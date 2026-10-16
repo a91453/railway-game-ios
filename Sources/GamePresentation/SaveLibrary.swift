@@ -397,8 +397,10 @@ public struct SaveLibrary: Sendable {
 
     /// `world` saved at `date` as a file to share, named after the app and
     /// the date, in the temporary folder (the reference's "导出本地存档").
-    public static func exportFile(for world: GameWorld, at date: Date) throws(SaveError) -> URL {
-        let data = try encode(world, at: date)
+    /// Decision 175, later: the file carries the game's news log `news`,
+    /// which an import reads back and a build before it skips.
+    public static func exportFile(for world: GameWorld, news: NewsLog? = nil, at date: Date) throws(SaveError) -> URL {
+        let data = try encode(world, news: news, at: date)
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("Exports", isDirectory: true)
         let url = folder.appendingPathComponent("Along the Line \(stamp(date)).json")
         do {
@@ -412,9 +414,11 @@ public struct SaveLibrary: Sendable {
 
     // MARK: - The file
 
-    /// The file for `world` saved at `date`.
-    public static func encode(_ world: GameWorld, at date: Date) throws(SaveError) -> Data {
-        let file = SaveFile(app: appName, savedAt: date, summary: SaveSummary(world: world), game: SavedGame(world: world))
+    /// The file for `world` saved at `date`, with the news log `news` when
+    /// given (an exported file; a save in the folder keeps its news log
+    /// beside it).
+    public static func encode(_ world: GameWorld, news: NewsLog? = nil, at date: Date) throws(SaveError) -> Data {
+        let file = SaveFile(app: appName, savedAt: date, summary: SaveSummary(world: world), game: SavedGame(world: world), news: news)
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         do {
@@ -427,12 +431,30 @@ public struct SaveLibrary: Sendable {
     /// The world in a save file: one this app wrote, of a version this
     /// build reads, that GameCore accepts.
     public static func decode(_ data: Data) throws(SaveError) -> GameWorld {
+        try decodeWithNews(data).world
+    }
+
+    /// The world in a save file, as ``decode(_:)`` reads it, and the news
+    /// log an exported file carries (decision 175, later), or `nil`: none,
+    /// or one that cannot be read, which never stops the game loading.
+    public static func decodeWithNews(_ data: Data) throws(SaveError) -> (world: GameWorld, news: NewsLog?) {
         _ = try header(of: data).get()
         do {
-            return try decoder.decode(SaveFile.self, from: data).game.world
+            let file = try decoder.decode(SaveFile.self, from: data)
+            return (file.game.world, file.news)
         } catch {
             throw .damaged
         }
+    }
+
+    /// When a save was written, by the device's clock: "14:20" (decision
+    /// 192, later: the autosave Continue fell back to).
+    public static func clockText(_ date: Date, timeZone: TimeZone = .current) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = timeZone
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: date)
     }
 
     /// The file's header, after checking it is this app's and of a version
@@ -650,11 +672,34 @@ public enum SaveError: Error, Hashable, Sendable {
 }
 
 /// The whole file.
+///
+/// Decision 175, later: `news`, the news log, only in an exported file, an
+/// optional key a build before it skips (`JSONDecoder` ignores keys a type
+/// does not name), so the save version stays.
 private struct SaveFile: Codable {
     let app: String
     let savedAt: Date
     let summary: SaveSummary
     let game: SavedGame
+    let news: NewsLog?
+
+    init(app: String, savedAt: Date, summary: SaveSummary, game: SavedGame, news: NewsLog?) {
+        self.app = app
+        self.savedAt = savedAt
+        self.summary = summary
+        self.game = game
+        self.news = news
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        app = try container.decode(String.self, forKey: .app)
+        savedAt = try container.decode(Date.self, forKey: .savedAt)
+        summary = try container.decode(SaveSummary.self, forKey: .summary)
+        game = try container.decode(SavedGame.self, forKey: .game)
+        // The news log is a convenience: one that cannot be read is left out.
+        news = try? container.decodeIfPresent(NewsLog.self, forKey: .news)
+    }
 }
 
 /// Only what a list needs and what decides whether the game loads.

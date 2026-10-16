@@ -418,6 +418,9 @@ struct TrainStatusCapsule: View {
 
     let text: String
     let kind: Kind
+    /// The icon alone, where the words do not fit (the station's board on
+    /// a narrow card); VoiceOver still reads the words.
+    var symbolOnly = false
 
     init(text: String, kind: Kind) {
         self.text = text
@@ -429,8 +432,9 @@ struct TrainStatusCapsule: View {
         self.kind = card.showsPunctuality ? (card.isLate ? .late : .onTime) : .neutral
     }
 
-    init(row: DepartureBoard.Row, language: DisplayLanguage) {
+    init(row: DepartureBoard.Row, language: DisplayLanguage, symbolOnly: Bool = false) {
         self.text = row.status.text(in: language)
+        self.symbolOnly = symbolOnly
         switch row.status {
         case .boarding: self.kind = .boarding
         case .passes: self.kind = .neutral
@@ -441,22 +445,36 @@ struct TrainStatusCapsule: View {
     }
 
     var body: some View {
-        HStack(spacing: 3) {
+        if symbolOnly {
             if let symbol {
                 Image(systemName: symbol)
                     .font(.system(size: 9, weight: .bold))
-                    .accessibilityHidden(true)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 3)
+                    .background(fill, in: Capsule())
+                    .foregroundStyle(foreground)
+                    .fixedSize()
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(Text(verbatim: text))
             }
-            Text(verbatim: text)
-                .font(.caption2.weight(.bold))
-                .lineLimit(1)
+        } else {
+            HStack(spacing: 3) {
+                if let symbol {
+                    Image(systemName: symbol)
+                        .font(.system(size: 9, weight: .bold))
+                        .accessibilityHidden(true)
+                }
+                Text(verbatim: text)
+                    .font(.caption2.weight(.bold))
+                    .lineLimit(1)
+            }
+            .padding(.leading, symbol == nil ? 7 : 5)
+            .padding(.trailing, 7)
+            .padding(.vertical, 2)
+            .background(fill, in: Capsule())
+            .foregroundStyle(foreground)
+            .fixedSize()
         }
-        .padding(.leading, symbol == nil ? 7 : 5)
-        .padding(.trailing, 7)
-        .padding(.vertical, 2)
-        .background(fill, in: Capsule())
-        .foregroundStyle(foreground)
-        .fixedSize()
     }
 
     private var symbol: String? {

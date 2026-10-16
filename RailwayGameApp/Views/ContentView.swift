@@ -57,6 +57,11 @@ struct ContentView: View {
             .sheet(item: presentedPanel) { panel in
                 panelSheet(panel)
             }
+            // Decision 229, later: this game's 3D map, from the map's own
+            // button (``Map3DShortcut``).
+            .fullScreenCover(isPresented: $screen.showsMap3D) {
+                Map3DPreviewScreen(session: session, close: { screen.showsMap3D = false })
+            }
             .environment(screen)
             .onAppear(perform: syncSecretarySettings)
             .onChange(of: pausesForImportantEvents) { _, _ in syncSecretarySettings() }
@@ -228,6 +233,9 @@ struct ContentView: View {
             HelpView(language: session.language)
         case .postcard:
             PostcardSheet(session: session)
+        case .achievements:
+            AchievementsSheet(session: session, records: launcher.achievements)
+                .presentationDetents([.medium, .large])
         }
     }
 
@@ -250,11 +258,12 @@ struct ContentView: View {
             let isOpen = sidePanel == nil && ControlDetails.isOpen(
                 session, choice: detailsChoice, foldsWhileDrawing: verticalSizeClass == .compact
             )
-            // Decision 226: on a phone held sideways (out of the tutorial,
-            // whose steps point where its controls have always been), the
-            // tools are a column down the leading edge, not a dock along the
-            // bottom; the map keeps its height. `dockSize` measures either.
-            let toolsColumn = compactHeight && session.tutorial == nil
+            // Decision 226: on a phone held sideways the tools are a column
+            // down the leading edge, not a dock along the bottom; the map
+            // keeps its height. `dockSize` measures either. In the tutorial
+            // too (decision 226, later: its steps point at the game's own
+            // controls, not a dock it alone had).
+            let toolsColumn = compactHeight
             // With the column, the bottom row is the column's foot, the
             // map's own buttons (layers, map style, expansion) and the
             // station master with its title, side by side
@@ -373,12 +382,18 @@ struct ContentView: View {
                     // it closes, with nothing to see now.
                     Group {
                         if toolsColumn {
-                            // Between the board and the bottom, less the
-                            // card's toggle over the building tools and
-                            // Build under them.
+                            // Up to the screen's gap below the layer strip
+                            // (TestFlight, 2026-10-16: on a short phone the
+                            // column's top all but touched it), or below the
+                            // board while the strip is not there; the follow
+                            // bar alone stands beside the column.
                             ToolsColumn(
                                 session: session, isOpen: isOpen, canToggle: sidePanel == nil,
-                                railHeight: max(60, proxy.size.height - pillDepth - strip - 2 * margin - 2 * ToolsColumn.tileDepth)
+                                maxHeight: CGFloat(ToolColumn.maxHeight(
+                                    screenHeight: proxy.size.height,
+                                    top: showsLayerStrip ? pillDepth + margin + stripHeight : pillDepth,
+                                    gap: margin, bottom: strip + margin
+                                ))
                             ) {
                                 detailsChoice = !isOpen
                             }
@@ -602,17 +617,26 @@ private enum ControlDetails {
 private struct ControlDetailsToggle: View {
     let isOpen: Bool
     let action: () -> Void
+    @Environment(\.toolColumnStyle) private var column
 
     var body: some View {
         Button(action: action) {
             // The card's own shape, open or not: the map's ⓘ is MapLibre's
             // attribution, a different thing (decision 123).
-            Image(systemName: "sidebar.trailing")
+            let icon = Image(systemName: "sidebar.trailing")
                 .font(.subheadline.weight(.bold))
-                // As wide as the tools under it in the phone's column, so
-                // the column's pieces are one width (2026-10-15); 40 in the
-                // dock, which offers it no more.
-                .frame(minWidth: 40, maxWidth: .infinity, minHeight: 40)
+            if column != nil {
+                // In the phone's column, the size of the tools under it,
+                // labelled or not (TestFlight, 2026-10-16: the toggle was
+                // as wide as its icon and shorter than a named button): a
+                // name's room kept, unseen, round the icon.
+                TabLabel(systemImage: "sidebar.trailing", title: " ")
+                    .hidden()
+                    .overlay { icon }
+            } else {
+                // 40 in the dock, which offers it no more.
+                icon.frame(minWidth: 40, minHeight: 40)
+            }
         }
         .buttonStyle(ThemeSelectableButtonStyle(isActive: isOpen))
         .accessibilityLabel(isOpen ? "Hide Controls" : "Show Controls")
@@ -638,8 +662,9 @@ private struct StatusPill: View {
 
 /// Build, the lines and the company's figures, and Undo
 /// (``ControlPanel``'s tools), in a dock at the bottom of the screen
-/// (decision 106; an iPad, and the tutorial), with the button that shows or
-/// hides the details card.
+/// (decision 106; a regular height: an iPad, the tutorial too since
+/// decision 226's later change), with the button that shows or hides the
+/// details card.
 private struct ControlDock: View {
     let session: GameSession
     let isOpen: Bool
@@ -675,35 +700,78 @@ private struct ToolsColumn: View {
     let session: GameSession
     let isOpen: Bool
     var canToggle = true
-    /// The most height the building tools may take.
-    let railHeight: CGFloat
+    /// The most height the column may take: from the screen's foot up to
+    /// the layer strip, less the gap kept below it (``ToolColumn``).
+    let maxHeight: CGFloat
     let toggle: () -> Void
 
+    /// The groups with names under the icons where they fit, else the icons
+    /// alone, else the icons scrolling, all of them alike (as the building
+    /// tools beside the map, ``BuildToolRail``): each button one size,
+    /// chosen or not, each group one width (TestFlight, 2026-10-16).
     var body: some View {
+        ViewThatFits(in: .vertical) {
+            groups(compact: false)
+            groups(compact: true)
+            ScrollView {
+                groups(compact: true)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .scrollIndicators(.hidden)
+            .tutorialClip()
+        }
+        .frame(width: ToolColumnStyle.width)
+        // Offered no more than that, and as tall as what it shows: a frame
+        // would stand as tall as the room, and the column faded for a
+        // finger drawing over the map above it (``GameScreenState/toolsFrame``).
+        .modifier(HeightCap(maxHeight: maxHeight))
+    }
+
+    private func groups(compact: Bool) -> some View {
         VStack(alignment: .center, spacing: ControlPanel.tileGap) {
             // The card's toggle stays on top while building too: a chosen
-            // tool keeps the card open, and folding it shows the map.
-            toggleTile
+            // tool keeps the card open, and folding it shows the map. Not
+            // on the tutorial's steps that point into the card, which keep
+            // it open, as in the dock.
+            if session.tutorial?.step.usesDetailsCard != true {
+                ControlDetailsToggle(isOpen: isOpen, action: toggle)
+                    .disabled(!canToggle)
+                    .controlTile()
+            }
             if BuildToolRail.isShown(session) {
-                BuildToolRail(session: session, maxHeight: railHeight)
+                BuildToolButtons(session: session)
+                    .controlTile()
                 // Build where it was, lit: a second tap closes the tools.
                 ControlPanel(session: session, arrangement: .buildEntry)
             } else {
                 ControlPanel(session: session, arrangement: .toolsColumn)
             }
         }
-        // As narrow as its buttons; the building tools fit their height
-        // themselves (``BuildToolRail``'s `ViewThatFits`).
-        .fixedSize(horizontal: true, vertical: false)
+        .environment(\.toolColumnStyle, ToolColumnStyle(compact: compact))
+    }
+}
+
+/// Offers a view at most `maxHeight` and takes the height it takes, at the
+/// foot of the room.
+private struct HeightCap: ViewModifier {
+    let maxHeight: CGFloat
+
+    func body(content: Content) -> some View {
+        CapLayout(maxHeight: maxHeight) { content }
     }
 
-    /// A one-button tile and the gap after it.
-    static let tileDepth: CGFloat = 48 + 8 + ControlPanel.tileGap
+    private struct CapLayout: Layout {
+        let maxHeight: CGFloat
 
-    private var toggleTile: some View {
-        ControlDetailsToggle(isOpen: isOpen, action: toggle)
-            .disabled(!canToggle)
-            .controlTile()
+        func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+            guard let view = subviews.first else { return .zero }
+            return view.sizeThatFits(ProposedViewSize(width: proposal.width, height: min(proposal.height ?? maxHeight, maxHeight)))
+        }
+
+        func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+            subviews.first?.place(at: CGPoint(x: bounds.minX, y: bounds.maxY), anchor: .bottomLeading,
+                                  proposal: ProposedViewSize(width: bounds.width, height: bounds.height))
+        }
     }
 }
 
@@ -891,6 +959,9 @@ final class GameScreenState {
         case help
         /// The network postcard (decision 215), from the game menu.
         case postcard
+        /// The achievements (decision 181), from the game menu's first
+        /// level (decision 226, later).
+        case achievements
 
         var id: Self { self }
 
@@ -899,12 +970,15 @@ final class GameScreenState {
         var isBesideMap: Bool {
             switch self {
             case .lines, .station, .economy: true
-            case .timetable, .fleet, .mapLayers, .dataSources, .settings, .yearEnd, .goals, .tourism, .news, .monthEnd, .help, .postcard: false
+            case .timetable, .fleet, .mapLayers, .dataSources, .settings, .yearEnd, .goals, .tourism, .news, .monthEnd, .help, .postcard, .achievements: false
             }
         }
     }
 
     var panel: Panel?
+    /// Decision 229, later: whether this game's 3D map is open, from the
+    /// map's 3D button.
+    var showsMap3D = false
     /// Whether the station panel, as it opens, puts up its rename alert
     /// at once: the station tag's pencil (TestFlight 60.1, renaming took
     /// three taps before a letter could be typed).
