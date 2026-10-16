@@ -12,7 +12,9 @@
 // A line's spare train (a later fix to decision 58) has no service, so
 // nothing else ever moves it: it keeps its track as a waiting train does,
 // and where no service can step aside the dispatcher moves the spare out
-// of the way instead.
+// of the way instead. Where there is neither, a service that would come
+// back through the station it waits at turns back there short (decision
+// 255), leaving out the calls it cannot reach past the other train.
 //
 // Everything here is derived from the world as it is, read-only: which
 // trains wait, for whom, and whether a passing place would help. Only the
@@ -234,9 +236,11 @@ extension GameWorld {
     /// only trains waiting with it, or a line's spares, hold, so none of
     /// them can ever go by itself. Once a minute the dispatcher sends one
     /// of their services to a passing place where that lets another go, or
-    /// else moves a spare out of the way; a deadlock with neither stays
-    /// until the player changes something (more platforms, a passing loop,
-    /// fewer trains). Derived on every call, never saved.
+    /// else moves a spare out of the way, or else turns a service back
+    /// short (decision 255, see ``shortTurn(of:in:)``); a deadlock with
+    /// none of them stays until the player changes something (more
+    /// platforms, a passing loop, fewer trains). Derived on every call,
+    /// never saved.
     public func deadlockedTrains() -> [TrainID] {
         var memo = DirectionMemo()
         return deadlock(memo: &memo).keys.sorted()
@@ -388,5 +392,55 @@ extension GameWorld {
             if let best { return best.train }
         }
         return nil
+    }
+
+    // MARK: - Turning back short
+
+    /// `train`, a service of deadlock `stuck` (see ``deadlock(memo:)``)
+    /// waiting at a stop, turned back short there (decision 255), or `nil`.
+    /// Two lines sharing a single track with no passing place, one running
+    /// on beyond the other's end: neither train can ever pass the other,
+    /// so a service whose next calls lie past the other train can never
+    /// make them. As a dispatcher turns such a train back where it is, it
+    /// turns round there and waits at the next entry of its timetable for
+    /// the same station, as if it had come back already, leaving out the
+    /// calls between. Only a train standing beside that station's platform
+    /// its whole length (as at a terminus), part way along its timetable,
+    /// which comes back through the station after turning round on the
+    /// way and calls somewhere after that, and only where
+    /// it can then leave from there now and leaving lets another train of
+    /// the deadlock go.
+    func shortTurn(of train: Train, in stuck: [TrainID: (candidate: Train, departs: Bool)]) -> Train? {
+        guard isTrafficControlEnabled, case .waitingAtStop(let stop, let cycle)? = train.execution,
+              let place = train.placement
+        else { return nil }
+        let station = train.timetable[stop].station
+        // Only part way along: turning at its first call for its last
+        // would give up the whole trip, not leave out the calls it cannot
+        // make.
+        guard stop > 0, stationsBesideWholeTrain(train.id).contains(station),
+              let back = train.timetable.indices.dropFirst(stop + 1).first(where: { train.timetable[$0].station == station }),
+              back < train.timetable.count - 1,
+              (stop + 1..<back).contains(where: { train.timetable[$0].reverses })
+        else { return nil }
+        var turned = train
+        stand(&turned, at: turnedRound(place))
+        turned.reservation = []
+        turned.execution = .waitingAtStop(back, cycle: cycle)
+        turned.times = ServiceTimes(arrival: clock.now, departure: clock.now)
+        // Leaving from there now must let another train of the deadlock
+        // go: the way it leaves by is free, and with it gone the others
+        // are no longer stuck.
+        let there = replacing(turned)
+        var memo = DirectionMemo()
+        guard let leaving = there.leaving(turned, stop: back, cycle: cycle).train, case .travellingToStop? = leaving.execution,
+              case .granted(let granted) = there.reservingDeparture(leaving, memo: &memo)
+        else { return nil }
+        // Moving, it is waited for by nobody in a deadlock.
+        let gone = there.replacing(granted)
+        var after = DirectionMemo()
+        let left = gone.deadlock(memo: &after)
+        guard stuck.keys.contains(where: { $0 != train.id && left[$0] == nil }) else { return nil }
+        return turned
     }
 }
