@@ -9920,7 +9920,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 - 只用 `monospacedDigit`：已經在用；星期、月份的名字、秒數、連假仍會改寬度。
 - 寬度只增不減（記住看過最寬的）：前幾天還是會換排法，而且每台裝置、每次開啟都要重新「學」。
 
-**測試**：`StatusBarWidthsTests`（一年每一天、兩種語言、兩種長度、有秒與沒秒的日期都被涵蓋；秒數的位置在暫停時也留著；金額到 7 位數同寬、8 位數才變寬；倍速、列車速度、彎道限速的最寬字）。畫面上的寬度由 UI 測試 `ShellLayoutUITests.testTheStatusBarKeepsItsWidthAsTheDaysGoBy` 看：最大字級、6000× 跑 50 秒（約三天半），選單鈕不動、日期的寬度不變，暫停與繼續也不動（full lane，不進 gate）。
+**測試**：`StatusBarWidthsTests`（一年每一天、兩種語言、兩種長度、有秒與沒秒的日期都被涵蓋；秒數的位置在暫停時也留著；金額到 7 位數同寬、8 位數才變寬；倍速、列車速度、彎道限速的最寬字）。畫面上的寬度由 UI 測試 `ShellLayoutUITests.testTheStatusBarKeepsItsWidthAsTheDaysGoBy` 看：最大字級、6000× 跑 50 秒（Simulator 跟得上的約一天半，至少換一天），選單鈕不動、日期的寬度不變，暫停與繼續也不動（full lane，不進 gate）。
 
 **參考**：參考庫 `Railway/commuter_journey_reference_clean/source/css/hud.css` 的計時面板是 `min-width: 145px` 加 `font-variant-numeric: tabular-nums`，其他面板 `min-width: 0` 讓位，和這裡「會變的字留位置、數字等寬、次要的讓位」同一個想法；`island_city_reference_clean` 的數字也是 `tabular-nums`。沒有直接搬程式碼（CSS 對 SwiftUI）。外部專案沒有找到可用的。
 
