@@ -2468,7 +2468,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 **3. GamePresentation**：
 - `RealWorldFrame`：地圖中心在錨點，x 東、y 南，一個世界單位 1/64 公尺。底下的地圖是 Web Mercator（Apple 地圖，參考的 MapLibre 與高德也是）：App 把世界的一公尺畫成錨點緯度上的一公尺，整張地圖都用這個比例，所以鐵路和地圖處處對齊；離錨點的緯度越遠，世界的一公尺和地面的一公尺差一點（Mercator 的比例隨緯度變），16 公里的地圖在台北的緯度最多 0.06%，60° 是 0.22%。
 - `GeoAnchor(latitudeDegrees:longitudeDegrees:)`：四捨五入到千萬分之一度，經度轉回 −180° 到 180°（地圖繞過地球時會回報 190°）。
-- `RealWorldPlace`：64 個地點，`Railway/` 的 11 個台鐵主要車站（台灣，每個站名第一次出現的點）與 `Ci/` 的 53 座城市（`center`，名字改成台灣用語的繁體），依地區分組；座標和兩份參考逐一比對過，完全相同。預設是臺北車站。
+- `RealWorldPlace`：64 個地點，`Railway/` 的 11 個台鐵主要車站（台灣，每個站名第一次出現的點）與 `Ci/` 的 53 座城市（`center`，名字改成台灣用語的繁體），依地區分組；座標和兩份參考逐一比對過，完全相同。預設是臺北車站。（決策 262 加了 107 個城市的主要車站，共 171 個，地區分成九組。）
 - `GameWorld.newGame(anchor:)`、`GameLauncher.startNewGame(at:)`：實景的新遊戲就是放在地球上的新遊戲，資金、價格、城市都一樣。
 
 **4. App**：
@@ -10286,6 +10286,151 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 - 預設維持寫實、把簡單放在選項裡：新玩家不會去找選項。
 - 遊戲中可以切換規則：車輛經濟、真實車長只在買車時用到，中途切換會讓同一局有兩種車。
 - 彈性派車也關掉：§1.2 量到開或關的數字一樣，留著讓列車從兩端都能發車，配合第 2 個 PR 的自動配車。
+
+### 262. 實景地圖的城市：日韓與各國大城市，用主要車站當起點
+
+2026-10-16。作者：「實景城市增加日韓城市，然後再看還缺哪些大城市座標。」號碼依工作登記 #231：登記時最大是 261，取 262。GameCore、存檔版本、golden schema、SaveFixtures、ReplayFixtures 都不動。
+
+**門檻**（三條任一條就加；日韓照作者列的清單全加）：
+- A：聯合國《World Urbanization Prospects 2025》估計 2025 年人口超過 500 萬的都市（85 個，取自英文維基百科 List of largest cities 引用的數字）。
+- B：一國首都，而且有地鐵（rapid transit；英文維基百科 List of metro systems 列的系統，加上它的表沒有列到的東京、首爾、曼谷、馬尼拉、雅加達）。輕軌、通勤鐵路、BRT 不算。
+- C：一國最大的城市，而且有地鐵，但不是首都（雪梨、阿拉木圖、杜拜；其他符合的城市已經在 A 或原本的清單裡）。
+
+**做法**：
+- `RealWorldPlace.mainStations`（`RealWorldStations.swift`）：107 個地點，日本 21、韓國 7（首爾已有），其他 79。全部 171 個。
+- 點是各城市的主要車站：沒有主要幹線車站的城市用市中心的地鐵轉乘站（杜哈 Msheireb、杜拜 BurJuman、亞特蘭大 Five Points、巴拿馬城 Albrook、聖多明哥 Casandra Damirón、卡拉卡斯 Capitolio、瓜達拉哈拉 Juárez、貝洛奧里藏特與巴西利亞的 Central）。高鐵站離市中心遠的用市中心的車站：光州用光州站、蔚山用太和江站、神戶用三宮、仁川用富平。
+- 座標用 Wikidata 那一站的 P625（CC0），七位小數；每行註記 Wikidata 的編號。Wikidata 找不到有座標的車站的四個城市（塔什干、喀土穆、三蘭港、基多）用參考庫 `city_map_reference_clean/source/data/city-catalog.json` 的城市中心。
+- 每個車站都和 `city-catalog.json` 的城市中心比過距離：大多在 8 公里內；安卡拉 27 公里、亞歷山卓 31 公里、莫斯科 17 公里、墨西哥城 14 公里、聖彼得堡 12 公里、濟南 12 公里，是參考庫的中心點取在省或都會區的中心，車站本身是對的（逐一看過 Wikidata 的說明）。
+- `Region` 從五組改成九組：台灣、東亞、東南亞與南亞、中亞與西亞、歐洲、北美洲、拉丁美洲、非洲、大洋洲。`Region` 不是 `Codable`，存檔、指令紀錄（`CommandLog`、`RealWorldDataSet`）只存錨點與資料有無，沒有存地區，所以舊存檔不受影響。
+- `DataSourceCredits` 的「地圖」加一筆 Wikidata（CC0 1.0）。
+
+**台灣以外能玩到什麼**：和 `Ci/` 的 53 座城市一樣，可以開局。底圖是 Apple 地圖或 OpenFreeMap（要網路）；人口、地點、分區、水域、高度、建物覆蓋率、景點、真實鐵路都只有台灣，台灣以外新車站一律是城市預設的 10,000 人次、住宅區，地圖上沒有水域與陡坡。這是 `docs/HANDOFF.md` 第 5 節的待辦。
+
+**四方**：
+- 玩家：日本、韓國與各國大城市都能直接選，地圖一打開就在車站上，可以馬上從車站蓋起；亞洲拆成三組，清單不會一長串。
+- 開發：只動 GamePresentation 的資料與一個列舉，App 的清單照 `Region.allCases` 自己長出來，不必改；不動 GameCore 與存檔。
+- 美術：清單沿用現有的列與圖示，只多幾個段落標題，沒有新圖。
+- 音樂：none。
+
+**沒有採用**：
+- 用市政府或城市中心（參考庫 `city-catalog.json` 有 535 個城市中心）：這是鐵道遊戲，起點在車站上，玩家開局就看得到可以接的鐵路；城市中心只留給找不到車站的四個城市。
+- 門檻只用人口 500 萬：維也納、阿姆斯特丹、布拉格等有地鐵的首都會漏掉，雪梨、杜拜也會漏掉。
+- 門檻加上「都會區 300 萬以上」：會多出上百個城市，清單太長，資料也只到台灣。
+- 亞洲維持一組：東亞加日韓後就超過 60 個。
+
+**沒有加的**（作者舉例、但沒過門檻）：蒙特婁（都會區約 430 萬，不是首都、不是加拿大最大城）、西雅圖（約 400 萬）、布里斯本（約 270 萬）、奧克蘭（紐西蘭最大城但沒有地鐵）、奈洛比（首都，但只有通勤鐵路）。沒有地鐵的首都（都柏林、伯恩、坎培拉、威靈頓、渥太華、阿布達比、阿布加等）也不加。
+
+**清單**（門檻欄：日本、韓國是作者的清單；A、B、C 見上）：
+
+| 城市 | id | 地區 | 門檻 | 點 | 來源 | 緯度, 經度 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 東京 Tokyo | `tokyo` | 東亞 | 日本、A、B | Tokyo Station | Wikidata Q283196 | 35.6808333, 139.7669444 |
+| 橫濱 Yokohama | `yokohama` | 東亞 | 日本 | Yokohama Station | Wikidata Q801658 | 35.4658333, 139.6227778 |
+| 大阪 Osaka | `osaka` | 東亞 | 日本、A | Ōsaka Station | Wikidata Q801694 | 34.7025000, 135.4961111 |
+| 名古屋 Nagoya | `nagoya` | 東亞 | 日本、A | Nagoya Station | Wikidata Q49381 | 35.1707722, 136.8816028 |
+| 札幌 Sapporo | `sapporo` | 東亞 | 日本 | Sapporo Station | Wikidata Q801404 | 43.0686111, 141.3507778 |
+| 福岡 Fukuoka | `fukuoka` | 東亞 | 日本、A | Hakata Station | Wikidata Q800875 | 33.5898030, 130.4206810 |
+| 神戶 Kobe | `kobe` | 東亞 | 日本 | Sannomiya Station (JR West) | Wikidata Q14616729 | 34.6947222, 135.1950000 |
+| 京都 Kyoto | `kyoto` | 東亞 | 日本 | Kyōto Station | Wikidata Q801046 | 34.9855556, 135.7586111 |
+| 川崎 Kawasaki | `kawasaki` | 東亞 | 日本 | Kawasaki Station | Wikidata Q80562 | 35.5313889, 139.6969444 |
+| 埼玉 Saitama | `saitama` | 東亞 | 日本 | Ōmiya Station (Saitama) | Wikidata Q801692 | 35.9063889, 139.6238889 |
+| 廣島 Hiroshima | `hiroshima` | 東亞 | 日本 | Hiroshima Station | Wikidata Q576459 | 34.3983333, 132.4758333 |
+| 仙台 Sendai | `sendai` | 東亞 | 日本 | Sendai Station (Miyagi) | Wikidata Q801429 | 38.2602778, 140.8819444 |
+| 北九州 Kitakyushu | `kitakyushu` | 東亞 | 日本 | Kokura Station | Wikidata Q801027 | 33.8869230, 130.8831810 |
+| 千葉 Chiba | `chiba` | 東亞 | 日本 | Chiba Station | Wikidata Q800625 | 35.6131222, 140.1131917 |
+| 岡山 Okayama | `okayama` | 東亞 | 日本 | Okayama Station | Wikidata Q801293 | 34.6663694, 133.9185889 |
+| 熊本 Kumamoto | `kumamoto` | 東亞 | 日本 | Kumamoto Station | Wikidata Q969324 | 32.7893389, 130.6886944 |
+| 新潟 Niigata | `niigata` | 東亞 | 日本 | Niigata Station | Wikidata Q701753 | 37.9120278, 139.0618889 |
+| 靜岡 Shizuoka | `shizuoka` | 東亞 | 日本 | Shizuoka Station | Wikidata Q801440 | 34.9716667, 138.3888889 |
+| 濱松 Hamamatsu | `hamamatsu` | 東亞 | 日本 | Hamamatsu Station | Wikidata Q603640 | 34.7036111, 137.7344444 |
+| 鹿兒島 Kagoshima | `kagoshima` | 東亞 | 日本 | Kagoshima-Chūō Station | Wikidata Q1316913 | 31.5836667, 130.5417222 |
+| 那霸 Naha | `naha` | 東亞 | 日本 | Prefectural Office Station | Wikidata Q7484295 | 26.2144000, 127.6790000 |
+| 釜山 Busan | `busan` | 東亞 | 韓國 | Busan station | Wikidata Q53118 | 35.1147222, 129.0419444 |
+| 仁川 Incheon | `incheon` | 東亞 | 韓國 | Bupyeong Station | Wikidata Q490474 | 37.4895528, 126.7240722 |
+| 大邱 Daegu | `daegu` | 東亞 | 韓國 | Dongdaegu station | Wikidata Q54288 | 35.8797222, 128.6292167 |
+| 大田 Daejeon | `daejeon` | 東亞 | 韓國 | Daejeon Station | Wikidata Q20919 | 36.3318944, 127.4345222 |
+| 光州 Gwangju | `gwangju` | 東亞 | 韓國 | Gwangju station | Wikidata Q489731 | 35.1653278, 126.9092361 |
+| 蔚山 Ulsan | `ulsan` | 東亞 | 韓國 | Taehwagang station | Wikidata Q626465 | 35.5391190, 129.3542140 |
+| 水原 Suwon | `suwon` | 東亞 | 韓國 | Suwon Station | Wikidata Q54306 | 37.2661111, 126.9997222 |
+| 平壤 Pyongyang | `pyongyang` | 東亞 | B | Pyongyang station | Wikidata Q701162 | 39.0047222, 125.7363889 |
+| 濟南 Jinan | `jinan` | 東亞 | A | Jinan railway station | Wikidata Q5975526 | 36.6704167, 116.9854167 |
+| 雅加達 Jakarta | `jakarta` | 東南亞與南亞 | A、B | Gambir railway station | Wikidata Q1889128 | -6.1767160, 106.8305080 |
+| 萬隆 Bandung | `bandung` | 東南亞與南亞 | A | Bandung railway station | Wikidata Q2571158 | -6.9141667, 107.6025000 |
+| 泗水 Surabaya | `surabaya` | 東南亞與南亞 | A | Surabaya Gubeng railway station | Wikidata Q2355304 | -7.2653200, 112.7526900 |
+| 馬尼拉 Manila | `manila` | 東南亞與南亞 | A、B | Tutuban station | Wikidata Q7857053 | 14.6114000, 120.9732000 |
+| 曼谷 Bangkok | `bangkok` | 東南亞與南亞 | A、B | Krung Thep Aphiwat Central Terminal | Wikidata Q23925684 | 13.8050000, 100.5416667 |
+| 吉隆坡 Kuala Lumpur | `kualalumpur` | 東南亞與南亞 | A、B | Kuala Lumpur Sentral station | Wikidata Q801042 | 3.1340000, 101.6860000 |
+| 胡志明市 Ho Chi Minh City | `hochiminhcity` | 東南亞與南亞 | A | Saigon station | Wikidata Q2673539 | 10.7822200, 106.6772200 |
+| 河內 Hanoi | `hanoi` | 東南亞與南亞 | B | Hanoi railway station | Wikidata Q1207323 | 21.0241700, 105.8408300 |
+| 仰光 Yangon | `yangon` | 東南亞與南亞 | A | Yangon Central railway station | Wikidata Q8048610 | 16.7817000, 96.1611000 |
+| 達卡 Dhaka | `dhaka` | 東南亞與南亞 | A、B | Kamalapur railway station | Wikidata Q6355669 | 23.7305400, 90.4268600 |
+| 德里 Delhi | `delhi` | 東南亞與南亞 | A、B | New Delhi railway station | Wikidata Q2742296 | 28.6423140, 77.2200040 |
+| 加爾各答 Kolkata | `kolkata` | 東南亞與南亞 | A | Howrah railway station | Wikidata Q986105 | 22.5828709, 88.3428112 |
+| 班加羅爾 Bengaluru | `bengaluru` | 東南亞與南亞 | A | Bengaluru City railway station | Wikidata Q3633970 | 12.9775950, 77.5680830 |
+| 清奈 Chennai | `chennai` | 東南亞與南亞 | A | Chennai Central railway station | Wikidata Q257382 | 13.0847613, 80.2748563 |
+| 海德拉巴 Hyderabad | `hyderabad` | 東南亞與南亞 | A | Hyderabad Deccan railway station | Wikidata Q3633967 | 17.3933630, 78.4673770 |
+| 艾哈邁達巴德 Ahmedabad | `ahmedabad` | 東南亞與南亞 | A | Ahmedabad Junction railway station | Wikidata Q4696124 | 23.0257150, 72.6017160 |
+| 蘇拉特 Surat | `surat` | 東南亞與南亞 | A | Surat railway station | Wikidata Q1851275 | 21.2065680, 72.8407930 |
+| 浦那 Pune | `pune` | 東南亞與南亞 | A | Pune Junction railway station | Wikidata Q3632576 | 18.5293780, 73.8730860 |
+| 喀拉蚩 Karachi | `karachi` | 東南亞與南亞 | A | Karachi Cantonment railway station | Wikidata Q3605245 | 24.8444080, 67.0425580 |
+| 拉合爾 Lahore | `lahore` | 東南亞與南亞 | A | Lahore Junction railway station | Wikidata Q3695748 | 31.5772000, 74.3363000 |
+| 伊斯坦堡 Istanbul | `istanbul` | 中亞與西亞 | A | Sirkeci railway station | Wikidata Q800974 | 41.0149669, 28.9764566 |
+| 安卡拉 Ankara | `ankara` | 中亞與西亞 | B | Ankara railway station | Wikidata Q800389 | 39.9359990, 32.8435230 |
+| 德黑蘭 Tehran | `tehran` | 中亞與西亞 | A、B | Tehran railway station | Wikidata Q4453688 | 35.6571002, 51.3973437 |
+| 巴格達 Baghdad | `baghdad` | 中亞與西亞 | A | Baghdad Central Station | Wikidata Q3544831 | 33.3236110, 44.3802780 |
+| 利雅德 Riyadh | `riyadh` | 中亞與西亞 | A、B | Riyadh railway station | Wikidata Q30594324 | 24.6504000, 46.7406000 |
+| 杜哈 Doha | `doha` | 中亞與西亞 | B | Msheireb station | Wikidata Q25343654 | 25.2834389, 51.5249667 |
+| 杜拜 Dubai | `dubai` | 中亞與西亞 | C | BurJuman (Dubai Metro) | Wikidata Q4998050 | 25.2547222, 55.3041667 |
+| 巴庫 Baku | `baku` | 中亞與西亞 | B | Baku railway station | Wikidata Q4076080 | 40.3802006, 49.8503910 |
+| 第比利斯 Tbilisi | `tbilisi` | 中亞與西亞 | B | Tbilisi railway station | Wikidata Q1341835 | 41.7233333, 44.7977778 |
+| 葉里溫 Yerevan | `yerevan` | 中亞與西亞 | B | Yerevan railway station | Wikidata Q4176210 | 40.1553950, 44.5085390 |
+| 塔什干 Tashkent | `tashkent` | 中亞與西亞 | B | (city centre) | 參考 `city-catalog.json` 的市中心 | 41.3123363, 69.2787079 |
+| 阿拉木圖 Almaty | `almaty` | 中亞與西亞 | C | Almaty 2 railway station | Wikidata Q800371 | 43.2737278, 76.9391111 |
+| 阿斯塔納 Astana | `astana` | 中亞與西亞 | B | Astana-1 station | Wikidata Q800403 | 51.1956750, 71.4090833 |
+| 莫斯科 Moscow | `moscow` | 歐洲 | A、B | Moscow Leningradsky railway station | Wikidata Q1344454 | 55.7762611, 37.6553278 |
+| 聖彼得堡 Saint Petersburg | `saintpetersburg` | 歐洲 | A | Moskovsky railway station (Saint Petersburg) | Wikidata Q139318 | 59.9287170, 30.3624330 |
+| 巴塞隆納 Barcelona | `barcelona` | 歐洲 | A | Barcelona Sants railway station | Wikidata Q800453 | 41.3788889, 2.1400000 |
+| 阿姆斯特丹 Amsterdam | `amsterdam` | 歐洲 | B | Amsterdam Centraal station | Wikidata Q50719 | 52.3789500, 4.9001600 |
+| 維也納 Vienna | `vienna` | 歐洲 | B | Wien Hauptbahnhof | Wikidata Q697300 | 48.1850000, 16.3777778 |
+| 布魯塞爾 Brussels | `brussels` | 歐洲 | B | Brussels-Central railway station | Wikidata Q800588 | 50.8455560, 4.3572220 |
+| 布拉格 Prague | `prague` | 歐洲 | B | Praha hlavní nádraží | Wikidata Q751174 | 50.0830556, 14.4358333 |
+| 布達佩斯 Budapest | `budapest` | 歐洲 | B | Budapest Keleti station | Wikidata Q841167 | 47.5005556, 19.0836111 |
+| 華沙 Warsaw | `warsaw` | 歐洲 | B | Warszawa Centralna railway station | Wikidata Q693034 | 52.2286111, 21.0030556 |
+| 雅典 Athens | `athens` | 歐洲 | B | Athens railway station | Wikidata Q3560693 | 37.9929400, 23.7200600 |
+| 里斯本 Lisbon | `lisbon` | 歐洲 | B | Santa Apolónia railway station | Wikidata Q531789 | 38.7140203, -9.1227400 |
+| 奧斯陸 Oslo | `oslo` | 歐洲 | B | Oslo Central Station | Wikidata Q1410317 | 59.9109490, 10.7525360 |
+| 赫爾辛基 Helsinki | `helsinki` | 歐洲 | B | Helsinki Central Station | Wikidata Q1044613 | 60.1710483, 24.9414487 |
+| 布加勒斯特 Bucharest | `bucharest` | 歐洲 | B | Bucharest North railway station | Wikidata Q683346 | 44.4463670, 26.0742080 |
+| 索菲亞 Sofia | `sofia` | 歐洲 | B | Sofia Central Station | Wikidata Q2095010 | 42.7121301, 23.3211209 |
+| 基輔 Kyiv | `kyiv` | 歐洲 | B | Kyiv-Pasazhyrskyi railway station | Wikidata Q2105249 | 50.4404500, 30.4890400 |
+| 明斯克 Minsk | `minsk` | 歐洲 | B | Minsk railway station | Wikidata Q801196 | 53.8906667, 27.5511111 |
+| 開羅 Cairo | `cairo` | 非洲 | A、B | Ramses Station | Wikidata Q633754 | 30.0636111, 31.2472222 |
+| 亞歷山卓 Alexandria | `alexandria` | 非洲 | A | Alexandria railway station (Egypt) | Wikidata Q958574 | 31.1933333, 29.9063056 |
+| 阿爾及爾 Algiers | `algiers` | 非洲 | B | Algiers railway station | Wikidata Q3095611 | 36.7792000, 3.0618200 |
+| 喀土穆 Khartoum | `khartoum` | 非洲 | A | (city centre) | 參考 `city-catalog.json` 的市中心 | 15.5517700, 32.5324100 |
+| 阿迪斯阿貝巴 Addis Ababa | `addisababa` | 非洲 | A | Legehar train station | Wikidata Q3968826 | 9.0094722, 38.7532222 |
+| 金夏沙 Kinshasa | `kinshasa` | 非洲 | A | Gare de l'Est, Kinshasa | Wikidata Q3098110 | -4.3006000, 15.3190000 |
+| 羅安達 Luanda | `luanda` | 非洲 | A | Luanda Bungo | Wikidata Q65170215 | -8.8053200, 13.2442720 |
+| 三蘭港 Dar es Salaam | `daressalaam` | 非洲 | A | (city centre) | 參考 `city-catalog.json` 的市中心 | -6.8160837, 39.2803583 |
+| 約翰尼斯堡 Johannesburg | `johannesburg` | 非洲 | A | Johannesburg Park station | Wikidata Q5175720 | -26.1972220, 28.0419440 |
+| 雪梨 Sydney | `sydney` | 大洋洲 | C | Central railway station, Sydney | Wikidata Q1585639 | -33.8825000, 151.2066667 |
+| 休士頓 Houston | `houston` | 北美洲 | A | Houston station (Texas) | Wikidata Q9294212 | 29.7673000, -95.3675000 |
+| 達拉斯 Dallas | `dallas` | 北美洲 | A | Dallas Union Station | Wikidata Q5371609 | 32.7753823, -96.8077500 |
+| 費城 Philadelphia | `philadelphia` | 北美洲 | A | 30th Street Station | Wikidata Q224214 | 39.9558220, -75.1824000 |
+| 亞特蘭大 Atlanta | `atlanta` | 北美洲 | A | Five Points station | Wikidata Q5456094 | 33.7538000, -84.3916000 |
+| 墨西哥城 Mexico City | `mexicocity` | 拉丁美洲 | A、B | Buenavista railway station | Wikidata Q54867396 | 19.4478000, -99.1522000 |
+| 瓜達拉哈拉 Guadalajara | `guadalajara` | 拉丁美洲 | A | Juárez light rail station | Wikidata Q5816925 | 20.6747220, -103.3547220 |
+| 巴拿馬城 Panama City | `panamacity` | 拉丁美洲 | B | Albrook metro station | Wikidata Q25420956 | 8.9735000, -79.5495000 |
+| 聖多明哥 Santo Domingo | `santodomingo` | 拉丁美洲 | B | Casandra Damirón metro station | Wikidata Q25421631 | 18.4711111, -69.9116667 |
+| 卡拉卡斯 Caracas | `caracas` | 拉丁美洲 | B | Capitolio station | Wikidata Q11294573 | 10.5048974, -66.9176005 |
+| 波哥大 Bogotá | `bogota` | 拉丁美洲 | A | Bogotá La Sabana railway station | Wikidata Q6433290 | 4.6072778, -74.0832222 |
+| 基多 Quito | `quito` | 拉丁美洲 | B | (city centre) | 參考 `city-catalog.json` 的市中心 | -0.1692388, -78.5043144 |
+| 利馬 Lima | `lima` | 拉丁美洲 | A、B | Desamparados station | Wikidata Q5201438 | -12.0443583, -77.0286083 |
+| 聖地牙哥 Santiago | `santiago` | 拉丁美洲 | A、B | Central Station (Santiago) | Wikidata Q28163126 | -33.4519444, -70.6788889 |
+| 聖保羅 São Paulo | `saopaulo` | 拉丁美洲 | A | Luz Station | Wikidata Q2983699 | -23.5350900, -46.6352800 |
+| 里約熱內盧 Rio de Janeiro | `riodejaneiro` | 拉丁美洲 | A | Central do Brasil | Wikidata Q1274003 | -22.9034139, -43.1914444 |
+| 貝洛奧里藏特 Belo Horizonte | `belohorizonte` | 拉丁美洲 | A | Central station (Belo Horizonte Metro) | Wikidata Q10275642 | -19.9178747, -43.9337187 |
+| 巴西利亞 Brasília | `brasilia` | 拉丁美洲 | B | Central station (Federal District Metro) | Wikidata Q10275643 | -15.7933333, -47.8841667 |
 
 ## 目前規則摘要
 

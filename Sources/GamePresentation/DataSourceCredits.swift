@@ -78,6 +78,7 @@ public enum DataSourceCredits {
         PERFORMANCE OF THIS SOFTWARE.
         """
     static let cc0URL = "https://creativecommons.org/publicdomain/zero/1.0/"
+    static let wikidataURL = "https://www.wikidata.org"
 
     /// The short credit shown on a real-world map while Taiwan's railways
     /// are drawn on it.
@@ -253,6 +254,24 @@ public enum DataSourceCredits {
                             "授權聲明請見地圖左下角的「法律資訊」。"
                         ),
                         links: []
+                    ),
+                    // Decision 262: where the large cities' main stations
+                    // stand, the places a real-world game can start at.
+                    DataSourceCredit(
+                        id: "wikidata",
+                        title: "Wikidata",
+                        detail: language.text(
+                            "Where the main stations of many of the cities in the real-world map’s list stand.",
+                            "實景地圖城市清單裡許多城市主要車站的位置。"
+                        ),
+                        notice: language.text(
+                            "Wikidata’s data is available under CC0 1.0 (public domain).",
+                            "Wikidata 的資料依 CC0 1.0（公眾領域）提供。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: "Wikidata", url: wikidataURL),
+                            DataSourceCredit.Link(title: "CC0 1.0", url: cc0URL),
+                        ]
                     ),
                     // Decision 151: Taiwan's base map, the app's own tiles
                     // of OpenStreetMap and their glyphs.

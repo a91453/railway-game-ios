@@ -146,12 +146,15 @@ final class RealWorldMapTests: XCTestCase {
     // MARK: - Places
 
     /// The references' places: the eleven Taiwan Railway stations of
-    /// `Railway/` and the 53 cities of `Ci/`, grouped by region.
+    /// `Railway/`, the 53 cities of `Ci/` and the 107 main stations of
+    /// decision 262, grouped by region.
     func testThePlacesAreTheReferences() {
         let places = RealWorldPlace.all
-        XCTAssertEqual(places.count, 64)
-        XCTAssertEqual(Set(places.map(\.id)).count, 64)
-        XCTAssertEqual(Set(places.map(\.anchor)).count, 64)
+        XCTAssertEqual(places.count, 171)
+        XCTAssertEqual(Set(places.map(\.id)).count, 171)
+        XCTAssertEqual(Set(places.map(\.anchor)).count, 171)
+        XCTAssertEqual(Set(places.map { $0.name(in: .english) }).count, 171)
+        XCTAssertEqual(Set(places.map { $0.name(in: .traditionalChinese) }).count, 171)
         XCTAssertEqual(places.filter { $0.id.hasPrefix("tra-") }.count, 11)
         XCTAssertEqual(places.map(\.region), places.map(\.region).sorted { a, b in
             RealWorldPlace.Region.allCases.firstIndex(of: a)! < RealWorldPlace.Region.allCases.firstIndex(of: b)!
@@ -163,10 +166,18 @@ final class RealWorldMapTests: XCTestCase {
         // `Ci/`'s Shanghai: center [31.2304, 121.4737].
         XCTAssertEqual(places.first { $0.id == "shanghai" }?.anchor, GeoAnchor(latitude: 312_304_000, longitude: 1_214_737_000))
         XCTAssertEqual(places.first { $0.id == "london" }?.anchor, GeoAnchor(latitude: 515_074_000, longitude: -1_278_000))
+        // Wikidata's Tokyo Station (Q283196): 35.6808333, 139.7669444.
+        XCTAssertEqual(places.first { $0.id == "tokyo" }?.anchor, GeoAnchor(latitude: 356_808_333, longitude: 1_397_669_444))
+        XCTAssertEqual(places.first { $0.id == "tokyo" }?.name(in: .traditionalChinese), "東京")
         for place in places {
             XCTAssertNotEqual(place.name(in: .english), place.name(in: .traditionalChinese), place.id)
             // Apple's maps (Web Mercator) show up to about 85°.
             XCTAssertLessThan(abs(place.anchor.latitudeDegrees), 85, place.id)
+        }
+        for id in ["tokyo", "yokohama", "osaka", "nagoya", "sapporo", "fukuoka", "kobe", "kyoto", "kawasaki", "saitama", "hiroshima",
+                   "sendai", "kitakyushu", "chiba", "okayama", "kumamoto", "niigata", "shizuoka", "hamamatsu", "kagoshima", "naha",
+                   "seoul", "busan", "incheon", "daegu", "daejeon", "gwangju", "ulsan", "suwon"] {
+            XCTAssertEqual(places.first { $0.id == id }?.region, .eastAsia, id)
         }
         for region in RealWorldPlace.Region.allCases {
             XCTAssertTrue(places.contains { $0.region == region }, "\(region)")
