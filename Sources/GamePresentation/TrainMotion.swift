@@ -11,10 +11,12 @@ import GameCore
 // The track it covered is the way the train's movement said it would go
 // at the tick before (``TrainMovement/remainingEdges``): from its previous
 // head along the rest of that edge and the edges named after it, to its
-// head now. A train that turned back, was placed or taken off, or got
-// somewhere its path did not lead (a new route given and run within the
-// same tick, a changed track, another game), jumps to where it is, as
-// every train did before.
+// head now. When it came to the end of that way and set off along a new
+// path within the same tick (a call passed while the game runs fast, a
+// minute a tick), the way goes on along the edges of the new path it has
+// entered since. A train that turned back, was placed or taken off, or got
+// somewhere neither leads (a changed track, another game), jumps to where
+// it is, as every train did before.
 //
 // The `Railway/` reference's 3D view places its cars by distance along a
 // path (`rail-3d/integration/train-path.js` `makePath`: `at(s)` the point
@@ -243,7 +245,8 @@ public struct TrainMotion: Sendable {
             var trail = Trail(body)
             var lag = 0.0
             if let before = previous?.samples[train.id],
-               let covered = Self.covered(from: before.position, along: before.ahead, to: position, in: world) {
+               let covered = Self.covered(from: before.position, along: before.ahead, to: position, in: world)
+                ?? Self.covered(from: before.position, along: before.ahead + train.movement.edges.prefix(train.movement.cursor), to: position, in: world) {
                 let glide = Trail(covered.reversed())
                 if glide.length > 0, glide.length <= Self.longestGlide {
                     trail = Trail(Array(covered.reversed()) + before.body.dropFirst())
@@ -275,6 +278,14 @@ public struct TrainMotion: Sendable {
     /// Whether any train glides.
     public var isMoving: Bool {
         runs.contains { $0.lag > 0 }
+    }
+
+    /// Where train `id`'s head is drawn at `time` (seconds on the caller's
+    /// clock): the point the camera following it looks at, frame by frame,
+    /// so the map moves with the train rather than a step a tick. `nil`
+    /// when it is not on the map.
+    public func head(of id: TrainID, at time: Double) -> Point? {
+        runs.first { $0.train == id }?.head(at: progress(at: time))?.point
     }
 
     /// The track from a head at `start` to one at `end`, going the way the

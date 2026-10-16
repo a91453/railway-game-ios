@@ -11,9 +11,23 @@ struct AchievementsView: View {
     let records: AchievementRecords
     /// The game's facts, for the progress; `nil` on the start screen.
     var facts: AchievementFacts?
+    /// Why the game counts none (decision 200), above the list.
+    var note: String? = nil
 
     var body: some View {
         List {
+            if let note {
+                Section {
+                    Label {
+                        Text(verbatim: note)
+                    } icon: {
+                        Image(systemName: "infinity")
+                    }
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                    .accessibilityIdentifier("achievements.note")
+                }
+            }
             Section {
                 // Decision 174 and 180: in a game without attractions or
                 // trains priced by type, their marks are not listed.
@@ -75,8 +89,9 @@ struct AchievementsView: View {
 }
 
 /// The achievements from the game menu's first level (decision 226,
-/// later): the list with a Done button, and the game's progress measured
-/// once a day rather than on every tick.
+/// later): the list with a Done button, why a game with unlimited funds
+/// counts none (decision 200), and the game's progress measured once a
+/// day rather than on every tick.
 struct AchievementsSheet: View {
     let session: GameSession
     let records: AchievementRecords
@@ -86,7 +101,10 @@ struct AchievementsSheet: View {
     var body: some View {
         let today = session.world.clock.now.seconds / GameTime.secondsPerDay
         NavigationStack {
-            AchievementsView(language: session.language, records: records, facts: facts)
+            AchievementsView(
+                language: session.language, records: records, facts: facts,
+                note: GameMenuLayout.achievementsNote(unlimitedFunds: session.world.economy.unlimitedFunds, in: session.language)
+            )
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {
                         Button {

@@ -307,11 +307,13 @@ final class RunDepotTests: XCTestCase {
 
     /// A line without depots, or a line without runs, is as before: the
     /// trains stay where their runs end.
+    ///
+    /// One train: two going opposite ways at once on the single track wait
+    /// for each other (decision 248) rather than run through each other.
     func testWithoutDepotsTheTrainsStayWhereTheyEnd() throws {
-        var world = try makeWorld(minutes: 340, depots: [], at: [(3, true), (7, false)])
+        var world = try makeWorld(minutes: 340, depots: [], runs: [run(0, 1, at: 360)], at: [(3, true)])
         try world.advance(ticks: 3 * 60)
         XCTAssertEqual(world.stationsStoppedAt(by: id(1)), [gamma])
-        XCTAssertEqual(world.stationsStoppedAt(by: id(2)), [alpha])
         XCTAssertEqual(world.line(id: main)?.deadheadDistance, 0)
     }
 

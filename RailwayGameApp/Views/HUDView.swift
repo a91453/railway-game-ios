@@ -159,8 +159,6 @@ struct HUDView: View {
             screen: screen,
             showsGoals: session.world.scenario != nil || session.world.hasCityRequests,
             showsTourism: session.world.hasTourism,
-            achievementsUnlocked: launcher.achievements.count,
-            unlimitedFunds: session.world.economy.unlimitedFunds,
             language: session.language,
             askSaveName: {
                 saveName = ""
@@ -381,10 +379,6 @@ private struct GameMenu: View, Equatable {
     let showsGoals: Bool
     /// Decision 174: a game with sights shows them.
     let showsTourism: Bool
-    /// Decision 181: how many achievements are unlocked, for their row.
-    let achievementsUnlocked: Int
-    /// Decision 200: a game with unlimited funds counts none.
-    let unlimitedFunds: Bool
     let language: DisplayLanguage
     /// Asks the name of a save (decision 184), in the HUD's alert.
     let askSaveName: @MainActor () -> Void
@@ -401,8 +395,6 @@ private struct GameMenu: View, Equatable {
             && lhs.screen === rhs.screen
             && lhs.showsGoals == rhs.showsGoals
             && lhs.showsTourism == rhs.showsTourism
-            && lhs.achievementsUnlocked == rhs.achievementsUnlocked
-            && lhs.unlimitedFunds == rhs.unlimitedFunds
             && lhs.language == rhs.language
     }
 
@@ -416,7 +408,7 @@ private struct GameMenu: View, Equatable {
                     Divider()
                 }
                 ForEach(section, id: \.self) { row in
-                    self.row(row, more: layout.moreRows)
+                    self.row(row, in: layout)
                 }
             }
         } label: {
@@ -442,7 +434,7 @@ private struct GameMenu: View, Equatable {
 
     /// One row of the menu's first level.
     @ViewBuilder
-    private func row(_ row: GameMenuLayout.Row, more moreRows: [GameMenuLayout.MoreRow]) -> some View {
+    private func row(_ row: GameMenuLayout.Row, in layout: GameMenuLayout) -> some View {
         switch row {
         case .saveGame:
             Button {
@@ -500,6 +492,46 @@ private struct GameMenu: View, Equatable {
                 Label("Back to Start", systemImage: "house")
             }
             .accessibilityIdentifier("menu.backToStart")
+        case .shortcuts:
+            // Decision 226, later (2026-10-16): side by side in one row,
+            // so the first level keeps to six rows (``GameMenuLayout``).
+            ControlGroup {
+                ForEach(layout.shortcuts, id: \.self) { shortcut in
+                    self.shortcut(shortcut)
+                }
+            }
+            .controlGroupStyle(.compactMenu)
+        case .more:
+            // The panels opened less often, in one row whatever the game
+            // has: on a phone on its side the menu shows about six rows,
+            // and the goals (decisions 86 and 183) and the sights (decision
+            // 174) pushed Back to Start out of reach.
+            Menu {
+                ForEach(layout.moreRows, id: \.self) { row in
+                    self.moreRow(row)
+                }
+            } label: {
+                Label {
+                    Text(verbatim: language.text("More", "更多"))
+                } icon: {
+                    Image(systemName: "ellipsis.circle")
+                }
+            }
+            .accessibilityIdentifier("menu.more")
+        case .settings:
+            Button {
+                screen.panel = .settings
+            } label: {
+                Label("Settings", systemImage: "gearshape")
+            }
+            .accessibilityIdentifier("menu.settings")
+        }
+    }
+
+    /// One of the shortcuts side by side in the first level.
+    @ViewBuilder
+    private func shortcut(_ shortcut: GameMenuLayout.Shortcut) -> some View {
+        switch shortcut {
         case .tutorial:
             // Decision 188, later fix (TestFlight 54.1): a skipped tutorial
             // is taken up again where it was, or started over, from one row,
@@ -554,50 +586,17 @@ private struct GameMenu: View, Equatable {
             }
             .accessibilityIdentifier("menu.postcard")
         case .achievements:
-            // Decision 181: the achievements, from the menu's first level
-            // (decision 226, later); decision 200: greyed, saying why,
-            // with unlimited funds.
-            let achievements = GameMenuLayout.achievementsRow(
-                unlocked: achievementsUnlocked, unlimitedFunds: unlimitedFunds, in: language
-            )
+            // Decision 181: the achievements (decision 226, later).
             Button {
                 screen.panel = .achievements
             } label: {
                 Label {
-                    Text(verbatim: achievements.title)
-                    if let subtitle = achievements.subtitle {
-                        Text(verbatim: subtitle)
-                    }
+                    Text(verbatim: language.text("Achievements", "成就"))
                 } icon: {
                     Image(systemName: "rosette")
                 }
             }
-            .disabled(!achievements.isEnabled)
             .accessibilityIdentifier("menu.achievements")
-        case .more:
-            // The panels opened less often, in one row whatever the game
-            // has: on a phone on its side the menu shows about six rows,
-            // and the goals (decisions 86 and 183) and the sights (decision
-            // 174) pushed Back to Start out of reach.
-            Menu {
-                ForEach(moreRows, id: \.self) { row in
-                    self.moreRow(row)
-                }
-            } label: {
-                Label {
-                    Text(verbatim: language.text("More", "更多"))
-                } icon: {
-                    Image(systemName: "ellipsis.circle")
-                }
-            }
-            .accessibilityIdentifier("menu.more")
-        case .settings:
-            Button {
-                screen.panel = .settings
-            } label: {
-                Label("Settings", systemImage: "gearshape")
-            }
-            .accessibilityIdentifier("menu.settings")
         }
     }
 
@@ -621,6 +620,7 @@ private struct GameMenu: View, Equatable {
         case .tourism:
             // Decision 174: a game with sights shows them.
             Button {
+                screen.sightFocus = nil
                 screen.panel = .tourism
             } label: {
                 Label {

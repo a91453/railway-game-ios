@@ -122,7 +122,10 @@ public struct Tourism: Hashable, Sendable {
     /// A source station of the outside counts as this many residents.
     public static let outsideWeight: Int64 = 200_000
     public static let busiestSources = 5
-    public static let maximumAttractions = 64
+    /// The most a world has (decision 250: from 64, so that the whole of
+    /// Taiwan holds every sight of the app's catalog, and a blank map that
+    /// buys its map five for each of its 25 tiles).
+    public static let maximumAttractions = 256
     static let potential: [Int64] = [300, 800, 2_000, 4_500, 9_000]
 
     public init(attractions: [Attraction] = [], year: Int64 = 0, nextID: Int = 1) {
@@ -251,15 +254,25 @@ extension GameWorld {
     }
 
     /// Turns tourism on for a blank map with three to five attractions drawn
-    /// from `seed` (decision 174): on a cell of leisure land first, then on
-    /// a steep slope or by the water (a cell next to water), and, if the map
-    /// has too few of those, anywhere inside the world at least 600 m from
-    /// its edge. Two are at least 3 km apart. Each has a kind that fits where
-    /// it stands (water: coast, steep: mountain, leisure: a hot spring or a
-    /// town), a name from its kind's list and 2 to 4 stars.
+    /// from `seed` for each tile of ``MapExpansion/tileLength`` (16.384 km)
+    /// a side (decision 174; decision 250: by the map's area, so a map that
+    /// buys its map has them across all its tiles): on a cell of leisure
+    /// land first, then on a steep slope or by the water (a cell next to
+    /// water), and, if the tile has too few of those, anywhere inside it at
+    /// least 600 m from its edge. Two are at least 3 km apart. Each has a
+    /// kind that fits where it stands (water: coast, steep: mountain,
+    /// leisure: a hot spring or a town), a name from its kind's list not
+    /// used yet while one is left, and 2 to 4 stars.
+    ///
+    /// The tile with the world's middle draws as the whole map did before
+    /// decision 250, so a map of one tile has the same places, kinds and
+    /// stars (the names, from longer lists, differ), and the middle tile of
+    /// a map that buys its map the usual map's.
     public mutating func foundAttractions(seed: UInt32) {
         let draw = SeedDraw(seed: seed)
-        let wanted = Int(draw.roll("tourism.count", in: 3...5))
+        let tile = MapExpansion.tileLength
+        let columns = (bounds.width + tile - 1) / tile, rows = (bounds.height + tile - 1) / tile
+        let middle = (row: bounds.height / 2 / tile, column: bounds.width / 2 / tile)
         enum Place { case leisure, water, steep, open }
         var candidates: [(point: PlanPoint, place: Place)] = []
         for cell in land.cells where cell.use == .leisure {
@@ -274,7 +287,7 @@ extension GameWorld {
             if beside >= 0, !terrain.isWater(row: run.row, column: beside) { candidates.append((cellCentre(row: run.row, column: beside), .water)) }
         }
         let margin: Int64 = 600 * WorldCoordinate.unitsPerMetre
-        var chosen: [(point: PlanPoint, place: Place)] = []
+        var chosen: [(point: PlanPoint, place: Place, key: String, index: Int)] = []
         func far(_ point: PlanPoint) -> Bool {
             let spacing = 3_000 * WorldCoordinate.unitsPerMetre
             return chosen.allSatisfy { other in
@@ -282,34 +295,57 @@ extension GameWorld {
                 return dx * dx + dy * dy >= spacing * spacing
             }
         }
-        var attempt = 0
-        while chosen.count < wanted, attempt < 200 {
-            defer { attempt += 1 }
-            let point: PlanPoint
-            let place: Place
-            if !candidates.isEmpty, attempt < 100 {
-                let pick = candidates[Int(draw.roll("tourism.pick.\(attempt)", in: 0...Int64(candidates.count - 1)))]
-                (point, place) = pick
-            } else {
-                let x = draw.roll("tourism.x.\(attempt)", in: margin...max(margin, bounds.width - margin))
-                let y = draw.roll("tourism.y.\(attempt)", in: margin...max(margin, bounds.height - margin))
-                (point, place) = (PlanPoint(x: x, y: y), .open)
+        // The middle tile first, then the others row by row.
+        var tiles = [middle]
+        for row in 0..<rows {
+            for column in 0..<columns where (row, column) != middle { tiles.append((row, column)) }
+        }
+        for (row, column) in tiles {
+            let key = (row, column) == middle ? "tourism." : "tourism.\(row).\(column)."
+            let west = column * tile, north = row * tile
+            let east = min(west + tile, bounds.width), south = min(north + tile, bounds.height)
+            let inside = candidates.filter { $0.point.x >= west && $0.point.x < west + tile && $0.point.y >= north && $0.point.y < north + tile }
+            var wanted = Int(draw.roll("\(key)count", in: 3...5))
+            if columns * rows > 1 {
+                // A part of a tile at the world's edge: as many for its area.
+                let area = (east - west) * (south - north)
+                wanted = Int((Int64(wanted) * area + tile * tile / 2) / (tile * tile))
             }
-            guard point.x >= 0, point.y >= 0, point.x < bounds.width, point.y < bounds.height, far(point) else { continue }
-            chosen.append((point, place))
+            var found = 0
+            var attempt = 0
+            while found < wanted, attempt < 200, chosen.count < Tourism.maximumAttractions {
+                defer { attempt += 1 }
+                let point: PlanPoint
+                let place: Place
+                if !inside.isEmpty, attempt < 100 {
+                    let pick = inside[Int(draw.roll("\(key)pick.\(attempt)", in: 0...Int64(inside.count - 1)))]
+                    (point, place) = pick
+                } else {
+                    let x = draw.roll("\(key)x.\(attempt)", in: west + margin...max(west + margin, east - margin))
+                    let y = draw.roll("\(key)y.\(attempt)", in: north + margin...max(north + margin, south - margin))
+                    (point, place) = (PlanPoint(x: x, y: y), .open)
+                }
+                guard point.x >= 0, point.y >= 0, point.x < bounds.width, point.y < bounds.height, far(point) else { continue }
+                chosen.append((point, place, key, found))
+                found += 1
+            }
         }
         var list: [Attraction] = []
-        for (index, spot) in chosen.enumerated() {
+        var used: Set<String> = []
+        for (number, spot) in chosen.enumerated() {
             let kind: AttractionKind = switch spot.place {
             case .water: .coast
             case .steep: .mountain
-            case .leisure: draw.roll("tourism.kind.\(index)", in: 0...1) == 0 ? .hotSpring : .town
-            case .open: AttractionKind.allCases[Int(draw.roll("tourism.kind.\(index)", in: 0...3))]
+            case .leisure: draw.roll("\(spot.key)kind.\(spot.index)", in: 0...1) == 0 ? .hotSpring : .town
+            case .open: AttractionKind.allCases[Int(draw.roll("\(spot.key)kind.\(spot.index)", in: 0...3))]
             }
             let names = Self.attractionNames[kind]!
-            let name = names[Int(draw.roll("tourism.name.\(index)", in: 0...Int64(names.count - 1)))]
-            list.append(Attraction(id: AttractionID(rawValue: index + 1), name: name.chinese, englishName: name.english, point: spot.point,
-                                   kind: kind, baseStars: Int(draw.roll("tourism.stars.\(index)", in: 2...4)) * 100))
+            // The drawn name, or the next one not used yet.
+            let drawn = Int(draw.roll("\(spot.key)name.\(spot.index)", in: 0...Int64(names.count - 1)))
+            let name = (0..<names.count).lazy.map { names[(drawn + $0) % names.count] }.first { !used.contains($0.chinese) } ?? names[drawn]
+            used.insert(name.chinese)
+            list.append(Attraction(id: AttractionID(rawValue: number + 1), name: name.chinese, englishName: name.english, point: spot.point,
+                                   kind: kind, baseStars: Int(draw.roll("\(spot.key)stars.\(spot.index)", in: 2...4)) * 100))
         }
         setTourism(list)
     }
@@ -318,11 +354,33 @@ extension GameWorld {
         PlanPoint(x: Int64(column) * Land.cellLength + Land.cellLength / 2, y: Int64(row) * Land.cellLength + Land.cellLength / 2)
     }
 
+    /// A blank map's names of each kind (decision 250: sixteen of each, so
+    /// a map of many tiles repeats few; the first three are decision 174's).
     static let attractionNames: [AttractionKind: [(chinese: String, english: String)]] = [
-        .coast: [("海岬燈塔", "Cape Lighthouse"), ("白沙灣", "White Sand Bay"), ("礁岩海岸", "Reef Coast")],
-        .mountain: [("雲海山頂", "Sea-of-Clouds Peak"), ("森林步道", "Forest Trail"), ("高山湖", "Alpine Lake")],
-        .hotSpring: [("溫泉鄉", "Hot Spring Village"), ("湯谷溫泉", "Hot Valley Spa"), ("碧潭溫泉", "Green Pool Spa")],
-        .town: [("老街", "Old Street"), ("古城門", "Old Town Gate"), ("市集廣場", "Market Square")],
+        .coast: [
+            ("海岬燈塔", "Cape Lighthouse"), ("白沙灣", "White Sand Bay"), ("礁岩海岸", "Reef Coast"), ("漁港碼頭", "Fishing Harbour"),
+            ("夕陽海堤", "Sunset Seawall"), ("貝殼沙灘", "Shell Beach"), ("海蝕洞", "Sea Caves"), ("紅樹林", "Mangrove Shore"),
+            ("觀浪步道", "Wave-watching Trail"), ("濕地鳥園", "Wetland Bird Park"), ("藍色海灣", "Blue Bay"), ("防風林海岸", "Windbreak Coast"),
+            ("岬角草原", "Headland Meadow"), ("鹽田", "Salt Pans"), ("潮間帶", "Tidal Flats"), ("沙丘", "Sand Dunes"),
+        ],
+        .mountain: [
+            ("雲海山頂", "Sea-of-Clouds Peak"), ("森林步道", "Forest Trail"), ("高山湖", "Alpine Lake"), ("瀑布谷", "Waterfall Valley"),
+            ("茶園山坡", "Tea Hills"), ("神木林", "Giant Tree Grove"), ("吊橋峽谷", "Suspension Bridge Gorge"), ("楓紅山谷", "Maple Valley"),
+            ("觀日峰", "Sunrise Peak"), ("竹林小徑", "Bamboo Path"), ("櫻花林道", "Cherry Blossom Road"), ("螢火蟲谷", "Firefly Valley"),
+            ("水庫湖畔", "Reservoir Shore"), ("石壁步道", "Cliff Trail"), ("高山牧場", "Highland Ranch"), ("星空草原", "Starlit Meadow"),
+        ],
+        .hotSpring: [
+            ("溫泉鄉", "Hot Spring Village"), ("湯谷溫泉", "Hot Valley Spa"), ("碧潭溫泉", "Green Pool Spa"), ("冷泉公園", "Cold Spring Park"),
+            ("泥漿溫泉", "Mud Spring"), ("溪畔湯屋", "Riverside Baths"), ("硫磺谷", "Sulphur Valley"), ("地熱谷", "Thermal Valley"),
+            ("山中湯宿", "Mountain Spa Inn"), ("竹林溫泉", "Bamboo Grove Spa"), ("碳酸泉", "Soda Spring"), ("雲霧溫泉", "Misty Spa"),
+            ("櫻花溫泉", "Blossom Spa"), ("足湯廣場", "Foot Bath Square"), ("野溪溫泉", "Wild Creek Spring"), ("溫泉老街", "Spa Street"),
+        ],
+        .town: [
+            ("老街", "Old Street"), ("古城門", "Old Town Gate"), ("市集廣場", "Market Square"), ("夜市", "Night Market"),
+            ("媽祖廟", "Mazu Temple"), ("糖廠", "Sugar Mill"), ("舊車站", "Old Station"), ("眷村", "Military Village"),
+            ("紅磚古厝", "Red Brick Mansion"), ("文創園區", "Creative Park"), ("藝術村", "Art Village"), ("主題樂園", "Theme Park"),
+            ("博物館", "Museum"), ("觀光工廠", "Factory Tour"), ("燈會廣場", "Lantern Square"), ("孔廟", "Confucius Temple"),
+        ],
     ]
 
     /// Builds the next level of attraction `id`'s souvenir shop: $300,000 a

@@ -154,6 +154,24 @@ final class SettingsUITests: XCTestCase {
         XCTAssertTrue(app.buttons["report.done"].disappears(within: 10), "Done did not go back to the game")
     }
 
+    /// On a phone on its side the game menu shows about six rows: its
+    /// Settings, the last, stays in reach without scrolling (main
+    /// 84a792e's full lane, run 38861445072: an eighth row put it out of
+    /// reach).
+    func testTheGameMenusSettingsIsInReachOnAPhoneOnItsSide() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        defer { XCUIDevice.shared.orientation = .portrait }
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-ui-testing-paused", "-demo-layout", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+
+        openSettingsFromTheGameMenu(app)
+        tap(app.buttons["settings.done"], name: "settings.done")
+        XCTAssertTrue(app.buttons["settings.done"].disappears(within: 10), "Done did not go back to the game")
+    }
+
     /// 2026-10-16: the shortcuts one tap from the game: the map's 3D
     /// button opens this game's 3D map; the postcard and the achievements
     /// stand in the game menu's first level; the train card shows its
