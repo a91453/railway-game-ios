@@ -16,9 +16,9 @@ struct BuildToolRail: View {
     /// dock. Past it the rail scrolls.
     let maxHeight: CGFloat
 
-    /// The column's width: as wide as the phone's tools column
-    /// (``ToolColumn``).
-    static let width: CGFloat = ToolColumnStyle.width
+    /// The column's width: 66.1's 72 points, wider than the phone's tools
+    /// column, as the map has room to spare beside it (``ToolColumn``).
+    static let width = CGFloat(ToolColumn.railWidth)
 
     /// Whether the rail shows.
     @MainActor
@@ -55,7 +55,7 @@ struct BuildToolRail: View {
     private func column(compact: Bool) -> some View {
         BuildToolButtons(session: session)
             .padding(ToolColumnStyle.tilePadding)
-            .environment(\.toolColumnStyle, ToolColumnStyle(compact: compact))
+            .environment(\.toolColumnStyle, ToolColumnStyle(compact: compact, buttonWidth: CGFloat(ToolColumn.railButtonWidth)))
     }
 }
 
