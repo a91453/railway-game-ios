@@ -619,9 +619,21 @@ final class ShellLayoutUITests: XCTestCase {
             let to = origin.withOffset(CGVector(dx: x, dy: list.frame.minY + 40 - app.frame.minY))
             from.press(forDuration: 0.1, thenDragTo: to, withVelocity: .slow, thenHoldForDuration: 0.3)
         }
-        let due = Date().addingTimeInterval(15)
+        let due = Date().addingTimeInterval(5)
         while !time.exists, Date() < due {
-            Thread.sleep(forTimeInterval: 1)
+            Thread.sleep(forTimeInterval: 0.5)
+        }
+        // Whether a train is due at the station just then depends on how the
+        // demo's trains run: at 07:17 its board listed one, at 07:20 in the
+        // next run none (runs 38871334760, 38873835534). With none, time runs
+        // again, the board in view, until one is due, and pauses then.
+        if !time.exists, resume.exists {
+            resume.tap()
+            let running = Date().addingTimeInterval(90)
+            while !time.exists, Date() < running {
+                Thread.sleep(forTimeInterval: 0.25)
+            }
+            if pause.exists { pause.tap() }
         }
         // Not dragged into view: a label inside a row read as one is never
         // hittable, and the drag would hunt for it (the sixth run). The
