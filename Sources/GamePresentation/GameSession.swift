@@ -208,7 +208,7 @@ public final class GameSession {
         didSet { if selectedTrackEdge != oldValue { trackUpgrade = nil } }
     }
     /// What the track card is about to build on ``selectedTrackEdge``
-    /// (decision 257, TrackUpgrade.swift): `nil` until the player picks
+    /// (decision 247, TrackUpgrade.swift): `nil` until the player picks
     /// "Make double track" or "Add X crossover".
     public internal(set) var trackUpgrade: TrackUpgradeKind?
     /// Which side of the picked track the second track goes, and whether
@@ -393,7 +393,7 @@ public final class GameSession {
     /// (decision 204, ``DoubleTrack``), on ``networkDoubleSide`` of the
     /// way it is drawn.
     /// With ``networkTracesRealRailway`` too, the traced stretch gets it
-    /// (decision 257).
+    /// (decision 247).
     public var networkBuildsDouble = false
     public var networkDoubleSide: PlatformTrackSide = .left
     /// Whether the next stretch follows the real railway under a

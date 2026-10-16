@@ -1,6 +1,6 @@
 import GameCore
 
-// Upgrading the track the select tool picked (ARCHITECTURE decision 257,
+// Upgrading the track the select tool picked (ARCHITECTURE decision 247,
 // the author's report: "點選軌道有升級複線或加入 X 轉轍器的選項"). On single
 // track, "Make double track" lays a second track 5 m beside it, from the
 // switch or track end before it to the one after (or only the piece
@@ -300,7 +300,7 @@ extension GameSession {
         switch scissorsPlan(from: start, to: end) {
         case .success(let found): plan = found
         case .failure(.notLevel):
-            // Decision 257: as the network tool's, on level track only.
+            // Decision 247: as the network tool's, on level track only.
             return refused(language.text("An X crossover can only go where the track is level.", "X 渡線只能建在平坦的路段。"))
         case .failure(let problem): return refused(problem.text(in: language))
         }

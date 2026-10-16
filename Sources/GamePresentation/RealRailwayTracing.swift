@@ -457,7 +457,7 @@ extension GameSession {
         var draft = world.pricingCopy()
         var cost: Money?
         var command = PlayerCommand.buildTrackChain(built)
-        // Decision 257: with double track on, the second track beside it.
+        // Decision 247: with double track on, the second track beside it.
         var double: Result<DoubleChainPlan, TraceDoubleProblem>?
         if networkBuildsDouble, !built.isEmpty {
             double = tracedDoublePlan(built, from: start, to: end, reachesEnd: !plan.stopped)
@@ -509,7 +509,7 @@ extension GameSession {
     }
 
     /// The traced stretch's `built` edges with a second track beside them
-    /// (decision 257), on ``networkDoubleSide``, and a crossover at each
+    /// (decision 247), on ``networkDoubleSide``, and a crossover at each
     /// end that joins track (the far end only when the trace gets there);
     /// or why not, as the player reads it.
     func tracedDoublePlan(
@@ -630,7 +630,7 @@ extension NetworkBuilding {
     }
 }
 
-/// Why a traced stretch's second track cannot be laid (decision 257), as
+/// Why a traced stretch's second track cannot be laid (decision 247), as
 /// the player reads it.
 struct TraceDoubleProblem: Error {
     let text: String

@@ -50,7 +50,7 @@ public enum PlayerCommand: Hashable, Sendable {
     /// network tool traces along a real line (decision 213,
     /// ``GameSession/tracePlan(from:to:)``), all of it or none.
     case buildTrackChain([TrackStretch])
-    /// A second track beside a chain (decision 257): `main` laid first as
+    /// A second track beside a chain (decision 247): `main` laid first as
     /// a chain (empty for track already there), then `parallel` as a chain,
     /// its `platforms`, then the `crossovers` joining it to the first track
     /// (``GameSession/planDoubleChain(main:run:parallel:platforms:wantsCrossover:in:)``),

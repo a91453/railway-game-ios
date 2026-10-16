@@ -67,7 +67,7 @@ struct InspectorView: View {
             if let inspection = session.trackInspection(of: edge), !inspection.lines.isEmpty {
                 lineButtons(inspection.lines)
             }
-            // Decision 257: make it double, or add an X crossover.
+            // Decision 247: make it double, or add an X crossover.
             TrackUpgradeControls(session: session)
         }
     }
@@ -500,7 +500,7 @@ struct TrainStatusCapsule: View {
     }
 }
 
-/// The picked track's upgrades (ARCHITECTURE decision 257): "Make double
+/// The picked track's upgrades (ARCHITECTURE decision 247): "Make double
 /// track" on single track, with the side the second track goes and how far
 /// it runs, and "Add X crossover" on double track. The map's ✓ beside the
 /// track shows the price and builds it (`MapBuildConfirm`).

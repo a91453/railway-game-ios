@@ -316,7 +316,7 @@ private struct BuildConfirmation {
             confirm = { _ = session.buyChosenMapTile() }
             return
         }
-        // Decision 257: the track card's upgrade, where the track was
+        // Decision 247: the track card's upgrade, where the track was
         // tapped, with its whole price.
         if session.tool == .select, let preview = session.trackUpgradePreview, let point = session.selectedPoint {
             start = nil

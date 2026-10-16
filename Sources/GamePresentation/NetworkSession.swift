@@ -138,7 +138,7 @@ extension GameSession {
             scissors
         } else if let traced = tracePreview(from: start, to: end) {
             // Decision 213: along the real line, when both ends are on one;
-            // decision 257: its second track drawn as a double track's.
+            // decision 247: its second track drawn as a double track's.
             traced
         } else {
             // The double track's parallel is drawn as the crossover's
@@ -1041,7 +1041,7 @@ public struct NetworkOverlay: Hashable, Sendable {
 extension GameSession {
     /// What the map draws for the network tool; `nil` with another tool.
     public var networkOverlay: NetworkOverlay? {
-        // Decision 257: the track card's drafted upgrade, drawn as the
+        // Decision 247: the track card's drafted upgrade, drawn as the
         // network tool's preview.
         if tool == .select, let draft = trackUpgradePreview {
             var overlay = NetworkOverlay()

@@ -1,6 +1,6 @@
 import GameCore
 
-// A second track beside a chain of edges (ARCHITECTURE decision 257): the
+// A second track beside a chain of edges (ARCHITECTURE decision 247): the
 // track traced along a real line with double track on, and the select
 // tool's "Make double track" on track already there. Both lay the same
 // thing: a parallel chain ``DoubleTrack/spacing`` (5 m) to one side, its

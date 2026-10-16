@@ -3,7 +3,7 @@ import GameCore
 @testable import GamePresentation
 import XCTest
 
-/// Decision 257: a traced stretch can be double track too, and the select
+/// Decision 247: a traced stretch can be double track too, and the select
 /// tool's track card makes single track double or adds an X crossover on
 /// double track, each previewed with its whole price and built as one
 /// command undo takes back.
