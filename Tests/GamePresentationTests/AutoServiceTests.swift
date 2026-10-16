@@ -1,5 +1,5 @@
 import Foundation
-import GameCore
+@testable import GameCore
 @testable import GamePresentation
 import XCTest
 
@@ -214,6 +214,27 @@ final class AutoServiceTests: XCTestCase {
         XCTAssertEqual(session.world.lines, before.lines)
         XCTAssertEqual(session.world.stations, before.stations)
         XCTAssertEqual(session.world.trains, before.trains)
+    }
+
+    /// A passing loop the player cannot afford is refused as the loop it
+    /// is, not as "add a train": its plan buys no train.
+    func testAPassingLoopRefusedForCashIsNamedAsTheLoop() throws {
+        let (world, a, b, c) = try stations(rules: .realistic)
+        let setup = GameSession(world: world)
+        draftLine([a, b], in: setup)
+        setup.staffSelectedLine(headway: 60)
+        draftLine([c, a, b], in: setup)
+        setup.staffSelectedLine(headway: 60)
+        var poor = setup.world
+        poor.economy.settle(Money(1_000 - poor.economy.balance.amount))
+        let session = GameSession(world: poor)
+        session.selectLine(poor.lines[1].id)
+        XCTAssertNotNil(session.selectedLinePassingShortfall)
+        session.addPassingLoopToSelectedLine()
+        let text = session.message?.text ?? ""
+        XCTAssertEqual(session.message?.kind, .failure, text)
+        XCTAssertTrue(text.contains("build this passing loop"), text)
+        XCTAssertFalse(text.contains("add a train"), text)
     }
 
     /// Realistic rules and the tutorial ask the player, as before.
