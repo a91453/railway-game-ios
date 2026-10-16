@@ -405,8 +405,9 @@ extension GameWorld {
     /// turns round there and waits at the next entry of its timetable for
     /// the same station, as if it had come back already, leaving out the
     /// calls between. Only a train standing beside that station's platform
-    /// its whole length (as at a terminus), whose timetable comes back
-    /// through the station after turning round on the way, and only where
+    /// its whole length (as at a terminus), part way along its timetable,
+    /// which comes back through the station after turning round on the
+    /// way and calls somewhere after that, and only where
     /// it can then leave from there now and leaving lets another train of
     /// the deadlock go.
     func shortTurn(of train: Train, in stuck: [TrainID: (candidate: Train, departs: Bool)]) -> Train? {
@@ -414,8 +415,12 @@ extension GameWorld {
               let place = train.placement
         else { return nil }
         let station = train.timetable[stop].station
-        guard stationsBesideWholeTrain(train.id).contains(station),
+        // Only part way along: turning at its first call for its last
+        // would give up the whole trip, not leave out the calls it cannot
+        // make.
+        guard stop > 0, stationsBesideWholeTrain(train.id).contains(station),
               let back = train.timetable.indices.dropFirst(stop + 1).first(where: { train.timetable[$0].station == station }),
+              back < train.timetable.count - 1,
               (stop + 1..<back).contains(where: { train.timetable[$0].reverses })
         else { return nil }
         var turned = train
