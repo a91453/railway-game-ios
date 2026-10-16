@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="290" viewBox="0 0 260 290">
+<rect width="260" height="290" fill="#fff"/>
+<text x="56.0" y="24" font-size="13" text-anchor="middle" fill="#333">67.1（前）</text>
+<rect x="20" y="40" width="72" height="52" rx="16" fill="#e8eef3" stroke="#9aa"/>
+<rect x="24" y="44" width="64" height="44" rx="10" fill="none" stroke="#9aa"/>
+<text x="56.0" y="72" font-size="12" text-anchor="middle" fill="#222"></text>
+<rect x="20" y="98" width="72" height="148" rx="16" fill="#e8eef3" stroke="#9aa"/>
+<rect x="24" y="102" width="64" height="44" rx="10" fill="none" stroke="#9aa"/>
+<text x="56.0" y="130" font-size="12" text-anchor="middle" fill="#222">資料</text>
+<rect x="24" y="150" width="64" height="44" rx="10" fill="none" stroke="#9aa"/>
+<text x="56.0" y="178" font-size="12" text-anchor="middle" fill="#222">路線</text>
+<rect x="24" y="198" width="64" height="44" rx="10" fill="#2e7d5b" stroke="none"/>
+<text x="56.0" y="226" font-size="12" text-anchor="middle" fill="#fff">建設</text>
+<text x="56.0" y="268" font-size="12" text-anchor="middle" fill="#555">72 pt</text>
+<text x="178.0" y="24" font-size="13" text-anchor="middle" fill="#333">66.1／這個 PR（後）</text>
+<rect x="150" y="40" width="56" height="52" rx="16" fill="#e8eef3" stroke="#9aa"/>
+<rect x="154" y="44" width="48" height="44" rx="10" fill="none" stroke="#9aa"/>
+<text x="178.0" y="72" font-size="12" text-anchor="middle" fill="#222"></text>
+<rect x="150" y="98" width="56" height="148" rx="16" fill="#e8eef3" stroke="#9aa"/>
+<rect x="154" y="102" width="48" height="44" rx="10" fill="none" stroke="#9aa"/>
+<text x="178.0" y="130" font-size="12" text-anchor="middle" fill="#222">資料</text>
+<rect x="154" y="150" width="48" height="44" rx="10" fill="none" stroke="#9aa"/>
+<text x="178.0" y="178" font-size="12" text-anchor="middle" fill="#222">路線</text>
+<rect x="154" y="198" width="48" height="44" rx="10" fill="#2e7d5b" stroke="none"/>
+<text x="178.0" y="226" font-size="12" text-anchor="middle" fill="#fff">建設</text>
+<text x="178.0" y="268" font-size="12" text-anchor="middle" fill="#555">56 pt</text>
+</svg>

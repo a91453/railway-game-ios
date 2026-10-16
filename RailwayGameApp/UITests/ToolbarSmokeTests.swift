@@ -515,6 +515,8 @@ final class ShellLayoutUITests: XCTestCase {
             return (id, button.frame)
         }
         guard let first = frames.first?.1 else { return }
+        // 66.1's width (TestFlight 67.1 beside 66.1, ``ToolColumn``).
+        XCTAssertEqual(first.width, 48, accuracy: 0.5, "The column's buttons are 48 points wide \(state): \(frames)", file: file, line: line)
         for (id, frame) in frames {
             XCTAssertEqual(frame.width, first.width, accuracy: 0.5, "\(id) is as wide as the toggle \(state): \(frames)", file: file, line: line)
             XCTAssertEqual(frame.height, first.height, accuracy: 0.5, "\(id) is as tall as the toggle \(state): \(frames)", file: file, line: line)

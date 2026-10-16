@@ -3,11 +3,20 @@ import XCTest
 
 /// Decision 226, later (TestFlight, 2026-10-16): the phone's tools column.
 final class ToolColumnTests: XCTestCase {
-    func testEveryGroupIsAsWideAsTheBuildingTools() {
-        // The building tools beside the map were 72 points wide before; the
-        // column's groups are as wide, and so are their buttons.
-        XCTAssertEqual(ToolColumn.width, 72)
+    func testTheColumnIsAsWideAsOn66_1() {
+        // TestFlight 67.1 beside 66.1: the phone's column back to 66.1's
+        // width, a button of 48 points (the narrowest a named button was)
+        // and the glass either side.
+        XCTAssertEqual(ToolColumn.buttonWidth, 48)
+        XCTAssertEqual(ToolColumn.width, 56)
         XCTAssertEqual(ToolColumn.buttonWidth + 2 * ToolColumn.tilePadding, ToolColumn.width)
+    }
+
+    func testTheBuildingToolsBesideTheMapKeep66_1sWidth() {
+        // The rail beside the map (an iPad's) was 72
+        // points on 66.1, and stays so: its buttons are 64.
+        XCTAssertEqual(ToolColumn.railWidth, 72)
+        XCTAssertEqual(ToolColumn.railButtonWidth + 2 * ToolColumn.tilePadding, ToolColumn.railWidth)
     }
 
     func testTheColumnStopsAGapBelowTheLayerStrip() {

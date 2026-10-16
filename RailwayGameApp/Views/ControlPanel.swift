@@ -141,7 +141,7 @@ struct TabLabel: View {
             // names stay the buttons' accessibility labels.
             Image(systemName: systemImage)
                 .font(.subheadline.weight(.semibold))
-                .frame(width: ToolColumnStyle.buttonWidth)
+                .frame(width: column?.buttonWidth)
                 .frame(minHeight: 32)
         } else {
             VStack(spacing: 2) {
@@ -157,7 +157,7 @@ struct TabLabel: View {
             .frame(minWidth: 48, maxWidth: .infinity, minHeight: 40)
             // In the column, one width whether chosen or not: a chosen
             // button's bolder name made it wider (TestFlight, 2026-10-16).
-            .frame(width: column == nil ? nil : ToolColumnStyle.buttonWidth)
+            .frame(width: column?.buttonWidth)
         }
     }
 }
@@ -169,8 +169,10 @@ struct TabLabel: View {
 /// their names.
 struct ToolColumnStyle: Equatable {
     var compact: Bool
+    /// Every button's width: the phone's column, or the wider building
+    /// tools beside the map (``ToolColumn/railButtonWidth``).
+    var buttonWidth = CGFloat(ToolColumn.buttonWidth)
 
-    static let buttonWidth = CGFloat(ToolColumn.buttonWidth)
     static let tilePadding = CGFloat(ToolColumn.tilePadding)
     static let buttonSpacing = CGFloat(ToolColumn.buttonSpacing)
     static let width = CGFloat(ToolColumn.width)
