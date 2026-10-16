@@ -76,7 +76,7 @@ public struct DepartureBoard: Equatable, Sendable {
             case passes
             case onTime
             case late(minutes: Int)
-            /// Late behind a late train: "前車誤點".
+            /// Late behind a late train: "前車誤點 4 分".
             case lateBehind(minutes: Int)
 
             public func text(in language: DisplayLanguage) -> String {
@@ -85,7 +85,7 @@ public struct DepartureBoard: Equatable, Sendable {
                 case .passes: language.text("Passes", "通過")
                 case .onTime: language.text("On time", "準點")
                 case .late(let minutes): language.text("\(minutes) min late", "誤點 \(minutes) 分")
-                case .lateBehind: language.text("Train ahead late", "前車誤點")
+                case .lateBehind(let minutes): language.text("\(minutes) min late, train ahead", "前車誤點 \(minutes) 分")
                 }
             }
 

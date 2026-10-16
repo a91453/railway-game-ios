@@ -87,6 +87,15 @@ extension GameSession {
         return nil
     }
 
+    /// Whether any of `id` has track beside it: looked for at a quarter,
+    /// half and three quarters of its length.
+    func hasTrackBeside(_ id: TrackEdgeID) -> Bool {
+        guard let geometry = world.trackGeometry(of: id) else { return false }
+        return [1, 2, 3].contains { quarter in
+            trackBeside(id, near: geometry.location(at: geometry.length * Int64(quarter) / 4).position.plan) != nil
+        }
+    }
+
     /// Whether the select tool picked single track that "Make double
     /// track" can be offered on: track with none beside it.
     public var canDoubleSelectedTrack: Bool {
@@ -215,6 +224,25 @@ extension GameSession {
         let run = trackRun(from: id, whole: trackUpgradeWholeRun)
         let segments = run.compactMap { ChainSegment(edge: $0.edge, reversed: $0.reversed, in: world) }
         guard !run.isEmpty, segments.count == run.count else { return refused(language.text("This track is gone.", "這段軌道已經不在了。")) }
+        // Only the piece picked was looked at for track beside it; a run to
+        // the switches can take in pieces that are double already, and the
+        // second track drawn over them used to be refused for its shape or
+        // spacing, not for what was wrong (the review of #695).
+        // A loop with no switch has no ends for the second track to start
+        // and end at, and was refused the same way.
+        if run.count > 1, let first = world.network.edge(run[0].edge), let last = run.last.flatMap({ world.network.edge($0.edge) }),
+           (run[0].reversed ? first.to : first.from) == (run[run.count - 1].reversed ? last.from : last.to) {
+            return refused(language.text(
+                "This track is a loop with no switch, so the second track has no ends to join. Choose \u{201C}This piece only\u{201D} to double it a piece at a time.",
+                "這是沒有道岔的環線，第二條軌道沒有兩端可以接。請選「只有這一段」，一段一段升級。"
+            ))
+        }
+        if run.count > 1, run.contains(where: { hasTrackBeside($0.edge) }) {
+            return refused(language.text(
+                "Part of this stretch already has a second track. Choose \u{201C}This piece only\u{201D} to double the piece picked.",
+                "這段路有一部分已經是複線。請選「只有這一段」，只把點的這一段升級。"
+            ))
+        }
         guard let parallel = parallelChain(beside: segments, side: trackUpgradeSide, in: world) else {
             return refused(language.text(
                 "There is no room for the second track 5 m beside this track. Try the other side.",

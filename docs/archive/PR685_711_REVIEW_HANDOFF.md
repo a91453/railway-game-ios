@@ -294,3 +294,97 @@ Session：https://claude.ai/code/session_01EsozfWmDmXd6Tp2f4fzExd（2026-10-16�
 | **合計（這一輪新發現）** | **14** | **6** | **8** |
 
 另有判定不成立的項目（第五節），不計入。
+
+## 十一、清理：現在修的、延後（等穩定）的、已經不成立的（2026-10-16）
+
+審查回報清理 session（session_01FUXNvfnNmoSMf58pgakpsF，派工 session_01AaAj4wvJMxJQuLWAoYu6S8 開出）在 main 8cef1a4 逐項重看第四節。作者 2026-10-16 說：「牽涉小的話現在修，牽涉大等穩定再修」。
+
+分類的標準：
+- **小**：只動 App 或 GamePresentation、局部、不改存檔與 GameCore 行為、不動 golden／replay。
+- **大**：動 GameCore 規則、存檔格式、效能架構、跨畫面的版面、要美術方案的、3D 渲染管線，或必須先在 Simulator／裝置上確認問題存在的。
+- 拿不準的歸大。
+
+### 現在修了
+
+| 項目 | PR | 玩家感受到的改變 |
+| --- | --- | --- |
+| 「升級為複線」在部分已是複線的路段上 | #728 | 預覽直接說「這段路有一部分已經是複線」，請玩家選「只有這一段」。以前只說「軌道形狀不合」；第二條在另一側時甚至會蓋成三條。 |
+| 沒有道岔的環形軌道升級成複線（原本「沒證實」） | #728 | 用六段的環線證實了：以前一樣只說「軌道形狀不合」，不會在同一點放兩個渡線，世界也不變。現在說「這是沒有道岔的環線」，請玩家一段一段升級。 |
+| UI 測試裡的固定等待（`sleep(1)`、出現後立刻問 `isHittable`、先 `swipeUp()` 再找） | #730 | 沒有。測試比較不會亂紅。 |
+| #680 從清單底邊開始拖（上兩輪第 10 項） | #730 | 沒有。拖曳的兩端夾在清單帶裡。 |
+| `map.style`（上兩輪第 5 項） | #730 | 沒有。 |
+
+### 延後（等穩定）
+
+| 項目 | 為什麼延後 | 建議做法 | 預估影響範圍 |
+| --- | --- | --- | --- |
+| 破產倒數時狀態列變寬（#711，決策 251） | 需要美術方案。牽涉 iPhone 和 iPad 的狀態列排法，也牽涉 `showsSeconds` 在 600 倍以上時的整分縮回。 | 美術 session 決定倒數放哪裡。可以疊在金額下方，或做成獨立的小膠囊。再把「破產倒數 9／30 天」兩種位數、兩種語言都加進 `StatusBarWidths` 的最寬文字，`HUDView.balance` 用 `WidestTextRoom` 保留空間。 | `HUDView.swift`、`StatusBarWidths.swift` 與測試、`ShellLayoutUITests` 的寬度斷言、`docs/UI_THEME.md` |
+| 景點標記的計算量（#701，`MapAttractionMarks.swift`） | 效能架構，而且還沒量到實際卡頓。 | 先在全島地圖用 Instruments 量。如果真的慢，把每個景點的星等與服務車站，按 `worldRevision` 記在 GamePresentation：建物或車站改變才重算。`hotelsNear` 改成用格子索引，不要掃所有建物。 | `MapAttractionMarks.swift`、`TourismText.swift`、新的記憶結構與 Linux 測試 |
+| 3D 牆面的亮窗（#690，`Map3DShaders.metal` 的 `plane [[flat]]`） | 3D 渲染管線，要在裝置上看。 | 在 vertex 端讓同一面牆的四個頂點帶一樣的 `plane`（建模時寫進 instance 資料），或在 fragment 用 `floor(plane/4 + 0.5)` 避開整數邊界。改完在 iPhone 上拍同一角度前後對照。 | `Map3DShaders.metal`、`Map3DModels.swift`（牆的頂點資料）、`Map3DTests` |
+| 3D 地圖開著時跳出月底報表（#697） | 要先在 Simulator 上確認 sheet 是不是真的被吃掉。報表的時機牽涉月報、年報、挑戰結束三種。 | `ContentView` 的三個 `onChange`（月底、年底、挑戰結束）在 `screen.showsMap3D` 時先不設 `screen.panel`。加一個 `onChange(of: screen.showsMap3D)`：關掉 3D 時，如果有 `pendingReport` 就打開（和現有「關掉面板後 0.5 秒」同一套）。另外加一支 UI 測試：開 3D、快轉過月底、關 3D，看報表有沒有出來。 | `ContentView.swift`、一支新 UI 測試（full lane） |
+| `TutorialJourneyUITests` 115（第二次縮小之後的 `sleep(1)`） | 等的是地圖鏡頭的縮放動畫，App 沒有給 UI 測試讀得到的狀態。要改 App。 | UI 測試時讓地圖的 accessibility value 帶鏡頭比例（和 `map.stations` 一樣只在 `-ui-testing` 時有）。測試等它連續兩次一樣。 | `MapView.swift`（只在 UI 測試時）、`TutorialJourneyUITests`、iPad 教學 job |
+| #638 Advanced 開關的 accessibility frame（上兩輪第 3 項） | 要在 Simulator 上看。線路面板 `Form` 裡的 `Toggle`（`LinesPanel.swift` `advancedSection`）整列的框只到 x≈582，開關畫在 x≈735（run 38641908091）。如果框真的不對，VoiceOver 也會受影響，要改面板的版面。測試已經改點列裡的 switch 本身（`toggle.switches.firstMatch`），所以不會再紅。 | 用 Accessibility Inspector 看那一列的框，和畫出來的開關位置是否一致。不一致的話，查面板寬度（#626 之後側欄變窄）是不是讓 `Form` 列的框沒有跟著版面更新。 | `LinesPanel.swift`、可能還有側欄的寬度計算 |
+| #638 月台測試依賴真實地形（上兩輪第 4 項，`RealWorldMapUITests`） | 要重新設計測試的地點，牽涉實景地圖的鏡頭和資料，不是局部改動。 | 讓測試讀 App 在 UI 測試時寫出的「平地位置」（像 `map.expansion.tiles`），或改用 demo 地圖測月台工具，把實景地圖的部分留給只看能不能打開的測試。 | `RealWorldMapUITests`、可能加一個 UI 測試專用的 accessibility value |
+| #657 坡道上切開軌道的錯誤訊息（上兩輪第 7 項） | 要把 GameCore 算切點高度的函式公開，讓工具共用。是 GameCore 的 API 改動。 | 把 GameCore 算切點 chainage 的函式改成 `public`。工具改用它來判斷「轉轍器不能在變坡處」。行為不變，golden 不動。 | `Sources/GameCore/Railway/`（只改可見性）、GamePresentation 的切軌工具與測試 |
+| 3D 深度精度（反向 Z，上兩輪第 11 項） | 3D 渲染管線，要在裝置上看。 | 投影矩陣改成反向 Z（near→1、far→0），深度比較改成 `greater`，深度格式維持 `depth32Float`。 | `Map3D` 的 renderer、shader、相機 |
+| CI 用 Swift 6.4.1，hook 和 CLAUDE.md 寫 6.4.0（上兩輪第 17 項） | 會改到每個平行 session 的開機環境（重新下載工具鏈）。現在很多 session 同時在跑，等穩定再一起換。 | `session-start.sh` 的版本改成 6.4.1。CLAUDE.md、`install-swift-linux.sh` 註解裡的 6.4.0 一起改。下載網址已確認存在（`swift-6.4.1-RELEASE`）。 | `.claude/hooks/session-start.sh`、`CLAUDE.md`、`.github/scripts/install-swift-linux.sh` 的註解 |
+| #632 拖曳時工具變淡卡住（剩極少見的情況） | 上一輪已經修了換工具和開面板的情況。剩下的是地圖 view 在拖曳中被拆掉，重現要 Simulator。 | 在地圖 `UIViewRepresentable` 的 `dismantleUIView` 把 `isDrawingUnderTools` 改回 false。 | `MapView.swift`、`ContentView.swift` |
+| 沒在用的 String Catalog key | 要在 Xcode 匯出才查得到，Linux 上做不到。 | 在 macOS 上用 Xcode 的「Export Localizations」，看標成 stale 的 key，一次清掉。 | `Localizable.xcstrings` |
+
+### 不成立或保留
+
+- 上兩輪第 1、2、8、12、14、16 項：已經修好（見第四節的表）。
+- 第 6 項 `unknownLinePattern` 的「pattern #3」：和別處的「停站模式 N」一致，保留。
+- 第 9 項 #659 Advanced 開關 390 ms 的觸控沒反應：已經查清楚，不是 App 的問題。清單還在減速時，點一下只會讓它停住，這是 iOS 本來的行為，玩家也一樣。兩次失敗都發生在最後一次短拖曳的一秒後；沒有拖曳的五次啟動，每次都一點就切換。測試現在先等清單停穩才點（`ToolbarSmokeTests` `setAdvanced` 的 `waitUntilSettled`）。
+- 第 13 項 3D 預覽的統計只有英文：刻意的（決策 229），保留。
+- 第 15 項 `RunSpacing.catches` 用 `Double`：實際上是決定性的，保留。
+- 這一輪 `TutorialJourneyUITests` 444 的 `sleep(1)`：在 main 上已經不在了（現在那裡是點擊後的 0.5 秒，屬於點擊本身的節奏）。
+
+### 第二批：`docs/HANDOFF.md` §7.1（舊審查交接 #200–#684 留下的 30 項）
+
+派工 session 在第一批之後加派。規則一樣。標「待查」的先確認是不是刻意的設計：是的話，在原決策補一節「後來」說明理由後結案，不改程式。
+
+**現在修了**
+
+| 項目 | PR | 玩家感受到的改變 |
+| --- | --- | --- |
+| 「前車誤點」沒寫自己誤點幾分（PR526_626 B8） | #735 | 看板寫「前車誤點 4 分」。 |
+| 待避線的號誌站名可能重複（PR401_525） | #735 | 拆掉或關掉車站之後，新的號誌站不會和現有的同名。 |
+| `LineLossFix.isAffordable` 不看無限資金（PR401_525） | #735 | 沒有。這個函式只有測試在用，App 的按鈕不受影響；直接拿掉。 |
+| 車隊總覽、列車控制每次重繪都重算列車狀態（U4） | #737 | 車隊總覽比較不卡，字一樣。 |
+| 描線時每次重繪都跑一次最短路徑（U7） | #737 | 描真實鐵路時拖曳比較順。 |
+| 描真實鐵路的總價沒有自己的測試（決策 245 的缺口） | #738 | 沒有（補測試，main 的行為本來就對）。 |
+| `meshy.mjs pack` 覆寫 index.json，丟掉 N700ST 的設定（PR319_400 §6-1） | #738 | 重新打包模型時，高鐵的顏色和陰影不會不見。 |
+| 解除配屬的貨運列車，車上還有貨時被當成客車顯示（PR319_400 §4-7） | #739 | 撤下的貨車照實寫車上還有幾噸，不是「載客 0」。 |
+
+**刻意的設計，已在原決策補「後來」結案**
+
+| 項目 | 決策 | 理由（一句） |
+| --- | --- | --- |
+| 無限資金時，完成訊息寫「$0」 | 200、245 | 決策 200 寫明訊息寫實際付的 $0；預覽在價錢副本上量出的也是 0，兩者一致。審查時試過改成原價，因為和兩個決策不一致，沒有採用。 |
+| 貨運載貨中被減節，載貨百分比超過 100%（待查） | 155 | 照參考：條封頂，數字照實，超載用超載的樣式。 |
+| 空車回送算進發車數與座位（待查） | 172 | 回送照記一次離站，滿載率才反映空車跑的那一段。 |
+| 地價圖層不畫只因臨水而加價的空格（待查） | 111 | 圖層跟著蓋了什麼長大、不跟著地圖大小，全島的海岸線很長。 |
+| 手機上只選了起點時，地圖上沒有 ✕（待查） | 136 | 第 4 點的設計：打開細節卡按「清除」，或按「完成」。 |
+| iPad CI 偶爾「Unable to find a device」 | — | 交接寫「之後沒再出現；再出現時才做」。條件還沒成立。 |
+
+**延後（等穩定）**
+
+| 項目 | 為什麼延後 | 建議做法 | 預估影響範圍 |
+| --- | --- | --- | --- |
+| 指令日誌滿 5,000 筆、起點往後移之後，復原歷史沒有跟著截（PR401_525） | 復原歷史是 `GameWorld` 的快照，沒有對應到日誌的位置，要加對應關係。只在暫停中連續記兩千多筆才會遇到，而且只影響回報的重播。 | 記下每個復原快照是在第幾筆日誌之後。日誌起點往後移時，丟掉起點之前的快照（重做也一樣）。 | `CommandLog.swift`、`GameSession` 的 undo／redo、`CommandLogTests` |
+| 閒置快轉跨午夜時，飯店住客用預估值（PR401_525） | GameCore 觀光規則。改了會動到閒置快轉和逐分鐘的一致性，以及 golden／replay。 | 快轉在午夜切開：先結算當天，再用實際人數算住客。用 `FlexDispatchTests` 那種「一次推進＝逐分鐘」的測試鎖住。 | `Sources/GameCore/Passenger/Tourism.swift`、GameCore 測試，可能還有 golden |
+| 載客量圖層對固定班次的路線，兩個方向、全天都用同一個容量（PR319_400 §4-5） | `SectionFlow` 的容量只按路段、不分方向。要照 `line.runs` 算，得把資料結構改成分方向、逐時。 | `capacities(of:)` 有班次時，改從每班的方向和經過各段的時間累加，結果改成 `[方向][段][時]`。 | `SectionFlow.swift` 與測試、App 的圖層 |
+| 建物讀土地的範圍 64 m，小於遊樂園的半對角線約 79 m（PR319_400 §4-8） | 讀土地也發生在指令重播（`PlayerCommandEdit` 的 `readLand`），改範圍會改到重播出來的世界。 | 範圍改成「最大建物的半對角線加淨空」（約 96 m）。同時確認 `ReplayFixtures` 和舊回報的重播不受影響；受影響的話，把範圍記進日誌的 `readLand(reach:)`（它已經有 reach 欄位）。 | `BuildingSession.swift`、`PlayerCommandEdit.swift`、重播測試 |
+| 月報的「創新高」只比票收和乘客，沒算貨運（PR319_400 §4-10） | 要新增一種標題（貨運收入創新高），是報表文字的設計。 | `MonthlyHeadline.Item` 加 `.freight`，排在票收、乘客之後；兩種語言的標題、月報測試一起加。 | `MonthlyReportText.swift`、`MonthlyReportTests` |
+| 名產店沒檢查是否在已買的地圖區塊（PR319_400 §4-10） | GameCore 規則（觀光商店的建造驗證）。 | 和車站、建物一樣用 `isOwned` 檢查，拒絕時用既有的「這塊地還沒買」錯誤。要考慮舊存檔裡已經蓋在外面的店。 | `Sources/GameCore/Passenger/Tourism.swift`、GameCore 測試 |
+| 縮放鈕讓位在 iPad 也會觸發，開 VoiceOver 時沒有別的縮放方式（PR200_290 §4-3） | App 版面，要 Simulator 驗證；`MapView.swift` 也有別的 PR 在改（#724）。 | 判斷條件改成「留給地圖的寬度」或只在手機上生效。開著 VoiceOver 或切換控制時，一律保留縮放鈕，另外給地圖加 `accessibilityZoomIn/Out` 動作。 | `MapView.swift`、決策 123、一支 UI 測試 |
+| 拖曳鋪軌時，邊緣捲動區用整張地圖量，被卡片蓋住（PR200_290 §4-4） | App 手勢，要 Simulator 驗證，`MapView.swift` 同上。 | 邊緣區改用扣掉卡片與工具欄 inset 之後的可見區域來量（`MapCover` 已經算好可見區域）。 | `MapView.swift` |
+| 城市需求幾乎沒有工作時，某些夜晚完全不成長（PR200_290 §9，待查） | 不是刻意的：權重以千分之一取整到 0。但這是 GameCore 城市規則，改了會動到 golden。 | 權重小於 1 但大於 0 時至少給 1，或改用餘數累積。先用經濟平衡的報告測試量影響。 | GameCore 城市成長、golden |
+| 成長動畫在很窄的時間窗裡，仍把讀進的土地當成新建物（PR200_290 §10，待查） | 不是刻意的。只在 23:5x 讀進土地、背景計算跨午夜時發生，只影響動畫。要處理背景計算的取消。 | 天際線的背景計算被取消時，下一次比較改用最後一次完整算完的天際線，不用更舊的。 | App 的天際線計算、`CitySkyline` |
+| 城市建物關閉時，出售建物的人可能搬進別棟的方塊（PR200_290 §10，待查） | 不是刻意的，但只有 GameCore API 會碰到（App 的新遊戲兩者都開）。 | 和 #325 的修法一樣，用搬進去之後那棟建物的方塊判斷，也涵蓋城市建物關閉的情況。 | GameCore 城市建物、測試 |
+| 固定班次只服務部分方向時，另一方向的乘客一直等（PR200_290 §10，待查） | 不是刻意的，但只有 GameCore API 或示範資料會設定這種班次（平溪線兩個方向都有）。GameCore 乘客規則。 | 沒有班次服務的方向不產生乘客，或讓他們改搭其他路線。 | GameCore 乘客、固定班次、golden |
+| 匯入的存檔會解鎖成就（決策 200） | 要升存檔版本（先在 #231 取號）。 | 世界記一個「從匯入來的」旗標，`checkAchievements` 看到就不解鎖；舊存檔缺 key 當作不是匯入的。 | `SavedGame`、`GameLauncher`、新的 SaveFixture |
+| 官網 3D 頁的設定用中文名稱存，瀏覽器換語言就不見（PR319_400 §6-2） | 網頁（`Web/CityView`），要在瀏覽器裡驗證，也要讀得回舊的中文 key。 | 存的時候把中文名稱換回英文（`GUI_ZH` 的反查），讀的時候反過來；舊的中文 key 先換成英文再讀。 | `Web/CityView/src/main.js` |
+| ARCHITECTURE 裡決策 240 排在其他決策後面（PR647_684 §4） | 現在決策 240 在檔案最後，開著的 PR 都把自己的決策插在「### 240.」前面。移動它會讓那些 PR 全部衝突。 | 等開著、動到 ARCHITECTURE 的 PR 都合併後，把 240 那一段搬到 239 和 241 之間，單獨一個 PR。 | `docs/ARCHITECTURE.md` |
+| 把 `BoardingPropertyTests`（624 秒）、`LineDispatchPropertyTests`（602 秒）各拆成兩半（PR647_684 §9） | 改 CI 腳本會跑完整的 Swift tier（19 個 job），要向合併 session 排名額。 | 照 #718 的做法，在 `swift-shards.sh` 的 `classes_of` 把兩個 class 用 `--filter` 的 test 名稱拆成兩組，放到不同 shard，再看兩次 main 的時間。 | `.github/scripts/swift-shards.sh` |

@@ -191,6 +191,9 @@ final class GameAudio {
         case .income: 0.35
         case .refused: 0.5
         case .warning: 0.45
+        // Decision 256: as loud as a watched train's chime, which it
+        // shares its phrase with.
+        case .goalMet: 0.55
         }
     }
 
@@ -229,6 +232,8 @@ final class GameAudio {
         // worries (a new day's) sounds once.
         case .refused: .milliseconds(600)
         case .warning: .seconds(2)
+        // Decision 256: goals met at the same midnight sound once.
+        case .goalMet: .seconds(2)
         }
     }
 
@@ -237,7 +242,7 @@ final class GameAudio {
         switch cue {
         case .refused: .error
         case .warning: .warning
-        case .built: .success
+        case .built, .goalMet: .success
         case .arrival, .track, .transition, .income: nil
         }
     }
