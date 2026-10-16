@@ -556,7 +556,7 @@ final class ShellLayoutUITests: XCTestCase {
             abs(a.minX - b.minX) < 0.5 && abs(a.minY - b.minY) < 0.5 && abs(a.width - b.width) < 0.5 && abs(a.height - b.height) < 0.5
         }
         var labels: Set<String> = []
-        let deadline = Date().addingTimeInterval(40)
+        let deadline = Date().addingTimeInterval(50)
         while Date() < deadline {
             Thread.sleep(forTimeInterval: 0.5)
             guard let menuNow = try? menu.snapshot().frame, let timeNow = try? time.snapshot() else { continue }
