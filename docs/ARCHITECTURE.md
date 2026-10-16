@@ -10017,6 +10017,36 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
 **參考**：參考庫的 OpenWorld `destination-catalog.js`（原本 27 列，決策 174 已用）；`OpenWorld/reference_snapshot/play/src/world/taipei-landmark-catalog.js` 的台北地標名單（只有名字與描述，沒有座標；其中台北 101、中正紀念堂、龍山寺、西門町、大稻埕迪化街、華山、國父紀念館、饒河街夜市、士林夜市、台北故宮收進來）；`Railway/site_archive_clean/rail-3d/landmark-catalog.js` 的 5 個地標座標（台北 101、中正紀念堂、國父紀念館、新光摩天大樓、高雄 85 大樓；收了 101、中正紀念堂、國父紀念館、85 大樓，座標仍由工具從 OSM 找，和它的差不到 50 m）；`Railway/island_city_reference_clean` 只有遊戲內的觀光收入規則，沒有地點資料。外部專案：沒有可用的（OpenTTD、Simutrans 沒有台灣的景點資料）；資料是 OpenStreetMap（ODbL 1.0，`DataSourceCredits` 已列「實景地圖上觀光景點的位置」）。
 
+### 251. 狀態列與跟隨列的寬度：會變的字留最寬時的位置，次要的縮成圖示
+
+交接（`docs/archive/PR647_684_REVIEW_HANDOFF.md` 第四節）：狀態列裡會改寬度的元素（金額、日期、倍速、天氣、連假、徽章）讓整列在小手機上跳動；跟隨列很窄時字會超出（`FollowBar.swift` 每一列都 `.fixedSize()`）。號碼依 #231：main 250，還沒釋出的登記到 250，取 251。只改畫面（GamePresentation 與 App），GameCore、存檔版本、golden schema 不動。
+
+**原因**（origin/main 84a792e）：狀態列（`HUDView`）寫多寬就多寬，四種排法用 `ViewThatFits` 挑第一個放得下的。日期每天不同寬（「May 9」「May 28」、星期的名字），連假那天多一個名字，天氣圖示每種寬度不同，以 600× 以下的速度跑時秒數每到整分就消失再出現，暫停時倍速旁多一個黃點。SE 橫放平常的一天整列 640 pt，離可用的 647 pt 只差 7 點，任何一個變寬就換排法，暫停鈕和倍速跟著移到別處。
+
+**做法**：
+1. `StatusBarWidths`（GamePresentation）列出每一塊能顯示的最寬的字：這一年每種寫法的日期（月份與星期的名字、數字取最多位，加不加秒照 `showsSeconds`：速度在 600× 以下，暫停也算）、金額（同樣位數、至少 7 位、加負號）、所有倍速、「888 km/h」、彎道限速。數字是 `monospacedDigit`，所以只要位數一樣就一樣寬。
+2. App 的 `WidestTextRoom`：用 UIKit 量這些字，取最寬的那個藏在原本的字後面（`ZStack`，`hidden()`），字就有固定的位置。每一組只量一次（依字級與這一組的鍵記住）。
+3. 天氣圖示佔固定 20 點；連假不再寫名字，把時鐘換成 `warning` 色的旗子，名字留在預報（`ForecastView` 本來就寫）與 VoiceOver（時間的值）；倍速旁的黃點位置一直留著。
+4. 跟隨列（`FollowBar`）加最後一種排法：只有線號徽章和取消跟隨的叉，一定放得下。
+5. 規則寫進 `docs/UI_THEME.md`「狀態列與跟隨列的寬度」。
+
+**四方**：
+- 玩家：狀態列一整年同一個寬度、同一種排法，暫停、換倍速、過了一天都不會讓旁邊的鈕移到手指下；小手機上跟隨列不再超出畫面。代價是 SE 上平常就用「金額疊在時間上」的兩層排法（之前平常一列、偶爾換兩層）。
+- 開發：要留多寬全在 GamePresentation，有 Linux 測試（一年每一天的日期都被涵蓋、秒數的位置暫停時也留、金額到 7 位數同寬）；App 只量字、藏一個字，不用另外的版面計算。
+- 美術：沒有新的顏色；連假用形狀（旗子）不只靠顏色；數字等寬，數字跳動時不會左右晃。
+- 音樂：無。
+
+**沒選的**（預覽在 `docs/art/status-bar-width-2026-10-16/`）：
+- B：照舊寫多寬就多寬（`b-now.png`）。
+- C：手機上時間一律自己一列（`c-time-row.png`）：不換排法，但到處都是兩列高，寬度仍然每天變。
+- D：次要的先縮成圖示、不留位置（`d-icons-first.png`）：日期和金額還是會變寬變窄。
+- 只用 `monospacedDigit`：已經在用；星期、月份的名字、秒數、連假仍會改寬度。
+- 寬度只增不減（記住看過最寬的）：前幾天還是會換排法，而且每台裝置、每次開啟都要重新「學」。
+
+**測試**：`StatusBarWidthsTests`（一年每一天、兩種語言、兩種長度、有秒與沒秒的日期都被涵蓋；秒數的位置在暫停時也留著；金額到 7 位數同寬、8 位數才變寬；倍速、列車速度、彎道限速的最寬字）。畫面上的寬度由 UI 測試 `ShellLayoutUITests.testTheStatusBarKeepsItsWidthAsTheDaysGoBy` 看：最大字級、6000× 跑 50 秒（Simulator 跟得上的約一天半，至少換一天），選單鈕不動、日期的寬度不變，暫停與繼續也不動（full lane，不進 gate）。
+
+**參考**：參考庫 `Railway/commuter_journey_reference_clean/source/css/hud.css` 的計時面板是 `min-width: 145px` 加 `font-variant-numeric: tabular-nums`，其他面板 `min-width: 0` 讓位，和這裡「會變的字留位置、數字等寬、次要的讓位」同一個想法；`island_city_reference_clean` 的數字也是 `tabular-nums`。沒有直接搬程式碼（CSS 對 SwiftUI）。外部專案沒有找到可用的。
+
 ### 252. 台鐵車款擴充：EMU100、莒光號（E200／E500／R100／R200 牽引）、海風號
 
 2026-10-16，遊戲規劃 session 派工（NEXT_PRIORITIES §15.2 第 1 名、§15.3 第 3 項）。號碼依工作登記 #231：決策 252，存檔版本與 golden schema 不動。建在決策 225（車型表）、227（車長）、236／237（性能表）、243（外觀）上：**只加列**，既有的列一個值都不改；golden、`SaveFixtures/`、`ReplayFixtures/` 都不動。

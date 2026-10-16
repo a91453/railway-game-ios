@@ -522,6 +522,61 @@ final class ShellLayoutUITests: XCTestCase {
         }
     }
 
+    /// Decision 251: the status bar keeps one width while the days go by
+    /// and the game is paused and resumed, at the largest text: the menu
+    /// button and the date stay where they are (on main the date's width
+    /// changed from day to day, a holiday added its name and pausing added
+    /// a dot, and near a layout's edge the bar changed its layout).
+    func testTheStatusBarKeepsItsWidthAsTheDaysGoBy() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-ui-testing", "-demo-layout", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
+            "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryXXXL",
+        ]
+        app.launch()
+        defer { app.terminate() }
+        let menu = app.buttons["hud.menu"]
+        let time = app.buttons["hud.time"]
+        menu.waitUntilSettled(timeout: 15)
+        XCTAssertTrue(time.appears(within: 10))
+        // The fastest speed: a day in about 15 seconds where the device
+        // keeps up.
+        let speed = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Speed")).firstMatch
+        XCTAssertTrue(speed.appears(within: 10))
+        speed.tap()
+        let fast = app.buttons["6000 times real time, fast forward"]
+        XCTAssertTrue(fast.appears(within: 10))
+        fast.tap()
+        XCTAssertTrue(fast.disappears(within: 10))
+        menu.waitUntilSettled()
+        let start = (menu: menu.frame, time: time.frame, label: time.label)
+        func same(_ a: CGRect, _ b: CGRect) -> Bool {
+            abs(a.minX - b.minX) < 0.5 && abs(a.minY - b.minY) < 0.5 && abs(a.width - b.width) < 0.5 && abs(a.height - b.height) < 0.5
+        }
+        var labels: Set<String> = []
+        let deadline = Date().addingTimeInterval(50)
+        while Date() < deadline {
+            Thread.sleep(forTimeInterval: 0.5)
+            guard let menuNow = try? menu.snapshot().frame, let timeNow = try? time.snapshot() else { continue }
+            labels.insert(String(timeNow.label.prefix(while: { $0 != ")" })))
+            XCTAssertTrue(same(menuNow, start.menu), "The menu button moved as the days went by: \(start.menu) then \(menuNow), \(timeNow.label)")
+            XCTAssertEqual(timeNow.frame.width, start.time.width, accuracy: 0.5, "The date changed its width: \(start.label) then \(timeNow.label)")
+        }
+        // The Simulator keeps up with about a day and a half of it (run
+        // 38866488755: Jan 1 to Jan 2).
+        XCTAssertGreaterThanOrEqual(labels.count, 2, "No day went by: \(labels.sorted())")
+        // Pausing and resuming move nothing either.
+        let pause = app.buttons["Pause"]
+        XCTAssertTrue(pause.appears(within: 5))
+        pause.tap()
+        XCTAssertTrue(app.buttons["Resume"].appears(within: 5))
+        XCTAssertTrue(same(menu.frame, start.menu), "Pausing moved the menu button: \(menu.frame)")
+        app.buttons["Resume"].tap()
+        XCTAssertTrue(pause.appears(within: 5))
+        XCTAssertTrue(same(menu.frame, start.menu), "Resuming moved the menu button: \(menu.frame)")
+    }
+
     /// The station's board in the panel beside the map: each train in two
     /// lines, its time and minutes never broken a character a line (the
     /// TestFlight report: "1／2:／5／5", "17／分").
