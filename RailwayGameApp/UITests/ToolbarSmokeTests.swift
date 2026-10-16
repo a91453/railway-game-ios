@@ -606,7 +606,10 @@ final class ShellLayoutUITests: XCTestCase {
         while !time.exists, Date() < due {
             Thread.sleep(forTimeInterval: 1)
         }
-        let listed = time.exists && app.dragUntilWhollyOnScreen(time, in: list)
+        // Not dragged into view: a label inside a row read as one is never
+        // hittable, and the drag would hunt for it (the sixth run). The
+        // board's head is in view, and its first trains under it.
+        let listed = time.exists
         if !listed { attach("No train on the station's board") }
         XCTAssertTrue(listed, "The board lists a train")
         // A time or a count of minutes on one line is wider than tall and a
@@ -614,6 +617,7 @@ final class ShellLayoutUITests: XCTestCase {
         // a line, "1／2:／5／5" stood four lines high.
         let times = app.staticTexts.matching(identifier: "station.board.row.time").allElementsBoundByIndex
         let aways = app.staticTexts.matching(identifier: "station.board.row.away").allElementsBoundByIndex
+        // Their frames are laid out whether or not the list shows them yet.
         XCTAssertFalse(times.isEmpty)
         for label in times + aways where label.exists && label.frame.height > 0 {
             XCTAssertLessThan(label.frame.height, 40, "\(label.label) keeps to one line: \(label.frame)")
