@@ -73,3 +73,33 @@ struct AchievementsView: View {
         .accessibilityIdentifier("achievement.\(achievement.id)")
     }
 }
+
+/// The achievements from the game menu's first level (decision 226,
+/// later): the list with a Done button, and the game's progress measured
+/// once a day rather than on every tick.
+struct AchievementsSheet: View {
+    let session: GameSession
+    let records: AchievementRecords
+    @Environment(\.dismiss) private var dismiss
+    @State private var facts: AchievementFacts?
+
+    var body: some View {
+        let today = session.world.clock.now.seconds / GameTime.secondsPerDay
+        NavigationStack {
+            AchievementsView(language: session.language, records: records, facts: facts)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button {
+                            dismiss()
+                        } label: {
+                            Text(verbatim: session.language.text("Done", "完成"))
+                        }
+                        .accessibilityIdentifier("achievements.done")
+                    }
+                }
+        }
+        .task(id: today) {
+            facts = AchievementFacts(world: session.world)
+        }
+    }
+}

@@ -232,7 +232,7 @@ private struct PostcardPicture {
     let image: Image
 }
 
-/// "Make a Postcard" (decision 215), from the game menu's More: the card as
+/// "Make a Postcard" (decision 215), from the game menu: the card as
 /// it will be shared, the company's name to write on it, light or dark, and
 /// the share button, which hands the picture (1200 by 1500 pixels) to the
 /// system's share sheet. The card shows the network as it was when the

@@ -595,8 +595,15 @@ struct MapView: View {
                             }
                             .padding(.trailing, 12)
                         }
-                        if !zoomGivesWay {
-                            zoomControls(camera: projection, limit: zoomLimit)
+                        HStack(spacing: 0) {
+                            // Decision 229, later: this game's 3D map, one
+                            // tap away, beside the zoom buttons.
+                            if Map3DShortcut.isShown(zoomButtonsShow: !zoomGivesWay, tutorialRuns: session.tutorial != nil) {
+                                map3DButton
+                            }
+                            if !zoomGivesWay {
+                                zoomControls(camera: projection, limit: zoomLimit)
+                            }
                         }
                     }
                     .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.mapArea)) } action: { bottomTrailingFrame = $0 }
@@ -1417,6 +1424,25 @@ struct MapView: View {
         #else
         false
         #endif
+    }
+
+    /// Decision 229, later: opens this game's 3D map (``Map3DShortcut``),
+    /// as round as the overview map's button above it.
+    private var map3DButton: some View {
+        Button {
+            screen.showsMap3D = true
+        } label: {
+            Image("Glyph3DMap")
+                .resizable()
+                .renderingMode(.template)
+                .frame(width: 24, height: 24)
+                .frame(width: 44, height: 44)
+                .glassBackground(in: Circle(), interactive: true)
+        }
+        .accessibilityLabel(Text(verbatim: session.language.text("3D Map", "3D 地圖")))
+        .accessibilityHint(Text(verbatim: session.language.text("Shows your railway, trains and town in 3D.", "用 3D 看你的鐵路、列車與城鎮。")))
+        .accessibilityIdentifier("map.open3D")
+        .padding(.vertical, 12)
     }
 
     /// `limit`: how close the base map lets the camera come
