@@ -180,25 +180,33 @@ private final class TutorialJourney {
 
         // Done usually set time running, and the step that asks for it is
         // then passed over (`moveTutorialForward`).
-        if arrive(atOneOf: [15, 16]) == 15 {
+        // The first fares can come in seconds later, and the step that
+        // waits for them moves on by itself: both steps passed between two
+        // looks at the card (main 878adaf's full lane, run 38878787559:
+        // step 17 next), and the line's card is the next step then.
+        var shown = arrive(atOneOf: [15, 16, 17])
+        if shown == 15 {
             let resume = app.buttons["Resume"]
             check(resume, "▶︎ (Resume)")
             resume.tap()
-            arrive(at: 16)
+            shown = arrive(atOneOf: [16, 17])
         }
-        // The step points at the cash and the speed.
-        let cash = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Cash")).firstMatch
-        check(cash, "the cash")
-        let speed = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Speed:")).firstMatch
-        check(speed, "the speed menu")
-        // The first fares come in at an hour's settlement after the trains
-        // set off at 06:00; at the speed Done resumes, that is under a
-        // minute. If not, the speed menu goes faster, as the hint says.
-        if !waitForStep(after: 16, timeout: 60) {
-            speed.tap()
-            let fastest = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "6000 times real time")).firstMatch
-            if fastest.appears(within: 5) {
-                fastest.tap()
+        if shown == 16 {
+            // The step points at the cash and the speed.
+            let cash = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Cash")).firstMatch
+            check(cash, "the cash")
+            let speed = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Speed:")).firstMatch
+            check(speed, "the speed menu")
+            // The first fares come in at an hour's settlement after the
+            // trains set off at 06:00; at the speed Done resumes, that is
+            // under a minute. If not, the speed menu goes faster, as the
+            // hint says.
+            if !waitForStep(after: 16, timeout: 60) {
+                speed.tap()
+                let fastest = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "6000 times real time")).firstMatch
+                if fastest.appears(within: 5) {
+                    fastest.tap()
+                }
             }
         }
 
@@ -274,11 +282,15 @@ private final class TutorialJourney {
     /// snapshot, nil when it is gone: a card that folded between `exists`
     /// and `label` failed the label's lookup.
     private func shownStep() -> Int? {
-        if let title = try? app.staticTexts["tutorial.title"].firstMatch.snapshot(),
+        // `exists` first: a snapshot of an element not there is tried three
+        // times, about four seconds, while the card is folded, and a step
+        // that moves on by itself could pass between two looks.
+        let title = app.staticTexts["tutorial.title"].firstMatch
+        if title.exists, let title = try? title.snapshot(),
            let index = Self.titles.firstIndex(of: title.label) {
             return index + 1
         }
-        if let pill = try? folded.firstMatch.snapshot(),
+        if folded.exists, let pill = try? folded.firstMatch.snapshot(),
            let index = Self.titles.firstIndex(where: { pill.label.hasSuffix(": " + $0) }) {
             return index + 1
         }
