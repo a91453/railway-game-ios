@@ -246,6 +246,13 @@ extension GameWorld {
         return language.text("waiting \(groups.joined(separator: ", "))", "候車 \(groups.joined(separator: "、"))")
     }
 
+    /// Whether train `id`'s load is tons: it is on a freight line, or was
+    /// and still has cargo on board, which is lost at the next whole hour
+    /// (decision 155); for that hour it read "riding 0".
+    func carriesFreight(_ id: TrainID) -> Bool {
+        isFreightTrain(id) || cargoOnBoard(of: id) > 0
+    }
+
     /// How full train `id` is, such as "640 riding · 33%": riders over its
     /// rated capacity (cars × 320), rounded half up, as the reference's
     /// load (``TrainLoadInfo/percentage(passengers:capacity:)``). `nil` if
@@ -253,7 +260,7 @@ extension GameWorld {
     public func loadText(of id: TrainID, in language: DisplayLanguage) -> String? {
         guard let load = trainLoadInfo(of: id), load.passengerCount > 0 else { return nil }
         // Decision 155: a freight train's load is its tons.
-        if isFreightTrain(id) {
+        if carriesFreight(id) {
             return language.text("\(load.passengerCount) t aboard · \(load.percentage)%", "載貨 \(load.passengerCount) 噸 · \(load.percentage)%")
         }
         return language.text("\(load.passengerCount) riding · \(load.percentage)%", "載客 \(load.passengerCount) 人 · \(load.percentage)%")
@@ -264,7 +271,7 @@ extension GameWorld {
     public func trainLoadInfo(of id: TrainID) -> TrainLoadInfo? {
         guard let train = train(id: id) else { return nil }
         // Decision 155: a freight train's tons over its cars' tons.
-        if isFreightTrain(id) {
+        if carriesFreight(id) {
             return TrainLoadInfo(passengerCount: cargoOnBoard(of: id), capacity: Self.freightCapacity(cars: train.cars), isFreight: true)
         }
         let count = riders(of: id).reduce(Int64(0)) { $0 + $1.count }
@@ -277,7 +284,7 @@ extension GameWorld {
     /// service, so it counts in neither. `nil` when no train is placed.
     public func fleetLoadInfo() -> TrainLoadInfo? {
         // Decision 155: freight trains carry tons, not riders.
-        let placed = trains.filter { $0.position != nil && !isFreightTrain($0.id) }
+        let placed = trains.filter { $0.position != nil && !carriesFreight($0.id) }
         guard !placed.isEmpty else { return nil }
         let count = placed.reduce(Int64(0)) { sum, train in sum + riders(of: train.id).reduce(0) { $0 + $1.count } }
         let capacity = placed.reduce(Int64(0)) { $0 + $1.ratedCapacity }
