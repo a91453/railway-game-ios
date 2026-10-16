@@ -323,8 +323,7 @@ Session：https://claude.ai/code/session_01EsozfWmDmXd6Tp2f4fzExd（2026-10-16�
 | 3D 牆面的亮窗（#690，`Map3DShaders.metal` 的 `plane [[flat]]`） | 3D 渲染管線，要在裝置上看。 | 在 vertex 端讓同一面牆的四個頂點帶一樣的 `plane`（建模時寫進 instance 資料），或在 fragment 用 `floor(plane/4 + 0.5)` 避開整數邊界。改完在 iPhone 上拍同一角度前後對照。 | `Map3DShaders.metal`、`Map3DModels.swift`（牆的頂點資料）、`Map3DTests` |
 | 3D 地圖開著時跳出月底報表（#697） | 要先在 Simulator 上確認 sheet 是不是真的被吃掉。報表的時機牽涉月報、年報、挑戰結束三種。 | `ContentView` 的三個 `onChange`（月底、年底、挑戰結束）在 `screen.showsMap3D` 時先不設 `screen.panel`。加一個 `onChange(of: screen.showsMap3D)`：關掉 3D 時，如果有 `pendingReport` 就打開（和現有「關掉面板後 0.5 秒」同一套）。另外加一支 UI 測試：開 3D、快轉過月底、關 3D，看報表有沒有出來。 | `ContentView.swift`、一支新 UI 測試（full lane） |
 | `TutorialJourneyUITests` 115（第二次縮小之後的 `sleep(1)`） | 等的是地圖鏡頭的縮放動畫，App 沒有給 UI 測試讀得到的狀態。要改 App。 | UI 測試時讓地圖的 accessibility value 帶鏡頭比例（和 `map.stations` 一樣只在 `-ui-testing` 時有）。測試等它連續兩次一樣。 | `MapView.swift`（只在 UI 測試時）、`TutorialJourneyUITests`、iPad 教學 job |
-| #638 Advanced 開關的 accessibility frame（上兩輪第 3 項） | 要在 Simulator 上看。如果框真的不對，VoiceOver 也會受影響，要改側欄的版面。 | 用 Accessibility Inspector 看開關的框和畫出來的位置是否一致。不一致的話，把 `Toggle` 從 `LabeledContent` 換成 label 和開關分開的 `HStack`，讓框跟著開關。 | 設定頁或側欄的 `Toggle`、`ToolbarSmokeTests` 第 149 行附近 |
-| #659 Advanced 開關 390 ms 的觸控沒反應（上兩輪第 9 項） | 要在 Simulator 上看 view 的 identity 有沒有在觸控中改變。玩家的點擊也可能被吃掉。 | 和上一項一起看。如果是重建，就把開關所在的區塊用穩定的 `id` 包起來。 | 同上 |
+| #638 Advanced 開關的 accessibility frame（上兩輪第 3 項） | 要在 Simulator 上看。線路面板 `Form` 裡的 `Toggle`（`LinesPanel.swift` `advancedSection`）整列的框只到 x≈582，開關畫在 x≈735（run 38641908091）。如果框真的不對，VoiceOver 也會受影響，要改面板的版面。測試已經改點列裡的 switch 本身（`toggle.switches.firstMatch`），所以不會再紅。 | 用 Accessibility Inspector 看那一列的框，和畫出來的開關位置是否一致。不一致的話，查面板寬度（#626 之後側欄變窄）是不是讓 `Form` 列的框沒有跟著版面更新。 | `LinesPanel.swift`、可能還有側欄的寬度計算 |
 | #638 月台測試依賴真實地形（上兩輪第 4 項，`RealWorldMapUITests`） | 要重新設計測試的地點，牽涉實景地圖的鏡頭和資料，不是局部改動。 | 讓測試讀 App 在 UI 測試時寫出的「平地位置」（像 `map.expansion.tiles`），或改用 demo 地圖測月台工具，把實景地圖的部分留給只看能不能打開的測試。 | `RealWorldMapUITests`、可能加一個 UI 測試專用的 accessibility value |
 | #657 坡道上切開軌道的錯誤訊息（上兩輪第 7 項） | 要把 GameCore 算切點高度的函式公開，讓工具共用。是 GameCore 的 API 改動。 | 把 GameCore 算切點 chainage 的函式改成 `public`。工具改用它來判斷「轉轍器不能在變坡處」。行為不變，golden 不動。 | `Sources/GameCore/Railway/`（只改可見性）、GamePresentation 的切軌工具與測試 |
 | 3D 深度精度（反向 Z，上兩輪第 11 項） | 3D 渲染管線，要在裝置上看。 | 投影矩陣改成反向 Z（near→1、far→0），深度比較改成 `greater`，深度格式維持 `depth32Float`。 | `Map3D` 的 renderer、shader、相機 |
@@ -336,6 +335,7 @@ Session：https://claude.ai/code/session_01EsozfWmDmXd6Tp2f4fzExd（2026-10-16�
 
 - 上兩輪第 1、2、8、12、14、16 項：已經修好（見第四節的表）。
 - 第 6 項 `unknownLinePattern` 的「pattern #3」：和別處的「停站模式 N」一致，保留。
+- 第 9 項 #659 Advanced 開關 390 ms 的觸控沒反應：已經查清楚，不是 App 的問題。清單還在減速時，點一下只會讓它停住，這是 iOS 本來的行為，玩家也一樣。兩次失敗都發生在最後一次短拖曳的一秒後；沒有拖曳的五次啟動，每次都一點就切換。測試現在先等清單停穩才點（`ToolbarSmokeTests` `setAdvanced` 的 `waitUntilSettled`）。
 - 第 13 項 3D 預覽的統計只有英文：刻意的（決策 229），保留。
 - 第 15 項 `RunSpacing.catches` 用 `Double`：實際上是決定性的，保留。
 - 這一輪 `TutorialJourneyUITests` 444 的 `sleep(1)`：在 main 上已經不在了（現在那裡是點擊後的 0.5 秒，屬於點擊本身的節奏）。
