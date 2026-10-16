@@ -1972,7 +1972,7 @@ W2 要接上真實車速與以秒計的停站（ROADMAP 的 Stage W；[對照文
 
 第二版內部 TestFlight（0.2.0）之前，App 加上繁體中文（台灣用語）。英文保留為來源語言，跟著系統語言切換。只換畫面文字，不改任何規則或存檔。
 
-- **語言從哪裡來**：iOS 在啟動時依使用者的語言設定，從 App 有的語系（`en`、`zh-Hant`）選一個；App 讀 `Bundle.main.preferredLocalizations.first`，換成 `DisplayLanguage` 交給 `GameSession`。String Catalog 用的也是同一個語系，所以兩邊的文字一致。使用者在設定改語言時 iOS 會重新啟動 App，所以 `GameSession.language` 是 `let`。
+- **語言從哪裡來**：iOS 在啟動時依使用者的語言設定，從 App 有的語系（`en`、`zh-Hant`）選一個；App 讀 `Bundle.main.preferredLocalizations.first`，換成 `DisplayLanguage` 交給 `GameSession`。String Catalog 用的也是同一個語系，所以兩邊的文字一致。使用者在設定改語言時 iOS 會重新啟動 App，所以 `GameSession.language` 是 `let`。開始畫面的語言選單（決策 257）寫的是同一個設定，下次啟動才生效。
 - **GamePresentation（Linux 上測試）**：
   - `DisplayLanguage`（`english`、`traditionalChinese`）；`init(localization:)` 把任何 `zh` 開頭的識別碼對到繁體中文，其他都是英文。
   - 每個產生文字的函式都明確接收語言（`playerMessage(in:)`、`tileSummary(at:in:)`、`displayText(in:)` 等），沒有全域狀態，文字仍是世界與語言的純函數，兩種語言都在 Linux 上測試。
@@ -2258,7 +2258,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 **App**：
 
 - **開始畫面**（`StartView`）：繼續（顯示存檔的遊戲時間、現金與規模，以及存檔時間）、新遊戲、示範地圖、存檔清單（點一下讀取、滑動刪除；讀不進來的寫出原因）、匯入（「檔案」App）。
-- **語言**：參考的首頁有語言選單；iOS 的每個 App 的語言在「設定」裡，所以這裡是一個打開「設定」的按鈕。
+- **語言**：參考的首頁有語言選單；iOS 的每個 App 的語言在「設定」裡，所以這裡原本是一個打開「設定」的按鈕。決策 257 改成 App 內的語言選單。
 - **遊戲選單**（HUD）：儲存遊戲、匯出存檔（分享時才寫出檔案）、回到開始畫面（先自動存檔）。
 - **`-demo-layout` 啟動參數**：仍然只有 Debug 有，`release-archive.yml` 確認 Release 的執行檔不含它（參數名太短，Swift 把 15 位元組以內的字串放在程式碼裡而不是二進位的資料裡，直接找不到；所以改找 Debug 專用的 `DebugLaunch.marker`，`ios-build.yml` 也確認 Debug 的 App 找得到它）；示範地圖本身在 Release 由開始畫面開啟。
 
@@ -10291,6 +10291,36 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 - 實機（TestFlight）看：「+$12」在 600 倍速的密度、暖黃環在淺色與深色地圖上看不看得到、旋律的音量和到站鈴比，以及減少動態效果開與關各一次。看了要改，只改 `FareFloatBoard`、`TownGrowthPulse` 的常數或 `GameAudio` 的音量。
 - 決策 254 §4 剩下的回報：過關的星星與一顆星一個音、解鎖新工具時按鈕跳一下。這些屬於第 4 個 PR（關卡框架），可以沿用 `GoalMetCheck` 的做法，旋律照 `scores/goal-met.score.json` 的寫法加進 `TUNES`。
 - 沒有路線帳的舊存檔，站上不冒車資。要補的話，從 `LineAccounts` 以外的地方讀每站的車資，畫面層就做得到。
+
+### 257. 開始畫面的語言選單：App 內選語言，下次開啟生效
+
+作者回報（2026-10-16，TestFlight）：「語言跳出去設定後好像又沒有可選擇選項了，之前還有英文。」
+
+**查到的**（origin/main 5e3699c）：
+- 打包設定沒有變：`knownRegions` 有 `en`、`zh-Hant`，兩個 `.lproj/InfoPlist.strings` 與 `Localizable.xcstrings`（`sourceLanguage` 為 `en`）都在，專案與這些檔案自 #622 之後沒有改過；`59bda878` 只刪了 13 個沒用的 key，不影響語系。
+- iOS 的規則：設定裡 App 頁面的「偏好的語言」那一列，只有在裝置的偏好語言清單有兩種以上時才出現。裝置只留一種語言時（例如只留繁體中文），那一列就不見了，玩家沒有地方選英文。原本的「Language」按鈕只打開設定，所以等於沒有作用。
+
+**做法**：
+1. 開始畫面的「Language」改成選單（`start.language`）：「跟隨 iPhone」、「English」、「繁體中文」；兩種語言各用自己的文字寫，看不懂目前語言的玩家也找得到。
+2. 選擇寫進 App 自己的 `AppleLanguages`（和 iOS 設定寫的是同一個值）；「跟隨 iPhone」把它拿掉。iOS 在 App 啟動時讀它，所以下次開啟才換；換了的話跳出提示，請玩家從多工畫面關掉遊戲再開。目前的選擇只從 App 自己的設定讀（不看裝置與啟動參數），由 `LanguageChoice`（GamePresentation）把選擇和 `AppleLanguages` 互換。
+3. CI 檢查打包出來的 App 同時有 `en.lproj`、`zh-Hant.lproj` 的 `InfoPlist.strings` 與 `zh-Hant.lproj/Localizable.strings`（`.github/scripts/check-app-localizations.sh`）：`ios-build.yml` 查 Debug 的模擬器 App，`release-archive.yml` 查 Release 的封存。
+
+**四方**：
+- 玩家：不用先到 iOS 設定加第二種語言，開始畫面就能選；選完知道要重開。
+- 開發：只動 App 與 GamePresentation（Linux 測試）；GameCore、存檔、golden 都不動；`DisplayLanguage.app` 照舊讀 iOS 選的語系，所以 String Catalog 與程式內文字一定一致。
+- 美術：沿用原本的膠囊按鈕與地球圖示，選單用系統的樣子。
+- 音樂：無。
+
+**沒選的**：
+- 不重開就立刻換：String Catalog 的文字由 iOS 在啟動時決定語系，立刻換只會換掉程式內的那一半，畫面會中英混雜。
+- 保留打開設定並加一行說明：玩家得先到「一般 → 語言與地區」加第二種語言，步驟太多，而且回報的正是這裡找不到。
+- 用 `exit()` 自動關掉 App：Apple 的規範不讓 App 自己結束。
+
+**測試**：
+- Linux：`LanguageChoiceTests`（每個選擇寫的 `AppleLanguages`、從 iOS 設定寫的值讀回選擇、選單名稱、什麼時候提示重開）。
+- UI：`StartSaveFlowSmokeTests.testLanguageOpensTheGamesLanguageMenu`（選單有三個選項、點得到），跑在完整測試（決策 199），不進 gate。
+
+**參考**：參考庫 `Ci` 的首頁有語言選單（`home.language`），網頁版立刻換語言；iOS 的語系在啟動時決定，所以只沿用「首頁就能選」的做法。外部專案沒有用到。
 
 ### 258. 簡單規則當新遊戲的預設，寫實是選項
 

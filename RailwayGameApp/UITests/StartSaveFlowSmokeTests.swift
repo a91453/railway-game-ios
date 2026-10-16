@@ -10,6 +10,24 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         checkFlow(language: "zh-Hant", locale: "zh_TW")
     }
 
+    /// Decision 257: the start screen's Language opens the game's own menu
+    /// of languages, each named in itself. Nothing is chosen, so the
+    /// Simulator's app settings stay as they were. Full lane only.
+    func testLanguageOpensTheGamesLanguageMenu() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+
+        requiredButton("start.language", in: app).tap()
+        for name in ["Same as iPhone", "English", "繁體中文"] {
+            let item = app.buttons[name].firstMatch
+            XCTAssertTrue(item.appears(within: 5), "The language menu has no \(name). \(screenText(in: app))")
+            XCTAssertTrue(item.becomesHittable(within: 5), "\(name) cannot be tapped")
+        }
+    }
+
     /// City building P0-A (decision 92): on a blank map, choose the house,
     /// tap the ground, see it built, save, go back to the start and
     /// continue: the house is still there.

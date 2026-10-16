@@ -403,7 +403,7 @@ V4a 不新增權威存檔欄位，存檔 9／schema 31 不變。所有既有 Gol
 | `Ci` 本機草稿（`LOCAL_DRAFT_NO_FLOW_SAVE_DEBOUNCE_MS` = 1800，建造後寫入）與雲端自動存檔（`AUTOSAVE_INTERVAL_MS` = 900 × 1000） | 自動存檔 | 離開前景、回到開始畫面、每 `GameLauncher.autosaveInterval`（900 秒）寫入 `autosave.json` | 毫秒 → 秒 | 部分 faithful：間隔照雲端自動存檔；不在每次建造後存（世界每一刻都在變，整個重寫太頻繁），改在離開前景時存 |
 | `Ci` `saveUi.desktop.localSlots`、`gameMenuSave` | 本機存檔槽位、選單的「儲存」 | 玩家自己的存檔一個一個檔案、清單（讀取、刪除）；遊戲選單的「儲存遊戲」 | — | 部分 faithful：不限槽位數 |
 | `Ci` `downloadLocalSave`、`importLocalSaveFromFile`（`saveUi.desktop.export`、`import`） | 匯出、匯入 JSON 存檔 | 遊戲選單的「匯出存檔」（`ShareLink`，`SaveLibrary.exportFile`）；開始畫面的「匯入存檔」（`fileImporter`，`GameLauncher.importSave`） | — | faithful |
-| `Ci` `home.title`「城市设计师」、`home.language` | 首頁與介面語言 | `StartView` 的標題；「語言」打開 iOS 的「設定」 | — | **改變**：iOS 的每個 App 的語言在「設定」 |
+| `Ci` `home.title`「城市设计师」、`home.language` | 首頁與介面語言 | `StartView` 的標題；「語言」是 App 內的選單（決策 257） | — | **改變**：iOS 的語系在啟動時決定，選了下次開啟才換 |
 | `Ci` 雲端存檔、加密（`metroEncryptSaveBlob`）、分享碼、`LOCAL_SAVE_MAX_IMPORT_BYTES` | 帳號、雲端與加密 | 不做 | — | 延後：沒有帳號與伺服器；iCloud 另議 |
 | `Ci` 教學的示範（上海—南京）；舊的 `DemoLayout.swift`（方格） | 示範地圖 | `DemoWorld`：路網上的兩條線，中央一座兩個月台的點車站，全天營運、每站有運量；Release 也能從開始畫面開 | 格 → 世界單位 | **gap**：參考沒有可以移植的示範地圖（它的示範是真實路線），配置是自己的 |
 
