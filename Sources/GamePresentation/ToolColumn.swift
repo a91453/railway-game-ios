@@ -3,17 +3,25 @@
 // map, keep one size for every button, chosen or not, and one width for
 // every group of them, so the column lines up; and the column keeps the
 // screen's gap below the layer strip over it rather than reaching up to it.
+// Later the same day (TestFlight 67.1 beside 66.1): the column back to
+// 66.1's width, so the map has the room it had.
 
 /// The sizes of the tools column, in points.
 public enum ToolColumn {
     /// Every button's width in the column, chosen or not: a chosen button's
     /// bolder name made it wider than the others, and the card's toggle
-    /// was as wide as its icon.
-    public static let buttonWidth: Double = 64
+    /// was as wide as its icon. 48, the narrowest a named button was on
+    /// 66.1, when each took its name's width: at 64 the column took a
+    /// quarter more of the map (TestFlight 67.1).
+    public static let buttonWidth: Double = 48
     /// The glass round each group of buttons, on every side.
     public static let tilePadding: Double = 4
     /// The space between the buttons of a group.
     public static let buttonSpacing: Double = 4
+    /// How small a name in the column may shrink to fit its button. The
+    /// Chinese names fit whole at every text size the app takes; the longest
+    /// English ones ("Buildings", "Network") need about half at the largest.
+    public static let minimumNameScale: Double = 0.45
     /// The column's width, and the building tools' beside the map: a
     /// button and the glass either side of it.
     public static var width: Double { buttonWidth + 2 * tilePadding }

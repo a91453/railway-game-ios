@@ -3,11 +3,23 @@ import XCTest
 
 /// Decision 226, later (TestFlight, 2026-10-16): the phone's tools column.
 final class ToolColumnTests: XCTestCase {
-    func testEveryGroupIsAsWideAsTheBuildingTools() {
-        // The building tools beside the map were 72 points wide before; the
-        // column's groups are as wide, and so are their buttons.
-        XCTAssertEqual(ToolColumn.width, 72)
+    func testTheColumnIsAsWideAsOn66_1() {
+        // TestFlight 67.1 beside 66.1: the column back to 66.1's width, a
+        // button of 48 points (the narrowest a named button was) and the
+        // glass either side; the building tools beside the map as wide.
+        XCTAssertEqual(ToolColumn.buttonWidth, 48)
+        XCTAssertEqual(ToolColumn.width, 56)
         XCTAssertEqual(ToolColumn.buttonWidth + 2 * ToolColumn.tilePadding, ToolColumn.width)
+    }
+
+    func testTheLongestNamesFitTheButtonShrunkRatherThanCut() {
+        // A name has the button less 4 points either side. At the largest
+        // text the app takes, captions are 17 points: two Chinese characters
+        // take 34 and fit whole; "Buildings" in bold, the widest English
+        // name, about 78, which fits once shrunk to the least scale.
+        let room = ToolColumn.buttonWidth - 8
+        XCTAssertLessThanOrEqual(2 * 17, room)
+        XCTAssertLessThanOrEqual(78 * ToolColumn.minimumNameScale, room)
     }
 
     func testTheColumnStopsAGapBelowTheLayerStrip() {

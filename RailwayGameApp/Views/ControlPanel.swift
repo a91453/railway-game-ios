@@ -151,7 +151,9 @@ struct TabLabel: View {
                 Text(verbatim: title)
                     .font(.caption.weight(isActive ? .bold : .medium))
                     .lineLimit(1)
-                    .minimumScaleFactor(0.7)
+                    // In the column, smaller where a long name needs it,
+                    // rather than cut (``ToolColumn/minimumNameScale``).
+                    .minimumScaleFactor(column == nil ? 0.7 : ToolColumnStyle.minimumNameScale)
             }
             .padding(.horizontal, 4)
             .frame(minWidth: 48, maxWidth: .infinity, minHeight: 40)
@@ -174,6 +176,7 @@ struct ToolColumnStyle: Equatable {
     static let tilePadding = CGFloat(ToolColumn.tilePadding)
     static let buttonSpacing = CGFloat(ToolColumn.buttonSpacing)
     static let width = CGFloat(ToolColumn.width)
+    static let minimumNameScale = CGFloat(ToolColumn.minimumNameScale)
 }
 
 extension EnvironmentValues {
