@@ -44,7 +44,7 @@ public struct Map3DModelPack: Sendable {
         }
         // Decision 244: and the street furniture.
         models += Map3DProp.allCases.map { $0.model() }
-        // Decision 256: and the people, scooters and cars.
+        // Decision 259: and the people, scooters and cars.
         models += Map3DStreetModel.allCases.map { $0.model() }
         self.models = models
     }

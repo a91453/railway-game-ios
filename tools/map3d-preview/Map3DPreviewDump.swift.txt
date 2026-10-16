@@ -95,7 +95,7 @@ final class Map3DPreviewDump: XCTestCase {
             guard !detailFar else { continue }
             for prop in chunk.props { expand(prop) }
         }
-        // Decision 256: MAP3D_LIFE=x:z:distance, the people and vehicles a
+        // Decision 259: MAP3D_LIFE=x:z:distance, the people and vehicles a
         // camera that far from that target draws at 10:00:00 of a clock,
         // each moved into place; MAP3D_BUSY=1 as if every station were busy.
         if let life = ProcessInfo.processInfo.environment["MAP3D_LIFE"].map({ $0.split(separator: ":").map { Float(String($0))! } }) {
@@ -107,7 +107,8 @@ final class Map3DPreviewDump: XCTestCase {
                     activity.front[station] = Map3DStreetLife.frontCrowd(trips: 8_000)
                 }
             }
-            let frame = scene.streetLife.frame(target: Map3DPoint(life[0], 0, life[1]), distance: life[2], time: 36_000, detail: .full,
+            let frame = scene.streetLife.frame(target: Map3DPoint(life[0], 0, life[1]), distance: life[2], time: 36_000,
+                                               detail: ProcessInfo.processInfo.environment["MAP3D_LIFE_DETAIL"] == "reduced" ? .reduced : .full,
                                                activity: activity)
             print("MAP3D_LIFE people \(frame.people) vehicles \(frame.vehicles) models \(Set(frame.instances.map(\.model)).count)")
             frame.instances.forEach(expand)

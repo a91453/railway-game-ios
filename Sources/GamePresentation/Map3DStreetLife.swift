@@ -1,7 +1,7 @@
 import Foundation
 import GameCore
 
-// Decision 256: the people, scooters and cars of the 3D map's streets,
+// Decision 259: the people, scooters and cars of the 3D map's streets,
 // seen only close up. Where they walk and drive is worked out with the
 // still scene (``Map3DStreetLife/Lane``, ``Map3DStreetLife/Spot``); where
 // each one is at a moment is worked out every frame from the clock alone,
@@ -79,9 +79,9 @@ public enum Map3DStreetModel: String, CaseIterable, Sendable {
             glowing { box(0.57, 0.86, 0, 0.06, 0.2, 0.1, Self.headlamp) }
             glowing { box(-0.75, 0.5, 0, 0.04, 0.24, 0.08, Self.tailLamp) }
             // The rider, seated, hands on the bars, in a helmet.
-            Self.addRider(to: &mesh, at: -0.2, shirt: Self.riderShirt, helmet: Self.helmets[0], reach: true)
+            Self.addRider(to: &mesh, at: -0.2, shirt: Self.riderShirt, helmet: Self.helmets[1], reach: true)
             if self == .scooterPair {
-                Self.addRider(to: &mesh, at: -0.62, shirt: Self.pillionShirt, helmet: Self.helmets[1], reach: false)
+                Self.addRider(to: &mesh, at: -0.62, shirt: Self.pillionShirt, helmet: Self.helmets[0], reach: false)
             }
         case .car, .van:
             // `traffic.js`'s sedan and van: length, width, the belt and the
@@ -148,7 +148,7 @@ public enum Map3DStreetModel: String, CaseIterable, Sendable {
     static let helmets = [Map3DColor.rgb(0xFFC86B), Map3DColor.rgb(0xF2F2EE)]
 }
 
-/// How much street life a device draws (decision 256): the most figures
+/// How much street life a device draws (decision 259): the most figures
 /// and vehicles in a frame, the nearest first.
 public enum Map3DStreetDetail: Int, CaseIterable, Comparable, Sendable {
     case off, reduced, full
@@ -189,7 +189,7 @@ public enum Map3DStreetDetail: Int, CaseIterable, Comparable, Sendable {
     public static func < (a: Map3DStreetDetail, b: Map3DStreetDetail) -> Bool { a.rawValue < b.rawValue }
 }
 
-/// Where the 3D map's people walk and its vehicles drive (decision 256),
+/// Where the 3D map's people walk and its vehicles drive (decision 259),
 /// made with the still scene, and the figures and vehicles of a frame.
 public struct Map3DStreetLife: Sendable {
     /// A line along the ground in scene metres, with the way to its right
@@ -282,6 +282,15 @@ public struct Map3DStreetLife: Sendable {
             /// A street's pavement.
             case sidewalk
 
+            /// Whether fewer are out at night (not at a station or a
+            /// temple, which stay busy).
+            var thinsAtNight: Bool {
+                switch self {
+                case .platform, .stationFront, .temple: false
+                case .shops, .sidewalk: true
+                }
+            }
+
             /// The share of its people standing still, the rest walking up
             /// and down.
             var standing: Float {
@@ -368,7 +377,7 @@ public struct Map3DStreetLife: Sendable {
 
     /// Within this camera distance, metres, people are drawn; within
     /// ``vehiclesFrom``, vehicles. Farther, none: a figure would be a dot.
-    public static let peopleFrom: Float = 650
+    public static let peopleFrom: Float = 500
     public static let vehiclesFrom: Float = 1_300
 
     /// How far round the camera's target figures and vehicles are drawn
@@ -403,8 +412,10 @@ public struct Map3DStreetLife: Sendable {
     /// The figures and vehicles at `time` (seconds of any clock) round
     /// `target` seen from `distance` away, at most `detail`'s, the nearest
     /// spots and roads first. When `still` (Reduce Motion) nobody moves:
-    /// everyone stands where they would be at the clock's start.
-    public func frame(target: Map3DPoint, distance: Float, time: Double, still: Bool = false, detail: Map3DStreetDetail,
+    /// everyone stands where they would be at the clock's start. With the
+    /// city's `lights` on (``Map3DLighting/lights``, 0–1), the streets and
+    /// shops have up to half their people.
+    public func frame(target: Map3DPoint, distance: Float, time: Double, still: Bool = false, lights: Float = 0, detail: Map3DStreetDetail,
                       activity: Activity) -> Frame {
         var frame = Frame()
         guard detail != .off, Self.models.count == Map3DStreetModel.allCases.count else { return frame }
@@ -416,8 +427,8 @@ public struct Map3DStreetLife: Sendable {
                 return away < reach ? (index, away) : nil
             }.sorted { $0.1 < $1.1 }
             for (index, _) in near where frame.people < detail.people {
-                addPeople(of: spots[index], to: &frame, target: target, reach: reach, time: clock, still: still, budget: detail.people,
-                          activity: activity)
+                addPeople(of: spots[index], to: &frame, target: target, reach: reach, time: clock, still: still, lights: lights,
+                          budget: detail.people, activity: activity)
             }
         }
         if distance <= Self.vehiclesFrom {
@@ -440,14 +451,15 @@ public struct Map3DStreetLife: Sendable {
         min(max((reach - away) / (reach * fadeShare), 0), 1)
     }
 
-    private func addPeople(of spot: Spot, to frame: inout Frame, target: Map3DPoint, reach: Float, time: Double, still: Bool, budget: Int,
-                           activity: Activity) {
-        let count: Int
+    private func addPeople(of spot: Spot, to frame: inout Frame, target: Map3DPoint, reach: Float, time: Double, still: Bool, lights: Float,
+                           budget: Int, activity: Activity) {
+        var count: Int
         switch spot.kind {
         case .platform: count = spot.station.flatMap { activity.platform[$0] } ?? 0
         case .stationFront: count = spot.station.flatMap { activity.front[$0] } ?? 0
         default: count = spot.people
         }
+        if spot.kind.thinsAtNight { count = Int((Float(count) * (1 - 0.5 * min(max(lights, 0), 1))).rounded()) }
         let length = spot.path.length
         for index in 0..<count where frame.people < budget {
             let r = { (salt: Int32) in map3DRandom(spot.seed.0 &+ Int32(index), spot.seed.1, salt: salt) }
@@ -553,7 +565,7 @@ extension Map3DScene.Builder {
         return total
     }
 
-    /// Decision 256: a road of the base map as lanes and, where it has
+    /// Decision 259: a road of the base map as lanes and, where it has
     /// them, pavements: each kept to its tile, at the road's height.
     mutating func addStreetLife(_ road: Map3DBaseMap.Road) {
         let lift = Self.lift(of: road.kind) + 0.02
@@ -630,7 +642,7 @@ extension Map3DScene.Builder {
         }
     }
 
-    /// Decision 256: on a map with no base map, the streets between the
+    /// Decision 259: on a map with no base map, the streets between the
     /// city's lots: along each 64 m grid line, the runs beside a built lot
     /// clear of the track, with traffic and pavements by the lots' density.
     mutating func addGridStreets(_ built: [Map3DScene.ChunkKey: Int], clearOf cleared: Set<Map3DScene.ChunkKey>) {
@@ -690,7 +702,7 @@ extension Map3DScene.Builder {
         }
     }
 
-    /// Decision 256: a platform's waiting crowd on it, and outside it, on
+    /// Decision 259: a platform's waiting crowd on it, and outside it, on
     /// the side away from the track, the station's passengers coming and
     /// going.
     mutating func addStationLife(line: [Map3DPoint], offset: Float, width: Float, station: StationID) {
@@ -708,7 +720,7 @@ extension Map3DScene.Builder {
                                                      seed: lifeSeed(front.points[0], salt: 263)))
     }
 
-    /// Decision 256: shoppers along a row of shops from `from` to `to`,
+    /// Decision 259: shoppers along a row of shops from `from` to `to`,
     /// more where the town is denser.
     mutating func addShopLife(from: Map3DPoint, to: Map3DPoint, density: Int) {
         guard target == .near, let path = Map3DStreetLife.Path([from, to]) else { return }
@@ -717,7 +729,7 @@ extension Map3DScene.Builder {
                                                      seed: lifeSeed(from, salt: 264)))
     }
 
-    /// Decision 256: worshippers and visitors on a temple's forecourt.
+    /// Decision 259: worshippers and visitors on a temple's forecourt.
     mutating func addTempleLife(from: Map3DPoint, to: Map3DPoint) {
         guard target == .near, let path = Map3DStreetLife.Path([from, to]) else { return }
         streetLife.spots.append(Map3DStreetLife.Spot(kind: .temple, path: path, width: 3, people: 12, station: nil, seed: lifeSeed(from, salt: 265)))

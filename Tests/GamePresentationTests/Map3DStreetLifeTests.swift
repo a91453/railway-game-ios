@@ -3,7 +3,7 @@ import Foundation
 @testable import GamePresentation
 import XCTest
 
-/// ARCHITECTURE decision 256: the people, scooters and cars of the 3D map's
+/// ARCHITECTURE decision 259: the people, scooters and cars of the 3D map's
 /// streets, worked out every frame from the clock, as many as the game's
 /// passengers and towns say.
 final class Map3DStreetLifeTests: XCTestCase {
@@ -127,7 +127,7 @@ final class Map3DStreetLifeTests: XCTestCase {
         let later = life.frame(target: middle, distance: 300, time: 1_004, detail: .full, activity: activity)
         XCTAssertNotEqual(later.instances.map(\.floats), near.instances.map(\.floats))
         // Farther, the people go first, then the vehicles.
-        let mid = life.frame(target: middle, distance: 900, time: 1_000, detail: .full, activity: activity)
+        let mid = life.frame(target: middle, distance: 800, time: 1_000, detail: .full, activity: activity)
         XCTAssertEqual(mid.people, 0)
         XCTAssertGreaterThan(mid.vehicles, 0)
         XCTAssertTrue(life.frame(target: middle, distance: 2_000, time: 1_000, detail: .full, activity: activity).instances.isEmpty)
@@ -136,6 +136,24 @@ final class Map3DStreetLifeTests: XCTestCase {
         let reduced = life.frame(target: middle, distance: 600, time: 1_000, detail: .reduced, activity: activity)
         XCTAssertLessThanOrEqual(reduced.people, Map3DStreetDetail.reduced.people)
         XCTAssertLessThanOrEqual(reduced.vehicles, Map3DStreetDetail.reduced.vehicles)
+    }
+
+    func testAtNightTheStreetsThinButNotTheStations() throws {
+        let world = try lineBetweenTwoTowns()
+        let life = Map3DScene(world: world).streetLife
+        let (id, middle) = try station(in: life)
+        var activity = Map3DStreetLife.Activity()
+        activity.platform[id] = 20
+        activity.front[id] = 20
+        let day = life.frame(target: middle, distance: 450, time: 0, detail: .full, activity: activity)
+        let night = life.frame(target: middle, distance: 450, time: 0, lights: 1, detail: .full, activity: activity)
+        XCTAssertLessThan(night.people, day.people)
+        XCTAssertGreaterThan(night.people, day.people / 3)
+        // The station's own crowd stays.
+        var stationOnly = Map3DStreetLife()
+        stationOnly.spots = life.spots.filter { $0.station != nil }
+        XCTAssertEqual(stationOnly.frame(target: middle, distance: 450, time: 0, lights: 1, detail: .full, activity: activity).people,
+                       stationOnly.frame(target: middle, distance: 450, time: 0, detail: .full, activity: activity).people)
     }
 
     func testWithReduceMotionNobodyMovesOrStrides() throws {

@@ -85,7 +85,7 @@ extension Map3DScene.Builder {
                      taking: &lines)
         }
         addStreetProps(map)
-        // Decision 256: their traffic and their pavements' people.
+        // Decision 259: their traffic and their pavements' people.
         for road in map.roads where road.points.count >= 2 { addStreetLife(road) }
         return taken
     }

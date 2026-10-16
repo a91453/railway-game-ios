@@ -9,7 +9,7 @@ final class Map3DModelTests: XCTestCase {
 
     func testEveryStyleHasACabAndAMiddleCarOfTheRightSize() {
         // Decision 244: and the street furniture after the trains;
-        // decision 256: then the people and vehicles.
+        // decision 259: then the people and vehicles.
         XCTAssertEqual(pack.models.count, Map3DTrainStyle.all.count * 2 + Map3DProp.allCases.count + Map3DStreetModel.allCases.count)
         for style in Map3DTrainStyle.all {
             for name in [style.name + "-cab", style.name + "-car"] {
