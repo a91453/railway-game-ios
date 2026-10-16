@@ -37,6 +37,9 @@ rm Tests/GamePresentationTests/Map3DPreviewDump.swift
 | `MAP3D_CROP` | `x:z:半徑`：只輸出這一圈內的分塊（大場景會讓瀏覽器記憶體不夠） |
 | `MAP3D_MINUTE` | 一天裡的第幾分鐘（`0`–`1439`），照那時的光線畫；預設 `840`（14:00） |
 | `MAP3D_HEIGHTS` | `1`：世界還沒讀的地面用 App 的高度檔（`taiwan_heights.dat`），和 App 一樣 |
+| `MAP3D_LIFE` | `x:z:距離`：決策 259 的行人與車輛，鏡頭在這個距離看這一點時畫的那些（時鐘的第 36,000 秒），每個實例展開成網格 |
+| `MAP3D_LIFE_DETAIL` | `reduced`：和 `MAP3D_LIFE` 一起用，畫舊機型的份量（決策 259） |
+| `MAP3D_BUSY` | `1`：和 `MAP3D_LIFE` 一起用，每個車站都當作候車 400 人、一天 8,000 人次 |
 | `MAP3D_DETAIL` | `far`：輸出遠處看到的簡化版城市（決策 238），預設是完整的近版（近版連街道設施一起，決策 244：每個實例展開成網格） |
 
 前後對照：在 `main` 的 worktree 與分支上各跑一次同樣的鏡頭，再把兩張上下拼起來（`docs/art/*/` 的圖都是上半 `main`、下半新版）。
