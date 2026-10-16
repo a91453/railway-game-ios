@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""How many sights a 16 km real-world map has (ARCHITECTURE decision 249).
+"""How many sights a 16 km real-world map has (ARCHITECTURE decision 250).
 
 Lays 16.384 km squares (a new game's map) over Taiwan at every 2 km, adds
 up the people in each from the app's population grid (WorldPop, CC BY 4.0)

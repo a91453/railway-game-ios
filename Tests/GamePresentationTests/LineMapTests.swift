@@ -126,4 +126,34 @@ final class LineMapTests: XCTestCase {
             }
         }
     }
+
+    // MARK: - Double track (decision 249)
+
+    /// Lines ridden both ways sit over the track as MapBuilder offsets them;
+    /// those ridden one way begin ``LineMap/trackClearance`` off it on the
+    /// left of their way, and many lines on one track narrow so that
+    /// together they span ``LineMap/sharedWidth``.
+    func testTheLayoutPutsOneWayLinesOffTheTrackOnTheirLeft() {
+        let one = LineMap.layout(both: 0, forward: 1, backward: 0)
+        XCTAssertEqual(one.forward.map(\.offset), [1.5])
+        XCTAssertEqual(one.forward.map(\.width), [1])
+        let pair = LineMap.layout(both: 0, forward: 0, backward: 2)
+        XCTAssertEqual(pair.backward.map(\.offset), [-1.5, -2.5], "on the edge's right, from the track out")
+        let shared = LineMap.layout(both: 1, forward: 0, backward: 0)
+        XCTAssertEqual(shared.both.map(\.offset), [0])
+        let mixed = LineMap.layout(both: 3, forward: 1, backward: 0)
+        XCTAssertEqual(mixed.both.map(\.offset), [0, -1, 1])
+        XCTAssertEqual(mixed.forward.map(\.offset), [2], "beyond the lines over the track")
+        for count in 1...12 {
+            let layout = LineMap.layout(both: 0, forward: count, backward: 0)
+            let span = layout.forward.map(\.width).reduce(0, +)
+            XCTAssertLessThanOrEqual(span, max(Double(min(count, 3)), LineMap.sharedWidth, Double(count) * LineMap.narrowestWidth) + 1e-9, "\(count) lines")
+            XCTAssertLessThanOrEqual(span, LineMap.widestShared + 1e-9, "\(count) lines: \(span) wide")
+            if count <= 8 { XCTAssertGreaterThanOrEqual(layout.forward.map(\.width).min() ?? 1, LineMap.narrowestWidth) }
+            // Side by side, touching, none over another.
+            for (a, b) in zip(layout.forward, layout.forward.dropFirst()) {
+                XCTAssertEqual(b.offset - a.offset, (a.width + b.width) / 2, accuracy: 1e-9)
+            }
+        }
+    }
 }

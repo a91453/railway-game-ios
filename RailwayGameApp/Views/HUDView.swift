@@ -155,6 +155,8 @@ struct HUDView: View {
             screen: screen,
             showsGoals: session.world.scenario != nil || session.world.hasCityRequests,
             showsTourism: session.world.hasTourism,
+            achievementsUnlocked: launcher.achievements.count,
+            unlimitedFunds: session.world.economy.unlimitedFunds,
             language: session.language,
             askSaveName: {
                 saveName = ""
@@ -265,6 +267,11 @@ struct HUDView: View {
                         .background(Capsule().fill(Theme.warning.opacity(0.35)))
                         .accessibilityIdentifier("hud.holiday")
                 }
+                // 2026-10-16: says that a tap opens more, the forecast.
+                Image(systemName: "chevron.down")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(Theme.textSecondary)
+                    .accessibilityHidden(true)
             }
             .padding(.horizontal, 4)
             .padding(.vertical, 5)
@@ -362,6 +369,10 @@ private struct GameMenu: View, Equatable {
     let showsGoals: Bool
     /// Decision 174: a game with sights shows them.
     let showsTourism: Bool
+    /// Decision 181: how many achievements are unlocked, for their row.
+    let achievementsUnlocked: Int
+    /// Decision 200: a game with unlimited funds counts none.
+    let unlimitedFunds: Bool
     let language: DisplayLanguage
     /// Asks the name of a save (decision 184), in the HUD's alert.
     let askSaveName: @MainActor () -> Void
@@ -378,11 +389,50 @@ private struct GameMenu: View, Equatable {
             && lhs.screen === rhs.screen
             && lhs.showsGoals == rhs.showsGoals
             && lhs.showsTourism == rhs.showsTourism
+            && lhs.achievementsUnlocked == rhs.achievementsUnlocked
+            && lhs.unlimitedFunds == rhs.unlimitedFunds
             && lhs.language == rhs.language
     }
 
     var body: some View {
+        let layout = GameMenuLayout(showsGoals: showsGoals, showsTourism: showsTourism)
         Menu {
+            // Decision 226, later (2026-10-16): the rows and their order
+            // come from GamePresentation (``GameMenuLayout``).
+            ForEach(Array(layout.sections.enumerated()), id: \.offset) { index, section in
+                if index > 0 {
+                    Divider()
+                }
+                ForEach(section, id: \.self) { row in
+                    self.row(row, more: layout.moreRows)
+                }
+            }
+        } label: {
+            Image(systemName: "line.3.horizontal")
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(Theme.primary)
+                .frame(width: 38, height: 32)
+                // Touched over 44 by 44 points: a menu is touched over its
+                // label's own frame, not a larger content shape (run
+                // 38335812150), so the label is that large and the
+                // negative padding below keeps the 38 by 32 the pill lays
+                // out (``touchTarget(around:)``).
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .padding(.horizontal, -3)
+        .padding(.vertical, -6)
+        .accessibilityLabel("Game menu")
+        .accessibilityHint("Saves the game, exports it as a file, opens the tutorial or the settings, or goes back to the start screen.")
+        .accessibilityIdentifier("hud.menu")
+        .tutorialTarget(.gameMenu)
+    }
+
+    /// One row of the menu's first level.
+    @ViewBuilder
+    private func row(_ row: GameMenuLayout.Row, more moreRows: [GameMenuLayout.MoreRow]) -> some View {
+        switch row {
+        case .saveGame:
             Button {
                 UITestTrace.action("menu.saveGame")
                 launcher.saveCurrentGame()
@@ -390,6 +440,7 @@ private struct GameMenu: View, Equatable {
                 Label("Save Game", systemImage: "square.and.arrow.down")
             }
             .accessibilityIdentifier("menu.saveGame")
+        case .saveOptions:
             // Decision 184: a save with a name of the player's, beside the
             // export in one row, so the menu keeps its length: on a phone
             // on its side a longer menu put Back to Start out of reach.
@@ -427,6 +478,7 @@ private struct GameMenu: View, Equatable {
                 }
             }
             .accessibilityIdentifier("menu.saveOptions")
+        case .backToStart:
             // The only way out of the game, in the first section rather
             // than the last row (TestFlight 54.1): on a short phone, or
             // with larger text, the last row of six was off the screen.
@@ -436,7 +488,7 @@ private struct GameMenu: View, Equatable {
                 Label("Back to Start", systemImage: "house")
             }
             .accessibilityIdentifier("menu.backToStart")
-            Divider()
+        case .tutorial:
             // Decision 188, later fix (TestFlight 54.1): a skipped tutorial
             // is taken up again where it was, or started over, from one row,
             // so the menu keeps its six rows.
@@ -477,70 +529,48 @@ private struct GameMenu: View, Equatable {
                 }
                 .accessibilityIdentifier("menu.tutorial")
             }
+        case .postcard:
+            // Decision 215: the network as a picture to share.
+            Button {
+                screen.panel = .postcard
+            } label: {
+                Label {
+                    Text(verbatim: language.text("Make a Postcard", "做明信片"))
+                } icon: {
+                    Image(systemName: "photo.on.rectangle")
+                }
+            }
+            .accessibilityIdentifier("menu.postcard")
+        case .achievements:
+            // Decision 181: the achievements, from the menu's first level
+            // (decision 226, later); decision 200: greyed, saying why,
+            // with unlimited funds.
+            let achievements = GameMenuLayout.achievementsRow(
+                unlocked: achievementsUnlocked, unlimitedFunds: unlimitedFunds, in: language
+            )
+            Button {
+                screen.panel = .achievements
+            } label: {
+                Label {
+                    Text(verbatim: achievements.title)
+                    if let subtitle = achievements.subtitle {
+                        Text(verbatim: subtitle)
+                    }
+                } icon: {
+                    Image(systemName: "rosette")
+                }
+            }
+            .disabled(!achievements.isEnabled)
+            .accessibilityIdentifier("menu.achievements")
+        case .more:
             // The panels opened less often, in one row whatever the game
             // has: on a phone on its side the menu shows about six rows,
             // and the goals (decisions 86 and 183) and the sights (decision
             // 174) pushed Back to Start out of reach.
             Menu {
-                // Decision 86: a game with a challenge shows its goals;
-                // decision 183: and one with the city's requests.
-                if showsGoals {
-                    Button {
-                        screen.panel = .goals
-                    } label: {
-                        Label {
-                            Text(verbatim: language.text("Goals", "目標"))
-                        } icon: {
-                            Image(systemName: "flag.checkered")
-                        }
-                    }
-                    .accessibilityIdentifier("menu.goals")
+                ForEach(moreRows, id: \.self) { row in
+                    self.moreRow(row)
                 }
-                // Decision 174: a game with sights shows them.
-                if showsTourism {
-                    Button {
-                        screen.panel = .tourism
-                    } label: {
-                        Label {
-                            Text(verbatim: language.text("Sights", "觀光景點"))
-                        } icon: {
-                            Image(systemName: "star")
-                        }
-                    }
-                    .accessibilityIdentifier("menu.tourism")
-                }
-                Button {
-                    screen.panel = .help
-                } label: {
-                    Label {
-                        Text(verbatim: language.text("Help", "說明"))
-                    } icon: {
-                        Image(systemName: "questionmark.circle")
-                    }
-                }
-                .accessibilityIdentifier("menu.help")
-                // Decision 215: the network as a picture to share.
-                Button {
-                    screen.panel = .postcard
-                } label: {
-                    Label {
-                        Text(verbatim: language.text("Make a Postcard", "做明信片"))
-                    } icon: {
-                        Image(systemName: "photo.on.rectangle")
-                    }
-                }
-                .accessibilityIdentifier("menu.postcard")
-                // TestFlight 54.1: where to send a note, from the game.
-                Button {
-                    reportProblem()
-                } label: {
-                    Label {
-                        Text(verbatim: language.text("Report a Problem", "回報問題"))
-                    } icon: {
-                        Image(systemName: "exclamationmark.bubble")
-                    }
-                }
-                .accessibilityIdentifier("menu.report")
             } label: {
                 Label {
                     Text(verbatim: language.text("More", "更多"))
@@ -549,32 +579,69 @@ private struct GameMenu: View, Equatable {
                 }
             }
             .accessibilityIdentifier("menu.more")
-            Divider()
+        case .settings:
             Button {
                 screen.panel = .settings
             } label: {
                 Label("Settings", systemImage: "gearshape")
             }
             .accessibilityIdentifier("menu.settings")
-        } label: {
-            Image(systemName: "line.3.horizontal")
-                .font(.subheadline.weight(.bold))
-                .foregroundStyle(Theme.primary)
-                .frame(width: 38, height: 32)
-                // Touched over 44 by 44 points: a menu is touched over its
-                // label's own frame, not a larger content shape (run
-                // 38335812150), so the label is that large and the
-                // negative padding below keeps the 38 by 32 the pill lays
-                // out (``touchTarget(around:)``).
-                .frame(width: 44, height: 44)
-                .contentShape(Rectangle())
         }
-        .padding(.horizontal, -3)
-        .padding(.vertical, -6)
-        .accessibilityLabel("Game menu")
-        .accessibilityHint("Saves the game, exports it as a file, opens the tutorial or the settings, or goes back to the start screen.")
-        .accessibilityIdentifier("hud.menu")
-        .tutorialTarget(.gameMenu)
+    }
+
+    /// One row under More.
+    @ViewBuilder
+    private func moreRow(_ row: GameMenuLayout.MoreRow) -> some View {
+        switch row {
+        case .goals:
+            // Decision 86: a game with a challenge shows its goals;
+            // decision 183: and one with the city's requests.
+            Button {
+                screen.panel = .goals
+            } label: {
+                Label {
+                    Text(verbatim: language.text("Goals", "目標"))
+                } icon: {
+                    Image(systemName: "flag.checkered")
+                }
+            }
+            .accessibilityIdentifier("menu.goals")
+        case .tourism:
+            // Decision 174: a game with sights shows them.
+            Button {
+                screen.panel = .tourism
+            } label: {
+                Label {
+                    Text(verbatim: language.text("Sights", "觀光景點"))
+                } icon: {
+                    Image(systemName: "star")
+                }
+            }
+            .accessibilityIdentifier("menu.tourism")
+        case .help:
+            Button {
+                screen.panel = .help
+            } label: {
+                Label {
+                    Text(verbatim: language.text("Help", "說明"))
+                } icon: {
+                    Image(systemName: "questionmark.circle")
+                }
+            }
+            .accessibilityIdentifier("menu.help")
+        case .report:
+            // TestFlight 54.1: where to send a note, from the game.
+            Button {
+                reportProblem()
+            } label: {
+                Label {
+                    Text(verbatim: language.text("Report a Problem", "回報問題"))
+                } icon: {
+                    Image(systemName: "exclamationmark.bubble")
+                }
+            }
+            .accessibilityIdentifier("menu.report")
+        }
     }
 }
 
@@ -820,8 +887,8 @@ private struct ExportedSave: Transferable {
 
     static var transferRepresentation: some TransferRepresentation {
         FileRepresentation(exportedContentType: .json) { save in
-            let world = await save.session.worldToSave
-            return SentTransferredFile(try SaveLibrary.exportFile(for: world, at: Date()))
+            let (world, news) = await (save.session.worldToSave, save.session.news)
+            return SentTransferredFile(try SaveLibrary.exportFile(for: world, news: news, at: Date()))
         }
     }
 }

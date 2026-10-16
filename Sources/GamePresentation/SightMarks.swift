@@ -1,6 +1,6 @@
 import GameCore
 
-// Which sights the map marks (ARCHITECTURE decision 249): with Taiwan's 213
+// Which sights the map marks (ARCHITECTURE decision 250): with Taiwan's 214
 // sights, or a dozen in the middle of Taipei, the marks of a map seen from
 // afar would lie on each other. A mark gives way to a better-rated one it
 // would overlap: the higher rating first, the lower number between equals.

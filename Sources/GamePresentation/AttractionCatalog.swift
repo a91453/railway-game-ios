@@ -5,7 +5,7 @@ import GameCore
 // (`OpenWorld/reference_snapshot/play/src/world/destination-catalog.js` of
 // the owner's reference repository) without the places a railway cannot
 // reach (the offshore islands) and the invented ones, with the hot springs
-// and the Pingxi sky lanterns added; decision 249 added the island's famous
+// and the Pingxi sky lanterns added; decision 250 added the island's famous
 // sights round its towns (`t…`), so that a 16 km map where people live
 // usually has two to five. The places are put on the map by
 // `tools/tourism-spots/build_tourism_spots.py` from OpenStreetMap

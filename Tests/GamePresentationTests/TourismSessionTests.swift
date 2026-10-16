@@ -39,12 +39,12 @@ final class TourismSessionTests: XCTestCase {
         for skipped in ["s03", "s05", "s10", "s13", "s14", "s19", "s22", "s24"] {
             XCTAssertFalse(ids.contains(skipped), skipped)
         }
-        XCTAssertEqual(AttractionCatalog.spots.count, 214, "decision 249: 25 and 189 more")
+        XCTAssertEqual(AttractionCatalog.spots.count, 214, "decision 250: 25 and 189 more")
         XCTAssertEqual(Set(AttractionCatalog.spots.map(\.kind)), Set(AttractionKind.allCases), "the hot springs are added")
         XCTAssertTrue(AttractionCatalog.spots.allSatisfy { (100...500).contains($0.stars) && $0.latitude > 21.5 && $0.latitude < 25.5 })
         XCTAssertEqual(ids.count, AttractionCatalog.spots.count, "each once")
         XCTAssertEqual(Set(AttractionCatalog.spots.map(\.name)).count, AttractionCatalog.spots.count)
-        // Decision 249: the sights added stay below the alert bubbles'
+        // Decision 250: the sights added stay below the alert bubbles'
         // rating, so the map asks for no more lines than before.
         let added = AttractionCatalog.spots.filter { $0.id.hasPrefix("t") }
         XCTAssertEqual(added.count, 189)
@@ -52,7 +52,7 @@ final class TourismSessionTests: XCTestCase {
         XCTAssertLessThanOrEqual(AttractionCatalog.spots.count, Tourism.maximumAttractions, "the whole of Taiwan holds them all")
     }
 
-    /// Decision 249: a 16 km map round a county's main station has two to
+    /// Decision 250: a 16 km map round a county's main station has two to
     /// five sights or so (`tools/tourism-spots/coverage.py` counts them
     /// over the whole island).
     func testATownsMapHasSeveralSights() throws {
@@ -96,7 +96,7 @@ final class TourismSessionTests: XCTestCase {
         XCTAssertNotEqual(GameWorld.newGame(eventSeed: 1).tourism, GameWorld.newGame(eventSeed: 2).tourism)
     }
 
-    /// Decision 249: no name twice on a map while its kind has one left.
+    /// Decision 250: no name twice on a map while its kind has one left.
     func testABlankMapsSightsHaveTheirOwnNames() throws {
         for seed in [UInt32(1), 7, 99, 12_345] {
             let sights = try XCTUnwrap(GameWorld.newGame(eventSeed: seed).tourism?.attractions)
@@ -105,7 +105,7 @@ final class TourismSessionTests: XCTestCase {
         }
     }
 
-    /// Decision 249: a blank map that buys its map (decision 160) has its
+    /// Decision 250: a blank map that buys its map (decision 160) has its
     /// sights over all its tiles, at most five a tile, and its middle tile
     /// the usual map's.
     func testABlankMapThatBuysItsMapHasSightsInEveryTile() throws {
@@ -140,7 +140,7 @@ final class TourismSessionTests: XCTestCase {
         }
     }
 
-    /// Decision 249: a mark gives way to a better-rated one it would lie on.
+    /// Decision 250: a mark gives way to a better-rated one it would lie on.
     func testTheMapsSightMarksGiveWay() {
         func mark(_ id: Int, _ stars: Int, _ x: Double, _ y: Double) -> SightMarks.Mark {
             SightMarks.Mark(id: AttractionID(rawValue: id), stars: stars, x: x, y: y)
@@ -158,7 +158,7 @@ final class TourismSessionTests: XCTestCase {
         let world = GameWorld.newGame(anchor: jiufen, land: [])
         let sights = try XCTUnwrap(world.tourism?.attractions)
         XCTAssertEqual(sights.map(\.name), ["九份", "平溪天燈", "猴硐貓村", "鼻頭角", "和平島", "正濱漁港", "八斗子潮境"],
-                       "Jiufen at the middle, Pingxi 9 km south west and decision 249's round Keelung, inside the 16 km square, in the catalog's order")
+                       "Jiufen at the middle, Pingxi 9 km south west and decision 250's round Keelung, inside the 16 km square, in the catalog's order")
         // At the middle of the map, which is where the anchor is.
         XCTAssertEqual(Double(sights[0].point.x), Double(world.bounds.width) / 2, accuracy: 64)
         XCTAssertEqual(Double(sights[0].point.y), Double(world.bounds.height) / 2, accuracy: 64)

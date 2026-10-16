@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Coordinates of the game's tourist attractions (ARCHITECTURE decisions 174
-and 249).
+and 250).
 
 The spots are the ones in the owner's OpenWorld `destination-catalog.js`
 (27 rows) a railway can reach, plus the hot springs and the Pingxi sky
@@ -21,7 +21,7 @@ landmark 303, an original future landmark".
     python3 -I tools/tourism-spots/build_tourism_spots.py taiwan.pbf \
         tools/tourism-spots/taiwan_attractions.json
 
-Decision 249 adds `MORE_SPOTS`, looked for nearer (see there);
+Decision 250 adds `MORE_SPOTS`, looked for nearer (see there);
 `coverage.py` counts how many a 16 km map gets.
 
 Stars are in hundredths (100 to 500). Kinds: coast, mountain, hotSpring, town.
@@ -65,7 +65,7 @@ SPOTS = [
     ("p01", "平溪天燈", "Pingxi Sky Lanterns", "town", 350, ["十分", "平溪", "Shifen", "Pingxi"], (25.0415, 121.7745)),
 ]
 
-# Decision 249: the famous sights round the island, so that a 16 km map
+# Decision 250: the famous sights round the island, so that a 16 km map
 # where people live usually has two to five. Picked by hand from the
 # sights a guide of Taiwan lists (the reference has only OpenWorld's 27 and
 # its Taipei landmark names, `taipei-landmark-catalog.js`, some of which are
@@ -307,7 +307,7 @@ def score(tags):
 
 
 def more_score(tags):
-    """The class of an object to put one of `MORE_SPOTS` on (decision 249):
+    """The class of an object to put one of `MORE_SPOTS` on (decision 250):
     as `score`, with temples, markets, stations and streets, but not a
     township's or a village's node, whose name a sight often shares."""
     quality = score(tags)
@@ -347,7 +347,7 @@ class Finder(osmium.SimpleHandler):
                     continue
                 key = (-quality, distance)
             else:
-                # Decision 249: the sight's own name first, then the class.
+                # Decision 250: the sight's own name first, then the class.
                 if more == 0:
                     continue
                 key = (0 if spot[5][0] in names else 1, -more, distance)
@@ -359,7 +359,7 @@ class Finder(osmium.SimpleHandler):
             self.consider("node", n.id, n.tags, n.location.lat, n.location.lon)
 
     def way(self, w):
-        # A street, for `MORE_SPOTS` only (decision 249): an old street or a
+        # A street, for `MORE_SPOTS` only (decision 250): an old street or a
         # night market is often only that. Its middle node.
         if w.is_closed() or "name" not in w.tags:
             return

@@ -122,7 +122,7 @@ public struct Tourism: Hashable, Sendable {
     /// A source station of the outside counts as this many residents.
     public static let outsideWeight: Int64 = 200_000
     public static let busiestSources = 5
-    /// The most a world has (decision 249: from 64, so that the whole of
+    /// The most a world has (decision 250: from 64, so that the whole of
     /// Taiwan holds every sight of the app's catalog, and a blank map that
     /// buys its map five for each of its 25 tiles).
     public static let maximumAttractions = 256
@@ -255,7 +255,7 @@ extension GameWorld {
 
     /// Turns tourism on for a blank map with three to five attractions drawn
     /// from `seed` for each tile of ``MapExpansion/tileLength`` (16.384 km)
-    /// a side (decision 174; decision 249: by the map's area, so a map that
+    /// a side (decision 174; decision 250: by the map's area, so a map that
     /// buys its map has them across all its tiles): on a cell of leisure
     /// land first, then on a steep slope or by the water (a cell next to
     /// water), and, if the tile has too few of those, anywhere inside it at
@@ -265,7 +265,7 @@ extension GameWorld {
     /// used yet while one is left, and 2 to 4 stars.
     ///
     /// The tile with the world's middle draws as the whole map did before
-    /// decision 249, so a map of one tile has the same places, kinds and
+    /// decision 250, so a map of one tile has the same places, kinds and
     /// stars (the names, from longer lists, differ), and the middle tile of
     /// a map that buys its map the usual map's.
     public mutating func foundAttractions(seed: UInt32) {
@@ -354,7 +354,7 @@ extension GameWorld {
         PlanPoint(x: Int64(column) * Land.cellLength + Land.cellLength / 2, y: Int64(row) * Land.cellLength + Land.cellLength / 2)
     }
 
-    /// A blank map's names of each kind (decision 249: sixteen of each, so
+    /// A blank map's names of each kind (decision 250: sixteen of each, so
     /// a map of many tiles repeats few; the first three are decision 174's).
     static let attractionNames: [AttractionKind: [(chinese: String, english: String)]] = [
         .coast: [
