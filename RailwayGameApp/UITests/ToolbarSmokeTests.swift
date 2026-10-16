@@ -475,7 +475,10 @@ final class ShellLayoutUITests: XCTestCase {
     private func launch() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = [
-            "-ui-testing", "-AppleLanguages", "(zh-Hant)", "-AppleLocale", "zh_TW",
+            // Straight into the demo: at this size the start screen's Demo
+            // Map button has no activation point XCTest can ask about (the
+            // first run, 38844484023).
+            "-ui-testing", "-demo-layout", "-AppleLanguages", "(zh-Hant)", "-AppleLocale", "zh_TW",
             "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryXXXL",
         ]
         app.launch()
@@ -488,7 +491,6 @@ final class ShellLayoutUITests: XCTestCase {
         continueAfterFailure = false
         let app = launch()
         defer { app.terminate() }
-        app.openDemo("demo.simple")
         let toggle = app.buttons["controls.toggle"]
         toggle.waitUntilSettled(timeout: 15)
         let more = app.buttons["map.quickLayer.more"]
@@ -529,7 +531,6 @@ final class ShellLayoutUITests: XCTestCase {
         continueAfterFailure = false
         let app = launch()
         defer { app.terminate() }
-        app.openDemo("demo.simple")
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.appears(within: 10))
         // As MapInteractionTests' hold: the station nearest the middle once
