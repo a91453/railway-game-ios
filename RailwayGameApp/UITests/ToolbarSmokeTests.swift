@@ -129,25 +129,6 @@ final class LineRoutePreferenceUITests: XCTestCase {
         bringIntoView(app.buttons["line.route.-1.0.1"], in: app)
     }
 
-    /// TEMPORARY probe (not for merge): five launches, each turning the
-    /// switch on with one tap, as the route test's first steps do.
-    func testProbeAdvancedSwitchFiveLaunches() {
-        continueAfterFailure = false
-        for _ in 0..<5 {
-            let app = XCUIApplication()
-            app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
-            app.launch()
-            app.openDemo("demo.realWorld")
-            let pause = app.buttons["Pause"]
-            XCTAssertTrue(pause.appears(within: 15)); pause.tap()
-            let lines = app.buttons["Lines"]
-            XCTAssertTrue(lines.appears(within: 10)); lines.tap()
-            setAdvanced(true, in: app)
-            setAdvanced(false, in: app)
-            app.terminate()
-        }
-    }
-
     /// Turns the lines panel's "Advanced" switch on or off: the choice is
     /// kept between launches, so a test sets the one it needs.
     private func setAdvanced(_ shown: Bool, in app: XCUIApplication) {
@@ -166,6 +147,12 @@ final class LineRoutePreferenceUITests: XCTestCase {
         // (main bf12187's full lane, run 38641908091: (540, 314), the switch
         // drawn at about 735).
         let control = toggle.switches.firstMatch
+        // Once the list has stopped: a tap on a list still moving after the
+        // drags only stops it, and the switch, under the finger 350 ms, did
+        // not turn (PR #659's run 38729482700 and run 38863791023, the app's
+        // trace: both a second after a short last drag; the five launches
+        // without one each turned it at once).
+        (control.exists ? control : toggle).waitUntilSettled()
         if control.exists {
             control.tap()
         } else {

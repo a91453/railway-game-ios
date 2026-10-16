@@ -306,8 +306,8 @@ final class TutorialUITests: XCTestCase {
         let folded = app.buttons["tutorial.unfold"]
         XCTAssertTrue(waitForCard(card, or: folded), "No tutorial card", file: file, line: line)
         if !card.exists {
-            // One tap: the card is kept as a done step moves on, so a touch
-            // on it then still opens it
+            // One tap: the pill opens the card as the finger comes down, so
+            // a touch on it as a done step moves on still opens it
             // (``testATouchHeldOnTheFoldedCardAsTheStepMovesOnOpensIt``).
             folded.waitUntilSettled()
             folded.tap()
@@ -316,12 +316,13 @@ final class TutorialUITests: XCTestCase {
     }
 
     /// A touch on the folded card as a done step moves on opens the card.
-    /// The card was made anew for each step, and the new one cancelled a
-    /// touch on the old (main 6e86506's full lane, run 38709237236, the
-    /// app's trace: the touch began on the pill and was cancelled 170 ms
-    /// later, the card did not open). Here the step waits four seconds
-    /// before it moves on (`-tutorial-advance-ms`), and a press of six
-    /// seconds, begun before, is held across it.
+    /// The card is made anew for each step, and the next step's pill
+    /// stands elsewhere: a touch that began on the pill was cancelled as the
+    /// step moved on, and the card did not open (main 6e86506's full lane,
+    /// run 38709237236, the app's trace: cancelled 170 ms after it began).
+    /// Here the step waits four seconds before it moves on
+    /// (`-tutorial-advance-ms`), and a press of six seconds, begun before,
+    /// is held across it; the next step's card is open.
     func testATouchHeldOnTheFoldedCardAsTheStepMovesOnOpensIt() {
         continueAfterFailure = false
         let app = XCUIApplication()

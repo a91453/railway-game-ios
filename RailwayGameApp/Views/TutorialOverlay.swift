@@ -608,6 +608,14 @@ private struct FoldedTutorialCard: View {
                 .contentShape(Capsule())
             }
             .buttonStyle(.plain)
+            // Opens as the finger comes down, not as it lifts: a done step
+            // moves on by itself, the card is made anew for the next step
+            // and its pill stands elsewhere, so a touch that began on the
+            // pill as the step moved on was cancelled and opened nothing
+            // (main 6e86506's full lane, run 38709237236, the app's trace;
+            // the next step's pill 160 points away, run 38863791023). The
+            // player's choice then carries to the next step of the chapter.
+            .simultaneousGesture(DragGesture(minimumDistance: 0).onChanged { _ in unfold() })
             .accessibilityLabel(Text(verbatim: session.language.text(
                 "Show Tutorial: \(tutorial.step.title(in: .english))",
                 "展開教學：\(tutorial.step.title(in: .traditionalChinese))"
