@@ -274,7 +274,13 @@ set -euo pipefail
 # 38822987126). TRADemoDayTests went to campaigns-12 first: its job took
 # 18m11s of 20 (run 38825240720), so it goes to campaigns-8, the shortest
 # job on that run (9m07s); campaigns-16 keeps the high-speed day alone
-# (its job 16m59s). HighSpeedDemoBatchTests, which checks
+# (its job 16m59s).
+# On main after #687 (run 38830182218, against #684's 38813149430) the
+# longest jobs were campaigns-11 16m58s and campaigns-16 16m57s, past the
+# 15m47s of rest before it. Each train's way is now kept while the trains
+# move a second (decision 228 later), some 12% off both demos' days, and
+# HighSpeedDemoBatchTests goes to campaigns-14 (9m09s on that run), where
+# it opens the demo for itself (about a minute). HighSpeedDemoBatchTests, which checks
 # that, opens the same demo as HighSpeedDemoTests, so it goes with it to
 # campaigns-11 (8m42s with it on run 38822987126).
 classes_of() {
@@ -289,10 +295,10 @@ classes_of() {
     campaigns-8) echo "GoldenScenarioTests ScheduledOvertakeTrackMiddlePropertyTests TimetablePropertyTests ScreenshotSceneTests NewGameBalanceTests TRADemoDayTests" ;;
     campaigns-9) echo "SaveMutationTests EconomySecondHalfPropertyTests" ;;
     campaigns-10) echo "PassengerPlanKeyTests ReservationShortcutTests NetworkPostcardTests StationCommerceCardTests LineLossDiagnosisTests" ;;
-    campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests HighSpeedDemoTests TRADemoTests HighSpeedDemoBatchTests" ;;
+    campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests HighSpeedDemoTests TRADemoTests" ;;
     campaigns-12) echo "TrafficControlPropertyTests ScheduledOvertakeTrackFinalPropertyTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests" ;;
     campaigns-13) echo "BoardingPropertyTests TurnbackPropertyTests" ;;
-    campaigns-14) echo "ServiceLinePropertyTests OnboardingTests CommandLogTests ScheduledTrafficTests TurnbackTests" ;;
+    campaigns-14) echo "ServiceLinePropertyTests OnboardingTests CommandLogTests ScheduledTrafficTests TurnbackTests HighSpeedDemoBatchTests" ;;
     campaigns-15) echo "TrafficFollowingPropertyTests ScheduledOvertakeTrackLastPropertyTests NewGameSavePropertyTests RealWorldDemoTests" ;;
     campaigns-16) echo "HighSpeedDemoDayTests" ;;
     *) return 1 ;;

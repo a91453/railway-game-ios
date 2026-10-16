@@ -8634,8 +8634,10 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 - 問題：`advance` 把沒有事件的秒數合成一個 span 一起移動，`clearAhead` 只看 span 開始時其他車的位置。高鐵示範用 `.normal` 每次推一分鐘、和用 `.x10` 每分鐘推 60 次一秒，第 3 分鐘 THSR 4 的位置就不同（#660 之前 240 分鐘都一樣）。遊戲速度不同結果就不同；`CommandLog` 把連續的 advance 合成一筆，問題回報的重播也重建不出裝置上的世界。
 - 現在：`spacingMayHold(within:)` 為真（有真實班次的路線、交通管制關著，而且有列車在它前方的路上會停在某列車之前）時，這個 span 裡只有列車逐秒移動（每秒 `moveTrains` 一秒、`dropRunsHeldUp` 一次），其他的事照 span 做。只看「這個 span 走得到的距離內」會不會被擋不夠：對向車與後方較快的車在 span 裡越來越近，逐秒時中途才擋（試過，第 5、6 分鐘仍有差）。
 - 代價：高鐵示範一天的 `HighSpeedDemoDayTests` 在本機 debug 從 401 秒變約 800 秒（每分鐘一次 `advance` 時幾乎都逐秒），台鐵示範（決策 240，號誌也關著）的 `TRADemoDayTests` 162 → 185 秒；其他世界不變。另一個做法是整個 advance 迴圈逐秒（1106 秒），沒採用。CI 和本機 debug 差不多快，兩天放在一起超過 `campaigns-16` 的 20 分鐘，所以 `TRADemoDayTests` 移到 `campaigns-8`（當時最短的 job）。玩的時候高鐵、台鐵示範在高速下每分鐘的計算也約多一倍；要再快，得找出只在真的會擋的時候才逐秒的條件（之後的工作）。
-- 測試：`HighSpeedDemoBatchTests.testAMinuteInOneStepIsSixtyOneSecondSteps`（`campaigns-11`，和 `HighSpeedDemoTests` 共用開好的示範）：30 分鐘，每分鐘比較兩個世界的列車。修正前第 3 分鐘就不同。
+- 測試：`HighSpeedDemoBatchTests.testAMinuteInOneStepIsSixtyOneSecondSteps`（`campaigns-14`）：30 分鐘，每分鐘比較兩個世界的列車。修正前第 3 分鐘就不同。
 - 四個角度：玩家：任何速度玩出來都一樣，回報的重播可信；開發：決策 37 的規則回來了，代價只在有真實班次、交通管制關著的世界；美術：無；音樂：無。
+
+- 再後來（CI 提速）：逐秒移動時，每列車的路（`way(of:)`）在同一秒裡算過就留著（`DirectionMemo.ways`），那列車移動後才丟掉；對向與讓位的檢查只在對方的路碰到這一秒走得到的軌道時才算對方的路。結果逐位元不變：高鐵、台鐵示範各跑一天（每 30 分鐘的列車與最後的整個世界）編碼後和 `main` 完全相同，`HighSpeedDemoBatchTests` 仍通過。兩個示範的一天約快 12%。更大的改進要找「真的會被擋時才逐秒」的條件（之後的工作）。
 
 ### 229. 原生 3D 地圖第一步：Metal，讀遊戲狀態，先在實機量
 
