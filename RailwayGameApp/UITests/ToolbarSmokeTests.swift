@@ -666,14 +666,22 @@ final class ShellLayoutUITests: XCTestCase {
             let to = origin.withOffset(CGVector(dx: x, dy: list.frame.minY + 40 - app.frame.minY))
             from.press(forDuration: 0.1, thenDragTo: to, withVelocity: .slow, thenHoldForDuration: 0.3)
         }
+        // The clock is paused at 07:00, when every station's board lists
+        // trains (DemoAtTests): the rows only have to be drawn. A row once
+        // showed for a moment and was gone at the next look (#712), so one
+        // sighting counts.
+        var listed = false
         let due = Date().addingTimeInterval(5)
-        while !time.exists, Date() < due {
+        repeat {
+            if time.exists {
+                listed = true
+                break
+            }
             Thread.sleep(forTimeInterval: 0.5)
-        }
+        } while Date() < due
         // Not dragged into view: a label inside a row read as one is never
         // hittable, and the drag would hunt for it (the sixth run). The
         // board's head is in view, and its first trains under it.
-        let listed = time.exists
         if !listed { attach("No train on the station's board") }
         XCTAssertTrue(listed, "The board lists a train")
         // A time or a count of minutes on one line is wider than tall and a

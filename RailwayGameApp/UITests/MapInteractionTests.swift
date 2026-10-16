@@ -1309,15 +1309,25 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(newGame.appears(within: 10))
         app.bringStartButtonIntoView(newGame)
         newGame.tap()
-        // A new blank map has three to five sights; the last one marked.
+        // A new blank map has three to five sights in each tile, anywhere
+        // in it: the opening, framed on the towns, may show none (main
+        // 878adaf's full lane, run 38878787559), so the map is drawn back
+        // until one is marked.
         let marks = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'map.sight.'"))
+        let zoomOut = app.buttons["Zoom out"]
+        XCTAssertTrue(zoomOut.appears(within: 30))
+        for _ in 0..<5 where !marks.firstMatch.appears(within: 3) && zoomOut.isEnabled {
+            zoomOut.tap()
+        }
         XCTAssertTrue(marks.firstMatch.appears(within: 10), "No sight is marked on the map")
         let mark = marks.element(boundBy: marks.count - 1)
         let id = mark.identifier.replacingOccurrences(of: "map.sight.", with: "")
         XCTAssertTrue(mark.becomesHittable(within: 10))
         mark.tap()
         XCTAssertTrue(app.buttons["tourism.done"].appears(within: 10), "The sights did not open")
-        let row = app.descendants(matching: .any)["tourism.row.\(id)"].firstMatch
+        // The row's name: its star, which carries the row's identifier too,
+        // is hidden from VoiceOver and never hittable (PR #713's run).
+        let row = app.staticTexts.matching(identifier: "tourism.row.\(id)").firstMatch
         XCTAssertTrue(row.appears(within: 10), "The sight's row is not in the panel")
         XCTAssertTrue(row.becomesHittable(within: 10), "The panel did not open at the sight's row")
     }
