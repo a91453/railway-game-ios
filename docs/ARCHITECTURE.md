@@ -7218,6 +7218,8 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 
 **沒有驗證的**：畫面（SwiftUI，只在 macOS CI 編譯）、兩張 alert 在實機上的時機（列車開始等車的那一刻）。
 
+**後來**（2026-10-16，`docs/HANDOFF.md` §7.1，PR401_525 §5）：號誌站的編號改成「所有號誌站名稱（兩種語言）裡最大的號碼加一」。以前用封閉車站的數量：玩家自己關掉的車站會被算進去，拆掉一座號誌站之後，下一座又會和還在的那座同名。測試：`PassingLoopSessionTests.testTheSignalStationTakesTheNextNumberNotInUse`。
+
 ### 205. 地圖的標記不靠路線色、站名底牌、拉遠的建物、列車一節一節畫
 
 2026-10-13，作者開「美術線」（玩法進步、美術沒跟上），`docs/research/NEXT_PRIORITIES_2026-10-12.md` §0 第 8、12 項與「三方的其他意見」美術那條。作者看過兩輪預覽（現在／方案 A／方案 B，再一版 A 修改版），選 A 修改版。號碼依工作登記 #231：決策 205；存檔版本、golden schema 不動。只改畫面（App 與 GamePresentation），GameCore 不動。
@@ -8241,6 +8243,8 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 參考庫沒有車輛運用表或甘特圖，也沒有誤點原因（「前車誤點」）。搜尋了 gantt、運用、rostering、前車誤點、delay cause 等字，`MapBuilder/`、`Simulator/`、`OpenWorld/`、`Ci/` 都沒有。所以這兩項是這個專案自己的。外部只看了作者自己的航空模擬器截圖，取版型，沒有程式或素材。
 
 **沒有驗證的**：這一則只有預覽與設計，沒有 App 程式。實機上的字級、卡片高度、iPhone 橫拿時運用表一畫面放幾列，都要等實作後在 TestFlight 看。
+
+**後來**（2026-10-16，`docs/HANDOFF.md` §7.1，PR526_626 §5 的 B8）：「前車誤點」也寫自己誤點幾分：「前車誤點 4 分」／「4 min late, train ahead」。只有原因、沒有分鐘數時，玩家要另外看刪除線的時刻才知道慢多少。看板放不下時照舊退成只有圖示（`ViewThatFits`）。測試：`DepartureBoardTests.testTheStatusAndTheStruckThroughTime`。
 
 ### 224. 六個新畫面的原創排版：營運概覽、車種型錄、開新路線比較、車站營運頁、圖層開關、HUD
 
