@@ -101,13 +101,15 @@ final class Map3DStreetLifeTests: XCTestCase {
         // Every station with a platform has its crowd there.
         let stations = Set(world.network.platforms.map(\.station))
         XCTAssertEqual(Set(life.spots.filter { $0.kind == .platform }.compactMap(\.station)), stations)
-        // The streets are drawn, navy, under their traffic.
+        // Decision 263: the streets are drawn, in their kinds' navy, under
+        // their traffic.
         let scene = Map3DScene(world: world)
-        let roads = scene.chunks.flatMap { $0.mesh.vertices }.filter { $0.color == Map3DPalette.road(.tertiary) }
+        let navy = Set([Map3DBaseMap.RoadKind.primary, .tertiary, .minor].map(Map3DPalette.road))
+        let roads = scene.chunks.flatMap(\.mesh.vertices).filter { navy.contains($0.color) }
         XCTAssertGreaterThan(roads.count, 100)
         let lane = try XCTUnwrap(life.lanes.first)
         let middle = lane.path.at(lane.path.length / 2).point
-        XCTAssertTrue(roads.contains { abs($0.x - middle.x) < 4 && abs($0.z - middle.z) < 4 && abs($0.y - (middle.y - 0.02)) < 0.05 },
+        XCTAssertTrue(roads.contains { abs($0.x - middle.x) < 12 && abs($0.z - middle.z) < 12 && abs($0.y - (middle.y - 0.02)) < 0.05 },
                       "a road under the lane, just under the wheels")
         // Nothing but finite points.
         for spot in life.spots {

@@ -58,8 +58,8 @@ final class Map3DPropsTests: XCTestCase {
             }
         }
         XCTAssertEqual(Map3DScene(world: world, baseMap: tiles).chunks.flatMap(\.props).map(\.floats), props.map(\.floats))
-        // A blank map has no real streets, so none.
-        XCTAssertTrue(Map3DScene(world: GameWorld.newGame()).chunks.allSatisfy(\.props.isEmpty))
+        // Decision 263: a blank map's are along its seeded streets.
+        XCTAssertFalse(Map3DScene(world: GameWorld.newGame()).chunks.allSatisfy(\.props.isEmpty))
     }
 
     func testNoPropStandsWhereTheTrackRuns() throws {
