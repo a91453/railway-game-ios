@@ -253,9 +253,11 @@ struct RealWorldPicker: View {
                                     stationButton(station, showsSystem: false)
                                 }
                             } label: {
+                                // On the label, as the places' groups above:
+                                // on the group it hid the stations' own.
                                 Text(verbatim: "\(system.name(in: launcher.language)) · \(stations.count)")
+                                    .accessibilityIdentifier("railway.\(system.id)")
                             }
-                            .accessibilityIdentifier("railway.\(system.id)")
                         }
                     } header: {
                         Text("Railway Stations")
