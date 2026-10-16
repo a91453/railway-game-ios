@@ -530,6 +530,58 @@ WHY='change detection did not succeed' expect fail "gate: the detection failed" 
 WHY='change detection did not succeed' expect fail "gate: the detection was cancelled" gate CHANGES=cancelled SWIFT_NEEDED=false TIER=none CURRENT=skipped
 WHY='neither' expect fail "gate: no answer from the detection" gate CHANGES=success SWIFT_NEEDED= TIER= CURRENT=skipped
 
+# A pull request's gate waits for its iOS App Build run (ios-gate). A fake
+# `gh` answers each look in turn with the next of FAKE_IOS's words: a run as
+# status:conclusion, NONE for no run, FAIL for the API failing; past the
+# last word it keeps giving the last.
+sha_ios=0123456789abcdef0123456789abcdef01234567
+cat >"$work/bin/gh" <<'FAKE'
+#!/usr/bin/env bash
+[[ "$1 $2" == "api repos/owner/repo/actions/workflows/ios-build.yml/runs?head_sha=0123456789abcdef0123456789abcdef01234567&event=pull_request&per_page=20" ]] ||
+  { echo "gh: unexpected query: $*" >&2; exit 1; }
+read -r -a answers <<<"$FAKE_IOS"
+n="$(cat "$FAKE_IOS_COUNT" 2>/dev/null || echo 0)"
+echo $((n + 1)) >"$FAKE_IOS_COUNT"
+(( n < ${#answers[@]} )) || n=$((${#answers[@]} - 1))
+case "${answers[$n]}" in
+  FAIL) echo "gh: HTTP 502" >&2; exit 1 ;;
+  NONE) ;;
+  *) echo "${answers[$n]%%:*} ${answers[$n]#*:} https://example.invalid/run" ;;
+esac
+FAKE
+chmod +x "$work/bin/gh"
+ios_gate() {
+  rm -f "$work/ios-count"
+  env GITHUB_REPOSITORY=owner/repo HEAD_SHA="$sha_ios" IOS_GATE_POLL_SECONDS=0 IOS_GATE_TRIES=3 \
+    FAKE_IOS_COUNT="$work/ios-count" "$@" "$script" ios-gate
+}
+# looks <n>: the last ios_gate looked exactly n times.
+looks() {
+  if [[ "$(cat "$work/ios-count")" == "$1" ]]; then
+    echo "ok   looks $1"
+  else
+    echo "FAIL expected $1 looks, got $(cat "$work/ios-count")"
+    failures=$((failures + 1))
+  fi
+}
+expect pass "ios-gate: the iOS run passed" ios_gate FAKE_IOS="completed:success"
+expect pass "ios-gate: the iOS run's jobs were skipped (the change passed before)" ios_gate FAKE_IOS="completed:skipped"
+expect pass "ios-gate: waits while the iOS run is queued and running" ios_gate FAKE_IOS="queued:- in_progress:- completed:success"
+looks 3
+expect pass "ios-gate: no iOS run, after a second look (a change the app cannot see)" ios_gate FAKE_IOS="NONE"
+looks 2
+expect pass "ios-gate: a run that shows up on the second look is waited for" ios_gate FAKE_IOS="NONE in_progress:- completed:success"
+looks 3
+expect pass "ios-gate: the API failing fewer times than the limit" ios_gate FAKE_IOS="FAIL FAIL completed:success"
+WHY='did not pass \(failure\)' expect fail "ios-gate: the iOS run failed" ios_gate FAKE_IOS="in_progress:- completed:failure"
+WHY='did not pass \(cancelled\)' expect fail "ios-gate: the iOS run was cancelled" ios_gate FAKE_IOS="completed:cancelled"
+WHY='did not pass \(startup_failure\)' expect fail "ios-gate: the iOS run did not start" ios_gate FAKE_IOS="completed:startup_failure"
+WHY='did not pass \(failure\)' expect fail "ios-gate: a run that shows up on the second look and fails" ios_gate FAKE_IOS="NONE completed:failure"
+WHY='Could not list the iOS App Build runs' expect fail "ios-gate: the API failing every time" ios_gate FAKE_IOS="FAIL"
+looks 3
+WHY='HEAD_SHA is not a commit' expect fail "ios-gate: no commit" ios_gate FAKE_IOS="completed:success" HEAD_SHA=
+WHY='GITHUB_REPOSITORY is not set' expect fail "ios-gate: no repository name" ios_gate FAKE_IOS="completed:success" GITHUB_REPOSITORY=
+
 if [[ "$failures" -ne 0 ]]; then
   echo "::error::swift-shards.sh self-test: $failures failures."
   exit 1

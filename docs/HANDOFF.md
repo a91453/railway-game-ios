@@ -48,6 +48,8 @@
 **每個 PR 合併前確認**（`pull_request_read` 的 get 與 get_check_runs）：
 - 不是 draft，`mergeable_state` 是 `clean`。
 - check runs 全部是 success 或 skipped，沒有 in_progress。
+  - 決策 265 之後，PR 的 `Swift CI (gate)` 會等同一個 commit 的 `iOS App Build`，iOS 紅了 gate 就紅；所以 gate 綠就代表 iOS 也綠了。
+  - iOS 失敗、重跑通過之後，gate 不會自己變綠：對 CI 那一輪按 Re-run failed jobs（`actions_run_trigger` 的 rerun_failed_jobs）。
   - 「Remember that this change passed」顯示 skipped 是正常的：同一個改動前一輪已經跑過。
   - Xcode build 有時跑兩輪，兩輪都要看。
 - main 最新一次 push 的 `ci.yml` 是綠的（`actions_list` 的 list_workflow_runs，條件 ci.yml、branch main、event push）。cancelled 是被新的 push 取代，不算紅；要看最新一個跑完的。
@@ -69,8 +71,11 @@
 - 兩個 PR 撞同一個決策號，或 ARCHITECTURE、OVERVIEW 衝突：請該 session 自己 merge main 解，決策照號碼排。
 - 存檔版本與決策號以 main 加上 #231 還沒釋出的登記為準，取最大值加一。
 
-**full lane**（`ios-build.yml` 把 iPhone UI 測試全部跑一次：兩個 iPhone job 加 iPad 教學，約 42–45 分鐘）：
-- 合了會影響 App 的 PR 後，用 `actions_run_trigger` 跑：run_workflow，workflow `ios-build.yml`，ref main。
+**full lane**（`ios-build.yml` 把 iPhone UI 測試全部跑一次：兩個 iPhone job 加 iPad 教學，約 42–45 分鐘，佔 3 台 macOS）：
+- 合併後不用手動跑（決策 265）：`ios-full-lane.yml` 在合了會影響 App 的 PR 之後自己啟動，最多每三小時一次。10-14 到 10-16 的 67 小時裡 full lane 跑了 42 次，只有 7 次是它啟動的，佔全部 macOS 用量的 34%。
+- 只在兩種情況用 `actions_run_trigger` 手動跑（run_workflow，workflow `ios-build.yml`，ref main）：
+  - 發版前要用的 HEAD；
+  - full lane 紅了，要二分的 commit。
 - 只改 docs、`Tests/`、`tools/` 的 PR 不影響 App，不用重跑。
 - 要發版的 commit 必須自己有一輪綠的 full lane。
 
