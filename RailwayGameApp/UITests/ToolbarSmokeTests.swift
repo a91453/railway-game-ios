@@ -556,6 +556,21 @@ final class ShellLayoutUITests: XCTestCase {
             XCTFail("The demo has stations")
             return
         }
+        // The demo opens at midnight and its trains start at 06:00: the
+        // board lists the next three hours, so it waits for 04:00 (the
+        // second run found an empty board). The clock is the board's last
+        // "HH:MM".
+        let time = app.descendants(matching: .any)["hud.time"].firstMatch
+        XCTAssertTrue(time.appears(within: 10))
+        func hour() -> Int? {
+            guard let label = try? time.snapshot().label, let colon = label.lastIndex(of: ":") else { return nil }
+            return Int(String(label[..<colon].reversed().prefix { $0.isNumber }.reversed()))
+        }
+        let morning = Date().addingTimeInterval(90)
+        while !(4...20).contains(hour() ?? -1), Date() < morning {
+            Thread.sleep(forTimeInterval: 1)
+        }
+        XCTAssertTrue((4...20).contains(hour() ?? -1), "The clock reaches the trains' hours: \(String(describing: try? time.snapshot().label))")
         map.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: central.x, dy: central.y)).press(forDuration: 0.8)
         let row = app.descendants(matching: .any).matching(identifier: "station.board.row").firstMatch
         // The panel's list, beside the map on the trailing side, once it has
@@ -573,7 +588,14 @@ final class ShellLayoutUITests: XCTestCase {
             add(hierarchy)
         }
         XCTAssertNotNil(list, "The hold opens the station's panel")
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(row, in: list), "The board lists a train")
+        let listed = app.dragUntilWhollyOnScreen(row, in: list)
+        if !listed {
+            let hierarchy = XCTAttachment(string: app.debugDescription)
+            hierarchy.name = "No train on the station's board"
+            hierarchy.lifetime = .keepAlways
+            add(hierarchy)
+        }
+        XCTAssertTrue(listed, "The board lists a train")
         let rows = app.descendants(matching: .any).matching(identifier: "station.board.row").allElementsBoundByIndex
         for row in rows where row.exists && row.frame.height > 0 {
             // Two lines at this size are about 50 points: the train and the
