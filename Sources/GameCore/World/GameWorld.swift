@@ -3304,18 +3304,24 @@ public struct GameWorld: Equatable, Sendable {
             return aside.id
         }
         // Decision 255: with no passing place and no spare to move, a
-        // service due to leave turns back short where it waits, a call
-        // made again there, its riders for the calls it leaves out
-        // abandoned.
+        // service due to leave turns back short where it waits: a call
+        // made again there, its doors opening again at once. Those riding
+        // to the calls it leaves out get off, abandoned, and those waiting
+        // there for its way back get on, as at any call. It runs nowhere,
+        // so no departure is counted.
         for id in stuck.keys.sorted() {
             guard let index = trains.firstIndex(where: { $0.id == id }),
-                  case .waitingAtStop(let stop, _)? = trains[index].execution,
+                  case .waitingAtStop? = trains[index].execution,
                   let due = departureDue(of: trains[index]), due <= clock.now,
-                  let turned = shortTurn(of: trains[index], in: stuck)
+                  let turned = shortTurn(of: trains[index], in: stuck),
+                  case .waitingAtStop(let back, _)? = turned.execution
             else { continue }
             setOff(index, as: turned)
-            serve(departureOf: id, from: stop, distance: 0)
-            abandonStrandedRiders()
+            let crowd = doorCrowd(of: id, at: turned.timetable[back].station)
+            let busy = exchangePassengers(index, at: back, memo: &memo)
+            let opened = Self.saturating(clock.now, plus: ServiceDwell.doorOpening)
+            let seconds = trains[index].exchangeSeconds(busy, crowd: crowd)
+            trains[index].times?.exchangeEnd = Self.saturating(opened, plus: seconds)
             return id
         }
         return nil
