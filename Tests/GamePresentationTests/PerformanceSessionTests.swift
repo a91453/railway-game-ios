@@ -33,12 +33,13 @@ final class PerformanceSessionTests: XCTestCase {
     // MARK: - Presets and text
 
     func testThePresetsAreTheReferencesTrainsByName() {
-        XCTAssertEqual(PerformancePreset.allCases.count, 17)
+        XCTAssertEqual(PerformancePreset.allCases.count, 23)
         XCTAssertEqual(PerformancePreset.metro.performance, .metro)
         XCTAssertEqual(PerformancePreset.taroko.performance, .tiltingTaroko)
         XCTAssertEqual(
             PerformancePreset.allCases.map { $0.title(in: .traditionalChinese) },
-            ["標準", "捷運", "區間車", "普快車", "莒光／復興", "自強", "EMU3000", "推拉式自強", "太魯閣", "普悠瑪", "柴聯自強", "DR1000", "阿里山林鐵", "高鐵", "蒸汽列車", "北捷 C371／C381", "EMU800／900 區間車"]
+            ["標準", "捷運", "區間車", "普快車", "莒光／復興", "自強", "EMU3000", "推拉式自強", "太魯閣", "普悠瑪", "柴聯自強", "DR1000", "阿里山林鐵", "高鐵", "蒸汽列車", "北捷 C371／C381", "EMU800／900 區間車",
+             "EMU100 自強號", "莒光號（E200 電力機車）", "莒光號（E500 電力機車）", "莒光號（R100 柴電機車）", "莒光號（R200 柴電機車）", "海風號"]
         )
         XCTAssertEqual(PerformancePreset.designSpeeds, [60, 80, 90, 100, 120, 140, 150, 160, 180, 200])
         // A design speed changes only the top speed: still the metro.
@@ -63,6 +64,31 @@ final class PerformanceSessionTests: XCTestCase {
         }
         XCTAssertEqual(TrainPerformance.metroC381.displayText(in: .traditionalChinese), "北捷 C371／C381 · 80 km/h · 3.6 / 3.6 km/h/s")
         XCTAssertEqual(TrainPerformance.emu800.displayText(in: .english), "EMU800 / EMU900 local · 130 km/h · 1.456 / 4.32 km/h/s")
+    }
+
+    /// Decision 252: the Taiwan Railway's further models, each read as
+    /// itself whatever its design speed, none a high-speed one, and each
+    /// the performance of the train type of the same model.
+    func testTheTaiwanRailwayModelsOfDecision252() {
+        let rows: [(PerformancePreset, TrainType, TrainPerformance)] = [
+            (.emu100, .emu100, TrainPerformance(acceleration: 670, braking: 2_500, topSpeed: 120)),
+            (.e200ChuKuang, .e200ChuKuang, TrainPerformance(acceleration: 1_256, braking: 2_600, topSpeed: 110)),
+            (.e500ChuKuang, .e500ChuKuang, TrainPerformance(acceleration: 1_657, braking: 2_600, topSpeed: 120)),
+            (.r100ChuKuang, .r100ChuKuang, TrainPerformance(acceleration: 583, braking: 2_600, topSpeed: 100)),
+            (.r200ChuKuang, .r200ChuKuang, TrainPerformance(acceleration: 920, braking: 2_600, topSpeed: 110)),
+            (.haiFeng, .haiFeng, TrainPerformance(acceleration: 2_880, braking: 2_840, topSpeed: 110)),
+        ]
+        for (preset, type, performance) in rows {
+            XCTAssertEqual(preset.performance, performance, preset.code)
+            XCTAssertEqual(type.performance, performance, preset.code)
+            XCTAssertEqual(PerformancePreset(matching: performance), preset, preset.code)
+            XCTAssertEqual(PerformancePreset(matching: performance.withTopSpeed(90)), preset, preset.code)
+            XCTAssertFalse(performance.isHighSpeed, preset.code)
+            XCTAssertTrue(performance.isValid, preset.code)
+            XCTAssertEqual(type.title(in: .traditionalChinese), preset.title(in: .traditionalChinese))
+        }
+        XCTAssertEqual(TrainPerformance.e200ChuKuang.displayText(in: .traditionalChinese), "莒光號（E200 電力機車） · 110 km/h · 1.256 / 2.6 km/h/s")
+        XCTAssertEqual(TrainPerformance.haiFeng.displayText(in: .english), "Hai-Feng sightseeing train · 110 km/h · 2.88 / 2.84 km/h/s")
     }
 
     /// Decision 236: the presets are the catalog's rows, each code once and

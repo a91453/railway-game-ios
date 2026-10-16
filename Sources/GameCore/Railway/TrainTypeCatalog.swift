@@ -46,6 +46,21 @@
 //   linear-motor metros (Osaka, Guangzhou); D 20 m, the APM's 12.5 m, sky
 //   rail's 12 m, maglev and monorail 15 m and the steam train's four-wheeled
 //   coach 8 m are estimates from cars of their kind.
+// - The Taiwan Railway's models of decision 252, each with the performance
+//   of the same name (`RunningCurve.swift` says where each comes from):
+//   - The EMU100: a car is rated 45, its five-car set's 224 (Chinese
+//     Wikipedia's 編組定員) over 5, 44.8 rounded; one door a side (its
+//     page: each car one set of folding doors); 20.09 m a car.
+//   - A Chu-Kuang train is a locomotive and its coaches, which this model
+//     has as one set whose cars are the coaches (gap: a locomotive that
+//     couples and uncouples is later); the locomotive is in the first car's
+//     price. A coach is rated 50, the Chinese Wikipedia's 22,000 seats in
+//     2006 over its 441 coaches, 49.9 rounded; two doors a side (the coaches
+//     built or rebuilt since 1995); 20.0 m a coach, the owner's fleet
+//     catalogue (`fleet/catalog.json`, `juguang` `pitchM`).
+//   - The Hai-Feng is an EMU500 rebuilt for sightseeing: the EMU500's
+//     rebuilt car, 44 seats, three doors a side and 20.33 m (Chinese
+//     Wikipedia); its own seats are not published.
 // - The families (metro, railway, high speed, special) are decision 224's
 //   catalogue of types; a high-speed set is the type whose family is high
 //   speed.
@@ -141,6 +156,19 @@ public enum TrainTypeCatalog {
               performance: .highSpeed, firstDollars: 900_000, carDollars: 120_000, operatingPermille: 2_000, carMetres: (25, 0)),
         .init(code: "EMU3000", family: .railway, offer: .added, capacity: 45, doors: 2, overloads: true,
               performance: .emu3000, firstDollars: 260_000, carDollars: 55_000, operatingPermille: 1_200, carMetres: (20, 3)),
+        // Decision 252.
+        .init(code: "EMU100", family: .railway, offer: .added, capacity: 45, doors: 1, overloads: true,
+              performance: .emu100, firstDollars: 200_000, carDollars: 45_000, operatingPermille: 1_100, carMetres: (20, 1)),
+        .init(code: "E200CK", family: .railway, offer: .added, capacity: 50, doors: 2, overloads: true,
+              performance: .e200ChuKuang, firstDollars: 220_000, carDollars: 35_000, operatingPermille: 1_300, carMetres: (20, 0)),
+        .init(code: "E500CK", family: .railway, offer: .added, capacity: 50, doors: 2, overloads: true,
+              performance: .e500ChuKuang, firstDollars: 300_000, carDollars: 35_000, operatingPermille: 1_200, carMetres: (20, 0)),
+        .init(code: "R100CK", family: .railway, offer: .added, capacity: 50, doors: 2, overloads: true,
+              performance: .r100ChuKuang, firstDollars: 160_000, carDollars: 35_000, operatingPermille: 1_500, carMetres: (20, 0)),
+        .init(code: "R200CK", family: .railway, offer: .added, capacity: 50, doors: 2, overloads: true,
+              performance: .r200ChuKuang, firstDollars: 280_000, carDollars: 35_000, operatingPermille: 1_400, carMetres: (20, 0)),
+        .init(code: "HAIFENG", family: .railway, offer: .added, capacity: 44, doors: 3, overloads: true,
+              performance: .haiFeng, firstDollars: 240_000, carDollars: 50_000, operatingPermille: 1_300, carMetres: (20, 3)),
     ]
 
     /// Each code's row. Building it traps on a code listed twice.

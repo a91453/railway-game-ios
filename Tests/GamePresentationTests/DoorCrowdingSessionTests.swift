@@ -45,7 +45,9 @@ final class DoorCrowdingSessionTests: XCTestCase {
     func testTheEMU3000IsOfferedNamedAndRunsAsTheReferenceHasIt() throws {
         var world = GameWorld.newGame()
         XCTAssertTrue(world.offeredTrainTypes.contains(.emu3000))
-        XCTAssertEqual(world.offeredTrainTypes.last, .emu3000, "after the high-speed set")
+        let offered = world.offeredTrainTypes
+        // Decision 252's Taiwan Railway models come after it.
+        XCTAssertEqual(offered.firstIndex(of: .emu3000), offered.firstIndex(of: .highSpeed).map { $0 + 1 }, "after the high-speed set")
         XCTAssertEqual(TrainType.emu3000.title(in: .english), "New Tze-Chiang")
         XCTAssertEqual(TrainType.emu3000.title(in: .traditionalChinese), "新自強號")
         XCTAssertEqual(Train.typeText(.emu3000, in: .english), "New Tze-Chiang · 45 a car · 2 doors")

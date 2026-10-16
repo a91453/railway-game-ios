@@ -1628,6 +1628,18 @@ V 實際放行 → T、U（保證不互穿）
 | 參考庫沒有太魯閣的塗裝 | `TrainLivery.taroko` | 本專案的（gap） |
 | 外部 | 檢查腳本用 `colorspacious`（MIT）算色盲模擬，只在 scratchpad，不進 repo | — |
 
+## 台鐵車款擴充（決策 252）
+
+| 參考 | 本專案 | 怎麼用 |
+| --- | --- | --- |
+| `Simulator/reference_snapshot/_next/static/chunks/2694-efba5e23a92b434e.js` 的塗裝表（`tra-emu100`、`tra-e201`、`tra-e500`、`tra-r100`、`tra-r200`、`tra-sea-breeze`：`bodyColor`、`stripeColor`、`cabShape`） | `TrainLivery.emu100`、`.e200ChuKuang`、`.e500ChuKuang`、`.r100ChuKuang`、`.r200ChuKuang`、`.haiFeng` | 色值取用，撞到地圖保留色或同形狀車頭的才調深淺；`boxy` → `TrainNose.flat`、`streamlined` → `.round` |
+| `Railway/site_archive_clean/memories/tainan-2026-09-12/fleet/catalog.json` 的 `juguang`（`pitchM` 20.0、`livery`）、`e200`、`e500` 的 `livery` | 莒光客車的車長（`TrainTypeCatalog` `E200CK` 等，20.0 m）、客車的橘 `TrainLivery.chuKuangCoach`、E500 的深色車頭 | 長度照用（每公尺 64 單位）；顏色照描述取 |
+| `Railway/site_archive_clean/rail-3d/integration/formations.js`（`chukuang`：機車＋客車 8 輛；`haifeng`：4 輛） | 莒光號加速度推估的編組；海風號 | 只當推估的根據，車型不固定節數 |
+| `Railway/site_archive_clean/index.html` `PERF_RULES` `/莒光|復興/`（`TrainPerformance.semiExpress`：煞車 2.6、120 km/h） | 莒光四款的煞車 2.6、客車最高 120 km/h | 數值照用 |
+| `Railway/site_archive_clean/train-garage-catalog.js`（`emu100`、`e200`、`e500`、`r100`、`r200`、`haifeng`、`juguang` 的照片出處） | — | 只用來確認車款；沒有性能數字 |
+| 參考庫沒有：各車的加減速、定員、機車＋客車的整列性能 | `RunningCurve.swift` 的六個預設、`TrainTypeCatalog` 的六列 | 中文維基百科（EMU100、EMU500、E200、E500、R100、R200、莒光號）與公視新聞（海風號由 EMU500 改造）的公開數字；整列加速度是本專案的推估（gap） |
+| 外部開源專案 | — | 沒有另外找：這次是公開規格數字與塗裝資料，不是演算法；程式是本專案的 |
+
 ## 3D 地圖的街道設施（決策 244）
 
 | 參考 | 本專案 | 怎麼改 |
