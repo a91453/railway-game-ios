@@ -145,7 +145,7 @@ private struct TutorialOverlay: View {
             guard session.tutorialAdvancesByItself else { return }
             let index = tutorial.index
             do {
-                try await Task.sleep(for: voiceOverEnabled ? Duration.milliseconds(1_500) : Tutorial.autoAdvanceDelay)
+                try await Task.sleep(for: voiceOverEnabled ? Duration.milliseconds(1_500) : Self.autoAdvanceDelay)
             } catch {
                 return
             }
@@ -173,6 +173,20 @@ private struct TutorialOverlay: View {
         if layerBeforeTutorial == nil { layerBeforeTutorial = popTravelModeName }
         popTravelModeName = ""
     }
+
+    /// How long a done step waits before it moves on. A UI test can make
+    /// it longer (`-tutorial-advance-ms`, Debug builds only), to hold a
+    /// touch on the card across the step moving on.
+    private static let autoAdvanceDelay: Duration = {
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        if let index = arguments.firstIndex(of: "-tutorial-advance-ms"), arguments.indices.contains(index + 1),
+           let milliseconds = Int(arguments[index + 1]) {
+            return .milliseconds(milliseconds)
+        }
+        #endif
+        return Tutorial.autoAdvanceDelay
+    }()
 
     /// What restarts the wait before a done step moves on.
     private struct AutoAdvance: Equatable {
@@ -594,6 +608,14 @@ private struct FoldedTutorialCard: View {
                 .contentShape(Capsule())
             }
             .buttonStyle(.plain)
+            // Opens as the finger comes down, not as it lifts: a done step
+            // moves on by itself, the card is made anew for the next step
+            // and its pill stands elsewhere, so a touch that began on the
+            // pill as the step moved on was cancelled and opened nothing
+            // (main 6e86506's full lane, run 38709237236, the app's trace;
+            // the next step's pill 160 points away, run 38863791023). The
+            // player's choice then carries to the next step of the chapter.
+            .simultaneousGesture(DragGesture(minimumDistance: 0).onChanged { _ in unfold() })
             .accessibilityLabel(Text(verbatim: session.language.text(
                 "Show Tutorial: \(tutorial.step.title(in: .english))",
                 "展開教學：\(tutorial.step.title(in: .traditionalChinese))"

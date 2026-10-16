@@ -147,27 +147,25 @@ final class LineRoutePreferenceUITests: XCTestCase {
         // (main bf12187's full lane, run 38641908091: (540, 314), the switch
         // drawn at about 735).
         let control = toggle.switches.firstMatch
-        func tapSwitch() {
-            if control.exists {
-                control.tap()
-            } else {
-                toggle.coordinate(withNormalizedOffset: CGVector(dx: 1, dy: 0.5)).withOffset(CGVector(dx: -42, dy: 0)).tap()
-            }
+        // Once the list has stopped: a tap on a list still moving after the
+        // drags only stops it, and the switch, under the finger 350 ms, did
+        // not turn (PR #659's run 38729482700 and run 38863791023, the app's
+        // trace: both a second after a short last drag; the five launches
+        // without one each turned it at once).
+        (control.exists ? control : toggle).waitUntilSettled()
+        if control.exists {
+            control.tap()
+        } else {
+            toggle.coordinate(withNormalizedOffset: CGVector(dx: 1, dy: 0.5)).withOffset(CGVector(dx: -42, dy: 0)).tap()
         }
-        tapSwitch()
         // Twenty seconds: as a job's first test, on a cold Simulator with
         // the real-world demo, one lookup took 10 to 20 seconds, and the
         // switch's value was first read 17 seconds after the tap (run
         // 38441429093); the same steps in the next test took a second.
-        // A touch that reached the switch can still leave it as it was: one
-        // held 390 ms on the switch's own view and nothing turned (PR #659's
-        // run 38729482700, the app's trace). Not turned after ten seconds,
-        // and still not on a fresh look, the switch is tapped once more.
-        let flipped = { XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", shown ? "1" : "0"), object: toggle) }
-        if XCTWaiter.wait(for: [flipped()], timeout: 10) != .completed, (toggle.value as? String == "1") != shown {
-            tapSwitch()
-        }
-        XCTAssertEqual(XCTWaiter.wait(for: [flipped()], timeout: 20), .completed, "The Advanced switch did not turn \(shown ? "on" : "off")")
+        // One tap: on the Simulator a press of 0.05 to 1 second turned it
+        // each time (run 38862097826).
+        let flipped = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", shown ? "1" : "0"), object: toggle)
+        XCTAssertEqual(XCTWaiter.wait(for: [flipped], timeout: 20), .completed, "The Advanced switch did not turn \(shown ? "on" : "off")")
     }
 
     /// Dismisses the status message the sheet shows at its bottom, if
