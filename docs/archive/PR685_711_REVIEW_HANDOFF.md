@@ -200,11 +200,12 @@ Session：https://claude.ai/code/session_01EsozfWmDmXd6Tp2f4fzExd（2026-10-16�
 | 建置步驟 | 2.3 | 2.4 |
 
 - 原因：#702（決策 248）讓高鐵一天又變快，campaigns-16 空出來了；但台鐵一天（2.8 分）還在 campaigns-12，高鐵批次測試（1.5 分）在 campaigns-14。
-- `claude/ci-shard-balance`：把 `TRADemoDayTests`、`HighSpeedDemoBatchTests` 移到 campaigns-16。
-  - 預估 campaigns-12 約 15.0 分、campaigns-14 約 15.1 分、campaigns-16 約 14 分。
-  - 最長的變成 rest（15.7 分），一次 run 預估約 16.2 分（**−2 分**）。
-  - 本機跑 campaigns-16：見那個 PR。
-- 改 CI 腳本會跑完整一層（19 個 job），推之前先和合併 session 排名額。
+- #718（`claude/ci-shard-balance`）：把 `TRADemoDayTests`、`HighSpeedDemoBatchTests` 移到 campaigns-16。
+  - 本機 `swift-shards.sh run campaigns-16`：測試共 719 秒（批次 112、高鐵一天 404、台鐵一天 204）。
+  - #718 自己的完整 tier（commit 5ddead3）：一次 run **15.7 分**（優化前中位數 18.2 分）。
+  - 各 shard：rest 15.7（最長）、campaigns-8 15.3、campaigns-1 15.2、campaigns-14 15.0、campaigns-12 10.9、campaigns-16 10.2。
+  - 只有一次的數字；合併後要再看 main 上的幾次。
+- 改 CI 腳本會跑完整一層（19 個 job），推之前和合併 session 排了名額。
 
 ### iOS full lane（`ios-build.yml`，`workflow_dispatch`）
 
@@ -250,8 +251,17 @@ Session：https://claude.ai/code/session_01EsozfWmDmXd6Tp2f4fzExd（2026-10-16�
 | 列車卡片 | 從 00:00 開始，約 36 秒後才發車，只觀察 60 秒 | 06:30 打開，車在跑 |
 | 狀態列寬度 | 固定 50 秒 | 23:58 打開，看到 3 個日期就停 |
 
-- 預估每次 full lane 省 1–4 分鐘，而且不再看時段。
-- 實際的秒數要等 `only_testing` 的 run 和下一次 full lane。
+- 手動跑 `only_testing`（run 38888496446）三支都通過。和之前 full lane（38849566648、38878787559、38861445072）比：
+
+| 測試 | 之前 | `-demo-at` |
+| --- | --- | --- |
+| 時刻列 | 失敗 77.5 秒、失敗 118.1 秒 | **通過 29.9 秒** |
+| 列車卡片 | 33.2／43.3／50.6 秒 | 81.2 秒 |
+| 狀態列 | 78.7 秒 | 93.3 秒 |
+
+- 列車卡片變慢：它是那次 run 的第一支，包含 App 冷啟動約 12 秒；06:30 的世界列車多，每次快照要 1.5–2.5 秒。好處是不用再賭 1 號車剛好在 60 秒內發車。
+- 狀態列跑滿了 50 秒：6000 倍下 Simulator 看不到第三個日期。#716 的 91ec683 改成日期變過一次、而且看了 20 秒就停。
+- 主要的收穫是時刻列不再失敗（兩次 full lane 紅燈都有它）。整體秒數要看下一次 full lane。
 
 ### 還可以做（沒做）
 
