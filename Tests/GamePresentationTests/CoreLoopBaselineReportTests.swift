@@ -15,15 +15,16 @@ import XCTest
 ///       --filter CoreLoopBaselineReportTests
 ///
 /// `CORE_LOOP_REPORT` is the days to play (1 to 60). The opening, as the
-/// tutorial and the 56.1 testers' "first fare, then the second town and a
-/// second train" play it:
+/// tutorial and the run testers were asked to play ("first fare, then the
+/// second town and a second train", NEXT_PRIORITIES §0) play it:
 ///
 /// 1. Minute 0: one line from the first town to the second (seed 1), its
 ///    track one curved edge bowed sideways as a finger draws it, a station
 ///    at each end, one train of four cars running all day.
-/// 2. Day 3: the line runs on to the third town, curving on from the
-///    second's platform, and a second line calls at all three with a
-///    train of its own, so the two share the first line's single track.
+/// 2. Day 3: the track runs on from the first town's end to the third
+///    town (on the far side of the first), curving on from the first
+///    line's track, and a second line calls at all three with a train of
+///    its own, so the two share the first line's single track.
 final class CoreLoopBaselineReportTests: XCTestCase {
     func testANewPlayersOpening() throws {
         guard let value = ProcessInfo.processInfo.environment["CORE_LOOP_REPORT"] else {
@@ -31,8 +32,8 @@ final class CoreLoopBaselineReportTests: XCTestCase {
         }
         let days = try XCTUnwrap(Int64(value).flatMap { (1...60).contains($0) ? $0 : nil }, "CORE_LOOP_REPORT is 1 to 60 days")
         var rows = [
-            "| Rules | Commands | First fare (game min / real s at 600×) | Fares day 1 | Balance day 1 / 3 / 7 / \(days) | Back to the starting balance | Held train-minutes (episodes) | Slowest curve limit | Trips day \(days) |",
-            "| --- | --: | --- | --: | --- | --- | --- | --: | --: |",
+            "| Rules | Commands | First fare (game min / real s at 600×) | Fares day 1 | Balance day 1 / 3 / 7 / \(days) | Back to the starting balance | Held train-minutes (episodes) | Slowest curve limit | Trips day 2 / \(days) | Deadlocked at the end |",
+            "| --- | --: | --- | --: | --- | --- | --- | --: | --- | --: |",
         ]
         for preset in Preset.allCases {
             let started = Date()
@@ -86,6 +87,7 @@ final class CoreLoopBaselineReportTests: XCTestCase {
         var heldMinutes = 0, episodes = 0
         var held: Set<TrainID> = []
         var minute: Int64 = 0
+        var tripsDayTwo: Int64 = 0
         while minute < days * 1_440 {
             if minute == 3 * 1_440 {
                 try script.extend(&world, to: towns[2])
@@ -103,6 +105,7 @@ final class CoreLoopBaselineReportTests: XCTestCase {
                 let day = minute / 1_440
                 balances[day] = world.economy.balance.amount
                 if day == 1 { faresDayOne = world.financeReport(.day).previous.fareRevenue.amount }
+                if day == 2 { tripsDayTwo = world.lastDayTrips() }
                 if backOn == nil, world.economy.balance.amount >= start { backOn = day }
             }
         }
@@ -110,7 +113,7 @@ final class CoreLoopBaselineReportTests: XCTestCase {
         let curve = script.slowestCurve(in: world).map { "\($0) km/h" } ?? "—"
         let shown = [1, 3, 7, days].map { balances[$0].map(dollars) ?? "—" }.joined(separator: " / ")
         return "| \(preset.rawValue) | \(script.commands) | \(first) | \(dollars(faresDayOne)) | \(shown) | "
-            + "\(backOn.map { "day \($0)" } ?? "not by day \(days)") | \(heldMinutes) (\(episodes)) | \(curve) | \(world.lastDayTrips()) |"
+            + "\(backOn.map { "day \($0)" } ?? "not by day \(days)") | \(heldMinutes) (\(episodes)) | \(curve) | \(tripsDayTwo) / \(world.lastDayTrips()) | \(world.deadlockedTrains().count) of \(world.trains.count) trains |"
     }
 
     /// The player's commands, counted: each call to the world a tap or a
@@ -119,14 +122,15 @@ final class CoreLoopBaselineReportTests: XCTestCase {
         var commands = 0
         var edges: [TrackEdgeID] = []
         var stations: [StationID] = []
-        var lastEnd: (node: TrackNodeID, point: PlanPoint, heading: (Double, Double))?
+        var firstEnd: (node: TrackNodeID, point: PlanPoint, heading: (Double, Double))?
 
         /// Four cars of the longest real car (25 m), so any type fits.
-        let platform: Int64 = 4 * 25 * WorldCoordinate.unitsPerMetre
+        static let platform: Int64 = 4 * 25 * WorldCoordinate.unitsPerMetre
 
         /// One curved edge from a platform beyond `from` to one beyond `to`,
         /// bowed sideways by a fifth of its span.
         mutating func openFirstLine(_ world: inout GameWorld, from: PlanPoint, to: PlanPoint) throws {
+            let platform = Self.platform
             let (dx, dy) = unit(from, to)
             let a = PlanPoint(x: from.x - Int64(dx * Double(platform)), y: from.y - Int64(dy * Double(platform)))
             let b = PlanPoint(x: to.x + Int64(dx * Double(platform)), y: to.y + Int64(dy * Double(platform)))
@@ -143,17 +147,17 @@ final class CoreLoopBaselineReportTests: XCTestCase {
             let second = try command { try world.buildStation(named: "S1", at: to).id }
             try command { try world.addTrackPlatform(second, on: edge, from: length - platform - platform / 2, to: length - platform / 2) }
             stations = [first, second]
-            let arriving = unit(c2, b)
-            lastEnd = (end, b, arriving)
+            firstEnd = (start, a, unit(c1, a))
             try openLine(&world, stops: stations, on: TrackTraversal(edge: edge, direction: .forward))
         }
 
-        /// On from the last edge's end to a platform beyond `town`, leaving
-        /// the way the last edge arrived and curving round to it; a second
-        /// line calling at every station with a train of its own, from the
-        /// far end.
+        /// On from the first edge's start to a platform beyond `town`,
+        /// leaving the way the first edge runs there and curving round to
+        /// it; a second line calling at every station with a train of its
+        /// own, from the far end.
         mutating func extend(_ world: inout GameWorld, to town: PlanPoint) throws {
-            guard let (node, point, heading) = lastEnd else { return }
+            let platform = Self.platform
+            guard let (node, point, heading) = firstEnd else { return }
             let (dx, dy) = unit(point, town)
             let b = PlanPoint(x: town.x + Int64(dx * Double(platform)), y: town.y + Int64(dy * Double(platform)))
             let span = distance(point, b)
@@ -166,12 +170,13 @@ final class CoreLoopBaselineReportTests: XCTestCase {
             let third = try command { try world.buildStation(named: "S2", at: town).id }
             try command { try world.addTrackPlatform(third, on: edge, from: length - platform - platform / 2, to: length - platform / 2) }
             stations.append(third)
-            try openLine(&world, stops: [third, stations[1], stations[0]], on: TrackTraversal(edge: edge, direction: .backward))
+            try openLine(&world, stops: [third, stations[0], stations[1]], on: TrackTraversal(edge: edge, direction: .backward))
         }
 
         /// A line calling at `stops`, all day, one train of four cars whose
         /// head is at the far end of the first stop's platform on `traversal`.
         mutating func openLine(_ world: inout GameWorld, stops: [StationID], on traversal: TrackTraversal) throws {
+            let platform = Self.platform
             let line = try command { try world.createLine(named: "Line \(world.lines.count + 1)", stops: stops).id }
             try command { try world.setLineServiceWindow(line, to: .allDay) }
             try command { try world.setLineTrainsInService(line, to: TrainsInService(peak: 1, offPeak: 1, low: 1)) }
