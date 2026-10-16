@@ -124,7 +124,7 @@
 
 每個方案都附玩家、開發、美術、音樂四方各一行。作者 2026-10-14 起由 session 自己決定；作者保留的事項另外列出。
 
-### A. PR 的 `Swift CI (gate)` 等同一個 commit 的 iOS App Build（PR #1，決策 265 第 1 點）
+### A. PR 的 `Swift CI (gate)` 等同一個 commit 的 iOS App Build（#756，決策 265 第 1 點，已合併）
 
 - **做法**：gate 在 Swift 判定之後加一步 `swift-shards.sh ios-gate`。
   - 找同一個 head commit 最新的 `ios-build.yml` PR run，等它跑完；成功或跳過才綠。
@@ -141,7 +141,7 @@
   - **只靠規則（決策 187 已經寫了「合併前確認 iOS 綠」）**：今晚證明規則擋不住。
 - **代價**：iOS 失敗、重跑通過之後，要再對 CI 的那一輪按 Re-run failed jobs，gate 才會重新判。gate 的訊息會這樣寫。
 
-### B. 手動 run 不做翻譯匯出；full lane 的第二個 job 多跑 `SettingsUITests`（PR #2）
+### B. 手動 run 不做翻譯匯出；full lane 的第二個 job 多跑 `SettingsUITests`（第二個 PR，決策 265 的之後的修正）
 
 - **做法**：
   - `only_testing` 的 run 跳過翻譯檢查的三步。這類 run 是為了修某一支 UI 測試，翻譯在 PR 和 full lane 都還會檢查。每次約省 3 分。
@@ -152,7 +152,7 @@
   - 美術：無。
   - 音樂：無。
 
-### C. full lane 不在每批合併後手動跑（HANDOFF §1.2，隨 PR #1 的文件）
+### C. full lane 不在每批合併後手動跑（HANDOFF §1.2，隨 #756 合併）
 
 - **做法**：
   - 合併後由 `ios-full-lane.yml` 自己啟動（最多每三小時一次，main 的 push 會觸發，另有排程補位）；
@@ -163,6 +163,39 @@
   - 開發：壞掉要最多約三小時才知道，二分的範圍也比較大；但 PR 的 gate 有 UI 測試，加上 A 之後 gate 紅了就不能合，所以只有 full lane 才有的測試會晚一點發現。
   - 美術：無。
   - 音樂：無。
+
+### E. PR gate 的 UI 步驟：名單不動（PR712_754 審查交接第四節）
+
+- **交接說的**：PR gate 的 UI 步驟中位數 8.8 分，目標約 6 分。這是 #746–#753 那 5 個 PR 的數字。
+- **量了最近 15 個綠的 PR run**（Xcode build job 的 log）：
+
+| 測試 | 中位數 | 最快 | 最慢 |
+| --- | ---: | ---: | ---: |
+| `RealWorldMapUITests.testARealWorldGameStartsFromAPlaceAndIsSavedAsOne` | 88.9 秒 | 57.5 | 164.7 |
+| `StartSaveFlowSmokeTests.testAHouseBuiltOnABlankMapIsKeptBySavingAndContinuing` | 61.4 | 39.0 | 216.4 |
+| `TutorialUITests.testEnglishTutorialNavigation` | 41.8 | 31.0 | 55.2 |
+| `TutorialUITests.testBuildingTrackEnablesNextAndSkipEnds` | 32.4 | 21.8 | 39.1 |
+| `StartSaveFlowSmokeTests.testBackToStartWorksWithLargeTextWhileTheClockRuns` | 31.2 | 17.4 | 65.2 |
+| `TutorialUITests.testTheLineStepLeavesTheLinesPanelUsable` | 23.9 | 14.6 | 62.1 |
+| `ToolbarSmokeTests.testEnglishToolbar` | 18.5 | 11.2 | 47.3 |
+
+  - 一輪 7 支測試合計：中位數 5.7 分（3.3–7.5）。
+  - 第一支測試開始前，xcodebuild 安裝與啟動 test runner：中位數 1.3 分（0.7–3.5）。
+  - 所以測試本身在決策 199 的「約 6 分鐘」以內。8.8 分是那幾個 PR 碰上慢的 runner，單支測試慢到 2–3 倍。
+- **決定：名單不動**。
+- **四方**：
+  - 玩家：最慢、最不穩的實景開局測試，今晚剛抓到 #746 的錯（決策 262）。移到 full lane，這類錯又會等到合併後才發現；現在 gate 會擋合併（A），它留在 gate 才有用。
+  - 開發：省下的最多約 1.5 分，換掉的是今晚實際抓到錯的那一支。慢 runner 的變異不是名單的問題。
+  - 美術：無。
+  - 音樂：無。
+- **之後若要再縮**：交接 PR685_711 第九節「還可以做」的實景開局參數（直接打開某個地點，每支省約 10–20 秒），要改 App 的除錯參數，另開 PR。
+
+### F. 新 gate 的實測（#758）
+
+- #758 改了 `ios-build.yml`，是第一個在合併 #756 之後跑 iOS 的 PR。
+- `Swift CI (gate)` 23:27:46 開始。23:27:49 記下「iOS App Build is queued … looking again in 30 s」，之後每 30 秒查一次。
+- iOS run 38981529817 在 23:43:17 跑完（Xcode build 15.3 分、iPad 14.0 分）；gate 23:43:32 記下「iOS App Build passed」，23:43:34 才綠。
+- gate 確實等到 iOS 跑完才綠，等了約 16 分鐘。
 
 ### D. 沒有做的
 
