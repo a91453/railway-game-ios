@@ -125,7 +125,7 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | STATION_COMMERCE_2026-10-14 | 現行 | 決策 222：車站商業三級的規則、數字校準、畫面與美術方案；第二段（GameCore，存檔 57）照第 6 節做 |
 | RAILWAY_SOUND_2026-10-14 | 現行 | 決策 219：鐵道聲音的四階段計畫（產製流程與三種到站鈴 → 逐站鈴聲 → 分軌配樂 → 工作坊）；各階段開工前照 #231 登記 |
 | GAP_RESEARCH_2026-10-12 | 部分過時 | 參考遊戲比較（§2）仍有效；優先順序已併進 NEXT_PRIORITIES；§5 教學由決策 188 取代；§4.6 CI 由決策 187 取代 |
-| CI_INCIDENT_2026-10-12 | 歷史 | 4A 已由決策 187 實作；4B、4C 待作者決定 |
+| CI_INCIDENT_2026-10-12 | 歷史 | 4A 已由決策 187 實作；4B 在 NEXT_PRIORITIES §10 第 11 題；4C（自架 runner、Xcode Cloud、第三方 macOS runner）待作者決定，記在 HANDOFF 第 3 節 |
 | TUTORIAL_REDO_SPEC、TUTORIAL_REDO_AUDIT | 歷史 | 決策 188；P1、P2 列在 NEXT_PRIORITIES |
 | DISRUPTION_STUDY | 部分有效 | 方案 B 已由決策 154、162 實作；方案 A（老化、故障、檢修）與 C（停駛）仍是提案，併進機廠的研究 |
 | FREIGHT_STUDY | 部分有效 | 方案 C、A 已由決策 155–158 實作；方案 B（產業鏈）仍是提案 |
