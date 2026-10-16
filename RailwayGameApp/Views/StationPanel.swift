@@ -170,34 +170,53 @@ struct StationPanel: View {
         }
     }
 
+    /// A train on the board in two lines (TestFlight, the station card on
+    /// a phone held sideways: in one line the capsule and the minutes left
+    /// the train's name and its time a character or two wide, "區間／車",
+    /// "1／2:／5／5"): the badge, the train and in how many minutes on the
+    /// first; the time it is due and how it stands on the second. The
+    /// time, the minutes and the capsule never break; where the line is
+    /// short the capsule keeps only its symbol, then gives way, and the
+    /// line and the way it goes are cut short first.
     private func departureRow(_ row: DepartureBoard.Row, language: DisplayLanguage) -> some View {
-        HStack(spacing: 8) {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
             // Decision 216: the line's badge.
             LineCodeBadge(code: LineBadge.codes(for: session.world.lines)[row.line] ?? "", color: Palette.lineColor(row.line, custom: row.color), size: .small)
-                .frame(minWidth: 36, alignment: .leading)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(verbatim: row.trainName.isEmpty ? row.lineName : row.trainName)
-                    .font(.subheadline.weight(.semibold))
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text(verbatim: row.trainName.isEmpty ? row.lineName : row.trainName)
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(1)
+                    Spacer(minLength: 4)
+                    Text(verbatim: row.awayText(in: language))
+                        .font(.subheadline.monospacedDigit().weight(.semibold))
+                        .foregroundStyle(row.isBoarding ? Theme.primary : Theme.textPrimary)
+                        .fixedSize()
+                        .accessibilityIdentifier("station.board.row.away")
+                }
                 // Decision 223: the time it is due, the timetable's struck
                 // through when late.
                 HStack(spacing: 4) {
                     LateTimeText(scheduled: row.replacedTimeText ?? row.expected.clockText,
                                  expected: row.replacedTimeText == nil ? nil : row.expected.clockText)
+                        .fixedSize()
+                        .accessibilityIdentifier("station.board.row.time")
+                    // The capsule says how it stands in words (decision
+                    // 223); a train at the platform says so in the minutes.
+                    if !row.isBoarding {
+                        ViewThatFits(in: .horizontal) {
+                            TrainStatusCapsule(row: row, language: language)
+                            TrainStatusCapsule(row: row, language: language, symbolOnly: true)
+                            Color.clear.frame(width: 0, height: 0)
+                        }
+                        .layoutPriority(1)
+                    }
                     Text(verbatim: departureDetail(row, language: language))
                         .foregroundStyle(Theme.textSecondary)
                         .lineLimit(1)
                 }
                 .font(.caption.monospacedDigit())
             }
-            Spacer(minLength: 4)
-            // The capsule says how it stands in words (decision 223); a
-            // train at the platform says so in the time column instead.
-            if !row.isBoarding {
-                TrainStatusCapsule(row: row, language: language)
-            }
-            Text(verbatim: row.awayText(in: language))
-                .font(.subheadline.monospacedDigit().weight(.semibold))
-                .foregroundStyle(row.isBoarding ? Theme.primary : Theme.textPrimary)
         }
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("station.board.row")

@@ -50,6 +50,12 @@ public enum PlayerCommand: Hashable, Sendable {
     /// network tool traces along a real line (decision 213,
     /// ``GameSession/tracePlan(from:to:)``), all of it or none.
     case buildTrackChain([TrackStretch])
+    /// A second track beside a chain (decision 257): `main` laid first as
+    /// a chain (empty for track already there), then `parallel` as a chain,
+    /// its `platforms`, then the `crossovers` joining it to the first track
+    /// (``GameSession/planDoubleChain(main:run:parallel:platforms:wantsCrossover:in:)``),
+    /// all of it or none.
+    case buildDoubleTrackChain(main: [TrackStretch], parallel: [TrackStretch], platforms: [ChainPlatform], crossovers: [TrackStretch])
 
     /// A stretch of track as the network tool lays it: a node for each new
     /// end (splitting an edge for an end on one), then the edge, with the
@@ -179,6 +185,7 @@ public enum PlayerCommand: Hashable, Sendable {
         case .buildDepotYard: "buildDepotYard"
         case .edit(let edit): edit.name
         case .buildTrackChain: "buildTrackChain"
+        case .buildDoubleTrackChain: "buildDoubleTrackChain"
         }
     }
 }
@@ -249,6 +256,11 @@ extension GameSession {
                 outcome.track = built
                 previous = built.to
             }
+        case .buildDoubleTrackChain(let main, let parallel, let platforms, let crossovers):
+            outcome.track = try buildDoubleChain(main: main, parallel: parallel, platforms: platforms, in: &world).last
+            for crossover in crossovers {
+                _ = try crossover.build(in: &world, heights: heights)
+            }
         case .removeTrack(let id):
             guard let edge = world.network.edge(id) else { throw .unknownTrackEdge(id) }
             try world.removeTrackEdge(id)
@@ -316,6 +328,10 @@ extension PlayerCommand: Codable {
         var crossovers: [PlayerCommand]?
         /// A chain's stretches, each a `buildTrack`.
         var stretches: [PlayerCommand]?
+        /// A double-track chain's second track, each a `buildTrack`, and
+        /// its platforms.
+        var parallelChain: [PlayerCommand]?
+        var platforms: [ChainPlatform]?
     }
 
     public init(from decoder: any Decoder) throws {
@@ -419,6 +435,18 @@ extension PlayerCommand: Codable {
             }
             guard !stretches.isEmpty else { throw invalid("a chain needs its stretches") }
             self = .buildTrackChain(stretches)
+        case "buildDoubleTrackChain":
+            func pieces(_ commands: [PlayerCommand]?) throws -> [TrackStretch] {
+                try (commands ?? []).map { command in
+                    guard case .buildTrack(let stretch) = command else { throw invalid("a chain's piece is a stretch") }
+                    return stretch
+                }
+            }
+            let parallel = try pieces(record.parallelChain)
+            guard !parallel.isEmpty else { throw invalid("a double track needs its second track") }
+            self = .buildDoubleTrackChain(
+                main: try pieces(record.stretches), parallel: parallel, platforms: record.platforms ?? [], crossovers: try pieces(record.crossovers)
+            )
         default:
             throw invalid("unknown command")
         }
@@ -484,6 +512,11 @@ extension PlayerCommand: Codable {
             record.edit = edit
         case .buildTrackChain(let stretches):
             record.stretches = stretches.map(PlayerCommand.buildTrack)
+        case .buildDoubleTrackChain(let main, let parallel, let platforms, let crossovers):
+            record.stretches = main.map(PlayerCommand.buildTrack)
+            record.parallelChain = parallel.map(PlayerCommand.buildTrack)
+            record.platforms = platforms.isEmpty ? nil : platforms
+            record.crossovers = crossovers.isEmpty ? nil : crossovers.map(PlayerCommand.buildTrack)
         }
         try record.encode(to: encoder)
     }
@@ -514,6 +547,8 @@ extension PlayerCommand {
             case .existing:
                 language.text("add this platform", "加這座月台")
             }
+        case .buildDoubleTrackChain(let main, _, _, _):
+            main.isEmpty ? language.text("make this track double", "把這段改成複線") : language.text("lay this track", "鋪這段軌道")
         case .buildCrossover:
             language.text("build this crossover", "建這組渡線")
         case .addPlatformTrack:

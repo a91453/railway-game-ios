@@ -204,7 +204,19 @@ public final class GameSession {
     /// The track the last tap with the select tool picked where there was
     /// no station, train or building (decision 184), which the inspector
     /// shows (``GameWorld/trackInspectionText(of:in:)``); an ID only.
-    public private(set) var selectedTrackEdge: TrackEdgeID?
+    public private(set) var selectedTrackEdge: TrackEdgeID? {
+        didSet { if selectedTrackEdge != oldValue { trackUpgrade = nil } }
+    }
+    /// What the track card is about to build on ``selectedTrackEdge``
+    /// (decision 257, TrackUpgrade.swift): `nil` until the player picks
+    /// "Make double track" or "Add X crossover".
+    public internal(set) var trackUpgrade: TrackUpgradeKind?
+    /// Which side of the picked track the second track goes, and whether
+    /// it runs to the switches at both ends (the default) or covers only
+    /// the piece picked.
+    public var trackUpgradeSide: PlatformTrackSide = .left
+    public var trackUpgradeWholeRun = true
+    @ObservationIgnored var trackUpgradeMemo: TrackUpgradeMemo?
 
     /// The train the camera follows: the `Ci/` reference's
     /// `trackedTrainId`, kept apart from the selection
@@ -380,17 +392,14 @@ public final class GameSession {
     /// Whether each stretch gets a second track beside it, 5 m apart
     /// (decision 204, ``DoubleTrack``), on ``networkDoubleSide`` of the
     /// way it is drawn.
-    public var networkBuildsDouble = false {
-        // Decision 213: a traced stretch is single track.
-        didSet { if networkBuildsDouble { networkTracesRealRailway = false } }
-    }
+    /// With ``networkTracesRealRailway`` too, the traced stretch gets it
+    /// (decision 257).
+    public var networkBuildsDouble = false
     public var networkDoubleSide: PlatformTrackSide = .left
     /// Whether the next stretch follows the real railway under a
     /// real-world map (decision 213, ``tracePlan(from:to:)``): ends snap
     /// to the real lines, and the track between follows them.
-    public var networkTracesRealRailway = false {
-        didSet { if networkTracesRealRailway { networkBuildsDouble = false } }
-    }
+    public var networkTracesRealRailway = false
     /// The real lines of the map, projected once for each map (decision
     /// 213, ``realRailwayTraces``).
     @ObservationIgnored var realRailwayTracesMemo: (key: RealRailwayTracesKey, traces: RealRailwayTraces)?

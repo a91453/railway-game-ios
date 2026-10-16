@@ -285,8 +285,21 @@ final class RealWorldMapUITests: XCTestCase {
         XCTAssertTrue(platform.appears(within: 10), "No Platform mode")
         platform.waitUntilSettled()
         platform.tap()
-        // A platform on the track, levelled first where it climbs.
-        let site = origin.withOffset(CGVector(dx: frame.minX + frame.width * 0.425, dy: middle))
+        // Beside the open details card the 3D map and zoom buttons stand in
+        // the middle of the map, on the stretch's line since the game menu
+        // moved into the top row (#697): a tap there zoomed out, and the
+        // next one fell on a climb (main 84a792e's full lane, run
+        // 38861445072). The taps below keep off them.
+        let mapButtons = ["map.open3D", "Zoom out", "Zoom in"].map { app.buttons[$0] }
+        func mapButton(at x: CGFloat) -> CGRect? {
+            mapButtons.lazy.filter(\.exists).map { $0.frame.insetBy(dx: -4, dy: -4) }
+                .first { $0.contains(CGPoint(x: x, y: middle)) }
+        }
+        // A platform on the track, levelled first where it climbs; on the
+        // near side of a button there.
+        var siteX = frame.minX + frame.width * 0.425
+        if let covering = mapButton(at: siteX) { siteX = covering.minX - 1 }
+        let site = origin.withOffset(CGVector(dx: siteX, dy: middle))
         site.tap()
         XCTAssertTrue(confirm.appears(within: 10), "No ✓ for the platform")
         confirm.waitUntilSettled()
@@ -297,7 +310,7 @@ final class RealWorldMapUITests: XCTestCase {
         // over the site (run 38291939056), so the tap moves along the
         // platform, 16 cars and some 170 points long, until it reaches the
         // track.
-        for offset: CGFloat in [60, -60, 90, -90] where !confirm.exists {
+        for offset: CGFloat in [60, -60, 90, -90] where !confirm.exists && mapButton(at: siteX + offset) == nil {
             site.withOffset(CGVector(dx: offset, dy: 0)).tap()
             _ = confirm.appears(within: 3)
         }

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Checks a built RailwayGame.app carries both of the game's languages
-# (ARCHITECTURE decision 247): English and Traditional Chinese, each with
+# (ARCHITECTURE decision 257): English and Traditional Chinese, each with
 # its InfoPlist.strings, and the String Catalog's Chinese text. iOS offers
 # an app only the languages its bundle has, so a lost .lproj would leave
 # the player one language and an empty language row in Settings.

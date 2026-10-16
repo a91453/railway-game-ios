@@ -23,7 +23,7 @@ struct FollowBar: View {
         // Decision 226 (2026-10-15): beside the layer strip, the room left
         // before the details card, which says the trip in full: the widest
         // of these that fits, the name never broken over lines, down to the
-        // badge, the speeds and the stop.
+        // badge and the stop (decision 251).
         ViewThatFits(in: .horizontal) {
             row {
                 badge(info)
@@ -65,6 +65,14 @@ struct FollowBar: View {
             row {
                 badge(info)
                 speeds
+                unfollow(short: true)
+            }
+            // Decision 251: the last of them always fits, down to the badge
+            // and the stop (the bar beside a narrow layer strip on a small
+            // phone went past the screen's edge); the speeds are in the
+            // status bar too.
+            row {
+                badge(info)
                 unfollow(short: true)
             }
         }

@@ -134,6 +134,12 @@ public struct GameWorld: Equatable, Sendable {
     /// it on. It changes no train already bought. Set by
     /// ``setRealCarLengths(_:)`` only.
     public internal(set) var realCarLengths: Bool = false
+    /// Decision 248: how far each train of a line with real runs may still
+    /// go on before the minute ends, with traffic control off
+    /// (``assessSpacing(from:memo:)``). Given as a minute begins, and to a
+    /// train setting off within one; empty again as it ends, so empty at
+    /// every whole minute.
+    public internal(set) var spacingAllowances: [TrainID: SpacingAllowance] = [:]
     /// Whether a line sends its trains out from either end, and runs one
     /// that stands elsewhere empty to an end (decision 172); off, only from
     /// the first stop, as before. A new game turns it on.
@@ -2606,6 +2612,9 @@ public struct GameWorld: Equatable, Sendable {
             let second = start.secondOfMinute
             var span = min(remaining, minute - second)
             solveRuns()
+            // Decision 248: how far the trains of real runs may go on in
+            // the rest of the minute.
+            assessSpacing(from: start, memo: &memo.directions)
             if let event = nextServiceEvent(after: start) {
                 let (gap, overflow) = event.seconds.subtractingReportingOverflow(start.seconds)
                 span = overflow ? span : min(span, gap)
@@ -2618,7 +2627,7 @@ public struct GameWorld: Equatable, Sendable {
             // for its route, which then tries again, or (Stage U2) for a
             // train following them to take more of its route. `moves` keeps
             // the trains as each span tried leaves them, for the move below.
-            var moves: [Int64: (trains: [Train], moved: Bool)] = [:]
+            var moves: [Int64: (trains: [Train], spacing: [TrainID: SpacingAllowance], moved: Bool)] = [:]
             if span > 1, !held.isEmpty || trains.contains(where: { isFollowing($0, memo: &memo.directions) }),
                let freed = secondsUntilARouteFrees(held, from: start, within: span, moves: &moves, memo: &memo) {
                 span = freed
@@ -2647,26 +2656,12 @@ public struct GameWorld: Equatable, Sendable {
             // Nothing has changed a train since the spans were tried.
             if let move = moves[span] {
                 trains = move.trains
+                spacingAllowances = move.spacing
                 if move.moved {
                     changed = true
                 }
                 if dropRunsHeldUp(endingAt: Self.saturating(start, plus: span), memo: &memo.directions) {
                     changed = true
-                }
-            } else if span > 1, spacingMayHold(within: span) {
-                // Decision 228: a train held up behind another stops where
-                // one second at a time leaves it only one second at a time,
-                // as the one ahead moves on between them (decision 37).
-                // Nothing else happens within the span, so only the trains
-                // move second by second.
-                for second in 0..<span {
-                    let at = Self.saturating(start, plus: second)
-                    if moveTrains(from: at, for: 1, memo: &memo.directions) {
-                        changed = true
-                    }
-                    if dropRunsHeldUp(endingAt: Self.saturating(at, plus: 1), memo: &memo.directions) {
-                        changed = true
-                    }
                 }
             } else {
                 if moveTrains(from: start, for: span, memo: &memo.directions) {
@@ -2678,6 +2673,8 @@ public struct GameWorld: Equatable, Sendable {
             }
             clock.advance(basicSteps: span)
             remaining -= span
+            // Decision 248: the minute's allowances are spent as it ends.
+            if clock.now.isWholeMinute, !spacingAllowances.isEmpty { spacingAllowances = [:] }
             recordTrafficVisits(traffic, before: beforeTraffic)
             memo.directions.stepTraffic = nil
             if recordArrivals() {
@@ -3928,15 +3925,16 @@ public struct GameWorld: Equatable, Sendable {
     /// ``authority(of:memo:)``).
     private mutating func moveTrains(from start: GameTime, for span: Int64, memo: inout DirectionMemo) -> Bool {
         var moved = false
-        // Decision 228: the trains near each other's ways, once a step.
-        memo.spacing = spacingIndex()
-        defer { memo.spacing = nil }
         for index in trains.indices {
             let movement = trains[index].movement
             guard let position = trains[index].position, movement.rate > 0 else { continue }
             let distance = travelShare(of: trains[index], from: start, memo: &memo)(span)
             guard distance > 0 else { continue }
             let travel = travelling(trains[index], distance: distance, memo: &memo)
+            // Decision 248: what it has gone of its allowance.
+            if let allowance = spacingAllowances[trains[index].id], allowance.left != .max {
+                spacingAllowances[trains[index].id]?.left = allowance.left - min(distance, allowance.left)
+            }
             guard travel.position != position || travel.cursor != movement.cursor else { continue }
             switch (position, travel.position) {
             case (.onEdge(let traversal, _), .onEdge(_, let reached)):
@@ -3983,8 +3981,12 @@ public struct GameWorld: Equatable, Sendable {
             guard left > run.length - run.distance(on: curve, from: run.start, to: end) else { continue }
             // Decision 228: a train of real runs, held up by the train ahead
             // with traffic control off, keeps its run, later by the time it
-            // lost: it goes on at its pace once it can.
-            if !isTrafficControlEnabled, followsRealTimetable(trains[index]), let late = runDelay(run, curve: curve, covered: run.length - left, at: end) {
+            // lost: it goes on at its pace once it can. Decision 248: as the
+            // minute ends, as its allowances run (so the same however the
+            // minute's seconds are stepped).
+            let spaced = !isTrafficControlEnabled && followsRealTimetable(trains[index])
+            if spaced, !end.isWholeMinute { continue }
+            if spaced, let late = runDelay(run, curve: curve, covered: run.length - left, at: end) {
                 trains[index].times?.run = run.delayed(by: late)
                 dropped = true
                 continue
@@ -4057,9 +4059,9 @@ public struct GameWorld: Equatable, Sendable {
     /// in `memo` (see ``authority(of:memo:)``).
     func travelling(_ train: Train, distance: Int64, memo: inout DirectionMemo) -> (position: TrainPosition, cursor: Int) {
         var distance = authority(of: train, memo: &memo).map { min(distance, $0.left) } ?? distance
-        // Decision 228: without traffic control, a train of real runs stops
-        // behind the one ahead.
-        if let clear = clearAhead(of: train, within: distance, near: memo.spacing) { distance = clear }
+        // Decision 248: without traffic control, a train of real runs goes
+        // no farther in a minute than its allowance (decision 228).
+        if let allowance = spacingAllowances[train.id], allowance.left < distance { distance = max(0, allowance.left) }
         let movement = train.movement
         switch train.position! {
         case .onEdge(let traversal, let offset):
@@ -4184,13 +4186,13 @@ public struct GameWorld: Equatable, Sendable {
     ///
     /// - Precondition: `start.secondOfMinute + span <= 60`.
     private func secondsUntilARouteFrees(
-        _ held: [HeldRoute], from start: GameTime, within span: Int64, moves: inout [Int64: (trains: [Train], moved: Bool)],
+        _ held: [HeldRoute], from start: GameTime, within span: Int64, moves: inout [Int64: (trains: [Train], spacing: [TrainID: SpacingAllowance], moved: Bool)],
         memo: inout DispatchMemo
     ) -> Int64? {
         func frees(after seconds: Int64) -> Bool {
             var moved = self
             let any = moved.moveTrains(from: start, for: seconds, memo: &memo.directions)
-            moves[seconds] = (moved.trains, any)
+            moves[seconds] = (moved.trains, moved.spacingAllowances, any)
             // The cheaper question first: either answer frees.
             if moved.canExtendAnyAuthority(memo: &memo.directions) {
                 return true
@@ -4375,7 +4377,7 @@ extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, disruptions, townGrowth, accounts, geoAnchor
-        case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, blockSections, curveSpeedLimits, realCarLengths, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
+        case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, blockSections, curveSpeedLimits, realCarLengths, spacingAllowances, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
         case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion
     }
 
@@ -4480,6 +4482,12 @@ extension GameWorld: Codable {
         blockSections = container.contains(.blockSections) ? try container.decode(Bool.self, forKey: .blockSections) : false
         curveSpeedLimits = container.contains(.curveSpeedLimits) ? try container.decode(Bool.self, forKey: .curveSpeedLimits) : false
         realCarLengths = try container.decodeIfPresent(Bool.self, forKey: .realCarLengths) ?? false
+        if let saved = try container.decodeIfPresent([SavedSpacingAllowance].self, forKey: .spacingAllowances) {
+            guard zip(saved, saved.dropFirst()).allSatisfy({ $0.train < $1.train }) else {
+                throw DecodingError.dataCorruptedError(forKey: .spacingAllowances, in: container, debugDescription: "Spacing allowances must be ordered by train, one each.")
+            }
+            spacingAllowances = Dictionary(uniqueKeysWithValues: saved.map { ($0.train, $0.allowance) })
+        }
         flexDispatch = try container.decodeIfPresent(Bool.self, forKey: .flexDispatch) ?? false
         rollingStockEconomics = try container.decodeIfPresent(Bool.self, forKey: .rollingStockEconomics) ?? false
         lineAccounts = try container.decodeIfPresent(LineAccounts.self, forKey: .lineAccounts)
@@ -4617,6 +4625,10 @@ extension GameWorld: Codable {
         }
         if realCarLengths {
             try container.encode(true, forKey: .realCarLengths)
+        }
+        if !spacingAllowances.isEmpty {
+            let saved = spacingAllowances.sorted { $0.key < $1.key }.map { SavedSpacingAllowance(train: $0.key, $0.value) }
+            try container.encode(saved, forKey: .spacingAllowances)
         }
         if flexDispatch {
             try container.encode(true, forKey: .flexDispatch)
@@ -4795,6 +4807,9 @@ extension GameWorld: Codable {
             return "The line accounts must be well formed, for lines and stations that exist."
         }
         if let problem = tripLogProblem(trainIDsBelow: nextTrainID) { return problem }
+        guard spacingAllowances.allSatisfy({ $0.key.rawValue < nextTrainID && $0.value.isValid }) else {
+            return "Every spacing allowance must be well formed, of a train ID handed out."
+        }
         if let problem = transferGroupProblem() { return problem }
         if let problem = placedBuildingProblem() { return problem }
         if let problem = freightProblem() { return problem }

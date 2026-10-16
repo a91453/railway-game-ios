@@ -76,7 +76,10 @@ struct MapAlertBubbles: View {
             // red the company's figures. A town short of materials opens
             // its station's panel, whose Freight section builds the yard.
             switch alert.kind {
-            case .sightWithoutStation: screen.panel = .tourism
+            case .sightWithoutStation(let sight):
+                // Decision 250: at that sight's row.
+                screen.sightFocus = sight
+                screen.panel = .tourism
             case .materialsShort where alert.station != nil: screen.panel = .station
             case .insolvency: screen.panel = .economy
             default: break

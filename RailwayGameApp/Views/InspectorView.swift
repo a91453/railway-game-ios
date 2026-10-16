@@ -63,9 +63,12 @@ struct InspectorView: View {
                     }
                 }
             }
-        } else if session.tool == .select, session.selectedStationID == nil, let edge = session.selectedTrackEdge,
-                  let inspection = session.trackInspection(of: edge), !inspection.lines.isEmpty {
-            lineButtons(inspection.lines)
+        } else if session.tool == .select, session.selectedStationID == nil, let edge = session.selectedTrackEdge {
+            if let inspection = session.trackInspection(of: edge), !inspection.lines.isEmpty {
+                lineButtons(inspection.lines)
+            }
+            // Decision 257: make it double, or add an X crossover.
+            TrackUpgradeControls(session: session)
         }
     }
 
@@ -415,6 +418,9 @@ struct TrainStatusCapsule: View {
 
     let text: String
     let kind: Kind
+    /// The icon alone, where the words do not fit (the station's board on
+    /// a narrow card); VoiceOver still reads the words.
+    var symbolOnly = false
 
     init(text: String, kind: Kind) {
         self.text = text
@@ -426,8 +432,9 @@ struct TrainStatusCapsule: View {
         self.kind = card.showsPunctuality ? (card.isLate ? .late : .onTime) : .neutral
     }
 
-    init(row: DepartureBoard.Row, language: DisplayLanguage) {
+    init(row: DepartureBoard.Row, language: DisplayLanguage, symbolOnly: Bool = false) {
         self.text = row.status.text(in: language)
+        self.symbolOnly = symbolOnly
         switch row.status {
         case .boarding: self.kind = .boarding
         case .passes: self.kind = .neutral
@@ -438,22 +445,36 @@ struct TrainStatusCapsule: View {
     }
 
     var body: some View {
-        HStack(spacing: 3) {
+        if symbolOnly {
             if let symbol {
                 Image(systemName: symbol)
                     .font(.system(size: 9, weight: .bold))
-                    .accessibilityHidden(true)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 3)
+                    .background(fill, in: Capsule())
+                    .foregroundStyle(foreground)
+                    .fixedSize()
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(Text(verbatim: text))
             }
-            Text(verbatim: text)
-                .font(.caption2.weight(.bold))
-                .lineLimit(1)
+        } else {
+            HStack(spacing: 3) {
+                if let symbol {
+                    Image(systemName: symbol)
+                        .font(.system(size: 9, weight: .bold))
+                        .accessibilityHidden(true)
+                }
+                Text(verbatim: text)
+                    .font(.caption2.weight(.bold))
+                    .lineLimit(1)
+            }
+            .padding(.leading, symbol == nil ? 7 : 5)
+            .padding(.trailing, 7)
+            .padding(.vertical, 2)
+            .background(fill, in: Capsule())
+            .foregroundStyle(foreground)
+            .fixedSize()
         }
-        .padding(.leading, symbol == nil ? 7 : 5)
-        .padding(.trailing, 7)
-        .padding(.vertical, 2)
-        .background(fill, in: Capsule())
-        .foregroundStyle(foreground)
-        .fixedSize()
     }
 
     private var symbol: String? {
@@ -476,5 +497,68 @@ struct TrainStatusCapsule: View {
 
     private var foreground: Color {
         kind == .neutral ? Theme.textSecondary : Theme.onPrimary
+    }
+}
+
+/// The picked track's upgrades (ARCHITECTURE decision 257): "Make double
+/// track" on single track, with the side the second track goes and how far
+/// it runs, and "Add X crossover" on double track. The map's ✓ beside the
+/// track shows the price and builds it (`MapBuildConfirm`).
+private struct TrackUpgradeControls: View {
+    @Bindable var session: GameSession
+
+    var body: some View {
+        let language = session.language
+        switch session.trackUpgrade {
+        case .doubleTrack?:
+            VStack(alignment: .leading, spacing: 6) {
+                Picker(selection: $session.trackUpgradeSide) {
+                    ForEach(PlatformTrackSide.allCases, id: \.self) { side in
+                        Text(verbatim: session.trackUpgradeSideText(side)).tag(side)
+                    }
+                } label: {
+                    Text(verbatim: language.text("Second track", "第二條軌道"))
+                }
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("inspector.track.doubleSide")
+                Picker(selection: $session.trackUpgradeWholeRun) {
+                    Text(verbatim: language.text("To the switches", "到兩端道岔")).tag(true)
+                    Text(verbatim: language.text("This piece only", "只有這一段")).tag(false)
+                } label: {
+                    Text(verbatim: language.text("How far", "範圍"))
+                }
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("inspector.track.doubleRun")
+            }
+            .font(.footnote)
+        case .scissors?:
+            EmptyView()
+        case nil:
+            if session.canDoubleSelectedTrack {
+                upgradeButton(language.text("Make double track", "升級為複線"), systemImage: "equal", id: "inspector.track.double") {
+                    session.beginTrackUpgrade(.doubleTrack)
+                }
+            } else if session.canAddScissorsOnSelectedTrack {
+                upgradeButton(language.text("Add X crossover", "加 X 渡線"), systemImage: "xmark", id: "inspector.track.scissors") {
+                    session.beginTrackUpgrade(.scissors)
+                }
+            }
+        }
+    }
+
+    private func upgradeButton(_ title: String, systemImage: String, id: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Image(systemName: systemImage)
+                    .font(.caption.weight(.bold))
+                    .accessibilityHidden(true)
+                Text(verbatim: title)
+                    .font(.caption.weight(.semibold))
+            }
+            .padding(.horizontal, 8)
+            .frame(height: 30)
+        }
+        .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
+        .accessibilityIdentifier(id)
     }
 }

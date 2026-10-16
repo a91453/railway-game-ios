@@ -21,10 +21,23 @@ import GameCore
 //   shades are this project's.
 // - The Taroko's orange-red on white is this project's, from the train's
 //   paint (gap: the references do not have it).
+// - Decision 252's Taiwan Railway models start from the owner's simulator
+//   (`Simulator/reference_snapshot/_next/static/chunks/2694-*.js`, the
+//   liveries `tra-emu100`, `tra-e201`, `tra-e500`, `tra-r100`, `tra-r200`,
+//   `tra-sea-breeze`: `bodyColor`, `stripeColor`, `cabShape`) and the fleet
+//   catalogue's Chu-Kuang coach (「白線以上米黃、以下橘色」). A Chu-Kuang
+//   set's body is its coaches' orange and its front its locomotive's mark:
+//   the E200's cream, the E500's dark cab, the R100's red, the R200's navy.
+//   Where the simulator's shade sits too near the map's warm yellow or
+//   teal, or another front of the same shape, the shade is this project's:
+//   the EMU100's cream and orange, the R100's red darkened, the R200's navy
+//   lightened, the Hai-Feng's sea green kept for its stripe, its body a
+//   pale mint and its front a pale sea blue.
 // - Noses (decision 168: the shape is the difference): pointed for the
 //   high-speed set only, round for the expresses (the tilting trains' long
 //   noses read as round at the map's size), flat for the local trains and
-//   the metro.
+//   the metro; for decision 252's, the simulator's `cabShape`: "boxy" flat,
+//   "streamlined" (the R200) round.
 
 /// The shape of a train's nose on the map (decision 243).
 public enum TrainNose: String, CaseIterable, Hashable, Sendable {
@@ -62,15 +75,36 @@ public struct TrainLivery: Hashable, Sendable {
     public static let emu800 = TrainLivery(body: 0xC9CCCE, stripe: 0xF2C230, cab: 0x2F6FB7, nose: .flat)
     /// Taipei Metro's C371 and C381.
     public static let metroC381 = TrainLivery(body: 0xC9CCCE, stripe: 0x7B8794, cab: 0x222A38, nose: .flat)
+    /// The EMU100 express (decision 252).
+    public static let emu100 = TrainLivery(body: 0xF3E9C6, stripe: 0xF09B28, cab: 0xDD7424, nose: .flat)
+    /// Chu-Kuang coaches behind an E200 (decision 252).
+    public static let e200ChuKuang = TrainLivery(body: chuKuangCoach, stripe: 0xECE2BC, cab: 0xECE2BC, nose: .flat)
+    /// Chu-Kuang coaches behind an E500 (decision 252).
+    public static let e500ChuKuang = TrainLivery(body: chuKuangCoach, stripe: 0xECE2BC, cab: 0x262E33, nose: .flat)
+    /// Chu-Kuang coaches behind an R100 (decision 252).
+    public static let r100ChuKuang = TrainLivery(body: chuKuangCoach, stripe: 0xECE2BC, cab: 0x9B2F23, nose: .flat)
+    /// Chu-Kuang coaches behind an R200 (decision 252).
+    public static let r200ChuKuang = TrainLivery(body: chuKuangCoach, stripe: 0xECE2BC, cab: 0x2A4E9A, nose: .round)
+    /// The Hai-Feng tourist train (decision 252).
+    public static let haiFeng = TrainLivery(body: 0xE4EEE6, stripe: 0x7DBBB0, cab: 0x9ACBE6, nose: .flat)
+    /// A Chu-Kuang coach's orange (the cream above its white line is the
+    /// stripe).
+    static let chuKuangCoach = 0xE2662A
 
     /// The livery of each train type with one, by the type's code
     /// (``TrainTypeSpec/code``).
-    public static let byType: [String: TrainLivery] = ["HSR": highSpeed, "EMU3000": emu3000]
+    public static let byType: [String: TrainLivery] = [
+        "HSR": highSpeed, "EMU3000": emu3000,
+        "EMU100": emu100, "E200CK": e200ChuKuang, "E500CK": e500ChuKuang, "R100CK": r100ChuKuang, "R200CK": r200ChuKuang,
+        "HAIFENG": haiFeng,
+    ]
     /// The livery of each real model's performance, by its preset's code
     /// (``TrainPerformanceSpec/code``), for a train whose type has none.
     public static let byPerformance: [String: TrainLivery] = [
         "highSpeed": highSpeed, "emu3000": emu3000, "puyuma": puyuma, "taroko": taroko,
         "emu800": emu800, "metroC381": metroC381,
+        "emu100": emu100, "e200ChuKuang": e200ChuKuang, "e500ChuKuang": e500ChuKuang, "r100ChuKuang": r100ChuKuang,
+        "r200ChuKuang": r200ChuKuang, "haiFeng": haiFeng,
     ]
 
     /// A train's livery: its type's, else its performance's model's

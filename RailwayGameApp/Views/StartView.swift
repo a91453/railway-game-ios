@@ -358,7 +358,7 @@ struct StartView: View {
     /// Language, Data Sources and Settings, under the start screen's
     /// buttons.
     @ViewBuilder private var chips: some View {
-        // Decision 247: the game's own language menu, as on the
+        // Decision 257: the game's own language menu, as on the
         // reference's home screen (iOS shows an app's language in
         // Settings only on a device with two or more languages).
         Menu {
@@ -631,12 +631,14 @@ private struct StartButton: View {
 
 private struct CardTapButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+            // Decision 253: with Reduce Motion it only dims.
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.98 : 1.0)
             .opacity(isEnabled ? (configuration.isPressed ? 0.85 : 1.0) : 0.5)
-            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+            .animation(MotionRule.press.running(reduceMotion: reduceMotion)?.animation, value: configuration.isPressed)
     }
 }
 

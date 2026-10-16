@@ -144,7 +144,7 @@ jobs:
           codesign --display "$app" 2>&1 || true
           [[ "$failed" == false ]]
 
-      # Decision 247: the app iOS installs offers both languages.
+      # Decision 257: the app iOS installs offers both languages.
       - name: Check the archived app has English and Traditional Chinese
         run: .github/scripts/check-app-localizations.sh "$ARCHIVE_PATH/Products/Applications/RailwayGame.app"
 

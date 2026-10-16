@@ -1,7 +1,7 @@
 import GamePresentation
 import XCTest
 
-/// ARCHITECTURE decision 247: the start screen's language menu. iOS shows an
+/// ARCHITECTURE decision 257: the start screen's language menu. iOS shows an
 /// app's language row in Settings only when the device lists two or more
 /// languages, so the game chooses its own: the choice is the app's
 /// `AppleLanguages` override, read back from it, and used from the next launch.

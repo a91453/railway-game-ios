@@ -403,7 +403,7 @@ V4a 不新增權威存檔欄位，存檔 9／schema 31 不變。所有既有 Gol
 | `Ci` 本機草稿（`LOCAL_DRAFT_NO_FLOW_SAVE_DEBOUNCE_MS` = 1800，建造後寫入）與雲端自動存檔（`AUTOSAVE_INTERVAL_MS` = 900 × 1000） | 自動存檔 | 離開前景、回到開始畫面、每 `GameLauncher.autosaveInterval`（900 秒）寫入 `autosave.json` | 毫秒 → 秒 | 部分 faithful：間隔照雲端自動存檔；不在每次建造後存（世界每一刻都在變，整個重寫太頻繁），改在離開前景時存 |
 | `Ci` `saveUi.desktop.localSlots`、`gameMenuSave` | 本機存檔槽位、選單的「儲存」 | 玩家自己的存檔一個一個檔案、清單（讀取、刪除）；遊戲選單的「儲存遊戲」 | — | 部分 faithful：不限槽位數 |
 | `Ci` `downloadLocalSave`、`importLocalSaveFromFile`（`saveUi.desktop.export`、`import`） | 匯出、匯入 JSON 存檔 | 遊戲選單的「匯出存檔」（`ShareLink`，`SaveLibrary.exportFile`）；開始畫面的「匯入存檔」（`fileImporter`，`GameLauncher.importSave`） | — | faithful |
-| `Ci` `home.title`「城市设计师」、`home.language` | 首頁與介面語言 | `StartView` 的標題；「語言」是 App 內的選單（決策 247） | — | **改變**：iOS 的語系在啟動時決定，選了下次開啟才換 |
+| `Ci` `home.title`「城市设计师」、`home.language` | 首頁與介面語言 | `StartView` 的標題；「語言」是 App 內的選單（決策 257） | — | **改變**：iOS 的語系在啟動時決定，選了下次開啟才換 |
 | `Ci` 雲端存檔、加密（`metroEncryptSaveBlob`）、分享碼、`LOCAL_SAVE_MAX_IMPORT_BYTES` | 帳號、雲端與加密 | 不做 | — | 延後：沒有帳號與伺服器；iCloud 另議 |
 | `Ci` 教學的示範（上海—南京）；舊的 `DemoLayout.swift`（方格） | 示範地圖 | `DemoWorld`：路網上的兩條線，中央一座兩個月台的點車站，全天營運、每站有運量；Release 也能從開始畫面開 | 格 → 世界單位 | **gap**：參考沒有可以移植的示範地圖（它的示範是真實路線），配置是自己的 |
 
@@ -1627,6 +1627,18 @@ V 實際放行 → T、U（保證不互穿）
 | 參考庫 `Railway/site_archive_clean/memories/tainan-2026-09-12/fleet/catalog.json` 各車的 `livery` 文字 | `TrainLivery.emu3000`、`.puyuma`、`.emu800` | 照描述（EMU3000 黑面罩、普悠瑪紅頭紅帶、EMU800 藍面板黃帶）取色，色值本專案的 |
 | 參考庫沒有太魯閣的塗裝 | `TrainLivery.taroko` | 本專案的（gap） |
 | 外部 | 檢查腳本用 `colorspacious`（MIT）算色盲模擬，只在 scratchpad，不進 repo | — |
+
+## 台鐵車款擴充（決策 252）
+
+| 參考 | 本專案 | 怎麼用 |
+| --- | --- | --- |
+| `Simulator/reference_snapshot/_next/static/chunks/2694-efba5e23a92b434e.js` 的塗裝表（`tra-emu100`、`tra-e201`、`tra-e500`、`tra-r100`、`tra-r200`、`tra-sea-breeze`：`bodyColor`、`stripeColor`、`cabShape`） | `TrainLivery.emu100`、`.e200ChuKuang`、`.e500ChuKuang`、`.r100ChuKuang`、`.r200ChuKuang`、`.haiFeng` | 色值取用，撞到地圖保留色或同形狀車頭的才調深淺；`boxy` → `TrainNose.flat`、`streamlined` → `.round` |
+| `Railway/site_archive_clean/memories/tainan-2026-09-12/fleet/catalog.json` 的 `juguang`（`pitchM` 20.0、`livery`）、`e200`、`e500` 的 `livery` | 莒光客車的車長（`TrainTypeCatalog` `E200CK` 等，20.0 m）、客車的橘 `TrainLivery.chuKuangCoach`、E500 的深色車頭 | 長度照用（每公尺 64 單位）；顏色照描述取 |
+| `Railway/site_archive_clean/rail-3d/integration/formations.js`（`chukuang`：機車＋客車 8 輛；`haifeng`：4 輛） | 莒光號加速度推估的編組；海風號 | 只當推估的根據，車型不固定節數 |
+| `Railway/site_archive_clean/index.html` `PERF_RULES` `/莒光|復興/`（`TrainPerformance.semiExpress`：煞車 2.6、120 km/h） | 莒光四款的煞車 2.6、客車最高 120 km/h | 數值照用 |
+| `Railway/site_archive_clean/train-garage-catalog.js`（`emu100`、`e200`、`e500`、`r100`、`r200`、`haifeng`、`juguang` 的照片出處） | — | 只用來確認車款；沒有性能數字 |
+| 參考庫沒有：各車的加減速、定員、機車＋客車的整列性能 | `RunningCurve.swift` 的六個預設、`TrainTypeCatalog` 的六列 | 中文維基百科（EMU100、EMU500、E200、E500、R100、R200、莒光號）與公視新聞（海風號由 EMU500 改造）的公開數字；整列加速度是本專案的推估（gap） |
+| 外部開源專案 | — | 沒有另外找：這次是公開規格數字與塗裝資料，不是演算法；程式是本專案的 |
 
 ## 3D 地圖的街道設施（決策 244）
 

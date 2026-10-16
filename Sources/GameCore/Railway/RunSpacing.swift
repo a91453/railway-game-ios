@@ -8,6 +8,41 @@
 // on at its pace later rather than from a stand. Every other train runs as
 // before, so worlds without such lines are unchanged.
 
+/// The traversals of a train's way, in order, where each begins from its
+/// head, those its body is on, and their edges (``GameWorld/way(of:)``).
+typealias SpacingWay = (order: [TrackTraversal], starts: [TrackTraversal: Int64], body: Set<TrackTraversal>, edges: Set<TrackEdgeID>)
+
+/// Decision 248: how far a train of a line with real runs may still go on
+/// before the minute ends (``GameWorld/assessSpacing(from:memo:)``), given
+/// while it is bound for the call `stop` of `cycle`; `Int64.max` when
+/// nothing holds it.
+public struct SpacingAllowance: Hashable, Sendable {
+    public internal(set) var left: Int64
+    public let stop: Int
+    public let cycle: Int64
+
+    /// Well formed: nothing negative.
+    var isValid: Bool { left >= 0 && stop >= 0 && cycle >= 0 }
+}
+
+/// A saved ``SpacingAllowance`` and its train (`"left"` left out when
+/// nothing holds it).
+struct SavedSpacingAllowance: Codable {
+    let train: TrainID
+    let left: Int64?
+    let stop: Int
+    let cycle: Int64
+
+    init(train: TrainID, _ allowance: SpacingAllowance) {
+        self.train = train
+        left = allowance.left == .max ? nil : allowance.left
+        stop = allowance.stop
+        cycle = allowance.cycle
+    }
+
+    var allowance: SpacingAllowance { SpacingAllowance(left: left ?? .max, stop: stop, cycle: cycle) }
+}
+
 extension GameWorld {
     /// How far along their ways trains are looked at for one coming the
     /// other way (decision 228): as many edges as that.
@@ -60,7 +95,7 @@ extension GameWorld {
     /// those near a train. Empty under traffic control, or without a line of
     /// real runs.
     func spacingIndex() -> [TrackEdgeID: [TrainID]] {
-        guard !isTrafficControlEnabled, lines.contains(where: { !$0.runs.isEmpty }) else { return [:] }
+        guard spacingApplies else { return [:] }
         var index: [TrackEdgeID: [TrainID]] = [:]
         for train in trains where train.position != nil {
             var edges = Set(train.movement.remainingEdges.prefix(Self.oncomingLookahead))
@@ -71,24 +106,120 @@ extension GameWorld {
         return index
     }
 
-    /// Decision 228 with decision 37: whether a train may be held up in
-    /// the `span` seconds the step is about to move the
-    /// trains in one go. Then how far it gets depends on where the others
-    /// are each second, so they move one second at a time. Whether it is
-    /// held then depends on how far the others have come, and how sure the
-    /// faster one is to catch it: so any train that a train would stop
-    /// short of anywhere along its way counts, not only one within the
-    /// span's reach. Without a line of real runs, or under traffic control,
-    /// never.
-    func spacingMayHold(within span: Int64) -> Bool {
-        guard span > 1 else { return false }
+    /// Whether decision 228 keeps trains apart: traffic control off, and a
+    /// line with real runs.
+    var spacingApplies: Bool {
+        !isTrafficControlEnabled && lines.contains { !$0.runs.isEmpty }
+    }
+
+    /// Decision 248 (decision 228 with decision 37): how far each train of
+    /// a line with real runs may go on, at most, until the minute ends.
+    /// At every whole minute, from where the trains are then: as far as
+    /// ``heldUp(_:within:near:)`` lets it, and, taking the trains in ID
+    /// order, short of track that one taken before it, or a train of
+    /// another line, may reach in the same minute coming the other way
+    /// (short of all the track its way shares with that one's), or onto
+    /// which that one may come from another way. A train that sets off (or
+    /// goes on for its next call) within the minute is given its allowance
+    /// then, after those that have one. Each train then moves by itself,
+    /// so moving the trains a whole minute at once leaves them where moving
+    /// them one second at a time would; and two trains coming towards each
+    /// other never both go onto a single track in a minute.
+    mutating func assessSpacing(from start: GameTime, memo: inout DirectionMemo) {
+        guard spacingApplies else {
+            if !spacingAllowances.isEmpty { spacingAllowances = [:] }
+            return
+        }
+        let minuteEnd = Int64(GameTime.secondsPerMinute) - start.secondOfMinute
+        var real: [Train] = []
+        var others: [Train] = []
+        for train in trains where train.position != nil && train.movement.rate > 0 {
+            if case .travellingToStop = train.execution, followsRealTimetable(train) { real.append(train) } else { others.append(train) }
+        }
+        // An allowance holds while its train goes on for the same call.
+        for (id, allowance) in spacingAllowances {
+            guard let train = real.first(where: { $0.id == id }), case .travellingToStop(let stop, let cycle)? = train.execution,
+                  stop == allowance.stop, cycle == allowance.cycle else {
+                spacingAllowances[id] = nil
+                continue
+            }
+        }
+        let candidates = real.filter { spacingAllowances[$0.id] == nil }
+        guard !candidates.isEmpty else { return }
         let index = spacingIndex()
-        guard !index.isEmpty else { return false }
-        return trains.contains { $0.position != nil && $0.movement.rate > 0 && heldUp($0, within: .max / 4, near: index) != nil }
+        var ways: [TrainID: SpacingWay] = [:]
+        func way(of train: Train) -> SpacingWay {
+            if let known = ways[train.id] { return known }
+            let found = self.way(of: train)
+            ways[train.id] = found
+            return found
+        }
+        // Where each train may be in the rest of the minute: the traversals
+        // its body is on, and those ahead of it it may reach.
+        var sweeps: [(train: Train, traversals: Set<TrackTraversal>)] = []
+        func sweep(of train: Train, left: Int64) -> Set<TrackTraversal> {
+            let mine = way(of: train)
+            let reach = min(left, travelShare(of: train, from: start, memo: &memo)(minuteEnd))
+            var swept = mine.body
+            for traversal in mine.order where !mine.body.contains(traversal) {
+                guard let at = mine.starts[traversal], at < reach else { break }
+                swept.insert(traversal)
+            }
+            return swept
+        }
+        for train in others { sweeps.append((train, sweep(of: train, left: .max))) }
+        for train in real {
+            if let allowance = spacingAllowances[train.id] { sweeps.append((train, sweep(of: train, left: allowance.left))) }
+        }
+        for train in candidates.sorted(by: { $0.id < $1.id }) {
+            guard case .travellingToStop(let stop, let cycle)? = train.execution else { continue }
+            let reach = travelShare(of: train, from: start, memo: &memo)(minuteEnd)
+            var left = reach > 0 ? heldUp(train, within: reach, near: index, ways: &ways)?.clear ?? .max : .max
+            let mine = way(of: train)
+            ahead: for traversal in mine.order where !mine.body.contains(traversal) {
+                guard let at = mine.starts[traversal], at < min(reach, left) else { break }
+                for other in sweeps {
+                    if other.traversals.contains(traversal.reversed) {
+                        // Short of all the track its way shares with that
+                        // one's, the other way round.
+                        let theirs = way(of: other.train)
+                        let shared = mine.order.first { theirs.starts[$0.reversed] != nil }
+                        let near = shared.flatMap { mine.body.contains($0) ? nil : mine.starts[$0] } ?? at
+                        left = min(left, max(0, near))
+                        break ahead
+                    }
+                    // Ahead of it on its way, it stops short of that one's
+                    // tail (``heldUp(_:within:near:)``); from another way,
+                    // that one may get there first.
+                    if other.traversals.contains(traversal), way(of: other.train).body.isDisjoint(with: mine.order) {
+                        left = min(left, max(0, at))
+                        break ahead
+                    }
+                }
+            }
+            spacingAllowances[train.id] = SpacingAllowance(left: left, stop: stop, cycle: cycle)
+            sweeps.append((train, sweep(of: train, left: left)))
+        }
     }
 
     /// ``clearAhead(of:within:near:)``, and the train it stops short of.
     func heldUp(_ train: Train, within distance: Int64, near index: [TrackEdgeID: [TrainID]]? = nil) -> (clear: Int64, by: TrainID)? {
+        var ways: [TrainID: SpacingWay] = [:]
+        return heldUp(train, within: distance, near: index, ways: &ways)
+    }
+
+    /// ``heldUp(_:within:near:)`` with the trains' ways (``way(of:)``) kept
+    /// in `ways` by train: a way depends on its train alone, so one worked
+    /// out stays right until that train moves, and the caller drops it then.
+    func heldUp(
+        _ train: Train, within distance: Int64, near index: [TrackEdgeID: [TrainID]]?, ways: inout [TrainID: SpacingWay]
+    ) -> (clear: Int64, by: TrainID)? {
+        func way(of train: Train) -> SpacingWay {
+            if let known = ways[train.id] { return known }
+            let found = self.way(of: train)
+            ways[train.id] = found
+            return found
+        }
         guard !isTrafficControlEnabled, distance > 0, case .onEdge(let traversal, let offset)? = train.position,
               network.edge(traversal.edge) != nil, followsRealTimetable(train) else { return nil }
         // Nothing to do when no other train is near its way.
@@ -121,6 +252,20 @@ extension GameWorld {
                 if part.traversal == traversal, part.to <= offset { continue }
                 let gap = max(0, start + part.from)
                 if gap < distance, gap < clear?.clear ?? .max { clear = (gap, other.id) }
+            }
+            // The rest needs its way where it meets this one's within
+            // `distance` (the body and the traversals ahead of it closer
+            // than that, the first in `mine.order`): none of those edges on
+            // its way, nothing below can apply.
+            let reach = mine.order.prefix { (starts[$0] ?? .max) < distance }.map(\.edge)
+            if !reach.isEmpty {
+                var theirEdges = Set(other.trailEdges)
+                theirEdges.insert(head.edge)
+                theirEdges.formUnion(other.movement.remainingEdges.prefix(Self.oncomingLookahead))
+                for part in bodyStretches(of: other) { theirEdges.insert(part.traversal.edge) }
+                guard reach.contains(where: theirEdges.contains) else { continue }
+            } else {
+                continue
             }
             let theirs = way(of: other)
             // Still leaving its platform: short of where it joins the way of
@@ -156,7 +301,7 @@ extension GameWorld {
     /// from its head (those its body is on behind it, at 0 or less), up to
     /// ``oncomingLookahead`` edges ahead; those its body is on; and their
     /// edges.
-    private func way(of train: Train) -> (order: [TrackTraversal], starts: [TrackTraversal: Int64], body: Set<TrackTraversal>, edges: Set<TrackEdgeID>) {
+    private func way(of train: Train) -> SpacingWay {
         var order: [TrackTraversal] = []
         var starts: [TrackTraversal: Int64] = [:]
         for part in bodyStretches(of: train) where starts[part.traversal] == nil {

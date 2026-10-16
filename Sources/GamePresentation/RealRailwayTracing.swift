@@ -448,7 +448,7 @@ extension GameSession {
     /// builds, their length and cost, and why the trace stops where it
     /// does; `nil` when the ends are not both on real lines that join, so
     /// the tool lays one stretch as usual.
-    func tracePreview(from start: NetworkAnchor, to end: NetworkAnchor) -> NetworkPreview? {
+    func tracePreview(from start: NetworkAnchor, to end: NetworkAnchor) -> (NetworkPreview, [WorldCoordinate])? {
         guard let plan = tracePlan(from: start, to: end) else { return nil }
         let points = plan.stretches.map { stretch in
             TrackGeometry(from: stretch.from, to: stretch.to, curve: stretch.curve)?.points ?? [stretch.from, stretch.to]
@@ -456,10 +456,26 @@ extension GameSession {
         let built = Array(plan.stretches.prefix(plan.buildable))
         var draft = world.pricingCopy()
         var cost: Money?
-        if !built.isEmpty, (try? apply(.buildTrackChain(built), to: &draft)) != nil {
-            cost = Money(GameWorld.pricingBalance.amount - draft.economy.balance.amount)
+        var command = PlayerCommand.buildTrackChain(built)
+        // Decision 257: with double track on, the second track beside it.
+        var double: Result<DoubleChainPlan, TraceDoubleProblem>?
+        if networkBuildsDouble, !built.isEmpty {
+            double = tracedDoublePlan(built, from: start, to: end, reachesEnd: !plan.stopped)
         }
-        let shortfall = cost.flatMap { shortfallText($0, doing: .buildTrackChain(built)) }
+        switch double {
+        case .success(let found)?:
+            draft = found.built
+            command = found.command
+            cost = Money(GameWorld.pricingBalance.amount - draft.economy.balance.amount)
+        case .failure?:
+            break
+        case nil:
+            if !built.isEmpty, (try? apply(command, to: &draft)) != nil {
+                cost = Money(GameWorld.pricingBalance.amount - draft.economy.balance.amount)
+            }
+        }
+        var shortfall = cost.flatMap { shortfallText($0, doing: command) }
+        if case .failure(let problem)? = double { shortfall = problem.text }
         let length = built.compactMap { TrackGeometry(from: $0.from, to: $0.to, curve: $0.curve)?.length }.reduce(0, +)
         let shown = built.isEmpty ? points.flatMap { $0 } : points.prefix(plan.buildable).flatMap { $0 }
         let first = plan.stretches.first, last = built.last
@@ -473,6 +489,14 @@ extension GameSession {
             cleared: built.isEmpty ? [] : world.placedBuildings(clearedIn: draft)
         )
         preview.traced = built.count
+        var second: [WorldCoordinate] = []
+        if case .success(let found)? = double {
+            second = found.parallelPoints
+            preview.crossovers = found.crossoverPoints
+            if shortfall == nil, found.outcome != .none {
+                preview.crossoverNote = String(Self.crossoverText(found.outcome, in: language).drop { $0 == " " })
+            }
+        }
         if plan.stopped, !built.isEmpty {
             preview.unbuilt = points.dropFirst(plan.buildable).flatMap { $0 }
             let stop = NetworkBuilding.distanceText(length, in: language)
@@ -481,7 +505,27 @@ extension GameSession {
                 "描到 \(stop) 處停下：\(plan.problem ?? "")"
             )
         }
-        return preview
+        return (preview, second)
+    }
+
+    /// The traced stretch's `built` edges with a second track beside them
+    /// (decision 257), on ``networkDoubleSide``, and a crossover at each
+    /// end that joins track (the far end only when the trace gets there);
+    /// or why not, as the player reads it.
+    func tracedDoublePlan(
+        _ built: [PlayerCommand.TrackStretch], from start: NetworkAnchor, to end: NetworkAnchor, reachesEnd: Bool
+    ) -> Result<DoubleChainPlan, TraceDoubleProblem> {
+        guard let parallel = parallelChain(beside: built.map(ChainSegment.init), side: networkDoubleSide, in: world) else {
+            return .failure(TraceDoubleProblem(text: Self.noParallelText(in: language)))
+        }
+        do throws(GameError) {
+            return .success(try planDoubleChain(
+                main: built, run: [], parallel: parallel, platforms: [],
+                wantsCrossover: (needsCrossover(start, in: world), reachesEnd && needsCrossover(end, in: world)), in: world
+            ))
+        } catch {
+            return .failure(TraceDoubleProblem(text: error.playerMessage(in: language)))
+        }
     }
 
     /// Builds the traced stretch (decision 213), as far as GameCore builds
@@ -494,7 +538,19 @@ extension GameSession {
             return true
         }
         let stretches = Array(plan.stretches.prefix(plan.buildable))
-        let built = perform(.buildTrackChain(stretches)) { _, before, world in
+        var command = PlayerCommand.buildTrackChain(stretches)
+        var crossovers = DoubleTrack.CrossoverOutcome.none
+        if networkBuildsDouble {
+            switch tracedDoublePlan(stretches, from: start, to: end, reachesEnd: !plan.stopped) {
+            case .success(let found):
+                command = found.command
+                crossovers = found.outcome
+            case .failure(let problem):
+                message = StatusMessage(kind: .failure, text: problem.text)
+                return true
+            }
+        }
+        let built = perform(command) { _, before, world in
             let cost = Money(before.economy.balance.amount - world.economy.balance.amount)
             let length = stretches.compactMap { TrackGeometry(from: $0.from, to: $0.to, curve: $0.curve)?.length }.reduce(0, +)
             let distance = NetworkBuilding.distanceText(length, in: language)
@@ -502,6 +558,9 @@ extension GameSession {
                 "Traced the real railway for \(distance) (\(stretches.count) pieces of track) for \(cost.moneyText).",
                 "沿真實鐵路鋪了 \(distance)（\(stretches.count) 段），花費 \(cost.moneyText)。"
             )
+            if case .buildDoubleTrackChain = command {
+                text += language.text(" With a second track beside it.", "旁邊也鋪了第二條。") + Self.crossoverText(crossovers, in: language)
+            }
             if plan.stopped, let problem = plan.problem {
                 text += language.text(" It stops there: \(problem)", "在那裡停下：\(problem)")
             }
@@ -569,4 +628,10 @@ extension NetworkBuilding {
         let text = "\(tenths / 10).\(tenths % 10)"
         return language.text("\(text) km", "\(text) 公里")
     }
+}
+
+/// Why a traced stretch's second track cannot be laid (decision 257), as
+/// the player reads it.
+struct TraceDoubleProblem: Error {
+    let text: String
 }

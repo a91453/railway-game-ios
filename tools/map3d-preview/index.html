@@ -1,29 +1,40 @@
 <!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#000}canvas{display:block}</style></head>
 <body><canvas id="c" width="1600" height="900"></canvas>
 <script>
-// A WebGL2 port of RailwayGameApp/Views/Map3D/Map3DShaders.metal (decisions 231, 242), for previews on Linux.
+// A WebGL2 port of RailwayGameApp/Views/Map3D/Map3DShaders.metal (decisions 231, 242, 229 續's night lights), for previews on Linux.
 const vs = `#version 300 es
 layout(location=0) in vec3 position; layout(location=1) in vec3 normal; layout(location=2) in vec3 color; layout(location=3) in vec3 tex;
 uniform mat4 viewProjection;
-out vec3 vColor; out vec3 vNormal; out vec3 vWorld; out vec2 vUV; flat out float vLayer;
+out vec3 vColor; out vec3 vNormal; out vec3 vWorld; out vec2 vUV; flat out float vLayer; flat out float vPlane;
 void main(){ vec4 p = viewProjection * vec4(position,1.0); p.z = 2.0*p.z - p.w; gl_Position = p;
- vColor=color; vNormal=normal; vWorld=position; vUV=tex.xy; vLayer=tex.z; }`;
+ vColor=color; vNormal=normal; vWorld=position; vUV=tex.xy; vLayer=tex.z; vPlane=dot(position, normalize(normal)); }`;
 const fs = `#version 300 es
 precision highp float; precision highp sampler2DArray;
-uniform vec4 sunDirection, sunColor, ambientSky, ambientGround, fogColor, eye, fog; uniform sampler2DArray surfaces; uniform int textured;
-in vec3 vColor; in vec3 vNormal; in vec3 vWorld; in vec2 vUV; flat in float vLayer; out vec4 outColor;
+uniform vec4 sunDirection, sunColor, ambientSky, ambientGround, fogColor, eye, fog, shade; uniform vec4 nightWindows[12]; uniform sampler2DArray surfaces; uniform int textured;
+in vec3 vColor; in vec3 vNormal; in vec3 vWorld; in vec2 vUV; flat in float vLayer; flat in float vPlane; out vec4 outColor;
 const float detailRepeat[4] = float[4](3.6, 1.8, 1.8, 1.8);
-void main(){ vec3 n = normalize(vNormal); vec3 base = vColor;
+float hash12(vec2 p){ vec3 q=fract(vec3(p.xyx)*0.1031); q+=dot(q,q.yzx+33.33); return fract((q.x+q.y)*q.z); }
+void main(){ vec3 n = normalize(vNormal); vec3 base = vColor; vec3 glow = vec3(0.0); float lights = shade.y;
+ if (vLayer < -1.5) glow = base * 1.3 * lights;
  if (textured==1 && vLayer >= 0.0) { int packed = int(vLayer + 0.5); vec4 t = texture(surfaces, vec3(vUV, float(packed % 64)));
   vec3 tinted = base * t.rgb * 2.0; int material = packed / 64;
   if (material > 0) { int layer = material - 1; float metres = detailRepeat[min(layer - 18, 3)];
    vec2 at = abs(n.y) > 0.7 ? vWorld.xz : vec2(dot(vWorld, normalize(cross(vec3(0.0,1.0,0.0), n))), vWorld.y);
    float near = 1.0 - smoothstep(200.0, 600.0, distance(vWorld, eye.xyz));
    tinted *= mix(1.0, texture(surfaces, vec3(at / metres, float(layer))).r * 2.0, near); }
-  base = mix(t.rgb, tinted, t.a); }
+  base = mix(t.rgb, tinted, t.a);
+  int surface = packed % 64; vec4 row = nightWindows[min(surface / 2, 11)]; vec2 rule = (surface % 2 == 0) ? row.xy : row.zw;
+  if (lights > 0.0 && rule.x > 0.0) {
+   float glass = (1.0 - t.a) * step(dot(t.rgb, vec3(0.2126, 0.7152, 0.0722)), rule.y);
+   vec2 face = vec2(floor(vPlane / 4.0), dot(round(n * 4.0), vec3(1.0, 17.0, 289.0)));
+   vec2 room = floor(vUV) + fract(face * vec2(0.1373, 0.2719)) * 512.0;
+   float busy = mix(0.5, 1.6, hash12(face * 0.37 + 11.0));
+   float on = step(1.0 - clamp(rule.x * busy, 0.0, 0.95), hash12(room + 23.0));
+   vec3 warm = mix(vec3(1.0, 0.6, 0.3), vec3(1.0, 0.82, 0.6), hash12(room + 67.0));
+   glow += warm * mix(0.55, 1.1, hash12(room + 1.3)) * glass * on * lights; } }
  float sun = max(dot(n, sunDirection.xyz), 0.0); vec3 ambient = mix(ambientGround.rgb, ambientSky.rgb, n.y*0.5+0.5);
  vec3 lit = base * (ambient + sunColor.rgb * sun);
- float f = smoothstep(fog.x, fog.y, distance(vWorld, eye.xyz)); outColor = vec4(mix(lit, fogColor.rgb, f), 1.0); }`;
+ float f = smoothstep(fog.x, fog.y, distance(vWorld, eye.xyz)); outColor = vec4(min(mix(lit, fogColor.rgb, f) + glow * (1.0 - f * 0.7), 1.0), 1.0); }`;
 window.render = async function(view, textured, shadows) {
   const gl = document.getElementById('c').getContext('webgl2', {antialias:true, preserveDrawingBuffer:true});
   if (!window.prog) {
@@ -47,24 +58,28 @@ window.render = async function(view, textured, shadows) {
     gl.texImage3D(gl.TEXTURE_2D_ARRAY,0,gl.RGBA8,N,N,L,0,gl.RGBA,gl.UNSIGNED_BYTE,data); gl.generateMipmap(gl.TEXTURE_2D_ARRAY);
     gl.texParameteri(gl.TEXTURE_2D_ARRAY,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D_ARRAY,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
     const svs=`#version 300 es
-layout(location=0) in vec3 position; layout(location=1) in float dark; uniform mat4 viewProjection; out float vDark; out vec3 vWorld;
-void main(){ vec4 p=viewProjection*vec4(position,1.0); p.z=2.0*p.z-p.w; gl_Position=p; vDark=dark; vWorld=position; }`;
+layout(location=0) in vec3 position; layout(location=1) in vec3 light; layout(location=2) in float dark; uniform mat4 viewProjection; out float vDark; out vec3 vLight; out vec3 vWorld;
+void main(){ vec4 p=viewProjection*vec4(position,1.0); p.z=2.0*p.z-p.w; gl_Position=p; vDark=dark; vLight=light; vWorld=position; }`;
     const sfs=`#version 300 es
-precision highp float; uniform vec4 eye, fog, shade; in float vDark; in vec3 vWorld; out vec4 o;
-void main(){ float f=smoothstep(fog.x,fog.y,distance(vWorld,eye.xyz)); o=vec4(0.10,0.12,0.20,vDark*shade.x*(1.0-f)); }`;
+precision highp float; uniform vec4 eye, fog, shade; in float vDark; in vec3 vLight; in vec3 vWorld; out vec4 o;
+void main(){ float f=smoothstep(fog.x,fog.y,distance(vWorld,eye.xyz));
+ if (any(greaterThan(vLight, vec3(0.0)))) { o=vec4(vLight, vDark*shade.y*(1.0-f)); return; }
+ o=vec4(0.10,0.12,0.20,vDark*shade.x*(1.0-f)); }`;
     const sp=gl.createProgram(); gl.attachShader(sp,sh(gl.VERTEX_SHADER,svs)); gl.attachShader(sp,sh(gl.FRAGMENT_SHADER,sfs)); gl.linkProgram(sp);
     if(!gl.getProgramParameter(sp,gl.LINK_STATUS)) throw gl.getProgramInfoLog(sp); window.sprog=sp;
     const sv=new Float32Array(await (await fetch('/demo.svertices')).arrayBuffer()); const si=new Uint32Array(await (await fetch('/demo.sindices')).arrayBuffer());
     window.scount=si.length; const svao=gl.createVertexArray(); gl.bindVertexArray(svao);
     const svb=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,svb); gl.bufferData(gl.ARRAY_BUFFER,sv,gl.STATIC_DRAW);
     const sib=gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,sib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,si,gl.STATIC_DRAW);
-    gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0,3,gl.FLOAT,false,16,0); gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1,1,gl.FLOAT,false,16,12);
+    gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0,3,gl.FLOAT,false,28,0); gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1,3,gl.FLOAT,false,28,12);
+    gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2,1,gl.FLOAT,false,28,24);
     window.svao=svao; window.vao=vao; gl.bindVertexArray(vao);
     const an=gl.getExtension('EXT_texture_filter_anisotropic'); if(an) gl.texParameterf(gl.TEXTURE_2D_ARRAY,an.TEXTURE_MAX_ANISOTROPY_EXT,8);
   }
   const u=window.meta.views[view]; const p=window.prog; gl.useProgram(p);
   gl.uniformMatrix4fv(gl.getUniformLocation(p,'viewProjection'),false,new Float32Array(u.slice(0,16)));
-  ['sunDirection','sunColor','ambientSky','ambientGround','fogColor','eye','fog'].forEach((n,i)=>gl.uniform4fv(gl.getUniformLocation(p,n),new Float32Array(u.slice(16+i*4,20+i*4))));
+  ['sunDirection','sunColor','ambientSky','ambientGround','fogColor','eye','fog','shade'].forEach((n,i)=>gl.uniform4fv(gl.getUniformLocation(p,n),new Float32Array(u.slice(16+i*4,20+i*4))));
+  gl.uniform4fv(gl.getUniformLocation(p,'nightWindows'),new Float32Array(u.slice(48,96)));
   gl.uniform1i(gl.getUniformLocation(p,'textured'),textured?1:0); gl.uniform1i(gl.getUniformLocation(p,'surfaces'),0);
   const sky=u.slice(16+16,16+19); gl.viewport(0,0,1600,900); gl.clearColor(sky[0],sky[1],sky[2],1); gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LESS);
   gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT); gl.bindVertexArray(window.vao); gl.depthMask(true); gl.disable(gl.BLEND); gl.drawElements(gl.TRIANGLES,window.count,gl.UNSIGNED_INT,0);

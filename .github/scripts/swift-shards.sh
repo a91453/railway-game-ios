@@ -274,9 +274,25 @@ set -euo pipefail
 # 38822987126). TRADemoDayTests went to campaigns-12 first: its job took
 # 18m11s of 20 (run 38825240720), so it goes to campaigns-8, the shortest
 # job on that run (9m07s); campaigns-16 keeps the high-speed day alone
-# (its job 16m59s). HighSpeedDemoBatchTests, which checks
+# (its job 16m59s).
+# On main after #687 (run 38830182218, against #684's 38813149430) the
+# longest jobs were campaigns-11 16m58s and campaigns-16 16m57s, past the
+# 15m47s of rest before it. Each train's way is now kept while the trains
+# move a second (decision 228 later), some 12% off both demos' days, and
+# HighSpeedDemoBatchTests goes to campaigns-14 (9m09s on that run), where
+# it opens the demo for itself (about a minute). On this branch's run
+# (38845130413) campaigns-8 took 18m33s with TRADemoDayTests (186 s of its
+# 923), so the TRA day goes to campaigns-12, the lightest shard by
+# CLASS_WEIGHTS (about 620 s; a single run's job times swing by minutes). HighSpeedDemoBatchTests, which checks
 # that, opens the same demo as HighSpeedDemoTests, so it goes with it to
 # campaigns-11 (8m42s with it on run 38822987126).
+# 2026-10-16 (the #685–#711 review): after decision 248 (#702) the
+# high-speed day is fast again, and campaigns-16 the shortest job (median
+# 9.8 min of main's last ten full push runs, 38856199600–38878358538),
+# while campaigns-12 ended last in nine of them (median 17.8: its test step
+# 14.4, TRADemoDayTests 2.8 of it) and campaigns-14 next (16.6,
+# HighSpeedDemoBatchTests 1.5). Both demo classes go to campaigns-16 (about
+# 14 min with them); rest (15.7) is then the longest.
 classes_of() {
   case "$1" in
     campaigns-1) echo "ServiceRepeatingPropertyTests ScheduledTrafficPropertyTests WorldStateMachineTests" ;;
@@ -286,15 +302,15 @@ classes_of() {
     campaigns-5) echo "SaveMutationSecondHalfTests ScheduledOvertakeTrackPropertyTests LineLossFixesTests" ;;
     campaigns-6) echo "ServiceRepeatingSecondHalfPropertyTests EconomyPropertyTests" ;;
     campaigns-7) echo "LinePatternPropertyTests NetworkServicePropertyTests" ;;
-    campaigns-8) echo "GoldenScenarioTests ScheduledOvertakeTrackMiddlePropertyTests TimetablePropertyTests ScreenshotSceneTests NewGameBalanceTests TRADemoDayTests" ;;
+    campaigns-8) echo "GoldenScenarioTests ScheduledOvertakeTrackMiddlePropertyTests TimetablePropertyTests ScreenshotSceneTests NewGameBalanceTests" ;;
     campaigns-9) echo "SaveMutationTests EconomySecondHalfPropertyTests" ;;
     campaigns-10) echo "PassengerPlanKeyTests ReservationShortcutTests NetworkPostcardTests StationCommerceCardTests LineLossDiagnosisTests" ;;
-    campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests HighSpeedDemoTests TRADemoTests HighSpeedDemoBatchTests" ;;
+    campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests HighSpeedDemoTests TRADemoTests" ;;
     campaigns-12) echo "TrafficControlPropertyTests ScheduledOvertakeTrackFinalPropertyTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests" ;;
     campaigns-13) echo "BoardingPropertyTests TurnbackPropertyTests" ;;
     campaigns-14) echo "ServiceLinePropertyTests OnboardingTests CommandLogTests ScheduledTrafficTests TurnbackTests" ;;
     campaigns-15) echo "TrafficFollowingPropertyTests ScheduledOvertakeTrackLastPropertyTests NewGameSavePropertyTests RealWorldDemoTests" ;;
-    campaigns-16) echo "HighSpeedDemoDayTests" ;;
+    campaigns-16) echo "HighSpeedDemoDayTests TRADemoDayTests HighSpeedDemoBatchTests" ;;
     *) return 1 ;;
   esac
 }
@@ -362,7 +378,7 @@ selected_pattern() {
 # class to another part, never out of the selection.
 CLASS_WEIGHTS="BoardingPropertyTests:624 LineDispatchPropertyTests:602
   ServiceLinePropertyTests:487 SaveMutationSecondHalfTests:478
-  TrafficControlPropertyTests:475 HighSpeedDemoDayTests:780 HighSpeedDemoBatchTests:55 HighSpeedDemoTests:415
+  TrafficControlPropertyTests:475 HighSpeedDemoDayTests:780 HighSpeedDemoBatchTests:110 TRADemoDayTests:190 HighSpeedDemoTests:415
   TrafficFollowingPropertyTests:434 PassengerPlanKeyTests:405
   LinePatternPropertyTests:401 ServicePropertyTests:398
   ServiceRepeatingSecondHalfPropertyTests:395

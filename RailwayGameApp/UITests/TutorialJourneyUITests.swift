@@ -35,7 +35,7 @@ private final class TutorialJourney {
     /// The steps' titles in English, in order (`Tutorial.standardSteps`):
     /// step `n` is `titles[n - 1]`.
     static let titles = [
-        "Tap Network",
+        "Tap Build",
         "Zoom out to see the town",
         "Tap the start, then the end",
         "Tap ✓ to build the track",
@@ -44,11 +44,11 @@ private final class TutorialJourney {
         "Tap ✓ to build the station",
         "Tap the track near the other end",
         "Tap ✓ for the second station",
+        "Tap Done to stop building",
         "Tap Lines",
         "Tap one station, then the other",
         "Tap ✓ to create the line",
         "Tap Buy … and Start Service",
-        "Tap Done to stop building",
         "Tap \u{25B6}\u{FE0E} to run time",
         "Wait for your first fares",
         "Tap Lines to check your line",
@@ -94,9 +94,12 @@ private final class TutorialJourney {
         XCTAssertTrue(start.appears(within: 15), "No Tutorial button on the start screen")
         start.tap()
 
-        // Track
+        // Track: Build, as in the game (decision 226, later), opens the
+        // building tools with Network chosen.
         arrive(at: 1)
-        tapTool("tool.network")
+        XCTAssertFalse(app.buttons["tool.network"].exists, failure("the building tools are out before Build"))
+        tapTool("dock.build")
+        XCTAssertTrue(app.buttons["tool.network"].isSelected, failure("Build did not choose Network"))
 
         arrive(at: 2)
         let zoomOut = app.buttons["Zoom out"]
@@ -145,13 +148,18 @@ private final class TutorialJourney {
         arrive(at: 9)
         tapConfirm("the ✓ that builds the second station")
 
-        // Line
+        // Decision 226, later: Done before the line, as in the game, where
+        // Lines shows once the building tools are put away.
         arrive(at: 10)
+        putToolsAway()
+
+        // Line
+        arrive(at: 11)
         let lines = app.buttons["entry.lines"]
         check(lines, "the Lines button")
         lines.tap()
 
-        arrive(at: 11)
+        arrive(at: 12)
         // The lines panel slides in before the map beside it is tapped.
         XCTAssertTrue(app.buttons["line.draft.pick"].appears(within: 10), failure("the lines panel did not open"))
         Thread.sleep(forTimeInterval: 1)
@@ -161,39 +169,44 @@ private final class TutorialJourney {
         tap(secondStation)
 
         // Decision 100, later: the line is made by the ✓ on the map.
-        arrive(at: 12)
+        arrive(at: 13)
         tapConfirm("the ✓ that creates the line")
 
         // Service
-        arrive(at: 13)
+        arrive(at: 14)
         let buy = app.buttons["line.staff.start"]
         check(buy, "Buy … and Start Service")
         buy.tap()
 
-        arrive(at: 14)
-        tapTool("tool.select")
-
-        // Done usually sets time running, and the step that asks for it is
+        // Done usually set time running, and the step that asks for it is
         // then passed over (`moveTutorialForward`).
-        if arrive(atOneOf: [15, 16]) == 15 {
+        // The first fares can come in seconds later, and the step that
+        // waits for them moves on by itself: both steps passed between two
+        // looks at the card (main 878adaf's full lane, run 38878787559:
+        // step 17 next), and the line's card is the next step then.
+        var shown = arrive(atOneOf: [15, 16, 17])
+        if shown == 15 {
             let resume = app.buttons["Resume"]
             check(resume, "▶︎ (Resume)")
             resume.tap()
-            arrive(at: 16)
+            shown = arrive(atOneOf: [16, 17])
         }
-        // The step points at the cash and the speed.
-        let cash = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Cash")).firstMatch
-        check(cash, "the cash")
-        let speed = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Speed:")).firstMatch
-        check(speed, "the speed menu")
-        // The first fares come in at an hour's settlement after the trains
-        // set off at 06:00; at the speed Done resumes, that is under a
-        // minute. If not, the speed menu goes faster, as the hint says.
-        if !waitForStep(after: 16, timeout: 60) {
-            speed.tap()
-            let fastest = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "6000 times real time")).firstMatch
-            if fastest.appears(within: 5) {
-                fastest.tap()
+        if shown == 16 {
+            // The step points at the cash and the speed.
+            let cash = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Cash")).firstMatch
+            check(cash, "the cash")
+            let speed = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Speed:")).firstMatch
+            check(speed, "the speed menu")
+            // The first fares come in at an hour's settlement after the
+            // trains set off at 06:00; at the speed Done resumes, that is
+            // under a minute. If not, the speed menu goes faster, as the
+            // hint says.
+            if !waitForStep(after: 16, timeout: 60) {
+                speed.tap()
+                let fastest = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "6000 times real time")).firstMatch
+                if fastest.appears(within: 5) {
+                    fastest.tap()
+                }
             }
         }
 
@@ -269,11 +282,15 @@ private final class TutorialJourney {
     /// snapshot, nil when it is gone: a card that folded between `exists`
     /// and `label` failed the label's lookup.
     private func shownStep() -> Int? {
-        if let title = try? app.staticTexts["tutorial.title"].firstMatch.snapshot(),
+        // `exists` first: a snapshot of an element not there is tried three
+        // times, about four seconds, while the card is folded, and a step
+        // that moves on by itself could pass between two looks.
+        let title = app.staticTexts["tutorial.title"].firstMatch
+        if title.exists, let title = try? title.snapshot(),
            let index = Self.titles.firstIndex(of: title.label) {
             return index + 1
         }
-        if let pill = try? folded.firstMatch.snapshot(),
+        if folded.exists, let pill = try? folded.firstMatch.snapshot(),
            let index = Self.titles.firstIndex(where: { pill.label.hasSuffix(": " + $0) }) {
             return index + 1
         }
@@ -338,6 +355,19 @@ private final class TutorialJourney {
             } while Date() < deadline
         }
         XCTFail(failure("\(identifier) is not selected after two taps"))
+    }
+
+    /// Taps Done, once more only if a touch was lost, until the building
+    /// tools are put away: they show only while a tool is chosen (decision
+    /// 114), so Done is never left selected.
+    private func putToolsAway() {
+        let done = app.buttons["tool.select"]
+        check(done, "Done")
+        for _ in 0..<2 where done.exists {
+            done.tap()
+            if done.disappears(within: 5) { return }
+        }
+        XCTFail(failure("Done did not put the building tools away"))
     }
 
     /// Taps the map's ✓, once more only if a press was dropped and nothing

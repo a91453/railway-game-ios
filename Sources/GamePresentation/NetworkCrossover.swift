@@ -48,6 +48,12 @@ extension GameSession {
     func scissorsPlan() -> Result<ScissorsPlan, ScissorsProblem>? {
         guard networkPicksCrossover, networkBuildsScissors,
               case .track(let start)? = networkStart, case .track(let end)? = networkEnd else { return nil }
+        return scissorsPlan(from: start, to: end)
+    }
+
+    /// The X crossover from place `start` on one track to place `end` on
+    /// another, or why not.
+    func scissorsPlan(from start: NetworkEdgePoint, to end: NetworkEdgePoint) -> Result<ScissorsPlan, ScissorsProblem> {
         guard let p1 = world.position(of: .track(start), height: 0), let p2 = world.position(of: .track(end), height: 0),
               p1.z == p2.z else { return .failure(.notLevel) }
         // Each place projected across onto the other track.

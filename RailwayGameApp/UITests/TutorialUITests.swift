@@ -1,7 +1,7 @@
 import XCTest
 
 /// Exercises the CX-5 card against the tutorial's steps (C5, redone by
-/// decision 188: the network tool, the map, a stretch of track; the line
+/// decision 188: Build, the map, a stretch of track; the line
 /// steps from `-tutorial-step`). Gameplay goals are tested in
 /// TutorialSessionTests; these checks prove the overlay passes touches
 /// through to the tool, observes completion and exposes its navigation.
@@ -36,8 +36,11 @@ final class TutorialUITests: XCTestCase {
         openCard(app)
         let next = app.buttons["tutorial.next"]
         XCTAssertTrue(next.appears(within: 10))
-        checkToolIsUncovered(app, identifier: "tool.network")
-        selectTool(app, "tool.network")
+        // Decision 226, later: Build, as in the game, opens the tools with
+        // Network chosen.
+        checkToolIsUncovered(app, identifier: "dock.build")
+        selectTool(app, "dock.build")
+        XCTAssertTrue(app.buttons["tool.network"].isSelected)
 
         // Stage E1: zooming out moves the map; the card leaves the zoom
         // buttons free.
@@ -65,10 +68,10 @@ final class TutorialUITests: XCTestCase {
         let gameTime = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label BEGINSWITH %@", "Game time")).firstMatch
         let hudBottom = max(app.buttons["hud.menu"].frame.maxY, gameTime.frame.maxY) + 12
-        // The dock floats over the map's bottom (decision 106): only the
-        // map above it can be tapped too. The tools run down the map's
-        // leading edge during the tutorial (decision 114): only the map
-        // beside them.
+        // The dock floats over the map's bottom (decision 106; on a phone
+        // Build is the foot of the tools column): only the map above it can
+        // be tapped too. The building tools run down the map's leading edge
+        // (decision 114): only the map beside them.
         let dockTop = app.buttons["dock.build"].frame.minY - 12
         let railEnd = app.buttons["tool.select"].frame.maxX + 12
         let wholeMap = map.frame.intersection(app.frame)
@@ -185,8 +188,8 @@ final class TutorialUITests: XCTestCase {
 
     /// Decision 188 (full lane and iPad, not the gate): the ✓ on the map
     /// creates the line (decision 100, later), and the lines panel scrolls
-    /// Buy … and Start Service into view for its step, clear of the card; Done closes the panel and leaves the
-    /// fares to wait for. The card the player folds stays folded through the
+    /// Buy … and Start Service into view for its step, clear of the card;
+    /// then the panel closes and the fares are waited for. The card the player folds stays folded through the
     /// service chapter's steps.
     func testCreateLineAndBuyAreInReach() {
         continueAfterFailure = false
@@ -228,13 +231,10 @@ final class TutorialUITests: XCTestCase {
         XCTAssertTrue(waitForHittable(buy), "The folded card covers Buy … and Start Service")
         buy.tap()
 
-        waitForStep(app, title: "Tap Done to stop building")
-        if foldedByPlayer {
-            XCTAssertFalse(card.exists, "The card opened again within its chapter")
-        }
-        XCTAssertTrue(app.buttons["line.draft.pick"].disappears(within: 10), "The lines panel stayed open")
-        selectTool(app, "tool.select")
+        // Decision 226, later: Done came before the line, and set time
+        // running, so the time step is passed over and the panel closes.
         waitForStep(app, title: "Wait for your first fares")
+        XCTAssertTrue(app.buttons["line.draft.pick"].disappears(within: 10), "The lines panel stayed open")
         if foldedByPlayer {
             XCTAssertFalse(card.exists, "The card opened again within its chapter")
             XCTAssertTrue(folded.exists)
@@ -306,19 +306,51 @@ final class TutorialUITests: XCTestCase {
         let folded = app.buttons["tutorial.unfold"]
         XCTAssertTrue(waitForCard(card, or: folded), "No tutorial card", file: file, line: line)
         if !card.exists {
-            // A done step moves on by itself, and the next step's pill
-            // replaces this one (the card is rebuilt for each step): a touch
-            // on the pill as it is replaced is cancelled and opens nothing
-            // (main 6e86506's full lane, run 38709237236, the app's trace).
-            // Once it has come to rest, the pill is tapped again.
+            // One tap: the pill opens the card as the finger comes down, so
+            // a touch on it as a done step moves on still opens it
+            // (``testATouchHeldOnTheFoldedCardAsTheStepMovesOnOpensIt``).
             folded.waitUntilSettled()
             folded.tap()
-            if !card.appears(within: 3), folded.exists {
-                folded.waitUntilSettled()
-                folded.tap()
-            }
             XCTAssertTrue(card.appears(within: 10), "The folded card did not open", file: file, line: line)
         }
+    }
+
+    /// A touch on the folded card as a done step moves on opens the card.
+    /// The card is made anew for each step, and the next step's pill
+    /// stands elsewhere: a touch that began on the pill was cancelled as the
+    /// step moved on, and the card did not open (main 6e86506's full lane,
+    /// run 38709237236, the app's trace: cancelled 170 ms after it began).
+    /// Here the step waits four seconds before it moves on
+    /// (`-tutorial-advance-ms`), and a press of six seconds, begun before,
+    /// is held across it; the next step's card is open.
+    func testATouchHeldOnTheFoldedCardAsTheStepMovesOnOpensIt() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
+            "-tutorial-step", "map.move", "-tutorial-advance-ms", "4000",
+        ]
+        app.launch()
+        defer { app.terminate() }
+        let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
+        let folded = app.buttons["tutorial.unfold"]
+        XCTAssertTrue(folded.appears(within: 20), "No folded card at the map step")
+        folded.waitUntilSettled()
+        let zoomOut = app.buttons["Zoom out"]
+        XCTAssertTrue(zoomOut.becomesHittable())
+        let before = folded.frame
+        // Done: the step moves on four seconds from now.
+        zoomOut.tap()
+        XCTAssertTrue(folded.label.contains("Zoom out to see the town"), "The step moved on before the touch: \(folded.label)")
+        // Near the pill's leading end, by the station master, which stays
+        // where it is whatever the next step's title.
+        folded.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.5)).press(forDuration: 6)
+        let progress = app.staticTexts.matching(identifier: "tutorial.progress").firstMatch
+        XCTAssertTrue(
+            card.appears(within: 5),
+            "The touch held across the step moving on did not open the card (pill \(before) then \(folded.exists ? "\(folded.frame) \(folded.label)" : "gone"))"
+        )
+        XCTAssertTrue(progress.label.hasPrefix("Step 3 of"), "Not the next step: \(progress.label)")
     }
 
     /// Waits up to 15 seconds for the tutorial's card, open or folded.
@@ -359,13 +391,16 @@ final class TutorialUITests: XCTestCase {
         XCTAssertEqual(skip.label, skipLabel)
         waitForEnabled(app, false, "The first step waits for the network tool")
         XCTAssertFalse(back.exists, "The first step has no Back button")
+        // Decision 226, later: the game's own tools; the building tools
+        // show only once Build is tapped.
+        XCTAssertFalse(app.buttons["tool.network"].exists, "The building tools are out before Build")
 
         // The outlined button must receive the touch underneath the overlay.
-        checkToolIsUncovered(app, identifier: "tool.network")
+        checkToolIsUncovered(app, identifier: "dock.build")
         // Through selectTool, as the later taps: a single synthesized touch
         // can be lost (run 37797595561 left Next disabled after one tap on
         // an uncovered network tool, in Traditional Chinese on the iPad).
-        selectTool(app, "tool.network")
+        selectTool(app, "dock.build")
         // Decision 188: the done step moves on by itself, and the map step
         // waits for the map to move. From the second step the card starts
         // folded (decision 188, later fix): open it for Back.
@@ -383,9 +418,9 @@ final class TutorialUITests: XCTestCase {
         Thread.sleep(forTimeInterval: 2)
         XCTAssertFalse(back.exists, "A step reached by Back moved on by itself")
         checkToolIsUncovered(app, identifier: "tool.select")
-        selectTool(app, "tool.select")
+        putToolsAway(app)
         waitForEnabled(app, false)
-        selectTool(app, "tool.network")
+        selectTool(app, "dock.build")
         waitForEnabled(app, true)
         XCTAssertFalse(back.exists, "A step reached by Back moved on by itself")
 
@@ -399,18 +434,18 @@ final class TutorialUITests: XCTestCase {
         skip.waitUntilSettled(timeout: 10)
         checkToolIsUncovered(app, identifier: "tool.network")
         checkToolIsUncovered(app, identifier: "tool.select")
-        selectTool(app, "tool.select")
+        putToolsAway(app)
         waitForEnabled(app, false)
-        selectTool(app, "tool.network")
+        checkToolIsUncovered(app, identifier: "dock.build")
+        selectTool(app, "dock.build")
         waitForEnabled(app, true)
         skip.tap()
         // The card may still be closing right after Skip: wait for it to go.
         XCTAssertTrue(next.disappears(within: 10), "Skip did not close the tutorial")
         // The restarted tutorial's first step waits for Network again.
-        // Decision 114: outside the tutorial the tools show only while one
-        // is chosen, so Done closes them rather than staying selected.
-        app.buttons["tool.select"].tap()
-        XCTAssertTrue(app.buttons["tool.select"].disappears(within: 10), "Done did not close the tools")
+        // Decision 114: the tools show only while one is chosen, so Done
+        // closes them rather than staying selected.
+        putToolsAway(app)
 
         // The game menu starts the tutorial again without leaving this game:
         // the skipped tutorial is offered at its step, or from the start
@@ -474,6 +509,19 @@ final class TutorialUITests: XCTestCase {
             y += 8
         }
         return nil
+    }
+
+    /// Taps Done until the building tools are put away, at most twice (a
+    /// touch can be lost, as in ``selectTool(_:_:file:line:)``): they show
+    /// only while a tool is chosen (decision 114), the tutorial too since
+    /// decision 226's later change, so Done is not left selected.
+    private func putToolsAway(_ app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
+        let done = app.buttons["tool.select"]
+        for _ in 0..<2 where done.exists {
+            done.tap()
+            if done.disappears(within: 5) { return }
+        }
+        XCTAssertFalse(done.exists, "Done did not put the tools away", file: file, line: line)
     }
 
     private func checkToolIsUncovered(_ app: XCUIApplication, identifier: String) {

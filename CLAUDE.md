@@ -155,7 +155,9 @@ needs OSM data reads the same extract.
   workflows' files.
   A pull request runs a short gate list of UI tests,
   and the iPad tutorial tests only when it touches the tutorial's own files;
-  the full lane runs every UI test and the iPad tutorial tests (the
+  the full lane runs every UI test, its iPhone tests split over two jobs
+  (`FULL_LANE_SECOND_JOB` names the second's classes), and the iPad
+  tutorial tests (the
   missing-button proof nightly and on request) on `main` after a merge, at
   most every three hours (`ios-full-lane.yml` starts it unless `main`'s
   newest commit already had one or one ran in the last three hours; its
@@ -351,6 +353,9 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
 - Before drawing or changing any icon, glyph, character or illustration for
   the app, read `.claude/skills/art-style/SKILL.md`: the art style the owner
   chose and how to check a drawing before showing it.
+- Before adding or changing any animation or transition in the app, read
+  `.claude/skills/motion/SKILL.md`: the motion rules (`MotionRule`, decision
+  253) and what Reduce Motion does.
 - Prefer small, minimal changes. Avoid speculative architecture, abstractions
   with no current use, new dependencies, and unrelated refactors or formatting.
 - This repository is public: never commit secrets (API keys, `.p8`/`.p12`,

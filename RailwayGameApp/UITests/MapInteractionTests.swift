@@ -214,12 +214,19 @@ final class MapInteractionTests: XCTestCase {
                 return xy.count == 2 ? CGPoint(x: xy[0], y: xy[1]) : nil
             }
         }
+        // The opening camera may still move clear of the corner buttons
+        // for two seconds after the map opens (`MapView.openingSettles`):
+        // places that stood still for half a second inside that time could
+        // still move (main 878adaf's full lane and its run 38888973282:
+        // held at (437, 201) two seconds in, no panel). So they are read
+        // once that time is over, and once they stand still for a second.
+        let opened = Date()
         var last = places()
-        let settle = Date().addingTimeInterval(10)
+        let settle = opened.addingTimeInterval(12)
         while Date() < settle {
-            Thread.sleep(forTimeInterval: 0.5)
+            Thread.sleep(forTimeInterval: 1)
             let now = places()
-            if !now.isEmpty, now == last { break }
+            if !now.isEmpty, now == last, Date().timeIntervalSince(opened) > 3 { break }
             last = now
         }
         let middle = CGPoint(x: map.frame.width / 2, y: map.frame.height / 2)
@@ -1127,10 +1134,13 @@ final class MapInteractionTests: XCTestCase {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-demo-layout", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        // At 06:30, its trains running: opened at midnight, Train 1 set off
+        // only some 36 seconds into the test, of the 60 it watches for.
+        app.launchArguments = ["-ui-testing", "-demo-layout", "-demo-at", "06:30", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         defer { app.terminate() }
-        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 10))
+        // The demo runs on to 06:30 before the map opens.
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 60))
         XCTAssertTrue(app.buttons["Pause"].appears(within: 10), "The clock must run")
         app.buttons["dock.build"].tap()
         let trainTool = app.buttons["tool.train"]
@@ -1168,11 +1178,15 @@ final class MapInteractionTests: XCTestCase {
         var samples: [String] = []
         // Until the train has been seen stopped and running three times
         // each: a snapshot of the demo's card takes a second or two, and in
-        // one run 20 seconds held no stop (run 38332921819).
+        // one run 20 seconds held no stop (run 38332921819, the demo opened
+        // at midnight then).
         var stopped = 0, running = 0
         let deadline = Date().addingTimeInterval(60)
         while Date() < deadline, stopped < 3 || running < 3 {
-            guard let snapshot = try? card.snapshot() else { continue }
+            guard let snapshot = try? card.snapshot() else {
+                Thread.sleep(forTimeInterval: 0.1)
+                continue
+            }
             var layout = "none", summary = "", marks: [String] = []
             var queue = [snapshot]
             while let next = queue.popLast() {
@@ -1286,5 +1300,42 @@ final class MapInteractionTests: XCTestCase {
         let sidings = app.descendants(matching: .any)["network.depotSidings"].firstMatch
         XCTAssertTrue(sidings.appears(within: 10), "The number of sidings")
         XCTAssertTrue(sidings.becomesHittable(within: 10))
+    }
+
+    /// Decision 250 (a player's report): a sight tapped on the map opens the
+    /// sights panel at its row, not at the top. Full lane only (decision
+    /// 199): which row it opens at is `SightFocus` on Linux; this asks only
+    /// whether the row is there to reach.
+    func testASightTappedOnTheMapOpensItsRow() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 10))
+        app.bringStartButtonIntoView(newGame)
+        newGame.tap()
+        // A new blank map has three to five sights in each tile, anywhere
+        // in it: the opening, framed on the towns, may show none (main
+        // 878adaf's full lane, run 38878787559), so the map is drawn back
+        // until one is marked.
+        let marks = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'map.sight.'"))
+        let zoomOut = app.buttons["Zoom out"]
+        XCTAssertTrue(zoomOut.appears(within: 30))
+        for _ in 0..<5 where !marks.firstMatch.appears(within: 3) && zoomOut.isEnabled {
+            zoomOut.tap()
+        }
+        XCTAssertTrue(marks.firstMatch.appears(within: 10), "No sight is marked on the map")
+        let mark = marks.element(boundBy: marks.count - 1)
+        let id = mark.identifier.replacingOccurrences(of: "map.sight.", with: "")
+        XCTAssertTrue(mark.becomesHittable(within: 10))
+        mark.tap()
+        XCTAssertTrue(app.buttons["tourism.done"].appears(within: 10), "The sights did not open")
+        // The row's name: its star, which carries the row's identifier too,
+        // is hidden from VoiceOver and never hittable (PR #713's run).
+        let row = app.staticTexts.matching(identifier: "tourism.row.\(id)").firstMatch
+        XCTAssertTrue(row.appears(within: 10), "The sight's row is not in the panel")
+        XCTAssertTrue(row.becomesHittable(within: 10), "The panel did not open at the sight's row")
     }
 }

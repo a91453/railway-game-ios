@@ -157,8 +157,8 @@ public enum DataSourceCredits {
                         id: "openStreetMap",
                         title: "OpenStreetMap",
                         detail: language.text(
-                            "The track of every real railway line, station and platform positions, single and double track; places such as shops, offices, schools and sights round new stations; the industrial land, parks, farmland, coastline, rivers and lakes of real-world maps; the names of the settlements, villages and townships new stations are named after; where the tourist sights of real-world maps stand; where the high-speed demo's depots and the TRA demo's sidings stand and how many platform tracks the high-speed demo's end stations have; the roads, parks and shop names of the 3D city preview.",
-                            "提供每條真實鐵道的軌道走向、車站與月台位置、單雙線資訊；新車站周邊的商店、辦公室、學校、景點等地點；實景地圖上的工業區、公園、農地、海岸線、河川與湖泊；替新車站命名的聚落、村里與鄉鎮市區名稱；實景地圖上觀光景點的位置；高鐵示範的機廠與台鐵示範的側線位置、高鐵示範端點站的股道數；3D 城市預覽的道路、公園與店名。"
+                            "The track of every real railway line, station and platform positions, single and double track; places such as shops, offices, schools and sights round new stations; the industrial land, parks, farmland, coastline, rivers and lakes of real-world maps; the names of the settlements, villages and townships new stations are named after; where the tourist sights of real-world maps stand; where the high-speed demo's depots and the TRA demo's Yilan and Su'aoxin sidings stand and how many platform tracks the high-speed demo's end stations have; the roads, parks and shop names of the 3D city preview.",
+                            "提供每條真實鐵道的軌道走向、車站與月台位置、單雙線資訊；新車站周邊的商店、辦公室、學校、景點等地點；實景地圖上的工業區、公園、農地、海岸線、河川與湖泊；替新車站命名的聚落、村里與鄉鎮市區名稱；實景地圖上觀光景點的位置；高鐵示範的機廠與台鐵示範宜蘭、蘇澳新側線的位置、高鐵示範端點站的股道數；3D 城市預覽的道路、公園與店名。"
                         ),
                         // The ODbL asks for the derived files to be offered
                         // under the same licence: the source repository link

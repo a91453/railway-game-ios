@@ -10,7 +10,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         checkFlow(language: "zh-Hant", locale: "zh_TW")
     }
 
-    /// Decision 247: the start screen's Language opens the game's own menu
+    /// Decision 257: the start screen's Language opens the game's own menu
     /// of languages, each named in itself. Nothing is chosen, so the
     /// Simulator's app settings stay as they were. Full lane only.
     func testLanguageOpensTheGamesLanguageMenu() {

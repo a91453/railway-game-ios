@@ -28,11 +28,16 @@ public struct LineMap: Equatable, Sendable {
         /// `from` node: `0 <= start < end <=` the edge's length.
         public let start: Int64
         public let end: Int64
-        /// How far beside the track the line is drawn, in line widths, to
-        /// the left of the way the edge goes from its `from` node to its
-        /// `to` node: 0 on the track, and a negative number to the right
-        /// (MapBuilder's `offsets`, in its 8 px line widths).
+        /// How far beside the track the middle of the line is drawn, in
+        /// line widths, to the left of the way the edge goes from its
+        /// `from` node to its `to` node: 0 on the track, and a negative
+        /// number to the right (MapBuilder's `offsets`, in its 8 px line
+        /// widths). Decision 249: a line ridden one way only is drawn off
+        /// the track on the left of that way (``layout(both:forward:backward:)``).
         public let offset: Double
+        /// How wide the line is drawn, in line widths: 1, narrower where
+        /// many lines share the track (decision 249, ``widths(count:)``).
+        public let width: Double
         /// Which way the line's trains run along it (decision 201): the map
         /// draws arrows on a stretch ridden one way only, so a double line
         /// shows which track each way takes.
@@ -40,7 +45,7 @@ public struct LineMap: Equatable, Sendable {
 
         public init(
             line: LineID, color: LineColor?, isHighSpeed: Bool = false, edge: TrackEdgeID, start: Int64, end: Int64, offset: Double,
-            way: Way = .both
+            width: Double = 1, way: Way = .both
         ) {
             self.line = line
             self.color = color
@@ -49,6 +54,7 @@ public struct LineMap: Equatable, Sendable {
             self.start = start
             self.end = end
             self.offset = offset
+            self.width = width
             self.way = way
         }
     }
@@ -64,14 +70,35 @@ public struct LineMap: Equatable, Sendable {
         case both
     }
 
+    /// A stretch of one edge that every line over it rides the same one
+    /// way (decision 249): the map draws its arrows on the track there,
+    /// once, rather than on each line.
+    public struct OneWay: Equatable, Sendable {
+        public let edge: TrackEdgeID
+        public let start: Int64
+        public let end: Int64
+        /// ``Way/forward`` or ``Way/backward``.
+        public let way: Way
+
+        public init(edge: TrackEdgeID, start: Int64, end: Int64, way: Way) {
+            self.edge = edge
+            self.start = start
+            self.end = end
+            self.way = way
+        }
+    }
+
     /// Every line's stretches, by edge, then line, then start.
     public let stretches: [Stretch]
+    /// Where the track is ridden one way only, by edge, then start.
+    public let oneWay: [OneWay]
     /// Each transfer group's stations, where they stand, in the group's
     /// order: MapBuilder links an interchange's stations in its order.
     public let transfers: [[PlanPoint]]
 
-    public init(stretches: [Stretch] = [], transfers: [[PlanPoint]] = []) {
+    public init(stretches: [Stretch] = [], oneWay: [OneWay] = [], transfers: [[PlanPoint]] = []) {
         self.stretches = stretches
+        self.oneWay = oneWay
         self.transfers = transfers
     }
 
@@ -85,7 +112,9 @@ public struct LineMap: Equatable, Sendable {
     /// (``Stretch/way``), except in a platform of a station the line calls
     /// at, where a train turns round. Where lines share a stretch
     /// of track, the lines over it are ordered by ID and drawn side by side,
-    /// as MapBuilder offsets the lines of an interline segment. A line whose
+    /// as MapBuilder offsets the lines of an interline segment, those ridden
+    /// one way only off the track on the left of their way (decision 249,
+    /// ``layout(both:forward:backward:)``). A line whose
     /// journey cannot be driven is not drawn.
     ///
     /// Costs one ``GameWorld/lineJourney(_:pattern:)`` a service.
@@ -115,6 +144,7 @@ public struct LineMap: Equatable, Sendable {
         }
         let platforms = Dictionary(grouping: world.network.platforms, by: \.edge)
         var stretches: [Stretch] = []
+        var arrows: [OneWay] = []
         for edge in ranges.keys.sorted() {
             guard let lines = ranges[edge] else { continue }
             let merged = lines.mapValues(Self.merged)
@@ -129,26 +159,55 @@ public struct LineMap: Equatable, Sendable {
             var done: [Stretch] = []
             for (start, end) in zip(cuts, cuts.dropFirst()) {
                 let over = merged.filter { $0.value.contains { $0.lowerBound <= start && end <= $0.upperBound } }.keys.sorted()
-                let offsets = Self.offsets(count: over.count)
-                for (line, offset) in zip(over, offsets) {
-                    func runs(_ forward: Bool) -> Bool {
+                let lineWays: [(line: LineID, way: Way)] = over.map { line in
+                    func runs(_ forward: Bool, from start: Int64, to end: Int64) -> Bool {
                         ways[line]?[forward]?.contains { $0.lowerBound <= start && end <= $0.upperBound } ?? false
                     }
-                    let turning = platforms[edge]?.contains {
-                        turns[line]?.contains($0.station) == true && $0.start <= start && end <= $0.end
+                    // Decision 249: a platform of a call the line's trains
+                    // ride both ways, which they turn round in; one they
+                    // pass through keeps their way.
+                    let turning = platforms[edge]?.contains { platform in
+                        guard turns[line]?.contains(platform.station) == true, platform.start <= start, end <= platform.end else { return false }
+                        func touches(_ forward: Bool) -> Bool {
+                            ways[line]?[forward]?.contains { $0.lowerBound <= platform.end && platform.start <= $0.upperBound } ?? false
+                        }
+                        return touches(true) && touches(false)
                     } ?? false
-                    let way: Way = turning || runs(true) == runs(false) ? .both : runs(true) ? .forward : .backward
-                    if let last = open[line], last.end == start, last.offset == offset, last.way == way {
-                        open[line] = Stretch(
-                            line: line, color: last.color, isHighSpeed: last.isHighSpeed, edge: edge, start: last.start, end: end, offset: offset,
-                            way: way
-                        )
+                    let forward = runs(true, from: start, to: end), backward = runs(false, from: start, to: end)
+                    return (line, turning || forward == backward ? .both : forward ? .forward : .backward)
+                }
+                // Decision 249: the lines ridden both ways on the track, those
+                // ridden one way off it on the left of their way.
+                func group(_ way: Way) -> [LineID] { lineWays.filter { $0.way == way }.map(\.line) }
+                let groups = [group(.both), group(.forward), group(.backward)]
+                let layout = Self.layout(both: groups[0].count, forward: groups[1].count, backward: groups[2].count)
+                // A track all its lines ride the same one way has arrows
+                // that way on it.
+                if groups[0].isEmpty, groups[1].isEmpty != groups[2].isEmpty {
+                    let way: Way = groups[1].isEmpty ? .backward : .forward
+                    if let last = arrows.last, last.edge == edge, last.end == start, last.way == way {
+                        arrows[arrows.count - 1] = OneWay(edge: edge, start: last.start, end: end, way: way)
                     } else {
-                        if let last = open[line] { done.append(last) }
-                        open[line] = Stretch(
-                            line: line, color: colors[line] ?? nil, isHighSpeed: fast.contains(line), edge: edge, start: start, end: end, offset: offset,
-                            way: way
-                        )
+                        arrows.append(OneWay(edge: edge, start: start, end: end, way: way))
+                    }
+                }
+                let placed: [(Way, [LineID], [(offset: Double, width: Double)])] = [
+                    (.both, groups[0], layout.both), (.forward, groups[1], layout.forward), (.backward, groups[2], layout.backward),
+                ]
+                for (way, lines, places) in placed {
+                    for (line, place) in zip(lines, places) {
+                        if let last = open[line], last.end == start, last.offset == place.offset, last.width == place.width, last.way == way {
+                            open[line] = Stretch(
+                                line: line, color: last.color, isHighSpeed: last.isHighSpeed, edge: edge, start: last.start, end: end, offset: place.offset,
+                                width: place.width, way: way
+                            )
+                        } else {
+                            if let last = open[line] { done.append(last) }
+                            open[line] = Stretch(
+                                line: line, color: colors[line] ?? nil, isHighSpeed: fast.contains(line), edge: edge, start: start, end: end,
+                                offset: place.offset, width: place.width, way: way
+                            )
+                        }
                     }
                 }
             }
@@ -156,6 +215,7 @@ public struct LineMap: Equatable, Sendable {
             stretches += done.sorted { ($0.line, $0.start) < ($1.line, $1.start) }
         }
         self.stretches = stretches
+        self.oneWay = arrows
         self.transfers = world.transferGroups.map { group in
             group.stations.compactMap { world.station(id: $0)?.location }
         }.filter { $0.count > 1 }
@@ -171,6 +231,58 @@ public struct LineMap: Equatable, Sendable {
             let distance = count % 2 == 1 ? Double((index + 1) / 2) : 0.5 + Double(index / 2)
             return index % 2 == 0 ? distance : -distance
         }
+    }
+
+    /// How far from the middle of a track the lines ridden one way only
+    /// begin (decision 249), in line widths: the track's bed shows between
+    /// them and its centre line, and on a double track the two ways' lines
+    /// stand apart however far the map is zoomed out.
+    public static let trackClearance = 1.0
+    /// The size of the arrows on a track ridden one way only, in line
+    /// widths: the map's arrow reaches this far ahead of its middle and
+    /// 0.95 times it either side, so it stays within ``trackClearance`` of
+    /// the track's middle, off the lines.
+    public static let arrowSize = 0.7
+    /// How wide more than three lines sharing a track are drawn together,
+    /// in line widths (decision 249): each narrower, down to
+    /// ``narrowestWidth``...
+    public static let sharedWidth = 3.0
+    /// ...the narrowest a line is drawn, in line widths, while there are
+    /// few enough...
+    public static let narrowestWidth = 0.5
+    /// ...and never wider than this together, however many there are.
+    public static let widestShared = 4.0
+
+    /// The width of each of `count` lines drawn side by side on one track
+    /// (decision 249): a whole line width for up to three, then narrower so
+    /// they span ``sharedWidth``, down to ``narrowestWidth`` (six to eight
+    /// lines), then narrower again so they span ``widestShared``.
+    public static func widths(count: Int) -> Double {
+        guard count > 0 else { return 1 }
+        let lines = Double(count)
+        return min(1, max(sharedWidth / lines, min(narrowestWidth, widestShared / lines)))
+    }
+
+    /// Where `both` lines ridden both ways, `forward` lines ridden forward
+    /// only and `backward` lines ridden backward only over one stretch of
+    /// track are drawn, each group in its lines' order (decision 249):
+    /// those ridden both ways over the track side by side as MapBuilder
+    /// offsets them; those ridden one way beyond them on the left of that
+    /// way (decision 178's load layer draws each way on its left too), from
+    /// ``trackClearance`` out, so a double track's two tracks, kept left
+    /// (decision 202), have their lines on their outer sides with both beds
+    /// between. Each group's lines are ``widths(count:)`` wide.
+    public static func layout(both: Int, forward: Int, backward: Int) -> (
+        both: [(offset: Double, width: Double)], forward: [(offset: Double, width: Double)], backward: [(offset: Double, width: Double)]
+    ) {
+        let middle = widths(count: both)
+        let centred = offsets(count: both).map { (offset: $0 * middle, width: middle) }
+        let from = max(trackClearance, Double(both) * middle / 2)
+        func outward(_ count: Int, side: Double) -> [(offset: Double, width: Double)] {
+            let width = widths(count: count)
+            return (0..<max(0, count)).map { (offset: side * (from + width * (Double($0) + 0.5)), width: width) }
+        }
+        return (centred, outward(forward, side: 1), outward(backward, side: -1))
     }
 
     /// The pieces of track `journey` drives, in order: each the way it is
@@ -201,8 +313,14 @@ public struct LineMap: Equatable, Sendable {
                 pieces = []
             }
             // A leg that leaves from the other end of the edge turned round
-            // where the last one stopped.
+            // where the last one stopped; one that stays on the edge, where
+            // the journey turns round (decision 249: it was taken as going
+            // on the same way).
+            let turns = (!journey.isRing && index == journey.legs.count / 2) || journey.intermediateTurnbacks.contains(index)
             if let first = leg.path.traversals.first, node(first, atEnd: false) != node(traversal, atEnd: true) {
+                offset = length(traversal) - offset
+                traversal = traversal.reversed
+            } else if leg.path.traversals.isEmpty, index > 0, turns {
                 offset = length(traversal) - offset
                 traversal = traversal.reversed
             }

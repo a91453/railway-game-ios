@@ -357,6 +357,46 @@ public final class GameLauncher {
         begin(world, keepingAutosave: true, isDemo: true)
     }
 
+    /// Opens the demo map run on to `time` ("HH:MM") of its first day,
+    /// paused there when `paused`: only the Debug app's `-demo-at` launch
+    /// argument asks for it, so that a UI test which needs the morning's
+    /// trains opens on them instead of waiting for the clock (the demo
+    /// opens at midnight; its trains set off at 06:00). The world runs on
+    /// off the main actor, as a screenshot scene does. Returns `nil` for a
+    /// time that is not one.
+    @discardableResult
+    public func openDemo(at time: String, paused: Bool) -> Task<Void, Never>? {
+        guard let seconds = Self.secondOfDay(time) else { return nil }
+        let language = language
+        return Task {
+            let world = await Task.detached(priority: .userInitiated) {
+                var world = DemoWorld.make(in: language)
+                do throws(GameError) {
+                    // .fast is ten minutes a tick, .x10 one second.
+                    world.setSpeed(.fast)
+                    try world.advance(ticks: Int(seconds / 600))
+                    world.setSpeed(.x10)
+                    try world.advance(ticks: Int(seconds % 600))
+                } catch {
+                    preconditionFailure("The demo no longer runs on to \(time): \(error)")
+                }
+                world.setSpeed(.normal)
+                if paused { world.setSpeed(.paused) }
+                return world
+            }.value
+            self.begin(world, keepingAutosave: true, isDemo: true)
+        }
+    }
+
+    /// The second of the day "HH:MM" names, or `nil`.
+    static func secondOfDay(_ time: String) -> Int64? {
+        let parts = time.split(separator: ":", omittingEmptySubsequences: false)
+        guard parts.count == 2, parts.allSatisfy({ $0.count == 2 }), let hour = Int64(parts[0]), let minute = Int64(parts[1]),
+              (0..<24).contains(hour), (0..<60).contains(minute)
+        else { return nil }
+        return hour * 3_600 + minute * 60
+    }
+
     /// Opens a website screenshot scene (decision 165), paused at the
     /// moment it shows; only the Debug app's `-screenshot-scene` launch
     /// argument asks for one. The scene runs on to its moment off the main
@@ -515,11 +555,13 @@ public final class GameLauncher {
 
     /// Starts the tutorial's game at step `id` (Debug builds'
     /// `-tutorial-step`, for the UI tests of a later step's screen): from
-    /// the line chapter on, with what the steps before it have the player
+    /// `build.done` on, with what the steps before it have the player
     /// build near the middle of the map: a stretch of track with a station
-    /// near each end (nothing left picked), and from `line.create` the two
-    /// stations picked for the line, from `line.staff` the line, from
-    /// `build.done` its trains. The network tool is left chosen.
+    /// near each end (nothing left picked, the network tool left chosen),
+    /// and from `line.open` the tools put away (decision 226, later: Done
+    /// comes before the line), from `line.create` the two stations picked
+    /// for the line, from `line.staff` the line, from `time.play` its
+    /// trains.
     public func startTutorial(atStep id: String) {
         startTutorial()
         guard let session else { return }
@@ -528,7 +570,7 @@ public final class GameLauncher {
             guard let index = steps.firstIndex(of: id), let first = steps.firstIndex(of: step) else { return false }
             return index >= first
         }
-        if reaches("line.open") {
+        if reaches("build.done") {
             let tile: Int64 = 1_024
             let reach: Int64 = 512
             let bounds = session.world.bounds
@@ -547,6 +589,7 @@ public final class GameLauncher {
             session.networkStart = nil
             session.networkEnd = nil
             session.networkEdgePoint = nil
+            if reaches("line.open") { session.selectTool(.select) }
             if reaches("line.create") {
                 for station in session.world.stations.suffix(2) {
                     session.selectStation(station.id)
@@ -554,18 +597,24 @@ public final class GameLauncher {
                 }
             }
             if reaches("line.staff") { session.createLineFromDraft() }
-            if reaches("build.done") { session.staffSelectedLine(headway: 10) }
+            if reaches("time.play") { session.staffSelectedLine(headway: 10) }
         }
         session.startTutorial(atStep: id)
     }
 
     /// Goes on with the autosave.
-    public func continueGame() {
-        guard let autosave else {
+    ///
+    /// Decision 192, later: when the newest cannot be read back (its game
+    /// is damaged, or GameCore refuses it), the next autosave that can is
+    /// loaded instead, newest first, and the player is told from when. The
+    /// damaged one is kept, for a problem report.
+    public func continueGame(at date: Date = Date()) {
+        let candidates = entries.filter { $0.kind == .autosave && $0.problem == nil }
+        guard !candidates.isEmpty else {
             message = StatusMessage(kind: .failure, text: language.text("There is no game to continue.", "沒有可以繼續的遊戲。"))
             return
         }
-        load(autosave)
+        loadAutosave(candidates, fallingBack: true, at: date)
     }
 
     /// Loads `entry`. The autosave is kept first, unless `entry` is an
@@ -578,7 +627,7 @@ public final class GameLauncher {
     /// autosave, so Continue goes on with it.
     public func load(_ entry: SaveLibrary.Entry, at date: Date = Date()) {
         if entry.kind == .autosave {
-            loadAutosave(entry, at: date)
+            loadAutosave([entry], fallingBack: false, at: date)
             return
         }
         do throws(SaveError) {
@@ -590,26 +639,53 @@ public final class GameLauncher {
         }
     }
 
-    private func loadAutosave(_ entry: SaveLibrary.Entry, at date: Date) {
+    /// Loads the first of `candidates` that can be read; with
+    /// `fallingBack`, one whose game is damaged is passed over for the
+    /// next (decision 192, later).
+    private func loadAutosave(_ candidates: [SaveLibrary.Entry], fallingBack: Bool, at date: Date) {
         let playing = session
         if playing != nil { recordChallengeResult(at: date) }
         let current = playing.map { ($0.worldToSave, $0.news) }
         do throws(SaveError) {
             let library = library
-            let (world, news, wentBack) = try afterSaves { () throws(SaveError) in
+            let loaded = try afterSaves { () throws(SaveError) -> (GameWorld, NewsLog, Bool, SaveLibrary.Entry?)? in
                 // Read first: keeping a game in turn may delete the oldest.
-                let (world, news) = (try library.load(entry), library.news(for: entry))
+                var read: (SaveLibrary.Entry, GameWorld)?
+                for candidate in candidates {
+                    do throws(SaveError) {
+                        read = (candidate, try library.load(candidate))
+                        break
+                    } catch .damaged where fallingBack {
+                        continue
+                    }
+                }
+                guard let (entry, world) = read else { return nil }
+                let news = library.news(for: entry)
+                let fellBackTo = entry == candidates.first ? nil : entry
                 if let (now, log) = current {
                     try library.saveAutosaveSlot(now, news: log, at: date)
-                    return (world, news, true)
+                    return (world, news, true, fellBackTo)
                 }
                 guard library.newestAutosave()?.id != entry.id else {
-                    return (world, news, false)
+                    return (world, news, false, fellBackTo)
                 }
-                try library.keepLatestAutosaveInSlot()
-                return (world, news, true)
+                // A damaged latest passed over is moved, not deleted; the
+                // one gone back to stays until it is the latest.
+                try library.keepLatestAutosaveInSlot(sparing: entry.id)
+                return (world, news, true, fellBackTo)
+            }
+            guard let (world, news, wentBack, fellBackTo) = loaded else {
+                message = StatusMessage(kind: .failure, text: language.text("None of the autosaves can be loaded.", "所有自動存檔都讀不了。"))
+                return
             }
             begin(world, keepingAutosave: false, news: news)
+            if let fellBackTo, let session {
+                let clock = fellBackTo.savedAt.map { SaveLibrary.clockText($0) } ?? "–"
+                session.message = StatusMessage(kind: .failure, text: language.text(
+                    "The newest save could not be loaded. Continued from the save of \(clock).",
+                    "最新的存檔讀不了，已從 \(clock) 的存檔繼續。"
+                ))
+            }
             if wentBack {
                 autosaveInBackground(at: date)
             }
@@ -639,7 +715,8 @@ public final class GameLauncher {
     /// Loads the save file `data`.
     public func importSave(_ data: Data) {
         do throws(SaveError) {
-            begin(try SaveLibrary.decode(data), keepingAutosave: true)
+            let (world, news) = try SaveLibrary.decodeWithNews(data)
+            begin(world, keepingAutosave: true, news: news)
         } catch {
             message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
         }

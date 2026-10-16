@@ -1,4 +1,4 @@
-/// The start screen's language menu (ARCHITECTURE decision 247): follow the
+/// The start screen's language menu (ARCHITECTURE decision 257): follow the
 /// iPhone's languages, or always English, or always Traditional Chinese.
 ///
 /// iOS shows an app's language row in Settings only when the device lists

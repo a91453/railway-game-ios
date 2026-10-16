@@ -147,27 +147,25 @@ final class LineRoutePreferenceUITests: XCTestCase {
         // (main bf12187's full lane, run 38641908091: (540, 314), the switch
         // drawn at about 735).
         let control = toggle.switches.firstMatch
-        func tapSwitch() {
-            if control.exists {
-                control.tap()
-            } else {
-                toggle.coordinate(withNormalizedOffset: CGVector(dx: 1, dy: 0.5)).withOffset(CGVector(dx: -42, dy: 0)).tap()
-            }
+        // Once the list has stopped: a tap on a list still moving after the
+        // drags only stops it, and the switch, under the finger 350 ms, did
+        // not turn (PR #659's run 38729482700 and run 38863791023, the app's
+        // trace: both a second after a short last drag; the five launches
+        // without one each turned it at once).
+        (control.exists ? control : toggle).waitUntilSettled()
+        if control.exists {
+            control.tap()
+        } else {
+            toggle.coordinate(withNormalizedOffset: CGVector(dx: 1, dy: 0.5)).withOffset(CGVector(dx: -42, dy: 0)).tap()
         }
-        tapSwitch()
         // Twenty seconds: as a job's first test, on a cold Simulator with
         // the real-world demo, one lookup took 10 to 20 seconds, and the
         // switch's value was first read 17 seconds after the tap (run
         // 38441429093); the same steps in the next test took a second.
-        // A touch that reached the switch can still leave it as it was: one
-        // held 390 ms on the switch's own view and nothing turned (PR #659's
-        // run 38729482700, the app's trace). Not turned after ten seconds,
-        // and still not on a fresh look, the switch is tapped once more.
-        let flipped = { XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", shown ? "1" : "0"), object: toggle) }
-        if XCTWaiter.wait(for: [flipped()], timeout: 10) != .completed, (toggle.value as? String == "1") != shown {
-            tapSwitch()
-        }
-        XCTAssertEqual(XCTWaiter.wait(for: [flipped()], timeout: 20), .completed, "The Advanced switch did not turn \(shown ? "on" : "off")")
+        // One tap: on the Simulator a press of 0.05 to 1 second turned it
+        // each time (run 38862097826).
+        let flipped = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", shown ? "1" : "0"), object: toggle)
+        XCTAssertEqual(XCTWaiter.wait(for: [flipped], timeout: 20), .completed, "The Advanced switch did not turn \(shown ? "on" : "off")")
     }
 
     /// Dismisses the status message the sheet shows at its bottom, if
@@ -463,5 +461,241 @@ extension XCUIApplication {
         let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: demo)
         XCTAssertEqual(XCTWaiter().wait(for: [enabled], timeout: timeout), .completed, "The demo never became enabled: \(identifier)")
         demo.tap()
+    }
+}
+
+/// TestFlight, 2026-10-16: the phone's tools column and the station card on
+/// a phone held sideways, at the largest text the app takes
+/// (`dynamicTypeSize(...xxxLarge)`), where they were squeezed. In the full
+/// lane (decision 199).
+@MainActor
+final class ShellLayoutUITests: XCTestCase {
+    private func launch(_ extra: [String] = []) -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            // Straight into the demo: at this size the start screen's Demo
+            // Map button has no activation point XCTest can ask about (the
+            // first run, 38844484023).
+            "-ui-testing", "-demo-layout", "-AppleLanguages", "(zh-Hant)", "-AppleLocale", "zh_TW",
+            "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryXXXL",
+        ] + extra
+        app.launch()
+        return app
+    }
+
+    /// Every button of the column one size, chosen or not, looking at the
+    /// map and while building; and the column a gap below the layer strip.
+    func testTheToolsColumnsButtonsAreOneSize() {
+        continueAfterFailure = false
+        let app = launch()
+        defer { app.terminate() }
+        let toggle = app.buttons["controls.toggle"]
+        toggle.waitUntilSettled(timeout: 15)
+        let more = app.buttons["map.quickLayer.more"]
+        XCTAssertTrue(more.appears(within: 10))
+        assertOneSize(["controls.toggle", "entry.economy", "entry.lines", "dock.build"], in: app, while: "looking at the map")
+        // The strip's glass ends 3 points under its buttons, the column's 4
+        // above its first; between them the screen's gap of 10, as from the
+        // board to the strip.
+        XCTAssertGreaterThanOrEqual(toggle.frame.minY - more.frame.maxY, 3 + 10 + 4 - 0.5,
+                                    "The column stops a gap below the layer strip: toggle \(toggle.frame), strip \(more.frame)")
+
+        let build = app.buttons["dock.build"]
+        build.tap()
+        app.buttons["tool.select"].waitUntilSettled(timeout: 10)
+        assertOneSize(["controls.toggle", "tool.network", "tool.train", "tool.building", "tool.select", "dock.build"],
+                      in: app, while: "building")
+    }
+
+    private func assertOneSize(_ identifiers: [String], in app: XCUIApplication, while state: String,
+                               file: StaticString = #filePath, line: UInt = #line) {
+        let frames = identifiers.map { id -> (String, CGRect) in
+            let button = app.buttons[id]
+            XCTAssertTrue(button.appears(within: 10), "Missing \(id) \(state)", file: file, line: line)
+            return (id, button.frame)
+        }
+        guard let first = frames.first?.1 else { return }
+        // 66.1's width (TestFlight 67.1 beside 66.1, ``ToolColumn``).
+        XCTAssertEqual(first.width, 48, accuracy: 0.5, "The column's buttons are 48 points wide \(state): \(frames)", file: file, line: line)
+        for (id, frame) in frames {
+            XCTAssertEqual(frame.width, first.width, accuracy: 0.5, "\(id) is as wide as the toggle \(state): \(frames)", file: file, line: line)
+            XCTAssertEqual(frame.height, first.height, accuracy: 0.5, "\(id) is as tall as the toggle \(state): \(frames)", file: file, line: line)
+            XCTAssertEqual(frame.midX, first.midX, accuracy: 0.5, "\(id) lines up with the toggle \(state): \(frames)", file: file, line: line)
+        }
+    }
+
+    /// Decision 251: the status bar keeps one width while the days go by
+    /// and the game is paused and resumed, at the largest text: the menu
+    /// button and the date stay where they are (on main the date's width
+    /// changed from day to day, a holiday added its name and pausing added
+    /// a dot, and near a layout's edge the bar changed its layout).
+    func testTheStatusBarKeepsItsWidthAsTheDaysGoBy() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = [
+            // Two minutes before midnight, so the first day goes by at once.
+            "-ui-testing", "-demo-layout", "-demo-at", "23:58", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
+            "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryXXXL",
+        ]
+        app.launch()
+        defer { app.terminate() }
+        let menu = app.buttons["hud.menu"]
+        let time = app.buttons["hud.time"]
+        // The demo runs on to 23:58 before the map opens.
+        menu.waitUntilSettled(timeout: 60)
+        XCTAssertTrue(time.appears(within: 10))
+        // The fastest speed: a day in about 15 seconds where the device
+        // keeps up.
+        let speed = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Speed")).firstMatch
+        XCTAssertTrue(speed.appears(within: 10))
+        speed.tap()
+        let fast = app.buttons["6000 times real time, fast forward"]
+        XCTAssertTrue(fast.appears(within: 10))
+        fast.tap()
+        XCTAssertTrue(fast.disappears(within: 10))
+        menu.waitUntilSettled()
+        let start = (menu: menu.frame, time: time.frame, label: time.label)
+        func same(_ a: CGRect, _ b: CGRect) -> Bool {
+            abs(a.minX - b.minX) < 0.5 && abs(a.minY - b.minY) < 0.5 && abs(a.width - b.width) < 0.5 && abs(a.height - b.height) < 0.5
+        }
+        var labels: Set<String> = []
+        // Opened at 23:58, the next date comes at once; then watched for 20
+        // seconds of the new day (the Simulator keeps up with about a day
+        // and a half in 50: run 38866488755 saw two dates, the by-hand run
+        // 38888496446 at 23:58 never a third).
+        let watched = Date().addingTimeInterval(20)
+        let deadline = Date().addingTimeInterval(50)
+        while Date() < deadline, labels.count < 2 || Date() < watched {
+            Thread.sleep(forTimeInterval: 0.5)
+            guard let menuNow = try? menu.snapshot().frame, let timeNow = try? time.snapshot() else { continue }
+            labels.insert(String(timeNow.label.prefix(while: { $0 != ")" })))
+            XCTAssertTrue(same(menuNow, start.menu), "The menu button moved as the days went by: \(start.menu) then \(menuNow), \(timeNow.label)")
+            XCTAssertEqual(timeNow.frame.width, start.time.width, accuracy: 0.5, "The date changed its width: \(start.label) then \(timeNow.label)")
+        }
+        // The Simulator keeps up with about a day and a half of it (run
+        // 38866488755: Jan 1 to Jan 2).
+        XCTAssertGreaterThanOrEqual(labels.count, 2, "No day went by: \(labels.sorted())")
+        // Pausing and resuming move nothing either.
+        let pause = app.buttons["Pause"]
+        XCTAssertTrue(pause.appears(within: 5))
+        pause.tap()
+        XCTAssertTrue(app.buttons["Resume"].appears(within: 5))
+        XCTAssertTrue(same(menu.frame, start.menu), "Pausing moved the menu button: \(menu.frame)")
+        app.buttons["Resume"].tap()
+        XCTAssertTrue(pause.appears(within: 5))
+        XCTAssertTrue(same(menu.frame, start.menu), "Resuming moved the menu button: \(menu.frame)")
+    }
+
+    /// The station's board in the panel beside the map: each train in two
+    /// lines, its time and minutes never broken a character a line (the
+    /// TestFlight report: "1／2:／5／5", "17／分").
+    func testTheStationBoardsTimesKeepToOneLine() {
+        continueAfterFailure = false
+        // The demo opens at midnight; its trains set off at 06:00 and only
+        // then come on the board. Waiting for the clock found none due at
+        // 05:19, 07:20 and 16:07 (runs 38866705071, 38873835534,
+        // 38861445072): the demo opens run on to 07:00 instead, paused, when
+        // every station's board lists trains (DemoAtTests).
+        let app = launch(["-demo-at", "07:00", "-ui-testing-paused"])
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        // The demo runs on to 07:00 before the map opens.
+        XCTAssertTrue(map.appears(within: 60))
+        // As MapInteractionTests' hold: the station nearest the middle once
+        // the stations stand still.
+        let stations = app.descendants(matching: .any)["map.stations"].firstMatch
+        XCTAssertTrue(stations.appears(within: 10))
+        func places() -> [CGPoint] {
+            ((stations.value as? String) ?? "").split(separator: ";").compactMap { pair in
+                let xy = pair.split(separator: ",").compactMap { Double($0) }
+                return xy.count == 2 ? CGPoint(x: xy[0], y: xy[1]) : nil
+            }
+        }
+        var last = places()
+        let settle = Date().addingTimeInterval(10)
+        while Date() < settle {
+            Thread.sleep(forTimeInterval: 0.5)
+            let now = places()
+            if !now.isEmpty, now == last { break }
+            last = now
+        }
+        let middle = CGPoint(x: map.frame.width / 2, y: map.frame.height / 2)
+        guard let central = last.min(by: { hypot($0.x - middle.x, $0.y - middle.y) < hypot($1.x - middle.x, $1.y - middle.y) }) else {
+            XCTFail("The demo has stations")
+            return
+        }
+        let clock = app.descendants(matching: .any)["hud.time"].firstMatch
+        XCTAssertTrue(clock.appears(within: 10))
+        XCTAssertTrue((try? clock.snapshot().label)?.contains("07:00") ?? false, "Paused at 07:00: \(String(describing: try? clock.snapshot().label))")
+        // The board's own identifier is carried by every row under it, so
+        // each train is found by its time and its minutes, which keep theirs
+        // (the fifth run's hierarchy: rows read "station.board").
+        let time = app.staticTexts.matching(identifier: "station.board.row.time").firstMatch
+        // The panel's list, beside the map on the trailing side, once it has
+        // slid in (the first run looked at once and found none). With the
+        // clock running, a hold was once taken for a tap: it picked the
+        // station and showed its tag, and no panel came (run 38848806364).
+        // So it holds again, up to three times (the clock is paused now).
+        var list: XCUIElement?
+        for _ in 0..<3 where list == nil {
+            map.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: central.x, dy: central.y)).press(forDuration: 1.2)
+            let opened = Date().addingTimeInterval(5)
+            repeat {
+                list = app.collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame.minX > app.frame.midX }
+                if list == nil { Thread.sleep(forTimeInterval: 0.25) }
+            } while list == nil && Date() < opened
+        }
+        func attach(_ name: String) {
+            let hierarchy = XCTAttachment(string: app.debugDescription)
+            hierarchy.name = name
+            hierarchy.lifetime = .keepAlways
+            add(hierarchy)
+        }
+        if list == nil { attach("No station panel after the hold") }
+        XCTAssertNotNil(list, "The hold opens the station's panel")
+        let board = app.buttons["station.board"].firstMatch
+        let boardShown = app.dragUntilWhollyOnScreen(board, in: list)
+        if !boardShown { attach("No board in the station's panel") }
+        XCTAssertTrue(boardShown, "The station's panel has its board")
+        // Its trains lie under its head and the way they go, which can be
+        // all the panel shows of it (the eighth run: the head and "往 西站"
+        // at the panel's foot, the trains below not yet made). One slow drag
+        // brings the head up to the panel's top, the trains under it.
+        if let list, boardShown, board.frame.minY > list.frame.minY + 80 {
+            let origin = app.coordinate(withNormalizedOffset: .zero)
+            let x = list.frame.minX + 8 - app.frame.minX
+            let from = origin.withOffset(CGVector(dx: x, dy: board.frame.minY - app.frame.minY))
+            let to = origin.withOffset(CGVector(dx: x, dy: list.frame.minY + 40 - app.frame.minY))
+            from.press(forDuration: 0.1, thenDragTo: to, withVelocity: .slow, thenHoldForDuration: 0.3)
+        }
+        // The clock is paused at 07:00, when every station's board lists
+        // trains (DemoAtTests): the rows only have to be drawn. A row once
+        // showed for a moment and was gone at the next look (#712), so one
+        // sighting counts.
+        var listed = false
+        let due = Date().addingTimeInterval(5)
+        repeat {
+            if time.exists {
+                listed = true
+                break
+            }
+            Thread.sleep(forTimeInterval: 0.5)
+        } while Date() < due
+        // Not dragged into view: a label inside a row read as one is never
+        // hittable, and the drag would hunt for it (the sixth run). The
+        // board's head is in view, and its first trains under it.
+        if !listed { attach("No train on the station's board") }
+        XCTAssertTrue(listed, "The board lists a train")
+        // A time or a count of minutes on one line is wider than tall and a
+        // line high (some 22 and 25 points at this size); broken a character
+        // a line, "1／2:／5／5" stood four lines high.
+        let times = app.staticTexts.matching(identifier: "station.board.row.time").allElementsBoundByIndex
+        let aways = app.staticTexts.matching(identifier: "station.board.row.away").allElementsBoundByIndex
+        // Their frames are laid out whether or not the list shows them yet.
+        XCTAssertFalse(times.isEmpty)
+        for label in times + aways where label.exists && label.frame.height > 0 {
+            XCTAssertLessThan(label.frame.height, 40, "\(label.label) keeps to one line: \(label.frame)")
+            XCTAssertGreaterThan(label.frame.width, label.frame.height, "\(label.label) keeps to one line: \(label.frame)")
+        }
     }
 }

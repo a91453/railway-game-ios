@@ -16,6 +16,16 @@ final class TrainLiveryTests: XCTestCase {
         XCTAssertEqual(TrainLivery.of(type: nil, performance: .highSpeed), .highSpeed)
         XCTAssertEqual(TrainLivery.of(type: nil, performance: .emu3000), .emu3000)
         XCTAssertEqual(TrainLivery.of(type: nil, performance: .standard), .plain)
+        // Decision 252.
+        XCTAssertEqual(TrainLivery.of(type: .emu100, performance: .standard), .emu100)
+        XCTAssertEqual(TrainLivery.of(type: .e200ChuKuang, performance: .standard), .e200ChuKuang)
+        XCTAssertEqual(TrainLivery.of(type: .e500ChuKuang, performance: .standard), .e500ChuKuang)
+        XCTAssertEqual(TrainLivery.of(type: .r100ChuKuang, performance: .standard), .r100ChuKuang)
+        XCTAssertEqual(TrainLivery.of(type: .r200ChuKuang, performance: .standard), .r200ChuKuang)
+        XCTAssertEqual(TrainLivery.of(type: .haiFeng, performance: .standard), .haiFeng)
+        XCTAssertEqual(TrainLivery.of(type: nil, performance: .r200ChuKuang), .r200ChuKuang)
+        XCTAssertEqual(TrainLivery.of(type: .b, performance: .haiFeng.withTopSpeed(90)), .haiFeng)
+        XCTAssertEqual(TrainLivery.of(type: nil, performance: .semiExpress), .plain, "the reference's Chu-Kuang preset keeps its look")
         XCTAssertEqual(TrainLivery.of(type: .b, performance: .local), .plain, "a model the table has not")
         XCTAssertEqual(TrainLivery.of(type: nil, performance: TrainPerformance(acceleration: 1_234, braking: 2_345, topSpeed: 100)), .plain)
     }
@@ -43,9 +53,12 @@ final class TrainLiveryTests: XCTestCase {
     /// selection's warm yellow or the track's teal (CIE76 at least 30), and
     /// models with the same nose have fronts apart (at least 40).
     func testTheColoursKeepClearOfTheMapsAndOfEachOther() {
-        let models: [String: TrainLivery] = [
+        var models: [String: TrainLivery] = [
             "highSpeed": .highSpeed, "emu3000": .emu3000, "puyuma": .puyuma, "taroko": .taroko, "emu800": .emu800, "metroC381": .metroC381,
         ]
+        for (code, livery) in TrainLivery.byPerformance {
+            models[code] = livery
+        }
         for (name, livery) in models {
             for colour in [livery.body, livery.cab].compactMap(\.self) {
                 for reserved in [0xFFC86B, 0x10917F, 0x45D3C0] {
@@ -57,6 +70,25 @@ final class TrainLiveryTests: XCTestCase {
             let first = models[a]!, second = models[b]!
             XCTAssertEqual(first.nose, second.nose)
             XCTAssertGreaterThanOrEqual(Self.difference(first.cab!, second.cab!), 40, "\(a) and \(b)")
+        }
+        // Decision 252: any two models with the same nose differ by at
+        // least 40 in their fronts or their bodies (a Chu-Kuang set's dark
+        // E500 front is the metro's, on an orange train, not a silver one).
+        let codes = models.keys.sorted()
+        for (i, a) in codes.enumerated() {
+            for b in codes[(i + 1)...] {
+                let first = models[a]!, second = models[b]!
+                guard first.nose == second.nose else { continue }
+                let apart = max(Self.difference(first.cab!, second.cab!), Self.difference(first.body!, second.body!))
+                XCTAssertGreaterThanOrEqual(apart, 40, "\(a) and \(b)")
+            }
+        }
+        // The Chu-Kuang sets share their coaches: their fronts tell them
+        // apart, and each front stands out from the coaches.
+        let chuKuang: [TrainLivery] = [.e200ChuKuang, .e500ChuKuang, .r100ChuKuang, .r200ChuKuang]
+        for livery in chuKuang {
+            XCTAssertEqual(livery.body, TrainLivery.chuKuangCoach)
+            XCTAssertGreaterThanOrEqual(Self.difference(livery.cab!, livery.body!), 30)
         }
     }
 

@@ -831,6 +831,12 @@ extension TrainType {
         "STEAM": ("Steam train", "蒸汽列車"),
         "HSR": ("High-speed set", "高鐵列車"),
         "EMU3000": ("New Tze-Chiang", "新自強號"),
+        "EMU100": ("EMU100 Tze-Chiang", "EMU100 自強號"),
+        "E200CK": ("Chu-Kuang, E200 locomotive", "莒光號（E200 電力機車）"),
+        "E500CK": ("Chu-Kuang, E500 locomotive", "莒光號（E500 電力機車）"),
+        "R100CK": ("Chu-Kuang, R100 diesel", "莒光號（R100 柴電機車）"),
+        "R200CK": ("Chu-Kuang, R200 diesel", "莒光號（R200 柴電機車）"),
+        "HAIFENG": ("Hai-Feng sightseeing train", "海風號"),
     ]
 }
 

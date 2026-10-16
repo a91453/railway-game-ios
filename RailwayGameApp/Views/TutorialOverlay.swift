@@ -145,7 +145,7 @@ private struct TutorialOverlay: View {
             guard session.tutorialAdvancesByItself else { return }
             let index = tutorial.index
             do {
-                try await Task.sleep(for: voiceOverEnabled ? Duration.milliseconds(1_500) : Tutorial.autoAdvanceDelay)
+                try await Task.sleep(for: voiceOverEnabled ? Duration.milliseconds(1_500) : Self.autoAdvanceDelay)
             } catch {
                 return
             }
@@ -173,6 +173,20 @@ private struct TutorialOverlay: View {
         if layerBeforeTutorial == nil { layerBeforeTutorial = popTravelModeName }
         popTravelModeName = ""
     }
+
+    /// How long a done step waits before it moves on. A UI test can make
+    /// it longer (`-tutorial-advance-ms`, Debug builds only), to hold a
+    /// touch on the card across the step moving on.
+    private static let autoAdvanceDelay: Duration = {
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        if let index = arguments.firstIndex(of: "-tutorial-advance-ms"), arguments.indices.contains(index + 1),
+           let milliseconds = Int(arguments[index + 1]) {
+            return .milliseconds(milliseconds)
+        }
+        #endif
+        return Tutorial.autoAdvanceDelay
+    }()
 
     /// What restarts the wait before a done step moves on.
     private struct AutoAdvance: Equatable {
@@ -208,6 +222,12 @@ private struct TutorialCardSlot: View {
     @State private var waitedForSkip = false
     /// Compact height: a phone, held on its side.
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// How the card settles as it opens or folds (decision 253).
+    private var settle: MotionRule {
+        MotionRule.pop.running(reduceMotion: reduceMotion) ?? .pop
+    }
 
     /// Whether the step waits for Next, so the chapter's choice does not
     /// carry into it.
@@ -261,20 +281,38 @@ private struct TutorialCardSlot: View {
     var body: some View {
         let hint = session.tutorialHint
         let skips = offersSkip(hint: hint, done: session.isTutorialStepDone)
+        // Read here: the animator's closures run off the main actor.
+        let reduceMotion = self.reduceMotion, settle = self.settle
         TutorialCardLayout(placement: isFolded ? sized.folded : sized) {
-            if isFolded {
-                FoldedTutorialCard(session: session, tutorial: tutorial, hint: hint, offersSkip: skips) {
-                    UITestTrace.action("tutorial.unfold")
-                    choose(folded: false)
+            // One view the layout places, open or folded: the one shown
+            // takes the other's place at once (two would share their
+            // buttons' identifiers), then settles (decision 253).
+            ZStack {
+                if isFolded {
+                    FoldedTutorialCard(session: session, tutorial: tutorial, hint: hint, offersSkip: skips) {
+                        UITestTrace.action("tutorial.unfold")
+                        choose(folded: false)
+                    }
+                } else {
+                    TutorialCard(session: session, tutorial: tutorial, hint: hint, offersSkip: skips) {
+                        UITestTrace.action("tutorial.fold")
+                        choose(folded: true)
+                    }
+                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(tutorialOverlaySpace)) } action: { frame in
+                        updateFold { $0.cardPlaced(at: TutorialCardPlacement.Frame(frame), by: sized, mayFold: mayFold) }
+                    }
                 }
-            } else {
-                TutorialCard(session: session, tutorial: tutorial, hint: hint, offersSkip: skips) {
-                    UITestTrace.action("tutorial.fold")
-                    choose(folded: true)
-                }
-                .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(tutorialOverlaySpace)) } action: { frame in
-                    updateFold { $0.cardPlaced(at: TutorialCardPlacement.Frame(frame), by: sized, mayFold: mayFold) }
-                }
+            }
+            // Decision 253: opening or folding, the card grows from a
+            // little smaller at its top and fades up (``MotionRule/pop``);
+            // with Reduce Motion it only fades, in half the time.
+            .keyframeAnimator(initialValue: 1.0, trigger: isFolded) { card, shown in
+                card
+                    .scaleEffect(reduceMotion ? 1 : 0.94 + 0.06 * shown, anchor: .top)
+                    .opacity(0.4 + 0.6 * min(shown, 1))
+            } keyframes: { _ in
+                MoveKeyframe(0.0)
+                SpringKeyframe(1.0, duration: settle.seconds, spring: settle.spring)
             }
         }
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(tutorialOverlaySpace)) } action: { bounds = $0 }
@@ -594,6 +632,14 @@ private struct FoldedTutorialCard: View {
                 .contentShape(Capsule())
             }
             .buttonStyle(.plain)
+            // Opens as the finger comes down, not as it lifts: a done step
+            // moves on by itself, the card is made anew for the next step
+            // and its pill stands elsewhere, so a touch that began on the
+            // pill as the step moved on was cancelled and opened nothing
+            // (main 6e86506's full lane, run 38709237236, the app's trace;
+            // the next step's pill 160 points away, run 38863791023). The
+            // player's choice then carries to the next step of the chapter.
+            .simultaneousGesture(DragGesture(minimumDistance: 0).onChanged { _ in unfold() })
             .accessibilityLabel(Text(verbatim: session.language.text(
                 "Show Tutorial: \(tutorial.step.title(in: .english))",
                 "展開教學：\(tutorial.step.title(in: .traditionalChinese))"

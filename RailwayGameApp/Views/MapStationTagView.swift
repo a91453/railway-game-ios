@@ -23,6 +23,7 @@ struct MapStationTagView: View {
     let insets: EdgeInsets
     @Environment(\.mapDetailsOpen) private var detailsOpen
     @Environment(GameScreenState.self) private var screen
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var size = CGSize(width: 160, height: 44)
 
     var body: some View {
@@ -31,11 +32,13 @@ struct MapStationTagView: View {
                 content(tag)
                     .onGeometryChange(for: CGSize.self) { $0.size } action: { size = $0 }
                     .offset(placement(under: camera.screenPoint(of: tag.location)))
-                    .transition(.scale(scale: 0.8, anchor: .top).combined(with: .opacity))
+                    .transition(.pop(anchor: .top, reduceMotion: reduceMotion))
             }
         }
         .frame(width: viewport.width, height: viewport.height, alignment: .topLeading)
-        .animation(.spring(duration: 0.25, bounce: 0.3), value: tag?.station)
+        // Decision 253: it pops up under the station tapped, and moves to
+        // the next one tapped (at once with Reduce Motion).
+        .animation(MotionRule.pop.layout(reduceMotion: reduceMotion), value: tag?.station)
     }
 
     private var tag: StationTag? {

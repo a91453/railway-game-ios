@@ -15,10 +15,6 @@ import SwiftUI
 struct TrainControls: View {
     @Bindable var session: GameSession
     @Environment(GameScreenState.self) private var screen
-    /// The lines panel's "Advanced" switch (decision 196, later).
-    @AppStorage("linesPanel.showsAdvanced") private var storedShowsAdvanced: Bool?
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -30,21 +26,19 @@ struct TrainControls: View {
                     session.setSelectedTrainPerformance(performance)
                 }
                 .equatable()
-                // Stage C2: its own timetable. Decision 196, later: an
-                // advanced detail, shown folded only when the train has one.
-                if !train.timetable.isEmpty || AdvancedDetails.isShown(
-                    stored: storedShowsAdvanced,
-                    roomy: horizontalSizeClass == .regular && verticalSizeClass == .regular
-                ) {
-                    Button {
-                        screen.panel = .timetable
-                    } label: {
-                        Label(session.world.timetableSummary(of: train.id, in: session.language) ?? String(localized: "Timetable"), systemImage: "calendar.badge.clock")
-                            .font(.footnote)
-                            .monospacedDigit()
-                    }
-                    .accessibilityHint("Shows the train's own timetable: its stops, times and whether it repeats.")
+                // Stage C2: its own timetable. Decision 196, later
+                // (2026-10-16): shown whether or not the lines panel's
+                // Advanced is on; a row saying where to turn it on would
+                // take the same room and one more trip.
+                Button {
+                    screen.panel = .timetable
+                } label: {
+                    Label(session.world.timetableSummary(of: train.id, in: session.language) ?? String(localized: "Timetable"), systemImage: "calendar.badge.clock")
+                        .font(.footnote)
+                        .monospacedDigit()
                 }
+                .accessibilityHint("Shows the train's own timetable: its stops, times and whether it repeats.")
+                .accessibilityIdentifier("train.timetable")
                 if train.position == nil {
                     Stepper(value: Binding(get: { train.cars }, set: { session.setSelectedTrainCars($0) }), in: Train.minimumCars...Train.maximumCars) {
                         Text(train.carsText(in: session.language))
@@ -122,15 +116,24 @@ struct TrainControls: View {
             Button {
                 screen.panel = .fleet
             } label: {
-                Image(systemName: "list.bullet.rectangle.portrait")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Theme.textPrimary)
-                    .padding(8)
-                    .background(Theme.chip, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .strokeBorder(Theme.panelBorder, lineWidth: 1)
-                    )
+                // 2026-10-16: with its name, not the icon alone.
+                Label {
+                    Text(verbatim: session.language.text("Fleet", "車隊總覽"))
+                        .lineLimit(1)
+                        .fixedSize()
+                } icon: {
+                    Image(systemName: "list.bullet.rectangle.portrait")
+                }
+                .labelStyle(.titleAndIcon)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Theme.textPrimary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Theme.chip, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(Theme.panelBorder, lineWidth: 1)
+                )
             }
             .accessibilityLabel(Text(verbatim: session.language.text("Fleet Overview", "車隊總覽")))
             .accessibilityIdentifier("train.fleetOverview")

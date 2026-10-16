@@ -154,6 +154,60 @@ final class SettingsUITests: XCTestCase {
         XCTAssertTrue(app.buttons["report.done"].disappears(within: 10), "Done did not go back to the game")
     }
 
+    /// On a phone on its side the game menu shows about six rows: its
+    /// Settings, the last, stays in reach without scrolling (main
+    /// 84a792e's full lane, run 38861445072: an eighth row put it out of
+    /// reach).
+    func testTheGameMenusSettingsIsInReachOnAPhoneOnItsSide() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        defer { XCUIDevice.shared.orientation = .portrait }
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-ui-testing-paused", "-demo-layout", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+
+        openSettingsFromTheGameMenu(app)
+        tap(app.buttons["settings.done"], name: "settings.done")
+        XCTAssertTrue(app.buttons["settings.done"].disappears(within: 10), "Done did not go back to the game")
+    }
+
+    /// 2026-10-16: the shortcuts one tap from the game: the map's 3D
+    /// button opens this game's 3D map; the postcard and the achievements
+    /// stand in the game menu's first level; the train card shows its
+    /// timetable with the lines panel's Advanced off (a phone's default).
+    func testTheMapAndMenuShortcutsOpenTheirScreens() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-ui-testing-paused", "-demo-layout", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 10))
+
+        tapHittable("map.open3D", in: app)
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 15), "The 3D button opens the 3D map")
+        tap(app.buttons["map3D.close"], name: "map3D.close")
+        XCTAssertTrue(app.buttons["map3D.close"].disappears(within: 10), "Close goes back to the game")
+
+        tapHittable("hud.menu", in: app)
+        tapHittable("menu.postcard", in: app)
+        tap(app.buttons["postcard.done"], name: "postcard.done")
+        XCTAssertTrue(app.buttons["postcard.done"].disappears(within: 10))
+
+        tapHittable("hud.menu", in: app)
+        tapHittable("menu.achievements", in: app)
+        tap(app.buttons["achievements.done"], name: "achievements.done")
+        XCTAssertTrue(app.buttons["achievements.done"].disappears(within: 10))
+
+        tap(app.buttons["dock.build"], name: "dock.build")
+        let trainTool = app.buttons["tool.train"]
+        XCTAssertTrue(trainTool.appears(within: 10))
+        trainTool.waitUntilSettled()
+        trainTool.tap()
+        XCTAssertTrue(app.buttons["train.fleetOverview"].appears(within: 10))
+        XCTAssertTrue(app.buttons["train.timetable"].appears(within: 10), "The timetable shows with Advanced off")
+    }
+
     /// Taps the copy of the button `identifier` that can be touched: a
     /// native menu can hold an unplaced copy of an action
     /// (`WebsiteScreenshotTests.tapButton`).

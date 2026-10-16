@@ -25,11 +25,6 @@ extension GameWorld {
         }
         var plans: [Plan: Set<TrackTraversal>] = [:]
         var walks: [Walk: Set<TrackTraversal>] = [:]
-        /// Decision 228: while the trains move in one step, by edge, the
-        /// trains whose body is on it or whose way leads over it as the
-        /// step began (see ``GameWorld/spacingIndex()``): where they can be
-        /// in the step.
-        var spacing: [TrackEdgeID: [TrainID]]?
         /// V3 (decision 59): the last scheduled-traffic plan worked out,
         /// with what it was derived from, and the plan an advance's step
         /// keeps for all its decisions.
