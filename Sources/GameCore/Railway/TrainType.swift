@@ -63,6 +63,19 @@ public struct TrainType: RawRepresentable, Hashable, Codable, CaseIterable, Send
     /// 45 seats, two doors a side. Not one of the reference's types: neither
     /// reference has a Taiwanese train but its high-speed options.
     public static let emu3000 = TrainType(listed: "EMU3000")
+    /// The Taiwan Railway's EMU100 express (decision 252).
+    public static let emu100 = TrainType(listed: "EMU100")
+    /// Chu-Kuang coaches behind an E200 electric locomotive (decision 252),
+    /// as one set whose cars are the coaches.
+    public static let e200ChuKuang = TrainType(listed: "E200CK")
+    /// Chu-Kuang coaches behind an E500 (decision 252).
+    public static let e500ChuKuang = TrainType(listed: "E500CK")
+    /// Chu-Kuang coaches behind an R100 diesel (decision 252).
+    public static let r100ChuKuang = TrainType(listed: "R100CK")
+    /// Chu-Kuang coaches behind an R200 diesel (decision 252).
+    public static let r200ChuKuang = TrainType(listed: "R200CK")
+    /// The Hai-Feng tourist train (decision 252).
+    public static let haiFeng = TrainType(listed: "HAIFENG")
 
     /// The reference's main types, offered everywhere
     /// (`LINE_TRAIN_TYPE_MAIN`); the others are its extras

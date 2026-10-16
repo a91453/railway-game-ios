@@ -133,6 +133,35 @@ public struct TrainPerformance: Hashable, Sendable {
     /// a curve here has one rate). Service braking 1.2 m/s² (4.32 km/h a
     /// second), the EMU800's; the EMU900's is not published.
     public static let emu800 = TrainPerformance(acceleration: 1456, braking: 4320, topSpeed: 130)
+    /// The Taiwan Railway's EMU100 express (decision 252): 120 km/h, and
+    /// 0.67 km/h a second as its whole run from 0 to 120 averages (1.41 to
+    /// 50). Its braking is not published: the reference's default 2.5 km/h
+    /// a second (estimated).
+    public static let emu100 = TrainPerformance(acceleration: 670, braking: 2500, topSpeed: 120)
+    /// The Hai-Feng tourist train (decision 252), an EMU500 rebuilt: the
+    /// EMU500's 2.88 km/h a second to start, 2.84 of service braking and
+    /// 110 km/h.
+    public static let haiFeng = TrainPerformance(acceleration: 2880, braking: 2840, topSpeed: 110)
+    /// Chu-Kuang coaches behind an E200 electric locomotive (decision 252):
+    /// 110 km/h, the E200's. One rate that reaches it as soon as 197 kN
+    /// (20,100 kgf) and then 2,800 kW take 96 t and eight 42 t coaches
+    /// there, with no running resistance: 87.6 seconds (estimated). It
+    /// brakes as the reference's Chu-Kuang trains (``semiExpress``).
+    public static let e200ChuKuang = TrainPerformance(acceleration: 1256, braking: 2600, topSpeed: 110)
+    /// Chu-Kuang coaches behind an E500 (decision 252): 280 kN and
+    /// 3,888 kW, 96 t, to the coaches' 120 km/h (the reference's Chu-Kuang
+    /// top speed; the E500 runs 130) in 72.4 seconds (estimated, as the
+    /// E200's).
+    public static let e500ChuKuang = TrainPerformance(acceleration: 1657, braking: 2600, topSpeed: 120)
+    /// Chu-Kuang coaches behind an R100 diesel (decision 252): 148.9 kN
+    /// (15,180 kgf) and 1,650 hp at the engine, four fifths of it at the
+    /// rails, 78 t, to its 100 km/h in 171.5 seconds (estimated, as the
+    /// E200's).
+    public static let r100ChuKuang = TrainPerformance(acceleration: 583, braking: 2600, topSpeed: 100)
+    /// Chu-Kuang coaches behind an R200 diesel (decision 252): 430 kN and
+    /// six 286 kW motors, 96 t, to its 110 km/h in service in 119.5 seconds
+    /// (estimated, as the E200's).
+    public static let r200ChuKuang = TrainPerformance(acceleration: 920, braking: 2600, topSpeed: 110)
 
     /// Whether a train or line may have this performance (Stage W2c): every
     /// rate and the top speed in `1...RunningCurve.maximumRate`, and a coast

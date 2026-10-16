@@ -43,6 +43,13 @@ public enum TrainPerformanceCatalog {
         // Puyuma rows above, and the 700T the high-speed row (`PERF_HSR`).
         .init(code: "metroC381", performance: .metroC381),
         .init(code: "emu800", performance: .emu800),
+        // Decision 252: more of the Taiwan Railway's models.
+        .init(code: "emu100", performance: .emu100),
+        .init(code: "e200ChuKuang", performance: .e200ChuKuang),
+        .init(code: "e500ChuKuang", performance: .e500ChuKuang),
+        .init(code: "r100ChuKuang", performance: .r100ChuKuang),
+        .init(code: "r200ChuKuang", performance: .r200ChuKuang),
+        .init(code: "haiFeng", performance: .haiFeng),
     ]
 
     /// Each code's row. Building it traps on a code listed twice.
