@@ -394,10 +394,25 @@ final class OnboardingTests: XCTestCase {
             XCTAssertFalse(entry.question(in: .english).isEmpty)
             XCTAssertNotEqual(entry.question(in: .english), entry.question(in: .traditionalChinese), entry.id)
             XCTAssertNotEqual(entry.answer(in: .english), entry.answer(in: .traditionalChinese), entry.id)
-            XCTAssertEqual(entry.otherAnswer(than: .english), entry.answer(in: .traditionalChinese))
         }
         for topic in HelpEntry.Topic.allCases {
             XCTAssertTrue(HelpGuide.entries.contains { $0.topic == topic }, "no empty section")
+        }
+    }
+
+    /// The owner: the guide need not list both languages. An open entry
+    /// shows its question and answer once, in the game's language.
+    func testTheGuideShowsOnlyTheGamesLanguage() {
+        for entry in HelpGuide.entries {
+            for (language, other) in [(DisplayLanguage.english, DisplayLanguage.traditionalChinese), (.traditionalChinese, .english)] {
+                let shown = entry.shownText(in: language)
+                XCTAssertEqual(shown.question, entry.question(in: language), entry.id)
+                XCTAssertEqual(shown.answer, entry.answer(in: language), entry.id)
+                for text in [shown.question, shown.answer] {
+                    XCTAssertFalse(text.contains(entry.question(in: other)), entry.id)
+                    XCTAssertFalse(text.contains(entry.answer(in: other)), entry.id)
+                }
+            }
         }
     }
 
