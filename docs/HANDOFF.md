@@ -17,10 +17,10 @@
 
 | 角色 | 現在的 session | 做什麼 | 交接 |
 | --- | --- | --- | --- |
-| 遊戲規劃（決策） | session_018D6gYU1yiZMtxSmNNU1K17 | 從玩家、開發、美術、音樂四個角度決定優先順序與設計，開實作 session 並派工，寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1 節 |
-| 合併協調 | session_016sNs4eeZwga9hz1CCHkpmX | 照批次規則合併、發 GameCore CI 名額、看 main 的 CI 與 full lane、發版前檢查 | 第 1.2 節 |
-| 派工（玩家回報與 bug） | session_01AaAj4wvJMxJQuLWAoYu6S8 | 收作者轉來的回報與 bug，開修正 session | 第 1.3 節 |
-| 每日 Threads 開發日誌 | 排程「每日 Threads 開發日誌」每天觸發遊戲規劃，由它開寫作 session | 寫當天的串文草稿，用 SendUserFile 交給作者；不 commit、不發布 | 派工單照 2026-10-14、10-15、10-16 的寫作 session |
+| 遊戲規劃（決策） | session_01V1xd3H9vNkuZoSA3czNfGm（2026-10-16 起；前任 session_018D6gYU1yiZMtxSmNNU1K17，對話太長交接） | 從玩家、開發、美術、音樂四個角度決定優先順序與設計，開實作 session 並派工，寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1 節 |
+| 合併協調 | session_01QoA24EvFCFbmbcM1EwaZT7（2026-10-16 起；前任 session_016sNs4eeZwga9hz1CCHkpmX。作者本人確認授權前只巡查、不合併） | 照批次規則合併、發 GameCore CI 名額、看 main 的 CI 與 full lane、發版前檢查 | 第 1.2 節 |
+| 派工（玩家回報與 bug） | session_01MJ7sdeid5DAFjSVbTkmdi3（2026-10-16 起；前任 session_01AaAj4wvJMxJQuLWAoYu6S8） | 收作者轉來的回報與 bug，開修正 session | 第 1.3 節 |
+| 每日 Threads 開發日誌 | 排程「每日 Threads 開發日誌」（台灣時間每天 21:43）觸發遊戲規劃，由它開寫作 session；換遊戲規劃 session 時，排程要改到新 session | 寫當天的串文草稿，用 SendUserFile 交給作者；不 commit、不發布 | 派工單照 2026-10-14、10-15、10-16 的寫作 session |
 
 ### 1.1 遊戲規劃
 
@@ -36,6 +36,8 @@
   - session 停下來，不一定是因為發版。重開之前先問派工 session，或讀那個 session 自己的紀錄。例：語言選單是作者說「先不要動」才停的，不是發版；後來作者本人在那個 session 回「四方決定要不要繼續」，才重開成 #727。
   - 給實作 session 的派工單要對照 art-style §7 的現行規則：參考庫的模型「任意組合、成品跟原本不同」，不是「能搬就搬」。
   - 同時開好幾個 session，它們會在幾分鐘內登記同一個決策號（2026-10-16：三個都登記 256）。派工單裡直接寫好號碼；或開完之後看一次 #231，照登記先後重排並留言。
+
+- **換手**（2026-10-16，作者：「你太長了接手」）：遊戲規劃的對話太長時，開新 session 接手。新 session 的派工單要寫清楚現在進行到哪、等誰；每日開發日誌的排程改到新 session；在 #231 留言、通知合併協調與派工；這一節第 1 節表格的 session 改成新的。
 
 ### 1.2 合併協調
 
@@ -602,6 +604,8 @@
 ### 7.1 小 bug 與效能（舊審查交接留下的）
 
 審查回報清理 session（session_01FUXNvfnNmoSMf58pgakpsF）已經把這 30 項逐項分好類，每一項的去向寫在 `docs/archive/PR685_711_REVIEW_HANDOFF.md` 第十一節的「第二批」：現在修的（#735、#737、#738、#739）、刻意設計已在原決策補「後來」結案的，以及延後等穩定的（附原因、建議做法、影響範圍）。清單只留那一份。
+
+第一批（PR685_711 交接第四節與前兩輪剩下的）的延後項目也在 `docs/archive/PR685_711_REVIEW_HANDOFF.md` 第十一節：狀態列破產倒數、景點計算量、3D 亮窗與反向 Z、3D 開著時的月底報表、#680 清單拖曳、#657 坡道切軌訊息、hook 的 Swift 6.4.1 等，每項附原因與建議做法。
 
 ### 7.2 遊戲功能的後續（決策與研究裡寫了「之後」的）
 

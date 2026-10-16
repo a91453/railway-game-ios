@@ -18,7 +18,7 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 存檔版本 | 63（每整分鐘決定行車間隔，#702，決策 248）；每個版本一個存檔 fixture，共 67 個 | `SavedGame.currentVersion`、`SaveFixtures/` |
 | golden | schema 74（車站商業，#595），`GoldenScenarios/` 裡 77 個 JSON | `GoldenScenarios/` |
 | replay | 9 個指令紀錄（含問題回報轉成的 `problem-report-blank-map.json`，#468；長區段行車控制 `long-leg-traffic.json`，#480） | `ReplayFixtures/` |
-| 決策 | 1–217、219–254（218 沒有使用：越行寫進了決策 212，#556、#589）。141、150、203 曾保留但沒有使用；之後的號碼以工作登記 #231 為準（2026-10-16：單線死結修正登記了 255） | `docs/ARCHITECTURE.md`，索引在第 9 節 |
+| 決策 | 1–217、219–264（218 沒有使用：越行寫進了決策 212，#556、#589）。141、150、203 曾保留但沒有使用；之後的號碼以工作登記 #231 為準 | `docs/ARCHITECTURE.md`，索引在第 9 節 |
 | App 版本 | 0.5.0 | `RailwayGameApp/project.yml` |
 | 平台與語言 | iPhone（只橫拿）、iPad；繁體中文、英文。日文已移除（#171） | — |
 | 程式規模 | GameCore 90 檔 3.3 萬行、GamePresentation 115 檔 3.1 萬行、App 61 檔 1.9 萬行、測試 292 檔 8.1 萬行 | — |
@@ -443,8 +443,11 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 254 | 核心玩法的方向：10 個入門關卡（一關一個目標、1–3 顆星、過關解鎖工具）、新遊戲預設簡單規則（寫實是選項；單線多一列車自動加待避線）、每個動作都有回報；量測 `CoreLoopBaselineReportTests`（只在要求時跑）；`docs/research/CORE_LOOP_2026-10-16.md`（存檔不動） |
 | 255 | 單線沒有待避處時的死結：決策 58 的待避站與備用車都解不開時，時刻表之後會回到同一站的服務在原地提早折返，跳過走不到的停靠站（`shortTurn(of:in:)`）；修 CORE_LOOP §1.2 第二列車卡死；存檔、golden 不動 |
 | 256 | 每個動作都有回報（第一批）：站上冒「+$12」（一站一個、1 秒內合併、600 倍速以上只跟隨的列車與畫面中間 3 站）、目標達成打勾與旋律 `goal-met.wav`（跟音效音量）、城鎮每長大四分之一一圈暖黃的環；`ActionFeedback.swift`（存檔不動） |
+| 257 | 開始畫面的語言選單：App 內選語言（跟隨 iPhone／English／繁體中文），下次開啟生效；裝置只設一種語言時設定裡沒有語言列，所以不再只打開設定（存檔不動） |
+| 258 | 簡單規則當新遊戲的預設、寫實是選項（`NewGameRules`）：簡單規則關掉區間閉塞、彎道限速、寫實運轉、車門擁擠、車輛經濟、建材與天氣颱風油電；舊存檔與其他呼叫者照舊是寫實（GameCore、存檔不動） |
 | 259 | 3D 地圖的行人、機車、汽車：拉近才出現（人 500 m、車 1,300 m 內），月台人數照候車、站前照一天的旅次、街上照城鎮人口；實例化繪製最多多 6 次 draw call，舊機型與掉幀時降級（`Map3DStreetLife`，存檔不動；預覽 `docs/art/map3d-street-life-2026-10-16/`） |
 | 260 | 沒有畫面的遊戲：`swift run GameSim`（new-game、load、apply、advance、dump、save，用 `then` 串，每步一行 JSON 收據，不認得的選項就拒絕）；`HeadlessGame`、`HeadlessSummary`（GamePresentation），測試的指令紀錄重播也改用它（存檔不動） |
 | 261 | 腳本化試玩：`Policy`、`PolicyPlayer`、`RulePreset`、`PolicyMap`、`PlayReport`（GamePresentation），四支報告測試共用，原本的數字一字不差，另外多一張相同指標的表；異常清單（死結、零旅次、現金負、挑戰失敗、列車停住）；`GameSim new-game --preset/--place`、`play --policy`（存檔不動） |
 | 262 | 實景地圖的城市：日本 21、韓國 7 與各國大城市（都會區 500 萬以上：聯合國 2025 或 Demographia；有地鐵的首都；有地鐵的最大城），共 191 個起點，用主要車站（Wikidata）；清單依國家（4 個以上）與地區分組、大城市在前、可收合、可搜尋（存檔不動） |
 | 263 | 空白地圖的道路用種子產生：主要道路每 4–6 格一條、其餘街或巷、少數地塊合成街廓；軌道優先（地面上越過畫平交道，高架下照常畫、避開橋墩，避開路堤、路塹與月台）；透天厝沿街排、正面朝街（存檔不動；預覽 `docs/art/map3d-seeded-streets-2026-10-16/`） |
+| 264 | 開線自動配車、自動交會：簡單規則下開線就配一列車、單線 2 公里以上先蓋待避線（決策 204 的 `PassingLoopPlan`）、路線卡「加開一列車」、開線前看得到總價；兩種規則都有：共用單線沒有地方交會時，站長與路線卡說明並可一鍵加待避線，擋路的列車先放回路線起點（`AutoService`，GameCore、存檔不動） |
