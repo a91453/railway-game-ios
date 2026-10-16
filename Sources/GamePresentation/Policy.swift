@@ -1,3 +1,4 @@
+import Foundation
 import GameCore
 
 // Decision 261: scripted play. The report tests (BalanceReportTests,
@@ -323,7 +324,15 @@ public struct Policy {
     /// The policy `name` on a world of `bounds` whose towns were drawn
     /// from `seed`, or `nil` for a name not in ``names``.
     public static func named(_ name: String, seed: UInt32, bounds: WorldBounds) -> Policy? {
-        let towns = Land.townCentres(seed: seed, in: bounds)
+        named(name, towns: Land.townCentres(seed: seed, in: bounds), bounds: bounds)
+    }
+
+    /// The policy `name` building between `towns` (two at least; three
+    /// for those that reach a third), or `nil` for a name not in
+    /// ``names`` or too few towns.
+    public static func named(_ name: String, towns: [PlanPoint], bounds: WorldBounds) -> Policy? {
+        let needs = ["none": 0, "two-towns": 2][name] ?? 3
+        guard towns.count >= needs else { return nil }
         switch name {
         case "none": return Policy.none
         case "two-towns": return twoTowns(towns)
@@ -375,6 +384,20 @@ public struct PolicyPlayer {
     /// it was seen on.
     public private(set) var anomalies: [PlayAnomaly] = []
     public private(set) var anomalyDays: [PlayAnomaly.Kind: Int] = [:]
+    /// Whether each day is played a minute (a tick) at a time, so the
+    /// trains held for a route are counted (``heldTrainMinutes``). Off,
+    /// a day is one call, as the reports have always played it; GameCore
+    /// gives the same world either way, but a minute at a time takes longer.
+    public let byMinute: Bool
+    /// The cash at the end of each day played, in cents, by day from 1.
+    public private(set) var balances: [Int64] = []
+    /// The fares paid each day played, by day from 1.
+    public private(set) var trips: [Int64] = []
+    /// With ``byMinute``: each minute, the trains held for a route others
+    /// hold, added up; and how many times a train began to be held.
+    public private(set) var heldTrainMinutes = 0
+    public private(set) var holdEpisodes = 0
+    private var held: Set<TrainID> = []
     private var positions: [TrainID: Standing] = [:]
 
     /// Where a train stood and when it last arrived somewhere.
@@ -383,8 +406,9 @@ public struct PolicyPlayer {
         let times: ServiceTimes?
     }
 
-    public init(world: GameWorld, policy: Policy) {
+    public init(world: GameWorld, policy: Policy, byMinute: Bool = false) {
         self.world = world
+        self.byMinute = byMinute
         pending = policy.actions
     }
 
@@ -413,11 +437,26 @@ public struct PolicyPlayer {
     }
 
     /// The due actions, a day of game time (1,440 ticks, a minute each at
-    /// 600×) and what went wrong in it.
-    public mutating func playDay() throws {
+    /// 600×) and what went wrong in it. With ``byMinute``, `eachMinute`
+    /// sees the world after each minute, with the minute of the play
+    /// (from 1).
+    public mutating func playDay(eachMinute: (GameWorld, Int64) -> Void = { _, _ in }) throws {
         try runDue()
-        try world.advance(ticks: 1_440)
+        if byMinute {
+            for minute in 1...Int64(1_440) {
+                try world.advance(ticks: 1)
+                let holding = Set(world.trains.map(\.id).filter { world.trainHoldingRoute(of: $0) != nil })
+                heldTrainMinutes += holding.count
+                holdEpisodes += holding.subtracting(held).count
+                held = holding
+                eachMinute(world, day * 1_440 + minute)
+            }
+        } else {
+            try world.advance(ticks: 1_440)
+        }
         day += 1
+        balances.append(world.economy.balance.amount)
+        trips.append(world.lastDayTrips())
         observe()
     }
 
@@ -445,5 +484,175 @@ public struct PolicyPlayer {
         }
         positions = now
         if !stopped.isEmpty { note(.trainStopped, stopped) }
+    }
+}
+
+/// The rule sets a policy is played under (decision 261): the new game's
+/// own (realistic, every rule on) and each a simpler default might take
+/// off (CoreLoopBaselineReportTests' comparison, decision 254 §1.2).
+public enum RulePreset: String, CaseIterable, Sendable {
+    case newGame = "new-game"
+    case noCurveLimits = "no-curve-limits"
+    case noBlockSections = "no-block-sections"
+    case noRealisticOperation = "no-realistic-operation"
+    case noFlexDispatch = "no-flex-dispatch"
+    case simple
+    case noTrafficControl = "no-traffic-control"
+
+    /// How the comparison table names it.
+    public var title: String {
+        switch self {
+        case .newGame: "New game (every rule on)"
+        case .noCurveLimits: "− curve limits (217)"
+        case .noBlockSections: "− block sections (212)"
+        case .noRealisticOperation: "− realistic operation (207)"
+        case .noFlexDispatch: "− flexible dispatch (172)"
+        case .simple: "Simple: − 207, 212, 217, 172, 169, 180"
+        case .noTrafficControl: "Simple and − traffic control (32)"
+        }
+    }
+
+    /// Turns `world`'s rules to the preset's: those it takes off, off.
+    public func apply(to world: inout GameWorld) throws {
+        switch self {
+        case .newGame: break
+        case .noCurveLimits: world.setCurveSpeedLimits(false)
+        case .noBlockSections: world.setBlockSections(false)
+        case .noRealisticOperation: world.setRealisticOperation(false)
+        case .noFlexDispatch: world.setFlexDispatch(false)
+        case .simple, .noTrafficControl:
+            world.setRealisticOperation(false)
+            world.setBlockSections(false)
+            world.setCurveSpeedLimits(false)
+            world.setFlexDispatch(false)
+            world.setDoorCrowding(false)
+            world.setRollingStockEconomics(false)
+            if self == .noTrafficControl { try world.setTrafficControl(false) }
+        }
+    }
+}
+
+/// The map a policy is played on (decision 261): a blank map's towns, or
+/// a real place's first tile, with the towns a policy builds between.
+public enum PolicyMap: Sendable {
+    /// A new game's blank map, its towns drawn from `seed`.
+    case blank(seed: UInt32)
+    /// A real place's map bought a tile at a time (decision 167), its
+    /// first tile's land read in.
+    case place(String)
+
+    /// The world, a new game under `rules`, and its towns: the blank
+    /// map's town centres, or the real place's densest towns
+    /// (``densestTowns(in:tile:)``). A real place reads the app's data
+    /// from `files`.
+    @MainActor
+    public func start(rules: NewGameRules, files: RealWorldFiles?) throws -> (world: GameWorld, towns: [PlanPoint]) {
+        switch self {
+        case .blank(let seed):
+            let world = GameWorld.newGame(eventSeed: seed, rules: rules)
+            return (world, Land.townCentres(seed: seed, in: world.bounds))
+        case .place(let id):
+            guard let place = RealWorldPlace.all.first(where: { $0.id == id }), let layout = RealWorldExpansion(around: place.anchor) else {
+                throw HeadlessGameError("unknown place \(id); known: \(RealWorldPlace.all.map(\.id).joined(separator: ", "))")
+            }
+            guard let files else { throw HeadlessGameError("a real place reads the app's data: give its folder (--data)") }
+            let (population, places) = try files.peopleAndPlaces()
+            let step = layout.ridersStep(population: population, places: places, water: nil)
+            var world = GameWorld.newRealWorldExpansionGame(layout, ridersStep: step)
+            rules.apply(to: &world)
+            GameSession.readLand(roundStationsOf: &world, population: population, places: places)
+            guard let towns = Self.densestTowns(in: world, tile: layout.start) else {
+                throw HeadlessGameError("\(id) has no two towns 3 to 8 km apart in its first tile")
+            }
+            return (world, towns)
+        }
+    }
+
+    /// The towns of `world`'s land in `tile` but not at its edge with the
+    /// most people within 800 m: the first, the second 3 to 8 km from it
+    /// (RealWorldExpansionReportTests' pair), and, when there is one, a
+    /// third 3 to 8 km from the first and 2 km or more from the second.
+    public static func densestTowns(in world: GameWorld, tile: MapTile) -> [PlanPoint]? {
+        let length = MapExpansion.tileLength, margin = 1_000 * Int64(WorldCoordinate.unitsPerMetre)
+        let minX = Int64(tile.column) * length + margin, maxX = Int64(tile.column + 1) * length - margin
+        let minY = Int64(tile.row) * length + margin, maxY = Int64(tile.row + 1) * length - margin
+        // One candidate for each block of 1 km that holds a cell.
+        var candidates = Set<LandBlock>()
+        for cell in world.land.cells {
+            candidates.insert(LandBlock(cellRow: cell.row, column: cell.column))
+        }
+        let scored: [(point: PlanPoint, people: Int64)] = candidates.sorted().compactMap { block in
+            let point = PlanPoint(
+                x: Int64(block.column) * Land.blockLength + Land.blockLength / 2, y: Int64(block.row) * Land.blockLength + Land.blockLength / 2
+            )
+            guard (minX...maxX).contains(point.x), (minY...maxY).contains(point.y) else { return nil }
+            let totals = world.land.totals(within: Land.catchmentRadius, of: point)
+            return (point, totals.residents + totals.jobs)
+        }
+        guard let first = scored.max(by: { $0.people < $1.people }) else { return nil }
+        func metres(_ a: PlanPoint, _ b: PlanPoint) -> Double {
+            hypot(Double(a.x - b.x), Double(a.y - b.y)) / Double(WorldCoordinate.unitsPerMetre)
+        }
+        let near = scored.filter { (3_000...8_000).contains(metres($0.point, first.point)) }
+        guard let second = near.max(by: { $0.people < $1.people }) else { return nil }
+        let third = near.filter { metres($0.point, second.point) >= 2_000 }.max { $0.people < $1.people }
+        return [first.point, second.point] + (third.map { [$0.point] } ?? [])
+    }
+}
+
+/// One play summed up in the measures every report shares (decision 261):
+/// the cash on days 1, 3, 7 and 14, the last day's trips, the trains held
+/// for a route and the deadlocks, and what went wrong.
+public struct PlayReport: Hashable, Sendable {
+    public let label: String
+    /// The cash at the end of days 1, 3, 7 and 14, in cents; `nil` for a
+    /// day not played.
+    public let cash: [Int64?]
+    public let lastDayTrips: Int64
+    /// `nil` when the play was not played a minute at a time.
+    public let held: (minutes: Int, episodes: Int)?
+    public let deadlocked: Int
+    public let trains: Int
+    public let anomalies: [PlayAnomaly]
+
+    /// The days whose cash is shown.
+    public static let cashDays = [1, 3, 7, 14]
+
+    public init(label: String, player: PolicyPlayer) {
+        self.label = label
+        cash = Self.cashDays.map { $0 <= player.balances.count ? player.balances[$0 - 1] : nil }
+        lastDayTrips = player.world.lastDayTrips()
+        held = player.byMinute ? (player.heldTrainMinutes, player.holdEpisodes) : nil
+        deadlocked = player.world.deadlockedTrains().count
+        trains = player.world.trains.count
+        anomalies = player.anomalies
+    }
+
+    public static func == (lhs: PlayReport, rhs: PlayReport) -> Bool {
+        lhs.label == rhs.label && lhs.cash == rhs.cash && lhs.lastDayTrips == rhs.lastDayTrips && lhs.held?.minutes == rhs.held?.minutes
+            && lhs.held?.episodes == rhs.held?.episodes && lhs.deadlocked == rhs.deadlocked && lhs.trains == rhs.trains && lhs.anomalies == rhs.anomalies
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(label)
+        hasher.combine(cash)
+        hasher.combine(lastDayTrips)
+    }
+
+    /// The reports' shared table, in Markdown, under `title`.
+    public static func table(_ rows: [PlayReport], title: String) -> String {
+        var lines = [
+            "#### \(title): the same measures as every report",
+            "",
+            "| Play | Cash day " + cashDays.map(String.init).joined(separator: " / ") + " | Trips the last day | Held train-minutes (episodes) | Deadlocked | Anomalies (first day) |",
+            "| --- | --- | --: | --- | --: | --- |",
+        ]
+        for row in rows {
+            let cash = row.cash.map { $0.map { "$\($0 / 100)" } ?? "—" }.joined(separator: " / ")
+            let held = row.held.map { "\($0.minutes) (\($0.episodes))" } ?? "— (PLAY_BY_MINUTE=1)"
+            let anomalies = row.anomalies.isEmpty ? "none" : row.anomalies.map { "\($0.kind.rawValue) \($0.day)" }.joined(separator: ", ")
+            lines.append("| \(row.label) | \(cash) | \(row.lastDayTrips) | \(held) | \(row.deadlocked) of \(row.trains) | \(anomalies) |")
+        }
+        return lines.joined(separator: "\n")
     }
 }

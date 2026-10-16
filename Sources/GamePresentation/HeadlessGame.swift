@@ -23,6 +23,9 @@ public final class HeadlessGame {
     /// The seed a new game's towns were drawn from (``newGame(seed:buysMap:rules:)``);
     /// `nil` for a game loaded.
     public private(set) var seed: UInt32?
+    /// The towns a policy builds between (decision 261): a new game's;
+    /// empty for a game loaded.
+    public private(set) var towns: [PlanPoint] = []
 
     /// The world as it is now.
     public var world: GameWorld { session.world }
@@ -47,6 +50,19 @@ public final class HeadlessGame {
     public static func newGame(seed: UInt32, buysMap: Bool = false, rules: NewGameRules = .simple) -> HeadlessGame {
         let game = HeadlessGame(world: .newGame(eventSeed: seed, buysMap: buysMap, rules: rules))
         game.seed = seed
+        game.towns = Land.townCentres(seed: seed, in: GameWorld.newGameBounds)
+        return game
+    }
+
+    /// A new game on `map` under `rules` and then `preset` (decision 261:
+    /// any policy, any rules, any map). A real place reads the app's data
+    /// from `files`.
+    public static func newGame(map: PolicyMap, rules: NewGameRules = .simple, preset: RulePreset? = nil, files: RealWorldFiles? = nil) throws -> HeadlessGame {
+        var (world, towns) = try map.start(rules: rules, files: files)
+        try preset?.apply(to: &world)
+        let game = HeadlessGame(world: world)
+        if case .blank(let seed) = map { game.seed = seed }
+        game.towns = towns
         return game
     }
 
@@ -241,6 +257,11 @@ public final class HeadlessGame {
             public var deadlocked: Int
         }
 
+        /// The trains held for a route others hold, each minute, added up,
+        /// and how many times a train began to be held.
+        public var heldTrainMinutes: Int
+        public var holdEpisodes: Int
+
         public var policy: String
         public var days: [Day]
         /// Each kind of anomaly the first day it was seen.
@@ -252,10 +273,11 @@ public final class HeadlessGame {
     }
 
     /// Plays `policy` for `days` days on the world (decision 261), its
-    /// actions due from the day the play starts; the session goes on from
-    /// the world it ends with (its command log starts there).
+    /// actions due from the day the play starts, a minute at a time as the
+    /// device plays; the session goes on from the world it ends with (its
+    /// command log starts there).
     public func play(_ policy: Policy, days: Int64) throws -> Played {
-        var player = PolicyPlayer(world: world, policy: policy)
+        var player = PolicyPlayer(world: world, policy: policy, byMinute: true)
         var rows: [Played.Day] = []
         for _ in 0..<days {
             try player.playDay()
@@ -267,7 +289,7 @@ public final class HeadlessGame {
         }
         session = Self.session(player.world)
         return Played(
-            policy: policy.name, days: rows, anomalies: player.anomalies,
+            heldTrainMinutes: player.heldTrainMinutes, holdEpisodes: player.holdEpisodes, policy: policy.name, days: rows, anomalies: player.anomalies,
             anomalyDays: Dictionary(uniqueKeysWithValues: player.anomalyDays.map { ($0.key.rawValue, $0.value) }),
             unbuilt: player.pending.count
         )
@@ -309,6 +331,13 @@ public final class RealWorldFiles {
     /// The bytes of the bundled file `name`.
     public func data(_ name: String) throws -> Data {
         try Data(contentsOf: folder.appendingPathComponent(name))
+    }
+
+    /// The bundled people and places of Taiwan, read once.
+    func peopleAndPlaces() throws -> (PopulationGrid, PlaceGrid) {
+        population = try population ?? PopulationGrid(data: data("taiwan_population.json"))
+        places = try places ?? PlaceGrid(data: data("taiwan_places.json"))
+        return (population!, places!)
     }
 
     /// Gives `session` the data `set` names that it does not have yet.

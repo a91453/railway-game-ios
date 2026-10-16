@@ -50,7 +50,7 @@ final class BalanceReportTests: XCTestCase {
         Self.applyRealisticOperationSwitch(&world)
         let encoder = JSONEncoder()
         var rows = ["| Day | Balance | Fares | Operating profit | Tourism and shops | Lines' fares | Lines' costs | Trains | Sights |", "| --: | --: | --: | --: | --: | --: | --: | --: | --: |"]
-        var player = PolicyPlayer(world: world, policy: .none)
+        var player = try reportPlayer(world)
         try player.advance(ticks: 1)
         var lowest = player.world.economy.balance.amount
         for day in 1...days {
@@ -72,6 +72,7 @@ final class BalanceReportTests: XCTestCase {
             }
         }
         print("### A year with every switch on (lowest balance \(dollars(lowest)))\n" + rows.joined(separator: "\n"))
+        print("\n" + PlayReport.table([PlayReport(label: "Two lines", player: player)], title: "A year with every switch on"))
     }
 
     /// The first line with the company's buildings (decision 130): once the
@@ -645,7 +646,7 @@ final class BalanceReportTests: XCTestCase {
             "| --: | --: | --: | --: | --: | --: | --: | --: | --- | --: | --- | --- | --- | --- |",
         ]
         // Decision 261: the days played by the shared player.
-        var player = PolicyPlayer(world: world, policy: .none)
+        var player = try reportPlayer(world)
         try player.advance(ticks: 1)
         for day in 1...days {
             try player.playDay()
@@ -653,6 +654,7 @@ final class BalanceReportTests: XCTestCase {
         }
         world = player.world
         print(lines.joined(separator: "\n"))
+        print("\n" + PlayReport.table([PlayReport(label: title, player: player)], title: title))
     }
 
     private func row(_ world: GameWorld, day: Int, stops: [StationID], cost: Money) -> String {

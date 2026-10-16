@@ -24,7 +24,7 @@ public struct HeadlessCommandLine {
     }
 
     public static let operations: [Operation] = [
-        Operation(name: "new-game", options: ["seed": true, "buys-map": false, "rules": true], takesFile: false, summary: "a new blank-map game; --seed N (1), --rules simple|realistic (simple, as the app), --buys-map"),
+        Operation(name: "new-game", options: ["seed": true, "buys-map": false, "rules": true, "preset": true, "place": true], takesFile: false, summary: "a new game; --seed N (1), --rules simple|realistic (simple, as the app), --preset \(RulePreset.allCases.map(\.rawValue).joined(separator: "|")), --place ID (a real place's map, needs --data), --buys-map"),
         Operation(name: "load", options: [:], takesFile: true, summary: "a save file, or a problem report's command log from its start"),
         Operation(name: "apply", options: [:], takesFile: true, summary: "a problem report's log, a list of log entries, or a list of commands"),
         Operation(name: "advance", options: ["days": true, "hours": true, "minutes": true, "seconds": true], takesFile: false, summary: "let game time run; --days, --hours, --minutes, --seconds add up"),
@@ -163,7 +163,21 @@ public struct HeadlessCommandLine {
                 }
                 rules = chosen
             }
-            let started = HeadlessGame.newGame(seed: seed, buysMap: step.options["buys-map"] != nil, rules: rules)
+            var preset: RulePreset?
+            if let name = step.options["preset"] {
+                guard let chosen = RulePreset(rawValue: name) else {
+                    throw HeadlessGameError("unknown preset \(name); known: \(RulePreset.allCases.map(\.rawValue).joined(separator: ", "))")
+                }
+                preset = chosen
+            }
+            let started: HeadlessGame
+            if let place = step.options["place"] {
+                started = try HeadlessGame.newGame(map: .place(place), rules: rules, preset: preset, files: realWorld)
+            } else if preset != nil {
+                started = try HeadlessGame.newGame(map: .blank(seed: seed), rules: rules, preset: preset)
+            } else {
+                started = HeadlessGame.newGame(seed: seed, buysMap: step.options["buys-map"] != nil, rules: rules)
+            }
             game = started
             return started.summary([.economy])
         case "load":
@@ -186,11 +200,17 @@ public struct HeadlessCommandLine {
             return game.advance(seconds: seconds)
         case "play":
             guard let name = step.options["policy"] else { throw HeadlessGameError("play needs --policy; known: \(Policy.names.joined(separator: ", "))") }
-            guard let seed = try step.options["seed"].map({ try number($0, "seed", UInt32.self) }) ?? game.seed else {
-                throw HeadlessGameError("play needs --seed: a loaded game does not say which towns it drew")
+            var towns = game.towns
+            if let seed = try step.options["seed"].map({ try number($0, "seed", UInt32.self) }) {
+                towns = Land.townCentres(seed: seed, in: game.world.bounds)
             }
-            guard let policy = Policy.named(name, seed: seed, bounds: game.world.bounds) else {
+            guard Policy.names.contains(name) else {
                 throw HeadlessGameError("unknown policy \(name); known: \(Policy.names.joined(separator: ", "))")
+            }
+            guard let policy = Policy.named(name, towns: towns, bounds: game.world.bounds) else {
+                throw HeadlessGameError(towns.isEmpty
+                    ? "play needs --seed: a loaded game does not say which towns it drew"
+                    : "\(name) needs more towns than this map has (\(towns.count))")
             }
             let days = try step.options["days"].map { try number($0, "days", Int64.self) } ?? 0
             guard days > 0 else { throw HeadlessGameError("play needs --days above 0") }

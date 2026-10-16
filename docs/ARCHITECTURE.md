@@ -10336,13 +10336,22 @@ swift run GameSim --state /tmp/game.json load report.json then apply report.json
   - 挑戰失敗；
   - 列車停住（有路線的列車和前一天同一個位置，而且一天裡都沒有到站）。
   - 每種記第一次出現的那天，和出現了幾天。
+- **`RulePreset`**：核心玩法基準量測的規則組合，從那支測試搬過來：新遊戲（全開）、拿掉彎道限速、拿掉區間閉塞、拿掉寫實運轉、拿掉彈性派車、簡單、簡單再拿掉行車控制。
+- **`PolicyMap`**：空白地圖（種子決定城鎮），或實景地點（擴張地圖，讀第一塊的土地，城鎮取 `densestTowns`；實景報告的兩鎮選法搬過來，另外加一個第三鎮）。所以任何玩法都能搭任何規則組合、任何地圖跑。
+- **`PlayReport`**：每支報告在自己原本的表格之後，多印一張相同指標的表：現金第 1／3／7／14 天、最後一天的旅次、列車等候（分鐘與次數）、死結、異常。
+  - 各支自己的長處都留著：平衡報告的經濟指標、挑戰報告的三種玩法並列、核心玩法基準的規則組合比較、實景報告的擴張。
+- **`byMinute`**：一分鐘一分鐘地走，才數得到列車等候。
+  - 核心玩法基準本來就這樣走；GameSim 的 `play` 也這樣走，和裝置一樣。
+  - 其他三支照原本一天一次地走，數字才會一字不差；它們的等候欄寫「—」。設 `PLAY_BY_MINUTE=1` 就改成一分鐘一分鐘走。GameCore 兩種走法的結果相同，`PolicyTests` 驗了三天。
+  - `PLAY_PRESET=<名稱>` 讓平衡、挑戰、實景報告換一組規則跑。
 - **直接作用在 `GameWorld`**，和報告測試原本的做法一樣，所以世界照規則走，數字不受 session 的畫面邏輯影響。
-- **`HeadlessGame.play`** 與 **GameSim** 的 `play --policy NAME --days N [--seed N]`：
+- **`HeadlessGame.play`** 與 **GameSim**：`new-game --preset NAME --place ID`，以及 `play --policy NAME --days N [--seed N]`：
   - 印出每天的錢、旅次、死結的列車數，以及異常；
   - 試玩之後，session 從試玩結束的世界繼續（指令紀錄從那裡開始）。
 
 ```sh
 swift run GameSim new-game --seed 1 then play --policy third-town --days 14
+swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra-hsinchu --preset simple then play --policy two-towns --days 14
 ```
 
 **四支報告改前改後一字不差**：同一個 release build、同一組環境變數，`main`（改前）與這個 branch（改後）各跑一次，比對輸出。數字與參數寫在 PR。

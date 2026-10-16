@@ -64,6 +64,7 @@ final class RealWorldExpansionReportTests: XCTestCase {
             "| Place | " + (Self.shares.map { "\($0.0)/\($0.1)" } + Self.roots.map { "\(Int($0)) √trips" }).joined(separator: " | ") + " |",
             "| --- | " + (Self.shares.map { _ in "--:" } + Self.roots.map { _ in "--:" }).joined(separator: " | ") + " |",
         ]
+        var shared: [PlayReport] = []
         for id in ids {
             let place = try XCTUnwrap(RealWorldPlace.all.first { $0.id == id })
             let layout = try XCTUnwrap(RealWorldExpansion(around: place.anchor))
@@ -72,14 +73,15 @@ final class RealWorldExpansionReportTests: XCTestCase {
             GameSession.readLand(roundStationsOf: &world, population: Self.population, places: Self.places)
             let residents = world.land.cells.reduce(0) { $0 + $1.residents }
             let trips = residents * StationDemand.tripsPerHundredResidents / 100
-            let sites = try XCTUnwrap(densestTowns(in: world, tile: layout.start))
+            let towns = try XCTUnwrap(PolicyMap.densestTowns(in: world, tile: layout.start))
+            let sites = (towns[0], towns[1])
             let apart = hypot(Double(sites.0.x - sites.1.x), Double(sites.0.y - sites.1.y)) / 64 / 1_000
             let catchments = [sites.0, sites.1].map { world.land.totals(within: Land.catchmentRadius, of: $0).residents }
             let before = world.economy.balance
             world = try newGameLine(through: [sites.0, sites.1], in: world)
             let cost = before - world.economy.balance
             // Decision 261: the days played by the shared player.
-            var player = PolicyPlayer(world: world, policy: .none)
+            var player = try reportPlayer(world)
             try player.advance(ticks: 1)
             var riders: [Int64] = []
             var best: [Int64] = []
@@ -122,8 +124,11 @@ final class RealWorldExpansionReportTests: XCTestCase {
                 row += " \(day) (\(step)) |"
             }
             unlocks.append(row)
+            shared.append(PlayReport(label: place.name(in: .english), player: player))
         }
         print((lines + unlocks).joined(separator: "\n"))
+        // Decision 261: the measures every report shares.
+        print("\n" + PlayReport.table(shared, title: "Buying a real place's map"))
     }
 
     /// What owning several tiles of a dense place costs (decision 167):
@@ -140,7 +145,8 @@ final class RealWorldExpansionReportTests: XCTestCase {
         var world = GameWorld.newRealWorldExpansionGame(layout, ridersStep: MapExpansion.standardRidersStep, balance: 1_000_000_000_000)
         world.setEconomyMode(.free)
         GameSession.readLand(roundStationsOf: &world, population: Self.population, places: Self.places)
-        let towns = try XCTUnwrap(densestTowns(in: world, tile: layout.start))
+        let pair = try XCTUnwrap(PolicyMap.densestTowns(in: world, tile: layout.start))
+        let towns = (pair[0], pair[1])
         world = try newGameLine(through: [towns.0, towns.1], in: world)
         var lines = [
             "### Several dense tiles: Taipei bought tile by tile (free play), a line of two stations running",
@@ -179,34 +185,6 @@ final class RealWorldExpansionReportTests: XCTestCase {
             )
         }
         print(lines.joined(separator: "\n"))
-    }
-
-    /// The two towns of `world`'s land, in `tile` but not at its edge, with
-    /// the most people within 800 m, the second 3 to 8 km from the first.
-    private func densestTowns(in world: GameWorld, tile: MapTile) -> (PlanPoint, PlanPoint)? {
-        let length = MapExpansion.tileLength, margin = 1_000 * Int64(WorldCoordinate.unitsPerMetre)
-        let minX = Int64(tile.column) * length + margin, maxX = Int64(tile.column + 1) * length - margin
-        let minY = Int64(tile.row) * length + margin, maxY = Int64(tile.row + 1) * length - margin
-        // One candidate for each block of 1 km that holds a cell.
-        var candidates = Set<LandBlock>()
-        for cell in world.land.cells {
-            candidates.insert(LandBlock(cellRow: cell.row, column: cell.column))
-        }
-        let scored: [(point: PlanPoint, people: Int64)] = candidates.sorted().compactMap { block in
-            let point = PlanPoint(
-                x: Int64(block.column) * Land.blockLength + Land.blockLength / 2, y: Int64(block.row) * Land.blockLength + Land.blockLength / 2
-            )
-            guard (minX...maxX).contains(point.x), (minY...maxY).contains(point.y) else { return nil }
-            let totals = world.land.totals(within: Land.catchmentRadius, of: point)
-            return (point, totals.residents + totals.jobs)
-        }
-        guard let first = scored.max(by: { $0.people < $1.people }) else { return nil }
-        func metres(_ a: PlanPoint, _ b: PlanPoint) -> Double {
-            hypot(Double(a.x - b.x), Double(a.y - b.y)) / Double(WorldCoordinate.unitsPerMetre)
-        }
-        let second = scored.filter { (3_000...8_000).contains(metres($0.point, first.point)) }.max { $0.people < $1.people }
-        guard let second else { return nil }
-        return (first.point, second.point)
     }
 
     private func dollars(_ cents: Int64) -> String {

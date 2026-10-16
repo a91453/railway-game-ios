@@ -124,4 +124,50 @@ final class PolicyTests: XCTestCase {
         ))
         XCTAssertTrue(printed[1].contains("unknown policy fly; known: none, two-towns"), printed[1])
     }
+
+    func testAnyPolicyPlaysUnderAnyRulesOnAnyMap() throws {
+        let plain = try HeadlessGame.newGame(map: .blank(seed: 2), rules: .realistic, preset: .noTrafficControl)
+        XCTAssertFalse(plain.world.isTrafficControlEnabled)
+        XCTAssertFalse(plain.world.curveSpeedLimits)
+        XCTAssertEqual(plain.towns, Land.townCentres(seed: 2, in: plain.world.bounds))
+        XCTAssertEqual(plain.seed, 2)
+        XCTAssertEqual(try HeadlessGame.newGame(map: .blank(seed: 2), rules: .realistic).world, GameWorld.newGame(eventSeed: 2))
+
+        // A real place: its densest towns, its land read in.
+        let files = RealWorldFiles(folder: CommandLogReplay.root.appendingPathComponent("RailwayGameApp/Resources/RealWorld"))
+        let place = try HeadlessGame.newGame(map: .place("tra-hsinchu"), files: files)
+        XCTAssertGreaterThanOrEqual(place.towns.count, 2)
+        XCTAssertFalse(place.world.land.cells.isEmpty)
+        XCTAssertNil(place.seed)
+        XCTAssertThrowsError(try HeadlessGame.newGame(map: .place("tra-hsinchu")), "the data is needed")
+        XCTAssertThrowsError(try HeadlessGame.newGame(map: .place("atlantis"), files: files))
+
+        // A policy needs its towns.
+        let bounds = GameWorld.newGameBounds
+        XCTAssertNil(Policy.named("third-town", towns: Array(plain.towns.prefix(2)), bounds: bounds))
+        XCTAssertNotNil(Policy.named("two-towns", towns: Array(plain.towns.prefix(2)), bounds: bounds))
+        XCTAssertNotNil(Policy.named("none", towns: [], bounds: bounds))
+    }
+
+    func testTheSharedTableShowsTheSameMeasuresForEveryPlay() throws {
+        var minutes = PolicyPlayer(world: try lineWorld(), policy: .none, byMinute: true)
+        var days = PolicyPlayer(world: try lineWorld(), policy: .none)
+        for _ in 0..<3 {
+            try minutes.playDay()
+            try days.playDay()
+        }
+        XCTAssertEqual(minutes.world, days.world, "a minute at a time comes to the same world")
+        XCTAssertEqual(minutes.balances, days.balances)
+        XCTAssertEqual(minutes.trips, days.trips)
+        let table = PlayReport.table([PlayReport(label: "By minute", player: minutes), PlayReport(label: "By day", player: days)], title: "Test")
+        let rows = table.split(separator: "\n", omittingEmptySubsequences: false)
+        XCTAssertEqual(rows.count, 6)
+        XCTAssertTrue(rows[4].hasPrefix("| By minute | $\(minutes.balances[0] / 100) / $\(minutes.balances[2] / 100) / — / — | \(minutes.trips[2]) | 0 (0) | 0 of 1 | none |"), String(rows[4]))
+        XCTAssertTrue(rows[5].contains("| — (PLAY_BY_MINUTE=1) |"), String(rows[5]))
+    }
+
+    private func lineWorld() throws -> GameWorld {
+        let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+        return try newGameLine(through: [towns[0], towns[1]])
+    }
 }

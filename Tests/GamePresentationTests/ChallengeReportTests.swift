@@ -56,15 +56,20 @@ final class ChallengeReportTests: XCTestCase {
                 "| Seed | Play | " + goals.joined(separator: " | ") + " | Result | Riders a day / population / equity on day " + Self.checkpoints.map(String.init).joined(separator: ", ") + " |",
                 "| --: | --- |" + String(repeating: " --: |", count: goals.count) + " --- | --- |",
             ]
+            var shared: [PlayReport] = []
             for seed in seeds {
                 for play in plays {
                     let started = Date()
-                    lines.append(try row(challenge, seed: seed, play: play, runOn: runOn))
+                    let (row, report) = try row(challenge, seed: seed, play: play, runOn: runOn)
+                    lines.append(row)
+                    shared.append(report)
                     // Each row as it comes: the longest take minutes.
                     FileHandle.standardError.write(Data("\(lines.last!) (\(Int(Date().timeIntervalSince(started))) s)\n".utf8))
                 }
             }
             lines.append("")
+            // Decision 261: the measures every report shares.
+            lines += [PlayReport.table(shared, title: challenge.title(in: .english)), ""]
         }
         print(lines.joined(separator: "\n"))
     }
@@ -89,13 +94,13 @@ final class ChallengeReportTests: XCTestCase {
 
     /// Plays `challenge` on `seed` until it ends (or, `runOn`, until its
     /// deadline) and returns its row.
-    private func row(_ challenge: Challenge, seed: UInt32, play: Play, runOn: Bool) throws -> String {
+    private func row(_ challenge: Challenge, seed: UInt32, play: Play, runOn: Bool) throws -> (String, PlayReport) {
         let start = GameWorld.newGame(challenge: challenge, eventSeed: seed)
         let towns = Land.townCentres(seed: seed, in: start.bounds)
         // Decision 261: the way to play is the shared policy, each line
         // built as soon as it can be paid for; a line refused for anything
         // else is a broken script.
-        var player = PolicyPlayer(world: start, policy: .challenge(play.policy, towns: towns, bounds: start.bounds))
+        var player = try reportPlayer(start, policy: .challenge(play.policy, towns: towns, bounds: start.bounds))
         try player.advance(ticks: 1)
         var checked: [String] = []
         let deadline = player.world.scenario?.scenario.deadlineDays ?? 0
@@ -123,6 +128,7 @@ final class ChallengeReportTests: XCTestCase {
         }
         let unbuilt = pending.isEmpty ? "" : ", \(pending.count) lines never paid for"
         let column = checked.isEmpty ? "—" : checked.joined(separator: ", ")
-        return "| \(seed) | \(play.rawValue) | " + met.joined(separator: " | ") + " | \(result)\(unbuilt) | \(column) |"
+        let row = "| \(seed) | \(play.rawValue) | " + met.joined(separator: " | ") + " | \(result)\(unbuilt) | \(column) |"
+        return (row, PlayReport(label: "Seed \(seed), \(play.rawValue)", player: player))
     }
 }

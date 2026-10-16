@@ -35,93 +35,51 @@ final class CoreLoopBaselineReportTests: XCTestCase {
             "| Rules | Commands | First fare (game min / real s at 600×) | Fares day 1 | Balance day 1 / 3 / 7 / \(days) | Back to the starting balance | Held train-minutes (episodes) | Slowest curve limit | Trips day 2 / \(days) | Deadlocked at the end |",
             "| --- | --: | --- | --: | --- | --- | --- | --: | --- | --: |",
         ]
-        for preset in Preset.allCases {
+        var shared: [PlayReport] = []
+        // Decision 261: the rule sets are the shared presets.
+        for preset in RulePreset.allCases {
             let started = Date()
-            rows.append(try row(preset, days: days))
+            let (row, report) = try row(preset, days: days)
+            rows.append(row)
+            shared.append(report)
             FileHandle.standardError.write(Data("\(rows.last!) (\(Int(Date().timeIntervalSince(started))) s)\n".utf8))
         }
         print("### A new player's opening (seed 1, \(days) days)\n\n" + rows.joined(separator: "\n"))
+        print("\n" + PlayReport.table(shared, title: "A new player's opening"))
     }
 
-    /// The rules the opening is played under: the new game's, and each
-    /// rule a simpler default might take off.
-    enum Preset: String, CaseIterable {
-        case newGame = "New game (every rule on)"
-        case noCurveLimits = "− curve limits (217)"
-        case noBlockSections = "− block sections (212)"
-        case noRealisticOperation = "− realistic operation (207)"
-        case noFlexDispatch = "− flexible dispatch (172)"
-        case simple = "Simple: − 207, 212, 217, 172, 169, 180"
-        case noTrafficControl = "Simple and − traffic control (32)"
-        /// Decision 258: the app's default, ``NewGameRules/simple``.
-        case simpleRules = "Simple rules (258): − 207, 212, 217, 169, 180, 156, weather"
-
-        func apply(to world: inout GameWorld) throws {
-            switch self {
-            case .newGame: break
-            case .simpleRules: NewGameRules.simple.apply(to: &world)
-            case .noCurveLimits: world.setCurveSpeedLimits(false)
-            case .noBlockSections: world.setBlockSections(false)
-            case .noRealisticOperation: world.setRealisticOperation(false)
-            case .noFlexDispatch: world.setFlexDispatch(false)
-            case .simple, .noTrafficControl:
-                world.setRealisticOperation(false)
-                world.setBlockSections(false)
-                world.setCurveSpeedLimits(false)
-                world.setFlexDispatch(false)
-                world.setDoorCrowding(false)
-                world.setRollingStockEconomics(false)
-                if self == .noTrafficControl { try world.setTrafficControl(false) }
-            }
-        }
-    }
-
-    private func row(_ preset: Preset, days: Int64) throws -> String {
+    private func row(_ preset: RulePreset, days: Int64) throws -> (String, PlayReport) {
         var world = GameWorld.newGame(eventSeed: 1)
         try preset.apply(to: &world)
         let start = world.economy.balance.amount
         let towns = Land.townCentres(seed: 1, in: world.bounds)
-        // Decision 261: the opening is the shared policy; its due actions
-        // run as each day begins.
-        var player = PolicyPlayer(world: world, policy: .thirdTown(towns))
-        try player.runDue(onDay: 0)
-        world = player.world
+        // Decision 261: the opening is the shared policy, played a minute
+        // at a time; its due actions run as each day begins.
+        var player = PolicyPlayer(world: world, policy: .thirdTown(towns), byMinute: true)
         var firstFare: Int64?
         var balances: [Int64: Int64] = [:]
         var faresDayOne: Int64 = 0
         var backOn: Int64?
-        var heldMinutes = 0, episodes = 0
-        var held: Set<TrainID> = []
-        var minute: Int64 = 0
         var tripsDayTwo: Int64 = 0
-        while minute < days * 1_440 {
-            if minute > 0, minute % 1_440 == 0 {
-                try player.runDue(onDay: minute / 1_440)
+        for day in 1...days {
+            try player.playDay { world, minute in
+                if firstFare == nil, world.financeReport(.day).current.fareRevenue.amount > 0 {
+                    firstFare = minute
+                }
             }
-            try player.advance(ticks: 1)
             world = player.world
-            minute += 1
-            if firstFare == nil, world.financeReport(.day).current.fareRevenue.amount > 0 {
-                firstFare = minute
-            }
-            let holding = Set(world.trains.map(\.id).filter { world.trainHoldingRoute(of: $0) != nil })
-            heldMinutes += holding.count
-            episodes += holding.subtracting(held).count
-            held = holding
-            if minute % 1_440 == 0 {
-                let day = minute / 1_440
-                balances[day] = world.economy.balance.amount
-                if day == 1 { faresDayOne = world.financeReport(.day).previous.fareRevenue.amount }
-                if day == 2 { tripsDayTwo = world.lastDayTrips() }
-                if backOn == nil, world.economy.balance.amount >= start { backOn = day }
-            }
+            balances[day] = world.economy.balance.amount
+            if day == 1 { faresDayOne = world.financeReport(.day).previous.fareRevenue.amount }
+            if day == 2 { tripsDayTwo = world.lastDayTrips() }
+            if backOn == nil, world.economy.balance.amount >= start { backOn = day }
         }
         let first = firstFare.map { "\($0) / " + String(format: "%.1f", Double($0) / 10) } ?? "none"
         let opening = player.memory.opening
         let curve = opening.edges.compactMap { world.trackEdge($0) }.flatMap { $0.speedLimits(going: .forward) }.map(\.speed).min().map { "\($0) km/h" } ?? "—"
         let shown = [1, 3, 7, days].map { balances[$0].map(dollars) ?? "—" }.joined(separator: " / ")
-        return "| \(preset.rawValue) | \(opening.commands) | \(first) | \(dollars(faresDayOne)) | \(shown) | "
-            + "\(backOn.map { "day \($0)" } ?? "not by day \(days)") | \(heldMinutes) (\(episodes)) | \(curve) | \(tripsDayTwo) / \(world.lastDayTrips()) | \(world.deadlockedTrains().count) of \(world.trains.count) trains |"
+        let row = "| \(preset.title) | \(opening.commands) | \(first) | \(dollars(faresDayOne)) | \(shown) | "
+            + "\(backOn.map { "day \($0)" } ?? "not by day \(days)") | \(player.heldTrainMinutes) (\(player.holdEpisodes)) | \(curve) | \(tripsDayTwo) / \(world.lastDayTrips()) | \(world.deadlockedTrains().count) of \(world.trains.count) trains |"
+        return (row, PlayReport(label: preset.title, player: player))
     }
 }
 

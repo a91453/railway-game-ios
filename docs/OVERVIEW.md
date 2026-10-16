@@ -442,4 +442,4 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 253 | 介面動態的規則：一種動作一條規則（`MotionRule`，GamePresentation），減少動態效果只留淡入淡出；第一批套用在建造的回饋（被拒絕改成左右搖）、選取與面板、教學卡片，加 `motion` skill（改寫自 LottieFiles，MIT；存檔不動） |
 | 254 | 核心玩法的方向：10 個入門關卡（一關一個目標、1–3 顆星、過關解鎖工具）、新遊戲預設簡單規則（寫實是選項；單線多一列車自動加待避線）、每個動作都有回報；量測 `CoreLoopBaselineReportTests`（只在要求時跑）；`docs/research/CORE_LOOP_2026-10-16.md`（存檔不動） |
 | 260 | 沒有畫面的遊戲：`swift run GameSim`（new-game、load、apply、advance、dump、save，用 `then` 串，每步一行 JSON 收據，不認得的選項就拒絕）；`HeadlessGame`、`HeadlessSummary`（GamePresentation），測試的指令紀錄重播也改用它（存檔不動） |
-| 261 | 腳本化試玩：`Policy`、`PolicyPlayer`（GamePresentation），四支報告測試共用，改前改後一字不差；異常清單（死結、零旅次、現金負、挑戰失敗、列車停住）；`GameSim play --policy`（存檔不動） |
+| 261 | 腳本化試玩：`Policy`、`PolicyPlayer`、`RulePreset`、`PolicyMap`、`PlayReport`（GamePresentation），四支報告測試共用，原本的數字一字不差，另外多一張相同指標的表；異常清單（死結、零旅次、現金負、挑戰失敗、列車停住）；`GameSim new-game --preset/--place`、`play --policy`（存檔不動） |
