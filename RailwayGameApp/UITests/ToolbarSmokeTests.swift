@@ -558,8 +558,20 @@ final class ShellLayoutUITests: XCTestCase {
         }
         map.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: central.x, dy: central.y)).press(forDuration: 0.8)
         let row = app.descendants(matching: .any).matching(identifier: "station.board.row").firstMatch
-        // The panel's list, beside the map on the trailing side.
-        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.minX > app.frame.midX }
+        // The panel's list, beside the map on the trailing side, once it has
+        // slid in (the first run looked at once and found none).
+        var list: XCUIElement?
+        let opened = Date().addingTimeInterval(5)
+        repeat {
+            list = app.collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame.minX > app.frame.midX }
+            if list == nil { Thread.sleep(forTimeInterval: 0.25) }
+        } while list == nil && Date() < opened
+        if list == nil {
+            let hierarchy = XCTAttachment(string: app.debugDescription)
+            hierarchy.name = "No station panel after the hold"
+            hierarchy.lifetime = .keepAlways
+            add(hierarchy)
+        }
         XCTAssertNotNil(list, "The hold opens the station's panel")
         XCTAssertTrue(app.dragUntilWhollyOnScreen(row, in: list), "The board lists a train")
         let rows = app.descendants(matching: .any).matching(identifier: "station.board.row").allElementsBoundByIndex
