@@ -338,6 +338,18 @@ struct MapView: View {
                         camera: projection
                     )
                     .equatable()
+                    // Decision 182, later: following a gliding train, the
+                    // camera follows its glide frame by frame.
+                    if followsGlide {
+                        TimelineView(.animation) { timeline in
+                            Color.clear.onChange(of: timeline.date) { last, now in
+                                centerOnFollowedTrain(
+                                    projection: projection, at: now.timeIntervalSinceReferenceDate, elapsed: now.timeIntervalSince(last)
+                                )
+                            }
+                        }
+                        .allowsHitTesting(false)
+                    }
                     // The stations' names and waiting counts over the
                     // trains (docs/MAP_LAYERS.md 55–57), and the network
                     // tool's preview and the tracks' numbers over them;
@@ -834,6 +846,8 @@ struct MapView: View {
                 screen.tutorialMapSites = sites
             }
             .onChange(of: session.world.clock) { _, _ in
+                // While its train glides, the frames move the camera.
+                guard !followsGlide else { return }
                 centerOnFollowedTrain(projection: projection)
             }
             .onChange(of: session.followedTrain?.id) { _, _ in
@@ -1504,14 +1518,23 @@ struct MapView: View {
         }
     }
 
+    /// Whether the camera follows a train that glides between ticks
+    /// (decision 182): then it moves with the train every frame.
+    private var followsGlide: Bool {
+        session.isFollowingTrain && !session.world.clock.isPaused && trainMotion.isMoving
+    }
+
     /// One step of the camera towards the followed train (``FollowCamera``,
-    /// the reference's eased follow), once for each world the loop shows:
-    /// the time between two is the game loop's tick interval.
-    private func centerOnFollowedTrain(projection: PlanCamera) {
+    /// the reference's eased follow): once for each world the loop shows,
+    /// the time between two the game loop's tick interval; or, at `time`,
+    /// a frame `elapsed` after the last, towards where its glide draws it.
+    private func centerOnFollowedTrain(projection: PlanCamera, at time: Double? = nil, elapsed: Double = FollowCamera.tickSeconds) {
         guard let train = session.followedTrain,
               let position = train.position,
-              let coordinate = session.world.location(of: position)?.position else { return }
-        let center = followCamera.step(towardX: Double(coordinate.x), y: Double(coordinate.y), elapsed: FollowCamera.tickSeconds)
+              let location = session.world.location(of: position)?.position else { return }
+        let glided = time.flatMap { trainMotion.head(of: train.id, at: $0) }
+        let coordinate = glided ?? TrainMotion.Point(x: Double(location.x), y: Double(location.y))
+        let center = followCamera.step(towardX: coordinate.x, y: coordinate.y, elapsed: elapsed)
         let moved = projection.centered(atX: center.x, y: center.y)
         // The tooltip is pinned to a screen point: once the map moves under
         // it, it would describe another cell, as after a pan.
