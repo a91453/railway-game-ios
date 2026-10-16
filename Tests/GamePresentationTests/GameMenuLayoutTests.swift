@@ -8,18 +8,20 @@ import XCTest
 final class GameMenuLayoutTests: XCTestCase {
     func testThePostcardAndAchievementsStandInTheFirstLevel() {
         let layout = GameMenuLayout(showsGoals: true, showsTourism: true)
-        let first = layout.sections.flatMap { $0 }
-        XCTAssertTrue(first.contains(.postcard))
-        XCTAssertTrue(first.contains(.achievements))
+        XCTAssertTrue(layout.sections.flatMap { $0 }.contains(.shortcuts))
+        XCTAssertEqual(layout.shortcuts, [.tutorial, .postcard, .achievements], "One row, side by side")
         XCTAssertEqual(layout.moreRows, [.goals, .tourism, .help, .report], "More keeps the rest, without the postcard")
     }
 
-    func testBackToStartStaysTheThirdRow() {
+    func testTheFirstLevelKeepsToSixRowsWithBackToStartThird() {
         // On a phone on its side the menu shows about six rows
-        // (TestFlight 54.1): the way out stays in reach.
+        // (TestFlight 54.1); an eighth row put Settings out of reach (main
+        // 84a792e's full lane, run 38861445072).
         let first = GameMenuLayout(showsGoals: false, showsTourism: false).sections.flatMap { $0 }
+        XCTAssertLessThanOrEqual(first.count, GameMenuLayout.rowsInReach)
+        XCTAssertEqual(GameMenuLayout.rowsInReach, 6)
         XCTAssertEqual(first.firstIndex(of: .backToStart), 2)
-        XCTAssertEqual(first, [.saveGame, .saveOptions, .backToStart, .tutorial, .postcard, .achievements, .more, .settings])
+        XCTAssertEqual(first, [.saveGame, .saveOptions, .backToStart, .shortcuts, .more, .settings])
     }
 
     func testMoreListsOnlyWhatTheGameHas() {
@@ -28,15 +30,10 @@ final class GameMenuLayoutTests: XCTestCase {
         XCTAssertEqual(GameMenuLayout(showsGoals: false, showsTourism: true).moreRows, [.tourism, .help, .report])
     }
 
-    func testTheAchievementsRowSaysWhyItCountsNoneWithUnlimitedFunds() {
-        let counted = GameMenuLayout.achievementsRow(unlocked: 3, total: 20, unlimitedFunds: false, in: .english)
-        XCTAssertEqual(counted.title, "Achievements 3/20")
-        XCTAssertNil(counted.subtitle)
-        XCTAssertTrue(counted.isEnabled)
-        let unlimited = GameMenuLayout.achievementsRow(unlocked: 3, total: 20, unlimitedFunds: true, in: .traditionalChinese)
-        XCTAssertEqual(unlimited.title, "成就 3/20")
-        XCTAssertEqual(unlimited.subtitle, "資金無限的局不計成就")
-        XCTAssertFalse(unlimited.isEnabled)
+    func testTheAchievementsSayWhyTheyCountNoneWithUnlimitedFunds() {
+        XCTAssertNil(GameMenuLayout.achievementsNote(unlimitedFunds: false, in: .english))
+        XCTAssertEqual(GameMenuLayout.achievementsNote(unlimitedFunds: true, in: .traditionalChinese), "資金無限的局不計成就。")
+        XCTAssertEqual(GameMenuLayout.achievementsNote(unlimitedFunds: true, in: .english), "Not counted with unlimited funds.")
     }
 
     func testThe3DButtonShowsWithTheZoomButtonsOutsideTheTutorial() {
