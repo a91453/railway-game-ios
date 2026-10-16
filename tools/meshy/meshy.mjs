@@ -13,6 +13,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { createRequire } from 'node:module';
+import { indexEntry } from './index-entry.mjs';
 
 const ROOT = process.cwd();
 const SPEC = path.join(ROOT, 'tools/meshy/models.json');
@@ -100,7 +101,7 @@ async function pack(id) {
   // the city view finds the models, and the way each one faces, in index.json beside them (src/world/trains.js)
   const indexFile = path.join(path.dirname(out), 'index.json');
   const index = fs.existsSync(indexFile) ? JSON.parse(fs.readFileSync(indexFile, 'utf8')) : {};
-  index[id] = { file: path.basename(out), front: m.front ?? '+x' };
+  index[id] = indexEntry(index[id], path.basename(out), m.front ?? '+x');
   fs.writeFileSync(indexFile, JSON.stringify(index, null, 2) + '\n');
   const triangles = (json.meshes ?? []).flatMap((mesh) => mesh.primitives)
     .reduce((n, p) => n + (p.indices !== undefined ? json.accessors[p.indices].count : json.accessors[p.attributes.POSITION].count) / 3, 0);
