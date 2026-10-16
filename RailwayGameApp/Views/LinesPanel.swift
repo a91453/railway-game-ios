@@ -751,11 +751,14 @@ struct LinesPanel: View {
                     }
                     .disabled(!line.assignedTrains.isEmpty)
                     .accessibilityIdentifier("line.freight")
-                    Text(verbatim: session.world.freightLineText(line.id, in: session.language)
-                        ?? session.world.freightLineHelp(in: session.language))
+                    Text(verbatim: session.world.freightLineFooter(line.id, in: session.language))
                         .font(.caption)
                         .foregroundStyle(Theme.textSecondary)
                 }
+            } else if let hint = session.world.freightYardFirstText(in: session.language) {
+                Text(verbatim: hint)
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
             }
             // Stage C3: the performance its journeys are planned with
             // (Stage W2c), and the journey that gives.
