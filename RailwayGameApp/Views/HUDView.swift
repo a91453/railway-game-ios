@@ -1,6 +1,7 @@
 import GameCore
 import GamePresentation
 import SwiftUI
+import UIKit
 import UniformTypeIdentifiers
 
 /// Cash (which opens the economy panel), game time, speed controls and the
@@ -31,7 +32,10 @@ struct HUDView: View {
         // with the shorter date ("2 年 5/12（六）08:40", decision 226); only
         // then do cash and time stack. With the largest text the time gets
         // a row of its own rather than being cut short ("Day 2 · 07…"), and
-        // the cash is never cut short ("$ 3,0…").
+        // the cash is never cut short ("$ 3,0…"). Decision 251: each part
+        // keeps the room of the widest text it can show (``StatusBarWidths``),
+        // so the bar keeps one width, and one of these layouts, while the
+        // game runs.
         ViewThatFits(in: .horizontal) {
             HStack(spacing: 16) {
                 cash
@@ -209,6 +213,8 @@ struct HUDView: View {
                     .foregroundStyle(isNegative ? Theme.error : Theme.success)
                 Text(text)
                     .foregroundStyle(isNegative ? Theme.error : Theme.textPrimary)
+                    // Decision 251: until the amount gains an eighth digit.
+                    .modifier(WidestTextRoom(StatusBarWidths.moneyText(session.world.economy.balance)))
                 // Decision 175: a challenge that is lost to the red says how
                 // long is left.
                 if let days = session.world.insolvencyCountdown {
@@ -243,29 +249,33 @@ struct HUDView: View {
         let language = session.language
         let clock = session.world.clock
         let text = short ? clock.shortCalendarText(in: language) : clock.calendarText(in: language)
+        let holiday = session.world.todayHoliday()?.title(in: language)
         return Button {
             showsForecast = true
         } label: {
             HStack(spacing: 6) {
-                Image(systemName: "clock.fill")
+                // Decision 251: a holiday turns the clock into a flag rather
+                // than adding its name, which widened the bar for the day;
+                // the forecast and VoiceOver say which holiday.
+                Image(systemName: holiday == nil ? "clock.fill" : "flag.fill")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(Theme.primary)
+                    .foregroundStyle(holiday == nil ? Theme.primary : Theme.warning)
+                    .frame(width: StatusBarIcon.width)
+                    .accessibilityIdentifier(holiday == nil ? "hud.clock" : "hud.holiday")
                 Text(text)
                     .foregroundStyle(Theme.textPrimary)
+                    // Decision 251: any day of the year, with the seconds'
+                    // room while they can show.
+                    .modifier(WidestTextRoom(key: "date \(clock.now.date.year) \(short) \(StatusBarWidths.showsSeconds(clock)) \(language)") {
+                        StatusBarWidths.dateTexts(of: clock, short: short, in: language)
+                    })
                 if let symbol = session.world.todaySymbol() {
+                    // One width for every kind of weather.
                     Image(systemName: symbol)
                         .font(.caption.weight(.semibold))
                         .symbolRenderingMode(.multicolor)
+                        .frame(width: StatusBarIcon.width)
                         .accessibilityIdentifier("hud.weather")
-                }
-                if let holiday = session.world.todayHoliday() {
-                    Text(verbatim: holiday.title(in: language))
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(Theme.textPrimary)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Capsule().fill(Theme.warning.opacity(0.35)))
-                        .accessibilityIdentifier("hud.holiday")
                 }
                 // 2026-10-16: says that a tap opens more, the forecast.
                 Image(systemName: "chevron.down")
@@ -283,6 +293,8 @@ struct HUDView: View {
                 .presentationCompactAdaptation(.popover)
         }
         .accessibilityLabel("Game time \(text)")
+        // Decision 251: the holiday the flag stands for.
+        .accessibilityValue(Text(verbatim: holiday ?? ""))
         .accessibilityHint(Text(verbatim: language.text("Shows the forecast of the next seven days.", "顯示未來七天的預報。")))
         .accessibilityIdentifier("hud.time")
     }
@@ -764,14 +776,18 @@ private struct ViewingReadout: View {
                     .accessibilityHidden(true)
             }
             if let train {
+                // Decision 251: the speed and the curve limit keep the room
+                // of their widest while the train is followed.
                 VStack(alignment: .leading, spacing: 0) {
                     Text(verbatim: train)
-                        .font(.caption.weight(.semibold))
                         .foregroundStyle(Theme.textPrimary)
+                        .modifier(WidestTextRoom(StatusBarWidths.trainSpeedText))
+                        .font(.caption.weight(.semibold))
                     if let curve {
                         Text(verbatim: curve)
-                            .font(.caption2)
                             .foregroundStyle(Theme.textSecondary)
+                            .modifier(WidestTextRoom(key: "curve \(language)") { StatusBarWidths.curveTexts(in: language) })
+                            .font(.caption2)
                     }
                 }
                 .monospacedDigit()
@@ -861,14 +877,18 @@ private struct SpeedMenu: View, Equatable {
             }
         } label: {
             HStack(spacing: 4) {
-                if isPaused {
-                    Circle()
-                        .fill(Theme.warning)
-                        .frame(width: 6, height: 6)
-                }
+                // Decision 251: the dot's place is kept while the game runs,
+                // and the label has the room of the widest speed, so pausing
+                // or changing the speed moves nothing beside it.
+                Circle()
+                    .fill(isPaused ? Theme.warning : Color.clear)
+                    .frame(width: 6, height: 6)
                 Text(runningSpeed.label(in: language))
-                    .font(.subheadline.weight(.bold))
                     .foregroundStyle(Theme.primary)
+                    .modifier(WidestTextRoom(key: "speed \(language)") {
+                        StatusBarWidths.speedLabels(in: language).filter { $0 != GameSpeed.paused.label(in: language) }
+                    })
+                    .font(.subheadline.weight(.bold))
             }
             .padding(.horizontal, 8)
             .frame(minWidth: 48, minHeight: 32)
@@ -899,4 +919,64 @@ private struct GoBackChoice: Identifiable {
     let entry: SaveLibrary.Entry
     let label: String
     var id: String { entry.id }
+}
+
+/// Decision 251: the room of a status bar icon, whichever symbol it shows
+/// (the weather's are of different widths).
+private enum StatusBarIcon {
+    static let width: CGFloat = 20
+}
+
+/// Decision 251: lays a text out as wide as the widest of some texts in
+/// the same font, so it keeps one width while what it says changes. The
+/// widest is the one hidden behind it, in the font around both (set the
+/// text's font after this); it is picked by measuring the texts at the
+/// text size the player chose, once for each `key`.
+private struct WidestTextRoom: ViewModifier {
+    let key: String
+    let texts: () -> [String]
+    /// Measured again when the player changes the text size.
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// The room of `texts`, which `key` names.
+    init(key: String, texts: @escaping () -> [String]) {
+        self.key = key
+        self.texts = texts
+    }
+
+    /// The room of `text`.
+    init(_ text: String) {
+        self.init(key: text) { [text] }
+    }
+
+    func body(content: Content) -> some View {
+        ZStack(alignment: .leading) {
+            Text(verbatim: WidestText.widest(key: key, at: dynamicTypeSize, of: texts))
+                .hidden()
+                .accessibilityHidden(true)
+            content
+        }
+    }
+}
+
+/// Picks and remembers the widest of a list of texts in the status bar's
+/// font, ``WidestTextRoom``.
+@MainActor
+private enum WidestText {
+    private static var picked: [String: String] = [:]
+
+    static func widest(key: String, at size: DynamicTypeSize, of texts: () -> [String]) -> String {
+        let key = "\(size) \(key)"
+        if let text = picked[key] { return text }
+        let candidates = texts()
+        let pointSize = UIFont.preferredFont(forTextStyle: .subheadline).pointSize
+        let font = UIFont.monospacedDigitSystemFont(ofSize: pointSize, weight: .bold)
+        func width(_ text: String) -> CGFloat {
+            (text as NSString).size(withAttributes: [.font: font]).width
+        }
+        let text = candidates.count > 1 ? candidates.max { width($0) < width($1) } ?? "" : candidates.first ?? ""
+        if picked.count > 64 { picked.removeAll() }
+        picked[key] = text
+        return text
+    }
 }
