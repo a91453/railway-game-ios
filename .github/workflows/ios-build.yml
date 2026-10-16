@@ -34,6 +34,9 @@ name: iOS App Build
 # Two jobs run in parallel, each on its own runner with its own Simulator, so
 # the wall time is the slower job rather than the sum. A cold Simulator boot
 # costs about 4 minutes on a fresh runner, so each device is booted once.
+# The full lane runs a third: its iPhone UI tests are split over two jobs
+# (the classes in FULL_LANE_SECOND_JOB below run in "Xcode UI tests, second
+# half"), so it holds at most three macOS runners of the five.
 #
 # A pull request whose change to the app has already passed here is not
 # tested again (decision 187): the changes job keys the change (see "Key of
@@ -107,6 +110,15 @@ on:
 
 permissions:
   contents: read
+
+# The full lane's iPhone UI test classes that run in their own job (the
+# second half), beside the build job's. The two slowest classes, about 25
+# minutes of the 50 the full list took on 2026-10-15 (run 38789203602:
+# MapInteractionTests 837 s, RealWorldMapUITests 679 s of 2,982), so the
+# halves end about level: the build job keeps the other 24 minutes, the
+# project and translation checks; the second half builds for itself.
+env:
+  FULL_LANE_SECOND_JOB: "MapInteractionTests RealWorldMapUITests"
 
 # A newer push to a pull request cancels its older run. Every other run (the
 # full lane: started after a merge, nightly or by hand) has its own group
@@ -491,10 +503,14 @@ jobs:
               -only-testing:RailwayGameUITests/TutorialUITests/testTheLineStepLeavesTheLinesPanelUsable
             )
           else
-            lane="full ($GITHUB_EVENT_NAME): all the UI tests"
+            lane="full ($GITHUB_EVENT_NAME): all the UI tests but the second half's ($FULL_LANE_SECOND_JOB)"
             # Decision 165: the website's screenshots are taken by
             # website-screenshots.yml alone; they test nothing.
             only=(-skip-testing:RailwayGameUITests/WebsiteScreenshotTests)
+            # The second half's classes run in their own job.
+            for class in $FULL_LANE_SECOND_JOB; do
+              only+=("-skip-testing:RailwayGameUITests/$class")
+            done
           fi
           # By hand, only the named tests (Class or Class/testMethod; the
           # target is added).
@@ -642,6 +658,134 @@ jobs:
             ${{ runner.temp }}/ui-smoke-missing-button-summary.json
             ${{ runner.temp }}/ui-smoke-missing-button.log
           if-no-files-found: error
+          retention-days: 7
+
+  # The full lane's second half of the iPhone UI tests (FULL_LANE_SECOND_JOB),
+  # on a runner of its own: the full list had grown to 63 tests and 44 to 55
+  # minutes in one job (step limit 75) by 2026-10-15. Not on a pull request
+  # or a run by hand (only_testing), which the build job runs alone. It
+  # builds for testing itself, as the build job does, then boots, warms up
+  # and runs only its classes; the project and translation checks stay in
+  # the build job.
+  ui-second-half:
+    name: Xcode UI tests, second half (iOS Simulator)
+    needs: changes
+    if: ${{ !cancelled() && github.event_name != 'pull_request' && !inputs.only_testing }}
+    runs-on: macos-26
+    # Build (about 8 minutes on a slow runner), boot (14 at most), warm-up
+    # (5) and the tests (45).
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Toolchain versions
+        run: |
+          sw_vers
+          xcodebuild -version
+          echo "iOS Simulator SDK: $(xcrun --sdk iphonesimulator --show-sdk-version)"
+
+      - name: Select an available iPhone Simulator
+        run: |
+          xcrun simctl list devices available --json > "$RUNNER_TEMP/simulators.json"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          devices = json.loads(Path(os.environ["RUNNER_TEMP"], "simulators.json").read_text())["devices"]
+          iphones = [device for runtime, group in devices.items()
+                     if ".iOS-" in runtime for device in group
+                     if device["isAvailable"] and device["name"].startswith("iPhone")]
+          if not iphones:
+              raise SystemExit("No available iPhone Simulator")
+          device = iphones[0]
+          print(f"Selected {device['name']} ({device['udid']})")
+          with open(os.environ["GITHUB_ENV"], "a") as env:
+              env.write(f"SIMULATOR_UDID={device['udid']}\n")
+          PY
+
+      # As the build job's step of the same name: for the selected
+      # Simulator, signed ad hoc, before the boot.
+      - name: Build for iOS Simulator
+        run: |
+          xcodebuild build-for-testing \
+            -project RailwayGameApp/RailwayGame.xcodeproj \
+            -scheme RailwayGame \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            -disableAutomaticPackageResolution \
+            CODE_SIGN_IDENTITY=-
+
+      - name: Boot the selected iPhone Simulator
+        timeout-minutes: 14
+        run: xcrun simctl bootstatus "$SIMULATOR_UDID" -b
+
+      # As the build job's: the first launch on a fresh device is the slow one.
+      - name: Warm up the app's first launch
+        timeout-minutes: 5
+        continue-on-error: true
+        run: |
+          app="$RUNNER_TEMP/DerivedData/Build/Products/Debug-iphonesimulator/RailwayGame.app"
+          xcrun simctl install "$SIMULATOR_UDID" "$app"
+          if xcrun simctl launch "$SIMULATOR_UDID" io.github.a91453.RailwayGame -ui-testing; then
+            sleep 10
+            xcrun simctl terminate "$SIMULATOR_UDID" io.github.a91453.RailwayGame || true
+          else
+            echo "::warning::The warm-up launch failed; the UI tests launch the app themselves."
+          fi
+
+      # The two classes took about 25 minutes on 2026-10-15; a slow runner
+      # up to 1.8 times as long.
+      - name: UI tests, second half
+        id: ui-second-half
+        timeout-minutes: 45
+        run: |
+          only=()
+          for class in $FULL_LANE_SECOND_JOB; do
+            only+=("-only-testing:RailwayGameUITests/$class")
+          done
+          echo "UI tests, second half: ${only[*]}"
+          echo "- **UI tests, second half:** $FULL_LANE_SECOND_JOB" >> "$GITHUB_STEP_SUMMARY"
+          xcodebuild test-without-building \
+            -project RailwayGameApp/RailwayGame.xcodeproj \
+            -scheme RailwayGame \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            -resultBundlePath "$RUNNER_TEMP/ui-second-half.xcresult" \
+            "${only[@]}" \
+            -parallel-testing-enabled NO \
+            -test-timeouts-enabled YES \
+            -default-test-execution-time-allowance 480 \
+            -maximum-test-execution-time-allowance 600 \
+            -disableAutomaticPackageResolution
+
+      - name: Upload failed UI test results
+        if: always() && (steps.ui-second-half.outcome == 'failure' || steps.ui-second-half.outcome == 'cancelled')
+        uses: actions/upload-artifact@v7
+        with:
+          overwrite: true
+          name: ui-second-half-xcresult
+          path: ${{ runner.temp }}/ui-second-half.xcresult
+          if-no-files-found: warn
+          retention-days: 7
+
+      # The app's touches and actions, as for the build job's UI tests (K4).
+      - name: Save the app's UI test trace
+        if: always() && (steps.ui-second-half.outcome == 'failure' || steps.ui-second-half.outcome == 'cancelled')
+        continue-on-error: true
+        run: |
+          xcrun simctl spawn "$SIMULATOR_UDID" log show --last 3h --style compact \
+            --predicate 'subsystem == "io.github.a91453.RailwayGame" AND category == "ui-test"' \
+            > "$RUNNER_TEMP/ui-second-half-trace.log" || echo "::warning::Could not read the app's UI test trace"
+
+      - name: Upload the app's UI test trace
+        if: always() && (steps.ui-second-half.outcome == 'failure' || steps.ui-second-half.outcome == 'cancelled')
+        uses: actions/upload-artifact@v7
+        with:
+          overwrite: true
+          name: ui-second-half-trace
+          path: ${{ runner.temp }}/ui-second-half-trace.log
+          if-no-files-found: warn
           retention-days: 7
 
   ipad-tutorial:
