@@ -214,12 +214,19 @@ final class MapInteractionTests: XCTestCase {
                 return xy.count == 2 ? CGPoint(x: xy[0], y: xy[1]) : nil
             }
         }
+        // The opening camera may still move clear of the corner buttons
+        // for two seconds after the map opens (`MapView.openingSettles`):
+        // places that stood still for half a second inside that time could
+        // still move (main 878adaf's full lane and its run 38888973282:
+        // held at (437, 201) two seconds in, no panel). So they are read
+        // once that time is over, and once they stand still for a second.
+        let opened = Date()
         var last = places()
-        let settle = Date().addingTimeInterval(10)
+        let settle = opened.addingTimeInterval(12)
         while Date() < settle {
-            Thread.sleep(forTimeInterval: 0.5)
+            Thread.sleep(forTimeInterval: 1)
             let now = places()
-            if !now.isEmpty, now == last { break }
+            if !now.isEmpty, now == last, Date().timeIntervalSince(opened) > 3 { break }
             last = now
         }
         let middle = CGPoint(x: map.frame.width / 2, y: map.frame.height / 2)
