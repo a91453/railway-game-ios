@@ -403,6 +403,11 @@ public final class GameSession {
     /// The real lines of the map, projected once for each map (decision
     /// 213, ``realRailwayTraces``).
     @ObservationIgnored var realRailwayTracesMemo: (key: RealRailwayTracesKey, traces: RealRailwayTraces)?
+    /// The real line ``networkTracedWay`` last found, and between which
+    /// points: the map reads it at every redraw.
+    @ObservationIgnored var tracedWayMemo: (key: TracedWayKey, way: [WorldCoordinate])?
+    /// How many times ``networkTracedWay`` was worked out (for the tests).
+    @ObservationIgnored var tracedWaysWorkedOut = 0
     /// Which side of the picked track a passing loop goes (decision 204).
     public var networkLoopSide: PlatformTrackSide = .left
     /// The depot tool's sidings (decision 214, ``DepotYard``): how many,

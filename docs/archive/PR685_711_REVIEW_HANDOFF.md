@@ -311,7 +311,6 @@ Session：https://claude.ai/code/session_01EsozfWmDmXd6Tp2f4fzExd（2026-10-16�
 | 「升級為複線」在部分已是複線的路段上 | #728 | 預覽直接說「這段路有一部分已經是複線」，請玩家選「只有這一段」。以前只說「軌道形狀不合」；第二條在另一側時甚至會蓋成三條。 |
 | 沒有道岔的環形軌道升級成複線（原本「沒證實」） | #728 | 用六段的環線證實了：以前一樣只說「軌道形狀不合」，不會在同一點放兩個渡線，世界也不變。現在說「這是沒有道岔的環線」，請玩家一段一段升級。 |
 | UI 測試裡的固定等待（`sleep(1)`、出現後立刻問 `isHittable`、先 `swipeUp()` 再找） | #730 | 沒有。測試比較不會亂紅。 |
-| #680 從清單底邊開始拖（上兩輪第 10 項） | #730 | 沒有。拖曳的兩端夾在清單帶裡。 |
 | `map.style`（上兩輪第 5 項） | #730 | 沒有。 |
 
 ### 延後（等穩定）
@@ -327,6 +326,7 @@ Session：https://claude.ai/code/session_01EsozfWmDmXd6Tp2f4fzExd（2026-10-16�
 | #638 月台測試依賴真實地形（上兩輪第 4 項，`RealWorldMapUITests`） | 要重新設計測試的地點，牽涉實景地圖的鏡頭和資料，不是局部改動。 | 讓測試讀 App 在 UI 測試時寫出的「平地位置」（像 `map.expansion.tiles`），或改用 demo 地圖測月台工具，把實景地圖的部分留給只看能不能打開的測試。 | `RealWorldMapUITests`、可能加一個 UI 測試專用的 accessibility value |
 | #657 坡道上切開軌道的錯誤訊息（上兩輪第 7 項） | 要把 GameCore 算切點高度的函式公開，讓工具共用。是 GameCore 的 API 改動。 | 把 GameCore 算切點 chainage 的函式改成 `public`。工具改用它來判斷「轉轍器不能在變坡處」。行為不變，golden 不動。 | `Sources/GameCore/Railway/`（只改可見性）、GamePresentation 的切軌工具與測試 |
 | 3D 深度精度（反向 Z，上兩輪第 11 項） | 3D 渲染管線，要在裝置上看。 | 投影矩陣改成反向 Z（near→1、far→0），深度比較改成 `greater`，深度格式維持 `depth32Float`。 | `Map3D` 的 renderer、shader、相機 |
+| #680 從清單底邊開始拖（上兩輪第 10 項） | 原本要在 #730 修：把拖曳的兩端夾在清單帶裡。但改動後的手動 run（38920574869）有兩支 `SettingsUITests`（3D 城市預覽、回報附存檔）在捲動設定表單時紅，job log 又看不到失敗那一段，所以改回 main 的寫法。 | 單獨開一個 PR，只改 `dragUntilWhollyOnScreen`，並用 `only_testing: SettingsUITests` 先在 iPhone 橫放跑，從 xcresult 的失敗截圖看拖曳落在哪裡。起點可以改成 `bottom - 8` 而不是夾住比例，長拖曳的距離保持不變。 | `ToolbarSmokeTests.swift` 的 `dragUntilWhollyOnScreen`、所有用它的 UI 測試 |
 | CI 用 Swift 6.4.1，hook 和 CLAUDE.md 寫 6.4.0（上兩輪第 17 項） | 會改到每個平行 session 的開機環境（重新下載工具鏈）。現在很多 session 同時在跑，等穩定再一起換。 | `session-start.sh` 的版本改成 6.4.1。CLAUDE.md、`install-swift-linux.sh` 註解裡的 6.4.0 一起改。下載網址已確認存在（`swift-6.4.1-RELEASE`）。 | `.claude/hooks/session-start.sh`、`CLAUDE.md`、`.github/scripts/install-swift-linux.sh` 的註解 |
 | #632 拖曳時工具變淡卡住（剩極少見的情況） | 上一輪已經修了換工具和開面板的情況。剩下的是地圖 view 在拖曳中被拆掉，重現要 Simulator。 | 在地圖 `UIViewRepresentable` 的 `dismantleUIView` 把 `isDrawingUnderTools` 改回 false。 | `MapView.swift`、`ContentView.swift` |
 | 沒在用的 String Catalog key | 要在 Xcode 匯出才查得到，Linux 上做不到。 | 在 macOS 上用 Xcode 的「Export Localizations」，看標成 stale 的 key，一次清掉。 | `Localizable.xcstrings` |

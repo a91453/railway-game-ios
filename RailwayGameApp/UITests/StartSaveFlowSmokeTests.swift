@@ -10,6 +10,24 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         checkFlow(language: "zh-Hant", locale: "zh_TW")
     }
 
+    /// Decision 257: the start screen's Language opens the game's own menu
+    /// of languages, each named in itself. Nothing is chosen, so the
+    /// Simulator's app settings stay as they were. Full lane only.
+    func testLanguageOpensTheGamesLanguageMenu() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+
+        requiredButton("start.language", in: app).tap()
+        for name in ["Same as iPhone", "English", "繁體中文"] {
+            let item = app.buttons[name].firstMatch
+            XCTAssertTrue(item.appears(within: 5), "The language menu has no \(name). \(screenText(in: app))")
+            XCTAssertTrue(item.becomesHittable(within: 5), "\(name) cannot be tapped")
+        }
+    }
+
     /// City building P0-A (decision 92): on a blank map, choose the house,
     /// tap the ground, see it built, save, go back to the start and
     /// continue: the house is still there.
@@ -265,7 +283,8 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         // train tool.
         let menuRows = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "Train [0-9]+"))
         XCTAssertTrue(menuRows.firstMatch.appears(within: 10), "The train menu did not open")
-        Thread.sleep(forTimeInterval: 1)
+        // The menu grows open: read its rows once they stop moving.
+        menuRows.firstMatch.waitUntilStill()
         func visibleRows() -> [String] {
             menuRows.allElementsBoundByIndex.filter(touchable).map { "\($0.label) \($0.frame)" }
         }
@@ -352,7 +371,8 @@ final class StartSaveFlowSmokeTests: XCTestCase {
 
         menu.tap()
         XCTAssertTrue(menuRows.firstMatch.appears(within: 10), "The menu \(identifier) did not open")
-        Thread.sleep(forTimeInterval: 1)
+        // The menu grows open: read its rows once they stop moving.
+        menuRows.firstMatch.waitUntilStill()
         func visibleRows() -> [String] {
             menuRows.allElementsBoundByIndex.filter(touchable).map { "\($0.label) \($0.frame)" }
         }
@@ -424,10 +444,9 @@ final class StartSaveFlowSmokeTests: XCTestCase {
     private func openGameMenu(in app: XCUIApplication) {
         requiredButton("hud.menu", in: app).tap()
         _ = menuRow("menu.saveGame", in: app)
-        _ = menuRow("menu.backToStart", in: app)
         // Let the menu finish opening: tapMenuAction touches an action's
         // frame as it reads it. The screenshot taken here used to pause so.
-        Thread.sleep(forTimeInterval: 1)
+        menuRow("menu.backToStart", in: app).waitUntilStill()
     }
 
     private func tapMenuAction(_ identifier: String, in app: XCUIApplication) {

@@ -28,8 +28,8 @@ final class MapInteractionTests: XCTestCase {
             trainTool.waitUntilSettled()
             trainTool.tap()
             let fleet = app.buttons["train.fleetOverview"]
-            if !fleet.isHittable { app.swipeUp() }
             XCTAssertTrue(fleet.appears(within: 5))
+            if !fleet.becomesHittable(within: 1) { app.swipeUp() }
             fleet.tap()
             let follow = app.buttons["fleet.follow.\(name)"]
             // The overview's list makes a row only once it scrolls into
@@ -105,8 +105,8 @@ final class MapInteractionTests: XCTestCase {
         trainTool.waitUntilSettled()
         trainTool.tap()
         let fleet = app.buttons["train.fleetOverview"]
-        if !fleet.isHittable { app.swipeUp() }
         XCTAssertTrue(fleet.appears(within: 5))
+        if !fleet.becomesHittable(within: 1) { app.swipeUp() }
         fleet.tap()
         let fleetFollow = app.buttons["fleet.follow.Train 1"]
         XCTAssertTrue(fleetFollow.appears(within: 5))
@@ -305,7 +305,7 @@ final class MapInteractionTests: XCTestCase {
         }
         XCTAssertFalse(zoomOut.isEnabled, "The whole 1024 × 1024 map must fit within 12 zoom-out taps")
         XCTAssertTrue(zoomIn.isEnabled)
-        XCTAssertTrue(zoomIn.isHittable)
+        XCTAssertTrue(zoomIn.becomesHittable())
 
         map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         XCTAssertTrue((map.value as? String)?.contains("Central") == true,
@@ -918,7 +918,7 @@ final class MapInteractionTests: XCTestCase {
         // A tap then used to change only what showed after the panel closed.
         toggle.tap()
         if stationMaster.exists {
-            XCTAssertTrue(stationMaster.isHittable,
+            XCTAssertTrue(stationMaster.becomesHittable(),
                           "The station master \(stationMaster.frame) shows only where the panel \(bar.frame) leaves it room")
             XCTAssertLessThanOrEqual(stationMaster.frame.maxX, bar.frame.minX,
                                      "The station master \(stationMaster.frame) must not lie under the panel \(bar.frame)")
@@ -997,7 +997,7 @@ final class MapInteractionTests: XCTestCase {
 
         let card = app.descendants(matching: .any)["details.card"].firstMatch
         XCTAssertTrue(card.appears(within: 5))
-        waitUntilStill(card)
+        card.waitUntilStill()
         let action = app.buttons["panel.action"]
         XCTAssertTrue(action.appears(within: 5))
         XCTAssertTrue(action.becomesHittable(), "Add Platform \(action.frame) must be in reach without scrolling the card \(card.frame)")
@@ -1008,7 +1008,7 @@ final class MapInteractionTests: XCTestCase {
         card.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6))
             .press(forDuration: 0.1, thenDragTo: card.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25)))
         assertWhollyInside(status, card, "after scrolling the options")
-        XCTAssertTrue(action.isHittable, "Add Platform must stay in reach after scrolling the options")
+        XCTAssertTrue(action.becomesHittable(), "Add Platform must stay in reach after scrolling the options")
     }
 
     /// The train tool's card keeps its head (the selection) whole while
@@ -1030,7 +1030,7 @@ final class MapInteractionTests: XCTestCase {
 
         let card = app.descendants(matching: .any)["details.card"].firstMatch
         XCTAssertTrue(card.appears(within: 5))
-        waitUntilStill(card)
+        card.waitUntilStill()
         let status = app.descendants(matching: .any)["inspector.status"].firstMatch
         XCTAssertTrue(status.appears(within: 5))
         assertWhollyInside(status, card, "when the train tool opens")
@@ -1149,8 +1149,8 @@ final class MapInteractionTests: XCTestCase {
         // Follow Train 1, so that it stays under the map's middle, and tap
         // it there: the card's head shows its summary.
         let fleet = app.buttons["train.fleetOverview"]
-        if !fleet.isHittable { app.swipeUp() }
         XCTAssertTrue(fleet.appears(within: 15))
+        if !fleet.becomesHittable(within: 1) { app.swipeUp() }
         fleet.tap()
         // The demo's tree is large and its clock runs: the list can take
         // longer than a paused demo's (run 38332921819).
@@ -1214,16 +1214,6 @@ final class MapInteractionTests: XCTestCase {
     /// quarter of a second apart: the card slides in, and grows as its
     /// content arrives. Unlike ``XCUIElement/waitUntilSettled(timeout:)``
     /// it asks nothing of hit testing, which a card is not made for.
-    private func waitUntilStill(_ element: XCUIElement) {
-        var last = element.frame
-        for _ in 0..<20 {
-            Thread.sleep(forTimeInterval: 0.25)
-            let now = element.frame
-            if now == last { return }
-            last = now
-        }
-        XCTFail("\(element) did not stop moving")
-    }
 
     private func assertWhollyInside(_ element: XCUIElement, _ card: XCUIElement, _ when: String,
                                     file: StaticString = #filePath, line: UInt = #line) {
