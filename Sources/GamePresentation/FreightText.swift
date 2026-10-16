@@ -81,6 +81,28 @@ extension GameWorld {
         )
     }
 
+    /// The text under line `id`'s freight toggle: a freight line's cargo,
+    /// or what a freight line is; and, while the line has trains (so the
+    /// toggle is greyed out), that they come off first.
+    public func freightLineFooter(_ id: LineID, in language: DisplayLanguage) -> String {
+        guard let cargo = freightLineText(id, in: language) else { return freightLineHelp(in: language) }
+        guard line(id: id)?.assignedTrains.isEmpty == false else { return cargo }
+        return cargo + "\n" + language.text(
+            "Take this line's trains off first to change it back to passengers.",
+            "要改回客運，先把這條線的列車拿下來。"
+        )
+    }
+
+    /// What the line panel says in place of the freight toggle before the
+    /// first freight yard, or `nil` once there is one or freight is off.
+    public func freightYardFirstText(in language: DisplayLanguage) -> String? {
+        guard freight?.facilities.isEmpty == true else { return nil }
+        return language.text(
+            "To make a line carry freight, build a freight yard at one of its stations first.",
+            "先在車站蓋貨運場，才能把路線改成貨運。"
+        )
+    }
+
     /// The freight totals for the economy panel, or `nil` while there is
     /// nothing to say.
     public func freightTotalsText(in language: DisplayLanguage) -> String? {

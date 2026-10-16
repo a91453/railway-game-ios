@@ -221,3 +221,36 @@ extension FreightSessionTests {
         XCTAssertTrue(text.hasSuffix(" on 1 train."), text)
     }
 }
+
+extension FreightSessionTests {
+    /// The freight toggle is greyed out while a line has trains; the text
+    /// under it says why, on a freight line as on a passenger line.
+    func testALineWithTrainsSaysToTakeThemOffFirst() throws {
+        var world = try Self.world()
+        world.enableFreight()
+        try world.buildFreightFacility(at: Self.alpha)
+        let line = try world.createLine(named: "Goods", stops: [Self.alpha, Self.beta]).id
+        XCTAssertEqual(world.freightLineFooter(line, in: .english), world.freightLineHelp(in: .english))
+        try world.setLineFreight(line, to: true)
+        XCTAssertEqual(world.freightLineFooter(line, in: .english), "Carrying 0 t of 0 t on 0 trains.")
+        let train = try world.purchaseTrain(named: "F1").id
+        try world.assignTrain(train, to: line, pattern: nil)
+        XCTAssertEqual(world.freightLineFooter(line, in: .english),
+                       "Carrying 0 t of 40 t on 1 train.\nTake this line's trains off first to change it back to passengers.")
+        XCTAssertEqual(world.freightLineFooter(line, in: .traditionalChinese),
+                       "1 列列車載運中：0 噸／40 噸。\n要改回客運，先把這條線的列車拿下來。")
+    }
+
+    /// Before the first freight yard the toggle is not offered; the line
+    /// panel says what to build first, in a game with freight only.
+    func testBeforeAYardTheLinePanelSaysToBuildOne() throws {
+        var world = try Self.world()
+        XCTAssertNil(world.freightYardFirstText(in: .english))
+        world.enableFreight()
+        XCTAssertEqual(world.freightYardFirstText(in: .english),
+                       "To make a line carry freight, build a freight yard at one of its stations first.")
+        XCTAssertEqual(world.freightYardFirstText(in: .traditionalChinese), "先在車站蓋貨運場，才能把路線改成貨運。")
+        try world.buildFreightFacility(at: Self.alpha)
+        XCTAssertNil(world.freightYardFirstText(in: .english))
+    }
+}
