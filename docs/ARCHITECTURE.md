@@ -5751,6 +5751,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **之後的修正**（查 bug，2026-10-12，發佈前）：`firstLineLosing` 不再對還沒有任何列車的路線說話：車站與軌道的固定成本讓昨天的營業結果是負的，站長卻說「車站太近、客太少」，還擋住「路線沒有車」的提醒（`OnboardingTests.testAShortLineWithNoTrainIsNotCalledLosing`）。
 
+**後來**（作者回報，2026-10-16：「說明應該不用中英文同時列出」）：說明手冊展開後只顯示遊戲目前的語言，問題與答案各一次，不再在下方用灰字附另一個語言（`HelpEntry.otherQuestion`／`otherAnswer` 移除，畫面改讀 `shownText(in:)`）。搜尋照舊比對兩種語言的文字與關鍵字：玩家：用中文玩的人打英文詞（例如「loan」）也找得到，找到的條目仍用自己的語言顯示；開發：比對的資料不變，只少畫兩行；美術：展開的內容少了分隔線與灰字，一頁不再一半是看不懂的字；音樂：無。測試：`OnboardingTests.testTheGuideShowsOnlyTheGamesLanguage`。同時掃過其他畫面（教學卡、新聞、成就、資料來源、站長、設定、開始畫面），都只顯示遊戲語言；資料來源裡的原文名稱與授權聲明（OpenStreetMap、ODbL、WorldPop、MIT／ISC 條文）照舊。
+
 ### 172. 彈性發車與折返：列車從路線任一端發車，停在別處的先空車回送
 
 2026-10-12，作者睡覺期間派工的 Q4（`docs/ROADMAP.md` 的「Q4 — 彈性發車與折返」，作者 2026-10-10 決定做成正式的營運功能，不當 bug 修）。號碼依工作登記 #231：決策 172、存檔版本 45、golden schema 67。解除決策 134 的限制（開著這個開關的世界）。

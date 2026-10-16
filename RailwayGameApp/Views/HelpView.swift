@@ -2,8 +2,8 @@ import GamePresentation
 import SwiftUI
 
 /// The help guide (decision 177): the questions players ask, with their
-/// answers in the game's language and the other language below, searchable
-/// (``HelpGuide``). Opened from the start screen, the game menu and the
+/// answers, in the game's language only; the search also finds the other
+/// language's words (``HelpGuide``). Opened from the start screen, the game menu and the
 /// settings.
 struct HelpView: View {
     let language: DisplayLanguage
@@ -26,19 +26,11 @@ struct HelpView: View {
                         Section(topic.title(in: language)) {
                             ForEach(entries) { entry in
                                 DisclosureGroup(isExpanded: binding(for: entry)) {
-                                    VStack(alignment: .leading, spacing: 10) {
-                                        Text(verbatim: entry.answer(in: language))
-                                        Divider()
-                                        Text(verbatim: entry.otherQuestion(than: language))
-                                            .font(.footnote.weight(.semibold))
-                                        Text(verbatim: entry.otherAnswer(than: language))
-                                            .font(.footnote)
-                                            .foregroundStyle(Theme.textSecondary)
-                                    }
-                                    .font(.subheadline)
-                                    .padding(.vertical, 4)
+                                    Text(verbatim: entry.shownText(in: language).answer)
+                                        .font(.subheadline)
+                                        .padding(.vertical, 4)
                                 } label: {
-                                    Text(verbatim: entry.question(in: language))
+                                    Text(verbatim: entry.shownText(in: language).question)
                                         .font(.headline)
                                 }
                                 .accessibilityIdentifier("help.\(entry.id)")

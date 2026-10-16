@@ -1,5 +1,6 @@
 // The help guide (ARCHITECTURE decision 177): questions players ask, with
-// answers, searchable in English and Traditional Chinese. A-Train Tourism has
+// answers in the game's language, searchable in English and Traditional
+// Chinese. A-Train Tourism has
 // hint pages sorted by the problem the player has; the reference's `Ci/`
 // keeps six questions of its own (`guide.metro.faq.0` to `.5` in
 // `lib/ui-locales/zh-CN__q_8e57e7fa49d074d2.js`: how to create a line, add a
@@ -11,7 +12,8 @@
 
 import GameCore
 
-/// One question and its answer, in both languages.
+/// One question and its answer, kept in both languages for the search;
+/// the guide shows the game's language only.
 public struct HelpEntry: Hashable, Sendable, Identifiable {
     public enum Topic: String, CaseIterable, Sendable {
         case building, running, money, city
@@ -49,14 +51,11 @@ public struct HelpEntry: Hashable, Sendable, Identifiable {
         language.text(answer[0], answer[1])
     }
 
-    /// The same question or answer in the language `language` is not: the
-    /// guide shows both (the guide is bilingual, decision 177).
-    public func otherQuestion(than language: DisplayLanguage) -> String {
-        language.text(question[1], question[0])
-    }
-
-    public func otherAnswer(than language: DisplayLanguage) -> String {
-        language.text(answer[1], answer[0])
+    /// What the guide shows of it in `language`: the question, then its
+    /// answer, in that language only (decision 177, later). The other
+    /// language's text is still searched (``matches(_:)``).
+    public func shownText(in language: DisplayLanguage) -> (question: String, answer: String) {
+        (question(in: language), answer(in: language))
     }
 
     /// Whether every word of `query` (split at spaces, case ignored) is in
