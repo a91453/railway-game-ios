@@ -295,7 +295,7 @@ struct FleetOverviewSheet: View {
                             .font(.caption)
                             .foregroundStyle(Theme.textSecondary)
                     } else {
-                        Text(verbatim: session.world.trainPathStatusText(of: train.id, in: language))
+                        Text(verbatim: session.trainPathStatusText(of: train.id))
                             .font(.caption)
                             .foregroundStyle(Theme.textSecondary)
                     }
