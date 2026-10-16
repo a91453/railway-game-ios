@@ -78,16 +78,19 @@ final class RealWorldExpansionReportTests: XCTestCase {
             let before = world.economy.balance
             world = try newGameLine(through: [sites.0, sites.1], in: world)
             let cost = before - world.economy.balance
-            try world.advance(ticks: 1)
+            // Decision 261: the days played by the shared player.
+            var player = PolicyPlayer(world: world, policy: .none)
+            try player.advance(ticks: 1)
             var riders: [Int64] = []
             var best: [Int64] = []
             var balances: [Int64] = []
             var top: Int64 = 0
             var affordable: Int?
             var unlocked: Int?
-            let price = try XCTUnwrap(world.mapExpansion).nextPrice
+            let price = try XCTUnwrap(player.world.mapExpansion).nextPrice
             for day in 1...days {
-                try world.advance(ticks: 1_440)
+                try player.playDay()
+                world = player.world
                 let yesterday = world.lastDayTrips()
                 riders.append(yesterday)
                 top = max(top, yesterday)

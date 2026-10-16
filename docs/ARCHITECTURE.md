@@ -10313,6 +10313,57 @@ swift run GameSim --state /tmp/game.json load report.json then apply report.json
 - `Policy` 腳本化試玩：在 `HeadlessGame` 上跑固定的玩法 N 天，列出死結、零旅次、破產、列車停住。給關卡 session 量目標天數。
 - 文件數字一致性檢查。
 
+### 261. 腳本化試玩：`Policy` 與 `PolicyPlayer`，四支報告測試共用一套
+
+2026-10-16，遊戲規劃 session 派工（HANDOFF §7.4、`docs/research/GAME_AI_TOOLS_2026-10-15.md` §3.3）。號碼依工作登記 #231：未釋出的登記最大 260，取 261。GameCore、存檔版本、golden schema、SaveFixtures、ReplayFixtures 都不動。
+
+**為什麼**：四支只在要求時跑的報告測試（`BalanceReportTests`、`ChallengeReportTests`、`CoreLoopBaselineReportTests`、`RealWorldExpansionReportTests`）各有自己的蓋線、排程與逐日迴圈。關卡（決策 254 §7 第 4 個 PR）要量目標天數，如果再寫一套，就是第五套。遊戲規劃要的是：把共同的部分抽出來，四支改用它，數字一個都不能變。
+
+**做法**（GamePresentation `Policy.swift`）：
+- **`LineBuilder`**：
+  - `line(through:in:)`：測試的 `newGameLine` 原封搬過來，`TestSupport.newGameLine` 改成呼叫它；
+  - `straightLine`：挑戰報告的直線，遇到已有的鐵軌就改走高架，城鎮的站共用；
+  - `nearestEdge`。
+- **`CurvedOpening`**：核心玩法基準量測的開局，一條彎曲的線，第 3 天延伸到第三鎮。它也數玩家下了幾個指令。
+- **`Policy`**：哪一天蓋什麼。
+  - `waitsForMoney` 的動作被「錢不夠」拒絕時，隔天再試，後面的動作也跟著等；其他的拒絕就停下並丟出錯誤；
+  - 每個動作在世界的副本上試，成功才換上；
+  - 有名字的玩法：`none`、`two-towns`、`third-town`、`linked`、`longTrains`、`grown`。
+- **`PolicyPlayer`**：每天先做到期的動作，再走 1,440 個 tick，然後記下異常（`PlayAnomaly`）：
+  - 死結；
+  - 零旅次（第 2 天起，有路線卻一整天沒有人搭）；
+  - 現金負；
+  - 挑戰失敗；
+  - 列車停住（有路線的列車和前一天同一個位置，而且一天裡都沒有到站）。
+  - 每種記第一次出現的那天，和出現了幾天。
+- **直接作用在 `GameWorld`**，和報告測試原本的做法一樣，所以世界照規則走，數字不受 session 的畫面邏輯影響。
+- **`HeadlessGame.play`** 與 **GameSim** 的 `play --policy NAME --days N [--seed N]`：
+  - 印出每天的錢、旅次、死結的列車數，以及異常；
+  - 試玩之後，session 從試玩結束的世界繼續（指令紀錄從那裡開始）。
+
+```sh
+swift run GameSim new-game --seed 1 then play --policy third-town --days 14
+```
+
+**四支報告改前改後一字不差**：同一個 release build、同一組環境變數，`main`（改前）與這個 branch（改後）各跑一次，比對輸出。數字與參數寫在 PR。
+
+**參考**：參考庫沒有腳本化試玩（缺口）。外部只取結構：ml-agents（Apache-2.0）的 `Agent`，也就是「到了決策的時候做一個動作、世界拒絕的動作不算」。沒有訓練，沒有複製程式碼。
+
+**四方**：
+- 玩家：關卡的目標天數用自動試玩量，難度更準。
+- 開發：一套試玩框架，報告、GameSim 和關卡共用；異常清單一眼看出死結、零旅次。
+- 美術：無。
+- 音樂：無。
+
+**沒有採用**：
+- 另寫一套新的開局腳本：會變成第五套，報告與關卡量的不是同一個玩法。
+- 經 `GameSession` 試玩：session 每一步的畫面邏輯（新聞、自己暫停）會讓報告的數字和改前不同。
+- 把列車停住定義成「位置一天沒變」：準時循環的列車可能每天午夜正好停在同一個月台，所以另外要求那一天沒有到過任何站。
+
+**下一步**：
+- 關卡 session 用 `Policy` 和 `PolicyPlayer` 量每關的天數；新的玩法加成 `Policy` 的一個 static。
+- 文件數字一致性檢查（HANDOFF §7.4）。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

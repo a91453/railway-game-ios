@@ -28,6 +28,7 @@ public struct HeadlessCommandLine {
         Operation(name: "load", options: [:], takesFile: true, summary: "a save file, or a problem report's command log from its start"),
         Operation(name: "apply", options: [:], takesFile: true, summary: "a problem report's log, a list of log entries, or a list of commands"),
         Operation(name: "advance", options: ["days": true, "hours": true, "minutes": true, "seconds": true], takesFile: false, summary: "let game time run; --days, --hours, --minutes, --seconds add up"),
+        Operation(name: "play", options: ["policy": true, "days": true, "seed": true], takesFile: false, summary: "play a way to play for --days N (policies: \(Policy.names.joined(separator: ", "))); --seed N for a loaded game's towns"),
         Operation(name: "dump", options: ["sections": true], takesFile: false, summary: "the world summed up; --sections \(HeadlessSummary.Section.allCases.map(\.rawValue).joined(separator: ","))"),
         Operation(name: "save", options: [:], takesFile: true, summary: "write the game as a save file"),
     ]
@@ -183,6 +184,17 @@ public struct HeadlessCommandLine {
             }
             guard seconds > 0 else { throw HeadlessGameError("advance needs --days, --hours, --minutes or --seconds above 0") }
             return game.advance(seconds: seconds)
+        case "play":
+            guard let name = step.options["policy"] else { throw HeadlessGameError("play needs --policy; known: \(Policy.names.joined(separator: ", "))") }
+            guard let seed = try step.options["seed"].map({ try number($0, "seed", UInt32.self) }) ?? game.seed else {
+                throw HeadlessGameError("play needs --seed: a loaded game does not say which towns it drew")
+            }
+            guard let policy = Policy.named(name, seed: seed, bounds: game.world.bounds) else {
+                throw HeadlessGameError("unknown policy \(name); known: \(Policy.names.joined(separator: ", "))")
+            }
+            let days = try step.options["days"].map { try number($0, "days", Int64.self) } ?? 0
+            guard days > 0 else { throw HeadlessGameError("play needs --days above 0") }
+            return try game.play(policy, days: days)
         case "dump":
             var sections = Set(HeadlessSummary.Section.allCases)
             if let list = step.options["sections"] {

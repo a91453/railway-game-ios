@@ -81,8 +81,11 @@ final class CoreLoopBaselineReportTests: XCTestCase {
         try preset.apply(to: &world)
         let start = world.economy.balance.amount
         let towns = Land.townCentres(seed: 1, in: world.bounds)
-        var script = Script()
-        try script.openFirstLine(&world, from: towns[0], to: towns[1])
+        // Decision 261: the opening is the shared policy; its due actions
+        // run as each day begins.
+        var player = PolicyPlayer(world: world, policy: .thirdTown(towns))
+        try player.runDue(onDay: 0)
+        world = player.world
         var firstFare: Int64?
         var balances: [Int64: Int64] = [:]
         var faresDayOne: Int64 = 0
@@ -92,10 +95,11 @@ final class CoreLoopBaselineReportTests: XCTestCase {
         var minute: Int64 = 0
         var tripsDayTwo: Int64 = 0
         while minute < days * 1_440 {
-            if minute == 3 * 1_440 {
-                try script.extend(&world, to: towns[2])
+            if minute > 0, minute % 1_440 == 0 {
+                try player.runDue(onDay: minute / 1_440)
             }
-            try world.advance(ticks: 1)
+            try player.advance(ticks: 1)
+            world = player.world
             minute += 1
             if firstFare == nil, world.financeReport(.day).current.fareRevenue.amount > 0 {
                 firstFare = minute
@@ -113,104 +117,11 @@ final class CoreLoopBaselineReportTests: XCTestCase {
             }
         }
         let first = firstFare.map { "\($0) / " + String(format: "%.1f", Double($0) / 10) } ?? "none"
-        let curve = script.slowestCurve(in: world).map { "\($0) km/h" } ?? "—"
+        let opening = player.memory.opening
+        let curve = opening.edges.compactMap { world.trackEdge($0) }.flatMap { $0.speedLimits(going: .forward) }.map(\.speed).min().map { "\($0) km/h" } ?? "—"
         let shown = [1, 3, 7, days].map { balances[$0].map(dollars) ?? "—" }.joined(separator: " / ")
-        return "| \(preset.rawValue) | \(script.commands) | \(first) | \(dollars(faresDayOne)) | \(shown) | "
+        return "| \(preset.rawValue) | \(opening.commands) | \(first) | \(dollars(faresDayOne)) | \(shown) | "
             + "\(backOn.map { "day \($0)" } ?? "not by day \(days)") | \(heldMinutes) (\(episodes)) | \(curve) | \(tripsDayTwo) / \(world.lastDayTrips()) | \(world.deadlockedTrains().count) of \(world.trains.count) trains |"
-    }
-
-    /// The player's commands, counted: each call to the world a tap or a
-    /// confirmation would make.
-    private struct Script {
-        var commands = 0
-        var edges: [TrackEdgeID] = []
-        var stations: [StationID] = []
-        var firstEnd: (node: TrackNodeID, point: PlanPoint, heading: (Double, Double))?
-
-        /// Four cars of the longest real car (25 m), so any type fits.
-        static let platform: Int64 = 4 * 25 * WorldCoordinate.unitsPerMetre
-
-        /// One curved edge from a platform beyond `from` to one beyond `to`,
-        /// bowed sideways by a fifth of its span.
-        mutating func openFirstLine(_ world: inout GameWorld, from: PlanPoint, to: PlanPoint) throws {
-            let platform = Self.platform
-            let (dx, dy) = unit(from, to)
-            let a = PlanPoint(x: from.x - Int64(dx * Double(platform)), y: from.y - Int64(dy * Double(platform)))
-            let b = PlanPoint(x: to.x + Int64(dx * Double(platform)), y: to.y + Int64(dy * Double(platform)))
-            let span = distance(a, b), bow = span / 5
-            let c1 = PlanPoint(x: a.x + Int64(dx * span / 3 - dy * bow), y: a.y + Int64(dy * span / 3 + dx * bow))
-            let c2 = PlanPoint(x: a.x + Int64(dx * span * 2 / 3 - dy * bow), y: a.y + Int64(dy * span * 2 / 3 + dx * bow))
-            let start = try command { try world.buildTrackNode(at: WorldCoordinate(x: a.x, y: a.y)) }
-            let end = try command { try world.buildTrackNode(at: WorldCoordinate(x: b.x, y: b.y)) }
-            let edge = try command { try world.buildTrackEdge(from: start, to: end, curve: .cubic(c1, c2)) }
-            edges.append(edge)
-            let length = world.trackEdge(edge)?.length ?? 0
-            let first = try command { try world.buildStation(named: "S0", at: from).id }
-            try command { try world.addTrackPlatform(first, on: edge, from: platform / 2, to: platform + platform / 2) }
-            let second = try command { try world.buildStation(named: "S1", at: to).id }
-            try command { try world.addTrackPlatform(second, on: edge, from: length - platform - platform / 2, to: length - platform / 2) }
-            stations = [first, second]
-            firstEnd = (start, a, unit(c1, a))
-            try openLine(&world, stops: stations, on: TrackTraversal(edge: edge, direction: .forward))
-        }
-
-        /// On from the first edge's start to a platform beyond `town`,
-        /// leaving the way the first edge runs there and curving round to
-        /// it; a second line calling at every station with a train of its
-        /// own, from the far end.
-        mutating func extend(_ world: inout GameWorld, to town: PlanPoint) throws {
-            let platform = Self.platform
-            guard let (node, point, heading) = firstEnd else { return }
-            let (dx, dy) = unit(point, town)
-            let b = PlanPoint(x: town.x + Int64(dx * Double(platform)), y: town.y + Int64(dy * Double(platform)))
-            let span = distance(point, b)
-            let c1 = PlanPoint(x: point.x + Int64(heading.0 * span / 3), y: point.y + Int64(heading.1 * span / 3))
-            let c2 = PlanPoint(x: b.x - Int64(dx * span / 3), y: b.y - Int64(dy * span / 3))
-            let end = try command { try world.buildTrackNode(at: WorldCoordinate(x: b.x, y: b.y)) }
-            let edge = try command { try world.buildTrackEdge(from: node, to: end, curve: .cubic(c1, c2)) }
-            edges.append(edge)
-            let length = world.trackEdge(edge)?.length ?? 0
-            let third = try command { try world.buildStation(named: "S2", at: town).id }
-            try command { try world.addTrackPlatform(third, on: edge, from: length - platform - platform / 2, to: length - platform / 2) }
-            stations.append(third)
-            try openLine(&world, stops: [third, stations[0], stations[1]], on: TrackTraversal(edge: edge, direction: .backward))
-        }
-
-        /// A line calling at `stops`, all day, one train of four cars whose
-        /// head is at the far end of the first stop's platform on `traversal`.
-        mutating func openLine(_ world: inout GameWorld, stops: [StationID], on traversal: TrackTraversal) throws {
-            let platform = Self.platform
-            let line = try command { try world.createLine(named: "Line \(world.lines.count + 1)", stops: stops).id }
-            try command { try world.setLineServiceWindow(line, to: .allDay) }
-            try command { try world.setLineTrainsInService(line, to: TrainsInService(peak: 1, offPeak: 1, low: 1)) }
-            let train = try command { try world.purchaseTrain(named: "Train \(world.trains.count + 1)").id }
-            try command { try world.setTrainCars(train, to: 4) }
-            try command { try world.placeTrain(train, at: .onEdge(traversal, offset: platform + platform / 2)) }
-            try command { try world.setTrainContinuation(train, along: [], stoppingAt: platform + platform / 2) }
-            try command { try world.setTrainMovementRate(train, to: 512) }
-            try command { try world.assignTrain(train, to: line) }
-        }
-
-        /// The lowest curve limit posted on the script's track, in km/h.
-        func slowestCurve(in world: GameWorld) -> Int64? {
-            edges.compactMap { world.trackEdge($0) }.flatMap { $0.speedLimits(going: .forward) }.map(\.speed).min()
-        }
-
-        @discardableResult
-        mutating func command<T>(_ body: () throws -> T) throws -> T {
-            commands += 1
-            return try body()
-        }
-
-        func unit(_ from: PlanPoint, _ to: PlanPoint) -> (Double, Double) {
-            let span = distance(from, to)
-            return (Double(to.x - from.x) / span, Double(to.y - from.y) / span)
-        }
-
-        func distance(_ a: PlanPoint, _ b: PlanPoint) -> Double {
-            let dx = Double(b.x - a.x), dy = Double(b.y - a.y)
-            return (dx * dx + dy * dy).squareRoot()
-        }
     }
 }
 

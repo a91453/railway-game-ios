@@ -20,6 +20,9 @@ import GameCore
 @MainActor
 public final class HeadlessGame {
     public private(set) var session: GameSession
+    /// The seed a new game's towns were drawn from (``newGame(seed:buysMap:rules:)``);
+    /// `nil` for a game loaded.
+    public private(set) var seed: UInt32?
 
     /// The world as it is now.
     public var world: GameWorld { session.world }
@@ -42,7 +45,9 @@ public final class HeadlessGame {
     /// with `seed`'s towns and events, under `rules` (decision 258: the
     /// app's new games are simple unless the player chooses realistic).
     public static func newGame(seed: UInt32, buysMap: Bool = false, rules: NewGameRules = .simple) -> HeadlessGame {
-        HeadlessGame(world: .newGame(eventSeed: seed, buysMap: buysMap, rules: rules))
+        let game = HeadlessGame(world: .newGame(eventSeed: seed, buysMap: buysMap, rules: rules))
+        game.seed = seed
+        return game
     }
 
     /// The game in `data`: a save file the app wrote (``SaveLibrary``),
@@ -219,6 +224,52 @@ public final class HeadlessGame {
         return Advanced(
             seconds: world.clock.now.seconds - start, day: world.clock.now.seconds / GameTime.secondsPerDay,
             balanceChange: (world.economy.balance - balance).amount / 100
+        )
+    }
+
+    // MARK: - Scripted play
+
+    /// What `play` did (decision 261): each day's numbers and what went
+    /// wrong.
+    public struct Played: Codable, Hashable, Sendable {
+        public struct Day: Codable, Hashable, Sendable {
+            public var day: Int64
+            /// Whole dollars at the end of the day.
+            public var balance: Int64
+            /// Passengers who paid a fare that day.
+            public var trips: Int64
+            public var deadlocked: Int
+        }
+
+        public var policy: String
+        public var days: [Day]
+        /// Each kind of anomaly the first day it was seen.
+        public var anomalies: [PlayAnomaly]
+        /// How many days each kind was seen on.
+        public var anomalyDays: [String: Int]
+        /// Actions never run: waiting for money at the end.
+        public var unbuilt: Int
+    }
+
+    /// Plays `policy` for `days` days on the world (decision 261), its
+    /// actions due from the day the play starts; the session goes on from
+    /// the world it ends with (its command log starts there).
+    public func play(_ policy: Policy, days: Int64) throws -> Played {
+        var player = PolicyPlayer(world: world, policy: policy)
+        var rows: [Played.Day] = []
+        for _ in 0..<days {
+            try player.playDay()
+            let world = player.world
+            rows.append(Played.Day(
+                day: player.day, balance: world.economy.balance.amount / 100, trips: world.lastDayTrips(),
+                deadlocked: world.deadlockedTrains().count
+            ))
+        }
+        session = Self.session(player.world)
+        return Played(
+            policy: policy.name, days: rows, anomalies: player.anomalies,
+            anomalyDays: Dictionary(uniqueKeysWithValues: player.anomalyDays.map { ($0.key.rawValue, $0.value) }),
+            unbuilt: player.pending.count
         )
     }
 

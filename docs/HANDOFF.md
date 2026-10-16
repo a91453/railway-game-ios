@@ -654,7 +654,7 @@
 | --- | --- |
 | 無頭模擬入口 `GameSim`（指令：new-game、load、apply、advance、dump）——決策 260，`claude/game-sim` | GAME_AI_TOOLS §3.1、MOTION_3D_TOOLS §4 |
 | 3D 截圖時一起輸出每幀時間與 draw call 的 JSON | GAME_AI_TOOLS §3.2 |
-| 腳本化玩法框架（`Policy`）＋自動試玩，列出異常 | GAME_AI_TOOLS §3.3、MOTION_3D_TOOLS §5 |
+| 腳本化玩法框架（`Policy`）＋自動試玩，列出異常——決策 261，`claude/scripted-play` | GAME_AI_TOOLS §3.3、MOTION_3D_TOOLS §5 |
 | 文件數字一致性檢查：存檔版本、golden schema、golden 個數（OVERVIEW 現在是手動補的） | GAME_AI_TOOLS §3.4 |
 | 官網與社群說明短片的 skill | MOTION_3D_TOOLS §2.3 B |
 | 在 macOS 上跑一部分套件測試，比對 Apple libm 的浮點值 | GAP_RESEARCH §4.2 |
