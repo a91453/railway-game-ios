@@ -388,6 +388,11 @@ jobs:
           fi
           echo "The Debug app carries the Debug-only marker."
 
+      # Decision 247: the app carries both languages (release-archive.yml
+      # checks the Release archive the same way).
+      - name: Check the app has English and Traditional Chinese
+        run: .github/scripts/check-app-localizations.sh "$RUNNER_TEMP/DerivedData/Build/Products/Debug-iphonesimulator/RailwayGame.app"
+
       # Booted only after the build: booting while the app built (#211) slowed
       # the build from 1.4 to 4.8 minutes on the runner's 3 cores and saved
       # only 0.6 of the boot's 3, so the job took longer.

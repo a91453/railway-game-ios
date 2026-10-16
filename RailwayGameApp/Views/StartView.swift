@@ -24,7 +24,11 @@ struct StartView: View {
     @State private var showsHelp = false
     @State private var showsNewGameOptions = false
     @State private var showsAchievements = false
-    @Environment(\.openURL) private var openURL
+    /// The language menu's choice, read from the app's settings.
+    @State private var languageChoice = LanguageChoice.saved
+    /// What the player is told after choosing a language: it takes effect
+    /// the next time the game opens.
+    @State private var languageNote: String?
     @Environment(GameAudio.self) private var audio
     /// Compact: a phone on its side.
     @Environment(\.verticalSizeClass) private var verticalSizeClass
@@ -354,16 +358,34 @@ struct StartView: View {
     /// Language, Data Sources and Settings, under the start screen's
     /// buttons.
     @ViewBuilder private var chips: some View {
-        // iOS keeps each app's language in Settings (the
-        // reference's home screen has a language menu instead).
-        Button {
-            if let url = URL(string: UIApplication.openSettingsURLString) {
-                openURL(url)
+        // Decision 247: the game's own language menu, as on the
+        // reference's home screen (iOS shows an app's language in
+        // Settings only on a device with two or more languages).
+        Menu {
+            Picker(selection: languageChoiceBinding) {
+                ForEach(LanguageChoice.allCases, id: \.self) { choice in
+                    Text(verbatim: choice.title(in: launcher.language)).tag(choice)
+                }
+            } label: {
+                EmptyView()
             }
         } label: {
             chip(Label("Language", systemImage: "globe"))
         }
-        .accessibilityHint("Opens Settings, where the game's language is chosen.")
+        .accessibilityIdentifier("start.language")
+        .accessibilityHint(Text(verbatim: launcher.language.text("Chooses the game's language.", "選擇遊戲的語言。")))
+        .alert(
+            Text(verbatim: launcher.language.text("Language", "語言")),
+            isPresented: Binding(get: { languageNote != nil }, set: { if !$0 { languageNote = nil } })
+        ) {
+            Button {
+                languageNote = nil
+            } label: {
+                Text(verbatim: launcher.language.text("OK", "好"))
+            }
+        } message: {
+            Text(verbatim: languageNote ?? "")
+        }
         // Where the real-world data comes from (the `Railway/`
         // site's data sources page).
         Button {
@@ -391,6 +413,20 @@ struct StartView: View {
             chip(Label("Settings", systemImage: "gearshape"))
         }
         .accessibilityIdentifier("start.settings")
+    }
+
+    /// The language menu's selection: saves the choice, and tells the
+    /// player to reopen the game when the language may change.
+    private var languageChoiceBinding: Binding<LanguageChoice> {
+        Binding {
+            languageChoice
+        } set: { choice in
+            if choice.needsRestart(from: languageChoice, showing: launcher.language) {
+                languageNote = choice.restartNote(in: launcher.language)
+            }
+            languageChoice = choice
+            choice.save()
+        }
     }
 
     /// A small capsule under the start buttons.

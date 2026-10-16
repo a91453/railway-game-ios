@@ -40,6 +40,8 @@ on:
       - RailwayGameApp/project.yml
       - RailwayGameApp/Resources/Assets.xcassets/**
       - RailwayGameApp/Resources/*.lproj/**
+      - RailwayGameApp/Resources/Localizable.xcstrings
+      - .github/scripts/check-app-localizations.sh
       - RailwayGameApp/App/**
       - .github/workflows/release-archive.yml
 
@@ -141,6 +143,10 @@ jobs:
           # Expected to report "not signed at all": this archive is unsigned.
           codesign --display "$app" 2>&1 || true
           [[ "$failed" == false ]]
+
+      # Decision 247: the app iOS installs offers both languages.
+      - name: Check the archived app has English and Traditional Chinese
+        run: .github/scripts/check-app-localizations.sh "$ARCHIVE_PATH/Products/Applications/RailwayGame.app"
 
       # Evidence for the privacy and export-compliance answers in
       # docs/XCODE_CLOUD_ONBOARDING.md, not a gate: which libraries the app

@@ -1403,16 +1403,6 @@
         }
       }
     },
-    "Opens Settings, where the game's language is chosen." : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "打開「設定」，在那裡選擇遊戲的語言。"
-          }
-        }
-      }
-    },
     "Operating" : {
       "localizations" : {
         "zh-Hant" : {
