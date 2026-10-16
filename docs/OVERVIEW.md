@@ -444,3 +444,4 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 255 | 單線沒有待避處時的死結：決策 58 的待避站與備用車都解不開時，時刻表之後會回到同一站的服務在原地提早折返，跳過走不到的停靠站（`shortTurn(of:in:)`）；修 CORE_LOOP §1.2 第二列車卡死；存檔、golden 不動 |
 | 256 | 每個動作都有回報（第一批）：站上冒「+$12」（一站一個、1 秒內合併、600 倍速以上只跟隨的列車與畫面中間 3 站）、目標達成打勾與旋律 `goal-met.wav`（跟音效音量）、城鎮每長大四分之一一圈暖黃的環；`ActionFeedback.swift`（存檔不動） |
 | 259 | 3D 地圖的行人、機車、汽車：拉近才出現（人 500 m、車 1,300 m 內），月台人數照候車、站前照一天的旅次、街上照城鎮人口；實例化繪製最多多 6 次 draw call，舊機型與掉幀時降級（`Map3DStreetLife`，存檔不動；預覽 `docs/art/map3d-street-life-2026-10-16/`） |
+| 260 | 沒有畫面的遊戲：`swift run GameSim`（new-game、load、apply、advance、dump、save，用 `then` 串，每步一行 JSON 收據，不認得的選項就拒絕）；`HeadlessGame`、`HeadlessSummary`（GamePresentation），測試的指令紀錄重播也改用它（存檔不動） |
