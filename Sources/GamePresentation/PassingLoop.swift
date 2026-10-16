@@ -70,10 +70,18 @@ extension GameSession {
         }
     }
 
-    /// "Signal 1", "號誌站 1": the next number after the closed stations'.
+    /// "Signal 1", "號誌站 1": one more than the highest number a signal
+    /// station's name has, in either language. Counting the closed
+    /// stations gave a name already in use once the player closed a
+    /// station or demolished a signal station.
     func signalStationName() -> String {
-        let closed = world.stations.filter { $0.operationMode == .closed }.count
-        return language.text("Signal \(closed + 1)", "號誌站 \(closed + 1)")
+        let highest = world.stations.compactMap { station -> Int? in
+            for prefix in ["Signal ", "號誌站 "] where station.name.hasPrefix(prefix) {
+                return Int(station.name.dropFirst(prefix.count))
+            }
+            return nil
+        }.max() ?? 0
+        return language.text("Signal \(highest + 1)", "號誌站 \(highest + 1)")
     }
 
     /// Builds `plan` in `world`: the siding, then the signal station, closed,

@@ -86,6 +86,39 @@ final class RealRailwayTracingTests: XCTestCase {
         XCTAssertFalse(text.contains("edge"), text)
     }
 
+    /// Decision 245's gap: a trace a dollar short of its price. The
+    /// preview says the whole price and why it cannot be paid, building it
+    /// is refused with the same words, and nothing of it is laid.
+    func testATraceADollarShortSaysTheWholePriceAndBuildsNothing() throws {
+        let (rich, taipei, banqiao) = try taipei(in: .english)
+        rich.tapNetwork(at: taipei, reach: reach)
+        rich.tapNetwork(at: banqiao, reach: reach)
+        let cost = try XCTUnwrap(rich.networkPreview?.cost)
+        XCTAssertGreaterThan(cost, .zero)
+
+        let tra = try BundledRealData.station("臺北", in: "tra_sched")
+        let world = GameWorld.newGame(anchor: try XCTUnwrap(tra.anchor), balance: cost - Money(1))
+        let session = GameSession(world: world, language: .english)
+        session.railways = try BundledRealData.railways()
+        session.selectTool(.network)
+        session.setNetworkMode(.build)
+        session.networkTracesRealRailway = true
+        session.tapNetwork(at: taipei, reach: reach)
+        session.tapNetwork(at: banqiao, reach: reach)
+        let preview = try XCTUnwrap(session.networkPreview)
+        XCTAssertNotNil(preview.traced, "still traced")
+        XCTAssertEqual(preview.cost, cost, "the whole price, though the cash is short")
+        let problem = try XCTUnwrap(preview.problem)
+        let (required, _) = Money.shortfallTexts(required: cost, available: cost - Money(1))
+        XCTAssertTrue(problem.contains(required), problem)
+
+        let before = session.world
+        session.buildNetworkTrack()
+        XCTAssertEqual(session.message?.kind, .failure)
+        XCTAssertEqual(session.message?.text, problem, "refused in the preview's words")
+        XCTAssertEqual(session.world, before, "nothing of it laid")
+    }
+
     func testTheChainCodesAsItIs() throws {
         let (session, taipei, banqiao) = try taipei()
         session.tapNetwork(at: taipei, reach: reach)
@@ -159,6 +192,27 @@ final class RealRailwayTracingTests: XCTestCase {
         session.clearNetworkDraft()
         session.networkTracesRealRailway = false
         XCTAssertFalse(session.networkDragDraws(from: taipei, reach: reach))
+    }
+
+    /// Handoff §7.1 (PR526_626 §5, U7): the map reads the traced way at
+    /// every redraw, and each read ran a shortest path along the real
+    /// lines. It is worked out once for each pair of points.
+    func testTheTracedWayIsWorkedOutOnceForEachPairOfPoints() throws {
+        let (session, taipei, banqiao) = try taipei()
+        session.tapNetwork(at: taipei, reach: reach)
+        session.tapNetwork(at: banqiao, reach: reach)
+        let way = session.networkTracedWay
+        XCTAssertFalse(way.isEmpty)
+        XCTAssertEqual(session.networkTracedWay, way)
+        XCTAssertEqual(session.networkOverlay?.tracedWay ?? way, way)
+        XCTAssertEqual(session.tracedWaysWorkedOut, 1, "read three times, worked out once")
+
+        session.clearNetworkDraft()
+        session.tapNetwork(at: taipei, reach: reach)
+        let halfway = PlanPoint(x: (taipei.x + banqiao.x) / 2, y: (taipei.y + banqiao.y) / 2)
+        session.dragNetwork(from: taipei, to: halfway, reach: reach)
+        _ = session.networkTracedWay
+        XCTAssertEqual(session.tracedWaysWorkedOut, 2, "the finger is a new end")
     }
 
     func testTheTightestRadiusOfAnEdge() {

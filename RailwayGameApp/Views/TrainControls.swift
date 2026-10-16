@@ -205,7 +205,7 @@ struct TrainControls: View {
             }
 
             if train.position != nil {
-                Text(session.world.trainPathStatusText(of: train.id, in: language))
+                Text(session.trainPathStatusText(of: train.id))
                     .font(.footnote)
                     .foregroundStyle(Theme.textSecondary)
                     .monospacedDigit()

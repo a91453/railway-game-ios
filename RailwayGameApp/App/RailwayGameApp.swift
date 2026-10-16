@@ -369,3 +369,24 @@ extension DisplayLanguage {
         DisplayLanguage(localization: Bundle.main.preferredLocalizations.first ?? "en")
     }
 }
+
+extension LanguageChoice {
+    /// The start screen's language choice, from the app's own
+    /// `AppleLanguages` (decision 257). Read from the app's domain alone:
+    /// the device's languages and a launch argument's are not the player's
+    /// choice in the game.
+    static var saved: LanguageChoice {
+        let domain = Bundle.main.bundleIdentifier.flatMap { UserDefaults.standard.persistentDomain(forName: $0) }
+        return LanguageChoice(appleLanguages: domain?["AppleLanguages"] as? [String])
+    }
+
+    /// Keeps the choice in the app's `AppleLanguages`, which iOS reads at
+    /// the next launch (``DisplayLanguage/app`` then follows it).
+    func save() {
+        if let appleLanguages {
+            UserDefaults.standard.set(appleLanguages, forKey: "AppleLanguages")
+        } else {
+            UserDefaults.standard.removeObject(forKey: "AppleLanguages")
+        }
+    }
+}

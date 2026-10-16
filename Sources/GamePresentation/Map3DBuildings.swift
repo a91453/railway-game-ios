@@ -328,6 +328,9 @@ extension Map3DScene.Builder {
             let burner = (mainHall + frontHall) * 0.5 + floor
             mesh.addCylinder(base: burner, radius: 0.8, height: 1.2, sides: 8, top: Map3DColor.rgb(0x6B5A3E), side: Map3DColor.rgb(0x8C7449))
         }
+        // Decision 259: worshippers and visitors before the terrace.
+        let forecourt = base + forward * (terrace / 2 + 3) + Map3DPoint(0, 0.05, 0)
+        addTempleLife(from: forecourt + Map3DPoint(-terrace / 2, 0, 0), to: forecourt + Map3DPoint(terrace / 2, 0, 0))
         addShadow(centre: mainHall, forward: forward, length: hallLength + 2, width: hallWidth + 2, spread: 3, darkness: 0.3)
     }
 
