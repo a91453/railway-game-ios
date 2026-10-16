@@ -40,7 +40,7 @@ STOCK = {
         "name": "THSR N700ST cab car",
         "length": 24.4, "nose": 9.0,
         "shell": {"halfW": 1.45, "floor": 0.62, "roof": 3.75, "drop": 1.78, "lift": 0.1,
-                  "tuck": 0.34, "cap": 0.56, "wing": 0.05, "shoulder": 0.66},
+                  "tuck": 0.34, "cap": 0.56, "wing": 0.06, "shoulder": 0.64, "canopy": 0.24},
         "window": {"from": 0.555, "to": 0.780, "pitch": 1.0, "width": 0.50},
         "door": {"width": 0.85},
         "skirtTop": 0.28, "screen": True,
@@ -49,7 +49,7 @@ STOCK = {
         "name": "THSR N700ST intermediate car",
         "length": 24.4, "nose": 0.0,
         "shell": {"halfW": 1.45, "floor": 0.62, "roof": 3.75, "drop": 1.78, "lift": 0.1,
-                  "tuck": 0.34, "cap": 0.56, "wing": 0.05, "shoulder": 0.66},
+                  "tuck": 0.34, "cap": 0.56, "wing": 0.06, "shoulder": 0.64, "canopy": 0.24},
         "window": {"from": 0.555, "to": 0.780, "pitch": 1.0, "width": 0.50},
         "door": {"width": 0.85},
         "skirtTop": 0.28, "screen": False,
@@ -88,14 +88,20 @@ def ring(x, t, sh):
     how high the point sits within its own ring — which is what the livery is measured in."""
     half_w, top, bottom, cap, low, up = section(t, sh)
     cz, hz = (top + bottom) / 2, ((top - bottom) / 2) * cap
+    canopy = sh.get("canopy", 0.0)
     pts = []
     for k in range(RING):
         a = -math.pi / 2 + (2 * math.pi * k) / RING
         c, s = math.cos(a), math.sin(a)
         z = cz + math.copysign(abs(s) ** (low if s < 0 else up), s) * hz
-        f = (z - bottom) / (top - bottom)
-        wing = 1 + sh["wing"] * math.exp(-(((f - sh["shoulder"]) / 0.1) ** 2))
-        y = math.copysign(abs(c) ** low, c) * half_w * wing * cap
+        raw_f = (z - bottom) / max(0.01, top - bottom)
+        if t > 0 and s > 0 and (canopy > 0 or sh["wing"] > 0):
+            dome = canopy * math.sin(math.pi * min(1.0, t / 0.50)) * math.exp(-((c / 0.48) ** 2)) * s
+            cheek = sh["wing"] * 1.4 * 4 * t * (1 - t) * math.exp(-(((abs(c) - 0.76) / 0.20) ** 2)) * s
+            z = min(sh["roof"], z + (dome + cheek) * cap)
+        f = min(1.0, max(0.0, (z - bottom) / max(0.01, top - bottom)))
+        wing = 1 + sh["wing"] * math.exp(-(((raw_f - sh["shoulder"]) / 0.1) ** 2))
+        y = math.copysign(min(sh["halfW"], abs(c) ** low * half_w * wing * cap), c)
         pts.append((y, z, f))
     return pts
 
@@ -255,17 +261,16 @@ def furnish(spec, verts, faces, kind):
             for wy in (-1.06, 1.06):
                 add_cylinder(verts, faces, kind, wx, wy, 0.43, 0.43, 0.14, UNDER)
     add_box(verts, faces, kind, (body_from + body_to) / 2, 0, 0.42, body_to - body_from, 2.2, 0.45, UNDER)
-    # The air-conditioning run and its ducts. On a cab car they stop short of the nose: a box left on
-    # the crown is the first thing a head-on view meets, and the real roof there is smooth.
+    # Shinkansen roof: continuous high-voltage cable shrouds and a low-profile pantograph fairing,
+    # stopping clear of the cab nose.
     run_from = body_from + 0.6
     run_to = (half - nose - 1.0) if nose else body_to - 0.6
-    units = max(2, round((run_to - run_from) / 3.2))
-    for i in range(units):
-        x = run_from + (run_to - run_from) * (i + 0.5) / units
-        add_box(verts, faces, kind, x, 0, sh["roof"] + 0.08, 2.1, 1.9, 0.26, ROOF)
-    for y in (-0.95, 0.95):
+    for y in (-0.72, 0.72):
         add_box(verts, faces, kind, (run_from + run_to) / 2, y, sh["roof"] + 0.04,
-                run_to - run_from, 0.26, 0.14, ROOF)
+                run_to - run_from, 0.28, 0.16, ROOF)
+    panto_x = (run_from + 2.2) if nose else (run_from + run_to) / 2
+    add_box(verts, faces, kind, panto_x, 0, sh["roof"] + 0.07, 3.0, 1.62, 0.22, ROOF)
+    add_box(verts, faces, kind, panto_x, 0, sh["roof"] + 0.20, 1.8, 1.36, 0.08, UNDER)
 
 
 def make_object(spec, verts, faces, kind):
@@ -291,7 +296,7 @@ SWATCH = (1 - SIDE_Y0 / 2 / TEX_H)          # the plain swatches in the top 16 p
 SWATCH_U = {ROOF: 0.25, UNDER: 0.75}        # as plainUv is called in trains.js
 # The nose's own chart, laid out along the nose and across it: NOSE in trains.js, same numbers. A
 # windscreen painted at a height instead goes right round the ring and comes out as a visor.
-NOSE_X0, NOSE_X1, NOSE_Y0, NOSE_Y1, NOSE_ACROSS = 16, 1456, 264, 504, 3
+NOSE_X0, NOSE_X1, NOSE_Y0, NOSE_Y1, NOSE_ACROSS = 16, 1456, 264, 504, 4
 
 
 def written(u, v):

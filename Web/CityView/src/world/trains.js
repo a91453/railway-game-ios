@@ -43,7 +43,7 @@ const HSR_STOCK = {
   models: { cab: 'n700st-cab', car: 'n700st-car' },
   // 台灣高鐵 N700ST: 12 cars of 25 m (Hitachi: a set is about 300 m). Dimensions are the N700S's,
   // which is all any public source gives; the nose is shaped from the owner's photographs.
-  shell: { halfW: 1.45, floor: 0.62, roof: 3.75, drop: 1.78, lift: 0.1, tuck: 0.34, cap: 0.56, wing: 0.05, shoulder: 0.66 },
+  shell: { halfW: 1.45, floor: 0.62, roof: 3.75, drop: 1.78, lift: 0.1, tuck: 0.34, cap: 0.56, wing: 0.06, shoulder: 0.64, canopy: 0.24 },
   livery: {
     body: '#f6f6f4', skirt: '#8f959b', skirtTop: 0.28,
     bands: [{ from: 0.380, to: 0.500, colour: '#ea6a1e', dive: 0.20 },
@@ -56,9 +56,9 @@ const HSR_STOCK = {
     // and `narrow` how far it reaches across at each end. The canopy drawn at a height — what this
     // replaces — came out as a black visor right round the front.
     cab: { crease: 0.645, glass: '#161a20', canopyStops: 0.70,
-           screen: { from: 0.10, to: 0.34, wide: 0.52, narrow: 0.30, surround: '#eceded' },
+           screen: { from: 0.12, to: 0.40, wide: 0.46, narrow: 0.28, surround: '#2b3356' },
            canopy: [{ at: 0.9, length: 3.4, to: 0.73 }, { at: 2.2, length: 2.0, to: 0.84 }],
-           lamp: { at: 5.0, f: 0.50, width: 1.0, tall: 0.024, lens: 0.26, gap: 0.22, housing: '#49505a' } },
+           lamp: { at: 5.0, f: 0.52, width: 1.05, tall: 0.032, lens: 0.28, gap: 0.22, housing: '#3e4652' } },
   },
 };
 // 臺鐵 EMU3000 新自強號: 12 cars, cabs at both ends (the owner: 車頭 = 車尾). The dimensions are the
@@ -118,7 +118,7 @@ const uOf = (m, L, u0) => u0 + U0 + (m / L) * USPAN;   // m: metres from the car
 // superellipse, which keeps the top nearly flat, so three of the six rings either side of the
 // centre line sit in the outer fifth of the width. Measuring across in metres makes the chart a
 // view from above, which is what a windscreen can be drawn in.
-const NOSE = { x0: 16, x1: 1456, y0: 264, y1: 504, rings: 3 };
+const NOSE = { x0: 16, x1: 1456, y0: 264, y1: 504, rings: 4 };
 const noseUv = (along, across) => [(NOSE.x0 + along * (NOSE.x1 - NOSE.x0)) / TEX_W,
                                    1 - (NOSE.y0 + across * (NOSE.y1 - NOSE.y0)) / TEX_H];
 const noseAcross = (y, edge) => 0.5 - (0.5 * y) / edge;
@@ -240,13 +240,20 @@ function shellRing(z, t, shell) {
   // The section is fuller below the crease than above it, the way a body tucks in towards its roof,
   // and it widens by a little at the crease itself: that is the wing line running along the nose.
   const low = 2 / (8.5 - 5.6 * ease(t)), up = 2 / (4.6 - 2.3 * ease(t));
+  const canopy = shell.canopy ?? 0;
   const pts = [];
   for (let k = 0; k < RING; k++) {
     const a = -Math.PI / 2 + (2 * Math.PI * k) / RING, c = Math.cos(a), s = Math.sin(a);
-    const y = cy + Math.sign(s) * Math.abs(s) ** (s < 0 ? low : up) * hy;
-    const f = (y - bottom) / (top - bottom);
-    const wing = 1 + shell.wing * Math.exp(-(((f - shell.shoulder) / 0.1) ** 2));
-    pts.push([Math.sign(c) * Math.abs(c) ** low * halfW * wing * cap, y, f]);
+    let y = cy + Math.sign(s) * Math.abs(s) ** (s < 0 ? low : up) * hy;
+    const rawF = (y - bottom) / Math.max(0.01, top - bottom);
+    if (t > 0 && s > 0 && (canopy > 0 || shell.wing > 0)) {
+      const dome = canopy * Math.sin(Math.PI * Math.min(1, t / 0.50)) * Math.exp(-((c / 0.48) ** 2)) * s;
+      const cheek = (shell.wing ?? 0) * 1.4 * 4 * t * (1 - t) * Math.exp(-(((Math.abs(c) - 0.76) / 0.20) ** 2)) * s;
+      y = Math.min(shell.roof, y + (dome + cheek) * cap);
+    }
+    const f = (y - bottom) / Math.max(0.01, top - bottom);
+    const wing = 1 + shell.wing * Math.exp(-(((rawF - shell.shoulder) / 0.1) ** 2));
+    pts.push([Math.sign(c) * Math.min(shell.halfW, Math.abs(c) ** low * halfW * wing * cap), y, Math.min(1, Math.max(0, f))]);
   }
   return { z, pts };
 }
@@ -326,20 +333,33 @@ function shellGeometry(stock, cab) {
       parts.push(plainUv(wheel, 0.75));
     }
   }
-  // Roof: the air-conditioning run and the cable ducts beside it, over the body only.
-  const roof = sh.roof, runFrom = back + 0.6, runTo = forward - 0.6, units = Math.max(2, Math.round((runTo - runFrom) / 3.2));
-  for (let i = 0; i < units; i++) {
-    const z = runFrom + ((runTo - runFrom) * (i + 0.5)) / units;
-    parts.push(plainUv(new THREE.BoxGeometry(1.9, 0.26, 2.1).translate(0, roof + 0.08, z), 0.25));
+  // Roof: on the N700ST, continuous cable shrouds and a low-profile pantograph fairing stopping clear of
+  // the nose; on other lofted stock, the air-conditioning run and cable ducts.
+  const roof = sh.roof, runFrom = back + 0.6, runTo = nose ? half - nose - 1.0 : forward - 0.6;
+  if (stock === HSR_STOCK) {
+    for (const x of [-0.72, 0.72]) {
+      parts.push(plainUv(new THREE.BoxGeometry(0.28, 0.16, runTo - runFrom).translate(x, roof + 0.04, (runFrom + runTo) / 2), 0.25));
+    }
+    const pantoZ = nose ? runFrom + 2.2 : (runFrom + runTo) / 2;
+    parts.push(plainUv(new THREE.BoxGeometry(1.62, 0.22, 3.0).translate(0, roof + 0.07, pantoZ), 0.25));
+    parts.push(plainUv(new THREE.BoxGeometry(1.36, 0.08, 1.8).translate(0, roof + 0.20, pantoZ), 0.75));
+  } else {
+    const units = Math.max(2, Math.round((runTo - runFrom) / 3.2));
+    for (let i = 0; i < units; i++) {
+      const z = runFrom + ((runTo - runFrom) * (i + 0.5)) / units;
+      parts.push(plainUv(new THREE.BoxGeometry(1.9, 0.26, 2.1).translate(0, roof + 0.08, z), 0.25));
+    }
+    for (const x of [-0.95, 0.95]) parts.push(plainUv(new THREE.BoxGeometry(0.26, 0.14, runTo - runFrom).translate(x, roof + 0.04, (runFrom + runTo) / 2), 0.75));
   }
-  for (const x of [-0.95, 0.95]) parts.push(plainUv(new THREE.BoxGeometry(0.26, 0.14, runTo - runFrom).translate(x, roof + 0.04, (runFrom + runTo) / 2), 0.75));
   return mergeGeometries(parts);
 }
 
 // The windscreen, painted into the nose's own chart (NOSE). `along` runs from the cab roof (0) to
 // the tip (1) and `across` from one side of the chart's band to the other, so the glass can be the
 // shape it really is: wide where it meets the roof, narrowing forward, with its corners rounded.
-function windscreen(g, lv, ws, glass) {
+// The N700ST's wing-ridge headlamps also sit along the outer shoulders of this chart so they read
+// head-on as well as from the flank.
+function windscreen(g, e, lv, ws, lp) {
   const W = NOSE.x1 - NOSE.x0, H = NOSE.y1 - NOSE.y0, mid = NOSE.y0 + H / 2;
   g.fillStyle = lv.body; g.fillRect(NOSE.x0 - 12, NOSE.y0 - 12, W + 24, H + 24);
   const at = (a) => NOSE.x0 + a * W, side = (s) => mid + (s * H) / 2;
@@ -357,7 +377,7 @@ function windscreen(g, lv, ws, glass) {
     if (typeof fill === 'string') g.stroke();
     g.fill();
   };
-  panel(ws.surround, 0.018, 0.20, 34);          // the body the glass is set into
+  panel(ws.surround, 0.018, 0.16, 30);          // the body bezel the glass is set into
   // The glass takes the sky at the back and darkens where it turns down towards the tip. Painted
   // near-black instead it reads as a hole cut in the nose, not as glass.
   const sky = g.createLinearGradient(at(ws.from), 0, at(ws.to), 0);
@@ -368,6 +388,22 @@ function windscreen(g, lv, ws, glass) {
   g.lineTo(at(ws.to), side(ws.narrow)); g.lineTo(at(ws.from), side(ws.wide));
   g.closePath(); g.stroke();
   g.fillStyle = sky; g.fill();
+  if (lp) {
+    const lampAlong = 0.56;
+    for (const sign of [-1, 1]) {
+      const cy = side(sign * 0.83);
+      g.fillStyle = lp.housing;
+      g.beginPath(); g.ellipse(at(lampAlong), cy, 0.062 * W, 0.075 * H, 0, 0, Math.PI * 2); g.fill();
+      for (const da of [-0.023, 0.023]) {
+        g.fillStyle = '#fbf7ea';
+        g.beginPath(); g.ellipse(at(lampAlong + da), cy, 0.017 * W, 0.044 * H, 0, 0, Math.PI * 2); g.fill();
+        if (e) {
+          e.fillStyle = '#fff4de';
+          e.beginPath(); e.ellipse(at(lampAlong + da), cy, 0.017 * W, 0.044 * H, 0, 0, Math.PI * 2); e.fill();
+        }
+      }
+    }
+  }
 }
 
 // The livery of a lofted car, in the same picture as the other stock: the plain swatches in the top
@@ -452,21 +488,20 @@ function highSpeedTextures(stock) {
   carWindows(CAB, L - stock.nose); carWindows(MID, L);
   // the cab: the canopy where the nose starts to fall, and the lamps on its shoulders
   const oval = (c, x, y, w, h, colour) => { c.fillStyle = colour; c.beginPath(); c.ellipse(x, y, w / 2, h / 2, 0, 0, Math.PI * 2); c.fill(); };
-  const cab = lv.cab;
+  const cab = lv.cab, lp = cab.lamp;
   if (cab.crease) { g.fillStyle = 'rgba(0,0,0,0.1)'; g.fillRect(noseX, row(cab.crease), HALF - noseX, 3); }
   // The EMU3000 wears its whole nose as one dark mask, windscreen and all, white only along the
   // lower flanks; the N700ST has no mask, just a canopy, so this is absent there.
   if (cab.mask) band(noseX, HALF, cab.mask.from, 1, [cab.mask.dive, 0], cab.glass);
-  if (cab.screen) windscreen(g, lv, cab.screen, cab.glass);
+  if (cab.screen) windscreen(g, e, lv, cab.screen, lp);
   else {
     for (const c of cab.canopy) oval(g, noseX + c.at * perM, row(1), c.length * perM, (row(c.to) - row(1)) * 2, cab.glass);
     g.fillStyle = lv.body; g.fillRect(0, row(1), noseX, row(cab.canopyStops) - row(1));  // it stops where the body does
-  }
-  const lp = cab.lamp;
-  oval(g, noseX + lp.at * perM, row(lp.f), lp.width * perM, row(lp.f - lp.tall) - row(lp.f + lp.tall), lp.housing);
-  for (const k of [-lp.gap, lp.gap]) {
-    oval(g, noseX + (lp.at + k) * perM, row(lp.f), lp.lens * perM, row(lp.f - lp.tall * 0.55) - row(lp.f + lp.tall * 0.55), '#fbf7ea');
-    oval(e, noseX + (lp.at + k) * perM, row(lp.f), lp.lens * perM, row(lp.f - lp.tall * 0.55) - row(lp.f + lp.tall * 0.55), '#fff4de');
+    oval(g, noseX + lp.at * perM, row(lp.f), lp.width * perM, row(lp.f - lp.tall) - row(lp.f + lp.tall), lp.housing);
+    for (const k of [-lp.gap, lp.gap]) {
+      oval(g, noseX + (lp.at + k) * perM, row(lp.f), lp.lens * perM, row(lp.f - lp.tall * 0.55) - row(lp.f + lp.tall * 0.55), '#fbf7ea');
+      oval(e, noseX + (lp.at + k) * perM, row(lp.f), lp.lens * perM, row(lp.f - lp.tall * 0.55) - row(lp.f + lp.tall * 0.55), '#fff4de');
+    }
   }
   const tex = (c) => { const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; };
   return { map: tex(side), emissiveMap: tex(glow) };
