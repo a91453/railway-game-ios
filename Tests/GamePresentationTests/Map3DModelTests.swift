@@ -50,6 +50,16 @@ final class Map3DModelTests: XCTestCase {
         // Some vertices take the line's colour (alpha 0), some are glass.
         XCTAssertTrue(car.vertices.contains { $0.color >> 24 == 0 })
         XCTAssertTrue(car.vertices.contains { $0.color == Map3DTrainStyle.glass })
+        // On the N700ST cab, the line-coloured stripe and navy band sweep
+        // forward onto the nose, the shoulder headlamps glow, and the
+        // windscreen stops at the cockpit canopy rather than blackening the bill.
+        XCTAssertTrue(cab.vertices.contains { $0.x > 4 && $0.color >> 24 == 0 })
+        XCTAssertTrue(cab.vertices.contains { $0.x > 4 && $0.color == Map3DTrainStyle.navyLine })
+        XCTAssertTrue(cab.vertices.contains { $0.x > 4 && $0.glows })
+        XCTAssertFalse(cab.vertices.contains { $0.x > 6.5 && $0.color == Map3DTrainStyle.glass })
+        let noseCrown = cab.vertices.filter { $0.x > 7.5 && $0.x < 9.2 && abs($0.y) < 0.25 && $0.z > 1.5 }
+        XCTAssertFalse(noseCrown.isEmpty)
+        XCTAssertTrue(noseCrown.allSatisfy { $0.nz > 0 }, "the dropping nose crown faces upward, not inward")
     }
 
     func testTheModelsAreTheSameEveryTime() {
