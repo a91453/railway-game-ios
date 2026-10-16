@@ -95,6 +95,65 @@ final class TrainMotionTests: XCTestCase {
         XCTAssertLessThan(jumps, glides / 10, "it jumps only when it turns back")
     }
 
+    /// Six seconds a tick, a train comes to a call and sets off from it
+    /// within one tick: it glides on along its new path rather than jumping, and
+    /// jumps only where it turns back at the line's ends (decision 182,
+    /// later).
+    func testATrainGlidesOnThroughACallWithinATick() throws {
+        var world = try makeWorld(width: 65_536, height: 4_096, balance: 1_000_000, speed: .x60)
+        let track = TestLine(tiles: 61, row: 1)
+        try track.build(in: &world)
+        var stops: [StationID] = []
+        for x in stride(from: 1, through: 55, by: 6) {
+            stops.append(try track.buildStation(named: "S\(x)", beside: x, at: 0, in: &world))
+        }
+        let main = try world.createLine(named: "Main", stops: stops).id
+        try world.setLineServiceWindow(main, to: .allDay)
+        try world.setLineTrainsInService(main, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        let train = try world.purchaseTrain(named: "T1")
+        try world.placeTrain(train.id, at: track.at(1, facingEast: true))
+        try world.setTrainMovementRate(train.id, to: 1_024)
+        try world.assignTrain(train.id, to: main)
+
+        var motion = TrainMotion(world: world, time: 0)
+        var throughCalls = 0, jumps = 0
+        for tick in 1...600 {
+            let was = try XCTUnwrap(world.train(id: train.id))
+            try world.advance(ticks: 1)
+            motion = TrainMotion(world: world, previous: motion, time: Double(tick) / 10)
+            let now = try XCTUnwrap(world.train(id: train.id))
+            let run = try XCTUnwrap(motion.runs.first)
+            guard case .onEdge(let from, let a)? = was.position, case .onEdge(let to, let b)? = now.position, from != to || a != b else { continue }
+            let turned = from.edge == to.edge && from.direction != to.direction
+            if run.lag > 0, was.execution != now.execution { throughCalls += 1 }
+            if run.lag == 0, !turned { jumps += 1 }
+        }
+        XCTAssertGreaterThan(throughCalls, 5, "it glides on past its calls")
+        XCTAssertEqual(jumps, 0, "it jumps only where it turns back (\(throughCalls) glides through calls)")
+    }
+
+    /// The camera following a train looks at its head where its glide
+    /// draws it, frame by frame (decision 182, later).
+    func testTheFollowedHeadIsWhereItsGlideIs() throws {
+        var world = try makeWorld(width: 16_384, height: 4_096, balance: 1_000_000, speed: .x10)
+        let west = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 2_048))
+        let east = try world.buildTrackNode(at: WorldCoordinate(x: 15_360, y: 2_048))
+        let edge = try world.buildTrackEdge(from: west, to: east)
+        let train = try world.purchaseTrain(named: "T1").id
+        try world.placeTrain(train, at: .onEdge(TrackTraversal(edge: edge, direction: .forward), offset: 1_024))
+        try world.setTrainMovementRate(train, to: 6_000)
+        var motion = TrainMotion(world: world, time: 10)
+        try world.advance(ticks: 1)
+        motion = TrainMotion(world: world, previous: motion, time: 10.1)
+        let run = try XCTUnwrap(motion.runs.first)
+        XCTAssertGreaterThan(run.lag, 0)
+        for time in [10.1, 10.15, 10.2, 11] {
+            let head = try XCTUnwrap(motion.head(of: train, at: time))
+            XCTAssertEqual(head, try XCTUnwrap(run.head(at: motion.progress(at: time))).point)
+        }
+        XCTAssertNil(motion.head(of: TrainID(rawValue: 99), at: 10.2))
+    }
+
     /// A train of several cars draws its whole body behind its gliding
     /// head, along the track it was on.
     func testABodyFollowsItsHead() throws {
