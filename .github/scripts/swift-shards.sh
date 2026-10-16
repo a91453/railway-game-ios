@@ -271,9 +271,10 @@ set -euo pipefail
 # about 760 s locally where it took 401, TRADemoDayTests 185 where it took
 # 162 (CI runs these about as fast as a local debug build: 395 and 164 on
 # main's #684 run). Together they passed campaigns-16's 20 minutes (run
-# 38822987126), so TRADemoDayTests goes to campaigns-12, the shortest
-# shard (492 s on that run), and campaigns-16 keeps the high-speed day
-# alone (some 13 minutes of tests). HighSpeedDemoBatchTests, which checks
+# 38822987126). TRADemoDayTests went to campaigns-12 first: its job took
+# 18m11s of 20 (run 38825240720), so it goes to campaigns-8, the shortest
+# job on that run (9m07s); campaigns-16 keeps the high-speed day alone
+# (its job 16m59s). HighSpeedDemoBatchTests, which checks
 # that, opens the same demo as HighSpeedDemoTests, so it goes with it to
 # campaigns-11 (8m42s with it on run 38822987126).
 classes_of() {
@@ -285,11 +286,11 @@ classes_of() {
     campaigns-5) echo "SaveMutationSecondHalfTests ScheduledOvertakeTrackPropertyTests LineLossFixesTests" ;;
     campaigns-6) echo "ServiceRepeatingSecondHalfPropertyTests EconomyPropertyTests" ;;
     campaigns-7) echo "LinePatternPropertyTests NetworkServicePropertyTests" ;;
-    campaigns-8) echo "GoldenScenarioTests ScheduledOvertakeTrackMiddlePropertyTests TimetablePropertyTests ScreenshotSceneTests NewGameBalanceTests" ;;
+    campaigns-8) echo "GoldenScenarioTests ScheduledOvertakeTrackMiddlePropertyTests TimetablePropertyTests ScreenshotSceneTests NewGameBalanceTests TRADemoDayTests" ;;
     campaigns-9) echo "SaveMutationTests EconomySecondHalfPropertyTests" ;;
     campaigns-10) echo "PassengerPlanKeyTests ReservationShortcutTests NetworkPostcardTests StationCommerceCardTests LineLossDiagnosisTests" ;;
     campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests HighSpeedDemoTests TRADemoTests HighSpeedDemoBatchTests" ;;
-    campaigns-12) echo "TrafficControlPropertyTests ScheduledOvertakeTrackFinalPropertyTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests TRADemoDayTests" ;;
+    campaigns-12) echo "TrafficControlPropertyTests ScheduledOvertakeTrackFinalPropertyTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests" ;;
     campaigns-13) echo "BoardingPropertyTests TurnbackPropertyTests" ;;
     campaigns-14) echo "ServiceLinePropertyTests OnboardingTests CommandLogTests ScheduledTrafficTests TurnbackTests" ;;
     campaigns-15) echo "TrafficFollowingPropertyTests ScheduledOvertakeTrackLastPropertyTests NewGameSavePropertyTests RealWorldDemoTests" ;;
