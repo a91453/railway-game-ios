@@ -23,10 +23,17 @@ struct MapAttractionMarks: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             if (session.tool == .select) != isPassive, let sights = session.world.tourism?.attractions {
+                // Decision 249: a mark that would lie on a better-rated
+                // one waits until the map is brought closer.
+                let shown = SightMarks.shown(sights.compactMap { sight -> SightMarks.Mark? in
+                    let at = camera.screenPoint(of: sight.point)
+                    guard at.x > Double(insets.leading), at.x < viewport.width - Double(insets.trailing),
+                          at.y > Double(insets.top) + 40, at.y < viewport.height - Double(insets.bottom) else { return nil }
+                    return SightMarks.Mark(id: sight.id, stars: session.world.stars(of: sight), x: at.x, y: at.y)
+                })
                 ForEach(sights, id: \.id) { sight in
                     let at = camera.screenPoint(of: sight.point)
-                    if at.x > Double(insets.leading), at.x < viewport.width - Double(insets.trailing),
-                       at.y > Double(insets.top) + 40, at.y < viewport.height - Double(insets.bottom) {
+                    if shown.contains(sight.id) {
                         mark(sight)
                             .opacity(isPassive ? 0.5 : 1)
                             .allowsHitTesting(!isPassive)

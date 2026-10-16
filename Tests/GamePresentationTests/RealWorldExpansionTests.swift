@@ -150,8 +150,9 @@ final class RealWorldExpansionTests: XCTestCase {
         // The save holds the step, and loads.
         let saved = try JSONEncoder().encode(SavedGame(world: world))
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: saved).world, world)
-        // No land yet: a few hundred bytes, and the sights of Taiwan (decision 174) a few kilobytes.
-        XCTAssertLessThan(saved.count, 6_000, "no land yet: a few kilobytes at most")
+        // No land yet: a few hundred bytes, and the 214 sights of Taiwan (decisions 174 and
+        // 249) about 27 KB.
+        XCTAssertLessThan(saved.count, 32_000, "no land yet: the sights' few tens of kilobytes at most")
     }
 
     /// The first tile's land is all there when the game begins: exactly the
