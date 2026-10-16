@@ -75,7 +75,7 @@ struct ControlPanel: View {
                 }
             }
         case .toolsColumn:
-            VStack(spacing: 4) {
+            VStack(spacing: ToolColumnStyle.buttonSpacing) {
                 QuickEntries(session: session, vertical: true)
                 BuildEntry(session: session)
             }
@@ -111,7 +111,7 @@ extension View {
     /// Decision 226: a group of the screen's controls in its own glass
     /// (since 2026-10-15; at first a solid tile with an outline).
     func controlTile() -> some View {
-        padding(4)
+        padding(ToolColumnStyle.tilePadding)
             .glassBackground(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
@@ -132,20 +132,52 @@ struct TabLabel: View {
     let systemImage: String
     let title: String
     var isActive = false
+    @Environment(\.toolColumnStyle) private var column
 
     var body: some View {
-        VStack(spacing: 2) {
+        if column?.compact == true {
+            // 32 points and the style's 4 above and below: the buttons in
+            // the room a phone held sideways leaves (decision 123); the
+            // names stay the buttons' accessibility labels.
             Image(systemName: systemImage)
                 .font(.subheadline.weight(.semibold))
-            // Decision 106: caption, not caption2, so the name reads on glass.
-            Text(verbatim: title)
-                .font(.caption.weight(isActive ? .bold : .medium))
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
+                .frame(width: ToolColumnStyle.buttonWidth)
+                .frame(minHeight: 32)
+        } else {
+            VStack(spacing: 2) {
+                Image(systemName: systemImage)
+                    .font(.subheadline.weight(.semibold))
+                // Decision 106: caption, not caption2, so the name reads on glass.
+                Text(verbatim: title)
+                    .font(.caption.weight(isActive ? .bold : .medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            .padding(.horizontal, 4)
+            .frame(minWidth: 48, maxWidth: .infinity, minHeight: 40)
+            // In the column, one width whether chosen or not: a chosen
+            // button's bolder name made it wider (TestFlight, 2026-10-16).
+            .frame(width: column == nil ? nil : ToolColumnStyle.buttonWidth)
         }
-        .padding(.horizontal, 4)
-        .frame(minWidth: 48, maxWidth: .infinity, minHeight: 40)
     }
+}
+
+/// Decision 226, later (TestFlight, 2026-10-16): the buttons of a tools
+/// column (``ToolColumn``) are one size, chosen or not, labelled or, where
+/// the column has not the height, icons alone (`compact`), all of them
+/// together. `nil` outside a column: the dock's buttons are as wide as
+/// their names.
+struct ToolColumnStyle: Equatable {
+    var compact: Bool
+
+    static let buttonWidth = CGFloat(ToolColumn.buttonWidth)
+    static let tilePadding = CGFloat(ToolColumn.tilePadding)
+    static let buttonSpacing = CGFloat(ToolColumn.buttonSpacing)
+    static let width = CGFloat(ToolColumn.width)
+}
+
+extension EnvironmentValues {
+    @Entry var toolColumnStyle: ToolColumnStyle?
 }
 
 /// The lines and the company's figures, named beside the tools (decision
@@ -163,7 +195,7 @@ private struct QuickEntries: View {
         // In the column (decision 226) no frame of their own, the glass they
         // sit in is it; in the dock a thin frame, as on 61.1.
         if vertical {
-            VStack(spacing: 4) {
+            VStack(spacing: ToolColumnStyle.buttonSpacing) {
                 data
                 lines
             }
