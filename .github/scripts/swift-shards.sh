@@ -265,6 +265,18 @@ set -euo pipefail
 # 700 s), so it is a shard of its own, campaigns-16: one job more. What
 # stays of HighSpeedDemoTests in campaigns-11 is about 530 s locally,
 # some 415 on CI, as before.
+# Later (the #647–#684 review, decision 228 later): a minute moved in one
+# go now moves the trains second by second where a set may be held up, as
+# sixty one-second steps do (decision 37): HighSpeedDemoDayTests takes
+# about 760 s locally where it took 401, TRADemoDayTests 185 where it took
+# 162 (CI runs these about as fast as a local debug build: 395 and 164 on
+# main's #684 run). Together they passed campaigns-16's 20 minutes (run
+# 38822987126). TRADemoDayTests went to campaigns-12 first: its job took
+# 18m11s of 20 (run 38825240720), so it goes to campaigns-8, the shortest
+# job on that run (9m07s); campaigns-16 keeps the high-speed day alone
+# (its job 16m59s). HighSpeedDemoBatchTests, which checks
+# that, opens the same demo as HighSpeedDemoTests, so it goes with it to
+# campaigns-11 (8m42s with it on run 38822987126).
 classes_of() {
   case "$1" in
     campaigns-1) echo "ServiceRepeatingPropertyTests ScheduledTrafficPropertyTests WorldStateMachineTests" ;;
@@ -274,15 +286,15 @@ classes_of() {
     campaigns-5) echo "SaveMutationSecondHalfTests ScheduledOvertakeTrackPropertyTests LineLossFixesTests" ;;
     campaigns-6) echo "ServiceRepeatingSecondHalfPropertyTests EconomyPropertyTests" ;;
     campaigns-7) echo "LinePatternPropertyTests NetworkServicePropertyTests" ;;
-    campaigns-8) echo "GoldenScenarioTests ScheduledOvertakeTrackMiddlePropertyTests TimetablePropertyTests ScreenshotSceneTests NewGameBalanceTests" ;;
+    campaigns-8) echo "GoldenScenarioTests ScheduledOvertakeTrackMiddlePropertyTests TimetablePropertyTests ScreenshotSceneTests NewGameBalanceTests TRADemoDayTests" ;;
     campaigns-9) echo "SaveMutationTests EconomySecondHalfPropertyTests" ;;
     campaigns-10) echo "PassengerPlanKeyTests ReservationShortcutTests NetworkPostcardTests StationCommerceCardTests LineLossDiagnosisTests" ;;
-    campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests HighSpeedDemoTests TRADemoTests" ;;
+    campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests HighSpeedDemoTests TRADemoTests HighSpeedDemoBatchTests" ;;
     campaigns-12) echo "TrafficControlPropertyTests ScheduledOvertakeTrackFinalPropertyTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests" ;;
     campaigns-13) echo "BoardingPropertyTests TurnbackPropertyTests" ;;
     campaigns-14) echo "ServiceLinePropertyTests OnboardingTests CommandLogTests ScheduledTrafficTests TurnbackTests" ;;
     campaigns-15) echo "TrafficFollowingPropertyTests ScheduledOvertakeTrackLastPropertyTests NewGameSavePropertyTests RealWorldDemoTests" ;;
-    campaigns-16) echo "HighSpeedDemoDayTests TRADemoDayTests" ;;
+    campaigns-16) echo "HighSpeedDemoDayTests" ;;
     *) return 1 ;;
   esac
 }
@@ -350,7 +362,7 @@ selected_pattern() {
 # class to another part, never out of the selection.
 CLASS_WEIGHTS="BoardingPropertyTests:624 LineDispatchPropertyTests:602
   ServiceLinePropertyTests:487 SaveMutationSecondHalfTests:478
-  TrafficControlPropertyTests:475 HighSpeedDemoDayTests:520 HighSpeedDemoTests:415
+  TrafficControlPropertyTests:475 HighSpeedDemoDayTests:780 HighSpeedDemoBatchTests:55 HighSpeedDemoTests:415
   TrafficFollowingPropertyTests:434 PassengerPlanKeyTests:405
   LinePatternPropertyTests:401 ServicePropertyTests:398
   ServiceRepeatingSecondHalfPropertyTests:395

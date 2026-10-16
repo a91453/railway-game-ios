@@ -71,6 +71,22 @@ extension GameWorld {
         return index
     }
 
+    /// Decision 228 with decision 37: whether a train may be held up in
+    /// the `span` seconds the step is about to move the
+    /// trains in one go. Then how far it gets depends on where the others
+    /// are each second, so they move one second at a time. Whether it is
+    /// held then depends on how far the others have come, and how sure the
+    /// faster one is to catch it: so any train that a train would stop
+    /// short of anywhere along its way counts, not only one within the
+    /// span's reach. Without a line of real runs, or under traffic control,
+    /// never.
+    func spacingMayHold(within span: Int64) -> Bool {
+        guard span > 1 else { return false }
+        let index = spacingIndex()
+        guard !index.isEmpty else { return false }
+        return trains.contains { $0.position != nil && $0.movement.rate > 0 && heldUp($0, within: .max / 4, near: index) != nil }
+    }
+
     /// ``clearAhead(of:within:near:)``, and the train it stops short of.
     func heldUp(_ train: Train, within distance: Int64, near index: [TrackEdgeID: [TrainID]]? = nil) -> (clear: Int64, by: TrainID)? {
         guard !isTrafficControlEnabled, distance > 0, case .onEdge(let traversal, let offset)? = train.position,
