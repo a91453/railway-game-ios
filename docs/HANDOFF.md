@@ -153,11 +153,10 @@
 | --- | --- | --- | --- | :-: | --- |
 | 單線對頭永遠卡死 | session_0162V1LTnnJubXXTaNkZUKQx | `claude/single-line-deadlock-fix` | 兩條線共用單線、沒有待避處時，行車控制下兩列車對頭永遠卡死（`CORE_LOOP_2026-10-16.md` §1.2 的種子 1）。先寫會失敗的測試，再修根因。golden、SaveFixtures、ReplayFixtures 不動 | 是 | 決策 255。CI 名額向合併協調拿 |
 | 核心玩法：規則、配車、關卡 | session_01Q48iRY9H6EmeUL8NPyfiDW | #725 已合併（決策 258）；第 2 個 PR 待開 | 決策 254 §7 的第 1→2→4→5 個 PR。**合併方式（遊戲規劃 2026-10-16，作者同意「好」）**：第 2 個 PR：簡單規則下自動加待避線、自動配車，用決策 204 的 `PassingLoopPlan`；寫實規則下，#736 的提早折返（決策 255）發生時，路線卡說明「在 A 提早折返」，站長多一個「在這裡加待避線」按鈕（同一個 `PassingLoopPlan`）；不改 `Deadlock.swift`。第 4 個 PR：教學、關卡、「進階」只留一個狀態——解鎖狀態決定有沒有工具；教學的步驟引擎與 `TutorialCardPlacement` 變成第 1、2 關的引導，舊的教學入口收掉；「進階」只在已解鎖的工具裡替手機再收一層；自由模式與沙盒全部解鎖 | 否 | 第 2 個要等 #736 合併；第 6 個（關卡判定進 GameCore）先不做 |
-| 核心玩法：回饋 → 開發工具 | session_011Z9h1X1GcZZ3i1EKEEjDZj | #724（決策 256）；`claude/game-sim`，#740（決策 260） | 回饋第一批做完後接開發工具（NEXT_PRIORITIES §16）：`GameSim` → `Policy` → 文件數字檢查。**合併方式（遊戲規劃 2026-10-16，作者同意「好」）**：`Policy` 不另寫開局腳本，從 `BalanceReportTests`、`ChallengeReportTests`、`CoreLoopBaselineReportTests`、`RealWorldExpansionReportTests` 抽出來，四支改用它、數字一字不差；保留各自長處（經濟指標、三種玩法並列、規則組合比較、實景擴張），任何玩法 × 任何規則 × 任何地圖，同一種報告表格，`GameSim` 用名字跑；文件數字檢查先放進 `tools/golden-checks/` 或 `.github/scripts/` | 否（`GameSim` 加 executable target，CI 跑完整 tier） | 關卡的目標天數用 `Policy` 量 |
+| 核心玩法：回饋 → 開發工具 | session_011Z9h1X1GcZZ3i1EKEEjDZj | #724（決策 256）、#740（決策 260）已合併；`claude/scripted-play`（決策 261）開 PR；文件數字檢查在 `claude/doc-numbers`（本機，下一個 PR） | 回饋第一批做完後接開發工具（NEXT_PRIORITIES §16）：`GameSim` → `Policy` → 文件數字檢查。**合併方式（遊戲規劃 2026-10-16，作者同意「好」）**：`Policy` 不另寫開局腳本，從 `BalanceReportTests`、`ChallengeReportTests`、`CoreLoopBaselineReportTests`、`RealWorldExpansionReportTests` 抽出來，四支改用它、數字一字不差；保留各自長處（經濟指標、三種玩法並列、規則組合比較、實景擴張），任何玩法 × 任何規則 × 任何地圖，同一種報告表格，`GameSim` 用名字跑；文件數字檢查先放進 `tools/golden-checks/` 或 `.github/scripts/` | 否（`GameSim` 加 executable target，CI 跑完整 tier） | 關卡的目標天數用 `Policy` 量；`Policy` 合併後告訴 session_01Q48iRY9H6EmeUL8NPyfiDW 怎麼用（`swift run GameSim new-game … then play --policy …`、報告的 `PLAY_PRESET`／`PLAY_BY_MINUTE`） |
 | 3D 生活感 | session_01EPkWLr5a25LyJvCuvh1U3R | `claude/map3d-crowds-traffic`（決策 259） | 行人與機車 → 騎樓、雨遮、曬衣 → 廟埕與牌樓 → 主地圖拉近就傾斜 | 否 | 目標畫面與交接見第 4 節 |
 | 語言選單 | session_01UUcjVERB4CaVtdcbR3BWgJ | `claude/in-app-language`，#727（決策 257） | 開始畫面的「Language」改成 App 內選單（跟隨 iPhone／English／繁體中文）。裝置只設一種語言時，設定裡沒有語言列 | 否 | 作者原本說「先不要動」；2026-10-16 作者本人在那個 session 回「四方決定要不要繼續」，結論是繼續（派工 session 確認） |
 | 審查回報的清理 | session_01FUXNvfnNmoSMf58pgakpsF | 各項各自一個小 PR | `docs/archive/PR685_711_REVIEW_HANDOFF.md` 第四節，加前兩輪剩下的，共 19 項：逐項在 main 確認，小的現在修（先寫在 main 會失敗的測試），大的寫成「延後」清單 | 視項目 | 派工 session 開出 |
-| 開發工具 | session_011Z9h1X1GcZZ3i1EKEEjDZj | `claude/game-sim`（決策 260） | HANDOFF §7.4 的第 1、3、4 項，一次一個 PR：無頭模擬 `GameSim`（`HeadlessGame`）→ 腳本化試玩 `Policy` 與異常清單 → 文件數字一致性檢查 | 否 | 排在核心玩法第 4 個 PR（關卡）之前；`Policy` 做好後告訴 session_01Q48iRY9H6EmeUL8NPyfiDW 怎麼用 |
 
 ## 3. 作者說過的話、還在等作者的事、遊戲規劃代為決定的事
 
@@ -618,7 +617,7 @@
 
 | 項目 | 出處 |
 | --- | --- |
-| 無頭模擬入口 `GameSim`（指令：new-game、load、apply、advance、dump）——決策 260，`claude/game-sim` | GAME_AI_TOOLS §3.1、MOTION_3D_TOOLS §4 |
+| 無頭模擬入口 `GameSim`（指令：new-game、load、apply、advance、dump）——決策 260，#740 已合併 | GAME_AI_TOOLS §3.1、MOTION_3D_TOOLS §4 |
 | 3D 截圖時一起輸出每幀時間與 draw call 的 JSON | GAME_AI_TOOLS §3.2 |
 | 腳本化玩法框架（`Policy`）＋自動試玩，列出異常——決策 261，`claude/scripted-play` | GAME_AI_TOOLS §3.3、MOTION_3D_TOOLS §5 |
 | 文件數字一致性檢查：存檔版本、golden schema、golden 個數（OVERVIEW 現在是手動補的） | GAME_AI_TOOLS §3.4 |
