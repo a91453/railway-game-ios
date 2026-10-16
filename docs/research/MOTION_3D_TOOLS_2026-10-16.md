@@ -37,8 +37,8 @@
 **三句話**：
 
 - **動態設計那 15 個，大多是同一招**：把每一格寫成 `seek(t)` 的 HTML，用無頭瀏覽器截圖，再用 ffmpeg 接起來。官網的 `render.js` 已經在做這件事，所以它們能帶來的是**做法與品味的規則**，不是新的能力。最值得拿的是兩個不綁函式庫的 skill：LottieFiles 的動畫原則（可以用在 App 的 SwiftUI），以及 animate 的「先分鏡、自訂畫風、音樂用程式寫」。
-- **App Store 的預覽影片這些工具都做不了**：Apple 審核準則 2.3.4 規定預覽只能是 App 本身的螢幕錄影，最多加旁白與文字。錄影要在 macOS 模擬器或實機上做，Linux 容器做不到；但 `website-screenshots.yml` 已經在 GitHub Actions 的 macOS 上開模擬器截官網的圖，同一條路加上 `xcrun simctl io <裝置> recordVideo` 就能錄實機畫面（UNVERIFIED，沒有試）。這些工具適合官網影片、社群短片、TestFlight 的新功能短片，也可以替錄好的畫面加字卡。
-- **3D 生成模型做不出 App 要的模型**：它們輸出幾十萬面、帶 PBR 貼圖的網格，而 App 的渲染器是頂點色、一個材質、程式建模（決策 230 否決過「縮面重上色搬進來」）。地標（例如 101）照決策 230、235 的做法用程式組合比較好；AI 最多產生形體參考。官網的 GLB 已經有 Meshy。
+- **App Store 的預覽影片要用 App 的實際錄影**（2026-10-16 修正：原本寫「這些工具都做不了」太絕對）：Apple 審核準則 2.3.4 限制的是影片內容：只能是 App 本身的螢幕錄影，可以加旁白與文字或影片的覆蓋。它不限制製作工具。所以這些工具不能拿重建的假介面當預覽，但可以剪輯實際的錄影、加說明的覆蓋與旁白。錄影要在 macOS 模擬器或實機上做，Linux 容器做不到；但 `website-screenshots.yml` 已經在 GitHub Actions 的 macOS 上開模擬器截官網的圖，同一條路加上 `xcrun simctl io <裝置> recordVideo` 就能錄實機畫面（UNVERIFIED，沒有試）。這些工具適合官網影片、社群短片、TestFlight 的新功能短片，也可以替錄好的畫面加字卡。
+- **3D 生成模型的預設輸出不能直接接進 App，現在轉換也不划算**（2026-10-16 修正：原本寫「做不出 App 要的模型」太廣）：它們輸出幾十萬面、帶 PBR 貼圖的網格，而 App 的渲染器是頂點色、一個材質（決策 229、231），決策 230 也否決過「縮面重上色搬進來」的列車。這是現在的材質與畫風的限制，不是說地標永遠只能程式建模：目前像 101 這種重複量體用程式組合（決策 230、235）比較乾淨，生成模型先當形體參考；轉檔流程（第 3.3 節）做出來、量過之後再重新評估。官網的 GLB 已經有 Meshy。
 - **清單外更值得做的是處理已經有的模型**（2026-10-16 補，第 3.3 節）：glTF-Transform 與 meshoptimizer（都是 MIT）在這個容器就能把 GLB 解開、減面、烘成頂點色，接上決策 244 留下的「GLB 轉檔」。要作者同意 `tools/` 多兩個 npm 依賴。
 
 ## 1. 怎麼查的
@@ -82,8 +82,10 @@
 - **GSAP**：2025 年起由 Webflow 免費提供，但授權頁自相矛盾：
   - FAQ 寫「All of GSAP… can be used in commercial projects at no charge」；
   - 同一頁的白話摘要還寫「as long as end users are not charged a fee of any kind」（擷取文字第 88 行）；
-  - Webflow 可以「in its discretion」終止授權、隨時改條款；禁止用在和 Webflow 競爭的無程式碼動畫工具。
-  - 只用在官網或宣傳影片的風險低（App 本身不會帶 GSAP）。但 App 會開官網的 `/city/`，所以 GSAP 不要放進 `/city/`。
+  - 終止（第 V 節）和違反條款連動：「may terminate… if you fail to comply with any of these terms」。
+  - 改條款時，不接受新條款的人仍可以照舊條款用之前的版本：「you may continue using previous versions of GSAP Products under the applicable terms licensed to you prior to the effective date of the revised GSAP License」。
+  - 禁止用在和 Webflow 競爭的無程式碼動畫工具，我們不是。
+  - 2026-10-16 修正：原本寫「可以隨時收回，所以不要放進 `/city/`」理由不足。照現行條款，官網、`/city/`、宣傳影片都可以商用。現在不採用，是因為**沒有需求**（官網的 CSS 與 `render.js` 夠用），不是授權禁止。白話摘要那句和 FAQ 不一致，真的要用時再請作者確認一次。
   - gsap-skills 的 `README.md:33` 對 AI agent 寫「recommend GSAP」，裝了會讓之後的 session 偏向選它。
 - **HyperFrames**：本體 Apache-2.0，可以用。要注意：
   - 範本庫有些區塊附 GSAP；
@@ -115,7 +117,7 @@
   - 音樂用程式合成（`kit/score-head.js`），和決策 219 的方向一致；
   - 只要 Node、Playwright Chromium、ffmpeg，容器裡都有，不用 npm 套件（推論，沒有執行）。
 - **做法**：不把整個外掛搬進來。先拿它的「故事 → 分鏡 → 做 → 檢查」流程與新畫風的方法，改寫成官網 `Website/tools/trailer/` 旁邊的一個 skill，算繪仍用現有的 `render.js`。聲音照舊用遊戲自己的音檔（`mix_audio.py`）。
-- **用途**：官網的玩法說明、社群的直式短片、TestFlight 新功能的短片。**不是** App Store 的預覽影片（第 0 節）。App 裡的教學動畫照舊在 SwiftUI／Metal 做。
+- **用途**：官網的玩法說明、社群的直式短片、TestFlight 新功能的短片。它畫的是重建的畫面，不能當 App Store 的預覽影片（第 0 節）；預覽要用實際錄影，可以用它的流程加覆蓋。App 裡的教學動畫照舊在 SwiftUI／Metal 做。
 - **四個角度**：
   - 玩家：還沒下載的人能在一分鐘內看懂怎麼玩。
   - 開發：沿用已經有的 `render.js`，沒有新依賴。
@@ -168,7 +170,7 @@
   - 決策 230：作者看過「縮面、重上色就搬進來」的列車，否決了；
   - art-style §7：成品不能像從別的遊戲搬來的；參考庫的圖不上傳到會保留或拿去訓練的外部服務。
 - **建議**：
-  - 地標先照決策 230、235 用程式組合。例如台北 101 是 8 節重複的斗形量體，程式做比 AI 生成乾淨（AI 生成的建築邊角軟、面有雜訊）。
+  - 目前的地標先照決策 230、235 用程式組合。例如台北 101 是 8 節重複的斗形量體，程式做比 AI 生成乾淨（AI 生成的建築邊角軟、面有雜訊）。
   - AI 生成只拿來做形體參考或粗模。要做的話，**TripoSR**（程式與權重都是 MIT、預設就輸出頂點色、能用 CPU 跑，`run.py:52`、`run.py:97-99`）最合，可以在本機處理自己拍的照片，不用上傳。它要 torch 等幾 GB 的工具依賴，要作者同意。
   - 官網的 GLB 照舊用 Meshy。
   - 已經有的 GLB 要轉進 App，用第 3.3 節的 glTF-Transform 與 meshoptimizer。
@@ -256,13 +258,12 @@
 | 5 一次一個系統 | 「小而少的改動」、一個工作一個 PR | 已經做到 |
 | 6 **Opus 用自動駕駛試玩，先列出所有 bug 再修** | 一部分：`ChallengeReportTests`（沒有玩家、幾個種子、三種玩法）、`BalanceReportTests`、性質測試的 `WorldInvariants.violations(in:)`、`HighSpeedDemoDayTests`（一天裡的重疊、逆行、誤點）、`WebsiteTimelineTests`（跑一年） | **值得補**：見下 |
 
-**第 6 步缺的**：一個像玩家的自動駕駛，用幾種玩法跑完整局，**不讓測試失敗，而是寫出一份排過序的發現清單**，再交給修 bug 的 session。例如：
+**第 6 步缺的**：一個像玩家的自動駕駛，用幾種玩法跑完整局。它的發現分兩種（2026-10-16 修正：原本寫「全部不讓測試失敗、只列清單」，但虧錢不一定是 bug）：
 
-- 永遠上不了車的旅客；
-- 卡住或一直閒著的列車；
-- 每個月都虧錢的路線；
-- 錢用光；
-- 做不到、或第一天就達成的挑戰目標。
+| 種類 | 例子 | 怎麼處理 |
+| --- | --- | --- |
+| **確定的錯誤** | 死結（列車永遠互等、時間不再前進）、狀態損壞（`WorldInvariants.violations(in:)` 不是空的、存檔讀回來不一樣）、旅客的人數對不上 | **測試失敗**，和現在的性質測試一樣 |
+| **觀察** | 卡住很久或一直閒著的列車、永遠上不了車的旅客、每個月都虧錢的路線、錢用光、做不到或第一天就達成的挑戰目標 | 不讓測試失敗，寫進排過序的報告，交給修 bug 或調平衡的 session 判斷（economy-balance skill） |
 
 做法是 GAME_AI_TOOLS §3.3 的 `Policy` 加一段「異常」的輸出，經 §3.1 的 `advance` 與 `dump` 執行。全部放在測試與工具裡，不進 GameCore。
 
@@ -275,7 +276,7 @@
 | HyperFrames | 官網的影片工具要不要多一個 npm 依賴（要關遙測） | 先不要：`render.js` 夠用，等影片多到要字幕、多段組合時再說 |
 | motion（網頁動畫） | 官網要不要多一個放在自己檔案裡的函式庫 | 先不要：CSS 夠用 |
 | Remotion | 要不要用（作者與幫手合計超過 3 人就要買公司授權） | 不要：要多一個 React 專案，結果和現有流程一樣 |
-| GSAP | 要不要用在官網 | 不要：授權可以被收回或改寫；絕不放進 App 會開的 `/city/` |
+| GSAP | 要不要用在官網或 `/city/` | 現在不用：沒有需求（CSS 與 `render.js` 夠用）。授權照現行條款允許商用（第 2.2 節） |
 | TripoSR | 要不要在工具裡加 torch（CPU）做形體參考 | 等決策 244 的地標開工、程式建模做不出來時再說 |
 | Stable Fast 3D | 登記、「Powered by Stability AI」的標示、營收 100 萬美元的門檻 | 不要：TripoSR 授權更乾淨 |
 | TRELLIS.2 | 租 24 GB 以上的 GPU、自己寫頂點色匯出 | 不要：品質最好，但成本與 nvdiffrast 的授權都不划算 |
