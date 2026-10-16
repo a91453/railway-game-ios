@@ -221,7 +221,7 @@ struct ContentView: View {
             GoalsPanel(session: session, achievements: launcher.achievements)
                 .presentationDetents([.medium, .large])
         case .tourism:
-            TourismPanel(session: session)
+            TourismPanel(session: session, focus: screen.sightFocus)
                 .presentationDetents([.medium, .large])
         case .news:
             NewsLogView(session: session)
@@ -976,6 +976,10 @@ final class GameScreenState {
     }
 
     var panel: Panel?
+    /// Decision 250 (a player's report): the sight whose mark or bubble on
+    /// the map opened the sights panel, which scrolls to it; `nil` from the
+    /// menu.
+    var sightFocus: AttractionID?
     /// Decision 229, later: whether this game's 3D map is open, from the
     /// map's 3D button.
     var showsMap3D = false

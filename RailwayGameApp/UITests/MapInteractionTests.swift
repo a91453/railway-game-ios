@@ -1287,4 +1287,31 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(sidings.appears(within: 10), "The number of sidings")
         XCTAssertTrue(sidings.becomesHittable(within: 10))
     }
+
+    /// Decision 250 (a player's report): a sight tapped on the map opens the
+    /// sights panel at its row, not at the top. Full lane only (decision
+    /// 199): which row it opens at is `SightFocus` on Linux; this asks only
+    /// whether the row is there to reach.
+    func testASightTappedOnTheMapOpensItsRow() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 10))
+        app.bringStartButtonIntoView(newGame)
+        newGame.tap()
+        // A new blank map has three to five sights; the last one marked.
+        let marks = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'map.sight.'"))
+        XCTAssertTrue(marks.firstMatch.appears(within: 10), "No sight is marked on the map")
+        let mark = marks.element(boundBy: marks.count - 1)
+        let id = mark.identifier.replacingOccurrences(of: "map.sight.", with: "")
+        XCTAssertTrue(mark.becomesHittable(within: 10))
+        mark.tap()
+        XCTAssertTrue(app.buttons["tourism.done"].appears(within: 10), "The sights did not open")
+        let row = app.descendants(matching: .any)["tourism.row.\(id)"].firstMatch
+        XCTAssertTrue(row.appears(within: 10), "The sight's row is not in the panel")
+        XCTAssertTrue(row.becomesHittable(within: 10), "The panel did not open at the sight's row")
+    }
 }

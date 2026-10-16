@@ -40,3 +40,19 @@ public enum SightMarks {
         return Set(kept.map(\.id))
     }
 }
+
+/// The sight the sights panel opens on (ARCHITECTURE decision 250, a
+/// player's report): the one whose mark or bubble on the map was tapped.
+/// The panel scrolls to its row and marks it for a moment; opened from the
+/// menu it opens at the top, as before. View state only, never game state.
+public enum SightFocus {
+    /// How long the row stays marked, in seconds.
+    public static let highlightSeconds: Double = 2
+
+    /// The row of `rows` the panel scrolls to for `sight`: the sight's own
+    /// while the panel lists it, none for no sight (the menu) or one gone.
+    public static func row(for sight: AttractionID?, in rows: [AttractionRow]) -> AttractionID? {
+        guard let sight, rows.contains(where: { $0.id == sight }) else { return nil }
+        return sight
+    }
+}

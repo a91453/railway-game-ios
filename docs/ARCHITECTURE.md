@@ -9920,11 +9920,12 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 5. **空白地圖照面積**（`GameWorld.foundAttractions(seed:)`，GameCore）：每一格 `MapExpansion.tileLength`（16.384 km）見方各畫 3–5 個，候選點與隨機位置都限在那一格裡；邊緣不滿一格的照面積比例。**含世界中心的那一格用原本的抽籤鍵**（`tourism.count`、`tourism.pick.N`…），而且先畫，所以一般 16 km 空白地圖的景點位置、種類、星等和以前完全相同（本機比對種子 1–40 逐位元相同）；買地大地圖的中間格就是一般地圖的那幾個，其他格用 `tourism.<列>.<行>.` 開頭的鍵。景點彼此仍至少 3 km。
 6. **名字清單 3 → 16 個**（每種，前 3 個不變），抽到用過的就往後找第一個沒用過的，一種的 16 個都用完才重複。所以一般空白地圖的名字會和以前不同（清單變長，抽到的序號不同）；只影響新遊戲。
 7. **地圖上的景點標記避讓**（`SightMarks.shown`，GamePresentation；App 的 `MapAttractionMarks`）：拉遠時，會疊在一起的標記只留星等高的（同星等留編號小的），拉近就全部出現。全台灣 214 個、台北市區十幾個，拉遠時不會疊成一團。
+8. **點景點就跳到那一列**（作者回報，規劃 session 併進這個 PR）：以前點地圖上的景點星章只打開觀光面板、停在最上面。現在點星章（或「這個景點沒有車站」的提醒泡泡），面板打開就捲到那個景點那一列，背景亮 2 秒（`SightFocus.highlightSeconds`）；iPhone、iPad 一樣。從選單打開照舊停在最上面。要跳到哪一個是畫面狀態 `GameScreenState.sightFocus`（不是 `GameWorld`）；判斷「這一列還在不在面板裡」的是 GamePresentation 的 `SightFocus.row(for:in:)`（Linux 測試 `testTheSightsPanelOpensAtTheSightTapped`）。UI 測試 `MapInteractionTests.testASightTappedOnTheMapOpensItsRow` 放 full lane（決策 199：邏輯在 Linux，UI 測試只問那一列點得到）。
 
 **四方**：
-- 玩家：一般 16 km 實景地圖從「通常沒有景點」變成「通常 2–5 個」，蓋線時有觀光的目標；全台灣地圖每個縣市都有自己的景點；空白大地圖每一格都有景點、名字不重複。拉遠時標記不疊在一起。
+- 玩家：一般 16 km 實景地圖從「通常沒有景點」變成「通常 2–5 個」，蓋線時有觀光的目標；全台灣地圖每個縣市都有自己的景點；空白大地圖每一格都有景點、名字不重複。拉遠時標記不疊在一起。點地圖上的景點直接看到那個景點的那一列，景點多了不用在長清單裡找。
 - 開發：只加資料列和一個常數，規則（潛在人數、係數、名產店）一個都不動；空白一般地圖的抽籤鍵不變，golden、SaveFixtures、ReplayFixtures 都不動；GameCore 只動 `Tourism.swift` 一個檔。
-- 美術：沿用現有四種景點與星形標記，不畫新圖示；避讓讓地圖拉遠時乾淨。
+- 美術：沿用現有四種景點與星形標記，不畫新圖示；避讓讓地圖拉遠時乾淨；點選的那一列用主題的強調色淡淡亮一下，不加新元素。
 - 音樂：無。
 
 **沒選的**（PR 裡有三種的預覽）：

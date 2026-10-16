@@ -56,6 +56,9 @@ struct MapAttractionMarks: View {
         let open = session.world.attractionStation(of: sight.id) != nil
         let text = "\(sight.name(in: session.language)) \(session.world.starsText(of: sight))"
         return Button {
+            // Decision 250 (a player's report): the panel opens at this
+            // sight's row.
+            screen.sightFocus = sight.id
             screen.panel = .tourism
         } label: {
             HStack(spacing: 3) {

@@ -153,6 +153,20 @@ final class TourismSessionTests: XCTestCase {
         XCTAssertEqual(SightMarks.shown([]), [])
     }
 
+    /// Decision 250 (a player's report): the panel opened from a sight's
+    /// mark goes to that sight's row; from the menu, or for a sight gone,
+    /// to none.
+    func testTheSightsPanelOpensAtTheSightTapped() throws {
+        let world = GameWorld.newGame(eventSeed: 7)
+        let rows = world.attractionRows(in: .english)
+        let last = try XCTUnwrap(rows.last?.id)
+        XCTAssertEqual(SightFocus.row(for: last, in: rows), last)
+        XCTAssertEqual(SightFocus.row(for: rows[0].id, in: rows), rows[0].id)
+        XCTAssertNil(SightFocus.row(for: nil, in: rows), "from the menu: the top")
+        XCTAssertNil(SightFocus.row(for: AttractionID(rawValue: 999), in: rows), "a sight no longer listed")
+        XCTAssertGreaterThan(SightFocus.highlightSeconds, 0)
+    }
+
     func testARealWorldMapHasTaiwansSightsInItsBounds() throws {
         let jiufen = try XCTUnwrap(GeoAnchor(latitudeDegrees: 25.10873, longitudeDegrees: 121.84357))
         let world = GameWorld.newGame(anchor: jiufen, land: [])
