@@ -210,13 +210,16 @@ final class LessonUITests: XCTestCase {
         let before = stationPoints().count
         tap(app.buttons["lessonResult.keepPlaying"])
         XCTAssertTrue(element("lessonResult.title").disappears(within: 10))
+        // Keep Playing runs the clock the goal met paused, at the speed it
+        // ran at (decision 266, later; PR #785): Pause shows with no tap.
+        XCTAssertTrue(app.buttons["Pause"].becomesHittable(within: 10), "Keep Playing must run the game again")
+        // The lesson ran at 6000 times real time, and so does the game it
+        // goes on with: one look at the app then took 14 s, and the map's
+        // readout was not read twice within `stationPoints`' 10 s (main
+        // 98d1f15's full lane, run 39070554849). Pause before reading it.
+        pause()
         XCTAssertTrue(map.appears(within: 5))
         XCTAssertEqual(stationPoints().count, before, "Keep Playing must keep the railway")
-        // The goal-met event can leave the clock paused after the result
-        // closes. Keep Playing preserves this game; the player can resume it.
-        let resume = app.buttons["Resume"]
-        if resume.appears(within: 2) { tap(resume) }
-        XCTAssertTrue(app.buttons["Pause"].becomesHittable(within: 5), "The game can continue running")
         tap(app.buttons["dock.build"])
         XCTAssertTrue(app.buttons["tool.network"].becomesHittable(within: 5))
     }
