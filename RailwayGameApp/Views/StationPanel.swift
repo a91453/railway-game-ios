@@ -384,7 +384,8 @@ struct StationPanel: View {
     private func freightSection(_ station: Station) -> some View {
         let language = session.language
         let world = session.world
-        if world.hasFreight {
+        // Decision 271: in a lesson, from lesson 8.
+        if session.showsFreight {
             Section {
                 // Decision 156: the station's building materials.
                 if let materials = world.materialsText(at: station.id, in: language) {

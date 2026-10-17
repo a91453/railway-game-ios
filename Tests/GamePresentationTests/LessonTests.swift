@@ -13,12 +13,21 @@ final class LessonTests: XCTestCase {
     }
 
     func testTheLessonsAndWhatEachUnlocks() {
-        XCTAssertEqual(Lesson.all.map(\.number), [1, 2, 3])
-        XCTAssertEqual(Lesson.all.map(\.id), ["lesson.1", "lesson.2", "lesson.3"])
+        XCTAssertEqual(Lesson.all.map(\.number), Array(1...10))
+        XCTAssertEqual(Lesson.all.map(\.id), (1...10).map { "lesson.\($0)" })
         XCTAssertEqual(Lesson.all[0].tools, [])
         XCTAssertEqual(Lesson.all[1].tools, [])
         XCTAssertEqual(Lesson.all[2].tools, [.addTrain, .passingLoop])
-        XCTAssertEqual(Lesson.all.map { $0.challenge.title(in: .traditionalChinese) }, ["第一條線", "第三個城鎮", "多一列車"])
+        // Decision 271: one more each, in `UnlockableTool`'s order, and
+        // every tool by the last lesson.
+        XCTAssertEqual(Lesson.all.map(\.unlocks), [
+            [], [], [.addTrain, .passingLoop], [], [.doubleTrack], [.lineDetails], [.depot], [.freight], [.buildingTool], [.trainTool],
+        ])
+        XCTAssertEqual(Lesson.all.last?.tools, Set(UnlockableTool.allCases))
+        XCTAssertEqual(Lesson.all.map { $0.challenge.title(in: .traditionalChinese) }, [
+            "第一條線", "第三個城鎮", "多一列車", "兩條線", "雙線", "路線的細節", "機廠", "貨運", "觀光景點", "城市的委託",
+        ])
+        XCTAssertEqual(Set(Lesson.all.map { $0.teaches(in: .english) }).count, 10, "each teaches its own thing")
         for lesson in Lesson.all {
             XCTAssertNotNil(Challenge.named(lesson.id), "a save names it")
             XCTAssertFalse(lesson.teaches(in: .english).isEmpty)
@@ -39,6 +48,7 @@ final class LessonTests: XCTestCase {
         XCTAssertFalse(first.contains("line.staff"))
         XCTAssertEqual(Lesson.all[1].guide.map(\.id), ["lesson.extend", "line.card.open", "line.card.read", "station.select", "station.ridership"])
         XCTAssertEqual(Lesson.all[2].guide.map(\.id), ["lesson.addTrain"])
+        XCTAssertEqual(Lesson.all.dropFirst(3).map { $0.guide.map(\.id) }, (4...10).map { ["lesson.\($0)"] })
 
         let world = GameWorld.newGame(lesson: Lesson.all[0])
         XCTAssertEqual(Tutorial.steps(over: world).map(\.id), first)
@@ -64,6 +74,52 @@ final class LessonTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(world.lines.first?.stops.count ?? 0, 2, "its two stations, and the passing loop a long line opens with (decision 264)")
         XCTAssertFalse(world.trains.isEmpty)
         XCTAssertNil(world.scenario?.outcome)
+    }
+
+    /// Decision 271: lessons 5 to 10 begin with lesson 4's line to the
+    /// third town too, and what a lesson turns on stays on after it: the
+    /// sight from lesson 9, the city's requests in lesson 10. Freight, on
+    /// in every new game, is shown from lesson 8.
+    func testTheLaterLessonsGames() throws {
+        let fourth = GameWorld.newGame(lesson: Lesson.all[3])
+        XCTAssertEqual(fourth.lines.count, 1, "lesson 4 opens the second line itself")
+        XCTAssertFalse(GameSession(world: fourth).showsFreight)
+        let fifth = GameWorld.newGame(lesson: Lesson.all[4])
+        XCTAssertEqual(fifth.lines.count, 2)
+        XCTAssertGreaterThanOrEqual(fifth.trains.count, 2)
+        XCTAssertNil(fifth.tourism)
+        XCTAssertFalse(GameSession(world: .newGame(lesson: Lesson.all[6])).showsFreight)
+        XCTAssertTrue(GameSession(world: .newGame(lesson: Lesson.all[7])).showsFreight)
+        XCTAssertTrue(GameSession(world: .newGame()).showsFreight, "every other game")
+        let ninth = GameWorld.newGame(lesson: Lesson.all[8])
+        XCTAssertEqual(ninth.tourism?.attractions.map(\.point), [Lesson.sight(in: ninth.bounds)])
+        XCTAssertNil(ninth.cityRequests)
+        let tenth = GameWorld.newGame(lesson: Lesson.all[9])
+        XCTAssertNotNil(tenth.cityRequests)
+        for lesson in Lesson.all.dropFirst(3) {
+            let world = GameWorld.newGame(lesson: lesson)
+            XCTAssertNil(world.scenario?.outcome, "lesson \(lesson.number) is not won as it begins")
+            XCTAssertGreaterThan(world.economy.balance, .zero, "lesson \(lesson.number) begins with money to build")
+        }
+    }
+
+    /// Decision 271: double track only once lesson 5 has taught it.
+    func testDoubleTrackFromLessonFive() {
+        XCTAssertFalse(GameSession(world: .newGame(lesson: Lesson.all[3])).allows(UnlockableTool.doubleTrack))
+        XCTAssertTrue(GameSession(world: .newGame(lesson: Lesson.all[4])).allows(UnlockableTool.doubleTrack))
+        // The first line's track picked in each: Make Double Track is
+        // offered in lesson 5, not in lesson 4.
+        for (index, offered) in [(3, false), (4, true)] {
+            let session = GameSession(world: .newGame(lesson: Lesson.all[index]))
+            session.selectTool(.select)
+            let edge = session.world.network.edges.max { $0.length < $1.length }
+            let geometry = edge.flatMap { session.world.trackGeometry(of: $0.id) }
+            if let geometry {
+                session.tapMap(at: geometry.location(at: geometry.length / 3).position.plan, reach: 512)
+            }
+            XCTAssertNotNil(session.selectedTrackEdge, "lesson \(index + 1)")
+            XCTAssertEqual(session.canDoubleSelectedTrack, offered, "lesson \(index + 1)")
+        }
     }
 
     /// Decision 266: in a lesson only the tools unlocked up to it; in any
@@ -92,7 +148,7 @@ final class LessonTests: XCTestCase {
         let folder = directory()
         defer { try? FileManager.default.removeItem(at: folder) }
         let launcher = GameLauncher(library: SaveLibrary(directory: folder), language: .english)
-        XCTAssertEqual(Lesson.all.map(launcher.isOpen), [true, false, false])
+        XCTAssertEqual(Lesson.all.map(launcher.isOpen), [true] + Array(repeating: false, count: 9))
         XCTAssertTrue(launcher.showsFirstGameCard)
 
         launcher.startLesson(Lesson.all[0])
@@ -105,7 +161,7 @@ final class LessonTests: XCTestCase {
         world.scenario?.outcome = .completed(day: 2, rating: .silver)
         launcher.recordLessonResult(of: world)
         XCTAssertEqual(launcher.stars(of: Lesson.all[0]), 2)
-        XCTAssertEqual(Lesson.all.map(launcher.isOpen), [true, true, false])
+        XCTAssertEqual(Lesson.all.map(launcher.isOpen), [true, true] + Array(repeating: false, count: 8))
         XCTAssertFalse(launcher.showsFirstGameCard, "the tutorial is finished")
 
         world.scenario?.outcome = .completed(day: 3, rating: .bronze)
@@ -142,7 +198,7 @@ final class LessonTests: XCTestCase {
         XCTAssertEqual(failed.stars, 0)
         XCTAssertNil(failed.next)
         XCTAssertEqual(Lesson.stars(for: .silver), 2)
-        var last = GameWorld.newGame(lesson: Lesson.all[2])
+        var last = GameWorld.newGame(lesson: Lesson.all[9])
         last.scenario?.outcome = .completed(day: 2, rating: .gold)
         XCTAssertNil(LessonResult(world: last)?.next, "the last lesson")
     }
