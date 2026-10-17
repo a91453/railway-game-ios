@@ -497,8 +497,9 @@ public final class GameSession {
         didSet { noteTutorialStepToResume() }
     }
     /// Whether new lines wait for the player to buy their trains, under
-    /// simple rules too (decision 264): the tutorial's game, which teaches
-    /// it. Never saved.
+    /// simple rules too (decision 264): for tests that staff lines by hand.
+    /// Since decision 266 the tutorial (lesson 1's guide) no longer sets it.
+    /// Never saved.
     public internal(set) var staffsLinesByHand = false
     /// The tutorial the player skipped, kept to be taken up again at the
     /// same step from the game menu (``resumeTutorial()``; decision 188,

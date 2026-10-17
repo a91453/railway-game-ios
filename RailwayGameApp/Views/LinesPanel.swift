@@ -259,13 +259,17 @@ struct LinesPanel: View {
     private var showsAdvanced: Bool {
         AdvancedDetails.isShown(
             stored: storedShowsAdvanced,
-            roomy: horizontalSizeClass == .regular && verticalSizeClass == .regular
+            roomy: horizontalSizeClass == .regular && verticalSizeClass == .regular,
+            unlocked: session.allows(.lineDetails)
         )
     }
 
     /// The "Advanced" switch, under the lines where it is seen at once;
-    /// folded, what the network has set there in one line.
+    /// folded, what the network has set there in one line. Decision 266:
+    /// none in a lesson before the details are unlocked.
+    @ViewBuilder
     private var advancedSection: some View {
+        if session.allows(.lineDetails) {
         Section {
             Toggle(isOn: Binding(get: { showsAdvanced }, set: { storedShowsAdvanced = $0 })) {
                 Label {
@@ -285,6 +289,7 @@ struct LinesPanel: View {
                     .foregroundStyle(Theme.textSecondary)
                     .accessibilityIdentifier("lines.advanced.summary")
             }
+        }
         }
     }
 
@@ -1143,12 +1148,15 @@ struct LinesPanel: View {
         if !line.isRing {
             // Decision 264: trains that cannot pass on single track shared
             // with another line, and the one tap that mends it.
-            if let shortfall = session.selectedLinePassingShortfall {
+            // Decision 266: in a lesson, once passing loops are unlocked.
+            if session.allows(.passingLoop), let shortfall = session.selectedLinePassingShortfall {
                 passingShortfallSection(shortfall)
             }
             if line.trains.isEmpty {
                 staffSection(line)
-            } else {
+            } else if session.allows(.addTrain) {
+                // Decision 266: a lesson's lines run the train they open
+                // with until more trains are taught.
                 headwaySection(line)
             }
         }

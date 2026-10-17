@@ -82,7 +82,7 @@ extension Challenge {
     /// The challenge with `id`, as a save names its scenario: one of
     /// ``sandbox`` or ``history`` (decision 90), or a week's (decision 87).
     public static func named(_ id: String) -> Challenge? {
-        (sandbox + history).first { $0.id == id } ?? WeeklyChallenge.named(id)?.challenge
+        (sandbox + history + Lesson.all.map(\.challenge)).first { $0.id == id } ?? WeeklyChallenge.named(id)?.challenge
     }
 
     private static let year = FinancePeriod.year.days

@@ -28,7 +28,8 @@ struct NetworkControls: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Picker("Network mode", selection: Binding(get: { session.networkMode }, set: { session.setNetworkMode($0) })) {
-                ForEach(NetworkToolMode.allCases, id: \.self) { mode in
+                // Decision 266: in a lesson, only the modes it has unlocked.
+                ForEach(NetworkToolMode.allCases.filter { session.allows($0) }, id: \.self) { mode in
                     Text(mode.title(in: session.language)).tag(mode)
                 }
             }

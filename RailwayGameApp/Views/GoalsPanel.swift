@@ -531,3 +531,191 @@ struct ChallengePicker: View {
         .padding(.vertical, 4)
     }
 }
+
+/// The lessons (decision 266): one card each, in order, with the stars it
+/// was passed with; a lesson opens once the one before it is passed.
+struct LessonPicker: View {
+    let launcher: GameLauncher
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        let language = launcher.language
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(Lesson.all) { lesson in
+                        card(lesson, in: language)
+                    }
+                } footer: {
+                    Text(verbatim: language.text(
+                        "Each lesson teaches one thing in a short game. Pass one to open the next. Free play has every tool from the start.",
+                        "每一關用一場短短的遊戲教一件事，過關就開下一關。自由模式一開始就有全部的工具。"
+                    ))
+                }
+            }
+            .navigationTitle(Text(verbatim: language.text("Lessons", "入門")))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text(verbatim: language.text(
+                        "Lessons · ★ \(launcher.lessonStarTotal)/\(3 * Lesson.all.count)",
+                        "入門 · ★ \(launcher.lessonStarTotal)/\(3 * Lesson.all.count)"
+                    ))
+                    .font(.headline)
+                    .accessibilityIdentifier("lessons.title")
+                }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Text(verbatim: language.text("Cancel", "取消"))
+                    }
+                }
+            }
+        }
+    }
+
+    private func card(_ lesson: Lesson, in language: DisplayLanguage) -> some View {
+        let isOpen = launcher.isOpen(lesson)
+        let stars = launcher.stars(of: lesson)
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(verbatim: "\(lesson.number)")
+                    .font(.headline.monospacedDigit())
+                    .foregroundStyle(Theme.onPrimary)
+                    .frame(width: 28, height: 28)
+                    .background(isOpen ? Theme.primary : Theme.textSecondary, in: Circle())
+                Text(verbatim: lesson.challenge.title(in: language))
+                    .font(.headline)
+                    .foregroundStyle(Theme.textPrimary)
+                Spacer(minLength: 0)
+                LessonStars(count: stars)
+                    .accessibilityLabel(Text(verbatim: language.text("\(stars) of 3 stars", "3 顆星中的 \(stars) 顆")))
+            }
+            Text(verbatim: lesson.challenge.story(in: language))
+                .font(.footnote)
+                .foregroundStyle(Theme.textSecondary)
+            Label {
+                Text(verbatim: lesson.teaches(in: language))
+            } icon: {
+                Image(systemName: "graduationcap")
+            }
+            .font(.footnote)
+            .foregroundStyle(Theme.textPrimary)
+            ForEach(lesson.challenge.goalsText(in: language), id: \.self) { goal in
+                Label {
+                    Text(verbatim: goal)
+                } icon: {
+                    Image(systemName: "flag")
+                }
+                .font(.footnote)
+                .foregroundStyle(Theme.textPrimary)
+            }
+            Text(verbatim: lesson.starsText(in: language))
+                .font(.caption)
+                .foregroundStyle(Theme.textSecondary)
+            if isOpen {
+                Button {
+                    dismiss()
+                    launcher.startLesson(lesson)
+                } label: {
+                    Text(verbatim: stars > 0 ? language.text("Play Again", "再玩一次") : language.text("Start", "開始"))
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(ThemeProminentButtonStyle())
+                .accessibilityIdentifier("lesson.\(lesson.number).start")
+            } else {
+                Label {
+                    Text(verbatim: language.text("Pass lesson \(lesson.number - 1) to open it.", "先通過第 \(lesson.number - 1) 關。"))
+                } icon: {
+                    Image(systemName: "lock.fill")
+                }
+                .font(.footnote)
+                .foregroundStyle(Theme.textSecondary)
+            }
+        }
+        .padding(.vertical, 4)
+        .accessibilityIdentifier("lesson.\(lesson.number)")
+    }
+}
+
+/// Three stars, `count` of them filled (decision 266): SF Symbols, as the
+/// interface's icons are (decision 121).
+struct LessonStars: View {
+    let count: Int
+    var shown = 3
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(0..<3, id: \.self) { index in
+                Image(systemName: index < count && index < shown ? "star.fill" : "star")
+                    .foregroundStyle(index < count && index < shown ? Theme.accent : Theme.textSecondary)
+            }
+        }
+        .font(.subheadline)
+    }
+}
+
+/// How a lesson ended (decision 266): its stars, lit one after another
+/// (`MotionRule.pop`, 0.15 s apart, at once with Reduce Motion), and the
+/// next lesson, the same again, or the game played on.
+struct LessonResultCard: View {
+    let result: LessonResult
+    let language: DisplayLanguage
+    let next: () -> Void
+    let again: () -> Void
+    let keepPlaying: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var lit = 0
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Text(verbatim: result.title(in: language))
+                .font(.title2.weight(.bold))
+                .foregroundStyle(Theme.textPrimary)
+                .accessibilityIdentifier("lessonResult.title")
+            LessonStars(count: result.stars, shown: lit)
+                .font(.largeTitle)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Text(verbatim: language.text("\(result.stars) of 3 stars", "3 顆星中的 \(result.stars) 顆")))
+                .accessibilityIdentifier("lessonResult.stars")
+            Text(verbatim: result.detail(in: language))
+                .font(.subheadline)
+                .foregroundStyle(Theme.textSecondary)
+                .multilineTextAlignment(.center)
+            if result.next != nil {
+                Button(action: next) {
+                    Text(verbatim: language.text("Next Lesson", "下一關"))
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(ThemeProminentButtonStyle())
+                .accessibilityIdentifier("lessonResult.next")
+            }
+            Button(action: again) {
+                Text(verbatim: language.text("Play Again", "再玩一次"))
+                    .frame(maxWidth: .infinity, minHeight: 44)
+            }
+            .buttonStyle(.bordered)
+            .accessibilityIdentifier("lessonResult.again")
+            Button(action: keepPlaying) {
+                Text(verbatim: language.text("Keep Playing", "繼續玩"))
+                    .frame(maxWidth: .infinity, minHeight: 44)
+            }
+            .accessibilityIdentifier("lessonResult.keepPlaying")
+        }
+        .padding(24)
+        .frame(maxWidth: 360)
+        .task {
+            guard !reduceMotion else {
+                lit = result.stars
+                return
+            }
+            for star in 1...max(1, result.stars) where star <= result.stars {
+                try? await Task.sleep(for: .milliseconds(150))
+                withAnimation(MotionRule.pop.layout(reduceMotion: reduceMotion)) { lit = star }
+            }
+        }
+    }
+}

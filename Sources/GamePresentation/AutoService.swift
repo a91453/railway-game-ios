@@ -214,10 +214,10 @@ struct LineOpeningMemo {
 extension GameSession {
     /// Whether new lines and "Add a Train" run themselves (decision 264):
     /// in a managed game (a company's, as every new game is) of simple rules
-    /// (``NewGameRules``), outside the tutorial, which teaches buying a
-    /// line's trains by hand.
+    /// (``NewGameRules``). Decision 266: the lessons' guide too, whose lines
+    /// open with their trains as a new game's do.
     public var runsLinesForThePlayer: Bool {
-        tutorial == nil && !staffsLinesByHand && world.accounts.mode == .management && NewGameRules(of: world) == .simple
+        !staffsLinesByHand && world.accounts.mode == .management && NewGameRules(of: world) == .simple
     }
 
     /// The new line of ``createLineFromDraft()`` under simple rules, with
