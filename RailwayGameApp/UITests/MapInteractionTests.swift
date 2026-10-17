@@ -1338,4 +1338,30 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(row.appears(within: 10), "The sight's row is not in the panel")
         XCTAssertTrue(row.becomesHittable(within: 10), "The panel did not open at the sight's row")
     }
+
+    /// Decision 269: the map tilts as it comes closer. Pinched close, the
+    /// 2D map hands over to the 3D map; pinched back out, the 3D map hands
+    /// it back. In the full lane's second job (the class is in
+    /// `FULL_LANE_SECOND_JOB`), not the pull request gate.
+    func testPinchingCloseOpensTheThreeDMapAndPinchingOutComesBack() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        app.openDemo("demo.simple")
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 10))
+        let close = app.buttons["map3D.close"]
+        // Two pinches: the first may only bring the demo near the line.
+        map.pinch(withScale: 6, velocity: 3)
+        if !close.appears(within: 5) { map.pinch(withScale: 6, velocity: 3) }
+        XCTAssertTrue(close.appears(within: 20), "A pinch close hands the 2D map over to the 3D map")
+        let view = app.descendants(matching: .any)["map3D.view"].firstMatch
+        XCTAssertTrue(view.appears(within: 10))
+        view.pinch(withScale: 0.1, velocity: -3)
+        if !close.disappears(within: 5) { view.pinch(withScale: 0.1, velocity: -3) }
+        XCTAssertTrue(close.disappears(within: 10), "A pinch out hands the 3D map back")
+        XCTAssertTrue(map.appears(within: 10))
+    }
 }

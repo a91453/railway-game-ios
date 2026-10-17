@@ -509,6 +509,21 @@ struct MapView: View {
                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                             screen.panel = .station
                         }
+                    }, onPinchCloser: { pinched in
+                        // Decision 269: the map tilts as it comes closer.
+                        // Near the line the 3D scene starts building; past
+                        // it, the 3D map takes over at once, where the 2D
+                        // map was and as close (not with a building tool
+                        // out, nor in the tutorial).
+                        guard Map3DHandoff.hands(building: session.tool != .select, tutorialRuns: session.tutorial != nil),
+                              !screen.showsMap3D else { return }
+                        let opens = Map3DHandoff.opensAt(viewportHeight: pinched.viewport.height)
+                        if pinched.referenceSize >= opens / 2 { Map3DSceneCache.shared.prepare(for: session) }
+                        guard pinched.referenceSize >= opens else { return }
+                        screen.map3DHandoff = Map3DHandoff.Plan(x: pinched.centerX, y: pinched.centerY, referenceSize: pinched.referenceSize)
+                        var cut = Transaction()
+                        cut.disablesAnimations = true
+                        withTransaction(cut) { screen.showsMap3D = true }
                     }) { location in
                         let point = projection.planPoint(at: location)
                         let reach = projection.worldDistance(NetworkBuilding.touchRadius)
@@ -868,6 +883,18 @@ struct MapView: View {
                 // cleared `_trackCenter` does.
                 followCamera.reset()
                 centerOnFollowedTrain(projection: projection)
+            }
+            // Decision 269: the 3D map handed back, pinched out: the 2D
+            // map where it looked, as close.
+            .onChange(of: screen.map2DReturn) { _, plan in
+                guard let plan else { return }
+                screen.map2DReturn = nil
+                if session.followedTrain != nil { session.stopFollowingTrain() }
+                let centred = projection.centered(atX: plan.x, y: plan.y)
+                camera = centred.zoomed(by: plan.referenceSize / centred.referenceSize,
+                                        around: ScreenPoint(x: centred.viewport.width / 2, y: centred.viewport.height / 2))
+                    .centered(atX: plan.x, y: plan.y)
+                session.mapDidMove()
             }
             // The corners' buttons and legend are measured after the first
             // layout: a camera that opened before then, and that nothing
@@ -1457,6 +1484,7 @@ struct MapView: View {
     /// as round as the overview map's button above it.
     private var map3DButton: some View {
         Button {
+            screen.map3DHandoff = nil
             screen.showsMap3D = true
         } label: {
             Image("Glyph3DMap")
@@ -2343,6 +2371,9 @@ private struct MapGestures: UIViewRepresentable {
     /// the touch stays a tap however long it is held.
     let holdsAt: (ScreenPoint) -> Bool
     let onHold: (ScreenPoint) -> Void
+    /// Decision 269: each step of a pinch that brings the map closer, with
+    /// the camera it left (after ``onCameraChange``).
+    let onPinchCloser: (PlanCamera) -> Void
     let onTap: (ScreenPoint) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -2534,6 +2565,7 @@ private struct MapGestures: UIViewRepresentable {
                 let anchor = ScreenPoint(x: pinchAnchor.x, y: pinchAnchor.y)
                 setCamera(start.zoomed(by: gesture.scale, around: anchor)
                     .panned(byX: point.x - pinchAnchor.x, y: point.y - pinchAnchor.y))
+                if gesture.scale > 1, let camera = latest { parent.onPinchCloser(camera) }
             }
             if gesture.state == .ended || gesture.state == .cancelled || gesture.state == .failed {
                 pinchStart = nil
