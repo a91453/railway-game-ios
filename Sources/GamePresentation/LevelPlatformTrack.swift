@@ -14,13 +14,21 @@ import GameCore
 // (`GameWorld.removeTrackEdge(_:)`), a node at each end of the stretch, the
 // edges built as one (`GameWorld.buildTrackEdges(_:)`); so the player pays
 // the new edges' price and GameCore refuses what it always refuses (a train
-// on the edge, another platform on it, an outer edge steeper than 40‰, too
-// little money). GameCore's split (`GameWorld.split`) is internal and splits
-// level edges only, so a curve is cut here by de Casteljau's rule; neither
-// reference has such a tool: native.
+// on the edge, an outer edge steeper than 40‰, too little money).
+// GameCore's split (`GameWorld.split`) is internal and splits level edges
+// only, so a curve is cut here by de Casteljau's rule; neither reference
+// has such a tool: native.
+//
+// TestFlight 70.1: the edge often has platforms on it already (a line laid
+// end to end, a station at each end, then one between), which GameCore
+// will not lay again (`trackEdgeHasPlatform`). They are taken off first
+// (`GameWorld.removeTrackPlatform`), the edge is cut at their ends too, each
+// laid level at the height it stood at, and they are put back on their
+// edges at their own stations, in the same edit.
 
 /// A stretch of an edge a platform would take, levelled: the edge laid again
-/// in up to three edges, the middle one level.
+/// in up to three edges, the middle one level, and one more level edge for
+/// each platform already on it.
 public struct PlatformLevelling: Hashable, Sendable {
     /// The edge as it is, and the stretch the platform would take, moved
     /// to an end of the edge where it came within a split's least piece of
@@ -28,17 +36,24 @@ public struct PlatformLevelling: Hashable, Sendable {
     let edge: TrackEdgeID
     let start: Int64
     let end: Int64
-    /// The edges to build in order: before the stretch (if it does not
-    /// start at the edge's start), the stretch, after it (if it does not
-    /// end at the edge's end).
+    /// The edges to build in order along the old one, cut at the ends of
+    /// the stretch and of every platform on it, but at its own ends.
     let legs: [Leg]
-    /// The new nodes at the stretch's ends; `nil` where it reaches an end
-    /// of the edge, whose node it uses.
-    let stretchStart: WorldCoordinate?
-    let stretchEnd: WorldCoordinate?
+    /// The new nodes between the legs, one fewer than the legs.
+    let nodes: [WorldCoordinate]
     let structure: TrackStructure
     /// Which of ``legs`` is the level one.
     let levelLeg: Int
+    /// The platforms on the edge as it is, taken off and put back, each on
+    /// a level leg of its own, the whole of it.
+    let kept: [KeptPlatform]
+
+    struct KeptPlatform: Hashable, Sendable {
+        let station: StationID
+        /// Where it starts on the old edge.
+        let start: Int64
+        let leg: Int
+    }
 
     struct Leg: Hashable, Sendable {
         let from: WorldCoordinate
@@ -57,6 +72,11 @@ enum PlatformLevellingProblem: Error {
     case wholeEdge
     /// A curve too short or too sharp to cut.
     case cannotCut
+    /// The stretch runs into a platform already on the edge.
+    case platformInTheWay
+    /// The stretch or a platform on the edge comes within a split's least
+    /// piece of another's end, too near to cut between.
+    case tooNearAPlatform
 
     func text(in language: DisplayLanguage) -> String {
         switch self {
@@ -71,6 +91,16 @@ enum PlatformLevellingProblem: Error {
             language.text(
                 "This curve cannot be cut there to level the platform's stretch: try a straighter place.",
                 "這段彎道無法在那裡切開整平：請換一個比較直的地方。"
+            )
+        case .platformInTheWay:
+            language.text(
+                "A platform already stands on part of this stretch: tap the track beside it.",
+                "這一段已經有月台了：請點選旁邊沒有月台的軌道。"
+            )
+        case .tooNearAPlatform:
+            language.text(
+                "This is too near the end of another platform to level the track between them: tap a little further from it.",
+                "這裡離另一座月台的端點太近，兩者之間的軌道無法整平：請點選離它遠一點的地方。"
             )
         }
     }
@@ -134,9 +164,11 @@ extension GameSession {
               let a = world.network.node(current.from)?.position, let b = world.network.node(current.to)?.position
         else { return .failure(.missing) }
         // Each new piece at least a split's least piece long: a stretch
-        // nearer an end than that moves to it, its length kept.
+        // nearer an end of the edge, or of a platform on it, than that moves
+        // to it, its length kept.
         let piece = GameWorld.minimumSplitPiece
         let length = end - start
+        let platforms = world.network.platforms(on: edge).sorted { $0.start < $1.start }
         var start = start, end = end
         if start < piece {
             start = 0
@@ -148,18 +180,41 @@ extension GameSession {
             if start < piece { start = 0 }
         }
         guard start > 0 || end < current.length else { return .failure(.wholeEdge) }
-        // The level: the track's height at the middle of the stretch, or
-        // the height of the edge's end it reaches.
-        let height = start == 0 ? a.z : end == current.length ? b.z : geometry.height(at: (start + end) / 2)
+        // Moved against a platform before it or after it, the nearer one.
+        if start > 0, let before = platforms.last(where: { $0.end <= start + piece / 2 }), start - before.end < piece {
+            start = before.end
+            end = min(current.length, start + length)
+        } else if end < current.length, let after = platforms.first(where: { $0.start >= end - piece / 2 }), after.start - end < piece {
+            end = after.start
+            start = max(0, end - length)
+        }
+        guard !platforms.contains(where: { start < $0.end && $0.start < end }) else { return .failure(.platformInTheWay) }
 
-        // The plan points of the cut, and each leg's curve.
+        // The height each cut stands at: a platform's the height it stands
+        // at now (it is level), the stretch's the edge's end it reaches, a
+        // platform it meets, or else the track's at its middle.
+        var heights: [Int64: Int64] = [0: a.z, current.length: b.z]
+        func require(_ height: Int64, at distance: Int64) -> Bool {
+            if let found = heights[distance] { return found == height }
+            heights[distance] = height
+            return true
+        }
+        for platform in platforms {
+            let height = geometry.height(at: platform.start)
+            guard require(height, at: platform.start), require(height, at: platform.end) else { return .failure(.cannotCut) }
+        }
+        let height = heights[start] ?? heights[end] ?? geometry.height(at: (start + end) / 2)
+        // Between two at different heights it cannot be level.
+        guard require(height, at: start), require(height, at: end) else { return .failure(.tooNearAPlatform) }
+        let cuts = heights.keys.sorted()
+        guard zip(cuts, cuts.dropFirst()).allSatisfy({ $1 - $0 >= piece }) else { return .failure(.tooNearAPlatform) }
+
+        // The plan points of the cuts, and each leg's curve.
+        let inner = cuts.dropFirst().dropLast()
         var plans: [(from: PlanPoint, to: PlanPoint, curve: TrackCurve)] = []
         switch current.curve {
         case .straight:
-            var points = [a.plan]
-            if start > 0 { points.append(geometry.location(at: start).position.plan) }
-            if end < current.length { points.append(geometry.location(at: end).position.plan) }
-            points.append(b.plan)
+            let points = [a.plan] + inner.map { geometry.location(at: $0).position.plan } + [b.plan]
             for index in 1..<points.count {
                 plans.append((points[index - 1], points[index], .straight))
             }
@@ -172,7 +227,7 @@ extension GameSession {
             var pieces: [[(Double, Double)]] = []
             var rest = [p0, q1, q2, p3]
             var done = 0.0
-            for (distance, cuts) in [(start, start > 0), (end, end < current.length)] where cuts {
+            for distance in inner {
                 let t = PlatformLevelling.parameter(p0, q1, q2, p3, at: distance, of: current.length)
                 let local = (t - done) / (1 - done)
                 guard local > 0, local < 1 else { return .failure(.cannotCut) }
@@ -186,11 +241,11 @@ extension GameSession {
                 plans.append((plan(piece[0]), plan(piece[3]), .cubic(plan(piece[1]), plan(piece[2]))))
             }
         }
-        let levelLeg = start > 0 ? 1 : 0
+        guard let levelLeg = cuts.firstIndex(of: start) else { return .failure(.cannotCut) }
         var legs: [PlatformLevelling.Leg] = []
         for (index, plan) in plans.enumerated() {
-            let fromZ = index == 0 ? a.z : height
-            let toZ = index == plans.count - 1 ? b.z : height
+            let fromZ = heights[cuts[index]] ?? a.z
+            let toZ = heights[cuts[index + 1]] ?? b.z
             let from = WorldCoordinate(x: plan.from.x, y: plan.from.y, z: fromZ)
             let to = WorldCoordinate(x: plan.to.x, y: plan.to.y, z: toZ)
             var profile = TrackProfile.uniform
@@ -206,19 +261,22 @@ extension GameSession {
             legs.append(PlatformLevelling.Leg(from: from, to: to, curve: plan.curve, profile: profile))
         }
         guard legs.allSatisfy({ $0.from.plan != $0.to.plan }) else { return .failure(.cannotCut) }
+        let kept = platforms.compactMap { platform in
+            cuts.firstIndex(of: platform.start).map { PlatformLevelling.KeptPlatform(station: platform.station, start: platform.start, leg: $0) }
+        }
         return .success(PlatformLevelling(
             edge: edge, start: start, end: end, legs: legs,
-            stretchStart: start > 0 ? legs[levelLeg].from : nil,
-            stretchEnd: end < current.length ? legs[levelLeg].to : nil,
+            nodes: legs.dropLast().map(\.to),
             // Track on the ground takes what the ground asks for once its
             // height changes (decision 124); one carried keeps its carrier.
             structure: current.structure == .surface ? .automatic : current.structure,
-            levelLeg: levelLeg
+            levelLeg: levelLeg, kept: kept
         ))
     }
 
-    /// Lays `levelling` in `world`: the old edge removed, the new nodes and
-    /// edges built as one. Returns the level edge. All or nothing in the
+    /// Lays `levelling` in `world`: the platforms on the old edge taken
+    /// off, the old edge removed, the new nodes and edges built as one, the
+    /// platforms put back. Returns the level edge. All or nothing in the
     /// caller's copy.
     func build(_ levelling: PlatformLevelling, in world: inout GameWorld) throws(GameError) -> TrackEdgeID {
         guard let old = world.network.edge(levelling.edge) else { throw .unknownTrackEdge(levelling.edge) }
@@ -226,30 +284,44 @@ extension GameSession {
         // the same.
         let fromExits = Set(world.network.node(old.from)?.end(of: old.id)?.exits ?? [])
         let toExits = Set(world.network.node(old.to)?.end(of: old.id)?.exits ?? [])
-        // A train whose way runs along it, or a line's chosen path along it,
-        // would lose it: refused as a split refuses them.
-        if let train = world.trains.first(where: { train in
+        // A train on it, or whose way runs along it, would lose it: refused
+        // as a split refuses it, a train standing on it said as such (70.1:
+        // a train waiting at a platform there has nothing to pass).
+        if world.trains.contains(where: { train in
             if case .onEdge(let traversal, _)? = train.position, traversal.edge == old.id { return true }
-            return train.trailEdges.contains(old.id) || train.movement.remainingEdges.contains(old.id)
+            return train.trailEdges.contains(old.id)
+        }) {
+            throw .trackEdgeInUse(old.id)
+        }
+        if let train = world.trains.first(where: { train in
+            train.movement.remainingEdges.contains(old.id)
                 || train.reservation.contains { if case .span(let span) = $0 { span.edge == old.id } else { false } }
         }) {
             throw .trackReserved(train.id)
         }
-        if let line = world.lines.first(where: { line in
-            ([line.routePreferences] + line.patterns.map(\.routePreferences)).joined().contains { route in
-                route.platform.edge == old.id || route.tracks.contains { $0.edge == old.id }
+        // The lines' chosen paths along it, laid again along the new edges
+        // once they are built (70.1; a split refuses them).
+        let chosen = world.lines.flatMap { line in
+            ([nil] + line.patterns.indices.map(Optional.some)).compactMap { pattern -> (LineID, Int?, [LineRoutePreference])? in
+                let routes = pattern.map { line.patterns[$0].routePreferences } ?? line.routePreferences
+                let touched = routes.contains { route in
+                    route.platform.edge == old.id || route.tracks.contains { $0.edge == old.id }
+                }
+                return touched ? (line.id, pattern, routes) : nil
             }
-        }) {
-            throw .trackEdgeInLineRoute(line.id)
         }
         // Decision 124: the ground under the new track read in first.
         let surveyed = levelling.legs.compactMap { TrackGeometry(from: $0.from, to: $0.to, curve: $0.curve, profile: $0.profile) }
             .flatMap(NetworkBuilding.surveyedPoints(of:))
         try world.readGround(under: levelling.legs.flatMap { [$0.from.plan, $0.to.plan] } + surveyed, from: heights)
+        for platform in levelling.kept {
+            try world.removeTrackPlatform(platform.station, on: old.id, from: platform.start)
+        }
         try world.removeTrackEdge(old.id)
         var nodes = [old.from]
-        if let start = levelling.stretchStart { nodes.append(try world.buildTrackNode(at: start)) }
-        if let end = levelling.stretchEnd { nodes.append(try world.buildTrackNode(at: end)) }
+        for node in levelling.nodes {
+            nodes.append(try world.buildTrackNode(at: node))
+        }
         nodes.append(old.to)
         let plans = levelling.legs.indices.map { index in
             TrackEdgePlan(
@@ -267,7 +339,61 @@ extension GameSession {
               exits(first, at: old.from) == fromExits, exits(last, at: old.to) == toExits,
               edges.indices.dropFirst().allSatisfy({ exits(edges[$0], at: nodes[$0]) == [edges[$0 - 1]] })
         else { throw .invalidTrackGeometry }
+        for platform in levelling.kept {
+            let edge = edges[platform.leg]
+            try world.addTrackPlatform(platform.station, on: edge, from: 0, to: world.network.edge(edge)?.length ?? 0)
+        }
+        for (line, pattern, routes) in chosen {
+            guard let stops = world.lines.first(where: { $0.id == line })?.stops else { continue }
+            let moved = routes.map { Self.route($0, from: old.id, along: edges, kept: levelling.kept, stops: stops, in: world) }
+            try world.setLineRoutePreferences(line, to: moved, pattern: pattern)
+        }
         return edges[levelling.levelLeg]
+    }
+
+    /// `route` with old edge `old` laid again as `edges` (in order along
+    /// it): a walk along it runs along them all, its first from the leg of
+    /// the platform it leaves and its last to the leg of the platform it
+    /// ends at, and a kept platform is the one on its leg. A platform on
+    /// `old` that was not kept is left as it was, as GameCore leaves a
+    /// chosen path whose track is gone (the automatic path until it is
+    /// back).
+    static func route(
+        _ route: LineRoutePreference, from old: TrackEdgeID, along edges: [TrackEdgeID], kept: [PlatformLevelling.KeptPlatform],
+        stops: [StationID], in world: GameWorld
+    ) -> LineRoutePreference {
+        func leg(of station: StationID, start: Int64? = nil) -> Int? {
+            let found = kept.filter { $0.station == station && (start == nil || $0.start == start) }
+            return found.count == 1 ? found[0].leg : nil
+        }
+        var platform = route.platform
+        var arrival: Int?
+        if platform.edge == old {
+            guard let index = leg(of: platform.station, start: platform.start),
+                  let length = world.network.edge(edges[index])?.length else { return route }
+            platform = TrackPlatform(station: platform.station, edge: edges[index], start: 0, end: length)
+            arrival = index
+        }
+        let departure = stops.indices.contains(route.from) ? leg(of: stops[route.from]) : nil
+        var tracks: [TrackTraversal] = []
+        for (index, traversal) in route.tracks.enumerated() {
+            guard traversal.edge == old else {
+                tracks.append(traversal)
+                continue
+            }
+            var legs = Array(edges.indices)
+            if index == 0, let departure {
+                legs = traversal.direction == .forward ? Array(legs[departure...]) : Array(legs[...departure])
+            }
+            if index == route.tracks.count - 1, let arrival {
+                legs = legs.filter { traversal.direction == .forward ? $0 <= arrival : $0 >= arrival }
+            }
+            if traversal.direction == .backward { legs.reverse() }
+            tracks += legs.map { TrackTraversal(edge: edges[$0], direction: traversal.direction) }
+        }
+        // A walk that no longer ends on its platform: left as it was.
+        guard route.tracks.isEmpty || tracks.last?.edge == platform.edge else { return route }
+        return LineRoutePreference(from: route.from, to: route.to, tracks: tracks, platform: platform)
     }
 
     /// Where ``addNetworkPlatform()`` puts a new station on the stretch

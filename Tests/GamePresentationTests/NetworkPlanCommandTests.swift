@@ -134,4 +134,67 @@ final class NetworkPlanCommandTests: XCTestCase {
             if case .addPlatform(let addition) = command { addition.levelling != nil } else { false }
         }
     }
+
+    /// 70.1: the levelling of an edge with platforms on it keeps them in
+    /// the log, and replays to the same world.
+    func testALevellingThatKeepsPlatformsIsLoggedWithThem() throws {
+        var world = GameWorld(
+            bounds: try WorldBounds(width: 262_144, height: 262_144), economy: GameEconomy(balance: 100_000_000, costs: testCosts),
+            clock: GameClock(speed: .paused)
+        )
+        let side = GroundBlock.side
+        try world.setGround((0..<4).map { block in
+            let heights = (0..<side).flatMap { _ in (0..<side).map { Int16((block * (side - 1) + $0) / 15) } }
+            return GroundBlock(block: LandBlock(row: 0, column: block), heights: heights)!
+        })
+        let laying = GameSession(world: world)
+        laying.selectTool(.network)
+        laying.tapNetwork(at: PlanPoint(x: 1_024, y: 2_048), reach: 16)
+        laying.tapNetwork(at: PlanPoint(x: 193_024, y: 2_048), reach: 16)
+        laying.buildNetworkTrack()
+        XCTAssertEqual(laying.message?.kind, .success, laying.message?.text ?? "")
+        world = laying.world
+        let edge = try XCTUnwrap(world.network.edges.first)
+        let west = try world.buildStation(named: "West", at: PlanPoint(x: 3_584, y: 2_048)).id
+        try world.addTrackPlatform(west, on: edge.id, from: 0, to: 5_120)
+        let session = GameSession(world: world)
+        session.selectTool(.network)
+        session.setNetworkMode(.platform)
+        session.tapNetwork(at: PlanPoint(x: 97_024, y: 2_048), reach: 16)
+        session.addNetworkPlatform()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        try assertLoggedAndReplayed(session) { command in
+            if case .addPlatform(let addition) = command { addition.levelling?.kept.isEmpty == false } else { false }
+        }
+    }
+
+    /// A levelling logged before 70.1 names the stretch's ends, not the
+    /// nodes, and has no kept platforms: it still reads, the same.
+    func testALevellingLoggedBeforeKeptPlatformsReads() throws {
+        var world = GameWorld(
+            bounds: try WorldBounds(width: 262_144, height: 262_144), economy: GameEconomy(balance: 100_000_000, costs: testCosts),
+            clock: GameClock(speed: .paused)
+        )
+        let side = GroundBlock.side
+        let heights = (0..<side).flatMap { _ in (0..<side).map { Int16([10, 15][min($0, 1)]) } }
+        try world.setGround([GroundBlock(block: LandBlock(row: 0, column: 0), heights: heights)!])
+        let session = GameSession(world: world)
+        session.selectTool(.network)
+        session.tapNetwork(at: PlanPoint(x: 1_024, y: 2_048), reach: 16)
+        session.tapNetwork(at: PlanPoint(x: 17_408, y: 2_048), reach: 16)
+        session.buildNetworkTrack()
+        session.setNetworkMode(.platform)
+        session.tapNetwork(at: PlanPoint(x: 9_216, y: 2_048), reach: 16)
+        session.addNetworkPlatform()
+        guard case .command(.addPlatform(let addition))? = session.commandLog.entries.last?.action,
+              let levelling = addition.levelling else { return XCTFail("\(session.commandLog.entries)") }
+        XCTAssertEqual(levelling.nodes.count, 2)
+        var record = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(levelling)) as? [String: Any])
+        let nodes = try XCTUnwrap(record.removeValue(forKey: "nodes") as? [Any])
+        XCTAssertNil(record["kept"])
+        record["stretchStart"] = nodes[0]
+        record["stretchEnd"] = nodes[1]
+        let old = try JSONDecoder().decode(PlatformLevelling.self, from: JSONSerialization.data(withJSONObject: record))
+        XCTAssertEqual(old, levelling)
+    }
 }
