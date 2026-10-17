@@ -11060,6 +11060,11 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - Linux 測試 `AutoServiceTests.testAddATrainBuildsEveryLoopTheLineIsShortOf`：C–B 約 9.5 公里的單線上有兩列車、沒有交會處，加開第三列時一次蓋兩處。
 - 四方：玩家：按一次就夠，不會加了車卻卡在單線上；開發：只改 GamePresentation 的規劃，一個指令、一次 Undo；美術：無；音樂：無。
 
+**之後的修正**（2026-10-17，PR #755–#784 的審查延後的一項，`docs/archive/PR755_784_REVIEW_HANDOFF.md` 第四節）：一次蓋多處時，第二處以後的副本 `GameSession` 帶上這個 session 的高度、水域、人口、地點與建物覆蓋。
+- 原本副本沒有高度檔：在實景地圖上，前一處待避線的側線碰到還沒讀進來的地面區塊時，在副本上試蓋會因為讀不到地面（`groundNotLoaded`）而失敗，後面幾處就不規劃了，回到一次只蓋一處。
+- Linux 測試 `AutoServiceTests.testEveryLoopIsPlannedOnTheSessionsGround`：海峽上地面 0 公尺的 10 公里單線，緊貼區塊列的邊界（北側的側線落在沒讀過的那一列），三列車加開第四列時蓋三處；修正前只有兩處。
+- 四方：玩家：實景地圖上按一次「加開一列車」，該蓋的交會處都會蓋；開發：只改 GamePresentation，副本讀的地面和真的蓋的時候一樣；美術：無；音樂：無。
+
 ### 265. PR 的 gate 等同一個 commit 的 iOS App Build；full lane 不在每批合併後手動跑
 
 2026-10-16。作者：「不用凍結了 但也先不要開工我要做pr review 跟ci優化」；遊戲規劃 session_01V1xd3H9vNkuZoSA3czNfGm 派工給 CI 優化 session。號碼依工作登記 #231：決策 265；存檔版本、golden schema 不動。GameCore、App、測試都不動，存檔、golden、replay 也都不變。量測與其他方案見 `docs/research/CI_MEASURE_2026-10-16.md`。
@@ -11656,6 +11661,8 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 兩端的候車人數只數等這條線的人（`waitingPassengers(at:)` 裡 `line` 是它的）。原本數車站的全部候車，兩條線同一個起點時，每條線都說兩條線的總和，「一班車載不完」也是拿總和比這條線的一列車。
 - 座位圖一排最多 6 節（`SeatMap.carsPerRow`，約 240 點），多的換行。手機橫拿時列車卡片最寬 300 點，原本 7 節以上就撐出卡片（高鐵示範 12 節約 476 點）。
 - 四方：玩家：需求燈說的是這條線自己的乘客，長編組的座位圖看得完整。開發：只改 GamePresentation 的換算與 App 的排版，有 Linux 測試。美術：座位與車廂的樣子不變，只是換行。音樂：無。
+
+**之後的修正**（2026-10-17，PR #755–#784 的審查延後的一項）：兩端的需求燈改成對比路線上**最小**列車的定員，原本用第一列車。同一條線混用長短不同的列車時，下一班來的可能是短的那列；用第一列（長的）比，短車載不完的人潮也顯示「人少」。Linux 測試 `LineFeedbackTests.testAnEndsLightIsAgainstTheSmallestTrain`：8 節與 2 節各一列，修正前是「人少」，修正後是「一班車載不完」。四方：玩家：燈號照最壞的那班車說，不會低估排隊；開發：只改一行換算；美術：燈號樣子不變；音樂：無。
 
 ## 目前規則摘要
 

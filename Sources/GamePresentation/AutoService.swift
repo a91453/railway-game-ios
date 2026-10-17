@@ -497,8 +497,18 @@ extension GameSession {
         var scratch = world
         while plans.count < limit, let shortfall = scratch.passingPlaceShortfall(of: id, trains: wanted, readyFor: readyFor) {
             // The first on this session's track; the next on a copy with
-            // the loops before it built.
+            // the loops before it built, reading the same ground and land
+            // as this session: without the heights, a loop whose siding
+            // reached a block not read yet could not be tried there, and
+            // the loops after it were left out (#785's review).
             let planner = plans.isEmpty ? self : GameSession(world: scratch, language: language)
+            if planner !== self {
+                planner.population = population
+                planner.places = places
+                planner.water = water
+                planner.heights = heights
+                planner.coverage = coverage
+            }
             guard let plan = shortfall.legs.lazy.filter({ $0.distance >= shortestLeg }).compactMap({ planner.passingLoopPlan(along: $0.edges) }).first
             else { break }
             plans.append(plan)
