@@ -61,7 +61,14 @@ struct ContentView: View {
             // Decision 229, later: this game's 3D map, from the map's own
             // button (``Map3DShortcut``).
             .fullScreenCover(isPresented: $screen.showsMap3D) {
-                Map3DPreviewScreen(session: session, close: { screen.showsMap3D = false })
+                Map3DPreviewScreen(session: session, handedOver: screen.map3DHandoff, close: { screen.showsMap3D = false }, handBack: { plan in
+                    // Decision 269: back to the 2D map as it was handed
+                    // over, at once (the 2D map takes up `plan`).
+                    screen.map2DReturn = plan
+                    var cut = Transaction()
+                    cut.disablesAnimations = true
+                    withTransaction(cut) { screen.showsMap3D = false }
+                })
             }
             .environment(screen)
             .onAppear(perform: syncSecretarySettings)
@@ -988,6 +995,11 @@ final class GameScreenState {
     /// Decision 229, later: whether this game's 3D map is open, from the
     /// map's 3D button.
     var showsMap3D = false
+    /// Decision 269: the 2D map's view when a pinch handed it over to the
+    /// 3D map (`nil` when the 3D button opened it), and the 3D map's when
+    /// it handed it back, for the 2D map to take up.
+    var map3DHandoff: Map3DHandoff.Plan?
+    var map2DReturn: Map3DHandoff.Plan?
     /// Whether the station panel, as it opens, puts up its rename alert
     /// at once: the station tag's pencil (TestFlight 60.1, renaming took
     /// three taps before a letter could be typed).

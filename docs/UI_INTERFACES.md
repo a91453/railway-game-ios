@@ -177,6 +177,7 @@ CX-5 的覆蓋層這樣讀（示意）：
 - **相機是 view 的狀態**：地圖 view 用 `@State` 保存 `PlanCamera?`，在 `GeometryReader` 第一次拿到大小時建立，大小改變時 `resized(to:)`。不放進 `GameSession`，也不放進 GameCore。
 - **點選**：`session.tapMap(at: camera.planPoint(at: location), reach: camera.worldDistance(NetworkBuilding.touchRadius))`，路網工具用 `tapNetwork`，和現在一樣。
 - **縮放按鈕保留**（VoiceOver、沒辦法用兩指時），並保留 `.tutorialTarget(.zoomControls)`。
+- **拉近就傾斜**（決策 269，`Sources/GamePresentation/Map3DHandoff.swift`）：雙指拉近超過 `Map3DHandoff.opensAt(viewportHeight:)`（3D 相機站在 `Map3DCamera.flatFrom` 時的比例），2D 地圖交給 3D 地圖，同一個中心、同一個比例、正上方往下看；3D 拉遠超過 `Map3DHandoff.closesAt` 交回 2D。只有雙指會交接，縮放按鈕照舊只動 2D；拿著建造工具（`session.tool != .select`）或教學進行中（`session.tutorial != nil`）都不交接。交接與交回都呼叫 `session.mapDidMove()` 的同一套規則（交回時呼叫一次）。
 - **細節等級**：現在的 `MapDetail` 有 `overview` 與 `full` 兩級。需要更多級時，CX-4 可以改 `MapScale.swift` 的 `MapDetail`、`detail(forReferenceSize:)`（F3d 前叫 `detail(forTileSize:)`）與 `MapScaleTests`（只影響呈現，不影響模擬）。
 
 ## 5. 檔案歸屬與合併

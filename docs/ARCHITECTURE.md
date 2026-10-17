@@ -11274,6 +11274,64 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
   - `Map3DSurfaceTests` 原本斷言場景的頂點不是素色就有表面，現在也允許發光（燈籠）。這是這一步刻意的改變，不是 golden。
 - **UNVERIFIED**：畫面、幀數（TestFlight 實機）。
 
+### 269. 主地圖拉近就傾斜：雙指把 2D 地圖交給 3D，拉遠交回；傾斜曲線改成 150–200 m 約 34–40°
+
+2026-10-17。3D 生活感第 4 步，接在決策 268 之後。遊戲規劃 session 派工：主地圖拉近就變成傾斜的 3D（NEXT_PRIORITIES §0 第 14 項「同一張地圖拉近就傾斜」，HANDOFF §4.4）。開工前照遊戲規劃的要求讀了 `docs/UI_INTERFACES.md`，並問了核心玩法 session（#767，關卡）：它不改 `MapView.swift`，`ContentView.swift` 只動關卡結果那一段，引導裡唯一的縮放是拉遠，建議教學進行中不交接（照做）。
+
+號碼依工作登記 #231：決策 269（266 是關卡）。存檔版本、golden schema 不動；GameCore 不動。
+
+1. **傾斜曲線**（`Map3DCamera`）：
+   - 原本 2,400 m 以外平視、300 m 以內傾 55°。
+   - 現在 800 m 以外平視（`flatFrom`），120 m 以內傾 42°（`tiltedFrom`、`mostTilt`），之間照舊是距離對數上的 smoothstep。
+   - 150 m 約 40°、170 m 約 38°、200 m 約 34°，接近作者目標畫面的角度（HANDOFF §4.4：「150–200 m 時接近 35–40°」）。
+   - 800 m 平視是交接的條件：2D 地圖交過來時，3D 相機正上方往下看，畫面不會跳。
+2. **交接**（`Map3DHandoff`，GamePresentation，Linux 測試 `Map3DHandoffTests`）：
+   - 2D 的比例（每 16 m 幾點）和 3D 的距離互換：3D 相機往下看時，畫面高度看到的地面和 2D 一樣多（視角 35°）。
+   - 2D 雙指拉近到 `opensAt`（3D 站在 800 m 的比例；iPhone 直拿約每 16 m 27 點，2D 最近是 64 點）時，交給 3D：同一個中心、同一個比例。
+   - 3D 拉遠超過 `closesAt`（960 m，比交接遠兩成，停在線上不會來回跳）時交回 2D，2D 回到 3D 看的中心與相同的比例。
+   - **只有雙指交接**：縮放按鈕照舊只動 2D（VoiceOver、只用按鈕的玩家，與按縮放的 UI 測試都不變）；3D 按鈕照舊開 3D。
+   - **不交接**：拿著建造工具時（3D 只能看，鋪軌、蓋建物、劃區都在 2D），與教學進行中（引導的點擊在 2D 上）。
+3. **App**（`MapView.swift`、`ContentView.swift`、`Map3DPreviewScreen.swift`）：
+   - 2D 的雙指每次拉近時回報相機（`onPinchCloser`）；拉到門檻的一半就開始在背景蓋 3D 場景（`Map3DSceneCache`，世界不變就留著同一份），到門檻時開 3D。
+   - 交接與交回都是直接切換，不滑上來：兩邊在同一個比例、同一個方向往下看，切換本身就是轉場。沒有新的動畫，「減少動態效果」也是一樣（motion skill）。
+   - 3D 的提示在交接開的時候多一句「拉遠就回到平面地圖」。
+   - 場景快取：3D 每次打開原本都重蓋一次場景；現在同一個世界（軌道、月台、建物、每週的城市）只蓋一次。
+
+**量測**：GamePresentation 只多換算，沒有新的幾何；傾斜變小，同一個距離看到的遠處變少，畫的分塊不會變多。實機的交接順不順、場景快取的記憶體 **UNVERIFIED**（TestFlight）。
+
+**四方**（選「雙指交接、按鈕不交接、建造與教學不交接」）：
+- 玩家：看城市時拉近就自然變成傾斜的街景，拉遠就回到平面地圖；鋪軌、蓋東西的時候地圖不會突然變 3D。
+- 開發：換算與門檻都在 GamePresentation，有 Linux 測試；`PlanCamera` 的介面不動；App 只多一個回呼與一個快取；UI 測試照舊（按鈕不交接），新的交接 UI 測試在 full lane。
+- 美術：交接點是 3D 正上方往下看，和 2D 同一個比例，切換時不跳；150–200 m 的角度照目標畫面。
+- 音樂：無。
+
+**沒有選的做法**（預覽在 `docs/art/map3d-tilt-zoom-2026-10-17/`，上半是 main 的曲線）：
+- 縮放按鈕也交接：按一下就變 3D，VoiceOver 與只用按鈕的玩家不容易回到最近的 2D；按縮放的 UI 測試也要全部改。
+- 建造時也交接、在 3D 裡建造：3D 沒有點選與建造，要整套搬過去，是另一個階段的事。
+- 2D 與 3D 疊在同一個畫面、用透明度漸變：要同時畫兩份地圖，交接那一下的負擔加倍。
+- 舊曲線（300 m 以內 55°）：170 m 時比目標畫面斜得多，遠處的分塊一路排到畫面頂；交接時（約 800 m）已經傾約 30°，畫面會跳。
+
+**參考**：
+
+| 參考 | → 目標 |
+| --- | --- |
+| `docs/UI_INTERFACES.md` §4 的相機分工（MapLibre 的中心＋縮放，`PlanCamera`） | `Map3DHandoff.Plan`（中心＋比例），交接只讀 `PlanCamera` 的 `centerX`、`centerY`、`referenceSize`、`viewport` |
+| 參考庫 `Railway/railway_game_reference_clean/web_runtime/touch_pinch_zoom.js`（雙指縮放以兩指中點為準） | 交接時沿用 2D 雙指的相機（手指下的點不動）再換算 |
+| MapLibre 的 pitch（手動傾斜，決策 229 已記為缺口） | 傾斜仍跟著距離（本專案自己的曲線），參考沒有規則 |
+
+外部專案：沒有另外搜尋（比例換算是視角的三角函數）。程式碼是本專案自己的。
+
+**缺口**：
+- 2D 拉近到看得見建物的那一級，還沒有畫種子道路（決策 263）；下一個 PR。
+- 3D 裡沒有點選與建造，所以建造時不交接。
+- 交接後手指還在 2D 上，要放開再雙指才在 3D 裡繼續拉近。
+- 3D 的方向（兩指旋轉）交回 2D 時不保留，2D 永遠北朝上。
+
+**驗證**：
+- **VERIFIED**（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；所有 `Map3D*` 測試通過；`swiftc -parse` 檢查了改到的 App 檔。
+  - `Map3DTests` 原本斷言 200 m 已經傾到最大，改成 100 m，並加上 150–200 m 的角度範圍。這是這一步刻意的改變，不是 golden。
+- **UNVERIFIED**：App 的編譯與 UI 測試（macOS CI；新的 `MapInteractionTests/testPinchingCloseOpensTheThreeDMapAndPinchingOutComesBack` 在 full lane），實機的手感與記憶體（TestFlight）。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

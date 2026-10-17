@@ -23,10 +23,13 @@ public struct Map3DCamera: Hashable, Sendable {
     /// The view's height, as an angle (35°).
     public static let fieldOfView: Float = 35 * .pi / 180
     /// From this distance out the map looks straight down; at ``tiltedFrom``
-    /// and closer it leans ``mostTilt`` over.
-    public static let flatFrom: Float = 2_400
-    public static let tiltedFrom: Float = 300
-    public static let mostTilt: Float = 55 * .pi / 180
+    /// and closer it leans ``mostTilt`` over. Decision 269: flat as far in
+    /// as the 2D map's closer zooms (where a pinch hands the 2D map over,
+    /// ``Map3DHandoff``), 34–40° at 150–200 m (the owner's target picture,
+    /// HANDOFF §4.4), at most 42° (55° from 300 m in before).
+    public static let flatFrom: Float = 800
+    public static let tiltedFrom: Float = 120
+    public static let mostTilt: Float = 42 * .pi / 180
 
     public init(target: Map3DPoint = .zero, distance: Float = 1_200, heading: Float = 0, viewport: (width: Float, height: Float) = (390, 844)) {
         self.target = target
