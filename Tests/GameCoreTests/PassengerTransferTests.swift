@@ -285,6 +285,56 @@ final class PassengerTransferTests: XCTestCase {
         try assertConservedAndSaveable(world)
     }
 
+    /// Decision 275: the same track and platform taken out and laid again
+    /// in one edit, as levelling a platform's stretch does, keeps the queue
+    /// waiting for it.
+    func testTrackLaidAgainInOneEditKeepsThePlannedQueue() throws {
+        var world = try world()
+        let journey = try XCTUnwrap(PassengerJourney(origin: a, route: XCTUnwrap(world.passengerRoutes(from: a, to: c).first)))
+        world.passengers[0].release(5, along: journey, at: GameTime(minutes: -1))
+        let track = TestLine(tiles: 7)
+        try world.editTrackAsOne { (world: inout GameWorld) throws(GameError) in
+            try world.removeTrackPlatform(a, on: .edge(2), from: 0)
+            try world.removeTrackEdge(.edge(2))
+            let edge = try world.buildTrackEdge(from: track.node(1), to: track.node(2))
+            try world.addTrackPlatform(a, on: edge, from: 0, to: TestLine.tile / 2)
+        }
+        XCTAssertEqual(world.passengerLedger(of: a).abandoned, 0)
+        XCTAssertEqual(world.passengerLedger(of: a).waiting, 5)
+        try assertConservedAndSaveable(world)
+    }
+
+    /// One edit that leaves the track broken sends the queue away at its
+    /// end, as the commands one at a time do.
+    func testTrackLeftBrokenByOneEditAbandonsThePlannedQueue() throws {
+        var world = try world()
+        let journey = try XCTUnwrap(PassengerJourney(origin: a, route: XCTUnwrap(world.passengerRoutes(from: a, to: c).first)))
+        world.passengers[0].release(5, along: journey, at: GameTime(minutes: -1))
+        try world.editTrackAsOne { (world: inout GameWorld) throws(GameError) in
+            try world.removeTrackPlatform(a, on: .edge(2), from: 0)
+            try world.removeTrackEdge(.edge(2))
+        }
+        XCTAssertEqual(world.passengerLedger(of: a).abandoned, 5)
+        XCTAssertEqual(world.passengerLedger(of: a).waiting, 0)
+        try assertConservedAndSaveable(world)
+    }
+
+    /// An edit that fails part way changes nothing, the queue included.
+    func testAFailedEditMadeAsOneChangesNothing() throws {
+        var world = try world()
+        let journey = try XCTUnwrap(PassengerJourney(origin: a, route: XCTUnwrap(world.passengerRoutes(from: a, to: c).first)))
+        world.passengers[0].release(5, along: journey, at: GameTime(minutes: -1))
+        let before = world
+        XCTAssertThrowsError(try world.editTrackAsOne { (world: inout GameWorld) throws(GameError) in
+            try world.removeTrackPlatform(a, on: .edge(2), from: 0)
+            try world.removeTrackEdge(.edge(2))
+            try world.removeTrackEdge(.edge(99))
+        }) { XCTAssertEqual($0 as? GameError, .unknownTrackEdge(.edge(99))) }
+        XCTAssertEqual(world, before)
+        XCTAssertEqual(world.passengerLedger(of: a).waiting, 5)
+        XCTAssertEqual(world.network.edge(.edge(2))?.id, .edge(2))
+    }
+
     func testStoppingATrainAbandonsItsRidersOnTheOriginalLedger() throws {
         var world = try world()
         let journey = try XCTUnwrap(PassengerJourney(origin: a, route: XCTUnwrap(world.passengerRoutes(from: a, to: c).first)))

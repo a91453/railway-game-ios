@@ -240,6 +240,9 @@ public struct GameWorld: Equatable, Sendable {
     /// stations alone, kept between calls of ``advance(ticks:)`` while they
     /// stay the same; not game state (see ``RouteMemo``).
     var routeMemo = RouteMemo()
+    /// How many edits made as one (``editTrackAsOne(_:)``, decision 275)
+    /// are running: 0 between commands; not game state.
+    var trackEditDepth = 0
 
     /// The next ID to hand out to a station, a train or a line (see
     /// `allocateID(from:)`).
