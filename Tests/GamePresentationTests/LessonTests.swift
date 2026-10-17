@@ -247,6 +247,33 @@ final class LessonTests: XCTestCase {
         XCTAssertTrue(free.showsFreight)
     }
 
+    /// Lesson 1's guide ends on an action step, the first fares: done, it
+    /// does not move on by itself, so the guide waits for Finish (decision
+    /// 177) rather than ending before it can be tapped (the full lane on
+    /// main d530311).
+    func testTheFirstLessonsLastStepWaitsForFinish() throws {
+        // A line from the first town to the second, as the guide has it
+        // built, then time run until the fares come in.
+        var world = GameWorld.newGame(lesson: Lesson.all[0])
+        var opening = CurvedOpening(auto: true)
+        try opening.openFirstLine(&world, from: Lesson.towns(in: world.bounds)[0], to: Lesson.towns(in: world.bounds)[1])
+        let session = GameSession(world: world, language: .english)
+        session.startTutorial(atStep: "first.fare")
+        let last = try XCTUnwrap(session.tutorial?.steps.count) - 1
+        XCTAssertEqual(session.tutorial?.steps.last?.id, "first.fare")
+        XCTAssertEqual(session.tutorial?.index, last)
+        let end = session.world.clock.now.seconds + 2 * GameTime.secondsPerDay
+        while !session.isTutorialStepDone, session.world.clock.now.seconds < end {
+            session.advance(realElapsed: GameSession.maximumStepDuration)
+        }
+        XCTAssertTrue(session.isTutorialStepDone, "the fares came in")
+        XCTAssertFalse(session.tutorialAdvancesByItself, "the last step waits for Finish")
+        session.showNextTutorialStep(from: last)
+        XCTAssertEqual(session.tutorial?.index, last, "moving on by itself does nothing")
+        session.showNextTutorialStep()
+        XCTAssertNil(session.tutorial, "Finish ends it")
+    }
+
     func testTheResultCard() throws {
         var world = GameWorld.newGame(lesson: Lesson.all[0])
         XCTAssertNil(LessonResult(world: world), "not over yet")

@@ -11199,6 +11199,12 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
   - 第 1 關的建造工具列只有網路工具、網路工具沒有 Loop 與 Depot。
   - 第 3 關的路線卡有「加開一列車」，第 1 關沒有。
 
+**之後的修正**（2026-10-17，main d530311 的 full lane，ios-build.yml run 39020766185）：`TutorialJourneyUITests` 的手機與 iPad 都在第 15 步「等第一筆車資」失敗，原因是車資一進來，教學卡就不見了，「完成」按不到。
+- 根因：做完的動作步驟過一下會自己前進（`tutorialAdvancesByItself`，決策 188）。以前完整教學的最後一步是閱讀步驟（「教學結束」），所以從來沒有這種情形。第 1 關的引導最後一步是動作步驟，自己前進就等於結束教學，違反決策 177「只有『完成』能結束教學」。
+- 修正：最後一步不會自己前進（`!tutorial.isLastStep`），等玩家按「完成」。
+- Linux 測試：`LessonTests.testTheFirstLessonsLastStepWaitsForFinish`。不修的時候這個測試會失敗。
+- 四方：玩家：看得到第一筆車資和「完成」，教學不會突然消失；開發：一個條件，有測試；美術：無；音樂：無。
+
 ### 267. 3D 街景的騎樓、雨遮、曬衣、水塔，最近的一層細節；斜交與複線的平交道
 
 2026-10-17。3D 街景第 2 步的後半（第 2b 步），接在決策 263 之後。作者說「還開始」後，遊戲規劃 session 派工：騎樓貨物、低遮雨棚、樓上鐵皮雨遮、曬衣、水塔（HANDOFF 第 4.4 節），加上 #712–#754 審查延後的 3D 斜交平交道三件事與測試容差（`docs/archive/PR712_754_REVIEW_HANDOFF.md` 第四節）。
