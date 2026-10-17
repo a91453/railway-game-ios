@@ -141,7 +141,7 @@ final class LessonUITests: XCTestCase {
             XCTAssertTrue(element("station.operations").appears(within: 10), "The station panel must be open before looking for freight")
             if number == 8 {
                 let freight = app.buttons["station.freight.build"]
-                reveal(freight)
+                revealPastMenus(freight)
                 XCTAssertTrue(freight.becomesHittable(within: 5))
             } else {
                 assertAbsent(app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'station.freight.'")), through: app.buttons["station.remove"])
@@ -263,14 +263,20 @@ final class LessonUITests: XCTestCase {
         XCTAssertTrue(element("lessons.title").disappears(within: 5))
     }
 
-    /// Scrolls `list` until the middle of `control` shows in it, as
-    /// `scrollUntilShown` does, but dragging at the list's left edge, clear
-    /// of its rows (as `assertAbsent` does): a drag that starts on a row's
-    /// menu (a station's "Platform 1: add a platform track") opens the menu
-    /// instead of scrolling, and the station panel stayed at that row for
-    /// 40 drags, short of its Freight section (main abb306a's full lane,
-    /// run 39053855189).
     private func reveal(_ control: XCUIElement) {
+        XCTAssertTrue(app.scrollUntilShown(control, in: list), "Cannot scroll to \(control)")
+        control.waitUntilSettled()
+    }
+
+    /// Scrolls a panel's `list` until the middle of `control` shows in it,
+    /// as `scrollUntilShown` does, but dragging at the list's left edge,
+    /// clear of its rows (as `assertAbsent` does): a drag that starts on a
+    /// row's menu (a station's "Platform 1: add a platform track") opens
+    /// the menu instead of scrolling, and the station panel stayed at that
+    /// row for 40 drags, short of its Freight section (main abb306a's full
+    /// lane, run 39053855189). The lesson picker's sheet does not scroll
+    /// from its edge, so `reveal` keeps the middle there.
+    private func revealPastMenus(_ control: XCUIElement) {
         XCTAssertTrue(list.appears(within: 10), "Missing \(list)")
         let onScreen = list.frame.intersection(app.frame)
         let area = onScreen.isEmpty ? list.frame : onScreen
