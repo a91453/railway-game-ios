@@ -185,6 +185,68 @@ final class LessonTests: XCTestCase {
         XCTAssertEqual(launcher.session?.tutorial?.step.id, "build.network")
     }
 
+    /// Decision 266, later: a lesson's minutes, with the app in the
+    /// foreground only, the minutes it took to pass and the step its guide
+    /// was left on, for the problem report; nothing else.
+    func testTheLessonsTimingsForAProblemReport() throws {
+        let folder = directory()
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let launcher = GameLauncher(library: SaveLibrary(directory: folder), language: .english)
+        var clock = Date(timeIntervalSinceReferenceDate: 0)
+        launcher.now = { clock }
+        XCTAssertNil(launcher.lessonReport(in: .english), "no lesson played")
+        launcher.setActive(true)
+        defer { launcher.setActive(false) }
+        launcher.startLesson(Lesson.all[0])
+        clock += 4 * 60
+        launcher.setActive(false)
+        clock += 60 * 60
+        launcher.setActive(true)
+        clock += 2 * 60
+        var world = try XCTUnwrap(launcher.session).world
+        world.scenario?.outcome = .completed(day: 1, rating: .gold)
+        launcher.recordLessonResult(of: world)
+        clock += 3 * 60
+        XCTAssertEqual(
+            launcher.lessonReport(in: .english),
+            "1 ★3 9 min, passed after 6 min, left at step 1 of 15", "the hour in the background is not counted"
+        )
+        XCTAssertEqual(launcher.lessonReport(in: .traditionalChinese), "1 ★3 9 分，6 分 過關，停在第 1／15 步")
+
+        launcher.startLesson(Lesson.all[1])
+        launcher.startLesson(Lesson.all[1])
+        clock += 60
+        XCTAssertEqual(
+            launcher.lessonReport(in: .english),
+            "1 ★3 9 min, passed after 6 min, left at step 1 of 15; 2 ★0 1 min, left at step 1 of 5, started 2 times"
+        )
+        let report = ProblemReport(version: "1.0", build: "1", system: "iOS", device: "iPhone", lessons: launcher.lessonReport(in: .english))
+        XCTAssertTrue(report.text(in: .english).hasSuffix("Lessons: 1 ★3 9 min, passed after 6 min, left at step 1 of 15; 2 ★0 1 min, left at step 1 of 5, started 2 times"))
+        XCTAssertFalse(ProblemReport(version: "1.0", build: "1", system: "iOS", device: "iPhone").text(in: .english).contains("Lessons"))
+    }
+
+    /// Decision 266, later: the lessons' unlocks never reach another game;
+    /// once every lesson is passed, the list says so.
+    func testEveryLessonPassedAndFreePlayHasEverything() throws {
+        let folder = directory()
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let launcher = GameLauncher(library: SaveLibrary(directory: folder), language: .english)
+        XCTAssertFalse(launcher.passedEveryLesson)
+        for lesson in Lesson.all {
+            var world = GameWorld.newGame(lesson: lesson)
+            world.scenario?.outcome = .completed(day: 1, rating: .bronze)
+            launcher.recordLessonResult(of: world)
+        }
+        XCTAssertTrue(launcher.passedEveryLesson)
+        launcher.startLesson(Lesson.all[0])
+        XCTAssertFalse(try XCTUnwrap(launcher.session).allows(UnlockableTool.addTrain), "a lesson keeps to its own tools")
+        launcher.startNewGame()
+        let free = try XCTUnwrap(launcher.session)
+        XCTAssertNil(free.lesson)
+        XCTAssertTrue(UnlockableTool.allCases.allSatisfy { free.allows($0) })
+        XCTAssertTrue(free.showsFreight)
+    }
+
     func testTheResultCard() throws {
         var world = GameWorld.newGame(lesson: Lesson.all[0])
         XCTAssertNil(LessonResult(world: world), "not over yet")
