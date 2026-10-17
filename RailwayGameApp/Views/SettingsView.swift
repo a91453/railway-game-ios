@@ -15,6 +15,9 @@ struct SettingsView: View {
     /// (``GameSession/problemReportGame``), for a problem report; `nil`
     /// from the start screen.
     var game: String? = nil
+    /// Decision 266, later: the lessons played on this device, for a
+    /// problem report (``GameLauncher/lessonReport(in:)``).
+    var lessons: String? = nil
     /// The game the settings were opened from, for its own settings
     /// (decision 154: holidays and other events); `nil` from the start
     /// screen.
@@ -337,7 +340,7 @@ struct SettingsView: View {
     /// problem, through the share sheet to wherever the player chooses.
     private var aboutSection: some View {
         let language = DisplayLanguage.app
-        let report = ProblemReport.current(game: game)
+        let report = ProblemReport.current(game: game, lessons: lessons)
         return Section {
             Button {
                 showsHelp = true
@@ -360,7 +363,7 @@ struct SettingsView: View {
                 }
             }
             .accessibilityIdentifier("settings.version")
-            ProblemReportRows(game: game, session: session)
+            ProblemReportRows(game: game, session: session, lessons: lessons)
             Button {
                 showsWebsite = true
             } label: {
@@ -392,6 +395,8 @@ struct ProblemReportRows: View {
     /// the start screen.
     let game: String?
     let session: GameSession?
+    /// Decision 266, later: the lessons' timings (``GameLauncher/lessonReport(in:)``).
+    var lessons: String? = nil
     /// Decision 193: whether the game's save and commands go with a
     /// problem report: the player's choice, off until they turn it on.
     @State private var attachesCommandLog = false
@@ -402,14 +407,14 @@ struct ProblemReportRows: View {
     /// What the rows do, under them.
     static func footer(in language: DisplayLanguage) -> String {
         language.text(
-            "Report a Problem writes a note with the version, your device and, from a game, what is in it, for Mail, Messages or any app you choose. From a game you may also attach its save and what you did since, so the problem can be played again; you see what it holds before you send it. Nothing is sent until you send it. Testing in TestFlight? You can also take a screenshot and share it with the developer from there.",
-            "「回報問題」會寫好一則附上版本、裝置（在遊戲中開啟時還有遊戲的狀態）的訊息，由你選擇用郵件、訊息或其他 App 傳送。在遊戲中也可以選擇附上這局的存檔和之後做過的事，讓問題可以重現；傳送前會列出裡面有什麼。你按下傳送前不會送出任何東西。用 TestFlight 測試時，也可以截圖後直接分享給開發者。"
+            "Report a Problem writes a note with the version, your device, how long each lesson took and, from a game, what is in it, for Mail, Messages or any app you choose. From a game you may also attach its save and what you did since, so the problem can be played again; you see what it holds before you send it. Nothing is sent until you send it. Testing in TestFlight? You can also take a screenshot and share it with the developer from there.",
+            "「回報問題」會寫好一則附上版本、裝置、每一關花了多久（在遊戲中開啟時還有遊戲的狀態）的訊息，由你選擇用郵件、訊息或其他 App 傳送。在遊戲中也可以選擇附上這局的存檔和之後做過的事，讓問題可以重現；傳送前會列出裡面有什麼。你按下傳送前不會送出任何東西。用 TestFlight 測試時，也可以截圖後直接分享給開發者。"
         )
     }
 
     var body: some View {
         let language = DisplayLanguage.app
-        let report = ProblemReport.current(game: game)
+        let report = ProblemReport.current(game: game, lessons: lessons)
         if let session {
             Toggle(isOn: $attachesCommandLog) {
                 Label {
@@ -488,13 +493,14 @@ struct ProblemReportRows: View {
 extension ProblemReport {
     /// The note for this app, system and device, and the game it is
     /// written from.
-    @MainActor static func current(game: String?) -> ProblemReport {
+    @MainActor static func current(game: String?, lessons: String? = nil) -> ProblemReport {
         let info = Bundle.main.infoDictionary
         let version = info?["CFBundleShortVersionString"] as? String ?? "?"
         let build = info?["CFBundleVersion"] as? String ?? "?"
         let device = UIDevice.current
         return ProblemReport(
-            version: version, build: build, system: "\(device.systemName) \(device.systemVersion)", device: modelIdentifier, game: game
+            version: version, build: build, system: "\(device.systemName) \(device.systemVersion)", device: modelIdentifier, game: game,
+            lessons: lessons
         )
     }
 
@@ -515,6 +521,8 @@ extension ProblemReport {
 struct ProblemReportSheet: View {
     let game: String?
     let session: GameSession
+    /// Decision 266, later: the lessons' timings.
+    var lessons: String? = nil
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -523,7 +531,7 @@ struct ProblemReportSheet: View {
             List {
                 Section {
                     LabeledContent {
-                        Text(verbatim: ProblemReport.current(game: game).versionText)
+                        Text(verbatim: ProblemReport.current(game: game, lessons: lessons).versionText)
                             .textSelection(.enabled)
                     } label: {
                         Label {
@@ -532,7 +540,7 @@ struct ProblemReportSheet: View {
                             Image(systemName: "info.circle")
                         }
                     }
-                    ProblemReportRows(game: game, session: session)
+                    ProblemReportRows(game: game, session: session, lessons: lessons)
                 } footer: {
                     Text(verbatim: ProblemReportRows.footer(in: language))
                 }

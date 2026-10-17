@@ -19,13 +19,18 @@ public struct ProblemReport: Hashable, Sendable {
     /// What is in the game it was sent from (``GameSession/problemReportGame``),
     /// or `nil` from the start screen.
     public let game: String?
+    /// Decision 266, later: the lessons played on this device, their
+    /// minutes and where they were left (``GameLauncher/lessonReport(in:)``),
+    /// or `nil`.
+    public let lessons: String?
 
-    public init(version: String, build: String, system: String, device: String, game: String? = nil) {
+    public init(version: String, build: String, system: String, device: String, game: String? = nil, lessons: String? = nil) {
         self.version = version
         self.build = build
         self.system = system
         self.device = device
         self.game = game
+        self.lessons = lessons
     }
 
     /// "0.4.0 (12)": the version and, in brackets, the build.
@@ -56,6 +61,9 @@ public struct ProblemReport: Hashable, Sendable {
         ]
         if let game {
             lines.append(language.text("Game: \(game)", "遊戲：\(game)"))
+        }
+        if let lessons {
+            lines.append(language.text("Lessons: \(lessons)", "入門：\(lessons)"))
         }
         return lines.joined(separator: "\n")
     }
