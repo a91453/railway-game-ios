@@ -11043,7 +11043,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 **下一步**（也寫在 `docs/HANDOFF.md` 第 2 節）：
 - 教學那一局仍然手動配車，第 4 個 PR 把教學搬進第 1、2 關時，改成照新的開線流程。
-- 3 列以上的同一條線：每次加開只蓋一處，交會處不夠時，下一次加開才會再蓋。
+- ~~3 列以上的同一條線：每次加開只蓋一處~~：已改成一次蓋夠（見下面「之後的修正」，2026-10-17）。
 
 **之後的修正**（2026-10-17，`docs/archive/PR712_754_REVIEW_HANDOFF.md` 第四節第一列）：第 7 點被取下的列車，路線兩端都被占用、放不回去時，原本會留在軌道外、離開自己的路線，指令照樣算成功（`held` 還會被新車的數字蓋掉）。改成整個指令拒絕：`apply` 丟出 `.trackReserved`，指名那列車。GameCore、存檔版本、golden schema 都不動。
 - 「在這裡加待避線」與「加開一列車」本來就先試算、接住 `.trackReserved`，訊息說「等它開過去再按一次」。
@@ -11052,6 +11052,13 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 四方：玩家：不會再付了錢卻少一列車在跑，錯了也能再按一次；開發：一個指令全有或全無，不加新的結果欄位；美術：無；音樂：無。
 - 沒有採用：另外記 `stranded`，讓那列車暫時離線、訊息請玩家到車隊重新配車。缺點是「加開一列車」會變成付了錢、路線上的車反而少一列，玩家還得自己去車隊配回來。
 - 留下的事：手放的列車停在單線中間、兩端都有車時，三列車都不會動，所以「等它開過去」不會發生。這時玩家要先自己移開一列車。
+
+**之後的修正**（2026-10-17，決策 264「下一步」的第二件，決策 271 之後）：「加開一列車」時，路線少幾處交會的地方就一次蓋幾處，不再一次只蓋一處。
+- `passingLoopsNeeded(…limit:)`：第一處照舊在 session 自己的軌道上算；之後每一處都在已經蓋好前面那幾處的副本上重算（另開一個 `GameSession` 來算），所以下一處用的是切開之後的軌道。照順序蓋到真的世界時，軌道的編號和副本一樣（決定論）。
+- 「加開一列車」最多蓋路線現有列車數那麼多處（`n` 列車要 `n − 1` 處）。開新線照舊最多一處，價錢與預覽不變。
+- 訊息寫出蓋了幾處：「單線上加了 2 處待避線…」。
+- Linux 測試 `AutoServiceTests.testAddATrainBuildsEveryLoopTheLineIsShortOf`：C–B 約 9.5 公里的單線上有兩列車、沒有交會處，加開第三列時一次蓋兩處。
+- 四方：玩家：按一次就夠，不會加了車卻卡在單線上；開發：只改 GamePresentation 的規劃，一個指令、一次 Undo；美術：無；音樂：無。
 
 ### 265. PR 的 gate 等同一個 commit 的 iOS App Build；full lane 不在每批合併後手動跑
 
@@ -11185,7 +11192,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 **下一步**（也寫在 `docs/HANDOFF.md` 第 2 節）：
 - 第 5 個 PR：第 4–10 關，目標同樣用 `LessonTargetReportTests` 量。
 - 第 3 關要真的檢查第二列車：一條線上幾列車的 `Goal`（第 6 個 PR），或換一張一列車載不完的地圖。
-- 決策 264「下一步」剩下的一件：同一條線 3 列以上時，每次加開只蓋一處待避線。
+- 決策 264「下一步」剩下的一件：已在決策 264 的「之後的修正」（2026-10-17）做完。
 - 適合交給 Codex 的 UI 測試（只要 Simulator 能回答、邏輯已有 Linux 測試）：
   - 關卡清單：第 2、3 關鎖住、第 1 關的「開始」按得到（`lesson.N`、`lesson.N.start`）。
   - 結果卡：「下一關」、「再玩一次」、「繼續玩」按得到，減少動態效果時星星直接全亮（`lessonResult.*`）。
@@ -11406,6 +11413,18 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
   - `Map3DTests` 原本斷言 200 m 已經傾到最大，改成 100 m，並加上 150–200 m 的角度範圍。這是這一步刻意的改變，不是 golden。
 - **UNVERIFIED**：App 的編譯與 UI 測試（macOS CI；新的 `MapInteractionTests/testPinchingCloseOpensTheThreeDMapAndPinchingOutComesBack` 在 full lane），實機的手感與記憶體（TestFlight）。
 
+**之後的修正**（2026-10-17，作者在 71.1 回報：「3d打得開 但是一放大就跳掉」「是地圖3d會跳回2d」）：
+- 原因：交回 2D 的回呼不管 3D 是怎麼打開的都接上了，判斷只看「距離超過 960 m」。用 3D 按鈕打開的 3D 從幾公里外看（整個城鎮在畫面裡），所以第一次雙指、連拉近也一樣，就交回 2D。
+- 修正（`Map3DHandoff.handsBack(handedOverAt:from:to:)`，GamePresentation）：
+  - 只有雙指交接進來的 3D 會交回，3D 按鈕打開的永遠不交回；
+  - 只在拉遠時交回，拉近永遠不會；
+  - 門檻是 960 m 與交接時距離的 1.2 倍取大的，因為 3D 畫面比 2D 地圖高時，同一個比例會站得比 800 m 遠。
+- App：`ContentView` 只在交接開的 3D 傳交回的回呼；`Map3DPreviewScreen` 記下交接時的距離，用上面的判斷。
+- 測試：
+  - `Map3DHandoffTests` 的兩個新測試，含新竹實景地圖的場景；在修正前的 main 上沒有這個函式，等於失敗；舊的判斷在「按鈕、拉近」那一條會回答交回。
+  - 新的 UI 測試 `MapInteractionTests/testTheButtonsThreeDMapStaysThreeDWhenPinchedCloser`（full lane）。
+- GameCore、存檔版本、golden schema 都不動。
+
 ### 270. 空白地圖的 2D 拉近時畫種子道路：和 3D 同一份，配色照實景的 2D 道路
 
 2026-10-17。3D 生活感第 4 步的後半，接在決策 269 之後。HANDOFF §4.4 的下一步：「2D 拉近到看得見建物的那一級時，也畫同一份種子道路」。空白地圖的 2D 原本沒有任何道路，3D 卻有（決策 263），兩邊對不上；決策 269 起雙指拉近會把 2D 交給 3D，交接那一下道路突然出現。
@@ -11520,7 +11539,48 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 **下一步**（也寫在 `docs/HANDOFF.md` 第 2 節）：
 - 第 6 個 PR（GameCore 的新目標，作者說可以不做）：一條線上幾列車（第 3 關）、雙線長度（第 5 關）、機廠入庫（第 7 關）、貨運噸數（第 8 關）、觀光客（第 9 關）、完成的委託（第 10 關）。
-- 決策 264「下一步」剩下的一件：同一條線 3 列以上時，每次加開只蓋一處待避線。
+- 決策 264「下一步」剩下的一件：已在決策 264 的「之後的修正」（2026-10-17）做完。
+
+### 272. 3D 地圖的亮度：白天的光強一成二，公園與樹更綠；地面與道路照決策 241
+
+2026-10-17。HANDOFF §4.4 的「配色」：決策 241 把 3D 的地面與道路換成 2D 地圖的色系，比作者的目標畫面（`docs/art/3d-style-2026-10-13/ftwplus-street.jpg`，明亮的晴天）灰。要求拿目標畫面並排出兩三個亮度方案，照四方決定，決策 241 的色系不整個推翻。遊戲規劃 session 排在 3D 四步之後。
+
+號碼依工作登記 #231：決策 272。存檔版本、golden schema 不動；GameCore 不動，只動 GamePresentation 的光線與兩種綠。
+
+**三個方案**（預覽 `docs/art/map3d-brightness-2026-10-17/`，每張是 A、B、C 加上目標畫面；兩鎮地圖、下午 2 點）：
+- **A：現在**。
+- **B：白天的光強一成二**：太陽光與天空、地面的環境光都乘上 1.12，只在白天，夜裡照舊。
+- **C：B ＋ 公園與樹更綠**：公園 `#B5D6A2` → `#A6D68A`，樹冠與行道樹的綠也調飽和一些（`#6FA85A` → `#5FAD48` 等五種）。
+
+試過但沒有列為方案的：地面調亮（`#E1E5F0`、`#DDE3F4`）。下午的暖光下地面變成粉橘色，比現在更不像目標畫面；地面照決策 241 留著。
+
+**選 C**（`Map3DLighting.dayBrightening = 0.12`、`dayBoost`；`Map3DPalette.park`、`crown`；`Map3DProp.greens`）：
+- **白天的光**：太陽光與環境光乘上 `1 + 0.12 × (1 − 夜晚)`，所以中午強一成二，黃昏漸漸回到原本，夜裡不變。
+- **綠**：公園、樹冠、行道樹的綠更飽和，接近目標畫面的晴天綠地。
+- **不變**：地面、道路、水、屋頂、建物照決策 241 與之前的配色。
+
+**四方**：
+- 玩家：白天的城市更明亮，公園與樹一眼看得出是綠地，接近作者要的晴天街景；夜景不變。
+- 開發：一個常數與三組顏色，Linux 測試釘住白天強一成二、夜裡不變、中午的白屋頂不會過曝；GameCore 不動。
+- 美術：地圖感（決策 241 的地面與藏青道路）留著，只把光和綠調亮；目標畫面的大片草地沒有照搬，空地仍是 2D 地圖的地面色，3D 與 2D 一致。
+- 音樂：無。
+
+**參考**：
+
+| 參考 | → 目標 |
+| --- | --- |
+| `docs/art/3d-style-2026-10-13/ftwplus-street.jpg`（畫風示意 session 的晴天：sun ×2.5、hemi ×1.35，HANDOFF §4.3 的「光」） | 只取「明亮的晴天」的方向：白天的光強一成二、綠更飽和 |
+| 決策 241 的地圖色系 | 地面、道路、水照舊 |
+
+外部專案與參考庫：沒有另外搜尋。
+
+**缺口**：
+- 目標畫面空地上的大片草地沒有做（決策 241 的地圖感）；要做的話是另一個決策，連 2D 地圖一起改。
+- 預覽是 WebGL 照 `Map3DShaders.metal` 的算式畫的，不是 iPhone 的畫面；實機的亮度要 TestFlight 看。
+
+**驗證**：
+- **VERIFIED**（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`Map3DNightAndGroundTests` 新增 `testTheDayIsBrighterAndTheNightAsItWas`；所有 `Map3D*` 測試通過。
+- **UNVERIFIED**：實機畫面（TestFlight）。
 
 ## 目前規則摘要
 

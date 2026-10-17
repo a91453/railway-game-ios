@@ -301,7 +301,8 @@ extension GameSession {
         guard let line = world.line(id: id), !line.isRing, world.lineJourney(id) != nil else { return nil }
         let cars = line.trains.first.flatMap { world.train(id: $0)?.cars } ?? Self.autoServiceCars(for: id, in: world)
         return AutoService(
-            newLine: nil, line: id, loops: passingLoopsNeeded(for: id, trains: line.assignedTrains.count + 1, in: world), trains: 1, cars: cars,
+            newLine: nil, line: id,
+            loops: passingLoopsNeeded(for: id, trains: line.assignedTrains.count + 1, limit: max(1, line.assignedTrains.count), in: world), trains: 1, cars: cars,
             language: language
         )
     }
@@ -429,7 +430,12 @@ extension GameSession {
                 "\(line.name) 現在有 \(count) 列車，花費 \(cost.moneyText)。"
             )
         }
-        if outcome.number > 0 {
+        if outcome.number > 1 {
+            text += language.text(
+                " \(outcome.number) passing loops went in on its single track, so its trains pass each other there.",
+                "單線上加了 \(outcome.number) 處待避線，列車會在那裡交會。"
+            )
+        } else if outcome.number > 0 {
             text += language.text(
                 " A passing loop went in on its single track, so its trains pass each other there.",
                 "單線上加了待避線，列車會在那裡交會。"
@@ -469,26 +475,38 @@ extension GameSession {
         return min(max(Int(shortest / world.platformCarLength), Train.minimumCars), AutoService.maximumCars)
     }
 
-    /// The passing loop line `id` needs in `world` to run `trains` of its
+    /// The passing loops line `id` needs in `world` to run `trains` of its
     /// own (decision 264), with room for `readyFor` trains in all on its
-    /// single track, as a plan on this session's track (which `world`
-    /// shares), or none. Only legs at least `shortestLeg` long take one.
+    /// single track, as plans on this session's track (which `world`
+    /// shares), at most `limit` of them, or none. Only legs at least
+    /// `shortestLeg` long take one.
     ///
     /// A line's single-track legs carry its own trains and those of every
     /// line that runs over the same track. Trains on single track pass
     /// only at a stop with a track each way: `n` trains need `n − 1` such
-    /// stops between the line's ends. When the line has fewer, one loop
-    /// goes in the middle of its longest single-track leg that another
-    /// line shares, or else its longest: one a tap, so a line grows a loop
-    /// with each train it needs one for. Rings are left to the player.
+    /// stops between the line's ends. When the line has fewer, a loop goes
+    /// in the middle of its longest single-track leg that another line
+    /// shares, or else its longest. Each loop after the first is worked
+    /// out on the track as the ones before it leave it (decision 264,
+    /// later: Add a Train on a line short of more than one place to pass
+    /// builds them all in one tap). Rings are left to the player.
     func passingLoopsNeeded(
-        for id: LineID, trains wanted: Int, readyFor: Int = 0, shortestLeg: Int64 = 0, in world: GameWorld
+        for id: LineID, trains wanted: Int, readyFor: Int = 0, shortestLeg: Int64 = 0, limit: Int = 1, in world: GameWorld
     ) -> [PassingLoopPlan] {
-        guard let shortfall = world.passingPlaceShortfall(of: id, trains: wanted, readyFor: readyFor) else { return [] }
-        for leg in shortfall.legs where leg.distance >= shortestLeg {
-            if let plan = passingLoopPlan(along: leg.edges) { return [plan] }
+        var plans: [PassingLoopPlan] = []
+        var scratch = world
+        while plans.count < limit, let shortfall = scratch.passingPlaceShortfall(of: id, trains: wanted, readyFor: readyFor) {
+            // The first on this session's track; the next on a copy with
+            // the loops before it built.
+            let planner = plans.isEmpty ? self : GameSession(world: scratch, language: language)
+            guard let plan = shortfall.legs.lazy.filter({ $0.distance >= shortestLeg }).compactMap({ planner.passingLoopPlan(along: $0.edges) }).first
+            else { break }
+            plans.append(plan)
+            guard plans.count < limit else { break }
+            let built = AutoService(newLine: nil, line: id, loops: [plan], trains: 0, cars: Train.minimumCars, language: language)
+            guard (try? planner.apply(built, to: &scratch)) != nil else { break }
         }
-        return []
+        return plans
     }
 
     /// A passing loop in the middle of a leg over `edges`: on its longest

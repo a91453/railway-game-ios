@@ -1364,4 +1364,29 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(close.disappears(within: 10), "A pinch out hands the 3D map back")
         XCTAssertTrue(map.appears(within: 10))
     }
+
+    /// Decision 269, later fix (71.1, the owner: "3D 一放大就跳回 2D"): a
+    /// 3D map the button opened stays 3D as it is pinched closer; only one
+    /// a pinch handed over goes back to the 2D map, and only pinched out.
+    func testTheButtonsThreeDMapStaysThreeDWhenPinchedCloser() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        app.openDemo("demo.simple")
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        let close = app.buttons["map3D.close"]
+        XCTAssertTrue(close.appears(within: 20), "The 3D button opens the 3D map")
+        let view = app.descendants(matching: .any)["map3D.view"].firstMatch
+        XCTAssertTrue(view.appears(within: 10))
+        view.pinch(withScale: 3, velocity: 2)
+        view.pinch(withScale: 3, velocity: 2)
+        XCTAssertFalse(close.disappears(within: 3), "Pinching closer must not go back to the 2D map")
+        close.tap()
+        XCTAssertTrue(close.disappears(within: 10))
+    }
 }

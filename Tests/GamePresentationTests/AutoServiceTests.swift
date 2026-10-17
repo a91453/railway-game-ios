@@ -201,6 +201,38 @@ final class AutoServiceTests: XCTestCase {
         XCTAssertEqual(session.world.economy.balance, before.economy.balance)
     }
 
+    /// Decision 264, later: a line short of more than one place to pass
+    /// gets them all with the train Add a Train puts on, each loop worked
+    /// out on the track as the one before leaves it. Line C–B, about 9.5
+    /// km of single track, runs two trains it has no place to pass; a
+    /// third needs two loops.
+    func testAddATrainBuildsEveryLoopTheLineIsShortOf() throws {
+        var (world, a, b, c) = try stations()
+        _ = a
+        let line = try world.createLine(named: "Line 1", stops: [c, b]).id
+        for name in ["T1", "T2"] {
+            let train = try world.purchaseTrain(named: name).id
+            try world.assignTrain(train, to: line)
+        }
+        XCTAssertNotNil(world.passingPlaceShortfall(of: line, trains: 3))
+        let session = GameSession(world: world)
+        let plan = try XCTUnwrap(session.autoServicePlan(addingTrainTo: line))
+        XCTAssertEqual(plan.loops.count, 2, "three trains need two places to pass")
+        XCTAssertNotEqual(plan.loops[0].station, plan.loops[1].station)
+        XCTAssertNotEqual(plan.loops[0].name, plan.loops[1].name)
+        var built = world
+        _ = try session.apply(plan, to: &built)
+        let stops = try XCTUnwrap(built.line(id: line)?.stops)
+        XCTAssertEqual(stops.count, 4, "both loops are its stops")
+        XCTAssertNil(built.passingPlaceShortfall(of: line, trains: 3), "room for three")
+        XCTAssertEqual(built.line(id: line)?.assignedTrains.count, 3)
+
+        session.selectLine(line)
+        session.addTrainToSelectedLine()
+        XCTAssertEqual(session.world.line(id: line)?.stops.count, 4, session.message?.text ?? "")
+        XCTAssertTrue(session.message?.text.contains("2 passing loops went in") == true, session.message?.text ?? "")
+    }
+
     /// CORE_LOOP §1.2: a second line from C over the first's single track
     /// gets a loop on the shared track, a stop of both lines.
     func testASecondLineOverTheFirstsSingleTrackGetsALoopBothLinesStopAt() throws {

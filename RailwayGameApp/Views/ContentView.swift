@@ -63,9 +63,12 @@ struct ContentView: View {
             // Decision 229, later: this game's 3D map, from the map's own
             // button (``Map3DShortcut``).
             .fullScreenCover(isPresented: $screen.showsMap3D) {
-                Map3DPreviewScreen(session: session, handedOver: screen.map3DHandoff, close: { screen.showsMap3D = false }, handBack: { plan in
-                    // Decision 269: back to the 2D map as it was handed
-                    // over, at once (the 2D map takes up `plan`).
+                // Decision 269: a 3D map a pinch handed over hands the 2D
+                // map back as it is pinched out, at once (the 2D map takes
+                // up `plan`); one the button opened never does (later fix,
+                // 71.1).
+                Map3DPreviewScreen(session: session, handedOver: screen.map3DHandoff, close: { screen.showsMap3D = false },
+                                   handBack: screen.map3DHandoff == nil ? nil : { plan in
                     screen.map2DReturn = plan
                     var cut = Transaction()
                     cut.disablesAnimations = true
