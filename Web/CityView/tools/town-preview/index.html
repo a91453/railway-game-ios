@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>台灣車站前 3D 城鎮試看頁 — Town Scene Preview</title>
+  <style>
+    :root {
+      --bg-card: rgba(18, 24, 38, 0.88);
+      --border-card: rgba(255, 255, 255, 0.18);
+      --text-main: #F5F6FA;
+      --text-dim: #B8C0D4;
+      --accent-blue: #3B7DD8;
+      --accent-amber: #FFC86B;
+      --accent-red: #FF7A70;
+      --accent-green: #6EE7B7;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #9fc6ea;
+      font-family: "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--text-main);
+      user-select: none;
+    }
+    #stage {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+    canvas#webgl {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    canvas#weather-fx {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 2;
+    }
+    /* Bottom-left HUD: Mode + Triangle Budget Breakdown (keeps upper building skyline unobstructed) */
+    #hud-card {
+      position: absolute;
+      bottom: 14px;
+      left: 14px;
+      z-index: 10;
+      width: 500px;
+      background: var(--bg-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-card);
+      border-radius: 12px;
+      padding: 12px 15px;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+      line-height: 1.4;
+    }
+    .hud-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      padding-bottom: 6px;
+      margin-bottom: 6px;
+    }
+    .hud-title {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: #FFFFFF;
+    }
+    .hud-view-badge {
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: rgba(59, 125, 216, 0.35);
+      border: 1px solid rgba(114, 168, 242, 0.5);
+      color: #E2EEFF;
+      white-space: nowrap;
+    }
+    .hud-subtitle {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+    .tri-total-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 7px;
+      padding: 5px 10px;
+      margin-bottom: 6px;
+    }
+    .tri-total-label {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #DDE4F2;
+    }
+    .tri-total-val {
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--accent-amber);
+      font-variant-numeric: tabular-nums;
+    }
+    .tri-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11.5px;
+      font-variant-numeric: tabular-nums;
+    }
+    .tri-table th {
+      text-align: left;
+      color: var(--text-dim);
+      font-weight: 600;
+      padding: 2px 4px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .tri-table td {
+      padding: 3px 4px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      vertical-align: top;
+    }
+    .status-over {
+      color: var(--accent-red);
+      font-weight: 700;
+    }
+    .status-ok {
+      color: var(--accent-green);
+      font-weight: 700;
+    }
+    .hud-note {
+      margin-top: 6px;
+      font-size: 11px;
+      color: #D2DAEC;
+      background: rgba(255, 200, 107, 0.11);
+      border-left: 3px solid var(--accent-amber);
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+    /* Interactive toolbar at top-right */
+    #controls {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background: var(--bg-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-card);
+      border-radius: 10px;
+      padding: 8px 10px;
+    }
+    .ctrl-group {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .ctrl-label {
+      font-size: 11px;
+      color: var(--text-dim);
+      min-width: 36px;
+    }
+    button.ctrl-btn {
+      background: rgba(255, 255, 255, 0.09);
+      color: var(--text-main);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 6px;
+      padding: 4px 9px;
+      font-size: 11.5px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    button.ctrl-btn:hover {
+      background: rgba(255, 255, 255, 0.18);
+    }
+    button.ctrl-btn.active {
+      background: var(--accent-blue);
+      border-color: #7BB0F8;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <canvas id="webgl"></canvas>
+    <canvas id="weather-fx"></canvas>
+
+    <div id="hud-card">
+      <div class="hud-header">
+        <div class="hud-title" id="hud-mode-title">載入場景中…</div>
+        <div class="hud-view-badge" id="hud-view-title">視角載入中</div>
+      </div>
+      <div class="hud-subtitle" id="hud-desc"></div>
+      <div class="tri-total-row">
+        <span class="tri-total-label">場景總三角形數 (Total Triangles)</span>
+        <span class="tri-total-val" id="hud-total-tris">—</span>
+      </div>
+      <table class="tri-table">
+        <thead>
+          <tr>
+            <th>類別 (數量)</th>
+            <th>單個三角形</th>
+            <th>類別小計</th>
+            <th>手機預算目標對照</th>
+          </tr>
+        </thead>
+        <tbody id="hud-tbody"></tbody>
+      </table>
+      <div class="hud-note" id="hud-gap-note"></div>
+    </div>
+
+    <div id="controls">
+      <div class="ctrl-group">
+        <span class="ctrl-label">模式</span>
+        <button class="ctrl-btn" data-mode="A">A Kenney 原樣</button>
+        <button class="ctrl-btn" data-mode="B">B 台灣版 (晴)</button>
+        <button class="ctrl-btn" data-mode="C">C 台灣版＋雨天</button>
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-label">視角</span>
+        <button class="ctrl-btn" data-view="overview">同視角全景</button>
+        <button class="ctrl-btn" data-view="close">拉近 (臉＋車)</button>
+        <button class="ctrl-btn" data-view="mid">中距離 (3D地圖)</button>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="./scene.js"></script>
+</body>
+</html>

@@ -1,0 +1,419 @@
+{
+  "generatedAt": "2026-10-17",
+  "referenceArchive": "railway-reference-private/Railway/town-scene-reference-clean",
+  "licenseSummary": "All 3D models and colormap textures in this folder originate from Kenney (https://kenney.nl) asset packs released under CC0 1.0 Universal (Public Domain Dedication). Audio files from the reference pack (01-sunny-station.mp3) were excluded due to missing redistribution license.",
+  "mobileBudgetTargets": {
+    "personMaxTriangles": 500,
+    "vehicleMaxTriangles": 1500,
+    "notes": "Kenney mini-characters (690–756 tris/person) exceed the <=500 tris/person mobile target by 38%–51%. Kenney car-kit vehicles (2,032–2,474 tris/vehicle) exceed the <=1,500 tris/vehicle mobile target by 35%–65%. Kenney nature trees (62–196 tris/tree) are well within mobile budget. Scooter (機車) and Taiwanese city bus models are absent from the Kenney reference packs."
+  },
+  "packs": {
+    "commercial": {
+      "packName": "Kenney City Kit (Commercial)",
+      "url": "https://kenney.nl/assets/city-kit-commercial",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    "train-kit": {
+      "packName": "Kenney Train Kit",
+      "url": "https://kenney.nl/assets/train-kit",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    "car-kit": {
+      "packName": "Kenney Car Kit",
+      "url": "https://kenney.nl/assets/car-kit",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    "mini-characters": {
+      "packName": "Kenney Mini Characters 1",
+      "url": "https://kenney.nl/assets/mini-characters-1",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    "nature": {
+      "packName": "Kenney Nature Kit",
+      "url": "https://kenney.nl/assets/nature-kit",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    "roads": {
+      "packName": "Kenney City Kit (Roads)",
+      "url": "https://kenney.nl/assets/city-kit-roads",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    }
+  },
+  "models": [
+    {
+      "path": "commercial/building-k.glb",
+      "role": "Station building (晴川站)",
+      "sourcePack": "Kenney City Kit (Commercial)",
+      "sourceUrl": "https://kenney.nl/assets/city-kit-commercial",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "triangles": 2960,
+      "meshes": 1,
+      "bytes": 246976,
+      "sha256": "afd36f573b9d6a6a890675aa0fbe762b29efb6258f322990752d79d9f0da42c6",
+      "textures": [
+        "Textures/colormap.png"
+      ]
+    },
+    {
+      "path": "commercial/building-d.glb",
+      "role": "Shop 1 (站前便當)",
+      "sourcePack": "Kenney City Kit (Commercial)",
+      "sourceUrl": "https://kenney.nl/assets/city-kit-commercial",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "triangles": 1100,
+      "meshes": 1,
+      "bytes": 95160,
+      "sha256": "40605608e9aca0c98e294acff4af0f74afa417a51d589be490ca98f33ce4c2f5",
+      "textures": [
+        "Textures/colormap.png"
+      ]
+    },
+    {
+      "path": "commercial/building-a.glb",
+      "role": "Shop 2 (伴手禮)",
+      "sourcePack": "Kenney City Kit (Commercial)",
+      "sourceUrl": "https://kenney.nl/assets/city-kit-commercial",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "triangles": 1252,
+      "meshes": 1,
+      "bytes": 108936,
+      "sha256": "5cf220f90ee3f21e7abe38055ca409a48aa8ef1d5ffab6e2deb99e5a5e1ed5e0",
+      "textures": [
+        "Textures/colormap.png"
+      ]
+    },
+    {
+      "path": "commercial/building-c.glb",
+      "role": "Shop 3 (車站咖啡)",
+      "sourcePack": "Kenney City Kit (Commercial)",
+      "sourceUrl": "https://kenney.nl/assets/city-kit-commercial",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "triangles": 1195,
+      "meshes": 1,
+      "bytes": 102788,
+      "sha256": "f6887608a95a165503561730252c30506938803731c6546efca12bd47b1666bd",
+      "textures": [
+        "Textures/colormap.png"
+      ]
+    },
+    {
+      "path": "commercial/building-h.glb",
+      "role": "Shop 4 (便利商店)",
+      "sourcePack": "Kenney City Kit (Commercial)",
+      "sourceUrl": "https://kenney.nl/assets/city-kit-commercial",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "triangles": 1512,
+      "meshes": 1,
+      "bytes": 127384,
+      "sha256": "6881613ce218bb33a0f56137d4d33b00d307c47e518fbb21ccba1083efbea896",
+      "textures": [
+        "Textures/colormap.png"
+      ]
+    },
+    {
+      "path": "commercial/building-b.glb",
+      "role": "Shop 5 (麵包坊)",
+      "sourcePack": "Kenney City Kit (Commercial)",
+      "sourceUrl": "https://kenney.nl/assets/city-kit-commercial",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "triangles": 1276,
+      "meshes": 1,
+      "bytes": 106408,
+      "sha256": "3b5d3ac0799c024781d92bb15971d42f4f8e380554dc5cf6a40c2f07d948947a",
+      "textures": [
+        "Textures/colormap.png"
+      ]
+    },
+    {
+      "path": "commercial/building-f.glb",
+      "role": "Row house / 透天厝 A",
+      "sourcePack": "Kenney City Kit (Commercial)",
+      "sourceUrl": "https://kenney.nl/assets/city-kit-commercial",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "triangles": 1794,
+      "meshes": 1,
+      "bytes": 148952,
+      "sha256": "633a25f7fb3ccf98e304a885a36ed900aecee5bde7ecd554729dec753cceea78",
+      "textures": [
+        "Textures/colormap.png"
+      ]
+    },
+    {
+      "path": "commercial/building-g.glb",
+      "role": "Row house / 透天厝 B",
+      "sourcePack": "Kenney City Kit (Commercial)",
+      "sourceUrl": "https://kenney.nl/assets/city-kit-commercial",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "triangles": 2006,
+      "meshes": 1,
+      "bytes": 166356,
+      "sha256": "9a28fa2fdfac07492ee95589882213cfd6eb32d6752cb3b2f5404604c676d27a",
+      "textures": [
+        "Textures/colormap.png"
+      ]
+    },
+    {
+      "path": "train-kit/railroad-straight.glb",
+      "role": "Platform side track segment",
+      "sourcePack": "Kenney Train Kit",
+      "sourceUrl": "https://kenney.nl/assets/train-kit",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "triangles": 376,
+      "meshes": 1,
+      "bytes": 34736,
+      "sha256": "bcbd501f74b754b61f2ddb5cba2d45d5d694bfd25c497fa72af65202a53930d9",
+      "textures": [
+        "Textures/colormap.png"
+      ]
+    },
+    {
+      "path": "train-kit/train-electric-square-a.glb",
+      "role": "Commuter train lead car",
+      "sourcePack": "Kenney Train Kit",
+      "sourceUrl": "https://kenney.nl/assets/train-kit",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "triangles": 1616,
+      "meshes": 4,
+      "bytes": 145944,
+      "sha256": "eda1492a88b08655e92958fdf1ec1c47ac58fe974d7cb207bf59ae74cee0c74a",
+      "textures": [
+        "Textures/colormap.png"
+      ]
+    },
+    {
+      "path": "train-kit/train-electric-square-b.glb",
+      "role": "Commuter train middle car",
+      "sourcePack": "Kenney Train Kit",
+      "sourceUrl": "https://kenney.nl/assets/train-kit",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "triangles": 1418,
+      "meshes": 3,
+      "bytes": 128948,
+      "sha256": "d7cd7143803677d5ade54e927185b6543a5528dd084773ecc6d8c3380a29ce71",
+      "textures": [
+        "Textures/colormap.png"
+      ]
+    },
+    {
+      "path": "car-kit/sedan.glb",
+      "role": "Passenger car (Sedan)",
+      "sourcePack": "Kenney Car Kit",
+      "sourceUrl": "https://kenney.nl/assets/car-kit",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "triangles": 2032,
+      "meshes": 5,
+      "bytes": 172216,
+      "sha256": "b532ea7d2c59f7f6b22b138cf1955218a2c1898f1cea932af4d3fd563c3959b7",
+      "textures": [
+        "Textures/colormap.png"
+      ]
+    },
+    {
+      "path": "car-kit/taxi.glb",
+      "role": "Station taxi (計程車)",
+      "sourcePack": "Kenney Car Kit",
+      "sourceUrl": "https://kenney.nl/assets/car-kit",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "triangles": 2072,
+      "meshes": 5,
+      "bytes": 175608,
+      "sha256": "3803539718ffd3b84b515dbce8ed6b489f1ff5be58edb1903d2c5db5c584bdc7",
+      "textures": [
+        "Textures/colormap.png"
+      ]
+    },
+    {
+      "path": "car-kit/suv.glb",
+      "role": "Passenger SUV (休旅車)",
+      "sourcePack": "Kenney Car Kit",
+      "sourceUrl": "https://kenney.nl/assets/car-kit",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "triangles": 2474,
+      "meshes": 6,
+      "bytes": 207572,
+      "sha256": "9df31f6e89e927a8176fc792aa125f0b19dc1ba29d2025bfef7c4f4d6ab1778a",
+      "textures": [
+        "Textures/colormap.png"
+      ]
+    },
+    {
+      "path": "car-kit/van.glb",
+      "role": "Commercial van (廂型車)",
+      "sourcePack": "Kenney Car Kit",
+      "sourceUrl": "https://kenney.nl/assets/car-kit",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "triangles": 2082,
+      "meshes": 5,
+      "bytes": 175664,
+      "sha256": "ed4ed56e8e5ed98db050af09ed2062b3b6bb7b93eab1e563cb6774b387b233a1",
+      "textures": [
+        "Textures/colormap.png"
+      ]
+    },
+    {
+      "path": "mini-characters/character-female-b.glb",
+      "role": "Pedestrian 1 (female-b)",
+      "sourcePack": "Kenney Mini Characters 1",
+      "sourceUrl": "https://kenney.nl/assets/mini-characters-1",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "triangles": 742,
+      "meshes": 2,
+      "bytes": 252140,
+      "sha256": "2288438e7baf9acc91a870c82dc00d66710bb486592cfc3474ef8ed93a03863a",
+      "textures": [
+        "Textures/colormap.png"
+      ]
+    },
+    {
+      "path": "mini-characters/character-female-c.glb",
+      "role": "Pedestrian 2 (female-c)",
+      "sourcePack": "Kenney Mini Characters 1",
+      "sourceUrl": "https://kenney.nl/assets/mini-characters-1",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "triangles": 732,
+      "meshes": 2,
+      "bytes": 252040,
+      "sha256": "3cd9e1b5d6409fce0ba1af617d9e008c3069493185a4c100f49fb99a2626a055",
+      "textures": [
+        "Textures/colormap.png"
+      ]
+    },
+    {
+      "path": "mini-characters/character-female-e.glb",
+      "role": "Pedestrian 3 (female-e)",
+      "sourcePack": "Kenney Mini Characters 1",
+      "sourceUrl": "https://kenney.nl/assets/mini-characters-1",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "triangles": 756,
+      "meshes": 2,
+      "bytes": 248012,
+      "sha256": "3ee3939f80d718945fcb9199f909a92c39669e38aeec7f544536b5dce6e79f98",
+      "textures": [
+        "Textures/colormap.png"
+      ]
+    },
+    {
+      "path": "mini-characters/character-male-a.glb",
+      "role": "Pedestrian 4 (male-a)",
+      "sourcePack": "Kenney Mini Characters 1",
+      "sourceUrl": "https://kenney.nl/assets/mini-characters-1",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "triangles": 723,
+      "meshes": 2,
+      "bytes": 246916,
+      "sha256": "77572792bfe2773b715b8cd8e18644b52b3e1f155fe10450254b50f9c364382a",
+      "textures": [
+        "Textures/colormap.png"
+      ]
+    },
+    {
+      "path": "mini-characters/character-male-b.glb",
+      "role": "Pedestrian 5 (male-b)",
+      "sourcePack": "Kenney Mini Characters 1",
+      "sourceUrl": "https://kenney.nl/assets/mini-characters-1",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "triangles": 690,
+      "meshes": 2,
+      "bytes": 247332,
+      "sha256": "791fc0c203924c175c0a3d5b60d030daf36797b039506689cf7cd01ef5253b3c",
+      "textures": [
+        "Textures/colormap.png"
+      ]
+    },
+    {
+      "path": "mini-characters/character-male-d.glb",
+      "role": "Pedestrian 6 (male-d)",
+      "sourcePack": "Kenney Mini Characters 1",
+      "sourceUrl": "https://kenney.nl/assets/mini-characters-1",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "triangles": 711,
+      "meshes": 2,
+      "bytes": 245184,
+      "sha256": "dd12b2e75ffb1cdb45aaec3916c3d6e732929ccb4a8b89b946f69baaabfa64da",
+      "textures": [
+        "Textures/colormap.png"
+      ]
+    },
+    {
+      "path": "nature/tree_default.glb",
+      "role": "Street tree (Default)",
+      "sourcePack": "Kenney Nature Kit",
+      "sourceUrl": "https://kenney.nl/assets/nature-kit",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "triangles": 114,
+      "meshes": 1,
+      "bytes": 9428,
+      "sha256": "562d29638c902de3c7bee465d3a53bb77117efbc392ae04ed894faf6b5dc691d",
+      "textures": []
+    },
+    {
+      "path": "nature/tree_oak.glb",
+      "role": "Street tree (Oak / 樟樹・榕樹)",
+      "sourcePack": "Kenney Nature Kit",
+      "sourceUrl": "https://kenney.nl/assets/nature-kit",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "triangles": 196,
+      "meshes": 1,
+      "bytes": 14644,
+      "sha256": "d7fd8773674928c50c11b66d12c636d49bdcc15a8b1c7fbb98e6f63a3439a3f3",
+      "textures": []
+    },
+    {
+      "path": "nature/tree_simple.glb",
+      "role": "Street tree (Simple)",
+      "sourcePack": "Kenney Nature Kit",
+      "sourceUrl": "https://kenney.nl/assets/nature-kit",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "triangles": 62,
+      "meshes": 1,
+      "bytes": 6500,
+      "sha256": "93891ea740447634930de19c31a7c1c9f4add94122e6db03aca9f75aea32f9d6",
+      "textures": []
+    },
+    {
+      "path": "roads/light-square.glb",
+      "role": "Streetlight",
+      "sourcePack": "Kenney City Kit (Roads)",
+      "sourceUrl": "https://kenney.nl/assets/city-kit-roads",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "triangles": 60,
+      "meshes": 1,
+      "bytes": 6996,
+      "sha256": "6230d136c8883d7f9bc1b86f0309077e452e26e5e1e587ef1b77abef3c5f047c",
+      "textures": [
+        "Textures/colormap.png"
+      ]
+    }
+  ]
+}
