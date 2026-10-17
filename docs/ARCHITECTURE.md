@@ -11043,7 +11043,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 **下一步**（也寫在 `docs/HANDOFF.md` 第 2 節）：
 - 教學那一局仍然手動配車，第 4 個 PR 把教學搬進第 1、2 關時，改成照新的開線流程。
-- 3 列以上的同一條線：每次加開只蓋一處，交會處不夠時，下一次加開才會再蓋。
+- ~~3 列以上的同一條線：每次加開只蓋一處~~：已改成一次蓋夠（見下面「之後的修正」，2026-10-17）。
 
 **之後的修正**（2026-10-17，`docs/archive/PR712_754_REVIEW_HANDOFF.md` 第四節第一列）：第 7 點被取下的列車，路線兩端都被占用、放不回去時，原本會留在軌道外、離開自己的路線，指令照樣算成功（`held` 還會被新車的數字蓋掉）。改成整個指令拒絕：`apply` 丟出 `.trackReserved`，指名那列車。GameCore、存檔版本、golden schema 都不動。
 - 「在這裡加待避線」與「加開一列車」本來就先試算、接住 `.trackReserved`，訊息說「等它開過去再按一次」。
@@ -11052,6 +11052,13 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 四方：玩家：不會再付了錢卻少一列車在跑，錯了也能再按一次；開發：一個指令全有或全無，不加新的結果欄位；美術：無；音樂：無。
 - 沒有採用：另外記 `stranded`，讓那列車暫時離線、訊息請玩家到車隊重新配車。缺點是「加開一列車」會變成付了錢、路線上的車反而少一列，玩家還得自己去車隊配回來。
 - 留下的事：手放的列車停在單線中間、兩端都有車時，三列車都不會動，所以「等它開過去」不會發生。這時玩家要先自己移開一列車。
+
+**之後的修正**（2026-10-17，決策 264「下一步」的第二件，決策 271 之後）：「加開一列車」時，路線少幾處交會的地方就一次蓋幾處，不再一次只蓋一處。
+- `passingLoopsNeeded(…limit:)`：第一處照舊在 session 自己的軌道上算；之後每一處都在已經蓋好前面那幾處的副本上重算（另開一個 `GameSession` 來算），所以下一處用的是切開之後的軌道。照順序蓋到真的世界時，軌道的編號和副本一樣（決定論）。
+- 「加開一列車」最多蓋路線現有列車數那麼多處（`n` 列車要 `n − 1` 處）。開新線照舊最多一處，價錢與預覽不變。
+- 訊息寫出蓋了幾處：「單線上加了 2 處待避線…」。
+- Linux 測試 `AutoServiceTests.testAddATrainBuildsEveryLoopTheLineIsShortOf`：C–B 約 9.5 公里的單線上有兩列車、沒有交會處，加開第三列時一次蓋兩處。
+- 四方：玩家：按一次就夠，不會加了車卻卡在單線上；開發：只改 GamePresentation 的規劃，一個指令、一次 Undo；美術：無；音樂：無。
 
 ### 265. PR 的 gate 等同一個 commit 的 iOS App Build；full lane 不在每批合併後手動跑
 
@@ -11185,7 +11192,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 **下一步**（也寫在 `docs/HANDOFF.md` 第 2 節）：
 - 第 5 個 PR：第 4–10 關，目標同樣用 `LessonTargetReportTests` 量。
 - 第 3 關要真的檢查第二列車：一條線上幾列車的 `Goal`（第 6 個 PR），或換一張一列車載不完的地圖。
-- 決策 264「下一步」剩下的一件：同一條線 3 列以上時，每次加開只蓋一處待避線。
+- 決策 264「下一步」剩下的一件：已在決策 264 的「之後的修正」（2026-10-17）做完。
 - 適合交給 Codex 的 UI 測試（只要 Simulator 能回答、邏輯已有 Linux 測試）：
   - 關卡清單：第 2、3 關鎖住、第 1 關的「開始」按得到（`lesson.N`、`lesson.N.start`）。
   - 結果卡：「下一關」、「再玩一次」、「繼續玩」按得到，減少動態效果時星星直接全亮（`lessonResult.*`）。
@@ -11520,7 +11527,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 **下一步**（也寫在 `docs/HANDOFF.md` 第 2 節）：
 - 第 6 個 PR（GameCore 的新目標，作者說可以不做）：一條線上幾列車（第 3 關）、雙線長度（第 5 關）、機廠入庫（第 7 關）、貨運噸數（第 8 關）、觀光客（第 9 關）、完成的委託（第 10 關）。
-- 決策 264「下一步」剩下的一件：同一條線 3 列以上時，每次加開只蓋一處待避線。
+- 決策 264「下一步」剩下的一件：已在決策 264 的「之後的修正」（2026-10-17）做完。
 
 ## 目前規則摘要
 
