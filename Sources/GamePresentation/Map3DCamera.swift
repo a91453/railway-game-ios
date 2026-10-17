@@ -304,11 +304,17 @@ public struct Map3DLighting: Hashable, Sendable {
     // as they are (decision 229's rule 3: worked out here, tested on Linux).
 
     /// The sun's (or the moon's) light, red, green and blue.
-    public var sunLight: SIMD3<Float> { Self.rgb(sun) * (sunStrength * 0.16) }
+    public var sunLight: SIMD3<Float> { Self.rgb(sun) * (sunStrength * 0.16 * dayBoost) }
     /// The ambient light from the sky, on what faces up.
-    public var skyLight: SIMD3<Float> { Self.tinted(sky, share: 0.3, scale: ambient * 0.5) }
+    public var skyLight: SIMD3<Float> { Self.tinted(sky, share: 0.3, scale: ambient * 0.5 * dayBoost) }
     /// The ambient light from the ground, on what faces down.
-    public var groundLight: SIMD3<Float> { Self.tinted(ground, share: 0.5, scale: ambient * 0.5 * 0.8) }
+    public var groundLight: SIMD3<Float> { Self.tinted(ground, share: 0.5, scale: ambient * 0.5 * 0.8 * dayBoost) }
+
+    /// Decision 272: by day the light a little stronger than three.js's
+    /// keyframes (a bright, clear day, as the owner's target picture), at
+    /// night as it was.
+    public static let dayBrightening: Float = 0.12
+    var dayBoost: Float { 1 + Self.dayBrightening * (1 - min(max(night, 0), 1)) }
 
     /// A surface of `colour` (0–1 a channel) facing `normal` as the
     /// fragment shader lights it, before the fog.

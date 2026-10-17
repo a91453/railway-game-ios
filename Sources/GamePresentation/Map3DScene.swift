@@ -202,7 +202,9 @@ public enum Map3DPalette {
     /// one of the navy roads, and the farms a softer green.
     public static let ground = Map3DColor.rgb(0xD9DFEF)
     public static let water = Map3DColor.rgb(0x92C4E6)
-    public static let park = Map3DColor.rgb(0xB5D6A2)
+    /// Decision 272: the parks' green and the trees' livelier, nearer the
+    /// owner's sunny target picture; the ground and roads as decision 241.
+    public static let park = Map3DColor.rgb(0xA6D68A)
     public static let farm = Map3DColor.rgb(0xD6DEB4)
     public static let plaza = Map3DColor.rgb(0xD9D4C8)
     public static let ballast = Map3DColor.rgb(0xA39B8E)
@@ -221,7 +223,7 @@ public enum Map3DPalette {
     public static let tankBlue = Map3DColor.rgb(0x3B7DD8)
     public static let tankSteel = Map3DColor.rgb(0xC8CDD2)
     public static let trunk = Map3DColor.rgb(0x8A6A4F)
-    public static let crown = Map3DColor.rgb(0x6FA85A)
+    public static let crown = Map3DColor.rgb(0x5FAD48)
     /// The player's buildings (decision 205) and the navy rim that marks
     /// them apart from the city's offices in grey (the art direction's
     /// note).

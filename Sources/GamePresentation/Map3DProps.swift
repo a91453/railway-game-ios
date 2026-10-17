@@ -95,8 +95,9 @@ public enum Map3DProp: String, CaseIterable, Sendable {
         return Map3DPoint(cosf(angle), 0, sinf(angle))
     }
 
-    /// The street trees' greens, one picked for each tree.
-    public static let greens: [UInt32] = [0x6FA85A, 0x5E9A52, 0x7FB566, 0x669E4E, 0x88B86A].map(Map3DColor.rgb)
+    /// The street trees' greens, one picked for each tree (decision 272:
+    /// livelier, as the parks').
+    public static let greens: [UInt32] = [0x5FAD48, 0x4E9E3E, 0x6FBA52, 0x58A240, 0x7CC058].map(Map3DColor.rgb)
 }
 
 extension Map3DModelPack.Model {

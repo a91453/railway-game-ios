@@ -71,7 +71,17 @@ attribution), `Railway/commuter_journey_reference_clean/` (start with its
 `00_READ_ME_FIRST.md` and `REFERENCE_COMPARISON.md`; a Hong Kong metro
 commuter game in Three.js: crowds, queues, train doors, interchange
 wayfinding, station shops; it uses `Math.random()` and live input, so port
-it into the presentation layer, not GameCore).
+it into the presentation layer, not GameCore),
+`Railway/town-scene-reference-clean/` (start with its `00_READ_ME_FIRST.md`
+and `ATTRIBUTION_AND_RIGHTS.md`; a small Three.js railway town: Kenney CC0
+models, a station-front shop street, weather presets; its music has no
+licence text and is not used; decision in `docs/HANDOFF.md` §2),
+`Railway/procedural_assets_reference_clean/`,
+`Railway/location_modeler_reference_clean/`,
+`Railway/night_district_reference_clean/` (each: start with its
+`00_READ_ME_FIRST.md`), and `city_map_reference_clean/` and
+`power_grid_reference_clean/` at the repository root (start with their
+`REFERENCE_COMPARISON.md` and `SANITIZATION_REPORT.md`).
 
 When a problem is hard (an algorithm, a data source, a performance or
 platform limit, a design with no obvious answer), look for prior work before
