@@ -113,7 +113,8 @@ public enum Map3DTrains {
             let count = TrainCars.count(length: run.length, carPitch: run.carPitch)
             let cars = TrainCars.cars(body: body, heading: head.heading, count: count, gap: gap)
             let (side, stripe) = colours(of: run.look, palette: palette)
-            let carModels = run.look == .freight ? nil : models?.models(forType: heights.type(of: run.train))
+            let trainType = heights.type(of: run.train)
+            let hasModels = run.look != .freight && models?.models(forType: trainType) != nil
             for (index, car) in cars.enumerated() {
                 guard let front = car.first, let back = car.last else { continue }
                 // On the rails, which stand ``Map3DScene/railLift`` over the
@@ -129,9 +130,8 @@ public enum Map3DTrains {
                 frame.shadows.addShadow(
                     inner: Map3DMesh.footprint(centre: base + bed, forward: a - b, length: length, width: carWidth),
                     outer: Map3DMesh.footprint(centre: base + bed, forward: a - b, length: length + 1, width: carWidth + 1), darkness: 0.38)
-                if let models, let carModels, let eye, (base - eye).length < modelReach {
-                    let ends = index == 0 || index == cars.count - 1
-                    let model = ends ? carModels.head : carModels.middle
+                if let models, hasModels, let eye, (base - eye).length < modelReach,
+                   let model = models.modelIndex(forType: trainType, carIndex: index, count: cars.count) {
                     // The last car is the head car's model turned round.
                     let turned = index == cars.count - 1 && cars.count > 1
                     frame.instances.append(instance(of: models.models[model], index: model, from: turned ? a : b, to: turned ? b : a,
