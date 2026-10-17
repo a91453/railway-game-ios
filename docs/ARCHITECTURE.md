@@ -11711,6 +11711,78 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 **UI 測試**（交給 Codex）：沒有新的畫面；不需要。
 
+### 277. 3D 地圖下雨時變暗、變灰、霧變近；站前商店街與雨絲的計畫
+
+2026-10-17。3D 生活感的下一步，遊戲規劃 session 同意。HANDOFF §2 原本寫「等下一版 TestFlight 量到 3D 幀時間，才做 (a) 站前商店街構件，(b) 午後雷陣雨」。這個決策先做沒有新幾何的一項：下雨時的光線與霧。不必等 fps。另外兩項的計畫也寫在這裡。
+
+號碼依工作登記 #231：決策 277。存檔版本、golden schema 不動；GameCore 不動。
+
+1. **光線怎麼變**（`Map3DWeather`、`Map3DLighting`，GamePresentation）：數值照參考庫 `Railway/town-scene-reference-clean/` 的 `source/weather.js`，`PRESETS.rain` 與 `applyLighting` 的算法。
+   - 白天：太陽 ×0.56，天空與地面的環境光 ×0.92。
+   - 夜裡：太陽（月光）×0.94，環境光不變。
+   - 天空（畫面背景）往 `66778A` 混 0.24，月光與陽光的顏色也往它混 0.24 × 0.3。
+   - 天空的環境光往 `8392A3` 混 0.1，地面的往 `68737F` 混 0.12。
+   - 霧往 `586777` 混 0.24；霧開始與全白的距離 ×0.84、×0.76。
+   - 這些都乘上「天氣多明顯」：白天 1，夜裡 0.45（參考的 `weatherStrength`）。
+     - 參考從陽光強度（0.45 到 3）算白天的比例。這裡月亮的強度也是 1（決策 229），所以改用 `1 − night`。
+   - 換天氣時 2 秒混過去（`TRANSITION_SECONDS`，`Map3DWeather.Change`）。開 3D 時的第一個天氣直接套用。
+   - 晴天完全照舊：背景、霧色都是原本的天空色，光線不變（`Map3DWeatherTests` 釘住每 90 分鐘）。
+2. **哪天下雨**：照 GameCore 自己的天氣（決策 162），也就是 2D 地圖用的 `MapWeather.sky`。不用參考的亂數（晴 70%、陰 13%、雨 13%、雪 4%）。
+   - 雨、雷雨、颱風都用 rain。閃電與更大的雨，是雨絲那一步的事。
+   - 參考的陰天、雪，GameCore 沒有這兩種天氣，不做。
+3. **App**（`Map3DMetalView`、`Map3DPreviewScreen`）：
+   - 把當天的 `Map3DWeather(MapWeather(world:))` 交給 Metal 畫面，每幀算出混到哪裡；
+   - 背景色用 `background`，霧色用 `fogColour`，霧的距離乘上 `fogScale`；
+   - 著色器不改：霧色原本就是一個獨立的 uniform。
+
+**四方**（選「數值照參考、觸發照 GameCore、先做光線」）：
+- 玩家：GameCore 下雨的那天，3D 也是陰暗、灰藍、遠處起霧，和 2D 地圖的雨一致；晴天完全不變。
+- 開發：沒有新幾何，幀數不變；算法在 GamePresentation，有 Linux 測試；不另擲亂數，和 GameCore 的天氣同一個來源。
+- 美術：雨天的色調是參考調好的「感覺」，不是造型，照用不和平塗風衝突；晴天的配色（決策 241、272）不動。
+- 音樂：無。雨聲不在這次範圍；參考的音樂沒有授權，不用。
+
+**沒有選的做法**：
+- 等 72.1 的 fps 才做：這一項沒有新幾何，不影響幀數，沒有理由等。
+- 照參考擲亂數決定天氣：會和 GameCore 的天氣（2D 地圖、營運的影響）對不上。
+- 雨天只把畫面蓋一層灰（2D 地圖的作法）：3D 有光線與霧可以用，蓋一層會連夜裡的燈一起變灰。
+
+**接下來的兩步**（每一項一個 PR、一個決策號，開工時在 #231 取）：
+1. **雨絲**：等這個決策合併，而且 72.1 的 fps 回報沒有問題再做。
+   - 照參考的作法：一層蓋在畫面上、平行的細線。
+   - 數值：數量高 480、中 260、低 140（跟著 `Map3DStreetDetail`），速度 220、斜度 0.12、線寬 0.7，顏色 rgba(198, 215, 228, 0.24 × 雨量)。
+   - 雷雨加閃電（照 2D 地圖的節奏）；颱風雨量加大。
+   - 動態照 `.claude/skills/motion/SKILL.md`：「減少動態效果」打開時不畫雨絲，只留光線。
+   - 亂數改成位置雜湊（`map3DRandom`）。
+2. **站前商店街**：等 fps 確定有餘裕。只補原生缺的；騎樓、店面招牌帶、低遮雨棚、鐵皮雨遮、曬衣、水塔、直立招牌已有（決策 263、267、268）。
+   - 條紋布雨遮：照 `main.js` 的 `addAwning`，7 條兩色交錯（店色與米白 `F1EBE0`）、斜 0.42 rad、下緣一條垂邊；和鐵皮雨遮二選一。
+   - 站前一排每家一個主色：只取這個作法；顏色用本專案的 `Map3DPalette.signs` 再加 2–3 色，不照參考那五家店的組合。
+   - 站前較高的一棟加屋頂立牌（兩根柱子）、入口雨棚的暖色下照燈（glowing），照 `decorateHotel`。
+   - 範圍只在車站周圍（站前的街，或離站 150 m 內的店面），一個站約 4,000 面。
+   - 店名、站名不用（不用「晴川站」）；3D 裡沒有文字，招牌是色塊（art-style §7）。
+
+**參考**：
+
+| 參考 | → 目標 |
+| --- | --- |
+| `Railway/town-scene-reference-clean/source/weather.js` `PRESETS.sunny`、`PRESETS.rain` | `Map3DWeather.clear`、`.rain`（數值照用） |
+| 同檔 `applyLighting`（`daylight`、`weatherStrength`、各項的混法） | `Map3DLighting` 的 `sunLight`、`skyLight`、`groundLight`、`background`、`fogColour`、`fogScale` |
+| 同檔 `blendProfile`、`TRANSITION_SECONDS` | `Map3DWeather.blended(to:share:)`、`Change`、`changeSeconds` |
+| 同檔 `QUALITY.*.rain`、`RAIN_SPEED`、`RAIN_SLANT` | 下一步的雨絲 |
+| `source/main.js` `addAwning`、`decorateShop`、`decorateHotel` | 站前商店街那一步 |
+| `source/levels/station.js` 的店名、「晴川站」、五家店的配色；Kenney 模型；音樂 | 不用 |
+
+授權：參考包本身沒附程式的授權文件（`ATTRIBUTION_AND_RIGHTS.md`）；CLAUDE.md 把它列為作者授權的實作來源，只排除沒有授權文字的音樂。外部專案：沒有另外搜尋。
+
+**缺口**：
+- 每家店各自的打烊時間（參考的招牌到打烊時間就熄）：要給每塊招牌一個時間，再在著色器比對，現在沒有。
+- 3D 裡的文字（店名、站名）。
+- 雨天路面的反光與水窪：參考也沒有。
+- 預覽：沒有另做；數值照參考，畫面要在實機看。
+
+**驗證**：
+- **VERIFIED**（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`Map3DWeatherTests` 6 個、`Map3DNightAndGroundTests`、`Map3DTests`、`Map3DShadowTests` 通過；改到的 App 檔通過 `swiftc -parse`。
+- **UNVERIFIED**：App 的編譯（macOS CI）；實機的雨天畫面（TestFlight）。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

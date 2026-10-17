@@ -30,7 +30,8 @@ struct Map3DPreviewScreen: View {
     var body: some View {
         let language = DisplayLanguage.app
         ZStack {
-            Map3DView(scene: scene, sceneVersion: sceneVersion, lighting: Map3DLighting(at: session.world.clock.now), feed: feed,
+            Map3DView(scene: scene, sceneVersion: sceneVersion, lighting: Map3DLighting(at: session.world.clock.now),
+                      weather: Map3DWeather(MapWeather(world: session.world)), feed: feed,
                       start: handedOver, farOut: farOut, onStats: { stats = $0 })
                 .ignoresSafeArea()
                 .accessibilityIdentifier("map3D.view")
@@ -239,6 +240,8 @@ private struct Map3DView: UIViewRepresentable {
     let scene: Map3DScene?
     let sceneVersion: Int
     let lighting: Map3DLighting
+    /// Decision 277: the day's weather on the map.
+    let weather: Map3DWeather
     let feed: Map3DTrainFeed
     /// Decision 269: the 2D map's view a pinch handed over, and what to do
     /// when pinched back out past ``Map3DHandoff/closesAt``.
@@ -279,6 +282,7 @@ private struct Map3DView: UIViewRepresentable {
     func updateUIView(_ uiView: UIView, context: Context) {
         guard let view = uiView as? Map3DMetalView else { return }
         view.lighting = lighting
+        view.weather = weather
         view.onStats = onStats
         context.coordinator.farOut = farOut
         guard let scene, context.coordinator.shownVersion != sceneVersion else { return }
