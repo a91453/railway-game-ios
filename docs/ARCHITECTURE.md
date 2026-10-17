@@ -11139,7 +11139,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 5. 過了上一關才開下一關；第 1 關一直開著。第 1 關過了就算教學完成（`tutorialCompleted`），首次遊玩的卡片不再出現。
 
 **教學併進關卡**：
-6. 開始畫面的「教學」換成「入門 · ★ n/9」，打開關卡清單（每關的故事、教什麼、目標、幾天幾顆星、開始或鎖住）。首次遊玩卡片的按鈕改成「開始第 1 關」。
+6. 開始畫面的「教學」換成「入門 · ★ n/9」（決策 271 加到 10 關後是 n/30，程式寫成 `3 × Lesson.all.count`），打開關卡清單（每關的故事、教什麼、目標、幾天幾顆星、開始或鎖住）。首次遊玩卡片的按鈕改成「開始第 1 關」。
 7. 教學的步驟引擎（決策 188）與 `TutorialCardPlacement` 變成關卡的引導（`Tutorial.steps(over:)` 讀世界的關卡）：
    - 第 1 關：教學的第一段，從「點建造」到「等第一筆車資」，不含「購買…並開始營運」（決策 264：簡單規則下開線就有車）。
    - 第 2 關：一張閱讀卡「把路線延伸到第三個城鎮」，接著教學原本的路線卡與車站乘客四步。
@@ -11204,6 +11204,8 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 修正：最後一步不會自己前進（`!tutorial.isLastStep`），等玩家按「完成」。
 - Linux 測試：`LessonTests.testTheFirstLessonsLastStepWaitsForFinish`。不修的時候這個測試會失敗。
 - 四方：玩家：看得到第一筆車資和「完成」，教學不會突然消失；開發：一個條件，有測試；美術：無；音樂：無。
+
+**之後的修正**（2026-10-17，PR #755–#784 的審查）：關卡結果卡的「繼續玩」讓遊戲接著跑（`GameSession.keepPlaying()`）。達成目標時遊戲會自己暫停（決策 175），原本按「繼續玩」只關掉卡片，玩家還要再找「繼續」（Codex 在 #784 的 UI 測試看到）。只在遊戲是自己為事件暫停的時候繼續；玩家自己按的暫停不動。四方：玩家：按的就是字面上的「繼續玩」；開發：一個 GamePresentation 方法加 Linux 測試，UI 測試兩種都接受；美術：無；音樂：無。
 
 ### 267. 3D 街景的騎樓、雨遮、曬衣、水塔，最近的一層細節；斜交與複線的平交道
 
@@ -11431,6 +11433,8 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
   - 新的 UI 測試 `MapInteractionTests/testTheButtonsThreeDMapStaysThreeDWhenPinchedCloser`（full lane）。
 - GameCore、存檔版本、golden schema 都不動。
 
+**之後的修正**（2026-10-17，PR #755–#784 的審查）：3D 場景快取（`Map3DSceneCache`）只給同一局用，多記一個 `weak` 的 `GameSession`。鍵只數軌道、月台、建物與第幾週，兩個新局（例如入門第 1 關，再開自由模式）都是 0 條軌道、第 0 週，原本會拿到上一局的場景。四方：玩家：3D 永遠是這一局的城鎮；開發：一行身分比對（換局都會建新的 `GameSession`）；美術：無；音樂：無。
+
 ### 270. 空白地圖的 2D 拉近時畫種子道路：和 3D 同一份，配色照實景的 2D 道路
 
 2026-10-17。3D 生活感第 4 步的後半，接在決策 269 之後。HANDOFF §4.4 的下一步：「2D 拉近到看得見建物的那一級時，也畫同一份種子道路」。空白地圖的 2D 原本沒有任何道路，3D 卻有（決策 263），兩邊對不上；決策 269 起雙指拉近會把 2D 交給 3D，交接那一下道路突然出現。
@@ -11647,6 +11651,11 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 **UI 測試**（交給 Codex）：路線卡跑滿一天後有「營運狀況」與兩端的候車列；列車面板的載客率條下有座位圖。
 
 **下一步**：第二個 PR 做 ② 每趟蓋章與長按路線看旅程（決策 220）。
+
+**之後的修正**（2026-10-17，PR #755–#784 的審查，`docs/archive/PR755_784_REVIEW_HANDOFF.md` 第三節）：
+- 兩端的候車人數只數等這條線的人（`waitingPassengers(at:)` 裡 `line` 是它的）。原本數車站的全部候車，兩條線同一個起點時，每條線都說兩條線的總和，「一班車載不完」也是拿總和比這條線的一列車。
+- 座位圖一排最多 6 節（`SeatMap.carsPerRow`，約 240 點），多的換行。手機橫拿時列車卡片最寬 300 點，原本 7 節以上就撐出卡片（高鐵示範 12 節約 476 點）。
+- 四方：玩家：需求燈說的是這條線自己的乘客，長編組的座位圖看得完整。開發：只改 GamePresentation 的換算與 App 的排版，有 Linux 測試。美術：座位與車廂的樣子不變，只是換行。音樂：無。
 
 ## 目前規則摘要
 

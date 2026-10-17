@@ -501,12 +501,22 @@ struct MapView: View {
                     }, holdsAt: { location in
                         // Decision 119: holding a station, while only
                         // looking at the map, opens its panel.
-                        guard session.tool == .select, screen.panel != .lines else { return false }
+                        // Which way a hold went, for the UI tests' trace: the
+                        // flaky hold of MapInteractionTests ends with no panel
+                        // and nothing yet says why (PR #755–#784 review).
+                        guard session.tool == .select, screen.panel != .lines else {
+                            UITestTrace.action("map.hold refused: tool \(session.tool), panel \(String(describing: screen.panel))")
+                            return false
+                        }
                         let reach = projection.worldDistance(NetworkBuilding.touchRadius)
-                        return session.world.station(near: projection.planPoint(at: location), within: reach) != nil
+                        let found = session.world.station(near: projection.planPoint(at: location), within: reach) != nil
+                        UITestTrace.action("map.hold at (\(Int(location.x)), \(Int(location.y))): station \(found ? "found" : "none")")
+                        return found
                     }, onHold: { location in
                         let reach = projection.worldDistance(NetworkBuilding.touchRadius)
-                        if session.holdMap(at: projection.planPoint(at: location), reach: reach) != nil {
+                        let held = session.holdMap(at: projection.planPoint(at: location), reach: reach)
+                        UITestTrace.action("map.hold began: \(held.map { "station \($0.rawValue)" } ?? "no station")")
+                        if held != nil {
                             cellTooltip = nil
                             cityTooltip = nil
                             terrainTooltip = nil

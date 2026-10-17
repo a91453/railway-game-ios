@@ -121,7 +121,10 @@ struct ContentView: View {
                             lessonResult = nil
                             launcher.startLesson(Lesson.all[result.lesson - 1])
                         },
-                        keepPlaying: { lessonResult = nil }
+                        keepPlaying: {
+                            lessonResult = nil
+                            session.keepPlaying()
+                        }
                     )
                     .presentationDetents([.medium, .large])
                 }
