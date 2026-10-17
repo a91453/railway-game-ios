@@ -541,17 +541,14 @@ final class StartSaveFlowSmokeTests: XCTestCase {
     private func requiredButton(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
         // A phone on its side (decision 106) shows fewer of the start
         // screen's buttons at once: scroll their column to the one wanted.
+        // Scroll until its middle shows, which is what `touchable` asks: a
+        // button partly on screen is hittable to XCTest, so asking that left
+        // the Demo Map, pushed down by the Lessons button (decision 266),
+        // with its middle under the screen's edge (full lanes 39020766185
+        // and 39026081385: frame y 357-456 on a 402-point-high screen).
         let button = app.buttons[identifier]
-        if identifier.hasPrefix("start."), button.appears(within: 10), !button.becomesHittable(within: 1) {
-            let column = app.scrollViews.containing(.button, identifier: identifier).firstMatch
-            for _ in 0..<4 where column.exists && !button.isHittable {
-                // Slowly, so the column does not fling past the button.
-                if button.frame.midY < column.frame.midY {
-                    column.swipeDown(velocity: .slow)
-                } else {
-                    column.swipeUp(velocity: .slow)
-                }
-            }
+        if identifier.hasPrefix("start."), button.appears(within: 10) {
+            XCTAssertTrue(app.scrollUntilShown(button), "The start screen's column never showed \(identifier)")
         }
         // The tools slide in once Build is pressed: tap one once it stays put.
         if identifier.hasPrefix("tool.") { button.waitUntilSettled() }
