@@ -214,7 +214,7 @@ struct TrainControls: View {
                         .font(.footnote.weight(.semibold))
                 }
                 if let loadInfo = session.world.trainLoadInfo(of: train.id) {
-                    TrainLoadBar(load: loadInfo, language: language)
+                    TrainLoadBar(load: loadInfo, language: language, cars: train.cars)
                         .padding(.top, 2)
                 }
             }

@@ -1159,6 +1159,67 @@ struct LinesPanel: View {
                 // with until more trains are taught.
                 headwaySection(line)
             }
+            // Decision 274: how well its trains fit, and who waits at its ends.
+            if let feedback = session.world.lineFeedback(line.id) {
+                feedbackSection(feedback)
+            }
+        }
+    }
+
+    /// Decision 274: yesterday's fit of the line's trains, and the people
+    /// waiting at each end now as one, two or three people (art style).
+    private func feedbackSection(_ feedback: LineFeedback) -> some View {
+        let language = session.language
+        return Section {
+            if let fit = feedback.fit {
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: fit.title(in: language))
+                            .font(.footnote.weight(.semibold))
+                        Text(verbatim: fit.advice(peakPercent: feedback.peakPercent, in: language))
+                            .font(.caption)
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                } icon: {
+                    Image(systemName: fit == .justRight ? "checkmark.circle" : "exclamationmark.circle")
+                        .foregroundStyle(fit == .justRight ? Theme.success : Theme.warning)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("line.trainFit")
+            }
+            ForEach(feedback.ends, id: \.station) { end in
+                Label {
+                    Text(verbatim: language.text(
+                        "\(end.name): \(end.waiting) waiting · \(end.demand.title(in: language))",
+                        "\(end.name)：\(end.waiting) 人在等・\(end.demand.title(in: language))"
+                    ))
+                    .font(.footnote)
+                } icon: {
+                    Image(systemName: Self.peopleSymbol(end.demand))
+                        .foregroundStyle(Self.demandColor(end.demand))
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("line.endDemand")
+            }
+        } header: {
+            Text(verbatim: language.text("How It Runs", "營運狀況"))
+        }
+    }
+
+    /// One, two or three people, as the map's crowding marks count them.
+    private static func peopleSymbol(_ demand: EndDemand) -> String {
+        switch demand {
+        case .calm: "person.fill"
+        case .busy: "person.2.fill"
+        case .crowded: "person.3.fill"
+        }
+    }
+
+    private static func demandColor(_ demand: EndDemand) -> Color {
+        switch demand {
+        case .calm: Theme.success
+        case .busy: Theme.warning
+        case .crowded: Theme.error
         }
     }
 
