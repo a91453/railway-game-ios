@@ -132,4 +132,31 @@ final class Map3DModelTests: XCTestCase {
         XCTAssertTrue(far.instances.isEmpty)
         XCTAssertEqual(far.boxes.triangleCount, all.boxes.triangleCount)
     }
+
+    /// After #752: the top of each cab's nose stays the roof's grey, as it
+    /// was before #752 (the #764 check found the EMU3000's nose top turned
+    /// white); only a diving high-speed nose sweeps its body colour over
+    /// the top to the tip.
+    func testTheNoseTopIsTheRoofsColourButOnAHighSpeedNose() throws {
+        for style in Map3DTrainStyle.all where style.nose > 0 {
+            let model = pack.models[try XCTUnwrap(pack.index(of: style.name + "-cab"))]
+            let top = style.floor + 0.9 * (style.roof - style.floor)
+            // The shell's top over the nose (not the roof boxes above it).
+            let noseTop = model.vertices.filter { $0.x > style.length / 2 - style.nose + 0.01 && $0.z > top + 0.01 && $0.z <= style.roof + 0.01 }
+            XCTAssertFalse(noseTop.isEmpty, style.name)
+            let body = noseTop.filter { $0.color == style.body }.count
+            if style.dive > 0 {
+                XCTAssertGreaterThan(body, 0, "\(style.name): the body colour sweeps over the nose")
+            } else {
+                // Glass where the windscreen reaches up (a flat front), the
+                // roof's grey over the rest (the EMU3000's long nose).
+                XCTAssertTrue(noseTop.allSatisfy { $0.color == Map3DTrainStyle.roofColour || $0.color == Map3DTrainStyle.glass },
+                              "\(style.name): the nose top is the roof's grey or the windscreen")
+            }
+        }
+        // The EMU3000's long nose has the roof's grey on top.
+        let express = pack.models[try XCTUnwrap(pack.index(of: "express-cab"))]
+        let style = try XCTUnwrap(Map3DTrainStyle.all.first { $0.name == "express" })
+        XCTAssertTrue(express.vertices.contains { $0.x > style.length / 2 - style.nose + 0.01 && $0.color == Map3DTrainStyle.roofColour })
+    }
 }
