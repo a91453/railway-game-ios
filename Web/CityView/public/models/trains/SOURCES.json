@@ -1,14 +1,14 @@
 {
   "comment": "Where each model in Web/CityView/public/models/trains/ came from. A model made with Meshy keeps its provenance here rather than in the GLB: the owner's export is re-written by tools/trains/bake_model.py (decimated, re-unwrapped, its colour baked into a new picture), so nothing of the original file survives to carry it. Meshy's terms ask that AI-generated output stay identifiable; this is where it is said.",
   "n700st-cab": {
-    "source": "Procedural game-style parametric loft (tools/trains/build_train.py), with cockpit canopy dome and Dual Supreme Wing shoulder profile calibrated against the owner's 2026-10-11 Meshy reference model",
+    "source": "Procedural game-style parametric loft (tools/trains/build_train.mjs), with cockpit canopy dome and Dual Supreme Wing shoulder profile calibrated against the owner's 2026-10-11 Meshy reference model",
     "reference_sha256": "8c8fa4924726332efaf988305d94d572f33caca99fb7929e96bbb715686c7ba7",
-    "triangles": 3060,
-    "made_by": "tools/trains/build_train.py: 24.4 m x 2.944 m x 3.99 m, 9.0 m N700S/N700ST duck-bill nose with raised cockpit canopy dome and Dual Supreme Wing ridges, Shinkansen roof cable shrouds and pantograph fairing, unwrapped to the clean procedural livery in Web/CityView/src/world/trains.js (TEXCOORD_0) and analytical ambient occlusion in n700st-cab-ao.png (TEXCOORD_1)"
+    "triangles": 3036,
+    "made_by": "tools/trains/build_train.mjs (Blender parity script: tools/trains/build_train.py): 24.4 m x 2.944 m x 3.87 m, 9.0 m N700S/N700ST duck-bill nose with raised cockpit canopy dome and Dual Supreme Wing ridges, continuous Shinkansen roof cable shrouds (pantograph fairings are instanced only on Car 4 and Car 9 in Web/CityView/src/world/trains.js), unwrapped to the procedural livery in Web/CityView/src/world/trains.js (TEXCOORD_0) and analytical 512x512 greyscale ambient occlusion in n700st-cab-ao.png (TEXCOORD_1, generated directly by tools/trains/build_train.mjs from underframe/bogie proximity, window/door frame recesses, and roof shroud crevices)"
   },
   "n700st-car": {
-    "source": "Procedural game-style parametric loft (tools/trains/build_train.py) matching n700st-cab cross-section",
-    "triangles": 2616,
-    "made_by": "tools/trains/build_train.py: 24.4 m x 2.944 m x 3.99 m intermediate car with plug doors, capsule saloon windows, Shinkansen roof cable shrouds and pantograph fairing, unwrapped to Web/CityView/src/world/trains.js (TEXCOORD_0) and n700st-car-ao.png (TEXCOORD_1)"
+    "source": "Procedural game-style parametric loft (tools/trains/build_train.mjs) matching n700st-cab cross-section",
+    "triangles": 2592,
+    "made_by": "tools/trains/build_train.mjs (Blender parity script: tools/trains/build_train.py): 24.4 m x 2.944 m x 3.87 m intermediate car with plug doors, capsule saloon windows, and continuous Shinkansen roof cable shrouds (pantograph fairings are instanced only on Car 4 and Car 9 in Web/CityView/src/world/trains.js), unwrapped to Web/CityView/src/world/trains.js (TEXCOORD_0) and analytical 512x512 greyscale ambient occlusion in n700st-car-ao.png (TEXCOORD_1, generated directly by tools/trains/build_train.mjs)"
   }
 }

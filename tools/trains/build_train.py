@@ -261,16 +261,17 @@ def furnish(spec, verts, faces, kind):
             for wy in (-1.06, 1.06):
                 add_cylinder(verts, faces, kind, wx, wy, 0.43, 0.43, 0.14, UNDER)
     add_box(verts, faces, kind, (body_from + body_to) / 2, 0, 0.42, body_to - body_from, 2.2, 0.45, UNDER)
-    # Shinkansen roof: continuous high-voltage cable shrouds and a low-profile pantograph fairing,
-    # stopping clear of the cab nose.
+    # Shinkansen roof: continuous high-voltage cable shrouds stopping clear of the cab nose;
+    # the pantograph fairing is added only when a car spec carries a pantograph.
     run_from = body_from + 0.6
     run_to = (half - nose - 1.0) if nose else body_to - 0.6
     for y in (-0.72, 0.72):
         add_box(verts, faces, kind, (run_from + run_to) / 2, y, sh["roof"] + 0.04,
                 run_to - run_from, 0.28, 0.16, ROOF)
-    panto_x = (run_from + 2.2) if nose else (run_from + run_to) / 2
-    add_box(verts, faces, kind, panto_x, 0, sh["roof"] + 0.07, 3.0, 1.62, 0.22, ROOF)
-    add_box(verts, faces, kind, panto_x, 0, sh["roof"] + 0.20, 1.8, 1.36, 0.08, UNDER)
+    if spec.get("pantograph"):
+        panto_x = (run_from + run_to) / 2
+        add_box(verts, faces, kind, panto_x, 0, sh["roof"] + 0.07, 3.0, 1.62, 0.22, ROOF)
+        add_box(verts, faces, kind, panto_x, 0, sh["roof"] + 0.20, 1.8, 1.36, 0.08, UNDER)
 
 
 def make_object(spec, verts, faces, kind):
@@ -296,7 +297,7 @@ SWATCH = (1 - SIDE_Y0 / 2 / TEX_H)          # the plain swatches in the top 16 p
 SWATCH_U = {ROOF: 0.25, UNDER: 0.75}        # as plainUv is called in trains.js
 # The nose's own chart, laid out along the nose and across it: NOSE in trains.js, same numbers. A
 # windscreen painted at a height instead goes right round the ring and comes out as a visor.
-NOSE_X0, NOSE_X1, NOSE_Y0, NOSE_Y1, NOSE_ACROSS = 16, 1456, 264, 504, 4
+NOSE_X0, NOSE_X1, NOSE_Y0, NOSE_Y1, NOSE_ACROSS = 16, 1456, 264, 504, 3
 
 
 def written(u, v):
