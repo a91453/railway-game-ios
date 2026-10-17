@@ -132,10 +132,13 @@ public struct LineFeedback: Hashable, Sendable {
 extension GameWorld {
     /// Line `id`'s feedback (decision 274), or `nil` for a freight line, a
     /// ring or one without trains: its trains' fit from yesterday's fullest
-    /// train, and how many wait at each end against what one train takes.
+    /// train, and how many wait at each end against what its smallest
+    /// train takes.
     public func lineFeedback(_ id: LineID) -> LineFeedback? {
+        // Against the smallest of its trains (#785's review): whichever
+        // comes next, those waiting must fit it.
         guard let line = line(id: id), !line.isFreight, !line.isRing, line.stops.count >= 2,
-              let first = line.assignedTrains.first.flatMap({ train(id: $0) }) else { return nil }
+              let capacity = line.assignedTrains.compactMap({ train(id: $0)?.ratedCapacity }).min() else { return nil }
         let peak = lineYesterday(id)?.peakLoad
         let ends = [line.stops[0], line.stops[line.stops.count - 1]].compactMap { id -> LineFeedback.End? in
             guard let station = station(id: id) else { return nil }
@@ -144,7 +147,7 @@ extension GameWorld {
             let waiting = waitingPassengers(at: id).filter { $0.line == line.id }.reduce(Int64(0)) { $0 + $1.count }
             return LineFeedback.End(
                 station: id, name: station.name, waiting: waiting,
-                demand: EndDemand(waiting: waiting, capacity: first.ratedCapacity)
+                demand: EndDemand(waiting: waiting, capacity: capacity)
             )
         }
         return LineFeedback(fit: peak.map { TrainFit(peakLoad: $0) }, peakPercent: ((peak ?? 0) + 5) / 10, ends: ends)
