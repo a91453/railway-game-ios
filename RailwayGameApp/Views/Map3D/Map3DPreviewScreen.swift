@@ -120,12 +120,31 @@ struct Map3DPreviewScreen: View {
 /// near. One build at a time for each world. Kept for one game: the key
 /// counts only what changes within a game, and two new games (a lesson,
 /// then free play) both start with no track, no buildings, in week 0.
+/// Decision 269, later (#785's review): let go on the start screen and
+/// when the system is short of memory (``clear()``); a 3D map on screen
+/// keeps its own scene.
 @MainActor
 final class Map3DSceneCache {
     static let shared = Map3DSceneCache()
     private var key: Map3DSceneKey?
     private weak var game: GameSession?
     private var building: Task<Map3DScene, Never>?
+    private var memoryWarning: NSObjectProtocol?
+
+    private init() {
+        memoryWarning = NotificationCenter.default.addObserver(
+            forName: UIApplication.didReceiveMemoryWarningNotification, object: nil, queue: .main
+        ) { _ in
+            MainActor.assumeIsolated { Map3DSceneCache.shared.clear() }
+        }
+    }
+
+    /// Lets go of the scene built or building; the next 3D map builds anew.
+    func clear() {
+        key = nil
+        game = nil
+        building = nil
+    }
 
     /// Starts building `session`'s scene, unless it is built or building.
     func prepare(for session: GameSession) {

@@ -66,6 +66,22 @@ public enum Map3DHandoff {
         return after > before && after > max(closesAt, start * 1.2)
     }
 
+    /// How long, in seconds, a pinch rests near the line
+    /// (``buildsAhead(referenceSize:viewportHeight:)``) before the 3D scene
+    /// starts building. Decision 269, later: it started as soon as a pinch
+    /// passed half the line, so a player who only zoomed the 2D map in
+    /// built a 3D city (seconds of work, tens of MB) they never opened.
+    public static let buildsAfterResting: Double = 0.4
+
+    /// Whether the 2D map at `referenceSize` points per 16 m is near enough
+    /// the line to build the 3D scene ahead, once the pinch rests there:
+    /// from three quarters of ``opensAt(viewportHeight:)`` to it. Past the
+    /// line the 3D map opens and builds its scene anyway.
+    public static func buildsAhead(referenceSize: Double, viewportHeight: Double) -> Bool {
+        let opens = opensAt(viewportHeight: viewportHeight)
+        return referenceSize >= opens * 0.75 && referenceSize < opens
+    }
+
     /// Whether the 2D map hands over when pinched close: not with a
     /// building tool out, nor while the tutorial runs.
     public static func hands(building: Bool, tutorialRuns: Bool) -> Bool {

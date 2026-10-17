@@ -11435,6 +11435,24 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 **之後的修正**（2026-10-17，PR #755–#784 的審查）：3D 場景快取（`Map3DSceneCache`）只給同一局用，多記一個 `weak` 的 `GameSession`。鍵只數軌道、月台、建物與第幾週，兩個新局（例如入門第 1 關，再開自由模式）都是 0 條軌道、第 0 週，原本會拿到上一局的場景。四方：玩家：3D 永遠是這一局的城鎮；開發：一行身分比對（換局都會建新的 `GameSession`）；美術：無；音樂：無。
 
+**之後的修正**（2026-10-17，#785 審查延後的兩項，#787 派給 3D session）：
+- 快取放手：`Map3DSceneCache.clear()` 放掉蓋好或蓋到一半的場景。兩個時機：回到開始畫面（`RootView` 的 `StartView` 出現時），以及系統的記憶體警告（`UIApplication.didReceiveMemoryWarningNotification`）。畫面上開著的 3D 地圖保留自己那份場景，關掉才放掉。之前快取一直留著最後一個場景，回到開始畫面也一樣（兩鎮地圖約幾十 MB）。
+- 預先蓋：之前 2D 拉近過門檻的一半（約 1,600 m 的比例），就開始在背景蓋 3D 場景；只是拉近看 2D 的玩家也付了幾秒的計算與記憶體。現在要拉近到門檻的四分之三到門檻之間（`Map3DHandoff.buildsAhead(referenceSize:viewportHeight:)`），並在那裡停 0.4 秒（`buildsAfterResting`）才開始蓋。每次雙指的變化都重新計時；時間到時地圖還在那一帶、3D 還沒開，才蓋。離開這一局（`MapView` 消失）就取消。
+  - 一口氣拉過門檻的雙指不會先蓋；交給 3D 時才開始蓋，蓋好之前 3D 畫面先轉圈。換來的是：沒進 3D 就不蓋。
+- 四方：
+  - 玩家：只看 2D 的玩家不再在背景多算一個 3D 城市，手機比較不燙、比較省電。回到開始畫面就把記憶體還回去，記憶體不夠時 App 比較不會被系統關掉。在門檻附近停一下再進 3D，還是一打開就有畫面。
+  - 開發：門檻一帶的判斷在 GamePresentation，有 Linux 測試；App 只多一個計時和兩個放手的時機。GameCore 不動。
+  - 美術：畫面不變。
+  - 音樂：無。
+- 沒有選的做法：
+  - 照舊過一半就蓋：浪費的計算和記憶體都還在。
+  - 完全不預先蓋：每次交給 3D 都要等場景，拉近的那一下會斷掉。
+  - 只清快取、不改預先蓋的時機：預先蓋的浪費還在。
+- 驗證：
+  - **VERIFIED**（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`Map3DHandoffTests` 6 個通過，含新的 `testTheSceneBuildsAheadOnlyNearTheLine`；改到的 App 檔通過 `swiftc -parse`。
+  - **UNVERIFIED**：App 的編譯（macOS CI）；實機的記憶體與電池（TestFlight）。
+- GameCore、存檔版本、golden schema 都不動。
+
 ### 270. 空白地圖的 2D 拉近時畫種子道路：和 3D 同一份，配色照實景的 2D 道路
 
 2026-10-17。3D 生活感第 4 步的後半，接在決策 269 之後。HANDOFF §4.4 的下一步：「2D 拉近到看得見建物的那一級時，也畫同一份種子道路」。空白地圖的 2D 原本沒有任何道路，3D 卻有（決策 263），兩邊對不上；決策 269 起雙指拉近會把 2D 交給 3D，交接那一下道路突然出現。
