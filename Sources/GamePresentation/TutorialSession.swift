@@ -49,10 +49,14 @@ extension GameSession {
 
     /// Whether the step on screen moves on by itself
     /// (``Tutorial/autoAdvanceDelay`` after it is done, decision 188): an
-    /// action step, done, that was not reached by Back.
+    /// action step, done, that was not reached by Back, and not the last.
+    /// The last waits for Finish, which alone ends a tutorial (decision
+    /// 177): lesson 1's guide ends on an action step, the first fares
+    /// (decision 266), and moving on from it by itself had ended the guide
+    /// before Finish could be tapped (the full lane on main d530311).
     public var tutorialAdvancesByItself: Bool {
         guard let tutorial else { return false }
-        return tutorial.step.goal != .read && !tutorial.reachedByBack && isTutorialStepDone
+        return tutorial.step.goal != .read && !tutorial.isLastStep && !tutorial.reachedByBack && isTutorialStepDone
     }
 
     /// The places on the map the step on screen has the player tap
