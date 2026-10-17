@@ -1,4 +1,4 @@
-# 3D 地圖的亮度方案（決策 271）
+# 3D 地圖的亮度方案（決策 272）
 
 用 `tools/map3d-preview` 畫：WebGL 照 `Map3DShaders.metal` 的算式重畫，不是 iPhone 的畫面。兩鎮地圖、下午 2 點。
 

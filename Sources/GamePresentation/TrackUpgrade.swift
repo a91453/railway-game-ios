@@ -99,12 +99,15 @@ extension GameSession {
     /// Whether the select tool picked single track that "Make double
     /// track" can be offered on: track with none beside it.
     public var canDoubleSelectedTrack: Bool {
+        // Decision 271: in a lesson, once lesson 5 has taught it.
+        guard allows(UnlockableTool.doubleTrack) else { return false }
         guard tool == .select, let id = selectedTrackEdge, world.network.edge(id) != nil else { return false }
         return trackBeside(id, near: selectedPoint) == nil
     }
 
     /// Whether the select tool picked double track, for "Add X crossover".
     public var canAddScissorsOnSelectedTrack: Bool {
+        guard allows(UnlockableTool.doubleTrack) else { return false }
         guard tool == .select, let id = selectedTrackEdge else { return false }
         return trackBeside(id, near: selectedPoint) != nil
     }

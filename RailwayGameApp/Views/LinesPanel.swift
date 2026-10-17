@@ -760,7 +760,7 @@ struct LinesPanel: View {
                         .font(.caption)
                         .foregroundStyle(Theme.textSecondary)
                 }
-            } else if let hint = session.world.freightYardFirstText(in: session.language) {
+            } else if session.showsFreight, let hint = session.world.freightYardFirstText(in: session.language) {
                 Text(verbatim: hint)
                     .font(.caption)
                     .foregroundStyle(Theme.textSecondary)

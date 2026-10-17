@@ -202,7 +202,7 @@ public enum Map3DPalette {
     /// one of the navy roads, and the farms a softer green.
     public static let ground = Map3DColor.rgb(0xD9DFEF)
     public static let water = Map3DColor.rgb(0x92C4E6)
-    /// Decision 271: the parks' green and the trees' livelier, nearer the
+    /// Decision 272: the parks' green and the trees' livelier, nearer the
     /// owner's sunny target picture; the ground and roads as decision 241.
     public static let park = Map3DColor.rgb(0xA6D68A)
     public static let farm = Map3DColor.rgb(0xD6DEB4)

@@ -310,7 +310,7 @@ public struct Map3DLighting: Hashable, Sendable {
     /// The ambient light from the ground, on what faces down.
     public var groundLight: SIMD3<Float> { Self.tinted(ground, share: 0.5, scale: ambient * 0.5 * 0.8 * dayBoost) }
 
-    /// Decision 271: by day the light a little stronger than three.js's
+    /// Decision 272: by day the light a little stronger than three.js's
     /// keyframes (a bright, clear day, as the owner's target picture), at
     /// night as it was.
     public static let dayBrightening: Float = 0.12

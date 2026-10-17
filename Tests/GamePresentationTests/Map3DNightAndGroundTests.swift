@@ -248,7 +248,7 @@ final class Map3DNightAndGroundTests: XCTestCase {
         XCTAssertEqual(alone.ground(x: centre.x + Double(Land.blockLength), y: centre.y), 0)
     }
 
-    /// Decision 271: by day the light a little stronger (a bright, clear
+    /// Decision 272: by day the light a little stronger (a bright, clear
     /// day, as the owner's target picture), the night as it was.
     func testTheDayIsBrighterAndTheNightAsItWas() {
         let noon = Map3DLighting(minute: 12 * 60), midnight = Map3DLighting(minute: 0)
