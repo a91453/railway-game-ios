@@ -97,6 +97,65 @@ final class JourneyTraceTests: XCTestCase {
         XCTAssertNil(world.journeyTrace(of: delta).summary(in: world, language: .english))
     }
 
+    /// Decision 276: a line's trace is the busiest pairs of its stops,
+    /// each from the earlier stop, with the trips the station panel's pairs
+    /// give; a station off the line is not in it.
+    func testALinesTraceIsTheBusiestPairsOfItsStops() throws {
+        var world = try makeWorld(width: 8_192, height: 4_096, balance: 100_000)
+        for (name, x) in [("Alpha", 1), ("Beta", 3), ("Gamma", 5), ("Delta", 7)] {
+            try world.buildStation(named: name, at: TestLine.centre(x, 0))
+        }
+        let alpha = StationID(rawValue: 1), beta = StationID(rawValue: 2), gamma = StationID(rawValue: 3), delta = StationID(rawValue: 4)
+        let main = try world.createLine(named: "Main", stops: [alpha, beta, gamma]).id
+        try world.setStationDemand(alpha, to: StationDemand(kind: .residential, dailyTrips: 3_000))
+        try world.setStationDemand(beta, to: StationDemand(kind: .office, dailyTrips: 1_000))
+        try world.setStationDemand(gamma, to: StationDemand(kind: .office, dailyTrips: 3_000))
+        try world.setStationDemand(delta, to: StationDemand(kind: .office, dailyTrips: 9_000))
+
+        let trace = try XCTUnwrap(world.journeyTrace(ofLine: main))
+        XCTAssertNil(trace.station)
+        XCTAssertEqual(trace.line, main)
+        XCTAssertFalse(trace.arcs.isEmpty)
+        let order: [StationID] = [alpha, beta, gamma]
+        for arc in trace.arcs {
+            XCTAssertLessThan(try XCTUnwrap(order.firstIndex(of: arc.from)), try XCTUnwrap(order.firstIndex(of: arc.station)), "from the earlier stop")
+            let pair = try XCTUnwrap(world.stationDemandPairs(of: arc.from).first { $0.station == arc.station })
+            XCTAssertEqual([arc.outbound, arc.inbound], [pair.outbound, pair.inbound])
+        }
+        XCTAssertFalse(trace.arcs.contains { $0.station == delta || $0.from == delta }, "Delta is not on the line")
+        XCTAssertEqual(trace.arcs.map(\.trips), trace.arcs.map(\.trips).sorted(by: >), "busiest first")
+        let first = try XCTUnwrap(trace.arcs.first)
+        let name = { (id: StationID) in world.station(id: id)!.name }
+        XCTAssertTrue(trace.summary(in: world, language: .english)?.hasPrefix(
+            "Busiest trips: \(name(first.from))–\(name(first.station)) \(Money(first.trips).displayText)"
+        ) == true, trace.summary(in: world, language: .english) ?? "")
+        XCTAssertNil(world.journeyTrace(ofLine: LineID(rawValue: 99)))
+    }
+
+    /// Decision 276: on the demo map, holding a line's track where no
+    /// station is selects the line the map draws there (the lowest
+    /// numbered where several share it); off the lines, nothing.
+    @MainActor
+    func testHoldingALinesTrackSelectsIt() throws {
+        let world = DemoWorld.make(in: .english)
+        let session = GameSession(world: world, language: .english)
+        let map = LineMap(world: world)
+        func middle(of stretch: LineMap.Stretch) -> PlanPoint? {
+            world.trackGeometry(of: stretch.edge)?.location(at: (stretch.start + stretch.end) / 2).position.plan
+        }
+        // Track well away from any station, where a hold finds no station.
+        let stretch = try XCTUnwrap(map.stretches.first { stretch in
+            middle(of: stretch).map { world.station(near: $0, within: 2_048) == nil } ?? false
+        })
+        let point = try XCTUnwrap(middle(of: stretch))
+        let on = map.stretches.filter { $0.edge == stretch.edge && $0.start <= (stretch.start + stretch.end) / 2 && (stretch.start + stretch.end) / 2 <= $0.end }
+        let held = session.holdLine(at: point, reach: 64)
+        XCTAssertEqual(held, on.map(\.line).min())
+        XCTAssertEqual(session.selectedLineID, held)
+        XCTAssertNotNil(session.world.journeyTrace(ofLine: try XCTUnwrap(held)))
+        XCTAssertNil(session.lineHeld(at: PlanPoint(x: 1, y: 1), reach: 64), "no line in the corner")
+    }
+
     /// On the demo map, with network routing: never more than five arcs,
     /// and they are the busiest of the station's pairs.
     func testTheDemoMapsTracesAreTheBusiestPairs() {

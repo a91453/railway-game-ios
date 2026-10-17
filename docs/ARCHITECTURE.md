@@ -11659,7 +11659,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 ### 276. 回饋第二批（二）：每趟蓋章「客滿／空位多」，長按路線看旅程
 
-2026-10-17，NEXT_PRIORITIES §16 第 3 項的第二個 PR（HANDOFF 第 3 節「航空遊戲手感借到鐵道」的 ②），遊戲規劃 session_01V1xd3H9vNkuZoSA3czNfGm 在 72.1 發版後派工。號碼依工作登記 #231：main 到 274、#789 用 275，取 276。存檔版本、golden schema、GameCore 都不動。第一個 PR 是每趟蓋章；長按路線看旅程（決策 220 的「路線之後再加」）是第二個 PR，補在這裡。
+2026-10-17，NEXT_PRIORITIES §16 第 3 項的第二個 PR（HANDOFF 第 3 節「航空遊戲手感借到鐵道」的 ②），遊戲規劃 session_01V1xd3H9vNkuZoSA3czNfGm 在 72.1 發版後派工。號碼依工作登記 #231：main 到 274、#789 用 275，取 276。存檔版本、golden schema、GameCore 都不動。第一個 PR 是每趟蓋章（第 1–6 點）；長按路線看旅程（決策 220 的「路線之後再加」）是第二個 PR（第 7–15 點）。
 
 1. **每趟蓋章**（`Sources/GamePresentation/TripStamp.swift`）：一趟（`TrainTrip`，路線的一個來回）照計畫跑完時，在它最後停靠的那一站上方蓋一個章。
    - 「客滿」：這一趟列車最擠的時候滿載（100% 以上）；
@@ -11693,7 +11693,34 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 **UI 測試**（交給 Codex）：章在 Linux 上已有邏輯測試；畫面只有 Simulator 看得到：開一條線跑到早上尖峰，車站上方出現「客滿」或「空位多」的章，2 秒後消失。
 
-**下一步**：第二個 PR，長按路線看旅程。
+**第二個 PR：長按路線看旅程**（決策 220 第 8 點「沒有做的」的第一項）：
+7. **怎麼叫出來**：選取時在路線的軌道上（不是車站上）按住 0.45 秒，和長按車站（決策 119、220）是同一個手勢。
+   - 選取那條路線、打開路線面板，地圖畫出這條路線的旅程（`GameSession.lineHeld(at:reach:)`、`holdLine(at:reach:)`）。
+   - 找的是地圖畫在那段軌道上的路線（`LineMap` 的 stretch），幾條共用時取號碼最小的。
+   - 車站優先：按在車站上照舊是車站。
+   - 工具在手上、路線面板已經開著時，長按照舊不成立。
+8. **什麼時候畫**（`MapView.tracedLineID`）：路線面板開著、選了一條路線、手上沒有工具、沒有正在畫新路線（`lineDraft` 是空的）。換一條路線就換它的，關掉面板就收掉，和車站的一樣。
+9. **資料**（`GameWorld.journeyTrace(ofLine:)`、`JourneyTrace(line:pairs:)`）：
+   - 這條路線各站之間的每日需求：每一站的 `stationDemandPairs(of:)` 裡、在這條路線上排在它後面的站；
+   - 去、回相加，取最多的 5 對，同數字時站號小的在前；
+   - 一條線停兩次的站只算一次。
+   - 參考 `Ci/` 的 `metroRenderStationODLinksFromValues` 是一站對同一條線的其他站；這裡改成整條線最多的幾對，長按路線時看的是整條線。
+10. **外觀**：和車站的旅程同一套（藏青白邊、粗細、扇形的弧、膠囊數字、0.4 秒畫出、減少動態效果時一次畫完）。每條弧從它那一對裡排前面的站畫到後面的站（`Arc.from`），所以不再都從同一站出發；彎的方向照舊是前進方向的左邊。
+11. **無障礙**：地圖的值加一句「最多人往返：Alpha–Gamma 2,000、Alpha–Beta 900（每天）」，路線的弧寫出兩端站名。
+12. **四方**：
+    - 玩家：一按就看到這條線上哪兩站之間最多人坐，該在哪裡加快車、加班次；不用學新手勢。
+    - 開發：沿用車站旅程的資料與畫法，只多一個起點；找路線用地圖已經有的 `LineMap`；邏輯在 GamePresentation，Linux 上測。
+    - 美術：同一套弧與膠囊，不加新顏色或圖示。
+    - 音樂：無。
+13. **沒有採用**：
+    - 照路線顏色畫弧：會和路線本身混在一起，決策 220 也定了不用路線色。
+    - 每一站對其他所有站都畫：一條十站的線有 45 對，畫不下。
+    - 在路線面板加「旅程」按鈕：多一步，和決策 220 不另加按鈕的理由一樣。
+14. **測試**：
+    - `JourneyTraceTests.testALinesTraceIsTheBusiestPairsOfItsStops`：只有路線上的站、從前面的站出發、人數照每站的需求、最多的在前、VoiceOver 的兩端站名。
+    - `JourneyTraceTests.testHoldingALinesTrackSelectsIt`：示範地圖上，長按離車站遠的軌道選到那段軌道上號碼最小的路線；角落沒有路線。
+    - App 的畫面交給 CI 的 iOS build。
+15. **UI 測試**（交給 Codex）：示範地圖上長按一段沒有車站的路線軌道，路線面板打開、選的是那條線，地圖的值寫出「Busiest trips: A–B …」。
 
 ## 目前規則摘要
 

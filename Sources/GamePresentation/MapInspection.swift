@@ -132,14 +132,34 @@ extension GameSession {
     /// lines; the signal is read from the world as it is now.
     public func trackInspection(of id: TrackEdgeID) -> TrackInspection? {
         guard world.network.edge(id) != nil else { return nil }
-        let map: LineMap
-        if let kept = inspectionLineMap, kept.revision == commandRevision {
-            map = kept.map
-        } else {
-            map = LineMap(world: world)
-            inspectionLineMap = (commandRevision, map)
-        }
-        return world.trackInspection(of: id, along: map)
+        return world.trackInspection(of: id, along: commandLineMap())
+    }
+
+    /// The world's line map, built once for each ``commandRevision``.
+    private func commandLineMap() -> LineMap {
+        if let kept = inspectionLineMap, kept.revision == commandRevision { return kept.map }
+        let map = LineMap(world: world)
+        inspectionLineMap = (commandRevision, map)
+        return map
+    }
+
+    /// Decision 276: the line a hold at `point` lands on, where no station
+    /// is: the lowest numbered line the map draws along the track within
+    /// `reach` of it; `nil` off the lines.
+    public func lineHeld(at point: PlanPoint, reach: Int64) -> LineID? {
+        guard world.bounds.contains(point), let at = world.trackEdgePoint(near: point, within: reach) else { return nil }
+        return commandLineMap().stretches
+            .filter { $0.edge == at.edge && $0.start <= at.distance && at.distance <= $0.end }
+            .map(\.line).min()
+    }
+
+    /// Decision 276: holding a line selects it, for the line panel and its
+    /// journey trace; the line held, or `nil` off the lines.
+    @discardableResult
+    public func holdLine(at point: PlanPoint, reach: Int64) -> LineID? {
+        guard let id = lineHeld(at: point, reach: reach) else { return nil }
+        selectLine(id)
+        return id
     }
 
     /// ``GameWorld/trackInspectionText(of:in:)`` from ``trackInspection(of:)``.
