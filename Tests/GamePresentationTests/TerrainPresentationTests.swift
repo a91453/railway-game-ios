@@ -217,6 +217,143 @@ final class TerrainPresentationTests: XCTestCase {
         XCTAssertEqual(session.world, built, "one undo takes back the levelling with the platform")
     }
 
+    /// The long line of 70.1's report: 3 km of track over ground climbing
+    /// 1 m every 15 cells (laid on a grade of about 1‰, eased), an 80 m
+    /// platform at each end, West and East, and a line calling at both.
+    private func longLine() throws -> (world: GameWorld, edge: TrackEdge, ends: [(station: StationID, start: Int64)], line: ServiceLine) {
+        var ground = try world()
+        let side = GroundBlock.side
+        try ground.setGround((0..<4).map { block in
+            let heights = (0..<side).flatMap { _ in (0..<side).map { Int16((block * (side - 1) + $0) / 15) } }
+            return GroundBlock(block: LandBlock(row: 0, column: block), heights: heights)!
+        })
+        let session = preview(ground, from: 1_024, to: 193_024)
+        session.buildNetworkTrack()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        var world = session.world
+        let edge = try XCTUnwrap(world.network.edges.first)
+        let platform = Self.endPlatform
+        let ends = [
+            (station: try world.buildStation(named: "West", at: PlanPoint(x: 3_584, y: Self.row)).id, start: Int64(0)),
+            (station: try world.buildStation(named: "East", at: PlanPoint(x: 190_464, y: Self.row)).id, start: edge.length - platform),
+        ]
+        for end in ends {
+            try world.addTrackPlatform(end.station, on: edge.id, from: end.start, to: end.start + platform)
+        }
+        let line = try world.createLine(named: "Main", stops: ends.map(\.station))
+        return (world, edge, ends, line)
+    }
+
+    private static let endPlatform: Int64 = 5_120
+
+    /// The platform tool on `world`, a platform picked in the long line's
+    /// middle.
+    private func middlePlatform(on world: GameWorld) -> GameSession {
+        let tool = GameSession(world: world)
+        tool.selectTool(.network)
+        tool.setNetworkMode(.platform)
+        tool.tapNetwork(at: PlanPoint(x: 97_024, y: Self.row), reach: 16)
+        return tool
+    }
+
+    /// The line's chosen paths along the old edge, each way, run along the
+    /// new edges from the platform they leave to the one they end at.
+    func testALinesChosenPathIsLaidAlongTheLevelledTrack() throws {
+        var (built, edge, ends, line) = try longLine()
+        let platforms = ends.map { TrackPlatform(station: $0.station, edge: edge.id, start: $0.start, end: $0.start + Self.endPlatform) }
+        try built.setLineRoutePreferences(line.id, to: [
+            LineRoutePreference(from: 0, to: 1, tracks: [TrackTraversal(edge: edge.id, direction: .forward)], platform: platforms[1]),
+            LineRoutePreference(from: 1, to: 0, tracks: [TrackTraversal(edge: edge.id, direction: .backward)], platform: platforms[0]),
+        ])
+        let tool = middlePlatform(on: built)
+        tool.addNetworkPlatform()
+        XCTAssertEqual(tool.message?.kind, .success, tool.message?.text ?? "")
+        let after = tool.world
+        // West's leg, the climb, the new platform, the climb, East's leg.
+        let edges = after.network.edges.map(\.id)
+        XCTAssertEqual(edges.count, 5)
+        let west = try XCTUnwrap(after.trackPlatforms(of: ends[0].station).first)
+        let east = try XCTUnwrap(after.trackPlatforms(of: ends[1].station).first)
+        XCTAssertEqual([west.edge, east.edge], [edges[0], edges[4]])
+        let routes = try XCTUnwrap(after.lines.first { $0.id == line.id }?.routePreferences)
+        XCTAssertEqual(routes, [
+            LineRoutePreference(from: 0, to: 1, tracks: edges.map { TrackTraversal(edge: $0, direction: .forward) }, platform: east),
+            LineRoutePreference(from: 1, to: 0, tracks: edges.reversed().map { TrackTraversal(edge: $0, direction: .backward) }, platform: west),
+        ])
+        tool.undo()
+        XCTAssertEqual(tool.world, built)
+    }
+
+    /// A train standing at a platform on the edge: refused, saying a train
+    /// is on that track, and nothing changes.
+    func testAnEdgeWithATrainAtItsPlatformIsNotLevelled() throws {
+        var (world, edge, _, _) = try longLine()
+        let train = try world.purchaseTrain(named: "Test").id
+        try world.placeTrain(train, at: .onEdge(TrackTraversal(edge: edge.id, direction: .forward), offset: 4_096))
+        let tool = middlePlatform(on: world)
+        let reason = GameError.trackEdgeInUse(edge.id).playerMessage(in: .english)
+        XCTAssertEqual(tool.networkPlatformLevelling?.problem, reason)
+        tool.addNetworkPlatform()
+        XCTAssertEqual(tool.message?.kind, .failure)
+        XCTAssertTrue(tool.message?.text.contains(reason) == true, tool.message?.text ?? "")
+        XCTAssertEqual(tool.world, world)
+    }
+
+    /// TestFlight 70.1: a long line laid first, a station at each end on a
+    /// gentle grade (about 1‰, the ground climbing 1 m every 15 cells),
+    /// a line calling at both, then a station in the middle. The edge has
+    /// the two end platforms on it, which GameCore will not lay again; the
+    /// levelling takes them off and puts them back, each on a level edge of
+    /// its own, at its own station, in the same edit.
+    func testAPlatformOnAGradeLevelsAnEdgeWithPlatformsOnIt() throws {
+        let (built, edge, ends, line) = try longLine()
+        let platform = Self.endPlatform
+
+        let tool = middlePlatform(on: built)
+        XCTAssertEqual(tool.networkPlatformGrade, 1)
+        let stretch = try XCTUnwrap(tool.networkPlatformStretch)
+        XCTAssertEqual(stretch.edge, edge.id)
+        let levelling = try XCTUnwrap(tool.networkPlatformLevelling)
+        XCTAssertNil(levelling.problem, levelling.problem ?? "")
+        let cost = try XCTUnwrap(levelling.cost)
+
+        tool.addNetworkPlatform()
+        XCTAssertEqual(tool.message?.kind, .success, tool.message?.text ?? "")
+        let after = tool.world
+        XCTAssertNil(after.network.edge(edge.id), "the old edge is gone")
+        XCTAssertEqual(after.stations.count, 3)
+        // Every platform stands on a level edge of its own, the old ones at
+        // their stations and about as long as they were.
+        for end in ends {
+            let platforms = after.trackPlatforms(of: end.station)
+            XCTAssertEqual(platforms.count, 1)
+            let kept = try XCTUnwrap(platforms.first)
+            XCTAssertEqual(kept.start, 0)
+            XCTAssertLessThanOrEqual(abs(kept.end - platform), 16, "\(kept)")
+            XCTAssertEqual(after.network.edge(kept.edge)?.length, kept.end, "the platform takes its whole edge")
+        }
+        let new = try XCTUnwrap(after.stations.first { !ends.map(\.station).contains($0.id) })
+        XCTAssertEqual(after.trackPlatforms(of: new.id).count, 1)
+        for platform in after.network.platforms {
+            let geometry = try XCTUnwrap(after.trackGeometry(of: platform.edge))
+            XCTAssertEqual(geometry.startHeight, geometry.endHeight, "\(platform) is level")
+        }
+        XCTAssertEqual(after.network.edges.count, 5, "west platform, climb, new platform, climb, east platform")
+        // The track still runs end to end, joined at each new node.
+        for node in after.network.nodes {
+            let degree = after.network.edges.filter { $0.from == node.id || $0.to == node.id }.count
+            XCTAssertEqual(degree, [edge.from, edge.to].contains(node.id) ? 1 : 2)
+        }
+        XCTAssertEqual(after.lines.first { $0.id == line.id }?.stops, ends.map(\.station), "the line still calls at both")
+        // Paid: the new edges and the station.
+        let edgeCosts = try after.network.edges.map { try XCTUnwrap(after.longSection(of: $0.id)).cost.total.amount }.reduce(0, +)
+        XCTAssertEqual(edgeCosts, cost.amount)
+        XCTAssertEqual(built.economy.balance.amount - after.economy.balance.amount, cost.amount + Self.costs.station.amount)
+
+        tool.undo()
+        XCTAssertEqual(tool.world, built, "one undo takes it all back")
+    }
+
     /// The same, in Chinese.
     func testThePlatformToolSaysItLevelsInChinese() throws {
         let session = preview(try world(columns: [10, 15]), from: 1_024, to: 17_408)
@@ -343,7 +480,7 @@ final class TerrainPresentationTests: XCTestCase {
         placed.tapNetwork(at: PlanPoint(x: 9_216, y: Self.row), reach: 16)
         let levelling = try XCTUnwrap(placed.networkPlatformLevelling)
         XCTAssertNil(levelling.cost)
-        let reason = GameError.trackReserved(train).playerMessage(in: .english)
+        let reason = GameError.trackEdgeInUse(edge).playerMessage(in: .english)
         XCTAssertEqual(levelling.problem, reason)
         placed.addNetworkPlatform()
         XCTAssertEqual(placed.message, StatusMessage(kind: .failure, text: """

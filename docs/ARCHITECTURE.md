@@ -6517,6 +6517,30 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 
 **沒有驗證的**：Linux 不能建置 App；膠囊的位置與 UI 測試要在 macOS CI 上跑，實景地圖上的手感要在 TestFlight 上看。
 
+**之後的修正**（TestFlight 70.1，2026-10-17，作者「都修」）：邊上已經有月台時也能整平。
+
+- **回報**：台北實景地圖，玩家先鋪公館到中山國中約 4.5 公里的一條軌道，兩端各放一座 80 公尺的月台（坡度約 1‰，兩端在緩和段裡，所以是水平的），再在大安森林公園放月台時，膠囊寫「坡度 1‰：無法整平」，原因是「這段軌道上有車站的月台」。整平先拆整條邊（`removeTrackEdge`），GameCore 在邊上有月台時拒絕（`trackEdgeHasPlatform`）。先鋪整條線、兩端放站、再加中間站是最常見的玩法，實景地圖上幾乎每段軌道都有一點坡，所以多數玩家都會碰到。
+- **做法**（GamePresentation，`LevelPlatformTrack.swift`；GameCore 不動，存檔、golden、replay 都不變）：
+  1. 邊上既有的月台，各自的兩端也是切點；新月台的區間和邊上每座月台的兩端一起，把邊切成多段（直線照位置、曲線照舊用 de Casteljau 法逐刀切）。
+  2. 高度：既有月台那一段兩端都用它現在的高度（它本來就是水平的），新月台那一段照舊（碰到邊的端點用端點的高度，否則用中點的軌面高度）；其他段是坡，照舊緩和。
+  3. 新區間離既有月台的端點不到 `minimumSplitPiece`（16 m）時，貼到那座月台旁邊（長度不變），高度用那座月台的；和既有月台重疊時說「這一段已經有月台了：請點選旁邊沒有月台的軌道」；任兩個切點不到 16 m、或夾在兩個高度不同的月台中間時說「這裡離另一座月台的端點太近……」。
+  4. 建造（`build(_:in:)`，同一個 `performEdit`）：先 `removeTrackPlatform` 拿掉既有月台，拆邊、建節點、一次建所有新邊，再用 `addTrackPlatform` 把每座月台加回原本的車站，月台是它那一段的整條邊。全有或全無，一次復原退回。
+  5. **路線指定的進路**（`LineRoutePreference`）經過舊邊時不再拒絕：新邊建好後改寫到新邊上（`GameSession.route(_:from:along:kept:stops:in:)` 經 `setLineRoutePreferences`）：經過舊邊的那一步換成沿線的每條新邊（反向就反過來）；第一步從出發站月台那一段開始，最後一步到目的月台那一段為止；目的月台換成加回去的那座。對不上的（例如同一站在舊邊上有兩座月台）照舊留著，GameCore 照它的規則改走自動進路。路線的停站本來就是車站，不受影響。
+  6. **列車**：停在這條邊上（或車尾還在邊上）的列車改用「這段軌道上有列車。請先把列車移出軌道。」（`trackEdgeInUse`）；原本的「有列車的路線要經過這段軌道，請等它通過」只留給要開過來、預約了這條邊的列車。停在月台上等車的列車沒有「通過」這回事，舊訊息會讓玩家一直等。
+  7. 指令日誌：`PlatformLevelling` 多 `nodes`（各段之間的新節點）與 `kept`（拿掉再加回的月台：車站、在舊邊上的起點、在第幾段）；舊日誌的 `stretchStart`／`stretchEnd` 照樣讀得進來。
+- **四方**：
+  - 玩家：最常見的「先鋪線、後加中間站」不再卡住，兩端的車站、月台、路線和指定的進路都留著；停著列車時知道要先移開。
+  - 開發：只動 GamePresentation，用 GameCore 既有的公開指令（拿掉、加回月台，設進路），不開放 `split`、不放寬月台的坡度規則，所以 CI 只跑 GamePresentation 那一層。
+  - 美術：沒有新畫面；地圖上的膠囊與卡片照舊，只是多數情況變成可以整平的那一句。
+  - 音樂：無。
+- **沒採用的做法**：
+  - (b1) 只切新月台那一段、邊上既有的月台留在外側兩段：外側兩段變成新的坡，既有月台多半不再水平，GameCore 會拒絕加回，結果看位置而定。
+  - (b2) 在 GameCore 開放切有坡的邊或放寬月台坡度：要跑完整 tier、動 GameCore 的規則（決策 164），範圍大得多。
+  - (b3) 只改提示文字，叫玩家先拆月台：作者明說不要。
+- **參考庫與外部專案**：參考庫（`1d2c668`）的 `Simulator/`、`MapBuilder/`、`Ci/`、`Railway/` 都沒有「整平時保留既有月台」或改寫進路的做法，nothing usable；外部沒有引用程式碼。程式是本專案自己寫的。
+- **測試**：`TerrainPresentationTests` 的 `testAPlatformOnAGradeLevelsAnEdgeWithPlatformsOnIt`（70.1 的情境：3 km、約 1‰、兩端各 80 m 月台、一條路線；中間設月台成功、五段、每座月台都水平且在原車站、路線還在、扣款＝新邊加車站、一次復原還原；在 main 上會失敗）、`testALinesChosenPathIsLaidAlongTheLevelledTrack`（兩個方向的指定進路改寫到新邊上）、`testAnEdgeWithATrainAtItsPlatformIsNotLevelled`；`testAPlatformOnAGradeWithATrainOnItIsRefused` 的期望改成 `trackEdgeInUse`（上面第 6 點）。`NetworkPlanCommandTests` 的 `testALevellingThatKeepsPlatformsIsLoggedWithThem`（寫進日誌、重播出同一個世界）、`testALevellingLoggedBeforeKeptPlatformsReads`（舊日誌照樣讀）。
+- **限制**：加回的月台長度是新邊的長度，因重新取樣可能和原本差幾個單位；月台的 ID 跟著新邊換掉。
+
 ### 191. 實景地圖的署名縮成角落的短標示
 
 2026-10-12，作者在實機上覺得實景地圖底部那條很長的署名（「© OpenMapTiles © OpenStreetMap 貢獻者・鐵道：交通部 TDX、© OpenStreetMap 貢獻者」）太擠，授權照下面的設計做（功能凍結期的玩家回報介面修正）。號碼依工作登記 #231：決策 191；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、replay 都不變。

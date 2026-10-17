@@ -114,7 +114,7 @@ extension PlatformTrackPlan: Codable {
 
 extension PlatformLevelling: Codable {
     private enum CodingKeys: String, CodingKey {
-        case edge, start, end, legs, stretchStart, stretchEnd, structure, levelLeg
+        case edge, start, end, legs, nodes, stretchStart, stretchEnd, structure, levelLeg, kept
     }
 
     private struct LegRecord: Codable {
@@ -124,18 +124,33 @@ extension PlatformLevelling: Codable {
         let profile: TrackProfile
     }
 
+    /// A kept platform: its station, its start on the old edge and its leg.
+    private struct KeptRecord: Codable {
+        let station: Int
+        let start: Int64
+        let leg: Int
+    }
+
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         edge = .edge(try container.decode(Int.self, forKey: .edge))
         start = try container.decode(Int64.self, forKey: .start)
         end = try container.decode(Int64.self, forKey: .end)
         legs = try container.decode([LegRecord].self, forKey: .legs).map { Leg(from: $0.from, to: $0.to, curve: $0.curve, profile: $0.profile) }
-        stretchStart = try container.decodeIfPresent(WorldCoordinate.self, forKey: .stretchStart)
-        stretchEnd = try container.decodeIfPresent(WorldCoordinate.self, forKey: .stretchEnd)
+        // Logs written before 70.1's fix name the stretch's ends only.
+        nodes = try container.decodeIfPresent([WorldCoordinate].self, forKey: .nodes)
+            ?? [container.decodeIfPresent(WorldCoordinate.self, forKey: .stretchStart),
+                container.decodeIfPresent(WorldCoordinate.self, forKey: .stretchEnd)].compactMap(\.self)
         structure = try container.decode(TrackStructure.self, forKey: .structure)
         levelLeg = try container.decode(Int.self, forKey: .levelLeg)
+        kept = try (container.decodeIfPresent([KeptRecord].self, forKey: .kept) ?? []).map {
+            KeptPlatform(station: StationID(rawValue: $0.station), start: $0.start, leg: $0.leg)
+        }
         guard legs.indices.contains(levelLeg) else {
             throw DecodingError.dataCorruptedError(forKey: .levelLeg, in: container, debugDescription: "The level leg is one of the legs.")
+        }
+        guard nodes.count == legs.count - 1, kept.allSatisfy({ legs.indices.contains($0.leg) && $0.leg != levelLeg }) else {
+            throw DecodingError.dataCorruptedError(forKey: .kept, in: container, debugDescription: "A node between each two legs, each kept platform on a leg of its own.")
         }
     }
 
@@ -145,10 +160,12 @@ extension PlatformLevelling: Codable {
         try container.encode(start, forKey: .start)
         try container.encode(end, forKey: .end)
         try container.encode(legs.map { LegRecord(from: $0.from, to: $0.to, curve: $0.curve, profile: $0.profile) }, forKey: .legs)
-        try container.encodeIfPresent(stretchStart, forKey: .stretchStart)
-        try container.encodeIfPresent(stretchEnd, forKey: .stretchEnd)
+        try container.encode(nodes, forKey: .nodes)
         try container.encode(structure, forKey: .structure)
         try container.encode(levelLeg, forKey: .levelLeg)
+        if !kept.isEmpty {
+            try container.encode(kept.map { KeptRecord(station: $0.station.rawValue, start: $0.start, leg: $0.leg) }, forKey: .kept)
+        }
     }
 }
 
