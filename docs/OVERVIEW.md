@@ -18,7 +18,7 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 存檔版本 | 63（每整分鐘決定行車間隔，#702，決策 248）；每個版本一個存檔 fixture，共 67 個 | `SavedGame.currentVersion`、`SaveFixtures/` |
 | golden | schema 74（車站商業，#595），`GoldenScenarios/` 裡 77 個 JSON | `GoldenScenarios/` |
 | replay | 9 個指令紀錄（含問題回報轉成的 `problem-report-blank-map.json`，#468；長區段行車控制 `long-leg-traffic.json`，#480） | `ReplayFixtures/` |
-| 決策 | 1–217、219–265、267（266 已在工作登記 #231 保留給核心玩法；218 沒有使用：越行寫進了決策 212，#556、#589）。141、150、203 曾保留但沒有使用；之後的號碼以工作登記 #231 為準 | `docs/ARCHITECTURE.md`，索引在第 9 節 |
+| 決策 | 1–217、219–265、267–268（266 已在工作登記 #231 保留給核心玩法；218 沒有使用：越行寫進了決策 212，#556、#589）。141、150、203 曾保留但沒有使用；之後的號碼以工作登記 #231 為準 | `docs/ARCHITECTURE.md`，索引在第 9 節 |
 | App 版本 | 0.5.0 | `RailwayGameApp/project.yml` |
 | 平台與語言 | iPhone（只橫拿）、iPad；繁體中文、英文。日文已移除（#171） | — |
 | 程式規模 | GameCore 90 檔 3.3 萬行、GamePresentation 115 檔 3.1 萬行、App 61 檔 1.9 萬行、測試 292 檔 8.1 萬行 | — |
@@ -454,3 +454,4 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 264 | 開線自動配車、自動交會：簡單規則下開線就配一列車、單線 2 公里以上先蓋待避線（決策 204 的 `PassingLoopPlan`）、路線卡「加開一列車」、開線前看得到總價；兩種規則都有：共用單線沒有地方交會時，站長與路線卡說明並可一鍵加待避線，擋路的列車先放回路線起點（`AutoService`，GameCore、存檔不動） |
 | 265 | PR 的 `Swift CI (gate)` 等同一個 commit 的 iOS App Build 跑完，紅了就紅（`swift-shards.sh ios-gate`），自動合併與提早合併都不會搶在 UI 測試前；full lane 合併後由 `ios-full-lane.yml` 每三小時最多一次，手動只跑發版的 HEAD 與二分（量測：`docs/research/CI_MEASURE_2026-10-16.md`） |
 | 267 | 3D 街景的騎樓柱、櫃台與貨物、低遮雨棚、樓上的彩色鐵皮雨遮、曬衣、藍色或不鏽鋼的圓水塔；熱鬧街道的透天厝一樓開店；這些小東西放進第 4 層 LOD（`Chunk.close`，鏡頭 450 m 內才畫）；斜交平交道的柵欄離開道床、平台照角度加長，複線合成一個平交道（存檔不動；預覽 `docs/art/map3d-arcade-life-2026-10-17/`） |
+| 268 | 3D 的廟面向最熱鬧的種子道路，台基前留石鋪廟埕（最深 16 m）、人行道邊立牌樓、簷下 4 盞夜裡發光的紅燈籠、兩棵榕樹，廟埕 36 人；兩面臨街的透天厝後院 70% 鋪草地、1–3 棵樹（存檔不動；預覽 `docs/art/map3d-temple-forecourt-2026-10-17/`） |

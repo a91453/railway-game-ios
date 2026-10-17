@@ -671,8 +671,9 @@ extension Map3DScene.Builder {
     }
 
     /// Decision 259: worshippers and visitors on a temple's forecourt.
-    mutating func addTempleLife(from: Map3DPoint, to: Map3DPoint) {
+    /// Decision 268: as wide and as many as the forecourt holds.
+    mutating func addTempleLife(from: Map3DPoint, to: Map3DPoint, width: Float = 3, people: Int = 12) {
         guard target == .near, let path = Map3DStreetLife.Path([from, to]) else { return }
-        streetLife.spots.append(Map3DStreetLife.Spot(kind: .temple, path: path, width: 3, people: 12, station: nil, seed: lifeSeed(from, salt: 265)))
+        streetLife.spots.append(Map3DStreetLife.Spot(kind: .temple, path: path, width: width, people: people, station: nil, seed: lifeSeed(from, salt: 265)))
     }
 }
