@@ -260,7 +260,7 @@ struct LinesPanel: View {
         AdvancedDetails.isShown(
             stored: storedShowsAdvanced,
             roomy: horizontalSizeClass == .regular && verticalSizeClass == .regular,
-            unlocked: session.allows(.lineDetails)
+            unlocked: session.allows(UnlockableTool.lineDetails)
         )
     }
 
@@ -269,27 +269,27 @@ struct LinesPanel: View {
     /// none in a lesson before the details are unlocked.
     @ViewBuilder
     private var advancedSection: some View {
-        if session.allows(.lineDetails) {
-        Section {
-            Toggle(isOn: Binding(get: { showsAdvanced }, set: { storedShowsAdvanced = $0 })) {
-                Label {
-                    Text(verbatim: session.language.text("Advanced", "進階"))
-                } icon: {
-                    Image(systemName: "slider.horizontal.3")
+        if session.allows(UnlockableTool.lineDetails) {
+            Section {
+                Toggle(isOn: Binding(get: { showsAdvanced }, set: { storedShowsAdvanced = $0 })) {
+                    Label {
+                        Text(verbatim: session.language.text("Advanced", "進階"))
+                    } icon: {
+                        Image(systemName: "slider.horizontal.3")
+                    }
+                }
+                .accessibilityIdentifier("lines.advanced")
+                .accessibilityHint(Text(verbatim: session.language.text(
+                    "Shows the service day, stopping patterns, the tracks each leg takes, target headways and traffic control. Hidden, they keep working as set.",
+                    "顯示時段、停靠模式、各段股道、目標班距與行車控制。收起時，這些設定照常運作。"
+                )))
+                if !showsAdvanced {
+                    Text(verbatim: AdvancedDetails.networkSummary(of: session.world, in: session.language))
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                        .accessibilityIdentifier("lines.advanced.summary")
                 }
             }
-            .accessibilityIdentifier("lines.advanced")
-            .accessibilityHint(Text(verbatim: session.language.text(
-                "Shows the service day, stopping patterns, the tracks each leg takes, target headways and traffic control. Hidden, they keep working as set.",
-                "顯示時段、停靠模式、各段股道、目標班距與行車控制。收起時，這些設定照常運作。"
-            )))
-            if !showsAdvanced {
-                Text(verbatim: AdvancedDetails.networkSummary(of: session.world, in: session.language))
-                    .font(.caption)
-                    .foregroundStyle(Theme.textSecondary)
-                    .accessibilityIdentifier("lines.advanced.summary")
-            }
-        }
         }
     }
 
@@ -1149,12 +1149,12 @@ struct LinesPanel: View {
             // Decision 264: trains that cannot pass on single track shared
             // with another line, and the one tap that mends it.
             // Decision 266: in a lesson, once passing loops are unlocked.
-            if session.allows(.passingLoop), let shortfall = session.selectedLinePassingShortfall {
+            if session.allows(UnlockableTool.passingLoop), let shortfall = session.selectedLinePassingShortfall {
                 passingShortfallSection(shortfall)
             }
             if line.trains.isEmpty {
                 staffSection(line)
-            } else if session.allows(.addTrain) {
+            } else if session.allows(UnlockableTool.addTrain) {
                 // Decision 266: a lesson's lines run the train they open
                 // with until more trains are taught.
                 headwaySection(line)
