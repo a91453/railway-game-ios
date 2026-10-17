@@ -98,21 +98,28 @@ struct MapBuildConfirm: View {
     }
 
     private func pill(_ build: BuildConfirmation) -> some View {
-        VStack(spacing: 4) {
-            if let caption = build.caption {
-                Text(verbatim: caption)
-                    .font(.caption.weight(.semibold))
-                    .monospacedDigit()
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(Theme.textPrimary)
-                    .padding(.horizontal, 8)
-                    .accessibilityIdentifier("map.build.catchment")
+        WidthLimit(maxWidth: BuildConfirmLayout.maximumWidth(
+            viewportWidth: viewport.width, leading: Double(insets.leading), trailing: Double(insets.trailing)
+        )) {
+            VStack(spacing: 4) {
+                if let caption = build.caption {
+                    // A long refusal wraps within the map's clear band rather
+                    // than running under the card beside it (TestFlight 67.1).
+                    Text(verbatim: caption)
+                        .font(.caption.weight(.semibold))
+                        .monospacedDigit()
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(Theme.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 8)
+                        .accessibilityIdentifier("map.build.catchment")
+                }
+                buttons(build)
+                    .fixedSize()
             }
-            buttons(build)
+            .padding(6)
+            .glassBackground(in: RoundedRectangle(cornerRadius: 26, style: .continuous))
         }
-        .padding(6)
-        .glassBackground(in: RoundedRectangle(cornerRadius: 26, style: .continuous))
-        .fixedSize()
     }
 
     private func buttons(_ build: BuildConfirmation) -> some View {
@@ -178,11 +185,14 @@ struct MapBuildConfirm: View {
     /// `clearance`, or over it when there is no room below; kept clear of
     /// the controls along the map's edges.
     private func placement(below point: ScreenPoint, clearance: Double) -> CGSize {
-        let margin = 8.0
+        let margin = BuildConfirmLayout.margin
         let width = Double(pillSize.width), height = Double(pillSize.height)
         let minX = Double(insets.leading) + margin
         let maxX = viewport.width - Double(insets.trailing) - width - margin
-        let x = min(max(point.x - width / 2, minX), max(minX, maxX))
+        let x = BuildConfirmLayout.originX(
+            anchorX: point.x, width: width, viewportWidth: viewport.width,
+            leading: Double(insets.leading), trailing: Double(insets.trailing)
+        )
         let top = Double(insets.top) + margin
         let bottom = viewport.height - Double(insets.bottom) - margin
         var y = point.y + clearance
@@ -222,6 +232,21 @@ struct MapBuildConfirm: View {
             }
         }
         return (x, y)
+    }
+}
+
+/// Its content at its own size, given no more than `maxWidth` across:
+/// words wrap there, and the pill measures no wider than they need (a
+/// frame's `maxWidth` would stretch to it).
+private struct WidthLimit: Layout {
+    let maxWidth: Double
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        subviews.first?.sizeThatFits(ProposedViewSize(width: maxWidth, height: nil)) ?? .zero
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        subviews.first?.place(at: bounds.origin, proposal: ProposedViewSize(width: bounds.width, height: bounds.height))
     }
 }
 
