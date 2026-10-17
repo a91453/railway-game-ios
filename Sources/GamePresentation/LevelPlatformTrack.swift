@@ -313,42 +313,46 @@ extension GameSession {
         // Decision 124: the ground under the new track read in first.
         let surveyed = levelling.legs.compactMap { TrackGeometry(from: $0.from, to: $0.to, curve: $0.curve, profile: $0.profile) }
             .flatMap(NetworkBuilding.surveyedPoints(of:))
-        try world.readGround(under: levelling.legs.flatMap { [$0.from.plan, $0.to.plan] } + surveyed, from: heights)
-        for platform in levelling.kept {
-            try world.removeTrackPlatform(platform.station, on: old.id, from: platform.start)
+        // Decision 275: one edit for the passengers, so those changing
+        // trains onto this track are not sent away while it is out.
+        return try world.editTrackAsOne { (world: inout GameWorld) throws(GameError) -> TrackEdgeID in
+            try world.readGround(under: levelling.legs.flatMap { [$0.from.plan, $0.to.plan] } + surveyed, from: heights)
+            for platform in levelling.kept {
+                try world.removeTrackPlatform(platform.station, on: old.id, from: platform.start)
+            }
+            try world.removeTrackEdge(old.id)
+            var nodes = [old.from]
+            for node in levelling.nodes {
+                nodes.append(try world.buildTrackNode(at: node))
+            }
+            nodes.append(old.to)
+            let plans = levelling.legs.indices.map { index in
+                TrackEdgePlan(
+                    from: nodes[index], to: nodes[index + 1], curve: levelling.legs[index].curve,
+                    profile: levelling.legs[index].profile, structure: levelling.structure
+                )
+            }
+            let edges = try world.buildTrackEdges(plans)
+            // The new track joins what the old did at its ends, and runs on
+            // through the new nodes.
+            func exits(_ edge: TrackEdgeID, at node: TrackNodeID) -> Set<TrackEdgeID> {
+                Set(world.network.node(node)?.end(of: edge)?.exits ?? [])
+            }
+            guard let first = edges.first, let last = edges.last,
+                  exits(first, at: old.from) == fromExits, exits(last, at: old.to) == toExits,
+                  edges.indices.dropFirst().allSatisfy({ exits(edges[$0], at: nodes[$0]) == [edges[$0 - 1]] })
+            else { throw .invalidTrackGeometry }
+            for platform in levelling.kept {
+                let edge = edges[platform.leg]
+                try world.addTrackPlatform(platform.station, on: edge, from: 0, to: world.network.edge(edge)?.length ?? 0)
+            }
+            for (line, pattern, routes) in chosen {
+                guard let stops = world.lines.first(where: { $0.id == line })?.stops else { continue }
+                let moved = routes.map { Self.route($0, from: old.id, along: edges, kept: levelling.kept, stops: stops, in: world) }
+                try world.setLineRoutePreferences(line, to: moved, pattern: pattern)
+            }
+            return edges[levelling.levelLeg]
         }
-        try world.removeTrackEdge(old.id)
-        var nodes = [old.from]
-        for node in levelling.nodes {
-            nodes.append(try world.buildTrackNode(at: node))
-        }
-        nodes.append(old.to)
-        let plans = levelling.legs.indices.map { index in
-            TrackEdgePlan(
-                from: nodes[index], to: nodes[index + 1], curve: levelling.legs[index].curve,
-                profile: levelling.legs[index].profile, structure: levelling.structure
-            )
-        }
-        let edges = try world.buildTrackEdges(plans)
-        // The new track joins what the old did at its ends, and runs on
-        // through the new nodes.
-        func exits(_ edge: TrackEdgeID, at node: TrackNodeID) -> Set<TrackEdgeID> {
-            Set(world.network.node(node)?.end(of: edge)?.exits ?? [])
-        }
-        guard let first = edges.first, let last = edges.last,
-              exits(first, at: old.from) == fromExits, exits(last, at: old.to) == toExits,
-              edges.indices.dropFirst().allSatisfy({ exits(edges[$0], at: nodes[$0]) == [edges[$0 - 1]] })
-        else { throw .invalidTrackGeometry }
-        for platform in levelling.kept {
-            let edge = edges[platform.leg]
-            try world.addTrackPlatform(platform.station, on: edge, from: 0, to: world.network.edge(edge)?.length ?? 0)
-        }
-        for (line, pattern, routes) in chosen {
-            guard let stops = world.lines.first(where: { $0.id == line })?.stops else { continue }
-            let moved = routes.map { Self.route($0, from: old.id, along: edges, kept: levelling.kept, stops: stops, in: world) }
-            try world.setLineRoutePreferences(line, to: moved, pattern: pattern)
-        }
-        return edges[levelling.levelLeg]
     }
 
     /// `route` with old edge `old` laid again as `edges` (in order along
