@@ -263,8 +263,39 @@ final class LessonUITests: XCTestCase {
         XCTAssertTrue(element("lessons.title").disappears(within: 5))
     }
 
+    /// Scrolls `list` until the middle of `control` shows in it, as
+    /// `scrollUntilShown` does, but dragging at the list's left edge, clear
+    /// of its rows (as `assertAbsent` does): a drag that starts on a row's
+    /// menu (a station's "Platform 1: add a platform track") opens the menu
+    /// instead of scrolling, and the station panel stayed at that row for
+    /// 40 drags, short of its Freight section (main abb306a's full lane,
+    /// run 39053855189).
     private func reveal(_ control: XCUIElement) {
-        XCTAssertTrue(app.scrollUntilShown(control, in: list), "Cannot scroll to \(control)")
+        XCTAssertTrue(list.appears(within: 10), "Missing \(list)")
+        let onScreen = list.frame.intersection(app.frame)
+        let area = onScreen.isEmpty ? list.frame : onScreen
+        let band = area.insetBy(dx: 0, dy: 24)
+        func shown() -> Bool {
+            control.exists && band.minY <= control.frame.midY && control.frame.midY <= band.maxY
+        }
+        func drag(from: CGFloat, to: CGFloat) {
+            let origin = app.coordinate(withNormalizedOffset: .zero)
+            let x = area.minX + area.width * 0.02 - app.frame.minX
+            origin.withOffset(CGVector(dx: x, dy: area.minY + area.height * from - app.frame.minY))
+                .press(forDuration: 0.1, thenDragTo: origin.withOffset(CGVector(dx: x, dy: area.minY + area.height * to - app.frame.minY)),
+                       withVelocity: .slow, thenHoldForDuration: 0.3)
+        }
+        for _ in 0..<40 {
+            if shown() { break }
+            if !control.exists {
+                drag(from: 0.85, to: 0.15)
+            } else if control.frame.midY < band.minY {
+                drag(from: 0.35, to: 0.65)
+            } else {
+                drag(from: 0.65, to: 0.35)
+            }
+        }
+        XCTAssertTrue(shown(), "Cannot scroll to \(control)")
         control.waitUntilSettled()
     }
 
