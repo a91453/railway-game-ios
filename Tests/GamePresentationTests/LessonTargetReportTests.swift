@@ -24,8 +24,11 @@ final class LessonTargetReportTests: XCTestCase {
             "| --- | --- | --- | --- | --- |",
         ]
         for lesson in Lesson.all {
-            for (name, policy) in Self.plays(for: lesson, in: GameWorld.newGame(lesson: lesson)) {
-                var player = PolicyPlayer(world: .newGame(lesson: lesson), policy: policy)
+            // Without lesson 1's line: each play opens it on day 0, as the
+            // lessons after the first begin (``GameWorld/newGame(lesson:)``).
+            let blank = GameWorld.newGame(lesson: lesson, opensFirstLine: false)
+            for (name, policy) in Self.plays(for: lesson, in: blank) {
+                var player = PolicyPlayer(world: blank, policy: policy)
                 while player.day < days {
                     try player.playDay()
                 }
@@ -57,8 +60,9 @@ final class LessonTargetReportTests: XCTestCase {
                 ]))
             }
         default:
-            // A second train on day 0 or day 1, as Add a Train puts it on.
-            return [0, 1].map { day in
+            // One train, as lesson 1's line opens, and a second on day 0 or
+            // day 1, as Add a Train puts it on.
+            return [("one train", first)] + [0, 1].map { day in
                 ("second train on day \(day)", Policy(name: "lesson-3", actions: first.actions + [
                     Policy.Action(day: day, waitsForMoney: true) { world, _ in
                         try MainActor.assumeIsolated {

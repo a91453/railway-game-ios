@@ -150,7 +150,7 @@ extension Lesson {
                 Scenario(
                     id: "lesson.2",
                     goals: [.connect(points: Lesson.towns(in: bounds), radius: Land.catchmentRadius), .dailyRiders(Lesson.secondRiders)],
-                    goldDays: 3, silverDays: 4, deadlineDays: 6
+                    goldDays: 2, silverDays: 3, deadlineDays: 5
                 )
             }
         ),
@@ -182,10 +182,12 @@ extension Lesson {
     )
 
     /// The riders a day each lesson asks for (decision 266, measured with
-    /// `Policy`: LessonTargetReportTests).
+    /// `Policy`: LessonTargetReportTests). Lesson 1's line carries some
+    /// 59,500 a day from its first day; the third town adds some 8,500; a
+    /// second train on seed 1's line adds next to none (decision 266).
     static let firstRiders: Int64 = 30_000
-    static let secondRiders: Int64 = 80_000
-    static let thirdRiders: Int64 = 100_000
+    static let secondRiders: Int64 = 65_000
+    static let thirdRiders: Int64 = 60_000
 
     /// Lesson 2's first step: what to build, read.
     static let extendStep = TutorialStep(
@@ -216,16 +218,32 @@ extension GameWorld {
     /// A lesson's game (decision 266): a new game of simple rules
     /// (decision 258) on the usual 16 km blank map, its towns seed 1's,
     /// without holidays, sights or the city's requests, and the lesson's
-    /// scenario.
+    /// scenario. After lesson 1 the game begins with lesson 1's line, from
+    /// the first town to the second, opened with its train as the player
+    /// opened it, so each lesson goes on from the one before.
+    @MainActor
     public static func newGame(lesson: Lesson) -> GameWorld {
+        newGame(lesson: lesson, opensFirstLine: lesson.number > 1)
+    }
+
+    /// ``newGame(lesson:)``, with or without lesson 1's line: the target
+    /// report builds it itself, as a play does (LessonTargetReportTests).
+    @MainActor
+    static func newGame(lesson: Lesson, opensFirstLine: Bool) -> GameWorld {
         var world = newGame(eventSeed: Lesson.seed, rules: .simple)
         world.setDisruptions(nil)
         world.setTourism(nil)
         world.setCityRequests(seed: nil)
         do {
+            if opensFirstLine {
+                let towns = Lesson.towns(in: world.bounds)
+                var opening = CurvedOpening(auto: true)
+                try opening.openFirstLine(&world, from: towns[0], to: towns[1])
+            }
             try world.startScenario(lesson.challenge.scenario(seed: Lesson.seed, in: world.bounds))
         } catch {
-            // A new game is managed and the lessons' rules are this file's.
+            // A new game is managed, has the money for the line, and the
+            // lessons' rules are this file's.
             preconditionFailure("Could not start lesson \(lesson.number): \(error)")
         }
         return world

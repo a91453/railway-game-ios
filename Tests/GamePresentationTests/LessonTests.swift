@@ -57,6 +57,13 @@ final class LessonTests: XCTestCase {
         XCTAssertNil(world.tourism)
         XCTAssertEqual(world.scenario?.scenario.id, "lesson.2")
         XCTAssertNil(GameWorld.newGame().lesson)
+        // Lesson 1 begins on a blank map; the lessons after it with lesson
+        // 1's line, its train running, so each goes on from the one before.
+        XCTAssertTrue(GameWorld.newGame(lesson: Lesson.all[0]).lines.isEmpty)
+        XCTAssertEqual(world.lines.count, 1)
+        XCTAssertGreaterThanOrEqual(world.lines.first?.stops.count ?? 0, 2, "its two stations, and the passing loop a long line opens with (decision 264)")
+        XCTAssertFalse(world.trains.isEmpty)
+        XCTAssertNil(world.scenario?.outcome)
     }
 
     /// Decision 266: in a lesson only the tools unlocked up to it; in any
