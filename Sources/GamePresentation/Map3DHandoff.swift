@@ -53,6 +53,19 @@ public enum Map3DHandoff {
     /// does not flick between the two.
     public static let closesAt: Float = Map3DCamera.flatFrom * 1.2
 
+    /// Whether a pinch that moved the 3D camera from `before` to `after`
+    /// metres hands the 2D map back. Only on a 3D map a pinch handed over
+    /// (`start`, the distance it opened at; `nil` when the 3D button opened
+    /// it, which opens kilometres out), only as it is pinched out, and only
+    /// past ``closesAt`` or a fifth past where it opened, whichever is
+    /// farther (a 3D view taller than the 2D map's opens farther out at the
+    /// same scale). Decision 269, later fix: 71.1 handed every pinch back,
+    /// even closer, on a 3D map the button had opened.
+    public static func handsBack(handedOverAt start: Float?, from before: Float, to after: Float) -> Bool {
+        guard let start else { return false }
+        return after > before && after > max(closesAt, start * 1.2)
+    }
+
     /// Whether the 2D map hands over when pinched close: not with a
     /// building tool out, nor while the tutorial runs.
     public static func hands(building: Bool, tutorialRuns: Bool) -> Bool {
