@@ -148,6 +148,8 @@ public struct CurvedOpening: Sendable {
     public private(set) var edges: [TrackEdgeID] = []
     public private(set) var stations: [StationID] = []
     private var firstEnd: End?
+    /// The first edge's other end, beyond the second town (decision 271).
+    private var secondEnd: End?
 
     private struct End: Sendable {
         let node: TrackNodeID
@@ -183,6 +185,7 @@ public struct CurvedOpening: Sendable {
         try command { try world.addTrackPlatform(second, on: edge, from: length - platform - platform / 2, to: length - platform / 2) }
         stations = [first, second]
         firstEnd = End(node: start, point: a, heading: unit(c1, a))
+        secondEnd = End(node: end, point: b, heading: unit(c2, b))
         try openLine(&world, stops: stations, on: TrackTraversal(edge: edge, direction: .forward))
     }
 
@@ -207,6 +210,30 @@ public struct CurvedOpening: Sendable {
         try command { try world.addTrackPlatform(third, on: edge, from: length - platform - platform / 2, to: length - platform / 2) }
         stations.append(third)
         try openLine(&world, stops: [third, stations[0], stations[1]], on: TrackTraversal(edge: edge, direction: .backward))
+    }
+
+    /// On from the first edge's far end, beyond the second town, to a
+    /// platform beyond `place` (decision 271: lesson 9's sight), leaving
+    /// the way the first edge runs there; a line from the second station
+    /// to the new one.
+    public mutating func extendBeyondTheSecondTown(_ world: inout GameWorld, to place: PlanPoint) throws {
+        let platform = Self.platform
+        guard let secondEnd, stations.count >= 2 else { return }
+        let (node, point, heading) = (secondEnd.node, secondEnd.point, secondEnd.heading)
+        let (dx, dy) = unit(point, place)
+        let b = PlanPoint(x: place.x + Int64(dx * Double(platform)), y: place.y + Int64(dy * Double(platform)))
+        let span = distance(point, b)
+        let c1 = PlanPoint(x: point.x + Int64(heading.0 * span / 3), y: point.y + Int64(heading.1 * span / 3))
+        let c2 = PlanPoint(x: b.x - Int64(dx * span / 3), y: b.y - Int64(dy * span / 3))
+        let end = try command { try world.buildTrackNode(at: WorldCoordinate(x: b.x, y: b.y)) }
+        let edge = try command { try world.buildTrackEdge(from: node, to: end, curve: .cubic(c1, c2)) }
+        edges.append(edge)
+        let length = world.trackEdge(edge)?.length ?? 0
+        let name = "S\(stations.count)"
+        let station = try command { try world.buildStation(named: name, at: place).id }
+        try command { try world.addTrackPlatform(station, on: edge, from: length - platform - platform / 2, to: length - platform / 2) }
+        stations.append(station)
+        try openLine(&world, stops: [stations[1], station], on: TrackTraversal(edge: edge, direction: .forward))
     }
 
     /// A line calling at `stops`, all day, one train of four cars whose

@@ -24,9 +24,11 @@ final class LessonTargetReportTests: XCTestCase {
             "| --- | --- | --- | --- | --- |",
         ]
         for lesson in Lesson.all {
-            // Without lesson 1's line: each play opens it on day 0, as the
-            // lessons after the first begin (``GameWorld/newGame(lesson:)``).
-            let blank = GameWorld.newGame(lesson: lesson, opensFirstLine: false)
+            // Lessons 1–4 and 9 without the lines they begin with: each play
+            // opens them on day 0, as ``GameWorld/newGame(lesson:)`` does,
+            // and goes on from there. The other lessons as they begin
+            // (decision 271).
+            let blank = GameWorld.newGame(lesson: lesson, opensFirstLine: ![1, 2, 3, 4, 9].contains(lesson.number))
             for (name, policy) in Self.plays(for: lesson, in: blank) {
                 var player = PolicyPlayer(world: blank, policy: policy)
                 while player.day < days {
@@ -59,6 +61,31 @@ final class LessonTargetReportTests: XCTestCase {
                     },
                 ]))
             }
+        case 4:
+            // Nothing, and lesson 4's line on to the third town, from the
+            // first town's end of the track, on day 0 or day 1.
+            return [("nothing", first)] + [0, 1].map { day in
+                ("second line on day \(day)", Policy(name: "lesson-4", actions: first.actions + [
+                    Policy.Action(day: day, waitsForMoney: true) { world, memory in
+                        try memory.opening.extend(&world, to: towns[2])
+                    },
+                ]))
+            }
+        case 9:
+            // The lines lesson 9 begins with, then nothing, or the track on
+            // from beyond the second town to the sight on day 0 or day 1.
+            let both = first.actions + [Policy.Action(day: 0) { world, memory in try memory.opening.extend(&world, to: towns[2]) }]
+            return [("nothing", Policy(name: "lesson-9", actions: both))] + [0, 1].map { day in
+                ("line to the sight on day \(day)", Policy(name: "lesson-9", actions: both + [
+                    Policy.Action(day: day, waitsForMoney: true) { world, memory in
+                        try memory.opening.extendBeyondTheSecondTown(&world, to: Lesson.sight(in: world.bounds))
+                    },
+                ]))
+            }
+        case 5...10:
+            // As the lesson begins: what it teaches is not among the goals
+            // GameCore judges (decision 271).
+            return [("as it begins", Policy(name: "lesson-\(lesson.number)", actions: []))]
         default:
             // One train, as lesson 1's line opens, and a second on day 0 or
             // day 1, as Add a Train puts it on.
