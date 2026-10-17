@@ -94,6 +94,16 @@ final class Map3DPreviewDump: XCTestCase {
             // model moved into place (the app draws them as instances).
             guard !detailFar else { continue }
             for prop in chunk.props { expand(prop) }
+            // Decision 267: the closest detail (shopfronts, awnings,
+            // washing), drawn only close up; MAP3D_DETAIL=near leaves it out.
+            guard ProcessInfo.processInfo.environment["MAP3D_DETAIL"] != "near" else { continue }
+            let closeBase = UInt32(floats.count / 12)
+            for v in chunk.close.vertices {
+                let c = v.color
+                floats += [v.x, v.y, v.z, v.nx, v.ny, v.nz,
+                           Float(c & 0xFF) / 255, Float((c >> 8) & 0xFF) / 255, Float((c >> 16) & 0xFF) / 255, v.u, v.v, v.layer]
+            }
+            indices += chunk.close.indices.map { $0 + closeBase }
         }
         // Decision 259: MAP3D_LIFE=x:z:distance, the people and vehicles a
         // camera that far from that target draws at 10:00:00 of a clock,
@@ -171,6 +181,7 @@ final class Map3DPreviewDump: XCTestCase {
                 .reduce(0) { total, chunk in
                     total + (camera.wantsDetail(minimum: chunk.minimum, maximum: chunk.maximum)
                         ? chunk.mesh.triangleCount : chunk.baseIndexCount / 3 + chunk.far.triangleCount)
+                        + (camera.wantsClose(minimum: chunk.minimum, maximum: chunk.maximum) ? chunk.close.triangleCount : 0)
                 }
         }
         let uses = CitySkyline(world: world).lots(in: scene.region).filter { !$0.isOpenGround }

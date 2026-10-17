@@ -64,6 +64,10 @@ final class Map3DMetalView: MTKView {
         let far: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
         /// Whether it was drawn in full last frame (decision 238's margin).
         var detailed = false
+        /// Decision 267: its closest detail, and whether it was drawn last
+        /// frame.
+        let close: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
+        var closeUp = false
         /// Decision 232: its shadows, if it has any.
         let shadows: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
         /// Decision 244: its street furniture's instances, sorted by model,
@@ -287,6 +291,10 @@ final class Map3DMetalView: MTKView {
             if let farVertices = makeBuffer(chunk.far.vertices), let farIndices = makeBuffer(chunk.far.indices) {
                 far = (farVertices, farIndices, chunk.far.indices.count)
             }
+            var close: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
+            if let closeVertices = makeBuffer(chunk.close.vertices), let closeIndices = makeBuffer(chunk.close.indices) {
+                close = (closeVertices, closeIndices, chunk.close.indices.count)
+            }
             var props: (instances: MTLBuffer, runs: [(model: Int, first: Int, count: Int)])?
             let sorted = chunk.props.sorted { $0.model < $1.model }
             if let instances = makeBuffer(sorted.flatMap(\.floats)) {
@@ -301,7 +309,7 @@ final class Map3DMetalView: MTKView {
                 props = (instances, runs)
             }
             return Chunk(vertices: vertices, indices: indices, indexCount: chunk.mesh.indices.count, baseIndexCount: chunk.baseIndexCount,
-                         far: far, shadows: shadows, props: props, minimum: chunk.minimum, maximum: chunk.maximum)
+                         far: far, close: close, shadows: shadows, props: props, minimum: chunk.minimum, maximum: chunk.maximum)
         }
     }
 
@@ -353,6 +361,9 @@ final class Map3DMetalView: MTKView {
             // so the margin holds.
             chunks[index].detailed = camera.wantsDetail(minimum: chunks[index].minimum, maximum: chunks[index].maximum,
                                                         wasDetailed: chunks[index].detailed)
+            // Decision 267: and its closest detail, only close up.
+            chunks[index].closeUp = chunks[index].detailed && chunks[index].close != nil
+                && camera.wantsClose(minimum: chunks[index].minimum, maximum: chunks[index].maximum, wasClose: chunks[index].closeUp)
             if Map3DCamera.sees(minimum: chunks[index].minimum, maximum: chunks[index].maximum, through: matrix) {
                 visible.append(chunks[index])
             }
@@ -368,6 +379,13 @@ final class Map3DMetalView: MTKView {
                                               indexBuffer: chunk.indices, indexBufferOffset: 0)
                 drawCalls += 1
                 triangles += count / 3
+            }
+            if chunk.closeUp, let close = chunk.close {
+                encoder.setVertexBuffer(close.vertices, offset: 0, index: 0)
+                encoder.drawIndexedPrimitives(type: .triangle, indexCount: close.indexCount, indexType: .uint32,
+                                              indexBuffer: close.indices, indexBufferOffset: 0)
+                drawCalls += 1
+                triangles += close.indexCount / 3
             }
             if !detailed, let far = chunk.far {
                 encoder.setVertexBuffer(far.vertices, offset: 0, index: 0)
