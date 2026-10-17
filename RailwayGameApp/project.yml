@@ -95,6 +95,12 @@ targets:
       - path: UITests
     dependencies:
       - target: RailwayGame
+      # Fixture coordinates for UI gestures use the existing lesson map;
+      # no game commands are sent to the app through these test dependencies.
+      - package: RailwayGame
+        product: GameCore
+      - package: RailwayGame
+        product: GamePresentation
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.github.a91453.RailwayGameUITests

@@ -12,6 +12,7 @@
 		02612154E68649C32252E2AF /* FinanceTrendCharts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 787EB9DDCEED2E78C0E0E237 /* FinanceTrendCharts.swift */; };
 		0A6DFB7DC5EF1467874F231E /* tra_platforms.json in Resources */ = {isa = PBXBuildFile; fileRef = 007476F85C3E1C799257C7B6 /* tra_platforms.json */; };
 		0CAEF26EBDE94052FA874ABE /* tra.json in Resources */ = {isa = PBXBuildFile; fileRef = FAA79D875396E732FE48A605 /* tra.json */; };
+		0EA0D456816BC0F34F34AD3A /* LessonUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C02012D8840DFEC5FEBCB494 /* LessonUITests.swift */; };
 		0F9E2782FAEA7F557182B7DA /* thsr_track.json in Resources */ = {isa = PBXBuildFile; fileRef = 411F6A0DAE0C614613B6B4CE /* thsr_track.json */; };
 		10D525FC9BA6C8175B84AB5F /* station_names.json in Resources */ = {isa = PBXBuildFile; fileRef = 31AA7BB032ACE4E009B42AF1 /* station_names.json */; };
 		10E13E2AD7D42FDB96BF2C00 /* MapBuildConfirm.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8372106A7EF953548452B15 /* MapBuildConfirm.swift */; };
@@ -24,6 +25,7 @@
 		1DD4F130E64F5E59D3A91E3A /* GameCore in Frameworks */ = {isa = PBXBuildFile; productRef = B7E2B69371F0B985A7107860 /* GameCore */; };
 		1E9DD55C059CAB8D682CA656 /* afr.json in Resources */ = {isa = PBXBuildFile; fileRef = 52815B08C6FE03A12ABC22D5 /* afr.json */; };
 		20561212C765FBDE6629645A /* ListSearchField.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDFF0DE7D90A7A399342FCC8 /* ListSearchField.swift */; };
+		2232B3B82542EDB28DE20D32 /* GameCore in Frameworks */ = {isa = PBXBuildFile; productRef = 30D78FBA510CB46263A33F36 /* GameCore */; };
 		225C04C52DFBA47A1A6F22A4 /* DataSourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 222E67E267AF07C25D4745C9 /* DataSourcesView.swift */; };
 		231927FCE953BD76302D19BE /* TutorialTargets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E01CB29C26C0F92124DEE0C /* TutorialTargets.swift */; };
 		24BDC33BAEB05C1B78B39AE5 /* MapLibre in Frameworks */ = {isa = PBXBuildFile; productRef = FD2BB5E656E35262DF9997FA /* MapLibre */; };
@@ -106,6 +108,7 @@
 		AEA94B60157383F2A9A1D826 /* thsr-schedule.json in Resources */ = {isa = PBXBuildFile; fileRef = 86547460C77F513B1976E1A4 /* thsr-schedule.json */; };
 		AF80C7D3AA57530427081DFF /* StartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A23CAC8DC027701B44D9FEF2 /* StartView.swift */; };
 		B2E315F0FCFC44707DC846E7 /* whoosh.wav in Resources */ = {isa = PBXBuildFile; fileRef = 58D2ECE334BAC4B7C9744680 /* whoosh.wav */; };
+		B3A042E18BED57FDA9488905 /* GamePresentation in Frameworks */ = {isa = PBXBuildFile; productRef = 7B8018E9BA28EB5C1FC2CBAC /* GamePresentation */; };
 		B4C21D76AC6D8C7F15D03E7A /* krtc.json in Resources */ = {isa = PBXBuildFile; fileRef = F7E81C097849391C73D31AF5 /* krtc.json */; };
 		B66C11081A6C43C87B222D37 /* TourismPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BDC97F7CE4B4CD1486F8245 /* TourismPanel.swift */; };
 		B8B325969899BBA81E72BD3B /* MonthlyReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFC0DA778E9B720DF0A4177A /* MonthlyReport.swift */; };
@@ -259,6 +262,7 @@
 		BE5F9CA2A582C25F505C6761 /* ntalrt_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ntalrt_times.json; sourceTree = "<group>"; };
 		BEB483D5847D06BCBC26230C /* HelpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpView.swift; sourceTree = "<group>"; };
 		BF99D3AA87D898A7B9F0A295 /* FeedbackViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedbackViews.swift; sourceTree = "<group>"; };
+		C02012D8840DFEC5FEBCB494 /* LessonUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LessonUITests.swift; sourceTree = "<group>"; };
 		C08B430E6B57DEDAF0C1964E /* EconomyPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EconomyPanel.swift; sourceTree = "<group>"; };
 		C12C3242BE7CC739B03D2613 /* tra_pingxi_runs.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra_pingxi_runs.json; sourceTree = "<group>"; };
 		C32DC68DE89FFF96A515EA04 /* chime-metro.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "chime-metro.wav"; sourceTree = "<group>"; };
@@ -298,6 +302,15 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		7365340496299A860708BA49 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2232B3B82542EDB28DE20D32 /* GameCore in Frameworks */,
+				B3A042E18BED57FDA9488905 /* GamePresentation in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		B071A2BE9B6A4A2054356841 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -523,6 +536,7 @@
 		C0B361249E4B7CC041A973C6 /* UITests */ = {
 			isa = PBXGroup;
 			children = (
+				C02012D8840DFEC5FEBCB494 /* LessonUITests.swift */,
 				21275B6D1B1A72F75A29DA13 /* MapInteractionTests.swift */,
 				464ED7CD74C3D89609658AD5 /* RealWorldMapUITests.swift */,
 				7E833A49B8766511EF574847 /* SettingsUITests.swift */,
@@ -580,6 +594,7 @@
 			buildConfigurationList = C8C180C0B5D711599E902A75 /* Build configuration list for PBXNativeTarget "RailwayGameUITests" */;
 			buildPhases = (
 				3E3F43EA7A9B2166962511FF /* Sources */,
+				7365340496299A860708BA49 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -588,6 +603,8 @@
 			);
 			name = RailwayGameUITests;
 			packageProductDependencies = (
+				30D78FBA510CB46263A33F36 /* GameCore */,
+				7B8018E9BA28EB5C1FC2CBAC /* GamePresentation */,
 			);
 			productName = RailwayGameUITests;
 			productReference = A0888B79097535628EEF865F /* RailwayGameUITests.xctest */;
@@ -783,6 +800,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0EA0D456816BC0F34F34AD3A /* LessonUITests.swift in Sources */,
 				298E6F23EF908E81C6D9639F /* MapInteractionTests.swift in Sources */,
 				A63CC2F5042DB04F53E77F6D /* RealWorldMapUITests.swift in Sources */,
 				5816A50B5D199B14095EB3AA /* SettingsUITests.swift in Sources */,
@@ -1075,7 +1093,15 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		30D78FBA510CB46263A33F36 /* GameCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = GameCore;
+		};
 		45EC5C77CE30354C4B4E2BAF /* GamePresentation */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = GamePresentation;
+		};
+		7B8018E9BA28EB5C1FC2CBAC /* GamePresentation */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = GamePresentation;
 		};
