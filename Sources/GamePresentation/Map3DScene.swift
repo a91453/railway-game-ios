@@ -807,7 +807,7 @@ extension Map3DScene {
                 case .civic:
                     addCivic(base: base, side: side, density: lot.density, seed: seed)
                 default:
-                    addLeisure(base: base, side: side, seed: seed)
+                    addLeisure(base: base, side: side, seed: seed, front: templeFront(column: lot.column, row: lot.row))
                 }
             }
         }
@@ -886,6 +886,27 @@ extension Map3DScene {
                              west: -half + (clear(false, column, row) ?? 2), east: half - (clear(false, column + 1, row) ?? 2),
                              northKind: streetEdges[Map3DSeededStreets.Edge(horizontal: true, line: row, along: column)],
                              southKind: streetEdges[Map3DSeededStreets.Edge(horizontal: true, line: row + 1, along: column)])
+        }
+
+        /// Decision 268: the way a temple on cell (`column`, `row`) faces,
+        /// toward the busiest seeded street beside it (south first, as
+        /// temples face, when two are alike), and how far from the lot's
+        /// middle that street's pavement begins; `nil` with no street
+        /// beside it.
+        func templeFront(column: Int, row: Int) -> (forward: Map3DPoint, distance: Float)? {
+            let half = Float(Double(Land.cellLength) / Self.metre / 2)
+            let sides: [(Map3DPoint, Map3DSeededStreets.Edge)] = [
+                (Map3DPoint(0, 0, 1), Map3DSeededStreets.Edge(horizontal: true, line: row + 1, along: column)),
+                (Map3DPoint(1, 0, 0), Map3DSeededStreets.Edge(horizontal: false, line: column + 1, along: row)),
+                (Map3DPoint(-1, 0, 0), Map3DSeededStreets.Edge(horizontal: false, line: column, along: row)),
+                (Map3DPoint(0, 0, -1), Map3DSeededStreets.Edge(horizontal: true, line: row, along: column)),
+            ]
+            var best: (forward: Map3DPoint, distance: Float, kind: Map3DBaseMap.RoadKind)?
+            for (forward, edge) in sides {
+                guard let kind = streetEdges[edge], kind.rawValue > (best?.kind.rawValue ?? -1) else { continue }
+                best = (forward, half - Map3DSeededStreets.clearance(kind) - 0.3, kind)
+            }
+            return best.map { ($0.forward, $0.distance) }
         }
 
         /// Two rows of 透天厝 back to back on the lot, facing north and
@@ -1005,6 +1026,32 @@ extension Map3DScene {
                 target = .close
                 mesh(at: base) { $0.append(closeDetail) }
                 target = saved
+            }
+            // Decision 268: between two rows facing streets on both sides,
+            // the back yards; on most lots a lawn down their middle with a
+            // few trees (the rest stay paved, for parking).
+            if let north = fronts?.north, let south = fronts?.south {
+                let yard = (from: -(north - depth) + 1.5, to: south - depth - 1.5)
+                let r = { (salt: Int32) in map3DRandom(seed.0, seed.1, salt: salt) }
+                if yard.to - yard.from >= 5, span.1 - span.0 > 16, r(90) < 0.7 {
+                    let length = (span.1 - span.0) * (0.5 + 0.3 * r(91))
+                    let middleX = (span.0 + span.1) / 2 + (r(92) - 0.5) * (span.1 - span.0 - length)
+                    let west = middleX - length / 2, east = middleX + length / 2
+                    mesh(at: base) { mesh in
+                        mesh.addQuad(base + Map3DPoint(west, 0.02, yard.from), base + Map3DPoint(west, 0.02, yard.to),
+                                     base + Map3DPoint(east, 0.02, yard.to), base + Map3DPoint(east, 0.02, yard.from),
+                                     color: Map3DPalette.park, paint: Self.grass)
+                    }
+                    if target == .near, let tree = Self.propModels[.tree] {
+                        let count = 1 + Int(r(93) * 3)
+                        for index in 0..<count {
+                            let x = west + length * (Float(index) + 0.5 + (r(Int32(94 + index)) - 0.5) * 0.5) / Float(count)
+                            let foot = base + Map3DPoint(x, 0, (yard.from + yard.to) / 2 + (r(Int32(98 + index)) - 0.5) * (yard.to - yard.from - 3))
+                            props[key(of: foot), default: []].append(.prop(tree, at: foot, forward: Map3DPoint(1, 0, 0), scale: 0.9 + 0.4 * r(Int32(102 + index)),
+                                                                           tint: Self.pick(Map3DProp.greens, r(Int32(106 + index)))))
+                        }
+                    }
+                }
             }
             // Decision 232: a shadow round each row.
             for facing: Float in [-1, 1] {
