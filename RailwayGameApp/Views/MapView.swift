@@ -122,6 +122,9 @@ struct MapView: View {
     /// cancelled, for decision 140's comparison (not observed: it draws
     /// nothing).
     @State private var skylineMemory = SkylineMemory()
+    /// Decision 270: a blank map's seeded streets, as the 3D map lays them.
+    @State private var streets: SeededStreetPlan?
+    @State private var streetsVersion = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The city tooltip of the last tapped cell, and where it was tapped.
     @State private var cityTooltip: (info: CityCellInfo, at: ScreenPoint)?
@@ -283,6 +286,8 @@ struct MapView: View {
                         layer: popTravelLayer(realWorld: realWorld),
                         // Decision 182: the town's windows at night.
                         lights: realWorld == nil ? lights : 0,
+                        streets: realWorld == nil ? streets : nil,
+                        streetsVersion: streetsVersion,
                         camera: projection
                     )
                     .equatable()
@@ -1054,6 +1059,22 @@ struct MapView: View {
             guard !Task.isCancelled else { return }
             skylineGrowth = nil
             skylineVersion &+= 1
+        }
+        .task(id: Map3DSceneKey(world: session.world, hasHeights: false)) {
+            // Decision 270: a blank map's seeded streets (decision 263),
+            // worked out off the main thread when the track, the platforms,
+            // the buildings or the week's city change, as the 3D map lays
+            // them. None on a real-world map, which draws its own roads.
+            guard session.world.geoAnchor == nil, !session.world.land.isEmpty else {
+                streets = nil
+                streetsVersion &+= 1
+                return
+            }
+            let world = session.world
+            let plan = await Task.detached(priority: .utility) { Map3DScene.seededStreets(world: world) }.value
+            guard !Task.isCancelled else { return }
+            streets = plan
+            streetsVersion &+= 1
         }
         .onChange(of: mapLayers.popTravelMode) { _, mode in
             cellTooltip = nil
@@ -1933,17 +1954,21 @@ private struct MapBaseCanvas: View, Equatable {
     let layer: PopTravelLayer?
     /// Decision 182: how strongly the town's windows shine at night.
     let lights: Double
+    /// Decision 270: the seeded streets, compared by their version.
+    let streets: SeededStreetPlan?
+    let streetsVersion: Int
     let camera: PlanCamera
 
     nonisolated static func == (lhs: MapBaseCanvas, rhs: MapBaseCanvas) -> Bool {
         lhs.bounds == rhs.bounds && lhs.drawsLand == rhs.drawsLand && lhs.skyline == rhs.skyline && lhs.layer == rhs.layer
-            && lhs.lights == rhs.lights && lhs.camera == rhs.camera
+            && lhs.lights == rhs.lights && lhs.camera == rhs.camera && lhs.streetsVersion == rhs.streetsVersion
+            && (lhs.streets == nil) == (rhs.streets == nil)
     }
 
     var body: some View {
         let shown = self.skyline
         let bounds = bounds, drawsLand = drawsLand, growth = shown?.growth, growthOnly = shown?.growthOnly ?? false
-        let skyline = shown?.skyline, layer = layer, camera = camera, lights = lights
+        let skyline = shown?.skyline, layer = layer, camera = camera, lights = lights, streets = streets
         // Decision 140: redrawn every frame only while a night's growth
         // plays; otherwise the timeline is paused and the canvas is drawn
         // as before.
@@ -1958,6 +1983,7 @@ private struct MapBaseCanvas: View, Equatable {
                     growthOnly: growthOnly,
                     layer: layer,
                     lights: lights,
+                    streets: streets,
                     projection: camera,
                     in: context
                 )

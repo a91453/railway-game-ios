@@ -1220,6 +1220,7 @@ enum MapArt {
         growthOnly: Bool,
         layer: PopTravelLayer?,
         lights: Double = 0,
+        streets: SeededStreetPlan? = nil,
         projection: some MapProjection,
         in context: GraphicsContext
     ) {
@@ -1233,6 +1234,8 @@ enum MapArt {
             ])
             context.fill(land, with: .color(Palette.land))
         }
+        // Decision 270: under the town, its seeded streets.
+        if let streets { drawStreets(streets, projection: projection, in: context) }
         if let skyline, !growthOnly {
             drawSkyline(skyline, growth: growth, growthOnly: false, lights: lights, projection: projection, in: context)
         } else if let skyline, let growth {
@@ -1289,6 +1292,39 @@ enum MapArt {
     private static func drawCity(_ map: CityMap, mode: PopTravelMode, opacity: Double, projection: some MapProjection, in context: GraphicsContext) {
         let blockSize = CityMap.blockSize(pointsPerUnit: projection.pointsPerUnit)
         drawTravel(map.tiles(for: mode, in: drawingRegion(projection), blockSize: blockSize), opacity: opacity, projection: projection, in: context)
+    }
+
+    /// Decision 270: from this many points a 64 m cell the seeded streets
+    /// fade in, fully drawn from ``streetsFullCellPoints``.
+    private static let streetsCellPoints = 16.0
+    private static let streetsFullCellPoints = 24.0
+
+    /// Decision 270: a blank map's seeded streets (decision 263), as the
+    /// real map's 2D roads (decision 241): white over a pale casing, at
+    /// their true width but never under a point; every casing first, then
+    /// the fills, the larger roads last, so crossings join.
+    private static func drawStreets(_ plan: SeededStreetPlan, projection: some MapProjection, in context: GraphicsContext) {
+        let cellPoints = Double(Land.cellLength) * projection.pointsPerUnit
+        guard !plan.isEmpty, cellPoints >= streetsCellPoints else { return }
+        let roads = plan.roads(in: drawingRegion(projection))
+        guard !roads.isEmpty else { return }
+        var faded = context
+        faded.opacity = min(1, (cellPoints - streetsCellPoints) / (streetsFullCellPoints - streetsCellPoints))
+        let pointsPerMetre = Double(WorldCoordinate.unitsPerMetre) * projection.pointsPerUnit
+        func path(_ road: SeededStreetPlan.Road) -> Path {
+            var path = Path()
+            path.move(to: screenPoint(Double(road.points[0].x), Double(road.points[0].y), projection))
+            for point in road.points.dropFirst() { path.addLine(to: screenPoint(Double(point.x), Double(point.y), projection)) }
+            return path
+        }
+        for road in roads {
+            faded.stroke(path(road), with: .color(Palette.roadCasing),
+                         style: StrokeStyle(lineWidth: max(1, road.width * pointsPerMetre) + 1.5, lineCap: .square))
+        }
+        for road in roads {
+            faded.stroke(path(road), with: .color(road.major ? Palette.roadMajor : Palette.road),
+                         style: StrokeStyle(lineWidth: max(1, road.width * pointsPerMetre), lineCap: .square))
+        }
     }
 
     /// Below this many points a 64 m cell, the town is too small to draw.

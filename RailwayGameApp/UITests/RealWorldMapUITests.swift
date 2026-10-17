@@ -21,13 +21,22 @@ final class RealWorldMapUITests: XCTestCase {
         // list makes rows only as they come near): scroll to it first.
         let taipei = app.buttons.matching(identifier: "place.tra-taipei").firstMatch
         XCTAssertTrue(app.scrollUntilShown(taipei, in: app.collectionViews.firstMatch), "Missing button: place.tra-taipei")
+        taipei.waitUntilSettled()
         XCTAssertEqual(taipei.label, "Taipei", "The references' places are listed")
         app.tapMiddle(of: taipei)
 
-        tappable(app.buttons.matching(identifier: "realWorld.start"), name: "realWorld.start").tap()
+        let start = tappable(app.buttons.matching(identifier: "realWorld.start"), name: "realWorld.start")
+        start.waitUntilSettled()
+        let startedAt = Date()
+        start.tap()
+        let tapReturnedAfter = Date().timeIntervalSince(startedAt)
 
         let map = app.descendants(matching: .any)["map"].firstMatch
-        XCTAssertTrue(map.appears(within: 15), "The game starts")
+        let mapAppeared = map.appears(within: 15)
+        let mapAppearedAfter = Date().timeIntervalSince(startedAt)
+        print("Real-world start timing: tap returned in \(tapReturnedAfter)s; map appeared=\(mapAppeared) in \(mapAppearedAfter)s from Build Here tap")
+        XCTAssertTrue(mapAppeared, "The game starts after Build Here")
+        XCTAssertTrue(start.disappears(within: 5), "The place picker closes after Build Here")
         XCTAssertTrue(app.buttons["Zoom in"].appears(within: 10))
 
         // Keep the live clock from rebuilding the native menus (the map

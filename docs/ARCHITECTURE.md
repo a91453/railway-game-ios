@@ -11332,7 +11332,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 | --- | --- |
 | HANDOFF 第 4.3 節（F 台灣版＋的廟埕 34×16、牌樓 0.9×6 柱在 ±6 m、14 m 橫樑在 5.4 m、燈籠 E0392C） | `addTemple` 的廟埕、牌樓、燈籠；`Map3DPalette.forecourt`、`lantern` |
 | 參考庫 `Railway/street_scene_reference_clean/source/assets/scene.js`（第 4.3 節的來源） | 只當量尺，模型沒有載入或複製（決策 230） |
-| 參考庫 `Railway/city_world_reference/` 的廟（決策 235 已用） | 台基、正殿、前殿、燕尾沿用 |
+| 參考庫 `Railway/procedural_assets_reference_clean/` 的 japan temple hall（`japan/assets/createModel-CDFBb8kJ.js`，決策 235 已用；2026-10-17 決策 270 更正：原本誤寫成 `city_world_reference`） | 台基、正殿、前殿、燕尾沿用（四坡屋頂取自 temple hall，其餘是本專案的台灣樣式） |
 | 參考庫 `Railway/island_city_reference_clean/` | 看過：有公園地塊與樹，但沒有廟埕、牌樓或後院；樹的作法本專案已有（決策 244） |
 
 外部專案：沒有另外搜尋（幾個方塊與一片地面）。程式碼是本專案自己的。
@@ -11417,6 +11417,58 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
   - `Map3DHandoffTests` 的兩個新測試，含新竹實景地圖的場景；在修正前的 main 上沒有這個函式，等於失敗；舊的判斷在「按鈕、拉近」那一條會回答交回。
   - 新的 UI 測試 `MapInteractionTests/testTheButtonsThreeDMapStaysThreeDWhenPinchedCloser`（full lane）。
 - GameCore、存檔版本、golden schema 都不動。
+
+### 270. 空白地圖的 2D 拉近時畫種子道路：和 3D 同一份，配色照實景的 2D 道路
+
+2026-10-17。3D 生活感第 4 步的後半，接在決策 269 之後。HANDOFF §4.4 的下一步：「2D 拉近到看得見建物的那一級時，也畫同一份種子道路」。空白地圖的 2D 原本沒有任何道路，3D 卻有（決策 263），兩邊對不上；決策 269 起雙指拉近會把 2D 交給 3D，交接那一下道路突然出現。
+
+號碼依工作登記 #231：決策 270。存檔版本、golden schema 不動；GameCore 不動。
+
+1. **同一份道路**（`Map3DScene.seededStreets(world:)`、`SeededStreetPlan`，GamePresentation）：
+   - 3D 場景照舊蓋種子道路（決策 263：格線上的主要道路、街、巷；軌道優先，平交道、月台、路堤、高架的規則）；場景多存一份 `seededStreets`。
+   - 2D 用的是另一個入口：只鋪軌道、月台，再照同一套規則選路，不蓋城市，所以只花蓋整個場景的一小部分（兩鎮地圖、Linux 除錯版：0.43 秒對 2.67 秒）。
+   - 測試釘住兩邊的道路完全一樣（`SeededStreetPlanTests`）。
+   - 每條格線上同一等級、相連的邊合成一條路（世界座標的兩個端點，加上寬度：主要道路 9 m、街 7 m、巷 5 m）。
+   - 實景地圖沒有種子道路（它有自己的底圖道路）。
+2. **2D 怎麼畫**（`MapArt.drawStreets`）：
+   - 地面之上、城市建物之下。
+   - 照實景 2D 地圖的道路（決策 241、`BaseMapStyle`）：白色路面加淺色邊線，深色模式用同一組深色；主要道路與街是「major」的顏色。
+   - 照真實寬度畫，最細 1 點；先畫全部的邊線、再依等級畫路面，所以路口接得起來。
+   - 64 m 格子在畫面上 16 點時開始淡入，24 點時全部畫出（每 16 m 約 4–6 點；決策 269 交給 3D 是在每 16 m 約 27 點），所以拉近的途中道路先出現，交給 3D 時兩邊都有路。
+   - 在背景算（`MapView` 的 `task`），軌道、月台、建物或每週的城市改變時重算，和 3D 場景的快取同一把鑰匙（`Map3DSceneKey`）。
+
+**量測**：2D 每次畫只畫畫面內的路（`roads(in:)`）；兩鎮地圖約 300 條路。背景計算在 Linux 除錯版 0.43 秒；實機的時間、拉近時的幀數 **UNVERIFIED**（TestFlight）。
+
+**四方**（選「和 3D 同一份＋實景 2D 的道路配色＋拉近才淡入」）：
+- 玩家：空白地圖拉近就看得到大路、街與巷，鋪軌時知道會不會穿過街；拉近交給 3D 時路一直都在，不會突然冒出來。
+- 開發：道路規則只有一份（3D 的），2D 只換畫法；有 Linux 測試釘住兩邊一樣；GameCore 不動。
+- 美術：照實景 2D 地圖的道路配色與邊線，空白地圖和實景地圖的 2D 看起來一致；拉遠時道路淡出，不會把整張地圖畫成格子。
+- 音樂：無。
+
+**沒有選的做法**（預覽在 `docs/art/map2d-seeded-roads-2026-10-17/`，上半就是 main：沒有道路）：
+- 2D 自己用格線畫一份路、不管軌道：會壓在月台與路堤上，和 3D 不一樣。
+- 等 3D 場景蓋好再拿它的道路：要先蓋整個 3D 城市（幾秒、幾十 MB），只在 2D 玩的玩家也要付。
+- 任何縮放都畫：拉遠時整張地圖變成密密的格子，蓋過城市與路線。
+
+**參考**：
+
+| 參考 | → 目標 |
+| --- | --- |
+| 本 repo 決策 263 的種子道路規則（`Map3DSeededStreets`、`addSeededStreets`） | 照用，不另寫一份 |
+| 本 repo `BaseMapStyle` 的實景道路配色（road、roadMajor、casing，淺色與深色） | `Palette.road`、`roadMajor`、`roadCasing` |
+
+外部專案與參考庫：沒有另外搜尋（規則與配色都是本專案已有的）。程式碼是本專案自己的。
+
+這個 PR 也更正決策 268 參考表的一行：廟沿用的是參考庫 `Railway/procedural_assets_reference_clean/` 的 japan temple hall（決策 235），原本誤寫成 `city_world_reference`。
+
+**缺口**：
+- 2D 沒有平交道的記號（軌道直接畫在路上）。
+- 道路沒有名稱。
+- 預覽是 Python 依同一份資料畫的近似圖，不是 App 的畫面；App 的畫面要在 Simulator 或實機看。
+
+**驗證**：
+- **VERIFIED**（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`SeededStreetPlanTests` 4 個與所有 `Map3D*` 測試通過；改到的 App 檔 `swiftc -parse` 通過。
+- **UNVERIFIED**：App 的編譯與畫面（macOS CI、TestFlight）。
 
 ## 目前規則摘要
 
