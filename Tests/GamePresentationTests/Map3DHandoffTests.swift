@@ -65,6 +65,20 @@ final class Map3DHandoffTests: XCTestCase {
         XCTAssertTrue(Map3DHandoff.handsBack(handedOverAt: 1_040, from: 1_200, to: 1_300))
     }
 
+    /// Decision 269, later (#785's review): the 3D scene builds ahead only
+    /// near the line (three quarters of it to it), not from half of it.
+    func testTheSceneBuildsAheadOnlyNearTheLine() {
+        for height in [844.0, 390.0] {
+            let opens = Map3DHandoff.opensAt(viewportHeight: height)
+            XCTAssertFalse(Map3DHandoff.buildsAhead(referenceSize: opens * 0.5, viewportHeight: height), "half the line built before")
+            XCTAssertFalse(Map3DHandoff.buildsAhead(referenceSize: opens * 0.74, viewportHeight: height))
+            XCTAssertTrue(Map3DHandoff.buildsAhead(referenceSize: opens * 0.75, viewportHeight: height))
+            XCTAssertTrue(Map3DHandoff.buildsAhead(referenceSize: opens * 0.99, viewportHeight: height))
+            XCTAssertFalse(Map3DHandoff.buildsAhead(referenceSize: opens, viewportHeight: height), "past the line the 3D map opens")
+        }
+        XCTAssertGreaterThan(Map3DHandoff.buildsAfterResting, 0)
+    }
+
     /// The same on a real-world map's scene: handed over from its 2D map's
     /// zoom, the camera opens inside the line and a pinch closer keeps it.
     func testOnARealMapAPinchCloserStaysInThreeD() {

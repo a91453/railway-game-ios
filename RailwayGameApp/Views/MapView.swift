@@ -81,6 +81,9 @@ struct MapView: View {
     /// gliding to where they are, and a number that changes with them.
     @State private var trainMotion = TrainMotion()
     @State private var trainMotionVersion = 0
+    /// Decision 269, later: the wait before the 3D scene builds ahead,
+    /// started again by each pinch step near the line.
+    @State private var buildAhead: Task<Void, Never>?
     /// Decision 182: today's weather on the map, worked out once a day.
     @State private var mapWeather = MapWeather.clear
     /// The open panel, and the layer's opacity, hour and playback: kept
@@ -526,14 +529,14 @@ struct MapView: View {
                         }
                     }, onPinchCloser: { pinched in
                         // Decision 269: the map tilts as it comes closer.
-                        // Near the line the 3D scene starts building; past
-                        // it, the 3D map takes over at once, where the 2D
+                        // Resting near the line the 3D scene starts
+                        // building; past it, the 3D map takes over at once, where the 2D
                         // map was and as close (not with a building tool
                         // out, nor in the tutorial).
                         guard Map3DHandoff.hands(building: session.tool != .select, tutorialRuns: session.tutorial != nil),
                               !screen.showsMap3D else { return }
                         let opens = Map3DHandoff.opensAt(viewportHeight: pinched.viewport.height)
-                        if pinched.referenceSize >= opens / 2 { Map3DSceneCache.shared.prepare(for: session) }
+                        buildAheadIfResting(near: pinched)
                         guard pinched.referenceSize >= opens else { return }
                         screen.map3DHandoff = Map3DHandoff.Plan(x: pinched.centerX, y: pinched.centerY, referenceSize: pinched.referenceSize)
                         var cut = Transaction()
@@ -1107,6 +1110,12 @@ struct MapView: View {
             }
             edges = next
         }
+        .onDisappear {
+            // A game left while a pinch rested near the 3D line builds
+            // nothing for it afterwards.
+            buildAhead?.cancel()
+            buildAhead = nil
+        }
     }
 
     /// What the base canvas draws of the population and travel layer, or
@@ -1193,6 +1202,23 @@ struct MapView: View {
     /// Shows the tapped cell's people and density while the population
     /// layer is on (the reference's `pop-grid-tooltip`); a tap where no one
     /// lives hides it. The tap still selects as it always does.
+    /// Decision 269, later (#785's review): builds the 3D scene ahead only
+    /// when a pinch rests near the line for a moment, the map still there
+    /// when the wait ends, so zooming the 2D map in on the way elsewhere
+    /// builds nothing.
+    private func buildAheadIfResting(near pinched: PlanCamera) {
+        buildAhead?.cancel()
+        buildAhead = nil
+        let height = pinched.viewport.height
+        guard Map3DHandoff.buildsAhead(referenceSize: pinched.referenceSize, viewportHeight: height) else { return }
+        buildAhead = Task {
+            try? await Task.sleep(for: .seconds(Map3DHandoff.buildsAfterResting))
+            guard !Task.isCancelled, !screen.showsMap3D,
+                  let now = camera, Map3DHandoff.buildsAhead(referenceSize: now.referenceSize, viewportHeight: height) else { return }
+            Map3DSceneCache.shared.prepare(for: session)
+        }
+    }
+
     private func showCellTooltip(at location: ScreenPoint, projection: PlanCamera) {
         // Decision 178: the passenger load layer's tooltip words the
         // stretch of track tapped: its riders against its trains' capacity.

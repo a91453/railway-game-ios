@@ -881,6 +881,28 @@ extension GameWorld {
         }
     }
 
+    /// Makes `edit`, several track, platform and line commands, one command
+    /// for the passengers (decision 275): none of its steps sends away a
+    /// group waiting for a trip, or a rider, that a later step serves again;
+    /// once `edit` is done, those the finished edit leaves unserved leave
+    /// as after any one command (``abandonUnservedPassengers()``).
+    /// Levelling a platform's stretch takes its platforms and track out
+    /// and lays them again; one at a time, the step that takes the track
+    /// out sent away everyone changing trains onto it. All or nothing:
+    /// when `edit` throws, the world is as it was. Returns what `edit`
+    /// returns.
+    public mutating func editTrackAsOne<Result>(
+        _ edit: (inout GameWorld) throws(GameError) -> Result
+    ) throws(GameError) -> Result {
+        var draft = self
+        draft.trackEditDepth += 1
+        let result = try edit(&draft)
+        draft.trackEditDepth -= 1
+        draft.abandonUnservedPassengers()
+        self = draft
+        return result
+    }
+
     /// After a line's stops change or it is removed, or anything else its
     /// journey or the service it can run depends on (its track, platforms,
     /// performance, route preferences and trains): every group waiting for
@@ -889,6 +911,8 @@ extension GameWorld {
     /// longer calls at their destination before it turns round leaves the
     /// train (see ``abandonStrandedRiders()``), so the world still loads.
     mutating func abandonUnservedPassengers() {
+        // Decision 275: once, at the end of an edit made as one.
+        guard trackEditDepth == 0 else { return }
         passengerPlan = PassengerPlanCache()
         abandonStrandedRiders()
         // A pair's balanced routes must still be ridable one after another,

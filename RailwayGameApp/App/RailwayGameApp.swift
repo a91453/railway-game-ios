@@ -369,6 +369,9 @@ private struct RootView: View {
                 ContentView(session: session, launcher: launcher)
             } else {
                 StartView(launcher: launcher)
+                    // Decision 269, later: the last game's 3D scene is not
+                    // kept on the start screen.
+                    .onAppear { Map3DSceneCache.shared.clear() }
             }
         }
         #if DEBUG
