@@ -170,6 +170,27 @@ struct RailwayGameApp: App {
                     try manager.removeItem(at: directory)
                 }
                 try manager.createDirectory(at: directory, withIntermediateDirectories: true)
+                // Lesson UI tests can open later lessons without playing
+                // all the earlier ones. Only this cleared testing library,
+                // under -ui-testing in Debug, ever receives these stars.
+                if let value = DebugLaunch.value(of: "-lesson-stars") {
+                    let counts = value.split(separator: ",", omittingEmptySubsequences: false)
+                    guard counts.count <= Lesson.all.count else {
+                        fatalError("-lesson-stars has more entries than lessons")
+                    }
+                    var preferences = LauncherPreferences()
+                    var stars: [String: Int] = [:]
+                    for (index, text) in counts.enumerated() {
+                        guard let count = Int(text), (0...3).contains(count) else {
+                            fatalError("-lesson-stars expects comma-separated counts from 0 to 3")
+                        }
+                        stars[Lesson.all[index].id] = count
+                    }
+                    preferences.lessonStars = stars
+                    try JSONEncoder().encode(preferences).write(
+                        to: directory.appendingPathComponent("launcher-preferences.data"), options: .atomic
+                    )
+                }
                 // A save that cannot be read, which the list must still let
                 // the player delete.
                 if DebugLaunch.isSet("-broken-save") {
