@@ -78,7 +78,20 @@ final class Map3DStreetsTests: XCTestCase {
         let across = [Map3DPoint(30, 1, -40), Map3DPoint(30, 1, 40)]
         let along = [Map3DPoint(-10, 1, 6), Map3DPoint(80, 1, 6)]
         // On the ground, across it: a level crossing at the rails' height.
-        XCTAssertEqual(meeting(across, .surface), .crossing(Map3DPoint(30, 1, 0)))
+        let north = Map3DPoint(0, 0, 1)
+        XCTAssertEqual(meeting(across, .surface), .crossing(Map3DPoint(30, 1, 0), way: north, spread: 0))
+        // Decision 267: a double track (4 m apart): one crossing over both,
+        // in the middle between them.
+        var double = builder(track: across, kind: .surface)
+        double.trackLines.append(([Map3DPoint(34, 1, -40), Map3DPoint(34, 1, 40)], .surface))
+        let (doubleSegments, doubleIndex) = double.trackSegments()
+        XCTAssertEqual(double.trackMeeting(from: road.0, to: road.1, half: 7.5, segments: doubleSegments, index: doubleIndex),
+                       .crossing(Map3DPoint(32, 1, 0), way: north, spread: 4))
+        // Two tracks far apart are not one crossing.
+        var apart = builder(track: across, kind: .surface)
+        apart.trackLines.append(([Map3DPoint(50, 1, -40), Map3DPoint(50, 1, 40)], .surface))
+        let (apartSegments, apartIndex) = apart.trackSegments()
+        XCTAssertEqual(apart.trackMeeting(from: road.0, to: road.1, half: 7.5, segments: apartSegments, index: apartIndex), .blocked)
         // Over a viaduct or a tunnel, the street runs on under or over.
         XCTAssertEqual(meeting(across, .viaduct), .clear, "under a viaduct where no pier stands")
         var piered = builder(track: across, kind: .viaduct)
@@ -87,7 +100,7 @@ final class Map3DStreetsTests: XCTestCase {
         XCTAssertEqual(piered.trackMeeting(from: road.0, to: road.1, half: 7.5, segments: segments, index: index), .blocked, "a pier in the street")
         // A track of short pieces still crosses once, at a level crossing.
         let pieces = stride(from: Float(-40), through: 40, by: 16).map { Map3DPoint(30, 1, $0) }
-        XCTAssertEqual(meeting(pieces, .surface), .crossing(Map3DPoint(30, 1, 0)))
+        XCTAssertEqual(meeting(pieces, .surface), .crossing(Map3DPoint(30, 1, 0), way: north, spread: 0))
         XCTAssertEqual(meeting(across, .tunnel), .clear)
         XCTAssertEqual(meeting(along, .tunnel), .clear)
         // Along the track, a bank or a cutting, or a platform: none.
@@ -108,10 +121,35 @@ final class Map3DStreetsTests: XCTestCase {
     func testALevelCrossingLiftsItsStreetOverTheRails() {
         let crossing = Map3DLevelCrossing(point: Map3DPoint(0, 1.2, 0), along: Map3DPoint(1, 0, 0), kind: .tertiary)
         XCTAssertEqual(crossing.rise(x: 0, z: 1, road: 0.3), 1.2 + Map3DLevelCrossing.deckRise - 0.3, accuracy: 1e-5)
-        XCTAssertEqual(crossing.rise(x: (Map3DLevelCrossing.deckHalf + Map3DLevelCrossing.rampEnd) / 2, z: 0, road: 0.3),
+        XCTAssertEqual(crossing.rise(x: (crossing.deckHalfLength + crossing.rampEnd) / 2, z: 0, road: 0.3),
                        (1.2 + Map3DLevelCrossing.deckRise - 0.3) / 2, accuracy: 1e-4, "half way down the ramp")
         XCTAssertEqual(crossing.rise(x: 14, z: 0, road: 0.3), 0)
         XCTAssertEqual(crossing.rise(x: 0, z: 30, road: 0.3), 0, "beside the street")
+    }
+
+    /// Decision 267 (#712–#754's review): at a slant, the deck still covers
+    /// the bed, and the barriers stand clear of it.
+    func testASlantingCrossingCoversTheBedAndKeepsItsBarriersOffIt() {
+        let bedHalf = Map3DScene.Builder.bedBottom / 2
+        for degrees: Float in [48, 60, 90, 120, 138] {
+            let angle = degrees * .pi / 180
+            let track = Map3DPoint(cosf(angle), 0, sinf(angle))
+            for spread: Float in [0, 4] {
+                let crossing = Map3DLevelCrossing(point: .zero, along: Map3DPoint(1, 0, 0), kind: .tertiary, trackWay: track, spread: spread)
+                let normal = Map3DPoint(-track.z, 0, track.x)
+                // The deck reaches past the bed (and every track) across the
+                // track.
+                XCTAssertGreaterThanOrEqual(crossing.deckHalfLength * crossing.crossingSine, bedHalf + spread / 2 * crossing.crossingSine - 0.01,
+                                            "\(degrees)°")
+                for end: Float in [-1, 1] {
+                    let edge = -end * (Map3DBaseMap.RoadKind.tertiary.width(ramp: false) / 2 + 0.6)
+                    let foot = crossing.spot(end: end, fromTrack: Map3DLevelCrossing.barrier, fromMiddle: edge)
+                    // On the road's edge line, and clear of the bed.
+                    XCTAssertEqual(foot.dot(Map3DPoint(0, 0, 1)), edge, accuracy: 1e-3, "\(degrees)°")
+                    XCTAssertGreaterThan(abs(foot.dot(normal)), bedHalf + spread / 2 + 1, "\(degrees)° end \(end)")
+                }
+            }
+        }
     }
 
     // MARK: - Two towns and a line
@@ -142,8 +180,15 @@ final class Map3DStreetsTests: XCTestCase {
             let middle = scene.point(platform.points[platform.points.count / 2])
             XCTAssertFalse(scene.levelCrossings.contains { abs($0.point.x - middle.x) < 40 && abs($0.point.z - middle.z) < 40 }, "a crossing at a station")
         }
-        let decks = scene.levelCrossings.map(\.point)
-        for vertex in roads where !decks.contains(where: { abs($0.x - vertex.x) < 12 && abs($0.z - vertex.z) < 12 }) {
+        // Only the decks and their ramps themselves are let off.
+        func onCrossing(_ vertex: Map3DVertex) -> Bool {
+            scene.levelCrossings.contains { crossing in
+                let dx = vertex.x - crossing.point.x, dz = vertex.z - crossing.point.z
+                let along = abs(dx * crossing.along.x + dz * crossing.along.z), side = abs(dx * crossing.along.z - dz * crossing.along.x)
+                return along <= crossing.rampEnd + 0.5 && side <= crossing.halfWidth + 0.5
+            }
+        }
+        for vertex in roads where !onCrossing(vertex) {
             XCTAssertFalse(rails.contains { abs($0.x - vertex.x) < 2 && abs($0.z - vertex.z) < 2 && abs($0.y - vertex.y) < 3 },
                            "a street on the track at \(vertex.x), \(vertex.z)")
         }

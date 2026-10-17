@@ -148,6 +148,23 @@ public struct Map3DCamera: Hashable, Sendable {
         return false
     }
 
+    /// Decision 267: within this distance, the chunks round the target
+    /// also draw their closest detail (``Map3DScene/Chunk/close``: a
+    /// street's awnings, washing, counters and crates), within this reach
+    /// of the target: about where the street's people show (decision 259).
+    public static let closeDistance: Float = 450
+    public static let closeReach: Float = 350
+
+    /// Whether the chunk from `minimum` to `maximum` draws its closest
+    /// detail, with the same margin as ``wantsDetail(minimum:maximum:wasDetailed:)``.
+    public func wantsClose(minimum: Map3DPoint, maximum: Map3DPoint, wasClose: Bool = false) -> Bool {
+        let margin: Float = wasClose ? 1.14 : 0.86
+        guard distance <= Self.closeDistance * margin else { return false }
+        let reach = max(Self.closeReach, distance * 0.9) * margin
+        let dx = target.x - min(max(target.x, minimum.x), maximum.x), dz = target.z - min(max(target.z, minimum.z), maximum.z)
+        return dx * dx + dz * dz <= reach * reach
+    }
+
     // MARK: - Gestures
 
     /// Metres on the ground per point on the screen at the target.

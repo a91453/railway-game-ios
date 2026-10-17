@@ -107,10 +107,25 @@ final class Map3DStreetLifeTests: XCTestCase {
         let navy = Set([Map3DBaseMap.RoadKind.primary, .tertiary, .minor].map(Map3DPalette.road))
         let roads = scene.chunks.flatMap(\.mesh.vertices).filter { navy.contains($0.color) }
         XCTAssertGreaterThan(roads.count, 100)
+        // Decision 267 (#712–#754's review): the lane's middle lies on a
+        // road's triangle, just over it.
         let lane = try XCTUnwrap(life.lanes.first)
         let middle = lane.path.at(lane.path.length / 2).point
-        XCTAssertTrue(roads.contains { abs($0.x - middle.x) < 12 && abs($0.z - middle.z) < 12 && abs($0.y - (middle.y - 0.02)) < 0.05 },
-                      "a road under the lane, just under the wheels")
+        func under(_ point: Map3DPoint) -> Float? {
+            for chunk in scene.chunks {
+                let v = chunk.mesh.vertices, i = chunk.mesh.indices
+                for start in stride(from: 0, to: i.count, by: 3) {
+                    let a = v[Int(i[start])], b = v[Int(i[start + 1])], c = v[Int(i[start + 2])]
+                    guard navy.contains(a.color), navy.contains(b.color), navy.contains(c.color) else { continue }
+                    func side(_ p: Map3DVertex, _ q: Map3DVertex) -> Float { (q.x - p.x) * (point.z - p.z) - (q.z - p.z) * (point.x - p.x) }
+                    let s1 = side(a, b), s2 = side(b, c), s3 = side(c, a)
+                    if (s1 >= 0 && s2 >= 0 && s3 >= 0) || (s1 <= 0 && s2 <= 0 && s3 <= 0) { return (a.y + b.y + c.y) / 3 }
+                }
+            }
+            return nil
+        }
+        let road = try XCTUnwrap(under(middle), "a road under the lane")
+        XCTAssertEqual(road, middle.y - 0.02, accuracy: 0.1, "just under the wheels")
         // Nothing but finite points.
         for spot in life.spots {
             XCTAssertTrue(spot.path.points.allSatisfy { $0.x.isFinite && $0.y.isFinite && $0.z.isFinite })

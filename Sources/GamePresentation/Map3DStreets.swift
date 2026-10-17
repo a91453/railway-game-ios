@@ -111,36 +111,72 @@ struct Map3DSeededStreets: Sendable {
 /// laid on the ground, a deck over the rails, ramps up to it, stop lines
 /// and the barriers.
 struct Map3DLevelCrossing: Sendable {
-    /// On the street's middle line over the track, at the rails' height.
+    /// On the street's middle line over the track (between its tracks,
+    /// where it crosses more than one), at the rails' height.
     let point: Map3DPoint
     /// The street's way, level.
     let along: Map3DPoint
     let kind: Map3DBaseMap.RoadKind
+    /// Decision 267: the track's way, level, and how far apart along the
+    /// street its outermost tracks are crossed (0 for one track).
+    var trackWay: Map3DPoint = Map3DPoint(0, 0, 1)
+    var spread: Float = 0
 
-    /// Half the deck along the street (over a bed 4.6 m wide) and where
-    /// the ramps reach the road again: long and gentle, about 1 in 13
-    /// over the track's raised bed (``Map3DScene/railLift``).
+    /// Half the deck along the street over one track crossed square on
+    /// (a bed 4.6 m wide), and how far past the deck the ramps reach the
+    /// road again: long and gentle, about 1 in 13 over the track's raised
+    /// bed (``Map3DScene/railLift``).
     static let deckHalf: Float = 2.6
-    static let rampEnd: Float = 12
+    static let ramp: Float = 9.4
+    /// The most tracks a deck covers apart, metres along the street: a
+    /// double track's two (4 m apart) and a little more.
+    static let mostSpread: Float = 8
+    /// The longest half deck, for a sharply slanting crossing.
+    static let longestDeckHalf: Float = 9
     /// The deck's top over the rails' line (``Map3DScene/railLift``):
     /// just over the rail heads.
     static let deckRise: Float = 0.22
-    /// Where the stop lines and the barriers stand from the track's middle.
-    static let stopLine: Float = 8
+    /// Where the barriers stand from the track's middle, across the track
+    /// (the stop lines stand a metre past the ramps).
     static let barrier: Float = 3.8
 
     var deckTop: Float { point.y + Self.deckRise }
     /// Half the street's width with its pavements.
     var halfWidth: Float { Map3DSeededStreets.clearance(kind) }
+    /// The sine of the angle between the street and the track: 1 square
+    /// on.
+    var crossingSine: Float { max(abs(along.x * trackWay.z - along.z * trackWay.x), 0.5) }
+    /// Decision 267: half the deck along the street: longer the more the
+    /// street slants across the track (the bed's width over the sine), and
+    /// over all its tracks.
+    var deckHalfLength: Float { min(Self.deckHalf / crossingSine + spread / 2, Self.longestDeckHalf) }
+    /// Where the ramps reach the road again, from the middle.
+    var rampEnd: Float { deckHalfLength + Self.ramp }
 
     /// How much higher than its road a point is over the deck or its
     /// ramps, given the road's surface there; 0 off the crossing.
     func rise(x: Float, z: Float, road: Float) -> Float {
         let dx = x - point.x, dz = z - point.z
         let d = abs(dx * along.x + dz * along.z), side = abs(dx * along.z - dz * along.x)
-        guard side <= halfWidth + 0.5, d < Self.rampEnd else { return 0 }
+        guard side <= halfWidth + 0.5, d < rampEnd else { return 0 }
         let full = max(deckTop - road, 0)
-        return d <= Self.deckHalf ? full : full * (Self.rampEnd - d) / (Self.rampEnd - Self.deckHalf)
+        return d <= deckHalfLength ? full : full * (rampEnd - d) / (rampEnd - deckHalfLength)
+    }
+
+    /// Decision 267: where a thing stands `fromTrack` metres from the
+    /// track's middle (across the track, on the side the street comes from
+    /// for `end` −1, the other for +1) on the line `fromMiddle` metres to
+    /// the street's right of its middle line: so a barrier stands clear of
+    /// the bed whatever the angle.
+    func spot(end: Float, fromTrack: Float, fromMiddle: Float) -> Map3DPoint {
+        let across = Map3DPoint(-along.z, 0, along.x)
+        // The track's normal, pointing the way the street goes on.
+        var normal = Map3DPoint(-trackWay.z, 0, trackWay.x)
+        if normal.dot(along) < 0 { normal = -normal }
+        let level = Map3DPoint(point.x, 0, point.z)
+        let distance = end * (fromTrack + spread / 2)
+        let t = (distance - fromMiddle * across.dot(normal)) / max(along.dot(normal), 0.3)
+        return level + across * fromMiddle + along * t
     }
 }
 
@@ -162,7 +198,10 @@ extension Map3DScene.Builder {
     /// cross a bank or a cutting); or crosses it at a level crossing.
     enum TrackMeeting: Equatable {
         case clear, blocked
-        case crossing(Map3DPoint)
+        /// Over the track at `point` (the middle of the tracks crossed, at
+        /// the rails' height), the track running `way`, its outermost
+        /// tracks `spread` metres apart along the street.
+        case crossing(Map3DPoint, way: Map3DPoint, spread: Float)
     }
 
     /// A level piece of the track (or, `isPlatform`, a platform's track)
@@ -178,7 +217,9 @@ extension Map3DScene.Builder {
         let low = (x: min(a.x, b.x) - half - 12, z: min(a.z, b.z) - half - 12)
         let high = (x: max(a.x, b.x) + half + 12, z: max(a.z, b.z) + half + 12)
         var seen = Set<Int>()
-        var crossing: Map3DPoint?
+        // Decision 267: every track crossed on the ground (a double track's
+        // two), within ``Map3DLevelCrossing/mostSpread`` of one another.
+        var hits: [(point: Map3DPoint, way: Map3DPoint)] = []
         // Pieces too near the street, decided once a crossing is known: the
         // track's pieces next to its own crossing are near it too.
         var near: [(p: Map3DPoint, q: Map3DPoint, reach: Float)] = []
@@ -193,18 +234,19 @@ extension Map3DScene.Builder {
                     // Crossing at a slant of less than 30° runs along it.
                     let way = Map3DPoint(q.x - p.x, 0, q.z - p.z).normalized ?? along
                     let slant = abs(way.x * along.z - way.z * along.x)
-                    if let crossing, abs(crossing.x - hit.x) < 1, abs(crossing.z - hit.z) < 1 { continue }
+                    // A piece's end shared with the next: one place.
+                    if hits.contains(where: { abs($0.point.x - hit.x) < 1 && abs($0.point.z - hit.z) < 1 }) { continue }
                     switch kind {
                     case .tunnel: continue
                     // Under a viaduct or a bridge, where no pier stands in it.
                     case .viaduct where !isPlatform && slant > 0.5, .bridge where !isPlatform && slant > 0.5:
                         if piers.contains(where: { abs($0.x - hit.x) < half + 2 && abs($0.z - hit.z) < half + 2 }) { return .blocked }
                         continue
-                    case .surface where !isPlatform && slant > 0.5 && crossing == nil:
+                    case .surface where !isPlatform && slant > 0.5:
                         let t = Map3DStreetLife.Path([p, q]).map { path in
                             min(max((Map3DPoint(hit.x - p.x, 0, hit.z - p.z)).length / path.length, 0), 1)
                         } ?? 0
-                        crossing = Map3DPoint(hit.x, p.y + (q.y - p.y) * t, hit.z)
+                        hits.append((Map3DPoint(hit.x, p.y + (q.y - p.y) * t, hit.z), way))
                     default:
                         return .blocked
                     }
@@ -217,12 +259,20 @@ extension Map3DScene.Builder {
                 }
             }
         }
+        guard let first = hits.first else { return near.isEmpty ? .clear : .blocked }
+        // Along the street, the tracks crossed; too far apart for one deck,
+        // none.
+        let distances = hits.map { Map3DPoint($0.point.x - a.x, 0, $0.point.z - a.z).dot(along) }
+        guard let low = distances.min(), let high = distances.max(), high - low <= Map3DLevelCrossing.mostSpread else { return .blocked }
         for piece in near {
             // Within a crossing's own reach, it is the track crossing.
-            if let crossing, Self.distance(crossing, crossing, piece.p, piece.q) < piece.reach + 16 { continue }
+            if hits.contains(where: { Self.distance($0.point, $0.point, piece.p, piece.q) < piece.reach + 16 }) { continue }
             return .blocked
         }
-        return crossing.map { .crossing($0) } ?? .clear
+        let middle = (low + high) / 2
+        let height = hits.map(\.point.y).reduce(0, +) / Float(hits.count)
+        let at = a + along * middle
+        return .crossing(Map3DPoint(at.x, height, at.z), way: first.way, spread: high - low)
     }
 
     /// The track's and the platforms' segments, and their numbers by the
@@ -290,17 +340,18 @@ extension Map3DScene.Builder {
         let streets = Map3DSeededStreets(built: built)
         let (segments, index) = trackSegments()
         var kept: [Map3DSeededStreets.Edge: Map3DBaseMap.RoadKind] = [:]
-        var crossingsOn: [Map3DSeededStreets.Edge: Map3DPoint] = [:]
+        var crossingsOn: [Map3DSeededStreets.Edge: Map3DLevelCrossing] = [:]
         for (edge, kind) in streets.edges.sorted(by: { $0.key < $1.key }) {
             let (a, b) = edgeEnds(edge)
             switch trackMeeting(from: a, to: b, half: Map3DSeededStreets.clearance(kind), segments: segments, index: index) {
             case .clear: kept[edge] = kind
             case .blocked: continue
-            case .crossing(let at):
+            case .crossing(let at, let way, let spread):
                 // A lane, and half the streets, end at the railway.
-                guard Map3DSeededStreets.crossesTrack(line: edge.line, horizontal: edge.horizontal) else { continue }
+                guard Map3DSeededStreets.crossesTrack(line: edge.line, horizontal: edge.horizontal),
+                      let along = Map3DPoint(b.x - a.x, 0, b.z - a.z).normalized else { continue }
                 kept[edge] = kind
-                crossingsOn[edge] = at
+                crossingsOn[edge] = Map3DLevelCrossing(point: at, along: along, kind: kind, trackWay: way, spread: spread)
             }
         }
         // A crossing only where the street goes on both sides of it, never
@@ -315,11 +366,7 @@ extension Map3DScene.Builder {
         }
         streetEdges = kept
         // The level crossings first: their decks lift the traffic.
-        for (edge, at) in crossingsOn.sorted(by: { $0.key < $1.key }) {
-            let (a, b) = edgeEnds(edge)
-            guard let along = Map3DPoint(b.x - a.x, 0, b.z - a.z).normalized, let kind = kept[edge] else { continue }
-            crossings.append(Map3DLevelCrossing(point: at, along: along, kind: kind))
-        }
+        crossings = crossingsOn.sorted(by: { $0.key < $1.key }).map(\.value)
         // Each line's edges next to one another of one kind, one road.
         var roads: [Map3DBaseMap.Road] = []
         let regionBounds = Map3DBaseMap.Bounds(minX: (region.minX - originX) / Self.metre, minZ: (region.minY - originY) / Self.metre,
@@ -335,9 +382,9 @@ extension Map3DScene.Builder {
             var distances = Set(stride(from: Float(0), through: length, by: 16).map { $0 })
             distances.insert(length)
             for edge in run {
-                guard let at = crossingsOn[edge] else { continue }
-                let d = Map3DPoint(at.x - start.x, 0, at.z - start.z).dot(along)
-                for offset in [-Map3DLevelCrossing.rampEnd, -Map3DLevelCrossing.deckHalf, 0, Map3DLevelCrossing.deckHalf, Map3DLevelCrossing.rampEnd]
+                guard let crossing = crossingsOn[edge] else { continue }
+                let d = Map3DPoint(crossing.point.x - start.x, 0, crossing.point.z - start.z).dot(along)
+                for offset in [-crossing.rampEnd, -crossing.deckHalfLength, 0, crossing.deckHalfLength, crossing.rampEnd]
                     where d + offset > 0 && d + offset < length {
                     distances.insert(d + offset)
                 }
@@ -385,7 +432,7 @@ extension Map3DScene.Builder {
         let base = Map3DPoint(middle.x, drawnGround(x: middle.x, z: middle.z), middle.z)
         var corners: [[Map3DPoint]] = []
         for end: Float in [-1, 1] {
-            let near = middle + along * (end * Map3DLevelCrossing.deckHalf), far = middle + along * (end * Map3DLevelCrossing.rampEnd)
+            let near = middle + along * (end * crossing.deckHalfLength), far = middle + along * (end * crossing.rampEnd)
             let farY = drawnGround(x: far.x, z: far.z) + Self.lift(of: crossing.kind)
             corners.append([near + across * half + Map3DPoint(0, top, 0), near - across * half + Map3DPoint(0, top, 0),
                             far - across * half + Map3DPoint(0, farY, 0), far + across * half + Map3DPoint(0, farY, 0)])
@@ -394,7 +441,7 @@ extension Map3DScene.Builder {
         target = .base
         mesh(at: base) { mesh in
             let deckCorners = [-1, 1].flatMap { (end: Float) in
-                [middle + along * (end * Map3DLevelCrossing.deckHalf) + across * (end * half), middle + along * (end * Map3DLevelCrossing.deckHalf) - across * (end * half)]
+                [middle + along * (end * crossing.deckHalfLength) + across * (end * half), middle + along * (end * crossing.deckHalfLength) - across * (end * half)]
             }.map { Map3DPoint($0.x, top, $0.z) }
             let up = (deckCorners[1] - deckCorners[0]).cross(deckCorners[3] - deckCorners[0]).y > 0
             mesh.addFacet(up ? deckCorners : deckCorners.reversed(), color: deck)
@@ -407,13 +454,18 @@ extension Map3DScene.Builder {
         target = .near
         var feet: [Float: Map3DPoint] = [:]
         for end: Float in [-1, 1] {
-            let foot = middle + along * (end * Map3DLevelCrossing.barrier) + across * (-end * (crossing.kind.width(ramp: false) / 2 + 0.6))
-            feet[end] = Map3DPoint(foot.x, drawnGround(x: foot.x, z: foot.z) + Self.sidewalkLift, foot.z)
+            // Decision 267: 3.8 m from the track's middle across the track
+            // (clear of its bed at any angle), at the carriageway's edge on
+            // the right of the way in; on the deck or its ramp where it
+            // reaches there.
+            let foot = crossing.spot(end: end, fromTrack: Map3DLevelCrossing.barrier, fromMiddle: -end * (crossing.kind.width(ramp: false) / 2 + 0.6))
+            let ground = drawnGround(x: foot.x, z: foot.z) + Self.sidewalkLift
+            feet[end] = Map3DPoint(foot.x, ground + crossing.rise(x: foot.x, z: foot.z, road: ground), foot.z)
         }
         mesh(at: base) { mesh in
             for end: Float in [-1, 1] {
                 // A stop line across the way in, on the driver's right.
-                let line = middle + along * (end * Map3DLevelCrossing.stopLine)
+                let line = middle + along * (end * (crossing.rampEnd + 1))
                 let lineY = Map3DPoint(0, base.y + Self.centreLineLift, 0)
                 mesh.addBox(base: line + across * (-end * crossing.kind.width(ramp: false) / 4) + lineY, forward: along, length: 0.4,
                             width: crossing.kind.width(ramp: false) / 2, height: 0.02, top: Self.stopWhite, side: Self.stopWhite)

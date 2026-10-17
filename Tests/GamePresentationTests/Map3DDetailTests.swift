@@ -55,4 +55,19 @@ final class Map3DDetailTests: XCTestCase {
         XCTAssertEqual(again.chunks.map(\.shadows.vertices), scene.chunks.map(\.shadows.vertices))
         XCTAssertEqual(again.chunks.map(\.far.vertices), scene.chunks.map(\.far.vertices))
     }
+
+    /// Decision 267: the closest detail only near the target, close up.
+    func testTheClosestDetailOnlyCloseUp() {
+        let box = (Map3DPoint(-256, 0, -256), Map3DPoint(256, 30, 256))
+        let close = Map3DCamera(target: .zero, distance: 200)
+        XCTAssertTrue(close.wantsClose(minimum: box.0, maximum: box.1))
+        XCTAssertFalse(close.wantsClose(minimum: Map3DPoint(1024, 0, 1024), maximum: Map3DPoint(1536, 30, 1536)), "a kilometre off")
+        let higher = Map3DCamera(target: .zero, distance: 800)
+        XCTAssertFalse(higher.wantsClose(minimum: box.0, maximum: box.1), "too high")
+        XCTAssertTrue(higher.wantsDetail(minimum: box.0, maximum: box.1), "though still in full")
+        // The margin: once drawn, kept a little farther.
+        let edge = Map3DCamera(target: .zero, distance: Map3DCamera.closeDistance)
+        XCTAssertFalse(edge.wantsClose(minimum: box.0, maximum: box.1))
+        XCTAssertTrue(edge.wantsClose(minimum: box.0, maximum: box.1, wasClose: true))
+    }
 }

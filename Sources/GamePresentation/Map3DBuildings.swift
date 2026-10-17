@@ -44,6 +44,18 @@ extension Map3DPalette {
     /// The japan pack's outdoor air conditioner (`#e9e7df`).
     static let acUnit = rgbColor(0xE9E7DF)
     static let signs: [UInt32] = [rgbColor(0xD9534A), rgbColor(0x3E7CC0), rgbColor(0xF0B847), rgbColor(0x4FA36B)]
+    /// Decision 267: a street's life on a row house's front, in the colours
+    /// of F 台灣版＋ (`docs/art/3d-style-2026-10-13/`, HANDOFF §4.3) and the
+    /// owner's target picture: shop counters, the crates on them, the low
+    /// shop awnings, the tin awnings over the windows (blue, green, red,
+    /// grey) and the washing on the balconies.
+    static let counters: [UInt32] = [rgbColor(0xD8D0C2), rgbColor(0x8E6E52), rgbColor(0xC9CCCF)]
+    static let crates: [UInt32] = [rgbColor(0xE86A7A), rgbColor(0xF2D24B), rgbColor(0x5E9A78), rgbColor(0x4E78A8), rgbColor(0xF2F0EA), rgbColor(0xD98A4A)]
+    static let shopAwnings: [UInt32] = [rgbColor(0x3E8C8C), rgbColor(0xC65A4E), rgbColor(0x4E78A8), rgbColor(0xF2F0EA)]
+    static let tinAwnings: [UInt32] = [rgbColor(0x4E78A8), rgbColor(0x5E9A78), rgbColor(0xC65A4E), rgbColor(0x7A93A6)]
+    static let washing: [UInt32] = [rgbColor(0xF2F0EA), rgbColor(0x4E78A8), rgbColor(0xE86A7A), rgbColor(0x8A9BB0), rgbColor(0xD9B48A)]
+    /// The water tank's stand.
+    static let tankStand = rgbColor(0x6E747B)
 
     fileprivate static func rgbColor(_ hex: UInt32) -> UInt32 { Map3DColor.rgb(hex) }
 }
@@ -390,14 +402,34 @@ extension Map3DScene.Builder {
     /// under some windows of the rest, and a blade sign on a shop (the
     /// japan pack's balconies 0.95–1.05 m deep, its air conditioners
     /// 0.8 m, its blade signs).
-    static func addFrontDetail(_ mesh: inout Map3DMesh, front: Map3DPoint, facing: Map3DPoint, width: Float, groundFloor: Float,
-                               upper: Float, floors: Int, wall: UInt32, balconies: Bool, sign: Bool, r: (Int32) -> Float) {
+    static func addFrontDetail(_ mesh: inout Map3DMesh, close: inout Map3DMesh, front: Map3DPoint, facing: Map3DPoint, width: Float, groundFloor: Float,
+                               upper: Float, floors: Int, wall: UInt32, balconies: Bool, sign: Bool, arcade: Bool = false,
+                               r: (Int32) -> Float) {
         let across = Map3DPoint(-facing.z, 0, facing.x)
+        // Decision 267: the arcade's pillars, and a shop's counter, crates
+        // and low awning, in `close` (drawn only close up), as are the
+        // awnings and washing above.
+        addStreetLevel(&close, front: front, facing: facing, width: width, groundFloor: groundFloor, wall: wall, shop: sign, arcade: arcade, r: r)
         for floor in 1..<max(1, floors) {
             let level = Map3DPoint(0, groundFloor + upper * Float(floor - 1), 0)
+            // Decision 267: a tin awning over the windows on half the
+            // floors, out past a balcony.
+            if r(Int32(50 + floor)) < 0.5 {
+                addSlope(&close, from: front + level + Map3DPoint(0, 2.45, 0), facing: facing, width: width - 0.8, depth: balconies ? 1.4 : 0.9,
+                         drop: 0.33, color: pick(Map3DPalette.tinAwnings, r(Int32(60 + floor))))
+            }
             if balconies {
                 mesh.addBox(base: front + facing * 0.5 + level, forward: facing, length: 1, width: width - 0.8, height: 1.05,
                             top: Map3DColor.shaded(wall, 0.97), side: Map3DColor.shaded(wall, 0.93))
+                // Decision 267: washing on 45% of the balconies: four
+                // pieces hung out over the rail.
+                if r(Int32(70 + floor)) < 0.45 {
+                    for piece in 0..<4 {
+                        let spot = front + facing * 1.08 + level + across * ((Float(piece) - 1.5) * min(0.55, (width - 1.2) / 4)) + Map3DPoint(0, 0.45, 0)
+                        addPanel(&close, at: spot, facing: facing, width: 0.45, height: 0.6,
+                                 color: pick(Map3DPalette.washing, r(Int32(80 + floor * 4 + piece))))
+                    }
+                }
             } else if r(Int32(20 + floor)) < 0.5 {
                 let side: Float = r(Int32(30 + floor)) < 0.5 ? -1 : 1
                 mesh.addBox(base: front + facing * 0.2 + across * (side * width / 4) + level + Map3DPoint(0, 0.5, 0), forward: facing,
@@ -409,6 +441,64 @@ extension Map3DScene.Builder {
             mesh.addBox(base: front + facing * 0.45 + across * (width / 2 - 0.5) + Map3DPoint(0, groundFloor + 0.3, 0), forward: facing,
                         length: 0.7, width: 0.25, height: height, top: Map3DPalette.tileWhite, side: pick(Map3DPalette.signs, r(13)))
         }
+    }
+
+    /// Decision 267: what stands at a row house's foot. Under an arcade
+    /// (騎樓), its two pillars at the front corners; at a shop, a counter
+    /// with three crates out before the shop front (in the arcade, or on
+    /// the pavement) under a low awning sloping out (HANDOFF §4.3: the
+    /// counter 0.55 of the width, 0.9 m tall, 0.6 m deep; crates 0.5 ×
+    /// 0.35 × 0.35; the awning 2.95 m up, 1.1 m out, falling 0.25 rad).
+    static func addStreetLevel(_ mesh: inout Map3DMesh, front: Map3DPoint, facing: Map3DPoint, width: Float, groundFloor: Float, wall: UInt32,
+                               shop: Bool, arcade: Bool, r: (Int32) -> Float) {
+        let across = Map3DPoint(-facing.z, 0, facing.x)
+        if arcade {
+            for side: Float in [-1, 1] {
+                mesh.addBox(base: front - facing * 0.2 + across * (side * (width / 2 - 0.25)), forward: facing, length: 0.4, width: 0.4,
+                            height: groundFloor, top: Map3DColor.shaded(wall, 0.92), side: Map3DColor.shaded(wall, 0.88))
+            }
+        }
+        guard shop else { return }
+        // The shop front: the arcade's back wall, or the house's face.
+        let shopFront = arcade ? front - facing * Self.arcadeDepth : front
+        let counterWidth = width * 0.55
+        let counter = shopFront + facing * 0.6
+        mesh.addBox(base: counter, forward: facing, length: 0.6, width: counterWidth, height: 0.9, top: pick(Map3DPalette.counters, r(40)),
+                    side: pick(Map3DPalette.counters, r(40)))
+        for crate in 0..<3 {
+            let colour = pick(Map3DPalette.crates, r(Int32(41 + crate)))
+            mesh.addBox(base: counter + across * ((Float(crate) - 1) * counterWidth / 3) + Map3DPoint(0, 0.9, 0), forward: facing, length: 0.35,
+                        width: min(0.5, counterWidth / 3 - 0.05), height: 0.35, top: colour, side: colour)
+        }
+        // The awning: at the arcade's edge, or over the shop front.
+        let height = min(2.95, groundFloor - 0.35)
+        addSlope(&mesh, from: (arcade ? front : shopFront) + Map3DPoint(0, height, 0), facing: facing, width: width - 0.3, depth: 1.1, drop: 0.28,
+                 color: pick(Map3DPalette.shopAwnings, r(45)))
+    }
+
+    /// How far an arcade's ground floor stands back from the house's face
+    /// (``addRowHouses``).
+    static let arcadeDepth: Float = 3.4
+
+    /// A sloping sheet `width` wide from a wall at `from` (its top edge's
+    /// middle), `depth` out along `facing` and `drop` lower there: an
+    /// awning, its face up.
+    static func addSlope(_ mesh: inout Map3DMesh, from top: Map3DPoint, facing: Map3DPoint, width: Float, depth: Float, drop: Float, color: UInt32) {
+        let across = Map3DPoint(-facing.z, 0, facing.x) * (width / 2)
+        let out = facing * depth - Map3DPoint(0, drop, 0)
+        let corners = [top - across, top + across, top + across + out, top - across + out]
+        let up = (corners[1] - corners[0]).cross(corners[3] - corners[0]).y > 0
+        mesh.addFacet(up ? corners : corners.reversed(), color: color)
+    }
+
+    /// An upright sheet `width` × `height` hanging from `at` (its top
+    /// edge's middle), its face toward `facing`: a piece of washing.
+    static func addPanel(_ mesh: inout Map3DMesh, at top: Map3DPoint, facing: Map3DPoint, width: Float, height: Float, color: UInt32) {
+        let across = Map3DPoint(-facing.z, 0, facing.x) * (width / 2)
+        let down = Map3DPoint(0, height, 0)
+        let corners = [top - across - down, top + across - down, top + across, top - across]
+        let out = (corners[1] - corners[0]).cross(corners[3] - corners[0]).dot(facing) > 0
+        mesh.addFacet(out ? corners : corners.reversed(), color: color)
     }
 
     // MARK: Roofs

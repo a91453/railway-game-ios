@@ -32,6 +32,10 @@ public struct Map3DScene: Sendable {
         /// the rest of ``mesh`` when the chunk is far from the camera
         /// (``Map3DCamera/wantsDetail(minimum:maximum:)``).
         public let far: Map3DMesh
+        /// Decision 267: the city's smallest things, drawn only close up
+        /// (``Map3DCamera/wantsClose(minimum:maximum:wasClose:)``) on top
+        /// of the full mesh.
+        public let close: Map3DMesh
         /// Decision 232: the soft shadows on its ground, drawn after
         /// everything else.
         public let shadows: Map3DMesh
@@ -317,6 +321,8 @@ extension Map3DScene {
         /// or simplified. The city's shadows are made once, in full.
         enum Target {
             case base, near, far
+            /// Decision 267: the closest detail.
+            case close
         }
         var target = Target.base
         /// Decision 244: the street furniture, by chunk.
@@ -333,6 +339,7 @@ extension Map3DScene {
         var crossings: [Map3DLevelCrossing] = []
         var nearMeshes: [ChunkKey: Map3DMesh] = [:]
         var farMeshes: [ChunkKey: Map3DMesh] = [:]
+        var closeMeshes: [ChunkKey: Map3DMesh] = [:]
         /// Whether what is being built is the simplified city.
         var isFar: Bool { target == .far }
         /// The ground's heights at the 64 m grid's corners, in metres, by
@@ -429,23 +436,24 @@ extension Map3DScene {
             case .base: build(&meshes[key, default: Map3DMesh()])
             case .near: build(&nearMeshes[key, default: Map3DMesh()])
             case .far: build(&farMeshes[key, default: Map3DMesh()])
+            case .close: build(&closeMeshes[key, default: Map3DMesh()])
             }
         }
 
         func chunks() -> [Chunk] {
-            Set(meshes.keys).union(shadows.keys).union(nearMeshes.keys).union(farMeshes.keys).union(props.keys).sorted().compactMap { key in
+            Set(meshes.keys).union(shadows.keys).union(nearMeshes.keys).union(farMeshes.keys).union(closeMeshes.keys).union(props.keys).sorted().compactMap { key in
                 var mesh = meshes[key] ?? Map3DMesh()
                 let baseIndexCount = mesh.indices.count
                 mesh.append(nearMeshes[key] ?? Map3DMesh())
-                let far = farMeshes[key] ?? Map3DMesh(), shadows = shadows[key] ?? Map3DMesh()
+                let far = farMeshes[key] ?? Map3DMesh(), shadows = shadows[key] ?? Map3DMesh(), close = closeMeshes[key] ?? Map3DMesh()
                 // The props too: the renderer leaves out a chunk whose box
                 // is off screen, which cut off a pole's top still in view.
                 let propBoxes = (props[key] ?? []).compactMap { $0.bounds(in: .standard) }
-                let boxes = [mesh.bounds, far.bounds, shadows.bounds].compactMap { $0 } + propBoxes
+                let boxes = [mesh.bounds, far.bounds, shadows.bounds, close.bounds].compactMap { $0 } + propBoxes
                 guard let first = boxes.first else { return nil }
                 let low = boxes.reduce(first.min) { Map3DPoint(min($0.x, $1.min.x), min($0.y, $1.min.y), min($0.z, $1.min.z)) }
                 let high = boxes.reduce(first.max) { Map3DPoint(max($0.x, $1.max.x), max($0.y, $1.max.y), max($0.z, $1.max.z)) }
-                return Chunk(column: key.column, row: key.row, mesh: mesh, baseIndexCount: baseIndexCount, far: far, shadows: shadows,
+                return Chunk(column: key.column, row: key.row, mesh: mesh, baseIndexCount: baseIndexCount, far: far, close: close, shadows: shadows,
                              props: props[key] ?? [], minimum: low, maximum: high)
             }
         }
@@ -849,6 +857,21 @@ extension Map3DScene {
             let south: Float?
             let west: Float
             let east: Float
+            /// Decision 267: the kind of street each row faces.
+            var northKind: Map3DBaseMap.RoadKind?
+            var southKind: Map3DBaseMap.RoadKind?
+
+            /// Decision 267: the share of a row's houses with a shop on the
+            /// ground floor: on a main road most, on a street some, on a
+            /// lane or the back none (a Taiwanese 透天厝 on a busy street
+            /// keeps a shop below its home).
+            func shopShare(facing: Float) -> Float {
+                switch facing > 0 ? southKind : northKind {
+                case .primary, .secondary, .trunk: 0.7
+                case .tertiary: 0.4
+                default: 0
+                }
+            }
         }
 
         /// The fronts on the seeded streets round cell (`column`, `row`), or
@@ -860,7 +883,9 @@ extension Map3DScene {
                 streetEdges[Map3DSeededStreets.Edge(horizontal: horizontal, line: line, along: along)].map { Map3DSeededStreets.clearance($0) + 0.3 }
             }
             return RowFronts(north: clear(true, row, column).map { half - $0 }, south: clear(true, row + 1, column).map { half - $0 },
-                             west: -half + (clear(false, column, row) ?? 2), east: half - (clear(false, column + 1, row) ?? 2))
+                             west: -half + (clear(false, column, row) ?? 2), east: half - (clear(false, column + 1, row) ?? 2),
+                             northKind: streetEdges[Map3DSeededStreets.Edge(horizontal: true, line: row, along: column)],
+                             southKind: streetEdges[Map3DSeededStreets.Edge(horizontal: true, line: row + 1, along: column)])
         }
 
         /// Two rows of 透天厝 back to back on the lot, facing north and
@@ -868,7 +893,7 @@ extension Map3DScene {
         /// density 2) with an arcade (騎樓) on most shops, a parapet and a
         /// water tank on many roofs (`city_world_reference` `pickType`,
         /// `floorsFor`, `widthFor`, `waterTank`).
-        mutating func addRowHouses(base: Map3DPoint, side: Float, density: Int, shops: Bool, seed: (Int32, Int32), fronts: RowFronts? = nil) {
+        mutating func addRowHouses(base: Map3DPoint, side: Float, density: Int, shops lotShops: Bool, seed: (Int32, Int32), fronts: RowFronts? = nil) {
             var depth = min(16, side / 2 - 1)
             // Decision 263: on seeded streets, each row's front at its
             // street's pavement (back to back where it has none), from the
@@ -879,6 +904,8 @@ extension Map3DScene {
             }
             if let fronts { depth = min(depth, [fronts.north, fronts.south].compactMap { $0 }.map { $0 - 0.5 }.min() ?? depth) }
             guard depth > 4 else { return }
+            // Decision 267: the street's smallest things, drawn only close.
+            var closeDetail = Map3DMesh()
             let flats = density >= 2
             let far = isFar
             mesh(at: base) { mesh in
@@ -900,6 +927,9 @@ extension Map3DScene {
                         let middleX = x + width / 2
                         let front = Map3DPoint(0, 0, facing) // the way the house faces
                         let rowMiddle = base + Map3DPoint(middleX, 0, facing * (frontAt(facing) - depth / 2))
+                        // Decision 267: a shop below on a commercial lot, and
+                        // on a busy street's houses now and then.
+                        let shops = lotShops || r(13) < (fronts?.shopShare(facing: facing) ?? 0)
                         let arcade = shops && r(5) < 0.8
                         // Decision 231: the ground floor a shop or a
                         // rolling shutter, the floors above windows (a
@@ -930,18 +960,28 @@ extension Map3DScene {
                         // and the parapet's rim; afar, only the roof's tank
                         // or room, which read from far off.
                         if !far {
-                            Self.addFrontDetail(&mesh, front: rowMiddle + front * (depth / 2), facing: front, width: width,
+                            Self.addFrontDetail(&mesh, close: &closeDetail, front: rowMiddle + front * (depth / 2), facing: front, width: width,
                                                 groundFloor: groundFloor, upper: upper, floors: Int(floors), wall: wall,
-                                                balconies: balconies, sign: shops, r: r)
+                                                balconies: balconies, sign: shops, arcade: arcade, r: r)
                             mesh.addBox(base: rowMiddle + Map3DPoint(0, height, 0), forward: front, length: depth, width: width - 0.1,
                                         height: 0.7, top: Map3DPalette.roof, side: Map3DColor.shaded(wall, 0.95),
                                         topPaint: Self.roofing, frontPaint: Self.plaster, flankPaint: Self.plaster)
                         }
-                        if r(6) < 0.6 {
+                        if r(6) < 0.75 {
+                            // Decision 267: on three in four roofs, a round water
+                            // tank (r 0.62 m, 1.1 m tall; HANDOFF §4.3) on its
+                            // stand, blue or stainless; afar one box in the
+                            // tank's colour, as few triangles as before.
                             let tank = r(7) < 0.5 ? Map3DPalette.tankBlue : Map3DPalette.tankSteel
-                            mesh.addBox(base: rowMiddle + Map3DPoint(0, height + 0.7, 0) - front * (depth / 4), forward: front,
-                                        length: 1.6, width: 1.6, height: 2.2, top: tank, side: tank)
-                        } else if r(6) < 0.85, width > 4 {
+                            let foot = rowMiddle + Map3DPoint(0, height + 0.7, 0) - front * (depth / 4)
+                            if far {
+                                mesh.addBox(base: foot, forward: front, length: 1.2, width: 1.2, height: 1.8, top: tank, side: tank)
+                            } else {
+                                mesh.addBox(base: foot, forward: front, length: 1.2, width: 1.2, height: 0.7, top: Map3DPalette.tankStand,
+                                            side: Map3DPalette.tankStand)
+                                mesh.addCylinder(base: foot + Map3DPoint(0, 0.7, 0), radius: 0.62, height: 1.1, sides: 8, top: tank, side: tank)
+                            }
+                        } else if r(6) < 0.92, width > 4 {
                             // Decision 235: a sheet-steel room on the roof
                             // (頂樓加蓋) over the back half, under a low gable
                             // (the japan pack's shutter garage and shed
@@ -960,17 +1000,22 @@ extension Map3DScene {
                     }
                 }
             }
+            if !closeDetail.isEmpty {
+                let saved = target
+                target = .close
+                mesh(at: base) { $0.append(closeDetail) }
+                target = saved
+            }
             // Decision 232: a shadow round each row.
             for facing: Float in [-1, 1] {
                 addShadow(centre: base + Map3DPoint((span.0 + span.1) / 2, 0, facing * (frontAt(facing) - depth / 2)), forward: Map3DPoint(1, 0, 0),
                           length: span.1 - span.0, width: depth + 0.5, spread: 3, darkness: 0.3)
             }
-            // Decision 259: shoppers along the shops' fronts.
-            if shops {
-                for facing: Float in [-1, 1] {
-                    let out = facing * (frontAt(facing) + 1.2)
-                    addShopLife(from: base + Map3DPoint(span.0 + 0.5, 0.05, out), to: base + Map3DPoint(span.1 - 0.5, 0.05, out), density: density)
-                }
+            // Decision 259: shoppers along the shops' fronts (decision 267:
+            // and along a busy street's).
+            for facing: Float in [-1, 1] where lotShops || (fronts?.shopShare(facing: facing) ?? 0) > 0 {
+                let out = facing * (frontAt(facing) + 1.2)
+                addShopLife(from: base + Map3DPoint(span.0 + 0.5, 0.05, out), to: base + Map3DPoint(span.1 - 0.5, 0.05, out), density: density)
             }
         }
 
