@@ -992,6 +992,14 @@ public final class GameSession {
         return saved
     }
 
+    /// "Keep Playing" on a lesson's result card (decision 266): runs the
+    /// game again at its speed when the session paused it by itself for
+    /// the goal met (decision 175); a pause of the player's own stays.
+    public func keepPlaying() {
+        guard world.clock.isPaused, isPausedForEvent else { return }
+        togglePause()
+    }
+
     /// Pauses a running game, or resumes a paused one at the speed it ran
     /// at (see `GameClock.runningSpeed`).
     public func togglePause() {

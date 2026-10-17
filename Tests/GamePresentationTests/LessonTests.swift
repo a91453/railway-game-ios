@@ -291,4 +291,27 @@ final class LessonTests: XCTestCase {
         last.scenario?.outcome = .completed(day: 2, rating: .gold)
         XCTAssertNil(LessonResult(world: last)?.next, "the last lesson")
     }
+
+    /// A goal met pauses the game (decision 175); "Keep Playing" on the
+    /// lesson's result card goes on running it, as it says, without the
+    /// player looking for Resume (the Codex UI tests of #784 saw it stay
+    /// paused). A pause of the player's own is left alone.
+    func testKeepPlayingRunsTheGameAGoalPaused() throws {
+        let session = GameSession(world: GameWorld.newGame(lesson: Lesson.all[0], opensFirstLine: true), language: .english)
+        session.setSpeed(.normal)
+        for _ in 0..<48 where !session.world.clock.isPaused {
+            let tick = try XCTUnwrap(session.beginLoopTick())
+            let step = try GameSession.advanced(tick.world, by: 60, listening: false)
+            XCTAssertTrue(session.finish(tick, with: .success(step)))
+        }
+        XCTAssertTrue(session.world.clock.isPaused, "a goal met paused it")
+        XCTAssertTrue(session.isPausedForEvent)
+        session.keepPlaying()
+        XCTAssertFalse(session.world.clock.isPaused, "Keep Playing runs it again")
+        XCTAssertEqual(session.world.clock.speed, .normal)
+
+        session.togglePause()
+        session.keepPlaying()
+        XCTAssertTrue(session.world.clock.isPaused, "the player's own pause stays")
+    }
 }

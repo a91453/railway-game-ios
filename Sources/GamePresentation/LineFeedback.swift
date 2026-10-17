@@ -139,7 +139,9 @@ extension GameWorld {
         let peak = lineYesterday(id)?.peakLoad
         let ends = [line.stops[0], line.stops[line.stops.count - 1]].compactMap { id -> LineFeedback.End? in
             guard let station = station(id: id) else { return nil }
-            let waiting = passengers.first { $0.station == id }?.waitingCount ?? 0
+            // Those waiting for this line only: at a station other lines
+            // call at too, their riders are not this line's crowd.
+            let waiting = waitingPassengers(at: id).filter { $0.line == line.id }.reduce(Int64(0)) { $0 + $1.count }
             return LineFeedback.End(
                 station: id, name: station.name, waiting: waiting,
                 demand: EndDemand(waiting: waiting, capacity: first.ratedCapacity)
@@ -155,6 +157,9 @@ extension GameWorld {
 public struct SeatMap: Hashable, Sendable {
     /// The seats drawn for each car: two rows of four.
     public static let seatsPerCar = 8
+    /// The most cars drawn side by side: six take about 240 points, within
+    /// the train card on a phone (300 at most); a longer train wraps.
+    public static let carsPerRow = 6
 
     public let cars: Int
     /// Seats filled, in all, 0 to ``cars`` × ``seatsPerCar``.
@@ -169,6 +174,11 @@ public struct SeatMap: Hashable, Sendable {
         self.cars = cars
         filled = min(seats, (load.percentage * seats + 50) / 100)
         standing = load.percentage > 100
+    }
+
+    /// The cars of each row drawn, at most ``carsPerRow`` a row.
+    public var rows: [Range<Int>] {
+        stride(from: 0, to: cars, by: Self.carsPerRow).map { $0..<min(cars, $0 + Self.carsPerRow) }
     }
 
     /// Whether seat `seat` of car `car` (both from 0) is taken: the cars

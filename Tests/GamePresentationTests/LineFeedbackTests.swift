@@ -64,4 +64,42 @@ final class LineFeedbackTests: XCTestCase {
         XCTAssertEqual(after.peakPercent, (peak + 5) / 10)
         XCTAssertNil(GameWorld.newGame(lesson: Lesson.all[0]).lines.first.flatMap { world.lineFeedback($0.id) }, "no line, nothing")
     }
+
+    /// A line's end counts the people waiting for that line only: at a
+    /// station two lines start from, the other line's riders are not
+    /// "more than a train takes" on this one.
+    func testAnEndCountsOnlyThoseWaitingForTheLine() throws {
+        var world = try makeWorld(width: 8_192, height: 4_096, balance: 1_000_000)
+        let alpha = try world.buildStation(named: "Alpha", at: TestLine.centre(1, 0)).id
+        let beta = try world.buildStation(named: "Beta", at: TestLine.centre(3, 0)).id
+        let gamma = try world.buildStation(named: "Gamma", at: TestLine.centre(3, 2)).id
+        let main = try world.createLine(named: "Main", stops: [alpha, beta]).id
+        let branch = try world.createLine(named: "Branch", stops: [alpha, gamma]).id
+        for line in [main, branch] {
+            let train = try world.purchaseTrain(named: "T\(line.rawValue)")
+            try world.assignTrain(train.id, to: line, pattern: nil)
+        }
+        try world.setStationDemand(alpha, to: StationDemand(kind: .residential, dailyTrips: 20_000))
+        try world.setStationDemand(beta, to: StationDemand(kind: .office, dailyTrips: 1_000))
+        try world.setStationDemand(gamma, to: StationDemand(kind: .office, dailyTrips: 1_000))
+        world.setSpeed(.normal)
+        try world.advance(ticks: 240)
+        func waiting(for line: LineID) -> Int64 {
+            world.waitingPassengers(at: alpha).filter { $0.line == line }.reduce(0) { $0 + $1.count }
+        }
+        XCTAssertGreaterThan(waiting(for: main), 0, "the test needs riders for each line")
+        XCTAssertGreaterThan(waiting(for: branch), 0, "the test needs riders for each line")
+        XCTAssertEqual(world.lineFeedback(main)?.ends.first?.waiting, waiting(for: main))
+        XCTAssertEqual(world.lineFeedback(branch)?.ends.first?.waiting, waiting(for: branch))
+    }
+
+    /// A long train's seat map wraps, at most ``SeatMap/carsPerRow`` cars a
+    /// row, so it fits the train card on a phone (300 points at most).
+    func testALongTrainsSeatMapWraps() {
+        let load = TrainLoadInfo(passengerCount: 50, capacity: 100)
+        XCTAssertEqual(SeatMap(load: load, cars: 4).rows, [0..<4])
+        XCTAssertEqual(SeatMap(load: load, cars: 6).rows, [0..<6])
+        XCTAssertEqual(SeatMap(load: load, cars: 12).rows, [0..<6, 6..<12])
+        XCTAssertEqual(SeatMap(load: load, cars: 16).rows, [0..<6, 6..<12, 12..<16])
+    }
 }

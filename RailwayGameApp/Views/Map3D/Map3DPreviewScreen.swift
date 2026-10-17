@@ -117,11 +117,14 @@ struct Map3DPreviewScreen: View {
 /// Decision 269: the last scene built, kept while the world it shows
 /// stays the same, so the 3D map opens at once when a pinch hands the 2D
 /// map over; the 2D map starts it (``prepare(for:)``) as the pinch comes
-/// near. One build at a time for each world.
+/// near. One build at a time for each world. Kept for one game: the key
+/// counts only what changes within a game, and two new games (a lesson,
+/// then free play) both start with no track, no buildings, in week 0.
 @MainActor
 final class Map3DSceneCache {
     static let shared = Map3DSceneCache()
     private var key: Map3DSceneKey?
+    private weak var game: GameSession?
     private var building: Task<Map3DScene, Never>?
 
     /// Starts building `session`'s scene, unless it is built or building.
@@ -135,7 +138,7 @@ final class Map3DSceneCache {
 
     private func task(for session: GameSession) -> Task<Map3DScene, Never> {
         let key = Map3DSceneKey(world: session.world, hasHeights: session.heights != nil)
-        if key == self.key, let building { return building }
+        if key == self.key, game === session, let building { return building }
         let world = session.world
         // The ground the world has not read yet, from the heights file,
         // so the blocks it has read do not stand up as cliffs.
@@ -152,6 +155,7 @@ final class Map3DSceneCache {
                               heights: heights)
         }
         self.key = key
+        game = session
         building = task
         return task
     }

@@ -63,29 +63,38 @@ struct SeatMapView: View {
     let map: SeatMap
 
     var body: some View {
-        HStack(spacing: 4) {
-            ForEach(0..<map.cars, id: \.self) { car in
-                VStack(spacing: 2) {
-                    ForEach(0..<2, id: \.self) { row in
-                        HStack(spacing: 2) {
-                            ForEach(0..<SeatMap.seatsPerCar / 2, id: \.self) { column in
-                                let seat = row * SeatMap.seatsPerCar / 2 + column
-                                RoundedRectangle(cornerRadius: 1.5)
-                                    .fill(map.isFilled(car: car, seat: seat) ? (map.standing ? Theme.error : Theme.textPrimary) : Theme.panelBorder)
-                                    .frame(width: 6, height: 6)
-                            }
-                        }
+        // A long train wraps (``SeatMap/rows``), so it stays in the card.
+        VStack(alignment: .leading, spacing: 4) {
+            ForEach(map.rows, id: \.lowerBound) { cars in
+                HStack(spacing: 4) {
+                    ForEach(cars, id: \.self) { car in
+                        self.car(car)
+                    }
+                    if map.standing, cars.upperBound == map.cars {
+                        Image(systemName: "figure.stand")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(Theme.error)
                     }
                 }
-                .padding(3)
-                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Theme.textSecondary, lineWidth: 1))
-            }
-            if map.standing {
-                Image(systemName: "figure.stand")
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(Theme.error)
             }
         }
         .accessibilityHidden(true)
+    }
+
+    private func car(_ car: Int) -> some View {
+        VStack(spacing: 2) {
+            ForEach(0..<2, id: \.self) { row in
+                HStack(spacing: 2) {
+                    ForEach(0..<SeatMap.seatsPerCar / 2, id: \.self) { column in
+                        let seat = row * SeatMap.seatsPerCar / 2 + column
+                        RoundedRectangle(cornerRadius: 1.5)
+                            .fill(map.isFilled(car: car, seat: seat) ? (map.standing ? Theme.error : Theme.textPrimary) : Theme.panelBorder)
+                            .frame(width: 6, height: 6)
+                    }
+                }
+            }
+        }
+        .padding(3)
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(Theme.textSecondary, lineWidth: 1))
     }
 }
