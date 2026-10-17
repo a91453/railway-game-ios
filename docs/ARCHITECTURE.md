@@ -9012,6 +9012,8 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 - **UNVERIFIED LOCALLY**（要 macOS／Xcode CI）：instanced pipeline 與 shader 的編譯。
 - **UNVERIFIED**（要 TestFlight 實機）：畫面與幀時間。
 
+**之後的修正**（2026-10-17，#752（N700）的收尾）：#752 把車頭鼻頂的車頂色限制在鼻子後面（`paint` 的 `t == 0`），讓高鐵的車身色一路掃到鼻尖，但其他車頭也跟著變：EMU3000（`express`）長鼻子頂上 30 個頂點從車頂的灰 `#C5C9CD` 變成車身的白。#764 還原了其餘部分；遊戲規劃 session 要求的三方逐頂點比對（#752 之前 `5d25dc3`、main、#764）找到這一項。現在 `t == 0` 只限制在會下潛的高鐵鼻子（`style.dive > 0`），commuter、express、metro、peopleMover 的頭車與中間車共 8 個模型和 #752 之前逐頂點一致（Linux 比對）。`Map3DModelTests` 的 `testTheNoseTopIsTheRoofsColourButOnAHighSpeedNose` 釘住：不下潛的鼻頂只有車頂灰或擋風玻璃，高鐵的鼻頂是車身色。只動 GamePresentation，GameCore、存檔版本、golden schema 都不動。
+
 ### 231. 原生 3D 地圖第三步：素材庫的圖改過之後當貼圖
 
 2026-10-15。作者把 3D 交給新的 session（「接手3d的任務」），並在參考庫加了素材庫 `Railway/procedural_assets_reference_clean/`：「裡面圖片素材都可以用 但不能跟原圖一模一樣 需有稍微修改 結合其他檔案的圖片也沒關係」。這條寫進 art-style §7。號碼依工作登記 #231：決策 231；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、replay 都不變。

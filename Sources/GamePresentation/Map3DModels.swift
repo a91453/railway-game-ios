@@ -270,7 +270,10 @@ struct Map3DTrainBuilder {
         if cab, inScreenSpan || inFlatFront {
             return Map3DTrainStyle.glass
         }
-        if share > 0.9, t == 0 { return Map3DTrainStyle.roofColour }
+        // The roof's colour over the top: on a diving high-speed nose only
+        // back of the nose (t == 0), so its body colour sweeps to the tip;
+        // on every other cab along the nose too, as before #752.
+        if share > 0.9, t == 0 || style.dive == 0 { return Map3DTrainStyle.roofColour }
         return style.body
     }
 
