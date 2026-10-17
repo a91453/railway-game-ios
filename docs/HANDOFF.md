@@ -178,7 +178,7 @@
   - 整平月台時，轉乘中的乘客會被放棄（要動 GameCore，取決策號）；
   - `AutoService.passingLoopsNeeded` 的第二處以後的規劃帶上高度與水域；
   - 兩端需求燈改用路線列車定員的最小值。
-- 3D session（等 72.1 幀數的空檔）：3D 場景快取在回到開始畫面與記憶體警告時清掉；2D 拉近到門檻附近停一下才開始預先蓋 3D。
+- 3D session：做完（#788，決策 269 的「之後的修正」）。3D 場景快取在回到開始畫面、收到記憶體警告時放掉；2D 拉近到門檻 ¾ 到門檻之間停 0.4 秒，才開始預先蓋 3D。
 - Codex（作者轉交）：`LessonUITests` 讓 full lane 第一個 job 跑到 1 小時，拆到兩個 job 或第三個 iPhone job（第二個 job 已 35–40 分，整個搬過去會超過 45 分上限）；`-lesson-stars` 用的檔名常數改成 public 給 App 讀；`ci.yml` push 超過 30 分的兩次（#759、#770）看 shard 時間。
 - 時好時壞的 `MapInteractionTests/testHoldingAStationTracesItsBusiestTrips`：下次紅時讀 #785 加的 trace（refused／station none／什麼都沒有，各指一個原因），再派。
 
