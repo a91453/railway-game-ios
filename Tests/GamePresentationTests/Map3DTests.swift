@@ -67,8 +67,13 @@ final class Map3DTests: XCTestCase {
         XCTAssertEqual(Map3DCamera.tilt(atDistance: Map3DCamera.flatFrom), 0)
         XCTAssertEqual(Map3DCamera.tilt(atDistance: Map3DCamera.tiltedFrom), Map3DCamera.mostTilt)
         XCTAssertEqual(Map3DCamera.tilt(atDistance: 60), Map3DCamera.mostTilt)
+        // Decision 269: 34–40° at 150–200 m, the target picture's angle.
+        for (distance, low, high) in [(Float(200), Float(34), Float(36)), (170, 37.5, 39), (150, 40, 41)] {
+            let degrees = Map3DCamera.tilt(atDistance: distance) * 180 / .pi
+            XCTAssertTrue((low...high).contains(degrees), "\(distance) m: \(degrees)°")
+        }
         var last: Float = -1
-        for distance in stride(from: Float(3_000), through: 200, by: -50) {
+        for distance in stride(from: Float(3_000), through: 100, by: -50) {
             let tilt = Map3DCamera.tilt(atDistance: distance)
             XCTAssertGreaterThanOrEqual(tilt, last)
             last = tilt
@@ -91,7 +96,7 @@ final class Map3DTests: XCTestCase {
     }
 
     func testCloseUpTheViewLeansNorthAndStillCentresTheTarget() {
-        let camera = Map3DCamera(target: .zero, distance: 200, viewport: (800, 400))
+        let camera = Map3DCamera(target: .zero, distance: 100, viewport: (800, 400))
         XCTAssertEqual(camera.tilt, Map3DCamera.mostTilt)
         XCTAssertGreaterThan(camera.eye.z, 0, "the eye stands south of the target")
         XCTAssertGreaterThan(camera.eye.y, 0)

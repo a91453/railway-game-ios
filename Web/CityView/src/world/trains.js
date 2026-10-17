@@ -33,13 +33,14 @@ const EMU900_STOCK = { stripe: '#7ac143', body: '#c9ccce', cars: 10, length: 20.
 // everything that differs between two such trains is data. `shell` is the section in metres above the
 // rail; `livery` is painted in f, how high up that section a thing sits (0 the skirt hem, 1 the roof).
 // Measure a reference with .claude/skills/rolling-stock/measure.cjs before filling either in.
-// `models` are the ones tools/trains/build_train.py builds in Blender: the same loft as shellGeometry
+// `models` are the ones tools/trains/build_train.mjs builds: the same loft as shellGeometry
 // below, plus window units and door leaves standing proud of the body and the occlusion that collects
 // around them, baked into a second UV channel. The livery stays this file's: the model's first UV
 // channel is written in the very coordinates highSpeedTextures paints in, so the canvas below dresses
-// the Blender car as it dresses the lofted one. Until the model arrives the lofted car runs.
+// the model car as it dresses the lofted one. Until the model arrives the lofted car runs.
 const HSR_STOCK = {
   stripe: '#ea6a1e', body: '#f6f6f4', cars: 12, length: 25, nose: 9, highSpeed: true,
+  pantographs: [3, 8],
   models: { cab: 'n700st-cab', car: 'n700st-car' },
   // 台灣高鐵 N700ST: 12 cars of 25 m (Hitachi: a set is about 300 m). Dimensions are the N700S's,
   // which is all any public source gives; the nose is shaped from the owner's photographs.
@@ -58,7 +59,7 @@ const HSR_STOCK = {
     cab: { crease: 0.645, glass: '#161a20', canopyStops: 0.70,
            screen: { from: 0.12, to: 0.40, wide: 0.46, narrow: 0.28, surround: '#2b3356' },
            canopy: [{ at: 0.9, length: 3.4, to: 0.73 }, { at: 2.2, length: 2.0, to: 0.84 }],
-           lamp: { at: 5.0, f: 0.52, width: 1.05, tall: 0.032, lens: 0.28, gap: 0.22, housing: '#3e4652' } },
+           lamp: { at: 5.2, f: 0.58, width: 1.15, tall: 0.048, lens: 0.32, gap: 0.24, housing: '#3e4652' } },
   },
 };
 // 臺鐵 EMU3000 新自強號: 12 cars, cabs at both ends (the owner: 車頭 = 車尾). The dimensions are the
@@ -99,8 +100,8 @@ const SWATCH_V = 1 - SIDE_Y0 / 2 / TEX_H;
 // One mapping from a place on a car to a place in the picture, for the painter and the geometry
 // alike: a car body is `length - 0.6` m long and its half of the picture runs from u0 + U0 to
 // u0 + U0 + USPAN, kept just inside the half so the nose cannot sample the other car's paint.
-// tools/trains/build_train.py writes the same one into the models it builds, which is what lets one
-// canvas dress a car modelled in Blender. Painting on one scale and modelling on another leaves the
+// tools/trains/build_train.mjs writes the same one into the models it builds, which is what lets one
+// canvas dress a car modelled offline. Painting on one scale and modelling on another leaves the
 // window glass sitting beside the window.
 const U0 = 0.004, USPAN = 0.492;
 const uOf = (m, L, u0) => u0 + U0 + (m / L) * USPAN;   // m: metres from the car's rear end
@@ -118,7 +119,7 @@ const uOf = (m, L, u0) => u0 + U0 + (m / L) * USPAN;   // m: metres from the car
 // superellipse, which keeps the top nearly flat, so three of the six rings either side of the
 // centre line sit in the outer fifth of the width. Measuring across in metres makes the chart a
 // view from above, which is what a windscreen can be drawn in.
-const NOSE = { x0: 16, x1: 1456, y0: 264, y1: 504, rings: 4 };
+const NOSE = { x0: 16, x1: 1456, y0: 264, y1: 504, rings: 3 };
 const noseUv = (along, across) => [(NOSE.x0 + along * (NOSE.x1 - NOSE.x0)) / TEX_W,
                                    1 - (NOSE.y0 + across * (NOSE.y1 - NOSE.y0)) / TEX_H];
 const noseAcross = (y, edge) => 0.5 - (0.5 * y) / edge;
@@ -333,16 +334,14 @@ function shellGeometry(stock, cab) {
       parts.push(plainUv(wheel, 0.75));
     }
   }
-  // Roof: on the N700ST, continuous cable shrouds and a low-profile pantograph fairing stopping clear of
-  // the nose; on other lofted stock, the air-conditioning run and cable ducts.
+  // Roof: on the N700ST, continuous high-voltage cable shrouds stopping clear of the nose (pantograph
+  // fairings sit only on the cars in `stock.pantographs`, added by pantoGeometry below); on other
+  // lofted stock, the air-conditioning run and cable ducts.
   const roof = sh.roof, runFrom = back + 0.6, runTo = nose ? half - nose - 1.0 : forward - 0.6;
   if (stock === HSR_STOCK) {
     for (const x of [-0.72, 0.72]) {
       parts.push(plainUv(new THREE.BoxGeometry(0.28, 0.16, runTo - runFrom).translate(x, roof + 0.04, (runFrom + runTo) / 2), 0.25));
     }
-    const pantoZ = nose ? runFrom + 2.2 : (runFrom + runTo) / 2;
-    parts.push(plainUv(new THREE.BoxGeometry(1.62, 0.22, 3.0).translate(0, roof + 0.07, pantoZ), 0.25));
-    parts.push(plainUv(new THREE.BoxGeometry(1.36, 0.08, 1.8).translate(0, roof + 0.20, pantoZ), 0.75));
   } else {
     const units = Math.max(2, Math.round((runTo - runFrom) / 3.2));
     for (let i = 0; i < units; i++) {
@@ -354,12 +353,20 @@ function shellGeometry(stock, cab) {
   return mergeGeometries(parts);
 }
 
+// Low-profile Shinkansen pantograph fairing and folded single-arm collector pan, mounted only on
+// the cars listed in `stock.pantographs` (Car 4 and Car 9 on a 12-car THSR 700T / N700ST set).
+function pantoGeometry(stock) {
+  const roof = stock.shell.roof;
+  return mergeGeometries([
+    plainUv(new THREE.BoxGeometry(1.62, 0.22, 3.0).translate(0, roof + 0.07, 0), 0.25),
+    plainUv(new THREE.BoxGeometry(1.36, 0.08, 1.8).translate(0, roof + 0.20, 0), 0.75),
+  ]);
+}
+
 // The windscreen, painted into the nose's own chart (NOSE). `along` runs from the cab roof (0) to
 // the tip (1) and `across` from one side of the chart's band to the other, so the glass can be the
 // shape it really is: wide where it meets the roof, narrowing forward, with its corners rounded.
-// The N700ST's wing-ridge headlamps also sit along the outer shoulders of this chart so they read
-// head-on as well as from the flank.
-function windscreen(g, e, lv, ws, lp) {
+function windscreen(g, lv, ws) {
   const W = NOSE.x1 - NOSE.x0, H = NOSE.y1 - NOSE.y0, mid = NOSE.y0 + H / 2;
   g.fillStyle = lv.body; g.fillRect(NOSE.x0 - 12, NOSE.y0 - 12, W + 24, H + 24);
   const at = (a) => NOSE.x0 + a * W, side = (s) => mid + (s * H) / 2;
@@ -388,22 +395,6 @@ function windscreen(g, e, lv, ws, lp) {
   g.lineTo(at(ws.to), side(ws.narrow)); g.lineTo(at(ws.from), side(ws.wide));
   g.closePath(); g.stroke();
   g.fillStyle = sky; g.fill();
-  if (lp) {
-    const lampAlong = 0.56;
-    for (const sign of [-1, 1]) {
-      const cy = side(sign * 0.83);
-      g.fillStyle = lp.housing;
-      g.beginPath(); g.ellipse(at(lampAlong), cy, 0.062 * W, 0.075 * H, 0, 0, Math.PI * 2); g.fill();
-      for (const da of [-0.023, 0.023]) {
-        g.fillStyle = '#fbf7ea';
-        g.beginPath(); g.ellipse(at(lampAlong + da), cy, 0.017 * W, 0.044 * H, 0, 0, Math.PI * 2); g.fill();
-        if (e) {
-          e.fillStyle = '#fff4de';
-          e.beginPath(); e.ellipse(at(lampAlong + da), cy, 0.017 * W, 0.044 * H, 0, 0, Math.PI * 2); e.fill();
-        }
-      }
-    }
-  }
 }
 
 // The livery of a lofted car, in the same picture as the other stock: the plain swatches in the top
@@ -493,15 +484,15 @@ function highSpeedTextures(stock) {
   // The EMU3000 wears its whole nose as one dark mask, windscreen and all, white only along the
   // lower flanks; the N700ST has no mask, just a canopy, so this is absent there.
   if (cab.mask) band(noseX, HALF, cab.mask.from, 1, [cab.mask.dive, 0], cab.glass);
-  if (cab.screen) windscreen(g, e, lv, cab.screen, lp);
+  if (cab.screen) windscreen(g, lv, cab.screen);
   else {
     for (const c of cab.canopy) oval(g, noseX + c.at * perM, row(1), c.length * perM, (row(c.to) - row(1)) * 2, cab.glass);
     g.fillStyle = lv.body; g.fillRect(0, row(1), noseX, row(cab.canopyStops) - row(1));  // it stops where the body does
-    oval(g, noseX + lp.at * perM, row(lp.f), lp.width * perM, row(lp.f - lp.tall) - row(lp.f + lp.tall), lp.housing);
-    for (const k of [-lp.gap, lp.gap]) {
-      oval(g, noseX + (lp.at + k) * perM, row(lp.f), lp.lens * perM, row(lp.f - lp.tall * 0.55) - row(lp.f + lp.tall * 0.55), '#fbf7ea');
-      oval(e, noseX + (lp.at + k) * perM, row(lp.f), lp.lens * perM, row(lp.f - lp.tall * 0.55) - row(lp.f + lp.tall * 0.55), '#fff4de');
-    }
+  }
+  oval(g, noseX + lp.at * perM, row(lp.f), lp.width * perM, row(lp.f - lp.tall) - row(lp.f + lp.tall), lp.housing);
+  for (const k of [-lp.gap, lp.gap]) {
+    oval(g, noseX + (lp.at + k) * perM, row(lp.f), lp.lens * perM, row(lp.f - lp.tall * 0.55) - row(lp.f + lp.tall * 0.55), '#fbf7ea');
+    oval(e, noseX + (lp.at + k) * perM, row(lp.f), lp.lens * perM, row(lp.f - lp.tall * 0.55) - row(lp.f + lp.tall * 0.55), '#fff4de');
   }
   const tex = (c) => { const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; };
   return { map: tex(side), emissiveMap: tex(glow) };
@@ -545,7 +536,7 @@ function pointAt(path, s, out) {
 // Along the Line (decision 161): a car model as one geometry and material for an InstancedMesh, in the frame of
 // carGeometry: the cab (`front`, the axis it faces in the model) towards +z and the rail top at y = 0. A Meshy
 // model (tools/meshy) is then fitted to the stock's car length, 2.9 m wide and 3.9 m tall, because nothing about
-// a generated mesh's scale can be relied on; one from tools/trains/build_train.py says `fit: false` in the index,
+// a generated mesh's scale can be relied on; one from tools/trains/build_train.mjs says `fit: false` in the index,
 // because it was modelled in the game's own metres and squeezing it into a box would only lose them. Null when
 // the model is not there: the cars stay as they were.
 const loader = new GLTFLoader();
@@ -579,7 +570,7 @@ async function carModel(url, { front, fit = true }, length) {
   return { geometry, material };
 }
 
-// The occlusion baked beside a model (tools/trains/build_train.py) lives in its second UV channel, so
+// The occlusion baked beside a model (tools/trains/build_train.mjs) lives in its second UV channel, so
 // three.js reads it as what it is — a shadow term on the indirect light — rather than it being burnt
 // into the paint, where it would also darken the train in direct sun. Each model carries its own bake,
 // which is why this clones: one material cannot hold two.
@@ -642,6 +633,9 @@ export class Trains {
         ? { cabs: instance(shellGeometry(stock, true), list.length * 2), cars: instance(shellGeometry(stock, false), list.length * (stock.cars - 2)) }
         : null;
       const mesh = model ? null : instance(carGeometry(stock.length), list.length * stock.cars);
+      const pantos = stock.pantographs?.length
+        ? instance(pantoGeometry(stock), list.length * stock.pantographs.length)
+        : null;
       // the light of the leading car's headlamps on the track ahead (one pool per train; see the cars' in traffic.js)
       const pool = new THREE.BufferGeometry(), z0 = stock.length / 2 - 0.5, z1 = stock.length / 2 + 55;
       pool.setAttribute('position', new THREE.Float32BufferAttribute([-4.5, 0.12, z0, 4.5, 0.12, z0, 4.5, 0.12, z1, -4.5, 0.12, z0, 4.5, 0.12, z1, -4.5, 0.12, z1], 3));
@@ -652,7 +646,7 @@ export class Trains {
       this.lamps.add(beams);
       // `materials` is every material the set draws with: the painted one, and later a clone per model
       // carrying that model's baked occlusion. The saloon lights are turned up on all of them together.
-      this.sets.push({ stock, mesh, model, beams, materials: [material], material, trains: list.map((path, i) => ({ path, s: (i * 613) % (path.length + GAP) })) });
+      this.sets.push({ stock, mesh, model, pantos, beams, materials: [material], material, trains: list.map((path, i) => ({ path, s: (i * 613) % (path.length + GAP) })) });
     }
     this.dummy = new THREE.Object3D();
     this.a = new THREE.Vector3(); this.b = new THREE.Vector3();
@@ -675,7 +669,7 @@ export class Trains {
         const model = await carModel(`models/trains/${spec.file}`, spec, stock.length);
         if (!model) return null;
         // Three kinds of model, and the index entry says which: one baked from a dense model brings
-        // its own colour; one built to this file's atlas (build_train.py) wears the stock's painted
+        // its own colour; one built to this file's atlas (build_train.mjs) wears the stock's painted
         // canvas; anything else keeps the material it came with.
         let material = spec.colour ? await baked(spec) : stock.livery ? set.material : model.material;
         if (!material) return null;
@@ -708,13 +702,14 @@ export class Trains {
     const { dummy, a, b } = this;
     this.beam.color.setRGB(2.2 * night, 2.1 * night, 1.8 * night);
     this.beam.visible = night > 0.02;
-    for (const { stock, mesh, beams, materials, trains, model } of this.sets) {
+    for (const { stock, mesh, beams, materials, trains, model, pantos } of this.sets) {
       for (const m of materials) m.emissiveIntensity = 0.2 + night * 2.2; // the saloon lights and the lamps are always on
-      let n = 0, ends = 0, middles = 0;
+      let n = 0, ends = 0, middles = 0, collectors = 0;
       const put = (c, matrix) => {
         if (!model) mesh.setMatrixAt(n, matrix);
         else if (c === 0 || c === stock.cars - 1) model.cabs.setMatrixAt(ends++, matrix);
         else model.cars.setMatrixAt(middles++, matrix);
+        if (pantos && stock.pantographs.includes(c)) pantos.setMatrixAt(collectors++, matrix);
       };
       trains.forEach((t, ti) => {
         const span = t.path.length + stock.cars * stock.length + GAP;
@@ -735,6 +730,7 @@ export class Trains {
       });
       if (mesh) mesh.instanceMatrix.needsUpdate = true;
       if (model) model.cabs.instanceMatrix.needsUpdate = model.cars.instanceMatrix.needsUpdate = true;
+      if (pantos) pantos.instanceMatrix.needsUpdate = true;
       beams.instanceMatrix.needsUpdate = true;
     }
   }

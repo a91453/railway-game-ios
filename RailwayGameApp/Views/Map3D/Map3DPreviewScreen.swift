@@ -11,9 +11,15 @@ import UIKit
 /// fingers to turn. The corner shows how smoothly it runs, which is what
 /// this step is for: measuring the 3D map on devices before it replaces
 /// the 2D one.
+///
+/// Decision 269: a pinch on the 2D map hands it over here (`handedOver`,
+/// the 2D map's middle and zoom), and pinched back out past
+/// ``Map3DHandoff/closesAt`` it hands the 2D map back (`handBack`).
 struct Map3DPreviewScreen: View {
     let session: GameSession
+    var handedOver: Map3DHandoff.Plan? = nil
     let close: () -> Void
+    var handBack: ((Map3DHandoff.Plan) -> Void)? = nil
     @State private var scene: Map3DScene?
     @State private var sceneVersion = 0
     @State private var stats: Map3DMetalView.Stats?
@@ -25,7 +31,7 @@ struct Map3DPreviewScreen: View {
         let language = DisplayLanguage.app
         ZStack {
             Map3DView(scene: scene, sceneVersion: sceneVersion, lighting: Map3DLighting(at: session.world.clock.now), feed: feed,
-                      onStats: { stats = $0 })
+                      start: handedOver, farOut: farOut, onStats: { stats = $0 })
                 .ignoresSafeArea()
                 .accessibilityIdentifier("map3D.view")
             if scene == nil {
@@ -54,8 +60,11 @@ struct Map3DPreviewScreen: View {
                     }
                 }
                 Spacer()
-                Text(verbatim: language.text("Pinch closer to tilt the map. Drag to move, two fingers to turn.",
-                                             "兩指拉近，地圖就會傾斜。拖曳移動，兩指旋轉。"))
+                Text(verbatim: handedOver == nil
+                     ? language.text("Pinch closer to tilt the map. Drag to move, two fingers to turn.",
+                                     "兩指拉近，地圖就會傾斜。拖曳移動，兩指旋轉。")
+                     : language.text("Pinch closer to tilt the map, or out to go back. Drag to move, two fingers to turn.",
+                                     "兩指拉近地圖就傾斜，拉遠就回到平面地圖。拖曳移動，兩指旋轉。"))
                     .font(.footnote)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
@@ -64,21 +73,7 @@ struct Map3DPreviewScreen: View {
             .padding()
         }
         .task(id: Map3DSceneKey(world: session.world, hasHeights: session.heights != nil)) {
-            let world = session.world
-            // The ground the world has not read yet, from the heights file,
-            // so the blocks it has read do not stand up as cliffs.
-            let heights = session.heights
-            // Decision 234: on a real-world map, the base map's roads, rivers
-            // and cover, read from the file the 2D map draws.
-            let tiles = world.geoAnchor == nil ? nil : BaseMapFiles.tiles
-            // Decision 239: and the real buildings round Kaohsiung and
-            // Taichung Stations.
-            let city = world.geoAnchor == nil ? nil : BaseMapFiles.city
-            let built = await Task.detached(priority: .userInitiated) {
-                let baseMap = tiles.flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }.flatMap { try? BaseMapTiles(data: $0) }
-                return Map3DScene(world: world, baseMap: baseMap, cityTiles: city.map(CityTileArea.areas(in:)) ?? [],
-                                  heights: heights)
-            }.value
+            let built = await Map3DSceneCache.shared.scene(for: session)
             // A newer world or the heights file started another build: a
             // cancelled one may finish after it and must not replace it.
             guard !Task.isCancelled else { return }
@@ -87,6 +82,16 @@ struct Map3DPreviewScreen: View {
         }
         .onChange(of: session.world.trains, initial: true) { _, _ in
             feed.update(world: session.world, palette: linePalette)
+        }
+    }
+
+    /// Decision 269: pinched out past the line, the 2D map's view to hand
+    /// back; nothing when the 3D button opened this.
+    private var farOut: ((Map3DCamera) -> Void)? {
+        guard let handBack else { return nil }
+        return { camera in
+            guard let scene else { return }
+            handBack(Map3DHandoff.plan(from: camera, in: scene))
         }
     }
 
@@ -109,10 +114,53 @@ struct Map3DPreviewScreen: View {
     }
 }
 
+/// Decision 269: the last scene built, kept while the world it shows
+/// stays the same, so the 3D map opens at once when a pinch hands the 2D
+/// map over; the 2D map starts it (``prepare(for:)``) as the pinch comes
+/// near. One build at a time for each world.
+@MainActor
+final class Map3DSceneCache {
+    static let shared = Map3DSceneCache()
+    private var key: Map3DSceneKey?
+    private var building: Task<Map3DScene, Never>?
+
+    /// Starts building `session`'s scene, unless it is built or building.
+    func prepare(for session: GameSession) {
+        _ = task(for: session)
+    }
+
+    func scene(for session: GameSession) async -> Map3DScene {
+        await task(for: session).value
+    }
+
+    private func task(for session: GameSession) -> Task<Map3DScene, Never> {
+        let key = Map3DSceneKey(world: session.world, hasHeights: session.heights != nil)
+        if key == self.key, let building { return building }
+        let world = session.world
+        // The ground the world has not read yet, from the heights file,
+        // so the blocks it has read do not stand up as cliffs.
+        let heights = session.heights
+        // Decision 234: on a real-world map, the base map's roads, rivers
+        // and cover, read from the file the 2D map draws.
+        let tiles = world.geoAnchor == nil ? nil : BaseMapFiles.tiles
+        // Decision 239: and the real buildings round Kaohsiung and
+        // Taichung Stations.
+        let city = world.geoAnchor == nil ? nil : BaseMapFiles.city
+        let task = Task.detached(priority: .userInitiated) {
+            let baseMap = tiles.flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }.flatMap { try? BaseMapTiles(data: $0) }
+            return Map3DScene(world: world, baseMap: baseMap, cityTiles: city.map(CityTileArea.areas(in:)) ?? [],
+                              heights: heights)
+        }
+        self.key = key
+        building = task
+        return task
+    }
+}
+
 /// What makes the still scene change: track, platforms, the player's
 /// buildings, and the city, which grows by night, each week; and the
 /// heights file, which can arrive after the game opened.
-private struct Map3DSceneKey: Hashable {
+struct Map3DSceneKey: Hashable {
     let hasHeights: Bool
     let edges: Int
     let lastEdge: TrackEdgeID?
@@ -169,6 +217,10 @@ private struct Map3DView: UIViewRepresentable {
     let sceneVersion: Int
     let lighting: Map3DLighting
     let feed: Map3DTrainFeed
+    /// Decision 269: the 2D map's view a pinch handed over, and what to do
+    /// when pinched back out past ``Map3DHandoff/closesAt``.
+    let start: Map3DHandoff.Plan?
+    let farOut: ((Map3DCamera) -> Void)?
     let onStats: @MainActor (Map3DMetalView.Stats) -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -205,6 +257,7 @@ private struct Map3DView: UIViewRepresentable {
         guard let view = uiView as? Map3DMetalView else { return }
         view.lighting = lighting
         view.onStats = onStats
+        context.coordinator.farOut = farOut
         guard let scene, context.coordinator.shownVersion != sceneVersion else { return }
         let first = context.coordinator.shownVersion == nil
         context.coordinator.shownVersion = sceneVersion
@@ -212,7 +265,10 @@ private struct Map3DView: UIViewRepresentable {
         let feed = feed, models = Map3DView.models
         view.trains = { eye in feed.frame(in: scene, models: models, eye: eye) }
         view.streetLife = { camera, lights, detail in feed.streetLife(in: scene, camera: camera, lights: lights, detail: detail) }
-        if first {
+        if first, let start {
+            // Decision 269: where the 2D map was, as close, straight down.
+            view.camera = Map3DHandoff.camera(from: start, in: scene, viewport: view.camera.viewport)
+        } else if first {
             // Open over the middle of what is built, the whole of it in view.
             let width = Float((scene.region.maxX - scene.region.minX) / Double(WorldCoordinate.unitsPerMetre))
             let height = Float((scene.region.maxY - scene.region.minY) / Double(WorldCoordinate.unitsPerMetre))
@@ -224,6 +280,8 @@ private struct Map3DView: UIViewRepresentable {
     final class Coordinator: NSObject, UIGestureRecognizerDelegate {
         weak var view: Map3DMetalView?
         var shownVersion: Int?
+        var farOut: ((Map3DCamera) -> Void)?
+        private var handedBack = false
 
         @objc func pan(_ recognizer: UIPanGestureRecognizer) {
             guard let view else { return }
@@ -236,6 +294,11 @@ private struct Map3DView: UIViewRepresentable {
             guard let view else { return }
             view.camera = view.camera.zoomed(by: Float(recognizer.scale))
             recognizer.scale = 1
+            // Decision 269: pinched back out, the 2D map takes over again.
+            if let farOut, !handedBack, view.camera.distance > Map3DHandoff.closesAt {
+                handedBack = true
+                farOut(view.camera)
+            }
         }
 
         @objc func rotate(_ recognizer: UIRotationGestureRecognizer) {

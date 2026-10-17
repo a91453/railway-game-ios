@@ -10,9 +10,12 @@ final class Map3DModelTests: XCTestCase {
     func testEveryStyleHasACabAndAMiddleCarOfTheRightSize() {
         // Decision 244: and the street furniture after the trains;
         // decision 259: then the people and vehicles.
-        XCTAssertEqual(pack.models.count, Map3DTrainStyle.all.count * 2 + Map3DProp.allCases.count + Map3DStreetModel.allCases.count)
+        let pantoStyles = Map3DTrainStyle.all.filter { !$0.pantographCars.isEmpty }.count
+        XCTAssertEqual(pack.models.count, Map3DTrainStyle.all.count * 2 + pantoStyles + Map3DProp.allCases.count + Map3DStreetModel.allCases.count)
         for style in Map3DTrainStyle.all {
-            for name in [style.name + "-cab", style.name + "-car"] {
+            var names = [style.name + "-cab", style.name + "-car"]
+            if !style.pantographCars.isEmpty { names.append(style.name + "-panto") }
+            for name in names {
                 guard let index = pack.index(of: name) else { return XCTFail(name) }
                 let model = pack.models[index]
                 XCTAssertEqual(model.vertices.count % 3, 0)
@@ -43,6 +46,7 @@ final class Map3DModelTests: XCTestCase {
     func testTheCabHasANoseAndTheLineColourIsMarked() throws {
         let cab = pack.models[try XCTUnwrap(pack.index(of: "highSpeed-cab"))]
         let car = pack.models[try XCTUnwrap(pack.index(of: "highSpeed-car"))]
+        let panto = pack.models[try XCTUnwrap(pack.index(of: "highSpeed-panto"))]
         // The nose drops: the front end is lower than the roof.
         let tip = cab.vertices.filter { $0.x > cab.maximum.x - 0.5 }
         XCTAssertLessThan(try XCTUnwrap(tip.map(\.z).max()), 2.5)
@@ -51,15 +55,24 @@ final class Map3DModelTests: XCTestCase {
         XCTAssertTrue(car.vertices.contains { $0.color >> 24 == 0 })
         XCTAssertTrue(car.vertices.contains { $0.color == Map3DTrainStyle.glass })
         // On the N700ST cab, the line-coloured stripe and navy band sweep
-        // forward onto the nose, the shoulder headlamps glow, and the
-        // windscreen stops at the cockpit canopy rather than blackening the bill.
+        // forward onto the nose, the shoulder headlamps glow low on the
+        // shoulder ridge, and the windscreen stops at the cockpit canopy.
         XCTAssertTrue(cab.vertices.contains { $0.x > 4 && $0.color >> 24 == 0 })
         XCTAssertTrue(cab.vertices.contains { $0.x > 4 && $0.color == Map3DTrainStyle.navyLine })
-        XCTAssertTrue(cab.vertices.contains { $0.x > 4 && $0.glows })
+        let lamps = cab.vertices.filter { $0.x > 4 && $0.glows }
+        XCTAssertFalse(lamps.isEmpty)
+        XCTAssertLessThan(try XCTUnwrap(lamps.map(\.z).max()), 2.3, "headlamps sit low on the shoulder ridge")
         XCTAssertFalse(cab.vertices.contains { $0.x > 6.5 && $0.color == Map3DTrainStyle.glass })
         let noseCrown = cab.vertices.filter { $0.x > 7.5 && $0.x < 9.2 && abs($0.y) < 0.25 && $0.z > 1.5 }
         XCTAssertFalse(noseCrown.isEmpty)
         XCTAssertTrue(noseCrown.allSatisfy { $0.nz > 0 }, "the dropping nose crown faces upward, not inward")
+        // Pantograph fairing sits only on Car 4 and Car 9 (indices 3 and 8) of a 12-car HSR set.
+        XCTAssertGreaterThan(panto.maximum.z, car.maximum.z)
+        XCTAssertEqual(pack.modelIndex(forType: "HSR", carIndex: 0, count: 12), pack.index(of: "highSpeed-cab"))
+        XCTAssertEqual(pack.modelIndex(forType: "HSR", carIndex: 1, count: 12), pack.index(of: "highSpeed-car"))
+        XCTAssertEqual(pack.modelIndex(forType: "HSR", carIndex: 3, count: 12), pack.index(of: "highSpeed-panto"))
+        XCTAssertEqual(pack.modelIndex(forType: "HSR", carIndex: 8, count: 12), pack.index(of: "highSpeed-panto"))
+        XCTAssertEqual(pack.modelIndex(forType: "HSR", carIndex: 11, count: 12), pack.index(of: "highSpeed-cab"))
     }
 
     func testTheModelsAreTheSameEveryTime() {
