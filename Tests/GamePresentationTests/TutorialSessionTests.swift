@@ -36,7 +36,10 @@ final class TutorialSessionTests: XCTestCase {
                 XCTAssertNil(session.tutorial)
                 XCTAssertFalse(session.isTutorialStepDone, "no tutorial")
                 session.startTutorial()
-                XCTAssertEqual(session.tutorial?.steps.map(\.id), Self.stepIDs)
+                // Decision 266: a line opens with its trains under simple
+                // rules (the demo's), so there is nothing to buy.
+                let stepIDs = NewGameRules(of: world) == .simple ? Self.stepIDs.filter { $0 != "line.staff" } : Self.stepIDs
+                XCTAssertEqual(session.tutorial?.steps.map(\.id), stepIDs)
                 XCTAssertEqual(session.tutorial?.isFirstStep, true)
                 session.showNextTutorialStep()
                 XCTAssertEqual(session.tutorial?.index, 0, "Next waits for the network tool")
@@ -68,7 +71,7 @@ final class TutorialSessionTests: XCTestCase {
                         session.showNextTutorialStep(from: tutorial.index)
                     }
                 }
-                XCTAssertEqual(visited, Self.stepIDs.filter { $0 != "time.play" }, "Done sets time running")
+                XCTAssertEqual(visited, stepIDs.filter { $0 != "time.play" }, "Done sets time running")
                 XCTAssertNil(session.tutorial, "Finish ends it")
                 XCTAssertTrue(finished)
             }
@@ -530,7 +533,9 @@ final class TutorialSessionTests: XCTestCase {
             launcher.continueGame()
             session = try XCTUnwrap(launcher.session)
             session.resumeTutorial()
-            Self.walk(session, to: "end")
+            // Lesson 1's guide ends at the first fares (decision 266).
+            Self.walk(session, to: "first.fare")
+            Self.runUntilFares(session)
             session.showNextTutorialStep()
             XCTAssertNil(session.tutorial)
             XCTAssertNil(launcher.preferences.tutorialStepToResume, "finished")
@@ -542,12 +547,10 @@ final class TutorialSessionTests: XCTestCase {
         }
     }
 
-    /// The start screen's tutorial entry starts a new game on the first
-    /// step, keeping the autosave as starting a new game does; the
-    /// tutorial's game keeps no holidays (decision 154), no building
-    /// materials (decision 157), no slowing of the doors in a crowd
-    /// (decision 169), no flexible dispatch (decision 172) and no keeping
-    /// left (decision 202).
+    /// The tutorial's entries start lesson 1 (decision 266) on the first
+    /// step: a game of simple rules (decision 258, which has none of the
+    /// realistic options the tutorial's game used to turn off one by one),
+    /// without holidays (decision 154), sights or the city's requests.
     func testTheStartScreenStartsANewGameWithTheTutorial() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("TutorialSessionTests-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -555,29 +558,15 @@ final class TutorialSessionTests: XCTestCase {
             let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
             launcher.startTutorial()
             let session = try XCTUnwrap(launcher.session)
-            // A new game, without its holidays (decision 154), its
-            // building materials (decision 157), its crowded doors
-            // (decision 169), its flexible dispatch (decision 172), its
-            // keeping left (decision 202), its realistic operation
-            // (decision 207), its block sections (decision 212) or its
-            // curve speed limits (decision 217) or its real car lengths
-            // (decision 227).
-            var expected = GameWorld.newGame(eventSeed: try XCTUnwrap(session.world.demandEvents?.seed))
-            expected.setDisruptions(nil)
-            expected.setBuildingMaterials(false)
-            expected.setDoorCrowding(false)
-            expected.setRollingStockEconomics(false)
-            expected.setFlexDispatch(false)
-            expected.setKeepLeft(false)
-            expected.setRealisticOperation(false)
-            expected.setBlockSections(false)
-            expected.setCurveSpeedLimits(false)
-            expected.setRealCarLengths(false)
-            expected.setTourism(nil)
-            expected.setCityRequests(seed: nil)
-            XCTAssertEqual(session.world, expected)
+            // Decision 266: it is lesson 1's game, of simple rules
+            // (decision 258), and its guide is the tutorial's first part.
+            XCTAssertEqual(session.world, GameWorld.newGame(lesson: Lesson.all[0]))
+            XCTAssertEqual(NewGameRules(of: session.world), .simple)
+            XCTAssertNil(session.world.disruptions)
+            XCTAssertNil(session.world.tourism)
             XCTAssertEqual(session.tutorial?.index, 0)
-            XCTAssertEqual(session.tutorial?.steps, Tutorial.standardSteps)
+            XCTAssertEqual(session.tutorial?.steps.first, Tutorial.standardSteps.first)
+            XCTAssertEqual(session.tutorial?.steps.last?.id, "first.fare")
         }
     }
 
@@ -614,16 +603,9 @@ final class TutorialSessionTests: XCTestCase {
             XCTAssertFalse(session.isTutorialStepDone, "the line is still to make")
             session.createLineFromDraft()
             XCTAssertTrue(session.isTutorialStepDone)
+            XCTAssertFalse(session.world.trains.isEmpty, "the line opens with its trains (decision 264)")
             session.showNextTutorialStep()
-            XCTAssertEqual(session.tutorial?.step.id, "line.staff")
-
-            launcher.startTutorial(atStep: "line.staff")
-            session = try XCTUnwrap(launcher.session)
-            XCTAssertEqual(session.tutorial?.step.id, "line.staff")
-            XCTAssertEqual(session.world.lines.count, 1)
-            XCTAssertFalse(session.isTutorialStepDone, "the line has no trains")
-            session.staffSelectedLine(headway: 10)
-            XCTAssertTrue(session.isTutorialStepDone)
+            XCTAssertEqual(session.tutorial?.step.id, "first.fare", "time runs and there is nothing to buy")
 
             launcher.startTutorial(atStep: "build.done")
             session = try XCTUnwrap(launcher.session)
@@ -812,11 +794,13 @@ final class TutorialSessionTests: XCTestCase {
     /// one step does both (decision 125); doing it by hand still counts.
     func testStartingServiceNeedsAnAssignedTrainAndATrainWanted() async throws {
         await MainActor.run {
-            let session = GameSession(world: DemoWorld.make(in: .english), language: .english)
+            // Realistic rules: under simple ones the line opens with its
+            // trains and the step is left out (decision 266).
+            let session = GameSession(world: .newGame(), language: .english)
             session.startTutorial()
             Self.walk(session, to: "line.staff")
             XCTAssertEqual(session.tutorial?.step.goal, .startService)
-            XCTAssertFalse(session.isTutorialStepDone, "the demo's lines already run their own trains")
+            XCTAssertFalse(session.isTutorialStepDone, "the line has no trains")
             session.selectTool(.train)
             session.purchaseTrain()
             session.selectStation(Self.newStations(session).first.id)

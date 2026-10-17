@@ -636,6 +636,7 @@ struct LessonPicker: View {
             }
         }
         .padding(.vertical, 4)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("lesson.\(lesson.number)")
     }
 }
