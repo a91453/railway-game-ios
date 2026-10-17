@@ -75,6 +75,8 @@ public struct Map3DScene: Sendable {
     public let streetLife: Map3DStreetLife
     /// Decision 263: where its seeded streets cross the track.
     let levelCrossings: [Map3DLevelCrossing]
+    /// Decision 270: its seeded streets, for the 2D map to draw the same.
+    public let seededStreets: SeededStreetPlan
 
     public var triangleCount: Int { chunks.reduce(0) { $0 + $1.mesh.triangleCount } }
 
@@ -100,13 +102,11 @@ public struct Map3DScene: Sendable {
 
     // MARK: - Building
 
-    /// The scene of `world`: what is built and ``margin`` round it, at most
-    /// ``reach`` each way from its middle; on a map with nothing built, the
-    /// ``reach`` round `focus` (world units), or round the map's middle.
-    /// On a real-world map, `baseMap`'s ground and `cityTiles`' buildings,
-    /// and `heights`' ground where the world has not read its own.
-    public init(world: GameWorld, snapshot: RailwaySnapshot? = nil, skyline: CitySkyline? = nil, focus: (x: Double, y: Double)? = nil,
-                baseMap: BaseMapTiles? = nil, cityTiles: [CityTileArea] = [], heights: HeightGrid? = nil) {
+    /// The part of `world` a scene covers and its origin (world units):
+    /// what is built and ``margin`` round it, at most ``reach`` each way
+    /// from its middle; with nothing built, round `focus` or the map's
+    /// middle.
+    static func frame(world: GameWorld, focus: (x: Double, y: Double)?) -> (region: WorldRegion, originX: Double, originY: Double) {
         let metre = Double(WorldCoordinate.unitsPerMetre)
         let mapRegion = WorldRegion(bounds: world.bounds)
         let built = WorldRegion.built(in: world)
@@ -115,12 +115,37 @@ public struct Map3DScene: Sendable {
         let reach = Self.reach * metre, margin = Self.margin * metre
         let wanted = built.map { WorldRegion(minX: $0.minX - margin, minY: $0.minY - margin, maxX: $0.maxX + margin, maxY: $0.maxY + margin) }
             ?? WorldRegion(minX: middle.x - margin, minY: middle.y - margin, maxX: middle.x + margin, maxY: middle.y + margin)
-        region = WorldRegion(
+        let region = WorldRegion(
             minX: max(mapRegion.minX, max(wanted.minX, middle.x - reach)), minY: max(mapRegion.minY, max(wanted.minY, middle.y - reach)),
             maxX: min(mapRegion.maxX, min(wanted.maxX, middle.x + reach)), maxY: min(mapRegion.maxY, min(wanted.maxY, middle.y + reach))
         )
-        originX = middle.x.rounded()
-        originY = middle.y.rounded()
+        return (region, middle.x.rounded(), middle.y.rounded())
+    }
+
+    /// Decision 270: the seeded streets of `world` alone, as the scene
+    /// would lay them (decision 263: the track and platforms first), for
+    /// the 2D map: the track and platforms are laid, the city is not, so
+    /// this is a small part of building the scene. None on a real-world
+    /// map.
+    public static func seededStreets(world: GameWorld, snapshot: RailwaySnapshot? = nil, skyline: CitySkyline? = nil) -> SeededStreetPlan {
+        guard world.geoAnchor == nil else { return SeededStreetPlan(edges: [:]) }
+        let frame = frame(world: world, focus: nil)
+        var builder = Builder(originX: frame.originX, originY: frame.originY, region: frame.region, world: world)
+        let snapshot = snapshot ?? world.railwaySnapshot()
+        let cleared = builder.addTrack(snapshot)
+        builder.addPlatforms(snapshot)
+        builder.addSeededStreets(skyline ?? CitySkyline(world: world), clearOf: cleared)
+        return SeededStreetPlan(edges: builder.streetEdges)
+    }
+
+    /// The scene of `world`: what is built and ``margin`` round it, at most
+    /// ``reach`` each way from its middle; on a map with nothing built, the
+    /// ``reach`` round `focus` (world units), or round the map's middle.
+    /// On a real-world map, `baseMap`'s ground and `cityTiles`' buildings,
+    /// and `heights`' ground where the world has not read its own.
+    public init(world: GameWorld, snapshot: RailwaySnapshot? = nil, skyline: CitySkyline? = nil, focus: (x: Double, y: Double)? = nil,
+                baseMap: BaseMapTiles? = nil, cityTiles: [CityTileArea] = [], heights: HeightGrid? = nil) {
+        (region, originX, originY) = Self.frame(world: world, focus: focus)
 
         var builder = Builder(originX: originX, originY: originY, region: region, world: world, heights: heights)
         let snapshot = snapshot ?? world.railwaySnapshot()
@@ -142,6 +167,7 @@ public struct Map3DScene: Sendable {
         // between the lots, clear of the track and the platforms but where
         // they cross it.
         if real == nil, world.geoAnchor == nil { builder.addSeededStreets(city, clearOf: cleared) }
+        seededStreets = SeededStreetPlan(edges: builder.streetEdges)
         // Decision 244: no street furniture where the track runs.
         builder.removeProps(on: cleared)
         // Decision 229 續: the street lights' pools, seen at night.

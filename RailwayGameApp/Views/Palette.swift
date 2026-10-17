@@ -15,6 +15,11 @@ import UIKit
 /// colours stay for good.
 enum Palette {
     static let land = hex(light: 0xECEEF6, dark: 0x262C57)
+    /// Decision 270: a blank map's seeded streets, as the real map's roads
+    /// (`BaseMapStyle`'s road, major road and casing, light and dark).
+    static let road = hex(light: 0xFFFFFF, dark: 0x363D72)
+    static let roadMajor = hex(light: 0xFFFFFF, dark: 0x424A84)
+    static let roadCasing = hex(light: 0xCDD1E4, dark: 0x1E2348)
     static let mapEdge = hex(light: 0x262C57, dark: 0xECEEF6, alpha: 0.3)
     /// The track's bed: the icon's teal, a shade darker on the light map
     /// (#10917F) so it stands out from the ground by 3:1 (3.37:1; the
