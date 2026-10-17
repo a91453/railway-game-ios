@@ -366,15 +366,30 @@ final class LessonUITests: XCTestCase {
     private func stationPoints() -> [CGPoint] {
         let readout = element("map.stations")
         XCTAssertTrue(readout.appears(within: 10))
-        var last: String?
+        // Settled: two looks at least half a second apart read the same.
+        // Every look counts, the last one too. One look at the app can take
+        // seconds: 14 s with the game at 6000 times real time (main
+        // 98d1f15's full lane, run 39070554849), and 46 s right after a
+        // launch with the clock paused, while the app's main thread did
+        // not answer for 6 s (PR #791's run 39077241788). An `XCTWaiter` of
+        // 10 s timed out before its second look came back.
+        let deadline = Date().addingTimeInterval(60)
+        var last = readout.value as? String ?? ""
         var since = Date()
-        let stable = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+        var settled = false
+        while !settled {
+            Thread.sleep(forTimeInterval: 0.1)
             let value = readout.value as? String ?? ""
-            if last != value { last = value; since = Date(); return false }
-            return Date().timeIntervalSince(since) >= 0.5
-        }, object: readout)
-        XCTAssertEqual(XCTWaiter.wait(for: [stable], timeout: 10), .completed, "The map did not settle")
-        return (last ?? "").split(separator: ";").compactMap { pair in
+            if value != last {
+                last = value
+                since = Date()
+            } else {
+                settled = Date().timeIntervalSince(since) >= 0.5
+            }
+            if !settled, Date() >= deadline { break }
+        }
+        XCTAssertTrue(settled, "The map did not settle: \(last)")
+        return last.split(separator: ";").compactMap { pair in
             let xy = pair.split(separator: ",").compactMap { Double($0) }
             guard xy.count == 2 else { return nil }
             return CGPoint(x: map.frame.minX + xy[0], y: map.frame.minY + xy[1])
