@@ -54,6 +54,7 @@ final class LessonUITests: XCTestCase {
         XCTAssertTrue(app.buttons["tool.network"].isSelected)
         XCTAssertFalse(app.buttons["tool.train"].exists)
         XCTAssertFalse(app.buttons["tool.building"].exists)
+        openControls()
         XCTAssertTrue(mode("Lay").appears(within: 5))
         XCTAssertTrue(mode("Platform").appears(within: 5))
         XCTAssertFalse(mode("Loop").exists)
@@ -92,10 +93,9 @@ final class LessonUITests: XCTestCase {
             // stations and the opening's passing loops.
             let alignment = fixture.railwaySnapshot().edges.max { $0.geometry.length < $1.geometry.length }!
             let point = alignment.geometry.location(at: alignment.geometry.length / 3).position
-            tapMap(project(PlanPoint(x: point.x, y: point.y), from: fixture.stations[0].location))
+            tapMap(bringMapPointIntoView(PlanPoint(x: point.x, y: point.y), from: fixture.stations[0].location))
             XCTAssertTrue(((map.value as? String) ?? "").contains("Track"), "No track selected: \(String(describing: map.value))")
-            let controls = app.buttons["controls.toggle"]
-            if controls.exists, controls.label == "Show Controls" { tap(controls) }
+            openControls()
             XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'inspector.line.'")).firstMatch.becomesHittable(within: 5), "The selected track's line card must be open")
             let double = app.buttons["inspector.track.double"]
             if number == 5 {
@@ -138,7 +138,7 @@ final class LessonUITests: XCTestCase {
             XCTAssertFalse(stations.isEmpty)
             // Holding a station is the existing way into its panel.
             coordinate(stations[0]).press(forDuration: 1)
-            XCTAssertTrue(app.buttons["station.rename"].appears(within: 10), "The station panel must be open before looking for freight")
+            XCTAssertTrue(element("station.operations").appears(within: 10), "The station panel must be open before looking for freight")
             if number == 8 {
                 let freight = app.buttons["station.freight.build"]
                 reveal(freight)
@@ -156,10 +156,11 @@ final class LessonUITests: XCTestCase {
         dismissGuide()
         pause()
         let marks = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'map.sight.'"))
-        for _ in 0..<6 {
-            if marks.firstMatch.exists { break }
-            tap(app.buttons["Zoom out"])
-        }
+        let fixture = GameWorld.newGame(lesson: Lesson.all[8])
+        // At the opening's broad zoom the sight is below the map's usable
+        // area. Pan it clear of the bottom controls rather than zooming
+        // farther out (which leaves it behind those same controls).
+        _ = bringMapPointIntoView(fixture.tourism!.attractions[0].point, from: fixture.stations[0].location)
         let mark = marks.firstMatch
         XCTAssertTrue(mark.appears(within: 10), "Lesson 9's sight must be visible on the map")
         let id = mark.identifier.replacingOccurrences(of: "map.sight.", with: "")
@@ -304,6 +305,13 @@ final class LessonUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Resume"].appears(within: 5))
     }
 
+    private func openControls() {
+        let toggle = app.buttons["controls.toggle"]
+        XCTAssertTrue(toggle.appears(within: 5))
+        if toggle.label == "Show Controls" { tap(toggle) }
+        XCTAssertEqual(toggle.label, "Hide Controls")
+    }
+
     private func openLineCard() {
         tap(app.buttons["entry.lines"])
         let row = element("line.trainsRow.1")
@@ -349,12 +357,31 @@ final class LessonUITests: XCTestCase {
         coordinate(point).tap()
     }
 
+    /// Leave the HUD, dock and bottom zoom controls clear. The world point
+    /// may start under any of them; dragging from bare map moves it into
+    /// reach without tapping the overlay in its place.
+    private func bringMapPointIntoView(_ point: PlanPoint, from known: PlanPoint) -> CGPoint {
+        let middle = CGPoint(x: map.frame.midX, y: map.frame.midY)
+        let clear = CGRect(x: middle.x - 130, y: middle.y - 60, width: 260, height: 120)
+        for _ in 0..<10 {
+            let at = project(point, from: known)
+            if clear.contains(at) { return at }
+            let destination = CGPoint(x: middle.x + max(-140, min(140, middle.x - at.x)),
+                                      y: middle.y + max(-90, min(90, middle.y - at.y)))
+            coordinate(middle).press(forDuration: 0.1, thenDragTo: coordinate(destination),
+                                     withVelocity: XCUIGestureVelocity(rawValue: 200), thenHoldForDuration: 0.3)
+        }
+        let at = project(point, from: known)
+        XCTAssertTrue(clear.contains(at), "Map point did not come clear of controls: \(at)")
+        return at
+    }
+
     private func selectStation(_ index: Int) {
         // A hold selects the station even when its train is over it.
         coordinate(stationPoints()[index]).press(forDuration: 1)
-        XCTAssertTrue(app.buttons["station.rename"].appears(within: 10))
+        XCTAssertTrue(element("station.operations").appears(within: 10))
         tap(app.navigationBars.buttons["Done"].firstMatch)
-        XCTAssertTrue(app.buttons["station.rename"].disappears(within: 5))
+        XCTAssertTrue(element("station.operations").disappears(within: 5))
     }
 
     // MARK: - Passing lesson 1 through the UI
@@ -395,6 +422,7 @@ final class LessonUITests: XCTestCase {
         tap(app.buttons["map.build.confirm"])
         XCTAssertTrue(app.buttons["map.build.confirm"].disappears(within: 5))
 
+        openControls()
         tap(mode("Platform"))
         tapMap(project(PlanPoint(x: site.x, y: site.y), from: known))
         tap(app.buttons["map.build.confirm"])
