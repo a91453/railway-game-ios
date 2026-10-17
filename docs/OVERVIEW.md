@@ -18,7 +18,7 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 存檔版本 | 63（每整分鐘決定行車間隔，#702，決策 248）；每個版本一個存檔 fixture，共 67 個 | `SavedGame.currentVersion`、`SaveFixtures/` |
 | golden | schema 74（車站商業，#595），`GoldenScenarios/` 裡 77 個 JSON | `GoldenScenarios/` |
 | replay | 9 個指令紀錄（含問題回報轉成的 `problem-report-blank-map.json`，#468；長區段行車控制 `long-leg-traffic.json`，#480） | `ReplayFixtures/` |
-| 決策 | 1–217、219–267（218 沒有使用：越行寫進了決策 212，#556、#589）。141、150、203 曾保留但沒有使用；之後的號碼以工作登記 #231 為準 | `docs/ARCHITECTURE.md`，索引在第 9 節 |
+| 決策 | 1–217、219–268（218 沒有使用：越行寫進了決策 212，#556、#589）。141、150、203 曾保留但沒有使用；之後的號碼以工作登記 #231 為準 | `docs/ARCHITECTURE.md`，索引在第 9 節 |
 | App 版本 | 0.5.0 | `RailwayGameApp/project.yml` |
 | 平台與語言 | iPhone（只橫拿）、iPad；繁體中文、英文。日文已移除（#171） | — |
 | 程式規模 | GameCore 90 檔 3.3 萬行、GamePresentation 115 檔 3.1 萬行、App 61 檔 1.9 萬行、測試 292 檔 8.1 萬行 | — |
@@ -455,3 +455,4 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 265 | PR 的 `Swift CI (gate)` 等同一個 commit 的 iOS App Build 跑完，紅了就紅（`swift-shards.sh ios-gate`），自動合併與提早合併都不會搶在 UI 測試前；full lane 合併後由 `ios-full-lane.yml` 每三小時最多一次，手動只跑發版的 HEAD 與二分（量測：`docs/research/CI_MEASURE_2026-10-16.md`） |
 | 266 | 關卡第 1–3 關：一個解鎖狀態決定有哪些工具（關卡裡只有學過的，其他局全部）、教學引擎變成第 1、2 關的引導、開始畫面的「教學」換成「入門」、結果卡的星星、教學那一局也自動配車；目標用 `Policy` 量（`Lessons.swift`，GameCore、存檔不動） |
 | 267 | 3D 街景的騎樓柱、櫃台與貨物、低遮雨棚、樓上的彩色鐵皮雨遮、曬衣、藍色或不鏽鋼的圓水塔；熱鬧街道的透天厝一樓開店；這些小東西放進第 4 層 LOD（`Chunk.close`，鏡頭 450 m 內才畫）；斜交平交道的柵欄離開道床、平台照角度加長，複線合成一個平交道（存檔不動；預覽 `docs/art/map3d-arcade-life-2026-10-17/`） |
+| 268 | 3D 的廟面向最熱鬧的種子道路，台基前留石鋪廟埕（最深 16 m）、人行道邊立牌樓、簷下 4 盞夜裡發光的紅燈籠、兩棵榕樹，廟埕 36 人；兩面臨街的透天厝後院 70% 鋪草地、1–3 棵樹（存檔不動；預覽 `docs/art/map3d-temple-forecourt-2026-10-17/`） |

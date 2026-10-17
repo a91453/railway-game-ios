@@ -39,6 +39,10 @@ extension Map3DPalette {
     static let templeRoof = rgbColor(0xE39A48)
     static let templeRidge = rgbColor(0xC64C36)
     static let granite = rgbColor(0xD3CDC1)
+    /// Decision 268: a temple forecourt's stone, and its lanterns' red
+    /// (HANDOFF §4.3).
+    static let forecourt = rgbColor(0xD8D0C2)
+    static let lantern = rgbColor(0xE0392C)
     /// Plant on the roofs: air conditioners, stair houses' doors.
     static let plant = rgbColor(0xA7A39A)
     /// The japan pack's outdoor air conditioner (`#e9e7df`).
@@ -291,58 +295,122 @@ extension Map3DScene.Builder {
 
     /// A temple on a granite terrace (a front hall and a main hall with
     /// two-tiered, swept, orange-glazed roofs) or a shopping hall with its
-    /// sign band.
-    mutating func addLeisure(base: Map3DPoint, side: Float, seed: (Int32, Int32)) {
+    /// sign band. Decision 268: `front` is the way a temple faces and how
+    /// far from the lot's middle the pavement before it begins.
+    mutating func addLeisure(base: Map3DPoint, side: Float, seed: (Int32, Int32), front: (forward: Map3DPoint, distance: Float)? = nil) {
         let r = Self.numbers(seed)
         let lot = max(side - 2, 14)
         if r(1) < 0.55 {
-            addTemple(base: base, lot: lot)
+            addTemple(base: base, lot: lot, forward: front?.forward ?? Map3DPoint(0, 0, 1), front: front?.distance ?? lot / 2)
         } else {
             addMall(base: base, lot: lot, r: r)
         }
     }
 
-    mutating func addTemple(base: Map3DPoint, lot: Float) {
-        let forward = Map3DPoint(0, 0, 1) // facing south, as temples do
-        let terrace = min(lot * 0.85, 34)
+    /// Decision 268: the temple faces `forward` (south, as temples do,
+    /// unless a busier street is on another side) with a stone forecourt
+    /// (廟埕) between its terrace and the street, a gateway (牌樓) at the
+    /// pavement, banyans at the forecourt's corners and red lanterns
+    /// under the front eaves that glow at night (HANDOFF §4.3: the
+    /// forecourt 34 × 16, the gateway's posts 0.9 × 6 at ±6 m under a
+    /// 14 m beam at 5.4 m, the lanterns E0392C).
+    mutating func addTemple(base: Map3DPoint, lot: Float, forward: Map3DPoint = Map3DPoint(0, 0, 1), front: Float? = nil) {
+        let across = Map3DPoint(-forward.z, 0, forward.x)
+        let front = front ?? lot / 2
+        // From the street's pavement to the lot's back: the terrace, and
+        // the forecourt before it.
+        let room = front + lot / 2
+        let terrace = max(14, min(lot * 0.85, 34, room - 8))
+        let court = max(0, min(16, room - terrace))
+        let centre = base + forward * (front - court - terrace / 2)
         let hallLength: Float = 12, hallWidth = min(terrace * 0.6, 18)
         // A front hall only where the terrace has room for a courtyard.
         let hasFrontHall = terrace >= 24
-        let mainHall = hasFrontHall ? base - forward * (terrace / 2 - hallLength / 2 - 1) : base
-        let frontHall = base + forward * (terrace / 2 - 4.5)
+        let mainHall = hasFrontHall ? centre - forward * (terrace / 2 - hallLength / 2 - 1) : centre
+        let frontHall = centre + forward * (terrace / 2 - 4.5)
+        let gateway = base + forward * (front - 1.2)
         let far = isFar
         mesh(at: base) { mesh in
-            mesh.addBox(base: base, forward: forward, length: terrace, width: terrace, height: 0.6, top: Map3DPalette.granite,
+            mesh.addBox(base: centre, forward: forward, length: terrace, width: terrace, height: 0.6, top: Map3DPalette.granite,
                         side: Map3DColor.shaded(Map3DPalette.granite, 0.9), topPaint: Self.paving)
+            // The forecourt, paved in stone from the terrace to the street.
+            if court > 1 {
+                let near = centre + forward * (terrace / 2), street = base + forward * front
+                let half = across * (terrace / 2)
+                mesh.addQuad(near + half + Map3DPoint(0, 0.03, 0), street + half + Map3DPoint(0, 0.03, 0),
+                             street - half + Map3DPoint(0, 0.03, 0), near - half + Map3DPoint(0, 0.03, 0),
+                             color: Map3DPalette.forecourt, paint: Self.paving)
+            }
             let floor = Map3DPoint(0, 0.6, 0)
             // The main hall: two roofs, the upper one over a clerestory.
             mesh.addBox(base: mainHall + floor, forward: forward, length: hallLength, width: hallWidth, height: 5.2, top: Map3DPalette.templeWall,
                         side: Map3DPalette.templeWall, capped: false)
-            mesh.addHipRoof(base: mainHall + floor + Map3DPoint(0, 5.2, 0), forward: Map3DPoint(1, 0, 0), length: hallWidth, width: hallLength,
+            mesh.addHipRoof(base: mainHall + floor + Map3DPoint(0, 5.2, 0), forward: across, length: hallWidth, width: hallLength,
                             rise: 2.6, overhang: 1.8, sweep: 1.0, color: Map3DPalette.templeRoof, paint: Self.roofing)
             mesh.addBox(base: mainHall + floor + Map3DPoint(0, 6.4, 0), forward: forward, length: hallLength * 0.6, width: hallWidth * 0.7,
                         height: 1.6, top: Map3DPalette.templeWall, side: Map3DPalette.templeWall, capped: false)
-            mesh.addHipRoof(base: mainHall + floor + Map3DPoint(0, 8, 0), forward: Map3DPoint(1, 0, 0), length: hallWidth * 0.7,
+            mesh.addHipRoof(base: mainHall + floor + Map3DPoint(0, 8, 0), forward: across, length: hallWidth * 0.7,
                             width: hallLength * 0.6, rise: 2.8, overhang: 1.4, sweep: 1.1, color: Map3DPalette.templeRoof, paint: Self.roofing)
             // The ridge, red, its ends swept up like a swallow's tail (燕尾).
             let ridgeLength = max(2, hallWidth * 0.7 + 2.8 - hallLength * 0.6 - 2.8)
-            if !far { Self.addSwallowtailRidge(&mesh, middle: mainHall + floor + Map3DPoint(0, 10.8, 0), along: Map3DPoint(1, 0, 0), length: ridgeLength + 2) }
+            if !far { Self.addSwallowtailRidge(&mesh, middle: mainHall + floor + Map3DPoint(0, 10.8, 0), along: across, length: ridgeLength + 2) }
+            guard !far else {
+                // Afar, only the front hall's box and roof.
+                guard hasFrontHall else { return }
+                mesh.addBox(base: frontHall + floor, forward: forward, length: 6, width: hallWidth * 0.9, height: 4.4, top: Map3DPalette.templeWall,
+                            side: Map3DPalette.templeWall, capped: false)
+                mesh.addHipRoof(base: frontHall + floor + Map3DPoint(0, 4.4, 0), forward: across, length: hallWidth * 0.9, width: 6,
+                                rise: 2.4, overhang: 1.5, sweep: 0.9, color: Map3DPalette.templeRoof, paint: Self.roofing)
+                return
+            }
+            // The gateway at the pavement: two red posts, a beam and a
+            // little roof.
+            if court >= 6 {
+                for end: Float in [-1, 1] {
+                    mesh.addBox(base: gateway + across * (end * 6), forward: forward, length: 0.9, width: 0.9, height: 6, top: Map3DPalette.templeRidge,
+                                side: Map3DPalette.templeRidge)
+                }
+                mesh.addBox(base: gateway + Map3DPoint(0, 5.4, 0), forward: forward, length: 0.9, width: 14, height: 0.9, top: Map3DPalette.templeWall,
+                            side: Map3DPalette.templeWall)
+                mesh.addHipRoof(base: gateway + Map3DPoint(0, 6.3, 0), forward: across, length: 14.6, width: 1.8, rise: 0.9, overhang: 0.4,
+                                sweep: 0.5, color: Map3DPalette.templeRoof, paint: Self.roofing)
+            }
+            // The hall the lanterns hang from: the front hall where there is
+            // one, else the main hall.
+            let eaves = hasFrontHall ? (hall: frontHall, depth: Float(6), width: hallWidth * 0.9, height: Float(3.6))
+                : (hall: mainHall, depth: hallLength, width: hallWidth, height: Float(4.2))
+            let glow = mesh.vertices.count
+            for lantern in 0..<4 {
+                let spot = eaves.hall + floor + forward * (eaves.depth / 2 + 0.9) + across * ((Float(lantern) - 1.5) * eaves.width / 4.5)
+                mesh.addCylinder(base: spot + Map3DPoint(0, eaves.height, 0), radius: 0.32, height: 0.6, sides: 6, top: Map3DPalette.lantern,
+                                 side: Map3DPalette.lantern)
+            }
+            mesh.makeGlowing(from: glow)
             // The front hall, lower, one roof.
             guard hasFrontHall else { return }
             mesh.addBox(base: frontHall + floor, forward: forward, length: 6, width: hallWidth * 0.9, height: 4.4, top: Map3DPalette.templeWall,
                         side: Map3DPalette.templeWall, capped: false)
-            mesh.addHipRoof(base: frontHall + floor + Map3DPoint(0, 4.4, 0), forward: Map3DPoint(1, 0, 0), length: hallWidth * 0.9, width: 6,
+            mesh.addHipRoof(base: frontHall + floor + Map3DPoint(0, 4.4, 0), forward: across, length: hallWidth * 0.9, width: 6,
                             rise: 2.4, overhang: 1.5, sweep: 0.9, color: Map3DPalette.templeRoof, paint: Self.roofing)
-            guard !far else { return }
-            Self.addSwallowtailRidge(&mesh, middle: frontHall + floor + Map3DPoint(0, 6.8, 0), along: Map3DPoint(1, 0, 0),
+            Self.addSwallowtailRidge(&mesh, middle: frontHall + floor + Map3DPoint(0, 6.8, 0), along: across,
                                      length: max(2, hallWidth * 0.9 - 6) + 2)
             // The incense burner in the courtyard between them.
             let burner = (mainHall + frontHall) * 0.5 + floor
             mesh.addCylinder(base: burner, radius: 0.8, height: 1.2, sides: 8, top: Map3DColor.rgb(0x6B5A3E), side: Map3DColor.rgb(0x8C7449))
         }
-        // Decision 259: worshippers and visitors before the terrace.
-        let forecourt = base + forward * (terrace / 2 + 3) + Map3DPoint(0, 0.05, 0)
-        addTempleLife(from: forecourt + Map3DPoint(-terrace / 2, 0, 0), to: forecourt + Map3DPoint(terrace / 2, 0, 0))
+        // Decision 268: a banyan at each of the forecourt's front corners.
+        let court0 = base + forward * (front - min(court, 10) / 2)
+        if court >= 8, target == .near, let tree = Self.propModels[.tree] {
+            for end: Float in [-1, 1] {
+                let foot = court0 + across * (end * (terrace / 2 - 2.5))
+                props[key(of: foot), default: []].append(.prop(tree, at: foot, forward: forward, scale: 1.7, tint: Map3DProp.greens[1]))
+            }
+        }
+        // Decision 259: worshippers and visitors (decision 268: on the
+        // forecourt, more of them where it is wide).
+        let middle = base + forward * (front - max(court, 6) / 2) + Map3DPoint(0, 0.05, 0)
+        addTempleLife(from: middle - across * (terrace / 2 - 1), to: middle + across * (terrace / 2 - 1),
+                      width: max(3, court - 4), people: court >= 10 ? 36 : 12)
         addShadow(centre: mainHall, forward: forward, length: hallLength + 2, width: hallWidth + 2, spread: 3, darkness: 0.3)
     }
 
