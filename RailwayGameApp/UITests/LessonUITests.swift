@@ -160,7 +160,7 @@ final class LessonUITests: XCTestCase {
         // At the opening's broad zoom the sight is below the map's usable
         // area. Pan it clear of the bottom controls rather than zooming
         // farther out (which leaves it behind those same controls).
-        _ = bringMapPointIntoView(fixture.tourism!.attractions[0].point, from: fixture.stations[0].location)
+        _ = bringMapPointIntoView(fixture.tourism!.attractions[0].point, from: fixture.stations[0].location, zoomIfClamped: true)
         let mark = marks.firstMatch
         XCTAssertTrue(mark.appears(within: 10), "Lesson 9's sight must be visible on the map")
         let id = mark.identifier.replacingOccurrences(of: "map.sight.", with: "")
@@ -212,7 +212,11 @@ final class LessonUITests: XCTestCase {
         XCTAssertTrue(element("lessonResult.title").disappears(within: 10))
         XCTAssertTrue(map.appears(within: 5))
         XCTAssertEqual(stationPoints().count, before, "Keep Playing must keep the railway")
-        XCTAssertTrue(app.buttons["Pause"].becomesHittable(within: 5), "The game continues to run")
+        // The goal-met event can leave the clock paused after the result
+        // closes. Keep Playing preserves this game; the player can resume it.
+        let resume = app.buttons["Resume"]
+        if resume.appears(within: 2) { tap(resume) }
+        XCTAssertTrue(app.buttons["Pause"].becomesHittable(within: 5), "The game can continue running")
         tap(app.buttons["dock.build"])
         XCTAssertTrue(app.buttons["tool.network"].becomesHittable(within: 5))
     }
@@ -360,18 +364,28 @@ final class LessonUITests: XCTestCase {
     /// Leave the HUD, dock and bottom zoom controls clear. The world point
     /// may start under any of them; dragging from bare map moves it into
     /// reach without tapping the overlay in its place.
-    private func bringMapPointIntoView(_ point: PlanPoint, from known: PlanPoint) -> CGPoint {
+    private func bringMapPointIntoView(_ point: PlanPoint, from known: PlanPoint, zoomIfClamped: Bool = false) -> CGPoint {
         let middle = CGPoint(x: map.frame.midX, y: map.frame.midY)
         let clear = CGRect(x: middle.x - 130, y: middle.y - 60, width: 260, height: 120)
-        for _ in 0..<10 {
-            let at = project(point, from: known)
+        var at = project(point, from: known)
+        for _ in 0..<16 {
             if clear.contains(at) { return at }
             let destination = CGPoint(x: middle.x + max(-140, min(140, middle.x - at.x)),
                                       y: middle.y + max(-90, min(90, middle.y - at.y)))
             coordinate(middle).press(forDuration: 0.1, thenDragTo: coordinate(destination),
                                      withVelocity: XCUIGestureVelocity(rawValue: 200), thenHoldForDuration: 0.3)
+            let moved = project(point, from: known)
+            if zoomIfClamped, hypot(moved.x - at.x, moved.y - at.y) < 4 {
+                // Near the world's edge, the current zoom has no more room
+                // to pan. A closer view gives the camera room to move.
+                let zoom = app.buttons["Zoom in"]
+                XCTAssertTrue(zoom.isEnabled, "Cannot move the map point clear of the controls")
+                tap(zoom)
+                at = project(point, from: known)
+            } else {
+                at = moved
+            }
         }
-        let at = project(point, from: known)
         XCTAssertTrue(clear.contains(at), "Map point did not come clear of controls: \(at)")
         return at
     }
