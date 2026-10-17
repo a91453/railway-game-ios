@@ -11406,6 +11406,18 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
   - `Map3DTests` 原本斷言 200 m 已經傾到最大，改成 100 m，並加上 150–200 m 的角度範圍。這是這一步刻意的改變，不是 golden。
 - **UNVERIFIED**：App 的編譯與 UI 測試（macOS CI；新的 `MapInteractionTests/testPinchingCloseOpensTheThreeDMapAndPinchingOutComesBack` 在 full lane），實機的手感與記憶體（TestFlight）。
 
+**之後的修正**（2026-10-17，作者在 71.1 回報：「3d打得開 但是一放大就跳掉」「是地圖3d會跳回2d」）：
+- 原因：交回 2D 的回呼不管 3D 是怎麼打開的都接上了，判斷只看「距離超過 960 m」。用 3D 按鈕打開的 3D 從幾公里外看（整個城鎮在畫面裡），所以第一次雙指、連拉近也一樣，就交回 2D。
+- 修正（`Map3DHandoff.handsBack(handedOverAt:from:to:)`，GamePresentation）：
+  - 只有雙指交接進來的 3D 會交回，3D 按鈕打開的永遠不交回；
+  - 只在拉遠時交回，拉近永遠不會；
+  - 門檻是 960 m 與交接時距離的 1.2 倍取大的，因為 3D 畫面比 2D 地圖高時，同一個比例會站得比 800 m 遠。
+- App：`ContentView` 只在交接開的 3D 傳交回的回呼；`Map3DPreviewScreen` 記下交接時的距離，用上面的判斷。
+- 測試：
+  - `Map3DHandoffTests` 的兩個新測試，含新竹實景地圖的場景；在修正前的 main 上沒有這個函式，等於失敗；舊的判斷在「按鈕、拉近」那一條會回答交回。
+  - 新的 UI 測試 `MapInteractionTests/testTheButtonsThreeDMapStaysThreeDWhenPinchedCloser`（full lane）。
+- GameCore、存檔版本、golden schema 都不動。
+
 ### 270. 空白地圖的 2D 拉近時畫種子道路：和 3D 同一份，配色照實景的 2D 道路
 
 2026-10-17。3D 生活感第 4 步的後半，接在決策 269 之後。HANDOFF §4.4 的下一步：「2D 拉近到看得見建物的那一級時，也畫同一份種子道路」。空白地圖的 2D 原本沒有任何道路，3D 卻有（決策 263），兩邊對不上；決策 269 起雙指拉近會把 2D 交給 3D，交接那一下道路突然出現。

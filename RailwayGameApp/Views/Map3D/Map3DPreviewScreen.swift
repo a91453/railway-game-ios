@@ -268,6 +268,7 @@ private struct Map3DView: UIViewRepresentable {
         if first, let start {
             // Decision 269: where the 2D map was, as close, straight down.
             view.camera = Map3DHandoff.camera(from: start, in: scene, viewport: view.camera.viewport)
+            context.coordinator.handedOverAt = view.camera.distance
         } else if first {
             // Open over the middle of what is built, the whole of it in view.
             let width = Float((scene.region.maxX - scene.region.minX) / Double(WorldCoordinate.unitsPerMetre))
@@ -281,6 +282,9 @@ private struct Map3DView: UIViewRepresentable {
         weak var view: Map3DMetalView?
         var shownVersion: Int?
         var farOut: ((Map3DCamera) -> Void)?
+        /// Decision 269: how far out the camera a pinch handed over opened;
+        /// `nil` when the 3D button opened the map.
+        var handedOverAt: Float?
         private var handedBack = false
 
         @objc func pan(_ recognizer: UIPanGestureRecognizer) {
@@ -292,10 +296,14 @@ private struct Map3DView: UIViewRepresentable {
 
         @objc func pinch(_ recognizer: UIPinchGestureRecognizer) {
             guard let view else { return }
+            let before = view.camera.distance
             view.camera = view.camera.zoomed(by: Float(recognizer.scale))
             recognizer.scale = 1
-            // Decision 269: pinched back out, the 2D map takes over again.
-            if let farOut, !handedBack, view.camera.distance > Map3DHandoff.closesAt {
+            // Decision 269: pinched back out past the line, the 2D map takes
+            // over again; never as it comes closer, nor on a 3D map the
+            // button opened (later fix, 71.1).
+            if let farOut, !handedBack,
+               Map3DHandoff.handsBack(handedOverAt: handedOverAt, from: before, to: view.camera.distance) {
                 handedBack = true
                 farOut(view.camera)
             }
