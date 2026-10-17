@@ -68,7 +68,8 @@ struct BuildToolButtons: View {
 
     var body: some View {
         VStack(spacing: ToolColumnStyle.buttonSpacing) {
-            ForEach(ConstructionTool.networkTools.filter { $0 != .select }, id: \.self) { tool in
+            // Decision 266: in a lesson, only the tools it has unlocked.
+            ForEach(ConstructionTool.networkTools.filter { $0 != .select && session.allows($0) }, id: \.self) { tool in
                 toolButton(tool)
             }
             if column?.compact != true {

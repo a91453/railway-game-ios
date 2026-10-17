@@ -14,6 +14,9 @@ public struct LauncherPreferences: Codable, Equatable, Sendable {
     /// (decision 188, later fix): the step it was skipped on, or on screen
     /// when the game was left; `nil` once finished or never begun.
     public var tutorialStepToResume: String?
+    /// Decision 266: the most stars each lesson was passed with, by its id;
+    /// `nil` in preferences written before the lessons.
+    public var lessonStars: [String: Int]?
 
     public init() {}
 

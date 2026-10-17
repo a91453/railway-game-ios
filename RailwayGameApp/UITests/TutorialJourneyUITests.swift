@@ -2,7 +2,8 @@ import UIKit
 import XCTest
 
 /// The whole tutorial (decision 188), walked from its first step to its
-/// last as a player would: started from the start screen, never from
+/// last as a player would: lesson 1's guide (decision 266), started from
+/// the start screen's Lessons, never from
 /// `-tutorial-step`, every step done with the control it points at
 /// (NEXT_PRIORITIES_2026-10-12 §2, item 1). On every step the control is
 /// in reach and the tutorial's card, open or folded, leaves it free; a
@@ -29,11 +30,12 @@ final class TutorialJourneyUITests: XCTestCase {
     }
 }
 
-/// One walk through the tutorial's 21 steps, in English.
+/// One walk through lesson 1's 15 steps (decision 266), in English.
 @MainActor
 private final class TutorialJourney {
-    /// The steps' titles in English, in order (`Tutorial.standardSteps`):
-    /// step `n` is `titles[n - 1]`.
+    /// The steps' titles in English, in order (lesson 1's guide: the
+    /// tutorial's first part, without buying the trains, as its line opens
+    /// with them, decision 264): step `n` is `titles[n - 1]`.
     static let titles = [
         "Tap Build",
         "Zoom out to see the town",
@@ -48,14 +50,8 @@ private final class TutorialJourney {
         "Tap Lines",
         "Tap one station, then the other",
         "Tap ✓ to create the line",
-        "Tap Buy … and Start Service",
         "Tap \u{25B6}\u{FE0E} to run time",
         "Wait for your first fares",
-        "Tap Lines to check your line",
-        "Read your line's card",
-        "Tap one of your stations",
-        "Tap Ridership to see who rides",
-        "That's the tour",
     ]
 
     let test: XCTestCase
@@ -90,9 +86,13 @@ private final class TutorialJourney {
         app.launch()
         defer { app.terminate() }
 
-        let start = app.buttons["start.tutorial"]
-        XCTAssertTrue(start.appears(within: 15), "No Tutorial button on the start screen")
-        start.tap()
+        let lessons = app.buttons["start.lessons"]
+        XCTAssertTrue(lessons.appears(within: 15), "No Lessons button on the start screen")
+        lessons.tap()
+        let first = app.buttons["lesson.1.start"]
+        XCTAssertTrue(first.appears(within: 10), "No lesson 1 in the list")
+        XCTAssertTrue(first.becomesHittable(), "Lesson 1's Start cannot be tapped")
+        first.tap()
 
         // Track: Build, as in the game (decision 226, later), opens the
         // building tools with Network chosen.
@@ -172,72 +172,33 @@ private final class TutorialJourney {
         arrive(at: 13)
         tapConfirm("the ✓ that creates the line")
 
-        // Service
-        arrive(at: 14)
-        let buy = app.buttons["line.staff.start"]
-        check(buy, "Buy … and Start Service")
-        buy.tap()
-
-        // Done usually set time running, and the step that asks for it is
-        // then passed over (`moveTutorialForward`).
-        // The first fares can come in seconds later, and the step that
-        // waits for them moves on by itself: both steps passed between two
-        // looks at the card (main 878adaf's full lane, run 38878787559:
-        // step 17 next), and the line's card is the next step then.
-        var shown = arrive(atOneOf: [15, 16, 17])
-        if shown == 15 {
+        // Service: the line opens with its trains (decision 264). Done
+        // usually set time running, and the step that asks for it is then
+        // passed over (`moveTutorialForward`).
+        let shown = arrive(atOneOf: [14, 15])
+        if shown == 14 {
             let resume = app.buttons["Resume"]
             check(resume, "▶︎ (Resume)")
             resume.tap()
-            shown = arrive(atOneOf: [16, 17])
+            arrive(at: 15)
         }
-        if shown == 16 {
-            // The step points at the cash and the speed.
-            let cash = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Cash")).firstMatch
-            check(cash, "the cash")
-            let speed = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Speed:")).firstMatch
-            check(speed, "the speed menu")
-            // The first fares come in at an hour's settlement after the
-            // trains set off at 06:00; at the speed Done resumes, that is
-            // under a minute. If not, the speed menu goes faster, as the
-            // hint says.
-            if !waitForStep(after: 16, timeout: 60) {
-                speed.tap()
-                let fastest = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "6000 times real time")).firstMatch
-                if fastest.appears(within: 5) {
-                    fastest.tap()
-                }
+        // The step points at the cash and the speed.
+        let cash = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Cash")).firstMatch
+        check(cash, "the cash")
+        let speed = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Speed:")).firstMatch
+        check(speed, "the speed menu")
+        // The first fares come in at an hour's settlement after the trains
+        // set off at 06:00; at the speed Done resumes, that is under a
+        // minute. If not, the speed menu goes faster, as the hint says.
+        // The last step does not move on by itself: Finish, once done.
+        if !waitForFares(timeout: 60) {
+            speed.tap()
+            let fastest = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "6000 times real time")).firstMatch
+            if fastest.appears(within: 5) {
+                fastest.tap()
             }
+            XCTAssertTrue(waitForFares(timeout: 120), failure("no fares came"))
         }
-
-        // The line's card (decision 194): the lines panel, then a step to
-        // read over it. Its card comes after the line's first full day, so
-        // the panel may show none yet.
-        arrive(at: 17, timeout: 180)
-        let linesAgain = app.buttons["entry.lines"]
-        check(linesAgain, "the Lines button")
-        linesAgain.tap()
-
-        arrive(at: 18)
-        tapNext(finishing: false)
-
-        // Passengers: the step closes the lines panel.
-        arrive(at: 19)
-        // Stopped, so the trains stand still while a station is tapped.
-        let pause = app.buttons["Pause"]
-        if pause.exists, pause.isHittable { pause.tap() }
-        check(map: firstStation, "the first station")
-        tap(firstStation)
-
-        arrive(at: 20)
-        let ridership = app.buttons["inspector.ridership"]
-        check(ridership, "the Ridership button")
-        ridership.tap()
-        // A step to read: Next, once the station's panel is open.
-        tapNext(finishing: false)
-
-        arrive(at: 21)
-        check(app.buttons["hud.menu"], "the game menu")
         tapNext(finishing: true)
         XCTAssertTrue(card.disappears(within: 10), failure("Finish did not end the tutorial"))
         XCTAssertFalse(folded.exists, failure("Finish left the folded card"))
@@ -268,11 +229,14 @@ private final class TutorialJourney {
         return 0
     }
 
-    /// Whether the tutorial moved past step `number` within `timeout`.
-    private func waitForStep(after number: Int, timeout: TimeInterval) -> Bool {
+    /// Whether the last step's Finish turned on within `timeout`: the
+    /// first fares came in.
+    private func waitForFares(timeout: TimeInterval) -> Bool {
+        if folded.exists, !card.exists { folded.tap() }
+        let finish = app.buttons["tutorial.next"]
         let deadline = Date().addingTimeInterval(timeout)
         repeat {
-            if let shown = shownStep(), shown > number { return true }
+            if finish.exists, finish.isEnabled { return true }
             Thread.sleep(forTimeInterval: 0.5)
         } while Date() < deadline
         return false

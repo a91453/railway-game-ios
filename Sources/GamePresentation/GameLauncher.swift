@@ -320,6 +320,7 @@ public final class GameLauncher {
     /// Keeps the game's challenge result if it is the player's best
     /// (decision 87), and says so on the status line.
     public func recordChallengeResult(at date: Date = Date()) {
+        if let session { recordLessonResult(of: session.world) }
         guard let session, records.record(session.world, at: date),
               let record = session.world.scenario.flatMap({ records.best[$0.scenario.id] }) else { return }
         session.message = StatusMessage(kind: .success, text: language.text("New best! \(record.text(in: language))", "刷新紀錄！\(record.text(in: language))"))
@@ -330,7 +331,8 @@ public final class GameLauncher {
     /// read from the world, so a save opened again still counts nothing),
     /// and says so in the game.
     func checkAchievements(of session: GameSession, at date: Date = Date()) {
-        guard !session.news.isDemo, session.tutorial == nil, !session.world.economy.unlimitedFunds else { return }
+        // Decision 266: nor do the lessons count.
+        guard !session.news.isDemo, session.tutorial == nil, session.lesson == nil, !session.world.economy.unlimitedFunds else { return }
         let unlocked = achievements.unlock(meeting: AchievementFacts(world: session.world), at: date, only: Self.achievementScope(of: session.world))
         session.noteAchievements(unlocked)
     }
@@ -524,35 +526,48 @@ public final class GameLauncher {
         water?.steepCells(frame: RealWorldFrame(anchor: anchor, bounds: GameWorld.newGameBounds), bounds: GameWorld.newGameBounds) ?? []
     }
 
-    /// Starts a new game with the tutorial on its first step (the start
-    /// screen's tutorial entry, Stage C5).
+    // MARK: - Lessons (decision 266)
+
+    /// The most stars `lesson` was passed with on this device, 0 for none.
+    public func stars(of lesson: Lesson) -> Int {
+        preferences.lessonStars?[lesson.id] ?? 0
+    }
+
+    /// The stars of every lesson, added up.
+    public var lessonStarTotal: Int {
+        Lesson.all.reduce(0) { $0 + stars(of: $1) }
+    }
+
+    /// Whether `lesson` can be played: the first always, each other once
+    /// the one before it was passed.
+    public func isOpen(_ lesson: Lesson) -> Bool {
+        lesson.number == 1 || stars(of: Lesson.all[lesson.number - 2]) > 0
+    }
+
+    /// Starts `lesson` (decision 266): its game, with its guide's first step
+    /// on screen when it has a guide.
+    public func startLesson(_ lesson: Lesson) {
+        guard begin(.newGame(lesson: lesson), keepingAutosave: true) else { return }
+        if !lesson.guide.isEmpty { session?.startTutorial() }
+    }
+
+    /// Keeps the stars `world`'s lesson was passed with, if more than before;
+    /// lesson 1 passed counts as the tutorial finished.
+    func recordLessonResult(of world: GameWorld) {
+        guard let result = LessonResult(world: world), let lesson = world.lesson,
+              result.stars > stars(of: lesson) else { return }
+        var stars = preferences.lessonStars ?? [:]
+        stars[lesson.id] = result.stars
+        preferences.lessonStars = stars
+        if lesson.number == 1 { preferences.tutorialCompleted = true }
+        savePreferences()
+    }
+
+    /// Starts lesson 1 with its guide on its first step: the tutorial,
+    /// since decision 266 the first lesson's guide (the first-time card,
+    /// and the app's `-tutorial-step`).
     public func startTutorial() {
-        // Decision 154: the tutorial's first line is not raised by a
-        // holiday.
-        var world = GameWorld.newGame(eventSeed: .random(in: .min ... .max))
-        world.setDisruptions(nil)
-        // Decision 157: nor slowed by building materials; decision 169: nor
-        // by a crowd at the doors.
-        world.setBuildingMaterials(false)
-        world.setDoorCrowding(false)
-        world.setRollingStockEconomics(false)
-        world.setFlexDispatch(false)
-        // Decision 202: its routes are as they were measured.
-        world.setKeepLeft(false)
-        // Decision 207: its timetables are as they were measured.
-        world.setRealisticOperation(false)
-        // Decision 212: its traffic control takes whole legs as measured.
-        world.setBlockSections(false)
-        world.setCurveSpeedLimits(false)
-        world.setRealCarLengths(false)
-        // Decision 174: nor do tourists come to its sights.
-        world.setTourism(nil)
-        // Decision 183: nor does the city ask it for anything.
-        world.setCityRequests(seed: nil)
-        guard begin(world, keepingAutosave: true) else { return }
-        // Decision 264: the tutorial teaches staffing a line by hand.
-        session?.staffsLinesByHand = true
-        session?.startTutorial()
+        startLesson(Lesson.all[0])
     }
 
     /// Starts the tutorial's game at step `id` (Debug builds'
@@ -598,8 +613,8 @@ public final class GameLauncher {
                     session.addSelectedStationToLineDraft()
                 }
             }
+            // Decision 264: the line opens with its train.
             if reaches("line.staff") { session.createLineFromDraft() }
-            if reaches("time.play") { session.staffSelectedLine(headway: 10) }
         }
         session.startTutorial(atStep: id)
     }

@@ -8,15 +8,15 @@ import XCTest
 @MainActor
 final class TutorialUITests: XCTestCase {
     func testEnglishTutorialNavigation() {
-        checkNavigation(language: "en", locale: "en_US", tutorialLabel: "Tutorial", nextLabel: "Next", backLabel: "Back", skipLabel: "Skip")
+        checkNavigation(language: "en", locale: "en_US", tutorialLabel: "Tutorial", lessonsLabel: "Lessons", nextLabel: "Next", backLabel: "Back", skipLabel: "Skip")
     }
 
     func testTraditionalChineseTutorialNavigation() {
-        checkNavigation(language: "zh-Hant", locale: "zh_TW", tutorialLabel: "教學", nextLabel: "下一步", backLabel: "上一步", skipLabel: "略過")
+        checkNavigation(language: "zh-Hant", locale: "zh_TW", tutorialLabel: "教學", lessonsLabel: "入門", nextLabel: "下一步", backLabel: "上一步", skipLabel: "略過")
     }
 
     func testLargeTextTutorialNavigation() {
-        checkNavigation(language: "en", locale: "en_US", tutorialLabel: "Tutorial", nextLabel: "Next", backLabel: "Back", skipLabel: "Skip", largeText: true)
+        checkNavigation(language: "en", locale: "en_US", tutorialLabel: "Tutorial", lessonsLabel: "Lessons", nextLabel: "Next", backLabel: "Back", skipLabel: "Skip", largeText: true)
     }
 
     /// The tutorial's track chapter (decision 188; the name is kept for
@@ -30,9 +30,7 @@ final class TutorialUITests: XCTestCase {
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         defer { app.terminate() }
-        let start = app.buttons["start.tutorial"]
-        XCTAssertTrue(start.appears(within: 10))
-        start.tap()
+        startFirstLesson(app)
         openCard(app)
         let next = app.buttons["tutorial.next"]
         XCTAssertTrue(next.appears(within: 10))
@@ -189,10 +187,10 @@ final class TutorialUITests: XCTestCase {
     }
 
     /// Decision 188 (full lane and iPad, not the gate): the ✓ on the map
-    /// creates the line (decision 100, later), and the lines panel scrolls
-    /// Buy … and Start Service into view for its step, clear of the card;
-    /// then the panel closes and the fares are waited for. The card the player folds stays folded through the
-    /// service chapter's steps.
+    /// creates the line (decision 100, later); lesson 1's line opens with
+    /// its trains (decisions 264 and 266, the name kept from when the lines
+    /// panel's Buy … and Start Service came next), so the panel closes and
+    /// the fares are waited for.
     func testCreateLineAndBuyAreInReach() {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
@@ -217,31 +215,10 @@ final class TutorialUITests: XCTestCase {
         }
         create.tap()
 
-        let buy = app.buttons["line.staff.start"]
-        XCTAssertTrue(buy.appears(within: 10), "No Buy … and Start Service")
-        XCTAssertTrue(waitForHittable(buy), "Buy … and Start Service was not scrolled into view")
-        waitForStep(app, title: "Tap Buy … and Start Service")
-        // Folded by the player, the card stays folded for the rest of the
-        // chapter (TestFlight 54.1: it had to be folded on every step). One
-        // that folded itself, to leave the panel free, is not the player's.
-        var foldedByPlayer = false
-        if card.exists {
-            XCTAssertFalse(card.frame.intersects(buy.frame), "The tutorial card covers Buy … and Start Service")
-            app.buttons["tutorial.fold"].tap()
-            XCTAssertTrue(folded.appears(within: 10), "The card did not fold")
-            foldedByPlayer = true
-        }
-        XCTAssertTrue(waitForHittable(buy), "The folded card covers Buy … and Start Service")
-        buy.tap()
-
         // Decision 226, later: Done came before the line, and set time
         // running, so the time step is passed over and the panel closes.
         waitForStep(app, title: "Wait for your first fares")
         XCTAssertTrue(app.buttons["line.draft.pick"].disappears(within: 10), "The lines panel stayed open")
-        if foldedByPlayer {
-            XCTAssertFalse(card.exists, "The card opened again within its chapter")
-            XCTAssertTrue(folded.exists)
-        }
     }
 
     /// TestFlight 55.1: a data layer left on from the last game (the
@@ -304,6 +281,21 @@ final class TutorialUITests: XCTestCase {
     /// Opens the tutorial's card, folded from the second step (decision
     /// 188, later fix), as the player does to read the step and reach Back,
     /// Next and Skip; an open card is left as it is.
+    /// Decision 266: the start screen's Lessons, then lesson 1, whose
+    /// guide is the tutorial's first part.
+    private func startFirstLesson(_ app: XCUIApplication, label: String? = nil, file: StaticString = #filePath, line: UInt = #line) {
+        let lessons = app.buttons["start.lessons"]
+        XCTAssertTrue(lessons.appears(within: 10), "No Lessons on the start screen", file: file, line: line)
+        if let label {
+            XCTAssertTrue(lessons.label.contains(label), "Lessons reads \(lessons.label)", file: file, line: line)
+        }
+        lessons.tap()
+        let first = app.buttons["lesson.1.start"]
+        XCTAssertTrue(first.appears(within: 10), "No lesson 1 in the list", file: file, line: line)
+        XCTAssertTrue(first.becomesHittable(), "Lesson 1's Start cannot be tapped", file: file, line: line)
+        first.tap()
+    }
+
     private func openCard(_ app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
         let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
         let folded = app.buttons["tutorial.unfold"]
@@ -366,7 +358,9 @@ final class TutorialUITests: XCTestCase {
         return card.exists || folded.exists
     }
 
-    private func checkNavigation(language: String, locale: String, tutorialLabel: String, nextLabel: String, backLabel: String, skipLabel: String, largeText: Bool = false) {
+    private func checkNavigation(
+        language: String, locale: String, tutorialLabel: String, lessonsLabel: String, nextLabel: String, backLabel: String, skipLabel: String, largeText: Bool = false
+    ) {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
@@ -380,10 +374,7 @@ final class TutorialUITests: XCTestCase {
             XCUIDevice.shared.orientation = .landscapeLeft
         }
 
-        let start = app.buttons["start.tutorial"]
-        XCTAssertTrue(start.appears(within: 10))
-        XCTAssertTrue(start.label.contains(tutorialLabel))
-        start.tap()
+        startFirstLesson(app, label: lessonsLabel)
         openCard(app)
 
         let next = app.buttons["tutorial.next"]

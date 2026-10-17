@@ -33,6 +33,8 @@ final class KeepLeftSessionTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: directory) }
         let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
         launcher.startTutorial()
-        XCTAssertEqual(launcher.session?.world.keepLeft, false)
+        // Decision 266: the tutorial is lesson 1, of simple rules, measured
+        // as they are.
+        XCTAssertEqual(launcher.session?.world.keepLeft, GameWorld.newGame(rules: .simple).keepLeft)
     }
 }

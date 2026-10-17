@@ -18,6 +18,8 @@ struct StartView: View {
     @State private var importsSave = false
     @State private var choosesPlace = false
     @State private var choosesChallenge = false
+    /// Decision 266: the lessons, in place of the tutorial.
+    @State private var choosesLesson = false
     @State private var choosesDemo = false
     @State private var showsDataSources = false
     @State private var showsSettings = false
@@ -100,6 +102,9 @@ struct StartView: View {
         }
         .sheet(isPresented: $choosesChallenge) {
             ChallengePicker(launcher: launcher)
+        }
+        .sheet(isPresented: $choosesLesson) {
+            LessonPicker(launcher: launcher)
         }
         .sheet(isPresented: $choosesDemo) {
             DemoPicker(launcher: launcher, loadingDetail: loadingDetail)
@@ -188,15 +193,23 @@ struct StartView: View {
             }
             .disabled(launcher.isLoadingRealWorldData)
             .accessibilityIdentifier("start.realWorld")
+            // Decision 266: the lessons, where the tutorial was: its steps
+            // are the first lessons' guide.
             StartButton(
-                title: String(localized: "Tutorial"),
-                detail: String(localized: "Learn to build and run a railway step by step"),
+                title: launcher.language.text(
+                    "Lessons · ★ \(launcher.lessonStarTotal)/\(3 * Lesson.all.count)",
+                    "入門 · ★ \(launcher.lessonStarTotal)/\(3 * Lesson.all.count)"
+                ),
+                detail: launcher.language.text(
+                    "Short games that teach one thing each: build, run, and earn up to 3 stars",
+                    "一關教一件事的短遊戲：蓋、開、賺，最多拿 3 顆星"
+                ),
                 systemImage: "hand.point.up.left",
                 tone: .accent
             ) {
-                launcher.startTutorial()
+                choosesLesson = true
             }
-            .accessibilityIdentifier("start.tutorial")
+            .accessibilityIdentifier("start.lessons")
             // Decision 135: both demos behind one button, so the start
             // screen keeps to the ways into a game of one's own.
             StartButton(
@@ -276,7 +289,7 @@ struct StartView: View {
                 Button {
                     launcher.startTutorial()
                 } label: {
-                    Text(verbatim: language.text("Start the Tutorial", "開始教學"))
+                    Text(verbatim: language.text("Start Lesson 1", "開始第 1 關"))
                         .font(.subheadline.weight(.bold))
                         .foregroundStyle(Theme.onPrimary)
                         .padding(.horizontal, 16)

@@ -14,8 +14,12 @@ public enum AdvancedDetails {
     /// Whether the details show: the player's own choice once made,
     /// otherwise shown only where the screen is roomy (an iPad), folded on
     /// a phone.
-    public static func isShown(stored: Bool?, roomy: Bool) -> Bool {
-        stored ?? roomy
+    ///
+    /// Decision 266: only among the tools unlocked: in a lesson before the
+    /// details are taught (`unlocked` false) they never show, and the
+    /// switch with them.
+    public static func isShown(stored: Bool?, roomy: Bool, unlocked: Bool = true) -> Bool {
+        unlocked && (stored ?? roomy)
     }
 
     /// What `line` has set among the folded details, in one line, or `nil`

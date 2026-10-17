@@ -473,8 +473,14 @@ extension Tutorial {
     /// ``standardSteps`` for a tutorial over `world`: without what they say
     /// of demand by distance where it is off (a demo, a save from before
     /// decision 137), where short trips do not walk.
+    ///
+    /// Decision 266: in a lesson, the lesson's guide; under simple rules,
+    /// without "Buy … and Start Service".
     static func steps(over world: GameWorld) -> [TutorialStep] {
-        world.distanceDemand ? standardSteps : standardSteps.map { $0.withoutDistanceNote() }
+        var steps = world.lesson.map(\.guide).flatMap { $0.isEmpty ? nil : $0 } ?? standardSteps
+        // A line opens with its trains there (decision 264).
+        if NewGameRules(of: world) == .simple { steps.removeAll { $0.id == "line.staff" } }
+        return world.distanceDemand ? steps : steps.map { $0.withoutDistanceNote() }
     }
 
     /// The tutorial's steps (decision 188): one action each, in the order a

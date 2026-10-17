@@ -340,8 +340,9 @@ final class AutoServiceTests: XCTestCase {
         XCTAssertFalse(text.contains("add a train"), text)
     }
 
-    /// Realistic rules and the tutorial ask the player, as before.
-    func testRealisticRulesAndTheTutorialLeaveTheTrainsToThePlayer() throws {
+    /// Realistic rules ask the player, as before. Decision 266: the
+    /// tutorial, lesson 1's guide, opens its lines with their trains too.
+    func testRealisticRulesLeaveTheTrainsToThePlayerAndTheTutorialDoesNot() throws {
         let (world, a, b, _) = try stations(rules: .realistic)
         let session = GameSession(world: world)
         XCTAssertFalse(session.runsLinesForThePlayer)
@@ -353,9 +354,8 @@ final class AutoServiceTests: XCTestCase {
         let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
         launcher.startTutorial()
         let tutorial = try XCTUnwrap(launcher.session)
-        XCTAssertFalse(tutorial.runsLinesForThePlayer)
-        tutorial.skipTutorial()
-        XCTAssertFalse(tutorial.runsLinesForThePlayer, "the tutorial's game stays as it teaches")
+        XCTAssertNotNil(tutorial.tutorial)
+        XCTAssertTrue(tutorial.runsLinesForThePlayer)
     }
 
     /// The command log keeps it, and a replay makes it again.

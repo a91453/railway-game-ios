@@ -41,6 +41,8 @@ struct ContentView: View {
     /// The player's choice for the details card: open or folded, `nil` to
     /// follow what there is to show (``ControlDetails``).
     @State private var detailsChoice: Bool?
+    /// Decision 266: how the lesson just played ended, on its card.
+    @State private var lessonResult: LessonResult?
     /// Compact height: a phone, held on its side.
     @Environment(\.verticalSizeClass) private var verticalSizeClass
 
@@ -94,8 +96,31 @@ struct ContentView: View {
                 if ended {
                     launcher.recordChallengeResult()
                 }
+                // Decision 266: a lesson ends on its result card.
+                if ended, let result = LessonResult(world: session.world) {
+                    session.dismissScenarioEnd()
+                    lessonResult = result
+                    return
+                }
                 if ended, screen.panel == nil {
                     screen.panel = .goals
+                }
+            }
+            .sheet(isPresented: Binding(get: { lessonResult != nil }, set: { if !$0 { lessonResult = nil } })) {
+                if let result = lessonResult {
+                    LessonResultCard(
+                        result: result, language: session.language,
+                        next: {
+                            lessonResult = nil
+                            if let next = result.next { launcher.startLesson(next) }
+                        },
+                        again: {
+                            lessonResult = nil
+                            launcher.startLesson(Lesson.all[result.lesson - 1])
+                        },
+                        keepPlaying: { lessonResult = nil }
+                    )
+                    .presentationDetents([.medium, .large])
                 }
             }
             .onChange(of: screen.panel) { old, new in
