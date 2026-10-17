@@ -247,4 +247,19 @@ final class Map3DNightAndGroundTests: XCTestCase {
         XCTAssertGreaterThan(alone.ground(x: centre.x, y: centre.y), 300)
         XCTAssertEqual(alone.ground(x: centre.x + Double(Land.blockLength), y: centre.y), 0)
     }
+
+    /// Decision 271: by day the light a little stronger (a bright, clear
+    /// day, as the owner's target picture), the night as it was.
+    func testTheDayIsBrighterAndTheNightAsItWas() {
+        let noon = Map3DLighting(minute: 12 * 60), midnight = Map3DLighting(minute: 0)
+        XCTAssertEqual(noon.dayBoost, 1 + Map3DLighting.dayBrightening, accuracy: 1e-6)
+        XCTAssertEqual(midnight.dayBoost, 1, accuracy: 1e-6)
+        let plainNoon = Map3DLighting.rgb(noon.sun) * (noon.sunStrength * 0.16)
+        XCTAssertEqual(noon.sunLight.x, plainNoon.x * (1 + Map3DLighting.dayBrightening), accuracy: 1e-5)
+        let plainNight = Map3DLighting.rgb(midnight.sun) * (midnight.sunStrength * 0.16)
+        XCTAssertEqual(midnight.sunLight.x, plainNight.x, accuracy: 1e-6)
+        // A white roof at noon comes to about white, not far past it.
+        let roof = noon.lit(SIMD3<Float>(0.77, 0.78, 0.84), normal: Map3DPoint(0, 1, 0))
+        XCTAssertLessThan(roof.max(), 1.25)
+    }
 }
