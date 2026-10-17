@@ -6541,6 +6541,8 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 - **測試**：`TerrainPresentationTests` 的 `testAPlatformOnAGradeLevelsAnEdgeWithPlatformsOnIt`（70.1 的情境：3 km、約 1‰、兩端各 80 m 月台、一條路線；中間設月台成功、五段、每座月台都水平且在原車站、路線還在、扣款＝新邊加車站、一次復原還原；在 main 上會失敗）、`testALinesChosenPathIsLaidAlongTheLevelledTrack`（兩個方向的指定進路改寫到新邊上）、`testAnEdgeWithATrainAtItsPlatformIsNotLevelled`；`testAPlatformOnAGradeWithATrainOnItIsRefused` 的期望改成 `trackEdgeInUse`（上面第 6 點）。`NetworkPlanCommandTests` 的 `testALevellingThatKeepsPlatformsIsLoggedWithThem`（寫進日誌、重播出同一個世界）、`testALevellingLoggedBeforeKeptPlatformsReads`（舊日誌照樣讀）。
 - **限制**：加回的月台長度是新邊的長度，因重新取樣可能和原本差幾個單位；月台的 ID 跟著新邊換掉。
 
+**之後的修正（2026-10-17，決策 275）**：整平的指令放進 GameCore 的 `editTrackAsOne`，拆掉軌道的那一步不再送走要搭這段軌道的轉乘乘客；做完仍到不了的才離開。
+
 ### 191. 實景地圖的署名縮成角落的短標示
 
 2026-10-12，作者在實機上覺得實景地圖底部那條很長的署名（「© OpenMapTiles © OpenStreetMap 貢獻者・鐵道：交通部 TDX、© OpenStreetMap 貢獻者」）太擠，授權照下面的設計做（功能凍結期的玩家回報介面修正）。號碼依工作登記 #231：決策 191；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、replay 都不變。
@@ -11656,6 +11658,40 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 兩端的候車人數只數等這條線的人（`waitingPassengers(at:)` 裡 `line` 是它的）。原本數車站的全部候車，兩條線同一個起點時，每條線都說兩條線的總和，「一班車載不完」也是拿總和比這條線的一列車。
 - 座位圖一排最多 6 節（`SeatMap.carsPerRow`，約 240 點），多的換行。手機橫拿時列車卡片最寬 300 點，原本 7 節以上就撐出卡片（高鐵示範 12 節約 476 點）。
 - 四方：玩家：需求燈說的是這條線自己的乘客，長編組的座位圖看得完整。開發：只改 GamePresentation 的換算與 App 的排版，有 Linux 測試。美術：座位與車廂的樣子不變，只是換行。音樂：無。
+
+### 275. 整平有月台的軌道時，轉乘中的乘客不會被丟掉：多個指令當成一次編輯
+
+2026-10-17，PR #755–#784 的審查延後給核心玩法的一項（`docs/archive/PR755_784_REVIEW_HANDOFF.md` 第四節；HANDOFF 第 2 節），遊戲規劃 session_01V1xd3H9vNkuZoSA3czNfGm 派工。號碼依工作登記 #231：決策 275。存檔版本、golden schema 都不動。
+
+**問題**：整平（決策 190）在世界的副本上依序呼叫 GameCore 的指令：拆月台、拆軌道（`removeTrackEdge`）、蓋新的節點與軌道、把月台放回去。每個指令最後都會 `abandonUnservedPassengers()`：等的那一段已經沒有路線走的候車群離開車站，記進 `abandoned`。拆掉軌道的那一刻，要搭這段軌道的轉乘乘客（有 `journey` 的候車群）就被送走了，雖然幾步之後軌道就蓋回來。#761 讓「有月台的軌道」也能整平之後，碰到的機會變多。
+
+1. **一次編輯**（`GameWorld.editTrackAsOne(_:)`，`Sources/GameCore/Passenger/PassengerDemand.swift`）：在世界的副本上執行傳入的多個指令，期間 `abandonUnservedPassengers()` 不做事（`trackEditDepth`，不是遊戲狀態、不存檔）；全部做完後才做一次。做完仍然到不了的乘客照舊離開，記進 `abandoned`，守恆不變。可以巢狀。
+2. **全有或全無**：中途丟出錯誤時世界不變，乘客也不變。
+3. **整平用它**（`LevelPlatformTrack.swift` 的 `build(_:in:)`）：讀地面、拆月台與軌道、蓋新的節點與軌道、放回月台、改路線的指定路徑，都在同一個 `editTrackAsOne` 裡。
+4. 其他單一指令的行為不變：一個指令仍在做完時檢查一次，所以 golden、存檔與重播都不動。
+
+**測試**：
+- GameCore 的 `PassengerTransferTests`：
+  - `testTrackLaidAgainInOneEditKeepsThePlannedQueue`：同一段軌道與月台在一次編輯裡拆掉再蓋回，5 位候車的人還在；
+  - `testTrackLeftBrokenByOneEditAbandonsThePlannedQueue`：一次編輯做完軌道仍斷，5 位照舊離開；
+  - `testAFailedEditMadeAsOneChangesNothing`：中途失敗，世界與乘客都不變。
+- GamePresentation 的 `TerrainPresentationTests.testLevellingKeepsThoseWaitingForTheLine`：長線中間設月台、整平之後，起點等這條線的 5 人還在。
+- 兩個「還在」的測試，拿掉延後（每一步照舊放棄）時都失敗：5 人被放棄。
+
+**參考**：參考庫沒有（`Ci/` 與 `Simulator/` 的編輯都是單一動作，沒有候車的轉乘乘客）。外部專案沒有查：這是本專案自己的守恆規則。程式是本專案自己寫的。
+
+**四方**：
+- 玩家：在車站設月台時，正在轉車的乘客不會因為整平而憑空不見、算成放棄。
+- 開發：一個 GameCore 的通用入口，整平以外需要拆了再蓋的編輯也能用；單一指令與存檔格式都不變，有 Linux 測試。
+- 美術：無。
+- 音樂：無。
+
+**沒有採用**：
+- 在 GamePresentation 整平前後比對候車人數，在訊息裡說明有人離開：乘客還是被丟掉，只是說了出來。
+- 整平時把拆掉的軌道 ID 留給新的軌道：GameCore 的 ID 只增不減，改它會動到存檔與重播。
+- 每個指令都不再檢查、改成每一分鐘檢查一次：會改變所有指令的行為與 golden。
+
+**UI 測試**（交給 Codex）：沒有新的畫面；不需要。
 
 ## 目前規則摘要
 

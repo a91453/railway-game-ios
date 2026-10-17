@@ -1,4 +1,4 @@
-import GameCore
+@testable import GameCore
 import GamePresentation
 import XCTest
 
@@ -282,6 +282,28 @@ final class TerrainPresentationTests: XCTestCase {
         ])
         tool.undo()
         XCTAssertEqual(tool.world, built)
+    }
+
+    /// Decision 275: passengers waiting at West for a trip along the line
+    /// still wait once a platform in the middle levels the track under it.
+    /// The levelling takes the track out and lays it again; one command at
+    /// a time, taking it out sent them away (#785's review).
+    func testLevellingKeepsThoseWaitingForTheLine() throws {
+        var (world, _, ends, line) = try longLine()
+        try world.setLineServiceWindow(line.id, to: .allDay)
+        try world.setLineTrainsInService(line.id, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        try world.setStationDemand(ends[0].station, to: StationDemand(kind: .residential, dailyTrips: 0))
+        world.setPassengerRoutingMode(.network)
+        let route = try XCTUnwrap(world.passengerRoutes(from: ends[0].station, to: ends[1].station).first)
+        let journey = try XCTUnwrap(PassengerJourney(origin: ends[0].station, route: route))
+        let west = try XCTUnwrap(world.passengers.firstIndex { $0.station == ends[0].station })
+        world.passengers[west].release(5, along: journey, at: GameTime(minutes: -1))
+        let tool = middlePlatform(on: world)
+        tool.addNetworkPlatform()
+        XCTAssertEqual(tool.message?.kind, .success, tool.message?.text ?? "")
+        XCTAssertEqual(tool.world.network.edges.count, 5, "levelled")
+        XCTAssertEqual(tool.world.passengerLedger(of: ends[0].station).abandoned, 0)
+        XCTAssertEqual(tool.world.passengerLedger(of: ends[0].station).waiting, 5)
     }
 
     /// A train standing at a platform on the edge: refused, saying a train
