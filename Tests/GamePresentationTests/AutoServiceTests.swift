@@ -39,6 +39,109 @@ final class AutoServiceTests: XCTestCase {
         return (world, a, b, c)
     }
 
+    /// Line A–B over three edges, A's platform on a short one at the west
+    /// end, B's on one at the east end, 4 km of single track between them,
+    /// and three trains: one waiting at each end, where the line's trips
+    /// start each way, and one halfway along the single track, where the
+    /// passing loop it needs goes in.
+    private func endsTaken(rules: NewGameRules) throws -> (world: GameWorld, line: LineID, a: StationID, b: StationID, between: TrainID) {
+        var world = GameWorld.newGame(rules: rules)
+        world.setTourism(nil)
+        let platform = Int64(4) * world.platformCarLength
+        let end = 2 * platform
+        let span = 4_000 * WorldCoordinate.unitsPerMetre
+        let x = world.bounds.width / 2 - span / 2, y = world.bounds.height / 2
+        let nodes = try [x, x + end, x + end + span, x + 2 * end + span].map { try world.buildTrackNode(at: WorldCoordinate(x: $0, y: y)) }
+        let west = try world.buildTrackEdge(from: nodes[0], to: nodes[1])
+        let middle = try world.buildTrackEdge(from: nodes[1], to: nodes[2])
+        let east = try world.buildTrackEdge(from: nodes[2], to: nodes[3])
+        let a = try world.buildStation(named: "A", at: PlanPoint(x: x + platform, y: y)).id
+        try world.addTrackPlatform(a, on: west, from: platform / 2, to: platform + platform / 2)
+        let b = try world.buildStation(named: "B", at: PlanPoint(x: x + end + span + platform, y: y)).id
+        try world.addTrackPlatform(b, on: east, from: platform / 2, to: platform + platform / 2)
+        let line = try world.createLine(named: "Line 1", stops: [a, b]).id
+        let journey = try XCTUnwrap(world.lineJourney(line))
+        let back = try XCTUnwrap(GameSession.farEndJourney(of: line, in: world))
+        for (name, start) in [("West", journey), ("East", back)] {
+            let train = try world.purchaseTrain(named: name).id
+            try GameSession.placeAtStart(train, of: start, in: &world)
+            try world.assignTrain(train, to: line)
+        }
+        let between = try world.purchaseTrain(named: "Between").id
+        let length = try XCTUnwrap(world.trackEdge(middle)?.length)
+        try world.placeTrain(between, at: .onEdge(TrackTraversal(edge: middle, direction: .forward), offset: length / 2))
+        try world.assignTrain(between, to: line)
+        return (world, line, a, b, between)
+    }
+
+    /// Realistic rules: the line card's loop goes in where the train
+    /// between the ends stands, and with both ends taken that train has
+    /// nowhere to go back to. The loop waits, the train stays on its line,
+    /// and the message says to tap again once it has passed.
+    func testALoopWaitsWhenTheTrainInItsWayCannotGoBack() throws {
+        let (world, line, _, _, between) = try endsTaken(rules: .realistic)
+        let session = GameSession(world: world)
+        session.selectLine(line)
+        let plans = session.passingLoopsNeeded(for: line, trains: 3, in: world)
+        XCTAssertEqual(plans.count, 1)
+        var trial = world
+        do throws(GameError) {
+            _ = try session.apply(AutoService(newLine: nil, line: line, loops: plans, trains: 0, cars: Train.minimumCars, language: .english), to: &trial)
+            XCTFail("the train in the way has nowhere to go back to")
+        } catch {
+            XCTAssertEqual(error, .trackReserved(between))
+        }
+
+        session.addPassingLoopToSelectedLine()
+        let text = session.message?.text ?? ""
+        XCTAssertEqual(session.message?.kind, .failure, text)
+        XCTAssertTrue(text.contains("Tap again once it has passed"), text)
+        XCTAssertEqual(session.world.lines, world.lines)
+        XCTAssertEqual(session.world.stations, world.stations)
+        XCTAssertEqual(session.world.trains, world.trains)
+        XCTAssertEqual(session.world.economy.balance, world.economy.balance)
+        XCTAssertEqual(session.world.assignedLine(of: between), line)
+    }
+
+    /// Simple rules: "Add a Train" on the same line needs that loop first,
+    /// so it waits too, and nothing is bought.
+    func testAddATrainWaitsWhenTheTrainInTheLoopsWayCannotGoBack() throws {
+        let (world, line, _, _, between) = try endsTaken(rules: .simple)
+        let session = GameSession(world: world)
+        XCTAssertTrue(session.runsLinesForThePlayer)
+        session.selectLine(line)
+        session.addTrainToSelectedLine()
+        let text = session.message?.text ?? ""
+        XCTAssertEqual(session.message?.kind, .failure, text)
+        XCTAssertTrue(text.contains("Tap again once it has passed"), text)
+        XCTAssertEqual(session.world.lines, world.lines)
+        XCTAssertEqual(session.world.trains, world.trains)
+        XCTAssertEqual(session.world.economy.balance, world.economy.balance)
+        XCTAssertEqual(session.world.assignedLine(of: between), line)
+    }
+
+    /// Simple rules: a second line over the same single track still opens,
+    /// without the loop; the first line keeps its trains, and the message
+    /// says the loop goes in with a train added once the other has passed.
+    func testANewLineOpensWithoutItsLoopWhenTheTrainInTheWayCannotGoBack() throws {
+        let (world, line, a, b, between) = try endsTaken(rules: .simple)
+        let session = GameSession(world: world)
+        for stop in [a, b] {
+            session.selectStation(stop)
+            session.addSelectedStationToLineDraft()
+        }
+        XCTAssertEqual(session.lineOpeningPreview?.loop, false)
+        session.createLineFromDraft()
+        let text = session.message?.text ?? ""
+        XCTAssertEqual(session.message?.kind, .success, text)
+        XCTAssertEqual(session.world.lines.count, 2, text)
+        XCTAssertTrue(session.world.stations.allSatisfy { $0.operationMode != .closed }, "no loop")
+        XCTAssertEqual(session.world.line(id: line), world.line(id: line))
+        XCTAssertEqual(session.world.assignedLine(of: between), line)
+        XCTAssertEqual(session.world.train(id: between)?.position, world.train(id: between)?.position)
+        XCTAssertTrue(text.contains("Once it has passed, tap Add a Train"), text)
+    }
+
     private func draftLine(_ stops: [StationID], in session: GameSession) {
         for stop in stops {
             session.selectStation(stop)

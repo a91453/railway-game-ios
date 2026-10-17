@@ -258,7 +258,7 @@ extension GameSession {
         let key = LineOpeningMemo.Key(stops: stops, worldRevision: commandRevision)
         if let memo = lineOpeningMemo, memo.key == key { return memo.preview }
         var preview: LineOpeningPreview?
-        if let plan = autoServicePlan(creating: Self.suggestedLineName(for: world, in: language), stops: stops, targets: nil).flatMap(feasible),
+        if let plan = autoServicePlan(creating: Self.suggestedLineName(for: world, in: language), stops: stops, targets: nil).flatMap(feasible)?.plan,
            let priced = try? priced({ world throws(GameError) in try apply(plan, to: &world) }) {
             let trains = priced.result.line.map(\.trains.count) ?? 0
             preview = LineOpeningPreview(cost: priced.cost, train: trains > 0, loop: priced.result.number > 0)
@@ -268,18 +268,24 @@ extension GameSession {
     }
 
     /// `plan` as it can run now: whole, or without its loops when they
-    /// cannot go in (a train stands on or has reserved that track), or
-    /// `nil` when even that is refused, for the line to be made as before.
-    func feasible(_ plan: AutoService) -> AutoService? {
-        var candidates = [plan]
-        if !plan.loops.isEmpty {
-            candidates.append(AutoService(
+    /// cannot go in (a train stands on or has reserved that track, or one
+    /// in the way cannot go back on its line), or `nil` when even that is
+    /// refused, for the line to be made as before. `trainInTheWay`: its
+    /// loops were left out because a train is on their track.
+    func feasible(_ plan: AutoService) -> (plan: AutoService, trainInTheWay: Bool)? {
+        var trial = world
+        do throws(GameError) {
+            _ = try apply(plan, to: &trial)
+            return (plan, false)
+        } catch {
+            guard !plan.loops.isEmpty else { return nil }
+            let without = AutoService(
                 newLine: plan.newLine, line: plan.line, loops: [], trains: plan.trains, cars: plan.cars, language: plan.language
-            ))
-        }
-        return candidates.first { candidate in
-            var trial = world
-            return (try? apply(candidate, to: &trial)) != nil
+            )
+            trial = world
+            guard (try? apply(without, to: &trial)) != nil else { return nil }
+            if case .trackReserved = error { return (without, true) }
+            return (without, false)
         }
     }
 
@@ -401,9 +407,11 @@ extension GameSession {
     }
 
     /// What the message says after `plan`: the trains, the loops, and what
-    /// it cost.
+    /// it cost; `loopWaits`, that the loop the new line needed was left
+    /// out because a train is on its track.
     static func autoServiceText(
-        _ plan: AutoService, outcome: PlayerCommand.Outcome, line id: LineID, cost: Money, in world: GameWorld, language: DisplayLanguage
+        _ plan: AutoService, outcome: PlayerCommand.Outcome, line id: LineID, cost: Money, in world: GameWorld, language: DisplayLanguage,
+        loopWaits: Bool = false
     ) -> String {
         guard let line = world.line(id: id) else { return "" }
         let count = line.trains.count
@@ -425,6 +433,11 @@ extension GameSession {
             text += language.text(
                 " A passing loop went in on its single track, so its trains pass each other there.",
                 "單線上加了待避線，列車會在那裡交會。"
+            )
+        } else if loopWaits {
+            text += language.text(
+                " Its passing loop is not in yet: a train is on that track now. Once it has passed, tap Add a Train and the loop goes in with the next train.",
+                "待避線還沒蓋：那段單線上現在有列車。等它開過去再按「加開一列車」，待避線會和下一列車一起蓋。"
             )
         }
         text += liftedText(outcome, in: language)
@@ -498,7 +511,8 @@ extension GameSession {
     /// Runs `plan` in `world` (``apply(_:to:)``): the line made, the loops
     /// built and made stops of the lines through them, then the trains.
     /// The outcome has the line, the loops built in its count, and the
-    /// trains left off the track.
+    /// trains left off the track. Throws ``GameError/trackReserved(_:)``
+    /// naming a train in a loop's way that cannot go back on its line.
     func apply(_ plan: AutoService, to world: inout GameWorld) throws(GameError) -> PlayerCommand.Outcome {
         var outcome = PlayerCommand.Outcome()
         let id: LineID
@@ -513,7 +527,10 @@ extension GameSession {
         // GameCore never cuts track a train stands on or has reserved: a
         // line's train in the way is taken off its line and the track, as
         // re-forming a line takes its trains off (decision 180), and put
-        // back where its line's trips start once the loop is in.
+        // back where its line's trips start once the loop is in. When both
+        // its line's ends are taken, the whole command is refused: the
+        // loop waits until the train has passed, rather than the train
+        // leaving its line unseen.
         var lifted: [(train: TrainID, line: LineID, pattern: Int?)] = []
         for loop in plan.loops {
             var built: Station?
@@ -540,14 +557,12 @@ extension GameSession {
             outcome.number += 1
         }
         for (train, line, pattern) in lifted {
-            guard let journey = world.lineJourney(line) else { continue }
+            guard let journey = world.lineJourney(line) else { throw .trackReserved(train) }
             var placed = world
             if (try? Self.placeAtStart(train, of: journey, in: &placed)) == nil {
                 placed = world
                 guard let back = Self.farEndJourney(of: line, in: world), (try? Self.placeAtStart(train, of: back, in: &placed)) != nil else {
-                    // Left off the track, as a train bought with no room.
-                    outcome.held += 1
-                    continue
+                    throw .trackReserved(train)
                 }
             }
             world = placed

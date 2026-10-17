@@ -1871,11 +1871,15 @@ public final class GameSession {
         // Decision 264: under simple rules the line comes with its first
         // train, and the passing loop its single track needs.
         let name = Self.suggestedLineName(for: world, in: language)
-        if runsLinesForThePlayer, let plan = autoServicePlan(creating: name, stops: stops, targets: real?.targets).flatMap(feasible) {
+        if runsLinesForThePlayer, let found = autoServicePlan(creating: name, stops: stops, targets: real?.targets).flatMap(feasible) {
+            let plan = found.plan
             let balance = world.economy.balance
             let made = perform(.autoService(plan)) { outcome, _, world in
                 guard let id = outcome.line?.id else { return "" }
-                return Self.autoServiceText(plan, outcome: outcome, line: id, cost: Money(balance.amount - world.economy.balance.amount), in: world, language: language)
+                return Self.autoServiceText(
+                    plan, outcome: outcome, line: id, cost: Money(balance.amount - world.economy.balance.amount), in: world, language: language,
+                    loopWaits: found.trainInTheWay
+                )
             }
             if let created = made?.line?.id {
                 selectedLineID = created
