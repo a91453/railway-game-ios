@@ -335,6 +335,108 @@ final class RealWorldMapUITests: XCTestCase {
         }
     }
 
+    /// TestFlight 67.1's report ("字會一直被面板擋住"): a phone on its side,
+    /// the track card open, and the map's pill for the track's upgrade
+    /// with a long line of words, which ran from the tools to under the
+    /// card and was cut off there. Here a stretch is built, picked, and
+    /// made double from its card, at a large text size so the pill's words
+    /// are long: the pill stays left of the card, its words wrap, and its
+    /// ✓ and ✕ can be tapped. Full lane only (not in the pull request
+    /// gate).
+    func testTheUpgradePillStaysBesideTheTrackCard() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
+            "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXL",
+        ]
+        app.launch()
+        defer { app.terminate() }
+
+        startARealWorldGameFromTaipei(in: app)
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 15), "The game starts")
+        tappable(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause").tap()
+        // Some 330 m a point, as in the platform test above, so the stretch
+        // stays on land the game owns.
+        let zoomIn = app.buttons["Zoom in"]
+        XCTAssertTrue(zoomIn.appears(within: 10))
+        for _ in 0..<5 where zoomIn.isEnabled {
+            zoomIn.tap()
+        }
+
+        let build = app.buttons["dock.build"]
+        tappable(app.buttons.matching(identifier: "dock.build"), name: "dock.build").tap()
+        let network = app.buttons["tool.network"]
+        network.waitUntilSettled()
+        network.tap()
+
+        // The platform test's stretch, built with the map's ✓ (or the
+        // details card's Build Track).
+        let hudBottom = app.buttons["hud.menu"].frame.maxY
+        let dockTop = build.frame.minY
+        let middle = (hudBottom + dockTop) / 2
+        let frame = map.frame.intersection(app.frame)
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        func point(_ fraction: CGFloat) -> XCUICoordinate {
+            origin.withOffset(CGVector(dx: frame.minX + frame.width * fraction, dy: middle))
+        }
+        point(0.25).tap()
+        point(0.6).tap()
+        let confirm = app.buttons["map.build.confirm"]
+        let card = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Build Track'")).firstMatch
+        let builder = confirm.appears(within: 10) ? confirm : card
+        XCTAssertTrue(builder.appears(within: 10), "No way to build the stretch")
+        XCTAssertTrue(builder.becomesHittable(), "The ✓ cannot be tapped: \(builder.frame)")
+        builder.tap()
+        let built = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "Built Track")).firstMatch
+        if !built.appears(within: 10) {
+            let problem = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Problem'")).firstMatch
+            XCTFail("The stretch was not built: \(problem.exists ? problem.label : "no banner")")
+            return
+        }
+
+        // The tools put away, the stretch picked: its card opens beside
+        // the map. Off the map's own buttons in the middle, as above.
+        let done = app.buttons["tool.select"]
+        XCTAssertTrue(done.appears(within: 5), "No way to put the tools away")
+        done.waitUntilSettled()
+        done.tap()
+        let mapButtons = ["map.open3D", "Zoom out", "Zoom in"].map { app.buttons[$0] }
+        var trackX = frame.minX + frame.width * 0.425
+        if let covering = mapButtons.lazy.filter(\.exists).map({ $0.frame.insetBy(dx: -4, dy: -4) })
+            .first(where: { $0.contains(CGPoint(x: trackX, y: middle)) }) {
+            trackX = covering.minX - 1
+        }
+        origin.withOffset(CGVector(dx: trackX, dy: middle)).tap()
+        let double = app.buttons["inspector.track.double"]
+        if !double.appears(within: 5) {
+            let controls = app.buttons["controls.toggle"]
+            if controls.exists { controls.tap() }
+        }
+        XCTAssertTrue(double.appears(within: 10), "No Make double track on the track card")
+        double.waitUntilSettled()
+        double.tap()
+
+        let words = app.staticTexts["map.build.catchment"]
+        XCTAssertTrue(words.appears(within: 10), "No words on the upgrade's pill")
+        let details = app.descendants(matching: .any)["details.card"].firstMatch
+        XCTAssertTrue(details.appears(within: 5), "The track card closed")
+        let cardEdge = details.frame.minX
+        let cancel = app.buttons["map.build.cancel"]
+        for (name, element) in [("words", words), ("✓", confirm), ("✕", cancel)] {
+            XCTAssertTrue(element.appears(within: 5), "No \(name) on the pill")
+            XCTAssertLessThanOrEqual(
+                element.frame.maxX, cardEdge,
+                "The pill's \(name) runs under the track card: \(element.frame), card \(details.frame)"
+            )
+        }
+        for (name, button) in [("✓", confirm), ("✕", cancel)] {
+            XCTAssertTrue(button.becomesHittable(), "The pill's \(name) cannot be tapped: \(button.frame)")
+        }
+    }
+
     /// A player's report (a phone held sideways, a real-world map, in
     /// Chinese): the track tool's buttons, with "沿真實鐵路" (decision 213)
     /// added, did not fit the side panel, and "進階選項" and "沿真實鐵路"
