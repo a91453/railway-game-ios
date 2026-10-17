@@ -46,4 +46,40 @@ final class Map3DHandoffTests: XCTestCase {
         XCTAssertEqual(back.y, y, accuracy: 64)
         XCTAssertEqual(back.referenceSize, size, accuracy: size * 1e-4)
     }
+
+    /// Decision 269, later fix (71.1, the owner: "3D 一放大就跳回 2D"): a
+    /// 3D map the button opened, kilometres out, never hands back; one a
+    /// pinch handed over hands back only as it is pinched out past the line.
+    func testOnlyAPinchOutPastTheLineHandsBack() {
+        // The button's 3D map, opened kilometres out: no pinch hands back.
+        XCTAssertFalse(Map3DHandoff.handsBack(handedOverAt: nil, from: 9_000, to: 7_000))
+        XCTAssertFalse(Map3DHandoff.handsBack(handedOverAt: nil, from: 9_000, to: 11_000))
+        // Handed over at 400 m: closer never; out past 960 m, yes.
+        XCTAssertFalse(Map3DHandoff.handsBack(handedOverAt: 400, from: 400, to: 300))
+        XCTAssertFalse(Map3DHandoff.handsBack(handedOverAt: 400, from: 800, to: 900))
+        XCTAssertTrue(Map3DHandoff.handsBack(handedOverAt: 400, from: 900, to: 1_000))
+        XCTAssertFalse(Map3DHandoff.handsBack(handedOverAt: 400, from: 1_100, to: 1_000), "coming closer")
+        // A 3D view taller than the 2D map's opens farther out at the same
+        // scale: a fifth past that, not at once.
+        XCTAssertFalse(Map3DHandoff.handsBack(handedOverAt: 1_040, from: 1_040, to: 1_100))
+        XCTAssertTrue(Map3DHandoff.handsBack(handedOverAt: 1_040, from: 1_200, to: 1_300))
+    }
+
+    /// The same on a real-world map's scene: handed over from its 2D map's
+    /// zoom, the camera opens inside the line and a pinch closer keeps it.
+    func testOnARealMapAPinchCloserStaysInThreeD() {
+        let world = GameWorld.newGame(anchor: GeoAnchor(latitudeDegrees: 24.8016, longitudeDegrees: 120.9716)!)
+        let scene = Map3DScene(world: world)
+        for (width, height) in [(Float(390), Float(844)), (844, 390)] {
+            let size = Map3DHandoff.opensAt(viewportHeight: Double(height))
+            let middle = scene.worldPosition(of: .zero)
+            let camera = Map3DHandoff.camera(from: Map3DHandoff.Plan(x: middle.x, y: middle.y, referenceSize: size), in: scene, viewport: (width, height))
+            XCTAssertLessThanOrEqual(camera.distance, Map3DCamera.flatFrom + 1)
+            let closer = camera.zoomed(by: 1.5)
+            XCTAssertLessThan(closer.distance, camera.distance)
+            XCTAssertFalse(Map3DHandoff.handsBack(handedOverAt: camera.distance, from: camera.distance, to: closer.distance))
+            let farther = camera.zoomed(by: 0.3)
+            XCTAssertTrue(Map3DHandoff.handsBack(handedOverAt: camera.distance, from: camera.distance, to: farther.distance))
+        }
+    }
 }
