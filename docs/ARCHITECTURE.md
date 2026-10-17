@@ -11541,6 +11541,33 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 第 6 個 PR（GameCore 的新目標，作者說可以不做）：一條線上幾列車（第 3 關）、雙線長度（第 5 關）、機廠入庫（第 7 關）、貨運噸數（第 8 關）、觀光客（第 9 關）、完成的委託（第 10 關）。
 - 決策 264「下一步」剩下的一件：已在決策 264 的「之後的修正」（2026-10-17）做完。
 
+### 273. 核心玩法收尾：入門全過之後，與「回報問題」裡的匿名關卡計時
+
+2026-10-17，NEXT_PRIORITIES §16 第 2 項，遊戲規劃 session_01V1xd3H9vNkuZoSA3czNfGm 派工（#777 合併後）。號碼依工作登記 #231：決策 273（272 是 #776 的）。存檔版本、golden schema、GameCore 都不動。
+
+1. **解鎖不會漏到自由模式**：`GameSession.allows(_:)` 只看這一局的關卡（世界的 scenario id），自由模式、挑戰、示範一直全部都有；入門過了幾關不影響它們。CORE_LOOP §2.5 想過的「自由模式依入門進度給工具」沒有做（決策 266 已定自由模式全開），所以不需要「一鍵全開」。Linux 測試 `LessonTests.testEveryLessonPassedAndFreePlayHasEverything` 釘住。
+2. **全部過關**（`GameLauncher.passedEveryLesson`）：關卡清單最上面多一段「全部關卡都過了。自由模式一開始就有全部的工具。」與「開始自由模式」（`lessons.allPassed`、`lessons.freePlay`），用新遊戲選項開一局。
+3. **匿名的關卡計時**（`LauncherPreferences.lessonPlays`，每關一筆 `LessonPlay`；舊的檔案讀成 `nil`）：
+   - 玩了幾秒：從開始這一關到離開（回到開始畫面、開別的遊戲），App 在背景的時間不算（`setActive`）。
+   - 第一次過關時玩了幾秒、開始了幾次、離開時停在引導的第幾步（引導結束後是空的）。
+   - 「回報問題」多一行：「入門：1 ★3 9 分，6 分 過關，停在第 1／15 步；2 ★0 1 分，停在第 1／5 步，開始 2 次」（`GameLauncher.lessonReport(in:)`，只讀不寫；`ProblemReport.lessons`）。開始畫面與遊戲裡的回報都有。
+   - 只有關卡號、星數、分鐘數、步數與次數，沒有任何個人資料或裝置識別；和原本的回報一樣，玩家在分享單看得到全文，按下傳送前不會送出。說明文字多寫「每一關花了多久」。
+   - 計時存在裝置上，不在存檔裡（和星星一樣）。
+4. **測試**：`LessonTests.testTheLessonsTimingsForAProblemReport`：用注入的時鐘，背景的一小時不算，過關的分鐘數、停的步數、開始次數與兩種語言的文字。
+
+**四方**：
+- 玩家：過完入門知道下一步去哪；回報問題時不用自己說明卡在哪一關多久。
+- 開發：TestFlight 的「第 1 關花幾分鐘、卡在哪」（§16 第 2 項）直接在回報裡；只在 GamePresentation 與一行行的畫面傳遞。
+- 美術：一個 SF Symbol（`checkmark.seal.fill`）與現有的按鈕樣式。
+- 音樂：無。
+
+**沒有採用**：
+- 自動上傳計時：要伺服器，也違反「按下傳送前不送出」。
+- 用遊戲內的天數計時：快轉時天數與玩家花的時間對不上。
+- 自由模式依入門進度給工具（CORE_LOOP §2.5）：決策 266 已定自由模式全開。
+
+**UI 測試**（交給 Codex）：全部過關時清單最上面有「開始自由模式」，按了開一局自由模式；「回報問題」的分享文字有「入門：」一行。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

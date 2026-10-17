@@ -542,6 +542,34 @@ struct LessonPicker: View {
         let language = launcher.language
         NavigationStack {
             List {
+                // Decision 266, later: every lesson passed, the way on is
+                // free play, where every tool is open.
+                if launcher.passedEveryLesson {
+                    Section {
+                        Label {
+                            Text(verbatim: language.text(
+                                "Every lesson passed. Free play has every tool from the start.",
+                                "全部關卡都過了。自由模式一開始就有全部的工具。"
+                            ))
+                        } icon: {
+                            Image(systemName: "checkmark.seal.fill")
+                                .foregroundStyle(Theme.accent)
+                        }
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textPrimary)
+                        .accessibilityIdentifier("lessons.allPassed")
+                        Button {
+                            dismiss()
+                            launcher.startNewGame()
+                        } label: {
+                            Text(verbatim: language.text("Start Free Play", "開始自由模式"))
+                                .font(.headline)
+                                .frame(maxWidth: .infinity, minHeight: 44)
+                        }
+                        .buttonStyle(ThemeProminentButtonStyle())
+                        .accessibilityIdentifier("lessons.freePlay")
+                    }
+                }
                 Section {
                     ForEach(Lesson.all) { lesson in
                         card(lesson, in: language)

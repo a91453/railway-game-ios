@@ -75,7 +75,7 @@ struct StartView: View {
         }
         .background(Theme.background)
         .sheet(isPresented: $showsSettings) {
-            SettingsView(audio: audio)
+            SettingsView(audio: audio, lessons: launcher.lessonReport(in: .app))
         }
         .sheet(isPresented: $showsHelp) {
             HelpView(language: launcher.language)

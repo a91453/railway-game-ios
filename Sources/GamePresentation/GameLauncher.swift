@@ -548,12 +548,25 @@ public final class GameLauncher {
     /// on screen when it has a guide.
     public func startLesson(_ lesson: Lesson) {
         guard begin(.newGame(lesson: lesson), keepingAutosave: true) else { return }
+        var plays = preferences.lessonPlays ?? [:]
+        plays[lesson.id, default: LessonPlay()].starts += 1
+        preferences.lessonPlays = plays
+        savePreferences()
         if !lesson.guide.isEmpty { session?.startTutorial() }
     }
 
     /// Keeps the stars `world`'s lesson was passed with, if more than before;
     /// lesson 1 passed counts as the tutorial finished.
     func recordLessonResult(of world: GameWorld) {
+        if let result = LessonResult(world: world), result.stars > 0, let lesson = world.lesson {
+            noteLessonTime()
+            var plays = preferences.lessonPlays ?? [:]
+            if plays[lesson.id, default: LessonPlay()].passedAfter == nil {
+                plays[lesson.id, default: LessonPlay()].passedAfter = plays[lesson.id]?.seconds ?? 0
+                preferences.lessonPlays = plays
+                savePreferences()
+            }
+        }
         guard let result = LessonResult(world: world), let lesson = world.lesson,
               result.stars > stars(of: lesson) else { return }
         var stars = preferences.lessonStars ?? [:]
@@ -561,6 +574,88 @@ public final class GameLauncher {
         preferences.lessonStars = stars
         if lesson.number == 1 { preferences.tutorialCompleted = true }
         savePreferences()
+    }
+
+    /// Whether every lesson has been passed (decision 266, later): the
+    /// lesson list then says so and points to free play.
+    public var passedEveryLesson: Bool {
+        Lesson.all.allSatisfy { stars(of: $0) > 0 }
+    }
+
+    // MARK: - Lesson timings (decision 266, later)
+
+    /// The lesson being timed and since when; `nil` outside a lesson or
+    /// while the app is in the background.
+    @ObservationIgnored private var lessonClock: (id: String, since: Date)?
+
+    /// The clock the timings read: the time now (tests set their own).
+    @ObservationIgnored var now: () -> Date = Date.init
+
+    /// Starts timing the game's lesson, if it is one and the app is in the
+    /// foreground.
+    private func startLessonClock() {
+        lessonClock = nil
+        guard isActive, let id = session?.lesson?.id else { return }
+        lessonClock = (id, now())
+    }
+
+    /// Adds the time since the lesson's clock was started to its record,
+    /// and starts it again from now.
+    private func noteLessonTime() {
+        guard let clock = lessonClock else { return }
+        let time = now()
+        let seconds = max(0, Int(time.timeIntervalSince(clock.since)))
+        lessonClock = (clock.id, time)
+        guard seconds > 0 else { return }
+        var plays = preferences.lessonPlays ?? [:]
+        plays[clock.id, default: LessonPlay()].seconds += seconds
+        preferences.lessonPlays = plays
+        savePreferences()
+    }
+
+    /// Stops timing the lesson, keeping the time played.
+    private func stopLessonClock() {
+        noteLessonTime()
+        lessonClock = nil
+    }
+
+    /// Notes the guide's step a lesson's game is on (or `nil` once the guide
+    /// is over).
+    private func noteLessonStep(_ step: String?) {
+        guard let id = session?.lesson?.id else { return }
+        var plays = preferences.lessonPlays ?? [:]
+        guard plays[id, default: LessonPlay()].step != step else { return }
+        plays[id, default: LessonPlay()].step = step
+        preferences.lessonPlays = plays
+        savePreferences()
+    }
+
+    /// The lessons played on this device, one line for a problem report:
+    /// for each, its stars, the minutes played, the minutes it took to pass
+    /// and the guide's step it was left on. Nothing personal; `nil` before
+    /// any lesson was played.
+    /// Only reads: the lesson being played counts its time so far.
+    public func lessonReport(in language: DisplayLanguage) -> String? {
+        var plays = preferences.lessonPlays ?? [:]
+        if let clock = lessonClock {
+            plays[clock.id, default: LessonPlay()].seconds += max(0, Int(now().timeIntervalSince(clock.since)))
+        }
+        let parts = Lesson.all.compactMap { lesson -> String? in
+            guard let play = plays[lesson.id] else { return nil }
+            func minutes(_ seconds: Int) -> String { language.text("\((seconds + 30) / 60) min", "\((seconds + 30) / 60) 分") }
+            var text = "\(lesson.number) ★\(stars(of: lesson)) \(minutes(play.seconds))"
+            if let passed = play.passedAfter {
+                text += language.text(", passed after \(minutes(passed))", "，\(minutes(passed)) 過關")
+            }
+            if let step = play.step, let index = lesson.guide.firstIndex(where: { $0.id == step }) {
+                text += language.text(", left at step \(index + 1) of \(lesson.guide.count)", "，停在第 \(index + 1)／\(lesson.guide.count) 步")
+            }
+            if play.starts > 1 {
+                text += language.text(", started \(play.starts) times", "，開始 \(play.starts) 次")
+            }
+            return text
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: language.text("; ", "；"))
     }
 
     /// Starts lesson 1 with its guide on its first step: the tutorial,
@@ -753,6 +848,7 @@ public final class GameLauncher {
                 return false
             }
         }
+        stopLessonClock()
         session?.stopGameLoop()
         let started = GameSession(world: world, language: language)
         started.population = population
@@ -777,12 +873,16 @@ public final class GameLauncher {
             started.keepTutorialToResume(atStep: step)
             started.notedTutorialStepToResume = step
         }
-        started.onTutorialStepToResume = { [weak self] step in self?.noteTutorialStepToResume(step) }
+        started.onTutorialStepToResume = { [weak self] step in
+            self?.noteTutorialStepToResume(step)
+            self?.noteLessonStep(step)
+        }
         started.onMidnight = { [weak self, weak started] in
             guard let self, let started else { return }
             self.checkAchievements(of: started)
         }
         session = started
+        startLessonClock()
         lastSlotWorld = started.worldToSave
         message = nil
         playSound?(.transition)
@@ -974,6 +1074,7 @@ public final class GameLauncher {
     /// being thrown away unsaved.
     public func returnToStart() {
         guard session == nil || autosaveCurrentGame(refreshing: false) else { return }
+        stopLessonClock()
         let left = session != nil
         session?.stopGameLoop()
         session = nil
@@ -1018,6 +1119,7 @@ public final class GameLauncher {
         guard active != isActive else { return }
         isActive = active
         if active {
+            startLessonClock()
             session?.startGameLoop()
             autosaveLoop = Task { [weak self] in
                 while true {
@@ -1033,6 +1135,7 @@ public final class GameLauncher {
         } else {
             autosaveLoop?.cancel()
             autosaveLoop = nil
+            stopLessonClock()
             session?.stopGameLoop()
             autosaveInBackground()
         }
