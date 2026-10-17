@@ -431,7 +431,10 @@ extension XCUIApplication {
         func shown() -> Bool {
             button.exists && band.minY <= button.frame.midY && button.frame.midY <= band.maxY
         }
-        for _ in 0..<drags where !shown() {
+        // A `where !shown()` keeps querying for every remaining iteration
+        // after the row is visible (about 63 s in run 38996792440).
+        for _ in 0..<drags {
+            if shown() { return true }
             if !button.exists {
                 drag(in: area, at: area.midX, from: 0.85, to: 0.15)
             } else if button.frame.midY < band.minY {
