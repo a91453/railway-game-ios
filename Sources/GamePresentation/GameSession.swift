@@ -588,6 +588,13 @@ public final class GameSession {
     /// map floats over them (``FareFloatBoard``); `nil` before any. Never
     /// saved.
     public internal(set) var farePulse: FarePulse?
+    /// Decision 276: the trips the last step ended full or roomy, which
+    /// the map stamps at the stations they ended at (``TripStampBoard``);
+    /// `nil` before any. Never saved.
+    public internal(set) var tripStampPulse: TripStampPulse?
+    /// Decision 276: the fullest each running trip's train has been, read
+    /// after every step for the stamps. Never saved.
+    @ObservationIgnored var tripLoads = TripLoads()
     /// Decision 256: the goals the last step met, which the map checks off
     /// with a tune; `nil` before any. Never saved.
     public internal(set) var goalPulse: GoalPulse?

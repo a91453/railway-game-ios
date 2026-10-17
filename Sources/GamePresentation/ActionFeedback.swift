@@ -267,12 +267,17 @@ public struct TownGrowthPulse: Hashable, Sendable {
 
 extension GameSession {
     /// Decision 256: what a step did that the map answers: fares over
-    /// the stations, goals met (the tune), towns grown a step at
-    /// midnight. Called after the step with the world before it.
+    /// the stations, trips stamped full or roomy (decision 276), goals met
+    /// (the tune), towns grown a step at midnight. Called after the step with the world before it.
     func noteActions(since before: GameWorld) {
         let fares = StationFare.taken(from: before, to: world)
         if !fares.isEmpty {
             farePulse = FarePulse(fares: fares, serial: (farePulse?.serial ?? 0) + 1)
+        }
+        // Decision 276: each trip's result, where it ended.
+        let stamps = tripLoads.step(from: before, to: world)
+        if !stamps.isEmpty {
+            tripStampPulse = TripStampPulse(stamps: stamps, serial: (tripStampPulse?.serial ?? 0) + 1)
         }
         let titles = GoalPulse.met(from: before, to: world, in: language)
         if !titles.isEmpty {

@@ -740,6 +740,11 @@ struct MapView: View {
                     FareFloatMarks(session: session, camera: projection)
                         .mask { attribution.fill() }
                 }
+                // Decision 276: a trip's result where it ended.
+                .overlay(alignment: .topLeading) {
+                    TripStampMarks(session: session, camera: projection)
+                        .mask { attribution.fill() }
+                }
                 .overlay {
                     GoalMetCheck(pulse: session.goalPulse, language: session.language)
                 }
