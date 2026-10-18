@@ -398,8 +398,22 @@ public final class GameSession {
     /// (decision 204, ``DoubleTrack``), on ``networkDoubleSide`` of the
     /// way it is drawn.
     /// With ``networkTracesRealRailway`` too, the traced stretch gets it
-    /// (decision 247).
-    public var networkBuildsDouble = false
+    /// (decision 247); until the player sets it, a traced stretch is
+    /// single or double as the real line is (its later,
+    /// ``tracedDouble(_:)``).
+    public var networkBuildsDouble = false {
+        didSet { networkDoubleChosen = true }
+    }
+    /// Whether the player has set ``networkBuildsDouble``: from then on a
+    /// traced stretch follows it, not the real line.
+    public internal(set) var networkDoubleChosen = false
+    /// The "Double" switch as it shows: what the stretch drawn will be
+    /// (single or double as the real line is, while that decides it), and
+    /// otherwise ``networkBuildsDouble``. Setting it sets that.
+    public var networkDoubleShown: Bool {
+        get { networkPreview?.tracedDouble ?? networkBuildsDouble }
+        set { networkBuildsDouble = newValue }
+    }
     public var networkDoubleSide: PlatformTrackSide = .left
     /// Whether the next stretch follows the real railway under a
     /// real-world map (decision 213, ``tracePlan(from:to:)``): ends snap

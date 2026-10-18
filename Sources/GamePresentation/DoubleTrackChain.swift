@@ -164,6 +164,17 @@ extension GameSession {
             if case .straight = segments[index].curve, leaving == arriving,
                (to.x - from.x) * leaving.dy == (to.y - from.y) * leaving.dx {
                 curve = .straight
+            } else if case .cubic(let c1, let c2) = segments[index].curve {
+                // The chain's own curve moved out by the spacing, each
+                // control point beside its end: a new curve fitted to the
+                // ends' directions alone bends differently along a long
+                // traced edge and comes closer than the spacing midway.
+                // The miter at a node lies along the edge from the plain
+                // offset, so the curve still leaves and arrives along it.
+                func beside(_ point: PlanPoint, _ way: PlanVector) -> PlanPoint {
+                    DoubleTrack.beside(WorldCoordinate(x: point.x, y: point.y, z: 0), way: way, side: side, distance: DoubleTrack.spacing).plan
+                }
+                curve = .cubic(beside(c1, leaving), beside(c2, arriving))
             } else {
                 guard let found = NetworkBuilding.curve(from: from.plan, leaving: leaving, to: to.plan, leaving: arriving.reversed) else { return nil }
                 curve = found

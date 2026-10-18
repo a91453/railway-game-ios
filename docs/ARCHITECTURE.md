@@ -10000,6 +10000,30 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
 **後來**（2026-10-16，審查 #685–#711 第四節的兩項）：「升級為複線」只看點到的那一段旁邊有沒有軌道。範圍是「到兩端道岔」時，有兩種情況以前只得到一般的「軌道形狀不合」：整段路其中一段已經是複線（第二條在另一側時甚至會蓋成三條），以及沒有道岔的環線（第二條沒有兩端可以接）。現在預覽直接說原因，請玩家改選「只有這一段」，那個選項照樣蓋得出來。旁邊有沒有軌道在每一段的 1/4、1/2、3/4 處找（`hasTrackBeside`）。只改 GamePresentation，GameCore 與存檔不動。測試：`DoubleTrackUpgradeTests` 的 `testARunPartlyDouble…`（兩種語言）、`testALoopWithNoSwitch…`。
 
+**後來**（2026-10-18，HANDOFF §7.2 的「用 `tra_track_sections.json` 每段的 `tracks` 決定描線時預設單線或複線」；作者交辦，經 session_01KeynzCwtDyLHTUYBfKxy1c 轉派）：沿台鐵描線時，單線或複線預設照真實鐵路。只改 GamePresentation 與 App 的「複線」開關；GameCore、存檔版本、golden schema 不動，沿用本決策的號碼。
+1. **哪一段算哪一種**（`realDoubleTrack(along:)`）：描出可以蓋的那幾段（`TracePlan.buildable`），每 100 m 取一點（`tracedSectionStep`），看它落在 `tra_track_sections.json` 的哪一個站間：兩站的位置取 `track_stations.geojson` 的台鐵站，選「從一站經過這點到另一站」繞得最少的那一對（繞的路超過兩站距離就不算）。只看離描線 150 m 內的車站的站間（`tracedStationReach`）；一個站也沒經過（在兩站中間描一小段）時看全部站間。
+2. **整段一種**：一半以上的點在複線站間就整段鋪複線，一半以上在單線站間就整段單線，其餘（資料不夠）照舊。門檻一半和來源判雙線的 `parallelFrac` ≥ 0.5 同一把尺。不在中途換線（例如瑞芳—三貂嶺複線接平溪線單線）：`buildDoubleTrackChain` 一次只有一條第二條軌道，中途換要在每個接頭加渡線、或分成多個指令，要動的比這次多，留作缺口。
+3. **玩家選了就照玩家的**：`networkBuildsDouble` 被設過（`networkDoubleChosen`，同一局裡一直記得）就照它，不再看真實資料。「複線」開關改顯示實際會蓋的（`networkDoubleShown`：真實資料決定時顯示它，否則是玩家的值），按一下就是玩家的選擇。
+4. **只在台鐵**：描的是高鐵、捷運、林鐵，或資料沒有的地方，照舊（預覽的 `tracedDouble` 是 `nil`）。
+5. **玩家看到的字**：真實資料決定時，預覽與確認膠囊（`crossoverNote` 的開頭）和蓋好的訊息說「Double track, as the real railway is here.」「照真實鐵路鋪成複線。」或「Single track, as the real railway is here.」「照真實鐵路鋪成單線。」
+6. **順便修的錯**（`parallelChain`）：沿真實鐵路描出的曲線段可以很長（羅東附近一段 573 m），第二條原本只照兩端的方向另外求一條曲線，中段彎法不同，離主線只剩 2.9 m，GameCore 說「不到 4 m」整段蓋不了。所以以前描台鐵時打開「複線」，在宜蘭線就蓋不起來；預設複線後每次都會碰到。現在第二條直接把主線曲線的兩個控制點各往外移 5 m（端點的 miter 和控制點的位移只差沿切線的一段，所以出發與到達的方向不變）。`DoubleTrackUpgradeTests` 等既有測試照樣過。
+
+**四方**：
+- 玩家：沿宜蘭線、縱貫線描出來就是複線，平溪線、內灣線是單線，和真的一樣，不用每次記得切；不想要時按一下「複線」就照自己的。
+- 開發：只用 App 已經帶著的 `tra_track_sections.json`、`track_stations.geojson`，不加資料、不動 GameCore；一個預設值加一個「玩家選過」的旗標，Linux 測試涵蓋。
+- 美術：不加新元素：開關、預覽的第二條線、確認膠囊上的那一行都是既有的。
+- 音樂：無。
+
+**沒選的**（預覽）：
+- 中途換線（複線段鋪兩條、單線段鋪一條，接頭加渡線）：最像真的，但要多個第二條軌道與中途的渡線，指令與預覽都要改；等玩家需要時再做。
+- 照描線起點那一段決定：描很長時起點那段不代表整段（例如從瑞芳描到菁桐，大部分是單線）。
+- 只在預覽提示「真實是複線」、不改預設：玩家還是得自己切，這項就是要省掉這一步。
+- 每次重新開關「沿真實鐵路」就忘掉玩家的選擇：玩家明明選過，又被改回去，比較意外。
+
+**參考**：`Railway/taiwan-rail-reference-clean/source/data/tra_track_sections.json`（新版）與 App 帶的版本 243 個站間、`tracks` 全部相同，新版只多 `via`、`override` 欄位，所以不更新資料。產生器 `source/scripts/build_tra_track_sections.mjs`（14 m、25° 內的平行正線，佔比 ≥ 50% 為雙線）在新版裡找到了，`docs/research/F3_GRID_INVENTORY.md` 寫的缺口「平行的定義」有了出處，但這裡只讀它的結果。來源唯一的使用者是交會推估（`index.html` 的 `single(a,b)`／`inferMeetPassTimes`），沒有建造時用它的做法可以移植；「繞得最少的站間」是這裡自己的做法。外部：OpenTTD、Simutrans 沒有依真實資料決定單複線的工具（GPL，只看做法）。
+
+**測試**（`RealRailwayTracingTests`）：`testThePingxiLineTracesSingle`（十分—望古單線，預覽與訊息的字）、`testTheYilanLineTracesDouble`（羅東—冬山複線，一個指令、兩倍的邊，兩種語言；沒有第 6 點的修正時這個測試失敗）、`testThePlayersChoiceWins`（宜蘭線選單線、平溪線選複線）、`testOffTheTRAATraceIsAsBefore`（高鐵）。既有的台北—板橋、羅東—新馬測試是單線的測試，改成玩家選了單線。
+
 ### 248. 行車間隔每整分鐘決定一次：這一分鐘每列車最遠到哪（決策 228 的續、決策 37）
 
 問題（玩家回饋 66.1，規劃 session 指定優先於新功能）：決策 228 的「後來」為了整批推進＝逐秒推進，讓有真實班次、交通管制關著的世界幾乎每個 span 都逐秒移動列車。高鐵示範用快轉（`.fast`，每 tick 十分鐘遊戲時間）時每 tick 中位 510 ms，比 tick 間隔 100 ms 長得多，畫面一頓一頓。號碼依 #231：存檔版本 63、決策 248。
