@@ -199,17 +199,22 @@ public enum HighSpeedDemo {
         in language: DisplayLanguage, railways: RealRailways, population: PopulationGrid? = nil, places: PlaceGrid? = nil,
         water: WaterGrid? = nil, coverage: CoverageGrid? = nil, eventSeed: UInt32 = 1
     ) throws(Failure) -> GameWorld {
-        try make(spec, in: language, railways: railways, population: population, places: places, water: water, coverage: coverage, eventSeed: eventSeed)
+        try make(
+            spec, in: language, railways: railways, population: population, places: places, water: water, coverage: coverage, heights: nil,
+            eventSeed: eventSeed
+        )
     }
 
     /// A demo of `spec`'s line (decision 240): built as the high-speed
-    /// demo is, and opened at `spec`'s minute of the first day.
+    /// demo is, and opened at `spec`'s minute of the first day; over the
+    /// ground of `heights` where `spec` follows the real structures
+    /// (decision 279).
     static func make(
         _ spec: RealLineDemoSpec, in language: DisplayLanguage, railways: RealRailways, population: PopulationGrid?, places: PlaceGrid?,
-        water: WaterGrid?, coverage: CoverageGrid?, eventSeed: UInt32
+        water: WaterGrid?, coverage: CoverageGrid?, heights: HeightGrid?, eventSeed: UInt32
     ) throws(Failure) -> GameWorld {
-        let layout = try Layout(railways: railways, spec: spec)
-        var world = newWorld(paying: layout.cost(at: ConstructionCosts.newGame), eventSeed: eventSeed)
+        let layout = try Layout(railways: railways, spec: spec, heights: heights)
+        var world = newWorld(paying: layout.cost(eventSeed: eventSeed), eventSeed: eventSeed, ground: layout.ground)
         // Decision 240: the TRA demo's trains keep left (decision 202).
         world.setKeepLeft(spec.keepLeft)
         do throws(GameError) {
@@ -231,12 +236,20 @@ public enum HighSpeedDemo {
 
     /// The world the demo is built in: a new whole-Taiwan game with `cost`,
     /// what the layout costs, on top of its money, and its land read in as
-    /// it is needed.
-    static func newWorld(paying cost: Money, eventSeed: UInt32) -> GameWorld {
+    /// it is needed; with `ground` (decision 279), that ground read.
+    static func newWorld(paying cost: Money, eventSeed: UInt32, ground: [GroundBlock] = []) -> GameWorld {
         var world = GameWorld.newGame(
             anchor: WholeTaiwan.anchor, bounds: WholeTaiwan.bounds, balance: GameWorld.startingBalance + cost, eventSeed: eventSeed, land: []
         )
         world.setLandOnDemand()
+        if !ground.isEmpty {
+            do throws(GameError) {
+                try world.mapGround()
+                try world.setGround(ground)
+            } catch {
+                preconditionFailure("The demo's ground does not read: \(error)")
+            }
+        }
         // Decision 169: nor do its dwells lengthen in a crowd; the service
         // levels were measured without.
         world.setDoorCrowding(false)
@@ -255,6 +268,50 @@ public enum HighSpeedDemo {
         // Decision 183: nor does the city ask it for anything.
         world.setCityRequests(seed: nil)
         return world
+    }
+
+    // MARK: - Over the ground (decision 279)
+
+    /// How far either side of the down track the ground is read: past the
+    /// widest of the tracks beside it, a depot's outermost siding.
+    static let groundReach = 128.0 * RealWorldDemo.metre
+
+    /// The heights of a track along `path` over the ground of `heights`
+    /// (decision 279), as the real-world demo's (``TrackRise``): the real
+    /// line's bridges, viaducts and tunnels kept where its ground lets
+    /// them, and each of `levels` level, within
+    /// ``RealWorldDemo/stationReach`` of the ground, or of a viaduct's
+    /// height where the real one is on a viaduct (Dongshan). And the
+    /// ground read for it, to read into the world it is built in; `nil`
+    /// and none where no line within the grade keeps to its levels.
+    static func rise(
+        along path: WorldPath, levels: [ClosedRange<Double>], railways: RealRailways, heights: HeightGrid, frame: RealWorldFrame
+    ) -> (TrackRise?, [GroundBlock]) {
+        var world = newWorld(paying: Money(0), eventSeed: 1)
+        let points = stride(from: 0, through: path.length, by: 32 * RealWorldDemo.metre).flatMap { distance -> [PlanPoint] in
+            let point = path.point(at: distance), side = path.tangent(at: distance).normal
+            return [-groundReach, 0, groundReach].map { (point + side * $0).plan }
+        }
+        do throws(GameError) {
+            try world.mapGround()
+            try world.setGround(heights.ground(of: world.missingGroundBlocks(under: points), frame: frame))
+        } catch {
+            preconditionFailure("The demo's ground does not read: \(error)")
+        }
+        func ground(_ point: WorldVector) -> Double {
+            Double(world.groundHeight(at: point.plan) ?? 0)
+        }
+        let carried = railways.structures?.stretches(along: path, frame: frame) ?? []
+        let viaducts = carried.filter { $0.kind == .bridge && $0.range.upperBound - $0.range.lowerBound >= TrackRise.shortestCarried }
+            .map { ($0.range.lowerBound + TrackRise.carriedInset)...($0.range.upperBound - TrackRise.carriedInset) }
+        let reach = RealWorldDemo.stationReach
+        let levels = levels.map { range in
+            let middle = (range.lowerBound + range.upperBound) / 2
+            let height = ground(path.point(at: middle)) + (viaducts.contains { $0.contains(middle) } ? TrackRise.carriedHeight + reach : 0)
+            return TrackRise.Level(range, from: height - reach, to: height + reach)
+        }
+        guard let rise = TrackRise(path: path, ground: ground, water: { _ in false }, levels: levels, carried: carried) else { return (nil, []) }
+        return (rise, world.ground.sortedBlocks)
     }
 
     // MARK: - The layout
@@ -384,8 +441,11 @@ public enum HighSpeedDemo {
         let junctions: (north: Double, south: Double)
         /// What it is built from (decision 240).
         let spec: RealLineDemoSpec
+        /// The ground it is laid over (decision 279): none when it is flat
+        /// at 0 m.
+        let ground: [GroundBlock]
 
-        init(railways: RealRailways, spec: RealLineDemoSpec = HighSpeedDemo.spec) throws(Failure) {
+        init(railways: RealRailways, spec: RealLineDemoSpec = HighSpeedDemo.spec, heights: HeightGrid? = nil) throws(Failure) {
             self.spec = spec
             let frame = HighSpeedDemo.frame
             let points = spec.path(railways, frame)
@@ -527,8 +587,21 @@ public enum HighSpeedDemo {
             forced += endNodes(platforms[last], northward: true, reach: endReach.south)
             forced += ladders.flatMap(depotNodes)
             forced += crossingInto.flatMap { $0 }
+            // Decision 279: over the ground, at the heights the real line's
+            // structures ask for, the stations' platforms and the depots'
+            // sidings level.
+            let levels = platforms.map { ($0.lowerBound - margin)...($0.upperBound + margin) } + ladders.map { ladder in
+                let nodes = depotNodes(ladder), far = nodes[nodes.count - 2]
+                return min(far, ladder.deadEnd)...max(far, ladder.deadEnd)
+            }
+            var rise: TrackRise?, ground: [GroundBlock] = []
+            if spec.followsRealStructures, let heights {
+                (rise, ground) = HighSpeedDemo.rise(along: path, levels: levels, railways: railways, heights: heights, frame: frame)
+            }
+            self.ground = ground
             let plan = RealWorldDemo.TrackPlan(
-                path, forced: forced, avoiding: platforms, tolerance: spec.tolerance, longestEdge: spec.longestEdge
+                path, forced: forced, avoiding: platforms, rise: rise, structure: rise == nil ? .surface : .automatic, tolerance: spec.tolerance,
+                longestEdge: spec.longestEdge
             )
             self.plan = plan
             func index(_ distance: Double) -> Int {
@@ -642,6 +715,31 @@ public enum HighSpeedDemo {
             pieces += endTracks.north + endTracks.south
             pieces += depots.flatMap { $0.east + $0.west }
             return pieces
+        }
+
+        /// What building it costs a new game (decision 279): over its ground,
+        /// priced edge by edge as the game prices it there; flat, at
+        /// ``cost(at:)``.
+        func cost(eventSeed: UInt32) -> Money {
+            guard !ground.isEmpty else { return cost(at: ConstructionCosts.newGame) }
+            let world = HighSpeedDemo.newWorld(paying: Money(0), eventSeed: eventSeed, ground: ground)
+            let costs = world.economy.costs
+            do throws(GameError) {
+                var track: Int64 = 0
+                for piece in [plan] + pieces {
+                    for (index, curve) in piece.curves.enumerated() {
+                        func at(_ index: Int) -> WorldCoordinate {
+                            WorldCoordinate(x: piece.nodes[index].point.x, y: piece.nodes[index].point.y, z: piece.heights[index])
+                        }
+                        track += try world.trackEdgePrice(from: at(index), to: at(index + 1), curve: curve, structure: piece.structure).amount
+                    }
+                }
+                let stations = Int64(stops.count + depots.count) * costs.station.amount
+                let trains = setCars.map { costs.train.amount + Int64($0 - 1) * costs.car.amount }.reduce(0, +)
+                return Money(track + stations + trains)
+            } catch {
+                preconditionFailure("The demo's track cannot be priced: \(error)")
+            }
         }
 
         /// What building it costs at `costs` (the prices of
@@ -1020,7 +1118,8 @@ extension RealWorldDemo.TrackPlan {
     /// (``WorldVector/normal`` of the way the track runs there), and cubic
     /// edges that leave and reach each node along that way, as
     /// ``init(_:forced:avoiding:looseUntil:close:start:end:rise:structure:tolerance:longestEdge:)``
-    /// lays them, flat on the ground. Where two nodes in a row stand off by
+    /// lays them, at `plan`'s heights and on its structure (decision 279;
+    /// the high-speed demo's flat on the ground). Where two nodes in a row stand off by
     /// the same, the edge between runs beside `plan`'s that far off it;
     /// where they differ, it is a ramp from the one to the other.
     init(beside plan: RealWorldDemo.TrackPlan, at indices: [Int], offsets: [Double]) {
@@ -1030,10 +1129,10 @@ extension RealWorldDemo.TrackPlan {
             return (point: (WorldVector(node.point) + direction.normal * offset).plan, direction: direction)
         }
         path = plan.path
-        structure = .surface
+        structure = plan.structure
         self.distances = distances
         self.nodes = nodes
-        heights = distances.map { _ in 0 }
+        heights = indices.map { plan.heights[$0] }
         curves = distances.indices.dropLast().map { index in
             let handle = (distances[index + 1] - distances[index]) / 3
             let c1 = WorldVector(nodes[index].point) + nodes[index].direction * handle

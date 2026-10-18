@@ -470,7 +470,8 @@ public final class GameLauncher {
     public private(set) var isOpeningTRADemo = false
 
     /// Opens ``TRADemo`` (decision 240): the Yilan Line, Toucheng to
-    /// Su'aoxin, running a weekday's real trains. Built off the main actor
+    /// Su'aoxin, running a weekday's real trains, over the ground of the
+    /// app's heights (decision 279). Built off the main actor
     /// as the high-speed demo is (``openHighSpeedDemo(railways:)``), with
     /// the start screen showing meanwhile (``isOpeningTRADemo``). Returns
     /// the task, or `nil` while one is being built already (either demo).
@@ -479,11 +480,11 @@ public final class GameLauncher {
     public func openTRADemo(railways: RealRailways) -> Task<Void, Never>? {
         guard !isOpeningADemo else { return nil }
         isOpeningTRADemo = true
-        let (language, population, places, water, coverage) = (language, population, places, water, coverage)
+        let (language, population, places, water, coverage, heights) = (language, population, places, water, coverage, heights)
         return Task {
             let world = await Task.detached(priority: .userInitiated) {
                 try? TRADemo.make(
-                    in: language, railways: railways, population: population, places: places, water: water, coverage: coverage,
+                    in: language, railways: railways, population: population, places: places, water: water, coverage: coverage, heights: heights,
                     eventSeed: .random(in: .min ... .max)
                 )
             }.value
