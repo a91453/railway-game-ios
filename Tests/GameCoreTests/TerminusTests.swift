@@ -35,7 +35,10 @@ final class TerminusTests: XCTestCase {
         let t: StationID
     }
 
-    private func makeScene(blocks: Bool = true) throws -> Scene {
+    /// `depotBeyond`: a depot's siding runs on from P2's dead end, e5 to
+    /// Y (decision 280), as Nangang's depot lies beyond the high-speed
+    /// demo's north end.
+    private func makeScene(blocks: Bool = true, depotBeyond: Bool = false) throws -> Scene {
         var world = try GameWorld(
             bounds: WorldBounds(width: 106_496, height: 16_384), economy: GameEconomy(balance: 100_000_000, costs: testCosts),
             clock: GameClock(speed: .normal)
@@ -61,6 +64,14 @@ final class TerminusTests: XCTestCase {
         let u = try world.buildStation(named: "U", at: PlanPoint(x: 98_304, y: 6_144)).id
         let e4 = try XCTUnwrap(world.trackEdge(.edge(5))?.length)
         try world.addTrackPlatform(u, on: .edge(5), from: e4 - 6_144, to: e4 - 2_048)
+        if depotBeyond {
+            let yard = try world.buildTrackNode(at: WorldCoordinate(x: 102_400, y: 5_120))
+            try world.buildTrackEdge(from: p2, to: yard)  // e5
+            let y = try world.buildStation(named: "Y", at: PlanPoint(x: 96_256, y: 2_048)).id
+            let e5 = try XCTUnwrap(world.trackEdge(.edge(6))?.length)
+            try world.addTrackPlatform(y, on: .edge(6), from: e5 - 8_192, to: e5 - 1_024)
+            try world.setStationDepot(y, to: true)
+        }
 
         // M: S to T's P2 and back, along e3 both ways; its train stands at
         // U, out of D's way, and the line sends none out.
@@ -100,6 +111,26 @@ final class TerminusTests: XCTestCase {
     /// berth, P2, lies on track M runs both ways. Now D sets off for P2.
     func testAServiceTakesAnotherBerthOfATerminusTheLinesRunBothWays() throws {
         var scene = try makeScene()
+        var arrived = false
+        for _ in 0..<60 {
+            try scene.world.advance(ticks: 1)
+            if scene.world.stationsStoppedAt(by: scene.service) == [scene.t] {
+                arrived = true
+                break
+            }
+        }
+        XCTAssertTrue(arrived, "D calls at T; held by \(String(describing: scene.world.trainHoldingRoute(of: scene.service)))")
+        guard case .onEdge(let traversal, _)? = scene.world.train(id: scene.service)?.position else { return XCTFail("D is placed") }
+        XCTAssertEqual(traversal.edge, .edge(4), "at P2")
+        XCTAssertEqual(WorldInvariants.violations(in: scene.world), [])
+    }
+
+    /// Decision 280: a depot's sidings beyond the terminus are dead ends
+    /// too, where trains come back out turned round, so the way into the
+    /// terminus that runs on into them is still exempt. Before, the
+    /// depot's platform counted as another station's, and D waited at R.
+    func testAServiceTakesAnotherBerthOfATerminusWithADepotBeyondIt() throws {
+        var scene = try makeScene(depotBeyond: true)
         var arrived = false
         for _ in 0..<60 {
             try scene.world.advance(ticks: 1)

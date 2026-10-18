@@ -51,6 +51,30 @@ extension GameWorld {
         return free.isEmpty ? nil : Set(free)
     }
 
+    /// Decision 280: whether depot `station` has a siding for `train`
+    /// beyond those the trains already on their way in will take: more of
+    /// the sidings it fits have no train's head on them than trains bound
+    /// there (other than `train`) have yet to reach one. Asked under
+    /// traffic control before a train is sent in: one sent while the
+    /// trains before it still wait out their least dwell ran for the same
+    /// last siding behind them and stood where its run began, waiting for
+    /// a siding that never came free.
+    func depotHasRoom(_ station: StationID, for train: Train) -> Bool {
+        let sidings = Set(berths(of: station, length: train.length).map(\.traversal.edge))
+        var taken: Set<TrackEdgeID> = []
+        var coming = 0
+        for other in trains where other.id != train.id {
+            var head: TrackEdgeID?
+            if case .onEdge(let traversal, _)? = other.position { head = traversal.edge }
+            if let head, sidings.contains(head) {
+                taken.insert(head)
+            } else if other.execution != nil, other.timetable.last?.station == station {
+                coming += 1
+            }
+        }
+        return sidings.subtracting(taken).count > coming
+    }
+
     /// Decision 228: how long before and after another train's time at a
     /// platform this one keeps off it: three minutes, a high-speed line's
     /// least headway.
@@ -381,6 +405,8 @@ extension GameWorld {
         let surplus = runningTrains(of: line, stream) + waiting.count > needed
         for index in stranded + (surplus ? waiting.reversed() : []) {
             guard let trip = emptyRun(of: line, for: trains[index], to: line.depots) else { continue }
+            // Decision 280: under traffic control, only with a siding for it.
+            if isTrafficControlEnabled, let depot = trip.deadhead?.to, !depotHasRoom(depot, for: trains[index]) { continue }
             if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
                case .held = reservingDeparture(leaving, memo: &memo.directions) {
                 continue
