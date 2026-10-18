@@ -2,7 +2,8 @@ import GameCore
 
 /// Decision 220: the journey trace. Holding a station on the map draws an
 /// arc from it to each of the stations it trades the most trips with, at
-/// most ``limit``, each as wide as its trips (SC4's Route Query, after the
+/// most ``limit``, each as wide as its trips; holding a line (decision
+/// 276), an arc between each of the busiest pairs of its stops (SC4's Route Query, after the
 /// `Ci/` reference's station OD layer: `showStationODForStation` →
 /// `renderStationODLayerFromMatrix` with a focus station). Worked out from
 /// the world's daily demand (``GameWorld/stationDemandPairs(of:)``), not
@@ -12,6 +13,9 @@ public struct JourneyTrace: Hashable, Sendable {
     /// One arc: the station at its far end and the trips each day both
     /// ways between it and the traced station.
     public struct Arc: Hashable, Sendable {
+        /// Where it starts: the traced station, or for a line's trace
+        /// (decision 276) the earlier of the pair's stops.
+        public let from: StationID
         public let station: StationID
         /// Trips from the traced station to ``station`` each day.
         public let outbound: Int64
@@ -23,8 +27,10 @@ public struct JourneyTrace: Hashable, Sendable {
         public var trips: Int64 { outbound + inbound }
     }
 
-    /// The traced station.
-    public let station: StationID
+    /// The traced station, or `nil` for a line's trace.
+    public let station: StationID?
+    /// The traced line (decision 276), or `nil` for a station's trace.
+    public let line: LineID?
     /// The busiest first (ties to the lower station ID), at most ``limit``.
     public let arcs: [Arc]
 
@@ -41,6 +47,7 @@ public struct JourneyTrace: Hashable, Sendable {
     /// with any trips at all.
     public init(station: StationID, pairs: [StationDemandPair]) {
         self.station = station
+        line = nil
         let busiest = pairs
             .filter { $0.outbound + $0.inbound > 0 }
             .sorted { lhs, rhs in
@@ -50,8 +57,29 @@ public struct JourneyTrace: Hashable, Sendable {
             .prefix(Self.limit)
         let largest = busiest.first.map { $0.outbound + $0.inbound } ?? 0
         arcs = busiest.map {
-            Arc(station: $0.station, outbound: $0.outbound, inbound: $0.inbound,
+            Arc(from: station, station: $0.station, outbound: $0.outbound, inbound: $0.inbound,
                 width: Self.width(of: $0.outbound + $0.inbound, largest: largest))
+        }
+    }
+
+    /// A line's trace (decision 276): the ``limit`` busiest of `pairs`,
+    /// each a pair of its stops with the trips both ways between them (the
+    /// earlier stop first), busiest first (ties to the lower stops).
+    public init(line: LineID, pairs: [(from: StationID, pair: StationDemandPair)]) {
+        station = nil
+        self.line = line
+        let busiest = pairs
+            .filter { $0.pair.outbound + $0.pair.inbound > 0 }
+            .sorted { lhs, rhs in
+                let left = lhs.pair.outbound + lhs.pair.inbound, right = rhs.pair.outbound + rhs.pair.inbound
+                if left != right { return left > right }
+                return (lhs.from.rawValue, lhs.pair.station.rawValue) < (rhs.from.rawValue, rhs.pair.station.rawValue)
+            }
+            .prefix(Self.limit)
+        let largest = busiest.first.map { $0.pair.outbound + $0.pair.inbound } ?? 0
+        arcs = busiest.map {
+            Arc(from: $0.from, station: $0.pair.station, outbound: $0.pair.outbound, inbound: $0.pair.inbound,
+                width: Self.width(of: $0.pair.outbound + $0.pair.inbound, largest: largest))
         }
     }
 
@@ -108,8 +136,10 @@ public struct JourneyTrace: Hashable, Sendable {
     /// without arcs.
     public func summary(in world: GameWorld, language: DisplayLanguage) -> String? {
         guard !arcs.isEmpty else { return nil }
+        func name(_ id: StationID) -> String { world.station(id: id)?.name ?? "#\(id.rawValue)" }
+        // A line's arcs name both ends (decision 276).
         let names = arcs.map { arc in
-            "\(world.station(id: arc.station)?.name ?? "#\(arc.station.rawValue)") \(Self.tripsText(arc))"
+            line == nil ? "\(name(arc.station)) \(Self.tripsText(arc))" : "\(name(arc.from))–\(name(arc.station)) \(Self.tripsText(arc))"
         }
         return language.text(
             "Busiest trips: \(names.joined(separator: ", ")) a day",
@@ -119,6 +149,25 @@ public struct JourneyTrace: Hashable, Sendable {
 }
 
 extension GameWorld {
+    /// Line `id`'s journey trace (decision 276): the busiest pairs of its
+    /// stops, from each stop's ``stationDemandPairs(of:)`` to the stops
+    /// after it (a stop the line calls at twice counted once). Searches
+    /// the whole map with network routing, a search a stop, so the map
+    /// works it out off the main actor. `nil` for a line the world does
+    /// not have.
+    public func journeyTrace(ofLine id: LineID) -> JourneyTrace? {
+        guard let line = line(id: id) else { return nil }
+        var stops: [StationID] = []
+        for stop in line.stops where !stops.contains(stop) { stops.append(stop) }
+        var pairs: [(from: StationID, pair: StationDemandPair)] = []
+        for (index, stop) in stops.enumerated() {
+            let later = Set(stops.dropFirst(index + 1))
+            guard !later.isEmpty else { continue }
+            pairs += stationDemandPairs(of: stop).filter { later.contains($0.station) }.map { (from: stop, pair: $0) }
+        }
+        return JourneyTrace(line: id, pairs: pairs)
+    }
+
     /// Station `id`'s journey trace (decision 220): its busiest pairs of
     /// ``stationDemandPairs(of:)``. Searches the whole map with network
     /// routing, so the map works it out off the main actor.

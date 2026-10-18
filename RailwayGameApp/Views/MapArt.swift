@@ -971,7 +971,8 @@ enum MapArt {
     }
 
     /// Decision 220: the journey trace. An arc from the held station to
-    /// each of its busiest pairs (``JourneyTrace``), navy on a white edge,
+    /// each of its busiest pairs (``JourneyTrace``), or between the busiest
+    /// pairs of a held line's stops (decision 276), navy on a white edge,
     /// as wide as its trips, the narrowest drawn first so the busiest lies
     /// on top; drawn out from the station as `progress` goes to 1. Once
     /// whole, each arc's trips on a white plate edged in navy halfway
@@ -979,12 +980,14 @@ enum MapArt {
     private static func drawJourneyTrace(
         _ trace: JourneyTrace, world: GameWorld, progress: Double, projection: some MapProjection, in context: GraphicsContext
     ) {
-        guard let origin = world.station(id: trace.station).map({ projection.screenPoint(of: $0.location) }) else { return }
-        let curves: [(arc: JourneyTrace.Arc, end: ScreenPoint)] = trace.arcs.compactMap { arc in
-            world.station(id: arc.station).map { (arc: arc, end: projection.screenPoint(of: $0.location)) }
+        // Each arc from its own start: the traced station, or for a line's
+        // trace (decision 276) the earlier of its pair of stops.
+        let curves: [(arc: JourneyTrace.Arc, origin: ScreenPoint, end: ScreenPoint)] = trace.arcs.compactMap { arc in
+            guard let from = world.station(id: arc.from), let to = world.station(id: arc.station) else { return nil }
+            return (arc: arc, origin: projection.screenPoint(of: from.location), end: projection.screenPoint(of: to.location))
         }
         let share = min(1, max(0, progress))
-        for (arc, end) in curves.reversed() {
+        for (arc, origin, end) in curves.reversed() {
             var path = Path()
             path.move(to: cgPoint(origin))
             path.addQuadCurve(to: cgPoint(end), control: cgPoint(JourneyTrace.control(from: origin, to: end)))
@@ -996,7 +999,7 @@ enum MapArt {
         guard share >= 1 else { return }
         let view = context.clipBoundingRect
         var placed: [CGRect] = []
-        for (arc, end) in curves {
+        for (arc, origin, end) in curves {
             let point = cgPoint(JourneyTrace.apex(from: origin, to: end))
             let text = context.resolve(
                 Text(verbatim: JourneyTrace.tripsText(arc))
