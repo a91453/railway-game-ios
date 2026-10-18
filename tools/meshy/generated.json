@@ -1,0 +1,29 @@
+{
+  "city-bus": {
+    "tasks": [
+      {
+        "id": "01a14cad-0bf4-7490-b98e-9ce0dc301b38",
+        "type": "image-to-image",
+        "prompt": "Redraw the bus in this photo as one clean generic Taiwanese city low-floor bus, 12 m long, seen from its front-left three-quarter view, whole bus visible, on a plain white background. Keep its boxy single-deck shape, large flat windshield, two passenger doors on the near side, a long row of tinted side windows and the low flat roof with an air-conditioning unit. Plain white body with one simple blue stripe below the windows, dark tinted windows, black wheels. No text, no route number, no company name, no logos, no advertisements, no licence plate, no people, no street, no shadows.",
+        "texture_prompt": null,
+        "ai_model": "nano-banana-pro",
+        "model_type": null,
+        "credits": 9,
+        "finished": "2026-10-18T01:43:15.852Z"
+      },
+      {
+        "id": "01a14cae-0304-73a5-acee-8a7abb7122e3",
+        "type": "image-to-3d",
+        "prompt": null,
+        "texture_prompt": "Flat colours only: plain white body, one blue stripe along the side below the windows, dark grey tinted windows and windshield, black tyres with grey hubs, light grey roof unit. No text, no logos, no advertisements.",
+        "ai_model": null,
+        "model_type": null,
+        "credits": 15,
+        "finished": "2026-10-18T01:44:31.671Z"
+      }
+    ],
+    "credits": 24,
+    "raw_sha256": "43b59d1958bb2beb5ae07db491018fadd2545355f787664db7d9b4986a70126d",
+    "raw_bytes": 2208860
+  }
+}
