@@ -20,7 +20,7 @@ final class TRADemoTests: XCTestCase {
         return try RealRailways(
             lines: file("track_lines.geojson"), stations: file("track_stations.geojson"), names: file("station_names.json"),
             operations: RealRailwayOperations(systems: [:], timetables: [:], schedules: [TRADemo.schedule: file("tra-yilan-schedule.json")]),
-            structures: RealRailStructures(data: file("tra_structures.json"))
+            structures: RealRailStructures(data: file("rail_structures.json"))
         )
     }
 
@@ -264,7 +264,8 @@ final class TRADemoTests: XCTestCase {
             }
         }
         let path = layout.plan.path
-        let carried = try XCTUnwrap(Self.railways().structures).stretches(along: path, frame: HighSpeedDemo.frame)
+        let structures = try XCTUnwrap(Self.railways().structures)
+        let carried = structures.stretches(along: path, frame: HighSpeedDemo.frame, system: "tra_sched")
         var viaduct = (up: 0, all: 0), ground = (off: 0, all: 0)
         for distance in stride(from: 0, through: path.length, by: 64 * Self.metre) {
             let point = path.point(at: distance)

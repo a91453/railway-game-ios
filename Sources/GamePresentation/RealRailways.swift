@@ -350,7 +350,7 @@ public struct RealRailways: Sendable {
     /// (`tra_pingxi_runs.json`, decision 133).
     public let pingxiRuns: RealLineRuns?
     /// Where the real TRA lines are on bridges and in tunnels
-    /// (`tra_structures.json`, decision 279).
+    /// (`rail_structures.json`, decision 279).
     public let structures: RealRailStructures?
     /// The files of the optional data above that could not be read, and
     /// why; empty when all could. Listed for debugging (the data sources
@@ -704,8 +704,8 @@ extension RealRailways {
         let pingxiRuns = read("tra_pingxi_runs", "json").flatMap { data in
             parse("tra_pingxi_runs.json") { try RealLineRuns(data: data) }
         }
-        let structures = read("tra_structures", "json").flatMap { data in
-            parse("tra_structures.json") { try RealRailStructures(data: data) }
+        let structures = read("rail_structures", "json").flatMap { data in
+            parse("rail_structures.json") { try RealRailStructures(data: data) }
         }
 
         guard let lines, let stations, let names else { return Loaded(railways: nil, issues: issues + operations.loadIssues) }

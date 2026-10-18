@@ -38,6 +38,9 @@ struct RealLineDemoSpec: Sendable {
     /// their ids begin with (`thsr_sched|`).
     let stationNames: [String]
     let stationIDPrefix: String
+    /// The system its line is of (`thsr_sched`), as its stations' ids name
+    /// it.
+    var system: String { String(stationIDPrefix.dropLast()) }
     /// The scheduled system whose day it runs (`thsr`).
     let schedule: String
     let kinds: [Kind]

@@ -22,7 +22,7 @@ final class RealWorldDemoGroundTests: XCTestCase {
             lines: resource("RealRailways/track_lines.geojson"), stations: resource("RealRailways/track_stations.geojson"),
             names: resource("RealRailways/station_names.json"),
             pingxiRuns: RealLineRuns(data: resource("RealRailways/tra_pingxi_runs.json")),
-            structures: RealRailStructures(data: resource("RealRailways/tra_structures.json"))
+            structures: RealRailStructures(data: resource("RealRailways/rail_structures.json"))
         )
     }
 
@@ -90,7 +90,7 @@ final class RealWorldDemoGroundTests: XCTestCase {
     }
 
     /// Decision 279: where the real lines are on a viaduct or in a tunnel
-    /// (`tra_structures.json`), most of the track built there is too, and
+    /// (`rail_structures.json`), most of the track built there is too, and
     /// where they are on the ground, little is up on a viaduct or down in
     /// a tunnel. The game's ground is coarser than the real line's, so not
     /// all: the shares measured when it was made, less a margin.

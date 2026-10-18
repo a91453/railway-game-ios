@@ -1,24 +1,28 @@
 #!/usr/bin/env python3
-"""Where the Taiwan Railway's real track is on bridges and viaducts or in
-tunnels (ARCHITECTURE decision 279), for the demos and the network tool to
-lay their track at real heights.
+"""Where Taiwan's real railways are on bridges and viaducts or in tunnels
+(ARCHITECTURE decision 279): the TRA's, the High Speed Rail's and the Alishan
+Forest Railway's running lines, for the demos and the network tool to lay
+their track at real heights.
 
     python3 tools/real-railways/extract_structures.py \\
-        <railway-reference-private>/Railway/site_archive_clean/rail-3d/physical/network.json \\
-        <railway-reference-private>/Railway/site_archive_clean/rail-3d/physical/level-profiles.json \\
-        RailwayGameApp/Resources/RealRailways/tra_structures.json
+        <railway-reference-private>/Railway/taiwan-rail-reference-clean/source/rail-3d/physical/network.json \\
+        <railway-reference-private>/Railway/taiwan-rail-reference-clean/source/rail-3d/physical/level-profiles.json \\
+        RailwayGameApp/Resources/RealRailways/rail_structures.json
 
-The inputs are the owner's `Railway/` site's: `network.json`, its
+The inputs are the owner's Taiwan rail website's, its newer snapshot
+`Railway/taiwan-rail-reference-clean/` (2026-10-18; the first run read the
+older `Railway/site_archive_clean/`): `network.json`, its
 OpenStreetMap railway ways (Overpass, ODbL 1.0), and `level-profiles.json`,
 each way's structure as the site settled it (its `classifyRailStructure`,
 `rail-3d/physical/structure-kind.js`): OpenStreetMap's own `bridge` and
 `tunnel` tags, filled in where they are missing from the National Land
-Surveying and Mapping Center's railway geometry (data.gov.tw 73220, Open
-Government Data License 1.0), and the two weighed against the terrain where
-they disagree. `layer` alone never makes a bridge or a tunnel.
+Surveying and Mapping Center's railway and high-speed railway geometry
+(data.gov.tw 73220 and 73221, Open Government Data License 1.0), and the two
+weighed against the terrain where they disagree. `layer` alone never makes a
+bridge or a tunnel.
 
-What it keeps: every TRA running line (`system` `tra_sched`, no `service`
-tag) the site calls a bridge or a tunnel, as the way's points, six
+What it keeps: every running line of `SYSTEMS` (no `service` tag) the site
+calls a bridge or a tunnel, with its system, as the way's points, six
 decimals (about 0.1 m). Heights are left out: the site's are estimates
 (its `basis`), and the game lays its own over its own ground.
 """
@@ -26,6 +30,10 @@ decimals (about 0.1 m). Heights are left out: the site's are estimates
 import hashlib
 import json
 import sys
+
+# The scheduled systems the game builds on real alignments: the TRA, the
+# High Speed Rail and the Alishan Forest Railway.
+SYSTEMS = ("tra_sched", "thsr_sched", "afr_sched")
 
 
 def main(network_path, profiles_path, out_path):
@@ -43,17 +51,17 @@ def main(network_path, profiles_path, out_path):
 
     structures = []
     for way in network["ways"]:
-        if way["system"] != "tra_sched" or "service" in way["tags"]:
+        if way["system"] not in SYSTEMS or "service" in way["tags"]:
             continue
         kind = entries.get(way["id"], {}).get("kind")
         if kind not in ("bridge", "tunnel"):
             continue
         points = [[round(lon, 6), round(lat, 6)] for lon, lat in way["coordinates"]]
-        structures.append({"way": way["id"], "kind": kind, "points": points})
+        structures.append({"way": way["id"], "system": way["system"], "kind": kind, "points": points})
     structures.sort(key=lambda s: (len(s["way"]), s["way"]))
 
     out = {
-        "_readme": "Where the TRA's running lines are on bridges and viaducts (bridge) or in tunnels (tunnel), "
+        "_readme": "Where the TRA's, the High Speed Rail's and the Alishan Forest Railway's running lines are on bridges and viaducts (bridge) or in tunnels (tunnel), "
         "one way of the site's network each (an OpenStreetMap way, or a link the site added). Made by tools/real-railways/extract_structures.py (decision 279); do not edit.",
         "source": {
             "openStreetMap": {
@@ -62,8 +70,8 @@ def main(network_path, profiles_path, out_path):
                 "at": network["source"]["at"],
             },
             "official": {
-                "attribution": "內政部國土測繪中心「臺灣鐵路」",
-                "url": "https://data.gov.tw/dataset/73220",
+                "attribution": "內政部國土測繪中心「臺灣鐵路」「高速鐵路」",
+                "url": "https://data.gov.tw/dataset/73220 https://data.gov.tw/dataset/73221",
                 "license": "Open Government Data License 1.0",
             },
             "networkSha256": actual,
@@ -74,7 +82,8 @@ def main(network_path, profiles_path, out_path):
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
         f.write("\n")
-    counts = {k: sum(1 for s in structures if s["kind"] == k) for k in ("bridge", "tunnel")}
+    counts = {(system, kind): sum(1 for s in structures if s["system"] == system and s["kind"] == kind)
+              for system in SYSTEMS for kind in ("bridge", "tunnel")}
     print(f"{len(structures)} ways: {counts}")
 
 

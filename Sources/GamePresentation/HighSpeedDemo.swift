@@ -277,15 +277,15 @@ public enum HighSpeedDemo {
     static let groundReach = 128.0 * RealWorldDemo.metre
 
     /// The heights of a track along `path` over the ground of `heights`
-    /// (decision 279), as the real-world demo's (``TrackRise``): the real
-    /// line's bridges, viaducts and tunnels kept where its ground lets
+    /// (decision 279), as the real-world demo's (``TrackRise``): `system`'s
+    /// real line's bridges, viaducts and tunnels kept where its ground lets
     /// them, and each of `levels` level, within
     /// ``RealWorldDemo/stationReach`` of the ground, or of a viaduct's
     /// height where the real one is on a viaduct (Dongshan). And the
     /// ground read for it, to read into the world it is built in; `nil`
     /// and none where no line within the grade keeps to its levels.
     static func rise(
-        along path: WorldPath, levels: [ClosedRange<Double>], railways: RealRailways, heights: HeightGrid, frame: RealWorldFrame
+        along path: WorldPath, levels: [ClosedRange<Double>], railways: RealRailways, system: String, heights: HeightGrid, frame: RealWorldFrame
     ) -> (TrackRise?, [GroundBlock]) {
         var world = newWorld(paying: Money(0), eventSeed: 1)
         let points = stride(from: 0, through: path.length, by: 32 * RealWorldDemo.metre).flatMap { distance -> [PlanPoint] in
@@ -301,7 +301,7 @@ public enum HighSpeedDemo {
         func ground(_ point: WorldVector) -> Double {
             Double(world.groundHeight(at: point.plan) ?? 0)
         }
-        let carried = railways.structures?.stretches(along: path, frame: frame) ?? []
+        let carried = railways.structures?.stretches(along: path, frame: frame, system: system) ?? []
         let viaducts = carried.filter { $0.kind == .bridge && $0.range.upperBound - $0.range.lowerBound >= TrackRise.shortestCarried }
             .map { ($0.range.lowerBound + TrackRise.carriedInset)...($0.range.upperBound - TrackRise.carriedInset) }
         let reach = RealWorldDemo.stationReach
@@ -596,7 +596,7 @@ public enum HighSpeedDemo {
             }
             var rise: TrackRise?, ground: [GroundBlock] = []
             if spec.followsRealStructures, let heights {
-                (rise, ground) = HighSpeedDemo.rise(along: path, levels: levels, railways: railways, heights: heights, frame: frame)
+                (rise, ground) = HighSpeedDemo.rise(along: path, levels: levels, railways: railways, system: spec.system, heights: heights, frame: frame)
             }
             self.ground = ground
             let plan = RealWorldDemo.TrackPlan(
