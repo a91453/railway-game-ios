@@ -21,7 +21,8 @@ final class RealWorldDemoGroundTests: XCTestCase {
         try RealRailways(
             lines: resource("RealRailways/track_lines.geojson"), stations: resource("RealRailways/track_stations.geojson"),
             names: resource("RealRailways/station_names.json"),
-            pingxiRuns: RealLineRuns(data: resource("RealRailways/tra_pingxi_runs.json"))
+            pingxiRuns: RealLineRuns(data: resource("RealRailways/tra_pingxi_runs.json")),
+            structures: RealRailStructures(data: resource("RealRailways/tra_structures.json"))
         )
     }
 
@@ -86,6 +87,60 @@ final class RealWorldDemoGroundTests: XCTestCase {
         }
         let loaded = try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))).world
         XCTAssertEqual(loaded, world, "it saves and loads")
+    }
+
+    /// Decision 279: where the real lines are on a viaduct or in a tunnel
+    /// (`tra_structures.json`), most of the track built there is too, and
+    /// where they are on the ground, little is up on a viaduct or down in
+    /// a tunnel. The game's ground is coarser than the real line's, so not
+    /// all: the shares measured when it was made, less a margin.
+    func testTheTrackFollowsTheRealStructures() throws {
+        let (railways, world) = try Self.built.get()
+        let routes = RealWorldDemo.GroundRoutes(railways: railways)
+        // The built track's kind every 8 m, by where it is.
+        var built: [(point: WorldVector, kind: TrackSectionKind)] = []
+        for edge in world.network.edges {
+            let geometry = try XCTUnwrap(world.trackGeometry(of: edge.id))
+            for span in edge.sectionSpans where span.end > span.start {
+                for point in geometry.points(from: span.start, to: span.end) {
+                    built.append((WorldVector(x: Double(point.x), y: Double(point.y)), span.kind))
+                }
+            }
+        }
+        func kind(at point: WorldVector) -> TrackSectionKind? {
+            built.min { ($0.point - point).length < ($1.point - point).length }?.kind
+        }
+        var tunnel = (inside: 0, all: 0), viaduct = (inside: 0, all: 0), ground = (off: 0, all: 0)
+        for path in [routes.main, routes.trunk, routes.pingxi, routes.shenao] {
+            let carried = routes.carried(along: path)
+            for distance in stride(from: 0, through: path.length, by: 64 * RealWorldDemo.metre) {
+                guard let built = kind(at: path.point(at: distance)) else { continue }
+                if let stretch = carried.first(where: {
+                    $0.range.upperBound - $0.range.lowerBound >= TrackRise.shortestCarried
+                        && ($0.range.lowerBound + TrackRise.carriedInset...$0.range.upperBound - TrackRise.carriedInset).contains(distance)
+                }) {
+                    if stretch.kind == .tunnel {
+                        tunnel.all += 1
+                        tunnel.inside += built == .tunnel ? 1 : 0
+                    } else {
+                        viaduct.all += 1
+                        viaduct.inside += [.viaduct, .bridge].contains(built) ? 1 : 0
+                    }
+                } else if !carried.contains(where: { ($0.range.lowerBound - 200 * RealWorldDemo.metre...$0.range.upperBound + 200 * RealWorldDemo.metre).contains(distance) }) {
+                    ground.all += 1
+                    ground.off += [.viaduct, .tunnel].contains(built) ? 1 : 0
+                }
+            }
+        }
+        // Measured (decision 279): 64 of 70 samples in the real tunnels are
+        // in the game's, 1 of 1 on the one long viaduct up on one, and 10
+        // of 385 on the real ground up on a viaduct or down in a tunnel;
+        // without the real structures 59 of 70, 1 of 1 and 22 of 385.
+        XCTAssertGreaterThan(tunnel.all, 50)
+        XCTAssertGreaterThanOrEqual(Double(tunnel.inside), 0.85 * Double(tunnel.all), "\(tunnel)")
+        XCTAssertEqual(viaduct.inside, viaduct.all, "\(viaduct)")
+        XCTAssertGreaterThan(ground.all, 300)
+        XCTAssertLessThanOrEqual(Double(ground.off), 0.04 * Double(ground.all), "\(ground)")
     }
 
     // MARK: - What it builds

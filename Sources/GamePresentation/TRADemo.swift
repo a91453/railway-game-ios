@@ -13,9 +13,12 @@ import GameCore
 /// A whole-Taiwan game with the Yilan Line, Toucheng to Su'aoxin, built and
 /// running a weekday's real trains (decision 240).
 ///
-/// - The track is double, as on the real line, flat and on the ground: the
-///   down track (southbound) on the real alignment, the up track beside it,
-///   west of it, as the real trains keep left.
+/// - The track is double, as on the real line: the down track (southbound)
+///   on the real alignment, the up track beside it, west of it, as the real
+///   trains keep left. With the app's heights it is laid over the ground,
+///   up on viaducts and down in tunnels where the real line is (decision
+///   279: south of Yilan towards Erjie, and through Dongshan, whose
+///   station stands on its viaduct); without them flat at 0 m.
 /// - The ten stations that trains call at stand where the real ones do
 ///   (Xinma, where none called that weekday, is left out). Each between the
 ///   ends has a loop beside each track with a platform; the local trains
@@ -128,20 +131,27 @@ public enum TRADemo {
         rampsFollowTrack: true,
         // By day more sets wait at the ends than stand there at night.
         spareSidings: 4,
-        keepLeft: true
+        keepLeft: true,
+        // Decision 279: up on the viaducts south of Yilan and through
+        // Dongshan, as the real line is.
+        followsRealStructures: true
     )
 
     /// The demo: a new whole-Taiwan game with the Yilan Line built,
     /// running from 07:00, its land read in as the high-speed demo's
-    /// (``HighSpeedDemo/make(in:railways:population:places:water:coverage:eventSeed:)``).
+    /// (``HighSpeedDemo/make(in:railways:population:places:water:coverage:eventSeed:)``),
+    /// over the ground of `heights` (decision 279).
     ///
     /// - Throws: ``HighSpeedDemo/Failure/noHighSpeedRail`` when `railways`
     ///   has no Yilan Line or not its stations, ``HighSpeedDemo/Failure/noTimetable``
     ///   when it has no day of its trains.
     public static func make(
         in language: DisplayLanguage, railways: RealRailways, population: PopulationGrid? = nil, places: PlaceGrid? = nil,
-        water: WaterGrid? = nil, coverage: CoverageGrid? = nil, eventSeed: UInt32 = 1
+        water: WaterGrid? = nil, coverage: CoverageGrid? = nil, heights: HeightGrid? = nil, eventSeed: UInt32 = 1
     ) throws(HighSpeedDemo.Failure) -> GameWorld {
-        try HighSpeedDemo.make(spec, in: language, railways: railways, population: population, places: places, water: water, coverage: coverage, eventSeed: eventSeed)
+        try HighSpeedDemo.make(
+            spec, in: language, railways: railways, population: population, places: places, water: water, coverage: coverage, heights: heights,
+            eventSeed: eventSeed
+        )
     }
 }

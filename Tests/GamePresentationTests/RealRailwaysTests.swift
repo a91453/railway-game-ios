@@ -356,7 +356,7 @@ final class RealRailwaysTests: XCTestCase {
             let sections = DataSourceCredits.sections(in: language)
             XCTAssertEqual(sections.map(\.id), ["railways", "population", "map", "cityView"])
             let credits = sections.flatMap(\.credits)
-            XCTAssertEqual(credits.map(\.id), ["tdx", "traOpenData", "openStreetMap", "operators", "worldPop", "overtureBuildings", "appleMaps", "wikidata", "worldUrbanizationProspects", "taiwanBaseMap", "openFreeMap", "mapLibre", "map3DGround", "copernicusDEM", "proceduralTokyo", "polyHaven"])
+            XCTAssertEqual(credits.map(\.id), ["tdx", "traOpenData", "nlsc", "openStreetMap", "operators", "worldPop", "overtureBuildings", "appleMaps", "wikidata", "worldUrbanizationProspects", "taiwanBaseMap", "openFreeMap", "mapLibre", "map3DGround", "copernicusDEM", "proceduralTokyo", "polyHaven"])
             for credit in credits {
                 XCTAssertFalse(credit.title.isEmpty || credit.detail.isEmpty || credit.notice.isEmpty, credit.id)
                 for link in credit.links {
@@ -428,6 +428,13 @@ final class RealRailwaysTests: XCTestCase {
             DataSourceCredits.sections(in: .traditionalChinese).first?.credits.first { $0.id == "traOpenData" }?.notice,
             "依「政府資料開放授權條款第 1 版」使用。"
         )
+        // Decision 279: the National Land Surveying and Mapping Center's
+        // railway, with the licence's attribution.
+        let nlsc = try XCTUnwrap(DataSourceCredits.sections(in: .traditionalChinese).flatMap(\.credits).first { $0.id == "nlsc" })
+        for part in ["內政部國土測繪中心", "臺灣鐵路", "政府資料開放授權條款"] {
+            XCTAssertTrue(nlsc.notice.contains(part), part)
+        }
+        XCTAssertTrue(nlsc.links.contains { $0.url == "https://data.gov.tw/dataset/73220" })
     }
 
     func testTheBundledRealRailwaysWithOperationalData() throws {
