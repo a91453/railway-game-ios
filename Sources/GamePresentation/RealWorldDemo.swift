@@ -418,12 +418,14 @@ public enum RealWorldDemo {
 
         /// With `rise` (decision 132) the track has the heights it gives,
         /// edges are cut until their straight grade keeps close to it, and
-        /// never where a node would stand too far above or below the ground.
+        /// never where a node would stand too far above or below the ground;
+        /// `heightFit` is how far an edge's grade may stray from it
+        /// (``TrackRise/fit``).
         init(
             _ path: WorldPath, forced: [Double], avoiding: [ClosedRange<Double>], looseUntil: Double = 0, close: [ClosedRange<Double>] = [],
             start: (point: PlanPoint, direction: WorldVector)? = nil, end: (point: PlanPoint, direction: WorldVector)? = nil,
             rise: TrackRise? = nil, structure: TrackStructure = .surface,
-            tolerance: Double = RealWorldDemo.tolerance, longestEdge: Double = RealWorldDemo.longestEdge
+            tolerance: Double = RealWorldDemo.tolerance, longestEdge: Double = RealWorldDemo.longestEdge, heightFit: Double = TrackRise.fit
         ) {
             self.path = path
             self.structure = structure
@@ -445,7 +447,7 @@ public enum RealWorldDemo {
                 let turn = tangent(at: a).angle(to: tangent(at: b))
                 let limit = close.contains { $0.overlaps(a...b) } ? closeTolerance : tolerance
                 let near = b <= looseUntil || deviation(of: cubic(a, b), from: path, between: a, and: b) <= limit
-                let level = rise?.fits(from: a, to: b) ?? true
+                let level = rise?.fits(from: a, to: b, within: heightFit) ?? true
                 if length <= longestEdge, turn <= sharpestTurn, near, level { return }
                 guard length > 2 * shortestEdge else { return }
                 var cut = (a + b) / 2

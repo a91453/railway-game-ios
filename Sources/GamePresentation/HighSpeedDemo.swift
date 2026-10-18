@@ -88,6 +88,12 @@ public enum HighSpeedDemo {
     /// and the fit loose.
     static let tolerance = 10.0 * RealWorldDemo.metre
     static let longestEdge = 4_000.0 * RealWorldDemo.metre
+    /// How far an edge's straight grade may stray from the heights the
+    /// real structures ask for (decision 281): the 2 m between the 10 m
+    /// over the ground a viaduct stands at and the 8 m above which the game
+    /// builds one (``TrackRise/carriedHeight``), so half the edges of the
+    /// TRA demo's 1 m, each checked against all before it.
+    static let heightFit = 2.0 * RealWorldDemo.metre
     /// How far apart the two tracks' centre lines are: the real line's
     /// 4.5 m and a little, clear of the game's 4 m
     /// (``RailwayNetwork/trackSpacing``) on every curve.
@@ -162,6 +168,7 @@ public enum HighSpeedDemo {
         // Decision 281: up on its viaducts and down in its tunnels, as the
         // real line is, and Zuoying's depot reached by its own track.
         followsRealStructures: true,
+        heightFit: heightFit,
         depotLeads: true
     )
 
@@ -634,7 +641,7 @@ public enum HighSpeedDemo {
             self.ground = ground
             let plan = RealWorldDemo.TrackPlan(
                 path, forced: forced, avoiding: platforms, rise: rise, structure: rise == nil ? .surface : .automatic, tolerance: spec.tolerance,
-                longestEdge: spec.longestEdge
+                longestEdge: spec.longestEdge, heightFit: spec.heightFit
             )
             self.plan = plan
             func index(_ distance: Double) -> Int {
