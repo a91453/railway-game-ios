@@ -444,11 +444,11 @@ public final class GameLauncher {
     public func openHighSpeedDemo(railways: RealRailways) -> Task<Void, Never>? {
         guard !isOpeningADemo else { return nil }
         isOpeningHighSpeedDemo = true
-        let (language, population, places, water, coverage) = (language, population, places, water, coverage)
+        let (language, population, places, water, coverage, heights) = (language, population, places, water, coverage, heights)
         return Task {
             let world = await Task.detached(priority: .userInitiated) {
                 try? HighSpeedDemo.make(
-                    in: language, railways: railways, population: population, places: places, water: water, coverage: coverage,
+                    in: language, railways: railways, population: population, places: places, water: water, coverage: coverage, heights: heights,
                     eventSeed: .random(in: .min ... .max)
                 )
             }.value

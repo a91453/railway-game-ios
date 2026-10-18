@@ -91,7 +91,10 @@ final class HighSpeedDemoTests: XCTestCase {
             self.loopsOf = loopsOf
             var bothWays = crossovers.union(sidings)
             var reaches = Array(layout.turnbackReach.values)
-            for depot in layout.depots {
+            // Not along the down track to a depot with its own lead
+            // (Zuoying's, decision 281): the sets reach it from the end's
+            // throat, beyond the turnout.
+            for depot in layout.depots where depot.lead == nil {
                 for station in depot.serving {
                     let zone = layout.platforms[station]
                     let near = depot.entry < zone.lowerBound ? zone.lowerBound : zone.upperBound
@@ -171,6 +174,43 @@ final class HighSpeedDemoTests: XCTestCase {
         for (depot, count) in zip(depots, [11, 7, 20]) {
             XCTAssertEqual(world.network.platforms(of: depot).count, count, "a platform on each siding")
         }
+    }
+
+    /// Decision 281: Zuoying's depot has its own track from the south
+    /// end's throat, beside the down track on its east, so its sets never
+    /// run against the trains coming in along the down track: its sidings
+    /// and its lead meet the down track at one node only, the lead's
+    /// turnout beyond the up track's.
+    func testZuoyingsDepotHasItsOwnTrack() throws {
+        let (layout, world, tracks) = try Self.built.get()
+        XCTAssertNil(layout.depots[0].lead, "Nangang's")
+        XCTAssertNil(layout.depots[1].lead, "Wuri's")
+        let lead = try XCTUnwrap(layout.depots[2].lead, "Zuoying's")
+        let turnout = lead.distances[lead.distances.count - 1]
+        XCTAssertGreaterThan(turnout, layout.junctions.south, "beyond the up track's turnout")
+        XCTAssertLessThan(turnout, layout.platforms[11].lowerBound, "in the throat, north of the platforms")
+        XCTAssertEqual(lead.distances[0], layout.depots[2].entry, accuracy: 1, "on to where the sidings begin")
+        // Every node of Zuoying's depot's tracks the down track has.
+        let downNodes = Set(tracks.down.flatMap { id in world.network.edge(id).map { [$0.from, $0.to] } ?? [] })
+        let edges = Self.zuoyingDepotEdges(layout: layout, world: world, tracks: tracks)
+        let shared = Set(edges.flatMap { id in world.network.edge(id).map { [$0.from, $0.to] } ?? [] }).intersection(downNodes)
+        XCTAssertEqual(shared.count, 1, "the lead's turnout only")
+        XCTAssertTrue(tracks.between.isDisjoint(with: tracks.bothWays), "the down track between the turnouts is only run southbound")
+    }
+
+    /// The edges of Zuoying's depot's sidings and lead: the depots' track
+    /// joined to its platforms' sidings.
+    private static func zuoyingDepotEdges(layout: HighSpeedDemo.Layout, world: GameWorld, tracks: Tracks) -> Set<TrackEdgeID> {
+        let depot = world.stations.filter(\.isDepot)[2].id
+        var edges: Set<TrackEdgeID> = [], frontier = Set(world.network.platforms(of: depot).map(\.edge))
+        while let id = frontier.popFirst() {
+            guard edges.insert(id).inserted, let edge = world.network.edge(id) else { continue }
+            for other in tracks.sidings where !edges.contains(other) {
+                guard let next = world.network.edge(other), !Set([next.from, next.to]).isDisjoint(with: [edge.from, edge.to]) else { continue }
+                frontier.insert(other)
+            }
+        }
+        return edges
     }
 
     func testItsStationsStandWhereTheRealOnesDo() throws {
