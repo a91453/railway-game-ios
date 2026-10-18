@@ -167,6 +167,91 @@ private struct FareFloatLabel: View {
     }
 }
 
+/// Decision 276: a trip's result stamped where it ended, "Full" in the
+/// error colour or "Plenty of seats" in the warning colour, with the
+/// map's one- or three-person crowding glyph (art style: more people,
+/// more crowded), one a station (``TripStampBoard``). Above the fares'
+/// "+$12", so both read. Each pops in, holds and goes up and out within
+/// 2 s; with Reduce Motion it only fades. At 600× and faster only the
+/// followed train's and the three stations nearest the middle of the map.
+/// Takes no touches; VoiceOver reads a line's fit in its card.
+struct TripStampMarks: View {
+    let session: GameSession
+    let camera: PlanCamera
+    @State private var board = TripStampBoard()
+
+    var body: some View {
+        let middle = (x: camera.viewport.width / 2, y: camera.viewport.height / 2)
+        let stamps = board.shown(
+            fast: FareFloatBoard.isFast(session.world.clock.speed), followed: session.followedTrainID
+        ) { location in
+            let at = camera.screenPoint(of: location)
+            return (at.x - middle.x) * (at.x - middle.x) + (at.y - middle.y) * (at.y - middle.y)
+        }
+        ZStack(alignment: .topLeading) {
+            ForEach(stamps) { stamp in
+                let at = camera.screenPoint(of: stamp.location)
+                TripStampLabel(kind: stamp.kind, language: session.language)
+                    .position(x: at.x, y: at.y - 46)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+        .onChange(of: session.tripStampPulse) { _, pulse in
+            guard let pulse else { return }
+            board.add(pulse.stamps, at: Self.now)
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(TripStampBoard.lifetime))
+                board.expire(at: Self.now)
+            }
+        }
+    }
+
+    private static var now: Double {
+        Date().timeIntervalSinceReferenceDate
+    }
+}
+
+/// One stamp: decision 253's `pop` in, a hold, `cardOut` up and out, as
+/// the fares. A flat panel with a heavy border in the stamp's colour,
+/// set a little askew like a rubber stamp; no shadow (art style).
+private struct TripStampLabel: View {
+    let kind: TripStampKind
+    let language: DisplayLanguage
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var shown = false
+    @State private var gone = false
+
+    var body: some View {
+        let colour = kind == .full ? Theme.error : Theme.warning
+        HStack(spacing: 4) {
+            (kind == .full ? MapGlyph.full : MapGlyph.person).image
+                .resizable()
+                .frame(width: 14, height: 14)
+            Text(verbatim: kind.title(in: language))
+                .font(.caption.weight(.heavy))
+        }
+        .foregroundStyle(colour)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3)
+        .background(Theme.panel, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(colour, lineWidth: 2))
+        .rotationEffect(.degrees(-6))
+        .fixedSize()
+        .scaleEffect(reduceMotion || shown ? 1 : 0.6)
+        .offset(y: reduceMotion || !gone ? 0 : -12)
+        .opacity(shown && !gone ? 1 : 0)
+        .task {
+            // A frame at the start first, so the change animates.
+            try? await Task.sleep(for: .milliseconds(16))
+            withAnimation(MotionRule.pop.running(reduceMotion: reduceMotion)?.animation) { shown = true }
+            try? await Task.sleep(for: .seconds(MotionRule.pop.seconds + TripStampBoard.hold))
+            withAnimation(MotionRule.cardOut.running(reduceMotion: reduceMotion)?.animation) { gone = true }
+        }
+    }
+}
+
 /// Decision 256: a goal met, checked off in the middle of the map: a
 /// check and the goal's title that pop in, bump once (`confirm`) and go
 /// after a few seconds. With Reduce Motion it only fades. VoiceOver hears
