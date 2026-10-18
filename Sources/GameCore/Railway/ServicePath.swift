@@ -199,7 +199,7 @@ extension GameWorld {
     /// a berth on it, the berth's offset less where the head is on it (0
     /// just after entering it); to the next traversal, the rest of this
     /// one. Only a step from the start can be 0.
-    private func networkPath(from start: TrackTraversal, offset: Int64, toStation id: StationID, length: Int64, clear: ((TrackStretch) -> Bool)? = nil, forbidden: Set<TrackTraversal> = [], berthPenalty: [Berth: Int64] = [:], edgePenalty: [TrackEdgeID: Int64] = [:], only: Berth? = nil, eligible: Set<Berth>? = nil, keepingLeft: Bool = true) -> TrainPath? {
+    private func networkPath(from start: TrackTraversal, offset: Int64, toStation id: StationID, length: Int64, clear: ((TrackStretch) -> Bool)? = nil, forbidden: Set<TrackTraversal> = [], forbids: ((TrackTraversal) -> Bool)? = nil, berthPenalty: [Berth: Int64] = [:], edgePenalty: [TrackEdgeID: Int64] = [:], only: Berth? = nil, eligible: Set<Berth>? = nil, keepingLeft: Bool = true) -> TrainPath? {
         guard isOnNetwork(start, offset: offset) else { return nil }
         let keepsLeft = keepLeft && keepingLeft
         // Each traversal's berths, nearest first. Only looked up by key.
@@ -224,7 +224,7 @@ extension GameWorld {
             }
             let edgeLength = network.edge(traversal.edge)!.length
             func allowed(to end: Int64) -> Bool {
-                if end > from, forbidden.contains(traversal) || yard.contains(traversal.edge) { return false }
+                if end > from, forbidden.contains(traversal) || forbids?(traversal) == true || yard.contains(traversal.edge) { return false }
                 guard let clear else { return true }
                 return clear(TrackStretch(traversal: traversal, from: from, to: end))
             }
@@ -278,6 +278,32 @@ extension GameWorld {
                 !blocked.blocks(cover(of: [step]), in: network)
             }, forbidden: forbidden, only: only)
         }
+    }
+
+    /// ``path(from:toStation:length:avoiding:forbidden:only:)`` with the
+    /// traversals it may not run along asked one at a time.
+    func path(from start: TrainPosition, toStation id: StationID, length: Int64, avoiding blocked: BlockedTrack, forbids: @escaping (TrackTraversal) -> Bool) -> TrainPath? {
+        switch start {
+        case .onEdge(let traversal, let offset):
+            networkPath(from: traversal, offset: offset, toStation: id, length: length, clear: blocked.isEmpty ? nil : { step in
+                !blocked.blocks(cover(of: [step]), in: network)
+            }, forbids: forbids)
+        }
+    }
+
+    /// Whether `path`, from `start`, runs along any traversal `forbids`:
+    /// as the path searches above ask it, of each traversal it goes some
+    /// way along.
+    func runsAlongAny(_ path: TrainPath, from start: TrainPosition, _ forbids: (TrackTraversal) -> Bool) -> Bool {
+        guard case .onEdge(let first, let offset) = start, let firstLength = network.edge(first.edge)?.length else { return false }
+        let firstEnd = path.traversals.isEmpty ? path.end ?? firstLength : firstLength
+        if firstEnd > offset, forbids(first) { return true }
+        for (index, traversal) in path.traversals.enumerated() {
+            guard let length = network.edge(traversal.edge)?.length else { continue }
+            let end = index == path.traversals.count - 1 ? path.end ?? length : length
+            if end > 0, forbids(traversal) { return true }
+        }
+        return false
     }
 
     /// V3 generalized path cost (migration map §7). The geometric length

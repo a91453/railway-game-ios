@@ -88,9 +88,9 @@ extension GameWorld {
         if let kept = plan.sidings[key] { return kept }
         let service = plan.services[s], point = service.points[j]
         guard trafficHasSiding(at: point, train: service.train, known: &plan.hasSiding) else { return [] }
-        let own = trafficNominalDirections(service)
-        let opposite = Set(plan.services.filter { $0.train.id != service.train.id }
-            .flatMap { trafficNominalDirections($0).map(\.reversed) }).subtracting(own)
+        let own = trafficNominalDirections(&plan, service: s)
+        let opposite = Set(plan.services.indices.filter { plan.services[$0].train.id != service.train.id }
+            .flatMap { trafficNominalDirections(&plan, service: $0).map(\.reversed) }).subtracting(own)
         let assignedSiding = trafficAssignedSiding(plan, service: s, at: j)
         let tracks = berths(of: point.station, length: service.train.length).compactMap { berth -> TrafficTrack? in
             guard berth.traversal.edge != point.berth.traversal.edge || assignedSiding,
@@ -137,6 +137,21 @@ extension GameWorld {
                                                        berthPenalty: [:], edgePenalty: [:], only: points[j + 1].berth) {
             directions.formUnion(trafficStretches(from: position, along: path).filter { $0.to > $0.from }.map(\.traversal))
         }
+        return directions
+    }
+
+    /// ``trafficNominalDirections(_:)`` of service `s`, kept in `plan` by
+    /// what it reads (see ``TrafficParts/Nominal``); the network, the
+    /// lines and keeping left do not change while it is kept.
+    func trafficNominalDirections(_ plan: inout TrafficPlan, service s: Int) -> Set<TrackTraversal> {
+        let service = plan.services[s]
+        let key = TrafficParts.Nominal(
+            train: service.train.id, length: service.train.length, timetable: service.train.timetable,
+            points: service.points.map { .init(station: $0.station, stop: $0.stop, calls: $0.calls, berth: $0.berth) }
+        )
+        if let known = plan.nominal[key] { return known }
+        let directions = trafficNominalDirections(service)
+        plan.nominal[key] = directions
         return directions
     }
 
