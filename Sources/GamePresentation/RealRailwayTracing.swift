@@ -249,10 +249,6 @@ extension GameSession {
     /// it.
     static let traceGrade = 0.038
 
-    /// The system whose real structures a trace follows (decision 279):
-    /// the TRA's, the lines `tra_structures.json` has.
-    static let tracedStructuresSystem = "tra_sched"
-
     /// Whether the network tool can trace the real railway here: on a
     /// real-world map whose real railways are loaded.
     public var canTraceRealRailway: Bool {
@@ -345,13 +341,20 @@ extension GameSession {
         var levels: [TrackRise.Level] = []
         if case .point = start {} else { levels.append(TrackRise.Level(0...0, at: Double(from.z))) }
         if case .point = end {} else { levels.append(TrackRise.Level(path.length...path.length, at: Double(to.z))) }
-        // Decision 279: along a TRA line over real ground, with the tool's
+        // Decision 279: along a real line over real ground, with the tool's
         // own choices (what the ground asks for, nothing raised), up on the
-        // real line's viaducts and down in its tunnels.
+        // real line's viaducts and down in its tunnels: the TRA's, the High
+        // Speed Rail's and the Alishan Forest Railway's.
         var carried: [TrackRise.Carried] = []
         if mapped, networkStructure == .automatic, networkHeight == 0, let traces = realRailwayTraces, let frame = RealWorldFrame(world: draft),
-           let snap = traces.snap(WorldVector(from.plan), within: reach), traces.lines[snap.place.line].system == Self.tracedStructuresSystem {
-            carried = railways?.structures?.stretches(along: path, frame: frame) ?? []
+           let snap = traces.snap(WorldVector(from.plan), within: reach), let structures = railways?.structures {
+            carried = structures.stretches(along: path, frame: frame, system: traces.lines[snap.place.line].system)
+            // A new end stands where the tool puts it, and the track climbs
+            // or falls from it to the real line's viaduct or tunnel.
+            if !carried.isEmpty {
+                if case .point = start { levels.append(TrackRise.Level(0...0, at: Double(from.z))) }
+                if case .point = end { levels.append(TrackRise.Level(path.length...path.length, at: Double(to.z))) }
+            }
         }
         guard let rise = TrackRise(path: path, ground: ground, water: water, levels: levels, grade: Self.traceGrade, carried: carried) else {
             return TracePlan(stretches: [], buildable: 0, problem: language.text(

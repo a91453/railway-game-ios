@@ -9,11 +9,12 @@ import Foundation
 // (`rail-3d/physical/level-profiles.json`, after its `classifyRailStructure`
 // in `structure-kind.js`): OpenStreetMap's own bridge and tunnel tags, filled
 // in from the National Land Surveying and Mapping Center's railway
-// geometry; `tools/real-railways/extract_structures.py` keeps the TRA's
-// running lines' (`tra_structures.json`).
+// geometry; `tools/real-railways/extract_structures.py` keeps the running
+// lines' of the TRA, the High Speed Rail and the Alishan Forest Railway
+// (`rail_structures.json`).
 
-/// The stretches of the real TRA lines that are on bridges and viaducts or
-/// in tunnels (decision 279), as `tra_structures.json` lists them.
+/// The stretches of Taiwan's real railways that are on bridges and viaducts
+/// or in tunnels (decision 279), as `rail_structures.json` lists them.
 public struct RealRailStructures: Sendable, Equatable {
     public enum Kind: String, Sendable, Hashable, Decodable {
         /// On a bridge or a viaduct.
@@ -22,6 +23,9 @@ public struct RealRailStructures: Sendable, Equatable {
     }
 
     public struct Structure: Sendable, Equatable {
+        /// The system it is a line of, as ``RealRailways/System/id`` names
+        /// it (`tra_sched`).
+        public let system: String
         public let kind: Kind
         /// Along the track, at least two.
         public let points: [RealRailways.Coordinate]
@@ -34,6 +38,7 @@ public struct RealRailStructures: Sendable, Equatable {
     public init(data: Data) throws {
         struct File: Decodable {
             struct Structure: Decodable {
+                let system: String
                 let kind: Kind
                 let points: [[Double]]
             }
@@ -50,7 +55,7 @@ public struct RealRailStructures: Sendable, Equatable {
             guard points.count >= 2 else {
                 throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "A structure has fewer than two points"))
             }
-            return Structure(kind: structure.kind, points: points)
+            return Structure(system: structure.system, kind: structure.kind, points: points)
         }
     }
 
@@ -58,23 +63,56 @@ public struct RealRailStructures: Sendable, Equatable {
     /// track of a double line, and the few metres a centre line strays.
     static let reach = 20.0 * RealWorldDemo.metre
 
-    /// The stretches of `path` (in world units of `frame`) that the real
-    /// line carries on a bridge or in a tunnel: each structure whose every
-    /// point lies within ``reach`` of it, from the nearest point of the path
-    /// to its first to the nearest to its last, one stretch where those of
-    /// a kind overlap or touch. In order along the path.
-    func stretches(along path: WorldPath, frame: RealWorldFrame) -> [TrackRise.Carried] {
+    /// The systems it has structures of.
+    public var systems: Set<String> { Set(structures.map(\.system)) }
+
+    /// How far apart a structure is followed along its length: its ways'
+    /// points can be far apart on a straight viaduct.
+    static let sampleSpacing = 16.0 * RealWorldDemo.metre
+    /// How much of its own length a run along the path covers of the path:
+    /// less, and it crosses the path rather than runs along it.
+    static let alongShare = 0.8
+    /// How long a run that is only part of its structure must be: the end
+    /// of another line's structure where it leaves the path is shorter.
+    static let shortestPart = 64.0 * RealWorldDemo.metre
+
+    /// The stretches of `path` (in world units of `frame`) that `system`'s
+    /// real line carries on a bridge or in a tunnel: each run of a
+    /// structure, every ``sampleSpacing`` along it, within ``reach`` of the
+    /// path and along it (``alongShare``), from the nearest point of the
+    /// path to its first sample to the nearest to its last (a part of a
+    /// structure at least ``shortestPart`` long); one stretch where those
+    /// of a kind overlap or touch. In order along the path.
+    func stretches(along path: WorldPath, frame: RealWorldFrame, system: String) -> [TrackRise.Carried] {
         let xs = path.points.map(\.x), ys = path.points.map(\.y)
         guard let minX = xs.min(), let maxX = xs.max(), let minY = ys.min(), let maxY = ys.max() else { return [] }
         let box = (x: (minX - Self.reach)...(maxX + Self.reach), y: (minY - Self.reach)...(maxY + Self.reach))
         var found: [TrackRise.Carried] = []
-        for structure in structures {
+        for structure in structures where structure.system == system {
             let points = structure.points.map { WorldVector(frame.worldPosition(latitude: $0.latitude, longitude: $0.longitude)) }
-            guard points.allSatisfy({ box.x.contains($0.x) && box.y.contains($0.y) }) else { continue }
-            let nearest = points.map(path.nearest)
-            guard nearest.allSatisfy({ $0.away <= Self.reach }), let start = nearest.map(\.along).min(), let end = nearest.map(\.along).max(),
-                  end > start else { continue }
-            found.append(TrackRise.Carried(range: start...end, kind: structure.kind))
+            guard points.contains(where: { box.x.contains($0.x) && box.y.contains($0.y) }) else { continue }
+            var samples = [points[0]]
+            for (a, b) in zip(points, points.dropFirst()) {
+                let steps = max(1, Int(((b - a).length / Self.sampleSpacing).rounded(.up)))
+                samples += (1...steps).map { a + (b - a) * (Double($0) / Double(steps)) }
+            }
+            var run: [Double] = [], length = 0.0, first = 0
+            func close(at last: Int) {
+                defer { run = []; length = 0 }
+                guard run.count >= 2, let start = run.min(), let end = run.max(), end - start >= Self.alongShare * length else { return }
+                guard (first == 0 && last == samples.count - 1) || end - start >= Self.shortestPart else { return }
+                found.append(TrackRise.Carried(range: start...end, kind: structure.kind))
+            }
+            for (index, sample) in samples.enumerated() {
+                let inBox = box.x.contains(sample.x) && box.y.contains(sample.y)
+                guard inBox, case let nearest = path.nearest(sample), nearest.away <= Self.reach else {
+                    close(at: index - 1)
+                    continue
+                }
+                if run.isEmpty { first = index } else { length += (sample - samples[index - 1]).length }
+                run.append(nearest.along)
+            }
+            close(at: samples.count - 1)
         }
         var merged: [TrackRise.Carried] = []
         for kind in [Kind.bridge, .tunnel] {

@@ -193,7 +193,7 @@ extension RealWorldDemo {
         /// Where along `path` the real line is on a bridge or in a tunnel
         /// (decision 279): none without the app's structures.
         func carried(along path: WorldPath) -> [TrackRise.Carried] {
-            structures?.stretches(along: path, frame: frame) ?? []
+            structures?.stretches(along: path, frame: frame, system: "tra_sched") ?? []
         }
 
         /// The points whose ground the demo reads: every 32 m along its
