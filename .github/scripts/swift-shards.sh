@@ -312,7 +312,7 @@ classes_of() {
     campaigns-13) echo "BoardingPropertyTests TurnbackPropertyTests" ;;
     campaigns-14) echo "ServiceLinePropertyTests OnboardingTests CommandLogTests ScheduledTrafficTests TurnbackTests" ;;
     campaigns-15) echo "TrafficFollowingPropertyTests ScheduledOvertakeTrackLastPropertyTests NewGameSavePropertyTests RealWorldDemoTests" ;;
-    campaigns-16) echo "HighSpeedDemoDayTests TRADemoDayTests HighSpeedDemoBatchTests" ;;
+    campaigns-16) echo "HighSpeedDemoDayTests TRADemoDayTests HighSpeedDemoBatchTests FlexDispatchPropertyTests" ;;
     *) return 1 ;;
   esac
 }

@@ -134,7 +134,7 @@ public final class GameLauncher {
         }
     }
 
-    nonisolated static let preferencesFileName = "launcher-preferences.data"
+    public nonisolated static let preferencesFileName = "launcher-preferences.data"
 
     private func savePreferences() {
         preferences.write(to: library.directory.appendingPathComponent(Self.preferencesFileName))
