@@ -418,9 +418,21 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         _ = requiredButton("start.continue", in: app)
     }
 
-    private func waitForLabel(_ label: String, of element: XCUIElement) {
-        let shown = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", label), object: element)
-        XCTAssertEqual(XCTWaiter().wait(for: [shown], timeout: 10), .completed, "Expected \(label), found \(element.label)")
+    /// Waits until `element` reads `label`, looking every tenth of a second,
+    /// and judges every look, the last one too. With fifteen trains and the
+    /// clock running one look at the app took 5 to 21 s (main abb306a's
+    /// full lane, run 39053855189): an `XCTWaiter` of 10 s timed out while
+    /// its first look was still out, and the look after it read the label
+    /// it waited for ("Expected Train: Train 5, found Train: Train 5",
+    /// main 98d1f15's full lane, run 39070554849).
+    private func waitForLabel(_ label: String, of element: XCUIElement, within timeout: TimeInterval = 30) {
+        let deadline = Date().addingTimeInterval(timeout)
+        var seen = element.exists ? element.label : "nothing"
+        while seen != label, Date() < deadline {
+            Thread.sleep(forTimeInterval: 0.1)
+            seen = element.exists ? element.label : "nothing"
+        }
+        XCTAssertEqual(seen, label, "Expected \(label), found \(seen)")
     }
 
     private func assertEmptyStart(in app: XCUIApplication) {

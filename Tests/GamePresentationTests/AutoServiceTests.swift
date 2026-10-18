@@ -233,6 +233,52 @@ final class AutoServiceTests: XCTestCase {
         XCTAssertTrue(session.message?.text.contains("2 passing loops went in") == true, session.message?.text ?? "")
     }
 
+    /// #785's review: each loop after the first is planned and tried on a
+    /// copy of the world, which reads the ground under its siding from the
+    /// same heights as the session. Without them, a first loop whose
+    /// siding reaches a block not read yet could not be tried on the copy,
+    /// and Add a Train stopped there: the loops after it were not planned. Out in the strait the ground is
+    /// level at 0 m; the line runs 2.5 m south of the edge between block
+    /// rows 4 and 5, so a siding on its north side lies in row 4, which
+    /// the line's own track never read.
+    func testEveryLoopIsPlannedOnTheSessionsGround() throws {
+        let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: 24.0, longitudeDegrees: 118.6))
+        var world = GameWorld.newGame(anchor: anchor, rules: .simple)
+        world.setTourism(nil)
+        try world.mapGround()
+        let heights = try HeightGrid(data: RealWorldDataLoadTests.file("taiwan_heights", "dat"))
+        let block = Land.blockLength
+        let y = 5 * block + 160
+        let west = 4 * block + block / 2
+        let span = 10_000 * WorldCoordinate.unitsPerMetre
+        let builder = GameSession(world: world, language: .english)
+        builder.heights = heights
+        builder.selectTool(.network)
+        builder.tapNetwork(at: PlanPoint(x: west, y: y), reach: 16)
+        builder.tapNetwork(at: PlanPoint(x: west + span, y: y), reach: 16)
+        builder.buildNetworkTrack()
+        XCTAssertEqual(builder.message?.kind, .success, builder.message?.text ?? "")
+        world = builder.world
+        let main = try XCTUnwrap(world.network.edges.first)
+        let platform = Int64(4) * world.platformCarLength
+        let a = try world.buildStation(named: "A", at: PlanPoint(x: west + platform, y: y)).id
+        try world.addTrackPlatform(a, on: main.id, from: platform / 2, to: platform + platform / 2)
+        let b = try world.buildStation(named: "B", at: PlanPoint(x: west + span - platform, y: y)).id
+        try world.addTrackPlatform(b, on: main.id, from: main.length - platform - platform / 2, to: main.length - platform / 2)
+        let line = try world.createLine(named: "Line 1", stops: [a, b]).id
+        for name in ["T1", "T2", "T3"] {
+            let train = try world.purchaseTrain(named: name).id
+            try world.assignTrain(train, to: line)
+        }
+        let session = GameSession(world: world, language: .english)
+        session.heights = heights
+        let plan = try XCTUnwrap(session.autoServicePlan(addingTrainTo: line))
+        XCTAssertEqual(plan.loops.count, 3, "four trains need three places to pass")
+        var built = world
+        _ = try session.apply(plan, to: &built)
+        XCTAssertNil(built.passingPlaceShortfall(of: line, trains: 4), "room for four")
+    }
+
     /// CORE_LOOP §1.2: a second line from C over the first's single track
     /// gets a loop on the shared track, a stop of both lines.
     func testASecondLineOverTheFirstsSingleTrackGetsALoopBothLinesStopAt() throws {

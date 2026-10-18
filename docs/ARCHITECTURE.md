@@ -11062,6 +11062,11 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - Linux 測試 `AutoServiceTests.testAddATrainBuildsEveryLoopTheLineIsShortOf`：C–B 約 9.5 公里的單線上有兩列車、沒有交會處，加開第三列時一次蓋兩處。
 - 四方：玩家：按一次就夠，不會加了車卻卡在單線上；開發：只改 GamePresentation 的規劃，一個指令、一次 Undo；美術：無；音樂：無。
 
+**之後的修正**（2026-10-17，PR #755–#784 的審查延後的一項，`docs/archive/PR755_784_REVIEW_HANDOFF.md` 第四節）：一次蓋多處時，第二處以後的副本 `GameSession` 帶上這個 session 的高度、水域、人口、地點與建物覆蓋。
+- 原本副本沒有高度檔：在實景地圖上，前一處待避線的側線碰到還沒讀進來的地面區塊時，在副本上試蓋會因為讀不到地面（`groundNotLoaded`）而失敗，後面幾處就不規劃了，回到一次只蓋一處。
+- Linux 測試 `AutoServiceTests.testEveryLoopIsPlannedOnTheSessionsGround`：海峽上地面 0 公尺的 10 公里單線，緊貼區塊列的邊界（北側的側線落在沒讀過的那一列），三列車加開第四列時蓋三處；修正前只有兩處。
+- 四方：玩家：實景地圖上按一次「加開一列車」，該蓋的交會處都會蓋；開發：只改 GamePresentation，副本讀的地面和真的蓋的時候一樣；美術：無；音樂：無。
+
 ### 265. PR 的 gate 等同一個 commit 的 iOS App Build；full lane 不在每批合併後手動跑
 
 2026-10-16。作者：「不用凍結了 但也先不要開工我要做pr review 跟ci優化」；遊戲規劃 session_01V1xd3H9vNkuZoSA3czNfGm 派工給 CI 優化 session。號碼依工作登記 #231：決策 265；存檔版本、golden schema 不動。GameCore、App、測試都不動，存檔、golden、replay 也都不變。量測與其他方案見 `docs/research/CI_MEASURE_2026-10-16.md`。
@@ -11677,6 +11682,8 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 座位圖一排最多 6 節（`SeatMap.carsPerRow`，約 240 點），多的換行。手機橫拿時列車卡片最寬 300 點，原本 7 節以上就撐出卡片（高鐵示範 12 節約 476 點）。
 - 四方：玩家：需求燈說的是這條線自己的乘客，長編組的座位圖看得完整。開發：只改 GamePresentation 的換算與 App 的排版，有 Linux 測試。美術：座位與車廂的樣子不變，只是換行。音樂：無。
 
+**之後的修正**（2026-10-17，PR #755–#784 的審查延後的一項）：兩端的需求燈改成對比路線上**最小**列車的定員，原本用第一列車。同一條線混用長短不同的列車時，下一班來的可能是短的那列；用第一列（長的）比，短車載不完的人潮也顯示「人少」。Linux 測試 `LineFeedbackTests.testAnEndsLightIsAgainstTheSmallestTrain`：8 節與 2 節各一列，修正前是「人少」，修正後是「一班車載不完」。四方：玩家：燈號照最壞的那班車說，不會低估排隊；開發：只改一行換算；美術：燈號樣子不變；音樂：無。
+
 ### 275. 整平有月台的軌道時，轉乘中的乘客不會被丟掉：多個指令當成一次編輯
 
 2026-10-17，PR #755–#784 的審查延後給核心玩法的一項（`docs/archive/PR755_784_REVIEW_HANDOFF.md` 第四節；HANDOFF 第 2 節），遊戲規劃 session_01V1xd3H9vNkuZoSA3czNfGm 派工。號碼依工作登記 #231：決策 275。存檔版本、golden schema 都不動。
@@ -11710,6 +11717,44 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 每個指令都不再檢查、改成每一分鐘檢查一次：會改變所有指令的行為與 golden。
 
 **UI 測試**（交給 Codex）：沒有新的畫面；不需要。
+
+### 276. 回饋第二批（二）：每趟蓋章「客滿／空位多」，長按路線看旅程
+
+2026-10-17，NEXT_PRIORITIES §16 第 3 項的第二個 PR（HANDOFF 第 3 節「航空遊戲手感借到鐵道」的 ②），遊戲規劃 session_01V1xd3H9vNkuZoSA3czNfGm 在 72.1 發版後派工。號碼依工作登記 #231：main 到 274、#789 用 275，取 276。存檔版本、golden schema、GameCore 都不動。第一個 PR 是每趟蓋章；長按路線看旅程（決策 220 的「路線之後再加」）是第二個 PR，補在這裡。
+
+1. **每趟蓋章**（`Sources/GamePresentation/TripStamp.swift`）：一趟（`TrainTrip`，路線的一個來回）照計畫跑完時，在它最後停靠的那一站上方蓋一個章。
+   - 「客滿」：這一趟列車最擠的時候滿載（100% 以上）；
+   - 「空位多」：最擠的時候也不到 35%；
+   - 中間的不蓋，路線跑得好時地圖保持安靜。門檻照決策 274 的 `TrainFit`（`TripStampKind(peakLoad:)`）。
+   - 只蓋載客路線的趟次：空車回送、出入庫、中途停止的、貨運線、列車自己的時刻表不蓋。
+2. **最擠的時候怎麼知道**（`TripLoads`）：GameCore 只記每條線每天的最高（`LineTally.peakLoad`），沒有每趟的。所以畫面層在每一步之後，讀每一趟還在跑的列車上有幾人，除以額定定員（千分比），記下最高的；那一趟結束的那一步就用它蓋章。
+   - 一步裡開出又結束的趟次（極快的倍速）沒讀到過，不蓋。
+   - 不存檔，不改世界（`GameSession.tripLoads`、`tripStampPulse`）。
+3. **畫面**（`TripStampMarks`、`TripStampLabel`，`FeedbackViews.swift`）：
+   - 扁平的面板，加章的顏色的粗框，稍微歪 6 度像蓋上去的章；左邊是地圖的人形圖示：客滿是三個人（`MapGlyph.full`），空位多是一個人（`MapGlyph.person`），照畫風規則「人越多越擠」；不加陰影。
+   - 顏色：客滿用 `Theme.error`，空位多用 `Theme.warning`（列車太大也是要調整的事，和路線卡「列車太大」的提醒同色）。
+   - 位置在車站上方 46 點，比車資「+$12」（22 點）高，兩個一起出現也看得到。
+4. **動態**：照決策 253 的規則，和車資一樣：`pop` 進來、停住、`cardOut` 往上淡出，整個 2 秒（車資 1.2 秒，章有兩個字要讀）。「減少動態效果」時只淡入淡出。
+5. **數量**（`TripStampBoard`）：一站一個，新的取代舊的；同時最多 6 個，舊的先走。600 倍速以上只顯示跟隨中的列車、以及離畫面中間最近的 3 站（和車資同一條規則，`FareFloatBoard.fastStations`）。
+6. **無障礙**：章是給眼睛看的提示，VoiceOver 不念（和車資一樣）；同樣的資訊在路線卡的「營運狀況」（決策 274）。
+
+**參考**：參考庫沒有可移植的（`Ci/` 的路線日報只有一天的尖峰載客率；`Railway/train_loop_reference_clean/` 的 `updatePass` 是到站橫幅的時間，決策 256 已照它定車資的時間）。外部：航空經營遊戲每個航班結束時標「客滿／空位多」的做法（HANDOFF 第 3 節的研究），只取做法，沒有程式碼。程式是本專案自己寫的。
+
+**四方**：
+- 玩家：一趟跑完就知道這班車太擠還是太空，不用打開路線卡；地圖上只在需要調整時才出現。
+- 開發：只在 GamePresentation 讀每一步的世界，門檻沿用決策 274 的 `TrainFit`，有 Linux 測試（`TripStampTests`）；App 只畫。
+- 美術：扁平色塊、粗框、地圖現有的人形圖示與 `Theme` 的顏色，沒有新圖、沒有陰影；歪 6 度只是擺放，不是動畫。
+- 音樂：無。蓋章不加聲音：每趟都響會太吵，目標旋律（決策 256）留給真正的里程碑。
+
+**沒有採用**：
+- 每一趟都蓋（包括「剛好」）：600 倍速時滿天都是章，真正要調整的看不出來。
+- 章跟著列車跑：列車在動，字跟著跑難讀（和車資同樣的理由）。
+- 用整趟上車的人數比定員：一個來回上下車好幾次，上車總數超過定員不代表擠。
+- 在 GameCore 記每趟的最高載客：要改存檔格式；畫面層每一步讀就夠用。
+
+**UI 測試**（交給 Codex）：章在 Linux 上已有邏輯測試；畫面只有 Simulator 看得到：開一條線跑到早上尖峰，車站上方出現「客滿」或「空位多」的章，2 秒後消失。
+
+**下一步**：第二個 PR，長按路線看旅程。
 
 ### 277. 3D 地圖下雨時變暗、變灰、霧變近；站前商店街與雨絲的計畫
 
