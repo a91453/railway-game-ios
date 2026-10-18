@@ -183,6 +183,11 @@
 - Codex（作者轉交）：`LessonUITests` 讓 full lane 第一個 job 跑到 1 小時，拆到兩個 job 或第三個 iPhone job（第二個 job 已 35–40 分，整個搬過去會超過 45 分上限）；`-lesson-stars` 用的檔名常數改成 public 給 App 讀；`ci.yml` push 超過 30 分的兩次（#759、#770）看 shard 時間。
 - 時好時壞的 `MapInteractionTests/testHoldingAStationTracesItsBusiestTrips`：下次紅時讀 #785 加的 trace（refused／station none／什麼都沒有，各指一個原因），再派。
 
+**作者 2026-10-18 暫停（「現在的做完 收工 就不要做了 沒有額度了」）**：遊戲規劃 session 讓各線停在這裡，每日 Threads 日誌的排程也暫停（`trig_01342WWauXtTPc87kNedEhb9`，重新開工時再打開）。沒有開著的 PR。下次開工從這裡接：
+- 核心玩法：NEXT_PRIORITIES §16 第 4 項高鐵示範剛開工就停，沒有 commit。量到 `.fast` 每 tick 中位數 112 ms、p90 150 ms，144 個 tick 有 85 個超過 100 ms 的預算（這次是模擬本身慢，不是 UI 測試）；下一步用 callgrind 找熱點，先做結果逐位元不變的修正。決策 278 已釋出，開工時重新取號。
+- 3D：等 72.1 的 fps 回報，才做決策 277 的雨絲與站前商店街；Meshy 公車（`docs/art/meshy-city-bus-2026-10-18/`，車頭 −x）等 Codex 的轉換器才接進 App。
+- Codex：三張卡仍在作者手上（full lane 拆工作 → 關卡 UI 測試 → GLB 轉換器）。
+
 **App 效能（#791 查到，遊戲規劃 2026-10-18 派給核心玩法 session）**：main 98d1f15 的 full lane 兩個 UI 測試紅，根因都是 App 忙到無障礙查詢要 5–46 秒（#791 改了測試的等待；證據在 #791 的說明，run 39070554849、39077241788 的 xcresult）。App 這邊還沒解：
 - 新遊戲買 15 列車、600 倍時，錄影裡 9 秒只走了 14 分鐘（應該 90 分）；6000 倍時一次查詢 14.5 秒。
 - 時鐘停著時，主執行緒也會有 6 秒沒回應（App 剛啟動、畫面靜止）。
