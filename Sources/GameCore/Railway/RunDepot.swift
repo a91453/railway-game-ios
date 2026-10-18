@@ -103,6 +103,9 @@ extension GameWorld {
             guard waiting.count > wanted else { continue }
             for index in waiting.suffix(waiting.count - wanted).reversed() {
                 guard let trip = emptyRun(of: line, for: trains[index], to: line.depots) else { continue }
+                // Decision 280: under traffic control, only with a siding
+                // for it; without one it stays where it waits.
+                if isTrafficControlEnabled, let depot = trip.deadhead?.to, !depotHasRoom(depot, for: trains[index]) { continue }
                 if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
                    case .held = reservingDeparture(leaving, memo: &memo.directions) {
                     continue

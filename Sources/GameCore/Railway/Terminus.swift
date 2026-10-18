@@ -13,7 +13,11 @@
 // platform on any of it. A train that goes in must come out turned round
 // on the same track, so the trains planned the other way there are trains
 // coming out, which reservation keeps apart; nothing in there is a stretch
-// of single or double track where two ways meet.
+// of single or double track where two ways meet. A depot's sidings are
+// dead ends of the same kind (decision 280): the high-speed demo's Nangang
+// depot lies beyond the station's tracks, and counting its sidings as
+// another station's kept every set bound for Nangang to the one berth its
+// route names.
 
 extension GameWorld {
     /// The traversals of `path` that lead into station `id`'s terminus (see
@@ -33,7 +37,8 @@ extension GameWorld {
     }
 
     /// Whether every way on from `traversal`, without turning round, ends
-    /// at a dead end with no platform of a station other than `id` on it.
+    /// at a dead end with no platform of a station other than `id` on it,
+    /// but a depot's (decision 280).
     /// `known` keeps the answers of one question; a traversal being asked
     /// is taken as no, so a way that comes round to it again (a loop) is
     /// none.
@@ -41,7 +46,7 @@ extension GameWorld {
         if let answer = known[traversal] { return answer }
         known[traversal] = false
         guard let edge = network.edge(traversal.edge),
-              !network.platforms(on: traversal.edge).contains(where: { $0.station != id })
+              !network.platforms(on: traversal.edge).contains(where: { $0.station != id && station(id: $0.station)?.isDepot != true })
         else { return false }
         let node = traversal.direction == .forward ? edge.to : edge.from
         guard let end = network.node(node)?.end(of: traversal.edge) else { return false }
