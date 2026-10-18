@@ -170,8 +170,9 @@ needs OSM data reads the same extract.
   workflows' files.
   A pull request runs a short gate list of UI tests,
   and the iPad tutorial tests only when it touches the tutorial's own files;
-  the full lane runs every UI test, its iPhone tests split over two jobs
-  (`FULL_LANE_SECOND_JOB` names the second's classes), and the iPad
+  the full lane runs every UI test, its iPhone tests split over three jobs
+  (`FULL_LANE_SECOND_JOB` names the second's classes and
+  `FULL_LANE_LESSONS_JOB` the third's, just `LessonUITests`), and the iPad
   tutorial tests (the
   missing-button proof nightly and on request) on `main` after a merge, at
   most every three hours (`ios-full-lane.yml` starts it unless `main`'s
@@ -179,7 +180,9 @@ needs OSM data reads the same extract.
   schedule is only a fallback, GitHub runs it hours late or not at all),
   nightly and by hand (by hand only for the commit a release will use and
   to bisect a red full lane, not after every merge: decision 265), and its
-  red result does not block a pull request),
+  red result does not block a pull request. The full lane holds four of the
+  account's five macOS runners at once, leaving only one for pull requests'
+  iOS checks),
   `release-archive.yml` (unsigned Release device archive; manual, nightly,
   and on PRs that change project settings, the app's entry point, the asset
   catalog, the String Catalog or the localized Info.plist strings), `testflight.yml`
