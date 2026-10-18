@@ -18,7 +18,7 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 存檔版本 | 63（每整分鐘決定行車間隔，#702，決策 248）；每個版本一個存檔 fixture，共 67 個 | `SavedGame.currentVersion`、`SaveFixtures/` |
 | golden | schema 74（車站商業，#595），`GoldenScenarios/` 裡 77 個 JSON | `GoldenScenarios/` |
 | replay | 9 個指令紀錄（含問題回報轉成的 `problem-report-blank-map.json`，#468；長區段行車控制 `long-leg-traffic.json`，#480） | `ReplayFixtures/` |
-| 決策 | 1–217、219–276（218 沒有使用：越行寫進了決策 212，#556、#589）。141、150、203 曾保留但沒有使用；之後的號碼以工作登記 #231 為準 | `docs/ARCHITECTURE.md`，索引在第 9 節 |
+| 決策 | 1–217、219–277（218 沒有使用：越行寫進了決策 212，#556、#589）。141、150、203 曾保留但沒有使用；之後的號碼以工作登記 #231 為準 | `docs/ARCHITECTURE.md`，索引在第 9 節 |
 | App 版本 | 0.5.0 | `RailwayGameApp/project.yml` |
 | 平台與語言 | iPhone（只橫拿）、iPad；繁體中文、英文。日文已移除（#171） | — |
 | 程式規模 | GameCore 90 檔 3.3 萬行、GamePresentation 115 檔 3.1 萬行、App 61 檔 1.9 萬行、測試 292 檔 8.1 萬行 | — |
@@ -464,3 +464,4 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 274 | 回饋第二批（一）：路線卡的「營運狀況」：列車太大／剛好／不夠（昨天最擠的列車）、兩端候車的需求燈（1–3 個人）；列車面板的車廂座位圖（`LineFeedback.swift`，GameCore 不動） |
 | 275 | 整平有月台的軌道時，轉乘中的乘客不會被丟掉：GameCore 的 `editTrackAsOne` 把多個指令當成一次編輯，做完才檢查一次誰到不了（存檔、golden 不動） |
 | 276 | 回饋第二批（二）：每趟蓋章，一趟跑完在終點站蓋「客滿」或「空位多」（`TripStamp.swift`）；長按路線看旅程，畫出路線上最多人往返的 5 對站（`JourneyTrace(line:pairs:)`）；GameCore 不動 |
+| 277 | 3D 地圖下雨時變暗、變灰、霧變近：數值照 town-scene 參考的 `PRESETS.rain`，哪天下雨照 GameCore 的天氣（`MapWeather`）；也寫下雨絲與站前商店街的計畫 |
