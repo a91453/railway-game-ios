@@ -210,13 +210,16 @@ final class LessonUITests: XCTestCase {
         let before = stationPoints().count
         tap(app.buttons["lessonResult.keepPlaying"])
         XCTAssertTrue(element("lessonResult.title").disappears(within: 10))
+        // Keep Playing runs the clock the goal met paused, at the speed it
+        // ran at (decision 266, later; PR #785): Pause shows with no tap.
+        XCTAssertTrue(app.buttons["Pause"].becomesHittable(within: 10), "Keep Playing must run the game again")
+        // The lesson ran at 6000 times real time, and so does the game it
+        // goes on with: one look at the app then took 14 s, and the map's
+        // readout was not read twice within `stationPoints`' 10 s (main
+        // 98d1f15's full lane, run 39070554849). Pause before reading it.
+        pause()
         XCTAssertTrue(map.appears(within: 5))
         XCTAssertEqual(stationPoints().count, before, "Keep Playing must keep the railway")
-        // The goal-met event can leave the clock paused after the result
-        // closes. Keep Playing preserves this game; the player can resume it.
-        let resume = app.buttons["Resume"]
-        if resume.appears(within: 2) { tap(resume) }
-        XCTAssertTrue(app.buttons["Pause"].becomesHittable(within: 5), "The game can continue running")
         tap(app.buttons["dock.build"])
         XCTAssertTrue(app.buttons["tool.network"].becomesHittable(within: 5))
     }
@@ -363,15 +366,30 @@ final class LessonUITests: XCTestCase {
     private func stationPoints() -> [CGPoint] {
         let readout = element("map.stations")
         XCTAssertTrue(readout.appears(within: 10))
-        var last: String?
+        // Settled: two looks at least half a second apart read the same.
+        // Every look counts, the last one too. One look at the app can take
+        // seconds: 14 s with the game at 6000 times real time (main
+        // 98d1f15's full lane, run 39070554849), and 46 s right after a
+        // launch with the clock paused, while the app's main thread did
+        // not answer for 6 s (PR #791's run 39077241788). An `XCTWaiter` of
+        // 10 s timed out before its second look came back.
+        let deadline = Date().addingTimeInterval(60)
+        var last = readout.value as? String ?? ""
         var since = Date()
-        let stable = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+        var settled = false
+        while !settled {
+            Thread.sleep(forTimeInterval: 0.1)
             let value = readout.value as? String ?? ""
-            if last != value { last = value; since = Date(); return false }
-            return Date().timeIntervalSince(since) >= 0.5
-        }, object: readout)
-        XCTAssertEqual(XCTWaiter.wait(for: [stable], timeout: 10), .completed, "The map did not settle")
-        return (last ?? "").split(separator: ";").compactMap { pair in
+            if value != last {
+                last = value
+                since = Date()
+            } else {
+                settled = Date().timeIntervalSince(since) >= 0.5
+            }
+            if !settled, Date() >= deadline { break }
+        }
+        XCTAssertTrue(settled, "The map did not settle: \(last)")
+        return last.split(separator: ";").compactMap { pair in
             let xy = pair.split(separator: ",").compactMap { Double($0) }
             guard xy.count == 2 else { return nil }
             return CGPoint(x: map.frame.minX + xy[0], y: map.frame.minY + xy[1])

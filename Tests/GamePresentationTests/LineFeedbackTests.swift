@@ -93,6 +93,36 @@ final class LineFeedbackTests: XCTestCase {
         XCTAssertEqual(world.lineFeedback(branch)?.ends.first?.waiting, waiting(for: branch))
     }
 
+    /// An end's light is against the smallest of the line's trains
+    /// (#785's review): whichever train comes next, those waiting must
+    /// fit it. With a long first train and a short second, it was the
+    /// first's, and a crowd the short train leaves behind showed calm.
+    func testAnEndsLightIsAgainstTheSmallestTrain() throws {
+        var world = try makeWorld(width: 8_192, height: 4_096, balance: 1_000_000)
+        let alpha = try world.buildStation(named: "Alpha", at: TestLine.centre(1, 0)).id
+        let beta = try world.buildStation(named: "Beta", at: TestLine.centre(3, 0)).id
+        let main = try world.createLine(named: "Main", stops: [alpha, beta]).id
+        let long = try world.purchaseTrain(named: "Long").id
+        let short = try world.purchaseTrain(named: "Short").id
+        try world.setTrainCars(long, to: 8)
+        try world.setTrainCars(short, to: 2)
+        for train in [long, short] {
+            try world.assignTrain(train, to: main, pattern: nil)
+        }
+        try world.setStationDemand(alpha, to: StationDemand(kind: .residential, dailyTrips: 60_000))
+        try world.setStationDemand(beta, to: StationDemand(kind: .office, dailyTrips: 1_000))
+        world.setSpeed(.normal)
+        try world.advance(ticks: 240)
+        let capacities = try [long, short].map { try XCTUnwrap(world.train(id: $0)).ratedCapacity }
+        XCTAssertLessThan(capacities[1], capacities[0])
+        let end = try XCTUnwrap(world.lineFeedback(main)?.ends.first)
+        XCTAssertGreaterThan(end.waiting, 0, "the test needs riders")
+        XCTAssertEqual(end.demand, EndDemand(waiting: end.waiting, capacity: capacities[1]))
+        XCTAssertNotEqual(EndDemand(waiting: end.waiting, capacity: capacities[1]),
+                          EndDemand(waiting: end.waiting, capacity: capacities[0]),
+                          "the test needs a crowd the two trains read differently")
+    }
+
     /// A long train's seat map wraps, at most ``SeatMap/carsPerRow`` cars a
     /// row, so it fits the train card on a phone (300 points at most).
     func testALongTrainsSeatMapWraps() {
