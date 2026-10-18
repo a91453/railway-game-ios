@@ -257,6 +257,50 @@ final class StartSaveFlowSmokeTests: XCTestCase {
     /// With the clock running the open menu stays as it opened for thirty
     /// ticks, and a type other than the train's can be chosen. The chosen
     /// train is still one not yet placed, whose panel shows the menu.
+    /// #791's review: with fifteen trains bought and the clock at 600×,
+    /// 9 s of a UI test ran 14 game minutes, not 90. Left alone for 10 s
+    /// (nothing asked of the app between two readings of the clock), the
+    /// game keeps up: so what is slow is answering the test's queries, not
+    /// running the game. It must run at least half its speed.
+    func testSixHundredTimesKeepsUpWithFifteenTrainsWhenLeftAlone() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+
+        requiredButton("start.newGame", in: app).tap()
+        _ = requiredButton(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause")
+        requiredButton("dock.build", in: app).tap()
+        requiredButton("tool.train", in: app).tap()
+        let buy = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Buy a train"))
+        for _ in 0..<15 {
+            requiredButton(buy, name: "Buy").tap()
+        }
+        let time = app.buttons["hud.time"]
+        XCTAssertTrue(time.appears(within: 10), "Missing the game's clock")
+        // "Game time Year 1 · Jan 2 (Tue) 03:41": the minutes since the
+        // month began.
+        func minutes() -> Int? {
+            let label = time.label
+            guard let day = label.range(of: #"[A-Z][a-z]{2} ([0-9]+) \("#, options: .regularExpression),
+                  let clock = label.range(of: #"([0-9]{2}):([0-9]{2})"#, options: .regularExpression) else { return nil }
+            let dayNumber = Int(label[day].split(separator: " ")[1]) ?? 0
+            let parts = label[clock].split(separator: ":").compactMap { Int($0) }
+            return dayNumber * 1_440 + parts[0] * 60 + parts[1]
+        }
+        guard let before = minutes() else { return XCTFail("Cannot read the clock: \(time.label)") }
+        let start = Date()
+        Thread.sleep(forTimeInterval: 10)
+        guard let after = minutes() else { return XCTFail("Cannot read the clock: \(time.label)") }
+        let real = Date().timeIntervalSince(start)
+        let ran = after - before
+        // A game minute a tick, ten ticks a second.
+        let due = Int(real * 10)
+        print("600× left alone: \(ran) game minutes in \(String(format: "%.1f", real)) s, \(due) due")
+        XCTAssertGreaterThanOrEqual(ran, due / 2, "600× ran \(ran) game minutes in \(String(format: "%.1f", real)) s, \(due) due")
+    }
+
     func testTheTrainAndTypeMenusStayStillAndChooseWhileTheClockRuns() {
         continueAfterFailure = false
         let app = XCUIApplication()
