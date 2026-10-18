@@ -312,6 +312,40 @@ private final class TouchTraceRecognizer: UIGestureRecognizer, UIGestureRecogniz
     }
 }
 
+/// #791's review: under `-ui-testing`, how busy the main thread is, for
+/// the UI test trace. Every 2 s it writes how many frames it drew and the
+/// longest time between two of them: a display link fires only when the
+/// main thread is free, so a long gap is the main thread busy (drawing,
+/// or answering a UI test's query) for that long.
+@MainActor
+final class FrameMeter: NSObject {
+    static let shared = FrameMeter()
+    private var link: CADisplayLink?
+    private var frames = 0
+    private var longest: CFTimeInterval = 0
+    private var last: CFTimeInterval = 0
+    private var windowStart: CFTimeInterval = 0
+
+    func start() {
+        guard link == nil else { return }
+        let link = CADisplayLink(target: self, selector: #selector(frame(_:)))
+        link.add(to: .main, forMode: .common)
+        self.link = link
+    }
+
+    @objc private func frame(_ link: CADisplayLink) {
+        let now = link.timestamp
+        if last > 0 { longest = max(longest, now - last) } else { windowStart = now }
+        last = now
+        frames += 1
+        guard now - windowStart >= 2 else { return }
+        UITestTrace.action("frames \(frames) in \(Int((now - windowStart) * 1_000)) ms, longest gap \(Int(longest * 1_000)) ms")
+        frames = 0
+        longest = 0
+        windowStart = now
+    }
+}
+
 /// Puts a ``TouchTraceRecognizer`` on the window it is shown in, once.
 private struct TouchTraceInstaller: UIViewRepresentable {
     final class Anchor: UIView {
@@ -319,6 +353,7 @@ private struct TouchTraceInstaller: UIViewRepresentable {
             super.didMoveToWindow()
             guard let window, !(window.gestureRecognizers ?? []).contains(where: { $0 is TouchTraceRecognizer }) else { return }
             window.addGestureRecognizer(TouchTraceRecognizer.make())
+            FrameMeter.shared.start()
         }
     }
 

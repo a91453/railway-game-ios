@@ -574,9 +574,10 @@ jobs:
       # and the named buttons' actions to the unified log under -ui-testing
       # (`UITestTrace` in RailwayGameApp.swift); kept beside the result
       # bundle, so the next such failure says whether the touch arrived and
-      # whether the action ran.
+      # whether the action ran. A run by hand of named tests keeps it too,
+      # passed or not: it holds the frame meter's readings (#791's review).
       - name: Save the app's UI test trace
-        if: always() && (steps.ui-smoke.outcome == 'failure' || steps.ui-smoke.outcome == 'cancelled')
+        if: always() && (steps.ui-smoke.outcome == 'failure' || steps.ui-smoke.outcome == 'cancelled' || inputs.only_testing != '')
         continue-on-error: true
         run: |
           xcrun simctl spawn "$SIMULATOR_UDID" log show --last 3h --style compact \
@@ -584,7 +585,7 @@ jobs:
             > "$RUNNER_TEMP/ui-smoke-trace.log" || echo "::warning::Could not read the app's UI test trace"
 
       - name: Upload the app's UI test trace
-        if: always() && (steps.ui-smoke.outcome == 'failure' || steps.ui-smoke.outcome == 'cancelled')
+        if: always() && (steps.ui-smoke.outcome == 'failure' || steps.ui-smoke.outcome == 'cancelled' || inputs.only_testing != '')
         uses: actions/upload-artifact@v7
         with:
           overwrite: true
