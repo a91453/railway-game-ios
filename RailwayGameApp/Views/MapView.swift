@@ -384,14 +384,6 @@ struct MapView: View {
                             camera: projection
                         )
                         .equatable()
-                        #if DEBUG
-                        // #791's review: which of the map's frame-by-frame
-                        // layers run, for the UI test trace beside the
-                        // frame meter (``FrameMeter``).
-                        .onChange(of: frameByFrameLayers(weather: mapWeather), initial: true) { _, layers in
-                            UITestTrace.action("map.frameByFrame \(layers)")
-                        }
-                        #endif
                     }
                     // Decision 204: while a finger draws track, the map
                     // under it three times closer, on the other side of
@@ -1631,17 +1623,6 @@ struct MapView: View {
 
     /// Whether the camera follows a train that glides between ticks
     /// (decision 182): then it moves with the train every frame.
-    #if DEBUG
-    /// #791's review: the map's layers drawn frame by frame now: the trains
-    /// gliding, their waiting rings pulsing, the rain, the camera following
-    /// a glide.
-    private func frameByFrameLayers(weather: MapWeather) -> String {
-        let running = !session.world.clock.isPaused
-        return "trains \(running && trainMotion.isMoving) waits \(running && !traffic.waits.isEmpty) "
-            + "weather \(!reduceMotion && weather.sky != .clear) follow \(followsGlide)"
-    }
-    #endif
-
     private var followsGlide: Bool {
         session.isFollowingTrain && !session.world.clock.isPaused && trainMotion.isMoving
     }
