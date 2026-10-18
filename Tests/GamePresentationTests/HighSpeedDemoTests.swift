@@ -200,7 +200,14 @@ final class HighSpeedDemoTests: XCTestCase {
         let edges = Self.zuoyingDepotEdges(layout: layout, world: world, tracks: tracks)
         let shared = Set(edges.flatMap { id in world.network.edge(id).map { [$0.from, $0.to] } ?? [] }).intersection(downNodes)
         XCTAssertEqual(shared.count, 1, "the lead's turnout only")
-        XCTAssertTrue(tracks.between.isDisjoint(with: tracks.bothWays), "the down track between the turnouts is only run southbound")
+        // The down track from the depot to the end's turnout is run only
+        // southbound: the sets no longer run north along it into the depot.
+        let distances = layout.plan.distances
+        let approach = tracks.down.indices.filter {
+            distances[$0] >= layout.depots[2].entry - 1 && distances[$0 + 1] <= layout.junctions.south + 1
+        }.map { tracks.down[$0] }
+        XCTAssertFalse(approach.isEmpty)
+        XCTAssertTrue(Set(approach).isSubset(of: tracks.southbound), "only southbound from the depot to the turnout")
     }
 
     /// The edges of Zuoying's depot's sidings and lead: the depots' track
@@ -320,7 +327,10 @@ final class HighSpeedDemoTests: XCTestCase {
         // are a few metres either side of the polyline.
         XCTAssertEqual(Double(track) / Self.metre / 1_000, 352.2, accuracy: 2)
         XCTAssertEqual(Double(track), real, accuracy: real * 0.005)
-        XCTAssertLessThan(tracks.down.count, 330, "the track is fitted loosely: every edge is checked against all before it")
+        // Fitted loosely: every edge is checked against all before it. Over
+        // the ground, at the heights of the real structures, it takes about
+        // three times the edges it took flat (decision 281).
+        XCTAssertLessThan(tracks.down.count, 1_000, "the track is fitted loosely: every edge is checked against all before it")
         // The up track runs beside it from turnout to turnout: as long
         // within a few metres (the inside of a curve is shorter), and the
         // two make up the whole network.

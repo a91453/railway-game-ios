@@ -15,8 +15,9 @@ import GameCore
 /// A whole-Taiwan game with the Taiwan High Speed Rail built and running
 /// (decision 170), on the real day's timetable (decision 197).
 ///
-/// - The track is double, as on the real line, flat and on the ground (the
-///   game's track, not the real viaducts and tunnels): the down track
+/// - The track is double, as on the real line, and with the app's heights
+///   laid over the ground up on the real viaducts and down in the real
+///   tunnels (decision 281; flat at 0 m without them): the down track
 ///   (southbound) is one line of cubic edges on the real alignment, the up
 ///   track (northbound) runs ``trackOffset`` beside it and joins it by a
 ///   turnout short of each end's yard, where the sets turn back.
@@ -33,7 +34,8 @@ import GameCore
 ///   ``realDepots``, from OpenStreetMap): Nangang's sidings beyond its
 ///   station, Wuri's south of Taichung and Zuoying's north of its station,
 ///   each a ladder of dead-end sidings beside the down track, one for each
-///   set that stands there at night (``Depot``). Every line keeps its sets
+///   set that stands there at night (``Depot``); Zuoying's reached by its
+///   own track from its station's throat (decision 281). Every line keeps its sets
 ///   in them: a set goes into the nearest when no run wants it for two
 ///   hours, and comes out in time for its next run.
 /// - A station's platforms are staggered (decision 197), each
@@ -602,12 +604,12 @@ public enum HighSpeedDemo {
                 let far = ladder.deadEnd - way * (2 * margin + Double(spec.platformLength))
                 return (0...max(ladder.east, ladder.west)).map { ladder.entry + way * Double($0) * step } + [far, ladder.deadEnd]
             }
-            // Decision 281: a depot north of the south end that keeps only
-            // its sets (Zuoying's) has its own track from the end's throat
-            // (``RealLineDemoSpec/depotLeads``):
-            // a turnout half a ramp beyond the outermost of the end's tracks
-            // on the down track's side (the up track joins half a ramp
-            // further), out to a track's width a ramp on.
+            // Decision 281 (``RealLineDemoSpec/depotLeads``): a depot north
+            // of the south end that keeps only its sets (Zuoying's) has its
+            // own track from the end's throat: a turnout half a ramp beyond
+            // the outermost of the end's tracks on the down track's side
+            // (the up track joins half a ramp further), out to a track's
+            // width a ramp on.
             let throat = platforms[last].lowerBound - margin - (endReach.south + 0.5) * ramp
             func leads(_ ladder: (real: RealDepot, entry: Double, deadEnd: Double, east: Int, west: Int, serving: [Int])) -> Bool {
                 spec.depotLeads && ladder.serving == [last] && ladder.deadEnd < ladder.entry && ladder.west == 0 && ladder.entry < throat - ramp
@@ -1170,10 +1172,10 @@ extension RealWorldDemo.TrackPlan {
     /// of `plan`'s nodes `at`, `offsets` from it to the side
     /// (``WorldVector/normal`` of the way the track runs there), and cubic
     /// edges that leave and reach each node along that way, as
-    /// ``init(_:forced:avoiding:looseUntil:close:start:end:rise:structure:tolerance:longestEdge:)``
-    /// lays them, at `plan`'s heights and on its structure (decision 279;
-    /// the high-speed demo's flat on the ground). Where two nodes in a row stand off by
-    /// the same, the edge between runs beside `plan`'s that far off it;
+    /// ``init(_:forced:avoiding:looseUntil:close:start:end:rise:structure:tolerance:longestEdge:heightFit:)``
+    /// lays them, at `plan`'s heights and on its structure (decision 279).
+    /// Where two nodes in a row stand off by the same, the edge between
+    /// runs beside `plan`'s that far off it;
     /// where they differ, it is a ramp from the one to the other.
     init(beside plan: RealWorldDemo.TrackPlan, at indices: [Int], offsets: [Double]) {
         let distances = indices.map { plan.distances[$0] }
