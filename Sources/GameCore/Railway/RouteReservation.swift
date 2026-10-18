@@ -279,10 +279,12 @@ extension GameWorld {
         // shortest way can only be as long or longer, or none, so where
         // there is no way short enough without them there is none with
         // them, and they need not be worked out.
+        // Decision 278: with block sections the way into a terminus is run
+        // both ways by every train there, so it is not forbidden.
         guard let free = path(from: position, toStation: station, length: candidate.length, avoiding: blocked),
               overflow || free.distance <= limit,
-              let path = path(from: position, toStation: station, length: candidate.length,
-                              avoiding: blocked, forbidden: opposingServiceTraversals(for: candidate, memo: &memo))
+              let path = path(from: position, toStation: station, length: candidate.length, avoiding: blocked,
+                              forbidden: opposingServiceTraversals(for: candidate, memo: &memo).subtracting(terminusTraversals(along: free, to: station)))
         else { return nil }
         return overflow || path.distance <= limit ? path : nil
     }
