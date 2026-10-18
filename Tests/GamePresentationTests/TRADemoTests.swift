@@ -19,17 +19,22 @@ final class TRADemoTests: XCTestCase {
         }
         return try RealRailways(
             lines: file("track_lines.geojson"), stations: file("track_stations.geojson"), names: file("station_names.json"),
-            operations: RealRailwayOperations(systems: [:], timetables: [:], schedules: [TRADemo.schedule: file("tra-yilan-schedule.json")])
+            operations: RealRailwayOperations(systems: [:], timetables: [:], schedules: [TRADemo.schedule: file("tra-yilan-schedule.json")]),
+            structures: RealRailStructures(data: file("tra_structures.json"))
         )
     }
 
+    /// The app's heights (decision 279: the demo is laid over them).
+    static let heights = try? HeightGrid(data: Data(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/RealWorld/taiwan_heights.dat")))
+
     static let metre = Double(WorldCoordinate.unitsPerMetre)
 
-    /// The layout as the game builds it, built on a world with what it
-    /// costs on top of a new game's money, and not run.
+    /// The layout as the game builds it, over the app's heights, built on
+    /// a world with what it costs on top of a new game's money, and not
+    /// run.
     static let built: Result<(layout: HighSpeedDemo.Layout, world: GameWorld, tracks: HighSpeedDemoTests.Tracks), Error> = Result {
-        let layout = try HighSpeedDemo.Layout(railways: railways(), spec: TRADemo.spec)
-        var world = HighSpeedDemo.newWorld(paying: layout.cost(at: ConstructionCosts.newGame), eventSeed: 1)
+        let layout = try HighSpeedDemo.Layout(railways: railways(), spec: TRADemo.spec, heights: XCTUnwrap(heights))
+        var world = HighSpeedDemo.newWorld(paying: layout.cost(eventSeed: 1), eventSeed: 1, ground: layout.ground)
         world.setKeepLeft(TRADemo.spec.keepLeft)
         let built = try layout.build(in: &world, language: .english)
         return (layout, world, HighSpeedDemoTests.Tracks(layout: layout, built: built))
@@ -37,7 +42,9 @@ final class TRADemoTests: XCTestCase {
 
     /// The demo as the game opens it.
     static let opened: Result<GameWorld, Error> = Result {
-        try TRADemo.make(in: .english, railways: railways(), population: HighSpeedDemoTests.population, places: HighSpeedDemoTests.places)
+        try TRADemo.make(
+            in: .english, railways: railways(), population: HighSpeedDemoTests.population, places: HighSpeedDemoTests.places, heights: XCTUnwrap(heights)
+        )
     }
 
     // MARK: - The track and the stations
@@ -232,6 +239,74 @@ final class TRADemoTests: XCTestCase {
         await task?.value
         XCTAssertFalse(launcher.isOpeningTRADemo)
         XCTAssertEqual(launcher.session?.world.stations.count, 13, "the game is open: ten stations and three depots")
+    }
+
+    // MARK: - Over the ground (decision 279)
+
+    /// Laid over the app's ground, as the real line is: up on its long
+    /// viaducts (south of Yilan towards Erjie, and through Dongshan, whose
+    /// station stands on its viaduct), on the ground elsewhere; Yilan's and
+    /// Luodong's platforms on the ground. The game's ground is coarser than
+    /// the real line's, so not every metre: the shares measured when it was
+    /// made, less a margin.
+    func testItsTrackFollowsTheRealStructures() throws {
+        let (layout, world, tracks) = try Self.built.get()
+        XCTAssertTrue(world.ground.isMapped)
+        XCTAssertTrue(world.network.edges.allSatisfy { $0.structure == .automatic })
+        // The down track's kind every 8 m, by where it is.
+        var built: [(point: WorldVector, kind: TrackSectionKind)] = []
+        for id in tracks.down {
+            let edge = try XCTUnwrap(world.network.edge(id)), geometry = try XCTUnwrap(world.trackGeometry(of: id))
+            for span in edge.sectionSpans where span.end > span.start {
+                for point in geometry.points(from: span.start, to: span.end) {
+                    built.append((WorldVector(x: Double(point.x), y: Double(point.y)), span.kind))
+                }
+            }
+        }
+        let path = layout.plan.path
+        let carried = try XCTUnwrap(Self.railways().structures).stretches(along: path, frame: HighSpeedDemo.frame)
+        var viaduct = (up: 0, all: 0), ground = (off: 0, all: 0)
+        for distance in stride(from: 0, through: path.length, by: 64 * Self.metre) {
+            let point = path.point(at: distance)
+            guard let kind = built.min(by: { ($0.point - point).length < ($1.point - point).length })?.kind else { continue }
+            if carried.contains(where: {
+                $0.kind == .bridge && $0.range.upperBound - $0.range.lowerBound >= TrackRise.shortestCarried
+                    && ($0.range.lowerBound + TrackRise.carriedInset...$0.range.upperBound - TrackRise.carriedInset).contains(distance)
+            }) {
+                viaduct.all += 1
+                viaduct.up += [.viaduct, .bridge].contains(kind) ? 1 : 0
+            } else if !carried.contains(where: { ($0.range.lowerBound - 200 * Self.metre...$0.range.upperBound + 200 * Self.metre).contains(distance) }) {
+                ground.all += 1
+                ground.off += [.viaduct, .tunnel].contains(kind) ? 1 : 0
+            }
+        }
+        // Measured (decision 279): 123 of 123 samples on the real long
+        // viaducts up on one, none of 357 on the real ground up on a
+        // viaduct or down in a tunnel.
+        XCTAssertGreaterThan(viaduct.all, 100)
+        XCTAssertGreaterThanOrEqual(Double(viaduct.up), 0.95 * Double(viaduct.all), "\(viaduct)")
+        XCTAssertGreaterThan(ground.all, 300)
+        XCTAssertLessThanOrEqual(Double(ground.off), 0.01 * Double(ground.all), "\(ground)")
+        // Dongshan's platforms up on its viaduct, Yilan's and Luodong's on
+        // the ground.
+        for (index, raised) in [(4, false), (7, false), (8, true)] {
+            let name = layout.stops[index].station.name(in: .english)
+            let station = try XCTUnwrap(world.stations.first { $0.name == name })
+            for platform in world.trackPlatforms(of: station.id) {
+                let edge = try XCTUnwrap(world.network.edge(platform.edge)), geometry = try XCTUnwrap(world.trackGeometry(of: platform.edge))
+                let middle = (platform.start + platform.end) / 2
+                let rail = geometry.height(at: middle)
+                let under = try XCTUnwrap(world.groundHeight(at: geometry.location(at: middle).position.plan))
+                let kind = try XCTUnwrap(edge.sectionSpans.first { $0.start <= middle && middle <= $0.end }).kind
+                if raised {
+                    XCTAssertEqual(kind, .viaduct, name)
+                    XCTAssertGreaterThan(rail - under, TrackSectionRules.highestFill, "\(name) stands \((rail - under) / 64) m up")
+                } else {
+                    XCTAssertFalse([.viaduct, .tunnel].contains(kind), name)
+                    XCTAssertLessThanOrEqual(abs(rail - under), TrackSectionRules.level, "\(name) stands \((rail - under) / 64) m off the ground")
+                }
+            }
+        }
     }
 
     // MARK: - The map (decision 249)

@@ -70,6 +70,11 @@ struct RealLineDemoSpec: Sendable {
     /// measured): the TRA demo's empty runs to and from its sidings go
     /// over to their way's own track.
     var keepLeft = false
+    /// Whether, with the app's heights, the track is laid over the ground
+    /// at the heights the real line's bridges, viaducts and tunnels ask for
+    /// (decision 279; the TRA demo's), its platforms level; otherwise flat
+    /// at 0 m, as the high-speed demo's.
+    var followsRealStructures = false
 
     /// Cars of the longest sets: every platform takes them.
     var cars: Int { kinds.map(\.cars).max() ?? 1 }
