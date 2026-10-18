@@ -127,6 +127,9 @@ extension RealWorldDemo {
         /// The Pingxi Line's real trains (decision 133), when the app has
         /// them.
         let pingxiRuns: RealLineRuns?
+        /// Where the real lines are on bridges and in tunnels (decision
+        /// 279), when the app has them.
+        let structures: RealRailStructures?
 
         init(railways: RealRailways) {
             let frame = RealWorldFrame(anchor: RealWorldDemo.anchor, bounds: GameWorld.newGameBounds)
@@ -144,6 +147,7 @@ extension RealWorldDemo {
             }
             self.frame = frame
             pingxiRuns = railways.pingxiRuns
+            structures = railways.structures
             // The site's Western Trunk Line runs from Keelung through Badu
             // to Qidu and south, its Yilan Line from Su'ao to Badu, its
             // Pingxi Line from Sandiaoling and its Shenao Line from Ruifang.
@@ -184,6 +188,12 @@ extension RealWorldDemo {
             let shenaoJunction = main.project(mainStops[4].point) - loopReach
             let beside = shenaoLine.project(main.point(at: shenaoJunction))
             shenao = WorldPath([main.point(at: shenaoJunction)] + shenaoLine.points(from: beside + 120 * metre, to: shenaoLine.length).dropFirst()).smoothed()
+        }
+
+        /// Where along `path` the real line is on a bridge or in a tunnel
+        /// (decision 279): none without the app's structures.
+        func carried(along path: WorldPath) -> [TrackRise.Carried] {
+            structures?.stretches(along: path, frame: frame) ?? []
         }
 
         /// The points whose ground the demo reads: every 32 m along its
@@ -306,7 +316,7 @@ extension RealWorldDemo {
                     startNode = (node.point, ahead.dot(node.direction) >= 0 ? node.direction : node.direction.reversed)
                     flat.append(TrackRise.Level(0...0, at: Double(hostPlan.heights[index])))
                 }
-                guard let rise = TrackRise(path: path, ground: ground, water: water, levels: flat) else {
+                guard let rise = TrackRise(path: path, ground: ground, water: water, levels: flat, carried: routes.carried(along: path)) else {
                     preconditionFailure("No grade reaches along a demo track \(Int(path.length / metre)) m long")
                 }
                 for (stop, span) in stations where levels[stop.station.id] == nil {
@@ -597,9 +607,60 @@ struct TrackRise {
     /// Each level stretch and the height it is laid at.
     let levels: [(range: ClosedRange<Double>, height: Double)]
 
+    /// A stretch of the path the real line carries on a bridge or a
+    /// viaduct, or in a tunnel (decision 279,
+    /// ``RealRailStructures/stretches(along:frame:)``).
+    struct Carried: Hashable {
+        let range: ClosedRange<Double>
+        let kind: RealRailStructures.Kind
+    }
+
+    /// Decision 279: how the real line's structures bound the track. On a
+    /// bridge or viaduct at least ``carriedHeight`` over the ground (the
+    /// game's viaducts are over 8 m, ``TrackSectionRules/highestFill``), in
+    /// a tunnel at least ``carriedDepth`` under it (its tunnels are under
+    /// 11 m, ``TrackSectionRules/deepestCutting``), each but its last
+    /// ``carriedInset`` at either end, where it meets the ground; and
+    /// elsewhere within ``surfaceBand`` of the ground, on it, on an
+    /// embankment or in a cutting, but beyond ``carriedApproach`` of a
+    /// structure, where the track climbs or falls to it. A structure
+    /// shorter than ``shortestCarried`` (a culvert, a stream's bridge, a
+    /// short tunnel under a spur) bounds nothing, and nor does the ground
+    /// within ``carriedInset`` of it: what the game's ground and water make
+    /// of it there stands.
+    ///
+    /// The bounds are kept in pieces at most ``boundPiece`` long. Where no
+    /// line within the grade keeps to them all (the ground the game reads
+    /// is coarser than the real line's: a bridge over a narrow valley
+    /// stands on the valley's sides), the pieces whose bounds clash are let
+    /// go, one clash at a time, before the water's are put in tunnels.
+    static let carriedHeight = 10.0 * RealWorldDemo.metre
+    static let carriedDepth = 13.0 * RealWorldDemo.metre
+    static let carriedInset = 64.0 * RealWorldDemo.metre
+    static let carriedApproach = 64.0 * RealWorldDemo.metre
+    static let shortestCarried = 160.0 * RealWorldDemo.metre
+    static let surfaceBand = (low: -10.5 * RealWorldDemo.metre, high: 7.5 * RealWorldDemo.metre)
+    static let boundPiece = 256.0 * RealWorldDemo.metre
+
+    /// A piece of the bounds of the real line's structures (decision 279):
+    /// over `indices`, the samples at least `low` and at most `high` from
+    /// the ground.
+    struct Bound: Hashable {
+        let indices: ClosedRange<Int>
+        let low: Double
+        let high: Double
+    }
+
     /// `nil` where no line within the grade keeps to `levels` (a traced
     /// stretch's ends on track, decision 213); the demo's always have one.
-    init?(path: WorldPath, ground: (WorldVector) -> Double, water: (WorldVector) -> Bool, levels: [Level], grade: Double = RealWorldDemo.rulingGrade) {
+    ///
+    /// With `carried`, the real line's structures (decision 279), the track
+    /// keeps to them as ``carriedHeight`` says, as far as a line within the
+    /// grade can.
+    init?(
+        path: WorldPath, ground: (WorldVector) -> Double, water: (WorldVector) -> Bool, levels: [Level], grade: Double = RealWorldDemo.rulingGrade,
+        carried: [Carried] = []
+    ) {
         let count = max(1, Int((path.length / Self.spacing).rounded(.up)))
         let grid = (0...count).map { min(Double($0) * Self.spacing, path.length) }
         let ends = levels.flatMap { [$0.range.lowerBound, $0.range.upperBound] }.filter { (0...path.length).contains($0) }
@@ -641,6 +702,7 @@ struct TrackRise {
                 runs.append(index...index)
             }
         }
+        let bounds = Self.bounds(distances: distances, carried: carried, wet: wet, levels: levels.map(\.range))
         // Where no grade reaches the water's either way, the stations may
         // stand further from the ground, a few metres at a time.
         for slack in Self.slack {
@@ -653,9 +715,16 @@ struct TrackRise {
                     high[index] = min(high[index], level.high + widen)
                 }
             }
+            var kept = bounds
             var tunnels: Set<Int> = []
             while true {
                 var low = low, high = high
+                for bound in kept {
+                    for index in bound.indices {
+                        low[index] = max(low[index], ground[index] + bound.low)
+                        high[index] = min(high[index], ground[index] + bound.high)
+                    }
+                }
                 for (number, run) in runs.enumerated() {
                     for index in max(0, run.lowerBound - 1)...min(distances.count - 1, run.upperBound + 1) {
                         if tunnels.contains(number) {
@@ -676,6 +745,16 @@ struct TrackRise {
                 case .failure(let failure):
                     stuck = failure
                 }
+                // Decision 279: the real line's bounds that clash there let
+                // go first.
+                let clash = Self.clash(at: stuck.index, low: low, high: high, steps: steps)
+                let clashing = kept.indices.filter { kept[$0].indices.contains(clash.low) || kept[$0].indices.contains(clash.high) }
+                if !clashing.isEmpty {
+                    for index in clashing.reversed() {
+                        kept.remove(at: index)
+                    }
+                    continue
+                }
                 // Under the water nearest where no grade reaches.
                 let nearest = runs.indices.filter { !tunnels.contains($0) }.min { a, b in
                     min(abs(runs[a].lowerBound - stuck.index), abs(runs[a].upperBound - stuck.index))
@@ -686,6 +765,67 @@ struct TrackRise {
             }
         }
         return nil
+    }
+
+    /// The bounds of `carried`, the real line's structures, in pieces
+    /// (``carriedHeight``); none on the ground within ``carriedInset`` of
+    /// the samples over water, `wet`, which go over it or under it, nor
+    /// along the level stretches, `levels`, which the stations bound.
+    private static func bounds(distances: [Double], carried: [Carried], wet: [Bool], levels: [ClosedRange<Double>]) -> [Bound] {
+        guard !carried.isEmpty else { return [] }
+        var nearWater = [Bool](repeating: false, count: distances.count)
+        var lastWet = -Double.infinity
+        for index in distances.indices {
+            if wet[index] { lastWet = distances[index] }
+            nearWater[index] = distances[index] - lastWet <= carriedInset
+        }
+        lastWet = .infinity
+        for index in distances.indices.reversed() {
+            if wet[index] { lastWet = distances[index] }
+            nearWater[index] = nearWater[index] || lastWet - distances[index] <= carriedInset
+        }
+        let long = carried.filter { $0.range.upperBound - $0.range.lowerBound >= shortestCarried }
+        // What bounds each sample: low and high from the ground, or none.
+        let each = zip(distances, nearWater).map { distance, nearWater -> (low: Double, high: Double)? in
+            if let stretch = long.first(where: { ($0.range.lowerBound + carriedInset...$0.range.upperBound - carriedInset).contains(distance) }) {
+                switch stretch.kind {
+                case .bridge: return (carriedHeight, .infinity)
+                case .tunnel: return (-.infinity, -carriedDepth)
+                }
+            }
+            let near = carried.contains { stretch in
+                let reach = long.contains(stretch) ? carriedApproach : carriedInset
+                return (stretch.range.lowerBound - reach...stretch.range.upperBound + reach).contains(distance)
+            }
+            return near || nearWater || levels.contains(where: { $0.contains(distance) }) ? nil : surfaceBand
+        }
+        var bounds: [Bound] = []
+        var start = 0
+        for index in distances.indices {
+            let last = index == distances.count - 1
+            let ends = last || each[index + 1]?.low != each[start]?.low || each[index + 1]?.high != each[start]?.high
+                || distances[index + 1] - distances[start] > boundPiece
+            guard ends else { continue }
+            if let bound = each[start] {
+                bounds.append(Bound(indices: start...index, low: bound.low, high: bound.high))
+            }
+            start = index + 1
+        }
+        return bounds
+    }
+
+    /// The two samples whose bounds clash where no grade reaches at
+    /// `index`: the one whose lowest height the grade carries highest
+    /// there, and the one whose highest it carries lowest.
+    private static func clash(at index: Int, low: [Double], high: [Double], steps: [Double]) -> (low: Int, high: Int) {
+        var reach = [0.0]
+        for step in steps.dropFirst() {
+            reach.append(reach[reach.count - 1] + step)
+        }
+        func far(_ other: Int) -> Double { abs(reach[index] - reach[other]) }
+        let lowest = low.indices.max { low[$0] - far($0) < low[$1] - far($1) } ?? index
+        let highest = high.indices.min { high[$0] + far($0) < high[$1] + far($1) } ?? index
+        return (lowest, highest)
     }
 
     /// Where no grade reaches.

@@ -691,18 +691,24 @@ struct WorldPath: Sendable {
 
     /// How far along the path its point nearest `point` lies.
     func project(_ point: WorldVector) -> Double {
-        var best = (distance: Double.infinity, along: 0.0)
+        nearest(point).along
+    }
+
+    /// How far along the path its point nearest `point` lies, and how far
+    /// that is from `point`.
+    func nearest(_ point: WorldVector) -> (along: Double, away: Double) {
+        var best = (along: 0.0, away: Double.infinity)
         for index in points.indices.dropLast() {
             let a = points[index], b = points[index + 1]
             let along = b - a
             let squared = along.dot(along)
             let t = squared > 0 ? max(0, min(1, (point - a).dot(along) / squared)) : 0
             let away = (a + along * t - point).length
-            if away < best.distance {
-                best = (away, distances[index] + t * (distances[index + 1] - distances[index]))
+            if away < best.away {
+                best = (distances[index] + t * (distances[index + 1] - distances[index]), away)
             }
         }
-        return best.along
+        return best
     }
 
     /// The path's points from `start` to `end` along it, the ends included.
