@@ -431,10 +431,11 @@ final class RealRailwaysTests: XCTestCase {
         // Decision 279: the National Land Surveying and Mapping Center's
         // railway, with the licence's attribution.
         let nlsc = try XCTUnwrap(DataSourceCredits.sections(in: .traditionalChinese).flatMap(\.credits).first { $0.id == "nlsc" })
-        for part in ["內政部國土測繪中心", "臺灣鐵路", "政府資料開放授權條款"] {
+        for part in ["內政部國土測繪中心", "臺灣鐵路", "高速鐵路", "政府資料開放授權條款"] {
             XCTAssertTrue(nlsc.notice.contains(part), part)
         }
         XCTAssertTrue(nlsc.links.contains { $0.url == "https://data.gov.tw/dataset/73220" })
+        XCTAssertTrue(nlsc.links.contains { $0.url == "https://data.gov.tw/dataset/73221" })
     }
 
     func testTheBundledRealRailwaysWithOperationalData() throws {

@@ -295,4 +295,55 @@ final class RealRailwayTracingTests: XCTestCase {
         let chosen = try dongshan(structures: true, structure: .surface)
         XCTAssertEqual(chosen.station, .surface, "the player's own choice")
     }
+
+    /// The High Speed Rail traced over real ground 3 km either side of
+    /// Changhua's station, which stands on the viaduct that carries the line
+    /// across the plain: up on a viaduct at the station and at both ends'
+    /// halfway points with the structures, on the ground without them.
+    func testATraceAlongTheHighSpeedRailFollowsItsViaduct() throws {
+        func trace(structures: Bool) throws -> [TrackSectionKind?] {
+            let bundled = try BundledRealData.railways()
+            let railways = structures ? bundled : try RealRailways(
+                lines: BundledRealData.file("track_lines", "geojson"), stations: BundledRealData.file("track_stations", "geojson"),
+                names: BundledRealData.file("station_names", "json")
+            )
+            let changhua = try BundledRealData.station("彰化", in: "thsr_sched")
+            var world = GameWorld.newGame(anchor: try XCTUnwrap(changhua.anchor))
+            try world.mapGround()
+            let session = GameSession(world: world, language: .english)
+            session.heights = try XCTUnwrap(Self.heights)
+            session.railways = railways
+            session.selectTool(.network)
+            session.setNetworkMode(.build)
+            session.networkTracesRealRailway = true
+            let frame = try XCTUnwrap(RealWorldFrame(world: world))
+            let line = try XCTUnwrap(railways.lines.first { $0.system.id == "thsr_sched" && $0.points.count > 100 })
+            let path = WorldPath(line.points.map { WorldVector(frame.worldPosition(latitude: $0.latitude, longitude: $0.longitude)) })
+            let station = try BundledRealData.point(changhua.coordinate, in: world)
+            let at = path.project(WorldVector(station))
+            let ends = [at - 3_000 * metre, at + 3_000 * metre].map { path.point(at: $0).plan }
+            session.tapNetwork(at: ends[0], reach: reach)
+            session.tapNetwork(at: ends[1], reach: reach)
+            XCTAssertNil(try XCTUnwrap(session.networkPreview).problem)
+            session.buildNetworkTrack()
+            XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+            let built = session.world
+            return try [at - 1_500 * metre, at, at + 1_500 * metre].map { distance in
+                let point = WorldVector(path.point(at: distance).plan)
+                var best: (distance: Double, kind: TrackSectionKind)?
+                for edge in built.network.edges {
+                    let geometry = try XCTUnwrap(built.trackGeometry(of: edge.id))
+                    for span in edge.sectionSpans where span.end > span.start {
+                        for sample in geometry.points(from: span.start, to: span.end) {
+                            let away = (WorldVector(sample.plan) - point).length
+                            if best == nil || away < best!.distance { best = (away, span.kind) }
+                        }
+                    }
+                }
+                return best?.kind
+            }
+        }
+        XCTAssertEqual(try trace(structures: true), [.viaduct, .viaduct, .viaduct])
+        XCTAssertFalse(try trace(structures: false).contains(.viaduct), "without the structures, on the plain's ground")
+    }
 }

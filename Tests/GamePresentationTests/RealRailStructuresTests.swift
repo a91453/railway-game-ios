@@ -4,7 +4,7 @@ import Foundation
 import XCTest
 
 /// Where the real TRA lines are on bridges and in tunnels (decision 279):
-/// `tra_structures.json` as the app bundles it, the stretches of a path it
+/// `rail_structures.json` as the app bundles it, the stretches of a path it
 /// carries, and the heights ``TrackRise`` lays along them.
 final class RealRailStructuresTests: XCTestCase {
     private static func bundledFile(_ name: String) throws -> Data {
@@ -17,9 +17,15 @@ final class RealRailStructuresTests: XCTestCase {
     // MARK: - The file
 
     func testTheBundledFileReads() throws {
-        let structures = try RealRailStructures(data: Self.bundledFile("tra_structures.json")).structures
-        XCTAssertGreaterThan(structures.count, 1_000)
+        let structures = try RealRailStructures(data: Self.bundledFile("rail_structures.json")).structures
+        XCTAssertGreaterThan(structures.count, 1_800)
         XCTAssertEqual(Set(structures.map(\.kind)), [.bridge, .tunnel])
+        // The TRA's, the High Speed Rail's and the Alishan Forest Railway's,
+        // each with both kinds.
+        XCTAssertEqual(Set(structures.map(\.system)), ["tra_sched", "thsr_sched", "afr_sched"])
+        for system in ["tra_sched", "thsr_sched", "afr_sched"] {
+            XCTAssertEqual(Set(structures.filter { $0.system == system }.map(\.kind)), [.bridge, .tunnel], system)
+        }
         XCTAssertTrue(structures.allSatisfy { $0.points.count >= 2 })
         // All in and round Taiwan.
         XCTAssertTrue(structures.allSatisfy { $0.points.allSatisfy { (21.8...25.4).contains($0.latitude) && (119.2...122.1).contains($0.longitude) } })
@@ -27,18 +33,20 @@ final class RealRailStructuresTests: XCTestCase {
 
     func testAFileOutOfShapeThrows() {
         func read(_ json: String) throws -> RealRailStructures { try RealRailStructures(data: Data(json.utf8)) }
-        XCTAssertNoThrow(try read(#"{"structures":[{"kind":"bridge","points":[[121.5,25.0],[121.6,25.1]]}]}"#))
-        XCTAssertThrowsError(try read(#"{"structures":[{"kind":"bridge","points":[[121.5,25.0]]}]}"#), "one point")
-        XCTAssertThrowsError(try read(#"{"structures":[{"kind":"bridge","points":[[121.5,95.0],[121.6,25.1]]}]}"#), "off the Earth")
-        XCTAssertThrowsError(try read(#"{"structures":[{"kind":"bridge","points":[[121.5],[121.6,25.1]]}]}"#), "not a point")
-        XCTAssertThrowsError(try read(#"{"structures":[{"kind":"culvert","points":[[121.5,25.0],[121.6,25.1]]}]}"#), "an unknown kind")
+        XCTAssertNoThrow(try read(#"{"structures":[{"system":"tra_sched","kind":"bridge","points":[[121.5,25.0],[121.6,25.1]]}]}"#))
+        XCTAssertThrowsError(try read(#"{"structures":[{"system":"tra_sched","kind":"bridge","points":[[121.5,25.0]]}]}"#), "one point")
+        XCTAssertThrowsError(try read(#"{"structures":[{"system":"tra_sched","kind":"bridge","points":[[121.5,95.0],[121.6,25.1]]}]}"#), "off the Earth")
+        XCTAssertThrowsError(try read(#"{"structures":[{"system":"tra_sched","kind":"bridge","points":[[121.5],[121.6,25.1]]}]}"#), "not a point")
+        XCTAssertThrowsError(try read(#"{"structures":[{"system":"tra_sched","kind":"culvert","points":[[121.5,25.0],[121.6,25.1]]}]}"#), "an unknown kind")
+        XCTAssertThrowsError(try read(#"{"structures":[{"kind":"bridge","points":[[121.5,25.0],[121.6,25.1]]}]}"#), "no system")
     }
 
     // MARK: - Along a path
 
     /// A path due east from the demo's anchor, and the structures beside
     /// it: those on it and on the other track 4 m off become one stretch,
-    /// one 50 m off is another line's, and one that leaves it is not its.
+    /// one 50 m off is another line's, one that leaves it is not its, and
+    /// one of another system on it is that system's.
     func testTheStretchesAlongAPath() throws {
         let frame = RealWorldFrame(anchor: RealWorldDemo.anchor, bounds: GameWorld.newGameBounds)
         let latitude = RealWorldDemo.anchor.latitudeDegrees, longitude = RealWorldDemo.anchor.longitudeDegrees
@@ -50,17 +58,20 @@ final class RealRailStructuresTests: XCTestCase {
         })
         let json = try String(
             data: JSONSerialization.data(withJSONObject: ["structures": [
-                ["kind": "bridge", "points": [point(500), point(800)]],
-                ["kind": "bridge", "points": [point(700, 4), point(1_200, 4)]],
-                ["kind": "tunnel", "points": [point(2_000), point(2_400)]],
-                ["kind": "bridge", "points": [point(1_500, 50), point(1_900, 50)]],
-                ["kind": "tunnel", "points": [point(2_600), point(2_900, 200)]],
+                ["system": "tra_sched", "kind": "bridge", "points": [point(500), point(800)]],
+                ["system": "tra_sched", "kind": "bridge", "points": [point(700, 4), point(1_200, 4)]],
+                ["system": "tra_sched", "kind": "tunnel", "points": [point(2_000), point(2_400)]],
+                ["system": "tra_sched", "kind": "bridge", "points": [point(1_500, 50), point(1_900, 50)]],
+                ["system": "tra_sched", "kind": "tunnel", "points": [point(2_600), point(2_900, 200)]],
+                ["system": "thsr_sched", "kind": "bridge", "points": [point(1_500), point(1_900)]],
             ]]),
             encoding: .utf8
         )
         let structures = try RealRailStructures(data: Data(XCTUnwrap(json).utf8))
-        let stretches = structures.stretches(along: path, frame: frame)
+        let stretches = structures.stretches(along: path, frame: frame, system: "tra_sched")
         XCTAssertEqual(stretches.map(\.kind), [.bridge, .tunnel])
+        let other = structures.stretches(along: path, frame: frame, system: "thsr_sched")
+        XCTAssertEqual(other.map(\.kind), [.bridge])
         let ranges = stretches.map { ($0.range.lowerBound / metre, $0.range.upperBound / metre) }
         XCTAssertEqual(ranges[0].0, 500, accuracy: 2)
         XCTAssertEqual(ranges[0].1, 1_200, accuracy: 2)
@@ -74,7 +85,7 @@ final class RealRailStructuresTests: XCTestCase {
     func testTheYilanLineViaducts() throws {
         let railways = try RealRailways(
             lines: Self.bundledFile("track_lines.geojson"), stations: Self.bundledFile("track_stations.geojson"),
-            names: Self.bundledFile("station_names.json"), structures: RealRailStructures(data: Self.bundledFile("tra_structures.json"))
+            names: Self.bundledFile("station_names.json"), structures: RealRailStructures(data: Self.bundledFile("rail_structures.json"))
         )
         let frame = RealWorldFrame(anchor: WholeTaiwan.anchor, bounds: WholeTaiwan.bounds)
         let line = try XCTUnwrap(railways.lines.first { $0.name.hasPrefix("宜蘭線") })
@@ -83,7 +94,7 @@ final class RealRailStructuresTests: XCTestCase {
             let station = try XCTUnwrap(railways.stations.first { $0.id == "tra_sched|\(name)" })
             return path.project(WorldVector(frame.worldPosition(latitude: station.coordinate.latitude, longitude: station.coordinate.longitude)))
         }
-        let stretches = try XCTUnwrap(railways.structures).stretches(along: path, frame: frame)
+        let stretches = try XCTUnwrap(railways.structures).stretches(along: path, frame: frame, system: "tra_sched")
         let (yilan, erjie, dongshan) = (try along("宜蘭"), try along("二結"), try along("冬山"))
         let between = min(yilan, erjie)...max(yilan, erjie)
         XCTAssertTrue(stretches.contains { $0.kind == .bridge && $0.range.upperBound - $0.range.lowerBound > 3_500 * metre && between.contains($0.range.lowerBound) && between.contains($0.range.upperBound) }, "south of Yilan")
