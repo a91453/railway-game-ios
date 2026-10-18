@@ -14,5 +14,8 @@
 ## 接進 App 之前要知道的
 - GLB 的 `asset` 是 `pygltflib`，沒有 `extras`：smart topology 的輸出裡沒有 AI 識別資訊可以保留（條款 §2.4）。出處改由 `tools/meshy/generated.json` 的任務紀錄證明；規格說「來源紀錄沒有就拒絕」要改成讀這份紀錄。
 - 三角形 1,545，比 1,500 多 3%：30 台全畫約 4.6 萬，仍在預算內。
-- 車頭朝 +x 還是 −x 還沒確認（縮圖看不出軸向），轉換器或 3D session 在預覽裡確認後填 `models.json` 的 `front`。
+- 車頭朝 **−x**（3D 生活感 2026-10-18 確認，`models.json` 的 `front` 填 `-x`）：`views.png` 是原檔從 +x、−x、+z、−z 四個方向的平行投影（每個三角形取貼圖中點的顏色）。
+  - −x 那頭：大片擋風玻璃，下緣兩角有頭燈；+x 那頭：較小的後窗，沒有頭燈。
+  - 前門在 −x 那頭、前輪的前面。
+  - 轉換器要把 −x 轉成模型空間的 +x（前）。
 - 呼叫時 smart topology 不接受 `remove_lighting`（API 400，沒扣點）；CLI 預設會送，要用 `--data '{"remove_lighting": null}'` 清掉。
