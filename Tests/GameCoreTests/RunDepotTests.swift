@@ -359,4 +359,31 @@ final class RunDepotTests: XCTestCase {
         try loaded.advance(ticks: 30)
         XCTAssertEqual(loaded.line(id: main)?.runDays[0], 0, "and the runs leave")
     }
+
+    /// The empty runs out of the depots, kept from one call of
+    /// `advance(ticks:)` to the next (`GameWorld.RouteMemo`), change
+    /// nothing: over a day a minute at a time, beside a world whose kept
+    /// memo is dropped before every call, the two stay the same, and every
+    /// run kept for where a train stands is the one worked out there now.
+    func testTheRunsOutOfTheDepotsKeptBetweenAdvancesChangeNothing() throws {
+        var kept = try makeWorld(minutes: 300)
+        var fresh = kept
+        var lent = 0
+        for step in 0..<(20 * 60) {
+            fresh.routeMemo = GameWorld.RouteMemo()
+            try kept.advance(ticks: 1)
+            try fresh.advance(ticks: 1)
+            XCTAssertTrue(kept == fresh && SavedGame(world: kept) == SavedGame(world: fresh), "after step \(step)")
+            var memo = GameWorld.DispatchMemo()
+            kept.routeMemo.lend(to: &memo, for: GameWorld.RouteMemo.ServiceKey(kept))
+            if !memo.runDepotTrips.isEmpty { lent += 1 }
+            let line = try XCTUnwrap(kept.line(id: main))
+            for (query, trip) in memo.runDepotTrips {
+                guard let train = kept.train(id: query.train), train.placement == query.from else { continue }
+                XCTAssertEqual(trip, kept.emptyRun(of: line, for: train, to: [query.to]), "after step \(step): \(query.train)")
+            }
+        }
+        XCTAssertGreaterThan(lent, 100, "advances lent kept runs out of the depots")
+        XCTAssertEqual(kept.line(id: main)?.runDays, [0, 0, 0, 0], "every run of the day left")
+    }
 }
