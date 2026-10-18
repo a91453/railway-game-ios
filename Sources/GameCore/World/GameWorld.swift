@@ -2528,6 +2528,10 @@ public struct GameWorld: Equatable, Sendable {
         if let routeKey {
             routeMemo.lend(to: &memo.directions, for: routeKey)
         }
+        let serviceKey = remaining > 0 ? RouteMemo.ServiceKey(self) : nil
+        if let serviceKey {
+            routeMemo.lend(to: &memo, for: serviceKey)
+        }
         // Departures due now whose routes other trains hold (Stage T), each
         // with the track it waits for: tried again at the next step.
         var held: [HeldRoute] = []
@@ -2739,6 +2743,9 @@ public struct GameWorld: Equatable, Sendable {
                 routeMemo = RouteMemo()
             }
         }
+        if let serviceKey, RouteMemo.ServiceKey(self) == serviceKey {
+            routeMemo.keep(memo, for: serviceKey)
+        }
     }
 
     /// `time` plus `minutes` whole minutes, or `nil` if that does not fit in
@@ -2780,9 +2787,9 @@ public struct GameWorld: Equatable, Sendable {
         /// where it stood when it was looked up, or `nil` if it had none.
         var depotTrips: [TrainID: (from: TrainPlacement, trip: LineTrip?)] = [:]
         /// Decision 221: each train's empty run out of its line's depot to a
-        /// stop of a line with runs, from where it stood when it was looked
-        /// up, or `nil` if it had none.
-        var runDepotTrips: [TrainID: (from: TrainPlacement, to: StationID, trip: LineTrip?)] = [:]
+        /// stop of a line with runs, by where it stood and the stop when it
+        /// was looked up, or `nil` if it had none.
+        var runDepotTrips: [RunDepotQuery: LineTrip?] = [:]
         /// Whether each line's service, by line and pattern, has a journey
         /// and runs trains at some level of its window (see
         /// ``GameWorld/isServed(_:memo:)``), once worked out.
@@ -2792,6 +2799,14 @@ public struct GameWorld: Equatable, Sendable {
     struct ScheduledService: Hashable {
         var line: LineID
         var pattern: Int?
+    }
+
+    /// A train's empty run out of a depot to a stop (decision 221), as
+    /// ``DispatchMemo/runDepotTrips`` keeps it.
+    struct RunDepotQuery: Hashable {
+        let train: TrainID
+        let from: TrainPlacement
+        let to: StationID
     }
 
     /// Phase 0 of a basic step: each line, in ascending ID order, and on it

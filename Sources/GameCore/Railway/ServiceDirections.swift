@@ -97,9 +97,49 @@ extension GameWorld {
                 curveSpeedLimits = world.curveSpeedLimits
             }
         }
+        /// What each service's journey, capacity and timetable are worked
+        /// out from: the network, the lines but for when they last sent
+        /// trains out, the stations, the settings the journeys read, the
+        /// service day and the trains' lengths.
+        struct ServiceKey: Equatable, Sendable {
+            let network: RailwayNetwork
+            let lines: [ServiceLine]
+            let stations: [StationID]
+            let depots: [StationID]
+            let flexDispatch: Bool
+            let keepLeft: Bool
+            let realisticOperation: Bool
+            let curveSpeedLimits: Bool
+            let trafficControl: Bool
+            let serviceDay: ServiceDay
+            let trains: [TrainID]
+            let trainLengths: [Int64]
+
+            init(_ world: GameWorld) {
+                network = world.network
+                lines = world.lines.map(\.withoutDispatchTimes)
+                stations = world.stations.map(\.id)
+                depots = world.stations.filter(\.isDepot).map(\.id)
+                flexDispatch = world.flexDispatch
+                keepLeft = world.keepLeft
+                realisticOperation = world.realisticOperation
+                curveSpeedLimits = world.curveSpeedLimits
+                trafficControl = world.isTrafficControlEnabled
+                serviceDay = world.serviceDay
+                trains = world.trains.map(\.id)
+                trainLengths = world.trains.map(\.length)
+            }
+        }
         /// The most of each it keeps: beyond it, it starts again.
         static let limit = 20_000
         private var key: Key?
+        private var serviceKey: ServiceKey?
+        private var journeys: [LineID: [Int: LineJourney?]] = [:]
+        private var capacityLayouts: [LineID: LineCapacityLayout] = [:]
+        private var capacities: [LineID: [Int: ServiceCapacityProfile?]] = [:]
+        private var outerCapacityJourneys: [LineID: LineJourney?] = [:]
+        private var scheduledServices: [ScheduledService: Bool] = [:]
+        private var runDepotTrips: [RunDepotQuery: LineTrip?] = [:]
         private var trafficParts = TrafficParts()
         private var paths = PathMemo()
         private var curves: [DirectionMemo.CurveQuery: RunCurve?] = [:]
@@ -113,6 +153,12 @@ extension GameWorld {
             key == nil
         }
 
+        /// Whether it keeps the services' journeys, capacities and whether
+        /// they run.
+        var keepsServices: Bool {
+            serviceKey != nil
+        }
+
         /// Gives `memo`, a new one, what it kept, when it was kept for the
         /// same network, lines, stations and dispatch (`key`).
         func lend(to memo: inout DirectionMemo, for key: Key) {
@@ -120,6 +166,34 @@ extension GameWorld {
             memo.trafficParts = trafficParts
             memo.paths = paths
             memo.curves = curves
+        }
+
+        /// Gives `memo`, a new one, the services' journeys, capacities and
+        /// whether they run, and the empty runs out of depots (each for
+        /// where its train stood), when they were kept for `key`: a
+        /// departure changes none of them (the dispatcher's
+        /// ``ServiceLine/withoutDispatchTimes``).
+        func lend(to memo: inout DispatchMemo, for key: ServiceKey) {
+            guard serviceKey == key else { return }
+            memo.journeys = journeys
+            memo.capacityLayouts = capacityLayouts
+            memo.capacities = capacities
+            memo.outerCapacityJourneys = outerCapacityJourneys
+            memo.scheduledServices = scheduledServices
+            memo.runDepotTrips = runDepotTrips
+        }
+
+        /// Keeps what `memo` worked out of the services and the runs out of
+        /// depots over a call of ``advance(ticks:)`` that left all of `key`
+        /// as it was.
+        mutating func keep(_ memo: DispatchMemo, for key: ServiceKey) {
+            serviceKey = key
+            journeys = memo.journeys
+            capacityLayouts = memo.capacityLayouts
+            capacities = memo.capacities
+            outerCapacityJourneys = memo.outerCapacityJourneys
+            scheduledServices = memo.scheduledServices
+            runDepotTrips = memo.runDepotTrips.count > Self.limit ? [:] : memo.runDepotTrips
         }
 
         /// The curve kept for `query`, if one was: a curve depends on its

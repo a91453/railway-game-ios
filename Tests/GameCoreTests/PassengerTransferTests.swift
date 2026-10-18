@@ -637,6 +637,57 @@ final class PassengerTransferTests: XCTestCase {
             entry["journeys"] = journeys
         }
     }
+
+    /// Each service's journey, capacity and whether it runs, kept from one
+    /// call of `advance(ticks:)` to the next (`GameWorld.RouteMemo`), change
+    /// nothing: beside a world whose kept memo is dropped before every call,
+    /// passengers changing trains a tick at a time, with the service day,
+    /// the trains in service and traffic control changed between the calls,
+    /// leave the two the same after each.
+    func testTheServicesKeptBetweenAdvancesChangeNothing() throws {
+        var kept = try world()
+        try kept.setStationDemand(a, to: StationDemand(kind: .residential, dailyTrips: 1_000))
+        try kept.setStationDemand(c, to: StationDemand(kind: .office, dailyTrips: 1_000))
+        var fresh = kept
+        let second = kept.lines[1].id
+        let legs = try XCTUnwrap(kept.passengerRoutes(from: a, to: c).first).legs.map(PassengerJourneyLeg.init)
+        XCTAssertEqual(legs.count, 2)
+        let peakAllDay = ServiceDay(bands: [ServiceDay.Band(start: 0, level: .peak)])
+        func both(_ change: (inout GameWorld) throws -> Void) rethrows {
+            try change(&kept)
+            try change(&fresh)
+        }
+        var lent = 0
+        for step in 0..<120 {
+            switch step {
+            // The line passengers change to runs no trains at the peak,
+            // and then, by the day alone, none at all.
+            case 30: try both { try $0.setLineTrainsInService(second, to: TrainsInService(peak: 0, offPeak: 1, low: 1)) }
+            case 50: try both { try $0.setServiceDay(peakAllDay) }
+            case 70: try both { try $0.setServiceDay(.standard) }
+            case 90: try both { try $0.setTrafficControl(true) }
+            default: break
+            }
+            if kept.routeMemo.keepsServices { lent += 1 }
+            fresh.routeMemo = GameWorld.RouteMemo()
+            try kept.advance(ticks: 1)
+            try fresh.advance(ticks: 1)
+            XCTAssertTrue(kept == fresh && SavedGame(world: kept) == SavedGame(world: fresh), "after step \(step)")
+            // What it keeps answers as the world now does.
+            var memo = GameWorld.DispatchMemo()
+            kept.routeMemo.lend(to: &memo, for: GameWorld.RouteMemo.ServiceKey(kept))
+            for leg in legs where memo.scheduledServices[GameWorld.ScheduledService(line: leg.line, pattern: leg.pattern)] != nil {
+                XCTAssertEqual(kept.isServed(leg, memo: &memo), kept.isServed(leg), "after step \(step): \(leg)")
+            }
+            for line in kept.lines {
+                for (service, journey) in memo.journeys[line.id] ?? [:] {
+                    XCTAssertEqual(journey, kept.journey(of: line, service: service), "after step \(step): \(line.id)")
+                }
+            }
+        }
+        XCTAssertGreaterThan(lent, 100, "advances lent kept services")
+        XCTAssertGreaterThan(kept.passengerLedger(of: a).arrived, 0, "passengers changed trains and arrived")
+    }
 }
 
 /// Changing trains between two stations a short walk apart (Phase 5F): the

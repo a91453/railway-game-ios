@@ -162,11 +162,12 @@ extension GameWorld {
                 return train.execution == nil && train.movement.rate > 0 && self.isStopped(train, at: depot)
             }), let placement = trains[index].placement else { continue }
             let trip: LineTrip?
-            if let known = memo.runDepotTrips[trains[index].id], known.from == placement, known.to == station {
-                trip = known.trip
+            let query = RunDepotQuery(train: trains[index].id, from: placement, to: station)
+            if let known = memo.runDepotTrips[query] {
+                trip = known
             } else {
                 trip = emptyRun(of: line, for: trains[index], to: [station])
-                memo.runDepotTrips[trains[index].id] = (placement, station, trip)
+                memo.runDepotTrips[query] = .some(trip)
             }
             guard let trip, let run = trip.deadhead, best.map({ run.seconds < $0.seconds }) ?? true else { continue }
             best = (index, trip, run.seconds)

@@ -68,3 +68,27 @@ debug 建置，每個 tick（600 倍是 1 遊戲分鐘，每 100 ms 一個）的
   - 下一版的 What to Test 請實機開 VoiceOver 跑 600 倍，看 HUD 的速度提醒（決策 195）和朗讀會不會延遲。
 - 每個 tick 讓整個畫面重新計算（SwiftUI 觀察整個 `session.world`），是 Debug 模擬器裡 50–100 ms 的來源。真的要省，得把畫面讀的值切小，是大改，等實機量到不夠再做。
 - 開始畫面查詢一次 46 s 的原因，從記錄看不出 App 在做什麼：畫面樹很小、時鐘沒走、資料早就讀完。可能是 CI 的模擬器本身慢，沒有追。
+
+## 5. 高鐵示範的快轉（NEXT_PRIORITIES §16 第 4 項，分支 `claude/hsr-demo-speed`）
+
+量法：高鐵示範開局（07:00，號誌關，出貨的設定）存成檔，Linux release 版 `GameSim` 改成臨時的量測程式（不提交），一個 tick 一個 tick 跑，記每個 tick 的時間，最後把世界存檔、算雜湊。`SWIFT_DETERMINISTIC_HASHING=1`，否則 JSON 的字典順序每次不同，雜湊對不起來。
+
+callgrind（144 個 `.fast` tick，一天）：
+- `advance` 裡 49% 在重算每條路線的整趟行程 `journey(of:service:direction:)`，大多從乘客轉乘的檢查來（`enqueueTransfer` → `isServed` → `isScheduled` → `lineJourney`）。每次 `advance` 的 `DispatchMemo` 會記住，但一次 `advance` 只走一個 tick，下一個 tick 又從頭算；一趟大約 1 億個指令（約 20 ms）。
+- 改掉之後，下一個熱點是出庫：`runTrainLeavingDepot` 對每一站問一次 `runPullOut`，`runDepotTrips` 每列車只記一個答案，換一站就蓋掉重算（剩下的 23%）。
+
+改法（結果逐位元不變，不升存檔、不改 golden、不取決策號）：
+- `RouteMemo` 多記一份 `ServiceKey`：路網、路線（去掉發車時間，`withoutDispatchTimes`）、車站、車庫、彈性發車、靠左、寫實運轉、彎道限速、行車控制、服務日、列車與車長。只要這些沒變，下一次 `advance` 借用上一次算好的行程、容量、是否有班（`scheduledServices`）與出庫的空車（`runDepotTrips`）。
+- `runDepotTrips` 改用（列車、位置、站）當鍵。
+
+| 一週 `.fast`（1,008 個 tick，預算 100.8 s） | 中位數 | p90 | 最長 | 超過 100 ms | 總共 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 改之前 | 105.8 ms | 153.1 ms | 363.5 ms | 563 | 97.1 s |
+| 只記行程 | 41.9 ms | 82.1 ms | 305.5 ms | 38 | 46.1 s |
+| 再記出庫 | 38.7 ms | 60.6 ms | 284.6 ms | 16 | 36.3 s |
+
+一天 `.normal`（288 個 tick）：5.9 s → 1.7 s。三種跑法改前改後的存檔雜湊都相同（一天 `.fast` `467851ce5ad12a46`、一週 `.fast` `30fca2e005bd01b5`、`.normal` `802c253e5e5000f9`）。
+
+測試：`PassengerTransferTests.testTheServicesKeptBetweenAdvancesChangeNothing`（換服務日、班數、行車控制，和每次丟掉記憶的世界逐 tick 比，並檢查記住的答案等於現在算的；故意讓鍵不看服務日，這個測試會在第 50 步紅）、`RunDepotTests.testTheRunsOutOfTheDepotsKeptBetweenAdvancesChangeNothing`。
+
+還沒做：最長的 tick（約 280 ms，零星）沒追；#669 的長進路死結與台南—左營交會（號誌開）也還沒開始。
