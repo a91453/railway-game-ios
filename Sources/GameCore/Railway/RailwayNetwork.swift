@@ -321,8 +321,10 @@ public struct RailwayNetwork: Hashable, Sendable {
     /// is from the first's is tried first: then it is O(1).
     private static func index(of number: Int, count: Int, numberAt: (Int) -> Int) -> Int? {
         if count > 0 {
-            let guess = number - numberAt(0)
-            if guess >= 0, guess < count, numberAt(guess) == number { return guess }
+            // A save's numbers can be anything, so the difference can
+            // overflow; then there is no guess, only the search.
+            let (guess, overflow) = number.subtractingReportingOverflow(numberAt(0))
+            if !overflow, guess >= 0, guess < count, numberAt(guess) == number { return guess }
         }
         var low = 0
         var high = count - 1
