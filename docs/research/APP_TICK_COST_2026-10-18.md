@@ -136,3 +136,10 @@ callgrind（144 個 `.fast` tick，一天）：
 - 閉塞區間時，跟車的列車大約每 18 秒過一個閉塞分界，二十多組跟車的列車加起來幾乎每秒都有一組能延長，所以忙的時候一半以上的步是 1 秒。
 
 要再快一個數量級，得改成「只在可能改變答案的事發生時才重算」：記下每一組等路的發車在等哪幾段軌道、每一組跟車的列車下一個分界在哪，只有那些軌道放出來時才重試；而不是每一秒把整個世界往前移來試。這會動到行車控制的核心（決策 55、56、212 的步進），要另外設計，並用現在的每小時雜湊證明結果不變。
+
+**驗證**：
+- 高鐵示範 05:00 起 24 小時，改前改後每小時的存檔雜湊、取消、晚點、全程行車時間：號誌開＋閉塞、只開號誌（沒有閉塞）、號誌關三種都完全相同。
+- `TrafficSpeedTests`：長區段 replay 逐 tick、行車控制與跟車兩套 campaign 每一步、決策 278 的終點站場景，每一組行駛中與等著發車的列車，新的 `alternativeRoute` 都等於「把方向合成集合再找一次」的舊算法；裡面有沒有限制的最短路逆著別人方向、要再找一次的情形。
+- 既有的 `ReservationShortcutTests.testTheMemoKeptBetweenAdvancesChangesNothing`（記憶跨 `advance` 借用與每次丟掉的世界逐 tick 相同）、`KernelDifferentialTests` 與 `DeadlockPropertyTests`（和參考模型逐秒比）、`ReplayFixtureTests`、`LongLegReplayTests`、`BlockSectionsTests` 等照舊通過。
+
+**下一步**：上面「沒有達到 70 秒」的事件驅動重試；在那之前，高鐵示範維持號誌關（號誌關一天約 5 秒）。
