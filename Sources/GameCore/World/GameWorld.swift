@@ -3980,6 +3980,7 @@ public struct GameWorld: Equatable, Sendable {
         for index in trains.indices {
             let movement = trains[index].movement
             guard let position = trains[index].position, movement.rate > 0 else { continue }
+            let before = trains[index]
             let distance = travelShare(of: trains[index], from: start, memo: &memo)(span)
             guard distance > 0 else { continue }
             let travel = travelling(trains[index], distance: distance, memo: &memo)
@@ -4005,7 +4006,7 @@ public struct GameWorld: Equatable, Sendable {
             } else {
                 trains[index].movement.cursor = travel.cursor
             }
-            releasePassedTrack(index)
+            releasePassedTrack(index, before: before, distance: distance, memo: &memo)
             moved = true
         }
         return moved
@@ -4135,8 +4136,23 @@ public struct GameWorld: Equatable, Sendable {
     /// A train only ever goes on along its route, so what it needs only
     /// ever shrinks: nothing is taken here, and nothing the train will
     /// still use is released.
-    private mutating func releasePassedTrack(_ index: Int) {
+    private mutating func releasePassedTrack(_ index: Int, before: Train, distance: Int64, memo: inout DirectionMemo) {
         guard !trains[index].reservation.isEmpty else { return }
+        // Nothing to release when its reservation held nothing outside its
+        // route envelope as it was (as its last release left it, the train
+        // unchanged since), it went no further than its length, and its
+        // body covers all its body covered: the envelope it had is then
+        // what its body covered and what its envelope covers now, its head
+        // having gone only over track its body now covers.
+        if memo.released[before.id]?.contains(before) == true, distance <= before.length, routeStretches(of: trains[index]).moves {
+            let now = cover(of: bodyStretches(of: trains[index]))
+            let was = bodyStretches(of: before)
+            if resources(covering: was).allSatisfy(now.contains), foulingNodes(covering: was).allSatisfy(now.contains) {
+                memo.release(trains[index])
+                return
+            }
+        }
+        defer { memo.release(trains[index]) }
         // Its route envelope (see ``routeEnvelope(of:)``), asked a resource
         // at a time (see ``TrackCover``).
         let route = routeStretches(of: trains[index])
@@ -4223,7 +4239,7 @@ public struct GameWorld: Equatable, Sendable {
     /// `held` could set off (wholly, or following the trains ahead, Stage
     /// U2), or a train following others could take more of its route, or
     /// `nil` if that does not happen within `span` (Stage U): trains moving
-    /// on release the track behind them (see ``releasePassedTrack(_:)``),
+    /// on release the track behind them (see ``releasePassedTrack(_:before:distance:memo:)``),
     /// so the step ends there and the departure or the following train
     /// tries again at the next, as it would one second at a time. Every
     /// train only moves on in the step, and what it holds only shrinks as it
@@ -4260,7 +4276,11 @@ public struct GameWorld: Equatable, Sendable {
         // The least `k` after which one is free. A train following another
         // moving on takes more of its route almost every second, so then
         // the first second is tried first.
-        if trains.contains(where: { isFollowing($0, memo: &memo.directions) }), frees(after: 1) { return 1 }
+        var low: Int64 = 1
+        if trains.contains(where: { isFollowing($0, memo: &memo.directions) }) {
+            if frees(after: 1) { return 1 }
+            low = 2
+        }
         // The step ends after `span` anyway, so only the seconds before it
         // are asked. After `span` a train may have come to the end of its
         // route (see ``secondsUntilARouteEnds(from:within:memo:)``), and one
@@ -4269,7 +4289,21 @@ public struct GameWorld: Equatable, Sendable {
         // second earlier may not then.
         let last = span - 1
         guard last >= 1, frees(after: last) else { return nil }
-        var (low, high) = (Int64(1), last)
+        // Once free, free at every second after (see above), so the least
+        // `k` is found by trying the seconds just ahead first, a widening
+        // stretch of them at a time (the next track to free is most often
+        // a second or two away), then halving the stretch it lies in.
+        var high = last
+        var width: Int64 = 1
+        while low < high {
+            let probe = min(low + width - 1, high - 1)
+            if frees(after: probe) {
+                high = probe
+                break
+            }
+            low = probe + 1
+            width *= 2
+        }
         while low < high {
             let middle = (low + high) / 2
             if frees(after: middle) {

@@ -316,8 +316,16 @@ public struct RailwayNetwork: Hashable, Sendable {
     }
 
     /// Binary search for `number` among `count` elements whose numbers,
-    /// read by `numberAt`, ascend.
+    /// read by `numberAt`, ascend. The numbers are handed out in turn and
+    /// seldom removed, so the element as far from the first as its number
+    /// is from the first's is tried first: then it is O(1).
     private static func index(of number: Int, count: Int, numberAt: (Int) -> Int) -> Int? {
+        if count > 0 {
+            // A save's numbers can be anything, so the difference can
+            // overflow; then there is no guess, only the search.
+            let (guess, overflow) = number.subtractingReportingOverflow(numberAt(0))
+            if !overflow, guess >= 0, guess < count, numberAt(guess) == number { return guess }
+        }
         var low = 0
         var high = count - 1
         while low <= high {

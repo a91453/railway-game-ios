@@ -64,6 +64,9 @@ extension GameWorld {
         /// What ``trafficHasSiding(at:train:known:)`` asks of the network,
         /// kept as the plan is worked out.
         var hasSiding: [TrafficSidingQuery: Bool] = [:]
+        /// Each service's ``trafficNominalDirections(_:)`` (see
+        /// ``TrafficParts/nominal``), kept as the plan is worked out.
+        var nominal: [TrafficParts.Nominal: Set<TrackTraversal>] = [:]
     }
     /// A berth of a station, the next call's station and a train's length:
     /// what ``trafficHasSiding(at:train:known:)`` reads of the network.
@@ -92,6 +95,23 @@ extension GameWorld {
         var points: [Run: [TrafficPoint]?] = [:]
         var tracks: [TrafficSection: Int] = [:]
         var hasSiding: [TrafficSidingQuery: Bool] = [:]
+        /// What ``trafficNominalDirections(_:)`` reads of a service: its
+        /// train, length and timetable (what its route preferences are
+        /// found from, and where it reverses), and where each point is.
+        struct Nominal: Hashable {
+            struct Point: Hashable {
+                var station: StationID
+                var stop: Int
+                var calls: Bool
+                var berth: Berth
+            }
+            var train: TrainID
+            var length: Int64
+            var timetable: [ScheduledStop]
+            var points: [Point]
+        }
+        /// Each service's ``trafficNominalDirections(_:)``, by what it reads.
+        var nominal: [Nominal: Set<TrackTraversal>] = [:]
     }
 
     /// Scheduled meets and overtakes, including future visits, in train,
@@ -170,9 +190,11 @@ extension GameWorld {
         guard plan.services.count >= 2 else { return plan }
         plan.tracks = parts.tracks
         plan.hasSiding = parts.hasSiding
+        plan.nominal = parts.nominal
         defer {
             parts.tracks = plan.tracks
             parts.hasSiding = plan.hasSiding
+            parts.nominal = plan.nominal
         }
         inferTrafficMeets(&plan)
         // resolveTraTraffic: one meet pass, up to eight overtaking passes;

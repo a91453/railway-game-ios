@@ -23,8 +23,19 @@ extension GameWorld {
             let start: TrainPlacement
             let stop: Int
         }
+        /// A travelling service's traversals but the stretch it is on:
+        /// what is left of its route as it goes along it, where that ends,
+        /// and the call it is bound for.
+        struct Travel: Hashable {
+            let plan: Plan
+            let moving: [TrackTraversal]
+            let end: TrainPlacement
+            let call: Int
+        }
         var plans: [Plan: Set<TrackTraversal>] = [:]
         var walks: [Walk: Set<TrackTraversal>] = [:]
+        /// Travelling services' traversals (see ``Travel``).
+        var travels: [Travel: Set<TrackTraversal>] = [:]
         /// V3 (decision 59): the last scheduled-traffic plan worked out,
         /// with what it was derived from, and the plan an advance's step
         /// keeps for all its decisions.
@@ -43,8 +54,8 @@ extension GameWorld {
         /// values asked about.
         var heldTracks: [TrainID: [(train: Train, held: HeldTrack)]] = [:]
         /// Each following train's route envelope (see
-        /// ``followingCover(of:_:memo:)``), for its last value asked about.
-        var followingCovers: [TrainID: (train: Train, cover: TrackCover)] = [:]
+        /// ``followingCover(of:_:memo:)``), for its last values asked about.
+        var followingCovers: [TrainID: [(train: Train, cover: TrackCover)]] = [:]
         /// ``foulingSpansByEdge()``, once worked out.
         var foulingByEdge: [TrackEdgeID: [TrackSpan]]?
         /// The paths searched for (see ``PathMemo``).
@@ -62,6 +73,30 @@ extension GameWorld {
         /// Each train's reservation in a ``ReservedTrack`` (see
         /// ``reservedTrack(of:memo:)``), for its last reservation asked about.
         var reserved: [TrainID: (reservation: [TrackResource], reserved: ReservedTrack)] = [:]
+        /// Each running service's traversals (see
+        /// ``serviceDirections(of:memo:)``), for its last values asked about.
+        var serviceDirections: [TrainID: [(train: Train, directions: Set<TrackTraversal>)]] = [:]
+        /// Each candidate's ``opposingServiceTraversals(for:memo:)``, for
+        /// the last trains and candidate asked about.
+        var opposing: [TrainID: (trains: [Train], candidate: Train, traversals: Set<TrackTraversal>)] = [:]
+        /// Each candidate's ``opposingParts(for:memo:)``, for the last
+        /// trains and candidate asked about.
+        var opposingParts: [TrainID: (trains: [Train], candidate: Train, parts: (directions: [Set<TrackTraversal>], defaultWays: Set<TrackTraversal>))] = [:]
+        /// Each train as its last releases of the track it has passed left
+        /// it (see ``releasePassedTrack(_:before:distance:memo:)``): its
+        /// reservation then held nothing outside its route envelope. A few
+        /// are kept: the steps of an advance try the trains moved on by
+        /// different seconds from the same start.
+        var released: [TrainID: [Train]] = [:]
+
+        /// Keeps `train` in ``released``.
+        mutating func release(_ train: Train) {
+            var known = released[train.id] ?? []
+            guard !known.contains(train) else { return }
+            known.insert(train, at: 0)
+            if known.count > 4 { known.removeLast() }
+            released[train.id] = known
+        }
     }
 
     /// What a ``DirectionMemo`` works out from the network, the lines, the
@@ -163,7 +198,6 @@ extension GameWorld {
         /// same network, lines, stations and dispatch (`key`).
         func lend(to memo: inout DirectionMemo, for key: Key) {
             guard self.key == key else { return }
-            memo.trafficParts = trafficParts
             memo.paths = paths
             memo.curves = curves
         }
@@ -181,6 +215,9 @@ extension GameWorld {
             memo.outerCapacityJourneys = outerCapacityJourneys
             memo.scheduledServices = scheduledServices
             memo.runDepotTrips = runDepotTrips
+            // The traffic plan's parts read the lines' runs and routes,
+            // never when they last sent trains out: kept across departures.
+            memo.directions.trafficParts = trafficParts
         }
 
         /// Keeps what `memo` worked out of the services and the runs out of
@@ -194,6 +231,8 @@ extension GameWorld {
             outerCapacityJourneys = memo.outerCapacityJourneys
             scheduledServices = memo.scheduledServices
             runDepotTrips = memo.runDepotTrips.count > Self.limit ? [:] : memo.runDepotTrips
+            let parts = memo.directions.trafficParts
+            trafficParts = parts.points.count > Self.limit || parts.nominal.count > Self.limit ? TrafficParts() : parts
         }
 
         /// The curve kept for `query`, if one was: a curve depends on its
@@ -207,7 +246,6 @@ extension GameWorld {
         /// ``advance(ticks:)`` that left all of `key` as it was.
         mutating func keep(_ memo: DirectionMemo, for key: Key) {
             self.key = key
-            trafficParts = memo.trafficParts.points.count > Self.limit ? TrafficParts() : memo.trafficParts
             paths = memo.paths.found.count > Self.limit ? PathMemo() : memo.paths
             curves = memo.curves.count > Self.limit ? [:] : memo.curves
         }
@@ -279,6 +317,22 @@ extension GameWorld {
     /// it has run already, and the berths it does not stand at, are not in
     /// it.
     private func serviceDirections(of train: Train, memo: inout DirectionMemo) -> Set<TrackTraversal> {
+        // Kept by the train as it is: it depends on nothing else but the
+        // network and the lines, which do not change within one memo. A
+        // few of each train's last values are kept (the steps of an advance
+        // ask of the trains as they would have moved on, between questions
+        // of the trains as they are).
+        if let known = memo.serviceDirections[train.id]?.first(where: { $0.train == train }) { return known.directions }
+        let directions = workedOutServiceDirections(of: train, memo: &memo)
+        var known = memo.serviceDirections[train.id] ?? []
+        known.insert((train, directions), at: 0)
+        if known.count > 4 { known.removeLast() }
+        memo.serviceDirections[train.id] = known
+        return directions
+    }
+
+    /// ``serviceDirections(of:memo:)``, worked out.
+    private func workedOutServiceDirections(of train: Train, memo: inout DirectionMemo) -> Set<TrackTraversal> {
         guard let execution = train.execution, var start = train.placement else { return [] }
         let plan = DirectionMemo.Plan(calls: train.timetable.map { DirectionMemo.Call(station: $0.station, reverses: $0.reverses) },
                                       length: train.length, repeats: train.timetablePeriod != nil,
@@ -289,17 +343,30 @@ extension GameWorld {
         case .waitingAtStop(let waiting, _):
             stop = waiting
         case .travellingToStop(let next, _):
-            directions.formUnion(routeStretches(of: train).stretches.filter { $0.to > $0.from }.map(\.traversal))
+            let moving = routeStretches(of: train).stretches.filter { $0.to > $0.from }.map(\.traversal)
+            directions.formUnion(moving)
             let ahead = pathAhead(of: train)
             let end = ahead.count == train.movement.remainingEdges.count ? train.movement.end : nil
             start = placement(start, after: TrainPath(traversals: ahead, end: end, distance: 0))
+            // The same for as long as its route and where it ends are: as
+            // it goes along the edge it is on.
+            let travel = DirectionMemo.Travel(plan: plan, moving: moving, end: start, call: next)
+            if let known = memo.travels[travel] { return known }
             let ordinary = path(from: start.position, toStation: plan.calls[next].station, length: plan.length)
             let continuation = ordinary.map { (start: start, path: $0) }
                 ?? passingContinuation(from: start, to: plan.calls[next].station)
-            guard let continuation else { return directions }
+            guard let continuation else {
+                memo.travels[travel] = directions
+                return directions
+            }
             directions.formUnion(self.directions(of: continuation.path, from: continuation.start))
             start = placement(continuation.start, after: continuation.path)
-            stop = next
+            let walk = DirectionMemo.Walk(plan: plan, start: start, stop: next)
+            let walked = memo.walks[walk] ?? walkedDirections(plan, from: start, stop: next)
+            memo.walks[walk] = walked
+            let all = directions.union(walked)
+            memo.travels[travel] = all
+            return all
         }
         let walk = DirectionMemo.Walk(plan: plan, start: start, stop: stop)
         if let known = memo.walks[walk] { return directions.union(known) }
@@ -318,9 +385,43 @@ extension GameWorld {
     /// with no placed train and an unplaced train protect nothing: when
     /// they start, their departure takes its route whole like any other.
     func opposingServiceTraversals(for candidate: Train, memo: inout DirectionMemo) -> Set<TrackTraversal> {
+        // Kept for the trains and the candidate as they are: a departure
+        // asks it twice (decision 57, and with block sections decision
+        // 212's way past standing trains), and again at every second a
+        // step tries.
+        if let known = memo.opposing[candidate.id], known.candidate == candidate, known.trains == trains { return known.traversals }
+        let traversals = workedOutOpposingServiceTraversals(for: candidate, memo: &memo)
+        memo.opposing[candidate.id] = (trains, candidate, traversals)
+        return traversals
+    }
+
+    /// ``opposingServiceTraversals(for:memo:)``, worked out.
+    private func workedOutOpposingServiceTraversals(for candidate: Train, memo: inout DirectionMemo) -> Set<TrackTraversal> {
+        let parts = opposingParts(for: candidate, memo: &memo)
         var directions: Set<TrackTraversal> = []
+        for part in parts.directions {
+            directions.formUnion(part)
+        }
+        return Set(directions.map(\.reversed)).subtracting(parts.defaultWays)
+    }
+
+    /// What ``opposingServiceTraversals(for:memo:)`` is made of: the
+    /// traversals the other trains and the lines are planned along, each
+    /// running service's and line plan's apart, which turned round it
+    /// forbids, but for `candidate`'s own default ways. Asking these of a
+    /// few traversals is quicker than gathering them all.
+    func opposingParts(for candidate: Train, memo: inout DirectionMemo) -> (directions: [Set<TrackTraversal>], defaultWays: Set<TrackTraversal>) {
+        if let known = memo.opposingParts[candidate.id], known.candidate == candidate, known.trains == trains { return known.parts }
+        let parts = workedOutOpposingParts(for: candidate, memo: &memo)
+        memo.opposingParts[candidate.id] = (trains, candidate, parts)
+        return parts
+    }
+
+    /// ``opposingParts(for:memo:)``, worked out.
+    private func workedOutOpposingParts(for candidate: Train, memo: inout DirectionMemo) -> (directions: [Set<TrackTraversal>], defaultWays: Set<TrackTraversal>) {
+        var directions: [Set<TrackTraversal>] = []
         for train in trains where train.id != candidate.id && train.position != nil {
-            directions.formUnion(serviceDirections(of: train, memo: &memo))
+            directions.append(serviceDirections(of: train, memo: &memo))
         }
         for line in lines {
             for service in 0..<line.serviceCount {
@@ -335,7 +436,7 @@ extension GameWorld {
                         DirectionMemo.Call(station: line.stops[station], reverses: !line.isRing && (index == order.count / 2 || index == order.count - 1))
                     }
                     for length in lengths {
-                        directions.formUnion(plannedDirections(.init(calls: calls, length: length, repeats: true, routes: line.routes(ofService: service).isEmpty ? [] : zip(order, order.dropFirst()).map { pair in line.routes(ofService: service).first { $0.from == pair.0 && $0.to == pair.1 } } + [nil], intermediateTurnbacks: isTrafficControlEnabled && !line.isRing), memo: &memo))
+                        directions.append(plannedDirections(.init(calls: calls, length: length, repeats: true, routes: line.routes(ofService: service).isEmpty ? [] : zip(order, order.dropFirst()).map { pair in line.routes(ofService: service).first { $0.from == pair.0 && $0.to == pair.1 } } + [nil], intermediateTurnbacks: isTrafficControlEnabled && !line.isRing), memo: &memo))
                     }
                 }
             }
@@ -343,6 +444,6 @@ extension GameWorld {
         // Default corridors may be shared in both directions (single track).
         // Only additional track borrowed by an alternative is restricted.
         let defaultWays = Set(routeStretches(of: candidate).stretches.filter { $0.to > $0.from }.map(\.traversal))
-        return Set(directions.map(\.reversed)).subtracting(defaultWays)
+        return (directions, defaultWays)
     }
 }

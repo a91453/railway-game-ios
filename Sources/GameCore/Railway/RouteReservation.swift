@@ -282,10 +282,23 @@ extension GameWorld {
         // Decision 278: with block sections the way into a terminus is run
         // both ways by every train there, so it is not forbidden.
         guard let free = path(from: position, toStation: station, length: candidate.length, avoiding: blocked),
-              overflow || free.distance <= limit,
-              let path = path(from: position, toStation: station, length: candidate.length, avoiding: blocked,
-                              forbidden: opposingServiceTraversals(for: candidate, memo: &memo).subtracting(terminusTraversals(along: free, to: station)))
+              overflow || free.distance <= limit
         else { return nil }
+        // The other trains' directions asked of a traversal at a time
+        // (see ``opposingParts(for:memo:)``): the same as asking the set
+        // of them, without gathering it.
+        let exempt = terminusTraversals(along: free, to: station)
+        let parts = opposingParts(for: candidate, memo: &memo)
+        let forbids = { (traversal: TrackTraversal) -> Bool in
+            !exempt.contains(traversal) && !parts.defaultWays.contains(traversal) && parts.directions.contains { $0.contains(traversal.reversed) }
+        }
+        // A free way that runs against none of them is the way the search
+        // with them finds: the shortest, and of the shortest the first
+        // (``TrainRoute/shortest(from:isDestination:next:)`` walks the
+        // first step of each place that leads on at the shortest), which
+        // leaving out steps the free way does not take changes neither.
+        guard runsAlongAny(free, from: position, forbids) else { return free }
+        guard let path = path(from: position, toStation: station, length: candidate.length, avoiding: blocked, forbids: forbids) else { return nil }
         return overflow || path.distance <= limit ? path : nil
     }
 
@@ -493,11 +506,14 @@ extension GameWorld {
     /// The route envelope of `train`, which follows another, from the
     /// envelopes its authority was found from (see ``authority(of:memo:)``):
     /// `cover(of: bodyStretches(of: train) + envelopes.stretches)`, kept in
-    /// `memo` by the train as it is.
+    /// `memo` by the train as it is (a few of its last values).
     func followingCover(of train: Train, _ envelopes: AuthorityEnvelopes, memo: inout DirectionMemo) -> TrackCover {
-        if let known = memo.followingCovers[train.id], known.train == train { return known.cover }
+        if let known = memo.followingCovers[train.id]?.first(where: { $0.train == train }) { return known.cover }
         let cover = cover(of: bodyStretches(of: train) + envelopes.stretches)
-        memo.followingCovers[train.id] = (train, cover)
+        var known = memo.followingCovers[train.id] ?? []
+        known.insert((train, cover), at: 0)
+        if known.count > 4 { known.removeLast() }
+        memo.followingCovers[train.id] = known
         return cover
     }
 
@@ -824,7 +840,10 @@ extension GameWorld {
             let authority = authority(of: train, memo: &memo)
             authorities.append(authority)
             tracks.append(heldTrack(train, memo: &memo))
-            covers.append(authority.map { followingCover(of: train, $0.envelopes, memo: &memo) })
+            // With block sections a following train claims nothing more
+            // than it holds (decision 212), so its route envelope is not
+            // read.
+            covers.append(blockSections ? nil : authority.map { followingCover(of: train, $0.envelopes, memo: &memo) })
         }
         if memo.foulingByEdge == nil { memo.foulingByEdge = network.foulingSpans.isEmpty ? [:] : foulingSpansByEdge() }
         let holders = trackHolders(authorities: authorities, tracks: tracks, covers: covers, foulingByEdge: memo.foulingByEdge!)
