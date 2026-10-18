@@ -188,7 +188,7 @@ struct RailwayGameApp: App {
                     }
                     preferences.lessonStars = stars
                     try JSONEncoder().encode(preferences).write(
-                        to: directory.appendingPathComponent("launcher-preferences.data"), options: .atomic
+                        to: directory.appendingPathComponent(GameLauncher.preferencesFileName), options: .atomic
                     )
                 }
                 // A save that cannot be read, which the list must still let

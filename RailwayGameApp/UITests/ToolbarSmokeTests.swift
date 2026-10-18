@@ -154,7 +154,10 @@ final class LineRoutePreferenceUITests: XCTestCase {
         // without one each turned it at once).
         (control.exists ? control : toggle).waitUntilSettled()
         if control.exists {
-            control.tap()
+            // A center tap landed on the iOS 26 switch's glass thumb but
+            // left its value at 0 in full lane run 39094300227. Press the
+            // destination side of the track, as a finger turning it would.
+            control.coordinate(withNormalizedOffset: CGVector(dx: shown ? 0.8 : 0.2, dy: 0.5)).tap()
         } else {
             toggle.coordinate(withNormalizedOffset: CGVector(dx: 1, dy: 0.5)).withOffset(CGVector(dx: -42, dy: 0)).tap()
         }
