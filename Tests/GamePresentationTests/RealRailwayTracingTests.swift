@@ -228,4 +228,71 @@ final class RealRailwayTracingTests: XCTestCase {
         let quarter = stretch(.cubic(PlanPoint(x: Int64(k), y: 0), PlanPoint(x: Int64(r), y: Int64(r - k))), to: PlanPoint(x: Int64(r), y: Int64(r)))
         XCTAssertEqual(GameSession.tightestRadius(of: quarter) ?? 0, r, accuracy: r * 0.03)
     }
+
+    // MARK: - The real structures (decision 279)
+
+    /// The app's heights.
+    private static let heights = try? HeightGrid(
+        data: Data(contentsOf: BundledRealData.directory.deletingLastPathComponent().appendingPathComponent("RealWorld/taiwan_heights.dat"))
+    )
+
+    /// The Yilan Line traced from Luodong to Xinma over real ground, with
+    /// the bundled railways or with them but not their structures: the
+    /// built track's kind where Dongshan's station stands, and where the
+    /// line runs on the ground midway between Luodong and Dongshan.
+    private func dongshan(structures: Bool, structure: TrackStructure = .automatic) throws -> (station: TrackSectionKind?, plain: TrackSectionKind?) {
+        let bundled = try BundledRealData.railways()
+        let railways = structures ? bundled : try RealRailways(
+            lines: BundledRealData.file("track_lines", "geojson"), stations: BundledRealData.file("track_stations", "geojson"),
+            names: BundledRealData.file("station_names", "json")
+        )
+        let dongshan = try BundledRealData.station("冬山", in: "tra_sched")
+        var world = GameWorld.newGame(anchor: try XCTUnwrap(dongshan.anchor))
+        try world.mapGround()
+        let session = GameSession(world: world, language: .english)
+        session.heights = try XCTUnwrap(Self.heights)
+        session.railways = railways
+        session.selectTool(.network)
+        session.setNetworkMode(.build)
+        session.networkTracesRealRailway = true
+        session.networkStructure = structure
+        let luodong = try BundledRealData.point(BundledRealData.station("羅東", in: "tra_sched").coordinate, in: world)
+        let xinma = try BundledRealData.point(BundledRealData.station("新馬", in: "tra_sched").coordinate, in: world)
+        session.tapNetwork(at: luodong, reach: reach)
+        session.tapNetwork(at: xinma, reach: reach)
+        XCTAssertNil(try XCTUnwrap(session.networkPreview).problem)
+        session.buildNetworkTrack()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        let built = session.world
+        func kind(at point: PlanPoint) throws -> TrackSectionKind? {
+            var best: (distance: Double, kind: TrackSectionKind)?
+            for edge in built.network.edges {
+                let geometry = try XCTUnwrap(built.trackGeometry(of: edge.id))
+                for span in edge.sectionSpans where span.end > span.start {
+                    for sample in geometry.points(from: span.start, to: span.end) {
+                        let distance = (WorldVector(sample.plan) - WorldVector(point)).length
+                        if best == nil || distance < best!.distance { best = (distance, span.kind) }
+                    }
+                }
+            }
+            return best?.kind
+        }
+        let station = try BundledRealData.point(dongshan.coordinate, in: world)
+        let plain = PlanPoint(x: (luodong.x + station.x) / 2, y: (luodong.y + station.y) / 2)
+        return (try kind(at: station), try kind(at: plain))
+    }
+
+    /// Traced over real ground along the TRA, the track stands on the real
+    /// line's viaduct through Dongshan, and on the ground where the real
+    /// line is; without the structures, or with a structure the player
+    /// chose, as before.
+    func testATraceOverRealGroundFollowsTheRealStructures() throws {
+        let real = try dongshan(structures: true)
+        XCTAssertEqual(real.station, .viaduct, "Dongshan on its viaduct")
+        XCTAssertFalse([TrackSectionKind.viaduct, .tunnel].contains(real.plain), "\(String(describing: real.plain))")
+        let plain = try dongshan(structures: false)
+        XCTAssertNotEqual(plain.station, .viaduct, "without the structures, on the ground")
+        let chosen = try dongshan(structures: true, structure: .surface)
+        XCTAssertEqual(chosen.station, .surface, "the player's own choice")
+    }
 }

@@ -249,6 +249,10 @@ extension GameSession {
     /// it.
     static let traceGrade = 0.038
 
+    /// The system whose real structures a trace follows (decision 279):
+    /// the TRA's, the lines `tra_structures.json` has.
+    static let tracedStructuresSystem = "tra_sched"
+
     /// Whether the network tool can trace the real railway here: on a
     /// real-world map whose real railways are loaded.
     public var canTraceRealRailway: Bool {
@@ -341,7 +345,15 @@ extension GameSession {
         var levels: [TrackRise.Level] = []
         if case .point = start {} else { levels.append(TrackRise.Level(0...0, at: Double(from.z))) }
         if case .point = end {} else { levels.append(TrackRise.Level(path.length...path.length, at: Double(to.z))) }
-        guard let rise = TrackRise(path: path, ground: ground, water: water, levels: levels, grade: Self.traceGrade) else {
+        // Decision 279: along a TRA line over real ground, with the tool's
+        // own choices (what the ground asks for, nothing raised), up on the
+        // real line's viaducts and down in its tunnels.
+        var carried: [TrackRise.Carried] = []
+        if mapped, networkStructure == .automatic, networkHeight == 0, let traces = realRailwayTraces, let frame = RealWorldFrame(world: draft),
+           let snap = traces.snap(WorldVector(from.plan), within: reach), traces.lines[snap.place.line].system == Self.tracedStructuresSystem {
+            carried = railways?.structures?.stretches(along: path, frame: frame) ?? []
+        }
+        guard let rise = TrackRise(path: path, ground: ground, water: water, levels: levels, grade: Self.traceGrade, carried: carried) else {
             return TracePlan(stretches: [], buildable: 0, problem: language.text(
                 "The track cannot climb from one end to the other along this line within the steepest grade, 40‰.",
                 "沿這段真實鐵路，從一端到另一端的高低差超過遊戲的坡度上限 40‰，鋪不上去。"
