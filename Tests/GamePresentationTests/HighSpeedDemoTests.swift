@@ -38,11 +38,12 @@ final class HighSpeedDemoTests: XCTestCase {
 
     static let metre = Double(WorldCoordinate.unitsPerMetre)
 
-    /// The layout as the game builds it, over the app's heights (decision
-    /// 281), then built on a world with just what it costs on top of a new
-    /// game's money, and not run: the tracks, the stations and the sets as
-    /// they stand at midnight. Built once for every test that needs it: it
-    /// takes two or three minutes in a debug build.
+    /// The layout as the game builds it, with the app's heights (decision
+    /// 281: laid over them when the demo follows the real structures), then
+    /// built on a world with just what it costs on top of a new game's
+    /// money, and not run: the tracks, the stations and the sets as they
+    /// stand at midnight. Built once for every test that needs it: it takes
+    /// a minute in a debug build, flat, and two or three over the ground.
     static let built: Result<(layout: HighSpeedDemo.Layout, world: GameWorld, tracks: Tracks), Error> = Result {
         let layout = try HighSpeedDemo.Layout(railways: railways(), heights: XCTUnwrap(heights))
         var world = HighSpeedDemo.newWorld(paying: layout.cost(eventSeed: 1), eventSeed: 1, ground: layout.ground)
@@ -242,6 +243,9 @@ final class HighSpeedDemoTests: XCTestCase {
     /// the ground away from them; Nangang, Taipei, Banqiao and Taoyuan under
     /// the ground, Hsinchu to Tainan up on the viaduct.
     func testItsTrackFollowsTheRealStructures() throws {
+        guard HighSpeedDemo.spec.followsRealStructures else {
+            throw XCTSkip("Decision 281: flat until a set late out of Nangang no longer meets one coming in on the track they share.")
+        }
         let (layout, world, tracks) = try Self.built.get()
         XCTAssertTrue(world.ground.isMapped)
         XCTAssertTrue(world.network.edges.allSatisfy { $0.structure == .automatic })
@@ -329,8 +333,8 @@ final class HighSpeedDemoTests: XCTestCase {
         XCTAssertEqual(Double(track), real, accuracy: real * 0.005)
         // Fitted loosely: every edge is checked against all before it. Over
         // the ground, at the heights of the real structures, it takes about
-        // three times the edges it took flat (decision 281).
-        XCTAssertLessThan(tracks.down.count, 1_000, "the track is fitted loosely: every edge is checked against all before it")
+        // three times the edges (934, decision 281).
+        XCTAssertLessThan(tracks.down.count, HighSpeedDemo.spec.followsRealStructures ? 1_000 : 330, "the track is fitted loosely: every edge is checked against all before it")
         // The up track runs beside it from turnout to turnout: as long
         // within a few metres (the inside of a curve is shorter), and the
         // two make up the whole network.

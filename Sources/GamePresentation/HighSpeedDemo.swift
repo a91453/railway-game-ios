@@ -15,9 +15,9 @@ import GameCore
 /// A whole-Taiwan game with the Taiwan High Speed Rail built and running
 /// (decision 170), on the real day's timetable (decision 197).
 ///
-/// - The track is double, as on the real line, and with the app's heights
-///   laid over the ground up on the real viaducts and down in the real
-///   tunnels (decision 281; flat at 0 m without them): the down track
+/// - The track is double, as on the real line, flat and on the ground (the
+///   game's track, not the real viaducts and tunnels; decision 281 lays it
+///   at their heights once its day runs over them): the down track
 ///   (southbound) is one line of cubic edges on the real alignment, the up
 ///   track (northbound) runs ``trackOffset`` beside it and joins it by a
 ///   turnout short of each end's yard, where the sets turn back.
@@ -167,9 +167,11 @@ public enum HighSpeedDemo {
         longestEdge: longestEdge,
         landAt: landAt,
         opensAt: opensAt,
-        // Decision 281: up on its viaducts and down in its tunnels, as the
-        // real line is, and Zuoying's depot reached by its own track.
-        followsRealStructures: true,
+        // Decision 281: Zuoying's depot reached by its own track. Up on its
+        // viaducts and down in its tunnels, as the real line is, once a set
+        // late out of Nangang no longer meets one coming in on the track
+        // they share (decision 281, next step): until then flat at 0 m.
+        followsRealStructures: false,
         heightFit: heightFit,
         depotLeads: true
     )
