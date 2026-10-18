@@ -598,7 +598,8 @@ struct TrackRise {
     /// How far a node may stand from the ground: the game's 64 m, less a
     /// margin.
     static let nodeReach = 60.0 * RealWorldDemo.metre
-    /// How far an edge's straight grade may stray from the line.
+    /// How far an edge's straight grade may stray from the line, unless
+    /// the track asks otherwise (``fits(from:to:within:)``).
     static let fit = 1.0 * RealWorldDemo.metre
 
     let distances: [Double]
@@ -875,13 +876,14 @@ struct TrackRise {
         abs(height(at: distance) - interpolate(ground, at: distance)) <= Self.nodeReach
     }
 
-    /// Whether a straight grade from `a` to `b` keeps close to the line.
-    func fits(from a: Double, to b: Double) -> Bool {
+    /// Whether a straight grade from `a` to `b` keeps within `limit` of
+    /// the line.
+    func fits(from a: Double, to b: Double, within limit: Double = fit) -> Bool {
         let start = height(at: a), end = height(at: b)
         var index = sample(at: a)
         while index < distances.count, distances[index] < b {
             let distance = distances[index]
-            if distance > a, abs(start + (end - start) * (distance - a) / (b - a) - height(at: distance)) > Self.fit { return false }
+            if distance > a, abs(start + (end - start) * (distance - a) / (b - a) - height(at: distance)) > limit { return false }
             index += 1
         }
         return true

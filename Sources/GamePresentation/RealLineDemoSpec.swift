@@ -75,9 +75,18 @@ struct RealLineDemoSpec: Sendable {
     var keepLeft = false
     /// Whether, with the app's heights, the track is laid over the ground
     /// at the heights the real line's bridges, viaducts and tunnels ask for
-    /// (decision 279; the TRA demo's), its platforms level; otherwise flat
-    /// at 0 m, as the high-speed demo's.
+    /// (decision 279; both demos', the high-speed demo's from decision
+    /// 281), its platforms level; otherwise flat at 0 m.
     var followsRealStructures = false
+    /// How far an edge's straight grade may stray from the heights it is
+    /// laid at (``TrackRise/fit``; the high-speed demo's looser, decision
+    /// 281).
+    var heightFit = TrackRise.fit
+    /// Whether a depot north of the south end that keeps only its sets
+    /// has its own track from the end's throat (decision 281; the
+    /// high-speed demo's Zuoying): otherwise its sidings leave the down
+    /// track, and the sets reach them along it.
+    var depotLeads = false
 
     /// Cars of the longest sets: every platform takes them.
     var cars: Int { kinds.map(\.cars).max() ?? 1 }
