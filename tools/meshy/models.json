@@ -55,6 +55,7 @@
       "texture_prompt": "Flat colours only: plain white body, one blue stripe along the side below the windows, dark grey tinted windows and windshield, black tyres with grey hubs, light grey roof unit. No text, no logos, no advertisements.",
       "target_polycount": 1500,
       "front": "-x",
+      "length_m": 12,
       "out": null
     }
   ]
