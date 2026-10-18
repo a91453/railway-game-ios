@@ -44,6 +44,20 @@ python3 tools/real-railways/match_osm.py taiwan.pbf \
 
 只有 OSM 確定過時或標錯（在衛星影像上確認過），才在 `osm_exceptions.json` 加一段：`from` 與 `to` 是原線上的兩點，之間保留 TDX 的線形；`middle` 是中間的一個原線頂點，`RealRailwaysTests` 檢查打包的線經過它。其他時候改 OSM 本身，再重新產生。
 
+## 橋與隧道（決策 279）
+
+`extract_structures.py` 從參考庫已經判好的結構抽出台鐵營運線在橋梁、高架與隧道上的路段，寫成 `RailwayGameApp/Resources/RealRailways/tra_structures.json`。示範地圖的軌道照它決定每段離地多高（`TrackRise` 的 `carried`）。
+
+```sh
+R=<railway-reference-private>/Railway/site_archive_clean/rail-3d/physical
+python3 tools/real-railways/extract_structures.py "$R/network.json" "$R/level-profiles.json" \
+  RailwayGameApp/Resources/RealRailways/tra_structures.json
+```
+
+- 輸入：`network.json`（參考網站的 OSM 軌道）與 `level-profiles.json`（每條軌道的結構：OSM 的 bridge／tunnel，沒有標的地方用內政部國土測繪中心「臺灣鐵路」補上）。工具先確認 `network.json` 的 sha256 就是 `level-profiles.json` 當初用的那份。
+- 輸出：`system` 是 `tra_sched`、沒有 `service` 標籤、結構是 bridge 或 tunnel 的軌道，各一段折線（小數 6 位）。2026-10-18（參考 `2d8a152`）：1,282 段，橋 1,044、隧道 238。
+- 授權：OSM 的部分依 ODbL 1.0，國土測繪中心的部分依政府資料開放授權第 1 版；遊戲的資料來源畫面都有標示（`DataSourceCredits` 的 `openStreetMap`、`nlsc`）。
+
 ## 授權
 
 線形與車站位置來自 OpenStreetMap：© OpenStreetMap 貢獻者，依 ODbL 1.0 使用。遊戲的資料來源畫面（`DataSourceCredits`）已經標示，產生的 `track_lines.geojson`、`track_stations.geojson` 依同一授權在本 repo 提供。

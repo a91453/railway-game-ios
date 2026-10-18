@@ -39,6 +39,7 @@ public enum DataSourceCredits {
     static let traOpenDataURL = "https://ods.railway.gov.tw"
     static let openGovernmentLicenseURL = "https://data.gov.tw/license"
     static let openStreetMapCopyrightURL = "https://www.openstreetmap.org/copyright"
+    static let nlscRailwayURL = "https://data.gov.tw/dataset/73220"
     static let odblURL = "https://opendatacommons.org/licenses/odbl/1-0/"
     static let repositoryURL = "https://github.com/a91453/railway-game-ios"
     static let worldPopURL = "https://www.worldpop.org"
@@ -156,12 +157,34 @@ public enum DataSourceCredits {
                             ),
                         ]
                     ),
+                    // Decision 279: through the reference's
+                    // `level-profiles.json`, the official railway geometry
+                    // that fills in OpenStreetMap's bridges and tunnels.
+                    DataSourceCredit(
+                        id: "nlsc",
+                        title: language.text("National Land Surveying and Mapping Center", "內政部國土測繪中心"),
+                        detail: language.text(
+                            "Where the TRA's lines run on bridges and viaducts or through tunnels, which the real-world demo's track follows.",
+                            "台鐵各線在橋梁、高架與隧道上的路段，實景示範的軌道照著蓋。"
+                        ),
+                        notice: language.text(
+                            "National Land Surveying and Mapping Center, Ministry of the Interior, 2026: Taiwan Railway. This open data is released to the public under the Open Government Data License, version 1.0; users may use it provided they comply with the terms of the licence.",
+                            "內政部國土測繪中心 2026 年臺灣鐵路（此開放資料依政府資料開放授權條款（Open Government Data License）第 1 版進行公眾釋出，使用者於遵守本條款各項規定之前提下，得利用之。）"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("Taiwan Railway (data.gov.tw)", "臺灣鐵路（政府資料開放平臺）"), url: nlscRailwayURL),
+                            DataSourceCredit.Link(
+                                title: language.text("Open Government Data License", "政府資料開放授權條款"),
+                                url: openGovernmentLicenseURL
+                            ),
+                        ]
+                    ),
                     DataSourceCredit(
                         id: "openStreetMap",
                         title: "OpenStreetMap",
                         detail: language.text(
-                            "The track of every real railway line, station and platform positions, single and double track; places such as shops, offices, schools and sights round new stations; the industrial land, parks, farmland, coastline, rivers and lakes of real-world maps; the names of the settlements, villages and townships new stations are named after; where the tourist sights of real-world maps stand; where the high-speed demo's depots and the TRA demo's Yilan and Su'aoxin sidings stand and how many platform tracks the high-speed demo's end stations have; the roads, parks and shop names of the 3D city preview.",
-                            "提供每條真實鐵道的軌道走向、車站與月台位置、單雙線資訊；新車站周邊的商店、辦公室、學校、景點等地點；實景地圖上的工業區、公園、農地、海岸線、河川與湖泊；替新車站命名的聚落、村里與鄉鎮市區名稱；實景地圖上觀光景點的位置；高鐵示範的機廠與台鐵示範宜蘭、蘇澳新側線的位置、高鐵示範端點站的股道數；3D 城市預覽的道路、公園與店名。"
+                            "The track of every real railway line, station and platform positions, single and double track, where the TRA's lines are on bridges and in tunnels; places such as shops, offices, schools and sights round new stations; the industrial land, parks, farmland, coastline, rivers and lakes of real-world maps; the names of the settlements, villages and townships new stations are named after; where the tourist sights of real-world maps stand; where the high-speed demo's depots and the TRA demo's Yilan and Su'aoxin sidings stand and how many platform tracks the high-speed demo's end stations have; the roads, parks and shop names of the 3D city preview.",
+                            "提供每條真實鐵道的軌道走向、車站與月台位置、單雙線資訊、台鐵在橋梁與隧道上的路段；新車站周邊的商店、辦公室、學校、景點等地點；實景地圖上的工業區、公園、農地、海岸線、河川與湖泊；替新車站命名的聚落、村里與鄉鎮市區名稱；實景地圖上觀光景點的位置；高鐵示範的機廠與台鐵示範宜蘭、蘇澳新側線的位置、高鐵示範端點站的股道數；3D 城市預覽的道路、公園與店名。"
                         ),
                         // The ODbL asks for the derived files to be offered
                         // under the same licence: the source repository link

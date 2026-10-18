@@ -349,6 +349,9 @@ public struct RealRailways: Sendable {
     /// The Pingxi Line's real trains for the real-world demo
     /// (`tra_pingxi_runs.json`, decision 133).
     public let pingxiRuns: RealLineRuns?
+    /// Where the real TRA lines are on bridges and in tunnels
+    /// (`tra_structures.json`, decision 279).
+    public let structures: RealRailStructures?
     /// The files of the optional data above that could not be read, and
     /// why; empty when all could. Listed for debugging (the data sources
     /// screen), never dropped silently.
@@ -367,6 +370,7 @@ public struct RealRailways: Sendable {
         operations: RealRailwayOperations? = nil,
         transfers: RealStationTransfers? = nil,
         pingxiRuns: RealLineRuns? = nil,
+        structures: RealRailStructures? = nil,
         loadIssues: [RealDataLoadIssue] = []
     ) throws {
         let decoder = JSONDecoder()
@@ -414,6 +418,7 @@ public struct RealRailways: Sendable {
         self.operations = operations
         self.transfers = transfers
         self.pingxiRuns = pingxiRuns
+        self.structures = structures
         self.loadIssues = loadIssues + (operations?.loadIssues ?? [])
         var byKey: [String: [Int]] = [:]
         for (index, station) in stations.enumerated() {
@@ -699,6 +704,9 @@ extension RealRailways {
         let pingxiRuns = read("tra_pingxi_runs", "json").flatMap { data in
             parse("tra_pingxi_runs.json") { try RealLineRuns(data: data) }
         }
+        let structures = read("tra_structures", "json").flatMap { data in
+            parse("tra_structures.json") { try RealRailStructures(data: data) }
+        }
 
         guard let lines, let stations, let names else { return Loaded(railways: nil, issues: issues + operations.loadIssues) }
         do {
@@ -710,6 +718,7 @@ extension RealRailways {
                 operations: operations,
                 transfers: transfers,
                 pingxiRuns: pingxiRuns,
+                structures: structures,
                 loadIssues: issues
             )
             return Loaded(railways: railways, issues: railways.loadIssues)

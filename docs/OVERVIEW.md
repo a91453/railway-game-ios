@@ -18,7 +18,7 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 存檔版本 | 63（每整分鐘決定行車間隔，#702，決策 248）；每個版本一個存檔 fixture，共 67 個 | `SavedGame.currentVersion`、`SaveFixtures/` |
 | golden | schema 74（車站商業，#595），`GoldenScenarios/` 裡 77 個 JSON | `GoldenScenarios/` |
 | replay | 9 個指令紀錄（含問題回報轉成的 `problem-report-blank-map.json`，#468；長區段行車控制 `long-leg-traffic.json`，#480） | `ReplayFixtures/` |
-| 決策 | 1–217、219–278（218 沒有使用：越行寫進了決策 212，#556、#589）。141、150、203 曾保留但沒有使用；之後的號碼以工作登記 #231 為準 | `docs/ARCHITECTURE.md`，索引在第 9 節 |
+| 決策 | 1–217、219–279（218 沒有使用：越行寫進了決策 212，#556、#589）。141、150、203 曾保留但沒有使用；之後的號碼以工作登記 #231 為準 | `docs/ARCHITECTURE.md`，索引在第 9 節 |
 | App 版本 | 0.5.0 | `RailwayGameApp/project.yml` |
 | 平台與語言 | iPhone（只橫拿）、iPad；繁體中文、英文。日文已移除（#171） | — |
 | 程式規模 | GameCore 90 檔 3.3 萬行、GamePresentation 115 檔 3.1 萬行、App 61 檔 1.9 萬行、測試 292 檔 8.1 萬行 | — |
@@ -466,3 +466,4 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 276 | 回饋第二批（二）：每趟蓋章，一趟跑完在終點站蓋「客滿」或「空位多」（`TripStamp.swift`）；長按路線看旅程，畫出路線上最多人往返的 5 對站（`JourneyTrace(line:pairs:)`）；GameCore 不動 |
 | 277 | 3D 地圖下雨時變暗、變灰、霧變近：數值照 town-scene 參考的 `PRESETS.rain`，哪天下雨照 GameCore 的天氣（`MapWeather`）；也寫下雨絲與站前商店街的計畫 |
 | 278 | 行車控制：跟車中、被沒有服務的列車擋住的列車，改去同一站另一個空的停車位置；閉塞區間打開時，進終點站的路不受決策 57 的方向保護。高鐵示範（號誌開＋閉塞）白天不再死結，取消 60 → 45 班（存檔、golden 不動） |
+| 279 | 示範地圖的軌道照真實的高架、橋與隧道：從參考庫抽出台鐵的橋隧（OSM＋國土測繪中心，`tra_structures.json`），`TrackRise` 依它限制每段離地的高度，衝突的範圍拿掉；先接瑞芳／平溪示範，宜蘭線示範是下一步（存檔、golden 不動） |

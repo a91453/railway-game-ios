@@ -11903,6 +11903,80 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 **驗證**：`BerthChangeTests`（跟車的列車改去 P2、一小時批次與逐分相同）、`TerminusTests`（閉塞區間時改去終點站的另一股；終點站的路只算通到盡頭、沒有別站月台的那一段；沒有閉塞區間時不算）。前兩個行為測試在 origin/main 失敗。既有的 `DeadlockTests`、`DeadlockPropertyTests`、`FollowerDeadlockTests`、`IdleTrainDeadlockTests`、`BlockSectionsTests`、`OccupiedRoutingPropertyTests`、`TrafficControlTests`、`ReservationShortcutTests`、`ScheduledTrafficTests`、`LongLegReplayTests`、`TurnbackTests`、`DepotTests`、`RunDepotTests`、`LineRunsTests` 照舊通過。
 
+### 279. 示範地圖的軌道照真實的高架、橋與隧道
+
+2026-10-18，作者直接交辦（研究「台鐵兩個示範的地圖都在地面，要怎麼依真實鐵軌是高架還是地面搬遷原有路線」，之後「四方考慮後開始執行」）。號碼依工作登記 #231：main 用到 278，所以取 279。GameCore、存檔版本、golden、replay 都不動。
+
+**現況**（研究時量的，main fff506b）：
+- 宜蘭線示範（決策 240）和高鐵示範共用的建法把整條線平放在 0 m，結構固定是地面，世界沒有讀地形。
+- 瑞芳／平溪示範（決策 132）讀地形：`TrackRise` 把地形平滑 160 m、坡度上限 2.5%，交給「自動」結構判斷。它只知道地形，不知道真實的橋隧。
+- 平溪挑戰（決策 90）用平的示範，目標是在平的圖上量的，不動。
+- 平面線形自決策 151 起已經照 OSM 的真實軌道，**不用搬**；要改的只有高度。
+
+**資料**（`tools/real-railways/extract_structures.py` → `RailwayGameApp/Resources/RealRailways/tra_structures.json`，205 KB）：
+- 參考庫 `Railway/site_archive_clean/rail-3d/physical/level-profiles.json` 已經替每條 OSM 軌道判定好結構：OSM 明確標的 bridge／tunnel，沒有標的地方用內政部國土測繪中心「臺灣鐵路」（data.gov.tw 73220，政府資料開放授權第 1 版）的官方橋隧幾何補上，兩者矛盾的地方用地形裁決；`layer` 不能單獨當橋或隧道的證據（`structure-kind.js`）。
+- 工具只取台鐵營運線（`tra_sched`、沒有 `service` 標籤）的 bridge 與 tunnel：1,282 段（橋 1,044、隧道 238），點取到小數 6 位。高度不取：參考的高度是估計值（它自己的 `basis` 這樣寫，高架的值上限 8 m）。工具會先比對 `network.json` 的 sha256 是不是 `level-profiles.json` 當初用的那份。
+- 資料來源畫面多一筆「內政部國土測繪中心」，附授權條款要求的標示；OSM 那一筆的說明加上「台鐵在橋梁與隧道上的路段」。
+
+**規則**（`RealRailStructures.stretches(along:frame:)`、`TrackRise` 的 `carried`）：
+1. **哪幾段**：一段橋隧的每一點都在路線 20 m 內，才算這條路線的（雙線的另一股也算，旁邊別的線不算）；同種、重疊或相接的合成一段。
+2. **高度範圍**（每 8 m 一個取樣，相對遊戲讀到的地面）：
+   - 真實的橋與高架：至少 +10 m（遊戲的高架是高於 8 m，`TrackSectionRules.highestFill`）。
+   - 真實的隧道：至少 −13 m（遊戲的隧道是深於 11 m，`deepestCutting`）。
+   - 兩端各留 64 m 不限（橋台、洞口附近）。
+   - 真實的地面：−10.5 m 到 +7.5 m（地面、路堤、路塹）；結構物兩端外 64 m 不限，留給坡道（2.5% 的坡，2.5 m 的高差要 100 m，兩端加起來 128 m）。
+   - 不限的地方：短於 160 m 的橋隧（涵洞、小溪的橋、山脊下的短隧道）和它們兩旁 64 m；遊戲的水域兩旁 64 m（水上照舊要過橋或鑽隧道）；車站的水平段（車站有自己的範圍）。
+3. **做不到時**：遊戲的地形比真實的粗（30 m 的高程；窄谷裡的橋，地形量到的是谷壁），有些範圍在 2.5% 的坡度內互相衝突。範圍切成最長 256 m 的一塊塊；求不出來時，找出真正衝突的兩個取樣（把最低限往那裡推得最高的那個、最高限推得最低的那個），**拿掉含有它們的那幾塊**，再求。真實範圍都不衝突了還求不出來，才照舊把水域改成隧道。
+4. **沒有資料時完全照舊**：`carried` 是空的，範圍就是空的，結果和以前逐位元相同（網路工具的「沿真實鐵路描線」、決策 213 沒有傳，不受影響）。
+
+**哪些地圖**：這個 PR 只接瑞芳／平溪示範（決策 132）。宜蘭線示範要先讓共用的建法讀地形、讓上行線與待避線跟著下行線的高度，是下一個 PR（見「下一步」）。
+
+**量測**（Linux，示範照 App 的方式建：地形、水域、陡坡）：
+- 和真實結構逐點對照（每 8 m，對到 40 m 內最近的真實軌道，單位公里）：
+
+  | 遊戲做成 ＼ 真實是 | 地面（之前） | 地面（之後） | 隧道（之前） | 隧道（之後） |
+  | --- | --- | --- | --- | --- |
+  | 高架 | 1.90 | **0.67** | 0.04 | 0.04 |
+  | 隧道 | 1.31 | 1.46 | 4.47 | **4.64** |
+  | 橋 | 1.02 | 0.96 | 0.09 | 0.09 |
+  | 地面、路堤、路塹 | 35.76 | 36.89 | 1.48 | **1.32** |
+
+- `RealWorldDemoGroundTests.testTheTrackFollowsTheRealStructures`（每 64 m 一點）：長隧道裡的點 64／70 是遊戲的隧道（之前 59／70）；真實地面上、離結構物 200 m 以外的點 10／385 被做成高架或隧道（之前 22／385）。測試門檻是 85% 與 4%。
+- 主線（七堵—牡丹）73 塊範圍留 62 塊，平溪線 46 塊留 41 塊，縱貫線 13 塊留 12 塊，深澳線 16 塊留 11 塊。
+- 還錯的地方：隧道多出來的 1.46 km 大多在不限的地方（結構物與水域的兩旁、拿掉的範圍）；車站平段上的高架 0.13 km。都是地形太粗：洞口附近地形量到的山比真的低或高。
+- 建造費照舊算在新遊戲的錢上：開局的餘額仍是新遊戲的（測試照舊通過）。
+
+**其他選項**（留給作者看）：
+- 直接用參考的高度（`values`、`terrainValues`）：參考的高度是估計值，高架上限 8 m，遊戲判成路堤；它的地形也和遊戲的不同，平移後橋隧兩端對不上。不用。
+- 每段照真實結構強制成「高架」「隧道」邊：結構改變的地方都要有節點，而且遊戲的地形比真實的粗，強制的高架在地形量到的山坡上會被拒絕（高架要在地面以上），隧道在地形量到的谷底會被拒絕。不用。
+- 只做宜蘭線、不動平溪：平溪示範已經有地形，改動小、可以先驗證規則，所以先做它。
+
+**下一步**（交接，`docs/HANDOFF.md` §2 有一行指過來）：
+1. 宜蘭線示範（決策 240）照真實結構：`RealLineDemoSpec` 加開關（高鐵示範先不開）；全島世界沿線讀地形（`mapGround`、`setGround`，`HeightGrid` 已涵蓋全島）；下行線用 `TrackRise`（`carried` 照這裡）；`TrackPlan(beside:)` 的上行線、待避線、渡線、兩端股道、側線改成跟著下行線的高度（現在寫死 0）；轉轍器所在處不超過 25‰（`maximumTurnoutGrade`）；`openTRADemo` 傳 `heights`；冬山站在高架上，車站的範圍（`stationReach` 8 m）要放寬或讓車站跟著真實結構；重跑 `TRADemoDayTests`。真實的高架：宜蘭站南邊往二結 4.2 km、冬山站前後 3.7 km（研究時量的，宜蘭線從八堵起 71.9–76.2 km 與 84.4–88.0 km）。
+2. 高鐵示範（約七成是高架）可以打開同一個開關，資料要加 `thsr`（參考有）。
+3. 「沿真實鐵路描線」（決策 213）可以傳 `carried`，玩家描的線也照真實的高架與隧道。
+
+**參考對照**（私有參考 `2d8a152`）：
+
+| 參考 | 本專案 |
+| --- | --- |
+| `Railway/site_archive_clean/rail-3d/physical/level-profiles.json` 的 `entries[*].kind` | `tools/real-railways/extract_structures.py` → `tra_structures.json` 的 `kind` |
+| 同一檔的 `inputSha256["network.json"]` | 工具開頭的 sha256 比對 |
+| `rail-3d/physical/network.json` 的 `ways[*].coordinates`、`system`、`tags.service` | `tra_structures.json` 的 `points`，只取 `tra_sched`、沒有 `service` |
+| `rail-3d/physical/structure-kind.js` 的 `classifyRailStructure`（layer 不單獨算橋隧、官方幾何補 OSM 沒標的） | 照它判好的結果用，不重新判 |
+| 同一檔 `basis` 的「臺鐵高鐵縱坡上限 2.5%」 | `RealWorldDemo.rulingGrade`（決策 132 已用） |
+| 同一檔 `basis` 的「高架至少離地 6 公尺」（估計） | 不用：遊戲的高架門檻是 8 m，所以 `TrackRise.carriedHeight` 10 m |
+
+外部專案：沒有另外搜尋。參考庫已經有判好的資料；高度的求法是決策 132 的 `TrackRise` 延伸，程式碼是本專案自己的。
+
+**四方**：
+- 玩家：瑞芳、平溪示範裡，真的隧道多半是隧道，真的平地上少了一半的假高架（1.90 → 0.67 km）；之後宜蘭線示範能看到冬山站與宜蘭南邊的高架。
+- 開發：只動 GamePresentation、工具與資源；沒有資料時結果逐位元不變；資料由工具從參考庫重做，有 sha256 檢查；GameCore、存檔、golden 都不動。
+- 美術：沿用現有的高架、橋、隧道畫法，不用新圖。
+- 音樂：無。
+
+**驗證**：Linux `swift build --build-tests -Xswiftc -warnings-as-errors`，`RealRailStructuresTests`（讀檔、壞檔、沿路線的段、宜蘭線的兩段高架、高度範圍、衝突時拿掉的塊）、`RealWorldDemoGroundTests`、`RealRailwaysTests`、`RealWorldDemoTests`、`PingxiChallengeTests`、`NetworkPostcardTests`。App 與 Xcode 專案（XcodeGen 2.46.0 重新產生）只能在 macOS CI 驗證。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

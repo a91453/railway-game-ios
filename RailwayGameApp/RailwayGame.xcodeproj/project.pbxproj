@@ -129,6 +129,7 @@
 		D4406F2AAF216CFD720F2A34 /* rail-joint.wav in Resources */ = {isa = PBXBuildFile; fileRef = AD6E3ED548E183F6E79E0111 /* rail-joint.wav */; };
 		D46AECD3578B57EB4AD69DB4 /* taiwan_water.json in Resources */ = {isa = PBXBuildFile; fileRef = 31A2D9E61F0D1A4537E1B356 /* taiwan_water.json */; };
 		D4FDC4F705567E31E0A61764 /* taiwan_heights.dat in Resources */ = {isa = PBXBuildFile; fileRef = 2C59CD3C076F73D4C4D5094B /* taiwan_heights.dat */; };
+		D54492B6839C32079EC025D3 /* tra_structures.json in Resources */ = {isa = PBXBuildFile; fileRef = D7E0FE94FF45474D4526CC0C /* tra_structures.json */; };
 		D576D7231B44DA908F4690A3 /* TrainRosterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A19B41254DC18939B0BA2CB0 /* TrainRosterView.swift */; };
 		D7C2F05C8F97660E0404A588 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 319005DEFC37AC8A7F4BB927 /* Localizable.xcstrings */; };
 		D9A96F6DD6A7A5B69078119E /* NotoSans-OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = F0F5EA47E14A5423014B49B8 /* NotoSans-OFL.txt */; };
@@ -277,6 +278,7 @@
 		CF26D5EFF8FE10DB6A8376C9 /* taiwan_coverage.dat */ = {isa = PBXFileReference; path = taiwan_coverage.dat; sourceTree = "<group>"; };
 		D490F999E435A0570BE04635 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		D4C0B07BD9AF82071392AB20 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		D7E0FE94FF45474D4526CC0C /* tra_structures.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra_structures.json; sourceTree = "<group>"; };
 		D8A3D706AFEA85A7941D8933 /* track_lines.geojson */ = {isa = PBXFileReference; path = track_lines.geojson; sourceTree = "<group>"; };
 		DA79BA929F6262FB0DD353E2 /* BaseMap */ = {isa = PBXFileReference; lastKnownFileType = folder; name = BaseMap; path = Resources/BaseMap; sourceTree = SOURCE_ROOT; };
 		DE2E4A53A2F134FC8BD9D4F7 /* NewsLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewsLogView.swift; sourceTree = "<group>"; };
@@ -388,6 +390,7 @@
 				007476F85C3E1C799257C7B6 /* tra_platforms.json */,
 				F34F5FAD9996ED6204B4F23C /* tra_station_class.json */,
 				150E696C9936773A65399191 /* tra_station_info.json */,
+				D7E0FE94FF45474D4526CC0C /* tra_structures.json */,
 				95B22F52AC2B7370C697A499 /* tra_track_sections.json */,
 				6630BFF287E651429AA31CC3 /* tra-yilan-schedule.json */,
 				FAA79D875396E732FE48A605 /* tra.json */,
@@ -704,6 +707,7 @@
 				0A6DFB7DC5EF1467874F231E /* tra_platforms.json in Resources */,
 				EBF4B51615CD5EA956ADD087 /* tra_station_class.json in Resources */,
 				9CC22169A02628E88713776A /* tra_station_info.json in Resources */,
+				D54492B6839C32079EC025D3 /* tra_structures.json in Resources */,
 				6361F5D3D8B97DFA6D29B6F2 /* tra_track_sections.json in Resources */,
 				66CD628AEFF6AEC5001B87F0 /* track_lines.geojson in Resources */,
 				F616E84EA51C9BCB0921FBA7 /* track_stations.geojson in Resources */,
