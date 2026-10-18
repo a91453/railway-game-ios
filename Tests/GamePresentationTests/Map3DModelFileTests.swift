@@ -78,6 +78,33 @@ final class Map3DModelFileTests: XCTestCase {
                        try Map3DModelFile(decoding: Data(bytes), named: "bus").model.vertices)
     }
 
+    func testTheNodeConverterFixtureReadsWithItsTextureAndFront() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent()
+        let url = root.appendingPathComponent("tools/glb-to-m3dmodel/fixtures/tiny.m3dmodel")
+        let decoded = try Map3DModelFile(decoding: Data(contentsOf: url), named: "fixture")
+        XCTAssertEqual(decoded.model.triangleCount, 2)
+        XCTAssertEqual(decoded.model.length, 12)
+        XCTAssertEqual(decoded.model.vertices[0].color, 0xFFC8_5A14, "blue PNG becomes a flat color")
+        XCTAssertEqual(decoded.model.vertices[0].x, 6, "-x GLB front becomes +x")
+        XCTAssertEqual(decoded.model.vertices[0].z, 0, "the model rests on the ground")
+        XCTAssertTrue(decoded.model.vertices[3].glows, "the headlight keeps its night flag")
+        XCTAssertTrue(decoded.provenance.contains("Meshy fixture"))
+    }
+
+    func testTheConvertedCityBusReadsWithEightColorsAndItsTaskRecord() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent()
+        let url = root.appendingPathComponent("docs/art/meshy-city-bus-2026-10-18/city-bus.m3dmodel")
+        let decoded = try Map3DModelFile(decoding: Data(contentsOf: url), named: "city-bus")
+        XCTAssertEqual(decoded.model.triangleCount, 1543)
+        XCTAssertEqual(decoded.model.length, 12, accuracy: 0.001)
+        XCTAssertEqual(Set(decoded.model.vertices.map(\.color)).count, 8)
+        XCTAssertTrue(decoded.model.vertices.contains { $0.color >> 24 == 0 }, "body paint can use each instance's stripe")
+        XCTAssertTrue(decoded.provenance.contains("01a14cae-0304-73a5-acee-8a7abb7122e3"))
+        XCTAssertTrue(decoded.provenance.contains("43b59d1958bb2beb5ae07db491018fadd2545355f787664db7d9b4986a70126d"))
+    }
+
     func testAnythingElseIsRefused() {
         func refusal(_ bytes: [UInt8]) -> Map3DModelFile.Error? {
             do {
