@@ -392,7 +392,7 @@ expect_plan presentation "$present" "#403 (GamePresentation and the app)" "${pr4
 expect_plan presentation "$present" "#406 (GamePresentation, the app, its sounds)" "${pr406[@]}"
 expect_plan presentation "$present" "#414 (GamePresentation and its tests)" "${pr414[@]}"
 expect_plan fixtures "GoldenScenarioTests ReferenceWorldGoldenTests" "#413's golden made smaller" "${slim[@]}"
-expect_plan presentation "FlexDispatchPropertyTests $present" "mixed: presentation and a campaign file run both" "${pr414[@]}" "${pr401[@]}"
+expect_plan full "" "mixed: presentation and a campaign file run every shard" "${pr414[@]}" "${pr401[@]}"
 expect_plan fixtures "FlexDispatchPropertyTests GoldenScenarioTests ReferenceWorldGoldenTests" "mixed: a fixture and a test file" "${slim[@]}" "${pr401[@]}"
 expect_plan full "" "mixed: anything with GameCore is full" "${pr403[@]}" Sources/GameCore/World/GameWorld.swift
 expect_plan none "" "docs, tools, the app's code and other workflows" docs/ROADMAP.md tools/golden-checks/city_requests.py \
