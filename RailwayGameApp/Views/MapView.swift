@@ -317,7 +317,7 @@ struct MapView: View {
                         linePalette: linePalette,
                         // Only the traced station's: not the last one's while
                         // the next is worked out, nor once its panel closes.
-                        journey: journeyTrace.flatMap { $0.station == tracedStationID ? $0 : nil },
+                        journey: journeyTrace.flatMap { $0.station == tracedStationID && $0.line == tracedLineID ? $0 : nil },
                         journeyProgress: journeyProgress,
                         drawsLabels: false
                     )
@@ -512,20 +512,26 @@ struct MapView: View {
                             return false
                         }
                         let reach = projection.worldDistance(NetworkBuilding.touchRadius)
-                        let found = session.world.station(near: projection.planPoint(at: location), within: reach) != nil
+                        let point = projection.planPoint(at: location)
+                        let found = session.world.station(near: point, within: reach) != nil
                         UITestTrace.action("map.hold at (\(Int(location.x)), \(Int(location.y))): station \(found ? "found" : "none")")
-                        return found
+                        // Decision 276: off a station, a line's track.
+                        return found || session.lineHeld(at: point, reach: reach) != nil
                     }, onHold: { location in
                         let reach = projection.worldDistance(NetworkBuilding.touchRadius)
-                        let held = session.holdMap(at: projection.planPoint(at: location), reach: reach)
+                        let point = projection.planPoint(at: location)
+                        let held = session.holdMap(at: point, reach: reach)
                         UITestTrace.action("map.hold began: \(held.map { "station \($0.rawValue)" } ?? "no station")")
-                        if held != nil {
+                        // Decision 276: a line held where no station is opens
+                        // its panel and traces its busiest trips.
+                        let line = held == nil ? session.holdLine(at: point, reach: reach) : nil
+                        if held != nil || line != nil {
                             cellTooltip = nil
                             cityTooltip = nil
                             terrainTooltip = nil
                             sectionFlowTooltip = nil
                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                            screen.panel = .station
+                            screen.panel = held != nil ? .station : .lines
                         }
                     }, onPinchCloser: { pinched in
                         // Decision 269: the map tilts as it comes closer.
@@ -943,7 +949,7 @@ struct MapView: View {
         .onChange(of: MapWeatherKey(world: session.world), initial: true) { _, _ in
             mapWeather = MapWeather(world: session.world)
         }
-        .task(id: JourneyTraceKey(world: session.world, station: tracedStationID)) {
+        .task(id: JourneyTraceKey(world: session.world, station: tracedStationID, line: tracedLineID)) {
             await workOutJourneyTrace()
         }
         .task(id: LineMapKey(world: session.world)) {
@@ -1306,7 +1312,7 @@ struct MapView: View {
     private var selectionDescription: String {
         let selection = session.selectionText() ?? String(localized: "Nothing selected")
         // Decision 220: the trace's trips, which the arcs show by width.
-        guard let trace = journeyTrace, trace.station == tracedStationID,
+        guard let trace = journeyTrace, trace.station == tracedStationID, trace.line == tracedLineID,
               let trips = trace.summary(in: session.world, language: session.language) else { return selection }
         return "\(selection). \(trips)"
     }
@@ -1320,21 +1326,36 @@ struct MapView: View {
         return session.selectedStationID
     }
 
-    /// Works out the traced station's busiest trips for the world as it
-    /// is, off the main actor (with network routing each station's day is a
-    /// search over the whole map), then draws the arcs out from it. The
-    /// same station's trace worked out again (its demand or the lines
-    /// changed) replaces the arcs without drawing them out again.
+    /// Decision 276: the line whose journey trace the map draws: the
+    /// selected one while the line panel is open beside the map, which
+    /// holding a line opens, and no new line is being drafted there; only
+    /// while looking at the map, not building.
+    private var tracedLineID: LineID? {
+        guard screen.panel == .lines, session.tool == .select, session.networkOverlay == nil, session.lineDraft.isEmpty
+        else { return nil }
+        return session.selectedLineID
+    }
+
+    /// Works out the traced station's busiest trips, or the traced line's
+    /// (decision 276), for the world as it is, off the main actor (with
+    /// network routing each station's day is a search over the whole map),
+    /// then draws the arcs out. The same station's or line's trace worked
+    /// out again (its demand or the lines changed) replaces the arcs
+    /// without drawing them out again.
     private func workOutJourneyTrace() async {
-        guard let id = tracedStationID else {
+        let station = tracedStationID, line = tracedLineID
+        guard station != nil || line != nil else {
             journeyTrace = nil
             return
         }
         let world = session.world
-        let trace = await Task.detached(priority: .userInitiated) { world.journeyTrace(of: id) }.value
+        let trace = await Task.detached(priority: .userInitiated) {
+            station.map { world.journeyTrace(of: $0) } ?? line.flatMap { world.journeyTrace(ofLine: $0) }
+        }.value
         guard !Task.isCancelled else { return }
-        let redraws = journeyTrace?.station != id
+        let redraws = journeyTrace?.station != station || journeyTrace?.line != line
         journeyTrace = trace
+        guard trace != nil else { return }
         guard redraws else { return }
         let start = Date()
         journeyProgress = JourneyTrace.progress(elapsed: 0, reduceMotion: reduceMotion)
@@ -2362,11 +2383,16 @@ private struct TravelTilesKey: Equatable {
 /// the traced station and what its day reads (``RidershipInputs``).
 private struct JourneyTraceKey: Equatable {
     let station: StationID?
+    /// Decision 276: the traced line, and its stops.
+    let line: LineID?
+    let stops: [StationID]?
     let inputs: RidershipInputs?
 
-    init(world: GameWorld, station: StationID?) {
+    init(world: GameWorld, station: StationID?, line: LineID? = nil) {
         self.station = station
-        inputs = station == nil ? nil : RidershipInputs(world: world)
+        self.line = line
+        stops = line.flatMap { world.line(id: $0)?.stops }
+        inputs = station == nil && line == nil ? nil : RidershipInputs(world: world)
     }
 }
 
