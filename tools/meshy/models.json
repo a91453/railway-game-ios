@@ -45,6 +45,17 @@
       "target_polycount": 7000,
       "front": null,
       "out": "Web/CityView/public/models/trains/n700st-cab.glb"
+    },
+    {
+      "id": "city-bus",
+      "use": "Generic Taiwan city low-floor bus (市區公車) for the native 3D map; first Meshy trial for the app (docs/research/MESHY_TRIAL_MODEL_SPEC_2026-10-17.md)",
+      "reference_image": "Wikimedia Commons, File:Capital Bus 735-FW right side and TWTC ITB (46106172592).jpg, by 玄史生 (Flickr f999999_key), CC0 1.0; used only as the shape reference for the image-to-image step",
+      "image_prompt": "Redraw the bus in this photo as one clean generic Taiwanese city low-floor bus, 12 m long, seen from its front-left three-quarter view, whole bus visible, on a plain white background. Keep its boxy single-deck shape, large flat windshield, two passenger doors on the near side, a long row of tinted side windows and the low flat roof with an air-conditioning unit. Plain white body with one simple blue stripe below the windows, dark tinted windows, black wheels. No text, no route number, no company name, no logos, no advertisements, no licence plate, no people, no street, no shadows.",
+      "prompt": null,
+      "texture_prompt": "Flat colours only: plain white body, one blue stripe along the side below the windows, dark grey tinted windows and windshield, black tyres with grey hubs, light grey roof unit. No text, no logos, no advertisements.",
+      "target_polycount": 1500,
+      "front": null,
+      "out": null
     }
   ]
 }
