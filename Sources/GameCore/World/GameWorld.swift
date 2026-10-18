@@ -2606,8 +2606,10 @@ public struct GameWorld: Equatable, Sendable {
                 changed = true
             }
             // Stage V2: once a minute, the dispatcher sends a service of a
-            // deadlock to a passing place.
-            if start.isWholeMinute, let resolved = resolveDeadlock(memo: &memo) {
+            // deadlock to a passing place; failing that (decision 278), a
+            // train following others onto a berth a train without a
+            // service stands on goes to another berth.
+            if start.isWholeMinute, let resolved = resolveDeadlock(memo: &memo) ?? changeBerth(memo: &memo) {
                 held.removeAll { $0.candidate.id == resolved }
                 changed = true
             }
@@ -3343,6 +3345,17 @@ public struct GameWorld: Equatable, Sendable {
             return id
         }
         return nil
+    }
+
+    /// Decision 278: once a minute, after the dispatcher's deadlock phase
+    /// has done nothing, a train following others that a train without a
+    /// service keeps from its berth changes to another berth of the same
+    /// station (see ``berthChange(memo:)``). Returns the train's ID, or
+    /// `nil`.
+    private mutating func changeBerth(memo: inout DispatchMemo) -> TrainID? {
+        guard let changed = berthChange(memo: &memo.directions), let index = trains.firstIndex(where: { $0.id == changed.id }) else { return nil }
+        trains[index] = changed
+        return changed.id
     }
 
     /// Whether a train without a service may be due to be sent out by its

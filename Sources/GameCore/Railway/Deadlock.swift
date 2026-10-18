@@ -394,6 +394,68 @@ extension GameWorld {
         return nil
     }
 
+    // MARK: - Another berth
+
+    /// Decision 278: a train following others (Stage U2) that can go no
+    /// further, because a train without a service stands on the berth its
+    /// route ends at, or on the way into it, as it arrives: the same train
+    /// setting off along the shortest way to another berth of the same
+    /// station, as a dispatcher sets the points for an empty platform; or
+    /// `nil`. Of the trains following others in ascending ID order, the
+    /// first with such a way: one that avoids what the trains without a
+    /// service hold, ends at a berth no other train travelling to that
+    /// station is bound for, borrows no track against another train's
+    /// planned direction (decision 57, ``opposingServiceTraversals(for:memo:)``,
+    /// but into a terminus, see ``terminusTraversals(along:to:)``), is at
+    /// most ``detourAllowance`` longer than its route, and that it can take
+    /// now, whole or following the trains ahead on it. The
+    /// shortest such way, the berth first in the station's order on a tie.
+    ///
+    /// A train without a service stays until its line sends it out, so a
+    /// train following another onto its berth would wait for it as long:
+    /// in the high-speed demo with traffic control and block sections,
+    /// seven sets ran out of Zuoying's depot towards the berth the first of
+    /// them stopped on, and none of the eight ever moved again.
+    func berthChange(memo: inout DirectionMemo) -> Train? {
+        guard isTrafficControlEnabled else { return nil }
+        let idle = Set(trains.lazy.filter { $0.execution == nil && $0.position != nil }.map(\.id))
+        guard !idle.isEmpty else { return nil }
+        for train in trains.sorted(by: { $0.id < $1.id }) {
+            guard case .travellingToStop(let stop, let cycle)? = train.execution, train.movement.rate > 0,
+                  let position = train.position, isFollowing(train, memo: &memo)
+            else { continue }
+            let step = travelling(train, distance: 1, memo: &memo)
+            guard step.position == train.position, step.cursor == train.movement.cursor else { continue }
+            let blocking = blockedTrack(except: train.id, among: idle, holders: trackHolders(memo: &memo))
+            guard blocking.blocks(envelopeCover(of: train), in: network) else { continue }
+            let station = train.timetable[stop].station
+            // The berths the other trains on their way there will stand at.
+            var taken: Set<TrackEdgeID> = []
+            for other in trains where other.id != train.id {
+                guard case .travellingToStop(let call, _)? = other.execution, other.timetable[call].station == station else { continue }
+                if let last = other.movement.edges.last {
+                    taken.insert(last)
+                } else if case .onEdge(let traversal, _)? = other.position {
+                    taken.insert(traversal.edge)
+                }
+            }
+            let forbidden = opposingServiceTraversals(for: train, memo: &memo)
+            let (limit, overflow) = routeLength(of: train).addingReportingOverflow(Self.detourAllowance)
+            var best: (train: Train, distance: Int64)?
+            for berth in berths(of: station, length: train.length) where !taken.contains(berth.traversal.edge) {
+                guard let free = path(from: position, toStation: station, length: train.length, avoiding: blocking, only: berth),
+                      let way = path(from: position, toStation: station, length: train.length, avoiding: blocking,
+                                     forbidden: forbidden.subtracting(terminusTraversals(along: free, to: station)), only: berth),
+                      way.distance > 0, overflow || way.distance <= limit, way.distance < best?.distance ?? .max,
+                      case .granted(let granted) = reserving(rerouted(train, along: way, stop: stop, cycle: cycle), following: true, memo: &memo)
+                else { continue }
+                best = (granted, way.distance)
+            }
+            if let best { return best.train }
+        }
+        return nil
+    }
+
     // MARK: - Turning back short
 
     /// `train`, a service of deadlock `stuck` (see ``deadlock(memo:)``)
