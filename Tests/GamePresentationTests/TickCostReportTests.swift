@@ -75,6 +75,22 @@ final class TickCostReportTests: XCTestCase {
         print(rows.joined(separator: "\n"))
     }
 
+    /// What reading the app's real-world data costs, once, and what
+    /// happens on the main actor when the launcher installs it.
+    func testWhatTheRealWorldLoadCosts() async throws {
+        guard ProcessInfo.processInfo.environment["TICK_REPORT"] != nil else {
+            throw XCTSkip("set TICK_REPORT to time the real-world load")
+        }
+        let clock = ContinuousClock()
+        var data: RealWorldData?
+        let read = clock.measure { data = RealWorldData.load(file: RealWorldDataLoadTests.file) }
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+        let loaded = try XCTUnwrap(data)
+        let install = await clock.measure { await launcher.loadRealWorldData { loaded }.value }
+        print("| Read | \(read) |\n| Install on the main actor | \(install) |")
+    }
+
     /// The UI test's game (a blank new game, fifteen trains bought), and
     /// the two demo maps.
     static func games() -> [(String, GameWorld)] {

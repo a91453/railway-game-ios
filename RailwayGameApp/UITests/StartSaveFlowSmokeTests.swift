@@ -262,6 +262,44 @@ final class StartSaveFlowSmokeTests: XCTestCase {
     /// (nothing asked of the app between two readings of the clock), the
     /// game keeps up: so what is slow is answering the test's queries, not
     /// running the game. It must run at least half its speed.
+    /// #791's review, a diagnosis run by hand (not in the gate): how busy
+    /// the app's main thread is in each state, from the frame meter's
+    /// readings in the UI test trace (`FrameMeter`, every 2 s). Each phase
+    /// asks nothing of the app for 8 s and prints when it began and ended,
+    /// to read beside the trace.
+    func testFrameRateDiagnosisByState() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        let stamp = ISO8601DateFormatter()
+        stamp.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        func phase(_ name: String) {
+            let start = Date()
+            Thread.sleep(forTimeInterval: 8)
+            print("phase \(name): \(stamp.string(from: start)) to \(stamp.string(from: Date()))")
+        }
+        phase("start screen")
+        requiredButton("start.newGame", in: app).tap()
+        let pause = app.buttons.matching(NSPredicate(format: "label == %@", "Pause"))
+        _ = requiredButton(pause, name: "Pause")
+        phase("600x, nothing open")
+        requiredButton(pause, name: "Pause").tap()
+        _ = requiredButton(app.buttons.matching(NSPredicate(format: "label == %@", "Resume")), name: "Resume")
+        phase("paused, nothing open")
+        requiredButton(app.buttons.matching(NSPredicate(format: "label == %@", "Resume")), name: "Resume").tap()
+        _ = requiredButton(pause, name: "Pause")
+        phase("600x again, nothing open")
+        requiredButton("dock.build", in: app).tap()
+        requiredButton("tool.train", in: app).tap()
+        let buy = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Buy a train"))
+        for _ in 0..<15 {
+            requiredButton(buy, name: "Buy").tap()
+        }
+        phase("600x, train tool open, 15 trains")
+    }
+
     func testSixHundredTimesKeepsUpWithFifteenTrainsWhenLeftAlone() {
         continueAfterFailure = false
         let app = XCUIApplication()
