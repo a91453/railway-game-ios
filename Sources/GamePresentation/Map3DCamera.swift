@@ -219,6 +219,8 @@ public struct Map3DLighting: Hashable, Sendable {
     public let night: Float
     /// Toward the sun, one metre long.
     public let sunDirection: Map3DPoint
+    /// Decision 277: the day's weather, clear unless it rains.
+    public var weather: Map3DWeather = .clear
 
     struct Key {
         let hour: Float
@@ -304,11 +306,48 @@ public struct Map3DLighting: Hashable, Sendable {
     // as they are (decision 229's rule 3: worked out here, tested on Linux).
 
     /// The sun's (or the moon's) light, red, green and blue.
-    public var sunLight: SIMD3<Float> { Self.rgb(sun) * (sunStrength * 0.16 * dayBoost) }
+    public var sunLight: SIMD3<Float> {
+        let colour = Self.mix(Self.rgb(sun), Self.rgb(weather.skyTint), weather.skyMix * weatherStrength * 0.3)
+        return colour * (sunStrength * 0.16 * dayBoost * Self.mix(weather.nightSunScale, weather.daySunScale, daylight))
+    }
     /// The ambient light from the sky, on what faces up.
-    public var skyLight: SIMD3<Float> { Self.tinted(sky, share: 0.3, scale: ambient * 0.5 * dayBoost) }
+    public var skyLight: SIMD3<Float> {
+        Self.tinted(Self.mix(Self.rgb(sky), Self.rgb(weather.hemiTint), weather.hemiMix * weatherStrength),
+                    share: 0.3, scale: ambient * 0.5 * dayBoost * hemiScale)
+    }
     /// The ambient light from the ground, on what faces down.
-    public var groundLight: SIMD3<Float> { Self.tinted(ground, share: 0.5, scale: ambient * 0.5 * 0.8 * dayBoost) }
+    public var groundLight: SIMD3<Float> {
+        Self.tinted(Self.mix(Self.rgb(ground), Self.rgb(weather.groundTint), weather.groundMix * weatherStrength),
+                    share: 0.5, scale: ambient * 0.5 * 0.8 * dayBoost * hemiScale)
+    }
+
+    // MARK: The weather (decision 277)
+
+    /// The sky behind the map, 0–1 a channel: the hour's sky, greyer under
+    /// rain (`applyLighting`'s background).
+    public var background: SIMD3<Float> {
+        Self.mix(Self.rgb(sky), Self.rgb(weather.skyTint), weather.skyMix * weatherStrength)
+    }
+
+    /// The fog's colour: the hour's sky, greyer under rain.
+    public var fogColour: SIMD3<Float> {
+        Self.mix(Self.rgb(sky), Self.rgb(weather.fogTint), weather.fogMix * weatherStrength)
+    }
+
+    /// Where the fog starts and ends, as shares of where it does on a
+    /// clear day: nearer under rain.
+    public var fogScale: (near: Float, far: Float) {
+        (Self.mix(1, weather.fogNear, weatherStrength), Self.mix(1, weather.fogFar, weatherStrength))
+    }
+
+    /// 1 by day, 0 at night. The reference reads it from the sun's
+    /// strength (0.45 to 3); here the moon lights the night at strength 1
+    /// (decision 229), so it is the night's own measure, turned round.
+    var daylight: Float { 1 - min(max(night, 0), 1) }
+    /// How strongly the weather shows: wholly by day, a little under half
+    /// at night (`weatherStrength`).
+    var weatherStrength: Float { Self.mix(0.45, 1, daylight) }
+    var hemiScale: Float { Self.mix(weather.nightHemiScale, weather.dayHemiScale, daylight) }
 
     /// Decision 272: by day the light a little stronger than three.js's
     /// keyframes (a bright, clear day, as the owner's target picture), at
@@ -385,8 +424,16 @@ extension Map3DLighting {
         SIMD3(Float(colour.red), Float(colour.green), Float(colour.blue)) / 255
     }
 
-    /// White `share` of the way to `colour`, times `scale`.
-    static func tinted(_ colour: PopTravel.RGB, share: Float, scale: Float) -> SIMD3<Float> {
-        (SIMD3<Float>(repeating: 1) + (rgb(colour) - SIMD3<Float>(repeating: 1)) * share) * scale
+    /// `colour` (`0xRRGGBB`) as 0–1 a channel.
+    static func rgb(_ colour: UInt32) -> SIMD3<Float> {
+        SIMD3(Float((colour >> 16) & 0xFF), Float((colour >> 8) & 0xFF), Float(colour & 0xFF)) / 255
     }
+
+    /// White `share` of the way to `colour`, times `scale`.
+    static func tinted(_ colour: SIMD3<Float>, share: Float, scale: Float) -> SIMD3<Float> {
+        (SIMD3<Float>(repeating: 1) + (colour - SIMD3<Float>(repeating: 1)) * share) * scale
+    }
+
+    static func mix(_ a: Float, _ b: Float, _ t: Float) -> Float { a + (b - a) * t }
+    static func mix(_ a: SIMD3<Float>, _ b: SIMD3<Float>, _ t: Float) -> SIMD3<Float> { a + (b - a) * t }
 }

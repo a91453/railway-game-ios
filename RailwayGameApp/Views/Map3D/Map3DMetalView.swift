@@ -35,6 +35,20 @@ final class Map3DMetalView: MTKView {
 
     var camera = Map3DCamera()
     var lighting = Map3DLighting(minute: 12 * 60)
+    /// Decision 277: the day's weather. The first is shown at once; a
+    /// later one turns the light over ``Map3DWeather/changeSeconds``.
+    var weather: Map3DWeather? {
+        didSet {
+            guard let weather, weather != oldValue else { return }
+            let now = CACurrentMediaTime()
+            let from = oldValue == nil ? weather : weatherChange?.weather(at: now) ?? weather
+            weatherChange = Map3DWeather.Change(from: from, to: weather, began: now)
+        }
+    }
+    private var weatherChange: Map3DWeather.Change?
+    /// This frame's light: the hour's, under the weather as far as it has
+    /// turned.
+    private var shown = Map3DLighting(minute: 12 * 60)
     /// The trains for this frame, seen from the eye given.
     var trains: (@MainActor (Map3DPoint) -> Map3DTrains.Frame)?
     /// Decision 259: the people and vehicles for this frame, seen with the
@@ -337,8 +351,10 @@ final class Map3DMetalView: MTKView {
 
     override func draw(_ rect: CGRect) {
         let start = CACurrentMediaTime()
-        let sky = Self.rgb(lighting.sky)
-        clearColor = MTLClearColor(red: Double(sky.0), green: Double(sky.1), blue: Double(sky.2), alpha: 1)
+        shown = lighting
+        shown.weather = weatherChange?.weather(at: start) ?? .clear
+        let sky = shown.background
+        clearColor = MTLClearColor(red: Double(sky.x), green: Double(sky.y), blue: Double(sky.z), alpha: 1)
         guard let pass = currentRenderPassDescriptor, let drawable = currentDrawable,
               let commands = queue.makeCommandBuffer(), let encoder = commands.makeRenderCommandEncoder(descriptor: pass)
         else { return }
@@ -427,7 +443,7 @@ final class Map3DMetalView: MTKView {
         }
         // Decision 259: the people and vehicles near the target, one draw
         // call a model, every one of it an instance.
-        let life = streetLife?(camera, lighting.lights, streetDetail)
+        let life = streetLife?(camera, shown.lights, streetDetail)
         var lifeUsed = false
         if let instances = life?.instances, !instances.isEmpty, let models, let buffer = nextLifeBuffer() {
             lifeUsed = true
@@ -515,24 +531,21 @@ final class Map3DMetalView: MTKView {
     /// `Map3DLighting`'s (`sunLight`, `skyLight`, `groundLight`, `lights`,
     /// `nightWindowRows`), worked out in GamePresentation.
     private func uniformValues(_ matrix: Map3DMatrix) -> [Float] {
-        let sky = Self.rgb(lighting.sky)
         func padded(_ light: SIMD3<Float>) -> [Float] { [light.x, light.y, light.z, 0] }
         let eye = camera.eye
         let far = camera.depthRange.far
+        // Decision 277: under rain the fog is greyer and nearer.
+        let fog = shown.fogScale
         return matrix.columns
-            + [lighting.sunDirection.x, lighting.sunDirection.y, lighting.sunDirection.z, 0]
-            + padded(lighting.sunLight)
-            + padded(lighting.skyLight)
-            + padded(lighting.groundLight)
-            + [sky.0, sky.1, sky.2, 0]
+            + [shown.sunDirection.x, shown.sunDirection.y, shown.sunDirection.z, 0]
+            + padded(shown.sunLight)
+            + padded(shown.skyLight)
+            + padded(shown.groundLight)
+            + padded(shown.fogColour)
             + [eye.x, eye.y, eye.z, 1]
-            + [camera.distance * 1.6, far * 0.9, 0, 0]
-            + [Map3DShadow.strength(lighting), lighting.lights, 0, 0]
+            + [camera.distance * 1.6 * fog.near, far * 0.9 * fog.far, 0, 0]
+            + [Map3DShadow.strength(shown), shown.lights, 0, 0]
             + Map3DLighting.nightWindowRows
-    }
-
-    private static func rgb(_ colour: PopTravel.RGB) -> (Float, Float, Float) {
-        (Float(colour.red) / 255, Float(colour.green) / 255, Float(colour.blue) / 255)
     }
 
     private func record(cpu: Double, drawCalls: Int, triangles: Int) {
