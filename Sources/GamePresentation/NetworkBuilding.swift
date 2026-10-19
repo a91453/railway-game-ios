@@ -98,10 +98,16 @@ public struct NetworkPreview: Hashable, Sendable {
     public var crossovers: [[WorldCoordinate]] = []
     /// What the double track does about joining the track there: the
     /// crossovers it adds, or why it adds none; `nil` when it joins none.
+    /// A traced stretch whose track count the real line decided says so
+    /// first (decision 247, later).
     public var crossoverNote: String? = nil
     /// How many edges a stretch traced along a real line has (decision
     /// 213); `nil` for one stretch.
     public var traced: Int? = nil
+    /// Whether a traced stretch is double (`true`) or single (`false`)
+    /// because the real line is there (decision 247, later); `nil` where
+    /// the player chose or the real data says nothing.
+    public var tracedDouble: Bool? = nil
     /// Where a traced stretch stops and why; `nil` when it reaches the
     /// picked end.
     public var traceNote: String? = nil

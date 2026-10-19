@@ -131,7 +131,7 @@ extension GameSession {
         let key = NetworkPreviewMemo.Key(
             start: start, end: end, structure: networkStructure, height: networkHeight, followsTrack: networkFollowsTrack,
             buildsScissors: networkBuildsScissors, easesGrade: networkEasesGrade,
-            buildsDouble: networkBuildsDouble, doubleSide: networkDoubleSide, traces: tracesRealRailway, worldRevision: worldRevision
+            buildsDouble: networkBuildsDouble, doubleChosen: networkDoubleChosen, doubleSide: networkDoubleSide, traces: tracesRealRailway, worldRevision: worldRevision
         )
         if let memo = networkPreviewMemo, memo.key == key { return memo.preview }
         let found: (preview: NetworkPreview, crossing: [WorldCoordinate])? = if let scissors = scissorsPreview() {
@@ -1184,6 +1184,7 @@ struct NetworkPreviewMemo {
         let buildsScissors: Bool
         let easesGrade: Bool
         let buildsDouble: Bool
+        let doubleChosen: Bool
         let doubleSide: PlatformTrackSide
         let traces: Bool
         let worldRevision: Int
