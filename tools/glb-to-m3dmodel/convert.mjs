@@ -63,7 +63,7 @@ function triangleColor(gltf, material, uvs, vertexColors, images) {
   return result.map(value => Math.round(value / samples));
 }
 
-function paletteOf(triangles) {
+function paletteOf(triangles, recolorLightPaint) {
   const colors = triangles.map(t => t.color);
   // A narrow stripe can cover few triangles. Keep chromatic surfaces in
   // their own box before splitting the dominant neutral body/window colors.
@@ -103,15 +103,16 @@ function paletteOf(triangles) {
   // White/light neutral paint is recolored by the existing vehicle shader.
   // Keep one alpha per palette entry, so the complete output has <=8 RGBA colors.
   const packed = palette.map(([r, g, b]) => {
-    const paint = Math.min(r, g, b) >= 180 && Math.max(r, g, b) - Math.min(r, g, b) <= 45;
+    const paint = recolorLightPaint && Math.min(r, g, b) >= 180 && Math.max(r, g, b) - Math.min(r, g, b) <= 45;
     return (r | (g << 8) | (b << 16) | ((paint ? 0 : 255) << 24)) >>> 0;
   });
   return { packed, assignments };
 }
 
-function provenance(gltf, bytes, modelId, generatedPath) {
+function provenance(gltf, bytes, modelId, generatedPath, sourceRecord) {
   const { asset, extras } = gltf.json;
   const original = { asset, ...(extras === undefined ? {} : { extras }) };
+  if (sourceRecord) return JSON.stringify({ ...original, source: sourceRecord });
   const aiRecord = /meshy|tripo|ai[- ]?generated/i.test(JSON.stringify(original));
   if (aiRecord) return JSON.stringify(original);
   const record = JSON.parse(readFileSync(generatedPath, 'utf8'))[modelId];
@@ -124,8 +125,9 @@ function provenance(gltf, bytes, modelId, generatedPath) {
   } });
 }
 
-export function convert(bytes, { modelId, front, lengthMeters, generatedPath = defaultGenerated }) {
-  if (!modelId || !front || !Number.isFinite(lengthMeters) || lengthMeters <= 0) {
+export function convert(bytes, { modelId, front, lengthMeters, units, recolorLightPaint = true,
+  sourceRecord, generatedPath = defaultGenerated }) {
+  if (!modelId || !front || (units !== 'meters' && (!Number.isFinite(lengthMeters) || lengthMeters <= 0))) {
     throw new Error('modelId, front, and a positive lengthMeters are required');
   }
   const gltf = readGlb(bytes), images = new Map(), triangles = [];
@@ -155,10 +157,10 @@ export function convert(bytes, { modelId, front, lengthMeters, generatedPath = d
   const max = [0, 1, 2].map(axis => Math.max(...all.map(p => p[axis])));
   const span = max[0] - min[0];
   if (!(span > 0)) throw new Error('GLB: zero length along its front axis');
-  const scale = lengthMeters / span, cx = (min[0] + max[0]) / 2, cy = (min[1] + max[1]) / 2;
+  const scale = units === 'meters' ? 1 : lengthMeters / span, cx = (min[0] + max[0]) / 2, cy = (min[1] + max[1]) / 2;
   for (const triangle of triangles) triangle.points = triangle.points.map(([x, y, z]) => [(x - cx) * scale, (y - cy) * scale, (z - min[2]) * scale]);
-  const { packed, assignments } = paletteOf(triangles);
-  const source = Buffer.from(provenance(gltf, bytes, modelId, generatedPath), 'utf8');
+  const { packed, assignments } = paletteOf(triangles, recolorLightPaint);
+  const source = Buffer.from(provenance(gltf, bytes, modelId, generatedPath, sourceRecord), 'utf8');
   if (!source.length || source.length > 1_000_000) throw new Error('Invalid provenance size');
   const padded = Math.ceil(source.length / 4) * 4, output = Buffer.alloc(16 + padded + triangles.length * 52);
   output.write('M3DM', 0, 'ascii');
