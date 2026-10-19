@@ -1,0 +1,41 @@
+[
+  {
+    "name": "gltf-transform-core",
+    "source": "https://github.com/donmccurdy/glTF-Transform/tree/v4.5.1",
+    "bytes": 1078,
+    "license_sha256": "2c4f111d00dbf22b10d31a14813c5f5de6a828640f7311f26b9dda89b3fce165",
+    "scope": "Direct package LICENSE only; does not cover transitive dependencies. See bridge-license-audit.json for LGPL correction and the five-package MIT route."
+  },
+  {
+    "name": "gltf-transform-extensions",
+    "source": "https://github.com/donmccurdy/glTF-Transform/tree/v4.5.1",
+    "bytes": 1078,
+    "license_sha256": "2c4f111d00dbf22b10d31a14813c5f5de6a828640f7311f26b9dda89b3fce165",
+    "scope": "Direct package LICENSE only; does not cover transitive dependencies. See bridge-license-audit.json for LGPL correction and the five-package MIT route."
+  },
+  {
+    "name": "gltf-transform-functions",
+    "source": "https://github.com/donmccurdy/glTF-Transform/tree/v4.5.1",
+    "bytes": 1078,
+    "license_sha256": "2c4f111d00dbf22b10d31a14813c5f5de6a828640f7311f26b9dda89b3fce165",
+    "scope": "Direct package LICENSE only; does not cover transitive dependencies. See bridge-license-audit.json for LGPL correction and the five-package MIT route."
+  },
+  {
+    "name": "meshoptimizer",
+    "source": "https://github.com/zeux/meshoptimizer/tree/v1.3",
+    "bytes": 1079,
+    "license_sha256": "f03037ca7bad1e3eb7f4a63fa6084a8baabd5ba30d3c239a9a7f35705d873e26"
+  },
+  {
+    "name": "uniffi-upstream",
+    "source": "https://raw.githubusercontent.com/mozilla/uniffi-rs/v0.32.2/LICENSE",
+    "bytes": 16725,
+    "license_sha256": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5"
+  },
+  {
+    "name": "ktx-software-upstream",
+    "source": "https://raw.githubusercontent.com/KhronosGroup/KTX-Software/v4.4.2/LICENSE.md",
+    "bytes": 1523,
+    "license_sha256": "0f92b4ce771585dfebc963ede074a30b4431b9e327911db44097d83ccf372128"
+  }
+]

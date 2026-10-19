@@ -1,0 +1,160 @@
+{
+  "node": "v22.14.0",
+  "meshoptimizer": "1.3.0",
+  "gltfTransform": "4.5.1",
+  "samples": [
+    {
+      "name": "ordinary-bus",
+      "bytes": 2208860,
+      "sha256": "43b59d1958bb2beb5ae07db491018fadd2545355f787664db7d9b4986a70126d",
+      "currentConverter": {
+        "triangles": 1543,
+        "colors": 8,
+        "paintTriangles": 569,
+        "glowingTriangles": 0,
+        "bytes": 81636,
+        "ms": 599.305603
+      },
+      "decodeMs": 4.251220999999987,
+      "input": {
+        "vertices": 1988,
+        "triangles": 1545,
+        "meshes": 1,
+        "materials": 1,
+        "textures": 1,
+        "bounds": {
+          "min": [
+            -0.4787600040435791,
+            -0.14770500361919403,
+            -0.1193849965929985
+          ],
+          "max": [
+            0.4748539924621582,
+            0.14477500319480896,
+            0.11791999638080597
+          ]
+        }
+      }
+    },
+    {
+      "name": "reference",
+      "bytes": 823224,
+      "sha256": "3a2f9b30fd928139d96196d03bf8e4833926aa965f8f70b6eec5a91853f65075",
+      "currentConverter": {
+        "error": "GLB: unsupported required extensions: EXT_meshopt_compression",
+        "ms": 2.4941369999999097
+      },
+      "decodeMs": 29.362938999999983,
+      "input": {
+        "vertices": 24424,
+        "triangles": 21878,
+        "meshes": 213,
+        "materials": 124,
+        "textures": 0,
+        "bounds": {
+          "min": [
+            -1.6150000095367432,
+            -0.9200000166893005,
+            -6.230000019073486
+          ],
+          "max": [
+            1.6150000095367432,
+            8.54500004821571,
+            6.2300004959106445
+          ]
+        }
+      },
+      "selectedNodes": [
+        "bus__bus_body",
+        "bus__bus_rear",
+        "bus__bus_skirt",
+        "bus__chrome",
+        "bus__glass_dark",
+        "bus__headlamp.002",
+        "bus__led_panel",
+        "bus__shade",
+        "bus__taillamp",
+        "bus__tire.006",
+        "bus__trim",
+        "bus__wheel"
+      ],
+      "selected": {
+        "vertices": 3007,
+        "triangles": 2488,
+        "meshes": 12,
+        "materials": 12,
+        "textures": 0,
+        "bounds": {
+          "min": [
+            -1.6150000095367432,
+            0,
+            -6.050000190734863
+          ],
+          "max": [
+            1.6150000095367432,
+            4.414999961853027,
+            6.100000858306885
+          ]
+        }
+      },
+      "normalized": {
+        "bytes": 97044,
+        "sha256": "ae71d20c32d9b2afcd671f361ee347774c924312a3e5a4af23fc79f4593b7371",
+        "vertices": 3007,
+        "triangles": 2488,
+        "meshes": 12,
+        "materials": 12,
+        "textures": 0,
+        "bounds": {
+          "min": [
+            -1.6150000095367432,
+            0,
+            -6.050000190734863
+          ],
+          "max": [
+            1.6150000095367432,
+            4.414999961853027,
+            6.100000858306885
+          ]
+        }
+      },
+      "normalizedCurrentError": "No AI identification in GLB and no generated.json tasks for reference",
+      "simplifyMs": 14.187499000000003,
+      "simplified": {
+        "bytes": 60568,
+        "sha256": "968f2bc607ad2695b20538056f878cc8d19e0f50b64021c93c3f219d96d3abe8",
+        "vertices": 1752,
+        "triangles": 1391,
+        "meshes": 12,
+        "materials": 12,
+        "textures": 0,
+        "bounds": {
+          "min": [
+            -1.6150000095367432,
+            0,
+            -6.050000190734863
+          ],
+          "max": [
+            1.6150000095367432,
+            4.414999961853027,
+            6.080981731414795
+          ]
+        }
+      }
+    }
+  ],
+  "codecProbe": [
+    {
+      "version": 0,
+      "header": "a0",
+      "bytes": 67,
+      "roundtripExact": true
+    },
+    {
+      "version": 1,
+      "header": "a1",
+      "bytes": 37,
+      "roundtripExact": true
+    }
+  ]
+}

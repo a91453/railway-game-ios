@@ -1,0 +1,55 @@
+{
+  "worldcover": {
+    "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N21E120_Map.tif",
+    "etag": "\"10ac55856cf6ab7b785a7f4784684c15-3\"",
+    "last_modified": "Wed, 26 Oct 2022 12:38:03 GMT",
+    "remote_bytes": "22768220",
+    "crs": "EPSG:4326",
+    "window": [
+      9120,
+      1680,
+      720,
+      720
+    ],
+    "crop_bytes": 30496,
+    "shape": [
+      720,
+      720
+    ],
+    "transform": [
+      8.333333333333333e-05,
+      0.0,
+      120.76,
+      0.0,
+      -8.333333333333333e-05,
+      23.86,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "sha256": "8b9bcf4e960ee7db9416dac2679d3a6f0d161db928e70dbd9e3c22382ceb2089",
+    "read_crop_seconds": 0.024000880000016878
+  },
+  "ktx_binary": {
+    "url": "https://github.com/KhronosGroup/KTX-Software/releases/download/v4.4.2/KTX-Software-4.4.2-Linux-x86_64.deb",
+    "version": "4.4.2",
+    "bytes": 7375900,
+    "sha256": "ca635ed489d8bf54fac8d7687056c651193de0740830a7738cc034adc63e3027"
+  },
+  "meshopt_reference": {
+    "reference_commit": "058f8333b195d5314cc7cbd49a87aaf1869b409d",
+    "compressed_bytes": 509535,
+    "decoded_buffer_bytes": 863684,
+    "buffer_views": 623,
+    "codecs": {
+      "index_e1": 1,
+      "vertex_a0": 622
+    },
+    "filters": "none"
+  },
+  "full_normalized": {
+    "bytes": 1043372,
+    "writeMs": 28.574973,
+    "meshes": 213
+  }
+}

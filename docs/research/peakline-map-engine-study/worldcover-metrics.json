@@ -1,0 +1,94 @@
+{
+  "bounds": [
+    120.76,
+    23.8,
+    120.82,
+    23.86
+  ],
+  "shape": [
+    720,
+    720
+  ],
+  "pixels": 518400,
+  "approx_km2": 40.80848591596434,
+  "classes": {
+    "10": 411169,
+    "30": 13500,
+    "40": 24612,
+    "50": 29477,
+    "60": 5440,
+    "80": 34202
+  },
+  "baseline_cross": {
+    "10": {
+      "0": 152464,
+      "10": 242228,
+      "30": 29,
+      "40": 8688,
+      "70": 417,
+      "80": 7108,
+      "100": 235
+    },
+    "30": {
+      "0": 7182,
+      "10": 3834,
+      "30": 20,
+      "40": 103,
+      "70": 4,
+      "80": 2357
+    },
+    "40": {
+      "0": 20382,
+      "10": 1123,
+      "30": 4,
+      "40": 2523,
+      "70": 29,
+      "80": 506,
+      "100": 45
+    },
+    "50": {
+      "0": 26470,
+      "10": 512,
+      "40": 1784,
+      "70": 58,
+      "80": 431,
+      "100": 222
+    },
+    "60": {
+      "0": 2014,
+      "10": 16,
+      "40": 27,
+      "80": 3263,
+      "100": 120
+    },
+    "80": {
+      "0": 1855,
+      "80": 32344,
+      "100": 3
+    }
+  },
+  "baseline_unclassified_pixels": 210367,
+  "fallback_pixels": 159646,
+  "fallback_km2": 12.56734479656644,
+  "wc_crops_outside_game_farms": 22089,
+  "wc_water_on_game_dry": 2413,
+  "wc_nonwater_on_game_water": 12620,
+  "candidate_changes_game_water": 0,
+  "candidate_changes_zones": 0,
+  "coarse_disagreement_pixels": 42504,
+  "tiles": 16,
+  "features": {
+    "landcover:wood": 53,
+    "water:lake": 83,
+    "water:ocean": 16,
+    "landcover:grass": 5,
+    "park:park": 11,
+    "water:river": 6
+  },
+  "seconds": 4.172207136999987,
+  "inputs": {
+    "RailwayGameApp/Resources/BaseMap/taiwan.pmtiles": "9273dd7d1e1d7a70d6c005822868789c49d527cf833c5e7667c7394f7716038b",
+    "RailwayGameApp/Resources/RealWorld/taiwan_places.json": "a043418c510c25801054618735206b76bcaaca8f82d282a9448f7e241b79f6de",
+    "RailwayGameApp/Resources/RealWorld/taiwan_water.json": "e11524960c1c3b5a83fcbaeeeb6a5a4f08efd912c1d96d5afccf825c000df9f6"
+  }
+}

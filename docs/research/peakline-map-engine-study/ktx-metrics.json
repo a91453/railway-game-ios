@@ -1,0 +1,97 @@
+{
+  "sha256": "5a6edef8b2991ebce8239f271b6d926e92b2a747bb077e79bb970a8c0c38a40f",
+  "bytes": 197624,
+  "asset": {
+    "generator": "臺北GTA scripts/avatars (Blender 4.5 + glTF-Transform 4.5 + KTX-Software v4.4.2)",
+    "version": "2.0",
+    "copyright": "Derived from the Microsoft Rocketbox Avatar Library (Male_Adult_09) — MIT License, Copyright (c) 2020 Microsoft. See LICENSE-ROCKETBOX.txt"
+  },
+  "used": [
+    "EXT_meshopt_compression",
+    "KHR_mesh_quantization",
+    "KHR_texture_basisu"
+  ],
+  "required": [
+    "EXT_meshopt_compression",
+    "KHR_mesh_quantization",
+    "KHR_texture_basisu"
+  ],
+  "nodes": 22,
+  "meshes": 1,
+  "materials": 1,
+  "images": [
+    {
+      "name": "casual-m-atlas-color",
+      "mimeType": "image/ktx2",
+      "bufferView": 0
+    },
+    {
+      "name": "casual-m-atlas-normal",
+      "mimeType": "image/ktx2",
+      "bufferView": 1
+    },
+    {
+      "name": "casual-m-atlas-mask",
+      "mimeType": "image/ktx2",
+      "bufferView": 2
+    }
+  ],
+  "skins": 1,
+  "animations": 0,
+  "currentError": "GLB: unsupported required extensions: EXT_meshopt_compression, KHR_mesh_quantization, KHR_texture_basisu",
+  "geometryDecodeMs": 11.923241999999988,
+  "positionTypeBefore": 5122,
+  "dequantizeMs": 2.400192000000004,
+  "positionTypeAfter": 5126,
+  "bounds": {
+    "min": [
+      -0.7191991806030273,
+      -1,
+      -0.1986144632101059
+    ],
+    "max": [
+      0.7191991806030273,
+      1,
+      0.1986144632101059
+    ]
+  },
+  "vertices": 2493,
+  "triangles": 3710,
+  "geometryNormalizedBytes": 314364,
+  "geometryNormalizedError": "GLB: unsupported required extensions: KHR_texture_basisu",
+  "transcode": [
+    {
+      "image": 0,
+      "bytes": 352133,
+      "sha256": "af8f026737bf78838a3a02eafb950c63c6a01273af2f572be8eef0fd69bd687e",
+      "width": 1536,
+      "height": 512,
+      "pngBitDepth": 8,
+      "pngColorType": 6,
+      "ms": 342.884145
+    },
+    {
+      "image": 1,
+      "bytes": 40989,
+      "sha256": "d108228cac3bb598538e42b3a368ce697b19be8d83477d19d54230273e3f3a27",
+      "width": 384,
+      "height": 128,
+      "pngBitDepth": 8,
+      "pngColorType": 2,
+      "ms": 50.590862000000016
+    },
+    {
+      "image": 2,
+      "bytes": 10029,
+      "sha256": "ca54448cfd1e9d1bf816b4548bfcaf8ca38341bbc729737633b65b6c7d8fff5b",
+      "width": 192,
+      "height": 64,
+      "pngBitDepth": 8,
+      "pngColorType": 2,
+      "ms": 32.208347
+    }
+  ],
+  "pngGlbBytes": 562908,
+  "pngCurrentError": "No AI identification in GLB and no generated.json tasks for casual",
+  "outputStatus": "未輸出正式模型：有 skin，既有 converter 無 skin pose 處理；不以刪除 skin 假裝完整成功。另有非AI來源驗證缺口。"
+}
