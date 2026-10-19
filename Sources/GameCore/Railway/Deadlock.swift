@@ -490,6 +490,27 @@ extension GameWorld {
         turned.reservation = []
         turned.execution = .waitingAtStop(back, cycle: cycle)
         turned.times = ServiceTimes(arrival: clock.now, departure: clock.now)
+        // Decision 288 (TestFlight 74.1): the calls left out take no time,
+        // so the rest of the trip comes forward by the time they would
+        // have taken; it leaves after its usual dwell, not standing there,
+        // in the way, until the time it would have come back. The calls
+        // left out are due now (its departure here is already past, so the
+        // timetable stays in order). Never later, and only on a trip of its
+        // own (a repeating timetable keeps its times).
+        let now = clock.now
+        let early = train.timetable[back].arrival.seconds - now.seconds
+        if train.timetablePeriod == nil, early > 0 {
+            for index in stop + 1..<turned.timetable.count {
+                let call = turned.timetable[index]
+                let left = index < back
+                turned.timetable[index] = ScheduledStop(
+                    station: call.station,
+                    arrival: left ? now : GameTime(seconds: call.arrival.seconds - early),
+                    departure: left ? now : GameTime(seconds: call.departure.seconds - early),
+                    reverses: call.reverses
+                )
+            }
+        }
         // Leaving from there now must let another train of the deadlock
         // go: the way it leaves by is free, and with it gone the others
         // are no longer stuck.

@@ -143,4 +143,39 @@ final class SharedSingleTrackTests: XCTestCase {
         XCTAssertNil(WorldInvariants.roundTripProblem(of: world))
         XCTAssertEqual(WorldInvariants.violations(in: world), [])
     }
+
+    /// Decision 288 (TestFlight 74.1): the calls left out take no time. As
+    /// it turns at A, the rest of its trip comes forward to now, each call
+    /// keeping its dwell, and it leaves A for C after its usual dwell, not
+    /// at the time it would have come back from B. The calls before the
+    /// turn keep their times; B, left out, is due as it turns.
+    func testATrainTurnedShortLeavesAfterItsDwellNotWhenItWouldHaveComeBack() throws {
+        var (world, _, through) = try world()
+        try world.advance(ticks: 4)
+        let planned = try XCTUnwrap(world.train(id: through)?.timetable)
+        XCTAssertEqual(planned.map(\.station), [Self.c, Self.a, Self.b, Self.a, Self.c])
+        // The turn comes in the step from minute 4 to 5.
+        let turnedAt = world.clock.now
+        try world.advance(ticks: 1)
+        XCTAssertEqual(world.train(id: through)?.execution, .waitingAtStop(3))
+        let turned = try XCTUnwrap(world.train(id: through)?.timetable)
+        let early = planned[3].arrival.seconds - turnedAt.seconds
+        XCTAssertGreaterThan(early, 0, "it would have come back from B later")
+        XCTAssertEqual(Array(turned.prefix(2)), Array(planned.prefix(2)), "the calls made keep their times")
+        XCTAssertEqual(turned[2], ScheduledStop(station: Self.b, arrival: turnedAt, departure: turnedAt, reverses: true), "B, left out, is due as it turns")
+        for index in 3..<planned.count {
+            XCTAssertEqual(turned[index].station, planned[index].station)
+            XCTAssertEqual(turned[index].reverses, planned[index].reverses)
+            XCTAssertEqual(turned[index].arrival.seconds, planned[index].arrival.seconds - early)
+            XCTAssertEqual(turned[index].departure.seconds, planned[index].departure.seconds - early)
+        }
+        XCTAssertEqual(turned[3].arrival, turnedAt, "due back at A as it turns")
+        // A minute on it has left A for C, where it would still have stood
+        // until the time it would have come back from B.
+        try world.advance(ticks: 1)
+        XCTAssertGreaterThan(planned[3].departure.seconds, world.clock.now.seconds)
+        XCTAssertNotEqual(world.train(id: through)?.execution, .waitingAtStop(3), "gone from A")
+        XCTAssertNil(WorldInvariants.roundTripProblem(of: world))
+        XCTAssertEqual(WorldInvariants.violations(in: world), [])
+    }
 }
