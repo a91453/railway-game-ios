@@ -113,6 +113,9 @@ struct MapView: View {
     /// shown, and again only when the land, its buildings, the stations or
     /// the last measured service change, and a number that changes with it.
     @State private var cityMap: CityMap?
+    /// Decision 292: the layer to put back once the coverage switch's
+    /// coverage goes.
+    @State private var coverageShortcut = CoverageShortcut()
     @State private var cityMapVersion = 0
     /// Decision 126: the city's buildings on the plain map, and a version
     /// that changes when they are replaced.
@@ -623,7 +626,8 @@ struct MapView: View {
                                             legendFold = LegendFold.stored(folded: folded)
                                         }
                                     }
-                                )
+                                ),
+                                coverage: mode == .coverage ? cityMap?.coverage : nil
                             ) {
                                 stopPopTravelPlay()
                                 cellTooltip = nil
@@ -647,6 +651,13 @@ struct MapView: View {
                             .padding(.trailing, 12)
                         }
                         HStack(spacing: 0) {
+                            // Decision 292: coverage, one tap away while
+                            // building.
+                            if session.offersCoverageShortcut {
+                                MapCoverageButton(isOn: coverageShortcut.isOn(showing: mapLayers.popTravelMode), language: session.language) {
+                                    popTravelModeName = coverageShortcut.toggle(showing: mapLayers.popTravelMode)?.rawValue ?? ""
+                                }
+                            }
                             // Decision 229, later: this game's 3D map, one
                             // tap away, beside the zoom buttons.
                             if Map3DShortcut.isShown(zoomButtonsShow: !zoomGivesWay, tutorialRuns: session.tutorial != nil) {
@@ -1099,6 +1110,11 @@ struct MapView: View {
             guard !Task.isCancelled else { return }
             streets = plan
             streetsVersion &+= 1
+        }
+        .onChange(of: session.offersCoverageShortcut) { _, offered in
+            // Decision 292: leaving the tool puts back the player's layer.
+            guard !offered else { return }
+            popTravelModeName = coverageShortcut.buildingEnded(showing: mapLayers.popTravelMode)?.rawValue ?? ""
         }
         .onChange(of: mapLayers.popTravelMode) { _, mode in
             cellTooltip = nil
