@@ -12313,7 +12313,25 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - **C. 季節限定的班次**：海風號只在 4–10 月週五到週日、山嵐號 9–12 月開。預覽：路線面板多一個「只在週末／旺季開」的開關，或觀光列車到了淡季自動停在機廠。沒選：多一件要管的事（決策 254 的反面），而且要 GameCore 的派車看月份；景點本身已經有季節係數（決策 174），淡季觀光客本來就少。
 - **D. 具名班次事件**：像劇本節慶那樣，某天「藍皮解憂號開出」由遊戲自己開一班。預覽：站長泡泡「今天藍皮解憂號從枋寮開往臺東」。沒選：玩家看得到但碰不到，不是玩家自己的鐵路；要新的事件系統。
 
-**量到的**（`BalanceReportTests.testASightseeingTrainAtASight`，`BALANCE_REPORT=60`，release，Linux 雲端容器）：BALANCE_PLACEHOLDER
+**量到的**（`BalanceReportTests.testASightseeingTrainAtASight`，`BALANCE_REPORT=60`，release，Linux 雲端容器）：
+
+兩個世界都是第一條線（三站、一列四節），最後一站 47 m 外一個 4★ 的城鎮，沒有名產店；一個用莒光（R100），一個用藍皮解憂號（同性能、同座位，只差價錢與觀光標記）。沒有觀光列車的世界逐位元等於 main（規則只在有觀光車款時多一項），所以莒光那一欄就是「改之前」。
+
+| 數字 | 莒光（R100） | 藍皮解憂號 |
+| --- | --: | --: |
+| 買車（4 節） | 基準 | 多 $130,000（第一節 +$100,000、每節 +$10,000） |
+| 觀光客：平日／週六／週日 | 540／1,440／1,170 | 810／2,160／1,755（+50%：4★ → 4.5★） |
+| 車資：平日／週六 | 約 $23,000–$30,000／$31,000–$36,000 | 平日多約 $2,800，週六多約 $7,300 |
+| 現金差（藍皮減莒光） | — | 第 1 天 −$121,000，第 34 天追平，第 60 天 +$136,940 |
+| 第 60 天現金 | −$41,580 | $95,360 |
+
+- 錢從哪來：多的觀光客照付車資，平均每天約多 $4,300；營運成本兩款相同（權重 1,500），水槽沒有少。約 33 天回本。
+- 對照：決策 174 的名產店兩級（$600,000）約 65 天回本；藍皮的半星比名產店的四分之一星大，但它不另外收店的錢，而且一個景點只算一次，多買幾列不會再多。
+- 範圍兩端：星等越低，半星的比例越大（2★ → 2.5★：800 → 1,400，+75%；4.5★ → 5★：6,750 → 9,000，+33%）；5★ 的景點什麼都不加。觀光客的上限仍是決策 174 的 200‰，沒有滾雪球。
+- 一面倒的選擇：在景點旁，藍皮解憂號比同性能、同座位的莒光（R100）好，這是付 $130,000 換來的；不在景點旁就只是比較貴的莒光。和其他車款（EMU3000 的速度、捷運的大定員）比，它座位少、速度慢，不是全面最好。
+- **判定：NOT ASSESSED**：觀光列車的回本天數在決策與測試裡沒有寫下的目標（`no stated range — not judged`）。其他項目沒有看到 CRITICAL 的跡象（帳的來源與水槽都對得上、沒有無限增長、不是全面最好的車款）。回本快慢待 TestFlight 回報；要調整就調 `Tourism.starsPerSightseeingTrain` 或 `BLUE` 的價錢。
+
+指令：`swift build -c release -Xswiftc -enable-testing --build-tests`，`BALANCE_REPORT=60 swift test -c release --skip-build --filter 'BalanceReportTests/testASightseeingTrainAtASight$'`（VERIFIED，Linux 雲端容器，Swift 6.4.0，`claude/tourist-trains` 8a1ccf8 的程式）。
 
 **參考庫與外部專案**（`a91453/railway-reference-private`；新版 `Railway/taiwan-rail-reference-clean/` 優先）：
 
