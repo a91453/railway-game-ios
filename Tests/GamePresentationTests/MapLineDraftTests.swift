@@ -43,14 +43,15 @@ final class MapLineDraftTests: XCTestCase {
         XCTAssertEqual(draft.calls.count, 3)
         XCTAssertEqual(draft.picked.count, 2)
         XCTAssertEqual(draft.anchor, world.station(id: stations[2])?.point)
-        XCTAssertEqual(draft.caption, "3 stops: Alpha → Gamma")
+        // The draft's one line (CTM study 4.2): stops, length, time.
+        XCTAssertEqual(draft.caption, "3 stops · 56 m · about 2 min")
 
         let chinese = GameSession(world: world, language: .traditionalChinese)
         chinese.selectStation(stations[0])
         chinese.startLineFromSelectedStation()
         chinese.selectStation(stations[2])
         chinese.addSelectedStationToLineDraft()
-        XCTAssertEqual(chinese.mapLineDraft?.caption, "3 站：Alpha → Gamma")
+        XCTAssertEqual(chinese.mapLineDraft?.caption, "3 站 · 56 m · 約 2 分")
 
         session.createLineFromDraft()
         XCTAssertEqual(session.world.lines.count, 1)

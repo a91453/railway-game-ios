@@ -181,13 +181,18 @@ public struct LineOpeningPreview: Equatable, Sendable {
     /// "With a train and a passing loop · $ 1,234,000", for the line panel
     /// and the map's ✓.
     public func text(in language: DisplayLanguage) -> String {
-        let what = switch (train, loop) {
+        contentsText(in: language) + " · " + cost.moneyText
+    }
+
+    /// "With a train and a passing loop": what opening the line brings,
+    /// where its price is already said (``LineDraftSummary``).
+    public func contentsText(in language: DisplayLanguage) -> String {
+        switch (train, loop) {
         case (true, true): language.text("With a train and a passing loop", "含一列車與一處待避線")
         case (true, false): language.text("With a train", "含一列車")
         case (false, true): language.text("With a passing loop", "含一處待避線")
         case (false, false): language.text("No train yet", "還沒有列車")
         }
-        return what + " · " + cost.moneyText
     }
 }
 
