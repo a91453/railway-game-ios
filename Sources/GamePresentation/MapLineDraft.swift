@@ -12,8 +12,8 @@ public struct MapLineDraft: Equatable, Sendable {
     public let picked: [PlanPoint]
     /// Where the ✓ goes under: the last station picked.
     public let anchor: PlanPoint
-    /// One line over the ✓: how many stops, from where to where; or what
-    /// to tap next.
+    /// One line over the ✓: the draft's summary (``GameSession/lineDraftSummary``),
+    /// and what opening the line brings; or what to tap next.
     public let caption: String
     /// Whether the ✓ can create the line: two stops or more.
     public let canCreate: Bool
@@ -41,20 +41,19 @@ extension GameSession {
         guard let anchor = picked.last else { return nil }
         let stops = lineDraftStops
         let calls = stops.compactMap { world.station(id: $0)?.point }
-        let names = stops.compactMap { world.station(id: $0)?.name }
         let canCreate = stops.count >= 2
         let caption: String
         if !canCreate {
             caption = language.text("Tap the line's next station", "點路線的下一站")
-        } else if let first = names.first, let last = names.last {
-            caption = language.text("\(stops.count) stops: \(first) → \(last)", "\(stops.count) 站：\(first) → \(last)")
         } else {
-            caption = ""
+            // The draft's one line (CTM study 4.2): its stops, length,
+            // time and price, or why no track joins them.
+            caption = lineDraftSummary?.text ?? ""
         }
         let opening = canCreate ? lineOpeningPreview : nil
         return MapLineDraft(
             calls: calls, picked: picked, anchor: anchor,
-            caption: opening.map { caption + "\n" + $0.text(in: language) } ?? caption, canCreate: canCreate, opening: opening
+            caption: opening.map { caption + "\n" + $0.contentsText(in: language) } ?? caption, canCreate: canCreate, opening: opening
         )
     }
 
