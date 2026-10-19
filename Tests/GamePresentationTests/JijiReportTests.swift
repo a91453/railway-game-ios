@@ -22,26 +22,28 @@ import XCTest
 /// ground, so the app's embankments, cuttings and tunnels cost more than
 /// here. The land is read round each station as the app reads it.
 ///
-/// - **Two cars**: one train of two standard cars, the flat fare.
+/// Every line runs a new line's hours (06:00 to midnight). Its costs are
+/// mostly by the train-kilometre, not by the car (``GameWorld``'s hourly
+/// settlement: $0.42 a train-km, $0.75 a departure), so a short train costs
+/// nearly what a long one does.
+///
+/// - **Two cars**: one train of two standard cars, the flat $5 fare.
 /// - **Four cars**: one train of four, the flat fare.
-/// - **Distance fares**: one train of two, fares by distance (the
-///   reference's steps).
-/// - **Two trains**: two trains of two, meeting at the loops, fares by
-///   distance.
+/// - **Fare $8**: one train of two, a flat $8 fare.
+/// - **Two trains**: two trains of two, meeting at the loops.
 /// - **Blue Train**: one Blue Train of two (a sightseeing train, decision
-///   286), which adds half a star to Jiji Station and Checheng, fares by
-///   distance.
+///   286), which adds half a star to Jiji Station and Checheng.
 @MainActor
 final class JijiReportTests: XCTestCase {
     enum Play: String, CaseIterable {
         case twoCars = "Two cars"
         case fourCars = "Four cars"
-        case distanceFares = "Distance fares"
+        case dearer = "Fare $8"
         case twoTrains = "Two trains"
         case blueTrain = "Blue Train"
 
         var cars: Int { self == .fourCars ? 4 : 2 }
-        var distance: Bool { ![.twoCars, .fourCars].contains(self) }
+        var fare: Money? { self == .dearer ? Money(800) : nil }
         var trains: Int { self == .twoTrains ? 2 : 1 }
         var type: TrainType? { self == .blueTrain ? .blueTrain : nil }
     }
@@ -86,8 +88,8 @@ final class JijiReportTests: XCTestCase {
         let before = world.economy.balance.amount
         try route.build(in: &world, trains: play.trains, cars: play.cars, type: play.type)
         let cost = before - world.economy.balance.amount
-        if play.distance {
-            try world.setFareRules(.distance(FareRules.standardBands(for: FareRules.standardFare)))
+        if let fare = play.fare {
+            try world.setFareRules(.flat(fare))
         }
         GameSession.readLand(roundStationsOf: &world, population: population, places: places, water: water)
         try world.advance(ticks: 1)
@@ -222,7 +224,7 @@ final class JijiReportTests: XCTestCase {
                 try world.addTrackPlatform(stations[name]!, on: edge, from: offset, to: offset + platformLength)
             }
             let line = try world.createLine(named: "Jiji", stops: names.map { stations[$0]! }).id
-            try world.setLineServiceWindow(line, to: .allDay)
+            try world.setLineServiceWindow(line, to: .standard)
             let (edge, start) = track.edge(at: zones[0].lowerBound, in: world)
             let offset = start + platformLength
             let position = TrainPosition.onEdge(TrackTraversal(edge: edge, direction: .forward), offset: offset)
