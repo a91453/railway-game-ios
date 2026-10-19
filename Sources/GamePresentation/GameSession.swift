@@ -99,6 +99,8 @@ public final class GameSession {
     /// Decision 264: what opening the drafted line costs, worked out once
     /// for each draft and world.
     @ObservationIgnored var lineOpeningMemo: LineOpeningMemo?
+    /// The draft's one line (``lineDraftSummary``), kept likewise.
+    @ObservationIgnored var lineDraftSummaryMemo: LineDraftSummaryMemo?
     /// Decision 264: the selected line's shortfall of places to pass.
     @ObservationIgnored var passingShortfallMemo: PassingShortfallMemo?
     /// The depot's sidings at the picked end, kept likewise.
@@ -478,6 +480,7 @@ public final class GameSession {
             passingLoopMemo = nil
             depotYardMemo = nil
             lineOpeningMemo = nil
+            lineDraftSummaryMemo = nil
         }
     }
 
