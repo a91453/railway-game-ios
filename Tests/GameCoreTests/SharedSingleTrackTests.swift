@@ -178,4 +178,80 @@ final class SharedSingleTrackTests: XCTestCase {
         XCTAssertNil(WorldInvariants.roundTripProblem(of: world))
         XCTAssertEqual(WorldInvariants.violations(in: world), [])
     }
+
+    /// Decision 288, a later fix (Codex's review of #823, R2): a save made
+    /// in any second after the turn loads again. The doors open as at any
+    /// arrival, so in the seconds before they have opened no exchange has
+    /// started (a save checks that one never starts before the doors open).
+    func testASaveInTheSecondsAfterATurnLoadsAgain() throws {
+        var (world, _, through) = try world()
+        world.setSpeed(.x10)
+        for _ in 0..<600 {
+            try world.advance(ticks: 1)
+            if case .waitingAtStop(3, _)? = world.train(id: through)?.execution { break }
+        }
+        XCTAssertEqual(world.train(id: through)?.execution, .waitingAtStop(3))
+        let turned = try XCTUnwrap(world.train(id: through)?.times?.arrival)
+        for seconds in [1, 7, 8, 9, 30] {
+            var probe = world
+            try probe.advance(ticks: Int(turned.seconds) + seconds - Int(probe.clock.now.seconds))
+            XCTAssertEqual(probe.clock.now.seconds, turned.seconds + Int64(seconds))
+            let data = try JSONEncoder().encode(SavedGame(world: probe))
+            let loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
+            XCTAssertTrue(loaded == probe, "\(seconds) s after the turn")
+            XCTAssertNil(WorldInvariants.roundTripProblem(of: probe), "\(seconds) s after the turn")
+        }
+        // The riders change in the step at which the doors have opened, as
+        // at any call.
+        var opened = world
+        try opened.advance(ticks: Int(turned.seconds) + Int(ServiceDwell.doorOpening) - Int(opened.clock.now.seconds))
+        XCTAssertNil(opened.train(id: through)?.times?.exchangeEnd, "not before the doors open")
+        try opened.advance(ticks: 1)
+        XCTAssertNotNil(opened.train(id: through)?.times?.exchangeEnd)
+    }
+
+    /// Decision 288, a later fix (R1): the trip log's scheduled arrival
+    /// comes forward with the timetable, so a trip turned short and then
+    /// held is late both in the log and in its line's punctuality.
+    func testATripTurnedShortIsLateByTheTimesItsLineCounts() throws {
+        var (world, _, through) = try world()
+        world.setEconomyMode(.management)
+        world.setLineAccounts(true)
+        world.setRealisticOperation(true)
+        let line = try XCTUnwrap(world.assignedLine(of: through))
+        var planned: [ScheduledStop] = []
+        for _ in 0..<60 {
+            if let train = world.train(id: through), !train.timetable.isEmpty, planned.isEmpty { planned = train.timetable }
+            try world.advance(ticks: 1)
+            if case .waitingAtStop(3, _)? = world.train(id: through)?.execution { break }
+        }
+        let turned = try XCTUnwrap(world.train(id: through))
+        XCTAssertEqual(turned.execution, .waitingAtStop(3))
+        XCTAssertNotEqual(turned.timetable, planned, "the timetable came forward")
+        XCTAssertEqual(world.trips(of: through).first?.scheduledArrival, turned.timetable.last?.arrival)
+        // Held past the new arrival by more than the punctual margin, it
+        // arrives late by both counts; a save on the way changes nothing.
+        var loaded = try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))).world
+        XCTAssertTrue(loaded == world)
+        try world.setTrainMovementRate(through, to: 0)
+        try loaded.setTrainMovementRate(through, to: 0)
+        let release = try XCTUnwrap(turned.timetable.last?.arrival.seconds) + 300
+        while world.clock.now.seconds < release {
+            try world.advance(ticks: 1)
+            try loaded.advance(ticks: 1)
+        }
+        try world.setTrainMovementRate(through, to: 1_024)
+        try loaded.setTrainMovementRate(through, to: 1_024)
+        for _ in 0..<10 where world.trips(of: through).first?.arrival == nil {
+            try world.advance(ticks: 1)
+            try loaded.advance(ticks: 1)
+        }
+        XCTAssertTrue(loaded == world)
+        let trip = try XCTUnwrap(world.trips(of: through).first)
+        XCTAssertNotNil(trip.arrival)
+        XCTAssertEqual(trip.isLate, true)
+        let tally = world.lineDays(line).map(\.tally) + [world.lineAccounts?.records(of: line)?.pending ?? LineTally()]
+        XCTAssertEqual(tally.reduce(0) { $0 + $1.lateTrips }, 1, "the line counts it late too")
+        XCTAssertEqual(WorldInvariants.violations(in: world), [])
+    }
 }
