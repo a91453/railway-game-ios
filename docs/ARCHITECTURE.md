@@ -10000,6 +10000,30 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
 **後來**（2026-10-16，審查 #685–#711 第四節的兩項）：「升級為複線」只看點到的那一段旁邊有沒有軌道。範圍是「到兩端道岔」時，有兩種情況以前只得到一般的「軌道形狀不合」：整段路其中一段已經是複線（第二條在另一側時甚至會蓋成三條），以及沒有道岔的環線（第二條沒有兩端可以接）。現在預覽直接說原因，請玩家改選「只有這一段」，那個選項照樣蓋得出來。旁邊有沒有軌道在每一段的 1/4、1/2、3/4 處找（`hasTrackBeside`）。只改 GamePresentation，GameCore 與存檔不動。測試：`DoubleTrackUpgradeTests` 的 `testARunPartlyDouble…`（兩種語言）、`testALoopWithNoSwitch…`。
 
+**後來**（2026-10-18，HANDOFF §7.2 的「用 `tra_track_sections.json` 每段的 `tracks` 決定描線時預設單線或複線」；作者交辦，經 session_01KeynzCwtDyLHTUYBfKxy1c 轉派）：沿台鐵描線時，單線或複線預設照真實鐵路。只改 GamePresentation 與 App 的「複線」開關；GameCore、存檔版本、golden schema 不動，沿用本決策的號碼。
+1. **哪一段算哪一種**（`realDoubleTrack(along:)`）：描出可以蓋的那幾段（`TracePlan.buildable`），每 100 m 取一點（`tracedSectionStep`），看它落在 `tra_track_sections.json` 的哪一個站間：兩站的位置取 `track_stations.geojson` 的台鐵站，選「從一站經過這點到另一站」繞得最少的那一對（繞的路超過兩站距離就不算）。只看離描線 150 m 內的車站的站間（`tracedStationReach`）；一個站也沒經過（在兩站中間描一小段）時看全部站間。
+2. **整段一種**：一半以上的點在複線站間就整段鋪複線，一半以上在單線站間就整段單線，其餘（資料不夠）照舊。門檻一半和來源判雙線的 `parallelFrac` ≥ 0.5 同一把尺。不在中途換線（例如瑞芳—三貂嶺複線接平溪線單線）：`buildDoubleTrackChain` 一次只有一條第二條軌道，中途換要在每個接頭加渡線、或分成多個指令，要動的比這次多，留作缺口。
+3. **玩家選了就照玩家的**：`networkBuildsDouble` 被設過（`networkDoubleChosen`，同一局裡一直記得）就照它，不再看真實資料。「複線」開關改顯示實際會蓋的（`networkDoubleShown`：真實資料決定時顯示它，否則是玩家的值），按一下就是玩家的選擇。
+4. **只在台鐵**：描的是高鐵、捷運、林鐵，或資料沒有的地方，照舊（預覽的 `tracedDouble` 是 `nil`）。
+5. **玩家看到的字**：真實資料決定時，預覽與確認膠囊（`crossoverNote` 的開頭）和蓋好的訊息說「Double track, as the real railway is here.」「照真實鐵路鋪成複線。」或「Single track, as the real railway is here.」「照真實鐵路鋪成單線。」
+6. **順便修的錯**（`parallelChain`）：沿真實鐵路描出的曲線段可以很長（羅東附近一段 573 m），第二條原本只照兩端的方向另外求一條曲線，中段彎法不同，離主線只剩 2.9 m，GameCore 說「不到 4 m」整段蓋不了。所以以前描台鐵時打開「複線」，在宜蘭線就蓋不起來；預設複線後每次都會碰到。現在第二條直接把主線曲線的兩個控制點各往外移 5 m（端點的 miter 和控制點的位移只差沿切線的一段，所以出發與到達的方向不變）。`DoubleTrackUpgradeTests` 等既有測試照樣過。
+
+**四方**：
+- 玩家：沿宜蘭線、縱貫線描出來就是複線，平溪線、內灣線是單線，和真的一樣，不用每次記得切；不想要時按一下「複線」就照自己的。
+- 開發：只用 App 已經帶著的 `tra_track_sections.json`、`track_stations.geojson`，不加資料、不動 GameCore；一個預設值加一個「玩家選過」的旗標，Linux 測試涵蓋。
+- 美術：不加新元素：開關、預覽的第二條線、確認膠囊上的那一行都是既有的。
+- 音樂：無。
+
+**沒選的**（預覽）：
+- 中途換線（複線段鋪兩條、單線段鋪一條，接頭加渡線）：最像真的，但要多個第二條軌道與中途的渡線，指令與預覽都要改；等玩家需要時再做。
+- 照描線起點那一段決定：描很長時起點那段不代表整段（例如從瑞芳描到菁桐，大部分是單線）。
+- 只在預覽提示「真實是複線」、不改預設：玩家還是得自己切，這項就是要省掉這一步。
+- 每次重新開關「沿真實鐵路」就忘掉玩家的選擇：玩家明明選過，又被改回去，比較意外。
+
+**參考**：`Railway/taiwan-rail-reference-clean/source/data/tra_track_sections.json`（新版）與 App 帶的版本 243 個站間、`tracks` 全部相同，新版只多 `via`、`override` 欄位，所以不更新資料。產生器 `source/scripts/build_tra_track_sections.mjs`（14 m、25° 內的平行正線，佔比 ≥ 50% 為雙線）在新版裡找到了，`docs/research/F3_GRID_INVENTORY.md` 寫的缺口「平行的定義」有了出處，但這裡只讀它的結果。來源唯一的使用者是交會推估（`index.html` 的 `single(a,b)`／`inferMeetPassTimes`），沒有建造時用它的做法可以移植；「繞得最少的站間」是這裡自己的做法。外部：OpenTTD、Simutrans 沒有依真實資料決定單複線的工具（GPL，只看做法）。
+
+**測試**（`RealRailwayTracingTests`）：`testThePingxiLineTracesSingle`（十分—望古單線，預覽與訊息的字）、`testTheYilanLineTracesDouble`（羅東—冬山複線，一個指令、兩倍的邊，兩種語言；沒有第 6 點的修正時這個測試失敗）、`testThePlayersChoiceWins`（宜蘭線選單線、平溪線選複線）、`testOffTheTRAATraceIsAsBefore`（高鐵）。既有的台北—板橋、羅東—新馬測試是單線的測試，改成玩家選了單線。
+
 ### 248. 行車間隔每整分鐘決定一次：這一分鐘每列車最遠到哪（決策 228 的續、決策 37）
 
 問題（玩家回饋 66.1，規劃 session 指定優先於新功能）：決策 228 的「後來」為了整批推進＝逐秒推進，讓有真實班次、交通管制關著的世界幾乎每個 span 都逐秒移動列車。高鐵示範用快轉（`.fast`，每 tick 十分鐘遊戲時間）時每 tick 中位 510 ms，比 tick 間隔 100 ms 長得多，畫面一頓一頓。號碼依 #231：存檔版本 63、決策 248。
@@ -12088,6 +12112,46 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 開發：只動 GamePresentation 的示範建法；真實地形會卡死的開關先關，不讓 main 的一天變紅；兩個新開關（`heightFit`、`depotLeads`）只開在高鐵示範，台鐵兩個示範逐位元不變；GameCore、存檔、golden 都不動。建造時間是平的 2.2 倍，用放寬的貼合壓下來。
 - 美術：沿用現有的高架、隧道、路塹畫法，不用新圖。
 - 音樂：無。
+
+**驗證**：見 PR。
+
+### 282. 切開「自動」結構的軌道時，兩段沿用原本的區段
+
+2026-10-19。作者交辦（經 session_01KeynzCwtDyLHTUYBfKxy1c 轉派）：`docs/HANDOFF.md` §7.2 的「切開『自動』結構的軌道時各段重算」，遊戲規劃已決定當成 GameCore 的 bug 修（`docs/archive/PR200_290_REVIEW_HANDOFF.md` §4 第 2 項）。號碼依工作登記 #231：決策 282，存檔版本、golden schema 不動。
+
+**問題**：`splitTrackEdge(_:at:)`（加轉轍器、渡線、機廠岔線時把一條邊切成兩條）以前把兩段都當成新蓋的邊，依地形重新判斷「自動」結構的每 16 m（決策 124）。所以：
+- 全島地圖的水域是讀到哪裡才有（決策 88），邊蓋好之後才讀入的水會讓切開被拒絕（`trackOverWater`），雖然軌道沒有變。
+- 切出來的一段若比 4 個計價長度（64 m，`shortestRun`）短，就併進鄰段：隧道的尾巴變成路塹（明挖），可是上面公司的建物沒有拆（切邊從來不拆建物），軌道就從建物底下露出來。
+
+**規則**（`GameWorld.keptSections(of:part:from:)`，`TrackSections.swift`）：
+1. 「自動」結構的邊切開後，兩段的每個計價長度沿用原邊在那裡的區段：
+   - 這段長度和原邊的隧道重疊，就還是隧道（切點不在計價長度的邊界上時，第二段的長度會跨在原邊的兩段之間；隧道優先，所以不會有軌道從地下冒出來）；
+   - 否則用原邊在這段中點的區段；高度不允許時，再試它跨到的另一段；
+   - 地面上的三種（地面、路堤、路塹）照這段的高度命名（和建造時相同），高架、橋、隧道照原樣。
+   - 前提是幾何和高度不變：切點的新節點是原邊在那裡的高度（決策 233），兩段的取樣和原邊相同，只差新節點的取整（最多半個單位）。
+2. 水不再檢查，和讀檔時的 `structureProblem` 一樣：蓋好之後才讀入的水不影響已經在那裡的軌道。高度仍然要允許那一種（每一段的「乾」檢查，和讀檔相同），都不允許時拒絕（`invalidTrackStructure`）；實際上只會在隧道口那一段的高度剛好在地面以上時發生。
+3. 兩段露天的部分（不在隧道裡的）若會碰到公司的建物，拒絕切開（`buildingOnTrack`，指原來的邊），世界不變。規則 1 的隧道優先讓這只在規則 2 的例外情況才可能發生；這是交辦單的備案「明挖段碰到建物時拒絕切開」，只留作保險。
+4. 其他結構物（地面、高架、橋、隧道，不是「自動」）照舊依地形檢查（`sections(of:structure:)`），沒有改。
+5. 存檔格式不變（`sections` 是既有欄位）；存檔版本、golden schema 不動。golden、SaveFixtures、ReplayFixtures 都沒有切「自動」結構的邊，值不變。唯一改的既有測試是 `TrackSectionTests.testATunnelPassesUnderAHouseAndTheOpenTrackClearsOne` 的切開那一段：以前寫的就是這個 bug（第一段尾巴三個隧道長度變成路塹），現在照規則 1 留在隧道裡，新節點也不再是隧道口。
+
+**參考檢查**（`a91453/railway-reference-private` `058f833`）：
+
+| 參考 | 本專案 |
+| --- | --- |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` 的 `_splitSegmentAnchorsForInsert`：在一段路線中間插入車站時，那一段的錨點依沿線的位置分到前、後兩段，照原樣保留，不重算 | `keptSections(of:part:from:)`：區段依沿線的里程分到兩段，照原樣保留 |
+| `Simulator/reference_snapshot/` 的隧道是玩家在地形上標的格（`tunnelCells`），和軌道的切分無關 | 規則 1 的「隧道照原樣」 |
+
+參考沒有依地形自動判斷的區段，也沒有切邊時的建物規則（gap，自己寫）。外部專案：OpenTTD（GPL-2.0，只取想法）的隧道與橋是兩端之間的一個整體，中間不能接轉轍器；遊戲允許在隧道裡切（決策 233 只限坡度），所以沒有可用的做法，程式是本專案自己的。
+
+**四方**：
+- 玩家：在隧道、高架上加轉轍器或渡線，軌道還是原來的樣子，費用不變，上面的建物也還在；全島地圖讀到新的水之後，舊軌道照樣能加岔線。
+- 開發：只改 `splitTrackEdge` 算兩段區段的那幾行和一個新函式；不重算就不會因為地形或水的讀入順序而結果不同；存檔、golden、replay 都不動。
+- 美術：隧道口還在原來的地方，不會在切點多出一個路塹的缺口和一個新的隧道口。
+- 音樂：無。
+
+其他選項（沒有採用）：
+- 只在明挖段碰到建物時拒絕切開（交辦單的備案）：玩家會在隧道裡加不了轉轍器，水的問題也還在。
+- 照舊重算，但把碰到的建物拆掉並收拆除費（和建造相同，決策 95）：切個轉轍器就拆房子、收錢，而且隧道還是會變成路塹，和玩家蓋的不一樣。
 
 **驗證**：見 PR。
 

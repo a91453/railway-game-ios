@@ -177,9 +177,10 @@ struct NetworkControls: View {
     }
 
     /// Decision 204: a second track 5 m beside each stretch, in one step;
-    /// which side is among the folded options.
+    /// which side is among the folded options. Decision 247, later: on
+    /// while a traced stretch is double because the real line is.
     private var doubleToggle: some View {
-        Toggle(isOn: $session.networkBuildsDouble) {
+        Toggle(isOn: $session.networkDoubleShown) {
             Text(verbatim: session.language.text("Double", "複線"))
         }
         .toggleStyle(OnOffButtonToggleStyle())
@@ -240,7 +241,7 @@ struct NetworkControls: View {
             }
             .toggleStyle(OnOffButtonToggleStyle())
             .font(.footnote)
-            if session.networkBuildsDouble {
+            if session.networkDoubleShown {
                 Picker(selection: $session.networkDoubleSide) {
                     Text(verbatim: session.language.text("Second track on the left", "第二條在左側")).tag(PlatformTrackSide.left)
                     Text(verbatim: session.language.text("Second track on the right", "第二條在右側")).tag(PlatformTrackSide.right)
@@ -278,7 +279,7 @@ struct NetworkControls: View {
         if !session.networkFollowsTrack { parts.append(language.text("sharp curves", "不平順曲線")) }
         if !session.networkEasesGrade { parts.append(language.text("steep grade", "不緩和坡度")) }
         if !session.networkSnapsToTrack { parts.append(language.text("no snapping", "不吸附軌道")) }
-        if session.networkBuildsDouble {
+        if session.networkDoubleShown {
             parts.append(session.networkDoubleSide == .left
                 ? language.text("second track left", "第二條在左") : language.text("second track right", "第二條在右"))
         }

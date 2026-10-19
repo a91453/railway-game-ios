@@ -20,6 +20,9 @@ final class RealRailwayTracingTests: XCTestCase {
         session.selectTool(.network)
         session.setNetworkMode(.build)
         session.networkTracesRealRailway = true
+        // The player's own single track: the real line is double here
+        // (decision 247, later), and these tests are about one track.
+        session.networkBuildsDouble = false
         let banqiao = try BundledRealData.station("板橋", in: "tra_sched")
         return (session, try BundledRealData.point(tra.coordinate, in: world), try BundledRealData.point(banqiao.coordinate, in: world))
     }
@@ -103,6 +106,7 @@ final class RealRailwayTracingTests: XCTestCase {
         session.selectTool(.network)
         session.setNetworkMode(.build)
         session.networkTracesRealRailway = true
+        session.networkBuildsDouble = false
         session.tapNetwork(at: taipei, reach: reach)
         session.tapNetwork(at: banqiao, reach: reach)
         let preview = try XCTUnwrap(session.networkPreview)
@@ -256,6 +260,8 @@ final class RealRailwayTracingTests: XCTestCase {
         session.setNetworkMode(.build)
         session.networkTracesRealRailway = true
         session.networkStructure = structure
+        // One track, as the player chose: the real line is double here.
+        session.networkBuildsDouble = false
         let luodong = try BundledRealData.point(BundledRealData.station("羅東", in: "tra_sched").coordinate, in: world)
         let xinma = try BundledRealData.point(BundledRealData.station("新馬", in: "tra_sched").coordinate, in: world)
         session.tapNetwork(at: luodong, reach: reach)
@@ -345,5 +351,122 @@ final class RealRailwayTracingTests: XCTestCase {
         }
         XCTAssertEqual(try trace(structures: true), [.viaduct, .viaduct, .viaduct])
         XCTAssertFalse(try trace(structures: false).contains(.viaduct), "without the structures, on the plain's ground")
+    }
+
+    // MARK: - Single or double, as the real line is (decision 247, later)
+
+    /// A flat real-world game at TRA station `from`, the network tool
+    /// tracing, with the two stations' points.
+    private func tracing(from: String, to: String, in language: DisplayLanguage = .english) throws -> (session: GameSession, from: PlanPoint, to: PlanPoint) {
+        let start = try BundledRealData.station(from, in: "tra_sched")
+        let world = GameWorld.newGame(anchor: try XCTUnwrap(start.anchor))
+        let session = GameSession(world: world, language: language)
+        session.railways = try BundledRealData.railways()
+        session.selectTool(.network)
+        session.setNetworkMode(.build)
+        session.networkTracesRealRailway = true
+        let end = try BundledRealData.station(to, in: "tra_sched")
+        return (session, try BundledRealData.point(start.coordinate, in: world), try BundledRealData.point(end.coordinate, in: world))
+    }
+
+    /// Shifen to Wanggu on the Pingxi Line, single track all the way in
+    /// `tra_track_sections.json`: one track, and the preview says why.
+    func testThePingxiLineTracesSingle() throws {
+        let (session, shifen, wanggu) = try tracing(from: "十分", to: "望古")
+        session.tapNetwork(at: shifen, reach: reach)
+        session.tapNetwork(at: wanggu, reach: reach)
+        let preview = try XCTUnwrap(session.networkPreview)
+        XCTAssertNil(preview.problem)
+        XCTAssertEqual(preview.tracedDouble, false)
+        XCTAssertEqual(preview.crossoverNote, "Single track, as the real railway is here.")
+        XCTAssertFalse(session.networkDoubleShown, "the switch shows what is built")
+        XCTAssertFalse(session.networkDoubleChosen)
+        let edges = try XCTUnwrap(preview.traced)
+        session.buildNetworkTrack()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        XCTAssertTrue(session.message?.text.contains("Single track, as the real railway is here.") ?? false, session.message?.text ?? "")
+        guard case .command(.buildTrackChain)? = session.commandLog.entries.last?.action else { return XCTFail("one track") }
+        XCTAssertEqual(session.world.network.edges.count, edges)
+    }
+
+    /// Luodong to Dongshan on the Yilan Line, double track in the data:
+    /// a second track beside the first, in one command, said in both
+    /// languages.
+    func testTheYilanLineTracesDouble() throws {
+        for language in [DisplayLanguage.english, .traditionalChinese] {
+            let (session, luodong, dongshan) = try tracing(from: "羅東", to: "冬山", in: language)
+            session.tapNetwork(at: luodong, reach: reach)
+            session.tapNetwork(at: dongshan, reach: reach)
+            let preview = try XCTUnwrap(session.networkPreview)
+            XCTAssertNil(preview.problem, "\(language)")
+            XCTAssertEqual(preview.tracedDouble, true)
+            let note = language == .english ? "Double track, as the real railway is here." : "照真實鐵路鋪成複線。"
+            XCTAssertEqual(preview.crossoverNote, note)
+            XCTAssertFalse(session.networkOverlay?.crossing.isEmpty ?? true, "the second track drawn")
+            XCTAssertTrue(session.networkDoubleShown, "the switch shows what is built")
+            let edges = try XCTUnwrap(preview.traced)
+            session.buildNetworkTrack()
+            XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+            XCTAssertTrue(session.message?.text.contains(note) ?? false, session.message?.text ?? "")
+            guard case .command(.buildDoubleTrackChain(let main, let parallel, _, _))? = session.commandLog.entries.last?.action else {
+                return XCTFail("double track")
+            }
+            XCTAssertEqual(main.count, edges)
+            XCTAssertEqual(parallel.count, edges)
+            XCTAssertEqual(session.world.network.edges.count, 2 * edges)
+        }
+    }
+
+    /// Once the player sets the switch, a trace follows it, either way.
+    func testThePlayersChoiceWins() throws {
+        do {
+            let (session, luodong, dongshan) = try tracing(from: "羅東", to: "冬山")
+            session.networkDoubleShown = false
+            XCTAssertTrue(session.networkDoubleChosen)
+            session.tapNetwork(at: luodong, reach: reach)
+            session.tapNetwork(at: dongshan, reach: reach)
+            let preview = try XCTUnwrap(session.networkPreview)
+            XCTAssertNil(preview.tracedDouble)
+            XCTAssertNil(preview.crossoverNote, "nothing said of the real line")
+            XCTAssertFalse(session.networkDoubleShown)
+            session.buildNetworkTrack()
+            guard case .command(.buildTrackChain)? = session.commandLog.entries.last?.action else { return XCTFail("single, as chosen") }
+        }
+        do {
+            let (session, shifen, wanggu) = try tracing(from: "十分", to: "望古")
+            session.networkBuildsDouble = true
+            session.tapNetwork(at: shifen, reach: reach)
+            session.tapNetwork(at: wanggu, reach: reach)
+            let preview = try XCTUnwrap(session.networkPreview)
+            XCTAssertNil(preview.tracedDouble)
+            XCTAssertTrue(session.networkDoubleShown)
+            session.buildNetworkTrack()
+            XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+            guard case .command(.buildDoubleTrackChain)? = session.commandLog.entries.last?.action else { return XCTFail("double, as chosen") }
+        }
+    }
+
+    /// The High Speed Rail is not in the data: a trace along it is single,
+    /// as before, and says nothing of the real track.
+    func testOffTheTRAATraceIsAsBefore() throws {
+        let changhua = try BundledRealData.station("彰化", in: "thsr_sched")
+        let world = GameWorld.newGame(anchor: try XCTUnwrap(changhua.anchor))
+        let session = GameSession(world: world, language: .english)
+        let railways = try BundledRealData.railways()
+        session.railways = railways
+        session.selectTool(.network)
+        session.setNetworkMode(.build)
+        session.networkTracesRealRailway = true
+        let frame = try XCTUnwrap(RealWorldFrame(world: world))
+        let line = try XCTUnwrap(railways.lines.first { $0.system.id == "thsr_sched" && $0.points.count > 100 })
+        let path = WorldPath(line.points.map { WorldVector(frame.worldPosition(latitude: $0.latitude, longitude: $0.longitude)) })
+        let at = path.project(WorldVector(try BundledRealData.point(changhua.coordinate, in: world)))
+        session.tapNetwork(at: path.point(at: at - 1_000 * metre).plan, reach: reach)
+        session.tapNetwork(at: path.point(at: at + 1_000 * metre).plan, reach: reach)
+        let preview = try XCTUnwrap(session.networkPreview)
+        XCTAssertNotNil(preview.traced)
+        XCTAssertNil(preview.tracedDouble)
+        XCTAssertNil(preview.crossoverNote)
+        XCTAssertFalse(session.networkDoubleShown)
     }
 }
