@@ -12364,6 +12364,18 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 5. **3D 模型**：參考庫的 `blue`／`bluecoach`（Blender 匯出）等 GLB 轉換器後接上；2D 的機車頭形狀（HANDOFF §7.2 已有）。
 6. **到站旋律**：觀光列車自己的旋律（§15.3 的音樂角度），和逐站鈴聲一起做。
 
+**後來**（2026-10-19，「下一步」第 1 點的第一款：山嵐號；作者交辦。號碼不另取，寫在這裡；存檔版本、golden schema 不動）：
+- **車型**：車型表加一列 `SHANLAN`（`TrainType.shanLan`，名稱「山嵐號」「Shan-Lan sightseeing train」），觀光標記。參考庫 `namedTrains` `shanlan` 寫它是「海風號的姊妹車」，同是 EMU500 改造；`formations.js` `shanlan` 是官方 4 輛，和 `haifeng` 一樣。所以數字全部照海風號：定員 44、每側 3 門、20.3 m、EMU500 的性能（`.haiFeng`）、第一節 $240,000、每節 $50,000、營運權重 1,300。觀光的規則（加半顆星、幾列只算一次）不動；觀光面板的說明自動列出三款。
+- **外觀**（`TrainLivery.shanLan`）：車身 `#D4E48B`，是參考庫 garage 模型 `shanlan` 的「稻穗黃綠」（`specification.body`，模型 `body` 的線性色換成 sRGB 也是它）；帶色 `#7FA845`、車頭 `#5E8C3A` 是本專案的深一點的稻田綠，模型其他的顏色只有黑框、玻璃與金屬，沒有可當帶色的。車身離暖黃 `#FFC86B` 30.9（門檻 30），車頭離兩種綠松 38、48，和其他平頭車款至少差 65。`TrainLiveryTests` 的顏色檢查本來只看有性能預設的車款，這次把藍皮解憂號與山嵐號也放進去。3D 和海風號一樣用通勤電聯車的模型（`Map3DModels.styleByType`）。
+- **四方**：
+  - 玩家：多一款可以買的觀光列車，花東縱谷的黃綠色；效果和海風號一樣，挑喜歡的顏色就好，不多一件要管的事。
+  - 開發：GameCore 只加車型表一列，規則不動；存檔以代號存車型，舊存檔照讀；沒有山嵐號的世界逐位元不變。會跑完整的 Swift tier。
+  - 美術：車身照參考庫的稻穗黃綠，帶色與車頭用同色系深一點的綠，2D 地圖上和海風號的淡薄荷分得開。
+  - 音樂：無。
+- **沒選的**（預覽是玩家會看到的）：(B) 車身用真實照片的金黃（偏 `#E8C547`）：離暖黃只有十幾，地圖上會和車站與選取的黃色混在一起；(C) 數字和海風號不同（例如便宜一點、少一節）：參考庫沒有兩車不同的根據，玩家也會以為兩款有取捨，其實沒有；(D) 等鳴日號一起做：一個 PR 一款車比較好審，山嵐號又只是加一列。
+- **驗證**：VERIFIED（Linux 雲端容器，Swift 6.4.0）：`swift build --build-tests -Xswiftc -warnings-as-errors`；`SightseeingTrainTests`（三款觀光車款、山嵐號的數字等於海風號）、`TrainTypeCatalogTests`、`TrainTypeTests`、`RealCarLengthTests`、`TrainTypeNameTests`、`TrainLiveryTests`、`Map3DModelTests`、`TourismSessionTests`、`PerformanceSessionTests`。UNVERIFIED：App 的車型選單與型錄只在 macOS CI 編譯，實機的顏色待看。
+- 「下一步」第 1 點剩下：鳴日號、環島之星、仲夏寶島號。
+
 ### 287. 閉塞區間：分界不設在列車停下來會妨礙別條軌道的地方
 
 2026-10-19。作者交辦（決策 283 的「下一步」第 1 點）：號誌開＋閉塞時，高鐵示範的左營咽喉白天就卡住，一天取消 86 班（決策 280 當時是 32 班）；先用 `TRAFFIC_TIMING_DUMP` 看第一個死結是哪幾組車、各自在等什麼，判斷是調度還是軌道（出入線和進站的車共用咽喉）。號碼依工作登記 #231：開工時取 285（284 是 `claude/feedback-70-73` 的登記）；之後 #818 合併了 285（複線上的月台）、#819 合併了 286（觀光列車），所以改成 287。存檔版本、golden schema 不動。量測與探針在 [`research/HSR_SIGNAL_BASELINE_2026-10-15.md`](research/HSR_SIGNAL_BASELINE_2026-10-15.md) 第 11 節。
