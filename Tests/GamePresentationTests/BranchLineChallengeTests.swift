@@ -34,11 +34,11 @@ final class BranchLineChallengeTests: XCTestCase {
         let world = jiji.make()
         let state = try XCTUnwrap(world.scenario)
         XCTAssertEqual(state.scenario.id, "branch.jiji")
-        XCTAssertEqual(state.scenario.goals.last, .dailyRiders(JijiTargets.riders))
-        XCTAssertEqual(
-            world.goalProgress(in: .traditionalChinese).map(\.title),
-            ["二水—集集", "延伸到水里", "終點車埕", "每日運量（人次）"]
-        )
+        XCTAssertEqual(state.scenario.goals.suffix(2), [.dailyRiders(JijiTargets.riders), .annualNetProfit(JijiTargets.profit)])
+        XCTAssertEqual(state.scenario.goldDays, 360)
+        XCTAssertEqual(state.scenario.deadlineDays, 1_080)
+        XCTAssertEqual(world.goalProgress(in: .traditionalChinese).map(\.title).prefix(3), ["二水—集集", "延伸到水里", "終點車埕"])
+        XCTAssertEqual(world.goalProgress(in: .traditionalChinese).count, 5)
         let challenge = try XCTUnwrap(Challenge.named("branch.jiji"))
         XCTAssertEqual(challenge.map, .branchLine("jiji"))
         XCTAssertEqual(challenge.goalsText(in: .english).first, "Ershui to Jiji")

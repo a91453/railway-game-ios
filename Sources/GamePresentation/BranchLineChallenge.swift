@@ -31,6 +31,8 @@ public struct BranchLineChallenge: Sendable {
     /// The sights tourists come to (``AttractionCatalog`` ids).
     let sights: Set<String>
     let ridersTarget: Int64
+    /// A closed year's net profit to reach, if the line asks for one.
+    let profitTarget: Money?
     let startingBalance: Money
     let goldDays: Int64
     let silverDays: Int64
@@ -93,11 +95,12 @@ public struct BranchLineChallenge: Sendable {
     /// The towns' points, where the app reads the land in first.
     public var townPoints: [PlanPoint] { places.map(point(of:)) }
 
-    /// The scenario: the milestones and the riders.
+    /// The scenario: the milestones, the riders and the profit.
     var scenario: Scenario {
         Scenario(
             id: challengeID,
-            goals: milestones.map { .connect(points: $0.places.map { point(of: places[$0]) }, radius: Land.catchmentRadius) } + [.dailyRiders(ridersTarget)],
+            goals: milestones.map { .connect(points: $0.places.map { point(of: places[$0]) }, radius: Land.catchmentRadius) } + [.dailyRiders(ridersTarget)]
+                + (profitTarget.map { [.annualNetProfit($0)] } ?? []),
             goldDays: goldDays, silverDays: silverDays, deadlineDays: deadlineDays, insolvencyDays: 60
         )
     }
@@ -217,13 +220,14 @@ extension BranchLineChallenge {
         ],
         sights: ["t074", "t078"],
         ridersTarget: JijiTargets.riders,
+        profitTarget: JijiTargets.profit,
         startingBalance: JijiTargets.startingBalance,
         goldDays: JijiTargets.goldDays,
         silverDays: JijiTargets.silverDays,
         deadlineDays: JijiTargets.deadlineDays,
         welcome: (
-            "The Jiji Line is ours to lay again: from Ershui up the valley to Checheng. Reach Jiji, then Shuili, then Checheng, and carry \(Money(JijiTargets.riders).displayText) riders a day. Turn on Trace real in Network to follow the old line; a sightseeing train calling at Jiji or Checheng brings more visitors.",
-            "集集線交給我們重新鋪：從二水沿著山谷到車埕。先到集集、再到水里、最後到車埕，每日運量達到 \(Money(JijiTargets.riders).displayText) 人次。在「路網」打開「沿真實鐵路」就能沿著舊線鋪；觀光列車停靠集集或車埕，遊客會變多。"
+            "The Jiji Line is ours to lay again: from Ershui up the valley to Checheng. Reach Jiji, then Shuili, then Checheng, carry \(Money(JijiTargets.riders).displayText) riders a day and make a year's net profit of \(JijiTargets.profit.moneyText). Turn on Trace real in Network to follow the old line. A long line costs a lot to run: if it loses money, try a dearer fare.",
+            "集集線交給我們重新鋪：從二水沿著山谷到車埕。先到集集、再到水里、最後到車埕，每日運量達到 \(Money(JijiTargets.riders).displayText) 人次、一年淨利 \(JijiTargets.profit.moneyText)。在「路網」打開「沿真實鐵路」就能沿著舊線鋪。路線長、營運花費大，虧錢的話試著調高票價。"
         ),
         card: (
             "Milestones: Jiji, Shuili, Checheng · sights: Jiji Station, Checheng",
@@ -233,11 +237,26 @@ extension BranchLineChallenge {
 }
 
 /// The Jiji challenge's targets (decision 289), measured by
-/// `JijiReportTests`.
+/// `JijiReportTests` (debug build, flat ground, the whole line laid on the
+/// first day for some $5.3 million, one train on a new line's hours):
+/// the flat $5 fare carries 10,600 riders a day in the first week and
+/// 20,000 by day 120, but fares bring some $55,000 a day against $90,000
+/// of running costs (mostly by the train-kilometre, so a shorter train
+/// hardly saves), and it goes bankrupt on day 77 to 80 whether the train
+/// has two cars or four. A flat $8 fare carries fewer (7,900 a day in the
+/// first week, 15,000 by day 180, 22,600 by day 720) and pays: $4.35
+/// million net in the first year, $20.3 million in the second. The Blue
+/// Train, 50 a car, carries only 6,000 and goes bankrupt on day 72. So the
+/// line is laid easily; the challenge is to make it pay, as the Pingxi
+/// challenge's (decision 90). Its ratings fall on the year-end closings.
 enum JijiTargets {
-    static let riders: Int64 = 9_000_000
-    static let startingBalance = Money(600_000_000)
-    static let goldDays = FinancePeriod.year.days / 2
-    static let silverDays = FinancePeriod.year.days
+    static let riders: Int64 = 15_000
+    /// A closed year's net profit: $3,000,000.
+    static let profit = Money(300_000_000)
+    /// $7 million: the line on flat ground and $1.7 million to spare, for
+    /// the app's embankments, cuttings and tunnels and the first months.
+    static let startingBalance = Money(700_000_000)
+    static let goldDays = FinancePeriod.year.days
+    static let silverDays = 2 * FinancePeriod.year.days
     static let deadlineDays = 3 * FinancePeriod.year.days
 }
