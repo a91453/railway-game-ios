@@ -1652,6 +1652,8 @@ V 實際放行 → T、U（保證不互穿）
 | `source/rail-3d/integration/formations.js` `blue`（推估機車＋客車 4 輛）與 `FORMATIONS.md` 的出處 | `BLUE` 當一個編組（決策 252 的莒光做法），4 節客車 | 推估的根據；座位沒有公開，每節 50 是推估 |
 | `source/rail-3d/assets/garage-blender-v1/bluecoach.json`（`body`、`accent`）、`blue.json`（R135 的「藍皮深海軍藍」） | `TrainLivery.blueTrain`（`#345B7A`、`#E9EBE5`、`#232E48`）；性能沿用 `r100ChuKuang` | 線性色換成 sRGB 照用；R135 是 R100 型，所以性能照 R100 莒光的推估 |
 | `source/data/tra_schedule.json` 的 5898／5899、6652、6676 | 無 | 真實班次只當出處；遊戲的列車由玩家的路線派 |
+| 決策 286 的後來：`namedTrains` `shanlan`（「海風號的姊妹車」、EMU500 改造）、`formations.js` `shanlan`（官方 4 輛） | `TrainType.shanLan`（`SHANLAN`），數字照 `HAIFENG` | 名稱與編組取用；`story`、季節（9/4–12/27 週五至週日）沒有用 |
+| `source/rail-3d/assets/garage-blender-v1/shanlan.json` 的 `specification.body` `D4E48B`（「稻穗黃綠」） | `TrainLivery.shanLan` 的車身 `#D4E48B`；帶色 `#7FA845`、車頭 `#5E8C3A` 是本專案的 | 車身照用（模型 `body` 的線性色換成 sRGB 也是 `D4E48B`）；模型的其他顏色是黑框、玻璃、金屬，沒有可當帶色的 |
 | 參考庫沒有：觀光列車對景點、觀光客的規則 | `Tourism.starsPerSightseeingTrain`（0.5★） | 本專案自己的（gap） |
 | 外部開源專案（OpenTTD、Simutrans） | — | 沒有可用的：車輛沒有吸引遊客的規則 |
 

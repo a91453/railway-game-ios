@@ -40,12 +40,20 @@ final class SightseeingTrainTests: XCTestCase {
     }
 
     func testTheSightseeingTypes() {
-        XCTAssertEqual(TrainType.allCases.filter(\.isSightseeing), [.haiFeng, .blueTrain])
+        XCTAssertEqual(TrainType.allCases.filter(\.isSightseeing), [.haiFeng, .blueTrain, .shanLan])
         XCTAssertEqual(TrainType.blueTrain.ratedCapacityPerCar, 50)
         XCTAssertEqual(TrainType.blueTrain.doorsPerCar, 2)
         XCTAssertEqual(TrainType.blueTrain.performance, .r100ChuKuang)
         XCTAssertFalse(TrainType.blueTrain.isHighSpeed)
         XCTAssertTrue(TrainType.offered.contains(.blueTrain), "offered in a world without an era")
+        // Decision 286, later: the Shan-Lan is the Hai-Feng's sister, the
+        // same EMU500 rebuild, with the same numbers.
+        XCTAssertEqual(TrainType.shanLan.ratedCapacityPerCar, TrainType.haiFeng.ratedCapacityPerCar)
+        XCTAssertEqual(TrainType.shanLan.doorsPerCar, TrainType.haiFeng.doorsPerCar)
+        XCTAssertEqual(TrainType.shanLan.performance, TrainType.haiFeng.performance)
+        XCTAssertEqual(TrainType.shanLan.spec.pricing, TrainType.haiFeng.spec.pricing)
+        XCTAssertEqual(TrainType.shanLan.spec.carLength, TrainType.haiFeng.spec.carLength)
+        XCTAssertTrue(TrainType.offered.contains(.shanLan), "offered in a world without an era")
     }
 
     func testASightseeingTrainCallingNearASightAddsHalfAStar() throws {

@@ -3685,6 +3685,12 @@ public struct GameWorld: Equatable, Sendable {
             if let path = pathIntoDepot(call, from: start, for: train, memo: &memo) {
                 return (path, nil)
             }
+            // Decision 290: out of a depot under traffic control, a free
+            // berth of the stop.
+            if let free = pullOutBerths(of: train, leaving: stop, to: call),
+               let path = path(from: start, toStation: call, length: train.length, eligible: free, keepingLeft: true, memo: &memo) {
+                return (path, nil)
+            }
             guard let nearest = path(from: start, toStation: call, length: train.length, memo: &memo) else { return nil }
             // Decision 228: with traffic control off, a free platform first.
             if let next = train.call(after: stop, cycle: cycle),

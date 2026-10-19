@@ -71,9 +71,12 @@
 //   eight, so it runs a little slower than the real train would). The old
 //   coaches' seats are not published (gap): a coach is rated 50 as a
 //   Chu-Kuang coach is, two doors a side (one at each end), 20.0 m.
+// - The Shan-Lan (山嵐號, decision 286, later) is the Hai-Feng's sister,
+//   the same EMU500 rebuild (`namedTrains` `shanlan`; `formations.js`
+//   `shanlan`: four cars, official): the Hai-Feng's numbers.
 // - A sightseeing type (decision 286) adds half a star to a sight one of
 //   its trains calls near (``Tourism/starsPerSightseeingTrain``): the Blue
-//   Train and the Hai-Feng.
+//   Train, the Hai-Feng and the Shan-Lan.
 // - The families (metro, railway, high speed, special) are decision 224's
 //   catalogue of types; a high-speed set is the type whose family is high
 //   speed.
@@ -191,6 +194,10 @@ public enum TrainTypeCatalog {
         // Decision 286.
         .init(code: "BLUE", family: .railway, offer: .added, capacity: 50, doors: 2, overloads: true,
               performance: .r100ChuKuang, firstDollars: 260_000, carDollars: 45_000, operatingPermille: 1_500, carMetres: (20, 0),
+              sightseeing: true),
+        // Decision 286, later: the Hai-Feng's numbers.
+        .init(code: "SHANLAN", family: .railway, offer: .added, capacity: 44, doors: 3, overloads: true,
+              performance: .haiFeng, firstDollars: 240_000, carDollars: 50_000, operatingPermille: 1_300, carMetres: (20, 3),
               sightseeing: true),
     ]
 

@@ -9,7 +9,9 @@ import GameCore
 /// The trip is the train's timetable as it runs now: a line's train gets
 /// one for each trip it is sent on, and a repeating timetable's trip is its
 /// current cycle; a timetable that turns round is a trip each way, to the
-/// next place it turns round (``Train/trip(leaving:)``). Read from the world each time it is shown; never stored.
+/// next place it turns round (``Train/trip(leaving:)``), and a train
+/// turned back short is on the trip from where it turned (decision 255).
+/// Read from the world each time it is shown; never stored.
 public struct TrainCard: Hashable, Sendable {
     public let origin: String
     public let terminus: String
@@ -39,11 +41,14 @@ public struct TrainCard: Hashable, Sendable {
     /// is in its depot.
     public let state: FollowBarInfo.Status
     public let now: GameTime
+    /// The station it turned back short at on this trip (decision 255),
+    /// the trip's first stop; `nil` on a trip it runs whole.
+    public let turnedBackAt: String?
 
     public init(
         origin: String, terminus: String, departure: GameTime, arrival: GameTime, lateMinutes: Int64,
         hasDeparted: Bool, progress: Double, remainingMetres: Int64, nextStop: String?, nextStopMinutes: Int64?,
-        speed: Int64, load: TrainLoadInfo?, state: FollowBarInfo.Status, now: GameTime
+        speed: Int64, load: TrainLoadInfo?, state: FollowBarInfo.Status, now: GameTime, turnedBackAt: String? = nil
     ) {
         self.origin = origin
         self.terminus = terminus
@@ -59,6 +64,7 @@ public struct TrainCard: Hashable, Sendable {
         self.load = load
         self.state = state
         self.now = now
+        self.turnedBackAt = turnedBackAt
     }
 
     public var isLate: Bool { lateMinutes >= 1 }
@@ -106,6 +112,12 @@ public struct TrainCard: Hashable, Sendable {
     public func remainingText(in language: DisplayLanguage) -> String {
         let tenths = (remainingMetres + 50) / 100
         return language.text("\(tenths / 10).\(tenths % 10) km left", "剩 \(tenths / 10).\(tenths % 10) km")
+    }
+
+    /// "Turned back early at Guishan" under the trip of a train turned back
+    /// short; `nil` on a trip it runs whole.
+    public func turnedBackText(in language: DisplayLanguage) -> String? {
+        turnedBackAt.map { language.text("Turned back early at \($0)", "在\($0)提早折返") }
     }
 
     /// "Taoyuan · 3 min", or "—" at the last stop.
@@ -191,7 +203,8 @@ extension GameWorld {
             speed: Int64(trainSpeedKMH(of: id).rounded()),
             load: trainLoadInfo(of: id),
             state: info.status,
-            now: now
+            now: now,
+            turnedBackAt: train.shortTurnCall == trip.lowerBound ? stationName(first.station) : nil
         )
     }
 }

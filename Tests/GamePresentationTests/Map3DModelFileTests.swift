@@ -105,6 +105,24 @@ final class Map3DModelFileTests: XCTestCase {
         XCTAssertTrue(decoded.provenance.contains("43b59d1958bb2beb5ae07db491018fadd2545355f787664db7d9b4986a70126d"))
     }
 
+    func testTheStaticMeshoptConverterFixtureReadsWithFixedColorsAndSource() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent()
+        let url = root.appendingPathComponent("tools/glb-to-m3dmodel/fixtures/static.m3dmodel")
+        let decoded = try Map3DModelFile(decoding: Data(contentsOf: url), named: "static-fixture")
+        XCTAssertEqual(decoded.model.triangleCount, 2)
+        XCTAssertEqual(decoded.model.minimum, Map3DPoint(-0.5, -2, 0))
+        XCTAssertEqual(decoded.model.maximum, Map3DPoint(0.5, 2, 6))
+        XCTAssertEqual(decoded.model.vertices[0].color, 0xFFCC_CCCC, "light building surfaces keep their own color")
+        XCTAssertTrue(decoded.model.vertices.allSatisfy { $0.color >> 24 == 255 })
+        XCTAssertTrue(decoded.model.vertices[3].glows, "named lamps keep the existing glow flag")
+        XCTAssertTrue(decoded.provenance.contains("non-ai"))
+        XCTAssertTrue(decoded.provenance.contains("fixture-v1"))
+        XCTAssertTrue(decoded.provenance.contains("sha256"))
+        XCTAssertFalse(decoded.provenance.contains("aiGenerated"))
+        XCTAssertFalse(decoded.provenance.contains("tasks"))
+    }
+
     func testAnythingElseIsRefused() {
         func refusal(_ bytes: [UInt8]) -> Map3DModelFile.Error? {
             do {
