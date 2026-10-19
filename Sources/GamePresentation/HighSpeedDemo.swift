@@ -168,10 +168,10 @@ public enum HighSpeedDemo {
         landAt: landAt,
         opensAt: opensAt,
         // Decision 281: Zuoying's depot reached by its own track. Up on its
-        // viaducts and down in its tunnels, as the real line is, once a set
-        // late out of Nangang no longer meets one coming in on the track
-        // they share (decision 281, next step): until then flat at 0 m.
-        followsRealStructures: false,
+        // viaducts and down in its tunnels, as the real line is: decision
+        // 282 keeps a set late out of Nangang from meeting one coming in on
+        // the track they share.
+        followsRealStructures: true,
         heightFit: heightFit,
         depotLeads: true
     )

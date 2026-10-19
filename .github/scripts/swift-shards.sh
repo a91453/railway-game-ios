@@ -295,6 +295,19 @@ set -euo pipefail
 # 14.4, TRADemoDayTests 2.8 of it) and campaigns-14 next (16.6,
 # HighSpeedDemoBatchTests 1.5). Both demo classes go to campaigns-16 (about
 # 14 min with them); rest (15.7) is then the longest.
+# 2026-10-19 (ARCHITECTURE decision 282): the high-speed demo is built over
+# the ground at its real structures, about three times as many edges.
+# Local debug, each class alone, main fa1e360 against the branch:
+# HighSpeedDemoTests 334.6 -> about 517 s, HighSpeedDemoDayTests 240.1 ->
+# 443.6, HighSpeedDemoBatchTests 88.6 -> 196.2; TRADemoDayTests 113.9 ->
+# 115.8 (unchanged). CI ran main's HighSpeedDemoTests and
+# HighSpeedDemoBatchTests about 1.24 times as long as this machine
+# (CLASS_WEIGHTS 415 and 110), so their weights are the branch's times
+# times 1.24 (HighSpeedDemoDayTests' 780 was from before decision 248).
+# campaigns-16 would then hold some 1,150 s of tests (the day and the batch
+# test share one build of the demo, so a little less), so
+# FlexDispatchPropertyTests (161) goes to campaigns-10, the lightest
+# (about 650).
 classes_of() {
   case "$1" in
     campaigns-1) echo "ServiceRepeatingPropertyTests ScheduledTrafficPropertyTests WorldStateMachineTests" ;;
@@ -306,13 +319,13 @@ classes_of() {
     campaigns-7) echo "LinePatternPropertyTests NetworkServicePropertyTests" ;;
     campaigns-8) echo "GoldenScenarioTests ScheduledOvertakeTrackMiddlePropertyTests TimetablePropertyTests ScreenshotSceneTests NewGameBalanceTests" ;;
     campaigns-9) echo "SaveMutationTests EconomySecondHalfPropertyTests" ;;
-    campaigns-10) echo "PassengerPlanKeyTests ReservationShortcutTests NetworkPostcardTests StationCommerceCardTests LineLossDiagnosisTests" ;;
+    campaigns-10) echo "PassengerPlanKeyTests ReservationShortcutTests NetworkPostcardTests StationCommerceCardTests LineLossDiagnosisTests FlexDispatchPropertyTests" ;;
     campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests HighSpeedDemoTests TRADemoTests" ;;
     campaigns-12) echo "TrafficControlPropertyTests ScheduledOvertakeTrackFinalPropertyTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests" ;;
     campaigns-13) echo "BoardingPropertyTests TurnbackPropertyTests" ;;
     campaigns-14) echo "ServiceLinePropertyTests OnboardingTests CommandLogTests ScheduledTrafficTests TurnbackTests" ;;
     campaigns-15) echo "TrafficFollowingPropertyTests ScheduledOvertakeTrackLastPropertyTests NewGameSavePropertyTests RealWorldDemoTests" ;;
-    campaigns-16) echo "HighSpeedDemoDayTests TRADemoDayTests HighSpeedDemoBatchTests FlexDispatchPropertyTests" ;;
+    campaigns-16) echo "HighSpeedDemoDayTests TRADemoDayTests HighSpeedDemoBatchTests" ;;
     *) return 1 ;;
   esac
 }
@@ -380,7 +393,7 @@ selected_pattern() {
 # class to another part, never out of the selection.
 CLASS_WEIGHTS="BoardingPropertyTests:624 LineDispatchPropertyTests:602
   ServiceLinePropertyTests:487 SaveMutationSecondHalfTests:478
-  TrafficControlPropertyTests:475 HighSpeedDemoDayTests:780 HighSpeedDemoBatchTests:110 TRADemoDayTests:190 HighSpeedDemoTests:415
+  TrafficControlPropertyTests:475 HighSpeedDemoDayTests:550 HighSpeedDemoBatchTests:245 TRADemoDayTests:190 HighSpeedDemoTests:640
   TrafficFollowingPropertyTests:434 PassengerPlanKeyTests:405
   LinePatternPropertyTests:401 ServicePropertyTests:398
   ServiceRepeatingSecondHalfPropertyTests:395

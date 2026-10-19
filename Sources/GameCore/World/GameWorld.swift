@@ -3177,6 +3177,8 @@ public struct GameWorld: Equatable, Sendable {
         // Decision 228: where trains stand as the phase begins (a train only
         // leaves them in it).
         let standing = standingEdges()
+        // Decision 282: and where trains travel.
+        let moving = movingEdges()
         for index in trains.indices where trains[index].execution != nil {
             if stepDwell(index, at: now, memo: &memo) {
                 changed = true
@@ -3185,9 +3187,10 @@ public struct GameWorld: Equatable, Sendable {
                 changed = true
             }
             // Decision 228: to a free platform, when a train stands on its
-            // own. Its run is kept: a longer way ends with a short run from
-            // a stand.
-            if let path = freePlatformOnTheWay(of: trains[index], standing: standing, memo: &memo.directions.paths) {
+            // own (decision 282: or comes out along its track towards it).
+            // Its run is kept: a longer way ends with a short run from a
+            // stand.
+            if let path = freePlatformOnTheWay(of: trains[index], standing: standing, moving: moving, memo: &memo.directions.paths) {
                 follow(path, &trains[index])
                 changed = true
             }
