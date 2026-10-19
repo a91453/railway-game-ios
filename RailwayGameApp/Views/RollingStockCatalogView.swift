@@ -27,6 +27,12 @@ struct RollingStockCatalogView: View {
                         familyPicker(catalog, entry: entry, language: language)
                         showroom(catalog, entry: entry, language: language)
                         figures(entry, language: language)
+                        if let note = session.world.sightseeingNote(for: entry.type, in: language) {
+                            Text(verbatim: note)
+                                .font(.footnote)
+                                .foregroundStyle(Theme.textSecondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
                         purchase(entry, language: language)
                         thumbnails(catalog, entry: entry, language: language)
                     }

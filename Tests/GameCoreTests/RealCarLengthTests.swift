@@ -17,6 +17,8 @@ final class RealCarLengthTests: XCTestCase {
             "MAGLEV": 960, "SKYRAIL": 768, "MONORAIL": 960, "STEAM": 512, "HSR": 1_600, "EMU3000": 1_299,
             // Decision 252: 20.1, 20.0 (the Chu-Kuang coaches) and 20.3 m.
             "EMU100": 1_286, "E200CK": 1_280, "E500CK": 1_280, "R100CK": 1_280, "R200CK": 1_280, "HAIFENG": 1_299,
+            // Decision 286: 20.0 m (the old blue coaches, estimated).
+            "BLUE": 1_280,
         ]
         XCTAssertEqual(Set(metres.keys), Set(TrainType.allCases.map(\.rawValue)))
         for type in TrainType.allCases {

@@ -1642,6 +1642,19 @@ V 實際放行 → T、U（保證不互穿）
 | 參考庫沒有：各車的加減速、定員、機車＋客車的整列性能 | `RunningCurve.swift` 的六個預設、`TrainTypeCatalog` 的六列 | 中文維基百科（EMU100、EMU500、E200、E500、R100、R200、莒光號）與公視新聞（海風號由 EMU500 改造）的公開數字；整列加速度是本專案的推估（gap） |
 | 外部開源專案 | — | 沒有另外找：這次是公開規格數字與塗裝資料，不是演算法；程式是本專案的 |
 
+## 觀光列車（決策 286）
+
+參考庫 `a91453/railway-reference-private`，新版 `Railway/taiwan-rail-reference-clean/` 優先（`site_archive_clean` 的同名檔只差兩個虛構班次的 `operator` 字樣）。
+
+| 參考 | 本專案 | 怎麼用 |
+| --- | --- | --- |
+| `source/data/tra_special_trains.json` `namedTrains`（11 班） | `blue-train` → `TrainType.blueTrain`（`BLUE`）；`haifeng` → `HAIFENG` 標成觀光列車（`TrainTypeSpec.isSightseeing`） | 名稱與編組取用；其他 9 班、`story`、季節的 `status2026` 留給決策 286 的下一步 |
+| `source/rail-3d/integration/formations.js` `blue`（推估機車＋客車 4 輛）與 `FORMATIONS.md` 的出處 | `BLUE` 當一個編組（決策 252 的莒光做法），4 節客車 | 推估的根據；座位沒有公開，每節 50 是推估 |
+| `source/rail-3d/assets/garage-blender-v1/bluecoach.json`（`body`、`accent`）、`blue.json`（R135 的「藍皮深海軍藍」） | `TrainLivery.blueTrain`（`#345B7A`、`#E9EBE5`、`#232E48`）；性能沿用 `r100ChuKuang` | 線性色換成 sRGB 照用；R135 是 R100 型，所以性能照 R100 莒光的推估 |
+| `source/data/tra_schedule.json` 的 5898／5899、6652、6676 | 無 | 真實班次只當出處；遊戲的列車由玩家的路線派 |
+| 參考庫沒有：觀光列車對景點、觀光客的規則 | `Tourism.starsPerSightseeingTrain`（0.5★） | 本專案自己的（gap） |
+| 外部開源專案（OpenTTD、Simutrans） | — | 沒有可用的：車輛沒有吸引遊客的規則 |
+
 ## 3D 地圖的街道設施（決策 244）
 
 | 參考 | 本專案 | 怎麼改 |
