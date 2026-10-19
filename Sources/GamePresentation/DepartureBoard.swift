@@ -317,12 +317,54 @@ extension Train {
 
     /// The trip the train is on (``trip(leaving:)``): the one leaving the
     /// stop it waits at, or the stop it last left; between trips, the last
-    /// one of its timetable.
+    /// one of its timetable. A train turned back short (``shortTurnCall``)
+    /// is on the trip from where it turned, not from the place it never
+    /// reached.
     var currentTrip: ClosedRange<Int>? {
+        guard let at = lastCall else { return trip(leaving: timetable.count - 1) }
+        guard let trip = trip(leaving: at) else { return nil }
+        if let back = shortTurnCall(at: at, on: trip) { return back...trip.upperBound }
+        return trip
+    }
+
+    /// The call it came back to when it turned back short on the trip it
+    /// is on (decision 255), or `nil`: where it waits, or the call it last
+    /// left, at or after it.
+    var shortTurnCall: Int? {
+        guard let at = lastCall, let trip = trip(leaving: at) else { return nil }
+        return shortTurnCall(at: at, on: trip)
+    }
+
+    /// The stop it waits at, or the stop it last left; `nil` between trips.
+    private var lastCall: Int? {
         switch execution {
-        case .waitingAtStop(let stop, _)?: trip(leaving: stop)
-        case .travellingToStop(let stop, _)?: trip(leaving: max(0, stop - 1))
-        case nil: trip(leaving: timetable.count - 1)
+        case .waitingAtStop(let stop, _)?: stop
+        case .travellingToStop(let stop, _)?: max(0, stop - 1)
+        case nil: nil
         }
+    }
+
+    /// Turning a train back short, the dispatcher leaves out the calls up
+    /// to where it would have turned round and, on a trip of its own,
+    /// brings the rest forward (decision 288): the calls left out, and its
+    /// arrival back at the station it turned at, are all due the moment it
+    /// turned. That is how it reads here, from the timetable alone: no run
+    /// of calls it made takes no time. A repeating timetable keeps its
+    /// times, so a turn on one does not read.
+    private func shortTurnCall(at index: Int, on trip: ClosedRange<Int>) -> Int? {
+        let start = trip.lowerBound
+        guard timetablePeriod == nil, start > 0, timetable[start].reverses else { return nil }
+        let turned = timetable[start].arrival
+        func leftOut(_ call: Int) -> Bool { timetable[call].arrival == turned && timetable[call].departure == turned }
+        guard leftOut(start) else { return nil }
+        // The calls left out run from just after where it turned.
+        var first = start
+        while first > 1, leftOut(first - 1) { first -= 1 }
+        let station = timetable[first - 1].station
+        guard start < index,
+              let back = (start + 1...index).first(where: { timetable[$0].station == station }),
+              (start + 1..<back).allSatisfy(leftOut), timetable[back].arrival == turned
+        else { return nil }
+        return back
     }
 }

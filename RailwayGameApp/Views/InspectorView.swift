@@ -268,6 +268,13 @@ struct TrainCardView: View {
                 Spacer(minLength: 4)
                 TrainStatusCapsule(card: card, language: language)
             }
+            if let turnedBack = card.turnedBackText(in: language) {
+                Text(verbatim: turnedBack)
+                    .font(.caption2)
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
             HStack(alignment: .bottom, spacing: 8) {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(verbatim: card.origin)
