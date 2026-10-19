@@ -1,0 +1,79 @@
+[
+  {
+    "id": "hk-download",
+    "url": "https://3d.map.gov.hk/mapviewer/app/download-api?l=en-US",
+    "status": 200,
+    "bytes": 7157,
+    "sha256": "70f7e0f25a7acdaa070e6d8838910b851eb5ef813bbf95053ce88b04fb76b30b"
+  },
+  {
+    "id": "hk-individual",
+    "url": "https://data.gov.hk/en-data/dataset/hk-landsd-openmap-3d-visualisation-map-individualised-models",
+    "status": 200,
+    "bytes": 71851,
+    "sha256": "20e8a0f6d331417857d396b3bc179b871df0c1ed884b6225e3a5ff801cc15310"
+  },
+  {
+    "id": "hk-csdi",
+    "url": "https://portal.csdi.gov.hk/csdi-webpage/dataset/landsd_rcd_1671676915450_88604",
+    "status": 200,
+    "bytes": 7555,
+    "sha256": "49d4521b3acf5114f459f1475239da56aea5b4e921f8e54d75403246bd9527c5"
+  },
+  {
+    "id": "hk-list",
+    "url": "https://portal.csdi.gov.hk/csdi-webpage/DatasetList",
+    "status": 200,
+    "bytes": 14027,
+    "sha256": "f8370a568cbaebbfd26e54d3a650481f07de1be573d0a213f1f30d15cf9bc599"
+  },
+  {
+    "id": "meshopt-js",
+    "url": "https://raw.githubusercontent.com/zeux/meshoptimizer/v1.3/js/README.md",
+    "status": 200,
+    "bytes": 34109,
+    "sha256": "72162d4a46a34622d12914bc47d94ca36e88a4be5ffdf009d89fc1c6e7c47e03"
+  },
+  {
+    "id": "meshopt-license",
+    "url": "https://raw.githubusercontent.com/zeux/meshoptimizer/v1.3/LICENSE.md",
+    "status": 200,
+    "bytes": 1079,
+    "sha256": "f03037ca7bad1e3eb7f4a63fa6084a8baabd5ba30d3c239a9a7f35705d873e26"
+  },
+  {
+    "id": "mpl-faq",
+    "url": "https://www.mozilla.org/en-US/MPL/2.0/FAQ/",
+    "status": 200,
+    "bytes": 68702,
+    "sha256": "083c0ad83de4ba974c340f7decb34d179fc728433a098b1b7b31db70182b368d"
+  },
+  {
+    "id": "csdi-terms",
+    "url": "https://portal.csdi.gov.hk/csdi-webpage/doc/TNC",
+    "status": 200,
+    "bytes": 21273,
+    "sha256": "53594dd98d9fc2177b0f53db04d80eda999b3c0cfca318ba5ef92e123c6dae0a"
+  },
+  {
+    "id": "worldcover",
+    "url": "https://esa-worldcover.org/en/data-access",
+    "status": 200,
+    "bytes": 49873,
+    "sha256": "def33d117ab9e401d26d28a6554354e1969291c90f7fd6e1c520cd3a909899ef"
+  },
+  {
+    "id": "ccby",
+    "url": "https://creativecommons.org/licenses/by/4.0/legalcode.en",
+    "status": 200,
+    "bytes": 48742,
+    "sha256": "58230517b7895aa219ff46a6ed63e67057a1582fb9ea054b16728a8c13525650"
+  },
+  {
+    "id": "metal-profile",
+    "url": "https://developer.apple.com/documentation/xcode/analyzing-the-performance-of-your-metal-app/",
+    "status": 200,
+    "bytes": 18893,
+    "sha256": "89caa8acc0ff7681bf8e179b60362ed4e42684f7a548f457dfaf06d9241f3f50"
+  }
+]

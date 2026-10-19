@@ -1,0 +1,48 @@
+[
+  {
+    "triangles": 2488,
+    "colors": 7,
+    "paintTriangles": 591,
+    "glowingTriangles": 112,
+    "name": "normalized",
+    "bytes": 129700,
+    "sha256": "66281f92a070fa446eae9c2f7892e45eb3972f77e1284d50ff38f641e43abdfb",
+    "ms": 90.67673099999999,
+    "bounds": {
+      "min": [
+        -6,
+        -1.5950615406036377,
+        0
+      ],
+      "max": [
+        6,
+        1.5950615406036377,
+        4.360493183135986
+      ]
+    },
+    "expandedVertexBytes": 298560
+  },
+  {
+    "triangles": 1391,
+    "colors": 8,
+    "paintTriangles": 325,
+    "glowingTriangles": 80,
+    "name": "simplified",
+    "bytes": 72656,
+    "sha256": "1b4ce209a966ba82420ac8bd08d14234e18ad9d1e024eec5b184569ebd6975ff",
+    "ms": 24.305589000000012,
+    "bounds": {
+      "min": [
+        -6,
+        -1.597562313079834,
+        0
+      ],
+      "max": [
+        6,
+        1.597562313079834,
+        4.367330074310303
+      ]
+    },
+    "expandedVertexBytes": 166920
+  }
+]

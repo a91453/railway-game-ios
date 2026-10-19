@@ -1,0 +1,31 @@
+{
+  "checked_at": "2026-10-19T06:38:06.926313+00:00",
+  "environment": "Linux x86_64; AMD EPYC 9V74; Node v22.14.0",
+  "checks": [
+    {
+      "name": "node --test tools/glb-to-m3dmodel/convert.test.mjs",
+      "status": "VERIFIED",
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "name": "Inventory, CSV, local-link, M3DM structural and Python syntax validation",
+      "status": "VERIFIED",
+      "result": "C001-C141, 137 names, D01-D26, E01-E04, 20 crate checksums, local links, WorldCover sums/masks, M3DM headers"
+    },
+    {
+      "name": "WorldCover rerun from committed crop with compare_worldcover.py",
+      "status": "VERIFIED",
+      "result": "All non-timing metrics identical"
+    },
+    {
+      "name": "git diff --check",
+      "status": "VERIFIED"
+    },
+    {
+      "name": "Swift build/tests, iOS build, Simulator, iPhone measurement",
+      "status": "UNVERIFIED",
+      "reason": "No production Swift/App change; no Swift6.4/Xcode/device execution this research"
+    }
+  ]
+}

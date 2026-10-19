@@ -1,0 +1,14 @@
+{
+  "url": "https://data11.map.gov.hk/api/3d-zip/GLTF/10-SW-19C.zip",
+  "format": "GLTF",
+  "sheet": "10-SW-19C",
+  "size_list": {
+    "TILE_NAME": "10-SW-19C",
+    "FBX_SIZE_MB": "2.4",
+    "GLTF_SIZE_MB": "2.4",
+    "MAX_SIZE_MB": "2.5"
+  },
+  "status": 403,
+  "bytes": 199,
+  "response_content_type": "text/html; charset=iso-8859-1"
+}
