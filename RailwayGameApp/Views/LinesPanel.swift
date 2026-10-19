@@ -1564,11 +1564,9 @@ struct LinesPanel: View {
                     if route.count > draft.count {
                         stoppingControls(route)
                     }
-                } else {
-                    Text(verbatim: language.text(
-                        "No track joins these stations yet. The line calls at the stations picked; its trains run once track joins them.",
-                        "這些車站之間還沒有軌道相連。路線只停點選的車站，軌道接通後列車才能行駛。"
-                    ))
+                } else if let gap = session.lineDraftGap {
+                    // Decision 284: why, and what joins them.
+                    Text(verbatim: session.world.lineDraftGapText(gap, in: language))
                     .font(.footnote)
                     .foregroundStyle(Theme.warning)
                 }

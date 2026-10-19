@@ -240,6 +240,42 @@ final class BalanceReportTests: XCTestCase {
         print(lines.joined(separator: "\n"))
     }
 
+    /// Decision 286's sightseeing train: the first line beside a 4-star
+    /// town, its one train of four coaches the Blue Train, against the same
+    /// line run by the R100 Chu-Kuang (the same performance and seats, no
+    /// sightseeing). The Blue Train's half star: the tourists, the fares and
+    /// the cash. No shop, so the difference is the train's alone.
+    func testASightseeingTrainAtASight() throws {
+        let days = try requestedDays()
+        var worlds = try [TrainType.r100ChuKuang, .blueTrain].map { type in
+            var world = try firstLine(type: type)
+            let station = try XCTUnwrap(world.stations.last)
+            world.setTourism([Attraction(
+                id: AttractionID(rawValue: 1), name: "Sight", englishName: "Sight",
+                point: PlanPoint(x: station.point.x + 3_000, y: station.point.y), kind: .town, baseStars: 400
+            )])
+            try world.advance(ticks: 1)
+            return world
+        }
+        var lines = [
+            "### A first line beside a 4-star town: R100 Chu-Kuang against the Blue Train (four coaches)",
+            "",
+            "| Day | Balance Chu-Kuang | Balance Blue | Difference | Tourists Chu-Kuang | Tourists Blue | Fares Chu-Kuang | Fares Blue |",
+            "| --: | --: | --: | --: | --: | --: | --: | --: |",
+        ]
+        for day in 1...days {
+            for index in worlds.indices { try worlds[index].advance(ticks: 1_440) }
+            let plain = worlds[0], blue = worlds[1]
+            let tourists = worlds.map { $0.attraction(id: AttractionID(rawValue: 1))?.yesterday ?? 0 }
+            lines.append(
+                "| \(day) | \(dollars(plain.economy.balance.amount)) | \(dollars(blue.economy.balance.amount)) | "
+                    + "\(dollars((blue.economy.balance - plain.economy.balance).amount)) | \(tourists[0]) | \(tourists[1]) | "
+                    + "\(dollars(plain.financeReport(.day).previous.fareRevenue.amount)) | \(dollars(blue.financeReport(.day).previous.fareRevenue.amount)) |"
+            )
+        }
+        print(lines.joined(separator: "\n"))
+    }
+
     /// Decision 174's hotels: a hotel built on day 10 beside a sight, whose
     /// guests are 80 per mille of its tourists, for a sight of 3, 4 and 4.5
     /// stars before it (a hotel adds a quarter star). The hotel's customers,
@@ -340,7 +376,7 @@ final class BalanceReportTests: XCTestCase {
 
     /// `NewGameBalanceTests`' first line: three stations through the first
     /// town on 448 m of track and one train of four cars, $914,800.
-    private func firstLine() throws -> GameWorld {
+    private func firstLine(type: TrainType? = nil) throws -> GameWorld {
         var world = GameWorld.newGame()
         let tile = Int64(1_024)
         let cars = 4
@@ -359,6 +395,7 @@ final class BalanceReportTests: XCTestCase {
         try world.setLineServiceWindow(line, to: .allDay)
         try world.setLineTrainsInService(line, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
         let train = try world.purchaseTrain(named: "Train 1").id
+        if let type { try world.setTrainType(train, to: type) }
         try world.setTrainCars(train, to: cars)
         try world.placeTrain(train, at: .onEdge(TrackTraversal(edge: edge, direction: .forward), offset: tile + platform))
         try world.setTrainContinuation(train, along: [], stoppingAt: tile + platform)

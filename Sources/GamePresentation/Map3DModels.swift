@@ -59,7 +59,8 @@ public struct Map3DModelPack: Sendable {
 
     /// The style of each train type, by its code (`""` for a train with no
     /// type: a commuter EMU). Types with no style (maglev, skyrail,
-    /// monorail, steam) are drawn as boxes.
+    /// monorail, steam, the locomotive-hauled Chu-Kuang sets and Blue Train)
+    /// are drawn as boxes.
     public static let styleByType: [String: String] = [
         "": "commuter", "EMU3000": "express", "HSR": "highSpeed",
         // Decision 252: the flat-fronted EMUs as commuters; the Chu-Kuang

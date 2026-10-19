@@ -40,6 +40,8 @@ final class TrainTypeCatalogTests: XCTestCase {
         .init(code: "R100CK", capacity: 50, doors: 2, overloads: true, performance: .r100ChuKuang, first: 160_000, car: 35_000, permille: 1_500),
         .init(code: "R200CK", capacity: 50, doors: 2, overloads: true, performance: .r200ChuKuang, first: 280_000, car: 35_000, permille: 1_400),
         .init(code: "HAIFENG", capacity: 44, doors: 3, overloads: true, performance: .haiFeng, first: 240_000, car: 50_000, permille: 1_300),
+        // Decision 286.
+        .init(code: "BLUE", capacity: 50, doors: 2, overloads: true, performance: .r100ChuKuang, first: 260_000, car: 45_000, permille: 1_500),
     ]
 
     func testEveryTypeKeepsItsNumbers() throws {
@@ -61,10 +63,10 @@ final class TrainTypeCatalogTests: XCTestCase {
     func testTheListsKeepTheirTypesAndOrder() {
         XCTAssertEqual(TrainType.main.map(\.rawValue), ["A", "B", "C"])
         XCTAssertEqual(TrainType.reference.map(\.rawValue), ["A", "B", "C", "L", "D", "APM", "MAGLEV", "SKYRAIL", "MONORAIL"])
-        XCTAssertEqual(TrainType.offered.map(\.rawValue), ["A", "B", "C", "L", "D", "APM", "MAGLEV", "SKYRAIL", "MONORAIL", "HSR", "EMU3000", "EMU100", "E200CK", "E500CK", "R100CK", "R200CK", "HAIFENG"])
+        XCTAssertEqual(TrainType.offered.map(\.rawValue), ["A", "B", "C", "L", "D", "APM", "MAGLEV", "SKYRAIL", "MONORAIL", "HSR", "EMU3000", "EMU100", "E200CK", "E500CK", "R100CK", "R200CK", "HAIFENG", "BLUE"])
         XCTAssertEqual(TrainType.referenceDefault.rawValue, "B")
         XCTAssertEqual([TrainType.a, .b, .c, .l, .d, .apm, .maglev, .skyRail, .monorail, .steam, .highSpeed, .emu3000,
-                        .emu100, .e200ChuKuang, .e500ChuKuang, .r100ChuKuang, .r200ChuKuang, .haiFeng], TrainType.allCases)
+                        .emu100, .e200ChuKuang, .e500ChuKuang, .r100ChuKuang, .r200ChuKuang, .haiFeng, .blueTrain], TrainType.allCases)
     }
 
     func testTheStandardCarKeepsItsNumbers() {

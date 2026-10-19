@@ -837,6 +837,7 @@ extension TrainType {
         "R100CK": ("Chu-Kuang, R100 diesel", "莒光號（R100 柴電機車）"),
         "R200CK": ("Chu-Kuang, R200 diesel", "莒光號（R200 柴電機車）"),
         "HAIFENG": ("Hai-Feng sightseeing train", "海風號"),
+        "BLUE": ("Blue Train sightseeing train", "藍皮解憂號"),
     ]
 }
 

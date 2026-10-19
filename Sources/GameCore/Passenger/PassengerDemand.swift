@@ -560,10 +560,14 @@ extension GameWorld {
         let curveSpeedLimits: Bool
     }
 
-    /// Each sight's rating now, with its hotels (empty without tourism): a
-    /// plan is worked out again when a hotel goes up or comes down.
+    /// Each sight's rating now, with its hotels and sightseeing trains
+    /// (empty without tourism): a plan is worked out again when a hotel
+    /// goes up or comes down, or a sightseeing train starts or stops
+    /// calling near a sight.
     var tourismStars: [Int] {
-        tourism?.attractions.map { stars(of: $0) } ?? []
+        guard let tourism else { return [] }
+        let stops = sightseeingStops()
+        return tourism.attractions.map { stars(of: $0, sightseeingStops: stops) }
     }
 
     /// The key of the network plan ``makePassengerPlan()`` works out now.

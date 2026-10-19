@@ -583,8 +583,9 @@ enum MapArt {
 
     private static func drawNetworkOverlay(_ overlay: NetworkOverlay, projection: some MapProjection, in context: GraphicsContext) {
         let referenceSize = projection.referenceSize
-        if overlay.highlight.count > 1 {
-            let band = polyline(overlay.highlight, projection: projection)
+        // Decision 285: a platform on the track beside too.
+        for highlight in [overlay.highlight, overlay.besideHighlight] where highlight.count > 1 {
+            let band = polyline(highlight, projection: projection)
             switch overlay.highlightKind {
             case .removal:
                 context.stroke(band, with: .color(Color.red.opacity(0.6)), style: StrokeStyle(lineWidth: max(6, referenceSize * 0.6), lineCap: .round, lineJoin: .round))

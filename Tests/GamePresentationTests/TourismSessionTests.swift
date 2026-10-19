@@ -275,6 +275,33 @@ final class TourismSessionTests: XCTestCase {
         XCTAssertEqual(StationMasterAdvice.starsText(305), "3.05★")
     }
 
+    /// Decision 286: a sightseeing train calling at Foot shows on the row and
+    /// in its stars; the help names the sightseeing trains.
+    func testThePanelSaysASightseeingTrainCalls() throws {
+        var world = try world()
+        XCTAssertNil(world.attractionRows(in: .english)[0].sightseeingTrainText)
+        let line = try XCTUnwrap(world.lines.first).id
+        let blue = try world.purchaseTrain(named: "Blue").id
+        try world.setTrainType(blue, to: .blueTrain)
+        try world.assignTrain(blue, to: line)
+        let row = world.attractionRows(in: .english)[0]
+        XCTAssertEqual(row.starsText, "4★")
+        XCTAssertEqual(row.sightseeingTrainText, "A sightseeing train calls here (+0.5★)")
+        XCTAssertEqual(world.attractionRows(in: .traditionalChinese)[0].sightseeingTrainText, "有觀光列車停靠（+0.5★）")
+        XCTAssertTrue(world.tourismHelp(in: .english).hasSuffix(
+            "A sightseeing train (Hai-Feng sightseeing train, Blue Train sightseeing train) calling at a station within 800 m adds 0.5 stars."
+        ), world.tourismHelp(in: .english))
+        XCTAssertTrue(world.tourismHelp(in: .traditionalChinese).hasSuffix("觀光列車（海風號、藍皮解憂號）停靠 800 公尺內的車站時，景點加 0.5 星。"))
+        // The train catalog's note: only under a sightseeing type, only with sights.
+        XCTAssertEqual(world.sightseeingNote(for: .blueTrain, in: .traditionalChinese), "觀光列車：停靠景點 800 公尺內的車站時，景點加 0.5 星，觀光客會變多。")
+        XCTAssertEqual(world.sightseeingNote(for: .haiFeng, in: .english),
+                       "Sightseeing train: calling at a station within 800 m of a sight adds 0.5 stars to it, so more tourists come.")
+        XCTAssertNil(world.sightseeingNote(for: .r100ChuKuang, in: .english))
+        XCTAssertNil(world.sightseeingNote(for: nil, in: .english))
+        world.setTourism(nil)
+        XCTAssertNil(world.sightseeingNote(for: .blueTrain, in: .english), "no sights, nothing to say")
+    }
+
     func testTheShopButtonBuysTheNextLevelAndSaysSo() throws {
         let session = GameSession(world: try world())
         let before = session.world.economy.balance
