@@ -1,0 +1,95 @@
+{
+  "checked_at": "2026-10-19T07:04:05.969162+00:00",
+  "supplement_pr": 820,
+  "supplement_head": "cf05be2bce4e619dbc5b0cc56b830337c447e3e7",
+  "reference_sha": "058f8333b195d5314cc7cbd49a87aaf1869b409d",
+  "reference_files_read": {
+    "Railway/taiwan-rail-reference-clean/source/scripts/build_worldcover.py": {
+      "bytes": 5895,
+      "sha256": "a4f97643e300d32aa295a0abc28300c06df14ef410c892336759fea00e5c8356"
+    },
+    "Railway/taiwan-rail-reference-clean/source/scripts/verify_worldcover_data.py": {
+      "bytes": 2433,
+      "sha256": "3825c0041d38ba0ba0822b29611bd12d87f457c69b2a68c65b76abb9e8d5567d"
+    },
+    "Railway/taiwan-rail-reference-clean/source/rail-3d/landcover/worldcover-2021/manifest.json": {
+      "bytes": 2374,
+      "sha256": "c62b5d44c168b050f9e8ad74883f46b545458c62f4dee8e2da376de5b71c266b"
+    },
+    "Railway/taiwan-rail-reference-clean/source/docs/worldcover-0908.md": {
+      "bytes": 3875,
+      "sha256": "ab5b599d71cbd69844f9639e53db265abd7890d5b7e3b301a17fced1a25f21ca"
+    },
+    "Railway/taiwan-rail-reference-clean/source/docs/landscape-0908.md": {
+      "bytes": 5654,
+      "sha256": "19850c9cbab182584ef808c8ee9fa352913f66fd6a6b351b5014f7aa60ee982a"
+    }
+  },
+  "worldcover_reference_manifest": {
+    "dataset": "ESA WorldCover 2021 v200",
+    "year": 2021,
+    "sourceResolutionM": 10,
+    "displayResolutionMApprox": 70,
+    "license": "CC-BY-4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "citation": "https://doi.org/10.5281/zenodo.7254221",
+    "attribution": "© ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium",
+    "processing": "台灣海岸線遮罩；各 zoom 最近鄰分類取樣；拓樸保留簡化；不提供單株樹木位置或高度",
+    "coastline": {
+      "source": "內政部 直轄市、縣市界線(TWD97經緯度)",
+      "version": "1140318",
+      "license": "政府資料開放授權條款-第1版",
+      "sourceUrl": "https://data.gov.tw/dataset/7442",
+      "note": "以縣市界線共用邊消去（dissolve）取海岸線，RDP 簡化 ~150m；僅供圖磚載入前的離線海陸墊底圖"
+    },
+    "bounds": [
+      118.151366,
+      21.895601,
+      122.085059,
+      26.383474
+    ],
+    "minzoom": 6,
+    "maxzoom": 11,
+    "tiles": 918,
+    "nonemptyTiles": 276,
+    "bytes": 22967839,
+    "largestTileBytes": 391261,
+    "classPixelsAtMaxzoom": {
+      "wood": 5555754,
+      "scrub": 82,
+      "grass": 343227,
+      "farmland": 708414,
+      "built": 617973,
+      "bare": 90627,
+      "snow": 2,
+      "water": 245304,
+      "wetland": 1515,
+      "mangrove": 253,
+      "moss": 0
+    },
+    "sources": [
+      {
+        "tile": "N21E117",
+        "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N21E117_Map.tif",
+        "sha256": "072533cfdf31cfddf3f4d033fe4b48df36448a5b36dd20f80abd80e2841244fb"
+      },
+      {
+        "tile": "N21E120",
+        "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N21E120_Map.tif",
+        "sha256": "b23a186262569b69c05b7638e6fa0645a7376ebbb2644a8eac8c58fa8a767bd2"
+      },
+      {
+        "tile": "N24E117",
+        "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N24E117_Map.tif",
+        "sha256": "99cbc3abd8b76a1bcb81e1e614323506807076dad6799b0727644cbf6a4024c1"
+      },
+      {
+        "tile": "N24E120",
+        "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N24E120_Map.tif",
+        "sha256": "730c11c72158595d6fcc9b0fe4a61ff2fb786e17f08a3412542ce7e4de17a3c9"
+      }
+    ]
+  },
+  "hong_kong": "PR820 reports GLTF0 43,394,698 bytes and textured Range sample; own environment returned403, not independently reproduced. See supplement for original sample counts/timings/terms.",
+  "comparison_limit": "Supplement uses z13 and independent zone thresholds without tile-boundary clipping; main study uses z14, tile clipping and PlaceGrid majority/tie priority. Regional comparisons are not directly comparable or nationwide ground truth."
+}

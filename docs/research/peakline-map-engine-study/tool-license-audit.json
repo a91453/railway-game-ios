@@ -3,19 +3,22 @@
     "name": "gltf-transform-core",
     "source": "https://github.com/donmccurdy/glTF-Transform/tree/v4.5.1",
     "bytes": 1078,
-    "license_sha256": "2c4f111d00dbf22b10d31a14813c5f5de6a828640f7311f26b9dda89b3fce165"
+    "license_sha256": "2c4f111d00dbf22b10d31a14813c5f5de6a828640f7311f26b9dda89b3fce165",
+    "scope": "Direct package LICENSE only; does not cover transitive dependencies. See bridge-license-audit.json for LGPL correction and the five-package MIT route."
   },
   {
     "name": "gltf-transform-extensions",
     "source": "https://github.com/donmccurdy/glTF-Transform/tree/v4.5.1",
     "bytes": 1078,
-    "license_sha256": "2c4f111d00dbf22b10d31a14813c5f5de6a828640f7311f26b9dda89b3fce165"
+    "license_sha256": "2c4f111d00dbf22b10d31a14813c5f5de6a828640f7311f26b9dda89b3fce165",
+    "scope": "Direct package LICENSE only; does not cover transitive dependencies. See bridge-license-audit.json for LGPL correction and the five-package MIT route."
   },
   {
     "name": "gltf-transform-functions",
     "source": "https://github.com/donmccurdy/glTF-Transform/tree/v4.5.1",
     "bytes": 1078,
-    "license_sha256": "2c4f111d00dbf22b10d31a14813c5f5de6a828640f7311f26b9dda89b3fce165"
+    "license_sha256": "2c4f111d00dbf22b10d31a14813c5f5de6a828640f7311f26b9dda89b3fce165",
+    "scope": "Direct package LICENSE only; does not cover transitive dependencies. See bridge-license-audit.json for LGPL correction and the five-package MIT route."
   },
   {
     "name": "meshoptimizer",

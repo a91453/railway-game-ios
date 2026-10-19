@@ -1,0 +1,18 @@
+{
+  "environment": "Linux x86_64 / Node 22.14.0",
+  "sourceSha256": "3a2f9b30fd928139d96196d03bf8e4833926aa965f8f70b6eec5a91853f65075",
+  "selectedNodes": 12,
+  "triangles": 2488,
+  "colors": 7,
+  "paintTriangles": 591,
+  "glowingTriangles": 112,
+  "normalizedGlbBytes": 118988,
+  "normalizedGlbSha256": "edc7f7b0cb63d8491fdf8927e5fead01bbb1b98ff6fc7df99a60fa82fa4ba986",
+  "m3dmodelBytes": 129700,
+  "m3dmodelSha256": "41b1f5b250bc5a5551482bb9c07b419acceb3001b5b1f6fb40d59bdd8a0a928f",
+  "trianglePayloadBytes": 129376,
+  "trianglePayloadSha256": "2903b7cbd5f280f9aa3515e0c22138d968532ff567fc67d1641d19317864294c",
+  "sameTrianglePayloadAsOriginalExperiment": true,
+  "provenance": "Scratch-only non-AI provenance function, unchanged triangle conversion; formal converter interface remains unimplemented.",
+  "limitations": "No functions package; sample-specific cleanup only; no quantization, KTX2, skin, simplification, App or device verification."
+}

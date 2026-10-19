@@ -26,6 +26,23 @@
       "name": "Swift build/tests, iOS build, Simulator, iPhone measurement",
       "status": "UNVERIFIED",
       "reason": "No production Swift/App change; no Swift6.4/Xcode/device execution this research"
+    },
+    {
+      "name": "Five-package MIT-only static bridge replay",
+      "status": "VERIFIED",
+      "environment": "Linux x86_64 / Node22.14.0",
+      "result": "12 nodes, 2488 triangles, 7 colors; 129376 triangle payload bytes identical to original experiment. Original functions simplification/dequantization not rerun."
+    },
+    {
+      "name": "Full minimal npm dependency tree and LICENSE texts",
+      "status": "VERIFIED",
+      "result": "5 installed packages, each MIT; lock integrity and LICENSE SHA retained. Historical offline lock contains 14 LGPL-bearing platform/wasm entries, not recommended."
+    },
+    {
+      "name": "PR820 supplement and reference WorldCover cross-check",
+      "status": "VERIFIED",
+      "result": "cf05be2 supplement read; reference source/manifest file hashes retained; HK sample remains externally reported, not independently reproduced."
     }
-  ]
+  ],
+  "followup_checked_at": "2026-10-19T07:06:52.336637+00:00"
 }

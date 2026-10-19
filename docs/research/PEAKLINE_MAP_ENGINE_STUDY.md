@@ -4,6 +4,8 @@
 
 **建議先做一個 tools-only 的「靜態 meshopt GLB → `.m3dmodel` 橋接」**：解開壓縮、明確挑一組節點、接上非 AI 素材來源紀錄，沿用現有讀取器。現有 Metal 已有分塊、剔除、LOD、instancing 與量測；換 wgpu／Rust 不會直接補出建物或解決這次實際遇到的轉檔缺口。WorldCover 有補林地空白的價值，但需守住既有水域、農地與城市擺放語意，列為有條件候選。
 
+2026-10-19 交叉查核更新：本檔是主報告；[#820 的補充](https://github.com/a91453/railway-game-ios/blob/cf05be2bce4e619dbc5b0cc56b830337c447e3e7/docs/research/PEAKLINE_STUDY_SUPPLEMENT_2026-10-19.md)另保存香港實際樣本、參考庫 WorldCover 流程與更多模型格式邊界，不重複完整盤點。補充基準為 `cf05be2bce4e619dbc5b0cc56b830337c447e3e7`。本次修正初版漏查的 functions 間接 LGPL 授權，新增只用五個 MIT 套件的靜態重跑證據；香港數字保留為對方環境結果，不宣稱已在本環境重現。交叉核對時remote main已到 `59b568dfcd0ebf52555778e54eb0d7921d162178`（觀光列車變更），已讀其指引／HANDOFF差異；下列小樣本與主要程式查核數據仍固定在原研究SHA，不宣稱重測新main。
+
 ## 1. 基準、範圍與證據等級
 
 - 開始研究時由 `git ls-remote … refs/heads/main` 確認最新 main：**`43f6abc95bd4235a07f91480e401231cbf4cfe5f`**。其 commit 時間為 2026-10-19 13:24:32 +08:00；與任務書基準相同。
@@ -40,7 +42,7 @@ Peakline 的第三方告知只能證明列名與聲明。不能由此取得它�
 
 先讀 `AGENTS.md`、`CLAUDE.md`、`docs/OVERVIEW.md`、`docs/HANDOFF.md`（尤其§2–4、§7.3）、`NEXT_PRIORITIES_2026-10-12.md` 的現行方向，並查 ARCHITECTURE 229、230、231、234、238、239、242、244。美術依 `.claude/skills/art-style/SKILL.md` §7：原生微縮、平塗、調色盤、淡材質；參考素材需拆件重組，公開repo不放原始參考GLB及其對照。這次未製作正式App美術。
 
-HANDOFF §3／#729 已同意 **glTF-Transform 與 meshoptimizer 僅在 tools 使用**：固定版本、工具自己的 package.json／lockfile、README 授權記錄、不被 App／Swift 套件讀取或打包。本研究沿用這個決策，沒有重新列成未批准。研究重現用的 npm manifest／lock 是[證據檔](peakline-map-engine-study/offline-package.json)，只在暫存目錄安裝；正式工具接線留給§8。
+HANDOFF §3／#729 已同意 **glTF-Transform 與 meshoptimizer 僅在 tools 使用**：固定版本、工具自己的 package.json／lockfile、README 授權記錄、不被 App／Swift 套件讀取或打包。本研究沿用這個決策，沒有重新列成未批准。初版研究的 [offline-package.json](peakline-map-engine-study/offline-package.json)／lock 保留為歷史證據，**其 functions 間接引入 LGPL 套件，不能概括在這項 MIT 授權決策內**。後續靜態橋接與重跑改用 [bridge-package.json](peakline-map-engine-study/bridge-package.json)／[lock](peakline-map-engine-study/bridge-package-lock.json)，只有 core、extensions、meshoptimizer 及兩個 MIT 間接套件；全五包 LICENSE 核對見 [bridge-license-audit.json](peakline-map-engine-study/bridge-license-audit.json)。正式工具接線留給§8。
 
 | 已查檔案 | 本次原始碼結論／限制 |
 | --- | --- |
@@ -55,7 +57,7 @@ HANDOFF §3／#729 已同意 **glTF-Transform 與 meshoptimizer 僅在 tools 使
 | `Map3DBaseMap.swift`、`Map3DRealGround.swift` | **新增地表不能只直接套舊cover入口**：`addArea`的wood／park／water也會把格子加入`taken`，影響程序城市的展示擺放。WorldCover純視覺層應避免繼承這種效果。|
 | `PHASE6_LAND_USE_STUDY.md`、`MOTION_3D_TOOLS_2026-10-16.md`、`3D_DIRECTION_STUDY.md`、`MESHY_TRIAL_MODEL_SPEC_2026-10-17.md` | 既有研究已有WorldCover相關參考和離線GLB方向；本次是在現況上補實證，沒有宣稱repo從未研究WorldCover，也沒有把已完成普通轉檔器再列成待做。|
 
-## 3. 香港模型：來源有價值，未取得的樣本不能當通過
+## 3. 香港模型：本環境未取得，補充研究已有實際樣本
 
 [地政總署產品說明](https://www.landsd.gov.hk/en/survey-mapping/mapping/3d-mapping.html)區分單體化、無貼圖、由斜視航空影像生成的整片mesh。[單體化資料頁](https://data.gov.hk/en-data/dataset/hk-landsd-openmap-3d-visualisation-map-individualised-models)列MAX／FBX／GLTF。GLTF列名不保證是單一嵌入式GLB，也不保證沒有擴充、外部貼圖、地理座標或多物件；需以實際包為準。
 
@@ -74,6 +76,14 @@ HANDOFF §3／#729 已同意 **glTF-Transform 與 meshoptimizer 僅在 tools 使
 VERIFIED — Linux：讀取官方[下載API](https://3d.map.gov.hk/mapviewer/app/download-api?l=en-US)、圖幅索引、[模型大小CSV](https://3d.map.gov.hk/mapviewer/app/grid/INDIVIDUAL_MODELS_DATA_SIZE.csv)。API以format與1:1000圖幅選包，單體化不等於可逐棟網路下載。官方示例`11-NW-10B`在清單的GLTF約**5,723.7 MB**，因此未下載；另找出`10-SW-19C`約**2.4 MB**做小樣本候選。
 
 實際查詢公開下載流程產生的`https://data11.map.gov.hk/api/3d-zip/GLTF/10-SW-19C.zip`（參數值不寫入repo）回 **403、199 bytes、HTML**，不是ZIP；原download主機的示例查詢也回403。目錄與CSV可讀不等於模型可取得。[hk-acquisition.json](peakline-map-engine-study/hk-acquisition.json)保留無敏感參數的結果。**沒有取得香港模型**，故資料版本、實際模型授權包、CRS／單位、原點、朝向、單棟操作、面數、轉檔、外觀與手機效能均UNVERIFIED。403的根因未確定，不宣稱資料全球不可用或必須付費。
+
+### #820 補充的實際樣本（非本環境重跑）
+
+[補充§2](https://github.com/a91453/railway-game-ios/blob/cf05be2bce4e619dbc5b0cc56b830337c447e3e7/docs/research/PEAKLINE_STUDY_SUPPLEMENT_2026-10-19.md#2-香港單體化模型其實拿得到)記錄同日由無金鑰的 `download.map.gov.hk/api/3d-zip/{格式}/11-NW-10B.zip` 取得 2026-07-17 修訂批次：GLTF0 ZIP **43,394,698 bytes**；帶貼圖 ZIP 的 Content-Length **861,053,392 bytes**，並用 HTTP Range 只取一棟四檔 **171,507 bytes**。CSV的5,723.7 MB與ZIP長度不同，不能當作實際下載量；選樣前應查實際 Content-Length／Range。對方已取得不推翻本環境的403記錄；本環境對該無金鑰路徑仍回403，根因未定。
+
+補充的無貼圖圖幅含161棟、102,541面，中位353面、最多4,964面；每棟是 `.gltf`＋外部 `.bin`，帶貼圖另有JPEG／PNG，未用glTF擴充。三件轉檔樣本為351面／1色／18,652 bytes、同棟帶貼圖351面／8色／18,676 bytes，以及高樓4,964面／258,528 bytes。外形增加退縮與屋頂細節；照片窗格在平塗後明顯流失。無貼圖建物全部、貼圖建物105面被現有中性色啟發式誤當塗裝，說明「轉成功」仍需一般建物的材質策略。以上為 **#820 Linux樣本證據**，模型／CRS／轉換時間未在本環境獨立重跑。
+
+補充的原converter測試使用scratch `generated.json`來源佔位資料，因此只證明幾何／烘色路徑；**正式非AI來源接口仍未完成**。外部 `.gltf` 打包、HK1980方格座標／公尺／高程及z-up→y-up矩陣、一般建物關閉塗裝猜測，列為日後建物接線條件，不擴大§8的靜態GLB任務。下載API頁另指向 LandsD Map API 條款，含圖面標誌／copyright與呼叫限制；散布前需核對實際取得路徑，不能用CSDI總條款替代。詳見補充§2.4；本研究沒有散布香港原始模型。
 
 取得後需先驗：CRS／垂直基準→轉局部公尺、HK網格或地心座標→遊戲座標、是否Z-up／Y-up、節點矩陣、單棟選取與貼圖URI，再測幾何／貼圖／簡化／烘色。不要對地理模型直接套公車的「長12m、重置地面」邏輯；絕對海拔和底高分開保存。
 
@@ -109,6 +119,12 @@ VERIFIED — Linux：原工具直接輸出 **1,543面、8色、81,636 bytes**，
 原始比較圖留`/workspace/scratch/peakline-study/reference-comparison-private.png`，不提交公開repo，遵守HANDOFF §3與art-style §7的原始素材對照規則。圖以相同12m、相同CPU正交相機比較解碼前後及減面版本；可用本次交付的暫存重現包在有參考庫權限的環境重建。沒有把單純改色縮面當成可直接入App的美術成品。
 
 **大小不能混比**：823,224→97,044 bytes的「單台解碼GLB」同時刪掉其餘201個mesh，不能宣稱是壓縮率改善。公平的完整同內容檔案比較是823,224→1,043,372。`.m3dmodel`展開成平塗GPU頂點時，每面3×40B：2,488面為**298,560 bytes**、1,391面為**166,920 bytes**；普通公車為185,160 bytes。這是按現行reader布局計算的vertex payload，不含其他場景、緩衝配置與實例，**未在GPU實測配置或幀時間**。
+
+### 4.2a 排除 functions 後的靜態重跑
+
+VERIFIED — Linux／Node22.14.0：在乾淨scratch安裝 `bridge-package.json` 的三個直接依賴，`npm ls --all`只有五包；逐包讀到MIT許可正文並記LICENSE SHA。只用core／extensions／meshoptimizer解碼，同樣明確挑12個`bus__`節點，以本樣本的引用集合清理未用mesh／accessor／material，沒有import functions。普通GLB **118,988 bytes**；再經同一scratch非AI來源函式，M3DM **129,700 bytes、2,488面、7色**，其 **129,376-byte三角形payload與§4.2原實驗逐byte相同**。檔頭來源SHA因中介GLB編碼不同而變，沒有宣稱整個M3DM hash相同。數據與SHA見 [bridge-replay.json](peakline-map-engine-study/bridge-replay.json)。
+
+這只驗證靜態、無貼圖樣本，不是通用prune實作；§4.2減面與§4.3反量化仍是原含functions環境的歷史數據，未在此新環境重跑。後續若要減面可另試同一MIT套件的`MeshoptSimplifier`，但不納入§8第一版。
 
 ### 4.3 額外邊界樣本：量化、KTX2與skin
 
@@ -149,6 +165,12 @@ VERIFIED — Linux：範圍 **120.76–120.82°E／23.80–23.86°N**，集集�
 - 2021距研究日約5年，新增聚落、開發、河道與耕作變化都可能過時；樹／作物、人工地表／裸地、濕地邊界分類也會錯。官方全球整體精度不是這40.81km²的實測精度，故不拿全球數字替本區驗收。
 
 圖中右側只是離線候選合成。未遮罩道路、現有建物／軌道的候選面積屬上限；實作樹木前必須另排除它們。尤其現有`addArea(.wood)`會拿走程序城市展示地塊，不能把所有候選樹類直接塞入該入口，讓有城鎮的地方被樹林遮掉。
+
+### 可重用的參考庫流程與區域結論限制
+
+交叉查核[#820補充§3](https://github.com/a91453/railway-game-ios/blob/cf05be2bce4e619dbc5b0cc56b830337c447e3e7/docs/research/PEAKLINE_STUDY_SUPPLEMENT_2026-10-19.md#3-worldcover參考庫已經做好而且空缺在平原)後，已直接讀同一參考SHA的 `Railway/taiwan-rail-reference-clean/source/scripts/build_worldcover.py`、`verify_worldcover_data.py`、`rail-3d/landcover/worldcover-2021/manifest.json`及兩篇landscape／WorldCover說明；檔案SHA與manifest摘錄見 [supplement-review.json](peakline-map-engine-study/supplement-review.json)。這是初版參考檢查漏列的現成路徑。產生器由四塊官方COG、內政部1140318縣市界海岸mask、最近鄰256²分類與拓撲簡化輸出MVT。manifest記 **z6–11共918塊、276非空、22,967,839 bytes、最大391,261 bytes，近景約70m**；並保留WorldCover CC BY4.0與海岸來源政府資料開放授權。這是**參考成品既有容量**，不是目前App的包體增量，也不是已在本專案跑過全臺製程。後續優先轉接／裁切這條路徑，不重寫已有切圖器；仍須處理本專案mask與`taken`語意。
+
+補充兩樣區的WorldCover樹木與OSM林地交集為宜蘭29.2%、平溪94.3%，說明收益隨區域不同；本報告的集集樣本也有林地空缺。**不能由這三區推定全臺「空缺只在平原」或「山區已完整」**。補充比較器取OSM z13、未裁tile buffer，分區各自用門檻判斷；本比較取App 3D使用的z14、裁tile邊界並解分區majority／tie。因此數字只各自支援其樣區，跨區排序或精算收益前須統一取樣口徑。兩者均未以同期真值驗證分類準確率，也未證明遊戲畫面更好。
 
 ### 建議映射與最小整合位置
 
@@ -195,10 +217,10 @@ VERIFIED — Linux：範圍 **120.76–120.82°E／23.80–23.86°N**，集集�
 
 | 候選／優先 | 解決現有問題／已具備部分 | 缺口與整合位置／成本 | 授權／實證 |
 | --- | --- | --- | --- |
-| **1 優先試作：靜態meshopt離線橋接** | 壓縮參考被拒；已有普通GLB→M3DM與原生reader | tools內解碼、節點選取、非AI provenance；小。資料格式／renderer不動 | glTF-Transform4.5.1、meshoptimizer1.3.0 MIT；靜態樣本幾何解碼與scratch輸出通過；正式主工具接口未做 |
+| **1 優先試作：靜態meshopt離線橋接** | 壓縮參考被拒；已有普通GLB→M3DM與原生reader | tools內解碼、節點選取、非AI provenance；小。資料格式／renderer不動 | core／extensions4.5.1、meshoptimizer1.3.0及間接兩包共五包MIT；無functions靜態重跑通過；正式主工具接口未做 |
 | 2 有條件：WorldCover遠景補漏 | 有OSM覆蓋，但集集存在未分類帶 | 離線視覺mask＋2D/3D展示接線；中。避免taken、道路、城鎮、water／zones | 2021 v200、CC BY4.0、免費；本區比較通過，非真值精度或實機驗收 |
 | 3 有條件：香港Building／3D-BIT00 L1 | 香港實景量體；已有擠出器 | 選批次、CRS／高度語意→CityTile類似中介；中 | 官方頁可確認用途；未下載schema／版本／條款包，不當已可打包 |
-| 4 有條件：香港單體化／無貼圖精選 | 地標外形或生成城市幾何細節 | 分件、重組、LOD、材質改寫、原點；中到高 | CSDI路徑條件可商用；小包下載403，模型整合未驗 |
+| 4 有條件：香港單體化／無貼圖精選 | 地標外形或生成城市幾何細節 | 分件、重組、LOD、材質改寫、原點；中到高 | 本環境下載403；#820已取得兩種樣本並烘色，暴露塗裝誤判及細節流失；實際路徑條款需另核 |
 | 5 暫緩：整片攝影mesh／全城素材 | 遠景實景 | 地面切分、單棟獨立操作、城市避讓、容量；高 | 未取得樣本；不能以城市目錄的GLTF標籤當作現成遊戲素材 |
 | 6 有條件但暫不接：KTX2／量化／角色skin | 複雜參考素材 | 幾何、貼圖、pose及來源是四個獨立問題；高於靜態橋接 | 本次三張KTX2轉PNG與反量化通過；skin未通過完整輸出驗收，授權檔亦有缺口 |
 | 7 暫緩：wgpu／UniFFI／Naga遷移 | 未來跨平台renderer／Rust模組 | 現已有Metal／Swift；遷移成本高，沒有手機對照數據 | wgpu指定包MIT OR Apache；UniFFI MPL2.0；不是本次地圖素材工作的前置 |
@@ -209,7 +231,7 @@ VERIFIED — Linux：範圍 **120.76–120.82°E／23.80–23.86°N**，集集�
 - **香港CSDI**：[條款](https://portal.csdi.gov.hk/csdi-webpage/doc/TNC)§3允許依條件免費商業／非商業下載、重製、散布等，須在副本清楚標政府與CSDI來源、承認相關權利，並有免責及賠償條款。這不是把資料改成CC0。所選模型未下載，修改／派生素材的具體包內附加條件仍待查；進App前保存版本、原始告示、修改記錄及credits。地政總署一般產品頁也保留HKMS價格／訂購說明，不能把CSDI免費路徑擴大到所有批次／平台／服務均無費用。
 - **WorldCover2021 v200**：官方頁與[CC BY4.0](https://creativecommons.org/licenses/by/4.0/legalcode.en)允許商用、修改、分享；保留作者／來源／授權連結及修改說明。圖中及本報告保留「© ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium. CC BY 4.0.」本次修改為裁切、分類mask、多數重採樣與繪圖；若日後進App，再把同等資訊加`DataSourceCredits`。
 - **OSM**：既有底圖與分區來源持續標OSM contributors／ODbL；本次分類比較未用Peakline重製資料庫。Produced Work圖像與衍生資料庫的散布義務須分開，不以截圖署名替代實際資料的ODbL處理。[官方copyright](https://www.openstreetmap.org/copyright)
-- **meshoptimizer1.3.0／glTF-Transform4.5.1**：實際安裝npm包讀LICENSE；均MIT，可商用修改散布，需保留版權與許可告示，無工具本身授權費。這不授權任何輸入模型。僅暫存研究使用；若實作正式tools，沿既定固定版本／lockfile／README告示。
+- **meshoptimizer1.3.0／glTF-Transform4.5.1**：直接包為MIT，但初版僅查直接包而漏掉 `functions → ndarray-pixels5.2.0 → sharp0.35.5 → @img/sharp-libvips-*1.3.4` 的LGPL-3.0-or-later；歷史lock也列含LGPL的wasm條目。這項漏查已修正：原lock／減面與反量化量測照實保留，不再推薦安裝該環境或將其視為§3的MIT決策已涵蓋。LGPL不等於禁止商用或要求整個獨立遊戲開源；此處按repo未同意重用copyleft的規則，縮到不含functions的路徑即可完成最小任務，不另增批准流程。新bridge lock的core／extensions4.5.1、meshoptimizer1.3.0、property-graph4.1.0、ktx-parse1.1.0全五包已查MIT正文與SHA，見bridge-license-audit.json；散布程式仍須保留版權／許可。這不授權輸入模型。正式tools沿固定版本／lockfile／README告示。
 - **wgpu30.0.1／Naga30.0.1**：下載相關來源包，checksum相符，讀到MIT及Apache授權檔；實際選用時可依雙授權擇一、保留適用告示與NOTICE／修改要求。各平台間接依賴另有自己的條款；這份沒有把同repo全列一概改授權，也未把crate加進App。
 - **UniFFI0.32.2**：8個來源包的Cargo.toml／registry宣告MPL-2.0；包內未找到獨立LICENSE，另核官方tag `v0.32.2`（`7bc621ee9d0d15371d792612707ba5ed4111f950`）的LICENSE。[MPL FAQ](https://www.mozilla.org/en-US/MPL/2.0/FAQ/)說明檔案範圍的義務；散布受涵蓋可執行碼時需讓接收者能取得對應Source Code Form並告知取得方法，保留授權告示，修改受涵蓋檔案須依MPL提供。可與獨立的閉源遊戲組成Larger Work；**未修改不等於沒有告知／原始碼提供義務，也不要求整個獨立遊戲開源**。只在內部跑產碼與實際散布runtime／受涵蓋產物的情形應分查。沒有複製MPL程式進本專案。
 - **weedle2 5.0.0**：實際crate的LICENSE.md是MIT；共用UniFFI repo不改變C129原授權。**unicode-ident1.0.26**包有Unicode授權檔，保留`(MIT OR Apache-2.0) AND Unicode-3.0`，不能漏掉AND條件。
@@ -222,7 +244,7 @@ VERIFIED — Linux：範圍 **120.76–120.82°E／23.80–23.86°N**，集集�
 
 ### 範圍與位置
 
-1. `tools/glb-to-m3dmodel/`新增一個顯式前處理入口和小型manifest：input／節點名白名單／front／length或單位策略／來源URL或私有引用／版本SHA／授權與署名文字。輸入EXT_meshopt以官方decoder解開後產生普通GLB；保留節點矩陣，不只複製POSITION。固定glTF-Transform4.5.1與meshoptimizer1.3.0，工具自己的package.json、lockfile及README授權記錄。
+1. `tools/glb-to-m3dmodel/`新增一個顯式前處理入口和小型manifest：input／節點名白名單／front／length或單位策略／來源URL或私有引用／版本SHA／授權與署名文字。輸入EXT_meshopt以官方decoder解開後產生普通GLB；保留節點矩陣，不只複製POSITION。固定`@gltf-transform/core`／`extensions`4.5.1與meshoptimizer1.3.0，**不加functions**；以本報告bridge lock的五個MIT包為起點，工具自己的package.json、lockfile及README授權記錄。節點引用清理使用core API，不為prune拉入影像依賴；第一版不做反量化。
 2. `convert.mjs`增加**非AI來源紀錄接口**，保留既有Meshy驗證；非AI支路不捏造generated.tasks、不寫aiGenerated=true。兩支路都要求可追溯來源，輸出既有M3DM v1，無需改`Map3DModelFile`。
 3. 邊界明確：第一版只處理EXT_meshopt與普通色材質，未知required extension、量化／KTX2、外部資源、skin／animation／morph等未支援語意明確拒絕。減面在此次研究證明可行，但**不列進第一版任務**；先讓可選的靜態模型可靠進現有格式。
 4. 測試放`tools/glb-to-m3dmodel/`；用本專案自製、無第三方素材的壓縮fixture測變換／節點選取／錯誤邊界。實際私有參考樣本只在本地重跑，不把原檔或改名原檔當fixture提交。README補命令與接手點，HANDOFF更新一小段。
@@ -234,6 +256,7 @@ VERIFIED — Linux：範圍 **120.76–120.82°E／23.80–23.86°N**，集集�
 - 以本次靜態參考挑出的12件模型跑端到端，普通GLB與新入口產出的M3DM一致；目前主工具的非AI拒絕確實被合法來源支路取代，原本缺來源者仍拒絕。
 - 未支援skin／KTX2／量化／外部圖像及未知required擴充時，在輸出前給可操作錯誤；失敗不留下半個可用模型。不刪required宣告來假裝支援。
 - `.m3dmodel`由現有Swift reader讀入的檢查若執行，只用Swift6.4，標明Linux；不改App依賴、正式素材、renderer、GameCore、存檔或golden。工具不被App／Swift套件或Xcode資源規則打包。
+- lockfile完整依賴樹與實際安裝包授權均查核，維持五個MIT包；不得以只看直接包授權替代。
 - 此任務完成不等於模型美術採用或手機效能通過；素材拆件重組／Palette與同場景實機量測仍屬後續採用關卡，不在工具PR偷渡正式素材。
 
 ### 撤回
@@ -262,10 +285,10 @@ python3 -m venv /tmp/peakline-study-venv
 ### 模型重現方法
 
 1. checkout上述兩個完整SHA，確認三件原始模型SHA與metrics相符；從私有庫逐件`git show <sha>:<path>`取樣，原件留scratch。
-2. 把`offline-package.json`／`offline-package-lock.json`複製到一個scratch npm目錄、分別命名package.json／package-lock.json，Node22執行`npm ci --ignore-scripts`；不在App或Swift套件根目錄安裝。
+2. 靜態重跑使用`bridge-package.json`／`bridge-package-lock.json`，複製到scratch並命名package.json／package-lock.json，Node22執行`npm ci --ignore-scripts`；`npm ls --all`須只有五個MIT包。`offline-package*`保留原實驗環境，不再當推薦安裝入口；沒有將既有減面／反量化結果冒稱已用新環境重現。不在App或Swift套件根目錄安裝。
 3. 普通公車直接跑README的現行convert命令；原壓縮模型先跑同命令記錄拒絕，再用NodeIO註冊ALL_EXTENSIONS與`meshopt.decoder`，等待decoder.ready，讀完整檔。對每個壓縮buffer記header／mode／count×stride，驗證整檔場景與索引均可讀。
-4. 靜態樣本明確選`bus__`12節點，prune，移除已處理的meshopt擴充，寫普通GLB；原converter仍因來源拒絕。scratch複本**只替換provenance處理**做非AI記錄，再測輸出；另外用weld／simplify(.5,.01)／prune做一份對照，front=+z、length=12m。
-5. 角色樣本read→dequantize→移除已處理meshopt；三張KTX2取level0，用`ktx extract --transcode rgba8 input.ktx2 output.png`；替換texture並移除basisu後重試。保留skin，記錄未驗收完整輸出，不以忽略姿態宣稱成功。
+4. 靜態樣本明確選`bus__`12節點，用core引用集合清理未用mesh／accessor／material，移除已處理的meshopt擴充、合併buffer後寫普通GLB；原converter仍因來源拒絕。scratch複本**只替換provenance處理**做非AI記錄，再測輸出，front=+z、length=12m。新重跑比較M3DM的三角形payload逐byte相同，檔頭來源SHA允許因中介編碼而不同。原weld／simplify(.5,.01)／prune對照只記錄舊環境方法，不包含在新環境驗收。
+5. 原環境的角色階段方法（新MIT環境未重跑）：read→dequantize→移除已處理meshopt；三張KTX2取level0，用`ktx extract --transcode rgba8 input.ktx2 output.png`；替換texture並移除basisu後重試。保留skin，記錄未驗收完整輸出，不以忽略姿態宣稱成功。
 6. 固定相機比較普通公車與靜態參考的原材質／8色／減面；記錄輸出bytes、面數與3×40B GPU頂點推算。原始參考圖、模型加工腳本及來源對照留scratch／私有重現包，依HANDOFF不提交公開repo。
 
 本次完整加工腳本、工具版本、授權檔、執行紀錄另交暫存重現包；當前工作目錄為`/workspace/scratch/peakline-study/`。它包含主工具的scratch provenance差異，與公開repo正式程式分開；參考庫權限仍由接手者取得。公開報告保留方法、參數、SHA及數據，不以不可查的主觀「流暢」當證據。
@@ -280,7 +303,9 @@ python3 -m venv /tmp/peakline-study-venv
 | 普通GLB端到端＋4個既有Node測試 | VERIFIED — Node22／Linux |
 | 靜態meshopt整檔解碼、選件、scratch來源接口、減面／烘色輸出 | VERIFIED — Linux；正式converter橋接未實作，原始模型不是正式美術成品 |
 | 量化／KTX2角色 | VERIFIED — 幾何與3張貼圖階段；UNVERIFIED — skin姿態、整體模型輸出／減面／素材授權包完整性 |
-| 香港單體化模型 | UNVERIFIED — 403，未取得模型；無面數、轉換時間或外觀數字 |
+| 香港單體化模型 | 本環境UNVERIFIED — 403；#820 Linux取得／三件轉檔結果另引§3，未在本環境獨立重跑 |
+| 排除functions的靜態重跑／全依賴授權 | VERIFIED — Node22／Linux，五包LICENSE；12節點／2,488面／7色，三角形payload與原實驗相同；不含減面／反量化 |
+| 參考庫現成WorldCover | VERIFIED — 指定SHA原始碼／manifest查核；918塊23MB為參考成品，App整合與全臺製程重跑UNVERIFIED |
 | WorldCover同區比較／裁切／重採樣 | VERIFIED — Linux；UNVERIFIED — 同期真值精度、全臺容量、正式2D/3D接入 |
 | iOS build／Simulator／實機 | UNVERIFIED — 本次未執行；無手機FPS、GPU時間、記憶體配置或視覺驗收數字 |
 | wgpu／UniFFI／Rust遷移 | UNVERIFIED — 僅用途與授權研究，未建置／遷移或測速 |
