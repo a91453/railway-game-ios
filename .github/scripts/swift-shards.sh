@@ -295,7 +295,7 @@ set -euo pipefail
 # 14.4, TRADemoDayTests 2.8 of it) and campaigns-14 next (16.6,
 # HighSpeedDemoBatchTests 1.5). Both demo classes go to campaigns-16 (about
 # 14 min with them); rest (15.7) is then the longest.
-# 2026-10-19 (ARCHITECTURE decision 282): the high-speed demo is built over
+# 2026-10-19 (ARCHITECTURE decision 283): the high-speed demo is built over
 # the ground at its real structures, about three times as many edges.
 # Local debug, each class alone, main fa1e360 against the branch:
 # HighSpeedDemoTests 334.6 -> about 517 s, HighSpeedDemoDayTests 240.1 ->

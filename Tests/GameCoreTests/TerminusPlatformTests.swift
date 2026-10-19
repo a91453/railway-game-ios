@@ -2,7 +2,7 @@ import Foundation
 @testable import GameCore
 import XCTest
 
-/// Decision 282: with traffic control off, a train of real runs bound for a
+/// Decision 283: with traffic control off, a train of real runs bound for a
 /// terminus's platform track another train is still pulling out of, coming
 /// towards it, goes to a free platform. The high-speed demo built over the
 /// real ground stopped at 08:25 at Nangang this way (decision 281): THSR 8,

@@ -12072,7 +12072,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 1. Claude platform：修「遲到的車還佔著終點站的月台軌道時，另一班不再被排進同一條」（GameCore 的調度規則；重現：`HighSpeedDemo.spec` 的 `followsRealStructures` 改成 `true`，跑 `HighSpeedDemoDayTests`，08:25 南港的 THSR 8 與 THSR 27）。修好後在同一個 PR：開關改 `true`；`HighSpeedDemoTests.testItsTrackFollowsTheRealStructures` 不再跳過；`testItsTrackIsTheRealAlignmentsLength` 的邊數自動改用 1,000 的上限；`swift-shards.sh` 的 `CLASS_WEIGHTS` 照新的時間調（本機 debug：`HighSpeedDemoTests` 約 650 秒，平地時約 530；`HighSpeedDemoDayTests` 每建一次示範多約 90 秒）。
 2. Claude platform：用號誌開＋閉塞重量高鐵示範的一天（`TrafficControlTimingReportTests`，決策 280 的表），看南端夜裡的排隊少了多少；出入線只拿掉逆走正線這個根本原因，不保證一次解完，剩下的照調度規則處理。
 3. 左營月台離地 −3 到 −4 m（路塹）：真實的高鐵左營站沒有查證。
-- 之後：第 1、2 點由決策 282 做完，開關打開；第 2 點量到號誌開＋閉塞時左營咽喉白天就卡住（決策 282「結果」）。
+- 之後：第 1、2 點由決策 283 做完，開關打開；第 2 點量到號誌開＋閉塞時左營咽喉白天就卡住（決策 283「結果」）。
 
 **參考對照**（私有參考 `058f833`）：
 
@@ -12091,9 +12091,9 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 **驗證**：見 PR。
 
-### 282. 行車控制關著時：遲到的車還在終點站的股道上，進站的車改去空的一條；沿路看對向車看 20 km；兩列都還沒上共用的軌道時，遠的等近的；高鐵示範照真實高架與隧道建
+### 283. 行車控制關著時：遲到的車還在終點站的股道上，進站的車改去空的一條；沿路看對向車看 20 km；兩列都還沒上共用的軌道時，遠的等近的；高鐵示範照真實高架與隧道建
 
-2026-10-19。作者交辦（決策 281 的「下一步」第 1、2 點）：高鐵示範的開關 `followsRealStructures` 打開後，號誌關的一天在 08:25 卡死在南港咽喉；修 GameCore 的規則，同一個 PR 把開關打開、`HighSpeedDemoDayTests` 全過、調 `CLASS_WEIGHTS`，再用號誌開＋閉塞重量一天。號碼依 #231：決策 281 是 #812，所以取 282。存檔版本、golden schema 不動。
+2026-10-19。作者交辦（決策 281 的「下一步」第 1、2 點）：高鐵示範的開關 `followsRealStructures` 打開後，號誌關的一天在 08:25 卡死在南港咽喉；修 GameCore 的規則，同一個 PR 把開關打開、`HighSpeedDemoDayTests` 全過、調 `CLASS_WEIGHTS`，再用號誌開＋閉塞重量一天。號碼依 #231：決策 281 是 #812、282 是 #815（切開自動結構的軌道），所以取 283。存檔版本、golden schema 不動。
 
 **重現**（`main` fa1e360，開關改 `true`，Linux debug，`HighSpeedDemoDayTests`）：157 個失敗。下行線上的車分鐘 1,250（要 > 5,000）、上行 3,427，最晚的車晚 83,700 秒（23 小時），隔天清晨的班沒開，03:00 沒有一組在機廠。
 

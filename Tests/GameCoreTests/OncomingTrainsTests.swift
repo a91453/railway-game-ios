@@ -2,7 +2,7 @@ import Foundation
 @testable import GameCore
 import XCTest
 
-/// Decision 282: with traffic control off, of two trains of real runs on
+/// Decision 283: with traffic control off, of two trains of real runs on
 /// their way towards a single track from its two ends, neither on it yet,
 /// the farther waits short of it and the nearer goes first. Before, only a
 /// train still leaving its platform waited for a nearer one, and a train
@@ -16,7 +16,7 @@ import XCTest
 ///
 /// P runs PS to Pd and Q runs QS to Qd, both setting off at 06:00. S is
 /// forty short edges, more than the thirty-two a train was looked at along
-/// before (decision 282: and on to 20 km). Q starts nearer S than P does.
+/// before (decision 283: and on to 20 km). Q starts nearer S than P does.
 final class OncomingTrainsTests: XCTestCase {
     private struct Scene {
         var world: GameWorld

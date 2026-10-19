@@ -49,7 +49,7 @@ extension GameWorld {
     /// ``oncomingReach`` (see ``lookahead(of:)``).
     static let oncomingLookahead = 32
 
-    /// Decision 282: how far along its way, at least, a train is looked at
+    /// Decision 283: how far along its way, at least, a train is looked at
     /// for one coming the other way: 20 km, twice the high-speed demo's
     /// longest track run both ways (Nangang to Taipei). Thirty-two edges
     /// reached about that far on the demo laid flat, but its track laid
@@ -60,7 +60,7 @@ extension GameWorld {
 
     /// The edges of `train`'s path ahead it is looked at along for one
     /// coming the other way (decision 228): ``oncomingLookahead`` of them,
-    /// and on until they reach ``oncomingReach`` (decision 282).
+    /// and on until they reach ``oncomingReach`` (decision 283).
     func lookahead(of train: Train) -> ArraySlice<TrackEdgeID> {
         let edges = train.movement.remainingEdges
         guard edges.count > Self.oncomingLookahead else { return edges }
@@ -102,7 +102,7 @@ extension GameWorld {
     /// and going the same way along it, or the track it shares with a
     /// train coming the other way that is on it already, or that is nearer
     /// it (of two as near, the one with the lower ID goes first; before
-    /// decision 282 only while it is still leaving the platform of its last
+    /// decision 283 only while it is still leaving the platform of its last
     /// call); or, while it is still leaving that platform, where it joins
     /// the way of a faster train that would catch it before its next call
     /// (``catches(_:at:by:from:)``). `nil` when
@@ -315,7 +315,7 @@ extension GameWorld {
                   let near = starts[shared], near < distance else { continue }
             let meeting = theirs.order.filter { starts[$0.reversed] != nil }
             if !meeting.contains(where: theirs.body.contains) {
-                // Not on it yet: it lets one nearer go first. Decision 282:
+                // Not on it yet: it lets one nearer go first. Decision 283:
                 // on its way too, not only still leaving its platform. A
                 // set let off its platform by another hold went on, and
                 // neither it nor the one coming waited for the other until
@@ -371,7 +371,7 @@ extension GameWorld {
     /// along `path` up to ``platformApproach`` short of its end, and from
     /// there the shortest way to a free platform; when none is reached
     /// that way, to the one that is free soonest, if sooner than its own.
-    /// Decision 282: its own is taken, too, while another train comes out
+    /// Decision 283: its own is taken, too, while another train comes out
     /// along its track towards `train` (``trainLeavingTowards(_:along:)``),
     /// and no platform is gone to that one is coming out of. `nil` when
     /// `path` may stay as it is, or no better platform is reached that way.
@@ -379,7 +379,7 @@ extension GameWorld {
         guard case .onEdge(let first, let offset) = start,
               var waits = platformWaits(id, for: train, over: platformTimes(of: train, stop: next.stop, cycle: next.cycle)) else { return nil }
         let target = (path.traversals.last ?? first).edge
-        // Decision 282: taken while another train comes out along its track
+        // Decision 283: taken while another train comes out along its track
         // towards this one, until a while after now: it is late, so when it
         // will have gone is not known.
         if trainLeavingTowards(train, along: [first] + path.traversals) != nil {
@@ -401,7 +401,7 @@ extension GameWorld {
         let all = berths(of: id, length: train.length)
         for limit in Set(waits.values).sorted() where limit < own {
             var eligible = Set(all.filter { (waits[$0.traversal.edge] ?? .max) <= limit })
-            // Decision 282: nor one another train is coming out of towards it.
+            // Decision 283: nor one another train is coming out of towards it.
             while !eligible.isEmpty {
                 let found: TrainPath
                 if let cut, let length = network.edge(cut.traversal.edge)?.length {
@@ -434,7 +434,7 @@ extension GameWorld {
         return edges
     }
 
-    /// The edges trains travelling to a call are on (decision 282): where
+    /// The edges trains travelling to a call are on (decision 283): where
     /// ``freePlatformOnTheWay(of:standing:moving:memo:)`` looks for one
     /// coming out of a platform's track. Empty under traffic control, or
     /// without a line of real runs.
@@ -452,7 +452,7 @@ extension GameWorld {
     /// `train`, of a line with real runs, on its way to a call with traffic
     /// control off, when another train stands on the one it is bound for
     /// and a better one is free (see ``freePlatformPath(_:from:toStation:for:next:memo:)``):
-    /// a train that was due to leave it in time may not have. Decision 282:
+    /// a train that was due to leave it in time may not have. Decision 283:
     /// or when another train, late out of it, is coming along its track
     /// towards this one (see ``trainLeavingTowards(_:along:)``). `standing`
     /// and `moving` are where trains stand and travel as the services'
@@ -530,7 +530,7 @@ extension GameWorld {
 }
 
 extension GameWorld {
-    /// Decision 282: the edges of the track a platform on `edge` lies on:
+    /// Decision 283: the edges of the track a platform on `edge` lies on:
     /// `edge`, and on from it either way every edge up to the first node
     /// where more than two meet (a turnout) or a dead end. At a terminus,
     /// the track a train comes in by and goes out by, turned round.
@@ -550,7 +550,7 @@ extension GameWorld {
         return track
     }
 
-    /// Decision 282: another train, travelling to a call, whose body is on
+    /// Decision 283: another train, travelling to a call, whose body is on
     /// the track of the platform `way` ends at (``platformTrack(of:)``),
     /// running along it the other way round to `way`: coming out of that
     /// platform's track towards `train`, which runs `way` into it. `nil`
