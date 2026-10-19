@@ -18,6 +18,8 @@ import XCTest
 ///   B ──e0────────── n1 ──e1──────── J ┤
 ///   D1 (Depot) ──e5──┐  /              └──e3── PA2 (A)
 ///   D2 (Depot) ──e6── K ─e4
+///
+/// Edge `en` is `.edge(n + 1)`.
 final class PullOutRoomTests: XCTestCase {
     private func forward(_ edge: Int) -> TrackTraversal {
         TrackTraversal(edge: .edge(edge), direction: .forward)
