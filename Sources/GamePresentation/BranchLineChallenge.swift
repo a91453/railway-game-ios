@@ -226,8 +226,8 @@ extension BranchLineChallenge {
         silverDays: JijiTargets.silverDays,
         deadlineDays: JijiTargets.deadlineDays,
         welcome: (
-            "The Jiji Line is ours to lay again: from Ershui up the valley to Checheng. Reach Jiji, then Shuili, then Checheng, carry \(Money(JijiTargets.riders).displayText) riders a day and make a year's net profit of \(JijiTargets.profit.moneyText). Turn on Trace real in Network to follow the old line. A long line costs a lot to run: if it loses money, try a dearer fare.",
-            "集集線交給我們重新鋪：從二水沿著山谷到車埕。先到集集、再到水里、最後到車埕，每日運量達到 \(Money(JijiTargets.riders).displayText) 人次、一年淨利 \(JijiTargets.profit.moneyText)。在「路網」打開「沿真實鐵路」就能沿著舊線鋪。路線長、營運花費大，虧錢的話試著調高票價。"
+            "The Jiji Line is ours to lay again: from Ershui up the valley to Checheng. Reach Jiji, then Shuili, then Checheng, carry \(Money(JijiTargets.riders).displayText) riders a day and make a year's net profit of \(JijiTargets.profit.moneyText). Turn on Trace real in Network to follow the old line. The first months are lean: a long line is dear to run until the towns along it grow, so start with one short train.",
+            "集集線交給我們重新鋪：從二水沿著山谷到車埕。先到集集、再到水里、最後到車埕，每日運量達到 \(Money(JijiTargets.riders).displayText) 人次、一年淨利 \(JijiTargets.profit.moneyText)。在「路網」打開「沿真實鐵路」就能沿著舊線鋪。頭幾個月最辛苦：沿線城鎮長大之前，長路線的營運很花錢，先用一列短短的列車撐過去。"
         ),
         card: (
             "Milestones: Jiji, Shuili, Checheng · sights: Jiji Station, Checheng",
@@ -238,19 +238,22 @@ extension BranchLineChallenge {
 
 /// The Jiji challenge's targets (decision 289), measured by
 /// `JijiReportTests` (debug build, flat ground, the whole line laid on the
-/// first day for some $5.3 million, one train on a new line's hours):
-/// the flat $5 fare carries 10,600 riders a day in the first week and
-/// 20,000 by day 120, but fares bring some $55,000 a day against $90,000
-/// of running costs (mostly by the train-kilometre, so a shorter train
-/// hardly saves), and it goes bankrupt on day 77 to 80 whether the train
-/// has two cars or four. A flat $8 fare carries fewer (7,900 a day in the
-/// first week, 15,000 by day 180, 22,600 by day 720) and pays: $4.35
-/// million net in the first year, $20.3 million in the second. The Blue
-/// Train, 50 a car, carries only 6,000 and goes bankrupt on day 72. So the
-/// line is laid easily; the challenge is to make it pay, as the Pingxi
-/// challenge's (decision 90). Its ratings fall on the year-end closings.
+/// first day for some $5.3 million, one train on a new line's hours,
+/// these targets): the line carries 10,600 riders a day in its first
+/// week, but fares bring some $55,000 a day against $90,000 of running
+/// costs (mostly by the train-kilometre, so a shorter train hardly saves),
+/// until the towns along it grow: 19,900 riders on day 60, 38,300 on day
+/// 120, 50,300 on day 180. One train of two cars at the flat $5 fare gets
+/// through with its cash near nothing from day 30 to 60, then earns $30.9
+/// million net in its first year: gold on day 360. A flat $8 fare slows the
+/// towns (15,200 riders on day 360, 22,600 on day 720): $4.35 million net
+/// in the first year, the riders in the second, silver. Two trains of two
+/// spend too much too soon and go bankrupt on day 76; with $1 million less
+/// to start the flat fare's one train does too, on day 80. The Blue Train,
+/// 50 a car, carries only 6,000 a day and goes bankrupt on day 72. So the
+/// line is laid easily; the challenge is to get through its first months.
 enum JijiTargets {
-    static let riders: Int64 = 15_000
+    static let riders: Int64 = 20_000
     /// A closed year's net profit: $3,000,000.
     static let profit = Money(300_000_000)
     /// $7 million: the line on flat ground and $1.7 million to spare, for

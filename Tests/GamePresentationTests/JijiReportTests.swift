@@ -11,11 +11,12 @@ import XCTest
 ///     JIJI_REPORT=1 swift test -c release -Xswiftc -enable-testing \
 ///       --filter JijiReportTests
 ///
-/// `JIJI_PLAY` picks one way to play, `JIJI_TRACE=1` prints every day,
-/// `JIJI_DAYS` stops early and `JIJI_RICH=1` starts with money to spare
-/// (to measure what the line costs and earns). Every play lays the whole
-/// line along the real one (the app's `tra_sched|JIJI`, ``RealRailways``)
-/// on the first day, calling at its seven stations, with passing loops
+/// The numbers it measured are in ``JijiTargets``. `JIJI_PLAY` picks one
+/// way to play, `JIJI_TRACE=1` prints every day, `JIJI_DAYS` stops early
+/// and `JIJI_RICH=1` borrows the most the company may from the first day.
+/// Every play lays the whole line along the real one (the app's
+/// `tra_sched|JIJI`, ``RealRailways``) on the first day, calling at its
+/// seven stations, with passing loops
 /// where the real line has two tracks (Yuanquan, Zhuoshui, Longquan, Jiji,
 /// Shuili). The map is flat, without the ground the app reads: a stretch
 /// over the real water is a bridge (4 times the price), the rest on the
@@ -23,9 +24,9 @@ import XCTest
 /// here. The land is read round each station as the app reads it.
 ///
 /// Every line runs a new line's hours (06:00 to midnight). Its costs are
-/// mostly by the train-kilometre, not by the car (``GameWorld``'s hourly
-/// settlement: $0.42 a train-km, $0.75 a departure), so a short train costs
-/// nearly what a long one does.
+/// mostly by the train-kilometre and the departure, not by the car (the
+/// hourly settlement in `Operations.swift`), so a short train costs nearly
+/// what a long one does.
 ///
 /// - **Two cars**: one train of two standard cars, the flat $5 fare.
 /// - **Four cars**: one train of four, the flat fare.
