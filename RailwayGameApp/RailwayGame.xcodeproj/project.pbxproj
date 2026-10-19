@@ -12,6 +12,7 @@
 		02612154E68649C32252E2AF /* FinanceTrendCharts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 787EB9DDCEED2E78C0E0E237 /* FinanceTrendCharts.swift */; };
 		0A6DFB7DC5EF1467874F231E /* tra_platforms.json in Resources */ = {isa = PBXBuildFile; fileRef = 007476F85C3E1C799257C7B6 /* tra_platforms.json */; };
 		0CAEF26EBDE94052FA874ABE /* tra.json in Resources */ = {isa = PBXBuildFile; fileRef = FAA79D875396E732FE48A605 /* tra.json */; };
+		0E4EC2F54A6F330F9C0427F6 /* FeatureUITestWorld.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF11EF43ACFDD9FA340D2081 /* FeatureUITestWorld.swift */; };
 		0EA0D456816BC0F34F34AD3A /* LessonUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C02012D8840DFEC5FEBCB494 /* LessonUITests.swift */; };
 		0F9E2782FAEA7F557182B7DA /* thsr_track.json in Resources */ = {isa = PBXBuildFile; fileRef = 411F6A0DAE0C614613B6B4CE /* thsr_track.json */; };
 		10D525FC9BA6C8175B84AB5F /* station_names.json in Resources */ = {isa = PBXBuildFile; fileRef = 31AA7BB032ACE4E009B42AF1 /* station_names.json */; };
@@ -138,6 +139,7 @@
 		DE4556F23627CF834FB636CD /* MapQuickLayerStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC1E505164102E63F407C64 /* MapQuickLayerStrip.swift */; };
 		DE4AC9AE303F65DF2C543FF3 /* GamePresentation in Frameworks */ = {isa = PBXBuildFile; productRef = 45EC5C77CE30354C4B4E2BAF /* GamePresentation */; };
 		E0751BAC4F08ABCE62170267 /* GoalsPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA92CA4D96486CF019CFB053 /* GoalsPanel.swift */; };
+		E0AAF4F80FFB96017A1C7714 /* Feature284To286UITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00A3435B9D12725EEF9D3FA3 /* Feature284To286UITests.swift */; };
 		E185710E92BEBBD011BAA363 /* TutorialJourneyUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B79ADC872C8814C1468A48EA /* TutorialJourneyUITests.swift */; };
 		E2EBB2C322FFE308B9EABCBE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 41251B12461A0FD34DFCB786 /* Assets.xcassets */; };
 		EB5F149F1C5ED00E96A4BDB5 /* MiniMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81D550FDBEF9E69496D0BF4D /* MiniMapView.swift */; };
@@ -162,6 +164,7 @@
 
 /* Begin PBXFileReference section */
 		007476F85C3E1C799257C7B6 /* tra_platforms.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra_platforms.json; sourceTree = "<group>"; };
+		00A3435B9D12725EEF9D3FA3 /* Feature284To286UITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Feature284To286UITests.swift; sourceTree = "<group>"; };
 		080B5EA4C72E50F138757E75 /* NetworkControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkControls.swift; sourceTree = "<group>"; };
 		0A8A6A623CDA7792FB18C0A2 /* Palette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Palette.swift; sourceTree = "<group>"; };
 		0B4F958A2EC6D131F9218CDD /* MapAlertBubbles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapAlertBubbles.swift; sourceTree = "<group>"; };
@@ -276,6 +279,7 @@
 		CBAD6AED84A8DA58D17AC1C7 /* PopulationLegendView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopulationLegendView.swift; sourceTree = "<group>"; };
 		CCCFEDE062F8A4532BBAA221 /* taiwan_place_names.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = taiwan_place_names.json; sourceTree = "<group>"; };
 		CE177E709243BF5670A3607B /* StationCommerceSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationCommerceSection.swift; sourceTree = "<group>"; };
+		CF11EF43ACFDD9FA340D2081 /* FeatureUITestWorld.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureUITestWorld.swift; sourceTree = "<group>"; };
 		CF26D5EFF8FE10DB6A8376C9 /* taiwan_coverage.dat */ = {isa = PBXFileReference; path = taiwan_coverage.dat; sourceTree = "<group>"; };
 		D490F999E435A0570BE04635 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		D4C0B07BD9AF82071392AB20 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -361,6 +365,7 @@
 		323CCFDFD5FC7E9426C5F161 /* App */ = {
 			isa = PBXGroup;
 			children = (
+				CF11EF43ACFDD9FA340D2081 /* FeatureUITestWorld.swift */,
 				E6EEB9DC1C736BE4F98AD2BC /* GameAudio.swift */,
 				9D5672CF6C6C6FF4659709AE /* RailwayGameApp.swift */,
 			);
@@ -539,6 +544,7 @@
 		C0B361249E4B7CC041A973C6 /* UITests */ = {
 			isa = PBXGroup;
 			children = (
+				00A3435B9D12725EEF9D3FA3 /* Feature284To286UITests.swift */,
 				C02012D8840DFEC5FEBCB494 /* LessonUITests.swift */,
 				21275B6D1B1A72F75A29DA13 /* MapInteractionTests.swift */,
 				464ED7CD74C3D89609658AD5 /* RealWorldMapUITests.swift */,
@@ -736,6 +742,7 @@
 				CDA0BE241DE1D06BA9047372 /* ControlPanel.swift in Sources */,
 				225C04C52DFBA47A1A6F22A4 /* DataSourcesView.swift in Sources */,
 				647CBFF4717FB3B4384775E6 /* EconomyPanel.swift in Sources */,
+				0E4EC2F54A6F330F9C0427F6 /* FeatureUITestWorld.swift in Sources */,
 				823389D4FCA1A54E1DDAB274 /* FeedbackViews.swift in Sources */,
 				02612154E68649C32252E2AF /* FinanceTrendCharts.swift in Sources */,
 				DC0C16D1A36913B68ED98526 /* FleetOverviewSheet.swift in Sources */,
@@ -804,6 +811,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E0AAF4F80FFB96017A1C7714 /* Feature284To286UITests.swift in Sources */,
 				0EA0D456816BC0F34F34AD3A /* LessonUITests.swift in Sources */,
 				298E6F23EF908E81C6D9639F /* MapInteractionTests.swift in Sources */,
 				A63CC2F5042DB04F53E77F6D /* RealWorldMapUITests.swift in Sources */,
