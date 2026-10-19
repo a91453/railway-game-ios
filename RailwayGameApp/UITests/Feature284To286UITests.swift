@@ -71,11 +71,17 @@ final class Feature284To286UITests: XCTestCase {
         tap(app.buttons["menu.more"])
         tap(app.buttons["menu.tourism"])
         XCTAssertTrue(app.buttons["tourism.done"].appears(within: 10))
+        let list = app.collectionViews.firstMatch
+        XCTAssertTrue(list.appears(within: 10))
         let sight = app.staticTexts.matching(identifier: "tourism.row.1").firstMatch
-        reveal(sight)
+        XCTAssertTrue(app.scrollUntilShown(sight, in: list))
+        sight.waitUntilSettled()
         XCTAssertTrue(sight.label.contains("海岸老街"), sight.label)
         let bonus = app.staticTexts["有觀光列車停靠（+0.5★）"]
-        reveal(bonus)
+        // This sheet fills the phone. Its leading edge lies outside the
+        // landscape safe area; scroll through the text in its middle.
+        XCTAssertTrue(app.scrollUntilShown(bonus, in: list))
+        bonus.waitUntilSettled()
         XCTAssertTrue(bonus.becomesHittable(within: 5))
         tap(app.buttons["tourism.done"])
         XCTAssertTrue(app.buttons["tourism.done"].disappears(within: 10))
@@ -111,8 +117,10 @@ final class Feature284To286UITests: XCTestCase {
         for _ in 0..<40 {
             XCTAssertTrue(app.scrollUntilShown(previous, in: app.scrollViews.firstMatch))
             previous.waitUntilSettled()
-            let title = app.staticTexts[name].firstMatch
+            let title = catalogHeading(name)
             if title.exists, !title.frame.isEmpty, title.frame.maxY <= previous.frame.minY {
+                XCTAssertTrue(app.scrollUntilShown(title, in: app.scrollViews.firstMatch))
+                title.waitUntilSettled()
                 XCTAssertTrue(title.becomesHittable(within: 5))
                 return
             }
@@ -121,8 +129,14 @@ final class Feature284To286UITests: XCTestCase {
         XCTFail("The showroom never showed \(name)")
     }
 
+    private func catalogHeading(_ name: String) -> XCUIElement {
+        // The showroom and thumbnails use Train.typeText: the name is
+        // followed by capacity and doors, rather than being the whole label.
+        app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "\(name) ·")).firstMatch
+    }
+
     private func checkCatalogType(_ name: String) {
-        let heading = app.staticTexts[name].firstMatch
+        let heading = catalogHeading(name)
         XCTAssertTrue(heading.appears(within: 5))
         XCTAssertTrue(heading.becomesHittable(within: 5), "The showroom must show \(name)")
         let note = app.staticTexts["觀光列車：停靠景點 800 公尺內的車站時，景點加 0.5 星，觀光客會變多。"]
