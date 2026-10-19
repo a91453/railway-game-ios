@@ -58,6 +58,9 @@ public struct LineOperatingDay: Hashable, Identifiable, Sendable {
 public struct LineReport: Hashable, Identifiable, Sendable {
     public let line: LineID
     public let name: String
+    /// The current day's completed hourly settlements; excludes pending
+    /// activity and expenses posted only at the end of the day.
+    public let today: LineOperatingDay?
     /// The day before the clock's, or `nil` with no record of it.
     public let yesterday: LineOperatingDay?
     /// The completed days kept, oldest first (the day in progress is left
@@ -84,7 +87,18 @@ public struct LineReport: Hashable, Identifiable, Sendable {
     /// 87%": the line's row in the lines list.
     public func rowText(in language: DisplayLanguage) -> String {
         guard let yesterday else {
-            return language.text("No record of yesterday yet", "昨日還沒有紀錄")
+            // A new line has no "yesterday" yet. The hourly accounts can
+            // already tell the player whether its first trains carried
+            // anyone; avoid provisional profit because daily staff and
+            // energy costs have not been posted yet.
+            guard let today else {
+                return language.text("No record of yesterday yet", "昨日還沒有紀錄")
+            }
+            return language.joined([
+                language.text("Today so far (through last hour): \(Money(today.riders).displayText) riders", "今日（截至上個整點）\(Money(today.riders).displayText) 人次"),
+                language.text("fares \(today.fareRevenue.moneyText)", "票收 \(today.fareRevenue.moneyText)"),
+                language.text("peak \(today.peakLoadPercent)%", "尖峰 \(today.peakLoadPercent)%"),
+            ])
         }
         return language.joined([
             language.text("Yesterday \(Money(yesterday.riders).displayText) riders", "昨日 \(Money(yesterday.riders).displayText) 人次"),
@@ -136,8 +150,10 @@ extension GameWorld {
     public func lineReport(_ id: LineID) -> LineReport? {
         guard lineAccounts != nil, let line = line(id: id) else { return nil }
         let today = FinanceHistory.floorDay(clock.now)
-        let days = lineDays(id).filter { $0.day < today }.map(LineOperatingDay.init)
-        return LineReport(line: id, name: line.name, yesterday: days.first { $0.day == today - 1 }, days: days)
+        let lineDays = lineDays(id)
+        let days = lineDays.filter { $0.day < today }.map(LineOperatingDay.init)
+        let current = lineDays.first { $0.day == today }.map(LineOperatingDay.init)
+        return LineReport(line: id, name: line.name, today: current, yesterday: days.first { $0.day == today - 1 }, days: days)
     }
 
     /// Every line's report, in `order`; empty without line accounts.
