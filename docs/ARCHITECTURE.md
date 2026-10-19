@@ -12096,6 +12096,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 1. Claude platform：修「遲到的車還佔著終點站的月台軌道時，另一班不再被排進同一條」（GameCore 的調度規則；重現：`HighSpeedDemo.spec` 的 `followsRealStructures` 改成 `true`，跑 `HighSpeedDemoDayTests`，08:25 南港的 THSR 8 與 THSR 27）。修好後在同一個 PR：開關改 `true`；`HighSpeedDemoTests.testItsTrackFollowsTheRealStructures` 不再跳過；`testItsTrackIsTheRealAlignmentsLength` 的邊數自動改用 1,000 的上限；`swift-shards.sh` 的 `CLASS_WEIGHTS` 照新的時間調（本機 debug：`HighSpeedDemoTests` 約 650 秒，平地時約 530；`HighSpeedDemoDayTests` 每建一次示範多約 90 秒）。
 2. Claude platform：用號誌開＋閉塞重量高鐵示範的一天（`TrafficControlTimingReportTests`，決策 280 的表），看南端夜裡的排隊少了多少；出入線只拿掉逆走正線這個根本原因，不保證一次解完，剩下的照調度規則處理。
 3. 左營月台離地 −3 到 −4 m（路塹）：真實的高鐵左營站沒有查證。
+- 之後：第 1、2 點由決策 283 做完，開關打開；第 2 點量到號誌開＋閉塞時左營咽喉白天就卡住（決策 283「結果」）。
 
 **參考對照**（私有參考 `058f833`）：
 
@@ -12153,6 +12154,56 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 照舊重算，但把碰到的建物拆掉並收拆除費（和建造相同，決策 95）：切個轉轍器就拆房子、收錢，而且隧道還是會變成路塹，和玩家蓋的不一樣。
 
 **驗證**：見 PR。
+
+### 283. 行車控制關著時：遲到的車還在終點站的股道上，進站的車改去空的一條；沿路看對向車看 20 km；兩列都還沒上共用的軌道時，遠的等近的；高鐵示範照真實高架與隧道建
+
+2026-10-19。作者交辦（決策 281 的「下一步」第 1、2 點）：高鐵示範的開關 `followsRealStructures` 打開後，號誌關的一天在 08:25 卡死在南港咽喉；修 GameCore 的規則，同一個 PR 把開關打開、`HighSpeedDemoDayTests` 全過、調 `CLASS_WEIGHTS`，再用號誌開＋閉塞重量一天。號碼依 #231：決策 281 是 #812、282 是 #815（切開自動結構的軌道），所以取 283。存檔版本、golden schema 不動。
+
+**重現**（`main` fa1e360，開關改 `true`，Linux debug，`HighSpeedDemoDayTests`）：157 個失敗。下行線上的車分鐘 1,250（要 > 5,000）、上行 3,427，最晚的車晚 83,700 秒（23 小時），隔天清晨的班沒開，03:00 沒有一組在機廠。
+
+**為什麼**（探針，逐分鐘、逐秒看）：
+1. **08:25 南港**：THSR 8 晚了，08:18 才離開月台軌道 `1914`，車身停在它南邊的 `1915`（月台到咽喉的 300 m），等咽喉的下行線 `18`（100 m，兩個方向都走）上進站的車過去。THSR 27 也晚了，08:20 從台北開往 `1914`：決策 228 的「一個月台同時只排一班」只看停著的車和照時刻表會在的車，THSR 8 已經「開往台北」、照表也早該走了，所以 `1914` 看起來是空的。THSR 27 上了 `18`，停在 `1915` 前；THSR 8 等 `18`，THSR 27 等 `1915`。
+2. **沿路只看 32 條邊**（決策 228 的 `oncomingLookahead`）：平地時 32 條邊大約 30 多 km，照地形建的軌道邊多了三倍（下行線節點 312 → 935），32 條邊只剩 10 km 上下。南港往台北上行側月台的車，整段 9 km 走上行線（決策 197 的折返區，兩個方向都走）；從台北開出的車看不到南港開出、正朝它來的車，等兩列都上了中間那段才看到。
+3. **只有還在月台上的車會讓近的先走**：一列在路上的車只等已經在共用軌道上的車。南港開出的車被別的原因放行、離開月台後，它和台北開來的車都還沒上共用的那段，兩列都不等，在上行線上迎面相遇（09:05 THSR 4 和 THSR 30、20:08 THSR 1 和 THSR 34，都在 `949`，車身重疊 33–171 m）。
+
+只修第 1 點時，一天跑到 20:08 才出現第 3 點；加上第 2 點，09:05 出現第 3 點；三點都修，一天全過。
+
+**改了什麼**（GameCore，`Railway/RunSpacing.swift`，只在行車控制關著、有班次的路線生效，和決策 228 一樣）：
+1. **月台的股道還有車要出來，就改去空的一條**（`trainLeavingTowards(_:along:)`、`platformTrack(of:)`）：月台的股道是月台所在的邊，加上往兩頭接下去、直到第一個道岔（三條以上的邊交會的節點）或盡頭的邊。一列往某個月台去的車，那條股道上有另一列「正開往下一站」的車、車身的方向和它進來的路相反（正從裡面出來、朝它開），那個月台就算被佔用（到現在加 3 分鐘，`platformClearance`）。`freePlatformPath` 照決策 228 改去最早空出來的那一條；同樣有車正出來的月台也不去。路上每一步都再看一次（`freePlatformOnTheWay`，`movingEdges()` 先篩），發車時（`leaving`）也看。沒有空的月台時照舊：開到被佔用的股道前、最後一個道岔前停下，哪條月台空了就從那裡轉進去。
+2. **沿路看對向車至少 20 km**（`oncomingReach`、`lookahead(of:)`）：照舊至少 32 條邊，不夠 20 km 就再往前看到 20 km。20 km 是示範裡最長的雙向區段（南港到台北）的兩倍。
+3. **兩列都還沒上共用的軌道時，遠的等近的**（`heldUp`）：原本只有還在月台上的車會讓比它近的對向車先走；現在路上的車也一樣（一樣近時編號小的先走）。兩列看到的是同一段共用軌道兩端的距離，所以總是只有一列等，不會互等。已經在共用軌道上的車照舊先走。
+4. **高鐵示範的開關打開**（`HighSpeedDemo.spec.followsRealStructures = true`，GamePresentation）：決策 281 的建法上線，`HighSpeedDemoTests.testItsTrackFollowsTheRealStructures` 不再跳過，`testItsTrackIsTheRealAlignmentsLength` 改用 1,000 條邊的上限。
+5. `TrafficControlTimingReportTests` 照遊戲的建法讀高度（`TRAFFIC_TIMING_FLAT=1` 時照舊平的）。
+
+**結果**（Linux）：
+- 號誌關的一天（`HighSpeedDemoDayTests`，debug，07:00 到隔天 07:30）全過：沒有兩組車身在同一條邊上、沒有車逆向、班次都開、03:00 每組都在機廠。release 的 `testOverlapReport`（20 小時）：重疊 0，每組最晚 0–19 分（中位數 8 分）；`main` 平地版 0–28 分。
+- 號誌關、05:00 起 24 小時（`TrafficControlTimingReportTests`）：照地形和平地的結果相同，191 班沒有取消，到終點晚點中位數 0 分、最晚 8／11／12 分。
+- 號誌開＋閉塞（同一個報告，`TRAFFIC_TIMING_ON=1 TRAFFIC_TIMING_BLOCKS=1`，這個決策的規則都不生效，量的是決策 281 的軌道）：
+  - 平地（`main` 自己的報告也量到同一串存檔雜湊）：09–10 時開始死結（11 組），16–17 時 35 組全部；取消 129 班（36／48／45）。
+  - 照地形：15–16 時以前沒有死結；16–17 時 13 組，18–19 時起 28–33 組到天亮；取消 86 班（21／35／30），一天的計算 1,130.8 s。
+  - 兩種都是**白天**就在左營咽喉卡住：進左營的車、要從出入線入庫的閒置車、從機廠出來的車互等，閒置車把左營的八股停滿，後面往左營的車一路排回去。決策 280 量到的「南端夜裡排隊」問不到了：還沒入夜就卡住。決策 280 當時（沒有出入線）一天取消 32 班，白天只有短暫的 3 組死結，夜裡才在左營前排隊。
+
+**不變**：存檔格式（新規則都從世界現況推出）、golden、replay、`SaveFixtures` 的值（`GoldenScenarioTests`、`ReplayFixtureTests`、`SavedGameTests`、`LongLegReplayTests` 照舊通過）。行車控制開著的世界逐位元不變（新規則都在行車控制關著時才生效）。行車控制關著、有班次的路線（高鐵與台鐵示範）結果會變。
+
+**測試**（Linux 的新測試都在 `main` 上失敗）：
+- `TerminusPlatformTests`：X 晚離 A 的 P1、沿單線往 B，Y 從 B 開往 P1（出發時 P1 看起來是空的）：Y 改去 P2，X 在咽喉等 Y 過去，逐秒沒有兩列在同一條邊上；整分與逐秒相同。`main` 上 Y 照舊開往 P1，兩列在單線上迎面相遇。
+- `OncomingTrainsTests`：P、Q 從單線的兩頭各自的支線開來，都已離開月台、都還沒上單線（單線 40 條短邊）：遠的 P 在單線前等，近的 Q 先過；逐秒沒有相遇，兩列都到站；整分與逐秒相同。`main` 上兩列都上了單線、迎面相遇。
+- `HighSpeedDemoDayTests` 照地形建全過；`TRADemoDayTests`、`HighSpeedDemoBatchTests`、`RunSpacingMinuteTests` 照舊通過。
+
+**CI**：照地形建示範比平的慢。本機 debug、每個類別單獨跑：`HighSpeedDemoTests` 334.6 → 約 517 秒、`HighSpeedDemoDayTests` 240.1 → 443.6、`HighSpeedDemoBatchTests` 88.6 → 196.2，`TRADemoDayTests` 113.9 → 115.8（不變）。`swift-shards.sh` 的 `CLASS_WEIGHTS` 改成 640、550、245（CI 跑 `main` 的 `HighSpeedDemoTests`、`HighSpeedDemoBatchTests` 約是本機的 1.24 倍）；`campaigns-16` 會到 1,150 秒上下，所以 `FlexDispatchPropertyTests` 移到最輕的 `campaigns-10`。
+
+**參考對照**（私有參考庫）：參考的 `Railway/site_archive_clean/index.html` 的 `updateBlockHolds` 只處理同方向的後車（決策 228 已查過），沒有挑月台或對向讓車的規則；規則是本專案自己的（決策 228 的延伸）。外部專案：OpenTTD（GPL-2.0）的路徑號誌會替進站的列車找空的月台，只參考想法，沒有看或複製程式。
+
+**下一步**：
+1. 號誌開＋閉塞時左營咽喉的白天死結（上面）：決策 281 的出入線讓閒置車不再逆走正線，但入庫、出庫、進站都在左營咽喉交會。要先用 `TRAFFIC_TIMING_DUMP` 看第一個死結的那幾組車，再決定是調度（例如入庫等進站的車過完咽喉）還是軌道（立體交叉的出入線，決策 281「其他選項」）。
+2. 南港往台北上行側月台的車整段走上行線（決策 197 的折返區），這段 9 km 等於單線；決策 228 的規則讓它們不相遇，但會互相等。要不要讓它們在台北北邊的渡線才換線，是示範的軌道與偏好（GamePresentation）。
+3. 照地形建，一天的計算變慢（release，號誌關 3.6 → 5.4 s；號誌開＋閉塞 419.3 → 1,130.8 s，兩種都卡住、只能粗看）；建示範的時間決策 281 已量（debug 61 → 135 秒），手機上沒量。
+
+**四方**：
+- 玩家：打開高鐵示範，台北、板橋在地下，新竹以南在高架上，列車照真實時刻表跑完一天，每組最晚晚 19 分，不再整天卡在南港。
+- 開發：三條都是行車控制關著時的調度規則，從世界現況推出，不加存檔狀態；每條都有在 `main` 上失敗的 Linux 測試；行車控制開著、golden、replay 都不變。
+- 美術：沿用決策 281 的高架、隧道、路塹畫法，不用新圖。
+- 音樂：無。
 
 ### 284. 開新路線時說出兩站為什麼不相連；列車比月台長時說是哪一站
 

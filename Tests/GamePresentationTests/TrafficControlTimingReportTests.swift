@@ -12,6 +12,8 @@ import XCTest
 ///     swift build -c release -Xswiftc -enable-testing --build-tests
 ///     TRAFFIC_TIMING_REPORT=1 swift test -c release --skip-build --filter TrafficControlTimingReportTests
 ///
+/// `TRAFFIC_TIMING_FLAT=1` builds it flat, as before decision 281
+/// (`HighSpeedDemo.spec.followsRealStructures`).
 /// `TRAFFIC_TIMING_ON=1` turns traffic control on (`TRAFFIC_TIMING_BLOCKS=1`
 /// with block sections, decision 212), `TRAFFIC_TIMING_HOURS`
 /// (default 20) is how many game hours from 05:00 to run, and
@@ -93,11 +95,13 @@ final class TrafficControlTimingReportTests: XCTestCase {
     }
 
     /// The demo as the game builds it, at midnight of its first day, run
-    /// minute by minute from there.
+    /// minute by minute from there: over the app's heights, as the game
+    /// lays it (decision 281), or flat with `TRAFFIC_TIMING_FLAT=1`.
     func testTheDemoOnTheRealDay() throws {
         guard ProcessInfo.processInfo.environment["TRAFFIC_TIMING_REPORT"] != nil else { throw XCTSkip("Set TRAFFIC_TIMING_REPORT=1.") }
-        let layout = try HighSpeedDemo.Layout(railways: HighSpeedDemoTests.railways())
-        var world = HighSpeedDemo.newWorld(paying: layout.cost(at: ConstructionCosts.newGame), eventSeed: 1)
+        let flat = ProcessInfo.processInfo.environment["TRAFFIC_TIMING_FLAT"] != nil
+        let layout = try HighSpeedDemo.Layout(railways: HighSpeedDemoTests.railways(), heights: flat ? nil : XCTUnwrap(HighSpeedDemoTests.heights))
+        var world = HighSpeedDemo.newWorld(paying: layout.cost(eventSeed: 1), eventSeed: 1, ground: layout.ground)
         let built = try layout.build(in: &world, language: .english)
         let tracks = HighSpeedDemoTests.Tracks(layout: layout, built: built)
         world.setSpeed(.normal)
