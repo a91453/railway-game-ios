@@ -25,6 +25,21 @@ final class FeedbackSeventyThreeTests: XCTestCase {
         return session
     }
 
+    /// A station's platform 64 m long at `x`, put on one track only, as
+    /// the platform tool did before decision 285 (and still does beside a
+    /// platform there already): the session over the world with it.
+    private func platformOnOneTrack(_ session: GameSession, x: Int64, north: Bool) throws -> GameSession {
+        var world = session.world
+        let y: Int64 = north ? 10_240 - 320 : 10_240
+        let point = try XCTUnwrap(world.trackEdgePoint(near: PlanPoint(x: x, y: y), within: 64))
+        let station = try world.buildStation(named: "Station \(world.stations.count + 1)", at: PlanPoint(x: x, y: y))
+        try world.addTrackPlatform(station.id, on: point.edge, from: point.distance - 2_048, to: point.distance + 2_048)
+        let next = GameSession(world: world, language: session.language)
+        next.selectTool(.network)
+        next.setNetworkMode(.platform)
+        return next
+    }
+
     private func addPlatform(_ session: GameSession, x: Int64, north: Bool) {
         session.tapNetwork(at: PlanPoint(x: x, y: north ? 10_240 - 320 : 10_240), reach: 64)
         session.addNetworkPlatform()
@@ -42,9 +57,9 @@ final class FeedbackSeventyThreeTests: XCTestCase {
 
     func testStationsOnTheTwoTracksOfADoubleLineAreToldTheyDoNotMeet() throws {
         for language in [DisplayLanguage.english, .traditionalChinese] {
-            let session = try doubleTrack(language: language)
-            addPlatform(session, x: 6_144, north: false)
-            addPlatform(session, x: 30_720, north: true)
+            let session = try platformOnOneTrack(
+                platformOnOneTrack(doubleTrack(language: language), x: 6_144, north: false), x: 30_720, north: true
+            )
             draftBothStations(session)
             let ids = session.world.stations.map(\.id)
             XCTAssertNil(session.lineDraftRoute)
@@ -59,9 +74,7 @@ final class FeedbackSeventyThreeTests: XCTestCase {
     }
 
     func testAPlatformOnTheOtherTrackJoinsThem() throws {
-        let session = try doubleTrack()
-        addPlatform(session, x: 6_144, north: false)
-        addPlatform(session, x: 30_720, north: true)
+        let session = try platformOnOneTrack(platformOnOneTrack(doubleTrack(), x: 6_144, north: false), x: 30_720, north: true)
         draftBothStations(session)
         XCTAssertNotNil(session.lineDraftGap)
         // The east station's second platform, on the main track: the

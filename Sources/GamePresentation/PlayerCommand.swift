@@ -116,21 +116,37 @@ public enum PlayerCommand: Hashable, Sendable {
 
     /// A platform on `edge` from `start` to `end`, for `station`, or for a
     /// new station; on a grade, on the level edge `levelling` builds first
-    /// (decision 190).
+    /// (decision 190). Decision 285: with `beside`, the same station's
+    /// platform on the other track of a double line, built after it.
     public struct PlatformAddition: Hashable, Sendable {
         public let edge: TrackEdgeID
         public let start: Int64
         public let end: Int64
         public let station: PlatformStation
         public let levelling: PlatformLevelling?
+        public let beside: BesidePlatform?
 
-        public init(edge: TrackEdgeID, start: Int64, end: Int64, station: PlatformStation, levelling: PlatformLevelling? = nil) {
+        public init(
+            edge: TrackEdgeID, start: Int64, end: Int64, station: PlatformStation, levelling: PlatformLevelling? = nil,
+            beside: BesidePlatform? = nil
+        ) {
             self.edge = edge
             self.start = start
             self.end = end
             self.station = station
             self.levelling = levelling
+            self.beside = beside
         }
+    }
+
+    /// A platform on `edge` from `start` to `end` beside another, for the
+    /// same station; on a grade, on the level edge `levelling` builds
+    /// first (``GameSession/besidePlatform(of:)``).
+    public struct BesidePlatform: Hashable, Sendable {
+        public let edge: TrackEdgeID
+        public let start: Int64
+        public let end: Int64
+        public let levelling: PlatformLevelling?
     }
 
     /// Whose platform it is: a station's that stands, or a new one's,
@@ -235,6 +251,16 @@ extension GameSession {
             }
             try world.addTrackPlatform(station.id, on: stretch.edge, from: stretch.start, to: stretch.end)
             outcome.stretch = stretch
+            if let beside = addition.beside {
+                var other = (edge: beside.edge, start: beside.start, end: beside.end)
+                if let levelling = beside.levelling {
+                    let balance = world.economy.balance
+                    let edge = try build(levelling, in: &world)
+                    other = (edge, 0, world.network.edge(edge)?.length ?? 0)
+                    outcome.levellingCost = Money((outcome.levellingCost?.amount ?? 0) + balance.amount - world.economy.balance.amount)
+                }
+                try world.addTrackPlatform(station.id, on: other.edge, from: other.start, to: other.end)
+            }
             // Decision 88: the land round a new station is read in after the
             // edit; read it now, so the opening message counts who it reaches.
             Self.readLand(roundStationsOf: &world, population: population, places: places, water: water, coverage: coverage)
@@ -302,6 +328,13 @@ extension PlayerCommand: Codable {
             var hinterland: Int64
         }
 
+        struct Beside: Codable {
+            var edge: Int
+            var startDistance: Int64
+            var endDistance: Int64
+            var levelling: PlatformLevelling?
+        }
+
         var kind: String
         var start: Anchor?
         var end: Anchor?
@@ -330,6 +363,9 @@ extension PlayerCommand: Codable {
         var autoService: AutoService?
         var depotYard: DepotYardPlan?
         var levelling: PlatformLevelling?
+        /// Decision 285: the platform's twin on the track beside it;
+        /// absent for none (and in logs from before it).
+        var beside: Beside?
         /// The double track's parallel, as a `buildTrack` of its own.
         var parallel: PlayerCommand?
         /// The double track's crossovers, each a `buildTrack`; absent for
@@ -411,7 +447,12 @@ extension PlayerCommand: Codable {
                 }
                 station = .new(name: name, at: point, demand: StationDemand(kind: kind, dailyTrips: demand.dailyTrips, hinterland: demand.hinterland))
             }
-            self = .addPlatform(PlatformAddition(edge: .edge(edge), start: start, end: end, station: station, levelling: record.levelling))
+            let beside = record.beside.map {
+                BesidePlatform(edge: .edge($0.edge), start: $0.startDistance, end: $0.endDistance, levelling: $0.levelling)
+            }
+            self = .addPlatform(PlatformAddition(
+                edge: .edge(edge), start: start, end: end, station: station, levelling: record.levelling, beside: beside
+            ))
         case "removePlatform":
             guard let station = record.station, let edge = record.edge, let start = record.startDistance, let end = record.endDistance else {
                 throw invalid("a platform needs its station, edge, start and end")
@@ -496,6 +537,9 @@ extension PlayerCommand: Codable {
             record.startDistance = addition.start
             record.endDistance = addition.end
             record.levelling = addition.levelling
+            record.beside = addition.beside.map {
+                Record.Beside(edge: $0.edge.number, startDistance: $0.start, endDistance: $0.end, levelling: $0.levelling)
+            }
             switch addition.station {
             case .existing(let id):
                 record.station = id.rawValue

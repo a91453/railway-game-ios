@@ -118,19 +118,21 @@ extension GameWorld {
     /// `a` to a platform of station `b`, whichever way a train could
     /// drive it.
     func platformTracksMeet(_ a: StationID, _ b: StationID) -> Bool {
-        let targets = Set(network.platforms(of: b).map(\.edge))
-        var edgesAt: [TrackNodeID: [TrackEdgeID]] = [:]
-        for edge in network.edges {
-            edgesAt[edge.from, default: []].append(edge.id)
-            edgesAt[edge.to, default: []].append(edge.id)
-        }
-        var seen = Set(network.platforms(of: a).map(\.edge))
+        tracksMeet(Set(network.platforms(of: a).map(\.edge)), Set(network.platforms(of: b).map(\.edge)))
+    }
+
+    /// Whether track, through any node, runs from one of the edges `from`
+    /// to one of `to`, whichever way a train could drive it.
+    func tracksMeet(_ from: Set<TrackEdgeID>, _ to: Set<TrackEdgeID>) -> Bool {
+        var seen = from
         var queue = Array(seen)
         while let id = queue.popLast() {
-            if targets.contains(id) { return true }
+            if to.contains(id) { return true }
             guard let edge = network.edge(id) else { continue }
-            for next in edgesAt[edge.from, default: []] + edgesAt[edge.to, default: []] where seen.insert(next).inserted {
-                queue.append(next)
+            for node in [edge.from, edge.to] {
+                for end in network.node(node)?.ends ?? [] where seen.insert(end.edge).inserted {
+                    queue.append(end.edge)
+                }
             }
         }
         return false
