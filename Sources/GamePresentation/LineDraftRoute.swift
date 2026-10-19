@@ -79,3 +79,89 @@ extension GameWorld {
         return route
     }
 }
+
+// TestFlight 70.1 (decision 284): a double track drawn from open ground has
+// no crossover between its two tracks, so stations given platforms on
+// different ones are not joined. The draft said only that no track joins
+// them; it now says why and what joins them.
+
+/// Why no line can be driven between two stations picked one after the
+/// other (``GameWorld/lineDraftGap(through:)``).
+public enum LineDraftGap: Hashable, Sendable {
+    /// The station has no platform on any track.
+    case noPlatform(StationID)
+    /// No track at all, through any switch, runs from a platform of the
+    /// first to a platform of the second: the two tracks of a double line
+    /// with no crossover between them, say.
+    case separateTracks(StationID, StationID)
+    /// Track joins their platforms, but a train cannot drive it from one to
+    /// the other.
+    case noWay(StationID, StationID)
+}
+
+extension GameWorld {
+    /// Why ``stationsAlongTrack(through:)`` finds no route through
+    /// `picked`: for the first two in a row with none, the station of the
+    /// two without a platform, or else whether any track joins their
+    /// platforms. `nil` when a route is found, or for fewer than two.
+    public func lineDraftGap(through picked: [StationID]) -> LineDraftGap? {
+        for (from, to) in zip(picked, picked.dropFirst()) where stationsAlongTrack(from: from, to: to) == nil {
+            for id in [from, to] where network.platforms(of: id).isEmpty {
+                return .noPlatform(id)
+            }
+            return platformTracksMeet(from, to) ? .noWay(from, to) : .separateTracks(from, to)
+        }
+        return nil
+    }
+
+    /// Whether track, through any node, runs from a platform of station
+    /// `a` to a platform of station `b`, whichever way a train could
+    /// drive it.
+    func platformTracksMeet(_ a: StationID, _ b: StationID) -> Bool {
+        let targets = Set(network.platforms(of: b).map(\.edge))
+        var edgesAt: [TrackNodeID: [TrackEdgeID]] = [:]
+        for edge in network.edges {
+            edgesAt[edge.from, default: []].append(edge.id)
+            edgesAt[edge.to, default: []].append(edge.id)
+        }
+        var seen = Set(network.platforms(of: a).map(\.edge))
+        var queue = Array(seen)
+        while let id = queue.popLast() {
+            if targets.contains(id) { return true }
+            guard let edge = network.edge(id) else { continue }
+            for next in edgesAt[edge.from, default: []] + edgesAt[edge.to, default: []] where seen.insert(next).inserted {
+                queue.append(next)
+            }
+        }
+        return false
+    }
+
+    /// What the new line's draft says when no track joins the stations
+    /// picked: why, and what to do. The line can still be created; it
+    /// calls at the stations picked.
+    public func lineDraftGapText(_ gap: LineDraftGap, in language: DisplayLanguage) -> String {
+        let still = language.text(
+            " The line calls at the stations picked; its trains run once track joins them.",
+            "路線只停點選的車站，軌道接通後列車才能行駛。"
+        )
+        switch gap {
+        case .noPlatform(let id):
+            let name = stationName(id)
+            return language.text(
+                "\(name) has no platform yet: add one on the track with the network tool's Platform.",
+                "\(name) 還沒有月台：用路網工具的「月台」在軌道上設一座。"
+            ) + still
+        case .separateTracks(let a, let b):
+            let first = stationName(a), second = stationName(b)
+            return language.text(
+                "The platforms of \(first) and \(second) are on tracks that do not meet, such as the two tracks of a double line with no crossover. Give both a platform on the same track, or select the track and tap Add X crossover.",
+                "\(first) 和 \(second) 的月台在兩條不相連的軌道上（例如複線的兩條之間沒有渡線）。在同一條軌道上為兩站都設月台，或選取軌道按「加 X 渡線」。"
+            ) + still
+        case .noWay:
+            return language.text(
+                "No track joins these stations yet.",
+                "這些車站之間還沒有軌道相連。"
+            ) + still
+        }
+    }
+}
