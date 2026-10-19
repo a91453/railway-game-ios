@@ -87,6 +87,10 @@ public struct TrainLivery: Hashable, Sendable {
     public static let r200ChuKuang = TrainLivery(body: chuKuangCoach, stripe: 0xECE2BC, cab: 0x2A4E9A, nose: .round)
     /// The Hai-Feng tourist train (decision 252).
     public static let haiFeng = TrainLivery(body: 0xE4EEE6, stripe: 0x7DBBB0, cab: 0x9ACBE6, nose: .flat)
+    /// The Blue Train (decision 286): the old coaches' blue, their cream
+    /// line, the R100-class diesel's navy (the reference's garage models
+    /// `bluecoach` and `blue`).
+    public static let blueTrain = TrainLivery(body: 0x345B7A, stripe: 0xE9EBE5, cab: 0x232E48, nose: .flat)
     /// A Chu-Kuang coach's orange (the cream above its white line is the
     /// stripe).
     static let chuKuangCoach = 0xE2662A
@@ -96,7 +100,7 @@ public struct TrainLivery: Hashable, Sendable {
     public static let byType: [String: TrainLivery] = [
         "HSR": highSpeed, "EMU3000": emu3000,
         "EMU100": emu100, "E200CK": e200ChuKuang, "E500CK": e500ChuKuang, "R100CK": r100ChuKuang, "R200CK": r200ChuKuang,
-        "HAIFENG": haiFeng,
+        "HAIFENG": haiFeng, "BLUE": blueTrain,
     ]
     /// The livery of each real model's performance, by its preset's code
     /// (``TrainPerformanceSpec/code``), for a train whose type has none.

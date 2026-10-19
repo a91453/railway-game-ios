@@ -51,6 +51,11 @@ struct TourismPanel: View {
                                 .font(.footnote)
                                 .foregroundStyle(Theme.textSecondary)
                             }
+                            if let text = row.sightseeingTrainText {
+                                Text(verbatim: text)
+                                    .font(.footnote)
+                                    .foregroundStyle(Theme.textSecondary)
+                            }
                             if let station = row.stationName {
                                 Text(verbatim: language.text("Station: \(station)", "車站：\(station)"))
                                     .font(.footnote)

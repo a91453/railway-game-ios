@@ -12284,6 +12284,65 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 **沒有驗證的**：App 的地圖預覽只在 macOS CI 編譯；坡道上兩條各自整平的路徑沒有自己的測試（整平本身由決策 190 的測試涵蓋）；實機上點在哪一條、預覽是否看得清楚待實機確認。
 
+### 286. 觀光列車：觀光車款停靠景點旁的車站，景點加半顆星（第一步：藍皮解憂號、海風號）
+
+2026-10-19。NEXT_PRIORITIES §16「接下來的順序」第 5 步（內容）的第 1 項，§15.3 那一列：「鳴日號、藍皮解憂號、山嵐號等 11 班，有故事、季節班次、加價」。作者交辦，經 session_01KeynzCwtDyLHTUYBfKxy1c 轉派。號碼依 #231：main 上最大是 285，所以取 286；存檔版本、golden schema 不動。決策 174 的限制「沒有專門的觀光列車」與決策 250 的「之後」在這裡接上。作者說過遊戲性太弱、太複雜（決策 254），所以這一步只加內容、不加要管的事：買一列、放在經過景點的路線上，就有效果。
+
+**規則**（GameCore）：
+1. **觀光車款**：車型表（決策 225）的一列可以標成觀光列車（`TrainTypeSpec.isSightseeing`、`TrainType.isSightseeing`）。這一版是**海風號**（決策 252 已有的 `HAIFENG`，只加標記，數字不動）與新的**藍皮解憂號**（`BLUE`，`TrainType.blueTrain`）。
+2. **加星**：一條客運路線（或它的停車模式）指派了觀光車款的列車，它停靠的車站（收旅客的）800 m 內（`Tourism.reach`，和景點的車站同一個距離）的景點加 **0.5★**（`Tourism.starsPerSightseeingTrain` = 50），幾列都只加一次；和名產店、飯店加在一起，整體 5★ 為止（`GameWorld.stars(of:)`）。觀光客人數、面板、地圖標記、站長都讀同一個星等。
+3. **算法**：`sightseeingStops()` 先找觀光車款的列車（沒有就馬上回空的，所以沒有觀光列車的世界多花的只是掃一次列車），再收集有它們的路線停靠的車站位置；`tourismStars` 一次算好給所有景點，乘客計畫的快取鍵本來就記每個景點的星等（決策 174 的飯店那次），所以列車指派、換型、拿掉之後，下一次釋出就重算計畫。
+4. **藍皮解憂號這一列**：參考庫 `formations.js` 的 `blue` 推估機車 1 輛＋客車 4 輛，車庫模型 `blue` 是 R135（R100 型柴電機車）。照莒光號（決策 252）把機車＋客車當成一個編組：節數是客車，機車的價錢算在第一節。性能沿用 `r100ChuKuang`（推估：4 節客車比莒光的 8 節輕，真車會比這快一點；最高 100 km/h）。舊客車的座位沒有公開（gap）：每節定員照莒光客車 50、每側 2 門（兩端各一）、20.0 m（推估）。價錢（第一節 $260,000、每節 $45,000、營運權重 1,500）是本專案的（決策 180 的做法）：比莒光（R100）貴 $100,000 與每節 $10,000，換一顆景點的半星。
+5. 只在打開觀光（`tourism`）的世界有作用：舊存檔、教學、挑戰、示範地圖照決策 174 都關著，數字不變。
+
+**介面**（GamePresentation 與 App）：
+- 車種型錄（`RollingStockCatalogView`）在觀光車款的數字下面加一行（只在有景點的世界）：「觀光列車：停靠景點 800 公尺內的車站時，景點加 0.5 星，觀光客會變多。」「Sightseeing train: calling at a station within 800 m of a sight adds 0.5 stars to it, so more tourists come.」（`GameWorld.sightseeingNote(for:in:)`）。
+- 觀光面板：景點那一列多一行「有觀光列車停靠（+0.5★）」「A sightseeing train calls here (+0.5★)」（`AttractionRow.sightseeingTrainText`）；說明最後加一句「觀光列車（海風號、藍皮解憂號）停靠 800 公尺內的車站時，景點加 0.5 星。」。
+- 名稱「藍皮解憂號」「Blue Train sightseeing train」（`TrainType.names`）。
+- 外觀（`TrainLivery.blueTrain`，決策 243 的欄位）：車身 `#345B7A`、帶色 `#E9EBE5`、車頭 `#232E48`、平頭。出處是參考庫車庫模型 `bluecoach` 的 `body`／`accent` 與 `blue`（R135）的「藍皮深海軍藍」，把模型的線性色換成 sRGB；過了 `TrainLiveryTests` 的對比檢查，沒有調色。3D 沒有機車模型，和莒光一樣畫成方塊（`Map3DModels.styleByType` 沒有 `BLUE`）。
+- 沒有新圖示、沒有新動畫（art-style、motion 不適用）。
+
+**四方**：
+- 玩家：買一列觀光列車、放在經過景點的路線上，景點就多半顆星、觀光客多約三成到七成（星等越低，多得越多）；不多一個要管的開關、班表或票價。看得到：型錄那一行、面板那一行、藍色的列車。
+- 開發：GameCore 只加車型表的一欄與一列、`stars(of:)` 多一項；存檔、golden、replay 不動（車型以代號存，沒有新狀態）；沒有觀光列車的世界的數字逐位元不變。會跑完整的 Swift tier。
+- 美術：藍皮的浪漫藍、乳白帶、海軍藍車頭，取自參考庫的車庫模型；台灣味的老客車在 2D 地圖上一眼分得出。
+- 音樂：無（之後觀光列車可以有自己的到站旋律，見下一步）。
+
+**沒選的**（預覽是玩家會看到的）：
+- **B. 加價列車**：觀光車款的乘客每人多收（真實的藍皮解憂號單程 299 元起）。預覽：型錄那一行改成「每位乘客加收 $5」，路線報表的票收變多。沒選：上車收票（`chargeFares`）不知道是哪一列車，要把車型帶進上車的每一處；而且通勤客上了觀光列車也照收，等於純賺，會變成「一面倒的選擇」（economy-balance §4），要另外設計（例如只有觀光客付、或觀光列車只停景點站）。留作下一步。
+- **C. 季節限定的班次**：海風號只在 4–10 月週五到週日、山嵐號 9–12 月開。預覽：路線面板多一個「只在週末／旺季開」的開關，或觀光列車到了淡季自動停在機廠。沒選：多一件要管的事（決策 254 的反面），而且要 GameCore 的派車看月份；景點本身已經有季節係數（決策 174），淡季觀光客本來就少。
+- **D. 具名班次事件**：像劇本節慶那樣，某天「藍皮解憂號開出」由遊戲自己開一班。預覽：站長泡泡「今天藍皮解憂號從枋寮開往臺東」。沒選：玩家看得到但碰不到，不是玩家自己的鐵路；要新的事件系統。
+
+**量到的**（`BalanceReportTests.testASightseeingTrainAtASight`，`BALANCE_REPORT=60`，release，Linux 雲端容器）：BALANCE_PLACEHOLDER
+
+**參考庫與外部專案**（`a91453/railway-reference-private`；新版 `Railway/taiwan-rail-reference-clean/` 優先）：
+
+| 參考 | 本專案 | 分類 |
+| --- | --- | --- |
+| `Railway/taiwan-rail-reference-clean/source/data/tra_special_trains.json` `namedTrains`（11 班；和 `site_archive_clean` 的同一檔只差兩個虛構班次的 `operator` 字樣） | 這一步：`blue-train` → `BLUE`、`haifeng` → `HAIFENG` 的觀光標記；其他 9 班寫在下一步 | 資料取用（名稱、編組、車次與路線只當出處） |
+| 同檔的 `story`、`status2026`、`tags`（「季節限定」「可自行購票」） | 下一步的故事與季節 | 這一步沒用：玩家看的字只說功能（CLAUDE.md） |
+| `source/data/tra_schedule.json` 的 5898／5899（臺東 14:17 → 枋寮 17:39、枋寮 10:25 → 臺東 13:32）、6652、6676 | 無 | 真實班表；遊戲的列車由玩家的路線派，沒有用到；支線情境包或台鐵示範可用 |
+| `source/rail-3d/integration/formations.js` `blue`（推估機車＋客車 4 輛）、`FORMATIONS.md` 的出處 | `BLUE` 當一個編組、4 節客車的推估 | 推估的根據 |
+| `source/rail-3d/assets/garage-blender-v1/bluecoach.json`、`blue.json`（`drawGroups` 的顏色；`blue` 是 R135） | `TrainLivery.blueTrain`；性能沿用 R100 | 顏色照用（線性 → sRGB）；3D 模型等 GLB 轉換器（HANDOFF §2）之後再接 |
+| `source/train-garage-catalog.js` `bluecoach`（照片出處） | 無 | 只確認車款 |
+| 參考庫沒有：觀光列車對景點、觀光客的規則 | `Tourism.starsPerSightseeingTrain` | 本專案自己的（決策 174 的星等加成同一種做法） |
+
+外部專案：沒有可用的（OpenTTD、Simutrans 的車輛只有速度、容量、維護費，沒有「觀光列車吸引遊客」的規則）；「nothing usable」，程式是這個專案自己的。A 列車只讀概念，不取素材。
+
+**存檔、golden、replay**：不動。存檔裡列車的車型是代號字串，新的一列不改格式（決策 225）；`SightseeingTrainTests` 有存檔來回。golden 與 replay 沒有觀光列車，也沒有海風號。
+
+**測試**：`SightseeingTrainTests`（觀光車款是哪兩款、藍皮的數字；路線上有觀光列車加 0.5★、兩列也只加一次；其他車款不加；不停靠景點附近的路線、沒指派路線的不加；觀光客與計畫跟著列車，拿掉就回來；5★ 上限；存檔來回）；`TourismSessionTests.testThePanelSaysASightseeingTrainCalls`（面板那一行、說明、型錄那一行、沒有景點時不說）；`TrainTypeCatalogTests`、`TrainTypeTests`、`RealCarLengthTests`、`TrainTypeNameTests`、`Map3DModelTests` 在列表後面加 `BLUE`（前面的值不動）。
+
+**沒有驗證的**：App 的型錄與面板那一行只在 macOS CI 編譯，實機上排版待看；觀光列車的半星在實機上夠不夠讓玩家想買，看 TestFlight 回報。
+
+**下一步**（照這個順序，一個 PR 一項；HANDOFF §7.2 有同一張表）：
+1. **其他具名列車**（參考庫 `namedTrains`）：山嵐號（花蓮—池上，EMU500 改造，同海風號的數字加一列 `SHANLAN` 與它的塗裝）、鳴日號（機車＋5 客車）、環島之星（E500＋6 客車）各一列；仲夏寶島號（CT273 蒸汽）要讓 `STEAM` 在沒有年代的世界也能買，或另加一列；寶可夢彩繪是期間限定的塗裝，不是車款。郵輪式列車、兩鐵列車是服務方式，不做成車款；山海號、平原號是參考網站虛構的班次，不收。
+2. **加價**（上面 B）：先決定誰付（只有觀光客，或觀光列車只停景點站時才收），再把車型帶進上車收票；照 economy-balance 量。
+3. **故事**：`namedTrains` 的 `story` 放進車種圖鑑（§15.2 不排的「車種圖鑑解鎖」）；玩家看的字的規則不適用於圖鑑這種內容，要另外寫進 UI_THEME。
+4. **季節**（上面 C）：若要做，做成「觀光列車在旺季多加星」這類不用玩家管的規則，不做開關。
+5. **3D 模型**：參考庫的 `blue`／`bluecoach`（Blender 匯出）等 GLB 轉換器後接上；2D 的機車頭形狀（HANDOFF §7.2 已有）。
+6. **到站旋律**：觀光列車自己的旋律（§15.3 的音樂角度），和逐站鈴聲一起做。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

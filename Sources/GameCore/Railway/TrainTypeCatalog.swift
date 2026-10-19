@@ -61,6 +61,19 @@
 //   - The Hai-Feng is an EMU500 rebuilt for sightseeing: the EMU500's
 //     rebuilt car, 44 seats, three doors a side and 20.33 m (Chinese
 //     Wikipedia); its own seats are not published.
+// - The Blue Train (藍皮解憂號, decision 286) is the owner's reference
+//   (`Railway/taiwan-rail-reference-clean/source/data/tra_special_trains.json`
+//   `namedTrains` `blue-train`; `rail-3d/integration/formations.js` `blue`:
+//   an estimated locomotive and four coaches; the garage model `blue` is
+//   the R135, an R100-class diesel). As the Chu-Kuang trains, one set whose
+//   cars are the coaches, the locomotive in the first car's price, and the
+//   R100 Chu-Kuang's performance (estimated: four coaches are lighter than
+//   eight, so it runs a little slower than the real train would). The old
+//   coaches' seats are not published (gap): a coach is rated 50 as a
+//   Chu-Kuang coach is, two doors a side (one at each end), 20.0 m.
+// - A sightseeing type (decision 286) adds half a star to a sight one of
+//   its trains calls near (``Tourism/starsPerSightseeingTrain``): the Blue
+//   Train and the Hai-Feng.
 // - The families (metro, railway, high speed, special) are decision 224's
 //   catalogue of types; a high-speed set is the type whose family is high
 //   speed.
@@ -105,10 +118,14 @@ public struct TrainTypeSpec: Hashable, Sendable {
     /// world with real car lengths (decision 227): the type's real coupler
     /// pitch, a middle car's.
     public let carLength: Int64
+    /// Whether it is a sightseeing train (decision 286): a sight one of its
+    /// trains calls near gains ``Tourism/starsPerSightseeingTrain``.
+    public let isSightseeing: Bool
 
     init(
         code: String, family: TrainFamily, offer: TrainTypeOffer, capacity: Int64, doors: Int64, overloads: Bool,
-        performance: TrainPerformance?, firstDollars: Int64, carDollars: Int64, operatingPermille: Int64, carMetres: (Int64, Int64)
+        performance: TrainPerformance?, firstDollars: Int64, carDollars: Int64, operatingPermille: Int64, carMetres: (Int64, Int64),
+        sightseeing: Bool = false
     ) {
         self.code = code
         self.family = family
@@ -119,6 +136,7 @@ public struct TrainTypeSpec: Hashable, Sendable {
         self.performance = performance
         pricing = RollingStockPricing(firstDollars: firstDollars, carDollars: carDollars, operatingPermille: operatingPermille)
         carLength = Self.worldUnits(metres: carMetres.0, tenths: carMetres.1)
+        isSightseeing = sightseeing
     }
 
     /// `metres.tenths` metres in world units (64 a metre), to the nearest.
@@ -168,7 +186,12 @@ public enum TrainTypeCatalog {
         .init(code: "R200CK", family: .railway, offer: .added, capacity: 50, doors: 2, overloads: true,
               performance: .r200ChuKuang, firstDollars: 280_000, carDollars: 35_000, operatingPermille: 1_400, carMetres: (20, 0)),
         .init(code: "HAIFENG", family: .railway, offer: .added, capacity: 44, doors: 3, overloads: true,
-              performance: .haiFeng, firstDollars: 240_000, carDollars: 50_000, operatingPermille: 1_300, carMetres: (20, 3)),
+              performance: .haiFeng, firstDollars: 240_000, carDollars: 50_000, operatingPermille: 1_300, carMetres: (20, 3),
+              sightseeing: true),
+        // Decision 286.
+        .init(code: "BLUE", family: .railway, offer: .added, capacity: 50, doors: 2, overloads: true,
+              performance: .r100ChuKuang, firstDollars: 260_000, carDollars: 45_000, operatingPermille: 1_500, carMetres: (20, 0),
+              sightseeing: true),
     ]
 
     /// Each code's row. Building it traps on a code listed twice.

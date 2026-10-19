@@ -76,6 +76,9 @@ public struct TrainType: RawRepresentable, Hashable, Codable, CaseIterable, Send
     public static let r200ChuKuang = TrainType(listed: "R200CK")
     /// The Hai-Feng tourist train (decision 252).
     public static let haiFeng = TrainType(listed: "HAIFENG")
+    /// The Blue Train (藍皮解憂號, decision 286): old blue coaches behind an
+    /// R100-class diesel, as one set whose cars are the coaches.
+    public static let blueTrain = TrainType(listed: "BLUE")
 
     /// The reference's main types, offered everywhere
     /// (`LINE_TRAIN_TYPE_MAIN`); the others are its extras
@@ -123,6 +126,10 @@ public struct TrainType: RawRepresentable, Hashable, Codable, CaseIterable, Send
     /// Whether it is a high-speed set (decision 168): its family is high
     /// speed.
     public var isHighSpeed: Bool { TrainTypeCatalog.builtIn[row].family == .highSpeed }
+
+    /// Whether it is a sightseeing train (decision 286): the Hai-Feng and
+    /// the Blue Train.
+    public var isSightseeing: Bool { TrainTypeCatalog.builtIn[row].isSightseeing }
 
     /// Reads a code; a code no type has does not read, as the type's codes
     /// did when they were an enum's raw values.

@@ -82,8 +82,9 @@ final class Map3DModelTests: XCTestCase {
 
     func testEveryTypeWithAStyleHasItsModels() {
         for type in TrainTypeCatalog.builtIn {
-            // Decision 252: the Chu-Kuang sets have no locomotive model yet.
-            let expected = !["MAGLEV", "SKYRAIL", "MONORAIL", "STEAM", "E200CK", "E500CK", "R100CK", "R200CK"].contains(type.code)
+            // Decisions 252 and 286: the Chu-Kuang sets and the Blue Train have
+            // no locomotive model yet.
+            let expected = !["MAGLEV", "SKYRAIL", "MONORAIL", "STEAM", "E200CK", "E500CK", "R100CK", "R200CK", "BLUE"].contains(type.code)
             XCTAssertEqual(pack.models(forType: type.code) != nil, expected, type.code)
         }
         XCTAssertNotNil(pack.models(forType: ""), "a train with no type is a commuter EMU")
