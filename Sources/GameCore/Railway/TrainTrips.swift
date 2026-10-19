@@ -34,8 +34,9 @@ public struct TrainTrip: Hashable, Sendable {
     public let to: StationID
     /// When the timetable had it leave its first call.
     public let scheduledDeparture: GameTime
-    /// When the timetable had it arrive at its last call.
-    public let scheduledArrival: GameTime
+    /// When the timetable had it arrive at its last call: brought forward
+    /// with the timetable when the train turns back short (decision 288).
+    public internal(set) var scheduledArrival: GameTime
     /// Whether it was an empty run (decision 172), or into or out of a
     /// depot (decision 209).
     public let isDeadhead: Bool
@@ -244,6 +245,18 @@ extension GameWorld {
             tripLog[slot].calls.append(call)
         }
         if stop == last { tripLog[slot].arrival = now }
+    }
+
+    /// Train `index`'s running trip, if any, is due at its last call when
+    /// the train's timetable now has it: its timetable came forward as it
+    /// turned back short (decision 288), so the trip is late or on time by
+    /// the times its line's punctuality counts.
+    mutating func retimeRunningTrip(of index: Int) {
+        guard recordsTrips, case .waitingAtStop(_, let cycle)? = trains[index].execution,
+              let running = runningTripIndex(of: trains[index].id)
+        else { return }
+        let train = trains[index]
+        tripLog[running].scheduledArrival = train.scheduledArrival(of: train.timetable.count - 1, cycle: cycle)
     }
 
     /// Train `id` has left its call at `station` now: its last trip's last
