@@ -63,9 +63,10 @@ public struct Map3DModelPack: Sendable {
     /// are drawn as boxes.
     public static let styleByType: [String: String] = [
         "": "commuter", "EMU3000": "express", "HSR": "highSpeed",
-        // Decision 252: the flat-fronted EMUs as commuters; the Chu-Kuang
-        // sets have no locomotive model yet, so are boxes.
-        "EMU100": "commuter", "HAIFENG": "commuter",
+        // Decision 252: the flat-fronted EMUs as commuters (decision 286:
+        // and the Shan-Lan); the Chu-Kuang sets have no locomotive model
+        // yet, so are boxes.
+        "EMU100": "commuter", "HAIFENG": "commuter", "SHANLAN": "commuter",
         "A": "metro", "B": "metro", "C": "metro", "L": "metro", "D": "metro", "APM": "peopleMover",
     ]
 

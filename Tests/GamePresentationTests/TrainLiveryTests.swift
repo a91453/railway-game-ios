@@ -23,6 +23,7 @@ final class TrainLiveryTests: XCTestCase {
         XCTAssertEqual(TrainLivery.of(type: .r100ChuKuang, performance: .standard), .r100ChuKuang)
         XCTAssertEqual(TrainLivery.of(type: .r200ChuKuang, performance: .standard), .r200ChuKuang)
         XCTAssertEqual(TrainLivery.of(type: .haiFeng, performance: .standard), .haiFeng)
+        XCTAssertEqual(TrainLivery.of(type: .shanLan, performance: .haiFeng), .shanLan, "the Hai-Feng's performance, its own look")
         XCTAssertEqual(TrainLivery.of(type: nil, performance: .r200ChuKuang), .r200ChuKuang)
         XCTAssertEqual(TrainLivery.of(type: .b, performance: .haiFeng.withTopSpeed(90)), .haiFeng)
         XCTAssertEqual(TrainLivery.of(type: nil, performance: .semiExpress), .plain, "the reference's Chu-Kuang preset keeps its look")
@@ -55,6 +56,8 @@ final class TrainLiveryTests: XCTestCase {
     func testTheColoursKeepClearOfTheMapsAndOfEachOther() {
         var models: [String: TrainLivery] = [
             "highSpeed": .highSpeed, "emu3000": .emu3000, "puyuma": .puyuma, "taroko": .taroko, "emu800": .emu800, "metroC381": .metroC381,
+            // Decision 286: the sightseeing types have no performance of their own.
+            "blueTrain": .blueTrain, "shanLan": .shanLan,
         ]
         for (code, livery) in TrainLivery.byPerformance {
             models[code] = livery
