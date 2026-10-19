@@ -1,0 +1,201 @@
+{
+  "asset": {
+    "generator": "glTF-Transform v4.5.1",
+    "version": "2.0"
+  },
+  "accessors": [
+    {
+      "type": "VEC3",
+      "componentType": 5126,
+      "count": 3,
+      "max": [
+        1,
+        1,
+        1
+      ],
+      "min": [
+        0,
+        0,
+        0
+      ],
+      "bufferView": 0,
+      "byteOffset": 0
+    },
+    {
+      "type": "VEC4",
+      "componentType": 5121,
+      "count": 3,
+      "normalized": true,
+      "bufferView": 0,
+      "byteOffset": 12
+    },
+    {
+      "type": "SCALAR",
+      "componentType": 5123,
+      "count": 3,
+      "bufferView": 1,
+      "byteOffset": 0
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 48,
+      "byteStride": 16,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 48,
+      "byteLength": 8,
+      "target": 34963
+    }
+  ],
+  "buffers": [
+    {
+      "uri": "buffer.bin",
+      "byteLength": 56
+    }
+  ],
+  "materials": [
+    {
+      "name": "body",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.8,
+          0.8,
+          0.8,
+          1
+        ]
+      }
+    },
+    {
+      "name": "lamp",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.1,
+          0.3,
+          0.8,
+          1
+        ]
+      }
+    },
+    {
+      "name": "excluded",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          1,
+          0,
+          0,
+          1
+        ]
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "body",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "COLOR_0": 1
+          },
+          "mode": 4,
+          "material": 0,
+          "indices": 2
+        }
+      ]
+    },
+    {
+      "name": "lamp",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "COLOR_0": 1
+          },
+          "mode": 4,
+          "material": 1,
+          "indices": 2
+        }
+      ]
+    },
+    {
+      "name": "excluded",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "COLOR_0": 1
+          },
+          "mode": 4,
+          "material": 2,
+          "indices": 2
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "body",
+      "translation": [
+        1,
+        0,
+        0
+      ],
+      "mesh": 0
+    },
+    {
+      "name": "lamp",
+      "translation": [
+        0,
+        1,
+        0
+      ],
+      "mesh": 1
+    },
+    {
+      "name": "parent",
+      "translation": [
+        10,
+        3,
+        -5
+      ],
+      "rotation": [
+        0,
+        0.7071067811865476,
+        0,
+        0.7071067811865476
+      ],
+      "scale": [
+        2,
+        3,
+        -1
+      ],
+      "children": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "excluded",
+      "translation": [
+        999,
+        0,
+        0
+      ],
+      "mesh": 2
+    }
+  ],
+  "scenes": [
+    {
+      "nodes": [
+        2,
+        3
+      ]
+    }
+  ],
+  "scene": 0
+}

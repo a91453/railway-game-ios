@@ -62,6 +62,7 @@ test('actual city bus JPEG converts within the color budget, facing +x at 12 m',
   const blue = jpg.sample(100, 60);
   assert.ok(blue[2] > blue[0] + 80, `JPEG blue stripe decoded: ${blue}`);
   const { output, triangles, colors, paintTriangles } = convert(source, { modelId: 'city-bus', front: '-x', lengthMeters: 12 });
+  assert.deepEqual(output, readFileSync(new URL('../../docs/art/meshy-city-bus-2026-10-18/city-bus.m3dmodel', import.meta.url)), '#803 output remains byte-identical');
   assert.equal(triangles, 1543); // GLB has 1,545; two zero-area triangles are removed
   assert.ok(colors <= 8);
   assert.ok(paintTriangles > 0);

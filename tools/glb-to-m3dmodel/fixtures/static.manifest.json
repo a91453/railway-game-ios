@@ -1,0 +1,18 @@
+{
+  "input": "static-meshopt.glb",
+  "modelId": "static-fixture",
+  "nodes": [
+    "body",
+    "lamp"
+  ],
+  "front": "+x",
+  "units": "meters",
+  "recolorLightPaint": false,
+  "source": {
+    "kind": "non-ai",
+    "reference": "project:tools/glb-to-m3dmodel/make-static-fixtures.mjs",
+    "revision": "fixture-v1",
+    "license": "project-authored test geometry",
+    "attribution": "Railway game contributors"
+  }
+}
