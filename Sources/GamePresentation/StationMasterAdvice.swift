@@ -348,7 +348,8 @@ public enum StationMasterAdvice: Hashable, Sendable {
     /// Decision 153: the playing scenario's first words, if it has them.
     private static func welcome(in world: GameWorld) -> StationMasterAdvice? {
         guard let state = world.scenario, state.outcome == nil,
-              [Challenge.liuMingchuan.id, Challenge.pingxi.id].contains(state.scenario.id) else { return nil }
+              [Challenge.liuMingchuan.id, Challenge.pingxi.id].contains(state.scenario.id) || BranchLineChallenge.named(state.scenario.id) != nil
+        else { return nil }
         return .scenarioWelcome(scenario: state.scenario.id)
     }
 
@@ -550,11 +551,21 @@ public enum StationMasterAdvice: Hashable, Sendable {
                 "「\(name)」附近昨晚缺建材，城市長得慢。讓一座貨運場出建材，「\(name)」也蓋一座（在車站面板的「貨運」）。再到「路線」把連接兩站的路線設成貨運路線：不需要特別的貨車，任何列車每節載 \(Freight.tonsPerCar) 噸。"
             )
         case .scenarioWelcome(let scenario):
-            scenario == Challenge.liuMingchuan.id ? LiuMingchuanChallenge.welcomeText(in: language) : PingxiChallenge.welcomeText(in: language)
+            if scenario == Challenge.liuMingchuan.id {
+                LiuMingchuanChallenge.welcomeText(in: language)
+            } else if let line = BranchLineChallenge.named(scenario) {
+                line.welcomeText(in: language)
+            } else {
+                PingxiChallenge.welcomeText(in: language)
+            }
         case .goalMet(let scenario, let goal, let titles):
-            scenario == Challenge.liuMingchuan.id && LiuMingchuanChallenge.milestones.indices.contains(goal)
-                ? LiuMingchuanChallenge.milestoneCheer(goal, in: language)
-                : language.text("Goal met: \(titles.first ?? "")!", "目標達成：\(titles.last ?? "")！")
+            if scenario == Challenge.liuMingchuan.id && LiuMingchuanChallenge.milestones.indices.contains(goal) {
+                LiuMingchuanChallenge.milestoneCheer(goal, in: language)
+            } else if let cheer = BranchLineChallenge.named(scenario)?.milestoneCheer(goal, in: language) {
+                cheer
+            } else {
+                language.text("Goal met: \(titles.first ?? "")!", "目標達成：\(titles.last ?? "")！")
+            }
         case .scenarioCompleted(let rating):
             language.text(
                 "Challenge complete: \(rating.displayName(in: language))! The line runs on: keep it going.",
