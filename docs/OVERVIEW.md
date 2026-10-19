@@ -131,6 +131,7 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | DISRUPTION_STUDY | 部分有效 | 方案 B 已由決策 154、162 實作；方案 A（老化、故障、檢修）與 C（停駛）仍是提案，併進機廠的研究 |
 | FREIGHT_STUDY | 部分有效 | 方案 C、A 已由決策 155–158 實作；方案 B（產業鏈）仍是提案 |
 | PEAKLINE_STUDY_SUPPLEMENT_2026-10-19 | 現行，補充 | Peakline 研究（主報告 #821 的 PEAKLINE_MAP_ENGINE_STUDY）的補充：GLB 轉換器不要用 `@gltf-transform/functions`（LGPL）、香港模型的實際取得與條款、參考庫現成的 WorldCover、平原與山區的對照、轉換器的其他缺口；不改程式 |
+| CITY_TRANSPORT_MANAGER_STUDY_2026-10-19 | 現行，研究（等更多截圖） | 競品 City Transport Manager（PeDePe，2026-10-16 上架的手機公車／電車／地鐵經營遊戲）的分析與對照；建議依序吸收建線時自動出現的潛力熱圖、建線草稿的摘要列、自由模式開局目標，都不動或少動 GameCore；直拿與營利模式不跟 |
 | FENN_3D_WORLD_STUDY_2026-10-19 | 現行，研究 | Fenn 開發者公開 3D 場景的做法（OSM、程序化外牆、假光貼片、bloom、手機降級）與原生 3D 的對照；建議在 Metal 裡依序加 bloom＋色調映射、實景建物依大小選外牆、假光貼片，不換引擎；§6 收錄另一份研究的架構風險（每週重建、整場景上傳、真實建物與城市沒有對應） |
 | 3D_DIRECTION_STUDY | 有效提案 | 「唯讀 3D 檢視」的建議，等作者決定 |
 | PROCEDURAL_CITY_STUDY | 部分過時 | Swift 試片已由決策 152、161、163 取代 |
