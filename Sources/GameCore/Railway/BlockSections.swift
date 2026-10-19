@@ -11,7 +11,9 @@
 // 1. every edge is cut into blocks of ``blockLength`` from its `from` node,
 //    its ends bounding blocks too, and a following train's authority ends
 //    at a block's boundary (still ``followingGap`` short of the track the
-//    trains ahead hold), so it takes its route a block at a time;
+//    trains ahead hold), so it takes its route a block at a time; no
+//    boundary lies where a train standing there would foul another track
+//    (decision 285);
 // 2. a train following others leads a train behind it as well;
 // 3. a following train holds only what it has taken: the track of its
 //    route it has not taken yet keeps no other train from it (decision 56,
@@ -68,11 +70,42 @@ extension GameWorld {
     /// edges end): a train waits for more of its route on plain track, and
     /// takes its way through a station's turnouts at once, as decision 32
     /// takes a whole route, so it never stands among them holding half a
-    /// way another train needs to cross.
+    /// way another train needs to cross. Nor where a train standing there
+    /// would foul another track (decision 285, see ``isClear(_:of:)``).
     private func isBlockBoundary(_ chainage: Int64, of edge: TrackEdge) -> Bool {
         if isJunction(edge.from), chainage < RailwayNetwork.junctionZone { return false }
         if isJunction(edge.to), edge.length - chainage < RailwayNetwork.junctionZone { return false }
-        return chainage == 0 || chainage == edge.length || chainage % Self.blockLength == 0
+        guard chainage == 0 || chainage == edge.length || chainage % Self.blockLength == 0 else { return false }
+        return isClear(chainage, of: edge)
+    }
+
+    /// Decision 285: whether a train whose head stands at `chainage` along
+    /// `edge` is clear of every other track: no span of the edge there
+    /// (each that reaches the point, as a train standing on a span's end
+    /// holds both) fouls a span of another edge (Stage F2b,
+    /// ``RailwayNetwork/foulingSpans``). Where a turnout's branch leaves
+    /// the line gently, the two tracks stay closer than
+    /// ``RailwayNetwork/trackSpacing`` well beyond ``RailwayNetwork/junctionZone``:
+    /// the high-speed demo's up track joins the down track over a ramp of
+    /// 100 m, and a node 50 m out (laid for Zuoying's depot lead, decision
+    /// 281) ended a block. A train waiting there for a berth at Zuoying
+    /// fouled the up track, the one way out for the sets on those berths,
+    /// so each waited for the other. As a home signal stands short of the
+    /// fouling point, a block ends only where the train is clear.
+    private func isClear(_ chainage: Int64, of edge: TrackEdge) -> Bool {
+        let spans = network.spans(of: edge.id, length: edge.length)
+        // The first span ending at or after the point, then each that
+        // starts by it.
+        var low = 0, high = spans.count
+        while low < high {
+            let middle = (low + high) / 2
+            if spans[middle].end < chainage { low = middle + 1 } else { high = middle }
+        }
+        while low < spans.count, spans[low].start <= chainage {
+            if network.foulingSpans[spans[low]]?.isEmpty == false { return false }
+            low += 1
+        }
+        return true
     }
 
     /// Whether more than two edges end at node `node`.
