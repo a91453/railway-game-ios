@@ -188,7 +188,9 @@ extension GameWorld {
     /// then when its first departure, less ``LineRun/earliestDispatch`` and
     /// the run out's lead (decision 209's: the least dwell and the run's
     /// seconds, in whole minutes, and a minute more), has come. Under
-    /// traffic control the train must be able to take its route now.
+    /// traffic control the stop must have a berth for the train (see
+    /// ``endHasRoom(_:for:)``, decision 289) and the train must be able to
+    /// take its route now.
     func runTrainLeavingDepot(of line: ServiceLine, memo: inout DispatchMemo) -> (index: Int, trip: LineTrip)? {
         guard !line.depots.isEmpty, line.hasRuns, clock.now.seconds >= 0 else { return nil }
         let now = clock.now.seconds
@@ -203,6 +205,9 @@ extension GameWorld {
             else { continue }
             let lead = Self.lead(of: run) * GameTime.secondsPerMinute
             guard Self.runsWithoutTrains(soon.filter { $0 - LineRun.earliestDispatch - lead <= now }, ready: ready) > 0 else { continue }
+            // Decision 289: under traffic control, only with a berth there
+            // for it; without one it stays in the depot.
+            if isTrafficControlEnabled, !endHasRoom(station, for: trains[index]) { continue }
             if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
                case .held = reservingDeparture(leaving, memo: &memo.directions) {
                 continue
@@ -210,6 +215,55 @@ extension GameWorld {
             return (index, trip)
         }
         return nil
+    }
+
+    // MARK: - Room at the end
+
+    /// Decision 289: the berths of `station` that `train` fits and that
+    /// are free for it: no part of another train stands on their track,
+    /// and no train on its way to the station is bound for it (its route
+    /// ends there).
+    func freeEndBerths(_ station: StationID, for train: Train) -> [Berth] {
+        var taken: Set<TrackEdgeID> = []
+        for other in trains where other.id != train.id {
+            for stretch in bodyStretches(of: other) { taken.insert(stretch.traversal.edge) }
+            if case .travellingToStop(let call, _)? = other.execution, other.timetable[call].station == station,
+               let last = other.movement.edges.last {
+                taken.insert(last)
+            }
+        }
+        return berths(of: station, length: train.length).filter { !taken.contains($0.traversal.edge) }
+    }
+
+    /// Decision 289: whether `station` has a berth for `train`, about to
+    /// be sent out of a depot to it, beyond those the trains already sent
+    /// out of a depot to it and not yet on their way will take: more of
+    /// its tracks have a free berth (see ``freeEndBerths(_:for:)``) than
+    /// there are such trains. Asked under traffic control: a set sent out
+    /// to a terminus with every track taken stood on the depot's single
+    /// lead waiting for one, and the sets there could not go in past it.
+    func endHasRoom(_ station: StationID, for train: Train) -> Bool {
+        let free = Set(freeEndBerths(station, for: train).map(\.traversal.edge))
+        let coming = trains.count { other in
+            guard other.id != train.id, other.isDeadheading, case .waitingAtStop(0, _)? = other.execution,
+                  other.timetable.count > 1, other.timetable.last?.station == station
+            else { return false }
+            return self.station(id: other.timetable[0].station)?.isDepot == true
+        }
+        return free.count > coming
+    }
+
+    /// Decision 289: the free berths (see ``freeEndBerths(_:for:)``) a
+    /// train of a line with runs, sent out of a depot under traffic control
+    /// and leaving it from stop `stop`, runs to at `call`; `nil` for any
+    /// other departure, or when none is free (it then takes the nearest,
+    /// as before).
+    func pullOutBerths(of train: Train, leaving stop: Int, to call: StationID) -> Set<Berth>? {
+        guard isTrafficControlEnabled, train.isDeadheading, station(id: train.timetable[stop].station)?.isDepot == true,
+              station(id: call)?.isDepot == false, followsRealTimetable(train)
+        else { return nil }
+        let free = freeEndBerths(call, for: train)
+        return free.isEmpty ? nil : Set(free)
     }
 
     // MARK: - Waking
