@@ -13,7 +13,7 @@
 //    at a block's boundary (still ``followingGap`` short of the track the
 //    trains ahead hold), so it takes its route a block at a time; no
 //    boundary lies where a train standing there would foul another track
-//    (decision 285);
+//    (decision 287);
 // 2. a train following others leads a train behind it as well;
 // 3. a following train holds only what it has taken: the track of its
 //    route it has not taken yet keeps no other train from it (decision 56,
@@ -71,7 +71,7 @@ extension GameWorld {
     /// takes its way through a station's turnouts at once, as decision 32
     /// takes a whole route, so it never stands among them holding half a
     /// way another train needs to cross. Nor where a train standing there
-    /// would foul another track (decision 285, see ``isClear(_:of:)``).
+    /// would foul another track (decision 287, see ``isClear(_:of:)``).
     private func isBlockBoundary(_ chainage: Int64, of edge: TrackEdge) -> Bool {
         if isJunction(edge.from), chainage < RailwayNetwork.junctionZone { return false }
         if isJunction(edge.to), edge.length - chainage < RailwayNetwork.junctionZone { return false }
@@ -79,7 +79,7 @@ extension GameWorld {
         return isClear(chainage, of: edge)
     }
 
-    /// Decision 285: whether a train whose head stands at `chainage` along
+    /// Decision 287: whether a train whose head stands at `chainage` along
     /// `edge` is clear of every other track: no span of the edge there
     /// (each that reaches the point, as a train standing on a span's end
     /// holds both) fouls a span of another edge (Stage F2b,

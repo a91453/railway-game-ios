@@ -2,7 +2,7 @@ import Foundation
 @testable import GameCore
 import XCTest
 
-/// Decision 285: a block ends only where a train standing there is clear
+/// Decision 287: a block ends only where a train standing there is clear
 /// of every other track. The high-speed demo's up track joins the down
 /// track over a ramp of 100 m short of Zuoying, and a node 50 m out, laid
 /// for Zuoying's depot lead (decision 281), ended a block. With traffic
