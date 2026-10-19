@@ -135,7 +135,7 @@ public struct StationPairComparison: Equatable, Sendable {
         return text
     }
 
-    private static func kilometres(_ metres: Int64) -> String {
+    static func kilometres(_ metres: Int64) -> String {
         if metres < 1_000 { return "\(metres) m" }
         let tenths = (metres + 50) / 100
         return "\(tenths / 10).\(tenths % 10) km"

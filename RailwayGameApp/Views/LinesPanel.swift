@@ -1529,6 +1529,9 @@ struct LinesPanel: View {
                 .font(.footnote)
                 .foregroundStyle(Theme.textSecondary)
             } else {
+                // CTM study 4.2 (M0): stops, length, time and price, or
+                // why no track joins them.
+                LineDraftSummaryRow(session: session)
                 LabeledContent {
                     Text(verbatim: names(draft))
                 } label: {
@@ -1584,7 +1587,7 @@ struct LinesPanel: View {
                 // Decision 264: under simple rules, the train and the
                 // passing loop the line opens with, and their price.
                 if let opening = session.lineOpeningPreview {
-                    Text(verbatim: opening.text(in: language))
+                    Text(verbatim: opening.contentsText(in: language))
                         .font(.footnote.monospacedDigit())
                         .foregroundStyle(Theme.textSecondary)
                         .accessibilityIdentifier("line.draft.opening")
