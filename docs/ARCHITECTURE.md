@@ -12412,7 +12412,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 **驗證**：`ClearBlockBoundaryTests`（緩和的轉轍器前 50 m 的節點不是分界；D 跟車要去的月台被後來的 I 佔住，D 停在清的分界，I 從斜線出站後 D 才進站，沒有死結；一小時批次與逐分相同）。前兩個在 `main` 上失敗（`main` 上 D、I 互等到最後）。
 
-- 之後：「下一步」第 1 點由決策 289 做完（終點站有空股才從機廠出庫，並開往那一股；照地形建時夜裡不再卡住）。
+- 之後：「下一步」第 1 點由決策 290 做完（終點站有空股才從機廠出庫，並開往那一股；照地形建時夜裡不再卡住）。
 
 ### 288. 提早折返的列車照一般停站就開走：之後的時刻往前移掉跳過的時間
 
@@ -12450,9 +12450,9 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 **驗證**：`SharedSingleTrackTests.testATrainTurnedShortLeavesAfterItsDwellNotWhenItWouldHaveComeBack`（舊程式上失敗）；其他見 PR。
 
-### 289. 行車控制：終點站有空股才從機廠出庫，並開往那一股
+### 290. 行車控制：終點站有空股才從機廠出庫，並開往那一股
 
-2026-10-19。作者交辦（決策 287 的「下一步」第 1 點）：號誌開＋閉塞、照地形建時，左營夜裡出庫的死結（22:05 起，到 05:00 還有 17 組）；也看 THSR 24「剛入庫 16 分鐘又出庫」是不是另一個該修的調度問題。不改軌道。號碼依工作登記 #231：開工時 main 上最大 287、沒有未釋出的登記，取 288（這個 session 在 #231 留言被 403 擋下，登記全文在 PR）；之後 #823 合併了 288（提早折返的列車照一般停站就開走），所以改成 289。存檔版本、golden schema 不動。量測與探針在 [`research/HSR_SIGNAL_BASELINE_2026-10-15.md`](research/HSR_SIGNAL_BASELINE_2026-10-15.md) 第 12 節。
+2026-10-19。作者交辦（決策 287 的「下一步」第 1 點）：號誌開＋閉塞、照地形建時，左營夜裡出庫的死結（22:05 起，到 05:00 還有 17 組）；也看 THSR 24「剛入庫 16 分鐘又出庫」是不是另一個該修的調度問題。不改軌道。號碼依工作登記 #231：開工時 main 上最大 287、沒有未釋出的登記，取 288（這個 session 在 #231 留言被 403 擋下，登記全文在 PR）；之後 #823 合併了 288（提早折返的列車照一般停站就開走），`claude/branch-line-jiji`（集集線挑戰）登記了 289，所以改成 290。存檔版本、golden schema 不動。量測與探針在 [`research/HSR_SIGNAL_BASELINE_2026-10-15.md`](research/HSR_SIGNAL_BASELINE_2026-10-15.md) 第 12 節。
 
 **為什麼**（`main` fa2e3ff，照地形、號誌開＋閉塞，把世界存在 21:00、21:30，載入後逐分鐘看）：
 1. **出庫只問「現在拿不拿得到路」**（決策 221 的 `runTrainLeavingDepot`）：21:53 各站停的 THSR 8、21:57 九站停的 THSR 24 從左營機廠出庫，路都通到 `end5`（那時唯一沒有車停的一股）。閉塞區間時跟車也算拿得到路，所以 THSR 24 跟在 THSR 8 後面出來；THSR 8 停上 `end5`、成了閒置車，THSR 24 停在單線的出入線上等它。閒置車要入庫只能走出入線，兩邊互等，往左營的車從台南排回台中。和決策 280（兩組車搶機廠最後一股）是同一件事的反面。
@@ -12465,7 +12465,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 **量測**（`TrafficControlTimingReportTests`，release，Linux 雲端容器 4 核心，高鐵示範從 05:00 起 24 小時、191 班，號誌開＋閉塞；計算秒數的量測時機器同時在編譯或跑別的量測，不比）：
 
-| | `main` fa2e3ff（決策 287） | 決策 289 |
+| | `main` fa2e3ff（決策 287） | 決策 290 |
 | --- | --- | --- |
 | 照地形（遊戲的建法）：取消（各站／九站／五站） | 44（10／18／16） | **30**（7／11／12） |
 | 照地形：死結（每小時結束時） | 06–07 時 2、14–15 時 1（下一小時解開）；22–23 時 8，23–00 時 13，00 時起 16–17 組到 05:00 | **每小時結束時都是 0** |

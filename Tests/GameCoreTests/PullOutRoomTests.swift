@@ -2,7 +2,7 @@ import Foundation
 @testable import GameCore
 import XCTest
 
-/// Decision 289: under traffic control a line with runs sends a train out
+/// Decision 290: under traffic control a line with runs sends a train out
 /// of a depot to a stop only when the stop has a berth for it, one no
 /// train stands on or is bound for beyond those the trains already sent
 /// out will take, and the train runs to a free berth.

@@ -189,7 +189,7 @@ extension GameWorld {
     /// the run out's lead (decision 209's: the least dwell and the run's
     /// seconds, in whole minutes, and a minute more), has come. Under
     /// traffic control the stop must have a berth for the train (see
-    /// ``endHasRoom(_:for:)``, decision 289) and the train must be able to
+    /// ``endHasRoom(_:for:)``, decision 290) and the train must be able to
     /// take its route now.
     func runTrainLeavingDepot(of line: ServiceLine, memo: inout DispatchMemo) -> (index: Int, trip: LineTrip)? {
         guard !line.depots.isEmpty, line.hasRuns, clock.now.seconds >= 0 else { return nil }
@@ -205,7 +205,7 @@ extension GameWorld {
             else { continue }
             let lead = Self.lead(of: run) * GameTime.secondsPerMinute
             guard Self.runsWithoutTrains(soon.filter { $0 - LineRun.earliestDispatch - lead <= now }, ready: ready) > 0 else { continue }
-            // Decision 289: under traffic control, only with a berth there
+            // Decision 290: under traffic control, only with a berth there
             // for it; without one it stays in the depot.
             if isTrafficControlEnabled, !endHasRoom(station, for: trains[index]) { continue }
             if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
@@ -219,7 +219,7 @@ extension GameWorld {
 
     // MARK: - Room at the end
 
-    /// Decision 289: the berths of `station` that `train` fits and that
+    /// Decision 290: the berths of `station` that `train` fits and that
     /// are free for it: no part of another train stands on their track,
     /// and no train on its way to the station is bound for it (its route
     /// ends there).
@@ -235,7 +235,7 @@ extension GameWorld {
         return berths(of: station, length: train.length).filter { !taken.contains($0.traversal.edge) }
     }
 
-    /// Decision 289: whether `station` has a berth for `train`, about to
+    /// Decision 290: whether `station` has a berth for `train`, about to
     /// be sent out of a depot to it, beyond those the trains already sent
     /// out of a depot to it and not yet on their way will take: more of
     /// its tracks have a free berth (see ``freeEndBerths(_:for:)``) than
@@ -253,7 +253,7 @@ extension GameWorld {
         return free.count > coming
     }
 
-    /// Decision 289: the free berths (see ``freeEndBerths(_:for:)``) a
+    /// Decision 290: the free berths (see ``freeEndBerths(_:for:)``) a
     /// train of a line with runs, sent out of a depot under traffic control
     /// and leaving it from stop `stop`, runs to at `call`; `nil` for any
     /// other departure, or when none is free (it then takes the nearest,
