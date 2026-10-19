@@ -715,6 +715,7 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 | 影子不跟太陽方向偏移、建物彼此不投影、月台與雨棚底下沒有影子 | 決策 232 |
 | 地面的斑馬線、停止線、車道線（新的地面層要插進第 4.1 節的高度順序） | 決策 241 |
 | 3D 的「地圖風格」設定（換配色） | 決策 241 |
+| `tools/glb-to-m3dmodel` 讀 meshopt 壓縮的 GLB（參考庫街景的車、道具模板）：照 Peakline 研究主報告（#821）§8 的橋接任務，但**只用** `@gltf-transform/core`、`extensions` 與 `meshoptimizer`，**不用** `@gltf-transform/functions`（間接裝進 LGPL 的 libvips）；也要收 `.gltf`＋外部 `.bin`、讓非車輛模型關掉「淺色當塗裝」。之後才是 WorldCover 只上色圖層（從參考庫 `taiwan-rail-reference-clean` 的 `build_worldcover.py` 與圖磚開始）與香港無貼圖量體 | `docs/research/PEAKLINE_MAP_ENGINE_STUDY.md` §8（#821）；補充與修正 `docs/research/PEAKLINE_STUDY_SUPPLEMENT_2026-10-19.md` §1–§4（#820）；轉換器原本是 Codex 的線（第 2 節） |
 | Metal 的色調映射與泛光（作者說留待以後） | `docs/art/map3d-night-terrain-2026-10-16/` |
 | 兩批生成素材：generated-2026-10-13（43 張）、micro3d（24 張），沒接進 App，也沒有「採用或放棄」的紀錄 | `docs/art/generated-2026-10-13/`、`docs/art/generated-2026-10-14-micro3d/` |
 
