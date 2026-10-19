@@ -130,6 +130,7 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | TUTORIAL_REDO_SPEC、TUTORIAL_REDO_AUDIT | 歷史 | 決策 188；P1、P2 列在 NEXT_PRIORITIES |
 | DISRUPTION_STUDY | 部分有效 | 方案 B 已由決策 154、162 實作；方案 A（老化、故障、檢修）與 C（停駛）仍是提案，併進機廠的研究 |
 | FREIGHT_STUDY | 部分有效 | 方案 C、A 已由決策 155–158 實作；方案 B（產業鏈）仍是提案 |
+| PEAKLINE_STUDY_SUPPLEMENT_2026-10-19 | 現行，補充 | Peakline 研究（主報告 #821 的 PEAKLINE_MAP_ENGINE_STUDY）的補充：GLB 轉換器不要用 `@gltf-transform/functions`（LGPL）、香港模型的實際取得與條款、參考庫現成的 WorldCover、平原與山區的對照、轉換器的其他缺口；不改程式 |
 | 3D_DIRECTION_STUDY | 有效提案 | 「唯讀 3D 檢視」的建議，等作者決定 |
 | PROCEDURAL_CITY_STUDY | 部分過時 | Swift 試片已由決策 152、161、163 取代 |
 | PHASE8_ASSET_INVENTORY | 參考 | 3D 素材清單 |

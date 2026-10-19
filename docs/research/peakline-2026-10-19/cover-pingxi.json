@@ -1,0 +1,56 @@
+{
+ "box": [
+  121.74,
+  25.02,
+  121.8,
+  25.08
+ ],
+ "pixels": [
+  720,
+  720
+ ],
+ "px_m2": 77.4,
+ "area_km2": 40.14,
+ "wc_km2": {
+  "tree": 39.82,
+  "shrub": 0.0,
+  "grass": 0.01,
+  "crop": 0.01,
+  "built": 0.29,
+  "bare": 0.0,
+  "water": 0.01,
+  "wetland": 0.0
+ },
+ "osm_km2": {
+  "wood": 37.59,
+  "grass": 0.0,
+  "wetland": 0.0,
+  "sand": 0.0,
+  "park": 0.01,
+  "water": 0.11
+ },
+ "zones_km2": {
+  "industrial": 0.0,
+  "park": 0.0,
+  "farmland": 0.0
+ },
+ "water_grid_km2": 0.1,
+ "wc_tree_not_osm_green_km2": 2.19,
+ "wc_tree_in_osm_wood_pct": 94.3,
+ "wc_crop_in_farm_zone_pct": 0.0,
+ "wc_crop_outside_any_zone_km2": 0.01,
+ "farm_zone_where_wc_built_km2": 0.0,
+ "farm_zone_where_wc_tree_km2": 0.0,
+ "osm_wood_where_wc_not_tree_km2": 0.03,
+ "wc_water_not_game_water_km2": 0.0,
+ "game_water_not_wc_water_km2": 0.1,
+ "unpainted_now_km2": 2.48,
+ "unpainted_now_by_wc_km2": {
+  "tree": 2.19,
+  "grass": 0.01,
+  "crop": 0.01,
+  "built": 0.26,
+  "bare": 0.0,
+  "water": 0.0
+ }
+}
