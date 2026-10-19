@@ -81,6 +81,11 @@ extension GameWorld {
                 "不在首站 \(name)：派它到首站"
             )
         case .noRoundTrip(let first):
+            // Decision 284 (TestFlight 73.1): a train longer than every
+            // platform of a call can stop there on no platform.
+            if let short = shortPlatformCall(ofTrain: id) {
+                return shortPlatformText(short, in: language)
+            }
             let name = stationName(first)
             return language.text(
                 "Cannot run the line from here: check the track to \(name)",
@@ -112,6 +117,49 @@ extension GameWorld {
             }
             return language.text("The way ahead is taken: waits for it to clear", "前方區間被占用：等候空出")
         }
+    }
+}
+
+/// A call of a line that a train is too long for (decision 284): every
+/// platform of the station is shorter than the train, so it can stop there
+/// on none (`GameWorld.path(from:toStation:length:)` ends only at a platform
+/// the train fits).
+public struct ShortPlatformCall: Hashable, Sendable {
+    /// The first such call, in the order the service calls.
+    public let station: StationID
+    /// The length, in world units, its longest platform must have.
+    public let needed: Int64
+    /// The most cars, at the train's car length, that fit at every call of
+    /// the service.
+    public let cars: Int
+}
+
+extension GameWorld {
+    /// The first call of the service train `id` runs for that the train is
+    /// longer than every platform of (``ShortPlatformCall``), or `nil` when
+    /// it fits at every call, or runs for no line.
+    public func shortPlatformCall(ofTrain id: TrainID) -> ShortPlatformCall? {
+        guard let train = train(id: id), let lineID = assignedLine(of: id), let line = line(id: lineID) else { return nil }
+        let stops = assignedPattern(of: id).map { line.patterns[$0].calls.map { line.stops[$0] } } ?? line.stops
+        // A station with no platform at all is another problem: no train
+        // stops there, however short.
+        let longest = stops.map { stop in network.platforms(of: stop).map(\.length).max() }
+        guard let index = longest.firstIndex(where: { $0.map { $0 < train.length } ?? false }),
+              let shortest = longest.compactMap(\.self).min()
+        else { return nil }
+        return ShortPlatformCall(station: stops[index], needed: train.length, cars: Int(shortest / train.carPitch) + 1)
+    }
+
+    /// What a train too long for a call of its line is told: the station,
+    /// how long its platform must be, and how many cars fit.
+    public func shortPlatformText(_ short: ShortPlatformCall, in language: DisplayLanguage) -> String {
+        let name = stationName(short.station)
+        let unitsPerMetre = WorldCoordinate.unitsPerMetre
+        let metres = (short.needed + unitsPerMetre - 1) / unitsPerMetre
+        return language.text(
+            "Too long for the platforms at \(name): lengthen one to \(metres) m, or take the train off the track and shorten it to \(short.cars) \(short.cars == 1 ? "car" : "cars")",
+            "列車比 \(name) 的月台長：把月台加長到 \(metres) 公尺，或把列車移出軌道、減到 \(short.cars) 節"
+        )
     }
 }
 

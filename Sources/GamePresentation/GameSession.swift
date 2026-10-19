@@ -339,6 +339,11 @@ public final class GameSession {
     /// picked stations or when no track joins two picked in a row.
     public private(set) var lineDraftRoute: [StationID]?
 
+    /// Why no track joins the stations of ``lineDraft`` (decision 284),
+    /// kept with ``lineDraftRoute``: `nil` while a route is found or for
+    /// fewer than two picked stations.
+    public private(set) var lineDraftGap: LineDraftGap?
+
     /// Which stations along ``lineDraftRoute`` the new line calls at.
     public var lineDraftStopping: LineDraftStopping = .everyStation
 
@@ -1880,6 +1885,8 @@ public final class GameSession {
     func refreshLineDraftRoute() {
         let route = world.stationsAlongTrack(through: lineDraft)
         if route != lineDraftRoute { lineDraftRoute = route }
+        let gap = route == nil ? world.lineDraftGap(through: lineDraft) : nil
+        if gap != lineDraftGap { lineDraftGap = gap }
         let along = Set(route ?? [])
         if !lineDraftSkipped.isSubset(of: along) { lineDraftSkipped.formIntersection(along) }
     }
@@ -2115,6 +2122,11 @@ public final class GameSession {
             } else {
                 opens = ""
             }
+            // Decision 284: a train too long for a call never leaves; say
+            // so, last, as it is assigned.
+            let tooLong = world.shortPlatformCall(ofTrain: train.id).map { short in
+                language.text(" ", "") + world.shortPlatformText(short, in: language) + language.text(".", "。")
+            } ?? ""
             // TestFlight 60.1: a line already running trains keeps its
             // counts, so the new train would wait: say so, and how.
             if started == 0, let unused = world.lineUnusedTrains(ofTrain: train.id) {
@@ -2122,13 +2134,13 @@ public final class GameSession {
                 return text + opens + language.text(
                     " \(service) is set to run \(now) \(now == 1 ? "train" : "trains"): tap Run \(unused.target) on the train card, or set it in the Lines panel.",
                     "\(service) 只設定上線 \(now) 列：在列車卡按「加開到 \(unused.target) 列」，或在路線面板設定。"
-                )
+                ) + tooLong
             }
-            guard started > 0 else { return text + opens }
+            guard started > 0 else { return text + opens + tooLong }
             return text + opens + language.text(
                 " \(service) ran no trains, so it now runs \(started) at every level.",
                 "\(service) 原本沒有上線列車，現在各時段上線 \(started) 列。"
-            )
+            ) + tooLong
         }
     }
 
