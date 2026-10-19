@@ -142,17 +142,52 @@ final class TrackSectionTests: XCTestCase {
         XCTAssertEqual([tunnel.start, tunnel.end], [5_120, 21_504])
         XCTAssertFalse(world.network.isTunnelPortal(edge.from))
 
-        // Split 8,192 along: the first part's last three tunnel lengths, a
-        // run shorter than 4, become a cutting (the deepest is 20 m, as
-        // deep as a cutting may go when it joins one); the second part
-        // starts in the tunnel.
+        // Split 8,192 along (decision 282): the parts keep the tunnel, the
+        // first part's last three lengths too, though a run that short
+        // would join the cutting were the part built afresh.
         let node = try world.splitTrackEdge(edge.id, at: 8_192)
         let parts = world.network.edges.filter { $0.from == node || $0.to == node }.sorted { $0.id < $1.id }
         XCTAssertEqual(parts.map(\.sections), [
-            sections([(.surface, 3), (.cutting, 5)]),
+            sections([(.surface, 3), (.cutting, 2), (.tunnel, 3)]),
             sections([(.tunnel, 13), (.cutting, 2), (.surface, 9)]),
         ])
-        XCTAssertTrue(world.network.isTunnelPortal(node), "a cutting meets a tunnel at the new node")
+        XCTAssertFalse(world.network.isTunnelPortal(node), "the new node is inside the tunnel")
+    }
+
+    /// Decision 282: a house over a tunnel 2,048 short of where it is cut
+    /// stands, and the track under it stays in the tunnel, cut on a length
+    /// or between two; the world still loads.
+    func testSplittingATunnelKeepsItAndTheHouseOverIt() throws {
+        var world = try world(columns: [0, 0, 20, 20, 20, 20, 0])
+        let house = try world.placeBuilding(.house, at: PlanPoint(x: 8_960, y: Self.row))
+        let (edge, _) = try build(&world, from: 1_024, to: 33_792, z: 0, structure: .automatic)
+        XCTAssertEqual(world.placedBuildings.map(\.id), [house.id], "the house over the tunnel stands")
+        for distance: Int64 in [8_192, 8_700] {
+            var cut = world
+            let node = try cut.splitTrackEdge(edge.id, at: distance)
+            let parts = cut.network.edges.filter { $0.from == node || $0.to == node }.sorted { $0.id < $1.id }
+            XCTAssertEqual(parts.map { $0.kind(at: node) }, [.tunnel, .tunnel], "\(distance)")
+            XCTAssertEqual(parts.flatMap(\.sections).filter { $0.kind == .tunnel }.map(\.lengths).reduce(0, +), 16 + (distance == 8_192 ? 0 : 1),
+                           "the tunnel kept, a length at the cut in both parts")
+            XCTAssertEqual(cut.placedBuildings.map(\.id), [house.id], "\(distance)")
+            XCTAssertEqual(cut.economy.balance, world.economy.balance)
+            let data = try JSONEncoder().encode(SavedGame(world: cut))
+            XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, cut, "\(distance)")
+        }
+    }
+
+    /// Decision 282: water read under automatic track after it was built
+    /// does not stop it being cut; the parts stay on the surface.
+    func testWaterReadLaterDoesNotStopASplit() throws {
+        var world = try world(columns: [0])
+        let (edge, _) = try build(&world, from: 1_024, to: 17_408, z: 0, structure: .automatic)
+        XCTAssertEqual(edge.sections, sections([(.surface, 16)]))
+        try world.setWater([CellPosition(row: 0, column: 2)])
+        let node = try world.splitTrackEdge(edge.id, at: 4_096)
+        let parts = world.network.edges.filter { $0.from == node || $0.to == node }.sorted { $0.id < $1.id }
+        XCTAssertEqual(parts.map(\.sections), [sections([(.surface, 4)]), sections([(.surface, 12)])])
+        let data = try JSONEncoder().encode(SavedGame(world: world))
+        XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
     }
 
     // MARK: - Water

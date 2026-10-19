@@ -16,8 +16,9 @@
 // metres of it, a viaduct above, a tunnel below, a bridge over water. Runs
 // shorter than ``TrackSectionRules/shortestRun`` lengths join a neighbour,
 // so the track does not flick between viaduct and embankment over every
-// hump. Once built, an automatic edge keeps its sections: the ground never
-// changes, but the water of a map read as it is needed may come in later.
+// hump. Once built, an automatic edge keeps its sections, and its parts keep
+// them when it is cut (decision 282): the ground never changes, but the
+// water of a map read as it is needed may come in later.
 //
 // The references have no structure chosen by the ground, no earthwork and
 // no water rule (gap, the design's section 10); the thresholds follow its
@@ -240,6 +241,41 @@ extension GameWorld {
             return []
         }
         return try Self.automaticSections(survey.lengths, price: economy.costs.track.amount)
+    }
+
+    /// The sections of a part of automatic `edge` cut at a node, the part
+    /// of `geometry` starting `offset` along the edge (decision 282): each
+    /// of its lengths keeps what carried the edge there, so a tunnel stays
+    /// a tunnel and water read since it was built does not count. A length
+    /// over a tunnel and something else stays in the tunnel, so no track
+    /// comes out of the ground; otherwise it is what carried the edge at its
+    /// middle, or else at the rest of it, the first its height allows (the
+    /// kinds on the ground as their height makes them).
+    ///
+    /// - Throws: ``GameError/groundNotLoaded``;
+    ///   ``GameError/invalidTrackStructure`` when its height allows none.
+    func keptSections(of edge: TrackEdge, part geometry: TrackGeometry, from offset: Int64) throws(GameError) -> [TrackSection] {
+        let spans = edge.sectionSpans
+        var sections: [TrackSection] = []
+        for length in try survey(geometry).lengths {
+            // The parts' lengths are rounded: the last may run a few units
+            // past the edge's end.
+            let start = min(offset + length.start, edge.length - 1)
+            let end = max(start + 1, min(offset + length.end, edge.length))
+            let middle = (start + end) / 2
+            let under = spans.filter { $0.start < end && start < $0.end }
+            let candidates = (under.contains { $0.kind == .tunnel } ? [.tunnel] : [])
+                + under.filter { $0.start <= middle && middle < $0.end }.map(\.kind) + under.map(\.kind)
+            let dry = TrackPricedLength(start: length.start, end: length.end, delta: length.delta, isWater: false)
+            guard let kept = candidates.first(where: { dry.allows($0) }) else { throw .invalidTrackStructure }
+            let kind = kept.isOnGround ? length.groundKind : kept
+            if let last = sections.last, last.kind == kind {
+                sections[sections.count - 1] = TrackSection(kind: kind, lengths: last.lengths + 1)
+            } else {
+                sections.append(TrackSection(kind: kind, lengths: 1))
+            }
+        }
+        return sections
     }
 
     /// The automatic structure's sections over `lengths` (decision 124).

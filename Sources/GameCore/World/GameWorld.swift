@@ -573,7 +573,10 @@ public struct GameWorld: Equatable, Sendable {
     ///   a part's structure does not suit the ground under it; since decision
     ///   160, after the parts' geometry, ``GameError/mapTileNotOwned(_:)``
     ///   when a part's centre line passes over a tile the company does not
-    ///   own.
+    ///   own. Since decision 282 an automatic edge's parts keep its sections
+    ///   (``keptSections(of:part:from:)``), and after them
+    ///   ``GameError/buildingOnTrack(_:)`` names the edge when a part's open
+    ///   track would come near a company building.
     @discardableResult
     public mutating func splitTrackEdge(_ id: TrackEdgeID, at distance: Int64) throws(GameError) -> TrackNodeID {
         guard let edge = network.edge(id), let geometry = network.geometry(of: id),
@@ -624,10 +627,25 @@ public struct GameWorld: Equatable, Sendable {
             ?? firstTileNotOwned(along: secondGeometry.points.map(\.plan)) {
             throw .mapTileNotOwned(tile)
         }
-        // Decision 124: each part is carried as the ground under it asks,
-        // an automatic edge's sections worked out again for each.
-        let firstSections = try sections(of: firstGeometry, structure: edge.structure)
-        let secondSections = try sections(of: secondGeometry, structure: edge.structure)
+        // Decision 124: each part is carried as the ground under it asks;
+        // decision 282: an automatic edge's parts keep its sections, parted
+        // at the cut, and no company building comes near their open track.
+        let firstSections: [TrackSection], secondSections: [TrackSection]
+        if edge.structure == .automatic {
+            firstSections = try keptSections(of: edge, part: firstGeometry, from: 0)
+            secondSections = try keptSections(of: edge, part: secondGeometry, from: cut.chainage)
+        } else {
+            firstSections = try sections(of: firstGeometry, structure: edge.structure)
+            secondSections = try sections(of: secondGeometry, structure: edge.structure)
+        }
+        let open = [(firstGeometry, cut.first, firstProfile, firstSections), (secondGeometry, cut.second, secondProfile, secondSections)]
+            .flatMap { geometry, curve, profile, sections in
+                TrackEdge(id: id, from: edge.from, to: edge.to, curve: curve, length: geometry.length, profile: profile,
+                          structure: edge.structure, sections: sections).openStretches(of: geometry)
+            }
+        guard !placedBuildings.contains(where: { building in open.contains { Self.line($0, comesNear: building) } }) else {
+            throw .buildingOnTrack(id)
+        }
 
         var after = network
         let platforms = after.platforms(on: id)
