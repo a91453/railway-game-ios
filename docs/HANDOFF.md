@@ -748,8 +748,7 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 | 官網與社群說明短片的 skill | MOTION_3D_TOOLS §2.3 B |
 | 在 macOS 上跑一部分套件測試，比對 Apple libm 的浮點值 | GAP_RESEARCH §4.2 |
 | 測試用的參照模型擴充到全網選路（`ReferenceWorldGoldenTests.swift:130` 還是 `preconditionFailure`） | GAP_RESEARCH §4.2 |
-| 等作者同意依賴：pixelmatch（ISC，npm）接 `tools/map3d-preview/`，前後對照多一張差異圖與改動像素比例 | GAME_AI_TOOLS §6.1 |
-| 等作者同意依賴：OR-Tools（Apache-2.0，Python）離線量尺，高鐵示範一天的車輛運用最佳解，對照 `claude/hsr-train-rostering` 的規則；參考庫 `optimize_physical_dispatch.py` 已有 CP-SAT 的寫法 | GAME_AI_TOOLS §6.1 |
+| 跟著相關的 PR 一起加的工具（作者 2026-10-20 交給 session 判斷時機）：pixelmatch 差異圖 → 下一個改 3D 畫面的 PR；glTF-Validator → Meshy 公車接進 App 的 PR；OR-Tools 車輛運用量尺 → 決策 297 合併後、還有說不出原因的取消時；`performAccessibilityAudit()` → 實機 VoiceOver 有問題時。做那件事的 session 照表加，不必再等作者同意依賴 | GAME_AI_TOOLS §6.3 |
 
 ### 7.5 只等實機確認的
 

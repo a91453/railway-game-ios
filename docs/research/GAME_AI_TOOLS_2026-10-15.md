@@ -304,6 +304,28 @@ MIT，`5beb35b`。給 Claude Code、Codex 等的 skill 集，主張「小、可�
 - OR-Tools 車輛運用量尺：最接近模擬深度；要加 Python 依賴，而且 `claude/hsr-train-rostering` 正在做同一件事的規則，
   等它合併後量尺才有東西可比。
 
+### 6.3 什麼時候加（作者 2026-10-20：「四方考慮，依現有優先順序，現在加還是做到相關的時候再加，給你判斷」）
+
+原則：工具跟著用得到它的那個 PR 一起進來，不先裝著等。現在的派工（NEXT_PRIORITIES §16、§17）
+是甲線（上手）、乙線（現實路網）與高鐵示範的車輛運用；3D 那條線在等 72.1 的實機 fps 回報。
+這些工具沒有一個在擋它們，所以**現在只做第一列**，其餘寫明在哪個時機由做那件事的 session 加。
+作者把這幾個工具加不加、何時加交給 session 判斷，所以到了時機不必再等作者同意依賴；
+能抄單一檔案（保留授權）就不加套件。
+
+| 項目 | 時機 | 怎麼加 | 四方（玩家／開發／美術／音樂） |
+| --- | --- | --- | --- |
+| diagnosing-bugs 試用 | **現在** | 拿一個已修好的真 bug（#828 的 R2）回到修之前的 commit，只照 skill 走，看能不能做出會紅的指令、找到同一個原因 | 無／驗證 #847 真的有用，便宜／無／無 |
+| pixelmatch 差異圖 | 下一個改 3D 畫面的 PR（決策 277 的雨絲與站前商店街、Meshy 公車接進 App） | 抄 `pixelmatch` 的單一檔案（ISC，授權放旁邊）進 `tools/map3d-preview/`，在 `render.cjs` 已開的 Chromium 裡用 canvas 解 PNG、比對；不加 npm 套件。只當審查的證據，不當通過門檻 | 無／前後對照有數字／看得出改動只在該改的地方／無 |
+| glTF-Validator | Meshy 公車接進 App 的那個 PR | 加進 `tools/glb-to-m3dmodel` 自己的 `package.json`（`gltf-validator`，Apache-2.0，固定版本），轉換前先查；遊戲自己的限制（無貼圖、面數）照舊另查 | 無／壞模型在轉換前就擋下／無／無 |
+| OR-Tools 車輛運用量尺 | `claude/hsr-train-rostering`（決策 297）合併後，量到的取消或晚點還有說不出原因的才做 | 離線 Python 工具，照參考庫 `optimize_physical_dispatch.py` 的 CP-SAT 寫法；不進 GameCore | 間接（高鐵示範號誌預設關）／知道規則離最佳差多少／無／無 |
+| MetricKit、OSSignposter、開發者 HUD | 照 NEXT_PRIORITIES §2 第 8 項；72.1 的 fps 或 VoiceOver 600 倍（HANDOFF §7.5）在實機看到卡頓就提前 | Apple 自帶，不加依賴 | 間接／實機的數字，不再只有 Linux／3D 的幀預算／無 |
+| `performAccessibilityAudit()` | 實機 VoiceOver 回報有問題時 | full lane 加一個測試，不進 PR gate | 用 VoiceOver 的玩家／不加依賴／無／無 |
+| `writing-for-agents` 的檢查 | 下一次有人大改 `CLAUDE.md` 時 | 照它檢查「去讀某某文件」的句子 | 無／agent 該讀的會讀到／無／無 |
+| gtfs-validator | 有新的 GTFS 要匯入時 | 只在 `tools/` 的轉檔前跑 | — |
+| SwiftLint | 審查一再抓到同一種風格問題時 | 先只報告新改的檔案，不加 CI 必過 | — |
+| sentry-cocoa | 不加 | 除非 TestFlight 規模大到 App Store Connect 的當機報告不夠，而且作者同意把資料送第三方 | — |
+| swift-snapshot-testing、AccessibilitySnapshot | 不加 | 除非作者改了「UI 測試不截圖、不比圖」 | — |
+
 **VERIFIED**（這個容器，Linux）：8 個專案的授權檔；參考庫的 CP-SAT 腳本；skill 引用的測試類別、環境變數
 （`PROPERTY_REPLAY`、`PROBLEM_REPORT`、`TRAFFIC_TIMING_REPORT`、`TICK_REPORT`）與 GameSim 指令在 `b368ce7` 都存在。
 **UNVERIFIED**：8 個工具都沒有安裝或試跑；skill 還沒有在真的 bug 上用過。
