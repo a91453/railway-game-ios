@@ -54,6 +54,7 @@ struct LinesPanel: View {
     /// Its fares, costs and why it loses money, kept for a command and a
     /// game day (decision 194).
     @State private var lossMemo = LineLossMemo()
+    @State private var satisfactionMemo = LineSatisfactionMemo()
     /// Decision 184: the name typed to find a line, and which lines show.
     @State private var lineSearch = ListSearch()
     @State private var lineFilter: LineFilter = .all
@@ -671,6 +672,16 @@ struct LinesPanel: View {
                         .equatable()
                         .tutorialPanelTarget(.lineLoss)
                         .id(TutorialTarget.lineLoss)
+                }
+                // Decision 301: how riders find the line, and the fix
+                // beside its weakest score.
+                if let satisfaction = satisfactionMemo.satisfaction(line.id, of: session) {
+                    let fix = satisfactionMemo.fix(line.id, of: session)
+                    LineSatisfactionCard(
+                        satisfaction: satisfaction, language: session.language, session: session, lineName: line.name, fix: fix,
+                        shortOfMoney: fix.map { !session.world.economy.canAfford($0.cost) } ?? false
+                    )
+                        .equatable()
                 }
             } header: {
                 Text(verbatim: session.language.text("Operations", "營運"))
@@ -1839,6 +1850,161 @@ private struct LineLossCard: View, Equatable {
         case .emptyRuns: "arrow.uturn.left"
         case .lowLoad: "person.2"
         }
+    }
+}
+
+/// Decision 301: how riders find a line, three scores out of 100 each
+/// with a face, the figure it comes from, and for the weakest one below good
+/// what helps; beside it decision 194's one-tap fix, asked before it is made.
+/// An equatable view, which only a command or a new game day changes.
+private struct LineSatisfactionCard: View, Equatable {
+    let satisfaction: LineSatisfaction
+    let language: DisplayLanguage
+    let session: GameSession
+    let lineName: String
+    let fix: LineLossFix?
+    let shortOfMoney: Bool
+    @State private var asking: LineLossFix?
+
+    nonisolated static func == (lhs: LineSatisfactionCard, rhs: LineSatisfactionCard) -> Bool {
+        lhs.satisfaction == rhs.satisfaction && lhs.language == rhs.language && lhs.session === rhs.session
+            && lhs.lineName == rhs.lineName && lhs.fix == rhs.fix && lhs.shortOfMoney == rhs.shortOfMoney
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(verbatim: satisfaction.spanText(in: language))
+                .font(.caption.weight(.semibold))
+                .accessibilityAddTraits(.isHeader)
+            if let text = satisfaction.waitingText(in: language) {
+                Text(verbatim: text)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            ForEach(satisfaction.items) { item in
+                itemRow(item, weakest: item.aspect == satisfaction.weakest?.aspect)
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("line.satisfaction")
+        .confirmationDialog(
+            Text(verbatim: asking.map { $0.title(in: language) } ?? ""),
+            isPresented: Binding(get: { asking != nil }, set: { if !$0 { asking = nil } }),
+            titleVisibility: .visible,
+            presenting: asking
+        ) { fix in
+            Button {
+                session.applyLineLossFix(fix, to: satisfaction.line)
+            } label: {
+                Text(verbatim: fix.title(in: language))
+            }
+            Button(role: .cancel) {
+            } label: {
+                Text(verbatim: language.text("Cancel", "取消"))
+            }
+        } message: { fix in
+            Text(verbatim: fix.question(on: lineName, in: language))
+        }
+    }
+
+    private func itemRow(_ item: LineSatisfaction.Item, weakest: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .center, spacing: 8) {
+                face(item.grade)
+                Text(verbatim: item.title(in: language))
+                    .font(.subheadline.weight(.semibold))
+                Spacer(minLength: 8)
+                Text(verbatim: item.scoreText(in: language))
+                    .font(item.score == nil ? Font.footnote : Font.footnote.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(item.score == nil ? Theme.textSecondary : Theme.textPrimary)
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(verbatim: item.spokenText(in: language)))
+            if let score = item.score {
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(Theme.chip)
+                        Capsule()
+                            .fill(Self.colour(of: item.grade))
+                            .frame(width: max(CGFloat(score > 0 ? 3 : 0), proxy.size.width * CGFloat(score) / 100))
+                    }
+                }
+                .frame(height: 6)
+                .padding(.leading, 28)
+                .accessibilityHidden(true)
+            }
+            Text(verbatim: item.detail(in: language))
+                .font(.footnote)
+                .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.leading, 28)
+                .accessibilityHidden(true)
+            if weakest, let advice = item.advice(in: language) {
+                Text(verbatim: advice)
+                    .font(.footnote)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.leading, 28)
+                if let fix, item.aspect.fixKind != nil {
+                    fixButton(fix)
+                }
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("line.satisfaction.\(item.aspect.rawValue)")
+    }
+
+    /// The face of `grade` (our own drawings, decision 301), or a dash's
+    /// circle before there is a score.
+    @ViewBuilder
+    private func face(_ grade: LineSatisfaction.Grade?) -> some View {
+        Group {
+            switch grade {
+            case .good: Image("RatingGood").renderingMode(.template).resizable()
+            case .fair: Image("RatingFair").renderingMode(.template).resizable()
+            case .poor: Image("RatingPoor").renderingMode(.template).resizable()
+            case nil: Image(systemName: "circle.dashed").resizable()
+            }
+        }
+        .scaledToFit()
+        .frame(width: 20, height: 20)
+        .foregroundStyle(Self.colour(of: grade))
+        .accessibilityHidden(true)
+    }
+
+    private static func colour(of grade: LineSatisfaction.Grade?) -> Color {
+        switch grade {
+        case .good: Theme.success
+        case .fair: Theme.warning
+        case .poor: Theme.error
+        case nil: Theme.textSecondary
+        }
+    }
+
+    /// The fix's button, at least 44 points each way; off, with the
+    /// reason under it, when the money does not reach.
+    private func fixButton(_ fix: LineLossFix) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Button {
+                asking = fix
+            } label: {
+                Text(verbatim: fix.title(in: language))
+                    .font(.footnote.weight(.semibold))
+                    .frame(minWidth: 44, minHeight: 44)
+            }
+            .buttonStyle(.bordered)
+            .disabled(shortOfMoney)
+            .accessibilityHint(Text(verbatim: shortOfMoney ? fix.shortOfMoneyText(in: language) : ""))
+            .accessibilityIdentifier("line.satisfaction.fix")
+            if shortOfMoney {
+                Text(verbatim: fix.shortOfMoneyText(in: language))
+                    .font(.caption)
+                    .foregroundStyle(Theme.error)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.leading, 28)
     }
 }
 

@@ -174,6 +174,10 @@ final class Feature284To286UITests: XCTestCase {
     private func reveal(_ control: XCUIElement) {
         let list = app.collectionViews.firstMatch
         XCTAssertTrue(list.appears(within: 10))
+        // Measured while the panel still slides in, the list's place is its
+        // trailing edge, and every drag there misses it (main e255b0a's full
+        // lane, run 39482364298: 40 drags at x 804; decision 299, later).
+        list.waitUntilStill()
         let bar = app.navigationBars.firstMatch
         // Drag beside menu rows, and below the panel's navigation bar.
         XCTAssertTrue(app.dragUntilWhollyOnScreen(control, in: list, below: bar.frame.maxY), "Cannot reveal \(control)")
