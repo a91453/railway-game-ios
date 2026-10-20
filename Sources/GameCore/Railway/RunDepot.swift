@@ -13,6 +13,7 @@ extension GameWorld {
     /// as the high-speed demo's sets wait at an end for their next run
     /// (decision 197); a train that turns round within the hour stays.
     static let runDepotLookahead: Int64 = 2 * GameTime.secondsPerHour
+    nonisolated(unsafe) static var depotVariant = 3 // VARIANT (measurement only)
 
     /// The first departures, in seconds, of `line`'s runs that leave from
     /// `station`, have not sent a train out on their day and may still:
@@ -101,7 +102,11 @@ extension GameWorld {
             let waiting = runTrainsWaiting(of: line, at: station)
             let wanted = pendingRunStarts(of: line, from: station).count { $0 <= horizon }
             guard waiting.count > wanted else { continue }
+            // Decision 296: a train out of a depot for a run due here is
+            // not one too many until that run leaves or is dropped.
+            let due = isTrafficControlEnabled && pendingRunStarts(of: line, from: station).contains { $0 - LineRun.earliestDispatch <= clock.now.seconds }
             for index in waiting.suffix(waiting.count - wanted).reversed() {
+                if GameWorld.depotVariant & 2 != 0, due, cameOutOfDepot(trains[index], to: station) { continue } // VARIANT
                 guard let trip = emptyRun(of: line, for: trains[index], to: line.depots) else { continue }
                 // Decision 280: under traffic control, only with a siding
                 // for it; without one it stays where it waits.
@@ -204,7 +209,11 @@ extension GameWorld {
                   let run = trip.deadhead
             else { continue }
             let lead = Self.lead(of: run) * GameTime.secondsPerMinute
-            guard Self.runsWithoutTrains(soon.filter { $0 - LineRun.earliestDispatch - lead <= now }, ready: ready) > 0 else { continue }
+            // Decision 296: under traffic control, only the runs it can
+            // stand at in time for: a run out that arrives after a run's
+            // last moment to leave does not take it.
+            let reachable = soon.filter { !(GameWorld.depotVariant & 1 != 0 && isTrafficControlEnabled) || $0 + LineRun.latestDispatch >= now + lead }
+            guard Self.runsWithoutTrains(reachable.filter { $0 - LineRun.earliestDispatch - lead <= now }, ready: ready) > 0 else { continue }
             // Decision 290: under traffic control, only with a berth there
             // for it; without one it stays in the depot.
             if isTrafficControlEnabled, !endHasRoom(station, for: trains[index]) { continue }
@@ -215,6 +224,14 @@ extension GameWorld {
             return (index, trip)
         }
         return nil
+    }
+
+    /// Decision 296: whether `train`, standing without a service at
+    /// `station`, last ran there empty out of a depot (its timetable, kept
+    /// once the run ends, starts at a depot and ends there).
+    func cameOutOfDepot(_ train: Train, to station: StationID) -> Bool {
+        guard let first = train.timetable.first, let last = train.timetable.last, last.station == station else { return false }
+        return self.station(id: first.station)?.isDepot == true
     }
 
     // MARK: - Room at the end

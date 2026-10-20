@@ -103,6 +103,7 @@ final class TrafficControlTimingReportTests: XCTestCase {
     func testTheDemoOnTheRealDay() throws {
         guard ProcessInfo.processInfo.environment["TRAFFIC_TIMING_REPORT"] != nil else { throw XCTSkip("Set TRAFFIC_TIMING_REPORT=1.") }
         let flat = ProcessInfo.processInfo.environment["TRAFFIC_TIMING_FLAT"] != nil
+        if let variant = ProcessInfo.processInfo.environment["DEPOT_VARIANT"].flatMap(Int.init) { GameWorld.depotVariant = variant } // VARIANT
         let layout = try HighSpeedDemo.Layout(railways: HighSpeedDemoTests.railways(), heights: flat ? nil : XCTUnwrap(HighSpeedDemoTests.heights))
         var world = HighSpeedDemo.newWorld(paying: layout.cost(eventSeed: 1), eventSeed: 1, ground: layout.ground)
         let built = try layout.build(in: &world, language: .english)
