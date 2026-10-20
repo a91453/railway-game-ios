@@ -16,8 +16,9 @@ import GameCore
 // line. Its targets, the festival's days and boost are this project's.
 
 extension Challenge {
-    /// The Taiwan railway history challenges, oldest era first.
-    public static let history: [Challenge] = [liuMingchuan, pingxi]
+    /// The Taiwan railway history challenges, oldest era first, then the
+    /// branch lines (decision 289).
+    public static let history: [Challenge] = [liuMingchuan, pingxi] + BranchLineChallenge.all.map(\.challenge)
 
     /// The Pingxi Line, home of the sky lanterns.
     static let pingxi = Challenge(

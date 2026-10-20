@@ -455,6 +455,15 @@ struct ChallengePicker: View {
                                     }
                                     .font(.caption)
                                     .foregroundStyle(Theme.primary)
+                                } else if case .branchLine(let id) = challenge.map, let line = BranchLineChallenge.line(id) {
+                                    // Decision 289: its milestones and sights.
+                                    Label {
+                                        Text(verbatim: line.cardText(in: language))
+                                    } icon: {
+                                        Image(systemName: "tram")
+                                    }
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.primary)
                                 }
                             }
                         }

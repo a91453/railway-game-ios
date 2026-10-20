@@ -308,6 +308,20 @@ public final class GameLauncher {
                 water: water, coverage: coverage
             )
             begin(grounded(world, .real), keepingAutosave: true)
+        case .branchLine(let id):
+            // Decision 289: as the Liu Mingchuan challenge's, the line's map,
+            // its towns read in round the line's places, and its ground.
+            guard population != nil, let line = BranchLineChallenge.line(id) else {
+                message = StatusMessage(kind: .failure, text: language.text(
+                    "The real-world data is not ready yet.", "實景資料還沒準備好。"
+                ))
+                return
+            }
+            var world = line.make(eventSeed: .random(in: .min ... .max))
+            GameSession.readLand(
+                within: WholeTaiwan.landReach, of: line.townPoints, in: &world, population: population, places: places, water: water, coverage: coverage
+            )
+            begin(grounded(world, .real), keepingAutosave: true)
         }
     }
 

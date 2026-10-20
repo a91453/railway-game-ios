@@ -18,6 +18,10 @@ public enum ChallengeMap: Hashable, Sendable {
     /// The real-world map from Keelung to Hsinchu with nothing built, its
     /// land read in as stations are built (decision 153).
     case liuMingchuan
+    /// A branch line's real-world map with nothing built, as the Liu
+    /// Mingchuan challenge's (decision 289): the ``BranchLineChallenge`` of
+    /// that id.
+    case branchLine(String)
 }
 
 /// A challenge the start screen offers: its words, its map, and the
@@ -332,7 +336,8 @@ extension Challenge {
     /// What goal `goal` of the scenario `id` is called when it is a named
     /// milestone (decision 153), or `nil`.
     static func milestoneTitle(of id: String, goal: Int, in language: DisplayLanguage) -> String? {
-        id == liuMingchuan.id ? LiuMingchuanChallenge.milestoneTitle(goal, in: language) : nil
+        if id == liuMingchuan.id { return LiuMingchuanChallenge.milestoneTitle(goal, in: language) }
+        return BranchLineChallenge.named(id)?.milestoneTitle(goal, in: language)
     }
 
     /// The ratings' days on the challenge card.

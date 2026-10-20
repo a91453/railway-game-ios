@@ -49,24 +49,16 @@ public struct CityMap: Sendable {
     /// The smallest a drawn rectangle may be on screen, in points.
     public static let minimumTilePoints = 6.0
 
-    public init(world: GameWorld) {
-        let rows = Land.rows(in: world.bounds), columns = Land.columns(in: world.bounds)
-        self.rows = rows
-        self.columns = columns
-        var kinds: [CellPosition: UInt8] = [:], peopled: Set<CellPosition> = []
-        for cell in world.land.cells where cell.row < rows && cell.column < columns {
-            let position = CellPosition(row: cell.row, column: cell.column)
-            if cell.residents + cell.jobs > 0 { peopled.insert(position) }
-            if let building = world.buildings.building(row: cell.row, column: cell.column) {
-                let density = building.kind == .existingStock ? 5 : building.density.rawValue
-                kinds[position] = UInt8(Self.useCode(building.use) * 8 + density)
-            } else {
-                kinds[position] = UInt8(Self.useCode(cell.use) * 8)
-            }
-        }
+    /// How many of the residents and jobs the stations reach (decision
+    /// 292), from the same cells the coverage layer draws.
+    public let coverage: CoverageSummary
+
+    /// The cells whose middles are within ``Land/catchmentRadius`` of a
+    /// station's, in a straight line; a closed station reaches no one
+    /// (decision 77). A cell two stations reach is one cell.
+    static func coveredCells(of world: GameWorld, rows: Int, columns: Int) -> Set<CellPosition> {
         var covered: Set<CellPosition> = []
         let length = Land.cellLength, radius = Land.catchmentRadius
-        // A closed station reaches no one (decision 77).
         for station in world.stations where station.operationMode != .closed {
             let point = station.location
             let firstRow = max(0, Int((point.y - radius) / length) - 1), lastRow = min(rows - 1, Int((point.y + radius) / length) + 1)
@@ -82,6 +74,27 @@ public struct CityMap: Sendable {
                 }
             }
         }
+        return covered
+    }
+
+    public init(world: GameWorld) {
+        let rows = Land.rows(in: world.bounds), columns = Land.columns(in: world.bounds)
+        self.rows = rows
+        self.columns = columns
+        var kinds: [CellPosition: UInt8] = [:], peopled: Set<CellPosition> = []
+        for cell in world.land.cells where cell.row < rows && cell.column < columns {
+            let position = CellPosition(row: cell.row, column: cell.column)
+            if cell.residents + cell.jobs > 0 { peopled.insert(position) }
+            if let building = world.buildings.building(row: cell.row, column: cell.column) {
+                let density = building.kind == .existingStock ? 5 : building.density.rawValue
+                kinds[position] = UInt8(Self.useCode(building.use) * 8 + density)
+            } else {
+                kinds[position] = UInt8(Self.useCode(cell.use) * 8)
+            }
+        }
+        let covered = Self.coveredCells(of: world, rows: rows, columns: columns)
+        let length = Land.cellLength
+        coverage = CoverageSummary(world: world, covered: covered, rows: rows, columns: columns)
         // Decision 91: the cells a park makes worth more.
         var nearParks: Set<CellPosition> = []
         let parkReach = LandValueRules.parkReach

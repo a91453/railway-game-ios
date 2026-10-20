@@ -37,6 +37,28 @@ final class LineReportTests: XCTestCase {
         XCTAssertFalse(world.lineLosingMoney(Self.short))
     }
 
+    func testFirstDayLineRowShowsSettledHoursWithoutInventingProfit() throws {
+        var world = try managedWorld()
+        let initial = try XCTUnwrap(world.lineReport(Self.short))
+        XCTAssertNil(initial.today)
+        XCTAssertEqual(initial.rowText(in: .english), "No record of yesterday yet")
+
+        // The first day's hourly books now exist, but the day-end staff
+        // and energy costs have not been settled: do not present a profit.
+        try world.advance(ticks: 120)
+        let report = try XCTUnwrap(world.lineReport(Self.short))
+        let partial = try XCTUnwrap(report.today)
+        XCTAssertEqual(partial.day, 0)
+        XCTAssertNil(report.yesterday)
+        XCTAssertTrue(report.days.isEmpty, "partial days must stay out of finished-day reports")
+        XCTAssertEqual(report.rowText(in: .english),
+                       "Today so far (through last hour): 0 riders · fares $ 0 · peak 0%")
+        XCTAssertEqual(report.rowText(in: .traditionalChinese),
+                       "今日（截至上個整點）0 人次 · 票收 $ 0 · 尖峰 0%")
+        XCTAssertFalse(report.rowText(in: .english).contains("profit"))
+        XCTAssertFalse(report.rowText(in: .traditionalChinese).contains("損益"))
+    }
+
     func testYesterdayRowAndTheCompletedDays() throws {
         var world = try managedWorld()
         XCTAssertEqual(world.lineReport(Self.short)?.yesterday, nil)

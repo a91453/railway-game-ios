@@ -37,6 +37,9 @@ struct PopulationLegendView: View {
     /// Folded to its title and colour bar (TestFlight 59.1, ``LegendFold``):
     /// the opacity, the timeline and the rest show when it opens.
     @Binding var isFolded: Bool
+    /// Decision 292: how many of the residents and jobs the stations reach,
+    /// under the coverage layer's title; `nil` while it is worked out.
+    var coverage: CoverageSummary? = nil
     var onDismiss: (() -> Void)? = nil
 
     var body: some View {
@@ -128,8 +131,23 @@ struct PopulationLegendView: View {
             .frame(height: 12)
             .clipShape(Capsule())
             .accessibilityIdentifier("map.sectionFlowLegend")
-        case .landUse, .coverage, .zoning, .terrain:
+        case .coverage:
+            coverageShare
+        case .landUse, .zoning, .terrain:
             EmptyView()
+        }
+    }
+
+    /// Decision 292: the share the stations reach, and that it is an
+    /// estimate, folded or open.
+    @ViewBuilder
+    private var coverageShare: some View {
+        if let coverage {
+            Text(verbatim: coverage.text(in: language))
+                .font(.caption2.monospacedDigit())
+                .foregroundStyle(Theme.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("map.coverageShare")
         }
     }
 
@@ -137,6 +155,9 @@ struct PopulationLegendView: View {
     @ViewBuilder
     private var details: some View {
         scale
+        if mode == .coverage {
+            coverageShare
+        }
 
         if mode != .coverage, mode != .zoning, mode != .terrain {
             HStack {
