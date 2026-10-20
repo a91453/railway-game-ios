@@ -67,9 +67,25 @@ python3 -I tools/real-ridership/build_trtc_ridership.py --year 2025 --downloaded
     --output RailwayGameApp/Resources/RealRailways/trtc_ridership.json
 ```
 
-一年要讀約 3.7 GB，在雲端容器約半小時。
+一年要讀約 3.7 GB，在雲端容器約半小時；`--cache 資料夾` 留下每個月的加總，重跑只讀新的月份。12 月的檔包含跨年夜通宵運行的 1 月 1 日 06:00 前，那些人次算在 12/31 的營運日，不多算一天。
+
+## 高雄捷運：`build_krtc_ridership.py`
+
+**來源**：政府資料開放平臺的[高雄都會區大眾捷運系統各站旅運量入站](https://data.gov.tw/dataset/159641)與[出站](https://data.gov.tw/dataset/159640)（高雄市政府捷運工程局），依政府資料開放授權條款第 1 版使用。一年一列、一站一欄（紅線與橘線，不含輕軌）。
+
+**雲端容器連不上 data.kcg.gov.tw**（連線一開始就被切斷，另一條網路路徑回 503；看起來擋國外連線），所以由**作者在台灣下載兩個 CSV、附在對話裡**；工具記下兩個檔的 SHA-256 與下載日期。原始 CSV 不進 repository。
+
+**輸出**：`RailwayGameApp/Resources/RealRailways/krtc_ridership.json`，以 App 的 `krtc.json` 的站名為 key，一天平均（進站＋出站）÷ 2。資料用的是舊站名，五站之後改了名，工具裡的 `RENAMED` 對照：楠梓加工區→楠梓科技園區、南岡山→岡山高醫、西子灣→哈瑪星、市議會→前金、技擊館→苓雅運動園區。
+
+```sh
+python3 -I tools/real-ridership/build_krtc_ridership.py 入站.csv 出站.csv --year 2025 --downloaded 2026-10-20 \
+    --stations RailwayGameApp/Resources/RealRailways/krtc.json \
+    --output RailwayGameApp/Resources/RealRailways/krtc_ridership.json
+```
+
+**2026-10-20 的結果（2025 年）**：38 站，全部對上 App 的紅線與橘線。最多的是左營 20,244、高雄車站 15,230、巨蛋 14,099、三多商圈 11,171、美麗島 9,549。
 
 ## 共同的注意
 
-- 兩個下載的工具用 `curl` 讀，不用 Python 的 `urllib`：雲端容器經過的代理憑證，Python 3.13 的嚴格檢查不接受，curl 照系統設定接受。不關掉任何檢查。
-- **還沒有的**：高雄捷運（政府資料開放平臺 [159640](https://data.gov.tw/dataset/159640)、[159641](https://data.gov.tw/dataset/159641) 的各站出站、入站，在 data.kcg.gov.tw；雲端容器連不上那個主機，2026-10-20）、台中捷運、桃園機捷、輕軌、三鶯線、林鐵。這些站的轉乘點數照系統的規則（決策 298）。高雄捷運可以之後用 GitHub Actions 讀（runner 連得上的話）。
+- 下載的工具用 `curl` 讀，不用 Python 的 `urllib`：雲端容器經過的代理憑證，Python 3.13 的嚴格檢查不接受，curl 照系統設定接受。不關掉任何檢查。
+- **還沒有的**：台中捷運、桃園機捷、輕軌（含高雄環狀輕軌）、三鶯線、林鐵。這些站的轉乘點數照系統的規則（決策 298）。TDX 沒有各站運量的 API（2026-10-20 查過它軌道類的全部 API 說明）。

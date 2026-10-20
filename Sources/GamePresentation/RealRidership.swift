@@ -3,8 +3,9 @@ import Foundation
 // How many people use each real station a day (ARCHITECTURE decision 298):
 // the official yearly averages `tools/real-ridership/` writes, which the
 // transfer points of a station by a real one follow. Taiwan Railway's by
-// station code (`tra_ridership.json`), the High Speed Rail's and Taipei
-// Metro's by station name (`thsr_ridership.json`, `trtc_ridership.json`).
+// station code (`tra_ridership.json`), the High Speed Rail's, Taipei
+// Metro's and Kaohsiung Metro's by station name (`thsr_ridership.json`,
+// `trtc_ridership.json`, `krtc_ridership.json`).
 // Each file is optional; a station none of them has keeps its system's rule.
 
 /// Real stations' average riders a day, (entries + exits) / 2 over a year.
@@ -45,15 +46,17 @@ public struct RealRidership: Sendable {
     public let tra: Table?
     public let thsr: Table?
     public let trtc: Table?
+    public let krtc: Table?
 
-    public init(tra: Table?, thsr: Table?, trtc: Table?) {
+    public init(tra: Table?, thsr: Table?, trtc: Table?, krtc: Table? = nil) {
         self.tra = tra
         self.thsr = thsr
         self.trtc = trtc
+        self.krtc = krtc
     }
 
     /// The riders a day of real station `station`: Taiwan Railway's by its
-    /// code in `data`, the High Speed Rail's and Taipei Metro's by name.
+    /// code in `data`, the High Speed Rail's and the metros' by name.
     /// `nil` for a system with no file, or a station its file does not have.
     public func riders(of station: RealRailways.Station, data: RealStationData?) -> Int? {
         switch station.system.id {
@@ -64,6 +67,8 @@ public struct RealRidership: Sendable {
             return thsr?.riders[RealRailways.stationKey(station.chinese)]
         case "mrt":
             return trtc?.riders[RealRailways.stationKey(station.chinese)]
+        case "krtc":
+            return krtc?.riders[RealRailways.stationKey(station.chinese)]
         default:
             return nil
         }

@@ -720,7 +720,9 @@ extension RealRailways {
         let tra = ridershipTable("tra_ridership", byName: false)
         let thsr = ridershipTable("thsr_ridership", byName: true)
         let trtc = ridershipTable("trtc_ridership", byName: true)
-        let ridership = tra == nil && thsr == nil && trtc == nil ? nil : RealRidership(tra: tra, thsr: thsr, trtc: trtc)
+        let krtc = ridershipTable("krtc_ridership", byName: true)
+        let ridership = tra == nil && thsr == nil && trtc == nil && krtc == nil
+            ? nil : RealRidership(tra: tra, thsr: thsr, trtc: trtc, krtc: krtc)
 
         guard let lines, let stations, let names else { return Loaded(railways: nil, issues: issues + operations.loadIssues) }
         do {
