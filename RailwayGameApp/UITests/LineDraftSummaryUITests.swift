@@ -37,7 +37,10 @@ final class LineDraftSummaryUITests: XCTestCase {
 
         selectStation(at: points[0])
         tap(app.buttons["entry.lines"])
-        if app.buttons["line.new"].appears(within: 3) {
+        // Both maps open with lines, so the panel lists them first and folds
+        // the new line's form into "New Line…" below them (decision 196),
+        // off the screen on a phone: scrolled to, not waited for.
+        if !app.buttons["Add Selected Station"].appears(within: 3) {
             reveal(app.buttons["line.new"])
             tap(app.buttons["line.new"])
         }

@@ -24,7 +24,10 @@ struct NextStepChip: View {
                 .glassBackground(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
             .buttonStyle(.plain)
-            .accessibilityElement(children: .ignore)
+            // One button to VoiceOver and to a finger's test, as the quick
+            // layers beside it are: an `.accessibilityElement(children:
+            // .ignore)` here wrapped it in a plain element that carried the
+            // identifier but not the button (main 614375c's full lane).
             .accessibilityLabel(Text(verbatim: steps.chipText(in: language)))
             .accessibilityValue(Text(verbatim: current.progressText))
             .accessibilityHint(Text(verbatim: language.text("Shows every step and how to do it.", "列出每一步和怎麼做。")))

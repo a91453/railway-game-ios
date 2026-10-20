@@ -302,16 +302,21 @@ final class RealWorldMapUITests: XCTestCase {
         // the middle of the map, on the stretch's line since the game menu
         // moved into the top row (#697): a tap there zoomed out, and the
         // next one fell on a climb (main 84a792e's full lane, run
-        // 38861445072). The taps below keep off them.
-        let mapButtons = ["map.open3D", "Zoom out", "Zoom in"].map { app.buttons[$0] }
+        // 38861445072). The taps below keep off them. The station coverage
+        // shortcut (#839) stands left of the 3D map button, and the step
+        // left of that button landed on it (main 614375c's full lane, run
+        // 39438209091); a real station's pin (#844) can stand on the line too.
+        let mapButtons = ["map.coverageShortcut", "map.open3D", "Zoom out", "Zoom in"].map { app.buttons[$0] }
+        let pins = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'map.realStation.'"))
         func mapButton(at x: CGFloat) -> CGRect? {
-            mapButtons.lazy.filter(\.exists).map { $0.frame.insetBy(dx: -4, dy: -4) }
+            (mapButtons.filter(\.exists) + pins.allElementsBoundByIndex).lazy
+                .map { $0.frame.insetBy(dx: -4, dy: -4) }
                 .first { $0.contains(CGPoint(x: x, y: middle)) }
         }
         // A platform on the track, levelled first where it climbs; on the
-        // near side of a button there.
+        // near side of the buttons there.
         var siteX = frame.minX + frame.width * 0.425
-        if let covering = mapButton(at: siteX) { siteX = covering.minX - 1 }
+        while let covering = mapButton(at: siteX) { siteX = covering.minX - 1 }
         let site = origin.withOffset(CGVector(dx: siteX, dy: middle))
         site.tap()
         XCTAssertTrue(confirm.appears(within: 10), "No ✓ for the platform")
