@@ -13018,6 +13018,8 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 **參考庫與外部專案**：沒有查。這是面板捲動的小修正，沒有要移植的演算法或資料。
 
+**後來**（2026-10-20）：合併後的 run 39461248592 裡示範地圖那個測試第二輪仍紅（"Cannot scroll to Add Selected Station"）：面板還在從右邊滑進來時就量了清單的位置，40 次拖曳全落在 x 835 的面板舊右緣。只改測試：捲動前先等清單停穩；App 不動。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。
