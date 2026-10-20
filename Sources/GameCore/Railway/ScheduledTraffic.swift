@@ -520,7 +520,7 @@ extension GameWorld {
                 }
                 let physical = hasRoutePreferences(a.train) || hasRoutePreferences(b.train)
                 let runs = physical ? preferredTrafficCommon(a, b) : [common]
-                let timetabled = followsRealTimetable(a.train) && followsRealTimetable(b.train)
+                let timetabled = blockSections && followsRealTimetable(a.train) && followsRealTimetable(b.train)
                 for common in runs {
                     guard common.count >= 2, zip(common, common.dropFirst()).allSatisfy({ $0.ai < $1.ai }) else { continue }
                     for n in 0..<(common.count - 1) {
@@ -605,7 +605,8 @@ extension GameWorld {
     /// more, as ``planTrafficOvertakes(_:)`` has a slow train wait, when a
     /// siding keeps it clear of the other's way. ``planTrafficOvertakes(_:)``
     /// finds only trains that would meet between two points (decision 59),
-    /// and a real timetable passes its slow trains at their calls.
+    /// and a real timetable passes its slow trains at their calls. Asked
+    /// only with block sections on.
     func timetabledOvertake(_ plan: inout TrafficPlan, _ ia: Int, _ ib: Int, at point: (ai: Int, bi: Int), next: (ai: Int, bi: Int),
                             physical: Bool) -> TrafficOvertakeProposal? {
         guard next.ai == point.ai + 1, next.bi == point.bi + 1 else { return nil }
