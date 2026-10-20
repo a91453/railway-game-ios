@@ -12831,6 +12831,50 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - `TimetabledOvertakeTests`：慢車在 X 停、快車在它停站時通過的時刻表，計畫裡有「慢車在 X 等快車」；快車晚了三分，慢車停在側線讓它先過，快車先到 Q；一小時批次與逐分相同。前兩個在 `main` 上失敗（計畫裡沒有待避，慢車停在 X 的正線）。
 - `ApproachLockingTests`：A 從 30 km 外開往 Z，B 要從 Z 旁經過 Z 前 1 km 的道岔開往 Y：B 10:10 前就到 Y，A 照樣準時到 Z；A 在 14 km 外只拿到離站 4 km 以外的路，進到 14 km 內拿全部；30 分鐘批次與逐分相同。前兩個在 `main` 上失敗（`main` 上 A 一出發就拿到 Z 前的道岔，B 10:24 才到 Y）。
 
+### 295. 實景地圖的月台工具：真實車站當「建議站點」
+
+2026-10-20。NEXT_PRIORITIES §17.1 第 1 名、§17.2 乙線「現實路網」第一步；競品研究 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.5。作者交辦（經 session_01MBXXssxDUz9h5gZ9EDVnZb 派工）。號碼依 #231：main 上最大 293，高鐵示範的 Claude platform 可能取 294（#231 沒有它的登記），所以取 295。只改 GamePresentation 與 App 的 2D 畫面；GameCore、存檔版本、golden schema、replay 不動。
+
+**為什麼**：實景地圖底下已經畫出真實的鐵路與車站（`RealRailways.swift`，決策 213 也用它描線），玩家的站名在真實車站 450 m 內就認得是哪一站（`RealRailwayGameplay.swift`），但玩家要自己找到那個位置、點到軌道上，站名也要靠 800 m 內的自動命名（決策 159）。CTM 建線時把真實站牌畫成圖釘，點了就用那個位置與站名。
+
+**規則**（`RealStationSuggestions.swift`）：
+1. **什麼時候有**（`GameSession.offersRealStations`）：實景地圖、真實鐵路資料已載入、路網工具的月台模式。其他工具、鋪軌、空白地圖都沒有。
+2. **哪些站**（`realStationSuggestions`）：世界範圍裡、公司已買的地上（`ownsGround`，決策 160）的真實車站，同名（`RealRailways.stationKey`，臺北、台北車站、Taipei 都是 台北）而且相距 450 m 內的算一個地方（台北的台鐵、高鐵、捷運是一根圖釘）。已經有玩家車站是它的（同名、450 m 內，`realStations(named:at:)`，車站卡用的同一個判斷）就不畫。
+3. **共用的查詢**（R1 轉乘站也用）：`realStations(near:within:)` 給一點附近的真實車站（同上分地方、由近到遠），`nearestRealStation(to:within:)` 給最近的一個，預設 450 m（網站的轉乘距離）。都在 GamePresentation，GameCore 看不到真實資料。
+4. **點一下**（`pickRealStation`）：找離那個站 400 m 內最近的軌道（`trackEdgePoint(near:within:)`），像點在那裡一樣選好月台的位置（抽成 `pickPlatformPlace`，點軌道也走這裡）；新車站的名字換成真實站名（玩家的語言），連玩家打過的名字也換掉，因為圖釘是玩家自己點的。32 m 內已有玩家的站時，月台照舊加進那一站。月台長度照舊用真實台鐵站等的預設（`realPlatformCars`）。**不直接蓋**：和點軌道一樣，地圖上出現旗子與 ✓（決策 107），玩家按 ✓ 才蓋、才花錢。
+   - 400 m 而不是 450 m：月台會沿著軌道挪到放得下的地方，站的中心留 50 m 餘裕，蓋好之後仍在 450 m 內，認得是那個真實車站。
+   - 400 m 內沒有軌道：不選任何位置，訊息寫「猴硐 400 公尺內還沒有軌道。先在那裡鋪軌，再點一次 猴硐。」
+5. **畫面**（`MapRealStationPins`，`MAP_LAYERS.md` 71.5）：和車站徽章一樣大的虛線空心圈畫在真實車站的位置，旁邊虛線底牌的站名，都用 `Theme.textSecondary`；在建造的旗子（72）下面。只畫畫面內的；會疊在一起時，停的系統多的先留（`RealStationSuggestion.shown`，像決策 250 的景點），拉近就都出來。不加動畫。VoiceOver 唸「真實車站 猴硐」，提示「把月台放到最近的軌道上，站名用 猴硐。」
+6. **效能**：每次重畫掃一次全部真實車站（約兩千個）、對每座玩家車站查一次名字索引；只在月台模式時算。
+
+**四方**：
+- 玩家：在實景地圖上照著真實的站蓋，一點就放好、站名也對；不用自己找軌道上哪一點最近，也不會自己的站和真實的差幾百公尺而不被認得。
+- 開發：一個 GamePresentation 的查詢加一個點擊動作，Linux 測試；點軌道的程式抽成同一個函式，沒有兩份；「找最近的真實車站」寫成 R1 可以直接用的樣子。不動 GameCore、存檔、golden。
+- 美術：虛線圈讀起來是「還沒蓋的站」，次要文字色比玩家實線藏青的站淡，玩家的線與站仍在最上面；不加新顏色、不畫新圖示。對比：次要文字色對面板，淺色約 6:1、深色約 7:1；圈對淺色地面約 5:1。
+- 音樂：無。
+
+**沒選的**（預覽在 `docs/art/real-station-pins-2026-10-20/options.png`）：
+- **B 只有站名**：看起來和玩家的站名牌太像，點的位置也不清楚。
+- **C 暖黃水滴圖釘**：最顯眼，但暖黃是主要按鈕與景點的顏色，會搶玩家的站與景點的星星。
+- **點了直接蓋**（不經 ✓）：少按一下，但會花錢、在坡道上可能要整平（決策 190），和點軌道的流程不一樣，玩家會意外蓋站。
+- **所有工具都畫**：選取時地圖已有景點、委託、泡泡，再多一層太擠；只在要放月台時有用。
+
+**參考庫與外部專案**（`a91453/railway-reference-private`）：
+
+| 參考 | 本專案 | 說明 |
+| --- | --- | --- |
+| `Ci/reference_snapshot/lib/app__q_*.js` 的 `_findNearestStationOnDifferentLine`、`MOVE_TRANSFER_AUTO_JOIN_MAX_M`（250 m） | `GameSession.realStations(near:within:)`、`nearestRealStation(to:within:)` | 地鐵遊戲移站時找別條線最近的站自動轉乘：逐站算距離取最小，和已有的 `RealRailways.nearbyStations` 同一種做法；距離改用網站的轉乘距離 450 m（`station_transfers.json`），和車站卡一致 |
+| `Railway/taiwan-rail-reference-clean/source/app/ios/App/RailBoardWidget/RailBoardData.swift` 的 `nearestStation(lat:lon:…)` | 同上 | 小工具找使用者常去地點最近的車站；一樣是逐站取最小，沒有可另外移植的 |
+| `MapBuilder/reference_snapshot/`（找 snap、nearest、station） | 無 | 路線編輯器沒有「吸附到真實車站」的行為（snap 都是 Firebase 的 snapshot） |
+
+外部專案：沒有另外找，資料與比對都已在 App 裡。程式是這個專案自己的。
+
+**存檔、golden、replay**：不動。
+
+**測試**（`RealStationSuggestionTests`）：台北的台鐵、高鐵、捷運是同一個建議、由近到遠；空白地圖與 450 m 外沒有；只在月台模式有圖釘、都在已買的地上；中文或英文名字已蓋的站不再出現；點了選到最近的軌道、真實站名蓋過打過的名字、蓋好後認得是真實車站且圖釘消失；英文介面用英文站名；400 m 內沒有軌道時不選並說明；疊在一起時停的系統多的先留。
+
+**沒有驗證的**：圖釘在手機上的大小、和旗子與景點星星疊在一起時好不好點，待實機看；畫面只在 macOS CI 編譯。沒有加 UI 測試（要在實景地圖上鋪軌才看得到圖釘，判斷都已在 Linux 測試）。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

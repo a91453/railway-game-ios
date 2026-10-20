@@ -59,20 +59,7 @@ extension GameSession {
                 networkEnd = anchor
             }
         case .platform:
-            networkEdgePoint = world.trackEdgePoint(near: point, within: reach)
-            // The land a station there would reach, so the site's count
-            // (decision 108) has it; not an edit, as for the building tool.
-            if let site = networkEdgePoint.flatMap({ planPoint(of: .track($0)) }) {
-                readLand(within: WholeTaiwan.landReach, of: site)
-            }
-            platformStationID = networkEdgePoint.flatMap { nearestStation(to: $0) }
-            if platformStationID == nil, let stretch = networkPlatformStretch, let geometry = world.trackGeometry(of: stretch.edge) {
-                let middle = geometry.location(at: (stretch.start + stretch.end) / 2).position.plan
-                // A name the player typed stays (only a suggestion is
-                // replaced).
-                suggestStationName(at: middle)
-            }
-            suggestPlatformCars()
+            pickPlatformPlace(world.trackEdgePoint(near: point, within: reach))
         case .remove, .passingLoop:
             networkEdgePoint = world.trackEdgePoint(near: point, within: reach)
         case .depot:
@@ -85,6 +72,30 @@ extension GameSession {
                 message = StatusMessage(kind: .failure, text: DepotYardProblem.notAnEnd.text(in: language))
             }
         }
+    }
+
+    /// Picks `place` on the track for the next platform: the station within
+    /// ``platformStationReach`` it joins, or else a name for a new one,
+    /// `name` where given (a real station's pin, decision 295), otherwise
+    /// a suggestion that leaves a name the player typed as it is; then the
+    /// platform's length.
+    func pickPlatformPlace(_ place: NetworkEdgePoint?, named name: String? = nil) {
+        networkEdgePoint = place
+        // The land a station there would reach, so the site's count
+        // (decision 108) has it; not an edit, as for the building tool.
+        if let site = place.flatMap({ planPoint(of: .track($0)) }) {
+            readLand(within: WholeTaiwan.landReach, of: site)
+        }
+        platformStationID = place.flatMap { nearestStation(to: $0) }
+        if platformStationID == nil, let stretch = networkPlatformStretch, let geometry = world.trackGeometry(of: stretch.edge) {
+            if let name {
+                stationName = name
+                automaticStationName = name
+            } else {
+                suggestStationName(at: geometry.location(at: (stretch.start + stretch.end) / 2).position.plan)
+            }
+        }
+        suggestPlatformCars()
     }
 
     /// Where a tap or a drag at `point` picks an end of the next stretch

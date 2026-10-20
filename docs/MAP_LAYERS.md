@@ -55,6 +55,7 @@
 | --- | --- | --- |
 | 70 | 手勢（不畫東西） | `MapGestures` |
 | 71 | 建造時淡淡的景點 | `MapAttractionMarks(isPassive: true)` |
+| 71.5 | 建議站點：實景地圖用月台工具時，還沒蓋的真實車站。虛線空心圈＋虛線底牌的站名，次要文字色；會疊在一起時，停的系統多的先留（決策 295） | `MapRealStationPins` |
 | 72 | 建造的旗子、取消與確定 | `MapBuildConfirm` |
 | 73 | 狀態泡泡（擁擠、客滿、死結，決策 109；擁擠與客滿第二行寫原因，泡泡抬到候車膠囊上面，決策 210） | `MapAlertBubbles` |
 | 74 | 景點的星星（決策 174） | `MapAttractionMarks` |
