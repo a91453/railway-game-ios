@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "source": "Web/CityView (Three.js/WebGL)",
+  "platform": "linux",
+  "chromium": "154.0.8037.57",
+  "viewport": {
+    "width": 960,
+    "height": 540,
+    "deviceScaleFactor": 1
+  },
+  "fixedDate": "2026-10-15T04:00:00.000Z",
+  "variant": {
+    "abstract": false,
+    "landmarks": true,
+    "windows": true,
+    "contact": false,
+    "relief": true
+  },
+  "settings": {
+    "traffic": false,
+    "birds": 0,
+    "clouds": 0,
+    "ortho": false,
+    "preview": false
+  },
+  "frames": 12,
+  "warmup": 4,
+  "timing": "app.tick() + gl.finish(), no requestAnimationFrame/vsync",
+  "views": [
+    {
+      "id": "station-day",
+      "png": "station-day.png",
+      "area": "kaohsiung",
+      "camera": [
+        0,
+        0,
+        420,
+        200,
+        32
+      ],
+      "hour": 12,
+      "drawCalls": 180,
+      "triangles": 961485,
+      "frameMs": {
+        "median": 2.25,
+        "p95": 8.035000000003487
+      }
+    },
+    {
+      "id": "station-night",
+      "png": "station-night.png",
+      "area": "kaohsiung",
+      "camera": [
+        0,
+        0,
+        420,
+        200,
+        32
+      ],
+      "hour": 22,
+      "drawCalls": 186,
+      "triangles": 962895,
+      "frameMs": {
+        "median": 2.700000000069849,
+        "p95": 5.059999999974388
+      }
+    },
+    {
+      "id": "district-day",
+      "png": "district-day.png",
+      "area": "kaohsiung",
+      "camera": [
+        320,
+        -180,
+        540,
+        245,
+        35
+      ],
+      "hour": 12,
+      "drawCalls": 227,
+      "triangles": 1503978,
+      "frameMs": {
+        "median": 3.549999999930151,
+        "p95": 8.349999999999998
+      }
+    }
+  ]
+}
