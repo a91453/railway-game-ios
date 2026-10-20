@@ -716,6 +716,13 @@ struct MapView: View {
                 .overlay(alignment: .topLeading) {
                     MapAttractionMarks(session: session, camera: projection, viewport: viewport, insets: clear, isPassive: true)
                 }
+                // Decision 295: the real stations, choosing where a
+                // platform goes on a real-world map; under the flags.
+                .overlay(alignment: .topLeading) {
+                    if session.offersRealStations {
+                        MapRealStationPins(session: session, camera: projection, viewport: viewport, insets: clear)
+                    }
+                }
                 // Decision 107: flags at the ends of the track previewed,
                 // and beside it, or the building shown, cancel and build.
                 .overlay(alignment: .topLeading) {

@@ -57,6 +57,7 @@
 		4EE0D41AC5A9913840A83374 /* TutorialUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BA3B0B2889A228FC08F83B8 /* TutorialUITests.swift */; };
 		543A1EE337FEC2FCA74B2603 /* TutorialOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = F488A7BFC7F63D86EDB96548 /* TutorialOverlay.swift */; };
 		54DD975F68392FD1FBC6829C /* music-loop.caf in Resources */ = {isa = PBXBuildFile; fileRef = 37971520DEDE438F5E6272D6 /* music-loop.caf */; };
+		558B24BC31C83D9B20B08BD9 /* MapRealStationPins.swift in Sources */ = {isa = PBXBuildFile; fileRef = E64C9567E9D8D53339DCF26F /* MapRealStationPins.swift */; };
 		5650A33F4398B9F43624CE35 /* OSMMapBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = F655E31850005DBAC32D5142 /* OSMMapBackground.swift */; };
 		5816A50B5D199B14095EB3AA /* SettingsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E833A49B8766511EF574847 /* SettingsUITests.swift */; };
 		585C09A427696BD99073713D /* refused.wav in Resources */ = {isa = PBXBuildFile; fileRef = E4631B47557CC9944903820E /* refused.wav */; };
@@ -300,6 +301,7 @@
 		DF79937B71C73C05EB0285FF /* PerformanceMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceMenu.swift; sourceTree = "<group>"; };
 		E2038D64EB91D02F90FE6716 /* ntdlrt.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ntdlrt.json; sourceTree = "<group>"; };
 		E4631B47557CC9944903820E /* refused.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = refused.wav; sourceTree = "<group>"; };
+		E64C9567E9D8D53339DCF26F /* MapRealStationPins.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapRealStationPins.swift; sourceTree = "<group>"; };
 		E654E2EC7E901F3CBD452FFE /* LineDraftSummaryRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LineDraftSummaryRow.swift; sourceTree = "<group>"; };
 		E6EEB9DC1C736BE4F98AD2BC /* GameAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameAudio.swift; sourceTree = "<group>"; };
 		E95E148A603B48CD12C8A714 /* TodaySettlementsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodaySettlementsSection.swift; sourceTree = "<group>"; };
@@ -452,6 +454,7 @@
 				C672FB058D7EDDE7177AF07E /* MapCoverageButton.swift */,
 				8363C536E3BE341871325469 /* MapLayerSheet.swift */,
 				FEC1E505164102E63F407C64 /* MapQuickLayerStrip.swift */,
+				E64C9567E9D8D53339DCF26F /* MapRealStationPins.swift */,
 				B8DD4857B9833F971AD18592 /* MapRequestMarks.swift */,
 				AFA812528CA2F00BD6143418 /* MapStationTagView.swift */,
 				AD5081F4C37E2CEB7CCECB73 /* MapView.swift */,
@@ -784,6 +787,7 @@
 				FC5DF7D86135072E69D33064 /* MapCoverageButton.swift in Sources */,
 				945BE0F504200741317CF54C /* MapLayerSheet.swift in Sources */,
 				DE4556F23627CF834FB636CD /* MapQuickLayerStrip.swift in Sources */,
+				558B24BC31C83D9B20B08BD9 /* MapRealStationPins.swift in Sources */,
 				AD539B90444E0B2C2F203078 /* MapRequestMarks.swift in Sources */,
 				7CFC437C2E691CD94BA7812D /* MapStationTagView.swift in Sources */,
 				8C1EFE8C1F4019116280DB94 /* MapView.swift in Sources */,
