@@ -14,14 +14,6 @@ extension GameWorld {
     /// (decision 197); a train that turns round within the hour stays.
     static let runDepotLookahead: Int64 = 2 * GameTime.secondsPerHour
 
-    /// Decision 297: how far ahead, under traffic control, a line with
-    /// runs looks at a stop between its ends: half an hour. A train
-    /// standing there takes a platform the line's other trains stop at
-    /// (the high-speed demo's sets turning at Taichung stood on one of its
-    /// two southbound platform tracks for an hour and more, and the trains
-    /// behind queued for the other).
-    static let throughStopLookahead: Int64 = 30 * GameTime.secondsPerMinute
-
     /// The first departures, in seconds, of `line`'s runs that leave from
     /// `station`, have not sent a train out on their day and may still:
     /// those of the days ``LineRun/latestDispatch`` behind to tomorrow (as
@@ -106,9 +98,9 @@ extension GameWorld {
             else { continue }
             stations.append(station)
         }
+        let horizon = clock.now.seconds + Self.runDepotLookahead
         for station in stations {
             let waiting = runTrainsWaiting(of: line, at: station)
-            let horizon = clock.now.seconds + lookahead(of: line, at: station)
             let wanted = pendingRunStarts(of: line, from: station).count { $0 <= horizon }
             guard waiting.count > wanted else { continue }
             // Decision 296: a train out of a depot for a run due here is
@@ -236,16 +228,6 @@ extension GameWorld {
         return nil
     }
 
-    /// How far ahead `line` looks for a run a train waiting at `station`
-    /// could take before sending it to a depot: ``runDepotLookahead``, but
-    /// under traffic control at a stop between the line's ends,
-    /// ``throughStopLookahead`` (decision 297).
-    func lookahead(of line: ServiceLine, at station: StationID) -> Int64 {
-        guard isTrafficControlEnabled, let first = line.stops.first, let last = line.stops.last,
-              station != first, station != last else { return Self.runDepotLookahead }
-        return Self.throughStopLookahead
-    }
-
     /// Decision 296: whether `train`, standing without a service at
     /// `station`, last ran there empty out of a depot (its timetable, kept
     /// once the run ends, starts at a depot and ends there).
@@ -332,7 +314,7 @@ extension GameWorld {
             guard !starts.isEmpty else { continue }
             let lead = runPullOut(of: line, to: station, memo: &memo)?.trip.deadhead.map { Self.lead(of: $0) * GameTime.secondsPerMinute }
             for start in starts {
-                wake(at: start - lookahead(of: line, at: station))
+                wake(at: start - Self.runDepotLookahead)
                 wake(at: start - LineRun.earliestDispatch - Self.runDepotLookahead)
                 if let lead { wake(at: start - LineRun.earliestDispatch - lead) }
                 // Decision 296: once its first departure has passed, a
