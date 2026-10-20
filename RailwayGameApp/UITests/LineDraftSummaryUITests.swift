@@ -52,7 +52,7 @@ final class LineDraftSummaryUITests: XCTestCase {
         reveal(app.buttons["Add Selected Station"])
         tap(app.buttons["Add Selected Station"])
         let summary = element("line.draft.summary")
-        reveal(summary)
+        reveal(summary, above: true)
         XCTAssertTrue(summary.label.hasPrefix("1 stop"), summary.label)
         tap(app.navigationBars["Lines"].buttons["Done"])
 
@@ -60,7 +60,7 @@ final class LineDraftSummaryUITests: XCTestCase {
         tap(app.buttons["entry.lines"])
         reveal(app.buttons["Add Selected Station"])
         tap(app.buttons["Add Selected Station"])
-        reveal(summary)
+        reveal(summary, above: true)
         XCTAssertFalse(summary.label.isEmpty)
         XCTAssertFalse(summary.label.hasPrefix("1 stop"), "The line moves on with the second station: \(summary.label)")
         XCTAssertTrue(list.frame.contains(CGPoint(x: summary.frame.midX, y: summary.frame.midY)), "The line is on the panel's list")
@@ -99,12 +99,23 @@ final class LineDraftSummaryUITests: XCTestCase {
         return true
     }
 
-    private func reveal(_ control: XCUIElement) {
+    /// `above`: the row is above the list's place, as the draft's summary
+    /// at the top of its form is above "Add Selected Station"; a row the
+    /// list has not loaded is otherwise looked for further down.
+    private func reveal(_ control: XCUIElement, above: Bool = false) {
         // Measured while the panel still slides in, the list's place is
         // its trailing edge, and every drag there misses it (run
         // 39461248592: 40 drags at x 835).
         XCTAssertTrue(list.appears(within: 10), "The lines panel's list")
         list.waitUntilStill()
+        // Not loaded, the summary was looked for below, 40 drags away from
+        // it (run 39476430973).
+        for _ in 0..<12 where above && !control.exists {
+            let area = list.frame
+            let start = app.coordinate(withNormalizedOffset: .zero)
+                .withOffset(CGVector(dx: area.minX + 8 - app.frame.minX, dy: area.minY + area.height * 0.2 - app.frame.minY))
+            start.press(forDuration: 0.1, thenDragTo: start.withOffset(CGVector(dx: 0, dy: area.height * 0.6)), withVelocity: .slow, thenHoldForDuration: 0.3)
+        }
         // Wholly on screen and under the bar: a row whose middle was in
         // the list's band lay at its bottom edge and never became hittable
         // (run 39471415591, "New Line…" under "Add a Train").
