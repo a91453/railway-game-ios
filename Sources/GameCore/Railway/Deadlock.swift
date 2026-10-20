@@ -404,8 +404,7 @@ extension GameWorld {
     /// `nil`. Of the trains following others in ascending ID order, the
     /// first with such a way: one that avoids what the trains without a
     /// service hold, ends at a berth no other train travelling to that
-    /// station is bound for (but one whose way runs over the edge this one
-    /// is on, behind it, decision 297), borrows no track against another train's
+    /// station is bound for, borrows no track against another train's
     /// planned direction (decision 57, ``opposingServiceTraversals(for:memo:)``,
     /// but into a terminus, see ``terminusTraversals(along:to:)``), is at
     /// most ``detourAllowance`` longer than its route, and that it can take
@@ -430,14 +429,10 @@ extension GameWorld {
             let blocking = blockedTrack(except: train.id, among: idle, holders: trackHolders(memo: &memo))
             guard blocking.blocks(envelopeCover(of: train), in: network) else { continue }
             let station = train.timetable[stop].station
-            // The berths the other trains on their way there will stand at,
-            // but those behind this one on their way (decision 297): they
-            // can only get there after it.
-            let here: TrackEdgeID? = if case .onEdge(let traversal, _) = position { traversal.edge } else { nil }
+            // The berths the other trains on their way there will stand at.
             var taken: Set<TrackEdgeID> = []
             for other in trains where other.id != train.id {
                 guard case .travellingToStop(let call, _)? = other.execution, other.timetable[call].station == station else { continue }
-                if let here, other.movement.edges[other.movement.cursor...].contains(here) { continue }
                 if let last = other.movement.edges.last {
                     taken.insert(last)
                 } else if case .onEdge(let traversal, _)? = other.position {
