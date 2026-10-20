@@ -5,6 +5,8 @@
 
 > 2026-10-16：作者再列的動態設計與 3D 工具（30 個）在 [MOTION_3D_TOOLS_2026-10-16.md](MOTION_3D_TOOLS_2026-10-16.md)；它也記了第 3 節候選的現況與補充的做法。
 
+> 2026-10-20：作者轉來的另外 8 個工具與 mattpocock/skills 的評估在第 6 節；這次用上的是改寫成 `.claude/skills/diagnosing-bugs/` 的查 bug 流程。
+
 作者 2026-10-15 列出 16 個「對我現在製作的幫助最大」的專案。這份逐一看它們做什麼、授權准不准、
 放到這個遊戲上有沒有用，再把能直接用的先用上。
 
@@ -246,3 +248,61 @@ ACE-Step 的輸出是音訊，最多當編曲的參考。
 - 沒有執行任何模型，這個容器沒有 GPU。
 - ACE-Step 的速度與音質，以及它在 iPhone 喇叭上和鈴聲合不合，要作者同意後再試。
 - 第 3 節的候選都還沒做。
+
+## 6. 2026-10-20 補充：8 個測試與工具專案、mattpocock/skills
+
+基準：`main` `b368ce7`。作者轉來另一個 AI 列的 8 個 GitHub 專案（附 9–10 分的適用分數），
+再加上 [mattpocock/skills](https://github.com/mattpocock/skills)。這節逐項對照 repo 的現況。
+授權讀的是各 repository 的 `LICENSE`；工具本身都沒有裝起來跑。
+
+### 6.1 8 個專案
+
+| 專案 | 授權 | 結論 | 理由 |
+| --- | --- | --- | --- |
+| [mapbox/pixelmatch](https://github.com/mapbox/pixelmatch) | ISC | **候選，等作者**（npm 依賴） | `tools/map3d-preview/` 現在把 `main` 與分支的圖上下拼起來給人看；它能多給一張差異圖與「改了幾 % 像素」。只在開發機，不進 App |
+| [google/or-tools](https://github.com/google/or-tools) | Apache-2.0 | **候選，等作者**（Python 依賴），用途要換 | 參考庫已經在用：`Railway/taiwan-rail-reference-clean/source/scripts/optimize_physical_dispatch.py` 的 CP-SAT 替每班選股道、排待避（決策 296 查過，不是車組運用）。可用的是離線的「量尺」：高鐵示範一天的車輛運用最佳解，對照決策 296「下一步」第 1 點的規則差多少。不進 GameCore |
+| [KhronosGroup/glTF-Validator](https://github.com/KhronosGroup/glTF-Validator) | Apache-2.0 | 候選，不急 | 能接在 `tools/glb-to-m3dmodel` 前面查規格。Meshy 試做公車排在實機量完 3D 幀時間之後（HANDOFF），到時再加。它不檢查這個遊戲自己的限制（無貼圖、面數），兩種檢查都要留 |
+| [realm/SwiftLint](https://github.com/realm/SwiftLint) | MIT | 不做 | 已經用 `-warnings-as-errors`；多一個 CI job 與依賴，換來的不多 |
+| [cashapp/AccessibilitySnapshot](https://github.com/cashapp/AccessibilitySnapshot) | Apache-2.0 | 不做 | HANDOFF 記的 VoiceOver 缺口是「時鐘 600 倍時會不會卡」，快照量不到。要查無障礙，先用 XCTest 內建的 `performAccessibilityAudit()`，不加依賴 |
+| [pointfreeco/swift-snapshot-testing](https://github.com/pointfreeco/swift-snapshot-testing) | MIT | 不做 | CLAUDE.md：UI 測試不截圖、不比圖，畫面由作者在實機看；又要 macOS runner（全帳號 5 台，full lane 一次佔 4 台）。排版邏輯照舊放進 GamePresentation 用 Linux 測（例如 `TutorialCardPlacementTests`）|
+| [MobilityData/gtfs-validator](https://github.com/MobilityData/gtfs-validator) | Apache-2.0 | 現在不做 | 世界版參考庫的 GTFS 已經轉好，沒有新的 GTFS 匯入 |
+| [getsentry/sentry-cocoa](https://github.com/getsentry/sentry-cocoa) | MIT | 不做 | 把玩家的資料送到第三方，又加依賴。NEXT_PRIORITIES 第 8 項已排 Apple 自帶的 MetricKit 與 OSSignposter |
+
+### 6.2 mattpocock/skills
+
+MIT，`5beb35b`。給 Claude Code、Codex 等的 skill 集，主張「小、可改、可組合」。
+
+**不整包裝**：
+- 它的設定流程會建 `GLOSSARY.md`、`docs/adr/` 與 issue tracker 的標籤。這裡已有編號的 ARCHITECTURE 決策、
+  `docs/HANDOFF.md` 與 #231，兩套會打架。
+- `handoff` 把交接寫進 `/tmp`；這裡交接一定要進 `main` 的 `docs/HANDOFF.md`。
+- `git-guardrails-claude-code` 擋 `git push`；session 要推分支開 PR。
+- plugin 裝在使用者那一層，雲端 session 與 Codex、Gemini 都讀不到；放進 `.claude/skills/` 才大家都有。
+
+**逐個看**：
+
+| skill | 結論 |
+| --- | --- |
+| `diagnosing-bugs` | **採用**，改寫成 `.claude/skills/diagnosing-bugs/`（這次）。它的十種「做出會變紅的指令」換成這個 repo 已有的：`--filter`、`PROPERTY_REPLAY`、問題回報重播（決策 193）、GameSim（決策 260）、批次對逐分、`swift-shards.sh`、map3d-preview、cityview-benchmark |
+| `writing-for-agents` | 只取想法：「去讀某某文件」的那句話寫法決定 agent 會不會去讀。CLAUDE.md 416 行、ARCHITECTURE 13,003 行時有用；要整理 CLAUDE.md 時再照它檢查一次 |
+| `tdd` | 不拿：「新的測試在舊規則下會失敗」已經是這裡的習慣 |
+| `research` | 不拿：`docs/research/` 已經是同一件事 |
+| `grill-me`、`grilling`、`grill-with-docs`、`to-spec`、`triage`、`wayfinder`、`to-tickets` | 不拿：都靠反覆問作者或 issue tracker 推進，和作者 2026-10-14「我不再做決定」相反 |
+| `domain-modeling`、`codebase-design`、`improve-codebase-architecture` | 不拿：ADR 與詞彙表的格式和決策紀錄重複；大規模重構違反「不做無關的重構」 |
+| `handoff`、`git-guardrails-claude-code` | 不拿（上面的理由） |
+| `prototype`、`code-review`、`implement`、`retro` 等 | 不拿：PR 裡留其他選項的預覽、CI 與審查已經有同樣的流程 |
+
+**四個角度**（這次採用 `diagnosing-bugs`）：
+- 玩家：間接。玩家回報的 bug 先在 Linux 變紅才修，修過的不會再回來。
+- 開發：每個 bug 先有一條重跑得出來的指令，少了猜測與「當成 flake 重跑」；不加依賴、不動程式，CI 不跑 Swift。
+- 美術：無。
+- 音樂：無。
+
+**沒選的另兩個**（預覽留給作者）：
+- pixelmatch 接 map3d-preview：3D 美術改動有數字可比；要加 npm 依賴，等作者。
+- OR-Tools 車輛運用量尺：最接近模擬深度；要加 Python 依賴，而且 `claude/hsr-train-rostering` 正在做同一件事的規則，
+  等它合併後量尺才有東西可比。
+
+**VERIFIED**（這個容器，Linux）：8 個專案的授權檔；參考庫的 CP-SAT 腳本；skill 引用的測試類別、環境變數
+（`PROPERTY_REPLAY`、`PROBLEM_REPORT`、`TRAFFIC_TIMING_REPORT`、`TICK_REPORT`）與 GameSim 指令在 `b368ce7` 都存在。
+**UNVERIFIED**：8 個工具都沒有安裝或試跑；skill 還沒有在真的 bug 上用過。
