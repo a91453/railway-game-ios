@@ -10,9 +10,12 @@ lamp light map at night, ambient occlusion's extra renders). Halving the resolut
 time. So the work below is about fewer objects, fewer walks through the scene and fewer, larger draws — the
 graphics card has room to spare.
 
-Measured in headless Chrome at 3840 × 2160 on an RTX 5090, frames driven by hand without vsync
-(`tools/_bench.mjs`, `tools/_prof.mjs`; not in the repository). The picture is checked against captures of
-twelve fixed views, frozen in time, taken before the work began (`tools/_fid.mjs`).
+The historical numbers below were measured in headless Chrome at 3840 × 2160 on an RTX 5090, with manually
+driven frames and no vsync. The original `_bench.mjs`, `_prof.mjs`, and `_fid.mjs` were not committed. For new,
+reproducible Web/CityView captures and draw call, triangle and frame time measurements, use
+[`tools/cityview-benchmark/capture.cjs`](../../tools/cityview-benchmark/README.md). Its fixed 960 × 540 views and
+current hardware differ from these historical runs, so compare a before and after capture made with the same tool
+and setup rather than directly comparing their milliseconds with this table.
 
 ## Baseline (before the work)
 
