@@ -24,28 +24,41 @@ struct EconomyPanel: View {
     /// takes the world's (``FareRules/bandStart(baseline:)``).
     @State private var bandStart: Int64?
     @State private var confirmsFreePlay = false
+    /// Whether the reports under the "Today" card show: `nil` until the
+    /// player chooses, when a game of simple rules shows only the card.
+    @State private var showsReports: Bool?
 
     var body: some View {
         NavigationStack {
             Form {
-                trendSection
-                balanceSection
+                // CTM study 4.12 (M0): today's money in three lines first.
+                let today = session.world.todayAccount()
+                if let today {
+                    todaySection(today)
+                }
                 if session.world.scenario != nil {
                     goalsSection
                 }
-                // Decision 200: with unlimited funds there is nothing to
-                // borrow for, and no cash to sheet.
-                if !session.world.economy.unlimitedFunds {
-                    loanSection
+                if today == nil || showsAllReports {
+                    trendSection
+                    balanceSection
+                    // Decision 200: with unlimited funds there is nothing to
+                    // borrow for, and no cash to sheet.
+                    if !session.world.economy.unlimitedFunds {
+                        loanSection
+                    }
+                    faresSection
+                    lastHourSection
+                    reportSection
+                    if !session.world.economy.unlimitedFunds {
+                        balanceSheetSection
+                    }
+                    closedYearsSection
+                    ledgerSection
                 }
-                faresSection
-                lastHourSection
-                reportSection
-                if !session.world.economy.unlimitedFunds {
-                    balanceSheetSection
+                if today != nil {
+                    reportsToggleSection
                 }
-                closedYearsSection
-                ledgerSection
             }
             .navigationTitle("Economy")
             .hardTopScrollEdge()
@@ -67,7 +80,51 @@ struct EconomyPanel: View {
         session.world.accounts
     }
 
+    /// Decision 258's simple rules show only the "Today" card at first;
+    /// realistic games show every report, as before.
+    private var showsAllReports: Bool {
+        showsReports ?? (NewGameRules(of: session.world) == .realistic)
+    }
+
     // MARK: - Sections
+
+    /// Today's fares, running costs and result, to the last full hour
+    /// (CTM study 4.12, step M0; ``TodayAccount``).
+    private func todaySection(_ today: TodayAccount) -> some View {
+        let language = session.language
+        let rows = today.rows(in: language)
+        return Section {
+            ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
+                LabeledContent {
+                    Text(verbatim: row.value)
+                        .foregroundStyle(index == rows.count - 1 ? (today.result < .zero ? Theme.error : Theme.success) : Theme.textPrimary)
+                } label: {
+                    Text(verbatim: row.title)
+                }
+                .font(index == rows.count - 1 ? .body.weight(.semibold) : .body)
+                .monospacedDigit()
+            }
+        } header: {
+            Text(verbatim: today.title(in: language))
+        } footer: {
+            Text(verbatim: today.note(in: language))
+        }
+        .accessibilityIdentifier("economy.today")
+    }
+
+    /// Shows or hides the reports under the "Today" card.
+    private var reportsToggleSection: some View {
+        Section {
+            Button {
+                showsReports = !showsAllReports
+            } label: {
+                Text(verbatim: showsAllReports
+                     ? session.language.text("Hide the other reports", "收起其他報表")
+                     : session.language.text("Show the other reports", "顯示其他報表"))
+            }
+            .accessibilityIdentifier("economy.reports")
+        }
+    }
 
     /// Decision 176: how the company is growing, over 30 days, 90 days, a
     /// year or all its closed years.

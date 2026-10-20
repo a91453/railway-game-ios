@@ -1852,33 +1852,47 @@ public struct GameWorld: Equatable, Sendable {
         if wasHighSpeed { refreshLandDemand() }
     }
 
-    /// Replaces a line's stops with `stops`, in order. Its patterns keep
-    /// their calls, as indices into the new stops.
+    /// Replaces a line's stops with `stops`, in order. Each stop the line
+    /// keeps takes its patterns' calls and its route preferences with it
+    /// (decision 291, ``ServiceLine/stopIndices(from:to:)``): a pattern
+    /// calls at the same stations, and a preferred path is kept for a leg
+    /// its service still takes between the same two stations; the others
+    /// go, back to the automatic route.
     ///
     /// - Throws, checked in this order: ``GameError/unknownLine(_:)``,
     ///   ``GameError/invalidLineStops`` (on a ring also fewer than three, or
     ///   the same station first and last, see ``setLineRing(_:to:)``),
     ///   ``GameError/unknownStation(_:)`` naming the first stop whose
-    ///   station does not exist, ``GameError/invalidLinePattern`` if a
-    ///   pattern would call past the new last stop (remove it first),
-    ///   ``GameError/invalidLineRoutePreference``, or, on a line with runs
-    ///   (decision 133), ``GameError/trainServiceActive(_:)`` while one of
-    ///   its trains runs a service.
+    ///   station does not exist, ``GameError/invalidLinePattern`` if the
+    ///   new stops leave out a stop a pattern calls at (remove the pattern
+    ///   first), or, on a line with runs (decision 133),
+    ///   ``GameError/trainServiceActive(_:)`` while one of its trains runs a
+    ///   service.
     public mutating func setLineStops(_ id: LineID, to stops: [StationID]) throws(GameError) {
         let index = try lineIndex(of: id)
         try requireLineStops(stops, ring: lines[index].isRing)
-        guard lines[index].patterns.allSatisfy({ LinePattern.isCallList($0.calls, stopCount: stops.count) }) else {
-            throw .invalidLinePattern
-        }
+        let moved = ServiceLine.stopIndices(from: lines[index].stops, to: stops)
         var changed = lines[index]
         changed.stops = stops
-        guard changed.validRoutePreferences else { throw .invalidLineRoutePreference }
+        for pattern in changed.patterns.indices {
+            let calls = changed.patterns[pattern].calls.compactMap { moved[$0] }.sorted()
+            guard calls.count == changed.patterns[pattern].calls.count, LinePattern.isCallList(calls, stopCount: stops.count) else {
+                throw .invalidLinePattern
+            }
+            changed.patterns[pattern].calls = calls
+        }
+        changed.routePreferences = changed.movedRoutes(changed.routePreferences, service: 0, by: moved)
+        for pattern in changed.patterns.indices {
+            changed.patterns[pattern].routePreferences = changed.movedRoutes(changed.patterns[pattern].routePreferences, service: pattern + 1, by: moved)
+        }
         // Decision 133: new stops end the runs, which a train on one still
         // follows one way to its end; not under it, as setLineRuns.
         if lines[index].hasRuns, let running = lines[index].trains.first(where: { train(id: $0)?.execution != nil }) {
             throw .trainServiceActive(running)
         }
         lines[index].stops = stops
+        lines[index].patterns = changed.patterns
+        lines[index].routePreferences = changed.routePreferences
         // Decision 133: runs name stops by index, so new stops end them.
         lines[index].runs = []
         lines[index].runDays = []

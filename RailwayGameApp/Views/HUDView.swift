@@ -157,7 +157,7 @@ struct HUDView: View {
             session: session,
             launcher: launcher,
             screen: screen,
-            showsGoals: session.world.scenario != nil || session.world.hasCityRequests,
+            showsGoals: session.world.scenario != nil || session.world.hasCityRequests || session.nextSteps != nil,
             showsTourism: session.world.hasTourism,
             language: session.language,
             askSaveName: {

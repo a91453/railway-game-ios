@@ -306,9 +306,53 @@ final class LineRoutePreferenceTests: XCTestCase {
         json["routePreferences"] = NSNull()
         XCTAssertThrowsError(try JSONDecoder().decode(ServiceLine.self, from: JSONSerialization.data(withJSONObject: json)))
         try world.setLineRoutePreferences(line, to: [good])
-        let before = world
-        XCTAssertThrowsError(try world.setLineStops(line, to: [SingleTrackMeet.west, SingleTrackMeet.east]))
-        XCTAssertEqual(world, before)
+    }
+
+    /// Decision 291 (75.1's report): a stop put in before the others moves
+    /// every preference and pattern call one on with its stations, where
+    /// the old indices refused the new stops; a stop taken out takes the
+    /// paths to it with it, back to the automatic route; one a pattern
+    /// calls at is still refused.
+    func testNewStopsCarryPreferencesAndCallsWithTheirStations() throws {
+        var (world, model, line, _) = try Self.setup(patterns: true)
+        let base = Self.loop(world), express = Self.loop(world, pattern: true)
+        try world.setLineRoutePreferences(line, to: [base]); XCTAssertNil(model.setLineRoutes(line, [base]))
+        try world.setLineRoutePreferences(line, to: [express], pattern: 0); XCTAssertNil(model.setLineRoutes(line, [express], pattern: 0))
+        let longer = [SingleTrackMeet.east, SingleTrackMeet.west, SingleTrackMeet.middle, SingleTrackMeet.east]
+        try world.setLineStops(line, to: longer); XCTAssertNil(model.setLineStops(line, longer))
+        XCTAssertEqual(world.lines[0].routePreferences, [LineRoutePreference(from: 1, to: 2, tracks: base.tracks, platform: base.platform)])
+        XCTAssertEqual(world.lines[0].patterns[0].calls, [1, 3], "still west to east")
+        XCTAssertEqual(world.lines[0].patterns[0].routePreferences, [LineRoutePreference(from: 1, to: 3, tracks: express.tracks, platform: express.platform)])
+        XCTAssertEqual(KernelDifferentialTests.differences(world, model), [])
+
+        let shorter = [SingleTrackMeet.west, SingleTrackMeet.east]
+        try world.setLineStops(line, to: shorter); XCTAssertNil(model.setLineStops(line, shorter))
+        XCTAssertEqual(world.lines[0].routePreferences, [], "no leg calls at the middle now")
+        XCTAssertEqual(world.lines[0].patterns[0].calls, [0, 1])
+        XCTAssertEqual(world.lines[0].patterns[0].routePreferences, [LineRoutePreference(from: 0, to: 1, tracks: express.tracks, platform: express.platform)])
+        XCTAssertEqual(KernelDifferentialTests.differences(world, model), [])
+
+        // Leaving out a stop the pattern calls at is still refused (remove
+        // the pattern first), and nothing moves.
+        let before = world, oracle = model
+        for stops in [[SingleTrackMeet.west, SingleTrackMeet.middle], [SingleTrackMeet.middle, SingleTrackMeet.east]] {
+            XCTAssertThrowsError(try world.setLineStops(line, to: stops)) { XCTAssertEqual($0 as? GameError, .invalidLinePattern) }
+            XCTAssertEqual(model.setLineStops(line, stops), .invalidLinePattern)
+        }
+        XCTAssertEqual(world, before); XCTAssertEqual(oracle, model)
+    }
+
+    /// Decision 291: which stop of the old list is which of the new.
+    func testStopIndicesFollowStationsThroughInsertsRemovalsAndMoves() {
+        let (a, b, c, d, x) = (StationID(rawValue: 1), StationID(rawValue: 2), StationID(rawValue: 3), StationID(rawValue: 4), StationID(rawValue: 9))
+        XCTAssertEqual(ServiceLine.stopIndices(from: [a, b, c, d], to: [a, b, x, c, d]), [0, 1, 3, 4], "inserted between")
+        XCTAssertEqual(ServiceLine.stopIndices(from: [a, b, c, d], to: [a, c, d]), [0, nil, 1, 2], "removed")
+        XCTAssertEqual(ServiceLine.stopIndices(from: [a, b, c, d], to: [a, c, b, d]), [0, 2, 1, 3], "moved up one")
+        XCTAssertEqual(ServiceLine.stopIndices(from: [a, b, a, c], to: [a, x, a, b, a, c]), [0, 3, 4, 5], "a station called at twice keeps its later stops in order")
+        XCTAssertEqual(ServiceLine.stopIndices(from: [a, b, c, d], to: [d, c, b, a]), [3, 2, 1, 0], "each called at once")
+        for (old, new) in [([a, b, c, d], [a, b, x, c, d]), ([a, b, a, c], [a, x, a, b, a, c]), ([a, b, c, a, b], [b, a, c, b, a])] {
+            XCTAssertEqual(ServiceLine.stopIndices(from: old, to: new), ReferenceWorld.keptStops(old, new))
+        }
     }
 
     func testTrafficOffAndVersionNineMigrationAndNewSaveRoundTrip() throws {

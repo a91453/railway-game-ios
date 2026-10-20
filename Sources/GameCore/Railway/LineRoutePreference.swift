@@ -74,6 +74,56 @@ extension ServiceLine {
         return true
     }
 
+    /// For each of `old`'s stops, its index in `new`, or `nil` where `new`
+    /// no longer has it (decision 291). The most stops both have in the
+    /// same order are paired, taking a stop where both have it next and
+    /// otherwise passing `old`'s first where that pairs as many; a stop
+    /// left over whose station `old` and `new` each call at once has moved
+    /// there. So a stop inserted, removed or moved leaves the others where
+    /// they were.
+    static func stopIndices(from old: [StationID], to new: [StationID]) -> [Int?] {
+        // kept[i][j]: how many stops old[i...] and new[j...] keep in order.
+        var kept = Array(repeating: Array(repeating: 0, count: new.count + 1), count: old.count + 1)
+        for i in old.indices.reversed() {
+            for j in new.indices.reversed() {
+                kept[i][j] = old[i] == new[j] ? kept[i + 1][j + 1] + 1 : max(kept[i + 1][j], kept[i][j + 1])
+            }
+        }
+        var moved = [Int?](repeating: nil, count: old.count)
+        var taken = Set<Int>()
+        var (i, j) = (0, 0)
+        while i < old.count, j < new.count {
+            if old[i] == new[j] {
+                moved[i] = j
+                taken.insert(j)
+                (i, j) = (i + 1, j + 1)
+            } else if kept[i + 1][j] >= kept[i][j + 1] {
+                i += 1
+            } else {
+                j += 1
+            }
+        }
+        for i in old.indices where moved[i] == nil && old.filter({ $0 == old[i] }).count == 1 {
+            let at = new.indices.filter { new[$0] == old[i] }
+            if at.count == 1, !taken.contains(at[0]) { moved[i] = at[0] }
+        }
+        return moved
+    }
+
+    /// `routes` of `service` with their stops at their `moved` indices
+    /// (``stopIndices(from:to:)``), keeping only those still for a leg the
+    /// service takes, in the same order: a path between two stations the
+    /// line no longer calls at one after the other goes.
+    func movedRoutes(_ routes: [LineRoutePreference], service: Int, by moved: [Int?]) -> [LineRoutePreference] {
+        let order = routeOrder(service: service)
+        return routes.compactMap { route in
+            guard moved.indices.contains(route.from), moved.indices.contains(route.to),
+                  let from = moved[route.from], let to = moved[route.to] else { return nil }
+            let kept = LineRoutePreference(from: from, to: to, tracks: route.tracks, platform: route.platform)
+            return isValidRoute(kept, order: order) ? kept : nil
+        }
+    }
+
     /// Whether `route` fits a service of this line whose timetable calls
     /// at the stops of `order` (``routeOrder(service:direction:)``): two
     /// different stops it takes one after the other, the platform one of
