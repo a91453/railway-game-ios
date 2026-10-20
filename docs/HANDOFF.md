@@ -13,37 +13,44 @@
 
 ## 1. 常駐的 session 與角色
 
-作者用幾個常駐 session 分工。這些 session 會換人，換的時候照這一節接手。
+作者 2026-10-20 把常駐 session 減成一個：遊戲規劃兼派工。合併協調不再常駐，合併由作者做，§1.2 留作合併與發版的檢查清單。原因是額度：常駐 session 每一輪都要重讀整段對話，連被 PR 事件或排程叫醒也一樣，對話越長越貴。舊的遊戲規劃 session 開了兩天，用量已經碰到每週額度的警告。舊文件裡寫「派工 session」的地方，現在都是遊戲規劃。
 
 | 角色 | 現在的 session | 做什麼 | 交接 |
 | --- | --- | --- | --- |
-| 遊戲規劃（決策） | session_01V1xd3H9vNkuZoSA3czNfGm（2026-10-16 起；前任 session_018D6gYU1yiZMtxSmNNU1K17，對話太長交接） | 從玩家、開發、美術、音樂四個角度決定優先順序與設計，開實作 session 並派工，寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1 節 |
-| 合併協調 | session_01QoA24EvFCFbmbcM1EwaZT7（2026-10-16 起；前任 session_016sNs4eeZwga9hz1CCHkpmX。作者本人確認授權前只巡查、不合併；這段時間由遊戲規劃照作者「由你四方思考後決定」合併） | 照批次規則合併、發 GameCore CI 名額、看 main 的 CI 與 full lane、發版前檢查 | 第 1.2 節 |
-| 派工（玩家回報與 bug） | session_01MJ7sdeid5DAFjSVbTkmdi3（2026-10-16 起；前任 session_01AaAj4wvJMxJQuLWAoYu6S8） | 收作者轉來的回報與 bug，開修正 session | 第 1.3 節 |
-| 每日 Threads 開發日誌 | 排程「每日 Threads 開發日誌」（台灣時間每天 21:43）觸發遊戲規劃，由它開寫作 session；換遊戲規劃 session 時，排程要改到新 session | 寫當天的串文草稿，用 SendUserFile 交給作者；不 commit、不發布 | 派工單照 2026-10-14、10-15、10-16 的寫作 session |
+| 遊戲規劃（兼派工） | session_01V1xd3H9vNkuZoSA3czNfGm（2026-10-16 起；前任 session_018D6gYU1yiZMtxSmNNU1K17。2026-10-18 起閒置，作者開新的就照 §1.1 的「換手」改這一格） | 從玩家、開發、美術、音樂四個角度決定優先順序與設計，開實作 session 並派工，收作者轉來的玩家回報與 bug（§1.3），寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1、1.3 節 |
+| 每日 Threads 開發日誌 | 排程「每日 Threads 開發日誌」（`trig_01342WWauXtTPc87kNedEhb9`，台灣時間每天 21:43，2026-10-18 起暫停）觸發遊戲規劃，由它開寫作 session；換遊戲規劃 session 時，排程要改到新 session | 寫當天的串文草稿，用 SendUserFile 交給作者；不 commit、不發布 | 派工單照 2026-10-14、10-15、10-16 的寫作 session |
+
+不再常駐（2026-10-20 停用）：合併協調 session_01QoA24EvFCFbmbcM1EwaZT7（前任 session_016sNs4eeZwga9hz1CCHkpmX）、派工 session_01MJ7sdeid5DAFjSVbTkmdi3（前任 session_01AaAj4wvJMxJQuLWAoYu6S8）。兩個都從 2026-10-17 起沒有動作。
+
+**額度**（作者 2026-10-20 同意的做法）：
+- 實作 session 同時 2–4 個。GameCore 的完整 tier 本來就最多 2 個，macOS runner 也只有 5 台，開更多只是排隊。
+- 實作 session 做完一件就收工：在 #231 留合併紀錄、把沒做完的寫進這份。不要留著等下一件。
+- 常駐 session 的對話太長（大約超過 20–30 萬 token）就照 §1.1 換手，靠這份接手，不靠舊對話。
+- 研究、寫文件可以用較低的思考強度；GameCore 的難題用高的。
+- 對話到一定長度就自動壓縮：`.claude/settings.json` 的 `autoCompactWindow` 是 400000（2026-10-20，作者：「你四方思考後決定」）。雲端 session 另外帶 `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=80`，所以實際大約在 32 萬 token 時壓縮（推算，沒有實測）。壓縮會把舊對話摘要，作者的原話、量到的數字要在壓縮前寫進 PR、#231 或這份。不要這個設定時，刪掉那一行就好。
 
 ### 1.1 遊戲規劃
 
 - **做決定的方式**（作者 2026-10-14「我不再做決定，都以這個當預設」，10-15 加音樂）：四個角度各一行理由寫進 PR；其他選項的預覽留在 PR；然後就做。作者自己保留：TestFlight 發版、Apple 帳號與 App Store Connect、secrets、加依賴、用 copyleft 或沒授權的程式碼。
 - **排序**：NEXT_PRIORITIES §14 的權重（玩家 30、開發 25、美術 15、鐵道迷＋產品 15、音樂 15）；§15 是參考庫還沒做的項目與 2026-10-16 的順序。
-- **一條線一次一個 PR**：前一個合併再開下一個（§14.4）。同時跑全套 Swift CI 的 GameCore PR 最多 2 個，名額由合併協調發。
+- **一條線一次一個 PR**：前一個合併再開下一個（§14.4）。同時跑全套 Swift CI 的 GameCore PR 最多 2 個；開 PR 前先看 #231 與開著的 PR 還有沒有名額。
 - **每次發版**：
   - 發版前：改 `.github/testflight-whats-new.md`（它只在上一版之後有改動時才會被用，沒改就是自動列出的 PR 清單）。
   - 發版後：看 `testflight.yml` 的 run 號與 commit，記進 `docs/research/PLAYER_FEEDBACK.md`。版本號是 0.5.0 (run 號.1)。
 - **踩過的坑**：
   - 不要憑記憶說版本號，查 `testflight.yml` 的 run。2026-10-16 把 66.1 當成 64.1。
   - 發版前要收工時，叫 session「做完再停」，不要叫它把做一半的東西留給之後（作者 2026-10-16：「記得不要暫停讓他們做完」「不要限制 可以任意開 pr 但就是收工」）。
-  - session 停下來，不一定是因為發版。重開之前先問派工 session，或讀那個 session 自己的紀錄。例：語言選單是作者說「先不要動」才停的，不是發版；後來作者本人在那個 session 回「四方決定要不要繼續」，才重開成 #727。
+  - session 停下來，不一定是因為發版。重開之前先讀那個 session 自己的紀錄與 #231。例：語言選單是作者說「先不要動」才停的，不是發版；後來作者本人在那個 session 回「四方決定要不要繼續」，才重開成 #727。
   - 給實作 session 的派工單要對照 art-style §7 的現行規則：參考庫的模型「任意組合、成品跟原本不同」，不是「能搬就搬」。
   - 同時開好幾個 session，它們會在幾分鐘內登記同一個決策號（2026-10-16：三個都登記 256；2026-10-17：#774 與 #776 都用 271，照登記先後 #776 改成 272）。派工單裡直接寫好號碼；或開完之後看一次 #231，照登記先後重排並留言。
 
-- **換手**（2026-10-16，作者：「你太長了接手」）：遊戲規劃的對話太長時，開新 session 接手。新 session 的派工單要寫清楚現在進行到哪、等誰；每日開發日誌的排程改到新 session；在 #231 留言、通知合併協調與派工；這一節第 1 節表格的 session 改成新的。
+- **換手**（2026-10-16，作者：「你太長了接手」）：遊戲規劃的對話太長時，開新 session 接手。新 session 的派工單要寫清楚現在進行到哪、等誰；每日開發日誌的排程改到新 session；在 #231 留言；第 1 節表格的 session 改成新的。
 
-### 1.2 合併協調
+### 1.2 合併與發版的檢查
 
-（合併協調 session 2026-10-16 寄來的交接原文，整理成條列。）
+（合併協調 session 2026-10-16 寄來的交接原文，整理成條列。2026-10-20 起沒有常駐的合併協調：合併的是作者；作者在某個 session 裡授權它合併，或要發版時開一個短 session 確認，那個 session 就照這一節。）
 
-**權限**：作者授權這個角色合併 PR（CLAUDE.md 的「never merge a PR」只對這個角色放寬）。不開 auto-merge、不 force-push、不碰 `testflight.yml`。
+**權限**：只有作者本人在那個 session 裡授權了才合併（CLAUDE.md 的「never merge a PR」只在這時放寬）。不開 auto-merge、不 force-push、不碰 `testflight.yml`。
 
 **每個 PR 合併前確認**（`pull_request_read` 的 get 與 get_check_runs）：
 - 不是 draft，`mergeable_state` 是 `clean`。
@@ -113,14 +120,14 @@
 - 不要取消 main 的 `ci.yml` push run。只能取消自己用 workflow_dispatch 跑的 full lane，或 PR 的 run。
 - #697 把選單從 6 列改成 8 列，SettingsUITests 跟著紅了三支（#706 改回 6 列）。改版面的 PR 要預期 full lane 會連帶紅。
 
-### 1.3 派工
+### 1.3 派工（遊戲規劃兼任）
 
-（派工 session 2026-10-16 寄來的交接原文，整理成條列。）
+（派工 session 2026-10-16 寄來的交接原文，整理成條列。2026-10-20 起由遊戲規劃兼任。）
 
 **職責**：
 - 接作者轉來的 TestFlight 玩家回報與 bug，到最新 main 查證，有問題就用 `create_session` 派修正 session，結果轉告作者。
 - 也盯 main 的 full lane（iOS App Build／ios-full-lane），紅了就派人修。
-- 不合併 PR，合併是合併協調或作者的事。
+- 不合併 PR，合併是作者的事（§1.2）。
 
 **查證**：
 - `git fetch origin main` 之後 grep 相關程式，先分清楚是 App 的 bug、過時的測試，還是已經修過。
@@ -134,7 +141,7 @@
 - 不改 golden、SaveFixtures、ReplayFixtures 的值；
 - 要協調的對象：改同一個檔案的 session；GameCore 的完整 tier 同時最多 2 個；
 - 驗證方式：本機只跑快速檢查；UI 測試只用 `ios-build.yml` 的 `only_testing`；
-- 收尾：draft → 綠 → ready → 在 #231 留「可合併」→ 用 send_message 告訴派工與合併協調；
+- 收尾：draft → 綠 → ready → 在 #231 留「可合併」→ 用 send_message 告訴遊戲規劃；
 - 禁止：合併、auto-merge、推 main、`testflight.yml`、`@claude`、在 repo 裡寫模型名稱。
 
 **作者的偏好**：
@@ -155,7 +162,7 @@
 - 交代彎道限速時要和區間閉塞一起考慮。
 - GitHub MCP 會間歇斷線，斷了等它重連再查。
 
-## 2. 正在做的線（2026-10-17 下午）
+## 2. 正在做的線（2026-10-20）
 
 作者 2026-10-17 讓各線開工，合併交給遊戲規劃（「交給你綠了就合 紅了解衝突」、「由你四方思考後決定」）。分工照 `AGENTS.md`：Claude 做核心與整合，Codex 做 UI 測試、工具與獨立審查，Antigravity 做網頁試看與畫面。
 
