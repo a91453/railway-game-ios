@@ -262,7 +262,7 @@ ACE-Step 的輸出是音訊，最多當編曲的參考。
 | [mapbox/pixelmatch](https://github.com/mapbox/pixelmatch) | ISC | **候選，等作者**（npm 依賴） | `tools/map3d-preview/` 現在把 `main` 與分支的圖上下拼起來給人看；它能多給一張差異圖與「改了幾 % 像素」。只在開發機，不進 App |
 | [google/or-tools](https://github.com/google/or-tools) | Apache-2.0 | **候選，等作者**（Python 依賴），用途要換 | 參考庫已經在用：`Railway/taiwan-rail-reference-clean/source/scripts/optimize_physical_dispatch.py` 的 CP-SAT 替每班選股道、排待避（決策 296 查過，不是車組運用）。可用的是離線的「量尺」：高鐵示範一天的車輛運用最佳解，對照決策 296「下一步」第 1 點的規則差多少。不進 GameCore |
 | [KhronosGroup/glTF-Validator](https://github.com/KhronosGroup/glTF-Validator) | Apache-2.0 | 候選，不急 | 能接在 `tools/glb-to-m3dmodel` 前面查規格。Meshy 試做公車排在實機量完 3D 幀時間之後（HANDOFF），到時再加。它不檢查這個遊戲自己的限制（無貼圖、面數），兩種檢查都要留 |
-| [realm/SwiftLint](https://github.com/realm/SwiftLint) | MIT | 不做 | 已經用 `-warnings-as-errors`；多一個 CI job 與依賴，換來的不多 |
+| [realm/SwiftLint](https://github.com/realm/SwiftLint) | MIT | 不做 | 它查的是風格、複雜度與自訂慣例，和編譯器的 `-warnings-as-errors` 不同；但要多一個 CI job 與依賴，現在換來的不多 |
 | [cashapp/AccessibilitySnapshot](https://github.com/cashapp/AccessibilitySnapshot) | Apache-2.0 | 不做 | HANDOFF 記的 VoiceOver 缺口是「時鐘 600 倍時會不會卡」，快照量不到。要查無障礙，先用 XCTest 內建的 `performAccessibilityAudit()`，不加依賴 |
 | [pointfreeco/swift-snapshot-testing](https://github.com/pointfreeco/swift-snapshot-testing) | MIT | 不做 | CLAUDE.md：UI 測試不截圖、不比圖，畫面由作者在實機看；又要 macOS runner（全帳號 5 台，full lane 一次佔 4 台）。排版邏輯照舊放進 GamePresentation 用 Linux 測（例如 `TutorialCardPlacementTests`）|
 | [MobilityData/gtfs-validator](https://github.com/MobilityData/gtfs-validator) | Apache-2.0 | 現在不做 | 世界版參考庫的 GTFS 已經轉好，沒有新的 GTFS 匯入 |
@@ -276,7 +276,8 @@ MIT，`5beb35b`。給 Claude Code、Codex 等的 skill 集，主張「小、可�
 - 它的設定流程會建 `GLOSSARY.md`、`docs/adr/` 與 issue tracker 的標籤。這裡已有編號的 ARCHITECTURE 決策、
   `docs/HANDOFF.md` 與 #231，兩套會打架。
 - `handoff` 把交接寫進 `/tmp`；這裡交接一定要進 `main` 的 `docs/HANDOFF.md`。
-- `git-guardrails-claude-code` 擋 `git push`；session 要推分支開 PR。
+- （`git-guardrails-claude-code` 不在 plugin 裡：它在 `skills/misc/`，作者註明「not promoted in the plugin」，
+  要另外照它的說明裝 hook 才會擋 `git push`。session 要推分支開 PR，所以也不裝。）
 - plugin 裝在使用者那一層，雲端 session 與 Codex、Gemini 都讀不到；放進 `.claude/skills/` 才大家都有。
 
 **逐個看**：
@@ -289,7 +290,7 @@ MIT，`5beb35b`。給 Claude Code、Codex 等的 skill 集，主張「小、可�
 | `research` | 不拿：`docs/research/` 已經是同一件事 |
 | `grill-me`、`grilling`、`grill-with-docs`、`to-spec`、`triage`、`wayfinder`、`to-tickets` | 不拿：都靠反覆問作者或 issue tracker 推進，和作者 2026-10-14「我不再做決定」相反 |
 | `domain-modeling`、`codebase-design`、`improve-codebase-architecture` | 不拿：ADR 與詞彙表的格式和決策紀錄重複；大規模重構違反「不做無關的重構」 |
-| `handoff`、`git-guardrails-claude-code` | 不拿（上面的理由） |
+| `handoff`、`git-guardrails-claude-code`（`misc/`，不在 plugin） | 不拿（上面的理由） |
 | `prototype`、`code-review`、`implement`、`retro` 等 | 不拿：PR 裡留其他選項的預覽、CI 與審查已經有同樣的流程 |
 
 **四個角度**（這次採用 `diagnosing-bugs`）：
@@ -302,6 +303,74 @@ MIT，`5beb35b`。給 Claude Code、Codex 等的 skill 集，主張「小、可�
 - pixelmatch 接 map3d-preview：3D 美術改動有數字可比；要加 npm 依賴，等作者。
 - OR-Tools 車輛運用量尺：最接近模擬深度；要加 Python 依賴，而且 `claude/hsr-train-rostering` 正在做同一件事的規則，
   等它合併後量尺才有東西可比。
+
+### 6.3 什麼時候加（作者 2026-10-20：「四方考慮，依現有優先順序，現在加還是做到相關的時候再加，給你判斷」）
+
+原則：工具跟著用得到它的那個 PR 一起進來，不先裝著等。現在的派工（NEXT_PRIORITIES §16、§17）
+是甲線（上手）、乙線（現實路網）與高鐵示範的車輛運用；3D 那條線在等 72.1 的實機 fps 回報。
+這些工具沒有一個在擋它們，所以**現在只做第一列**，其餘寫明在哪個時機由做那件事的 session 加。
+作者把這幾個工具加不加、何時加交給 session 判斷，所以到了時機不必再等作者同意依賴；
+能抄單一檔案（保留授權）就不加套件。
+
+| 項目 | 時機 | 怎麼加 | 四方（玩家／開發／美術／音樂） |
+| --- | --- | --- | --- |
+| diagnosing-bugs 試用 | **現在** | 拿一個已修好的真 bug（#828 的 R2）回到修之前的 commit，只照 skill 走，看能不能做出會紅的指令、找到同一個原因 | 無／驗證 #847 真的有用，便宜／無／無 |
+| pixelmatch 差異圖 | 下一個改 3D 畫面的 PR（決策 277 的雨絲與站前商店街、Meshy 公車接進 App） | 抄 `pixelmatch` 的單一檔案（ISC，授權放旁邊）進 `tools/map3d-preview/`，在 `render.cjs` 已開的 Chromium 裡用 canvas 解 PNG、比對；不加 npm 套件。只當審查的證據，不當通過門檻 | 無／前後對照有數字／看得出改動只在該改的地方／無 |
+| glTF-Validator | Meshy 公車接進 App 的那個 PR | 加進 `tools/glb-to-m3dmodel` 自己的 `package.json`（`gltf-validator`，Apache-2.0，固定版本），轉換前先查；遊戲自己的限制（無貼圖、面數）照舊另查 | 無／壞模型在轉換前就擋下／無／無 |
+| OR-Tools 車輛運用量尺 | `claude/hsr-train-rostering`（決策 297）合併後，量到的取消或晚點還有說不出原因的才做 | 離線 Python 工具，照參考庫 `optimize_physical_dispatch.py` 的 CP-SAT 寫法；不進 GameCore | 間接（高鐵示範號誌預設關）／知道規則離最佳差多少／無／無 |
+| MetricKit、OSSignposter、開發者 HUD | 照 NEXT_PRIORITIES §2 第 8 項；72.1 的 fps 或 VoiceOver 600 倍（HANDOFF §7.5）在實機看到卡頓就提前 | Apple 自帶，不加依賴 | 間接／實機的數字，不再只有 Linux／3D 的幀預算／無 |
+| `performAccessibilityAudit()` | 實機 VoiceOver 回報有問題時 | full lane 加一個測試，不進 PR gate | 用 VoiceOver 的玩家／不加依賴／無／無 |
+| `writing-for-agents` 的檢查 | 下一次有人大改 `CLAUDE.md` 時 | 照它檢查「去讀某某文件」的句子 | 無／agent 該讀的會讀到／無／無 |
+| gtfs-validator | 有新的 GTFS 要匯入時 | 只在 `tools/` 的轉檔前跑 | — |
+| SwiftLint | 審查一再抓到同一種風格問題時 | 先只報告新改的檔案，不加 CI 必過 | — |
+| sentry-cocoa | 不加 | 除非 TestFlight 規模大到 App Store Connect 的當機報告不夠，而且作者同意把資料送第三方 | — |
+| swift-snapshot-testing、AccessibilitySnapshot | 不加 | 除非作者改了「UI 測試不截圖、不比圖」 | — |
+
+### 6.4 之前研究過的外部專案：做了哪些、剩下的什麼時候加
+
+這次 8 個裡的 glTF-Transform、meshoptimizer 早就做完了，卻又被當成新推薦，因為結論散在幾份研究裡。
+這張表把**本文件第 3、4 節**與 **MOTION_3D_TOOLS** 的候選收在一起，只寫現況與時機，不重新評估；
+理由看各自的出處。其他研究（UX_REDESIGN、CITY_BUILDING、DISRUPTION、TERRAIN_HEIGHT、PEAKLINE）引用的
+外部專案（OpenTTD、Simutrans、A/B Street 等）是「只取想法」，已寫進各自的決策，不列。
+
+**已經做完的**（不要再推薦一次）：
+
+| 項目 | 怎麼做的 |
+| --- | --- |
+| Claude-Code-Game-Studios 的 `balance-check` | `.claude/skills/economy-balance/`（本文件第 2 節） |
+| godot-mcp 等引擎 MCP 的「無頭入口」 | `GameSim`（決策 260，#740） |
+| ml-agents 的觀察／動作結構 | 腳本化玩法 `Policy`（決策 261，#748） |
+| 3D 截圖加每幀量測 | `tools/cityview-benchmark/`（#841） |
+| 文件數字一致性 | `tools/golden-checks/doc_numbers.py`（#760） |
+| LottieFiles motion-design-skill | `.claude/skills/motion/`（決策 253） |
+| glTF-Transform、meshoptimizer | `tools/glb-to-m3dmodel/`（#803、#830） |
+| mattpocock/skills 的 `diagnosing-bugs` | `.claude/skills/diagnosing-bugs/`（#847） |
+
+**還沒做的**（照第 6.3 節的原則：跟著用得到它的工作一起加）：
+
+| 項目 | 時機 | 出處 |
+| --- | --- | --- |
+| animate 的流程改寫成官網說明短片的 skill | 下一次要做官網或社群的說明影片時（例如支線情境包或 R1 轉乘站上線要宣傳）；不加依賴 | MOTION_3D_TOOLS §2.3 B；HANDOFF §7.4 |
+| CityView 提供固定時間的 `render(t)`，錄 60 fps 官網影片 | 和上一列同一個 PR | MOTION_3D_TOOLS §2.4 |
+| TripoSR（CPU 的 torch）當地標的形體參考 | 決策 244 的地標開工、程式建模做不出來時 | MOTION_3D_TOOLS §6 |
+| HyperFrames | 官網影片多到要字幕、多段組合時 | MOTION_3D_TOOLS §6 |
+| ACE-Step 1.5 離線配樂 | **仍是作者的**：要改決策 219 §2.2（聲音全部自己合成）；遊戲規劃 2026-10-16 決定現在不加 | 本文件第 4 節；HANDOFF §3 |
+| 不加的 | motion、Remotion、GSAP、Stable Fast 3D、TRELLIS.2、Tripo 付費方案、騰訊兩個（授權不准在歐盟、英國、南韓用） | MOTION_3D_TOOLS §0、§6；本文件第 0 節 |
+
+### 6.5 diagnosing-bugs 的試用（第 6.3 節第一列）
+
+拿 Codex 審查 #828 的 R2（提早折返後幾秒內的存檔讀不回，#831 修好，決策 288 的「後來」）：
+
+- 在修之前的 commit（`a57ec61`）照 skill 第 1 節做會變紅的指令：`SharedSingleTrackTests` 的兩站世界，
+  折返前切到 `.x1`，之後每秒 `WorldInvariants.roundTripProblem(of:)`，共 180 秒。
+- **紅**：第 241–247 秒讀不回（`Train 2's service times are after the clock.`），248 秒起正常，
+  和審查報告的秒數相同。build 135 秒，測試本身 0.5 秒。
+- 同一個測試放到修好的 commit（`b6f04e4`）：**綠**，每一秒都讀得回。
+- 學到的：skill 的表原本把「存檔讀不回」指向存檔 fixture，抓不到這種只有幾秒的空窗；
+  原本的決策 288 測試也是一次走一分鐘才漏掉。表裡加了一列「逐秒存讀」。
+- 限制：試用前已從 #231 的留言知道原因，所以這次只證明「很快做得出會變紅的指令」，
+  沒有證明 skill 能從零找出原因；下一個真的新 bug 才看得出來。試用的測試沒有提交
+  （修好之後的 main 已有 #831 的回歸測試）。
 
 **VERIFIED**（這個容器，Linux）：8 個專案的授權檔；參考庫的 CP-SAT 腳本；skill 引用的測試類別、環境變數
 （`PROPERTY_REPLAY`、`PROBLEM_REPORT`、`TRAFFIC_TIMING_REPORT`、`TICK_REPORT`）與 GameSim 指令在 `b368ce7` 都存在。

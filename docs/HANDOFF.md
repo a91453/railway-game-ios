@@ -188,7 +188,7 @@
 
 **作者 2026-10-18 暫停（「現在的做完 收工 就不要做了 沒有額度了」）**：遊戲規劃 session 讓各線停在這裡，每日 Threads 日誌的排程也暫停（`trig_01342WWauXtTPc87kNedEhb9`，重新開工時再打開）。沒有開著的 PR。下次開工從這裡接：
 - 核心玩法：高鐵示範的快轉在停工前已推上 `claude/hsr-demo-speed`，之後由 #801 合併（一週 `.fast` 97 s → 36 s）。2026-10-18 作者重新派工後做了決策 278（見第 2 節表格）。
-- 3D：等 72.1 的 fps 回報，才做決策 277 的雨絲與站前商店街；Meshy 公車（`docs/art/meshy-city-bus-2026-10-18/`）已由 Codex 的轉換器轉好（#803，`city-bus.m3dmodel`，車頭轉成 +x），等 3D session 接進 App。
+- 3D：等 72.1 的 fps 回報，才做決策 277 的雨絲與站前商店街；Meshy 公車（`docs/art/meshy-city-bus-2026-10-18/`）已由 Codex 的轉換器轉好（#803，`city-bus.m3dmodel`，車頭轉成 +x），等 3D session 接進 App。那兩個 PR 順便照 GAME_AI_TOOLS §6.3 加工具：改 3D 畫面的加 pixelmatch 差異圖，接 Meshy 公車的加 glTF-Validator。
 - Codex：三張卡都已合併（#802 full lane 拆工作、#784 關卡 UI 測試、#803 GLB 轉換器），見第 2 節表格。
 
 **App 效能（#791 查到，遊戲規劃 2026-10-18 派給核心玩法 session）**：main 98d1f15 的 full lane 兩個 UI 測試紅，根因都是 App 忙到無障礙查詢要 5–46 秒（#791 改了測試的等待；證據在 #791 的說明，run 39070554849、39077241788 的 xcresult）。App 這邊還沒解：
@@ -748,8 +748,7 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 | 官網與社群說明短片的 skill | MOTION_3D_TOOLS §2.3 B |
 | 在 macOS 上跑一部分套件測試，比對 Apple libm 的浮點值 | GAP_RESEARCH §4.2 |
 | 測試用的參照模型擴充到全網選路（`ReferenceWorldGoldenTests.swift:130` 還是 `preconditionFailure`） | GAP_RESEARCH §4.2 |
-| 等作者同意依賴：pixelmatch（ISC，npm）接 `tools/map3d-preview/`，前後對照多一張差異圖與改動像素比例 | GAME_AI_TOOLS §6.1 |
-| 等作者同意依賴：OR-Tools（Apache-2.0，Python）離線量尺，高鐵示範一天的車輛運用最佳解，對照 `claude/hsr-train-rostering` 的規則；參考庫 `optimize_physical_dispatch.py` 已有 CP-SAT 的寫法 | GAME_AI_TOOLS §6.1 |
+| 跟著相關的 PR 一起加的工具（作者 2026-10-20 交給 session 判斷時機）：pixelmatch 差異圖 → 下一個改 3D 畫面的 PR；glTF-Validator → Meshy 公車接進 App 的 PR；OR-Tools 車輛運用量尺 → 決策 297 合併後、還有說不出原因的取消時；`performAccessibilityAudit()` → 實機 VoiceOver 有問題時。做那件事的 session 照表加，不必再等作者同意依賴 | GAME_AI_TOOLS §6.3 |
 
 ### 7.5 只等實機確認的
 

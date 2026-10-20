@@ -124,6 +124,14 @@ triangles; the converter removes two with zero area and writes **1,543
 triangles, eight colors** (about 80 KB). The source contains no separate
 headlight material, so no bus triangle gets the night glow flag.
 
+## Before a model goes into the App
+
+The first PR that puts a converted model into the App also adds the
+Khronos glTF-Validator (`gltf-validator`, Apache-2.0, pinned) to this tool
+and checks the input GLB before conversion. It checks the glTF spec only;
+the game's own limits (no textures, triangle budget) stay checked here.
+Timing: `docs/research/GAME_AI_TOOLS_2026-10-15.md` §6.3.
+
 ## Dependencies and licenses
 
 `package.json` pins the three direct versions; `package-lock.json` pins the
