@@ -74,7 +74,7 @@ python3 -I tools/real-ridership/build_trtc_ridership.py --year 2025 --downloaded
 
 ## 高雄捷運：`build_krtc_ridership.py`
 
-**來源**：政府資料開放平臺的[高雄都會區大眾捷運系統各站旅運量入站](https://data.gov.tw/dataset/159641)與[出站](https://data.gov.tw/dataset/159640)（高雄市政府捷運工程局），依政府資料開放授權條款第 1 版使用。一年一列、一站一欄（紅線與橘線，不含輕軌）。
+**來源**：政府資料開放平臺的[高雄都會區大眾捷運系統各站旅運量入站](https://data.gov.tw/dataset/159641)與[出站](https://data.gov.tw/dataset/159640)（高雄市政府；資料集頁面沒有寫是哪個局處），依政府資料開放授權條款第 1 版使用。一年一列、一站一欄（紅線與橘線，不含輕軌）。
 
 **雲端容器連不上 data.kcg.gov.tw**（連線一開始就被切斷，另一條網路路徑回 503；看起來擋國外連線），所以由**作者在台灣下載兩個 CSV、附在對話裡**；工具記下兩個檔的 SHA-256 與下載日期。原始 CSV 不進 repository。
 

@@ -94,7 +94,7 @@ def main():
     output = {
         "source": {
             "title": "高雄都會區大眾捷運系統各站旅運量入站、出站",
-            "publisher": "高雄市政府捷運工程局",
+            "publisher": "高雄市政府",
             "datasets": DATASETS,
             "fileSha256": {"entries": entry_hash, "exits": exit_hash},
             "downloaded": args.downloaded,
