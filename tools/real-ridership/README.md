@@ -42,6 +42,34 @@
 - 最多的：台北 63,307、桃園 28,045、台中 25,981、台南 25,957、板橋 25,692；最少的一天不到 10 人。
 - 天數不滿一年的 30 站（停駛、颱風、施工）只用有資料的天數平均；最少的是南方小站 5 天、新馬 2 天。
 
-## 高鐵、捷運
+## 高鐵：`build_thsr_ridership.py`
 
-還沒做：要找官方的各站人次與它的授權，或在 TDX 找（`.github/workflows/tdx-check.yml` 可以用作者的金鑰抓任一 TDX API）。做好之後寫在這裡。
+**來源**：台灣高鐵公司網站的[客運運輸情形](https://www.thsrc.com.tw/corp/9571df11-8524-4935-8a46-0d5a72e6bc7c)「各站進出旅客人數」表（2017 年起，每年一張進站、一張出站，每月一列、每站一欄、最後一欄是總計）。這是公司公布的營運統計，**沒有開放資料授權**；只取各站的年度合計（事實數字），標示出處「台灣高鐵公司」。政府開放資料平臺上找不到各站別的資料集（2026-10-20 查）。
+
+**輸出**：`RailwayGameApp/Resources/RealRailways/thsr_ridership.json`，以站名（南港到左營）為 key，一天平均（進站＋出站）÷ 2，記著網址、頁面的 SHA-256、讀取日期與期間。每個月的 12 站要加起來等於頁面的總計，12 個月都要有，頁面改版就會失敗而不是給錯的數字。
+
+```sh
+python3 -I tools/real-ridership/build_thsr_ridership.py --year 2025 --downloaded 2026-10-20 \
+    --output RailwayGameApp/Resources/RealRailways/thsr_ridership.json
+```
+
+**2026-10-20 的結果（2025 年）**：一天平均台北 47,192、台中 37,887、左營 29,402、桃園 26,857、新竹 21,577、板橋 16,051、台南 14,425、南港 11,090、嘉義 9,195、雲林 4,938、苗栗 3,617、彰化 2,621。年度進站數和 PTT 鐵道板轉貼的同一份表（[2025 全年](https://www.ptt.cc/bbs/Railway/M.1767965275.A.1BE.html)）逐站相同。頁面已有 2026 年到 9 月，明年一月起可以改用 2026 全年。
+
+## 台北捷運：`build_trtc_ridership.py`
+
+**來源**：政府資料開放平臺的[臺北捷運各站分時進出量統計](https://data.gov.tw/dataset/128506)（臺北大眾捷運股份有限公司，資料放在 data.taipei），依政府資料開放授權條款第 1 版使用。它是一份索引，每月一個 CSV：每天每小時、每一站到每一站的人次，一個月約 300 MB。2026-10-20 查的時候已有 2026 年 9 月。
+
+**輸出**：`RailwayGameApp/Resources/RealRailways/trtc_ridership.json`，以資料裡的站名為 key，一天平均（進站＋出站）÷ 2。工具一個月一個月串流讀（不存檔），每月記 SHA-256；12 個月、整年的天數都要有。印出 App 的 `trtc.json` 沒有的站名，和 App 有但資料沒有的站。
+
+```sh
+python3 -I tools/real-ridership/build_trtc_ridership.py --year 2025 --downloaded 2026-10-20 \
+    --stations RailwayGameApp/Resources/RealRailways/trtc.json \
+    --output RailwayGameApp/Resources/RealRailways/trtc_ridership.json
+```
+
+一年要讀約 3.7 GB，在雲端容器約半小時。
+
+## 共同的注意
+
+- 兩個下載的工具用 `curl` 讀，不用 Python 的 `urllib`：雲端容器經過的代理憑證，Python 3.13 的嚴格檢查不接受，curl 照系統設定接受。不關掉任何檢查。
+- **還沒有的**：高雄捷運（政府資料開放平臺 [159640](https://data.gov.tw/dataset/159640)、[159641](https://data.gov.tw/dataset/159641) 的各站出站、入站，在 data.kcg.gov.tw；雲端容器連不上那個主機，2026-10-20）、台中捷運、桃園機捷、輕軌、三鶯線、林鐵。這些站的轉乘點數照系統的規則（決策 298）。高雄捷運可以之後用 GitHub Actions 讀（runner 連得上的話）。
