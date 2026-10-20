@@ -710,7 +710,7 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 | 滴管（點既有軌道沿用它的構造與高度）等 UX §8 剩下的小項 | UX_REDESIGN_STUDY §8 | 核心玩法的工具欄依解鎖顯示之後再評估 |
 | 車站商業沒有逐線帳時，用「需求旅次 × 2」估人次，誤差沒量過 | STATION_COMMERCE §1.2 | 影響小，經濟平衡（economy-balance skill）下次量測時一起看 |
 | 平衡待觀察表：飯店回本、觀光景點份量、城市委託份量、加線加站反而少載、車種取捨、公司建物 | ROADMAP 平衡待觀察表 | 核心玩法第 4、5 個 PR 量關卡目標時，用 economy-balance 一起看 |
-| City Transport Manager 研究的 M0–M3（只顯示、只動 2D 的 GamePresentation 與 App，不碰 GameCore） | `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.0 | **M0 做完**（session_01Vrym4SZSjubXNm9G5XhP3Y，作者 2026-10-20 交辦）：#835 草稿摘要列（`LineDraftSummary`：「N 站 · X km · 約 Y 分 · 費用」，兩站不相連時換成決策 284 的短提示；`LineDraftSummaryUITests` 在 full lane）；財務「今天」卡（`TodayAccount`：截至上個整點的票收、營運成本、結果，人事與電費午夜才付所以不算；簡單規則的遊戲預設只展開這張，其他報表在「顯示其他報表」後面）。草稿的復原、略過一站、取消、完成本來就有；改路線不共用這個草稿畫面，沒動。**M1 接手點**（作者：M0 做完直接開）：建站、建線時一鍵切換現有的「腹地涵蓋」層（`PopTravelMode.coverage`、`CityMap`），寫明「800 m 直線範圍的估算」，覆蓋率照土地格聯集算（重疊不重算），沒有土地資料寫「—」；要取決策號。之後 M2、M3 照 4.0 |
+| City Transport Manager 研究的 M0–M3（只顯示、只動 2D 的 GamePresentation 與 App，不碰 GameCore） | `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.0 | **M0 做完**（session_01Vrym4SZSjubXNm9G5XhP3Y，作者 2026-10-20 交辦）：#835 草稿摘要列（`LineDraftSummary`）、#837 財務「今天」卡（`TodayAccount`）。**M1 做完**（決策 292，`claude/m1-coverage-toggle`）：建站、建線時地圖右下一顆同心圓鈕，一按切換「腹地涵蓋」層，離開工具換回原本的圖層（`CoverageShortcut`）；圖例說出車站 800 公尺內的居民與工作佔多少（`CoverageSummary`，直線範圍的估算，重疊不重算，沒有土地寫「—」）。待實機確認：鈕在手機橫拿時和右下圖例、縮放鈕擠不擠。**下一步 M2**（研究 4.0）：沿用 `GoalsPanel`、`AchievementsView`、劇本目標與城市委託，做「下一步／即時進度／完成時的回饋（不入帳）」；不引入付費星星、收集卡、新的經濟規則；要領錢才開 GameCore＋存檔的決策。之後 M3 照 4.0。M1 沒做的：研究 4.1 的「潛力」熱圖與白天／夜晚（遊戲需求模型的推估，要另外定顏色與說明） |
 | 匿名的本機操作計時（附在「回報問題」裡） | CORE_LOOP §1.6 第 6 點 | 核心玩法第 4 個 PR（關卡）時一起做，TestFlight 才問得出「第 1 關花幾分鐘」 |
 
 ### 7.3 3D 的後續
