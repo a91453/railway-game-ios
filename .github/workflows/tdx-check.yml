@@ -1,0 +1,77 @@
+name: Check TDX API
+
+# Checks that the repository secrets TDX_CLIENT_ID and TDX_CLIENT_SECRET
+# (the owner's key for the Ministry of Transportation's TDX platform) get a
+# token and read one TDX rail API: the first Taiwan Railway station. It
+# prints only whether each step worked, the HTTP status of a failure and how
+# many stations came back; never the key or the token.
+#
+# Runs by hand (Actions -> Check TDX API -> Run workflow) and on pull
+# requests that change this file. A pull request from a fork gets no
+# secrets, and this workflow then says so instead of failing on them.
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/tdx-check.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tdx-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify TDX
+        env:
+          TDX_CLIENT_ID: ${{ secrets.TDX_CLIENT_ID }}
+          TDX_CLIENT_SECRET: ${{ secrets.TDX_CLIENT_SECRET }}
+        run: |
+          python3 - <<'PY'
+          import json, os, sys, urllib.error, urllib.parse, urllib.request
+
+          client_id = os.environ.get("TDX_CLIENT_ID", "")
+          client_secret = os.environ.get("TDX_CLIENT_SECRET", "")
+          if not client_id or not client_secret:
+              missing = [name for name, value in [("TDX_CLIENT_ID", client_id), ("TDX_CLIENT_SECRET", client_secret)] if not value]
+              sys.exit("Not set for this run: " + ", ".join(missing) + " (repository secrets; a fork's pull request gets none)")
+
+          def fetch(request, step):
+              try:
+                  with urllib.request.urlopen(request, timeout=30) as response:
+                      return json.load(response)
+              except urllib.error.HTTPError as error:
+                  # TDX's error bodies say what is wrong (a bad client, an
+                  # unknown path) and hold no secret.
+                  sys.exit(f"{step} failed: HTTP {error.code} {error.read()[:300].decode('utf-8', 'replace')}")
+              except urllib.error.URLError as error:
+                  sys.exit(f"{step} failed: {error.reason}")
+
+          payload = urllib.parse.urlencode({
+              "grant_type": "client_credentials",
+              "client_id": client_id,
+              "client_secret": client_secret,
+          }).encode()
+          token = fetch(urllib.request.Request(
+              "https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token",
+              data=payload,
+              headers={"Content-Type": "application/x-www-form-urlencoded"},
+          ), "The token").get("access_token")
+          if not token:
+              sys.exit("The token request answered without an access_token")
+          print("Token: received")
+
+          data = fetch(urllib.request.Request(
+              "https://tdx.transportdata.tw/api/basic/v3/Rail/TRA/Station?%24top=1&%24format=JSON",
+              headers={"Authorization": "Bearer " + token, "Accept-Encoding": "identity"},
+          ), "The station API")
+          stations = data.get("Stations", data) if isinstance(data, dict) else data
+          print(f"Station API: {len(stations)} station(s) returned")
+          print("TDX API connection successful")
+          PY
