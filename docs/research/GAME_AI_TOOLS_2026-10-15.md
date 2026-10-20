@@ -262,7 +262,7 @@ ACE-Step 的輸出是音訊，最多當編曲的參考。
 | [mapbox/pixelmatch](https://github.com/mapbox/pixelmatch) | ISC | **候選，等作者**（npm 依賴） | `tools/map3d-preview/` 現在把 `main` 與分支的圖上下拼起來給人看；它能多給一張差異圖與「改了幾 % 像素」。只在開發機，不進 App |
 | [google/or-tools](https://github.com/google/or-tools) | Apache-2.0 | **候選，等作者**（Python 依賴），用途要換 | 參考庫已經在用：`Railway/taiwan-rail-reference-clean/source/scripts/optimize_physical_dispatch.py` 的 CP-SAT 替每班選股道、排待避（決策 296 查過，不是車組運用）。可用的是離線的「量尺」：高鐵示範一天的車輛運用最佳解，對照決策 296「下一步」第 1 點的規則差多少。不進 GameCore |
 | [KhronosGroup/glTF-Validator](https://github.com/KhronosGroup/glTF-Validator) | Apache-2.0 | 候選，不急 | 能接在 `tools/glb-to-m3dmodel` 前面查規格。Meshy 試做公車排在實機量完 3D 幀時間之後（HANDOFF），到時再加。它不檢查這個遊戲自己的限制（無貼圖、面數），兩種檢查都要留 |
-| [realm/SwiftLint](https://github.com/realm/SwiftLint) | MIT | 不做 | 已經用 `-warnings-as-errors`；多一個 CI job 與依賴，換來的不多 |
+| [realm/SwiftLint](https://github.com/realm/SwiftLint) | MIT | 不做 | 它查的是風格、複雜度與自訂慣例，和編譯器的 `-warnings-as-errors` 不同；但要多一個 CI job 與依賴，現在換來的不多 |
 | [cashapp/AccessibilitySnapshot](https://github.com/cashapp/AccessibilitySnapshot) | Apache-2.0 | 不做 | HANDOFF 記的 VoiceOver 缺口是「時鐘 600 倍時會不會卡」，快照量不到。要查無障礙，先用 XCTest 內建的 `performAccessibilityAudit()`，不加依賴 |
 | [pointfreeco/swift-snapshot-testing](https://github.com/pointfreeco/swift-snapshot-testing) | MIT | 不做 | CLAUDE.md：UI 測試不截圖、不比圖，畫面由作者在實機看；又要 macOS runner（全帳號 5 台，full lane 一次佔 4 台）。排版邏輯照舊放進 GamePresentation 用 Linux 測（例如 `TutorialCardPlacementTests`）|
 | [MobilityData/gtfs-validator](https://github.com/MobilityData/gtfs-validator) | Apache-2.0 | 現在不做 | 世界版參考庫的 GTFS 已經轉好，沒有新的 GTFS 匯入 |
@@ -276,7 +276,8 @@ MIT，`5beb35b`。給 Claude Code、Codex 等的 skill 集，主張「小、可�
 - 它的設定流程會建 `GLOSSARY.md`、`docs/adr/` 與 issue tracker 的標籤。這裡已有編號的 ARCHITECTURE 決策、
   `docs/HANDOFF.md` 與 #231，兩套會打架。
 - `handoff` 把交接寫進 `/tmp`；這裡交接一定要進 `main` 的 `docs/HANDOFF.md`。
-- `git-guardrails-claude-code` 擋 `git push`；session 要推分支開 PR。
+- （`git-guardrails-claude-code` 不在 plugin 裡：它在 `skills/misc/`，作者註明「not promoted in the plugin」，
+  要另外照它的說明裝 hook 才會擋 `git push`。session 要推分支開 PR，所以也不裝。）
 - plugin 裝在使用者那一層，雲端 session 與 Codex、Gemini 都讀不到；放進 `.claude/skills/` 才大家都有。
 
 **逐個看**：
@@ -289,7 +290,7 @@ MIT，`5beb35b`。給 Claude Code、Codex 等的 skill 集，主張「小、可�
 | `research` | 不拿：`docs/research/` 已經是同一件事 |
 | `grill-me`、`grilling`、`grill-with-docs`、`to-spec`、`triage`、`wayfinder`、`to-tickets` | 不拿：都靠反覆問作者或 issue tracker 推進，和作者 2026-10-14「我不再做決定」相反 |
 | `domain-modeling`、`codebase-design`、`improve-codebase-architecture` | 不拿：ADR 與詞彙表的格式和決策紀錄重複；大規模重構違反「不做無關的重構」 |
-| `handoff`、`git-guardrails-claude-code` | 不拿（上面的理由） |
+| `handoff`、`git-guardrails-claude-code`（`misc/`，不在 plugin） | 不拿（上面的理由） |
 | `prototype`、`code-review`、`implement`、`retro` 等 | 不拿：PR 裡留其他選項的預覽、CI 與審查已經有同樣的流程 |
 
 **四個角度**（這次採用 `diagnosing-bugs`）：
