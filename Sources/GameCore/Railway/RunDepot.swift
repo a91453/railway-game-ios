@@ -88,7 +88,9 @@ extension GameWorld {
     /// ``runDepotLookahead``, the last in ID order. Under traffic control it
     /// must be able to take its route now, and a train that came out of a
     /// depot to the stop stays while a run from there is due (decision
-    /// 296).
+    /// 296); and while none is due, a train in the way of a service
+    /// waiting for its route (see ``trainsInTheWay(memo:)``) goes in too,
+    /// however soon its next run there (decision 297).
     func runTrainEnteringDepot(of line: ServiceLine, memo: inout DispatchMemo) -> (index: Int, trip: LineTrip)? {
         guard !line.depots.isEmpty, line.hasRuns, clock.now.seconds >= 0 else { return nil }
         var stations: [StationID] = []
@@ -110,7 +112,7 @@ extension GameWorld {
             // Decision 297: under traffic control, while no run from here
             // is due, a train in the way of a service waiting for its
             // route goes in too.
-            if isTrafficControlEnabled, !due, station != line.stops.first, station != line.stops.last {
+            if isTrafficControlEnabled, !due {
                 if inTheWay == nil { inTheWay = trainsInTheWay(memo: &memo.directions) }
                 leaving += waiting.filter { inTheWay!.contains(trains[$0].id) && !leaving.contains($0) }
             }
@@ -238,6 +240,10 @@ extension GameWorld {
 
     /// Decision 297: the trains without a service holding track that a
     /// service waiting for its route needs (see ``awaitedRoute(of:memo:)``).
+    /// In the high-speed demo a set that ended its run at Taichung stood an
+    /// hour on the loop every southbound set calls at, its way out north
+    /// held by the sets queued for that loop; a set waiting at a terminus
+    /// keeps the sets arriving from a platform the same way.
     func trainsInTheWay(memo: inout DirectionMemo) -> Set<TrainID> {
         let idle = trains.filter { $0.execution == nil && $0.position != nil }
         guard !idle.isEmpty else { return [] }
