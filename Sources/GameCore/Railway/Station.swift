@@ -45,6 +45,11 @@ public struct Station: Identifiable, Hashable, Sendable {
     /// ``GameWorld/upgradeStationCommerce(at:)`` and
     /// ``GameWorld/demolishStationCommerce(at:)`` only; a depot has none.
     public internal(set) var commerce: StationCommerceLevel?
+    /// How many transfer points the real railways nearby give it (decision
+    /// 298): 0 for none. Each brings ``TransferDemand/tripsPerPoint`` trips
+    /// a day from the real network. Set by ``GameWorld/setTransfers(_:)``
+    /// only, while ``GameWorld/realTransfers`` is on; a depot has none.
+    public internal(set) var transferPoints: Int64 = 0
 
     /// A station standing at `point`.
     ///
@@ -64,7 +69,7 @@ public struct Station: Identifiable, Hashable, Sendable {
 
 extension Station: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, name, position, annexes, point, operationMode, depot, commerce
+        case id, name, position, annexes, point, operationMode, depot, commerce, transferPoints
     }
 
     /// Decodes a station, `{"id", "name", "point"}` (Stage F1), rejecting a
@@ -118,6 +123,17 @@ extension Station: Codable {
                 forKey: .commerce, in: container, debugDescription: "Station \(id.rawValue) is a depot, which has no shops."
             )
         }
+        // Decision 298: only a station with transfer points is written with
+        // them (every save before version 64 has none).
+        if container.contains(.transferPoints) {
+            transferPoints = try container.decode(Int64.self, forKey: .transferPoints)
+            guard (1...TransferDemand.maximumPoints).contains(transferPoints), !isDepot else {
+                throw DecodingError.dataCorruptedError(
+                    forKey: .transferPoints, in: container,
+                    debugDescription: "Station \(id.rawValue) has \(transferPoints) transfer points: 1 to \(TransferDemand.maximumPoints), and none at a depot."
+                )
+            }
+        }
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -133,6 +149,9 @@ extension Station: Codable {
             try container.encode(true, forKey: .depot)
         }
         try container.encodeIfPresent(commerce, forKey: .commerce)
+        if transferPoints > 0 {
+            try container.encode(transferPoints, forKey: .transferPoints)
+        }
     }
 }
 

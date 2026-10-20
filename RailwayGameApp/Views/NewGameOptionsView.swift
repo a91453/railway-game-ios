@@ -102,13 +102,15 @@ struct NewGameOptionsView: View {
                     Toggle(language.text("Building materials", "建材供應"), isOn: toggle(\.buildingMaterials))
                         .disabled(launcher.newGameOptions.rules == .simple)
                     Toggle(language.text("Outside connections", "外部連接"), isOn: toggle(\.outsideConnections))
+                    // Decision 298: real-world maps only.
+                    Toggle(language.text("Transfers from real railways", "現實路網：轉乘"), isOn: toggle(\.realTransfers))
                     Toggle(language.text("Buy the map tile by tile", "分區購買地圖"), isOn: toggle(\.buysMap))
                 } header: {
                     Text(verbatim: language.text("More rules", "其他規則"))
                 } footer: {
                     Text(verbatim: language.text(
-                        "Materials (realistic rules only): towns need them to grow. Outside connections: riders arrive from beyond the map's edge. Buying the map applies to a blank map; real-world maps decide for themselves.",
-                        "建材（只有寫實規則）：城市要有建材才能成長。外部連接：地圖邊緣外的旅客會進來。分區購買只適用於空白地圖，實景地圖有自己的規則。"
+                        "Materials (realistic rules only): towns need them to grow. Outside connections: riders arrive from beyond the map's edge. Transfers (real-world maps): a station within 450 m of a real station gets riders changing from the real trains. Buying the map applies to a blank map; real-world maps decide for themselves.",
+                        "建材（只有寫實規則）：城市要有建材才能成長。外部連接：地圖邊緣外的旅客會進來。轉乘（實景地圖）：車站在真實車站 450 公尺內，會有從真實列車轉乘過來的旅客。分區購買只適用於空白地圖，實景地圖有自己的規則。"
                     ))
                 }
                 Section {

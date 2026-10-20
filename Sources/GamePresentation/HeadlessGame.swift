@@ -195,6 +195,8 @@ public final class HeadlessGame {
             session.readLandRoundStations()
         case .readLand(let reach, let point):
             session.readLand(within: reach, of: point)
+        case .transfers(let points):
+            session.applyTransfers(points)
         case .unrecorded(let caller):
             return "\(caller) changed the world with no recorded command"
         }

@@ -352,6 +352,9 @@ public struct RealRailways: Sendable {
     /// Where the real TRA lines are on bridges and in tunnels
     /// (`rail_structures.json`, decision 279).
     public let structures: RealRailStructures?
+    /// How many people use each real station a day (decision 298); `nil`
+    /// without any of its files.
+    public let ridership: RealRidership?
     /// The files of the optional data above that could not be read, and
     /// why; empty when all could. Listed for debugging (the data sources
     /// screen), never dropped silently.
@@ -371,6 +374,7 @@ public struct RealRailways: Sendable {
         transfers: RealStationTransfers? = nil,
         pingxiRuns: RealLineRuns? = nil,
         structures: RealRailStructures? = nil,
+        ridership: RealRidership? = nil,
         loadIssues: [RealDataLoadIssue] = []
     ) throws {
         let decoder = JSONDecoder()
@@ -419,6 +423,7 @@ public struct RealRailways: Sendable {
         self.transfers = transfers
         self.pingxiRuns = pingxiRuns
         self.structures = structures
+        self.ridership = ridership
         self.loadIssues = loadIssues + (operations?.loadIssues ?? [])
         var byKey: [String: [Int]] = [:]
         for (index, station) in stations.enumerated() {
@@ -707,6 +712,17 @@ extension RealRailways {
         let structures = read("rail_structures", "json").flatMap { data in
             parse("rail_structures.json") { try RealRailStructures(data: data) }
         }
+        // Decision 298: each system's ridership on its own; one that cannot
+        // be read leaves the others.
+        func ridershipTable(_ name: String, byName: Bool) -> RealRidership.Table? {
+            read(name, "json").flatMap { data in parse("\(name).json") { try RealRidership.Table(data: data, byName: byName) } }
+        }
+        let tra = ridershipTable("tra_ridership", byName: false)
+        let thsr = ridershipTable("thsr_ridership", byName: true)
+        let trtc = ridershipTable("trtc_ridership", byName: true)
+        let krtc = ridershipTable("krtc_ridership", byName: true)
+        let ridership = tra == nil && thsr == nil && trtc == nil && krtc == nil
+            ? nil : RealRidership(tra: tra, thsr: thsr, trtc: trtc, krtc: krtc)
 
         guard let lines, let stations, let names else { return Loaded(railways: nil, issues: issues + operations.loadIssues) }
         do {
@@ -719,6 +735,7 @@ extension RealRailways {
                 transfers: transfers,
                 pingxiRuns: pingxiRuns,
                 structures: structures,
+                ridership: ridership,
                 loadIssues: issues
             )
             return Loaded(railways: railways, issues: railways.loadIssues)

@@ -72,6 +72,10 @@ public struct CommandLog: Sendable {
         case readLandRoundStations(RealWorldDataSet)
         /// The land under a building's site (decision 95).
         case readLand(reach: Int64, at: PlanPoint)
+        /// The stations' transfer points from the real railways (decision
+        /// 298), as ``GameSession/applyTransfers(_:)`` set them: the values,
+        /// so a replay needs no railways.
+        case transfers([StationID: Int64])
         /// A change with no value yet: the function that made it. A replay
         /// stops before it.
         case unrecorded(String)
@@ -129,7 +133,7 @@ public struct RealWorldDataSet: Hashable, Sendable, Codable {
 
 extension CommandLog.Entry: Codable {
     private enum CodingKeys: String, CodingKey {
-        case time, action, refused, command, ticks, speed, data, reach, point, caller
+        case time, action, refused, command, ticks, speed, data, reach, point, caller, points
     }
 
     public init(from decoder: any Decoder) throws {
@@ -159,6 +163,16 @@ extension CommandLog.Entry: Codable {
                 throw DecodingError.dataCorruptedError(forKey: .point, in: container, debugDescription: "A plan point is x and y.")
             }
             action = .readLand(reach: try container.decode(Int64.self, forKey: .reach), at: PlanPoint(x: point[0], y: point[1]))
+        case "transfers":
+            let pairs = try container.decode([[Int64]].self, forKey: .points)
+            var points: [StationID: Int64] = [:]
+            for pair in pairs {
+                guard pair.count == 2, let id = Int(exactly: pair[0]), points[StationID(rawValue: id)] == nil else {
+                    throw DecodingError.dataCorruptedError(forKey: .points, in: container, debugDescription: "Transfer points are a station and its points, each station once.")
+                }
+                points[StationID(rawValue: id)] = pair[1]
+            }
+            action = .transfers(points)
         case "unrecorded": action = .unrecorded(try container.decode(String.self, forKey: .caller))
         default:
             throw DecodingError.dataCorruptedError(forKey: .action, in: container, debugDescription: "Unknown action \(kind).")
@@ -179,6 +193,9 @@ extension CommandLog.Entry: Codable {
         case .readLand(let reach, let point):
             try container.encode(reach, forKey: .reach)
             try container.encode([point.x, point.y], forKey: .point)
+        case .transfers(let points):
+            let pairs = points.sorted { $0.key < $1.key }.map { [Int64($0.key.rawValue), $0.value] }
+            try container.encode(pairs, forKey: .points)
         case .unrecorded(let caller): try container.encode(caller, forKey: .caller)
         }
     }
@@ -197,6 +214,7 @@ extension CommandLog.Action {
         case .redo: "redo"
         case .readLandRoundStations: "readLandRoundStations"
         case .readLand: "readLand"
+        case .transfers: "transfers"
         case .unrecorded: "unrecorded"
         }
     }
