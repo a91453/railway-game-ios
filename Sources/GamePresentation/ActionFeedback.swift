@@ -279,7 +279,8 @@ extension GameSession {
         if !stamps.isEmpty {
             tripStampPulse = TripStampPulse(stamps: stamps, serial: (tripStampPulse?.serial ?? 0) + 1)
         }
-        let titles = GoalPulse.met(from: before, to: world, in: language)
+        // CTM study M2: a free game's next steps met in the step too.
+        let titles = GoalPulse.met(from: before, to: world, in: language) + newlyMetNextSteps(since: before)
         if !titles.isEmpty {
             goalPulse = GoalPulse(titles: titles, serial: (goalPulse?.serial ?? 0) + 1)
             playSound?(.goalMet)
