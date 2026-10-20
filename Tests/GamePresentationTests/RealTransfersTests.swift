@@ -73,11 +73,21 @@ final class RealTransfersTests: XCTestCase {
         // companies keeps the larger count.
         XCTAssertEqual(try points("中原", "mrt"), 3)
         XCTAssertEqual(try points("板橋", "mrt"), 42)
+        // Guangci/Fengtiangong opened after 2025: its first whole month,
+        // 2026-09, 9,148 a day.
+        XCTAssertEqual(ridership.riders(of: try BundledRealData.station("廣慈/奉天宮", in: "mrt"), data: railways.stationData), 9_148)
+        XCTAssertEqual(try points("廣慈/奉天宮", "mrt"), 9)
         // The Taoyuan Airport MRT, 2025 (28,773 a day at Taipei Main Station).
         XCTAssertEqual(ridership.riders(of: try BundledRealData.station("台北車站", in: "tymc"), data: railways.stationData), 28_773)
         XCTAssertEqual(try points("長庚醫院站", "tymc"), 10)
         XCTAssertEqual(try points("機場第一航廈站", "tymc"), 12)
         XCTAssertEqual(try points("機場第二航廈站", "tymc"), 11)
+        // The Kaohsiung Circular Light Rail has no riders by stop: a light
+        // rail's 1, not the metro's 3 of the system it is part of; Hamasen,
+        // a station of the Orange Line too, keeps the metro's count.
+        XCTAssertEqual(try points("籬仔內", "krtc"), 1)
+        XCTAssertEqual(try points("夢時代", "krtc"), 1)
+        XCTAssertNotNil(ridership.riders(of: try BundledRealData.station("哈瑪星", in: "krtc"), data: railways.stationData))
         // The Sanying Line over its months since it opened, 2026-07 to
         // 2026-09 (8,437 a day at Dingpu).
         XCTAssertEqual(ridership.riders(of: try BundledRealData.station("頂埔", in: "sanying"), data: railways.stationData), 8_437)
