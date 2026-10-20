@@ -721,8 +721,13 @@ extension RealRailways {
         let thsr = ridershipTable("thsr_ridership", byName: true)
         let trtc = ridershipTable("trtc_ridership", byName: true)
         let krtc = ridershipTable("krtc_ridership", byName: true)
-        let ridership = tra == nil && thsr == nil && trtc == nil && krtc == nil
-            ? nil : RealRidership(tra: tra, thsr: thsr, trtc: trtc, krtc: krtc)
+        let tmrt = ridershipTable("tmrt_ridership", byName: true)
+        let ntdlrt = ridershipTable("ntdlrt_ridership", byName: true)
+        let ntalrt = ridershipTable("ntalrt_ridership", byName: true)
+        let circular = ridershipTable("ntmc_circular_ridership", byName: true)
+        let tables = [tra, thsr, trtc, krtc, tmrt, ntdlrt, ntalrt, circular]
+        let ridership = tables.allSatisfy { $0 == nil }
+            ? nil : RealRidership(tra: tra, thsr: thsr, trtc: trtc, krtc: krtc, tmrt: tmrt, ntdlrt: ntdlrt, ntalrt: ntalrt, circular: circular)
 
         guard let lines, let stations, let names else { return Loaded(railways: nil, issues: issues + operations.loadIssues) }
         do {

@@ -53,6 +53,30 @@ final class RealTransfersTests: XCTestCase {
         XCTAssertEqual(GameSession.transferPoints(of: tra, data: railways.stationData), 14, "a special-class TRA station")
     }
 
+    func testTheOtherMetrosPointsFollowTheirRiders() throws {
+        let railways = try BundledRealData.railways()
+        let ridership = try XCTUnwrap(railways.ridership)
+        func points(_ name: String, _ system: String) throws -> Int64 {
+            GameSession.transferPoints(of: try BundledRealData.station(name, in: system), data: railways.stationData, ridership: ridership)
+        }
+        // Taichung Metro, 2025's seven months of exits (tools/real-ridership/):
+        // 8,436 and 5,791 a day, where a metro with no file has 3.
+        XCTAssertEqual(ridership.riders(of: try BundledRealData.station("高鐵臺中站", in: "tmrt"), data: railways.stationData), 8_436)
+        XCTAssertEqual(try points("高鐵臺中站", "tmrt"), 8)
+        XCTAssertEqual(try points("市政府", "tmrt"), 6)
+        XCTAssertEqual(try points("九張犁", "tmrt"), 1)
+        // New Taipei Metro's light rails, where one with no file has 1.
+        XCTAssertEqual(try points("紅樹林", "ntdlrt"), 8)
+        XCTAssertEqual(try points("十四張", "ntalrt"), 3)
+        // The Circular Line by New Taipei Metro's own count (2,831 a day at
+        // Zhongyuan; Taipei Metro's file has 701); a station of both
+        // companies keeps the larger count.
+        XCTAssertEqual(try points("中原", "mrt"), 3)
+        XCTAssertEqual(try points("板橋", "mrt"), 42)
+        // The Sanying Line has no year of riders yet.
+        XCTAssertEqual(try points("三峽", "sanying"), 1)
+    }
+
     func testAStationBuiltByARealOneBringsItsTransfers() throws {
         let (session, taipei) = try makeSession(at: "臺北")
         let metre = WorldCoordinate.unitsPerMetre

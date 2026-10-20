@@ -12,7 +12,8 @@ import GameCore
 //
 // The points stand for how many people change there: the real station's
 // riders a day where the app ships them (``RealRidership``: Taiwan Railway,
-// the High Speed Rail and Taipei Metro, a year's official averages), in
+// the High Speed Rail and the Taipei, New Taipei, Taichung and Kaohsiung
+// metros, official averages), in
 // proportion, so a station ten times as busy brings ten times the
 // transfers; elsewhere what a station of its system or TRA grade has.
 
@@ -35,8 +36,8 @@ extension GameSession {
     /// at least 1, where `ridership` has them. Otherwise what a station
     /// like it has: a Taiwan Railway station of its grade, the grade's
     /// median riders of 2025 (special 14, first 9, second 2, any other 1);
-    /// a metro 3; the High Speed Rail 20; a light rail, the Sanying Line and
-    /// the Alishan Forest Railway 1.
+    /// a metro 3 (the Taoyuan Airport MRT); the High Speed Rail 20; a light
+    /// rail, the Sanying Line and the Alishan Forest Railway 1.
     static func transferPoints(of station: RealRailways.Station, data: RealStationData?, ridership: RealRidership? = nil) -> Int64 {
         if let riders = ridership?.riders(of: station, data: data) {
             return max(1, Int64((Double(riders) / Double(transferRidersPerPoint)).rounded()))

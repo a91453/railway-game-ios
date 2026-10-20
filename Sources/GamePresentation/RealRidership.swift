@@ -3,9 +3,12 @@ import Foundation
 // How many people use each real station a day (ARCHITECTURE decision 298):
 // the official yearly averages `tools/real-ridership/` writes, which the
 // transfer points of a station by a real one follow. Taiwan Railway's by
-// station code (`tra_ridership.json`), the High Speed Rail's, Taipei
-// Metro's and Kaohsiung Metro's by station name (`thsr_ridership.json`,
-// `trtc_ridership.json`, `krtc_ridership.json`).
+// station code (`tra_ridership.json`), the others by station name: the High
+// Speed Rail's, Taipei Metro's, Kaohsiung Metro's, Taichung Metro's
+// (`thsr_ridership.json`, `trtc_ridership.json`, `krtc_ridership.json`,
+// `tmrt_ridership.json`) and New Taipei Metro's: the Danhai and Ankeng
+// light rails and the Circular Line (`ntdlrt_ridership.json`,
+// `ntalrt_ridership.json`, `ntmc_circular_ridership.json`).
 // Each file is optional; a station none of them has keeps its system's rule.
 
 /// Real stations' average riders a day, (entries + exits) / 2 over a year.
@@ -47,12 +50,23 @@ public struct RealRidership: Sendable {
     public let thsr: Table?
     public let trtc: Table?
     public let krtc: Table?
+    public let tmrt: Table?
+    public let ntdlrt: Table?
+    public let ntalrt: Table?
+    /// New Taipei Metro's own count of the Circular Line's stations: Taipei
+    /// Metro's file has them too, but only the trips it counts at its own
+    /// gates, a fraction of them (Zhongyuan 701 a day against 2,831).
+    public let circular: Table?
 
-    public init(tra: Table?, thsr: Table?, trtc: Table?, krtc: Table? = nil) {
+    public init(tra: Table?, thsr: Table?, trtc: Table?, krtc: Table? = nil, tmrt: Table? = nil, ntdlrt: Table? = nil, ntalrt: Table? = nil, circular: Table? = nil) {
         self.tra = tra
         self.thsr = thsr
         self.trtc = trtc
         self.krtc = krtc
+        self.tmrt = tmrt
+        self.ntdlrt = ntdlrt
+        self.ntalrt = ntalrt
+        self.circular = circular
     }
 
     /// The riders a day of real station `station`: Taiwan Railway's by its
@@ -66,9 +80,19 @@ public struct RealRidership: Sendable {
         case "thsr_sched":
             return thsr?.riders[RealRailways.stationKey(station.chinese)]
         case "mrt":
-            return trtc?.riders[RealRailways.stationKey(station.chinese)]
+            // A station of both companies (Banqiao, Jing'an) has each one's
+            // count of it; the larger, so no trip is counted twice.
+            let key = RealRailways.stationKey(station.chinese)
+            let counts = [trtc?.riders[key], circular?.riders[key]].compactMap { $0 }
+            return counts.max()
         case "krtc":
             return krtc?.riders[RealRailways.stationKey(station.chinese)]
+        case "tmrt":
+            return tmrt?.riders[RealRailways.stationKey(station.chinese)]
+        case "ntdlrt":
+            return ntdlrt?.riders[RealRailways.stationKey(station.chinese)]
+        case "ntalrt":
+            return ntalrt?.riders[RealRailways.stationKey(station.chinese)]
         default:
             return nil
         }
