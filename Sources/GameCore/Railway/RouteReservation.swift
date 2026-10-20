@@ -187,6 +187,13 @@ extension GameWorld {
         // Its route envelope (see ``routeEnvelope(of:)``), asked a resource
         // at a time, and gathered only to be taken.
         let route = routeStretches(of: candidate)
+        // Decision 294: a long leg of a line with runs, only part of the way.
+        if route.moves, blockSections, case .travellingToStop? = candidate.execution, followsRealTimetable(candidate) {
+            let envelopes = authorityEnvelopes(of: candidate, along: route.stretches)
+            if let limit = approachLimit(of: candidate, envelopes) {
+                return reservingApproach(candidate, envelopes: envelopes, limit: limit, following: following, memo: &memo)
+            }
+        }
         let envelope = cover(of: bodyStretches(of: candidate) + route.stretches)
         if let holder = holder(of: envelope, except: candidate.id, holders: trackHolders(memo: &memo)) {
             if following, route.moves, let train = followingAuthority(of: candidate, route: envelope, memo: &memo) {
@@ -1180,7 +1187,7 @@ extension GameWorld {
     /// ``authorityEnvelope(_:to:)``), its index, and how far into it the
     /// envelope goes: the first stretch always, even for no distance.
     /// - Precondition: `envelopes` has a stretch.
-    private func authorityEnd(_ envelopes: AuthorityEnvelopes, to distance: Int64) -> (index: Int, part: TrackStretch) {
+    func authorityEnd(_ envelopes: AuthorityEnvelopes, to distance: Int64) -> (index: Int, part: TrackStretch) {
         let index = envelopes.ends.firstIndex { distance <= $0 } ?? envelopes.stretches.count - 1
         let stretch = envelopes.stretches[index]
         let start = index == 0 ? 0 : envelopes.ends[index - 1]
@@ -1426,7 +1433,8 @@ extension GameWorld {
     ///
     /// `route` is asked a resource at a time (see ``TrackCover``), and
     /// `memo` keeps the trains' holders.
-    func followingAuthority(of candidate: Train, route: TrackCover, memo: inout DirectionMemo) -> Train? {
+    /// With `limit` (decision 294) it never reaches beyond that.
+    func followingAuthority(of candidate: Train, route: TrackCover, limit: Int64 = .max, memo: inout DirectionMemo) -> Train? {
         let holders = trackHolders(memo: &memo)
         let holding = holders.holding(route, except: candidate.id, fouling: true, in: network)
         for (place, other) in trains.enumerated() where other.id != candidate.id && other.position != nil {
@@ -1438,7 +1446,7 @@ extension GameWorld {
         let envelopes = authorityEnvelopes(of: candidate)
         let clear = clearOfBlocked(blocked)
         let free = longestAuthority(envelopes, from: 0, clearBase: clear.base(envelopes.base), clear: clear.stretch)
-        let authority = followingAuthority(envelopes, free: free)
+        let authority = min(followingAuthority(envelopes, free: free), limit)
         guard authority >= 1 else { return nil }
         var train = candidate
         train.reservation = authorityEnvelope(envelopes, to: authority).sorted()

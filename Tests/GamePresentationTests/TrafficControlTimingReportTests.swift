@@ -24,9 +24,12 @@ import XCTest
 /// Each hour prints the seconds of computing it took, the sets running, how
 /// many wait for a route, how many are deadlocked, how many set-minutes ran
 /// against their way's track, and a digest of the saved world, so two
-/// builds can be shown to run the same game. At the end: the runs due, those
-/// dropped, how late the sets reached the end of their runs, and how long
-/// the runs that call at all of their line's stops took end to end.
+/// builds can be shown to run the same game. At the end: the runs out of
+/// and into the depots, and how many sets came out within 30 minutes of
+/// going in; then for each line the runs due, those dropped (each by its
+/// first stop and time), how late the sets reached the end of their runs,
+/// and how long the runs that call at all of their line's stops took end to
+/// end.
 final class TrafficControlTimingReportTests: XCTestCase {
     private func say(_ text: String) {
         FileHandle.standardError.write(Data(("TIMING " + text + "\n").utf8))
@@ -126,6 +129,11 @@ final class TrafficControlTimingReportTests: XCTestCase {
         var done: [Sent] = []
         var against = 0
         var total = 0.0
+        // Runs out of and into the depots (empty runs starting or ending at
+        // one), and runs out within 30 minutes of the same set's run in.
+        var outs = 0, ins = 0, quickOuts = 0
+        var started: [TrainID: GameTime] = [:]
+        var lastIn: [TrainID: Int64] = [:]
         // `TRAFFIC_TIMING_DUMP=06:00,07:30`: every set's state at those minutes.
         let dumps = Set((ProcessInfo.processInfo.environment["TRAFFIC_TIMING_DUMP"] ?? "").split(separator: ",").compactMap { time -> Int64? in
             let parts = time.split(separator: ":").compactMap { Int64($0) }
@@ -165,6 +173,18 @@ final class TrafficControlTimingReportTests: XCTestCase {
                         sent[id] = entry
                     }
                 }
+                for train in world.trains {
+                    guard train.execution != nil, let first = train.timetable.first, started[train.id] != first.arrival else { continue }
+                    started[train.id] = first.arrival
+                    guard train.isDeadheading, let last = train.timetable.last else { continue }
+                    if world.station(id: first.station)?.isDepot == true {
+                        outs += 1
+                        if let back = lastIn[train.id], world.clock.now.seconds - back <= 30 * 60 { quickOuts += 1 }
+                    } else if world.station(id: last.station)?.isDepot == true {
+                        ins += 1
+                        lastIn[train.id] = last.arrival.seconds
+                    }
+                }
                 if dumps.contains(world.clock.now.minute % 1_440) { dump(world, layout: layout, built: built, tracks: tracks) }
                 let running = world.trains.filter { $0.execution != nil }
                 most = max(most, running.count)
@@ -183,6 +203,7 @@ final class TrafficControlTimingReportTests: XCTestCase {
             }
         }
         say(String(format: "total %.1f s", total))
+        say("runs out of the depots \(outs), into them \(ins), out within 30 minutes of the same set's run in \(quickOuts)")
 
         // The runs: sent out, dropped, and how late they ended.
         let now = world.clock.now.seconds
@@ -197,7 +218,12 @@ final class TrafficControlTimingReportTests: XCTestCase {
             }.sorted()
             func minutes(_ seconds: Int64) -> String { String(format: "%.1f", Double(seconds) / 60) }
             let onTime = late.count { $0 < 60 }, within5 = late.count { $0 < 300 }
+            let names = dropped.map { run -> String in
+                let start = line.runs[run].start(onDay: 0)
+                return world.stations.first { $0.id == line.stops[line.runs[run].from] }.map { "\($0.name) " + String(format: "%02d:%02d", start / 3_600 % 24, start / 60 % 60) } ?? "?"
+            }
             say("\(planned.english): \(due.count) due, \(dropped.count) dropped, \(ended.count) ended; late at the end: median \(late.isEmpty ? "–" : minutes(late[late.count / 2])) min, worst \(late.last.map(minutes) ?? "–") min, under 1 min \(onTime), under 5 min \(within5)")
+            if !names.isEmpty { say("  dropped: " + names.joined(separator: ", ")) }
             // The real trains that call at all the line's stops, end to end.
             let whole = ended.filter { entry in
                 let run = line.runs[entry.run]

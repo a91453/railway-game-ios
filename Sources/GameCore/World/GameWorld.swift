@@ -4227,11 +4227,15 @@ public struct GameWorld: Equatable, Sendable {
         var holders: TrackHolders?
         for index in trains.indices {
             guard let (held, envelopes) = authority(of: trains[index], memo: &memo) else { continue }
+            // Decision 294: a long leg of a line with runs, no farther than
+            // its approach allows yet.
+            let limit = approachLimit(of: trains[index], envelopes)
+            if let limit, held >= limit { continue }
             // Its route envelope (see ``routeEnvelope(of:)``): the base and
             // the track of every stretch, asked a resource at a time.
             let route = followingCover(of: trains[index], envelopes, memo: &memo)
             if holders == nil { holders = trackHolders(memo: &memo) }
-            if holder(of: route, except: trains[index].id, holders: holders!) == nil {
+            if limit == nil, holder(of: route, except: trains[index].id, holders: holders!) == nil {
                 trains[index].reservation = Set(route.resources).sorted()
                 extended = true
                 holders = nil
@@ -4239,7 +4243,7 @@ public struct GameWorld: Equatable, Sendable {
             }
             let clear = clearOfBlocked(blockedTrack(except: trains[index].id, holders: holders!))
             let free = longestAuthority(envelopes, from: held, clearBase: clear.base(envelopes.base), clear: clear.stretch)
-            let authority = followingAuthority(envelopes, free: free)
+            let authority = min(followingAuthority(envelopes, free: free), limit ?? .max)
             guard authority > held else { continue }
             trains[index].reservation = reservation(trains[index].reservation, extending: envelopes, from: held, to: authority)
             extended = true
@@ -4262,6 +4266,7 @@ public struct GameWorld: Equatable, Sendable {
         let holders = trackHolders(memo: &memo)
         return zip(trains, authorities).contains { train, authority in
             guard let (held, envelopes) = authority else { return false }
+            if let limit = approachLimit(of: train, envelopes), held >= limit { return false }
             let reach = reachToExtend(envelopes, beyond: held) ?? .max
             let clear = clearOfBlocked(blockedTrack(except: train.id, holders: holders))
             return isAuthority(envelopes, to: reach, clearBase: clear.base(envelopes.base), clear: clear.stretch)
@@ -4377,7 +4382,8 @@ public struct GameWorld: Equatable, Sendable {
             if seconds >= 1, seconds < (soonest ?? span) { soonest = seconds }
         }
         for wait in plan.waits {
-            for time in [wait.departure, trafficReleased(wait)].compactMap({ $0 }) where time > start {
+            let holdEnd = train(id: wait.train).flatMap { trafficHoldEnd(wait, of: $0) }
+            for time in [wait.departure, trafficReleased(wait), holdEnd].compactMap({ $0 }) where time > start {
                 let (gap, overflow) = time.seconds.subtractingReportingOverflow(start.seconds)
                 if !overflow { note(gap) }
             }
