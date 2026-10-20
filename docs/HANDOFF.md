@@ -671,6 +671,8 @@
 | `claude/hsr-depot-exit-priority` | 機廠出庫優先的 B 方案，量測失敗 | 紀錄在 #685，可以刪 |
 | `claude/hud-width-proof`、`claude/claude-key-check`、`claude/basemap-align-repro`、`claude/details-card-repro`、`claude/bughunt3-app-proof` | 只用來證明或重現的暫時 commit（「not for merge」「Repro only」「Proof only」） | 可以刪 |
 | `claude/review-u9-u10` | U9、U10，已由 #646 那一輪 cherry-pick 進 main | 可以刪 |
+| `claude/hsr-train-rostering` | 車輛運用（原車接下一班、閒得久的才入庫）的實驗，量了變差、沒有合併 | 數字在決策 296「下一步」第 1 點的「之後」，可以刪 |
+| `claude/real-station-suggestions`、`claude/hsr-overtake-approach`、`claude/hsr-depot-shuttle`、`claude/hsr-rostering-not-adopted` | 決策 295（#844）、294（#845）、296（#846）與 #849，都已合併 | 可以刪 |
 | 2026-10-12 以前的其他 `claude/*` | 這份是用淺層 clone 查的，看不到 10-12 以前的歷史，所以沒有核對這些 branch | 刪之前先用完整 clone 確認內容已在 main |
 
 ## 7. 舊交接與文件裡還沒做的（2026-10-16 稽核）
