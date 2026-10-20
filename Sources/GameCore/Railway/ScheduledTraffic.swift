@@ -27,6 +27,10 @@ public struct ScheduledTrafficWait: Hashable, Sendable {
     public let kind: Kind
     public let departure: GameTime
     public let clearance: Int64
+    /// Decision 294: for an overtake a real timetable has (see
+    /// ``GameWorld/timetabledOvertakeHold``), the most seconds it keeps
+    /// its train past when the train is due to leave; `nil` for any other.
+    public internal(set) var hold: Int64? = nil
 }
 
 extension GameWorld {
@@ -52,6 +56,18 @@ extension GameWorld {
         var train: Train
         var points: [TrafficPoint]
     }
+    /// An overtake ``planTrafficOvertakes(_:)`` may plan: the slow and
+    /// fast services and their points, the slow one's new departure, how
+    /// far ahead of the fast one it must come (decision 59), and for one a
+    /// real timetable has, how long at most it keeps the slow one (see
+    /// ``ScheduledTrafficWait/hold``, decision 294).
+    struct TrafficOvertakeProposal { var slow: Int; var fast: Int; var point: Int; var fastPoint: Int; var departure: Int64; var need: Int64; var hold: Int64? = nil }
+
+    /// Decision 294: how long past when it is due to leave a stopping train
+    /// waits for an express a real timetable has pass it at its call: 300
+    /// seconds. An express later than that passes it at the next station
+    /// instead, as a dispatcher sends the stopping train on.
+    static let timetabledOvertakeHold: Int64 = 300
     struct TrafficPlan {
         var services: [TrafficService] = []
         var waits: [ScheduledTrafficWait] = []
@@ -493,7 +509,7 @@ extension GameWorld {
     /// Direct translation of proposal, rebuild and relied-on ordering.
     /// The game's slow trains may also use their existing dwell at a call.
     func planTrafficOvertakes(_ plan: inout TrafficPlan) -> Bool {
-        struct Proposal { var slow: Int; var fast: Int; var point: Int; var fastPoint: Int; var departure: Int64; var need: Int64 }
+        typealias Proposal = TrafficOvertakeProposal
         var proposals: [Proposal] = []
         for ia in plan.services.indices {
             for ib in plan.services.indices where ib > ia {
@@ -504,6 +520,7 @@ extension GameWorld {
                 }
                 let physical = hasRoutePreferences(a.train) || hasRoutePreferences(b.train)
                 let runs = physical ? preferredTrafficCommon(a, b) : [common]
+                let timetabled = followsRealTimetable(a.train) && followsRealTimetable(b.train)
                 for common in runs {
                     guard common.count >= 2, zip(common, common.dropFirst()).allSatisfy({ $0.ai < $1.ai }) else { continue }
                     for n in 0..<(common.count - 1) {
@@ -544,6 +561,16 @@ extension GameWorld {
                             break
                         }
                     }
+                    // Decision 294: the overtake a real timetable already
+                    // has, within the slow train's call.
+                    if timetabled {
+                        for n in 0..<(common.count - 1) {
+                            guard let proposal = timetabledOvertake(&plan, ia, ib, at: common[n], next: common[n + 1], physical: physical) else { continue }
+                            if let old = proposals.firstIndex(where: { $0.slow == proposal.slow && $0.point == proposal.point }) {
+                                if proposals[old].departure < proposal.departure { proposals[old] = proposal }
+                            } else { proposals.append(proposal) }
+                        }
+                    }
                 }
             }
         }
@@ -561,12 +588,49 @@ extension GameWorld {
             plan.waits.removeAll { $0.train == l.train.id && $0.station == st.station && $0.stop == st.stop && $0.cycle == st.cycle }
             plan.waits.append(ScheduledTrafficWait(train: l.train.id, station: st.station, stop: st.stop, cycle: st.cycle,
                                                    other: f.train.id, otherStop: fst.stop, otherCycle: fst.cycle,
-                                                   kind: .overtake, departure: GameTime(seconds: p.departure), clearance: 30))
+                                                   kind: .overtake, departure: GameTime(seconds: p.departure), clearance: 30, hold: p.hold))
             applyTrafficAnchor(&plan.services[p.slow], at: p.point, departure: p.departure)
             rebuilt.insert(p.slow); relied.insert(p.fast); changed = true
             inferTrafficMeets(&plan, only: l.train.id)
         }
         return changed
+    }
+
+    /// Decision 294: the overtake the timetables of the services at `ia`
+    /// and `ib`, both of lines with runs, already have at their common
+    /// point `at`: one calls there, arrives before the other comes and is
+    /// due to leave after the other has left or passed, and both go on to
+    /// the common point `next` along the same track. The one that calls
+    /// waits there until the other has left or passed, and 30 seconds
+    /// more, as ``planTrafficOvertakes(_:)`` has a slow train wait, when a
+    /// siding keeps it clear of the other's way. ``planTrafficOvertakes(_:)``
+    /// finds only trains that would meet between two points (decision 59),
+    /// and a real timetable passes its slow trains at their calls.
+    func timetabledOvertake(_ plan: inout TrafficPlan, _ ia: Int, _ ib: Int, at point: (ai: Int, bi: Int), next: (ai: Int, bi: Int),
+                            physical: Bool) -> TrafficOvertakeProposal? {
+        guard next.ai == point.ai + 1, next.bi == point.bi + 1 else { return nil }
+        let a = plan.services[ia], b = plan.services[ib]
+        let pa = a.points[point.ai], pb = b.points[point.bi]
+        let slow: Int, fast: Int, sp: Int, fp: Int
+        if pa.calls, pa.arrival < pb.arrival, pa.departure > pb.departure {
+            (slow, fast, sp, fp) = (ia, ib, point.ai, point.bi)
+        } else if pb.calls, pb.arrival < pa.arrival, pb.departure > pa.departure {
+            (slow, fast, sp, fp) = (ib, ia, point.bi, point.ai)
+        } else { return nil }
+        if physical {
+            guard preferredTrafficSharesCorridor(a, from: point.ai, to: next.ai, b, from: point.bi, to: next.bi) else { return nil }
+        } else {
+            guard a.points[next.ai].berth.traversal == b.points[next.bi].berth.traversal else { return nil }
+        }
+        let l = plan.services[slow], f = plan.services[fast]
+        guard l.train.execution != nil else { return nil }
+        let st = l.points[sp], fst = f.points[fp]
+        let departure = Self.saturating(GameTime(seconds: fst.departure), plus: 30).seconds
+        guard departure > st.arrival, trafficHasSiding(at: st, train: l.train, known: &plan.hasSiding),
+              !plan.waits.contains(where: { $0.train == l.train.id && $0.station == st.station && $0.stop == st.stop && $0.cycle == st.cycle && $0.departure.seconds >= departure }),
+              overtakeTrackFree(&plan, service: slow, at: sp, departure: departure)
+        else { return nil }
+        return TrafficOvertakeProposal(slow: slow, fast: fast, point: sp, fastPoint: fp, departure: departure, need: 0, hold: Self.timetabledOvertakeHold)
     }
 
     func trafficHasSiding(at point: TrafficPoint, train: Train, known: inout [TrafficSidingQuery: Bool]) -> Bool {
@@ -613,6 +677,15 @@ extension GameWorld {
         return peer.execution == nil ? clock.now : nil
     }
 
+    /// Decision 294: when `wait`, an overtake a real timetable has, stops
+    /// keeping `train` (its train) however late the express is: its
+    /// ``ScheduledTrafficWait/hold`` past when the train is due to leave.
+    /// `nil` for any other wait, or before the train's departure is known.
+    func trafficHoldEnd(_ wait: ScheduledTrafficWait, of train: Train) -> GameTime? {
+        guard let hold = wait.hold, let due = departureDue(of: train) else { return nil }
+        return Self.saturating(due, plus: hold)
+    }
+
     /// The scheduled wait keeping `train` at its station, as the plan and
     /// the actual visits have it, before asking whether the train waited
     /// for can come at all (see ``currentTrafficWait(_:plan:memo:)``).
@@ -621,6 +694,7 @@ extension GameWorld {
         return plan.waits.first { wait in
             guard wait.train == train.id, wait.stop == execution.stop, wait.cycle == execution.cycle,
                   isStopped(train, at: wait.station) else { return false }
+            if let end = trafficHoldEnd(wait, of: train), clock.now >= end { return false }
             let released = trafficReleased(wait)
             return released == nil || clock.now < max(wait.departure, released!)
         }
