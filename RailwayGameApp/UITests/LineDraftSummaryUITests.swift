@@ -105,7 +105,11 @@ final class LineDraftSummaryUITests: XCTestCase {
         // 39461248592: 40 drags at x 835).
         XCTAssertTrue(list.appears(within: 10), "The lines panel's list")
         list.waitUntilStill()
-        XCTAssertTrue(app.scrollUntilShown(control, in: list), "Cannot scroll to \(control)")
+        // Wholly on screen and under the bar: a row whose middle was in
+        // the list's band lay at its bottom edge and never became hittable
+        // (run 39471415591, "New Line…" under "Add a Train").
+        let bar = app.navigationBars["Lines"]
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(control, in: list, below: bar.exists ? bar.frame.maxY : nil), "Cannot scroll to \(control)")
         control.waitUntilSettled()
     }
 
