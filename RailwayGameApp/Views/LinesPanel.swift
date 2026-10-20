@@ -1572,6 +1572,7 @@ struct LinesPanel: View {
                     Text(verbatim: session.world.lineDraftGapText(gap, in: language))
                     .font(.footnote)
                     .foregroundStyle(Theme.warning)
+                    .accessibilityIdentifier("line.draft.gap")
                 }
                 // Decision 110: the new line drawn as its stops.
                 RouteStrip(names: stops.map { name(of: $0) }, color: Theme.primary)

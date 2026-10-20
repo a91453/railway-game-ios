@@ -96,6 +96,18 @@ struct RailwayGameApp: App {
         if DebugLaunch.isSet("-ui-testing"), !DebugLaunch.isSet("-show-first-game-card") {
             launcher.dismissFirstGameCard()
         }
+        if DebugLaunch.isSet("-ui-testing"), let name = DebugLaunch.value(of: "-ui-test-world") {
+            launcher.continueGame()
+            guard let session = launcher.session else { fatalError("Could not load UI test world") }
+            if name == "separate-tracks" || name == "missing-platform" {
+                for station in session.world.stations {
+                    session.selectStation(station.id)
+                    session.addSelectedStationToLineDraft()
+                }
+            } else if let line = session.world.lines.first {
+                session.selectLine(line.id)
+            }
+        }
         // A Debug build launched with -demo-layout opens the demo map at
         // once (Release builds open it from the start screen).
         if DebugLaunch.isSet("-demo-layout") {
@@ -170,6 +182,10 @@ struct RailwayGameApp: App {
                     try manager.removeItem(at: directory)
                 }
                 try manager.createDirectory(at: directory, withIntermediateDirectories: true)
+                if let name = DebugLaunch.value(of: "-ui-test-world") {
+                    let world = try FeatureUITestWorld.make(name)
+                    _ = try SaveLibrary(directory: directory).save(world, as: .autosave, at: Date())
+                }
                 // Lesson UI tests can open later lessons without playing
                 // all the earlier ones. Only this cleared testing library,
                 // under -ui-testing in Debug, ever receives these stars.

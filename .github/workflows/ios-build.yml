@@ -112,10 +112,13 @@ permissions:
 # 39084020106) put LessonUITests at 1,556–2,030 s and the build job at
 # 62–79 minutes. The second job took 32–38 minutes. Give LessonUITests its
 # own job; the build job keeps every other class not named here. The pull
-# request gate list below is unchanged.
+# request gate list below is unchanged. Decisions 284–286's UI checks add
+# 7:36 standalone (only_testing, 39341335419) to the lessons job's 42:56
+# (39332055254): about 50:32 against its 75-minute limit. The second job
+# stays at 47:24. Keep at least ten minutes spare when adding tests here.
 env:
   FULL_LANE_SECOND_JOB: "MapInteractionTests RealWorldMapUITests SettingsUITests"
-  FULL_LANE_LESSONS_JOB: "LessonUITests"
+  FULL_LANE_LESSONS_JOB: "LessonUITests Feature284To286UITests"
 
 # A newer push to a pull request cancels its older run. Every other run (the
 # full lane: started after a merge, nightly or by hand) has its own group
@@ -746,7 +749,10 @@ jobs:
 
       - name: UI tests, ${{ matrix.partition }}
         id: ui-partition
-        timeout-minutes: 50
+        # Lessons' latest UI step was 36:44 (39332055254). Adding the
+        # feature checks' standalone 7:36 gives 44:20; 55 leaves 10:40 spare.
+        # The job still has its 75-minute cap; second keeps its old limit.
+        timeout-minutes: ${{ matrix.partition == 'lessons' && 55 || 50 }}
         run: |
           case "$PARTITION" in
             second) classes="$FULL_LANE_SECOND_JOB" ;;
