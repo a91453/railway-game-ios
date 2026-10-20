@@ -171,20 +171,32 @@ struct RollingStockCatalogView: View {
     /// dashed tag; and the choice.
     private func purchase(_ entry: RollingStockCatalog.Entry, language: DisplayLanguage) -> some View {
         let train = RollingStockCatalog.train(entry.type, cars: shownCars, in: session.world)
-        return ViewThatFits(in: .horizontal) {
-            HStack(spacing: 12) {
-                carsStepper(language: language, riders: train.riders)
-                Spacer(minLength: 4)
-                priceTag(train.price, language: language)
-                chooseButton(entry, language: language)
-            }
-            VStack(spacing: 10) {
-                carsStepper(language: language, riders: train.riders)
+        return VStack(alignment: .leading, spacing: 6) {
+            ViewThatFits(in: .horizontal) {
                 HStack(spacing: 12) {
+                    carsStepper(language: language, riders: train.riders)
+                    Spacer(minLength: 4)
                     priceTag(train.price, language: language)
                     chooseButton(entry, language: language)
                 }
+                VStack(spacing: 10) {
+                    carsStepper(language: language, riders: train.riders)
+                    HStack(spacing: 12) {
+                        priceTag(train.price, language: language)
+                        chooseButton(entry, language: language)
+                    }
+                }
             }
+            // Decision 301 (the City Transport Manager study's 4.11): what
+            // the train shown costs an hour, to set beside its fares.
+            Text(verbatim: language.text(
+                "This train costs \(train.hourly.moneyText) an hour on a line, plus its trips.",
+                "這列車在路線上每營運小時約 \(train.hourly.moneyText)，另加行駛與發車的費用。"
+            ))
+            .font(.caption)
+            .foregroundStyle(Theme.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityIdentifier("catalog.hourlyCost")
         }
     }
 

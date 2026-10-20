@@ -57,11 +57,20 @@ public struct RollingStockCatalog: Equatable, Sendable {
         return family[(index + offset + family.count) % family.count].type
     }
 
-    /// A train of `type` with `cars` cars: what it carries, costs and costs
-    /// a day, in `world`.
-    public static func train(_ type: TrainType, cars: Int, in world: GameWorld) -> (riders: Int64, price: Money, daily: Money) {
+    /// A train of `type` with `cars` cars: what it carries, costs, costs a
+    /// day and costs an hour on a line (decision 301), in `world`.
+    public static func train(_ type: TrainType, cars: Int, in world: GameWorld) -> (riders: Int64, price: Money, daily: Money, hourly: Money) {
         let cars = min(max(cars, Train.minimumCars), Train.maximumCars)
-        return (type.ratedCapacityPerCar * Int64(cars), world.purchaseCost(of: type, cars: cars), world.dailyRunningCost(of: type, cars: cars))
+        let daily = world.dailyRunningCost(of: type, cars: cars)
+        return (type.ratedCapacityPerCar * Int64(cars), world.purchaseCost(of: type, cars: cars), daily, hourlyCost(daily: daily))
+    }
+
+    /// What a train whose fixed running cost on a line is `daily` a day
+    /// costs an hour (decision 301, the City Transport Manager study's
+    /// 4.11): the day's cost over its 24 hours, to the nearest dollar, half
+    /// up. Its departures and kilometres are paid on top as it runs.
+    public static func hourlyCost(daily: Money) -> Money {
+        Money((max(0, daily.amount) + 1_200) / 2_400 * 100)
     }
 }
 
