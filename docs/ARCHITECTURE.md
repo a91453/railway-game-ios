@@ -13018,6 +13018,8 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 **參考庫與外部專案**：沒有查。這是面板捲動的小修正，沒有要移植的演算法或資料。
 
+**後來**（2026-10-20）：合併後 `LineDraftSummaryUITests` 仍會紅，四個原因都在測試，App 不動：（1）面板還在從右邊滑進來就量清單的位置，拖曳全落在面板舊右緣（run 39461248592）→ 先等清單不動（`waitUntilStill`；清單不算可點，`waitUntilSettled` 等不到）；（2）「新路線…」中點在清單範圍內但壓在下緣，點不到（run 39471415591）→ 改用 `dragUntilWhollyOnScreen`，要整列在標題列下方且可點；（3）加了第二站後摘要在表單最上面、沒載入，往下找 40 次都找不到（run 39476430973）→ 先往上找；（4）往上拖從標題列上開始，清單不動（run 39482371544）→ 從標題列下方開始。run 39490359992 兩個測試都綠。
+
 ### 301. 路線卡的「乘客感受」：候車、擁擠、準點三項，有數字才給分；買車卡寫每營運小時的成本
 
 2026-10-20。競品研究 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.0 的 M3（4.13），同一批做 4.11 的一行字（NEXT_PRIORITIES §17 第 7、11 名）。遊戲規劃 session_01WW7o3decEv5LY59nYVqnDN 派工。號碼依 #231：main 最大 299，#859 保留 300，取 301。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
