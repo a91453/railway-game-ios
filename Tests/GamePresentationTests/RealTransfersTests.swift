@@ -78,8 +78,11 @@ final class RealTransfersTests: XCTestCase {
         XCTAssertEqual(try points("長庚醫院站", "tymc"), 10)
         XCTAssertEqual(try points("機場第一航廈站", "tymc"), 12)
         XCTAssertEqual(try points("機場第二航廈站", "tymc"), 11)
-        // The Sanying Line has no year of riders yet.
-        XCTAssertEqual(try points("三峽", "sanying"), 1)
+        // The Sanying Line over its months since it opened, 2026-07 to
+        // 2026-09 (8,437 a day at Dingpu).
+        XCTAssertEqual(ridership.riders(of: try BundledRealData.station("頂埔", in: "sanying"), data: railways.stationData), 8_437)
+        XCTAssertEqual(try points("三峽", "sanying"), 3)
+        XCTAssertEqual(try points("龍埔", "sanying"), 1)
     }
 
     func testAStationBuiltByARealOneBringsItsTransfers() throws {

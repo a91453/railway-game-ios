@@ -137,7 +137,7 @@ python3 -I tools/real-ridership/build_tymc_ridership.py --year 2025 --downloaded
 **輸出**：`ntdlrt_ridership.json`、`ntalrt_ridership.json`、`ntmc_circular_ridership.json`，以 App 的 `ntdlrt.json`、`ntalrt.json`、`trtc.json` 環狀線的站名為 key，記每個月檔的 SHA-256、下載日期、期間與使用條件。
 
 ```sh
-python3 -I tools/real-ridership/build_ntmc_ridership.py --first 2025-10 --downloaded 2026-10-20 \
+python3 -I tools/real-ridership/build_ntmc_ridership.py --first 2025-10 --partial --downloaded 2026-10-20 \
     --app RailwayGameApp/Resources/RealRailways --output RailwayGameApp/Resources/RealRailways
 ```
 
@@ -145,7 +145,7 @@ python3 -I tools/real-ridership/build_ntmc_ridership.py --first 2025-10 --downlo
 - 淡海輕軌 14 站，全線一天 17,469（一年約 638 萬；審計處 2025 年 603 萬）：紅樹林 7,781、濱海義山 1,522、淡水行政中心 1,284。
 - 安坑輕軌 9 站，一天 6,201（約 226 萬；2025 年 203 萬）：十四張 2,662、新和國小 779。
 - 環狀線 14 站，一天 67,274（約 2,456 萬；2025 年約 2,200 萬）：板橋 11,640、景安 7,278、大坪林 6,950、新北產業園區 6,292。
-- 三鶯線：2026-06-30 才通車，只有 2026-07 起的月份，**不到 12 個月，工具跳過**，照決策 298 的後備 1 點。2027-07 有 2026-07 到 2027-06 之後，用 `--first 2026-07` 重跑就會產出 `sanying_ridership.json`（之後要在 `RealRidership` 加 `sanying`）。
+- 三鶯線 12 站：2026-06 底才通車，不到 12 個月。`--partial` 讓剛通車的線只取通車那個月之後的整月：**2026-07 到 2026-09 的 3 個月（92 天）**，全線一天 27,366；檔裡寫 `months`，SHA-256 也只記這 3 個月。頂埔 8,437、鶯歌車站 3,801、三峽 3,417、臺北大學 3,402、陶瓷老街 3,228。各月全線一天 30,991、29,723、21,186：9 月比暑假少約三成，3 個月的平均可能偏高，換成點數每站最多差 1 點（只用 9 月：頂埔 7、鶯歌 3）。沒有 `--partial` 時這條線照舊跳過。2027-07 有 2026-07 到 2027-06 的 12 個月後，用 `--first 2026-07` 重跑換成一整年。
 
 **什麼時候重跑**：每年一次，和其他檔一起；`--first` 取最近 12 個 `.ods` 月份的第一個。
 
@@ -158,4 +158,4 @@ python3 -I tools/real-ridership/build_ntmc_ridership.py --first 2025-10 --downlo
 ## 共同的注意
 
 - 下載的工具用 `curl` 讀，不用 Python 的 `urllib`：雲端容器經過的代理憑證，Python 3.13 的嚴格檢查不接受，curl 照系統設定接受。不關掉任何檢查。
-- **還沒有的**：三鶯線（還不到 12 個月）、高雄環狀輕軌（只有全系統）、林鐵。這些站的轉乘點數照系統的規則（決策 298），不推估、不拿年運量平分。TDX 沒有各站運量的 API（2026-10-20 查過它軌道類的全部 API 說明）。
+- **還沒有的**：高雄環狀輕軌（只有全系統）、林鐵。這些站的轉乘點數照系統的規則（決策 298），不推估、不拿年運量平分。三鶯線只有通車後 3 個月（見上面）。TDX 沒有各站運量的 API（2026-10-20 查過它軌道類的全部 API 說明）。

@@ -1,0 +1,38 @@
+{
+ "measure": "average riders a day: (entries + exits) / 2 over the listed months' days (the line opened in 2026-06; that month is left out)",
+ "months": [
+  "2026-07",
+  "2026-08",
+  "2026-09"
+ ],
+ "period": {
+  "from": "2026-07-01",
+  "to": "2026-09-30"
+ },
+ "riders": {
+  "三峽": 3417,
+  "國華": 873,
+  "媽祖田": 605,
+  "橫溪": 378,
+  "永吉公園": 775,
+  "臺北大學": 3402,
+  "長壽山": 341,
+  "陶瓷老街": 3228,
+  "頂埔": 8437,
+  "鶯桃福德": 1827,
+  "鶯歌車站": 3801,
+  "龍埔": 280
+ },
+ "source": {
+  "downloaded": "2026-10-20",
+  "fileSha256": {
+   "2026-07": "cd58850e8ae6e6b329964b722db12710e66a0bd196401b3b301fbb6c94954a73",
+   "2026-08": "ef2c2d1ad865f638075c60a53a13077e90bd4fa395fd42513af0b09b703ba932",
+   "2026-09": "6998c284a231af91959bbac230f8f2380c5d6b03c60149a8e672f9e4c1ff1c82"
+  },
+  "page": "https://www.ntmetro.com.tw/basic/?node=10145",
+  "publisher": "新北大眾捷運股份有限公司",
+  "terms": "no open-data licence (the company website's 政府網站資料開放宣告); only each station's average a day, a fact, is taken, credited to the company",
+  "title": "新北大眾捷運股份有限公司 營運統計數據：每日全線各站運量統計表（三鶯線）"
+ }
+}

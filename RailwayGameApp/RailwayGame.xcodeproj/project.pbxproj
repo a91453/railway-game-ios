@@ -164,6 +164,7 @@
 		F616E84EA51C9BCB0921FBA7 /* track_stations.geojson in Resources */ = {isa = PBXBuildFile; fileRef = BDC928DD3917E8959E2930DD /* track_stations.geojson */; };
 		F720FC931D713539D1AF8CCC /* tmrt.json in Resources */ = {isa = PBXBuildFile; fileRef = 10BAAEA97DA689ABA4004F2A /* tmrt.json */; };
 		F86D215344F8BC5B6E8955AD /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3934A6F628AA98414B2B952D /* Theme.swift */; };
+		FA57C7F457ADE1E1971249E7 /* sanying_ridership.json in Resources */ = {isa = PBXBuildFile; fileRef = B7DE13B493FCE66BA5ED5DBB /* sanying_ridership.json */; };
 		FC5DF7D86135072E69D33064 /* MapCoverageButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = C672FB058D7EDDE7177AF07E /* MapCoverageButton.swift */; };
 		FC698A6F5A2379335FC7CC65 /* NewsLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE2E4A53A2F134FC8BD9D4F7 /* NewsLogView.swift */; };
 		FC936165E05580706AC8015F /* ntmc_circular_ridership.json in Resources */ = {isa = PBXBuildFile; fileRef = 60AD430078BC348CA2F99EFB /* ntmc_circular_ridership.json */; };
@@ -285,6 +286,7 @@
 		B00B0A86FFD245909EF3231A /* ntdlrt_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ntdlrt_times.json; sourceTree = "<group>"; };
 		B2CB75E448956BC3D8E7FE02 /* StartSaveFlowSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartSaveFlowSmokeTests.swift; sourceTree = "<group>"; };
 		B79ADC872C8814C1468A48EA /* TutorialJourneyUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialJourneyUITests.swift; sourceTree = "<group>"; };
+		B7DE13B493FCE66BA5ED5DBB /* sanying_ridership.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = sanying_ridership.json; sourceTree = "<group>"; };
 		B80415091AAF98324FD6CDE1 /* tra_ridership.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra_ridership.json; sourceTree = "<group>"; };
 		B8372106A7EF953548452B15 /* MapBuildConfirm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapBuildConfirm.swift; sourceTree = "<group>"; };
 		B8DD4857B9833F971AD18592 /* MapRequestMarks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapRequestMarks.swift; sourceTree = "<group>"; };
@@ -421,6 +423,7 @@
 				E2038D64EB91D02F90FE6716 /* ntdlrt.json */,
 				60AD430078BC348CA2F99EFB /* ntmc_circular_ridership.json */,
 				4C1017DDE782DF1CF07D561E /* rail_structures.json */,
+				B7DE13B493FCE66BA5ED5DBB /* sanying_ridership.json */,
 				68B0C0FD89F59C53A9685C67 /* sanying_times.json */,
 				92FBF87A0B909AF9C100FC70 /* sanying.json */,
 				31AA7BB032ACE4E009B42AF1 /* station_names.json */,
@@ -748,6 +751,7 @@
 				D6C8E62EEC74F3D1A20A0B5B /* rail_structures.json in Resources */,
 				585C09A427696BD99073713D /* refused.wav in Resources */,
 				4BD9A2C2F541EB4CE36CA67B /* sanying.json in Resources */,
+				FA57C7F457ADE1E1971249E7 /* sanying_ridership.json in Resources */,
 				792A33CF70AD2536E13CF479 /* sanying_times.json in Resources */,
 				F46D9B04101FA9F89A33CB08 /* station-chime.wav in Resources */,
 				10D525FC9BA6C8175B84AB5F /* station_names.json in Resources */,

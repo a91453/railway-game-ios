@@ -19,11 +19,14 @@ the months' days. 人工統計資料 (single-journey and other paper tickets, ab
         --output RailwayGameApp/Resources/RealRailways
 
 writes `ntdlrt_ridership.json` (Danhai Light Rail, codes V), `ntalrt_
-ridership.json` (Ankeng Light Rail, K) and `ntmc_circular_ridership.json`
-(the Circular Line, Y), keyed by the names of the app's ntdlrt.json,
-ntalrt.json and trtc.json; the Sanying Line (LB) once it has twelve
-months, into `sanying_ridership.json`. It prints every station it cannot
-match and every station of the app with no data.
+ridership.json` (Ankeng Light Rail, K), `ntmc_circular_ridership.json`
+(the Circular Line, Y) and, once it has twelve months or with `--partial`,
+`sanying_ridership.json` (the Sanying Line, LB), keyed by the names of the
+app's ntdlrt.json, ntalrt.json, trtc.json and sanying.json. It prints every station it cannot
+match and every station of the app with no data. A line with fewer than
+the twelve months opened within them; `--partial` takes such a line over its
+months after the opening one (a month it ran only part of) and names them in
+the file, as the Taichung tool does.
 
 Only the months published as .ods are read (2025-09 on; earlier months are
 PDF or .xlsx). `--files FOLDER` reads FOLDER/YYYY-MM.ods instead of
@@ -154,6 +157,7 @@ def main():
     parser.add_argument("--app", required=True, help="the app's RealRailways folder (ntdlrt.json, ntalrt.json, trtc.json, sanying.json)")
     parser.add_argument("--output", required=True, help="the folder to write into")
     parser.add_argument("--files", help="a folder of YYYY-MM.ods files to read instead of downloading")
+    parser.add_argument("--partial", action="store_true", help="take a line that opened within the months over its months after the opening one")
     args = parser.parse_args()
 
     year, number = map(int, args.first.split("-"))
@@ -176,43 +180,54 @@ def main():
         for code, (name, count) in found["entries"].items():
             sums[code][month] += count + found["exits"][code][1]
             names[code] = name
-    first_day = f"{wanted[0]}-01"
-    last_year, last_month = map(int, wanted[-1].split("-"))
-    last_day = f"{wanted[-1]}-{calendar.monthrange(last_year, last_month)[1]:02d}"
-    days = sum(calendar.monthrange(*map(int, month.split("-")))[1] for month in wanted)
-
     for prefix, (output_name, app_name, app_line, title) in LINES.items():
         codes = sorted(code for code in sums if re.fullmatch(prefix + r"\d+", code))
         if not codes:
             print(f"{title}: no stations")
             continue
-        partial = [code for code in codes if len(sums[code]) < 12]
-        if partial:
-            print(f"{title}: skipped, {len(partial)} stations lack months (first month of {codes[0]}: {min(sums[codes[0]])})")
-            continue
+        months = wanted
+        opened = None
+        if any(len(sums[code]) < 12 for code in codes):
+            opened = min(month for code in codes for month in sums[code])
+            if not args.partial:
+                print(f"{title}: skipped, opened {opened}, not twelve months (--partial takes the months after it)")
+                continue
+            months = wanted[wanted.index(opened) + 1:]
+            lacking = [code for code in codes if any(month not in sums[code] for month in months)]
+            if not months or lacking:
+                sys.exit(f"{title}: no whole months after {opened}, or stations lacking some: {lacking}")
+        days = sum(calendar.monthrange(*map(int, month.split("-")))[1] for month in months)
+        last_year, last_month = map(int, months[-1].split("-"))
+        period = {"from": f"{months[0]}-01", "to": f"{months[-1]}-{calendar.monthrange(last_year, last_month)[1]:02d}"}
         lines = json.load(open(os.path.join(args.app, app_name), encoding="utf-8"))["lines"]
         app = {key(station["name"]): station["name"] for line in lines if app_line in (None, line["name"]) for station in line["stations"]}
         riders = {}
         for code in codes:
             name = app.get(key(names[code]), names[code])
-            riders[name] = round(sum(sums[code].values()) / 2 / days)
+            riders[name] = round(sum(sums[code][month] for month in months) / 2 / days)
         output = {
             "source": {
                 "title": f"新北大眾捷運股份有限公司 營運統計數據：每日全線各站運量統計表（{title}）",
                 "publisher": PUBLISHER,
                 "page": PAGE,
-                "fileSha256": digests,
+                "fileSha256": {month: digests[month] for month in months},
                 "downloaded": args.downloaded,
                 "terms": TERMS,
             },
-            "period": {"from": first_day, "to": last_day},
+            "period": period,
             "measure": "average riders a day: (entries + exits) / 2 over the twelve months' days",
             "riders": riders,
         }
+        if opened:
+            output["months"] = months
+            output["measure"] = (
+                f"average riders a day: (entries + exits) / 2 over the listed months' days "
+                f"(the line opened in {opened}; that month is left out)"
+            )
         with open(os.path.join(args.output, output_name), "w", encoding="utf-8") as file:
             json.dump(output, file, ensure_ascii=False, indent=1, sort_keys=True)
             file.write("\n")
-        print(f"{title}: {len(riders)} stations, {wanted[0]} to {wanted[-1]} ({days} days) → {output_name}")
+        print(f"{title}: {len(riders)} stations, {months[0]} to {months[-1]} ({days} days) → {output_name}")
         print("  names the app does not have: " + (", ".join(sorted(set(riders) - set(app.values()))) or "none"))
         print("  stations of the app with no data: " + (", ".join(sorted(set(app.values()) - set(riders))) or "none"))
         top = sorted(riders.items(), key=lambda item: -item[1])[:5]

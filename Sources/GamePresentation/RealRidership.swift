@@ -7,9 +7,10 @@ import Foundation
 // Speed Rail's, Taipei Metro's, Kaohsiung Metro's, Taichung Metro's, the
 // Taoyuan Airport MRT's (`thsr_ridership.json`, `trtc_ridership.json`,
 // `krtc_ridership.json`, `tmrt_ridership.json`, `tymc_ridership.json`) and
-// New Taipei Metro's: the Danhai and Ankeng
-// light rails and the Circular Line (`ntdlrt_ridership.json`,
-// `ntalrt_ridership.json`, `ntmc_circular_ridership.json`).
+// New Taipei Metro's: the Danhai and Ankeng light rails, the Circular Line
+// and the Sanying Line (`ntdlrt_ridership.json`, `ntalrt_ridership.json`,
+// `ntmc_circular_ridership.json`, `sanying_ridership.json`, the last over the
+// months since it opened).
 // Each file is optional; a station none of them has keeps its system's rule.
 
 /// Real stations' average riders a day, (entries + exits) / 2 over a year.
@@ -59,8 +60,9 @@ public struct RealRidership: Sendable {
     /// Metro's file has them too, but only the trips it counts at its own
     /// gates, a fraction of them (Zhongyuan 701 a day against 2,831).
     public let circular: Table?
+    public let sanying: Table?
 
-    public init(tra: Table?, thsr: Table?, trtc: Table?, krtc: Table? = nil, tmrt: Table? = nil, tymc: Table? = nil, ntdlrt: Table? = nil, ntalrt: Table? = nil, circular: Table? = nil) {
+    public init(tra: Table?, thsr: Table?, trtc: Table?, krtc: Table? = nil, tmrt: Table? = nil, tymc: Table? = nil, ntdlrt: Table? = nil, ntalrt: Table? = nil, circular: Table? = nil, sanying: Table? = nil) {
         self.tra = tra
         self.thsr = thsr
         self.trtc = trtc
@@ -70,6 +72,7 @@ public struct RealRidership: Sendable {
         self.ntdlrt = ntdlrt
         self.ntalrt = ntalrt
         self.circular = circular
+        self.sanying = sanying
     }
 
     /// The riders a day of real station `station`: Taiwan Railway's by its
@@ -98,6 +101,8 @@ public struct RealRidership: Sendable {
             return ntdlrt?.riders[RealRailways.stationKey(station.chinese)]
         case "ntalrt":
             return ntalrt?.riders[RealRailways.stationKey(station.chinese)]
+        case "sanying":
+            return sanying?.riders[RealRailways.stationKey(station.chinese)]
         default:
             return nil
         }

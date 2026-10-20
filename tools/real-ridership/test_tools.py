@@ -162,9 +162,9 @@ class NewTaipeiTests(unittest.TestCase):
             exits = {code: (name, count * 3) for code, (name, count) in stations.items()}
             ods(os.path.join(self.files, f"{year}-{month:02d}.ods"), stations, exits, days)
 
-    def build(self):
+    def build(self, *extra):
         return run("build_ntmc_ridership.py", "--first", "2025-10", "--downloaded", "2026-10-20", "--app", self.app,
-                   "--output", self.out, "--files", self.files)
+                   "--output", self.out, "--files", self.files, *extra)
 
     def riders(self, name):
         return json.load(open(os.path.join(self.out, name), encoding="utf-8"))["riders"]
@@ -180,6 +180,20 @@ class NewTaipeiTests(unittest.TestCase):
         # Three months of the Sanying Line are not a year.
         self.assertFalse(os.path.exists(os.path.join(self.out, "sanying_ridership.json")))
         self.assertIn("三鶯線: skipped", result.stdout)
+
+    def test_partial_takes_a_new_line_after_its_opening_month(self):
+        # The line opens in 2026-06 (offset 8): June is left out.
+        self.months(sanying_from=8)
+        result = self.build("--partial")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        output = json.load(open(os.path.join(self.out, "sanying_ridership.json"), encoding="utf-8"))
+        self.assertEqual(output["riders"], {"臺北大學": 80})
+        self.assertEqual(output["months"], ["2026-07", "2026-08", "2026-09"])
+        self.assertEqual(output["period"], {"from": "2026-07-01", "to": "2026-09-30"})
+        self.assertEqual(sorted(output["source"]["fileSha256"]), output["months"])
+        # A line of the whole twelve months is as without --partial.
+        self.assertEqual(self.riders("ntdlrt_ridership.json"), {"紅樹林": 200})
+        self.assertNotIn("months", json.load(open(os.path.join(self.out, "ntdlrt_ridership.json"), encoding="utf-8")))
 
     def test_a_missing_month_is_refused(self):
         self.months()
