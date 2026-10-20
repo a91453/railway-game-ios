@@ -110,7 +110,7 @@ extension GameWorld {
             // Decision 297: under traffic control, while no run from here
             // is due, a train in the way of a service waiting for its
             // route goes in too.
-            if isTrafficControlEnabled, !due {
+            if isTrafficControlEnabled, !due, station != line.stops.first, station != line.stops.last {
                 if inTheWay == nil { inTheWay = trainsInTheWay(memo: &memo.directions) }
                 leaving += waiting.filter { inTheWay!.contains(trains[$0].id) && !leaving.contains($0) }
             }
