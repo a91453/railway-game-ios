@@ -278,11 +278,16 @@ final class LessonUITests: XCTestCase {
     /// the menu instead of scrolling, and the station panel stayed at that
     /// row for 40 drags, short of its Freight section (main abb306a's full
     /// lane, run 39053855189). The lesson picker's sheet does not scroll
-    /// from its edge, so `reveal` keeps the middle there.
+    /// from its edge, so `reveal` keeps the middle there. The list is the
+    /// one holding the station's first section, not the first list on the
+    /// screen: with that one the drags fell at x 798, on the panel's scroll
+    /// bar, and scrubbed the panel up and down (Shops, Ridership, then
+    /// Platforms again in main 614375c's full lane, run 39438209091).
     private func revealPastMenus(_ control: XCUIElement) {
-        XCTAssertTrue(list.appears(within: 10), "Missing \(list)")
-        let onScreen = list.frame.intersection(app.frame)
-        let area = onScreen.isEmpty ? list.frame : onScreen
+        let panel = app.collectionViews.containing(.any, identifier: "station.operations").firstMatch
+        XCTAssertTrue(panel.appears(within: 10), "Missing \(panel)")
+        let onScreen = panel.frame.intersection(app.frame)
+        let area = onScreen.isEmpty ? panel.frame : onScreen
         let band = area.insetBy(dx: 0, dy: 24)
         func shown() -> Bool {
             control.exists && band.minY <= control.frame.midY && control.frame.midY <= band.maxY

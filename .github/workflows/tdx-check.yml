@@ -1,0 +1,109 @@
+name: Check TDX API
+
+# Reads the Ministry of Transportation's TDX platform with the owner's key,
+# the repository secrets TDX_CLIENT_ID and TDX_CLIENT_SECRET, so a session
+# can get TDX data without the key ever leaving GitHub: it gets a token,
+# asks the API path given (by default the first Taiwan Railway station) and
+# keeps the answer as the artifact `tdx-response` for a week. The log shows
+# only whether each step worked, a failure's HTTP status and the answer's
+# size; never the key or the token.
+#
+# Runs by hand (Actions -> Check TDX API -> Run workflow, with an API path)
+# and on pull requests that change this file, with the default path. A pull
+# request from a fork gets no secrets, and this workflow then says so.
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/tdx-check.yml
+  workflow_dispatch:
+    inputs:
+      path:
+        description: "A TDX API path under /api/basic/ or /api/advanced/, with its query"
+        required: false
+        default: "/api/basic/v3/Rail/TRA/Station?$top=1&$format=JSON"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tdx-check-${{ github.ref }}-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Ask TDX
+        env:
+          TDX_CLIENT_ID: ${{ secrets.TDX_CLIENT_ID }}
+          TDX_CLIENT_SECRET: ${{ secrets.TDX_CLIENT_SECRET }}
+          # Through the environment, never into the script's text.
+          TDX_PATH: ${{ inputs.path || '/api/basic/v3/Rail/TRA/Station?$top=1&$format=JSON' }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, sys, urllib.error, urllib.parse, urllib.request
+
+          client_id = os.environ.get("TDX_CLIENT_ID", "")
+          client_secret = os.environ.get("TDX_CLIENT_SECRET", "")
+          if not client_id or not client_secret:
+              missing = [name for name, value in [("TDX_CLIENT_ID", client_id), ("TDX_CLIENT_SECRET", client_secret)] if not value]
+              sys.exit("Not set for this run: " + ", ".join(missing) + " (repository secrets; a fork's pull request gets none)")
+
+          # Only TDX's own data paths: the token goes to no other host.
+          path = os.environ["TDX_PATH"].strip()
+          if not re.fullmatch(r"/api/(basic|advanced)/[A-Za-z0-9/_.\-]+(\?[^#\x00-\x1f\x7f]*)?", path):
+              sys.exit("The path must start with /api/basic/ or /api/advanced/ and hold only a path and a query")
+          path, _, query = path.partition("?")
+          if ".." in path.split("/"):
+              sys.exit("The path must not climb out of /api/")
+          url = "https://tdx.transportdata.tw" + path + ("?" + urllib.parse.quote(query, safe="$&=,:'()%+-_./") if query else "")
+
+          def fetch(request, step):
+              try:
+                  with urllib.request.urlopen(request, timeout=60) as response:
+                      return response.read()
+              except urllib.error.HTTPError as error:
+                  # TDX's error bodies say what is wrong (a bad client, an
+                  # unknown path) and hold no secret.
+                  sys.exit(f"{step} failed: HTTP {error.code} {error.read()[:300].decode('utf-8', 'replace')}")
+              except urllib.error.URLError as error:
+                  sys.exit(f"{step} failed: {error.reason}")
+
+          payload = urllib.parse.urlencode({
+              "grant_type": "client_credentials",
+              "client_id": client_id,
+              "client_secret": client_secret,
+          }).encode()
+          token = json.loads(fetch(urllib.request.Request(
+              "https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token",
+              data=payload,
+              headers={"Content-Type": "application/x-www-form-urlencoded"},
+          ), "The token")).get("access_token")
+          if not token:
+              sys.exit("The token request answered without an access_token")
+          print("Token: received")
+
+          body = fetch(urllib.request.Request(url, headers={"Authorization": "Bearer " + token, "Accept-Encoding": "identity"}), "The API")
+          with open("tdx-response.json", "wb") as file:
+              file.write(body)
+          print(f"API: {path} answered {len(body):,} bytes")
+          try:
+              data = json.loads(body)
+              if isinstance(data, list):
+                  print(f"A list of {len(data)}")
+              elif isinstance(data, dict):
+                  print("Keys: " + ", ".join(f"{key} ({len(value)})" if isinstance(value, list) else key for key, value in data.items()))
+          except ValueError:
+              print("Not JSON")
+          print("TDX API connection successful")
+          PY
+
+      - name: Keep the answer
+        uses: actions/upload-artifact@v7
+        with:
+          name: tdx-response
+          path: tdx-response.json
+          retention-days: 7
+          if-no-files-found: error

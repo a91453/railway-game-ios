@@ -20,6 +20,10 @@ not only Claude Code. Read it first and follow it. In particular:
   personal data: this repository is public.
 - Never commit to `main`, merge a pull request or enable auto-merge.
 - Report every check as **VERIFIED** (it ran, and where) or **UNVERIFIED**.
+- A choice that would otherwise wait for the owner is made by the agent
+  itself from five angles, one line of reason each in the pull request:
+  player, railway fan (how true it is to real railways and their data),
+  developer, art and music (`CLAUDE.md`, Workflow).
 - On a hard problem, first see whether the owner's reference repository has
   something to port, then look for open-source projects on GitHub, minding
   their licenses (`CLAUDE.md`, after the reference check). When neither has
@@ -73,9 +77,9 @@ author's time spent coordinating):
 
 - **Claude Code**: the core and its integration. Everything above, features
   that span GameCore, GamePresentation and the App, hard bugs, and the
-  resident roles in `docs/HANDOFF.md` (planning, merge coordination,
-  dispatch). Only the merge coordination session merges, for every agent's
-  pull requests.
+  resident role in `docs/HANDOFF.md` (planning, which also takes the
+  player reports and bugs). The author merges every agent's pull requests,
+  or a session the author authorizes for it (`docs/HANDOFF.md` §1.2).
 - **Codex**: independent engineering and a second review. A complete,
   checkable task with its own files: a panel or screen a written
   specification describes, UI and regression tests, CI scripts, `tools/`
@@ -104,8 +108,8 @@ How they work together:
   pull request, not only in its own conversation.
 - Mark who made a pull request: Codex branches start with `codex/` and its
   commits end with `Agent: Codex`; Antigravity branches start with
-  `gemini/` and its commits end with `Agent: Antigravity`. Merge
-  coordination finds the author of a failing commit by this trailer (Claude
+  `gemini/` and its commits end with `Agent: Antigravity`. Whoever looks
+  into a red `main` finds the author of a failing commit by this trailer (Claude
   Code's commits carry `Claude-Session:`) and hands the failure to the
   author, who passes it to that agent.
 - Comments on GitHub are posted as the author's account: never write

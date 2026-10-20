@@ -116,7 +116,10 @@ final class RealWorldMapTests: XCTestCase {
             let launcher = GameLauncher(library: library, language: .english)
             launcher.startNewGame(at: paris)
             let seed = try XCTUnwrap(launcher.session?.world.demandEvents?.seed)
-            XCTAssertEqual(launcher.session?.world, .newGame(anchor: paris, eventSeed: seed, rules: .simple))
+            var expected = GameWorld.newGame(anchor: paris, eventSeed: seed, rules: .simple)
+            // A real-world new game has riders changing from real railways (decision 298).
+            expected.setRealTransfers(true)
+            XCTAssertEqual(launcher.session?.world, expected)
             launcher.returnToStart()
             let autosave = try XCTUnwrap(launcher.autosave)
             XCTAssertEqual(autosave.summary?.realWorld, true)

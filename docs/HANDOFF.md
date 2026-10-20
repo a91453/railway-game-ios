@@ -13,37 +13,47 @@
 
 ## 1. 常駐的 session 與角色
 
-作者用幾個常駐 session 分工。這些 session 會換人，換的時候照這一節接手。
+作者 2026-10-20 把常駐 session 減成一個：遊戲規劃兼派工。合併協調不再常駐，合併由作者做，§1.2 留作合併與發版的檢查清單。原因是額度：常駐 session 每一輪都要重讀整段對話，連被 PR 事件或排程叫醒也一樣，對話越長越貴。舊的遊戲規劃 session 開了兩天，用量已經碰到每週額度的警告。舊文件裡寫「派工 session」的地方，現在都是遊戲規劃。
 
 | 角色 | 現在的 session | 做什麼 | 交接 |
 | --- | --- | --- | --- |
-| 遊戲規劃（決策） | session_01V1xd3H9vNkuZoSA3czNfGm（2026-10-16 起；前任 session_018D6gYU1yiZMtxSmNNU1K17，對話太長交接） | 從玩家、開發、美術、音樂四個角度決定優先順序與設計，開實作 session 並派工，寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1 節 |
-| 合併協調 | session_01QoA24EvFCFbmbcM1EwaZT7（2026-10-16 起；前任 session_016sNs4eeZwga9hz1CCHkpmX。作者本人確認授權前只巡查、不合併；這段時間由遊戲規劃照作者「由你四方思考後決定」合併） | 照批次規則合併、發 GameCore CI 名額、看 main 的 CI 與 full lane、發版前檢查 | 第 1.2 節 |
-| 派工（玩家回報與 bug） | session_01MJ7sdeid5DAFjSVbTkmdi3（2026-10-16 起；前任 session_01AaAj4wvJMxJQuLWAoYu6S8） | 收作者轉來的回報與 bug，開修正 session | 第 1.3 節 |
-| 每日 Threads 開發日誌 | 排程「每日 Threads 開發日誌」（台灣時間每天 21:43）觸發遊戲規劃，由它開寫作 session；換遊戲規劃 session 時，排程要改到新 session | 寫當天的串文草稿，用 SendUserFile 交給作者；不 commit、不發布 | 派工單照 2026-10-14、10-15、10-16 的寫作 session |
+| 遊戲規劃（兼派工） | session_01WW7o3decEv5LY59nYVqnDN（2026-10-20 起，作者：「接手 角色表中遊戲規劃的工作」；前任 session_01V1xd3H9vNkuZoSA3czNfGm（10-16 至 10-18）、session_018D6gYU1yiZMtxSmNNU1K17。換手照 §1.1） | 從玩家、開發、美術、音樂四個角度決定優先順序與設計，開實作 session 並派工，收作者轉來的玩家回報與 bug（§1.3），寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1、1.3 節 |
+| 每日 Threads 開發日誌 | 排程「每日 Threads 開發日誌」（`trig_01342WWauXtTPc87kNedEhb9`，台灣時間每天 21:43，2026-10-18 起暫停）觸發遊戲規劃，由它開寫作 session。排程還綁在前任 session_01V1xd3H9vNkuZoSA3czNfGm；排程的綁定改不了，作者要重新打開時，由現任遊戲規劃用同一份 prompt 建一個綁到自己的新排程，再刪掉舊的 | 寫當天的串文草稿，用 SendUserFile 交給作者；不 commit、不發布 | 派工單照 2026-10-14、10-15、10-16 的寫作 session |
+
+不再常駐（2026-10-20 停用）：合併協調 session_01QoA24EvFCFbmbcM1EwaZT7（前任 session_016sNs4eeZwga9hz1CCHkpmX）、派工 session_01MJ7sdeid5DAFjSVbTkmdi3（前任 session_01AaAj4wvJMxJQuLWAoYu6S8）。兩個都從 2026-10-17 起沒有動作。
+
+**額度**（作者 2026-10-20 同意的做法）：
+- 實作 session 同時 2–4 個。GameCore 的完整 tier 本來就最多 2 個，macOS runner 也只有 5 台，開更多只是排隊。
+- 實作 session 做完一件就收工：在 #231 留合併紀錄、把沒做完的寫進這份。不要留著等下一件。
+- 常駐 session 的對話太長（大約超過 20–30 萬 token）就照 §1.1 換手，靠這份接手，不靠舊對話。
+- 研究、寫文件可以用較低的思考強度；GameCore 的難題用高的。
+- 對話到一定長度就自動壓縮：`.claude/settings.json` 的 `autoCompactWindow` 是 400000（2026-10-20，作者：「你四方思考後決定」）。雲端 session 另外帶 `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=80`，所以實際大約在 32 萬 token 時壓縮（推算，沒有實測）。壓縮會把舊對話摘要，作者的原話、量到的數字要在壓縮前寫進 PR、#231 或這份。不要這個設定時，刪掉那一行就好。
+  - Claude Code 只讀 session 根目錄的 `.claude/settings.json`。同時掛好幾個 repo 的雲端 session，根目錄是上一層，讀不到 repo 裡這一行。所以作者也在雲端環境加了環境變數 `CLAUDE_CODE_AUTO_COMPACT_WINDOW=400000`（2026-10-20），它比設定檔優先，不管掛幾個 repo 都生效。
+  - 要確認一個 session 有沒有套用，執行 `env | grep COMPACT`。
+  - 要改值，兩處一起改。
 
 ### 1.1 遊戲規劃
 
-- **做決定的方式**（作者 2026-10-14「我不再做決定，都以這個當預設」，10-15 加音樂）：四個角度各一行理由寫進 PR；其他選項的預覽留在 PR；然後就做。作者自己保留：TestFlight 發版、Apple 帳號與 App Store Connect、secrets、加依賴、用 copyleft 或沒授權的程式碼。
+- **做決定的方式**（作者 2026-10-14「我不再做決定，都以這個當預設」，10-15 加音樂，10-20 加鐵道迷）：五個角度（玩家、鐵道迷、開發、美術、音樂）各一行理由寫進 PR；鐵道迷看真實度與資料來源，和真實鐵路無關就寫「鐵道迷：無」；其他選項的預覽留在 PR；然後就做。作者自己保留：TestFlight 發版、Apple 帳號與 App Store Connect、secrets、加依賴、用 copyleft 或沒授權的程式碼。
 - **排序**：NEXT_PRIORITIES §14 的權重（玩家 30、開發 25、美術 15、鐵道迷＋產品 15、音樂 15）；§15 是參考庫還沒做的項目與 2026-10-16 的順序。
-- **一條線一次一個 PR**：前一個合併再開下一個（§14.4）。同時跑全套 Swift CI 的 GameCore PR 最多 2 個，名額由合併協調發。
+- **一條線一次一個 PR**：前一個合併再開下一個（§14.4）。同時跑全套 Swift CI 的 GameCore PR 最多 2 個；開 PR 前先看 #231 與開著的 PR 還有沒有名額。
 - **每次發版**：
   - 發版前：改 `.github/testflight-whats-new.md`（它只在上一版之後有改動時才會被用，沒改就是自動列出的 PR 清單）。
   - 發版後：看 `testflight.yml` 的 run 號與 commit，記進 `docs/research/PLAYER_FEEDBACK.md`。版本號是 0.5.0 (run 號.1)。
 - **踩過的坑**：
   - 不要憑記憶說版本號，查 `testflight.yml` 的 run。2026-10-16 把 66.1 當成 64.1。
   - 發版前要收工時，叫 session「做完再停」，不要叫它把做一半的東西留給之後（作者 2026-10-16：「記得不要暫停讓他們做完」「不要限制 可以任意開 pr 但就是收工」）。
-  - session 停下來，不一定是因為發版。重開之前先問派工 session，或讀那個 session 自己的紀錄。例：語言選單是作者說「先不要動」才停的，不是發版；後來作者本人在那個 session 回「四方決定要不要繼續」，才重開成 #727。
+  - session 停下來，不一定是因為發版。重開之前先讀那個 session 自己的紀錄與 #231。例：語言選單是作者說「先不要動」才停的，不是發版；後來作者本人在那個 session 回「四方決定要不要繼續」，才重開成 #727。
   - 給實作 session 的派工單要對照 art-style §7 的現行規則：參考庫的模型「任意組合、成品跟原本不同」，不是「能搬就搬」。
   - 同時開好幾個 session，它們會在幾分鐘內登記同一個決策號（2026-10-16：三個都登記 256；2026-10-17：#774 與 #776 都用 271，照登記先後 #776 改成 272）。派工單裡直接寫好號碼；或開完之後看一次 #231，照登記先後重排並留言。
 
-- **換手**（2026-10-16，作者：「你太長了接手」）：遊戲規劃的對話太長時，開新 session 接手。新 session 的派工單要寫清楚現在進行到哪、等誰；每日開發日誌的排程改到新 session；在 #231 留言、通知合併協調與派工；這一節第 1 節表格的 session 改成新的。
+- **換手**（2026-10-16，作者：「你太長了接手」）：遊戲規劃的對話太長時，開新 session 接手。新 session 的派工單要寫清楚現在進行到哪、等誰；每日開發日誌的排程改到新 session；在 #231 留言；第 1 節表格的 session 改成新的。
 
-### 1.2 合併協調
+### 1.2 合併與發版的檢查
 
-（合併協調 session 2026-10-16 寄來的交接原文，整理成條列。）
+（合併協調 session 2026-10-16 寄來的交接原文，整理成條列。2026-10-20 起沒有常駐的合併協調：合併的是作者；作者在某個 session 裡授權它合併，或要發版時開一個短 session 確認，那個 session 就照這一節。）
 
-**權限**：作者授權這個角色合併 PR（CLAUDE.md 的「never merge a PR」只對這個角色放寬）。不開 auto-merge、不 force-push、不碰 `testflight.yml`。
+**權限**：只有作者本人在那個 session 裡授權了才合併（CLAUDE.md 的「never merge a PR」只在這時放寬）。不開 auto-merge、不 force-push、不碰 `testflight.yml`。
 
 **每個 PR 合併前確認**（`pull_request_read` 的 get 與 get_check_runs）：
 - 不是 draft，`mergeable_state` 是 `clean`。
@@ -113,14 +123,14 @@
 - 不要取消 main 的 `ci.yml` push run。只能取消自己用 workflow_dispatch 跑的 full lane，或 PR 的 run。
 - #697 把選單從 6 列改成 8 列，SettingsUITests 跟著紅了三支（#706 改回 6 列）。改版面的 PR 要預期 full lane 會連帶紅。
 
-### 1.3 派工
+### 1.3 派工（遊戲規劃兼任）
 
-（派工 session 2026-10-16 寄來的交接原文，整理成條列。）
+（派工 session 2026-10-16 寄來的交接原文，整理成條列。2026-10-20 起由遊戲規劃兼任。）
 
 **職責**：
 - 接作者轉來的 TestFlight 玩家回報與 bug，到最新 main 查證，有問題就用 `create_session` 派修正 session，結果轉告作者。
 - 也盯 main 的 full lane（iOS App Build／ios-full-lane），紅了就派人修。
-- 不合併 PR，合併是合併協調或作者的事。
+- 不合併 PR，合併是作者的事（§1.2）。
 
 **查證**：
 - `git fetch origin main` 之後 grep 相關程式，先分清楚是 App 的 bug、過時的測試，還是已經修過。
@@ -134,13 +144,13 @@
 - 不改 golden、SaveFixtures、ReplayFixtures 的值；
 - 要協調的對象：改同一個檔案的 session；GameCore 的完整 tier 同時最多 2 個；
 - 驗證方式：本機只跑快速檢查；UI 測試只用 `ios-build.yml` 的 `only_testing`；
-- 收尾：draft → 綠 → ready → 在 #231 留「可合併」→ 用 send_message 告訴派工與合併協調；
+- 收尾：draft → 綠 → ready → 在 #231 留「可合併」→ 用 send_message 告訴遊戲規劃；
 - 禁止：合併、auto-merge、推 main、`testflight.yml`、`@claude`、在 repo 裡寫模型名稱。
 
 **作者的偏好**：
 - 只回報「完成」或「需要決定」，簡短白話。不要一直報中間進度，作者抱怨過「怎麼一堆回報」。
 - 回玩家的話要簡單、和藹、親近、簡短，不要兇。
-- 選項、外觀、預設值、順序、golden 值的變更，由 session 自己從各個角度決定（現在是玩家、開發、美術、音樂四個），PR 裡每個角度寫一行。
+- 選項、外觀、預設值、順序、golden 值的變更，由 session 自己從各個角度決定（現在是玩家、鐵道迷、開發、美術、音樂五個），PR 裡每個角度寫一行。
 - 作者自己保留：TestFlight 發版、Apple 帳號與 App Store Connect、secrets、新增依賴、copyleft 或沒有授權的程式碼。
 - 作者說過「不要限制，可以任意開 PR」：收尾時開幾個 PR 都可以，不用先問。
 
@@ -155,17 +165,21 @@
 - 交代彎道限速時要和區間閉塞一起考慮。
 - GitHub MCP 會間歇斷線，斷了等它重連再查。
 
-## 2. 正在做的線（2026-10-17 下午）
+## 2. 正在做的線（2026-10-20）
 
 作者 2026-10-17 讓各線開工，合併交給遊戲規劃（「交給你綠了就合 紅了解衝突」、「由你四方思考後決定」）。分工照 `AGENTS.md`：Claude 做核心與整合，Codex 做 UI 測試、工具與獨立審查，Antigravity 做網頁試看與畫面。
 
 | 線 | 誰 | 狀態 | 下一步 | 動 GameCore |
 | --- | --- | --- | --- | :-: |
-| 核心玩法：規則、配車、關卡、回饋第二批 | session_01Q48iRY9H6EmeUL8NPyfiDW | 第 1–5 個 PR 與決策 264 的後續已合併（決策 258、264、266、271）；收尾 #779（決策 273）；回饋第二批全部做完：#780（決策 274）、#792 每趟蓋章與 #795 長按路線看旅程（決策 276）；#785 延後的三項 #789（決策 275）、#790 | 高鐵示範（NEXT_PRIORITIES §16 第 4 項）：快轉 #801 已合併；#669 的長進路死結與台南—左營交會是決策 278（#804，已合併）：號誌開＋閉塞時白天不再死結、取消 60 → 45 班。北端夜裡的死結是決策 280（`claude/hsr-north-depot-room`：機廠有空股才入庫，機廠的股道算終點站的盡頭；取消 45 → 32 班）；計算時間是 `claude/hsr-traffic-speed`（結果逐位元不變，`docs/research/APP_TICK_COST_2026-10-18.md` §6）。左營出入線是決策 281；南港咽喉與照地形建是決策 283（`claude/hsr-nangang-throat`）。左營咽喉白天的死結是決策 287（`claude/hsr-zuoying-throat`）：看了第一個死結，是調度不是軌道。閉塞分界設在上行線匯入的斜線旁（決策 281 為出入線加的節點），進站的車停在那裡擋住出站的路，和要讓出股道的閒置車互等；分界改成只設在列車停下來不會妨礙別條軌道的地方，取消 86 → 44 班（平地 129 → 46）。照地形建時夜裡出庫的死結是決策 290（`claude/hsr-zuoying-depot-exit`）：有班次的路線，終點站有一股沒有車停、也沒有車正開往才從機廠出庫，並開往那一股；照地形一天取消 44 → 30、每小時結束時都沒有死結（平地 46 → 33）。「剛入庫 16 分鐘又出庫」是另一個機制（班次晚了、在等的車拿不到路時，出庫的判斷把它們當成趕不上），試過讓兩邊一致，量了變差（照地形 30 → 40），不採用。決策 290 之後剩下的取消逐班分類寫在 `docs/research/HSR_SIGNAL_BASELINE_2026-10-15.md` §13：最多的是接班的車晚到（晚點四成多來自快車跟在慢車後面，排定待避一次都沒排出來），其次是左營咽喉被一百多 km 外的進站車整段占著。決策 294（`claude/hsr-overtake-approach`）兩條一起改：時刻表裡的待避照排（慢車停側線等快車，最多多等 5 分），長區間的列車離站 14 km 內才排進站的路；照地形取消 30 → 13、平地 33 → 22。只做其中一條時某一種建法會變差，數字在決策 294 的「試過、不採用」。機廠與終點站之間的來回（作者這輪的第 3 步）由 session_01KFRB53UNrJR1yVGu2fGJog 接手做成決策 296（`claude/hsr-depot-shuttle`）；下一步是作者提的車輛運用（原車接下一班、閒得久的才入庫，寫在決策 296 的「下一步」）。剩下的寫在決策 294 的「下一步」：平地白天短暫的死結（第 4 步，還沒看）、出站的路上停著的車不能跟（決策 212 的 (C)）、咽喉的容量與南港往台北共用上行線（軌道，§10）、計算時間（一天照地形 1,657 秒）、要不要讓示範的號誌與閉塞一起打開。第 6 個 PR（GameCore 的新目標）先不做。UI 測試交給 Codex（決策 266、271、273、274、276 列了要補的） | 是（決策 280、283、287、288、294） |
+| 核心玩法：規則、配車、關卡、回饋第二批 | session_01Q48iRY9H6EmeUL8NPyfiDW | 第 1–5 個 PR 與決策 264 的後續已合併（決策 258、264、266、271）；收尾 #779（決策 273）；回饋第二批全部做完：#780（決策 274）、#792 每趟蓋章與 #795 長按路線看旅程（決策 276）；#785 延後的三項 #789（決策 275）、#790 | 高鐵示範（NEXT_PRIORITIES §16 第 4 項）：快轉 #801 已合併；#669 的長進路死結與台南—左營交會是決策 278（#804，已合併）：號誌開＋閉塞時白天不再死結、取消 60 → 45 班。北端夜裡的死結是決策 280（`claude/hsr-north-depot-room`：機廠有空股才入庫，機廠的股道算終點站的盡頭；取消 45 → 32 班）；計算時間是 `claude/hsr-traffic-speed`（結果逐位元不變，`docs/research/APP_TICK_COST_2026-10-18.md` §6）。左營出入線是決策 281；南港咽喉與照地形建是決策 283（`claude/hsr-nangang-throat`）。左營咽喉白天的死結是決策 287（`claude/hsr-zuoying-throat`）：看了第一個死結，是調度不是軌道。閉塞分界設在上行線匯入的斜線旁（決策 281 為出入線加的節點），進站的車停在那裡擋住出站的路，和要讓出股道的閒置車互等；分界改成只設在列車停下來不會妨礙別條軌道的地方，取消 86 → 44 班（平地 129 → 46）。照地形建時夜裡出庫的死結是決策 290（`claude/hsr-zuoying-depot-exit`）：有班次的路線，終點站有一股沒有車停、也沒有車正開往才從機廠出庫，並開往那一股；照地形一天取消 44 → 30、每小時結束時都沒有死結（平地 46 → 33）。「剛入庫 16 分鐘又出庫」是另一個機制（班次晚了、在等的車拿不到路時，出庫的判斷把它們當成趕不上），試過讓兩邊一致，量了變差（照地形 30 → 40），不採用。決策 290 之後剩下的取消逐班分類寫在 `docs/research/HSR_SIGNAL_BASELINE_2026-10-15.md` §13：最多的是接班的車晚到（晚點四成多來自快車跟在慢車後面，排定待避一次都沒排出來），其次是左營咽喉被一百多 km 外的進站車整段占著。決策 294（`claude/hsr-overtake-approach`）兩條一起改：時刻表裡的待避照排（慢車停側線等快車，最多多等 5 分），長區間的列車離站 14 km 內才排進站的路；照地形取消 30 → 13、平地 33 → 22。只做其中一條時某一種建法會變差，數字在決策 294 的「試過、不採用」。機廠與終點站之間的來回（作者這輪的第 3 步）由 session_01KFRB53UNrJR1yVGu2fGJog 接手做成決策 296（`claude/hsr-depot-shuttle`）；作者提的車輛運用（原車接下一班、閒得久的才入庫）試過、不採用（照地形取消 13 → 24，數字在決策 296「下一步」第 1 點的「之後」）。剩下的寫在決策 294 的「下一步」：平地白天短暫的死結（第 4 步，還沒看）、出站的路上停著的車不能跟（決策 212 的 (C)）、咽喉的容量與南港往台北共用上行線（軌道，§10）、計算時間（一天照地形 1,657 秒）、要不要讓示範的號誌與閉塞一起打開。第 6 個 PR（GameCore 的新目標）先不做。UI 測試交給 Codex（決策 266、271、273、274、276 列了要補的） | 是（決策 280、283、287、288、294） |
 | 3D 生活感 | Claude session_01EPkWLr5a25LyJvCuvh1U3R | 四步完成：#734（259）、#745（263）、#765（267）、#768（268）、#769（269）、#771（270）；#770 收尾 #752；#772 修 71.1「3D 一放大就跳回 2D」；#776 配色亮度（決策 272）；#788 場景快取；#793 Meshy 試做模型規格與讀檔；#794 雨天的光線與霧（決策 277） | 決策 277 的後兩步：(a) 雨絲，等 72.1 的 fps 沒問題再做；(b) 站前商店街（條紋雨遮、屋頂立牌、下照燈），等 fps 確定有餘裕。店名、站名、招牌配色要換成本專案自己的，不沿用參考原作那五家店與「晴川站」（art-style §7） | 否 |
 | 關卡的 UI 測試、full lane、GLB 轉換器 | Codex | 三張卡都已合併（2026-10-18）：#784 關卡 UI 測試（`LessonUITests` 12 個，決策 271 列的五項都有）；#802 full lane 拆工作（`LessonUITests` 自己一個 iPhone job `FULL_LANE_LESSONS_JOB`、`-lesson-stars` 檔名常數改 public、`FlexDispatchPropertyTests` 搬到較短的 shard）；#803 GLB → `.m3dmodel` 轉換器（`tools/glb-to-m3dmodel/`，Meshy 公車 1,543 面、8 色）。之後 #821 Peakline 圖資研究（§4.5） | (1) 公車模型接進 App：3D session 做（`Resources/Models/`、XcodeGen 重新產生 `.xcodeproj`、取決策號；模型在 `docs/art/meshy-city-bus-2026-10-18/city-bus.m3dmodel`，轉換器已把車頭轉成 +x）；(2) meshopt／量化與 `.gltf` 橋接已實作於 `codex/glb-meshopt-bridge`，使用／接手點見第 7.3 節；App 接入仍由 3D session 做 | 否 |
 | 開發工具 | Claude session_011Z9h1X1GcZZ3i1EKEEjDZj | `GameSim` #740（決策 260）、`Policy` #748（決策 261）、文件數字檢查 #760 都已合併 | 第 7.4 節剩下的項目 | 否 |
 | 示範地圖照真實的高架與隧道（決策 279、281） | Claude session_01KeynzCwtDyLHTUYBfKxy1c（作者直接交辦） | #805、#807、#808、#809 已合併（瑞芳／平溪示範、宜蘭線示範、沿真實鐵路描線、參考庫新版）；`claude/hsr-real-structures`：左營機廠的出入線；高鐵示範照真實高架與隧道的建法做好，開關先關（決策 281） | Claude platform 做完（`claude/hsr-nangang-throat`，決策 283）：南港咽喉的卡死修好（遲到的車還在終點站的股道上，進站的車改去空的一條；沿路看對向車 20 km；兩列都還沒上共用軌道時遠的等近的），開關打開，號誌關的一天 `HighSpeedDemoDayTests` 全過。號誌開＋閉塞重量的結果：左營咽喉白天就卡住（平地 09 時、照地形 16 時起），下一步見決策 283。決策 287 看了第一個死結：是閉塞分界的位置（調度），不是出入線和進站的車共用咽喉，**軌道這邊不用改**。決策 290 做完夜裡出庫的死結（調度：終點站有空股才出庫），重量一天：照地形每小時結束時都沒有死結，所以**軌道仍不用為了死結改**。軌道這邊之後可以評估的（都不急，是示範的真實度與咽喉容量，不是死結）：出入線分成入庫、出庫兩條；左營咽喉照真實改成雙線加交叉渡線（現在八股只靠下行線上一串轉轍器） | 否（決策 283、287 動 GameCore） |
+
+**main 的 full lane 紅燈（遊戲規劃 2026-10-20 派工）**：main 的 `ios-build.yml` full lane 從 784bb3a（#833，10-19 16:41）起連續 7 次紅，最後一次綠是 ae77ab4（#827，run 39254620337）。每次都紅的是 `LineDraftSummaryUITests` 兩個（#835 新加）、`NextStepChipUITests.testANewGamesNextStepOpensTheGoals`（#842 新加）、`RealWorldMapUITests.testThePlatformConfirmStaysAboveTheDockUnderATallBanner`。時紅時好的是 `LessonUITests` 第 8、9 課（清單捲不到按鈕）。已派 session_01MV9BgbHcs7XFafNDk76DyD：先分清楚是 App 的 bug 還是測試過時，再修，用 `only_testing` 驗證。修好以前不發版。
+  - **修了**（session_01MV9BgbHcs7XFafNDk76DyD，`claude/full-lane-red-1020`，原因與證據在那個 PR 的說明）：`NextStepChip` 不是按鈕（App）；路線面板加第一站後停在原處、表單在畫面外（App，決策 299）；月台測試點到 #839 的涵蓋捷徑、第二個月台的偏移超過 80 m 月台（測試）；第 8 課的拖曳落在面板的捲軸上（測試）。
+  - **還沒查**（修完後的 full lane 再紅才查）：第 9 課 `testTheNinthLessonsSightOpensItsTourismPanel` 只在 784bb3a 紅過一次，那時 #840 還沒合併，和它無關；`CoverageShortcutUITests:16`、`LineDraftSummaryUITests:75` 的 `Failed to get background assertion`（Simulator 逾時）；`StartSaveFlowSmokeTests:499` 的 `menu.backToStart` 沒停穩。各只紅過一次。
 
 **決策 284–286 的 iPhone UI 測試（Codex，`codex/feature-ui-284-286`）**：`Feature284To286UITests` 共 5 個測試，檢查新路線草稿的兩種警告、複線月台卡片與確認後的兩個月台項目、兩款觀光列車的型錄說明與選擇按鈕、景點的觀光列車加星文字。只放 full lane 的 `FULL_LANE_LESSONS_JOB`，PR gate 不加測試。Debug 參數 `-ui-testing -ui-test-world <name>` 可開 `separate-tracks`、`missing-platform`、`double-platform`、`catalog`、`sightseeing`；全部先存入每次清空的測試暫存 library，再經一般讀檔入口載入。VERIFIED：Linux Swift 6.4 的 warnings-as-errors build、5 種世界的建立與存讀一致、XcodeGen 2.46.0 產生專案；GitHub Actions／macOS 26.6.2、Xcode 26.6、iOS 26.5、iPhone 17 Pro 的 [only_testing run 39341335419](https://github.com/a91453/railway-game-ios/actions/runs/39341335419)（head `3fd877f0`）5/5 通過、0 failures，測試 298.160 秒，整個 UI 測試步驟 7:36，專案 drift check 與 build-for-testing 也通過。以最近成功的 lessons job 42:56 加上完整 7:36 保守估算是 50:32／75 分鐘；UI 步驟 36:44＋7:36＝44:20／55 分鐘，兩者都留十分鐘以上。UNVERIFIED：加入新類別後的整條 full lane、實體裝置與 Release archive。下一步：審查者從本卡 PR 的 Checks 接，合併後看正常的 full lane；本卡不另手動開整條 full lane。重現只用 `ios-build.yml` 的 `only_testing=RailwayGameUITests/Feature284To286UITests`。2026-10-20 依作者回報續解 PR #840：merge main `c46f5d2d`，唯一衝突是產生的 `project.pbxproj`，已用 XcodeGen 2.46.0 重建（重複產生結果相同），保留 main 新增的 `LineDraftSummaryUITests`、`CoverageShortcutUITests` 與其 App 元件。本卡的 5 個測試、Debug world、App 測試入口與 full lane 分配皆未改，`LinesPanel` 相對 main 仍只有新增 identifier；main 的新 UI 與其他 session 交接完整保留。merge 後 VERIFIED（Linux／官方 Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors -j 3` 乾淨通過（221.86 秒），5 種 Debug 世界重新建立並經 `SaveLibrary` 存讀一致；沒有跑本機全套測試。上述 5/5 Simulator 證據屬 merge 前 head；merge 後未另手動重跑，專案 drift、Xcode build 與 PR gate 看 PR #840 的新 Checks。存檔版本、決策編號、golden schema 不動。
 
@@ -641,7 +655,8 @@
 | 從空地畫的複線兩條之間沒有渡線：玩家在兩站點了不同的一條就不相連（70.1 的回報）。決策 284 只讓開新路線的字說出原因與接法；根本的做法是畫複線時兩端自動加渡線，或「月台」工具在複線上一次設兩條的月台，兩個都改建造規則，預覽寫在決策 284「沒選的」 | 決策 284、285、PLAYER_FEEDBACK 70.1 | **做了**（`claude/double-track-platforms`，決策 285）：選了第二種。「月台」工具點在複線的一條上、而旁邊那條和它不相連時，同一個動作兩條都設月台（同一站），兩站點了不同的一條也相連。兩條已經相連（有渡線）時照舊只設點的那條。剩下：從空地畫複線時兩端自動加渡線（第一種）沒有做，預覽在決策 285「沒選的」；待實機確認 |
 | 73.1 的「終點無法折返」只從截圖推斷是列車比月台長（決策 284 改了字）。玩家的實際配置沒有存檔：下一版請測試者用「回報問題」附存檔，確認不是別的原因（例如終點的盡頭線放不下整列車） | 決策 284、PLAYER_FEEDBACK 73.1 | 待實機確認 |
 | 提早折返（決策 255）後，列車卡的「本趟」仍從沒去的那一站算（74.1 截圖的「扒子岡 13:52 發」）。決策 288 已讓它照一般停站開走、時刻往前移，但卡片與跟隨列還沒說「在龜山提早折返」（決策 255 的「下一步」）。74.1 的玩家配置沒有存檔，下一版請測試者確認不再卡在那一站 | 決策 255、288，PLAYER_FEEDBACK 74.1 | **做了**（`claude/short-turn-card`，決策 255 的第二則「後來」）：卡片與跟隨列的本趟從折返站算，多一行「在龜山提早折返」。剩下：重複的時刻表認不出折返；74.1 待實機確認 |
-| NEXT_PRIORITIES §17 的乙線「現實路網」：~~真實車站當建議站點~~（決策 295，`claude/real-station-suggestions`）→ R1 轉乘站（實景地圖的玩家車站在真實車站 450 m 內，每天多一份外地旅次；GameCore，升存檔、取決策號、量平衡；**找真實車站用決策 295 的 `GameSession.nearestRealStation(to:within:)`**，不要另寫一份）→ R2 電腦的車照已打包的時刻表在 2D 地圖上跑（只畫）。甲線（M0 之後的 M1–M3、確認路線卡、空窗快轉）由做 M0 的 session 接著做 | 75.1 玩家建議（PLAYER_FEEDBACK 75.1 #1）、競品研究 #832；排序 2026-10-20 | 建議站點：session_01KFRB53UNrJR1yVGu2fGJog 做完（PR 待合併；圖釘的大小與好不好點待實機）。R1 沒有人接，另外登記、另開 PR |
+| NEXT_PRIORITIES §17 的乙線「現實路網」：~~真實車站當建議站點~~（決策 295，`claude/real-station-suggestions`）→ ~~R1 轉乘站~~（決策 298，`claude/r1-transfer-stations`，存檔 64）→ R2 電腦的車照已打包的時刻表在 2D 地圖上跑（只畫）。甲線（M0 之後的 M1–M3、確認路線卡、空窗快轉）由做 M0 的 session 接著做 | 75.1 玩家建議（PLAYER_FEEDBACK 75.1 #1）、競品研究 #832；排序 2026-10-20 | 建議站點：決策 295 已合併（圖釘的大小與好不好點待實機）。R1：決策 298 做完（session_01TePLuBqSCAQxMhhJBTJ8Cq）；待實機：車站卡那一行、新遊戲的開關；決策 298「下一步」列了 R2 要接的地方。R2 沒有人接，另外登記、另開 PR |
+| 乙線的資料與時段研究（`docs/research/RIDERSHIP_SOURCES_AND_TIME_OF_DAY_2026-10-20.md`）：(1) 台中捷運（data.gov.tw 175718，2025 年只有 7 個月、只有出站）與桃園機捷（164957，雲端容器連不上，要作者在台灣下載 2025 年 12 個 CSV）有各站運量，淡海、安坑、三鶯、高雄輕軌、林鐵沒有；(2) 遊戲的一天時段已經接近北捷，差的是潮汐（住宅站早上進站真實 40–46%、遊戲最多 28%），建議三步：量尺報告 → 潮汐開關（GameCore，升一次存檔、量平衡，排在 #851 之後）→ 實景地圖用內政部電信信令的日夜人口（取代 geo-scene 第 4 項）；(3) 北捷路線色維持 App 的值 | 作者問「台中桃園 輕軌 三鶯有網址嗎」「台北捷運有分時段…日間夜間模型」；遊戲規劃派工 2026-10-20 | 研究做完；三步都沒有人接，台中、桃園的運量工具也沒有人接，各自登記、另開 PR |
 | 參考庫 2026-10-20 新增的 `Railway/geo-scene-reference-clean/`（台灣地理資料包）：遊戲的鐵路、車站、地形、居民人口比它準，不換。要融合的：(1) 新車站命名的地名加內政部的聚落（800 m 內有名字的居民 89.0% → 95.6%）、旗津區用官方外框補（`tools/place-names/`）；(2) 3D 的廟放到真實的廟址（`religion/temples.pmtiles`，19,201 座）；(3) 白天人口的比例，和 R1 一起量（先查出處，原包寫「模擬」）；(4) 21 個 `approx` 景點逐個核對、節慶與景點新種類用它的百大宗教活動與古蹟（§16 第 5.5 項）；(5) R2 移植它的 `RailEngine`／`BusEngine`。Ookla 不能商用，不用。之後不只鐵路的「線」（公車接駁 → 離島渡輪 → 航空）的參考也在研究 §6，排在 §17 甲、乙兩線之後 | `docs/research/GEO_SCENE_REFERENCE_2026-10-20.md`、NEXT_PRIORITIES §18；參考庫 `b3af6d8` | (1) 修正 lane、(2) 3D 那條線，都沒有人接；(3)–(5) 跟著它服務的項目做 |
 | 刪掉快車停的站被拒絕時，字沒有說要先刪掉哪個停站模式 | 決策 291 的「下一步」、PLAYER_FEEDBACK 75.1 #2 | 沒有人接（GamePresentation 的小 PR） |
 
@@ -694,7 +709,7 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 | 長按路線看旅程（用車上與候車的乘客）、鏡頭自動縮放、弧線端點記號 | 決策 220 | 併進「回饋第二批」（第 3 節航空手感那一列） |
 | 景點新種類：廟宇、夜市、博物館（新圖示、新季節係數） | 決策 250 | 併進 §15.3「台灣節慶」或觀光列車；廟宇可以和 3D 的廟埕一起做 |
 | 真正的機客分離：機車掛上、摘下、換端（要改列車模型與存檔） | 決策 252 | 長期；觀光列車（§15.3）之後再評估 |
-| 觀光列車的後續：其他具名列車（山嵐號、鳴日號、環島之星、仲夏寶島號）、加價、故事（車種圖鑑）、季節、3D 模型、到站旋律 | 決策 286「下一步」 | 第一步（藍皮解憂號、海風號，停靠景點旁加 0.5★）#819 已合併；山嵐號（`SHANLAN`，數字照海風號）在 `claude/tourist-train-sanlan`。下一步照決策裡的順序，一個 PR 一項：鳴日號（機車＋5 客車，照藍皮解憂號的做法）→ 環島之星 → 仲夏寶島號，之後才是加價、故事、季節 |
+| 觀光列車的後續：其他具名列車（山嵐號、鳴日號、環島之星、仲夏寶島號）、加價、故事（車種圖鑑）、季節、3D 模型、到站旋律 | 決策 286「下一步」 | 第一步（藍皮解憂號、海風號，停靠景點旁加 0.5★）#819 已合併；山嵐號（`SHANLAN`，數字照海風號）#826 已合併。下一步照決策裡的順序，一個 PR 一項：鳴日號（機車＋5 客車，照藍皮解憂號的做法）→ 環島之星 → 仲夏寶島號，之後才是加價、故事、季節 |
 | 2D 車頭形狀多一種「機車頭」（`TrainNose`、`MapArt.drawCars`） | 決策 252 | 小 PR；美術線有空就做 |
 | 台鐵示範延長到七堵或蘇澳 | 決策 240 | 併進 §15.3「支線劇本」 |
 | 支線情境包：內灣線 → 深澳線 → 六家線、沙崙線（一條一個 PR，只加一筆 `BranchLineChallenge` 的資料、用報告量一次目標；六家、沙崙通到高鐵站，等高鐵示範那條線告一段落） | 決策 289「下一步」 | 第一條集集線在 `claude/branch-line-jiji`；做法、量法照決策 289 |
@@ -733,6 +748,7 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 | 3D 的「地圖風格」設定（換配色） | 決策 241 |
 | `tools/glb-to-m3dmodel` 靜態橋接已實作（`codex/glb-meshopt-bridge`）：`bridge.mjs --manifest` 讀 meshopt／量化 GLB 與 `.gltf`＋外部 `.bin`，用節點白名單、非 AI 來源／SHA 與 `recolorLightPaint: false`；只用固定版本的 core／extensions／meshoptimizer（五包 MIT），不用 functions。拒收貼圖、skin／動畫／morph 等；原 Meshy 入口與 #803 公車成品逐位元相同。接手從工具 README 與自製 `fixtures/static.manifest.json` 開始；App 接入、美術重組／配色、素材授權與實機幀數仍交 3D session，本工具 PR 不代表素材採用。之後另開 WorldCover 只上色圖層（參考庫 `build_worldcover.py` 與圖磚）與香港無貼圖量體任務 | `docs/research/PEAKLINE_MAP_ENGINE_STUDY.md` §8（#821）；補充與修正 `docs/research/PEAKLINE_STUDY_SUPPLEMENT_2026-10-19.md` §1–§4（#820）；轉換器原本是 Codex 的線（第 2 節） |
 | Metal 的色調映射與泛光（作者說留待以後） | `docs/art/map3d-night-terrain-2026-10-16/` |
+| Fenn 3D 研究的建議，照順序，一次一個 PR，都在現有的 Metal 裡做：(1) 夜晚與黃昏的泛光＋色調映射，就是上一列，作者說留待以後，所以排到作者要時再做；(2) 實景建物依面積與樓層挑台灣的外牆樣式，補屋頂設備與一樓店面（`Map3DRealBuildings.swift`，可寫 Linux 測試）；(3) 假光貼片：車頭燈、廟與店面往上打的光、招牌光暈。不換 MapLibre、Apple Maps 或 wgpu，不搬 Kenney，手機不開 AO 或高解析度陰影 | [FENN_3D_WORLD_STUDY_2026-10-19.md](research/FENN_3D_WORLD_STUDY_2026-10-19.md) §5（#824） |
 | 兩批生成素材：generated-2026-10-13（43 張）、micro3d（24 張），沒接進 App，也沒有「採用或放棄」的紀錄 | `docs/art/generated-2026-10-13/`、`docs/art/generated-2026-10-14-micro3d/` |
 
 ### 7.4 開發工具

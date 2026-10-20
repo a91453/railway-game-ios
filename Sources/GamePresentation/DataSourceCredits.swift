@@ -158,6 +158,31 @@ public enum DataSourceCredits {
                             ),
                         ]
                     ),
+                    // Decision 298: the real stations' riders a day, which
+                    // the transfers of a station by one follow
+                    // (`tools/real-ridership/`).
+                    DataSourceCredit(
+                        id: "ridership",
+                        title: language.text("Riders by station", "各站運量"),
+                        detail: language.text(
+                            "How many people use each TRA, High Speed Rail, Taipei Metro and Kaohsiung Metro station a day, in 2025: a station of yours beside one gets riders changing from the real trains in proportion.",
+                            "台鐵、高鐵、台北捷運與高雄捷運各站 2025 年平均每天的進出人數：你的車站在真實車站旁，轉乘過來的旅客照它的人數多寡。"
+                        ),
+                        notice: language.text(
+                            "Taiwan Railway Corporation, daily entries and exits by station; Taipei Rapid Transit Corporation, hourly entries and exits by station; Kaohsiung City Government, entries and exits by station of the Kaohsiung Metro: used under the Open Government Data License, version 1.0. Taiwan High Speed Rail Corporation, passengers entering and leaving each station, from its published operating statistics.",
+                            "國營臺灣鐵路股份有限公司「臺鐵每日各站點進出站人數」、臺北大眾捷運股份有限公司「臺北捷運各站分時進出量統計」、高雄市政府「高雄都會區大眾捷運系統各站旅運量入站、出站」，依「政府資料開放授權條款第 1 版」使用；台灣高速鐵路股份有限公司「客運運輸情形：各站進出旅客人數」，取自其公布的營運統計。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("TRA entries and exits", "臺鐵各站進出站人數"), url: "https://data.gov.tw/dataset/8792"),
+                            DataSourceCredit.Link(title: language.text("Taipei Metro entries and exits", "臺北捷運各站進出量"), url: "https://data.gov.tw/dataset/128506"),
+                            DataSourceCredit.Link(title: language.text("Kaohsiung Metro entries and exits", "高雄捷運各站旅運量"), url: "https://data.gov.tw/dataset/159641"),
+                            DataSourceCredit.Link(title: language.text("High Speed Rail operating statistics", "高鐵客運運輸情形"), url: "https://www.thsrc.com.tw/corp/9571df11-8524-4935-8a46-0d5a72e6bc7c"),
+                            DataSourceCredit.Link(
+                                title: language.text("Open Government Data License", "政府資料開放授權條款"),
+                                url: openGovernmentLicenseURL
+                            ),
+                        ]
+                    ),
                     // Decision 279: through the reference's
                     // `level-profiles.json`, the official railway and
                     // high-speed railway geometry that fills in

@@ -1,0 +1,29 @@
+{
+ "measure": "average riders a day: (entries + exits) / 2 over the year's days",
+ "period": {
+  "from": "20250101",
+  "to": "20251231"
+ },
+ "riders": {
+  "南港": 11090,
+  "台中": 37887,
+  "台北": 47192,
+  "台南": 14425,
+  "嘉義": 9195,
+  "左營": 29402,
+  "彰化": 2621,
+  "新竹": 21577,
+  "板橋": 16051,
+  "桃園": 26857,
+  "苗栗": 3617,
+  "雲林": 4938
+ },
+ "source": {
+  "downloaded": "2026-10-20",
+  "licence": "The company's published operating statistics; no open-data licence. Only each station's yearly totals are taken, credited to Taiwan High Speed Rail.",
+  "page": "https://www.thsrc.com.tw/corp/9571df11-8524-4935-8a46-0d5a72e6bc7c",
+  "pageSha256": "fcb51c4a08e7d894092206694d2a6bbecf71feb7a0157bd3c71f3ead38f4405c",
+  "publisher": "台灣高速鐵路股份有限公司",
+  "title": "客運運輸情形：各站進出旅客人數"
+ }
+}
