@@ -283,14 +283,16 @@ extension GameWorld {
         return (legs, turnbacks)
     }
 
-    /// The first of `line`'s trains, in ID order, that `run` can send out
+    /// The first of `line`'s trains, in the order they take its runs
+    /// (``runTrainOrder(of:)``: the first to have come in under traffic
+    /// control, decision 297; otherwise in ID order), that `run` can send out
     /// now for game day `day`: one without a service, placed, with a rate
     /// above 0, stopped at the run's first stop, and able to drive it from
     /// there; under traffic control (Stage T) also able to take the route
     /// of its first departure now. With its index and timetable.
     func readyRunTrain(of line: ServiceLine, _ run: LineRun, day: Int64) -> (index: Int, timetable: [ScheduledStop])? {
         let first = line.stops[run.from]
-        for id in line.trains {
+        for id in runTrainOrder(of: line) {
             guard let index = trains.firstIndex(where: { $0.id == id }) else { continue }
             let train = trains[index]
             guard train.execution == nil, train.placement != nil, train.movement.rate > 0, isStopped(train, at: first),

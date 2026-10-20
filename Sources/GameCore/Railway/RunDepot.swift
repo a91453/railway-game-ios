@@ -32,10 +32,26 @@ extension GameWorld {
         return starts
     }
 
-    /// `line`'s trains without a service waiting at `station`, in ID
-    /// order: placed, with a rate above 0, stopped there.
+    /// `line`'s trains in the order they take its runs (decision 297):
+    /// under traffic control by when each last arrived where it stands
+    /// (the scheduled arrival of its last service or empty run, kept once
+    /// it ends; one never sent anywhere first), then by ID, so the train
+    /// that came in first takes the next run and the last in is the one
+    /// left over; otherwise in ID order.
+    func runTrainOrder(of line: ServiceLine) -> [TrainID] {
+        guard isTrafficControlEnabled else { return line.trains }
+        return line.trains.sorted { a, b in
+            let left = train(id: a)?.timetable.last?.arrival.seconds ?? .min
+            let right = train(id: b)?.timetable.last?.arrival.seconds ?? .min
+            return left != right ? left < right : a.rawValue < b.rawValue
+        }
+    }
+
+    /// `line`'s trains without a service waiting at `station`, in the
+    /// order they take its runs (``runTrainOrder(of:)``): placed, with a
+    /// rate above 0, stopped there.
     private func runTrainsWaiting(of line: ServiceLine, at station: StationID) -> [Int] {
-        line.trains.compactMap { id in
+        runTrainOrder(of: line).compactMap { id in
             guard let index = trains.firstIndex(where: { $0.id == id }) else { return nil }
             let train = trains[index]
             guard train.execution == nil, train.placement != nil, train.movement.rate > 0, isStopped(train, at: station) else { return nil }
@@ -85,7 +101,8 @@ extension GameWorld {
     /// `nil` (decision 221). Of its trains without a service waiting at a
     /// station other than its depots: one where no run of the line leaves,
     /// or, where more wait than runs leave within
-    /// ``runDepotLookahead``, the last in ID order. Under traffic control it
+    /// ``runDepotLookahead``, the last to have come in (in ID order with
+    /// traffic control off, see ``runTrainOrder(of:)``). Under traffic control it
     /// must be able to take its route now, and a train that came out of a
     /// depot to the stop stays while a run from there is due (decision
     /// 296).
