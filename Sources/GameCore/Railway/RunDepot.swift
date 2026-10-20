@@ -313,6 +313,9 @@ extension GameWorld {
                 wake(at: start - Self.runDepotLookahead)
                 wake(at: start - LineRun.earliestDispatch - Self.runDepotLookahead)
                 if let lead { wake(at: start - LineRun.earliestDispatch - lead) }
+                // Decision 296: once its first departure has passed, a
+                // train waiting for it counts as too late for it.
+                wake(at: start + 1)
                 wake(at: start + LineRun.latestDispatch + 1)
             }
         }
