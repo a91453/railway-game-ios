@@ -146,7 +146,7 @@ extension GameWorld {
         return awaitedRoute(of: id, memo: &memo)
     }
 
-    private func awaitedRoute(of id: TrainID, memo: inout DirectionMemo) -> (holder: TrainID, needs: Set<TrackResource>?)? {
+    func awaitedRoute(of id: TrainID, memo: inout DirectionMemo) -> (holder: TrainID, needs: Set<TrackResource>?)? {
         guard isTrafficControlEnabled, let train = train(id: id), train.position != nil else { return nil }
         if let wait = currentTrafficWait(train, plan: trafficPlan(memo: &memo), memo: &memo) { return (wait.other, nil) }
         if isFollowing(train, memo: &memo) {
