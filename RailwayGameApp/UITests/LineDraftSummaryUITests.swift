@@ -108,18 +108,20 @@ final class LineDraftSummaryUITests: XCTestCase {
         // 39461248592: 40 drags at x 835).
         XCTAssertTrue(list.appears(within: 10), "The lines panel's list")
         list.waitUntilStill()
+        let bar = app.navigationBars["Lines"]
         // Not loaded, the summary was looked for below, 40 drags away from
-        // it (run 39476430973).
+        // it (run 39476430973). Begun under the bar: the list runs on under
+        // it, and a drag begun on it moved nothing (run 39482371544).
         for _ in 0..<12 where above && !control.exists {
             let area = list.frame
+            let top = max(area.minY, bar.exists ? bar.frame.maxY : area.minY) + 12
             let start = app.coordinate(withNormalizedOffset: .zero)
-                .withOffset(CGVector(dx: area.minX + 8 - app.frame.minX, dy: area.minY + area.height * 0.2 - app.frame.minY))
-            start.press(forDuration: 0.1, thenDragTo: start.withOffset(CGVector(dx: 0, dy: area.height * 0.6)), withVelocity: .slow, thenHoldForDuration: 0.3)
+                .withOffset(CGVector(dx: area.minX + 8 - app.frame.minX, dy: top - app.frame.minY))
+            start.press(forDuration: 0.1, thenDragTo: start.withOffset(CGVector(dx: 0, dy: (area.maxY - top) * 0.6)), withVelocity: .slow, thenHoldForDuration: 0.3)
         }
         // Wholly on screen and under the bar: a row whose middle was in
         // the list's band lay at its bottom edge and never became hittable
         // (run 39471415591, "New Line…" under "Add a Train").
-        let bar = app.navigationBars["Lines"]
         XCTAssertTrue(app.dragUntilWhollyOnScreen(control, in: list, below: bar.exists ? bar.frame.maxY : nil), "Cannot scroll to \(control)")
         control.waitUntilSettled()
     }
