@@ -92,7 +92,14 @@ licence text and is not used; decision in `docs/HANDOFF.md` §2),
 `Railway/procedural_assets_reference_clean/`,
 `Railway/location_modeler_reference_clean/`,
 `Railway/night_district_reference_clean/` (each: start with its
-`00_READ_ME_FIRST.md`), and `city_map_reference_clean/` and
+`00_READ_ME_FIRST.md`), `Railway/geo-scene-reference-clean/` (added
+2026-10-20; a Taiwan geographic dashboard: MOI place names and township
+boundaries, temples, heritage, tourism, day/night population, hazards,
+bus routes, schedule-driven train and bus motion; start with its
+`00_READ_ME_FIRST.md`, `THIRD_PARTY_NOTICES.md` and
+`DATA_USE_NOTICES.json`; its Ookla files are CC BY-NC-SA and not used;
+which of its data beat the game's own is in
+`docs/research/GEO_SCENE_REFERENCE_2026-10-20.md`), and `city_map_reference_clean/` and
 `power_grid_reference_clean/` at the repository root (start with their
 `REFERENCE_COMPARISON.md` and `SANITIZATION_REPORT.md`).
 
