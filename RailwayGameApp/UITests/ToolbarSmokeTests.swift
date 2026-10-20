@@ -467,7 +467,10 @@ extension XCUIApplication {
     func openNewLineFromItsCard(required: Bool = true, file: StaticString = #filePath, line: UInt = #line) {
         let open = buttons["line.confirm.done"]
         guard open.appears(within: required ? 10 : 5) else {
-            if required { XCTFail("The new line's card did not rise", file: file, line: line) }
+            if required {
+                let up = buttons["line.confirm.back"].exists
+                XCTFail(up ? "The new line's card rose without Open Line" : "The new line's card did not rise", file: file, line: line)
+            }
             return
         }
         XCTAssertTrue(open.becomesHittable(within: 10), "Open Line on the new line's card is covered", file: file, line: line)

@@ -26,8 +26,20 @@ struct LineConfirmationCard: View {
                     if let preview {
                         trainsSection(preview, in: language)
                     }
-                    purchaseSection(preview, in: language)
+                    if preview == nil {
+                        Text(verbatim: language.text(
+                            "This line can't run as set. Go back and change the stops or the track.",
+                            "這條路線照這樣開不了。請返回改停靠站或軌道。"
+                        ))
+                        .font(.footnote)
+                        .foregroundStyle(Theme.warning)
+                    }
                 }
+            }
+            // Always in sight, under the list however far it is scrolled
+            // (a row below the fold is not loaded): what it costs, and Open Line.
+            .safeAreaInset(edge: .bottom) {
+                purchaseBar(session.lineConfirmationPreview, in: language)
             }
             .navigationTitle(Text(verbatim: language.text("New line", "新路線")))
             .navigationBarTitleDisplayMode(.inline)
@@ -186,8 +198,8 @@ struct LineConfirmationCard: View {
         }
     }
 
-    private func purchaseSection(_ preview: LineConfirmationPreview?, in language: DisplayLanguage) -> some View {
-        Section {
+    private func purchaseBar(_ preview: LineConfirmationPreview?, in language: DisplayLanguage) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
             if let preview {
                 Text(verbatim: preview.purchaseText(in: language))
                     .font(.subheadline.monospacedDigit())
@@ -198,13 +210,6 @@ struct LineConfirmationCard: View {
                         .foregroundStyle(Theme.warning)
                         .accessibilityIdentifier("line.confirm.shortfall")
                 }
-            } else {
-                Text(verbatim: language.text(
-                    "This line can't run as set. Go back and change the stops or the track.",
-                    "這條路線照這樣開不了。請返回改停靠站或軌道。"
-                ))
-                .font(.footnote)
-                .foregroundStyle(Theme.warning)
             }
             Button {
                 session.confirmLine()
@@ -218,6 +223,12 @@ struct LineConfirmationCard: View {
             .buttonStyle(ThemeProminentButtonStyle())
             .disabled(preview == nil || preview?.shortfall != nil)
             .accessibilityIdentifier("line.confirm.done")
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Theme.panel)
+        .overlay(alignment: .top) {
+            Rectangle().fill(Theme.panelBorder).frame(height: 1)
         }
     }
 }
