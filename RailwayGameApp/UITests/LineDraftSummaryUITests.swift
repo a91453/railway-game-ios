@@ -104,7 +104,7 @@ final class LineDraftSummaryUITests: XCTestCase {
         // its trailing edge, and every drag there misses it (run
         // 39461248592: 40 drags at x 835).
         XCTAssertTrue(list.appears(within: 10), "The lines panel's list")
-        list.waitUntilSettled()
+        list.waitUntilStill()
         XCTAssertTrue(app.scrollUntilShown(control, in: list), "Cannot scroll to \(control)")
         control.waitUntilSettled()
     }

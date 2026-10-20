@@ -43,7 +43,7 @@ final class ZoomRowUnderPanelUITests: XCTestCase {
         let panel = trailingList(in: app, within: 10)
         XCTAssertNotNil(panel, "The lines panel's list")
         guard let panel else { return }
-        panel.waitUntilSettled()
+        panel.waitUntilStill()
 
         let zoomIn = app.buttons["Zoom in"]
         XCTAssertTrue(zoomIn.appears(within: 10), "The zoom buttons stay beside the panel")
