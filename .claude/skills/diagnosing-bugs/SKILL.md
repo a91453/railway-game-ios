@@ -38,6 +38,7 @@ TestFlight 與 App Store Connect 的東西不在這裡查（CLAUDE.md：那是�
 | 整批推進和逐分推進結果不同 | 同一個世界兩種推法，比較狀態（做法見 `DepotShuttleTests.testABatchEndsWhereMinutesDo`）|
 | 和參照模型不同 | 對應的 differential 測試與 `Reference*.swift`（例如 `KernelDifferentialTests`、`ReferenceDeadlock.swift`）|
 | 舊存檔讀不回、replay checksum 移動 | `--filter SavedGameTests`、`--filter ReplayFixtureTests`、`--filter LongLegReplayTests`。fixture 與期望值都不能改（CLAUDE.md Architecture rules）|
+| 某件事剛發生後的存檔讀不回 | 在那件事前後**逐秒**存讀：`world.setSpeed(.x1)` 之後每 `advance(ticks: 10)` 是一秒，每秒看 `WorldInvariants.roundTripProblem(of:)`（`Tests/GameCoreTests/PropertySupport.swift`）。一次走一分鐘會漏掉只有幾秒的空窗（決策 288 的「後來」就是這樣漏的）|
 | CI 的某個 shard 紅 | 本機同一個 shard：`.github/scripts/swift-shards.sh run <shard>`；再縮成一個 `--filter`。不當成 flake 重跑 |
 | 某個 commit 之後才壞 | 把上面任一條包成腳本，`git bisect run <腳本>`；`main` 上被取代的 push 在 CI 沒有結果，照 CLAUDE.md 手動跑 `ci.yml` 二分 |
 | 原生 3D 畫面不對 | `tools/map3d-preview/`：`main` 與分支各畫同一個鏡頭（不是 Metal，實機要看 TestFlight）|

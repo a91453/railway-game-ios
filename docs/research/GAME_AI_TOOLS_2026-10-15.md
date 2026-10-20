@@ -357,6 +357,21 @@ MIT，`5beb35b`。給 Claude Code、Codex 等的 skill 集，主張「小、可�
 | ACE-Step 1.5 離線配樂 | **仍是作者的**：要改決策 219 §2.2（聲音全部自己合成）；遊戲規劃 2026-10-16 決定現在不加 | 本文件第 4 節；HANDOFF §3 |
 | 不加的 | motion、Remotion、GSAP、Stable Fast 3D、TRELLIS.2、Tripo 付費方案、騰訊兩個（授權不准在歐盟、英國、南韓用） | MOTION_3D_TOOLS §0、§6；本文件第 0 節 |
 
+### 6.5 diagnosing-bugs 的試用（第 6.3 節第一列）
+
+拿 Codex 審查 #828 的 R2（提早折返後幾秒內的存檔讀不回，#831 修好，決策 288 的「後來」）：
+
+- 在修之前的 commit（`a57ec61`）照 skill 第 1 節做會變紅的指令：`SharedSingleTrackTests` 的兩站世界，
+  折返前切到 `.x1`，之後每秒 `WorldInvariants.roundTripProblem(of:)`，共 180 秒。
+- **紅**：第 241–247 秒讀不回（`Train 2's service times are after the clock.`），248 秒起正常，
+  和審查報告的秒數相同。build 135 秒，測試本身 0.5 秒。
+- 同一個測試放到修好的 commit（`b6f04e4`）：**綠**，每一秒都讀得回。
+- 學到的：skill 的表原本把「存檔讀不回」指向存檔 fixture，抓不到這種只有幾秒的空窗；
+  原本的決策 288 測試也是一次走一分鐘才漏掉。表裡加了一列「逐秒存讀」。
+- 限制：試用前已從 #231 的留言知道原因，所以這次只證明「很快做得出會變紅的指令」，
+  沒有證明 skill 能從零找出原因；下一個真的新 bug 才看得出來。試用的測試沒有提交
+  （修好之後的 main 已有 #831 的回歸測試）。
+
 **VERIFIED**（這個容器，Linux）：8 個專案的授權檔；參考庫的 CP-SAT 腳本；skill 引用的測試類別、環境變數
 （`PROPERTY_REPLAY`、`PROBLEM_REPORT`、`TRAFFIC_TIMING_REPORT`、`TICK_REPORT`）與 GameSim 指令在 `b368ce7` 都存在。
 **UNVERIFIED**：8 個工具都沒有安裝或試跑；skill 還沒有在真的 bug 上用過。
