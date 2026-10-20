@@ -14,6 +14,9 @@ extension EnvironmentValues {
     /// (``mapInsets``' trailing inset): the details card ends there, and
     /// below it the map's bottom-trailing buttons keep to the edge.
     @Entry var mapTrailingInsetDepth = CGFloat.infinity
+    /// Decision 300: the bottom-trailing buttons stand at the edge under a
+    /// panel beside the map, which ends above them (``MapCornerRow``).
+    @Entry var mapButtonsUnderPanel = false
     /// The screen's safe area (``ContentView``, decision 120): the map is
     /// drawn to the screen's edges, under the camera housing and the home
     /// indicator, and its banners, keys and buttons keep inside this.
@@ -155,6 +158,7 @@ struct MapView: View {
     @Environment(\.mapLeadingRowFoot) private var leadingRowFoot
     @Environment(\.mapShowsLayerStrip) private var showsLayerStrip
     @Environment(\.mapTrailingInsetDepth) private var trailingInsetDepth
+    @Environment(\.mapButtonsUnderPanel) private var buttonsUnderPanel
     @Environment(\.mapSafeArea) private var safeArea
     /// The height of the bottom-trailing buttons and key, with their margin.
     @State private var bottomTrailingHeight: CGFloat = 0
@@ -234,7 +238,9 @@ struct MapView: View {
             // Whether the bottom-trailing buttons stand beside the trailing
             // controls (``EnvironmentValues/mapTrailingInsetDepth``): under a
             // folded control card the edge is free.
-            let besideTrailing = viewport.height - screenEdges.bottom - bottomTrailingHeight
+            // Decision 300: under a panel that ends above them, at the edge.
+            let besideTrailing = !buttonsUnderPanel
+                && viewport.height - screenEdges.bottom - bottomTrailingHeight
                 < screenEdges.top + trailingInsetDepth
             // Decision 123: beside a card or panel that takes more than a
             // third of the width (a phone's), the zoom buttons would stand in
@@ -243,15 +249,18 @@ struct MapView: View {
             // with their own fixed height (44 points and two paddings of
             // 12 each side), not the column's, which they leave. The
             // tutorial points at them, so they stay while it runs.
-            let zoomGivesWay = session.tutorial == nil
+            // Decision 300: under a phone's panel they have room of their own.
+            let zoomGivesWay = !buttonsUnderPanel && session.tutorial == nil
                 && insets.trailing > viewport.width / 3
                 && viewport.height - screenEdges.bottom - 92 < screenEdges.top + trailingInsetDepth
             // #593: beside such a card the legend would stand in the middle
             // of the map, over its stations: it folds. Measured with the
             // zoom buttons' fixed height, as above, not the column's, which
             // folding changes.
-            let legendBesideCard = insets.trailing > viewport.width / 3
-                && viewport.height - screenEdges.bottom - 92 < screenEdges.top + trailingInsetDepth
+            // Decision 300: under a panel too, where it stands beside the
+            // buttons in the room the panel leaves.
+            let legendBesideCard = buttonsUnderPanel || (insets.trailing > viewport.width / 3
+                && viewport.height - screenEdges.bottom - 92 < screenEdges.top + trailingInsetDepth)
             let zoomLimit: Double? = realWorld != nil && mapStyle != .openStreetMap ? baseMapZoomLimit : nil
             // What the camera's own framing keeps its places clear of (#593,
             // a player's report: the opening put a station under the zoom
@@ -602,7 +611,12 @@ struct MapView: View {
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { topColumnDepth = $0 }
                 }
                 .overlay(alignment: .bottomTrailing) {
-                    VStack(alignment: .trailing, spacing: 8) {
+                    // Decision 300: under a panel, the legend beside the
+                    // buttons, not above them under the panel.
+                    let cornerLayout = buttonsUnderPanel
+                        ? AnyLayout(HStackLayout(alignment: .bottom, spacing: 8))
+                        : AnyLayout(VStackLayout(alignment: .trailing, spacing: 8))
+                    cornerLayout {
                         if let mode = mapLayers.popTravelMode {
                             PopulationLegendView(
                                 mode: mode,

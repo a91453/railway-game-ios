@@ -21,6 +21,17 @@ final class MapFocusTests: XCTestCase {
         XCTAssertEqual(SidePanelWidth.card(screenWidth: 1_180, compactHeight: false), 340)
     }
 
+    /// Decision 300: on a phone on its side the zoom row stands under a
+    /// panel, which ends above it; elsewhere as before.
+    func testTheZoomRowStandsUnderAPanelOnAPhoneOnItsSide() {
+        XCTAssertTrue(MapCornerRow.standsUnderPanel(compactHeight: true, panelBesideMap: true))
+        XCTAssertFalse(MapCornerRow.standsUnderPanel(compactHeight: true, panelBesideMap: false))
+        XCTAssertFalse(MapCornerRow.standsUnderPanel(compactHeight: false, panelBesideMap: true))
+        XCTAssertEqual(MapCornerRow.height, 68)
+        XCTAssertEqual(MapCornerRow.panelBottom(margin: 10, compactHeight: true), 68)
+        XCTAssertEqual(MapCornerRow.panelBottom(margin: 10, compactHeight: false), 10)
+    }
+
     func testAStationUnderThePanelMovesToTheMiddleOfTheMapBesideIt() {
         let camera = PlanCamera(bounds: map, viewport: phone).centered(on: WorldCoordinate(x: 131_072, y: 131_072))
         let insets = ScreenInsets(top: 40, trailing: 274)

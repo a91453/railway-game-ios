@@ -19,6 +19,30 @@ public enum SidePanelWidth {
     }
 }
 
+/// Decision 300: the map's bottom-trailing buttons (coverage, 3D, zoom) on
+/// a phone on its side, beside a panel. Beside it they stood in the middle
+/// of the map, over the stations being picked (the panel is a little under
+/// a third of the screen, so decision 123 did not move them away); the
+/// panel ends above them instead, and they stand at the edge under it.
+public enum MapCornerRow {
+    /// The row's height with the padding above and below it: 44-point
+    /// buttons and 12 points each side.
+    public static let height: Double = 44 + 2 * 12
+
+    /// Whether the row stands under the panel: on a compact height (a phone
+    /// on its side) with a panel beside the map.
+    public static func standsUnderPanel(compactHeight: Bool, panelBesideMap: Bool) -> Bool {
+        compactHeight && panelBesideMap
+    }
+
+    /// How far above the map's bottom edge (inside the safe area and the
+    /// map's credits) a panel beside the map ends: the screen's `margin`,
+    /// or the row's height where the row stands under it.
+    public static func panelBottom(margin: Double, compactHeight: Bool) -> Double {
+        standsUnderPanel(compactHeight: compactHeight, panelBesideMap: true) ? height : margin
+    }
+}
+
 /// What floats over each edge of the map view, in points: the part of the
 /// view inside them is the map the player sees.
 public struct ScreenInsets: Hashable, Sendable {

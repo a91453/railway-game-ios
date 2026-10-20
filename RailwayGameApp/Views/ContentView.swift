@@ -293,6 +293,11 @@ struct ContentView: View {
             let cardWidth: CGFloat = SidePanelWidth.card(screenWidth: proxy.size.width, compactHeight: compactHeight)
             let sidePanel = screen.panel.flatMap { $0.isBesideMap ? $0 : nil }
             let sideWidth: CGFloat = SidePanelWidth.panel(screenWidth: proxy.size.width, compactHeight: compactHeight)
+            // Decision 300: on a phone on its side the panel ends above the
+            // map's zoom buttons, which stand under it rather than beside it
+            // in the middle of the map.
+            let buttonsUnderPanel = MapCornerRow.standsUnderPanel(compactHeight: compactHeight, panelBesideMap: sidePanel != nil)
+            let panelBottom = strip + CGFloat(MapCornerRow.panelBottom(margin: margin, compactHeight: compactHeight))
             // The details card gives way to a panel beside the map.
             let isOpen = sidePanel == nil && ControlDetails.isOpen(
                 session, choice: detailsChoice, foldsWhileDrawing: verticalSizeClass == .compact
@@ -347,8 +352,12 @@ struct ContentView: View {
                             bottom: dockBottom,
                             trailing: sidePanel != nil ? sideWidth + margin : isOpen ? cardWidth + margin : 0
                         ))
-                        // A panel beside the map runs down its whole side.
-                        .environment(\.mapTrailingInsetDepth, sidePanel != nil ? .infinity : isOpen ? cardDepth : 0)
+                        // A panel beside the map runs down its whole side,
+                        // but for the zoom buttons' row on a phone.
+                        .environment(\.mapTrailingInsetDepth, sidePanel != nil
+                            ? buttonsUnderPanel ? proxy.size.height - panelBottom : .infinity
+                            : isOpen ? cardDepth : 0)
+                        .environment(\.mapButtonsUnderPanel, buttonsUnderPanel)
                         .environment(\.mapDetailsOpen, isOpen)
                         .environment(\.mapSafeArea, proxy.safeAreaInsets)
                         .environment(\.mapShowsLayerStrip, showsLayerStrip)
@@ -538,7 +547,7 @@ struct ContentView: View {
                             // on a phone.
                             .padding(.top, pillDepth)
                             .padding([.top, .trailing], margin)
-                            .padding(.bottom, strip + margin)
+                            .padding(.bottom, panelBottom)
                             .transition(.card(from: .trailing, fades: false, reduceMotion: reduceMotion))
                     }
                 }
