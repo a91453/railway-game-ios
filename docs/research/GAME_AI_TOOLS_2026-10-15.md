@@ -326,6 +326,37 @@ MIT，`5beb35b`。給 Claude Code、Codex 等的 skill 集，主張「小、可�
 | sentry-cocoa | 不加 | 除非 TestFlight 規模大到 App Store Connect 的當機報告不夠，而且作者同意把資料送第三方 | — |
 | swift-snapshot-testing、AccessibilitySnapshot | 不加 | 除非作者改了「UI 測試不截圖、不比圖」 | — |
 
+### 6.4 之前研究過的外部專案：做了哪些、剩下的什麼時候加
+
+這次 8 個裡的 glTF-Transform、meshoptimizer 早就做完了，卻又被當成新推薦，因為結論散在幾份研究裡。
+這張表把**本文件第 3、4 節**與 **MOTION_3D_TOOLS** 的候選收在一起，只寫現況與時機，不重新評估；
+理由看各自的出處。其他研究（UX_REDESIGN、CITY_BUILDING、DISRUPTION、TERRAIN_HEIGHT、PEAKLINE）引用的
+外部專案（OpenTTD、Simutrans、A/B Street 等）是「只取想法」，已寫進各自的決策，不列。
+
+**已經做完的**（不要再推薦一次）：
+
+| 項目 | 怎麼做的 |
+| --- | --- |
+| Claude-Code-Game-Studios 的 `balance-check` | `.claude/skills/economy-balance/`（本文件第 2 節） |
+| godot-mcp 等引擎 MCP 的「無頭入口」 | `GameSim`（決策 260，#740） |
+| ml-agents 的觀察／動作結構 | 腳本化玩法 `Policy`（決策 261，#748） |
+| 3D 截圖加每幀量測 | `tools/cityview-benchmark/`（#841） |
+| 文件數字一致性 | `tools/golden-checks/doc_numbers.py`（#760） |
+| LottieFiles motion-design-skill | `.claude/skills/motion/`（決策 253） |
+| glTF-Transform、meshoptimizer | `tools/glb-to-m3dmodel/`（#803、#830） |
+| mattpocock/skills 的 `diagnosing-bugs` | `.claude/skills/diagnosing-bugs/`（#847） |
+
+**還沒做的**（照第 6.3 節的原則：跟著用得到它的工作一起加）：
+
+| 項目 | 時機 | 出處 |
+| --- | --- | --- |
+| animate 的流程改寫成官網說明短片的 skill | 下一次要做官網或社群的說明影片時（例如支線情境包或 R1 轉乘站上線要宣傳）；不加依賴 | MOTION_3D_TOOLS §2.3 B；HANDOFF §7.4 |
+| CityView 提供固定時間的 `render(t)`，錄 60 fps 官網影片 | 和上一列同一個 PR | MOTION_3D_TOOLS §2.4 |
+| TripoSR（CPU 的 torch）當地標的形體參考 | 決策 244 的地標開工、程式建模做不出來時 | MOTION_3D_TOOLS §6 |
+| HyperFrames | 官網影片多到要字幕、多段組合時 | MOTION_3D_TOOLS §6 |
+| ACE-Step 1.5 離線配樂 | **仍是作者的**：要改決策 219 §2.2（聲音全部自己合成）；遊戲規劃 2026-10-16 決定現在不加 | 本文件第 4 節；HANDOFF §3 |
+| 不加的 | motion、Remotion、GSAP、Stable Fast 3D、TRELLIS.2、Tripo 付費方案、騰訊兩個（授權不准在歐盟、英國、南韓用） | MOTION_3D_TOOLS §0、§6；本文件第 0 節 |
+
 **VERIFIED**（這個容器，Linux）：8 個專案的授權檔；參考庫的 CP-SAT 腳本；skill 引用的測試類別、環境變數
 （`PROPERTY_REPLAY`、`PROBLEM_REPORT`、`TRAFFIC_TIMING_REPORT`、`TICK_REPORT`）與 GameSim 指令在 `b368ce7` 都存在。
 **UNVERIFIED**：8 個工具都沒有安裝或試跑；skill 還沒有在真的 bug 上用過。
