@@ -24,6 +24,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import subprocess
 import sys
 from collections import defaultdict
@@ -85,8 +86,20 @@ def main():
 
     lines = json.load(open(args.stations, encoding="utf-8"))["lines"]
     known = {station["name"] for line in lines for station in line["stations"]}
-    names = sorted(set(entries) | set(exits))
-    average = {name: round((entries[name] + exits[name]) / 2 / len(days)) for name in names}
+
+    # Where two lines' gates are counted apart the data names them by line
+    # ("BL板橋" and "Y板橋", "G大坪林" beside "大坪林"), and one name ends
+    # with 站 ("大橋頭站"): each adds to the station the app knows.
+    def app_name(name):
+        if name in known:
+            return name
+        bare = re.sub(r"^(BL|BR|G|O|R|Y)(?=\D)", "", name).removesuffix("站")
+        return bare if bare in known else name
+    riders = defaultdict(int)
+    for name in set(entries) | set(exits):
+        riders[app_name(name)] += entries[name] + exits[name]
+    names = sorted(riders)
+    average = {name: round(riders[name] / 2 / len(days)) for name in names}
     output = {
         "source": {
             "title": "臺北捷運各站分時進出量統計",

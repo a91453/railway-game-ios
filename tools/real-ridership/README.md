@@ -68,6 +68,8 @@ python3 -I tools/real-ridership/build_trtc_ridership.py --year 2025 --downloaded
     --output RailwayGameApp/Resources/RealRailways/trtc_ridership.json
 ```
 
+**2026-10-20 的結果（2025 年）**：118 站，全部對上 App 的 `trtc.json`；App 有、資料沒有的只有廣慈/奉天宮（2025 年還沒營運）。兩條線分開計閘門的站，資料用路線代碼開頭（`BL板橋`、`Y板橋`、`G大坪林`、`O景安`、`O頭前庄`），工具加到同名的站；`大橋頭站` 去掉「站」。最多的：台北車站 149,891、西門 68,403、市政府 61,891、中山 51,610、忠孝復興 44,570。
+
 一年要讀約 3.7 GB，在雲端容器約半小時；`--cache 資料夾` 留下每個月的加總，重跑只讀新的月份。12 月的檔包含跨年夜通宵運行的 1 月 1 日 06:00 前，那些人次算在 12/31 的營運日，不多算一天。
 
 ## 高雄捷運：`build_krtc_ridership.py`
