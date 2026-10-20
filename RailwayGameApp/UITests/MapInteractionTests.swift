@@ -234,7 +234,12 @@ final class MapInteractionTests: XCTestCase {
             XCTFail("The demo has stations")
             return
         }
-        map.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: central.x, dy: central.y)).press(forDuration: 0.8)
+        // Held long enough for the 0.45 s hold to begin while the finger is
+        // still down when the app draws a few frames a second: held 0.8 s,
+        // the touch counted as a tap, picked Central and opened no panel
+        // (main e255b0a's full lane, run 39482364298: 8 frames in 2 s, no
+        // hold asked for).
+        map.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: central.x, dy: central.y)).press(forDuration: 1.5)
         XCTAssertTrue(app.navigationBars["Central"].appears(within: 5), "The hold opens Central's panel")
         func traces() -> Bool { (map.value as? String)?.contains("Busiest trips:") == true }
         let deadline = Date().addingTimeInterval(10)
