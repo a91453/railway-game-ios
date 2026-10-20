@@ -20,7 +20,7 @@ extension GameWorld {
     /// (the high-speed demo's sets turning at Taichung stood on one of its
     /// two southbound platform tracks for an hour and more, and the trains
     /// behind queued for the other).
-    static let throughStopLookahead: Int64 = 30 * GameTime.secondsPerMinute
+    static let throughStopLookahead: Int64 = 60 * GameTime.secondsPerMinute
 
     /// The first departures, in seconds, of `line`'s runs that leave from
     /// `station`, have not sent a train out on their day and may still:
