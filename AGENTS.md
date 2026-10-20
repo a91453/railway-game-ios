@@ -33,6 +33,9 @@ Its Claude-specific parts translate as follows:
 - Claude Code loads the skills in `.claude/skills/` by itself. Another agent
   reads `.claude/skills/art-style/SKILL.md` before drawing or changing any
   icon, glyph, character or illustration for the app.
+  Before diagnosing a hard bug, a red CI shard, a deadlock or a slowdown,
+  it reads `.claude/skills/diagnosing-bugs/SKILL.md`: first a command that
+  goes red on the bug, then the hypotheses.
 
 - The SessionStart hook (`.claude/hooks/session-start.sh`) runs only in Claude
   Code. In another agent's environment, install Swift in its setup script:
