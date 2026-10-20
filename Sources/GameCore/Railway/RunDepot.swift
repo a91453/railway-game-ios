@@ -207,7 +207,9 @@ extension GameWorld {
     /// traffic control the stop must have a berth for the train (see
     /// ``endHasRoom(_:for:)``, decision 290), the train must be able to
     /// take its route now, and only the runs it can stand at before their
-    /// last moment to leave count (decision 296).
+    /// last moment to leave count (decision 296), each from no earlier
+    /// than the train would stand there: a late train on its way that
+    /// arrives before it takes the run (decision 302).
     func runTrainLeavingDepot(of line: ServiceLine, memo: inout DispatchMemo) -> (index: Int, trip: LineTrip)? {
         guard !line.depots.isEmpty, line.hasRuns, clock.now.seconds >= 0 else { return nil }
         let now = clock.now.seconds
@@ -225,7 +227,11 @@ extension GameWorld {
             // stand at in time for: a run out that arrives after a run's
             // last moment to leave does not take it.
             let reachable = soon.filter { !isTrafficControlEnabled || $0 + LineRun.latestDispatch >= now + lead }
-            guard Self.runsWithoutTrains(reachable.filter { $0 - LineRun.earliestDispatch - lead <= now }, ready: ready) > 0 else { continue }
+            // Decision 302: under traffic control, a train on its way that
+            // stands there by the time this one would takes the run as
+            // well: a late train beats a run out that arrives after it.
+            let wanting = reachable.filter { $0 - LineRun.earliestDispatch - lead <= now }.map { isTrafficControlEnabled ? max($0, now + lead) : $0 }
+            guard Self.runsWithoutTrains(wanting, ready: ready) > 0 else { continue }
             // Decision 290: under traffic control, only with a berth there
             // for it; without one it stays in the depot.
             if isTrafficControlEnabled, !endHasRoom(station, for: trains[index]) { continue }
