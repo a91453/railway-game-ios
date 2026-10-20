@@ -13,7 +13,7 @@ description: 經濟與平衡怎麼量、怎麼判：改票價、成本、需求�
 agent（MIT，`be8993b`，授權全文在同目錄的 `LICENSE`）。保留的是它的三個好規則：沒有資料就說
 「沒有量」，不能當作通過；每個數字都對照一個寫下來的目標；判定照最壞的那一項。它的
 `project.yaml`、GDD、`design/registry/`、逐步問作者的流程都不適用：這裡目標寫在決策與測試裡，
-決定由 session 自己做（CLAUDE.md 的 Workflow，四個角度）。
+決定由 session 自己做（CLAUDE.md 的 Workflow，五個角度）。
 
 ## 1. 先找目標，找不到就是 NOT ASSESSED
 
@@ -114,7 +114,7 @@ PR 裡的格式：
   （`EconomySecondHalfPropertyTests`）：
   `.github/scripts/swift-shards.sh run campaigns-8`。分配以 `swift-shards.sh` 的 `classes_of` 為準。
 - **決策**：把新的「量到的」段落寫回那個決策，含指令、天數、commit。
-- **四個角度**：玩家、開發、美術、音樂各一行理由（和聲音無關就寫「音樂：無」）。
+- **五個角度**：玩家、鐵道迷、開發、美術、音樂各一行理由（和真實鐵路無關就寫「鐵道迷：無」，和聲音無關就寫「音樂：無」）。
 - **玩家看的字**：畫面只說玩家得到什麼，不寫係數、內部單位或怎麼算的（`docs/UI_THEME.md`）。
 
 ## 7. 已知的坑
