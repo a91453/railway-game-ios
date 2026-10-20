@@ -12998,7 +12998,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 **沒有驗證的**：車站卡那一行與新遊戲的開關在手機上的樣子（畫面只在 macOS CI 編譯）；實機上一局玩起來轉乘多不多。
 
-**後來（2026-10-20，`claude/ridership-tmrt-tymc`，PR #PRNUM）**：補台中捷運、新北捷運的各站運量，桃園機捷的工具寫好等檔（作者 2026-10-20：「還是要補台中捷運 新北捷運跟桃園捷運」；遊戲規劃 session_01WW7o3decEv5LY59nYVqnDN 派工）。點數規則（每天 1,000 人 1 點、後備值、上限 100）、GameCore、存檔、golden、replay 都不動；決策號不動。
+**後來（2026-10-20，`claude/ridership-tmrt-tymc`，PR #869）**：補台中捷運、新北捷運的各站運量，桃園機捷的工具寫好等檔（作者 2026-10-20：「還是要補台中捷運 新北捷運跟桃園捷運」；遊戲規劃 session_01WW7o3decEv5LY59nYVqnDN 派工）。點數規則（每天 1,000 人 1 點、後備值、上限 100）、GameCore、存檔、golden、replay 都不動；決策號不動。
 - **台中捷運**（`tmrt_ridership.json`，`build_tmrt_ridership.py`）：照研究 `RIDERSHIP_SOURCES_AND_TIME_OF_DAY_2026-10-20.md` §1 的 (a)，2025 年平臺上的 7 個月出站當作一天的人數。高鐵臺中站 3 → 8 點，市政府 3 → 6 點，九張犁 3 → 1 點。2026 年若 12 個月齊了，2027 年初換成 2026 全年。
 - **新北捷運**（`build_ntmc_ridership.py`）：研究時新北捷運公司網站連不上，這次連得上，「統計資料」每月公布每日各站進站、出站。淡海輕軌（`ntdlrt_ridership.json`）、安坑輕軌（`ntalrt_ridership.json`）從後備 1 點改照運量：紅樹林 8、十四張 3、濱海義山 2，其他站 1。
 - **環狀線**：`trtc_ridership.json` 有環狀線各站，但只是台北捷運閘門記到的部分（中原 701、新北捷運自己數 2,831），所以改讀新北捷運的（`ntmc_circular_ridership.json`）；兩家都有的站（大坪林、景安、板橋、頭前庄）取大的，不相加。只有新北捷運的那 10 站從 1 點（台北捷運記到的部分）變成 2–6 點：中和 5、新北產業園區 6、新埔民生與幸福 4、中原 3。
