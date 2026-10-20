@@ -101,6 +101,10 @@ public final class GameSession {
     @ObservationIgnored var lineOpeningMemo: LineOpeningMemo?
     /// The draft's one line (``lineDraftSummary``), kept likewise.
     @ObservationIgnored var lineDraftSummaryMemo: LineDraftSummaryMemo?
+    /// CTM study M2: the next steps (``nextSteps``), kept likewise, and
+    /// those already answered with the check (``newlyMetNextSteps()``).
+    @ObservationIgnored var nextStepsMemo: NextStepsMemo?
+    @ObservationIgnored var nextStepsCelebrated: Set<NextStep>?
     /// Decision 264: the selected line's shortfall of places to pass.
     @ObservationIgnored var passingShortfallMemo: PassingShortfallMemo?
     /// The depot's sidings at the picked end, kept likewise.
@@ -2479,8 +2483,11 @@ public final class GameSession {
         // Decision 184: a new edit ends the line Redo went forward along
         // (the simulator's push clears `future`).
         redoHistory.removeAll()
+        let before = world
         logging(action) { $0 = edited }
         editSerial &+= 1
+        // CTM study M2: a next step the edit met is answered at once.
+        noteNextSteps(since: before)
         return result
     }
 

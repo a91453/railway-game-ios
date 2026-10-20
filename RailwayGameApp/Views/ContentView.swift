@@ -392,6 +392,12 @@ struct ContentView: View {
                                 MapQuickLayerStrip(language: session.language) {
                                     screen.panel = .mapLayers
                                 }
+                                // CTM study M2: a free game's next step.
+                                if let steps = session.nextSteps {
+                                    NextStepChip(steps: steps, language: session.language) {
+                                        screen.panel = .goals
+                                    }
+                                }
                             }
                             if let followed {
                                 FollowBar(train: followed, session: session) {
