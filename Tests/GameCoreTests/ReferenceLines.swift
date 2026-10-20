@@ -47,16 +47,58 @@ extension ReferenceWorld {
     mutating func setLineStops(_ id: LineID, _ stops: [StationID]) -> GameError? {
         guard let index = lineIndex(id) else { return .unknownLine(id) }
         if let problem = stopsProblem(stops, ring: lines[index].ring) { return problem }
-        // Decision 24: the patterns keep their calls, which must still fit.
-        if lines[index].patterns.contains(where: { $0.calls.contains { $0 >= stops.count } }) { return .invalidLinePattern }
+        // Decision 291: a kept stop takes its patterns' calls and its
+        // preferred paths with it; a pattern keeps every call or the stops
+        // are refused.
+        let moved = Self.keptStops(lines[index].stops, stops)
         var candidate = self
         candidate.lines[index].stops = stops
-        for k in 0...lines[index].patterns.count {
-            if candidate.setLineRoutes(id, lines[index].service(k).routes, pattern: k == 0 ? nil : k - 1) != nil { return .invalidLineRoutePreference }
+        for k in lines[index].patterns.indices {
+            let calls = lines[index].patterns[k].calls.compactMap { moved[$0] }.sorted()
+            guard calls.count == lines[index].patterns[k].calls.count else { return .invalidLinePattern }
+            candidate.lines[index].patterns[k].calls = calls
         }
-        lines[index].stops = stops
+        // Each moved preference the service still takes on its own stays.
+        for k in 0...lines[index].patterns.count {
+            let pattern = k == 0 ? nil : k - 1
+            let kept = lines[index].service(k).routes.compactMap { route -> LineRoutePreference? in
+                guard route.from < moved.count, route.to < moved.count, let from = moved[route.from], let to = moved[route.to] else { return nil }
+                let shifted = LineRoutePreference(from: from, to: to, tracks: route.tracks, platform: route.platform)
+                var trial = candidate
+                return trial.setLineRoutes(id, [shifted], pattern: pattern) == nil ? shifted : nil
+            }
+            guard candidate.setLineRoutes(id, kept, pattern: pattern) == nil else { return .invalidLineRoutePreference }
+        }
+        lines[index] = candidate.lines[index]
         abandonStrandedPassengers()
         return nil
+    }
+
+    /// Decision 291, as a search: pair the most stops the two lists have
+    /// in the same order, from the front (a shared first stop pairs, else
+    /// the old list's first goes if that loses nothing, else the new
+    /// one's); then a stop left over that each list has once moves there.
+    static func keptStops(_ old: [StationID], _ new: [StationID]) -> [Int?] {
+        var memo: [[Int]: Int] = [:]
+        func most(_ i: Int, _ j: Int) -> Int {
+            guard i < old.count, j < new.count else { return 0 }
+            if let known = memo[[i, j]] { return known }
+            let value = old[i] == new[j] ? 1 + most(i + 1, j + 1) : max(most(i + 1, j), most(i, j + 1))
+            memo[[i, j]] = value
+            return value
+        }
+        var pairs: [Int: Int] = [:]
+        var (i, j) = (0, 0)
+        while i < old.count, j < new.count {
+            if old[i] == new[j] { pairs[i] = j; i += 1; j += 1 }
+            else if most(i + 1, j) == most(i, j) { i += 1 }
+            else { j += 1 }
+        }
+        for i in old.indices where pairs[i] == nil {
+            let olds = old.indices.filter { old[$0] == old[i] }, news = new.indices.filter { new[$0] == old[i] }
+            if olds.count == 1, news.count == 1, !pairs.values.contains(news[0]) { pairs[i] = news[0] }
+        }
+        return old.indices.map { pairs[$0] }
     }
 
     /// Decision 49: a ring needs a ring's stops, then no patterns, and runs

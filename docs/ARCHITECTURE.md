@@ -626,7 +626,7 @@ Stage Q3 讓一條路線除了自己的全線站站停服務之外，還能跑�
   - `addLinePattern(_:calling:)`：`unknownLine` → `invalidLinePattern`（少於 2 個、沒有嚴格遞增、或不是路線的站的索引）。加在最後，沒有列車數、目標與列車；回傳索引。
   - `removeLinePattern(_:at:)`：`unknownLine` → `unknownLinePattern`。它的列車不再屬於路線；正在跑的這一趟繼續當一般服務跑完，和 `removeLine` 相同。
   - `setLineTrainsInService(_:to:pattern:)`、`setLineTargetHeadways(_:to:pattern:)`、`assignTrain(_:to:pattern:)`：`pattern` 為 `nil` 時是路線自己的服務（原本的行為）。錯誤順序在 `unknownLine` 之後插入 `unknownLinePattern`。
-  - `setLineStops`：模式保留原本的索引；新的站數讓某個模式超出最後一站時，在原本的檢查之後丟出 `invalidLinePattern`。
+  - `setLineStops`：模式保留原本的索引；新的站數讓某個模式超出最後一站時，在原本的檢查之後丟出 `invalidLinePattern`。（決策 291 起改成：模式的停靠跟著站走；新站序少了模式停的站時丟出 `invalidLinePattern`。）
   - 一台列車最多屬於一個服務（任何路線的任何服務）；`unassignTrain` 從它所在的服務移除。`assignedLine(of:)` 也找模式，`assignedPattern(of:)` 回傳模式的索引。
 - **派車**：決策 23 的第 0 段依 `LineID` 遞增，每條路線依序處理自己的服務、模式 0、模式 1……，每個服務每步最多派一台。條件和決策 23 相同，只是換成該服務的列車數與班距（已經扣掉前面服務的容量）、該服務的列車、該服務的上次派車，以及停在**第一個停靠站**的列車。派出的時刻表只列出停靠的車站。快轉的喚醒時刻也逐一服務計算；前面服務的列車數只在營運時間與服務日換段時改變，所以仍然精確。
 - **查詢**：`lineJourney`、`lineMaximumTrains`、`lineTrainsInService`、`lineHeadway` 加上 `pattern` 參數；新增 `lineSegmentLoads(_:at:)`，回傳該等級每一段的負載（為 0 就是沒有覆蓋）。
@@ -2159,7 +2159,7 @@ Stage C 的第二步（ROADMAP 的盤點表）：GameCore 已有、App 卻沒有
   - 折返、刪除停靠站、清除、重複：開啟重複時週期是涵蓋整份時刻表的最短整分鐘（至少一分鐘），每次加減一分鐘；編輯讓時刻表超過週期時，週期跟著加長，不讓 GameCore 拒絕。刪到沒有停靠站時不再重複。
   - 服務執行中、或列車屬於路線時，GameCore 拒絕（`trainServiceActive`、`trainOnLine`），畫面顯示原因並停用控制項。
 - **路線的停靠站與服務日**（`LineEditing.swift`）：
-  - `LineStopEditing`：插入、刪除、上下移動，各呼叫一次 `setLineStops`。GameCore 拒絕連續兩次同一站與少於兩站；不再提供的行程，等車的乘客記進 `abandoned`。區間車照 GameCore 的規則保留停靠的位置。
+  - `LineStopEditing`：插入、刪除、上下移動，各呼叫一次 `setLineStops`。GameCore 拒絕連續兩次同一站與少於兩站；不再提供的行程，等車的乘客記進 `abandoned`。區間車照 GameCore 的規則保留停靠的位置（決策 291 起：停靠與路徑偏好跟著站走）。
   - `ServiceDay.ranges(of:)`：照參考的 `metroServiceSlotTimeRanges`，逐分鐘找出某一等級的時段，相鄰的同等級合併，最後一段結束在 24:00。`summaryText` 取代路線面板原本寫死的標準時段說明。
   - `ServiceDayEditing`：參考的時段寫死在程式裡，編輯是 App 自己的（gap）。改等級、每次半小時移動開始時間（介於前後時段之間，第一段固定 00:00）、刪除（由前一段延續）、拆分最長的時段（在中點，取整到半小時，兩半同等級，所以行為不變）、回到標準服務日，各呼叫一次 `setServiceDay`。
 - **方格的轉轍器與平面交叉**：`TrackPieceKind`（一般、轉轍器、平面交叉）、`GameSession.trackPieceKind`、`turnoutStem`。
@@ -2824,7 +2824,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 5. **執行優先**：V3 排定交會／待避的路徑與時間仍先嘗試；之後嘗試實體偏好，**只有可原子取得整條授權時採用**。拿不到就照決策 59 第 11 點回到原本 V1／U2／V2 路徑、跟車、替代股道或等待；不把偏好路當成永久硬限制，不拿一半偏好授權。交通控制關閉時指定可用 walk，但不建立預約；沒有偏好的關閉控制行為不變。
 6. **待避後續行與查詢**：在 V2 passing place 可由固定 walk 的後段重新接回，仍須整條授權；取得時以最快曲線續行，否則按原本 V1／V2。held／deadlock 查詢也檢查完整可用的偏好，不能把有可用偏好路的車報成互等。預約依舊保護 body、span 與限界節點。
 7. **名義進出／方向表**：ScheduledTraffic 的各站與通過時刻從指定路徑推導。V4a 的 moves／dirs 用這份 walk 到中間站 berth 的前綴與可重接後段，替代待避 berth 才回局部 V1 搜尋；不重新拿更短的通過路覆蓋指定走廊。方向保護的 memo key 含各段偏好，保護已放置路線與執行服務的全計畫。指定待避股已是名義 berth 時，若同向另一列的同站前後走廊使用不同股道，該名義 berth 也列候選，仍完整檢查 body／moves／dirs。來源是單向班表，遊戲往返重複訪同站；有偏好服務的共站序分成各折返點之間的有向 run，局部走廊用實際正向 head span 的正長度重疊辨識（不同月台可在站外匯合）。無偏好表仍是 V4a 的路徑與順序。
-8. **變更中的班次**：只有整份執行時刻表的站序等於當前路線／區間車的完整往返或該環線方向，才依索引套用當前偏好。刪線／刪區間車／改站序後，原班次仍按自己的時刻表跑完，不誤套另一段。改站序若使已有偏好無效，原子拒絕，先清除相關偏好；切換環線模式清除本線偏好，因其有向段集合改變。
+8. **變更中的班次**：只有整份執行時刻表的站序等於當前路線／區間車的完整往返或該環線方向，才依索引套用當前偏好。刪線／刪區間車／改站序後，原班次仍按自己的時刻表跑完，不誤套另一段。改站序若使已有偏好無效，原子拒絕，先清除相關偏好（決策 291 起改成：偏好跟著站走，路段不在了的拿掉，不再拒絕）；切換環線模式清除本線偏好，因其有向段集合改變。
 9. **月台成本**：沿用決策 59 的 station 400 m、mismatch 800 m 廣義成本及 detour 400 m；明確偏好是整條取路的優先項，不虛構另一組加權常數。RailwayCore §7 列出 `rail_shorter_platform_penalty`、`rail_longer_platform_penalty`／platformMismatchCost，但 clean pack 只有編譯符號與建議公式，沒有可讀的實作或預設值。短月台沿用 V1 全列可停限制，過長月台不加猜測成本。
 10. **畫面**：每個服務模式列出各有向路段，可選自動、只指定月台、或固定從各起站 berth 到該月台的有向 walk。選項由已建路網推導，按目的平台、起站 berth、目的 berth 順序去重；不依賴現實地名或股道資料。股道編號與箭頭讓玩家辨識實體路徑，設定由 GameSession 呼叫世界指令，無第二份權威計畫。新增字串有 zh-Hant 台灣用語；新增 UI 測試只放 full lane。
 11. **存檔／可攜契約**：版本 **10**，9→10 由路線／區間車 validated decoder 將缺少 routePreferences 遷移為空陣列；explicit null 拒絕。非空陣列才編碼；有向邊寫 `{edge, forward}`，月台寫 `{station, edge, start, end}`。新增 `SaveFixtures/v10-line-route-preferences.json`。golden schema **32** 新增設定指令與路線／區間車偏好觀測，繼續讀 30／31；新增 `GoldenScenarios/line-route-preference.json` 手算 3072／3584 單位、20／21 秒、來回 281 秒。新增 `ReplayFixtures/line-route-preferences.json`；checksum 只在非空偏好時加入相應行，舊 checksum 串不變。所有既有三種 fixture 檔案未修改。
@@ -12613,6 +12613,32 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 音樂：無。
 
 **驗證**：`PullOutRoomTests`（終點站只剩一股時，兩條路線在同一分鐘要出庫，只出來一組，另一組等第一組開走才出來，從頭到尾終點站停著的加上正開往的不超過兩股；出庫的車開往空的一股；一小時批次與逐分相同）。第一個在 `main` 上失敗（第 602 分起三組）。
+
+### 291. 改站序時，停站模式與進路跟著站走
+
+2026-10-20。75.1 玩家回報（作者轉來，`research/PLAYER_FEEDBACK.md` 75.1 第 2 則）：「中間新增車站沒辦法加入順序中」，截圖是路線面板的停靠站清單（11. RPOG11、12. G4、「在最後加入停靠站」），地圖與面板都跳「請為這個停站模式的路段選擇進路。」76.1（`main` 720dec9）與 `main` d5e8edb 都還沒修。號碼依工作登記 #231：main 上最大 290、沒有未釋出的登記，取 291。存檔版本、golden schema 不動。
+
+**為什麼**：路徑偏好（決策 61）與停站模式的停靠（決策 24）都用「路線的第幾站」記。決策 61 第 8 點定的是「改站序若使已有偏好無效，原子拒絕，先清除相關偏好」，但畫面上沒有說要先清掉哪一段，玩家只看到拒絕；這個決策改掉那一點。`setLineStops` 只換站序，這些號碼原樣留著：在第 11、12 站中間插入一站，原本「第 11 站 → 第 12 站」的偏好變成「RPOG11 → 新站」，不再是相鄰的兩站，月台也不是新站的，`validRoutePreferences` 拒絕整個修改（`invalidLineRoutePreference`）。所以只要路線（或它的任一個停站模式）選過一段進路，在中間插入、刪除、上下移動停靠站都失敗，只有加在最後成功。停站模式的停靠也一樣：插入一站之後，快車停的變成別的站（不會報錯，但停錯）。決策 80 的反轉站序早就把兩者換到新的位置，改站序沒有。
+
+**規則**（`GameWorld.setLineStops(_:to:)`，`ServiceLine.stopIndices(from:to:)`、`movedRoutes(_:service:by:)`）：
+1. **哪一站是哪一站**：舊站序與新站序依序配對最多的站（最長共同子序列；兩邊下一站相同就配，否則先跳過舊的那一站，只要配得一樣多）；剩下沒配到的站，若它的車站在舊、新站序裡各只出現一次，就算移到那裡。插入、刪除、上下移動一站時，其他站都對到原來的車站。
+2. **停站模式**：每個模式停的站換成它們的新位置，再排回遞增。新站序少了模式停的任何一站，照舊丟出 `invalidLinePattern`（先刪掉那個模式）：快車不會自己少停一站。以前只在「停到最後一站之後」時拒絕，刪掉模式停的中間站反而接受、停靠留在舊號碼（停錯站）；現在一律拒絕。
+3. **路徑偏好**（路線的與每個模式的）：起訖換成新位置；那個服務還會照順序走過這兩站（`isValidRoute`，含回程與環線）就保留，路徑與月台不變；被新站切開、或有一站被刪掉的路段拿掉，回到自動選路。因此不再因路徑偏好拒絕（錯誤 `invalidLineRoutePreference` 留給 `setLineRoutePreferences`）。
+4. 檢查順序照舊：`unknownLine` → 站序（`invalidLineStops`、`unknownStation`）→ `invalidLinePattern` → 有班次時 `trainServiceActive`；失敗時世界不變。班次（決策 133）照舊清空；等車的乘客照舊（`abandonUnservedPassengers`）。
+
+**存檔、golden、replay**：不動。沒有新的狀態；`GoldenScenarios/line-patterns.json` 的 `setLineStops [1, 2, 3]` 刪掉快車停的 D，照舊 `invalidLinePattern`；`ReplayFixtures/line-patterns.json` 第 118 個指令（線 2 刪掉模式停的站）也照舊被拒絕——第一版讓模式少停那一站，這個 replay 的第 12 個 checksum 就變了，所以改成第 2 點的拒絕；`LinePatternTests` 把 A–D 倒過來的那一步，照站走的停靠剛好也是 `[0, 3]`。replay 與 golden 照舊通過（見「驗證」）。改變的只有三種修改：以前因路徑偏好或模式停在最後一站之後而被拒絕、現在接受的（插入、移動站）；以前接受、但模式的停靠留在舊號碼而停錯站的（現在跟著站走）；以及刪掉模式停的中間站（以前接受、停錯站，現在拒絕）。
+
+**參考庫與外部專案**：路徑偏好的來源（`rail-3d/physical/dispatch.json` 的 `plans[trainKey].pathIds`，決策 61）是每一車次自己的路徑，沒有「改站序」這件事；`Ci/` 的 routeLegs 是班型與班距段（決策 61 已查）；MapBuilder 的 `handleAddStationToLine`（決策 80）只插入站。沒有改站序時帶著停靠與路徑走的做法可以搬。配對用的是最長共同子序列（教科書的動態規劃），程式是本專案自己的。
+
+**四方**：
+- 玩家：選過進路的路線也能在中間插站、刪站、移動站，選好的進路不會因此消失（只有被新站切開的那一段回到自動）；快車照舊停原本那幾站，不會因為插了一站就停錯，要刪快車停的站時照舊先說要刪掉那個模式。
+- 開發：只改一個指令、不加存檔狀態；配對寫成純函式，`ReferenceWorld` 用另一種寫法（遞迴與備忘）再寫一次，差分測試比對兩邊；golden、replay 不動。
+- 美術：無。
+- 音樂：無。
+
+**下一步**（交接，`docs/HANDOFF.md` §5 有一行指過來）：刪掉快車停的站被拒絕時，玩家看到的字仍是 `invalidLinePattern` 的「停站模式至少要依路線的順序，停靠路線上的兩站以上……」，沒有說是哪個停站模式、要先刪掉它；`GameSession` 的 `setStops(of:to:)` 可以像 `trainServiceActive` 那樣另給一句（GamePresentation，不動 GameCore）。
+
+**驗證**：`LineRoutePreferenceTests.testNewStopsCarryPreferencesAndCallsWithTheirStations`（在最前面加一站：路線與模式的偏好、模式的停靠都往後移一個；刪掉中間站：到它的偏好拿掉、模式的偏好保留；少了模式停的站照舊拒絕、世界不變；每一步都和 `ReferenceWorld` 相同）、`testStopIndicesFollowStationsThroughInsertsRemovalsAndMoves`（插入、刪除、移動、同一站停兩次、整串倒過來）。前者在 `main` 上第一步就失敗（`invalidLineRoutePreference`）。
 
 ### 292. 建站、建線時一鍵切換「腹地涵蓋」層，並說出車站涵蓋多少居民與工作
 
