@@ -86,7 +86,9 @@ extension GameWorld {
     /// station other than its depots: one where no run of the line leaves,
     /// or, where more wait than runs leave within
     /// ``runDepotLookahead``, the last in ID order. Under traffic control it
-    /// must be able to take its route now.
+    /// must be able to take its route now, and a train that came out of a
+    /// depot to the stop stays while a run from there is due (decision
+    /// 296).
     func runTrainEnteringDepot(of line: ServiceLine, memo: inout DispatchMemo) -> (index: Int, trip: LineTrip)? {
         guard !line.depots.isEmpty, line.hasRuns, clock.now.seconds >= 0 else { return nil }
         var stations: [StationID] = []
@@ -101,7 +103,11 @@ extension GameWorld {
             let waiting = runTrainsWaiting(of: line, at: station)
             let wanted = pendingRunStarts(of: line, from: station).count { $0 <= horizon }
             guard waiting.count > wanted else { continue }
+            // Decision 296: a train out of a depot for a run due here is
+            // not one too many until that run leaves or is dropped.
+            let due = isTrafficControlEnabled && pendingRunStarts(of: line, from: station).contains { $0 - LineRun.earliestDispatch <= clock.now.seconds }
             for index in waiting.suffix(waiting.count - wanted).reversed() {
+                if due, cameOutOfDepot(trains[index], to: station) { continue }
                 guard let trip = emptyRun(of: line, for: trains[index], to: line.depots) else { continue }
                 // Decision 280: under traffic control, only with a siding
                 // for it; without one it stays where it waits.
@@ -189,8 +195,9 @@ extension GameWorld {
     /// the run out's lead (decision 209's: the least dwell and the run's
     /// seconds, in whole minutes, and a minute more), has come. Under
     /// traffic control the stop must have a berth for the train (see
-    /// ``endHasRoom(_:for:)``, decision 290) and the train must be able to
-    /// take its route now.
+    /// ``endHasRoom(_:for:)``, decision 290), the train must be able to
+    /// take its route now, and only the runs it can stand at before their
+    /// last moment to leave count (decision 296).
     func runTrainLeavingDepot(of line: ServiceLine, memo: inout DispatchMemo) -> (index: Int, trip: LineTrip)? {
         guard !line.depots.isEmpty, line.hasRuns, clock.now.seconds >= 0 else { return nil }
         let now = clock.now.seconds
@@ -204,7 +211,11 @@ extension GameWorld {
                   let run = trip.deadhead
             else { continue }
             let lead = Self.lead(of: run) * GameTime.secondsPerMinute
-            guard Self.runsWithoutTrains(soon.filter { $0 - LineRun.earliestDispatch - lead <= now }, ready: ready) > 0 else { continue }
+            // Decision 296: under traffic control, only the runs it can
+            // stand at in time for: a run out that arrives after a run's
+            // last moment to leave does not take it.
+            let reachable = soon.filter { !isTrafficControlEnabled || $0 + LineRun.latestDispatch >= now + lead }
+            guard Self.runsWithoutTrains(reachable.filter { $0 - LineRun.earliestDispatch - lead <= now }, ready: ready) > 0 else { continue }
             // Decision 290: under traffic control, only with a berth there
             // for it; without one it stays in the depot.
             if isTrafficControlEnabled, !endHasRoom(station, for: trains[index]) { continue }
@@ -215,6 +226,14 @@ extension GameWorld {
             return (index, trip)
         }
         return nil
+    }
+
+    /// Decision 296: whether `train`, standing without a service at
+    /// `station`, last ran there empty out of a depot (its timetable, kept
+    /// once the run ends, starts at a depot and ends there).
+    func cameOutOfDepot(_ train: Train, to station: StationID) -> Bool {
+        guard let first = train.timetable.first, let last = train.timetable.last, last.station == station else { return false }
+        return self.station(id: first.station)?.isDepot == true
     }
 
     // MARK: - Room at the end
@@ -275,8 +294,10 @@ extension GameWorld {
     /// what decides it changes without a train changing: for each run
     /// still to leave a stop, when it comes within the look ahead (into the
     /// depot), within the look ahead of its earliest dispatch and within
-    /// the lead of the run out to it (out of the depot), and when its last
-    /// moment to leave passes. So this is exact.
+    /// the lead of the run out to it (out of the depot), when its first
+    /// departure passes (a train waiting for it then counts as too late
+    /// for it, decision 296) and when its last moment to leave passes. So
+    /// this is exact.
     func minutesUntilRunDepotMove(of line: ServiceLine, memo: inout DispatchMemo) -> Int64? {
         guard !line.depots.isEmpty, line.hasRuns else { return nil }
         let now = clock.now
@@ -296,6 +317,9 @@ extension GameWorld {
                 wake(at: start - Self.runDepotLookahead)
                 wake(at: start - LineRun.earliestDispatch - Self.runDepotLookahead)
                 if let lead { wake(at: start - LineRun.earliestDispatch - lead) }
+                // Decision 296: once its first departure has passed, a
+                // train waiting for it counts as too late for it.
+                wake(at: start + 1)
                 wake(at: start + LineRun.latestDispatch + 1)
             }
         }

@@ -179,7 +179,12 @@ final class TrafficControlTimingReportTests: XCTestCase {
                     guard train.isDeadheading, let last = train.timetable.last else { continue }
                     if world.station(id: first.station)?.isDepot == true {
                         outs += 1
-                        if let back = lastIn[train.id], world.clock.now.seconds - back <= 30 * 60 { quickOuts += 1 }
+                        if let back = lastIn[train.id], world.clock.now.seconds - back <= 30 * 60 {
+                            quickOuts += 1
+                            func hhmm(_ seconds: Int64) -> String { String(format: "%02d:%02d", seconds / 3_600 % 24, seconds / 60 % 60) }
+                            let to = world.station(id: last.station)?.name ?? "?"
+                            say("  \(train.name) in \(hhmm(back)), out \(hhmm(world.clock.now.seconds)) to \(to)")
+                        }
                     } else if world.station(id: last.station)?.isDepot == true {
                         ins += 1
                         lastIn[train.id] = last.arrival.seconds
