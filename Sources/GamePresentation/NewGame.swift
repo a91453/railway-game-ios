@@ -611,6 +611,9 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
     /// Decision 137: the towns beyond the map's edge send riders to the
     /// stations by it.
     public var outsideConnections = true
+    /// Decision 298: on a real-world map, the stations by real ones bring
+    /// the travellers changing from the real railways.
+    public var realTransfers = true
     /// Decision 160: a blank map is bought tile by tile as the railway
     /// grows; off, it is the usual 16 km map. Real-world maps decide for
     /// themselves.
@@ -638,6 +641,7 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
         disruptionChoice = try container.decodeIfPresent(Disruption.self, forKey: .disruptionChoice)
         buildingMaterials = try container.decodeIfPresent(Bool.self, forKey: .buildingMaterials) ?? standard.buildingMaterials
         outsideConnections = try container.decodeIfPresent(Bool.self, forKey: .outsideConnections) ?? standard.outsideConnections
+        realTransfers = try container.decodeIfPresent(Bool.self, forKey: .realTransfers) ?? standard.realTransfers
         buysMap = try container.decodeIfPresent(Bool.self, forKey: .buysMap) ?? standard.buysMap
         seed = try container.decodeIfPresent(UInt32.self, forKey: .seed)
         ground = try container.decodeIfPresent(Ground.self, forKey: .ground) ?? standard.ground
@@ -655,7 +659,7 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
     }
 
     /// Turns `world`'s disruptions, building materials, outside
-    /// connections, funds and rules (decision 258: simple rules have no
+    /// connections, real transfers (on a real-world map), funds and rules (decision 258: simple rules have no
     /// weather or building materials, whatever the options say) to these
     /// options. Free, and nothing else changes.
     public func apply(to world: inout GameWorld) {
@@ -670,6 +674,8 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
         }
         world.setBuildingMaterials(buildingMaterials)
         if !outsideConnections { world.setOutsideConnections(false) }
+        // Decision 298: real-world maps only.
+        world.setRealTransfers(realTransfers && world.geoAnchor != nil)
         world.setUnlimitedFunds(funds == .unlimited)
         rules.apply(to: &world)
     }
@@ -695,6 +701,7 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
         // Decision 258: simple rules have none, which their explanation says.
         if !buildingMaterials && self.rules == .realistic { rules.append(language.text("towns grow without building materials", "城市不需要建材就能成長")) }
         if !outsideConnections { rules.append(language.text("no riders from beyond the map's edge", "地圖邊緣外沒有旅客")) }
+        if !realTransfers { rules.append(language.text("no riders changing from real railways", "沒有從真實鐵路轉乘的旅客")) }
         if !buysMap { rules.append(language.text("a fixed 16 km map", "固定 16 公里的地圖")) }
         if ground == .flat { rules.append(language.text("flat ground on real-world maps", "實景地圖地形平坦")) }
         if funds == .unlimited {

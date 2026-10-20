@@ -330,9 +330,14 @@
 ///     reads only an earlier version would drop them, and its trains would
 ///     run up to each other again until the minute ends, so it says the
 ///     save is newer than it instead.
+/// 64. Real transfers (decision 298): a world can have
+///     `"realTransfers": true`, and a station its `"transferPoints"`. A
+///     build that reads only an earlier version would drop them, and the
+///     stations by real ones would lose the travellers changing there, so
+///     it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 63
+    public static let currentVersion = 64
 
     public let world: GameWorld
 
@@ -497,6 +502,8 @@ extension SavedGame: Codable {
         // of 16 m cars, and a train without `"carPitch"` has them.
         // Version 62 to 63: a world without `"spacingAllowances"` gives its
         // trains theirs as it goes on (at a whole minute it has none).
+        // Version 63 to 64: a world without `"realTransfers"` has them off,
+        // and a station without `"transferPoints"` has none.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

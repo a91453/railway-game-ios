@@ -1,0 +1,151 @@
+{
+  "saveVersion" : 64,
+  "world" : {
+    "accounts" : {
+      "assets" : [
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "station",
+          "owner" : 1
+        },
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "station",
+          "owner" : 2
+        },
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "station",
+          "owner" : 3
+        }
+      ],
+      "capitalDays" : [
+        {
+          "capitalSpending" : 3000,
+          "day" : 0
+        }
+      ],
+      "days" : [
+
+      ],
+      "entries" : [
+
+      ],
+      "mode" : "management",
+      "openedAt" : 0,
+      "pending" : {
+        "departures" : 0,
+        "fareRevenue" : 0,
+        "fareTrips" : 0,
+        "passengers" : 0,
+        "seats" : 0,
+        "trainDistance" : 0
+      }
+    },
+    "bounds" : {
+      "height" : 1048576,
+      "width" : 1048576
+    },
+    "clock" : {
+      "now" : 600,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 999997000,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "land" : [
+      {
+        "column" : 128,
+        "residents" : [
+          1000
+        ],
+        "row" : 128,
+        "use" : "residential"
+      }
+    ],
+    "landDemand" : true,
+    "nextStationID" : 4,
+    "nextTrainID" : 1,
+    "passengers" : [
+      {
+        "abandoned" : 0,
+        "demand" : {
+          "dailyTrips" : 600,
+          "kind" : "residential"
+        },
+        "overflowed" : 0,
+        "released" : 0,
+        "remainders" : [
+
+        ],
+        "station" : 1,
+        "waiting" : [
+
+        ]
+      },
+      {
+        "abandoned" : 0,
+        "demand" : {
+          "dailyTrips" : 700,
+          "kind" : "residential"
+        },
+        "overflowed" : 0,
+        "released" : 0,
+        "remainders" : [
+
+        ],
+        "station" : 2,
+        "waiting" : [
+
+        ]
+      }
+    ],
+    "realTransfers" : true,
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "Town",
+        "point" : {
+          "x" : 526336,
+          "y" : 526336
+        },
+        "transferPoints" : 2
+      },
+      {
+        "id" : 2,
+        "name" : "Hub",
+        "point" : {
+          "x" : 724288,
+          "y" : 524288
+        },
+        "transferPoints" : 7
+      },
+      {
+        "id" : 3,
+        "name" : "Yard",
+        "point" : {
+          "x" : 324288,
+          "y" : 524288
+        }
+      }
+    ],
+    "trains" : [
+
+    ]
+  }
+}
