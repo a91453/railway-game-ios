@@ -23,8 +23,9 @@ import csv
 import hashlib
 import io
 import json
-import sys
+import os
 import subprocess
+import sys
 from collections import defaultdict
 
 DATASET = "https://data.gov.tw/dataset/128506"
@@ -44,9 +45,11 @@ class open_url:
         self.process = subprocess.Popen(["curl", "-sSfL", "--retry", "3", self.url], stdout=subprocess.PIPE)
         return self.process.stdout
 
-    def __exit__(self, *_):
+    def __exit__(self, kind, *_):
         self.process.stdout.close()
-        if self.process.wait() != 0:
+        # A reader that stopped early makes curl fail too: its own error is
+        # the one to show.
+        if self.process.wait() != 0 and kind is None:
             sys.exit(f"curl failed ({self.process.returncode}) for {self.url}")
 
 
@@ -56,6 +59,7 @@ def main():
     parser.add_argument("--downloaded", required=True, help="the day the data was read, YYYY-MM-DD")
     parser.add_argument("--stations", required=True, help="the app's trtc.json")
     parser.add_argument("--output", required=True)
+    parser.add_argument("--cache", help="a folder to keep each month's sums in, so a second run reads only new months")
     args = parser.parse_args()
 
     with open_url(INDEX) as response:
@@ -68,25 +72,14 @@ def main():
     days = set()
     digests = {}
     for month, url in months:
-        digest = hashlib.sha256()
-        rows = 0
-        with open_url(url) as response:
-            # Line by line, so a month of some 300 MB is never held whole.
-            text = io.TextIOWrapper(io.BufferedReader(_Hashing(response, digest), 1 << 20), encoding="utf-8-sig", newline="")
-            reader = csv.reader(text)
-            header = next(reader)
-            if header != ["日期", "時段", "進站", "出站", "人次"]:
-                sys.exit(f"{args.year}-{month:02}: unexpected header {header}")
-            for date, _hour, origin, destination, trips in reader:
-                if not date.startswith(f"{args.year}-{month:02}-"):
-                    sys.exit(f"{args.year}-{month:02}: a row of another month: {date}")
-                count = int(trips)
-                entries[origin] += count
-                exits[destination] += count
-                days.add(date)
-                rows += 1
-        digests[f"{args.year}-{month:02}"] = digest.hexdigest()
-        print(f"{args.year}-{month:02}: {rows:,} rows", flush=True)
+        sums = month_sums(args.year, month, url, args.cache)
+        for name, count in sums["entries"].items():
+            entries[name] += count
+        for name, count in sums["exits"].items():
+            exits[name] += count
+        days.update(sums["days"])
+        digests[f"{args.year}-{month:02}"] = sums["sha256"]
+        print(f"{args.year}-{month:02}: {sums['rows']:,} rows", flush=True)
     if len(days) < 365:
         sys.exit(f"{args.year} has data for {len(days)} days only: not a whole year")
 
@@ -117,6 +110,46 @@ def main():
     print("stations of the app with no data: " + (", ".join(sorted(known - set(names))) or "none"))
     top = sorted(average.items(), key=lambda item: -item[1])[:5]
     print("busiest: " + ", ".join(f"{name} {count:,}" for name, count in top))
+
+
+def month_sums(year, month, url, cache):
+    """Each station's entries and exits in one month's file, the days it
+    covers, its row count and SHA-256; kept in `cache` when given.
+
+    The metro runs all night on New Year's Eve: December's file goes on
+    into the small hours of 1 January (before 06:00), trips of the 31st's
+    service day, counted with it and adding no day.
+    """
+    path = os.path.join(cache, f"{year}-{month:02}.json") if cache else None
+    if path and os.path.exists(path):
+        return json.load(open(path, encoding="utf-8"))
+    following = f"{year + 1}-01-01" if month == 12 else f"{year}-{month + 1:02}-01"
+    entries, exits = defaultdict(int), defaultdict(int)
+    days = set()
+    digest = hashlib.sha256()
+    rows = 0
+    with open_url(url) as response:
+        # Line by line, so a month of some 300 MB is never held whole.
+        text = io.TextIOWrapper(io.BufferedReader(_Hashing(response, digest), 1 << 20), encoding="utf-8-sig", newline="")
+        reader = csv.reader(text)
+        header = next(reader)
+        if header != ["日期", "時段", "進站", "出站", "人次"]:
+            sys.exit(f"{year}-{month:02}: unexpected header {header}")
+        for date, hour, origin, destination, trips in reader:
+            if date.startswith(f"{year}-{month:02}-"):
+                days.add(date)
+            elif not (date == following and int(hour) < 6):
+                sys.exit(f"{year}-{month:02}: a row of another day: {date} {hour}:00")
+            count = int(trips)
+            entries[origin] += count
+            exits[destination] += count
+            rows += 1
+    sums = {"entries": entries, "exits": exits, "days": sorted(days), "rows": rows, "sha256": digest.hexdigest()}
+    if path:
+        os.makedirs(cache, exist_ok=True)
+        with open(path, "w", encoding="utf-8") as file:
+            json.dump(sums, file, ensure_ascii=False)
+    return sums
 
 
 class _Hashing(io.RawIOBase):

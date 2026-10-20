@@ -21,30 +21,36 @@ final class RealTransfersTests: XCTestCase {
         return (session, at)
     }
 
-    func testAPlacesPointsAddUpItsSystems() throws {
+    func testAPlacesPointsFollowItsRealRiders() throws {
         let (session, taipei) = try makeSession(at: "臺北")
+        let railways = try XCTUnwrap(session.railways)
+        let ridership = try XCTUnwrap(railways.ridership)
         let place = try XCTUnwrap(session.nearestRealStation(to: taipei))
-        let data = session.railways?.stationData
-        let systems = Set(place.systems.map(\.id))
-        XCTAssertTrue(systems.isSuperset(of: ["tra_sched", "thsr_sched", "mrt"]), "\(systems)")
-        // 臺北 is a special-class TRA station: 6, the high-speed rail 6, the
-        // metro 2, and 2 for each other metro there.
-        XCTAssertEqual(data?.stationClass(forStation: "臺北"), .special)
-        let expected = min(6 + 6 + Int64(systems.subtracting(["tra_sched", "thsr_sched"]).count) * 2, TransferDemand.maximumPoints)
-        XCTAssertEqual(GameSession.transferPoints(of: place, data: data), expected)
+        let tra = try XCTUnwrap(place.stations.first { $0.system.id == "tra_sched" })
+        let hsr = try XCTUnwrap(place.stations.first { $0.system.id == "thsr_sched" })
+        // 2025's averages (tools/real-ridership/): 63,307 and 47,192 a day.
+        XCTAssertEqual(ridership.riders(of: tra, data: railways.stationData), 63_307)
+        XCTAssertEqual(ridership.riders(of: hsr, data: railways.stationData), 47_192)
+        XCTAssertEqual(GameSession.transferPoints(of: tra, data: railways.stationData, ridership: ridership), 63)
+        XCTAssertEqual(GameSession.transferPoints(of: hsr, data: railways.stationData, ridership: ridership), 47)
+        // The place's systems add up, at most the most a station takes.
+        let total = place.stations.reduce(into: [String: Int64]()) { bySystem, station in
+            let points = GameSession.transferPoints(of: station, data: railways.stationData, ridership: ridership)
+            bySystem[station.system.id] = max(bySystem[station.system.id] ?? 0, points)
+        }.values.reduce(0, +)
+        XCTAssertEqual(GameSession.transferPoints(of: place, data: railways.stationData, ridership: ridership), min(total, TransferDemand.maximumPoints))
+        XCTAssertEqual(GameSession.transferPoints(of: place, data: railways.stationData, ridership: ridership), TransferDemand.maximumPoints)
 
-        // A TRA station alone gives its grade's points.
+        // A quiet TRA station alone is at least 1.
         let (other, houtong) = try makeSession(at: "猴硐")
         let small = try XCTUnwrap(other.nearestRealStation(to: houtong))
         XCTAssertEqual(small.systems.map(\.id), ["tra_sched"])
-        let grade = other.railways?.stationData?.stationClass(forStation: "猴硐")
-        let points: Int64 = switch grade {
-        case .special: 6
-        case .first: 4
-        case .second: 2
-        default: 1
-        }
-        XCTAssertEqual(GameSession.transferPoints(of: small, data: other.railways?.stationData), points)
+        let riders = try XCTUnwrap(ridership.riders(of: small.stations[0], data: railways.stationData))
+        XCTAssertEqual(GameSession.transferPoints(of: small, data: railways.stationData, ridership: ridership), max(1, Int64((Double(riders) / 1_000).rounded())))
+
+        // Without a file, a station's system or grade decides.
+        XCTAssertEqual(GameSession.transferPoints(of: hsr, data: railways.stationData), 20)
+        XCTAssertEqual(GameSession.transferPoints(of: tra, data: railways.stationData), 14, "a special-class TRA station")
     }
 
     func testAStationBuiltByARealOneBringsItsTransfers() throws {
@@ -53,8 +59,8 @@ final class RealTransfersTests: XCTestCase {
         let site = PlanPoint(x: taipei.x + 100 * metre, y: taipei.y)
         let near = try session.performEdit { try $0.buildStation(named: "Near", at: site).id }
         let place = try XCTUnwrap(session.nearestRealStation(to: site))
-        let points = GameSession.transferPoints(of: place, data: session.railways?.stationData)
-        XCTAssertGreaterThanOrEqual(points, 12, "TRA and the high-speed rail at least")
+        let points = GameSession.transferPoints(of: place, data: session.railways?.stationData, ridership: session.railways?.ridership)
+        XCTAssertEqual(points, TransferDemand.maximumPoints, "TRA 63 and the high-speed rail 47 pass the most a station takes")
         XCTAssertEqual(session.world.station(id: near)?.transferPoints, points)
         XCTAssertEqual(session.world.transferTrips(of: near), points * TransferDemand.tripsPerPoint)
         XCTAssertTrue(session.commandLog.entries.contains { $0.action == .transfers([near: points]) })

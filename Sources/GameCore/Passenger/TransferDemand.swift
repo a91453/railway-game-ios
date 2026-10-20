@@ -22,7 +22,7 @@ public enum TransferDemand {
     /// The trips a day each transfer point brings.
     public static let tripsPerPoint: Int64 = 100
     /// The most transfer points a station can have.
-    public static let maximumPoints: Int64 = 20
+    public static let maximumPoints: Int64 = 100
 }
 
 extension GameWorld {

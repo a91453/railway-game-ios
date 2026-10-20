@@ -10,10 +10,11 @@ import GameCore
 // decision 295) and sets them after every edit and when the railways
 // arrive (``GameSession/refreshTransfers()``).
 //
-// The points stand for how many people change there, which no file the app
-// ships gives by station: the system's size and, for Taiwan Railway, the
-// station's official grade (`tra_station_class.json`), as the platform's
-// default length already reads it (``GameSession/realPlatformCars(forStationNamed:at:)``).
+// The points stand for how many people change there: the real station's
+// riders a day where the app ships them (``RealRidership``: Taiwan Railway,
+// the High Speed Rail and Taipei Metro, a year's official averages), in
+// proportion, so a station ten times as busy brings ten times the
+// transfers; elsewhere what a station of its system or TRA grade has.
 
 /// What the transfer points were last worked out from (decision 298): the
 /// stations' places, and whether the railways were there.
@@ -24,23 +25,34 @@ struct TransferMemo: Equatable {
 }
 
 extension GameSession {
+    /// The real riders a day one transfer point stands for (decision 298):
+    /// Taipei's TRA station (63,307) is 63 points, Changhua's High Speed
+    /// Rail station (2,621) 3, a halt of a hundred 1.
+    static let transferRidersPerPoint = 1_000
+
     /// The transfer points a system's station gives a place (decision 298):
-    /// high-speed rail and Taiwan Railway's special-class stations 6, its
-    /// first-class 4, second-class 2 and any other 1; a metro 2; a light
-    /// rail, the Sanying Line and the Alishan Forest Railway 1.
-    static func transferPoints(of station: RealRailways.Station, data: RealStationData?) -> Int64 {
+    /// its real riders a day over ``transferRidersPerPoint``, rounded and
+    /// at least 1, where `ridership` has them. Otherwise what a station
+    /// like it has: a Taiwan Railway station of its grade, the grade's
+    /// median riders of 2025 (special 14, first 9, second 2, any other 1);
+    /// a metro 3; the High Speed Rail 20; a light rail, the Sanying Line and
+    /// the Alishan Forest Railway 1.
+    static func transferPoints(of station: RealRailways.Station, data: RealStationData?, ridership: RealRidership? = nil) -> Int64 {
+        if let riders = ridership?.riders(of: station, data: data) {
+            return max(1, Int64((Double(riders) / Double(transferRidersPerPoint)).rounded()))
+        }
         switch station.system.id {
         case "thsr_sched":
-            return 6
+            return 20
         case "tra_sched":
             switch data?.stationClass(forStation: station.chinese) {
-            case .special: return 6
-            case .first: return 4
+            case .special: return 14
+            case .first: return 9
             case .second: return 2
             default: return 1
             }
         case "mrt", "krtc", "tmrt", "tymc":
-            return 2
+            return 3
         default:
             return 1
         }
@@ -50,10 +62,10 @@ extension GameSession {
     /// the points of each of its systems, the highest where a system has
     /// several stations there, added up, at most
     /// ``TransferDemand/maximumPoints``.
-    static func transferPoints(of place: RealStationSuggestion, data: RealStationData?) -> Int64 {
+    static func transferPoints(of place: RealStationSuggestion, data: RealStationData?, ridership: RealRidership? = nil) -> Int64 {
         var bySystem: [String: Int64] = [:]
         for station in place.stations {
-            bySystem[station.system.id] = max(bySystem[station.system.id] ?? 0, transferPoints(of: station, data: data))
+            bySystem[station.system.id] = max(bySystem[station.system.id] ?? 0, transferPoints(of: station, data: data, ridership: ridership))
         }
         return min(bySystem.values.reduce(0, +), TransferDemand.maximumPoints)
     }
@@ -73,7 +85,7 @@ extension GameSession {
         let data = railways?.stationData
         for station in world.stations {
             guard let place = transferPlace(of: station.id) else { continue }
-            let value = Self.transferPoints(of: place, data: data)
+            let value = Self.transferPoints(of: place, data: data, ridership: railways?.ridership)
             if value > 0 { points[station.id] = value }
         }
         return points
