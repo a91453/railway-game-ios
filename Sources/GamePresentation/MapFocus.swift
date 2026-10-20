@@ -22,12 +22,21 @@ public enum SidePanelWidth {
 /// Decision 300: the map's bottom-trailing buttons (coverage, 3D, zoom) on
 /// a phone on its side, beside a panel. Beside it they stood in the middle
 /// of the map, over the stations being picked (the panel is a little under
-/// a third of the screen, so decision 123 did not move them away); the
-/// panel ends above them instead, and they stand at the edge under it.
+/// a third of the screen, so decision 123 did not move them away). Under a
+/// panel they are as tall as the map's credit button and stand at the
+/// screen's edge: in the credits' band at the bottom where it has room
+/// beside them (the panel keeps its height), otherwise just above it,
+/// where the panel ends a little higher.
 public enum MapCornerRow {
-    /// The row's height with the padding above and below it: 44-point
-    /// buttons and 12 points each side.
-    public static let height: Double = 44 + 2 * 12
+    /// How tall the buttons look under a panel: as tall as the credit
+    /// button in the band (decision 120's `attributionHeight`, 30 points,
+    /// less a point above and below).
+    public static let height: Double = 28
+    /// How tall a finger's target is where the screen has room under the
+    /// buttons (the home indicator's safe area): Apple's 44 points.
+    public static let reach: Double = 44
+    /// Between the buttons and what stands beside them.
+    public static let gap: Double = 8
 
     /// Whether the row stands under the panel: on a compact height (a phone
     /// on its side) with a panel beside the map.
@@ -35,11 +44,24 @@ public enum MapCornerRow {
         compactHeight && panelBesideMap
     }
 
-    /// How far above the map's bottom edge (inside the safe area and the
-    /// map's credits) a panel beside the map ends: the screen's `margin`,
-    /// or the row's height where the row stands under it.
-    public static func panelBottom(margin: Double, compactHeight: Bool) -> Double {
-        standsUnderPanel(compactHeight: compactHeight, panelBesideMap: true) ? height : margin
+    /// Where a row `width` points wide ends (its trailing x) in the credits'
+    /// band of a view `viewportWidth` wide: left of the trailing-most credit
+    /// (`credits`, the logo, the legal link and the credit button, in the
+    /// view's points), or of the safe area's `trailingInset` without one,
+    /// and clear of the other credits; `nil` where it does not fit.
+    public static func bandEnd(rowWidth: Double, viewportWidth: Double, trailingInset: Double, credits: [ScreenFrame]) -> Double? {
+        let trailing = credits.filter { $0.x + $0.width / 2 > viewportWidth / 2 }.max { $0.x < $1.x }
+        let end = (trailing.map { $0.x } ?? viewportWidth - trailingInset) - gap
+        let start = end - rowWidth
+        let blocked = credits.contains { $0 != trailing && $0.x < end && $0.x + $0.width > start - gap }
+        return blocked || start < 0 ? nil : end
+    }
+
+    /// How much higher than the screen's `margin` a panel beside the map
+    /// ends: nothing where the row is in the credits' band (or not under
+    /// the panel), otherwise the row's height and a gap.
+    public static func panelRaise(underPanel: Bool, inBand: Bool) -> Double {
+        underPanel && !inBand ? height + gap : 0
     }
 }
 

@@ -293,11 +293,13 @@ struct ContentView: View {
             let cardWidth: CGFloat = SidePanelWidth.card(screenWidth: proxy.size.width, compactHeight: compactHeight)
             let sidePanel = screen.panel.flatMap { $0.isBesideMap ? $0 : nil }
             let sideWidth: CGFloat = SidePanelWidth.panel(screenWidth: proxy.size.width, compactHeight: compactHeight)
-            // Decision 300: on a phone on its side the panel ends above the
-            // map's zoom buttons, which stand under it rather than beside it
-            // in the middle of the map.
+            // Decision 300: on a phone on its side the map's zoom buttons
+            // stand under the panel rather than beside it in the middle of
+            // the map; the panel ends above them where the credits' band
+            // has no room for them.
             let buttonsUnderPanel = MapCornerRow.standsUnderPanel(compactHeight: compactHeight, panelBesideMap: sidePanel != nil)
-            let panelBottom = strip + CGFloat(MapCornerRow.panelBottom(margin: margin, compactHeight: compactHeight))
+            let panelBottom = strip + margin
+                + CGFloat(MapCornerRow.panelRaise(underPanel: buttonsUnderPanel, inBand: screen.mapRowInBand))
             // The details card gives way to a panel beside the map.
             let isOpen = sidePanel == nil && ControlDetails.isOpen(
                 session, choice: detailsChoice, foldsWhileDrawing: verticalSizeClass == .compact
@@ -352,11 +354,8 @@ struct ContentView: View {
                             bottom: dockBottom,
                             trailing: sidePanel != nil ? sideWidth + margin : isOpen ? cardWidth + margin : 0
                         ))
-                        // A panel beside the map runs down its whole side,
-                        // but for the zoom buttons' row on a phone.
-                        .environment(\.mapTrailingInsetDepth, sidePanel != nil
-                            ? buttonsUnderPanel ? proxy.size.height - panelBottom : .infinity
-                            : isOpen ? cardDepth : 0)
+                        // A panel beside the map runs down its whole side.
+                        .environment(\.mapTrailingInsetDepth, sidePanel != nil ? .infinity : isOpen ? cardDepth : 0)
                         .environment(\.mapButtonsUnderPanel, buttonsUnderPanel)
                         .environment(\.mapDetailsOpen, isOpen)
                         .environment(\.mapSafeArea, proxy.safeAreaInsets)
@@ -1065,6 +1064,10 @@ final class GameScreenState {
     /// buttons, a layer's key) stands on the screen, as the map measured
     /// it: the station master's bubble stops short of it.
     var mapCornerFrame: CGRect = .zero
+    /// Decision 300: whether the map's buttons under a phone's panel found
+    /// room in the credits' band, as the map measured it: where they did
+    /// not, the panel ends above them.
+    var mapRowInBand = false
     /// Where the map's bottom-leading buttons stand on the screen, as the
     /// map measured them: on a phone's bottom row the station master
     /// stands past them (decision 226).

@@ -15,7 +15,7 @@ extension EnvironmentValues {
     /// below it the map's bottom-trailing buttons keep to the edge.
     @Entry var mapTrailingInsetDepth = CGFloat.infinity
     /// Decision 300: the bottom-trailing buttons stand at the edge under a
-    /// panel beside the map, which ends above them (``MapCornerRow``).
+    /// panel beside the map, as tall as the credit button (``MapCornerRow``).
     @Entry var mapButtonsUnderPanel = false
     /// The screen's safe area (``ContentView``, decision 120): the map is
     /// drawn to the screen's edges, under the camera housing and the home
@@ -171,6 +171,8 @@ struct MapView: View {
     /// them.
     @State private var bottomLeadingFrame: CGRect = .zero
     @State private var bottomTrailingFrame: CGRect = .zero
+    /// Decision 300: the buttons' row under a phone's panel, as laid out.
+    @State private var cornerRowFrame: CGRect = .zero
     /// Where a real-world map's attribution sits (decision 120): Apple's
     /// logo and legal link, or MapLibre's attribution button, and the
     /// credits. Nothing of the game is drawn there, and a touch there
@@ -238,9 +240,7 @@ struct MapView: View {
             // Whether the bottom-trailing buttons stand beside the trailing
             // controls (``EnvironmentValues/mapTrailingInsetDepth``): under a
             // folded control card the edge is free.
-            // Decision 300: under a panel that ends above them, at the edge.
-            let besideTrailing = !buttonsUnderPanel
-                && viewport.height - screenEdges.bottom - bottomTrailingHeight
+            let besideTrailing = viewport.height - screenEdges.bottom - bottomTrailingHeight
                 < screenEdges.top + trailingInsetDepth
             // Decision 123: beside a card or panel that takes more than a
             // third of the width (a phone's), the zoom buttons would stand in
@@ -249,16 +249,25 @@ struct MapView: View {
             // with their own fixed height (44 points and two paddings of
             // 12 each side), not the column's, which they leave. The
             // tutorial points at them, so they stay while it runs.
-            // Decision 300: under a phone's panel they have room of their own.
+            // Decision 300: under a phone's panel they have a row of their own.
             let zoomGivesWay = !buttonsUnderPanel && session.tutorial == nil
                 && insets.trailing > viewport.width / 3
                 && viewport.height - screenEdges.bottom - 92 < screenEdges.top + trailingInsetDepth
+            // Decision 300: where the buttons' row under a phone's panel
+            // ends in the credits' band, `nil` where it has no room there.
+            let bandEnd: CGFloat? = buttonsUnderPanel && realWorld != nil
+                ? MapCornerRow.bandEnd(
+                    rowWidth: Double(cornerRowFrame.width), viewportWidth: viewport.width,
+                    trailingInset: Double(screenEdges.trailing), credits: attributionFrames.map { ScreenFrame($0) }
+                ).map { CGFloat($0) }
+                : nil
+            let rowInBand = bandEnd != nil
             // #593: beside such a card the legend would stand in the middle
             // of the map, over its stations: it folds. Measured with the
             // zoom buttons' fixed height, as above, not the column's, which
             // folding changes.
-            // Decision 300: under a panel too, where it stands beside the
-            // buttons in the room the panel leaves.
+            // Decision 300: beside a phone's panel too, where the buttons
+            // leave it alone.
             let legendBesideCard = buttonsUnderPanel || (insets.trailing > viewport.width / 3
                 && viewport.height - screenEdges.bottom - 92 < screenEdges.top + trailingInsetDepth)
             let zoomLimit: Double? = realWorld != nil && mapStyle != .openStreetMap ? baseMapZoomLimit : nil
@@ -271,7 +280,7 @@ struct MapView: View {
             // as they are (#544).
             let cover = MapCover(
                 edges: ScreenInsets(top: max(clear.top, topColumnDepth), leading: clear.leading, bottom: clear.bottom, trailing: clear.trailing),
-                corners: [bottomLeadingFrame, bottomTrailingFrame].map { ScreenFrame($0) }
+                corners: [bottomLeadingFrame, bottomTrailingFrame, buttonsUnderPanel ? cornerRowFrame : .zero].map { ScreenFrame($0) }
             )
             let framing = cover.framing(in: viewport)
             let projection = (camera?.resized(to: viewport) ?? openingCamera(viewport: viewport, clearOf: framing)).limited(toReferenceSize: zoomLimit)
@@ -611,12 +620,7 @@ struct MapView: View {
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { topColumnDepth = $0 }
                 }
                 .overlay(alignment: .bottomTrailing) {
-                    // Decision 300: under a panel, the legend beside the
-                    // buttons, not above them under the panel.
-                    let cornerLayout = buttonsUnderPanel
-                        ? AnyLayout(HStackLayout(alignment: .bottom, spacing: 8))
-                        : AnyLayout(VStackLayout(alignment: .trailing, spacing: 8))
-                    cornerLayout {
+                    VStack(alignment: .trailing, spacing: 8) {
                         if let mode = mapLayers.popTravelMode {
                             PopulationLegendView(
                                 mode: mode,
@@ -664,22 +668,10 @@ struct MapView: View {
                             }
                             .padding(.trailing, 12)
                         }
-                        HStack(spacing: 0) {
-                            // Decision 292: coverage, one tap away while
-                            // building.
-                            if session.offersCoverageShortcut {
-                                MapCoverageButton(isOn: coverageShortcut.isOn(showing: mapLayers.popTravelMode), language: session.language) {
-                                    popTravelModeName = coverageShortcut.toggle(showing: mapLayers.popTravelMode)?.rawValue ?? ""
-                                }
-                            }
-                            // Decision 229, later: this game's 3D map, one
-                            // tap away, beside the zoom buttons.
-                            if Map3DShortcut.isShown(zoomButtonsShow: !zoomGivesWay, tutorialRuns: session.tutorial != nil) {
-                                map3DButton
-                            }
-                            if !zoomGivesWay {
-                                zoomControls(camera: projection, limit: zoomLimit)
-                            }
+                        // Decision 300: under a phone's panel they stand
+                        // in a row of their own (below).
+                        if !buttonsUnderPanel {
+                            cornerButtons(camera: projection, limit: zoomLimit, zoomGivesWay: zoomGivesWay)
                         }
                     }
                     .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.mapArea)) } action: { bottomTrailingFrame = $0 }
@@ -694,6 +686,27 @@ struct MapView: View {
                     .padding(.trailing, besideTrailing ? clear.trailing : screenEdges.trailing)
                     .padding(.bottom, besideTrailing ? clear.bottom : screenEdges.bottom)
                     .animation(.easeInOut(duration: 0.2), value: trailingInsetDepth)
+                }
+                .overlay(alignment: .bottomTrailing) {
+                    // Decision 300: under a phone's panel, at the screen's
+                    // edge, as tall as the credit button: in the credits'
+                    // band where it has room beside them, a finger's target
+                    // reaching into the home indicator's margin below;
+                    // otherwise just above the band, and the panel ends
+                    // higher (``MapCornerRow/panelRaise(underPanel:inBand:)``).
+                    if buttonsUnderPanel {
+                        let below: CGFloat = rowInBand ? safeArea.bottom + 1 : screenEdges.bottom + 2
+                        let reach: CGFloat = min(CGFloat(MapCornerRow.reach - MapCornerRow.height), rowInBand || realWorld == nil ? below : 0)
+                        let rowEnd: CGFloat = bandEnd ?? CGFloat(viewport.width) - screenEdges.trailing - CGFloat(MapCornerRow.gap)
+                        cornerButtons(camera: projection, limit: zoomLimit, zoomGivesWay: false, compactReach: reach)
+                            .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.mapArea)) } action: { cornerRowFrame = $0 }
+                            .padding(.trailing, CGFloat(viewport.width) - rowEnd)
+                            .padding(.bottom, below - reach)
+                            .transition(.opacity)
+                    }
+                }
+                .onChange(of: buttonsUnderPanel && rowInBand, initial: true) { _, inBand in
+                    screen.mapRowInBand = inBand
                 }
                 .overlay(alignment: .bottomLeading) {
                     // On a phone's bottom row, one above the other beside the
@@ -745,7 +758,7 @@ struct MapView: View {
                     MapBuildConfirm(session: session, camera: projection, viewport: viewport, insets: EdgeInsets(
                         top: max(clear.top, topColumnDepth), leading: clear.leading,
                         bottom: clear.bottom, trailing: clear.trailing
-                    ), mapTop: clear.top, avoiding: [bottomLeadingFrame, bottomTrailingFrame])
+                    ), mapTop: clear.top, avoiding: [bottomLeadingFrame, bottomTrailingFrame, buttonsUnderPanel ? cornerRowFrame : .zero])
                     // Its flags and ring are where the track and the site
                     // are, which may be by the attribution.
                     .mask { attribution.fill() }
@@ -1600,9 +1613,33 @@ struct MapView: View {
         #endif
     }
 
+    /// The bottom-trailing buttons: coverage, this game's 3D map and the
+    /// zoom buttons. `compactReach`: under a phone's panel (decision 300)
+    /// they are as tall as the credit button, a finger's target reaching
+    /// that many points below them; `nil` as they were.
+    @ViewBuilder
+    private func cornerButtons(camera: PlanCamera, limit: Double?, zoomGivesWay: Bool, compactReach: CGFloat? = nil) -> some View {
+        HStack(alignment: .top, spacing: compactReach == nil ? 0 : 6) {
+            // Decision 292: coverage, one tap away while building.
+            if session.offersCoverageShortcut {
+                MapCoverageButton(isOn: coverageShortcut.isOn(showing: mapLayers.popTravelMode), language: session.language, compactReach: compactReach) {
+                    popTravelModeName = coverageShortcut.toggle(showing: mapLayers.popTravelMode)?.rawValue ?? ""
+                }
+            }
+            // Decision 229, later: this game's 3D map, one tap away, beside
+            // the zoom buttons.
+            if Map3DShortcut.isShown(zoomButtonsShow: !zoomGivesWay, tutorialRuns: session.tutorial != nil) {
+                map3DButton(compactReach: compactReach)
+            }
+            if !zoomGivesWay {
+                zoomControls(camera: camera, limit: limit, compactReach: compactReach)
+            }
+        }
+    }
+
     /// Decision 229, later: opens this game's 3D map (``Map3DShortcut``),
     /// as round as the overview map's button above it.
-    private var map3DButton: some View {
+    private func map3DButton(compactReach: CGFloat?) -> some View {
         Button {
             screen.map3DHandoff = nil
             screen.showsMap3D = true
@@ -1610,46 +1647,68 @@ struct MapView: View {
             Image("Glyph3DMap")
                 .resizable()
                 .renderingMode(.template)
-                .frame(width: 24, height: 24)
-                .frame(width: 44, height: 44)
-                .glassBackground(in: Circle(), interactive: true)
+                .frame(width: compactReach == nil ? 24 : 18, height: compactReach == nil ? 24 : 18)
+                .modifier(MapCornerButtonFace(compactReach: compactReach))
         }
         .accessibilityLabel(Text(verbatim: session.language.text("3D Map", "3D 地圖")))
         .accessibilityHint(Text(verbatim: session.language.text("Shows your railway, trains and town in 3D.", "用 3D 看你的鐵路、列車與城鎮。")))
         .accessibilityIdentifier("map.open3D")
-        .padding(.vertical, 12)
+        .padding(.vertical, compactReach == nil ? 12 : 0)
     }
 
     /// `limit`: how close the base map lets the camera come
-    /// (``baseMapZoomLimit``).
-    private func zoomControls(camera: PlanCamera, limit: Double?) -> some View {
-        HStack(spacing: 0) {
+    /// (``baseMapZoomLimit``). `compactReach` as for ``cornerButtons``.
+    @ViewBuilder
+    private func zoomControls(camera: PlanCamera, limit: Double?, compactReach: CGFloat? = nil) -> some View {
+        if let reach = compactReach {
+            let face = CGFloat(MapCornerRow.height)
+            zoomButtons(camera: camera, limit: limit, face: face, reach: reach, divider: 16)
+                .font(.body)
+                .background(alignment: .top) {
+                    Color.clear
+                        .frame(height: face)
+                        .glassBackground(in: Capsule(), interactive: true)
+                }
+                .tutorialTarget(.zoomControls)
+        } else {
+            zoomButtons(camera: camera, limit: limit, face: 44, reach: 0, divider: 24)
+                .font(.title3)
+                .glassBackground(in: Capsule(), interactive: true)
+                .tutorialTarget(.zoomControls)
+                .padding(12)
+        }
+    }
+
+    /// The two zoom buttons, `face` points tall, each a finger's target
+    /// `reach` points taller below.
+    private func zoomButtons(camera: PlanCamera, limit: Double?, face: CGFloat, reach: CGFloat, divider: CGFloat) -> some View {
+        HStack(alignment: .top, spacing: 0) {
             Button {
                 self.camera = camera.zoomedOut()
                 session.mapDidMove()
             } label: {
                 Image(systemName: "minus.magnifyingglass")
-                    .frame(width: 44, height: 44)
+                    .frame(width: 44, height: face)
+                    .frame(height: face + reach, alignment: .top)
+                    .contentShape(Rectangle())
             }
             .disabled(!camera.canZoomOut)
             .accessibilityLabel("Zoom out")
 
-            Divider().frame(height: 24)
+            Divider().frame(height: divider).frame(height: face)
 
             Button {
                 self.camera = camera.zoomedIn()
                 session.mapDidMove()
             } label: {
                 Image(systemName: "plus.magnifyingglass")
-                    .frame(width: 44, height: 44)
+                    .frame(width: 44, height: face)
+                    .frame(height: face + reach, alignment: .top)
+                    .contentShape(Rectangle())
             }
             .disabled(!canZoomIn(camera, limit: limit))
             .accessibilityLabel("Zoom in")
         }
-        .font(.title3)
-        .glassBackground(in: Capsule(), interactive: true)
-        .tutorialTarget(.zoomControls)
-        .padding(12)
     }
 
     /// Decision 106, later: moves the camera so the selected station (or,

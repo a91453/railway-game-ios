@@ -1,22 +1,40 @@
 import XCTest
 
-/// Decision 300: on a phone on its side, the lines panel ends above the
-/// map's zoom buttons, which stand under it at the edge rather than beside
-/// it in the middle of the map. Full lane only (decision 199): when the row
+/// Decision 300: on a phone on its side, the map's zoom buttons stand
+/// under the lines panel at the screen's edge rather than beside it in the
+/// middle of the map. Full lane only (decision 199): when the row
 /// stands under a panel is `MapFocusTests` on Linux; this checks where it
 /// shows and that a finger reaches it. Run by hand with
 /// only_testing=RailwayGameUITests/ZoomRowUnderPanelUITests.
 @MainActor
 final class ZoomRowUnderPanelUITests: XCTestCase {
     func testTheZoomButtonsStandUnderTheLinesPanel() {
+        let app = launch(["-demo-layout", "-ui-testing-paused"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 30), "The demo map opens")
+        checkTheRowStandsUnderTheLinesPanel(in: app)
+    }
+
+    /// On a real map the row stands in the credits' band, beside the
+    /// credit, where the panel keeps its height.
+    func testTheZoomButtonsStandInTheCreditsBandOfTheRealWorldDemo() {
+        let app = launch([])
+        defer { app.terminate() }
+        app.openDemo("demo.realWorld")
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 60), "The real-world demo opens")
+        checkTheRowStandsUnderTheLinesPanel(in: app)
+    }
+
+    private func launch(_ arguments: [String]) -> XCUIApplication {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-demo-layout", "-ui-testing-paused", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launchArguments = ["-ui-testing"] + arguments + ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
-        defer { app.terminate() }
-        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 30), "The demo map opens")
+        return app
+    }
 
+    private func checkTheRowStandsUnderTheLinesPanel(in app: XCUIApplication) {
         let lines = app.buttons["entry.lines"]
         XCTAssertTrue(lines.appears(within: 10))
         lines.tap()
