@@ -173,6 +173,11 @@ public struct GameWorld: Equatable, Sendable {
     /// app's new games but those of the whole of Taiwan turn them on. Set by
     /// ``setOutsideConnections(_:)`` only.
     public internal(set) var outsideConnections: Bool = false
+    /// Whether the stations by real stations bring the real network's
+    /// transfers (decision 298, ``Station/transferPoints``). Off in a new
+    /// world and in saves from before it; the app's new games on a
+    /// real-world map turn it on. Set by ``setRealTransfers(_:)`` only.
+    public internal(set) var realTransfers: Bool = false
     /// The city's demand for homes, shops and work (decision 139), or `nil`
     /// for a city that grows as before. Off in a new world and in saves
     /// from before it; the app's new games turn it on. Set by
@@ -1002,6 +1007,12 @@ public struct GameWorld: Equatable, Sendable {
             throw .depotInUse(line.id)
         }
         stations[index].isDepot = isDepot
+        // Decision 298: a depot brings no transfers.
+        if isDepot, stations[index].transferPoints > 0 {
+            stations[index].transferPoints = 0
+            passengerPlan = PassengerPlanCache()
+            refreshLandDemand()
+        }
     }
 
     /// Sets the level of the shops of the station at `index` (decision
@@ -1009,6 +1020,12 @@ public struct GameWorld: Equatable, Sendable {
     /// and charge.
     mutating func setStationCommerce(_ level: StationCommerceLevel?, at index: Int) {
         stations[index].commerce = level
+    }
+
+    /// Sets the transfer points of the station at `index` (decision 298);
+    /// ``setTransfers(_:)`` and ``setRealTransfers(_:)`` check.
+    mutating func setTransferPoints(_ points: Int64, at index: Int) {
+        stations[index].transferPoints = points
     }
 
     /// Gives line `id` the depot `depot` as its only one, or with `nil`
@@ -4512,7 +4529,7 @@ extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, disruptions, townGrowth, accounts, geoAnchor
-        case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, blockSections, curveSpeedLimits, realCarLengths, spacingAllowances, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
+        case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, blockSections, curveSpeedLimits, realCarLengths, spacingAllowances, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, realTransfers, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
         case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion
     }
 
@@ -4630,6 +4647,15 @@ extension GameWorld: Codable {
         tourism = try container.decodeIfPresent(Tourism.self, forKey: .tourism)
         cityRequests = try container.decodeIfPresent(CityRequests.self, forKey: .cityRequests)
         outsideConnections = try container.decodeIfPresent(Bool.self, forKey: .outsideConnections) ?? false
+        // Decision 298: written only when on (every save before version 64
+        // has it off), and only then may a station have transfer points.
+        realTransfers = container.contains(.realTransfers) ? try container.decode(Bool.self, forKey: .realTransfers) : false
+        if container.contains(.realTransfers), !realTransfers {
+            throw DecodingError.dataCorruptedError(forKey: .realTransfers, in: container, debugDescription: "A world is written with \"realTransfers\" only when they are on.")
+        }
+        if !realTransfers, let station = stations.first(where: { $0.transferPoints > 0 }) {
+            throw DecodingError.dataCorruptedError(forKey: .stations, in: container, debugDescription: "Station \(station.id.rawValue) has transfer points, but real transfers are off.")
+        }
         cityDemand = try container.decodeIfPresent(CityDemand.self, forKey: .cityDemand)
         cityFootprints = try container.decodeIfPresent(Bool.self, forKey: .cityFootprints) ?? false
         areaBuyOut = try container.decodeIfPresent(Bool.self, forKey: .areaBuyOut) ?? false
@@ -4781,6 +4807,9 @@ extension GameWorld: Codable {
         try container.encodeIfPresent(cityRequests, forKey: .cityRequests)
         if outsideConnections {
             try container.encode(true, forKey: .outsideConnections)
+        }
+        if realTransfers {
+            try container.encode(true, forKey: .realTransfers)
         }
         if let cityDemand {
             try container.encode(cityDemand, forKey: .cityDemand)

@@ -243,7 +243,8 @@ extension GameWorld {
     /// ``LandDemand/shares(of:among:)``), when the land sets it; a closed
     /// station has none (decision 77). Decision 137: an outside connection
     /// adds its share of the outside's trips, of its land's kind or homes
-    /// (``outsideTrips(among:)``). Decision 168: a high-speed station also
+    /// (``outsideTrips(among:)``), decision 298 a station by real ones its
+    /// transfers (``transferTrips(among:)``). Decision 168: a high-speed station also
     /// has the people of its hinterland (``highSpeedHinterlands()``).
     /// Passengers already waiting stay.
     mutating func refreshLandDemand() {
@@ -251,6 +252,8 @@ extension GameWorld {
         // Decision 94: the people in the player's buildings ride too.
         let shares = LandDemand.shares(of: land, among: landStations, placed: placedBuildings)
         let outside = outsideTrips(among: landStations)
+        // Decision 298: the real network's transfers, as the outside's.
+        let transfers = transferTrips(among: landStations)
         // Decision 168: a high-speed station's wide hinterland, whose
         // intercity trips are the pair's, not the station's own.
         let hinterlands = highSpeedHinterlands()
@@ -258,6 +261,10 @@ extension GameWorld {
         for station in stations {
             var demand = shares[station.id]?.demand
             if let trips = outside[station.id], trips > 0 {
+                demand = StationDemand(kind: demand?.kind ?? .residential,
+                                       dailyTrips: min(StationDemand.maximumDailyTrips, (demand?.dailyTrips ?? 0) + trips))
+            }
+            if let trips = transfers[station.id], trips > 0 {
                 demand = StationDemand(kind: demand?.kind ?? .residential,
                                        dailyTrips: min(StationDemand.maximumDailyTrips, (demand?.dailyTrips ?? 0) + trips))
             }
