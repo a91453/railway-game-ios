@@ -21,6 +21,35 @@ final class MapFocusTests: XCTestCase {
         XCTAssertEqual(SidePanelWidth.card(screenWidth: 1_180, compactHeight: false), 340)
     }
 
+    /// Decision 300: on a phone on its side the zoom row stands under a
+    /// panel, in the credits' band where it has room; elsewhere as before.
+    func testTheZoomRowStandsUnderAPanelOnAPhoneOnItsSide() {
+        XCTAssertTrue(MapCornerRow.standsUnderPanel(compactHeight: true, panelBesideMap: true))
+        XCTAssertFalse(MapCornerRow.standsUnderPanel(compactHeight: true, panelBesideMap: false))
+        XCTAssertFalse(MapCornerRow.standsUnderPanel(compactHeight: false, panelBesideMap: true))
+        // In the band the panel keeps its height; above it, it ends higher.
+        XCTAssertEqual(MapCornerRow.panelRaise(underPanel: true, inBand: true), 0)
+        XCTAssertEqual(MapCornerRow.panelRaise(underPanel: true, inBand: false), 36)
+        XCTAssertEqual(MapCornerRow.panelRaise(underPanel: false, inBand: false), 0)
+    }
+
+    /// Decision 300: an iPhone 16 Pro on its side (874 points, 62 of safe
+    /// area at each side), with OpenStreetMap's credits: the text at the
+    /// leading side and the credit button at the trailing one.
+    func testTheZoomRowFitsInTheCreditsBandBesideTheCreditButton() {
+        let text = ScreenFrame(x: 70, y: 346, width: 260, height: 20)
+        let button = ScreenFrame(x: 784, y: 342, width: 28, height: 28)
+        XCTAssertEqual(MapCornerRow.bandEnd(rowWidth: 176, viewportWidth: 874, trailingInset: 62, credits: [text, button]), 776)
+        // Without credits (a map of the game's own), at the safe area.
+        XCTAssertEqual(MapCornerRow.bandEnd(rowWidth: 176, viewportWidth: 874, trailingInset: 62, credits: []), 804)
+        // Apple's credit in the middle of the band, reaching under the row.
+        let wide = ScreenFrame(x: 300, y: 342, width: 400, height: 20)
+        XCTAssertNil(MapCornerRow.bandEnd(rowWidth: 176, viewportWidth: 874, trailingInset: 62, credits: [wide, button]))
+        // A short one leaves room.
+        let short = ScreenFrame(x: 362, y: 342, width: 150, height: 20)
+        XCTAssertEqual(MapCornerRow.bandEnd(rowWidth: 176, viewportWidth: 874, trailingInset: 62, credits: [short, button]), 776)
+    }
+
     func testAStationUnderThePanelMovesToTheMiddleOfTheMapBesideIt() {
         let camera = PlanCamera(bounds: map, viewport: phone).centered(on: WorldCoordinate(x: 131_072, y: 131_072))
         let insets = ScreenInsets(top: 40, trailing: 274)
