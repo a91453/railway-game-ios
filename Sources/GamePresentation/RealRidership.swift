@@ -4,9 +4,10 @@ import Foundation
 // the official yearly averages `tools/real-ridership/` writes, which the
 // transfer points of a station by a real one follow. Taiwan Railway's by
 // station code (`tra_ridership.json`), the others by station name: the High
-// Speed Rail's, Taipei Metro's, Kaohsiung Metro's, Taichung Metro's
-// (`thsr_ridership.json`, `trtc_ridership.json`, `krtc_ridership.json`,
-// `tmrt_ridership.json`) and New Taipei Metro's: the Danhai and Ankeng
+// Speed Rail's, Taipei Metro's, Kaohsiung Metro's, Taichung Metro's, the
+// Taoyuan Airport MRT's (`thsr_ridership.json`, `trtc_ridership.json`,
+// `krtc_ridership.json`, `tmrt_ridership.json`, `tymc_ridership.json`) and
+// New Taipei Metro's: the Danhai and Ankeng
 // light rails and the Circular Line (`ntdlrt_ridership.json`,
 // `ntalrt_ridership.json`, `ntmc_circular_ridership.json`).
 // Each file is optional; a station none of them has keeps its system's rule.
@@ -51,6 +52,7 @@ public struct RealRidership: Sendable {
     public let trtc: Table?
     public let krtc: Table?
     public let tmrt: Table?
+    public let tymc: Table?
     public let ntdlrt: Table?
     public let ntalrt: Table?
     /// New Taipei Metro's own count of the Circular Line's stations: Taipei
@@ -58,12 +60,13 @@ public struct RealRidership: Sendable {
     /// gates, a fraction of them (Zhongyuan 701 a day against 2,831).
     public let circular: Table?
 
-    public init(tra: Table?, thsr: Table?, trtc: Table?, krtc: Table? = nil, tmrt: Table? = nil, ntdlrt: Table? = nil, ntalrt: Table? = nil, circular: Table? = nil) {
+    public init(tra: Table?, thsr: Table?, trtc: Table?, krtc: Table? = nil, tmrt: Table? = nil, tymc: Table? = nil, ntdlrt: Table? = nil, ntalrt: Table? = nil, circular: Table? = nil) {
         self.tra = tra
         self.thsr = thsr
         self.trtc = trtc
         self.krtc = krtc
         self.tmrt = tmrt
+        self.tymc = tymc
         self.ntdlrt = ntdlrt
         self.ntalrt = ntalrt
         self.circular = circular
@@ -89,6 +92,8 @@ public struct RealRidership: Sendable {
             return krtc?.riders[RealRailways.stationKey(station.chinese)]
         case "tmrt":
             return tmrt?.riders[RealRailways.stationKey(station.chinese)]
+        case "tymc":
+            return tymc?.riders[RealRailways.stationKey(station.chinese)]
         case "ntdlrt":
             return ntdlrt?.riders[RealRailways.stationKey(station.chinese)]
         case "ntalrt":

@@ -1,0 +1,52 @@
+{
+ "measure": "average riders a day: (entries + exits) / 2 over the days of the year",
+ "period": {
+  "from": "2025-01-01",
+  "to": "2025-12-31"
+ },
+ "riders": {
+  "三重站": 5332,
+  "台北車站": 28773,
+  "坑口站": 1212,
+  "大園站": 2273,
+  "山鼻站": 3357,
+  "新北產業園區站": 7863,
+  "新莊副都心站": 3289,
+  "林口站": 6487,
+  "桃園體育園區站": 2829,
+  "機場旅館站": 1189,
+  "機場第一航廈站": 12096,
+  "機場第二航廈站": 10913,
+  "橫山站": 452,
+  "泰山站": 2390,
+  "泰山貴和站": 2814,
+  "環北站": 2277,
+  "老街溪站": 4002,
+  "興南站": 384,
+  "長庚醫院站": 10252,
+  "領航站": 1385,
+  "體育大學站": 6548,
+  "高鐵桃園站": 11781
+ },
+ "source": {
+  "downloaded": "2026-10-20",
+  "fileSha256": {
+   "2025-01": "74866e59f999b75bcb8f39c01a6a48fdbdd20934fb129c91b23be2ecb574d767",
+   "2025-02": "9932207fb6e3300225ee32c69bc4cedabc2d5f0c9e0b011e5885241b29967a48",
+   "2025-03": "85b13a93c88c3ab2fe7993367e6df65abf7d20344a76c951adbbb0758f0534c8",
+   "2025-04": "0ea573c389483a5163bd0cb7f08bdecf2dc98096d8e4d5341567c100a39e48bd",
+   "2025-05": "43bde22f1da782dda2815e236444665397bbc5c13eb926d0d3041d8abe07dab2",
+   "2025-06": "e2279a59f63b6275cfcd2779b85337fe6848ffa6767a7806ac935e49ea5c45ee",
+   "2025-07": "3a2218c910ca2f11cb9efcf3968a88fd0db40fa97188c7e6bfd56dbd18482660",
+   "2025-08": "e4610acd8f4a18605b88197d2ca7669496f115fa5d1df83153e827d25a680b22",
+   "2025-09": "6743c7a17c42d8b8250cda825365a0e7bf102643071cc6a20c36ca12e7103d9e",
+   "2025-10": "155f2372b0e44fb85e4636734e4c89f21c03c5d3d87704ea5a76749c48e252ae",
+   "2025-11": "bfc0b168e73baee11f034c3203c596b1a83626f6b6fa455c2ba1b3e66145f66b",
+   "2025-12": "15789870aa71487a6b86885a6bb2714339e256fc667ab8eaba31f5de712e2356"
+  },
+  "page": "https://www.tymetro.com.tw/tymetro-new/tw/_pages/about/statistics.html",
+  "publisher": "桃園大眾捷運股份有限公司",
+  "terms": "no open-data licence named on the company website; only each station's average a day, a fact, is taken, credited to the company (the same company's open data, data.gov.tw 164957, is out of the cloud container's reach)",
+  "title": "桃園大眾捷運股份有限公司 各站旅運量統計"
+ }
+}

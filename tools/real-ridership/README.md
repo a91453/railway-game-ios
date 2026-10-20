@@ -106,30 +106,25 @@ python3 -I tools/real-ridership/build_tmrt_ridership.py --year 2025 --partial --
 
 **什麼時候重跑**：2027 年初看 2026 年是否 12 個月都有（2026-10-20 已有 2–8 月，缺 1 月）。12 個月齊了就照 #851 的「最近一個完整年度」，拿掉 `--partial` 重跑 2026，換掉這份 7 個月的檔；不齊就仍用最近一年有的月份，在這裡寫明。
 
-## 桃園機捷：`build_tymc_ridership.py`（等作者的 12 個 CSV）
+## 桃園機捷：`build_tymc_ridership.py`
 
-**來源**：政府資料開放平臺的[桃園大眾捷運各場站運量每月統計表](https://data.gov.tw/dataset/164957)（桃園大眾捷運股份有限公司，檔在 `opendata.tycg.gov.tw`），依政府資料開放授權條款第 1 版使用。每月一個 CSV（平臺寫 Big5），欄位：年度、月份、捷運站別、平均日運量。
+**來源**：桃園大眾捷運股份有限公司網站的[統計資料](https://www.tymetro.com.tw/tymetro-new/tw/_pages/about/statistics.html)，每月一份「各站旅運量統計」PDF：各站當月的入站、出站人次與全線總計。同一家公司的開放資料（data.gov.tw [164957](https://data.gov.tw/dataset/164957)，檔在 `opendata.tycg.gov.tw`）雲端容器連不上（回「Request Rejected」），公司網站的 PDF 連得上。網站沒有寫開放授權，所以照高鐵、新北捷運的做法，只取各站的平均（事實數字），標示出處「桃園大眾捷運股份有限公司」。
 
-**雲端容器連不上 `opendata.tycg.gov.tw`**（回「Request Rejected」，看起來擋國外連線），所以和高雄捷運一樣，**由作者在台灣下載 2025 年 12 個 CSV、附在對話裡**：
+**算法**：2025 年 12 個月，（入站＋出站）÷ 2 除以 365 天。每個月的各站加總要等於「總計」列，「營運月份」要是該年該月，否則失敗。`團體票`、`其他`（自行車單程票、一次票、搭乘憑證，不到 0.1%）沒有分站，不算。PDF 用 poppler 的 `pdftotext -layout` 轉成文字（雲端容器裝好的系統工具，工具呼叫它，不是專案的相依套件）。
 
-1. 開 [data.gov.tw/dataset/164957](https://data.gov.tw/dataset/164957)，下載 `捷運各站運量統計表_202501` 到 `_202512` 共 12 個檔（網址列在研究 `RIDERSHIP_SOURCES_AND_TIME_OF_DAY_2026-10-20.md` §1「桃園機捷：作者在台灣下載的步驟」）。
-2. 順便下載[164956「桃園大眾捷運每月平均日運量統計」](https://data.gov.tw/dataset/164956)（全線每月的平均日運量），用來對下面第 3 步。
-3. **平均日運量是什麼**：資料集沒寫。工具每個月印出「各站加總」與 A1 的數字：
-   - 各站加總約等於全線的平均日運量（新聞：2025 年到 10 月底約 12.65 萬），A1 約 2.5 萬：是（進站＋出站）÷ 2 或進站數，用 `--measure mean`；
-   - 各站加總約是全線的兩倍，A1 約 5 萬：是進站＋出站，用 `--measure sum`（工具除以 2）。
-   - 對照：桃捷公司 2025-04 的新聞稿說 2023-07 到 2025-02 A1「平均每日進出站人數」51,287 人次（[中央社](https://www.cna.com.tw/news/ahel/202504130017.aspx)）；這個數字本身也沒說是進＋出還是 ÷ 2，所以以全線的對照為準，結果寫在這裡。
-4. 跑工具；原始 CSV 不進 repository。每個月以天數加權平均成一年。
+**為什麼不用開放資料的「平均日運量」**：164957 的欄位是「平均日運量」，沒寫是進＋出還是 ÷ 2，研究時得等全線的 164956 對過才知道。PDF 直接有入站、出站，就沒有這個問題。對照：2025 年全線一天 127,898 人（新聞：2025 年到 10 月底約 12.65 萬）；桃捷 2025-04 新聞稿 A1「平均每日進出站人數」51,287（[中央社](https://www.cna.com.tw/news/ahel/202504130017.aspx)）是進＋出的和，÷ 2 約 2.56 萬，和這裡 2025 年的 28,773 相近。
 
 ```sh
-python3 -I tools/real-ridership/build_tymc_ridership.py 捷運各站運量統計表_2025*.csv \
-    --year 2025 --measure mean --downloaded 下載日期 \
+python3 -I tools/real-ridership/build_tymc_ridership.py --year 2025 --downloaded 2026-10-20 \
     --stations RailwayGameApp/Resources/RealRailways/tymc.json \
     --output RailwayGameApp/Resources/RealRailways/tymc_ridership.json
 ```
 
-產出後：在 `RealRidership` 加 `tymc` 一張表（照 `tmrt`），`RealRailways.load` 讀 `tymc_ridership`，資料來源畫面加桃捷的出處（164957），`RealTransfersTests` 加 A1、A8、A12、A13 的點數，用 XcodeGen 重產專案。
+`--files 資料夾` 讀已轉好的 `YYYY-MM.txt`，不下載（測試用）。原始 PDF 不進 repository。
 
-**還沒跑**（2026-10-20）：工具用假的小 CSV 測過（`test_tools.py`），還沒有真的檔。
+**2026-10-20 的結果（2025 年）**：22 站，全部對上 App；App 不認得的站名、App 有資料沒有的站：都沒有。最多的：台北車站 28,773、機場第一航廈站 12,096、高鐵桃園站 11,781、機場第二航廈站 10,913、長庚醫院站 10,252；最少的興南站 384。
+
+**什麼時候重跑**：每年一次，和其他檔一起，`--year` 換成前一年。
 
 ## 新北捷運：`build_ntmc_ridership.py`
 
@@ -158,9 +153,9 @@ python3 -I tools/real-ridership/build_ntmc_ridership.py --first 2025-10 --downlo
 
 ## 測試
 
-`python3 -I tools/real-ridership/test_tools.py`：台中、桃園、新北三個工具用假的小檔測（不連網）：天數加權、只有出站、進＋出除以 2、缺月拒絕、民國年與 UTF-8、ODS 的重複格。CI 沒有跑它，改工具時在本機跑。
+`python3 -I tools/real-ridership/test_tools.py`：台中、桃園、新北三個工具用假的小檔測（不連網）：只有出站、進＋出除以 2、缺月或月份不對就拒絕、總計對不上就拒絕、ODS 的重複格。CI 沒有跑它，改工具時在本機跑。
 
 ## 共同的注意
 
 - 下載的工具用 `curl` 讀，不用 Python 的 `urllib`：雲端容器經過的代理憑證，Python 3.13 的嚴格檢查不接受，curl 照系統設定接受。不關掉任何檢查。
-- **還沒有的**：桃園機捷（工具寫好，等作者的檔）、三鶯線（還不到 12 個月）、高雄環狀輕軌（只有全系統）、林鐵。這些站的轉乘點數照系統的規則（決策 298），不推估、不拿年運量平分。TDX 沒有各站運量的 API（2026-10-20 查過它軌道類的全部 API 說明）。
+- **還沒有的**：三鶯線（還不到 12 個月）、高雄環狀輕軌（只有全系統）、林鐵。這些站的轉乘點數照系統的規則（決策 298），不推估、不拿年運量平分。TDX 沒有各站運量的 API（2026-10-20 查過它軌道類的全部 API 說明）。

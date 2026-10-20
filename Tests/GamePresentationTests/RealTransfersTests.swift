@@ -73,6 +73,11 @@ final class RealTransfersTests: XCTestCase {
         // companies keeps the larger count.
         XCTAssertEqual(try points("中原", "mrt"), 3)
         XCTAssertEqual(try points("板橋", "mrt"), 42)
+        // The Taoyuan Airport MRT, 2025 (28,773 a day at Taipei Main Station).
+        XCTAssertEqual(ridership.riders(of: try BundledRealData.station("台北車站", in: "tymc"), data: railways.stationData), 28_773)
+        XCTAssertEqual(try points("長庚醫院站", "tymc"), 10)
+        XCTAssertEqual(try points("機場第一航廈站", "tymc"), 12)
+        XCTAssertEqual(try points("機場第二航廈站", "tymc"), 11)
         // The Sanying Line has no year of riders yet.
         XCTAssertEqual(try points("三峽", "sanying"), 1)
     }

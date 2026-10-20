@@ -87,6 +87,7 @@
 		7CFC437C2E691CD94BA7812D /* MapStationTagView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFA812528CA2F00BD6143418 /* MapStationTagView.swift */; };
 		7E6BC92CBBB09DA09DE9F8EB /* krtc_ridership.json in Resources */ = {isa = PBXBuildFile; fileRef = A0EC41B721D0D2D757CD6EF0 /* krtc_ridership.json */; };
 		806D73969CCF23668A25B510 /* ntdlrt.json in Resources */ = {isa = PBXBuildFile; fileRef = E2038D64EB91D02F90FE6716 /* ntdlrt.json */; };
+		81123B585970D45CCAB1E455 /* tymc_ridership.json in Resources */ = {isa = PBXBuildFile; fileRef = B904E02415BA067EB6C3DCBF /* tymc_ridership.json */; };
 		8163932343EEB39A635118DD /* taiwan_places.json in Resources */ = {isa = PBXBuildFile; fileRef = 894953309F6C9C2D5C1F0DB6 /* taiwan_places.json */; };
 		823389D4FCA1A54E1DDAB274 /* FeedbackViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF99D3AA87D898A7B9F0A295 /* FeedbackViews.swift */; };
 		830D83B9EA543EBE0B160A9E /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8A6A623CDA7792FB18C0A2 /* Palette.swift */; };
@@ -287,6 +288,7 @@
 		B80415091AAF98324FD6CDE1 /* tra_ridership.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra_ridership.json; sourceTree = "<group>"; };
 		B8372106A7EF953548452B15 /* MapBuildConfirm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapBuildConfirm.swift; sourceTree = "<group>"; };
 		B8DD4857B9833F971AD18592 /* MapRequestMarks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapRequestMarks.swift; sourceTree = "<group>"; };
+		B904E02415BA067EB6C3DCBF /* tymc_ridership.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tymc_ridership.json; sourceTree = "<group>"; };
 		B9632F6F7D420675666B2F9E /* Map3DShaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Map3DShaders.metal; sourceTree = "<group>"; };
 		BBBC6A819CE29EEBC4FD844A /* TimetableEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimetableEditor.swift; sourceTree = "<group>"; };
 		BC6257E295DFF1BD2CE12B37 /* StationLineChips.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationLineChips.swift; sourceTree = "<group>"; };
@@ -444,6 +446,7 @@
 				83510312DE1715AFCB2B14F4 /* trtc_ridership.json */,
 				9E428A92A98C07A45636F5E3 /* trtc_times.json */,
 				56ABC6AFF31D91F9079F6044 /* trtc.json */,
+				B904E02415BA067EB6C3DCBF /* tymc_ridership.json */,
 				360D54F266227011F79894B4 /* tymc_times.json */,
 				9066371AFA922B8308EA3748 /* tymc.json */,
 			);
@@ -777,6 +780,7 @@
 				8E8DF7ADF7EF189838D3BB26 /* trtc_ridership.json in Resources */,
 				8F7D3D9A5618E26E83A6DA59 /* trtc_times.json in Resources */,
 				3CD0719BA9F8CDD5FC42B134 /* tymc.json in Resources */,
+				81123B585970D45CCAB1E455 /* tymc_ridership.json in Resources */,
 				2B45A912226EB245FACCA4F3 /* tymc_times.json in Resources */,
 				C2A0206D4D8F4C5F50DE9083 /* warning.wav in Resources */,
 				B2E315F0FCFC44707DC846E7 /* whoosh.wav in Resources */,

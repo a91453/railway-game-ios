@@ -29,51 +29,57 @@ class TaoyuanTests(unittest.TestCase):
         self.folder = tempfile.mkdtemp()
         self.stations = os.path.join(self.folder, "tymc.json")
         write_json(self.stations, {"lines": [{"name": "機場捷運", "stations": [{"name": "台北車站"}, {"name": "三重站"}, {"name": "老街溪站"}]}]})
+        self.files = os.path.join(self.folder, "files")
+        os.mkdir(self.files)
 
-    def month(self, month, rows, year="114", encoding="cp950"):
-        path = os.path.join(self.folder, f"{month:02d}.csv")
-        lines = ["年度,月份,捷運站別,平均日運量"] + [f"{year},{month},{name},{count}" for name, count in rows]
-        with open(path, "wb") as file:
-            file.write("\r\n".join(lines).encode(encoding))
-        return path
+    def month(self, month, rows, year="114", total=None):
+        """A month as pdftotext -layout writes it: rows of (code name, entries, exits)."""
+        entries = sum(row[1] for row in rows)
+        exits = sum(row[2] for row in rows)
+        lines = ["              桃園大眾捷運股份有限公司", f"營運月份：{year}年{month}月                     單位：人次",
+                 "                        各站旅運量", "捷運站別                    入站                出站"]
+        lines += [f"{name}               {a:,}           {b:,}" for name, a, b in rows]
+        lines += [f"總計                   {(total or (entries, exits))[0]:,}         {(total or (entries, exits))[1]:,}",
+                  "團體票                            2,954", "其他                             1,087"]
+        with open(os.path.join(self.files, f"2025-{month:02d}.txt"), "w", encoding="utf-8") as file:
+            file.write("\n".join(lines) + "\n")
 
     def year(self, a1=lambda month: 20_000):
-        return [self.month(month, [("A1台北車站", f"\"{a1(month):,}\""), ("A2三重站", "3000")]) for month in range(1, 13)]
+        for month in range(1, 13):
+            self.month(month, [("A1 台北車站", a1(month), a1(month)), ("A2 三重站", 3000, 1000)])
 
-    def build(self, files, measure="mean"):
+    def build(self):
         output = os.path.join(self.folder, "out.json")
-        result = run("build_tymc_ridership.py", *files, "--year", "2025", "--measure", measure, "--downloaded", "2026-10-21",
-                     "--stations", self.stations, "--output", output)
+        result = run("build_tymc_ridership.py", "--year", "2025", "--downloaded", "2026-10-21",
+                     "--stations", self.stations, "--output", output, "--files", self.files)
         return result, (json.load(open(output, encoding="utf-8")) if result.returncode == 0 else None)
 
-    def test_a_year_is_the_months_weighted_by_their_days(self):
-        # January's 31 days at 31,000 and the other months at 20,000.
-        result, output = self.build(self.year(lambda month: 31_000 if month == 1 else 20_000))
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(output["riders"]["台北車站"], round((31_000 * 31 + 20_000 * 334) / 365))
-        self.assertEqual(output["riders"]["三重站"], 3000)
-        self.assertEqual(output["period"], {"from": "2025-01-01", "to": "2025-12-31"})
-        self.assertEqual(len(output["source"]["fileSha256"]), 12)
-        self.assertIn("stations of the app with no data: 老街溪站", result.stdout)
-
-    def test_a_sum_of_entries_and_exits_is_halved(self):
-        result, output = self.build(self.year(), measure="sum")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(output["riders"]["台北車站"], 10_000)
-
-    def test_a_missing_month_or_a_wrong_year_is_refused(self):
-        result, _ = self.build(self.year()[:11])
-        self.assertNotEqual(result.returncode, 0)
-        files = self.year()
-        files[0] = self.month(1, [("A1台北車站", "1")], year="113")
-        result, _ = self.build(files)
-        self.assertNotEqual(result.returncode, 0)
-
-    def test_utf8_and_gregorian_years_are_read(self):
-        files = [self.month(month, [("A1 台北車站", "100"), ("A2三重站", "1")], year="2025", encoding="utf-8-sig") for month in range(1, 13)]
-        result, output = self.build(files)
+    def test_a_year_is_entries_and_exits_halved_over_its_days(self):
+        # January's entries and exits at 36,500 each, the other months' at 0.
+        self.year(lambda month: 36_500 if month == 1 else 0)
+        result, output = self.build()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(output["riders"]["台北車站"], 100)
+        self.assertEqual(output["riders"]["三重站"], round(12 * 4000 / 2 / 365))
+        self.assertEqual(output["period"], {"from": "2025-01-01", "to": "2025-12-31"})
+        self.assertEqual(len(output["source"]["fileSha256"]), 12)
+        self.assertIn("names the app does not have: none", result.stdout)
+        self.assertIn("stations of the app with no data: 老街溪站", result.stdout)
+
+    def test_a_missing_month_or_a_wrong_month_is_refused(self):
+        self.year()
+        os.remove(os.path.join(self.files, "2025-12.txt"))
+        self.assertNotEqual(self.build()[0].returncode, 0)
+        self.year()
+        self.month(1, [("A1 台北車站", 1, 1)], year="113")
+        self.assertNotEqual(self.build()[0].returncode, 0)
+
+    def test_a_total_row_the_stations_do_not_add_up_to_is_refused(self):
+        self.year()
+        self.month(3, [("A1 台北車站", 10, 10)], total=(11, 10))
+        result, _ = self.build()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("total row", result.stderr)
 
 
 class TaichungTests(unittest.TestCase):
