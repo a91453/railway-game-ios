@@ -37,9 +37,17 @@ final class LineDraftSummaryUITests: XCTestCase {
 
         selectStation(at: points[0])
         tap(app.buttons["entry.lines"])
-        if app.buttons["line.new"].appears(within: 3) {
-            reveal(app.buttons["line.new"])
-            tap(app.buttons["line.new"])
+        // Both maps open with lines, so the panel lists them first and folds
+        // the new line's form into "New Line…" below them (decision 196),
+        // off the screen on a phone: scrolled to, not waited for.
+        if !app.buttons["Add Selected Station"].appears(within: 3) {
+            let newLine = app.buttons["line.new"]
+            reveal(newLine)
+            tap(newLine)
+            // A tap while the list still glides only stops it (run
+            // 39456665951): the row is selected once its form is open.
+            if !isSelected(newLine, within: 3) { tap(newLine) }
+            XCTAssertTrue(isSelected(newLine, within: 3), "The new line's form did not open")
         }
         reveal(app.buttons["Add Selected Station"])
         tap(app.buttons["Add Selected Station"])
@@ -80,6 +88,15 @@ final class LineDraftSummaryUITests: XCTestCase {
         XCTAssertTrue(control.becomesHittable(within: 10), "Covered \(control)")
         control.waitUntilSettled()
         control.tap()
+    }
+
+    private func isSelected(_ control: XCUIElement, within timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while !(control.exists && control.isSelected) {
+            guard Date() < deadline else { return false }
+            Thread.sleep(forTimeInterval: 0.1)
+        }
+        return true
     }
 
     private func reveal(_ control: XCUIElement) {

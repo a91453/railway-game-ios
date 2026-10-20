@@ -73,6 +73,9 @@ struct LinesPanel: View {
 
     /// Target headways offered in the menu, in minutes.
     private static let targets: [Int64] = [5, 10, 15, 20, 30, 60]
+    /// Where the panel scrolls once the new line's form comes first
+    /// (decision 299): its Pick on Map button, under the draft's summary.
+    private static let draftAnchor = "line.draft.anchor"
 
     var body: some View {
         NavigationStack {
@@ -133,6 +136,17 @@ struct LinesPanel: View {
                     Task { @MainActor in
                         await Task.yield()
                         withAnimation { proxy.scrollTo(target, anchor: .center) }
+                    }
+                }
+                // Decision 299: the first station added (or picking begun)
+                // moves the new line's form from under the lines to the top;
+                // the panel follows it there rather than staying where the
+                // button was, among the selected line's stops.
+                .onChange(of: listsLinesFirst) { was, now in
+                    guard was, !now else { return }
+                    Task { @MainActor in
+                        await Task.yield()
+                        withAnimation { proxy.scrollTo(Self.draftAnchor, anchor: .center) }
                     }
                 }
             }
@@ -1555,6 +1569,7 @@ struct LinesPanel: View {
             }
             .accessibilityIdentifier("line.draft.pick")
             .tutorialPanelTarget(.pickLineStops)
+            .id(Self.draftAnchor)
             Button("Add Selected Station") {
                 session.addSelectedStationToLineDraft()
             }
