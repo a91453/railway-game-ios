@@ -41,6 +41,8 @@ public final class GameSession {
     @ObservationIgnored public private(set) var commandLog: CommandLog
     /// Whether a path that logs its own change is changing ``world``.
     @ObservationIgnored private var isLogging = false
+    /// The transfer points last worked out (decision 298) and what from.
+    @ObservationIgnored var transferMemo: TransferMemo?
     /// Counts the changes to ``world``, so what is worked out from it (the
     /// track preview, ``networkPreview``) is kept until it changes.
     @ObservationIgnored private(set) var worldRevision = 0
@@ -500,7 +502,11 @@ public final class GameSession {
     /// arrive after the game starts (``GameLauncher/loadRealWorldData(reading:)``),
     /// and the map then draws them.
     public var railways: RealRailways? {
-        didSet { suggestStationNameAtTheMiddle() }
+        didSet {
+            suggestStationNameAtTheMiddle()
+            // Decision 298: the transfers come with the railways.
+            refreshTransfers()
+        }
     }
 
     /// Taiwan's place names (decision 159), which a new station on a
@@ -2488,7 +2494,19 @@ public final class GameSession {
         editSerial &+= 1
         // CTM study M2: a next step the edit met is answered at once.
         noteNextSteps(since: before)
+        // Decision 298: a station built, moved or taken away by a real one.
+        refreshTransfers()
         return result
+    }
+
+    /// Gives the stations `points` transfer points and every other none
+    /// (decision 298), logged with the values so a replay needs no real
+    /// railways. Not an edit: nothing to undo. Nothing when the world
+    /// refuses them (``GameWorld/setTransfers(_:)``) or has them already.
+    func applyTransfers(_ points: [StationID: Int64]) {
+        var set = world
+        guard (try? set.setTransfers(points)) != nil, set != world else { return }
+        logging(.transfers(points)) { $0 = set }
     }
 
     /// Drops the oldest snapshots until at most ``landReadingUndoLimit``

@@ -356,7 +356,7 @@ final class RealRailwaysTests: XCTestCase {
             let sections = DataSourceCredits.sections(in: language)
             XCTAssertEqual(sections.map(\.id), ["railways", "population", "map", "cityView"])
             let credits = sections.flatMap(\.credits)
-            XCTAssertEqual(credits.map(\.id), ["tdx", "traOpenData", "nlsc", "openStreetMap", "operators", "worldPop", "overtureBuildings", "appleMaps", "wikidata", "worldUrbanizationProspects", "taiwanBaseMap", "openFreeMap", "mapLibre", "map3DGround", "copernicusDEM", "proceduralTokyo", "polyHaven"])
+            XCTAssertEqual(credits.map(\.id), ["tdx", "traOpenData", "ridership", "nlsc", "openStreetMap", "operators", "worldPop", "overtureBuildings", "appleMaps", "wikidata", "worldUrbanizationProspects", "taiwanBaseMap", "openFreeMap", "mapLibre", "map3DGround", "copernicusDEM", "proceduralTokyo", "polyHaven"])
             for credit in credits {
                 XCTAssertFalse(credit.title.isEmpty || credit.detail.isEmpty || credit.notice.isEmpty, credit.id)
                 for link in credit.links {
@@ -372,6 +372,12 @@ final class RealRailwaysTests: XCTestCase {
             XCTAssertTrue(openStreetMap.detail.contains(language.text("Yilan and Su'aoxin sidings", "宜蘭、蘇澳新側線")), openStreetMap.detail)
             XCTAssertTrue(openStreetMap.links.contains { $0.url == "https://opendatacommons.org/licenses/odbl/1-0/" })
             XCTAssertTrue(credits.first { $0.id == "tdx" }?.links.contains { $0.url == "https://data.gov.tw/license" } == true)
+            // Decision 298: the open data under its licence, and the High
+            // Speed Rail's statistics credited to the company.
+            let ridership = try XCTUnwrap(credits.first { $0.id == "ridership" })
+            XCTAssertTrue(ridership.notice.contains(language.text("Open Government Data License, version 1.0", "政府資料開放授權條款第 1 版")), ridership.notice)
+            XCTAssertTrue(ridership.notice.contains(language.text("Taiwan High Speed Rail Corporation", "台灣高速鐵路股份有限公司")), ridership.notice)
+            XCTAssertEqual(ridership.links.map(\.url).filter { $0.hasPrefix("https://data.gov.tw/dataset/") }.count, 3)
             let worldPop = try XCTUnwrap(credits.first { $0.id == "worldPop" })
             XCTAssertTrue(worldPop.notice.contains("CC BY 4.0"))
             XCTAssertTrue(worldPop.notice.contains("10.5258/SOTON/WP00840"))
