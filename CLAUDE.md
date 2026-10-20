@@ -338,10 +338,12 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
 - Decisions (owner, 2026-10-14: "我不再做決定，都以這個當預設"): a choice that
   would otherwise wait for the owner (which option, which look, which
   default, which order, a golden value a rule change moves) is made by the
-  session itself from four angles: player, developer, art and music
-  (owner, 2026-10-15). Write one line of reason per angle in the PR (and in
-  the decision when there is one; "music: none" when sound has nothing to
-  do with it), keep the other options' previews in the PR so the owner can look
+  session itself from five angles: player, railway fan (how true it is to
+  real railways and their data, and where that data comes from), developer,
+  art and music (owner, 2026-10-15; railway fan added 2026-10-20). Write one
+  line of reason per angle in the PR (and in the decision when there is
+  one; "railway fan: none" or "music: none" when it has nothing to do with
+  them), keep the other options' previews in the PR so the owner can look
   later, and go ahead. This does not change what stays the owner's: starting
   a TestFlight release, Apple account and App Store Connect steps, secrets,
   adding a dependency, and reusing copyleft or unlicensed code; nor any
