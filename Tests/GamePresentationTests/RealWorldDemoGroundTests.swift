@@ -132,7 +132,7 @@ final class RealWorldDemoGroundTests: XCTestCase {
                 }
             }
         }
-        // Measured (decision 279): 64 of 70 samples in the real tunnels are
+        // Measured (decision 279): 65 of 70 samples in the real tunnels are
         // in the game's, 1 of 1 on the one long viaduct up on one, and 10
         // of 385 on the real ground up on a viaduct or down in a tunnel;
         // without the real structures 59 of 70, 1 of 1 and 22 of 385.
