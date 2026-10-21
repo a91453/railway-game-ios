@@ -24,6 +24,13 @@ public struct Map3DTrainLabels: Sendable {
         public let info: Info
         public let x: Float
         public let y: Float
+
+        public init(train: TrainID, info: Info, x: Float, y: Float) {
+            self.train = train
+            self.info = info
+            self.x = x
+            self.y = y
+        }
     }
 
     /// The camera's distance from its target within which labels show, in
