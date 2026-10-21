@@ -204,6 +204,13 @@ PR：#187（配色與 HUD）、#190／#192（地圖為主的玻璃版面）、#1
 
 鎖上與打開用形狀分（鎖環有沒有插進去、鎖身的位置），不只靠顏色（art-style §2）。
 
+## 實景地圖的載入畫面（決策 307）
+
+- 底色 `Theme.background`；中間 220 pt 見方的小路網：三條線用 `Palette.lineColor`（線 0、1、2，色盲安全色也跟著），寬 8 pt、圓頭；站是 `Theme.panel` 白點、`Theme.textPrimary` 2.5 pt 邊。
+- 列車：`Theme.accent` 圓底（直徑 28 pt）、`Theme.onAccent` 2 pt 邊與 `MapGlyph.train` 圖示（18 pt），和地圖上列車的配色同一組（onAccent 對 accent 8.69:1）。
+- 下面三行：公司名（rounded、title2、heavy、`textPrimary`），地名（headline、`Theme.primary`），「正在準備地圖…」（subheadline、`textSecondary`）。
+- 淡入 0.7 s、淡出 0.45 s（`MotionRule.loadingIn`、`loadingOut`）；減少動態時列車不動。
+
 ## 乘客感受的表情（決策 301）
 
 路線卡「乘客感受」三項旁邊的臉。24 格單色模板，同一個圓臉（中心 12, 13、半徑 9.5），五官挖空；眼睛照站長的表情（決策 122）。顏色只用既有的色票，預覽在 `docs/art/line-satisfaction-2026-10-20/faces.png`。
