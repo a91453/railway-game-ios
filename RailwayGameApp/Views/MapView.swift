@@ -65,6 +65,7 @@ struct MapView: View {
     /// Which population and travel layer is shown (``PopTravelMode``'s raw
     /// value, empty for none); a view preference, as the other layers.
     @AppStorage("mapPopTravelMode") private var popTravelModeName = ""
+    @AppStorage("mapShowsFaresAndStamps") private var showsFaresAndStamps = true
     /// Whether the player folded the layer's legend (TestFlight 59.1,
     /// ``LegendFold``): a device preference, not in the save.
     @AppStorage(LegendFold.key) private var legendFold = 0
@@ -223,7 +224,8 @@ struct MapView: View {
             showsStationNames: showsStationNames,
             showsWaitingCounts: showsWaitingCounts,
             showsCatchmentRings: showsCatchmentRings,
-            popTravelMode: PopTravelMode(rawValue: popTravelModeName)
+            popTravelMode: PopTravelMode(rawValue: popTravelModeName),
+            showsFaresAndStamps: showsFaresAndStamps
         )
     }
 
@@ -784,6 +786,10 @@ struct MapView: View {
                     // are, which may be by the attribution.
                     .mask { attribution.fill() }
                 }
+                // Decision 167, later: the locks on the tiles not bought.
+                .overlay(alignment: .topLeading) {
+                    MapLockMarks(session: session, camera: projection, viewport: viewport, insets: clear)
+                }
                 // Decision 109: what needs the player, over its stations.
                 .overlay(alignment: .topLeading) {
                     MapAlertBubbles(session: session, camera: projection, viewport: viewport, insets: clear)
@@ -811,14 +817,20 @@ struct MapView: View {
                     TownGrowthRings(pulse: session.townPulse, camera: projection)
                         .mask { attribution.fill() }
                 }
+                // The fares, and decision 276's trips stamped full where
+                // they ended; both off with the quick strip's Fares
+                // (decision 310).
                 .overlay(alignment: .topLeading) {
-                    FareFloatMarks(session: session, camera: projection)
-                        .mask { attribution.fill() }
+                    if mapLayers.showsFaresAndStamps {
+                        FareFloatMarks(session: session, camera: projection)
+                            .mask { attribution.fill() }
+                    }
                 }
-                // Decision 276: a trip's result where it ended.
                 .overlay(alignment: .topLeading) {
-                    TripStampMarks(session: session, camera: projection)
-                        .mask { attribution.fill() }
+                    if mapLayers.showsFaresAndStamps {
+                        TripStampMarks(session: session, camera: projection)
+                            .mask { attribution.fill() }
+                    }
                 }
                 .overlay {
                     GoalMetCheck(pulse: session.goalPulse, language: session.language)
@@ -2998,6 +3010,7 @@ struct StoredMapLayerSheet: View {
     @AppStorage("mapShowsWaitingCounts") private var showsWaitingCounts = true
     @AppStorage("mapShowsCatchmentRings") private var showsCatchmentRings = true
     @AppStorage("mapPopTravelMode") private var popTravelModeName = ""
+    @AppStorage("mapShowsFaresAndStamps") private var showsFaresAndStamps = true
 
     var body: some View {
         MapLayerSheet(layers: Binding(
@@ -3006,7 +3019,8 @@ struct StoredMapLayerSheet: View {
                     showsStationNames: showsStationNames,
                     showsWaitingCounts: showsWaitingCounts,
                     showsCatchmentRings: showsCatchmentRings,
-                    popTravelMode: PopTravelMode(rawValue: popTravelModeName)
+                    popTravelMode: PopTravelMode(rawValue: popTravelModeName),
+                    showsFaresAndStamps: showsFaresAndStamps
                 )
             },
             set: { layers in
@@ -3014,6 +3028,7 @@ struct StoredMapLayerSheet: View {
                 showsWaitingCounts = layers.showsWaitingCounts
                 showsCatchmentRings = layers.showsCatchmentRings
                 popTravelModeName = layers.popTravelMode?.rawValue ?? ""
+                showsFaresAndStamps = layers.showsFaresAndStamps
             }
         ), mapStyle: mapStyleSection)
     }

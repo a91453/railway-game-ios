@@ -283,6 +283,10 @@ enum MapGlyph: String {
     case shops1 = "MapGlyphShops1"
     case shops2 = "MapGlyphShops2"
     case shops3 = "MapGlyphShops3"
+    /// Decision 167, later: a tile of the map not bought yet, shut until
+    /// the best day unlocks it, open after.
+    case lock = "MapGlyphLock"
+    case lockOpen = "MapGlyphLockOpen"
 
     /// The glyph of a station's shops at `level`.
     static func shops(_ level: StationCommerceLevel) -> MapGlyph {

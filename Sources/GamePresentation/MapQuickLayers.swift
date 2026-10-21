@@ -11,6 +11,8 @@ public enum MapQuickLayer: CaseIterable, Hashable, Sendable {
     case waitingCounts
     case passengerLoad
     case population
+    /// The fares and the stamps over the stations (decision 310).
+    case faresAndStamps
 
     /// Its short name under its button.
     public func title(in language: DisplayLanguage) -> String {
@@ -19,6 +21,7 @@ public enum MapQuickLayer: CaseIterable, Hashable, Sendable {
         case .waitingCounts: language.text("Waiting", "候車")
         case .passengerLoad: language.text("Load", "載客量")
         case .population: language.text("People", "人口")
+        case .faresAndStamps: language.text("Fares", "車資與章")
         }
     }
 
@@ -29,6 +32,7 @@ public enum MapQuickLayer: CaseIterable, Hashable, Sendable {
         case .waitingCounts: "person.2"
         case .passengerLoad: "chart.bar.xaxis"
         case .population: "person.3.sequence"
+        case .faresAndStamps: "dollarsign.circle"
         }
     }
 
@@ -39,6 +43,7 @@ public enum MapQuickLayer: CaseIterable, Hashable, Sendable {
         case .waitingCounts: layers.showsWaitingCounts
         case .passengerLoad: layers.shows(.sectionFlow)
         case .population: layers.shows(.population)
+        case .faresAndStamps: layers.showsFaresAndStamps
         }
     }
 
@@ -52,6 +57,7 @@ public enum MapQuickLayer: CaseIterable, Hashable, Sendable {
         case .waitingCounts: layers.showsWaitingCounts = on
         case .passengerLoad: layers.setShows(.sectionFlow, on)
         case .population: layers.setShows(.population, on)
+        case .faresAndStamps: layers.showsFaresAndStamps = on
         }
         return layers
     }

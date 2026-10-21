@@ -1,37 +1,34 @@
 import GameCore
 
 // Feedback, second batch, part two (decision 276): each trip's result
-// stamped where it ends, as an airline game stamps a flight "full" or
-// "plenty of seats". The fullest a trip's train was is read from the world
+// stamped where it ends, as an airline game stamps a flight "full"; since
+// decision 310, full only. The fullest a trip's train was is read from the world
 // after every step, as the fares are (decision 256); nothing here is saved
 // or changes the world.
 //
 // The references have none to port (gap): `Ci/`'s line report counts a
 // day's peak load (GameCore's `LineTally.peakLoad`), not a trip's.
 
-/// What a trip is stamped (decision 276): full, or plenty of seats, by
-/// decision 274's fit of the fullest its train was. A trip in between gets
-/// none, so the map stays quiet while a line runs well.
+/// What a trip is stamped (decision 276): full, by decision 274's fit of
+/// the fullest its train was. A trip with seats to spare gets none, so the
+/// map stays quiet while a line runs well (decision 310: an off-peak train
+/// a third full is ordinary, and "too big" stays in the line's card).
 public enum TripStampKind: Hashable, Sendable {
     /// Full at its busiest (``TrainFit/tooSmall``).
     case full
-    /// Never a third full (``TrainFit/tooBig``).
-    case roomy
 
     /// The stamp for a trip whose train was at most `peakLoad` thousandths
-    /// of its rated capacity, or `nil` for one just right.
+    /// of its rated capacity, or `nil` for one with seats to spare.
     public init?(peakLoad: Int64) {
-        switch TrainFit(peakLoad: peakLoad) {
-        case .tooSmall: self = .full
-        case .tooBig: self = .roomy
-        case .justRight: return nil
-        }
+        guard TrainFit(peakLoad: peakLoad) == .tooSmall else { return nil }
+        self = .full
     }
 
+    /// "滿載", not the station's "客滿" (a station holding 4,000 waiting),
+    /// so the two do not read alike (decision 310).
     public func title(in language: DisplayLanguage) -> String {
         switch self {
-        case .full: language.text("Full", "客滿")
-        case .roomy: language.text("Plenty of seats", "空位多")
+        case .full: language.text("Train full", "滿載")
         }
     }
 }

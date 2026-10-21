@@ -232,21 +232,64 @@ public final class GameLauncher {
     /// the new game turns on and the seed; and on a real-world map, the
     /// ground (decision 198).
     public func startNewGame(at anchor: GeoAnchor? = nil) {
-        let options = newGameOptions
+        begin(Self.newWorld(at: anchor, options: newGameOptions, data: newWorldData), keepingAutosave: true)
+    }
+
+    /// What building a new game's world reads of the real-world data: a
+    /// copy, so it can be built off the main actor.
+    struct NewWorldData: Sendable {
+        let population: PopulationGrid?
+        let places: PlaceGrid?
+        let water: WaterGrid?
+        let coverage: CoverageGrid?
+        let heights: HeightGrid?
+    }
+
+    var newWorldData: NewWorldData {
+        NewWorldData(population: population, places: places, water: water, coverage: coverage, heights: heights)
+    }
+
+    /// The world ``startNewGame(at:)`` begins: its rules, without the
+    /// launcher, so ``openRealWorldGame(at:)`` builds the same one off the
+    /// main actor.
+    nonisolated static func newWorld(at anchor: GeoAnchor?, options: NewGameOptions, data: NewWorldData) -> GameWorld {
         let seed = options.eventSeed()
-        if let anchor, let population, let expansion = RealWorldExpansion(around: anchor) {
-            let step = expansion.ridersStep(population: population, places: places, water: water)
+        if let anchor, let population = data.population, let expansion = RealWorldExpansion(around: anchor) {
+            let step = expansion.ridersStep(population: population, places: data.places, water: data.water)
             var world = GameWorld.newRealWorldExpansionGame(expansion, ridersStep: step, balance: options.startingBalance, eventSeed: seed)
             options.apply(to: &world)
-            begin(grounded(world, options.ground), keepingAutosave: true)
-            return
+            return grounded(world, options.ground, heights: data.heights)
         }
         var world = GameWorld.newGame(
-            anchor: anchor, balance: options.startingBalance, eventSeed: seed, land: anchor.flatMap(land(at:)),
-            water: anchor.map(water(at:)) ?? [], steep: anchor.map(steep(at:)) ?? [], buysMap: anchor == nil && options.buysMap
+            anchor: anchor, balance: options.startingBalance, eventSeed: seed, land: anchor.flatMap { land(at: $0, data: data) },
+            water: anchor.map { water(at: $0, data: data) } ?? [], steep: anchor.map { steep(at: $0, data: data) } ?? [],
+            buysMap: anchor == nil && options.buysMap
         )
         options.apply(to: &world)
-        begin(anchor == nil ? world : grounded(world, options.ground), keepingAutosave: true)
+        return anchor == nil ? world : grounded(world, options.ground, heights: data.heights)
+    }
+
+    /// What the loading screen shows while ``openRealWorldGame(at:)`` (or
+    /// a demo) builds its map (decision 307); `nil` otherwise.
+    public private(set) var realWorldLoading: RealWorldLoading?
+
+    /// Starts a new game on the real-world map round `anchor`, as
+    /// ``startNewGame(at:)`` does, but built off the main actor with the
+    /// loading screen showing meanwhile (``realWorldLoading``, decision
+    /// 307): a place of Taiwan reads the land of a whole tile. Returns the
+    /// task, or `nil` while a map is being built already. A game started
+    /// meanwhile stays.
+    @discardableResult
+    public func openRealWorldGame(at anchor: GeoAnchor) -> Task<Void, Never>? {
+        guard realWorldLoading == nil, !isOpeningADemo else { return nil }
+        realWorldLoading = RealWorldLoading(place: RealWorldLoading.placeName(near: anchor, in: placeNames, language: language))
+        let (options, data) = (newGameOptions, newWorldData)
+        return Task {
+            let world = await Task.detached(priority: .userInitiated) { Self.newWorld(at: anchor, options: options, data: data) }.value
+            realWorldLoading = nil
+            guard session == nil else { return }
+            begin(world, keepingAutosave: true)
+        }
     }
 
     /// Starts a new game on the whole of Taiwan (decision 88), its land
@@ -255,7 +298,7 @@ public final class GameLauncher {
         let options = newGameOptions
         var world = GameWorld.newWholeTaiwanGame(balance: options.startingBalance, eventSeed: options.eventSeed())
         options.apply(to: &world)
-        begin(grounded(world, options.ground), keepingAutosave: true)
+        begin(Self.grounded(world, options.ground, heights: heights), keepingAutosave: true)
     }
 
     /// `world`, a new real-world game, with ground (decision 124) when the
@@ -263,7 +306,7 @@ public final class GameLauncher {
     /// reads the ground in as track comes to it. Without the file, or on
     /// flat ground (decision 198), the map stays flat and its track level,
     /// in the game and in its saves.
-    private func grounded(_ world: GameWorld, _ ground: NewGameOptions.Ground) -> GameWorld {
+    nonisolated private static func grounded(_ world: GameWorld, _ ground: NewGameOptions.Ground, heights: HeightGrid?) -> GameWorld {
         guard heights != nil, ground == .real else { return world }
         var world = world
         try? world.mapGround()
@@ -307,7 +350,7 @@ public final class GameLauncher {
                 within: WholeTaiwan.landReach, of: LiuMingchuanChallenge.towns.map(\.point), in: &world, population: population, places: places,
                 water: water, coverage: coverage
             )
-            begin(grounded(world, .real), keepingAutosave: true)
+            begin(Self.grounded(world, .real, heights: heights), keepingAutosave: true)
         case .branchLine(let id):
             // Decision 289: as the Liu Mingchuan challenge's, the line's map,
             // its towns read in round the line's places, and its ground.
@@ -321,7 +364,7 @@ public final class GameLauncher {
             GameSession.readLand(
                 within: WholeTaiwan.landReach, of: line.townPoints, in: &world, population: population, places: places, water: water, coverage: coverage
             )
-            begin(grounded(world, .real), keepingAutosave: true)
+            begin(Self.grounded(world, .real, heights: heights), keepingAutosave: true)
         }
     }
 
@@ -456,8 +499,9 @@ public final class GameLauncher {
     /// meanwhile stays.
     @discardableResult
     public func openHighSpeedDemo(railways: RealRailways) -> Task<Void, Never>? {
-        guard !isOpeningADemo else { return nil }
+        guard !isOpeningADemo, realWorldLoading == nil else { return nil }
         isOpeningHighSpeedDemo = true
+        realWorldLoading = RealWorldLoading(place: language.text("Taiwan High Speed Rail", "台灣高鐵"))
         let (language, population, places, water, coverage, heights) = (language, population, places, water, coverage, heights)
         return Task {
             let world = await Task.detached(priority: .userInitiated) {
@@ -467,6 +511,7 @@ public final class GameLauncher {
                 )
             }.value
             isOpeningHighSpeedDemo = false
+            realWorldLoading = nil
             guard let world else {
                 message = StatusMessage(kind: .failure, text: language.text(
                     "The High Speed Rail could not be built from the real-world data.", "無法用實景資料蓋出高鐵。"
@@ -492,8 +537,9 @@ public final class GameLauncher {
     /// A game the player starts meanwhile stays.
     @discardableResult
     public func openTRADemo(railways: RealRailways) -> Task<Void, Never>? {
-        guard !isOpeningADemo else { return nil }
+        guard !isOpeningADemo, realWorldLoading == nil else { return nil }
         isOpeningTRADemo = true
+        realWorldLoading = RealWorldLoading(place: language.text("Yilan Line", "宜蘭線"))
         let (language, population, places, water, coverage, heights) = (language, population, places, water, coverage, heights)
         return Task {
             let world = await Task.detached(priority: .userInitiated) {
@@ -503,6 +549,7 @@ public final class GameLauncher {
                 )
             }.value
             isOpeningTRADemo = false
+            realWorldLoading = nil
             guard let world else {
                 message = StatusMessage(kind: .failure, text: language.text(
                     "The Yilan Line could not be built from the real-world data.", "無法用實景資料蓋出宜蘭線。"
@@ -521,24 +568,36 @@ public final class GameLauncher {
     /// Since decision 147 each cell has the coverage of the app's
     /// coverage file, when it has been read.
     func land(at anchor: GeoAnchor) -> [LandCell]? {
+        Self.land(at: anchor, data: newWorldData)
+    }
+
+    nonisolated static func land(at anchor: GeoAnchor, data: NewWorldData) -> [LandCell]? {
         let frame = RealWorldFrame(anchor: anchor, bounds: GameWorld.newGameBounds)
-        let cells = population.flatMap {
-            LandImport.cells(population: $0, places: places, water: water, frame: frame, bounds: GameWorld.newGameBounds)
+        let cells = data.population.flatMap {
+            LandImport.cells(population: $0, places: data.places, water: data.water, frame: frame, bounds: GameWorld.newGameBounds)
         }
-        guard let cells, let coverage else { return cells }
+        guard let cells, let coverage = data.coverage else { return cells }
         return coverage.covering(cells, frame: frame)
     }
 
     /// The water of a new game's map with its middle at `anchor` (decision
     /// 105, ``WaterGrid``): none without the app's water.
     func water(at anchor: GeoAnchor) -> [CellPosition] {
-        water?.cells(frame: RealWorldFrame(anchor: anchor, bounds: GameWorld.newGameBounds), bounds: GameWorld.newGameBounds) ?? []
+        Self.water(at: anchor, data: newWorldData)
+    }
+
+    nonisolated static func water(at anchor: GeoAnchor, data: NewWorldData) -> [CellPosition] {
+        data.water?.cells(frame: RealWorldFrame(anchor: anchor, bounds: GameWorld.newGameBounds), bounds: GameWorld.newGameBounds) ?? []
     }
 
     /// The steep slopes of a new game's map with its middle at `anchor`
     /// (decision 115, from the same file as the water): none without it.
     func steep(at anchor: GeoAnchor) -> [CellPosition] {
-        water?.steepCells(frame: RealWorldFrame(anchor: anchor, bounds: GameWorld.newGameBounds), bounds: GameWorld.newGameBounds) ?? []
+        Self.steep(at: anchor, data: newWorldData)
+    }
+
+    nonisolated static func steep(at anchor: GeoAnchor, data: NewWorldData) -> [CellPosition] {
+        data.water?.steepCells(frame: RealWorldFrame(anchor: anchor, bounds: GameWorld.newGameBounds), bounds: GameWorld.newGameBounds) ?? []
     }
 
     // MARK: - Lessons (decision 266)

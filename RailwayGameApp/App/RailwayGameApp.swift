@@ -413,6 +413,7 @@ private final class BackgroundSave {
 /// The game being played, or the start screen when there is none.
 private struct RootView: View {
     let launcher: GameLauncher
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Group {
@@ -425,6 +426,18 @@ private struct RootView: View {
                     .onAppear { Map3DSceneCache.shared.clear() }
             }
         }
+        // Decision 307: the loading screen of a real-world map, over the
+        // start screen while the map is built, fading away over the game.
+        .overlay {
+            if let loading = launcher.realWorldLoading {
+                RealWorldLoadingView(loading: loading, language: launcher.language)
+                    .transition(.opacity)
+            }
+        }
+        .animation(
+            (launcher.realWorldLoading == nil ? MotionRule.loadingOut : .loadingIn).running(reduceMotion: reduceMotion)?.animation,
+            value: launcher.realWorldLoading == nil
+        )
         #if DEBUG
         .background {
             if UITestTrace.isOn {
