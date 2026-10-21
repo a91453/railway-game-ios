@@ -624,6 +624,8 @@ final class HighSpeedDemoTests: XCTestCase {
         XCTAssertFalse(launcher.isOpeningHighSpeedDemo)
         XCTAssertEqual(launcher.session?.world.stations.count, 15, "the game is open")
         XCTAssertEqual(launcher.session?.world.lines.first?.isHighSpeed, true)
+        // Decision 313, later: its 3D map opens where the 2D map looks.
+        Map3DOpenEveryStartTests.assertOpensWhereThe2DMapLooks(try XCTUnwrap(launcher.session?.world), "openHighSpeedDemo")
         try XCTSkipIf(Self.population == nil, "The population file is not here.")
         let taipei = try XCTUnwrap(launcher.session?.world.stations.first { $0.name == "Taipei" })
         XCTAssertGreaterThan(launcher.session?.world.stationDemand(of: taipei.id)?.hinterland ?? 0, 1_000_000, "the people were handed to the build")

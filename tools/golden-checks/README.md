@@ -22,7 +22,7 @@ python3 -I tools/golden-checks/doc_numbers.py --root <路徑>  # 檢查別的 ch
 | golden | 「schema N」 | `Tests/GameCoreTests/GoldenScenario.swift` 的 `GoldenScenario.schemaVersion` |
 | golden | 「N 個 JSON」 | `GoldenScenarios/` 底下的 `*.json` 個數 |
 | replay | 開頭的「N 個」 | `ReplayFixtures/` 底下的 `*.json` 個數 |
-| 決策 | 括號前最大的號碼（「1–217、219–265（…）」讀成 265） | `docs/ARCHITECTURE.md` 最大的 `### N.` |
+| 決策 | 括號前最大的號碼（「1–217、219–265（…）」讀成 265）；括號前沒有號碼（「見決策索引（§9）」）就不比，表上寫「不列（見 §9）」 | `docs/ARCHITECTURE.md` 最大的 `### N.` |
 
 只算目錄本身的 JSON，不算子目錄，和讀這些檔案的測試一樣。所以 `ReplayFixtures/Reports/` 裡的問題回報範例不算 replay fixture。
 
@@ -31,7 +31,7 @@ python3 -I tools/golden-checks/doc_numbers.py --root <路徑>  # 檢查別的 ch
 | 情形 | 算差異 |
 | --- | --- |
 | ARCHITECTURE 的同一個 `### N.` 出現兩次以上 | 是 |
-| ARCHITECTURE 有 `### N.`，決策索引（OVERVIEW §9）沒有這一列 | 是 |
+| ARCHITECTURE 有 `### N.`，決策索引（OVERVIEW §9）還沒有這一列 | 否，只列出來（2026-10-21 起 PR 只寫 ARCHITECTURE 自己預約的那一節，索引由遊戲規劃合併後補） |
 | 決策索引有一列，ARCHITECTURE 沒有對應的 `### N.`（索引自己寫「保留後沒有使用」的列除外） | 是 |
 | 決策索引寫「沒有使用」，ARCHITECTURE 卻有這一號 | 是 |
 | 決策索引同一號不只一列 | 是 |
@@ -47,7 +47,8 @@ python3 -I tools/golden-checks/doc_numbers.py --root <路徑>  # 檢查別的 ch
 
 ### 什麼時候跑
 
-- 改了存檔版本、golden schema、fixture 個數或新增決策的 PR，更新 OVERVIEW §2 之後跑一次 `--check`。
+- 改了存檔版本、golden schema 或 fixture 個數的 PR，更新 OVERVIEW §2 之後跑一次 `--check`。新增決策的 PR 只填 ARCHITECTURE 裡預約的「### N. （預約）」那一節，不改 OVERVIEW 的決策列與 §9。
+- 遊戲規劃合併一批之後補索引，跑 `--check` 確認附註裡沒有「還沒進決策索引」。
 - 改這支工具本身時跑 `--selftest`。
 
 CI 不會自動跑它。工具放在這裡而不是 `.github/scripts/`，因為改 `.github/scripts/` 會觸發完整的 Swift tier（HANDOFF 第 2 節）。

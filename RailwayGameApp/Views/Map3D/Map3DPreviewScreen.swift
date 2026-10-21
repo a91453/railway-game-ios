@@ -20,9 +20,13 @@ import UIKit
 /// (`toMap2D`), and Build to its building tools there (`build`).
 /// Decision 269, later: turned from north, a compass under the close
 /// button shows where north is; a tap turns the map back.
+/// Decision 313, later: it opens over the place the 2D map showed, where a
+/// pinch handed it over or the 3D button opened it (`openedAt`), its scene
+/// built round that place; from the settings, round what is built.
 struct Map3DPreviewScreen: View {
     let session: GameSession
     var handedOver: Map3DHandoff.Plan? = nil
+    var openedAt: Map3DHandoff.Plan? = nil
     let close: () -> Void
     var handBack: ((Map3DHandoff.Plan) -> Void)? = nil
     /// Decision 313: back to the 2D map at this view's middle and scale,
@@ -44,7 +48,7 @@ struct Map3DPreviewScreen: View {
         ZStack {
             Map3DView(scene: scene, sceneVersion: sceneVersion, lighting: Map3DLighting(at: session.world.clock.now),
                       weather: Map3DWeather(MapWeather(world: session.world)), feed: feed,
-                      start: handedOver, farOut: farOut, compass: compass, cameraLink: cameraLink, onStats: { stats = $0 })
+                      start: handedOver, openedAt: openedAt, farOut: farOut, compass: compass, cameraLink: cameraLink, onStats: { stats = $0 })
                 .ignoresSafeArea()
                 .accessibilityIdentifier("map3D.view")
             if scene == nil {
@@ -129,8 +133,8 @@ struct Map3DPreviewScreen: View {
             }
             .padding()
         }
-        .task(id: Map3DSceneKey(world: session.world, hasHeights: session.heights != nil)) {
-            let built = await Map3DSceneCache.shared.scene(for: session)
+        .task(id: Map3DSceneKey(world: session.world, hasHeights: session.heights != nil, focus: focus)) {
+            let built = await Map3DSceneCache.shared.scene(for: session, focus: focus)
             // A newer world or the heights file started another build: a
             // cancelled one may finish after it and must not replace it.
             guard !Task.isCancelled else { return }
@@ -140,6 +144,11 @@ struct Map3DPreviewScreen: View {
         .onChange(of: session.world.trains, initial: true) { _, _ in
             feed.update(world: session.world, palette: linePalette)
         }
+    }
+
+    /// Decision 313, later: the world point the scene is built round.
+    private var focus: (x: Double, y: Double)? {
+        (handedOver ?? openedAt).map { (x: $0.x, y: $0.y) }
     }
 
     /// Decision 269: pinched out past the line, the 2D map's view to hand
@@ -166,6 +175,10 @@ struct Map3DPreviewScreen: View {
             if showsDetails {
                 Group {
                     Text(verbatim: String(format: "CPU %.1f ms · GPU %.1f ms", stats.cpuMilliseconds, stats.gpuMilliseconds))
+                    // The CPU waiting for the screen, apart from its work
+                    // (the far view's 16.6 ms, 2026-10-21), and the pixels a
+                    // point drawn (Map3DDrawScale).
+                    Text(verbatim: String(format: "wait %.1f ms · %.0f×", stats.waitMilliseconds, stats.drawScale))
                     Text(verbatim: "\(stats.drawCalls) draws · \(stats.triangles.formatted()) triangles")
                     Text(verbatim: "\(stats.people) people · \(stats.vehicles) vehicles · \(stats.streetDetail)")
                 }
@@ -210,17 +223,19 @@ final class Map3DSceneCache {
         building = nil
     }
 
-    /// Starts building `session`'s scene, unless it is built or building.
-    func prepare(for session: GameSession) {
-        _ = task(for: session)
+    /// Starts building `session`'s scene round `focus` (decision 313,
+    /// later: the point the 2D map looks at), unless it is built or
+    /// building round a point near it (``Map3DScene/FocusArea``).
+    func prepare(for session: GameSession, focus: (x: Double, y: Double)?) {
+        _ = task(for: session, focus: focus)
     }
 
-    func scene(for session: GameSession) async -> Map3DScene {
-        await task(for: session).value
+    func scene(for session: GameSession, focus: (x: Double, y: Double)?) async -> Map3DScene {
+        await task(for: session, focus: focus).value
     }
 
-    private func task(for session: GameSession) -> Task<Map3DScene, Never> {
-        let key = Map3DSceneKey(world: session.world, hasHeights: session.heights != nil)
+    private func task(for session: GameSession, focus: (x: Double, y: Double)?) -> Task<Map3DScene, Never> {
+        let key = Map3DSceneKey(world: session.world, hasHeights: session.heights != nil, focus: focus)
         if key == self.key, game === session, let building { return building }
         let world = session.world
         // The ground the world has not read yet, from the heights file,
@@ -234,7 +249,7 @@ final class Map3DSceneCache {
         let city = world.geoAnchor == nil ? nil : BaseMapFiles.city
         let task = Task.detached(priority: .userInitiated) {
             let baseMap = tiles.flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }.flatMap { try? BaseMapTiles(data: $0) }
-            return Map3DScene(world: world, baseMap: baseMap, cityTiles: city.map(CityTileArea.areas(in:)) ?? [],
+            return Map3DScene(world: world, focus: focus, baseMap: baseMap, cityTiles: city.map(CityTileArea.areas(in:)) ?? [],
                               heights: heights)
         }
         self.key = key
@@ -246,17 +261,20 @@ final class Map3DSceneCache {
 
 /// What makes the still scene change: track, platforms, the player's
 /// buildings, and the city, which grows by night, each week; and the
-/// heights file, which can arrive after the game opened.
+/// heights file, which can arrive after the game opened; decision 313,
+/// later: and the place it is built round, to a few kilometres.
 struct Map3DSceneKey: Hashable {
     let hasHeights: Bool
+    let focus: Map3DScene.FocusArea?
     let edges: Int
     let lastEdge: TrackEdgeID?
     let platforms: Int
     let buildings: Int
     let week: Int64
 
-    init(world: GameWorld, hasHeights: Bool) {
+    init(world: GameWorld, hasHeights: Bool, focus: (x: Double, y: Double)? = nil) {
         self.hasHeights = hasHeights
+        self.focus = focus.map { Map3DScene.FocusArea(x: $0.x, y: $0.y) }
         edges = world.network.edges.count
         lastEdge = world.network.edges.last?.id
         platforms = world.network.platforms.count
@@ -310,6 +328,9 @@ private struct Map3DView: UIViewRepresentable {
     /// when a pinch out is let go far enough
     /// (``Map3DHandoff/handsBack(handedOverAt:from:to:)``).
     let start: Map3DHandoff.Plan?
+    /// Decision 313, later: the 2D map's view the 3D button opened this
+    /// over.
+    let openedAt: Map3DHandoff.Plan?
     let farOut: ((Map3DCamera) -> Void)?
     /// Decision 269, later: the way the map faces, for the compass.
     let compass: Map3DCompassState
@@ -366,10 +387,13 @@ private struct Map3DView: UIViewRepresentable {
             view.camera = Map3DHandoff.camera(from: start, in: scene, viewport: view.camera.viewport)
             context.coordinator.handedOverAt = view.camera.distance
         } else if first {
-            // Open over the middle of what is built, the whole of it in view.
+            // Open over the place the 2D map showed (decision 313, later),
+            // or from the settings the middle of what is built, the whole
+            // scene in view.
             let width = Float((scene.region.maxX - scene.region.minX) / Double(WorldCoordinate.unitsPerMetre))
             let height = Float((scene.region.maxY - scene.region.minY) / Double(WorldCoordinate.unitsPerMetre))
-            view.camera = Map3DCamera(target: .zero, distance: max(width, height) * 0.9, viewport: view.camera.viewport)
+            let target = openedAt.map { scene.point(worldX: $0.x, worldY: $0.y, height: 0) } ?? .zero
+            view.camera = Map3DCamera(target: target, distance: max(width, height) * 0.9, viewport: view.camera.viewport)
         }
         context.coordinator.showHeading()
     }

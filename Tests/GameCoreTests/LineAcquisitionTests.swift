@@ -45,13 +45,13 @@ final class LineAcquisitionTests: XCTestCase {
 
     // MARK: - Buying
 
-    /// Bought at 05:00, the line pays $40 for each of its 500 riders, books
+    /// Bought at 05:00, the line pays $10,000 for each of its 2 riders, books
     /// it as an asset, and runs from the next day: the run out does not go
     /// at 06:10 today, and goes at 06:10 tomorrow.
     func testABoughtLineIsPaidForAndRunsFromTheNextDay() throws {
         var world = try world()
         let before = world.economy.balance
-        try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 500)
+        try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 2)
 
         XCTAssertEqual(world.economy.balance, before - Money(2_000_000))
         XCTAssertEqual(world.acquisitions, [LineAcquisition(realLine: pingxi, line: main, day: 0, value: Money(2_000_000))])
@@ -94,7 +94,7 @@ final class LineAcquisitionTests: XCTestCase {
         var world = try world()
         world.setEconomyMode(.free)
         let assets = world.accounts.assets
-        try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 10)
+        try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 1)
         XCTAssertEqual(world.accounts.assets, assets)
         XCTAssertEqual(world.acquisitions.count, 1)
     }
@@ -124,7 +124,7 @@ final class LineAcquisitionTests: XCTestCase {
         XCTAssertEqual(refusal { try $0.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: -1) }, .invalidAcquisition)
         XCTAssertEqual(refusal { try $0.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 200_001) }, .invalidAcquisition)
         XCTAssertEqual(refusal { try $0.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 100_000) },
-                       .insufficientFunds(required: Money(400_000_000), available: world.economy.balance))
+                       .insufficientFunds(required: Money(100_000_000_000), available: world.economy.balance))
         XCTAssertEqual(refusal(after: { try $0.setLineRuns(main, to: []) }) {
             try $0.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 1)
         }, .invalidAcquisition, "a line without runs")
@@ -148,7 +148,7 @@ final class LineAcquisitionTests: XCTestCase {
     /// the real line cannot be bought again.
     func testRemovingABoughtLineWritesItOff() throws {
         var world = try world()
-        try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 500)
+        try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 2)
         try world.removeLine(main)
         XCTAssertFalse(world.accounts.assets.contains { $0.kind == .acquiredLine })
         XCTAssertEqual(world.acquisitions.map(\.realLine), [pingxi])
@@ -164,7 +164,7 @@ final class LineAcquisitionTests: XCTestCase {
         var world = try world()
         let plain = try XCTUnwrap(try JSONSerialization.jsonObject(with: JSONEncoder().encode(world)) as? [String: Any])
         XCTAssertNil(plain["acquisitions"])
-        try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 500)
+        try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 2)
         let data = try JSONEncoder().encode(world)
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: data), world)
 
@@ -186,12 +186,12 @@ final class LineAcquisitionTests: XCTestCase {
         XCTAssertFalse(decodes { $0["acquisitions"] = [good.merging(["value": -1]) { $1 }] })
     }
 
-    /// Version 66 (decision 315): Main bought as Pingxi at 05:00 for 500
-    /// riders and run to tomorrow's 06:06, its train sent out; it saves byte
+    /// Version 66 (decision 315): Main bought as Pingxi at 05:00 for $20,000
+    /// (2 riders) and run to tomorrow's 06:06, its train sent out; it saves byte
     /// for byte and is the world this build makes.
     func testVersionSixtySixKeepsTheLineBought() throws {
         var world = try world()
-        try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 500)
+        try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 2)
         try world.advance(ticks: 24 * 60 + 76)
 
         let url = SavedGameTests.fixtures.appendingPathComponent("v66-line-acquisition.json")

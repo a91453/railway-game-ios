@@ -16,7 +16,7 @@ import XCTest
 ///
 /// - **Each line**: a real-world game round the line under simple rules
 ///   (decision 258), over the app's heights, its land read round each
-///   station, real transfers on, $20 million in the bank so neither way
+///   station, real transfers on, $200 million in the bank so neither way
 ///   runs short. One copy buys the line (`build`, recording it); the other
 ///   lays the same track, stations and trains and runs the same real
 ///   timetable without paying for the riders, from the same minute. Both
@@ -133,7 +133,7 @@ final class AcquisitionReportTests: XCTestCase {
         let latitude = stations.map(\.coordinate.latitude).reduce(0, +) / Double(stations.count)
         let longitude = stations.map(\.coordinate.longitude).reduce(0, +) / Double(stations.count)
         let anchor = try XCTUnwrap(GeoAnchor(latitude: Int64((latitude * 10_000_000).rounded()), longitude: Int64((longitude * 10_000_000).rounded())))
-        var world = GameWorld.newGame(anchor: anchor, bounds: try WorldBounds(width: 1 << 21, height: 1 << 21), balance: Money(2_000_000_000), land: [], rules: .simple)
+        var world = GameWorld.newGame(anchor: anchor, bounds: try WorldBounds(width: 1 << 21, height: 1 << 21), balance: Money(20_000_000_000), land: [], rules: .simple)
         world.setLandOnDemand()
         world.setRealTransfers(true)
         try world.mapGround()

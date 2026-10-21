@@ -22,8 +22,9 @@ public struct LineAcquisition: Hashable, Sendable {
     /// busiest TRA station's.
     public static let maximumDailyRiders: Int64 = 200_000
     /// What a bought line costs for each rider a day its stations carry in
-    /// real life, on top of building it and its trains: $40.
-    public static let valuePerDailyRider = Money(4_000)
+    /// real life, on top of building it and its trains: $10,000
+    /// (decision 315, measured by `AcquisitionReportTests`).
+    public static let valuePerDailyRider = Money(1_000_000)
     /// The longest real line name kept.
     public static let maximumNameLength = 64
     /// Bought before this second of a day, the line runs that day's
