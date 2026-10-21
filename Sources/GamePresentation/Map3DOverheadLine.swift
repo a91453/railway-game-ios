@@ -193,6 +193,14 @@ extension Map3DScene.Builder {
             }
             return nearest.wired
         }
+        /// Whether `p` lies on a street at one of its level crossings.
+        func inStreet(_ p: Map3DPoint) -> Bool {
+            crossings.contains { crossing in
+                let d = level(p - crossing.point)
+                return abs(d.dot(crossing.along)) < Self.mastSpacing
+                    && abs(d.x * crossing.along.z - d.z * crossing.along.x) <= crossing.halfWidth + 0.5
+            }
+        }
         var masts: [Cell: [Map3DPoint]] = [:]
         target = .close
         for line in lines {
@@ -216,6 +224,9 @@ extension Map3DScene.Builder {
                 if around(p).contains(where: { (masts[$0] ?? []).contains { level($0 - p).length < 2 } }) { continue }
                 let open = [Float(1), -1].filter { !neighbour(of: line.index, at: p, along: along, right: right, side: $0) }
                 guard let side = open.first(where: { platform(at: p, side: $0) == nil }) ?? open.first else { continue }
+                // None in a street crossing the track: the wire spans over
+                // it to the masts either side.
+                if inStreet(p + right * (side * Self.mastOffset)) { continue }
                 masts[cell(p), default: []].append(p)
                 var offset = Self.mastOffset, foot: Float
                 if let standing = platform(at: p, side: side) {

@@ -58,6 +58,20 @@ final class Map3DOverheadLineTests: XCTestCase {
         for meshes in [b.meshes, b.nearMeshes, b.farMeshes] { XCTAssertTrue(mastTops(meshes).isEmpty && wires(meshes).isEmpty) }
     }
 
+    /// No mast in the street at a level crossing: the 40 m spacing put
+    /// one at x 0, where a street crosses the track, and its traffic drove
+    /// through it. The wire spans over the street to the masts either side.
+    func testNoMastStandsInTheStreetAtALevelCrossing() {
+        var b = builder()
+        let crossing = Map3DLevelCrossing(point: Map3DPoint(0, Map3DScene.railLift, 0), along: Map3DPoint(0, 0, 1), kind: .secondary)
+        b.crossings = [crossing]
+        b.addOverheadLine()
+        let masts = mastTops(b.closeMeshes)
+        XCTAssertFalse(masts.isEmpty)
+        XCTAssertTrue(masts.allSatisfy { abs($0.x) > crossing.halfWidth + 0.5 }, "\(masts.map(\.x))")
+        XCTAssertTrue(wires(b.closeMeshes).contains { abs($0.x) < 1 }, "the wire still hangs over the street")
+    }
+
     func testALongLinesWiresStayInTheChunksTheyHangOver() {
         // 3 km of track: each chunk holds only the spans over it, so its
         // box is not seen, nor drawn close up, from all along the line.
