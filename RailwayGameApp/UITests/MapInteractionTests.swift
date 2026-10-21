@@ -685,8 +685,12 @@ final class MapInteractionTests: XCTestCase {
         let catchmentRingsToggle = app.switches["layer.catchmentRings"]
         XCTAssertTrue(catchmentRingsToggle.appears(within: 5), "Catchment rings toggle must exist in MapLayerSheet")
 
+        // Decision 310 added a row above, and on a phone the heatmap's
+        // section now starts below the sheet's medium height, where the
+        // form has not made it (main 1e23a2c, a166cbc, 308c019's full
+        // lanes): scroll until the row lies wholly on screen.
         let heatmapRow = app.switches["layer.populationHeatmap"]
-        XCTAssertTrue(heatmapRow.appears(within: 5), "Population heatmap row must exist")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(heatmapRow), "Population heatmap row must exist")
         // SwiftUI exposes a labelled wrapper and its actual UISwitch as
         // separate switches. Use the control's activation point; tapping
         // the wrapper or coordinates in its frame can leave it unchanged.
