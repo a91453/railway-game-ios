@@ -3,7 +3,6 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { accessor, applyMatrix, image, readGlb, scenePrimitives } from './glb.mjs';
-import { validateGlb } from './validate.mjs';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
 const defaultModels = resolve(root, 'tools/meshy/models.json');
@@ -183,7 +182,7 @@ export function convert(bytes, { modelId, front, lengthMeters, units, recolorLig
     glowingTriangles: triangles.filter(t => t.glow).length };
 }
 
-async function cli() {
+function cli() {
   const args = process.argv.slice(2), options = {};
   for (let i = 0; i < args.length; i += 2) {
     const key = args[i];
@@ -194,15 +193,12 @@ async function cli() {
   const models = JSON.parse(readFileSync(options.models ?? defaultModels, 'utf8'));
   const model = models.models?.find(entry => entry.id === options.id);
   if (!model) throw new Error(`Unknown model id: ${options.id}`);
-  const input = readFileSync(options.input);
-  const checked = await validateGlb(input, options.input);
-  const result = convert(input, { modelId: options.id, front: model.front,
+  const result = convert(readFileSync(options.input), { modelId: options.id, front: model.front,
     lengthMeters: model.length_m, generatedPath: options.generated ?? defaultGenerated });
   writeFileSync(options.output, result.output);
-  process.stdout.write(`glTF-Validator: no errors, ${checked.warnings} warnings, ${checked.infos} infos\n`);
   process.stdout.write(`${options.id}: ${result.triangles} triangles, ${result.colors} colors, ${result.paintTriangles} paint triangles, ${result.glowingTriangles} glowing triangles -> ${options.output}\n`);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  cli().catch(error => { console.error(error.message); process.exitCode = 1; });
+  try { cli(); } catch (error) { console.error(error.message); process.exitCode = 1; }
 }
