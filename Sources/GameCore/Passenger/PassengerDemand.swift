@@ -92,6 +92,20 @@ extension GameWorld {
         passengerPlan = PassengerPlanCache()
     }
 
+    /// Turns tidal demand on or off (decision 319): with it, a home's
+    /// trips leave in the morning and come back in the evening and a
+    /// workplace's the other way round, far more strongly than the
+    /// reference's hours, the night after 01:00 is all but empty, and each
+    /// hour releases its own trips. Passengers already waiting stay; the
+    /// next release uses the new hours.
+    public mutating func setTidalDemand(_ enabled: Bool) {
+        guard enabled != tidalDemand else { return }
+        tidalDemand = enabled
+        passengerPlan = PassengerPlanCache()
+        // The land's stations take their home shares, or drop them.
+        refreshLandDemand()
+    }
+
     /// Selects how future passenger releases choose a service. Groups
     /// already waiting or riding keep their chosen trip or journey.
     public mutating func setPassengerRoutingMode(_ mode: PassengerRoutingMode) {
@@ -218,8 +232,8 @@ extension GameWorld {
         // Decision 174: the tourists keep their own hours.
         let tourists = currentTouristFlows()
         let extra = tourists.trips(from: origin, to: destination)
-        guard extra > 0 else { return Self.hourly(trips, from: from.kind, to: to.kind, weekend: isDemandWeekend) }
-        let ordinary = Self.hourly(max(0, trips - extra), from: from.kind, to: to.kind, weekend: isDemandWeekend)
+        guard extra > 0 else { return Self.hourly(trips, from: from, to: to, weekend: isDemandWeekend, tidal: tidalDemand) }
+        let ordinary = Self.hourly(max(0, trips - extra), from: from, to: to, weekend: isDemandWeekend, tidal: tidalDemand)
         return zip(ordinary, tourists.hourly(from: origin, to: destination)).map { $0 + $1 }
     }
 
@@ -431,9 +445,26 @@ extension GameWorld {
     /// `trips` shared among the 24 hours (see ``hourlyDemand(from:to:)``).
     static func hourly(_ trips: Int64, from origin: StationDemandKind, to destination: StationDemandKind,
                        weekend: Bool = false) -> [Int64] {
-        let departures = origin.departureShape
-        let arrivals = destination.arrivalShape
-        let day = weekend ? StationDemand.weekendShape : StationDemand.dayShape
+        hourly(trips, from: StationDemand(kind: origin, dailyTrips: 0), to: StationDemand(kind: destination, dailyTrips: 0), weekend: weekend)
+    }
+
+    /// `trips` from a station of demand `origin` to one of `destination`
+    /// shared among the 24 hours. With tidal demand (decision 319) a
+    /// working day keeps the stations' tidal hours
+    /// (``StationDemand/departureShape(tidal:)``) and
+    /// ``StationDemand/tidalDayShape``, a weekend or holiday their kinds'
+    /// hours and ``StationDemand/tidalWeekendShape``.
+    static func hourly(_ trips: Int64, from origin: StationDemand, to destination: StationDemand,
+                       weekend: Bool = false, tidal: Bool = false) -> [Int64] {
+        let tide = tidal && !weekend
+        let departures = origin.departureShape(tidal: tide)
+        let arrivals = destination.arrivalShape(tidal: tide)
+        let day = switch (tidal, weekend) {
+        case (false, false): StationDemand.dayShape
+        case (false, true): StationDemand.weekendShape
+        case (true, false): StationDemand.tidalDayShape
+        case (true, true): StationDemand.tidalWeekendShape
+        }
         let weights = (0..<24).map { day[$0] * departures[$0] * arrivals[$0] }
         return apportion(trips, by: weights)
     }
@@ -445,8 +476,8 @@ extension GameWorld {
     /// to 0. The shares add up to `total` otherwise.
     ///
     /// `total` is at most ``StationDemand/maximumDailyTrips`` and every
-    /// weight at most 1800 × 1503 × 1503, so `total × weight` stays well
-    /// inside an `Int64`.
+    /// weight at most 2035 × 2923 × 2923 (decision 319's tidal hours), so
+    /// `total × weight` stays well inside an `Int64`.
     static func apportion(_ total: Int64, by weights: [Int64]) -> [Int64] {
         let sum = weights.reduce(0, +)
         guard sum > 0 else { return Array(repeating: 0, count: weights.count) }
@@ -542,6 +573,8 @@ extension GameWorld {
         /// one day (see ``GameWorld/demandDay``).
         let day: Int64?
         let weeklyDemand: Bool
+        /// Decision 319: the tidal hours.
+        let tidalDemand: Bool
         let demandEvents: DemandEventSchedule?
         /// Decision 154: the holidays.
         let disruptions: Disruptions?
@@ -584,7 +617,7 @@ extension GameWorld {
             levels: lines.map { serviceLevel(of: $0.id, at: clock.now) },
             records: passengers.map(\.station), demands: passengers.map(\.demand),
             economyMode: accounts.mode, fareRules: accounts.fareRules, fareBaseline: accounts.fareBaseline,
-            day: demandDay, weeklyDemand: weeklyDemand, demandEvents: demandEvents, disruptions: disruptions,
+            day: demandDay, weeklyDemand: weeklyDemand, tidalDemand: tidalDemand, demandEvents: demandEvents, disruptions: disruptions,
             distanceDemand: distanceDemand, outsideConnections: outsideConnections, tourism: tourism,
             tourismStars: tourismStars, realisticOperation: realisticOperation,
             curveSpeedLimits: curveSpeedLimits
@@ -648,7 +681,7 @@ extension GameWorld {
                 flows.append(PassengerPlan.Flow(origin: record.station,
                     record: passengers.firstIndex(where: { $0.station == record.station })!,
                     destination: destination.station, trip: trip, choices: []))
-                var hours = Self.hourly(trips, from: origin.kind, to: destination.demand!.kind, weekend: weekend)
+                var hours = Self.hourly(trips, from: origin, to: destination.demand!, weekend: weekend, tidal: tidalDemand)
                 if extra > 0 { hours = zip(hours, tourists.hourly(from: record.station, to: destination.station)).map { $0 + $1 } }
                 hourly += hours
             }
@@ -686,7 +719,7 @@ extension GameWorld {
             let origin: StationID
             let record: Int
             let destination: StationPassengers
-            let kind: StationDemandKind
+            let demand: StationDemand
             let options: [PassengerRouteChoice]
             let journeys: [PassengerJourney]
             /// The ordinary trips, and with the tourists' all of them.
@@ -729,7 +762,7 @@ extension GameWorld {
                 let extra = tourists.trips(from: record.station, to: destination.station)
                 guard trips + extra > 0 else { continue }
                 drafts.append(Draft(origin: record.station, record: index, destination: destination,
-                                    kind: origin.kind, options: options, journeys: journeys,
+                                    demand: origin, options: options, journeys: journeys,
                                     ordinary: trips, trips: trips + extra))
             }
         }
@@ -752,7 +785,7 @@ extension GameWorld {
             flows.append(PassengerPlan.Flow(origin: draft.origin, record: draft.record,
                 destination: draft.destination.station,
                 trip: PassengerTrip(line: first.line, direction: first.direction), choices: choices))
-            var hours = Self.hourly(draft.ordinary, from: draft.kind, to: draft.destination.demand!.kind, weekend: weekend)
+            var hours = Self.hourly(draft.ordinary, from: draft.demand, to: draft.destination.demand!, weekend: weekend, tidal: tidalDemand)
             if draft.trips > draft.ordinary {
                 hours = zip(hours, tourists.hourly(from: draft.origin, to: draft.destination.station)).map { $0 + $1 }
             }
@@ -816,8 +849,14 @@ extension GameWorld {
     /// trips: each hour's trips are counted `1830 + 1770 = 3600` times, in
     /// its own hour and the one before, so the remainder comes back to what
     /// it was.
+    ///
+    /// With tidal demand (decision 319) each hour's rate is its middle's,
+    /// not its start's: the interpolation runs half an hour later, from the
+    /// half hour before to the half hour after, so an hour releases about
+    /// its own trips rather than half of the next hour's (the reference's
+    /// rates came out half an hour early). The day's sum is the same.
     mutating func releasePassengers(at now: GameTime, _ release: inout PassengerRelease) {
-        let minute = now.minuteOfDay
+        let minute = tidalDemand ? (now.minuteOfDay + 1_410) % 1_440 : now.minuteOfDay
         let hour = minute / 60
         let next = (hour + 1) % 24
         let into = Int64(minute % 60)

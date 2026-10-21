@@ -50,6 +50,12 @@ public struct GameWorld: Equatable, Sendable {
     /// a new world and in saves from before it; the app's new games turn it
     /// on. Set by ``setWeeklyDemand(_:)`` only.
     public internal(set) var weeklyDemand: Bool = false
+    /// Whether demand keeps the tide (decision 319): homes' trips leave in
+    /// the morning and come back in the evening, workplaces' the other way
+    /// round, and the night is all but empty. Off in a new world and in
+    /// saves from before it; the app's new games turn it on. Set by
+    /// ``setTidalDemand(_:)`` only.
+    public internal(set) var tidalDemand: Bool = false
     /// The demand events and the seed they are drawn from, or `nil` for a
     /// world without them (item 4; see ``DemandEventSchedule``). Off in a
     /// new world and in saves from before them; the app's new games turn
@@ -4644,7 +4650,7 @@ extension GameWorld {
 extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
-        case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, disruptions, townGrowth, accounts, geoAnchor
+        case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, tidalDemand, demandEvents, disruptions, townGrowth, accounts, geoAnchor
         case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, blockSections, curveSpeedLimits, realCarLengths, spacingAllowances, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, realTransfers, acquisitions, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
         case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion
     }
@@ -4720,6 +4726,7 @@ extension GameWorld: Codable {
         passengerRoutingMode = container.contains(.passengerRoutingMode)
             ? try container.decode(PassengerRoutingMode.self, forKey: .passengerRoutingMode) : .direct
         weeklyDemand = container.contains(.weeklyDemand) ? try container.decode(Bool.self, forKey: .weeklyDemand) : false
+        tidalDemand = try container.decodeIfPresent(Bool.self, forKey: .tidalDemand) ?? false
         demandEvents = container.contains(.demandEvents) ? try container.decode(DemandEventSchedule.self, forKey: .demandEvents) : nil
         disruptions = try container.decodeIfPresent(Disruptions.self, forKey: .disruptions)
         townGrowth = container.contains(.townGrowth) ? try container.decode(TownGrowth.self, forKey: .townGrowth) : nil
@@ -4861,6 +4868,9 @@ extension GameWorld: Codable {
         }
         if weeklyDemand {
             try container.encode(weeklyDemand, forKey: .weeklyDemand)
+        }
+        if tidalDemand {
+            try container.encode(tidalDemand, forKey: .tidalDemand)
         }
         try container.encodeIfPresent(demandEvents, forKey: .demandEvents)
         try container.encodeIfPresent(disruptions, forKey: .disruptions)

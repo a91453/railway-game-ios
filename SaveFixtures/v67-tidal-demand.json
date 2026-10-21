@@ -1,0 +1,113 @@
+{
+  "saveVersion" : 67,
+  "world" : {
+    "accounts" : {
+      "assets" : [
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "station",
+          "owner" : 1
+        }
+      ],
+      "capitalDays" : [
+        {
+          "capitalSpending" : 1000,
+          "day" : 0
+        }
+      ],
+      "days" : [
+
+      ],
+      "entries" : [
+
+      ],
+      "mode" : "management",
+      "openedAt" : 0,
+      "pending" : {
+        "departures" : 0,
+        "fareRevenue" : 0,
+        "fareTrips" : 0,
+        "passengers" : 0,
+        "seats" : 0,
+        "trainDistance" : 0
+      }
+    },
+    "bounds" : {
+      "height" : 1048576,
+      "width" : 1048576
+    },
+    "clock" : {
+      "now" : 600,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 999999000,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "land" : [
+      {
+        "column" : 128,
+        "residents" : [
+          600
+        ],
+        "row" : 128,
+        "use" : "residential"
+      },
+      {
+        "column" : 129,
+        "jobs" : [
+          400
+        ],
+        "residents" : [
+          0
+        ],
+        "row" : 128,
+        "use" : "office"
+      }
+    ],
+    "landDemand" : true,
+    "nextStationID" : 2,
+    "nextTrainID" : 1,
+    "passengers" : [
+      {
+        "abandoned" : 0,
+        "demand" : {
+          "dailyTrips" : 400,
+          "homeShare" : 444,
+          "kind" : "residential"
+        },
+        "overflowed" : 0,
+        "released" : 0,
+        "remainders" : [
+
+        ],
+        "station" : 1,
+        "waiting" : [
+
+        ]
+      }
+    ],
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "Town",
+        "point" : {
+          "x" : 526336,
+          "y" : 526336
+        }
+      }
+    ],
+    "tidalDemand" : true,
+    "trains" : [
+
+    ]
+  }
+}

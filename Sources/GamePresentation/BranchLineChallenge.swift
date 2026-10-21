@@ -135,6 +135,8 @@ public struct BranchLineChallenge: Sendable {
         world.setBlockSections(false)
         world.setCurveSpeedLimits(false)
         world.setRealCarLengths(false)
+        // Decision 319: its demand keeps the hours it was measured by.
+        world.setTidalDemand(false)
         world.setCityRequests(seed: nil)
         // Its sights (decision 174): the line's own, which a sightseeing
         // train calling near raises (decision 286).

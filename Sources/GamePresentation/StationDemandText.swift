@@ -304,8 +304,8 @@ extension GameWorld {
             return StationRidership(flow: StationFlow(entries: entries, exits: exits, isShape: false), pairs: pairs)
         }
         let shape = StationFlow(
-            entries: Self.shared(demand.dailyTrips, by: demand.kind.departureShape),
-            exits: Self.shared(demand.dailyTrips, by: demand.kind.arrivalShape),
+            entries: Self.shared(demand.dailyTrips, by: demand.departureShape(tidal: tidalDemand), tidal: tidalDemand),
+            exits: Self.shared(demand.dailyTrips, by: demand.arrivalShape(tidal: tidalDemand), tidal: tidalDemand),
             isShape: true
         )
         return StationRidership(flow: shape, pairs: pairs)
@@ -319,10 +319,12 @@ extension GameWorld {
     }
 
     /// `trips` shared among the hours in proportion to
-    /// ``StationDemand/dayShape`` × `shape`, by largest remainder (ties to
-    /// the earlier hour), as GameCore shares a pair's trips.
-    static func shared(_ trips: Int64, by shape: [Int64]) -> [Int64] {
-        let weights = (0..<24).map { StationDemand.dayShape[$0] * shape[$0] }
+    /// ``StationDemand/dayShape`` (``StationDemand/tidalDayShape`` with the
+    /// tide) × `shape`, by largest remainder (ties to the earlier hour), as
+    /// GameCore shares a pair's trips.
+    static func shared(_ trips: Int64, by shape: [Int64], tidal: Bool = false) -> [Int64] {
+        let day = tidal ? StationDemand.tidalDayShape : StationDemand.dayShape
+        let weights = (0..<24).map { day[$0] * shape[$0] }
         let sum = weights.reduce(0, +)
         var shares = weights.map { trips * $0 / sum }
         let remainders = weights.map { trips * $0 % sum }

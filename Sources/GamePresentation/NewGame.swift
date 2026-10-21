@@ -144,6 +144,10 @@ extension GameWorld {
             // Phase 6b: its stations draw their ridership from it, and it
             // grows round the well-served ones.
             world.setLandDemand(true)
+            // Decision 319: homes send their riders out in the morning and
+            // workplaces in the evening, by how much of a home the land
+            // round each station is.
+            world.setTidalDemand(true)
             // Phase 6c-1: the city's buildings stand on its land, each
             // holding so many residents and jobs.
             world.setCityBuildings(true)
@@ -267,6 +271,8 @@ public enum DemoWorld {
         world.setBlockSections(false)
         world.setCurveSpeedLimits(false)
         world.setRealCarLengths(false)
+        // Decision 319: its demand keeps the hours it was measured by.
+        world.setTidalDemand(false)
         // Decision 174: nor are there sights.
         world.setTourism(nil)
         // Decision 183: nor the city's requests.

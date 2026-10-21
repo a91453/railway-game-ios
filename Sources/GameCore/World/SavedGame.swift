@@ -347,9 +347,14 @@
 ///     so the real trains would run over the company's line again and it
 ///     could be bought twice, and it cannot read the asset, so it says the
 ///     save is newer than it instead.
+/// 67. Tidal demand (decision 319): a world can have
+///     `"tidalDemand": true`, and a station's demand its `"homeShare"`. A
+///     build that reads only an earlier version would drop them, and the
+///     game's homes and offices would lose their morning and evening, so
+///     it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 66
+    public static let currentVersion = 67
 
     public let world: GameWorld
 
@@ -520,6 +525,8 @@ extension SavedGame: Codable {
         // trains evenly, as before.
         // Version 65 to 66: a world without `"acquisitions"` bought no
         // real line.
+        // Version 66 to 67: a world without `"tidalDemand"` has it off,
+        // and a demand without `"homeShare"` follows its kind.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

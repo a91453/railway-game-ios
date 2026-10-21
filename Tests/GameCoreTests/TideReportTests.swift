@@ -13,6 +13,8 @@ import XCTest
 ///     TIDE_REPORT=7 swift test --skip-build --filter TideReportTests
 ///
 /// `TIDE_REPORT` is the days to play; 7 or more take in a weekend.
+/// `TIDE_TIDAL=1` plays the world with tidal demand (decision 319, step 2),
+/// the app's new games' hours; without it, the reference's.
 final class TideReportTests: XCTestCase {
     private static let track = TestLine(tiles: 142)
     private static let homes = [("Home 1", 10), ("Home 2", 40), ("Home 3", 70)]
@@ -155,7 +157,7 @@ final class TideReportTests: XCTestCase {
         let bands: [(String, Range<Int>)] = [("00–06", 0..<6), ("06–07", 6..<7), ("07–09 morning peak", 7..<9), ("09–16", 9..<16),
                                              ("16–19 evening peak", 16..<19), ("19–23", 19..<23), ("23–24", 23..<24)]
         var lines = [
-            "### The tide: a line from three homes to two offices, \(days) days (\(dayKinds.filter { !$0 }.count) working, \(dayKinds.filter { $0 }.count) off)",
+            "### The tide\(Self.tidal ? ", with tidal demand" : ""): a line from three homes to two offices, \(days) days (\(dayKinds.filter { !$0 }.count) working, \(dayKinds.filter { $0 }.count) off)",
             "",
             "Each band's share of a day's entries. Game: as released (and, on a working day, as the demand table gives them by hour); Taipei Metro: 2025, 128506.",
             "",
@@ -258,6 +260,9 @@ final class TideReportTests: XCTestCase {
     /// trains of one car (a test platform holds one; two off peak, one at
     /// night), homes of 4,000 trips a day and offices of 6,000, weekly
     /// demand on.
+    /// Whether `TIDE_TIDAL` asks for tidal demand.
+    private static var tidal: Bool { ProcessInfo.processInfo.environment["TIDE_TIDAL"] == "1" }
+
     private func build() throws -> GameWorld {
         var world = try makeWorld(width: Int64(Self.track.tiles + 2) * TestLine.tile, height: 4 * TestLine.tile, balance: 100_000_000)
         try Self.track.build(in: &world)
@@ -282,6 +287,7 @@ final class TideReportTests: XCTestCase {
             try world.setStationDemand(id, to: StationDemand(kind: .office, dailyTrips: 6_000))
         }
         world.setWeeklyDemand(true)
+        world.setTidalDemand(Self.tidal)
         world.setSpeed(.normal)
         return world
     }
