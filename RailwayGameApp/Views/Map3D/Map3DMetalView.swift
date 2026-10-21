@@ -23,6 +23,10 @@ final class Map3DMetalView: MTKView {
         /// The CPU's time to prepare a frame and the GPU's to draw it, the
         /// middle value, in milliseconds.
         var cpuMilliseconds: Double
+        /// The CPU's wait for the drawable (and for a street life buffer
+        /// the GPU still reads), not counted in ``cpuMilliseconds``: the
+        /// screen's pace, not the frame's work (2026-10-21).
+        var waitMilliseconds: Double
         var gpuMilliseconds: Double
         var drawCalls: Int
         var triangles: Int
@@ -105,6 +109,7 @@ final class Map3DMetalView: MTKView {
     private var chunks: [Chunk] = []
     private let gpuTimes = OSAllocatedUnfairLock(initialState: [Double]())
     private var cpuTimes: [Double] = []
+    private var waitTimes: [Double] = []
     private var frames = 0
     private var lastStats = CACurrentMediaTime()
     private var lastCounts = (drawCalls: 0, triangles: 0)
@@ -349,28 +354,25 @@ final class Map3DMetalView: MTKView {
         }
     }
 
+    /// 2026-10-21 (the far view's CPU: the owner's iPhone 17 Pro read 16.6
+    /// ms on Taipei seen whole, one 60 Hz frame to the tenth): the frame's
+    /// CPU work comes first (which chunks show and how, the trains, the
+    /// street life and their buffers), and only then the drawable, as
+    /// Apple advises: held as briefly as possible. The time spent waiting
+    /// for it, and for a street life buffer the GPU still reads, is
+    /// counted apart (``Stats/waitMilliseconds``): the CPU's time was
+    /// measured from before the drawable, so a wait for the screen read
+    /// as work.
     override func draw(_ rect: CGRect) {
         let start = CACurrentMediaTime()
+        var waited = 0.0
         shown = lighting
         shown.weather = weatherChange?.weather(at: start) ?? .clear
         let sky = shown.background
         clearColor = MTLClearColor(red: Double(sky.x), green: Double(sky.y), blue: Double(sky.z), alpha: 1)
-        guard let pass = currentRenderPassDescriptor, let drawable = currentDrawable,
-              let commands = queue.makeCommandBuffer(), let encoder = commands.makeRenderCommandEncoder(descriptor: pass)
-        else { return }
+        let camera = camera
         let matrix = camera.viewProjection
         let uniforms = uniformValues(matrix)
-        encoder.setRenderPipelineState(pipeline)
-        encoder.setDepthStencilState(depthState)
-        encoder.setCullMode(.none)
-        encoder.setFragmentTexture(surfaces, index: 0)
-        uniforms.withUnsafeBytes { bytes in
-            guard let base = bytes.baseAddress else { return }
-            encoder.setVertexBytes(base, length: bytes.count, index: 1)
-            encoder.setFragmentBytes(base, length: bytes.count, index: 1)
-        }
-        var drawCalls = 0, triangles = 0
-        let camera = camera
         var visible: [Chunk] = []
         for index in chunks.indices {
             // Decision 238: in full near the camera, whether in view or not,
@@ -384,6 +386,57 @@ final class Map3DMetalView: MTKView {
                 visible.append(chunks[index])
             }
         }
+        let frame = trains?(camera.eye)
+        var trainBoxes: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int, triangles: Int)?
+        if let mesh = frame?.boxes, !mesh.isEmpty, let vertices = makeBuffer(mesh.vertices), let indices = makeBuffer(mesh.indices) {
+            trainBoxes = (vertices, indices, mesh.indices.count, mesh.triangleCount)
+        }
+        var trainShadows: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int, triangles: Int)?
+        if let mesh = frame?.shadows, !mesh.isEmpty, let vertices = makeBuffer(mesh.vertices), let indices = makeBuffer(mesh.indices) {
+            trainShadows = (vertices, indices, mesh.indices.count, mesh.triangleCount)
+        }
+        // Decision 230: the cars near the eye, one draw call a model, every
+        // car of it an instance.
+        var cars: (sorted: [Map3DInstance], buffer: MTLBuffer)?
+        if let instances = frame?.instances, !instances.isEmpty, models != nil {
+            let sorted = instances.sorted { $0.model < $1.model }
+            if let buffer = makeBuffer(sorted.flatMap(\.floats)) { cars = (sorted, buffer) }
+        }
+        // Decision 259: the people and vehicles near the target.
+        let life = streetLife?(camera, shown.lights, streetDetail)
+        var lifeDraw: (sorted: [Map3DInstance], buffer: MTLBuffer)?
+        if let instances = life?.instances, !instances.isEmpty, models != nil {
+            let waiting = CACurrentMediaTime()
+            let buffer = nextLifeBuffer()
+            waited += CACurrentMediaTime() - waiting
+            if let buffer {
+                let sorted = Array(instances.sorted { $0.model < $1.model }.prefix(Self.lifeCapacity))
+                let floats = sorted.flatMap(\.floats)
+                floats.withUnsafeBytes { bytes in
+                    if let base = bytes.baseAddress { buffer.contents().copyMemory(from: base, byteCount: bytes.count) }
+                }
+                lifeDraw = (sorted, buffer)
+            }
+        }
+        let waiting = CACurrentMediaTime()
+        guard let pass = currentRenderPassDescriptor, let drawable = currentDrawable,
+              let commands = queue.makeCommandBuffer(), let encoder = commands.makeRenderCommandEncoder(descriptor: pass)
+        else {
+            // The street life buffer taken goes back unused.
+            if lifeDraw != nil { lifeInFlight.signal() }
+            return
+        }
+        waited += CACurrentMediaTime() - waiting
+        encoder.setRenderPipelineState(pipeline)
+        encoder.setDepthStencilState(depthState)
+        encoder.setCullMode(.none)
+        encoder.setFragmentTexture(surfaces, index: 0)
+        uniforms.withUnsafeBytes { bytes in
+            guard let base = bytes.baseAddress else { return }
+            encoder.setVertexBytes(base, length: bytes.count, index: 1)
+            encoder.setFragmentBytes(base, length: bytes.count, index: 1)
+        }
+        var drawCalls = 0, triangles = 0
         for chunk in visible {
             // Decision 238: the city in full near the camera; afar, the
             // ground and track, then the city simplified.
@@ -411,54 +464,22 @@ final class Map3DMetalView: MTKView {
                 triangles += far.indexCount / 3
             }
         }
-        let frame = trains?(camera.eye)
-        if let mesh = frame?.boxes, !mesh.isEmpty, let vertices = makeBuffer(mesh.vertices), let indices = makeBuffer(mesh.indices) {
-            encoder.setVertexBuffer(vertices, offset: 0, index: 0)
-            encoder.drawIndexedPrimitives(type: .triangle, indexCount: mesh.indices.count, indexType: .uint32,
-                                          indexBuffer: indices, indexBufferOffset: 0)
+        if let boxes = trainBoxes {
+            encoder.setVertexBuffer(boxes.vertices, offset: 0, index: 0)
+            encoder.drawIndexedPrimitives(type: .triangle, indexCount: boxes.indexCount, indexType: .uint32,
+                                          indexBuffer: boxes.indices, indexBufferOffset: 0)
             drawCalls += 1
-            triangles += mesh.triangleCount
+            triangles += boxes.triangles
         }
-        // Decision 230: the cars near the eye, one draw call a model, every
-        // car of it an instance.
-        if let instances = frame?.instances, !instances.isEmpty, let models {
-            let sorted = instances.sorted { $0.model < $1.model }
-            if let buffer = makeBuffer(sorted.flatMap(\.floats)) {
+        if let models {
+            // Decision 230: the cars; decision 259: the people and vehicles.
+            for (sorted, buffer) in [cars, lifeDraw].compactMap({ $0 }) {
                 encoder.setRenderPipelineState(instancedPipeline)
                 var first = 0
                 while first < sorted.count {
                     let model = sorted[first].model
                     var last = first
                     while last + 1 < sorted.count, sorted[last + 1].model == model { last += 1 }
-                    let count = last - first + 1
-                    encoder.setVertexBuffer(models.buffers[model], offset: 0, index: 0)
-                    encoder.setVertexBuffer(buffer, offset: first * Self.instanceStride, index: 2)
-                    encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: models.pack.models[model].vertices.count,
-                                           instanceCount: count)
-                    drawCalls += 1
-                    triangles += models.pack.models[model].triangleCount * count
-                    first = last + 1
-                }
-            }
-        }
-        // Decision 259: the people and vehicles near the target, one draw
-        // call a model, every one of it an instance.
-        let life = streetLife?(camera, shown.lights, streetDetail)
-        var lifeUsed = false
-        if let instances = life?.instances, !instances.isEmpty, let models, let buffer = nextLifeBuffer() {
-            lifeUsed = true
-            let sorted = instances.sorted { $0.model < $1.model }
-            let floats = sorted.prefix(Self.lifeCapacity).flatMap(\.floats)
-            floats.withUnsafeBytes { bytes in
-                if let base = bytes.baseAddress { buffer.contents().copyMemory(from: base, byteCount: bytes.count) }
-            }
-            do {
-                encoder.setRenderPipelineState(instancedPipeline)
-                var first = 0
-                while first < min(sorted.count, Self.lifeCapacity) {
-                    let model = sorted[first].model
-                    var last = first
-                    while last + 1 < min(sorted.count, Self.lifeCapacity), sorted[last + 1].model == model { last += 1 }
                     let count = last - first + 1
                     if model < models.buffers.count {
                         encoder.setVertexBuffer(models.buffers[model], offset: 0, index: 0)
@@ -499,16 +520,16 @@ final class Map3DMetalView: MTKView {
             drawCalls += 1
             triangles += shadows.indexCount / 3
         }
-        if let mesh = frame?.shadows, !mesh.isEmpty, let vertices = makeBuffer(mesh.vertices), let indices = makeBuffer(mesh.indices) {
-            encoder.setVertexBuffer(vertices, offset: 0, index: 0)
-            encoder.drawIndexedPrimitives(type: .triangle, indexCount: mesh.indices.count, indexType: .uint32,
-                                          indexBuffer: indices, indexBufferOffset: 0)
+        if let shadows = trainShadows {
+            encoder.setVertexBuffer(shadows.vertices, offset: 0, index: 0)
+            encoder.drawIndexedPrimitives(type: .triangle, indexCount: shadows.indexCount, indexType: .uint32,
+                                          indexBuffer: shadows.indices, indexBufferOffset: 0)
             drawCalls += 1
-            triangles += mesh.triangleCount
+            triangles += shadows.triangles
         }
         encoder.endEncoding()
         let gpuTimes = gpuTimes
-        if lifeUsed {
+        if lifeDraw != nil {
             let inFlight = lifeInFlight
             commands.addCompletedHandler { @Sendable _ in inFlight.signal() }
         }
@@ -519,7 +540,7 @@ final class Map3DMetalView: MTKView {
         commands.present(drawable)
         commands.commit()
         lastLife = (life?.people ?? 0, life?.vehicles ?? 0)
-        record(cpu: CACurrentMediaTime() - start, drawCalls: drawCalls, triangles: triangles)
+        record(cpu: CACurrentMediaTime() - start - waited, wait: waited, drawCalls: drawCalls, triangles: triangles)
     }
 
     /// The uniforms the shaders read (`Map3DUniforms` in
@@ -548,9 +569,10 @@ final class Map3DMetalView: MTKView {
             + Map3DLighting.nightWindowRows
     }
 
-    private func record(cpu: Double, drawCalls: Int, triangles: Int) {
+    private func record(cpu: Double, wait: Double, drawCalls: Int, triangles: Int) {
         frames += 1
         cpuTimes.append(cpu)
+        waitTimes.append(wait)
         lastCounts = (drawCalls, triangles)
         let now = CACurrentMediaTime()
         guard now - lastStats >= 0.5 else { return }
@@ -562,6 +584,7 @@ final class Map3DMetalView: MTKView {
         let stats = Stats(
             framesPerSecond: Double(frames) / (now - lastStats),
             cpuMilliseconds: Self.median(cpuTimes) * 1_000,
+            waitMilliseconds: Self.median(waitTimes) * 1_000,
             gpuMilliseconds: Self.median(gpu) * 1_000,
             drawCalls: lastCounts.drawCalls,
             triangles: lastCounts.triangles,
@@ -579,6 +602,7 @@ final class Map3DMetalView: MTKView {
         }
         frames = 0
         cpuTimes.removeAll()
+        waitTimes.removeAll()
         lastStats = now
         onStats?(stats)
     }
