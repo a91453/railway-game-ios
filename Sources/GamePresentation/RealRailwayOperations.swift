@@ -44,6 +44,10 @@ public struct RealOperationLine: Hashable, Sendable, Identifiable {
     /// Whether the line is a ring (`loop`): its last station runs on to
     /// the first.
     public let isLoop: Bool
+    /// The line's drawn shape (`shape`, `[latitude, longitude]` points),
+    /// along which its stations' ``RealOperationStation/distanceKm`` are
+    /// measured; empty where the file has none (decision 304).
+    public let shape: [RealRailways.Coordinate]
 
     public init(
         id: String,
@@ -55,7 +59,8 @@ public struct RealOperationLine: Hashable, Sendable, Identifiable {
         stations: [RealOperationStation] = [],
         dwellSec: [Int]? = nil,
         segmentRunSec: [Int?]? = nil,
-        isLoop: Bool = false
+        isLoop: Bool = false,
+        shape: [RealRailways.Coordinate] = []
     ) {
         self.id = id
         self.name = name
@@ -67,6 +72,7 @@ public struct RealOperationLine: Hashable, Sendable, Identifiable {
         self.dwellSec = dwellSec
         self.segmentRunSec = segmentRunSec
         self.isLoop = isLoop
+        self.shape = shape
     }
 
     /// The site's `runBetween(ln, a, b)`: the run time in seconds from
@@ -197,6 +203,7 @@ public struct RealRailwayOperations: Sendable {
             let dwellSec: [Int]?
             let segs: [RawSeg]?
             let loop: Bool?
+            let shape: [[Double]]?
         }
         struct RawSystem: Decodable {
             let system: String?
@@ -216,7 +223,13 @@ public struct RealRailwayOperations: Sendable {
                 },
                 dwellSec: line.dwellSec,
                 segmentRunSec: line.segs?.map(\.run),
-                isLoop: line.loop ?? false
+                isLoop: line.loop ?? false,
+                // A point that is not `[latitude, longitude]` drops the
+                // shape, not the line: its trains then run straight from
+                // station to station.
+                shape: line.shape.flatMap { points in
+                    points.allSatisfy { $0.count >= 2 } ? points.map { RealRailways.Coordinate(latitude: $0[0], longitude: $0[1]) } : nil
+                } ?? []
             )
         }
         return RealOperationSystem(id: key, name: raw.system ?? key.uppercased(), lines: lines)
