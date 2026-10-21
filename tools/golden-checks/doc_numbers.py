@@ -10,7 +10,8 @@ Compared:
   (Tests/GameCoreTests/GoldenScenario.swift);
 - the golden fixtures with the JSON files in GoldenScenarios/;
 - the replay fixtures with the JSON files in ReplayFixtures/;
-- the last decision with the largest `### N.` in docs/ARCHITECTURE.md.
+- the last decision with the largest `### N.` in docs/ARCHITECTURE.md and
+  docs/decisions/.
 
 Only a directory's own JSON files are counted, as the tests that read them
 do (ReplayFixtures/Reports/ is not a replay fixture).
@@ -26,10 +27,19 @@ For the same reason OVERVIEW §2 may leave the last decision to the index
 or rows out of order, the numbers missing below the last one and the
 continuation headings (`### 204（續）.`) are notes too.
 
+Since decision 329 each new decision is a file of its own,
+docs/decisions/<N>.md, whose first `### N.` heading is its number: parallel
+pull requests then add different files and no longer change the same lines
+of ARCHITECTURE (decision 329). Those decisions have no row in the index;
+the files are their index (`--index` prints the whole table). A file whose
+name is not its heading's number, a file with no heading, or a number that
+is both a file and an ARCHITECTURE heading is a difference.
+
 Python 3 standard library only:
     python3 -I tools/golden-checks/doc_numbers.py            # report
     python3 -I tools/golden-checks/doc_numbers.py --check    # exit 1 on a difference
     python3 -I tools/golden-checks/doc_numbers.py --selftest
+    python3 -I tools/golden-checks/doc_numbers.py --index    # the whole decision index
 """
 import argparse
 import pathlib
@@ -41,6 +51,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 
 OVERVIEW = "docs/OVERVIEW.md"
 ARCHITECTURE = "docs/ARCHITECTURE.md"
+DECISIONS = "docs/decisions"
 SAVED_GAME = "Sources/GameCore/World/SavedGame.swift"
 GOLDEN_SCENARIO = "Tests/GameCoreTests/GoldenScenario.swift"
 
@@ -117,6 +128,31 @@ def headings(text):
     return found, continued
 
 
+def decision_files(root, differences):
+    """(number, title, path) of each docs/decisions/<N>.md, by number. A file
+    the directory holds that is not one decision is a difference."""
+    directory = pathlib.Path(root) / DECISIONS
+    files = []
+    if not directory.is_dir():
+        return files
+    for path in sorted(directory.glob("*.md")):
+        relative = f"{DECISIONS}/{path.name}"
+        if not path.stem.isdigit():
+            continue  # README.md and the like
+        found, _ = headings(path.read_text(encoding="utf-8"))
+        if not found:
+            differences.append(f"{relative} 沒有 ### N. 標題")
+            continue
+        number, line = found[0]
+        if number != int(path.stem):
+            differences.append(f"{relative} 的標題是 ### {number}.，檔名應該是 {number}.md")
+        for other, other_line in found[1:]:
+            differences.append(f"{relative} 有第二個決策標題 ### {other}.（第 {other_line} 行）；一個檔一個決策")
+        title = path.read_text(encoding="utf-8").splitlines()[line - 1].split(".", 1)[1].strip()
+        files.append((number, title, relative))
+    return sorted(files)
+
+
 def index_rows(text):
     """(number, title) of each row of OVERVIEW §9's table, in order."""
     return [(int(row[0]), row[1] if len(row) > 1 else "") for row in table_rows(section(text, 9)) if row and row[0].isdigit()]
@@ -159,7 +195,9 @@ def compare(root):
     overview, architecture = read(OVERVIEW), read(ARCHITECTURE)
     stated = overview_numbers(overview)
     found, continued = headings(architecture)
-    numbers = [number for number, _ in found]
+    files = decision_files(root, differences)
+    filed = [number for number, _, _ in files]
+    numbers = [number for number, _ in found] + filed
     actual = {
         "save_version": first(r"static let currentVersion\s*=\s*(\d+)", read(SAVED_GAME)),
         "save_fixtures": json_count(root / "SaveFixtures"),
@@ -174,7 +212,7 @@ def compare(root):
         ("golden_schema", "golden schema", "GoldenScenario.schemaVersion"),
         ("golden_fixtures", "golden 個數", "GoldenScenarios/*.json"),
         ("replay_fixtures", "replay 個數", "ReplayFixtures/*.json"),
-        ("last_decision", "最後的決策", "ARCHITECTURE 最大的 ### N."),
+        ("last_decision", "最後的決策", "ARCHITECTURE 與 docs/decisions/ 最大的 ### N."),
     ]
     table = []
     for key, name, source in items:
@@ -190,9 +228,11 @@ def compare(root):
             differences.append(f"{name}：OVERVIEW §2 寫 {doc if doc is not None else '（讀不到）'}，{source} 是 {code if code is not None else '（讀不到）'}")
         table.append((name, doc, source, code, result))
 
-    for number in duplicates(numbers):
+    for number in duplicates([number for number, _ in found]):
         lines = "、".join(str(line) for n, line in found if n == number)
         differences.append(f"ARCHITECTURE 的 ### {number}. 出現不只一次（第 {lines} 行）")
+    for number in sorted(set(filed) & {number for number, _ in found}):
+        differences.append(f"決策 {number} 同時在 ARCHITECTURE 與 {DECISIONS}/{number}.md")
     indexed = index_rows(overview)
     rows = [number for number, _ in indexed]
     # A row the index itself marks as never used ("（保留後沒有使用）")
@@ -200,7 +240,7 @@ def compare(root):
     unused = {number for number, title in indexed if UNUSED in title}
     for number in duplicates(rows):
         differences.append(f"決策索引（OVERVIEW §9）的 {number} 不只一列")
-    for number in sorted(set(numbers) - set(rows)):
+    for number in sorted({number for number, _ in found} - set(rows)):
         notes.append(f"決策 {number} 還沒進決策索引（OVERVIEW §9；遊戲規劃合併後補）")
     for number in sorted(set(rows) - set(numbers) - unused):
         differences.append(f"決策索引（OVERVIEW §9）有 {number}，ARCHITECTURE 沒有 ### {number}.")
@@ -209,6 +249,8 @@ def compare(root):
     for number in sorted(unused - set(numbers)):
         notes.append(f"決策索引（OVERVIEW §9）把 {number} 列為保留後沒有使用")
 
+    for number in sorted(set(filed) & set(rows)):
+        notes.append(f"決策 {number} 是 {DECISIONS}/{number}.md，索引（OVERVIEW §9）不用再列")
     notes += descents(found, "ARCHITECTURE")
     notes += descents([(number, row) for row, number in enumerate(rows, 1)], "決策索引")
     if numbers:
@@ -218,6 +260,23 @@ def compare(root):
     for title, line in continued:
         notes.append(f"續篇標題 ### {title}.（第 {line} 行），不算重複")
     return table, differences, notes
+
+
+def index(root):
+    """The whole decision index: OVERVIEW §9's rows and the decision files."""
+    root = pathlib.Path(root)
+    differences = []
+    overview = (root / OVERVIEW).read_text(encoding="utf-8") if (root / OVERVIEW).is_file() else ""
+    rows = dict(index_rows(overview))
+    for number, title, path in decision_files(root, differences):
+        rows.setdefault(number, f"{title}（`{path}`）")
+    print("| 決策 | 標題 |")
+    print("| --: | --- |")
+    for number in sorted(rows):
+        print(f"| {number} | {rows[number]} |")
+    for line in differences:
+        print(f"- {line}", file=sys.stderr)
+    return 0
 
 
 def report(root):
@@ -238,7 +297,7 @@ def report(root):
 
 # MARK: - Self-test
 
-def write_repository(root, *, overview_save="63", decisions="1–2、4（3 沒有使用，#5）。之後以 #231 為準", architecture_extra="", index_extra="", replay_reports=True):
+def write_repository(root, *, overview_save="63", decisions="1–2、4（3 沒有使用，#5）。之後以 #231 為準", architecture_extra="", index_extra="", replay_reports=True, decision_files=None):
     """A small repository whose numbers all agree unless told otherwise."""
     root = pathlib.Path(root)
     files = {
@@ -293,6 +352,8 @@ def write_repository(root, *, overview_save="63", decisions="1–2、4（3 沒�
     }
     if replay_reports:
         files["ReplayFixtures/Reports/report.json"] = "{}"
+    for name, content in (decision_files or {}).items():
+        files[f"{DECISIONS}/{name}"] = content
     for relative, content in files.items():
         path = root / relative
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -325,7 +386,7 @@ def selftest():
 
     _, differences, notes = case("a decision not indexed is a note", architecture_extra="\n### 5. （預約）五\n")
     assert "決策 5 還沒進決策索引（OVERVIEW §9；遊戲規劃合併後補）" in notes, notes
-    assert differences == ["最後的決策：OVERVIEW §2 寫 4，ARCHITECTURE 最大的 ### N. 是 5"], differences
+    assert differences == ["最後的決策：OVERVIEW §2 寫 4，ARCHITECTURE 與 docs/decisions/ 最大的 ### N. 是 5"], differences
 
     table, differences, _ = case("the last decision left to the index", decisions="見決策索引（§9）", architecture_extra="\n### 5. 五\n")
     assert differences == [], differences
@@ -336,7 +397,7 @@ def selftest():
 
     _, differences, notes = case("out of order is a note", architecture_extra="\n### 5. 五\n\n### 3. 三\n", index_extra="| 5 | 五 |\n| 6 | 六 |")
     assert differences == [
-        "最後的決策：OVERVIEW §2 寫 4，ARCHITECTURE 最大的 ### N. 是 5",
+        "最後的決策：OVERVIEW §2 寫 4，ARCHITECTURE 與 docs/decisions/ 最大的 ### N. 是 5",
         "決策索引（OVERVIEW §9）有 6，ARCHITECTURE 沒有 ### 6.",
         "決策索引（OVERVIEW §9）寫 3 沒有使用，ARCHITECTURE 卻有 ### 3.",
     ], differences
@@ -346,6 +407,35 @@ def selftest():
     assert differences == ["決策索引（OVERVIEW §9）的 2 不只一列"], differences
     assert "決策索引：2 排在 4 之後（第 5 列）" in notes, notes
 
+
+    table, differences, notes = case("a decision in a file of its own", decisions="見決策索引（§9）", decision_files={
+        "5.md": "### 5. 五\n\n本文\n\n### 5（續）. 五的續篇\n",
+        "README.md": "### 9. 說明裡的標題不算\n",
+    })
+    assert differences == [], differences
+    assert table[5][3] == 5, table
+    assert not any("決策 5" in note for note in notes), notes
+
+    _, differences, _ = case("a file named after another number", decisions="見決策索引（§9）", decision_files={"6.md": "### 5. 五\n"})
+    assert differences == ["docs/decisions/6.md 的標題是 ### 5.，檔名應該是 5.md"], differences
+
+    _, differences, _ = case("a file of two decisions", decisions="見決策索引（§9）", decision_files={"5.md": "### 5. 五\n\n### 6. 六\n"})
+    assert differences == ["docs/decisions/5.md 有第二個決策標題 ### 6.（第 3 行）；一個檔一個決策"], differences
+
+    _, differences, _ = case("a file with no heading", decision_files={"5.md": "五\n"})
+    assert differences == ["docs/decisions/5.md 沒有 ### N. 標題"], differences
+
+    _, differences, _ = case("a decision both in ARCHITECTURE and a file", decisions="見決策索引（§9）", architecture_extra="\n### 5. 五\n", decision_files={"5.md": "### 5. 五\n"})
+    assert differences == ["決策 5 同時在 ARCHITECTURE 與 docs/decisions/5.md"], differences
+
+    with tempfile.TemporaryDirectory() as directory:
+        write_repository(directory, decision_files={"5.md": "### 5. 五\n"})
+        cases.append("--index lists the rows and the files")
+        import contextlib, io
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            index(directory)
+        assert out.getvalue().splitlines()[-2:] == ["| 4 | 四 |", "| 5 | 五（`docs/decisions/5.md`） |"], out.getvalue()
 
     with tempfile.TemporaryDirectory() as directory:
         write_repository(directory)
@@ -371,10 +461,13 @@ def main(argv=None, quiet=False):
     parser = argparse.ArgumentParser(description="OVERVIEW §2 的數字與程式、ARCHITECTURE 的決策號是否一致。")
     parser.add_argument("--check", action="store_true", help="有差異時 exit 1")
     parser.add_argument("--selftest", action="store_true", help="用假的 repository 測這支工具")
+    parser.add_argument("--index", action="store_true", help="印出整份決策索引：OVERVIEW §9 加上 docs/decisions/ 的檔")
     parser.add_argument("--root", default=str(ROOT), help="repository 的根目錄（預設：這支工具所在的 repository）")
     options = parser.parse_args(argv)
     if options.selftest:
         return selftest()
+    if options.index:
+        return index(options.root)
     if quiet:
         _, differences, _ = compare(options.root)
     else:

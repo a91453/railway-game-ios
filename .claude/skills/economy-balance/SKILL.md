@@ -22,7 +22,7 @@ agent（MIT，`be8993b`，授權全文在同目錄的 `LICENSE`）。保留的�
 | 目標 | 在哪裡 |
 | --- | --- |
 | 第一條線的造價與回本天數（4–10 天；示範地圖 7–10 天） | `Tests/GamePresentationTests/NewGameBalanceTests.swift`（決策 46、137） |
-| 各決策「量到的」「平衡」段落 | `grep -n "BalanceReportTests\|量到的\|平衡（量過的）" docs/ARCHITECTURE.md`（決策 46、73、137、139、145、157、174、179、181、207……） |
+| 各決策「量到的」「平衡」段落 | `grep -rn "BalanceReportTests\|量到的\|平衡（量過的）" docs/ARCHITECTURE.md docs/decisions/`（決策 46、73、137、139、145、157、174、179、181、207……） |
 | 挑戰的目標日 | 決策 86、145（`ChallengeReportTests`），劉銘傳：決策 153 |
 | 還沒解決的觀察 | ROADMAP 的平衡待觀察表；`docs/research/NEXT_PRIORITIES_2026-10-12.md` §5 第 5 項「抑制現金滾雪球」 |
 

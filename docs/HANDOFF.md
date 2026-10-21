@@ -85,7 +85,7 @@
 - GameCore PR 的 base 比另一個已經合進去的 GameCore 改動舊時，請它 merge main（不要 rebase），重跑完整 tier 再合。
 
 **決策號與文件衝突**：
-- 兩個 PR 撞同一個決策號，或 ARCHITECTURE、OVERVIEW 衝突：請該 session 自己 merge main 解，決策照號碼排。
+- 兩個 PR 撞同一個決策號（329 起是兩個 `docs/decisions/<N>.md` 同名），照 #231 登記的先後，後登記的改號；ARCHITECTURE、OVERVIEW 衝突（改 1–328 的「後來」時還會有）：請該 session 自己 merge main 解。
 - 存檔版本與決策號以 main 加上 #231 還沒釋出的登記為準，取最大值加一。
 
 **full lane**（`ios-build.yml` 把 iPhone UI 測試全部跑一次：兩個 iPhone job 加 iPad 教學，約 42–45 分鐘，佔 3 台 macOS）：
@@ -151,7 +151,7 @@
 - 不改 golden、SaveFixtures、ReplayFixtures 的值；
 - 要協調的對象：改同一個檔案的 session；GameCore 的完整 tier 同時最多 2 個；
 - 驗證方式：本機只跑快速檢查；UI 測試只用 `ios-build.yml` 的 `only_testing`；
-- 決策號（2026-10-21 起）：派工前先在 main 的 ARCHITECTURE 放一節「### N. （預約）標題」（`## 目前規則摘要` 之前，一行說明是哪個 session），派工單寫「只填這一節，不改 OVERVIEW 的決策列與 §9」。合併後由遊戲規劃補 §9 的索引（`doc_numbers.py` 把「還沒進決策索引」列為附註）。以前每個 PR 都接在 ARCHITECTURE 最後、改 OVERVIEW 同一行，幾個 PR 並行時每合一個其他的就衝突、CI 重跑（#892 一天撞三次）；
+- 決策號：派工單寫好號碼（#231 的登記就是預約），PR 只加 `docs/decisions/<N>.md` 一個檔，不改 ARCHITECTURE 的最後、OVERVIEW 的決策列與 §9（決策 329，2026-10-21 晚）。不用再先在 main 放「### N. （預約）」一節，合併後也不用補 §9 的索引。以前每個 PR 都接在 ARCHITECTURE 最後、改 OVERVIEW 同一行；10-21 改成預約一節也擋不住，相鄰的預約節還是同一處（#934 三次衝突；三天 49 個 merge main 的 run，41 個是這兩份，佔 PR 的 Linux 用量四成，`docs/research/CI_MEASURE_2026-10-21.md`）；
 - 收尾：draft → 綠 → ready → 在 #231 留「可合併」→ 用 send_message 告訴遊戲規劃；
 - 禁止：合併、auto-merge、推 main、`testflight.yml`、`@claude`、在 repo 裡寫模型名稱。
 

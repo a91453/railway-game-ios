@@ -361,6 +361,13 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   (`send_message` to that session, or ask the user). Comment again when the
   PR opens, the scope changes, it merges, or it is dropped (release its
   numbers). Only comment; never edit the issue's body.
+- A new decision (329 on) is a file of its own, `docs/decisions/<N>.md`,
+  whose first heading is `### N. <title>` (`docs/decisions/README.md`,
+  decision 329): do not append it to `docs/ARCHITECTURE.md` or add it to
+  the index in `docs/OVERVIEW.md` §9, which every parallel pull request
+  would change at the same lines. The claim in #231 is the reservation.
+  Decisions 1–328 and their later amendments stay in ARCHITECTURE. Check
+  with `python3 -I tools/golden-checks/doc_numbers.py --check`.
 - Handoffs live on `main`, in `docs/HANDOFF.md` (owner, 2026-10-16). Read it
   before starting; when a session stops with work half done, left for later
   or passed to another session, write that into `docs/HANDOFF.md` (or the
@@ -400,8 +407,8 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
 - Text the game shows players (both languages) says only what a control or
   feature does for them, in a sentence or two: never design reasons, how it
   is computed, internal units or IDs, or program and library names. Those go
-  in the decision in docs/ARCHITECTURE.md; data and licence credits stay
-  (docs/UI_THEME.md, 玩家看的文字).
+  in the decision (docs/decisions/, or docs/ARCHITECTURE.md for 1–328); data
+  and licence credits stay (docs/UI_THEME.md, 玩家看的文字).
 - Before drawing or changing any icon, glyph, character or illustration for
   the app, read `.claude/skills/art-style/SKILL.md`: the art style the owner
   chose and how to check a drawing before showing it.

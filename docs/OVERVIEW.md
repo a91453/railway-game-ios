@@ -18,7 +18,7 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 存檔版本 | 69（高鐵票價表，決策 325；68 是一日券，決策 324）；每個版本一個存檔 fixture，共 73 個 | `SavedGame.currentVersion`、`SaveFixtures/` |
 | golden | schema 74（車站商業，#595），`GoldenScenarios/` 裡 77 個 JSON | `GoldenScenarios/` |
 | replay | 9 個指令紀錄（含問題回報轉成的 `problem-report-blank-map.json`，#468；長區段行車控制 `long-leg-traffic.json`，#480） | `ReplayFixtures/` |
-| 決策 | 見決策索引（§9）與 `docs/ARCHITECTURE.md`。號碼以工作登記 #231 為準：遊戲規劃派工時在 ARCHITECTURE 先放一節「### N. （預約）」，PR 只寫自己那一節，不改這一列與 §9，索引由遊戲規劃合併後補（2026-10-21，避免每個 PR 都撞同一行）。218 沒有使用：越行寫進了決策 212，#556、#589；141、150、203 曾保留但沒有使用 | `docs/ARCHITECTURE.md`，索引在第 9 節 |
+| 決策 | 見決策索引（§9）、`docs/ARCHITECTURE.md`（1–328）與 `docs/decisions/`（329 起，一個決策一個檔）。號碼以工作登記 #231 為準：登記就是預約，PR 只加自己的 `docs/decisions/<N>.md`，不改這一列與 §9（決策 329：每個 PR 都改同一處，每合一個其他的就衝突、重跑 CI）。218 沒有使用：越行寫進了決策 212，#556、#589；141、150、203 曾保留但沒有使用 | `docs/ARCHITECTURE.md`、`docs/decisions/`，索引在第 9 節 |
 | App 版本 | 0.5.0 | `RailwayGameApp/project.yml` |
 | 平台與語言 | iPhone（只橫拿）、iPad；繁體中文、英文。日文已移除（#171） | — |
 | 程式規模 | GameCore 90 檔 3.3 萬行、GamePresentation 115 檔 3.1 萬行、App 61 檔 1.9 萬行、測試 292 檔 8.1 萬行 | — |
@@ -101,7 +101,8 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | `docs/HANDOFF.md` | **交接**：常駐 session 的角色、正在做的線、作者說「先不要動」的事、還沒派的待辦、各領域的交接（3D 等） | 現行，每次開工、收工都更新 |
 | `docs/research/NEXT_PRIORITIES_2026-10-12.md` | **唯一的優先順序**，以及機廠、行駛時間、比例、車站商業的可行性 | 現行 |
 | `docs/research/PLAYER_FEEDBACK.md` | TestFlight 玩家意見的紀錄與處理流程（不寫個人資料） | 現行，每一版更新 |
-| `docs/ARCHITECTURE.md` | 每個決策的規則細節（逐條日誌） | 現行。開頭的分層說明與最後的「目前規則摘要」在 2026-10-12 修過一次，仍以各決策本文為準 |
+| `docs/ARCHITECTURE.md` | 決策 1–328 的規則細節（逐條日誌） | 現行。開頭的分層說明與最後的「目前規則摘要」在 2026-10-12 修過一次，仍以各決策本文為準 |
+| `docs/decisions/` | 決策 329 起，一個決策一個檔（`<N>.md`） | 現行（決策 329） |
 | `GoldenScenarios/README.md`、`SaveFixtures/README.md`、`ReplayFixtures/README.md` | 行為契約：golden schema、存檔版本、replay | 現行 |
 | `docs/ROADMAP.md` | 各 Stage／Phase 的歷史紀錄，以及平衡待觀察表 | 歷史為主。優先順序已移到 NEXT_PRIORITIES |
 
@@ -125,6 +126,7 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | STATION_COMMERCE_2026-10-14 | 現行 | 決策 222：車站商業三級的規則、數字校準、畫面與美術方案；第二段（GameCore，存檔 57）照第 6 節做 |
 | RAILWAY_SOUND_2026-10-14 | 現行 | 決策 219：鐵道聲音的四階段計畫（產製流程與三種到站鈴 → 逐站鈴聲 → 分軌配樂 → 工作坊）；各階段開工前照 #231 登記 |
 | GAP_RESEARCH_2026-10-12 | 部分過時 | 參考遊戲比較（§2）仍有效；優先順序已併進 NEXT_PRIORITIES；§5 教學由決策 188 取代；§4.6 CI 由決策 187 取代 |
+| CI_MEASURE_2026-10-21 | 現行 | 決策 329：三天的 PR run（Swift 不排隊、一輪 17–21 分，重跑佔 PR Linux 用量四成、衝突八成在 ARCHITECTURE／OVERVIEW）、取消的 run、swift-build 崩潰、full lane 連續 10 次紅 |
 | CI_MEASURE_2026-10-16 | 現行 | 決策 265：三天的 run 量測（runner 用量、排隊、各 job 時間、full lane）、方案 A–C 與要作者決定的事 |
 | CI_INCIDENT_2026-10-12 | 歷史 | 4A 已由決策 187 實作；4B 在 NEXT_PRIORITIES §10 第 11 題；4C（自架 runner、Xcode Cloud、第三方 macOS runner）待作者決定，記在 HANDOFF 第 3 節 |
 | TUTORIAL_REDO_SPEC、TUTORIAL_REDO_AUDIT | 歷史 | 決策 188；P1、P2 列在 NEXT_PRIORITIES |
@@ -190,7 +192,9 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 
 ## 9. 決策索引
 
-號碼只會增加，不會重新編號：程式註解、測試、工具、fixture 的 README 都用「決策 N」引用它們（約 470 處）。全文在 `docs/ARCHITECTURE.md`，用「### N.」搜尋。
+號碼只會增加，不會重新編號：程式註解、測試、工具、fixture 的 README 都用「決策 N」引用它們（約 470 處）。1–328 的全文在 `docs/ARCHITECTURE.md`，用「### N.」搜尋。
+
+**329 起不列在這張表**：每個決策一個檔，`docs/decisions/<N>.md`，那個目錄就是索引（決策 329，[decisions/README.md](decisions/README.md)）。PR 不用改這一節。整份索引（這張表加上那些檔）：`python3 -I tools/golden-checks/doc_numbers.py --index`。
 
 | 決策 | 標題 |
 | --: | --- |
