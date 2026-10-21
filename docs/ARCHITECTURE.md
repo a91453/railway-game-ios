@@ -13943,6 +13943,9 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
   - focus 在地圖外會擋回地圖內。
   - focus 附近蓋好的東西仍在場景裡。
   - `FocusArea` 同格相等。
+- **每一種開局**（遊戲規劃要求）：`Map3DOpenEveryStartTests` 用啟動器真的開每一種開局：空白新遊戲、實景新遊戲（台北與東京）、全台灣、三個沙盒挑戰、歷史挑戰（劉銘傳、平溪、集集）、每週挑戰、示範地圖、實景示範、教學、十課。每一種都從 2D 看的點開 3D（地圖內一點、地圖外一點），斷言場景的中心就在那裡，地圖外的點會擋回地圖內。
+  - 高鐵示範與宜蘭線示範各要建 130 與 35 秒，改在 `HighSpeedDemoTests`、`TRADemoTests` 原本用啟動器開示範的測試裡斷言同一件事，不再建第二次。這個類別本身約 23 秒，在 `rest` shard。
+  - `testEveryStartIsListed` 讀 `GameLauncher.swift` 裡每個公開的 `start…`／`open…` 呼叫，不在清單（`Start`，或寫明理由的 `notAStart`）裡就失敗。所以以後加新的開局，一定要把它加進來。
 - **副作用**：非實景地圖的種子街道（決策 270）給 2D 用時算的是沒有 focus 的範圍。3D 從某處開時，範圍可能不同，街道只在兩個範圍的邊上可能不一樣（街道排在世界的格子上，和原點無關）。
 - **量測**：場景大小的上限不變（前後左右各 `reach`）。高鐵示範從台北開的場景比以前小：以前要涵蓋兩端，以 `reach` 截掉的是台北那一端。三角形與 draw 數不會超過以前的上限。
 
