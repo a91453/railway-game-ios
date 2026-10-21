@@ -14949,14 +14949,14 @@ $10,000 的價格照報告的建造、列車與利益算出（旅客那一項是
 - 拆軌道：`trackEdgeInUse`，「這段軌道上有列車。請先把列車移出軌道。」，但沒說是哪一列、在哪裡。
 - 賣車（決策 180）只賣不在軌道上的列車：要先在地圖上點那列車、按「移出軌道」，再到車隊清單賣。路線面板的「刪除」也沒有確認卡。
 
-在 origin/main 上用測試重現過（`LineRemovalTrainsTests` 的前身：刪線、跑一天，拆月台兩次 `trackReserved(1)`、拆車站兩次 `trackReserved(1)`、拆軌道 `trackEdgeInUse(edge 1)`）。
+在 origin/main 上用測試重現過（`LineRemovalTrainsTests` 的前身：刪線、跑一天，拆月台兩次 `trackReserved(1)`、拆車站兩次 `trackReserved(1)`、拆軌道 `trackEdgeInUse(edge 1)`）。回報的版本是 79.1，有決策 315 的收購支線：刪除收購的平溪線也一樣，舊的刪線留下它的列車，月台與軌道拆不完（`RealLineAcquisitionTests.testRemovingALineBoughtSellsItsTrains`）。
 
 **改法**（都在 GamePresentation 與 App，**GameCore 不動**；新的 `Sources/GamePresentation/LineRemoval.swift`）：
 1. **刪除路線一起賣掉它的列車**：新指令 `PlayerCommand.Edit.removeLineSellingTrains`：`removeLine`，再把原本配屬的每一列照下面第 2 點賣掉，全部成功或全部不做（`performEdit` 在副本上做）。路線面板的「刪除」先跳確認卡：「它的 N 列車會一起賣掉，取得 $X。」或「這條路線沒有列車。」完成訊息說賣了幾列、取得多少。
 2. **沒有路線的列車在原地賣掉**：新指令 `sellTrainWhereItStands`：還在跑自己的時刻表就停掉（`stopTrainService`），在軌道上就移出（`unplaceTrain`），再照決策 180 賣（`sellTrain`，帳面價值的 70 %，乘客照舊下車、貨物照舊損失）。還配屬在路線上的列車照舊不能賣（`trainInService`）。車隊清單在軌道上、沒有路線的列車也有「出售」；點地圖上的列車打開的列車卡也有。
 3. **拆除被擋時說出是哪一列並可賣掉**：`GameSession.refusal` 遇到 `trackReserved` 或 `trackEdgeInUse`，擋住的列車若沒有路線、也沒有在跑時刻表（`GameWorld.idleTrainInTheWay(of:)`；這種列車不會自己離開），訊息改成「列車 1 沒有路線，停在這裡擋住了。賣掉它就能拆除。」，訊息條多一個「出售 列車 1 $X」的按鈕（`StatusMessage.sellableTrain`）。賣掉可以復原。
 
-舊的 `removeLine`、`sellTrain` 指令照舊留著，舊的指令紀錄重播得一樣。
+舊的 `removeLine`、`sellTrain` 指令照舊留著，舊的指令紀錄重播得一樣。收購的線也一樣：它的列車照時刻表停在哪裡都一起賣掉，收購紀錄照決策 315 留著（那條真實路線仍是公司的）。
 
 **沒有改的**：`GameWorld.removeLine` 的行為不動（golden、`SaveFixtures`、`ReplayFixtures` 都不動，存檔版本不動）。在跑的列車（有路線或有時刻表）擋住時照舊是原本的訊息，要等它過去，或先讓它離開路線。玩家說「地圖上看不到列車」：測試裡那列車停在第一站月台外約 6 m 處（軌道 1，偏移 5,888），應該畫得出來；沒有在 iPad 上確認為什麼沒看到，留給下一個 TestFlight 看。
 
