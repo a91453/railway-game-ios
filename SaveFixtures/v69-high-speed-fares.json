@@ -1,0 +1,365 @@
+{
+  "saveVersion" : 69,
+  "world" : {
+    "accounts" : {
+      "days" : [
+
+      ],
+      "entries" : [
+
+      ],
+      "highSpeedFares" : [
+        {
+          "fare" : 4900,
+          "from" : 1,
+          "to" : 2
+        },
+        {
+          "fare" : 400,
+          "from" : 1,
+          "to" : 3
+        }
+      ],
+      "mode" : "management",
+      "openedAt" : 0,
+      "pending" : {
+        "departures" : 0,
+        "fareRevenue" : 0,
+        "fareTrips" : 0,
+        "passengers" : 0,
+        "seats" : 0,
+        "trainDistance" : 0
+      }
+    },
+    "bounds" : {
+      "height" : 200000,
+      "width" : 5000000
+    },
+    "clock" : {
+      "now" : 300,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 999999610700,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "lines" : [
+      {
+        "id" : 1,
+        "name" : "Fast",
+        "performance" : {
+          "acceleration" : 1400,
+          "alternativeAcceleration" : 2000,
+          "alternativeBraking" : 2700,
+          "braking" : 1500,
+          "coast" : {
+            "deceleration" : 450,
+            "speedRatio" : 450
+          },
+          "topSpeed" : 300
+        },
+        "stops" : [
+          1,
+          3,
+          2
+        ],
+        "targetHeadways" : {
+          "low" : 10,
+          "offPeak" : 10,
+          "peak" : 10
+        },
+        "trains" : [
+          1
+        ],
+        "trainsInService" : {
+          "low" : 0,
+          "offPeak" : 0,
+          "peak" : 0
+        },
+        "window" : "allDay"
+      }
+    ],
+    "network" : {
+      "edges" : [
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 1,
+          "id" : 1,
+          "to" : 2
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 2,
+          "id" : 2,
+          "to" : 3
+        }
+      ],
+      "nextEdgeID" : 3,
+      "nextNodeID" : 4,
+      "nodes" : [
+        {
+          "id" : 1,
+          "x" : 100000,
+          "y" : 100000,
+          "z" : 0
+        },
+        {
+          "id" : 2,
+          "x" : 420000,
+          "y" : 100000,
+          "z" : 0
+        },
+        {
+          "id" : 3,
+          "x" : 4004000,
+          "y" : 100000,
+          "z" : 0
+        }
+      ],
+      "platforms" : [
+        {
+          "edge" : 1,
+          "end" : 8192,
+          "start" : 0,
+          "station" : 1
+        },
+        {
+          "edge" : 1,
+          "end" : 320000,
+          "start" : 311808,
+          "station" : 3
+        },
+        {
+          "edge" : 2,
+          "end" : 8192,
+          "start" : 0,
+          "station" : 3
+        },
+        {
+          "edge" : 2,
+          "end" : 3584000,
+          "start" : 3575808,
+          "station" : 2
+        }
+      ]
+    },
+    "nextLineID" : 2,
+    "nextStationID" : 4,
+    "nextTrainID" : 2,
+    "passengerRouteBalances" : [
+      {
+        "balances" : [
+          0
+        ],
+        "destination" : 2,
+        "journeys" : [
+          {
+            "current" : 0,
+            "destination" : 2,
+            "legs" : [
+              {
+                "direction" : "outbound",
+                "from" : 1,
+                "line" : 1,
+                "to" : 2
+              }
+            ],
+            "origin" : 1
+          }
+        ],
+        "origin" : 1,
+        "weights" : [
+          434
+        ]
+      },
+      {
+        "balances" : [
+          0
+        ],
+        "destination" : 1,
+        "journeys" : [
+          {
+            "current" : 0,
+            "destination" : 1,
+            "legs" : [
+              {
+                "direction" : "inbound",
+                "from" : 2,
+                "line" : 1,
+                "to" : 1
+              }
+            ],
+            "origin" : 2
+          }
+        ],
+        "origin" : 2,
+        "weights" : [
+          434
+        ]
+      }
+    ],
+    "passengerRoutingMode" : "network",
+    "passengers" : [
+      {
+        "abandoned" : 0,
+        "demand" : {
+          "dailyTrips" : 0,
+          "hinterland" : 2000000,
+          "kind" : "residential"
+        },
+        "overflowed" : 0,
+        "released" : 1,
+        "remainders" : [
+          {
+            "destination" : 2,
+            "value" : 300
+          }
+        ],
+        "station" : 1,
+        "waiting" : [
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 2,
+              "legs" : [
+                {
+                  "direction" : "outbound",
+                  "from" : 1,
+                  "line" : 1,
+                  "to" : 2
+                }
+              ],
+              "origin" : 1
+            },
+            "line" : 1,
+            "since" : 240
+          }
+        ]
+      },
+      {
+        "abandoned" : 0,
+        "demand" : {
+          "dailyTrips" : 0,
+          "hinterland" : 1000000,
+          "kind" : "residential"
+        },
+        "overflowed" : 0,
+        "released" : 1,
+        "remainders" : [
+          {
+            "destination" : 1,
+            "value" : 300
+          },
+          {
+            "destination" : 3,
+            "value" : 900
+          }
+        ],
+        "station" : 2,
+        "waiting" : [
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 1,
+              "legs" : [
+                {
+                  "direction" : "inbound",
+                  "from" : 2,
+                  "line" : 1,
+                  "to" : 1
+                }
+              ],
+              "origin" : 2
+            },
+            "line" : 1,
+            "since" : 240
+          }
+        ]
+      },
+      {
+        "abandoned" : 0,
+        "demand" : {
+          "dailyTrips" : 0,
+          "hinterland" : 500000,
+          "kind" : "residential"
+        },
+        "overflowed" : 0,
+        "released" : 0,
+        "remainders" : [
+          {
+            "destination" : 2,
+            "value" : 900
+          }
+        ],
+        "station" : 3,
+        "waiting" : [
+
+        ]
+      }
+    ],
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "A",
+        "point" : {
+          "x" : 100000,
+          "y" : 100000
+        }
+      },
+      {
+        "id" : 2,
+        "name" : "B",
+        "point" : {
+          "x" : 4004000,
+          "y" : 100000
+        }
+      },
+      {
+        "id" : 3,
+        "name" : "N",
+        "point" : {
+          "x" : 420000,
+          "y" : 100000
+        }
+      }
+    ],
+    "trains" : [
+      {
+        "cars" : 8,
+        "id" : 1,
+        "name" : "N700",
+        "performance" : {
+          "acceleration" : 1400,
+          "alternativeAcceleration" : 2000,
+          "alternativeBraking" : 2700,
+          "braking" : 1500,
+          "coast" : {
+            "deceleration" : 450,
+            "speedRatio" : 450
+          },
+          "topSpeed" : 300
+        },
+        "type" : "HSR"
+      }
+    ]
+  }
+}

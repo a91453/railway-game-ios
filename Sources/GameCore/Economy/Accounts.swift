@@ -373,6 +373,11 @@ public struct CompanyAccounts: Hashable, Sendable {
     /// weigh them, in line ID order; a day's energy and crew are not paid
     /// for them. Counted each hour and cleared as the day is settled.
     public internal(set) var depotHours: [DepotHours] = []
+    /// Decision 325: what a high-speed trip between two stations pays, a
+    /// real fare table's (the High Speed Rail demo's, from the official
+    /// one), by ascending pair; a pair not in it pays by the kilometre
+    /// (decision 168). Empty until set.
+    public internal(set) var highSpeedFares: [HighSpeedFare] = []
 
     /// Loans are taken and repaid $100,000 at a time.
     public static let loanStep: Money = 10_000_000
@@ -401,11 +406,26 @@ public struct CompanyAccounts: Hashable, Sendable {
     var isPristine: Bool {
         mode == .free && fareRules == nil && fareBaseline == FareRules.demandBaseline && pending == .empty && openedAt == nil
             && entries.isEmpty && days.isEmpty && loan == .zero && assets.isEmpty && capitalDays.isEmpty && years.isEmpty
+            && highSpeedFares.isEmpty
     }
 
     /// The rules trips pay by.
     public var effectiveFareRules: FareRules {
         fareRules ?? .standard
+    }
+
+    /// Decision 325: the fare table's fare between `a` and `b`, either
+    /// way, or `nil` if the table has no such pair.
+    public func highSpeedFare(between a: StationID, and b: StationID) -> Money? {
+        let key = HighSpeedFare.Key(a, b)
+        var low = 0, high = highSpeedFares.count
+        while low < high {
+            let middle = (low + high) / 2
+            let pair = highSpeedFares[middle].key
+            if pair == key { return highSpeedFares[middle].fare }
+            if pair < key { low = middle + 1 } else { high = middle }
+        }
+        return nil
     }
 
     /// Writes `entry`, keeping the latest rows and days.
@@ -619,7 +639,7 @@ extension LedgerEntry: Codable {
 
 extension CompanyAccounts: Codable {
     private enum CodingKeys: String, CodingKey {
-        case mode, fareRules, fareBaseline, pending, openedAt, entries, days, loan, assets, capitalDays, years, depotHours
+        case mode, fareRules, fareBaseline, pending, openedAt, entries, days, loan, assets, capitalDays, years, depotHours, highSpeedFares
     }
 
     /// Decodes the accounts; rules the player never set have no
@@ -644,6 +664,11 @@ extension CompanyAccounts: Codable {
         depotHours = try container.decodeIfPresent([DepotHours].self, forKey: .depotHours) ?? []
         guard zip(depotHours, depotHours.dropFirst()).allSatisfy({ $0.line < $1.line }), depotHours.allSatisfy({ $0.weightHours > 0 && $0.weightHours <= GameWorld.maximumHourly }) else {
             throw DecodingError.dataCorruptedError(forKey: .depotHours, in: container, debugDescription: "Depot hours are positive and capped, once a line, in line order.")
+        }
+        // Decision 325 (save version 69).
+        highSpeedFares = try container.decodeIfPresent([HighSpeedFare].self, forKey: .highSpeedFares) ?? []
+        guard HighSpeedFare.isTable(highSpeedFares) else {
+            throw DecodingError.dataCorruptedError(forKey: .highSpeedFares, in: container, debugDescription: "High-speed fares are once a pair of two stations, in pair order, from 0.01 to the highest fare.")
         }
     }
 
@@ -676,6 +701,9 @@ extension CompanyAccounts: Codable {
         }
         if !depotHours.isEmpty {
             try container.encode(depotHours, forKey: .depotHours)
+        }
+        if !highSpeedFares.isEmpty {
+            try container.encode(highSpeedFares, forKey: .highSpeedFares)
         }
     }
 }

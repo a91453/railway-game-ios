@@ -352,9 +352,15 @@
 ///     build that reads only an earlier version would drop them, and the
 ///     game's homes and offices would lose their morning and evening, so
 ///     it says the save is newer than it instead.
+/// 69. High-speed fare tables (decision 325): the accounts can have their
+///     `"highSpeedFares"`, a real fare for each pair of high-speed
+///     stations. A build that reads only an earlier version would drop
+///     them, and the High Speed Rail demo's trips would pay by the
+///     kilometre again, so it says the save is newer than it instead.
+///     (68 is the day pass's, decision 324.)
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 67
+    public static let currentVersion = 69
 
     public let world: GameWorld
 
@@ -527,6 +533,8 @@ extension SavedGame: Codable {
         // real line.
         // Version 66 to 67: a world without `"tidalDemand"` has it off,
         // and a demand without `"homeShare"` follows its kind.
+        // Version 67 to 69: accounts without `"highSpeedFares"` have no
+        // fare table, and every high-speed trip pays by the kilometre.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

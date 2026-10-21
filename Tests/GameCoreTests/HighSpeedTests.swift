@@ -494,4 +494,103 @@ final class HighSpeedTests: XCTestCase {
         XCTAssertEqual(world.tripFare(from: a, to: b, highSpeed: true), 2_700)
         XCTAssertNil(world.tripFare(from: a, to: a, highSpeed: true))
     }
+
+    // MARK: - The real fare table (decision 325)
+
+    func testAPairOfTheFareTablePaysItsFare() throws {
+        var world = try corridor()
+        try world.setHighSpeedFares([HighSpeedFare(between: b, and: a, fare: 4_900), HighSpeedFare(between: a, and: n, fare: 400)])
+        XCTAssertEqual(world.accounts.highSpeedFares, [HighSpeedFare(between: a, and: b, fare: 4_900), HighSpeedFare(between: a, and: n, fare: 400)])
+        XCTAssertEqual(world.accounts.highSpeedFares.map(\.from), [a, a], "kept with the lower station first, in pair order")
+        XCTAssertEqual(world.tripFare(from: a, to: b, highSpeed: true), 4_900, "the table's, not the kilometres' $27")
+        XCTAssertEqual(world.tripFare(from: b, to: a, highSpeed: true), 4_900, "either way")
+        XCTAssertEqual(world.tripFare(from: a, to: n, highSpeed: true), 400, "even below the network's $5, as the real line asks")
+        XCTAssertEqual(world.tripFare(from: n, to: b, highSpeed: true), 2_500, "a pair not in the table pays by the kilometre")
+        XCTAssertEqual(world.tripFare(from: a, to: b), 500, "a trip that does not ride the high-speed line pays the network's")
+        // The company's fare rules do not change the table's fares.
+        try world.setFareRules(.flat(6_000))
+        XCTAssertEqual(world.tripFare(from: a, to: b, highSpeed: true), 4_900)
+        XCTAssertEqual(world.tripFare(from: n, to: b, highSpeed: true), 6_000)
+        // An empty table goes back to the kilometres.
+        try world.setHighSpeedFares([])
+        XCTAssertEqual(world.tripFare(from: a, to: b, highSpeed: true), 6_000)
+        try world.setFareRules(.flat(500))
+        XCTAssertEqual(world.tripFare(from: a, to: b, highSpeed: true), 2_700)
+    }
+
+    func testTheFareTableIsChecked() throws {
+        var world = try corridor()
+        try world.setHighSpeedFares([HighSpeedFare(between: a, and: b, fare: 4_900)])
+        let before = world
+        let unknown = StationID(rawValue: 9)
+        XCTAssertThrowsGameError(try world.setHighSpeedFares([HighSpeedFare(between: a, and: unknown, fare: 100)]), .unknownStation(unknown))
+        XCTAssertThrowsGameError(try world.setHighSpeedFares([HighSpeedFare(between: a, and: a, fare: 100)]), .invalidFareRules)
+        XCTAssertThrowsGameError(try world.setHighSpeedFares([HighSpeedFare(between: a, and: n, fare: 0)]), .invalidFareRules)
+        XCTAssertThrowsGameError(try world.setHighSpeedFares([HighSpeedFare(between: a, and: n, fare: FareRules.maximumFare + 1)]), .invalidFareRules)
+        XCTAssertThrowsGameError(
+            try world.setHighSpeedFares([HighSpeedFare(between: a, and: n, fare: 100), HighSpeedFare(between: n, and: a, fare: 200)]), .invalidFareRules
+        )
+        XCTAssertEqual(world, before, "a table refused changes nothing")
+    }
+
+    func testABoarderPaysTheTablesFare() throws {
+        var fast = try boardingWorld(highSpeed: true)
+        // NT$1,490, Taipei to Zuoying, as the demo writes it: $149 each.
+        try fast.setHighSpeedFares([HighSpeedFare(between: a, and: b, fare: 14_900)])
+        try fast.advance(ticks: 5)
+        XCTAssertEqual(fast.accounts.pending.fareTrips, 3)
+        XCTAssertEqual(fast.accounts.pending.fareRevenue, 44_700)
+    }
+
+    /// Version 69 (decision 325): the high-speed line A–N–B, managed, with
+    /// a fare table of A–B and A–N, run five minutes. It saves byte for
+    /// byte and is the world this build makes; a table out of order, with a
+    /// pair twice or a fare of 0 is refused, and a world without the key
+    /// has none.
+    func testVersionSixtyNineKeepsTheFareTable() throws {
+        let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("SaveFixtures/v69-high-speed-fares.json")
+        var made = try corridor()
+        made.setEconomyMode(.management)
+        made.setSpeed(.normal)
+        try made.setHighSpeedFares([HighSpeedFare(between: a, and: b, fare: 4_900), HighSpeedFare(between: a, and: n, fare: 400)])
+        try made.advance(ticks: 5)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        if ProcessInfo.processInfo.environment["HIGH_SPEED_FARES_SAVE_NEW"] != nil {
+            try encoder.encode(SavedGame(world: made)).write(to: url)
+        }
+        let data = try Data(contentsOf: url)
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 69)
+        let world = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertEqual(world, made)
+        XCTAssertEqual(world.tripFare(from: b, to: a, highSpeed: true), 4_900)
+        let text = String(decoding: data, as: UTF8.self)
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(text
+            .replacingOccurrences(of: #""saveVersion" : 69,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+
+        func accounts(_ change: (inout [String: Any]) -> Void) throws -> Data {
+            var plain = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+            var saved = try XCTUnwrap(plain["world"] as? [String: Any])
+            var economy = try XCTUnwrap(saved["accounts"] as? [String: Any])
+            change(&economy)
+            saved["accounts"] = economy
+            plain["world"] = saved
+            return try JSONSerialization.data(withJSONObject: plain)
+        }
+        let none = try JSONDecoder().decode(SavedGame.self, from: accounts { $0["highSpeedFares"] = nil }).world
+        XCTAssertEqual(none.accounts.highSpeedFares, [])
+        XCTAssertEqual(none.tripFare(from: a, to: b, highSpeed: true), 2_700)
+        let pair = { (from: Int, to: Int, fare: Int) -> [String: Any] in ["from": from, "to": to, "fare": fare] }
+        for bad in [
+            [pair(1, 3, 400), pair(1, 2, 4_900)],
+            [pair(1, 2, 4_900), pair(1, 2, 400)],
+            [pair(2, 1, 4_900)],
+            [pair(1, 1, 4_900)],
+            [pair(1, 2, 0)],
+        ] {
+            XCTAssertThrowsError(try JSONDecoder().decode(SavedGame.self, from: accounts { $0["highSpeedFares"] = bad }), "\(bad)")
+        }
+    }
 }
