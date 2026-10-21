@@ -76,6 +76,10 @@ extension Map3DScene.Builder {
     /// (decision 259) their traffic and pavements' people: a real map's
     /// roads, or (decision 263) the seeded streets of a map without one.
     mutating func addRoads(_ roads: [Map3DBaseMap.Road], taking taken: inout Set<Map3DScene.ChunkKey>) {
+        for road in roads {
+            roadLines.append((road.points.map { Map3DPoint(Float($0.x), 0, Float($0.z)) },
+                              road.kind.width(ramp: road.isRamp) / 2 + Self.sidewalk(of: road.kind)))
+        }
         // Decision 241: the sidewalks first, a strip wider than the road
         // under it, so both edges show and they close at the junctions.
         for road in roads where Self.sidewalk(of: road.kind) > 0 && !road.isRamp {

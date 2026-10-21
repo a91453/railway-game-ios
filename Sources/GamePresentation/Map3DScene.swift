@@ -399,6 +399,9 @@ extension Map3DScene {
         var piers: [Map3DPoint] = []
         var streetEdges: [Map3DSeededStreets.Edge: Map3DBaseMap.RoadKind] = [:]
         var crossings: [Map3DLevelCrossing] = []
+        /// Decision 322: every road's middle line and how far either side
+        /// its carriageway and pavement reach, metres.
+        var roadLines: [(points: [Map3DPoint], half: Float)] = []
         var nearMeshes: [ChunkKey: Map3DMesh] = [:]
         var farMeshes: [ChunkKey: Map3DMesh] = [:]
         var closeMeshes: [ChunkKey: Map3DMesh] = [:]

@@ -354,6 +354,8 @@ extension Map3DScene.Builder {
         let columns = corners.map { index($0.x, originX) }, rows = corners.map { index($0.z, originY) }
         var cells = Set<Map3DScene.ChunkKey>()
         for row in rows.min()!...rows.max()! { for column in columns.min()!...columns.max()! { cells.insert(Map3DScene.ChunkKey(column: column, row: row)) } }
+        // Decision 322: the shop street on the plaza they leave.
+        addShopStreet(station, centre: centre, forward: forward, depth: depth, wide: wide, cells: cells)
         return cells
     }
 
