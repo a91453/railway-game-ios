@@ -87,8 +87,8 @@ final class LateArrivalPullOutTests: XCTestCase {
 
     /// T0 leaves at 10:14, so T1 leaves M twelve minutes late and reaches
     /// A at 10:17, before a run out of the depot could: T2 stays in the
-    /// depot while T1 is on its way. Before, T2 came out at 10:13, once T1
-    /// was due after 10:15.
+    /// depot while T1 is on its way. Before, T2 came out while T1 still
+    /// waited at M, due at A after 10:15.
     func testALateTrainOnItsWayTakesTheRunBeforeARunOutThatArrivesAfterIt() throws {
         var scene = try makeScene()
         var pullOuts = 0
