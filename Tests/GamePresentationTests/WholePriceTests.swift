@@ -195,6 +195,42 @@ final class WholePriceTests: XCTestCase {
         }, build: { $0.addNetworkPlatform() })
     }
 
+    /// Decision 285: on a double track on a grade, the platform tool
+    /// levels the track beside too, and ✓'s price counts it.
+    func testADoubleTracksPlatformsOnAGradeSayTheirWholePrice() throws {
+        var world = GameWorld(
+            bounds: try WorldBounds(width: 262_144, height: 262_144),
+            economy: GameEconomy(balance: Money(100_000_000), costs: testCosts),
+            clock: GameClock(speed: .paused)
+        )
+        let side = GroundBlock.side
+        let heights = (0..<side).flatMap { _ in (0..<side).map { Int16($0 == 0 ? 10 : 15) } }
+        try world.setGround([GroundBlock(block: LandBlock(row: 0, column: 0), heights: heights)!])
+        let laying = GameSession(world: world)
+        laying.selectTool(.network)
+        laying.networkBuildsDouble = true
+        laying.tapNetwork(at: PlanPoint(x: 1_024, y: 2_048), reach: 16)
+        laying.tapNetwork(at: PlanPoint(x: 17_408, y: 2_048), reach: 16)
+        laying.buildNetworkTrack()
+        XCTAssertEqual(laying.message?.kind, .success, laying.message?.text ?? "")
+        XCTAssertEqual(laying.world.network.edges.count, 2, "two tracks")
+        try assertWholePrice(of: laying.world, action: "build station “Dazhi” and its platform", setUp: { session in
+            session.selectTool(.network)
+            session.networkBuildsDouble = true
+            session.setNetworkMode(.platform)
+            session.tapNetwork(at: PlanPoint(x: 9_216, y: 2_048), reach: 16)
+            session.stationName = "Dazhi"
+        }, preview: { session in
+            XCTAssertNotNil(session.networkPlatformLevelling?.cost, "levelled first")
+            XCTAssertNotNil(session.networkPlatformBeside, "a platform on each track")
+            return (session.networkPlatformCost, session.world.economy.canAfford(session.networkPlatformCost ?? .zero) ? nil : {
+                let price = session.networkPlatformCost ?? .zero
+                let (required, available) = Money.shortfallTexts(required: price, available: session.world.economy.balance)
+                return "Not enough cash to build station “Dazhi” and its platform: it costs \(required) and you have \(available)."
+            }())
+        }, build: { $0.addNetworkPlatform() })
+    }
+
     // MARK: - Buildings and purchases
 
     func testABuildingSaysItsPrice() throws {

@@ -40,6 +40,14 @@ extension GameSession {
             total = total + cost
             clearing = levelling.stationClearing ?? clearing
         }
+        // Decision 285: the track beside is levelled too where it is on a
+        // grade (left out, as ✓ leaves it, where it cannot be).
+        if let beside = besidePlatform(of: stretch), let levelling = beside.levelling {
+            var draft = world.pricingCopy()
+            if (try? build(levelling, in: &draft)) != nil {
+                total = total + Money(GameWorld.pricingBalance.amount - draft.economy.balance.amount)
+            }
+        }
         if platformStationID.flatMap({ world.station(id: $0) }) == nil {
             total = total + world.economy.costs.station + clearing
         }
