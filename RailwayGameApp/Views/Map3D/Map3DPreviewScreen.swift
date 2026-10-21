@@ -42,6 +42,7 @@ struct Map3DPreviewScreen: View {
     @State private var compass = Map3DCompassState()
     @State private var cameraLink = Map3DCameraLink()
     @AppStorage(LinePalette.key) private var linePalette: LinePalette = .standard
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let language = DisplayLanguage.app
@@ -51,6 +52,13 @@ struct Map3DPreviewScreen: View {
                       start: handedOver, openedAt: openedAt, farOut: farOut, compass: compass, cameraLink: cameraLink, onStats: { stats = $0 })
                 .ignoresSafeArea()
                 .accessibilityIdentifier("map3D.view")
+            // Decision 277: the rain over the map, not with Reduce Motion
+            // (the light and fog still show the rain).
+            let rain = Map3DRain(MapWeather(world: session.world))
+            if rain.amount > 0, !reduceMotion {
+                Map3DRainView(rain: rain, detail: stats?.streetDetail ?? .full)
+                    .ignoresSafeArea()
+            }
             if scene == nil {
                 ProgressView()
                     .controlSize(.large)
@@ -579,5 +587,35 @@ private struct Map3DCompassNeedle: Shape {
         path.addLine(to: point(17, 22))
         path.closeSubpath()
         return path
+    }
+}
+
+/// Decision 277: the rain falling over the 3D map (``Map3DRain``), the
+/// reference's fine parallel streaks, and in a storm the 2D map's
+/// lightning. Not touchable: the map under it takes the fingers.
+private struct Map3DRainView: View {
+    let rain: Map3DRain
+    let detail: Map3DStreetDetail
+
+    var body: some View {
+        TimelineView(.animation) { timeline in
+            Canvas { context, size in
+                // A day's seconds, as the street life's clock.
+                let time = timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 86_400)
+                var streaks = Path()
+                for streak in rain.streaks(at: time, width: size.width, height: size.height, detail: detail) {
+                    streaks.move(to: CGPoint(x: streak.x0, y: streak.y0))
+                    streaks.addLine(to: CGPoint(x: streak.x1, y: streak.y1))
+                }
+                context.stroke(streaks, with: .color(Palette.rain3D.opacity(rain.opacity)),
+                               style: StrokeStyle(lineWidth: Map3DRain.lineWidth, lineCap: .round))
+                let flash = rain.flash(at: time)
+                if flash > 0 {
+                    context.fill(Path(CGRect(origin: .zero, size: size)), with: .color(Palette.lightning.opacity(0.35 * flash)))
+                }
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }

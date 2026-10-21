@@ -45,6 +45,10 @@ enum Palette {
     /// near black, and lightning's flash.
     static let weatherShade = hex(light: 0x10142E, dark: 0x05071A)
     static let lightning = hex(light: 0xFFFFFF, dark: 0xFFFFFF)
+    /// Decision 277: a streak of rain over the 3D map, the reference's pale
+    /// blue grey whatever the appearance (the 3D map has its own light), at
+    /// the rain's opacity (`Map3DRain.opacity`).
+    static let rain3D = rgb(Map3DRain.rgb)
     /// The link through a transfer group's stations: MapBuilder's
     /// interchange, white with a black edge in either appearance, here
     /// white with the icon's navy.
