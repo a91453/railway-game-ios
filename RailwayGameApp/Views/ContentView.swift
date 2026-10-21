@@ -143,6 +143,23 @@ struct ContentView: View {
                     .presentationDetents([.medium, .large])
                 }
             }
+            // Decision 315: a real branch line offered, and in the same
+            // sheet the card its purchase ends on.
+            .sheet(isPresented: Binding(
+                get: { session.shownRealLineOffer != nil || session.lastLineAcquired != nil },
+                set: { if !$0 { session.shownRealLineOffer = nil; session.lastLineAcquired = nil } }
+            )) {
+                if let acquired = session.lastLineAcquired {
+                    AcquisitionCompleteCard(acquired: acquired, language: session.language) {
+                        session.lastLineAcquired = nil
+                        screen.panel = .lines
+                    }
+                    .presentationDetents([.medium, .large])
+                } else if let offer = session.shownRealLineOffer {
+                    RealLineOfferCard(session: session, offer: offer)
+                        .presentationDetents([.medium, .large])
+                }
+            }
             // Decision 303: a new line's hours and trains, before they are
             // bought; the lines panel shows the line once it is open.
             .sheet(isPresented: Binding(

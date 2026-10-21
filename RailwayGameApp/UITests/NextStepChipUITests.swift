@@ -18,6 +18,7 @@ final class NextStepChipUITests: XCTestCase {
         let newGame = app.buttons["start.newGame"]
         XCTAssertTrue(newGame.appears(within: 15), "Missing the New Game button")
         newGame.tap()
+        app.chooseBlankMap()
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 30), "The new game opens")
 
         let chip = app.buttons["map.nextStep"]

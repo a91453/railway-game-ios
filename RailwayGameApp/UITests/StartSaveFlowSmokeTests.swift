@@ -39,6 +39,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         defer { app.terminate() }
 
         requiredButton("start.newGame", in: app).tap()
+        app.chooseBlankMap()
         requiredButton(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause").tap()
         // Decision 114: the tools show once Build is pressed.
         requiredButton("dock.build", in: app).tap()
@@ -101,6 +102,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         defer { app.terminate() }
 
         requiredButton("start.newGame", in: app).tap()
+        app.chooseBlankMap()
         requiredButton(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause").tap()
         // Decision 114: the tools show once Build is pressed.
         requiredButton("dock.build", in: app).tap()
@@ -266,6 +268,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
 
         // A blank new game: $3,000,000, enough for fifteen trains.
         requiredButton("start.newGame", in: app).tap()
+        app.chooseBlankMap()
         _ = requiredButton(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause")
         requiredButton("dock.build", in: app).tap()
         requiredButton("tool.train", in: app).tap()
@@ -338,6 +341,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         requiredButton("start.newGame", in: app).tap()
+        app.chooseBlankMap()
         _ = requiredButton(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause")
         requiredButton("dock.build", in: app).tap()
         requiredButton("tool.train", in: app).tap()
@@ -407,6 +411,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
             requiredButton("demo.simple", in: app).tap()
         } else {
             requiredButton("start.newGame", in: app).tap()
+            app.chooseBlankMap()
         }
         assertGame(in: app)
         // Not paused: the point is the running clock.

@@ -344,7 +344,11 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   line of reason per angle in the PR (and in the decision when there is
   one; "railway fan: none" or "music: none" when it has nothing to do with
   them), keep the other options' previews in the PR so the owner can look
-  later, and go ahead. This does not change what stays the owner's: starting
+  later, and go ahead. Previews and generated art the game does not load
+  (more than about 2 MB in one pull request) go to
+  a91453/railway-reference-private, `Railway/game-art-previews/docs/art/`
+  (owner, 2026-10-21); the pull request keeps one overview image, the
+  README and the images code or docs link to. This does not change what stays the owner's: starting
   a TestFlight release, Apple account and App Store Connect steps, secrets,
   adding a dependency, and reusing copyleft or unlicensed code; nor any
   "never" rule in this file.

@@ -61,10 +61,13 @@ public struct AssetRecord: Hashable, Sendable {
         case souvenirShop
         /// A level of the shops of station ``owner`` (decision 222).
         case stationCommerce
+        /// What line ``owner``, a real line bought, cost for its riders
+        /// (decision 315), written down as track is.
+        case acquiredLine
 
         public var assetClass: AssetClass {
             switch self {
-            case .track: .track
+            case .track, .acquiredLine: .track
             case .station: .stations
             case .train, .cars: .rollingStock
             case .building: .buildings
@@ -471,6 +474,7 @@ extension GameWorld {
             case .building: placedBuilding(id: PlacedBuildingID(rawValue: record.owner)) != nil
             case .souvenirShop: tourism?.attractions.contains { $0.id.rawValue == record.owner && $0.souvenir > 0 } ?? false
             case .stationCommerce: station(id: StationID(rawValue: record.owner))?.commerce != nil
+            case .acquiredLine: line(id: LineID(rawValue: record.owner)) != nil
             case .mapTile: mapExpansion.map { record.owner >= 0 && $0.owns(MapTile(row: record.owner / mapTileColumns, column: record.owner % mapTileColumns)) } ?? false
             }
             guard exists else { return "An asset record names a \(record.kind.rawValue) that does not exist." }

@@ -128,6 +128,20 @@ extension GameSession {
         guard trips > 0, let place = transferPlace(of: id) else { return nil }
         let systems = place.systems.map { $0.name(in: language) }.joined(separator: language.text(", ", "、"))
         let count = trips.formatted()
+        // Decision 315: past the junction of a line the company bought,
+        // Taiwan Railway's riders there are the line's own.
+        if place.systems.map(\.id) == ["tra_sched"], isOnBoughtLinePastItsJunction(id) {
+            return language.text("Regulars along the line: about \(count) a day", "沿線的常客：每天約 \(count) 人")
+        }
         return language.text("Changing here from \(systems): about \(count) a day", "從\(systems)轉乘：每天約 \(count) 人")
+    }
+
+    /// Whether station `id` is a stop of a real line bought, other than
+    /// its last, the junction with the main line (decision 315; the line
+    /// runs from its terminal, see ``GameSession/routePreferences(_:stops:)``).
+    func isOnBoughtLinePastItsJunction(_ id: StationID) -> Bool {
+        world.acquisitions.contains { bought in
+            world.line(id: bought.line)?.stops.dropLast().contains(id) ?? false
+        }
     }
 }

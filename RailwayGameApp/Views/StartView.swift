@@ -6,7 +6,8 @@ import UniformTypeIdentifiers
 /// The start screen (Stage C4), after the `Ci/` reference's home screen and
 /// its saved-game card (`screen-save-load-ui`: go on with the saved game,
 /// or start fresh): continue the autosave, start a new game on a blank or a
-/// real-world map (Stage E2), open one of the demos (decision 135: the
+/// real-world map (Stage E2; decision 316: both behind New Game), open one
+/// of the demos (decision 135: the
 /// real-world demo of Taiwan's real lines, or the simple demo), load one of
 /// the saves or import a save file.
 ///
@@ -16,7 +17,8 @@ struct StartView: View {
     let launcher: GameLauncher
     @State private var showsSaves = false
     @State private var importsSave = false
-    @State private var choosesPlace = false
+    /// Decision 316: the new game's page, blank or real-world.
+    @State private var choosesNewGame = false
     @State private var choosesChallenge = false
     /// Decision 266: the lessons, in place of the tutorial.
     @State private var choosesLesson = false
@@ -24,7 +26,6 @@ struct StartView: View {
     @State private var showsDataSources = false
     @State private var showsSettings = false
     @State private var showsHelp = false
-    @State private var showsNewGameOptions = false
     @State private var showsAchievements = false
     /// The language menu's choice, read from the app's settings.
     @State private var languageChoice = LanguageChoice.saved
@@ -80,8 +81,8 @@ struct StartView: View {
         .sheet(isPresented: $showsHelp) {
             HelpView(language: launcher.language)
         }
-        .sheet(isPresented: $showsNewGameOptions) {
-            NewGameOptionsView(launcher: launcher)
+        .sheet(isPresented: $choosesNewGame) {
+            NewGamePicker(launcher: launcher, loadingDetail: loadingDetail)
         }
         .sheet(isPresented: $showsAchievements) {
             NavigationStack {
@@ -108,9 +109,6 @@ struct StartView: View {
         }
         .sheet(isPresented: $choosesDemo) {
             DemoPicker(launcher: launcher, loadingDetail: loadingDetail)
-        }
-        .sheet(isPresented: $choosesPlace) {
-            RealWorldPicker(launcher: launcher)
         }
         .sheet(isPresented: $showsDataSources) {
             DataSourcesView(launcher: launcher)
@@ -150,49 +148,19 @@ struct StartView: View {
                 }
                 .accessibilityIdentifier("start.continue")
             }
+            // Decision 316: one way into a new game, on a blank or a
+            // real-world map, with the options both start with.
             StartButton(
                 title: String(localized: "New Game"),
-                detail: String(localized: "An empty map and \(launcher.newGameOptions.startingBalance.moneyText) to build with"),
+                detail: NewGameChoice.entryDetail(in: launcher.language),
                 systemImage: "plus",
                 isPrimary: launcher.autosave == nil,
                 tone: .primary
             ) {
-                launcher.startNewGame()
+                choosesNewGame = true
             }
             // Stable across localizations for the UI smoke tests.
             .accessibilityIdentifier("start.newGame")
-            // Decision 177: the difficulty, the cash and the rules of the
-            // new game (decision 258: simple or realistic), kept from one
-            // game to the next.
-            Button {
-                showsNewGameOptions = true
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "slider.horizontal.3")
-                    Text(verbatim: launcher.language.text(
-                        "New Game Options · \(launcher.newGameOptions.rules.title(in: launcher.language)) · \(launcher.newGameOptions.difficulty.title(in: launcher.language)) · \(launcher.newGameOptions.startingBalance.moneyText)",
-                        "新遊戲選項 · \(launcher.newGameOptions.rules.title(in: launcher.language))規則 · \(launcher.newGameOptions.difficulty.title(in: launcher.language)) · \(launcher.newGameOptions.startingBalance.moneyText)"
-                    ))
-                }
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(Theme.primary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 6)
-            }
-            .accessibilityIdentifier("start.newGameOptions")
-            // The real-world maps wait for the real-world data,
-            // read in the background at launch: a game started
-            // before it is would have no people on its map.
-            StartButton(
-                title: String(localized: "Real-World Map"),
-                detail: launcher.isLoadingRealWorldData ? loadingDetail : String(localized: "Build on a map of a real place"),
-                systemImage: "globe.asia.australia",
-                tone: .plain
-            ) {
-                choosesPlace = true
-            }
-            .disabled(launcher.isLoadingRealWorldData)
-            .accessibilityIdentifier("start.realWorld")
             // Decision 266: the lessons, where the tutorial was: its steps
             // are the first lessons' guide.
             StartButton(
@@ -562,6 +530,91 @@ private struct DemoPicker: View {
             }
         }
         .presentationDetents([.medium, .large])
+    }
+}
+
+/// Decision 316: the new game's page, the maps a new game can start on
+/// (``NewGameChoice``): a blank map, which starts at once, and a real-world
+/// map, which opens the place picker (decision 312). Under them, the
+/// new game's options (decision 177), which both start with.
+private struct NewGamePicker: View {
+    let launcher: GameLauncher
+    /// What the real-world map says while the real-world data is read.
+    let loadingDetail: String
+    @State private var choosesPlace = false
+    @State private var showsOptions = false
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        let language = launcher.language
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 12) {
+                    ForEach(NewGameChoice.allCases, id: \.self) { choice in
+                        // The real-world maps wait for the real-world data,
+                        // read in the background at launch: a game started
+                        // before it is would have no people on its map.
+                        let waits = choice == .realWorld && launcher.isLoadingRealWorldData
+                        StartButton(
+                            title: choice.title(in: language),
+                            detail: waits ? loadingDetail : choice.detail(in: language, options: launcher.newGameOptions),
+                            systemImage: choice.systemImage,
+                            isPrimary: choice == .blank,
+                            tone: .primary
+                        ) {
+                            switch choice {
+                            case .blank:
+                                dismiss()
+                                launcher.startNewGame()
+                            case .realWorld:
+                                choosesPlace = true
+                            }
+                        }
+                        .disabled(waits)
+                        .accessibilityIdentifier(choice.identifier)
+                    }
+                    VStack(spacing: 2) {
+                        Button {
+                            showsOptions = true
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "slider.horizontal.3")
+                                Text(verbatim: NewGameChoice.optionsSummary(launcher.newGameOptions, in: language))
+                            }
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(Theme.primary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 6)
+                        }
+                        .accessibilityIdentifier("start.newGameOptions")
+                        Text(verbatim: NewGameChoice.optionsNote(in: language))
+                            .font(.caption)
+                            .foregroundStyle(Theme.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.top, 4)
+                }
+                .frame(maxWidth: 420)
+                .padding()
+                .frame(maxWidth: .infinity)
+            }
+            .background(Theme.background)
+            .navigationTitle("New Game")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showsOptions) {
+            NewGameOptionsView(launcher: launcher)
+        }
+        .sheet(isPresented: $choosesPlace) {
+            RealWorldPicker(launcher: launcher)
+        }
     }
 }
 

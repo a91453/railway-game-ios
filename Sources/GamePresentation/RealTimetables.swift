@@ -345,43 +345,75 @@ public struct RealLineRuns: Sendable, Equatable {
     public let runs: [Run]
     /// The trainsets standing at each station at midnight.
     public let overnight: [String: Int]
+    /// The tracks with a platform each station needs: the most trainsets
+    /// standing there at once (decision 315); 1 where the file does not say.
+    public let tracks: [String: Int]
 
     /// Reads the file. Throws for one out of shape: a call that is not
     /// `[station, arrival, departure]`, or a run calling at a station that
     /// is not one of the line's.
     public init(data: Data) throws {
-        struct File: Decodable {
-            struct Run: Decodable {
-                let train: String
-                let calls: [[Call]]
-                let days: [Int]
-                let positioning: Bool?
+        try self.init(file: JSONDecoder().decode(File.self, from: data))
+    }
+
+    /// The lines of `tra_branch_runs.json` (decision 315,
+    /// `tools/real-timetables/extract_branch_runs.py`), by their
+    /// `tra.json` id (`PINGXI`).
+    public static func branchLines(data: Data) throws -> [String: RealLineRuns] {
+        struct Branches: Decodable {
+            struct Line: Decodable {
+                let network: String
             }
 
-            enum Call: Decodable {
-                case name(String)
-                case second(Int64)
+            let lines: [Line]
+        }
+        struct Files: Decodable {
+            let lines: [File]
+        }
+        let names = try JSONDecoder().decode(Branches.self, from: data).lines.map(\.network)
+        let files = try JSONDecoder().decode(Files.self, from: data).lines
+        var lines: [String: RealLineRuns] = [:]
+        for (name, file) in zip(names, files) {
+            lines[name] = try RealLineRuns(file: file)
+        }
+        return lines
+    }
 
-                init(from decoder: any Decoder) throws {
-                    let container = try decoder.singleValueContainer()
-                    if let second = try? container.decode(Int64.self) {
-                        self = .second(second)
-                    } else {
-                        self = .name(try container.decode(String.self))
-                    }
+    private struct File: Decodable {
+        struct Run: Decodable {
+            let train: String
+            let calls: [[Call]]
+            let days: [Int]
+            let positioning: Bool?
+        }
+
+        enum Call: Decodable {
+            case name(String)
+            case second(Int64)
+
+            init(from decoder: any Decoder) throws {
+                let container = try decoder.singleValueContainer()
+                if let second = try? container.decode(Int64.self) {
+                    self = .second(second)
+                } else {
+                    self = .name(try container.decode(String.self))
                 }
             }
-
-            let stops: [String]
-            let overnight: [String: Int]
-            let runs: [Run]
         }
-        let file = try JSONDecoder().decode(File.self, from: data)
+
+        let stops: [String]
+        let overnight: [String: Int]
+        let tracks: [String: Int]?
+        let runs: [Run]
+    }
+
+    private init(file: File) throws {
         func corrupt(_ why: String) -> DecodingError {
             DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: why))
         }
         stops = file.stops
         overnight = file.overnight
+        tracks = file.tracks ?? [:]
         runs = try file.runs.map { run in
             let calls = try run.calls.map { call -> Call in
                 guard call.count == 3, case .name(let station) = call[0], case .second(let arrival) = call[1], case .second(let departure) = call[2],

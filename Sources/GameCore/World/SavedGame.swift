@@ -341,9 +341,15 @@
 ///     only an earlier version would drop them, and the line would space
 ///     its trains evenly again, so it says the save is newer than it
 ///     instead.
+/// 66. Real lines bought (decision 315): a world can have its
+///     `"acquisitions"`, and an asset record the kind `"acquiredLine"`. A
+///     build that reads only an earlier version would drop the purchases,
+///     so the real trains would run over the company's line again and it
+///     could be bought twice, and it cannot read the asset, so it says the
+///     save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 65
+    public static let currentVersion = 66
 
     public let world: GameWorld
 
@@ -512,6 +518,8 @@ extension SavedGame: Codable {
         // and a station without `"transferPoints"` has none.
         // Version 64 to 65: a line without `"dispatchPattern"` spaces its
         // trains evenly, as before.
+        // Version 65 to 66: a world without `"acquisitions"` bought no
+        // real line.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

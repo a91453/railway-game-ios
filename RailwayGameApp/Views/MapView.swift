@@ -1076,7 +1076,8 @@ struct MapView: View {
         }
         .task(id: RealTrainsKey(
             realWorld: RealWorldFrame(world: session.world), bounds: session.world.bounds,
-            hasData: session.railways?.operations != nil, shown: showsRealTrains
+            hasData: session.railways?.operations != nil, shown: showsRealTrains,
+            bought: Set(session.world.acquisitions.map(\.realLine))
         )) {
             await workOutRealTrains()
         }
@@ -1287,8 +1288,10 @@ struct MapView: View {
             return
         }
         let bounds = session.world.bounds
+        // Decision 315: a bought line runs the company's trains, not these.
+        let bought = Set(session.world.acquisitions.map(\.realLine))
         let traffic = await Task.detached(priority: .utility) {
-            RealTrainTraffic(operations: operations, frame: frame, bounds: bounds)
+            RealTrainTraffic(operations: operations, frame: frame, bounds: bounds, bought: bought)
         }.value
         guard !Task.isCancelled else { return }
         realTrains = traffic.lines.isEmpty ? nil : traffic
@@ -2623,6 +2626,7 @@ private struct RealTrainsKey: Equatable {
     let bounds: WorldBounds
     let hasData: Bool
     let shown: Bool
+    let bought: Set<String>
 }
 
 /// What the population heatmap is laid out from: the grid (by its total)

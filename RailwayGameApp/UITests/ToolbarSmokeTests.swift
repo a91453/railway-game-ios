@@ -48,6 +48,7 @@ final class ToolbarSmokeTests: XCTestCase {
             return
         }
         newGame.tap()
+        app.chooseBlankMap()
 
         // Decision 114: Build opens the tools at the map's edge, and Done
         // closes them; so each is tapped in this order.
@@ -398,6 +399,16 @@ extension XCUIApplication {
                 column.swipeUp(velocity: .slow)
             }
         }
+    }
+
+    /// Decision 316: the start screen's New Game opens the new game's
+    /// page; taps its blank map, which starts the game, once the page has
+    /// slid up.
+    func chooseBlankMap(file: StaticString = #filePath, line: UInt = #line) {
+        let blank = buttons["newGame.blank"]
+        XCTAssertTrue(blank.appears(within: 10), "Missing the new game's blank map", file: file, line: line)
+        XCTAssertTrue(blank.becomesHittable(within: 5), "The new game's blank map cannot be tapped", file: file, line: line)
+        blank.tap()
     }
 
     /// Scrolls `holder`, or whatever holds `button` (a scroll view, or a

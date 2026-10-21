@@ -264,6 +264,32 @@ struct LinesPanel: View {
         }
         if showsNewLine {
             draftSection
+            buyableLinesSection
+        }
+    }
+
+    /// Decision 315: the real branch lines this map sells, under the new
+    /// line's form; none on a map that sells none.
+    @ViewBuilder
+    private var buyableLinesSection: some View {
+        let lines = session.buyableRealLines
+        if !lines.isEmpty {
+            Section {
+                ForEach(lines, id: \.id) { line in
+                    Button {
+                        session.offerRealLine(line)
+                    } label: {
+                        Label {
+                            Text(verbatim: session.language.text("Buy \(line.name(in: session.language))…", "收購\(line.name(in: session.language))…"))
+                        } icon: {
+                            Image(systemName: "signature")
+                        }
+                    }
+                    .accessibilityIdentifier("line.acquire.\(line.network)")
+                }
+            } header: {
+                Text(verbatim: session.language.text("Real lines for sale", "可收購的真實路線"))
+            }
         }
     }
 
