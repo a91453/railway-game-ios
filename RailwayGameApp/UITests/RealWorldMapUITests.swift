@@ -551,10 +551,12 @@ final class RealWorldMapUITests: XCTestCase {
             // The new game's page, once it has slid up, tapped by the button,
             // which XCTest scrolls into view itself. Dragged as the screens
             // are, it never came into view on an iPad, and on an iPhone the
-            // drags closed the sheet (run 39574256715).
+            // drags closed the sheet (run 39574256715). Still, not settled:
+            // with this text on a phone on its side the card is below the
+            // screen, not hittable, until the tap scrolls it (run 39581442596).
             if identifier == "newGame.realWorld" {
                 XCTAssertTrue(button.appears(within: 10), "Missing button: newGame.realWorld")
-                button.waitUntilSettled()
+                button.waitUntilStill()
                 let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: button)
                 XCTAssertEqual(XCTWaiter().wait(for: [enabled], timeout: 15), .completed, "newGame.realWorld never became enabled")
                 button.tap()
