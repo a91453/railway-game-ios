@@ -390,7 +390,7 @@ struct RealWorldPicker: View {
         guard let anchor else { return }
         recentStarts = RecentStartPlaces(stored: recentStarts).adding(anchor).stored
         dismiss()
-        launcher.startNewGame(at: anchor)
+        launcher.openRealWorldGame(at: anchor)
     }
 
     // MARK: - The map

@@ -83,8 +83,16 @@ extension MotionRule {
     /// with Reduce Motion the map faces north at once.
     public static let turnNorth = MotionRule(seconds: 0.24, curve: .decelerate, moves: true, fades: false)
 
+    /// The loading screen of a real-world map fading in (decision 307):
+    /// 0.7 s, decelerating, as the geographic dashboard's boot screen does
+    /// (`boot-fade-in`, geo-scene `bootScreen.css`). It only fades.
+    public static let loadingIn = MotionRule(seconds: 0.7, curve: .decelerate, moves: false, fades: true)
+    /// The same screen fading away over the game once it is ready: 0.45 s,
+    /// the boot screen's `fadeMs`, leaving fast.
+    public static let loadingOut = MotionRule(seconds: 0.45, curve: .accelerate, moves: false, fades: true)
+
     /// Every rule, for the tests.
-    public static let all: [MotionRule] = [.press, .change, .cardIn, .cardOut, .pop, .confirm, .refuse, .builtRing, .turnNorth]
+    public static let all: [MotionRule] = [.press, .change, .cardIn, .cardOut, .pop, .confirm, .refuse, .builtRing, .turnNorth, .loadingIn, .loadingOut]
 }
 
 /// Decision 253: a refusal shakes sideways three times, each smaller,

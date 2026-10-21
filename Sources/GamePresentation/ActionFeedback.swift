@@ -267,7 +267,7 @@ public struct TownGrowthPulse: Hashable, Sendable {
 
 extension GameSession {
     /// Decision 256: what a step did that the map answers: fares over
-    /// the stations, trips stamped full or roomy (decision 276), goals met
+    /// the stations, trips stamped full (decisions 276, 310), goals met
     /// (the tune), towns grown a step at midnight. Called after the step with the world before it.
     func noteActions(since before: GameWorld) {
         let fares = StationFare.taken(from: before, to: world)
