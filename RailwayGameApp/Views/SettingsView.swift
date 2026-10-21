@@ -337,8 +337,8 @@ struct SettingsView: View {
             .accessibilityIdentifier("settings.map3DQuality")
         } footer: {
             Text(verbatim: language.text(
-                "See your own railway, trains and town in 3D. Pinch closer and the map tilts. The number in the corner shows how smoothly it runs on this device. Pinch closer for 3D: pinching on past the flat map's closest view and letting go opens the 3D map; off, only the 3D button does. 3D quality: Automatic stays sharp and turns softer when the phone works hard, runs hot or is in Low Power Mode; Battery Saver is softer and uses less battery and heat; High Quality stays sharp and uses more battery.",
-                "用 3D 看你自己的鐵路、列車與城鎮。兩指拉近，地圖就會傾斜。角落的數字是這台裝置跑起來的流暢度。拉近自動變 3D：平面地圖拉到最近還繼續拉、放手就打開 3D 地圖；關掉時只有 3D 鈕會打開。3D 畫質：自動平常清楚，手機吃力、發燙或開低耗電模式時改得柔和；省電畫面較柔和，比較不耗電、不發燙；高畫質一直清楚，比較耗電。"
+                "See your own railway, trains and town in 3D. Pinch closer and the map tilts. The number in the corner shows how smoothly it runs on this device. Pinch closer for 3D: pinching on past the flat map's closest view and letting go opens the 3D map; off, only the 3D button does. 3D quality: Automatic stays sharp and turns softer when the phone works hard, runs hot or is in Low Power Mode; Battery Saver makes the 3D map softer and uses less battery and heat; High Quality stays sharp and uses more battery. The flat map is not affected.",
+                "用 3D 看你自己的鐵路、列車與城鎮。兩指拉近，地圖就會傾斜。角落的數字是這台裝置跑起來的流暢度。拉近自動變 3D：平面地圖拉到最近還繼續拉、放手就打開 3D 地圖；關掉時只有 3D 鈕會打開。3D 畫質：自動平常清楚，手機吃力、發燙或開低耗電模式時改得柔和；省電讓 3D 畫面較柔和，比較不耗電、不發燙；高畫質一直清楚，比較耗電。2D 地圖不受影響。"
             ))
         }
     }
