@@ -563,6 +563,10 @@ extension GameError {
             language.text("The station's shops are at their top level.", "這一站的商業已經是最高等級。")
         case .noStationCommerce:
             language.text("This station has no shops.", "這個車站沒有商業。")
+        case .lineAlreadyAcquired:
+            language.text("This line is already yours.", "這條線已經是你的了。")
+        case .invalidAcquisition:
+            language.text("This line can't be bought as it is.", "這條線現在不能收購。")
         case .depotInUse:
             language.text("A line keeps its trains at this depot: untick it on that line's depots first.", "有路線把列車停在這個機廠：先在那條路線的機廠清單取消勾選。")
         case .depotListedTwice:
