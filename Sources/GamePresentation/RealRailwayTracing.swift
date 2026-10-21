@@ -344,16 +344,35 @@ extension GameSession {
         // Decision 279: along a real line over real ground, with the tool's
         // own choices (what the ground asks for, nothing raised), up on the
         // real line's viaducts and down in its tunnels: the TRA's, the High
-        // Speed Rail's and the Alishan Forest Railway's.
+        // Speed Rail's, the Alishan Forest Railway's and the metros' and
+        // light rails'.
         var carried: [TrackRise.Carried] = []
+        var carriedEnds = (start: false, end: false)
         if mapped, networkStructure == .automatic, networkHeight == 0, let traces = realRailwayTraces, let frame = RealWorldFrame(world: draft),
            let snap = traces.snap(WorldVector(from.plan), within: reach), let structures = railways?.structures {
             carried = structures.stretches(along: path, frame: frame, system: traces.lines[snap.place.line].system)
-            // A new end stands where the tool puts it, and the track climbs
-            // or falls from it to the real line's viaduct or tunnel.
+            // A new end on a long viaduct or in a long tunnel (a metro's
+            // station over the street or under it, laid a station at a
+            // time) stands on it, as the real line does, the structure
+            // reaching past it; elsewhere it stands where the tool puts it,
+            // and the track climbs or falls from it to the real line's
+            // viaduct or tunnel.
+            let on = RealRailStructures.sampleSpacing
+            for (index, stretch) in carried.enumerated() where stretch.range.upperBound - stretch.range.lowerBound >= TrackRise.shortestCarried {
+                var range = stretch.range
+                if case .point = start, range.lowerBound <= on {
+                    range = -TrackRise.carriedInset...range.upperBound
+                    carriedEnds.start = true
+                }
+                if case .point = end, range.upperBound >= path.length - on {
+                    range = range.lowerBound...path.length + TrackRise.carriedInset
+                    carriedEnds.end = true
+                }
+                carried[index] = TrackRise.Carried(range: range, kind: stretch.kind)
+            }
             if !carried.isEmpty {
-                if case .point = start { levels.append(TrackRise.Level(0...0, at: Double(from.z))) }
-                if case .point = end { levels.append(TrackRise.Level(path.length...path.length, at: Double(to.z))) }
+                if case .point = start, !carriedEnds.start { levels.append(TrackRise.Level(0...0, at: Double(from.z))) }
+                if case .point = end, !carriedEnds.end { levels.append(TrackRise.Level(path.length...path.length, at: Double(to.z))) }
             }
         }
         guard let rise = TrackRise(path: path, ground: ground, water: water, levels: levels, grade: Self.traceGrade, carried: carried) else {
@@ -362,6 +381,8 @@ extension GameSession {
                 "沿這段真實鐵路，從一端到另一端的高低差超過遊戲的坡度上限 40‰，鋪不上去。"
             ))
         }
+        if carriedEnds.start { from = WorldCoordinate(x: from.x, y: from.y, z: rise.node(at: 0)) }
+        if carriedEnds.end { to = WorldCoordinate(x: to.x, y: to.y, z: rise.node(at: path.length)) }
 
         // Each end leaves the track there along it, where the tool joins
         // track (as one stretch does, decision 103).

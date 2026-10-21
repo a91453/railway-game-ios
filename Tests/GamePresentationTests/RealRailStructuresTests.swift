@@ -3,7 +3,7 @@ import Foundation
 @testable import GamePresentation
 import XCTest
 
-/// Where the real TRA lines are on bridges and in tunnels (decision 279):
+/// Where the real railways are on bridges and in tunnels (decision 279):
 /// `rail_structures.json` as the app bundles it, the stretches of a path it
 /// carries, and the heights ``TrackRise`` lays along them.
 final class RealRailStructuresTests: XCTestCase {
@@ -18,13 +18,17 @@ final class RealRailStructuresTests: XCTestCase {
 
     func testTheBundledFileReads() throws {
         let structures = try RealRailStructures(data: Self.bundledFile("rail_structures.json")).structures
-        XCTAssertGreaterThan(structures.count, 1_800)
+        XCTAssertGreaterThan(structures.count, 2_400)
         XCTAssertEqual(Set(structures.map(\.kind)), [.bridge, .tunnel])
-        // The TRA's, the High Speed Rail's and the Alishan Forest Railway's,
-        // each with both kinds.
-        XCTAssertEqual(Set(structures.map(\.system)), ["tra_sched", "thsr_sched", "afr_sched"])
-        for system in ["tra_sched", "thsr_sched", "afr_sched"] {
-            XCTAssertEqual(Set(structures.filter { $0.system == system }.map(\.kind)), [.bridge, .tunnel], system)
+        // The TRA's, the High Speed Rail's, the Alishan Forest Railway's and
+        // the metros' and light rails', each with both kinds but Danhai's
+        // and Sanying's light rails and Taichung's metro, on viaducts and
+        // the ground only.
+        let systems = ["tra_sched", "thsr_sched", "afr_sched", "mrt", "tymc", "ntdlrt", "ntalrt", "sanying", "krtc", "tmrt"]
+        XCTAssertEqual(Set(structures.map(\.system)), Set(systems))
+        for system in systems {
+            let kinds: Set<RealRailStructures.Kind> = ["ntdlrt", "sanying", "tmrt"].contains(system) ? [.bridge] : [.bridge, .tunnel]
+            XCTAssertEqual(Set(structures.filter { $0.system == system }.map(\.kind)), kinds, system)
         }
         XCTAssertTrue(structures.allSatisfy { $0.points.count >= 2 })
         // All in and round Taiwan.
