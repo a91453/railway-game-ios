@@ -60,6 +60,8 @@ struct MapView: View {
     /// the player's railway is drawn over them.
     @AppStorage("realRailwayTrackStyle") private var trackStyle: RealRailways.TrackStyle = .faint
     @AppStorage("mapShowsStationNames") private var showsStationNames = true
+    /// Decision 313: whether a pinch past the closest zoom opens the 3D map.
+    @AppStorage(Map3DHandoff.pinchOpensKey) private var pinchOpens3D = true
     @AppStorage("mapShowsWaitingCounts") private var showsWaitingCounts = true
     @AppStorage("mapShowsCatchmentRings") private var showsCatchmentRings = true
     /// Which population and travel layer is shown (``PopTravelMode``'s raw
@@ -578,16 +580,23 @@ struct MapView: View {
                             screen.panel = held != nil ? .station : .lines
                         }
                     }, onPinchCloser: { pinched in
-                        // Decision 269: the map tilts as it comes closer.
-                        // Resting near the line the 3D scene starts
-                        // building; past it, the 3D map takes over at once, where the 2D
-                        // map was and as close (not with a building tool
-                        // out, nor in the tutorial).
-                        guard Map3DHandoff.hands(building: session.tool != .select, tutorialRuns: session.tutorial != nil),
+                        // Decision 269, later: resting near the closest
+                        // zoom, the 3D scene starts building.
+                        guard Map3DHandoff.hands(building: session.tool != .select, tutorialRuns: session.tutorial != nil,
+                                                 pinchOpens: pinchOpens3D),
                               !screen.showsMap3D else { return }
-                        let opens = Map3DHandoff.opensAt(viewportHeight: pinched.viewport.height)
                         buildAheadIfResting(near: pinched)
-                        guard pinched.referenceSize >= opens else { return }
+                    }, onPinchEnded: { pinched, asked in
+                        // Decision 313: decided only as the fingers lift. A
+                        // pinch that went on past the 2D map's closest zoom
+                        // hands it over to the 3D map, where the 2D map
+                        // was and as close (not with a building tool out,
+                        // in the tutorial, or with the setting off).
+                        guard Map3DHandoff.hands(building: session.tool != .select, tutorialRuns: session.tutorial != nil,
+                                                 pinchOpens: pinchOpens3D),
+                              !screen.showsMap3D,
+                              Map3DHandoff.opensOnRelease(referenceSize: pinched.referenceSize, asked: asked) else { return }
+                        UITestTrace.action("map.pinch let go past the closest zoom: 3D")
                         screen.map3DHandoff = Map3DHandoff.Plan(x: pinched.centerX, y: pinched.centerY, referenceSize: pinched.referenceSize)
                         var cut = Transaction()
                         cut.disablesAnimations = true
@@ -1329,12 +1338,11 @@ struct MapView: View {
     private func buildAheadIfResting(near pinched: PlanCamera) {
         buildAhead?.cancel()
         buildAhead = nil
-        let height = pinched.viewport.height
-        guard Map3DHandoff.buildsAhead(referenceSize: pinched.referenceSize, viewportHeight: height) else { return }
+        guard Map3DHandoff.buildsAhead(referenceSize: pinched.referenceSize) else { return }
         buildAhead = Task {
             try? await Task.sleep(for: .seconds(Map3DHandoff.buildsAfterResting))
             guard !Task.isCancelled, !screen.showsMap3D,
-                  let now = camera, Map3DHandoff.buildsAhead(referenceSize: now.referenceSize, viewportHeight: height) else { return }
+                  let now = camera, Map3DHandoff.buildsAhead(referenceSize: now.referenceSize) else { return }
             Map3DSceneCache.shared.prepare(for: session)
         }
     }
@@ -2675,6 +2683,10 @@ private struct MapGestures: UIViewRepresentable {
     /// Decision 269: each step of a pinch that brings the map closer, with
     /// the camera it left (after ``onCameraChange``).
     let onPinchCloser: (PlanCamera) -> Void
+    /// Decision 313: a pinch let go, with the camera it left and the zoom
+    /// its fingers asked for (the zoom it began at times its scale, which
+    /// the closest zoom stops).
+    let onPinchEnded: (PlanCamera, Double) -> Void
     let onTap: (ScreenPoint) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -2725,6 +2737,8 @@ private struct MapGestures: UIViewRepresentable {
         private var panStart: PlanCamera?
         private var pinchStart: PlanCamera?
         private var pinchAnchor = CGPoint.zero
+        /// Decision 313: the zoom the pinch's fingers last asked for.
+        private var pinchAsked = 0.0
         /// Where a painting drag began (decision 98), while it goes on.
         private var paintStart: CGPoint?
         /// While a painting finger is near the edge of the view: where it
@@ -2866,7 +2880,11 @@ private struct MapGestures: UIViewRepresentable {
                 let anchor = ScreenPoint(x: pinchAnchor.x, y: pinchAnchor.y)
                 setCamera(start.zoomed(by: gesture.scale, around: anchor)
                     .panned(byX: point.x - pinchAnchor.x, y: point.y - pinchAnchor.y))
+                pinchAsked = start.referenceSize * gesture.scale
                 if gesture.scale > 1, let camera = latest { parent.onPinchCloser(camera) }
+            }
+            if gesture.state == .ended, pinchStart != nil, let camera = latest {
+                parent.onPinchEnded(camera, pinchAsked)
             }
             if gesture.state == .ended || gesture.state == .cancelled || gesture.state == .failed {
                 pinchStart = nil

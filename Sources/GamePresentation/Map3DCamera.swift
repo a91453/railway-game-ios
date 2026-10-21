@@ -17,6 +17,11 @@ public struct Map3DCamera: Hashable, Sendable {
     public var heading: Float
     /// The view's size in points, for its shape.
     public var viewport: (width: Float, height: Float)
+    /// From this distance out this camera looks straight down
+    /// (``tilt(atDistance:from:)``): ``flatFrom`` unless a pinch handed the
+    /// 2D map over closer in (decision 313: the 2D map's closest zoom), so
+    /// the handed-over map starts straight down and leans from there.
+    public var tiltsFrom: Float = Map3DCamera.flatFrom
 
     public static let nearest: Float = 60
     public static let farthest: Float = 12_000
@@ -25,7 +30,9 @@ public struct Map3DCamera: Hashable, Sendable {
     /// From this distance out the map looks straight down; at ``tiltedFrom``
     /// and closer it leans ``mostTilt`` over. Decision 269: flat as far in
     /// as the 2D map's closer zooms (where a pinch hands the 2D map over,
-    /// ``Map3DHandoff``), 34–40° at 150–200 m (the owner's target picture,
+    /// ``Map3DHandoff``; decision 313 hands over closer in, at the 2D
+    /// map's closest zoom, and that camera is flat from there,
+    /// ``tiltsFrom``), 34–40° at 150–200 m (the owner's target picture,
     /// HANDOFF §4.4), at most 42° (55° from 300 m in before).
     public static let flatFrom: Float = 800
     public static let tiltedFrom: Float = 120
@@ -39,7 +46,7 @@ public struct Map3DCamera: Hashable, Sendable {
     }
 
     public static func == (a: Map3DCamera, b: Map3DCamera) -> Bool {
-        a.target == b.target && a.distance == b.distance && a.heading == b.heading
+        a.target == b.target && a.distance == b.distance && a.heading == b.heading && a.tiltsFrom == b.tiltsFrom
             && a.viewport.width == b.viewport.width && a.viewport.height == b.viewport.height
     }
 
@@ -47,20 +54,30 @@ public struct Map3DCamera: Hashable, Sendable {
         hasher.combine(target)
         hasher.combine(distance)
         hasher.combine(heading)
+        hasher.combine(tiltsFrom)
     }
 
     /// The tilt from straight down at `distance`, in radians: 0 from
-    /// ``flatFrom`` out, ``mostTilt`` from ``tiltedFrom`` in, and between,
-    /// a smoothstep over the distance's logarithm, so each pinch tilts the
-    /// map a like step.
-    public static func tilt(atDistance distance: Float) -> Float {
-        guard distance < flatFrom else { return 0 }
-        guard distance > tiltedFrom else { return mostTilt }
-        let t = (logf(flatFrom) - logf(distance)) / (logf(flatFrom) - logf(tiltedFrom))
+    /// `flat` (``flatFrom`` unless said) out, ``mostTilt`` from
+    /// ``mostTiltedDistance(flatFrom:)`` in, and between, a smoothstep over
+    /// the distance's logarithm, so each pinch tilts the map a like step.
+    public static func tilt(atDistance distance: Float, from flat: Float = flatFrom) -> Float {
+        let most = mostTiltedDistance(flatFrom: flat)
+        guard distance < flat else { return 0 }
+        guard distance > most else { return mostTilt }
+        let t = (logf(flat) - logf(distance)) / (logf(flat) - logf(most))
         return mostTilt * t * t * (3 - 2 * t)
     }
 
-    public var tilt: Float { Self.tilt(atDistance: distance) }
+    /// Where a camera flat from `flat` metres leans all the way:
+    /// ``tiltedFrom``, or closer for one flat from nearer in (decision 313:
+    /// a phone held sideways hands over at about 150 m), so the lean still
+    /// takes a few pinches; never closer than ``nearest``.
+    public static func mostTiltedDistance(flatFrom flat: Float) -> Float {
+        min(tiltedFrom, max(nearest, flat * 0.45))
+    }
+
+    public var tilt: Float { Self.tilt(atDistance: distance, from: tiltsFrom) }
 
     /// The level way the view faces, and the way to its right.
     var forward: Map3DPoint { Map3DPoint(sinf(heading), 0, -cosf(heading)) }

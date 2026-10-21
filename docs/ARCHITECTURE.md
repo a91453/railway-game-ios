@@ -13676,6 +13676,71 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 **下一步**：實機（TestFlight）看快速圖層多一格之後，iPhone 直拿時和「快轉到早上」、下一步晶片排在一起放不放得下。
 
+### 313. 2D 與 3D 不搶畫面：交接只在放手時判斷，2D 拉到最近還繼續拉才進 3D；3D 加「2D」與「建設」鈕；設定「拉近自動變 3D」
+
+2026-10-21。作者實機回報：「2d常常跟3d搶畫面」（iPhone 17 Pro）。遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 整理規則、作者定案，派給 3D session_01Y25x9NJSKmAuP1M1K3Sf3C。號碼依工作登記 #231（遊戲規劃保留 313）。存檔版本、golden schema 不動；GameCore 不動。改的是決策 269 的交接。
+
+**原則**：2D 負責建造、規劃與操作；3D 負責觀賞、探索與跟車。兩邊可以快速來回，但不打斷玩家正在做的事：手指還在動時畫面不換。
+
+**原本的毛病**（決策 269）：2D 雙指拉到約 800 m 的比例（iPhone 直拿約每 16 m 27 點）就在手勢途中換成 3D，所以 2D 最近的那一段（27–64 點）用雙指拉不到；想看清楚 2D 的路口、月台，地圖卻變 3D。3D 裡不能點選與建造，要回 2D 只能拉遠或按關閉（回到原本的地方，不是現在看的地方）。
+
+1. **進 3D**（`Map3DHandoff.opensOnRelease(referenceSize:asked:)`，GamePresentation）：
+   - 只在雙指**放手時**判斷。手勢途中只動 2D。
+   - 2D 雙指可以一路拉到最近（`MapScale.largestSize`，每 16 m 64 點）。
+   - 放手時 2D 已經在最近，而且手指要的比例（手勢開始的比例 × 雙指的倍數，最近的比例會擋住它）超過最近的 1.3 倍（`pastClosest`）才進 3D。剛好拉到底、或拉過頭又退回來再放手，都留在 2D。
+   - 3D 從交接的距離起算傾斜：交接的相機記下 `Map3DCamera.tiltsFrom`（交接時的距離），從那裡正上方往下看，拉近才開始傾斜，傾到最大的距離是 `mostTiltedDistance(flatFrom:)`（120 m，或交接距離的 0.45 倍取小、不小於 60 m）。iPhone 直拿約 280 m 交接、橫拿約 150 m、iPad 約 400 m；畫面不跳。3D 按鈕開的 3D 照舊從 800 m（`flatFrom`）起算。
+   - 預先蓋 3D 場景（決策 269 的「後來」）改成在 2D 最近的四分之三以內停 0.4 秒（`buildsAhead(referenceSize:)`）。
+2. **回 2D**：
+   - 雙指交接進來的 3D：拉遠也只在放手時判斷（`handsBack(handedOverAt:from:to:)`：這次雙指是拉遠，而且放手時比交接時遠 1.5 倍以上，`closesPast`）。遠景 3D 的 CPU 貴（作者實機台北遠景 16.6 ms），所以保留自動交回。
+   - 3D 按鈕開的 3D 照舊不自動交回。
+   - 3D 左上原本的關閉鈕換成明確的「2D」鈕（地圖圖示加「2D」兩個字）：回到 3D 看的同一個中心、相近的比例（2D 的比例範圍會擋住），不管 3D 是怎麼打開的。設定裡的 3D 預覽下面沒有 2D 地圖，照舊是關閉鈕。
+3. **3D 的「建設」鈕**（在「2D」下面，鎚子圖示加「建設」，和下方工具列的「建設」同一個字）：回到同一個位置的 2D，並打開建造工具（和工具列的「建設」一樣是軌道工具）。建造時 2D 固定，不交接（決策 269 原本就是）。
+4. **設定「拉近自動變 3D」**（設定的 3D 地圖那一節，`Map3DHandoff.pinchOpensKey`，預設開）：關掉時雙指永遠不進 3D，只有 3D 鈕會開（Google Earth 的「縮放時自動傾斜」）。
+5. 切換照舊是直接切換、不滑上來（決策 269）；沒有新的動畫，「減少動態效果」也一樣（motion skill）。兩顆新鈕用 SF Symbols（art-style §2：工具列、面板的按鈕照舊用 SF Symbols），和關閉鈕同一個 `.regularMaterial` 底、44 點高。
+
+**程式**：
+- GamePresentation：`Map3DHandoff`（`opensOnRelease`、`pastClosest`、`handsBack`、`closesPast`、`buildsAhead(referenceSize:)`、`pinchOpensKey`、`hands(building:tutorialRuns:pinchOpens:)`；拿掉 `opensAt`、`closesAt`），`Map3DCamera.tiltsFrom`、`tilt(atDistance:from:)`、`mostTiltedDistance(flatFrom:)`。Linux 測試 `Map3DHandoffTests`。
+- App：`MapView.swift`（手勢的 coordinator 記下手指要的比例，放手時回報 `onPinchEnded`）、`Map3DPreviewScreen.swift`（放手才判斷交回；「2D」「建設」鈕；`Map3DCameraLink` 讓畫面讀到 Metal view 的相機）、`ContentView.swift`、`SettingsView.swift`。沒有新檔，xcodeproj 不用重新產生。
+- UI 測試（full lane 的第二個 job）：`MapInteractionTests/testPinchingCloseOpensTheThreeDMapAndPinchingOutComesBack` 照新規則（XCUITest 的 `pinch` 本來就會放手）；`testTheButtonsThreeDMapStaysThreeDWhenPinchedCloser` 加按「建設」回到 2D、工具打開。「2D」鈕沿用 `map3D.close` 的識別碼，按它關掉 3D 的測試不用改。
+
+**量測**：沒有新的幾何，畫的三角形與 draw 數不變（作者實機：近景 21–27 draws、約 13.4 萬三角形；遠景 192 draws、約 18.8 萬）。2D 雙指交接進來的 3D 比以前近（約 280 m，以前約 800 m），一開始畫的分塊更少。
+
+**五方**：
+- 玩家：雙指可以把 2D 拉到看清楚路口與月台，不會中途變 3D；想看 3D 時繼續拉、放手就進去；3D 裡一顆鈕回到同一個地方的 2D，一顆鈕直接去建造。不喜歡自動變 3D 的可以關掉。
+- 鐵道迷：2D 最近那一級看得到月台、道岔與號誌的細節（真實路網的資料都在 2D 上），現在雙指拉得到；和真實資料的來源無關。
+- 開發：判斷都在 GamePresentation，有 Linux 測試；App 只把「手勢途中」改成「放手時」，加兩顆鈕與一個設定；GameCore、存檔、golden 都不動。
+- 美術：交接時 3D 從交接的距離正上方往下看，比例相同，畫面不跳；新鈕用現有的材質底與 SF Symbols，和關閉鈕、指北針排成左上一欄。
+- 音樂：無。
+
+**沒有選的做法**（預覽在 `docs/art/map3d-handoff-2026-10-21/buttons.svg`）：
+- 鈕只放圖示的圓鈕（B）：「2D」是作者要的「明確」，只有地圖圖示認不出是回平面地圖；鎚子單獨也不一定讀成「建設」。
+- 「2D｜建設」放在畫面下方一列（C）：和下方的提示、跟車的列（之後）搶位置，手指也離左上的指北針遠。
+- 留著關閉鈕、另加「2D」鈕：兩顆都是回 2D，只差回到哪裡，玩家分不出。
+- 拉到底後在手勢途中就換（不等放手）：就是作者說的「搶畫面」。
+- 進 3D 不要求過頭 1.3 倍、拉到底放手就進：只想看最近一級 2D 的玩家每次都會進 3D。
+
+**之後**（這次不做）：
+- 兩指上下拖改傾斜角（Apple 地圖的做法）：現在傾斜跟著距離。
+- 不用 `fullScreenCover`，讓 2D 與 3D 共用同一套介面（HUD、工具列）。
+- 建造時 3D 把建物簡化（Cities: Skylines II 的做法），讓 3D 也能建造。
+- 3D 上的資料圖層（Transport Fever 2 的做法）。
+- HANDOFF §7.5：實機看「拉近自動變 3D」預設開是不是還會誤進 3D；常誤觸就把預設改成關，不必重做。
+
+**參考**：
+
+| 參考 | → 目標 |
+| --- | --- |
+| 決策 269 的 `Map3DHandoff`（比例與距離互換、`Plan`、`camera(from:)`、`plan(from:)`） | 沿用；判斷的時機從手勢途中改成放手 |
+| 參考庫 `Railway/railway_game_reference_clean/web_runtime/touch_pinch_zoom.js`（雙指縮放以兩指中點為準，`touchend` 才結束一次縮放） | 2D 雙指照舊以兩指中點為準；`UIPinchGestureRecognizer` 的 `.ended` 是放手的那一刻 |
+| 參考庫 `Railway/taiwan-rail-reference-clean/source/main-reference.js`、`MapBuilder/reference_snapshot/` 的 MapLibre／Mapbox 地圖 | 2D 與 3D 是同一張地圖、pitch 手動，沒有「兩張地圖交接」的規則：缺口，本專案自己的 |
+| Google Earth 的「縮放時自動傾斜」設定（只看行為，沒有程式碼） | 設定「拉近自動變 3D」 |
+
+外部專案：沒有另外搜尋程式碼（判斷是幾個比較）。程式碼是本專案自己的。
+
+**驗證**：
+- **VERIFIED**（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`Map3DHandoffTests`、`Map3DTests`、`Map3DCompassTests` 通過；改到的 App 檔通過 `swiftc -parse`。
+- **UNVERIFIED**：App 的編譯（`ios-build.yml`）；兩個交接的 UI 測試（full lane，PR 用 `only_testing` 跑）；實機的手感與誤觸（TestFlight，HANDOFF §7.5）。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。
