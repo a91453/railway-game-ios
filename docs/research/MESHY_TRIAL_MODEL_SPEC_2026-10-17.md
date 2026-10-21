@@ -82,9 +82,9 @@ Meshy 的貼圖只用來取顏色，不放進 App。所以生成時要的是乾�
 | 讀檔 `Map3DModelFile`＋Linux 測試 | 3D 生活感 | 做好了 |
 | GLB 轉換器（`tools/`，Node 22 自己讀 GLB 的 JSON＋BIN chunk，不加套件；附自己的測試） | Codex（遊戲規劃寫卡、作者轉交） | 還沒做 |
 | Meshy 生成（作者登入後，由 session 照 `.claude/skills/meshy-3d-generation` 跑） | 作者同意點數後 | 還沒做 |
-| 接進 App：`RailwayGameApp/Resources/Models/<id>.m3dmodel`、啟動時讀進 `Map3DModelPack`，排在 `Map3DProp` 之後（`Map3DModelTests` 的總數跟著改）；讀不到就退回方盒 | 3D 生活感 | 等模型；那時取決策號。新資料夾會改 App 的檔案配置，要照 CLAUDE.md 用 XcodeGen 2.46.0 重新產生 `.xcodeproj` 一起提交 |
-| 公車上街（決策 259 的車流） | 3D 生活感 | 等 72.1 的實機幀數 |
-| 資料來源畫面註明 Meshy 生成（`tools/meshy/README.md` 的授權段） | 3D 生活感 | 接進 App 時一起做 |
+| 接進 App：`RailwayGameApp/Resources/Models/<id>.m3dmodel`、啟動時讀進 `Map3DModelPack`，排在 `Map3DProp` 之後（`Map3DModelTests` 的總數跟著改）；讀不到就退回方盒 | 3D session_01Y25x9NJSKmAuP1M1K3Sf3C | 做好了（2026-10-21，`claude/map3d-city-bus`）：`Resources/Models/city-bus.m3dmodel`，`Map3DCityBus.pack(file:)` 讀進來放在方盒公車 `Map3DStreetModel.bus` 的 index（模型數多 1 個，`Map3DModelTests` 照公式跟著變）；讀不到就用方盒公車。`.xcodeproj` 已用 XcodeGen 2.46.0 重新產生 |
+| 公車上街（決策 259 的車流） | 3D session_01Y25x9NJSKmAuP1M1K3Sf3C | 做好了（同上）：幹道、主要、次要道路的車流 5% 是公車，一幀最多 30 台；台北近景（280 m）三角形 188,498 → 201,595、draw 30 → 31 |
+| 資料來源畫面註明 Meshy 生成（`tools/meshy/README.md` 的授權段） | 3D session_01Y25x9NJSKmAuP1M1K3Sf3C | 做好了（同上）：「地圖」那一節的 `meshy`，含參考照片的出處 |
 
 ## 點數
 
