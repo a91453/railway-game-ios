@@ -13,6 +13,13 @@
 | Mini Tokyo 3D（nagix/mini-tokyo-3d `220adf8`） | **程式** MIT；**`data/` 沒有寫授權**（ODPT 的資料有各自條款） | 時刻表 → 位置的加減速內插、直通運轉的串接、日照、追蹤鏡頭 | 實景地圖「真實列車」（決策 304）的加減速；3D 跟車鏡頭 | 只移植演算法，不拿資料，§4.C、§4.E |
 | 「ひと駅」的出處文字 | —（是別人的署名，不是資料） | 證實上面三份能做出 JR 東海、JR 西日本北陸、伊勢鉄道等的路網；日本 JR 沒有開放的時刻表，所以它的行駛與停站時間是模擬的估計值 | 日本的真實列車只能用估計班距（§4.D） | 參考做法 |
 
+作者接著貼了ひと駅的音效、音樂與地圖出處，見 §7：
+- **地圖**那一串，遊戲都已經有了，不用改。
+- **ポケットサウンド**與 **TAM Music Factory** 禁止散布素材檔本身，這個 repository 是公開的，所以不能放進 App 的資源。
+- **CC BY 的錄音**（OtoLogic、Freesound 的兩筆）可以用。
+
+建議不直接打包錄音，改用遊戲自己的合成器，量錄音的頻譜當參考，做跟車時的行駛聲。
+
 一句話：**台灣以外的實景地圖缺真實鐵路**這個洞，日本可以用 N02＋最適化ベクトルタイル補起來，資料都是 CC BY 4.0 相容、可以打包進 App；Mini Tokyo 3D 能用的是程式（MIT），它的東京資料不能拿。
 
 ## 1. 起因與範圍
@@ -198,17 +205,97 @@
 - **不改順序**：甲、乙兩線與 GameCore 的排隊都照舊。這些全在 `tools/`、GamePresentation 與 App 的資源，不升存檔，可以放進「修正 lane」或乙線 R2 之後。
 - 玩家分不高的理由：大多數玩家玩台灣；日本開局是決策 262 才加的，還沒有玩家回報要日本的真實鐵路。
 
-## 7. 驗證與來源
+## 7. 音效、音樂與地圖的出處（作者 2026-10-21 第二批）
+
+作者接著貼了「ひと駅」的音源與地圖出處，問這些能不能用。
+
+### 7.1 遊戲的聲音現在怎麼做
+
+- App 的 15 個音檔（`RailwayGameApp/Resources/Audio/`）全部由 `tools/audio/make_game_audio.py` 用正弦波與固定種子的雜訊合成。沒有取樣，也沒有第三方音源（決策 79、219）。
+- `--check` 重新產生，要和提交的檔案一個位元組都不差。
+- 決策 219 的研究（`RAILWAY_SOUND_2026-10-14.md` §2.2）定了用自己的合成器，理由有兩個：
+  - 聲音和遊戲、介紹影片一致；
+  - 沒有授權問題。
+- 作者的參考庫裡沒有任何音檔（同一份研究 §9）。
+- **這個 repository 是公開的**（CLAUDE.md）：放進 App 資源的檔案，任何人都能從 GitHub 下載原檔。
+
+### 7.2 每一筆音源
+
+| 音源 | 授權 | 公開 repo 能不能放 | 是什麼 | 遊戲用得到嗎 |
+| --- | --- | --- | --- | --- |
+| ポケットサウンド（pocket-se.info） | 自己的規約（2023-05-31 版） | **不能**：禁止「音素材そのものの二次配布・転売」，公開 repo 等於散布原檔 | ひと駅沒有寫用了哪幾個檔 | 不用。要用，得先用問い合わせフォーム問清楚公開原始碼的情況 |
+| OtoLogic | CC BY 4.0（作者貼的；官網有 Cloudflare 驗證，這裡打不開，UNVERIFIED） | 可以，署名「OtoLogic」並附連結 | 印表機（紙）、改札的嗶聲、新幹線行駛音 | 新幹線行駛音：跟隨高鐵時的行駛聲。印表機：之後一日券（NEXT_PRIORITIES §21）的票券卡。改札嗶聲：遊戲沒有剪票口的畫面 |
+| uair01「train_wheels_ringing_curve」（Freesound 57786） | CC BY 3.0（頁面確認） | 可以 | 11 秒，慢速過彎的輪緣摩擦聲；沒寫是哪裡的車 | 跟隨列車慢速通過急彎時（決策 217 由曲率算出限速的地方） |
+| Shuhmi「Modern Diesel Train (BR 622 LINT)」（Freesound 850682） | CC BY 4.0（頁面確認） | 可以 | 32 秒，德國 Alstom Coradia LINT 54 柴聯車怠速與起步 | 只當頻譜參考：它是德國的車，不是台灣的柴油車。ひと駅也只用平均頻譜做穩定的質感，沒有用原錄音 |
+| Chihayasassas「Toden Arakawa Line-bell」（Wikimedia Commons） | CC BY-SA 3.0（另有 2.5、2.0、1.0 與 GFDL，任選） | 可以，但改作後的檔案仍是 CC BY-SA 3.0，要分開標明 | 2.2 秒，都電荒川線的發車信號鈴 | 不用：東京路面電車特有的聲音，台灣的輕軌不是這樣；日本開局之後再說 |
+| TAM Music Factory | 自己的規約 | **不能**：禁止「素材そのものの販売・二次配布」；有課金就算商用，要寫「音楽：TAM Music Factory」 | 配樂 | 不用。遊戲的配樂是自己的 MML 與分軌（決策 219），不換成現成曲 |
+
+CC 3.0 的授權（uair01、荒川線的鈴）不允許加上限制使用者權利的技術保護。App Store 的 FairPlay 算不算，有爭議。公開 repo 本身就是一份沒有保護的原檔，一般認為這樣就夠了。真的要打包時，再查一次 CC 的 FAQ。
+
+### 7.3 建議：不打包錄音，用合成器照錄音的頻譜做
+
+ひと駅處理柴聯車的方法是：
+- 照原錄音的平均頻譜做一段穩定的質感，再濾波、合成、做成循環；
+- 不用原錄音的時間變化、相位、人聲與發車信號。
+
+遊戲的合成器（固定種子的雜訊）可以照同樣的方法做行駛聲。
+
+**做法**：
+1. 量 CC BY 錄音的平均頻譜：OtoLogic 的新幹線行駛音、uair01 的過彎聲，柴油車用 Shuhmi 的。
+2. 用量到的頻譜塑形 `make_game_audio.py` 的雜訊，做成三種循環：
+   - 高速（高鐵）；
+   - 一般電車；
+   - 過彎的摩擦聲。
+3. 頻譜的數字寫進工具（它也是改作的依據），`DataSourceCredits` 照 CC BY 署名，註明「參考其頻譜重新合成」。
+4. 輸出仍然每次相同，`--check` 照舊。
+
+**什麼時候播**：
+- 決策 219 第二階段的「跟隨列車、60 倍速以下」才播，和配樂淡出同一個時機。
+- 過彎聲只在跟隨的列車通過有曲線限速的地方時播。
+
+**五方**：
+- 玩家：跟著自己的車看時，聽得到車在跑、過彎時的聲音。
+- 鐵道迷：聲音的質感來自真實錄音，但不是逐車的真實錄音，要寫明。
+- 開發：只動資料工具與 App 的播放，GameCore 不動；頻譜量一次，之後重產都相同。
+- 美術：無。
+- 音樂：音色仍是同一套合成器，和鈴聲、配樂不衝突。直接放錄音會是遊戲第一個真實取樣，和柔和的合成音色混在一起會突兀。
+
+**沒選的**：
+- **直接打包 OtoLogic 與 uair01 的錄音**：最快，授權也允許。但會破壞決策 219 的「一套合成器」，循環點也要另外處理。合成的版本聽起來不夠真時，這是退路，預覽留在 PR 給作者比較。
+- **ポケットサウンド、TAM**：公開 repo 不能放。私有庫加建置時注入可以避開，但要動 CI 與祕密，不值得。
+
+| 項目 | 玩家 | 開發 | 美術 | 鐵道迷 | 音樂 | 加權分 | 依賴 |
+| --- | --: | --: | --: | --: | --: | --: | --- |
+| 跟車行駛聲（合成，參考 CC BY 錄音的頻譜） | 3 | 3 | 1 | 4 | 4 | 3.00 | 決策 219 第二階段（跟隨列車、音量分開） |
+| 直接打包 CC BY 錄音（退路） | 3 | 4 | 1 | 4 | 2 | 2.95 | 同上 |
+
+### 7.4 地圖：遊戲都已經有了
+
+| ひと駅的 | 遊戲 | 出處 |
+| --- | --- | --- |
+| OpenMapTiles（格式 CC BY 4.0，地圖角落要看得到署名） | 有：地圖角落「© OpenMapTiles © OpenStreetMap」（決策 191），資料來源頁有格式的連結 | `DataSourceCredits.swift` 100–102、366 行 |
+| OpenStreetMap（ODbL 1.0） | 有 | 同上 |
+| OpenFreeMap | 有：台灣以外的實景地圖用它的圖磚 | `BaseMapStyle.openFreeMapTiles` |
+| Positron 樣式（程式 BSD 3-Clause、設計 CC BY 4.0，衍生自 CartoDB CC BY 3.0） | **不用**：遊戲是自己的樣式（決策 151），不需要 Positron 的聲明。以後要借它的配色時才要加 | `BaseMapStyle.swift` 檔頭 |
+| MapLibre Native 6.31.0（BSD 2-Clause） | 有，同一版（`project.yml` 的 `exactVersion: 6.31.0`），授權檔隨 App | `Resources/Licenses/MapLibre-iOS-LICENSE.md` |
+| Noto Sans（OFL 1.1） | 有：ひと駅用 OpenFreeMap 的遠端字形；遊戲把字形打包在 App 裡，連 OFL 全文 | `Resources/BaseMap/fonts/`、`Resources/Licenses/NotoSans-OFL.txt` |
+
+不用改。
+
+## 8. 驗證與來源
 
 **VERIFIED（Linux，2026-10-21）**：
 - Mini Tokyo 3D：`git clone` 後 checkout `220adf8`，讀 `LICENSE`、`src/`、`data/`、README 與 `docs/`；沒有執行它的任何程式。數字（`configs.js` 的 80 km/h、3 km/h/s 等）是讀原始碼得到的。
 - N02：下載 `N02-25_GML.zip`，用 Python 解析 GeoJSON，數出 §3.1 的筆數；21 個城市的範圍與大小用 `RealWorldStations.swift` 的座標算。
 - GSI：抓 `experimental_multil/15/29140/12897.geojson` 等圖磚、`optimal_bvmap` 的 repo 與規格、利用規約頁。`www.gsi.go.jp` 要允許 OpenSSL 的舊式重新協商才連得上（憑證照常驗證）。
+- §7：讀了ポケットサウンド（https://pocket-se.info/rules/）與 TAM Music Factory（https://www.tam-music.com/interface）的規約頁、兩筆 Freesound 與 Wikimedia Commons 的檔案頁；遊戲的地圖署名、樣式、MapLibre 版本與字形照 repo 的程式與 `project.yml` 核對。
 
 **UNVERIFIED**：
 - ODPT 各資料的條款原文（開發者網站要 JavaScript，抓不到）；本文照參考庫 `route_scope.json` 已查過的結論。
 - 多言語表記打包時是否屬於基本測量成果、要不要申請。
 - App 裡的大小、讀檔時間與幀成本（沒有實作）。
+- OtoLogic 的規約原文（官網有 Cloudflare 驗證，打不開）；照作者貼的 CC BY 4.0。
+- 頻譜重新合成的行駛聲聽起來夠不夠真（沒有做）。
 
 **來源**：
 - https://github.com/nagix/mini-tokyo-3d/tree/220adf8e8c4dae8251f4999502757d2cbc25c747（MIT）
