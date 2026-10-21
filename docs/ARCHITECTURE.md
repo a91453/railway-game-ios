@@ -14345,6 +14345,49 @@ session_0125dMtwyMdz7mzoBCRNa1pn 預約（#231）。這一節由那個 PR 填寫
 
 **驗證**：`NewGameChoiceTests`（Linux）。App 的畫面（主選單、新遊戲頁、iPhone 橫拿與 iPad）只能靠 macOS CI 編譯與 UI 測試；實機的樣子由作者在 TestFlight 看。
 
+### 318. 3D 地圖補上方塊列車的模型：莒光號、藍皮、推拉式自強號、普悠瑪、太魯閣、EMU800、柴油客車
+
+（2026-10-21，3D session_01Y25x9NJSKmAuP1M1K3Sf3C，遊戲規劃派工；預覽 `docs/art/map3d-train-sets-2026-10-21/`）
+
+**做什麼**：決策 230 的 3D 列車只有車型有樣式時近看才是模型，其他都是方塊。這次照 #900 的原生程序化列車（`Map3DSceneKit*.swift`，只帶進程式與 `manifest.json`，圖片與 GLB 留在私有參考庫）給這些列車各做一套模型：
+
+- **一套** = 頭車、中間車、最後一節（`Map3DTrainSet`，模型名 `set-<key>-head／car／tail／single`），接在 `Map3DModelPack.standard` 的最後面，原本的模型 index 不變。
+- **牽引的列車**：莒光號 E200、E500（現代箱型機車）、R100（舊型車頭在一端）、R200 拖莒光號客車；藍皮是 R135 拖藍色客車。第 1 節是機車，中間是客車，最後一節是有尾門與兩盞紅尾燈的客車。
+- **推拉式自強號**：E1000 動力車在兩端（最後一節是頭車轉過來）。
+- **電聯車**：普悠瑪、太魯閣、EMU800 用 #900 的車頭與 `Map3DTrainBuilder` 的中間車，最後一節是自己的尾車。
+- **柴油客車**：1–2 節是 DR1000（單節時兩端都有駕駛台），3 節以上是 DR3100。柴油客車與柴油自強號的性能曲線相同，分不出來，所以照節數挑。
+- **哪一套**：列車的車型代號有樣式或有一套就用它；沒有車型時照性能（普悠瑪、太魯閣、四種莒光號的性能各對到自己的一套）；都沒有就是方塊。`Map3DTrains.Heights` 記下每列車的 key。
+- **顏色**：參考庫車庫規格（`garage-blender-v1/*.json` 的 `specification.body`／`accent`）與 `TrainLivery` 的塗裝；模型自己的顏色，不吃路線色。
+- **量**：33 個模型、19,704 個三角形，啟動時建一次（debug 0.29 秒）；整包從約 20 個模型、5.3 千個三角形變成 53 個、25,050 個。只有近處（`modelReach`）的車是模型，實例數不變，每個模型一個 draw。
+- **還是方塊**：磁浮、懸吊、單軌、蒸汽（參考庫與 #900 都沒有合適的做法）、貨車。
+
+**五個角度**：
+- 玩家：莒光號、藍皮、普悠瑪、太魯閣近看是自己的樣子，不再是一排白盒子；最後一節有尾燈，看得出車頭往哪走。
+- 鐵道迷：牽引的列車有機車與客車之分，E1000 動力車在兩端、DR1000 單節兩端都有駕駛台，顏色照參考庫車庫規格（出自照片）；不準的地方：E200、E500 用同一個箱型車頭，R100、R135 用同一個舊型車頭，機車與客車同長（車輛位置是 GameCore 算的），機車佔掉一節客車的位置。
+- 開發：只動 GamePresentation 與它的測試；GameCore、存檔、golden、replay 不動；#900 的六個 Swift 檔照原樣帶進來，只把機車的車頂、車頂顏色改成參數，車種的做法整理成 `trainRecipe`；新測試 `Map3DTrainSetTests` 6 個、`Map3DSceneKitTests` 7 個。
+- 美術：平塗頂點色、方塊與圓角，和決策 230 的通勤車並排看不突兀（預覽）；機車頂改成灰色車頂，不用 #900 的深藍（看起來像貨櫃）；這些模型是 AI 生成的素材表照著寫成程式的（README 標明）。
+- 音樂：無。
+
+**沒有選的做法**（預覽在 `docs/art/map3d-train-sets-2026-10-21/`，上半是方塊）：
+- **留方塊**：最便宜；但遊戲規劃把它排成第一件，方塊在近景最顯眼。
+- **整個合併 #900**：81 MB（62 MB PNG、11 MB GLB），App 用不到圖片；只帶需要的 Swift 檔。
+- **讀 #900 的 GLB 或 m3dmodel**：要打包檔案、多一條讀檔路徑；程式蓋的模型同樣是那份做法，App 少十幾 MB。
+- **只換顏色（方塊上色）**：便宜，但看不出機車與客車、車頭朝向。
+
+**參考與來源**：
+
+| 來源 | 拿了什麼 | 用在 |
+| --- | --- | --- |
+| #900 `Sources/GamePresentation/Map3DSceneKit*.swift`（私有參考庫 `Railway/generated-3d-assets-2026-10-21/scene-kit-pr900/`） | 原生程序化列車、機車、車頭的做法 | 照原樣帶進來；`trainRecipe`、`locomotive(... roof:)` |
+| #900 `docs/art/generated-2026-10-21-scene-kit/manifest.json` | 素材表的座標、描述、SHA-256 | `Map3DSceneKitTests` |
+| 參考庫 `Railway/taiwan-rail-reference-clean/source/rail-3d/assets/garage-blender-v1/*.json` | e200、e500、r100、r200、blue、bluecoach、juguang、ppcoach、e1000、dr1000、dr3100 的車身與飾帶色 | `Map3DTrainSet.all` |
+| 外部專案 | 沒有找（列車外型的做法已在 #900） | — |
+
+**驗證**：
+- **VERIFIED**（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`Map3DTrainSetTests`、`Map3DSceneKitTests`、`Map3DModelTests` 與名字含 Map3D、StreetLife、TrainLivery 的測試全過。
+- **VERIFIED**（Linux，無頭 Chromium 的 WebGL 預覽，決策 238）：每一套的頭、中、尾並排（預覽圖）。
+- **UNVERIFIED**：App 的編譯（`ios-build.yml`）、3D 的 UI 測試（`only_testing`）、實機的樣子與幀數（TestFlight）。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。
