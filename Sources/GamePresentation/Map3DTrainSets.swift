@@ -10,8 +10,8 @@ import GameCore
 /// cab at each end.
 ///
 /// Their colours are their own (``TrainLivery``, the reference's garage
-/// models for the locomotives and the railcars, #900's for the EMU3000 and
-/// the 700T), baked in, so they do not take the line's colour; the metro's
+/// models for the locomotives, the EMU800 and the railcars) on #900's
+/// shapes, baked in, so they do not take the line's colour; the metro's
 /// band stays the line's. The locomotives are ``Map3DTrainLocomotive``.
 public struct Map3DTrainSet: Sendable {
     /// The type's code (``TrainTypeSpec/code``) or, for a train whose type
@@ -69,17 +69,22 @@ public struct Map3DTrainSet: Sendable {
             // The multiple units, by their performance (decision 237); the
             // EMU3000, the 700T and the metro as #900 has them (the author,
             // 2026-10-21), the metro's band the line's colour.
-            multipleUnit("emu3000", asset: "01_TRA_modern_3x2-01"),
-            multipleUnit("highSpeed", asset: "02_HSR_MRT_3x2-01", pantographCars: [3, 8]),
+            multipleUnit("emu3000", asset: "01_TRA_modern_3x2-01", livery: TrainLivery.emu3000),
+            multipleUnit("highSpeed", asset: "02_HSR_MRT_3x2-01", livery: TrainLivery.highSpeed, pantographCars: [3, 8]),
             multipleUnit("metroC381", asset: "02_HSR_MRT_3x2-02", lineColoured: true),
             multipleUnit("wenhu", asset: "02_HSR_MRT_3x2-03", lineColoured: true),
             multipleUnit("puyuma", asset: "01_TRA_modern_3x2-02", livery: TrainLivery.puyuma),
             multipleUnit("taroko", asset: "01_TRA_modern_3x2-03", livery: TrainLivery.taroko),
-            multipleUnit("emu800", asset: "01_TRA_modern_3x2-04", livery: TrainLivery.emu800),
-            // The DR1000 railcar and the DR3100 diesel express: silver,
-            // yellow-orange ends (the reference's `dr1000`, `dr3100`).
-            multipleUnit("dieselRailcar", asset: "05_TRA_classic_3x2-03", body: 0xBFC8C9, band: 0xE89A27, single: true),
-            multipleUnit("dieselExpress", asset: "05_TRA_classic_3x2-04", body: 0xBFC8C9, band: 0xE89A27),
+            // The EMU800: grey, a blue band and its blue face (the reference's
+            // garage `emu800`) on #900's curved front (the author, 2026-10-21).
+            multipleUnit("emu800", asset: "01_TRA_modern_3x2-04", body: 0xBBC6C9, band: 0x214F90, face: 0x214F90),
+            // The DR1000 railcar and the DR3100 diesel express: silver, a thin
+            // orange band, yellow-orange faces (the reference's `dr1000`,
+            // `dr3100`) on #900's curved fronts.
+            multipleUnit("dieselRailcar", asset: "05_TRA_classic_3x2-03", body: 0xBFC8C9, band: 0xE89A27, thinBand: true,
+                         face: 0xE89A27, single: true),
+            multipleUnit("dieselExpress", asset: "05_TRA_classic_3x2-04", body: 0xBFC8C9, band: 0xE89A27, thinBand: true,
+                         face: 0xE89A27),
         ]
     }()
 
@@ -139,15 +144,20 @@ public struct Map3DTrainSet: Sendable {
     }
 
     static func multipleUnit(_ key: String, asset id: String, livery: TrainLivery? = nil, body: Int? = nil, band: Int? = nil,
-                             single: Bool = false, pantographCars: Set<Int> = [], lineColoured: Bool = false) -> Map3DTrainSet {
+                             thinBand: Bool = false, face: Int? = nil, single: Bool = false, pantographCars: Set<Int> = [],
+                             lineColoured: Bool = false) -> Map3DTrainSet {
         Map3DTrainSet(key: key, pantographCars: pantographCars) {
             guard let asset = Map3DSceneKit.asset(id: id) else { preconditionFailure("No scene-kit subject \(id).") }
             var recipe = SceneKitBuilder.trainRecipe(asset)
             if let colour = livery?.body ?? body { recipe.style.body = Map3DColor.rgb(UInt32(colour)) }
             if let colour = livery?.stripe ?? band { recipe.tint = Map3DColor.rgb(UInt32(colour)) }
+            // A thin band under the windows, not a wide one.
+            if thinBand { recipe.style.band = 0.36...0.40 }
             func cab(tail: Bool) -> Map3DModelPack.Model {
-                baked(SceneKitCab(style: recipe.style, asset: asset, tail: tail, tint: recipe.tint, lineColoured: lineColoured).model(),
-                      tint: recipe.tint, keepsShares: lineColoured)
+                let model = baked(SceneKitCab(style: recipe.style, asset: asset, tail: tail, tint: recipe.tint, lineColoured: lineColoured).model(),
+                                  tint: recipe.tint, keepsShares: lineColoured)
+                guard let face else { return model }
+                return model.painting(recipe.style.body, within: recipe.style.nose, as: Map3DColor.rgb(UInt32(face)))
             }
             func car(pantograph: Bool) -> Map3DModelPack.Model {
                 baked(Map3DTrainBuilder(style: recipe.style, cab: false, pantograph: pantograph).model(named: key),
@@ -213,6 +223,16 @@ public struct Map3DTrainSet: Sendable {
 }
 
 extension Map3DModelPack.Model {
+    /// This model with its `colour` within `depth` of its front painted
+    /// `paint` (a cab car's face in its own colour).
+    func painting(_ colour: UInt32, within depth: Float, as paint: UInt32) -> Map3DModelPack.Model {
+        let from = maximum.x - depth
+        let vertices = self.vertices.map { v in
+            v.x > from && v.color == colour ? Map3DVertex(Map3DPoint(v.x, v.y, v.z), normal: Map3DPoint(v.nx, v.ny, v.nz), color: paint, layer: v.layer) : v
+        }
+        return Map3DModelPack.Model(name: name, vertices: vertices, minimum: minimum, maximum: maximum)
+    }
+
     /// This model turned round to face −x, so a train's last car can be
     /// drawn as its tail facing forward like every other car.
     var turned: Map3DModelPack.Model {
