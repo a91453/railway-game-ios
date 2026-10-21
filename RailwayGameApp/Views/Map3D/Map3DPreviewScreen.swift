@@ -15,6 +15,8 @@ import UIKit
 /// Decision 269: a pinch on the 2D map hands it over here (`handedOver`,
 /// the 2D map's middle and zoom), and pinched back out past
 /// ``Map3DHandoff/closesAt`` it hands the 2D map back (`handBack`).
+/// Decision 269, later: turned from north, a compass under the close
+/// button shows where north is; a tap turns the map back.
 struct Map3DPreviewScreen: View {
     let session: GameSession
     var handedOver: Map3DHandoff.Plan? = nil
@@ -25,6 +27,7 @@ struct Map3DPreviewScreen: View {
     @State private var stats: Map3DMetalView.Stats?
     @State private var showsDetails = false
     @State private var feed = Map3DTrainFeed()
+    @State private var compass = Map3DCompassState()
     @AppStorage(LinePalette.key) private var linePalette: LinePalette = .standard
 
     var body: some View {
@@ -32,7 +35,7 @@ struct Map3DPreviewScreen: View {
         ZStack {
             Map3DView(scene: scene, sceneVersion: sceneVersion, lighting: Map3DLighting(at: session.world.clock.now),
                       weather: Map3DWeather(MapWeather(world: session.world)), feed: feed,
-                      start: handedOver, farOut: farOut, onStats: { stats = $0 })
+                      start: handedOver, farOut: farOut, compass: compass, onStats: { stats = $0 })
                 .ignoresSafeArea()
                 .accessibilityIdentifier("map3D.view")
             if scene == nil {
@@ -41,14 +44,17 @@ struct Map3DPreviewScreen: View {
             }
             VStack {
                 HStack(alignment: .top) {
-                    Button(action: close) {
-                        Image(systemName: "xmark")
-                            .font(.headline)
-                            .frame(width: 44, height: 44)
-                            .background(.regularMaterial, in: Circle())
+                    VStack(spacing: 8) {
+                        Button(action: close) {
+                            Image(systemName: "xmark")
+                                .font(.headline)
+                                .frame(width: 44, height: 44)
+                                .background(.regularMaterial, in: Circle())
+                        }
+                        .accessibilityLabel(Text(verbatim: language.text("Close", "關閉")))
+                        .accessibilityIdentifier("map3D.close")
+                        Map3DCompassButton(state: compass)
                     }
-                    .accessibilityLabel(Text(verbatim: language.text("Close", "關閉")))
-                    .accessibilityIdentifier("map3D.close")
                     Spacer()
                     if let stats {
                         Button {
@@ -247,10 +253,12 @@ private struct Map3DView: UIViewRepresentable {
     /// when pinched back out past ``Map3DHandoff/closesAt``.
     let start: Map3DHandoff.Plan?
     let farOut: ((Map3DCamera) -> Void)?
+    /// Decision 269, later: the way the map faces, for the compass.
+    let compass: Map3DCompassState
     let onStats: @MainActor (Map3DMetalView.Stats) -> Void
 
     func makeCoordinator() -> Coordinator {
-        Coordinator()
+        Coordinator(compass: compass)
     }
 
     /// Decision 230: the train models, made in code once.
@@ -302,6 +310,7 @@ private struct Map3DView: UIViewRepresentable {
             let height = Float((scene.region.maxY - scene.region.minY) / Double(WorldCoordinate.unitsPerMetre))
             view.camera = Map3DCamera(target: .zero, distance: max(width, height) * 0.9, viewport: view.camera.viewport)
         }
+        context.coordinator.showHeading()
     }
 
     @MainActor
@@ -313,8 +322,58 @@ private struct Map3DView: UIViewRepresentable {
         /// `nil` when the 3D button opened the map.
         var handedOverAt: Float?
         private var handedBack = false
+        private let compass: Map3DCompassState
+        /// The turn back to north running, a frame at a time.
+        private var northLink: CADisplayLink?
+        private var northTurn: (start: Float, began: CFTimeInterval, seconds: Double)?
+
+        init(compass: Map3DCompassState) {
+            self.compass = compass
+            super.init()
+            compass.turnNorth = { [weak self] reduceMotion in self?.turnNorth(reduceMotion: reduceMotion) }
+        }
+
+        /// Tells the compass the way the camera faces now.
+        func showHeading() {
+            guard let view else { return }
+            let turn = view.camera.turnFromNorth, facesNorth = view.camera.facesNorth
+            if compass.turn != turn { compass.turn = turn }
+            if compass.facesNorth != facesNorth { compass.facesNorth = facesNorth }
+        }
+
+        /// Turns the map back to north: at once with Reduce Motion, or
+        /// else over ``MotionRule/turnNorth``. A finger on the map stops it
+        /// where it is, as the reference's map does.
+        func turnNorth(reduceMotion: Bool) {
+            guard let view else { return }
+            stopTurningNorth()
+            guard let rule = MotionRule.turnNorth.running(reduceMotion: reduceMotion) else {
+                view.camera = view.camera.turnedNorth(from: view.camera.heading, progress: 1)
+                showHeading()
+                return
+            }
+            northTurn = (view.camera.heading, CACurrentMediaTime(), rule.seconds)
+            let link = CADisplayLink(target: self, selector: #selector(northStep(_:)))
+            link.add(to: .main, forMode: .common)
+            northLink = link
+        }
+
+        @objc private func northStep(_ link: CADisplayLink) {
+            guard let view, let turn = northTurn else { return stopTurningNorth() }
+            let progress = Float((link.timestamp - turn.began) / turn.seconds)
+            view.camera = view.camera.turnedNorth(from: turn.start, progress: progress)
+            showHeading()
+            if progress >= 1 { stopTurningNorth() }
+        }
+
+        private func stopTurningNorth() {
+            northLink?.invalidate()
+            northLink = nil
+            northTurn = nil
+        }
 
         @objc func pan(_ recognizer: UIPanGestureRecognizer) {
+            if recognizer.state == .began { stopTurningNorth() }
             guard let view else { return }
             let moved = recognizer.translation(in: view)
             view.camera = view.camera.panned(dx: Float(moved.x), dy: Float(moved.y))
@@ -322,6 +381,7 @@ private struct Map3DView: UIViewRepresentable {
         }
 
         @objc func pinch(_ recognizer: UIPinchGestureRecognizer) {
+            if recognizer.state == .began { stopTurningNorth() }
             guard let view else { return }
             let before = view.camera.distance
             view.camera = view.camera.zoomed(by: Float(recognizer.scale))
@@ -337,13 +397,87 @@ private struct Map3DView: UIViewRepresentable {
         }
 
         @objc func rotate(_ recognizer: UIRotationGestureRecognizer) {
+            if recognizer.state == .began { stopTurningNorth() }
             guard let view else { return }
             view.camera = view.camera.turned(by: -Float(recognizer.rotation))
             recognizer.rotation = 0
+            showHeading()
         }
 
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
             true
         }
+    }
+}
+
+/// Decision 269, later: the way the 3D map faces, for its compass, and how
+/// to turn it back to north. The camera stays the Metal view's own; this
+/// only mirrors its heading, so turning redraws the compass alone.
+@MainActor
+@Observable
+final class Map3DCompassState {
+    /// The camera's turn from north, in radians, clockwise.
+    var turn: Float = 0
+    /// Whether it faces north (``Map3DCamera/facesNorth``).
+    var facesNorth = true
+    /// Turns the map back to north; with Reduce Motion at once.
+    @ObservationIgnored var turnNorth: ((_ reduceMotion: Bool) -> Void)?
+}
+
+/// Decision 269, later: the 3D map's compass, only while the map does not
+/// face north, as in Apple Maps. A round button the size of the close
+/// button above it; the needle, red to the north and white to the south
+/// (MapLibre's compass, the reference's map), points where north is on
+/// the screen. A tap turns the map back.
+private struct Map3DCompassButton: View {
+    let state: Map3DCompassState
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        if !state.facesNorth {
+            Button {
+                state.turnNorth?(reduceMotion)
+            } label: {
+                ZStack {
+                    Circle().fill(Theme.panel)
+                    Circle().strokeBorder(Theme.textPrimary, lineWidth: 1.5)
+                    ZStack {
+                        needle(north: true, fill: Palette.metroRed)
+                        needle(north: false, fill: .white)
+                    }
+                    .rotationEffect(.radians(Double(-state.turn)))
+                }
+                .frame(width: 44, height: 44)
+                .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text(verbatim: DisplayLanguage.app.text("Turn to north", "轉回北方")))
+            .accessibilityIdentifier("map3D.compass")
+        }
+    }
+
+    private func needle(north: Bool, fill: Color) -> some View {
+        let half = Map3DCompassNeedle(north: north)
+        return half.fill(fill)
+            .overlay(half.stroke(Theme.textPrimary, style: StrokeStyle(lineWidth: 1.25, lineJoin: .round)))
+    }
+}
+
+/// Half the compass's needle, in a 44-point square: from the middle to
+/// the tip, 13.5 points long and 10 wide where the halves meet.
+private struct Map3DCompassNeedle: Shape {
+    let north: Bool
+
+    func path(in rect: CGRect) -> Path {
+        let scale = rect.width / 44
+        func point(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
+            CGPoint(x: rect.minX + x * scale, y: rect.minY + y * scale)
+        }
+        var path = Path()
+        path.move(to: point(22, north ? 8.5 : 35.5))
+        path.addLine(to: point(27, 22))
+        path.addLine(to: point(17, 22))
+        path.closeSubpath()
+        return path
     }
 }

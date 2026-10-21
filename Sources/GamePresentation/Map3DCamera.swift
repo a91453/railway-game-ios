@@ -199,6 +199,39 @@ public struct Map3DCamera: Hashable, Sendable {
         camera.heading = (heading + radians).truncatingRemainder(dividingBy: 2 * .pi)
         return camera
     }
+
+    // MARK: - North (decision 269, later: the compass)
+
+    /// How far from north the view may face, in radians, and still count
+    /// as facing north: 0.05°, as the reference's map decides it is turned
+    /// (`syncOrientationClass` in `main-reference.js`). Less does not show
+    /// on a screen: the edge of a phone's view moves under half a point.
+    public static let northTolerance: Float = 0.05 * .pi / 180
+
+    /// `heading` as a turn from north, more than -π and at most π:
+    /// positive is turned clockwise (facing east of north).
+    public static func turnFromNorth(_ heading: Float) -> Float {
+        var turn = heading.truncatingRemainder(dividingBy: 2 * .pi)
+        if turn > .pi { turn -= 2 * .pi } else if turn <= -.pi { turn += 2 * .pi }
+        return turn
+    }
+
+    public var turnFromNorth: Float { Self.turnFromNorth(heading) }
+
+    /// Whether the view faces north, within ``northTolerance``: the 3D
+    /// map's compass shows only when it does not.
+    public var facesNorth: Bool { abs(turnFromNorth) <= Self.northTolerance }
+
+    /// The camera `progress` (0 to 1) of the way back to north from facing
+    /// `start` when the compass was tapped: the shorter way round, fast at
+    /// first and landing gently (``MotionRule/turnNorth``), as the
+    /// reference's `stepMapNorth` eases (1 − (1 − t)²); exactly north at 1.
+    public func turnedNorth(from start: Float, progress: Float) -> Map3DCamera {
+        var camera = self
+        let t = min(max(progress, 0), 1)
+        camera.heading = t >= 1 ? 0 : Self.turnFromNorth(start) * (1 - t) * (1 - t)
+        return camera
+    }
 }
 
 /// The light on the native 3D map at a time of day (ARCHITECTURE decision
