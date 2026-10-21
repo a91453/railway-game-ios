@@ -13,11 +13,17 @@
 
 ## 1. 常駐的 session 與角色
 
-作者 2026-10-20 把常駐 session 減成一個：遊戲規劃兼派工。合併協調不再常駐，合併由作者做，§1.2 留作合併與發版的檢查清單。原因是額度：常駐 session 每一輪都要重讀整段對話，連被 PR 事件或排程叫醒也一樣，對話越長越貴。舊的遊戲規劃 session 開了兩天，用量已經碰到每週額度的警告。舊文件裡寫「派工 session」的地方，現在都是遊戲規劃。
+作者 2026-10-20 把常駐 session 減成一個：遊戲規劃兼派工。合併協調不再常駐，§1.2 留作合併與發版的檢查清單。
+
+**2026-10-21 起遊戲規劃也合併**（作者原話：「你的權限跟我一樣高／開發新功能一次最多3～4個session同步進行／Pr也不要一次開太多 不然會一直解合併衝突／或是等runner 綠了就合併 紅了就修／另外好像很久沒做pr review了 先優先做／再進行新功能依優先順序逐個進行」）：
+- PR 綠了遊戲規劃照 §1.2 合併；紅了交回那個 PR 的 session 修。
+- 新功能的實作 session 同時最多 3–4 個，照 NEXT_PRIORITIES §19 的順序一件一件開；開著的 PR 也不要多，免得一直解衝突。
+- PR 審查比新功能優先。上一輪是 #786–#872（§7.1）。
+- 仍是作者的：TestFlight 發版、Apple 帳號與 App Store Connect、secrets、加依賴、copyleft 或沒授權的程式碼，以及 CLAUDE.md 所有的「never」（不跑 `testflight.yml`、不開 auto-merge、不 force-push `main`、不取消 `main` 的 push run）。原因是額度：常駐 session 每一輪都要重讀整段對話，連被 PR 事件或排程叫醒也一樣，對話越長越貴。舊的遊戲規劃 session 開了兩天，用量已經碰到每週額度的警告。舊文件裡寫「派工 session」的地方，現在都是遊戲規劃。
 
 | 角色 | 現在的 session | 做什麼 | 交接 |
 | --- | --- | --- | --- |
-| 遊戲規劃（兼派工） | session_01WW7o3decEv5LY59nYVqnDN（2026-10-20 起，作者：「接手 角色表中遊戲規劃的工作」；前任 session_01V1xd3H9vNkuZoSA3czNfGm（10-16 至 10-18）、session_018D6gYU1yiZMtxSmNNU1K17。換手照 §1.1） | 從玩家、開發、美術、音樂四個角度決定優先順序與設計，開實作 session 並派工，收作者轉來的玩家回報與 bug（§1.3），寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1、1.3 節 |
+| 遊戲規劃（兼派工） | session_01WW7o3decEv5LY59nYVqnDN（2026-10-20 起，作者：「接手 角色表中遊戲規劃的工作」；前任 session_01V1xd3H9vNkuZoSA3czNfGm（10-16 至 10-18）、session_018D6gYU1yiZMtxSmNNU1K17。換手照 §1.1） | 從玩家、鐵道迷、開發、美術、音樂五個角度決定優先順序與設計，開實作 session 並派工，綠了的 PR 照 §1.2 合併（2026-10-21 起），收作者轉來的玩家回報與 bug（§1.3），寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1、1.3 節 |
 | 每日 Threads 開發日誌 | 排程「每日 Threads 開發日誌」（`trig_01342WWauXtTPc87kNedEhb9`，台灣時間每天 21:43，2026-10-18 起暫停）觸發遊戲規劃，由它開寫作 session。排程還綁在前任 session_01V1xd3H9vNkuZoSA3czNfGm；排程的綁定改不了，作者要重新打開時，由現任遊戲規劃用同一份 prompt 建一個綁到自己的新排程，再刪掉舊的 | 寫當天的串文草稿，用 SendUserFile 交給作者；不 commit、不發布 | 派工單照 2026-10-14、10-15、10-16 的寫作 session |
 
 不再常駐（2026-10-20 停用）：合併協調 session_01QoA24EvFCFbmbcM1EwaZT7（前任 session_016sNs4eeZwga9hz1CCHkpmX）、派工 session_01MJ7sdeid5DAFjSVbTkmdi3（前任 session_01AaAj4wvJMxJQuLWAoYu6S8）。兩個都從 2026-10-17 起沒有動作。
@@ -35,7 +41,7 @@
 ### 1.1 遊戲規劃
 
 - **做決定的方式**（作者 2026-10-14「我不再做決定，都以這個當預設」，10-15 加音樂，10-20 加鐵道迷）：五個角度（玩家、鐵道迷、開發、美術、音樂）各一行理由寫進 PR；鐵道迷看真實度與資料來源，和真實鐵路無關就寫「鐵道迷：無」；其他選項的預覽留在 PR；然後就做。作者自己保留：TestFlight 發版、Apple 帳號與 App Store Connect、secrets、加依賴、用 copyleft 或沒授權的程式碼。
-- **排序**：NEXT_PRIORITIES §14 的權重（玩家 30、開發 25、美術 15、鐵道迷＋產品 15、音樂 15）；§15 是參考庫還沒做的項目與 2026-10-16 的順序。
+- **排序**：NEXT_PRIORITIES §19（2026-10-21，鐵道迷單獨成一欄：玩家 30、開發 25、美術 15、鐵道迷 15、音樂 15）。§14 是舊的權重（鐵道迷＋產品），§15 是參考庫還沒做的項目與 2026-10-16 的順序。
 - **一條線一次一個 PR**：前一個合併再開下一個（§14.4）。同時跑全套 Swift CI 的 GameCore PR 最多 2 個；開 PR 前先看 #231 與開著的 PR 還有沒有名額。
 - **每次發版**：
   - 發版前：改 `.github/testflight-whats-new.md`（它只在上一版之後有改動時才會被用，沒改就是自動列出的 PR 清單）。
@@ -51,9 +57,9 @@
 
 ### 1.2 合併與發版的檢查
 
-（合併協調 session 2026-10-16 寄來的交接原文，整理成條列。2026-10-20 起沒有常駐的合併協調：合併的是作者；作者在某個 session 裡授權它合併，或要發版時開一個短 session 確認，那個 session 就照這一節。）
+（合併協調 session 2026-10-16 寄來的交接原文，整理成條列。2026-10-20 起沒有常駐的合併協調。2026-10-21 起遊戲規劃照這一節合併（§1）；作者在別的 session 裡授權它合併，或要發版時開一個短 session 確認，那個 session 也照這一節。）
 
-**權限**：只有作者本人在那個 session 裡授權了才合併（CLAUDE.md 的「never merge a PR」只在這時放寬）。不開 auto-merge、不 force-push、不碰 `testflight.yml`。
+**權限**：遊戲規劃（作者 2026-10-21 授權），或作者本人在那個 session 裡授權了的 session，才合併（CLAUDE.md 的「never merge a PR」只在這時放寬）。不開 auto-merge、不 force-push、不碰 `testflight.yml`。
 
 **每個 PR 合併前確認**（`pull_request_read` 的 get 與 get_check_runs）：
 - 不是 draft，`mergeable_state` 是 `clean`。
@@ -71,6 +77,7 @@
 **批次**：
 - 一批 3–5 個綠的 PR，兩批之間等 main 的 `ci.yml` 綠。
 - 只改 docs，或只改 UI 測試、CI 腳本的 PR，可以隨時合。
+- 先合正在等的那一個：有 PR 為了解衝突重跑 CI 時，先不要合另一個也改 OVERVIEW、ARCHITECTURE 或這份的 PR，否則它要再解一次（2026-10-21：先合 #876，#875 第二次衝突）。
 
 **GameCore 名額**：
 - 同時最多 2 個要跑完整 tier（18–19 個 job）的 PR 在跑 CI。改 `.github/scripts/swift-shards.sh` 這類 CI 腳本也算完整 tier。
@@ -696,6 +703,20 @@ PR #816／#822／#823 的 Codex 獨立審查與待原作者修正：折返後行
 第一批（PR685_711 交接第四節與前兩輪剩下的）的延後項目也在 `docs/archive/PR685_711_REVIEW_HANDOFF.md` 第十一節：狀態列破產倒數、景點計算量、3D 亮窗與反向 Z、3D 開著時的月底報表、#680 清單拖曳、#657 坡道切軌訊息、hook 的 Swift 6.4.1 等，每項附原因與建議做法。
 
 PR #712–#754 那一輪（69.1 收工那一晚）的審查：修了三項，延後的 11 項（自動待避線抬起的列車放不回去、3D 斜交平交道、#752 模型的可追溯性、PR gate 的 UI 時間等）連同原因與建議做法，寫在 `docs/archive/PR712_754_REVIEW_HANDOFF.md` 第四節。3D 平交道那幾項與測試容差已在第 2b 步（決策 267）做完。
+
+PR #786–#872 那一輪（2026-10-21，作者：「很久沒做pr review了 先優先做」）分三組審查，都已合併：
+- **A 組 行車控制**（#878，[PR786_872_A_REVIEW_HANDOFF.md](archive/PR786_872_A_REVIEW_HANDOFF.md)）：0 個新發現。延後的在它第五節：
+  - **R3**（P2）：#822 的閉塞分界只看車頭。建議 `isClear` 改看車尾，會動閉塞開時的 golden 與 replay。交行車控制的 session 或 #822 的作者，等 302 的後續做完再排。
+  - **R4**（P2，測試工具）：`WorldInvariants.violations` 遇到 v28 的自動結構會 trap（`ReferenceVertical.swift:81`）。交 `ReferenceWorld` 的作者；探針的 fixture 數要改成 68。
+  - **B4**（P3）：已經誤點的車被折返，時刻表不動，列車卡認不出折返。B 組建議的修法會讓時刻表非遞增、存檔讀不回，不能用。可行的兩條：GameCore 把之後的停靠移到不早於現在（違反決策 288，要重驗 golden 與 replay），或 GamePresentation 從行程紀錄認出折返（較小，建議走這條）。
+- **B 組 建造、真實資料、經濟**（#874，[PR786_872_B_REVIEW_HANDOFF.md](archive/PR786_872_B_REVIEW_HANDOFF.md)）：B1–B3 已修，B4 見上。另兩個小項：整平的提示與成功訊息只說點到的那條軌道的長度；#869 之後轉乘的平衡沒有量（`TRANSFER_REPORT=14`，NOT ASSESSED）。
+- **C 組 App、介面、3D、工具**（#873，[PR786_872_C_REVIEW_HANDOFF.md](archive/PR786_872_C_REVIEW_HANDOFF.md)）：6 個發現都修了。它第三節有 6 項只讀程式看到、Linux 測不到的，要在 macOS 或實機確認：
+  - 3D 場景快取的 key 只數建築與月台（`Map3DPreviewScreen.swift`）；
+  - `Map3DSceneCache.clear()` 不會取消建到一半的場景；
+  - 路線面板的 `scrollTo` 沒有照「減少動態效果」；
+  - 地圖角落按鈕的觸控區只有 44×28；
+  - #870 的預覽用 `targets: nil`，建立路線卻用路線自己的目標班距（已轉給空窗快轉 session）；
+  - diagnosing-bugs skill 的 TICK_REPORT 指令少了 `--skip-build`。
 
 PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡需求燈只數這條線、座位圖換行、關卡「繼續玩」會繼續、3D 場景快取分局、長按的診斷 trace、決策 266 的文字），延後的 10 項（`main` 在 abb306a 的 full lane 紅、`testHoldingAStationTracesItsBusiestTrips` 的根因、整平時的轉乘乘客、72.1 沒有自己的綠 full lane 等）連同原因與建議做法，寫在 `docs/archive/PR755_784_REVIEW_HANDOFF.md` 第四節。
 
