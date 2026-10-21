@@ -1096,6 +1096,27 @@ enum MapArt {
         context.stroke(head, with: .color(Palette.ink), style: StrokeStyle(lineWidth: 1.5, lineJoin: .round))
     }
 
+    /// Decision 304: the real lines' trains, each a short capsule along its
+    /// way in its line's colour, fainter and smaller than the player's
+    /// trains (``RealTrainTraffic/look``), edged in a light trace of
+    /// ``Palette/ink``.
+    static func drawRealTrains(_ dots: some Sequence<RealTrainDot>, projection: some MapProjection, in context: GraphicsContext) {
+        let look = RealTrainTraffic.look
+        let radius = trainHeadRadius(projection.referenceSize) * look.sizeShare
+        let half = radius * look.lengthShare, side = radius
+        for dot in dots {
+            let center = projection.screenPoint(worldX: dot.x, worldY: dot.y)
+            // The screen is north up, as the world: its heading as it is.
+            let ux = dot.headingX, uy = dot.headingY
+            let body = Path(
+                roundedRect: CGRect(x: -half - side, y: -side, width: 2 * (half + side), height: 2 * side), cornerRadius: side
+            ).applying(CGAffineTransform(translationX: center.x, y: center.y).rotated(by: atan2(uy, ux)))
+            let colour = Color(red: Double(dot.color.red) / 255, green: Double(dot.color.green) / 255, blue: Double(dot.color.blue) / 255)
+            context.fill(body, with: .color(colour.opacity(look.opacity)))
+            context.stroke(body, with: .color(Palette.ink.opacity(look.edgeOpacity)), lineWidth: look.edgeWidth)
+        }
+    }
+
     /// Decision 205: a train close up, car by car (``TrainCars``), each car
     /// in its colour with a navy joint between, the whole cased in
     /// ``Palette/ink`` and the leading car's nose its model's shape

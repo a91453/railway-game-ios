@@ -77,6 +77,14 @@ struct MapView: View {
     /// weather (the settings' switches, on the device).
     @AppStorage(MapAmbienceSettings.dayNightKey) private var showsDayNight = true
     @AppStorage(MapAmbienceSettings.weatherKey) private var showsWeather = true
+    /// Decision 304: the real lines' trains on a real-world map, on the
+    /// device.
+    @AppStorage(MapAmbienceSettings.realTrainsKey) private var showsRealTrains = true
+    /// The real lines on this map and their trains (decision 304), worked
+    /// out once for the map, and the game clock they are drawn at.
+    @State private var realTrains: RealTrainTraffic?
+    @State private var realTrainsVersion = 0
+    @State private var realTrainClock: RealTrainClock?
     /// Decision 216: the lines' colours, the player's or the
     /// colour-blind-safe palette's; the canvases redraw when it changes.
     @AppStorage(LinePalette.key) private var linePalette: LinePalette = .standard
@@ -350,6 +358,19 @@ struct MapView: View {
                         Palette.tint(tint)
                             .blendMode(.multiply)
                             .allowsHitTesting(false)
+                    }
+                    // Decision 304: the real lines' trains, faint and
+                    // under the player's.
+                    if showsRealTrains, let realWorld, let realTrains, let realTrainClock {
+                        RealTrainCanvas(
+                            traffic: realTrains,
+                            version: realTrainsVersion,
+                            clock: realTrainClock,
+                            frame: realWorld,
+                            animating: !session.world.clock.isPaused && !reduceMotion && realTrainClock.isMoving,
+                            camera: projection
+                        )
+                        .equatable()
                     }
                     MapTrainCanvas(
                         motion: trainMotion,
@@ -991,6 +1012,17 @@ struct MapView: View {
             trainMotion = TrainMotion(world: session.world, previous: trainMotion, time: Date().timeIntervalSinceReferenceDate)
             trainMotionVersion &+= 1
         }
+        .onChange(of: session.world.clock.now, initial: true) { _, _ in
+            // Decision 304: the real trains glide with the game clock.
+            guard realTrains != nil else { return }
+            realTrainClock = RealTrainClock(world: session.world, previous: realTrainClock, time: Date().timeIntervalSinceReferenceDate)
+        }
+        .task(id: RealTrainsKey(
+            realWorld: RealWorldFrame(world: session.world), bounds: session.world.bounds,
+            hasData: session.railways?.operations != nil, shown: showsRealTrains
+        )) {
+            await workOutRealTrains()
+        }
         .onChange(of: MapWeatherKey(world: session.world), initial: true) { _, _ in
             mapWeather = MapWeather(world: session.world)
         }
@@ -1172,6 +1204,26 @@ struct MapView: View {
             buildAhead?.cancel()
             buildAhead = nil
         }
+    }
+
+    /// Decision 304: the real lines on a real-world map and their trains,
+    /// worked out off the main actor; none on a map of no real place, or
+    /// when the player turned them off.
+    private func workOutRealTrains() async {
+        guard showsRealTrains, let frame = RealWorldFrame(world: session.world),
+              let operations = session.railways?.operations else {
+            realTrains = nil
+            realTrainClock = nil
+            return
+        }
+        let bounds = session.world.bounds
+        let traffic = await Task.detached(priority: .utility) {
+            RealTrainTraffic(operations: operations, frame: frame, bounds: bounds)
+        }.value
+        guard !Task.isCancelled else { return }
+        realTrains = traffic.lines.isEmpty ? nil : traffic
+        realTrainsVersion &+= 1
+        realTrainClock = realTrains == nil ? nil : RealTrainClock(world: session.world, time: Date().timeIntervalSinceReferenceDate)
     }
 
     /// What the base canvas draws of the population and travel layer, or
@@ -2215,6 +2267,44 @@ private struct MapTrainCanvas: View, Equatable {
     }
 }
 
+/// Decision 304: the real lines' trains (``RealTrainTraffic``), each where
+/// its timetable puts it at the game clock, gliding between ticks as the
+/// player's trains do (``RealTrainClock``) and drawn where they are while
+/// the game is paused or the player reduces motion. Only those on the
+/// screen, none when the map is zoomed out past
+/// ``RealTrainTraffic/shownFromReferenceSize``, and at most
+/// ``RealTrainTraffic/mostDrawn``.
+private struct RealTrainCanvas: View, Equatable {
+    let traffic: RealTrainTraffic
+    /// Compared by its number, not line by line.
+    let version: Int
+    let clock: RealTrainClock
+    let frame: RealWorldFrame
+    let animating: Bool
+    let camera: PlanCamera
+
+    nonisolated static func == (lhs: RealTrainCanvas, rhs: RealTrainCanvas) -> Bool {
+        lhs.version == rhs.version && lhs.clock == rhs.clock && lhs.frame == rhs.frame
+            && lhs.animating == rhs.animating && lhs.camera == rhs.camera
+    }
+
+    var body: some View {
+        let traffic = traffic, clock = clock, frame = frame, animating = animating, camera = camera
+        return TimelineView(.animation(paused: !animating)) { timeline in
+            Canvas { context, size in
+                guard RealTrainTraffic.isShown(referenceSize: camera.referenceSize) else { return }
+                let second = clock.second(at: timeline.date.timeIntervalSinceReferenceDate, glides: animating)
+                let dots = traffic.trains(
+                    at: second, on: clock.today, dayBefore: clock.dayBefore, frame: frame,
+                    visible: camera.visibleRegion.expanded(by: 12 / camera.pointsPerUnit)
+                )
+                MapArt.drawRealTrains(dots.prefix(RealTrainTraffic.mostDrawn), projection: camera, in: context)
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}
+
 /// Decision 182: today's weather over the map (``MapWeather``), the rain
 /// falling frame by frame unless the player reduces motion, and the sign of
 /// a typhoon beside each station it blows over.
@@ -2411,6 +2501,16 @@ private struct CityMapKey: Equatable {
         placed = isShown ? world.placedBuildings : []
         setsRidership = isShown && world.landDemand && world.accounts.mode == .management
     }
+}
+
+/// What the real trains are worked out from (decision 304): the map's
+/// place and size, whether the real railways have arrived (they can come
+/// after the game starts), and whether they are shown.
+private struct RealTrainsKey: Equatable {
+    let realWorld: RealWorldFrame?
+    let bounds: WorldBounds
+    let hasData: Bool
+    let shown: Bool
 }
 
 /// What the population heatmap is laid out from: the grid (by its total)

@@ -38,6 +38,7 @@ struct SettingsView: View {
     /// Decision 182: the map's time of day and weather, on the device.
     @AppStorage(MapAmbienceSettings.dayNightKey) private var showsDayNight = true
     @AppStorage(MapAmbienceSettings.weatherKey) private var showsWeather = true
+    @AppStorage(MapAmbienceSettings.realTrainsKey) private var showsRealTrains = true
     /// Decision 216: the lines' colours, on the device.
     @AppStorage(LinePalette.key) private var linePalette: LinePalette = .standard
 
@@ -142,7 +143,8 @@ struct SettingsView: View {
         }
     }
 
-    /// Decision 182: whether the map shows the time of day and the weather.
+    /// Decision 182: whether the map shows the time of day and the weather;
+    /// decision 304: and the real lines' trains.
     private var mapSection: some View {
         Section {
             Toggle(isOn: $showsDayNight) {
@@ -153,10 +155,14 @@ struct SettingsView: View {
                 Label("Weather Effects", systemImage: "cloud.rain")
             }
             .accessibilityIdentifier("settings.weather")
+            Toggle(isOn: $showsRealTrains) {
+                Label("Real Trains", systemImage: "tram")
+            }
+            .accessibilityIdentifier("settings.realTrains")
         } header: {
             Text("Map")
         } footer: {
-            Text("Day and night: the map gets dark at night, and stations, trains and windows light up. Weather effects: rain and lightning on rainy and stormy days, and a typhoon sign at the stations a typhoon hits.")
+            Text("Day and night: the map gets dark at night, and stations, trains and windows light up. Weather effects: rain and lightning on rainy and stormy days, and a typhoon sign at the stations a typhoon hits. Real trains: on a real-world map, the real lines' trains run faintly by their timetables; they carry none of your passengers and never get in your trains' way.")
         }
     }
 
@@ -577,4 +583,6 @@ struct ProblemReportSheet: View {
 enum MapAmbienceSettings {
     static let dayNightKey = "map.showsDayNight"
     static let weatherKey = "map.showsWeather"
+    /// Decision 304: the real lines' trains on a real-world map.
+    static let realTrainsKey = "map.showsRealTrains"
 }
