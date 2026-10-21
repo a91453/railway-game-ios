@@ -137,10 +137,11 @@ extension GameSession {
     }
 
     /// Whether station `id` is a stop of a real line bought, other than
-    /// its first, the junction with the main line (decision 315).
+    /// its last, the junction with the main line (decision 315; the line
+    /// runs from its terminal, see ``GameSession/routePreferences(_:stops:)``).
     func isOnBoughtLinePastItsJunction(_ id: StationID) -> Bool {
         world.acquisitions.contains { bought in
-            world.line(id: bought.line)?.stops.dropFirst().contains(id) ?? false
+            world.line(id: bought.line)?.stops.dropLast().contains(id) ?? false
         }
     }
 }

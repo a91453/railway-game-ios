@@ -14017,6 +14017,42 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 4. App：車站卡與路線清單的「收購這條線」、收購卡、「收購完成」卡、`SoundCue.lineAcquired`、String Catalog 兩種語言。
 5. push 之前先 `send_message` 遊戲規劃要 GameCore 名額（同時最多 2 個 GameCore PR 跑 CI，一次只有一件升存檔）。
 
+#### 後來（第 2 步實作時和設計不同的地方）
+
+2026-10-21，第 2 步（`claude/acquire-real-branch`，存檔 66）。
+
+- **開放四條線，不是六條**：平溪 `PINGXI`、深澳 `SHENAO`、集集 `JIJI`、內灣 `NEIWAN`。**六家線、沙崙線先不開放**：兩條都是雙線電化的線，班次裡上下行在站間交會（`extract_branch_runs.py` 的 `tracks` 量到中間站要 2 股以上，區間也是雙線），現在的配置只鋪一條正線、在站上加待避線，雙線要另一套鋪法（兩條平行的正線、兩端的渡線）。留到下一步，資料（班次）已能擷取。
+- **內灣線從竹中起，不是新竹**：新竹—竹中是六家線與內灣線共用的雙線區間，真實列車多半從新竹開進內灣線，班次在竹中截斷（和平溪線截在三貂嶺一樣），竹中就是分歧站。線上 9 站。
+- **待避線照班次量**：設計寫照 `tra_overtake_tracks.json`，實作改成照班次本身：工具（`tracks`）掃每站同時停著的列車數，要 2 股的站加一條待避線（`groundLoopOffset` 6 m 的側線，3 股時另一側再一條），兩端各留直線（`runOn` = 待避線長＋60 m）。這樣班次在哪裡交會，哪裡就有股道，不會死結；`tra_overtake_tracks.json` 只有幹線的站。
+- **GameCore 裡的線從終點站排到分歧站，每個方向指定股道**：簡單規則（決策 258，App 的預設）沒有閉塞區間，列車改走同站別的股道只限沒有別的列車計畫反方向走的地方（決策 57），而線的計畫從第一站的**每一股**出發，終點站的股道又兩個方向都走（決策 278 的豁免要閉塞區間）。照班次排，三貂嶺晚上停 3 列、二水與竹中停 2 列，第二列進站時它路線指的那股有車、別股都算「反方向」，就整天等著（平溪、集集、內灣第 30 天起 0 人次，不算死結、沒有警告）。改成：線的站序反過來（`createLine` 收到終點站在前、分歧站在後，班次的 `from`／`to` 跟著換），每段指定月台（`LineRoutePreference`，`routePreferences(_:stops:)`）：從終點站那一側進站走正線、從分歧站那一側走待避線、進兩端都走正線。分歧站在最後，它的其他股道沒有任何計畫，可以借；四條線的終點站都只有 1 股。量過：平溪在簡單規則下每天約 2.1 萬人次、每天的班次都派出（寫實規則一樣）。不動 GameCore 的規則；`testEveryLineOnSaleIsBoughtOverTheRealGroundAndRunsItsDay` 改在簡單規則下跑。收購卡、完成卡與車站卡照舊從分歧站寫起（它們讀的是收購計畫的站序，不是 GameCore 的線）；路線面板的站序是菁桐在前。
+- **玩家看的字**：和其他面板一樣用 `language.text` 寫兩種語言，不進 String Catalog。
+- **列車用遊戲的通勤車種（`type` nil）3 節**，不是 DR1000：加 `dr1000` 車種要動 `TrainType`（存檔、車種表、3D 車），不在這一步。每天要的車組數照 `overnight`：平溪 3、內灣 2、集集 2、深澳 1。
+- **地塊**：買的是沒買下的地塊時，GameCore 照常拒絕（`mapTileNotOwned`），收購卡寫出擋住的原因、不能按收購；收購**不**替玩家買地塊（設計第 2 點寫「加上線底下還沒買的地塊」）。地圖擴張開著的遊戲，要先把線經過的圖塊買下。
+- **新錯誤的名稱**：`GameError.lineAlreadyAcquired`、`GameError.invalidAcquisition`（玩家看到的字在 `DisplayText`）。
+- **常客**：車站卡那一行在支線自己的站（分歧站以外）、旁邊的真實車站只有臺鐵時，寫「沿線的常客：每天約 N 人」（`transferText(of:)`）；分歧站照舊寫「從台鐵轉乘」。
+- **真實列車**：`RealTrainTraffic(operations:frame:bounds:bought:)` 跳過 `world.acquisitions` 裡的線（`"tra:PINGXI"` 對 `tra` 的 `PINGXI`）；地圖的 `RealTrainsKey` 多了 `bought`，買下後重算一次。
+- **玩家已經沿線蓋了軌道**：沒有另外偵測「已經是玩家的線」，試蓋時 GameCore 照常拒絕（`trackConflict`、`trackTooClose`……），收購卡寫出擋住的地方。
+- **入口**：車站卡「真實車站」那一段多一列「收購這條線…」（`buyableRealLine(at:)`：玩家的車站在支線上分歧站以外的真實車站 450 m 內）；路線面板「新路線…」展開後，最下面列出「可收購的真實路線」。收購卡（`RealLineOfferCard`）與「收購完成」卡（`AcquisitionCompleteCard`）是同一張 sheet，買下後原地換成完成卡，免得一張 sheet 關、另一張開時被 SwiftUI 吃掉。
+- **動畫**：完成卡的章用 `MotionRule.pop`（0.25 秒、彈簧 bounce 0.2，從 1.25 倍縮回、同時淡入）蓋下一次；減少動態時章直接在那裡。
+- **短樂句**：`scores/line-acquired.score.json`（125 bpm、1.5 秒）：鐘 C6、G6（地方小站到站鈴的兩個音），撥弦 D6、G5 往下落在 C6 的鐘與 C5 撥弦，最後一聲 C4 撥弦疊接縫聲的「蓋章」。照鈴聲的規則（五聲音階、音域 C3–C7、3 軌）。`SoundCue.lineAcquired`，音量 0.55（同 `goalMet`），跟「音效」的音量，觸覺回饋 `.success`。
+
+#### 之後：第二批開放輕軌
+
+遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm（2026-10-21）：
+
+- **第二批開放輕軌**：淡海輕軌（綠山線 `ntdlrt|V`、藍海線 `ntdlrt|VB`）、安坑輕軌（`ntalrt|K`）、高雄環狀輕軌（`krtc|C`）。條件是參考庫或 `tools/` 有它們的路線與時刻表：App 已經打包了（`ntdlrt.json`、`ntalrt.json`、`krtc.json` 的路線，`*_times.json` 的各站時刻，交通部 TDX 2026-07-16），所以資料夠；要做的是把各站時刻表排成每一班的 `LineRun`（像 `extract_branch_runs.py` 對臺鐵那樣）與輕軌的車種。
+- **重運量捷運不開放**（板南、淡水信義、文湖等）。
+- 五方：
+  - **玩家**：輕軌的規模接近支線，買得起；重運量一條線 20–30 站、每天幾十萬人，價格會超過任何存錢目標。
+  - **鐵道迷**：輕軌在現實中就有委外經營（新北輕軌委託營運）；重運量是全市一張網、同一套票價，只買一條線不真實。
+  - **開發**：輕軌的班距與車隊和支線接近；重運量 3–4 分鐘一班、幾十列車，轉乘的帳也複雜。
+  - **美術**：輕軌可以有自己的車型。
+  - **音樂**：無。
+
+#### 量到的
+
+（第 2 步的報告跑完後寫入：`AcquisitionReportTests`，release，360 天。）
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

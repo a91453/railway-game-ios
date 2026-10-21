@@ -115,6 +115,19 @@
       "endLevel": 0.0
     },
     {
+      "file": "line-acquired.wav",
+      "score": "tools/audio/scores/line-acquired.score.json",
+      "scoreSha256": "e3cc3e0af7be8f2f9f688c08a86b6af1fcb3ac9c63906584c37e6af0face05c6",
+      "kind": "tune",
+      "sha256": "e313ed073e5b2d4c62d74ebd1d63d8044b37e187b3c56a291c6d362287ecb3e9",
+      "frames": 72000,
+      "seconds": 1.5,
+      "peakDbfs": -4.44,
+      "rmsDbfs": -16.96,
+      "largestStep": 0.14401,
+      "endLevel": 0.0
+    },
+    {
       "file": "music-loop.caf",
       "kind": "music",
       "synth": "make_game_audio.py music()",

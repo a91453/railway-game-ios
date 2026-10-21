@@ -194,6 +194,8 @@ final class GameAudio {
         // Decision 256: as loud as a watched train's chime, which it
         // shares its phrase with.
         case .goalMet: 0.55
+        // Decision 315: as loud as the goal-met tune.
+        case .lineAcquired: 0.55
         }
     }
 
@@ -234,6 +236,7 @@ final class GameAudio {
         case .warning: .seconds(2)
         // Decision 256: goals met at the same midnight sound once.
         case .goalMet: .seconds(2)
+        case .lineAcquired: .seconds(2)
         }
     }
 
@@ -242,7 +245,7 @@ final class GameAudio {
         switch cue {
         case .refused: .error
         case .warning: .warning
-        case .built, .goalMet: .success
+        case .built, .goalMet, .lineAcquired: .success
         case .arrival, .track, .transition, .income: nil
         }
     }

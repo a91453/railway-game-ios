@@ -144,6 +144,43 @@ public struct RealLineOffer: Sendable {
     public let price: RealLineAcquisitionPrice?
     /// Why it cannot be bought, as the player reads it.
     public let problem: String?
+
+    /// The card's price rows (decision 315 §2), and the total last.
+    public func priceRows(in language: DisplayLanguage) -> [(label: String, amount: Money)] {
+        guard let price, let acquisition else { return [] }
+        return [
+            (language.text("Track, stations and platforms", "軌道、車站與月台"), price.building),
+            (language.text("\(acquisition.trains.count) trains", "\(acquisition.trains.count) 列車"), price.trains),
+            (language.text("Its regulars along the line", "沿線的常客"), price.riders),
+            (language.text("Total", "合計"), price.total),
+        ]
+    }
+
+    /// What the purchase brings, in a line.
+    public func summaryText(in language: DisplayLanguage) -> String {
+        let stops = line.stops.count
+        guard let acquisition else { return language.text("\(stops) stations", "\(stops) 站") }
+        return language.text(
+            "\(line.stops.first ?? "") to \(line.stops.last ?? ""): \(stops) stations, \(acquisition.trains.count) trains and the real timetable",
+            "\(line.stops.first ?? "")—\(line.stops.last ?? "")：\(stops) 站、\(acquisition.trains.count) 列車與真實班次"
+        )
+    }
+
+    /// What the company still lacks to buy it with `balance`, or `nil`
+    /// when it has enough (or there is nothing to buy).
+    public func shortfallText(balance: Money, in language: DisplayLanguage) -> String? {
+        guard let total = price?.total, balance < total else { return nil }
+        let short = (total - balance).moneyText
+        return language.text("\(short) short of the price.", "還差 \(short)。")
+    }
+
+    /// What the card says when the game has real transfers off.
+    public static func transfersOffText(in language: DisplayLanguage) -> String {
+        language.text(
+            "Real transfers are off: the line has only the riders of the towns along it.",
+            "關掉了真實轉乘，這條線只有沿線城鎮的旅客。"
+        )
+    }
 }
 
 extension GameSession {
@@ -168,6 +205,19 @@ extension GameSession {
     /// is on past its junction, if any.
     public func buyableRealLine(through name: String) -> RealBranchLine? {
         buyableRealLines.first { $0.stops.dropFirst().contains(name) }
+    }
+
+    /// The branch line on sale that station `id` stands on past its
+    /// junction, by the real station beside it (decision 315 §1), if any.
+    public func buyableRealLine(at id: StationID) -> RealBranchLine? {
+        guard let station = world.station(id: id), !station.isDepot,
+              let place = nearestRealStation(to: station.point) else { return nil }
+        return place.stations.lazy.filter { $0.system.id == "tra_sched" }.compactMap { self.buyableRealLine(through: $0.chinese) }.first
+    }
+
+    /// Opens the purchase card for `line`, laid out and priced now.
+    public func offerRealLine(_ line: RealBranchLine) {
+        shownRealLineOffer = realLineOffer(for: line)
     }
 
     private func realPoint(of name: String, railways: RealRailways, frame: RealWorldFrame) -> WorldVector? {
@@ -377,9 +427,33 @@ extension GameSession {
 
     /// Builds `acquisition` in `world` and records it (decision 315 §5):
     /// all of it or, throwing, none, the caller's copy dropped. What each
-    /// part cost.
+    /// part cost. Not `recording`, the same line built by the company
+    /// itself, its runs from now on (what `AcquisitionReportTests`
+    /// compares a purchase with).
     @discardableResult
-    func build(_ acquisition: RealLineAcquisition, in world: inout GameWorld) throws(GameError) -> RealLineAcquisitionPrice {
+    /// Where the trains of a line bought stop at a station of more than one
+    /// track, by the line's stops (the terminal first, the junction last):
+    /// coming from the terminal's side on the main track, from the
+    /// junction's on the loop, and into either end on the main track.
+    /// Under simple rules (decision 258) a train may take another track of
+    /// a station only where no train is planned the other way along it
+    /// (decision 57). At an end every track a train is planned along is run
+    /// both ways (decision 278), and a line's plan sets off from every
+    /// track of its first stop, so a train coming in to the junction, where
+    /// the real trains stand two and three at night, to a train standing
+    /// on the track its route names waited for it all day. With the
+    /// junction last and each way's track named, its other tracks are
+    /// planned by nobody and are free to take; the terminals have one.
+    static func routePreferences(_ platformsOf: [Int: [TrackPlatform]], stops: Int) -> [LineRoutePreference] {
+        var routes: [LineRoutePreference] = []
+        for (stop, platforms) in platformsOf.sorted(by: { $0.key < $1.key }) where platforms.count > 1 {
+            if stop > 0 { routes.append(LineRoutePreference(from: stop - 1, to: stop, platform: platforms[0])) }
+            if stop < stops - 1 { routes.append(LineRoutePreference(from: stop + 1, to: stop, platform: platforms[stop == 0 ? 0 : 1])) }
+        }
+        return routes
+    }
+
+    func build(_ acquisition: RealLineAcquisition, in world: inout GameWorld, recording: Bool = true) throws(GameError) -> RealLineAcquisitionPrice {
         let opening = world.economy.balance
         var nodes: [[TrackNodeID]] = []
         var edges: [[TrackEdgeID]] = []
@@ -432,18 +506,27 @@ extension GameSession {
                 stations.append(station.id)
             }
         }
+        // Each stop's platforms, the main track's first.
+        var platformsOf: [Int: [TrackPlatform]] = [:]
         for platform in acquisition.platforms {
             guard stations.indices.contains(platform.stop) else { throw .invalidTrackGeometry }
             let (on, offset) = try edge(platform.at)
             try world.addTrackPlatform(stations[platform.stop], on: on, from: offset, to: offset + platform.length)
+            platformsOf[stations.count - 1 - platform.stop, default: []].append(TrackPlatform(station: stations[platform.stop], edge: on, start: offset, end: offset + platform.length))
         }
         Self.readLand(roundStationsOf: &world, population: population, places: places, water: water, coverage: coverage)
         let built = world.economy.balance
 
-        let line = try world.createLine(named: acquisition.lineName, stops: stations)
+        // The line runs from its terminal to its junction: see
+        // ``routePreferences(_:stops:)``.
+        let last = stations.count - 1
+        let line = try world.createLine(named: acquisition.lineName, stops: stations.reversed())
         if let color = acquisition.color { try world.setLineColor(line.id, to: color) }
         try world.setLineServiceWindow(line.id, to: .allDay)
-        try world.setLineRuns(line.id, to: acquisition.runs)
+        try world.setLineRuns(line.id, to: acquisition.runs.map { run in
+            LineRun(from: last - run.from, to: last - run.to, times: run.times, days: run.days)
+        })
+        try world.setLineRoutePreferences(line.id, to: Self.routePreferences(platformsOf, stops: stations.count))
         let count = acquisition.trains.count
         try world.setLineTrainsInService(line.id, to: TrainsInService(peak: count, offPeak: count, low: count))
         let length = Int64(acquisition.cars + 1) * Train.carLength
@@ -459,7 +542,9 @@ extension GameSession {
             try world.assignTrain(train, to: line.id)
         }
         let bought = world.economy.balance
-        try world.recordLineAcquisition(line: line.id, realLine: acquisition.realLine, dailyRiders: acquisition.dailyRiders)
+        if recording {
+            try world.recordLineAcquisition(line: line.id, realLine: acquisition.realLine, dailyRiders: acquisition.dailyRiders)
+        }
         return RealLineAcquisitionPrice(
             building: opening - built, trains: built - bought, riders: bought - world.economy.balance
         )
@@ -537,7 +622,9 @@ extension GameSession {
             ends: (acquisition.stops.first?.name ?? "", acquisition.stops.last?.name ?? ""),
             stations: acquisition.stops.count, metres: max(0, metres), trains: acquisition.trains.count, weekdayTrains: weekday
         )
+        shownRealLineOffer = nil
         selectLine(line.id)
+        playSound?(.lineAcquired)
         return true
     }
 }

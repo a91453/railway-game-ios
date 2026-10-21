@@ -9,14 +9,14 @@ import XCTest
 final class RealLineAcquisitionTests: XCTestCase {
     /// A real-world game round the middle of `line`'s stations, with the
     /// bundled railways and `balance`.
-    private func game(round network: String, balance: Money = Money(100_000_000_000), side: Int64 = 1 << 20, heights: Bool = false, transfers: Bool = false) throws -> GameSession {
+    private func game(round network: String, balance: Money = Money(100_000_000_000), side: Int64 = 1 << 20, heights: Bool = false, transfers: Bool = false, rules: NewGameRules = .realistic) throws -> GameSession {
         let railways = try BundledRealData.railways()
         let runs = try XCTUnwrap(railways.branchRuns[network])
         let stations = try runs.stops.map { try BundledRealData.station($0, in: "tra_sched") }
         let latitude = stations.map(\.coordinate.latitude).reduce(0, +) / Double(stations.count)
         let longitude = stations.map(\.coordinate.longitude).reduce(0, +) / Double(stations.count)
         let anchor = try XCTUnwrap(GeoAnchor(latitude: Int64((latitude * 10_000_000).rounded()), longitude: Int64((longitude * 10_000_000).rounded())))
-        var world = GameWorld.newGame(anchor: anchor, bounds: try WorldBounds(width: side, height: side), balance: balance)
+        var world = GameWorld.newGame(anchor: anchor, bounds: try WorldBounds(width: side, height: side), balance: balance, rules: rules)
         if heights { try world.mapGround() }
         if transfers { world.setRealTransfers(true) }
         let session = GameSession(world: world, language: .traditionalChinese)
@@ -48,7 +48,10 @@ final class RealLineAcquisitionTests: XCTestCase {
         XCTAssertEqual(acquisition.trains.count, 3)
 
         let before = session.world
+        var heard: [SoundCue] = []
+        session.playSound = { heard.append($0) }
         XCTAssertTrue(session.acquireRealLine(offer), session.message?.text ?? "")
+        XCTAssertEqual(heard.last, .lineAcquired)
         XCTAssertEqual(session.world.economy.balance, before.economy.balance - price.total)
         let bought = try XCTUnwrap(session.world.acquisition(of: "tra:PINGXI"))
         let line = try XCTUnwrap(session.world.line(id: bought.line))
@@ -84,10 +87,12 @@ final class RealLineAcquisitionTests: XCTestCase {
     }
 
     /// Each line on sale, over the app's heights: bought, and two days of
-    /// its real timetable run, every run sent out.
+    /// its real timetable run, every run sent out, under the app's simple
+    /// rules (decision 258), where trains that met at a station of more
+    /// than one track once waited there for good.
     func testEveryLineOnSaleIsBoughtOverTheRealGroundAndRunsItsDay() throws {
         for network in ["PINGXI", "SHENAO", "JIJI", "NEIWAN"] {
-            let session = try game(round: network, side: 1 << 21, heights: true)
+            let session = try game(round: network, side: 1 << 21, heights: true, rules: .simple)
             let line = try line(network, in: session)
             let offer = session.realLineOffer(for: line)
             XCTAssertNil(offer.problem, network)
@@ -127,7 +132,33 @@ final class RealLineAcquisitionTests: XCTestCase {
         let shifen = try XCTUnwrap(stops.first { session.world.station(id: $0)?.name == "十分" })
         let text = try XCTUnwrap(session.transferText(of: shifen))
         XCTAssertTrue(text.hasPrefix("沿線的常客：每天約 "), text)
-        let junction = try XCTUnwrap(session.transferText(of: stops[0]))
+        // The line runs from its terminal: the junction is its last stop.
+        let junction = try XCTUnwrap(session.transferText(of: try XCTUnwrap(stops.last)))
         XCTAssertTrue(junction.hasPrefix("從台鐵轉乘"), junction)
+    }
+
+    /// A station of the player's beside a real one past the junction
+    /// offers the line; the card lists the price, and closes once bought for
+    /// the card that says so.
+    func testAStationBesideTheLineOffersIt() throws {
+        let session = try game(round: "PINGXI")
+        let pingxi = try line("PINGXI", in: session)
+        let frame = try XCTUnwrap(RealWorldFrame(world: session.world))
+        let shifen = try BundledRealData.station("十分", in: "tra_sched").coordinate
+        let at = frame.worldPosition(latitude: shifen.latitude, longitude: shifen.longitude)
+        let metre = WorldCoordinate.unitsPerMetre
+        let near = try session.performEdit { try $0.buildStation(named: "Near", at: PlanPoint(x: Int64(at.x) + 100 * metre, y: Int64(at.y))).id }
+        XCTAssertEqual(session.buyableRealLine(at: near), pingxi)
+
+        session.offerRealLine(pingxi)
+        let offer = try XCTUnwrap(session.shownRealLineOffer)
+        let rows = offer.priceRows(in: .traditionalChinese)
+        XCTAssertEqual(rows.map(\.label), ["軌道、車站與月台", "3 列車", "沿線的常客", "合計"])
+        XCTAssertEqual(rows.dropLast().map(\.amount).reduce(.zero, +), rows.last?.amount)
+        XCTAssertEqual(offer.summaryText(in: .traditionalChinese), "三貂嶺—菁桐：7 站、3 列車與真實班次")
+        XCTAssertNil(offer.problem, offer.problem ?? "")
+        XCTAssertTrue(session.acquireRealLine(offer), session.message?.text ?? "")
+        XCTAssertNil(session.shownRealLineOffer)
+        XCTAssertNotNil(session.lastLineAcquired)
     }
 }

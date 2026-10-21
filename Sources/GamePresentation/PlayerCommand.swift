@@ -300,7 +300,7 @@ extension GameSession {
         case .autoService(let plan):
             return try apply(plan, to: &world)
         case .acquireRealLine(let acquisition):
-            try build(acquisition, in: &world)
+            _ = try build(acquisition, in: &world)
             outcome.line = world.acquisition(of: acquisition.realLine).flatMap { world.line(id: $0.line) }
         case .removeTrack(let id):
             guard let edge = world.network.edge(id) else { throw .unknownTrackEdge(id) }
