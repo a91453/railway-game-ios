@@ -57,13 +57,16 @@ extension GameSession {
     /// railways' codes for the same place, the routes to change to there
     /// (`station_transfers.json`, as the site's `transferRoutesAtStation`
     /// lists them) and the tracks a TRA train can wait on to be overtaken.
-    /// Decision 298: first, who changes there from the real railways.
+    /// Decision 298: first, who changes there from the real railways;
+    /// decision 304: then the real lines' next trains.
     /// Empty for a station that is no real one.
     public func realStationDetails(of id: StationID) -> [String] {
         guard let railways, let station = world.station(id: id) else { return [] }
         let point: PlanPoint? = RealWorldFrame(world: world) == nil ? nil : station.location
         var lines: [String] = []
         if let transfer = transferText(of: id) { lines.append(transfer) }
+        // Decision 304: the real lines' next trains.
+        lines += realServiceText(of: id)
 
         var traID: String?
         if let data = railways.stationData, let tra = realTRAStationName(of: station.name, at: point) {
