@@ -3,9 +3,9 @@
 Reads the same open data as build_trtc_ridership.py, "臺北捷運各站分時進出量
 統計" (data.gov.tw dataset 128506): one CSV a month of every day's hourly
 trips from each station to each other. The months of one year are streamed,
-never saved. The output is a small file the report test
-`Tests/GamePresentationTests/TideReportTests.swift` reads beside the game's
-own numbers; the app does not bundle it.
+never saved. The output is a small file whose numbers the report test
+TideReportTests (GameCoreTests) prints beside the game's own; the test
+copies them rather than reading the file, and the app does not bundle it.
 
 - Each service day runs from 06:00 to 06:00: a row before 06:00 belongs to
   the day before (the last trains after midnight, New Year's Eve all night).
