@@ -88,8 +88,18 @@ private final class TutorialJourney {
 
         let lessons = app.buttons["start.lessons"]
         XCTAssertTrue(lessons.appears(within: 15), "No Lessons button on the start screen")
+        // After a 35 s first launch on the iPad, a tap found at once landed
+        // at (270, 688), off the button (478–898, 499–580), as if the screen
+        // were still turning, and the lessons never opened (run
+        // 39526204987). Tapped once settled, and once more if they did not
+        // open.
+        lessons.waitUntilSettled()
         lessons.tap()
         let first = app.buttons["lesson.1.start"]
+        if !first.appears(within: 5), lessons.exists {
+            lessons.waitUntilSettled()
+            lessons.tap()
+        }
         XCTAssertTrue(first.appears(within: 10), "No lesson 1 in the list")
         XCTAssertTrue(first.becomesHittable(), "Lesson 1's Start cannot be tapped")
         first.tap()
