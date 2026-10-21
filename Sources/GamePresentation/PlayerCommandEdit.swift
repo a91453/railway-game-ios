@@ -94,6 +94,8 @@ extension PlayerCommand {
         case setLineRing(LineID, Bool)
         case setLineTrains(LineID, TrainsInService, pattern: Int?)
         case setLineTargets(LineID, TargetHeadways, pattern: Int?)
+        /// How the line's own service spaces its trains out (decision 309).
+        case setLineDispatchPattern(LineID, DispatchPattern)
         case addLinePattern(LineID, calls: [Int])
         case removeLinePattern(LineID, index: Int)
         case setLinePerformance(LineID, TrainPerformance)
@@ -277,6 +279,7 @@ extension GameSession {
         case .setLineRing(let id, let ring): try world.setLineRing(id, to: ring)
         case .setLineTrains(let id, let trains, let pattern): try world.setLineTrainsInService(id, to: trains, pattern: pattern)
         case .setLineTargets(let id, let targets, let pattern): try world.setLineTargetHeadways(id, to: targets, pattern: pattern)
+        case .setLineDispatchPattern(let id, let pattern): try world.setLineDispatchPattern(id, to: pattern)
         case .addLinePattern(let id, let calls): outcome.number = try world.addLinePattern(id, calling: calls)
         case .removeLinePattern(let id, let index): try world.removeLinePattern(id, at: index)
         case .setLinePerformance(let id, let performance): try world.setLinePerformance(id, to: performance)

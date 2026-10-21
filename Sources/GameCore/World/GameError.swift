@@ -71,6 +71,11 @@ public enum GameError: Error, Hashable, Sendable {
     /// A line's dwell is ``ServiceDwell/minimum`` to
     /// ``ServiceLine/maximumDwellSeconds`` seconds (decision 207).
     case invalidLineDwell
+    /// A line's dispatch pattern (decision 309) staggers its trains by
+    /// ``DispatchPattern/staggerRange`` minutes; a ring and a line with
+    /// runs space them evenly; and only a world with flexible dispatch
+    /// sends them from both ends.
+    case invalidDispatchPattern
     /// A line's service window opens at a minute of the day (`0...1439`) and
     /// closes after it, no later than 06:00 the next morning (`1800`).
     case invalidServiceWindow

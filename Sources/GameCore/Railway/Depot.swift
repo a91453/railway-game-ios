@@ -335,8 +335,9 @@ extension GameWorld {
         guard let time = Self.time(clock.now, plusMinutes: lead), let wanted = wanted(line, stream, at: time, memo: &memo),
               runningTrains(of: line, stream) < wanted.trains
         else { return false }
-        if let last = line.lastDispatch(of: stream) {
-            guard let due = Self.time(last, plusMinutes: wanted.headway), due <= time else { return false }
+        // Decision 309: when the line's pattern sends its next train out.
+        if let due = nextDispatch(of: line, stream, from: .first, planned: wanted) {
+            guard due <= time else { return false }
         }
         return true
     }
@@ -455,8 +456,8 @@ extension GameWorld {
             let lead = Self.lead(of: run)
             guard let time = Self.time(now, plusMinutes: lead) else { continue }
             wake(at: line.nextChange(after: time, in: serviceDay).flatMap { Self.time($0, plusMinutes: -lead) })
-            if let last = line.lastDispatch(of: stream), let wanted = wanted(line, stream, at: time, memo: &memo),
-               let due = Self.time(last, plusMinutes: wanted.headway) {
+            if let wanted = wanted(line, stream, at: time, memo: &memo),
+               let due = nextDispatch(of: line, stream, from: .first, planned: wanted) {
                 wake(at: Self.time(due, plusMinutes: -lead))
             }
         }
