@@ -47,6 +47,14 @@ struct ContentView: View {
     /// Compact height: a phone, held on its side.
     @Environment(\.verticalSizeClass) private var verticalSizeClass
 
+    /// Decision 269: the 3D map closes at once onto the 2D map at `plan`.
+    private func back(to plan: Map3DHandoff.Plan) {
+        screen.map2DReturn = plan
+        var cut = Transaction()
+        cut.disablesAnimations = true
+        withTransaction(cut) { screen.showsMap3D = false }
+    }
+
     var body: some View {
         gameLayout
             // Inside the text size limit below: the tutorial's card shares the
@@ -68,12 +76,15 @@ struct ContentView: View {
                 // map back as it is pinched out, at once (the 2D map takes
                 // up `plan`); one the button opened never does (later fix,
                 // 71.1).
+                // Decision 313: its "2D" button goes back to the 2D map
+                // where it looks, whichever way it opened, and Build there
+                // with the building tools out, as the dock's Build does.
                 Map3DPreviewScreen(session: session, handedOver: screen.map3DHandoff, close: { screen.showsMap3D = false },
-                                   handBack: screen.map3DHandoff == nil ? nil : { plan in
-                    screen.map2DReturn = plan
-                    var cut = Transaction()
-                    cut.disablesAnimations = true
-                    withTransaction(cut) { screen.showsMap3D = false }
+                                   handBack: screen.map3DHandoff == nil ? nil : { plan in back(to: plan) },
+                                   toMap2D: { plan in back(to: plan) },
+                                   build: { plan in
+                    back(to: plan)
+                    session.selectTool(.network)
                 })
             }
             .environment(screen)

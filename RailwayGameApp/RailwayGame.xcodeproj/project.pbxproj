@@ -51,6 +51,7 @@
 		47D7D11A0F4705BFD3BE7E6A /* Map3DSurfaces.png in Resources */ = {isa = PBXBuildFile; fileRef = 70170091E76358BF8886BB8E /* Map3DSurfaces.png */; };
 		481A5F7BE0BA94DF2592045D /* tmrt_ridership.json in Resources */ = {isa = PBXBuildFile; fileRef = 05F7A5F3105B96C3E70DF1AA /* tmrt_ridership.json */; };
 		4936E4C3E4EF4FA3E29C6989 /* MapArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = A92B62C199B3DE4F7602175F /* MapArt.swift */; };
+		4AC759850C82A45A974174C0 /* RealWorldLoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 148B6BCCE51E5F5D112B8C8D /* RealWorldLoadingView.swift */; };
 		4BD9A2C2F541EB4CE36CA67B /* sanying.json in Resources */ = {isa = PBXBuildFile; fileRef = 92FBF87A0B909AF9C100FC70 /* sanying.json */; };
 		4CC1E6E850C8B587B582C668 /* taiwan_place_names.json in Resources */ = {isa = PBXBuildFile; fileRef = CCCFEDE062F8A4532BBAA221 /* taiwan_place_names.json */; };
 		4CF789B41082623D62B5AB27 /* Map3DPreviewScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A32E5B7462B864BC37E88A37 /* Map3DPreviewScreen.swift */; };
@@ -200,6 +201,7 @@
 		10C54A651E2F6DD601FA3F15 /* StationPairDrawer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationPairDrawer.swift; sourceTree = "<group>"; };
 		10CD1930FBBEEDFCB26CC5A3 /* FollowBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FollowBar.swift; sourceTree = "<group>"; };
 		12998D87B1570EBD259935E7 /* NightSkipChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NightSkipChip.swift; sourceTree = "<group>"; };
+		148B6BCCE51E5F5D112B8C8D /* RealWorldLoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealWorldLoadingView.swift; sourceTree = "<group>"; };
 		150E696C9936773A65399191 /* tra_station_info.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra_station_info.json; sourceTree = "<group>"; };
 		17DDE7FD43D5C9514F89C9CA /* LinesPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinesPanel.swift; sourceTree = "<group>"; };
 		1D8FCC5E34CD27136469F2A8 /* chime-local-motif.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "chime-local-motif.wav"; sourceTree = "<group>"; };
@@ -516,6 +518,7 @@
 				CBAD6AED84A8DA58D17AC1C7 /* PopulationLegendView.swift */,
 				FEAD664FAAE1ADFB437DDCA2 /* PostcardView.swift */,
 				6F8DA1B59CC2DD5AF84AEA1C /* PromotionLineView.swift */,
+				148B6BCCE51E5F5D112B8C8D /* RealWorldLoadingView.swift */,
 				4B68167398B13543EA8C564A /* RealWorldPicker.swift */,
 				C9BEC5EA8A60EBE76A1B2C84 /* RegionStyle.swift */,
 				771361B568387359268A6B83 /* RollingStockCatalogView.swift */,
@@ -866,6 +869,7 @@
 				BB5F13C5775274242DF7E68C /* PostcardView.swift in Sources */,
 				1D765F8EE00C620166255264 /* PromotionLineView.swift in Sources */,
 				2733FFE60203B4AA0059ECFD /* RailwayGameApp.swift in Sources */,
+				4AC759850C82A45A974174C0 /* RealWorldLoadingView.swift in Sources */,
 				2AB6C1070610AFCEB0DD27A0 /* RealWorldPicker.swift in Sources */,
 				7620F6925D1B67C07C540F42 /* RegionStyle.swift in Sources */,
 				7B2C7C245265CD7529B9371B /* RollingStockCatalogView.swift in Sources */,
