@@ -1,0 +1,73 @@
+{
+  "status": "VERIFIED",
+  "environment": "Linux / Swift 6.4 native geometry / Node / Chromium WebGL2",
+  "models": 156,
+  "orthographic_views": 936,
+  "isometric_views": 156,
+  "transparent_pngs": 1092,
+  "triangles": 72954,
+  "maximum_triangles": 2742,
+  "checks": [
+    "156 original subject IDs covered",
+    "native model SHA-256 and provenance",
+    "GLB SHA-256 and complete native-vertex conversion",
+    "GLB accessor byte ranges and embedded buffers",
+    "no photographic or private model textures",
+    "1092 RGBA PNG headers, hashes and visible bounds",
+    "all seven views nonempty and unclipped"
+  ],
+  "not_verified": [
+    "Native Metal rendering and performance on an iPhone or iPad",
+    "Automatic placement in the live game map"
+  ],
+  "browser": {
+    "status": "VERIFIED",
+    "models_loaded": 156,
+    "checks": [
+      "156 native models loaded into WebGL",
+      "category and ID/name filtering",
+      "top/bottom/left/right/front/back controls",
+      "pointer orbit changes real rendered vertices",
+      "zoom",
+      "PNG and GLB downloads",
+      "original concept comparison",
+      "390 px without horizontal overflow",
+      "no JavaScript errors, failed resources or external requests"
+    ],
+    "errors": [],
+    "failed_requests": [],
+    "external_requests": []
+  },
+  "png_full_decode": {
+    "status": "VERIFIED",
+    "images": 1092,
+    "rgba_size": [
+      384,
+      384
+    ],
+    "alpha_range": [
+      0,
+      255
+    ],
+    "visible_bounds_match": true
+  },
+  "swift_checks": {
+    "status": "VERIFIED",
+    "version": "6.4.0",
+    "warnings_as_errors_build": true,
+    "tests": 13,
+    "failures": 0
+  },
+  "node_tests": {
+    "status": "VERIFIED",
+    "tests": 4,
+    "failures": 0
+  },
+  "visually_inspected": [
+    "previews/overview.png",
+    "previews/directions.png",
+    "previews/viewer-desktop.png",
+    "previews/viewer-bottom.png",
+    "previews/viewer-mobile.png"
+  ]
+}

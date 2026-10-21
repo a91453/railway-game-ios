@@ -1,4 +1,4 @@
-# 台灣鐵道與城市場景圖片素材
+# 台灣鐵道與城市場景素材
 
 **18 張透明 PNG 素材表，共 156 個圖像項目**。作者要求先推送現有鐵道素材，再補住宅、商業及能組合遊戲場景的圖片；全部收錄於此目錄。
 
@@ -8,7 +8,11 @@
 
 [全部 156 個項目總覽](previews/all-156-items.png) · [四底色／尺寸／模糊／灰階](previews/style-checks.png) · [手機深色預覽](previews/gallery-mobile-dark.png)
 
-## 素材清單
+## 原生 3D 與七方向圖片
+
+已新增 [156 個原生程序化模型、GLB 及 1,092 張上下左右前後／立體透明 PNG](native3d/README.md)。[可旋轉檢視頁](native3d/index.html) 支援六方向、拖曳與縮放；[總覽](native3d/previews/overview.png) 與 [方向對照](native3d/previews/directions.png) 可直接查看。新模型重新組合量體、屋頂與設備，換成遊戲的霧面色票；不直接搬私有原模或貼原圖片。
+
+## 原圖片素材清單
 
 | 素材表 | 分類 | 排列 | 項目 |
 | --- | --- | --- | ---: |
