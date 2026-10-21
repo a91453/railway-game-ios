@@ -69,7 +69,8 @@ final class Map3DLowFloorBusTests: XCTestCase {
             let a=life.frame(target:Map3DPoint(1000,0,0),distance:1200,time:60,detail:.full,activity:.init())
             for i in ids.indices { counts[i]+=a.instances.filter { $0.model==ids[i] }.count }
             total+=a.vehicles
-            XCTAssertEqual(a.buses,a.instances.filter { ids.contains($0.model) }.count)
+            let allBusIDs=Set(Map3DStreetModel.allCases.filter(\.isBus).compactMap { Map3DStreetLife.models[$0] })
+            XCTAssertEqual(a.buses,a.instances.filter { allBusIDs.contains($0.model) }.count)
             life.lanes=[.init(path:path,half:6,twoWay:true,speed:11,perHundred:5,scooters:true,seed:(seed,4))]
             let b=life.frame(target:Map3DPoint(1000,0,0),distance:1200,time:60,detail:.full,activity:.init())
             XCTAssertEqual(a.vehicles,b.vehicles);XCTAssertEqual(b.buses,0)
