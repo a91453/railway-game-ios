@@ -790,6 +790,7 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 | 3D 列車的集電弓、車門把手 | 決策 230 |
 | 磁浮、懸吊、單軌、蒸汽沒有 3D 樣式，還是方塊（莒光號、藍皮、推拉式自強號、普悠瑪、太魯閣、EMU800、柴油客車已有模型，決策 318）；機車拉長到和客車同長、集電弓畫成降下 | 決策 230、252、318 |
 | 影子不跟太陽方向偏移、建物彼此不投影、月台與雨棚底下沒有影子 | 決策 232 |
+| 車站套件（決策 321）的後續：站房可能壓到實景底圖的道路（基隆）；高架站只有樓梯口、沒有高架下的大廳；站房跨在軌道上的橋上站房；真實站體輪廓（OSM `building=train_station`）沒有用 | 決策 321 |
 | 地面的斑馬線、停止線、車道線（新的地面層要插進第 4.1 節的高度順序） | 決策 241 |
 | 3D 的「地圖風格」設定（換配色） | 決策 241 |
 | `tools/glb-to-m3dmodel` 靜態橋接已實作（`codex/glb-meshopt-bridge`）：`bridge.mjs --manifest` 讀 meshopt／量化 GLB 與 `.gltf`＋外部 `.bin`，用節點白名單、非 AI 來源／SHA 與 `recolorLightPaint: false`；只用固定版本的 core／extensions／meshoptimizer（五包 MIT），不用 functions。拒收貼圖、skin／動畫／morph 等；原 Meshy 入口與 #803 公車成品逐位元相同。接手從工具 README 與自製 `fixtures/static.manifest.json` 開始；App 接入、美術重組／配色、素材授權與實機幀數仍交 3D session，本工具 PR 不代表素材採用。之後另開 WorldCover 只上色圖層（參考庫 `build_worldcover.py` 與圖磚）與香港無貼圖量體任務 | `docs/research/PEAKLINE_MAP_ENGINE_STUDY.md` §8（#821）；補充與修正 `docs/research/PEAKLINE_STUDY_SUPPLEMENT_2026-10-19.md` §1–§4（#820）；轉換器原本是 Codex 的線（第 2 節） |

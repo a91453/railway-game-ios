@@ -14624,6 +14624,52 @@ session_0125dMtwyMdz7mzoBCRNa1pn 預約（#231）。這一節由那個 PR 填寫
   - 3D 的 UI 測試（`only_testing`）。
   - 實機的雨、閃電與幀數（TestFlight）。
 
+### 321. 3D 的車站用車站套件蓋：代表站有自己的外觀，其他站照月台挑一般站型；雨棚改成套件的曲頂雨棚
+
+（2026-10-21，3D session_01Y25x9NJSKmAuP1M1K3Sf3C，遊戲規劃派工；預覽 `docs/art/map3d-station-kit-2026-10-21/`）
+
+**做什麼**：3D 地圖的車站原本只有月台與一條平的雨棚（決策 259），旁邊是城市的程序建物。這次每個車站都用 #913 的車站套件（`Map3DStationKit`）蓋，寫在 `Map3DStations.swift`：
+
+- **哪一種站**（`Map3DStationKit.recipe(for:at:layout:frame:)`）：實景地圖上，套件目錄（544 站，`track_stations.geojson` 的位置）裡離遊戲車站月台中點 300 m 以內、而且站型合得上的真實車站，就用它的配方，35 個代表站（臺北、基隆、高雄、新竹、臺南……）有自己的外觀；地下站型（含美麗島、中央公園）只配給全在隧道裡的車站，高架站型只配給高架上的車站。其他（空白地圖或附近沒有）用一般站型：地面上 1 座月台、短於 100 m 是招呼站，否則是一般站，等級照月台數（4 座以上特等）；全在高架上是高架站；全在隧道裡是地下站。變化的種子來自車站 ID，同一站每次一樣。
+- **月台與軌道照遊戲的**：套件自己的軌道與月台不畫，遊戲的軌道與 `TrackPlatform` 照原樣；套件只蓋站房、雨棚與出入口，對齊遊戲月台的線與高度。
+- **雨棚**：每座月台中間五分之三（同決策 259）放套件的曲頂雨棚（月台面上 3.2 m、拱高 0.6 m，`platformCanopy`），沿月台的線每段最多 8 m（套件的月台模組），彎道上一段段接起來，每段一根柱（最後一段兩根）。
+- **站房**（`addHouse`）：放在月台旁，背對月台、離最外側月台邊 1 m；兩側挑「站房會壓到的其他軌道少」、再挑「最外側是月台不是光軌道」的一側；月台外還有沒有月台的通過線時，站房退到那條線外；月台中間有別的線交叉（示範地圖的中央站）就沿月台滑開一個站房寬。站房腳下的 64 m 格變成廣場，不放城市建物與街道家具（同軌道的格，決策 234、244 的 `cleared`）。月台有地面也有高架的車站（兩條線交叉）照地面的月台蓋。
+- **出入口**（`addEntrances`）：高架站在高架兩側各一個樓梯口；地下站在月台六分之一與六分之五處各一個地下出口；美麗島加兩座玻璃出入口、中央公園加波浪大屋頂；輕軌站只有雨棚。
+- **近與遠**：近看是套件的模型與影子；遠看（決策 238 的 `far`）站房是一個方塊（站型的牆色與屋頂色），雨棚是原本的平板。
+- **量**（`MAP3D_FRAME_REPORT=1 swift test --filter Map3DFrameCostReportTests/testTheGPUBudget`，臺北車站一條線，main 45dfa3e → 這個 PR）：近 280 m 201,731 → 200,431 個三角形、中 800 m 189,882 → 190,262、中 1,400 m 15,314 → 15,080、遠 10.8 km 259,798 → 259,564；其中城市（近看）10,010 → 14,618（臺北代表站與雨棚），站房格裡的街道家具拿掉，91,464 → 87,432。draw 都不變（31、25、8、223），站房併在所在格的 mesh 裡。
+
+**五個角度**：
+- 玩家：車站看得出是車站，有站房、有雨棚，臺北車站是紅色環形屋頂；走到月台的那一側就是站前。
+- 鐵道迷：代表站照真實車站的辨識外觀（套件的 35 站），月台與軌道照遊戲實際蓋的，雨棚只蓋月台中段、柱在月台上；不準的地方：站房的位置是照月台與軌道算的、不是真實的站體位置（套件沒有真實輪廓），同名的多系統共構站各自一個，高架站的站體只有樓梯口。
+- 開發：只動 GamePresentation（新檔 `Map3DStations.swift`、`Map3DScene` 呼叫 `addStations`、`Map3DMesh.append(_:at:forward:)`）與測試；GameCore、存檔、golden、replay 不動；新測試 `Map3DStationsTests` 9 個；預覽工具多一個 `taipeiline` 世界與視角高度。
+- 美術：套件是同一套平塗頂點色與調色盤，和城市並排不突兀；雨棚從平板變成有柱的曲頂，遠看仍是平板。
+- 音樂：無。
+
+**沒有選的做法**（預覽在 `docs/art/map3d-station-kit-2026-10-21/`）：
+- **保留平板雨棚、只加站房**（`8-option-flat-canopy.jpg` 上排）：三角形少一點；但近看月台上沒有柱，和套件的站房不成一套。
+- **整座套件模型（含它自己的軌道與月台）放在車站上**：最像套件的預覽；但套件的軌道數、月台長度與高度是示意的，和遊戲蓋的軌道對不上，會有兩套軌道。
+- **站房蓋在月台正上方或跨在軌道上（橋上站房）**：真實有這種站；但要知道哪幾條是同一站的軌道與跨線的高度，下一步再做。
+- **只有代表站換、其他站照舊**：改動小；但派工要求每個車站都用套件。
+- **真實站體輪廓（OSM 的 `building=train_station`）**：位置最準；套件說明不搬輪廓，另開 PR 才能讀進來。
+
+**參考與來源**（定點比例：世界座標每公尺 64 單位，`WorldCoordinate.unitsPerMetre`；300 m = 19,200 單位）：
+
+| 來源 | 拿了什麼 | 用在 |
+| --- | --- | --- |
+| #913 `Map3DStationKit.stations`（本專案 `track_stations.geojson`、`tra_station_class.json`） | 544 站的位置、站型、等級、種子 | `Map3DStationKit.recipe(for:at:layout:frame:)` |
+| #913 `StationKitBuilder.station(_:)`（各站型的站房；私有庫 `Railway/taiwan-rail-reference-clean/source/rail-3d/station-models.js` 的 `buildTaipeiMain`／`buildStation`，由 #913 重建） | 每個站型的站房，去掉 `railCourt`／`trackAcross`／`platform()` | `StationKitBuilder.house(_:)` |
+| #913 `part(.platformCanopy)`（8 m 模組、曲頂 `canopy`） | 曲頂雨棚與柱 | `StationKitBuilder.platformCanopy(length:width:last:)` |
+| #913 `part(.stairHead)`、`part(.undergroundExit)` | 樓梯口、地下出口 | `Map3DScene.Builder.addEntrances` |
+| #913 `underground(profile: .formosa, …)`、`supportedRoof(… wave: true)` | 美麗島的玻璃出入口、中央公園的波浪屋頂 | `StationKitBuilder.formosaEntrances()`、`addEntrances` |
+| 外部專案 | 沒有找：參考庫（經 #913）已有車站的做法，放置規則是這個專案自己的 | — |
+
+**缺口**（PR 與 `docs/HANDOFF.md` §7.3）：站房可能壓到實景底圖的道路（基隆）；高架站的站體（高架下的大廳）沒有蓋；真實站體輪廓沒有用；實景示範的十分、菁桐在 64 m 地面格底下看不到（原本就這樣，決策 229 的路塹問題）。
+
+**驗證**：
+- **VERIFIED**（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`Map3DStationsTests` 9 個與名字含 Map3D 的測試（196 個）全過；畫面成本報告（上面的數字）。
+- **VERIFIED**（Linux，無頭 Chromium 的 WebGL 預覽，決策 238）：示範地圖、瑞芳、基隆、臺北的 main 與這個 PR 的對照與 pixelmatch 差異圖。
+- **UNVERIFIED**：App 的編譯（`ios-build.yml`）、3D 的 UI 測試（`only_testing`）、實機的樣子與幀數（TestFlight）。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。
