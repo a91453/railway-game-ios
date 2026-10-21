@@ -18,6 +18,8 @@ extension PlayerCommand {
         case setPassengerRoutingMode(PassengerRoutingMode)
         case setEconomyMode(EconomyMode)
         case setFareRules(FareRules)
+        /// The day pass's price, or none on sale (decision 324).
+        case setDayPass(Money?)
         case borrow(Money)
         case repayLoan(Money)
         case setServiceDay(ServiceDay)
@@ -182,6 +184,7 @@ extension GameSession {
         case .setPassengerRoutingMode(let mode): world.setPassengerRoutingMode(mode)
         case .setEconomyMode(let mode): world.setEconomyMode(mode)
         case .setFareRules(let rules): try world.setFareRules(rules)
+        case .setDayPass(let price): try world.setDayPass(price)
         case .borrow(let amount): try world.borrow(amount)
         case .repayLoan(let amount): try world.repayLoan(amount)
         case .setServiceDay(let day): try world.setServiceDay(day)

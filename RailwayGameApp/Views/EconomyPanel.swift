@@ -23,6 +23,9 @@ struct EconomyPanel: View {
     /// The distance steps' first fare, in cents; `nil` until the panel
     /// takes the world's (``FareRules/bandStart(baseline:)``).
     @State private var bandStart: Int64?
+    /// The day pass's price on the stepper, in cents; `nil` until the
+    /// player moves it (decision 324).
+    @State private var dayPassPrice: Int64?
     @State private var confirmsFreePlay = false
     /// Whether the reports under the "Today" card show: `nil` until the
     /// player chooses, when a game of simple rules shows only the card.
@@ -48,6 +51,7 @@ struct EconomyPanel: View {
                         loanSection
                     }
                     faresSection
+                    dayPassSection
                     lastHourSection
                     reportSection
                     if !session.world.economy.unlimitedFunds {
@@ -323,6 +327,64 @@ struct EconomyPanel: View {
                 Text(verbatim: language.text("Charge by distance from \(bands[0].fare.centsText)", "改收階梯票價（\(bands[0].fare.centsText) 起）"))
             }
             .accessibilityIdentifier("economy.chargeByDistance")
+        }
+    }
+
+    /// Decision 324: the day pass, a ticket for a day of rides that the
+    /// sights' visitors buy.
+    private var dayPassSection: some View {
+        let language = session.language
+        let card = DayPassCard(world: session.world)
+        let price = Binding(
+            get: { dayPassPrice ?? card.suggestedPrice.amount },
+            set: { dayPassPrice = $0 }
+        )
+        return Section {
+            Label {
+                Text(verbatim: card.statusText(in: language))
+            } icon: {
+                Image(systemName: "ticket")
+                    .foregroundStyle(Theme.primary)
+            }
+            .accessibilityIdentifier("economy.dayPass.status")
+            Text(verbatim: card.explanation(in: language))
+                .font(.caption)
+                .foregroundStyle(Theme.textSecondary)
+            if let unavailable = card.unavailableText(in: language) {
+                Text(verbatim: unavailable)
+                    .font(.caption)
+                    .foregroundStyle(Theme.warning)
+            } else {
+                Stepper(value: price, in: DayPassCard.priceRange, step: DayPassCard.priceStep) {
+                    Text(verbatim: language.text("Price \(Money(price.wrappedValue).centsText)", "售價 \(Money(price.wrappedValue).centsText)"))
+                        .monospacedDigit()
+                }
+                .accessibilityIdentifier("economy.dayPass.price")
+                Button {
+                    session.setDayPass(Money(price.wrappedValue))
+                } label: {
+                    Text(verbatim: DayPassCard.sellText(Money(price.wrappedValue), in: language))
+                }
+                .disabled(card.price == Money(price.wrappedValue))
+                .accessibilityIdentifier("economy.dayPass.sell")
+                if let today = card.todayText(in: language) {
+                    Text(verbatim: today)
+                        .font(.caption)
+                        .monospacedDigit()
+                        .foregroundStyle(Theme.textSecondary)
+                        .accessibilityIdentifier("economy.dayPass.today")
+                }
+                if card.price != nil {
+                    Button(role: .destructive) {
+                        session.setDayPass(nil)
+                    } label: {
+                        Text(verbatim: DayPassCard.stopText(in: language))
+                    }
+                    .accessibilityIdentifier("economy.dayPass.stop")
+                }
+            }
+        } header: {
+            Text(verbatim: card.title(in: language))
         }
     }
 

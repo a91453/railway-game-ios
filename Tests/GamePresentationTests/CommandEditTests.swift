@@ -105,7 +105,7 @@ final class CommandEditTests: XCTestCase {
         let edits: [PlayerCommand.Edit] = [
             .setTrafficControl(true), .setDisruptions(Disruptions(level: DisruptionLevel.allCases[0], country: "TW", seed: 7)),
             .setDisruptions(nil), .setPassengerRoutingMode(.network), .setEconomyMode(.free), .setFareRules(.flat(Money(300))),
-            .borrow(Money(1_000)), .repayLoan(Money(1_000)), .setServiceDay(try makeWorld().serviceDay),
+            .setDayPass(Money(1_500)), .setDayPass(nil), .borrow(Money(1_000)), .repayLoan(Money(1_000)), .setServiceDay(try makeWorld().serviceDay),
             .purchaseTrain(name: "列車 1"), .sellTrain(train), .setTrainCars(train, cars: 3), .setTrainType(train, .highSpeed),
             .setTrainType(train, nil), .setTrainRate(train, rate: 40), .resumeTrain(train),
             .sendTrain(train, along: [PlayerCommand.Edit.Step(TrackTraversal(edge: .edge(2), direction: .backward))], stoppingAt: 512),
@@ -139,7 +139,7 @@ final class CommandEditTests: XCTestCase {
         let entries = edits.enumerated().map { CommandLog.Entry(time: Int64($0.offset), action: .command(.edit($0.element))) }
         let data = try JSONEncoder().encode(entries)
         XCTAssertEqual(try JSONDecoder().decode([CommandLog.Entry].self, from: data), entries)
-        XCTAssertEqual(Set(edits.map(\.name)).count, edits.count - 8, "each kind, eight of them twice")
+        XCTAssertEqual(Set(edits.map(\.name)).count, edits.count - 9, "each kind, nine of them twice")
         XCTAssertEqual(PlayerCommand.edit(.reverseTrain(train)).name, "reverseTrain")
 
         // A zone this build does not know: read back as not recorded.

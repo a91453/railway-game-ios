@@ -101,6 +101,7 @@ extension LedgerEntry.Kind {
         case .monthlySubsidy: language.text("City subsidies (monthly)", "城市補助金（月初）")
         case .dailyDepot: language.text("Depots (daily)", "機廠維護（日結）")
         case .dailyStationCommerce: language.text("Station shops (daily)", "車站商業收支（日結）")
+        case .dailyDayPass: language.text("Day passes (daily)", "一日週遊券（日結）")
         }
     }
 }
@@ -132,6 +133,8 @@ extension LedgerItem {
         case .depotUpkeep: language.text("Depot sidings", "機廠停車線維護")
         case .stationCommerceRevenue: language.text("Station shop takings", "車站商業收入")
         case .stationCommerceUpkeep: language.text("Station shop upkeep", "車站商業維護")
+        case .dayPassSales: language.text("Day pass sales", "週遊券收入")
+        case .dayPassFares: language.text("Fares the passes covered", "週遊券抵用的車資")
         }
     }
 }

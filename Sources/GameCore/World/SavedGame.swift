@@ -352,9 +352,14 @@
 ///     build that reads only an earlier version would drop them, and the
 ///     game's homes and offices would lose their morning and evening, so
 ///     it says the save is newer than it instead.
+/// 68. Day passes (decision 324): the accounts can have a `"dayPass"`
+///     price, and the ledger the row `"dailyDayPass"` with its items
+///     `"dayPassSales"` and `"dayPassFares"`. A build that reads only an
+///     earlier version would drop the pass and cannot read the row, so it
+///     says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 67
+    public static let currentVersion = 68
 
     public let world: GameWorld
 
@@ -527,6 +532,7 @@ extension SavedGame: Codable {
         // real line.
         // Version 66 to 67: a world without `"tidalDemand"` has it off,
         // and a demand without `"homeShare"` follows its kind.
+        // Version 67 to 68: accounts without `"dayPass"` sell none.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }
