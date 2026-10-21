@@ -1,0 +1,38 @@
+{
+  "status": "VERIFIED",
+  "environment": "Windows / Linux Swift 6.4 / Node / Chromium WebGL 2",
+  "parts": 36,
+  "examples": 4,
+  "models": 40,
+  "views": 280,
+  "triangles": 19032,
+  "maximum_triangles": 3068,
+  "checks": [
+    "all native vertices round-trip through the game loader",
+    "native / GLB / PNG SHA-256 matches exactly",
+    "complete native-to-GLB conversion without degradation",
+    "three commercial categories: 12 buildings, 12 shops/dining, 12 signage/facilities/bus",
+    "all 280 transparent views nonempty and unclipped",
+    "opaque finite native vertices and unit connector normals",
+    "closed undersides and backed window panes"
+  ],
+  "not_verified": [
+    "iPhone / iPad Metal rendering and performance",
+    "live map placement, vehicular collision or animated customer pathing",
+    "commercial economy balance and revenue simulation",
+    "source pack browser rendering / pixel comparison; raw sources are not redistributed"
+  ],
+  "browser": {
+    "status": "VERIFIED",
+    "models_loaded": 40,
+    "checks": [
+      "three categories / examples / Chinese name filtering",
+      "seven directions",
+      "pointer orbit changes rendered geometry",
+      "zoom",
+      "PNG / native / GLB download hashes match exactly",
+      "390 px responsive mobile layout without horizontal overflow",
+      "no external requests / missing resources / JavaScript errors"
+    ]
+  }
+}
