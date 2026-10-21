@@ -349,7 +349,7 @@ struct RealWorldPicker: View {
     private func start() {
         guard let anchor else { return }
         dismiss()
-        launcher.startNewGame(at: anchor)
+        launcher.openRealWorldGame(at: anchor)
     }
 
     // MARK: - The map

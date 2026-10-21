@@ -193,6 +193,13 @@ PR：#187（配色與 HUD）、#190／#192（地圖為主的玻璃版面）、#1
 | `MapGlyphShops1`、`2`、`3`（1、2、3 個購物袋：扁提把、袋口一道摺線；3 個的中間那個大一點） | 地圖上的車站（圖層 30），便利商店、站內商店街、車站商場 | 站名牌左邊空 4 點，一個圓角 3 的方章，邊長和站名同高（12 到 16 點）；`playerBuilding`（暖黃）底，1.2 點 `ink` 外框。圖示是 `stationSymbol`（藏青），方章的 0.8 倍。只在站名顯示時畫。等級用同一種形狀的數量表示（art-style §2），不靠顏色 | 8.69（藏青對暖黃）；方章外框 11.47（對 `land`） |
 | `StationCommerceConvenienceStore`、`Arcade`、`Mall`（120 × 120 多色插圖） | 車站面板「車站商業」一節的卡片（44 點，隨動態字級放大） | 和建造卡同一組顏色，墊 `#BDEFE7` 的圓角方塊。便利商店（招牌、貨架、站鐘）、車站雨棚下三間店、拱頂商場；三張都畫在淺灰月台與綠松軌道上 | — |
 
+## 實景地圖的載入畫面（決策 307）
+
+- 底色 `Theme.background`；中間 220 pt 見方的小路網：三條線用 `Palette.lineColor`（線 0、1、2，色盲安全色也跟著），寬 8 pt、圓頭；站是 `Theme.panel` 白點、`Theme.textPrimary` 2.5 pt 邊。
+- 列車：`Theme.accent` 圓底（直徑 28 pt）、`Theme.onAccent` 2 pt 邊與 `MapGlyph.train` 圖示（18 pt），和地圖上列車的配色同一組（onAccent 對 accent 8.69:1）。
+- 下面三行：公司名（rounded、title2、heavy、`textPrimary`），地名（headline、`Theme.primary`），「正在準備地圖…」（subheadline、`textSecondary`）。
+- 淡入 0.7 s、淡出 0.45 s（`MotionRule.loadingIn`、`loadingOut`）；減少動態時列車不動。
+
 ## 乘客感受的表情（決策 301）
 
 路線卡「乘客感受」三項旁邊的臉。24 格單色模板，同一個圓臉（中心 12, 13、半徑 9.5），五官挖空；眼睛照站長的表情（決策 122）。顏色只用既有的色票，預覽在 `docs/art/line-satisfaction-2026-10-20/faces.png`。

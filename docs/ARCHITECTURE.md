@@ -13538,6 +13538,39 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 **沒有驗證的**：晶片在手機橫拿時和圖層列擠不擠、快轉時地圖上的列車與夜色看起來如何，待實機；高鐵示範的夜裡沒有在 Linux 跑（要讀真實資料，一晚的模擬很久），靠第 2、3 點的通則與照班次跑的路線的測試。
 
+### 307. 實景地圖的載入畫面：公司名、最近的地名、自己的路線色與跑來跑去的列車
+
+2026-10-21。競品研究 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.8（NEXT_PRIORITIES §19 第 6）。作者 2026-10-14、10-15 起的預設「session 五方決定」，遊戲規劃 session_01WW7o3decEv5LY59nYVqnDN 派工。號碼依 #231：main 最大 305，這次的登記保留 307。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
+
+**為什麼**：在實景地圖選好地點按「開始」後，台灣的地點要讀整塊地塊的土地，主執行緒卡住、畫面停在開始畫面上，玩家不知道遊戲是不是當了。競品在這段時間放公司名與城市名，讓等待變成「我的公司要在這裡開業」。
+
+**規則**：
+1. **什麼時候出現**（`GameLauncher.realWorldLoading`）：從實景地點挑選開新遊戲（`openRealWorldGame(at:)`），以及高鐵、宜蘭線兩個示範地圖讀取時。世界改在背景建（`Task.detached`，和示範地圖一樣；`GameLauncher.newWorld(at:options:data:)` 是原本 `startNewGame(at:)` 的內容，搬成不碰主執行緒的靜態函式），建好就收起畫面、開始遊戲；建的時候已經開了別的遊戲（例如讀檔）就留著那一局。同時只建一張。
+2. **寫什麼**：玩家在明信片上取的公司名（沒取時「我的鐵道」，`NetworkPostcard.companyName`）；地點最近的聚落、村里（`PlaceNames.nearby`），沒有時用所在鄉鎮市區（`township(containing:)`），兩個都沒有（國外、海上）就不寫；示範地圖寫「台灣高鐵」「宜蘭線」；最後一行「正在準備地圖…」。
+3. **畫什麼**（`LoadingRoutes`）：一個小路網，三條線用遊戲自己的路線色（`Palette.lineColor`，色盲安全色也跟著），站是白點，每條線一列車：黃色圓底上的列車圖示（地圖上同一個 `MapGlyph.train`）。列車等速來回，一趟 3.2 秒（`crossingSeconds`），三列從不同位置出發。
+4. **動態**（決策 253）：淡入 0.7 秒減速（`MotionRule.loadingIn`）、淡出 0.45 秒加速（`loadingOut`），數字取自 geo-scene 開站畫面（`bootScreen.css` 的 `boot-fade-in` 0.7s、`bootSequence.ts` 的 `fadeMs` 450）。「減少動態效果」打開時列車停在出發位置、`TimelineView` 暫停（不自動循環），淡入淡出照 `reduced` 減半。
+5. **VoiceOver**：整個畫面一個元素，讀「公司名、地名、正在準備地圖…」；識別碼 `loading.realWorld`。
+
+**參考對照**（a91453/railway-reference-private b3af6d8）：
+
+| 參考 | 這裡 | 取用 |
+|---|---|---|
+| `Railway/geo-scene-reference-clean/source/src/components/boot/bootScreen.css`（`.boot-screen`、`boot-fade-in`、`prefers-reduced-motion`） | `RealWorldLoadingView`、`MotionRule.loadingIn` | 版面（圖在中間、名字與狀態在下面）、淡入 0.7 s、減少動態時停掉動畫 |
+| 同上 `bootSequence.ts`（`BOOT_TIMING.fadeMs` 450） | `MotionRule.loadingOut` | 淡出 0.45 s |
+| `OpenWorld/reference_snapshot/play/src/game/loading-screen.js`（`LoadingScreen.stage` 進度條） | — | 沒有採用：我們不知道建世界的進度，假的進度條會騙人 |
+| 台灣輪廓與城市脈動（`taiwanOutline.ts`） | — | 沒有採用：任務要的是自己的路線色與列車；國外的地點也用不上台灣輪廓 |
+
+**五方**：
+- 玩家：等待時看到「我的公司要在九份開業」，知道遊戲沒當、在做什麼。
+- 鐵道迷：地名是 OpenStreetMap 的聚落、村里與鄉鎮市區（決策 159 的 `PlaceNames`，ODbL，資料來源畫面已列），和新車站的站名建議同一份；路網是示意圖，不冒充真實路線。
+- 開發：建世界搬到背景，主執行緒不再卡住；路線與列車位置在 GamePresentation、Linux 測試（`RealWorldLoadingTests`），App 只畫。
+- 美術：路線色與列車圖示和地圖上一樣，不另畫新圖；深淺色由 `Theme` 管。
+- 音樂：沒有（載入時不放聲音）。
+
+**沒有採用的做法**（預覽在 PR）：A. 進度條（同上，沒有真的進度）；B. 台灣輪廓加城市脈動（geo-scene 原樣）：國外地點不適用，也不是自己的路線；C. 只有轉圈的 `ProgressView`：說不出公司與地點。
+
+**驗證**：`RealWorldLoadingTests`、`InterfaceMotionTests`、`GameLauncherTests` 在 Linux 跑過；App 的畫面只能靠 macOS CI 編譯，實機外觀由作者在 TestFlight 看。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。
