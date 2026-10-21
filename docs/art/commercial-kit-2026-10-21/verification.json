@@ -5,8 +5,8 @@
   "examples": 4,
   "models": 40,
   "views": 280,
-  "triangles": 19032,
-  "maximum_triangles": 3068,
+  "triangles": 20662,
+  "maximum_triangles": 3202,
   "checks": [
     "all native vertices round-trip through the game loader",
     "native / GLB / PNG SHA-256 matches exactly",

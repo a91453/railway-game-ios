@@ -4,8 +4,12 @@ import {resolve, dirname} from 'node:path';
 // Palette definitions matching Map3DPalette and GamePresentation constants
 export const PALETTE = {
   tileWhite: 0xFFF0EBE0,
+  warmWhite: 0xFFFAF6EE,
+  pureWhite: 0xFFFFFFFF,
   concrete: 0xFFD9D4C8,
   tankStand: 0xFF8A939E,
+  steel: 0xFFB8C2CC,
+  chrome: 0xFFE0E6ED,
   playerRim: 0xFF262C57,
   trainAccent: 0xFF1D4F91,
   trainYellow: 0xFFFFC86B,
@@ -13,19 +17,33 @@ export const PALETTE = {
   templeRoof: 0xFF9E382B,
   canopy: 0xFF2A7B72,
   glazing: 0xFF456B7D,
+  darkGlass: 0xFF1C222C,
+  warmGlow: 0xFFFFEA88,
   counters1: 0xFFC2884A,
   counters0: 0xFFE0B880,
+  warmWood: 0xFFB87842,
+  darkWood: 0xFF4A2E18,
   roof: 0xFF4A4E5A,
   playerRoof: 0xFF353945,
   darkRoof: 0xFF20232A,
   plaza: 0xFFD8D2C2,
   roadMajor: 0xFF3A4052,
   roadMinor: 0xFF52586B,
-  commMint: 0xFF58B98C,
-  commBlue: 0xFF1D4F91,
-  commYellow: 0xFFFFC86B,
-  commRed: 0xFFC93D2B,
-  greens: [0xFF2D6E3F, 0xFF3C824E, 0xFF4D995F, 0xFF62B075]
+  commMint: 0xFF48A878,
+  commBusGreen: 0xFF28854E,
+  commBlue: 0xFF1E5BB0,
+  commCyan: 0xFF2292A4,
+  commYellow: 0xFFFFB830,
+  commOrange: 0xFFF06520,
+  commRed: 0xFFD6322A,
+  commCrimson: 0xFFA0241E,
+  commPink: 0xFFE85D75,
+  tatungGreen: 0xFF1B6B46,
+  bobaBrown: 0xFF3D2314,
+  teaAmber: 0xFFC88220,
+  taroPurple: 0xFF8E7C93,
+  greens: [0xFF2D6E3F, 0xFF3C824E, 0xFF4D995F, 0xFF62B075],
+  flowers: [0xFFE84855, 0xFFF9DC5C, 0xFFFFFFFF, 0xFFE86A92]
 };
 
 function shadeColor(color, factor) {
@@ -146,30 +164,85 @@ export class MeshBuilder {
     }
   }
 
-  pane(x, y, z, width, height) {
-    this.box(x, y, z, 0.10, width + 0.16, height + 0.16, PALETTE.tileWhite);
+  // Horizontal cylinder along Z axis (e.g. wheels, axles)
+  cylinderZ(x, y, z, radius, length, color, sides = 12) {
+    const z0 = z - length / 2, z1 = z + length / 2;
+    const ring0 = [], ring1 = [];
+    for (let i = 0; i < sides; i++) {
+      const a = (i * 2 * Math.PI) / sides;
+      const dx = Math.cos(a) * radius, dy = Math.sin(a) * radius;
+      ring0.push([x + dx, y + dy, z0]);
+      ring1.push([x + dx, y + dy, z1]);
+    }
+    // End caps
+    this.addFaceBuilder(ring0, [x, y, z], shadeColor(color, 0.8));
+    this.addFaceBuilder(ring1, [x, y, z], shadeColor(color, 0.9));
+    // Tube quads
+    for (let i = 0; i < sides; i++) {
+      const next = (i + 1) % sides;
+      this.addQuadBuilder(ring0[i], ring0[next], ring1[next], ring1[i], color);
+    }
+  }
+
+  // Realistic vehicle wheel oriented along Z axis
+  wheelZ(x, y, z, radius = 0.48, width = 0.28, tireColor = PALETTE.darkRoof, rimColor = PALETTE.steel, sides = 14) {
+    const z0 = z - width / 2, z1 = z + width / 2;
+    const ring0 = [], ring1 = [];
+    const rimRadius = radius * 0.58;
+    const rim0 = [], rim1 = [];
+
+    for (let i = 0; i < sides; i++) {
+      const a = (i * 2 * Math.PI) / sides;
+      const dx = Math.cos(a) * radius, dy = Math.sin(a) * radius;
+      ring0.push([x + dx, y + dy, z0]);
+      ring1.push([x + dx, y + dy, z1]);
+      rim0.push([x + dx * 0.58, y + dy * 0.58, z0 - 0.005]);
+      rim1.push([x + dx * 0.58, y + dy * 0.58, z1 + 0.005]);
+    }
+
+    // Outer tire tread
+    for (let i = 0; i < sides; i++) {
+      const next = (i + 1) % sides;
+      this.addQuadBuilder(ring0[i], ring0[next], ring1[next], ring1[i], tireColor);
+    }
+
+    // Tire sidewalls
+    this.addFaceBuilder(ring0, [x, y, z], tireColor);
+    this.addFaceBuilder(ring1, [x, y, z], tireColor);
+
+    // Silver rim discs
+    this.addFaceBuilder(rim0, [x, y, z], rimColor);
+    this.addFaceBuilder(rim1, [x, y, z], rimColor);
+
+    // Center hubcap
+    this.cylinderZ(x, y, z0 - 0.015, radius * 0.22, 0.03, PALETTE.playerRim, 8);
+    this.cylinderZ(x, y, z1 + 0.015, radius * 0.22, 0.03, PALETTE.playerRim, 8);
+  }
+
+  pane(x, y, z, width, height, frameColor = PALETTE.tileWhite, glassColor = PALETTE.glazing) {
+    this.box(x, y, z, 0.10, width + 0.16, height + 0.16, frameColor);
     // Glass pane with backing panel
     this.addQuadBuilder(
       [x + 0.057, y + 0.08, z - width / 2],
       [x + 0.057, y + height + 0.08, z - width / 2],
       [x + 0.057, y + height + 0.08, z + width / 2],
       [x + 0.057, y + 0.08, z + width / 2],
-      PALETTE.glazing
+      glassColor
     );
   }
 
-  commWindowBand(x, y, z, length, width, floors, bays = 4) {
+  commWindowBand(x, y, z, length, width, floors, bays = 4, frameColor = PALETTE.tileWhite, glassColor = PALETTE.glazing) {
     for (let floor = 0; floor < floors; floor++) {
       const floorY = y + 0.9 + floor * 3.2;
       for (let i = 0; i < bays; i++) {
         const offset = ((i + 0.5) * width) / bays - width / 2;
-        this.pane(x + length / 2, floorY, z + offset, (width / bays) * 0.70, 1.45);
-        this.box(x - length / 2 - 0.015, floorY, z + offset, 0.03, (width / bays) * 0.70, 1.45, PALETTE.glazing);
+        this.pane(x + length / 2, floorY, z + offset, (width / bays) * 0.70, 1.45, frameColor, glassColor);
+        this.box(x - length / 2 - 0.015, floorY, z + offset, 0.03, (width / bays) * 0.70, 1.45, glassColor);
       }
       for (const sign of [-1, 1]) {
         for (let i = 0; i < 2; i++) {
           const offset = ((i + 0.5) * length) / 2 - length / 2;
-          this.box(x + offset, floorY, z + sign * (width / 2 + 0.015), length * 0.32, 0.03, 1.45, PALETTE.glazing);
+          this.box(x + offset, floorY, z + sign * (width / 2 + 0.015), length * 0.32, 0.03, 1.45, glassColor);
         }
       }
     }
@@ -202,14 +275,54 @@ export class MeshBuilder {
     this.box(x, y - 0.1, z, length, width, 0.12, color);
   }
 
+  stripedAwning(x, y, z, length, width, rise, color1, color2, stripes = 6) {
+    const stripeW = width / stripes;
+    for (let i = 0; i < stripes; i++) {
+      const sw = stripeW;
+      const sz = z - width / 2 + (i + 0.5) * sw;
+      const c = (i % 2 === 0) ? color1 : color2;
+      this.commAwning(x, y, sz, length, sw, rise, c);
+    }
+  }
+
+  // Classic Taiwan stainless steel rooftop water tower on 4-legged metal stand
+  waterTank(x, y, z, radius = 0.85, height = 1.35) {
+    // 4 Steel leg supports
+    const spread = radius * 0.7;
+    for (const sx of [-spread, spread]) {
+      for (const sz of [-spread, spread]) {
+        this.box(x + sx, y, z + sz, 0.08, 0.08, 0.75, PALETTE.tankStand);
+      }
+    }
+    // Horizontal cross-bracing
+    this.box(x, y + 0.35, z - spread, spread * 2, 0.06, 0.06, PALETTE.tankStand);
+    this.box(x, y + 0.35, z + spread, spread * 2, 0.06, 0.06, PALETTE.tankStand);
+    // Cylindrical stainless steel tank
+    this.cylinder(x, y + 0.75, z, radius, height, PALETTE.chrome, 12);
+    // Conical cap
+    this.cylinder(x, y + 0.75 + height, z, radius * 0.95, 0.25, PALETTE.steel, 10);
+    this.cylinder(x, y + 0.75 + height + 0.25, z, radius * 0.35, 0.15, PALETTE.tankStand, 8);
+  }
+
+  // Classic Taiwan AC outdoor compressor unit with fan grille
+  airConditionerUnit(x, y, z, length = 0.85, width = 0.35, height = 0.65) {
+    this.box(x, y, z, length, width, height, PALETTE.tileWhite);
+    // Circular dark fan grille on front face
+    this.box(x + length / 2 + 0.01, y + height * 0.22, z, 0.02, height * 0.65, height * 0.65, PALETTE.playerRim);
+    this.box(x + length / 2 + 0.02, y + height * 0.32, z, 0.02, height * 0.45, height * 0.45, PALETTE.tankStand);
+  }
+
+  // Hanging lantern
+  lantern(x, y, z, radius = 0.28, height = 0.48, color = PALETTE.commRed) {
+    this.cylinder(x, y, z, radius, height, color, 8);
+    this.cylinder(x, y - 0.06, z, radius * 0.55, 0.06, PALETTE.playerRim, 8);
+    this.cylinder(x, y + height, z, radius * 0.55, 0.06, PALETTE.playerRim, 8);
+    this.cylinder(x, y - 0.22, z, 0.04, 0.16, PALETTE.trainYellow, 6); // tassel
+  }
+
   commSignboard(x, y, z, length, height, thickness = 0.15, frameColor = PALETTE.tankStand, faceColor = PALETTE.commYellow) {
     this.box(x, y, z, thickness, length, height, frameColor);
     this.box(x + thickness / 2 + 0.01, y + 0.04, z, 0.02, length - 0.12, height - 0.08, faceColor);
-  }
-
-  commWheel(x, y, z, radius = 0.48, width = 0.28) {
-    this.cylinder(x, y + radius, z, radius, width, PALETTE.darkRoof, 12);
-    this.cylinder(x, y + radius, z - 0.02, radius * 0.55, width + 0.04, PALETTE.tankStand, 8);
   }
 
   gable(x, y, z, length, width, rise, color) {

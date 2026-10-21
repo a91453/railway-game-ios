@@ -14,6 +14,17 @@ for (const record of manifest.models) {
   const file = 'models/' + record.id + '.glb';
   writeFileSync(resolve(root, file), glb);
   record.glb = file;
+  record.triangles = model.vertices.length / 3;
+  record.minimum = [
+    Math.min(...model.vertices.map(v => v.position[0])),
+    Math.min(...model.vertices.map(v => v.position[1])),
+    Math.min(...model.vertices.map(v => v.position[2]))
+  ];
+  record.maximum = [
+    Math.max(...model.vertices.map(v => v.position[0])),
+    Math.max(...model.vertices.map(v => v.position[1])),
+    Math.max(...model.vertices.map(v => v.position[2]))
+  ];
   record.native_sha256 = createHash('sha256').update(native).digest('hex');
   record.glb_sha256 = createHash('sha256').update(glb).digest('hex');
   record.views = Object.fromEntries(manifest.directions.map(d => [d, 'views/' + record.id + '/' + d + '.png']));

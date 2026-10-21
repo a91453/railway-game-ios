@@ -4,231 +4,259 @@ extension StationKitBuilder {
     mutating func commercialBuilding(_ part: Map3DCommercialKit.Part) {
         switch part {
         case .departmentStore:
-            // 4-level tiered department store
-            box(0, 0, 0, 18, 22, 14, Map3DPalette.tileWhite)
-            commWindowBand(0, 3.5, 0, length: 18, width: 22, floors: 3, bays: 6)
-            // Ground floor grand entrance & display glass
-            pane(9, 0.4, 0, 8, 3.0)
-            commAwning(9.8, 3.4, 0, length: 2.2, width: 10, rise: 0.3, color: Self.commBlue)
-            for side: Float in [-4.6, 4.6] { box(10.8, 0, side, 0.25, 0.25, 3.4, Self.steel) }
-            // Setback upper level
-            box(-1, 14, 0, 14, 18, 3.5, Map3DPalette.concrete)
-            // Rooftop machinery & advertising sign frame
-            box(-1, 17.5, 0, 14.4, 18.4, 0.25, Map3DPalette.roof)
-            box(0, 17.75, 4, 3, 5, 2.2, Map3DPalette.tankStand)
-            commSignboard(5, 17.75, 0, length: 12, height: 3.2, thickness: 0.3, frameColor: Self.steel, faceColor: Self.commRed)
+            // 1F-2F Podium with dark plinth, arcade colonnade and warm display windows
+            box(0, 0, 0, 19, 23, 7.0, Self.commWarmWhite)
+            box(0, 0, 0, 19.4, 23.4, 0.45, Self.commDarkRoof)
+            pane(9.55, 0.45, -5.5, 6.0, 3.2)
+            pane(9.55, 0.45, 5.5, 6.0, 3.2)
+            for pz: Float in [-10, -5, 0, 5, 10] {
+                box(9.6, 0.45, pz, 0.45, 0.45, 6.5, Self.commConcrete)
+            }
+            pane(9.55, 0.45, 0, 3.6, 3.2)
+            commAwning(10.6, 4.2, 0, length: 2.5, width: 9.0, rise: 0.25, color: Self.commBlue)
+            for pz: Float in [-4, 4] {
+                beam(Map3DPoint(9.7, 5.8, pz), Map3DPoint(11.8, 4.4, pz), 0.06, Self.steel)
+            }
+
+            // 3F-5F Main shopping block with architectural sunshade fins
+            box(-0.5, 7.0, 0, 16.5, 20.5, 9.0, Map3DPalette.tileWhite)
+            for i in -8...8 {
+                box(7.85, 7.5, Float(i) * 1.1, 0.22, 0.08, 8.0, Map3DPalette.counters[0])
+            }
+            commWindowBand(-0.5, 7.2, 0, length: 16.5, width: 20.5, floors: 3, bays: 5, frameColor: Self.commDark, glassColor: Self.commDarkGlass)
+
+            // Rooftop terrace, parapet, water tank and LED billboard
+            box(-0.5, 16.0, 0, 16.8, 20.8, 0.4, Self.commConcrete)
+            box(-0.5, 16.4, 0, 16.2, 20.2, 0.65, Map3DPalette.roof)
+            box(5.5, 16.4, 0, 0.08, 14.0, 1.0, Self.glass)
+            box(-3.5, 16.4, 4.5, 5.0, 6.5, 3.2, Self.commConcrete)
+            commWaterTank(-3.5, 16.4, -4.5, radius: 1.1, height: 1.6)
+            box(6.2, 16.4, -7.0, 0.35, 6.0, 3.5, Self.steel)
+            box(6.4, 16.6, -7.0, 0.05, 5.6, 3.1, Self.commYellow)
 
         case .cinema:
-            // Art Deco cinema with stepped vertical facade
-            box(0, 0, 0, 16, 14, 11, Map3DPalette.counters[1])
-            // Stepped central parapet
-            box(8.05, 0, 0, 0.3, 8, 13.5, Map3DPalette.concrete)
-            box(8.05, 0, 0, 0.4, 4, 14.8, Map3DPalette.trainAccent)
-            // Windows with backplates
-            commWindowBand(0, 4.5, 0, length: 16, width: 14, floors: 2, bays: 3)
-            // Marquee canopy projecting over entrance
-            box(9.2, 3.8, 0, 2.6, 10, 0.35, Map3DPalette.canopy)
-            box(9.2, 3.55, 0, 2.4, 9.6, 0.15, Map3DPalette.trainYellow) // underside lighting
-            // Tie rods supporting marquee
-            beam(Map3DPoint(8.1, 7.5, -4), Map3DPoint(10.2, 4.15, -4), 0.10, Self.steel)
-            beam(Map3DPoint(8.1, 7.5, 4), Map3DPoint(10.2, 4.15, 4), 0.10, Self.steel)
-            // Center ticket booth
-            box(7.5, 0, 0, 1.4, 2.2, 2.6, Self.steel)
-            pane(8.2, 1.0, 0, 1.8, 1.4)
-            // Ground entrance double doors
-            pane(8.1, 0, -3.2, 2.2, 2.5)
-            pane(8.1, 0, 3.2, 2.2, 2.5)
-            // Roof parapet
-            box(0, 11, 0, 16.4, 14.4, 0.35, Map3DPalette.roof)
+            box(0, 0, 0, 17, 15, 12, Self.commWarmWhite)
+            box(8.55, 0, 0, 0.45, 9.0, 14.5, Self.commCyan)
+            box(8.65, 0, 0, 0.55, 5.0, 16.0, Self.commRed)
+            box(8.75, 0, 0, 0.65, 2.2, 17.2, Self.commYellow)
+
+            box(10.0, 4.2, 0, 3.2, 11.0, 0.55, Self.commDarkRoof)
+            box(10.0, 4.0, 0, 3.0, 10.6, 0.15, Self.commWarmGlow)
+            beam(Map3DPoint(8.8, 8.5, -4.5), Map3DPoint(11.2, 4.7, -4.5), 0.08, Self.steel)
+            beam(Map3DPoint(8.8, 8.5, 4.5), Map3DPoint(11.2, 4.7, 4.5), 0.08, Self.steel)
+
+            box(10.2, 7.5, 0, 0.45, 0.85, 7.5, Self.commCrimson)
+            box(10.45, 7.8, 0, 0.10, 0.65, 6.8, Self.commWarmGlow)
+
+            for pz: Float in [-3.8, 0, 3.8] {
+                box(8.6, 1.2, pz, 0.18, 1.8, 2.4, Self.commDarkRoof)
+                let posterColor = pz < -1 ? Self.commBlue : pz > 1 ? Self.commMint : Self.commRed
+                box(8.7, 1.35, pz, 0.05, 1.5, 2.1, posterColor)
+            }
+
+            box(9.2, 0, 0, 1.6, 2.4, 2.6, Self.commDarkWood)
+            pane(9.95, 1.1, 0, 1.8, 1.3)
+            box(0, 12.0, 0, 17.5, 15.5, 0.35, Map3DPalette.roof)
 
         case .supermarket:
-            // Wide single-story commercial supermarket with cart corral
-            box(0, 0, 0, 15, 24, 6.5, Map3DPalette.concrete)
-            // Front wide glass storefront
-            pane(7.55, 0.4, 2, 12, 4.2)
-            commWindowBand(0, 1.0, -8, length: 15, width: 6, floors: 1, bays: 2)
-            // Supermarket entrance overhang
-            commAwning(8.4, 4.8, 2, length: 2.2, width: 14, rise: 0.25, color: Self.commMint)
-            for side: Float in [-6.5, 0, 6.5] { box(9.3, 0, 2 + side, 0.2, 0.2, 4.8, Self.steel) }
-            // Cart return corral
-            box(8.2, 0, -8, 2.8, 3.5, 0.12, Map3DPalette.concrete)
-            box(8.2, 0.12, -9.6, 2.6, 0.1, 1.0, Self.steel)
-            box(8.2, 0.12, -6.4, 2.6, 0.1, 1.0, Self.steel)
-            box(6.9, 0.12, -8, 0.1, 3.2, 1.0, Self.steel)
-            // Roof equipment
-            box(0, 6.5, 0, 15.5, 24.5, 0.3, Map3DPalette.roof)
-            cylinder(-2, 6.8, 4, radius: 1.2, height: 1.5, color: Map3DPalette.tankStand, sides: 8)
-            cylinder(-2, 6.8, -4, radius: 1.2, height: 1.5, color: Map3DPalette.tankStand, sides: 8)
+            box(0, 0, 0, 16, 24, 6.8, Self.commWarmWhite)
+            box(8.05, 4.8, 0, 0.22, 23.5, 1.6, Self.commMint)
+            box(8.18, 5.2, 0, 0.08, 21.0, 0.8, Self.commOrange)
+
+            pane(8.1, 0.45, 3.0, 8.5, 3.8)
+            commAwning(9.2, 4.4, 3.0, length: 2.4, width: 10.5, rise: 0.25, color: Self.commMint)
+            for pz: Float in [-1.5, 7.5] {
+                box(10.2, 0, 3.0 + pz, 0.25, 0.25, 4.4, Self.steel)
+            }
+
+            box(8.8, 0, -6.5, 3.2, 4.2, 0.12, Self.commConcrete)
+            box(8.8, 0.12, -8.4, 3.0, 0.10, 0.95, Self.steel)
+            box(8.8, 0.12, -4.6, 3.0, 0.10, 0.95, Self.steel)
+            box(7.4, 0.12, -6.5, 0.10, 3.8, 0.95, Self.steel)
+            for i in 0..<4 {
+                box(7.9 + Float(i) * 0.65, 0.15, -6.5, 0.85, 0.55, 0.75, Self.commChrome)
+            }
+
+            box(0, 6.8, 0, 16.6, 24.6, 0.35, Map3DPalette.roof)
+            commAirConditionerUnit(-3.5, 7.15, 6.0, length: 1.8, width: 1.2, height: 1.4)
+            commAirConditionerUnit(-3.5, 7.15, 2.5, length: 1.8, width: 1.2, height: 1.4)
+            cylinder(3.0, 7.15, -4.0, radius: 0.95, height: 1.2, color: Self.steel, sides: 8)
 
         case .cornerOffice:
-            // 4-story commercial office building with chamfered corner
-            box(0, 0, 0, 16, 16, 15.5, Map3DPalette.tileWhite)
-            commWindowBand(0, 3.5, 0, length: 16, width: 16, floors: 3, bays: 4)
-            // Ground floor entrance
-            pane(8.05, 0, 0, 4.5, 3.2)
-            box(8.8, 3.4, 0, 1.8, 6.0, 0.25, Map3DPalette.canopy)
-            for side: Float in [-2.6, 2.6] { box(9.5, 0, side, 0.18, 0.18, 3.4, Self.steel) }
-            // Corporate fascia band
-            box(8.1, 3.8, 0, 0.25, 12, 1.1, Self.commBlue)
-            // Rooftop elevator penthouse
-            box(-2, 15.5, -2, 6, 6, 3.2, Map3DPalette.concrete)
-            box(0, 15.5, 0, 16.4, 16.4, 0.35, Map3DPalette.roof)
+            box(0, 0, 0, 15, 16, 17, Self.commConcrete)
+            box(7.55, 0, 0, 0.45, 14.0, 16.5, Self.commDarkRoof)
+            commWindowBand(0, 4.2, 0, length: 15, width: 16, floors: 4, bays: 4, frameColor: Self.commDark, glassColor: Self.glass)
+            pane(7.6, 0.45, 0, 11.0, 3.5)
+            box(5.5, 0.45, 0, 1.2, 3.2, 1.1, Self.commWarmWood)
+            box(5.5, 1.55, 0, 0.1, 2.8, 0.6, Self.commWarmGlow)
+
+            commAwning(8.8, 4.2, 0, length: 2.6, width: 7.5, rise: 0.25, color: Self.commDarkRoof)
+            for pz: Float in [-3.2, 3.2] {
+                box(9.8, 0, pz, 0.25, 0.25, 4.2, Self.commChrome)
+            }
+
+            box(0, 17.0, 0, 15.6, 16.6, 0.45, Self.commDarkRoof)
+            cylinder(0, 17.45, 0, radius: 0.15, height: 5.5, color: Self.steel, sides: 6)
+            cylinder(0, 22.95, 0, radius: 0.35, height: 0.25, color: Self.commYellow, sides: 6)
+            commWaterTank(-3.5, 17.45, 4.0, radius: 0.95, height: 1.3)
 
         case .yellowCafe:
-            // Warm yellow brick cafe with outdoor seating patio
-            box(0, 0, 0, 10, 11, 7.5, Self.commBrick)
-            // Ground floor display bay
-            pane(5.05, 0.6, -1.8, 4.2, 2.4)
-            pane(5.05, 0, 2.5, 1.8, 2.6) // entrance door
-            commWindowBand(0, 4.0, 0, length: 10, width: 11, floors: 1, bays: 3)
-            // Striped awning
-            commAwning(5.8, 3.4, -1.8, length: 1.8, width: 5.2, rise: 0.25, color: Self.commYellow)
-            // Mansard roof top
-            box(0, 7.5, 0, 10.5, 11.5, 0.35, Map3DPalette.roof)
-            gable(0, 7.85, 0, 9.5, 10.5, 2.6, Map3DPalette.playerRoof)
+            box(0, 0, 0, 11, 13, 7.5, Map3DPalette.counters[1])
+            box(0, 0, 0, 11.4, 13.4, 0.35, Self.commConcrete)
+            gable(0, 7.5, 0, 11.8, 13.8, 3.2, Map3DPalette.templeRoof)
+
+            box(3.2, 8.5, 0, 1.8, 2.2, 1.6, Self.commWarmWhite)
+            pane(4.15, 8.8, 0, 1.4, 1.1)
+            gable(3.2, 10.1, 0, 2.0, 2.4, 0.85, Map3DPalette.templeRoof)
+
+            for pz: Float in [-3.5, 3.5] {
+                pane(5.55, 4.2, pz, 2.2, 2.4)
+                commStripedAwning(6.4, 6.2, pz, length: 1.6, width: 2.6, rise: 0.45, color1: Self.commMint, color2: Self.commWarmWhite, stripes: 4)
+            }
+
+            pane(5.55, 0.45, 2.2, 3.5, 3.2)
+            box(6.8, 0, -2.5, 3.2, 5.0, 0.25, Self.commWarmWood)
+            box(8.2, 0.25, -2.5, 0.4, 4.6, 0.55, Self.commConcrete)
+            box(8.2, 0.75, -2.5, 0.3, 4.4, 0.35, Map3DPalette.greens[1])
 
         case .gasStation:
-            // Overhead pump island canopy with service kiosk
-            // Service kiosk building
-            box(-6, 0, 0, 6, 10, 4.2, Map3DPalette.tileWhite)
-            pane(-3.05, 0.2, 0, 4.5, 2.8)
-            commWindowBand(-6, 1.0, 0, length: 6, width: 10, floors: 1, bays: 2)
-            box(-6, 4.2, 0, 6.4, 10.4, 0.25, Map3DPalette.roof)
-            // Island canopy
-            box(4, 5.2, 0, 12, 18, 0.6, Map3DPalette.canopy)
-            box(4, 5.0, 0, 11.6, 17.6, 0.1, Map3DPalette.tileWhite) // underside
-            // 4 canopy support pillars
-            for cx: Float in [0, 8] {
-                for cz: Float in [-5.5, 5.5] {
-                    cylinder(cx, 0, cz, radius: 0.30, height: 5.2, color: Self.steel, sides: 12)
+            box(0, 5.2, 0, 13, 20, 0.85, Self.commWarmWhite)
+            box(0, 5.3, 0, 13.4, 20.4, 0.35, Self.commBlue)
+            box(0, 5.65, 0, 13.4, 20.4, 0.30, Self.commRed)
+            for sx: Float in [-3.8, 3.8] {
+                for sz: Float in [-5.5, 5.5] {
+                    box(sx, 0, sz, 0.55, 0.55, 5.2, Self.steel)
                 }
             }
-            // Twin pump islands
-            for pz: Float in [-4, 4] {
-                box(4, 0, pz, 6, 1.8, 0.22, Map3DPalette.concrete)
-                // Fuel dispenser pumps
-                box(2.8, 0.22, pz, 1.1, 0.9, 1.6, Self.commRed)
-                box(5.2, 0.22, pz, 1.1, 0.9, 1.6, Self.commBlue)
-                // Protective bollards
-                cylinder(0.7, 0, pz, radius: 0.12, height: 0.9, color: Self.commYellow, sides: 8)
-                cylinder(7.3, 0, pz, radius: 0.12, height: 0.9, color: Self.commYellow, sides: 8)
+
+            for sz: Float in [-5.5, 5.5] {
+                box(0, 0, sz, 7.5, 1.6, 0.25, Self.commConcrete)
+                for bx: Float in [-3.4, 3.4] {
+                    cylinder(bx, 0.25, sz, radius: 0.16, height: 0.85, color: Self.commYellow, sides: 8)
+                }
+                for px: Float in [-1.5, 1.5] {
+                    box(px, 0.25, sz, 0.85, 0.55, 1.65, Self.commDarkRoof)
+                    box(px, 1.1, sz, 0.88, 0.58, 0.45, Self.commBlue)
+                    box(px + 0.44, 0.85, sz, 0.03, 0.40, 0.35, Self.commYellow)
+                    box(px, 0.75, sz - 0.32, 0.2, 0.1, 0.5, Self.commMint)
+                    box(px, 0.75, sz + 0.32, 0.2, 0.1, 0.5, Self.commRed)
+                }
             }
-            // Totem price sign
-            box(11, 0, -9, 0.4, 2.0, 6.5, Self.commBlue)
-            box(11, 3.2, -9, 0.5, 1.8, 2.8, Map3DPalette.trainYellow)
+
+            box(-7.5, 0, 2.0, 5.5, 8.5, 4.0, Self.commWarmWhite)
+            pane(-4.7, 0.45, 2.0, 6.5, 3.0)
+            box(-7.5, 4.0, 2.0, 5.8, 8.8, 0.25, Map3DPalette.roof)
+
+            box(6.8, 0, 9.5, 0.45, 1.4, 4.2, Self.commBlue)
+            box(6.8, 1.2, 9.5, 0.50, 1.2, 2.6, Self.commDarkRoof)
+            for i in 0..<3 {
+                box(7.06, 1.6 + Float(i) * 0.7, 9.5, 0.02, 0.9, 0.4, Self.commYellow)
+            }
 
         case .parkingGarage:
-            // 3-tier concrete open-structure parking garage
-            let length: Float = 16, width: Float = 18
-            for tier in 0..<3 {
-                let ty = Float(tier) * 3.4
-                box(0, ty, 0, length, width, 0.35, Map3DPalette.concrete)
-                // Exterior safety barrier railings
-                for sign: Float in [-1, 1] {
-                    box(0, ty + 0.35, sign * (width / 2 - 0.1), length, 0.18, 0.9, Self.steel)
-                    box(sign * (length / 2 - 0.1), ty + 0.35, 0, 0.18, width, 0.9, Self.steel)
+            box(0, 0, 0, 18, 16, 9.5, Self.commConcrete)
+            for floor in 0..<3 {
+                let fy: Float = 0.5 + Float(floor) * 3.0
+                box(0, fy, 0, 18.2, 16.2, 0.9, Self.steel)
+                for sx: Float in [-8.5, 0, 8.5] {
+                    for sz: Float in [-7.5, 7.5] {
+                        box(sx, fy, sz, 0.8, 0.8, 3.0, Self.commConcrete)
+                    }
                 }
             }
-            // Structural corner & intermediate columns
-            for cx: Float in [-length / 2 + 0.6, 0, length / 2 - 0.6] {
-                for cz: Float in [-width / 2 + 0.6, 0, width / 2 - 0.6] {
-                    box(cx, 0, cz, 0.8, 0.8, 7.2, Map3DPalette.concrete)
-                }
+            box(9.2, 0, 2.5, 0.45, 0.45, 1.2, Self.commYellow)
+            box(9.2, 0.85, 0.8, 0.08, 2.6, 0.15, Self.commRed)
+            stairs(-8.5, 0, -8.5, run: 6.0, width: 3.2, rise: 3.0)
+            for pz: Float in [-6.0, 6.0] {
+                cylinder(0, 9.5, pz, radius: 0.08, height: 3.2, color: Self.steel, sides: 6)
+                box(0, 12.6, pz, 0.65, 0.35, 0.2, Self.commWarmGlow)
             }
-            // Entrance barrier gate & ticket console
-            box(8.2, 0, 2.5, 0.5, 0.5, 1.2, Self.commYellow)
-            box(8.2, 0.9, 0.5, 0.15, 3.2, 0.15, Self.commRed) // barrier arm
-            // Concrete approach ramp
-            stairs(-2, 0, 7.2, run: 8, width: 3.2, rise: 3.4)
 
         case .commercialHotel:
-            // Boutique business hotel with porte-cochere vehicle drop-off
-            box(0, 0, 0, 14, 18, 17, Map3DPalette.tileWhite)
-            commWindowBand(0, 4.0, 0, length: 14, width: 18, floors: 4, bays: 4)
-            // Ground floor lobby picture windows
-            pane(7.05, 0.3, 0, 10, 3.2)
-            // Porte-cochere drop-off canopy
-            box(9.2, 3.8, 0, 5.0, 12, 0.4, Map3DPalette.canopy)
-            for cz: Float in [-4.8, 4.8] {
-                cylinder(11.2, 0, cz, radius: 0.32, height: 3.8, color: Self.steel, sides: 12)
+            box(0, 0, 0, 15, 14, 16, Self.commWarmWhite)
+            box(0, 0, 0, 15.4, 14.4, 0.45, Self.commDarkRoof)
+            pane(7.55, 0.45, 0, 9.5, 3.4)
+
+            box(9.6, 3.8, 0, 4.0, 10.0, 0.45, Self.commDarkRoof)
+            for pz: Float in [-4.2, 4.2] {
+                box(11.2, 0, pz, 0.45, 0.45, 3.8, Self.commChrome)
             }
-            // Vertical hotel blade sign on facade corner
-            box(7.15, 6, -7.5, 0.4, 0.9, 9.5, Self.commBlue)
-            box(0, 17, 0, 14.5, 18.5, 0.35, Map3DPalette.roof)
+
+            commWindowBand(0, 4.2, 0, length: 15, width: 14, floors: 3, bays: 4, frameColor: Self.commDark, glassColor: Self.glass)
+            box(0, 16.0, 0, 15.6, 14.6, 0.65, Self.commConcrete)
+            box(5.0, 16.65, 0, 0.35, 8.5, 1.8, Self.commBlue)
+            box(5.2, 16.85, 0, 0.05, 8.0, 1.4, Self.commWarmGlow)
+            commWaterTank(-3.5, 16.65, 3.0, radius: 0.95, height: 1.4)
 
         case .bankBranch:
-            // Classical commercial bank with granite portal and ATM vestibule
-            box(0, 0, 0, 14, 16, 9.5, Map3DPalette.concrete)
-            commWindowBand(0, 4.2, 0, length: 14, width: 16, floors: 1, bays: 4)
-            // Front granite entrance portal & pillars
-            box(7.05, 0, 0, 0.6, 12, 8.8, Map3DPalette.tankStand)
-            for pz: Float in [-4, -1.5, 1.5, 4] {
-                cylinder(7.35, 0, pz, radius: 0.38, height: 7.2, color: Map3DPalette.tileWhite, sides: 12)
+            box(0, 0, 0, 14, 16, 9.5, Self.commConcrete)
+            box(0, 0, 0, 14.6, 16.6, 0.65, Self.commDarkRoof)
+            for pz: Float in [-5.5, -1.8, 1.8, 5.5] {
+                box(7.2, 0.65, pz, 0.75, 0.75, 7.5, Self.commWarmWhite)
             }
-            // Main double entrance doors with shutter housing
-            pane(7.1, 0, 0, 2.8, 3.4)
-            box(7.2, 3.5, 0, 0.4, 3.4, 0.6, Self.steel)
-            // ATM vestibule on right
-            pane(7.1, 0, 5.2, 2.0, 3.0)
-            box(6.8, 0.9, 5.2, 0.3, 1.2, 0.9, Self.commBlue) // ATM console
-            // Classical pediment top
-            box(7.2, 7.2, 0, 0.8, 12.8, 1.6, Map3DPalette.concrete)
-            box(0, 9.5, 0, 14.4, 16.4, 0.35, Map3DPalette.roof)
+            gable(7.2, 8.15, 0, 1.8, 14.0, 1.8, Self.commWarmWhite)
+            pane(6.9, 0.65, 0, 6.5, 3.5)
+
+            box(7.1, 0.65, 6.2, 0.85, 2.2, 3.2, Self.commBlue)
+            pane(7.55, 0.85, 6.2, 1.6, 2.4)
+            box(0, 9.5, 0, 14.5, 16.5, 0.45, Self.commDarkRoof)
 
         case .stackedShopHouse:
-            // 3-story Taiwanese commercial shophouse with arcade (騎樓) setback
-            box(-1.5, 0, 0, 11, 7.5, 12, Map3DPalette.counters[1])
-            // Ground floor arcade walkway & front columns
-            box(3.5, 0, 0, 2.5, 7.5, 0.18, Map3DPalette.concrete) // sidewalk
-            box(4.5, 0, -3.2, 0.5, 0.5, 3.8, Map3DPalette.concrete)
-            box(4.5, 0, 3.2, 0.5, 0.5, 3.8, Map3DPalette.concrete)
-            // Ground floor shop shutter & entrance
-            pane(2.2, 0, 0, 5.5, 2.8)
-            box(2.25, 2.9, 0, 0.3, 6.0, 0.6, Self.steel) // roll-up shutter box
-            // Upper floors window bands & balconies
-            commWindowBand(-1.5, 4.2, 0, length: 11, width: 7.5, floors: 2, bays: 2)
-            for floor in 1...2 {
-                let by = Float(floor) * 3.8
-                box(4.2, by, 0, 1.4, 7.5, 0.22, Map3DPalette.concrete)
-                box(4.8, by + 0.22, 0, 0.12, 7.5, 0.9, Self.steel) // security railing
+            box(0, 0, 0, 12, 8, 13.5, Self.commWarmWhite)
+            box(4.5, 0, 0, 3.0, 8.0, 3.8, Map3DPalette.tileWhite)
+            for pz: Float in [-3.6, 3.6] {
+                box(5.8, 0, pz, 0.45, 0.45, 3.8, Self.commConcrete)
             }
-            // Rooftop water tank
-            box(-1.5, 12, 0, 11.4, 7.9, 0.35, Map3DPalette.roof)
-            cylinder(-3, 12.35, 1.5, radius: 0.9, height: 1.8, color: Self.steel, sides: 12)
+            pane(4.45, 0.35, 0, 5.5, 3.2)
+
+            pane(6.05, 4.2, 0, 5.5, 2.2)
+            box(6.15, 4.2, 0, 0.04, 5.5, 2.2, Self.commMint)
+            pane(6.05, 7.5, 0, 5.5, 2.2)
+            box(6.15, 7.5, 0, 0.04, 5.5, 2.2, Self.commMint)
+
+            box(6.4, 7.0, 0, 0.8, 6.5, 0.15, Self.commConcrete)
+            box(6.75, 7.15, 0, 0.06, 6.5, 0.85, Self.steel)
+            box(6.4, 7.15, -1.8, 0.4, 1.2, 0.45, Map3DPalette.greens[2])
+            box(6.4, 7.15, 1.8, 0.4, 1.2, 0.45, Map3DPalette.greens[0])
+
+            box(0, 13.5, 0, 11.5, 7.5, 2.8, Self.commMint)
+            gable(0, 16.3, 0, 11.8, 7.8, 1.2, Map3DPalette.roof)
+            commWaterTank(-3.2, 13.5, 2.2, radius: 0.85, height: 1.3)
 
         case .warehouseStore:
-            // Commercial wholesale warehouse with raised loading dock
-            box(0, 0, 0, 16, 20, 8.5, Map3DPalette.concrete)
-            commWindowBand(0, 4.5, 0, length: 16, width: 20, floors: 1, bays: 4)
-            // Raised loading dock (1.2m height)
-            box(9.2, 0, 0, 2.8, 14, 1.2, Map3DPalette.concrete)
-            // 2 roll-up cargo doors
-            for side: Float in [-3.5, 3.5] {
-                box(8.05, 1.2, side, 0.2, 4.5, 4.2, Self.steel)
-                // Rubber bumper pads on dock edge
-                box(10.6, 0.7, side - 1.8, 0.15, 0.35, 0.6, Map3DPalette.playerRim)
-                box(10.6, 0.7, side + 1.8, 0.15, 0.35, 0.6, Map3DPalette.playerRim)
-            }
-            // Gabled metal roof
-            gable(0, 8.5, 0, 16.5, 20.5, 3.2, Self.commBlue)
+            box(0, 0, 0, 18, 22, 8.5, Self.commConcrete)
+            box(0, 6.5, 0, 18.4, 22.4, 1.8, Map3DPalette.trainAccent)
+            box(9.25, 7.1, 0, 0.05, 14.0, 0.9, Self.commRed)
+
+            pane(9.05, 0.45, 4.5, 8.5, 4.8)
+            commAwning(10.2, 5.2, 4.5, length: 2.4, width: 10.0, rise: 0.35, color: Map3DPalette.trainAccent)
+
+            box(9.05, 0.85, -6.5, 0.15, 5.5, 3.8, Map3DPalette.tankStand)
+            box(9.8, 0, -6.5, 1.8, 6.5, 0.85, Self.commConcrete)
+
+            box(0, 8.5, 0, 18.5, 22.5, 0.35, Map3DPalette.roof)
+            cylinder(-4.0, 8.85, 4.0, radius: 1.2, height: 1.2, color: Self.steel, sides: 8)
+            cylinder(-4.0, 8.85, -4.0, radius: 1.2, height: 1.2, color: Self.steel, sides: 8)
 
         case .metroEntrance:
-            // Angled tempered glass metro entrance pavilion
-            // Granite escalator pit walls
-            box(0, 0, 0, 9, 5.5, 1.2, Map3DPalette.tankStand)
-            // Escalator stair well opening
-            stairs(0.5, 0, 0, run: 6.5, width: 2.8, rise: 2.2)
-            // Angled glass canopy structure
-            canopy(0, 2.4, 0, length: 10.5, width: 6.2, rise: 1.4, color: Self.commMint)
-            // 4 tubular steel canopy columns
-            for cx: Float in [-4, 4] {
-                for cz: Float in [-2.6, 2.6] {
-                    cylinder(cx, 0, cz, radius: 0.16, height: 2.8, color: Self.steel, sides: 8)
-                }
+            box(0, 0, 0, 7.5, 4.2, 0.35, Self.commConcrete)
+            stairs(0.5, 0, 0, run: 5.5, width: 3.2, rise: 2.8)
+            for pz: Float in [-1.8, 1.8] {
+                box(0.5, 0.35, pz, 5.5, 0.08, 1.1, Self.glass)
+                box(0.5, 1.45, pz, 5.5, 0.10, 0.08, Self.commChrome)
             }
-            // Transit signage totem
-            box(5.2, 0, 3.2, 0.35, 0.8, 3.6, Self.commMint)
-            box(5.2, 2.6, 3.2, 0.42, 0.7, 0.7, Map3DPalette.tileWhite)
+            for px: Float in [-1.8, 0.8, 3.4] {
+                beam(Map3DPoint(px, 0.35, -2.0), Map3DPoint(px, 2.8, -2.0), 0.10, Self.commMint)
+                beam(Map3DPoint(px, 0.35, 2.0), Map3DPoint(px, 2.8, 2.0), 0.10, Self.commMint)
+                beam(Map3DPoint(px, 2.8, -2.0), Map3DPoint(px, 3.4, 0), 0.10, Self.commMint)
+                beam(Map3DPoint(px, 2.8, 2.0), Map3DPoint(px, 3.4, 0), 0.10, Self.commMint)
+            }
+            canopy(0.8, 3.1, 0, length: 6.2, width: 4.2, rise: 0.45, color: Self.glass)
+
+            box(3.8, 0, -2.4, 0.35, 0.35, 3.8, Self.commMint)
+            box(3.8, 3.2, -2.4, 0.45, 0.45, 0.65, Self.commBlue)
+            box(3.8, 3.3, -2.4, 0.48, 0.48, 0.45, Self.commWarmWhite)
+
         default:
             break
         }
