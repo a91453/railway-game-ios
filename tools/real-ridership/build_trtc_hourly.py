@@ -101,11 +101,14 @@ def main():
 
     # Where two lines' gates are counted apart the data names them by line
     # ("BL板橋" and "Y板橋"), and one name ends with 站 ("大橋頭站"): as
-    # build_trtc_ridership.py, each adds to the one station.
+    # build_trtc_ridership.py, each adds to the one station. 台北車站 is
+    # the station's own name and keeps its 站.
     station_days = defaultdict(lambda: [0] * 6)
     for day in kinds["working"]:
         for name, counts in stations[day].items():
-            name = re.sub(r"^(BL|BR|G|O|R|Y)(?=\D)", "", name).removesuffix("站")
+            name = re.sub(r"^(BL|BR|G|O|R|Y)(?=\D)", "", name)
+            if not name.endswith("車站"):
+                name = name.removesuffix("站")
             station_days[name] = [a + b for a, b in zip(station_days[name], counts)]
     average = {name: [round(count / len(kinds["working"])) for count in counts] for name, counts in station_days.items()}
     # The Circular line's own stations have entries but no exits in 128506
