@@ -13641,7 +13641,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 美術：路線色與列車圖示和地圖上一樣，不另畫新圖；深淺色由 `Theme` 管。
 - 音樂：沒有（載入時不放聲音）。
 
-**沒有採用的做法**（預覽在 PR）：A. 進度條（同上，沒有真的進度）；B. 台灣輪廓加城市脈動（geo-scene 原樣）：國外地點不適用，也不是自己的路線；C. 只有轉圈的 `ProgressView`：說不出公司與地點。
+**沒有採用的做法**（預覽：`docs/art/loading-screen-2026-10-21/chosen-and-others.png`，網頁示意，不是 App 截圖）：A. 進度條（同上，沒有真的進度）；B. 台灣輪廓加城市脈動（geo-scene 原樣）：國外地點不適用，也不是自己的路線；C. 只有轉圈的 `ProgressView`：說不出公司與地點。
 
 **驗證**：`RealWorldLoadingTests`、`InterfaceMotionTests`、`GameLauncherTests` 在 Linux 跑過；App 的畫面只能靠 macOS CI 編譯，實機外觀由作者在 TestFlight 看。
 
