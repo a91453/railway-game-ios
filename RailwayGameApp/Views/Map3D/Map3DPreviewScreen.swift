@@ -133,8 +133,8 @@ struct Map3DPreviewScreen: View {
             }
             .padding()
         }
-        .task(id: Map3DSceneKey(world: session.world, hasHeights: session.heights != nil, focus: focus)) {
-            let built = await Map3DSceneCache.shared.scene(for: session, focus: focus)
+        .task(id: Map3DSceneKey(world: session.world, hasHeights: session.heights != nil, focus: focus, palette: linePalette)) {
+            let built = await Map3DSceneCache.shared.scene(for: session, focus: focus, palette: linePalette)
             // A newer world or the heights file started another build: a
             // cancelled one may finish after it and must not replace it.
             guard !Task.isCancelled else { return }
@@ -226,16 +226,17 @@ final class Map3DSceneCache {
     /// Starts building `session`'s scene round `focus` (decision 313,
     /// later: the point the 2D map looks at), unless it is built or
     /// building round a point near it (``Map3DScene/FocusArea``).
-    func prepare(for session: GameSession, focus: (x: Double, y: Double)?) {
-        _ = task(for: session, focus: focus)
+    /// Decision 314: its lines' bands in `palette`, the player's.
+    func prepare(for session: GameSession, focus: (x: Double, y: Double)?, palette: LinePalette) {
+        _ = task(for: session, focus: focus, palette: palette)
     }
 
-    func scene(for session: GameSession, focus: (x: Double, y: Double)?) async -> Map3DScene {
-        await task(for: session, focus: focus).value
+    func scene(for session: GameSession, focus: (x: Double, y: Double)?, palette: LinePalette) async -> Map3DScene {
+        await task(for: session, focus: focus, palette: palette).value
     }
 
-    private func task(for session: GameSession, focus: (x: Double, y: Double)?) -> Task<Map3DScene, Never> {
-        let key = Map3DSceneKey(world: session.world, hasHeights: session.heights != nil, focus: focus)
+    private func task(for session: GameSession, focus: (x: Double, y: Double)?, palette: LinePalette) -> Task<Map3DScene, Never> {
+        let key = Map3DSceneKey(world: session.world, hasHeights: session.heights != nil, focus: focus, palette: palette)
         if key == self.key, game === session, let building { return building }
         let world = session.world
         // The ground the world has not read yet, from the heights file,
@@ -250,7 +251,7 @@ final class Map3DSceneCache {
         let task = Task.detached(priority: .userInitiated) {
             let baseMap = tiles.flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }.flatMap { try? BaseMapTiles(data: $0) }
             return Map3DScene(world: world, focus: focus, baseMap: baseMap, cityTiles: city.map(CityTileArea.areas(in:)) ?? [],
-                              heights: heights)
+                              heights: heights, lineBands: Map3DLineBands(world: world, palette: palette))
         }
         self.key = key
         game = session
@@ -262,7 +263,10 @@ final class Map3DSceneCache {
 /// What makes the still scene change: track, platforms, the player's
 /// buildings, and the city, which grows by night, each week; and the
 /// heights file, which can arrive after the game opened; decision 313,
-/// later: and the place it is built round, to a few kilometres.
+/// later: and the place it is built round, to a few kilometres; decision
+/// 314: and the lines, whose colour bands run beside the track, in the
+/// player's palette, unless no `palette` is given (the 2D map's seeded
+/// streets, which have no bands).
 struct Map3DSceneKey: Hashable {
     let hasHeights: Bool
     let focus: Map3DScene.FocusArea?
@@ -271,8 +275,10 @@ struct Map3DSceneKey: Hashable {
     let platforms: Int
     let buildings: Int
     let week: Int64
+    let lines: [ServiceLine]
+    let palette: LinePalette?
 
-    init(world: GameWorld, hasHeights: Bool, focus: (x: Double, y: Double)? = nil) {
+    init(world: GameWorld, hasHeights: Bool, focus: (x: Double, y: Double)? = nil, palette: LinePalette? = nil) {
         self.hasHeights = hasHeights
         self.focus = focus.map { Map3DScene.FocusArea(x: $0.x, y: $0.y) }
         edges = world.network.edges.count
@@ -280,6 +286,8 @@ struct Map3DSceneKey: Hashable {
         platforms = world.network.platforms.count
         buildings = world.placedBuildings.count
         week = world.clock.now.seconds / (7 * GameTime.secondsPerDay)
+        lines = palette == nil ? [] : world.lines
+        self.palette = palette
     }
 }
 

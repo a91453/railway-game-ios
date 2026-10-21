@@ -1410,7 +1410,7 @@ struct MapView: View {
             try? await Task.sleep(for: .seconds(Map3DHandoff.buildsAfterResting))
             guard !Task.isCancelled, !screen.showsMap3D,
                   let now = camera, Map3DHandoff.buildsAhead(referenceSize: now.referenceSize) else { return }
-            Map3DSceneCache.shared.prepare(for: session, focus: (x: now.centerX, y: now.centerY))
+            Map3DSceneCache.shared.prepare(for: session, focus: (x: now.centerX, y: now.centerY), palette: linePalette)
         }
     }
 
