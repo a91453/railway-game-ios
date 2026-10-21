@@ -10,20 +10,27 @@ final class Map3DTrainSetTests: XCTestCase {
 
     /// Every set's cars are in the pack: a car's length and width, on the
     /// rail, up to a lowered pantograph's height, in their own colours (none
-    /// takes the line's), lit at the right end.
+    /// takes the line's but the metro's band), lit at the right end.
     func testEverySetsCarsAreInThePack() throws {
+        let lineColoured: Set = ["metroC381", "wenhu"]
         for set in Map3DTrainSet.all {
             var names = [set.headName, set.middleName]
-            if pack.index(of: set.tailName) != nil { names.append(set.tailName) }
-            if pack.index(of: set.singleName) != nil { names.append(set.singleName) }
+            for name in [set.tailName, set.singleName, set.pantographName] where pack.index(of: name) != nil { names.append(name) }
             for name in names {
                 let model = pack.models[try XCTUnwrap(pack.index(of: name), name)]
                 XCTAssertTrue((100...3_000).contains(model.triangleCount), "\(name): \(model.triangleCount) triangles")
-                XCTAssertTrue((17...21).contains(model.length), "\(name): \(model.length) m long")
-                XCTAssertEqual(model.maximum.y - model.minimum.y, 2.95, accuracy: 0.1, name)
+                // #900's 700T is 24 m, its Wenhu car 12.6 m; drawn at the
+                // train's car length.
+                let length: ClosedRange<Float> = set.key == "highSpeed" ? 23...25 : set.key == "wenhu" ? 12...13.5 : 17...22.5
+                XCTAssertTrue(length.contains(model.length), "\(name): \(model.length) m long")
+                XCTAssertTrue((2.6...3.5).contains(model.maximum.y - model.minimum.y), "\(name): \(model.maximum.y - model.minimum.y) m wide")
                 XCTAssertEqual(model.minimum.z, 0, accuracy: 0.1, "\(name) stands on the rail")
-                XCTAssertTrue((3.6...4.6).contains(model.maximum.z), "\(name): \(model.maximum.z) m tall")
-                XCTAssertTrue(model.vertices.allSatisfy { $0.color >> 24 == 0xFF }, "\(name) keeps its own colours")
+                XCTAssertTrue((3.4...4.6).contains(model.maximum.z), "\(name): \(model.maximum.z) m tall")
+                if lineColoured.contains(set.key) {
+                    XCTAssertTrue(model.vertices.contains { $0.color >> 24 == 0 }, "\(name): the band is the line's colour")
+                } else {
+                    XCTAssertTrue(model.vertices.allSatisfy { $0.color >> 24 == 0xFF }, "\(name) keeps its own colours")
+                }
                 XCTAssertTrue(model.vertices.allSatisfy { abs(Map3DPoint($0.nx, $0.ny, $0.nz).length - 1) < 1e-3 }, name)
             }
             let middle = (pack.models[try XCTUnwrap(pack.index(of: set.headName))].minimum.x
@@ -65,6 +72,8 @@ final class Map3DTrainSetTests: XCTestCase {
         XCTAssertEqual(Map3DTrainSet.key(type: .emu3000, performance: .tiltingPuyuma), "EMU3000", "the type's style first")
         XCTAssertEqual(Map3DTrainSet.key(type: .blueTrain, performance: .r100ChuKuang), "BLUE")
         XCTAssertEqual(Map3DTrainSet.key(type: .steam, performance: .steam), "STEAM")
+        XCTAssertEqual(Map3DTrainSet.key(type: nil, performance: .metroC381), "metroC381")
+        XCTAssertEqual(Map3DTrainSet.key(type: nil, performance: .metro), "metroC381", "a metro is a C381")
     }
 
     /// Which model each car is: a hauled set's locomotive, coaches and lit
@@ -84,7 +93,16 @@ final class Map3DTrainSetTests: XCTestCase {
         XCTAssertEqual(names("dieselExpress", 3), ["set-dieselExpress-head", "set-dieselExpress-car", "set-dieselExpress-tail"], "a DR3100 set")
         XCTAssertEqual(names("puyuma", 3), ["set-puyuma-head", "set-puyuma-car", "set-puyuma-tail"])
         XCTAssertEqual(names("", 3), ["commuter-cab", "commuter-car", "commuter-cab turned"])
-        XCTAssertEqual(names("HSR", 1), ["highSpeed-cab"])
+        // As #900 has them (the author, 2026-10-21): the 700T with its two
+        // pantograph cars, the EMU3000, every metro size a C381.
+        XCTAssertEqual(names("HSR", 1), ["set-highSpeed-head"])
+        XCTAssertEqual(names("HSR", 12), ["set-highSpeed-head", "set-highSpeed-car", "set-highSpeed-car", "set-highSpeed-panto"]
+            + Array(repeating: "set-highSpeed-car", count: 4) + ["set-highSpeed-panto", "set-highSpeed-car", "set-highSpeed-car", "set-highSpeed-tail"])
+        XCTAssertEqual(names("EMU3000", 3), ["set-emu3000-head", "set-emu3000-car", "set-emu3000-tail"])
+        for code in ["A", "B", "C", "L", "D"] {
+            XCTAssertEqual(names(code, 2), ["set-metroC381-head", "set-metroC381-tail"], code)
+        }
+        XCTAssertEqual(names("APM", 2), ["set-wenhu-head", "set-wenhu-tail"])
     }
 
     /// The 3D map asks each train of the world for its key.

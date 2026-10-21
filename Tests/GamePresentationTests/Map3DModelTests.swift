@@ -70,11 +70,8 @@ final class Map3DModelTests: XCTestCase {
         XCTAssertTrue(noseCrown.allSatisfy { $0.nz > 0 }, "the dropping nose crown faces upward, not inward")
         // Pantograph fairing sits only on Car 4 and Car 9 (indices 3 and 8) of a 12-car HSR set.
         XCTAssertGreaterThan(panto.maximum.z, car.maximum.z)
-        XCTAssertEqual(pack.modelIndex(forType: "HSR", carIndex: 0, count: 12), pack.index(of: "highSpeed-cab"))
-        XCTAssertEqual(pack.modelIndex(forType: "HSR", carIndex: 1, count: 12), pack.index(of: "highSpeed-car"))
-        XCTAssertEqual(pack.modelIndex(forType: "HSR", carIndex: 3, count: 12), pack.index(of: "highSpeed-panto"))
-        XCTAssertEqual(pack.modelIndex(forType: "HSR", carIndex: 8, count: 12), pack.index(of: "highSpeed-panto"))
-        XCTAssertEqual(pack.modelIndex(forType: "HSR", carIndex: 11, count: 12), pack.index(of: "highSpeed-cab"))
+        // (Decision 318: the HSR type is #900's 700T now, its pantograph
+        // cars the same, Map3DTrainSetTests.)
     }
 
     func testTheModelsAreTheSameEveryTime() {
