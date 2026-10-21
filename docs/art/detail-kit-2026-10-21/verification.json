@@ -1,0 +1,75 @@
+{
+  "status": "VERIFIED",
+  "environment": "Linux / Swift 6.4 / Node / Chromium WebGL 2",
+  "parts": 96,
+  "examples": 6,
+  "poses": 16,
+  "viewable_models": 118,
+  "separate_bodies": 32,
+  "views": 826,
+  "triangles": 45852,
+  "maximum_triangles": 4792,
+  "checks": [
+    "native loader vertex roundtrip",
+    "native / GLB / PNG SHA-256",
+    "complete native-to-GLB conversion",
+    "all seven transparent views nonempty and unclipped",
+    "six categories, 16 distinct parts each",
+    "all 16 browser poses match native geometry within 10 micrometres",
+    "normalised connectors and joint axes"
+  ],
+  "not_verified": [
+    "iPhone / iPad Metal rendering and performance",
+    "live game map placement, collisions and animation integration",
+    "engineering or safety specifications"
+  ],
+  "browser": {
+    "status": "VERIFIED",
+    "models_loaded": 118,
+    "checks": [
+      "all six categories / scenes / Chinese name filtering",
+      "seven directions",
+      "16 manual joint sliders visibly change geometry",
+      "pointer orbit changes rendered geometry",
+      "zoom",
+      "PNG / native / GLB download hashes",
+      "390 px without horizontal overflow",
+      "no external requests / missing resources / JavaScript errors"
+    ]
+  },
+  "swift_build": {
+    "status": "VERIFIED",
+    "toolchain": "Swift 6.4.0",
+    "command": "swift build --build-tests -Xswiftc -warnings-as-errors"
+  },
+  "swift_tests": {
+    "status": "VERIFIED",
+    "count": 21,
+    "suites": {
+      "Map3DDetailKitTests": 6,
+      "Map3DStationKitTests": 8,
+      "Map3DModelFileTests": 7
+    }
+  },
+  "node_tests": {
+    "status": "VERIFIED",
+    "count": 4,
+    "command": "node --test tools/station-kit/package.test.mjs"
+  },
+  "regressions": [
+    "awning diagonal brace starts inside its mounting plate; stricter test failed before correction",
+    "hand-truck wheel centre lowered 1 cm to touch the floor; 1 mm ground-gap test failed before correction"
+  ],
+  "png_decode": {
+    "status": "VERIFIED",
+    "count": 826,
+    "method": "Pillow full decode; RGBA 384x384 and alpha spans 0 to 255"
+  },
+  "visual_review": [
+    "all 96 parts sheet",
+    "all 16 rest/action pairs",
+    "18-item overview including all six assemblies",
+    "underside detail connections",
+    "four backgrounds / 120,64,44,28 px / blur / grayscale"
+  ]
+}

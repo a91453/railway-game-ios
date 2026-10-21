@@ -52,7 +52,9 @@ final class Map3DFrameCostReportTests: XCTestCase {
         let scene = try Self.taipeiScene()
         let width = Float((scene.region.maxX - scene.region.minX) / Double(WorldCoordinate.unitsPerMetre))
         let height = Float((scene.region.maxY - scene.region.minY) / Double(WorldCoordinate.unitsPerMetre))
-        let models = Map3DModelPack.standard
+        // The app's models: the city bus read from its file.
+        let models = Map3DCityBus.pack(file: Self.baseMap.deletingLastPathComponent().appendingPathComponent("Models/city-bus.m3dmodel"))
+        let bus = models.index(of: Map3DStreetModel.bus.modelName)
         for (name, distance) in [("far", max(width, height) * 0.9), ("middle", 1_400), ("middle", 800), ("near", 280)] as [(String, Float)] {
             let camera = Map3DCamera(target: .zero, distance: distance, viewport: (402, 874))
             let matrix = camera.viewProjection
@@ -102,10 +104,11 @@ final class Map3DFrameCostReportTests: XCTestCase {
             var lifeModels = Set<Int>()
             for instance in life.instances where models.models.indices.contains(instance.model) {
                 lifeModels.insert(instance.model)
-                add("people and vehicles", models.models[instance.model].triangleCount,
+                add(instance.model == bus ? "buses" : "people and vehicles", models.models[instance.model].triangleCount,
                     Self.pixels(models.models[instance.model].vertices, instance.transform, through: matrix), 0)
             }
-            add("people and vehicles", 0, 0, lifeModels.count)
+            add("people and vehicles", 0, 0, lifeModels.subtracting([bus].compactMap { $0 }).count)
+            if let bus, lifeModels.contains(bus) { add("buses", 0, 0, 1) }
             let triangles = layers.reduce(0) { $0 + $1.triangles }
             let draws = layers.reduce(0) { $0 + $1.draws }
             print("\(name) \(Int(distance)) m (tilt \(String(format: "%.0f", camera.tilt * 180 / .pi))°): \(triangles) triangles, about \(draws) draws")
