@@ -13,10 +13,10 @@ import XCTest
 /// sets stood idle at Nangang, and Taichung's 08:04 run, which THSR 13
 /// would have taken, was dropped.
 ///
-///   B ──e0 (1.5 km)── A ──e1 (5.6 km)── D (Depot)
+///   B ──e0── M ──e1── A ──e2 (5.6 km)── D (Depot)
 ///
-/// B's platform is on `e0`, A's on `e0` and on `e1`, D's on `e1`; edge
-/// `en` is `.edge(n + 1)`.
+/// B's and M's platforms are on `e0`, A's on `e1` and on `e2`, D's on
+/// `e2`; edge `en` is `.edge(n + 1)`.
 final class LateArrivalPullOutTests: XCTestCase {
     private func forward(_ edge: Int) -> TrackTraversal {
         TrackTraversal(edge: .edge(edge + 1), direction: .forward)
@@ -24,81 +24,86 @@ final class LateArrivalPullOutTests: XCTestCase {
 
     private struct Scene {
         var world: GameWorld
-        let b: StationID
+        let a: StationID
         let depot: StationID
+        let t0: TrainID
         let t1: TrainID
         let t2: TrainID
     }
 
-    /// At 10:00, the line Main from B to A with a run from B to A at 10:00
-    /// and one from A to B at 10:15, and the depot D beyond A. T1, Main's,
-    /// at B, tops out at 5 km/h and reaches A at about 10:17; T2, Main's,
-    /// in D, would be there four minutes after it set out. Under traffic
-    /// control.
+    /// At 10:00, the line Main from B by M to A with a run from B at 10:00
+    /// (M 10:02, A 10:05) and one from A to B at 10:15, and the depot D
+    /// beyond A. T1, Main's, at B; T2, Main's, in D, four minutes from A;
+    /// T0, of no line, standing on `e1`, so T1 waits at M for its route.
+    /// Under traffic control.
     private func makeScene() throws -> Scene {
         var world = try GameWorld(
             bounds: WorldBounds(width: 466_944, height: 16_384), economy: GameEconomy(balance: 100_000_000, costs: testCosts),
             clock: GameClock(now: GameTime(minutes: 600), speed: .normal)
         )
         let start = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 8_192))
+        let m = try world.buildTrackNode(at: WorldCoordinate(x: 49_152, y: 8_192))
         let a = try world.buildTrackNode(at: WorldCoordinate(x: 98_304, y: 8_192))
         let d = try world.buildTrackNode(at: WorldCoordinate(x: 458_752, y: 8_192))
-        try world.buildTrackEdge(from: start, to: a) // e0
-        try world.buildTrackEdge(from: a, to: d)     // e1
-        let first = try XCTUnwrap(world.trackEdge(.edge(1))?.length)
-        let second = try XCTUnwrap(world.trackEdge(.edge(2))?.length)
+        try world.buildTrackEdge(from: start, to: m) // e0
+        try world.buildTrackEdge(from: m, to: a)     // e1
+        try world.buildTrackEdge(from: a, to: d)     // e2
+        let lengths = try (1...3).map { try XCTUnwrap(world.trackEdge(.edge($0))?.length) }
         let b = try world.buildStation(named: "B", at: PlanPoint(x: 4_096, y: 10_240)).id
         try world.addTrackPlatform(b, on: .edge(1), from: 1_024, to: 9_216)
+        let mStation = try world.buildStation(named: "M", at: PlanPoint(x: 45_056, y: 10_240)).id
+        try world.addTrackPlatform(mStation, on: .edge(1), from: lengths[0] - 10_240, to: lengths[0] - 2_048)
         let aStation = try world.buildStation(named: "A", at: PlanPoint(x: 98_304, y: 10_240)).id
-        try world.addTrackPlatform(aStation, on: .edge(1), from: first - 10_240, to: first - 2_048)
-        try world.addTrackPlatform(aStation, on: .edge(2), from: 2_048, to: 10_240)
+        try world.addTrackPlatform(aStation, on: .edge(2), from: lengths[1] - 10_240, to: lengths[1] - 2_048)
+        try world.addTrackPlatform(aStation, on: .edge(3), from: 2_048, to: 10_240)
         let depot = try world.buildStation(named: "D", at: PlanPoint(x: 452_608, y: 10_240)).id
-        try world.addTrackPlatform(depot, on: .edge(2), from: second - 10_240, to: second - 2_048)
+        try world.addTrackPlatform(depot, on: .edge(3), from: lengths[2] - 10_240, to: lengths[2] - 2_048)
         try world.setStationDepot(depot, to: true)
-        let line = try world.createLine(named: "Main", stops: [b, aStation]).id
+        let line = try world.createLine(named: "Main", stops: [b, mStation, aStation]).id
         try world.setLineRuns(line, to: [
-            LineRun(from: 0, to: 1, times: [
-                LineRunTime(arrival: 600 * 60, departure: 600 * 60), LineRunTime(arrival: 605 * 60, departure: 605 * 60),
+            LineRun(from: 0, to: 2, times: [
+                LineRunTime(arrival: 600 * 60, departure: 600 * 60), LineRunTime(arrival: 602 * 60, departure: 602 * 60),
+                LineRunTime(arrival: 605 * 60, departure: 605 * 60),
             ]),
-            LineRun(from: 1, to: 0, times: [
-                LineRunTime(arrival: 615 * 60, departure: 615 * 60), LineRunTime(arrival: 620 * 60, departure: 620 * 60),
+            LineRun(from: 2, to: 0, times: [
+                LineRunTime(arrival: 615 * 60, departure: 615 * 60), LineRunTime(arrival: 618 * 60, departure: 618 * 60),
+                LineRunTime(arrival: 620 * 60, departure: 620 * 60),
             ]),
         ])
         try world.setLineDepots(line, to: [depot])
         var trains: [TrainID] = []
-        for (name, edge, at) in [("T1", 0, Int64(9_216)), ("T2", 1, second - 2_048)] {
+        for (name, edge, at, onLine) in [("T0", 1, lengths[1] / 2, false), ("T1", 0, Int64(9_216), true), ("T2", 2, lengths[2] - 2_048, true)] {
             let id = try world.purchaseTrain(named: name).id
             try world.setTrainCars(id, to: 2)
             try world.placeTrain(id, at: .onEdge(forward(edge), offset: at))
             try world.setTrainContinuation(id, along: [], stoppingAt: at)
             try world.setTrainMovementRate(id, to: 4_096)
-            try world.assignTrain(id, to: line)
+            if onLine { try world.assignTrain(id, to: line) }
             trains.append(id)
         }
-        try world.setTrainPerformance(trains[0], to: TrainPerformance(acceleration: 1_500, braking: 2_500, topSpeed: 5))
         try world.setTrafficControl(true)
-        return Scene(world: world, b: b, depot: depot, t1: trains[0], t2: trains[1])
+        return Scene(world: world, a: aStation, depot: depot, t0: trains[0], t1: trains[1], t2: trains[2])
     }
 
-    /// T1 runs twelve minutes late and reaches A before a run out of the
-    /// depot could: T2 stays in the depot, and T1 takes the 10:15 run.
-    /// Before, T2 came out at 10:17, as T1 arrived, and went back in.
+    /// T0 leaves at 10:14, so T1 leaves M twelve minutes late and reaches
+    /// A at 10:17, before a run out of the depot could: T2 stays in the
+    /// depot while T1 is on its way. Before, T2 came out at 10:13, once T1
+    /// was due after 10:15.
     func testALateTrainOnItsWayTakesTheRunBeforeARunOutThatArrivesAfterIt() throws {
         var scene = try makeScene()
         var pullOuts = 0
         var running = false
-        var t1Ends: Set<StationID> = []
-        for _ in 0..<30 {
+        for minute in 0..<17 {
+            if minute == 14 { try scene.world.unplaceTrain(scene.t0) }
             try scene.world.advance(ticks: 1)
             let t2 = try XCTUnwrap(scene.world.train(id: scene.t2))
             let out = t2.execution != nil && t2.timetable.first?.station == scene.depot
             if out, !running { pullOuts += 1 }
             running = out
-            if let last = try XCTUnwrap(scene.world.train(id: scene.t1)).timetable.last { t1Ends.insert(last.station) }
         }
         XCTAssertEqual(pullOuts, 0)
         XCTAssertTrue(scene.world.stationsStoppedAt(by: scene.t2).contains(scene.depot), "T2 stays in the depot")
-        XCTAssertTrue(t1Ends.contains(scene.b), "T1 takes the run back to B")
+        XCTAssertTrue(scene.world.stationsStoppedAt(by: scene.t1).contains(scene.a), "T1 stands at A")
         XCTAssertEqual(WorldInvariants.violations(in: scene.world), [])
     }
 
@@ -106,11 +111,12 @@ final class LateArrivalPullOutTests: XCTestCase {
     /// minute does.
     func testABatchEndsWhereMinutesDo() throws {
         var scene = try makeScene()
-        try scene.world.advance(ticks: 12)
+        try scene.world.advance(ticks: 14)
+        try scene.world.unplaceTrain(scene.t0)
         var single = scene.world
-        for _ in 0..<28 { try single.advance(ticks: 1) }
+        for _ in 0..<26 { try single.advance(ticks: 1) }
         var batched = scene.world
-        try batched.advance(ticks: 28)
+        try batched.advance(ticks: 26)
         XCTAssertEqual(batched, single)
     }
 }
