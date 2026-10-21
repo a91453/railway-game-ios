@@ -33,6 +33,10 @@ public enum Map3DStreetModel: String, CaseIterable, Sendable {
     case car
     /// A van or a tall hatchback.
     case van
+    /// A 12 m city bus: drawn from the Meshy model the app bundles
+    /// (``Map3DCityBus``); this box-built one stands in where that file
+    /// cannot be read.
+    case bus
 
     /// The model's name in ``Map3DModelPack``.
     public var modelName: String { "life-" + rawValue }
@@ -111,6 +115,18 @@ public enum Map3DStreetModel: String, CaseIterable, Sendable {
             glowing {
                 for z: Float in [-1, 1] { box(rear + 0.02, spec.belt - 0.28, z * (spec.width / 2 - 0.24), 0.06, 0.34, 0.14, Self.tailLamp) }
             }
+        case .bus:
+            // A Taiwanese low-floor city bus, 12 × 2.5 × 3.3 m: the body in
+            // the instance's colour, the window band and windscreen, the
+            // air conditioner on the roof, the lamps.
+            for x: Float in [-3.4, 3.6] {
+                for z: Float in [-1, 1] { box(x, 0, z * 1.1, 1.0, 0.3, 1.0, Self.tyre) }
+            }
+            box(0, 0.3, 0, 12, 2.5, 2.9, tinted)
+            box(-0.2, 1.3, 0, 10.8, 2.54, 1.2, Self.glass)
+            box(5.98, 0.85, 0, 0.06, 2.3, 1.95, Self.glass)
+            box(-1.6, 3.2, 0, 3.4, 1.7, 0.22, Self.steel)
+            Map3DCityBus.addLamps(to: &mesh)
         }
         return Map3DModelPack.Model.flat(named: modelName, from: mesh)
     }
@@ -266,6 +282,8 @@ public struct Map3DStreetLife: Sendable {
         /// Whether scooters may use it (not on a motorway).
         public let scooters: Bool
         let seed: (Int32, Int32)
+        /// Whether city buses run on it (a main road's).
+        public var buses = false
     }
 
     /// Where people gather or walk.
@@ -399,6 +417,19 @@ public struct Map3DStreetLife: Sendable {
     /// taxis' yellow.
     public static let carPaints: [UInt32] = [0xF2F3F1, 0xF2F3F1, 0xC3C8CF, 0xC3C8CF, 0xD9473F, 0x3A4150, 0x3B6FB6, 0xF2C230]
         .map(Map3DColor.rgb)
+    /// The buses' paint: the reference's street scene's (HANDOFF §4.3:
+    /// teal, blue, white, green), the colours of Taiwan's city buses.
+    public static let busPaints: [UInt32] = [0x3E8C8C, 0x4E78A8, 0xF2F2F0, 0x5E9A78].map(Map3DColor.rgb)
+    /// One vehicle in this many on a road buses run on is a bus; at most
+    /// ``mostBuses`` are drawn (the model's budget,
+    /// `docs/research/MESHY_TRIAL_MODEL_SPEC_2026-10-17.md`).
+    public static let busShare: Float = 0.05
+    public static let mostBuses = 30
+    /// A bus takes a place only where the vehicles are this far apart, so
+    /// that, with each one's start drawn up to 0.4 of it early, the next
+    /// one never reaches it.
+    static let busSpacing: Float = 17
+
     /// The scooters' paint.
     public static let scooterPaints: [UInt32] = [0xF2F3F1, 0xC3C8CF, 0x3A4150, 0xD9473F, 0x3B7DD8, 0x8FD3C4, 0xF2C230].map(Map3DColor.rgb)
 
@@ -407,6 +438,8 @@ public struct Map3DStreetLife: Sendable {
         public var instances: [Map3DInstance] = []
         public var people = 0
         public var vehicles = 0
+        /// Of the vehicles, the buses.
+        public var buses = 0
     }
 
     /// The figures and vehicles at `time` (seconds of any clock) round
@@ -516,23 +549,27 @@ public struct Map3DStreetLife: Sendable {
                 let along = direction > 0 ? Float(travelled) : length - Float(travelled)
                 let kind = r(2)
                 let model: Map3DStreetModel
-                if lane.scooters {
+                if lane.buses, spacing >= Self.busSpacing, frame.buses < Self.mostBuses, r(5) < Self.busShare {
+                    model = .bus
+                } else if lane.scooters {
                     model = kind < 0.5 ? .scooter : kind < 0.62 ? .scooterPair : kind < 0.9 ? .car : .van
                 } else {
                     model = kind < 0.75 ? .car : .van
                 }
                 let place = lane.path.at(along)
-                let side = model == .car || model == .van ? carSide : scooterSide
+                let side = model.isScooter ? scooterSide : carSide
                 let foot = place.point + place.right * (side * direction)
                 let away = Map3DPoint(foot.x - target.x, 0, foot.z - target.z).length
                 // Coming out of and going into the road's ends.
-                let ends = min(max(min(along, length - along) / 4, 0), 1)
+                // (A bus, three times as long, over three times as far.)
+                let ends = min(max(min(along, length - along) / (model == .bus ? 12 : 4), 0), 1)
                 let size = Self.fade(away, reach: reach) * ends
                 guard size > 0, let index = Self.models[model] else { continue }
-                let paints = model.isScooter ? Self.scooterPaints : Self.carPaints
+                let paints = model == .bus ? Self.busPaints : model.isScooter ? Self.scooterPaints : Self.carPaints
                 let tint = paints[min(Int(r(3) * Float(paints.count)), paints.count - 1)]
                 frame.instances.append(.prop(index, at: foot, forward: place.along * direction, scale: size, tint: tint))
                 frame.vehicles += 1
+                if model == .bus { frame.buses += 1 }
             }
         }
     }
@@ -603,7 +640,7 @@ extension Map3DScene.Builder {
                 streetLife.lanes.append(Map3DStreetLife.Lane(
                     path: path, half: half, twoWay: !road.isRamp && kind != .motorway, speed: traffic.speed,
                     perHundred: traffic.perHundred * (0.25 + 0.75 * level), scooters: kind != .motorway && kind != .trunk || level > 0.5,
-                    seed: lifeSeed(path.points[0], salt: 256)))
+                    seed: lifeSeed(path.points[0], salt: 256), buses: !road.isRamp && Self.busRoutes.contains(kind)))
             }
             let sidewalk = Self.sidewalk(of: kind)
             guard sidewalk > 0, !road.isRamp else { continue }
@@ -625,6 +662,10 @@ extension Map3DScene.Builder {
     mutating func groundPoint(x: Double, z: Double, lift: Float) -> Map3DPoint {
         Map3DPoint(Float(x), drawnGround(x: Float(x), z: Float(z)) + lift + crossingLift(x: Float(x), z: Float(z)), Float(z))
     }
+
+    /// The roads city buses run on: the main ones, through towns, not
+    /// the motorways or the side streets.
+    static let busRoutes: Set<Map3DBaseMap.RoadKind> = [.trunk, .primary, .secondary]
 
     /// How fast a road's vehicles go (`traffic.js`: its limit, 0.8 of it
     /// on a main road and 0.6 on a minor one, kept to 4.5–15 m/s; Taiwan's

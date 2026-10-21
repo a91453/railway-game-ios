@@ -11,7 +11,9 @@ npm test
 
 The new static bridge uses the tool's own pinned dependencies. App, SwiftPM
 and Xcode do not read or bundle these packages. The original Meshy entry
-below still uses only Node's standard library and keeps #803's output bytes.
+below keeps #803's output bytes; its command line first runs glTF-Validator
+(below), so it needs `npm ci` too. `convert()` itself still uses only
+Node's standard library.
 
 ## Static meshopt GLB and `.gltf` + `.bin`
 
@@ -124,18 +126,30 @@ triangles; the converter removes two with zero area and writes **1,543
 triangles, eight colors** (about 80 KB). The source contains no separate
 headlight material, so no bus triangle gets the night glow flag.
 
-## Before a model goes into the App
+## glTF-Validator before converting
 
-The first PR that puts a converted model into the App also adds the
-Khronos glTF-Validator (`gltf-validator`, Apache-2.0, pinned) to this tool
-and checks the input GLB before conversion. It checks the glTF spec only;
-the game's own limits (no textures, triangle budget) stay checked here.
-Timing: `docs/research/GAME_AI_TOOLS_2026-10-15.md` §6.3.
+The Khronos glTF-Validator (`gltf-validator` 2.0.0-dev.3.10, Apache-2.0,
+pinned) checks every GLB `convert.mjs`'s command line is given before it
+reads a triangle (`validate.mjs`), and refuses one with any error, naming
+the first five; warnings and infos are printed and let through. It checks
+the glTF spec only; the game's own limits (eight colours, the triangle
+budget, the provenance) stay with the converter and `Map3DModelFile`.
+Added with the bus going into the App (decision 259's traffic,
+`Sources/GamePresentation/Map3DCityBus.swift`), as
+`docs/research/GAME_AI_TOOLS_2026-10-15.md` §6.3 times it.
+
+- The Meshy bus: no errors, no warnings, one info (`NODE_MATRIX_DEFAULT`).
+- `fixtures/tiny.glb` has two errors (its POSITION accessors leave out the
+  bounds the spec requires), so `validate.test.mjs` uses it as the GLB the
+  command line refuses; `convert()`'s own tests still read it.
+- `bridge.mjs` does not run it yet: its inputs are meshopt-compressed and
+  quantized, which the validator reports on differently; add it when a
+  bridged model goes into the App.
 
 ## Dependencies and licenses
 
-`package.json` pins the three direct versions; `package-lock.json` pins the
-complete five-package tree and integrity hashes. All five installed license
+`package.json` pins the four direct versions; `package-lock.json` pins the
+complete six-package tree and integrity hashes. All six installed license
 texts were checked; no `@gltf-transform/functions`, sharp, or libvips is used.
 Preserve the installed packages' license notices when redistributing them.
 
@@ -146,6 +160,7 @@ Preserve the installed packages' license notices when redistributing them.
 | [`meshoptimizer`](https://github.com/zeux/meshoptimizer) | 1.3.0 | MIT, © 2016–2026 Arseny Kapoulkine | `node_modules/meshoptimizer/LICENSE.md` |
 | [`property-graph`](https://github.com/donmccurdy/property-graph) (transitive) | 4.1.0 | MIT, © 2021 Don McCurdy | `node_modules/property-graph/LICENSE` |
 | [`ktx-parse`](https://github.com/donmccurdy/ktx-parse) (transitive) | 1.1.0 | MIT, © 2020 Don McCurdy | `node_modules/ktx-parse/LICENSE` |
+| [`gltf-validator`](https://github.com/KhronosGroup/glTF-Validator) | 2.0.0-dev.3.10 | Apache-2.0, the Khronos Group's official validator compiled to JS; its bundled Dart runtime's notices in `NOTICES` | `node_modules/gltf-validator/LICENSE`, `NOTICES` |
 
 Reuse follows HANDOFF §3's tools-only approval and the #821 / #820 bridge
 experiments. `bridge.mjs` adapts core node/resource cleanup and integer

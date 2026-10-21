@@ -368,7 +368,9 @@ private struct Map3DView: UIViewRepresentable {
     }
 
     /// Decision 230: the train models, made in code once.
-    static let models: Map3DModelPack? = Map3DModelPack.standard
+    // The city bus from its file (Map3DCityBus), or the box-built one.
+    static let models: Map3DModelPack? = Map3DCityBus.pack(
+        file: Bundle.main.url(forResource: Map3DCityBus.fileName, withExtension: Map3DCityBus.fileExtension))
 
     func makeUIView(context: Context) -> UIView {
         guard let view = Map3DMetalView.make() else {

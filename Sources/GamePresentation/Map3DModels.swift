@@ -52,6 +52,10 @@ public struct Map3DModelPack: Sendable {
         self.models = models
     }
 
+    init(models: [Model]) {
+        self.models = models
+    }
+
     /// The model called `name`'s index.
     public func index(of name: String) -> Int? {
         models.firstIndex { $0.name == name }
