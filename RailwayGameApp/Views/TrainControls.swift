@@ -15,6 +15,8 @@ import SwiftUI
 struct TrainControls: View {
     @Bindable var session: GameSession
     @Environment(GameScreenState.self) private var screen
+    /// The train whose sale is being confirmed (decision 327).
+    @State private var sellingTrain: Train?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -39,6 +41,49 @@ struct TrainControls: View {
                 }
                 .accessibilityHint("Shows the train's own timetable: its stops, times and whether it repeats.")
                 .accessibilityIdentifier("train.timetable")
+                // Decision 327: a train on no line is sold from here too,
+                // taken off the track first.
+                if session.world.canSellTrainWhereItStands(train.id) {
+                    Button(role: .destructive) {
+                        sellingTrain = train
+                    } label: {
+                        Label {
+                            Text(verbatim: session.language.text(
+                                "Sell \(session.world.trainSaleQuote(train.id).moneyText)",
+                                "出售 \(session.world.trainSaleQuote(train.id).moneyText)"
+                            ))
+                        } icon: {
+                            Image(systemName: "dollarsign.circle")
+                        }
+                        .font(.footnote)
+                    }
+                    .accessibilityIdentifier("train.sell")
+                    .confirmationDialog(
+                        Text(verbatim: sellingTrain.map { session.language.text("Sell \($0.name)?", "出售 \($0.name)？") } ?? ""),
+                        isPresented: Binding(get: { sellingTrain != nil }, set: { if !$0 { sellingTrain = nil } }),
+                        titleVisibility: .visible,
+                        presenting: sellingTrain
+                    ) { selling in
+                        Button(role: .destructive) {
+                            session.sellTrain(selling.id)
+                        } label: {
+                            Text(verbatim: session.language.text(
+                                "Sell for \(session.world.trainSaleQuote(selling.id).moneyText)",
+                                "以 \(session.world.trainSaleQuote(selling.id).moneyText) 出售"
+                            ))
+                        }
+                    } message: { selling in
+                        Text(verbatim: selling.position == nil
+                            ? session.language.text(
+                                "Brings 70 % of what is left of its cost on the books.",
+                                "可取回帳面價值的 70 %。"
+                            )
+                            : session.language.text(
+                                "Takes it off the track and brings 70 % of what is left of its cost on the books.",
+                                "會先把它移出軌道，可取回帳面價值的 70 %。"
+                            ))
+                    }
+                }
                 if train.position == nil {
                     Stepper(value: Binding(get: { train.cars }, set: { session.setSelectedTrainCars($0) }), in: Train.minimumCars...Train.maximumCars) {
                         Text(train.carsText(in: session.language))
