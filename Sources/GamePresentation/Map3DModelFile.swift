@@ -30,6 +30,9 @@ public struct Map3DModelFile: Sendable {
         case noProvenance
         case unknownFlags(UInt32)
         case notFinite
+        /// No triangle with any area: nothing to draw, and no size to
+        /// scale or place it by.
+        case nothingToDraw
     }
 
     public static let version = 1
@@ -87,6 +90,7 @@ public struct Map3DModelFile: Sendable {
                 high = Map3DPoint(max(high.x, point.x), max(high.y, point.y), max(high.z, point.z))
             }
         }
+        guard !vertices.isEmpty else { throw .nothingToDraw }
         model = Map3DModelPack.Model(name: name, vertices: vertices, minimum: low, maximum: high)
         self.provenance = provenance
     }

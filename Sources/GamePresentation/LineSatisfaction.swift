@@ -29,7 +29,7 @@ public struct LineSatisfaction: Hashable, Sendable {
         public func title(in language: DisplayLanguage) -> String {
             switch self {
             case .waiting: language.text("Waiting", "候車")
-            case .crowding: language.text("Room on board", "車上擁擠")
+            case .crowding: language.text("Room on board", "車上空間")
             case .punctuality: language.text("On time", "準點")
             }
         }
