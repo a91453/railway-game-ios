@@ -142,7 +142,7 @@ struct Map3DPreviewScreen: View {
             }
             .padding()
         }
-        .task(id: Map3DSceneKey(world: session.world, hasHeights: session.heights != nil, focus: focus, palette: linePalette)) {
+        .task(id: Map3DSceneKey(world: session.world, hasHeights: session.heights != nil, hasRailways: session.railways != nil, focus: focus, palette: linePalette)) {
             let built = await Map3DSceneCache.shared.scene(for: session, focus: focus, palette: linePalette)
             // A newer world or the heights file started another build: a
             // cancelled one may finish after it and must not replace it.
@@ -245,12 +245,15 @@ final class Map3DSceneCache {
     }
 
     private func task(for session: GameSession, focus: (x: Double, y: Double)?, palette: LinePalette) -> Task<Map3DScene, Never> {
-        let key = Map3DSceneKey(world: session.world, hasHeights: session.heights != nil, focus: focus, palette: palette)
+        let key = Map3DSceneKey(world: session.world, hasHeights: session.heights != nil, hasRailways: session.railways != nil, focus: focus, palette: palette)
         if key == self.key, game === session, let building { return building }
         let world = session.world
         // The ground the world has not read yet, from the heights file,
         // so the blocks it has read do not stand up as cliffs.
         let heights = session.heights
+        // Decision 326: the real railways, for where the real track has no
+        // overhead line.
+        let railways = world.geoAnchor == nil ? nil : session.railways
         // Decision 234: on a real-world map, the base map's roads, rivers
         // and cover, read from the file the 2D map draws.
         let tiles = world.geoAnchor == nil ? nil : BaseMapFiles.tiles
@@ -260,7 +263,7 @@ final class Map3DSceneCache {
         let task = Task.detached(priority: .userInitiated) {
             let baseMap = tiles.flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }.flatMap { try? BaseMapTiles(data: $0) }
             return Map3DScene(world: world, focus: focus, baseMap: baseMap, cityTiles: city.map(CityTileArea.areas(in:)) ?? [],
-                              heights: heights, lineBands: Map3DLineBands(world: world, palette: palette))
+                              heights: heights, lineBands: Map3DLineBands(world: world, palette: palette), railways: railways)
         }
         self.key = key
         game = session
@@ -275,9 +278,11 @@ final class Map3DSceneCache {
 /// later: and the place it is built round, to a few kilometres; decision
 /// 314: and the lines, whose colour bands run beside the track, in the
 /// player's palette, unless no `palette` is given (the 2D map's seeded
-/// streets, which have no bands).
+/// streets, which have no bands); decision 326: and the real railways,
+/// which can arrive after the game opened too.
 struct Map3DSceneKey: Hashable {
     let hasHeights: Bool
+    let hasRailways: Bool
     let focus: Map3DScene.FocusArea?
     let edges: Int
     let lastEdge: TrackEdgeID?
@@ -287,8 +292,9 @@ struct Map3DSceneKey: Hashable {
     let lines: Map3DLineBands.Signature?
     let palette: LinePalette?
 
-    init(world: GameWorld, hasHeights: Bool, focus: (x: Double, y: Double)? = nil, palette: LinePalette? = nil) {
+    init(world: GameWorld, hasHeights: Bool, hasRailways: Bool = false, focus: (x: Double, y: Double)? = nil, palette: LinePalette? = nil) {
         self.hasHeights = hasHeights
+        self.hasRailways = hasRailways
         self.focus = focus.map { Map3DScene.FocusArea(x: $0.x, y: $0.y) }
         edges = world.network.edges.count
         lastEdge = world.network.edges.last?.id
