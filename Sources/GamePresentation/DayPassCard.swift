@@ -52,7 +52,8 @@ public struct DayPassCard: Hashable, Sendable {
     }
 
     /// Today's expected sales and what they bring against selling none,
-    /// such as "Today about 420 sold, +$ 1,260 more than their fares".
+    /// such as "Today about 48 sold: -$ 96 against what their trips would
+    /// have paid, and 0 extra rides."
     public func todayText(in language: DisplayLanguage) -> String? {
         guard price != nil, isAvailable else { return nil }
         guard today.sold > 0 else {
