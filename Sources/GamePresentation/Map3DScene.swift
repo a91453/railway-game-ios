@@ -104,22 +104,47 @@ public struct Map3DScene: Sendable {
 
     /// The part of `world` a scene covers and its origin (world units):
     /// what is built and ``margin`` round it, at most ``reach`` each way
-    /// from its middle; with nothing built, round `focus` or the map's
-    /// middle.
+    /// from its middle; with nothing built, round the map's middle.
+    /// Decision 313, later (2026-10-21, the owner's iPhone: the high-speed
+    /// demo's 3D map opened over Sun Moon Lake, a new real-world game's
+    /// over the mountains, the middle of what is built or of the whole
+    /// island): with `focus`, the point the 2D map looked at (kept within
+    /// the map), the middle, and what is built and the focus with
+    /// ``margin`` round them, at most ``reach`` each way from it.
     static func frame(world: GameWorld, focus: (x: Double, y: Double)?) -> (region: WorldRegion, originX: Double, originY: Double) {
         let metre = Double(WorldCoordinate.unitsPerMetre)
         let mapRegion = WorldRegion(bounds: world.bounds)
         let built = WorldRegion.built(in: world)
-        let middle = built.map { (x: ($0.minX + $0.maxX) / 2, y: ($0.minY + $0.maxY) / 2) }
-            ?? focus ?? (x: (mapRegion.minX + mapRegion.maxX) / 2, y: (mapRegion.minY + mapRegion.maxY) / 2)
+        let focus = focus.map { (x: min(max($0.x, mapRegion.minX), mapRegion.maxX), y: min(max($0.y, mapRegion.minY), mapRegion.maxY)) }
+        let middle = focus ?? built.map { (x: ($0.minX + $0.maxX) / 2, y: ($0.minY + $0.maxY) / 2) }
+            ?? (x: (mapRegion.minX + mapRegion.maxX) / 2, y: (mapRegion.minY + mapRegion.maxY) / 2)
         let reach = Self.reach * metre, margin = Self.margin * metre
-        let wanted = built.map { WorldRegion(minX: $0.minX - margin, minY: $0.minY - margin, maxX: $0.maxX + margin, maxY: $0.maxY + margin) }
-            ?? WorldRegion(minX: middle.x - margin, minY: middle.y - margin, maxX: middle.x + margin, maxY: middle.y + margin)
+        var shown = built ?? WorldRegion(minX: middle.x, minY: middle.y, maxX: middle.x, maxY: middle.y)
+        if focus != nil {
+            shown = WorldRegion(minX: min(shown.minX, middle.x), minY: min(shown.minY, middle.y),
+                                maxX: max(shown.maxX, middle.x), maxY: max(shown.maxY, middle.y))
+        }
+        let wanted = WorldRegion(minX: shown.minX - margin, minY: shown.minY - margin, maxX: shown.maxX + margin, maxY: shown.maxY + margin)
         let region = WorldRegion(
             minX: max(mapRegion.minX, max(wanted.minX, middle.x - reach)), minY: max(mapRegion.minY, max(wanted.minY, middle.y - reach)),
             maxX: min(mapRegion.maxX, min(wanted.maxX, middle.x + reach)), maxY: min(mapRegion.maxY, min(wanted.maxY, middle.y + reach))
         )
         return (region, middle.x.rounded(), middle.y.rounded())
+    }
+
+    /// Decision 313, later: which square of half ``reach`` a scene's focus
+    /// falls in. A scene built round a focus in the same square still holds
+    /// ``reach``'s half round any point of it, so the 3D map opens on a
+    /// scene already built; a focus further off builds anew.
+    public struct FocusArea: Hashable, Sendable {
+        public let column: Int64
+        public let row: Int64
+
+        public init(x: Double, y: Double) {
+            let side = Map3DScene.reach / 2 * Double(WorldCoordinate.unitsPerMetre)
+            column = Int64((x / side).rounded(.down))
+            row = Int64((y / side).rounded(.down))
+        }
     }
 
     /// Decision 270: the seeded streets of `world` alone, as the scene
@@ -139,8 +164,9 @@ public struct Map3DScene: Sendable {
     }
 
     /// The scene of `world`: what is built and ``margin`` round it, at most
-    /// ``reach`` each way from its middle; on a map with nothing built, the
-    /// ``reach`` round `focus` (world units), or round the map's middle.
+    /// ``reach`` each way from its middle; on a map with nothing built,
+    /// round the map's middle. With `focus` (world units, the point the 2D
+    /// map looked at), round it instead (decision 313, later).
     /// On a real-world map, `baseMap`'s ground and `cityTiles`' buildings,
     /// and `heights`' ground where the world has not read its own.
     public init(world: GameWorld, snapshot: RailwaySnapshot? = nil, skyline: CitySkyline? = nil, focus: (x: Double, y: Double)? = nil,

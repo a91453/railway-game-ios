@@ -13925,6 +13925,40 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - **VERIFIED**（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`Map3DHandoffTests`、`Map3DTests`、`Map3DCompassTests` 通過；改到的 App 檔通過 `swiftc -parse`。
 - **UNVERIFIED**：App 的編譯（`ios-build.yml`）；兩個交接的 UI 測試（full lane，PR 用 `only_testing` 跑）；實機的手感與誤觸（TestFlight，HANDOFF §7.5）。
 
+**後來**（2026-10-21，3D 開在 2D 看的地方）：作者實機（iPhone 17 Pro）回報兩個 3D 開錯地方的情形。高鐵示範從台北開 3D，卻開在日月潭附近；實景新遊戲還沒蓋東西，3D 開在中央山脈。原因是場景的中心取「蓋好的東西的正中間」：示範的台北到左營線，正中間在島的中部。什麼都沒蓋的時候取整張地圖的正中間，而 3D 按鈕與預先蓋場景都沒有把 2D 看的地方交給場景。遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 派工，3D session_01Y25x9NJSKmAuP1M1K3Sf3C 做。存檔、golden、GameCore 不動，沒有新的玩家文字。
+
+- **規則**（`Map3DScene.frame(world:focus:)`，GamePresentation）：
+  - 有 focus（2D 看的點）時，先把它擋在地圖內，當作場景的原點。
+  - 範圍是（蓋好的東西 ∪ focus）外加 `margin`，再和 focus 前後左右各 `reach`（6 km）、整張地圖取交集。所以 focus 附近蓋好的東西照舊在場景裡，遠處的不畫。
+  - 沒有 focus（設定裡的 3D 預覽）照舊。
+- **App**：
+  - 3D 按鈕把 2D 相機的中心交給 3D（`ContentView` 的 `map3DOpenedAt`），3D 的相機從那裡看下去，距離照舊是整個場景的距離。
+  - 雙指交接本來就交出雙指的點（`Map3DHandoff.Plan`）。
+  - 預先蓋場景用的也是 2D 相機的中心。
+  - 場景的快取鍵 `Map3DSceneKey` 多了 focus 所在的方格（`Map3DScene.FocusArea`，邊長 `reach` 的一半，3 km）。2D 在同一格裡移動，開 3D 時用的是已經蓋好的場景；移到別格就重蓋。
+  - 回 2D 照舊回到 3D 看的地方（本決策第 2 點的「2D」鈕）。
+- **測試**：Linux 的 `Map3DOpenHereTests`：
+  - 高鐵示範（台北與左營各一段線）從台北開，原點就在台北，以前離台北超過 100 km。
+  - 實景新遊戲什麼都沒蓋，原點就在 focus。
+  - focus 在地圖外會擋回地圖內。
+  - focus 附近蓋好的東西仍在場景裡。
+  - `FocusArea` 同格相等。
+- **副作用**：非實景地圖的種子街道（決策 270）給 2D 用時算的是沒有 focus 的範圍。3D 從某處開時，範圍可能不同，街道只在兩個範圍的邊上可能不一樣（街道排在世界的格子上，和原點無關）。
+- **量測**：場景大小的上限不變（前後左右各 `reach`）。高鐵示範從台北開的場景比以前小：以前要涵蓋兩端，以 `reach` 截掉的是台北那一端。三角形與 draw 數不會超過以前的上限。
+
+**五方**：
+- 玩家：按 3D 或雙指拉進 3D，看到的就是剛剛 2D 看的地方，不會跑到山裡或湖邊。
+- 鐵道迷：從台北車站開 3D 就看到台北車站附近的真實路網與建物；和資料來源無關。
+- 開發：規則在 GamePresentation，有 Linux 測試；App 只多傳一個點，快取鍵多一格，GameCore、存檔、golden 都不動。
+- 美術：3D 一打開就是 2D 的同一個地方，不必再找；畫面與材質不變。
+- 音樂：無。
+
+**沒有選的做法**：
+- 只在什麼都沒蓋時用 focus（原本的寫法）：高鐵示範這種蓋了一條縱貫線的世界照舊開在中間。
+- 不擋 focus 在地圖內：2D 可以捲到地圖外一點，原點落在沒有地面的地方。
+- 快取鍵用 focus 的原值：2D 每動一點就重蓋場景，預先蓋好的場景白費。
+- 方格邊長用 `reach`（6 km）：同一格裡的 focus 最遠可能只剩 0 km 的場景，打開 3D 就是邊。
+
 ### 315. 收購真實支線（設計）：實景地圖上把一條真實支線連軌道、車站、列車與真實班次買下來
 
 2026-10-21。NEXT_PRIORITIES §19 第 9 名、§20.1，作者 2026-10-21（「收購整條線……會讓玩法變有趣嗎」→「好 排進去」）。遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 派工給 session_017RbiiqGJTsLWDSz9q4Dukd。號碼依 #231：main 最大 313（314 保留給 3D 車頭標籤與色帶），取 315。分兩步：**第 1 步只有這一頁設計**（只改文件）；**第 2 步照設計實作**，升存檔 66，等第 1 步合併、規劃 session 給 GameCore 名額後才 push。golden schema 與 replay 兩步都不動。

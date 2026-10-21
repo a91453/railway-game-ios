@@ -1410,7 +1410,7 @@ struct MapView: View {
             try? await Task.sleep(for: .seconds(Map3DHandoff.buildsAfterResting))
             guard !Task.isCancelled, !screen.showsMap3D,
                   let now = camera, Map3DHandoff.buildsAhead(referenceSize: now.referenceSize) else { return }
-            Map3DSceneCache.shared.prepare(for: session)
+            Map3DSceneCache.shared.prepare(for: session, focus: (x: now.centerX, y: now.centerY))
         }
     }
 
@@ -1782,6 +1782,8 @@ struct MapView: View {
     private func map3DButton(compactReach: CGFloat?) -> some View {
         Button {
             screen.map3DHandoff = nil
+            // Decision 313, later: over the place the 2D map shows.
+            screen.map3DOpenedAt = camera.map { Map3DHandoff.Plan(x: $0.centerX, y: $0.centerY, referenceSize: $0.referenceSize) }
             screen.showsMap3D = true
         } label: {
             Image("Glyph3DMap")
