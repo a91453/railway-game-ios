@@ -167,14 +167,14 @@ private struct FareFloatLabel: View {
     }
 }
 
-/// Decision 276: a trip's result stamped where it ended, "Full" in the
-/// error colour or "Plenty of seats" in the warning colour, with the
-/// map's one- or three-person crowding glyph (art style: more people,
-/// more crowded), one a station (``TripStampBoard``). Above the fares'
-/// "+$12", so both read. Each pops in, holds and goes up and out within
-/// 2 s; with Reduce Motion it only fades. At 600× and faster only the
-/// followed train's and the three stations nearest the middle of the map.
-/// Takes no touches; VoiceOver reads a line's fit in its card.
+/// Decision 276: a trip stamped "Train full" where it ended, in the error
+/// colour with the map's three-person crowding glyph (art style: more
+/// people, more crowded), one a station (``TripStampBoard``); since
+/// decision 310 no stamp for seats to spare. Above the fares' "+$12", so
+/// both read. Each pops in, holds and goes up and out within 2 s; with
+/// Reduce Motion it only fades. At 600× and faster only the followed
+/// train's and the three stations nearest the middle of the map. Takes no
+/// touches; VoiceOver reads a line's fit in its card.
 struct TripStampMarks: View {
     let session: GameSession
     let camera: PlanCamera
@@ -224,9 +224,9 @@ private struct TripStampLabel: View {
     @State private var gone = false
 
     var body: some View {
-        let colour = kind == .full ? Theme.error : Theme.warning
+        let colour = Theme.error
         HStack(spacing: 4) {
-            (kind == .full ? MapGlyph.full : MapGlyph.person).image
+            MapGlyph.full.image
                 .resizable()
                 .frame(width: 14, height: 14)
             Text(verbatim: kind.title(in: language))

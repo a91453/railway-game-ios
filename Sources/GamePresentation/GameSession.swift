@@ -631,7 +631,7 @@ public final class GameSession {
     /// map floats over them (``FareFloatBoard``); `nil` before any. Never
     /// saved.
     public internal(set) var farePulse: FarePulse?
-    /// Decision 276: the trips the last step ended full or roomy, which
+    /// Decision 276: the trips the last step ended full (decision 310), which
     /// the map stamps at the stations they ended at (``TripStampBoard``);
     /// `nil` before any. Never saved.
     public internal(set) var tripStampPulse: TripStampPulse?

@@ -29,10 +29,16 @@ struct MapLayerSheet: View {
                         Label("800m Catchment Area", systemImage: "circle.circle")
                     }
                     .accessibilityIdentifier("layer.catchmentRings")
+
+                    // Decision 310: the same switch as the quick strip's.
+                    Toggle(isOn: $layers.showsFaresAndStamps) {
+                        Label("Fares and Full Trains", systemImage: "dollarsign.circle")
+                    }
+                    .accessibilityIdentifier("layer.faresAndStamps")
                 } header: {
                     Text("Station Overlays")
                 } footer: {
-                    Text("Station catchment area shows the 800-metre walking reference area (~10 minutes walk).")
+                    Text("Station catchment area shows the 800-metre walking reference area (~10 minutes walk). Fares and full trains: the fare each station takes, and a stamp where a full train ends its trip.")
                 }
 
                 // The reference's "population and travel data" column of its

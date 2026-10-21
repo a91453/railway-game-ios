@@ -11833,6 +11833,8 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 **UI 測試**（交給 Codex）：章在 Linux 上已有邏輯測試；畫面只有 Simulator 看得到：開一條線跑到早上尖峰，車站上方出現「客滿」或「空位多」的章，2 秒後消失。
 
+**後來**（2026-10-21，決策 310）：地圖不再蓋「空位多」；列車的「客滿」改成「滿載」；快速圖層的「車資與章」可以把車資與章一起關掉。
+
 **第二個 PR：長按路線看旅程**（決策 220 第 8 點「沒有做的」的第一項）：
 7. **怎麼叫出來**：選取時在路線的軌道上（不是車站上）按住 0.45 秒，和長按車站（決策 119、220）是同一個手勢。
    - 選取那條路線、打開路線面板，地圖畫出這條路線的旅程（`GameSession.lineHeld(at:reach:)`、`holdLine(at:reach:)`）。
@@ -13598,6 +13600,35 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 閉塞關：M→A 這一段照表定 180 秒跑。閉塞開：這一段跑得比 180 秒短、比較早到 A。
 - 舊規則（只在號誌關時追回）下兩者相同，測試失敗。
 - 閉塞開時整批推進 10 分鐘與逐分推進相同。
+
+### 310. 地圖提示整理：不蓋「空位多」、列車的章改「滿載」、快速圖層的「車資與章」開關
+
+2026-10-21。作者同意遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 的排程（「照這樣做」，#231 04:58 與 04:59 的兩則），派工給 session_01GPnquCXT5GQzPfCztHj6Sz。號碼依工作登記 #231：main 到 306，307（甲線載入畫面）、308（追回後續）、309（派車錯開）已登記，取 310。GameCore、存檔版本、golden schema、SaveFixtures、ReplayFixtures 都不動。
+
+1. **不蓋「空位多」**（`TripStampKind`，`Sources/GamePresentation/TripStamp.swift`）：決策 276 的章只剩一種，列車最擠的時候滿載（決策 274 的 `TrainFit.tooSmall`，100% 以上）；不到的都不蓋，`TripStampKind.roomy` 刪掉。原因：離峰與深夜幾乎每一趟最擠也不到 35%，「空位多」反而是地圖上最常出現的章，和決策 276「跑得好時地圖保持安靜」相反。列車太大的資訊留在路線卡「營運狀況」的「列車太大」（決策 274）。地圖的一人圖示（`MapGlyph.person`）照舊用在車站的候車頁，只是不再用在章上。
+2. **列車的章改「滿載」**（英文 Train full）：「客滿」也是車站候車滿 4,000 人時的字（`StationOperations`、說明「車站客滿…」），兩個意思撞字，PLAYER_FEEDBACK 59.1 #6 玩家就混淆過。作者 2026-10-21：台灣不說「車滿」，所以用「滿載」。車站維持「客滿／滿了」，「擁擠」泡泡不動。String Catalog 裡「未能上車」的說明說的是列車，也改成「滿載列車」。
+3. **快速圖層的「車資與章」**（`MapQuickLayer.faresAndStamps`、`MapLayerPreferences.showsFaresAndStamps`，App 的 `@AppStorage("mapShowsFaresAndStamps")`，預設開）：快速圖層最後一格（「更多」之前），圖示 `dollarsign.circle`，英文 Fares。關掉時決策 256 的「+$12」（`FareFloatMarks`）與「滿載」章（`TripStampMarks`）都不畫；圖層清單的「車站圖層」多一列同一個開關（Fares and Full Trains／車資與章），兩邊讀同一個值。只是畫不畫：車資照收、錢包下的「+$」與路線卡照舊，`GameSession` 照樣算每一步的車資與章（便宜，不必為了關掉而改）。
+
+**參考**：參考庫沒有可移植的（決策 276 已查過：`Ci/` 只有一天的尖峰載客率；`Railway/train_loop_reference_clean/` 的到站橫幅沒有開關）。外部沒有查到要移植的；程式是本專案自己寫的。
+
+**五方**：
+- 玩家：地圖上的章只在真的要加車時出現，一看到就知道是列車太擠，不會和車站客滿搞混；嫌畫面忙可以一鍵把車資和章都關掉。
+- 鐵道迷：真實鐵路離峰空車是正常的，不必提醒；台灣說列車「滿載」、車站「客滿」，各用各的字。
+- 開發：只動 GamePresentation 與 App；開關照其他圖層放在 `MapLayerPreferences`，有 Linux 測試（`TripStampTests`、`MapQuickLayersTests`）；GameCore、存檔、golden、replay 不動。
+- 美術：章只剩一種顏色（`Theme.error`）與三人圖示，快速圖層多一格同樣大小的按鈕，沒有新圖。
+- 音樂：無。
+
+**沒有採用**（預覽寫在 PR）：
+- 「空位多」只在尖峰時段蓋：尖峰的長編組空車少見，規則多一個時段判斷，資訊在路線卡已經有了。
+- 列車的章用「車滿」：作者說台灣不這樣說。
+- 車資與章分成兩個開關：快速圖層放不下兩格，玩家要的是「地圖安靜一點」，一個就夠。
+- 開關放進設定頁：其他地圖上畫不畫的開關都在圖層，放在一起才找得到。
+
+**驗證**：`TripStampTests`（不到滿載的不蓋、四節車早上的頭四趟沒有章、一節車早上蓋「滿載」、字是「滿載」／Train full）、`MapQuickLayersTests`（預設開、按一下只關這一項、按兩下回原樣、按鈕名稱）。App 的畫面交給 `ios-build.yml`。
+
+**UI 測試**（交給 Codex）：示範地圖上點快速圖層的「車資與章」，按鈕不再是選取狀態；跑到早上尖峰，車站上方沒有「+$」也沒有「滿載」；再點一次又出現。
+
+**下一步**：實機（TestFlight）看快速圖層多一格之後，iPhone 直拿時和「快轉到早上」、下一步晶片排在一起放不放得下。
 
 ## 目前規則摘要
 
