@@ -616,6 +616,10 @@ extension GameWorld {
         fileprivate let bodies: [TrackEdgeID: [(place: Int, span: TrackSpan)]]
         /// The places of placed trains whose reservation is out of order.
         fileprivate let unordered: [Int]
+        /// By a following train: the trains its claim does not bind (see
+        /// ``binds(_:_:)``), because they hold or foul the track a train
+        /// it follows needs.
+        fileprivate var released: [TrainID: Set<TrainID>] = [:]
 
         /// Whether the train at `place` is placed, is not `id` and, given
         /// `among`, is one of those.
@@ -771,9 +775,12 @@ extension GameWorld {
         /// of its route (it is the train ahead), or `id` follows a train
         /// too and has the lower ID. Two following trains whose routes
         /// meet would otherwise each wait for the track the other waits
-        /// for, and neither ever go on; the lower goes first.
+        /// for, and neither ever go on; the lower goes first. Nor
+        /// (decision 308) when `id` holds or fouls track a train it
+        /// follows needs (one holding some of its route): the train
+        /// ahead waits for `id`, so `id` must go on first.
         func binds(_ claim: Claim, _ id: TrainID) -> Bool {
-            !holdsAny(of: claim, id) && !(claims[id] != nil && id < claim.train)
+            !holdsAny(of: claim, id) && !(claims[id] != nil && id < claim.train) && released[claim.train]?.contains(id) != true
         }
 
         /// Whether `claim`'s train waits for `resource`: it is on its route
@@ -957,6 +964,18 @@ extension GameWorld {
             ids: holders.ids, held: held, claims: claims, tracks: tracks, fouling: fouling, owners: owners, runs: runs, foulingByEdge: foulingByEdge,
             bodies: bodies, unordered: unordered
         )
+        var released: [TrainID: Set<TrainID>] = [:]
+        for (place, train) in trains.enumerated() {
+            guard let claim = claims[train.id] else { continue }
+            for (ahead, isAhead) in holders.holding(claim.cover, except: train.id, fouling: false, in: network).enumerated() where isAhead {
+                let leader = trains[ahead]
+                let cover = claims[leader.id]?.cover ?? envelopeCover(of: leader)
+                for (other, blocks) in holders.holding(cover, except: leader.id, fouling: true, in: network).enumerated() where blocks && other != place {
+                    released[train.id, default: []].insert(trains[other].id)
+                }
+            }
+        }
+        holders.released = released
         return holders
     }
 
@@ -1476,19 +1495,24 @@ extension GameWorld {
         for stretch in bodyStretches(of: train) + routeStretches(of: train).stretches where ways.contains(stretch.traversal.reversed) {
             return false
         }
-        // Where it stops for its call: for a train following another
-        // (decision 212), there and not where its authority ends.
+        guard !stopsOn(route, train) else {
+            return !train.timetable[stop].reverses && train.call(after: stop, cycle: cycle) != nil
+        }
+        return true
+    }
+
+    /// Whether `train`, travelling to a call, stops for it on track `route`
+    /// covers (or, if `fouling`, fouls it there): for a train following
+    /// another (decision 212), where it stops for its call, not where its
+    /// authority ends.
+    func stopsOn(_ route: TrackCover, _ train: Train, fouling: Bool = true) -> Bool {
         var arrived = train
         arrived.reservation = []
         let end = travelling(arrived, distance: routeLength(of: train))
         arrived.position = end.position
         arrived.movement.cursor = end.cursor
-        var standing = Set(occupied(arrived))
-        standing.formUnion(foulingNodes(covering: bodyStretches(of: arrived)))
-        guard !standing.contains(where: route.contains) else {
-            return !train.timetable[stop].reverses && train.call(after: stop, cycle: cycle) != nil
-        }
-        return true
+        return occupied(arrived).contains(where: route.contains)
+            || fouling && foulingNodes(covering: bodyStretches(of: arrived)).contains(where: route.contains)
     }
 
     // MARK: - The resources of a stretch
