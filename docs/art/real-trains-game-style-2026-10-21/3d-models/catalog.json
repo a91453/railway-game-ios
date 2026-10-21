@@ -1,398 +1,182 @@
 [
   {
     "id": "thsr-700t",
-    "name": "THSR 700T High-Speed Train (Kitbashed + Procedural)",
-    "category": "train",
-    "triangles": 1352,
-    "colors": 5,
-    "paintTriangles": 35,
-    "glowingTriangles": 132,
-    "lengthMeters": 17.6,
-    "glbBytes": 265452,
-    "m3dBytes": 71136,
-    "glbSha256": "0f9fff00d3d8250b3103896f542ef33ab457c5e636664ce30102514c2cda7d3f",
-    "m3dSha256": "fb5a8ef797888b509b2a34afc75859950874f1a3645a399c88118cbb9858a0ab",
-    "calibratedFromReferences": [
-      {
-        "referenceFile": "700t.bin",
-        "referenceSha256": "bc35a003cb8f1f1dcbb022e3cd246154f7b34c3af6f271e7fb1e7698f5b7c850",
-        "referenceBytes": 959880
-      }
-    ]
+    "name": "THSR 700T High-Speed Train (Duckbill Aerodynamic Cab)",
+    "triCount": 509,
+    "glowCount": 40,
+    "glbBytes": 133616,
+    "m3dBytes": 26632,
+    "glbSha256": "f92e1962e7d154a9b4d25e9460117fd5bd4c9182dded74ac3d9ba70c9e06b321",
+    "m3dSha256": "b1661d035300ed86e718afb258e9d3092b982eb946e3f613844a0e9cdbf8c44c"
   },
   {
     "id": "tra-emu3000",
-    "name": "TRA EMU3000 Tze-Chiang Express (Kitbashed + Procedural)",
-    "category": "train",
-    "triangles": 1208,
-    "colors": 6,
-    "paintTriangles": 326,
-    "glowingTriangles": 108,
-    "lengthMeters": 16.8,
-    "glbBytes": 246072,
-    "m3dBytes": 63668,
-    "glbSha256": "16d9548d34f9dad7c2f3b38c2d5a018d0aa13ff2b25ff47987ed178c796a96aa",
-    "m3dSha256": "21eb863e98d9a72022bb38bef148ae1603c0685472a253c5ea5f0021066c1c3c",
-    "calibratedFromReferences": [
-      {
-        "referenceFile": "emu3000.bin",
-        "referenceSha256": "f4a5ca66cf118162dab12c2ebfe87f59dd5f04f4f2d2c0b0ae488ab7256ecc86",
-        "referenceBytes": 960000
-      }
-    ]
+    "name": "TRA EMU3000 Tze-Chiang Express (Hitachi Minimalist Chisel & Black Mask)",
+    "triCount": 504,
+    "glowCount": 42,
+    "glbBytes": 135932,
+    "m3dBytes": 26372,
+    "glbSha256": "3d3214629ba02f62956d481af4a9399526b4a525e045b6e3d53fdba152b56b0a",
+    "m3dSha256": "e62a8caa0c86742bf8b1125e77b1ac7793bc3f12f4e92af29f60feab744d2178"
   },
   {
     "id": "tra-puyuma",
-    "name": "TRA TEMU2000 Puyuma Tilting Express (Kitbashed + Procedural)",
-    "category": "train",
-    "triangles": 1208,
-    "colors": 5,
-    "paintTriangles": 32,
-    "glowingTriangles": 108,
-    "lengthMeters": 16.6,
-    "glbBytes": 248768,
-    "m3dBytes": 63676,
-    "glbSha256": "a38d6249dcbb92d5276d663b54c46bb2117d431ef22bed96f24cd2f38667c695",
-    "m3dSha256": "a1dbc6fc7cb11e1365ed8a6dc5e413524b78d8af8c4563047c2de9954ffef0c8",
-    "calibratedFromReferences": [
-      {
-        "referenceFile": "temu2000.bin",
-        "referenceSha256": "5b3b9db90d34b1efe49446eb0b9b01321601afeeeb1b5444cedce3a270c5045d",
-        "referenceBytes": 960000
-      }
-    ]
+    "name": "TRA TEMU2000 Puyuma Tilting Express (Streamlined Bullet & Red Mask)",
+    "triCount": 504,
+    "glowCount": 42,
+    "glbBytes": 138640,
+    "m3dBytes": 26372,
+    "glbSha256": "fef9ec188868be96bae62f61ca6eff76a3d259906851787e88c0d1cdf91d4143",
+    "m3dSha256": "f68fbdd7dcdeb131c044fee8f5ee99d8a82038d48ea6ec93b9ad6230f8abb1db"
   },
   {
     "id": "tra-emu900",
-    "name": "TRA EMU900 Smiling Commuter Train (Kitbashed + Procedural)",
-    "category": "train",
-    "triangles": 1052,
-    "colors": 6,
-    "paintTriangles": 357,
-    "glowingTriangles": 96,
-    "lengthMeters": 15.8,
-    "glbBytes": 230388,
-    "m3dBytes": 55564,
-    "glbSha256": "74200d785aeae644267ff3374859fa83b8e2f944995b7372afc0d6e6ebcc6453",
-    "m3dSha256": "2f4846cc304805a3e6faa4e48d9b1185045eadc8b93801342f608cf94367147c",
-    "calibratedFromReferences": [
-      {
-        "referenceFile": "emu800-mid.bin",
-        "referenceSha256": "8aed244389748813feb6db6626c6b5cf1f355d22aaa28071675c159b38d0d841",
-        "referenceBytes": 925680
-      }
-    ]
+    "name": "TRA EMU900 Smiling Commuter Train (Black Mask & Neon-Green Smile)",
+    "triCount": 508,
+    "glowCount": 46,
+    "glbBytes": 145192,
+    "m3dBytes": 26580,
+    "glbSha256": "45eba8bc095103549322164580c9e51d0319b2427bbef497d5e60c9101e16222",
+    "m3dSha256": "ada1e8ca6b8e6035424be97b8c60bc520d3bc6f86b2783c2c3f1ff081380bf04"
   },
   {
     "id": "tra-emu800",
-    "name": "TRA EMU800 Smiling Commuter Train (Kitbashed + Procedural)",
-    "category": "train",
-    "triangles": 1052,
-    "colors": 6,
-    "paintTriangles": 218,
-    "glowingTriangles": 96,
-    "lengthMeters": 16,
-    "glbBytes": 222108,
-    "m3dBytes": 55556,
-    "glbSha256": "c4dec1df00517cfef67248e8d71c5aac8725f7106efcc9a431eb7efeff13d511",
-    "m3dSha256": "0019165709fe6a1893a6c095a3d006fbcb9bea32fdd0bc8401feb9c71a5c884c",
-    "calibratedFromReferences": [
-      {
-        "referenceFile": "emu800.bin",
-        "referenceSha256": "fb1df11a7c64d7dd5731283de2a805438857437a0f6caf8b7d107a46058ee558",
-        "referenceBytes": 959760
-      }
-    ]
+    "name": "TRA EMU800 Commuter Train (Pointed Yellow Beak Smile & Blue Hood)",
+    "triCount": 512,
+    "glowCount": 46,
+    "glbBytes": 137516,
+    "m3dBytes": 26788,
+    "glbSha256": "326d8b7a03f9ad911622de14686e356d60dde6e94746c9856c25d908c66b1f21",
+    "m3dSha256": "fc85526d61d5b22f2c2fdeafa6e2878c6145924ba3128ae7768198e975333f98"
   },
   {
     "id": "tra-chukuang",
-    "name": "TRA Chu-Kuang Express E200 + Coach Hybrid (Kitbashed + Procedural)",
-    "category": "train",
-    "triangles": 1124,
-    "colors": 6,
-    "paintTriangles": 0,
-    "glowingTriangles": 132,
-    "lengthMeters": 16.4,
-    "glbBytes": 239176,
-    "m3dBytes": 59600,
-    "glbSha256": "ac5f805fa7293cd323305755d80dd5832f493c86e7068bcd17c97609642c25f3",
-    "m3dSha256": "1af4cf0147363e0608ea2df4056796795f897451185a42b101ce204845d027fe",
-    "calibratedFromReferences": [
-      {
-        "referenceFile": "e200.bin",
-        "referenceSha256": "ff831fc43a53f2816d737b4fee93ac447d696d19bb1ab4f6f8cea5622e74b7da",
-        "referenceBytes": 960000
-      },
-      {
-        "referenceFile": "juguang.bin",
-        "referenceSha256": "a9c5f0eaa0b24f7055b5ac74195d9160deef130d385d932f2cc01c01c626cbe3",
-        "referenceBytes": 960000
-      }
-    ]
+    "name": "TRA Chu-Kuang E200 Electric Locomotive + Express Coach",
+    "triCount": 524,
+    "glowCount": 46,
+    "glbBytes": 145168,
+    "m3dBytes": 27412,
+    "glbSha256": "27f9994daceed65fffc2502f302f1c41c919c30e26ae69ea0c6894b7121ef6c3",
+    "m3dSha256": "9228e24370699394ddad7bf7567c67159b9e07b418a9834b9f74493c55361a09"
   },
   {
     "id": "tra-blue-train",
-    "name": "TRA Breezy Blue Heritage Train R100 + Coach (Kitbashed + Procedural)",
-    "category": "train",
-    "triangles": 1280,
-    "colors": 5,
-    "paintTriangles": 0,
-    "glowingTriangles": 144,
-    "lengthMeters": 16.2,
-    "glbBytes": 272652,
-    "m3dBytes": 67728,
-    "glbSha256": "3e4af468ad4d5883695d9c9711ce7dc04b4eee1120bb276d52b3693368d97ca8",
-    "m3dSha256": "a4b7b54de420626dfa42ccf8783169f6e6841554c286115298ca203252f2940a",
-    "calibratedFromReferences": [
-      {
-        "referenceFile": "blue.bin",
-        "referenceSha256": "02fe7c5b4780e3ad5416479389fd290fe45dae2a8666990c22de98e136a4e1d7",
-        "referenceBytes": 946920
-      },
-      {
-        "referenceFile": "bluecoach.bin",
-        "referenceSha256": "d28fe359fc73ecea358a835fef25d538e5652c1679423fa3e351a78a17ff7db9",
-        "referenceBytes": 959760
-      }
-    ]
+    "name": "TRA Breezy Blue R100 Diesel-Electric Locomotive + Heritage Coach",
+    "triCount": 508,
+    "glowCount": 42,
+    "glbBytes": 151772,
+    "m3dBytes": 26580,
+    "glbSha256": "940ec5408191feb521d111f78e7dd13f8aeba4ced37ee9f92425c30105a3fd9f",
+    "m3dSha256": "381235f3b292f4ee4b2dc0050875442c3b5558ea3804041e0fab0447d7f7b3d6"
   },
   {
     "id": "taipei-mrt-c381",
-    "name": "Taipei Metro C381 High-Capacity Train (Kitbashed + Procedural)",
-    "category": "train",
-    "triangles": 1052,
-    "colors": 6,
-    "paintTriangles": 381,
-    "glowingTriangles": 96,
-    "lengthMeters": 16.2,
-    "glbBytes": 232684,
-    "m3dBytes": 55576,
-    "glbSha256": "640e85e2769b3ca555ed740d3896835c379b6d5611610a69dfcce5e31b559b37",
-    "m3dSha256": "1773360426f9504a9f8b22193d3ce06d72ac8b24ca01d3a3b6d4112ab79e561c",
-    "calibratedFromReferences": [
-      {
-        "referenceFile": "c381.bin",
-        "referenceSha256": "44316b23e40818e8bbd87b5558e806e7d87667d1cef1f19b8bca15814c9b8061",
-        "referenceBytes": 960000
-      }
-    ]
+    "name": "Taipei MRT C381 High-Capacity Metro (Angled Flat Rake & Blue Stripe)",
+    "triCount": 508,
+    "glowCount": 46,
+    "glbBytes": 147508,
+    "m3dBytes": 26580,
+    "glbSha256": "d0f17779761e090fc6d38dda8bf83f5a98d172dbf0a16249bc6b2020b1818944",
+    "m3dSha256": "eef55f8f95da10e7524fe68c138f31bc004d19b653fb512c75d012b67a061f3d"
   },
   {
     "id": "mrt-wenhu",
-    "name": "Taipei Metro Wenhu Line Medium-Capacity APM (Kitbashed + Procedural)",
-    "category": "train",
-    "triangles": 1172,
-    "colors": 6,
-    "paintTriangles": 470,
-    "glowingTriangles": 72,
-    "lengthMeters": 13.4,
-    "glbBytes": 255344,
-    "m3dBytes": 61812,
-    "glbSha256": "d9f7adbb1d76c0e2bf1601c6688ca184bfc2b6d29150a8149b6a3b0872562317",
-    "m3dSha256": "20706c713a339ca0788e335a0386b3595b3caaa35934f86ee9e53c5930a3e1bc",
-    "calibratedFromReferences": [
-      {
-        "referenceFile": "wenhu.bin",
-        "referenceSha256": "f0eb26d03fb9eb63c79e2e6dfc84683d0e498fa689b1341d29ae2121fc707c66",
-        "referenceBytes": 960000
-      }
-    ]
+    "name": "Taipei Metro Wenhu Line APM (Rubber-Tired People Mover)",
+    "triCount": 500,
+    "glowCount": 38,
+    "glbBytes": 150152,
+    "m3dBytes": 26164,
+    "glbSha256": "767d4c1ce841cf0d671f986dd4b4e1a927f7d7dc15b7120215fb10765b75b102",
+    "m3dSha256": "c26f8c4d3183b8cb1ce845e44fab6489add7937e9f1867407feef41a0c6c475f"
   },
   {
     "id": "lrt-kaohsiung",
-    "name": "Kaohsiung Circular Light Rail CAF Tram (Kitbashed + Procedural)",
-    "category": "train",
-    "triangles": 1184,
-    "colors": 6,
-    "paintTriangles": 412,
-    "glowingTriangles": 72,
-    "lengthMeters": 15.6,
-    "glbBytes": 255452,
-    "m3dBytes": 62748,
-    "glbSha256": "25827df8cb34c81ab5f2c674ebf079515d34e0f27f499fc2de53816de29b355f",
-    "m3dSha256": "9ee489ec1921f6f2cf4b8dc7623bd5272880fa0058bc9936a35ff7ba6e28c6ff",
-    "calibratedFromReferences": [
-      {
-        "referenceFile": "caf-section-0.bin",
-        "referenceSha256": "65c3799f5d5bb4ab655fe51e50f5b1891b0d2744f54bd29841310fe8c1300d46",
-        "referenceBytes": 300240
-      },
-      {
-        "referenceFile": "caf-section-2.bin",
-        "referenceSha256": "8786d0ae9b634a48e9779d69030e8306fd5f4d0fe4ad43eb330a8920c225ba38",
-        "referenceBytes": 183840
-      }
-    ]
+    "name": "Kaohsiung Circular Light Rail (Low-Floor Tram Aerodynamic Wedge)",
+    "triCount": 504,
+    "glowCount": 42,
+    "glbBytes": 148884,
+    "m3dBytes": 26372,
+    "glbSha256": "01db3cdae88f4f50da9545e4e95bdfa3bff8f2bf7e45d6aa57146bab2285b644",
+    "m3dSha256": "9a660ddcf980d3ac41f9f8fb63a0d06d322d62e272cb553dbb0c9fb8e54eea07"
   },
   {
     "id": "station-classic-tra",
-    "name": "Classic Red-Brick TRA Station",
-    "category": "scene",
-    "triangles": 432,
-    "colors": 7,
-    "paintTriangles": 0,
-    "glowingTriangles": 168,
-    "lengthMeters": 18,
-    "glbBytes": 141636,
-    "m3dBytes": 23572,
-    "glbSha256": "5094c1a104d9da98eed18b021c4849cc9610b2ae9e4d8e2fd18e2ab4bb3b9f87",
-    "m3dSha256": "45c8819e1377cd4449fbf465c003a856c9900e2e38b8e461114cc84081520d13",
-    "calibratedFromReferences": [
-      {
-        "referenceFile": "far.mesh.bin",
-        "referenceSha256": "6dbc846807897c60cfa96ac5fe10c68b1d513482f6d0830a589ad574895574f5",
-        "referenceBytes": 37584
-      },
-      {
-        "referenceFile": "far.mesh.bin",
-        "referenceSha256": "05b0e1c0827a99e424f421242692b706cc569c6ebd9cc90595ae27a63191c83a",
-        "referenceBytes": 57456
-      }
-    ]
+    "name": "Taiwan Classic Red-Brick Station",
+    "triCount": 388,
+    "glowCount": 132,
+    "glbBytes": 134336,
+    "m3dBytes": 20340,
+    "glbSha256": "b30e8231997ba189d148d398aa5a0f148aaf5c3b9d512d332632aca981d7e2d4",
+    "m3dSha256": "9a4a75e1cbfd3a76d5e1caec8ba3b72e55040beb7415fdb1a7d9c54adbf389d7"
   },
   {
     "id": "station-elevated-mrt",
-    "name": "Modern Elevated MRT Station",
-    "category": "scene",
-    "triangles": 416,
-    "colors": 8,
-    "paintTriangles": 0,
-    "glowingTriangles": 180,
-    "lengthMeters": 22,
-    "glbBytes": 137208,
-    "m3dBytes": 22456,
-    "glbSha256": "bd1492cdc2bb8853dc7d3a63b0e840338ec9a08d0dc86ecf733b681537068744",
-    "m3dSha256": "53e3587f0736dc93dc898718165673eb68b5d9ec32f8b70817d292afbd6cfa9d",
-    "calibratedFromReferences": [
-      {
-        "referenceFile": "far.mesh.bin",
-        "referenceSha256": "9632fb1c2ff14a99e15bec3f657fefabfcea4c2ab1694db5c7162496a3019e63",
-        "referenceBytes": 119520
-      }
-    ]
+    "name": "Modern Elevated Metro Station",
+    "triCount": 260,
+    "glowCount": 144,
+    "glbBytes": 112616,
+    "m3dBytes": 13684,
+    "glbSha256": "72da67cc33db5069ee3e4324aa7b485d5528bd61da3ecd7bf75e270d773e75b5",
+    "m3dSha256": "c42915a89851a8fbf8bbbbfa5b69ae3319fc2b9870e7d0d562b4ae14f980027b"
   },
   {
     "id": "platform-island-tra",
     "name": "TRA Island Platform & Canopy",
-    "category": "scene",
-    "triangles": 864,
-    "colors": 6,
-    "paintTriangles": 0,
-    "glowingTriangles": 48,
-    "lengthMeters": 20,
-    "glbBytes": 202028,
-    "m3dBytes": 45752,
-    "glbSha256": "8f9634a008c96afacf652ffca224fb067c318798c07c4f93abd9f1ef45ebeb32",
-    "m3dSha256": "d8db5534fbbd7e5e0cde6bca6cdfcf103edf25f4b70a75800efbf68d5d33f277",
-    "calibratedFromReferences": [
-      {
-        "referenceFile": "far.mesh.bin",
-        "referenceSha256": "e9c58544b0f944783945a8c209bd85ed9fd6199235b0619c41adf4f2ea141940",
-        "referenceBytes": 41760
-      }
-    ]
+    "triCount": 132,
+    "glowCount": 24,
+    "glbBytes": 87484,
+    "m3dBytes": 7028,
+    "glbSha256": "63a5faa1394ad26476490a118c4a9cc124bc6f76fd69b7107150d0e9bde05f5e",
+    "m3dSha256": "979af73a6a55e122dfcb13b819968e92a1e2d60cc67773d0ae8163e43955206b"
   },
   {
     "id": "track-crossover-switch",
-    "name": "Double-Track Scissors Crossover Switch",
-    "category": "scene",
-    "triangles": 996,
-    "colors": 5,
-    "paintTriangles": 0,
-    "glowingTriangles": 48,
-    "lengthMeters": 18,
-    "glbBytes": 220128,
-    "m3dBytes": 52660,
-    "glbSha256": "a6a5120606f23a1b39d59b79aeebf6384ec76b5c13d896ceb82ed4dd159c7c0b",
-    "m3dSha256": "31cd57aac120f02a2ed53f93201c8b03361d977f1ba279663f1137a7d13380ec",
-    "calibratedFromReferences": [
-      {
-        "referenceFile": "railroad-straight.glb",
-        "referenceSha256": "bcbd501f74b754b61f2ddb5cba2d45d5d694bfd25c497fa72af65202a53930d9",
-        "referenceBytes": 34736
-      }
-    ]
+    "name": "Double Scissors Track Crossover",
+    "triCount": 528,
+    "glowCount": 0,
+    "glbBytes": 145904,
+    "m3dBytes": 27620,
+    "glbSha256": "edd3138f023604576ba3cda0b18c501ba585e5625be490691dc393afffa32e5d",
+    "m3dSha256": "80eabdd41f126ee962554f569d76568b8502c3b81b0675babdd7c09de06605ee"
   },
   {
     "id": "rail-level-crossing",
-    "name": "Taiwan Railway Level Crossing & Gates",
-    "category": "scene",
-    "triangles": 588,
-    "colors": 6,
-    "paintTriangles": 0,
-    "glowingTriangles": 48,
-    "lengthMeters": 14,
-    "glbBytes": 156220,
-    "m3dBytes": 31136,
-    "glbSha256": "a15e74e535b1eeff27118377df1c9ebeb383b17827663e97a083f8a5c5b41bfc",
-    "m3dSha256": "5ba88273135cb0523a658006a09277f58ab388938211cd79029019f466bf34ba",
-    "calibratedFromReferences": []
+    "name": "Taiwan Railway Level Crossing",
+    "triCount": 264,
+    "glowCount": 48,
+    "glbBytes": 105520,
+    "m3dBytes": 13892,
+    "glbSha256": "63ec85b6a4e4ec0a1092452a354a11daf273c119f602c573f540f49892eb0d44",
+    "m3dSha256": "68353fc9e68138985d0ad091ec67d06492eabf33d5402f9754d857c5e7daa6cd"
   },
   {
     "id": "rail-signal-mast",
-    "name": "Railway 3-Aspect Block Signal Mast",
-    "category": "scene",
-    "triangles": 400,
-    "colors": 3,
-    "paintTriangles": 0,
-    "glowingTriangles": 60,
-    "lengthMeters": 8.4,
-    "glbBytes": 129664,
-    "m3dBytes": 21344,
-    "glbSha256": "b4d1e4d606ff97f0f351e99ca21d31887a76980a0893bb80eea7c312e2ec8ae5",
-    "m3dSha256": "378df984a22734af99065e02eb7956feea65a2d5bc94bb969e8bc66b51747629",
-    "calibratedFromReferences": []
+    "name": "Railway 3-Aspect Signal Mast",
+    "triCount": 124,
+    "glowCount": 36,
+    "glbBytes": 86444,
+    "m3dBytes": 6612,
+    "glbSha256": "b9bb509bff7e15d55fde7751c1f497cfb1d831b3cd211f1c0126048035a0cf58",
+    "m3dSha256": "7ef7217c07f0c37937b78fb0431c8852ab6cda6137311851b1a3e22fd8e9abec"
   },
   {
     "id": "building-shophouse-arcade",
-    "name": "Taiwanese Shophouse Arcade Row (騎樓透天)",
-    "category": "scene",
-    "triangles": 686,
-    "colors": 7,
-    "paintTriangles": 0,
-    "glowingTriangles": 276,
-    "lengthMeters": 14.8,
-    "glbBytes": 181468,
-    "m3dBytes": 36848,
-    "glbSha256": "07f15e611b5e6653c5ef5e161cffc00a3dc6045670acb08ffd52982f14bc5d86",
-    "m3dSha256": "1ece2d953cb2a82df061d76f77c43213a44864c3ecfcc1b5b2064ab53e8f80de",
-    "calibratedFromReferences": [
-      {
-        "referenceFile": "building-type-a.glb",
-        "referenceSha256": "49f32e20b9dcd24b1c8f6d6488807b8c8cb684cbb595bfb0bb36ad903e470faa",
-        "referenceBytes": 98604
-      },
-      {
-        "referenceFile": "building-c.glb",
-        "referenceSha256": "f6887608a95a165503561730252c30506938803731c6546efca12bd47b1666bd",
-        "referenceBytes": 102788
-      }
-    ]
+    "name": "Taiwanese 3-Bay Shophouse Arcade",
+    "triCount": 492,
+    "glowCount": 240,
+    "glbBytes": 150692,
+    "m3dBytes": 25748,
+    "glbSha256": "45d32c85e679a04dbd604d39a7b54a1de126c65fbb251258cbd820a632569e9e",
+    "m3dSha256": "1404350f45bce5ee19868b80a684a21def57f7b96d5929e6e3c0166bd75a7834"
   },
   {
     "id": "building-commercial-mall",
-    "name": "Modern Commercial Department Store Mall",
-    "category": "scene",
-    "triangles": 592,
-    "colors": 6,
-    "paintTriangles": 0,
-    "glowingTriangles": 180,
-    "lengthMeters": 16.4,
-    "glbBytes": 164916,
-    "m3dBytes": 31936,
-    "glbSha256": "9fa02550ad7e66609b90e98e5ad83473b2fb9f889862666ce548f67808aa4da6",
-    "m3dSha256": "0bbdf351b5341030fa2630f621dc23814cb8f651de3f11b8ae16a0074610299b",
-    "calibratedFromReferences": [
-      {
-        "referenceFile": "building-f.glb",
-        "referenceSha256": "633a25f7fb3ccf98e304a885a36ed900aecee5bde7ecd554729dec753cceea78",
-        "referenceBytes": 148952
-      },
-      {
-        "referenceFile": "building-h.glb",
-        "referenceSha256": "6881613ce218bb33a0f56137d4d33b00d307c47e518fbb21ccba1083efbea896",
-        "referenceBytes": 127384
-      }
-    ]
+    "name": "Modern Department Store Mall",
+    "triCount": 228,
+    "glowCount": 180,
+    "glbBytes": 107684,
+    "m3dBytes": 12020,
+    "glbSha256": "578a3a1a25004b354fccca225561201cc1e0c346ae7daca67dc6494df96c64e9",
+    "m3dSha256": "8471402592247702c6003993c601ddbd551aff318d58cae4b1922709a08302e5"
   }
 ]

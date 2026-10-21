@@ -258,7 +258,7 @@ function renderLoop() {
     const scale = 15.5;
     const ox = canvas.width / 2, oy = canvas.height * 0.62;
     for (const { t, p } of proj) {
-      const dot = Math.abs(t.nrm[0] * 0.48 - t.nrm[1] * 0.56 + t.nrm[2] * 0.67);
+      const dot = Math.abs(t.nrm[0] * 0.52 + t.nrm[1] * 0.56 + t.nrm[2] * 0.65);
       let r, g, b;
       if (nightMode) {
         if (t.glow) {
