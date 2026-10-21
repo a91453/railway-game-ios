@@ -214,6 +214,7 @@ final class TutorialUITests: XCTestCase {
             XCTAssertFalse(card.frame.intersects(create.frame), "The tutorial card covers the ✓")
         }
         create.tap()
+        app.openNewLineFromItsCard()
 
         // Decision 226, later: Done came before the line, and set time
         // running, so the time step is passed over and the panel closes.

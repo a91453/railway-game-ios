@@ -24,6 +24,19 @@ public struct AutoService: Hashable, Sendable, Codable {
         public let name: String
         public let stops: [StationID]
         public let targets: TargetHeadways?
+        /// Decision 303: the colour and hours the confirmation card set,
+        /// or `nil` for a new line's own. A command recorded before has
+        /// neither, and runs as it did.
+        public let color: LineColor?
+        public let window: ServiceWindow?
+
+        init(name: String, stops: [StationID], targets: TargetHeadways?, color: LineColor? = nil, window: ServiceWindow? = nil) {
+            self.name = name
+            self.stops = stops
+            self.targets = targets
+            self.color = color
+            self.window = window
+        }
     }
 
     /// The new line, or `nil` for ``line``.
@@ -38,6 +51,23 @@ public struct AutoService: Hashable, Sendable, Codable {
     public let cars: Int
     /// The language the trains are named in.
     public let language: DisplayLanguage
+    /// Decision 303: the trains the line runs at each level, its targets
+    /// set to share the round trip between that many; `nil` to share it
+    /// between all its trains at every level, as before.
+    public let service: TrainsInService?
+
+    init(
+        newLine: NewLine?, line: LineID?, loops: [PassingLoopPlan], trains: Int, cars: Int, language: DisplayLanguage,
+        service: TrainsInService? = nil
+    ) {
+        self.newLine = newLine
+        self.line = line
+        self.loops = loops
+        self.trains = trains
+        self.cars = cars
+        self.language = language
+        self.service = service
+    }
 
     /// The most cars a train it buys has: four, the first line's in the
     /// balance tests (decision 137), when the platforms are long enough.
@@ -234,7 +264,11 @@ extension GameSession {
     /// single track still leaves no place for two trains to pass, a loop
     /// goes in now. Later it could not: GameCore never cuts track a train
     /// stands on or has reserved, and a line's train is always on its track.
-    func autoServicePlan(creating name: String, stops: [StationID], targets: TargetHeadways?) -> AutoService? {
+    ///
+    /// `trains` above one (decision 303's card) readies the line for them
+    /// and one more, as "Add a Train" does: every place to pass they need,
+    /// on legs of any length.
+    func autoServicePlan(creating name: String, stops: [StationID], targets: TargetHeadways?, trains: Int = 1) -> AutoService? {
         var scratch = world
         guard let line = try? scratch.createLine(named: name, stops: stops), scratch.lineJourney(line.id) != nil else { return nil }
         var stops = stops
@@ -245,7 +279,10 @@ extension GameSession {
         }
         return AutoService(
             newLine: AutoService.NewLine(name: name, stops: stops, targets: targets), line: nil,
-            loops: passingLoopsNeeded(for: line.id, trains: 1, readyFor: 2, shortestLeg: AutoService.shortestLoopLeg, in: scratch), trains: 1,
+            loops: passingLoopsNeeded(
+                for: line.id, trains: trains, readyFor: trains + 1, shortestLeg: trains > 1 ? 0 : AutoService.shortestLoopLeg, limit: trains, in: scratch
+            ),
+            trains: trains,
             cars: Self.autoServiceCars(for: line.id, in: scratch), language: language
         )
     }
@@ -263,7 +300,7 @@ extension GameSession {
         let key = LineOpeningMemo.Key(stops: stops, worldRevision: commandRevision)
         if let memo = lineOpeningMemo, memo.key == key { return memo.preview }
         var preview: LineOpeningPreview?
-        if let plan = autoServicePlan(creating: Self.suggestedLineName(for: world, in: language), stops: stops, targets: nil).flatMap(feasible)?.plan,
+        if let plan = autoServicePlan(creating: Self.suggestedLineName(for: world, in: language), stops: stops, targets: nil).flatMap({ feasible($0) })?.plan,
            let priced = try? priced({ world throws(GameError) in try apply(plan, to: &world) }) {
             let trains = priced.result.line.map(\.trains.count) ?? 0
             preview = LineOpeningPreview(cost: priced.cost, train: trains > 0, loop: priced.result.number > 0)
@@ -277,17 +314,22 @@ extension GameSession {
     /// in the way cannot go back on its line), or `nil` when even that is
     /// refused, for the line to be made as before. `trainInTheWay`: its
     /// loops were left out because a train is on their track.
-    func feasible(_ plan: AutoService) -> (plan: AutoService, trainInTheWay: Bool)? {
-        var trial = world
+    ///
+    /// `base`: the world to try it in, this session's by default (decision
+    /// 303's card tries it in a pricing copy, so that a price the cash in
+    /// hand does not pay is still shown).
+    func feasible(_ plan: AutoService, on base: GameWorld? = nil) -> (plan: AutoService, trainInTheWay: Bool)? {
+        var trial = base ?? world
         do throws(GameError) {
             _ = try apply(plan, to: &trial)
             return (plan, false)
         } catch {
             guard !plan.loops.isEmpty else { return nil }
             let without = AutoService(
-                newLine: plan.newLine, line: plan.line, loops: [], trains: plan.trains, cars: plan.cars, language: plan.language
+                newLine: plan.newLine, line: plan.line, loops: [], trains: plan.trains, cars: plan.cars, language: plan.language,
+                service: plan.service
             )
-            trial = world
+            trial = base ?? world
             guard (try? apply(without, to: &trial)) != nil else { return nil }
             if case .trackReserved = error { return (without, true) }
             return (without, false)
@@ -552,6 +594,8 @@ extension GameSession {
         if let new = plan.newLine {
             let line = try world.createLine(named: new.name, stops: new.stops)
             if let targets = new.targets { try world.setLineTargetHeadways(line.id, to: targets, pattern: nil) }
+            if let color = new.color { try world.setLineColor(line.id, to: color) }
+            if let window = new.window { try world.setLineServiceWindow(line.id, to: window) }
             id = line.id
         } else {
             guard let line = plan.line, world.line(id: line) != nil else { throw .unknownLine(plan.line ?? LineID(rawValue: 0)) }
@@ -610,7 +654,18 @@ extension GameSession {
             // The round trip shared between its trains.
             if let journey = world.lineJourney(id), let count = world.line(id: id)?.trains.count, count > 0 {
                 let headway = max(ServiceLine.minimumHeadwayMinutes, (journey.roundTripMinutes + Int64(count) - 1) / Int64(count))
-                try world.setLineTargetHeadways(id, to: TargetHeadways(peak: headway, offPeak: headway, low: headway), pattern: nil)
+                if let service = plan.service {
+                    // Decision 303: each level shares the round trip
+                    // between the trains the card set for it.
+                    func shared(_ level: ServiceLevel) -> Int64 {
+                        LineConfirmation.headway(roundTrip: journey.roundTripMinutes, trains: min(service[level], count))
+                    }
+                    try world.setLineTargetHeadways(
+                        id, to: TargetHeadways(peak: shared(.peak), offPeak: shared(.offPeak), low: shared(.low)), pattern: nil
+                    )
+                } else {
+                    try world.setLineTargetHeadways(id, to: TargetHeadways(peak: headway, offPeak: headway, low: headway), pattern: nil)
+                }
             }
         }
         outcome.line = world.line(id: id)

@@ -80,6 +80,8 @@ export function image(gltf, index) {
   throw new Error(`GLB: unsupported image type ${entry.mimeType}`);
 }
 
+const MAX_PNG_PIXELS = 4096 * 4096;
+
 function decodePng(bytes) {
   if (!bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) throw new Error('PNG: bad signature');
   let at = 8, width, height, depth, color, interlace;
@@ -99,8 +101,19 @@ function decodePng(bytes) {
   if (!width || !height || !channels || depth !== 8 || interlace !== 0) {
     throw new Error('PNG: only non-interlaced 8-bit gray, RGB, and RGBA images are supported');
   }
-  const rowSize = width * channels, raw = inflateSync(Buffer.concat(chunks));
-  if (raw.length !== height * (rowSize + 1)) throw new Error('PNG: bad data length');
+  // A texture as large as a generator makes (4096 × 4096) and no more;
+  // the image data is inflated only as far as the header says it is, so a
+  // small file cannot unpack to gigabytes before its length is checked.
+  if (width * height > MAX_PNG_PIXELS) throw new Error(`PNG: ${width} × ${height} is larger than 4096 × 4096`);
+  const rowSize = width * channels, size = height * (rowSize + 1);
+  let raw;
+  try {
+    raw = inflateSync(Buffer.concat(chunks), { maxOutputLength: size });
+  } catch (error) {
+    if (error.code === 'ERR_BUFFER_TOO_LARGE') throw new Error('PNG: bad data length');
+    throw error;
+  }
+  if (raw.length !== size) throw new Error('PNG: bad data length');
   const pixels = Buffer.alloc(rowSize * height);
   for (let y = 0; y < height; y++) {
     const filter = raw[y * (rowSize + 1)];
@@ -149,19 +162,24 @@ export function scenePrimitives(gltf) {
       2 * (x * z + y * w) * sz, 2 * (y * z - x * w) * sz, (1 - 2 * (x * x + y * y)) * sz, 0,
       tx, ty, tz, 1];
   }
-  function visit(index, parent, stack) {
-    if (stack.has(index)) throw new Error('GLB: node cycle');
+  // glTF gives each node one parent at most, so the scene is a forest: a
+  // node met twice is a cycle, or a node shared by two parents, whose
+  // copies would multiply with each level (2^n for a file of n nodes).
+  const seen = new Set();
+  function visit(index, parent) {
+    if (seen.has(index)) throw new Error('GLB: node cycle or node with more than one parent');
+    seen.add(index);
     const node = json.nodes?.[index];
     if (!node) throw new Error(`GLB: missing node ${index}`);
-    const matrix = multiply(parent, transform(node)), next = new Set(stack).add(index);
+    const matrix = multiply(parent, transform(node));
     if (node.mesh !== undefined) {
       const mesh = json.meshes?.[node.mesh];
       if (!mesh) throw new Error(`GLB: missing mesh ${node.mesh}`);
       for (const primitive of mesh.primitives ?? []) result.push({ primitive, matrix, name: mesh.name ?? node.name ?? '' });
     }
-    for (const child of node.children ?? []) visit(child, matrix, next);
+    for (const child of node.children ?? []) visit(child, matrix);
   }
-  for (const index of scene.nodes ?? []) visit(index, identity, new Set());
+  for (const index of scene.nodes ?? []) visit(index, identity);
   return result;
 }
 

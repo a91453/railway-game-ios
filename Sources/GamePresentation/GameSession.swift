@@ -103,6 +103,9 @@ public final class GameSession {
     @ObservationIgnored var lineOpeningMemo: LineOpeningMemo?
     /// The draft's one line (``lineDraftSummary``), kept likewise.
     @ObservationIgnored var lineDraftSummaryMemo: LineDraftSummaryMemo?
+    /// Decision 303: what the new line's confirmation card shows, kept
+    /// likewise.
+    @ObservationIgnored var lineConfirmationMemo: LineConfirmationMemo?
     /// CTM study M2: the next steps (``nextSteps``), kept likewise, and
     /// those already answered with the check (``newlyMetNextSteps()``).
     @ObservationIgnored var nextStepsMemo: NextStepsMemo?
@@ -341,6 +344,10 @@ public final class GameSession {
     /// GameCore checks them when ``createLineFromDraft()`` creates the line.
     public private(set) var lineDraft: [StationID] = []
 
+    /// Decision 303: the new line's confirmation card while it is up, the
+    /// settings it opens the drafted line with (``confirmLineDraft()``).
+    public internal(set) var lineConfirmation: LineConfirmation?
+
     /// The stations along the track through ``lineDraft``
     /// (`GameWorld.stationsAlongTrack(through:)`, decision 100), kept up to
     /// date as the draft and the track change; `nil` for fewer than two
@@ -487,6 +494,7 @@ public final class GameSession {
             depotYardMemo = nil
             lineOpeningMemo = nil
             lineDraftSummaryMemo = nil
+            lineConfirmationMemo = nil
         }
     }
 
@@ -1814,6 +1822,7 @@ public final class GameSession {
     }
 
     public func clearLineDraft() {
+        lineConfirmation = nil
         lineDraft = []
         lineDraftStopping = .everyStation
         lineDraftSkipped = []
@@ -1912,7 +1921,10 @@ public final class GameSession {
     /// line starts with that line's peak and off-peak headways as its
     /// targets (``realTargetHeadways(of:inSystem:)``), through
     /// `GameWorld.setLineTargetHeadways(_:to:pattern:)` in the same step.
-    public func createLineFromDraft() {
+    ///
+    /// `card`: the confirmation card's settings (decision 303), which set
+    /// the line's name, colour, hours and trains at each time of day.
+    public func createLineFromDraft(as card: LineConfirmation? = nil) {
         refreshLineDraftRoute()
         let stops = lineDraftStops
         let real = realLine(calling: stops).flatMap { match in
@@ -1921,7 +1933,9 @@ public final class GameSession {
         // Decision 264: under simple rules the line comes with its first
         // train, and the passing loop its single track needs.
         let name = Self.suggestedLineName(for: world, in: language)
-        if runsLinesForThePlayer, let found = autoServicePlan(creating: name, stops: stops, targets: real?.targets).flatMap(feasible) {
+        let planned = card.map { lineConfirmationPlan($0, stops: stops, targets: real?.targets) }
+            ?? autoServicePlan(creating: name, stops: stops, targets: real?.targets).flatMap({ feasible($0) })
+        if runsLinesForThePlayer, let found = planned {
             let plan = found.plan
             let balance = world.economy.balance
             let made = perform(.autoService(plan)) { outcome, _, world in

@@ -1,0 +1,44 @@
+{
+ "measure": "average riders a day: (entries + exits) / 2 over the twelve months' days",
+ "period": {
+  "from": "2025-10-01",
+  "to": "2026-09-30"
+ },
+ "riders": {
+  "中原": 2831,
+  "中和": 4680,
+  "十四張": 3382,
+  "大坪林": 6950,
+  "幸福": 4036,
+  "新北產業園區": 6292,
+  "新埔民生": 4445,
+  "景安": 7278,
+  "景平": 3343,
+  "板新": 2743,
+  "板橋": 11640,
+  "橋和": 2184,
+  "秀朗橋": 2284,
+  "頭前庄": 5186
+ },
+ "source": {
+  "downloaded": "2026-10-20",
+  "fileSha256": {
+   "2025-10": "08d836b6ad11c9ec5562293e5df80ad3b9fdc53f027402e7c327f2a4bbaadca2",
+   "2025-11": "ef4f3ecee07df2434b1d9adc7d02be6b9ae5012c76564971123661d8f332ac02",
+   "2025-12": "3acd3f76522902ea9b1afa73cbdc7637d49e1e83e8e8b172e40ccea12e452afa",
+   "2026-01": "dabef2d3c3c7d354f0bfed549f15973a2abe811eeed3655ae32849918dab824b",
+   "2026-02": "38042cbfa627358b6fe1cced4afb6fc5113a58b67ac09dc38db6aabd467622ac",
+   "2026-03": "45d7050251294843dfb8bed6e8a02c0fe080d63b5ed66fd6de39e644c7e62cb8",
+   "2026-04": "f329b5bc0edf6bc50dd63087e1ec58062cda78f41805a3c126ecc14dd47c382a",
+   "2026-05": "414a9a7bd65f17d8343af84f5c5464571edd715b8510122bc3fd4d88a2eec9bc",
+   "2026-06": "bb9ecae8edcbe25406d196f446c2588b17cd397eacf8884000955c9db713ac90",
+   "2026-07": "cd58850e8ae6e6b329964b722db12710e66a0bd196401b3b301fbb6c94954a73",
+   "2026-08": "ef2c2d1ad865f638075c60a53a13077e90bd4fa395fd42513af0b09b703ba932",
+   "2026-09": "6998c284a231af91959bbac230f8f2380c5d6b03c60149a8e672f9e4c1ff1c82"
+  },
+  "page": "https://www.ntmetro.com.tw/basic/?node=10145",
+  "publisher": "新北大眾捷運股份有限公司",
+  "terms": "no open-data licence (the company website's 政府網站資料開放宣告); only each station's average a day, a fact, is taken, credited to the company",
+  "title": "新北大眾捷運股份有限公司 營運統計數據：每日全線各站運量統計表（環狀線）"
+ }
+}

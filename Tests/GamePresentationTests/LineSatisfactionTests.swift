@@ -98,6 +98,14 @@ final class LineSatisfactionTests: XCTestCase {
         XCTAssertNil(waiting.advice(in: .english))
     }
 
+    /// A higher score is always better, so each item's name says what is
+    /// good in both languages: "Room on board" 30% is a crowded train, and
+    /// the Chinese must not read as "30% crowded".
+    func testEachTitleNamesWhatAHighScoreMeans() {
+        XCTAssertEqual(LineSatisfaction.Aspect.allCases.map { $0.title(in: .english) }, ["Waiting", "Room on board", "On time"])
+        XCTAssertEqual(LineSatisfaction.Aspect.allCases.map { $0.title(in: .traditionalChinese) }, ["候車", "車上空間", "準點"])
+    }
+
     func testTheWeakestBelowGoodGetsTheAdvice() throws {
         // A train every 30 min (half the departures), the fullest 95% full.
         let satisfaction = LineSatisfaction(

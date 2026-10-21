@@ -170,7 +170,15 @@ private final class TutorialJourney {
 
         // Decision 100, later: the line is made by the ✓ on the map.
         arrive(at: 13)
-        tapConfirm("the ✓ that creates the line")
+        // Decision 303: the ✓ raises the line's card, over the map, so it
+        // is not tapped again (a tap there would put the card away).
+        let confirm = app.buttons["map.build.confirm"]
+        check(confirm, "the ✓ that creates the line")
+        confirm.tap()
+        if !app.buttons["line.confirm.done"].appears(within: 10), confirm.isEnabled, confirm.isHittable {
+            confirm.tap()
+        }
+        app.openNewLineFromItsCard()
 
         // Service: the line opens with its trains (decision 264). Done
         // usually set time running, and the step that asks for it is then

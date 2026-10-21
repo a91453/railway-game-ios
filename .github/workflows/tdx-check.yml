@@ -85,7 +85,11 @@ jobs:
               sys.exit("The token request answered without an access_token")
           print("Token: received")
 
-          body = fetch(urllib.request.Request(url, headers={"Authorization": "Bearer " + token, "Accept-Encoding": "identity"}), "The API")
+          # Not sent on to a host a redirect names (urllib copies a
+          # request's other headers there).
+          api = urllib.request.Request(url, headers={"Accept-Encoding": "identity"})
+          api.add_unredirected_header("Authorization", "Bearer " + token)
+          body = fetch(api, "The API")
           with open("tdx-response.json", "wb") as file:
               file.write(body)
           print(f"API: {path} answered {len(body):,} bytes")

@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import { deflateSync } from 'node:zlib';
 import { convert } from './convert.mjs';
 import { image, readGlb } from './glb.mjs';
 import { makeFixture } from './make-fixture.mjs';
@@ -79,4 +80,70 @@ test('actual city bus JPEG converts within the color budget, facing +x at 12 m',
 test('invalid GLB and unsupported front fail without creating a model', () => {
   assert.throws(() => convert(Buffer.from('invalid'), { modelId: 'fixture', front: '-x', lengthMeters: 12 }), /glTF 2.0 GLB/);
   assert.throws(() => convert(readFileSync(fixture), { modelId: 'fixture', front: '-y', lengthMeters: 12 }), /Unknown front/);
+});
+
+// A GLB of one triangle whose nodes are `nodes`, scene root node 0.
+function glbWithNodes(nodes) {
+  const bin = Buffer.alloc(36);
+  [[0, 0, 0], [1, 0, 0], [0, 1, 0]].flat().forEach((value, index) => bin.writeFloatLE(value, index * 4));
+  const json = {
+    asset: { version: '2.0', generator: 'Meshy' }, scene: 0, scenes: [{ nodes: [0] }], nodes,
+    meshes: [{ primitives: [{ attributes: { POSITION: 0 } }] }],
+    accessors: [{ bufferView: 0, componentType: 5126, count: 3, type: 'VEC3' }],
+    bufferViews: [{ buffer: 0, byteLength: 36 }], buffers: [{ byteLength: 36 }],
+  };
+  let text = Buffer.from(JSON.stringify(json));
+  text = Buffer.concat([text, Buffer.alloc((4 - text.length % 4) % 4, 32)]);
+  const chunk = (type, data) => {
+    const head = Buffer.alloc(8);
+    head.writeUInt32LE(data.length);
+    head.write(type, 4, 'ascii');
+    return Buffer.concat([head, data]);
+  };
+  const head = Buffer.alloc(12);
+  head.write('glTF');
+  head.writeUInt32LE(2, 4);
+  const glb = Buffer.concat([head, chunk('JSON', text), chunk('BIN\0', bin)]);
+  glb.writeUInt32LE(glb.length, 8);
+  return glb;
+}
+
+test('a node shared by two parents is refused at once, not walked once per path', () => {
+  // 40 levels, each listing the next twice: 2^40 paths to the mesh.
+  const nodes = [];
+  for (let level = 0; level < 40; level++) nodes.push({ children: [level + 1, level + 1] });
+  nodes.push({ mesh: 0 });
+  const started = Date.now();
+  assert.throws(() => convert(glbWithNodes(nodes), { modelId: 'shared', front: '+x', lengthMeters: 1 }), /more than one parent/);
+  assert.ok(Date.now() - started < 2_000);
+  assert.throws(() => convert(glbWithNodes([{ children: [1] }, { children: [0] }]), { modelId: 'cycle', front: '+x', lengthMeters: 1 }), /node cycle/);
+});
+
+test('a PNG is inflated no further than its header says', () => {
+  const chunk = (type, data) => {
+    const head = Buffer.alloc(8);
+    head.writeUInt32BE(data.length);
+    head.write(type, 4, 'ascii');
+    return Buffer.concat([head, data, Buffer.alloc(4)]);
+  };
+  const png = (width, height, raw) => {
+    const header = Buffer.alloc(13);
+    header.writeUInt32BE(width, 0);
+    header.writeUInt32BE(height, 4);
+    header[8] = 8;
+    header[9] = 6;
+    return Buffer.concat([
+      Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', header), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0)),
+    ]);
+  };
+  const wrapped = (bytes) => ({ json: { images: [{ bufferView: 0, mimeType: 'image/png' }], bufferViews: [{ buffer: 0, byteLength: bytes.length }] }, binary: bytes });
+  // A 1 × 1 image is 5 bytes unpacked; these 64 MB of zeros pack to about 64 KB.
+  const bomb = wrapped(png(1, 1, Buffer.alloc(64 * 1024 * 1024)));
+  assert.ok(bomb.binary.length < 1024 * 1024);
+  const before = process.memoryUsage().arrayBuffers;
+  assert.throws(() => image(bomb, 0), /bad data length/);
+  // Unpacked in full, the 64 MB would still be held here, not yet collected.
+  assert.ok(process.memoryUsage().arrayBuffers - before < 16 * 1024 * 1024);
+  assert.throws(() => image(wrapped(png(65_536, 65_536, Buffer.alloc(1))), 0), /larger than 4096/);
+  assert.deepEqual(image(wrapped(png(1, 1, Buffer.from([0, 10, 20, 30, 40]))), 0).sample(0, 0), [10, 20, 30, 40]);
 });
