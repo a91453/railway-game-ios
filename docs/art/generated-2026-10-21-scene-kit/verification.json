@@ -1,0 +1,60 @@
+{
+  "status": "VERIFIED",
+  "environment": "Linux / Chromium / localhost HTTP",
+  "sheets": 18,
+  "items": 156,
+  "decoded_images": 18,
+  "checks": [
+    "PNG browser decoding",
+    "category and keyword filtering",
+    "empty search result",
+    "all 156 per-item previews",
+    "four-background size/blur/grayscale checks",
+    "theme and backdrop switching",
+    "scene add and pointer dragging",
+    "scale, duplicate, delete and layer order",
+    "20-object example scene",
+    "JSON export and import round trip",
+    "invalid import preserves scene",
+    "390 px dark layout without horizontal overflow",
+    "no JavaScript errors",
+    "no external requests"
+  ],
+  "page_errors": [],
+  "external_requests": [],
+  "not_verified": [
+    "Managed Chromium blocks file:// navigation; interaction checks used a local HTTP server. The page has no fetch or module loading.",
+    "Native App / Asset Catalog / Metal / device adoption"
+  ],
+  "previews": [
+    "previews/station-scene.png",
+    "previews/all-156-items.png",
+    "previews/gallery-desktop.png",
+    "previews/gallery-mobile-dark.png"
+  ],
+  "style_checks": {
+    "status": "VERIFIED",
+    "renderer": ".claude/skills/art-style/preview.cjs, scratch adaptation for installed Chromium and local cached PNG SVG wrappers",
+    "sheets_checked": 18,
+    "sizes": [
+      120,
+      64,
+      44,
+      28
+    ],
+    "backgrounds": [
+      "#FFFFFF",
+      "#30376A",
+      "#ECEEF6",
+      "#262C57"
+    ],
+    "blur_and_grayscale": true,
+    "image": "previews/style-checks.png",
+    "visually_inspected": [
+      "previews/style-checks.png",
+      "previews/all-156-items.png",
+      "previews/station-scene.png",
+      "previews/gallery-mobile-dark.png"
+    ]
+  }
+}
