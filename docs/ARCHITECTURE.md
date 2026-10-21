@@ -14402,6 +14402,63 @@ session_0125dMtwyMdz7mzoBCRNa1pn 預約（#231）。這一節由那個 PR 填寫
 
 **驗證**：`NewGameChoiceTests`（Linux）。App 的畫面（主選單、新遊戲頁、iPhone 橫拿與 iPad）只能靠 macOS CI 編譯與 UI 測試；實機的樣子由作者在 TestFlight 看。
 
+### 317. 3D 地圖的市區公車：Meshy 模型接進 App、上主要道路
+
+（2026-10-21，3D session_01Y25x9NJSKmAuP1M1K3Sf3C，遊戲規劃派工的第 4 項；規格 `docs/research/MESHY_TRIAL_MODEL_SPEC_2026-10-17.md`）
+
+**做什麼**：決策 259 的車流多了公車。模型是作者用 Meshy 生成、#803 轉好的 `city-bus.m3dmodel`。
+
+- **檔案**：`RailwayGameApp/Resources/Models/city-bus.m3dmodel`，和 `docs/art/meshy-city-bus-2026-10-18/` 的同一個檔案（`Map3DCityBusTests` 比對每個位元組）。新資料夾讓 App 的檔案配置變了，`.xcodeproj` 用 XcodeGen 2.46.0 重新產生。
+- **讀進來**：`Map3DPreviewScreen.models` 啟動 3D 時呼叫一次 `Map3DCityBus.pack(file:)`。讀到就換掉 `Map3DModelPack.standard` 裡的方盒公車 `Map3DStreetModel.bus`（`life-bus`），index 不變，所以 `Map3DStreetLife.models` 的對照不用改；沒有檔、讀不到（`Map3DModelFile` 拒絕的任何一種）就留方盒公車。模型數多一個，`Map3DModelTests` 的公式自己跟著算。
+- **大小**：Meshy 給的是 12 × 3.0 × 3.7 m，比一條 3 m 的車道寬。照台灣的低底盤市區公車縮成 **12 × 2.5 × 3.3 m**（長不變，寬、高各自縮），法線照縮放的反方向修正再正規化。
+- **燈**：原檔沒有獨立的燈材質，轉換器不憑顏色猜燈，所以程式加：兩個頭燈、兩個尾燈、擋風玻璃上方的路線牌（參考街景的 LED 牌 F0A93C，HANDOFF §4.3），都是夜裡發光的方塊，各 10 個三角形。
+- **哪裡跑**：幹道（trunk）、主要（primary）、次要（secondary）道路的車道 `Lane.buses`，匝道不跑。這些車道上每台車另抽一個亂數（salt 5），**5%** 是公車；其他車原本的抽法（salt 1–4）不動，所以轎車、廂型車、機車的位置與顏色都和以前一樣，只有變成公車的那幾台換掉。
+- **不撞**：車距照舊是 `length / count`，每台的起點最多提早 0.4 個車距。公車半長 6 m、轎車半長 2.2 m，所以只在車距 ≥ **17 m** 的車道放公車（0.6 × 17 = 10.2 m > 8.2 m）。路的兩端淡入淡出的距離公車放長成 12 m（轎車照舊 4 m）。
+- **上限**：一幀最多 **30 台**（規格的預算：30 台全畫約 4.8 萬個三角形），`Frame.buses` 計數。
+- **塗裝**：實例顏色，從參考街景的公車四色裡抽（3E8C8C、4E78A8、F2F2F0、5E9A78，HANDOFF §4.3）；模型的淺色車身（alpha 0）吃這個顏色，玻璃、輪胎與內裝照原檔的 8 色。
+- **資料來源**：「地圖」那一節加 `meshy`：3D 地圖街上的公車是 Meshy 的 AI 依描述與照片生成的模型，附參考照片（Wikimedia Commons，玄史生，CC0 1.0）。照 `tools/meshy/README.md` 的授權段（付費方案的輸出歸作者，條款 §3.2；註明是生成的，§2.4）。
+- **檢查**：轉換前在本機跑過 Khronos glTF-Validator（`gltf-validator` 2.0.0-dev.3.10，Apache-2.0）：0 錯誤、0 警告、1 個 info（`NODE_MATRIX_DEFAULT`）；同一條命令轉出的檔案和提交的 `city-bus.m3dmodel` 每個位元組相同。驗證器是新依賴，作者還沒同意，所以**沒有放進 repo**（`tools/glb-to-m3dmodel` 不動），等作者同意再照 GAME_AI_TOOLS §6.3 加。
+- **預覽與量測**：`tools/map3d-preview/Map3DPreviewDump.swift.txt` 與 `Map3DFrameCostReportTests.testTheGPUBudget` 改用 App 讀到的那一包（含檔案的公車），報告把公車另列一行。
+
+**量測**（Linux，`MAP3D_FRAME_REPORT=1 testTheGPUBudget`，台北車站實景新局，402 × 874 pt，main 216e3fa；「前」是把 `busShare` 暫時設成 0 量的）：
+
+| 鏡頭 | 前（公車 0%） | 後 | 公車 |
+| --- | --: | --: | --: |
+| 近 280 m | 188,634 三角形、30 draw | 201,731、31 draw | 9 台、14,337 三角形、1 draw |
+| 中 800 m | 172,486、24 draw | 189,882、25 draw | 12 台、19,116 三角形、1 draw |
+| 中 1,400 m、遠 10,800 m | 15,314、8 draw；259,798、223 draw | 不變 | 0（車流只畫到 1,300 m） |
+
+每台公車 1,593 個三角形（原檔 1,543＋燈 50）。最多 30 台時約 4.8 萬個；72.1 的實機近景只用了一幀的兩成。公車是同一個模型的實例，整幀只多一個 draw。
+
+**五個角度**：
+- 玩家：主要道路上看得到公車，車站前、大馬路更像台灣的城市；不能點、不影響經營。
+- 鐵道迷：公車照台灣低底盤市區公車的大小（12 × 2.5 × 3.3 m）、靠右行駛、只走幹道與主要道路、路線牌在擋風玻璃上方；顏色是一般市區公車的綠、藍、白，不照任何客運公司的塗裝。資料來源：規格書、參考街景的尺寸與四色、Wikimedia Commons 的 CC0 照片（只當外型參考）。
+- 開發：沒有新的 Swift 套件；GameCore、存檔、golden、replay 都不動；讀不到檔就退回方盒公車；其他車的抽法不變，原本的街景測試照過；glTF-Validator 是新依賴，只在本機跑過，沒有進 repo。
+- 美術：Meshy 模型已烤成 8 色平塗，和程式做的轎車、機車並排看（預覽）不突兀（art-style §7）；車身吃實例的顏色，沒有招牌字、標誌與車牌；夜裡頭燈、尾燈與路線牌亮，和轎車一樣。六面、四色、150 m 與夜裡在 `bus-views.jpg`：18 m 看得出輪廓、深色窗帶與淺色車門，150 m 還是一台長車（規格「怎麼判斷成功」第二條）。
+- 音樂：無。
+
+**沒有選的做法**（預覽在 `docs/art/map3d-city-bus-2026-10-21/`：`city-bus.jpg` 左上、右上白天，左下夜裡，右下是方盒公車；`bus-views.jpg` 第一列前、後、兩側，第二列上面與三種塗裝斜看，第三列 150 m 的兩種塗裝、夜裡近看與 150 m）：
+- **只用程式做的方盒公車**：不用讀檔、檔案小；但規格的目的就是試 Meshy 這條素材線，方盒公車看起來像一個盒子（右下）。留著當讀不到檔時的備用。
+- **照原檔的比例（3.0 m 寬、3.7 m 高）**：不變形；但比台灣的公車寬 0.5 m、高 0.4 m，靠右時壓到中線。
+- **公車多一點（10%）**：大馬路更熱鬧；但三角形多一倍，車距 ≥ 17 m 的限制下也常常排不進去，先 5%，實機看過再調。
+- **公車只停在車站前**（公車站、上下客）：最像真的；要有站牌、停靠的時間表與行人的走法，是另一件事，先讓它在路上跑。
+
+**參考與來源**：
+
+| 來源 | 拿了什麼 | 用在 |
+| --- | --- | --- |
+| `docs/art/meshy-city-bus-2026-10-18/city-bus.m3dmodel`（作者的 Meshy 任務，#797、#803） | 模型本身（1,543 個三角形、8 色、車頭 +x） | `RailwayGameApp/Resources/Models/`、`Map3DCityBus.model(from:)` |
+| 參考庫 `Railway/street_scene_reference_clean`（HANDOFF §4.3 記下的量尺） | 台灣單層公車 11 × 2.5 × 3.2 m、LED 牌 F0A93C、公車四色 | 寬與高的比例、路線牌、`Map3DStreetLife.busPaints` |
+| `Web/CityView/src/world/traffic.js`（本專案，MIT） | 車道 3 m、靠右（決策 259 已用） | 公車和轎車同一個車道位置 |
+| [Khronos glTF-Validator](https://github.com/KhronosGroup/glTF-Validator)（npm `gltf-validator`，Apache-2.0） | 只在本機檢查公車的 GLB，沒有進 repo | — |
+| 外部專案 | 沒有找（公車的車流和決策 259 的車流同一套，不是新的難題） | — |
+
+**驗證**：
+- **VERIFIED**（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`Map3DCityBusTests`（5 個）、`Map3DModelTests`、`Map3DModelFileTests`、`Map3DStreetLifeTests`、`RealRailwaysTests`，以及名字含 Map3D、StreetLife、DataSource 的 145 個測試全過；`MAP3D_FRAME_REPORT=1 testTheGPUBudget` 跑過（上表）；`RailwayGameApp/Views/Map3D/Map3DPreviewScreen.swift` 通過 `swiftc -parse`。
+- **VERIFIED**（Linux，Node 22，本機、不進 repo）：glTF-Validator 檢查公車的 GLB，0 錯誤、0 警告、1 個 info。
+- **VERIFIED**（Linux，無頭 Chromium 的 WebGL 預覽，決策 238）：台北車站附近，白天與 20:30，公車和轎車、機車並排（`city-bus.jpg`）；App 讀到的那台公車單獨從六個方向、四種塗裝、150 m 與夜裡畫（`bus-views.jpg`，three.js，鏡頭 28°）。
+- **UNVERIFIED**：App 的編譯與資源打包（`ios-build.yml`，PR 會跑）；3D 的 UI 測試（`only_testing`）；實機上公車的樣子與同一畫面有沒有公車的 fps 差（規格「怎麼判斷成功」第三條，要掉不到 3 fps；TestFlight）。
+
 ### 318. 3D 地圖補上方塊列車的模型：莒光號、藍皮、推拉式自強號、普悠瑪、太魯閣、EMU800、柴油客車
 
 （2026-10-21，3D session_01Y25x9NJSKmAuP1M1K3Sf3C，遊戲規劃派工；預覽 `docs/art/map3d-train-sets-2026-10-21/`）

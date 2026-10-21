@@ -8,7 +8,7 @@
 | `concept.jpg` | 第一步 image-to-image（nano-banana-pro，9 點）：照片加描述，畫成無字、無標誌、無廣告、無車牌的通用市區公車 |
 | `preview.png` | 第二步 image-to-3d（smart topology，目標 1,500 面，2K 貼圖，15 點）的 Meshy 縮圖 |
 | `city-bus.glb` | Meshy 交付的原檔：1,545 個三角形、1 個材質、1 張貼圖；長軸 x（約 0.95）、高 y、寬 z，比例 12 : 3.7 : 3.0 |
-| `city-bus.m3dmodel` | `tools/glb-to-m3dmodel/` 從上面的 GLB 轉出：去掉 2 個零面積三角形後是 1,543 面、8 色；車頭轉成 +x、長 12 m，檔頭保留兩筆 Meshy 任務與原檔 SHA-256。已由 `Map3DModelFile` 的 Linux 測試讀取；尚未放進 App |
+| `city-bus.m3dmodel` | `tools/glb-to-m3dmodel/` 從上面的 GLB 轉出：去掉 2 個零面積三角形後是 1,543 面、8 色；車頭轉成 +x、長 12 m，檔頭保留兩筆 Meshy 任務與原檔 SHA-256。已由 `Map3DModelFile` 的 Linux 測試讀取；2026-10-21 放進 App（`RailwayGameApp/Resources/Models/`，同一個檔案，`Map3DCityBusTests` 比對每個位元組），縮成 12 × 2.5 × 3.3 m、加頭燈、尾燈與路線牌，預覽在 `docs/art/map3d-city-bus-2026-10-21/` |
 
 合計 24 點（作者付費方案，輸出歸作者；Meshy 條款 §3.2）。
 
