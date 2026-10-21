@@ -14017,6 +14017,30 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 4. App：車站卡與路線清單的「收購這條線」、收購卡、「收購完成」卡、`SoundCue.lineAcquired`、String Catalog 兩種語言。
 5. push 之前先 `send_message` 遊戲規劃要 GameCore 名額（同時最多 2 個 GameCore PR 跑 CI，一次只有一件升存檔）。
 
+### 316. 新遊戲一個入口：主選單只留「新遊戲」，點了選「空白地圖」或「實景地圖」，新遊戲選項標明兩種都套用
+
+2026-10-21。作者回報（iPad 主選單截圖）：「實景地圖也算新遊戲，要不要收進新遊戲，然後選空白跟實景，才不會誤以為選項只能套用空白地圖」。作者 2026-10-14、10-15 起的預設「session 五方決定」，遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 派工。號碼依 #231。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
+
+**為什麼**：新遊戲選項（決策 177）本來就同時套用到實景（`GameLauncher.newWorld(at:options:)`），選項頁裡甚至有只對實景有用的「地形」「轉乘」；但主選單把選項列放在「新遊戲」卡（寫「空白地圖和起始資金」）下面、「實景地圖」是另一張卡，看起來選項只屬於空白地圖。
+
+**規則**（GamePresentation 的 `NewGameChoice`；App 只畫）：
+1. **主選單**：只留一張「新遊戲」卡（識別碼照舊 `start.newGame`），副標「空白地圖或真實地點」；拿掉獨立的「實景地圖」卡（`start.realWorld`）與主選單上的選項列。
+2. **新遊戲頁**（`StartView` 裡的 `NewGamePicker`，照示範地圖的頁）：兩張卡，順序是 `NewGameChoice.allCases`：「空白地圖」（寫起始資金，資金無限時寫「資金無限」；按了直接開局）與「實景地圖」（「在真實地點的地圖上建造」；按了開選點畫面 `RealWorldPicker`，決策 312，最近用過的地點在最上面；實景資料讀好前停用，寫讀取中）。下面是「新遊戲選項」那一列（識別碼照舊 `start.newGameOptions`），下面一行「兩種地圖都套用這些選項。」只對實景有用的選項（地形、轉乘）在選項頁照舊標「實景地圖」。
+3. **UI 測試**：主選單的「新遊戲」不再直接開局。直接開空白局的測試在按 `start.newGame` 之後呼叫共用的 `XCUIApplication.chooseBlankMap()`（等頁升好再按 `newGame.blank`）；開實景局的改成 `start.newGame` → `newGame.realWorld`。
+
+**參考對照**：`a91453/railway-reference-private` 的 `Ci/` 首頁（決策 C4 已移植的 `screen-save-load-ui`）是「新遊戲／繼續」兩個入口，沒有地圖種類的選擇；`Railway/city_world_reference/` 與 `MapBuilder/` 沒有開始畫面 — gap，這頁是這個專案自己的。外部專案沒有找（一頁兩張卡，用現有的 `StartButton`）。
+
+**五方**：
+- 玩家：一個入口再選地圖，和其他模擬遊戲一樣；選項寫在兩張卡下面，不會誤會只套用空白地圖；多點一下可以接受。
+- 鐵道迷：無（實景卡在新遊戲頁可以寫得比主選單完整）。
+- 開發：只動 App 的 `StartView` 與一頁新的 sheet；頁的內容、順序與文字在 GamePresentation，Linux 測試（`NewGameChoiceTests`）；UI 測試的開局一次改成共用的 helper。
+- 美術：主選單少一張卡，層次清楚；不畫新圖，用 SF Symbols（`square.dashed`、原本實景卡的 `globe.asia.australia`）與現有的卡片。
+- 音樂：無。
+
+**沒有採用的做法**（預覽：`docs/art/new-game-chooser-2026-10-21/chosen-and-others.png`，示意圖，不是 App 截圖）：B. 兩張卡都留，選項列搬到兩張卡下面並寫「空白與實景都適用」：主選單仍多一張卡，「新遊戲」與「實景地圖」看起來仍是兩件事；C. 「新遊戲」卡裡放「空白｜實景」切換、按卡開始：切換在卡片裡不好點，實景還要再開選點畫面，切換和按卡的意思混在一起。
+
+**驗證**：`NewGameChoiceTests`（Linux）。App 的畫面（主選單、新遊戲頁、iPhone 橫拿與 iPad）只能靠 macOS CI 編譯與 UI 測試；實機的樣子由作者在 TestFlight 看。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

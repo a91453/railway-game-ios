@@ -328,6 +328,7 @@ final class MapInteractionTests: XCTestCase {
         let newGame = app.buttons["start.newGame"]
         XCTAssertTrue(newGame.appears(within: 10))
         newGame.tap()
+        app.chooseBlankMap()
         // Decision 114: Build opens the tools, starting with the network.
         let buildEntry = app.buttons["dock.build"]
         XCTAssertTrue(buildEntry.appears(within: 10))
@@ -435,6 +436,7 @@ final class MapInteractionTests: XCTestCase {
         let newGame = app.buttons["start.newGame"]
         XCTAssertTrue(newGame.appears(within: 10))
         newGame.tap()
+        app.chooseBlankMap()
         let zoomIn = app.buttons["Zoom in"]
         let zoomOut = app.buttons["Zoom out"]
         XCTAssertTrue(zoomIn.appears(within: 10))
@@ -488,6 +490,7 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(newGame.appears(within: 10))
         app.bringStartButtonIntoView(newGame)
         newGame.tap()
+        app.chooseBlankMap()
         let expansion = app.buttons["map.expansion"]
         XCTAssertTrue(expansion.appears(within: 30), "A blank map can be expanded")
 
@@ -554,6 +557,7 @@ final class MapInteractionTests: XCTestCase {
         let newGame = app.buttons["start.newGame"]
         XCTAssertTrue(newGame.appears(within: 10))
         newGame.tap()
+        app.chooseBlankMap()
         let zoomIn = app.buttons["Zoom in"]
         XCTAssertTrue(zoomIn.appears(within: 10))
         zoomIn.tap()
@@ -589,6 +593,7 @@ final class MapInteractionTests: XCTestCase {
         let newGame = app.buttons["start.newGame"]
         XCTAssertTrue(newGame.appears(within: 10))
         newGame.tap()
+        app.chooseBlankMap()
         let zoomIn = app.buttons["Zoom in"]
         XCTAssertTrue(zoomIn.appears(within: 10))
         // A slow Simulator can lose the tap (main 81f3d4f's full lane):
@@ -738,6 +743,7 @@ final class MapInteractionTests: XCTestCase {
         let newGame = app.buttons["start.newGame"]
         XCTAssertTrue(newGame.appears(within: 10))
         newGame.tap()
+        app.chooseBlankMap()
 
         let pause = app.buttons["Pause"].firstMatch
         XCTAssertTrue(pause.appears(within: 10))
@@ -790,6 +796,7 @@ final class MapInteractionTests: XCTestCase {
         let newGame = app.buttons["start.newGame"]
         XCTAssertTrue(newGame.appears(within: 10))
         newGame.tap()
+        app.chooseBlankMap()
 
         // Decision 114: Build opens the tools, starting with the network.
         let buildEntry = app.buttons["dock.build"]
@@ -841,6 +848,7 @@ final class MapInteractionTests: XCTestCase {
         let newGame = app.buttons["start.newGame"]
         XCTAssertTrue(newGame.appears(within: 10))
         newGame.tap()
+        app.chooseBlankMap()
         let buildEntry = app.buttons["dock.build"]
         XCTAssertTrue(buildEntry.appears(within: 10))
         buildEntry.tap()
@@ -951,6 +959,7 @@ final class MapInteractionTests: XCTestCase {
         let newGame = app.buttons["start.newGame"]
         XCTAssertTrue(newGame.appears(within: 10))
         newGame.tap()
+        app.chooseBlankMap()
         let buildEntry = app.buttons["dock.build"]
         XCTAssertTrue(buildEntry.appears(within: 10))
         buildEntry.tap()
@@ -1291,6 +1300,7 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(newGame.appears(within: 10))
         app.bringStartButtonIntoView(newGame)
         newGame.tap()
+        app.chooseBlankMap()
         let buildEntry = app.buttons["dock.build"]
         XCTAssertTrue(buildEntry.appears(within: 10))
         buildEntry.tap()
@@ -1321,6 +1331,7 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(newGame.appears(within: 10))
         app.bringStartButtonIntoView(newGame)
         newGame.tap()
+        app.chooseBlankMap()
         // A new blank map has three to five sights in each tile, anywhere
         // in it: the opening, framed on the towns, may show none (main
         // 878adaf's full lane, run 38878787559), so the map is drawn back

@@ -14,7 +14,9 @@ final class RealWorldMapUITests: XCTestCase {
         app.launch()
         defer { app.terminate() }
 
-        tappable(app.buttons.matching(identifier: "start.realWorld"), name: "start.realWorld").tap()
+        // Decision 316: New Game, then its real-world map.
+        tappable(app.buttons.matching(identifier: "start.newGame"), name: "start.newGame").tap()
+        tappable(app.buttons.matching(identifier: "newGame.realWorld"), name: "newGame.realWorld").tap()
 
         // Decision 262 put Taiwan's places under a group heading, so on a
         // landscape iPhone Taipei's row starts below the screen (and the
@@ -169,6 +171,7 @@ final class RealWorldMapUITests: XCTestCase {
         let newGame = app.buttons["start.newGame"]
         XCTAssertTrue(newGame.appears(within: 10))
         newGame.tap()
+        app.chooseBlankMap()
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 10))
         XCTAssertTrue(app.buttons["Zoom in"].appears(within: 10))
         // Decision 226, step 3: the style is in the layer list, and not
@@ -534,19 +537,22 @@ final class RealWorldMapUITests: XCTestCase {
         }
     }
 
-    /// Start screen, Real-World Map, Taipei, Build Here: each scrolled
-    /// to first, as the largest text needs.
+    /// Start screen, New Game, Real-World Map (decision 316), Taipei, Build
+    /// Here: each scrolled to first, as the largest text needs, and the
+    /// new game's page tapped once it has slid up.
     private func startARealWorldGameFromTaipei(in app: XCUIApplication) {
         // The place list (the sheet's only collection view) makes its rows
         // as they come near: with this text Taipei's is not made at first.
         for (identifier, holder) in [
-            ("start.realWorld", nil), ("place.tra-taipei", app.collectionViews.firstMatch), ("realWorld.start", nil),
+            ("start.newGame", nil), ("newGame.realWorld", nil),
+            ("place.tra-taipei", app.collectionViews.firstMatch), ("realWorld.start", nil),
         ] as [(String, XCUIElement?)] {
             let button = app.buttons.matching(identifier: identifier).firstMatch
             XCTAssertTrue(
                 app.scrollUntilShown(button, in: holder),
                 "\(identifier) cannot be scrolled to: \(button.exists ? "\(button.frame)" : "missing"), app \(app.frame)"
             )
+            if identifier == "newGame.realWorld" { button.waitUntilSettled() }
             app.tapMiddle(of: button)
         }
     }
@@ -555,8 +561,8 @@ final class RealWorldMapUITests: XCTestCase {
     /// a menu or screen transition ends, and `ViewThatFits` can also expose
     /// an unplaced copy of a menu action, so `firstMatch` alone may not be
     /// hittable (the start and save flow's rule, `StartSaveFlowSmokeTests`).
-    /// It is waited for until enabled too: the start screen's real-world
-    /// buttons are disabled until the real-world data, read in the
+    /// It is waited for until enabled too: the new game's real-world map
+    /// (decision 316) is disabled until the real-world data, read in the
     /// background at launch, is there.
     private func tappable(_ query: XCUIElementQuery, name: String) -> XCUIElement {
         XCTAssertTrue(query.firstMatch.appears(within: 10), "Missing button: \(name)")
