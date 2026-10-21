@@ -739,6 +739,11 @@ PR #786–#872 那一輪（2026-10-21，作者：「很久沒做pr review了 先
   - #870 的預覽用 `targets: nil`，建立路線卻用路線自己的目標班距（轉給空窗快轉 session 後沒有在 #877 修：要一張有真實路線的實景地圖才做得出在 main 上紅的測試，又要改 #873 剛改過的 `LineConfirmation.swift`；留給之後，還沒有人接）；
   - diagnosing-bugs skill 的 TICK_REPORT 指令少了 `--skip-build`。
 
+PR #873–#910 那一輪的 A 組（2026-10-21，session_01SvQ285hMiSeRsER1EXzfT9，[PR873_910_REVIEW_HANDOFF.md](archive/PR873_910_REVIEW_HANDOFF.md)）：11 個發現，修了 6 個。兩個 P1 是存檔讀不回：交錯發車的路線改成環線、買下的線拆站拆到沒了。另外修了 3D 快取重用了不含新焦點的場景、半夜的班距、色帶重疊、一個斷掉的連結。延後的 5 個在它第三節：
+- **A6**（P2，GameCore）：晚點的真實時刻表列車追時間時，會把彎道限速丟掉（#883）。改了會動到示範日的數值，交給行車控制的 session。
+- **A7**（P2，App）：實景地圖的載入畫面被「新遊戲」頁蓋住（#897）。只在 Simulator 看得到，建議的修法與驗法寫在那裡，還沒有人接。
+- A8、A10、A11（P3）：有班次的路線保留發車方式；暫停中每個指令都重算快轉；SceneKit 的建築與地點沒有用到。
+
 **大世界的效能**（決策 328，`claude/perf-2d-sim-speed`，2026-10-21；玩家回報 78.1、79.1：三十幾站後 2D 約 5 FPS、加速跑不到設定）。已修：夜間快轉試跑移出主執行緒、乘客排隊二分搜尋、上車排序、實景支線可購清單記住。還沒做、還沒人接：
 - **2D 5 FPS 的主因**：Linux 量不到 SwiftUI 繪圖。要在實機打開「設定 → 地圖 → 幀數」，點開看哪一層（地面、軌道、列車、站名、天氣、推進後）每秒花最多。候選：`session.world` 每個 tick 都讓讀它的 view 重算；軌道畫布在交通覆蓋變了就整張重畫；站名畫布在候車數變了就重畫；夜色的 `.blendMode(.multiply)` 與站名的 `.colorMultiply`。量到哪層再對症改（拆出不常變的圖層、`drawingGroup`、降低重畫頻率）。
 - **1200× 在大世界的 GameCore**：第 730 天的測試存檔一個 tick 改之前約 7～9 ms、改之後約 4.5 ms（Linux release），隨等車人數變慢（放人、上車、`makeNetworkPassengerPlan`）。再快要把乘客佇列照路線分組，會改存檔格式。報告：`LONG_GAME_REPORT=730 swift test -c release -Xswiftc -enable-testing --filter LongGameCostReportTests`。

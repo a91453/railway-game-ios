@@ -496,8 +496,9 @@ extension RealRailwayOperations {
     /// of game day `day`: the next train each way of a metro's timetable
     /// (the day before's set for the trips after midnight) or the High
     /// Speed Rail's day of trains, those that leave from the station, not
-    /// end there; or a headway line's headway at that hour. Lines in the
-    /// site's order, each way by the time it leaves.
+    /// end there; or a headway line's headway at that hour, while its
+    /// trains run (``RealTrainTraffic/headwayHours``). Lines in the site's
+    /// order, each way by the time it leaves.
     public func service(atStationNamed name: String, siteSystem: String, after second: Int, on day: RealServiceDay, dayBefore: RealServiceDay) -> [RealStationService] {
         let key = RealRailways.stationKey(name)
         var found: [RealStationService] = []
@@ -529,7 +530,8 @@ extension RealRailwayOperations {
                             consider(last.name, stop.departureSecond - 86_400)
                         }
                     }
-                } else if let headway = RealTimetables.isPeak(second: second) ? line.peakHeadwaySec ?? line.offpeakHeadwaySec
+                } else if RealTrainTraffic.headwayHours.contains(second),
+                          let headway = RealTimetables.isPeak(second: second) ? line.peakHeadwaySec ?? line.offpeakHeadwaySec
                             : line.offpeakHeadwaySec ?? line.peakHeadwaySec, headway > 0 {
                     found.append(.headway(system: system.id, line: line.id, lineName: lineName, seconds: headway))
                     continue

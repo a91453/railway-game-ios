@@ -39,6 +39,22 @@ final class Map3DLineBandsTests: XCTestCase {
         XCTAssertEqual(bands[1].end, shared.end)
     }
 
+    /// A one-way line beside one ridden both ways moves neither, so the
+    /// both-ways line keeps one stretch over the one-way line's shorter
+    /// one: the bands are cut where either starts or ends, and only the
+    /// top line's band is over the shared track.
+    func testAStretchOverAShorterOneIsCut() throws {
+        let both = LineID(rawValue: 1), oneWay = LineID(rawValue: 2)
+        let lines = LineMap(stretches: [
+            LineMap.Stretch(line: both, color: LineColor(rgb: 0x112233), edge: .edge(1), start: 0, end: 200, offset: 0),
+            LineMap.Stretch(line: oneWay, color: LineColor(rgb: 0x445566), edge: .edge(1), start: 50, end: 100, offset: 1, way: .forward),
+        ])
+        let bands = Map3DLineBands(lines: lines, palette: .standard).bands
+        XCTAssertEqual(bands.map(\.start), [0, 50, 100])
+        XCTAssertEqual(bands.map(\.end), [50, 100, 200])
+        XCTAssertEqual(bands.map(\.rgb), [0x112233, 0x445566, 0x112233])
+    }
+
     /// A line with no colour of its own gets its automatic one (decision
     /// 216), and the colour-blind-safe palette changes it as the 2D map's.
     func testTheBandsColourIsTheOneThe2DMapDraws() throws {

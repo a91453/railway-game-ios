@@ -179,6 +179,18 @@ final class RealTrainMotionTests: XCTestCase {
             testOperations(headwayOnly: true).service(atStationNamed: "甲", siteSystem: "mrt", after: 30_000, on: weekday, dayBefore: weekday),
             [.headway(system: "trtc", line: "L", lineName: "測試線", seconds: 600)], "08:20 is the peak"
         )
+        // Before 05:00 and from midnight no train of a headway line runs
+        // on the map, so its card tells no headway.
+        for night in [0, 3 * 3_600, 5 * 3_600 - 1] {
+            XCTAssertEqual(
+                testOperations(headwayOnly: true).service(atStationNamed: "甲", siteSystem: "mrt", after: night, on: weekday, dayBefore: weekday),
+                [], "\(night)"
+            )
+        }
+        XCTAssertEqual(
+            testOperations(headwayOnly: true).service(atStationNamed: "甲", siteSystem: "mrt", after: 5 * 3_600, on: weekday, dayBefore: weekday).count, 1,
+            "from 05:00"
+        )
         XCTAssertEqual(GameSession.realClockText(28_800), "08:00")
         XCTAssertEqual(GameSession.realClockText(87_000), "00:10")
     }
