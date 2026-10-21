@@ -103,6 +103,11 @@ struct RailwayGameApp: App {
         if DebugLaunch.isSet("-ui-testing"), !DebugLaunch.isSet("-show-first-game-card") {
             launcher.dismissFirstGameCard()
         }
+        // A new game's seed, so a test that needs what the towns and
+        // sights of a blank map put on screen gets the same map each run.
+        if DebugLaunch.isSet("-ui-testing"), let seed = DebugLaunch.value(of: "-ui-test-seed").flatMap(UInt32.init) {
+            launcher.newGameOptions.seed = seed
+        }
         if DebugLaunch.isSet("-ui-testing"), let name = DebugLaunch.value(of: "-ui-test-world") {
             launcher.continueGame()
             guard let session = launcher.session else { fatalError("Could not load UI test world") }

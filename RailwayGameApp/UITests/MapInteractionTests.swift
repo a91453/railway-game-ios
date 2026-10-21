@@ -1328,7 +1328,11 @@ final class MapInteractionTests: XCTestCase {
     func testASightTappedOnTheMapOpensItsRow() {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        // A random map's sights can all lie off the middle of the screen
+        // through five steps out (main bc6611d's full lane, run 39680748935;
+        // on Linux, seeds 36 and 43 of 60): seed 1 has one there by the
+        // third step on a phone held either way.
+        app.launchArguments = ["-ui-testing", "-ui-test-seed", "1", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         defer { app.terminate() }
         let newGame = app.buttons["start.newGame"]
