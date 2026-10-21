@@ -5343,6 +5343,19 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 區塊價格跟著起點定，不跟著被買的那一塊：從臺東起手的人買到高雄的區塊也只付 $105 萬 × 已擁有塊數。
 - 沒有驗證的：選點畫面與 App 的 SwiftUI 在 macOS CI 看；啟動時間與買地的卡頓要 TestFlight 實機看（Linux 的 release 在表上）。
 
+**後來：還沒買的地塊畫鎖頭**（2026-10-21，NEXT_PRIORITIES §19 第 4 名，`docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.7；遊戲規劃派工，不另取決策號）。空白地圖的購地擴建（決策 160）與實景地圖的「先給一塊、之後買地」（本決策）都用 `GameWorld.mapExpansion`，所以「還沒買」就是不在 `mapExpansion.owned` 裡的地塊；依面積收購（決策 146）是買建物，不是地塊，沒有鎖頭。
+1. **哪幾塊有鎖頭**（GamePresentation 的 `GameSession.mapLocks(on:viewport:clearOf:)`、`MapLock`）：和擁有的土地相鄰、現在就能買的那幾塊（`mapTilesForSale()`）各一個；更外面的照決策 160 只淡化。只在沒有拿建造工具、沒有教學、沒有在擴建時出現（`showsMapLocks`）；擴建時那幾塊照舊顯示價格。
+2. **畫在哪裡**：那一塊在畫面上露出來的部分（扣掉蓋在地圖邊上的按鈕與面板）的正中間；露出來的部分任一邊不到 56 點（`MapLock.smallestPart`，拉得很遠，或只露出一條邊）就不畫。
+3. **鎖上或打開**：最佳一天的運量還不夠買那一塊時是鎖上的鎖（`MapGlyphLock`），夠了是打開的鎖（`MapGlyphLockOpen`，暖黃底，「購買」的顏色）；自由模式一律打開。
+4. **點了**（`GameSession.openMapLock(_:)`）：和按「擴建地圖」再點那一塊一樣，進入擴建（遊戲照決策 160 暫停）並選好那一塊，購地卡（價格、解鎖的運量、會變成一般車站的外地連絡站）直接出現；鏡頭不動。不能買的地塊什麼都不做。
+5. **畫面**（App）：`MapLockMarks` 是地圖上的按鈕（和委託的旗子、決策 246 同一種做法），VoiceOver 讀「還沒解鎖的土地」或「可以買的土地」，提示「看看價格」。選地時價格牌前面的 SF Symbols `lock.fill` 換成同一個 `MapGlyphLock`。顏色與對比在 `docs/UI_THEME.md`。
+- **五方**：玩家：看得到下一塊在哪、夠不夠格，點一下就看到價格，不必先找「擴建地圖」按鈕。鐵道迷：無（地塊是遊戲的規則，不是真實的資料）。開發：哪幾塊、放哪、點了做什麼都在 GamePresentation，Linux 測試（`MapLockTests`）；App 只畫，GameCore、存檔、golden 不動。美術：照 art-style 自己畫的單色圖示，和委託旗子、機廠同一套；鎖上、打開用形狀分。音樂：無。
+- **沒採用**：(A) 每一塊還沒買的地都畫鎖頭（研究裡那款遊戲的做法）：實景地圖有四百多塊，拉遠時滿畫面都是鎖，而且點了大多數只能說「不相鄰」；(B) 只用 SF Symbols 的 `lock.fill`：地圖物件要用自己的圖示（決策 121 第 4 點）；(C) 點了把鏡頭拉到整片可買的地（像「擴建地圖」按鈕）：玩家已經在看那一塊，拉走反而找不到。
+- **參考**：私有參考庫只有 `Railway/island_city_reference_clean/source/js/g41.js` 在還沒解鎖的建物按鈕上寫「🔒 第 N 章」（表情符號，鎖的是建物種類，不是地塊），沒有可以搬的鎖頭、淡化或點擊；其他參考包沒有會變大的地圖（同上面的「參考」）。外部專案沒有找：概念就是研究 4.7 那款遊戲的「起始範圍外淡掉、每格一個鎖」（商業遊戲，只取做法）。圖示是這個專案自己畫的。
+- **預覽**：選定的兩個圖示和沒採用的兩種畫法（高鎖環配圓鎖孔、圓鎖身）在 `docs/art/map-lock-2026-10-21/chosen-and-others.png`（art-style 的四種底、三種大小、模糊與灰階）。
+- **測試**：`MapLockTests`（Linux）；`MapLockUITests`（full lane，決策 199：新遊戲拉遠到看得到鎖頭、點了出現購地卡、結束後鎖頭回來）。
+- **沒有驗證的**：App 的畫法與手感要看 macOS CI 與 TestFlight。
+
 ### 168. 高鐵：高鐵路線、高鐵車組、按距離的票價與城際需求
 
 2026-10-11，全島步驟 C（`docs/research/WHOLE_TAIWAN_MAP.md`）。作者：「做實景地圖擴建第 2 步，再做高鐵」。號碼依工作登記 #231：決策 168、存檔版本 43、golden schema 65。
