@@ -3,7 +3,8 @@ import GameCore
 // Decision 292 (City Transport Manager study 4.0, step M1): while a station
 // or a line is being built, one tap shows the catchment coverage layer
 // (``PopTravelMode/coverage``, decision 76) and another, or leaving the
-// tool, puts back the layer the player had. Its key says how much of the
+// tool, puts back the layer the player had (decision 311 shows it, or where
+// people are, as soon as building begins: ``BuildingLayerShortcut``). Its key says how much of the
 // map's residents and jobs the stations reach. That is an estimate: a cell
 // counts when its middle is within 800 m of a station in a straight line,
 // whatever the trains' service or the way on foot, so the key says so; a
@@ -65,46 +66,11 @@ extension GameWorld {
     }
 }
 
-/// The coverage layer's one-tap switch while building (decision 292): which
-/// layer to put back when it goes. Kept by the map as transient state.
-public struct CoverageShortcut: Equatable, Sendable {
-    /// The layer shown before the switch showed coverage (`nil` for none),
-    /// while the switch's coverage is shown; `nil` otherwise.
-    public private(set) var restoring: PopTravelMode??
-
-    public init() {}
-
-    /// Whether the switch has coverage shown.
-    public func isOn(showing mode: PopTravelMode?) -> Bool {
-        mode == .coverage
-    }
-
-    /// A tap: shows coverage, remembering the layer shown, or puts that
-    /// layer back. Returns the layer to show.
-    public mutating func toggle(showing mode: PopTravelMode?) -> PopTravelMode? {
-        if mode == .coverage {
-            let back = restoring ?? nil
-            restoring = nil
-            return back
-        }
-        restoring = .some(mode)
-        return .coverage
-    }
-
-    /// Building ended: the layer to show, the one the player had when the
-    /// switch showed coverage; `mode` itself when the switch did not, or
-    /// the player chose another layer since.
-    public mutating func buildingEnded(showing mode: PopTravelMode?) -> PopTravelMode? {
-        defer { restoring = nil }
-        guard mode == .coverage, let back = restoring else { return mode }
-        return back
-    }
-}
-
 extension GameSession {
-    /// Whether the map offers the coverage switch (decision 292): while a
-    /// track or a platform is being placed, or a new line's stations are
-    /// picked; not in the tutorial, whose card leads.
+    /// Whether the map offers the building layer's switch (decisions 292
+    /// and 311, ``BuildingLayerShortcut``): while a track or a platform is
+    /// being placed, or a new line's stations are picked; not in the
+    /// tutorial, whose card leads.
     public var offersCoverageShortcut: Bool {
         guard tutorial == nil else { return false }
         if tool == .network, networkMode == .build || networkMode == .platform { return true }

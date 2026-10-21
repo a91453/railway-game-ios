@@ -68,6 +68,13 @@ struct MapView: View {
     /// value, empty for none); a view preference, as the other layers.
     @AppStorage("mapPopTravelMode") private var popTravelModeName = ""
     @AppStorage("mapShowsFaresAndStamps") private var showsFaresAndStamps = true
+    /// Decision 311: whether the building layer shows as soon as building
+    /// begins (the player puts it away with the corner button), which of
+    /// its two it shows and the hours of where people are; device
+    /// preferences, not in the save.
+    @AppStorage(BuildingLayerShortcut.autoShowsKey) private var buildingLayerAutoShows = true
+    @AppStorage("mapBuildingLayer") private var buildingLayerName = PopTravelMode.potential.rawValue
+    @AppStorage("mapPotentialPeriod") private var potentialPeriodName = PotentialPeriod.allDay.rawValue
     /// Whether the player folded the layer's legend (TestFlight 59.1,
     /// ``LegendFold``): a device preference, not in the save.
     @AppStorage(LegendFold.key) private var legendFold = 0
@@ -127,9 +134,12 @@ struct MapView: View {
     /// shown, and again only when the land, its buildings, the stations or
     /// the last measured service change, and a number that changes with it.
     @State private var cityMap: CityMap?
-    /// Decision 292: the layer to put back once the coverage switch's
-    /// coverage goes.
-    @State private var coverageShortcut = CoverageShortcut()
+    /// Decision 311: the layer shown over the player's own while building.
+    @State private var buildingLayer = BuildingLayerShortcut()
+    /// Decision 311: where a station would have riders, worked out in view
+    /// as it is drawn (``StationPotentialMap``), and a new one only when
+    /// its key changes.
+    @State private var potentialMap: StationPotentialMap?
     @State private var cityMapVersion = 0
     /// Decision 126: the city's buildings on the plain map, and a version
     /// that changes when they are replaced.
@@ -226,9 +236,21 @@ struct MapView: View {
             showsStationNames: showsStationNames,
             showsWaitingCounts: showsWaitingCounts,
             showsCatchmentRings: showsCatchmentRings,
-            popTravelMode: PopTravelMode(rawValue: popTravelModeName),
+            popTravelMode: buildingLayer.layer(over: PopTravelMode(rawValue: popTravelModeName)),
             showsFaresAndStamps: showsFaresAndStamps
         )
+    }
+
+    /// Decision 311: the hours where people are is weighed by.
+    private var potentialPeriod: PotentialPeriod {
+        PotentialPeriod(rawValue: potentialPeriodName) ?? .allDay
+    }
+
+    /// Decision 311: what where people are is worked out from while it
+    /// shows, `nil` otherwise.
+    private var potentialKey: StationPotentialMap.Key? {
+        guard mapLayers.popTravelMode == .potential else { return nil }
+        return StationPotentialMap.Key(world: session.world, drafts: session.lineDraft, period: potentialPeriod)
     }
 
     var body: some View {
@@ -327,6 +349,14 @@ struct MapView: View {
                         camera: projection
                     )
                     .equatable()
+                    // Decision 311: where a station would have riders, over
+                    // the town and under the railway; it fades in and out
+                    // (``MotionRule/change``), at once with Reduce Motion.
+                    if let potentialMap {
+                        MapPotentialCanvas(map: potentialMap, opacity: opacity(for: .potential), camera: projection)
+                            .equatable()
+                            .transition(reduceMotion ? .identity : .opacity.animation(MotionRule.change.animation))
+                    }
                     MapCanvas(
                         world: session.world,
                         selectedTrainID: session.selectedTrainID,
@@ -677,14 +707,20 @@ struct MapView: View {
                                         }
                                     }
                                 ),
-                                coverage: mode == .coverage ? cityMap?.coverage : nil
+                                coverage: mode == .coverage ? cityMap?.coverage : nil,
+                                building: buildingLayer.isOn ? buildingLegend : nil
                             ) {
                                 stopPopTravelPlay()
                                 cellTooltip = nil
                                 cityTooltip = nil
                                 terrainTooltip = nil
                                 sectionFlowTooltip = nil
-                                popTravelModeName = ""
+                                if buildingLayer.isOn {
+                                    // Decision 311: put away, as the corner button does.
+                                    buildingLayerAutoShows = buildingLayer.toggle()
+                                } else {
+                                    popTravelModeName = ""
+                                }
                             }
                             .transition(.scale.combined(with: .opacity))
                         } else if insets.trailing == 0 {
@@ -1198,10 +1234,23 @@ struct MapView: View {
             streets = plan
             streetsVersion &+= 1
         }
-        .onChange(of: session.offersCoverageShortcut) { _, offered in
-            // Decision 292: leaving the tool puts back the player's layer.
-            guard !offered else { return }
-            popTravelModeName = coverageShortcut.buildingEnded(showing: mapLayers.popTravelMode)?.rawValue ?? ""
+        .onChange(of: session.offersCoverageShortcut, initial: true) { _, offered in
+            // Decision 311: building shows where people are (or coverage,
+            // as the player last chose) over the player's layer, unless
+            // they put it away; leaving the tool shows their layer again.
+            if offered {
+                buildingLayer.choose(PopTravelMode(rawValue: buildingLayerName) ?? .potential)
+                buildingLayer.buildingBegan(autoShows: buildingLayerAutoShows)
+            } else {
+                buildingLayer.buildingEnded()
+            }
+        }
+        .onChange(of: popTravelModeName) {
+            // A layer the player chose shows instead (decision 311).
+            buildingLayer.playerChoseLayer()
+        }
+        .onChange(of: potentialKey, initial: true) { _, key in
+            potentialMap = key.map(StationPotentialMap.init(key:))
         }
         .onChange(of: mapLayers.popTravelMode) { _, mode in
             cellTooltip = nil
@@ -1247,6 +1296,21 @@ struct MapView: View {
         realTrainClock = realTrains == nil ? nil : RealTrainClock(world: session.world, time: Date().timeIntervalSinceReferenceDate)
     }
 
+    /// Decision 311: the building layer's switches in its legend.
+    private var buildingLegend: PopulationLegendView.Building {
+        PopulationLegendView.Building(
+            choice: Binding(
+                get: { buildingLayer.choice },
+                set: { mode in
+                    buildingLayer.choose(mode)
+                    buildingLayerName = buildingLayer.choice.rawValue
+                }
+            ),
+            period: Binding(get: { potentialPeriod }, set: { potentialPeriodName = $0.rawValue }),
+            hasDrafts: potentialMap?.key.hasDrafts ?? !session.lineDraft.isEmpty
+        )
+    }
+
     /// What the base canvas draws of the population and travel layer, or
     /// `nil` for nothing.
     private func popTravelLayer(realWorld: RealWorldFrame?) -> PopTravelLayer? {
@@ -1274,6 +1338,9 @@ struct MapView: View {
             return PopTravelLayer(content: .terrain(terrainMap), key: .terrain(version: terrainMapVersion), opacity: alpha)
         case .sectionFlow:
             // Drawn on the lines by the map canvas, not under them.
+            return nil
+        case .potential:
+            // Decision 311: a canvas of its own over the town, which fades.
             return nil
         }
     }
@@ -1692,10 +1759,11 @@ struct MapView: View {
     @ViewBuilder
     private func cornerButtons(camera: PlanCamera, limit: Double?, zoomGivesWay: Bool, compactReach: CGFloat? = nil) -> some View {
         HStack(alignment: .top, spacing: compactReach == nil ? 0 : 6) {
-            // Decision 292: coverage, one tap away while building.
+            // Decisions 292 and 311: the building layer, put away or
+            // brought back with one tap while building.
             if session.offersCoverageShortcut {
-                MapCoverageButton(isOn: coverageShortcut.isOn(showing: mapLayers.popTravelMode), language: session.language, compactReach: compactReach) {
-                    popTravelModeName = coverageShortcut.toggle(showing: mapLayers.popTravelMode)?.rawValue ?? ""
+                MapCoverageButton(isOn: buildingLayer.isOn, language: session.language, compactReach: compactReach) {
+                    buildingLayerAutoShows = buildingLayer.toggle()
                 }
             }
             // Decision 229, later: this game's 3D map, one tap away, beside
@@ -2218,6 +2286,28 @@ private struct MapBaseCanvas: View, Equatable {
                     in: context
                 )
             }
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+/// Decision 311: where a station would have riders, in a canvas of its
+/// own over the base so it can fade in and out; redrawn only when the
+/// camera, the map or its opacity changes.
+private struct MapPotentialCanvas: View, Equatable {
+    let map: StationPotentialMap
+    let opacity: Double
+    let camera: PlanCamera
+
+    nonisolated static func == (lhs: MapPotentialCanvas, rhs: MapPotentialCanvas) -> Bool {
+        lhs.map.key == rhs.map.key && lhs.opacity == rhs.opacity && lhs.camera == rhs.camera
+    }
+
+    var body: some View {
+        let map = map, opacity = opacity, camera = camera
+        return Canvas { context, size in
+            context.clip(to: Path(CGRect(origin: .zero, size: size)))
+            MapArt.drawPotential(map, opacity: opacity, projection: camera, in: context)
         }
         .allowsHitTesting(false)
     }
