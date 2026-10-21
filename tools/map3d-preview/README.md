@@ -52,5 +52,5 @@ node tools/map3d-preview/diff.cjs before-close-shadows.png after-close-shadows.p
 ```
 
 - `diff.cjs`：在 `render.cjs` 用的同一個無頭 Chromium 裡用 canvas 解 PNG，跑 pixelmatch（門檻 0.1），寫出差異圖（紅色是變了的像素，其他淡掉）並印出變了幾個像素。
-- `pixelmatch.mjs`：pixelmatch 7.2.0 的 `index.js`，一字未改（sha256 `52c6026c…5788`）；授權 ISC，原文在 `pixelmatch.LICENSE`。不加 npm 套件。
+- `pixelmatch.mjs`：pixelmatch 7.2.0 的 `index.js`，一字未改（sha256 `52c6026c…5788`）；授權 ISC，版權行與原文在 `pixelmatch.LICENSE`（複製或改寫時一起保留）。作者 2026-10-21 同意加這個依賴（「pixelmatch 可以加」），只在 `tools/` 與本機用，不進 App 的 bundle，不加 npm 套件。
 - 前後圖要同一個鏡頭、同一個時刻；只改一個東西時，在同一個分支上開關那個東西各輸出一次（例如決策 314 的路線色帶：`Map3DScene` 不給 `lineBands` 與給的），比兩個 worktree 省一次建置。
