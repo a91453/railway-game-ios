@@ -23,3 +23,7 @@
 - 按鈕上的圖示是 SF Symbols 的示意，App 照舊用 SF Symbols；站長用 App 裡的 `StationMasterTaiwanNormal`。
 - 顏色只用 `Theme` 與 `Palette`，對比寫在 `docs/UI_THEME.md` 的「整個畫面的外框」一節。
 - 預覽用 HTML 排版，再用環境裡的 Chromium（Playwright）截圖。腳本放在 scratchpad，不進 repo（art-style §3）。
+
+## 搬到私有庫
+
+2026-10-21 起，這個資料夾的其他預覽圖（含檢視頁）在私有庫 a91453/railway-reference-private 的 `Railway/game-art-previews/docs/art/screen-shell-2026-10-14/`，內容完整、連結照舊；這裡只留本說明與被程式或文件直接引用的圖。上面連到已搬走檔案的連結請到那裡看。

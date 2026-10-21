@@ -32,3 +32,7 @@
   - 車種的每節人數照 `TrainType`。
   - 天氣照決策 162、182：一天一種天氣，雨讓乘客 −10%、雷雨 −20%，颱風經過的站另外少；遊戲沒有氣溫，也沒有逐時天氣。
 - **產生方式**：預覽用 HTML 排版，再用環境裡的 Chromium（Playwright）截圖。腳本在 scratchpad，不進 repo（art-style §3）。
+
+## 搬到私有庫
+
+2026-10-21 起，這個資料夾的其他預覽圖（含檢視頁）在私有庫 a91453/railway-reference-private 的 `Railway/game-art-previews/docs/art/railway-ui-redesign-2026-10-14/`，內容完整、連結照舊；這裡只留本說明與被程式或文件直接引用的圖。上面連到已搬走檔案的連結請到那裡看。

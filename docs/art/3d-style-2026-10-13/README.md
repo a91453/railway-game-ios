@@ -231,3 +231,7 @@ NEXT_PRIORITIES §0 第 14 項「同一張地圖拉近就傾斜」開工前要�
 | `Railway/street_scene_reference_clean/`（八種畫面風格：剪紙、水粉、水墨、漫畫、黑白漫畫、微縮、素描、水彩；建物遠近 LOD） | 只看了做法。八種是整畫面的後處理，和地圖要讀得清楚的需求不合，所以沒有拿來當方向；「微縮」（移軸模糊）可以之後加在 A 或 C 的拉近上。建物 LOD 留給實作 |
 | `Web/CityView/src/main.js`（ACES、PCFSoft 陰影）、`performance.md` | B 的光線設定、B 的效能數字 |
 | `Simulator/`、`OpenWorld/` | 這次沒有讀（只出示意圖）；實作傾斜時再看它們的 3D 執行與軌道幾何 |
+
+## 搬到私有庫
+
+2026-10-21 起，這個資料夾的其他預覽圖（含檢視頁）在私有庫 a91453/railway-reference-private 的 `Railway/game-art-previews/docs/art/3d-style-2026-10-13/`，內容完整、連結照舊；這裡只留本說明與被程式或文件直接引用的圖。上面連到已搬走檔案的連結請到那裡看。
