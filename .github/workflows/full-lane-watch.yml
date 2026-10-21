@@ -1,0 +1,48 @@
+name: Full lane watch
+
+# Tells the work registry (#231) when main's full lane turns red, a job
+# turns red that had not in this red streak, or it turns green again
+# (decision 329). On 2026-10-20 and 10-21 the full lane was red ten times in
+# a row and nobody was told: its result shows only on the Actions page. The
+# rules of what is news live in tools/ci-watch/full_lane_watch.py, which
+# also skips runs that are not a full lane (pull requests, `only_testing`
+# runs by hand, other branches).
+#
+# workflow_run runs this file as it is on main, with the default branch's
+# token, whatever the run it watches checked out; it reads only the Actions
+# API and the tool from main, and writes one issue comment. The comment is
+# github-actions[bot]'s, which claude.yml does not answer, and it never
+# holds an at sign.
+
+on:
+  workflow_run:
+    workflows: [iOS App Build]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+
+jobs:
+  watch:
+    name: Tell #231 about main's full lane
+    if: >-
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      (github.event.workflow_run.event == 'workflow_dispatch' || github.event.workflow_run.event == 'schedule')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: tools/ci-watch
+          sparse-checkout-cone-mode: false
+
+      - name: Compare with the last full lane and comment when there is news
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          ISSUE: "231"
+        run: python3 -I tools/ci-watch/full_lane_watch.py --run "$RUN_ID"

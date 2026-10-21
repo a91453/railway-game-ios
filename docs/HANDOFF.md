@@ -98,7 +98,7 @@
 - 只改 docs、`Tests/`、`tools/` 的 PR 不影響 App，不用重跑。
 - 要發版的 commit 必須自己有一輪綠的 full lane。
 
-**full lane 紅了**：
+**full lane 紅了**（決策 329 起，`full-lane-watch.yml` 會在 #231 自動留言：第一次紅、紅燈裡又有新的 job 紅、綠回來。看到就照下面做）：
 1. 用 `actions_list` 的 list_workflow_jobs 找出失敗的 job。
 2. 用 `get_job_logs`（return_content 設 false）拿到 log 網址，用 curl 下載到 scratchpad。
 3. 用 `grep -aE "error: -\[|' failed \(|Executed [0-9]+ tests, with"` 找出失敗的測試與行號。
@@ -109,6 +109,7 @@
 
 **發版前**（作者自己跑 `testflight.yml`，這裡只確認）：
 - 要發的 commit 就是 main HEAD，它的 `ci.yml` 和它自己的 full lane 都要綠。
+- 看 #231 最後一則 `full-lane-watch.yml` 的自動留言：最後一則是「紅了」或「又有 job 紅了」、之後還沒有「綠了」，就是 main 的 full lane 還紅著，先不發（決策 329）。
 - 確認的時候如果 main 又合了改 App 的 PR，要在新的 HEAD 重跑 full lane。這時可以取消舊 commit 用 workflow_dispatch 跑的 full lane，讓出 macOS runner（上限 5 個）。
 - 確認後通知遊戲規劃與作者「可以發（commit X）」，並請各 session 發版前別再合改 App 的 PR。
 - 作者在收到「可以發（commit X）」之前就發了，要在 PLAYER_FEEDBACK 記下實際發的 commit 與它 full lane 的結果（72.1：作者 10:47 UTC 發 8c305a6，它的 full lane 才剛開始、後來紅；與全綠的 c3a3ec7 只差一個 UI 測試檔，App 相同。審查 #785 第二節）。
@@ -138,7 +139,7 @@
 
 **職責**：
 - 接作者轉來的 TestFlight 玩家回報與 bug，到最新 main 查證，有問題就用 `create_session` 派修正 session，結果轉告作者。
-- 也盯 main 的 full lane（iOS App Build／ios-full-lane），紅了就派人修。
+- 也盯 main 的 full lane（iOS App Build／ios-full-lane），紅了就派人修。決策 329 起紅了會在 #231 自動留言（`full-lane-watch.yml`），不用自己一直去 Actions 頁面看。
 - 不合併 PR，合併是作者的事（§1.2）。
 
 **查證**：

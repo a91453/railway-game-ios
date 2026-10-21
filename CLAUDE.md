@@ -219,7 +219,11 @@ needs OSM data reads the same extract.
   `claude.yml` (`@claude` in an issue, a pull request comment or a review
   by the owner or a collaborator runs `anthropics/claude-code-action` on a
   Linux runner, billed to the Claude API key in the repository secret
-  `ANTHROPIC_API_KEY`; decision 187's later amendment).
+  `ANTHROPIC_API_KEY`; decision 187's later amendment),
+  `full-lane-watch.yml` (when an iOS App Build full lane of `main` finishes,
+  `tools/ci-watch/full_lane_watch.py` comments on #231 if it turned red, a
+  job turned red that had not in this red streak, or it turned green again;
+  as github-actions[bot], never with an at sign; decision 329).
 - Distribution: GitHub Actions → internal TestFlight
   (`docs/TESTFLIGHT_GITHUB_ACTIONS.md`). A real run has verified the signed
   Release archive, the App Store distribution export, the IPA check and the
