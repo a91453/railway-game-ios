@@ -91,3 +91,17 @@ python3 tools/real-railways/extract_structures.py "$R/network.json" "$R/metro-ne
 - 林鐵本線獨立山一帶 40–100 m 的幾處小偏差：沒有逐段用影像確認，保留原檔。
 - OSM 有、App 沒有畫的：糖業鐵路、舊山線、花蓮臨港線與臺中港線（貨運）、北迴線的新永春隧道（OSM 的新舊兩座都標成正線，原檔走永春隧道）、機場航廈電車、義大單軌、草衙道電車，以及萬大線的施工路段與各系統機廠、尾軌的短線。都不是一般客運路線，或是同一條線的另一條軌道。
 
+
+## 離官方的鐵路多遠（2026-10-21）
+
+`measure_osm_offset.py` 量 App 打包的 `track_lines.geojson`（沿 OSM 重畫的）離內政部國土測繪中心「臺灣鐵路」（data.gov.tw 73220）與「捷運」（73222）多遠：每條線每 20 m 一點，量到同一種鐵路的官方線段，逐線列中位數、90%、3 m 內與超過 10 m 的比例、平均位移，以及連續 200 m 以上超過 10 m 的路段。只用 Python 標準庫；讀 shapefile 與 TM2 反投影照參考庫的 `scripts/build_rail_structures_official.mjs`。
+
+```sh
+curl -sSL -o rail.zip 'https://opdadm.moi.gov.tw/api/v1/no-auth/resource/api/dataset/299841E1-714A-40BA-AF4B-D6527EEA2A41/resource/801DECA5-E75E-40A4-816C-1BD6A1F322C9/download'
+curl -sSL -o mrt.zip 'https://opdadm.moi.gov.tw/api/v1/no-auth/resource/api/dataset/159E4D93-A053-4382-A6BD-9DE6B5C4E19F/resource/9D9CF5D4-EEA3-4E1C-ACB0-ECDBBA27C713/download'
+unzip -q rail.zip -d rail && unzip -q mrt.zip -d mrt
+python3 -I tools/real-railways/measure_osm_offset.py RailwayGameApp/Resources/RealRailways/track_lines.geojson \
+  rail/RAIL_*.shp mrt/MRT_*.shp report.json
+```
+
+「高速鐵路」（73221）放在 tgos.tw，台灣以外連不上（403）；在台灣下載 `HSRAIL_*.zip` 後，把 `HSRAIL_*.shp` 加在後面就會一起量。官方的檔與 `report.json` 不進 repository。結果與建議在 `docs/research/OSM_OFFSET_2026-10-21.md`（2026-10-21：`RAIL_1150409`、`MRT_1150409`，1,319 km，中位數 2.2 m，超過 10 m 的 3.8%）。
