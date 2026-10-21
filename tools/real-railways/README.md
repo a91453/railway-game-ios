@@ -94,7 +94,7 @@ python3 tools/real-railways/extract_structures.py "$R/network.json" "$R/metro-ne
 
 ## 離官方的鐵路多遠（2026-10-21）
 
-`measure_osm_offset.py` 量 App 打包的 `track_lines.geojson`（沿 OSM 重畫的）離內政部國土測繪中心「臺灣鐵路」（data.gov.tw 73220）與「捷運」（73222）多遠：每條線每 20 m 一點，量到同一種鐵路的官方線段，逐線列中位數、90%、3 m 內與超過 10 m 的比例、平均位移，以及連續 200 m 以上超過 10 m 的路段。只用 Python 標準庫；讀 shapefile 與 TM2 反投影照參考庫的 `scripts/build_rail_structures_official.mjs`。
+`measure_osm_offset.py` 量 App 打包的 `track_lines.geojson`（沿 OSM 重畫的）離內政部國土測繪中心「臺灣鐵路」（data.gov.tw 73220）與「捷運」（73222）多遠：每條線每 20 m 一點，量到同一種鐵路的官方線段，逐線列中位數、90%、95%、99%、3 m 內與超過 10 m 的比例、平均位移，以及連續 200 m 以上超過 10 m 的路段。只用 Python 標準庫；讀 shapefile 與 TM2 反投影照參考庫的 `scripts/build_rail_structures_official.mjs`。
 
 ```sh
 curl -sSL -o rail.zip 'https://opdadm.moi.gov.tw/api/v1/no-auth/resource/api/dataset/299841E1-714A-40BA-AF4B-D6527EEA2A41/resource/801DECA5-E75E-40A4-816C-1BD6A1F322C9/download'
@@ -104,4 +104,4 @@ python3 -I tools/real-railways/measure_osm_offset.py RailwayGameApp/Resources/Re
   rail/RAIL_*.shp mrt/MRT_*.shp report.json
 ```
 
-「高速鐵路」（73221）放在 tgos.tw，台灣以外連不上（403）；在台灣下載 `HSRAIL_*.zip` 後，把 `HSRAIL_*.shp` 加在後面就會一起量。官方的檔與 `report.json` 不進 repository。結果與建議在 `docs/research/OSM_OFFSET_2026-10-21.md`（2026-10-21：`RAIL_1150409`、`MRT_1150409`，1,319 km，中位數 2.2 m，超過 10 m 的 3.8%）。
+「高速鐵路」（73221）放在 tgos.tw，台灣以外連不上（403）；在台灣下載 `HSRAIL_*.zip` 後，把 `HSRAIL_*.shp` 加在後面就會一起量。官方的檔與 `report.json` 不進 repository。結果與建議在 `docs/research/OSM_OFFSET_2026-10-21.md`（2026-10-21：`RAIL_1150409`、`MRT_1150409`，1,319 km，中位數 2.2 m，95% 在 8.9 m 內，超過 10 m 的 3.8%）。

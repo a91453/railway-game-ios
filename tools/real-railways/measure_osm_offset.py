@@ -239,6 +239,7 @@ def main():
             "missingKm": round(missing * STEP / 1000, 1),
             "median": round(quantile(distances, 0.5), 1) if n else None,
             "p90": round(quantile(distances, 0.9), 1) if n else None,
+            "p95": round(quantile(distances, 0.95), 1) if n else None,
             "p99": round(quantile(distances, 0.99), 1) if n else None,
             "max": round(distances[-1], 1) if n else None,
             "within3": round(sum(d <= 3 for d in distances) / n, 3) if n else None,
@@ -255,6 +256,7 @@ def main():
     total = {
         "km": round(len(every) * STEP / 1000, 1),
         "median": round(quantile(every, 0.5), 1), "p90": round(quantile(every, 0.9), 1),
+        "p95": round(quantile(every, 0.95), 1),
         "p99": round(quantile(every, 0.99), 1),
         "within3": round(sum(d <= 3 for d in every) / len(every), 3),
         "over10": round(sum(d > 10 for d in every) / len(every), 3),
@@ -264,7 +266,7 @@ def main():
             print(f"{r['sys']:10} {r['line']}: not measured (no official file)")
             continue
         print(f"{r['sys']:10} {r['line']}: {r['km']} km (missing {r['missingKm']}), median {r['median']} m, "
-              f"p90 {r['p90']}, p99 {r['p99']}, max {r['max']}, shift E/N {r['meanShift']}, ≤3 m {r['within3']}, >10 m {r['over10']}, "
+              f"p90 {r['p90']}, p95 {r['p95']}, p99 {r['p99']}, max {r['max']}, shift E/N {r['meanShift']}, ≤3 m {r['within3']}, >10 m {r['over10']}, "
               f"stretches >10 m over 200 m: {len(r['stretchesOver10'])}")
     print("all", total)
     if report_path:
