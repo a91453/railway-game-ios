@@ -180,12 +180,12 @@ final class RealLineAcquisitionTests: XCTestCase {
         print("tunnels \(tunnel), bridges and viaducts \(carried), ground \(ground)")
         XCTAssertGreaterThan(tunnel.all, 20)
         XCTAssertGreaterThanOrEqual(Double(tunnel.inside), 0.85 * Double(tunnel.all), "\(tunnel)")
-        // Measured: 6 of 10. The 4 left are Neiwan's 499 m bridge between
-        // Zhudong and Hengshan, built on the ground (embankment
-        // and level): 10 m up (``TrackRise/carriedHeight``) within the
-        // grade clashes there, and the bound is let go.
+        // Measured: 10 of 10. Neiwan's low 499 m bridge between Zhudong and
+        // Hengshan was 4 of them on the ground (6 of 10) while its bound
+        // and its approach's were let go together; the approach's now goes
+        // first (``TrackRise/Bound/isOnGround``).
         XCTAssertGreaterThan(carried.all, 8)
-        XCTAssertGreaterThanOrEqual(carried.up, carried.all - 4, "\(carried)")
+        XCTAssertGreaterThanOrEqual(Double(carried.up), 0.85 * Double(carried.all), "\(carried)")
         XCTAssertGreaterThan(ground.all, 300)
         XCTAssertLessThanOrEqual(Double(ground.off), 0.04 * Double(ground.all), "\(ground)")
     }
