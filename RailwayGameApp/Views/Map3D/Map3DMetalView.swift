@@ -35,6 +35,8 @@ final class Map3DMetalView: MTKView {
         var people: Int
         var vehicles: Int
         var streetDetail: Map3DStreetDetail
+        /// The pixels a point drawn (``Map3DDrawScale``).
+        var drawScale: Double
     }
 
     var camera = Map3DCamera()
@@ -68,6 +70,10 @@ final class Map3DMetalView: MTKView {
     /// begin with, one step less each time it cannot hold its frame rate.
     private(set) var streetDetail = Map3DStreetDetail.off
     private var slowWindows = 0
+    /// 2026-10-21: whether the GPU kept over its budget (``Map3DDrawScale``)
+    /// and the map draws fewer pixels, until it closes.
+    private var drawsFewerPixels = false
+    private var overBudgetWindows = 0
     /// Decision 230: the train models, and a buffer of each one's vertices.
     private var models: (pack: Map3DModelPack, buffers: [MTLBuffer])?
     var onStats: (@MainActor (Stats) -> Void)?
@@ -287,6 +293,10 @@ final class Map3DMetalView: MTKView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
+        // 2026-10-21 (decision 238's later note): fewer pixels once the GPU
+        // keeps over its budget.
+        let scale = CGFloat(Map3DDrawScale.scale(display: Double(traitCollection.displayScale), lowered: drawsFewerPixels))
+        if scale > 0, contentScaleFactor != scale { contentScaleFactor = scale }
         camera.viewport = (Float(max(bounds.width, 1)), Float(max(bounds.height, 1)))
     }
 
@@ -590,7 +600,8 @@ final class Map3DMetalView: MTKView {
             triangles: lastCounts.triangles,
             people: lastLife.people,
             vehicles: lastLife.vehicles,
-            streetDetail: streetDetail
+            streetDetail: streetDetail,
+            drawScale: Double(contentScaleFactor)
         )
         // Decision 259: a device that cannot hold its frame rate while
         // drawing street life draws less of it.
@@ -599,6 +610,12 @@ final class Map3DMetalView: MTKView {
         if Map3DStreetDetail.shouldLower(framesPerSecond: stats.framesPerSecond, aim: Double(preferredFramesPerSecond), windows: slowWindows) {
             streetDetail = streetDetail.lowered
             slowWindows = 0
+        }
+        overBudgetWindows = Map3DDrawScale.isOver(gpuMilliseconds: stats.gpuMilliseconds, aim: Double(preferredFramesPerSecond))
+            ? overBudgetWindows + 1 : 0
+        if !drawsFewerPixels, Map3DDrawScale.shouldLower(windows: overBudgetWindows) {
+            drawsFewerPixels = true
+            setNeedsLayout()
         }
         frames = 0
         cpuTimes.removeAll()

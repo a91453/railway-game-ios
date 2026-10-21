@@ -39,6 +39,159 @@ final class Map3DFrameCostReportTests: XCTestCase {
         }
     }
 
+    /// What the GPU is given to draw (2026-10-21, the owner's second
+    /// screenshots: GPU 10–12 ms on Taipei from near and far), by layer:
+    /// triangles, and how many times over each layer covers the screen
+    /// (each triangle clipped to the view, its area in pixels of an iPhone
+    /// 17 Pro's 3× screen, summed, over the screen's). Opaque layers cost
+    /// little when covered twice (Apple's GPUs shade only the nearest
+    /// opaque surface of a pixel); the shadows and street lights' pools,
+    /// blended over them, are shaded every time.
+    func testTheGPUBudget() throws {
+        guard ProcessInfo.processInfo.environment["MAP3D_FRAME_REPORT"] != nil else { throw XCTSkip("Set MAP3D_FRAME_REPORT=1.") }
+        let scene = try Self.taipeiScene()
+        let width = Float((scene.region.maxX - scene.region.minX) / Double(WorldCoordinate.unitsPerMetre))
+        let height = Float((scene.region.maxY - scene.region.minY) / Double(WorldCoordinate.unitsPerMetre))
+        let models = Map3DModelPack.standard
+        for (name, distance) in [("far", max(width, height) * 0.9), ("middle", 1_400), ("middle", 800), ("near", 280)] as [(String, Float)] {
+            let camera = Map3DCamera(target: .zero, distance: distance, viewport: (402, 874))
+            let matrix = camera.viewProjection
+            let screen = Double(402 * 3) * Double(874 * 3)
+            var layers: [(name: String, triangles: Int, pixels: Double, draws: Int)] = []
+            func add(_ name: String, _ triangles: Int, _ pixels: Double, _ draws: Int) {
+                if let at = layers.firstIndex(where: { $0.name == name }) {
+                    layers[at].triangles += triangles
+                    layers[at].pixels += pixels
+                    layers[at].draws += draws
+                } else {
+                    layers.append((name, triangles, pixels, draws))
+                }
+            }
+            var propTriangles: [String: Int] = [:]
+            for chunk in scene.chunks where Map3DCamera.sees(minimum: chunk.minimum, maximum: chunk.maximum, through: matrix) {
+                let detailed = camera.wantsDetail(minimum: chunk.minimum, maximum: chunk.maximum, wasDetailed: false)
+                let closeUp = detailed && camera.wantsClose(minimum: chunk.minimum, maximum: chunk.maximum, wasClose: false)
+                let base = Self.pixels(chunk.mesh, upTo: chunk.baseIndexCount, through: matrix)
+                add("ground, track, roads", chunk.baseIndexCount / 3, base, 0)
+                if detailed {
+                    let all = Self.pixels(chunk.mesh, upTo: chunk.mesh.indices.count, through: matrix)
+                    add("city (full)", chunk.mesh.triangleCount - chunk.baseIndexCount / 3, all - base, 1)
+                } else {
+                    add("city (far)", chunk.far.triangleCount, Self.pixels(chunk.far, upTo: chunk.far.indices.count, through: matrix), 1)
+                }
+                if closeUp {
+                    add("close-up things", chunk.close.triangleCount, Self.pixels(chunk.close, upTo: chunk.close.indices.count, through: matrix), 1)
+                }
+                if detailed {
+                    var drawn = Set<Int>()
+                    for prop in chunk.props where models.models.indices.contains(prop.model) {
+                        let model = models.models[prop.model]
+                        drawn.insert(prop.model)
+                        propTriangles[model.name, default: 0] += model.triangleCount
+                        add("street furniture", model.triangleCount, Self.pixels(model.vertices, prop.transform, through: matrix), 0)
+                    }
+                    add("street furniture", 0, 0, drawn.count)
+                }
+                if !chunk.shadows.isEmpty {
+                    add("shadows and light pools (blended)", chunk.shadows.triangleCount,
+                        Self.pixels(chunk.shadows, upTo: chunk.shadows.indices.count, through: matrix), 1)
+                }
+            }
+            let life = scene.streetLife.frame(target: camera.target, distance: camera.distance, time: 1_000, lights: 1, detail: .full,
+                                              activity: Map3DStreetLife.Activity())
+            var lifeModels = Set<Int>()
+            for instance in life.instances where models.models.indices.contains(instance.model) {
+                lifeModels.insert(instance.model)
+                add("people and vehicles", models.models[instance.model].triangleCount,
+                    Self.pixels(models.models[instance.model].vertices, instance.transform, through: matrix), 0)
+            }
+            add("people and vehicles", 0, 0, lifeModels.count)
+            let triangles = layers.reduce(0) { $0 + $1.triangles }
+            let draws = layers.reduce(0) { $0 + $1.draws }
+            print("\(name) \(Int(distance)) m (tilt \(String(format: "%.0f", camera.tilt * 180 / .pi))°): \(triangles) triangles, about \(draws) draws")
+            for layer in layers {
+                print("  \(layer.name): \(layer.triangles) triangles, covers the screen \(String(format: "%.2f", layer.pixels / screen))×, \(layer.draws) draws")
+            }
+            let heaviest = propTriangles.sorted { $0.value > $1.value }.prefix(4).map { "\($0.key) \($0.value)" }
+            if !heaviest.isEmpty { print("  heaviest furniture: \(heaviest.joined(separator: ", "))") }
+        }
+    }
+
+    static func taipeiScene() throws -> Map3DScene {
+        let world = GameWorld.newGame(anchor: GeoAnchor(latitudeDegrees: 25.0478, longitudeDegrees: 121.5170)!)
+        let tiles = try BaseMapTiles(data: Data(contentsOf: baseMap.appendingPathComponent("taiwan.pmtiles"), options: .alwaysMapped))
+        let empty = Map3DScene(world: world, baseMap: tiles, cityTiles: [])
+        let across = Int64(5_000 * WorldCoordinate.unitsPerMetre)
+        let middle = (x: Int64(empty.originX), y: Int64(empty.originY))
+        let line = try LineBuilder.line(through: [PlanPoint(x: middle.x - across, y: middle.y - across / 2),
+                                                  PlanPoint(x: middle.x, y: middle.y),
+                                                  PlanPoint(x: middle.x + across, y: middle.y + across / 2)], in: world)
+        return Map3DScene(world: line, baseMap: tiles, cityTiles: CityTileArea.areas(in: baseMap.appendingPathComponent("city")))
+    }
+
+    /// The pixels the first `count` indices' triangles of `mesh` cover on a
+    /// 3× 402 × 874 screen, each clipped to the view.
+    static func pixels(_ mesh: Map3DMesh, upTo count: Int, through matrix: Map3DMatrix) -> Double {
+        var total = 0.0
+        let vertices = mesh.vertices, indices = mesh.indices
+        var at = 0
+        while at + 2 < count {
+            let a = vertices[Int(indices[at])], b = vertices[Int(indices[at + 1])], c = vertices[Int(indices[at + 2])]
+            total += area(clip(a.x, a.y, a.z, matrix), clip(b.x, b.y, b.z, matrix), clip(c.x, c.y, c.z, matrix))
+            at += 3
+        }
+        return total
+    }
+
+    /// The same for a model's triangles placed by `transform` (column by
+    /// column).
+    static func pixels(_ vertices: [Map3DVertex], _ t: [Float], through matrix: Map3DMatrix) -> Double {
+        var total = 0.0
+        var at = 0
+        func placed(_ v: Map3DVertex) -> SIMD4<Float> {
+            clip(t[0] * v.x + t[4] * v.y + t[8] * v.z + t[12], t[1] * v.x + t[5] * v.y + t[9] * v.z + t[13],
+                 t[2] * v.x + t[6] * v.y + t[10] * v.z + t[14], matrix)
+        }
+        while at + 2 < vertices.count {
+            total += area(placed(vertices[at]), placed(vertices[at + 1]), placed(vertices[at + 2]))
+            at += 3
+        }
+        return total
+    }
+
+    static func clip(_ x: Float, _ y: Float, _ z: Float, _ matrix: Map3DMatrix) -> SIMD4<Float> {
+        let m = matrix.columns
+        return SIMD4(m[0] * x + m[4] * y + m[8] * z + m[12], m[1] * x + m[5] * y + m[9] * z + m[13],
+                     m[2] * x + m[6] * y + m[10] * z + m[14], m[3] * x + m[7] * y + m[11] * z + m[15])
+    }
+
+    /// The triangle's area on screen in pixels, clipped (Sutherland–Hodgman)
+    /// to the view's four sides and near plane; either facing counts.
+    static func area(_ a: SIMD4<Float>, _ b: SIMD4<Float>, _ c: SIMD4<Float>) -> Double {
+        var polygon = [a, b, c]
+        let planes: [(SIMD4<Float>) -> Float] = [{ $0.w + $0.x }, { $0.w - $0.x }, { $0.w + $0.y }, { $0.w - $0.y }, { $0.z }, { $0.w - $0.z }]
+        for side in planes {
+            var kept: [SIMD4<Float>] = []
+            for index in polygon.indices {
+                let p = polygon[index], q = polygon[(index + 1) % polygon.count]
+                let dp = side(p), dq = side(q)
+                if dp >= 0 { kept.append(p) }
+                if (dp >= 0) != (dq >= 0) { kept.append(p + (q - p) * (dp / (dp - dq))) }
+            }
+            polygon = kept
+            if polygon.count < 3 { return 0 }
+        }
+        let width = 402.0 * 3, height = 874.0 * 3
+        var sum = 0.0
+        for index in polygon.indices {
+            let p = polygon[index], q = polygon[(index + 1) % polygon.count]
+            let px = Double(p.x / p.w) * width / 2, py = Double(p.y / p.w) * height / 2
+            let qx = Double(q.x / q.w) * width / 2, qy = Double(q.y / q.w) * height / 2
+            sum += px * qy - qx * py
+        }
+        return abs(sum) / 2
+    }
+
     /// Why Taipei's middle looks bare in 3D (2026-10-21, the owner's
     /// screenshot): of the city's lots round Taipei Main Station, how many
     /// stand, and how many the real map's roads, water and parks take
