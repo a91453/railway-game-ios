@@ -11991,6 +11991,59 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - **VERIFIED**（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`Map3DWeatherTests` 6 個、`Map3DNightAndGroundTests`、`Map3DTests`、`Map3DShadowTests` 通過；改到的 App 檔通過 `swiftc -parse`。
 - **UNVERIFIED**：App 的編譯（macOS CI）；實機的雨天畫面（TestFlight）。
 
+**後來**（2026-10-21，雨絲與站前商店街）：72.1 的 fps 回報到了（HANDOFF §2：近景只用一幀的兩成），上面「下一步」的兩項由 3D session_01Y25x9NJSKmAuP1M1K3Sf3C 做（遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 派工，#231）。存檔版本、golden schema 不動；GameCore 不動；沒有新的決策號。
+
+1. **雨絲**（`Map3DRain`，GamePresentation；App 的 `Map3DRainView`）：
+   - 照參考 `weather.js` 的 `updateRain`：畫面上一層平行細線（SwiftUI 的 `Canvas`，疊在 Metal 畫面上，手指點不到）。
+   - 數量照參考的三個畫質，跟著這台裝置的街景量（`Map3DStreetDetail`：完整 480、減少 260、關閉 140），再乘雨量。
+   - 雨量：雨 1、雷雨 1.3、颱風 1.6（MapWeather 的 `sky`；決策 162 的天氣），數量與不透明度（參考的 0.24 × 雨量）一起變。
+   - 每條 5–11 點長、速度 220 點／秒的 0.85–1.15 倍、斜度 0.12、線寬 0.7、顏色 `#C6D7E4`（`Palette.rain3D`）。參考用 `Math.random()` 給每滴的位置與快慢、一格一格移動；這裡改成 `map3DRandom` 與時間算出來，同一刻畫出同樣的雨，沒有每格的狀態。
+   - 雷雨與颱風加閃電：直接用 2D 地圖的 `MapWeather.flash(at:)`（每 9 秒一次、閃兩下約 0.34 秒），白色 0.35 × 亮度蓋一層，和 2D 同一個節奏。
+   - 「減少動態效果」打開時不畫雨絲也不閃（motion skill §3「不自動循環播放」）；光線與霧照舊（本決策第 1 點）。
+2. **站前商店街**（`Map3DScene.Builder.isStationStreet`、`Map3DBuildings.swift` 的 `addStripedAwning`、`addRoofBoard`、`addEntranceCanopy`）：
+   - 範圍：離車站（不含機廠）400 m 以內的店面（`stationStreetReach`）。上面的計畫寫 150 m，量過以後改成 400 m：新遊戲的城鎮中心是車站與高樓區，透天厝的店面從離站 300–400 m 才開始，150 m 以內一間店也沒有（`newGameLine` 兩站的世界：150 m 內 0 間，400 m 內 10 與 542 間）。
+   - 每家店一個主色（`Map3DPalette.stationShops`：原本招牌的四色，加紫 `#8A5FA8`、橘 `#E07B39`），招牌、雨遮、屋頂立牌都用它。參考那五家店的配色組合不用。
+   - 條紋布雨遮取代原本的單色雨遮（二選一）：照 `addAwning`，七條、店色與米白 `#F1EBE0` 交錯，從店面斜出 1.2 m（傾斜 0.42 rad），外緣一條 0.25 m 的垂邊，條紋一樣。高度、寬度照原本的雨遮（決策 267）。放在只有拉近才畫的 `close` 網格。
+   - 高的店（四層以上，一半）：屋頂一塊店色的立牌，兩根鐵柱（`#2C2F35`），離店面 1.5 m，夜裡亮（`makeGlowing`，和路燈同一種）。沒有騎樓的，門口改成一個深色雨棚（`#3A3329`，伸出 1.6 m、兩根柱子）與暖色下照燈（`#FFD49A`，夜裡亮），不擺攤架。照 `decorateHotel` 的作法。
+   - 沒有字：店名、站名不用（art-style §7；3D 裡沒有文字）。
+
+**量測**：
+- 雨絲：每格最多 768 條線（颱風、完整畫質）在 SwiftUI 的 `Canvas` 上，不加三角形與 draw call。
+- 商店街：`newGameLine` 兩站的世界，拉近才畫的網格 133,488 → 136,592 個三角形（+3,104），近景網格 492,128 → 493,598（+1,470），遠景 252,038 不變，draw 數不變。一站約 2,300 面，在計畫的約 4,000 面以內。
+
+**五方**：
+- 玩家：下雨天的 3D 看得到雨在下，雷雨會閃，和 2D 一樣；車站附近的店面比較熱鬧，一出站就知道到了街上。
+- 鐵道迷：台灣的站前商圈（台中、嘉義、高雄站前）多在站前幾百公尺的街上，透天厝一樓是店面、騎樓下有布雨遮；400 m 大約是站前商圈的範圍；和真實資料的來源無關（3D 的店是程序生成）。
+- 開發：雨絲與店面都在 GamePresentation，有 Linux 測試；雨絲是一個 SwiftUI 疊層，沒有新的 Metal 程式；店面在原本的網格裡，不加 draw call；GameCore、存檔、golden 都不動。
+- 美術：條紋與立牌都是平塗的頂點色，顏色從 `Map3DPalette` 取；雨絲照參考調好的淡藍灰與粗細，蓋在畫面上不搶戲；沒有字、沒有品牌（art-style §7）。
+- 音樂：無（雨聲不在範圍；參考的音樂沒有授權，不用）。
+
+**沒有選的做法**（預覽在 `docs/art/map3d-shop-street-2026-10-21/shop-street.svg`）：
+- 雨絲畫在 3D 裡（每滴一條三角形，有遠近）：參考的作法是畫面上一層，平移縮放時雨絲都平行，比較乾淨；畫在 3D 裡要多幾千個三角形。
+- 數量固定（照 2D 的 90／140／200 條）：3D 畫面大部分是近景，參考的 480 條比較像雨；跟著畫質變，舊手機自動少畫。
+- 站前範圍 150 m（計畫的數字）：新遊戲的城鎮一間也碰不到，看不出效果。
+- 站前範圍更大（600 m）：一站一千多間，商店街就不是「站前」了，也多上萬面。
+- 雨遮保留單色（B）或鐵皮（C）：看不出站前和其他街的差別；B、C 照舊用在離站遠的店。
+- 屋頂立牌與門口雨棚放在每一家店：整條街都是旅館，失去參考「一棟高的」的重點。
+
+**參考**：
+
+| 參考 | → 目標 |
+| --- | --- |
+| `Railway/town-scene-reference-clean/source/weather.js` `QUALITY.*.rain`（480／260／140）、`RAIN_SPEED`（220）、`RAIN_SLANT`（0.12）、`updateRain`（每滴 `[x, y, 5 + r·6, 0.85 + r·0.3]`、線寬 0.7、`rgba(198, 215, 228, 0.24 × amount)`） | `Map3DRain.baseCount(for:)`、`speed`、`slant`、`streaks(at:width:height:detail:)`、`lineWidth`、`rgb`、`opacity`（數值照用；亂數改成 `map3DRandom` 與時間） |
+| 同檔的雨畫在 `canvas` 疊層、`pointerEvents: 'none'` | `Map3DRainView`（`TimelineView` ＋ `Canvas`，`allowsHitTesting(false)`） |
+| `GamePresentation/MapWeather.swift` `flash(at:)`（決策 182，2D 的閃電） | `Map3DRain.flash(at:)`（直接用） |
+| `source/main.js` `addAwning`（`AWNING_TILT` 0.42、七條、`0xf1ebe0`、垂邊） | `Map3DScene.Builder.addStripedAwning`（深度改成決策 267 的雨遮公尺數） |
+| 同檔 `decorateShop`（每家店一個主色的招牌與雨遮） | 店色 `Map3DPalette.stationShops` 給招牌、雨遮、立牌 |
+| 同檔 `decorateHotel`（屋頂兩根柱子的立牌、門口雨棚與 `0xffd49a` 下照燈、`glowing`） | `addRoofBoard`、`addEntranceCanopy`（`makeGlowing`） |
+| 同檔的 `signTexture`、`drawSign`（店名的字）、`levels/station.js` 的店名與「晴川站」 | 不用（3D 裡沒有字） |
+
+外部專案：沒有另外搜尋（參考就有完整的作法）。
+
+**驗證**：
+- **VERIFIED**（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`Map3DRainTests`、`Map3DStationStreetTests` 與所有 `Map3D` 開頭的測試（148 個）通過；改到的 App 檔通過 `swiftc -parse`；三角形數照上面量過。
+- **UNVERIFIED**：App 的編譯（`ios-build.yml`）；3D 的 UI 測試（PR 用 `only_testing` 跑）；實機的雨絲、閃電、店面的樣子與夜裡的燈（TestFlight）。
+
 ### 278. 行車控制：跟車的列車改去空的月台；閉塞區間時，終點站的股道不受方向保護
 
 2026-10-18。NEXT_PRIORITIES §16 第 4 項（高鐵示範）：#669 的長進路死結與台南—左營的交會。作者派工（核心玩法 session）。量測、探針與前後對照在 [`research/HSR_SIGNAL_BASELINE_2026-10-15.md`](research/HSR_SIGNAL_BASELINE_2026-10-15.md) 第 8 節。

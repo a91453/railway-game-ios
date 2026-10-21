@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="360" viewBox="0 0 720 360" font-family="-apple-system, 'PingFang TC', sans-serif">
+  <!-- Decision 277, later: the station-front shop's awning, chosen (A) and not chosen (B, C), seen from the street. Colours from Map3DPalette: signs #D9534A #3E7CC0 #F0B847 #4FA36B, stationShops adds #8A5FA8 #E07B39; awningCream #F1EBE0; shopAwnings #3E8C8C; tinAwnings #7A93A6; signPost #2C2F35; entranceCanopy #3A3329; downlight #FFD49A. -->
+  <rect width="720" height="360" fill="#ECEEF6"/>
+  <g font-size="13" fill="#262C57" font-weight="600">
+    <text x="20" y="26">A（選用）：店色＋米白七條、垂邊</text>
+    <text x="260" y="26">B：一片單色雨遮（原本的）</text>
+    <text x="500" y="26">C：鐵皮雨遮</text>
+  </g>
+  <!-- A: a shop front with a striped awning -->
+  <g transform="translate(30 40)">
+    <rect x="0" y="0" width="200" height="150" fill="#E8DCC8" stroke="#262C57" stroke-width="1.5"/>
+    <rect x="20" y="70" width="160" height="80" fill="#5A6070"/>
+    <g>
+      <rect x="10" y="52" width="25.7" height="16" fill="#D9534A"/><rect x="35.7" y="52" width="25.7" height="16" fill="#F1EBE0"/>
+      <rect x="61.4" y="52" width="25.7" height="16" fill="#D9534A"/><rect x="87.1" y="52" width="25.7" height="16" fill="#F1EBE0"/>
+      <rect x="112.8" y="52" width="25.7" height="16" fill="#D9534A"/><rect x="138.5" y="52" width="25.7" height="16" fill="#F1EBE0"/>
+      <rect x="164.2" y="52" width="25.7" height="16" fill="#D9534A"/>
+      <rect x="10" y="68" width="180" height="6" fill="#D9534A" opacity="0.85"/>
+    </g>
+    <rect x="182" y="10" width="10" height="40" fill="#D9534A" stroke="#262C57" stroke-width="1"/>
+  </g>
+  <!-- B -->
+  <g transform="translate(260 40)">
+    <rect x="0" y="0" width="200" height="150" fill="#E8DCC8" stroke="#262C57" stroke-width="1.5"/>
+    <rect x="20" y="70" width="160" height="80" fill="#5A6070"/>
+    <rect x="10" y="56" width="180" height="12" fill="#3E8C8C"/>
+    <rect x="182" y="10" width="10" height="40" fill="#3E7CC0" stroke="#262C57" stroke-width="1"/>
+  </g>
+  <!-- C -->
+  <g transform="translate(490 40)">
+    <rect x="0" y="0" width="200" height="150" fill="#E8DCC8" stroke="#262C57" stroke-width="1.5"/>
+    <rect x="20" y="70" width="160" height="80" fill="#5A6070"/>
+    <g fill="#7A93A6" stroke="#5E7286" stroke-width="1">
+      <rect x="10" y="56" width="180" height="12"/>
+      <line x1="30" y1="56" x2="30" y2="68"/><line x1="50" y1="56" x2="50" y2="68"/><line x1="70" y1="56" x2="70" y2="68"/>
+      <line x1="90" y1="56" x2="90" y2="68"/><line x1="110" y1="56" x2="110" y2="68"/><line x1="130" y1="56" x2="130" y2="68"/>
+      <line x1="150" y1="56" x2="150" y2="68"/><line x1="170" y1="56" x2="170" y2="68"/>
+    </g>
+  </g>
+  <g font-size="13" fill="#262C57" font-weight="600">
+    <text x="20" y="232">D（選用）：高的店屋頂一塊店色立牌（兩根鐵柱，夜裡亮）＋門口雨棚與暖色下照燈</text>
+  </g>
+  <g transform="translate(60 248)">
+    <rect x="0" y="40" width="140" height="70" fill="#E8DCC8" stroke="#262C57" stroke-width="1.5"/>
+    <rect x="30" y="20" width="4" height="20" fill="#2C2F35"/><rect x="106" y="20" width="4" height="20" fill="#2C2F35"/>
+    <rect x="18" y="0" width="104" height="22" fill="#8A5FA8" stroke="#262C57" stroke-width="1"/>
+    <rect x="30" y="86" width="80" height="5" fill="#3A3329"/>
+    <rect x="38" y="91" width="64" height="2" fill="#FFD49A"/>
+    <rect x="32" y="91" width="2" height="19" fill="#3A3329"/><rect x="106" y="91" width="2" height="19" fill="#3A3329"/>
+  </g>
+</svg>
