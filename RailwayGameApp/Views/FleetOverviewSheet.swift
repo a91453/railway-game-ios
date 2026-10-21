@@ -142,13 +142,43 @@ struct FleetOverviewSheet: View {
                 ))
             }
         } message: { train in
-            Text(verbatim: session.language.text(
-                "Brings 70 % of what is left of its cost on the books.",
-                "可取回帳面價值的 70 %。"
-            ))
+            Text(verbatim: train.position == nil
+                ? session.language.text(
+                    "Brings 70 % of what is left of its cost on the books.",
+                    "可取回帳面價值的 70 %。"
+                )
+                : session.language.text(
+                    "Takes it off the track and brings 70 % of what is left of its cost on the books.",
+                    "會先把它移出軌道，可取回帳面價值的 70 %。"
+                ))
         }
         .fullScreenCover(isPresented: $showsRoster) {
             TrainRosterView(session: session)
+        }
+    }
+
+    /// Decision 180: a train on no line is sold back at 70 % of its books;
+    /// decision 327: one on the track is taken off it first.
+    @ViewBuilder
+    private func sellButton(_ train: Train) -> some View {
+        if session.world.canSellTrainWhereItStands(train.id) {
+            let language = session.language
+            Button {
+                sellingTrain = train
+            } label: {
+                Text(verbatim: language.text(
+                    "Sell \(session.world.trainSaleQuote(train.id).moneyText)",
+                    "出售 \(session.world.trainSaleQuote(train.id).moneyText)"
+                ))
+                .font(.caption2.weight(.bold))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Theme.chip)
+                .foregroundStyle(Theme.textPrimary)
+                .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("fleet.sell.\(train.name)")
         }
     }
 
@@ -304,32 +334,20 @@ struct FleetOverviewSheet: View {
                 if let load = session.world.trainLoadInfo(of: train.id) {
                     TrainLoadBar(load: load, language: language)
                 }
+                // Decision 327: a train on no line is sold from the track too.
+                if session.world.canSellTrainWhereItStands(train.id) {
+                    HStack {
+                        Spacer()
+                        sellButton(train)
+                    }
+                }
             } else {
                 HStack {
                     Text(verbatim: language.text("In depot / off track", "未上軌（車庫待命中）"))
                         .font(.caption)
                         .foregroundStyle(Theme.textSecondary)
                     Spacer()
-                    // Decision 180: a train on no line and off the track is sold
-                    // back at 70 % of its books.
-                    if session.world.canSellTrain(train.id) {
-                        Button {
-                            sellingTrain = train
-                        } label: {
-                            Text(verbatim: language.text(
-                                "Sell \(session.world.trainSaleQuote(train.id).moneyText)",
-                                "出售 \(session.world.trainSaleQuote(train.id).moneyText)"
-                            ))
-                            .font(.caption2.weight(.bold))
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Theme.chip)
-                            .foregroundStyle(Theme.textPrimary)
-                            .clipShape(Capsule())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("fleet.sell.\(train.name)")
-                    }
+                    sellButton(train)
                 }
             }
         }
