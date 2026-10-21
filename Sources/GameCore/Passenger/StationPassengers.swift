@@ -219,20 +219,32 @@ public struct StationPassengers: Hashable, Sendable {
     }
 
     private mutating func enqueue(_ group: WaitingGroup) {
-        if let index = waiting.firstIndex(where: {
-            $0.since == group.since && $0.line == group.line && $0.direction == group.direction &&
-                $0.destination == group.destination && $0.journey == group.journey && $0.readyAt == group.readyAt
-        }) {
-            let previous = waiting[index]
-            waiting[index] = WaitingGroup(line: previous.line, direction: previous.direction,
-                destination: previous.destination, since: previous.since, count: previous.count + group.count,
-                journey: previous.journey, readyAt: previous.readyAt)
-        } else {
-            let insert = waiting.firstIndex {
-                $0.since > group.since || $0.since == group.since && $0.destination > group.destination
-            } ?? waiting.count
-            waiting.insert(group, at: insert)
+        // Decision 328: the queue is in the order of `since` (the decoder
+        // holds every save to it), so only the groups of the same minute,
+        // found by halving, are looked at, not the whole queue; the group
+        // matched or the place found is the same as a search from the front.
+        var low = 0, high = waiting.count
+        while low < high {
+            let middle = (low + high) / 2
+            if waiting[middle].since < group.since { low = middle + 1 } else { high = middle }
         }
+        var insert = low
+        while insert < waiting.count, waiting[insert].since == group.since {
+            let other = waiting[insert]
+            if other.line == group.line && other.direction == group.direction && other.destination == group.destination
+                && other.journey == group.journey && other.readyAt == group.readyAt {
+                waiting[insert] = WaitingGroup(line: other.line, direction: other.direction,
+                    destination: other.destination, since: other.since, count: other.count + group.count,
+                    journey: other.journey, readyAt: other.readyAt)
+                waitingCount += group.count
+                return
+            }
+            insert += 1
+        }
+        // Before the first of the minute for a later destination.
+        var first = low
+        while first < insert, waiting[first].destination <= group.destination { first += 1 }
+        waiting.insert(group, at: first)
         waitingCount += group.count
     }
 
