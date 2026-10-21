@@ -888,7 +888,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "從這裡出發的每位乘客，不是在候車、在車上、已抵達，就是因車站客滿離開或放棄搭乘。「未能上車」計算客滿列車留下候車乘客的次數。"
+            "value" : "從這裡出發的每位乘客，不是在候車、在車上、已抵達，就是因車站客滿離開或放棄搭乘。「未能上車」計算滿載列車留下候車乘客的次數。"
           }
         }
       }
@@ -2663,6 +2663,16 @@
         }
       }
     },
+    "Fares and Full Trains" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "車資與章"
+          }
+        }
+      }
+    },
     "800m Catchment Area" : {
       "localizations" : {
         "zh-Hant" : {
@@ -2753,12 +2763,12 @@
         }
       }
     },
-    "Station catchment area shows the 800-metre walking reference area (~10 minutes walk)." : {
+    "Station catchment area shows the 800-metre walking reference area (~10 minutes walk). Fares and full trains: the fare each station takes, and a stamp where a full train ends its trip." : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "顯示以車站為中心、步行約 10 分鐘的 800 公尺步行服務範圍。"
+            "value" : "顯示以車站為中心、步行約 10 分鐘的 800 公尺步行服務範圍。車資與章：每站收到的車資，以及滿載的列車在終點站蓋的章。"
           }
         }
       }

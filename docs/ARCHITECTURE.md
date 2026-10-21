@@ -5343,6 +5343,19 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 區塊價格跟著起點定，不跟著被買的那一塊：從臺東起手的人買到高雄的區塊也只付 $105 萬 × 已擁有塊數。
 - 沒有驗證的：選點畫面與 App 的 SwiftUI 在 macOS CI 看；啟動時間與買地的卡頓要 TestFlight 實機看（Linux 的 release 在表上）。
 
+**後來：還沒買的地塊畫鎖頭**（2026-10-21，NEXT_PRIORITIES §19 第 4 名，`docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.7；遊戲規劃派工，不另取決策號）。空白地圖的購地擴建（決策 160）與實景地圖的「先給一塊、之後買地」（本決策）都用 `GameWorld.mapExpansion`，所以「還沒買」就是不在 `mapExpansion.owned` 裡的地塊；依面積收購（決策 146）是買建物，不是地塊，沒有鎖頭。
+1. **哪幾塊有鎖頭**（GamePresentation 的 `GameSession.mapLocks(on:viewport:clearOf:)`、`MapLock`）：和擁有的土地相鄰、現在就能買的那幾塊（`mapTilesForSale()`）各一個；更外面的照決策 160 只淡化。只在沒有拿建造工具、沒有教學、沒有在擴建時出現（`showsMapLocks`）；擴建時那幾塊照舊顯示價格。
+2. **畫在哪裡**：那一塊在畫面上露出來的部分（扣掉蓋在地圖邊上的按鈕與面板）的正中間；露出來的部分任一邊不到 56 點（`MapLock.smallestPart`，拉得很遠，或只露出一條邊）就不畫。
+3. **鎖上或打開**：最佳一天的運量還不夠買那一塊時是鎖上的鎖（`MapGlyphLock`），夠了是打開的鎖（`MapGlyphLockOpen`，暖黃底，「購買」的顏色）；自由模式一律打開。
+4. **點了**（`GameSession.openMapLock(_:)`）：和按「擴建地圖」再點那一塊一樣，進入擴建（遊戲照決策 160 暫停）並選好那一塊，購地卡（價格、解鎖的運量、會變成一般車站的外地連絡站）直接出現；鏡頭不動。不能買的地塊什麼都不做。
+5. **畫面**（App）：`MapLockMarks` 是地圖上的按鈕（和委託的旗子、決策 246 同一種做法），VoiceOver 讀「還沒解鎖的土地」或「可以買的土地」，提示「看看價格」。選地時價格牌前面的 SF Symbols `lock.fill` 換成同一個 `MapGlyphLock`。顏色與對比在 `docs/UI_THEME.md`。
+- **五方**：玩家：看得到下一塊在哪、夠不夠格，點一下就看到價格，不必先找「擴建地圖」按鈕。鐵道迷：無（地塊是遊戲的規則，不是真實的資料）。開發：哪幾塊、放哪、點了做什麼都在 GamePresentation，Linux 測試（`MapLockTests`）；App 只畫，GameCore、存檔、golden 不動。美術：照 art-style 自己畫的單色圖示，和委託旗子、機廠同一套；鎖上、打開用形狀分。音樂：無。
+- **沒採用**：(A) 每一塊還沒買的地都畫鎖頭（研究裡那款遊戲的做法）：實景地圖有四百多塊，拉遠時滿畫面都是鎖，而且點了大多數只能說「不相鄰」；(B) 只用 SF Symbols 的 `lock.fill`：地圖物件要用自己的圖示（決策 121 第 4 點）；(C) 點了把鏡頭拉到整片可買的地（像「擴建地圖」按鈕）：玩家已經在看那一塊，拉走反而找不到。
+- **參考**：私有參考庫只有 `Railway/island_city_reference_clean/source/js/g41.js` 在還沒解鎖的建物按鈕上寫「🔒 第 N 章」（表情符號，鎖的是建物種類，不是地塊），沒有可以搬的鎖頭、淡化或點擊；其他參考包沒有會變大的地圖（同上面的「參考」）。外部專案沒有找：概念就是研究 4.7 那款遊戲的「起始範圍外淡掉、每格一個鎖」（商業遊戲，只取做法）。圖示是這個專案自己畫的。
+- **預覽**：選定的兩個圖示和沒採用的兩種畫法（高鎖環配圓鎖孔、圓鎖身）在 `docs/art/map-lock-2026-10-21/chosen-and-others.png`（art-style 的四種底、三種大小、模糊與灰階）。
+- **測試**：`MapLockTests`（Linux）；`MapLockUITests`（full lane，決策 199：新遊戲拉遠到看得到鎖頭、點了出現購地卡、結束後鎖頭回來）。
+- **沒有驗證的**：App 的畫法與手感要看 macOS CI 與 TestFlight。
+
 ### 168. 高鐵：高鐵路線、高鐵車組、按距離的票價與城際需求
 
 2026-10-11，全島步驟 C（`docs/research/WHOLE_TAIWAN_MAP.md`）。作者：「做實景地圖擴建第 2 步，再做高鐵」。號碼依工作登記 #231：決策 168、存檔版本 43、golden schema 65。
@@ -9518,6 +9531,48 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
 外部專案：沒有用到。
 
+**後來（2026-10-21，作者實機的 CPU 與 GPU）**：作者的 iPhone 17 Pro 看真實台北交來兩組數字。
+- 第一組：遠景 CPU 16.6 ms，剛好一幀。
+- 第二組：同一個遠景 CPU 一下 1.2 ms、一下 11.9 ms；中景、遠景的 GPU 都是 10–12 ms（第一組只有 2–4 ms）；遠景 214 draws、中景 44 draws、245k 個三角形。
+
+1. **CPU**：
+   - 計時原本從拿 drawable 之前開始，等螢幕的時間被算成工作。現在一幀的 CPU 工作都做完才拿 drawable（Apple 的建議：晚拿、早放）。
+   - 等 drawable 與等街景緩衝的時間另計，幀數面板多一行 `wait`。
+   - `Map3DCamera.sees`、`wantsDetail` 不再每次配陣列。Linux debug 量：遠景 112／384 塊，剔除 3.6 ms → 0.24 ms。
+2. **GPU 給了什麼**（`Map3DFrameCostReportTests/testTheGPUBudget`，`MAP3D_FRAME_REPORT=1`，Linux 上把每個三角形裁進畫面、算在 3× 螢幕上的像素）：
+
+   | 鏡頭 | 三角形 | 地面、軌道、道路 | 城市 | 街道設施 | 陰影與路燈光池（混色） | 行人與車 |
+   | --- | --: | --: | --: | --: | --: | --: |
+   | 遠 10.8 km | 259,798 | 186,444／1.60× | 8,354／0.00× | — | 65,000／0.06× | — |
+   | 中 800 m | 172,350 | 9,002／1.53× | 9,874／0.21× | 91,464／0.07× | 3,310／0.19× | 58,700／0.01× |
+   | 近 280 m | 188,498 | 9,002／1.43× | 10,212／0.79× | 91,464／0.06× | 3,310／0.33× | 74,510／0.02× |
+
+   - 「1.60×」是蓋滿畫面幾次。Apple 的 GPU 只替每個像素最近的不透明面上色，所以不透明的層疊幾次花不了多少。真正每次都要上色的是混色的陰影與光池，最多只蓋 0.33 個畫面。
+   - 街道設施的三角形多半是行道樹（800 m 時 91,464 個中有 64,980 個），但只蓋 0.07 個畫面。
+   - 三角形最多 26 萬，對 A19 Pro 不算重。所以 10–12 ms 不太像是三角形或混色重疊造成的。
+   - 最可能的是像素量：3× 螢幕每點 9 個像素，每個像素有 4 個樣本、1–2 次各向異性的貼圖取樣。
+   - 兩組 GPU 差了三到五倍的原因沒有查出來（時刻、天氣、機身溫度都可能），要作者在同一個畫面記下時刻再量一次。
+3. **改了什麼**：
+   - `Map3DDrawScale`：GPU 時間的中位數連續 3 個半秒超過一幀的六成（60 Hz 時 10 ms），3D 就改畫每點 2×2 個像素（3× 螢幕的 0.44 倍），直到關掉 3D。iPad 的 2× 螢幕本來就是 2×，不變。
+   - 面板的 `wait` 那一行後面顯示現在畫幾倍。
+   - 著色器：材質的細紋在 600 m 外已經淡完，那裡不再做第二次取樣。
+4. **五方**：
+   - 玩家：GPU 吃緊的畫面一秒半後降到 2×，幀數穩住、機身少發熱；GPU 有餘裕時照舊銳利。
+   - 鐵道迷：無。
+   - 開發：規則在 GamePresentation，有 Linux 測試（`Map3DDrawScaleTests`）；Metal 只多一個 `contentScaleFactor`；GPU 預算報告可以重量。
+   - 美術：預覽（`docs/art/map3d-draw-scale-2026-10-21/`）看得出 2× 的窗格線較軟，所以只在 GPU 吃緊時才降，不一律降。
+   - 音樂：無。
+5. **沒選的**：
+   - (a) 一律 2×：窗格線變軟，GPU 有餘裕的機型白白吃虧。
+   - (b) 行道樹與路燈依距離簡化：它們佔三角形，但幾乎不佔像素，省不到 GPU。
+   - (c) 遠處不畫陰影與光池：可以少 111 個 draw、6.5 萬個三角形，但只蓋 0.06 個畫面，GPU 省得少；遠看的城市燈光也會不見。
+   - (d) MetalFX 放大：iOS 16 才有，要另外的管線與記憶體，先看 (3) 夠不夠。
+6. **實機待量**：
+   - 降到 2× 之後 GPU 是幾 ms。
+   - 降下去的時候畫面會不會跳一下。
+   - `wait` 那一行是不是吃掉了原本的 CPU。
+   - 這些都在 HANDOFF §7.5。
+
 ### 239. 原生 3D 地圖第八步：高雄、台中車站周圍的真實建物
 
 作者 2026-10-15 問：「我在做真實高雄台中地圖不就一堆素材了，我可以直接改成我的風格套用就好了。」答案是可以：取真實房子的足跡、高度與用途，外觀用本專案自己的畫風畫。作者回「好啊，3D 資料都在 Website 資料夾」。
@@ -11833,6 +11888,8 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 **UI 測試**（交給 Codex）：章在 Linux 上已有邏輯測試；畫面只有 Simulator 看得到：開一條線跑到早上尖峰，車站上方出現「客滿」或「空位多」的章，2 秒後消失。
 
+**後來**（2026-10-21，決策 310）：地圖不再蓋「空位多」；列車的「客滿」改成「滿載」；快速圖層的「車資與章」可以把車資與章一起關掉。
+
 **第二個 PR：長按路線看旅程**（決策 220 第 8 點「沒有做的」的第一項）：
 7. **怎麼叫出來**：選取時在路線的軌道上（不是車站上）按住 0.45 秒，和長按車站（決策 119、220）是同一個手勢。
    - 選取那條路線、打開路線面板，地圖畫出這條路線的旅程（`GameSession.lineHeld(at:reach:)`、`holdLine(at:reach:)`）。
@@ -12715,7 +12772,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 音樂：無。
 
 **沒選的**（預覽是玩家會看到的字或畫面）：
-- **建造時自動打開涵蓋層**（研究 4.1 的「建線時預設開」）：地圖一進建造就變色，蓋軌道時看不清地形與城市；台灣實景還要等 `CityMap` 算完。預覽：按「建造」後地圖立刻蓋上藍、桃紅兩色。
+- **建造時自動打開涵蓋層**（研究 4.1 的「建線時預設開」；決策 311 改成自動打開潛力圖，涵蓋在它的圖例裡切換）：地圖一進建造就變色，蓋軌道時看不清地形與城市；台灣實景還要等 `CityMap` 算完。預覽：按「建造」後地圖立刻蓋上藍、桃紅兩色。
 - **百分比四捨五入**：有人沒被涵蓋時也可能出現「100%」。預覽：「…：100%（直線範圍的估算）」。
 - **用 WorldPop 人口格當分母**（`PopulationHeatmap`）：那是另一套 1 km 格網，和涵蓋層的 64 m 土地格對不起來，畫面和數字會不一致。
 - **潛力熱圖、白天／夜晚**（研究 4.1 其餘部分）：是遊戲需求模型的推估，要另外定顏色與說明，留在之後。
@@ -13598,6 +13655,498 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 閉塞關：M→A 這一段照表定 180 秒跑。閉塞開：這一段跑得比 180 秒短、比較早到 A。
 - 舊規則（只在號誌關時追回）下兩者相同，測試失敗。
 - 閉塞開時整批推進 10 分鐘與逐分推進相同。
+
+### 307. 實景地圖的載入畫面：公司名、最近的地名、自己的路線色與跑來跑去的列車
+
+2026-10-21。競品研究 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.8（NEXT_PRIORITIES §19 第 6）。作者 2026-10-14、10-15 起的預設「session 五方決定」，遊戲規劃 session_01WW7o3decEv5LY59nYVqnDN 派工。號碼依 #231：main 最大 305，這次的登記保留 307。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
+
+**為什麼**：在實景地圖選好地點按「開始」後，台灣的地點要讀整塊地塊的土地，主執行緒卡住、畫面停在開始畫面上，玩家不知道遊戲是不是當了。競品在這段時間放公司名與城市名，讓等待變成「我的公司要在這裡開業」。
+
+**規則**：
+1. **什麼時候出現**（`GameLauncher.realWorldLoading`）：從實景地點挑選開新遊戲（`openRealWorldGame(at:)`），以及高鐵、宜蘭線兩個示範地圖讀取時。世界改在背景建（`Task.detached`，和示範地圖一樣；`GameLauncher.newWorld(at:options:data:)` 是原本 `startNewGame(at:)` 的內容，搬成不碰主執行緒的靜態函式），建好就收起畫面、開始遊戲；建的時候已經開了別的遊戲（例如讀檔）就留著那一局。同時只建一張。
+2. **寫什麼**：玩家在明信片上取的公司名（沒取時「我的鐵道」，`NetworkPostcard.companyName`）；地點最近的聚落、村里（`PlaceNames.nearby`），沒有時用所在鄉鎮市區（`township(containing:)`），兩個都沒有（國外、海上）就不寫；示範地圖寫「台灣高鐵」「宜蘭線」；最後一行「正在準備地圖…」。
+3. **畫什麼**（`LoadingRoutes`）：一個小路網，三條線用遊戲自己的路線色（`Palette.lineColor`，色盲安全色也跟著），站是白點，每條線一列車：黃色圓底上的列車圖示（地圖上同一個 `MapGlyph.train`）。列車等速來回，一趟 3.2 秒（`crossingSeconds`），三列從不同位置出發。
+4. **動態**（決策 253）：淡入 0.7 秒減速（`MotionRule.loadingIn`）、淡出 0.45 秒加速（`loadingOut`），數字取自 geo-scene 開站畫面（`bootScreen.css` 的 `boot-fade-in` 0.7s、`bootSequence.ts` 的 `fadeMs` 450）。「減少動態效果」打開時列車停在出發位置、`TimelineView` 暫停（不自動循環），淡入淡出照 `reduced` 減半。
+5. **VoiceOver**：整個畫面一個元素，讀「公司名、地名、正在準備地圖…」；識別碼 `loading.realWorld`。
+
+**參考對照**（a91453/railway-reference-private b3af6d8）：
+
+| 參考 | 這裡 | 取用 |
+|---|---|---|
+| `Railway/geo-scene-reference-clean/source/src/components/boot/bootScreen.css`（`.boot-screen`、`boot-fade-in`、`prefers-reduced-motion`） | `RealWorldLoadingView`、`MotionRule.loadingIn` | 版面（圖在中間、名字與狀態在下面）、淡入 0.7 s、減少動態時停掉動畫 |
+| 同上 `bootSequence.ts`（`BOOT_TIMING.fadeMs` 450） | `MotionRule.loadingOut` | 淡出 0.45 s |
+| `OpenWorld/reference_snapshot/play/src/game/loading-screen.js`（`LoadingScreen.stage` 進度條） | — | 沒有採用：我們不知道建世界的進度，假的進度條會騙人 |
+| 台灣輪廓與城市脈動（`taiwanOutline.ts`） | — | 沒有採用：任務要的是自己的路線色與列車；國外的地點也用不上台灣輪廓 |
+
+**五方**：
+- 玩家：等待時看到「我的公司要在九份開業」，知道遊戲沒當、在做什麼。
+- 鐵道迷：地名是 OpenStreetMap 的聚落、村里與鄉鎮市區（決策 159 的 `PlaceNames`，ODbL，資料來源畫面已列），和新車站的站名建議同一份；路網是示意圖，不冒充真實路線。
+- 開發：建世界搬到背景，主執行緒不再卡住；路線與列車位置在 GamePresentation、Linux 測試（`RealWorldLoadingTests`），App 只畫。
+- 美術：路線色與列車圖示和地圖上一樣，不另畫新圖；深淺色由 `Theme` 管。
+- 音樂：沒有（載入時不放聲音）。
+
+**沒有採用的做法**（預覽：`docs/art/loading-screen-2026-10-21/chosen-and-others.png`，網頁示意，不是 App 截圖）：A. 進度條（同上，沒有真的進度）；B. 台灣輪廓加城市脈動（geo-scene 原樣）：國外地點不適用，也不是自己的路線；C. 只有轉圈的 `ProgressView`：說不出公司與地點。
+
+**驗證**：`RealWorldLoadingTests`、`InterfaceMotionTests`、`GameLauncherTests` 在 Linux 跑過；App 的畫面只能靠 macOS CI 編譯，實機外觀由作者在 TestFlight 看。
+
+### 309. 路線的發車方式：平均錯開（預設）、兩端對開、第二列晚 N 分
+
+2026-10-21。TestFlight 77.1 #1（PLAYER_FEEDBACK）；NEXT_PRIORITIES §19 第 1 名；遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 派工。號碼依 #231：當時 `main` 到 306，307、308 已在 #231 保留，取 309；存檔 65。
+
+**玩家原話**：「希望在交由路線自動派車時，兩班車的發車時間可以自行調整班距……加入第二列之後，可能沒辦法對開或者晚前一班車 10 分鐘後開。」
+
+**為什麼做不到**：派車（決策 23）照班距一班一班送；從終點發的車（決策 172）和第一站共用同一個 `lastDispatch`，所以兩端不能同時發車，第二列晚幾分鐘開也沒有地方設。「加開一列車」（決策 264）把班距設成「來回 ÷ 列車數」，兩列車永遠平均錯開。
+
+**規則**（`DispatchPattern.swift`、`GameWorld.swift` 的派車）：
+1. 路線多一個「發車方式」`ServiceLine.dispatchPattern`，命令 `setLineDispatchPattern(_:to:)`（免費；已出發的車跑完這趟，下一班照新方式）：
+   - **平均錯開**（`.even`，預設，每一條舊路線）：和以前逐行相同，兩端共用一個派車時刻，下一班在上一班之後一個班距。
+   - **兩端對開**（`.fromBothEnds`）：第一站與終點各有自己的派車時刻（`lastDispatch` 與新的 `endLastDispatch`）。終點分到一半的車（往下取整），第一站分到其餘；每一端的間隔是 `班距 × 列車數 ÷ 這一端的車數`，所以每一端自己的車平均錯開。終點的車比它分到的少時，第一站多出來的一列馬上空車回送到終點（決策 172 的空車回送，不占班距、不載客），到了就發車。兩端在同一步可以各發一班。需要彈性發車（決策 172，App 的新遊戲預設開），因為只有它會從終點發車；沒有時命令拒絕（`invalidDispatchPattern`），之後關掉彈性發車的世界照平均錯開。
+   - **第二列晚 N 分**（`.staggered(minutes:)`，N 是 2–30）：兩列一組，第二列在第一列之後 N 分，下一組在第一列之後兩個班距。N 超過班距時照另一列看（`min(N, 2×班距−N)`），至少 2 分（`minimumHeadwayMinutes`）。這一組有沒有開著記在 `opensPair`；第二列在兩個班距之後才發（例如過了一夜），就當新的一組。
+2. 只管路線自己的服務（停站模式與環線兩個方向照舊平均），有班次的路線（決策 133）與環線不能設；一條線只跑 1 列車時沒有「第二列」，照平均。
+3. 列車數的上限照舊（`running < planned.trains`）；機廠出庫（決策 209）的時間也照發車方式（第一站那一端）。
+4. 閒置快轉（`minutesUntilNextDispatch`、`minutesUntilLineWaitsChange`）照每一端的時刻醒來，整批推進與逐分推進相同（`DispatchPatternTests.testLongBatchesMatchSingleTicks`）。
+
+**App**：路線面板「班距與列車數」裡，班距選擇的下面，路線有 2 列車以上時多一個「發車方式」選單：平均錯開、兩端對開（有彈性發車才有）、第二列晚 2／3／5／10／15／20／30 分，下面一行說它做什麼（`LineDispatchPatternChoice`，GamePresentation）。指令記進指令紀錄（`PlayerCommand.Edit.setLineDispatchPattern`）。
+
+**量到的**（`DispatchPatternReportTests`，`DISPATCH_PATTERN_REPORT=1`，Linux debug，24 小時；Alpha–Beta–Gamma 一條單線，爬行速度一趟來回 11 分，2 列車，行車控制關、寫實營運開，Alpha 住宅 3,000、Beta 商業 1,000、Gamma 辦公 3,000 旅次）：
+
+| 發車方式 | 載客 | 平均候車（分） | 準點 | 趟數 |
+| --- | ---: | ---: | ---: | ---: |
+| 平均錯開 | 6,996 | 3.1 | 100.0 % | 179 |
+| 兩端對開 | 6,992 | 3.2 | 100.0 % | 180 |
+| 第二列晚 2 分 | 6,993 | 5.3 | 100.0 % | 180 |
+| 第二列晚 10 分 | 6,993 | 3.3 | 100.0 % | 179 |
+
+- 兩端對開與平均錯開一天下來幾乎一樣：兩列車平均錯開跑穩了，本來就是兩端同時發車、在中間交會。差別在開頭：平均錯開時第二列要在第一站等一個班距（每天早上、每次加車都一樣），兩端對開時它一開始就在終點，首班兩端一起開。
+- 第二列晚 2 分的平均候車多 2 分多：兩列擠在一起，下一組要等很久。這是玩家自己選的，選單的說明寫清楚「兩列一組」。
+- 載客差不到 0.1 %，經濟沒有目標要對（`no stated range — not judged`）。準點 100 % 是因為行車控制關著；單線開行車控制時兩端對開的車要在中途交會，需要待避線（決策 264 的「加開一列車」本來就會蓋），沒有另外量（**NOT ASSESSED**）。
+
+**存檔 65**：路線多 `"dispatchPattern"`（`{"kind": "fromBothEnds"}` 或 `{"kind": "staggered", "minutes": n}`，平均不寫）、`"endLastDispatch"`（只有兩端對開）、`"opensPair": true`（只有第二列晚 N 分）。只讀到 64 的 build 會丟掉它們，路線又變回平均錯開，所以升版；舊存檔沒有這些 key，讀成平均錯開。拒絕：寫了 `even`、N 不在 2–30、兩端對開以外有 `endLastDispatch`、不是錯開卻有 `opensPair`、`opensPair: false`、環線有發車方式、`endLastDispatch` 在時鐘之後。fixture `SaveFixtures/v65-dispatch-pattern.json`。
+
+**golden、replay**：不動，值一個都沒變（預設平均錯開走的是原本的程式：`nextDispatch` 的 `.even` 就是「上一班加一個班距」）。golden 的測試程式多一個新錯誤的名稱 `invalidDispatchPattern`（沒有 golden 用到它，schema 不動）。
+
+**參考庫與外部專案**（`a91453/railway-reference-private`）：
+
+| 參考 | 本專案 | 分類 |
+| --- | --- | --- |
+| `Railway/train_loop_reference_clean`、`Simulator/reference_snapshot` 的發車：都照時刻表或固定班距一端發車 | 無 | 參考庫沒有「兩端各自的派車時刻」或「錯開 N 分」（gap），本專案自己寫 |
+
+外部專案：OpenTTD 的「自動分隔」（timetable autoseparation）讓同一路線的車平均錯開，是這裡的「平均錯開」；兩端對開與錯開發車是鐵路營運的一般做法，沒有搬程式。程式是本專案自己的。
+
+**五方**：
+- 玩家：77.1 的原話兩種都做到：加了第二列，可以讓它從終點一起開（兩端對開），或晚第一列幾分開；預設不變，不選的人什麼都不會變。
+- 鐵道迷：單線兩列車兩端對開、在中間站交會，是平溪、集集這類支線的做法；首班車兩端同時開也一樣。「續行」（兩列緊接著開）真實鐵路也有。沒有新的資料來源。
+- 開發：派車的時刻集中在 `nextDispatch` 一個函式，平均錯開走原本的算法，golden、replay 不動；只管路線自己的服務，停站模式與環線不碰；升存檔 65、加 fixture。
+- 美術：路線面板多一個選單和一行字，和目標班距的選單同一種（`TickStable` 的 Menu），圖示用 SF Symbols 的 `arrow.left.arrow.right`。
+- 音樂：無。
+
+**沒選的**（預覽留在 PR）：(a) 只加「第二列晚 N 分」一個步進器：做不到兩端對開；(b) 每列車各自設發車時刻：等於手排時刻表，初學者用不到，而且有決策 133 的班次；(c) 分段選擇器：選項有 9 個，手機橫拿放不下。
+
+**下一步**（`docs/HANDOFF.md` §5 有一行指過來）：
+1. 實機確認選單在手機橫拿時的位置與字（TestFlight）。
+2. UI 測試沒有加（選單的內容與命令有 Linux 測試 `LineDispatchPatternChoiceTests`）；要加就放 full lane。
+3. 停站模式（決策 24 的 `patterns`）也要發車方式時，`dispatchPattern`／`endLastDispatch` 要搬到每個服務。
+4. 單線開行車控制時兩端對開的量測（需要待避線的世界）。
+
+### 310. 地圖提示整理：不蓋「空位多」、列車的章改「滿載」、快速圖層的「車資與章」開關
+
+2026-10-21。作者同意遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 的排程（「照這樣做」，#231 04:58 與 04:59 的兩則），派工給 session_01GPnquCXT5GQzPfCztHj6Sz。號碼依工作登記 #231：main 到 306，307（甲線載入畫面）、308（追回後續）、309（派車錯開）已登記，取 310。GameCore、存檔版本、golden schema、SaveFixtures、ReplayFixtures 都不動。
+
+1. **不蓋「空位多」**（`TripStampKind`，`Sources/GamePresentation/TripStamp.swift`）：決策 276 的章只剩一種，列車最擠的時候滿載（決策 274 的 `TrainFit.tooSmall`，100% 以上）；不到的都不蓋，`TripStampKind.roomy` 刪掉。原因：離峰與深夜幾乎每一趟最擠也不到 35%，「空位多」反而是地圖上最常出現的章，和決策 276「跑得好時地圖保持安靜」相反。列車太大的資訊留在路線卡「營運狀況」的「列車太大」（決策 274）。地圖的一人圖示（`MapGlyph.person`）照舊用在車站的候車頁，只是不再用在章上。
+2. **列車的章改「滿載」**（英文 Train full）：「客滿」也是車站候車滿 4,000 人時的字（`StationOperations`、說明「車站客滿…」），兩個意思撞字，PLAYER_FEEDBACK 59.1 #6 玩家就混淆過。作者 2026-10-21：台灣不說「車滿」，所以用「滿載」。車站維持「客滿／滿了」，「擁擠」泡泡不動。String Catalog 裡「未能上車」的說明說的是列車，也改成「滿載列車」。
+3. **快速圖層的「車資與章」**（`MapQuickLayer.faresAndStamps`、`MapLayerPreferences.showsFaresAndStamps`，App 的 `@AppStorage("mapShowsFaresAndStamps")`，預設開）：快速圖層最後一格（「更多」之前），圖示 `dollarsign.circle`，英文 Fares。關掉時決策 256 的「+$12」（`FareFloatMarks`）與「滿載」章（`TripStampMarks`）都不畫；圖層清單的「車站圖層」多一列同一個開關（Fares and Full Trains／車資與章），兩邊讀同一個值。只是畫不畫：車資照收、錢包下的「+$」與路線卡照舊，`GameSession` 照樣算每一步的車資與章（便宜，不必為了關掉而改）。
+
+**參考**：參考庫沒有可移植的（決策 276 已查過：`Ci/` 只有一天的尖峰載客率；`Railway/train_loop_reference_clean/` 的到站橫幅沒有開關）。外部沒有查到要移植的；程式是本專案自己寫的。
+
+**五方**：
+- 玩家：地圖上的章只在真的要加車時出現，一看到就知道是列車太擠，不會和車站客滿搞混；嫌畫面忙可以一鍵把車資和章都關掉。
+- 鐵道迷：真實鐵路離峰空車是正常的，不必提醒；台灣說列車「滿載」、車站「客滿」，各用各的字。
+- 開發：只動 GamePresentation 與 App；開關照其他圖層放在 `MapLayerPreferences`，有 Linux 測試（`TripStampTests`、`MapQuickLayersTests`）；GameCore、存檔、golden、replay 不動。
+- 美術：章只剩一種顏色（`Theme.error`）與三人圖示，快速圖層多一格同樣大小的按鈕，沒有新圖。
+- 音樂：無。
+
+**沒有採用**（預覽寫在 PR）：
+- 「空位多」只在尖峰時段蓋：尖峰的長編組空車少見，規則多一個時段判斷，資訊在路線卡已經有了。
+- 列車的章用「車滿」：作者說台灣不這樣說。
+- 車資與章分成兩個開關：快速圖層放不下兩格，玩家要的是「地圖安靜一點」，一個就夠。
+- 開關放進設定頁：其他地圖上畫不畫的開關都在圖層，放在一起才找得到。
+
+**驗證**：`TripStampTests`（不到滿載的不蓋、四節車早上的頭四趟沒有章、一節車早上蓋「滿載」、字是「滿載」／Train full）、`MapQuickLayersTests`（預設開、按一下只關這一項、按兩下回原樣、按鈕名稱）。App 的畫面交給 `ios-build.yml`。
+
+**UI 測試**（交給 Codex）：示範地圖上點快速圖層的「車資與章」，按鈕不再是選取狀態；跑到早上尖峰，車站上方沒有「+$」也沒有「滿載」；再點一次又出現。
+
+**下一步**：實機（TestFlight）看快速圖層多一格之後，iPhone 直拿時和「快轉到早上」、下一步晶片排在一起放不放得下。
+
+### 311. 建線時自動出現的「哪裡人多」潛力熱圖，與角落一鍵收起
+
+2026-10-21。遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 派工（NEXT_PRIORITIES §19 #5，設計來源 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` §4.1），實作 session_01XcsvN9dp6TVNhLU2TY4sJD。只動 GamePresentation 與 App；GameCore、存檔版本、golden、SaveFixtures、ReplayFixtures 都不動。**修改決策 292 的「沒選的」第一項**（建造時自動打開涵蓋層）：自動打開的改成這張潛力圖，涵蓋留在圖例裡一鍵切換。
+
+1. **潛力圖**（`StationPotentialMap`，`Sources/GamePresentation/StationPotentialMap.swift`；`PopTravelMode.potential`）：每格是它 `Land.catchmentRadius`（800 m 直線）內的居民加就業，和 `Land.totals` 同一個圓、同一個數法（整數的列前綴和，一列一段）。六段固定的人數門檻 250、1,000、2,500、5,000、10,000、20,000，不到 250 不畫；門檻是絕對人數，不跟著畫面裡的最大值走，所以同一個顏色在台北和鄉下是同樣多的人。
+2. **有新線的站時**（`session.lineDraft` 有站）：每格乘上決策 137 的距離權重（`DistanceDemand.share`，到最近一個草稿站的直線距離；世界沒開 `distanceDemand` 時不乘），已經在營運中車站（不是關閉的站）800 m 內的格乘 `servedShare` = 0.4，標題改「從你的站可以去哪」。只是畫面上的估計，不是 GameCore 的需求模型（不做潮汐、不做路徑）。
+3. **時段**：全天、早上（7–10 時）、傍晚（17–20 時）。就業依 `LandDemand` 的對應分到 `StationDemandKind`（辦公、工業、農業 → 辦公；公共設施 → 公共設施；休閒 → 觀光；住宅、商業、公園 → 商業），居民算住宅；每類乘上它 `arrivalShape` 在那幾個鐘頭的平均（千分比，全天是 1000）。早上辦公區變深、住宅區照常，傍晚反過來。窗口取三小時：兩條曲線對稱，更寬的窗口幾乎看不出差別。
+4. **涵蓋**：圖例上「潛力／涵蓋」切換；涵蓋就是決策 292 的 `.coverage` 層（`CityMap`，只算營運中的車站）與它的「車站涵蓋多少居民與工作」。顏色**保留決策 292 的藍與桃紅**，不用研究寫的綠與紅：紅綠是最常見的色盲組合，涵蓋層已經上線、玩家認得。
+5. **只算畫面裡的、算過的留著**：地圖切成 32 × 32 個區塊（依縮放的 `CityMap.blockSize`）一塊的 chunk，畫到哪一塊才算哪一塊，結果放在 `StationPotentialMap` 的 chunk 快取（鎖保護，值型別外殼）。`StationPotentialMap.Key`（土地、營運中車站的點、草稿站的點、`distanceDemand`、時段、大小）在 tick 之間相等，只有指令（建站、拆站、開關站、土地改變、草稿改變）或時段改變才換一張新的；不會每個 tick 重算全圖。合併的區塊照 800 m 圓的格數換算回每格的人數。
+   - **台灣實景量測**（Linux、debug build，台北 25.047882, 121.517219 的新遊戲，`testTaipeisDenseLandIsWorkedOutInView`）：整張圖、4 格一塊：4095 塊、4 個 chunk，第一次 30 ms（有草稿站 38 ms），之後 3 ms；一個畫面大小（±33 × ±70 格、1 格一塊）：9447 塊、24 個 chunk，第一次 98 ms（有草稿站 160 ms），之後 12 ms。Release build 與實機沒有量。
+6. **App**：建軌道、月台或新線的工具一打開（`GameSession.offersCoverageShortcut`）就蓋上去（`BuildingLayerShortcut`），蓋在玩家自己的圖層上面但**不寫進**玩家的圖層設定（`@AppStorage("mapPopTravelMode")`），所以關掉工具就回到玩家原本的圖層；玩家在建造中自己選了別的圖層，就照玩家的。角落的按鈕（決策 292 的 `MapCoverageButton`）與圖例的關閉鈕收起它，收起會記住（`mapBuildingLayerAutoShows`，裝置偏好），下次建造不再自動出現，再按一次角落的按鈕拿回來。潛力／涵蓋與時段也是裝置偏好（`mapBuildingLayer`、`mapPotentialPeriod`）。圖例一行說明加一個 ⓘ（`StationPotentialMap.title`、`line`、`info`）。潛力圖畫在自己的 Canvas：城市底圖之上、路線與站名之下，不蓋站名與路線；出現與消失照 `MotionRule.change` 淡入淡出，「減少動態效果」時立刻切換（`.identity`）。UI 測試（`-ui-testing`）預設收起，除非給 `-show-building-layer`，免得圖例擋住其他測試要點的角落。
+7. **顏色**（docs/UI_THEME.md）：淡暖黃 → 綠 → 青 → 圖示的深藍，六段 #FFE7A8、#C6D98B、#7CC08C、#3A9BA6、#2D6890、#262C57，不透明度 0.7；不用 CTM 的藍／橘／紅。亮度單調上升，三種常見色盲下仍分得出深淺。
+
+**限制**（不寫進玩家看的字）：800 m 是直線，不看河、山與路；人數是遊戲土地模型的估計（`Land.totals`：WorldPop 與 OSM 換算的居民與就業），不含玩家蓋的建物；「從你的站可以去哪」只是距離權重乘上未服務的人，不是真的路徑或需求；0.4 是畫面上的淡化，不是規則。
+
+**參考**：
+| 來源 | 找到的 | 用了什麼 |
+|---|---|---|
+| `Ci/reference_snapshot/`（圖層面板） | 地圖圖層與涵蓋的字串，沒有潛力熱圖 | 沒有可移植的 |
+| `Railway/geo-scene-reference-clean/source/src/hooks/useRainGaugeLayer.ts` 等 | MapLibre 的 `heatmap` 圖層（點資料的核密度、色階依 0–1 的密度） | 沒有可移植的：遊戲的地圖是 SwiftUI Canvas、資料是 64 m 格，不是點 |
+| `city_map_reference_clean/`、`Railway/island_city_reference_clean/` | 城市格的土地與人口，沒有站點潛力 | 沒有 |
+| A/B Street `map_gui/src/tools/heatmap.rs`（https://github.com/a-b-street/abstreet，Apache-2.0） | 方格累加高斯核、一次 3×3 平滑、依最大值分 7 色、等值線 | 只參考想法，沒有搬程式碼：這裡用和腹地相同的 800 m 圓（玩家看到的就是車站的腹地），門檻用絕對人數 |
+
+公式與分 chunk 的快取是這個專案自己寫的。
+
+**五方**：
+- 玩家：一進建造就看得到哪裡人多，不必先找圖層；不想看一鍵收起而且會記住。
+- 鐵道迷：真實的路網規劃先看人口與就業分布、再看既有車站的服務範圍，早晚看通勤的方向；800 m 是台灣捷運常用的步行範圍。資料是 WorldPop 與 OSM，和車站運量同一份。
+- 開發：只在 GamePresentation 加一個值型別與 Linux 測試，App 只多一層 Canvas；不動 GameCore 與存檔；只算畫面裡的 chunk 並快取。
+- 美術：自己的黃綠青藍色階，與圖示的深藍同一家；畫在路線與站名下面，站名的淡色底板讓它不被蓋掉。
+- 音樂：無。
+
+**沒有採用**（預覽寫在 PR）：
+- 色階 B（深藍單色，#ECEEF6 → #262C57）：和水域、夜晚的色調撞，低段在淺色地圖上幾乎看不見。
+- 色階 C（黃到琥珀單色）：和地價層、車資的暖色撞，深段像警告。
+- 涵蓋改用綠／紅：紅綠色盲分不出，決策 292 的藍與桃紅已經上線。
+- 每個 tick 重算整張圖：台灣實景一次幾十到上百毫秒，會掉幀。
+- 做潮汐模型（早晚的起訖對）：派工明說不做；時段權重已經看得出早晚的方向。
+
+**驗證**：`StationPotentialMapTests`（腹地等於 `Land.totals`；最高的格在市中心而空的角落不畫；合併區塊換算；草稿站的距離權重、已服務的格變淡、關閉的站不算、沒開 `distanceDemand` 不乘；早上辦公區變深、住宅區照常；涵蓋只算營運中的站；Key 在 tick 之間相等、指令與時段才變，chunk 只算一次；圖例的字；`BuildingLayerShortcut` 的出現、收起、還原；台北的時間）。`CoverageShortcutUITests`（只在 full lane，不進 gate）改成：建造時潛力圖例出現、角落按鈕收起再拿回、切到涵蓋看到涵蓋比例、離開工具消失。
+
+**下一步**：實機（TestFlight）看潛力圖在 iPhone 直拿時圖例的高度、第一次畫一個畫面的停頓（Release 應比 debug 快）與台北市中心是否全部同一色（20,000 人以上一段）；需要時再加一段門檻。
+
+### 312. 實景開局：點地圖把起始範圍移過去，卡片寫面積與「之後可以買地擴大」，最近用過的地點列在前面
+
+2026-10-21。競品研究 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.6（NEXT_PRIORITIES §19 第 7 名）。作者 2026-10-14、10-15 起的預設「session 五方決定」，遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 派工。號碼依 #231：派工單保留 312。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
+
+**為什麼**：實景選點（`RealWorldPicker`）只能拖地圖讓中心對準，說明寫「每邊 16 公里」，玩家不知道一開始有多大、之後能不能變大；每次開新遊戲都要重新找地點。競品是點地圖就把範圍移過去、寫「20.4 km²」與「之後可以擴大」、已下載的城市列在前面。
+
+**規則**（GamePresentation 的 `RealWorldStartArea`、`RecentStartPlaces`；App 只畫）：
+1. **框**：起始範圍照決策 167 決定：台灣框內的地點是起手那一塊地塊（`RealWorldExpansion.start`），其他地方是 16 km 的整張地圖。四個角（`corners`，西北起順時針）用遊戲鋪世界的同一個 Web Mercator 算（`RealWorldFrame`），App 不再自己用 `MKMapPoint` 算一份。畫法沿用購地卡選中地塊的框（決策 160、`MapArt.drawMapExpansion`）：`Palette.metroGreen` 虛線（寬 3、虛線 8／5）、同色 18% 的底。原本的暖色底、深藍實線不用了。
+2. **點地圖**：點一下，鏡頭的中心移到那一點（距離不變，不縮放），「＋」與框跟著過去；拖地圖對準中心照舊。點到的位置先經過 `RealWorldStartArea.middle(latitude:longitude:)`：緯度限制在 ±`maximumLatitude`（84.978074°，框的北邊或南邊剛好落在地圖〔Web Mercator，約 ±85.0511°〕之內），經度繞回 −180° 到 180°；不是數字就不動。台灣的地塊伸出台灣框外（決策 167 的「限制」）不另外限制，和清單、拖地圖選到的一樣。
+3. **動態**（決策 253）：鏡頭移動用 `MotionRule.change`（0.2 秒、兩端平滑，原地的變化），`layout(reduceMotion:)`：減少動態效果時直接跳過去。沒有新增規則。
+4. **卡片**：說明的第一行寫面積（`summary(in:)`），用地面上的大小：16 km 的地圖在中心那條緯線上剛好 16,384 m，268 km²（16.4 × 16.4 km）；台灣的地塊是 16,384 個「世界公尺」，世界公尺是整張島的錨點（`RealWorldExpansion.anchor`，約北緯 23.6°）那條緯線上的公尺，所以越往北地面上越小：臺北 262 km²（16.2 × 16.2）、臺中 266、高雄 272、臺東 272。台灣的地點接著寫「之後可以買地擴大」，其他地方寫「之後不會再擴大」（決策 167：框外的 16 km 地圖不買地）。第二行改成「點地圖或移動地圖來放方框，再按『在這裡建造』」。
+5. **最近用過**：按「在這裡建造」時把那一點記在這台裝置（`@AppStorage("realWorld.recentStarts")`，`RecentStartPlaces.stored`：千萬分之一度的整數，`;` 分隔），最新的在前、1 km 內算同一個地方（換到最前面）、最多 5 個。清單在沒有輸入搜尋字時列在最前面（「最近用過」），點了把地圖移過去。名字顯示時才查：App 的地名（`PlaceNames`，OpenStreetMap 的聚落、村里，沒有時鄉鎮市區），沒有時清單裡 20 km 內最近的地點，再沒有就寫經緯度（「40.50°S 120.25°W」）。只記中心點，**不記搜尋結果**（Apple 的地圖資料不能保存，Attachment 6 §2.5，和原本的規定一樣）。UI 測試的 `-ui-testing` 每次啟動清掉設定，所以清單一開始是空的。
+
+**沒做**：
+- **「用我的位置」**：要 CoreLocation 與 Info.plist 的用途字串，App Store 的隱私標籤要更新（App Store Connect 是作者的事）。等作者決定，寫在 `docs/HANDOFF.md` §3。
+- **「已下載的地點」**：存檔的摘要（`SaveSummary`）沒有記錨點，要列出存檔的地點得讀每一個存檔或改摘要的格式。最近用過已經涵蓋「上次玩的地方」，所以先不做。
+- 公司名稱放在同一張卡（研究 4.6 的三步）：明信片已經有公司名（決策 307 的載入畫面也用它），不另外問。
+
+**參考對照**（a91453/railway-reference-private b3af6d8）：
+
+| 參考 | 這裡 | 取用 |
+|---|---|---|
+| `Ci/reference_snapshot/lib/flight_planner_panel__q_*.js`（`metrobuilder_recent_aircraft_v1_`：新的 `unshift`、去重、`slice(0,8)`） | `RecentStartPlaces.adding(_:)` | 最新在前、去重、有上限的做法；上限改成 5（清單在搜尋之前，太長會把台灣的地點推出畫面） |
+| `Ci/` 的「任意城市」（`CITIES` 的 `center`） | `RealWorldPicker`（決策 50 已移植） | 只有中心點，沒有範圍框 — gap |
+| `MapBuilder/reference_snapshot/`（路線與車站編輯器） | — | 沒有「選一塊範圍」的畫法 — nothing usable |
+| `Railway/city_world_reference/source/`（`regionEntry`、`regionLots`） | — | 地塊是城市內的建地，不是在真實地圖上選範圍 — nothing usable |
+
+外部專案沒有找：點地圖移到那裡是 MapKit 的 `MapReader.convert(_:from:)`，面積與限制是幾行算式（這個專案自己的）；做法的概念取自研究 4.6 那款商業遊戲（只取做法）。
+
+**五方**：
+- 玩家：一眼看到一開始有多大、之後能不能變大；點一下就換地方，不必拖到中心；上次玩的地方在最上面。
+- 鐵道迷：面積寫地面上的真實大小（台灣的地塊越北越小，臺北 262、臺東 272 km²），不是一律 268；地名照 OpenStreetMap（ODbL，資料來源畫面已列）。
+- 開發：框的位置、面積、限制、最近用過都在 GamePresentation，Linux 測試（`RealWorldStartAreaTests`）；App 不再自己算框；GameCore、存檔、golden 不動。
+- 美術：框和購地的框同一種綠色虛線，玩家看到同一種框就知道是「土地」；不另畫新圖，最近用過的列用 SF Symbols `clock.arrow.circlepath`（清單的列本來就用 SF Symbols）。
+- 音樂：無。
+
+**沒有採用的做法**（預覽：`docs/art/real-world-start-2026-10-21/chosen-and-others.png`，網頁示意，不是 App 截圖）：A. 框自己可以拖、地圖不動：手機上手指常同時拖到地圖，兩個手勢搶；B. 原本的暖色底、深藍實線框：和購地的框不一樣，也沒有面積；C. 面積寫在地圖的框上：字擋到路線，拉遠時字比框大。
+
+**驗證**：`RealWorldStartAreaTests`（Linux）。App 的畫面（點地圖、框、卡片、最近用過）只能靠 macOS CI 編譯與 `RealWorldMapUITests`（開局流程沒有改變：清單、在這裡建造），實機手感由作者在 TestFlight 看。點地圖沒有加 UI 測試：Simulator 上的地圖圖磚與點的位置不穩，留給實機。
+
+### 313. 2D 與 3D 不搶畫面：交接只在放手時判斷，2D 拉到最近還繼續拉才進 3D；3D 加「2D」與「建設」鈕；設定「拉近自動變 3D」
+
+2026-10-21。作者實機回報：「2d常常跟3d搶畫面」（iPhone 17 Pro）。遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 整理規則、作者定案，派給 3D session_01Y25x9NJSKmAuP1M1K3Sf3C。號碼依工作登記 #231（遊戲規劃保留 313）。存檔版本、golden schema 不動；GameCore 不動。改的是決策 269 的交接。
+
+**原則**：2D 負責建造、規劃與操作；3D 負責觀賞、探索與跟車。兩邊可以快速來回，但不打斷玩家正在做的事：手指還在動時畫面不換。
+
+**原本的毛病**（決策 269）：2D 雙指拉到約 800 m 的比例（iPhone 直拿約每 16 m 27 點）就在手勢途中換成 3D，所以 2D 最近的那一段（27–64 點）用雙指拉不到；想看清楚 2D 的路口、月台，地圖卻變 3D。3D 裡不能點選與建造，要回 2D 只能拉遠或按關閉（回到原本的地方，不是現在看的地方）。
+
+1. **進 3D**（`Map3DHandoff.opensOnRelease(referenceSize:asked:)`，GamePresentation）：
+   - 只在雙指**放手時**判斷。手勢途中只動 2D。
+   - 2D 雙指可以一路拉到最近（`MapScale.largestSize`，每 16 m 64 點）。
+   - 放手時 2D 已經在最近，而且手指要的比例（手勢開始的比例 × 雙指的倍數，最近的比例會擋住它）超過最近的 1.3 倍（`pastClosest`）才進 3D。剛好拉到底、或拉過頭又退回來再放手，都留在 2D。
+   - 3D 從交接的距離起算傾斜：交接的相機記下 `Map3DCamera.tiltsFrom`（交接時的距離），從那裡正上方往下看，拉近才開始傾斜，傾到最大的距離是 `mostTiltedDistance(flatFrom:)`（120 m，或交接距離的 0.45 倍取小、不小於 60 m）。iPhone 直拿約 280 m 交接、橫拿約 150 m、iPad 約 400 m；畫面不跳。3D 按鈕開的 3D 照舊從 800 m（`flatFrom`）起算。
+   - 預先蓋 3D 場景（決策 269 的「後來」）改成在 2D 最近的四分之三以內停 0.4 秒（`buildsAhead(referenceSize:)`）。
+2. **回 2D**：
+   - 雙指交接進來的 3D：拉遠也只在放手時判斷（`handsBack(handedOverAt:from:to:)`：這次雙指是拉遠，而且放手時比交接時遠 1.5 倍以上，`closesPast`）。遠景 3D 的 CPU 貴（作者實機台北遠景 16.6 ms），所以保留自動交回。
+   - 3D 按鈕開的 3D 照舊不自動交回。
+   - 3D 左上原本的關閉鈕換成明確的「2D」鈕（地圖圖示加「2D」兩個字）：回到 3D 看的同一個中心、相近的比例（2D 的比例範圍會擋住），不管 3D 是怎麼打開的。設定裡的 3D 預覽下面沒有 2D 地圖，照舊是關閉鈕。
+3. **3D 的「建設」鈕**（在「2D」下面，鎚子圖示加「建設」，和下方工具列的「建設」同一個字）：回到同一個位置的 2D，並打開建造工具（和工具列的「建設」一樣是軌道工具）。建造時 2D 固定，不交接（決策 269 原本就是）。
+4. **設定「拉近自動變 3D」**（設定的 3D 地圖那一節，`Map3DHandoff.pinchOpensKey`，預設開）：關掉時雙指永遠不進 3D，只有 3D 鈕會開（Google Earth 的「縮放時自動傾斜」）。
+5. 切換照舊是直接切換、不滑上來（決策 269）；沒有新的動畫，「減少動態效果」也一樣（motion skill）。兩顆新鈕用 SF Symbols（art-style §2：工具列、面板的按鈕照舊用 SF Symbols），和關閉鈕同一個 `.regularMaterial` 底、44 點高。
+
+**程式**：
+- GamePresentation：`Map3DHandoff`（`opensOnRelease`、`pastClosest`、`handsBack`、`closesPast`、`buildsAhead(referenceSize:)`、`pinchOpensKey`、`hands(building:tutorialRuns:pinchOpens:)`；拿掉 `opensAt`、`closesAt`），`Map3DCamera.tiltsFrom`、`tilt(atDistance:from:)`、`mostTiltedDistance(flatFrom:)`。Linux 測試 `Map3DHandoffTests`。
+- App：`MapView.swift`（手勢的 coordinator 記下手指要的比例，放手時回報 `onPinchEnded`）、`Map3DPreviewScreen.swift`（放手才判斷交回；「2D」「建設」鈕；`Map3DCameraLink` 讓畫面讀到 Metal view 的相機）、`ContentView.swift`、`SettingsView.swift`。沒有新檔，xcodeproj 不用重新產生。
+- UI 測試（full lane 的第二個 job）：`MapInteractionTests/testPinchingCloseOpensTheThreeDMapAndPinchingOutComesBack` 照新規則（XCUITest 的 `pinch` 本來就會放手）；`testTheButtonsThreeDMapStaysThreeDWhenPinchedCloser` 加按「建設」回到 2D、工具打開。「2D」鈕沿用 `map3D.close` 的識別碼，按它關掉 3D 的測試不用改。
+
+**量測**：沒有新的幾何，畫的三角形與 draw 數不變（作者實機：近景 21–27 draws、約 13.4 萬三角形；遠景 192 draws、約 18.8 萬）。2D 雙指交接進來的 3D 比以前近（約 280 m，以前約 800 m），一開始畫的分塊更少。
+
+**五方**：
+- 玩家：雙指可以把 2D 拉到看清楚路口與月台，不會中途變 3D；想看 3D 時繼續拉、放手就進去；3D 裡一顆鈕回到同一個地方的 2D，一顆鈕直接去建造。不喜歡自動變 3D 的可以關掉。
+- 鐵道迷：2D 最近那一級看得到月台、道岔與號誌的細節（真實路網的資料都在 2D 上），現在雙指拉得到；和真實資料的來源無關。
+- 開發：判斷都在 GamePresentation，有 Linux 測試；App 只把「手勢途中」改成「放手時」，加兩顆鈕與一個設定；GameCore、存檔、golden 都不動。
+- 美術：交接時 3D 從交接的距離正上方往下看，比例相同，畫面不跳；新鈕用現有的材質底與 SF Symbols，和關閉鈕、指北針排成左上一欄。
+- 音樂：無。
+
+**沒有選的做法**（預覽在 `docs/art/map3d-handoff-2026-10-21/buttons.svg`）：
+- 鈕只放圖示的圓鈕（B）：「2D」是作者要的「明確」，只有地圖圖示認不出是回平面地圖；鎚子單獨也不一定讀成「建設」。
+- 「2D｜建設」放在畫面下方一列（C）：和下方的提示、跟車的列（之後）搶位置，手指也離左上的指北針遠。
+- 留著關閉鈕、另加「2D」鈕：兩顆都是回 2D，只差回到哪裡，玩家分不出。
+- 拉到底後在手勢途中就換（不等放手）：就是作者說的「搶畫面」。
+- 進 3D 不要求過頭 1.3 倍、拉到底放手就進：只想看最近一級 2D 的玩家每次都會進 3D。
+
+**之後**（這次不做）：
+- 兩指上下拖改傾斜角（Apple 地圖的做法）：現在傾斜跟著距離。
+- 不用 `fullScreenCover`，讓 2D 與 3D 共用同一套介面（HUD、工具列）。
+- 建造時 3D 把建物簡化（Cities: Skylines II 的做法），讓 3D 也能建造。
+- 3D 上的資料圖層（Transport Fever 2 的做法）。
+- HANDOFF §7.5：實機看「拉近自動變 3D」預設開是不是還會誤進 3D；常誤觸就把預設改成關，不必重做。
+
+**參考**：
+
+| 參考 | → 目標 |
+| --- | --- |
+| 決策 269 的 `Map3DHandoff`（比例與距離互換、`Plan`、`camera(from:)`、`plan(from:)`） | 沿用；判斷的時機從手勢途中改成放手 |
+| 參考庫 `Railway/railway_game_reference_clean/web_runtime/touch_pinch_zoom.js`（雙指縮放以兩指中點為準，`touchend` 才結束一次縮放） | 2D 雙指照舊以兩指中點為準；`UIPinchGestureRecognizer` 的 `.ended` 是放手的那一刻 |
+| 參考庫 `Railway/taiwan-rail-reference-clean/source/main-reference.js`、`MapBuilder/reference_snapshot/` 的 MapLibre／Mapbox 地圖 | 2D 與 3D 是同一張地圖、pitch 手動，沒有「兩張地圖交接」的規則：缺口，本專案自己的 |
+| Google Earth 的「縮放時自動傾斜」設定（只看行為，沒有程式碼） | 設定「拉近自動變 3D」 |
+
+外部專案：沒有另外搜尋程式碼（判斷是幾個比較）。程式碼是本專案自己的。
+
+**驗證**：
+- **VERIFIED**（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`Map3DHandoffTests`、`Map3DTests`、`Map3DCompassTests` 通過；改到的 App 檔通過 `swiftc -parse`。
+- **UNVERIFIED**：App 的編譯（`ios-build.yml`）；兩個交接的 UI 測試（full lane，PR 用 `only_testing` 跑）；實機的手感與誤觸（TestFlight，HANDOFF §7.5）。
+
+**後來**（2026-10-21，3D 開在 2D 看的地方）：作者實機（iPhone 17 Pro）回報兩個 3D 開錯地方的情形。高鐵示範從台北開 3D，卻開在日月潭附近；實景新遊戲還沒蓋東西，3D 開在中央山脈。原因是場景的中心取「蓋好的東西的正中間」：示範的台北到左營線，正中間在島的中部。什麼都沒蓋的時候取整張地圖的正中間，而 3D 按鈕與預先蓋場景都沒有把 2D 看的地方交給場景。遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 派工，3D session_01Y25x9NJSKmAuP1M1K3Sf3C 做。存檔、golden、GameCore 不動，沒有新的玩家文字。
+
+- **規則**（`Map3DScene.frame(world:focus:)`，GamePresentation）：
+  - 有 focus（2D 看的點）時，先把它擋在地圖內，當作場景的原點。
+  - 範圍是（蓋好的東西 ∪ focus）外加 `margin`，再和 focus 前後左右各 `reach`（6 km）、整張地圖取交集。所以 focus 附近蓋好的東西照舊在場景裡，遠處的不畫。
+  - 沒有 focus（設定裡的 3D 預覽）照舊。
+- **App**：
+  - 3D 按鈕把 2D 相機的中心交給 3D（`ContentView` 的 `map3DOpenedAt`），3D 的相機從那裡看下去，距離照舊是整個場景的距離。
+  - 雙指交接本來就交出雙指的點（`Map3DHandoff.Plan`）。
+  - 預先蓋場景用的也是 2D 相機的中心。
+  - 場景的快取鍵 `Map3DSceneKey` 多了 focus 所在的方格（`Map3DScene.FocusArea`，邊長 `reach` 的一半，3 km）。2D 在同一格裡移動，開 3D 時用的是已經蓋好的場景；移到別格就重蓋。
+  - 回 2D 照舊回到 3D 看的地方（本決策第 2 點的「2D」鈕）。
+- **測試**：Linux 的 `Map3DOpenHereTests`：
+  - 高鐵示範（台北與左營各一段線）從台北開，原點就在台北，以前離台北超過 100 km。
+  - 實景新遊戲什麼都沒蓋，原點就在 focus。
+  - focus 在地圖外會擋回地圖內。
+  - focus 附近蓋好的東西仍在場景裡。
+  - `FocusArea` 同格相等。
+- **每一種開局**（遊戲規劃要求）：`Map3DOpenEveryStartTests` 用啟動器真的開每一種開局：空白新遊戲、實景新遊戲（台北與東京）、全台灣、三個沙盒挑戰、歷史挑戰（劉銘傳、平溪、集集）、每週挑戰、示範地圖、實景示範、教學、十課。每一種都從 2D 看的點開 3D（地圖內一點、地圖外一點），斷言場景的中心就在那裡，地圖外的點會擋回地圖內。
+  - 高鐵示範與宜蘭線示範各要建 130 與 35 秒，改在 `HighSpeedDemoTests`、`TRADemoTests` 原本用啟動器開示範的測試裡斷言同一件事，不再建第二次。這個類別本身約 23 秒，在 `rest` shard。
+  - `testEveryStartIsListed` 讀 `GameLauncher.swift` 裡每個公開的 `start…`／`open…` 呼叫，不在清單（`Start`，或寫明理由的 `notAStart`）裡就失敗。所以以後加新的開局，一定要把它加進來。
+- **副作用**：非實景地圖的種子街道（決策 270）給 2D 用時算的是沒有 focus 的範圍。3D 從某處開時，範圍可能不同，街道只在兩個範圍的邊上可能不一樣（街道排在世界的格子上，和原點無關）。
+- **量測**：場景大小的上限不變（前後左右各 `reach`）。高鐵示範從台北開的場景比以前小：以前要涵蓋兩端，以 `reach` 截掉的是台北那一端。三角形與 draw 數不會超過以前的上限。
+
+**五方**：
+- 玩家：按 3D 或雙指拉進 3D，看到的就是剛剛 2D 看的地方，不會跑到山裡或湖邊。
+- 鐵道迷：從台北車站開 3D 就看到台北車站附近的真實路網與建物；和資料來源無關。
+- 開發：規則在 GamePresentation，有 Linux 測試；App 只多傳一個點，快取鍵多一格，GameCore、存檔、golden 都不動。
+- 美術：3D 一打開就是 2D 的同一個地方，不必再找；畫面與材質不變。
+- 音樂：無。
+
+**沒有選的做法**：
+- 只在什麼都沒蓋時用 focus（原本的寫法）：高鐵示範這種蓋了一條縱貫線的世界照舊開在中間。
+- 不擋 focus 在地圖內：2D 可以捲到地圖外一點，原點落在沒有地面的地方。
+- 快取鍵用 focus 的原值：2D 每動一點就重蓋場景，預先蓋好的場景白費。
+- 方格邊長用 `reach`（6 km）：同一格裡的 focus 最遠可能只剩 0 km 的場景，打開 3D 就是邊。
+
+### 315. 收購真實支線（設計）：實景地圖上把一條真實支線連軌道、車站、列車與真實班次買下來
+
+2026-10-21。NEXT_PRIORITIES §19 第 9 名、§20.1，作者 2026-10-21（「收購整條線……會讓玩法變有趣嗎」→「好 排進去」）。遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 派工給 session_017RbiiqGJTsLWDSz9q4Dukd。號碼依 #231：main 最大 313（314 保留給 3D 車頭標籤與色帶），取 315。分兩步：**第 1 步只有這一頁設計**（只改文件）；**第 2 步照設計實作**，升存檔 66，等第 1 步合併、規劃 session 給 GameCore 名額後才 push。golden schema 與 replay 兩步都不動。
+
+**為什麼**：實景地圖上已經畫著真實的支線，列車照時刻在跑（決策 304），但那些車只是畫面。後期玩家錢多了，沒有一個要存錢的大目標。收購讓玩家把一條真實的地方支線整條接過來：軌道、車站、列車和真實的班次一次到手，接著用它接自己的線、接轉乘。地方支線換經營者在真實世界也有（集集線 1927 年由總督府從台灣電力收購，決策 289）。
+
+**已經有的、這次只是包起來**：
+- 沿真實鐵路描線（決策 213，`RealRailwayTraces`、`tracePlan`、`PlayerCommand.buildTrackChain`）：照真實中心線鋪軌，全成或全不成。
+- 路線照真實班次發車（決策 133，`LineRun`、`setLineRuns`）與平溪線的真實班次檔（`tra_pingxi_runs.json`，含車組每天回到原處的檢查）。
+- 支線的資料與報告（決策 289，`BranchLineChallenge`、`JijiReportTests`：集集線全線在平地約 $530 萬，五處待避線照 `tra_overtake_tracks.json`）。
+- 一鍵派車（`PlayerCommand.autoService`）與確認路線卡（決策 303）：一個指令裡建路線、待避線與列車。
+- 真實車站的運量（決策 298，`RealRidership`、`Station.transferPoints`）。
+
+#### 1. 哪幾條線可以買
+
+只開放台鐵的**支線**，而且只在實景地圖（世界有 `geoAnchor`）上。幹線（縱貫線、山海線、宜蘭線、北迴、南迴、臺東、屏東）與高鐵不開放：75.1 的玩家不想把台鐵、高鐵整個接過來，幹線的班次也是城際列車、不是一條地方線容得下的。
+
+| 線（`tra.json` 的 `id`） | 區間 | 長度 | 站數 | 已打包的班次 | 第 2 步 |
+| --- | --- | --: | --: | --- | --- |
+| 平溪線 `PINGXI` | 三貂嶺—菁桐 | 13.0 km | 7 | 有（`tra_pingxi_runs.json`，決策 133） | 開放 |
+| 集集線 `JIJI` | 二水—車埕 | 29.5 km | 7 | 沒有（`tra.json` 只有估計的班距） | 開放（新工具擷取班次） |
+| 內灣線 `NEIWAN` | 新竹—內灣 | 28.0 km | 13 | 沒有 | 開放（同上） |
+| 深澳線 `SHENAO` | 瑞芳—八斗子 | 4.7 km | 3 | 平溪線那份裡的直通車 | 開放（同上；真實的班次全是直通平溪線的車，只買深澳線時截到瑞芳） |
+| 六家線 `LIUJIA` | 竹中—六家 | 3.2 km | 2 | 沒有 | 開放（同上） |
+| 沙崙線 `SHALUN` | 中洲—沙崙 | 5.7 km | 3 | 沒有 | 開放（同上） |
+| 成追線、林鐵、捷運、高鐵、幹線 | — | — | — | — | 不開放 |
+
+- **線的範圍**：從分歧站（三貂嶺、二水、新竹、瑞芳、竹中、中洲）的月台到終點站。分歧站以外的幹線不賣：平溪線的真實列車多半從瑞芳或八斗子開來，班次在分歧站截斷，只留支線上的那一段（時刻照真實列車在這幾站的到、開）。
+- **班次的資料**（第 2 步的新工具 `tools/real-timetables/extract_branch_runs.py`）：從參考庫新版 `Railway/taiwan-rail-reference-clean/` 2026-10-16 的臺鐵時刻表（政府資料開放授權條款第 1 版），每條支線取停靠支線車站的列車，從分歧站（或它在支線上的第一站）到最後一站；照 `extract_pingxi_runs.py` 的做法取第一週沒有假日的平日與週末，必要時加回送讓車組每天回到原處，並檢查每天開始與結束時每組車都在同一站（`overnight`），**通不過檢查的線不開放**，PR 寫出原因。平溪線改用同一個工具重新擷取（截在三貂嶺），舊的 `tra_pingxi_runs.json` 留給實景示範與平溪挑戰，不改。
+- **什麼時候出現**：線上每一站（含分歧站）都在世界範圍內，才列出這條線。地圖框不住整條線（例如實景地圖只框到菁桐不含三貂嶺）就不列：買半條線開不了真實班次。
+- **在哪裡買**：點那條支線的真實車站，車站卡「真實路線」那一行（決策 304）多一個「收購這條線」；路線清單的「新路線」選單底下也列出這張地圖可以買的線。沒有可買的線時兩處都不出現。
+
+#### 2. 價格怎麼定
+
+**價格 = 建造費 + 列車 + 營運價值**，三項都在收購卡上分開列：
+
+1. **建造費**：GameCore 照它平常的價目算，鋪這條線的軌道、結構（橋、隧道，決策 279 的 `rail_structures.json`）、車站、月台與待避線，加上線底下還沒買的地塊（地圖擴張開著時，決策 160）。做法照決策 213 的預覽：在世界的副本上蓋一次，扣掉的錢就是建造費，和玩家自己描線蓋一模一樣。
+2. **列車**：照班次每天需要的車組數（`overnight` 的組數），每組用那條線的車種與節數照買車的價格（`rollingStockEconomics` 開著時照車種與節數計價，決策 180）。
+3. **營運價值**：`營運價值 = 沿線真實旅客（每天） × 每位旅客的價值`。
+   - 沿線真實旅客：決策 298 的 `RealRidership`（2025 年臺鐵各站進出站 ÷ 2），線上不含分歧站的各站相加。分歧站的旅客多半是幹線的，不算。
+   - 每位旅客的價值是一個常數（`RealLineAcquisition.valuePerDailyRider`），第 2 步照下面的目標量出來，寫回這個決策。
+   - 意思是「買的是一條已經有常客的線」：比自己蓋貴的那一部分，買的是第一天就有的客人與真實班次。
+
+**為什麼不是只有建造費**：那樣收購就和自己描線蓋一樣價，還送列車與班次，永遠比較划算（economy-balance 的「一面倒的選擇」，CRITICAL）。**為什麼不照遊戲裡的獲利估**：開線之前不知道它會賺多少，照模擬估又會每張地圖不同、玩家看不懂價格從哪來。真實運量是看得到、有出處的數字。
+
+**要量什麼、目標**（第 2 步的 `AcquisitionReportTests`，`ACQUIRE_REPORT=<天數>`，release，照 `.claude/skills/economy-balance`；目標寫在這裡，因為 economy-balance 只承認寫下來的目標）：
+
+| 數字 | 目標 | 為什麼 |
+| --- | --- | --- |
+| 價格 ÷ 新遊戲起始資金（標準難度 $300 萬，`NewGameOptions.Difficulty.standard`） | 2–6 倍 | 後期才買得起，開局買不起；集集線在平地光建造就約 $530 萬（決策 289），已近 2 倍 |
+| 價格 ÷ 同一條線自己描線蓋＋一鍵派車的花費 | 1.2–2.0 倍 | 低於 1.2 就幾乎沒有理由自己蓋（一面倒）；高於 2 就沒人買 |
+| 回本天數：價格 ÷ 第 30–360 天平均每天營業利益 | 360–1,080 天（1–3 個遊戲年） | 是要存錢的大目標，不是第一條線的 4–10 天（決策 46、137）；超過 3 年就是虧本生意 |
+| 第 360 天的累計現金：收購 對 自己蓋（同一天開始、同樣的車） | 收購的是自己蓋的 70–100% | 收購付的溢價要在一年內大致回來，但不能比自己蓋更好 |
+| 第 1 天的旅客：收購 對 自己蓋 | 收購的多 | 「有常客」要看得到；若一樣多，營運價值就是白付 |
+| 帳要對得上 | 收購的路線損益加總等於公司帳（決策 179） | 每次改經濟都量 |
+
+- 量法：六條線各從「已經營 180 天的實景新遊戲」開始，比較同一天收購與同一天自己描線蓋（`RealRailwayTracingTests` 的做法）加一鍵派車；量第 1、30、180、360 天。
+- 量出來超出範圍就調 `valuePerDailyRider`（只動營運價值，不動建造與列車的價目）；調不進範圍的線，第 2 步不開放並寫明。
+- 判定照 economy-balance 的 HEALTHY／CONCERNS／CRITICAL／NOT ASSESSED，寫在第 2 步的 PR 與這個決策的「量到的」。
+
+#### 3. 車上與月台上的旅客怎麼交接
+
+**遊戲裡沒有要交接的旅客**：決策 304 的真實列車只是畫面，不載遊戲的旅客，真實車站的月台上也沒有遊戲的旅客。所以交接是三件事，都在第 2 步做：
+
+1. **從隔天的首班車起由玩家經營**（真實的經營權移轉也是從營業日開始）：
+   - 收購當下就蓋好軌道與車站，列車放在班次的過夜位置（`overnight`，由第 2 步的工具照截斷後的班次算出）。
+   - 每一班的 `runDays`（`ServiceLine.runDays`：每班最後一次開出的**遊戲日**，`Int64?`，不是星期幾的集合）設成今天，所以只有今天剩下的班次不派，明天第一班照真實時刻開出；星期幾開照 `LineRun.days`，不受影響。`runDays` 只有 GameCore 能改（`internal(set)`），所以由新指令 `recordLineAcquisition` 設。收購卡寫「明天首班車起由你經營」。
+   - 那條線的真實列車從收購那一刻起不再畫（`RealTrainTraffic` 跳過已收購的線），不會和玩家的車疊在一起。
+2. **常客**：收購的車站和玩家其他車站一樣從腹地的土地拿旅客（決策 139），轉乘點數照決策 298：
+   - 分歧站照常有幹線的轉乘點數。
+   - 支線自己的站，真實臺鐵運量本來就是這條線的乘客。照決策 298 它們已經會變成點數；車站卡那一行在「臺鐵」只剩這條線本身時改寫成「沿線的常客：每天約 N 人」，不寫「轉乘」。
+   - 「現實路網：轉乘」關著的遊戲沒有常客；收購卡會寫「關掉了真實轉乘，這條線只有沿線城鎮的旅客」，營運價值也照算（價格不因開關而變，免得關掉開關買便宜線）。
+3. **轉乘不重複算**：收購之後，分歧站的轉乘點數仍照幹線的運量算，不另外加支線的運量。
+
+#### 4. 和玩家既有的軌道重疊時
+
+**拒絕**，只有一種例外：
+- 支線（分歧站月台以外）的路上有玩家的軌道、車站或建物，GameCore 照常拒絕那一段（`trackConflict`、`trackTooClose`、`buildingOnTrack`……），整筆收購不成立。收購卡事先在副本上試蓋，寫出擋住的地方（「你的軌道在十分附近擋住了這條線」）並在地圖上標出來，不讓玩家按「收購」。
+- **例外：分歧站**。玩家在真實分歧站 450 m 內已經有車站（決策 295 的 `nearestRealStation(to:)`），收購的線就接到那一站（`PlatformAddition.existing`），加一個月台而不另蓋車站，玩家的線因此可以和收購的線轉乘、甚至直通。
+- 玩家已經沿這條支線自己蓋了軌道（例如支線挑戰），這條線就不列為可收購：那條線已經是玩家的了。
+- **沒選「只買不重疊的部分」**：真實班次以整條線的站序記，切掉一段就開不了；價格也會變得難懂。真實的路線收購也是整條線。
+
+#### 5. GameCore 的指令形狀
+
+**照決策 213 與 `autoService`：GamePresentation 的一個 `PlayerCommand.acquireRealLine(RealLineAcquisition)`，把現有的 GameCore 指令串起來，加上一個新的小 GameCore 指令記下收購與營運價值。**
+
+- `RealLineAcquisition`（GamePresentation，`Codable`，指令紀錄寫成 `acquireRealLine`，決策 193 的格式，能在 Linux 重播）：
+  - `realLine`：`tra.json` 的線 id（例如 `"tra:PINGXI"`）；
+  - 軌道：`[TrackStretch]`（`tracePlan` 的結果，和 `buildTrackChain` 一樣）、待避線（`PassingLoopPlan`，照 `tra_overtake_tracks.json`）；
+  - 車站：每站 `PlatformAddition`（新站或分歧站的 `.existing`），站名照真實站名；
+  - 列車：車種、節數、放在哪一站（`overnight`）；
+  - 路線：名稱、顏色（`tra.json` 的路線色）、停靠站、`[LineRun]`（第 2 步的班次檔）；
+  - `dailyRiders`：營運價值用的真實旅客數。
+- `GameSession.apply` 在世界的副本上依序：`readGround` → 鋪軌（`buildTrackChain` 的做法）→ 月台與車站 → 待避線 → 買車、放車 → `createLine` → `setLineRuns` → `assignTrain` → 新指令 `GameWorld.recordLineAcquisition(line:realLine:dailyRiders:)`。
+- **新的 GameCore 指令** `recordLineAcquisition(line:realLine:dailyRiders:)`：
+  - 檢查依序：`unknownLine`；`realLine` 空白或已收購過（新的 `GameError.lineAlreadyAcquired`）；`dailyRiders` 在 0…`RealLineAcquisition.maximumDailyRiders`（200,000，比臺鐵最大站還多，擋住亂填）之外是新的 `invalidAcquisition`；錢不夠是 `insufficientFunds`。
+  - 把這條線每班的 `runDays` 設成今天（見第 3 點；那條線要剛建好、還沒開過任何一班，否則 `invalidAcquisition`）。
+  - 扣營運價值 = `dailyRiders × valuePerDailyRider`，記成一筆資產（新的 `AssetRecord.Kind.acquiredLine`，資產類別 `track`，照軌道 20 年攤提：買的是線的經營權，和軌道一起折舊），帳簿的資本支出多一項「收購路線」。
+  - 世界記下 `acquisitions`：每筆 `{realLine, line, day, value}`，`RealTrainTraffic` 與收購選單照它跳過已收購的線。
+  - 營運價值的計算在 GameCore（決定性的整數分），GamePresentation 只給旅客數，和決策 298 的 `setTransfers` 一樣：GameCore 不讀真實資料，只存數字。
+- **為什麼不是一個大的 GameCore 指令**：鋪軌、月台、待避線、買車的規則與價目都已經在 GameCore，GamePresentation 也已經會照真實鐵路排出它們（決策 213、289）。整包搬進 GameCore 要把 `RealRailwayTraces` 的資料讀法帶進去，GameCore 就要讀真實資料。
+- **為什麼不是只有現有指令、沒有新指令**：沒有新指令就沒有地方記「這條線是買來的」，真實列車會繼續畫在玩家的線上，同一條線也能再買一次；營運價值也不能只是扣錢而沒有資產。
+
+#### 6. 失敗原子性
+
+- 整筆收購在 `GameSession.apply` 的世界副本上做，任何一步拋錯（地塊沒買到、錢不夠、某段擋住、班次不合法）副本就丟掉，世界不變（和 `buildTrackChain`、`autoService` 相同）。一次復原整筆拿掉。
+- 新指令自己也先檢查完全部再改世界。
+- **錢**：收購卡在副本上試算一次總價，按下去時世界的錢不夠就整筆拒絕（`insufficientFunds`），不會蓋了一半、列車沒買。
+- 測試（第 2 步）：每種失敗（擋住、錢不夠、已收購、旅客數超出、範圍外）世界逐位元不變；成功之後存檔來回相同；指令紀錄重播得到同一個世界。
+
+#### 7. 存檔、golden、replay
+
+- **存檔 66**（第 2 步）：世界多 `"acquisitions"`（空的時候省略），資產多一種 `acquiredLine`。只讀到 65 的 build 會丟掉收購紀錄、也讀不了新的資產種類，所以升版；遷移是 65 → 66 補空的收購清單。新的 `SaveFixtures/v66-line-acquisition.json`（實景地圖收購了平溪線、過了一天）。
+- **golden schema 不動**：不加 golden fixture；既有的 golden 沒有這個指令，值都不會變。新指令由 `LineAcquisitionTests`（Linux）驗證。
+- **replay 不動**：既有的 `ReplayFixtures/` 指令流沒有收購，checksum 不會動。
+- 平衡的 shard：營運價值只動收購這條路；第 2 步仍跑 `campaigns-8`（`NewGameBalanceTests`、`GoldenScenarioTests`）確認既有的數字沒變。
+
+#### 8. 「收購完成」卡與短樂句
+
+- **卡**（App，`AcquisitionCompleteCard`；版面照挑戰達成卡，決策 256 的那一類）：
+  - 上面一條那條線的路線色帶，色帶上是線名（「平溪線」）。
+  - 中間一枚藏青的圓章「收購」（照 `.claude/skills/art-style`：扁平、藏青外框、不用新的色碼；第 2 步畫之前先讀那份 skill），章裡是分歧站到終點站兩個站名。
+  - 下面三行：「7 站、13.0 公里、3 列車」「明天首班車起由你經營」「真實班次：平日 N 班」。
+  - 一個「好」鈕；打開「減少動態效果」時章不蓋下來，直接出現（照 `.claude/skills/motion`）。
+- **短樂句**（`SoundCue.lineAcquired`，`tools/audio/` 產生）：分歧站的站鈴（決策 219 的 `StationChime`）前兩個音，接一個落在主音上的終止，最後一聲低的木魚般的「蓋章」聲，全長約 1.5 秒；和 `goalMet`（上行、亮）分得開，聽得出是「簽約完成」而不是「達成目標」。音效設定關掉時不播。
+- **玩家看的字**（兩種語言）只說玩家得到什麼：「收購平溪線：軌道、7 座車站、3 列車與真實班次」「明天首班車起由你經營」；不寫營運價值怎麼算、不寫 `valuePerDailyRider`。
+
+#### 五方
+
+- **玩家**：後期有一個要存錢的大目標；買下就多一條第一天就有客人、照真實時刻跑的線，可以接自己的線轉乘。被擋住時事先說哪裡擋住，不會按了才失敗。
+- **鐵道迷**：線形、車站、班次都照真實出處（OSM 線形、臺鐵開放資料的時刻表、臺鐵各站運量）；只賣支線、整條線一起買、從營業日交接，和真實的路線移轉一樣；價格裡看得到真實旅客。
+- **開發**：多半是把決策 213 的鋪軌、決策 133 的班次與一鍵派車包成一個指令；GameCore 只多一個記錄收購的小指令與一個欄位，存檔升一版，golden 與 replay 不動。
+- **美術**：一張「收購完成」卡：路線色帶加一枚藏青的「收購」圓章，照 art-style，不用新的色碼。
+- **音樂**：一段約 1.5 秒的簽約樂句：分歧站的站鈴開頭、落在主音、最後一聲蓋章，和「達成目標」的上行樂句分得開。
+
+#### 沒選的（預覽是玩家會看到的）
+
+- **價格只有建造費**：預覽「收購平溪線 $420 萬（自己蓋也是 $420 萬）」（數字只是示意）。永遠比自己蓋划算（多送列車與班次），一面倒。
+- **照模擬的獲利估價**：預覽「預估一年獲利 $80 萬 × 5 年 = $400 萬」（示意）。開線前的估計每張地圖不同，又要先跑一段模擬；玩家看不懂、也容易被估得太好的數字騙。
+- **只買不重疊的部分**：預覽「平溪線（十分—菁桐，其餘與你的軌道重疊）」。真實班次開不了，價格也難懂。
+- **重疊時沿用玩家的軌道**：預覽「收購平溪線，三貂嶺—大華用你的軌道」。玩家的軌道不一定照真實線形、待避線也不一定在真實的站，真實班次可能卡死（決策 133 的瑞芳死結），要多一套檢查。以後有玩家要再說。
+- **一個大的 GameCore 指令**：GameCore 要讀真實資料；見第 5 點。
+- **當下立刻接手、真實列車上的「旅客」變成遊戲旅客**：真實列車本來沒有遊戲的旅客，要憑空生出一車人；當天的班次也已經開了一半。
+- **開放幹線**：75.1 的玩家不要；城際的班次一條地方線容不下。
+- **收購公司、競爭對手**：作者還在考慮（NEXT_PRIORITIES §20.2），不在這個決策。
+
+#### 參考庫與外部專案
+
+`a91453/railway-reference-private` `b3af6d8`。參考庫**沒有**收購、接管路線或公司的實作，也沒有路線或公司的估價、軌道的折舊（搜尋過 `Ci/`、`Railway/` 各包、`Simulator/`、`MapBuilder/`、`OpenWorld/`、根目錄的 `city_map_reference_clean/`、`power_grid_reference_clean/`：收購、併購、接管、買下、takeover、acquisition、purchase、valuation、折舊、經營權）。用得上的是資料與相近的做法：
+
+| 參考 | 本專案（第 2 步） | 怎麼用 |
+| --- | --- | --- |
+| `Railway/taiwan-rail-reference-clean/source/data/tra_special_trains.json` 的 `branchLines`（平溪、集集、內灣、六家、深澳、沙崙：區間、`matchStations`、故事、出處） | 第 1 點的六條線；收購卡的線名與區間 | 照用（決策 289 已用它的清單） |
+| 同目錄 `tra_schedule_dense.json`（臺鐵開放資料 2026-10-16 起 14 天，1,083 班；停終點站的：菁桐 36、內灣 42、車埕 22、六家 82、八斗子 20、沙崙 73） | `extract_branch_runs.py` → `tra_branch_runs.json` | 照 `extract_pingxi_runs.py` 擷取；資料沒有每班的車種 |
+| 同目錄 `tra.json`、`tra_station_of_line.json`（`cumKm`）、`tra_platforms.json`、App 已打包的 `tra_overtake_tracks.json` | 車站、月台、待避線 | 照用 |
+| `Railway/taiwan-rail-reference-clean/source/main-reference.js` `DIESEL_BRANCH_IDS`（平溪、集集、深澳、內灣）、`isDr1000`（這幾條線的區間車是 DR1000；內灣線是竹中以南）、`PERF_DR1000`（a 1.5、b 2.448、v 110） | 收購的列車：這四條線用 DR1000，六家、沙崙是電氣化的線，用一般的電聯車 | 遊戲還沒有 DR1000（`TrainType` 只有 EMU3000、EMU100、莒光、海風、藍皮、山嵐等）；第 2 步照 `PERF_DR1000` 加一個 `dr1000` 車種，改到既有 golden 或存檔的值就先用遊戲的通勤車種、把 DR1000 留到下一步 |
+| 同目錄 `rail-3d/assets/garage-blender-v1/dr1000`、`train-garage-scenes.js`（十分站的 DR1000、內灣木造車站的 EMU600） | 無（3D 那條線之後可用） | 只記下出處 |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` 的額度購買（`quota_purchase`）記成投資現金流（`investingCashFlow = quotaReturnCashInflow - quotaPurchaseCashOutflow`），不進營業損益 | 營運價值記成資本支出（`acquiredLine` 資產），不進營業費用 | 同一種記帳方式 |
+| `Railway/taiwan-rail-reference-clean/source/scripts/verify_bounty_valuation.mjs`、`data/bounty_rules.json`（班次越少的路線越值錢，`clamp(全網中位數班數 ÷ 這條線的班數, 1, 3)`） | 無 | 是「稀有度」的懸賞，不是價格；沒採用，因為班次少的支線不應該因此更貴 |
+
+**外部專案**（只讀想法，沒有抄程式碼）：
+- **OpenTTD**（GPL-2.0，<https://github.com/OpenTTD/OpenTTD/blob/master/COPYING.md>；`economy.cpp`，<https://docs.openttd.org/source/d9/ddd/economy_8cpp_source>）：公司的資產值是車站設施與車輛（折舊後的 1.5 倍）的值，**軌道與土地不算**；惡意收購的價格是資產＋貸款＋最近四季有獲利的季的 2 倍獲利；破產的公司第 7 個月開放收購（`CmdBuyCompany`）；收購時車輛、車站、地塊一起移到買方（`ChangeOwnershipOfCompanyItems`）。取的想法：**價格＝資產＋營運的價值**，以及「所有東西一次移轉」。沒取的：OpenTTD 用過去的獲利，這裡改用真實運量（開線之前沒有遊戲裡的獲利）；它不算軌道，這裡照價目算建造費（否則比自己蓋便宜）。
+- **Simutrans**（Artistic License 1.0）：主遊戲沒有收購別家公司；Simutrans-Extended 的破產收購（jamespetts，2020–23）在論壇（<https://forum.simutrans.com/index.php?msg=184598>）回報過複製路線、壞存檔、起始資金白拿錢的問題。取的教訓：收購不能變成送錢（第 2 點的「不比自己蓋便宜」），整筆要全成或全不成（第 6 點）。
+
+參考庫沒有的（本專案自己的）：哪些線可以買、價格公式與 `valuePerDailyRider`、營業日交接、重疊時的規則、收購完成卡與樂句。
+
+#### 下一步（第 2 步，一個 PR）
+
+1. `tools/real-timetables/extract_branch_runs.py`：六條支線的班次（含 `overnight` 檢查），打包成 `RealRailways/tra_branch_runs.json`。
+2. GameCore：`recordLineAcquisition`、`GameWorld.acquisitions`、`AssetRecord.Kind.acquiredLine`、兩個新 `GameError`、存檔 66 與遷移、`SaveFixtures/v66-line-acquisition.json`、`LineAcquisitionTests`。
+3. GamePresentation：`RealLineAcquisition`（排出計畫、試算價格、擋住的地方）、`PlayerCommand.acquireRealLine`、`RealTrainTraffic` 跳過已收購的線、車站卡的「沿線的常客」、`AcquisitionReportTests`（量第 2 點的目標，把 `valuePerDailyRider` 與量到的數字寫回這裡）。
+4. App：車站卡與路線清單的「收購這條線」、收購卡、「收購完成」卡、`SoundCue.lineAcquired`、String Catalog 兩種語言。
+5. push 之前先 `send_message` 遊戲規劃要 GameCore 名額（同時最多 2 個 GameCore PR 跑 CI，一次只有一件升存檔）。
+
+### 308. （預約）高鐵：沒有閉塞時的互等與追回時間
+
+session_0125dMtwyMdz7mzoBCRNa1pn 預約（#231）。這一節由那個 PR 填寫。
+
+### 314. （預約）3D 的列車標籤與路線色帶
+
+session_01Y25x9NJSKmAuP1M1K3Sf3C 預約（#231）。這一節由那個 PR 填寫。
+
+### 316. （預約）新遊戲選擇頁：主選單的「新遊戲」再選空白地圖或實景地圖
+
+session_01PK2gs3bPYXPFbbJkwsDuUP 預約（#231）。這一節由那個 PR 填寫。
 
 ## 目前規則摘要
 

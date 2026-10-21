@@ -25,7 +25,19 @@ final class MapQuickLayersTests: XCTestCase {
     }
 
     func testTheButtonsNames() {
-        XCTAssertEqual(MapQuickLayer.allCases.map { $0.title(in: .traditionalChinese) }, ["站名", "候車", "載客量", "人口"])
+        XCTAssertEqual(MapQuickLayer.allCases.map { $0.title(in: .traditionalChinese) }, ["站名", "候車", "載客量", "人口", "車資與章"])
+    }
+
+    /// Decision 310: the fares and the full trains' stamps, on until the
+    /// player turns them off, and only they.
+    func testFaresAndStampsAreOnUntilTurnedOff() {
+        XCTAssertTrue(MapLayerPreferences.default.showsFaresAndStamps)
+        XCTAssertTrue(MapQuickLayer.faresAndStamps.isOn(in: .default))
+        let off = MapQuickLayer.faresAndStamps.toggled(.default)
+        XCTAssertFalse(off.showsFaresAndStamps)
+        var others = off
+        others.showsFaresAndStamps = true
+        XCTAssertEqual(others, .default, "nothing else changes")
     }
 
     func testTheTitleAndHowFarToTheNext() {

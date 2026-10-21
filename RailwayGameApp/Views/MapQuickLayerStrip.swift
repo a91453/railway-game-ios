@@ -3,7 +3,8 @@ import SwiftUI
 
 /// The layers used most, one tap each, under the status pill (ARCHITECTURE
 /// decision 224, option 5B, `docs/art/railway-ui-redesign-2026-10-14/s5-*.png`):
-/// station names, waiting counts, passenger load and population, each an
+/// station names, waiting counts, passenger load, population and the fares
+/// and stamps over the stations (decision 310), each an
 /// icon over its name, framed in teal when on, and More, which opens the full layer
 /// list. The same settings as the list (``StoredMapLayerSheet``), so each
 /// shows what the other changed.
@@ -14,13 +15,15 @@ struct MapQuickLayerStrip: View {
     @AppStorage("mapShowsWaitingCounts") private var showsWaitingCounts = true
     @AppStorage("mapShowsCatchmentRings") private var showsCatchmentRings = true
     @AppStorage("mapPopTravelMode") private var popTravelModeName = ""
+    @AppStorage("mapShowsFaresAndStamps") private var showsFaresAndStamps = true
 
     private var layers: MapLayerPreferences {
         MapLayerPreferences(
             showsStationNames: showsStationNames,
             showsWaitingCounts: showsWaitingCounts,
             showsCatchmentRings: showsCatchmentRings,
-            popTravelMode: PopTravelMode(rawValue: popTravelModeName)
+            popTravelMode: PopTravelMode(rawValue: popTravelModeName),
+            showsFaresAndStamps: showsFaresAndStamps
         )
     }
 
@@ -86,5 +89,6 @@ struct MapQuickLayerStrip: View {
         showsWaitingCounts = layers.showsWaitingCounts
         showsCatchmentRings = layers.showsCatchmentRings
         popTravelModeName = layers.popTravelMode?.rawValue ?? ""
+        showsFaresAndStamps = layers.showsFaresAndStamps
     }
 }

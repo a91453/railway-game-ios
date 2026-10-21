@@ -228,3 +228,69 @@ extension GameSession {
         return bought != nil
     }
 }
+
+/// A lock on a tile of the map not bought yet (decision 167, later): the
+/// tiles beside the land owned, the ones the player can buy next, each
+/// carry one while the player is not choosing a tile; a tap on it opens
+/// that tile's card (``GameSession/openMapLock(_:)``). The tiles further
+/// out are only shaded. The lock is open once the best day has unlocked
+/// the tile, shut until then.
+public struct MapLock: Hashable, Sendable, Identifiable {
+    public let tile: MapTile
+    /// Where the lock stands on the screen: the middle of the part of the
+    /// tile in view.
+    public let at: ScreenPoint
+    /// Whether the best day has unlocked the tile (always, in free play).
+    public let isUnlocked: Bool
+
+    public var id: MapTile { tile }
+
+    /// The smallest part of a tile in view, each way, that gets a lock, in
+    /// points: a sliver along the screen's edge, or a tile zoomed out to a
+    /// few points, gets none.
+    public static let smallestPart: Double = 56
+}
+
+extension GameSession {
+    /// Whether the map shows its locks: in a game that buys its map, with
+    /// no building tool out, no tutorial and no tile being chosen (then
+    /// the tiles for sale show their prices instead).
+    public var showsMapLocks: Bool {
+        buysMap && !isChoosingMapTile && tool == .select && tutorial == nil
+    }
+
+    /// The locks on the tiles for sale in view through `projection` on a
+    /// `viewport`, clear of what floats over its edges (`insets`); none
+    /// unless ``showsMapLocks``.
+    public func mapLocks(on projection: some MapProjection, viewport: ScreenSize, clearOf insets: ScreenInsets = ScreenInsets()) -> [MapLock] {
+        guard showsMapLocks else { return [] }
+        let clear = (
+            minX: insets.leading, minY: insets.top,
+            maxX: viewport.width - insets.trailing, maxY: viewport.height - insets.bottom
+        )
+        return world.mapTilesForSale().compactMap { tile in
+            guard let quote = world.mapTileQuote(tile) else { return nil }
+            let area = world.mapArea(of: tile)
+            let corners = [
+                projection.screenPoint(worldX: Double(area.minX), worldY: Double(area.minY)),
+                projection.screenPoint(worldX: Double(area.maxX), worldY: Double(area.maxY)),
+            ]
+            let minX = max(clear.minX, corners.map(\.x).min()!), maxX = min(clear.maxX, corners.map(\.x).max()!)
+            let minY = max(clear.minY, corners.map(\.y).min()!), maxY = min(clear.maxY, corners.map(\.y).max()!)
+            guard maxX - minX >= MapLock.smallestPart, maxY - minY >= MapLock.smallestPart else { return nil }
+            return MapLock(tile: tile, at: ScreenPoint(x: (minX + maxX) / 2, y: (minY + maxY) / 2), isUnlocked: quote.isUnlocked)
+        }
+    }
+
+    /// A lock tapped: starts choosing a tile, as the Expand button does,
+    /// with `tile` chosen, so its card shows at once. `false`, and nothing
+    /// changes, for a tile not for sale.
+    @discardableResult
+    public func openMapLock(_ tile: MapTile) -> Bool {
+        guard showsMapLocks, world.mapTilesForSale().contains(tile) else { return false }
+        startChoosingMapTile()
+        chosenMapTile = tile
+        message = nil
+        return true
+    }
+}

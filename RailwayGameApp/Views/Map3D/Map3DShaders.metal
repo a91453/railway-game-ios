@@ -123,8 +123,12 @@ fragment float4 map3dFragment(Map3DVertexOut in [[stage_in]], constant Map3DUnif
             float2 at = abs(facing.y) > 0.7 ? in.world.xz
                 : float2(dot(in.world, normalize(cross(float3(0.0, 1.0, 0.0), facing))), in.world.y);
             float near = 1.0 - smoothstep(200.0, 600.0, distance(in.world, uniforms.eye.xyz));
-            float detail = surfaces.sample(repeating, at / metres, layer).r * 2.0;
-            tinted *= mix(1.0, detail, near);
+            // 2026-10-21 (the GPU's time on Taipei): no second sample where
+            // the pattern has faded out.
+            if (near > 0.0) {
+                float detail = surfaces.sample(repeating, at / metres, layer).r * 2.0;
+                tinted *= mix(1.0, detail, near);
+            }
         }
         base = mix(texel.rgb, tinted, texel.a);
         // A lit window: its glass (untinted and dark enough, or a shop's

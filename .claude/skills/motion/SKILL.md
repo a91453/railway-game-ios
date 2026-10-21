@@ -22,6 +22,8 @@ App 的介面動畫照一套規則走（ARCHITECTURE 決策 253）：每一種�
 | `refuse` | 0.36 | 兩端平滑 | 被拒絕的狀態訊息左右搖三次，一次比一次小（`RefusalShake`，±6 點） | `StatusBanner` 的 `keyframeAnimator` |
 | `builtRing` | 0.9 | 減速 | 蓋好東西的地方擴散的環（決策 117） | `BuildPulseMark` |
 | `turnNorth` | 0.24 | 減速 | 3D 地圖點指北針轉回北方（決策 269 的「後來」）；只移動，減少動態時直接轉回 | `Map3DPreviewScreen` 的 `CADisplayLink`，`Map3DCamera.turnedNorth` |
+| `loadingIn` | 0.7 | 減速 | 實景地圖的載入畫面淡入（決策 307）；只淡入 | `RootView` 的 `.animation(_:value:)` |
+| `loadingOut` | 0.45 | 加速 | 同一個畫面在遊戲上淡出（決策 307） | 同上 |
 
 **加新的動畫時**：先找上表合用的一條。真的都不合，才在 `MotionRule` 加一條，並在 `InterfaceMotionTests` 加它的範圍，再補這張表與 `docs/UI_THEME.md`。
 
@@ -49,7 +51,7 @@ App 的介面動畫照一套規則走（ARCHITECTURE 決策 253）：每一種�
 - **淡入淡出留著**，時間減半以上，不用彈簧：`MotionRule.reduced`。
 - **只有移動的動作直接發生**：`reduced` 是 `nil`。
 - **版面讓位直接發生**：`layout(reduceMotion:)` 是 `nil`。卡片與面板的轉場自己帶著淡入淡出的動畫（`AnyTransition.card`、`.pop`），所以版面不動、卡片照樣淡入。
-- **不自動循環播放**：等待環的擴散、天氣、號誌的閃動都已經照這條做（`MapProblems.pulse`、`TrafficOverlay.deadlockStrength`、`MapWeather`）。
+- **不自動循環播放**：等待環的擴散、天氣、號誌的閃動都已經照這條做（`MapProblems.pulse`、`TrafficOverlay.deadlockStrength`、`MapWeather`、載入畫面的列車 `LoadingRoutes.share`，決策 307）。
 
 新的動畫一定要接上 `reduceMotion`。最簡單的方法是用 `Theme.swift` 的 `.card`、`.pop`、`layout(reduceMotion:)`，它們已經處理好。
 

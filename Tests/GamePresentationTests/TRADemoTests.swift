@@ -239,6 +239,8 @@ final class TRADemoTests: XCTestCase {
         await task?.value
         XCTAssertFalse(launcher.isOpeningTRADemo)
         XCTAssertEqual(launcher.session?.world.stations.count, 13, "the game is open: ten stations and three depots")
+        // Decision 313, later: its 3D map opens where the 2D map looks.
+        Map3DOpenEveryStartTests.assertOpensWhereThe2DMapLooks(try XCTUnwrap(launcher.session?.world), "openTRADemo")
     }
 
     // MARK: - Over the ground (decision 279)

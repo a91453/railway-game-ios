@@ -47,6 +47,14 @@ struct ContentView: View {
     /// Compact height: a phone, held on its side.
     @Environment(\.verticalSizeClass) private var verticalSizeClass
 
+    /// Decision 269: the 3D map closes at once onto the 2D map at `plan`.
+    private func back(to plan: Map3DHandoff.Plan) {
+        screen.map2DReturn = plan
+        var cut = Transaction()
+        cut.disablesAnimations = true
+        withTransaction(cut) { screen.showsMap3D = false }
+    }
+
     var body: some View {
         gameLayout
             // Inside the text size limit below: the tutorial's card shares the
@@ -68,12 +76,16 @@ struct ContentView: View {
                 // map back as it is pinched out, at once (the 2D map takes
                 // up `plan`); one the button opened never does (later fix,
                 // 71.1).
-                Map3DPreviewScreen(session: session, handedOver: screen.map3DHandoff, close: { screen.showsMap3D = false },
-                                   handBack: screen.map3DHandoff == nil ? nil : { plan in
-                    screen.map2DReturn = plan
-                    var cut = Transaction()
-                    cut.disablesAnimations = true
-                    withTransaction(cut) { screen.showsMap3D = false }
+                // Decision 313: its "2D" button goes back to the 2D map
+                // where it looks, whichever way it opened, and Build there
+                // with the building tools out, as the dock's Build does.
+                Map3DPreviewScreen(session: session, handedOver: screen.map3DHandoff, openedAt: screen.map3DOpenedAt,
+                                   close: { screen.showsMap3D = false },
+                                   handBack: screen.map3DHandoff == nil ? nil : { plan in back(to: plan) },
+                                   toMap2D: { plan in back(to: plan) },
+                                   build: { plan in
+                    back(to: plan)
+                    session.selectTool(.network)
                 })
             }
             .environment(screen)
@@ -1062,6 +1074,9 @@ final class GameScreenState {
     /// it handed it back, for the 2D map to take up.
     var map3DHandoff: Map3DHandoff.Plan?
     var map2DReturn: Map3DHandoff.Plan?
+    /// Decision 313, later: the 2D map's view when the 3D button opened the
+    /// 3D map, which opens over the same place.
+    var map3DOpenedAt: Map3DHandoff.Plan?
     /// Whether the station panel, as it opens, puts up its rename alert
     /// at once: the station tag's pencil (TestFlight 60.1, renaming took
     /// three taps before a letter could be typed).

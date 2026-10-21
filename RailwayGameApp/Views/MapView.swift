@@ -60,11 +60,21 @@ struct MapView: View {
     /// the player's railway is drawn over them.
     @AppStorage("realRailwayTrackStyle") private var trackStyle: RealRailways.TrackStyle = .faint
     @AppStorage("mapShowsStationNames") private var showsStationNames = true
+    /// Decision 313: whether a pinch past the closest zoom opens the 3D map.
+    @AppStorage(Map3DHandoff.pinchOpensKey) private var pinchOpens3D = true
     @AppStorage("mapShowsWaitingCounts") private var showsWaitingCounts = true
     @AppStorage("mapShowsCatchmentRings") private var showsCatchmentRings = true
     /// Which population and travel layer is shown (``PopTravelMode``'s raw
     /// value, empty for none); a view preference, as the other layers.
     @AppStorage("mapPopTravelMode") private var popTravelModeName = ""
+    @AppStorage("mapShowsFaresAndStamps") private var showsFaresAndStamps = true
+    /// Decision 311: whether the building layer shows as soon as building
+    /// begins (the player puts it away with the corner button), which of
+    /// its two it shows and the hours of where people are; device
+    /// preferences, not in the save.
+    @AppStorage(BuildingLayerShortcut.autoShowsKey) private var buildingLayerAutoShows = true
+    @AppStorage("mapBuildingLayer") private var buildingLayerName = PopTravelMode.potential.rawValue
+    @AppStorage("mapPotentialPeriod") private var potentialPeriodName = PotentialPeriod.allDay.rawValue
     /// Whether the player folded the layer's legend (TestFlight 59.1,
     /// ``LegendFold``): a device preference, not in the save.
     @AppStorage(LegendFold.key) private var legendFold = 0
@@ -124,9 +134,12 @@ struct MapView: View {
     /// shown, and again only when the land, its buildings, the stations or
     /// the last measured service change, and a number that changes with it.
     @State private var cityMap: CityMap?
-    /// Decision 292: the layer to put back once the coverage switch's
-    /// coverage goes.
-    @State private var coverageShortcut = CoverageShortcut()
+    /// Decision 311: the layer shown over the player's own while building.
+    @State private var buildingLayer = BuildingLayerShortcut()
+    /// Decision 311: where a station would have riders, worked out in view
+    /// as it is drawn (``StationPotentialMap``), and a new one only when
+    /// its key changes.
+    @State private var potentialMap: StationPotentialMap?
     @State private var cityMapVersion = 0
     /// Decision 126: the city's buildings on the plain map, and a version
     /// that changes when they are replaced.
@@ -223,8 +236,21 @@ struct MapView: View {
             showsStationNames: showsStationNames,
             showsWaitingCounts: showsWaitingCounts,
             showsCatchmentRings: showsCatchmentRings,
-            popTravelMode: PopTravelMode(rawValue: popTravelModeName)
+            popTravelMode: buildingLayer.layer(over: PopTravelMode(rawValue: popTravelModeName)),
+            showsFaresAndStamps: showsFaresAndStamps
         )
+    }
+
+    /// Decision 311: the hours where people are is weighed by.
+    private var potentialPeriod: PotentialPeriod {
+        PotentialPeriod(rawValue: potentialPeriodName) ?? .allDay
+    }
+
+    /// Decision 311: what where people are is worked out from while it
+    /// shows, `nil` otherwise.
+    private var potentialKey: StationPotentialMap.Key? {
+        guard mapLayers.popTravelMode == .potential else { return nil }
+        return StationPotentialMap.Key(world: session.world, drafts: session.lineDraft, period: potentialPeriod)
     }
 
     var body: some View {
@@ -323,6 +349,14 @@ struct MapView: View {
                         camera: projection
                     )
                     .equatable()
+                    // Decision 311: where a station would have riders, over
+                    // the town and under the railway; it fades in and out
+                    // (``MotionRule/change``), at once with Reduce Motion.
+                    if let potentialMap {
+                        MapPotentialCanvas(map: potentialMap, opacity: opacity(for: .potential), camera: projection)
+                            .equatable()
+                            .transition(reduceMotion ? .identity : .opacity.animation(MotionRule.change.animation))
+                    }
                     MapCanvas(
                         world: session.world,
                         selectedTrainID: session.selectedTrainID,
@@ -576,16 +610,23 @@ struct MapView: View {
                             screen.panel = held != nil ? .station : .lines
                         }
                     }, onPinchCloser: { pinched in
-                        // Decision 269: the map tilts as it comes closer.
-                        // Resting near the line the 3D scene starts
-                        // building; past it, the 3D map takes over at once, where the 2D
-                        // map was and as close (not with a building tool
-                        // out, nor in the tutorial).
-                        guard Map3DHandoff.hands(building: session.tool != .select, tutorialRuns: session.tutorial != nil),
+                        // Decision 269, later: resting near the closest
+                        // zoom, the 3D scene starts building.
+                        guard Map3DHandoff.hands(building: session.tool != .select, tutorialRuns: session.tutorial != nil,
+                                                 pinchOpens: pinchOpens3D),
                               !screen.showsMap3D else { return }
-                        let opens = Map3DHandoff.opensAt(viewportHeight: pinched.viewport.height)
                         buildAheadIfResting(near: pinched)
-                        guard pinched.referenceSize >= opens else { return }
+                    }, onPinchEnded: { pinched, asked in
+                        // Decision 313: decided only as the fingers lift. A
+                        // pinch that went on past the 2D map's closest zoom
+                        // hands it over to the 3D map, where the 2D map
+                        // was and as close (not with a building tool out,
+                        // in the tutorial, or with the setting off).
+                        guard Map3DHandoff.hands(building: session.tool != .select, tutorialRuns: session.tutorial != nil,
+                                                 pinchOpens: pinchOpens3D),
+                              !screen.showsMap3D,
+                              Map3DHandoff.opensOnRelease(referenceSize: pinched.referenceSize, asked: asked) else { return }
+                        UITestTrace.action("map.pinch let go past the closest zoom: 3D")
                         screen.map3DHandoff = Map3DHandoff.Plan(x: pinched.centerX, y: pinched.centerY, referenceSize: pinched.referenceSize)
                         var cut = Transaction()
                         cut.disablesAnimations = true
@@ -666,14 +707,20 @@ struct MapView: View {
                                         }
                                     }
                                 ),
-                                coverage: mode == .coverage ? cityMap?.coverage : nil
+                                coverage: mode == .coverage ? cityMap?.coverage : nil,
+                                building: buildingLayer.isOn ? buildingLegend : nil
                             ) {
                                 stopPopTravelPlay()
                                 cellTooltip = nil
                                 cityTooltip = nil
                                 terrainTooltip = nil
                                 sectionFlowTooltip = nil
-                                popTravelModeName = ""
+                                if buildingLayer.isOn {
+                                    // Decision 311: put away, as the corner button does.
+                                    buildingLayerAutoShows = buildingLayer.toggle()
+                                } else {
+                                    popTravelModeName = ""
+                                }
                             }
                             .transition(.scale.combined(with: .opacity))
                         } else if insets.trailing == 0 {
@@ -784,6 +831,10 @@ struct MapView: View {
                     // are, which may be by the attribution.
                     .mask { attribution.fill() }
                 }
+                // Decision 167, later: the locks on the tiles not bought.
+                .overlay(alignment: .topLeading) {
+                    MapLockMarks(session: session, camera: projection, viewport: viewport, insets: clear)
+                }
                 // Decision 109: what needs the player, over its stations.
                 .overlay(alignment: .topLeading) {
                     MapAlertBubbles(session: session, camera: projection, viewport: viewport, insets: clear)
@@ -811,14 +862,20 @@ struct MapView: View {
                     TownGrowthRings(pulse: session.townPulse, camera: projection)
                         .mask { attribution.fill() }
                 }
+                // The fares, and decision 276's trips stamped full where
+                // they ended; both off with the quick strip's Fares
+                // (decision 310).
                 .overlay(alignment: .topLeading) {
-                    FareFloatMarks(session: session, camera: projection)
-                        .mask { attribution.fill() }
+                    if mapLayers.showsFaresAndStamps {
+                        FareFloatMarks(session: session, camera: projection)
+                            .mask { attribution.fill() }
+                    }
                 }
-                // Decision 276: a trip's result where it ended.
                 .overlay(alignment: .topLeading) {
-                    TripStampMarks(session: session, camera: projection)
-                        .mask { attribution.fill() }
+                    if mapLayers.showsFaresAndStamps {
+                        TripStampMarks(session: session, camera: projection)
+                            .mask { attribution.fill() }
+                    }
                 }
                 .overlay {
                     GoalMetCheck(pulse: session.goalPulse, language: session.language)
@@ -1177,10 +1234,23 @@ struct MapView: View {
             streets = plan
             streetsVersion &+= 1
         }
-        .onChange(of: session.offersCoverageShortcut) { _, offered in
-            // Decision 292: leaving the tool puts back the player's layer.
-            guard !offered else { return }
-            popTravelModeName = coverageShortcut.buildingEnded(showing: mapLayers.popTravelMode)?.rawValue ?? ""
+        .onChange(of: session.offersCoverageShortcut, initial: true) { _, offered in
+            // Decision 311: building shows where people are (or coverage,
+            // as the player last chose) over the player's layer, unless
+            // they put it away; leaving the tool shows their layer again.
+            if offered {
+                buildingLayer.choose(PopTravelMode(rawValue: buildingLayerName) ?? .potential)
+                buildingLayer.buildingBegan(autoShows: buildingLayerAutoShows)
+            } else {
+                buildingLayer.buildingEnded()
+            }
+        }
+        .onChange(of: popTravelModeName) {
+            // A layer the player chose shows instead (decision 311).
+            buildingLayer.playerChoseLayer()
+        }
+        .onChange(of: potentialKey, initial: true) { _, key in
+            potentialMap = key.map(StationPotentialMap.init(key:))
         }
         .onChange(of: mapLayers.popTravelMode) { _, mode in
             cellTooltip = nil
@@ -1226,6 +1296,21 @@ struct MapView: View {
         realTrainClock = realTrains == nil ? nil : RealTrainClock(world: session.world, time: Date().timeIntervalSinceReferenceDate)
     }
 
+    /// Decision 311: the building layer's switches in its legend.
+    private var buildingLegend: PopulationLegendView.Building {
+        PopulationLegendView.Building(
+            choice: Binding(
+                get: { buildingLayer.choice },
+                set: { mode in
+                    buildingLayer.choose(mode)
+                    buildingLayerName = buildingLayer.choice.rawValue
+                }
+            ),
+            period: Binding(get: { potentialPeriod }, set: { potentialPeriodName = $0.rawValue }),
+            hasDrafts: potentialMap?.key.hasDrafts ?? !session.lineDraft.isEmpty
+        )
+    }
+
     /// What the base canvas draws of the population and travel layer, or
     /// `nil` for nothing.
     private func popTravelLayer(realWorld: RealWorldFrame?) -> PopTravelLayer? {
@@ -1253,6 +1338,9 @@ struct MapView: View {
             return PopTravelLayer(content: .terrain(terrainMap), key: .terrain(version: terrainMapVersion), opacity: alpha)
         case .sectionFlow:
             // Drawn on the lines by the map canvas, not under them.
+            return nil
+        case .potential:
+            // Decision 311: a canvas of its own over the town, which fades.
             return nil
         }
     }
@@ -1317,13 +1405,12 @@ struct MapView: View {
     private func buildAheadIfResting(near pinched: PlanCamera) {
         buildAhead?.cancel()
         buildAhead = nil
-        let height = pinched.viewport.height
-        guard Map3DHandoff.buildsAhead(referenceSize: pinched.referenceSize, viewportHeight: height) else { return }
+        guard Map3DHandoff.buildsAhead(referenceSize: pinched.referenceSize) else { return }
         buildAhead = Task {
             try? await Task.sleep(for: .seconds(Map3DHandoff.buildsAfterResting))
             guard !Task.isCancelled, !screen.showsMap3D,
-                  let now = camera, Map3DHandoff.buildsAhead(referenceSize: now.referenceSize, viewportHeight: height) else { return }
-            Map3DSceneCache.shared.prepare(for: session)
+                  let now = camera, Map3DHandoff.buildsAhead(referenceSize: now.referenceSize) else { return }
+            Map3DSceneCache.shared.prepare(for: session, focus: (x: now.centerX, y: now.centerY))
         }
     }
 
@@ -1672,10 +1759,11 @@ struct MapView: View {
     @ViewBuilder
     private func cornerButtons(camera: PlanCamera, limit: Double?, zoomGivesWay: Bool, compactReach: CGFloat? = nil) -> some View {
         HStack(alignment: .top, spacing: compactReach == nil ? 0 : 6) {
-            // Decision 292: coverage, one tap away while building.
+            // Decisions 292 and 311: the building layer, put away or
+            // brought back with one tap while building.
             if session.offersCoverageShortcut {
-                MapCoverageButton(isOn: coverageShortcut.isOn(showing: mapLayers.popTravelMode), language: session.language, compactReach: compactReach) {
-                    popTravelModeName = coverageShortcut.toggle(showing: mapLayers.popTravelMode)?.rawValue ?? ""
+                MapCoverageButton(isOn: buildingLayer.isOn, language: session.language, compactReach: compactReach) {
+                    buildingLayerAutoShows = buildingLayer.toggle()
                 }
             }
             // Decision 229, later: this game's 3D map, one tap away, beside
@@ -1694,6 +1782,8 @@ struct MapView: View {
     private func map3DButton(compactReach: CGFloat?) -> some View {
         Button {
             screen.map3DHandoff = nil
+            // Decision 313, later: over the place the 2D map shows.
+            screen.map3DOpenedAt = camera.map { Map3DHandoff.Plan(x: $0.centerX, y: $0.centerY, referenceSize: $0.referenceSize) }
             screen.showsMap3D = true
         } label: {
             Image("Glyph3DMap")
@@ -2203,6 +2293,28 @@ private struct MapBaseCanvas: View, Equatable {
     }
 }
 
+/// Decision 311: where a station would have riders, in a canvas of its
+/// own over the base so it can fade in and out; redrawn only when the
+/// camera, the map or its opacity changes.
+private struct MapPotentialCanvas: View, Equatable {
+    let map: StationPotentialMap
+    let opacity: Double
+    let camera: PlanCamera
+
+    nonisolated static func == (lhs: MapPotentialCanvas, rhs: MapPotentialCanvas) -> Bool {
+        lhs.map.key == rhs.map.key && lhs.opacity == rhs.opacity && lhs.camera == rhs.camera
+    }
+
+    var body: some View {
+        let map = map, opacity = opacity, camera = camera
+        return Canvas { context, size in
+            context.clip(to: Path(CGRect(origin: .zero, size: size)))
+            MapArt.drawPotential(map, opacity: opacity, projection: camera, in: context)
+        }
+        .allowsHitTesting(false)
+    }
+}
+
 /// Decision 182: the trains, over the map and the time of day's tint, each
 /// gliding from where it was at the last tick to where it is, frame by
 /// frame while the game runs (``TrainMotion``); drawn where they are while
@@ -2663,6 +2775,10 @@ private struct MapGestures: UIViewRepresentable {
     /// Decision 269: each step of a pinch that brings the map closer, with
     /// the camera it left (after ``onCameraChange``).
     let onPinchCloser: (PlanCamera) -> Void
+    /// Decision 313: a pinch let go, with the camera it left and the zoom
+    /// its fingers asked for (the zoom it began at times its scale, which
+    /// the closest zoom stops).
+    let onPinchEnded: (PlanCamera, Double) -> Void
     let onTap: (ScreenPoint) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -2713,6 +2829,8 @@ private struct MapGestures: UIViewRepresentable {
         private var panStart: PlanCamera?
         private var pinchStart: PlanCamera?
         private var pinchAnchor = CGPoint.zero
+        /// Decision 313: the zoom the pinch's fingers last asked for.
+        private var pinchAsked = 0.0
         /// Where a painting drag began (decision 98), while it goes on.
         private var paintStart: CGPoint?
         /// While a painting finger is near the edge of the view: where it
@@ -2854,7 +2972,11 @@ private struct MapGestures: UIViewRepresentable {
                 let anchor = ScreenPoint(x: pinchAnchor.x, y: pinchAnchor.y)
                 setCamera(start.zoomed(by: gesture.scale, around: anchor)
                     .panned(byX: point.x - pinchAnchor.x, y: point.y - pinchAnchor.y))
+                pinchAsked = start.referenceSize * gesture.scale
                 if gesture.scale > 1, let camera = latest { parent.onPinchCloser(camera) }
+            }
+            if gesture.state == .ended, pinchStart != nil, let camera = latest {
+                parent.onPinchEnded(camera, pinchAsked)
             }
             if gesture.state == .ended || gesture.state == .cancelled || gesture.state == .failed {
                 pinchStart = nil
@@ -2998,6 +3120,7 @@ struct StoredMapLayerSheet: View {
     @AppStorage("mapShowsWaitingCounts") private var showsWaitingCounts = true
     @AppStorage("mapShowsCatchmentRings") private var showsCatchmentRings = true
     @AppStorage("mapPopTravelMode") private var popTravelModeName = ""
+    @AppStorage("mapShowsFaresAndStamps") private var showsFaresAndStamps = true
 
     var body: some View {
         MapLayerSheet(layers: Binding(
@@ -3006,7 +3129,8 @@ struct StoredMapLayerSheet: View {
                     showsStationNames: showsStationNames,
                     showsWaitingCounts: showsWaitingCounts,
                     showsCatchmentRings: showsCatchmentRings,
-                    popTravelMode: PopTravelMode(rawValue: popTravelModeName)
+                    popTravelMode: PopTravelMode(rawValue: popTravelModeName),
+                    showsFaresAndStamps: showsFaresAndStamps
                 )
             },
             set: { layers in
@@ -3014,6 +3138,7 @@ struct StoredMapLayerSheet: View {
                 showsWaitingCounts = layers.showsWaitingCounts
                 showsCatchmentRings = layers.showsCatchmentRings
                 popTravelModeName = layers.popTravelMode?.rawValue ?? ""
+                showsFaresAndStamps = layers.showsFaresAndStamps
             }
         ), mapStyle: mapStyleSection)
     }

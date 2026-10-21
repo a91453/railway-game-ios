@@ -5,6 +5,7 @@
 
 import calendar
 import json
+import math
 import os
 import subprocess
 import sys
@@ -199,6 +200,185 @@ class NewTaipeiTests(unittest.TestCase):
         self.months()
         os.remove(os.path.join(self.files, "2026-03.ods"))
         self.assertNotEqual(self.build().returncode, 0)
+
+
+class TaipeiHourlyTests(unittest.TestCase):
+    """build_trtc_hourly.py on a made-up year: a home (蘆洲) and an office
+    (松江南京) trading 10,000 trips an hour at their peaks and 500 at other
+    hours on weekdays, four tenths of that at weekends; the first Monday a
+    holiday with weekend numbers and the first Saturday a working day. A
+    trip a day at noon from 台北車站 to 大橋頭站, as the data names them."""
+
+    def setUp(self):
+        self.folder = tempfile.mkdtemp()
+        index = ["西元年,月,URL"]
+        for year, month in [(2025, number) for number in range(1, 13)] + [(2026, 1)]:
+            path = os.path.join(self.folder, f"{year}-{month:02}.csv")
+            rows = ["日期,時段,進站,出站,人次"]
+            for day in range(1, calendar.monthrange(year, month)[1] + 1):
+                working = calendar.weekday(year, month, day) < 5
+                if (year, month, day) == (2025, 1, 6):
+                    working = False
+                if (year, month, day) == (2025, 1, 4):
+                    working = True
+                scale = 10 if working else 4
+                for hour in [0] + list(range(6, 24)):
+                    rows.append(f"{year}-{month:02}-{day:02},{hour},蘆洲,松江南京,{scale * (1000 if hour in (7, 8) else 50)}")
+                    rows.append(f"{year}-{month:02}-{day:02},{hour},松江南京,BL蘆洲,{scale * (1000 if hour in (17, 18) else 50)}")
+                rows.append(f"{year}-{month:02}-{day:02},12,台北車站,大橋頭站,1")
+            with open(path, "w", encoding="utf-8") as file:
+                file.write("\n".join(rows) + "\n")
+            index.append(f"{year},{month},file://{path}")
+        with open(os.path.join(self.folder, "index.csv"), "w", encoding="utf-8") as file:
+            file.write("\n".join(index) + "\n")
+
+    def build(self):
+        output = os.path.join(self.folder, "out.json")
+        result = run("build_trtc_hourly.py", "--year", "2025", "--downloaded", "2026-10-21", "--output", output,
+                     "--index", "file://" + os.path.join(self.folder, "index.csv"))
+        return result, (json.load(open(output, encoding="utf-8")) if result.returncode == 0 else None)
+
+    def test_days_are_told_apart_by_their_riders(self):
+        result, output = self.build()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(output["days"]["weekdaysOff"], ["2025-01-06"])
+        self.assertEqual(output["days"]["weekendsWorking"], ["2025-01-04"])
+        self.assertEqual(output["days"]["working"] + output["days"]["off"], 365)
+
+    def test_the_hour_after_midnight_is_the_day_before(self):
+        # 1 January's 00:00 belongs to 2024 and is left out; next January's
+        # 1st at 00:00 is 2025's New Year's Eve.
+        result, output = self.build()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(output["period"], {"from": "2025-01-01", "to": "2025-12-31"})
+        shares = output["hourShare"]["working"]
+        self.assertEqual(shares[1:6], [0, 0, 0, 0, 0])
+        self.assertAlmostEqual(sum(shares), 1, places=3)
+        self.assertGreater(shares[0], 0)
+
+    def test_a_lines_gate_adds_to_its_station(self):
+        result, output = self.build()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        stations = output["stations"]["workingDay"]
+        # 大橋頭站 is 大橋頭; 台北車站 keeps its name.
+        self.assertEqual(sorted(stations), sorted(["台北車站", "大橋頭", "松江南京", "蘆洲"]))
+        # 蘆洲: 20,000 entries 07-09 and 1,000 exits; 17-19 the other way.
+        self.assertEqual(stations["蘆洲"][2:6], [20_000, 1_000, 1_000, 20_000])
+        self.assertEqual(output["residential"]["stations"][0], "蘆洲")
+        self.assertEqual(output["office"]["stations"][0], "松江南京")
+        self.assertEqual(output["residential"]["morningEntriesToExits"]["max"], 20)
+
+    def test_a_missing_month_is_refused(self):
+        index = os.path.join(self.folder, "index.csv")
+        lines = open(index, encoding="utf-8").read().splitlines()
+        with open(index, "w", encoding="utf-8") as file:
+            file.write("\n".join(line for line in lines if not line.startswith("2025,7,")) + "\n")
+        result, _ = self.build()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("twelve months", result.stderr)
+
+
+class TideSourcesTests(unittest.TestCase):
+    """compare_tide_sources.py on a made-up city: two homes in township 甲
+    (half as many people by day as by night) and three offices in 乙 (twice
+    as many), one of them just outside 乙's outline; a station with entries
+    but no exits; 1 km cells of people and places."""
+
+    NORTH, WEST, CELL = 25.2, 121.0, 0.01
+
+    def setUp(self):
+        self.folder = tempfile.mkdtemp()
+        def middle(row, column):
+            return self.NORTH - (row + 0.5) * self.CELL, self.WEST + (column + 0.5) * self.CELL
+        # name: (cell, entries, exits, entries 07-09, exits 07-09, entries 17-19)
+        stations = {
+            "家一": ((2, 1), 10_000, 10_000, 4_000, 500, 600),
+            "家二": ((5, 1), 20_000, 20_000, 8_000, 1_000, 1_200),
+            "辦一": ((2, 7), 10_000, 10_000, 500, 4_000, 4_000),
+            "辦二": ((5, 7), 30_000, 30_000, 1_500, 12_000, 12_000),
+            "辦三": ((8, 7), 10_000, 10_000, 500, 4_000, 4_000),
+            "環": ((5, 4), 5_000, 0, 1_000, 0, 1_000),
+        }
+        working = {name: [entries, exits, am_in, am_out, pm_in, 0] for name, (_, entries, exits, am_in, am_out, pm_in) in stations.items()}
+        self.hourly = os.path.join(self.folder, "hourly.json")
+        write_json(self.hourly, {"source": {"title": "test", "dataset": "test"}, "period": {"from": "2025-01-01", "to": "2025-12-31"},
+                                 "stations": {"workingDay": working}})
+        self.lines = os.path.join(self.folder, "lines.json")
+        write_json(self.lines, {"lines": [{"stations": [{"name": name, "lat": middle(*cell)[0], "lon": middle(*cell)[1]}
+                                                        for name, (cell, *_) in stations.items()]}]})
+        grid = {"north": self.NORTH, "west": self.WEST, "cellDegrees": self.CELL}
+        self.population = os.path.join(self.folder, "population.json")
+        write_json(self.population, dict(grid, runs=[{"r": row, "c": 0, "p": [10_000] * 10} for row in range(10)]))
+        offices = [{"r": row, "c": 7, "p": [200]} for row in (2, 5, 8)]
+        far = [{"r": 9, "c": 9, "p": [1]}]
+        self.places = os.path.join(self.folder, "places.json")
+        write_json(self.places, dict(grid, source="test", licence="test", layers={
+            "offices": offices + far, "shops": far, "attractions": far, "schools": far}))
+        def square(south, west, north, east):
+            points = [(south, west), (south, east), (north, east), (north, west)]
+            deltas, last = [], (0, 0)
+            for latitude, longitude in points:
+                point = (round(latitude * 100_000), round(longitude * 100_000))
+                deltas += [point[0] - last[0], point[1] - last[1]]
+                last = point
+            return deltas
+        self.townships = os.path.join(self.folder, "townships.json")
+        # 乙 stops at row 7: 辦三 (row 8) is just south of it.
+        write_json(self.townships, {"scale": "100000", "townships": [
+            {"name": "甲", "rings": [square(25.1, 121.0, 25.2, 121.05)]},
+            {"name": "乙", "rings": [square(25.12, 121.05, 25.2, 121.1)]},
+        ]})
+        self.day = os.path.join(self.folder, "day.csv")
+        with open(self.day, "w", encoding="utf-8") as file:
+            file.write("COUNTY_ID,COUNTY,TOWN_ID,TOWN,DAY_WORK(7:00~13:00),DAY_WORK(13:00~19:00),DAY_WORK,DAY_WEEKEND(7:00~13:00),DAY_WEEKEND(13:00~19:00),DAY_WEEKEND,INFO_TIME\n"
+                       "縣市代碼,縣市名稱,鄉鎮市區代碼,鄉鎮市區名稱,平日上午活動人數,平日下午活動人數,平日日間活動人數,假日上午活動人數,假日下午活動人數,假日日間活動人數,資料時間\n"
+                       "63000,臺北市,1,甲區,0,0,50000,0,0,0,109Y11M\n"
+                       "63000,臺北市,2,乙區,0,0,200000,0,0,0,109Y11M\n"
+                       "10017,基隆市,3,甲區,0,0,1,0,0,0,109Y11M\n")
+        self.night = os.path.join(self.folder, "night.csv")
+        with open(self.night, "w", encoding="utf-8") as file:
+            file.write("縣市代碼,縣市名稱,鄉鎮市區代碼,鄉鎮市區名稱,平日夜間停留人數_統計,假日夜間停留人數_統計,資料時間_統計\n"
+                       "63000,臺北市,1,甲區,100000,0,109Y11M\n"
+                       "63000,臺北市,2,乙區,100000,0,109Y11M\n"
+                       "10017,基隆市,3,甲區,1,0,109Y11M\n")
+
+    def build(self):
+        output = os.path.join(self.folder, "out.json")
+        result = run("compare_tide_sources.py", "--downloaded", "2026-10-21", "--output", output,
+                     "--hourly", self.hourly, "--lines", self.lines, "--population", self.population,
+                     "--places", self.places, "--townships", self.townships,
+                     "--day", "file://" + self.day, "--night", "file://" + self.night)
+        return result, (json.load(open(output, encoding="utf-8")) if result.returncode == 0 else None)
+
+    def test_stations_get_their_townships_and_kinds(self):
+        result, output = self.build()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        stations = {station["name"]: station for station in output["stations"]}
+        # 環 has no exits.
+        self.assertEqual(sorted(stations), sorted(["家一", "家二", "辦一", "辦二", "辦三"]))
+        self.assertEqual(stations["家一"]["township"], "臺北市甲區")
+        self.assertAlmostEqual(stations["家一"]["dayToNight"], 0.5)
+        self.assertEqual(stations["辦二"]["township"], "臺北市乙區")
+        self.assertEqual(stations["辦三"]["township"], "臺北市乙區")
+        self.assertIn("辦三: on no township's outline; the nearest is 乙", result.stdout)
+        self.assertEqual(stations["家一"]["kind"], "residential")
+        self.assertEqual(stations["辦一"]["kind"], "office")
+        self.assertAlmostEqual(stations["家二"]["answer"]["morningEntries"], 0.4)
+        self.assertAlmostEqual(stations["家二"]["answer"]["morningToEvening"], 8_000 / 1_200, places=3)
+        # π × 0.8² km² of 10,000 a cell of 0.01° (some 1.11 × 1.01 km).
+        cell = (0.01 * 110_574) * (0.01 * 111_320 * math.cos(math.radians(25.175)))
+        self.assertAlmostEqual(stations["家一"]["residents"], 10_000 / cell * math.pi * 800 ** 2, delta=200)
+
+    def test_ways_are_judged_on_stations_they_did_not_learn(self):
+        result, output = self.build()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        results = output["results"]
+        for key in ("morningEntries", "morningExits", "morningToEvening"):
+            # The townships tell homes from offices exactly; knowing nothing
+            # does not.
+            self.assertLess(results[key]["C"]["medianError"], 1e-6)
+            self.assertGreater(results[key]["none"]["medianError"], 0.1)
+        self.assertEqual(len(output["telecom"]["day"]["sha256"]), 64)
 
 
 if __name__ == "__main__":

@@ -3,7 +3,9 @@ import SwiftUI
 
 /// Decision 292: while a station or a line is being built, one tap shows
 /// the catchment coverage layer, another (or leaving the tool) puts back
-/// the layer there was (``CoverageShortcut``). Round glass beside the 3D
+/// the layer there was. Decision 311: the building layer (where people are
+/// or coverage, ``BuildingLayerShortcut``) shows as building begins, and
+/// this puts it away or brings it back. Round glass beside the 3D
 /// and zoom buttons, framed in teal while on, as the quick layers are.
 struct MapCoverageButton: View {
     let isOn: Bool
@@ -24,10 +26,10 @@ struct MapCoverageButton: View {
                 .foregroundStyle(isOn ? Theme.primary : Theme.textPrimary)
                 .modifier(MapCornerButtonFace(compactReach: compactReach, isOn: isOn))
         }
-        .accessibilityLabel(Text(verbatim: language.text("Station coverage", "車站涵蓋")))
+        .accessibilityLabel(Text(verbatim: language.text("Where people are", "哪裡人多")))
         .accessibilityHint(Text(verbatim: language.text(
-            "Shows where people live and work within 800 m of a station, and where no station reaches.",
-            "顯示車站 800 公尺內有人住、有人工作的地方，以及還沒有車站的地方。"
+            "Shows or hides where many people are, or where your stations reach, while you build.",
+            "建造時顯示或收起哪裡人多，或你的車站到得了哪裡。"
         )))
         .accessibilityAddTraits(isOn ? .isSelected : [])
         .accessibilityIdentifier("map.coverageShortcut")

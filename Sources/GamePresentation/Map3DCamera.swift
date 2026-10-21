@@ -17,6 +17,11 @@ public struct Map3DCamera: Hashable, Sendable {
     public var heading: Float
     /// The view's size in points, for its shape.
     public var viewport: (width: Float, height: Float)
+    /// From this distance out this camera looks straight down
+    /// (``tilt(atDistance:from:)``): ``flatFrom`` unless a pinch handed the
+    /// 2D map over closer in (decision 313: the 2D map's closest zoom), so
+    /// the handed-over map starts straight down and leans from there.
+    public var tiltsFrom: Float = Map3DCamera.flatFrom
 
     public static let nearest: Float = 60
     public static let farthest: Float = 12_000
@@ -25,7 +30,9 @@ public struct Map3DCamera: Hashable, Sendable {
     /// From this distance out the map looks straight down; at ``tiltedFrom``
     /// and closer it leans ``mostTilt`` over. Decision 269: flat as far in
     /// as the 2D map's closer zooms (where a pinch hands the 2D map over,
-    /// ``Map3DHandoff``), 34–40° at 150–200 m (the owner's target picture,
+    /// ``Map3DHandoff``; decision 313 hands over closer in, at the 2D
+    /// map's closest zoom, and that camera is flat from there,
+    /// ``tiltsFrom``), 34–40° at 150–200 m (the owner's target picture,
     /// HANDOFF §4.4), at most 42° (55° from 300 m in before).
     public static let flatFrom: Float = 800
     public static let tiltedFrom: Float = 120
@@ -39,7 +46,7 @@ public struct Map3DCamera: Hashable, Sendable {
     }
 
     public static func == (a: Map3DCamera, b: Map3DCamera) -> Bool {
-        a.target == b.target && a.distance == b.distance && a.heading == b.heading
+        a.target == b.target && a.distance == b.distance && a.heading == b.heading && a.tiltsFrom == b.tiltsFrom
             && a.viewport.width == b.viewport.width && a.viewport.height == b.viewport.height
     }
 
@@ -47,20 +54,30 @@ public struct Map3DCamera: Hashable, Sendable {
         hasher.combine(target)
         hasher.combine(distance)
         hasher.combine(heading)
+        hasher.combine(tiltsFrom)
     }
 
     /// The tilt from straight down at `distance`, in radians: 0 from
-    /// ``flatFrom`` out, ``mostTilt`` from ``tiltedFrom`` in, and between,
-    /// a smoothstep over the distance's logarithm, so each pinch tilts the
-    /// map a like step.
-    public static func tilt(atDistance distance: Float) -> Float {
-        guard distance < flatFrom else { return 0 }
-        guard distance > tiltedFrom else { return mostTilt }
-        let t = (logf(flatFrom) - logf(distance)) / (logf(flatFrom) - logf(tiltedFrom))
+    /// `flat` (``flatFrom`` unless said) out, ``mostTilt`` from
+    /// ``mostTiltedDistance(flatFrom:)`` in, and between, a smoothstep over
+    /// the distance's logarithm, so each pinch tilts the map a like step.
+    public static func tilt(atDistance distance: Float, from flat: Float = flatFrom) -> Float {
+        let most = mostTiltedDistance(flatFrom: flat)
+        guard distance < flat else { return 0 }
+        guard distance > most else { return mostTilt }
+        let t = (logf(flat) - logf(distance)) / (logf(flat) - logf(most))
         return mostTilt * t * t * (3 - 2 * t)
     }
 
-    public var tilt: Float { Self.tilt(atDistance: distance) }
+    /// Where a camera flat from `flat` metres leans all the way:
+    /// ``tiltedFrom``, or closer for one flat from nearer in (decision 313:
+    /// a phone held sideways hands over at about 150 m), so the lean still
+    /// takes a few pinches; never closer than ``nearest``.
+    public static func mostTiltedDistance(flatFrom flat: Float) -> Float {
+        min(tiltedFrom, max(nearest, flat * 0.45))
+    }
+
+    public var tilt: Float { Self.tilt(atDistance: distance, from: tiltsFrom) }
 
     /// The level way the view faces, and the way to its right.
     var forward: Map3DPoint { Map3DPoint(sinf(heading), 0, -cosf(heading)) }
@@ -106,19 +123,28 @@ public struct Map3DCamera: Hashable, Sendable {
     /// Whether any of the box from `minimum` to `maximum` may be in view
     /// through `matrix` (``viewProjection``): false only when all eight
     /// corners lie beyond one side of the view.
+    /// With no arrays (2026-10-21, the far view's CPU: the owner's iPhone
+    /// spent 16.6 ms a frame on Taipei seen whole): the Metal view asks it
+    /// of every chunk every frame, a few hundred on a city seen whole.
     public static func sees(minimum: Map3DPoint, maximum: Map3DPoint, through matrix: Map3DMatrix) -> Bool {
-        var outside = [true, true, true, true, true, true]
+        let m = matrix.columns
+        var left = true, right = true, bottom = true, top = true, near = true, far = true
         for corner in 0..<8 {
-            let p = [corner & 1 == 0 ? minimum.x : maximum.x, corner & 2 == 0 ? minimum.y : maximum.y, corner & 4 == 0 ? minimum.z : maximum.z, 1]
-            var c = [Float](repeating: 0, count: 4)
-            for row in 0..<4 {
-                for k in 0..<4 { c[row] += matrix[row, k] * p[k] }
-            }
-            let (x, y, z, w) = (c[0], c[1], c[2], c[3])
-            let sides = [x < -w, x > w, y < -w, y > w, z < 0, z > w]
-            for side in 0..<6 where !sides[side] { outside[side] = false }
+            let px = corner & 1 == 0 ? minimum.x : maximum.x
+            let py = corner & 2 == 0 ? minimum.y : maximum.y
+            let pz = corner & 4 == 0 ? minimum.z : maximum.z
+            let x = m[0] * px + m[4] * py + m[8] * pz + m[12]
+            let y = m[1] * px + m[5] * py + m[9] * pz + m[13]
+            let z = m[2] * px + m[6] * py + m[10] * pz + m[14]
+            let w = m[3] * px + m[7] * py + m[11] * pz + m[15]
+            if !(x < -w) { left = false }
+            if !(x > w) { right = false }
+            if !(y < -w) { bottom = false }
+            if !(y > w) { top = false }
+            if !(z < 0) { near = false }
+            if !(z > w) { far = false }
         }
-        return !outside.contains(true)
+        return !(left || right || bottom || top || near || far)
     }
 
     // MARK: - Detail (decision 238)
@@ -143,12 +169,13 @@ public struct Map3DCamera: Hashable, Sendable {
         let margin: Float = wasDetailed ? 1.14 : 0.86
         guard distance <= Self.detailDistance * margin else { return false }
         let reach = max(Self.detailReach, distance * 1.2) * margin
-        let eye = eye
-        for point in [target, Map3DPoint(eye.x, 0, eye.z)] {
-            let dx = point.x - min(max(point.x, minimum.x), maximum.x), dz = point.z - min(max(point.z, minimum.z), maximum.z)
-            if dx * dx + dz * dz <= reach * reach { return true }
+        func within(_ x: Float, _ z: Float) -> Bool {
+            let dx = x - min(max(x, minimum.x), maximum.x), dz = z - min(max(z, minimum.z), maximum.z)
+            return dx * dx + dz * dz <= reach * reach
         }
-        return false
+        if within(target.x, target.z) { return true }
+        let eye = eye
+        return within(eye.x, eye.z)
     }
 
     /// Decision 267: within this distance, the chunks round the target

@@ -46,6 +46,13 @@ struct RailwayGameApp: App {
             // later), which comes up when a line's train first waits on
             // single track.
             UserDefaults.standard.set(true, forKey: PassingLoopHint.seenKey)
+            // Decision 311: the building layer starts put away, as a player
+            // who hid it would have it: shown as soon as building began,
+            // its legend took the corner where tests tap the map and the
+            // mini map. A test of it asks for it with -show-building-layer.
+            if !DebugLaunch.isSet("-show-building-layer") {
+                UserDefaults.standard.set(false, forKey: BuildingLayerShortcut.autoShowsKey)
+            }
         }
         // And silently: the music and sounds only take the runner's CPU
         // (``GameAudio/init(defaults:plays:)``); no test listens to them.
@@ -413,6 +420,7 @@ private final class BackgroundSave {
 /// The game being played, or the start screen when there is none.
 private struct RootView: View {
     let launcher: GameLauncher
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Group {
@@ -425,6 +433,18 @@ private struct RootView: View {
                     .onAppear { Map3DSceneCache.shared.clear() }
             }
         }
+        // Decision 307: the loading screen of a real-world map, over the
+        // start screen while the map is built, fading away over the game.
+        .overlay {
+            if let loading = launcher.realWorldLoading {
+                RealWorldLoadingView(loading: loading, language: launcher.language)
+                    .transition(.opacity)
+            }
+        }
+        .animation(
+            (launcher.realWorldLoading == nil ? MotionRule.loadingOut : .loadingIn).running(reduceMotion: reduceMotion)?.animation,
+            value: launcher.realWorldLoading == nil
+        )
         #if DEBUG
         .background {
             if UITestTrace.isOn {

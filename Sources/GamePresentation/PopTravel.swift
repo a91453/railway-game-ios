@@ -36,6 +36,10 @@ public enum PopTravelMode: String, CaseIterable, Hashable, Sendable {
     /// against its trains' capacity (decision 178, ``SectionFlow``): drawn
     /// on the lines, one at a time with the others.
     case sectionFlow
+    /// Where a station would have riders, shown while building (decision
+    /// 311, ``StationPotentialMap``): not in the layer list, and never
+    /// kept as the player's layer.
+    case potential
 
     /// The tab's title (`map.layers.population`, `map.layers.travelDemand`,
     /// `map.layers.demandChange`).
@@ -50,6 +54,7 @@ public enum PopTravelMode: String, CaseIterable, Hashable, Sendable {
         case .zoning: language.text("Zoning", "土地分區")
         case .terrain: language.text("Height and steep slopes", "高度與陡坡")
         case .sectionFlow: language.text("Passenger load", "載客量")
+        case .potential: language.text("Where people are", "哪裡人多")
         }
     }
 
@@ -103,6 +108,11 @@ public enum PopTravelMode: String, CaseIterable, Hashable, Sendable {
                 "The passengers each stretch of track carries each way in the chosen hour, against what its trains can carry: wider for more riders, darker blue for fuller trains, red when over capacity.",
                 "選定時段各區間每個方向載運的乘客對列車運能：線越寬人越多，越深藍越擠，紅色表示超過運能。"
             )
+        case .potential:
+            language.text(
+                "Where many people live and work: a station there would have many riders.",
+                "住的人、工作的人多的地方：車站蓋在這裡，搭車的人就多。"
+            )
         }
     }
 
@@ -136,6 +146,8 @@ public enum PopTravel {
     /// The city's layers (Phase 6d) start at 0.8.
     public static func baseOpacity(for mode: PopTravelMode, compactWidth: Bool) -> Double {
         if mode.isCityLayer || mode == .terrain { return 0.8 }
+        // Decision 311: the map under it still shows.
+        if mode == .potential { return 0.7 }
         if mode == .sectionFlow { return 1 }
         return mode == .population ? 0.72 : (compactWidth ? 1 : 0.85)
     }

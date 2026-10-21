@@ -267,6 +267,13 @@ final class LessonUITests: XCTestCase {
     }
 
     private func reveal(_ control: XCUIElement) {
+        // Measured while the lines panel still slides in, the list's place
+        // is its trailing edge: every drag for the second station's "Add
+        // Selected Station" fell at x 815.7 and moved nothing (main
+        // 01e3c9a's full lane, run 39546432319), as `LineDraftSummaryUITests`'
+        // did (decision 299, later).
+        XCTAssertTrue(list.appears(within: 10), "Missing \(list)")
+        list.waitUntilStill()
         XCTAssertTrue(app.scrollUntilShown(control, in: list), "Cannot scroll to \(control)")
         control.waitUntilSettled()
     }

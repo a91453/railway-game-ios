@@ -257,4 +257,41 @@ extension Map3DTests {
         let all = motion.runs.reduce(0) { $0 + TrainCars.count(length: $1.length, carPitch: $1.carPitch) }
         XCTAssertEqual(frame.shadows.triangleCount, all * 10)
     }
+
+    /// The far view's CPU (2026-10-21): `sees` without arrays answers as
+    /// the array version did, for boxes all round cameras near and far.
+    func testSeesAnswersAsBefore() {
+        func before(_ minimum: Map3DPoint, _ maximum: Map3DPoint, _ matrix: Map3DMatrix) -> Bool {
+            var outside = [true, true, true, true, true, true]
+            for corner in 0..<8 {
+                let p = [corner & 1 == 0 ? minimum.x : maximum.x, corner & 2 == 0 ? minimum.y : maximum.y, corner & 4 == 0 ? minimum.z : maximum.z, 1]
+                var c = [Float](repeating: 0, count: 4)
+                for row in 0..<4 {
+                    for k in 0..<4 { c[row] += matrix[row, k] * p[k] }
+                }
+                let (x, y, z, w) = (c[0], c[1], c[2], c[3])
+                let sides = [x < -w, x > w, y < -w, y > w, z < 0, z > w]
+                for side in 0..<6 where !sides[side] { outside[side] = false }
+            }
+            return !outside.contains(true)
+        }
+        var random = SystemRandomNumberGenerator()
+        var seen = 0, total = 0
+        for distance: Float in [80, 280, 800, 3_000, 10_800] {
+            for heading: Float in [0, 0.7, 2.5] {
+                let matrix = Map3DCamera(target: Map3DPoint(30, 0, -40), distance: distance, heading: heading, viewport: (402, 874)).viewProjection
+                for _ in 0..<400 {
+                    let x = Float.random(in: -12_000...12_000, using: &random), z = Float.random(in: -12_000...12_000, using: &random)
+                    let size = Float.random(in: 1...600, using: &random)
+                    let minimum = Map3DPoint(x, 0, z), maximum = Map3DPoint(x + size, Float.random(in: 0...80, using: &random), z + size)
+                    let answer = Map3DCamera.sees(minimum: minimum, maximum: maximum, through: matrix)
+                    XCTAssertEqual(answer, before(minimum, maximum, matrix))
+                    seen += answer ? 1 : 0
+                    total += 1
+                }
+            }
+        }
+        XCTAssertGreaterThan(seen, 0)
+        XCTAssertLessThan(seen, total)
+    }
 }
