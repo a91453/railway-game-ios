@@ -1,0 +1,52 @@
+{
+ "measure": "average riders a day: exits over the listed months' days (these months have no entries)",
+ "months": [
+  "2025-02",
+  "2025-04",
+  "2025-05",
+  "2025-07",
+  "2025-08",
+  "2025-11",
+  "2025-12"
+ ],
+ "period": {
+  "from": "2025-02-01",
+  "to": "2025-12-31"
+ },
+ "riders": {
+  "九張犁": 31,
+  "九德": 1432,
+  "北屯總站": 865,
+  "南屯": 1956,
+  "四維國小": 2046,
+  "大慶": 3280,
+  "市政府": 5791,
+  "文心中清": 3201,
+  "文心崇德": 3428,
+  "文心森林公園": 2395,
+  "文心櫻花": 1898,
+  "文華高中": 2197,
+  "松竹": 3145,
+  "水安宮": 3044,
+  "烏日": 718,
+  "舊社": 1206,
+  "豐樂公園": 2570,
+  "高鐵臺中站": 8436
+ },
+ "source": {
+  "dataset": "https://data.gov.tw/dataset/175718",
+  "downloaded": "2026-10-20",
+  "fileSha256": {
+   "2025-02": "756f255405773c411717b600a954e3b086f962b52af6d5ab038a9b52a8070745",
+   "2025-04": "f7d7af7ece9a16ec95cf59c6ebdd8bf566ac9d49199d491087e4735388461120",
+   "2025-05": "008884773154cc22c5fdd04ccbbe6222faab2b1e8cf7ac6782e02128808b3951",
+   "2025-07": "f9fdc4d53fa09901ddc90ab739441fe519ade240360d7c9a9b34b94c9120a8d6",
+   "2025-08": "e7dd1a2c6f4e55739738dd9bd28c24824000d208318f0e01c23ee9bd8cc1fbbd",
+   "2025-11": "4f8302b29a3a736c8b945a411fff3b90d9ce2f78a18b77248b1685df501122e9",
+   "2025-12": "2412a54496ac358392282458bf27f9d3ff614aa5ad79a5bc6fa152a2e83ea4c7"
+  },
+  "licence": "Open Government Data License, version 1.0 (https://data.gov.tw/license)",
+  "publisher": "臺中捷運股份有限公司",
+  "title": "臺中捷運股份有限公司捷運各站旅運量"
+ }
+}

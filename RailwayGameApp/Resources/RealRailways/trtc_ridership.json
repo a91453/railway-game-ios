@@ -1,4 +1,10 @@
 {
+ "later": {
+  "廣慈/奉天宮": {
+   "month": "2026-09",
+   "sha256": "ff4878a3b9bf73a7bc4bf3c54ffc165d5876f65fbc88cf7d17103a8b0b2cb86a"
+  }
+ },
  "measure": "average riders a day: (entries + exits) / 2 over the days of the year",
  "period": {
   "from": "2025-01-01",
@@ -60,6 +66,7 @@
   "市政府": 61891,
   "幸福": 960,
   "府中": 28138,
+  "廣慈/奉天宮": 9148,
   "後山埤": 16080,
   "徐匯中學": 11842,
   "復興崗": 3785,

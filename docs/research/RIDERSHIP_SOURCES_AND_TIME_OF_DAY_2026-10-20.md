@@ -50,6 +50,8 @@
 
 ### 桃園機捷：作者在台灣下載的步驟
 
+**後來（2026-10-20，PR #869）**：不必下載了。桃捷公司網站的[統計資料](https://www.tymetro.com.tw/tymetro-new/tw/_pages/about/statistics.html)每月有「各站旅運量統計」PDF（各站入站、出站），雲端連得上，`build_tymc_ridership.py` 改讀它（`tools/real-ridership/README.md`）。下面的步驟留作開放資料的紀錄。
+
 1. 開 [data.gov.tw/dataset/164957](https://data.gov.tw/dataset/164957)，下載 `捷運各站運量統計表_202501` 到 `_202512` 共 12 個 CSV（或用下面的網址）。
 2. 附在對話裡，工具記下每個檔的 SHA-256 與下載日期，原始 CSV 不進 repository（同 #851 的高雄捷運）。
 3. 欄位已經是「平均日運量」，不用再除天數；要確認它是（進＋出）÷ 2 還是進站數，資料集說明沒寫，先看 A1 台北車站的數字和新聞對不對得上。
