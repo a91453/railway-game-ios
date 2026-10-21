@@ -115,6 +115,22 @@ public enum LandDemand {
             }
             return StationDemand(kind: kind.0, dailyTrips: trips)
         }
+
+        /// How much a home the share makes its station for tidal demand
+        /// (decision 319), in thousandths: its residents' share of its
+        /// people, stretched so that 40 % or less is a workplace (0) and
+        /// 85 % or more a home (1000), between them in proportion, rounded
+        /// down; `nil` without people. On Taiwan's real-world land, Taipei
+        /// Metro's 108 stations of 2025 have 27–92 % (a median of 63 %),
+        /// and their morning share of entries rises with it; the fit pulls
+        /// both ends to the middle, so the ends are stretched to the
+        /// research's targets (RIDERSHIP_SOURCES_AND_TIME_OF_DAY_2026-10-20.md
+        /// §2.6).
+        public var homeShare: Int64? {
+            guard people > 0 else { return nil }
+            let stretched = (1_000_000 * residents - 400_000 * people) / (450 * people)
+            return min(1_000, max(0, stretched))
+        }
     }
 
     /// Each station's share of `land`: every cell whose middle lies within
@@ -260,16 +276,25 @@ extension GameWorld {
         var changed = false
         for station in stations {
             var demand = shares[station.id]?.demand
+            // Decision 319: with tidal demand the share also says how much
+            // a home the station is.
+            let home = tidalDemand ? shares[station.id]?.homeShare : nil
+            if let share = demand, home != nil {
+                demand = StationDemand(kind: share.kind, dailyTrips: share.dailyTrips, homeShare: home)
+            }
             if let trips = outside[station.id], trips > 0 {
                 demand = StationDemand(kind: demand?.kind ?? .residential,
-                                       dailyTrips: min(StationDemand.maximumDailyTrips, (demand?.dailyTrips ?? 0) + trips))
+                                       dailyTrips: min(StationDemand.maximumDailyTrips, (demand?.dailyTrips ?? 0) + trips),
+                                       homeShare: home)
             }
             if let trips = transfers[station.id], trips > 0 {
                 demand = StationDemand(kind: demand?.kind ?? .residential,
-                                       dailyTrips: min(StationDemand.maximumDailyTrips, (demand?.dailyTrips ?? 0) + trips))
+                                       dailyTrips: min(StationDemand.maximumDailyTrips, (demand?.dailyTrips ?? 0) + trips),
+                                       homeShare: home)
             }
             if let people = hinterlands[station.id], people > 0 {
-                demand = StationDemand(kind: demand?.kind ?? .residential, dailyTrips: demand?.dailyTrips ?? 0, hinterland: people)
+                demand = StationDemand(kind: demand?.kind ?? .residential, dailyTrips: demand?.dailyTrips ?? 0, hinterland: people,
+                                       homeShare: home)
             }
             if let index = passengers.firstIndex(where: { $0.station == station.id }) {
                 guard passengers[index].demand != demand else { continue }

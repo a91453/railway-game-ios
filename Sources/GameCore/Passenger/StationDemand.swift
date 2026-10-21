@@ -61,6 +61,20 @@ public enum StationDemandKind: String, CaseIterable, Codable, Sendable {
         933, 933, 933, 933, 933, 933, 933, 933, 933, 933, 933, 933,
         933, 933, 934, 951, 1056, 1316, 1492, 1316, 1056, 951, 934, 933,
     ]
+    // Tidal demand (decision 319, this project's: the reference has none),
+    // fitted to Taipei Metro's homes and offices of 2025:
+    // `(1 + 1.9·g(h; 8, 0.8))·(1 − 0.8·g(h; 18, 2))` and
+    // `(1 + 1.9·g(h; 18, 2))·(1 − 0.8·g(h; 8, 0.8))`, each normalised so
+    // that the day's mean is 1. A home's trips leave in the first and come
+    // back in the second, and hardly the other way round.
+    static let tidalMorning: [Int64] = [
+        1008, 1008, 1008, 1008, 1008, 1010, 1092, 1885, 2923, 1885, 1092, 1008,
+        999, 973, 899, 746, 519, 296, 202, 296, 519, 746, 899, 973,
+    ]
+    static let tidalEvening: [Int64] = [
+        752, 752, 752, 752, 752, 752, 726, 477, 150, 477, 726, 755,
+        768, 815, 946, 1217, 1620, 2014, 2182, 2014, 1620, 1217, 946, 815,
+    ]
     // `1 + 0.42·g(h; 14, 2.4) + 0.5·g(h; 19, 1.8)`.
     static let shoppingDepartures: [Int64] = [
         834, 834, 834, 834, 834, 835, 836, 839, 850, 874, 922, 995,
@@ -111,6 +125,13 @@ public struct StationDemand: Hashable, Sendable {
     /// the other high-speed stations (``HighSpeed/pairTrips(_:_:)``), which
     /// are not part of its ``dailyTrips``. 0 for any other station.
     public let hinterland: Int64
+    /// How much a home rather than a workplace the station is, in
+    /// thousandths, for tidal demand (decision 319): 1000 a home, whose
+    /// trips leave in the morning and come back in the evening, 0 a
+    /// workplace, the other way round. Demand from land sets it from the
+    /// station's residents and jobs (``LandDemand/Share/homeShare``);
+    /// `nil` follows the station's kind, as a demand the player sets does.
+    public let homeShare: Int64?
 
     /// The most trips a day a station can start: keeps every product of
     /// the demand's integer arithmetic well inside an `Int64`.
@@ -120,14 +141,51 @@ public struct StationDemand: Hashable, Sendable {
     /// trips' arithmetic fits an `Int64`.
     public static let maximumHinterland: Int64 = 100_000_000
 
-    public init(kind: StationDemandKind, dailyTrips: Int64, hinterland: Int64 = 0) {
+    public init(kind: StationDemandKind, dailyTrips: Int64, hinterland: Int64 = 0, homeShare: Int64? = nil) {
         self.kind = kind
         self.dailyTrips = dailyTrips
         self.hinterland = hinterland
+        self.homeShare = homeShare
     }
 
     var isValid: Bool {
         (0...Self.maximumDailyTrips).contains(dailyTrips) && (0...Self.maximumHinterland).contains(hinterland)
+            && (homeShare.map { (0...1_000).contains($0) } ?? true)
+    }
+
+    /// How strongly trips leave the station in each hour of the day, in
+    /// thousandths: its kind's ``StationDemandKind/departureShape``, or on
+    /// a working day with tidal demand (decision 319) its ``homeShare``'s
+    /// blend of the tidal morning and evening (a home's and a
+    /// workplace's for one without, by its kind; any other kind keeps its
+    /// own hours).
+    public func departureShape(tidal: Bool) -> [Int64] {
+        guard tidal, let home = tidalHomeShare else { return kind.departureShape }
+        return Self.blend(StationDemandKind.tidalMorning, StationDemandKind.tidalEvening, home)
+    }
+
+    /// How strongly trips arrive at the station in each hour of the day,
+    /// as ``departureShape(tidal:)`` with the morning and evening swapped.
+    public func arrivalShape(tidal: Bool) -> [Int64] {
+        guard tidal, let home = tidalHomeShare else { return kind.arrivalShape }
+        return Self.blend(StationDemandKind.tidalEvening, StationDemandKind.tidalMorning, home)
+    }
+
+    /// The home share tidal demand uses: ``homeShare``, else 1000 for a
+    /// home and 0 for a workplace; `nil` for any other kind.
+    var tidalHomeShare: Int64? {
+        if let homeShare { return homeShare }
+        switch kind {
+        case .residential: return 1_000
+        case .office: return 0
+        case .shopping, .scenic, .civic: return nil
+        }
+    }
+
+    /// `home` thousandths of `first` and the rest of `second`, rounded
+    /// half up.
+    static func blend(_ first: [Int64], _ second: [Int64], _ home: Int64) -> [Int64] {
+        zip(first, second).map { ($0 * home + $1 * (1_000 - home) + 500) / 1_000 }
     }
 
     /// How busy each hour of the day is for every trip, in thousandths:
@@ -147,6 +205,27 @@ public struct StationDemand: Hashable, Sendable {
     public static let weekendShape: [Int64] = [
         67, 75, 83, 80, 75, 38, 216, 417, 741, 1350, 1257, 1523,
         1365, 1474, 1509, 1238, 1375, 1059, 1440, 1500, 1000, 1020, 1300, 150,
+    ]
+
+    /// How busy each hour of a working day is with tidal demand (decision
+    /// 319), in thousandths: ``dayShape`` with the night after 01:00 all
+    /// but empty, as a metro's closed gates are, a quieter 06:00 and 23:00,
+    /// and a busier midday (1200 from 10:00 to 15:00), so that with the
+    /// tidal hours a line of homes and offices keeps Taipei Metro's
+    /// working day of 2025 (research
+    /// RIDERSHIP_SOURCES_AND_TIME_OF_DAY_2026-10-20.md §2.5).
+    public static let tidalDayShape: [Int64] = [
+        200, 10, 10, 10, 10, 10, 450, 1500, 1800, 1500, 1200, 1200,
+        1200, 1200, 1200, 1200, 1500, 1500, 1800, 1500, 1000, 1020, 1040, 450,
+    ]
+
+    /// How busy each hour of a weekend day or holiday is with tidal demand
+    /// (decision 319), in thousandths: Taipei Metro's days off of 2025 for
+    /// a line of homes and offices with their kinds' hours (a day off has
+    /// no tide), a late morning and an empty night.
+    public static let tidalWeekendShape: [Int64] = [
+        160, 10, 10, 10, 10, 10, 260, 410, 585, 850, 1320, 1775,
+        1840, 2005, 2035, 1995, 1935, 1720, 1305, 1195, 1355, 1465, 1190, 550,
     ]
 
     /// Each weekday's share of a week's trips, in thousandths of a day's,
@@ -182,18 +261,20 @@ public struct StationDemand: Hashable, Sendable {
 
 extension StationDemand: Codable {
     private enum CodingKeys: String, CodingKey {
-        case kind, dailyTrips, hinterland
+        case kind, dailyTrips, hinterland, homeShare
     }
 
     /// Decodes a demand, rejecting daily trips outside
     /// `0...maximumDailyTrips`. A station with no hinterland (decision 168,
     /// save version 43) has no `"hinterland"`, which is also how demands
-    /// saved before it read.
+    /// saved before it read; one without a home share (decision 319, save
+    /// version 67) has no `"homeShare"`, which must be 0 to 1000.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         kind = try container.decode(StationDemandKind.self, forKey: .kind)
         dailyTrips = try container.decode(Int64.self, forKey: .dailyTrips)
         hinterland = try container.decodeIfPresent(Int64.self, forKey: .hinterland) ?? 0
+        homeShare = try container.decodeIfPresent(Int64.self, forKey: .homeShare)
         guard (0...Self.maximumDailyTrips).contains(dailyTrips) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .dailyTrips, in: container, debugDescription: "A station starts 0 to \(Self.maximumDailyTrips) trips a day."
@@ -202,6 +283,11 @@ extension StationDemand: Codable {
         guard (0...Self.maximumHinterland).contains(hinterland) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .hinterland, in: container, debugDescription: "A hinterland has 0 to \(Self.maximumHinterland) people."
+            )
+        }
+        guard homeShare.map({ (0...1_000).contains($0) }) ?? true else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .homeShare, in: container, debugDescription: "A home share is 0 to 1000 thousandths."
             )
         }
     }
@@ -213,5 +299,6 @@ extension StationDemand: Codable {
         if hinterland != 0 {
             try container.encode(hinterland, forKey: .hinterland)
         }
+        try container.encodeIfPresent(homeShare, forKey: .homeShare)
     }
 }

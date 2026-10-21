@@ -8,12 +8,15 @@ struct SceneKitCab {
     let asset: Map3DSceneKit.Asset
     let tail: Bool
     let tint: UInt32
+    /// Whether the livery's band stays the line's colour, as the game's
+    /// metro does (decision 318), rather than `tint` baked in.
+    var lineColoured = false
 
     func model() -> Map3DModelPack.Model {
         let builder=Map3DTrainBuilder(style:style,cab:true)
         let start=style.length/2-style.nose
         var result=SceneKitBuilder()
-        result.addModel(Self.clipped(builder.model(named:asset.id),maximumX:start),tint:tint)
+        result.addModel(Self.clipped(builder.model(named:asset.id),maximumX:start),tint:tint,keepsShares:lineColoured)
         var nose=Map3DMesh()
         let steps=max(8,Int(style.nose/0.35))
         let rings=(0...steps).map { i in builder.ring(at:start+style.nose*Float(i)/Float(steps),t:Float(i)/Float(steps)) }
@@ -35,7 +38,7 @@ struct SceneKitCab {
         let highSpeed=asset.family == .metro && v==0
         let redFace=asset.family == .traModern && v==1
         let modern=asset.family == .traModern && v<3
-        if !redFace { surface.band(&cab,style:style,tint:tint) }
+        if !redFace { surface.band(&cab,style:style,tint:lineColoured ? tint & 0x00FF_FFFF : tint) }
         let low=style.floor+(highSpeed ? 0.57 : redFace ? 0.18 : modern ? 0.32 : 0.24)*h
         let high=style.floor+0.91*h
         let width=style.halfWidth*(highSpeed ? 0.66 : 0.84)

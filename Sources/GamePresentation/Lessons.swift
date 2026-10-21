@@ -390,6 +390,8 @@ extension GameWorld {
         world.setDisruptions(nil)
         world.setTourism(nil)
         world.setCityRequests(seed: nil)
+        // Decision 319: the lessons' targets were measured without the tide.
+        world.setTidalDemand(false)
         if lesson.number >= 9 {
             world.setTourism([Attraction(
                 id: AttractionID(rawValue: 1), name: "望海岬", englishName: "Seaview Point",

@@ -123,14 +123,15 @@ struct SceneKitBuilder {
     }
 
     mutating func addModel(_ model: Map3DModelPack.Model, at offset: Map3DPoint = .zero, angle: Float = 0,
-                           scale: Float = 1, tint: UInt32 = Map3DPalette.canopy) {
+                           scale: Float = 1, tint: UInt32 = Map3DPalette.canopy, keepsShares: Bool = false) {
         let c=cosf(angle),s=sinf(angle)
         for i in stride(from:0,to:model.vertices.count,by:3) {
             let triangle=model.vertices[i..<i+3].map { vertex -> Map3DVertex in
                 // Model z-up -> scene y-up, then a yaw in the scene's xz plane.
                 let x=vertex.x*scale,z = -vertex.y*scale
                 let p=Map3DPoint(c*x-s*z,vertex.z*scale,s*x+c*z)+offset
-                return Map3DVertex(p,normal:.zero,color:Self.baked(vertex.color,tint:tint),layer:vertex.layer)
+                // Kept shares take the line's colour when drawn (decision 318).
+                return Map3DVertex(p,normal:.zero,color:keepsShares ? vertex.color : Self.baked(vertex.color,tint:tint),layer:vertex.layer)
             }
             mesh.appendTriangle(triangle)
         }

@@ -1,0 +1,71 @@
+{
+  "status": "VERIFIED",
+  "environment": "Linux / Swift 6.4 / Node / Chromium WebGL 2",
+  "parts": 48,
+  "examples": 4,
+  "models": 52,
+  "views": 364,
+  "triangles": 113310,
+  "maximum_triangles": 14172,
+  "checks": [
+    "all native vertices round-trip through the game loader",
+    "native / GLB / PNG SHA-256",
+    "complete native-to-GLB conversion",
+    "four categories, 12 structurally distinct assets each",
+    "all seven transparent views nonempty and unclipped",
+    "opaque finite native vertices and connector normals"
+  ],
+  "not_verified": [
+    "iPhone / iPad Metal rendering and performance",
+    "live map placement, collisions, machinery or animal animation",
+    "engineering or safety specifications",
+    "source pack browser rendering / pixel comparison; raw sources are not redistributed"
+  ],
+  "browser": {
+    "status": "VERIFIED",
+    "models_loaded": 52,
+    "checks": [
+      "four categories / examples / Chinese name filtering",
+      "seven directions",
+      "pointer orbit changes rendered geometry",
+      "zoom",
+      "PNG / native / GLB download hashes",
+      "390 px without horizontal overflow",
+      "no external requests / missing resources / JavaScript errors"
+    ]
+  },
+  "swift_build": {
+    "status": "VERIFIED",
+    "toolchain": "Swift 6.4.0",
+    "command": "swift build --build-tests -Xswiftc -warnings-as-errors"
+  },
+  "swift_tests": {
+    "status": "VERIFIED",
+    "count": 21,
+    "suites": {
+      "Map3DWorksKitTests": 6,
+      "Map3DStationKitTests": 8,
+      "Map3DModelFileTests": 7
+    }
+  },
+  "node_tests": {
+    "status": "VERIFIED",
+    "count": 4
+  },
+  "png_decode": {
+    "status": "VERIFIED",
+    "count": 364,
+    "method": "Pillow full decode, RGBA 384x384, alpha spans 0–255"
+  },
+  "visual_review": [
+    "four category sheets / all 48 models",
+    "overview and all four assemblies",
+    "below-angle details",
+    "four backgrounds / 120,64,44,28 px / blur / grayscale"
+  ],
+  "visual_adjustments": [
+    "rooster tail feathers recomposed as curved segments",
+    "sparrow chestnut head / pale cheek / dark throat",
+    "palm fronds filled with solid broad leaves"
+  ]
+}

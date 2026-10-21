@@ -96,6 +96,8 @@ public enum PingxiChallenge {
         world.setBlockSections(false)
         world.setCurveSpeedLimits(false)
         world.setRealCarLengths(false)
+        // Decision 319: its demand keeps the hours it was measured by.
+        world.setTidalDemand(false)
         // Decision 174: but the Sky Lanterns of Pingxi are a sight tourists
         // come to (the only one on this map), by the festival's days and
         // all year; its riders' target counts them.
