@@ -62,14 +62,11 @@ public struct Map3DTrainSet: Sendable {
             // The multiple units, by their performance (decision 237).
             multipleUnit("puyuma", asset: "01_TRA_modern_3x2-02", livery: TrainLivery.puyuma),
             multipleUnit("taroko", asset: "01_TRA_modern_3x2-03", livery: TrainLivery.taroko),
-            // The EMU800: grey, a blue band and its blue face (the reference's
-            // garage `emu800`).
-            multipleUnit("emu800", asset: "01_TRA_modern_3x2-04", body: 0xBBC6C9, band: 0x214F90, face: 0x214F90),
-            // The DR1000 railcar and the DR3100 diesel express: silver, an
-            // orange band, flat yellow ends with a gangway door (the
-            // reference's `dr1000`, `dr3100`, front `yellowgangway`).
-            railcar("dieselRailcar", asset: "05_TRA_classic_3x2-03", single: true),
-            railcar("dieselExpress", asset: "05_TRA_classic_3x2-04"),
+            multipleUnit("emu800", asset: "01_TRA_modern_3x2-04", livery: TrainLivery.emu800),
+            // The DR1000 railcar and the DR3100 diesel express: silver,
+            // yellow-orange ends (the reference's `dr1000`, `dr3100`).
+            multipleUnit("dieselRailcar", asset: "05_TRA_classic_3x2-03", body: 0xBFC8C9, band: 0xE89A27, single: true),
+            multipleUnit("dieselExpress", asset: "05_TRA_classic_3x2-04", body: 0xBFC8C9, band: 0xE89A27),
         ]
     }()
 
@@ -115,18 +112,14 @@ public struct Map3DTrainSet: Sendable {
     }
 
     static func multipleUnit(_ key: String, asset id: String, livery: TrainLivery? = nil, body: Int? = nil, band: Int? = nil,
-                             face: Int? = nil, single: Bool = false) -> Map3DTrainSet {
+                             single: Bool = false) -> Map3DTrainSet {
         Map3DTrainSet(key: key) {
             guard let asset = Map3DSceneKit.asset(id: id) else { preconditionFailure("No scene-kit subject \(id).") }
             var recipe = SceneKitBuilder.trainRecipe(asset)
             if let colour = livery?.body ?? body { recipe.style.body = Map3DColor.rgb(UInt32(colour)) }
             if let colour = livery?.stripe ?? band { recipe.tint = Map3DColor.rgb(UInt32(colour)) }
-            var head = baked(SceneKitCab(style: recipe.style, asset: asset, tail: false, tint: recipe.tint).model(), tint: recipe.tint)
-            var tail = baked(SceneKitCab(style: recipe.style, asset: asset, tail: true, tint: recipe.tint).model(), tint: recipe.tint)
-            if let face {
-                head = head.painting(recipe.style.body, within: recipe.style.nose, as: Map3DColor.rgb(UInt32(face)))
-                tail = tail.painting(recipe.style.body, within: recipe.style.nose, as: Map3DColor.rgb(UInt32(face)))
-            }
+            let head = baked(SceneKitCab(style: recipe.style, asset: asset, tail: false, tint: recipe.tint).model(), tint: recipe.tint)
+            let tail = baked(SceneKitCab(style: recipe.style, asset: asset, tail: true, tint: recipe.tint).model(), tint: recipe.tint)
             let middle = baked(Map3DTrainBuilder(style: recipe.style, cab: false).model(named: key), tint: recipe.tint)
             var one: Map3DModelPack.Model?
             if single {
@@ -138,29 +131,6 @@ public struct Map3DTrainSet: Sendable {
                 one = .flat(named: key, from: builder.mesh)
             }
             return Cars(head: head, middle: middle, tail: tail.turned, single: one)
-        }
-    }
-
-    /// A railcar set with flat ends: its cars are the scene kit's
-    /// subject's middle car, closed at the cab ends by a yellow face with a
-    /// gangway door, two windscreens and lamps.
-    static func railcar(_ key: String, asset id: String, single: Bool = false) -> Map3DTrainSet {
-        Map3DTrainSet(key: key) {
-            guard let asset = Map3DSceneKit.asset(id: id) else { preconditionFailure("No scene-kit subject \(id).") }
-            var recipe = SceneKitBuilder.trainRecipe(asset)
-            recipe.style.body = Map3DColor.rgb(0xBFC8C9)
-            // A thin band under the windows, not a wide one.
-            recipe.style.band = 0.36...0.40
-            let band = Map3DColor.rgb(0xE89A27)
-            let car = Map3DTrainBuilder(style: recipe.style, cab: false).model(named: key)
-            func ends(_ ends: [(Float, Bool)]) -> Map3DModelPack.Model {
-                var builder = SceneKitBuilder()
-                builder.addModel(car, tint: band)
-                for (end, head) in ends { builder.flatEnd(end: end, at: car.maximum.x, style: recipe.style, face: band, head: head) }
-                return .flat(named: key, from: builder.mesh)
-            }
-            return Cars(head: ends([(1, true)]), middle: baked(car, tint: band), tail: ends([(1, false)]).turned,
-                        single: single ? ends([(1, true), (-1, false)]) : nil)
         }
     }
 
@@ -209,16 +179,6 @@ public struct Map3DTrainSet: Sendable {
 }
 
 extension Map3DModelPack.Model {
-    /// This model with its `colour` within `depth` of its front painted
-    /// `paint` (a cab car's face in its own colour).
-    func painting(_ colour: UInt32, within depth: Float, as paint: UInt32) -> Map3DModelPack.Model {
-        let from = maximum.x - depth
-        let vertices = self.vertices.map { v in
-            v.x > from && v.color == colour ? Map3DVertex(Map3DPoint(v.x, v.y, v.z), normal: Map3DPoint(v.nx, v.ny, v.nz), color: paint, layer: v.layer) : v
-        }
-        return Map3DModelPack.Model(name: name, vertices: vertices, minimum: minimum, maximum: maximum)
-    }
-
     /// This model turned round to face −x, so a train's last car can be
     /// drawn as its tail facing forward like every other car.
     var turned: Map3DModelPack.Model {
@@ -227,25 +187,5 @@ extension Map3DModelPack.Model {
         }
         return Map3DModelPack.Model(name: name, vertices: vertices,
                                     minimum: Map3DPoint(-maximum.x, -maximum.y, minimum.z), maximum: Map3DPoint(-minimum.x, -minimum.y, maximum.z))
-    }
-}
-
-extension SceneKitBuilder {
-    /// A flat cab end at `end` × `x`: the face in `face`'s colour, the
-    /// gangway door between two windscreens, the lamps (white at the head,
-    /// red at the tail) and the coupler.
-    mutating func flatEnd(end: Float, at x: Float, style: Map3DTrainStyle, face colour: UInt32, head: Bool) {
-        let face = end * x, floor = style.floor, width = 2 * style.halfWidth
-        box(face + end * 0.03, floor, 0, 0.06, width - 0.06, style.roof - floor - 0.12, colour)
-        box(face + end * 0.07, floor + 0.05, 0, 0.04, 0.78, 1.95, Map3DTrainStyle.doorColour)
-        box(face + end * 0.095, floor + 1.15, 0, 0.02, 0.46, 0.6, Map3DTrainStyle.glass)
-        for z: Float in [-0.95, 0.95] { box(face + end * 0.08, floor + 1.35, z, 0.04, 0.8, 0.75, Map3DTrainStyle.glass) }
-        let lamp = head ? Map3DTrainStyle.headlamp : Map3DPalette.lantern
-        for z: Float in [-0.95, 0.95] {
-            let start = mesh.vertices.count
-            box(face + end * 0.09, floor + 0.55, z, 0.08, 0.22, 0.2, lamp)
-            mesh.makeGlowing(from: start)
-        }
-        box(face + end * 0.15, 0.55, 0, 0.3, 0.4, 0.3, Map3DTrainStyle.under)
     }
 }
