@@ -10,10 +10,16 @@ keyed by the station's name as the data writes it. The tool prints every
 name the app's `trtc.json` does not have and every station of it with no
 data, so a new or renamed station is seen, not dropped.
 
+A station that opened after the year has no data in it. `--later YYYY-MM`
+takes, for such stations only, a whole month after the year that each of
+them ran every day of (not the month it opened), and names the month in the
+file's `later`; the other stations keep the year.
+
     python3 -I tools/real-ridership/build_trtc_ridership.py \
         --year 2025 --downloaded 2026-10-20 \
         --stations RailwayGameApp/Resources/RealRailways/trtc.json \
-        --output RailwayGameApp/Resources/RealRailways/trtc_ridership.json
+        --output RailwayGameApp/Resources/RealRailways/trtc_ridership.json \
+        --later 2026-09
 
 Standard library and curl only. See README.md.
 """
@@ -61,6 +67,7 @@ def main():
     parser.add_argument("--stations", required=True, help="the app's trtc.json")
     parser.add_argument("--output", required=True)
     parser.add_argument("--cache", help="a folder to keep each month's sums in, so a second run reads only new months")
+    parser.add_argument("--later", action="append", default=[], help="a month after the year, YYYY-MM, for the stations the year has no data for")
     args = parser.parse_args()
 
     with open_url(INDEX) as response:
@@ -86,6 +93,7 @@ def main():
 
     lines = json.load(open(args.stations, encoding="utf-8"))["lines"]
     known = {station["name"] for line in lines for station in line["stations"]}
+    by_index = {(int(row["西元年"]), int(row["月"])): row["URL"] for row in index}
 
     # Where two lines' gates are counted apart the data names them by line
     # ("BL板橋" and "Y板橋", "G大坪林" beside "大坪林"), and one name ends
@@ -98,8 +106,22 @@ def main():
     riders = defaultdict(int)
     for name in set(entries) | set(exits):
         riders[app_name(name)] += entries[name] + exits[name]
-    names = sorted(riders)
-    average = {name: round(riders[name] / 2 / len(days)) for name in names}
+    average = {name: round(riders[name] / 2 / len(days)) for name in riders}
+    later = {}
+    missing = known - set(average)
+    for month in args.later:
+        year, number = map(int, month.split("-"))
+        if year <= args.year or (year, number) not in by_index:
+            sys.exit(f"--later {month}: not a month of the index after {args.year}")
+        sums = later_sums(year, number, by_index[(year, number)], missing, app_name)
+        print(f"{month}: {sums['rows']:,} rows", flush=True)
+        for name, (count, ran) in sorted(sums["stations"].items()):
+            if ran != sums["days"]:
+                sys.exit(f"--later {month}: {name} ran {ran} of the month's {sums['days']} days, not the whole month")
+            average[name] = round(count / 2 / sums["days"])
+            later[name] = {"month": month, "sha256": sums["sha256"]}
+        missing -= set(sums["stations"])
+    names = sorted(average)
     output = {
         "source": {
             "title": "臺北捷運各站分時進出量統計",
@@ -114,11 +136,13 @@ def main():
         "measure": "average riders a day: (entries + exits) / 2 over the days of the year",
         "riders": average,
     }
+    if later:
+        output["later"] = later
     with open(args.output, "w", encoding="utf-8") as file:
         json.dump(output, file, ensure_ascii=False, indent=1, sort_keys=True)
         file.write("\n")
 
-    print(f"{len(average)} stations, {min(days)} to {max(days)}")
+    print(f"{len(average)} stations, {min(days)} to {max(days)}" + "".join(f"; {name} {entry['month']}" for name, entry in sorted(later.items())))
     print("names the app does not have: " + (", ".join(sorted(set(names) - known)) or "none"))
     print("stations of the app with no data: " + (", ".join(sorted(known - set(names))) or "none"))
     top = sorted(average.items(), key=lambda item: -item[1])[:5]
@@ -163,6 +187,32 @@ def month_sums(year, month, url, cache):
         with open(path, "w", encoding="utf-8") as file:
             json.dump(sums, file, ensure_ascii=False)
     return sums
+
+
+def later_sums(year, month, url, targets, app_name):
+    """`targets`' entries + exits in one month's file and the days each
+    had riders on, beside the month's days, row count and SHA-256."""
+    counts = defaultdict(int)
+    ran = defaultdict(set)
+    days = set()
+    digest = hashlib.sha256()
+    rows = 0
+    with open_url(url) as response:
+        text = io.TextIOWrapper(io.BufferedReader(_Hashing(response, digest), 1 << 20), encoding="utf-8-sig", newline="")
+        reader = csv.reader(text)
+        if next(reader) != ["日期", "時段", "進站", "出站", "人次"]:
+            sys.exit(f"{year}-{month:02}: unexpected header")
+        for date, hour, origin, destination, trips in reader:
+            within = date.startswith(f"{year}-{month:02}-")
+            if within:
+                days.add(date)
+            count = int(trips)
+            rows += 1
+            for name in (app_name(origin), app_name(destination)):
+                if name in targets and count and within:
+                    counts[name] += count
+                    ran[name].add(date)
+    return {"stations": {name: (counts[name], len(ran[name])) for name in counts}, "days": len(days), "rows": rows, "sha256": digest.hexdigest()}
 
 
 class _Hashing(io.RawIOBase):
