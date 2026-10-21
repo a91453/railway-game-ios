@@ -5,8 +5,8 @@
   "examples": 4,
   "models": 40,
   "views": 280,
-  "triangles": 28966,
-  "maximum_triangles": 5194,
+  "triangles": 24062,
+  "maximum_triangles": 3922,
   "checks": [
     "all native vertices round-trip through the game loader",
     "native / GLB / PNG SHA-256 matches exactly",
@@ -21,5 +21,18 @@
     "live map placement, vehicular collision or animated customer pathing",
     "commercial economy balance and revenue simulation",
     "source pack browser rendering / pixel comparison; raw sources are not redistributed"
-  ]
+  ],
+  "browser": {
+    "status": "VERIFIED",
+    "models_loaded": 40,
+    "checks": [
+      "three categories / examples / Chinese name filtering",
+      "seven directions",
+      "pointer orbit changes rendered geometry",
+      "zoom",
+      "PNG / native / GLB download hashes match exactly",
+      "390 px responsive mobile layout without horizontal overflow",
+      "no external requests / missing resources / JavaScript errors"
+    ]
+  }
 }
