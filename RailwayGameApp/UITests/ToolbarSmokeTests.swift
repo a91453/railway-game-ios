@@ -76,10 +76,7 @@ final class LineRoutePreferenceUITests: XCTestCase {
         app.launch()
         defer { app.terminate() }
         app.openDemo("demo.realWorld")
-        let pause = app.buttons["Pause"]
-        XCTAssertTrue(pause.appears(within: 15)); pause.tap()
-        let lines = app.buttons["Lines"]
-        XCTAssertTrue(lines.appears(within: 10)); lines.tap()
+        openLinesPanel(in: app)
         // Decision 196, later: the tracks a leg takes are an advanced detail.
         setAdvanced(true, in: app)
         let route = app.buttons["line.route.-1.0.1"]
@@ -128,6 +125,35 @@ final class LineRoutePreferenceUITests: XCTestCase {
         setAdvanced(true, in: app)
         XCTAssertFalse(app.staticTexts["lines.advanced.summary"].exists)
         bringIntoView(app.buttons["line.route.-1.0.1"], in: app)
+    }
+
+    /// Pauses the game and opens the Lines panel, tapping again while it
+    /// has not. On main 308c019's full lane (run 39676381575) the Pause tap
+    /// found no hit point ({-1, -1}), the Simulator brought up Settings
+    /// during the Lines tap, and the panel never opened: the test then
+    /// dragged the map for the switch until its 8 minutes ran out. The
+    /// runs before and after on the same code passed.
+    private func openLinesPanel(in app: XCUIApplication) {
+        let pause = app.buttons["Pause"].firstMatch
+        let resume = app.buttons["Resume"].firstMatch
+        XCTAssertTrue(pause.appears(within: 15))
+        pause.waitUntilSettled()
+        pause.tap()
+        if !resume.appears(within: 5), pause.exists {
+            pause.waitUntilSettled()
+            pause.tap()
+        }
+        XCTAssertTrue(resume.appears(within: 5), "Pause must pause the game")
+        let lines = app.buttons["Lines"].firstMatch
+        let bar = app.navigationBars["Lines"].firstMatch
+        XCTAssertTrue(lines.appears(within: 10))
+        lines.waitUntilSettled()
+        lines.tap()
+        if !bar.appears(within: 10), lines.exists {
+            lines.waitUntilSettled()
+            lines.tap()
+        }
+        XCTAssertTrue(bar.appears(within: 10), "Lines must open the lines panel")
     }
 
     /// Turns the lines panel's "Advanced" switch on or off: the choice is
