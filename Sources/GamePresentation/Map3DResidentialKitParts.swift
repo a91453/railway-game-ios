@@ -74,7 +74,13 @@ extension StationKitBuilder {
             }
             for z: Float in [-0.65,0.65] { beam(Map3DPoint(-1.1,0.39,z),Map3DPoint(1.1,0.92,z),0.09,steel) }
             let corners=[Map3DPoint(-1.2,0.46,-1.45),Map3DPoint(1.2,1.02,-1.45),Map3DPoint(1.2,1.02,1.45),Map3DPoint(-1.2,0.46,1.45)]
+            let underside=corners.map { $0-Map3DPoint(0,0.12,0) }
             face(corners,inside:Map3DPoint(0,0.65,0),color:Map3DPalette.playerRim)
+            face(underside,inside:Map3DPoint(0,0.72,0),color:steel)
+            for edge in 0..<4 {
+                let next=(edge+1)%4
+                face([corners[edge],corners[next],underside[next],underside[edge]],inside:Map3DPoint(0,0.68,0),color:steel)
+            }
             for z: Float in [-1.45,0,1.45] { beam(Map3DPoint(-1.2,0.47,z),Map3DPoint(1.2,1.03,z),0.045,Map3DPalette.platformEdge) }
         case .planter:
             box(0,0,0,1.1,4.5,0.55,stone);box(0,0.55,0,0.88,4.28,0.08,Map3DPalette.trunk)

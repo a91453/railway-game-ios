@@ -5,10 +5,17 @@ extension StationKitBuilder {
     private var trimColor: UInt32 { Map3DPalette.playerRim }
 
     mutating func residentialWindow(_ x: Float,_ y: Float,_ z: Float,width: Float = 1.1,height: Float = 1.35) {
-        // The solid facade is behind this framed glazing, including at the rear.
-        box(x-0.055,y,z,0.12,width+0.18,height+0.18,wallColor)
-        pane(x+0.025,y,z,width,height)
-        box(x+0.09,y+height*0.51,z,0.035,width+0.10,0.055,trimColor)
+        // Recessed two-sash window. Every pane has an opaque reveal and wall
+        // behind it; separate depths avoid coplanar glass/frame flicker.
+        box(x-0.055,y-0.04,z,0.12,width+0.18,height+0.15,wallColor)
+        box(x+0.015,y+0.03,z,0.035,width,height+0.02,trimColor)
+        for side: Float in [-1,1] {
+            box(x+0.04,y+0.10,z+side*width*0.25,0.025,width*0.5-0.085,height-0.14,Self.glass)
+            box(x+0.065,y+0.02,z+side*(width*0.5+0.015),0.08,0.075,height+0.07,Self.white)
+        }
+        box(x+0.065,y+0.02,z,0.08,0.07,height+0.07,Self.white)
+        box(x+0.065,y+height+0.02,z,0.08,width+0.18,0.08,Self.white)
+        box(x+0.08,y-0.055,z,0.18,width+0.27,0.085,Map3DPalette.concrete)
     }
     mutating func residentialDoor(_ x: Float,_ y: Float,_ z: Float,width: Float = 1.3) {
         box(x,y,z,0.13,width,2.15,Map3DPalette.counters[1])
@@ -16,18 +23,30 @@ extension StationKitBuilder {
         cylinder(x+0.10,y+1.0,z+width*0.34,radius:0.045,height:0.10,color:Map3DPalette.platformEdge,sides:8)
     }
     mutating func residentialBalcony(_ x: Float,_ y: Float,_ z: Float,width: Float) {
-        box(x+0.65,y,z,1.45,width,0.17,wallColor)
-        for dz: Float in [-width/2+0.16,width/2-0.16] {
-            box(x+1.27,y+0.17,z+dz,0.08,0.08,0.90,Self.steel)
+        // A walkable slab with a front parapet and side cheeks joined to
+        // the wall, rather than a disconnected strip of railing.
+        box(x+0.70,y,z,1.48,width,0.22,wallColor)
+        box(x+1.36,y+0.22,z,0.16,width,0.44,Map3DPalette.concrete)
+        for dz in stride(from:z-width/2+0.22,through:z+width/2-0.22,by:Float(0.65)) {
+            box(x+1.38,y+0.65,dz,0.08,0.07,0.39,Self.steel)
         }
-        for dz in stride(from:z-width/2+0.35,through:z+width/2-0.35,by:Float(0.45)) {
-            box(x+1.27,y+0.17,dz,0.045,0.045,0.90,Self.steel)
+        box(x+1.38,y+1.00,z,0.10,width,0.09,Self.steel)
+        for dz: Float in [-width/2+0.09,width/2-0.09] {
+            box(x+0.73,y+0.22,z+dz,1.38,0.18,0.67,Map3DPalette.concrete)
+            box(x+0.73,y+1.00,z+dz,1.38,0.09,0.09,Self.steel)
+            beam(Map3DPoint(x+0.03,y-0.34,z+dz),Map3DPoint(x+1.24,y+0.05,z+dz),0.11,wallColor)
         }
-        box(x+1.27,y+1.05,z,0.09,width,0.09,Self.steel)
-        // Short brackets meet both the facade and slab underside.
-        for dz: Float in [-width/2+0.22,width/2-0.22] {
-            beam(Map3DPoint(x+0.03,y-0.45,z+dz),Map3DPoint(x+1.22,y+0.02,z+dz),0.10,Self.steel)
+    }
+    mutating func residentialBalconyDoor(_ x: Float,_ y: Float,_ z: Float) {
+        // The glazing sits in a complete backed opening above the balcony.
+        box(x-0.055,y,z,0.12,1.70,2.35,wallColor)
+        box(x+0.02,y+0.06,z,0.04,1.56,2.20,trimColor)
+        for side: Float in [-1,1] {
+            box(x+0.052,y+0.17,z+side*0.39,0.025,0.68,1.96,Self.glass)
         }
+        for dz: Float in [-0.83,0,0.83] { box(x+0.08,y+0.05,z+dz,0.08,0.075,2.24,Self.white) }
+        box(x+0.08,y+2.25,z,0.08,1.74,0.08,Self.white)
+        box(x+0.08,y+0.04,z,0.12,1.74,0.10,Map3DPalette.concrete)
     }
     mutating func residentialHome(_ part: Map3DResidentialKit.Part) {
         let cream=Self.white,stone=wallColor,tile=Map3DPalette.playerRoof,roof=Map3DPalette.roof,blue=Map3DPalette.canopy
@@ -41,13 +60,26 @@ extension StationKitBuilder {
             for z: Float in [-2.4,2.4] { box(-0.4,9.33,z,6.2,0.18,0.8,stone) }
         case .arcadeTownhouse:
             box(0,0,0,9,8.0,0.18,stone)
-            box(-2.0,0.18,0,2.8,7.5,3.05,cream) // recessed real ground-floor wall
-            residentialDoor(-0.52,0.18,0);for z: Float in [-2.4,2.4] { residentialWindow(-0.50,0.98,z,width:1.15) }
+            box(-2.0,0.18,0,2.8,7.5,3.05,cream) // recessed shopfront wall
+            residentialDoor(-0.52,0.18,0)
+            for z: Float in [-2.28,2.28] { residentialWindow(-0.50,0.85,z,width:1.55,height:1.72) }
+            box(-0.54,2.68,0,0.14,6.9,0.34,tile) // blank shop fascia fixed to the recessed wall
             box(-0.7,3.23,0,7.5,7.5,5.8,cream)
-            for z: Float in [-3.3,3.3] { box(2.7,0.18,z,0.22,0.22,3.05,stone) }
-            box(2.35,3.03,0,1.2,7.9,0.20,blue)
-            for floor in 0..<2 { for z: Float in [-2.4,0,2.4] { residentialWindow(3.08,4.1+Float(floor)*2.8,z,width:1.1) } }
+            box(-0.7,3.07,0,7.5,7.5,0.16,stone) // continuous arcade soffit
+            for z: Float in [-3.25,3.25] {
+                box(2.72,0.18,z,0.44,0.46,2.94,stone)
+                box(2.72,0.18,z,0.66,0.68,0.25,Map3DPalette.concrete)
+                box(2.72,2.99,z,0.58,0.59,0.24,stone)
+            }
+            box(2.94,3.08,0,0.25,7.72,0.25,blue) // fascia touches the soffit
+            for floor in 0..<2 {
+                let y=4.02+Float(floor)*2.82
+                for z: Float in [-2.4,0,2.4] { residentialWindow(3.08,y,z,width:1.22,height:1.48) }
+            }
+            box(3.10,6.05,0,0.14,7.50,0.14,Map3DPalette.concrete)
+            for z: Float in [-3.47,3.47] { box(3.09,3.42,z,0.14,0.17,5.25,stone) }
             box(-0.7,9.03,0,8.2,8.1,0.25,roof)
+            box(3.05,9.23,0,0.24,8.10,0.26,stone)
         case .duplexHouse:
             box(0,0,0,10.4,13.5,0.18,stone)
             for z: Float in [-3.3,3.3] {
@@ -78,8 +110,11 @@ extension StationKitBuilder {
             residentialDoor(3.81,0.18,0,width:1.7)
             for floor in 0..<4 {
                 let y=0.95+Float(floor)*3
-                for z: Float in [-4.25,-2.5,2.5,4.25] { residentialWindow(3.80,y,z,width:0.90) }
-                if floor>0 { residentialBalcony(3.78,Float(floor)*3+0.12,0,width:3.0) }
+                for z: Float in [-4.3,-2.9,2.9,4.3] { residentialWindow(3.80,y,z,width:0.88,height:1.40) }
+                if floor>0 {
+                    residentialBalcony(3.78,Float(floor)*3+0.12,0,width:3.8)
+                    residentialBalconyDoor(3.80,Float(floor)*3+0.30,0)
+                }
             }
             box(-0.5,12.18,0,9.2,12.0,0.22,roof)
             for z: Float in [-5.7,5.7] { box(-0.5,12.40,z,9.2,0.16,0.85,stone) }

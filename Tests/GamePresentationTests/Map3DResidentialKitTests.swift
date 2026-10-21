@@ -45,12 +45,13 @@ final class Map3DResidentialKitTests: XCTestCase {
     }
 
     func testHomeWindowsHaveSolidBacking() {
+        let frontGlass=Map3DColor.shaded(Map3DPalette.glazing,0.92)
         for part in Map3DResidentialKit.Part.allCases where part.category == .home {
             let vertices=Map3DResidentialKit.model(for:part).vertices
             var count=0
             for i in stride(from:0,to:vertices.count,by:3) {
                 let face=Array(vertices[i..<i+3])
-                guard face.allSatisfy({ $0.color == Map3DPalette.glazing && $0.nx > 0.8 }) else { continue }
+                guard face.allSatisfy({ $0.color == frontGlass && $0.nx > 0.8 }) else { continue }
                 let center=face.reduce(Map3DPoint.zero) { $0 + Map3DPoint($1.x,$1.y,$1.z)*(1/3) }
                 XCTAssertLessThan(backingDistance(from:center+Map3DPoint(0.001,0,0),vertices:vertices),0.20,part.id)
                 count += 1
@@ -61,14 +62,39 @@ final class Map3DResidentialKitTests: XCTestCase {
 
     func testArcadePostsAndBalconyBracketsActuallyMeet() {
         let arcade=Map3DResidentialKit.model(for:.arcadeTownhouse)
-        for z: Float in [-3.3,3.3] {
-            XCTAssertTrue(arcade.vertices.contains { abs($0.x-2.7)<0.12 && abs($0.y+z)<0.12 && abs($0.z-0.18)<0.01 })
-            XCTAssertTrue(arcade.vertices.contains { abs($0.x-2.7)<0.12 && abs($0.y+z)<0.12 && abs($0.z-3.23)<0.01 })
+        for side: Float in [-1,1] {
+            for height: Float in [0.18,3.23] {
+                XCTAssertTrue(arcade.vertices.contains {
+                    $0.x > 2.4 && $0.x < 3.1 && abs($0.y-side*3.25)<0.36 && abs($0.z-height)<0.01
+                })
+            }
         }
         let balcony=Map3DResidentialKit.model(for:.balconyModule)
         XCTAssertEqual(balcony.minimum.x,0,accuracy:0.0001)
         XCTAssertTrue(balcony.vertices.contains { abs($0.x-0.09)<0.06 && abs($0.z-0.42)<0.06 })
         XCTAssertTrue(balcony.vertices.contains { abs($0.x-1.43)<0.06 && abs($0.z-0.10)<0.06 })
+    }
+
+    func testApartmentBalconiesHaveBackedDoorsOnEveryUpperFloor() {
+        let vertices=Map3DResidentialKit.model(for:.walkupApartment).vertices
+        let frontGlass=Map3DColor.shaded(Map3DPalette.glazing,0.92)
+        for floor in 1...3 {
+            let low=Float(floor)*3+0.45,high=low+1.96
+            XCTAssertTrue(vertices.contains {
+                $0.color == frontGlass && $0.nx > 0.8 && $0.x > 3.84 && $0.x < 3.91
+                    && abs($0.y)<0.7 && $0.z >= low && $0.z <= high
+            },"Missing balcony door on floor \(floor)")
+        }
+    }
+
+    func testSolarPanelHasARealUnderside() {
+        let vertices=Map3DResidentialKit.model(for:.roofSolar).vertices
+        XCTAssertTrue(stride(from:0,to:vertices.count,by:3).contains { i in
+            let face=vertices[i..<i+3]
+            let center=face.reduce(Map3DPoint.zero) { $0+Map3DPoint($1.x,$1.y,$1.z)*(1/3) }
+            return face.allSatisfy { $0.color == Map3DPalette.tankStand && $0.nz < -0.8 }
+                && center.z > 0.4 && center.z < 0.9 && abs(center.y) < 1.0
+        })
     }
 
     func testDeterministicAssembly() {
