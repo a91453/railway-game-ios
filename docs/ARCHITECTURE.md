@@ -14764,7 +14764,7 @@ $10,000 的價格照報告的建造、列車與利益算出（旅客那一項是
 | 瑞芳（實景示範） | 162,511 → 166,883 | 42,214 → 46,586（+4,372） |
 | 猴硐（實景示範） | 92,929 → 95,741 | +2,812 |
 
-每站約 4,000 個，照決策 277 的預算。店併在所在格的 mesh 裡，不另加 draw。畫面成本報告的臺北車站一條線只有代表站臺北，沒有商店街，數字不變。
+每站約 4,000 個，照決策 277 的預算。店併在所在格的 mesh 裡，不另加 draw。畫面成本報告（`MAP3D_FRAME_REPORT=1 swift test --filter Map3DFrameCostReportTests/testTheGPUBudget`）的臺北車站一條線只有代表站臺北，沒有商店街，和決策 321 量的一樣：近 280 m 200,431、中 800 m 190,262、中 1,400 m 15,080、遠 10.8 km 259,564 個三角形，draw 31、25、8、223。
 
 **五個角度**：
 - 玩家：車站前有了熱鬧的一排店，一眼看出哪裡是站前；夜裡招牌亮著，車站更好找。
@@ -14797,7 +14797,7 @@ $10,000 的價格照報告的建造、列車與利益算出（旅客那一項是
 **缺口**（`docs/HANDOFF.md` §7.3）：招牌沒有字；店不會開關；代表站沒有店；廣場被路切開的車站（十分）沒有店。
 
 **驗證**：
-- **VERIFIED**（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`Map3DShopStreetTests` 5 個、`Map3DStationsTests` 9 個與其他 Map3D 場景測試全過。
+- **VERIFIED**（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`swift test --skip-build --filter Map3D` 207 個全過（`Map3DShopStreetTests` 5 個新的；4 個只在要求時跑的跳過）；畫面成本報告（上面的數字）。
 - **VERIFIED**（Linux，無頭 Chromium 的 WebGL 預覽，決策 238）：示範地圖、瑞芳、猴硐的前後對照、夜景與 pixelmatch 差異圖，只有店的地方變了。
 - **UNVERIFIED**：App 的編譯（`ios-build.yml`）、3D 的 UI 測試（`only_testing`）、實機的樣子與幀數（TestFlight）。
 
