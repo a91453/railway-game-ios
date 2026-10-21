@@ -196,8 +196,12 @@ public struct Map3DScene: Sendable {
         // they cross it.
         if real == nil, world.geoAnchor == nil { builder.addSeededStreets(city, clearOf: cleared) }
         seededStreets = SeededStreetPlan(edges: builder.streetEdges)
-        // Decision 244: no street furniture where the track runs.
-        builder.removeProps(on: cleared)
+        // Decision 321: the stations' canopies and buildings from the
+        // station kit, a plaza where a building stands.
+        let stations = cleared.union(builder.addStations(snapshot, frame: RealWorldFrame(world: world)))
+        // Decision 244: no street furniture where the track runs (nor
+        // where a station's building stands).
+        builder.removeProps(on: stations)
         // Decision 229 續: the street lights' pools, seen at night.
         builder.addLampPools()
         // Decision 239: on a real-world map, the real buildings round
@@ -205,11 +209,11 @@ public struct Map3DScene: Sendable {
         // stand.
         let frame = real == nil ? nil : RealWorldFrame(world: world)
         builder.target = .near
-        let standing = frame.map { builder.addRealBuildings(cityTiles, frame: $0, clearOf: cleared) } ?? []
-        builder.addCity(city, clearOf: cleared, takenBy: taken.union(standing))
+        let standing = frame.map { builder.addRealBuildings(cityTiles, frame: $0, clearOf: stations) } ?? []
+        builder.addCity(city, clearOf: stations, takenBy: taken.union(standing))
         builder.target = .far
-        if let frame { builder.addRealBuildings(cityTiles, frame: frame, clearOf: cleared) }
-        builder.addCity(city, clearOf: cleared, takenBy: taken.union(standing))
+        if let frame { builder.addRealBuildings(cityTiles, frame: frame, clearOf: stations) }
+        builder.addCity(city, clearOf: stations, takenBy: taken.union(standing))
         builder.target = .base
         builder.addPlacedBuildings()
         chunks = builder.chunks()
@@ -390,6 +394,8 @@ extension Map3DScene {
         /// kept and the level crossings.
         var trackLines: [(points: [Map3DPoint], kind: TrackSectionKind)] = []
         var platformLines: [[Map3DPoint]] = []
+        /// Decision 321: the platforms as laid, for the station kit.
+        var laidPlatforms: [LaidPlatform] = []
         var piers: [Map3DPoint] = []
         var streetEdges: [Map3DSeededStreets.Edge: Map3DBaseMap.RoadKind] = [:]
         var crossings: [Map3DLevelCrossing] = []
@@ -776,11 +782,11 @@ extension Map3DScene {
                                    top: Map3DPalette.platform, side: Map3DPalette.platform, topPaint: Self.paving, sidePaint: Self.concrete)
                     mesh.addRibbon(along: line, width: 0.3, offset: side * (Self.platformEdge + 0.35), lift: Self.platformHeight + 0.01,
                                    top: Map3DPalette.platformEdge)
-                    // Decision 259: the canopy over the middle three fifths,
-                    // as most of TRA's are, so the ends show who waits.
-                    mesh.addRibbon(along: Self.middle(of: line, share: 0.6), width: min(width, 3.6), offset: offset, lift: Self.canopyHeight, depth: 0.3,
-                                   top: Map3DPalette.canopy, side: Map3DPalette.canopy, topPaint: Self.metal)
                 }
+                // Decision 321: its canopy and its station's building come
+                // with the station kit (`addStations`).
+                laidPlatforms.append(LaidPlatform(station: platform.platform.station, line: line, offset: offset, width: width,
+                                                  structure: platform.structure))
             }
         }
 
