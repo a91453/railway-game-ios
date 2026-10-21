@@ -151,6 +151,7 @@
 - 不改 golden、SaveFixtures、ReplayFixtures 的值；
 - 要協調的對象：改同一個檔案的 session；GameCore 的完整 tier 同時最多 2 個；
 - 驗證方式：本機只跑快速檢查；UI 測試只用 `ios-build.yml` 的 `only_testing`；
+- 決策號（2026-10-21 起）：派工前先在 main 的 ARCHITECTURE 放一節「### N. （預約）標題」（`## 目前規則摘要` 之前，一行說明是哪個 session），派工單寫「只填這一節，不改 OVERVIEW 的決策列與 §9」。合併後由遊戲規劃補 §9 的索引（`doc_numbers.py` 把「還沒進決策索引」列為附註）。以前每個 PR 都接在 ARCHITECTURE 最後、改 OVERVIEW 同一行，幾個 PR 並行時每合一個其他的就衝突、CI 重跑（#892 一天撞三次）；
 - 收尾：draft → 綠 → ready → 在 #231 留「可合併」→ 用 send_message 告訴遊戲規劃；
 - 禁止：合併、auto-merge、推 main、`testflight.yml`、`@claude`、在 repo 裡寫模型名稱。
 
@@ -678,7 +679,7 @@
 | 建造時的潛力圖（決策 311）只在 Linux 量過 debug 的時間（台北一個畫面第一次約 0.1–0.16 秒），App 沒在實機看過：iPhone 直拿時圖例（潛力／涵蓋、時段兩列切換）高不高、第一次畫的停頓、台北市中心是否整片同一色 | 決策 311 的「下一步」，session_01XcsvN9dp6TVNhLU2TY4sJD | 下一次 TestFlight 時看；要改門檻或把計算移到背景，是 GamePresentation／App 的小 PR |
 | 收購真實支線的第 2 步（實作）：照決策 315 做 `extract_branch_runs.py`、GameCore 的 `recordLineAcquisition` 與存檔 66、GamePresentation 的 `acquireRealLine` 與 `AcquisitionReportTests`（量 `valuePerDailyRider`）、App 的收購卡與「收購完成」卡 | 決策 315 的「下一步」、NEXT_PRIORITIES §20.1 | session_017RbiiqGJTsLWDSz9q4Dukd，branch `claude/acquire-real-branch`；等決策 315 合併、遊戲規劃給 GameCore 名額（一次只有一件升存檔）才 push；中斷時從決策 315 的「下一步」接 |
 | 刪掉快車停的站被拒絕時，字沒有說要先刪掉哪個停站模式 | 決策 291 的「下一步」、PLAYER_FEEDBACK 75.1 #2 | 沒有人接（GamePresentation 的小 PR） |
-| 自動派車時讓玩家調兩列車的發車：兩端對開、或晚前一班幾分鐘（77.1 #1）。現在「加開一列車」把班距設成「來回 ÷ 列車數」，從終點發的車和第一站共用一個派車間隔（`lastDispatch`，決策 23、172、264），所以做不到。要動 GameCore 的派車（每端各自的間隔或發車的錯開分鐘），升存檔 | PLAYER_FEEDBACK 77.1 #1；遊戲規劃 2026-10-20 | **做好待合併**：決策 309（`claude/dispatch-pattern`，session_01TaN2sdqT64ZaKnZ3hfQ1iH，存檔 65）。還沒做的寫在決策 309 的「下一步」（實機確認路線卡的選單、要不要加 UI 測試、停站模式的每個服務、單線開行車控制時的量測）。原本的排法：五方：玩家，初學者第二列車就卡住，影響大；鐵道迷，單線兩列車兩端對開、在中間站交會，最像真的（平溪、集集）；開發，GameCore＋存檔，和 302 同檔，排在它後面；美術，路線卡多一個選項；音樂，無 |
+| 自動派車時讓玩家調兩列車的發車：兩端對開、或晚前一班幾分鐘（77.1 #1）。現在「加開一列車」把班距設成「來回 ÷ 列車數」，從終點發的車和第一站共用一個派車間隔（`lastDispatch`，決策 23、172、264），所以做不到。要動 GameCore 的派車（每端各自的間隔或發車的錯開分鐘），升存檔 | PLAYER_FEEDBACK 77.1 #1；遊戲規劃 2026-10-20 | **已合併**：決策 309（#890，main `cbc7430`，存檔 65）。還沒做的寫在決策 309 的「下一步」（實機確認路線卡的選單、要不要加 UI 測試、停站模式的每個服務、單線開行車控制時的量測）。原本的排法：五方：玩家，初學者第二列車就卡住，影響大；鐵道迷，單線兩列車兩端對開、在中間站交會，最像真的（平溪、集集）；開發，GameCore＋存檔，和 302 同檔，排在它後面；美術，路線卡多一個選項；音樂，無 |
 
 ## 6. 留在遠端、沒有合併的 branch
 

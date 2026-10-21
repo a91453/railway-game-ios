@@ -18,7 +18,7 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 存檔版本 | 65（路線的發車方式，決策 309）；每個版本一個存檔 fixture，共 69 個 | `SavedGame.currentVersion`、`SaveFixtures/` |
 | golden | schema 74（車站商業，#595），`GoldenScenarios/` 裡 77 個 JSON | `GoldenScenarios/` |
 | replay | 9 個指令紀錄（含問題回報轉成的 `problem-report-blank-map.json`，#468；長區段行車控制 `long-leg-traffic.json`，#480） | `ReplayFixtures/` |
-| 決策 | 1–217、219–307、309–313、315（308 在 #231 保留中；315 是收購真實支線的設計，實作在下一個 PR；218 沒有使用：越行寫進了決策 212，#556、#589）。141、150、203 曾保留但沒有使用；之後的號碼以工作登記 #231 為準 | `docs/ARCHITECTURE.md`，索引在第 9 節 |
+| 決策 | 見決策索引（§9）與 `docs/ARCHITECTURE.md`。號碼以工作登記 #231 為準：遊戲規劃派工時在 ARCHITECTURE 先放一節「### N. （預約）」，PR 只寫自己那一節，不改這一列與 §9，索引由遊戲規劃合併後補（2026-10-21，避免每個 PR 都撞同一行）。218 沒有使用：越行寫進了決策 212，#556、#589；141、150、203 曾保留但沒有使用 | `docs/ARCHITECTURE.md`，索引在第 9 節 |
 | App 版本 | 0.5.0 | `RailwayGameApp/project.yml` |
 | 平台與語言 | iPhone（只橫拿）、iPad；繁體中文、英文。日文已移除（#171） | — |
 | 程式規模 | GameCore 90 檔 3.3 萬行、GamePresentation 115 檔 3.1 萬行、App 61 檔 1.9 萬行、測試 292 檔 8.1 萬行 | — |
