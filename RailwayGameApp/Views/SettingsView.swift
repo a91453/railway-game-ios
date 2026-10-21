@@ -31,6 +31,7 @@ struct SettingsView: View {
     @State private var showsWebsite = false
     /// Decision 175: the secretary room's settings, on the device.
     @AppStorage(SecretarySettings.pauseKey) private var pausesForImportantEvents = true
+    @AppStorage(SecretarySettings.nightSkipKey) private var skipsQuietNights = false
     @AppStorage(SecretarySettings.monthlyKey) private var monthlyReportMode = MonthlyReportMode.openAndPause.rawValue
     /// Whether the help guide is open (decision 177).
     @State private var showsHelp = false
@@ -259,6 +260,15 @@ struct SettingsView: View {
                 }
             }
             .accessibilityIdentifier("settings.autoPause")
+            // Decision 305: the night's shortcut, pressed by itself.
+            Toggle(isOn: $skipsQuietNights) {
+                Label {
+                    Text(verbatim: NightSkip.settingTitle(in: language))
+                } icon: {
+                    Image(systemName: "moon.zzz")
+                }
+            }
+            .accessibilityIdentifier("settings.nightSkip")
             // Decision 184, later: a menu the ticks leave alone.
             TickStable(StableKey(monthlyReportMode, language)) {
                 Picker(selection: $monthlyReportMode) {
@@ -278,8 +288,10 @@ struct SettingsView: View {
             Text(verbatim: language.text("Secretary", "秘書室"))
         } footer: {
             Text(verbatim: language.text(
-                "The game pauses when a typhoon is announced, a goal is met, the cash goes below zero or a challenge has a week left. Every 30 days a monthly report compares the month with the one before; it is always kept in the news log. Applies to every game on this device.",
-                "颱風預警、目標達成、現金轉為負債、挑戰剩不到 7 天時，遊戲會自動暫停。每 30 天有一張月報，和上個月比較；月報一定會記在新聞紀錄裡。套用到這台裝置上的每一局。"
+                "The game pauses when a typhoon is announced, a goal is met, the cash goes below zero or a challenge has a week left. Every 30 days a monthly report compares the month with the one before; it is always kept in the news log.",
+                "颱風預警、目標達成、現金轉為負債、挑戰剩不到 7 天時，遊戲會自動暫停。每 30 天有一張月報，和上個月比較；月報一定會記在新聞紀錄裡。"
+            ) + language.text(" ", "") + NightSkip.settingFooter(in: language) + language.text(
+                " Applies to every game on this device.", "套用到這台裝置上的每一局。"
             ))
         }
     }

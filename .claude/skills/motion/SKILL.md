@@ -21,6 +21,7 @@ App 的介面動畫照一套規則走（ARCHITECTURE 決策 253）：每一種�
 | `confirm` | 0.25 | 彈簧，bounce 0.2 | 好消息的狀態訊息輕輕一跳（放大 4%） | `StatusBanner` 的 `phaseAnimator` |
 | `refuse` | 0.36 | 兩端平滑 | 被拒絕的狀態訊息左右搖三次，一次比一次小（`RefusalShake`，±6 點） | `StatusBanner` 的 `keyframeAnimator` |
 | `builtRing` | 0.9 | 減速 | 蓋好東西的地方擴散的環（決策 117） | `BuildPulseMark` |
+| `turnNorth` | 0.24 | 減速 | 3D 地圖點指北針轉回北方（決策 269 的「後來」）；只移動，減少動態時直接轉回 | `Map3DPreviewScreen` 的 `CADisplayLink`，`Map3DCamera.turnedNorth` |
 
 **加新的動畫時**：先找上表合用的一條。真的都不合，才在 `MotionRule` 加一條，並在 `InterfaceMotionTests` 加它的範圍，再補這張表與 `docs/UI_THEME.md`。
 

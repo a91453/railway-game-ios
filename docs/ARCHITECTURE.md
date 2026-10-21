@@ -11498,6 +11498,47 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
   - **UNVERIFIED**：App 的編譯（macOS CI）；實機的記憶體與電池（TestFlight）。
 - GameCore、存檔版本、golden schema 都不動。
 
+**之後的補充**（2026-10-21，3D 的指北針；NEXT_PRIORITIES §19 第 2 名「3D 拉近時的三個小做法」的第一項，規格在 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.14；遊戲規劃 session 派工，不另取決策號）：
+- 原因：3D 可以兩指旋轉，但轉過之後畫面上沒有東西說北在哪，也沒有轉回北方的方法；拉遠交回 2D 時（2D 永遠北朝上）畫面會突然轉回去。作者 2026-10-19 問「旋轉的時候我遊戲需要指南針嗎」，研究的答案是要、只在 3D。
+- 做法：
+  - **只在 3D、只在方向不是北的時候出現**（和 Apple 地圖一樣）。「算北」的容差是 0.05°（`Map3DCamera.northTolerance`），和參考庫網站地圖判斷「轉過了」的值一樣；更小的角度在手機上連半點都不到。
+  - **點一下轉回北方**，走較短的那一邊（從 300° 經 330° 回到 0°，不經 180°），`MotionRule.turnNorth`：0.24 秒、減速（參考庫的 1 −（1 − t）²）。轉的途中手指一碰地圖（拖曳、雙指、旋轉）就停在那裡，和參考庫一樣。只有移動，所以「減少動態效果」打開時直接轉回。拉近的傾斜照舊跟著距離，不跟著指北針動（參考庫的 2D 地圖同時把傾斜歸零；我們的傾斜不是玩家手動的）。
+  - **圖示自己畫**（art-style）：44 點的圓鈕，`panel` 底、`textPrimary` 外框；針是 MapLibre 指北針的兩個三角形，北半 `metroRed`、南半白，針跟著畫面上北方的方向轉。SwiftUI 的 `Shape`，不是 MapKit 的 `MapCompass`（3D 是 Metal）。顏色與對比在 `docs/UI_THEME.md`。
+  - **位置**：3D 畫面左上的關閉鈕正下方，間隔 8 點；觸控區 44×44（不是 44×28）。右上是幀數，下面是提示，都不重疊；左上角原本只有關閉鈕，3D 的景不會被多擋多少。
+  - 玩家看的文字（VoiceOver）：「Turn to north」／「轉回北方」。這個畫面的字都用 `DisplayLanguage` 的中英兩份，不經 String Catalog。
+- 程式：
+  - GamePresentation `Map3DCamera`：`northTolerance`、`turnFromNorth`（−π 到 π）、`facesNorth`、`turnedNorth(from:progress:)`；`InterfaceMotion.swift` 加 `MotionRule.turnNorth`。Linux 測試 `Map3DCompassTests`（4 個）與 `InterfaceMotionTests`。
+  - App `Map3DPreviewScreen.swift`：`Map3DCompassState`（`@Observable`，只抄相機的方向，相機仍是 Metal view 自己的；旋轉時只重畫指北針）、`Map3DCompassButton`、`Map3DCompassNeedle`；手勢的 coordinator 用 `CADisplayLink` 一格一格轉。沒有新檔，xcodeproj 不用重新產生。
+- **參考**：
+
+| 參考 | → 目標 |
+| --- | --- |
+| 參考庫 `Railway/taiwan-rail-reference-clean/source/main-reference.js` 的 `resetMapNorth`、`stepMapNorth`（較短的一邊 `(−from + 540) % 360 − 180`、240 ms、`1 − (1 − t)²`、`mapGestureActive()` 時停止） | `Map3DCamera.turnedNorth(from:progress:)`、`MotionRule.turnNorth`、coordinator 的 `turnNorth(reduceMotion:)`／`stopTurningNorth()`（弧度，不是度） |
+| 同檔的 `syncOrientationClass`（`Math.abs(bearing) > 0.05` 算轉過） | `Map3DCamera.northTolerance`（0.05°，換成弧度） |
+| 同一個網站用的 MapLibre `NavigationControl` 的指北針圖（`vendor/maplibre-gl.css` 的 `.maplibregl-ctrl-compass`：上下兩個三角形，北深南淺；MapLibre GL JS，BSD-3-Clause） | `Map3DCompassNeedle` 的形狀（自己重畫的座標，北紅南白、藏青描邊），不搬原圖 |
+| `Railway/world-rail-reference-clean/` 同名檔 | 和台灣版相同，沒有另外的東西 |
+| `MapBuilder/reference_snapshot/` | 打包了 Mapbox GL 的 `NavigationControl`（`showCompass`），和上一列同一個指北針，沒有自己的 |
+| `Simulator/`、`OpenWorld/`、`Railway/street_scene_reference_clean/` | 搜尋 compass／指北／resetNorth：沒有指北針 |
+
+  外部專案：沒有另外搜尋，參考庫已經有完整的做法。
+- **四方＋鐵道迷**：
+  - 玩家：轉過的 3D 也找得到北，一點就回到和 2D、小地圖一樣的方向；沒轉時不佔畫面。
+  - 鐵道迷：真實地圖、路線圖都是北朝上，轉回北方後和 2D 的實景地圖對得上；和真實鐵路資料無關。
+  - 開發：判斷與轉法在 GamePresentation，有 Linux 測試；App 只多一個小 view 與一個 display link；GameCore、存檔版本、golden schema 都不動。
+  - 美術：照 art-style 自己畫的扁平圓鈕，色票取自 `Theme`、`Palette`；灰階與模糊都分得出南北（預覽 `docs/art/map3d-compass-2026-10-21/`）。
+  - 音樂：無。
+- **沒有選的做法**（預覽在 `docs/art/map3d-compass-2026-10-21/`）：
+  - 針上加 N（`b-with-n.svg`）：44 點時 N 太小、擠在針尖。
+  - 藏青實心圓鈕只畫紅箭頭（`c-arrow.svg`）：深色地圖上圓鈕看不出邊，也像導航鈕。
+  - 永遠顯示：北朝上時多擋一塊 3D 景，也和 Apple 地圖的習慣不同。
+  - 放在右上幀數下面：幀數點開細節時會變高，把指北針推下去。
+  - 轉回時照 `change`（0.2 秒、兩端平滑）：`change` 減少動態時還留淡入淡出，相機轉動沒有東西可以淡；所以另加一條只移動的規則，時間照參考庫。
+  - 鬆手時接近北方就自動吸回北方（MapLibre 原生 SDK 的做法）：參考庫的網站地圖沒有，先不做。
+- **缺口**：3D 的方向交回 2D 時仍不保留（2D 永遠北朝上）；「三個小做法」的另兩項（列車頭上的標籤、路線色帶）沒做，記在 HANDOFF §7.3。
+- **驗證**：
+  - **VERIFIED**（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`Map3DCompassTests` 4 個、`InterfaceMotionTests` 5 個通過；`Map3DPreviewScreen.swift` 通過 `swiftc -parse`。
+  - **UNVERIFIED**：App 的編譯（macOS CI 的 `ios-build.yml`）；指北針的樣子、轉回的手感、「減少動態效果」直接轉回（Simulator 或實機，TestFlight）。沒有加 UI 測試。
+
 ### 270. 空白地圖的 2D 拉近時畫種子道路：和 3D 同一份，配色照實景的 2D 道路
 
 2026-10-17。3D 生活感第 4 步的後半，接在決策 269 之後。HANDOFF §4.4 的下一步：「2D 拉近到看得見建物的那一級時，也畫同一份種子道路」。空白地圖的 2D 原本沒有任何道路，3D 卻有（決策 263），兩邊對不上；決策 269 起雙指拉近會把 2D 交給 3D，交接那一下道路突然出現。
@@ -13450,6 +13491,52 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 4. 路線名與站名的英文。
 5. R3 轉乘照真實班次的時段。
 
+### 305. 夜裡沒有車時的「快轉到早上」：跑到第一列車動起來前，照常逐 tick；設定可以自動，預設關
+
+2026-10-21。競品研究 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.15（第 79–81 張；NEXT_PRIORITIES §19 第 3）。作者 2026-10-14、10-15 起的預設「session 五方決定」，遊戲規劃 session_01WW7o3decEv5LY59nYVqnDN 派工。號碼依 #231：main 最大 303，304 由 R2 保留，取 305。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
+
+**為什麼**：收班後到首班前，地圖上什麼都不動，玩家只能把速度調到最快、再記得調回來。競品收班後自己快轉過夜（作者 2026-10-20 確認）。我們的夜裡常常不空（全天路線、真實時刻表的深夜車、貨運、高鐵回送），所以主要做法是玩家按的捷徑，自動的放在設定、預設關（研究 4.15 的建議）。
+
+**規則**（`NightSkip.swift`）：
+1. **什麼時候有**：有放在軌道上的列車，而且現在沒有一列在路上（有行程、空車回送中，或還有路要走：`NightSkip.isRunning`），而且第一列車要動起來之前至少還有 1 小時（`shortest`，含下面的 10 分）。在蓋東西而自動暫停時（決策 99）、快轉中都不另外提供。
+2. **停在哪裡**：在世界的副本上照常往前跑（`firstMove(after:)`）：先用最快速度（`.fast`，一 tick 10 分）一 tick 一 tick跑，看到任何一列車的位置變了或開始跑，再從前一 tick 起一分鐘一分鐘找出它開始動的那一分鐘。所以停的地方由世界自己決定：機廠出庫的時刻（決策 209、221）、沒有機廠時的首班、照班次跑的路線的下一班（真實時刻表、高鐵），都不用另寫規則；首班 08:00 時停在 07:50 左右。停在那一分鐘前 10 分（`lead`），只取從現在起的整分鐘。往前最多看 24 小時（`horizon`），24 小時內沒有車會動（例如車都停在班次用不到的站）就不提供。
+3. **夜裡有車在跑就不跳**：全天路線、還沒收班的過午夜路線、深夜車、貨運、空車回庫中的列車，在跑的時候就沒有捷徑；照班次跑的深夜車還沒開時，捷徑停在它開之前，不會跳過它。
+4. **怎麼跑**：按下後把速度設成 `.fast`，然後照常由遊戲迴圈逐 tick 跑（`GameWorld.advance(ticks:)`）；剩不到一個 tick 時依序換成 `.double`、`.normal`，剛好落在停的那一分鐘（`speed(remaining:)`），到了就回到按下前的速度（按下時是暫停的，就停在那裡暫停）。不改時鐘，午夜的帳、城市、旅客、事件都照常；速度的改變照常寫進指令紀錄（決策 193）。
+5. **中斷**：玩家改速度或按暫停，快轉就結束，速度是玩家選的；中途有指令（建造、改設定）時，下一個 tick 結束並回到原本的速度；遊戲因為重要事件自己暫停時（颱風預警、目標達成、負債、月報，決策 175），結束並回到原本的速度、維持暫停；萬一有車在停的地方之前開始跑，也結束。快轉中速度下面的晶片變成「快轉到 05:50 · 停止」。遊戲裡沒有「事故」事件（GameCore 沒有），颱風之外的天氣不暫停，所以不中斷。
+6. **設定「夜裡沒有車時自動快轉」**（秘書室，存在裝置上，預設關）：開著時，每個 tick 之後若有捷徑就自己按下去（同一段程式：`skipToMorning()`）。玩家停掉的那一晚不再自己開始（`autoSkipDeclined`），下一晚照常。教學中不自動。
+7. **效能**：往前跑的結果記到下一個指令為止（`NightSkipMemo`）：沒有指令時世界照原樣往前走，第一列車動起來的時刻不變；24 小時內找不到時，1 小時後再找一次。白天有車在跑時只看列車，不往前跑。
+
+**畫面**：狀態列下面那一列（圖層列、下一步的晶片同一列）的最前面，一個和下一步一樣的玻璃晶片：「⏭ 快轉到早上 · 05:50」／「Skip to Morning · 05:50」，提示「早上之前沒有車。用最快速度跑到第一班車出發前。」；快轉中是「⏹ 快轉到 05:50 · 停止」。不放進狀態列本身：狀態列照決策 251 保持同一個寬度，多一個會出現又消失的鈕會讓它換版面、把暫停鈕移到手指下。出現與消失用 motion skill 的 `pop`（減少動態效果時只淡入淡出），旁邊的晶片讓位用 `change`。設定在「秘書室」區塊，`moon.zzz` 圖示，說明加一句「夜裡沒有車時，遊戲用最快速度跑到早上第一班車出發前，再回到原本的速度。」不加夜色、不改音樂。
+
+**五方**：
+- 玩家：收班後一按就到早上，停在第一班車前 10 分，看得到早上開始；想要全自動的在設定打開；按錯了按一下就停，速度回到原本的。
+- 鐵道迷：夜裡是保養與施工的時間，但有深夜車、貨運、高鐵回送或全天路線時照實跑，不跳過；停的時間跟著機廠出庫與首班走，不是寫死 05:30。
+- 開發：只用 `advance` 與現有速度，結果與一分鐘一 tick 逐位元相同（測試比對整個世界與存檔的 JSON）；停在哪裡由世界自己跑出來，不在 GamePresentation 重寫派車與機廠的規則；GameCore、存檔、golden、replay 不動。
+- 美術：沿用下一步晶片的玻璃樣式與 SF Symbols（`forward.end.fill`、`stop.fill`、`moon.zzz`），不畫新圖；夜色已有（決策 182），不另做。
+- 音樂：無（快轉時配樂收小留給之後）。
+
+**沒選的**（預覽是玩家會看到的樣子）：
+- **自動快轉預設開（競品的做法）**：速度沒人碰就自己變，夜裡常有車的玩家會以為壞了；研究 4.15 說看 TestFlight 回饋再決定。預覽：收班後速度自己變成「6000×」。
+- **停在首班前 30 分、或寫死 05:30**：首班 08:00 的線會白等兩個多小時；機廠出庫比首班早，固定的時間會跳過出庫。預覽：「快轉到早上 · 05:30」。
+- **停在第一列車動的那一刻（不留 10 分）**：一停下來車就已經在開，看不到早上開始。預覽：「快轉到早上 · 06:00」。
+- **把按鈕放進狀態列、速度鈕旁邊**：狀態列會在出現與消失時換版面（決策 251）。預覽：「$ 1,000 | 23:10 | ⏸ 600× ⏭ | …」。
+- **直接把時鐘設到早上**：派工單與研究都不准；午夜的帳、城市、旅客要照常跑。
+- **夜裡有照班次跑的深夜車時整晚不提供**：深夜車開之前常有一兩個小時的空檔，停在它之前比整晚不提供有用，也不會跳過它。
+
+**參考庫與外部專案**（`a91453/railway-reference-private` b3af6d8）：
+
+| 參考 | 本專案 | 分類 |
+| --- | --- | --- |
+| 全庫找 skip night、fast forward、nextDeparture、skipTime、快进、跳过、快轉（`.js`、`.ts`、`.html`） | 無 | 只找到教學的「跳過」、載入失敗時跳過圖層、後端計分的跳過，沒有跳過遊戲時間的做法 |
+| 決策 37 已移植的倍速（`Ci/` 的速度控制） | `GameSpeed` | 照用：快轉就是現有的最快速度 |
+
+外部專案：沒有另外上網搜尋。就已知的 OpenTTD（GPL-2.0）的快轉鍵與 Simutrans 的快轉，都是按著或切換成固定倍速，沒有「跑到下一列車動之前」；只讀想法，沒有複製。這段規則與程式是這個專案自己的。
+
+**存檔、golden、replay**：不動。快轉只改速度，速度本來就寫在存檔與指令紀錄裡；設定存在裝置上（`secretary.skipsQuietNights`）。
+
+**測試**（`NightSkipTests`）：有機廠時停在出庫前 10 分、之前沒有一列車動過；沒有機廠時停在 05:50（首班 06:00）；首班 08:00 停在 07:50，有機廠的更早；過午夜收班的路線到 01:00 之後才提供；全天路線、夜裡跑的貨運不提供；回庫中的列車在跑時不提供，進了機廠才提供；照班次跑的深夜車開之前停在它之前，跑完之後才到早上；沒有列車、不到 1 小時不提供；速度剛好落在停的那一分鐘；快轉與一分鐘一 tick 跑到同一時刻，世界與存檔 JSON 逐位元相同（有／沒有機廠、從 1×60、600×、1200× 開始、跨午夜的帳）；停下後再 10 分列車照常開出；改速度、暫停、「停止」、指令都會結束；暫停中按下的停下來仍是暫停；颱風預警在午夜暫停時結束並維持暫停、不暫停的設定照常跑完；設定預設關，開著時自己開始、玩家停掉的那晚不再開始，結果和手按相同；實際大小的一條路線（06:00–20:00）在 01:00 有捷徑、停在 05:50；兩種語言的字。示範地圖的路線全天營運，夜裡沒有可跳的空窗。UI 測試 `NightSkipUITests`（full lane，決策 199）：`-ui-test-world quiet-night`（同一條路線，`FeatureUITestWorld`）01:00 看得到、點得到，點了之後跑到早上、晶片消失；2026-10-21 用 `ios-build.yml` 的 `only_testing` 和速度鈕（`ToolbarSmokeTests`）、開線（`LineDraftSummaryUITests`、`Feature284To286UITests`、`NextStepChipUITests`）的類別一起跑過，全過（run 39526323794）。後來：第一版的晶片每個 tick 都讀整個世界，它在畫面上的 UI 測試（`ToolbarSmokeTests` 英文 22.5 秒，別的 PR 10.7 秒；畫面上看不到它的教學測試不變）慢了一倍，PR 的 gate 裡 `StartSaveFlowSmokeTests` 的大字回開始畫面等不到選單停好而失敗。現在晶片讀 `GameSession.nightSkipOffer`：每個 tick 之後、暫停中每個指令之後、建造暫停開關時再看一次 `nightSkip`，值變了才換，所以夜裡它不跟著每個 tick 重畫（`testTheOfferFollowsTheSkip`）。
+
+**沒有驗證的**：晶片在手機橫拿時和圖層列擠不擠、快轉時地圖上的列車與夜色看起來如何，待實機；高鐵示範的夜裡沒有在 Linux 跑（要讀真實資料，一晚的模擬很久），靠第 2、3 點的通則與照班次跑的路線的測試。
 ### 306. 行車控制＋閉塞：晚點的列車照到表定到站剩下的時間跑，追回時間，不超過車的性能與彎道限速
 
 2026-10-21。作者 2026-10-21 問「是不是還有另一種解法是調整速度的方式，讓停站少的開快一點，但不能超過設計時速上限」；決策 302「下一步」第 4 點。號碼依 #231：`main` 最大 304，305 已保留，取 306。只改 GameCore 的一個條件；存檔版本、golden schema、replay 都不動。
