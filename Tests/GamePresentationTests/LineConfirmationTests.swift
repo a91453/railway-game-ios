@@ -233,6 +233,50 @@ final class LineConfirmationTests: XCTestCase {
         XCTAssertEqual(session.message?.text, preview.shortfall)
     }
 
+    /// A second line along the first one's track, its card asking for two
+    /// trains: the cash left after eight spare trains and the first line
+    /// pays for one.
+    private func secondLineCard() throws -> GameSession {
+        let (session, stations) = try session(spent: 8)
+        session.confirmLineDraft()
+        session.confirmLine()
+        XCTAssertEqual(session.world.lines.count, 1)
+        session.startPickingLineStops(announces: false)
+        for station in stations {
+            session.selectStation(station)
+            session.addSelectedStationToLineDraft()
+        }
+        session.confirmLineDraft()
+        session.updateLineConfirmation { $0.setting(.peak, to: 2) }
+        return session
+    }
+
+    /// The cash moves on while the card is up (the first line's running
+    /// costs, hour by hour): the shortfall follows the cash there is, not
+    /// the cash when the card was worked out, so Confirm turns off once it
+    /// no longer pays.
+    func testTheShortfallFollowsTheCash() throws {
+        let session = try secondLineCard()
+        let first = try XCTUnwrap(session.lineConfirmationPreview)
+        XCTAssertNil(first.shortfall)
+        for _ in 0..<30 where session.world.economy.canAfford(first.cost) {
+            session.advance(ticks: 600)
+        }
+        XCTAssertFalse(session.world.economy.canAfford(first.cost), "the running costs took the cash below the price")
+        let later = try XCTUnwrap(session.lineConfirmationPreview)
+        XCTAssertEqual(later.cost, first.cost)
+        let shortfall = try XCTUnwrap(later.shortfall)
+        XCTAssertTrue(shortfall.contains(session.world.economy.balance.moneyText), shortfall)
+    }
+
+    /// One train is one: the track limit's words for a single train.
+    func testTheTrackLimitOfOneTrain() throws {
+        let session = try secondLineCard()
+        let preview = try XCTUnwrap(session.lineConfirmationPreview)
+        XCTAssertEqual(preview.trainsToBuy, 1)
+        XCTAssertEqual(preview.trackLimit, "1 train can wait at the line's ends at once. Once it leaves, add more with Add a Train.")
+    }
+
     /// Realistic rules run no line for the player: the ✓ makes the line at
     /// once, as before, with no card.
     func testRealisticRulesMakeTheLineAtOnce() throws {
