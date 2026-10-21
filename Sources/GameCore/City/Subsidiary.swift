@@ -162,10 +162,10 @@ extension GameWorld {
     public func subsidiaryCustomers(of building: PlacedBuilding, onDay day: Int64) -> Int64 {
         guard building.kind.isSubsidiary else { return 0 }
         let served = servedStationIDs()
-        return customers(of: building, onDay: day, served: served)
+        return customers(of: building, onDay: day, served: served, passes: dayPassDay(onDay: day))
     }
 
-    private func customers(of building: PlacedBuilding, onDay day: Int64, served: Set<StationID>) -> Int64 {
+    private func customers(of building: PlacedBuilding, onDay day: Int64, served: Set<StationID>, passes: DayPassDay) -> Int64 {
         let reach = SubsidiaryRules.reach
         func weight(of station: Station) -> Int64 {
             let dx = station.point.x - building.centre.x, dy = station.point.y - building.centre.y
@@ -205,6 +205,16 @@ extension GameWorld {
                 denominator = 10_000_000
             default:
                 break
+            }
+            // Decision 324: the day pass's holders visiting the station.
+            if let holders = passes.visits[station.id] {
+                let capture: Int64 = switch building.kind {
+                case .amusementPark: DayPass.parkCapture
+                case .departmentStore: DayPass.storeCapture
+                case .hotel: DayPass.hotelStay
+                default: 0
+                }
+                numerator += holders * capture * 10 * w
             }
         }
         if building.kind == .amusementPark, best > 0 {
@@ -260,10 +270,11 @@ extension GameWorld {
     mutating func settleSubsidiaries(day: Int64, time: GameTime) {
         guard accounts.mode == .management else { return }
         let served = servedStationIDs()
+        let passes = dayPassDay(onDay: day)
         var sales = Money.zero, cost = Money.zero
         for index in placedBuildings.indices where placedBuildings[index].kind.isSubsidiary {
             let building = placedBuildings[index]
-            let result = subsidiaryDay(of: building, customers: customers(of: building, onDay: day, served: served))
+            let result = subsidiaryDay(of: building, customers: customers(of: building, onDay: day, served: served, passes: passes))
             placedBuildings[index].books.record(sales: result.sales, cost: result.cost, day: day)
             sales = sales + result.sales
             cost = cost + result.cost

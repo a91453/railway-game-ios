@@ -1260,6 +1260,15 @@ public final class GameSession {
         }
     }
 
+    /// Sells a day pass at `price`, or stops with `nil`, through
+    /// `GameWorld.setDayPass(_:)` (decision 324).
+    public func setDayPass(_ price: Money?) {
+        perform(.setDayPass(price)) { _, _, _ in
+            guard let price else { return language.text("Day passes are no longer sold.", "已停售一日週遊券。") }
+            return language.text("Day passes on sale at \(price.centsText).", "一日週遊券開賣，每張 \(price.centsText)。")
+        }
+    }
+
     // MARK: - Game loop
 
     /// Whether the real-time loop is currently advancing the world.

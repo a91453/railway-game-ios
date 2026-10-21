@@ -425,6 +425,7 @@ extension GameWorld {
         // Decision 94: the company's buildings' rent, upkeep and tax.
         settleProperty(day: day, time: time)
         settleTourism(day: day, time: time)
+        settleDayPasses(day: day, time: time)
         settleStationCommerce(day: day, time: time)
         // Decision 183: the city's requests are judged, and as a month
         // begins its subsidies paid and its new requests drawn, before the
@@ -554,6 +555,9 @@ extension GameWorld {
         guard (-Self.maximumBalance...Self.maximumBalance).contains(economy.balance.amount) else { return "The balance is out of range." }
         guard pending.fareRevenue.amount % 100 == 0 else { return "The hour's fares must be whole dollars." }
         guard (Money(1)...FareRules.maximumFare).contains(accounts.fareBaseline) else { return "The fare baseline is out of range." }
+        if let price = accounts.dayPass {
+            guard (Money(100)...FareRules.maximumFare).contains(price), price.amount % 100 == 0 else { return "The day pass's price is out of range." }
+        }
         guard (.zero...CompanyAccounts.maximumLoan).contains(accounts.loan),
               accounts.loan.amount % CompanyAccounts.loanStep.amount == 0 else {
             return "The loan must be whole steps of $100,000, up to the most the bank lends."
@@ -610,9 +614,10 @@ extension GameWorld {
         case .monthlySubsidy: [.subsidy]
         case .dailyDepot: [.depotUpkeep]
         case .dailyStationCommerce: [.stationCommerceRevenue, .stationCommerceUpkeep]
+        case .dailyDayPass: [.dayPassSales, .dayPassFares]
         }
         guard entry.breakdown.map(\.item) == items,
-              entry.breakdown.allSatisfy({ $0.item == .fareRevenue || $0.item == .propertyRent || $0.item == .freightRevenue || $0.item == .subsidiarySales || $0.item == .tourismRevenue || $0.item == .stationCommerceRevenue || $0.item == .subsidy ? $0.amount >= .zero : $0.amount <= .zero }),
+              entry.breakdown.allSatisfy({ $0.item == .fareRevenue || $0.item == .propertyRent || $0.item == .freightRevenue || $0.item == .subsidiarySales || $0.item == .tourismRevenue || $0.item == .stationCommerceRevenue || $0.item == .subsidy || $0.item == .dayPassSales ? $0.amount >= .zero : $0.amount <= .zero }),
               entry.breakdown.reduce(Int64(0), { $0 + $1.amount.amount }) == entry.amount.amount
         else { return false }
         guard let crowding = entry.crowding else { return entry.kind != .hourlyNet }
