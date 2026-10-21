@@ -67,6 +67,8 @@
   - 決策 265 之後，PR 的 `Swift CI (gate)` 會等同一個 commit 的 `iOS App Build`，iOS 紅了 gate 就紅；所以 gate 綠就代表 iOS 也綠了。
   - iOS 失敗、重跑通過之後，gate 不會自己變綠：對 CI 那一輪按 Re-run failed jobs（`actions_run_trigger` 的 rerun_failed_jobs）。
   - 「Remember that this change passed」顯示 skipped 是正常的：同一個改動前一輪已經跑過。
+  - PR 舊 commit 的 `Swift CI (gate)` 是 skipped、旁邊有一個 `Superseded by a newer push?`：那一輪被新的 push 取代了，看 head 那一輪（決策 329）。head 上的 gate 是紅的、訊息寫「cancelled because a newer push replaced」，也是同一回事。
+  - 分片 log 裡的「swift build was killed by signal … Building once more」是工具崩潰後自動重建（決策 329），不是測試失敗；同一個 job 再崩潰一次才會紅。
   - Xcode build 有時跑兩輪，兩輪都要看。
 - main 最新一次 push 的 `ci.yml` 是綠的（`actions_list` 的 list_workflow_runs，條件 ci.yml、branch main、event push）。cancelled 是被新的 push 取代，不算紅；要看最新一個跑完的。
 
