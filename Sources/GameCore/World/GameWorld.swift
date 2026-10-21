@@ -3797,8 +3797,10 @@ public struct GameWorld: Equatable, Sendable {
         // Decision 207: with realistic operation, the time left to the
         // scheduled arrival, so a late train makes up its margin.
         // Decision 228: so does a train of real runs with traffic control
-        // off, which another train held up on its way.
-        let scheduled = realisticOperation || (!isTrafficControlEnabled && followsRealTimetable(train))
+        // off, which another train held up on its way. Decision 306: and
+        // with traffic control on and block sections, as the app's new
+        // games have it; never above what the train and the curves allow.
+        let scheduled = realisticOperation || ((!isTrafficControlEnabled || blockSections) && followsRealTimetable(train))
             ? secondsToScheduledArrival(of: train, stop: next.stop, cycle: next.cycle)
             : train.scheduledArrival(of: next.stop, cycle: next.cycle).seconds - train.scheduledDeparture(of: stop, cycle: cycle).seconds
         moved.times = ServiceTimes(
