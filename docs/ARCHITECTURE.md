@@ -14057,6 +14057,18 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 4. App：車站卡與路線清單的「收購這條線」、收購卡、「收購完成」卡、`SoundCue.lineAcquired`、String Catalog 兩種語言。
 5. push 之前先 `send_message` 遊戲規劃要 GameCore 名額（同時最多 2 個 GameCore PR 跑 CI，一次只有一件升存檔）。
 
+### 308. （預約）高鐵：沒有閉塞時的互等與追回時間
+
+session_0125dMtwyMdz7mzoBCRNa1pn 預約（#231）。這一節由那個 PR 填寫。
+
+### 314. （預約）3D 的列車標籤與路線色帶
+
+session_01Y25x9NJSKmAuP1M1K3Sf3C 預約（#231）。這一節由那個 PR 填寫。
+
+### 316. （預約）新遊戲選擇頁：主選單的「新遊戲」再選空白地圖或實景地圖
+
+session_01PK2gs3bPYXPFbbJkwsDuUP 預約（#231）。這一節由那個 PR 填寫。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。
