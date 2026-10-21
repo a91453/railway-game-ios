@@ -784,6 +784,10 @@ struct MapView: View {
                     // are, which may be by the attribution.
                     .mask { attribution.fill() }
                 }
+                // Decision 167, later: the locks on the tiles not bought.
+                .overlay(alignment: .topLeading) {
+                    MapLockMarks(session: session, camera: projection, viewport: viewport, insets: clear)
+                }
                 // Decision 109: what needs the player, over its stations.
                 .overlay(alignment: .topLeading) {
                     MapAlertBubbles(session: session, camera: projection, viewport: viewport, insets: clear)
