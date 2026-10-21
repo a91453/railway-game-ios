@@ -82,6 +82,31 @@ final class RealRailStructuresTests: XCTestCase {
     /// The Yilan Line's two long viaducts (the reference's data, from
     /// OpenStreetMap and the National Land Surveying and Mapping Center):
     /// south of Yilan towards Erjie, and through Dongshan.
+    /// A path in the middle of one long straight piece of a structure
+    /// (the bundled file's high-speed viaducts and tunnels have pieces of
+    /// 4 to 6.5 km between two points) is on it, though none of the
+    /// structure's points is near the path.
+    func testAPathWithinOneLongPieceOfAStructureIsOnIt() throws {
+        let frame = RealWorldFrame(anchor: RealWorldDemo.anchor, bounds: GameWorld.newGameBounds)
+        let latitude = RealWorldDemo.anchor.latitudeDegrees, longitude = RealWorldDemo.anchor.longitudeDegrees
+        let east = 1 / (111_320 * cos(latitude * .pi / 180))
+        let path = WorldPath([3_000.0, 4_000].map { x in
+            WorldVector(frame.worldPosition(latitude: latitude, longitude: longitude + x * east))
+        })
+        let json = try String(
+            data: JSONSerialization.data(withJSONObject: ["structures": [
+                ["system": "thsr_sched", "kind": "bridge", "points": [[longitude, latitude], [longitude + 8_000 * east, latitude]]],
+            ]]),
+            encoding: .utf8
+        )
+        let structures = try RealRailStructures(data: Data(XCTUnwrap(json).utf8))
+        let stretches = structures.stretches(along: path, frame: frame, system: "thsr_sched")
+        XCTAssertEqual(stretches.map(\.kind), [.bridge])
+        let ranges = stretches.map { ($0.range.lowerBound / metre, $0.range.upperBound / metre) }
+        XCTAssertEqual(ranges.first?.0 ?? -1, 0, accuracy: 2)
+        XCTAssertEqual(ranges.first?.1 ?? -1, 1_000, accuracy: 2)
+    }
+
     func testTheYilanLineViaducts() throws {
         let railways = try RealRailways(
             lines: Self.bundledFile("track_lines.geojson"), stations: Self.bundledFile("track_stations.geojson"),

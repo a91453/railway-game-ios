@@ -90,7 +90,12 @@ public struct RealRailStructures: Sendable, Equatable {
         var found: [TrackRise.Carried] = []
         for structure in structures where structure.system == system {
             let points = structure.points.map { WorldVector(frame.worldPosition(latitude: $0.latitude, longitude: $0.longitude)) }
-            guard points.contains(where: { box.x.contains($0.x) && box.y.contains($0.y) }) else { continue }
+            // A piece's box, not only its points: a straight viaduct's two
+            // points can lie kilometres beyond a short path along it.
+            guard zip(points, points.dropFirst()).contains(where: { a, b in
+                min(a.x, b.x) <= box.x.upperBound && box.x.lowerBound <= max(a.x, b.x)
+                    && min(a.y, b.y) <= box.y.upperBound && box.y.lowerBound <= max(a.y, b.y)
+            }) || points.contains(where: { box.x.contains($0.x) && box.y.contains($0.y) }) else { continue }
             var samples = [points[0]]
             for (a, b) in zip(points, points.dropFirst()) {
                 let steps = max(1, Int(((b - a).length / Self.sampleSpacing).rounded(.up)))
