@@ -55,6 +55,9 @@ struct Map3DPreviewScreen: View {
                       onStats: { stats = $0 })
                 .ignoresSafeArea()
                 .accessibilityIdentifier("map3D.view")
+            Map3DRainLayer(rain: Map3DRain(MapWeather(world: session.world)), detail: stats?.streetDetail ?? .full,
+                           night: Map3DLighting(at: session.world.clock.now).night)
+                .ignoresSafeArea()
             Map3DTrainLabelsView(state: trainLabels, world: session.world)
                 .ignoresSafeArea()
             if scene == nil {
@@ -368,7 +371,9 @@ private struct Map3DView: UIViewRepresentable {
     }
 
     /// Decision 230: the train models, made in code once.
-    static let models: Map3DModelPack? = Map3DModelPack.standard
+    // The city bus from its file (Map3DCityBus), or the box-built one.
+    static let models: Map3DModelPack? = Map3DCityBus.pack(
+        file: Bundle.main.url(forResource: Map3DCityBus.fileName, withExtension: Map3DCityBus.fileExtension))
 
     func makeUIView(context: Context) -> UIView {
         guard let view = Map3DMetalView.make() else {
@@ -621,6 +626,52 @@ final class Map3DTrainLabelState {
     func show(_ next: [Map3DTrainLabels.Label]) {
         let rounded = next.map { Map3DTrainLabels.Label(train: $0.train, info: $0.info, x: $0.x.rounded(), y: $0.y.rounded()) }
         if rounded != labels { labels = rounded }
+    }
+}
+
+/// Decision 320: the day's rain over the 3D map (``Map3DRain``), falling
+/// frame by frame and flashing in a storm, unless the player reduces
+/// motion: then only the light of decision 277 shows the rain. Not
+/// touchable, and not read out.
+private struct Map3DRainLayer: View, Equatable {
+    let rain: Map3DRain
+    let detail: Map3DStreetDetail
+    /// How far the day's light has gone (``Map3DLighting/night``).
+    let night: Float
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    nonisolated static func == (lhs: Map3DRainLayer, rhs: Map3DRainLayer) -> Bool {
+        lhs.rain == rhs.rain && lhs.detail == rhs.detail && lhs.night == rhs.night
+    }
+
+    var body: some View {
+        let rain = rain, detail = detail
+        let look = rain.look(night: night)
+        let colour = Color(.sRGB, red: Double(look.colour >> 16 & 0xFF) / 255, green: Double(look.colour >> 8 & 0xFF) / 255,
+                           blue: Double(look.colour & 0xFF) / 255, opacity: look.opacity)
+        return Group {
+            if rain.amount > 0, !reduceMotion {
+                // At most 60 a second: the rain looks no smoother faster.
+                TimelineView(.animation(minimumInterval: 1.0 / 60)) { timeline in
+                    Canvas { context, size in
+                        let time = timeline.date.timeIntervalSinceReferenceDate
+                        var streaks = Path()
+                        for streak in rain.streaks(at: time, width: size.width, height: size.height, detail: detail) {
+                            streaks.move(to: CGPoint(x: streak.x0, y: streak.y0))
+                            streaks.addLine(to: CGPoint(x: streak.x1, y: streak.y1))
+                        }
+                        context.stroke(streaks, with: .color(colour), style: StrokeStyle(lineWidth: Map3DRain.lineWidth, lineCap: .round))
+                        let flash = rain.flash(at: time)
+                        if flash > 0 {
+                            context.fill(Path(CGRect(origin: .zero, size: size)),
+                                         with: .color(Palette.lightning.opacity(Map3DRain.flashOpacity * flash)))
+                        }
+                    }
+                }
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }
 

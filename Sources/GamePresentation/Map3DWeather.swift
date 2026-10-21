@@ -44,7 +44,7 @@ public struct Map3DWeather: Hashable, Sendable {
 
     /// The light of the day's weather on the map: rain for rain, a
     /// thunderstorm and a typhoon (their lightning and heavier rain are the
-    /// rain streaks' to show, decision 277's next step).
+    /// rain streaks', ``Map3DRain``, decision 320).
     public init(_ weather: MapWeather) {
         switch weather.sky {
         case .clear: self = .clear
