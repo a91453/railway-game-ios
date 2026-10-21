@@ -195,6 +195,17 @@ extension GameSession {
     /// map with the real trains loaded, each whose stations all lie in the
     /// world and that the company has not bought.
     public var buyableRealLines: [RealBranchLine] {
+        // Decision 328: worked out again only when the map, the lines
+        // bought or the railways change, not at every tick while a panel
+        // asks (some 2 ms each time).
+        let key = BuyableRealLinesKey(bounds: world.bounds, anchor: world.geoAnchor, bought: world.acquisitions, railways: railwaysRevision)
+        if let memo = buyableRealLinesMemo, memo.key == key { return memo.lines }
+        let lines = workOutBuyableRealLines()
+        buyableRealLinesMemo = (key, lines)
+        return lines
+    }
+
+    private func workOutBuyableRealLines() -> [RealBranchLine] {
         guard let railways, let frame = RealWorldFrame(world: world) else { return [] }
         return RealBranchLine.names.keys.sorted().compactMap { network in
             guard let runs = railways.branchRuns[network], let names = RealBranchLine.names[network] else { return nil }
@@ -688,4 +699,13 @@ extension GameSession {
         playSound?(.lineAcquired)
         return true
     }
+}
+
+/// What ``GameSession/buyableRealLines`` is worked out from (decision 328).
+struct BuyableRealLinesKey: Equatable {
+    let bounds: WorldBounds
+    let anchor: GeoAnchor?
+    let bought: [LineAcquisition]
+    /// ``GameSession/railwaysRevision``.
+    let railways: Int
 }

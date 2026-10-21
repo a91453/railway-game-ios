@@ -90,6 +90,8 @@ struct MapView: View {
     /// Decision 304: the real lines' trains on a real-world map, on the
     /// device.
     @AppStorage(MapAmbienceSettings.realTrainsKey) private var showsRealTrains = true
+    /// Decision 328: the frame readout, off unless the player turns it on.
+    @AppStorage(MapAmbienceSettings.frameRateKey) private var showsFrameRate = false
     /// The real lines on this map and their trains (decision 304), worked
     /// out once for the map, and the game clock they are drawn at.
     @State private var realTrains: RealTrainTraffic?
@@ -673,6 +675,11 @@ struct MapView: View {
                                 .transition(.move(edge: .top).combined(with: .opacity))
                         } else {
                             TrafficLegend(traffic: traffic, language: session.language)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        if showsFrameRate {
+                            MapFrameReadout(language: session.language)
+                                .padding(.horizontal, 12)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
@@ -2114,32 +2121,35 @@ private struct MapCanvas: View, Equatable {
         let labels = labels, latitude = world.geoAnchor?.latitudeDegrees ?? 0, flowStrokes = flowStrokes
         let routePreview = routePreview, journey = journey, journeyProgress = journeyProgress, drawsLabels = drawsLabels
         return Canvas { context, size in
-            context.clip(to: Path(CGRect(origin: .zero, size: size)))
-            MapArt.drawMap(
-                world,
-                selectedTrainID: selectedTrainID,
-                highlightedTrainID: highlightedTrainID,
-                selectedStationID: network == nil ? selectedStationID : nil,
-                network: network,
-                building: building,
-                expansion: expansion,
-                traffic: traffic,
-                projection: camera,
-                edges: edges,
-                layers: layers,
-                waitingCounts: waitingCounts,
-                lines: lines,
-                routePreview: routePreview,
-                labels: labels,
-                flowStrokes: flowStrokes,
-                latitude: latitude,
-                lights: lights,
-                lineCodes: lineCodes,
-                journey: journey,
-                journeyProgress: journeyProgress,
-                drawsLabels: drawsLabels,
-                in: context
-            )
+            // Decision 328: timed for the frame readout.
+            FrameCostMeter.shared.measure(.track) {
+                context.clip(to: Path(CGRect(origin: .zero, size: size)))
+                MapArt.drawMap(
+                    world,
+                    selectedTrainID: selectedTrainID,
+                    highlightedTrainID: highlightedTrainID,
+                    selectedStationID: network == nil ? selectedStationID : nil,
+                    network: network,
+                    building: building,
+                    expansion: expansion,
+                    traffic: traffic,
+                    projection: camera,
+                    edges: edges,
+                    layers: layers,
+                    waitingCounts: waitingCounts,
+                    lines: lines,
+                    routePreview: routePreview,
+                    labels: labels,
+                    flowStrokes: flowStrokes,
+                    latitude: latitude,
+                    lights: lights,
+                    lineCodes: lineCodes,
+                    journey: journey,
+                    journeyProgress: journeyProgress,
+                    drawsLabels: drawsLabels,
+                    in: context
+                )
+            }
         }
     }
 }
@@ -2184,12 +2194,14 @@ private struct MapLabelCanvas: View, Equatable {
         let labels = labels, lineCodes = lineCodes, latitude = world.geoAnchor?.latitudeDegrees ?? 0
         let network = network, routePreview = routePreview, edges = edges
         return Canvas { context, size in
-            context.clip(to: Path(CGRect(origin: .zero, size: size)))
-            MapArt.drawStationLabels(
-                world, layers: layers, waitingCounts: waitingCounts, labels: labels, latitude: latitude,
-                lineCodes: lineCodes, projection: camera, in: context
-            )
-            MapArt.drawBuildMarks(world, network: network, routePreview: routePreview, projection: camera, cached: edges, in: context)
+            FrameCostMeter.shared.measure(.labels) {
+                context.clip(to: Path(CGRect(origin: .zero, size: size)))
+                MapArt.drawStationLabels(
+                    world, layers: layers, waitingCounts: waitingCounts, labels: labels, latitude: latitude,
+                    lineCodes: lineCodes, projection: camera, in: context
+                )
+                MapArt.drawBuildMarks(world, network: network, routePreview: routePreview, projection: camera, cached: edges, in: context)
+            }
         }
         .allowsHitTesting(false)
     }
@@ -2277,19 +2289,21 @@ private struct MapBaseCanvas: View, Equatable {
         // as before.
         return TimelineView(.animation(paused: growth == nil)) { timeline in
             Canvas { context, size in
-                context.clip(to: Path(CGRect(origin: .zero, size: size)))
-                MapArt.drawBase(
-                    bounds: bounds,
-                    drawsLand: drawsLand,
-                    skyline: skyline,
-                    growth: growth.map { ($0.growth, elapsed: timeline.date.timeIntervalSince($0.start)) },
-                    growthOnly: growthOnly,
-                    layer: layer,
-                    lights: lights,
-                    streets: streets,
-                    projection: camera,
-                    in: context
-                )
+                FrameCostMeter.shared.measure(.ground) {
+                    context.clip(to: Path(CGRect(origin: .zero, size: size)))
+                    MapArt.drawBase(
+                        bounds: bounds,
+                        drawsLand: drawsLand,
+                        skyline: skyline,
+                        growth: growth.map { ($0.growth, elapsed: timeline.date.timeIntervalSince($0.start)) },
+                        growthOnly: growthOnly,
+                        layer: layer,
+                        lights: lights,
+                        streets: streets,
+                        projection: camera,
+                        in: context
+                    )
+                }
             }
         }
         .allowsHitTesting(false)
@@ -2361,21 +2375,23 @@ private struct MapTrainCanvas: View, Equatable {
         let beats = !reduceMotion && (traffic.waits.contains(where: \.isDeadlocked) || (running && !traffic.waits.isEmpty))
         return TimelineView(.animation(paused: !animating && !beats)) { timeline in
             Canvas { context, size in
-                context.clip(to: Path(CGRect(origin: .zero, size: size)))
-                MapArt.drawTrains(
-                    motion,
-                    progress: animating ? motion.progress(at: timeline.date.timeIntervalSinceReferenceDate) : 1,
-                    selectedTrainID: selectedTrainID,
-                    lights: lights,
-                    plain: plain,
-                    traffic: traffic,
-                    depotRuns: depotRuns,
-                    deadlock: TrafficOverlay.deadlockStrength(at: timeline.date.timeIntervalSinceReferenceDate, reduceMotion: reduceMotion),
-                    pulse: MapProblems.pulse(at: timeline.date.timeIntervalSinceReferenceDate, reduceMotion: reduceMotion, running: running),
-                    language: language,
-                    projection: camera,
-                    in: context
-                )
+                FrameCostMeter.shared.measure(.trains) {
+                    context.clip(to: Path(CGRect(origin: .zero, size: size)))
+                    MapArt.drawTrains(
+                        motion,
+                        progress: animating ? motion.progress(at: timeline.date.timeIntervalSinceReferenceDate) : 1,
+                        selectedTrainID: selectedTrainID,
+                        lights: lights,
+                        plain: plain,
+                        traffic: traffic,
+                        depotRuns: depotRuns,
+                        deadlock: TrafficOverlay.deadlockStrength(at: timeline.date.timeIntervalSinceReferenceDate, reduceMotion: reduceMotion),
+                        pulse: MapProblems.pulse(at: timeline.date.timeIntervalSinceReferenceDate, reduceMotion: reduceMotion, running: running),
+                        language: language,
+                        projection: camera,
+                        in: context
+                    )
+                }
             }
         }
         .allowsHitTesting(false)
@@ -2408,12 +2424,14 @@ private struct RealTrainCanvas: View, Equatable {
         return TimelineView(.animation(paused: !animating)) { timeline in
             Canvas { context, size in
                 guard RealTrainTraffic.isShown(referenceSize: camera.referenceSize) else { return }
-                let second = clock.second(at: timeline.date.timeIntervalSinceReferenceDate, glides: animating)
-                let dots = traffic.trains(
-                    at: second, on: clock.today, dayBefore: clock.dayBefore, frame: frame,
-                    visible: camera.visibleRegion.expanded(by: 12 / camera.pointsPerUnit)
-                )
-                MapArt.drawRealTrains(dots.prefix(RealTrainTraffic.mostDrawn), projection: camera, in: context)
+                FrameCostMeter.shared.measure(.realTrains) {
+                    let second = clock.second(at: timeline.date.timeIntervalSinceReferenceDate, glides: animating)
+                    let dots = traffic.trains(
+                        at: second, on: clock.today, dayBefore: clock.dayBefore, frame: frame,
+                        visible: camera.visibleRegion.expanded(by: 12 / camera.pointsPerUnit)
+                    )
+                    MapArt.drawRealTrains(dots.prefix(RealTrainTraffic.mostDrawn), projection: camera, in: context)
+                }
             }
         }
         .allowsHitTesting(false)
@@ -2438,16 +2456,18 @@ private struct MapWeatherLayer: View, Equatable {
         let weather = weather, reduceMotion = reduceMotion, typhoonStations = typhoonStations, camera = camera
         return TimelineView(.animation(paused: reduceMotion || weather.sky == .clear)) { timeline in
             Canvas { context, size in
-                context.clip(to: Path(CGRect(origin: .zero, size: size)))
-                MapArt.drawWeather(
-                    weather,
-                    time: timeline.date.timeIntervalSinceReferenceDate,
-                    reduceMotion: reduceMotion,
-                    typhoonStations: typhoonStations.map { camera.screenPoint(of: $0) },
-                    stationRadius: MapArt.stationRadius(camera),
-                    size: size,
-                    in: context
-                )
+                FrameCostMeter.shared.measure(.weather) {
+                    context.clip(to: Path(CGRect(origin: .zero, size: size)))
+                    MapArt.drawWeather(
+                        weather,
+                        time: timeline.date.timeIntervalSinceReferenceDate,
+                        reduceMotion: reduceMotion,
+                        typhoonStations: typhoonStations.map { camera.screenPoint(of: $0) },
+                        stationRadius: MapArt.stationRadius(camera),
+                        size: size,
+                        in: context
+                    )
+                }
             }
         }
         .allowsHitTesting(false)
@@ -3184,5 +3204,68 @@ struct StoredMapLayerSheet: View {
         } header: {
             Text("Map Style")
         } })
+    }
+}
+
+/// Decision 328: the frame readout a player turns on in Settings: how many
+/// frames a second the flat map draws, and, tapped, the longest frame and
+/// what each part of the map took (``FrameCostMeter``), as the 3D map
+/// shows its CPU and GPU times.
+private struct MapFrameReadout: View {
+    let language: DisplayLanguage
+    @State private var reading: FrameCostReading?
+    @State private var showsDetails = false
+    @State private var link = FrameReadoutLink()
+
+    var body: some View {
+        Button {
+            showsDetails.toggle()
+        } label: {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(verbatim: reading.map { "\(Int($0.framesPerSecond.rounded())) fps" } ?? "– fps")
+                    .font(.headline.monospacedDigit())
+                if showsDetails, let reading {
+                    ForEach(reading.lines(in: language), id: \.self) { line in
+                        Text(verbatim: line)
+                    }
+                    .font(.caption.monospacedDigit())
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("map.frameRate")
+        .onAppear { link.start { reading = $0 } }
+        .onDisappear { link.stop() }
+    }
+}
+
+/// The display link behind ``MapFrameReadout``: it fires when the main
+/// thread is free to draw a frame, so its gaps are the main thread busy.
+@MainActor
+private final class FrameReadoutLink: NSObject {
+    private var link: CADisplayLink?
+    private var onReading: ((FrameCostReading) -> Void)?
+
+    func start(_ onReading: @escaping (FrameCostReading) -> Void) {
+        self.onReading = onReading
+        guard link == nil else { return }
+        FrameCostMeter.shared.isOn = true
+        let link = CADisplayLink(target: self, selector: #selector(frame(_:)))
+        link.add(to: .main, forMode: .common)
+        self.link = link
+    }
+
+    func stop() {
+        link?.invalidate()
+        link = nil
+        onReading = nil
+        FrameCostMeter.shared.isOn = false
+    }
+
+    @objc private func frame(_ link: CADisplayLink) {
+        if let reading = FrameCostMeter.shared.frame(at: link.timestamp) { onReading?(reading) }
     }
 }
