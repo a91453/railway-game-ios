@@ -419,7 +419,7 @@ extension GameWorld {
     func berthChange(memo: inout DirectionMemo) -> Train? {
         guard isTrafficControlEnabled else { return nil }
         let idle = Set(trains.lazy.filter { $0.execution == nil && $0.position != nil }.map(\.id))
-        guard !idle.isEmpty else { return nil }
+        guard !idle.isEmpty || !blockSections else { return nil }
         for train in trains.sorted(by: { $0.id < $1.id }) {
             guard case .travellingToStop(let stop, let cycle)? = train.execution, train.movement.rate > 0,
                   let position = train.position, isFollowing(train, memo: &memo)
@@ -427,7 +427,11 @@ extension GameWorld {
             let step = travelling(train, distance: 1, memo: &memo)
             guard step.position == train.position, step.cursor == train.movement.cursor else { continue }
             let blocking = blockedTrack(except: train.id, among: idle, holders: trackHolders(memo: &memo))
-            guard blocking.blocks(envelopeCover(of: train), in: network) else { continue }
+            // Decision 308: or, without block sections, it waits short of a
+            // line's train ending its service on its berth.
+            guard blocking.blocks(envelopeCover(of: train), in: network)
+                || approachesStandingTrain(train, along: envelopeCover(of: train), holders: trackHolders(memo: &memo))
+            else { continue }
             let station = train.timetable[stop].station
             // The berths the other trains on their way there will stand at.
             var taken: Set<TrackEdgeID> = []
