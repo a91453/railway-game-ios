@@ -4,7 +4,7 @@
 
 `a91453/railway-reference-private` → `Railway/game-art-previews/docs/art/station-kit-2026-10-21/`
 
-公開遊戲庫保留原生生成碼、工具、測試、這份入口及一張總覽，依 CLAUDE.md 的大型預覽安排交付。
+[私有素材 PR #25](https://github.com/a91453/railway-reference-private/pull/25) 包含全部模型、GLB、圖片與離線檢視頁。公開遊戲庫保留原生生成碼、工具、測試、這份入口及一張總覽，依 CLAUDE.md 的大型預覽安排交付。
 
 ![車站與零件總覽](overview.png)
 
