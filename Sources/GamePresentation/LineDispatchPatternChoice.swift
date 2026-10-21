@@ -9,6 +9,10 @@ public struct LineDispatchPatternChoice: Hashable, Sendable, Identifiable {
     public let pattern: DispatchPattern
     public var id: DispatchPattern { pattern }
 
+    public init(pattern: DispatchPattern) {
+        self.pattern = pattern
+    }
+
     /// The staggers the menu offers, in minutes.
     public static let staggers: [Int64] = [2, 3, 5, 10, 15, 20, 30]
 
