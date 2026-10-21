@@ -42,13 +42,16 @@ struct Map3DPreviewScreen: View {
     @State private var compass = Map3DCompassState()
     @State private var cameraLink = Map3DCameraLink()
     @AppStorage(LinePalette.key) private var linePalette: LinePalette = .standard
+    /// Decision 238's later note: the 3D look chosen in Settings.
+    @AppStorage(Map3DQuality.key) private var quality: Map3DQuality = .automatic
 
     var body: some View {
         let language = DisplayLanguage.app
         ZStack {
             Map3DView(scene: scene, sceneVersion: sceneVersion, lighting: Map3DLighting(at: session.world.clock.now),
                       weather: Map3DWeather(MapWeather(world: session.world)), feed: feed,
-                      start: handedOver, openedAt: openedAt, farOut: farOut, compass: compass, cameraLink: cameraLink, onStats: { stats = $0 })
+                      start: handedOver, openedAt: openedAt, farOut: farOut, compass: compass, cameraLink: cameraLink, quality: quality,
+                      onStats: { stats = $0 })
                 .ignoresSafeArea()
                 .accessibilityIdentifier("map3D.view")
             if scene == nil {
@@ -336,6 +339,7 @@ private struct Map3DView: UIViewRepresentable {
     let compass: Map3DCompassState
     /// Decision 313: where the screen reads the camera, for the 2D button.
     let cameraLink: Map3DCameraLink
+    let quality: Map3DQuality
     let onStats: @MainActor (Map3DMetalView.Stats) -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -374,6 +378,7 @@ private struct Map3DView: UIViewRepresentable {
         view.lighting = lighting
         view.weather = weather
         view.onStats = onStats
+        view.quality = quality
         context.coordinator.farOut = farOut
         guard let scene, context.coordinator.shownVersion != sceneVersion else { return }
         let first = context.coordinator.shownVersion == nil
