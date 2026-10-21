@@ -43,12 +43,14 @@ public enum Map3DStreetModel: String, CaseIterable, Sendable {
     case lowFloorBus
     /// A three-axle high-deck touring coach, in off-white and warm red.
     case coachBus
+    /// Rounded cab-over midibus, in warm white and teal.
+    case midiBus
 
     /// The model's name in ``Map3DModelPack``.
     public var modelName: String { "life-" + rawValue }
 
     /// Any of the full-size buses or the high-roof shuttle.
-    public var isBus: Bool { self == .bus || self == .shuttleBus || self == .lowFloorBus || self == .coachBus }
+    public var isBus: Bool { self == .bus || self == .shuttleBus || self == .lowFloorBus || self == .coachBus || self == .midiBus }
 
     /// Whether it is a figure on foot.
     public var isPerson: Bool { self == .walking || self == .standing }
@@ -73,6 +75,7 @@ public enum Map3DStreetModel: String, CaseIterable, Sendable {
         case .shuttleBus: return Map3DShuttleBus.model()
         case .lowFloorBus: return Map3DLowFloorBus.model()
         case .coachBus: return Map3DCoachBus.model()
+        case .midiBus: return Map3DMidiBus.model()
         case .walking, .standing:
             // A block figure 1.68 m tall: legs, a body and sleeves in the
             // instance's colour, a head and its hair.
@@ -563,7 +566,7 @@ public struct Map3DStreetLife: Sendable {
                 let model: Map3DStreetModel
                 if lane.buses, spacing >= Self.busSpacing, frame.buses < Self.mostBuses, r(5) < Self.busShare {
                     let variant = r(6)
-                    model = variant < 0.30 ? .shuttleBus : variant < 0.65 ? .lowFloorBus : variant < 0.85 ? .coachBus : .bus
+                    model = variant < 0.30 ? .shuttleBus : variant < 0.65 ? .lowFloorBus : variant < 0.85 ? .coachBus : variant < 0.95 ? .midiBus : .bus
                 } else if lane.scooters {
                     model = kind < 0.5 ? .scooter : kind < 0.62 ? .scooterPair : kind < 0.9 ? .car : .van
                 } else {
@@ -575,7 +578,7 @@ public struct Map3DStreetLife: Sendable {
                 let away = Map3DPoint(foot.x - target.x, 0, foot.z - target.z).length
                 // Coming out of and going into the road's ends.
                 // Use the chosen bus body length, rather than the car fade distance.
-                let ends = min(max(min(along, length - along) / (model == .shuttleBus ? Map3DShuttleBus.length : model == .lowFloorBus ? Map3DLowFloorBus.length : model == .coachBus ? Map3DCoachBus.length : model == .bus ? 12 : 4), 0), 1)
+                let ends = min(max(min(along, length - along) / (model == .shuttleBus ? Map3DShuttleBus.length : model == .lowFloorBus ? Map3DLowFloorBus.length : model == .coachBus ? Map3DCoachBus.length : model == .midiBus ? Map3DMidiBus.length : model == .bus ? 12 : 4), 0), 1)
                 let size = Self.fade(away, reach: reach) * ends
                 guard size > 0, let index = Self.models[model] else { continue }
                 let paints = model.isBus ? Self.busPaints : model.isScooter ? Self.scooterPaints : Self.carPaints

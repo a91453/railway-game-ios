@@ -1,0 +1,418 @@
+{
+  "status": "VERIFIED",
+  "environment": "Linux / Swift 6.4 / Node / Chromium WebGL 2",
+  "new_vehicle_types": 1,
+  "comparison_models": 4,
+  "models": 5,
+  "views": 35,
+  "triangles": 10203,
+  "maximum_triangles": 2884,
+  "checks": [
+    "all native vertices round-trip through the game loader",
+    "native / GLB / PNG SHA-256",
+    "complete native-to-GLB conversion",
+    "one new rounded midibus type and four existing bus comparisons",
+    "all seven transparent views nonempty and unclipped",
+    "same-scale fleet uses all five original vertex sets and translations only",
+    "opaque finite new native bus; reference bus retains instance-tinted paint"
+  ],
+  "not_verified": [
+    "iPhone / iPad Metal rendering and performance",
+    "on-device App appearance, vehicle collision physics or wheel/door animation",
+    "wheel/door animation, actual vehicle brand or engineering dimensions",
+    "pixel comparison with original owner views / private source browser; raw sources are not redistributed"
+  ],
+  "browser": {
+    "status": "VERIFIED",
+    "models_loaded": 5,
+    "pngs_decoded": 35,
+    "checks": [
+      "new bus / reference / Chinese filtering / all 35 PNG decode",
+      "seven directions",
+      "pointer orbit changes rendered geometry",
+      "zoom",
+      "PNG / native / GLB download hashes",
+      "390 px without horizontal overflow",
+      "no external requests / missing resources / JavaScript errors"
+    ]
+  },
+  "fleet_decode": {
+    "status": "VERIFIED",
+    "size": [
+      1200,
+      900
+    ],
+    "visible_bounds": [
+      186,
+      107,
+      1097,
+      766
+    ]
+  },
+  "png_decode": {
+    "status": "VERIFIED",
+    "decoder": "Pillow full RGBA decode",
+    "views": [
+      {
+        "path": "views/life-midiBus/top.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 30357
+      },
+      {
+        "path": "views/life-midiBus/bottom.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 30358
+      },
+      {
+        "path": "views/life-midiBus/left.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 33759
+      },
+      {
+        "path": "views/life-midiBus/right.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 33759
+      },
+      {
+        "path": "views/life-midiBus/front.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 83812
+      },
+      {
+        "path": "views/life-midiBus/back.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 83811
+      },
+      {
+        "path": "views/life-midiBus/isometric.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 45836
+      },
+      {
+        "path": "views/life-shuttleBus/top.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 36762
+      },
+      {
+        "path": "views/life-shuttleBus/bottom.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 36762
+      },
+      {
+        "path": "views/life-shuttleBus/left.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 37591
+      },
+      {
+        "path": "views/life-shuttleBus/right.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 37603
+      },
+      {
+        "path": "views/life-shuttleBus/front.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 78701
+      },
+      {
+        "path": "views/life-shuttleBus/back.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 78700
+      },
+      {
+        "path": "views/life-shuttleBus/isometric.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 48678
+      },
+      {
+        "path": "views/life-lowFloorBus/top.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 24113
+      },
+      {
+        "path": "views/life-lowFloorBus/bottom.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 24115
+      },
+      {
+        "path": "views/life-lowFloorBus/left.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 26828
+      },
+      {
+        "path": "views/life-lowFloorBus/right.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 26822
+      },
+      {
+        "path": "views/life-lowFloorBus/front.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 78124
+      },
+      {
+        "path": "views/life-lowFloorBus/back.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 78114
+      },
+      {
+        "path": "views/life-lowFloorBus/isometric.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 38382
+      },
+      {
+        "path": "views/life-coachBus/top.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 22385
+      },
+      {
+        "path": "views/life-coachBus/bottom.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 22383
+      },
+      {
+        "path": "views/life-coachBus/left.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 27494
+      },
+      {
+        "path": "views/life-coachBus/right.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 27495
+      },
+      {
+        "path": "views/life-coachBus/front.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 72067
+      },
+      {
+        "path": "views/life-coachBus/back.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 72067
+      },
+      {
+        "path": "views/life-coachBus/isometric.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 38496
+      },
+      {
+        "path": "views/life-bus/top.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 23304
+      },
+      {
+        "path": "views/life-bus/bottom.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 23118
+      },
+      {
+        "path": "views/life-bus/left.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 24877
+      },
+      {
+        "path": "views/life-bus/right.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 24878
+      },
+      {
+        "path": "views/life-bus/front.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 78628
+      },
+      {
+        "path": "views/life-bus/back.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 78630
+      },
+      {
+        "path": "views/life-bus/isometric.png",
+        "alpha_range": [
+          0,
+          255
+        ],
+        "pixels": 37965
+      }
+    ]
+  },
+  "local_tests": {
+    "status": "VERIFIED",
+    "environment": "Linux Swift6.4 warnings-as-errors",
+    "xctest_count": 53,
+    "suites": [
+      "Map3DMidiBusTests",
+      "Map3DCoachBusTests",
+      "Map3DLowFloorBusTests",
+      "Map3DShuttleBusTests",
+      "Map3DCityBusTests",
+      "Map3DStreetLifeTests",
+      "Map3DModelTests",
+      "Map3DModelFileTests"
+    ],
+    "node_tests": 4,
+    "log_sha256": "9453048bce0ef4c68971b060467e37b7e9c3c358dff8c32e559e67a177f14f60"
+  },
+  "manual_visual_review": {
+    "status": "VERIFIED",
+    "images": [
+      "previews/overview.png",
+      "previews/directions.png",
+      "previews/style-checks.png",
+      "previews/fleet.png"
+    ],
+    "checks": [
+      "roof no coplanar two-colour overlap",
+      "front/rear/side/underside",
+      "supported glazing and equipment",
+      "four backgrounds and small sizes",
+      "same-camera native fleet proportions"
+    ],
+    "limitations": "Linux WebGL previews; not a device Metal render"
+  },
+  "comparison_preservation": {
+    "status": "VERIFIED",
+    "prior_zip_sha256": "808e27ec0ac54be39627bf5df1cd2e76271407a27b49ac9de0dffd5ff63aaf05",
+    "files": {
+      "models/life-shuttleBus.m3dmodel": {
+        "bytes": 74812,
+        "sha256": "19a7c58d456325eb9b249a327ac27c5392d8991a2ada71dfdf538d812960f49a",
+        "identical_to_coach_v2": true
+      },
+      "models/life-shuttleBus.glb": {
+        "bytes": 139048,
+        "sha256": "44fca19c2728244eda732b2fc2db7dcbaa41c41a379d733a410c49a7e87a8ba6",
+        "identical_to_coach_v2": true
+      },
+      "models/life-lowFloorBus.m3dmodel": {
+        "bytes": 115272,
+        "sha256": "f57038ee0f8470a1bb99075bdefc23da7076cf9c5a2f102958f616436788e45a",
+        "identical_to_coach_v2": true
+      },
+      "models/life-lowFloorBus.glb": {
+        "bytes": 213760,
+        "sha256": "82c28e5b484c5754a7d442304a097053ac9c770ebc0bc5f46b6366445cc2b664",
+        "identical_to_coach_v2": true
+      },
+      "models/life-coachBus.m3dmodel": {
+        "bytes": 150220,
+        "sha256": "8a4a68f2a831ea2d9cc69095c07a33482ebe915c461005bb170c4023b0965371",
+        "identical_to_coach_v2": true
+      },
+      "models/life-coachBus.glb": {
+        "bytes": 278276,
+        "sha256": "f6fa2c68b159e2919f63c016bc165dacb522232e1466e84178a663d4eface4d7",
+        "identical_to_coach_v2": true
+      },
+      "models/life-bus.m3dmodel": {
+        "bytes": 83076,
+        "sha256": "59b4ce18dddb93f431d2400ac8179784d5f63c8b8fbc51f8c1e23fc1ea896334",
+        "identical_to_coach_v2": true
+      },
+      "models/life-bus.glb": {
+        "bytes": 154276,
+        "sha256": "fd9a27a4280cae60b1f50c2b497eb633aaeeacebbad3797357e6282e2d4b832f",
+        "identical_to_coach_v2": true
+      }
+    }
+  }
+}

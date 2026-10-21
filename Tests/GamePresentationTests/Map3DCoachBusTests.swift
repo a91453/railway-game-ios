@@ -66,10 +66,10 @@ final class Map3DCoachBusTests: XCTestCase {
             XCTAssertEqual(ray(from:Map3DPoint(x,1.0,z),direction:Map3DPoint(0,-1,0),vertices:m.vertices),0.27,accuracy:0.001,"Feet fill the whole roof-to-HVAC gap")
         } }
     }
-    func testFourBusTypesKeepTheTrafficPopulationAndSafeLengthSpacing() throws {
+    func testFiveBusTypesKeepTheTrafficPopulationAndSafeLengthSpacing() throws {
         let types=Map3DStreetModel.allCases.filter(\.isBus)
         let ids=try types.map { try XCTUnwrap(Map3DStreetLife.models[$0]) }
-        XCTAssertEqual(Set(ids).count,4)
+        XCTAssertEqual(Set(ids).count,5)
         let coachID=try XCTUnwrap(Map3DStreetLife.models[.coachBus])
         XCTAssertEqual(Map3DModelPack.standard.models[coachID].vertices,Map3DCoachBus.model().vertices)
         let path=try XCTUnwrap(Map3DStreetLife.Path([.zero,Map3DPoint(2000,0,0)]))
@@ -95,7 +95,7 @@ final class Map3DCoachBusTests: XCTestCase {
             let b=life.frame(target:Map3DPoint(1000,0,0),distance:1200,time:60,detail:.full,activity:.init())
             XCTAssertEqual(a.vehicles,b.vehicles);XCTAssertEqual(b.buses,0)
         }
-        XCTAssertTrue(counts.values.allSatisfy { $0>0 },"All four types remain reachable: \(counts)")
+        XCTAssertTrue(counts.values.allSatisfy { $0>0 },"All five types remain reachable: \(counts)")
         XCTAssertEqual(Double(counts.values.reduce(0,+))/Double(total),Double(Map3DStreetLife.busShare),accuracy:0.02)
         XCTAssertGreaterThan(Map3DStreetLife.busSpacing,Map3DCoachBus.length+3)
     }
