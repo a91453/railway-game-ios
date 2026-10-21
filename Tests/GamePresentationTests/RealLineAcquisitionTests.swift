@@ -91,7 +91,7 @@ final class RealLineAcquisitionTests: XCTestCase {
     /// rules (decision 258), where trains that met at a station of more
     /// than one track once waited there for good.
     func testEveryLineOnSaleIsBoughtOverTheRealGroundAndRunsItsDay() throws {
-        for network in ["PINGXI", "SHENAO", "JIJI", "NEIWAN"] {
+        for network in ["PINGXI", "SHENAO", "JIJI", "NEIWAN", "LIUJIA", "SHALUN"] {
             let session = try game(round: network, side: 1 << 21, heights: true, rules: .simple)
             let line = try line(network, in: session)
             let offer = session.realLineOffer(for: line)
@@ -128,7 +128,7 @@ final class RealLineAcquisitionTests: XCTestCase {
     /// of ``RealWorldDemoGroundTests/testTheTrackFollowsTheRealStructures()``.
     func testALineBoughtFollowsTheRealStructures() throws {
         var tunnel = (inside: 0, all: 0), carried = (up: 0, all: 0), ground = (off: 0, all: 0)
-        for network in ["PINGXI", "SHENAO", "JIJI", "NEIWAN"] {
+        for network in ["PINGXI", "SHENAO", "JIJI", "NEIWAN", "LIUJIA", "SHALUN"] {
             let session = try game(round: network, side: 1 << 21, heights: true)
             let offer = session.realLineOffer(for: try line(network, in: session))
             let acquisition = try XCTUnwrap(offer.acquisition, "\(network): \(offer.problem ?? "")")
@@ -180,12 +180,16 @@ final class RealLineAcquisitionTests: XCTestCase {
         print("tunnels \(tunnel), bridges and viaducts \(carried), ground \(ground)")
         XCTAssertGreaterThan(tunnel.all, 20)
         XCTAssertGreaterThanOrEqual(Double(tunnel.inside), 0.85 * Double(tunnel.all), "\(tunnel)")
-        // Measured: 6 of 10. The 4 left are Neiwan's 499 m bridge between
+        // Measured: 113 of 125. Four left are Neiwan's 499 m bridge between
         // Zhudong and Hengshan, built on the ground (embankment
         // and level): 10 m up (``TrackRise/carriedHeight``) within the
-        // grade clashes there, and the bound is let go.
+        // grade clashes there, and the bound is let go. The other eight
+        // are the Liujia and Shalun Lines' viaducts within 300 m of
+        // Liujia, Chang Jung Christian University and Shalun, stations
+        // the real line raises but the game stands on the ground
+        // (decision 132): the track climbs to the viaduct beyond them.
         XCTAssertGreaterThan(carried.all, 8)
-        XCTAssertGreaterThanOrEqual(carried.up, carried.all - 4, "\(carried)")
+        XCTAssertGreaterThanOrEqual(carried.up, carried.all - 12, "\(carried)")
         XCTAssertGreaterThan(ground.all, 300)
         XCTAssertLessThanOrEqual(Double(ground.off), 0.04 * Double(ground.all), "\(ground)")
     }

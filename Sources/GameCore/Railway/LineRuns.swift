@@ -287,7 +287,9 @@ extension GameWorld {
     /// now for game day `day`: one without a service, placed, with a rate
     /// above 0, stopped at the run's first stop, and able to drive it from
     /// there; under traffic control (Stage T) also able to take the route
-    /// of its first departure now. With its index and timetable.
+    /// of its first departure now, or the route its line names for that
+    /// leg (decision 323), which it leaves by first when it can (decision
+    /// 61). With its index and timetable.
     func readyRunTrain(of line: ServiceLine, _ run: LineRun, day: Int64) -> (index: Int, timetable: [ScheduledStop])? {
         let first = line.stops[run.from]
         for id in line.trains {
@@ -298,7 +300,10 @@ extension GameWorld {
             else { continue }
             let timetable = trip.timetable(run, calling: line.stops, day: day, sentOutAt: clock.now)
             if isTrafficControlEnabled, let leaving = sentOut(train, on: timetable), case .held = reservingDeparture(leaving) {
-                continue
+                var memo = PathMemo()
+                guard case .setsOff(let preferred, _)? = preferredLeaving(dispatched(train, on: timetable), stop: 0, cycle: 0, memo: &memo),
+                      case .granted = reserving(preferred, following: blockSections)
+                else { continue }
             }
             return (index, timetable)
         }
@@ -308,12 +313,17 @@ extension GameWorld {
     /// `train` sent out now on `timetable`, as it would be once it has left
     /// the first call.
     func sentOut(_ train: Train, on timetable: [ScheduledStop]) -> Train? {
+        leaving(dispatched(train, on: timetable), stop: 0, cycle: 0).train
+    }
+
+    /// `train` given `timetable` now, waiting at its first call.
+    private func dispatched(_ train: Train, on timetable: [ScheduledStop]) -> Train {
         var sent = train
         sent.timetable = timetable
         sent.timetablePeriod = nil
         sent.execution = .waitingAtStop(0)
         sent.times = ServiceTimes(arrival: clock.now)
-        return leaving(sent, stop: 0, cycle: 0).train
+        return sent
     }
 
     /// The departure `train`, idle on a line with runs, is due to make now
