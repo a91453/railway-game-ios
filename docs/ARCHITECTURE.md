@@ -13883,6 +13883,180 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - **VERIFIED**（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`Map3DHandoffTests`、`Map3DTests`、`Map3DCompassTests` 通過；改到的 App 檔通過 `swiftc -parse`。
 - **UNVERIFIED**：App 的編譯（`ios-build.yml`）；兩個交接的 UI 測試（full lane，PR 用 `only_testing` 跑）；實機的手感與誤觸（TestFlight，HANDOFF §7.5）。
 
+### 315. 收購真實支線（設計）：實景地圖上把一條真實支線連軌道、車站、列車與真實班次買下來
+
+2026-10-21。NEXT_PRIORITIES §19 第 9 名、§20.1，作者 2026-10-21（「收購整條線……會讓玩法變有趣嗎」→「好 排進去」）。遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 派工給 session_017RbiiqGJTsLWDSz9q4Dukd。號碼依 #231：main 最大 313（314 保留給 3D 車頭標籤與色帶），取 315。分兩步：**第 1 步只有這一頁設計**（只改文件）；**第 2 步照設計實作**，升存檔 66，等第 1 步合併、規劃 session 給 GameCore 名額後才 push。golden schema 與 replay 兩步都不動。
+
+**為什麼**：實景地圖上已經畫著真實的支線，列車照時刻在跑（決策 304），但那些車只是畫面。後期玩家錢多了，沒有一個要存錢的大目標。收購讓玩家把一條真實的地方支線整條接過來：軌道、車站、列車和真實的班次一次到手，接著用它接自己的線、接轉乘。地方支線換經營者在真實世界也有（集集線 1927 年由總督府從台灣電力收購，決策 289）。
+
+**已經有的、這次只是包起來**：
+- 沿真實鐵路描線（決策 213，`RealRailwayTraces`、`tracePlan`、`PlayerCommand.buildTrackChain`）：照真實中心線鋪軌，全成或全不成。
+- 路線照真實班次發車（決策 133，`LineRun`、`setLineRuns`）與平溪線的真實班次檔（`tra_pingxi_runs.json`，含車組每天回到原處的檢查）。
+- 支線的資料與報告（決策 289，`BranchLineChallenge`、`JijiReportTests`：集集線全線在平地約 $530 萬，五處待避線照 `tra_overtake_tracks.json`）。
+- 一鍵派車（`PlayerCommand.autoService`）與確認路線卡（決策 303）：一個指令裡建路線、待避線與列車。
+- 真實車站的運量（決策 298，`RealRidership`、`Station.transferPoints`）。
+
+#### 1. 哪幾條線可以買
+
+只開放台鐵的**支線**，而且只在實景地圖（世界有 `geoAnchor`）上。幹線（縱貫線、山海線、宜蘭線、北迴、南迴、臺東、屏東）與高鐵不開放：75.1 的玩家不想把台鐵、高鐵整個接過來，幹線的班次也是城際列車、不是一條地方線容得下的。
+
+| 線（`tra.json` 的 `id`） | 區間 | 長度 | 站數 | 已打包的班次 | 第 2 步 |
+| --- | --- | --: | --: | --- | --- |
+| 平溪線 `PINGXI` | 三貂嶺—菁桐 | 13.0 km | 7 | 有（`tra_pingxi_runs.json`，決策 133） | 開放 |
+| 集集線 `JIJI` | 二水—車埕 | 29.5 km | 7 | 沒有（`tra.json` 只有估計的班距） | 開放（新工具擷取班次） |
+| 內灣線 `NEIWAN` | 新竹—內灣 | 28.0 km | 13 | 沒有 | 開放（同上） |
+| 深澳線 `SHENAO` | 瑞芳—八斗子 | 4.7 km | 3 | 平溪線那份裡的直通車 | 開放（同上；真實的班次全是直通平溪線的車，只買深澳線時截到瑞芳） |
+| 六家線 `LIUJIA` | 竹中—六家 | 3.2 km | 2 | 沒有 | 開放（同上） |
+| 沙崙線 `SHALUN` | 中洲—沙崙 | 5.7 km | 3 | 沒有 | 開放（同上） |
+| 成追線、林鐵、捷運、高鐵、幹線 | — | — | — | — | 不開放 |
+
+- **線的範圍**：從分歧站（三貂嶺、二水、新竹、瑞芳、竹中、中洲）的月台到終點站。分歧站以外的幹線不賣：平溪線的真實列車多半從瑞芳或八斗子開來，班次在分歧站截斷，只留支線上的那一段（時刻照真實列車在這幾站的到、開）。
+- **班次的資料**（第 2 步的新工具 `tools/real-timetables/extract_branch_runs.py`）：從參考庫新版 `Railway/taiwan-rail-reference-clean/` 2026-10-16 的臺鐵時刻表（政府資料開放授權條款第 1 版），每條支線取停靠支線車站的列車，從分歧站（或它在支線上的第一站）到最後一站；照 `extract_pingxi_runs.py` 的做法取第一週沒有假日的平日與週末，必要時加回送讓車組每天回到原處，並檢查每天開始與結束時每組車都在同一站（`overnight`），**通不過檢查的線不開放**，PR 寫出原因。平溪線改用同一個工具重新擷取（截在三貂嶺），舊的 `tra_pingxi_runs.json` 留給實景示範與平溪挑戰，不改。
+- **什麼時候出現**：線上每一站（含分歧站）都在世界範圍內，才列出這條線。地圖框不住整條線（例如實景地圖只框到菁桐不含三貂嶺）就不列：買半條線開不了真實班次。
+- **在哪裡買**：點那條支線的真實車站，車站卡「真實路線」那一行（決策 304）多一個「收購這條線」；路線清單的「新路線」選單底下也列出這張地圖可以買的線。沒有可買的線時兩處都不出現。
+
+#### 2. 價格怎麼定
+
+**價格 = 建造費 + 列車 + 營運價值**，三項都在收購卡上分開列：
+
+1. **建造費**：GameCore 照它平常的價目算，鋪這條線的軌道、結構（橋、隧道，決策 279 的 `rail_structures.json`）、車站、月台與待避線，加上線底下還沒買的地塊（地圖擴張開著時，決策 160）。做法照決策 213 的預覽：在世界的副本上蓋一次，扣掉的錢就是建造費，和玩家自己描線蓋一模一樣。
+2. **列車**：照班次每天需要的車組數（`overnight` 的組數），每組用那條線的車種與節數照買車的價格（`rollingStockEconomics` 開著時照車種與節數計價，決策 180）。
+3. **營運價值**：`營運價值 = 沿線真實旅客（每天） × 每位旅客的價值`。
+   - 沿線真實旅客：決策 298 的 `RealRidership`（2025 年臺鐵各站進出站 ÷ 2），線上不含分歧站的各站相加。分歧站的旅客多半是幹線的，不算。
+   - 每位旅客的價值是一個常數（`RealLineAcquisition.valuePerDailyRider`），第 2 步照下面的目標量出來，寫回這個決策。
+   - 意思是「買的是一條已經有常客的線」：比自己蓋貴的那一部分，買的是第一天就有的客人與真實班次。
+
+**為什麼不是只有建造費**：那樣收購就和自己描線蓋一樣價，還送列車與班次，永遠比較划算（economy-balance 的「一面倒的選擇」，CRITICAL）。**為什麼不照遊戲裡的獲利估**：開線之前不知道它會賺多少，照模擬估又會每張地圖不同、玩家看不懂價格從哪來。真實運量是看得到、有出處的數字。
+
+**要量什麼、目標**（第 2 步的 `AcquisitionReportTests`，`ACQUIRE_REPORT=<天數>`，release，照 `.claude/skills/economy-balance`；目標寫在這裡，因為 economy-balance 只承認寫下來的目標）：
+
+| 數字 | 目標 | 為什麼 |
+| --- | --- | --- |
+| 價格 ÷ 新遊戲起始資金（標準難度 $300 萬，`NewGameOptions.Difficulty.standard`） | 2–6 倍 | 後期才買得起，開局買不起；集集線在平地光建造就約 $530 萬（決策 289），已近 2 倍 |
+| 價格 ÷ 同一條線自己描線蓋＋一鍵派車的花費 | 1.2–2.0 倍 | 低於 1.2 就幾乎沒有理由自己蓋（一面倒）；高於 2 就沒人買 |
+| 回本天數：價格 ÷ 第 30–360 天平均每天營業利益 | 360–1,080 天（1–3 個遊戲年） | 是要存錢的大目標，不是第一條線的 4–10 天（決策 46、137）；超過 3 年就是虧本生意 |
+| 第 360 天的累計現金：收購 對 自己蓋（同一天開始、同樣的車） | 收購的是自己蓋的 70–100% | 收購付的溢價要在一年內大致回來，但不能比自己蓋更好 |
+| 第 1 天的旅客：收購 對 自己蓋 | 收購的多 | 「有常客」要看得到；若一樣多，營運價值就是白付 |
+| 帳要對得上 | 收購的路線損益加總等於公司帳（決策 179） | 每次改經濟都量 |
+
+- 量法：六條線各從「已經營 180 天的實景新遊戲」開始，比較同一天收購與同一天自己描線蓋（`RealRailwayTracingTests` 的做法）加一鍵派車；量第 1、30、180、360 天。
+- 量出來超出範圍就調 `valuePerDailyRider`（只動營運價值，不動建造與列車的價目）；調不進範圍的線，第 2 步不開放並寫明。
+- 判定照 economy-balance 的 HEALTHY／CONCERNS／CRITICAL／NOT ASSESSED，寫在第 2 步的 PR 與這個決策的「量到的」。
+
+#### 3. 車上與月台上的旅客怎麼交接
+
+**遊戲裡沒有要交接的旅客**：決策 304 的真實列車只是畫面，不載遊戲的旅客，真實車站的月台上也沒有遊戲的旅客。所以交接是三件事，都在第 2 步做：
+
+1. **從隔天的首班車起由玩家經營**（真實的經營權移轉也是從營業日開始）：
+   - 收購當下就蓋好軌道與車站，列車放在班次的過夜位置（`overnight`，由第 2 步的工具照截斷後的班次算出）。
+   - 每一班的 `runDays`（`ServiceLine.runDays`：每班最後一次開出的**遊戲日**，`Int64?`，不是星期幾的集合）設成今天，所以只有今天剩下的班次不派，明天第一班照真實時刻開出；星期幾開照 `LineRun.days`，不受影響。`runDays` 只有 GameCore 能改（`internal(set)`），所以由新指令 `recordLineAcquisition` 設。收購卡寫「明天首班車起由你經營」。
+   - 那條線的真實列車從收購那一刻起不再畫（`RealTrainTraffic` 跳過已收購的線），不會和玩家的車疊在一起。
+2. **常客**：收購的車站和玩家其他車站一樣從腹地的土地拿旅客（決策 139），轉乘點數照決策 298：
+   - 分歧站照常有幹線的轉乘點數。
+   - 支線自己的站，真實臺鐵運量本來就是這條線的乘客。照決策 298 它們已經會變成點數；車站卡那一行在「臺鐵」只剩這條線本身時改寫成「沿線的常客：每天約 N 人」，不寫「轉乘」。
+   - 「現實路網：轉乘」關著的遊戲沒有常客；收購卡會寫「關掉了真實轉乘，這條線只有沿線城鎮的旅客」，營運價值也照算（價格不因開關而變，免得關掉開關買便宜線）。
+3. **轉乘不重複算**：收購之後，分歧站的轉乘點數仍照幹線的運量算，不另外加支線的運量。
+
+#### 4. 和玩家既有的軌道重疊時
+
+**拒絕**，只有一種例外：
+- 支線（分歧站月台以外）的路上有玩家的軌道、車站或建物，GameCore 照常拒絕那一段（`trackConflict`、`trackTooClose`、`buildingOnTrack`……），整筆收購不成立。收購卡事先在副本上試蓋，寫出擋住的地方（「你的軌道在十分附近擋住了這條線」）並在地圖上標出來，不讓玩家按「收購」。
+- **例外：分歧站**。玩家在真實分歧站 450 m 內已經有車站（決策 295 的 `nearestRealStation(to:)`），收購的線就接到那一站（`PlatformAddition.existing`），加一個月台而不另蓋車站，玩家的線因此可以和收購的線轉乘、甚至直通。
+- 玩家已經沿這條支線自己蓋了軌道（例如支線挑戰），這條線就不列為可收購：那條線已經是玩家的了。
+- **沒選「只買不重疊的部分」**：真實班次以整條線的站序記，切掉一段就開不了；價格也會變得難懂。真實的路線收購也是整條線。
+
+#### 5. GameCore 的指令形狀
+
+**照決策 213 與 `autoService`：GamePresentation 的一個 `PlayerCommand.acquireRealLine(RealLineAcquisition)`，把現有的 GameCore 指令串起來，加上一個新的小 GameCore 指令記下收購與營運價值。**
+
+- `RealLineAcquisition`（GamePresentation，`Codable`，指令紀錄寫成 `acquireRealLine`，決策 193 的格式，能在 Linux 重播）：
+  - `realLine`：`tra.json` 的線 id（例如 `"tra:PINGXI"`）；
+  - 軌道：`[TrackStretch]`（`tracePlan` 的結果，和 `buildTrackChain` 一樣）、待避線（`PassingLoopPlan`，照 `tra_overtake_tracks.json`）；
+  - 車站：每站 `PlatformAddition`（新站或分歧站的 `.existing`），站名照真實站名；
+  - 列車：車種、節數、放在哪一站（`overnight`）；
+  - 路線：名稱、顏色（`tra.json` 的路線色）、停靠站、`[LineRun]`（第 2 步的班次檔）；
+  - `dailyRiders`：營運價值用的真實旅客數。
+- `GameSession.apply` 在世界的副本上依序：`readGround` → 鋪軌（`buildTrackChain` 的做法）→ 月台與車站 → 待避線 → 買車、放車 → `createLine` → `setLineRuns` → `assignTrain` → 新指令 `GameWorld.recordLineAcquisition(line:realLine:dailyRiders:)`。
+- **新的 GameCore 指令** `recordLineAcquisition(line:realLine:dailyRiders:)`：
+  - 檢查依序：`unknownLine`；`realLine` 空白或已收購過（新的 `GameError.lineAlreadyAcquired`）；`dailyRiders` 在 0…`RealLineAcquisition.maximumDailyRiders`（200,000，比臺鐵最大站還多，擋住亂填）之外是新的 `invalidAcquisition`；錢不夠是 `insufficientFunds`。
+  - 把這條線每班的 `runDays` 設成今天（見第 3 點；那條線要剛建好、還沒開過任何一班，否則 `invalidAcquisition`）。
+  - 扣營運價值 = `dailyRiders × valuePerDailyRider`，記成一筆資產（新的 `AssetRecord.Kind.acquiredLine`，資產類別 `track`，照軌道 20 年攤提：買的是線的經營權，和軌道一起折舊），帳簿的資本支出多一項「收購路線」。
+  - 世界記下 `acquisitions`：每筆 `{realLine, line, day, value}`，`RealTrainTraffic` 與收購選單照它跳過已收購的線。
+  - 營運價值的計算在 GameCore（決定性的整數分），GamePresentation 只給旅客數，和決策 298 的 `setTransfers` 一樣：GameCore 不讀真實資料，只存數字。
+- **為什麼不是一個大的 GameCore 指令**：鋪軌、月台、待避線、買車的規則與價目都已經在 GameCore，GamePresentation 也已經會照真實鐵路排出它們（決策 213、289）。整包搬進 GameCore 要把 `RealRailwayTraces` 的資料讀法帶進去，GameCore 就要讀真實資料。
+- **為什麼不是只有現有指令、沒有新指令**：沒有新指令就沒有地方記「這條線是買來的」，真實列車會繼續畫在玩家的線上，同一條線也能再買一次；營運價值也不能只是扣錢而沒有資產。
+
+#### 6. 失敗原子性
+
+- 整筆收購在 `GameSession.apply` 的世界副本上做，任何一步拋錯（地塊沒買到、錢不夠、某段擋住、班次不合法）副本就丟掉，世界不變（和 `buildTrackChain`、`autoService` 相同）。一次復原整筆拿掉。
+- 新指令自己也先檢查完全部再改世界。
+- **錢**：收購卡在副本上試算一次總價，按下去時世界的錢不夠就整筆拒絕（`insufficientFunds`），不會蓋了一半、列車沒買。
+- 測試（第 2 步）：每種失敗（擋住、錢不夠、已收購、旅客數超出、範圍外）世界逐位元不變；成功之後存檔來回相同；指令紀錄重播得到同一個世界。
+
+#### 7. 存檔、golden、replay
+
+- **存檔 66**（第 2 步）：世界多 `"acquisitions"`（空的時候省略），資產多一種 `acquiredLine`。只讀到 65 的 build 會丟掉收購紀錄、也讀不了新的資產種類，所以升版；遷移是 65 → 66 補空的收購清單。新的 `SaveFixtures/v66-line-acquisition.json`（實景地圖收購了平溪線、過了一天）。
+- **golden schema 不動**：不加 golden fixture；既有的 golden 沒有這個指令，值都不會變。新指令由 `LineAcquisitionTests`（Linux）驗證。
+- **replay 不動**：既有的 `ReplayFixtures/` 指令流沒有收購，checksum 不會動。
+- 平衡的 shard：營運價值只動收購這條路；第 2 步仍跑 `campaigns-8`（`NewGameBalanceTests`、`GoldenScenarioTests`）確認既有的數字沒變。
+
+#### 8. 「收購完成」卡與短樂句
+
+- **卡**（App，`AcquisitionCompleteCard`；版面照挑戰達成卡，決策 256 的那一類）：
+  - 上面一條那條線的路線色帶，色帶上是線名（「平溪線」）。
+  - 中間一枚藏青的圓章「收購」（照 `.claude/skills/art-style`：扁平、藏青外框、不用新的色碼；第 2 步畫之前先讀那份 skill），章裡是分歧站到終點站兩個站名。
+  - 下面三行：「7 站、13.0 公里、3 列車」「明天首班車起由你經營」「真實班次：平日 N 班」。
+  - 一個「好」鈕；打開「減少動態效果」時章不蓋下來，直接出現（照 `.claude/skills/motion`）。
+- **短樂句**（`SoundCue.lineAcquired`，`tools/audio/` 產生）：分歧站的站鈴（決策 219 的 `StationChime`）前兩個音，接一個落在主音上的終止，最後一聲低的木魚般的「蓋章」聲，全長約 1.5 秒；和 `goalMet`（上行、亮）分得開，聽得出是「簽約完成」而不是「達成目標」。音效設定關掉時不播。
+- **玩家看的字**（兩種語言）只說玩家得到什麼：「收購平溪線：軌道、7 座車站、3 列車與真實班次」「明天首班車起由你經營」；不寫營運價值怎麼算、不寫 `valuePerDailyRider`。
+
+#### 五方
+
+- **玩家**：後期有一個要存錢的大目標；買下就多一條第一天就有客人、照真實時刻跑的線，可以接自己的線轉乘。被擋住時事先說哪裡擋住，不會按了才失敗。
+- **鐵道迷**：線形、車站、班次都照真實出處（OSM 線形、臺鐵開放資料的時刻表、臺鐵各站運量）；只賣支線、整條線一起買、從營業日交接，和真實的路線移轉一樣；價格裡看得到真實旅客。
+- **開發**：多半是把決策 213 的鋪軌、決策 133 的班次與一鍵派車包成一個指令；GameCore 只多一個記錄收購的小指令與一個欄位，存檔升一版，golden 與 replay 不動。
+- **美術**：一張「收購完成」卡：路線色帶加一枚藏青的「收購」圓章，照 art-style，不用新的色碼。
+- **音樂**：一段約 1.5 秒的簽約樂句：分歧站的站鈴開頭、落在主音、最後一聲蓋章，和「達成目標」的上行樂句分得開。
+
+#### 沒選的（預覽是玩家會看到的）
+
+- **價格只有建造費**：預覽「收購平溪線 $420 萬（自己蓋也是 $420 萬）」（數字只是示意）。永遠比自己蓋划算（多送列車與班次），一面倒。
+- **照模擬的獲利估價**：預覽「預估一年獲利 $80 萬 × 5 年 = $400 萬」（示意）。開線前的估計每張地圖不同，又要先跑一段模擬；玩家看不懂、也容易被估得太好的數字騙。
+- **只買不重疊的部分**：預覽「平溪線（十分—菁桐，其餘與你的軌道重疊）」。真實班次開不了，價格也難懂。
+- **重疊時沿用玩家的軌道**：預覽「收購平溪線，三貂嶺—大華用你的軌道」。玩家的軌道不一定照真實線形、待避線也不一定在真實的站，真實班次可能卡死（決策 133 的瑞芳死結），要多一套檢查。以後有玩家要再說。
+- **一個大的 GameCore 指令**：GameCore 要讀真實資料；見第 5 點。
+- **當下立刻接手、真實列車上的「旅客」變成遊戲旅客**：真實列車本來沒有遊戲的旅客，要憑空生出一車人；當天的班次也已經開了一半。
+- **開放幹線**：75.1 的玩家不要；城際的班次一條地方線容不下。
+- **收購公司、競爭對手**：作者還在考慮（NEXT_PRIORITIES §20.2），不在這個決策。
+
+#### 參考庫與外部專案
+
+`a91453/railway-reference-private` `b3af6d8`。參考庫**沒有**收購、接管路線或公司的實作，也沒有路線或公司的估價、軌道的折舊（搜尋過 `Ci/`、`Railway/` 各包、`Simulator/`、`MapBuilder/`、`OpenWorld/`、根目錄的 `city_map_reference_clean/`、`power_grid_reference_clean/`：收購、併購、接管、買下、takeover、acquisition、purchase、valuation、折舊、經營權）。用得上的是資料與相近的做法：
+
+| 參考 | 本專案（第 2 步） | 怎麼用 |
+| --- | --- | --- |
+| `Railway/taiwan-rail-reference-clean/source/data/tra_special_trains.json` 的 `branchLines`（平溪、集集、內灣、六家、深澳、沙崙：區間、`matchStations`、故事、出處） | 第 1 點的六條線；收購卡的線名與區間 | 照用（決策 289 已用它的清單） |
+| 同目錄 `tra_schedule_dense.json`（臺鐵開放資料 2026-10-16 起 14 天，1,083 班；停終點站的：菁桐 36、內灣 42、車埕 22、六家 82、八斗子 20、沙崙 73） | `extract_branch_runs.py` → `tra_branch_runs.json` | 照 `extract_pingxi_runs.py` 擷取；資料沒有每班的車種 |
+| 同目錄 `tra.json`、`tra_station_of_line.json`（`cumKm`）、`tra_platforms.json`、App 已打包的 `tra_overtake_tracks.json` | 車站、月台、待避線 | 照用 |
+| `Railway/taiwan-rail-reference-clean/source/main-reference.js` `DIESEL_BRANCH_IDS`（平溪、集集、深澳、內灣）、`isDr1000`（這幾條線的區間車是 DR1000；內灣線是竹中以南）、`PERF_DR1000`（a 1.5、b 2.448、v 110） | 收購的列車：這四條線用 DR1000，六家、沙崙是電氣化的線，用一般的電聯車 | 遊戲還沒有 DR1000（`TrainType` 只有 EMU3000、EMU100、莒光、海風、藍皮、山嵐等）；第 2 步照 `PERF_DR1000` 加一個 `dr1000` 車種，改到既有 golden 或存檔的值就先用遊戲的通勤車種、把 DR1000 留到下一步 |
+| 同目錄 `rail-3d/assets/garage-blender-v1/dr1000`、`train-garage-scenes.js`（十分站的 DR1000、內灣木造車站的 EMU600） | 無（3D 那條線之後可用） | 只記下出處 |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` 的額度購買（`quota_purchase`）記成投資現金流（`investingCashFlow = quotaReturnCashInflow - quotaPurchaseCashOutflow`），不進營業損益 | 營運價值記成資本支出（`acquiredLine` 資產），不進營業費用 | 同一種記帳方式 |
+| `Railway/taiwan-rail-reference-clean/source/scripts/verify_bounty_valuation.mjs`、`data/bounty_rules.json`（班次越少的路線越值錢，`clamp(全網中位數班數 ÷ 這條線的班數, 1, 3)`） | 無 | 是「稀有度」的懸賞，不是價格；沒採用，因為班次少的支線不應該因此更貴 |
+
+**外部專案**（只讀想法，沒有抄程式碼）：
+- **OpenTTD**（GPL-2.0，<https://github.com/OpenTTD/OpenTTD/blob/master/COPYING.md>；`economy.cpp`，<https://docs.openttd.org/source/d9/ddd/economy_8cpp_source>）：公司的資產值是車站設施與車輛（折舊後的 1.5 倍）的值，**軌道與土地不算**；惡意收購的價格是資產＋貸款＋最近四季有獲利的季的 2 倍獲利；破產的公司第 7 個月開放收購（`CmdBuyCompany`）；收購時車輛、車站、地塊一起移到買方（`ChangeOwnershipOfCompanyItems`）。取的想法：**價格＝資產＋營運的價值**，以及「所有東西一次移轉」。沒取的：OpenTTD 用過去的獲利，這裡改用真實運量（開線之前沒有遊戲裡的獲利）；它不算軌道，這裡照價目算建造費（否則比自己蓋便宜）。
+- **Simutrans**（Artistic License 1.0）：主遊戲沒有收購別家公司；Simutrans-Extended 的破產收購（jamespetts，2020–23）在論壇（<https://forum.simutrans.com/index.php?msg=184598>）回報過複製路線、壞存檔、起始資金白拿錢的問題。取的教訓：收購不能變成送錢（第 2 點的「不比自己蓋便宜」），整筆要全成或全不成（第 6 點）。
+
+參考庫沒有的（本專案自己的）：哪些線可以買、價格公式與 `valuePerDailyRider`、營業日交接、重疊時的規則、收購完成卡與樂句。
+
+#### 下一步（第 2 步，一個 PR）
+
+1. `tools/real-timetables/extract_branch_runs.py`：六條支線的班次（含 `overnight` 檢查），打包成 `RealRailways/tra_branch_runs.json`。
+2. GameCore：`recordLineAcquisition`、`GameWorld.acquisitions`、`AssetRecord.Kind.acquiredLine`、兩個新 `GameError`、存檔 66 與遷移、`SaveFixtures/v66-line-acquisition.json`、`LineAcquisitionTests`。
+3. GamePresentation：`RealLineAcquisition`（排出計畫、試算價格、擋住的地方）、`PlayerCommand.acquireRealLine`、`RealTrainTraffic` 跳過已收購的線、車站卡的「沿線的常客」、`AcquisitionReportTests`（量第 2 點的目標，把 `valuePerDailyRider` 與量到的數字寫回這裡）。
+4. App：車站卡與路線清單的「收購這條線」、收購卡、「收購完成」卡、`SoundCue.lineAcquired`、String Catalog 兩種語言。
+5. push 之前先 `send_message` 遊戲規劃要 GameCore 名額（同時最多 2 個 GameCore PR 跑 CI，一次只有一件升存檔）。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。
