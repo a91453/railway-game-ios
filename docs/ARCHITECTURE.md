@@ -12730,7 +12730,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 音樂：無。
 
 **沒選的**（預覽是玩家會看到的字或畫面）：
-- **建造時自動打開涵蓋層**（研究 4.1 的「建線時預設開」）：地圖一進建造就變色，蓋軌道時看不清地形與城市；台灣實景還要等 `CityMap` 算完。預覽：按「建造」後地圖立刻蓋上藍、桃紅兩色。
+- **建造時自動打開涵蓋層**（研究 4.1 的「建線時預設開」；決策 311 改成自動打開潛力圖，涵蓋在它的圖例裡切換）：地圖一進建造就變色，蓋軌道時看不清地形與城市；台灣實景還要等 `CityMap` 算完。預覽：按「建造」後地圖立刻蓋上藍、桃紅兩色。
 - **百分比四捨五入**：有人沒被涵蓋時也可能出現「100%」。預覽：「…：100%（直線範圍的估算）」。
 - **用 WorldPop 人口格當分母**（`PopulationHeatmap`）：那是另一套 1 km 格網，和涵蓋層的 64 m 土地格對不起來，畫面和數字會不一致。
 - **潛力熱圖、白天／夜晚**（研究 4.1 其餘部分）：是遊戲需求模型的推估，要另外定顏色與說明，留在之後。
@@ -13734,6 +13734,49 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 **UI 測試**（交給 Codex）：示範地圖上點快速圖層的「車資與章」，按鈕不再是選取狀態；跑到早上尖峰，車站上方沒有「+$」也沒有「滿載」；再點一次又出現。
 
 **下一步**：實機（TestFlight）看快速圖層多一格之後，iPhone 直拿時和「快轉到早上」、下一步晶片排在一起放不放得下。
+
+### 311. 建線時自動出現的「哪裡人多」潛力熱圖，與角落一鍵收起
+
+2026-10-21。遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 派工（NEXT_PRIORITIES §19 #5，設計來源 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` §4.1），實作 session_01XcsvN9dp6TVNhLU2TY4sJD。只動 GamePresentation 與 App；GameCore、存檔版本、golden、SaveFixtures、ReplayFixtures 都不動。**修改決策 292 的「沒選的」第一項**（建造時自動打開涵蓋層）：自動打開的改成這張潛力圖，涵蓋留在圖例裡一鍵切換。
+
+1. **潛力圖**（`StationPotentialMap`，`Sources/GamePresentation/StationPotentialMap.swift`；`PopTravelMode.potential`）：每格是它 `Land.catchmentRadius`（800 m 直線）內的居民加就業，和 `Land.totals` 同一個圓、同一個數法（整數的列前綴和，一列一段）。六段固定的人數門檻 250、1,000、2,500、5,000、10,000、20,000，不到 250 不畫；門檻是絕對人數，不跟著畫面裡的最大值走，所以同一個顏色在台北和鄉下是同樣多的人。
+2. **有新線的站時**（`session.lineDraft` 有站）：每格乘上決策 137 的距離權重（`DistanceDemand.share`，到最近一個草稿站的直線距離；世界沒開 `distanceDemand` 時不乘），已經在營運中車站（不是關閉的站）800 m 內的格乘 `servedShare` = 0.4，標題改「從你的站可以去哪」。只是畫面上的估計，不是 GameCore 的需求模型（不做潮汐、不做路徑）。
+3. **時段**：全天、早上（7–10 時）、傍晚（17–20 時）。就業依 `LandDemand` 的對應分到 `StationDemandKind`（辦公、工業、農業 → 辦公；公共設施 → 公共設施；休閒 → 觀光；住宅、商業、公園 → 商業），居民算住宅；每類乘上它 `arrivalShape` 在那幾個鐘頭的平均（千分比，全天是 1000）。早上辦公區變深、住宅區照常，傍晚反過來。窗口取三小時：兩條曲線對稱，更寬的窗口幾乎看不出差別。
+4. **涵蓋**：圖例上「潛力／涵蓋」切換；涵蓋就是決策 292 的 `.coverage` 層（`CityMap`，只算營運中的車站）與它的「車站涵蓋多少居民與工作」。顏色**保留決策 292 的藍與桃紅**，不用研究寫的綠與紅：紅綠是最常見的色盲組合，涵蓋層已經上線、玩家認得。
+5. **只算畫面裡的、算過的留著**：地圖切成 32 × 32 個區塊（依縮放的 `CityMap.blockSize`）一塊的 chunk，畫到哪一塊才算哪一塊，結果放在 `StationPotentialMap` 的 chunk 快取（鎖保護，值型別外殼）。`StationPotentialMap.Key`（土地、營運中車站的點、草稿站的點、`distanceDemand`、時段、大小）在 tick 之間相等，只有指令（建站、拆站、開關站、土地改變、草稿改變）或時段改變才換一張新的；不會每個 tick 重算全圖。合併的區塊照 800 m 圓的格數換算回每格的人數。
+   - **台灣實景量測**（Linux、debug build，台北 25.047882, 121.517219 的新遊戲，`testTaipeisDenseLandIsWorkedOutInView`）：整張圖、4 格一塊：4095 塊、4 個 chunk，第一次 30 ms（有草稿站 38 ms），之後 3 ms；一個畫面大小（±33 × ±70 格、1 格一塊）：9447 塊、24 個 chunk，第一次 98 ms（有草稿站 160 ms），之後 12 ms。Release build 與實機沒有量。
+6. **App**：建軌道、月台或新線的工具一打開（`GameSession.offersCoverageShortcut`）就蓋上去（`BuildingLayerShortcut`），蓋在玩家自己的圖層上面但**不寫進**玩家的圖層設定（`@AppStorage("mapPopTravelMode")`），所以關掉工具就回到玩家原本的圖層；玩家在建造中自己選了別的圖層，就照玩家的。角落的按鈕（決策 292 的 `MapCoverageButton`）與圖例的關閉鈕收起它，收起會記住（`mapBuildingLayerAutoShows`，裝置偏好），下次建造不再自動出現，再按一次角落的按鈕拿回來。潛力／涵蓋與時段也是裝置偏好（`mapBuildingLayer`、`mapPotentialPeriod`）。圖例一行說明加一個 ⓘ（`StationPotentialMap.title`、`line`、`info`）。潛力圖畫在自己的 Canvas：城市底圖之上、路線與站名之下，不蓋站名與路線；出現與消失照 `MotionRule.change` 淡入淡出，「減少動態效果」時立刻切換（`.identity`）。UI 測試（`-ui-testing`）預設收起，除非給 `-show-building-layer`，免得圖例擋住其他測試要點的角落。
+7. **顏色**（docs/UI_THEME.md）：淡暖黃 → 綠 → 青 → 圖示的深藍，六段 #FFE7A8、#C6D98B、#7CC08C、#3A9BA6、#2D6890、#262C57，不透明度 0.7；不用 CTM 的藍／橘／紅。亮度單調上升，三種常見色盲下仍分得出深淺。
+
+**限制**（不寫進玩家看的字）：800 m 是直線，不看河、山與路；人數是遊戲土地模型的估計（`Land.totals`：WorldPop 與 OSM 換算的居民與就業），不含玩家蓋的建物；「從你的站可以去哪」只是距離權重乘上未服務的人，不是真的路徑或需求；0.4 是畫面上的淡化，不是規則。
+
+**參考**：
+| 來源 | 找到的 | 用了什麼 |
+|---|---|---|
+| `Ci/reference_snapshot/`（圖層面板） | 地圖圖層與涵蓋的字串，沒有潛力熱圖 | 沒有可移植的 |
+| `Railway/geo-scene-reference-clean/source/src/hooks/useRainGaugeLayer.ts` 等 | MapLibre 的 `heatmap` 圖層（點資料的核密度、色階依 0–1 的密度） | 沒有可移植的：遊戲的地圖是 SwiftUI Canvas、資料是 64 m 格，不是點 |
+| `city_map_reference_clean/`、`Railway/island_city_reference_clean/` | 城市格的土地與人口，沒有站點潛力 | 沒有 |
+| A/B Street `map_gui/src/tools/heatmap.rs`（https://github.com/a-b-street/abstreet，Apache-2.0） | 方格累加高斯核、一次 3×3 平滑、依最大值分 7 色、等值線 | 只參考想法，沒有搬程式碼：這裡用和腹地相同的 800 m 圓（玩家看到的就是車站的腹地），門檻用絕對人數 |
+
+公式與分 chunk 的快取是這個專案自己寫的。
+
+**五方**：
+- 玩家：一進建造就看得到哪裡人多，不必先找圖層；不想看一鍵收起而且會記住。
+- 鐵道迷：真實的路網規劃先看人口與就業分布、再看既有車站的服務範圍，早晚看通勤的方向；800 m 是台灣捷運常用的步行範圍。資料是 WorldPop 與 OSM，和車站運量同一份。
+- 開發：只在 GamePresentation 加一個值型別與 Linux 測試，App 只多一層 Canvas；不動 GameCore 與存檔；只算畫面裡的 chunk 並快取。
+- 美術：自己的黃綠青藍色階，與圖示的深藍同一家；畫在路線與站名下面，站名的淡色底板讓它不被蓋掉。
+- 音樂：無。
+
+**沒有採用**（預覽寫在 PR）：
+- 色階 B（深藍單色，#ECEEF6 → #262C57）：和水域、夜晚的色調撞，低段在淺色地圖上幾乎看不見。
+- 色階 C（黃到琥珀單色）：和地價層、車資的暖色撞，深段像警告。
+- 涵蓋改用綠／紅：紅綠色盲分不出，決策 292 的藍與桃紅已經上線。
+- 每個 tick 重算整張圖：台灣實景一次幾十到上百毫秒，會掉幀。
+- 做潮汐模型（早晚的起訖對）：派工明說不做；時段權重已經看得出早晚的方向。
+
+**驗證**：`StationPotentialMapTests`（腹地等於 `Land.totals`；最高的格在市中心而空的角落不畫；合併區塊換算；草稿站的距離權重、已服務的格變淡、關閉的站不算、沒開 `distanceDemand` 不乘；早上辦公區變深、住宅區照常；涵蓋只算營運中的站；Key 在 tick 之間相等、指令與時段才變，chunk 只算一次；圖例的字；`BuildingLayerShortcut` 的出現、收起、還原；台北的時間）。`CoverageShortcutUITests`（只在 full lane，不進 gate）改成：建造時潛力圖例出現、角落按鈕收起再拿回、切到涵蓋看到涵蓋比例、離開工具消失。
+
+**下一步**：實機（TestFlight）看潛力圖在 iPhone 直拿時圖例的高度、第一次畫一個畫面的停頓（Release 應比 debug 快）與台北市中心是否全部同一色（20,000 人以上一段）；需要時再加一段門檻。
 
 ### 313. 2D 與 3D 不搶畫面：交接只在放手時判斷，2D 拉到最近還繼續拉才進 3D；3D 加「2D」與「建設」鈕；設定「拉近自動變 3D」
 

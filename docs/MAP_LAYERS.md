@@ -13,13 +13,14 @@
 | 1 | Apple 地圖或 OSM 底圖（決策 97、151） | `AppleMapBackground`、`OSMMapBackground` |
 | 2 | 用途圖層打開時，把 Apple 地圖洗淡（60% 系統底色） | `MapView` 的 `.background` 裡的 `.overlay` |
 
-## 2. 地圖本身（`MapView` 的 `ZStack`，由下往上四個 Canvas）
+## 2. 地圖本身（`MapView` 的 `ZStack`，由下往上四個 Canvas，建造時多一個潛力圖）
 
 | # | 層 | 在哪裡畫 | 備註 |
 | --- | --- | --- | --- |
 | 10 | 地面（`Palette.land`；實景地圖不畫） | `MapArt.drawBase` | `MapBaseCanvas`：鏡頭或圖層變了才重畫 |
 | 11 | 城市的建物、夜裡的窗（決策 126、182） | `drawSkyline` | |
 | 12 | 人口、旅次、城市、地形圖層之一 | `drawPopulation`／`drawTravel`／`drawCity`／`drawTerrain` | 同時只有一種 |
+| 15 | 建造時的「哪裡人多」潛力圖（決策 311） | `MapArt.drawPotential` | `MapPotentialCanvas`：自己一層才能淡入淡出；鏡頭或潛力圖的 Key 變了才重畫；在路線與站名下面 |
 | 20 | 世界邊界外的陰影、邊界線、還沒買的地（決策 123、160） | `MapArt.drawMap` 開頭、`drawMapExpansion` | `MapCanvas` 從這裡開始 |
 | 21 | 車站的服務範圍圈 | `drawCatchmentRings` | 圖層開關 |
 | 22 | 路堤、路塹的坡面 | `drawSlopes` | |
