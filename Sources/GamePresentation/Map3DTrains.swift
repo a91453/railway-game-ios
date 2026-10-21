@@ -47,7 +47,8 @@ public enum Map3DTrains {
             var types: [TrainID: String] = [:]
             for train in world.trains where train.position != nil {
                 bodies[train.id] = world.bodyPath(of: train.id)
-                types[train.id] = train.type?.spec.code ?? ""
+                // Decision 318: or the set its performance has a model for.
+                types[train.id] = Map3DTrainSet.key(type: train.type, performance: train.performance)
             }
             self.bodies = bodies
             self.types = types
@@ -147,8 +148,9 @@ public enum Map3DTrains {
                     outer: Map3DMesh.footprint(centre: base + bed, forward: a - b, length: length + 1, width: carWidth + 1), darkness: 0.38)
                 if let models, hasModels, let eye, (base - eye).length < modelReach,
                    let model = models.modelIndex(forType: trainType, carIndex: index, count: cars.count) {
-                    // The last car is the head car's model turned round.
-                    let turned = index == cars.count - 1 && cars.count > 1
+                    // The last car is the head car's model turned round, or
+                    // the set's own tail.
+                    let turned = models.isTurned(forType: trainType, carIndex: index, count: cars.count)
                     frame.instances.append(instance(of: models.models[model], index: model, from: turned ? a : b, to: turned ? b : a,
                                                     stripe: stripe ?? band))
                     continue

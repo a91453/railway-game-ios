@@ -42,6 +42,7 @@ rm Tests/GamePresentationTests/Map3DPreviewDump.swift
 | `MAP3D_BUSY` | `1`：和 `MAP3D_LIFE` 一起用，每個車站都當作候車 400 人、一天 8,000 人次 |
 | `MAP3D_WEATHER` | `rain`、`thunderstorm`、`typhoon`：那種天氣的光線與霧（決策 277），和第 36,000 秒的雨絲（決策 320）。雨絲照手機畫：圖當成 533 × 300 點、每點 3 像素；預設是晴天 |
 | `MAP3D_DETAIL` | `far`：輸出遠處看到的簡化版城市（決策 238）；`near`：近版但不含最近一層（決策 267 的騎樓、遮雨棚、晾衣）；預設是最近的完整版（連街道設施一起，決策 244：每個實例展開成網格） |
+| `MAP3D_TRAINS` | `x:z`：在這一點的灰色地面上排出每一套列車（決策 318），一列一套：頭車、中間車、最後一節，最上面一列是一般通勤車；和 `MAP3D_CROP` 一起用 |
 
 前後對照：在 `main` 的 worktree 與分支上各跑一次同樣的鏡頭，再把兩張上下拼起來（`docs/art/*/` 的圖都是上半 `main`、下半新版）。
 

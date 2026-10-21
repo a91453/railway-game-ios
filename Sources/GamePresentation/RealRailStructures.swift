@@ -10,8 +10,8 @@ import Foundation
 // in `structure-kind.js`): OpenStreetMap's own bridge and tunnel tags, filled
 // in from the National Land Surveying and Mapping Center's railway
 // geometry; `tools/real-railways/extract_structures.py` keeps the running
-// lines' of the TRA, the High Speed Rail and the Alishan Forest Railway
-// (`rail_structures.json`).
+// lines' of the TRA, the High Speed Rail, the Alishan Forest Railway and the
+// metros and light rails (`rail_structures.json`).
 
 /// The stretches of Taiwan's real railways that are on bridges and viaducts
 /// or in tunnels (decision 279), as `rail_structures.json` lists them.
