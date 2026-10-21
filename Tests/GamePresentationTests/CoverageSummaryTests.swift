@@ -5,8 +5,8 @@ import XCTest
 
 /// Decision 292 (City Transport Manager study, step M1): the share of the
 /// residents and jobs within 800 m of a station, as the coverage layer
-/// counts them, on a small map and on Taipei's; and the coverage layer's
-/// one-tap switch while building.
+/// counts them, on a small map and on Taipei's; and when the coverage
+/// layer's switch is offered.
 @MainActor
 final class CoverageSummaryTests: XCTestCase {
     /// 32 × 24 cells, as `CityMapTests`: 6,156 people round column 5 of
@@ -98,28 +98,8 @@ final class CoverageSummaryTests: XCTestCase {
 
     // MARK: - The switch
 
-    func testTheSwitchShowsCoverageAndPutsTheLayerBack() {
-        var shortcut = CoverageShortcut()
-        XCTAssertFalse(shortcut.isOn(showing: nil))
-        XCTAssertEqual(shortcut.toggle(showing: nil), .coverage)
-        XCTAssertTrue(shortcut.isOn(showing: .coverage))
-        XCTAssertNil(shortcut.toggle(showing: .coverage), "no layer before, none after")
-
-        XCTAssertEqual(shortcut.toggle(showing: .landValue), .coverage)
-        XCTAssertEqual(shortcut.toggle(showing: .coverage), .landValue)
-    }
-
-    func testLeavingTheToolPutsTheLayerBackUnlessThePlayerChoseAnother() {
-        var shortcut = CoverageShortcut()
-        _ = shortcut.toggle(showing: .population)
-        XCTAssertEqual(shortcut.buildingEnded(showing: .coverage), .population)
-
-        // The player turned to zoning while building: zoning stays.
-        _ = shortcut.toggle(showing: nil)
-        XCTAssertEqual(shortcut.buildingEnded(showing: .zoning), .zoning)
-        // Coverage the player chose from the layer list, not the switch, stays too.
-        XCTAssertEqual(shortcut.buildingEnded(showing: .coverage), .coverage)
-    }
+    // Decision 311 replaced the switch with `BuildingLayerShortcut`
+    // (`StationPotentialMapTests`).
 
     func testTheSwitchIsOfferedWhileBuildingTrackPlatformsOrALine() throws {
         let session = GameSession(world: try world(), language: .english)
