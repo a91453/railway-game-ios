@@ -15111,3 +15111,70 @@ Linux（release，`-enable-testing`）上，改之前量到的（毫秒）：
 - 公司評等與成就（決策 181）：沒有劇本的遊戲在目標面板看公司評等（0–1000 分，七項線性加總，營業比與準點率在 20 站以下依車站數打折，每 100 分一個職稱、960 分以上鐵道大亨）與下一步；38 項成就記在裝置上的 `achievements.data`，每天午夜檢查，示範地圖不算。GameCore 沒有動。
 
 **之後的修正**（查 bug，2026-10-12）：載客量圖層的 `.task(id:)` 鍵放了整個 `ServiceLine`，其中的 `lastDispatch`、`runDays` 每次發車都會變，圖層顯示時每幾個遊戲分鐘就重算一次 `SectionFlow`（全台灣時很重，而且 `Task.detached` 不跟著取消，舊的會疊著跑）。鍵現在和乘客計畫的鍵一樣，先清掉這幾個欄位。App 檔案只能靠 macOS CI 編譯。
+
+### 325. 高鐵示範用真實票價表：搭高鐵在表裡兩站之間付官方票價（標準車廂、成人單程，NT$10＝$1）（存檔 69）
+
+2026-10-21。遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 派工（NEXT_PRIORITIES §19 第 8 名、HANDOFF §7「參考庫 2026-10-18 新增的兩個資料夾」的 (1)），session_01YEY1CSzE5zYPKVPqDAMBAy 做。號碼依 #231：決策 325、存檔 69（68 保留給一日券，決策 324），golden schema 不動。
+
+**為什麼**：決策 168 的高鐵票價是參考 `hsrFarePassengerPrice` 的每公里 0.45，量的是兩站的直線距離：台北—左營直線 290 km 是 $130，真實的票是 NT$1,490；南港—台北 9 km 照網路的 $5，真實的是 NT$40。參考庫的 `thsr_fare.json` 有 TDX 全部 66 個站對的官方票價，補上決策 168 寫的缺口（「沒有真實高鐵的票價表」）。
+
+**規則**（GameCore）：
+1. 公司帳多一張**高鐵站對票價表** `CompanyAccounts.highSpeedFares`（`[HighSpeedFare]`：兩站、票價；小的站號在前、照站對排序，不重複，票價 0.01 到 `FareRules.maximumFare`）。指令 `GameWorld.setHighSpeedFares(_:)` 整張換掉，空的表＝回到每公里；不認得的站 `unknownStation`，同一站、重複的站對、票價超出範圍 `invalidFareRules`，被拒時什麼都不變。不花錢。
+2. `tripFare(from:to:highSpeed:)`：搭高鐵（決策 168 的 `highSpeed`）而且兩站在表裡，付**表上的票價**，兩個方向一樣（官方表就是雙向共用；參考的鍵是「小站碼|大站碼」）；不在表裡照舊付網路票價與每公里票價較高的那個。外地連絡站的加價（決策 137）照舊加在後面。
+   - 表上的票價**取代**「不低於網路票價」：表是真實營運者的票價，南港—台北就是 $4，玩家改網路票價不影響表裡的站對。決策 168 那條下限是為了防止任何捷運線改成高鐵性能就收 4 倍；表只有示範會設，沒有這個問題。
+   - 票價不影響需求（決策 168 起高鐵票價就不影響需求，需求只讀網路的票價規則），所以只動收入。
+3. 車站拆掉時不刪表裡的站對：站號從不重複使用（`StationID`），查不到的站對永遠不會被問到。
+4. 存檔升到 69：帳裡有表時才寫 `"highSpeedFares"`；沒有 key＝空的表。舊版本讀到 69 會說存檔比它新，不會把表丟掉、讓示範改回每公里。新 fixture `v69-high-speed-fares.json`。
+5. 表是空的時候每一條路徑都和以前一樣：golden、replay、property digest 都不動。
+
+**資料**（GamePresentation）：
+- `HighSpeedFares.newTaiwanDollars`：12 × 12 的新台幣票價，`ticketType 1`（一般票，單程）、`fareClass 1`（成人）、`cabinClass 1`（標準座車廂），照 `HighSpeedDemo.stationNames` 南到北的順序，從參考庫的 `thsr_fare.json` 抽出（`Railway/taiwan-rail-reference-clean/source/data/thsr_fare.json`，MD5 `3945fbe83c174d40dee022af41f1a1b0`，參考庫 `159a2e4`）。
+- 換算 **NT$10＝$1**（`centsPerNewTaiwanDollar = 10`）：遊戲的錢還不是新台幣（決策 36：參考的美元），這個比例讓長程和決策 168 的水準差不多（台北—左營沿軌道 340 km 照每公里是 $153，官方 NT$1,490 → $149），而且官方票價都是 10 的倍數，換成美分剛好整數。
+- `RealLineDemoSpec.fares`：高鐵示範設這張表，台鐵示範沒有（`nil`）。建好車站、班次之前寫進世界，所以示範一開局的第一班車就照它收。
+- `DataSourceCredits` 的 TDX 那一則加上「高鐵示範各站之間的票價」與「高鐵起訖站票價」。
+
+**參考對照**：
+| 參考 | 目標 | 換算 |
+| --- | --- | --- |
+| `Railway/taiwan-rail-reference-clean/source/data/thsr_fare.json` 的 `fares["小站碼\|大站碼"]`，`ticketType 1`、`fareClass 1`、`cabinClass 1` 的 `price` | `HighSpeedFares.newTaiwanDollars[i][j]` | 站碼 → 示範的站序（0990 南港 … 1070 左營）；照抄，雙向填同一個值 |
+| 同上 `price` | `CompanyAccounts.highSpeedFares` 的 `fare` | × 10 美分（NT$10＝$1） |
+| `source_notes`：「鍵為小站碼\|大站碼，雙向共用」 | `HighSpeedFare(between:and:fare:)` 小的站號在前、`highSpeedFare(between:and:)` 不分方向 | — |
+| `data_provenance.json` 的 `thsr_fare.json`：TDX `Rail/THSR/ODFare` v2，2026-09-11 擷取 | `DataSourceCredits` 的 TDX、政府資料開放授權條款第 1 版 | — |
+| `source/app/THIRD_PARTY_NOTICES.md`：TDX 依資料發布條款標示來源 | 同上 | — |
+| `Ci/` 的 `hsrFarePassengerPrice`（決策 168） | 不在表裡的站對照舊 | — |
+| 外部專案 | 沒有另外找：要的是官方票價本身，資料就是答案；程式是這個專案自己的 | — |
+
+**缺口**：
+- **商務車廂**（`cabinClass 2`，台北—左營 NT$2,440）與自由座（`cabinClass 3`，少 NT$5–45）：遊戲只有一種車廂，沒有選車廂的旅客，所以只用標準車廂；之後若車組分車廂（N700 的 12 節裡第 6 節是商務），再照座位比例把商務票價加進來。
+- 學生、敬老、早鳥、團體、定期票：遊戲不分旅客種類，不用。
+- NT$10＝$1：等「新台幣」那輪（NEXT_PRIORITIES §16 第 5.7 項）把遊戲的錢換成新台幣時，這個比例拿掉，直接用表上的新台幣。
+
+**五方**：
+- 玩家：高鐵示範的財報多了約一成收入，長程比以前貴、短程（南港—台北、台北—板橋）便宜一點；看不到新的按鈕，只有數字更像真的。
+- 鐵道迷：66 個站對全部是交通部 TDX 的官方票價（標準車廂、成人單程），台北—左營 1,490、南港—台北 40，出處與授權在資料來源頁。
+- 開發：一張可省略的表與一條查表；表空的時候走原路，golden 與 replay 不動；升存檔一版。
+- 美術：無。
+- 音樂：無。
+
+**平衡（量過的）**（economy-balance；`HSR_DEMO_REPORT=1 swift test -c release --skip-build --filter 'HighSpeedDemoTests/testReport$'`，release，Linux 雲端容器 4 核心，base `f7bccd5` → 這個分支 `bf60414`，VERIFIED）：判定 **NOT ASSESSED**：高鐵示範的收入在任何決策裡都沒有寫下目標範圍（決策 170、197 的量測只有人次與車資的數字），所以只記前後，不判過不過。
+
+| 數字 | 目標（出處） | 改之前 | 改之後 | 判 |
+| --- | --- | --: | --: | --- |
+| 第一天人次 | no stated range — not judged | 237,070 | 237,070 | 不變（票價不影響需求） |
+| 第一天車資 | no stated range — not judged | $11,021,483 | $12,186,974 | +10.6% |
+| 第一天成本 | — | $3,509,827 | $3,509,827 | 不變 |
+| 第一天票收 − 成本 | — | $7,511,656 | $8,677,147 | +15.5% |
+| 第二天車資 | no stated range — not judged | $10,947,201 | $12,105,208 | +10.6% |
+| 第二天結束的現金 | — | $17,882,324 | $20,217,878 | +13.1% |
+
+- 錢從哪來、往哪去：只有票收變了，成本、人次、旅客流向一樣；示範本來就大賺（成本是車資的三成），多一成票收不改變它是賺錢的示範。
+- 每對的變化（直線每公里 → 官方，美元）：台北—左營 130 → 149、台北—台中 62 → 70、台中—左營 73 → 79、新竹—台中 40 → 41、南港—台北 5 → 4；66 對裡官方對每公里的比是 0.8（南港—台北、台北—板橋）到 1.18（南港—新竹、板橋—桃園）倍。決策 168 的每公里量的是直線，比沿軌道短，所以長程大多變貴。
+- 沒有一面倒的選擇：示範的票價表只在示範裡，空白地圖與實景新遊戲的高鐵照舊每公里，`NewGameBalanceTests` 與挑戰都不讀它。
+
+**驗證**（Linux，Swift 6.4，VERIFIED）：`swift build --build-tests -Xswiftc -warnings-as-errors`；`HighSpeedTests`（新增 4 個：表的票價、檢查、上車付表上的票價、v69 存檔）、`SavedGameTests`、`EconomyAccountsTests`；`HighSpeedDemoTests` 的 `testItsTripsPayTheRealFares`、`testTheRealFareTableHoldsTogether`、`testItSavesAndLoads`、`testItIsPaidForBeforeItStarts`。其他交給 CI（GameCore 改了，跑整個 tier）。
+
+**之後**：
+1. 商務車廂：等車組分車廂再做（見「缺口」）。
+2. 新台幣那輪拿掉 NT$10＝$1。
+3. 實景新遊戲裡玩家自己蓋的高鐵站若就在真實高鐵站旁，可以照同一張表收；要先決定「旁邊」多近（決策 298 的 450 m），這次沒做。
+

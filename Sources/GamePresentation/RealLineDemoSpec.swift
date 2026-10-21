@@ -87,6 +87,10 @@ struct RealLineDemoSpec: Sendable {
     /// high-speed demo's Zuoying): otherwise its sidings leave the down
     /// track, and the sets reach them along it.
     var depotLeads = false
+    /// What a trip between two of its stations pays (decision 325), by
+    /// index, north to south: the real fare table's; `nil` pays by the
+    /// kilometre (decision 168).
+    var fares: [[Money]]? = nil
 
     /// Cars of the longest sets: every platform takes them.
     var cars: Int { kinds.map(\.cars).max() ?? 1 }

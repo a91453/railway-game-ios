@@ -173,7 +173,9 @@ public enum HighSpeedDemo {
         // the track they share.
         followsRealStructures: true,
         heightFit: heightFit,
-        depotLeads: true
+        depotLeads: true,
+        // Decision 325: its trips pay the real fares.
+        fares: HighSpeedFares.standard
     )
 
     /// The world's frame: Taiwan's, as the whole-Taiwan game lays it.
@@ -927,6 +929,12 @@ public enum HighSpeedDemo {
                 }
                 try world.setStationDepot(id, to: true)
                 builtDepots.append(Built.Depot(station: id, berths: berths, southward: depot.southward, serving: depot.serving))
+            }
+            // Decision 325: the real fare between each two stations.
+            if let fares = spec.fares {
+                try world.setHighSpeedFares(ids.indices.flatMap { i in
+                    ids.indices.filter { $0 > i }.map { j in HighSpeedFare(between: ids[i], and: ids[j], fare: fares[i][j]) }
+                })
             }
             let turnouts = (north: plan.distances.firstIndex { abs($0 - junctions.north) < 1 }!, south: plan.distances.firstIndex { abs($0 - junctions.south) < 1 }!)
             let through = Through(down: down, up: upTrack, loops: builtLoops, turnouts: turnouts)

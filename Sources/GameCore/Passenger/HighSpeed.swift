@@ -177,3 +177,66 @@ extension GameWorld {
         return Self.typhoonTrips(scaledTrips(trips, at: origin), from: origin, to: destination, multipliers: typhoons)
     }
 }
+
+/// Decision 325: a pair of stations' high-speed fare, a real fare table's
+/// (``CompanyAccounts/highSpeedFares``). The same either way: the official
+/// table's fares are (the reference's `thsr_fare.json` keys each pair once).
+public struct HighSpeedFare: Hashable, Sendable {
+    /// The pair's stations, the lower ID first.
+    public let from: StationID
+    public let to: StationID
+    public let fare: Money
+
+    /// The fare between `a` and `b`, which ever is named first.
+    public init(between a: StationID, and b: StationID, fare: Money) {
+        (from, to) = a < b ? (a, b) : (b, a)
+        self.fare = fare
+    }
+
+    /// A pair of stations, the lower ID first, ordered by the lower then
+    /// the higher.
+    struct Key: Hashable, Comparable {
+        let from: Int
+        let to: Int
+
+        init(_ a: StationID, _ b: StationID) {
+            (from, to) = a < b ? (a.rawValue, b.rawValue) : (b.rawValue, a.rawValue)
+        }
+
+        static func < (lhs: Key, rhs: Key) -> Bool {
+            (lhs.from, lhs.to) < (rhs.from, rhs.to)
+        }
+    }
+
+    var key: Key { Key(from, to) }
+
+    /// Whether `fares` is a table a world keeps: each between two
+    /// different stations, the lower first, from 0.01 to
+    /// ``FareRules/maximumFare``, in ascending pairs without a pair twice.
+    static func isTable(_ fares: [HighSpeedFare]) -> Bool {
+        fares.allSatisfy { $0.from < $0.to && (Money(1)...FareRules.maximumFare).contains($0.fare) }
+            && zip(fares, fares.dropFirst()).allSatisfy { $0.key < $1.key }
+    }
+}
+
+extension HighSpeedFare: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case from, to, fare
+    }
+
+    /// Decodes `{"from", "to", "fare"}` as written; whether the table holds
+    /// together is checked with the accounts.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        from = try container.decode(StationID.self, forKey: .from)
+        to = try container.decode(StationID.self, forKey: .to)
+        fare = try container.decode(Money.self, forKey: .fare)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(from, forKey: .from)
+        try container.encode(to, forKey: .to)
+        try container.encode(fare, forKey: .fare)
+    }
+}

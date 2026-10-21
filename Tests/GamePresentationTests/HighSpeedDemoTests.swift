@@ -556,6 +556,38 @@ final class HighSpeedDemoTests: XCTestCase {
         XCTAssertEqual(world.economy.balance, GameWorld.startingBalance)
     }
 
+    /// Decision 325: its trips pay the real fare between each two of its
+    /// twelve stations, NT$10 to the dollar, either way; a depot has none.
+    func testItsTripsPayTheRealFares() throws {
+        let world = try Self.built.get().world
+        let stations = world.stations.filter { !$0.isDepot }.map(\.id)
+        XCTAssertEqual(world.accounts.highSpeedFares.count, 66, "each two of the twelve")
+        func fare(_ from: Int, _ to: Int) -> Int64? { world.tripFare(from: stations[from], to: stations[to], highSpeed: true)?.amount }
+        XCTAssertEqual(fare(1, 11), 14_900, "Taipei to Zuoying, NT$1,490")
+        XCTAssertEqual(fare(11, 1), 14_900)
+        XCTAssertEqual(fare(0, 1), 400, "Nangang to Taipei, NT$40")
+        XCTAssertEqual(fare(6, 4), 4_100, "Taichung to Hsinchu, NT$410")
+        XCTAssertEqual(fare(0, 11), 15_300, "the whole line, NT$1,530")
+        let depot = try XCTUnwrap(world.stations.first(where: \.isDepot)).id
+        XCTAssertNil(world.accounts.highSpeedFare(between: depot, and: stations[0]))
+    }
+
+    /// The table as the reference has it: twelve stations, the same either
+    /// way, dearer the farther from each station.
+    func testTheRealFareTableHoldsTogether() {
+        let table = HighSpeedFares.newTaiwanDollars
+        XCTAssertEqual(table.count, HighSpeedDemo.stationNames.count)
+        for (i, row) in table.enumerated() {
+            XCTAssertEqual(row.count, table.count)
+            XCTAssertEqual(row[i], 0)
+            for j in row.indices {
+                XCTAssertEqual(row[j], table[j][i], "\(i)–\(j) either way")
+                if j > i + 1 { XCTAssertGreaterThan(row[j], row[j - 1], "\(i): \(j) is farther") }
+                if j < i - 1 { XCTAssertGreaterThan(row[j], row[j + 1], "\(i): \(j) is farther") }
+            }
+        }
+    }
+
     func testItSavesAndLoads() throws {
         let world = try Self.built.get().world
         let loaded = try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))).world

@@ -86,6 +86,24 @@ extension GameWorld {
         passengerPlan = PassengerPlanCache()
     }
 
+    /// Sets the high-speed fare table (decision 325): a trip that rides a
+    /// high-speed line between two stations of it pays the table's fare
+    /// in place of the kilometres' (decision 168). Replaces the table; an
+    /// empty one goes back to the kilometres. Free.
+    ///
+    /// - Throws: ``GameError/unknownStation(_:)`` for a station the world
+    ///   does not have, or ``GameError/invalidFareRules`` for a pair of one
+    ///   station, a pair twice, or a fare outside 0.01 to
+    ///   ``FareRules/maximumFare``.
+    public mutating func setHighSpeedFares(_ fares: [HighSpeedFare]) throws(GameError) {
+        for fare in fares {
+            for id in [fare.from, fare.to] where station(id: id) == nil { throw .unknownStation(id) }
+        }
+        let table = fares.sorted { $0.key < $1.key }
+        guard HighSpeedFare.isTable(table) else { throw .invalidFareRules }
+        accounts.highSpeedFares = table
+    }
+
     /// Borrows `amount` from the bank (decision 67): the balance goes up by
     /// it and the loan with it, and interest is paid on the loan every
     /// midnight. Only a managed company borrows, in whole
@@ -129,14 +147,19 @@ extension GameWorld {
     /// 5 if that is 0 or less, and ``outsideFare`` more to or from an outside
     /// connection (decision 137). With `highSpeed`, a trip that rides a
     /// high-speed line (decision 168), the kilometres' fare
-    /// (``HighSpeed/fare(squaredDistance:)``) if it is more. `nil` for the
-    /// same station or an unknown one.
+    /// (``HighSpeed/fare(squaredDistance:)``) if it is more; or, between
+    /// two stations of the high-speed fare table (decision 325), the
+    /// table's fare. `nil` for the same station or an unknown one.
     public func tripFare(from origin: StationID, to destination: StationID, highSpeed: Bool = false) -> Money? {
         guard origin != destination, let squared = squaredDistance(from: origin, to: destination) else { return nil }
         var fare = FareRules.charged(accounts.effectiveFareRules.fare(squaredDistance: squared))
         // Decision 168: a trip that rides a high-speed line pays the
         // high-speed fare, if that is more than the network's.
-        if highSpeed { fare = max(fare, HighSpeed.fare(squaredDistance: squared)) }
+        // Decision 325: a pair of the real fare table pays its fare, as the
+        // real line charges it, however it compares with the network's.
+        if highSpeed {
+            fare = accounts.highSpeedFare(between: origin, and: destination) ?? max(fare, HighSpeed.fare(squaredDistance: squared))
+        }
         guard isOutsideConnection(origin) || isOutsideConnection(destination) else { return fare }
         return fare + outsideFare
     }
