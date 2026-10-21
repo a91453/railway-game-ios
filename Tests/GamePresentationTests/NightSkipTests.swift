@@ -490,6 +490,18 @@ final class NightSkipTests: XCTestCase {
         XCTAssertNil(again.nightSkip, "the memo still answers")
     }
 
+    /// A train about to leave makes the first move the moment the memo was
+    /// worked out: the main actor uses the tick's answer for that moment
+    /// instead of running ahead again (decision 328).
+    func testAMemoAnswersTheMomentItWasWorkedOut() {
+        let now = GameTime(seconds: 63_072_072)
+        let memo = NightSkipMemo(revision: 3, from: now, firstMove: now)
+        XCTAssertTrue(memo.covers(now, revision: 3))
+        XCTAssertFalse(memo.covers(GameTime(seconds: now.seconds + 6), revision: 3))
+        XCTAssertFalse(memo.covers(now, revision: 4))
+        XCTAssertFalse(memo.covers(GameTime(seconds: now.seconds - 6), revision: 3))
+    }
+
     // MARK: - Text
 
     func testTheTextSaysWhatItDoesInBothLanguages() throws {

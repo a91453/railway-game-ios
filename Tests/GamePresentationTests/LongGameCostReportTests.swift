@@ -76,8 +76,17 @@ final class LongGameCostReportTests: XCTestCase {
         // then put in place on it; the longest of each too.
         var worked = Duration.zero, finished = Duration.zero, longestWork = Duration.zero, longestFinish = Duration.zero
         let loopTicks = 200
-        for _ in 0..<loopTicks {
+        var slowest: [(tick: Int, work: Duration, finish: Duration, stopped: Bool)] = []
+        var stoppedTicks = 0, runAhead: Duration?
+        for index in 0..<loopTicks {
             guard let tick = session.beginLoopTick() else { break }
+            let stopped = !session.world.trains.contains(where: NightSkip.isRunning)
+            if stopped {
+                stoppedTicks += 1
+                // One run-ahead from here, as the session would do it.
+                let world = session.world
+                if runAhead == nil { runAhead = clock.measure { _ = NightSkip.firstMove(after: world) } }
+            }
             let start = clock.now
             let outcome = await tick.work()
             let work = clock.now - start
@@ -86,9 +95,15 @@ final class LongGameCostReportTests: XCTestCase {
             finished += finish
             longestWork = max(longestWork, work)
             longestFinish = max(longestFinish, finish)
+            slowest.append((index, work, finish, stopped))
         }
         rows.append("| loop tick worked out, off the main actor (longest) | \(Self.ms(worked, per: loopTicks)) (\(Self.ms(longestWork))) |")
         rows.append("| loop tick put in place on the main actor (longest) | \(Self.ms(finished, per: loopTicks)) (\(Self.ms(longestFinish))) |")
+        rows.append("| ticks with every train stopped | \(stoppedTicks) of \(loopTicks) |")
+        rows.append("| one night-skip run-ahead | \(runAhead.map { Self.ms($0) } ?? "–") |")
+        for row in slowest.sorted(by: { $0.finish > $1.finish }).prefix(5) {
+            rows.append("| slow tick \(row.tick)\(row.stopped ? " (all stopped)" : ""): off / on the main actor | \(Self.ms(row.work)) / \(Self.ms(row.finish)) |")
+        }
         for (label, piece) in pieces {
             let spent = clock.measure { for _ in 0..<count { piece() } }
             rows.append("| \(label) | \(Self.ms(spent, per: count)) |")

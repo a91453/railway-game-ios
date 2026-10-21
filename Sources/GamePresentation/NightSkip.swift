@@ -245,11 +245,13 @@ struct NightSkipMemo: Sendable {
     let firstMove: GameTime?
 
     /// Whether it still answers at `now` after the commands up to
-    /// `revision`: until the first move, or for an hour when none was
-    /// found.
+    /// `revision`: at the moment it was worked out (a train about to
+    /// leave makes the first move that moment, and the game loop's tick
+    /// has just worked it out off the main actor, decision 328), then
+    /// until the first move, or for an hour when none was found.
     func covers(_ now: GameTime, revision: Int) -> Bool {
         revision == self.revision && from <= now
-            && firstMove.map({ now < $0 }) ?? (now.seconds < from.seconds + GameTime.secondsPerHour)
+            && (now == from || firstMove.map({ now < $0 }) ?? (now.seconds < from.seconds + GameTime.secondsPerHour))
     }
 }
 
