@@ -11498,6 +11498,47 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
   - **UNVERIFIED**：App 的編譯（macOS CI）；實機的記憶體與電池（TestFlight）。
 - GameCore、存檔版本、golden schema 都不動。
 
+**之後的補充**（2026-10-21，3D 的指北針；NEXT_PRIORITIES §19 第 2 名「3D 拉近時的三個小做法」的第一項，規格在 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.14；遊戲規劃 session 派工，不另取決策號）：
+- 原因：3D 可以兩指旋轉，但轉過之後畫面上沒有東西說北在哪，也沒有轉回北方的方法；拉遠交回 2D 時（2D 永遠北朝上）畫面會突然轉回去。作者 2026-10-19 問「旋轉的時候我遊戲需要指南針嗎」，研究的答案是要、只在 3D。
+- 做法：
+  - **只在 3D、只在方向不是北的時候出現**（和 Apple 地圖一樣）。「算北」的容差是 0.05°（`Map3DCamera.northTolerance`），和參考庫網站地圖判斷「轉過了」的值一樣；更小的角度在手機上連半點都不到。
+  - **點一下轉回北方**，走較短的那一邊（從 300° 經 330° 回到 0°，不經 180°），`MotionRule.turnNorth`：0.24 秒、減速（參考庫的 1 −（1 − t）²）。轉的途中手指一碰地圖（拖曳、雙指、旋轉）就停在那裡，和參考庫一樣。只有移動，所以「減少動態效果」打開時直接轉回。拉近的傾斜照舊跟著距離，不跟著指北針動（參考庫的 2D 地圖同時把傾斜歸零；我們的傾斜不是玩家手動的）。
+  - **圖示自己畫**（art-style）：44 點的圓鈕，`panel` 底、`textPrimary` 外框；針是 MapLibre 指北針的兩個三角形，北半 `metroRed`、南半白，針跟著畫面上北方的方向轉。SwiftUI 的 `Shape`，不是 MapKit 的 `MapCompass`（3D 是 Metal）。顏色與對比在 `docs/UI_THEME.md`。
+  - **位置**：3D 畫面左上的關閉鈕正下方，間隔 8 點；觸控區 44×44（不是 44×28）。右上是幀數，下面是提示，都不重疊；左上角原本只有關閉鈕，3D 的景不會被多擋多少。
+  - 玩家看的文字（VoiceOver）：「Turn to north」／「轉回北方」。這個畫面的字都用 `DisplayLanguage` 的中英兩份，不經 String Catalog。
+- 程式：
+  - GamePresentation `Map3DCamera`：`northTolerance`、`turnFromNorth`（−π 到 π）、`facesNorth`、`turnedNorth(from:progress:)`；`InterfaceMotion.swift` 加 `MotionRule.turnNorth`。Linux 測試 `Map3DCompassTests`（4 個）與 `InterfaceMotionTests`。
+  - App `Map3DPreviewScreen.swift`：`Map3DCompassState`（`@Observable`，只抄相機的方向，相機仍是 Metal view 自己的；旋轉時只重畫指北針）、`Map3DCompassButton`、`Map3DCompassNeedle`；手勢的 coordinator 用 `CADisplayLink` 一格一格轉。沒有新檔，xcodeproj 不用重新產生。
+- **參考**：
+
+| 參考 | → 目標 |
+| --- | --- |
+| 參考庫 `Railway/taiwan-rail-reference-clean/source/main-reference.js` 的 `resetMapNorth`、`stepMapNorth`（較短的一邊 `(−from + 540) % 360 − 180`、240 ms、`1 − (1 − t)²`、`mapGestureActive()` 時停止） | `Map3DCamera.turnedNorth(from:progress:)`、`MotionRule.turnNorth`、coordinator 的 `turnNorth(reduceMotion:)`／`stopTurningNorth()`（弧度，不是度） |
+| 同檔的 `syncOrientationClass`（`Math.abs(bearing) > 0.05` 算轉過） | `Map3DCamera.northTolerance`（0.05°，換成弧度） |
+| 同一個網站用的 MapLibre `NavigationControl` 的指北針圖（`vendor/maplibre-gl.css` 的 `.maplibregl-ctrl-compass`：上下兩個三角形，北深南淺；MapLibre GL JS，BSD-3-Clause） | `Map3DCompassNeedle` 的形狀（自己重畫的座標，北紅南白、藏青描邊），不搬原圖 |
+| `Railway/world-rail-reference-clean/` 同名檔 | 和台灣版相同，沒有另外的東西 |
+| `MapBuilder/reference_snapshot/` | 打包了 Mapbox GL 的 `NavigationControl`（`showCompass`），和上一列同一個指北針，沒有自己的 |
+| `Simulator/`、`OpenWorld/`、`Railway/street_scene_reference_clean/` | 搜尋 compass／指北／resetNorth：沒有指北針 |
+
+  外部專案：沒有另外搜尋，參考庫已經有完整的做法。
+- **四方＋鐵道迷**：
+  - 玩家：轉過的 3D 也找得到北，一點就回到和 2D、小地圖一樣的方向；沒轉時不佔畫面。
+  - 鐵道迷：真實地圖、路線圖都是北朝上，轉回北方後和 2D 的實景地圖對得上；和真實鐵路資料無關。
+  - 開發：判斷與轉法在 GamePresentation，有 Linux 測試；App 只多一個小 view 與一個 display link；GameCore、存檔版本、golden schema 都不動。
+  - 美術：照 art-style 自己畫的扁平圓鈕，色票取自 `Theme`、`Palette`；灰階與模糊都分得出南北（預覽 `docs/art/map3d-compass-2026-10-21/`）。
+  - 音樂：無。
+- **沒有選的做法**（預覽在 `docs/art/map3d-compass-2026-10-21/`）：
+  - 針上加 N（`b-with-n.svg`）：44 點時 N 太小、擠在針尖。
+  - 藏青實心圓鈕只畫紅箭頭（`c-arrow.svg`）：深色地圖上圓鈕看不出邊，也像導航鈕。
+  - 永遠顯示：北朝上時多擋一塊 3D 景，也和 Apple 地圖的習慣不同。
+  - 放在右上幀數下面：幀數點開細節時會變高，把指北針推下去。
+  - 轉回時照 `change`（0.2 秒、兩端平滑）：`change` 減少動態時還留淡入淡出，相機轉動沒有東西可以淡；所以另加一條只移動的規則，時間照參考庫。
+  - 鬆手時接近北方就自動吸回北方（MapLibre 原生 SDK 的做法）：參考庫的網站地圖沒有，先不做。
+- **缺口**：3D 的方向交回 2D 時仍不保留（2D 永遠北朝上）；「三個小做法」的另兩項（列車頭上的標籤、路線色帶）沒做，記在 HANDOFF §7.3。
+- **驗證**：
+  - **VERIFIED**（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`Map3DCompassTests` 4 個、`InterfaceMotionTests` 5 個通過；`Map3DPreviewScreen.swift` 通過 `swiftc -parse`。
+  - **UNVERIFIED**：App 的編譯（macOS CI 的 `ios-build.yml`）；指北針的樣子、轉回的手感、「減少動態效果」直接轉回（Simulator 或實機，TestFlight）。沒有加 UI 測試。
+
 ### 270. 空白地圖的 2D 拉近時畫種子道路：和 3D 同一份，配色照實景的 2D 道路
 
 2026-10-17。3D 生活感第 4 步的後半，接在決策 269 之後。HANDOFF §4.4 的下一步：「2D 拉近到看得見建物的那一級時，也畫同一份種子道路」。空白地圖的 2D 原本沒有任何道路，3D 卻有（決策 263），兩邊對不上；決策 269 起雙指拉近會把 2D 交給 3D，交接那一下道路突然出現。

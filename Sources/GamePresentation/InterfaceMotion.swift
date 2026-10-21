@@ -77,8 +77,14 @@ extension MotionRule {
     /// The ring that spreads where something was put up (decision 117).
     public static let builtRing = MotionRule(seconds: 0.9, curve: .decelerate, moves: true, fades: true)
 
+    /// The 3D map turning back to north when its compass is tapped
+    /// (decision 269, later): 240 ms, decelerating, as the reference's map
+    /// does (`resetMapNorth` in `main-reference.js`). It only moves, so
+    /// with Reduce Motion the map faces north at once.
+    public static let turnNorth = MotionRule(seconds: 0.24, curve: .decelerate, moves: true, fades: false)
+
     /// Every rule, for the tests.
-    public static let all: [MotionRule] = [.press, .change, .cardIn, .cardOut, .pop, .confirm, .refuse, .builtRing]
+    public static let all: [MotionRule] = [.press, .change, .cardIn, .cardOut, .pop, .confirm, .refuse, .builtRing, .turnNorth]
 }
 
 /// Decision 253: a refusal shakes sideways three times, each smaller,
