@@ -2,34 +2,34 @@ import GameCore
 @testable import GamePresentation
 import XCTest
 
-/// Decision 276: each trip's result stamped where it ends, full or plenty
-/// of seats, from the fullest its train was.
+/// Decision 276: each trip's result stamped where it ends, from the
+/// fullest its train was; since decision 310, full only.
 @MainActor
 final class TripStampTests: XCTestCase {
-    /// Decision 274's fit: under 35% plenty of seats, 100% and over full,
-    /// in between no stamp.
+    /// Decision 274's fit: 100% and over full; under it no stamp, plenty
+    /// of seats included (decision 310). The train's "滿載", not the
+    /// station's "客滿".
     func testTheStampOfATripsPeakLoad() {
-        XCTAssertEqual(TripStampKind(peakLoad: 0), .roomy)
-        XCTAssertEqual(TripStampKind(peakLoad: 349), .roomy)
-        XCTAssertNil(TripStampKind(peakLoad: 350))
+        XCTAssertNil(TripStampKind(peakLoad: 0))
+        XCTAssertNil(TripStampKind(peakLoad: 349))
         XCTAssertNil(TripStampKind(peakLoad: 999))
         XCTAssertEqual(TripStampKind(peakLoad: 1_000), .full)
-        XCTAssertEqual(TripStampKind.full.title(in: .traditionalChinese), "客滿")
-        XCTAssertEqual(TripStampKind.roomy.title(in: .english), "Plenty of seats")
+        XCTAssertEqual(TripStampKind.full.title(in: .traditionalChinese), "滿載")
+        XCTAssertEqual(TripStampKind.full.title(in: .english), "Train full")
     }
 
     /// One a station, the newer in its place; at most six; gone after
     /// their lifetime; at 600× only the followed train's and those near
     /// the middle.
     func testTheBoard() {
-        func stamp(_ station: Int, train: Int = 1, kind: TripStampKind = .full) -> TripStamp {
-            TripStamp(station: StationID(rawValue: station), location: PlanPoint(x: Int64(station), y: 0), train: TrainID(rawValue: train), kind: kind)
+        func stamp(_ station: Int, train: Int = 1) -> TripStamp {
+            TripStamp(station: StationID(rawValue: station), location: PlanPoint(x: Int64(station), y: 0), train: TrainID(rawValue: train), kind: .full)
         }
         var board = TripStampBoard()
         board.add([stamp(1), stamp(2)], at: 0)
-        board.add([stamp(1, kind: .roomy)], at: 0.5)
+        board.add([stamp(1, train: 2)], at: 0.5)
         XCTAssertEqual(board.stamps.map(\.station.rawValue), [2, 1])
-        XCTAssertEqual(board.stamps.last?.kind, .roomy)
+        XCTAssertEqual(board.stamps.last?.train.rawValue, 2)
         board.add((3...9).map { stamp($0) }, at: 1)
         XCTAssertEqual(board.stamps.count, TripStampBoard.maximum)
         XCTAssertEqual(board.stamps.map(\.station.rawValue), [4, 5, 6, 7, 8, 9])
@@ -44,11 +44,11 @@ final class TripStampTests: XCTestCase {
     }
 
     /// Lesson 2's game begins with lesson 1's line and its train. Its
-    /// first trips of the day leave its four-car train mostly empty; its
-    /// morning riders fill a one-car train. Each stamp is at a stop of the
-    /// line.
+    /// four-car train's first trips of the day run mostly empty and are not
+    /// stamped (decision 310); its morning riders fill a one-car train,
+    /// stamped full. Each stamp is at a stop of the line.
     func testALinesTripsAreStampedWhereTheyEnd() throws {
-        func stamps(cars: Int, until done: ([TripStamp]) -> Bool) throws -> (stamps: [TripStamp], stops: [StationID]) {
+        func stamps(cars: Int, until done: ([TripStamp], Int) -> Bool) throws -> (stamps: [TripStamp], stops: [StationID]) {
             let session = GameSession(world: GameWorld.newGame(lesson: Lesson.all[1]))
             let line = try XCTUnwrap(session.world.lines.first)
             // Re-formed as the line panel does (decision 180).
@@ -63,17 +63,19 @@ final class TripStampTests: XCTestCase {
                 let before = world
                 try world.advance(ticks: 1)
                 stamped += loads.step(from: before, to: world)
-                if done(stamped) { break }
+                let ended = world.tripLog.filter { $0.line == line.id && $0.arrival != nil && !$0.isDeadhead }.count
+                if done(stamped, ended) { break }
             }
             return (stamped, line.stops)
         }
-        let long = try stamps(cars: 4) { $0.count >= 4 }
-        XCTAssertFalse(long.stamps.isEmpty, "a long train's trips end with plenty of seats")
-        XCTAssertTrue(long.stamps.allSatisfy { $0.kind == .roomy }, "\(long.stamps.map(\.kind))")
-        XCTAssertTrue(long.stamps.allSatisfy { long.stops.contains($0.station) })
+        // Its first four trips end, none of them full.
+        var ended = 0
+        let long = try stamps(cars: 4) { ended = $1; return $1 >= 4 }
+        XCTAssertGreaterThanOrEqual(ended, 4, "the long train's first trips ended")
+        XCTAssertEqual(long.stamps, [], "trips with seats to spare are not stamped")
 
-        // At night a one-car train has seats; in the morning it is full.
-        let short = try stamps(cars: Train.minimumCars) { $0.contains { $0.kind == .full } }
+        // In the morning a one-car train is full.
+        let short = try stamps(cars: Train.minimumCars) { stamped, _ in stamped.contains { $0.kind == .full } }
         XCTAssertTrue(short.stamps.contains { $0.kind == .full }, "a one-car train's morning trips end full: \(short.stamps.map(\.kind))")
         XCTAssertTrue(short.stamps.allSatisfy { short.stops.contains($0.station) })
     }
