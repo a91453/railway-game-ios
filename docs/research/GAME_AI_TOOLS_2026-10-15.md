@@ -315,7 +315,7 @@ MIT，`5beb35b`。給 Claude Code、Codex 等的 skill 集，主張「小、可�
 | 項目 | 時機 | 怎麼加 | 四方（玩家／開發／美術／音樂） |
 | --- | --- | --- | --- |
 | diagnosing-bugs 試用 | **現在** | 拿一個已修好的真 bug（#828 的 R2）回到修之前的 commit，只照 skill 走，看能不能做出會紅的指令、找到同一個原因 | 無／驗證 #847 真的有用，便宜／無／無 |
-| pixelmatch 差異圖 | 下一個改 3D 畫面的 PR（決策 277 的雨絲與站前商店街、Meshy 公車接進 App） | 抄 `pixelmatch` 的單一檔案（ISC，授權放旁邊）進 `tools/map3d-preview/`，在 `render.cjs` 已開的 Chromium 裡用 canvas 解 PNG、比對；不加 npm 套件。只當審查的證據，不當通過門檻 | 無／前後對照有數字／看得出改動只在該改的地方／無 |
+| pixelmatch 差異圖 | **已加**（作者 2026-10-21 同意：「pixelmatch 可以加」；決策 314 合併後的小 PR：`tools/map3d-preview/diff.cjs`，附決策 314 路線色帶的差異圖；之後改 3D 畫面的 PR 照 README 附差異圖） | 抄 `pixelmatch` 的單一檔案（ISC，授權放旁邊）進 `tools/map3d-preview/`，在 `render.cjs` 已開的 Chromium 裡用 canvas 解 PNG、比對；不加 npm 套件。只當審查的證據，不當通過門檻 | 無／前後對照有數字／看得出改動只在該改的地方／無 |
 | glTF-Validator | Meshy 公車接進 App 的那個 PR | 加進 `tools/glb-to-m3dmodel` 自己的 `package.json`（`gltf-validator`，Apache-2.0，固定版本），轉換前先查；遊戲自己的限制（無貼圖、面數）照舊另查 | 無／壞模型在轉換前就擋下／無／無 |
 | OR-Tools 車輛運用量尺 | `claude/hsr-train-rostering`（決策 297）合併後，量到的取消或晚點還有說不出原因的才做 | 離線 Python 工具，照參考庫 `optimize_physical_dispatch.py` 的 CP-SAT 寫法；不進 GameCore | 間接（高鐵示範號誌預設關）／知道規則離最佳差多少／無／無 |
 | MetricKit、OSSignposter、開發者 HUD | 照 NEXT_PRIORITIES §2 第 8 項；72.1 的 fps 或 VoiceOver 600 倍（HANDOFF §7.5）在實機看到卡頓就提前 | Apple 自帶，不加依賴 | 間接／實機的數字，不再只有 Linux／3D 的幀預算／無 |
