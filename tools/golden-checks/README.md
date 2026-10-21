@@ -11,6 +11,7 @@ python3 -I tools/golden-checks/doc_numbers.py            # 印出比對結果，
 python3 -I tools/golden-checks/doc_numbers.py --check    # 有差異時 exit 1
 python3 -I tools/golden-checks/doc_numbers.py --selftest # 用暫存目錄裡的假 repository 測這支工具
 python3 -I tools/golden-checks/doc_numbers.py --root <路徑>  # 檢查別的 checkout（預設是這支工具所在的 repository）
+python3 -I tools/golden-checks/doc_numbers.py --index    # 整份決策索引：OVERVIEW §9 加上 docs/decisions/
 ```
 
 ### 比對的數字
@@ -22,7 +23,7 @@ python3 -I tools/golden-checks/doc_numbers.py --root <路徑>  # 檢查別的 ch
 | golden | 「schema N」 | `Tests/GameCoreTests/GoldenScenario.swift` 的 `GoldenScenario.schemaVersion` |
 | golden | 「N 個 JSON」 | `GoldenScenarios/` 底下的 `*.json` 個數 |
 | replay | 開頭的「N 個」 | `ReplayFixtures/` 底下的 `*.json` 個數 |
-| 決策 | 括號前最大的號碼（「1–217、219–265（…）」讀成 265）；括號前沒有號碼（「見決策索引（§9）」）就不比，表上寫「不列（見 §9）」 | `docs/ARCHITECTURE.md` 最大的 `### N.` |
+| 決策 | 括號前最大的號碼（「1–217、219–265（…）」讀成 265）；括號前沒有號碼（「見決策索引（§9）」）就不比，表上寫「不列（見 §9）」 | `docs/ARCHITECTURE.md` 與 `docs/decisions/` 最大的 `### N.` |
 
 只算目錄本身的 JSON，不算子目錄，和讀這些檔案的測試一樣。所以 `ReplayFixtures/Reports/` 裡的問題回報範例不算 replay fixture。
 
@@ -38,8 +39,12 @@ python3 -I tools/golden-checks/doc_numbers.py --root <路徑>  # 檢查別的 ch
 | ARCHITECTURE 的標題或索引的列順序不對 | 否，只列出來 |
 | 1 到最大號之間缺的號碼 | 否，只列出來 |
 | 續篇標題（`### 204（續）.`） | 否，只列出來，不算重複 |
+| `docs/decisions/<N>.md` 的第一個 `### M.` 不是 N，或檔裡沒有 `### N.` 標題 | 是 |
+| `docs/decisions/<N>.md` 有第二個決策標題（續篇標題除外） | 是 |
+| 同一號同時在 ARCHITECTURE 與 `docs/decisions/` | 是 |
+| `docs/decisions/` 的決策不在 OVERVIEW §9 | 不算，也不列：329 起那個目錄就是索引（決策 329） |
 
-程式碼區塊（```` ``` ````）裡的 `### N.` 不算。決策索引在 OVERVIEW §9，ARCHITECTURE 開頭也寫明索引在那裡。
+程式碼區塊（```` ``` ````）裡的 `### N.` 不算。決策索引在 OVERVIEW §9（1–328），ARCHITECTURE 開頭也寫明索引在那裡；`docs/decisions/` 裡檔名不是號碼的檔（`README.md`）不讀。`--index` 印出整份索引：§9 的列加上 `docs/decisions/` 每個檔的標題。
 
 ### 輸出
 
@@ -47,8 +52,7 @@ python3 -I tools/golden-checks/doc_numbers.py --root <路徑>  # 檢查別的 ch
 
 ### 什麼時候跑
 
-- 改了存檔版本、golden schema 或 fixture 個數的 PR，更新 OVERVIEW §2 之後跑一次 `--check`。新增決策的 PR 只填 ARCHITECTURE 裡預約的「### N. （預約）」那一節，不改 OVERVIEW 的決策列與 §9。
-- 遊戲規劃合併一批之後補索引，跑 `--check` 確認附註裡沒有「還沒進決策索引」。
+- 改了存檔版本、golden schema 或 fixture 個數的 PR，更新 OVERVIEW §2 之後跑一次 `--check`。新增決策的 PR 只加 `docs/decisions/<N>.md`，不改 ARCHITECTURE 的最後、OVERVIEW 的決策列與 §9（決策 329），跑一次 `--check`。
 - 改這支工具本身時跑 `--selftest`。
 
 CI 不會自動跑它。工具放在這裡而不是 `.github/scripts/`，因為改 `.github/scripts/` 會觸發完整的 Swift tier（HANDOFF 第 2 節）。
