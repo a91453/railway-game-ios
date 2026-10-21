@@ -105,3 +105,7 @@
 - **UNVERIFIED**：App／Asset Catalog 編譯、SwiftUI 顯示與 TestFlight 實機；這輪只新增 docs 素材，不執行無關的 Swift／iOS 測試。
 
 工具不提供剩餘生圖額度，不推算餘額。
+
+## 搬到私有庫
+
+2026-10-21 起，這個資料夾的其他預覽圖（含檢視頁）在私有庫 a91453/railway-reference-private 的 `Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/`，內容完整、連結照舊；這裡只留本說明與被程式或文件直接引用的圖。上面連到已搬走檔案的連結請到那裡看。
