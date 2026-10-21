@@ -10,9 +10,12 @@ import SwiftUI
 /// and the game's 16 km map starts with its middle at the middle of the
 /// view. Or the player starts on the whole of Taiwan (decision 88). A place
 /// of Taiwan starts with that square only, and buys the land round it as
-/// the railway grows (decision 167).
+/// the railway grows (decision 167). A tap on the map moves the square
+/// there, and the list says how large it is and the places a game was
+/// started at before (decision 312).
 ///
-/// Only that middle is kept, as the world's anchor. A search's results are
+/// Only that middle is kept, as the world's anchor and in the list of recent
+/// places (decision 312). A search's results are
 /// Apple's map data, shown with the map and dropped (Attachment 6 §2.4 and
 /// §2.5 of the Apple Developer Program License Agreement).
 ///
@@ -32,7 +35,14 @@ struct RealWorldPicker: View {
     /// Taiwan's real railways as the map draws them, made when the picker
     /// appears (it opens once the launcher has read them).
     @State private var railwayLines: [RailwayLineDrawing] = []
+    /// How far the camera is from the map, kept so a tap moves the square
+    /// without zooming.
+    @State private var cameraDistance: Double?
+    /// The places a game was started at on this device (decision 312,
+    /// ``RecentStartPlaces``): only their middles.
+    @AppStorage("realWorld.recentStarts") private var recentStarts = ""
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(launcher: GameLauncher) {
         self.launcher = launcher
@@ -94,37 +104,48 @@ struct RealWorldPicker: View {
     /// over the middle of the region MapKit reported, so a game could
     /// start somewhere else than under it.
     private var preview: some View {
-        Map(position: $position, interactionModes: [.pan, .zoom]) {
-            ForEach(railwayLines) { line in
-                MapPolyline(coordinates: line.coordinates)
-                    .stroke(Color(line.color(colorScheme == .dark ? .dark : .light)), lineWidth: 2)
+        MapReader { reader in
+            Map(position: $position, interactionModes: [.pan, .zoom]) {
+                ForEach(railwayLines) { line in
+                    MapPolyline(coordinates: line.coordinates)
+                        .stroke(Color(line.color(colorScheme == .dark ? .dark : .light)), lineWidth: 2)
+                }
+                .mapOverlayLevel(level: .aboveRoads)
+                // Decision 312: the land the game starts with, drawn as the
+                // land chosen to buy is (decision 160): green, dashed.
+                MapPolygon(coordinates: square)
+                    .foregroundStyle(Palette.metroGreen.opacity(0.18))
+                    .stroke(Palette.metroGreen, style: StrokeStyle(lineWidth: 3, dash: [8, 5]))
             }
-            .mapOverlayLevel(level: .aboveRoads)
-            // The 16 km square and its centre mark in the game map's
-            // colours (decision 84): a station's warm fill with its navy
-            // edge, which Apple's light map would lose a warm line on.
-            MapPolygon(coordinates: square)
-                .foregroundStyle(Palette.station.opacity(0.15))
-                .stroke(Palette.ink, lineWidth: 2)
-        }
-        .mapStyle(.standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll))
-        .onAppear {
-            if railwayLines.isEmpty {
-                railwayLines = (launcher.railways?.lines ?? []).map(RailwayLineDrawing.init)
+            .mapStyle(.standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll))
+            // Decision 312: a tap moves the square there, kept on the map.
+            .onTapGesture { location in
+                guard let tapped = reader.convert(location, from: .local),
+                      let area = RealWorldStartArea(latitude: tapped.latitude, longitude: tapped.longitude)
+                else { return }
+                withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) {
+                    position = Self.camera(on: Self.coordinate(of: area.middle), distance: cameraDistance)
+                }
             }
+            .onAppear {
+                if railwayLines.isEmpty {
+                    railwayLines = (launcher.railways?.lines ?? []).map(RailwayLineDrawing.init)
+                }
+            }
+            .onMapCameraChange(frequency: .continuous) { context in
+                // Where the camera looks: under the "+".
+                middle = context.camera.centerCoordinate
+                cameraDistance = context.camera.distance
+            }
+            .overlay {
+                Image(systemName: "plus")
+                    .font(.title2.weight(.semibold))
+                    .foregroundStyle(Palette.ink)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+            .accessibilityIdentifier("realWorld.map")
         }
-        .onMapCameraChange(frequency: .continuous) { context in
-            // Where the camera looks: under the "+".
-            middle = context.camera.centerCoordinate
-        }
-        .overlay {
-            Image(systemName: "plus")
-                .font(.title2.weight(.semibold))
-                .foregroundStyle(Palette.ink)
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
-        }
-        .accessibilityIdentifier("realWorld.map")
     }
 
     private var places: some View {
@@ -147,6 +168,30 @@ struct RealWorldPicker: View {
                     ForEach(stations.prefix(50)) { station in
                         stationButton(station, showsSystem: true)
                     }
+                }
+            }
+            // Decision 312: where games were started before, ahead of the
+            // search; only while nothing is typed.
+            let recent = RecentStartPlaces(stored: recentStarts).places
+            if query.isEmpty, !recent.isEmpty {
+                Section {
+                    ForEach(Array(recent.enumerated()), id: \.offset) { index, place in
+                        Button {
+                            position = Self.camera(on: Self.coordinate(of: place))
+                        } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: "clock.arrow.circlepath")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Theme.primary)
+                                Text(verbatim: RecentStartPlaces.name(of: place, names: launcher.placeNames, language: launcher.language))
+                                    .font(.body)
+                                    .foregroundStyle(Theme.textPrimary)
+                            }
+                        }
+                        .accessibilityIdentifier("recent.\(index)")
+                    }
+                } header: {
+                    Text(verbatim: launcher.language.text("Recent", "最近用過"))
                 }
             }
             if search.isSearching || search.results != nil {
@@ -175,15 +220,18 @@ struct RealWorldPicker: View {
             }
             Section {
                 Group {
-                    if expansion != nil {
-                        // Decision 167: a place of Taiwan is bought tile by tile.
-                        Text(verbatim: launcher.language.text(
-                            "The square is the land you start with, 16 km a side. Move the map to choose where its middle is, then tap Build Here. Buy the land around it as your railway grows, out to the whole island.",
-                            "方框是你一開始擁有的土地，每邊 16 公里。移動地圖選擇它的中心，再按「在這裡建造」。鐵路成長後，再一塊一塊買下周圍的土地，一直買到整座島。"
-                        ))
-                    } else {
-                        Text("The square is your map, 16 km a side. Move the map to choose where its middle is, then tap Build Here.")
+                    // Decision 312: how large the start is, and whether it
+                    // grows (decision 167: a place of Taiwan buys tile by tile).
+                    if let startArea {
+                        Text(verbatim: startArea.summary(in: launcher.language))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Theme.textPrimary)
+                            .accessibilityIdentifier("realWorld.area")
                     }
+                    Text(verbatim: launcher.language.text(
+                        "Tap the map or move it to place the square, then tap Build Here.",
+                        "點地圖或移動地圖來放方框，再按「在這裡建造」。"
+                    ))
                     // Decision 198: the ground chosen in the new game's options.
                     if launcher.newGameOptions.ground == .flat {
                         Text(verbatim: launcher.language.text(
@@ -326,28 +374,21 @@ struct RealWorldPicker: View {
         GeoAnchor(latitudeDegrees: middle.latitude, longitudeDegrees: middle.longitude)
     }
 
-    /// The map bought tile by tile that a game here would be (decision 167),
-    /// or `nil` for a place outside Taiwan, whose map is the 16 km square.
-    private var expansion: RealWorldExpansion? {
-        anchor.flatMap(RealWorldExpansion.init(around:))
+    /// The land a game here starts with (decision 312): the tile round the
+    /// middle of the view where Taiwan's map is bought tile by tile
+    /// (decision 167), the 16 km square otherwise.
+    private var startArea: RealWorldStartArea? {
+        anchor.map(RealWorldStartArea.init(middle:))
     }
 
-    /// The corners of the land a game here starts with: the tile round the
-    /// middle of the view where Taiwan's map is bought tile by tile, the
-    /// 16 km square otherwise.
+    /// The corners of ``startArea``.
     private var square: [CLLocationCoordinate2D] {
-        guard let expansion else { return Self.square(around: middle) }
-        let frame = expansion.frame
-        let length = Double(MapExpansion.tileLength)
-        let west = Double(expansion.start.column) * length, north = Double(expansion.start.row) * length
-        return [(west, north), (west + length, north), (west + length, north + length), (west, north + length)].map { corner in
-            let place = frame.coordinate(worldX: corner.0, worldY: corner.1)
-            return CLLocationCoordinate2D(latitude: place.latitude, longitude: place.longitude)
-        }
+        (startArea?.corners ?? []).map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
     }
 
     private func start() {
         guard let anchor else { return }
+        recentStarts = RecentStartPlaces(stored: recentStarts).adding(anchor).stored
         dismiss()
         launcher.openRealWorldGame(at: anchor)
     }
@@ -358,23 +399,15 @@ struct RealWorldPicker: View {
         CLLocationCoordinate2D(latitude: anchor.latitudeDegrees, longitude: anchor.longitudeDegrees)
     }
 
-    /// The camera on `point` with the whole game map in view.
-    private static func camera(on point: CLLocationCoordinate2D) -> MapCameraPosition {
+    /// The camera on `point` with the whole game map in view, or, given
+    /// the camera's `distance`, as far away as it is (a tap moves the map
+    /// without zooming it).
+    private static func camera(on point: CLLocationCoordinate2D, distance: Double? = nil) -> MapCameraPosition {
+        if let distance {
+            return .camera(MapCamera(centerCoordinate: point, distance: distance, heading: 0, pitch: 0))
+        }
         let side = 2 * newMapHalfExtent.east * 1.4
         return .region(MKCoordinateRegion(center: point, latitudinalMeters: side, longitudinalMeters: side))
-    }
-
-    /// The corners of a new game's map with its middle at `point`, laid
-    /// over the Earth as the game lays it (``AppleMapBackground``): metres
-    /// at `point`'s latitude in MapKit's map points.
-    private static func square(around point: CLLocationCoordinate2D) -> [CLLocationCoordinate2D] {
-        let middle = MKMapPoint(point)
-        let pointsPerMetre = MKMapPointsPerMeterAtLatitude(point.latitude)
-        let east = newMapHalfExtent.east * pointsPerMetre, south = newMapHalfExtent.south * pointsPerMetre
-        let corners: [(x: Double, y: Double)] = [(-1, -1), (1, -1), (1, 1), (-1, 1)]
-        return corners.map { corner in
-            MKMapPoint(x: middle.x + corner.x * east, y: middle.y + corner.y * south).coordinate
-        }
     }
 
     /// How far a new game's map reaches from its middle, in metres.

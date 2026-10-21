@@ -13820,6 +13820,46 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 **下一步**：實機（TestFlight）看潛力圖在 iPhone 直拿時圖例的高度、第一次畫一個畫面的停頓（Release 應比 debug 快）與台北市中心是否全部同一色（20,000 人以上一段）；需要時再加一段門檻。
 
+### 312. 實景開局：點地圖把起始範圍移過去，卡片寫面積與「之後可以買地擴大」，最近用過的地點列在前面
+
+2026-10-21。競品研究 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.6（NEXT_PRIORITIES §19 第 7 名）。作者 2026-10-14、10-15 起的預設「session 五方決定」，遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 派工。號碼依 #231：派工單保留 312。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
+
+**為什麼**：實景選點（`RealWorldPicker`）只能拖地圖讓中心對準，說明寫「每邊 16 公里」，玩家不知道一開始有多大、之後能不能變大；每次開新遊戲都要重新找地點。競品是點地圖就把範圍移過去、寫「20.4 km²」與「之後可以擴大」、已下載的城市列在前面。
+
+**規則**（GamePresentation 的 `RealWorldStartArea`、`RecentStartPlaces`；App 只畫）：
+1. **框**：起始範圍照決策 167 決定：台灣框內的地點是起手那一塊地塊（`RealWorldExpansion.start`），其他地方是 16 km 的整張地圖。四個角（`corners`，西北起順時針）用遊戲鋪世界的同一個 Web Mercator 算（`RealWorldFrame`），App 不再自己用 `MKMapPoint` 算一份。畫法沿用購地卡選中地塊的框（決策 160、`MapArt.drawMapExpansion`）：`Palette.metroGreen` 虛線（寬 3、虛線 8／5）、同色 18% 的底。原本的暖色底、深藍實線不用了。
+2. **點地圖**：點一下，鏡頭的中心移到那一點（距離不變，不縮放），「＋」與框跟著過去；拖地圖對準中心照舊。點到的位置先經過 `RealWorldStartArea.middle(latitude:longitude:)`：緯度限制在 ±`maximumLatitude`（84.978074°，框的北邊或南邊剛好落在地圖〔Web Mercator，約 ±85.0511°〕之內），經度繞回 −180° 到 180°；不是數字就不動。台灣的地塊伸出台灣框外（決策 167 的「限制」）不另外限制，和清單、拖地圖選到的一樣。
+3. **動態**（決策 253）：鏡頭移動用 `MotionRule.change`（0.2 秒、兩端平滑，原地的變化），`layout(reduceMotion:)`：減少動態效果時直接跳過去。沒有新增規則。
+4. **卡片**：說明的第一行寫面積（`summary(in:)`），用地面上的大小：16 km 的地圖在中心那條緯線上剛好 16,384 m，268 km²（16.4 × 16.4 km）；台灣的地塊是 16,384 個「世界公尺」，世界公尺是整張島的錨點（`RealWorldExpansion.anchor`，約北緯 23.6°）那條緯線上的公尺，所以越往北地面上越小：臺北 262 km²（16.2 × 16.2）、臺中 266、高雄 272、臺東 272。台灣的地點接著寫「之後可以買地擴大」，其他地方寫「之後不會再擴大」（決策 167：框外的 16 km 地圖不買地）。第二行改成「點地圖或移動地圖來放方框，再按『在這裡建造』」。
+5. **最近用過**：按「在這裡建造」時把那一點記在這台裝置（`@AppStorage("realWorld.recentStarts")`，`RecentStartPlaces.stored`：千萬分之一度的整數，`;` 分隔），最新的在前、1 km 內算同一個地方（換到最前面）、最多 5 個。清單在沒有輸入搜尋字時列在最前面（「最近用過」），點了把地圖移過去。名字顯示時才查：App 的地名（`PlaceNames`，OpenStreetMap 的聚落、村里，沒有時鄉鎮市區），沒有時清單裡 20 km 內最近的地點，再沒有就寫經緯度（「40.50°S 120.25°W」）。只記中心點，**不記搜尋結果**（Apple 的地圖資料不能保存，Attachment 6 §2.5，和原本的規定一樣）。UI 測試的 `-ui-testing` 每次啟動清掉設定，所以清單一開始是空的。
+
+**沒做**：
+- **「用我的位置」**：要 CoreLocation 與 Info.plist 的用途字串，App Store 的隱私標籤要更新（App Store Connect 是作者的事）。等作者決定，寫在 `docs/HANDOFF.md` §3。
+- **「已下載的地點」**：存檔的摘要（`SaveSummary`）沒有記錨點，要列出存檔的地點得讀每一個存檔或改摘要的格式。最近用過已經涵蓋「上次玩的地方」，所以先不做。
+- 公司名稱放在同一張卡（研究 4.6 的三步）：明信片已經有公司名（決策 307 的載入畫面也用它），不另外問。
+
+**參考對照**（a91453/railway-reference-private b3af6d8）：
+
+| 參考 | 這裡 | 取用 |
+|---|---|---|
+| `Ci/reference_snapshot/lib/flight_planner_panel__q_*.js`（`metrobuilder_recent_aircraft_v1_`：新的 `unshift`、去重、`slice(0,8)`） | `RecentStartPlaces.adding(_:)` | 最新在前、去重、有上限的做法；上限改成 5（清單在搜尋之前，太長會把台灣的地點推出畫面） |
+| `Ci/` 的「任意城市」（`CITIES` 的 `center`） | `RealWorldPicker`（決策 50 已移植） | 只有中心點，沒有範圍框 — gap |
+| `MapBuilder/reference_snapshot/`（路線與車站編輯器） | — | 沒有「選一塊範圍」的畫法 — nothing usable |
+| `Railway/city_world_reference/source/`（`regionEntry`、`regionLots`） | — | 地塊是城市內的建地，不是在真實地圖上選範圍 — nothing usable |
+
+外部專案沒有找：點地圖移到那裡是 MapKit 的 `MapReader.convert(_:from:)`，面積與限制是幾行算式（這個專案自己的）；做法的概念取自研究 4.6 那款商業遊戲（只取做法）。
+
+**五方**：
+- 玩家：一眼看到一開始有多大、之後能不能變大；點一下就換地方，不必拖到中心；上次玩的地方在最上面。
+- 鐵道迷：面積寫地面上的真實大小（台灣的地塊越北越小，臺北 262、臺東 272 km²），不是一律 268；地名照 OpenStreetMap（ODbL，資料來源畫面已列）。
+- 開發：框的位置、面積、限制、最近用過都在 GamePresentation，Linux 測試（`RealWorldStartAreaTests`）；App 不再自己算框；GameCore、存檔、golden 不動。
+- 美術：框和購地的框同一種綠色虛線，玩家看到同一種框就知道是「土地」；不另畫新圖，最近用過的列用 SF Symbols `clock.arrow.circlepath`（清單的列本來就用 SF Symbols）。
+- 音樂：無。
+
+**沒有採用的做法**（預覽：`docs/art/real-world-start-2026-10-21/chosen-and-others.png`，網頁示意，不是 App 截圖）：A. 框自己可以拖、地圖不動：手機上手指常同時拖到地圖，兩個手勢搶；B. 原本的暖色底、深藍實線框：和購地的框不一樣，也沒有面積；C. 面積寫在地圖的框上：字擋到路線，拉遠時字比框大。
+
+**驗證**：`RealWorldStartAreaTests`（Linux）。App 的畫面（點地圖、框、卡片、最近用過）只能靠 macOS CI 編譯與 `RealWorldMapUITests`（開局流程沒有改變：清單、在這裡建造），實機手感由作者在 TestFlight 看。點地圖沒有加 UI 測試：Simulator 上的地圖圖磚與點的位置不穩，留給實機。
+
 ### 313. 2D 與 3D 不搶畫面：交接只在放手時判斷，2D 拉到最近還繼續拉才進 3D；3D 加「2D」與「建設」鈕；設定「拉近自動變 3D」
 
 2026-10-21。作者實機回報：「2d常常跟3d搶畫面」（iPhone 17 Pro）。遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 整理規則、作者定案，派給 3D session_01Y25x9NJSKmAuP1M1K3Sf3C。號碼依工作登記 #231（遊戲規劃保留 313）。存檔版本、golden schema 不動；GameCore 不動。改的是決策 269 的交接。
@@ -14058,6 +14098,18 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 3. GamePresentation：`RealLineAcquisition`（排出計畫、試算價格、擋住的地方）、`PlayerCommand.acquireRealLine`、`RealTrainTraffic` 跳過已收購的線、車站卡的「沿線的常客」、`AcquisitionReportTests`（量第 2 點的目標，把 `valuePerDailyRider` 與量到的數字寫回這裡）。
 4. App：車站卡與路線清單的「收購這條線」、收購卡、「收購完成」卡、`SoundCue.lineAcquired`、String Catalog 兩種語言。
 5. push 之前先 `send_message` 遊戲規劃要 GameCore 名額（同時最多 2 個 GameCore PR 跑 CI，一次只有一件升存檔）。
+
+### 308. （預約）高鐵：沒有閉塞時的互等與追回時間
+
+session_0125dMtwyMdz7mzoBCRNa1pn 預約（#231）。這一節由那個 PR 填寫。
+
+### 314. （預約）3D 的列車標籤與路線色帶
+
+session_01Y25x9NJSKmAuP1M1K3Sf3C 預約（#231）。這一節由那個 PR 填寫。
+
+### 316. （預約）新遊戲選擇頁：主選單的「新遊戲」再選空白地圖或實景地圖
+
+session_01PK2gs3bPYXPFbbJkwsDuUP 預約（#231）。這一節由那個 PR 填寫。
 
 ## 目前規則摘要
 
