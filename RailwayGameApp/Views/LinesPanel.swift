@@ -1331,6 +1331,10 @@ struct LinesPanel: View {
                 .accessibilityIdentifier("line.trains.fill")
             }
             headwayPicker
+            // Decision 309: how two trains or more leave (TestFlight 77.1).
+            if line.trains.count >= 2 {
+                dispatchPatternMenu(line)
+            }
             capacityWarning(line)
             if let change {
                 if let limit = change.limitText(in: language) {
@@ -1367,6 +1371,46 @@ struct LinesPanel: View {
         .task(id: line.id) {
             guard let now = memo.runningHeadway(line.id, of: session) else { return }
             staffHeadway = GameWorld.staffingHeadways.min { abs($0 - now) < abs($1 - now) } ?? staffHeadway
+        }
+    }
+
+    /// Decision 309: how the line's trains leave, evenly apart, from both
+    /// ends at once or in pairs, and a line on what that does. A menu the
+    /// ticks leave alone (decision 184, later).
+    @ViewBuilder
+    private func dispatchPatternMenu(_ line: ServiceLine) -> some View {
+        let language = session.language
+        let choices = session.selectedLineDispatchChoices
+        if !choices.isEmpty {
+            let current = LineDispatchPatternChoice(pattern: line.dispatchPattern)
+            VStack(alignment: .leading, spacing: 4) {
+                TickStable(StableKey(choices, current, language)) {
+                    Menu {
+                        ForEach(choices) { choice in
+                            Button {
+                                session.setSelectedLineDispatchPattern(choice.pattern)
+                            } label: {
+                                if choice == current {
+                                    Label(choice.title(in: language), systemImage: "checkmark")
+                                } else {
+                                    Text(verbatim: choice.title(in: language))
+                                }
+                            }
+                        }
+                    } label: {
+                        Label {
+                            Text(verbatim: language.text("How trains leave: ", "發車方式：") + current.title(in: language))
+                        } icon: {
+                            Image(systemName: "arrow.left.arrow.right")
+                        }
+                        .font(.subheadline)
+                    }
+                    .accessibilityIdentifier("line.dispatchPattern")
+                }
+                Text(verbatim: session.dispatchPatternFooter(line.dispatchPattern))
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
+            }
         }
     }
 

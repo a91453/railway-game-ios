@@ -1242,6 +1242,8 @@ extension StepOutcome: Codable {
             self = .rejected(.invalidTrainPerformance)
         case "invalidLineDwell":
             self = .rejected(.invalidLineDwell)
+        case "invalidDispatchPattern":
+            self = .rejected(.invalidDispatchPattern)
         case "invalidServiceWindow":
             self = .rejected(.invalidServiceWindow)
         case "invalidTrainsInService":
@@ -1471,6 +1473,8 @@ extension StepOutcome: Codable {
             try container.encode("invalidTrainPerformance", forKey: .result)
         case .rejected(.invalidLineDwell):
             try container.encode("invalidLineDwell", forKey: .result)
+        case .rejected(.invalidDispatchPattern):
+            try container.encode("invalidDispatchPattern", forKey: .result)
         case .rejected(.invalidServiceWindow):
             try container.encode("invalidServiceWindow", forKey: .result)
         case .rejected(.invalidTrainsInService):

@@ -335,9 +335,15 @@
 ///     build that reads only an earlier version would drop them, and the
 ///     stations by real ones would lose the travellers changing there, so
 ///     it says the save is newer than it instead.
+/// 65. Dispatch patterns (decision 309): a line can have its
+///     `"dispatchPattern"` (from both ends, or staggered pairs), the last
+///     stop's `"endLastDispatch"` and `"opensPair"`. A build that reads
+///     only an earlier version would drop them, and the line would space
+///     its trains evenly again, so it says the save is newer than it
+///     instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 64
+    public static let currentVersion = 65
 
     public let world: GameWorld
 
@@ -504,6 +510,8 @@ extension SavedGame: Codable {
         // trains theirs as it goes on (at a whole minute it has none).
         // Version 63 to 64: a world without `"realTransfers"` has them off,
         // and a station without `"transferPoints"` has none.
+        // Version 64 to 65: a line without `"dispatchPattern"` spaces its
+        // trains evenly, as before.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

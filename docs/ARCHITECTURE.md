@@ -13599,6 +13599,65 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 舊規則（只在號誌關時追回）下兩者相同，測試失敗。
 - 閉塞開時整批推進 10 分鐘與逐分推進相同。
 
+### 309. 路線的發車方式：平均錯開（預設）、兩端對開、第二列晚 N 分
+
+2026-10-21。TestFlight 77.1 #1（PLAYER_FEEDBACK）；NEXT_PRIORITIES §19 第 1 名；遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 派工。號碼依 #231：`main` 到 306，307（甲線）、308（追回後續）已保留，取 309；存檔 65。
+
+**玩家原話**：「希望在交由路線自動派車時，兩班車的發車時間可以自行調整班距……加入第二列之後，可能沒辦法對開或者晚前一班車 10 分鐘後開。」
+
+**為什麼做不到**：派車（決策 23）照班距一班一班送；從終點發的車（決策 172）和第一站共用同一個 `lastDispatch`，所以兩端不能同時發車，第二列晚幾分鐘開也沒有地方設。「加開一列車」（決策 264）把班距設成「來回 ÷ 列車數」，兩列車永遠平均錯開。
+
+**規則**（`DispatchPattern.swift`、`GameWorld.swift` 的派車）：
+1. 路線多一個「發車方式」`ServiceLine.dispatchPattern`，命令 `setLineDispatchPattern(_:to:)`（免費；已出發的車跑完這趟，下一班照新方式）：
+   - **平均錯開**（`.even`，預設，每一條舊路線）：和以前逐行相同，兩端共用一個派車時刻，下一班在上一班之後一個班距。
+   - **兩端對開**（`.fromBothEnds`）：第一站與終點各有自己的派車時刻（`lastDispatch` 與新的 `endLastDispatch`）。終點分到一半的車（往下取整），第一站分到其餘；每一端的間隔是 `班距 × 列車數 ÷ 這一端的車數`，所以每一端自己的車平均錯開。終點的車比它分到的少時，第一站多出來的一列馬上空車回送到終點（決策 172 的空車回送，不占班距、不載客），到了就發車。兩端在同一步可以各發一班。需要彈性發車（決策 172，App 的新遊戲預設開），因為只有它會從終點發車；沒有時命令拒絕（`invalidDispatchPattern`），之後關掉彈性發車的世界照平均錯開。
+   - **第二列晚 N 分**（`.staggered(minutes:)`，N 是 2–30）：兩列一組，第二列在第一列之後 N 分，下一組在第一列之後兩個班距。N 超過班距時照另一列看（`min(N, 2×班距−N)`），至少 2 分（`minimumHeadwayMinutes`）。這一組有沒有開著記在 `opensPair`；第二列在兩個班距之後才發（例如過了一夜），就當新的一組。
+2. 只管路線自己的服務（停站模式與環線兩個方向照舊平均），有班次的路線（決策 133）與環線不能設；一條線只跑 1 列車時沒有「第二列」，照平均。
+3. 列車數的上限照舊（`running < planned.trains`）；機廠出庫（決策 209）的時間也照發車方式（第一站那一端）。
+4. 閒置快轉（`minutesUntilNextDispatch`、`minutesUntilLineWaitsChange`）照每一端的時刻醒來，整批推進與逐分推進相同（`DispatchPatternTests.testLongBatchesMatchSingleTicks`）。
+
+**App**：路線面板「班距與列車數」裡，班距選擇的下面，路線有 2 列車以上時多一個「發車方式」選單：平均錯開、兩端對開（有彈性發車才有）、第二列晚 2／3／5／10／15／20／30 分，下面一行說它做什麼（`LineDispatchPatternChoice`，GamePresentation）。指令記進指令紀錄（`PlayerCommand.Edit.setLineDispatchPattern`）。
+
+**量到的**（`DispatchPatternReportTests`，`DISPATCH_PATTERN_REPORT=1`，Linux debug，24 小時；Alpha–Beta–Gamma 一條單線，爬行速度一趟來回 11 分，2 列車，行車控制關、寫實營運開，Alpha 住宅 3,000、Beta 商業 1,000、Gamma 辦公 3,000 旅次）：
+
+| 發車方式 | 載客 | 平均候車（分） | 準點 | 趟數 |
+| --- | ---: | ---: | ---: | ---: |
+| 平均錯開 | 6,996 | 3.1 | 100.0 % | 179 |
+| 兩端對開 | 6,992 | 3.2 | 100.0 % | 180 |
+| 第二列晚 2 分 | 6,993 | 5.3 | 100.0 % | 180 |
+| 第二列晚 10 分 | 6,993 | 3.3 | 100.0 % | 179 |
+
+- 兩端對開與平均錯開一天下來幾乎一樣：兩列車平均錯開跑穩了，本來就是兩端同時發車、在中間交會。差別在開頭：平均錯開時第二列要在第一站等一個班距（每天早上、每次加車都一樣），兩端對開時它一開始就在終點，首班兩端一起開。
+- 第二列晚 2 分的平均候車多 2 分多：兩列擠在一起，下一組要等很久。這是玩家自己選的，選單的說明寫清楚「兩列一組」。
+- 載客差不到 0.1 %，經濟沒有目標要對（`no stated range — not judged`）。準點 100 % 是因為行車控制關著；單線開行車控制時兩端對開的車要在中途交會，需要待避線（決策 264 的「加開一列車」本來就會蓋），沒有另外量（**NOT ASSESSED**）。
+
+**存檔 65**：路線多 `"dispatchPattern"`（`{"kind": "fromBothEnds"}` 或 `{"kind": "staggered", "minutes": n}`，平均不寫）、`"endLastDispatch"`（只有兩端對開）、`"opensPair": true`（只有第二列晚 N 分）。只讀到 64 的 build 會丟掉它們，路線又變回平均錯開，所以升版；舊存檔沒有這些 key，讀成平均錯開。拒絕：寫了 `even`、N 不在 2–30、兩端對開以外有 `endLastDispatch`、不是錯開卻有 `opensPair`、`opensPair: false`、環線有發車方式、`endLastDispatch` 在時鐘之後。fixture `SaveFixtures/v65-dispatch-pattern.json`。
+
+**golden、replay**：不動，值一個都沒變（預設平均錯開走的是原本的程式：`nextDispatch` 的 `.even` 就是「上一班加一個班距」）。golden 的測試程式多一個新錯誤的名稱 `invalidDispatchPattern`（沒有 golden 用到它，schema 不動）。
+
+**參考庫與外部專案**（`a91453/railway-reference-private`）：
+
+| 參考 | 本專案 | 分類 |
+| --- | --- | --- |
+| `Railway/train_loop_reference_clean`、`Simulator/reference_snapshot` 的發車：都照時刻表或固定班距一端發車 | 無 | 參考庫沒有「兩端各自的派車時刻」或「錯開 N 分」（gap），本專案自己寫 |
+
+外部專案：OpenTTD 的「自動分隔」（timetable autoseparation）讓同一路線的車平均錯開，是這裡的「平均錯開」；兩端對開與錯開發車是鐵路營運的一般做法，沒有搬程式。程式是本專案自己的。
+
+**五方**：
+- 玩家：77.1 的原話兩種都做到：加了第二列，可以讓它從終點一起開（兩端對開），或晚第一列幾分開；預設不變，不選的人什麼都不會變。
+- 鐵道迷：單線兩列車兩端對開、在中間站交會，是平溪、集集這類支線的做法；首班車兩端同時開也一樣。「續行」（兩列緊接著開）真實鐵路也有。沒有新的資料來源。
+- 開發：派車的時刻集中在 `nextDispatch` 一個函式，平均錯開走原本的算法，golden、replay 不動；只管路線自己的服務，停站模式與環線不碰；升存檔 65、加 fixture。
+- 美術：路線面板多一個選單和一行字，和目標班距的選單同一種（`TickStable` 的 Menu），圖示用 SF Symbols 的 `arrow.left.arrow.right`。
+- 音樂：無。
+
+**沒選的**（預覽留在 PR）：(a) 只加「第二列晚 N 分」一個步進器：做不到兩端對開；(b) 每列車各自設發車時刻：等於手排時刻表，初學者用不到，而且有決策 133 的班次；(c) 分段選擇器：選項有 9 個，手機橫拿放不下。
+
+**下一步**（`docs/HANDOFF.md` §5 有一行指過來）：
+1. 實機確認選單在手機橫拿時的位置與字（TestFlight）。
+2. UI 測試沒有加（選單的內容與命令有 Linux 測試 `LineDispatchPatternChoiceTests`）；要加就放 full lane。
+3. 停站模式（決策 Q3 的 patterns）也要發車方式時，`dispatchPattern`／`endLastDispatch` 要搬到每個服務。
+4. 單線開行車控制時兩端對開的量測（需要待避線的世界）。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

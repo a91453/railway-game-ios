@@ -106,6 +106,10 @@ struct LineTrip: Hashable, Sendable {
     /// carries no passengers and is not one of the line's dispatches; then
     /// ``journey`` has no legs.
     let deadhead: DeadheadRun?
+    /// Decision 309: whether the trip starts at the service's last call
+    /// (decision 172), where a line sending trains from both ends keeps
+    /// its own clock.
+    var fromLastCall = false
 
     init(turnsFirst: Bool, journey: LineJourney, deadhead: DeadheadRun? = nil) {
         self.turnsFirst = turnsFirst
