@@ -195,6 +195,8 @@ public enum LiuMingchuanChallenge {
         world.setBlockSections(false)
         world.setCurveSpeedLimits(false)
         world.setRealCarLengths(false)
+        // Decision 319: its demand keeps the hours it was measured by.
+        world.setTidalDemand(false)
         // Decision 174: nor do tourists come to its sights.
         world.setTourism(nil)
         // Decision 183: nor does the city ask it for anything.

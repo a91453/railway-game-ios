@@ -121,7 +121,13 @@ final class LandImportTests: XCTestCase {
         let station = try world.buildStation(named: "Taipei", at: PlanPoint(x: 524_288, y: 524_288)).id
         let demand = try XCTUnwrap(world.stationDemand(of: station))
         XCTAssertEqual(demand.kind, .office)
-        XCTAssertEqual(demand, LandDemand.shares(of: world.land, among: world.stations)[station]?.demand)
+        let share = try XCTUnwrap(LandDemand.shares(of: world.land, among: world.stations)[station])
+        XCTAssertEqual(demand.kind, share.demand?.kind)
+        XCTAssertEqual(demand.dailyTrips, share.demand?.dailyTrips)
+        // Decision 319: a new game's tide takes its home share from the
+        // land; Taipei Main Station's is all work.
+        XCTAssertEqual(demand.homeShare, share.homeShare)
+        XCTAssertEqual(demand.homeShare, 0)
     }
 
     /// Phase 6c-1 (ARCHITECTURE decision 74): a new game of Taipei puts up
