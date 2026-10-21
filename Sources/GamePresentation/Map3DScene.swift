@@ -438,6 +438,9 @@ extension Map3DScene {
         /// The heights file's ground round the region, for the blocks the
         /// world has not read yet; `nil` without the file or off the Earth.
         let fileGround: FileGround?
+        /// Decision 277, later: the stations in and near the scene (not
+        /// depots), where the station-front shop street is, on the ground.
+        let stations: [Map3DPoint]
 
         init(originX: Double, originY: Double, region: WorldRegion, world: GameWorld, heights: HeightGrid? = nil) {
             self.originX = originX
@@ -445,6 +448,25 @@ extension Map3DScene {
             self.region = region
             self.world = world
             fileGround = heights.flatMap { grid in RealWorldFrame(world: world).map { FileGround(grid, frame: $0, region: region) } }
+            let reach = Double(Self.stationStreetReach) * Self.metre
+            stations = world.stations.filter { station in
+                !station.isDepot && Double(station.point.x) >= region.minX - reach && Double(station.point.x) <= region.maxX + reach
+                    && Double(station.point.y) >= region.minY - reach && Double(station.point.y) <= region.maxY + reach
+            }.map { Map3DPoint(Float((Double($0.point.x) - originX) / Self.metre), 0, Float((Double($0.point.y) - originY) / Self.metre)) }
+        }
+
+        /// Decision 277, later: how far from a station its shop street
+        /// reaches, in metres.
+        static let stationStreetReach: Float = 400
+
+        /// Whether `point` is on a station's shop street, within
+        /// ``stationStreetReach`` of one of `stations`.
+        static func isStationStreet(_ point: Map3DPoint, stations: [Map3DPoint]) -> Bool {
+            let reach = Self.stationStreetReach * Self.stationStreetReach
+            return stations.contains { station in
+                let dx = station.x - point.x, dz = station.z - point.z
+                return dx * dx + dz * dz <= reach
+            }
         }
 
         func point(x: Double, y: Double, height: Double) -> Map3DPoint {
@@ -983,6 +1005,7 @@ extension Map3DScene {
             var closeDetail = Map3DMesh()
             let flats = density >= 2
             let far = isFar
+            let stations = stations
             mesh(at: base) { mesh in
                 for facing: Float in [-1, 1] {
                     // From the west end along the row.
@@ -1006,6 +1029,8 @@ extension Map3DScene {
                         // on a busy street's houses now and then.
                         let shops = lotShops || r(13) < (fronts?.shopShare(facing: facing) ?? 0)
                         let arcade = shops && r(5) < 0.8
+                        // Decision 277, later: the shops by a station.
+                        let stationStreet = shops && Self.isStationStreet(rowMiddle, stations: stations)
                         // Decision 231: the ground floor a shop or a
                         // rolling shutter, the floors above windows (a
                         // grille or a balcony on a 透天厝), the flanks
@@ -1037,7 +1062,7 @@ extension Map3DScene {
                         if !far {
                             Self.addFrontDetail(&mesh, close: &closeDetail, front: rowMiddle + front * (depth / 2), facing: front, width: width,
                                                 groundFloor: groundFloor, upper: upper, floors: Int(floors), wall: wall,
-                                                balconies: balconies, sign: shops, arcade: arcade, r: r)
+                                                balconies: balconies, sign: shops, arcade: arcade, stationStreet: stationStreet, r: r)
                             mesh.addBox(base: rowMiddle + Map3DPoint(0, height, 0), forward: front, length: depth, width: width - 0.1,
                                         height: 0.7, top: Map3DPalette.roof, side: Map3DColor.shaded(wall, 0.95),
                                         topPaint: Self.roofing, frontPaint: Self.plaster, flankPaint: Self.plaster)

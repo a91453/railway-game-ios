@@ -57,6 +57,17 @@ extension Map3DPalette {
     static let crates: [UInt32] = [rgbColor(0xE86A7A), rgbColor(0xF2D24B), rgbColor(0x5E9A78), rgbColor(0x4E78A8), rgbColor(0xF2F0EA), rgbColor(0xD98A4A)]
     static let shopAwnings: [UInt32] = [rgbColor(0x3E8C8C), rgbColor(0xC65A4E), rgbColor(0x4E78A8), rgbColor(0xF2F0EA)]
     static let tinAwnings: [UInt32] = [rgbColor(0x4E78A8), rgbColor(0x5E9A78), rgbColor(0xC65A4E), rgbColor(0x7A93A6)]
+    /// Decision 277, later: a station-front shop's own colour, on its
+    /// striped awning, its blade sign and its rooftop board (`town-scene`'s
+    /// one colour a shop, here the signs' four and two more), the awning's
+    /// other stripes cream (`addAwning`'s `0xf1ebe0`), and a tall shop's
+    /// sign posts and entrance canopy (`decorateHotel`'s iron `0x2c2f35`
+    /// and canopy `0x3a3329`) with its warm downlight (`0xffd49a`).
+    static let stationShops: [UInt32] = signs + [rgbColor(0x8A5FA8), rgbColor(0xE07B39)]
+    static let awningCream = rgbColor(0xF1EBE0)
+    static let signPost = rgbColor(0x2C2F35)
+    static let entranceCanopy = rgbColor(0x3A3329)
+    static let downlight = rgbColor(0xFFD49A)
     static let washing: [UInt32] = [rgbColor(0xF2F0EA), rgbColor(0x4E78A8), rgbColor(0xE86A7A), rgbColor(0x8A9BB0), rgbColor(0xD9B48A)]
     /// The water tank's stand.
     static let tankStand = rgbColor(0x6E747B)
@@ -472,12 +483,22 @@ extension Map3DScene.Builder {
     /// 0.8 m, its blade signs).
     static func addFrontDetail(_ mesh: inout Map3DMesh, close: inout Map3DMesh, front: Map3DPoint, facing: Map3DPoint, width: Float, groundFloor: Float,
                                upper: Float, floors: Int, wall: UInt32, balconies: Bool, sign: Bool, arcade: Bool = false,
-                               r: (Int32) -> Float) {
+                               stationStreet: Bool = false, r: (Int32) -> Float) {
         let across = Map3DPoint(-facing.z, 0, facing.x)
+        // Decision 277, later: by a station, the shop's own colour; a tall
+        // one now and then a board on its roof and, without an arcade, a
+        // canopy over its door in place of the counter.
+        let own: UInt32? = stationStreet ? pick(Map3DPalette.stationShops, r(46)) : nil
+        let tall = stationStreet && floors >= 4 && r(47) < 0.5
         // Decision 267: the arcade's pillars, and a shop's counter, crates
         // and low awning, in `close` (drawn only close up), as are the
         // awnings and washing above.
-        addStreetLevel(&close, front: front, facing: facing, width: width, groundFloor: groundFloor, wall: wall, shop: sign, arcade: arcade, r: r)
+        addStreetLevel(&close, front: front, facing: facing, width: width, groundFloor: groundFloor, wall: wall, shop: sign, arcade: arcade,
+                       own: own, entrance: tall && !arcade, r: r)
+        if let own, tall {
+            addRoofBoard(&mesh, front: front, facing: facing, width: width,
+                         roof: groundFloor + upper * Float(floors - 1) + 0.7, color: own)
+        }
         for floor in 1..<max(1, floors) {
             let level = Map3DPoint(0, groundFloor + upper * Float(floor - 1), 0)
             // Decision 267: a tin awning over the windows on half the
@@ -507,7 +528,7 @@ extension Map3DScene.Builder {
         if sign, r(12) < 0.7 {
             let height: Float = floors >= 3 ? 3.2 : 2.4
             mesh.addBox(base: front + facing * 0.45 + across * (width / 2 - 0.5) + Map3DPoint(0, groundFloor + 0.3, 0), forward: facing,
-                        length: 0.7, width: 0.25, height: height, top: Map3DPalette.tileWhite, side: pick(Map3DPalette.signs, r(13)))
+                        length: 0.7, width: 0.25, height: height, top: Map3DPalette.tileWhite, side: own ?? pick(Map3DPalette.signs, r(13)))
         }
     }
 
@@ -517,8 +538,11 @@ extension Map3DScene.Builder {
     /// the pavement) under a low awning sloping out (HANDOFF §4.3: the
     /// counter 0.55 of the width, 0.9 m tall, 0.6 m deep; crates 0.5 ×
     /// 0.35 × 0.35; the awning 2.95 m up, 1.1 m out, falling 0.25 rad).
+    /// Decision 277, later: a shop with its `own` colour (by a station)
+    /// under a striped cloth awning (``addStripedAwning``); with an
+    /// `entrance`, a canopy over its door and no counter.
     static func addStreetLevel(_ mesh: inout Map3DMesh, front: Map3DPoint, facing: Map3DPoint, width: Float, groundFloor: Float, wall: UInt32,
-                               shop: Bool, arcade: Bool, r: (Int32) -> Float) {
+                               shop: Bool, arcade: Bool, own: UInt32? = nil, entrance: Bool = false, r: (Int32) -> Float) {
         let across = Map3DPoint(-facing.z, 0, facing.x)
         if arcade {
             for side: Float in [-1, 1] {
@@ -529,6 +553,10 @@ extension Map3DScene.Builder {
         guard shop else { return }
         // The shop front: the arcade's back wall, or the house's face.
         let shopFront = arcade ? front - facing * Self.arcadeDepth : front
+        if entrance {
+            addEntranceCanopy(&mesh, front: shopFront, facing: facing, width: width, height: min(3.2, groundFloor - 0.4))
+            return
+        }
         let counterWidth = width * 0.55
         let counter = shopFront + facing * 0.6
         mesh.addBox(base: counter, forward: facing, length: 0.6, width: counterWidth, height: 0.9, top: pick(Map3DPalette.counters, r(40)),
@@ -540,8 +568,66 @@ extension Map3DScene.Builder {
         }
         // The awning: at the arcade's edge, or over the shop front.
         let height = min(2.95, groundFloor - 0.35)
-        addSlope(&mesh, from: (arcade ? front : shopFront) + Map3DPoint(0, height, 0), facing: facing, width: width - 0.3, depth: 1.1, drop: 0.28,
-                 color: pick(Map3DPalette.shopAwnings, r(45)))
+        let top = (arcade ? front : shopFront) + Map3DPoint(0, height, 0)
+        if let own {
+            addStripedAwning(&mesh, from: top, facing: facing, width: width - 0.3, color: own)
+        } else {
+            addSlope(&mesh, from: top, facing: facing, width: width - 0.3, depth: 1.1, drop: 0.28, color: pick(Map3DPalette.shopAwnings, r(45)))
+        }
+    }
+
+    /// Decision 277, later: `town-scene`'s striped cloth awning (`main.js`
+    /// `addAwning`): seven stripes, `color` and cream in turn, sloping out
+    /// 1.2 m from `top` (its top edge's middle) at 0.42 rad, and a 0.25 m
+    /// valance hanging from its edge, striped the same (the reference's
+    /// canopy 0.17 deep, its valance 0.035, here the shop awning's metres).
+    static func addStripedAwning(_ mesh: inout Map3DMesh, from top: Map3DPoint, facing: Map3DPoint, width: Float, color: UInt32) {
+        let across = Map3DPoint(-facing.z, 0, facing.x)
+        let stripes = 7, stripe = width / Float(stripes)
+        let depth: Float = 1.2, tilt: Float = 0.42
+        let out = depth * cosf(tilt), drop = depth * sinf(tilt)
+        for index in 0..<stripes {
+            let middle = top + across * (-width / 2 + (Float(index) + 0.5) * stripe)
+            let colour = index % 2 == 0 ? color : Map3DPalette.awningCream
+            addSlope(&mesh, from: middle, facing: facing, width: stripe, depth: out, drop: drop, color: colour)
+            addPanel(&mesh, at: middle + facing * out - Map3DPoint(0, drop, 0), facing: facing, width: stripe, height: 0.25, color: colour)
+        }
+    }
+
+    /// Decision 277, later: `town-scene`'s hotel board on its roof
+    /// (`decorateHotel`): a board in the shop's `color` on two iron posts,
+    /// 1.5 m back from the front, lit at night. No name on it: the 3D map
+    /// has no words (art-style §7).
+    static func addRoofBoard(_ mesh: inout Map3DMesh, front: Map3DPoint, facing: Map3DPoint, width: Float, roof: Float, color: UInt32) {
+        let across = Map3DPoint(-facing.z, 0, facing.x)
+        let foot = front - facing * 1.5 + Map3DPoint(0, roof, 0)
+        let board = min(width - 1, 4.5)
+        for side: Float in [-1, 1] {
+            mesh.addBox(base: foot + across * (side * board * 0.36), forward: facing, length: 0.15, width: 0.15, height: 1,
+                        top: Map3DPalette.signPost, side: Map3DPalette.signPost)
+        }
+        let start = mesh.vertices.count
+        mesh.addBox(base: foot + Map3DPoint(0, 1, 0), forward: facing, length: 0.2, width: board, height: 1.3, top: color, side: color)
+        mesh.makeGlowing(from: start)
+    }
+
+    /// Decision 277, later: `town-scene`'s hotel entrance (`decorateHotel`):
+    /// a dark canopy over the door 1.6 m out, on two posts at its outer
+    /// corners, with a warm downlight under it that glows at night.
+    static func addEntranceCanopy(_ mesh: inout Map3DMesh, front: Map3DPoint, facing: Map3DPoint, width: Float, height: Float) {
+        let across = Map3DPoint(-facing.z, 0, facing.x)
+        let wide = min(width - 0.6, 3.3)
+        let middle = front + facing * 0.8
+        mesh.addBox(base: middle + Map3DPoint(0, height, 0), forward: facing, length: 1.6, width: wide, height: 0.12,
+                    top: Map3DPalette.entranceCanopy, side: Map3DPalette.entranceCanopy)
+        for side: Float in [-1, 1] {
+            mesh.addBox(base: front + facing * 1.5 + across * (side * (wide / 2 - 0.1)), forward: facing, length: 0.1, width: 0.1, height: height,
+                        top: Map3DPalette.entranceCanopy, side: Map3DPalette.entranceCanopy)
+        }
+        let start = mesh.vertices.count
+        mesh.addBox(base: middle + Map3DPoint(0, height - 0.03, 0), forward: facing, length: 1.3, width: wide - 0.4, height: 0.03,
+                    top: Map3DPalette.downlight, side: Map3DPalette.downlight)
+        mesh.makeGlowing(from: start)
     }
 
     /// How far an arcade's ground floor stands back from the house's face
