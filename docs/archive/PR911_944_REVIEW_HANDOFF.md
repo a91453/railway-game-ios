@@ -3,7 +3,7 @@
 Session：session_017M3NJsMXLafGDsSvidGhD6，遊戲規劃 session_014rYHMtmqA5bEMkBBuKu6PV 派工，2026-10-21。分支 `claude/pr-review-b-911-944`。
 
 - 審查基準：`main` **543770c**（#944 的合併）。
-- 範圍：已合併的 #911–#944。#941、#942 還沒合併，不在範圍內。#873–#910 由審查 A（session_01SvQ285hMiSeRsER1EXzfT9）審。
+- 範圍：已合併的 #911–#944，以及遊戲規劃之後要求一起看的 #941、#942。#873–#910 由審查 A（session_01SvQ285hMiSeRsER1EXzfT9）審。
 - 上一輪：[PR786_872_A](PR786_872_A_REVIEW_HANDOFF.md)、[B](PR786_872_B_REVIEW_HANDOFF.md)、[C](PR786_872_C_REVIEW_HANDOFF.md)。
 - 存檔版本、決策編號、golden schema 都**不動**。GameCore、GoldenScenarios、SaveFixtures、ReplayFixtures 都沒改。
 - 本 PR 改了兩個 GamePresentation 檔案，各附一個回歸測試，另外加這份文件與 `docs/HANDOFF.md` §7.1 的一行。
@@ -44,6 +44,7 @@ Session：session_017M3NJsMXLafGDsSvidGhD6，遊戲規劃 session_014rYHMtmqA5bE
 | [#936](https://github.com/a91453/railway-game-ios/pull/936) | 決策 327。`removeLineSellingTrains` 先刪線再逐列賣；指令在副本上執行，所以失敗時整個不生效。`sellWhereItStands` 依序停服務、拉下軌道、賣掉。確認卡與訊息的文字沒問題 | 無問題 |
 | [#938](https://github.com/a91453/railway-game-ios/pull/938) | 決策 326，架空線。`wireSupports` 每根電桿至少前進 2 m，所以會結束。字典只拿來查，不影響順序。輕軌、捷運、林鐵不畫。快取的 key 加了 `hasRailways` | **B2（P2），已修**；B6 的第二項 |
 | [#939](https://github.com/a91453/railway-game-ios/pull/939) | 決策 328。`StationPassengers.enqueue` 的二分搜尋，在佇列依 `since` 排序、同一分鐘內依目的地排序時，和從頭找的結果相同；`waiting` 的每個寫入點都維持這個順序，解碼器也要求。`Boarding` 排序只是先查好再排，等價。試跑移出主執行緒：tick 的結果只有在 `tick.revision == worldRevision` 時才收，memo 只有在 `memo.revision == commandRevision` 時才存，所以 tick 進行中下了指令，結果會丟掉，不會蓋掉新狀態。`covers` 多了 `now == from`，結果和重算相同。`buyableRealLines` 的 key（範圍、地理錨點、已收購、railways 版本）涵蓋了計算用到的東西。`FrameCostMeter` 有加鎖 | 無問題 |
+| [#941](https://github.com/a91453/railway-game-ios/pull/941)、[#942](https://github.com/a91453/railway-game-ios/pull/942)（範圍外，遊戲規劃要求一起看） | 高頂小巴、低地板公車加入街景公車池（`Map3DStreetLife.swift` 的 `isBus`、選型、進出路端的長度）。#942 的 base 是 #941 的分支，所以 2026-10-21 23:31 的合併進了 `codex/shuttle-bus-2026-10-21`，不是 main（55a1775 不在 main 上）；遊戲規劃已改開 #951 合進 main，#945 的 base 也改成 main | 程式無問題。合併的 base 錯了，已通知遊戲規劃，由 #951 補上 |
 | [#944](https://github.com/a91453/railway-game-ios/pull/944) | full lane 的兩個 UI 測試。重試前先看 `exists`，再用 `appears(within:)` | 無問題 |
 
 PR 描述裡寫 VERIFIED 的測試數（架空線 8、車站 9、商店街 5、雨 5、公車 5），和 main 上的測試數相符。沒有找到宣稱有跑、實際沒跑的。
