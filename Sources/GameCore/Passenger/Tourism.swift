@@ -568,27 +568,63 @@ extension GameWorld {
 
     /// The tourists' trips on game day `day`, each attraction's tourists
     /// shared among the sources that can ride to its station (and back),
-    /// `reaches` saying which pairs can ride. Empty without tourism.
-    func touristFlows(onDay day: Int64, reaches: (StationID, StationID) -> Bool) -> (flows: TouristFlows, arrivals: [AttractionID: Int64]) {
+    /// `reaches` saying which pairs can ride. Empty without tourism. With a
+    /// day pass on sale (decision 324), its buyers' rides on to the next
+    /// sight and back too, counted as that sight's visitors, and the day's
+    /// passes.
+    func touristFlows(onDay day: Int64, reaches: (StationID, StationID) -> Bool)
+        -> (flows: TouristFlows, arrivals: [AttractionID: Int64], passes: DayPassDay) {
         var flows = TouristFlows()
         var arrivals: [AttractionID: Int64] = [:]
-        guard let tourism else { return (flows, arrivals) }
+        var passes = DayPassDay()
+        guard let tourism else { return (flows, arrivals, passes) }
         let candidates = touristCandidates()
+        var visited: [(station: StationID, tourists: [(source: StationID, count: Int64, back: Bool)])] = []
         for attraction in tourism.attractions {
             let expected = touristsExpected(for: attraction, onDay: day)
             guard expected > 0, let station = servingStation(at: attraction.point) else { continue }
             let sources = touristSources(excluding: station, among: candidates).filter { reaches($0.station, station) }
             guard !sources.isEmpty else { continue }
             let shares = Self.apportion(expected, by: sources.map(\.weight))
+            var tourists: [(source: StationID, count: Int64, back: Bool)] = []
             for (source, share) in zip(sources, shares) where share > 0 {
                 flows.add(outbound: share, back: 0, from: source.station, to: station)
-                if reaches(station, source.station) {
+                let back = reaches(station, source.station)
+                if back {
                     flows.add(outbound: 0, back: share, from: station, to: source.station)
                 }
+                tourists.append((source.station, share, back))
             }
             arrivals[attraction.id] = shares.reduce(0, +)
+            visited.append((station, tourists))
         }
-        return (flows, arrivals)
+        guard accounts.mode == .management, let price = accounts.dayPass else { return (flows, arrivals, passes) }
+        // Decision 324: who buys a pass, and the rides it adds.
+        let sights = tourism.attractions.compactMap { sight in servingStation(at: sight.point).map { (id: sight.id, station: $0) } }
+        for (station, tourists) in visited {
+            let next = nextSight(from: station, among: sights, reaches: reaches)
+            let ride = next.map { passFare(from: station, to: $0.station) + passFare(from: $0.station, to: station) } ?? .zero
+            for tourist in tourists {
+                let journey = passFare(from: tourist.source, to: station) + (tourist.back ? passFare(from: station, to: tourist.source) : .zero)
+                let buyers = tourist.count * DayPass.uptake(price: price, value: journey + ride) / 1_000
+                guard buyers > 0 else { continue }
+                passes.sold += buyers
+                passes.journeyFares = passes.journeyFares + Money(buyers * journey.amount)
+                passes.visits[station, default: 0] += buyers
+                if let next {
+                    flows.add(outbound: buyers, back: 0, from: station, to: next.station)
+                    flows.add(outbound: 0, back: buyers, from: next.station, to: station)
+                    arrivals[next.id, default: 0] += buyers
+                    passes.visits[next.station, default: 0] += buyers
+                    passes.rides += 2 * buyers
+                    passes.rideFares = passes.rideFares + Money(buyers * ride.amount)
+                }
+            }
+        }
+        passes.sales = Self.wholeDollars(passes.sold * price.amount)
+        passes.journeyFares = Self.wholeDollars(passes.journeyFares.amount)
+        passes.rideFares = Self.wholeDollars(passes.rideFares.amount)
+        return (flows, arrivals, passes)
     }
 
     /// Today's tourist trips as the passenger model reaches them now (an

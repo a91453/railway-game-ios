@@ -79,6 +79,11 @@ public enum LedgerItem: String, CaseIterable, Codable, Sendable {
     /// through each spend in them, in, and their upkeep, out.
     case stationCommerceRevenue
     case stationCommerceUpkeep
+    /// The day passes (decision 324; native): what they sold for, in, and
+    /// the fares of the rides they covered, charged as the holders boarded
+    /// and given back, out.
+    case dayPassSales
+    case dayPassFares
 }
 
 /// One line of a ledger row's breakdown.
@@ -151,6 +156,8 @@ public struct LedgerEntry: Hashable, Sendable {
         case dailyDepot
         /// The stations' shops: takings and upkeep (decision 222).
         case dailyStationCommerce
+        /// A day's passes: sales and the fares they covered (decision 324).
+        case dailyDayPass
     }
 
     public let kind: Kind
@@ -217,8 +224,8 @@ public struct DayAccount: Hashable, Sendable {
             case .routeEnergy, .trainEnergy: energyCost = energyCost + cost
             case .stationStaff, .trainStaff: staffCost = staffCost + cost
             case .loanInterest: interestCost = interestCost + cost
-            case .propertyRent, .tourismRevenue, .stationCommerceRevenue, .subsidiarySales, .subsidy: propertyRevenue = propertyRevenue + line.amount
-            case .propertyUpkeep, .tourismUpkeep, .stationCommerceUpkeep, .propertyTax, .propertyDemolition, .subsidiaryCost: propertyCost = propertyCost + cost
+            case .propertyRent, .tourismRevenue, .stationCommerceRevenue, .subsidiarySales, .subsidy, .dayPassSales: propertyRevenue = propertyRevenue + line.amount
+            case .propertyUpkeep, .tourismUpkeep, .stationCommerceUpkeep, .propertyTax, .propertyDemolition, .subsidiaryCost, .dayPassFares: propertyCost = propertyCost + cost
             case .incomeTax: taxCost = taxCost + cost
             case .freightRevenue: freightRevenue = freightRevenue + line.amount
             }
@@ -342,6 +349,9 @@ public struct CompanyAccounts: Hashable, Sendable {
     /// `metroFareDemandBaselineForCity`): ``FareRules/demandBaseline``,
     /// the reference's default city, until set.
     public internal(set) var fareBaseline: Money = FareRules.demandBaseline
+    /// The price of the day pass on sale (decision 324), or `nil` while
+    /// none is sold.
+    public internal(set) var dayPass: Money?
     public internal(set) var pending: HourlyAccrual = .empty
     /// When the accrual in ``pending`` began: the minute the company became
     /// managed, or the last settlement. An hour is settled only once it
@@ -404,7 +414,7 @@ public struct CompanyAccounts: Hashable, Sendable {
 
     /// Whether there is nothing in the accounts: a world before G1c.
     var isPristine: Bool {
-        mode == .free && fareRules == nil && fareBaseline == FareRules.demandBaseline && pending == .empty && openedAt == nil
+        mode == .free && fareRules == nil && fareBaseline == FareRules.demandBaseline && dayPass == nil && pending == .empty && openedAt == nil
             && entries.isEmpty && days.isEmpty && loan == .zero && assets.isEmpty && capitalDays.isEmpty && years.isEmpty
             && highSpeedFares.isEmpty
     }
@@ -639,7 +649,7 @@ extension LedgerEntry: Codable {
 
 extension CompanyAccounts: Codable {
     private enum CodingKeys: String, CodingKey {
-        case mode, fareRules, fareBaseline, pending, openedAt, entries, days, loan, assets, capitalDays, years, depotHours, highSpeedFares
+        case mode, fareRules, fareBaseline, dayPass, pending, openedAt, entries, days, loan, assets, capitalDays, years, depotHours, highSpeedFares
     }
 
     /// Decodes the accounts; rules the player never set have no
@@ -651,6 +661,8 @@ extension CompanyAccounts: Codable {
         mode = try container.decode(EconomyMode.self, forKey: .mode)
         fareRules = container.contains(.fareRules) ? try container.decode(FareRules.self, forKey: .fareRules) : nil
         fareBaseline = container.contains(.fareBaseline) ? try container.decode(Money.self, forKey: .fareBaseline) : FareRules.demandBaseline
+        // Decision 324 (save version 68).
+        dayPass = try container.decodeIfPresent(Money.self, forKey: .dayPass)
         pending = try container.decode(HourlyAccrual.self, forKey: .pending)
         openedAt = container.contains(.openedAt) ? try container.decode(GameTime.self, forKey: .openedAt) : nil
         entries = try container.decode([LedgerEntry].self, forKey: .entries)
@@ -680,6 +692,9 @@ extension CompanyAccounts: Codable {
         }
         if fareBaseline != FareRules.demandBaseline {
             try container.encode(fareBaseline, forKey: .fareBaseline)
+        }
+        if let dayPass {
+            try container.encode(dayPass, forKey: .dayPass)
         }
         try container.encode(pending, forKey: .pending)
         if let openedAt {

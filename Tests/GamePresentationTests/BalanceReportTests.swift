@@ -240,6 +240,80 @@ final class BalanceReportTests: XCTestCase {
         print(lines.joined(separator: "\n"))
     }
 
+    /// Decision 324's day pass: the first line with a 4-star town beside
+    /// its last station and a 3-star mountain beside its middle one, the
+    /// pass on sale from the first day at each price, against the same line
+    /// selling none. The passes sold, what they brought against the fares
+    /// their buyers would have paid, the extra rides, the cash; then an
+    /// amusement park beside the last station (bought on day 1, the cash
+    /// topped up in both worlds) with and without a pass at $15.
+    func testADayPassAtEachPrice() throws {
+        let days = try requestedDays()
+        func sights() throws -> GameWorld {
+            var world = try firstLine()
+            let middle = try XCTUnwrap(world.stations.dropFirst().first), last = try XCTUnwrap(world.stations.last)
+            world.setTourism([
+                Attraction(id: AttractionID(rawValue: 1), name: "Town", englishName: "Town",
+                           point: PlanPoint(x: last.point.x + 3_000, y: last.point.y), kind: .town, baseStars: 400),
+                Attraction(id: AttractionID(rawValue: 2), name: "Hill", englishName: "Hill",
+                           point: PlanPoint(x: middle.point.x, y: middle.point.y + 3_000), kind: .mountain, baseStars: 300),
+            ])
+            return world
+        }
+        var lines = [
+            "### A first line with two sights: a day pass at each price, from day 1, \(days) days",
+            "",
+            "| Price | Sold a day | Net a day (sales less their fares) | Extra rides a day | Fares a day | Balance | Against no pass |",
+            "| --: | --: | --: | --: | --: | --: | --: |",
+        ]
+        var plain = try sights()
+        try plain.advance(ticks: 1)
+        for _ in 1...days { try plain.advance(ticks: 1_440) }
+        let plainFares = plain.accounts.days.reduce(Int64(0)) { $0 + $1.fareRevenue.amount }
+        lines.append("| none | 0 | $0 | 0 | \(dollars(plainFares / Int64(days))) | \(dollars(plain.economy.balance.amount)) | $0 |")
+        for price in [500, 1_000, 1_200, 1_500, 1_800, 2_000, 2_500, 3_000] as [Int64] {
+            var world = try sights()
+            try world.setDayPass(Money(price))
+            try world.advance(ticks: 1)
+            var sold: Int64 = 0, net: Int64 = 0, rides: Int64 = 0
+            for day in 1...days {
+                try world.advance(ticks: 1_440)
+                let passes = world.dayPassDay(onDay: Int64(day) - 1)
+                sold += passes.sold
+                net += passes.net.amount
+                rides += passes.rides
+            }
+            let fares = world.accounts.days.reduce(Int64(0)) { $0 + $1.fareRevenue.amount }
+            let n = Int64(days)
+            lines.append(
+                "| \(dollars(price)) | \(sold / n) | \(dollars(net / n)) | \(rides / n) | \(dollars(fares / n)) | "
+                    + "\(dollars(world.economy.balance.amount)) | \(dollars((world.economy.balance - plain.economy.balance).amount)) |"
+            )
+        }
+        lines += ["", "| Park beside the town | Customers a day (mean) | Profit a day (mean) | Payback days | Balance |", "| --- | --: | --: | --: | --: |"]
+        for price in [nil, Money(1_500)] {
+            var world = try sights()
+            if let price { try world.setDayPass(price) }
+            try world.advance(ticks: 1)
+            world.economy.earn(Money(3_000_000_000))
+            let last = try XCTUnwrap(world.stations.last)
+            let park = try world.placeBuilding(.amusementPark, at: PlanPoint(x: last.point.x + 6_000, y: last.point.y + 8_000)).id
+            var customers: Int64 = 0, profit: Int64 = 0
+            for day in 1...days {
+                try world.advance(ticks: 1_440)
+                let building = try XCTUnwrap(world.placedBuilding(id: park))
+                let result = world.subsidiaryDay(of: building, onDay: Int64(day) - 1)
+                customers += result.customers
+                profit += (result.sales - result.cost).amount
+            }
+            let n = Int64(days)
+            let cost = try XCTUnwrap(world.placedBuilding(id: park)).cost.amount
+            let payback = profit > 0 ? cost * n / profit : 0
+            lines.append("| \(price.map { "pass at \(dollars($0.amount))" } ?? "no pass") | \(customers / n) | \(dollars(profit / n)) | \(payback) | \(dollars(world.economy.balance.amount)) |")
+        }
+        print(lines.joined(separator: "\n"))
+    }
+
     /// Decision 286's sightseeing train: the first line beside a 4-star
     /// town, its one train of four coaches the Blue Train, against the same
     /// line run by the R100 Chu-Kuang (the same performance and seats, no
