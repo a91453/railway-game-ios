@@ -41,9 +41,19 @@ extension SceneKitBuilder {
     fileprivate mutating func e200() {
         let orange = Map3DColor.rgb(0xE57939), ivory = Map3DColor.rgb(0xE8DFB9)
         running(axles: 3)
-        body(lower: orange, upper: ivory, split: 2.75, line: orange)
+        // The GE cab: nearly upright, its windscreen raked a little, the
+        // ivory coming down the nose's upper half.
+        let nose = Nose(rake: 0.3, chamfer: 0.3, split: 2.75, lower: orange, upper: ivory)
+        body(lower: orange, upper: ivory, split: 2.75, line: orange, front: nose.depth, back: nose.depth)
         roof(Map3DTrainStyle.roofColour)
-        for end: Float in [1, -1] { boxCab(end: end, body: ivory, lit: end > 0, chevron: false) }
+        for end: Float in [1, -1] {
+            boxCab(end: end, nose: nose, lit: end > 0)
+            // The ivory V on the orange of each face.
+            for z: Float in [-1, 1] {
+                beam(Map3DPoint(end * (Self.half + 0.03), 2.65, z * 1.25), Map3DPoint(end * (Self.half + 0.03), 1.95, 0),
+                     thickness: 0.12, color: ivory)
+            }
+        }
         sideGrilles(count: 6, from: -4.6, to: 4.6, y: 2.95, height: 0.6, colour: Map3DColor.shaded(ivory, 0.55))
         roofGrilles(from: -3, to: 3)
         pantographs(at: [-5.2, 5.2])
@@ -54,9 +64,11 @@ extension SceneKitBuilder {
     fileprivate mutating func e500() {
         let orange = Map3DColor.rgb(0xF07532), dark = Map3DColor.rgb(0x333F42)
         running(axles: 3)
-        body(lower: orange, upper: orange, split: 2.6, line: nil)
+        // The Toshiba cab: a raked windscreen wrapping round wide corners.
+        let nose = Nose(rake: 0.6, chamfer: 0.45, split: 2.2, lower: orange, upper: orange)
+        body(lower: orange, upper: orange, split: 2.6, line: nil, front: nose.depth, back: nose.depth)
         roof(Map3DTrainStyle.roofColour)
-        for end: Float in [1, -1] { boxCab(end: end, body: orange, lit: end > 0, chevron: false) }
+        for end: Float in [1, -1] { boxCab(end: end, nose: nose, lit: end > 0) }
         sideGrilles(count: 8, from: -5, to: 5, y: 2.1, height: 1.35, colour: dark)
         roofGrilles(from: -2.6, to: 2.6)
         pantographs(at: [-5.4, 5.4])
@@ -67,9 +79,11 @@ extension SceneKitBuilder {
     fileprivate mutating func r200() {
         let white = Map3DColor.rgb(0xEBEDEA), dark = Map3DColor.rgb(0x283944)
         running(axles: 3)
-        body(lower: white, upper: white, split: 2.6, line: nil)
+        // The Stadler cab: the most raked, a big windscreen.
+        let nose = Nose(rake: 0.85, chamfer: 0.5, split: 2.0, lower: white, upper: white)
+        body(lower: white, upper: white, split: 2.6, line: nil, front: nose.depth, back: 0)
         roof(white)
-        boxCab(end: 1, body: white, lit: true, chevron: false)
+        boxCab(end: 1, nose: nose, lit: true)
         closedEnd(end: -1, body: white)
         box(-1.2, 1.75, 0, 10.4, 2.84, 1.6, dark)
         sideGrilles(count: 7, from: -5.8, to: 3.4, y: 1.85, height: 1.4, colour: Map3DColor.shaded(dark, 0.7))
@@ -81,10 +95,12 @@ extension SceneKitBuilder {
     fileprivate mutating func e1000() {
         let white = Map3DColor.rgb(0xD8DDDB), orange = Map3DColor.rgb(0xE66D2F)
         running(axles: 2)
-        body(lower: white, upper: white, split: 2.6, line: nil)
+        // The power car's orange nose: raked, its corners rounded off.
+        let nose = Nose(rake: 0.7, chamfer: 0.6, split: 2.1, lower: orange, upper: orange)
+        body(lower: white, upper: white, split: 2.6, line: nil, front: nose.depth, back: 0)
         roof(Map3DTrainStyle.roofColour)
-        box(Self.half - 0.8, 1.2, 0, 1.6, 2.82, Self.roofTop - 1.2, orange)
-        boxCab(end: 1, body: orange, lit: true, chevron: false)
+        box(Self.half - nose.depth - 0.5, 1.08, 0, 1.0, 2.82, Self.roofTop - 1.08, orange)
+        boxCab(end: 1, nose: nose, lit: true)
         closedEnd(end: -1, body: white)
         box(-1.5, 1.9, 0, 9.4, 2.82, 1.3, orange)
         sideGrilles(count: 7, from: -5.6, to: 2.6, y: 2.0, height: 1.1, colour: Map3DColor.shaded(orange, 0.6))
@@ -158,30 +174,83 @@ extension SceneKitBuilder {
 
     /// The body from the underframe to the roof: `lower` below `split`,
     /// `upper` above, and a thin `line` along the join.
-    fileprivate mutating func body(lower: UInt32, upper: UInt32, split: Float, line: UInt32?) {
-        let length = 2 * Self.half - 0.1
-        box(0, 1.08, 0, length, 2.8, split - 1.08, lower)
-        box(0, split, 0, length, 2.8, Self.roofTop - split, upper)
-        if let line { box(0, split + 0.18, 0, length + 0.02, 2.82, 0.08, line) }
+    /// `front` and `back` leave room for a cab's nose at that end.
+    fileprivate mutating func body(lower: UInt32, upper: UInt32, split: Float, line: UInt32?, front: Float, back: Float) {
+        let from = -Self.half + max(back, 0.05), to = Self.half - max(front, 0.05)
+        let length = to - from, x = (from + to) / 2
+        box(x, 1.08, 0, length, 2.8, split - 1.08, lower)
+        box(x, split, 0, length, 2.8, Self.roofTop - split, upper)
+        if let line { box(x, split + 0.18, 0, length + 0.02, 2.82, 0.08, line) }
     }
 
     fileprivate mutating func roof(_ colour: UInt32) {
         box(0, Self.roofTop, 0, 2 * Self.half - 0.5, 2.5, 0.08, colour)
     }
 
-    /// A box cab's end at `end` (+1 front, −1 back): the windscreen, the
+    /// A box cab's nose: upright below `split`, its windscreen raked back
+    /// `rake` metres from there to the roof, the corners cut `chamfer` in
+    /// from the sides.
+    struct Nose {
+        var rake: Float
+        var chamfer: Float
+        var split: Float
+        var lower: UInt32
+        var upper: UInt32
+        /// How far it stands out from the body's end.
+        var depth: Float { rake + chamfer + 0.15 }
+    }
+
+    /// A box cab at `end` (+1 front, −1 back): its nose, windscreen and
     /// side windows, the lamps (lit at the front) and the pilot.
-    fileprivate mutating func boxCab(end: Float, body: UInt32, lit: Bool, chevron: Bool) {
-        let face = end * Self.half
-        box(face + end * 0.02, 2.55, 0, 0.06, 2.3, 0.95, Map3DTrainStyle.glass)
-        box(face - end * 0.03, 3.5, 0, 0.08, 2.8, 0.3, body)
-        box(face - end * 1.1, 2.6, 0, 0.8, 2.84, 0.8, Map3DTrainStyle.glass)
-        for z: Float in [-0.95, 0.95] {
+    fileprivate mutating func boxCab(end: Float, nose: Nose, lit: Bool) {
+        let face = end * Self.half, half: Float = 1.4
+        let bottom: Float = 1.08, top = Self.roofTop
+        // The plan outline at height `y`: from the body's end round the
+        // cut corners to the nose's front, which moves back above `split`.
+        func ring(_ y: Float) -> [Map3DPoint] {
+            let back = y <= nose.split ? 0 : nose.rake * (y - nose.split) / (top - nose.split)
+            let front = face - end * back, root = face - end * nose.depth
+            let corner = front - end * nose.chamfer
+            return [Map3DPoint(root, y, -half), Map3DPoint(corner, y, -half), Map3DPoint(front, y, -half + nose.chamfer),
+                    Map3DPoint(front, y, half - nose.chamfer), Map3DPoint(corner, y, half), Map3DPoint(root, y, half)]
+        }
+        let rings = [ring(bottom), ring(nose.split), ring(top)]
+        let centre = Map3DPoint(face - end * nose.depth / 2, (bottom + top) / 2, 0)
+        func facet(_ points: [Map3DPoint], _ colour: UInt32) {
+            let middle = points.reduce(Map3DPoint.zero, +) * (1 / Float(points.count))
+            let normal = (points[1] - points[0]).cross(points[2] - points[0])
+            mesh.addFacet(normal.dot(middle - centre) < 0 ? points.reversed() : points, color: colour)
+        }
+        for (level, colour) in [(0, nose.lower), (1, nose.upper)] {
+            let a = rings[level], b = rings[level + 1]
+            for i in 0..<5 { facet([a[i], a[i + 1], b[i + 1], b[i]], colour) }
+        }
+        facet(rings[0], Map3DColor.shaded(nose.lower, 0.7))
+        facet(rings[2], Map3DTrainStyle.roofColour)
+        // The windscreen across the raked front and round its corners, a
+        // hair proud of it.
+        let low = rings[1], high = rings[2]
+        func pane(_ i: Int, inset: Float) {
+            func at(_ u: Float, _ v: Float) -> Map3DPoint {
+                let a = low[i] + (low[i + 1] - low[i]) * u, b = high[i] + (high[i + 1] - high[i]) * u
+                return a + (b - a) * v
+            }
+            let points = [at(inset, 0.18), at(1 - inset, 0.18), at(1 - inset, 0.8), at(inset, 0.8)]
+            guard let normal = (points[1] - points[0]).cross(points[2] - points[0]).normalized else { return }
+            let middle = points.reduce(Map3DPoint.zero, +) * 0.25
+            let out = normal.dot(middle - centre) < 0 ? normal * -1 : normal
+            facet(points.map { $0 + out * 0.02 }, Map3DTrainStyle.glass)
+        }
+        pane(2, inset: 0.06)
+        pane(1, inset: 0.12)
+        pane(3, inset: 0.12)
+        box(face - end * (nose.depth + 0.7), 2.6, 0, 0.8, 2.84, 0.8, Map3DTrainStyle.glass)
+        for z: Float in [-0.85, 0.85] {
             let start = mesh.vertices.count
-            box(face + end * 0.06, 1.6, z, 0.1, 0.28, 0.2, lit ? Map3DTrainStyle.headlamp : Map3DTrainStyle.roofColour)
+            box(face + end * 0.05, 1.6, z, 0.1, 0.28, 0.2, lit ? Map3DTrainStyle.headlamp : Map3DTrainStyle.roofColour)
             if lit { mesh.makeGlowing(from: start) }
         }
-        pilot(end: end, chevron: chevron)
+        pilot(end: end, chevron: false)
     }
 
     /// A plain end with the gangway door, where the coaches couple on.
