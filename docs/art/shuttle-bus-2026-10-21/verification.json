@@ -1,0 +1,99 @@
+{
+  "status": "VERIFIED",
+  "environment": "Linux / Swift 6.4 / Node / Chromium WebGL 2",
+  "new_vehicle_types": 1,
+  "comparison_models": 1,
+  "models": 2,
+  "views": 14,
+  "triangles": 3027,
+  "maximum_triangles": 1593,
+  "checks": [
+    "all native vertices round-trip through the game loader",
+    "native / GLB / PNG SHA-256",
+    "complete native-to-GLB conversion",
+    "one new minibus type and one existing city-bus comparison",
+    "all seven transparent views nonempty and unclipped",
+    "opaque finite new native bus; reference bus retains instance-tinted paint"
+  ],
+  "not_verified": [
+    "iPhone / iPad Metal rendering and performance",
+    "on-device App appearance, vehicle collision physics or wheel/door animation",
+    "wheel/door animation, actual vehicle brand or engineering dimensions",
+    "pixel comparison with original owner views / private source browser; raw sources are not redistributed"
+  ],
+  "browser": {
+    "status": "VERIFIED",
+    "models_loaded": 2,
+    "pngs_decoded": 14,
+    "checks": [
+      "new bus / reference / Chinese filtering / all 14 PNG decode",
+      "seven directions",
+      "pointer orbit changes rendered geometry",
+      "zoom",
+      "PNG / native / GLB download hashes",
+      "390 px without horizontal overflow",
+      "no external requests / missing resources / JavaScript errors"
+    ]
+  },
+  "native_tests": {
+    "status": "VERIFIED",
+    "toolchain": "Swift6.4",
+    "warnings_as_errors": true,
+    "passed": 37,
+    "suites": [
+      "Map3DShuttleBusTests (5)",
+      "Map3DCityBusTests (5)",
+      "Map3DStreetLifeTests (12)",
+      "Map3DModelTests (8)",
+      "Map3DModelFileTests (7)"
+    ]
+  },
+  "node_tests": {
+    "status": "VERIFIED",
+    "passed": 4
+  },
+  "native_roundtrip": {
+    "status": "VERIFIED",
+    "positions_colours_glow": "exact per vertex",
+    "normals_absolute_tolerance": 1e-05
+  },
+  "png_decode": {
+    "status": "VERIFIED",
+    "count": 14,
+    "decoder": "Pillow full pixel decode + browser Image.decode",
+    "mode": "RGBA",
+    "size": [
+      384,
+      384
+    ],
+    "alpha_extrema": [
+      0,
+      255
+    ],
+    "pixel_counts_match_renderer": true
+  },
+  "street_frame": {
+    "status": "VERIFIED",
+    "coexisting_bus_types": 2,
+    "total_vehicle_count_unchanged": true,
+    "bus_share": 0.05,
+    "shuttle_share_of_buses": 0.3,
+    "existing_bus_spacing_metres": 17
+  },
+  "visual_review": {
+    "status": "VERIFIED",
+    "sheets": [
+      "overview",
+      "directions",
+      "comparison",
+      "style-checks"
+    ],
+    "adjustments": [
+      "Tapered high-roof shoulder panels",
+      "Matching white roof cap width",
+      "Rear seam meets backing",
+      "Length metadata includes bumpers"
+    ]
+  },
+  "new_bus_triangles": 1434
+}

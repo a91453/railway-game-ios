@@ -62,24 +62,24 @@ final class Map3DCityBusTests: XCTestCase {
     /// next; a road they do not run on has none.
     func testBusesRunOnMainRoadsKeepingApart() throws {
         let path = try XCTUnwrap(Map3DStreetLife.Path([Map3DPoint(0, 0, 0), Map3DPoint(2_000, 0, 0)]))
-        let busIndex = try XCTUnwrap(Map3DStreetLife.models[.bus])
+        let busIndices = Set(try [Map3DStreetModel.bus,.shuttleBus].map { try XCTUnwrap(Map3DStreetLife.models[$0]) })
         var life = Map3DStreetLife()
         life.lanes = [Map3DStreetLife.Lane(path: path, half: 6, twoWay: true, speed: 11, perHundred: 5, scooters: true, seed: (3, 4), buses: true)]
         var buses = 0, vehicles = 0
         for time in stride(from: 0.0, to: 600, by: 60) {
             let frame = life.frame(target: Map3DPoint(1_000, 0, 0), distance: 1_200, time: time, detail: .full, activity: .init())
-            XCTAssertEqual(frame.buses, frame.instances.filter { $0.model == busIndex }.count)
+            XCTAssertEqual(frame.buses, frame.instances.filter { busIndices.contains($0.model) }.count)
             XCTAssertLessThanOrEqual(frame.buses, Map3DStreetLife.mostBuses)
             buses += frame.buses
             vehicles += frame.vehicles
             for direction: Float in [1, -1] {
-                let ahead = frame.instances.filter { $0.transform[0] * direction > 0.5 }.map { ($0.transform[12], $0.model == busIndex) }
+                let ahead = frame.instances.filter { $0.transform[0] * direction > 0.5 }.map { ($0.transform[12], busIndices.contains($0.model)) }
                     .sorted { $0.0 < $1.0 }
                 for (a, b) in zip(ahead, ahead.dropFirst()) where a.1 || b.1 {
                     XCTAssertGreaterThan(b.0 - a.0, 8.3, "a bus's half and a car's")
                 }
             }
-            for bus in frame.instances where bus.model == busIndex {
+            for bus in frame.instances where busIndices.contains(bus.model) {
                 let paint = (UInt32((bus.stripe.0 * 255).rounded()), UInt32((bus.stripe.1 * 255).rounded()), UInt32((bus.stripe.2 * 255).rounded()))
                 XCTAssertTrue(Map3DStreetLife.busPaints.contains { ($0 & 0xFF, $0 >> 8 & 0xFF, $0 >> 16 & 0xFF) == paint })
             }
