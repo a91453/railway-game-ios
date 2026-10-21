@@ -1621,7 +1621,9 @@ struct LinesPanel: View {
                 }
             }
             Button {
-                session.createLineFromDraft()
+                // Decision 303: the card with its hours and trains first,
+                // where the game runs the line's trains.
+                session.confirmLineDraft()
             } label: {
                 Text("Create Line")
                     .font(.headline)

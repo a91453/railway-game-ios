@@ -300,8 +300,10 @@ private struct BuildConfirmation {
             showsCatchment = false
             cancel = { session.clearLineDraft() }
             confirm = {
-                session.createLineFromDraft()
-                if session.mapLineDraft == nil { openLines() }
+                // Decision 303: the card first, where the game runs the
+                // line's trains; its Open Line opens the lines panel.
+                session.confirmLineDraft()
+                if session.mapLineDraft == nil, session.lineConfirmation == nil { openLines() }
             }
             if session.lineDraft.count >= 2 {
                 undo = { session.removeLastLineDraftStop() }

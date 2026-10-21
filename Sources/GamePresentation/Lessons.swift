@@ -237,8 +237,8 @@ extension Lesson {
         step: (
             ("Open a second line to the third town", "開第二條線到第三座城鎮"),
             (
-                "Lay track from the first town's station to the third town and build a station there. Then open Lines and create a new line with the two.",
-                "從第一座城鎮的車站鋪軌道到第三座城鎮，在那裡蓋車站。再打開「路線」，用這兩站開一條新路線。"
+                "Lay track from the first town's station to the third town and build a station there. Then open Lines, create a new line with the two and open it from its card.",
+                "從第一座城鎮的車站鋪軌道到第三座城鎮，在那裡蓋車站。再打開「路線」，用這兩站開新路線，在卡片上按「開通路線」。"
             )
         )
     )
@@ -261,8 +261,8 @@ extension Lesson {
     static let sixth = later(
         6, titles: ("Line Details", "路線的細節"),
         stories: (
-            "A line can run all day or only at the busy hours, as often as you like, and skip stops. Open Advanced on the line card.",
-            "路線可以全天開或只在尖峰開，班距隨你定，也可以跳過某些站。打開路線卡的「進階」。"
+            "A line can run all day or only at the busy hours, as often as you like, and skip stops. A new line's card sets its hours and trains; later, open Advanced on the line card.",
+            "路線可以全天開或只在尖峰開，班距隨你定，也可以跳過某些站。新路線的卡片可以設營運時間與列車；之後再打開路線卡的「進階」。"
         ),
         goals: { _, _, _ in [.dailyRiders(Lesson.laterRiders)] }, days: (3, 4, 6), unlocks: [.lineDetails],
         step: (

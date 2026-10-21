@@ -129,6 +129,17 @@ struct ContentView: View {
                     .presentationDetents([.medium, .large])
                 }
             }
+            // Decision 303: a new line's hours and trains, before they are
+            // bought; the lines panel shows the line once it is open.
+            .sheet(isPresented: Binding(
+                get: { session.lineConfirmation != nil },
+                set: { if !$0 { session.cancelLineConfirmation() } }
+            )) {
+                LineConfirmationCard(session: session) {
+                    screen.panel = .lines
+                }
+                .presentationDetents([.medium, .large])
+            }
             .onChange(of: screen.panel) { old, new in
                 // The report or the goals that were shown have been seen.
                 if old == .yearEnd { session.dismissYearEnd() }
