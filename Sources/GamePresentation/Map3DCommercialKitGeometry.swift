@@ -1,8 +1,8 @@
 import Foundation
 
 extension StationKitBuilder {
-    static let commBlue: UInt32 = Map3DPalette.trainAccent
-    static let commYellow: UInt32 = Map3DPalette.trainYellow
+    static let commBlue: UInt32 = Map3DPalette.canopy
+    static let commYellow: UInt32 = Map3DPalette.platformEdge
     static let commRed: UInt32 = Map3DPalette.templeRidge
     static let commCrimson: UInt32 = 0xFFA0241E
     static let commMint: UInt32 = 0xFF48A878
@@ -11,7 +11,7 @@ extension StationKitBuilder {
     static let commOrange: UInt32 = 0xFFF06520
     static let commWarmWhite: UInt32 = 0xFFFAF6EE
     static let commDark: UInt32 = Map3DPalette.playerRim
-    static let commDarkRoof: UInt32 = Map3DPalette.darkRoof
+    static let commDarkRoof: UInt32 = Map3DColor.rgb(0x454A52)
     static let commConcrete: UInt32 = Map3DPalette.concrete
     static let commBrick: UInt32 = Map3DPalette.counters[1]
     static let commWarmWood: UInt32 = 0xFFB87842
@@ -20,6 +20,8 @@ extension StationKitBuilder {
     static let commChrome: UInt32 = 0xFFE0E6ED
     static let commWarmGlow: UInt32 = 0xFFFFEA88
     static let commDarkGlass: UInt32 = 0xFF1C222C
+    /// Glass railings and canopies you see through, kept apart from window glazing.
+    static let commPanelGlass: UInt32 = Map3DColor.rgb(0xAFC6D2)
 
     mutating func commercial(_ part: Map3DCommercialKit.Part) {
         switch part.category {
@@ -86,7 +88,7 @@ extension StationKitBuilder {
         }
         box(x, y + 0.35, z - spread, spread * 2, 0.06, 0.06, Self.steel)
         box(x, y + 0.35, z + spread, spread * 2, 0.06, 0.06, Self.steel)
-        cylinder(x, y + 0.75, z, radius: radius, height: height, color: commChrome, sides: 12)
+        cylinder(x, y + 0.75, z, radius: radius, height: height, color: Self.commChrome, sides: 12)
         cylinder(x, y + 0.75 + height, z, radius: radius * 0.95, height: 0.25, color: Self.steel, sides: 10)
     }
 

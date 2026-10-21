@@ -91,7 +91,7 @@ extension StationKitBuilder {
 
         case .commercialPlanter:
             box(0, 0, 0, 1.4, 2.8, 0.75, Self.commConcrete)
-            box(0, 0.75, 0, 1.25, 2.65, 0.45, Map3DPalette.greens[1])
+            box(0, 0.75, 0, 1.25, 2.65, 0.45, Map3DProp.greens[1])
             for i in -1...1 {
                 cylinder(0, 1.2, Float(i) * 0.85, radius: 0.22, height: 0.15, color: Self.commRed, sides: 6)
             }
@@ -125,7 +125,7 @@ extension StationKitBuilder {
             }
             for wy: Float in [0.5, 1.8, 3.6] {
                 for wz: Float in [-0.75, 0.75] {
-                    box(0.05, wy, wz, 0.25, 0.12, 0.12, Map3DPalette.tankStand)
+                    box(0.125, wy, wz, 0.25, 0.12, 0.12, Map3DPalette.tankStand)
                 }
             }
             box(1.2, 1.8, 0, 2.2, 1.5, 0.10, Self.steel)
@@ -210,7 +210,7 @@ extension StationKitBuilder {
             box(halfL + 0.17, 2.40, 0, 0.02, 1.65, 0.18, Self.commYellow)
 
             for sign: Float in [-1, 1] {
-                let mz = sign * (halfW + 0.25)
+                let mz = sign * (halfW + 0.12)
                 beam(Map3DPoint(halfL - 0.2, 2.50, sign * halfW), Map3DPoint(halfL + 0.35, 2.25, mz), 0.035, Self.commDark)
                 beam(Map3DPoint(halfL + 0.35, 2.25, mz), Map3DPoint(halfL + 0.35, 1.70, mz), 0.035, Self.commDark)
                 box(halfL + 0.35, 1.70, mz, 0.10, 0.14, 0.42, Self.commDark)

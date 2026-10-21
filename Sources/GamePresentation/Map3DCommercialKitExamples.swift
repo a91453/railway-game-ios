@@ -26,7 +26,7 @@ extension Map3DCommercialKit {
         case .commercialAvenue:
             // Ground plaza & road surface
             b.box(0, 0, 0, 36, 44, 0.12, Map3DPalette.plaza)
-            b.box(4, 0.12, 0, 8, 44, 0.02, Map3DPalette.road(.major))
+            b.box(4, 0.12, 0, 8, 44, 0.02, Map3DPalette.road(.primary))
             // Buildings on left
             add(.departmentStore, -9, 0.12, -12)
             add(.cinema, -8, 0.12, 10)

@@ -132,7 +132,7 @@ extension StationKitBuilder {
             pane(5.55, 0.45, 2.2, 3.5, 3.2)
             box(6.8, 0, -2.5, 3.2, 5.0, 0.25, Self.commWarmWood)
             box(8.2, 0.25, -2.5, 0.4, 4.6, 0.55, Self.commConcrete)
-            box(8.2, 0.75, -2.5, 0.3, 4.4, 0.35, Map3DPalette.greens[1])
+            box(8.2, 0.75, -2.5, 0.3, 4.4, 0.35, Map3DProp.greens[1])
 
         case .gasStation:
             box(0, 5.2, 0, 13, 20, 0.85, Self.commWarmWhite)
@@ -180,6 +180,7 @@ extension StationKitBuilder {
                 }
             }
             box(9.2, 0, 2.5, 0.45, 0.45, 1.2, Self.commYellow)
+            pane(9.05, 1.5, 4.5, 2.0, 1.2)
             box(9.2, 0.85, 0.8, 0.08, 2.6, 0.15, Self.commRed)
             stairs(-8.5, 0, -8.5, run: 6.0, width: 3.2, rise: 3.0)
             for pz: Float in [-6.0, 6.0] {
@@ -231,8 +232,8 @@ extension StationKitBuilder {
 
             box(6.4, 7.0, 0, 0.8, 6.5, 0.15, Self.commConcrete)
             box(6.75, 7.15, 0, 0.06, 6.5, 0.85, Self.steel)
-            box(6.4, 7.15, -1.8, 0.4, 1.2, 0.45, Map3DPalette.greens[2])
-            box(6.4, 7.15, 1.8, 0.4, 1.2, 0.45, Map3DPalette.greens[0])
+            box(6.4, 7.15, -1.8, 0.4, 1.2, 0.45, Map3DProp.greens[2])
+            box(6.4, 7.15, 1.8, 0.4, 1.2, 0.45, Map3DProp.greens[0])
 
             box(0, 13.5, 0, 11.5, 7.5, 2.8, Self.commMint)
             gable(0, 16.3, 0, 11.8, 7.8, 1.2, Map3DPalette.roof)
@@ -240,11 +241,11 @@ extension StationKitBuilder {
 
         case .warehouseStore:
             box(0, 0, 0, 18, 22, 8.5, Self.commConcrete)
-            box(0, 6.5, 0, 18.4, 22.4, 1.8, Map3DPalette.trainAccent)
+            box(0, 6.5, 0, 18.4, 22.4, 1.8, Self.commBlue)
             box(9.25, 7.1, 0, 0.05, 14.0, 0.9, Self.commRed)
 
             pane(9.05, 0.45, 4.5, 8.5, 4.8)
-            commAwning(10.2, 5.2, 4.5, length: 2.4, width: 10.0, rise: 0.35, color: Map3DPalette.trainAccent)
+            commAwning(10.2, 5.2, 4.5, length: 2.4, width: 10.0, rise: 0.35, color: Self.commBlue)
 
             box(9.05, 0.85, -6.5, 0.15, 5.5, 3.8, Map3DPalette.tankStand)
             box(9.8, 0, -6.5, 1.8, 6.5, 0.85, Self.commConcrete)
@@ -257,7 +258,7 @@ extension StationKitBuilder {
             box(0, 0, 0, 7.5, 4.2, 0.35, Self.commConcrete)
             stairs(0.5, 0, 0, run: 5.5, width: 3.2, rise: 2.8)
             for pz: Float in [-1.8, 1.8] {
-                box(0.5, 0.35, pz, 5.5, 0.08, 1.1, Self.glass)
+                box(0.5, 0.35, pz, 5.5, 0.08, 1.1, Self.commPanelGlass)
                 box(0.5, 1.45, pz, 5.5, 0.10, 0.08, Self.commChrome)
             }
             for px: Float in [-1.8, 0.8, 3.4] {
@@ -266,11 +267,12 @@ extension StationKitBuilder {
                 beam(Map3DPoint(px, 2.8, -2.0), Map3DPoint(px, 3.4, 0), 0.10, Self.commMint)
                 beam(Map3DPoint(px, 2.8, 2.0), Map3DPoint(px, 3.4, 0), 0.10, Self.commMint)
             }
-            canopy(0.8, 3.1, 0, length: 6.2, width: 4.2, rise: 0.45, color: Self.glass)
+            canopy(0.8, 3.1, 0, length: 6.2, width: 4.2, rise: 0.45, color: Self.commPanelGlass)
 
             box(3.8, 0, -2.4, 0.35, 0.35, 3.8, Self.commMint)
             box(3.8, 3.2, -2.4, 0.45, 0.45, 0.65, Self.commBlue)
             box(3.8, 3.3, -2.4, 0.48, 0.48, 0.45, Self.commWarmWhite)
+            pane(4.08, 1.0, -2.4, 0.36, 0.6)
 
         default:
             break

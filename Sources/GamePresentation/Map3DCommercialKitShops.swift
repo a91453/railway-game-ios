@@ -31,7 +31,7 @@ extension StationKitBuilder {
             box(0.2, 1.0, 0, 1.4, 4.2, 0.45, Self.glass)
             for i in 0..<6 {
                 let pz: Float = -1.6 + Float(i) * 0.65
-                let foodColor = i % 2 == 0 ? Map3DPalette.counters[1] : Map3DPalette.greens[2]
+                let foodColor = i % 2 == 0 ? Map3DPalette.counters[1] : Map3DProp.greens[2]
                 box(0.2, 1.02, pz, 0.75, 0.55, 0.10, foodColor)
             }
 
@@ -72,7 +72,7 @@ extension StationKitBuilder {
             pane(1.65, 0.45, 0, 4.6, 2.2)
             for i in -1...1 {
                 box(2.1, 0, Float(i) * 1.2, 0.65, 0.95, 0.65, Map3DPalette.counters[1])
-                cylinder(2.1, 0.65, Float(i) * 1.2, radius: 0.35, height: 0.15, color: Map3DPalette.greens[i + 1], sides: 8)
+                cylinder(2.1, 0.65, Float(i) * 1.2, radius: 0.35, height: 0.15, color: Map3DProp.greens[i + 1], sides: 8)
             }
 
         case .stationeryStore:
@@ -80,7 +80,7 @@ extension StationKitBuilder {
             pane(1.65, 0.45, 0.8, 2.8, 2.4)
             box(1.3, 0.65, 0.8, 0.4, 2.4, 0.75, Map3DPalette.counters[1])
             pane(1.65, 0.45, -1.5, 1.4, 2.4)
-            commAwning(2.2, 3.1, 0, length: 1.8, width: 5.0, rise: 0.35, color: Map3DPalette.trainAccent)
+            commAwning(2.2, 3.1, 0, length: 1.8, width: 5.0, rise: 0.35, color: Self.commBlue)
 
         case .ramenYatai:
             box(0, 0.45, 0, 2.4, 3.8, 0.85, Self.commDarkWood)
