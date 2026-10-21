@@ -355,7 +355,7 @@ struct EconomyPanel: View {
                     .font(.caption)
                     .foregroundStyle(Theme.warning)
             } else {
-                Stepper(value: price, in: DayPassCard.priceRange, step: DayPassCard.priceStep) {
+                Stepper(value: price, in: DayPassCard.priceRange, step: Int(DayPassCard.priceStep)) {
                     Text(verbatim: language.text("Price \(Money(price.wrappedValue).centsText)", "售價 \(Money(price.wrappedValue).centsText)"))
                         .monospacedDigit()
                 }
