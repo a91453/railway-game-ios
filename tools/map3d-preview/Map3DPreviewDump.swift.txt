@@ -176,16 +176,30 @@ final class Map3DPreviewDump: XCTestCase {
             }
         // Uniforms as Map3DMetalView.uniformValues writes them, for a few
         // cameras at MAP3D_MINUTE of the day (14:00 unless set).
-        let lighting = Map3DLighting(minute: ProcessInfo.processInfo.environment["MAP3D_MINUTE"].flatMap(Double.init) ?? 14 * 60)
-        func rgb(_ c: PopTravel.RGB) -> (Float, Float, Float) { (Float(c.red) / 255, Float(c.green) / 255, Float(c.blue) / 255) }
+        var lighting = Map3DLighting(minute: ProcessInfo.processInfo.environment["MAP3D_MINUTE"].flatMap(Double.init) ?? 14 * 60)
+        // Decisions 277 and 320: MAP3D_WEATHER=rain|thunderstorm|typhoon,
+        // the light, the fog and the rain's streaks of that weather: the
+        // streaks at second 36,000, the picture taken as a 533 × 300 point
+        // screen at 3 pixels a point, as a phone draws them.
+        let sky: MapWeather.Sky? = switch ProcessInfo.processInfo.environment["MAP3D_WEATHER"] {
+        case "rain": .rain
+        case "thunderstorm": .thunderstorm
+        case "typhoon": .typhoon
+        default: nil
+        }
+        let weather = sky.map { MapWeather(sky: $0) } ?? .clear
+        lighting.weather = Map3DWeather(weather)
+        let rain = Map3DRain(weather)
+        let look = rain.look(night: lighting.night)
+        let streaks = rain.streaks(at: 36_000, width: 1600 / 3, height: 300, detail: .full).map { [$0.x0 * 3, $0.y0 * 3, $0.x1 * 3, $0.y1 * 3] }
         func padded(_ light: SIMD3<Float>) -> [Float] { [light.x, light.y, light.z, 0] }
         func uniforms(_ camera: Map3DCamera) -> [Float] {
-            let sky = rgb(lighting.sky)
+            let fog = lighting.fogColour, scale = lighting.fogScale
             let eye = camera.eye, far = camera.depthRange.far
             return camera.viewProjection.columns
                 + [lighting.sunDirection.x, lighting.sunDirection.y, lighting.sunDirection.z, 0]
                 + padded(lighting.sunLight) + padded(lighting.skyLight) + padded(lighting.groundLight)
-                + [sky.0, sky.1, sky.2, 0] + [eye.x, eye.y, eye.z, 1] + [camera.distance * 1.6, far * 0.9, 0, 0]
+                + [fog.x, fog.y, fog.z, 0] + [eye.x, eye.y, eye.z, 1] + [camera.distance * 1.6 * scale.near, far * 0.9 * scale.far, 0, 0]
                 + [Map3DShadow.strength(lighting), lighting.lights, 0, 0] + Map3DLighting.nightWindowRows
         }
         let presets: [(String, Map3DPoint, Float, Float)] = (ProcessInfo.processInfo.environment["MAP3D_VIEWS"] ?? "close:0:0:140:35;mid:0:0:420:-25;far:0:0:1300:0")
@@ -214,7 +228,9 @@ final class Map3DPreviewDump: XCTestCase {
                 let p = scene.point(worldX: (Double(lot.column) + 0.5) * cell, worldY: (Double(lot.row) + 0.5) * cell, height: 0)
                 return ["x": p.x, "z": p.z, "d": lot.density, "use": lot.use.rawValue]
             }
-        try JSONSerialization.data(withJSONObject: ["drawn": drawn, "drawnInFull": drawnInFull, "uses": uses, "stations": stations, "low": Array(low.prefix(400)), "triangles": indices.count / 3, "views": views, "sky": [rgb(lighting.sky).0, rgb(lighting.sky).1, rgb(lighting.sky).2]])
+        try JSONSerialization.data(withJSONObject: ["drawn": drawn, "drawnInFull": drawnInFull, "uses": uses, "stations": stations, "low": Array(low.prefix(400)), "triangles": indices.count / 3, "views": views, "sky": [lighting.background.x, lighting.background.y, lighting.background.z],
+                                                        "rain": streaks, "rainColour": [Double(look.colour >> 16 & 0xFF), Double(look.colour >> 8 & 0xFF),
+                                                                                         Double(look.colour & 0xFF), look.opacity]])
             .write(to: URL(fileURLWithPath: out + ".json"))
     }
 }
