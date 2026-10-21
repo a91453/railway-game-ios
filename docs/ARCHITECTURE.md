@@ -13850,6 +13850,8 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 3. 停站模式（決策 24 的 `patterns`）也要發車方式時，`dispatchPattern`／`endLastDispatch` 要搬到每個服務。
 4. 單線開行車控制時兩端對開的量測（需要待避線的世界）。
 
+**後來**（2026-10-21，PR #873–#910 審查 A 組，session_01SvQ285hMiSeRsER1EXzfT9，`docs/archive/PR873_910_REVIEW_HANDOFF.md` A1）：路線改成環線時，`setLineRing` 沒有把發車方式改回平均錯開。存檔要求環線只能平均錯開，所以「第二列晚 N 分」或「兩端對開」的路線改成環線後，存檔讀不回。現在改成環線時，發車方式回到平均錯開，`endLastDispatch`、`opensPair` 一起清掉。環線本來就照平均錯開派車（`dispatchPattern(of:_:planned:)` 只看路線自己的服務、不看方向），所以環線的行車不變，只是存檔讀得回；之後再改回一般路線，發車方式是平均錯開，要另外再選。回歸測試 `DispatchPatternTests.testALineMadeARingSpacesItsTrainsEvenly`。存檔版本、golden、replay 不動。
+
 ### 310. 地圖提示整理：不蓋「空位多」、列車的章改「滿載」、快速圖層的「車資與章」開關
 
 2026-10-21。作者同意遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 的排程（「照這樣做」，#231 04:58 與 04:59 的兩則），派工給 session_01GPnquCXT5GQzPfCztHj6Sz。號碼依工作登記 #231：main 到 306，307（甲線載入畫面）、308（追回後續）、309（派車錯開）已登記，取 310。GameCore、存檔版本、golden schema、SaveFixtures、ReplayFixtures 都不動。
@@ -14292,6 +14294,10 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - **開發**：第二條正線借高鐵示範已經有的做法，沒有新的鋪法；班次工具多一個回送的規則，原本四條線的輸出不變（`tra_branch_runs.json` 的四條線一字不差）。
 - **美術**：無（軌道、月台照原本的畫法）。
 - **音樂**：無（收購完成的短樂句照舊）。
+
+#### 後來：拆車站拆掉買下的線
+
+2026-10-21，PR #873–#910 審查 A 組（session_01SvQ285hMiSeRsER1EXzfT9，`docs/archive/PR873_910_REVIEW_HANDOFF.md` A2）。拆車站拆到買下的線剩不到兩站時，`removeStation` 會連線一起拆掉，但沒有像 `removeLine` 那樣把 `.acquiredLine` 的資產註銷。資產紀錄指向已經不存在的線，存檔因此讀不回（`assetsProblem`）。現在這一條路也註銷資產；收購紀錄照樣留下，同一條真實線不能再買。回歸測試 `LineAcquisitionTests.testABoughtLineRemovedWithItsStationsWritesItOff`。存檔版本、golden、replay 不動。
 
 #### 之後：第二批開放輕軌
 

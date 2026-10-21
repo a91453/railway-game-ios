@@ -156,6 +156,20 @@ final class LineAcquisitionTests: XCTestCase {
         XCTAssertThrowsError(try world.recordLineAcquisition(line: other, realLine: pingxi, dailyRiders: 1))
     }
 
+    /// A bought line that loses its stations, so that it is removed with
+    /// them, writes its asset off as removing the line does, and the save
+    /// loads: before, the asset named a line that was gone.
+    func testABoughtLineRemovedWithItsStationsWritesItOff() throws {
+        var world = try world()
+        try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 2)
+        try world.removeStation(beta)
+        try world.removeStation(gamma)
+        XCTAssertNil(world.line(id: main))
+        XCTAssertFalse(world.accounts.assets.contains { $0.kind == .acquiredLine })
+        XCTAssertEqual(world.acquisitions.map(\.realLine), [pingxi])
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
+    }
+
     // MARK: - Saving
 
     /// A world without purchases writes no key; one with them round-trips,

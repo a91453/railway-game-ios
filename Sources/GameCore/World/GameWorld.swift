@@ -1178,6 +1178,8 @@ public struct GameWorld: Equatable, Sendable {
         for index in lines.indices.reversed() where lines[index].stops.contains(id) {
             guard let (line, dropped) = lines[index].removingStation(id) else {
                 removeLineAccounts(of: lines[index].id)
+                // Decision 315: as removing the line does.
+                disposeAsset(.acquiredLine, owner: lines[index].id.rawValue)
                 lines.remove(at: index)
                 continue
             }
@@ -2085,7 +2087,8 @@ public struct GameWorld: Equatable, Sendable {
     /// the third and so on the ``RingDirection/inner`` way, the others the
     /// ``RingDirection/outer`` way (see ``ServiceLine/ringDirection(of:)``).
     /// Making a line a ring makes its counts of trains in service even,
-    /// down (the reference's `normalizeRingPairedTrainCaps`); making it a
+    /// down (the reference's `normalizeRingPairedTrainCaps`) and its trains
+    /// spaced evenly (decision 309: a ring has no other pattern); making it a
     /// line again forgets when it last sent a train out the outer way.
     /// Trains already sent out keep their timetables either way.
     ///
@@ -2106,6 +2109,10 @@ public struct GameWorld: Equatable, Sendable {
             lines[index].trainsInService = TrainsInService(
                 peak: ServiceLine.paired(counts.peak), offPeak: ServiceLine.paired(counts.offPeak), low: ServiceLine.paired(counts.low)
             )
+            // Decision 309: a ring spaces its trains evenly.
+            lines[index].dispatchPattern = .even
+            lines[index].endLastDispatch = nil
+            lines[index].opensPair = false
         } else {
             lines[index].outerLastDispatch = nil
         }
