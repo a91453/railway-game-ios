@@ -13179,6 +13179,8 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 **沒有驗證的**：App 的卡片、表情與買車卡那一行只在 macOS CI 編譯；手機橫拿時路線面板的寬度夠不夠放分數與按鈕，待實機看。
 
+**後來**（2026-10-21，PR #786–#872 C 組審查，`docs/archive/PR786_872_C_REVIEW_HANDOFF.md`）：擁擠那一項的中文名稱從「車上擁擠」改成「車上空間」。分數越高越好，英文是「Room on board」；「車上擁擠 30%」會被讀成三成擁擠，意思正好相反。規則與分數不變（`LineSatisfactionTests.testEachTitleNamesWhatAHighScoreMeans`）。
+
 ### 303. 新路線的「確認路線」卡：名稱、顏色、首末班、四個時段各幾列，一次買齊
 
 2026-10-20。競品研究 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.4（它的圖 18、19；NEXT_PRIORITIES §17 第 9 名）。作者 2026-10-20「你五方決定」，遊戲規劃 session_01WW7o3decEv5LY59nYVqnDN 派工。號碼依 #231：main 最大 301，302 已保留，取 303。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
@@ -13227,6 +13229,10 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 **測試**（`LineConfirmationTests`）：標準服務日的四個時段；首末班裁切時段（08:00–19:00 剩三段、16:40–18:20 只剩晚尖峰）；末班過午夜進到夜間；班距（來回 25 分：3 列 9、2 列 13、1 列 25，最少 2 分）與兩種語言的字；設定的範圍；✓ 先升起卡片、什麼都不買，返回時草稿留著；預設值的價錢、列車數與世界等於原本的 ✓；名稱、顏色、首末班、尖峰 2 列一起進到路線上，花的錢等於卡上的總價，一次 Undo 退回；要 5 列時只買起訖站放得下的 2 列並寫原因，沒有多買的車；預覽只算一次、不改世界；錢不夠時寫原因、按了不改世界、卡片留著；寫實規則照舊直接開線；中文的字。
 
 **沒有驗證的**：卡片的版面只在 macOS CI 編譯與 UI 測試裡點過；手機橫拿時 `.medium` 高度放不放得下四個時段，待實機看。
+
+**後來**（2026-10-21，PR #786–#872 C 組審查，`docs/archive/PR786_872_C_REVIEW_HANDOFF.md`）：
+- 「還差多少」改成每次照現在的現金算，不放進 memo：卡片開著時遊戲時間照走，營運成本與票收會改變現金。原本要等下一個指令或改設定才更新，現金不夠了「開通路線」還開著，錢夠了也還關著（`LineConfirmationTests.testTheShortfallFollowsTheCash`）。價錢、列車數與班距仍然只在設定、草稿、指令或語言改變時重算。
+- 起訖站只停得下一列時，英文寫「1 train can wait…」，中文「等它開出後」（`testTheTrackLimitOfOneTrain`）。
 
 ## 目前規則摘要
 
