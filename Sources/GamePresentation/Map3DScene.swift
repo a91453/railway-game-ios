@@ -169,9 +169,12 @@ public struct Map3DScene: Sendable {
     /// map looked at), round it instead (decision 313, later).
     /// On a real-world map, `baseMap`'s ground and `cityTiles`' buildings,
     /// and `heights`' ground where the world has not read its own.
-    /// Decision 314: `lineBands` beside the track.
+    /// Decision 314: `lineBands` beside the track. Decision 326: an
+    /// overhead line over the track, but along `railways`' lines run
+    /// without one.
     public init(world: GameWorld, snapshot: RailwaySnapshot? = nil, skyline: CitySkyline? = nil, focus: (x: Double, y: Double)? = nil,
-                baseMap: BaseMapTiles? = nil, cityTiles: [CityTileArea] = [], heights: HeightGrid? = nil, lineBands: Map3DLineBands? = nil) {
+                baseMap: BaseMapTiles? = nil, cityTiles: [CityTileArea] = [], heights: HeightGrid? = nil, lineBands: Map3DLineBands? = nil,
+                railways: RealRailways? = nil) {
         (region, originX, originY) = Self.frame(world: world, focus: focus)
 
         var builder = Builder(originX: originX, originY: originY, region: region, world: world, heights: heights)
@@ -199,6 +202,10 @@ public struct Map3DScene: Sendable {
         // Decision 321: the stations' canopies and buildings from the
         // station kit, a plaza where a building stands.
         let stations = cleared.union(builder.addStations(snapshot, frame: RealWorldFrame(world: world)))
+        // Decision 326: the overhead line, its masts clear of the platforms;
+        // on a real-world map, none along the real lines without one.
+        if let railways, let frame = RealWorldFrame(world: world) { builder.addRealLines(railways, frame: frame) }
+        builder.addOverheadLine()
         // Decision 244: no street furniture where the track runs (nor
         // where a station's building stands).
         builder.removeProps(on: stations)
@@ -402,6 +409,9 @@ extension Map3DScene {
         /// Decision 322: every road's middle line and how far either side
         /// its carriageway and pavement reach, metres.
         var roadLines: [(points: [Map3DPoint], half: Float)] = []
+        /// Decision 326: on a real-world map, the real lines round the
+        /// scene and whether each runs under an overhead line.
+        var realLines: [(points: [Map3DPoint], wired: Bool)] = []
         var nearMeshes: [ChunkKey: Map3DMesh] = [:]
         var farMeshes: [ChunkKey: Map3DMesh] = [:]
         var closeMeshes: [ChunkKey: Map3DMesh] = [:]
