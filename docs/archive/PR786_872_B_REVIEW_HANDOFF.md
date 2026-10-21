@@ -82,7 +82,8 @@ Session：PR 審查 B 組（session_01E3oRjatcqtfWgatbqPbcr1，2026-10-21），�
 
 - **位置**：`DepartureBoard.swift` 的 `shortTurnCall(at:on:)` 只認得決策 288 改過的時刻（跳過的站與折回的站都等於折返的時刻）；但 `Deadlock.swift` 的 `shortTurn` 只在 `timetablePeriod == nil, early > 0` 時改時刻。車已經晚過它表定折回那一站的時間（`early <= 0`）就保留舊時刻，卡片回到 TestFlight 74.1 的錯：行程從沒到過的站算起、寫「已發車」、沒有「提早在 X 折返」。決策只寫了重複時刻表不認得，這一種沒寫。
 - **重現（VERIFIED，但用構造的狀態）**：`ShortTurnCardTests` 的世界折返後，把時刻表換成 GameCore 在 `early <= 0` 時會留下的未移動時刻（整體提早 2 小時，所以是誤點），`shortTurnCall` 是 `nil`（預期 3），`currentTrip` 是 `2...4`（預期 `3...4`）。沒有用指令一路玩到「誤點又折返」；探針只在本機跑過，沒有加進測試 target，A 組修時照這個做法寫回歸測試。
-- **為什麼延後**：修法在 GameCore 的 `Deadlock.shortTurn`（`early <= 0` 時也把跳過的站設成現在，其餘不移動），會動到行車的 golden 與 replay 要重驗，是 A 組（#823）的範圍；決策 302 的 session 也在 GameCore 調度附近。已交給 A 組。另一個做法是在決策 255 寫明這種情況不認得。
+- **為什麼延後**：修法在 GameCore 的 `Deadlock.shortTurn`，是 A 組（#823）的範圍，已交給 A 組。A 組用指令重現了（#828 附錄 `testShortTurnRepeatingAndAlreadyLate` 的非重複那一輪：`setTrainMovementRate(0)` 拖過原表回程到站，540 秒才折返，時刻表原樣不動），記在 [`PR786_872_A_REVIEW_HANDOFF.md`](PR786_872_A_REVIEW_HANDOFF.md)。
+- **我原本建議的修法不對**（A 組指出）：`early <= 0` 時折回那一站的到站已經早於現在，只把跳過的站設成現在，時刻表就不遞增，`Train` 解碼時 `ScheduledStop.isTimetable` 會擋，存檔讀不回（P1）。可行的兩條路：(1) 連折回那一站以後都不早於現在，等於把時刻往後移，和決策 288 的「絕不往後」相反，是規則改動，要重驗 golden 與 replay，由決策 288 的作者或下一個行車控制 session 決定；(2) 在 GamePresentation 用行程紀錄（實際停過的站）認折返，不靠時刻表。
 
 ## 五、沒有算成發現的
 
