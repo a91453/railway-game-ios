@@ -201,5 +201,78 @@ class NewTaipeiTests(unittest.TestCase):
         self.assertNotEqual(self.build().returncode, 0)
 
 
+class TaipeiHourlyTests(unittest.TestCase):
+    """build_trtc_hourly.py on a made-up year: a home (蘆洲) and an office
+    (松江南京) trading 10,000 trips an hour at their peaks and 500 at other
+    hours on weekdays, four tenths of that at weekends; the first Monday a
+    holiday with weekend numbers and the first Saturday a working day."""
+
+    def setUp(self):
+        self.folder = tempfile.mkdtemp()
+        index = ["西元年,月,URL"]
+        for year, month in [(2025, number) for number in range(1, 13)] + [(2026, 1)]:
+            path = os.path.join(self.folder, f"{year}-{month:02}.csv")
+            rows = ["日期,時段,進站,出站,人次"]
+            for day in range(1, calendar.monthrange(year, month)[1] + 1):
+                working = calendar.weekday(year, month, day) < 5
+                if (year, month, day) == (2025, 1, 6):
+                    working = False
+                if (year, month, day) == (2025, 1, 4):
+                    working = True
+                scale = 10 if working else 4
+                for hour in [0] + list(range(6, 24)):
+                    rows.append(f"{year}-{month:02}-{day:02},{hour},蘆洲,松江南京,{scale * (1000 if hour in (7, 8) else 50)}")
+                    rows.append(f"{year}-{month:02}-{day:02},{hour},松江南京,BL蘆洲,{scale * (1000 if hour in (17, 18) else 50)}")
+            with open(path, "w", encoding="utf-8") as file:
+                file.write("\n".join(rows) + "\n")
+            index.append(f"{year},{month},file://{path}")
+        with open(os.path.join(self.folder, "index.csv"), "w", encoding="utf-8") as file:
+            file.write("\n".join(index) + "\n")
+
+    def build(self):
+        output = os.path.join(self.folder, "out.json")
+        result = run("build_trtc_hourly.py", "--year", "2025", "--downloaded", "2026-10-21", "--output", output,
+                     "--index", "file://" + os.path.join(self.folder, "index.csv"))
+        return result, (json.load(open(output, encoding="utf-8")) if result.returncode == 0 else None)
+
+    def test_days_are_told_apart_by_their_riders(self):
+        result, output = self.build()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(output["days"]["weekdaysOff"], ["2025-01-06"])
+        self.assertEqual(output["days"]["weekendsWorking"], ["2025-01-04"])
+        self.assertEqual(output["days"]["working"] + output["days"]["off"], 365)
+
+    def test_the_hour_after_midnight_is_the_day_before(self):
+        # 1 January's 00:00 belongs to 2024 and is left out; next January's
+        # 1st at 00:00 is 2025's New Year's Eve.
+        result, output = self.build()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(output["period"], {"from": "2025-01-01", "to": "2025-12-31"})
+        shares = output["hourShare"]["working"]
+        self.assertEqual(shares[1:6], [0, 0, 0, 0, 0])
+        self.assertAlmostEqual(sum(shares), 1, places=3)
+        self.assertGreater(shares[0], 0)
+
+    def test_a_lines_gate_adds_to_its_station(self):
+        result, output = self.build()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        stations = output["stations"]["workingDay"]
+        self.assertEqual(sorted(stations), ["松江南京", "蘆洲"])
+        # 蘆洲: 20,000 entries 07-09 and 1,000 exits; 17-19 the other way.
+        self.assertEqual(stations["蘆洲"][2:6], [20_000, 1_000, 1_000, 20_000])
+        self.assertEqual(output["residential"]["stations"][0], "蘆洲")
+        self.assertEqual(output["office"]["stations"][0], "松江南京")
+        self.assertEqual(output["residential"]["morningEntriesToExits"]["max"], 20)
+
+    def test_a_missing_month_is_refused(self):
+        index = os.path.join(self.folder, "index.csv")
+        lines = open(index, encoding="utf-8").read().splitlines()
+        with open(index, "w", encoding="utf-8") as file:
+            file.write("\n".join(line for line in lines if not line.startswith("2025,7,")) + "\n")
+        result, _ = self.build()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("twelve months", result.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()
