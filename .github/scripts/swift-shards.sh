@@ -308,18 +308,30 @@ set -euo pipefail
 # test share one build of the demo, so a little less), so
 # FlexDispatchPropertyTests (161) goes to campaigns-10, the lightest
 # (about 650).
+# 2026-10-21: rest timed out on main 4a9685b (run 39603500311): a slow
+# runner took its tests about 1.34 times as long as #912's run of the same
+# classes (746 s there, past 958 s and unfinished at the 20 minutes on
+# main), and a fast runner's rest job was already 12m40s (c841882). Eight
+# GamePresentation classes leave rest for the three shortest jobs of
+# c841882's run (campaigns-9 8m39s, campaigns-2 9m07s, campaigns-10
+# 9m36s); seconds of tests on #912's run (job 119249810901):
+#   campaigns-2   RealLineAcquisition 38, Map3DOpenEveryStart 17, Lesson 13
+#   campaigns-9   NightSkip 40, Policy 18
+#   campaigns-10  RealRailwayTracing 31, Map3DStreetLife 14, Map3D 11
+# Rest loses about 182 s (some 245 on a slow runner). These are
+# GamePresentation's, so no pull request's tier changes (see 2026-10-14).
 classes_of() {
   case "$1" in
     campaigns-1) echo "ServiceRepeatingPropertyTests ScheduledTrafficPropertyTests WorldStateMachineTests" ;;
-    campaigns-2) echo "ServicePropertyTests VerticalRailwayPropertyTests NetworkSectionPropertyTests SingleTrackCapacityPropertyTests" ;;
+    campaigns-2) echo "ServicePropertyTests VerticalRailwayPropertyTests NetworkSectionPropertyTests SingleTrackCapacityPropertyTests RealLineAcquisitionTests Map3DOpenEveryStartTests LessonTests" ;;
     campaigns-3) echo "LineDispatchPropertyTests IdleTrainDeadlockTests LineRoutePreferencePropertyTests" ;;
     campaigns-4) echo "OccupiedRoutingPropertyTests ContinuousTrackPropertyTests PassengerPropertyTests KernelDifferentialTests DeadlockPropertyTests" ;;
     campaigns-5) echo "SaveMutationSecondHalfTests ScheduledOvertakeTrackPropertyTests LineLossFixesTests" ;;
     campaigns-6) echo "ServiceRepeatingSecondHalfPropertyTests EconomyPropertyTests" ;;
     campaigns-7) echo "LinePatternPropertyTests NetworkServicePropertyTests" ;;
     campaigns-8) echo "GoldenScenarioTests ScheduledOvertakeTrackMiddlePropertyTests TimetablePropertyTests ScreenshotSceneTests NewGameBalanceTests" ;;
-    campaigns-9) echo "SaveMutationTests EconomySecondHalfPropertyTests" ;;
-    campaigns-10) echo "PassengerPlanKeyTests ReservationShortcutTests NetworkPostcardTests StationCommerceCardTests LineLossDiagnosisTests FlexDispatchPropertyTests" ;;
+    campaigns-9) echo "SaveMutationTests EconomySecondHalfPropertyTests NightSkipTests PolicyTests" ;;
+    campaigns-10) echo "PassengerPlanKeyTests ReservationShortcutTests NetworkPostcardTests StationCommerceCardTests LineLossDiagnosisTests FlexDispatchPropertyTests RealRailwayTracingTests Map3DStreetLifeTests Map3DTests" ;;
     campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests HighSpeedDemoTests TRADemoTests" ;;
     campaigns-12) echo "TrafficControlPropertyTests ScheduledOvertakeTrackFinalPropertyTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests" ;;
     campaigns-13) echo "BoardingPropertyTests TurnbackPropertyTests" ;;
@@ -431,7 +443,10 @@ CLASS_WEIGHTS="BoardingPropertyTests:624 LineDispatchPropertyTests:602
   WholeTaiwanTests:4 WaterGridTests:4 ContinuousTrackTests:4 BuildingTests:4
   BlockSectionsTests:4 TutorialSessionTests:4 LandDemandTests:4
   TrafficOverlayTests:4 WebsiteTimelineTests:4 HighSpeedTests:4
-  HolidayTextTests:4 BoardingTests:3 LandImportTests:3"
+  HolidayTextTests:4 BoardingTests:3 LandImportTests:3 NightSkipTests:57
+  RealLineAcquisitionTests:52 RealRailwayTracingTests:38 PolicyTests:24
+  Map3DOpenEveryStartTests:24 Map3DStreetLifeTests:19 LessonTests:18
+  Map3DTests:15"
 CLASS_WEIGHT_DEFAULT=1
 
 # With SELECTED_PART=k/n, the test IDs on stdin of the k-th of n parts. Each

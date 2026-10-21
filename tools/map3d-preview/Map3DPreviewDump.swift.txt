@@ -19,6 +19,14 @@ final class Map3DPreviewDump: XCTestCase {
             world = try newGameLine(through: [towns[0], towns[1]])
         case "taipei":
             world = GameWorld.newGame(anchor: GeoAnchor(latitudeDegrees: 25.0478, longitudeDegrees: 121.5170)!)
+        // Decision 321: a line through Taipei Main Station, as the frame
+        // report's (`Map3DFrameCostReportTests.taipeiScene`).
+        case "taipeiline":
+            let taipei = GameWorld.newGame(anchor: GeoAnchor(latitudeDegrees: 25.0478, longitudeDegrees: 121.5170)!)
+            let empty = Map3DScene(world: taipei), across = Int64(5_000 * WorldCoordinate.unitsPerMetre)
+            let middle = (x: Int64(empty.originX), y: Int64(empty.originY))
+            world = try newGameLine(through: [PlanPoint(x: middle.x - across, y: middle.y - across / 2), PlanPoint(x: middle.x, y: middle.y),
+                                              PlanPoint(x: middle.x + across, y: middle.y + across / 2)], in: taipei)
         // Decision 239: the city tiles' own origins.
         case "kaohsiung":
             world = GameWorld.newGame(anchor: GeoAnchor(latitudeDegrees: 22.6394, longitudeDegrees: 120.3024)!)
@@ -205,7 +213,7 @@ final class Map3DPreviewDump: XCTestCase {
         let presets: [(String, Map3DPoint, Float, Float)] = (ProcessInfo.processInfo.environment["MAP3D_VIEWS"] ?? "close:0:0:140:35;mid:0:0:420:-25;far:0:0:1300:0")
             .split(separator: ";").map { part in
                 let f = part.split(separator: ":").map(String.init)
-                return (f[0], Map3DPoint(Float(f[1])!, 0, Float(f[2])!), Float(f[3])!, Float(f[4])! * .pi / 180)
+                return (f[0], Map3DPoint(Float(f[1])!, f.count > 5 ? Float(f[5])! : 0, Float(f[2])!), Float(f[3])!, Float(f[4])! * .pi / 180)
             }
         var views: [String: [Float]] = [:]
         // What the app would draw from each camera (decision 238): the

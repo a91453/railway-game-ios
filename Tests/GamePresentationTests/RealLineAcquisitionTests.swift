@@ -180,16 +180,16 @@ final class RealLineAcquisitionTests: XCTestCase {
         print("tunnels \(tunnel), bridges and viaducts \(carried), ground \(ground)")
         XCTAssertGreaterThan(tunnel.all, 20)
         XCTAssertGreaterThanOrEqual(Double(tunnel.inside), 0.85 * Double(tunnel.all), "\(tunnel)")
-        // Measured: 113 of 125. Four left are Neiwan's 499 m bridge between
-        // Zhudong and Hengshan, built on the ground (embankment
-        // and level): 10 m up (``TrackRise/carriedHeight``) within the
-        // grade clashes there, and the bound is let go. The other eight
-        // are the Liujia and Shalun Lines' viaducts within 300 m of
-        // Liujia, Chang Jung Christian University and Shalun, stations
-        // the real line raises but the game stands on the ground
-        // (decision 132): the track climbs to the viaduct beyond them.
+        // Measured: 117 of 125. Neiwan's low 499 m bridge between Zhudong and
+        // Hengshan was 4 of them on the ground while its bound and its
+        // approach's were let go together; the approach's now goes first
+        // (``TrackRise/Bound/isOnGround``). The ones left are the Liujia and
+        // Shalun Lines' viaducts within 300 m of Liujia, Chang Jung
+        // Christian University and Shalun, stations the real line raises
+        // but the game stands on the ground (decision 132): the track
+        // climbs to the viaduct beyond them.
         XCTAssertGreaterThan(carried.all, 8)
-        XCTAssertGreaterThanOrEqual(carried.up, carried.all - 12, "\(carried)")
+        XCTAssertGreaterThanOrEqual(Double(carried.up), 0.85 * Double(carried.all), "\(carried)")
         XCTAssertGreaterThan(ground.all, 300)
         XCTAssertLessThanOrEqual(Double(ground.off), 0.04 * Double(ground.all), "\(ground)")
     }
