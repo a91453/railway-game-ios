@@ -20,6 +20,7 @@ struct ContentView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Decision 175: the secretary room's settings, kept on the device.
     @AppStorage(SecretarySettings.pauseKey) private var pausesForImportantEvents = true
+    @AppStorage(SecretarySettings.nightSkipKey) private var skipsQuietNights = false
     @AppStorage(SecretarySettings.monthlyKey) private var monthlyReportMode = MonthlyReportMode.openAndPause.rawValue
     /// Lives above the layout: rebuilding it must not discard the camera.
     @State private var mapCamera: PlanCamera?
@@ -78,6 +79,7 @@ struct ContentView: View {
             .environment(screen)
             .onAppear(perform: syncSecretarySettings)
             .onChange(of: pausesForImportantEvents) { _, _ in syncSecretarySettings() }
+            .onChange(of: skipsQuietNights) { _, _ in syncSecretarySettings() }
             .onChange(of: monthlyReportMode) { _, _ in syncSecretarySettings() }
             // Decision 175: a month that closes opens its report.
             .onChange(of: session.monthEndReport) { _, report in
@@ -211,6 +213,7 @@ struct ContentView: View {
 
     private func syncSecretarySettings() {
         session.pausesForImportantEvents = pausesForImportantEvents
+        session.skipsQuietNights = skipsQuietNights
         session.monthlyReportMode = MonthlyReportMode(rawValue: monthlyReportMode) ?? .openAndPause
     }
 
@@ -408,6 +411,9 @@ struct ContentView: View {
                         let leading = showsRail ? (toolsColumn ? dockSize.width : BuildToolRail.width + margin) : 0
                         HStack(alignment: .center, spacing: margin) {
                             if showsLayerStrip {
+                                // Decision 305: under the speed, a night with
+                                // no train to skip.
+                                NightSkipChip(session: session)
                                 MapQuickLayerStrip(language: session.language) {
                                     screen.panel = .mapLayers
                                 }
@@ -1131,6 +1137,8 @@ final class GameScreenState {
 enum SecretarySettings {
     static let pauseKey = "secretary.pausesForImportantEvents"
     static let monthlyKey = "secretary.monthlyReport"
+    /// Decision 305: skip a quiet night without the shortcut; off.
+    static let nightSkipKey = "secretary.skipsQuietNights"
 }
 
 /// The one-time card about track numbers and routes (decision 201, later;

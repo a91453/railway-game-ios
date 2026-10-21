@@ -2,19 +2,21 @@
 import GameCore
 import GamePresentation
 
-/// Small worlds for decisions 284–286's UI tests. The app only asks for
+/// Small worlds for decisions 284–286's and 305's UI tests. The app only asks for
 /// these under -ui-testing, writes them into its cleared temporary save
 /// library, and loads them through the ordinary save reader. No fixtures
 /// or player saves are changed. Assertions belong to the UI tests.
 @MainActor
 enum FeatureUITestWorld {
     static func make(_ name: String) throws -> GameWorld {
-        guard ["separate-tracks", "missing-platform", "double-platform", "catalog", "sightseeing"].contains(name) else {
+        guard ["separate-tracks", "missing-platform", "double-platform", "catalog", "sightseeing", "quiet-night"].contains(name) else {
             preconditionFailure("Unknown -ui-test-world: \(name)")
         }
         let bounds = try WorldBounds(width: 40_960, height: 20_480)
+        // Decision 305's night: 01:00, running, until a 06:00 first train.
+        let clock = name == "quiet-night" ? GameClock(now: GameTime(minutes: 60), speed: .normal) : GameClock(speed: .paused)
         let builder = GameSession(world: GameWorld(bounds: bounds, economy: GameEconomy(balance: 100_000_000),
-                                                  clock: GameClock(speed: .paused)))
+                                                  clock: clock))
         builder.selectTool(.network)
         builder.networkBuildsDouble = true
         builder.tapNetwork(at: PlanPoint(x: 2_048, y: 10_240), reach: 16)
@@ -33,6 +35,21 @@ enum FeatureUITestWorld {
         try addPlatform(to: west, at: PlanPoint(x: 6_144, y: 10_240), in: &world)
         if name != "missing-platform" {
             try addPlatform(to: east, at: PlanPoint(x: 30_720, y: eastY), in: &world)
+        }
+        if name == "quiet-night" {
+            // One train standing at 海岸 on a line open 06:00–20:00, as
+            // NightSkipTests' full-size line.
+            let line = try world.createLine(named: "海岸線", stops: [west, east]).id
+            try world.setLineServiceWindow(line, to: .hours(open: 360, close: 1200))
+            try world.setLineTrainsInService(line, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+            let train = try world.purchaseTrain(named: "海岸1號").id
+            guard let site = world.trackEdgePoint(near: PlanPoint(x: 6_144, y: 10_240), within: 64) else {
+                preconditionFailure("No track at the UI test train")
+            }
+            try world.placeTrain(train, at: .onEdge(TrackTraversal(edge: site.edge, direction: .forward), offset: site.distance))
+            try world.setTrainContinuation(train, along: [], stoppingAt: site.distance)
+            try world.setTrainMovementRate(train, to: 512)
+            try world.assignTrain(train, to: line)
         }
         if name == "catalog" || name == "sightseeing" {
             world.setTourism([

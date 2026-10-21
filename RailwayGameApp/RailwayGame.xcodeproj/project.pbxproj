@@ -30,6 +30,7 @@
 		20561212C765FBDE6629645A /* ListSearchField.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDFF0DE7D90A7A399342FCC8 /* ListSearchField.swift */; };
 		2232B3B82542EDB28DE20D32 /* GameCore in Frameworks */ = {isa = PBXBuildFile; productRef = 30D78FBA510CB46263A33F36 /* GameCore */; };
 		225C04C52DFBA47A1A6F22A4 /* DataSourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 222E67E267AF07C25D4745C9 /* DataSourcesView.swift */; };
+		230CF50ABD22FC093F7C16FD /* NightSkipChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12998D87B1570EBD259935E7 /* NightSkipChip.swift */; };
 		231927FCE953BD76302D19BE /* TutorialTargets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E01CB29C26C0F92124DEE0C /* TutorialTargets.swift */; };
 		24BDC33BAEB05C1B78B39AE5 /* MapLibre in Frameworks */ = {isa = PBXBuildFile; productRef = FD2BB5E656E35262DF9997FA /* MapLibre */; };
 		2733FFE60203B4AA0059ECFD /* RailwayGameApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D5672CF6C6C6FF4659709AE /* RailwayGameApp.swift */; };
@@ -129,6 +130,7 @@
 		BEF6C6FD0A62EBDEDD8E4244 /* MapConstructionHUD.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BB64062D209FDE3EC54BAE7 /* MapConstructionHUD.swift */; };
 		C1EFF57A2944814982E3D1E7 /* TickStable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66DEEFE5F63CD7DD3B715B3B /* TickStable.swift */; };
 		C2A0206D4D8F4C5F50DE9083 /* warning.wav in Resources */ = {isa = PBXBuildFile; fileRef = 5BF4BA3F66CFC369FCBE3407 /* warning.wav */; };
+		C5AE4EE9A27FB9506D2B3AB3 /* NightSkipUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F1B1CF5E7A5989229368AA /* NightSkipUITests.swift */; };
 		C61BAB200CEB800C0F50B796 /* TimetableEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBBC6A819CE29EEBC4FD844A /* TimetableEditor.swift */; };
 		C7A83471D6C3E093D4DA78C1 /* LineConfirmationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 937E1D33FAD3FAD9CF5A6E8C /* LineConfirmationCard.swift */; };
 		CA2D393EB1EEDB99A27C093F /* HelpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEB483D5847D06BCBC26230C /* HelpView.swift */; };
@@ -195,6 +197,7 @@
 		10BAAEA97DA689ABA4004F2A /* tmrt.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tmrt.json; sourceTree = "<group>"; };
 		10C54A651E2F6DD601FA3F15 /* StationPairDrawer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationPairDrawer.swift; sourceTree = "<group>"; };
 		10CD1930FBBEEDFCB26CC5A3 /* FollowBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FollowBar.swift; sourceTree = "<group>"; };
+		12998D87B1570EBD259935E7 /* NightSkipChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NightSkipChip.swift; sourceTree = "<group>"; };
 		150E696C9936773A65399191 /* tra_station_info.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra_station_info.json; sourceTree = "<group>"; };
 		17DDE7FD43D5C9514F89C9CA /* LinesPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinesPanel.swift; sourceTree = "<group>"; };
 		1D8FCC5E34CD27136469F2A8 /* chime-local-motif.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "chime-local-motif.wav"; sourceTree = "<group>"; };
@@ -228,6 +231,7 @@
 		4966256D18F5622FE1A080BB /* station-chime.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "station-chime.wav"; sourceTree = "<group>"; };
 		4B68167398B13543EA8C564A /* RealWorldPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealWorldPicker.swift; sourceTree = "<group>"; };
 		4C1017DDE782DF1CF07D561E /* rail_structures.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = rail_structures.json; sourceTree = "<group>"; };
+		50F1B1CF5E7A5989229368AA /* NightSkipUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NightSkipUITests.swift; sourceTree = "<group>"; };
 		52449D8DCD618CC726CACDDE /* chime-tourist.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "chime-tourist.wav"; sourceTree = "<group>"; };
 		5252AAF098DD4F7D13231B10 /* StationOperationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationOperationsView.swift; sourceTree = "<group>"; };
 		52815B08C6FE03A12ABC22D5 /* afr.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = afr.json; sourceTree = "<group>"; };
@@ -500,6 +504,7 @@
 				6176ABC92A7FB39ABFE9BFB1 /* NewGameOptionsView.swift */,
 				DE2E4A53A2F134FC8BD9D4F7 /* NewsLogView.swift */,
 				22B3E573D7A6A1CB02F279FF /* NextStepChip.swift */,
+				12998D87B1570EBD259935E7 /* NightSkipChip.swift */,
 				F655E31850005DBAC32D5142 /* OSMMapBackground.swift */,
 				0A8A6A623CDA7792FB18C0A2 /* Palette.swift */,
 				DF79937B71C73C05EB0285FF /* PerformanceMenu.swift */,
@@ -603,6 +608,7 @@
 				091835300676F4F4DE9D6CE3 /* LineDraftSummaryUITests.swift */,
 				21275B6D1B1A72F75A29DA13 /* MapInteractionTests.swift */,
 				71EB126E20DDE2A8668CD619 /* NextStepChipUITests.swift */,
+				50F1B1CF5E7A5989229368AA /* NightSkipUITests.swift */,
 				464ED7CD74C3D89609658AD5 /* RealWorldMapUITests.swift */,
 				7E833A49B8766511EF574847 /* SettingsUITests.swift */,
 				B2CB75E448956BC3D8E7FE02 /* StartSaveFlowSmokeTests.swift */,
@@ -845,6 +851,7 @@
 				AB37C6000B8F37326B3FBCD5 /* NewGameOptionsView.swift in Sources */,
 				FC698A6F5A2379335FC7CC65 /* NewsLogView.swift in Sources */,
 				1C7C007EECCD097E32432661 /* NextStepChip.swift in Sources */,
+				230CF50ABD22FC093F7C16FD /* NightSkipChip.swift in Sources */,
 				5650A33F4398B9F43624CE35 /* OSMMapBackground.swift in Sources */,
 				830D83B9EA543EBE0B160A9E /* Palette.swift in Sources */,
 				7A4A6D92573E439869E49F7A /* PerformanceMenu.swift in Sources */,
@@ -889,6 +896,7 @@
 				A081D0BA7AD605EAA7BCC85A /* LineDraftSummaryUITests.swift in Sources */,
 				298E6F23EF908E81C6D9639F /* MapInteractionTests.swift in Sources */,
 				E6E0A7C92F1A3C01E0705817 /* NextStepChipUITests.swift in Sources */,
+				C5AE4EE9A27FB9506D2B3AB3 /* NightSkipUITests.swift in Sources */,
 				A63CC2F5042DB04F53E77F6D /* RealWorldMapUITests.swift in Sources */,
 				5816A50B5D199B14095EB3AA /* SettingsUITests.swift in Sources */,
 				CC783E4053798355ECF17075 /* StartSaveFlowSmokeTests.swift in Sources */,
