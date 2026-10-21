@@ -15,7 +15,7 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 項目 | 現在 | 在哪裡 |
 | --- | --- | --- |
 | 階段 | **核心玩法**：作者 2026-10-16 覺得遊戲性太弱、太複雜，同意決策 254 的方向（入門關卡、簡單規則當預設、動作回報），實作中；同時做 3D 的生活感。最新的 TestFlight 是 0.5.0 (69.1)（2026-10-16，run 69）；之後作者說先不開新工作，等作者說開工（`docs/HANDOFF.md` 第 2 節）。之前：波次 1（2026-10-12 功能凍結、10-13 解除） | `docs/HANDOFF.md`、工作登記 #231 |
-| 存檔版本 | 65（路線的發車方式，決策 309）；每個版本一個存檔 fixture，共 69 個 | `SavedGame.currentVersion`、`SaveFixtures/` |
+| 存檔版本 | 66（收購真實支線，決策 315）；每個版本一個存檔 fixture，共 70 個 | `SavedGame.currentVersion`、`SaveFixtures/` |
 | golden | schema 74（車站商業，#595），`GoldenScenarios/` 裡 77 個 JSON | `GoldenScenarios/` |
 | replay | 9 個指令紀錄（含問題回報轉成的 `problem-report-blank-map.json`，#468；長區段行車控制 `long-leg-traffic.json`，#480） | `ReplayFixtures/` |
 | 決策 | 見決策索引（§9）與 `docs/ARCHITECTURE.md`。號碼以工作登記 #231 為準：遊戲規劃派工時在 ARCHITECTURE 先放一節「### N. （預約）」，PR 只寫自己那一節，不改這一列與 §9，索引由遊戲規劃合併後補（2026-10-21，避免每個 PR 都撞同一行）。218 沒有使用：越行寫進了決策 212，#556、#589；141、150、203 曾保留但沒有使用 | `docs/ARCHITECTURE.md`，索引在第 9 節 |

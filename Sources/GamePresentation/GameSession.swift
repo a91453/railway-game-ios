@@ -343,6 +343,14 @@ public final class GameSession {
     /// Read the line itself through ``selectedLine``.
     public private(set) var selectedLineID: LineID?
 
+    /// The real line just bought (decision 315), for the card that says
+    /// so; the card clears it when closed.
+    public var lastLineAcquired: RealLineAcquired?
+
+    /// The real line offered on the purchase card (decision 315), while
+    /// the card is open.
+    public var shownRealLineOffer: RealLineOffer?
+
     /// The stations picked, in order, for the next line. Only a draft:
     /// GameCore checks them when ``createLineFromDraft()`` creates the line.
     public private(set) var lineDraft: [StationID] = []

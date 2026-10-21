@@ -574,11 +574,25 @@ struct StationPanel: View {
     @ViewBuilder
     private func realStationSection(_ station: Station) -> some View {
         let details = session.realStationDetails(of: station.id)
-        if !details.isEmpty {
+        // Decision 315: a real branch line on sale through here.
+        let buyable = session.buyableRealLine(at: station.id)
+        if !details.isEmpty || buyable != nil {
             Section {
                 ForEach(details, id: \.self) { line in
                     Text(verbatim: line)
                         .font(.footnote)
+                }
+                if let buyable {
+                    Button {
+                        session.offerRealLine(buyable)
+                    } label: {
+                        Label {
+                            Text(verbatim: session.language.text("Buy This Line…", "收購這條線…"))
+                        } icon: {
+                            Image(systemName: "signature")
+                        }
+                    }
+                    .accessibilityIdentifier("station.acquireLine")
                 }
             } header: {
                 Text("Real Station")

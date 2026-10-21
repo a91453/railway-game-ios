@@ -178,6 +178,10 @@ public struct GameWorld: Equatable, Sendable {
     /// world and in saves from before it; the app's new games on a
     /// real-world map turn it on. Set by ``setRealTransfers(_:)`` only.
     public internal(set) var realTransfers: Bool = false
+    /// The real lines the company bought (decision 315), in the order it
+    /// bought them. None in a new world and in saves from before it. Set by
+    /// ``recordLineAcquisition(line:realLine:dailyRiders:)`` only.
+    public internal(set) var acquisitions: [LineAcquisition] = []
     /// The city's demand for homes, shops and work (decision 139), or `nil`
     /// for a city that grows as before. Off in a new world and in saves
     /// from before it; the app's new games turn it on. Set by
@@ -1863,6 +1867,8 @@ public struct GameWorld: Equatable, Sendable {
         let wasHighSpeed = lines[index].isHighSpeed
         lines.remove(at: index)
         removeLineAccounts(of: id)
+        // Decision 315: what a line bought cost for its riders goes with it.
+        disposeAsset(.acquiredLine, owner: id.rawValue)
         abandonUnservedPassengers()
         // Decision 168: its stations draw no intercity trips unless
         // another high-speed line calls at them.
@@ -2012,6 +2018,15 @@ public struct GameWorld: Equatable, Sendable {
         lines[index].runDays = Array(repeating: nil, count: runs.count)
         abandonUnservedPassengers()
     }
+
+    /// Marks every run of line `index` as having sent its train out on
+    /// `day` (`nil`: never), so it runs from the day after (decision 315).
+    mutating func setRunsDone(ofLine index: Int, through day: Int64?) {
+        lines[index].runDays = Array(repeating: day, count: lines[index].runs.count)
+    }
+
+    /// The line IDs handed out are those below this (decision 315).
+    var lineIDsHandedOut: Int { nextLineID }
 
     /// Copies line `id` as a new line named `name` (decision 80,
     /// MapBuilder's `handleLineDuplicate`, which names the copy
@@ -4630,7 +4645,7 @@ extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, disruptions, townGrowth, accounts, geoAnchor
-        case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, blockSections, curveSpeedLimits, realCarLengths, spacingAllowances, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, realTransfers, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
+        case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, blockSections, curveSpeedLimits, realCarLengths, spacingAllowances, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, realTransfers, acquisitions, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
         case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion
     }
 
@@ -4745,6 +4760,10 @@ extension GameWorld: Codable {
         rollingStockEconomics = try container.decodeIfPresent(Bool.self, forKey: .rollingStockEconomics) ?? false
         lineAccounts = try container.decodeIfPresent(LineAccounts.self, forKey: .lineAccounts)
         tripLog = container.contains(.tripLog) ? try container.decode([TrainTrip].self, forKey: .tripLog) : []
+        acquisitions = try container.decodeIfPresent([LineAcquisition].self, forKey: .acquisitions) ?? []
+        if container.contains(.acquisitions), acquisitions.isEmpty {
+            throw DecodingError.dataCorruptedError(forKey: .acquisitions, in: container, debugDescription: "A world is written with \"acquisitions\" only when it bought a line.")
+        }
         tourism = try container.decodeIfPresent(Tourism.self, forKey: .tourism)
         cityRequests = try container.decodeIfPresent(CityRequests.self, forKey: .cityRequests)
         outsideConnections = try container.decodeIfPresent(Bool.self, forKey: .outsideConnections) ?? false
@@ -4903,6 +4922,9 @@ extension GameWorld: Codable {
         }
         if !tripLog.isEmpty {
             try container.encode(tripLog, forKey: .tripLog)
+        }
+        if !acquisitions.isEmpty {
+            try container.encode(acquisitions, forKey: .acquisitions)
         }
         try container.encodeIfPresent(tourism, forKey: .tourism)
         try container.encodeIfPresent(cityRequests, forKey: .cityRequests)
@@ -5072,6 +5094,7 @@ extension GameWorld: Codable {
             return "The line accounts must be well formed, for lines and stations that exist."
         }
         if let problem = tripLogProblem(trainIDsBelow: nextTrainID) { return problem }
+        if let problem = acquisitionsProblem() { return problem }
         guard spacingAllowances.allSatisfy({ $0.key.rawValue < nextTrainID && $0.value.isValid }) else {
             return "Every spacing allowance must be well formed, of a train ID handed out."
         }
