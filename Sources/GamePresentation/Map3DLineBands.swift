@@ -49,6 +49,36 @@ public struct Map3DLineBands: Hashable, Sendable {
         return bands[first..<end]
     }
 
+    /// What of `world`'s lines moves their bands: the track each takes
+    /// (its stops, paths, further services, ring) and its colour; not its
+    /// trains or dispatches, which change all game long. For a cache of
+    /// the scene to tell when to build it again.
+    public struct Signature: Hashable, Sendable {
+        private let lines: [Line]
+
+        private struct Line: Hashable, Sendable {
+            let id: LineID
+            let stops: [StationID]
+            let routePreferences: [LineRoutePreference]
+            let patterns: [Pattern]
+            let isRing: Bool
+            let color: LineColor?
+        }
+
+        private struct Pattern: Hashable, Sendable {
+            let calls: [Int]
+            let routePreferences: [LineRoutePreference]
+        }
+
+        public init(world: GameWorld) {
+            lines = world.lines.map { line in
+                Line(id: line.id, stops: line.stops, routePreferences: line.routePreferences,
+                     patterns: line.patterns.map { Pattern(calls: $0.calls, routePreferences: $0.routePreferences) },
+                     isRing: line.isRing, color: line.color)
+            }
+        }
+    }
+
     private struct Stretch: Hashable {
         let edge: TrackEdgeID
         let start: Int64

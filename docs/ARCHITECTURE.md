@@ -14165,9 +14165,73 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 session_0125dMtwyMdz7mzoBCRNa1pn 預約（#231）。這一節由那個 PR 填寫。
 
-### 314. （預約）3D 的列車標籤與路線色帶
+### 314. 3D 的列車標籤與路線色帶：拉近時畫面中間幾列車頭上有線號與載客／定員；軌道旁一條路線色的細帶
 
-session_01Y25x9NJSKmAuP1M1K3Sf3C 預約（#231）。這一節由那個 PR 填寫。
+2026-10-21。遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 派給 3D session_01Y25x9NJSKmAuP1M1K3Sf3C（號碼依工作登記 #231）。存檔版本、golden schema 不動；GameCore 不動。
+
+**原本的毛病**：3D 裡看得到列車在跑，卻看不出是哪一條線、坐了多少人；路網上幾條線各走哪段軌道，也只有 2D 的線色看得出來。
+
+1. **列車標籤**（`Map3DTrainLabels`，GamePresentation）：
+   - 相機離目標 `reach`（400 m）以內才有。雙指交接進來的 3D 約 280 m，所以一進來就有；3D 按鈕開的整片場景沒有。
+   - 只標車頭在畫面中間（左右、上下各一半的 `middle`，60%）的列車，最多 `most`（3）列，離中間近的先。畫面邊上的、遠處的車都不標，標籤不會蓋滿畫面。
+   - 只標路線上的客車：貨車（載的是噸，決策 155）和不在路線上的車沒有。
+   - 標籤寫線號徽章（決策 216 的 `LineCodeBadge`，小號）和「載客／定員」（`trainLoadInfo`：乘客數、`ratedCapacity`），例如「120／640」，英文介面用「120/640」。VoiceOver 唸「BL 線，載客 120／定員 640」。
+   - 位置：車頭第一節車廂前端往後 4 m、車頂上 1 m（`Map3DTrains.Head`，`headClearance`），標籤的下緣中點對準它。
+   - 標籤是 Metal 畫面上的 SwiftUI（`Map3DTrainLabelsView`），手指點不到，地圖照舊接手勢。每一格由 Metal 畫面交出車頭的點（`trainHeads`），位置以整點變動才更新 SwiftUI，地圖不動時不重畫。
+   - 線號、乘客數跟著世界的列車更新（`Map3DTrainFeed.update`）。
+2. **路線色帶**（`Map3DLineBands`，GamePresentation）：
+   - 每段有路線經過的軌道（`LineMap` 的 stretch）在道碴肩上（`offset`：地面軌道距中心 `bedTop / 2 − 0.3`，高架與橋在橋面邊 `deckWidth / 2 − 0.35`）畫一條 0.3 m 寬的線色細帶，高出道碴或橋面 4 cm，不會和它閃爍。帶在鋼軌外面（1,067 mm 軌距）。
+   - 幾條線共用同一段時只畫最上面一條：2D 地圖畫在最上面的那條，也就是 LineID 最大的。
+   - 顏色是 2D 地圖的線色：線自己的顏色或自動配色（決策 216），經過玩家的色盤（`LinePalette`，色盲友善色盤一樣換）。
+   - 隧道裡不畫（看不到）。
+   - 只放在近景網格（`Builder.Target.near`，和城市的完整模型一起）：遠處 0.3 m 不到一個像素，畫了只是多三角形。沒有自己的 draw call。
+   - 場景的快取鍵 `Map3DSceneKey` 多了路線的走法（`Map3DLineBands.Signature`：每條線的站、路徑、其他班次的停站、環狀與顏色）與色盤；改了這些，3D 重新蓋場景。不用整個 `ServiceLine`：它的列車與發車時間整局都在變，場景會一直重蓋。2D 的種子街道（決策 270）用同一個鍵、不給色盤，不因路線改變重算。
+
+**程式**：
+- GamePresentation：`Map3DLineBands.swift`（`Map3DLineBands`、`Builder.addLineBands`）、`Map3DTrainLabels.swift`；`Map3DScene.init` 多了 `lineBands:`；`Map3DTrains.Frame.heads`。
+- App：`Map3DPreviewScreen.swift`（`Map3DSceneKey` 多路線與色盤、`Map3DSceneCache` 傳色盤、`Map3DTrainLabelState`、`Map3DTrainLabelsView`）、`Map3DMetalView.swift`（`trainHeads`）、`MapView.swift`（預先蓋場景傳色盤）。
+- 測試（Linux）：`Map3DLineBandsTests`（共用時最上面一條、色盤、`Signature` 只隨路線的走法與顏色改變而不隨列車運行改變、場景只在近景多三角形、帶在鋼軌外的道碴肩上）、`Map3DTrainLabelsTests`（畫面中間的標在中間、最多三列離中間近的先、遠了沒有、世界的列車有它們線的標籤、車頭在車頂上）；`Map3DFrameCostReportTests.testTheLineBandsCost`（只在 `MAP3D_FRAME_REPORT=1` 時跑）。
+
+**量測**（`MAP3D_FRAME_REPORT=1`，Linux，台北實景、10 km 的一條線，和決策 313 後來的報告同一個場景）：
+- 色帶：整個場景的近景網格 30,608 → 32,016 個三角形（+1,408），遠景（地面、軌道、道路與城市的遠景）548,760 不變；draw 數不變。
+- 加了色帶之後近景（280 m）一格約 18.9 萬個三角形、約 30 draws；遠景 10.8 km 約 26 萬個三角形、約 223 draws（這兩個數字包含色帶；色帶在一格裡最多多 1,408 個）。
+- 標籤：最多三個 SwiftUI 小標籤，不加三角形與 draw call；每格多一次把最多幾十列車頭投影到畫面。
+
+**五方**：
+- 玩家：拉近就看得出眼前的車是哪條線、坐了幾個人；軌道旁的顏色和 2D 地圖一樣，3D 裡也認得出哪條線走哪段。標籤只在中間幾列，不會擋住畫面。
+- 鐵道迷：像車站月台與車廂外的路線色帶（台北捷運、東京地下鐵用顏色和線號認線）；線號是決策 216 的代碼；載客與定員是遊戲自己的數字，不是真實資料。
+- 開發：選車、投影、選色都在 GamePresentation，有 Linux 測試；App 只多一個 SwiftUI 疊層和一個每格的回呼；色帶在原本的網格裡，不加 draw call；GameCore、存檔、golden 都不動。
+- 美術：標籤用現有的線號徽章（白底、藏青框、線色塊，對比 13.29:1）和同樣的藏青字，扁平、圓角，照 art-style §1；色帶是平塗的頂點色，細到只是軌道的一條邊，不改道碴與鋼軌的樣子。
+- 音樂：無。
+
+**沒有選的做法**（預覽在 `docs/art/map3d-labels-2026-10-21/labels.svg`）：
+- 標籤只有線號徽章（B）：看不出坐了多少人，跟車時還要點開。
+- 兩行卡片，寫車名與載客率（C）：太大，三張就蓋住半個畫面；車名在跟車列（決策 216）已經有。
+- 畫面裡的每一列都標：車多的路段標籤疊成一片。
+- 拉遠也標：整片場景時一列車不到一個點，標籤比車大。
+- 整片道碴塗線色（E）：看不出道碴與鋼軌，和決策 231 的軌道樣子不合。
+- 共用的線並排幾條細帶（F）：2D 的做法（決策 84），但 3D 的道碴肩只有約 1.4 m，三條以上就擠在一起分不出；需要時看 2D。
+- 色帶也放在遠景：遠處 0.3 m 不到一個像素，多了三角形卻看不到。
+
+**之後**（這次不做）：
+- 點標籤跟車（決策 216 的跟車列）。
+- 色帶在月台邊畫成月台的線色（車站的月台牌）。
+
+**參考**：
+
+| 參考 | → 目標 |
+| --- | --- |
+| 參考庫 `Railway/taiwan-rail-reference-clean/source/rail-3d/integration/readability.js` 的 `vehicleMarkers`（每次 render 在地圖上的 canvas 疊層把每列車投影到畫面，畫面外加邊距的不畫，zoom ≥ 12 才標，跟隨的車最後畫） | `Map3DTrainLabels.labels(heads:camera:)`（每格投影車頭，畫面中間 60% 以外不標，相機 400 m 以內才標，最多 3 列）；canvas 疊層 → SwiftUI 疊層 `Map3DTrainLabelsView` |
+| 同一個檔的 `getMarker(v, tag)`（車的圖示，顏色 `v.color`） | 決策 216 的 `LineCodeBadge`＋「載客／定員」 |
+| 同一個網站 `map3d.js` 的 `getVehicleLabels`（標籤的方框，給其他疊層避開） | 沒有用：最多三個標籤，不需要避開 |
+| 決策 84 的 `LineMap`（線走哪段軌道、共用時並排、上面是 LineID 大的） | `Map3DLineBands(lines:palette:)`：每段只取最上面一條 |
+| 決策 216 的 `LineBadge`（代碼、自動配色）、`LinePalette` | 標籤的線號、色帶的顏色 |
+
+參考庫沒有軌道旁的路線色帶（網站 3D 的路線是畫在地圖上的線），這部分是本專案自己寫的。外部專案：沒有另外搜尋程式碼（投影與選色是幾行算式）。
+
+**驗證**：
+- **VERIFIED**（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`Map3DLineBandsTests`、`Map3DTrainLabelsTests`、`Map3DTests` 通過；`MAP3D_FRAME_REPORT=1` 的 `testTheLineBandsCost`、`testTheGPUBudget` 跑過（數字如上）；改到的 App 檔通過 `swiftc -parse`。
+- **UNVERIFIED**：App 的編譯（`ios-build.yml`）；3D 的 UI 測試（PR 用 `only_testing` 跑）；實機上標籤的大小、位置、跟車時的流暢度與色帶的樣子（TestFlight）。
 
 ### 316. （預約）新遊戲選擇頁：主選單的「新遊戲」再選空白地圖或實景地圖
 

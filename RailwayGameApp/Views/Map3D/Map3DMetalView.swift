@@ -57,6 +57,9 @@ final class Map3DMetalView: MTKView {
     private var shown = Map3DLighting(minute: 12 * 60)
     /// The trains for this frame, seen from the eye given.
     var trains: (@MainActor (Map3DPoint) -> Map3DTrains.Frame)?
+    /// Decision 314: this frame's trains' fronts, as the camera sees them,
+    /// for their labels.
+    var trainHeads: (@MainActor ([Map3DTrains.Head], Map3DCamera) -> Void)?
     /// Decision 259: the people and vehicles for this frame, seen with the
     /// camera given, with the city's lights on so far, at the detail given.
     var streetLife: (@MainActor (Map3DCamera, Float, Map3DStreetDetail) -> Map3DStreetLife.Frame)?
@@ -419,6 +422,7 @@ final class Map3DMetalView: MTKView {
             }
         }
         let frame = trains?(camera.eye)
+        trainHeads?(frame?.heads ?? [], camera)
         var trainBoxes: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int, triangles: Int)?
         if let mesh = frame?.boxes, !mesh.isEmpty, let vertices = makeBuffer(mesh.vertices), let indices = makeBuffer(mesh.indices) {
             trainBoxes = (vertices, indices, mesh.indices.count, mesh.triangleCount)

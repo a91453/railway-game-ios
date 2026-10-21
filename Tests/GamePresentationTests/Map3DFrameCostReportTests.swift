@@ -117,7 +117,9 @@ final class Map3DFrameCostReportTests: XCTestCase {
         }
     }
 
-    static func taipeiScene() throws -> Map3DScene {
+    /// Decision 314: with its line's colour bands, as the app builds it,
+    /// unless `bands` is false.
+    static func taipeiScene(bands: Bool = true) throws -> Map3DScene {
         let world = GameWorld.newGame(anchor: GeoAnchor(latitudeDegrees: 25.0478, longitudeDegrees: 121.5170)!)
         let tiles = try BaseMapTiles(data: Data(contentsOf: baseMap.appendingPathComponent("taiwan.pmtiles"), options: .alwaysMapped))
         let empty = Map3DScene(world: world, baseMap: tiles, cityTiles: [])
@@ -126,7 +128,20 @@ final class Map3DFrameCostReportTests: XCTestCase {
         let line = try LineBuilder.line(through: [PlanPoint(x: middle.x - across, y: middle.y - across / 2),
                                                   PlanPoint(x: middle.x, y: middle.y),
                                                   PlanPoint(x: middle.x + across, y: middle.y + across / 2)], in: world)
-        return Map3DScene(world: line, baseMap: tiles, cityTiles: CityTileArea.areas(in: baseMap.appendingPathComponent("city")))
+        return Map3DScene(world: line, baseMap: tiles, cityTiles: CityTileArea.areas(in: baseMap.appendingPathComponent("city")),
+                          lineBands: bands ? Map3DLineBands(world: line, palette: .standard) : nil)
+    }
+
+    /// Decision 314: what the line's colour bands add, in the near meshes
+    /// only (no draw call of their own); the trains' labels are a few
+    /// SwiftUI views over the map and add no triangles.
+    func testTheLineBandsCost() throws {
+        guard ProcessInfo.processInfo.environment["MAP3D_FRAME_REPORT"] != nil else { throw XCTSkip("Set MAP3D_FRAME_REPORT=1.") }
+        let plain = try Self.taipeiScene(bands: false), banded = try Self.taipeiScene()
+        func near(_ scene: Map3DScene) -> Int { scene.chunks.reduce(0) { $0 + $1.mesh.triangleCount - $1.baseIndexCount / 3 } }
+        func far(_ scene: Map3DScene) -> Int { scene.chunks.reduce(0) { $0 + $1.baseIndexCount / 3 + $1.far.triangleCount } }
+        print("bands: near \(near(plain)) → \(near(banded)) triangles (+\(near(banded) - near(plain))), far \(far(plain)) → \(far(banded))")
+        XCTAssertEqual(far(plain), far(banded))
     }
 
     /// The pixels the first `count` indices' triangles of `mesh` cover on a

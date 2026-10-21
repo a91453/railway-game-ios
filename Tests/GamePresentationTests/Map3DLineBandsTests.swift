@@ -51,6 +51,19 @@ final class Map3DLineBandsTests: XCTestCase {
         XCTAssertEqual(Map3DLineBands(world: try makeWorld().0, palette: .standard).bands, [], "no line, no band")
     }
 
+    /// The scene is built again when a line's track or colour changes,
+    /// not when its trains run.
+    func testTheSignatureChangesWithTheLinesTrackAndColourOnly() throws {
+        let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+        var world = try newGameLine(through: [towns[0], towns[1]])
+        let before = Map3DLineBands.Signature(world: world)
+        try world.advance(ticks: 600)
+        XCTAssertEqual(Map3DLineBands.Signature(world: world), before, "trains sent out and running")
+        let line = try XCTUnwrap(world.lines.first).id
+        try world.setLineColor(line, to: try XCTUnwrap(LineColor(rgb: 0x123456)))
+        XCTAssertNotEqual(Map3DLineBands.Signature(world: world), before)
+    }
+
     /// The bands are only in the near meshes, in the line's colour, beside
     /// the rails on the ballast's shoulder; the far view is unchanged.
     func testTheSceneDrawsTheBandsBesideTheTrackCloseUp() throws {

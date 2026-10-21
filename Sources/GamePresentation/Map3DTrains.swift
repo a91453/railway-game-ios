@@ -81,7 +81,18 @@ public enum Map3DTrains {
         public var instances: [Map3DInstance] = []
         /// Decision 232: each car's soft shadow on the bed under it.
         public var shadows = Map3DMesh()
+        /// Decision 314: over each train's front, where its label goes.
+        public var heads: [Head] = []
     }
+
+    /// Decision 314: a train and the point just over its front car's roof.
+    public struct Head: Equatable, Sendable {
+        public let train: TrainID
+        public let point: Map3DPoint
+    }
+
+    /// How far over the roof a train's label stands, in metres.
+    static let headClearance: Float = 1
 
     /// How far from the eye a car is drawn with its model, in metres;
     /// farther, it is a box (the art direction's near and far levels).
@@ -125,6 +136,10 @@ public enum Map3DTrains {
                 let length = (a - b).length
                 guard length > 1 else { continue }
                 let base = (a + b) * 0.5
+                if index == 0 {
+                    frame.heads.append(Head(train: run.train, point: a + (b - a) * (min(4, length / 2) / length)
+                                                + Map3DPoint(0, carHeight + headClearance, 0)))
+                }
                 // Decision 232: a soft shadow on the bed under the car.
                 let bed = Map3DPoint(0, 0.05 - Map3DScene.Builder.bedDrop, 0)
                 frame.shadows.addShadow(
