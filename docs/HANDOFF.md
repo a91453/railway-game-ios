@@ -788,6 +788,7 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 | `tools/glb-to-m3dmodel` 靜態橋接已實作（`codex/glb-meshopt-bridge`）：`bridge.mjs --manifest` 讀 meshopt／量化 GLB 與 `.gltf`＋外部 `.bin`，用節點白名單、非 AI 來源／SHA 與 `recolorLightPaint: false`；只用固定版本的 core／extensions／meshoptimizer（五包 MIT），不用 functions。拒收貼圖、skin／動畫／morph 等；原 Meshy 入口與 #803 公車成品逐位元相同。接手從工具 README 與自製 `fixtures/static.manifest.json` 開始；App 接入、美術重組／配色、素材授權與實機幀數仍交 3D session，本工具 PR 不代表素材採用。之後另開 WorldCover 只上色圖層（參考庫 `build_worldcover.py` 與圖磚）與香港無貼圖量體任務 | `docs/research/PEAKLINE_MAP_ENGINE_STUDY.md` §8（#821）；補充與修正 `docs/research/PEAKLINE_STUDY_SUPPLEMENT_2026-10-19.md` §1–§4（#820）；轉換器原本是 Codex 的線（第 2 節） |
 | Metal 的色調映射與泛光（作者說留待以後） | `docs/art/map3d-night-terrain-2026-10-16/` |
 | Fenn 3D 研究的建議，照順序，一次一個 PR，都在現有的 Metal 裡做：(1) 夜晚與黃昏的泛光＋色調映射，就是上一列，作者說留待以後，所以排到作者要時再做；(2) 實景建物依面積與樓層挑台灣的外牆樣式，補屋頂設備與一樓店面（`Map3DRealBuildings.swift`，可寫 Linux 測試）；(3) 假光貼片：車頭燈、廟與店面往上打的光、招牌光暈。不換 MapLibre、Apple Maps 或 wgpu，不搬 Kenney，手機不開 AO 或高解析度陰影 | [FENN_3D_WORLD_STUDY_2026-10-19.md](research/FENN_3D_WORLD_STUDY_2026-10-19.md) §5（#824） |
+| 台北市中心 3D 建物很少（2026-10-21 查）：台北車站一帶整個場景的程序建物格（64 m）有 480 格、433 格有建物，被真實底圖的道路、水域、公園佔走 1,986 格之後只剩 **73 格**（密度 1：87→13、2：189→36、3：130→16、4：27→8）。兩個原因疊在一起：(1) 真實建物（決策 239）的資料只有高雄與台中兩區（`["kaohsiung", "taichung"]`），台北沒有；(2) 決策 234 的規則是 64 m 格只要碰到道路、水域或公園就整格不放建物，市中心路網密，約 83% 的格被拿掉。修法另開 PR，兩條路（可一起做）：補台北的真實建物（照決策 239 的工具多做一區）；或把「碰到就整格拿掉」改成只讓開道路實際佔的那一塊（地塊縮小或切成小塊）。量法：`MAP3D_FRAME_REPORT=1 swift test --skip-build --filter Map3DFrameCostReportTests/testTaipeiLots` | 3D session 2026-10-21（遊戲規劃派工第 5 項） |
 | 兩批生成素材：generated-2026-10-13（43 張）、micro3d（24 張），沒接進 App，也沒有「採用或放棄」的紀錄 | `docs/art/generated-2026-10-13/`、`docs/art/generated-2026-10-14-micro3d/` |
 
 ### 7.4 開發工具
@@ -815,4 +816,11 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 - 56.1 #5：教學第 5 步的卡片蓋住 HUD，在 Linux 沒重現。教學之後會併進關卡（決策 254），到時一起看。
 - 實景地圖的轉乘站（決策 298，#851）：新遊戲選項的「現實路網：轉乘」開關看不看得到、實景地圖是不是預設開；車站卡第一行「從…轉乘：每天約 N 人」在手機橫拿時會不會被截斷；在台北車站等大站旁蓋站，玩起來覺不覺得旅客變多（量出來第 14 天多 3–12%）。
 - 2D／3D 交接（決策 313）：「拉近自動變 3D」預設開，放手才判斷之後是不是還會誤進 3D。常誤觸就把預設改成關（`Map3DHandoff.pinchOpensKey` 的 `@AppStorage` 預設值，在 `MapView.swift` 與 `SettingsView.swift`），不必重做；也看 3D 左上的「2D」「建設」兩顆鈕找不找得到、會不會擋到景。
+- 3D 的 CPU 與 GPU（2026-10-21，決策 238 的「後來」）：
+  - 統計面板多了「wait」一行，CPU 不再把等畫面（drawable）的時間算進去。
+  - GPU 連續 1.5 秒超過 10 ms，就降到每點 2×2 像素，面板的 wait 那一行後面寫現在是幾倍。
+  - 下一版請作者在同一個台北畫面記下時刻再看一次：
+    - CPU 是幾 ms、wait 是幾 ms：CPU 掉到幾 ms、wait 有 10 多 ms，原本量到的就是等螢幕；CPU 還在 16 ms 上下，就用 Instruments 的 Time Profiler 找。
+    - 降到 2× 之後 GPU 是幾 ms、畫面會不會跳一下、窗格看起來會不會太軟。太軟就把 `Map3DDrawScale.budget` 調高，或改用 MetalFX。
+    - 兩組 GPU（2–4 ms 與 10–12 ms）為什麼差這麼多。
 - 地圖提示整理（決策 310）：快速圖層多了「車資與章」一格之後，iPhone 直拿時和「快轉到早上」、下一步晶片排在一起放不放得下；地圖上只剩「滿載」章，看起來會不會太少。UI 測試交給 Codex（寫在決策 310）。

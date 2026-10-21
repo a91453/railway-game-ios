@@ -166,6 +166,10 @@ struct Map3DPreviewScreen: View {
             if showsDetails {
                 Group {
                     Text(verbatim: String(format: "CPU %.1f ms · GPU %.1f ms", stats.cpuMilliseconds, stats.gpuMilliseconds))
+                    // The CPU waiting for the screen, apart from its work
+                    // (the far view's 16.6 ms, 2026-10-21), and the pixels a
+                    // point drawn (Map3DDrawScale).
+                    Text(verbatim: String(format: "wait %.1f ms · %.0f×", stats.waitMilliseconds, stats.drawScale))
                     Text(verbatim: "\(stats.drawCalls) draws · \(stats.triangles.formatted()) triangles")
                     Text(verbatim: "\(stats.people) people · \(stats.vehicles) vehicles · \(stats.streetDetail)")
                 }

@@ -123,19 +123,28 @@ public struct Map3DCamera: Hashable, Sendable {
     /// Whether any of the box from `minimum` to `maximum` may be in view
     /// through `matrix` (``viewProjection``): false only when all eight
     /// corners lie beyond one side of the view.
+    /// With no arrays (2026-10-21, the far view's CPU: the owner's iPhone
+    /// spent 16.6 ms a frame on Taipei seen whole): the Metal view asks it
+    /// of every chunk every frame, a few hundred on a city seen whole.
     public static func sees(minimum: Map3DPoint, maximum: Map3DPoint, through matrix: Map3DMatrix) -> Bool {
-        var outside = [true, true, true, true, true, true]
+        let m = matrix.columns
+        var left = true, right = true, bottom = true, top = true, near = true, far = true
         for corner in 0..<8 {
-            let p = [corner & 1 == 0 ? minimum.x : maximum.x, corner & 2 == 0 ? minimum.y : maximum.y, corner & 4 == 0 ? minimum.z : maximum.z, 1]
-            var c = [Float](repeating: 0, count: 4)
-            for row in 0..<4 {
-                for k in 0..<4 { c[row] += matrix[row, k] * p[k] }
-            }
-            let (x, y, z, w) = (c[0], c[1], c[2], c[3])
-            let sides = [x < -w, x > w, y < -w, y > w, z < 0, z > w]
-            for side in 0..<6 where !sides[side] { outside[side] = false }
+            let px = corner & 1 == 0 ? minimum.x : maximum.x
+            let py = corner & 2 == 0 ? minimum.y : maximum.y
+            let pz = corner & 4 == 0 ? minimum.z : maximum.z
+            let x = m[0] * px + m[4] * py + m[8] * pz + m[12]
+            let y = m[1] * px + m[5] * py + m[9] * pz + m[13]
+            let z = m[2] * px + m[6] * py + m[10] * pz + m[14]
+            let w = m[3] * px + m[7] * py + m[11] * pz + m[15]
+            if !(x < -w) { left = false }
+            if !(x > w) { right = false }
+            if !(y < -w) { bottom = false }
+            if !(y > w) { top = false }
+            if !(z < 0) { near = false }
+            if !(z > w) { far = false }
         }
-        return !outside.contains(true)
+        return !(left || right || bottom || top || near || far)
     }
 
     // MARK: - Detail (decision 238)
@@ -160,12 +169,13 @@ public struct Map3DCamera: Hashable, Sendable {
         let margin: Float = wasDetailed ? 1.14 : 0.86
         guard distance <= Self.detailDistance * margin else { return false }
         let reach = max(Self.detailReach, distance * 1.2) * margin
-        let eye = eye
-        for point in [target, Map3DPoint(eye.x, 0, eye.z)] {
-            let dx = point.x - min(max(point.x, minimum.x), maximum.x), dz = point.z - min(max(point.z, minimum.z), maximum.z)
-            if dx * dx + dz * dz <= reach * reach { return true }
+        func within(_ x: Float, _ z: Float) -> Bool {
+            let dx = x - min(max(x, minimum.x), maximum.x), dz = z - min(max(z, minimum.z), maximum.z)
+            return dx * dx + dz * dz <= reach * reach
         }
-        return false
+        if within(target.x, target.z) { return true }
+        let eye = eye
+        return within(eye.x, eye.z)
     }
 
     /// Decision 267: within this distance, the chunks round the target
