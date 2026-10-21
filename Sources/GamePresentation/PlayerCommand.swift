@@ -60,6 +60,10 @@ public enum PlayerCommand: Hashable, Sendable {
     /// a line made or one already there, the passing loops it needs, and
     /// its trains, all or none.
     case autoService(AutoService)
+    /// A real branch line bought (decision 315, ``GameSession/realLineOffer(for:)``):
+    /// its track, stations, trains and real timetable, and the purchase
+    /// GameCore records, all or none.
+    case acquireRealLine(RealLineAcquisition)
 
     /// A stretch of track as the network tool lays it: a node for each new
     /// end (splitting an edge for an end on one), then the edge, with the
@@ -207,6 +211,7 @@ public enum PlayerCommand: Hashable, Sendable {
         case .buildTrackChain: "buildTrackChain"
         case .buildDoubleTrackChain: "buildDoubleTrackChain"
         case .autoService: "autoService"
+        case .acquireRealLine: "acquireRealLine"
         }
     }
 }
@@ -294,6 +299,9 @@ extension GameSession {
             }
         case .autoService(let plan):
             return try apply(plan, to: &world)
+        case .acquireRealLine(let acquisition):
+            try build(acquisition, in: &world)
+            outcome.line = world.acquisition(of: acquisition.realLine).flatMap { world.line(id: $0.line) }
         case .removeTrack(let id):
             guard let edge = world.network.edge(id) else { throw .unknownTrackEdge(id) }
             try world.removeTrackEdge(id)
@@ -361,6 +369,8 @@ extension PlayerCommand: Codable {
         var passingLoop: PassingLoopPlan?
         /// Decision 264.
         var autoService: AutoService?
+        /// Decision 315.
+        var acquisition: RealLineAcquisition?
         var depotYard: DepotYardPlan?
         var levelling: PlatformLevelling?
         /// Decision 285: the platform's twin on the track beside it;
@@ -475,6 +485,9 @@ extension PlayerCommand: Codable {
         case "autoService":
             guard let plan = record.autoService else { throw invalid("simple rules' service needs its plan") }
             self = .autoService(plan)
+        case "acquireRealLine":
+            guard let acquisition = record.acquisition else { throw invalid("a line bought needs its layout") }
+            self = .acquireRealLine(acquisition)
         case "edit":
             guard let edit = record.edit else { throw invalid("an edit needs its value") }
             self = .edit(edit)
@@ -575,6 +588,8 @@ extension PlayerCommand: Codable {
             record.crossovers = crossovers.isEmpty ? nil : crossovers.map(PlayerCommand.buildTrack)
         case .autoService(let plan):
             record.autoService = plan
+        case .acquireRealLine(let acquisition):
+            record.acquisition = acquisition
         }
         try record.encode(to: encoder)
     }
@@ -623,6 +638,8 @@ extension PlayerCommand {
             } else {
                 language.text("add a train", "加開一列車")
             }
+        case .acquireRealLine(let acquisition):
+            language.text("buy \(acquisition.lineName)", "收購\(acquisition.lineName)")
         case .removePlatform, .removeTrack:
             nil
         case .edit(let edit):

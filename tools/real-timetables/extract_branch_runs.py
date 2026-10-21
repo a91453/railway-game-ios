@@ -34,6 +34,15 @@ next day needs them; each is timed as the real train that runs that
 stretch fastest. The tool checks that every weekday starts and ends with
 the same trains at the same stations, and leaves a line out (and says so)
 when it cannot.
+
+Each station's `tracks` is the most trainsets standing at it at once, a
+train that passes without stopping counted for the second it passes: the
+tracks with a platform the game lays there, so the trains meet where the
+real ones do (one more than the main track is a passing loop).
+
+The Liujia and Shalun Lines are double track: their real trains pass each
+other between stations, which a single track with loops cannot run, so
+they are not among the lines yet (decision 315, 後來).
 """
 import collections
 import datetime
@@ -49,8 +58,6 @@ LINES = [
     ("JIJI", "二水", "jiji"),
     ("NEIWAN", "竹中", "neiwan"),
     ("SHENAO", "瑞芳", "shenao"),
-    ("LIUJIA", "竹中", "liujia"),
-    ("SHALUN", "中洲", "shalun"),
 ]
 TURNAROUND = 180
 DAY = 86400
@@ -132,6 +139,36 @@ def play(found, day, start):
     return idle, None
 
 
+def tracks(found, day, start):
+    """The most trainsets standing at each station at once on `day`, run
+    from `start`: each train from when it comes in (midnight for one there
+    overnight) to when it leaves (midnight for one there at the day's end);
+    one coming in counted before one leaving at the same second."""
+    events = collections.defaultdict(list)
+    idle = collections.defaultdict(list)
+    for station, count in start.items():
+        idle[station] += [0] * count
+        events[station] += [(0, 0)] * count
+    for run in day_of(found, day):
+        origin, leaves = run["calls"][0][0], run["calls"][0][2]
+        ready = [t for t in idle[origin] if t <= leaves]
+        idle[origin].remove(min(ready))
+        events[origin].append((leaves, 1))
+        for name, arrival, departure in run["calls"][1:-1]:
+            events[name] += [(arrival, 0), (departure, 1)]
+        end, arrives = run["calls"][-1][0], run["calls"][-1][1]
+        events[end].append((arrives, 0))
+        idle[end].append(arrives + TURNAROUND)
+    most = {}
+    for station, changes in events.items():
+        standing = peak = 0
+        for _, leaving in sorted(changes):
+            standing += -1 if leaving else 1
+            peak = max(peak, standing)
+        most[station] = peak
+    return most
+
+
 def stretch(found, origin, destination, leaves):
     """A positioning run from `origin` to `destination` leaving at `leaves`,
     timed as the fastest real train over that stretch."""
@@ -199,7 +236,12 @@ def line_runs(data, days, stops):
         if ends != start:
             return None, f"weekday {day}: starts with {dict(start)} and ends with {dict(ends)}"
     found.sort(key=lambda r: (r["calls"][0][2], r["train"]))
-    return {"stops": stops, "overnight": dict(sorted(start.items())), "runs": found}, None
+    most = collections.Counter()
+    for day in range(7):
+        for station, count in tracks(found, day, start).items():
+            most[station] = max(most[station], count)
+    needed = {s: max(1, most[s]) for s in stops}
+    return {"stops": stops, "overnight": dict(sorted(start.items())), "tracks": needed, "runs": found}, None
 
 
 def main(source, network, out):
@@ -220,7 +262,8 @@ def main(source, network, out):
             continue
         real = sum(1 for r in line["runs"] if not r.get("positioning"))
         print(f"{game_id}: {stops[0]}–{stops[-1]}, {real} real trains, {len(line['runs']) - real} positioning runs, "
-              f"{sum(line['overnight'].values())} trainsets, overnight {line['overnight']}")
+              f"{sum(line['overnight'].values())} trainsets, overnight {line['overnight']}, "
+              f"tracks {{{', '.join(f'{k} {v}' for k, v in line['tracks'].items() if v > 1)}}}")
         result["lines"].append({"id": game_id, "network": network_id, **line})
     # One run a line.
     parts = []
