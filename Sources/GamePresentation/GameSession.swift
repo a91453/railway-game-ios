@@ -33,6 +33,9 @@ public final class GameSession {
         didSet {
             worldRevision &+= 1
             if !isApplyingTick { commandRevision &+= 1 }
+            // Decision 305: a paused game has no tick to look again after
+            // a command.
+            if !isApplyingTick, world.clock.isPaused { refreshNightSkipOffer() }
             // Decision 193: a change no recorded path made is logged as one.
             if !isLogging { log(.unrecorded("world")) }
         }
@@ -735,6 +738,7 @@ public final class GameSession {
         self.newsWatch = NewsWatch(world: world)
         // What the first monthly report compares with.
         self.news.baseline = MonthlyBaseline(world: world)
+        refreshNightSkipOffer()
     }
 
     // MARK: - Selection
@@ -999,7 +1003,9 @@ public final class GameSession {
     /// later), so leaving the building tools, or the tiles, resumes it.
     /// Any speed change by the player, pausing and resuming included,
     /// lets go of it: the speed is then the player's.
-    public private(set) var isPausedForBuilding = false
+    public private(set) var isPausedForBuilding = false {
+        didSet { refreshNightSkipOffer() }
+    }
 
     // MARK: - Speed
 
@@ -1023,6 +1029,11 @@ public final class GameSession {
         logging(.pause) { $0.pause() }
         isPausedForEvent = true
     }
+
+    /// ``nightSkip`` as last looked at, after each tick and each command
+    /// while paused (decision 305): what the shortcut shows, which a view
+    /// reads without following the world every tick.
+    public internal(set) var nightSkipOffer: NightSkip?
 
     /// The skip over a quiet night under way (decision 305), or `nil`.
     public internal(set) var nightSkipRun: NightSkipRun?

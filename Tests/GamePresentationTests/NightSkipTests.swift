@@ -445,6 +445,28 @@ final class NightSkipTests: XCTestCase {
         XCTAssertEqual(session.world, before)
     }
 
+    /// What the shortcut shows is ``GameSession/nightSkip`` after each
+    /// tick, and after a command while paused, and stays the same value
+    /// from tick to tick while the night lasts.
+    func testTheOfferFollowsTheSkip() throws {
+        let session = GameSession(world: try world())
+        let skip = try XCTUnwrap(session.nightSkip)
+        XCTAssertEqual(session.nightSkipOffer, skip, "a new session shows it at once")
+        session.advance(ticks: 30)
+        XCTAssertEqual(session.nightSkipOffer, session.nightSkip)
+        XCTAssertEqual(session.nightSkipOffer?.stop, skip.stop, "the same stop while the night lasts")
+        session.skipToMorning()
+        _ = runSkip(session)
+        XCTAssertNil(session.nightSkipOffer, "nothing left to skip at the stop")
+
+        let paused = GameSession(world: try world())
+        paused.togglePause()
+        XCTAssertNotNil(paused.nightSkipOffer)
+        paused.setSelectedLineAllDay(true)
+        XCTAssertNil(paused.nightSkip, "the line now runs all night")
+        XCTAssertNil(paused.nightSkipOffer, "a command while paused is looked at at once")
+    }
+
     // MARK: - Text
 
     func testTheTextSaysWhatItDoesInBothLanguages() throws {

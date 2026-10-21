@@ -159,6 +159,13 @@ extension GameSession {
         return firstMove.flatMap { NightSkip.plan(from: now, firstMove: $0) }
     }
 
+    /// Looks at ``nightSkip`` again for ``nightSkipOffer``, which changes
+    /// only when the offer does.
+    func refreshNightSkipOffer() {
+        let offer = nightSkip
+        if offer != nightSkipOffer { nightSkipOffer = offer }
+    }
+
     /// Runs the game at its fastest speed to the skip's stop (decision
     /// 305); does nothing when there is nothing to skip.
     public func skipToMorning() {
@@ -175,6 +182,7 @@ extension GameSession {
     public func stopNightSkip() {
         guard nightSkipRun != nil else { return }
         endNightSkip(pausing: false)
+        refreshNightSkipOffer()
     }
 
     /// The player chose a speed or paused while a skip ran: the speed is
@@ -189,6 +197,7 @@ extension GameSession {
     /// the speed whose tick lands on its stop, or ends it; or starts one
     /// when the setting asks to.
     func continueNightSkip() {
+        defer { refreshNightSkipOffer() }
         guard let run = nightSkipRun else {
             if skipsQuietNights, !world.clock.isPaused, tutorial == nil, let skip = nightSkip, autoSkipDeclined != skip.firstMove {
                 skipToMorning()
@@ -213,7 +222,7 @@ extension GameSession {
             logging(.setSpeed(speed)) { $0.setSpeed(speed) }
         }
         run.revision = commandRevision
-        nightSkipRun = run
+        if run != nightSkipRun { nightSkipRun = run }
     }
 
     /// Back at the speed before the skip; paused if it was, or if
