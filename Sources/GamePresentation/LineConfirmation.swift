@@ -194,6 +194,14 @@ public struct LineConfirmationPreview: Equatable, Sendable {
     /// passing places hold only so many): says how many start, or `nil`.
     public let trackLimit: String?
 
+    /// This preview with `shortfall` for the cash there is now.
+    func with(shortfall: String?) -> LineConfirmationPreview {
+        LineConfirmationPreview(
+            figures: figures, direction: direction, firstTrain: firstTrain, lastTrain: lastTrain, rows: rows,
+            trainsToBuy: trainsToBuy, cost: cost, shortfall: shortfall, trackLimit: trackLimit
+        )
+    }
+
     /// "Buy 2 trains · $ 3,400,000"; "還要買 2 列 · $ 3,400,000".
     public func purchaseText(in language: DisplayLanguage) -> String {
         let trains = trainsToBuy == 1
@@ -225,6 +233,8 @@ struct LineConfirmationMemo {
 
     let key: Key
     let preview: LineConfirmationPreview?
+    /// The command the preview prices, for its shortfall.
+    let plan: AutoService?
 }
 
 extension GameSession {
@@ -284,10 +294,19 @@ extension GameSession {
         guard let card = lineConfirmation else { return nil }
         let stops = lineDraftStops
         let key = LineConfirmationMemo.Key(confirmation: card, stops: stops, revision: commandRevision, language: language)
-        if let memo = lineConfirmationMemo, memo.key == key { return memo.preview }
-        let preview = workOutLineConfirmationPreview(card, stops: stops)
-        lineConfirmationMemo = LineConfirmationMemo(key: key, preview: preview)
-        return preview
+        let memo: LineConfirmationMemo
+        if let kept = lineConfirmationMemo, kept.key == key {
+            memo = kept
+        } else {
+            let worked = workOutLineConfirmationPreview(card, stops: stops)
+            memo = LineConfirmationMemo(key: key, preview: worked?.preview, plan: worked?.plan)
+            lineConfirmationMemo = memo
+        }
+        // The cash moves with game time, which the key leaves out: the
+        // shortfall is read from the cash there is now, so Confirm turns
+        // on once the money is there, and off when running costs take it.
+        guard let preview = memo.preview else { return nil }
+        return preview.with(shortfall: shortfallText(preview.cost, doing: memo.plan.map { .autoService($0) }))
     }
 
     /// The plan Confirm runs: the line as `card` sets it, the passing loops
@@ -324,7 +343,7 @@ extension GameSession {
         return found
     }
 
-    private func workOutLineConfirmationPreview(_ card: LineConfirmation, stops: [StationID]) -> LineConfirmationPreview? {
+    private func workOutLineConfirmationPreview(_ card: LineConfirmation, stops: [StationID]) -> (preview: LineConfirmationPreview, plan: AutoService)? {
         guard stops.count >= 2, let found = lineConfirmationPlan(card, stops: stops, targets: nil),
               let priced = try? priced({ world throws(GameError) in try apply(found.plan, to: &world) }),
               let line = priced.result.line, let journey = priced.draft.lineJourney(line.id) else { return nil }
@@ -345,7 +364,7 @@ extension GameSession {
             )
         }
         let close = clockText(minuteOfDay: card.close == 1440 ? 0 : card.close)
-        return LineConfirmationPreview(
+        let preview = LineConfirmationPreview(
             figures: figures.joined(separator: " · "),
             direction: stops.first == stops.last
                 ? language.text("Round trip, back through the first stop", "來回，經過起點兩次")
@@ -355,12 +374,18 @@ extension GameSession {
             rows: rows,
             trainsToBuy: found.plan.trains,
             cost: priced.cost,
-            shortfall: shortfallText(priced.cost, doing: .autoService(found.plan)),
+            // Read from the cash at each look (``lineConfirmationPreview``).
+            shortfall: nil,
             trackLimit: card.trainsNeeded > running
                 ? language.text(
-                    "\(running) trains can wait at the line's ends at once. Once they leave, add more with Add a Train.",
-                    "起訖站一次只能停 \(running) 列。等它們開出後，再按「加開一列車」。")
+                    running == 1
+                        ? "1 train can wait at the line's ends at once. Once it leaves, add more with Add a Train."
+                        : "\(running) trains can wait at the line's ends at once. Once they leave, add more with Add a Train.",
+                    running == 1
+                        ? "起訖站一次只能停 1 列。等它開出後，再按「加開一列車」。"
+                        : "起訖站一次只能停 \(running) 列。等它們開出後，再按「加開一列車」。")
                 : nil
         )
+        return (preview, found.plan)
     }
 }

@@ -149,4 +149,16 @@ final class Map3DModelFileTests: XCTestCase {
         broken[1].corners[2] = (.nan, 0, 0)
         XCTAssertEqual(refusal(Self.file(broken)), .notFinite)
     }
+
+    /// A file of no triangles, or of only ones with no area, has nothing
+    /// to draw and no size: refused, as the converter refuses it, rather
+    /// than read with endless bounds.
+    func testAModelWithNothingToDrawIsRefused() {
+        let flat = Triangle(corners: [(0, 0, 0), (1, 0, 0), (2, 0, 0)], colour: 0xFF00_0000)
+        for triangles in [[], [flat]] {
+            XCTAssertThrowsError(try Map3DModelFile(decoding: Self.file(triangles), named: "empty")) { error in
+                XCTAssertEqual(error as? Map3DModelFile.Error, .nothingToDraw)
+            }
+        }
+    }
 }
