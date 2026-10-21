@@ -57,6 +57,9 @@ final class Map3DMetalView: MTKView {
     private var shown = Map3DLighting(minute: 12 * 60)
     /// The trains for this frame, seen from the eye given.
     var trains: (@MainActor (Map3DPoint) -> Map3DTrains.Frame)?
+    /// Decision 314: this frame's trains' fronts, as the camera sees them,
+    /// for their labels.
+    var trainHeads: (@MainActor ([Map3DTrains.Head], Map3DCamera) -> Void)?
     /// Decision 259: the people and vehicles for this frame, seen with the
     /// camera given, with the city's lights on so far, at the detail given.
     var streetLife: (@MainActor (Map3DCamera, Float, Map3DStreetDetail) -> Map3DStreetLife.Frame)?
@@ -70,10 +73,17 @@ final class Map3DMetalView: MTKView {
     /// begin with, one step less each time it cannot hold its frame rate.
     private(set) var streetDetail = Map3DStreetDetail.off
     private var slowWindows = 0
-    /// 2026-10-21: whether the GPU kept over its budget (``Map3DDrawScale``)
-    /// and the map draws fewer pixels, until it closes.
+    /// 2026-10-21: whether the GPU kept over its budget (``Map3DDrawScale``),
+    /// until the map closes, and whether the map draws fewer pixels: for
+    /// that, or as the 3D look in Settings, Low Power Mode or the phone's
+    /// heat say (``Map3DQuality``).
+    private var gpuOverBudget = false
     private var drawsFewerPixels = false
     private var overBudgetWindows = 0
+    /// Decision 238's later note: the 3D look chosen in Settings.
+    var quality = Map3DQuality.automatic {
+        didSet { if quality != oldValue { applyQuality() } }
+    }
     /// Decision 230: the train models, and a buffer of each one's vertices.
     private var models: (pack: Map3DModelPack, buffers: [MTLBuffer])?
     var onStats: (@MainActor (Stats) -> Void)?
@@ -201,6 +211,21 @@ final class Map3DMetalView: MTKView {
         clearDepth = 1
         preferredFramesPerSecond = 60
         streetDetail = Map3DStreetDetail.forGPUFamily(Self.appleFamily(of: device))
+        applyQuality()
+    }
+
+    /// The frames a second and the pixels a point that ``quality``, Low
+    /// Power Mode, the phone's heat and the GPU's budget ask for.
+    private func applyQuality() {
+        let process = ProcessInfo.processInfo
+        let heat = Map3DQuality.Heat(rawValue: process.thermalState.rawValue) ?? .critical
+        let plan = quality.plan(lowPower: process.isLowPowerModeEnabled, heat: heat)
+        if preferredFramesPerSecond != plan.framesPerSecond { preferredFramesPerSecond = plan.framesPerSecond }
+        let fewer = plan.fewerPixels || (plan.lowersWhenOver && gpuOverBudget)
+        if fewer != drawsFewerPixels {
+            drawsFewerPixels = fewer
+            setNeedsLayout()
+        }
     }
 
     /// The newest Apple GPU family `device` belongs to, as a number (9 for
@@ -397,6 +422,7 @@ final class Map3DMetalView: MTKView {
             }
         }
         let frame = trains?(camera.eye)
+        trainHeads?(frame?.heads ?? [], camera)
         var trainBoxes: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int, triangles: Int)?
         if let mesh = frame?.boxes, !mesh.isEmpty, let vertices = makeBuffer(mesh.vertices), let indices = makeBuffer(mesh.indices) {
             trainBoxes = (vertices, indices, mesh.indices.count, mesh.triangleCount)
@@ -613,10 +639,9 @@ final class Map3DMetalView: MTKView {
         }
         overBudgetWindows = Map3DDrawScale.isOver(gpuMilliseconds: stats.gpuMilliseconds, aim: Double(preferredFramesPerSecond))
             ? overBudgetWindows + 1 : 0
-        if !drawsFewerPixels, Map3DDrawScale.shouldLower(windows: overBudgetWindows) {
-            drawsFewerPixels = true
-            setNeedsLayout()
-        }
+        if Map3DDrawScale.shouldLower(windows: overBudgetWindows) { gpuOverBudget = true }
+        // Low Power Mode and the heat change while the map is open.
+        applyQuality()
         frames = 0
         cpuTimes.removeAll()
         waitTimes.removeAll()

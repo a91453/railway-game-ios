@@ -109,3 +109,7 @@
 - **VERIFIED — Linux**：所有 PNG 可完整解碼、RGBA 有透明與不透明像素、至少 1024×1024；manifest 記錄完整 alpha 範圍、可見範圍（alpha > 64）與是否碰邊，以及尺寸、檔案大小、SHA-256 與檔案數。生圖可能留下低透明度的邊緣雜點，原稿保留，不把它宣稱為已清理的正式輸出。
 - **VERIFIED — Linux／Chromium**：43 張原稿在檢視頁皆可解碼；四種分類、搜尋、深淺色切換、展開尺寸檢查可操作，390 px 寬沒有橫向溢出，沒有外部網路請求或 JavaScript 錯誤。四組總覽與尺寸／模糊／灰階檢查圖已輸出並目視查看。
 - **UNVERIFIED**：正式 Asset Catalog 編譯、SwiftUI 顯示、TestFlight 實機與嚴格平塗 SVG 規格。本次沒有改 App／Swift package，也沒有執行不相關的 Swift 測試。
+
+## 搬到私有庫
+
+2026-10-21 起，這個資料夾的其他預覽圖（含檢視頁）在私有庫 a91453/railway-reference-private 的 `Railway/game-art-previews/docs/art/generated-2026-10-13/`，內容完整、連結照舊；這裡只留本說明與被程式或文件直接引用的圖。上面連到已搬走檔案的連結請到那裡看。

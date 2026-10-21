@@ -290,7 +290,7 @@ public struct RealTrainTraffic: Sendable {
     /// The lines of `operations` that come within `metres` of `frame`'s
     /// map, each with the trains its data has: a metro's timetable, the
     /// High Speed Rail's day of trains, or Taiwan Railway's headways.
-    public init(operations: RealRailwayOperations, frame: RealWorldFrame, bounds: WorldBounds, margin metres: Double = 2_000) {
+    public init(operations: RealRailwayOperations, frame: RealWorldFrame, bounds: WorldBounds, bought: Set<String> = [], margin metres: Double = 2_000) {
         let half = RealWorldFrame.halfExtent(of: bounds)
         let corners = [(-1.0, -1.0), (1.0, 1.0)].map { sx, sy in
             frame.worldPosition(east: sx * (half.east + metres), south: sy * (half.south + metres))
@@ -299,18 +299,20 @@ public struct RealTrainTraffic: Sendable {
             minLatitude: min(corners[0].latitude, corners[1].latitude), maxLatitude: max(corners[0].latitude, corners[1].latitude),
             minLongitude: min(corners[0].longitude, corners[1].longitude), maxLongitude: max(corners[0].longitude, corners[1].longitude)
         )
-        self.init(operations: operations) { coordinate in
+        self.init(operations: operations, bought: bought) { coordinate in
             coordinate.latitude >= box.minLatitude && coordinate.latitude <= box.maxLatitude
                 && coordinate.longitude >= box.minLongitude && coordinate.longitude <= box.maxLongitude
         }
     }
 
     /// The lines of `operations` with a point of their shape (or a station)
-    /// for which `isNear` holds.
-    public init(operations: RealRailwayOperations, isNear: (RealRailways.Coordinate) -> Bool) {
+    /// for which `isNear` holds, but those in `bought` (`"tra:PINGXI"`):
+    /// a real line the company bought runs the company's trains instead
+    /// (decision 315).
+    public init(operations: RealRailwayOperations, bought: Set<String> = [], isNear: (RealRailways.Coordinate) -> Bool) {
         var lines: [Line] = []
         for system in operations.orderedSystems {
-            for line in system.lines {
+            for line in system.lines where !bought.contains("\(system.id):\(line.id)") {
                 let stationPoints = line.stations.map { RealRailways.Coordinate(latitude: $0.latitude, longitude: $0.longitude) }
                 guard line.shape.contains(where: isNear) || stationPoints.contains(where: isNear) else { continue }
                 if let made = Self.line(line, of: system.id, in: operations) { lines.append(made) }

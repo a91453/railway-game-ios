@@ -41,7 +41,17 @@ rm Tests/GamePresentationTests/Map3DPreviewDump.swift
 | `MAP3D_LIFE_DETAIL` | `reduced`：和 `MAP3D_LIFE` 一起用，畫舊機型的份量（決策 259） |
 | `MAP3D_BUSY` | `1`：和 `MAP3D_LIFE` 一起用，每個車站都當作候車 400 人、一天 8,000 人次 |
 | `MAP3D_DETAIL` | `far`：輸出遠處看到的簡化版城市（決策 238）；`near`：近版但不含最近一層（決策 267 的騎樓、遮雨棚、晾衣）；預設是最近的完整版（連街道設施一起，決策 244：每個實例展開成網格） |
+| `MAP3D_TRAINS` | `x:z`：在這一點的灰色地面上排出每一套列車（決策 318），一列一套：頭車、中間車、最後一節，最上面一列是一般通勤車；和 `MAP3D_CROP` 一起用 |
 
 前後對照：在 `main` 的 worktree 與分支上各跑一次同樣的鏡頭，再把兩張上下拼起來（`docs/art/*/` 的圖都是上半 `main`、下半新版）。
 
-還沒有差異圖：下一個改 3D 畫面的 PR 順便加（抄 pixelmatch 的單一檔案，ISC，不加 npm 套件；只當審查證據，不當通過門檻），見 `docs/research/GAME_AI_TOOLS_2026-10-15.md` §6.3。
+差異圖（`docs/research/GAME_AI_TOOLS_2026-10-15.md` §6.3）：前後兩張同一個鏡頭的圖，標出哪些像素變了、變了多少。只當審查的證據，不當通過門檻。
+
+```sh
+node tools/map3d-preview/diff.cjs before-close-shadows.png after-close-shadows.png diff-close.png
+# 9321 of 1440000 pixels differ (0.65%)
+```
+
+- `diff.cjs`：在 `render.cjs` 用的同一個無頭 Chromium 裡用 canvas 解 PNG，跑 pixelmatch（門檻 0.1），寫出差異圖（紅色是變了的像素，其他淡掉）並印出變了幾個像素。
+- `pixelmatch.mjs`：pixelmatch 7.2.0 的 `index.js`，一字未改（sha256 `52c6026c…5788`）；授權 ISC，版權行與原文在 `pixelmatch.LICENSE`（複製或改寫時一起保留）。作者 2026-10-21 同意加這個依賴（「pixelmatch 可以加」），只在 `tools/` 與本機用，不進 App 的 bundle，不加 npm 套件。
+- 前後圖要同一個鏡頭、同一個時刻；只改一個東西時，在同一個分支上開關那個東西各輸出一次（例如決策 314 的路線色帶：`Map3DScene` 不給 `lineBands` 與給的），比兩個 worktree 省一次建置。

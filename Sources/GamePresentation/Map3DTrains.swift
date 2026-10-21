@@ -47,7 +47,8 @@ public enum Map3DTrains {
             var types: [TrainID: String] = [:]
             for train in world.trains where train.position != nil {
                 bodies[train.id] = world.bodyPath(of: train.id)
-                types[train.id] = train.type?.spec.code ?? ""
+                // Decision 318: or the set its performance has a model for.
+                types[train.id] = Map3DTrainSet.key(type: train.type, performance: train.performance)
             }
             self.bodies = bodies
             self.types = types
@@ -81,7 +82,18 @@ public enum Map3DTrains {
         public var instances: [Map3DInstance] = []
         /// Decision 232: each car's soft shadow on the bed under it.
         public var shadows = Map3DMesh()
+        /// Decision 314: over each train's front, where its label goes.
+        public var heads: [Head] = []
     }
+
+    /// Decision 314: a train and the point just over its front car's roof.
+    public struct Head: Equatable, Sendable {
+        public let train: TrainID
+        public let point: Map3DPoint
+    }
+
+    /// How far over the roof a train's label stands, in metres.
+    static let headClearance: Float = 1
 
     /// How far from the eye a car is drawn with its model, in metres;
     /// farther, it is a box (the art direction's near and far levels).
@@ -125,6 +137,10 @@ public enum Map3DTrains {
                 let length = (a - b).length
                 guard length > 1 else { continue }
                 let base = (a + b) * 0.5
+                if index == 0 {
+                    frame.heads.append(Head(train: run.train, point: a + (b - a) * (min(4, length / 2) / length)
+                                                + Map3DPoint(0, carHeight + headClearance, 0)))
+                }
                 // Decision 232: a soft shadow on the bed under the car.
                 let bed = Map3DPoint(0, 0.05 - Map3DScene.Builder.bedDrop, 0)
                 frame.shadows.addShadow(
@@ -132,8 +148,9 @@ public enum Map3DTrains {
                     outer: Map3DMesh.footprint(centre: base + bed, forward: a - b, length: length + 1, width: carWidth + 1), darkness: 0.38)
                 if let models, hasModels, let eye, (base - eye).length < modelReach,
                    let model = models.modelIndex(forType: trainType, carIndex: index, count: cars.count) {
-                    // The last car is the head car's model turned round.
-                    let turned = index == cars.count - 1 && cars.count > 1
+                    // The last car is the head car's model turned round, or
+                    // the set's own tail.
+                    let turned = models.isTurned(forType: trainType, carIndex: index, count: cars.count)
                     frame.instances.append(instance(of: models.models[model], index: model, from: turned ? a : b, to: turned ? b : a,
                                                     stripe: stripe ?? band))
                     continue

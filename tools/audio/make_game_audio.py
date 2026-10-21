@@ -14,7 +14,8 @@ Decision 219: the station chimes are played from scores of 《沿線》
 station chime above), the metro interchange chime and the tourist chime,
 each also as its motif, the first notes alone, for high speed. Decision
 256: the goal-met tune is played from its score too (`scores/goal-met`,
-kept to the chime rules), as a whole only. Every file
+kept to the chime rules), as a whole only, and so is decision 315's
+line-acquired tune (`scores/line-acquired`). Every file
 is listed in `manifest.json` with its source, SHA-256, peak, RMS and its
 loop seam or end.
 
@@ -260,6 +261,8 @@ CHIMES = [
 # chimes' peak; no motif.
 TUNES = [
     ("goal-met", "goal-met.wav"),
+    # Decision 315: a real line bought.
+    ("line-acquired", "line-acquired.wav"),
 ]
 
 

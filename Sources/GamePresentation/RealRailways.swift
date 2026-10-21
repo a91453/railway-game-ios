@@ -349,6 +349,10 @@ public struct RealRailways: Sendable {
     /// The Pingxi Line's real trains for the real-world demo
     /// (`tra_pingxi_runs.json`, decision 133).
     public let pingxiRuns: RealLineRuns?
+    /// The real trains of the branch lines a player can buy
+    /// (`tra_branch_runs.json`, decision 315), by their `tra.json` id
+    /// (`PINGXI`); empty without the file.
+    public let branchRuns: [String: RealLineRuns]
     /// Where the real TRA lines are on bridges and in tunnels
     /// (`rail_structures.json`, decision 279).
     public let structures: RealRailStructures?
@@ -373,6 +377,7 @@ public struct RealRailways: Sendable {
         operations: RealRailwayOperations? = nil,
         transfers: RealStationTransfers? = nil,
         pingxiRuns: RealLineRuns? = nil,
+        branchRuns: [String: RealLineRuns] = [:],
         structures: RealRailStructures? = nil,
         ridership: RealRidership? = nil,
         loadIssues: [RealDataLoadIssue] = []
@@ -422,6 +427,7 @@ public struct RealRailways: Sendable {
         self.operations = operations
         self.transfers = transfers
         self.pingxiRuns = pingxiRuns
+        self.branchRuns = branchRuns
         self.structures = structures
         self.ridership = ridership
         self.loadIssues = loadIssues + (operations?.loadIssues ?? [])
@@ -709,6 +715,9 @@ extension RealRailways {
         let pingxiRuns = read("tra_pingxi_runs", "json").flatMap { data in
             parse("tra_pingxi_runs.json") { try RealLineRuns(data: data) }
         }
+        let branchRuns = read("tra_branch_runs", "json").flatMap { data in
+            parse("tra_branch_runs.json") { try RealLineRuns.branchLines(data: data) }
+        }
         let structures = read("rail_structures", "json").flatMap { data in
             parse("rail_structures.json") { try RealRailStructures(data: data) }
         }
@@ -741,6 +750,7 @@ extension RealRailways {
                 operations: operations,
                 transfers: transfers,
                 pingxiRuns: pingxiRuns,
+                branchRuns: branchRuns ?? [:],
                 structures: structures,
                 ridership: ridership,
                 loadIssues: issues

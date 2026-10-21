@@ -55,6 +55,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(newGame.appears(within: 10))
         app.bringStartButtonIntoView(newGame)
         newGame.tap()
+        app.chooseBlankMap()
         let expansion = app.buttons["map.expansion"]
         XCTAssertTrue(expansion.appears(within: 30), "A blank map can be expanded")
         expansion.tap()
@@ -138,6 +139,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(newGame.appears(within: 10))
         app.bringStartButtonIntoView(newGame)
         newGame.tap()
+        app.chooseBlankMap()
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 30), "The game starts")
         openFromGameMenu("menu.goals", in: app)
         settle(seconds: 3)
@@ -209,6 +211,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(newGame.appears(within: 10))
         app.bringStartButtonIntoView(newGame)
         newGame.tap()
+        app.chooseBlankMap()
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 30), "The game starts")
         settle(seconds: 5)
         pauseTheClock(in: app)
@@ -224,10 +227,12 @@ final class WebsiteScreenshotTests: XCTestCase {
     func testTourism() {
         let app = launch()
         defer { app.terminate() }
-        let realWorld = app.buttons["start.realWorld"]
-        XCTAssertTrue(realWorld.appears(within: 10))
-        app.bringStartButtonIntoView(realWorld)
-        tapButton("start.realWorld", in: app, timeout: 60)
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 10))
+        app.bringStartButtonIntoView(newGame)
+        newGame.tap()
+        // Decision 316: the real-world map is on the new game's page.
+        tapButton("newGame.realWorld", in: app, timeout: 60)
         // The whole of Taiwan is offered below Taiwan's places, in a list
         // that builds a row as it is scrolled to, and is enabled once the
         // population is read. The list is found by its first row, which it

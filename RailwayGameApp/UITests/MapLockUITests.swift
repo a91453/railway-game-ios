@@ -17,6 +17,7 @@ final class MapLockUITests: XCTestCase {
         XCTAssertTrue(newGame.appears(within: 10))
         app.bringStartButtonIntoView(newGame)
         newGame.tap()
+        app.chooseBlankMap()
         let expansion = app.buttons["map.expansion"]
         XCTAssertTrue(expansion.appears(within: 30), "A blank map can be expanded")
 

@@ -1,0 +1,42 @@
+{
+  "format": 1,
+  "role": "chime",
+  "title": "Line acquired",
+  "source": "Decision 315: the local station chime's C6 and G6 (scores/chime-local.score.json), a cadence D6 G5 down onto C6, and a low stamp (a clack over a C4 pluck); hand written, kept to the chime rules",
+  "tempo": 125,
+  "beatsPerBar": 4,
+  "length": 3000,
+  "motif": 2,
+  "fadeOut": 480,
+  "tracks": [
+    {
+      "voice": "bell",
+      "gain": 100,
+      "pan": 0,
+      "notes": [
+        {"pitch": 84, "start": 0, "length": 480, "velocity": 110},
+        {"pitch": 91, "start": 480, "length": 480, "velocity": 90},
+        {"pitch": 84, "start": 1440, "length": 1560, "velocity": 110}
+      ]
+    },
+    {
+      "voice": "pluck",
+      "gain": 80,
+      "pan": 0,
+      "notes": [
+        {"pitch": 86, "start": 960, "length": 240, "velocity": 100},
+        {"pitch": 79, "start": 1200, "length": 240, "velocity": 100},
+        {"pitch": 72, "start": 1440, "length": 720, "velocity": 100},
+        {"pitch": 60, "start": 2160, "length": 840, "velocity": 120}
+      ]
+    },
+    {
+      "voice": "clack",
+      "gain": 90,
+      "pan": 0,
+      "notes": [
+        {"pitch": 60, "start": 2160, "length": 240, "velocity": 127}
+      ]
+    }
+  ]
+}

@@ -311,4 +311,10 @@ public enum GameError: Error, Hashable, Sendable {
     case stationCommerceMaxedOut
     /// The station has no shops (decision 222).
     case noStationCommerce(StationID)
+    /// The real line, or the line its trains run as, was bought already
+    /// (decision 315).
+    case lineAlreadyAcquired
+    /// A purchase of a real line names no line, too many riders, or a line
+    /// without a timetable or one that has run it (decision 315).
+    case invalidAcquisition
 }

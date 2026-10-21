@@ -1226,6 +1226,10 @@ extension StepOutcome: Codable {
             self = .rejected(.stationCommerceMaxedOut)
         case "noStationCommerce":
             self = try .rejected(.noStationCommerce(container.decodeStation(forKey: .station)))
+        case "lineAlreadyAcquired":
+            self = .rejected(.lineAlreadyAcquired)
+        case "invalidAcquisition":
+            self = .rejected(.invalidAcquisition)
         case "trainServiceActive":
             self = try .rejected(.trainServiceActive(container.decodeTrain(forKey: .train)))
         case "trainServiceNotActive":
@@ -1636,6 +1640,10 @@ extension StepOutcome: Codable {
         case .rejected(.noStationCommerce(let id)):
             try container.encode("noStationCommerce", forKey: .result)
             try container.encode(id.rawValue, forKey: .station)
+        case .rejected(.lineAlreadyAcquired):
+            try container.encode("lineAlreadyAcquired", forKey: .result)
+        case .rejected(.invalidAcquisition):
+            try container.encode("invalidAcquisition", forKey: .result)
         case .rejected(.freightNotEnabled):
             try container.encode("freightNotEnabled", forKey: .result)
         case .rejected(.freightFacilityExists(let id)):
