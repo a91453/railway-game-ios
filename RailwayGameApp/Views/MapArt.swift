@@ -1319,6 +1319,14 @@ enum MapArt {
         drawTravel(map.tiles(for: mode, in: drawingRegion(projection), blockSize: blockSize), opacity: opacity, projection: projection, in: context)
     }
 
+    /// Decision 311: where a station would have riders
+    /// (``StationPotentialMap``), only the blocks in view, merged as the
+    /// city's layers are, one fill a colour.
+    static func drawPotential(_ map: StationPotentialMap, opacity: Double, projection: some MapProjection, in context: GraphicsContext) {
+        let blockSize = CityMap.blockSize(pointsPerUnit: projection.pointsPerUnit)
+        drawTravel(map.tiles(in: drawingRegion(projection), blockSize: blockSize), opacity: opacity, projection: projection, in: context)
+    }
+
     /// Decision 270: from this many points a 64 m cell the seeded streets
     /// fade in, fully drawn from ``streetsFullCellPoints``.
     private static let streetsCellPoints = 16.0

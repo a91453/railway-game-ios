@@ -40,7 +40,19 @@ struct PopulationLegendView: View {
     /// Decision 292: how many of the residents and jobs the stations reach,
     /// under the coverage layer's title; `nil` while it is worked out.
     var coverage: CoverageSummary? = nil
+    /// Decision 311: while the building layer shows, its switches.
+    var building: Building? = nil
     var onDismiss: (() -> Void)? = nil
+    @State private var showsInfo = false
+
+    /// Decision 311: the building layer's switches, between where people
+    /// are and coverage and among the hours, and whether a new line has
+    /// stations (the title and line then speak of trips from them).
+    struct Building {
+        let choice: Binding<PopTravelMode>
+        let period: Binding<PotentialPeriod>
+        let hasDrafts: Bool
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -67,6 +79,30 @@ struct PopulationLegendView: View {
                         : language.text("Fold the legend", "收合圖例")))
                 .accessibilityIdentifier("map.legend.fold")
                 Spacer(minLength: 4)
+                if building != nil {
+                    Button {
+                        showsInfo = true
+                    } label: {
+                        Image(systemName: "info.circle")
+                            .font(.caption2)
+                            .foregroundStyle(Theme.textSecondary)
+                            .frame(width: 28, height: 28)
+                            .contentShape(Rectangle())
+                            .padding(-8)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text(verbatim: language.text("About this map", "關於這張圖")))
+                    .accessibilityIdentifier("map.buildingLayer.info")
+                    .popover(isPresented: $showsInfo) {
+                        Text(verbatim: StationPotentialMap.info(in: language))
+                            .font(.footnote)
+                            .foregroundStyle(Theme.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: 280)
+                            .padding()
+                            .presentationCompactAdaptation(.popover)
+                    }
+                }
                 if let onDismiss {
                     Button {
                         onDismiss()
@@ -85,6 +121,10 @@ struct PopulationLegendView: View {
                 }
             }
 
+            // Decision 311: where people are or coverage, folded or open.
+            if let building {
+                buildingChoice(building)
+            }
             if isFolded {
                 foldedBar
             } else {
@@ -133,9 +173,24 @@ struct PopulationLegendView: View {
             .accessibilityIdentifier("map.sectionFlowLegend")
         case .coverage:
             coverageShare
+        case .potential:
+            scale
         case .landUse, .zoning, .terrain:
             EmptyView()
         }
+    }
+
+    /// Decision 311: the switch between where people are and coverage.
+    private func buildingChoice(_ building: Building) -> some View {
+        Picker(selection: building.choice) {
+            Text(verbatim: language.text("Potential", "潛力")).tag(PopTravelMode.potential)
+            Text(verbatim: language.text("Coverage", "涵蓋")).tag(PopTravelMode.coverage)
+        } label: {
+            Text(verbatim: language.text("Show", "顯示"))
+        }
+        .pickerStyle(.segmented)
+        .controlSize(.small)
+        .accessibilityIdentifier("map.buildingLayer.choice")
     }
 
     /// Decision 292: the share the stations reach, and that it is an
@@ -157,6 +212,26 @@ struct PopulationLegendView: View {
         scale
         if mode == .coverage {
             coverageShare
+        }
+        if mode == .potential {
+            // Decision 311: what the colours say, and the hours.
+            Text(verbatim: StationPotentialMap.line(hasDrafts: building?.hasDrafts ?? false, in: language))
+                .font(.caption2)
+                .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("map.potentialLine")
+            if let building {
+                Picker(selection: building.period) {
+                    ForEach(PotentialPeriod.allCases, id: \.self) { period in
+                        Text(verbatim: period.title(in: language)).tag(period)
+                    }
+                } label: {
+                    Text(verbatim: language.text("Hours", "時段"))
+                }
+                .pickerStyle(.segmented)
+                .controlSize(.small)
+                .accessibilityIdentifier("map.potential.period")
+            }
         }
 
         if mode != .coverage, mode != .zoning, mode != .terrain {
@@ -207,6 +282,7 @@ struct PopulationLegendView: View {
         case .travel: language.text("Travel demand", "交通需求")
         case .movement: language.text("Demand change", "需求變化")
         case .landUse, .landValue, .coverage, .zoning, .terrain, .sectionFlow: mode.title(in: language)
+        case .potential: StationPotentialMap.title(hasDrafts: building?.hasDrafts ?? false, in: language)
         }
     }
 
@@ -218,6 +294,7 @@ struct PopulationLegendView: View {
         case .landUse: language.text("Low-rise", "低層")
         case .landValue: "$ 0"
         case .sectionFlow: language.text("Empty", "空")
+        case .potential: language.text("Few", "少")
         case .coverage, .zoning, .terrain: ""
         }
     }
@@ -230,6 +307,7 @@ struct PopulationLegendView: View {
         case .landUse: language.text("Towers", "超高層")
         case .landValue: "$ \(CityMap.valueSteps.last ?? 0)+ / m²"
         case .sectionFlow: language.text("Full", "滿載")
+        case .potential: language.text("Many", "多")
         case .coverage, .zoning, .terrain: ""
         }
     }
@@ -256,6 +334,16 @@ struct PopulationLegendView: View {
             }
             .frame(height: 12)
             .clipShape(Capsule())
+        case .potential:
+            // Decision 311: pale warm yellow to navy, few to many.
+            HStack(spacing: 0) {
+                ForEach(Array(StationPotentialMap.colors.enumerated()), id: \.offset) { _, color in
+                    Color(color)
+                }
+            }
+            .frame(height: 12)
+            .clipShape(Capsule())
+            .accessibilityIdentifier("map.potentialLegend")
         case .movement:
             HStack(spacing: 0) {
                 ForEach(Array(PopTravel.decreaseColors.reversed().enumerated()), id: \.offset) { _, color in
