@@ -9,7 +9,7 @@ import XCTest
 final class RealLineAcquisitionTests: XCTestCase {
     /// A real-world game round the middle of `line`'s stations, with the
     /// bundled railways and `balance`.
-    private func game(round network: String, balance: Money = Money(100_000_000_000), side: Int64 = 1 << 20, heights: Bool = false) throws -> GameSession {
+    private func game(round network: String, balance: Money = Money(100_000_000_000), side: Int64 = 1 << 20, heights: Bool = false, transfers: Bool = false) throws -> GameSession {
         let railways = try BundledRealData.railways()
         let runs = try XCTUnwrap(railways.branchRuns[network])
         let stations = try runs.stops.map { try BundledRealData.station($0, in: "tra_sched") }
@@ -18,6 +18,7 @@ final class RealLineAcquisitionTests: XCTestCase {
         let anchor = try XCTUnwrap(GeoAnchor(latitude: Int64((latitude * 10_000_000).rounded()), longitude: Int64((longitude * 10_000_000).rounded())))
         var world = GameWorld.newGame(anchor: anchor, bounds: try WorldBounds(width: side, height: side), balance: balance)
         if heights { try world.mapGround() }
+        if transfers { world.setRealTransfers(true) }
         let session = GameSession(world: world, language: .traditionalChinese)
         session.railways = railways
         if heights { session.heights = try HeightGrid(data: RealWorldDataLoadTests.file("taiwan_heights", "dat")) }
@@ -103,5 +104,30 @@ final class RealLineAcquisitionTests: XCTestCase {
             }
             XCTAssertEqual(missed.count, 0, "\(network): runs not sent out yesterday: \(missed.count) of \(runs.runs.count)")
         }
+    }
+
+    /// A line bought runs the company's trains: the map draws no real ones
+    /// on it, and still those of the lines not bought.
+    func testTheMapDrawsNoRealTrainsOnALineBought() throws {
+        let operations = try XCTUnwrap(try BundledRealData.railways().operations)
+        let all = RealTrainTraffic(operations: operations) { _ in true }
+        let rest = RealTrainTraffic(operations: operations, bought: ["tra:PINGXI"]) { _ in true }
+        XCTAssertTrue(all.lines.contains { $0.system == "tra" && $0.line.id == "PINGXI" })
+        XCTAssertFalse(rest.lines.contains { $0.system == "tra" && $0.line.id == "PINGXI" })
+        XCTAssertEqual(rest.lines.count, all.lines.count - 1)
+    }
+
+    /// Past the junction, the station card calls Taiwan Railway's riders
+    /// the line's regulars; at the junction they still change from it.
+    func testTheStationCardCallsTheRidersAlongALineBoughtItsRegulars() throws {
+        let session = try game(round: "PINGXI", transfers: true)
+        let offer = session.realLineOffer(for: try line("PINGXI", in: session))
+        XCTAssertTrue(session.acquireRealLine(offer), session.message?.text ?? "")
+        let stops = try XCTUnwrap(session.world.line(id: try XCTUnwrap(session.world.acquisition(of: "tra:PINGXI")).line)?.stops)
+        let shifen = try XCTUnwrap(stops.first { session.world.station(id: $0)?.name == "十分" })
+        let text = try XCTUnwrap(session.transferText(of: shifen))
+        XCTAssertTrue(text.hasPrefix("沿線的常客：每天約 "), text)
+        let junction = try XCTUnwrap(session.transferText(of: stops[0]))
+        XCTAssertTrue(junction.hasPrefix("從台鐵轉乘"), junction)
     }
 }
