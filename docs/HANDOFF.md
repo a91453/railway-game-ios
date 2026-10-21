@@ -715,7 +715,7 @@ PR #786–#872 那一輪（2026-10-21，作者：「很久沒做pr review了 先
   - `Map3DSceneCache.clear()` 不會取消建到一半的場景；
   - 路線面板的 `scrollTo` 沒有照「減少動態效果」；
   - 地圖角落按鈕的觸控區只有 44×28；
-  - #870 的預覽用 `targets: nil`，建立路線卻用路線自己的目標班距（已轉給空窗快轉 session）；
+  - #870 的預覽用 `targets: nil`，建立路線卻用路線自己的目標班距（轉給空窗快轉 session 後沒有在 #877 修：要一張有真實路線的實景地圖才做得出在 main 上紅的測試，又要改 #873 剛改過的 `LineConfirmation.swift`；留給之後，還沒有人接）；
   - diagnosing-bugs skill 的 TICK_REPORT 指令少了 `--skip-build`。
 
 PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡需求燈只數這條線、座位圖換行、關卡「繼續玩」會繼續、3D 場景快取分局、長按的診斷 trace、決策 266 的文字），延後的 10 項（`main` 在 abb306a 的 full lane 紅、`testHoldingAStationTracesItsBusiestTrips` 的根因、整平時的轉乘乘客、72.1 沒有自己的綠 full lane 等）連同原因與建議做法，寫在 `docs/archive/PR755_784_REVIEW_HANDOFF.md` 第四節。
