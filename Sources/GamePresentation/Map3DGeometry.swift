@@ -308,6 +308,19 @@ public struct Map3DMesh: Sendable {
         indices += other.indices.map { $0 + base }
     }
 
+    /// Decision 321: `other` built with +x its front, +y up and +z its
+    /// right, stood on `base` with its front along level `forward`.
+    mutating func append(_ other: Map3DMesh, at base: Map3DPoint, forward: Map3DPoint) {
+        let along = Map3DPoint(forward.x, 0, forward.z).normalized ?? Map3DPoint(1, 0, 0)
+        let right = along.cross(.up)
+        func turned(_ p: Map3DPoint) -> Map3DPoint { along * p.x + Map3DPoint(0, p.y, 0) + right * p.z }
+        let start = UInt32(vertices.count)
+        vertices += other.vertices.map { v in
+            Map3DVertex(base + turned(v.position), normal: turned(Map3DPoint(v.nx, v.ny, v.nz)), color: v.color, u: v.u, v: v.v, layer: v.layer)
+        }
+        indices += other.indices.map { $0 + start }
+    }
+
     /// A flat four-cornered face, `a b c d` counter-clockwise seen from
     /// the side it faces, painted with `paint` when there is one.
     public mutating func addQuad(_ a: Map3DPoint, _ b: Map3DPoint, _ c: Map3DPoint, _ d: Map3DPoint, color: UInt32, paint: Map3DPaint? = nil) {

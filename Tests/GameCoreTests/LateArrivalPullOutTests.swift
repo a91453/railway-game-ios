@@ -86,13 +86,15 @@ final class LateArrivalPullOutTests: XCTestCase {
     }
 
     /// T0 leaves at 10:14, so T1 leaves M twelve minutes late and reaches
-    /// A at 10:17, before a run out of the depot could: T2 stays in the
-    /// depot while T1 is on its way. Before, T2 came out while T1 still
-    /// waited at M, due at A after 10:15.
+    /// A before a run out of the depot could: T2 stays in the depot while
+    /// T1 is on its way, and T1 takes the 10:15 run from A. Before, T2 came
+    /// out while T1 still waited at M, due at A after 10:15. (T1 reached A
+    /// at 10:17 until decision 308 let it make up time; now at 10:15.)
     func testALateTrainOnItsWayTakesTheRunBeforeARunOutThatArrivesAfterIt() throws {
         var scene = try makeScene()
         var pullOuts = 0
         var running = false
+        var stoodAtA = false
         for minute in 0..<17 {
             if minute == 14 { try scene.world.unplaceTrain(scene.t0) }
             try scene.world.advance(ticks: 1)
@@ -100,10 +102,14 @@ final class LateArrivalPullOutTests: XCTestCase {
             let out = t2.execution != nil && t2.timetable.first?.station == scene.depot
             if out, !running { pullOuts += 1 }
             running = out
+            if scene.world.stationsStoppedAt(by: scene.t1).contains(scene.a) { stoodAtA = true }
         }
         XCTAssertEqual(pullOuts, 0)
         XCTAssertTrue(scene.world.stationsStoppedAt(by: scene.t2).contains(scene.depot), "T2 stays in the depot")
-        XCTAssertTrue(scene.world.stationsStoppedAt(by: scene.t1).contains(scene.a), "T1 stands at A")
+        XCTAssertTrue(stoodAtA, "T1 stood at A")
+        let t1 = try XCTUnwrap(scene.world.train(id: scene.t1))
+        XCTAssertNotNil(t1.execution, "T1 runs")
+        XCTAssertEqual(t1.timetable.first?.station, scene.a, "T1 takes the run from A")
         XCTAssertEqual(WorldInvariants.violations(in: scene.world), [])
     }
 

@@ -4,8 +4,8 @@ import XCTest
 /// Decision 306: under traffic control with block sections, a late train
 /// of a line with runs runs its next leg in the time left to its
 /// scheduled arrival, as with traffic control off (decision 228): it
-/// makes up what it can, no faster than it can go. Without block
-/// sections it keeps the leg's scheduled time, as before.
+/// makes up what it can, no faster than it can go. Decision 308: without
+/// block sections too; before, it kept the leg's scheduled time.
 ///
 ///   B ──e0── M ──e1── A
 ///
@@ -80,24 +80,31 @@ final class TrafficControlCatchUpTests: XCTestCase {
 
     func testALateTrainMakesUpTimeWithBlockSections() throws {
         let caught = try arrival(blockSections: true)
-        let kept = try arrival(blockSections: false)
-        // Without block sections the leg keeps its three scheduled
-        // minutes; with them the train runs it as fast as it can.
-        XCTAssertEqual(kept.leg, 180)
-        XCTAssertLessThan(caught.leg, kept.leg)
-        XCTAssertLessThan(caught.minute, kept.minute)
+        // Not its three scheduled minutes: as fast as it can.
+        XCTAssertLessThan(caught.leg, 180)
+    }
+
+    /// Decision 308: without block sections the same.
+    func testALateTrainMakesUpTimeWithoutBlockSections() throws {
+        let caught = try arrival(blockSections: true)
+        let free = try arrival(blockSections: false)
+        XCTAssertLessThan(free.leg, 180)
+        XCTAssertEqual(free.leg, caught.leg)
+        XCTAssertEqual(free.minute, caught.minute)
     }
 
     /// The trains move at whole minutes, so a batch ends where minute by
     /// minute does.
     func testABatchEndsWhereMinutesDo() throws {
-        var scene = try makeWorld(blockSections: true)
-        try scene.world.advance(ticks: 14)
-        try scene.world.unplaceTrain(scene.t0)
-        var single = scene.world
-        for _ in 0..<10 { try single.advance(ticks: 1) }
-        var batched = scene.world
-        try batched.advance(ticks: 10)
-        XCTAssertEqual(batched, single)
+        for blockSections in [true, false] {
+            var scene = try makeWorld(blockSections: blockSections)
+            try scene.world.advance(ticks: 14)
+            try scene.world.unplaceTrain(scene.t0)
+            var single = scene.world
+            for _ in 0..<10 { try single.advance(ticks: 1) }
+            var batched = scene.world
+            try batched.advance(ticks: 10)
+            XCTAssertEqual(batched, single, "block sections \(blockSections)")
+        }
     }
 }

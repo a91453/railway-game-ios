@@ -131,12 +131,20 @@ extension ReferenceWorld {
 
     /// The track `other` keeps train `id` from: all it holds and, while it
     /// follows a train ahead and train `id` holds none of its route, the
-    /// rest of that route nobody holds.
+    /// rest of that route nobody holds. Not that rest (decision 308) when
+    /// train `id` holds or fouls what a train `other` follows (one holding
+    /// some of its route) needs.
     func blocking(_ other: Train, for id: Int) -> Set<TrackResource> {
         let own = held(other)
         guard following(other) else { return own }
         let route = needs(other).resources
         if let train = trains.first(where: { $0.id == id }), !held(train).isDisjoint(with: route) || (following(train) && id < other.id) { return own }
+        if let train = trains.first(where: { $0.id == id }), train.position != nil {
+            let mine = held(train)
+            for leader in trains where leader.id != other.id && leader.id != id && leader.position != nil && !held(leader).isDisjoint(with: route) {
+                if foul(needs(leader).resources, mine) { return own }
+            }
+        }
         var waiting = route
         for train in trains where train.id != other.id && train.position != nil {
             waiting.subtract(held(train))

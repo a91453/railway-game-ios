@@ -3920,7 +3920,8 @@ public struct GameWorld: Equatable, Sendable {
         // off, which another train held up on its way. Decision 306: and
         // with traffic control on and block sections, as the app's new
         // games have it; never above what the train and the curves allow.
-        let scheduled = realisticOperation || ((!isTrafficControlEnabled || blockSections) && followsRealTimetable(train))
+        // Decision 308: without block sections too.
+        let scheduled = realisticOperation || followsRealTimetable(train)
             ? secondsToScheduledArrival(of: train, stop: next.stop, cycle: next.cycle)
             : train.scheduledArrival(of: next.stop, cycle: next.cycle).seconds - train.scheduledDeparture(of: stop, cycle: cycle).seconds
         moved.times = ServiceTimes(
@@ -4380,6 +4381,7 @@ public struct GameWorld: Equatable, Sendable {
                 holders = nil
                 continue
             }
+            if approachesStandingTrain(trains[index], along: route, holders: holders!) { continue }
             let clear = clearOfBlocked(blockedTrack(except: trains[index].id, holders: holders!))
             let free = longestAuthority(envelopes, from: held, clearBase: clear.base(envelopes.base), clear: clear.stretch)
             let authority = min(followingAuthority(envelopes, free: free), limit ?? .max)
@@ -4409,6 +4411,32 @@ public struct GameWorld: Equatable, Sendable {
             let reach = reachToExtend(envelopes, beyond: held) ?? .max
             let clear = clearOfBlocked(blockedTrack(except: train.id, holders: holders))
             return isAuthority(envelopes, to: reach, clearBase: clear.base(envelopes.base), clear: clear.stretch)
+                && !approachesStandingTrain(train, along: followingCover(of: train, envelopes, memo: &memo), holders: holders)
+        }
+    }
+
+    /// Decision 308: whether `train`, following others along `route` (its
+    /// route envelope) without block sections, would go on towards a
+    /// line's train that ends its service or turns round on that route,
+    /// not beside it: standing without a service where its path ends,
+    /// standing for such a call, or travelling to one it stops for there
+    /// (see ``stopsOn(_:_:fouling:)``). Such a train is no train to follow
+    /// (see ``isLeading(_:onto:for:)``): it comes no nearer until that
+    /// train has gone, or it could stand on the only way that train has
+    /// out, as THSR 31 did in Zuoying's throat behind THSR 19.
+    func approachesStandingTrain(_ train: Train, along route: TrackCover, holders: TrackHolders) -> Bool {
+        guard !blockSections else { return false }
+        let holding = holders.holding(route, except: train.id, fouling: false, in: network)
+        return zip(trains, holding).contains { other, holds in
+            guard holds, assignedLine(of: other.id) != nil else { return false }
+            switch other.execution {
+            case nil:
+                return !routeStretches(of: other).moves
+            case .waitingAtStop(let stop, let cycle)?:
+                return other.timetable[stop].reverses || other.call(after: stop, cycle: cycle) == nil
+            case .travellingToStop(let stop, let cycle)?:
+                return (other.timetable[stop].reverses || other.call(after: stop, cycle: cycle) == nil) && stopsOn(route, other, fouling: false)
+            }
         }
     }
 
