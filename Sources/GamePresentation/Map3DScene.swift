@@ -169,8 +169,9 @@ public struct Map3DScene: Sendable {
     /// map looked at), round it instead (decision 313, later).
     /// On a real-world map, `baseMap`'s ground and `cityTiles`' buildings,
     /// and `heights`' ground where the world has not read its own.
+    /// Decision 314: `lineBands` beside the track.
     public init(world: GameWorld, snapshot: RailwaySnapshot? = nil, skyline: CitySkyline? = nil, focus: (x: Double, y: Double)? = nil,
-                baseMap: BaseMapTiles? = nil, cityTiles: [CityTileArea] = [], heights: HeightGrid? = nil) {
+                baseMap: BaseMapTiles? = nil, cityTiles: [CityTileArea] = [], heights: HeightGrid? = nil, lineBands: Map3DLineBands? = nil) {
         (region, originX, originY) = Self.frame(world: world, focus: focus)
 
         var builder = Builder(originX: originX, originY: originY, region: region, world: world, heights: heights)
@@ -185,6 +186,7 @@ public struct Map3DScene: Sendable {
         builder.addGround(water: real == nil)
         let taken = real.map { builder.addBaseMap($0) } ?? []
         let cleared = builder.addTrack(snapshot)
+        if let lineBands { builder.addLineBands(lineBands, snapshot: snapshot) }
         builder.addPlatforms(snapshot)
         builder.addPortals(snapshot)
         // Decision 238: the city twice, in full and simplified for afar.
