@@ -1,0 +1,81 @@
+{
+  "status": "VERIFIED",
+  "environment": "Linux / Swift 6.4 / Node / Chromium WebGL 2",
+  "models": 641,
+  "stations": 544,
+  "parts": 96,
+  "views": 4487,
+  "triangles": 724406,
+  "maximum_triangles": 4168,
+  "landmarks": 35,
+  "planned_stations": 12,
+  "checks": [
+    "exact coverage of bundled (system, name) station records",
+    "native and GLB SHA-256",
+    "complete native-to-GLB conversion",
+    "opaque finite native vertices",
+    "all seven RGBA views nonempty and unclipped",
+    "connector normalisation",
+    "planned routes and illustrative heights labelled"
+  ],
+  "not_verified": [
+    "iPhone / iPad Metal rendering and performance",
+    "live map selection, placement and alignment",
+    "surveyed station dimensions, interior layout or operating status beyond the source catalog"
+  ],
+  "swift": {
+    "status": "VERIFIED",
+    "version": "6.4.0",
+    "warnings_as_errors": true,
+    "related_tests": 15,
+    "native_readback_models": 641,
+    "roof_support_regression_old_failures": 4
+  },
+  "node_tests": {
+    "status": "VERIFIED",
+    "glb_tests": 4
+  },
+  "png_decode": {
+    "status": "VERIFIED",
+    "count": 4487,
+    "mode": "RGBA",
+    "size": [
+      384,
+      384
+    ],
+    "alpha_extrema": [
+      0,
+      255
+    ]
+  },
+  "visual_review": {
+    "status": "VERIFIED",
+    "sheets": [
+      "previews/overview.png",
+      "previews/parts.png",
+      "previews/landmarks.png",
+      "previews/directions.png",
+      "previews/undersides.png",
+      "previews/style-checks.png"
+    ],
+    "checks": [
+      "recognisable station silhouettes",
+      "actual undersides / glazing / roof supports / balcony mounting plates",
+      "four backgrounds / small sizes / blur / grayscale"
+    ]
+  },
+  "browser": {
+    "status": "VERIFIED",
+    "models_loaded": 641,
+    "checks": [
+      "catalog / category / system / name filtering",
+      "seven directions",
+      "pointer orbit changes rendered geometry",
+      "zoom",
+      "PNG / native / GLB download hashes",
+      "390 px without horizontal overflow",
+      "no external requests / missing resources / JavaScript errors"
+    ]
+  },
+  "private_artifact_path": "Railway/game-art-previews/docs/art/station-kit-2026-10-21/"
+}
