@@ -98,4 +98,24 @@ final class MapLockTests: XCTestCase {
         XCTAssertFalse(usual.showsMapLocks)
         XCTAssertEqual(usual.mapLocks(on: PlanCamera(bounds: usual.world.bounds, viewport: viewport), viewport: viewport), [])
     }
+
+    /// What `MapLockUITests` leans on: from the camera a blank game opens
+    /// with, on a phone on its side, the zoom-out button reaches the locks
+    /// before it reaches its farthest (run 39545597750 gave up after four).
+    func testZoomingOutFromTheOpeningReachesTheLocks() {
+        let session = GameSession(world: GameWorld.newGame(eventSeed: 9, buysMap: true), language: .english)
+        let phone = ScreenSize(width: 874, height: 402)
+        let clear = ScreenInsets(top: 100, leading: 150, bottom: 40, trailing: 140)
+        var camera = PlanCamera.opening(
+            bounds: session.world.bounds, viewport: phone, showing: WorldRegion.opening(in: session.world), keeping: [], clearOf: clear
+        )
+        var taps = 0
+        while session.mapLocks(on: camera, viewport: phone, clearOf: clear).isEmpty, taps < 12 {
+            camera = camera.zoomedOut()
+            taps += 1
+        }
+        XCTAssertFalse(session.mapLocks(on: camera, viewport: phone, clearOf: clear).isEmpty)
+        XCTAssertGreaterThan(taps, 4, "The opening is closer than the UI test once thought")
+        XCTAssertLessThanOrEqual(taps, 9)
+    }
 }

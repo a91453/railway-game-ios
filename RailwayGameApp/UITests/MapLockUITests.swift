@@ -20,12 +20,17 @@ final class MapLockUITests: XCTestCase {
         let expansion = app.buttons["map.expansion"]
         XCTAssertTrue(expansion.appears(within: 30), "A blank map can be expanded")
 
-        // Zoomed out until a tile beside the land owned is in view.
+        // Zoomed out until a tile beside the land owned is in view: a
+        // blank map opens on its town, some 2⁵ times closer than the
+        // farthest zoom, and its tile is far wider than the town (run
+        // 39545597750 stopped after four taps, the tile's edge still off
+        // the screen; on Linux the seventh shows the first locks).
         let lock = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'map.lock.'")).firstMatch
         let zoomOut = app.buttons["Zoom out"]
-        for _ in 0..<4 where !lock.exists && zoomOut.isEnabled {
+        XCTAssertTrue(zoomOut.appears(within: 10))
+        for _ in 0..<12 where !lock.exists && zoomOut.isEnabled {
             zoomOut.tap()
-            _ = lock.appears(within: 2)
+            _ = lock.appears(within: 1)
         }
         XCTAssertTrue(lock.appears(within: 5), "No lock on the tiles for sale")
         XCTAssertEqual(lock.label, "Locked land")
