@@ -32,15 +32,20 @@ public struct RealBranchLine: Hashable, Sendable {
         language.text(english, chinese)
     }
 
-    /// The lines on sale: those whose real trains run on a single track
-    /// with passing loops. The Liujia and Shalun Lines are double track
-    /// and wait for a later step (decision 315).
+    /// The lines on sale (decision 315).
     static let names: [String: (english: String, chinese: String)] = [
         "PINGXI": ("Pingxi Line", "平溪線"),
         "JIJI": ("Jiji Line", "集集線"),
         "NEIWAN": ("Neiwan Line", "內灣線"),
         "SHENAO": ("Shenao Line", "深澳線"),
+        "LIUJIA": ("Liujia Line", "六家線"),
+        "SHALUN": ("Shalun Line", "沙崙線"),
     ]
+
+    /// The lines on sale that are double track, laid with a second track
+    /// beside the first (decision 315's later note); the others run on a
+    /// single track with passing loops.
+    static let doubleTrack: Set<String> = ["LIUJIA", "SHALUN"]
 }
 
 /// A real line bought, as the session laid it out: every node, edge,
@@ -289,28 +294,59 @@ extension GameSession {
             return planning.terrain.isWater(row: Int(plan.y / Land.cellLength), column: Int(plan.x / Land.cellLength))
         }
 
-        // Each station level, its loops' stretch with it.
+        // Each station level, its loops' stretch with it. On a double track
+        // a station between the ends has the second track's platform too,
+        // and a loop only on the other side.
         let half = Double(Int64(RealLineAcquisition.carsPerTrain + 1) * Train.carLength) / 2
         let platformLength = Int64(RealLineAcquisition.carsPerTrain + 1) * Train.carLength
+        let double = RealBranchLine.doubleTrack.contains(line.network)
         var forced = [0, path.length]
         var levels: [TrackRise.Level] = []
         var zones: [ClosedRange<Double>] = []
-        var loopSpans: [(stop: Int, a: Double, b: Double, sides: Int)] = []
+        var spans: [ClosedRange<Double>] = []
+        var loopSpans: [(stop: Int, a: Double, b: Double, offsets: [Double])] = []
         for (index, name) in runs.stops.enumerated() {
             let at = along[index].along
             let zone = (at - half)...(at + half)
             zones.append(zone)
-            let tracks = runs.tracks[name] ?? 1
+            let between = double && index > 0 && index < runs.stops.count - 1
+            let loops = (runs.tracks[name] ?? 1) - (between ? 2 : 1)
+            // A positive offset is on the right going up the line; on a
+            // double track the second track is on the left, so a loop
+            // between the ends is on the right.
+            let offset = RealWorldDemo.groundLoopOffset
+            let sides = between ? [offset] : [offset, -offset]
+            guard loops <= sides.count else {
+                return refused("A station of the line has no room for its tracks here.", "這條線有一站放不下它要的股道。")
+            }
             let span: ClosedRange<Double>
-            if tracks > 1 {
+            if loops > 0 {
                 span = (at - RealWorldDemo.loopReach)...(at + RealWorldDemo.loopReach)
-                loopSpans.append((index, span.lowerBound, span.upperBound, tracks - 1))
+                loopSpans.append((index, span.lowerBound, span.upperBound, Array(sides.prefix(loops))))
             } else {
                 span = (zone.lowerBound - RealWorldDemo.platformMargin)...(zone.upperBound + RealWorldDemo.platformMargin)
             }
+            spans.append(span)
             forced += [span.lowerBound, span.upperBound]
             let height = ground(path.point(at: at))
             levels.append(TrackRise.Level(span, from: height - RealWorldDemo.stationReach, to: height + RealWorldDemo.stationReach))
+        }
+        // A double track's second track, for the trains toward the
+        // terminal, on their left (Taiwan's trains keep left, and the
+        // game's choose that track by keeping left, decision 202): beside the
+        // first from past the junction's station to short of the
+        // terminal's, as the high-speed demo's up track (decision 281); the
+        // trains toward the junction keep to the first. Each end station is
+        // on the first alone, with its loops.
+        let ramp = HighSpeedDemo.rampLength, gap = RealWorldDemo.shortestEdge
+        var second: (a: Double, b: Double)?
+        if double, let first = spans.first, let last = spans.last {
+            let a = first.upperBound + gap, b = last.lowerBound - gap
+            guard b - a > 2 * ramp + gap else {
+                return refused("The line is too short for its second track here.", "這條線太短，放不下第二條正線。")
+            }
+            forced += [a, a + ramp, b - ramp, b]
+            second = (a, b)
         }
         let carried = railways.structures?.stretches(along: path, frame: frame, system: "tra_sched") ?? []
         guard let rise = TrackRise(path: path, ground: ground, water: water, levels: levels, carried: carried) else {
@@ -319,15 +355,30 @@ extension GameSession {
                 "沿這條線的高低差超過遊戲的坡度上限，鋪不上去。"
             )
         }
+        let ramps = second.map { [$0.a...($0.a + ramp), ($0.b - ramp)...$0.b] } ?? []
         let main = RealWorldDemo.TrackPlan(
-            path, forced: forced, avoiding: zones, close: loopSpans.map { $0.a...$0.b }, rise: rise, structure: .automatic
+            path, forced: forced, avoiding: zones, close: loopSpans.map { $0.a...$0.b } + ramps, rise: rise, structure: .automatic
         )
         var plans: [(plan: RealWorldDemo.TrackPlan, start: RealLineAcquisition.NodeAt?, end: RealLineAcquisition.NodeAt?, together: Bool)] = [
             (main, nil, nil, false),
         ]
         var platformsAt: [(stop: Int, piece: Int, zone: ClosedRange<Double>)] = zones.enumerated().map { ($0.offset, 0, $0.element) }
+        if let second {
+            let node = { (distance: Double) in main.distances.firstIndex { abs($0 - distance) < 1 } }
+            guard let a = node(second.a), let inner = node(second.a + ramp), let outer = node(second.b - ramp), let b = node(second.b),
+                  a < inner, inner <= outer, outer < b
+            else {
+                return refused("The line is too short for its second track here.", "這條線太短，放不下第二條正線。")
+            }
+            let beside = [a] + Array(inner...outer) + [b]
+            plans.append((
+                RealWorldDemo.TrackPlan(beside: main, at: beside, offsets: beside.map { $0 == a || $0 == b ? 0 : -HighSpeedDemo.trackOffset }),
+                RealLineAcquisition.NodeAt(piece: 0, node: a), RealLineAcquisition.NodeAt(piece: 0, node: b), true
+            ))
+            platformsAt += zones.indices.dropFirst().dropLast().map { ($0, plans.count - 1, zones[$0]) }
+        }
         for loop in loopSpans {
-            for offset in [RealWorldDemo.groundLoopOffset, -RealWorldDemo.groundLoopOffset].prefix(loop.sides) {
+            for offset in loop.offsets {
                 let loopPath = path.offset(from: loop.a, to: loop.b, by: offset, ramp: RealWorldDemo.loopRamp)
                 guard let loopRise = TrackRise(
                     path: loopPath, ground: ground, water: water, levels: [TrackRise.Level(0...loopPath.length, at: Double(rise.node(at: loop.a)))]
@@ -492,6 +543,16 @@ extension GameSession {
             let length = Double(world.network.edge(built[index])?.length ?? 0)
             return (built[index], Int64(((at.distance - a) / max(b - a, 1) * length).rounded()))
         }
+        // Where a platform (and a train standing at it) `length` long from
+        // `at` starts: moved back to end a metre short of its edge's end
+        // when it would run past it, as the edge on the inside of a curve
+        // can be a little shorter than the plan's stretch it was fitted to.
+        func berth(_ at: RealLineAcquisition.PieceAt, length: Int64) throws(GameError) -> (TrackEdgeID, Int64) {
+            let (on, offset) = try edge(at)
+            let edgeLength = world.network.edge(on)?.length ?? 0
+            guard offset + length > edgeLength else { return (on, offset) }
+            return (on, max(0, edgeLength - length - Int64(RealLineAcquisition.metre)))
+        }
 
         var stations: [StationID] = []
         for stop in acquisition.stops {
@@ -510,7 +571,7 @@ extension GameSession {
         var platformsOf: [Int: [TrackPlatform]] = [:]
         for platform in acquisition.platforms {
             guard stations.indices.contains(platform.stop) else { throw .invalidTrackGeometry }
-            let (on, offset) = try edge(platform.at)
+            let (on, offset) = try berth(platform.at, length: platform.length)
             try world.addTrackPlatform(stations[platform.stop], on: on, from: offset, to: offset + platform.length)
             platformsOf[stations.count - 1 - platform.stop, default: []].append(TrackPlatform(station: stations[platform.stop], edge: on, start: offset, end: offset + platform.length))
         }
@@ -533,7 +594,7 @@ extension GameSession {
         for start in acquisition.trains {
             let train = try world.purchaseTrain(named: start.name).id
             try world.setTrainCars(train, to: acquisition.cars)
-            let (on, at) = try edge(start.at)
+            let (on, at) = try berth(start.at, length: length)
             let edgeLength = world.network.edge(on)?.length ?? 0
             let offset = start.forward ? at + length : edgeLength - at
             try world.placeTrain(train, at: .onEdge(TrackTraversal(edge: on, direction: start.forward ? .forward : .backward), offset: offset))

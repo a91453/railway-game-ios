@@ -26,9 +26,14 @@ A train's days are the weekdays it runs on in the timetable's first week
 (no holiday), as the game counts them (0 Sunday).
 
 The cut trains do not end each day where they began. The trains a line
-needs, and where they stand at midnight (`overnight`), are the most each
-weekday needs at each station, sending each run the train that has stood
-longest at its first stop at least three minutes before it leaves. After a
+needs, and where they stand at midnight (`overnight`), are what most
+weekdays need at each station, sending each run the train that has stood
+longest at its first stop at least three minutes before it leaves; on a
+weekday that needs a train elsewhere (the Shalun Line's Saturday has no
+early trains from Zhongzhou and three from Shalun), a positioning run
+brings one from the station whose train is free soonest, a turnaround
+before the run leaves. When no such run can, they are the most each
+weekday needs at each station. After a
 day's last arrival, positioning runs take the trains back to where the
 next day needs them; each is timed as the real train that runs that
 stretch fastest. The tool checks that every weekday starts and ends with
@@ -41,8 +46,8 @@ tracks with a platform the game lays there, so the trains meet where the
 real ones do (one more than the main track is a passing loop).
 
 The Liujia and Shalun Lines are double track: their real trains pass each
-other between stations, which a single track with loops cannot run, so
-they are not among the lines yet (decision 315, 後來).
+other between stations, and the game lays them two tracks (decision 315,
+後來); their `tracks` count both.
 """
 import collections
 import datetime
@@ -58,6 +63,8 @@ LINES = [
     ("JIJI", "二水", "jiji"),
     ("NEIWAN", "竹中", "neiwan"),
     ("SHENAO", "瑞芳", "shenao"),
+    ("LIUJIA", "竹中", "liujia"),
+    ("SHALUN", "中洲", "shalun"),
 ]
 TURNAROUND = 180
 DAY = 86400
@@ -123,9 +130,10 @@ def needs(found, day):
     return needed
 
 
-def play(found, day, start):
+def play(found, day, start, stuck_idle=None):
     """Runs `day` from `start`: where its trains end, and when each is free
-    there; or the run no train is there for."""
+    there; or the run no train is there for (and, in `stuck_idle`, where
+    the trains were free then)."""
     idle = collections.defaultdict(list)
     for station, count in start.items():
         idle[station] += [-DAY] * count
@@ -133,10 +141,43 @@ def play(found, day, start):
         origin, leaves = run["calls"][0][0], run["calls"][0][2]
         ready = [t for t in idle[origin] if t <= leaves]
         if not ready:
+            if stuck_idle is not None:
+                stuck_idle.update(idle)
             return None, run
         idle[origin].remove(min(ready))
         idle[run["calls"][-1][0]].append(run["calls"][-1][1] + TURNAROUND)
     return idle, None
+
+
+def rescue(found, day, start):
+    """Positioning runs on `day` that bring a train from another station to
+    each run no train stands ready for, each timed as the fastest real train
+    to come in a turnaround before the run leaves, sent by the station whose
+    train is free soonest; or the run none can reach."""
+    added = []
+    for _ in range(len(day_of(found, day))):
+        idle = collections.defaultdict(list)
+        _, stuck = play(found + added, day, start, idle)
+        if stuck is None:
+            return added, None
+        origin, leaves = stuck["calls"][0][0], stuck["calls"][0][2]
+        best = None
+        for donor, times in sorted(idle.items()):
+            if donor == origin or not times:
+                continue
+            probe = stretch(found, donor, origin, 0)
+            if probe is None:
+                continue
+            took = probe[-1][1] - probe[0][2]
+            sets_off = leaves - TURNAROUND - took
+            free = min(times)
+            if free <= sets_off and (best is None or free < best[0]):
+                best = (free, donor, sets_off)
+        if best is None:
+            return None, stuck
+        moved = stretch(found, best[1], origin, best[2])
+        added.append({"train": "回送", "type": "回送", "calls": moved, "days": [day], "positioning": True})
+    return None, stuck
 
 
 def tracks(found, day, start):
@@ -194,10 +235,25 @@ def line_runs(data, days, stops):
     found, problem = runs(data, days, stops)
     if problem:
         return None, problem
-    start = collections.Counter()
+    # Where the trains stand at midnight: what most weekdays need, if a
+    # positioning run on the others brings a train where it is short (the
+    # Shalun Line's Saturday starts at Shalun, its other days at
+    # Zhongzhou); or else the most each weekday needs at each station.
+    patterns = collections.Counter(tuple(sorted(needs(found, day).items())) for day in range(7))
+    start = collections.Counter(dict(max(patterns, key=lambda p: (patterns[p], -sum(c for _, c in p), p))))
+    rescued = []
     for day in range(7):
-        for station, count in needs(found, day).items():
-            start[station] = max(start[station], count)
+        added, _ = rescue(found, day, start)
+        if added is None:
+            rescued = None
+            break
+        rescued += added
+    if rescued is None:
+        start, rescued = collections.Counter(), []
+        for day in range(7):
+            for station, count in needs(found, day).items():
+                start[station] = max(start[station], count)
+    found += rescued
     for day in range(7):
         idle, stuck = play(found, day, start)
         if stuck:
