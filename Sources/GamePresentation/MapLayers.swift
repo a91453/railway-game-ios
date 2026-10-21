@@ -15,17 +15,22 @@ public struct MapLayerPreferences: Equatable, Hashable, Sendable {
     /// `G.popTravelMode` while `G.popTravelMapLayerEnabled`), or `nil` for
     /// none. Only one at a time, as in the reference's map layer panel.
     public var popTravelMode: PopTravelMode?
+    /// Whether the fares over the stations ("+$12", decision 256) and the
+    /// trips stamped full (decisions 276, 310) are drawn.
+    public var showsFaresAndStamps: Bool
 
     public init(
         showsStationNames: Bool = true,
         showsWaitingCounts: Bool = true,
         showsCatchmentRings: Bool = true,
-        popTravelMode: PopTravelMode? = nil
+        popTravelMode: PopTravelMode? = nil,
+        showsFaresAndStamps: Bool = true
     ) {
         self.showsStationNames = showsStationNames
         self.showsWaitingCounts = showsWaitingCounts
         self.showsCatchmentRings = showsCatchmentRings
         self.popTravelMode = popTravelMode
+        self.showsFaresAndStamps = showsFaresAndStamps
     }
 
     /// Whether the population grid is drawn (the reference's
