@@ -11,7 +11,7 @@ import GameCore
 ///
 /// Their colours are their own (``TrainLivery``, the reference's garage
 /// models for the locomotives and the railcars), baked in, so they do not
-/// take the line's colour.
+/// take the line's colour. The locomotives are ``Map3DTrainLocomotive``.
 public struct Map3DTrainSet: Sendable {
     /// The type's code (``TrainTypeSpec/code``) or, for a train whose type
     /// has no style, its performance's (``TrainPerformanceSpec/code``).
@@ -49,15 +49,15 @@ public struct Map3DTrainSet: Sendable {
         return [
             // The locomotive-hauled sets (decision 252): the coaches behind
             // their locomotive, the last coach's end lit red.
-            hauled("E200CK", locomotive: .init(modern: true, variant: 5, color: 0xE57939, accent: 0xE8DFB9), coach: chuKuang),
-            hauled("E500CK", locomotive: .init(modern: true, variant: 5, color: 0xF07532, accent: 0x333F42), coach: chuKuang),
-            hauled("R100CK", locomotive: .init(modern: false, variant: 4, color: 0xDF753B, accent: 0xEAE6D3), coach: chuKuang),
-            hauled("R200CK", locomotive: .init(modern: true, variant: 5, color: 0xEBEDEA, accent: 0x283944), coach: chuKuang),
+            hauled("E200CK", locomotive: .e200, coach: chuKuang),
+            hauled("E500CK", locomotive: .e500, coach: chuKuang),
+            hauled("R100CK", locomotive: .r100, coach: chuKuang),
+            hauled("R200CK", locomotive: .r200, coach: chuKuang),
             // Decision 286: the Blue Train's R135 and its old blue coaches.
-            hauled("BLUE", locomotive: .init(modern: false, variant: 4, color: 0x232E48, accent: 0xEEEDE4),
+            hauled("BLUE", locomotive: .r135,
                    coach: coach(TrainLivery.blueTrain, band: 0.38...0.43)),
             // The push-pull Tze-Chiang: an E1000 power car at each end.
-            hauled("pushPull", locomotive: .init(modern: true, variant: 5, color: 0xD8DDDB, accent: 0xE66D2F),
+            hauled("pushPull", locomotive: .e1000,
                    coach: coach(body: 0xC9CECC, band: 0xED822A), lastIsLocomotive: true),
             // The multiple units, by their performance (decision 237).
             multipleUnit("puyuma", asset: "01_TRA_modern_3x2-02", livery: TrainLivery.puyuma),
@@ -103,21 +103,9 @@ public struct Map3DTrainSet: Sendable {
 
     // MARK: Building
 
-    struct Locomotive {
-        var modern: Bool
-        var variant: Int
-        var color: UInt32
-        var accent: UInt32
-    }
-
-    static func hauled(_ key: String, locomotive: Locomotive, coach: Coach, lastIsLocomotive: Bool = false) -> Map3DTrainSet {
+    static func hauled(_ key: String, locomotive: Map3DTrainLocomotive, coach: Coach, lastIsLocomotive: Bool = false) -> Map3DTrainSet {
         Map3DTrainSet(key: key) {
-            var engine = SceneKitBuilder()
-            engine.locomotive(variant: locomotive.variant, modern: locomotive.modern,
-                              color: Map3DColor.rgb(locomotive.color), accent: Map3DColor.rgb(locomotive.accent),
-                              roof: Map3DTrainStyle.roofColour)
-            engine.locomotiveSides(locomotive)
-            let head = Map3DModelPack.Model.flat(named: key, from: engine.mesh)
+            let head = locomotive.model
             let middle = baked(SceneKitCab.coach(style: coach.style, named: key), tint: coach.tint)
             return Cars(head: head, middle: middle, tail: lastIsLocomotive ? nil : tailCoach(coach, named: key), single: nil)
         }
@@ -201,28 +189,3 @@ extension Map3DModelPack.Model {
                                     minimum: Map3DPoint(-maximum.x, -maximum.y, minimum.z), maximum: Map3DPoint(-minimum.x, -minimum.y, maximum.z))
     }
 }
-
-extension SceneKitBuilder {
-    /// A locomotive's sides, so it reads as one and not as a crate: the
-    /// cab windows, a band in its second colour along the body and the
-    /// grilles of its engine room (the reference's garage models: E200's
-    /// cream band, the hood units' cab and louvres).
-    mutating func locomotiveSides(_ locomotive: Map3DTrainSet.Locomotive) {
-        let accent = Map3DColor.rgb(locomotive.accent)
-        let grille = Map3DColor.shaded(Map3DColor.rgb(locomotive.color), 0.62)
-        if locomotive.modern {
-            // A box cab at each end: the windows behind each windscreen.
-            for x: Float in [-6.4, 6.4] { box(x, 2.45, 0, 1.1, 2.84, 0.85, Map3DTrainStyle.glass) }
-            box(0, 1.75, 0, 15.9, 2.83, 0.28, accent)
-            for x: Float in [-3.2, 0, 3.2] { box(x, 2.45, 0, 2.2, 2.84, 0.9, grille) }
-        } else {
-            // A hood unit: the cab's windows on every side, the hood's
-            // louvres and a band along its foot.
-            box(5.2, 2.75, 0, 2.6, 2.84, 0.8, Map3DTrainStyle.glass)
-            box(5.2, 2.75, 0, 3.84, 1.9, 0.8, Map3DTrainStyle.glass)
-            box(-1.9, 1.35, 0, 11.3, 2.24, 0.25, accent)
-            for x: Float in [-6, -3.4, -0.8, 1.8] { box(x, 2.0, 0, 1.8, 2.24, 0.95, grille) }
-        }
-    }
-}
-

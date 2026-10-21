@@ -9,8 +9,8 @@ final class Map3DTrainSetTests: XCTestCase {
     private let pack = Map3DModelPack.standard
 
     /// Every set's cars are in the pack: a car's length and width, on the
-    /// rail, in their own colours (none takes the line's), lit at the right
-    /// end.
+    /// rail, up to a lowered pantograph's height, in their own colours (none
+    /// takes the line's), lit at the right end.
     func testEverySetsCarsAreInThePack() throws {
         for set in Map3DTrainSet.all {
             var names = [set.headName, set.middleName]
@@ -22,7 +22,7 @@ final class Map3DTrainSetTests: XCTestCase {
                 XCTAssertTrue((17...21).contains(model.length), "\(name): \(model.length) m long")
                 XCTAssertEqual(model.maximum.y - model.minimum.y, 2.95, accuracy: 0.1, name)
                 XCTAssertEqual(model.minimum.z, 0, accuracy: 0.1, "\(name) stands on the rail")
-                XCTAssertTrue((3.6...4.2).contains(model.maximum.z), "\(name): \(model.maximum.z) m tall")
+                XCTAssertTrue((3.6...4.6).contains(model.maximum.z), "\(name): \(model.maximum.z) m tall")
                 XCTAssertTrue(model.vertices.allSatisfy { $0.color >> 24 == 0xFF }, "\(name) keeps its own colours")
                 XCTAssertTrue(model.vertices.allSatisfy { abs(Map3DPoint($0.nx, $0.ny, $0.nz).length - 1) < 1e-3 }, name)
             }

@@ -104,18 +104,19 @@ extension SceneKitBuilder {
         }
     }
 
-    mutating func locomotive(variant: Int,modern: Bool,color: UInt32 = Map3DPalette.templeRoof,accent: UInt32 = Map3DPalette.tileWhite,roof: UInt32 = Self.ink) {
+    mutating func locomotive(variant: Int,modern: Bool) {
+        let color=Map3DPalette.templeRoof
         box(0,0.5,0,17.5,2.9,0.7,Map3DTrainStyle.under)
         if modern || variant==5 {
             box(0,1.2,0,15.9,2.8,2.7,color)
-            box(6.9,1.2,0,2.3,2.9,2.7,accent)
+            box(6.9,1.2,0,2.3,2.9,2.7,Map3DPalette.tileWhite)
             box(8.08,2.25,0,0.08,2.1,1.15,Map3DTrainStyle.glass)
-            box(0,3.9,0,15.4,2.8,0.16,roof)
+            box(0,3.9,0,15.4,2.8,0.16,Self.ink)
         } else {
             box(-1.9,1.2,0,11.3,2.2,2.15,color)
             box(5.2,1.2,0,3.8,2.8,2.9,color)
             box(7.14,2.55,0,0.08,2.1,1,Map3DTrainStyle.glass)
-            box(-1.9,3.35,0,11,2.25,0.12,roof)
+            box(-1.9,3.35,0,11,2.25,0.12,Map3DPalette.tileWhite)
         }
         for x: Float in [-5,5] { for z: Float in [-1.2,1.2] { for dx: Float in [-0.75,0.75] {
             wheel(x+dx,0.55,z,radius:0.5,width:0.2)

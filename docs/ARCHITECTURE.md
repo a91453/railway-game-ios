@@ -14349,23 +14349,30 @@ session_0125dMtwyMdz7mzoBCRNa1pn 預約（#231）。這一節由那個 PR 填寫
 
 （2026-10-21，3D session_01Y25x9NJSKmAuP1M1K3Sf3C，遊戲規劃派工；預覽 `docs/art/map3d-train-sets-2026-10-21/`）
 
-**做什麼**：決策 230 的 3D 列車只有車型有樣式時近看才是模型，其他都是方塊。這次照 #900 的原生程序化列車（`Map3DSceneKit*.swift`，只帶進程式與 `manifest.json`，圖片與 GLB 留在私有參考庫）給這些列車各做一套模型：
+**做什麼**：決策 230 的 3D 列車只有車型有樣式時近看才是模型，其他都是方塊。這次照 #900 的原生程序化列車與參考庫的 E201、車庫機車（`Map3DSceneKit*.swift`，只帶進程式與 `manifest.json`，圖片與 GLB 留在私有參考庫）給這些列車各做一套模型：
 
 - **一套** = 頭車、中間車、最後一節（`Map3DTrainSet`，模型名 `set-<key>-head／car／tail／single`），接在 `Map3DModelPack.standard` 的最後面，原本的模型 index 不變。
-- **牽引的列車**：莒光號 E200、E500（現代箱型機車）、R100（舊型車頭在一端）、R200 拖莒光號客車；藍皮是 R135 拖藍色客車。第 1 節是機車，中間是客車，最後一節是有尾門與兩盞紅尾燈的客車。
+- **牽引的列車**：莒光號 E200、E500、R100、R200 拖莒光號客車；藍皮是 R135 拖藍色客車。第 1 節是機車，中間是客車，最後一節是有尾門與兩盞紅尾燈的客車。
+- **機車**（`Map3DTrainLocomotive`）：每款一個造型、照參考庫的原塗裝（作者 2026-10-21：「照原有配色 反正模型都換了」）。比例與零件取自私有庫 `Simulator/reference_snapshot/models/tra-e201/tra-e201.glb`（上下兩色、車頂格柵、礙子與兩支集電弓、三軸台車、黃色排障器）與車庫規格（集電弓數、軸數、側面格柵片數、車頭型式），用方塊與細桿重新組成，沒有搬原模型的頂點：
+  - E200：上半米白、下半橘、米白裡一條橘線，兩端駕駛室，兩支集電弓。
+  - E500：整台橘，側面一排深色格柵，兩支集電弓。
+  - R100：橘色長車頭，米白細線與扶手欄杆，駕駛室靠前，短鼻。
+  - R200：白車身，一端駕駛室，引擎室一條深色格柵帶，車頂三個散熱風扇。
+  - R135：深藍，白線與扶手，短鼻上黃黑 V 紋。
+  - E1000 動力車：白車身，橘色車頭與一條橘色格柵帶，一支集電弓，後端是接客車的貫通門。
 - **推拉式自強號**：E1000 動力車在兩端（最後一節是頭車轉過來）。
 - **電聯車**：普悠瑪、太魯閣、EMU800 用 #900 的車頭與 `Map3DTrainBuilder` 的中間車，最後一節是自己的尾車。
 - **柴油客車**：1–2 節是 DR1000（單節時兩端都有駕駛台），3 節以上是 DR3100。柴油客車與柴油自強號的性能曲線相同，分不出來，所以照節數挑。
 - **哪一套**：列車的車型代號有樣式或有一套就用它；沒有車型時照性能（普悠瑪、太魯閣、四種莒光號的性能各對到自己的一套）；都沒有就是方塊。`Map3DTrains.Heights` 記下每列車的 key。
 - **顏色**：參考庫車庫規格（`garage-blender-v1/*.json` 的 `specification.body`／`accent`）與 `TrainLivery` 的塗裝；模型自己的顏色，不吃路線色。
-- **量**：33 個模型、19,704 個三角形，啟動時建一次（debug 0.29 秒）；整包從約 20 個模型、5.3 千個三角形變成 53 個、25,050 個。只有近處（`modelReach`）的車是模型，實例數不變，每個模型一個 draw。
+- **量**：33 個模型、24,460 個三角形（每個 236–1,770；機車 1,064–1,420），啟動時建一次；整包從約 20 個模型、5.3 千個三角形變成 53 個、29,806 個。只有近處（`modelReach`）的車是模型，實例數不變，每個模型一個 draw。
 - **還是方塊**：磁浮、懸吊、單軌、蒸汽（參考庫與 #900 都沒有合適的做法）、貨車。
 
 **五個角度**：
 - 玩家：莒光號、藍皮、普悠瑪、太魯閣近看是自己的樣子，不再是一排白盒子；最後一節有尾燈，看得出車頭往哪走。
-- 鐵道迷：牽引的列車有機車與客車之分，E1000 動力車在兩端、DR1000 單節兩端都有駕駛台，顏色照參考庫車庫規格（出自照片）；不準的地方：E200、E500 用同一個箱型車頭，R100、R135 用同一個舊型車頭，機車與客車同長（車輛位置是 GameCore 算的），機車佔掉一節客車的位置。
-- 開發：只動 GamePresentation 與它的測試；GameCore、存檔、golden、replay 不動；#900 的六個 Swift 檔照原樣帶進來，只把機車的車頂、車頂顏色改成參數，車種的做法整理成 `trainRecipe`；新測試 `Map3DTrainSetTests` 6 個、`Map3DSceneKitTests` 7 個。
-- 美術：平塗頂點色、方塊與圓角，和決策 230 的通勤車並排看不突兀（預覽）；機車頂改成灰色車頂，不用 #900 的深藍（看起來像貨櫃）；這些模型是 AI 生成的素材表照著寫成程式的（README 標明）。
+- 鐵道迷：牽引的列車有機車與客車之分，E1000 動力車在兩端、DR1000 單節兩端都有駕駛台，六款機車各有自己的造型與原塗裝（E201 的上下兩色、R135 的黃黑 V 紋），顏色照參考庫車庫規格（出自照片）；不準的地方：機車拉長到和客車同長（車輛位置是 GameCore 算的）、佔掉一節客車的位置，集電弓畫成降下的樣子。
+- 開發：只動 GamePresentation 與它的測試；GameCore、存檔、golden、replay 不動；#900 的六個 Swift 檔照原樣帶進來，只把車種的做法整理成 `trainRecipe`；機車另寫在 `Map3DTrainLocomotives.swift`；新測試 `Map3DTrainSetTests` 6 個、`Map3DSceneKitTests` 7 個。
+- 美術：平塗頂點色、方塊與圓角，和決策 230 的通勤車並排看不突兀（預覽）；機車照參考庫的原塗裝（作者要的），零件細到集電弓、扶手，但仍是方塊組成；電聯車與客車是 AI 生成的素材表照著寫成程式的（README 標明）。
 - 音樂：無。
 
 **沒有選的做法**（預覽在 `docs/art/map3d-train-sets-2026-10-21/`，上半是方塊）：
@@ -14373,6 +14380,9 @@ session_0125dMtwyMdz7mzoBCRNa1pn 預約（#231）。這一節由那個 PR 填寫
 - **整個合併 #900**：81 MB（62 MB PNG、11 MB GLB），App 用不到圖片；只帶需要的 Swift 檔。
 - **讀 #900 的 GLB 或 m3dmodel**：要打包檔案、多一條讀檔路徑；程式蓋的模型同樣是那份做法，App 少十幾 MB。
 - **只換顏色（方塊上色）**：便宜，但看不出機車與客車、車頭朝向。
+- **#900 的通用機車上色**（這個 PR 的第一版）：E200、E500 同一個箱型、R100、R135 同一個舊型，車頂平的；作者看了 E201 之後要照原配色、換成各自的造型。
+- **直接放 E201 的 GLB**：最像；但 35,724 個三角形是一節車預算的 30 倍，而且原模型照搬不合 art-style §7。
+- **調色盤的顏色代替原塗裝**：和城市更一致；作者選了原配色。
 
 **參考與來源**：
 
@@ -14380,7 +14390,8 @@ session_0125dMtwyMdz7mzoBCRNa1pn 預約（#231）。這一節由那個 PR 填寫
 | --- | --- | --- |
 | #900 `Sources/GamePresentation/Map3DSceneKit*.swift`（私有參考庫 `Railway/generated-3d-assets-2026-10-21/scene-kit-pr900/`） | 原生程序化列車、機車、車頭的做法 | 照原樣帶進來；`trainRecipe`、`locomotive(... roof:)` |
 | #900 `docs/art/generated-2026-10-21-scene-kit/manifest.json` | 素材表的座標、描述、SHA-256 | `Map3DSceneKitTests` |
-| 參考庫 `Railway/taiwan-rail-reference-clean/source/rail-3d/assets/garage-blender-v1/*.json` | e200、e500、r100、r200、blue、bluecoach、juguang、ppcoach、e1000、dr1000、dr3100 的車身與飾帶色 | `Map3DTrainSet.all` |
+| 參考庫 `Simulator/reference_snapshot/models/tra-e201/tra-e201.glb`（35,724 個三角形、12 個材質、無貼圖） | E201 的上下兩色與分界、車頂格柵、礙子、集電弓與高壓線的配置、三軸台車、黃色排障器（看比例，不取頂點） | `Map3DTrainLocomotive.e200`、`pantographs`、`running` |
+| 參考庫 `Railway/taiwan-rail-reference-clean/source/rail-3d/assets/garage-blender-v1/*.json`、`*.webp` | e200、e500、r100、r200、blue、bluecoach、juguang、ppcoach、e1000、dr1000、dr3100 的車身與飾帶色；`pantos`、`axles`、`sideVentPanels`、`front`；縮圖看各款的造型（R100 欄杆、R135 的 V 紋、R200 的風扇） | `Map3DTrainSet.all`、`Map3DTrainLocomotive` |
 | 外部專案 | 沒有找（列車外型的做法已在 #900） | — |
 
 **驗證**：
