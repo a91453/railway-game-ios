@@ -634,7 +634,9 @@ struct TrackRise {
     /// line within the grade keeps to them all (the ground the game reads
     /// is coarser than the real line's: a bridge over a narrow valley
     /// stands on the valley's sides), the pieces whose bounds clash are let
-    /// go, one clash at a time, before the water's are put in tunnels.
+    /// go, one clash at a time, before the water's are put in tunnels: of a
+    /// clash between a structure and the ground beside it, the ground's
+    /// first (a low bridge's approach climbs off the ground to it).
     static let carriedHeight = 10.0 * RealWorldDemo.metre
     static let carriedDepth = 13.0 * RealWorldDemo.metre
     static let carriedInset = 64.0 * RealWorldDemo.metre
@@ -650,6 +652,12 @@ struct TrackRise {
         let indices: ClosedRange<Int>
         let low: Double
         let high: Double
+
+        /// Whether it keeps the track within ``surfaceBand`` of the
+        /// ground, not on or in a structure.
+        var isOnGround: Bool {
+            low == TrackRise.surfaceBand.low && high == TrackRise.surfaceBand.high
+        }
     }
 
     /// `nil` where no line within the grade keeps to `levels` (a traced
@@ -747,11 +755,14 @@ struct TrackRise {
                     stuck = failure
                 }
                 // Decision 279: the real line's bounds that clash there let
-                // go first.
+                // go first, the ground's before a structure's: where a
+                // bridge or a tunnel clashes with the ground beside it, the
+                // track leaves the ground to keep to the real structure.
                 let clash = Self.clash(at: stuck.index, low: low, high: high, steps: steps)
                 let clashing = kept.indices.filter { kept[$0].indices.contains(clash.low) || kept[$0].indices.contains(clash.high) }
+                let onGround = clashing.filter { kept[$0].isOnGround }
                 if !clashing.isEmpty {
-                    for index in clashing.reversed() {
+                    for index in (onGround.isEmpty ? clashing : onGround).reversed() {
                         kept.remove(at: index)
                     }
                     continue
