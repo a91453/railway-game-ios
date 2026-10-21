@@ -548,16 +548,13 @@ final class RealWorldMapUITests: XCTestCase {
             ("place.tra-taipei", app.collectionViews.firstMatch), ("realWorld.start", nil),
         ] as [(String, XCUIElement?)] {
             let button = app.buttons.matching(identifier: identifier).firstMatch
-            // The new game's page, once it has slid up: scrolled in its own
-            // scroll view where that is exposed, then tapped by the button,
-            // which XCTest scrolls into view itself. On an iPad the first
-            // scroll view holding it never brought it into view (run
-            // 39574256715).
+            // The new game's page, once it has slid up, tapped by the button,
+            // which XCTest scrolls into view itself. Dragged as the screens
+            // are, it never came into view on an iPad, and on an iPhone the
+            // drags closed the sheet (run 39574256715).
             if identifier == "newGame.realWorld" {
                 XCTAssertTrue(button.appears(within: 10), "Missing button: newGame.realWorld")
                 button.waitUntilSettled()
-                let page = app.scrollViews["newGame.page"]
-                if page.exists { _ = app.scrollUntilShown(button, in: page) }
                 let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: button)
                 XCTAssertEqual(XCTWaiter().wait(for: [enabled], timeout: 15), .completed, "newGame.realWorld never became enabled")
                 button.tap()

@@ -598,9 +598,6 @@ private struct NewGamePicker: View {
                 .padding()
                 .frame(maxWidth: .infinity)
             }
-            // The UI tests scroll the cards in it, not in the start screen
-            // behind the sheet.
-            .accessibilityIdentifier("newGame.page")
             .background(Theme.background)
             .navigationTitle("New Game")
             .navigationBarTitleDisplayMode(.inline)
