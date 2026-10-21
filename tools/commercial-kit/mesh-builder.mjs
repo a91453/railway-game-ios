@@ -360,16 +360,40 @@ export class MeshBuilder {
     }
   }
 
-  addModelAt(otherMesh, x, y, z, angle = 0) {
+  paneZ(x, y, z, length, height, frameColor = PALETTE.tileWhite, glassColor = PALETTE.glazing) {
+    this.box(x, y, z, length + 0.16, 0.10, height + 0.16, frameColor);
+    this.addQuadBuilder(
+      [x - length / 2, y + 0.08, z + 0.057],
+      [x + length / 2, y + 0.08, z + 0.057],
+      [x + length / 2, y + height + 0.08, z + 0.057],
+      [x - length / 2, y + height + 0.08, z + 0.057],
+      glassColor
+    );
+  }
+
+  paneBack(x, y, z, width, height, frameColor = PALETTE.tileWhite, glassColor = PALETTE.glazing) {
+    this.box(x, y, z, 0.10, width + 0.16, height + 0.16, frameColor);
+    this.addQuadBuilder(
+      [x - 0.057, y + 0.08, z + width / 2],
+      [x - 0.057, y + height + 0.08, z + width / 2],
+      [x - 0.057, y + height + 0.08, z - width / 2],
+      [x - 0.057, y + 0.08, z - width / 2],
+      glassColor
+    );
+  }
+
+  addModelAt(otherMesh, bx, by, bz, angle = 0) {
+    const [tx, ty, tz] = this.toNative(bx, by, bz);
     const cosA = Math.cos(angle), sinA = Math.sin(angle);
     const count = otherMesh.vertices.length;
     for (let i = 0; i < count; i += 3) {
       const tri = [otherMesh.vertices[i], otherMesh.vertices[i + 1], otherMesh.vertices[i + 2]];
       const rotated = tri.map(v => {
-        // Native rotation around +z (up)
-        const rx = cosA * v.x - sinA * v.y + x;
-        const ry = sinA * v.x + cosA * v.y + y;
-        const rz = v.z + z;
+        // v is in native coordinates (+x front, +y left, +z up)
+        // Rotation around native +z axis (vertical)
+        const rx = cosA * v.x - sinA * v.y + tx;
+        const ry = sinA * v.x + cosA * v.y + ty;
+        const rz = v.z + tz;
         return [rx, ry, rz];
       });
       this.addNativeTriangle(rotated[0], rotated[1], rotated[2], tri[0].color, tri[0].glows);

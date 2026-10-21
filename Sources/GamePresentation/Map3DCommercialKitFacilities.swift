@@ -34,10 +34,21 @@ extension StationKitBuilder {
             }
 
         case .aFrameSign:
-            box(0, 0, 0, 0.58, 0.78, 1.10, Self.commWarmWood)
-            box(0, 0.18, 0, 0.62, 0.65, 0.78, Self.commDark)
-            box(0.32, 0.35, 0, 0.02, 0.50, 0.55, Self.commYellow)
-            beam(Map3DPoint(-0.18, 0.45, 0), Map3DPoint(0.18, 0.45, 0), 0.02, Self.steel)
+            let width: Float = 0.65, height: Float = 1.05, spread: Float = 0.28
+            for lx: Float in [-spread, spread] {
+                for lz: Float in [-width / 2 + 0.04, width / 2 - 0.04] {
+                    box(lx, 0, lz, 0.05, 0.05, 0.18, Self.commWarmWood)
+                }
+            }
+            mesh.addQuad(Map3DPoint(spread, 0.15, -width / 2), Map3DPoint(spread, 0.15, width / 2),
+                         Map3DPoint(0, height, width / 2), Map3DPoint(0, height, -width / 2), color: Self.commWarmWood)
+            mesh.addQuad(Map3DPoint(-spread, 0.15, width / 2), Map3DPoint(-spread, 0.15, -width / 2),
+                         Map3DPoint(0, height, -width / 2), Map3DPoint(0, height, width / 2), color: Self.commWarmWood)
+            cylinder(0, height, 0, radius: 0.03, height: width, color: Self.commChrome, sides: 8)
+            box(spread * 0.55 + 0.01, 0.55, 0, 0.01, 0.36, 0.40, Self.commYellow)
+            box(-spread * 0.55 - 0.01, 0.55, 0, 0.01, 0.36, 0.40, Self.commWarmGlow)
+            beam(Map3DPoint(-spread * 0.65, 0.40, -width / 2 + 0.05), Map3DPoint(spread * 0.65, 0.40, -width / 2 + 0.05), 0.02, Self.steel)
+            beam(Map3DPoint(-spread * 0.65, 0.40, width / 2 - 0.05), Map3DPoint(spread * 0.65, 0.40, width / 2 - 0.05), 0.02, Self.steel)
 
         case .commercialBannerPole:
             cylinder(0, 0, 0, radius: 0.22, height: 0.45, color: Self.commConcrete, sides: 8)
@@ -68,9 +79,14 @@ extension StationKitBuilder {
 
             for i in 0..<4 {
                 let a = Float(i) * 2 * Float.pi / 4.0
-                let cx = cosf(a) * 1.05, cz = sinf(a) * 1.05
-                cylinder(cx, 0, cz, radius: 0.24, height: 0.45, color: Self.commWarmWood, sides: 8)
-                cylinder(cx * 1.15, 0.45, cz * 1.15, radius: 0.24, height: 0.40, color: Self.steel, sides: 8)
+                let cx = cosf(a) * 1.15, cz = sinf(a) * 1.15
+                box(cx, 0.42, cz, 0.45, 0.45, 0.06, Self.commWarmWood)
+                for lx: Float in [-0.18, 0.18] {
+                    for lz: Float in [-0.18, 0.18] {
+                        cylinder(cx + lx, 0, cz + lz, radius: 0.02, height: 0.42, color: Self.steel, sides: 6)
+                    }
+                }
+                box(cx + cosf(a) * 0.18, 0.48, cz + sinf(a) * 0.18, 0.05, 0.42, 0.38, Self.steel)
             }
 
         case .commercialPlanter:
@@ -99,75 +115,126 @@ extension StationKitBuilder {
             cylinder(0, 2.60, 0, radius: 0.88, height: 0.06, color: Self.steel, sides: 8)
 
         case .fireEscapeStair:
-            box(1.0, 3.2, 0, 2.0, 1.8, 0.12, Self.steel)
-            box(2.0, 3.32, 0, 0.08, 1.8, 0.9, Self.steel)
-            box(1.0, 3.32, -0.9, 2.0, 0.08, 0.9, Self.steel)
-            stairs(1.0, 0, 1.8, run: 2.8, width: 1.1, rise: 3.2)
-            for hy: Float in [0.5, 3.2] {
-                box(0.2, hy, -0.8, 0.4, 0.12, 0.12, Self.steel)
-                box(0.2, hy, 0.8, 0.4, 0.12, 0.12, Self.steel)
+            let height: Float = 3.8
+            let colR: Float = 0.06
+
+            for cx: Float in [0.1, 2.3] {
+                for cz: Float in [-0.75, 0.75] {
+                    cylinder(cx, 0, cz, radius: colR, height: height, color: Self.steel, sides: 8)
+                }
             }
+            for wy: Float in [0.5, 1.8, 3.6] {
+                for wz: Float in [-0.75, 0.75] {
+                    box(0.05, wy, wz, 0.25, 0.12, 0.12, Map3DPalette.tankStand)
+                }
+            }
+            box(1.2, 1.8, 0, 2.2, 1.5, 0.10, Self.steel)
+            box(2.28, 1.9, 0, 0.04, 1.5, 0.95, Self.steel)
+            box(1.2, 1.9, -0.73, 2.2, 0.04, 0.95, Self.steel)
+
+            box(1.2, 3.6, 0, 2.2, 1.5, 0.10, Self.steel)
+            box(2.28, 3.7, 0, 0.04, 1.5, 0.95, Self.steel)
+            box(1.2, 3.7, -0.73, 2.2, 0.04, 0.95, Self.steel)
+            box(1.2, 3.7, 0.73, 2.2, 0.04, 0.95, Self.steel)
+
+            let steps = 8
+            let runL: Float = 2.0, stairW: Float = 0.65
+            for i in 0..<steps {
+                let t = (Float(i) + 0.5) / Float(steps)
+                let sy = t * 1.8
+                let sx = 0.2 + t * runL
+                box(sx, sy, 0.35, runL / Float(steps) + 0.02, stairW, 0.08, Self.steel)
+            }
+            beam(Map3DPoint(0.2, 0.1, 0.70), Map3DPoint(2.2, 1.8, 0.70), 0.05, Self.steel)
+            beam(Map3DPoint(0.2, 0.95, 0.70), Map3DPoint(2.2, 2.65, 0.70), 0.04, Self.steel)
+
+            for i in 0..<steps {
+                let t = (Float(i) + 0.5) / Float(steps)
+                let sy = 1.8 + t * 1.8
+                let sx = 2.2 - t * runL
+                box(sx, sy, -0.35, runL / Float(steps) + 0.02, stairW, 0.08, Self.steel)
+            }
+            beam(Map3DPoint(2.2, 1.9, -0.70), Map3DPoint(0.2, 3.6, -0.70), 0.05, Self.steel)
+            beam(Map3DPoint(2.2, 2.75, -0.70), Map3DPoint(0.2, 4.45, -0.70), 0.04, Self.steel)
 
         case .transitFeederBus:
-            let length: Float = 10.4, width: Float = 2.5, wheelR: Float = 0.46
-            let chassisY: Float = 0.35
+            let length: Float = 10.4, width: Float = 2.5, wheelR: Float = 0.48
+            let halfL = length / 2, halfW = width / 2
 
-            box(0, chassisY, 0, length, width, 0.85, Self.commWarmWhite)
-            box(0, chassisY, 0, length + 0.15, width + 0.05, 0.22, Self.commDarkRoof)
+            box(0, 0.22, 0, length - 0.2, width - 0.12, 0.53, Self.commDarkRoof)
+            box(4.35, 0.22, 0, 1.7, width, 0.56, Map3DPalette.tileWhite)
+            box(0, 0.22, 0, 4.6, width, 0.56, Map3DPalette.tileWhite)
+            box(-4.35, 0.22, 0, 1.7, width, 0.56, Map3DPalette.tileWhite)
 
-            box(0, chassisY + 0.35, -width / 2 - 0.015, length * 0.85, 0.03, 0.35, Self.commBusGreen)
-            box(0, chassisY + 0.35, width / 2 + 0.015, length * 0.85, 0.03, 0.35, Self.commBusGreen)
+            for mx: Float in [-4.2, -1.2, 1.2, 4.2] {
+                for sign: Float in [-1, 1] {
+                    box(mx, 0.36, sign * (halfW + 0.01), 0.12, 0.02, 0.05, Self.commOrange)
+                }
+            }
 
-            box(0, chassisY + 0.85, 0, length, width, 1.35, Self.commDarkGlass)
+            box(0, 0.78, 0, length, width, 0.40, Self.commBusGreen)
+            box(0, 1.18, 0, length, width - 0.04, 1.20, Self.commDarkGlass)
+
             for i in -3...3 {
                 let px = Float(i) * 1.35
-                box(px, chassisY + 0.85, -width / 2, 0.12, 0.04, 1.35, Self.commDark)
-                box(px, chassisY + 0.85, width / 2, 0.12, 0.04, 1.35, Self.commDark)
+                box(px, 1.18, halfW, 0.10, 0.05, 1.20, Self.commDark)
+            }
+            box(3.2, 1.78, halfW + 0.01, 1.4, 0.03, 0.06, Self.steel)
+
+            for dx: Float in [3.3, -0.6] {
+                box(dx, 0.28, -halfW, 1.24, 0.08, 2.08, Self.commDark)
+                box(dx - 0.30, 0.32, -halfW - 0.01, 0.56, 0.04, 1.98, Self.commDarkGlass)
+                box(dx + 0.30, 0.32, -halfW - 0.01, 0.56, 0.04, 1.98, Self.commDarkGlass)
+                cylinder(dx, 0.35, -halfW + 0.22, radius: 0.025, height: 1.9, color: Self.commYellow, sides: 6)
+            }
+            for px: Float in [1.35, -2.4, -3.8] {
+                box(px, 1.18, -halfW, 0.10, 0.05, 1.20, Self.commDark)
             }
 
-            box(0, chassisY + 2.20, 0, length, width, 0.40, Self.commWarmWhite)
-            commAwning(length / 2 - 0.9, chassisY + 2.25, 0, length: 1.8, width: width, rise: 0.35, color: Self.commWarmWhite)
+            box(0, 2.38, 0, length, width, 0.24, Map3DPalette.tileWhite)
+            box(1.1, 2.62, 0, 6.2, width - 0.35, 0.42, Self.commBusGreen)
+            commAwning(4.45, 2.62, 0, length: 0.8, width: width - 0.35, rise: 0.40, color: Self.commBusGreen)
+            box(0.5, 3.05, 0, 3.8, width - 0.65, 0.04, Self.commDarkRoof)
 
-            pane(length / 2 + 0.08, chassisY + 0.85, 0, width - 0.35, 1.35)
-            box(length / 2 + 0.02, chassisY + 2.25, 0, 0.25, 1.8, 0.32, Self.commDarkRoof)
-            box(length / 2 + 0.15, chassisY + 2.27, 0, 0.02, 1.6, 0.24, Self.commYellow)
-
-            for sign: Float in [-0.95, 0.95] {
-                cylinder(length / 2 + 0.08, chassisY + 0.35, sign, radius: 0.12, height: 0.05, color: Map3DPalette.tileWhite, sides: 8)
-                cylinder(length / 2 + 0.08, chassisY + 0.52, sign, radius: 0.08, height: 0.05, color: Self.commYellow, sides: 8)
+            box(halfL + 0.08, 0.22, 0, 0.26, width - 0.1, 0.56, Map3DPalette.tileWhite)
+            box(halfL + 0.22, 0.28, 0, 0.02, 0.52, 0.18, Map3DPalette.tileWhite)
+            for sign: Float in [-1, 1] {
+                let hy: Float = 0.50, hz = sign * (halfW - 0.35)
+                box(halfL + 0.21, hy, hz, 0.03, 0.38, 0.18, Self.commDark)
+                cylinder(halfL + 0.22, hy, hz - sign * 0.08, radius: 0.065, height: 0.03, color: Map3DPalette.tileWhite, sides: 8)
+                cylinder(halfL + 0.22, hy, hz + sign * 0.08, radius: 0.045, height: 0.03, color: Self.commYellow, sides: 8)
             }
-            box(length / 2 + 0.08, chassisY + 0.35, 0, 0.04, 1.1, 0.32, Self.commDark)
-            box(length / 2 + 0.11, chassisY + 0.25, 0, 0.02, 0.55, 0.18, Self.commWarmWhite)
+            box(halfL + 0.08, 0.78, 0, 0.18, width - 0.1, 0.40, Self.commDark)
+            pane(halfL + 0.06, 1.18, 0, width - 0.25, 1.18)
+            box(halfL + 0.08, 2.38, 0, 0.16, 1.8, 0.22, Self.commDarkRoof)
+            box(halfL + 0.17, 2.40, 0, 0.02, 1.65, 0.18, Self.commYellow)
 
             for sign: Float in [-1, 1] {
-                let mz = sign * (width / 2 + 0.35)
-                beam(Map3DPoint(length / 2 - 0.2, chassisY + 2.1, sign * (width / 2)), Map3DPoint(length / 2 + 0.4, chassisY + 1.8, mz), 0.04, Self.commDarkRoof)
-                box(length / 2 + 0.4, chassisY + 1.45, mz, 0.10, 0.18, 0.45, Self.commDarkRoof)
-                box(length / 2 + 0.35, chassisY + 1.47, mz, 0.02, 0.14, 0.40, Self.commChrome)
+                let mz = sign * (halfW + 0.25)
+                beam(Map3DPoint(halfL - 0.2, 2.50, sign * halfW), Map3DPoint(halfL + 0.35, 2.25, mz), 0.035, Self.commDark)
+                beam(Map3DPoint(halfL + 0.35, 2.25, mz), Map3DPoint(halfL + 0.35, 1.70, mz), 0.035, Self.commDark)
+                box(halfL + 0.35, 1.70, mz, 0.10, 0.14, 0.42, Self.commDark)
+                box(halfL + 0.29, 1.72, mz, 0.02, 0.11, 0.38, Self.commChrome)
             }
 
-            for doorX: Float in [2.8, -0.8] {
-                box(doorX, chassisY, -width / 2 - 0.02, 1.30, 0.06, 1.95, Self.commDarkRoof)
-                pane(doorX, chassisY + 0.35, -width / 2 - 0.03, 1.10, 1.45)
-                cylinder(doorX + 0.3, chassisY + 0.4, -width / 2 + 0.15, radius: 0.03, height: 1.6, color: Self.commYellow, sides: 6)
+            box(-halfL - 0.05, 0.22, 0, 0.15, width - 0.1, 0.56, Map3DPalette.tileWhite)
+            box(-halfL - 0.05, 0.78, 0, 0.15, width - 0.1, 0.40, Self.commBusGreen)
+            pane(-halfL - 0.05, 1.35, 0, width - 0.4, 0.95)
+            for sign: Float in [-1, 1] {
+                let rz = sign * (halfW - 0.25)
+                box(-halfL - 0.06, 0.85, rz, 0.02, 0.16, 0.16, Self.commRed)
+                box(-halfL - 0.06, 0.65, rz, 0.02, 0.16, 0.14, Self.commYellow)
+                box(-halfL - 0.06, 0.48, rz, 0.02, 0.16, 0.12, Map3DPalette.tileWhite)
             }
+            box(-halfL - 0.06, 0.32, 0, 0.02, 0.52, 0.18, Map3DPalette.tileWhite)
 
-            pane(-length / 2 - 0.05, chassisY + 1.25, 0, width - 0.45, 0.95)
-            box(-length / 2 - 0.05, chassisY + 0.45, 0, 0.05, 1.9, 0.65, Self.commDark)
-            for sign: Float in [-0.95, 0.95] {
-                box(-length / 2 - 0.06, chassisY + 0.65, sign, 0.04, 0.14, 0.18, Self.commRed)
-                box(-length / 2 - 0.06, chassisY + 0.45, sign, 0.04, 0.14, 0.18, Self.commYellow)
-                box(-length / 2 - 0.06, chassisY + 0.25, sign, 0.04, 0.14, 0.18, Self.commWarmWhite)
-            }
-
-            box(0, chassisY + 2.60, 0, 3.8, 1.9, 0.45, Self.commWarmWhite)
-            commAwning(1.6, chassisY + 2.65, 0, length: 0.6, width: 1.8, rise: 0.25, color: Self.commWarmWhite)
-            box(0, chassisY + 2.68, 0, 3.2, 1.94, 0.22, Self.commDarkRoof)
-
-            commWheel(2.9, 0, -width / 2 + 0.06, radius: wheelR, width: 0.30)
-            commWheel(2.9, 0, width / 2 - 0.06, radius: wheelR, width: 0.30)
-            commWheel(-2.9, 0, -width / 2 + 0.06, radius: wheelR, width: 0.34)
-            commWheel(-2.9, 0, width / 2 - 0.06, radius: wheelR, width: 0.34)
+            let wheelZOffset = halfW - 0.14
+            commWheel(2.9, 0, -wheelZOffset, radius: wheelR, width: 0.28)
+            commWheel(2.9, 0, wheelZOffset, radius: wheelR, width: 0.28)
+            commWheel(-2.9, 0, -wheelZOffset, radius: wheelR, width: 0.28)
+            commWheel(-2.9, 0, wheelZOffset, radius: wheelR, width: 0.28)
+            cylinder(2.9, wheelR, 0, radius: 0.06, height: width - 0.4, color: Map3DPalette.tankStand, sides: 8)
+            cylinder(-2.9, wheelR, 0, radius: 0.06, height: width - 0.4, color: Map3DPalette.tankStand, sides: 8)
 
         default:
             break

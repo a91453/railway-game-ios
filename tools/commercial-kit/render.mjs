@@ -176,7 +176,13 @@ try {
 
   await sheet('directions.png', '上／下／左／右／前／後／立體｜同一個原生模型', picks.map(m => '<section><h3>' + m.name + '</h3><div class="row">' + Object.entries(m.views).map(([v, p]) => '<div><img src="' + p + '"><p>' + v + '</p></div>').join('') + '</div></section>').join(''));
 
-  const overview = [...examples, ...['departmentStore', 'cinema', 'supermarket', 'cornerOffice', 'yellowCafe', 'gasStation', 'bubbleTeaShop', 'bentoShop', 'ramenYatai', 'nightMarketFryer', 'vendingBank', 'totemLightbox', 'retractableAwning', 'cafeUmbrellaSet', 'transitFeederBus'].map(p => parts.find(m => m.id === 'commercial-' + p))];
+  const overviewParts = [
+    'departmentStore', 'cinema', 'supermarket', 'cornerOffice', 'yellowCafe', 'gasStation',
+    'stackedShopHouse', 'bubbleTeaShop', 'bentoShop', 'bakery', 'pharmacy', 'cornerGrocery',
+    'ramenYatai', 'nightMarketFryer', 'nightMarketFruit', 'vendingBank', 'mobileFoodCart',
+    'totemLightbox', 'aFrameSign', 'transitFeederBus'
+  ].map(p => parts.find(m => m.id === 'commercial-' + p));
+  const overview = [...examples, ...overviewParts];
   await sheet('overview.png', '36 種重組素材 · 商業建築／店鋪餐飲／招牌載具 · 4 個組景', cards(overview));
 
   const under = [];

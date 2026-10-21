@@ -83,22 +83,37 @@ extension StationKitBuilder {
             cylinder(3.0, 7.15, -4.0, radius: 0.95, height: 1.2, color: Self.steel, sides: 8)
 
         case .cornerOffice:
-            box(0, 0, 0, 15, 16, 17, Self.commConcrete)
-            box(7.55, 0, 0, 0.45, 14.0, 16.5, Self.commDarkRoof)
-            commWindowBand(0, 4.2, 0, length: 15, width: 16, floors: 4, bays: 4, frameColor: Self.commDark, glassColor: Self.glass)
-            pane(7.6, 0.45, 0, 11.0, 3.5)
-            box(5.5, 0.45, 0, 1.2, 3.2, 1.1, Self.commWarmWood)
-            box(5.5, 1.55, 0, 0.1, 2.8, 0.6, Self.commWarmGlow)
+            let width: Float = 16, depth: Float = 15
+            let halfD = depth / 2
 
-            commAwning(8.8, 4.2, 0, length: 2.6, width: 7.5, rise: 0.25, color: Self.commDarkRoof)
-            for pz: Float in [-3.2, 3.2] {
-                box(9.8, 0, pz, 0.25, 0.25, 4.2, Self.commChrome)
+            box(0, 0, 0, depth, width, 0.25, Self.commConcrete)
+            box(0, 0.25, 0, depth - 0.2, width - 0.2, 4.0, Self.commWarmWhite)
+            pane(halfD - 0.05, 0.45, 0, width - 3.0, 3.6)
+            pane(halfD + 0.02, 0.45, 0, 2.8, 2.8)
+            box(halfD - 2.5, 0.45, 0, 1.2, 3.2, 1.1, Self.commWarmWood)
+            box(halfD - 2.5, 1.55, 0, 0.1, 2.8, 0.4, Self.commWarmGlow)
+
+            commAwning(halfD + 1.2, 4.0, 0, length: 2.4, width: 6.5, rise: 0.20, color: Self.steel)
+            for pz: Float in [-2.8, 2.8] {
+                box(halfD + 2.2, 0.25, pz, 0.18, 0.18, 3.75, Self.commChrome)
             }
 
-            box(0, 17.0, 0, 15.6, 16.6, 0.45, Self.commDarkRoof)
-            cylinder(0, 17.45, 0, radius: 0.15, height: 5.5, color: Self.steel, sides: 6)
-            cylinder(0, 22.95, 0, radius: 0.35, height: 0.25, color: Self.commYellow, sides: 6)
-            commWaterTank(-3.5, 17.45, 4.0, radius: 0.95, height: 1.3)
+            box(0, 4.25, 0, depth, width, 12.75, Self.steel)
+            for fl in 1...4 {
+                let fy = 4.25 + Float(fl) * 3.1
+                box(0, fy - 0.35, 0, depth + 0.15, width + 0.15, 0.45, Self.commWarmWhite)
+            }
+            commWindowBand(0, 4.35, 0, length: depth, width: width, floors: 4, bays: 5, frameColor: Self.steel, glassColor: Self.glass)
+
+            box(0, 17.0, 0, depth + 0.1, width + 0.1, 1.1, Self.commConcrete)
+            box(0, 17.0, 0, depth - 0.8, width - 0.8, 1.2, Map3DPalette.roof)
+            box(-2.5, 17.0, 2.5, 5.5, 6.0, 3.2, Self.commWarmWhite)
+            box(-2.5, 20.2, 2.5, 5.8, 6.3, 0.35, Self.steel)
+            box(3.2, 17.0, 3.5, 2.4, 2.4, 1.6, Self.steel)
+            cylinder(3.2, 18.6, 3.5, radius: 0.85, height: 0.45, color: Self.commConcrete, sides: 10)
+            commWaterTank(-3.0, 17.0, -3.5, radius: 1.1, height: 1.5)
+            cylinder(0, 17.0, 0, radius: 0.12, height: 6.5, color: Self.steel, sides: 6)
+            cylinder(0, 23.5, 0, radius: 0.25, height: 0.25, color: Self.commYellow, sides: 6)
 
         case .yellowCafe:
             box(0, 0, 0, 11, 13, 7.5, Map3DPalette.counters[1])
