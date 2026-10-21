@@ -33,6 +33,9 @@ public final class GameSession {
         didSet {
             worldRevision &+= 1
             if !isApplyingTick { commandRevision &+= 1 }
+            // Decision 305: a paused game has no tick to look again after
+            // a command.
+            if !isApplyingTick, world.clock.isPaused { refreshNightSkipOffer() }
             // Decision 193: a change no recorded path made is logged as one.
             if !isLogging { log(.unrecorded("world")) }
         }
@@ -735,6 +738,7 @@ public final class GameSession {
         self.newsWatch = NewsWatch(world: world)
         // What the first monthly report compares with.
         self.news.baseline = MonthlyBaseline(world: world)
+        refreshNightSkipOffer()
     }
 
     // MARK: - Selection
@@ -999,7 +1003,9 @@ public final class GameSession {
     /// later), so leaving the building tools, or the tiles, resumes it.
     /// Any speed change by the player, pausing and resuming included,
     /// lets go of it: the speed is then the player's.
-    public private(set) var isPausedForBuilding = false
+    public private(set) var isPausedForBuilding = false {
+        didSet { refreshNightSkipOffer() }
+    }
 
     // MARK: - Speed
 
@@ -1007,6 +1013,7 @@ public final class GameSession {
     public func setSpeed(_ speed: GameSpeed) {
         isPausedForBuilding = false
         isPausedForEvent = false
+        dropNightSkip()
         // Decision 143: any write drops the tick being worked out, so the
         // speed the game already runs at is not written again.
         var clock = world.clock
@@ -1023,9 +1030,29 @@ public final class GameSession {
         isPausedForEvent = true
     }
 
+    /// ``nightSkip`` as last looked at, after each tick and each command
+    /// while paused (decision 305): what the shortcut shows, which a view
+    /// reads without following the world every tick.
+    public internal(set) var nightSkipOffer: NightSkip?
+
+    /// The skip over a quiet night under way (decision 305), or `nil`.
+    public internal(set) var nightSkipRun: NightSkipRun?
+
+    /// Whether a quiet night is skipped without the shortcut being pressed
+    /// (decision 305, the settings; kept on the device, so the app sets
+    /// it). Off unless the player turns it on.
+    public var skipsQuietNights = false
+
+    /// The run ahead behind ``nightSkip``.
+    @ObservationIgnored var nightSkipMemo: NightSkipMemo?
+
+    /// The first move of the night whose skip ended or was stopped, so the
+    /// setting does not start it again.
+    @ObservationIgnored var autoSkipDeclined: GameTime?
+
     /// Whether the session paused the game itself for an event (decision
     /// 175), and the player has not touched the speed since.
-    public private(set) var isPausedForEvent = false
+    public internal(set) var isPausedForEvent = false
 
     /// The world as a save keeps it (decision 99, 175 and 184, later): the
     /// world, but running at the player's speed when the session paused it
@@ -1052,6 +1079,7 @@ public final class GameSession {
     public func togglePause() {
         isPausedForBuilding = false
         isPausedForEvent = false
+        dropNightSkip()
         if world.clock.isPaused {
             logging(.resume) { $0.resume() }
         } else {
@@ -1346,6 +1374,8 @@ public final class GameSession {
         if world.clock.now.seconds / GameTime.secondsPerDay > dayBefore {
             onMidnight?()
         }
+        // Decision 305: the night's skip goes on, ends or starts.
+        continueNightSkip()
     }
 
     /// A tick of the game loop being worked out off the main actor
@@ -2391,7 +2421,7 @@ public final class GameSession {
 
     /// Changes ``world`` by `change`, which ``commandLog`` keeps as
     /// `action` (decision 193).
-    private func logging(_ action: CommandLog.Action, _ change: (inout GameWorld) -> Void) {
+    func logging(_ action: CommandLog.Action, _ change: (inout GameWorld) -> Void) {
         isLogging = true
         change(&world)
         isLogging = false
