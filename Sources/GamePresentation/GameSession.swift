@@ -1603,12 +1603,13 @@ public final class GameSession {
     }
 
     /// Sells train `id` back through `GameWorld.sellTrain(_:)` (decision
-    /// 180): 70 % of its books, and only a train off the track and off its
-    /// lines. A sold train that was selected or followed is let go.
+    /// 180): 70 % of its books, and only a train off its lines. Decision
+    /// 327: one on the track is stopped and taken off it first. A sold
+    /// train that was selected or followed is let go.
     public func sellTrain(_ id: TrainID) {
         guard let train = world.train(id: id) else { return }
         let quote = world.trainSaleQuote(id)
-        guard perform(.sellTrain(id), message: { _, _, _ in
+        guard perform(.sellTrainWhereItStands(id), message: { _, _, _ in
             language.text("Sold \(train.name) for \(quote.moneyText).", "已出售 \(train.name)，取得 \(quote.moneyText)。")
         }) != nil else { return }
         if selectedTrainID == id { selectedTrainID = world.trains.first?.id }
@@ -2040,13 +2041,18 @@ public final class GameSession {
         }
     }
 
-    /// Removes the selected line through `GameWorld.removeLine(_:)`; its
-    /// trains finish the trip they are on.
+    /// Removes the selected line through `GameWorld.removeLine(_:)` and
+    /// sells its trains (decision 327), so none is left on the track.
     public func removeSelectedLine() {
         guard let line = requireSelectedLine() else { return }
         let followsLineTrain = followedTrainID.map { world.assignedLine(of: $0) == line.id } ?? false
-        let removed = perform(.removeLine(line.id)) { _, _, _ in
-            language.text("Removed \(line.name). Its trains finish the trip they are on.", "已刪除 \(line.name)。它的列車會跑完目前這一趟。")
+        let sale = world.lineRemovalSale(line.id)
+        let removed = perform(.removeLineSellingTrains(line.id)) { _, _, _ in
+            guard sale.trains > 0 else { return language.text("Removed \(line.name).", "已刪除 \(line.name)。") }
+            return language.text(
+                "Removed \(line.name) and sold its \(sale.trains) \(sale.trains == 1 ? "train" : "trains") for \(sale.proceeds.moneyText).",
+                "已刪除 \(line.name)，並賣掉它的 \(sale.trains) 列車，取得 \(sale.proceeds.moneyText)。"
+            )
         }
         // The reference removes a line's trains with it, which ends
         // following one of them (`trackedTrainId` of a gone train).
@@ -2336,6 +2342,14 @@ public final class GameSession {
     /// (``StatusMessage/fundsNeeded``).
     func refusal(_ error: GameError, doing command: PlayerCommand? = nil) -> StatusMessage {
         guard case .insufficientFunds(let required, let available) = error else {
+            // Decision 327: a train left standing on no line is named, and
+            // the banner offers to sell it.
+            if let train = world.idleTrainInTheWay(of: error) {
+                return StatusMessage(kind: .failure, text: language.text(
+                    "\(train.name) is standing here with no line and is in the way. Sell it to clear the track.",
+                    "\(train.name) 沒有路線，停在這裡擋住了。賣掉它就能拆除。"
+                ), sellableTrain: train.id)
+            }
             return StatusMessage(kind: .failure, text: error.playerMessage(in: language))
         }
         let balance = world.economy.balance
@@ -2931,11 +2945,15 @@ public struct StatusMessage: Hashable, Sendable {
     /// cash covers it, the refusal is out of date and goes
     /// (``GameSession/refusal(_:doing:)``).
     public let fundsNeeded: Money?
+    /// For a refusal by a train standing on no line, that train: the
+    /// banner offers to sell it (decision 327).
+    public let sellableTrain: TrainID?
 
-    public init(kind: Kind, text: String, fundsNeeded: Money? = nil) {
+    public init(kind: Kind, text: String, fundsNeeded: Money? = nil, sellableTrain: TrainID? = nil) {
         self.kind = kind
         self.text = text
         self.fundsNeeded = fundsNeeded
+        self.sellableTrain = sellableTrain
     }
 
     /// How long the banner shows the message before clearing it: a success

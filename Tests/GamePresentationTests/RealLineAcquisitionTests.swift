@@ -86,6 +86,54 @@ final class RealLineAcquisitionTests: XCTestCase {
         XCTAssertEqual(session.world, before)
     }
 
+    /// Decision 327: removing a line bought sells its trains as removing
+    /// any line does, wherever its timetable has them, and then its
+    /// platforms and track come down. With the old command its trains
+    /// stayed, standing in the way.
+    func testRemovingALineBoughtSellsItsTrains() throws {
+        let bought = try game(round: "PINGXI")
+        XCTAssertTrue(bought.acquireRealLine(bought.realLineOffer(for: try line("PINGXI", in: bought))), bought.message?.text ?? "")
+        let id = try XCTUnwrap(bought.world.acquisition(of: "tra:PINGXI")?.line)
+        var world = bought.world
+        // The next day, to when one of its trains is out on a run.
+        try world.advance(ticks: (24 + 6) * 60)
+        let trains = try XCTUnwrap(world.line(id: id)?.assignedTrains)
+        XCTAssertFalse(trains.isEmpty)
+        for _ in 0..<(12 * 60) where !trains.contains(where: { world.train(id: $0)?.execution != nil }) {
+            try world.advance(ticks: 1)
+        }
+        XCTAssertTrue(trains.contains { world.train(id: $0)?.execution != nil }, "some out on a run")
+        let proceeds = trains.reduce(Money.zero) { $0 + world.trainSaleQuote($1) }
+
+        func demolish(_ world: inout GameWorld) -> [GameError] {
+            var refusals: [GameError] = []
+            for platform in world.network.platforms {
+                do throws(GameError) { try world.removeTrackPlatform(platform.station, on: platform.edge, from: platform.start) } catch { refusals.append(error) }
+            }
+            for edge in world.network.edges {
+                do throws(GameError) { try world.removeTrackEdge(edge.id) } catch { refusals.append(error) }
+            }
+            return refusals
+        }
+        var old = world
+        try old.removeLine(id)
+        try old.advance(ticks: 24 * 60)
+        XCTAssertFalse(demolish(&old).isEmpty, "the old command leaves its trains in the way")
+
+        let session = GameSession(world: world, language: .traditionalChinese)
+        session.selectLine(id)
+        XCTAssertEqual(session.selectedLineRemovalSale?.trains, trains.count)
+        XCTAssertEqual(session.selectedLineRemovalSale?.proceeds, proceeds)
+        session.removeSelectedLine()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        XCTAssertTrue(trains.allSatisfy { session.world.train(id: $0) == nil })
+        XCTAssertEqual(session.world.economy.balance, world.economy.balance + proceeds)
+        XCTAssertNotNil(session.world.acquisition(of: "tra:PINGXI"), "the real line is still the company's")
+        var after = session.world
+        XCTAssertEqual(demolish(&after), [])
+        XCTAssertTrue(after.network.edges.isEmpty)
+    }
+
     /// Each line on sale, over the app's heights: bought, and two days of
     /// its real timetable run, every run sent out, under the app's simple
     /// rules (decision 258), where trains that met at a station of more

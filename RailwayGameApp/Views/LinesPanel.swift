@@ -25,6 +25,8 @@ struct LinesPanel: View {
     /// The name being typed for the selected line, while its rename alert
     /// is up.
     @State private var renamingLine: String?
+    /// Whether the selected line's removal is being confirmed (decision 327).
+    @State private var confirmsRemoval = false
     /// Decision 216: the code being typed for the selected line, while its
     /// alert is up.
     @State private var editingCode: String?
@@ -879,13 +881,39 @@ struct LinesPanel: View {
             .accessibilityHint("Copies the line's stops and settings as a new line, without its trains.")
             .accessibilityIdentifier("line.duplicate")
             Button("Remove \(line.name)", role: .destructive) {
-                session.removeSelectedLine()
+                confirmsRemoval = true
+            }
+            // Decision 327: the line's trains are sold with it.
+            .confirmationDialog(
+                Text(verbatim: session.language.text("Remove \(line.name)?", "刪除 \(line.name)？")),
+                isPresented: $confirmsRemoval,
+                titleVisibility: .visible
+            ) {
+                Button(role: .destructive) {
+                    session.removeSelectedLine()
+                } label: {
+                    Text(verbatim: session.language.text("Remove Line", "刪除路線"))
+                }
+            } message: {
+                Text(verbatim: removalText(line))
             }
         } header: {
             Text(verbatim: "\(line.name) · \(line.window.displayText(in: session.language))")
         } footer: {
             Text(verbatim: session.world.serviceDay.summaryText(in: session.language))
         }
+    }
+
+    /// What removing `line` does to its trains (decision 327).
+    private func removalText(_ line: ServiceLine) -> String {
+        let sale = session.world.lineRemovalSale(line.id)
+        guard sale.trains > 0 else {
+            return session.language.text("The line has no trains.", "這條路線沒有列車。")
+        }
+        return session.language.text(
+            "Its \(sale.trains) \(sale.trains == 1 ? "train is" : "trains are") sold with it, for \(sale.proceeds.moneyText).",
+            "它的 \(sale.trains) 列車會一起賣掉，取得 \(sale.proceeds.moneyText)。"
+        )
     }
 
     // MARK: - The selected line's stops (Stage C2)
