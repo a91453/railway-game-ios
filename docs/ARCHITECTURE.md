@@ -13909,7 +13909,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 1. **從隔天的首班車起由玩家經營**（真實的經營權移轉也是從營業日開始）：
    - 收購當下就蓋好軌道與車站，列車放在班次的過夜位置（`overnight`，由第 2 步的工具照截斷後的班次算出）。
-   - 每一班的 `runDays` 設成今天，所以今天剩下的班次不派，明天第一班照真實時刻開出。收購卡寫「明天首班車起由你經營」。
+   - 每一班的 `runDays`（`ServiceLine.runDays`：每班最後一次開出的**遊戲日**，`Int64?`，不是星期幾的集合）設成今天，所以只有今天剩下的班次不派，明天第一班照真實時刻開出；星期幾開照 `LineRun.days`，不受影響。`runDays` 只有 GameCore 能改（`internal(set)`），所以由新指令 `recordLineAcquisition` 設。收購卡寫「明天首班車起由你經營」。
    - 那條線的真實列車從收購那一刻起不再畫（`RealTrainTraffic` 跳過已收購的線），不會和玩家的車疊在一起。
 2. **常客**：收購的車站和玩家其他車站一樣從腹地的土地拿旅客（決策 139），轉乘點數照決策 298：
    - 分歧站照常有幹線的轉乘點數。
@@ -13936,9 +13936,10 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
   - 列車：車種、節數、放在哪一站（`overnight`）；
   - 路線：名稱、顏色（`tra.json` 的路線色）、停靠站、`[LineRun]`（第 2 步的班次檔）；
   - `dailyRiders`：營運價值用的真實旅客數。
-- `GameSession.apply` 在世界的副本上依序：`readGround` → 鋪軌（`buildTrackChain` 的做法）→ 月台與車站 → 待避線 → 買車、放車 → `createLine` → `setLineRuns`（每班的 `runDays` 是今天）→ `assignTrain` → 新指令 `GameWorld.recordLineAcquisition(line:realLine:dailyRiders:)`。
+- `GameSession.apply` 在世界的副本上依序：`readGround` → 鋪軌（`buildTrackChain` 的做法）→ 月台與車站 → 待避線 → 買車、放車 → `createLine` → `setLineRuns` → `assignTrain` → 新指令 `GameWorld.recordLineAcquisition(line:realLine:dailyRiders:)`。
 - **新的 GameCore 指令** `recordLineAcquisition(line:realLine:dailyRiders:)`：
   - 檢查依序：`unknownLine`；`realLine` 空白或已收購過（新的 `GameError.lineAlreadyAcquired`）；`dailyRiders` 在 0…`RealLineAcquisition.maximumDailyRiders`（200,000，比臺鐵最大站還多，擋住亂填）之外是新的 `invalidAcquisition`；錢不夠是 `insufficientFunds`。
+  - 把這條線每班的 `runDays` 設成今天（見第 3 點；那條線要剛建好、還沒開過任何一班，否則 `invalidAcquisition`）。
   - 扣營運價值 = `dailyRiders × valuePerDailyRider`，記成一筆資產（新的 `AssetRecord.Kind.acquiredLine`，資產類別 `track`，照軌道 20 年攤提：買的是線的經營權，和軌道一起折舊），帳簿的資本支出多一項「收購路線」。
   - 世界記下 `acquisitions`：每筆 `{realLine, line, day, value}`，`RealTrainTraffic` 與收購選單照它跳過已收購的線。
   - 營運價值的計算在 GameCore（決定性的整數分），GamePresentation 只給旅客數，和決策 298 的 `setTransfers` 一樣：GameCore 不讀真實資料，只存數字。
