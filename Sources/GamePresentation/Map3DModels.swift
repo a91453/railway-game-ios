@@ -80,7 +80,7 @@ public struct Map3DModelPack: Sendable {
     /// (or a set's key, ``Map3DTrainSet/key(type:performance:)``), or `nil`
     /// when it has none.
     public func models(forType code: String) -> (head: Int, middle: Int)? {
-        if let set = Map3DTrainSet.byKey[code] {
+        if let set = Map3DTrainSet.named(code) {
             guard let head = index(of: set.headName), let middle = index(of: set.middleName) else { return nil }
             return (head, middle)
         }
@@ -96,6 +96,7 @@ public struct Map3DModelPack: Sendable {
             if count == 1, let single = index(of: set.singleName) { return single }
             if carIndex == 0 { return index(of: set.headName) }
             if carIndex == count - 1 { return index(of: set.tailName) ?? index(of: set.headName) }
+            if set.pantographCars.contains(carIndex), let panto = index(of: set.pantographName) { return panto }
             return index(of: set.middleName)
         }
         guard let styleName = Self.styleByType[code] else { return nil }
