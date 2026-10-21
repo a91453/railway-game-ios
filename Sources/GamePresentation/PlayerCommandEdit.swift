@@ -25,6 +25,9 @@ extension PlayerCommand {
         // MARK: Trains
         case purchaseTrain(name: String)
         case sellTrain(TrainID)
+        /// A train on no line stopped, taken off the track and sold
+        /// (decision 327: the fleet list's and the map's sale).
+        case sellTrainWhereItStands(TrainID)
         case setTrainCars(TrainID, cars: Int)
         /// The car type, and, for a train still running as standard, the
         /// type's own way of running (decision 168).
@@ -83,6 +86,8 @@ extension PlayerCommand {
         case createLine(name: String, stops: [StationID], targets: TargetHeadways?)
         case duplicateLine(LineID, name: String)
         case removeLine(LineID)
+        /// A line removed and its trains sold (decision 327).
+        case removeLineSellingTrains(LineID)
         case renameLine(LineID, name: String)
         case setLineColor(LineID, LineColor?)
         /// The line's code, or `nil` for the app's own (decision 216).
@@ -188,6 +193,7 @@ extension GameSession {
 
         case .purchaseTrain(let name): outcome.train = try world.purchaseTrain(named: name)
         case .sellTrain(let id): try world.sellTrain(id)
+        case .sellTrainWhereItStands(let id): try Self.sellWhereItStands(id, offLine: false, in: &world)
         case .setTrainCars(let id, let cars): try world.setTrainCars(id, to: cars)
         case .setTrainType(let id, let type):
             guard let train = world.train(id: id) else { throw .unknownTrain(id) }
@@ -269,6 +275,7 @@ extension GameSession {
             outcome.line = line
         case .duplicateLine(let id, let name): outcome.line = try world.duplicateLine(id, named: name)
         case .removeLine(let id): try world.removeLine(id)
+        case .removeLineSellingTrains(let id): outcome.number = try Self.removeLineSellingTrains(id, in: &world)
         case .renameLine(let id, let name): try world.renameLine(id, to: name)
         case .setLineColor(let id, let color): try world.setLineColor(id, to: color)
         case .setLineCode(let id, let code): try world.setLineCode(id, to: code)

@@ -741,6 +741,25 @@ struct StatusBanner: View {
                 .foregroundStyle(Theme.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
+            // Decision 327: a train standing on no line that is in the way
+            // is sold from here (Undo brings it back).
+            if let id = message.sellableTrain, let train = session.world.train(id: id) {
+                Button {
+                    session.sellTrain(id)
+                } label: {
+                    Text(verbatim: session.language.text(
+                        "Sell \(train.name) \(session.world.trainSaleQuote(id).moneyText)",
+                        "出售 \(train.name) \(session.world.trainSaleQuote(id).moneyText)"
+                    ))
+                    .font(.caption.weight(.bold))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Theme.chip, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Theme.textPrimary)
+                .accessibilityIdentifier("banner.sellTrain")
+            }
             Button {
                 session.dismissMessage()
             } label: {
