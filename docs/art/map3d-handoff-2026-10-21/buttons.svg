@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="670" height="440" viewBox="0 0 670 440"><rect width="670" height="440" fill="#FFFFFF"/><g transform="translate(10,0)">
+<rect x="0" y="30" width="200" height="400" rx="24" fill="#3B4A6B" stroke="#262C57" stroke-width="4"/>
+<rect x="20" y="300" width="160" height="10" fill="#8C96B8"/><rect x="60" y="200" width="40" height="60" fill="#ECEEF6"/><rect x="110" y="180" width="50" height="80" fill="#FFC86B"/>
+<rect x="150" y="44" width="40" height="22" rx="8" fill="#ECEEF6" opacity="0.85"/><text x="170" y="60" font-size="10" text-anchor="middle" fill="#262C57">60 fps</text>
+<text x="100" y="20" font-size="13" text-anchor="middle" fill="#262C57" font-family="sans-serif">A 選的：左上兩顆有字的膠囊</text>
+<rect x="12" y="44" width="56" height="30" rx="15" fill="#ECEEF6" opacity="0.9"/><text x="40.0" y="64" font-size="12" text-anchor="middle" fill="#12A08F" font-family="sans-serif" font-weight="bold">🗺 2D</text>
+<rect x="12" y="80" width="64" height="30" rx="15" fill="#ECEEF6" opacity="0.9"/><text x="44.0" y="100" font-size="12" text-anchor="middle" fill="#12A08F" font-family="sans-serif" font-weight="bold">🔨 建設</text>
+<circle cx="27" cy="130" r="15" fill="#ECEEF6" opacity="0.9"/><text x="27" y="134" font-size="10" text-anchor="middle" fill="#12A08F" font-family="sans-serif" font-weight="bold">N</text>
+<rect x="30" y="392" width="140" height="24" rx="12" fill="#ECEEF6" opacity="0.85"/><text x="100" y="408" font-size="8" text-anchor="middle" fill="#262C57">拉遠放手就回到平面地圖</text>
+</g><g transform="translate(230,0)">
+<rect x="0" y="30" width="200" height="400" rx="24" fill="#3B4A6B" stroke="#262C57" stroke-width="4"/>
+<rect x="20" y="300" width="160" height="10" fill="#8C96B8"/><rect x="60" y="200" width="40" height="60" fill="#ECEEF6"/><rect x="110" y="180" width="50" height="80" fill="#FFC86B"/>
+<rect x="150" y="44" width="40" height="22" rx="8" fill="#ECEEF6" opacity="0.85"/><text x="170" y="60" font-size="10" text-anchor="middle" fill="#262C57">60 fps</text>
+<text x="100" y="20" font-size="13" text-anchor="middle" fill="#262C57" font-family="sans-serif">B 沒選：只有圖示的圓鈕</text>
+<circle cx="27" cy="59" r="15" fill="#ECEEF6" opacity="0.9"/><text x="27" y="63" font-size="10" text-anchor="middle" fill="#12A08F" font-family="sans-serif" font-weight="bold">✕</text>
+<circle cx="27" cy="95" r="15" fill="#ECEEF6" opacity="0.9"/><text x="27" y="99" font-size="10" text-anchor="middle" fill="#12A08F" font-family="sans-serif" font-weight="bold">🗺</text>
+<circle cx="27" cy="131" r="15" fill="#ECEEF6" opacity="0.9"/><text x="27" y="135" font-size="10" text-anchor="middle" fill="#12A08F" font-family="sans-serif" font-weight="bold">🔨</text>
+<rect x="30" y="392" width="140" height="24" rx="12" fill="#ECEEF6" opacity="0.85"/><text x="100" y="408" font-size="8" text-anchor="middle" fill="#262C57">拉遠放手就回到平面地圖</text>
+</g><g transform="translate(450,0)">
+<rect x="0" y="30" width="200" height="400" rx="24" fill="#3B4A6B" stroke="#262C57" stroke-width="4"/>
+<rect x="20" y="300" width="160" height="10" fill="#8C96B8"/><rect x="60" y="200" width="40" height="60" fill="#ECEEF6"/><rect x="110" y="180" width="50" height="80" fill="#FFC86B"/>
+<rect x="150" y="44" width="40" height="22" rx="8" fill="#ECEEF6" opacity="0.85"/><text x="170" y="60" font-size="10" text-anchor="middle" fill="#262C57">60 fps</text>
+<text x="100" y="20" font-size="13" text-anchor="middle" fill="#262C57" font-family="sans-serif">C 沒選：下方一列</text>
+<rect x="40" y="350" width="120" height="30" rx="15" fill="#ECEEF6" opacity="0.9"/><text x="100" y="370" font-size="12" text-anchor="middle" fill="#12A08F" font-family="sans-serif" font-weight="bold">2D ｜ 建設</text>
+<circle cx="27" cy="59" r="15" fill="#ECEEF6" opacity="0.9"/><text x="27" y="63" font-size="10" text-anchor="middle" fill="#12A08F" font-family="sans-serif" font-weight="bold">✕</text>
+<rect x="30" y="392" width="140" height="24" rx="12" fill="#ECEEF6" opacity="0.85"/><text x="100" y="408" font-size="8" text-anchor="middle" fill="#262C57">拉遠放手就回到平面地圖</text>
+</g></svg>

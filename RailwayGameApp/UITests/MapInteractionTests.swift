@@ -1344,9 +1344,9 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(row.becomesHittable(within: 10), "The panel did not open at the sight's row")
     }
 
-    /// Decision 269: the map tilts as it comes closer. Pinched close, the
-    /// 2D map hands over to the 3D map; pinched back out, the 3D map hands
-    /// it back. In the full lane's second job (the class is in
+    /// Decision 269: the map tilts as it comes closer. Decision 313: a
+    /// pinch on past the 2D map's closest zoom, let go, hands it over to
+    /// the 3D map; a pinch out, let go, hands it back. In the full lane's second job (the class is in
     /// `FULL_LANE_SECOND_JOB`), not the pull request gate.
     func testPinchingCloseOpensTheThreeDMapAndPinchingOutComesBack() {
         continueAfterFailure = false
@@ -1358,10 +1358,11 @@ final class MapInteractionTests: XCTestCase {
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.appears(within: 10))
         let close = app.buttons["map3D.close"]
-        // Two pinches: the first may only bring the demo near the line.
+        // Two pinches: the first may only bring the demo to the closest
+        // zoom (a pinch is let go as it ends).
         map.pinch(withScale: 6, velocity: 3)
         if !close.appears(within: 5) { map.pinch(withScale: 6, velocity: 3) }
-        XCTAssertTrue(close.appears(within: 20), "A pinch close hands the 2D map over to the 3D map")
+        XCTAssertTrue(close.appears(within: 20), "A pinch past the closest zoom, let go, hands the 2D map over to the 3D map")
         let view = app.descendants(matching: .any)["map3D.view"].firstMatch
         XCTAssertTrue(view.appears(within: 10))
         view.pinch(withScale: 0.1, velocity: -3)
@@ -1391,7 +1392,11 @@ final class MapInteractionTests: XCTestCase {
         view.pinch(withScale: 3, velocity: 2)
         view.pinch(withScale: 3, velocity: 2)
         XCTAssertFalse(close.disappears(within: 3), "Pinching closer must not go back to the 2D map")
-        close.tap()
-        XCTAssertTrue(close.disappears(within: 10))
+        // Decision 313: Build goes back to the 2D map with the tools out.
+        let build = app.buttons["map3D.build"]
+        XCTAssertTrue(build.becomesHittable(within: 10))
+        build.tap()
+        XCTAssertTrue(close.disappears(within: 10), "Build goes back to the 2D map")
+        XCTAssertTrue(app.buttons["tool.select"].appears(within: 10), "Build takes the building tools out")
     }
 }

@@ -13,8 +13,11 @@ import UIKit
 /// the 2D one.
 ///
 /// Decision 269: a pinch on the 2D map hands it over here (`handedOver`,
-/// the 2D map's middle and zoom), and pinched back out past
-/// ``Map3DHandoff/closesAt`` it hands the 2D map back (`handBack`).
+/// the 2D map's middle and zoom), and pinched back out it hands the 2D map
+/// back (`handBack`). Decision 313: both only as the fingers lift
+/// (``Map3DHandoff/handsBack(handedOverAt:from:to:)``); over the game's
+/// map the "2D" button goes back to the 2D map where this one looks
+/// (`toMap2D`), and Build to its building tools there (`build`).
 /// Decision 269, later: turned from north, a compass under the close
 /// button shows where north is; a tap turns the map back.
 struct Map3DPreviewScreen: View {
@@ -22,12 +25,18 @@ struct Map3DPreviewScreen: View {
     var handedOver: Map3DHandoff.Plan? = nil
     let close: () -> Void
     var handBack: ((Map3DHandoff.Plan) -> Void)? = nil
+    /// Decision 313: back to the 2D map at this view's middle and scale,
+    /// in its place of the close button; and the same with the building
+    /// tools out. `nil` from the settings, which have no 2D map below.
+    var toMap2D: ((Map3DHandoff.Plan) -> Void)? = nil
+    var build: ((Map3DHandoff.Plan) -> Void)? = nil
     @State private var scene: Map3DScene?
     @State private var sceneVersion = 0
     @State private var stats: Map3DMetalView.Stats?
     @State private var showsDetails = false
     @State private var feed = Map3DTrainFeed()
     @State private var compass = Map3DCompassState()
+    @State private var cameraLink = Map3DCameraLink()
     @AppStorage(LinePalette.key) private var linePalette: LinePalette = .standard
 
     var body: some View {
@@ -35,7 +44,7 @@ struct Map3DPreviewScreen: View {
         ZStack {
             Map3DView(scene: scene, sceneVersion: sceneVersion, lighting: Map3DLighting(at: session.world.clock.now),
                       weather: Map3DWeather(MapWeather(world: session.world)), feed: feed,
-                      start: handedOver, farOut: farOut, compass: compass, onStats: { stats = $0 })
+                      start: handedOver, farOut: farOut, compass: compass, cameraLink: cameraLink, onStats: { stats = $0 })
                 .ignoresSafeArea()
                 .accessibilityIdentifier("map3D.view")
             if scene == nil {
@@ -44,15 +53,56 @@ struct Map3DPreviewScreen: View {
             }
             VStack {
                 HStack(alignment: .top) {
-                    VStack(spacing: 8) {
-                        Button(action: close) {
-                            Image(systemName: "xmark")
+                    VStack(alignment: .leading, spacing: 8) {
+                        if let toMap2D {
+                            // Decision 313: the way back to the 2D map, said
+                            // plainly, where the close button was.
+                            Button {
+                                leave(to: toMap2D)
+                            } label: {
+                                Label {
+                                    Text(verbatim: "2D")
+                                } icon: {
+                                    Image(systemName: "map")
+                                }
                                 .font(.headline)
-                                .frame(width: 44, height: 44)
-                                .background(.regularMaterial, in: Circle())
+                                .padding(.horizontal, 14)
+                                .frame(minWidth: 44, minHeight: 44)
+                                .background(.regularMaterial, in: Capsule())
+                            }
+                            .accessibilityLabel(Text(verbatim: language.text("2D Map", "平面地圖")))
+                            .accessibilityHint(Text(verbatim: language.text("Goes back to the flat map, here.", "回到這裡的平面地圖。")))
+                            .accessibilityIdentifier("map3D.close")
+                        } else {
+                            Button(action: close) {
+                                Image(systemName: "xmark")
+                                    .font(.headline)
+                                    .frame(width: 44, height: 44)
+                                    .background(.regularMaterial, in: Circle())
+                            }
+                            .accessibilityLabel(Text(verbatim: language.text("Close", "關閉")))
+                            .accessibilityIdentifier("map3D.close")
                         }
-                        .accessibilityLabel(Text(verbatim: language.text("Close", "關閉")))
-                        .accessibilityIdentifier("map3D.close")
+                        if let build {
+                            // Decision 313: building is on the 2D map; this
+                            // takes the player there with the tools out.
+                            Button {
+                                leave(to: build)
+                            } label: {
+                                Label {
+                                    Text(verbatim: language.text("Build", "建設"))
+                                } icon: {
+                                    Image(systemName: "hammer.fill")
+                                }
+                                .font(.headline)
+                                .padding(.horizontal, 14)
+                                .frame(minWidth: 44, minHeight: 44)
+                                .background(.regularMaterial, in: Capsule())
+                            }
+                            .accessibilityHint(Text(verbatim: language.text("Goes back to the flat map, here, with the track, train and building tools.",
+                                                                            "回到這裡的平面地圖，打開軌道、列車與建物的工具。")))
+                            .accessibilityIdentifier("map3D.build")
+                        }
                         Map3DCompassButton(state: compass)
                     }
                     Spacer()
@@ -70,8 +120,8 @@ struct Map3DPreviewScreen: View {
                 Text(verbatim: handedOver == nil
                      ? language.text("Pinch closer to tilt the map. Drag to move, two fingers to turn.",
                                      "兩指拉近，地圖就會傾斜。拖曳移動，兩指旋轉。")
-                     : language.text("Pinch closer to tilt the map, or out to go back. Drag to move, two fingers to turn.",
-                                     "兩指拉近地圖就傾斜，拉遠就回到平面地圖。拖曳移動，兩指旋轉。"))
+                     : language.text("Pinch closer to tilt the map, or pinch out and let go to go back. Drag to move, two fingers to turn.",
+                                     "兩指拉近地圖就傾斜，拉遠放手就回到平面地圖。拖曳移動，兩指旋轉。"))
                     .font(.footnote)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
@@ -100,6 +150,13 @@ struct Map3DPreviewScreen: View {
             guard let scene else { return }
             handBack(Map3DHandoff.plan(from: camera, in: scene))
         }
+    }
+
+    /// Decision 313: the 2D map's view where this one looks, for `go`; or,
+    /// before the scene is up, just closes.
+    private func leave(to go: (Map3DHandoff.Plan) -> Void) {
+        guard let scene, let camera = cameraLink.camera else { return close() }
+        go(Map3DHandoff.plan(from: camera, in: scene))
     }
 
     private func statsLabel(_ stats: Map3DMetalView.Stats) -> some View {
@@ -250,11 +307,14 @@ private struct Map3DView: UIViewRepresentable {
     let weather: Map3DWeather
     let feed: Map3DTrainFeed
     /// Decision 269: the 2D map's view a pinch handed over, and what to do
-    /// when pinched back out past ``Map3DHandoff/closesAt``.
+    /// when a pinch out is let go far enough
+    /// (``Map3DHandoff/handsBack(handedOverAt:from:to:)``).
     let start: Map3DHandoff.Plan?
     let farOut: ((Map3DCamera) -> Void)?
     /// Decision 269, later: the way the map faces, for the compass.
     let compass: Map3DCompassState
+    /// Decision 313: where the screen reads the camera, for the 2D button.
+    let cameraLink: Map3DCameraLink
     let onStats: @MainActor (Map3DMetalView.Stats) -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -273,6 +333,7 @@ private struct Map3DView: UIViewRepresentable {
             return label
         }
         context.coordinator.view = view
+        cameraLink.view = view
         if let models = Self.models {
             view.useModels(models)
         }
@@ -322,6 +383,8 @@ private struct Map3DView: UIViewRepresentable {
         /// `nil` when the 3D button opened the map.
         var handedOverAt: Float?
         private var handedBack = false
+        /// Decision 313: the distance as the pinch under way began.
+        private var pinchFrom: Float?
         private let compass: Map3DCompassState
         /// The turn back to north running, a frame at a time.
         private var northLink: CADisplayLink?
@@ -383,17 +446,22 @@ private struct Map3DView: UIViewRepresentable {
         @objc func pinch(_ recognizer: UIPinchGestureRecognizer) {
             if recognizer.state == .began { stopTurningNorth() }
             guard let view else { return }
-            let before = view.camera.distance
+            if recognizer.state == .began { pinchFrom = view.camera.distance }
             view.camera = view.camera.zoomed(by: Float(recognizer.scale))
             recognizer.scale = 1
-            // Decision 269: pinched back out past the line, the 2D map takes
-            // over again; never as it comes closer, nor on a 3D map the
-            // button opened (later fix, 71.1).
-            if let farOut, !handedBack,
+            // Decision 313: decided as the fingers lift. A pinch out let go
+            // far enough hands the 2D map back; never one coming closer,
+            // nor on a 3D map the button opened (decision 269's fix, 71.1).
+            guard recognizer.state == .ended else {
+                if recognizer.state == .cancelled || recognizer.state == .failed { pinchFrom = nil }
+                return
+            }
+            if let farOut, !handedBack, let before = pinchFrom,
                Map3DHandoff.handsBack(handedOverAt: handedOverAt, from: before, to: view.camera.distance) {
                 handedBack = true
                 farOut(view.camera)
             }
+            pinchFrom = nil
         }
 
         @objc func rotate(_ recognizer: UIRotationGestureRecognizer) {
@@ -408,6 +476,14 @@ private struct Map3DView: UIViewRepresentable {
             true
         }
     }
+}
+
+/// Decision 313: the Metal view, for the screen to read its camera as the
+/// player leaves for the 2D map. The camera stays the view's own.
+@MainActor
+final class Map3DCameraLink {
+    weak var view: Map3DMetalView?
+    var camera: Map3DCamera? { view?.camera }
 }
 
 /// Decision 269, later: the way the 3D map faces, for its compass, and how
