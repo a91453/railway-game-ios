@@ -5,7 +5,7 @@
   "comparison_models": 4,
   "models": 5,
   "views": 35,
-  "triangles": 10203,
+  "triangles": 10750,
   "maximum_triangles": 2884,
   "checks": [
     "all native vertices round-trip through the game loader",
@@ -59,7 +59,7 @@
           0,
           255
         ],
-        "pixels": 30357
+        "pixels": 30056
       },
       {
         "path": "views/life-midiBus/bottom.png",
@@ -67,7 +67,7 @@
           0,
           255
         ],
-        "pixels": 30358
+        "pixels": 30039
       },
       {
         "path": "views/life-midiBus/left.png",
@@ -75,7 +75,7 @@
           0,
           255
         ],
-        "pixels": 33759
+        "pixels": 34082
       },
       {
         "path": "views/life-midiBus/right.png",
@@ -83,7 +83,7 @@
           0,
           255
         ],
-        "pixels": 33759
+        "pixels": 34079
       },
       {
         "path": "views/life-midiBus/front.png",
@@ -91,7 +91,7 @@
           0,
           255
         ],
-        "pixels": 83812
+        "pixels": 79206
       },
       {
         "path": "views/life-midiBus/back.png",
@@ -99,7 +99,7 @@
           0,
           255
         ],
-        "pixels": 83811
+        "pixels": 79205
       },
       {
         "path": "views/life-midiBus/isometric.png",
@@ -107,7 +107,7 @@
           0,
           255
         ],
-        "pixels": 45836
+        "pixels": 43458
       },
       {
         "path": "views/life-shuttleBus/top.png",
@@ -338,7 +338,7 @@
   "local_tests": {
     "status": "VERIFIED",
     "environment": "Linux Swift6.4 warnings-as-errors",
-    "xctest_count": 53,
+    "xctest_count": 55,
     "suites": [
       "Map3DMidiBusTests",
       "Map3DCoachBusTests",
@@ -350,7 +350,12 @@
       "Map3DModelFileTests"
     ],
     "node_tests": 4,
-    "log_sha256": "9453048bce0ef4c68971b060467e37b7e9c3c358dff8c32e559e67a177f14f60"
+    "log_sha256": "9905bd2aaf3a3e77ce55bb159ce1845a6931b6d442e49e405bbe7d16b4d9e3fa",
+    "regressions": [
+      "curved roof shoulders and raised forehead support",
+      "outward dark window ribbon between panes; reproduced red before fix",
+      "backing on all height/plan windscreen facets"
+    ]
   },
   "manual_visual_review": {
     "status": "VERIFIED",
@@ -358,12 +363,15 @@
       "previews/overview.png",
       "previews/directions.png",
       "previews/style-checks.png",
-      "previews/fleet.png"
+      "previews/fleet.png",
+      "previews/streamline-before-after.png"
     ],
     "checks": [
-      "roof no coplanar two-colour overlap",
+      "rounded transverse roof shoulders and longitudinal crown",
+      "wraparound windshield with no cracked panes",
+      "continuous outward-facing window ribbon",
+      "swept lamps and waist apron",
       "front/rear/side/underside",
-      "supported glazing and equipment",
       "four backgrounds and small sizes",
       "same-camera native fleet proportions"
     ],
@@ -371,47 +379,47 @@
   },
   "comparison_preservation": {
     "status": "VERIFIED",
-    "prior_zip_sha256": "808e27ec0ac54be39627bf5df1cd2e76271407a27b49ac9de0dffd5ff63aaf05",
+    "prior_zip_sha256": "198bc66af3021133fe69abfb861875f2f3a7a723df20529e6ffc6841fc72f491",
     "files": {
       "models/life-shuttleBus.m3dmodel": {
         "bytes": 74812,
         "sha256": "19a7c58d456325eb9b249a327ac27c5392d8991a2ada71dfdf538d812960f49a",
-        "identical_to_coach_v2": true
+        "identical_to_midibus_v1": true
       },
       "models/life-shuttleBus.glb": {
         "bytes": 139048,
         "sha256": "44fca19c2728244eda732b2fc2db7dcbaa41c41a379d733a410c49a7e87a8ba6",
-        "identical_to_coach_v2": true
+        "identical_to_midibus_v1": true
       },
       "models/life-lowFloorBus.m3dmodel": {
         "bytes": 115272,
         "sha256": "f57038ee0f8470a1bb99075bdefc23da7076cf9c5a2f102958f616436788e45a",
-        "identical_to_coach_v2": true
+        "identical_to_midibus_v1": true
       },
       "models/life-lowFloorBus.glb": {
         "bytes": 213760,
         "sha256": "82c28e5b484c5754a7d442304a097053ac9c770ebc0bc5f46b6366445cc2b664",
-        "identical_to_coach_v2": true
+        "identical_to_midibus_v1": true
       },
       "models/life-coachBus.m3dmodel": {
         "bytes": 150220,
         "sha256": "8a4a68f2a831ea2d9cc69095c07a33482ebe915c461005bb170c4023b0965371",
-        "identical_to_coach_v2": true
+        "identical_to_midibus_v1": true
       },
       "models/life-coachBus.glb": {
         "bytes": 278276,
         "sha256": "f6fa2c68b159e2919f63c016bc165dacb522232e1466e84178a663d4eface4d7",
-        "identical_to_coach_v2": true
+        "identical_to_midibus_v1": true
       },
       "models/life-bus.m3dmodel": {
         "bytes": 83076,
         "sha256": "59b4ce18dddb93f431d2400ac8179784d5f63c8b8fbc51f8c1e23fc1ea896334",
-        "identical_to_coach_v2": true
+        "identical_to_midibus_v1": true
       },
       "models/life-bus.glb": {
         "bytes": 154276,
         "sha256": "fd9a27a4280cae60b1f50c2b497eb633aaeeacebbad3797357e6282e2d4b832f",
-        "identical_to_coach_v2": true
+        "identical_to_midibus_v1": true
       }
     }
   }

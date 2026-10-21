@@ -10,7 +10,7 @@ var records: [[String:Any]]=[]
     // Keep the previous batch's comparison envelopes byte-for-byte.
     let isNew=model.name==Map3DMidiBus.modelName
     let fidelity=model.name==Map3DCoachBus.modelName ? "owner-reference-recomposed" : info["fidelity"] ?? "illustrative"
-    let provenance: [String:Any]=["asset":["generator":isNew ? "Map3DMidiBus" : "Map3DCoachBus","version":isNew ? "1.0" : "2.0"],"extras":["assetId":model.name,"recipeVersion":1,"source":"native-procedural","fidelity":fidelity,"coordinateSystem":"metres; +x front, +y left, +z up"]]
+    let provenance: [String:Any]=["asset":["generator":isNew ? "Map3DMidiBus" : "Map3DCoachBus","version":"2.0"],"extras":["assetId":model.name,"recipeVersion":isNew ? 2 : 1,"source":"native-procedural","fidelity":fidelity,"coordinateSystem":"metres; +x front, +y left, +z up"]]
     let text=try JSONSerialization.data(withJSONObject:provenance,options:[.sortedKeys])
     var data=Data("M3DM".utf8)
     func put16(_ n: UInt16) { data.append(UInt8(n&255));data.append(UInt8(n>>8)) }
@@ -39,7 +39,7 @@ try export(Map3DCoachBus.model(),info:["name":"暖白暖紅三軸遊覽車（已
 let root=URL(fileURLWithPath:FileManager.default.currentDirectoryPath)
 let original=try Map3DModelFile(decoding:Data(contentsOf:root.appendingPathComponent("RailwayGameApp/Resources/Models/city-bus.m3dmodel")),named:"city-bus")
 try export(Map3DCityBus.model(from:original),info:["name":"既有大型市區公車（對照）","category":"reference","fidelity":"existing-game-model"])
-let manifest: [String:Any]=["schema_version":1,"generator":"Map3DMidiBus","recipe_version":1,"model_count":records.count,"part_count":1,"comparison_count":4,"example_count":0,
+let manifest: [String:Any]=["schema_version":1,"generator":"Map3DMidiBus","recipe_version":2,"model_count":records.count,"part_count":1,"comparison_count":4,"example_count":0,
     "native_coordinates":"metres; +x front, +y left, +z up","gltf_coordinates":"metres; +x front, +y up, -z left",
     "directions":["top","bottom","left","right","front","back","isometric"],"models":records,
     "notes":"One new rounded midibus type, plus four existing bus comparisons; fixed teal/off-white livery, static native geometry. Street motion uses the existing traffic system."]

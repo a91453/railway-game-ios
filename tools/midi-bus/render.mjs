@@ -1,5 +1,5 @@
 import {createServer} from 'node:http';
-import {readFileSync,writeFileSync,mkdirSync,copyFileSync,unlinkSync} from 'node:fs';
+import {readFileSync,writeFileSync,mkdirSync,copyFileSync,unlinkSync,existsSync} from 'node:fs';
 import {resolve,dirname,extname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createRequire} from 'node:module';
@@ -56,7 +56,8 @@ try{
  writeFileSync(resolve(root,'manifest.json'),JSON.stringify(manifest,null,2)+'\n');
  const bus=manifest.models[0],css='<style>body{font:18px system-ui;color:#262c57;background:#eceef6;margin:24px}h1{font-size:30px}h2{font-size:20px}main,.row{display:flex;gap:12px}section{background:white;border-radius:12px;padding:12px;flex:1;min-width:0}img{width:100%;object-fit:contain}p{margin:4px 0}.row section{text-align:center}.row img{aspect-ratio:1}.big{max-height:450px}</style>';
  async function sheet(name,html){await page.setContent('<meta charset="utf-8"><base href="'+address+'/">'+css+html);await page.evaluate(()=>Promise.all([...document.images].map(i=>i.decode())));await page.screenshot({path:resolve(root,'previews',name),fullPage:true});}
- await sheet('overview.png','<h1>圓弧車頭中型公車｜暖白 × 藍綠</h1><main><section><h2>四段弧面風擋・右前雙門</h2><img class="big" src="previews/'+bus.id+'-hero.png"></section><section><h2>兩軸短車身・貼合車頂與圓尾燈</h2><img class="big" src="previews/'+bus.id+'-rear.png"></section></main><div class="row">'+['front','back','left','right'].map(v=>'<section><img src="'+bus.views[v]+'"><p>'+({front:'前視',back:'後視',left:'左視',right:'右視'})[v]+'</p></section>').join('')+'</div>');
+ await sheet('overview.png','<h1>圓弧車頭中型公車｜暖白 × 藍綠</h1><main><section><h2>包覆曲面風擋・圓肩車頂</h2><img class="big" src="previews/'+bus.id+'-hero.png"></section><section><h2>連續窗帶與細裙線・右前雙門</h2><img class="big" src="previews/'+bus.id+'-rear.png"></section></main><div class="row">'+['front','back','left','right'].map(v=>'<section><img src="'+bus.views[v]+'"><p>'+({front:'前視',back:'後視',left:'左視',right:'右視'})[v]+'</p></section>').join('')+'</div>');
+ if(existsSync(resolve(root,'previews/streamline-before-hero.png')))await sheet('streamline-before-after.png','<h1>流線輪廓修整｜同角度前後對照</h1><main><section><h2>修整前：平頂、直線前窗與方形窗列</h2><img src="previews/streamline-before-hero.png"><img src="previews/streamline-before-right.png"></section><section><h2>修整後：圓肩頂蓋、包覆曲面與連續窗帶</h2><img src="previews/'+bus.id+'-hero.png"><img src="'+bus.views.right+'"></section></main>');
  await sheet('directions.png','<h1>同一原生車型｜七向透明圖</h1><div class="row">'+Object.entries(bus.views).map(([v,p])=>'<section><img src="'+p+'"><p>'+v+'</p></section>').join('')+'</div>');
  await sheet('comparison.png','<h1>遊戲風格對照｜1款新中巴與4款已完成車型</h1><main>'+manifest.models.map(m=>'<section><h2>'+m.name+'</h2><img src="previews/'+m.id+'-hero.png"><p>長 '+(m.maximum[0]-m.minimum[0]).toFixed(2)+' m · '+m.triangles+' 三角形</p></section>').join('')+'</main>');
  await sheet('fleet.png','<h1>同尺度車隊｜小巴也已完成遊戲風格</h1><p>同一鏡頭與公尺比例，由近至遠：藍綠高頂小巴 → 新暖白藍綠中巴 → 白藍低地板 → 暖紅三軸遊覽車 → 既有大型公車。</p><section><img src="previews/fleet-native.png"></section>');

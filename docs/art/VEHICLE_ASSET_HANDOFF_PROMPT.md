@@ -24,7 +24,7 @@
 2. builder 內部是 +x 前／+y 上／+z 右；Model.flat(named:from:) 只轉一次成原生 +x 前／+y 左／+z 上，單位公尺，輪底 z=0。不要把 GLTF 的 Y-up 誤當原生軸。GLB 由既有封裝器轉成 +x 前／+y 上／-z 左。
 3. 車體、車頂、底盤、輪胎、鏡殼與支架是封閉幾何；法線有限、單位化、朝外，不靠關掉剔除掩飾反面。頂點用不透明色，燈可 glow。不要每台用隨機彩色 instance 染色。一般車型約 1,500–3,000 三角形；上限需看當下 native loader／renderer，別把 15,000 loader 上限當每台應耗光的預算。
 4. 輪拱是實際凹口，不是黑色貼片。shuttleShell 耳切可保留凹輪廓，不能用 triangle fan 填凹多邊形。輪胎用封閉 civicTube、輪子落地，檢查輪拱上緣有空隙且門／裙板不蓋住輪子。
-5. 曲面車頭要在俯視與側視都重組，風擋依真實的分段斜面／弧面拆片，沿該片法線微移。側窗、前窗、門玻璃背後要有車身或實體門板，不能跨過折線浮在空中。用射線測支持距離，再看前後左右／底面。
+5. 曲面車頭要在俯視與側視都重組，風擋依真實的分段斜面／弧面拆片，沿該片法線微移。側窗、前窗、門玻璃背後要有車身或實體門板，不能跨過折線浮在空中。屋頂quad可能非共面，目的地牌應從實際三角面裁片；bilinear插值可能讓牌埋進屋頂。有腰線折點的色帶拆成凸片，不能對凹多邊形直接fan，否則first-three normal可能反向。用射線測支持距離與面片朝外，再看前後左右／底面。
 6. 服務／行李艙門採車身同色、薄接縫、小把手。StationKitBuilder.box／Map3DMesh.addBox 會對側面陰影著色，白漆蓋板可能變厚灰箱；需維持原色時用 face／shuttlePanel 直接著色。沿用 coachLuggageDoor 的封閉薄殼與面漆做法，不要復活舊厚鋼框。面漆與背板至少相差約 2 mm，薄片間距太近會深度閃爍；門仍應貼車身，不能為消閃爍突出幾公分。
 7. 車頂與車身分段相接，不能兩個不同色的殼有整片同面頂板，否則出現斑駁破碎區塊。冷氣／通風設備有接觸支腳，支腳完整填滿頂面到設備的間隙；鏡殼由相連鏡臂接到車身，走廊／踏階也要有支持。
 8. 複用舊 helper 可以，但不要為新車修改舊車的形狀／色彩。保留前批模型的 position/color/glow triangle payload；若沿用相同 provenance envelope，native 與 GLB 整檔也應一致。對照車是舊成果，不計新增。
@@ -68,7 +68,7 @@
 | #941 | `codex/shuttle-bus-2026-10-21`；高頂短鼻小巴與 shuttleShell helper |
 | #942 | `codex/low-floor-bus-2026-10-21`；依 #941 的低地板公車 |
 | #945 | `codex/coach-bus-2026-10-21`；依 #942 的三軸遊覽車，含最新同色行李門；本批基底 `0cabb0690ba1ec848ebeb1899b11f3c6949c7eb4` |
-| 本批 | `codex/midi-bus-2026-10-21`；依 #945 的圓弧中巴，不取代前三台 |
+| 本批 | `codex/midi-bus-2026-10-21`；依 #945 的圓弧中巴，已按作者回饋改圓肩loft／包覆風擋／細連續窗帶，不取代前三台 |
 | 新原生配方 | `Sources/GamePresentation/Map3DMidiBus.swift`／`life-midiBus`，約9.15×2.38×3.16m；鏡寬2.91m；軸 x=-2.12/+2.86 |
 | 原生現況 | 五款 bus：shuttle30%、low-floor35%、coach20%、midi10%、原有大型5%，都在原5%總池內；前三款 seed 選型不變 |
 | 工具 | `tools/midi-bus/rebuild.sh /absolute/private/output`；1新＋4對照，5native／5GLB／35七向PNG |
