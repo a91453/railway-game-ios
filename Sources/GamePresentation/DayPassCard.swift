@@ -8,7 +8,9 @@ public struct DayPassCard: Hashable, Sendable {
     /// The price on sale, or `nil` while none is.
     public let price: Money?
     /// The price the card offers first: the one on sale, else three of the
-    /// network's shortest fares.
+    /// network's shortest fares, to the nearest whole dollar within
+    /// ``priceRange`` (a pass sells only at whole dollars, and the
+    /// editor's distance steps make three fares $1.65).
     public let suggestedPrice: Money
     /// Whether anyone would buy one: the company keeps accounts and has
     /// sights.
@@ -22,9 +24,15 @@ public struct DayPassCard: Hashable, Sendable {
 
     public init(world: GameWorld) {
         price = world.accounts.dayPass
-        suggestedPrice = world.accounts.dayPass ?? DayPass.suggestedPrice(for: world.accounts.effectiveFareRules)
+        suggestedPrice = world.accounts.dayPass ?? Self.sellable(DayPass.suggestedPrice(for: world.accounts.effectiveFareRules))
         isAvailable = world.accounts.mode == .management && world.tourism != nil
         today = world.dayPassToday()
+    }
+
+    /// `price` to the nearest whole dollar, half up, within ``priceRange``.
+    static func sellable(_ price: Money) -> Money {
+        let dollars = (price.amount + priceStep / 2) / priceStep * priceStep
+        return Money(min(max(dollars, priceRange.lowerBound), priceRange.upperBound))
     }
 
     public func title(in language: DisplayLanguage) -> String {
