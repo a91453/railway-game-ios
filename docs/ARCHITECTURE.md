@@ -13655,7 +13655,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 **下一步**（`docs/HANDOFF.md` §5 有一行指過來）：
 1. 實機確認選單在手機橫拿時的位置與字（TestFlight）。
 2. UI 測試沒有加（選單的內容與命令有 Linux 測試 `LineDispatchPatternChoiceTests`）；要加就放 full lane。
-3. 停站模式（決策 Q3 的 patterns）也要發車方式時，`dispatchPattern`／`endLastDispatch` 要搬到每個服務。
+3. 停站模式（決策 24 的 `patterns`）也要發車方式時，`dispatchPattern`／`endLastDispatch` 要搬到每個服務。
 4. 單線開行車控制時兩端對開的量測（需要待避線的世界）。
 
 ## 目前規則摘要
