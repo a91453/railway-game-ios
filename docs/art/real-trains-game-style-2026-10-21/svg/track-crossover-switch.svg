@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+  <rect x="0" y="0" width="120" height="120" rx="22" fill="#BDEFE7"/>
+  <path fill="#8C5A3C" stroke="#262C57" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" d="M4.32 82.16 L60 113.48 L60 107.32 L4.32 76 Z"/>
+  <path fill="#8C5A3C" stroke="#262C57" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" d="M60 113.48 L115.68 82.16 L115.68 76 L60 107.32 Z"/>
+  <path fill="#ECE2BC" stroke="#262C57" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" d="M4.32 76 L60 107.32 L115.68 76 L60 44.68 Z"/>
+  <path fill="#7B8794" stroke="#262C57" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" d="M25.44 83 L73.44 56 L94.56 67.88 L46.56 94.88 Z"/>
+  <path fill="#7B8794" stroke="#262C57" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" d="M25.44 67.88 L46.56 56 L94.56 83 L73.44 94.88 Z"/>
+  <path fill="none" stroke="#262C57" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M31.97 85.55 L79.97 58.55"/>
+  <path fill="none" stroke="#262C57" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M31.97 63.09 L79.97 90.09"/>
+  <path fill="none" stroke="#262C57" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M40.03 90.09 L88.03 63.09"/>
+  <path fill="none" stroke="#262C57" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M40.03 58.55 L88.03 85.55"/>
+  <path fill="#D7282F" stroke="#262C57" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" d="M21.6 76 L26.88 78.97 L26.88 66.65 L21.6 63.68 Z"/>
+  <path fill="#D7282F" stroke="#262C57" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" d="M26.88 78.97 L32.16 76 L32.16 63.68 L26.88 66.65 Z"/>
+  <path fill="#262C57" stroke="#262C57" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" d="M21.6 63.68 L26.88 66.65 L32.16 63.68 L26.88 60.71 Z"/>
+  <path fill="#12A08F" stroke="#262C57" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" d="M87.84 76 L93.12 78.97 L93.12 66.65 L87.84 63.68 Z"/>
+  <path fill="#12A08F" stroke="#262C57" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" d="M93.12 78.97 L98.4 76 L98.4 63.68 L93.12 66.65 Z"/>
+  <path fill="#262C57" stroke="#262C57" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" d="M87.84 63.68 L93.12 66.65 L98.4 63.68 L93.12 60.71 Z"/>
+</svg>
