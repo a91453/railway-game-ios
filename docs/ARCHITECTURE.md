@@ -14319,6 +14319,7 @@ session_0125dMtwyMdz7mzoBCRNa1pn 預約（#231）。這一節由那個 PR 填寫
 **驗證**：
 - **VERIFIED**（Linux，無頭 Chromium 的 WebGL 預覽，決策 238）：色帶的前後對照 `docs/art/map3d-labels-2026-10-21/bands-before-after.jpg`（左前右後；上近景的高架與地面線交叉，下中景的環狀線與兩條直線）。
 - **VERIFIED**（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`Map3DLineBandsTests`、`Map3DTrainLabelsTests`、`Map3DTests` 通過；`MAP3D_FRAME_REPORT=1` 的 `testTheLineBandsCost`、`testTheGPUBudget` 跑過（數字如上）；改到的 App 檔通過 `swiftc -parse`。
+- **VERIFIED**（Linux，無頭 Chromium 的 WebGL 預覽，決策 238）：示範地圖近景（140 m）不給與給色帶各畫一次，pixelmatch 差異圖（GAME_AI_TOOLS §6.3，這個 PR 加進 `tools/map3d-preview/diff.cjs`）只標出軌道旁的色帶，1,440,000 個像素裡變了 9,321 個（0.65%），420 m 是 4,464 個（0.31%）；同一張自己比是 0。上中下是前、後、差異：`docs/art/map3d-labels-2026-10-21/bands-diff.jpg`。標籤畫在 SwiftUI 那層，預覽畫不到。
 - **UNVERIFIED**：App 的編譯（`ios-build.yml`）；3D 的 UI 測試（PR 用 `only_testing` 跑）；實機上標籤的大小、位置、跟車時的流暢度與色帶的樣子（TestFlight）。
 
 ### 316. 新遊戲一個入口：主選單只留「新遊戲」，點了選「空白地圖」或「實景地圖」，新遊戲選項標明兩種都套用
