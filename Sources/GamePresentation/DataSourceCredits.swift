@@ -127,12 +127,12 @@ public enum DataSourceCredits {
                             "交通部運輸資料流通服務平臺（TDX）"
                         ),
                         detail: language.text(
-                            "Routes, station order and names of the High Speed Rail, metro, light rail and Alishan Forest Railway lines; the positions of some TRA stations; official line colours, station codes, addresses and headways.",
-                            "提供高鐵、捷運、輕軌與阿里山林鐵的路線、站序與站名，部分台鐵車站的位置，各線的官方路線色、車站代碼、地址與營運班距。"
+                            "Routes, station order and names of the High Speed Rail, metro, light rail and Alishan Forest Railway lines; the positions of some TRA stations; official line colours, station codes, addresses and headways; the High Speed Rail demo's fares between stations.",
+                            "提供高鐵、捷運、輕軌與阿里山林鐵的路線、站序與站名，部分台鐵車站的位置，各線的官方路線色、車站代碼、地址與營運班距；高鐵示範各站之間的票價。"
                         ),
                         notice: language.text(
-                            "Ministry of Transportation and Communications, Transport Data eXchange (TDX), 2026: rail stations, lines, station order of lines, line shapes, travel times between stations, headways, station timetables and the High Speed Rail's daily timetable. This open data is released to the public under the Open Government Data License, version 1.0; users may use it provided they comply with the terms of the licence.",
-                            "交通部運輸資料流通服務平臺（TDX）2026 年軌道車站、路線、路線站序、路線線型、站間行駛時間、班距、車站時刻表與高鐵每日時刻表（此開放資料依政府資料開放授權條款（Open Government Data License）第 1 版進行公眾釋出，使用者於遵守本條款各項規定之前提下，得利用之。）"
+                            "Ministry of Transportation and Communications, Transport Data eXchange (TDX), 2026: rail stations, lines, station order of lines, line shapes, travel times between stations, headways, station timetables, the High Speed Rail's daily timetable and its origin–destination fares. This open data is released to the public under the Open Government Data License, version 1.0; users may use it provided they comply with the terms of the licence.",
+                            "交通部運輸資料流通服務平臺（TDX）2026 年軌道車站、路線、路線站序、路線線型、站間行駛時間、班距、車站時刻表、高鐵每日時刻表與高鐵起訖站票價（此開放資料依政府資料開放授權條款（Open Government Data License）第 1 版進行公眾釋出，使用者於遵守本條款各項規定之前提下，得利用之。）"
                         ),
                         links: [
                             DataSourceCredit.Link(title: "TDX", url: tdxURL),

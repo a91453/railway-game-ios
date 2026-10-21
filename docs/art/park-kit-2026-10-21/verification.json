@@ -1,0 +1,90 @@
+{
+  "status": "VERIFIED",
+  "environment": "Linux / Swift 6.4 / Node / Chromium WebGL 2",
+  "parts": 36,
+  "examples": 4,
+  "models": 40,
+  "views": 280,
+  "triangles": 36180,
+  "maximum_triangles": 6120,
+  "checks": [
+    "all native vertices round-trip through the game loader",
+    "native / GLB / PNG SHA-256",
+    "complete native-to-GLB conversion",
+    "three categories, 12 playground, sport and garden assets each",
+    "all seven transparent views nonempty and unclipped",
+    "opaque finite native vertices and connector normals"
+  ],
+  "not_verified": [
+    "iPhone / iPad Metal rendering and performance",
+    "live map placement, collisions, interior navigation or animation",
+    "playground safety, structural engineering or sports simulation",
+    "source pack browser rendering / pixel comparison; raw sources are not redistributed"
+  ],
+  "browser": {
+    "status": "VERIFIED",
+    "models_loaded": 40,
+    "pngs_decoded": 280,
+    "checks": [
+      "three categories / examples / Chinese name filtering",
+      "all 280 PNGs fully decoded",
+      "seven directions",
+      "pointer orbit changes rendered geometry",
+      "zoom",
+      "PNG / native / GLB download hashes",
+      "390 px without horizontal overflow",
+      "no external requests / missing resources / JavaScript errors"
+    ]
+  },
+  "native_tests": {
+    "status": "VERIFIED",
+    "toolchain": "Swift6.4",
+    "warnings_as_errors": true,
+    "passed": 21,
+    "suites": [
+      "Map3DParkKitTests (6)",
+      "Map3DStationKitTests (8)",
+      "Map3DModelFileTests (7)"
+    ]
+  },
+  "node_tests": {
+    "status": "VERIFIED",
+    "passed": 4
+  },
+  "png_decode": {
+    "status": "VERIFIED",
+    "count": 280,
+    "decoder": "Pillow full pixel decode + browser Image.decode",
+    "mode": "RGBA",
+    "size": [
+      384,
+      384
+    ],
+    "transparent_background": true,
+    "nonempty_pixels_match_render_metrics": true,
+    "maximum_alpha_range": [
+      192,
+      255
+    ],
+    "note": "Six edge-on views of thin court slabs have antialiased subpixel coverage; all native vertex alpha values are 255."
+  },
+  "visual_review": {
+    "status": "VERIFIED",
+    "sheets": [
+      "playground",
+      "sport",
+      "garden",
+      "examples",
+      "directions",
+      "undersides",
+      "style-checks"
+    ],
+    "adjustments": [
+      "Bridge lower suspension moved inside deck edge; native assertion failed before fix and passed after; Swift regression retained",
+      "Spring rider ears, tail and eyes",
+      "Trellis continuous stems"
+    ]
+  },
+  "maximum_part_triangles": 2856,
+  "maximum_assembly_triangles": 6120
+}

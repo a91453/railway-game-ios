@@ -522,11 +522,17 @@ public final class GameSession {
     /// and the map then draws them.
     public var railways: RealRailways? {
         didSet {
+            railwaysRevision &+= 1
             suggestStationNameAtTheMiddle()
             // Decision 298: the transfers come with the railways.
             refreshTransfers()
         }
     }
+
+    /// Counts the changes to ``railways`` (decision 328).
+    @ObservationIgnored private(set) var railwaysRevision = 0
+    /// ``buyableRealLines`` as last worked out, and from what.
+    @ObservationIgnored var buyableRealLinesMemo: (key: BuyableRealLinesKey, lines: [RealBranchLine])?
 
     /// Taiwan's place names (decision 159), which a new station on a
     /// real-world map is named after when no real station is right there.
@@ -1310,6 +1316,9 @@ public final class GameSession {
         var ticks: Int
         /// What traffic control shows of ``world``, when the step read it.
         var traffic: TrafficReading?
+        /// Decision 328: the night skip's run ahead from ``world``, when
+        /// the step worked it out.
+        var nightSkip: NightSkipMemo?
     }
 
     /// `world` advanced by `ticks`, all or nothing. `listening` (sounds
@@ -1363,6 +1372,8 @@ public final class GameSession {
         // Decision 195: the ticks that ran, and the followed train's way.
         ticksRun += Int64(step.ticks)
         if let traffic = step.traffic { trafficMemo = (worldRevision, traffic) }
+        // Decision 328: worked out with the tick, off the main actor.
+        if let memo = step.nightSkip, memo.revision == commandRevision { nightSkipMemo = memo }
         // Game time moved on: no edit before it can be undone.
         undoHistory.removeAll()
         redoHistory.removeAll()
@@ -1415,6 +1426,9 @@ public final class GameSession {
         /// The last reading, whose kinds of scheduled waits the tick's
         /// reading keeps (decision 210).
         var previousTraffic: TrafficReading?
+        /// Decision 328: what the tick needs to run ahead for the night
+        /// skip, when ``GameSession/nightSkip`` is looked at after it.
+        var nightSkip: NightSkipProbe?
 
         /// Advances ``world`` by one tick off the main actor, and reads
         /// what traffic control shows of it there too (decision 64's later
@@ -1424,12 +1438,18 @@ public final class GameSession {
         func work() async -> Result<TickStep, GameError> {
             let tick = self
             return await Task.detached(priority: .userInitiated) {
-                Result { () throws(GameError) in
-                    var step = try GameSession.advanced(tick.world, by: 1, listening: tick.listening)
-                    if tick.readsTraffic {
-                        step.traffic = TrafficReading(world: step.world, train: tick.train, in: tick.language, previous: tick.previousTraffic)
+                // Decision 328: timed for the map's frame readout.
+                FrameCostMeter.shared.measure(.step) {
+                    Result { () throws(GameError) in
+                        var step = try GameSession.advanced(tick.world, by: 1, listening: tick.listening)
+                        if tick.readsTraffic {
+                            step.traffic = TrafficReading(world: step.world, train: tick.train, in: tick.language, previous: tick.previousTraffic)
+                        }
+                        // Decision 328: some 100 ms on a big world, kept
+                        // off the main actor.
+                        step.nightSkip = tick.nightSkip?.firstMove(after: step.world)
+                        return step
                     }
-                    return step
                 }
             }.value
         }
@@ -1441,7 +1461,9 @@ public final class GameSession {
         guard !world.clock.isPaused else { return nil }
         return LoopTick(
             world: world, revision: worldRevision, listening: playSound != nil, train: selectedTrainID, language: language,
-            previousTraffic: trafficMemo?.reading
+            previousTraffic: trafficMemo?.reading,
+            // ``nightSkip`` runs ahead only with no skip under way.
+            nightSkip: nightSkipRun == nil && !isPausedForBuilding ? NightSkipProbe(memo: nightSkipMemo, revision: commandRevision) : nil
         )
     }
 
@@ -1480,7 +1502,7 @@ public final class GameSession {
     @discardableResult
     func finish(_ tick: LoopTick, with outcome: Result<TickStep, GameError>) -> Bool {
         guard tick.revision == worldRevision else { return false }
-        finish(outcome)
+        FrameCostMeter.shared.measure(.afterStep) { finish(outcome) }
         return true
     }
 
