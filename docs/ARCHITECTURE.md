@@ -14346,6 +14346,62 @@ session_0125dMtwyMdz7mzoBCRNa1pn 預約（#231）。這一節由那個 PR 填寫
 
 **驗證**：`NewGameChoiceTests`（Linux）。App 的畫面（主選單、新遊戲頁、iPhone 橫拿與 iPad）只能靠 macOS CI 編譯與 UI 測試；實機的樣子由作者在 TestFlight 看。
 
+### 318. 3D 地圖補上方塊列車的模型：莒光號、藍皮、推拉式自強號、普悠瑪、太魯閣、EMU800、柴油客車
+
+（2026-10-21，3D session_01Y25x9NJSKmAuP1M1K3Sf3C，遊戲規劃派工；預覽 `docs/art/map3d-train-sets-2026-10-21/`）
+
+**做什麼**：決策 230 的 3D 列車只有車型有樣式時近看才是模型，其他都是方塊。這次照 #900 的原生程序化列車與參考庫的 E201、車庫機車（`Map3DSceneKit*.swift`，只帶進程式與 `manifest.json`，圖片與 GLB 留在私有參考庫）給這些列車各做一套模型：
+
+- **一套** = 頭車、中間車、最後一節（`Map3DTrainSet`，模型名 `set-<key>-head／car／tail／single`），接在 `Map3DModelPack.standard` 的最後面，原本的模型 index 不變。
+- **牽引的列車**：莒光號 E200、E500、R100、R200 拖莒光號客車；藍皮是 R135 拖藍色客車。第 1 節是機車，中間是客車，最後一節是有尾門與兩盞紅尾燈的客車。
+- **機車**（`Map3DTrainLocomotive`）：每款一個造型、照參考庫的原塗裝（作者 2026-10-21：「照原有配色 反正模型都換了」）。比例與零件取自私有庫 `Simulator/reference_snapshot/models/tra-e201/tra-e201.glb`（上下兩色、車頂格柵、礙子與兩支集電弓、三軸台車、黃色排障器）與車庫規格（集電弓數、軸數、側面格柵片數、車頭型式），用方塊與細桿重新組成，沒有搬原模型的頂點：
+  - E200：上半米白、下半橘、米白裡一條橘線，車頭幾乎直立、擋風玻璃微微後傾，橘色車頭上一道米白 V 字，兩端駕駛室，兩支集電弓。
+  - E500：整台橘，擋風玻璃後傾、包到兩側的斜角，側面一排深色格柵，兩支集電弓。
+  - R100：橘色長車頭，米白細線與扶手欄杆，駕駛室靠前，短鼻。
+  - R200：白車身，一端駕駛室、車頭斜度最大的大擋風玻璃，引擎室一條深色格柵帶，車頂三個散熱風扇。
+  - R135：深藍，白線與扶手，短鼻上黃黑 V 紋。
+  - E1000 動力車：白車身，橘色、後傾、切角較大的車頭與一條橘色格柵帶，一支集電弓，後端是接客車的貫通門。
+  - 車頭的做法（`boxCab` 的 `Nose`）：下半直立，上半照 `rake` 往後傾到車頂，四角照 `chamfer` 切斜，擋風玻璃貼在斜面與兩個切角上；每款的斜度與切角照車庫模型的車頭型式（`front`：ge、toshiba、stadler-diesel、push-pull）量。
+- **推拉式自強號**：E1000 動力車在兩端（最後一節是頭車轉過來）。
+- **電聯車**：普悠瑪、太魯閣、EMU800 用 #900 的流線型車頭與 `Map3DTrainBuilder` 的中間車，最後一節是自己的尾車。EMU800 照車庫的原配色：灰車身、藍帶、藍色車頭。
+- **柴油客車**：1–2 節是 DR1000（單節時兩端都有駕駛台），3 節以上是 DR3100。車頭是平的黃色車端，中間貫通門、兩側擋風玻璃（車庫的 `yellowgangway`），車側一條細橘線。柴油客車與柴油自強號的性能曲線相同，分不出來，所以照節數挑。
+- **哪一套**：列車的車型代號有樣式或有一套就用它；沒有車型時照性能（普悠瑪、太魯閣、四種莒光號的性能各對到自己的一套）；都沒有就是方塊。`Map3DTrains.Heights` 記下每列車的 key。
+- **顏色**：參考庫車庫規格（`garage-blender-v1/*.json` 的 `specification.body`／`accent`）與 `TrainLivery` 的塗裝；模型自己的顏色，不吃路線色。
+- **量**：33 個模型、20,582 個三角形（每個 236–1,440；機車 1,074–1,440），啟動時建一次；整包從約 20 個模型、5.3 千個三角形變成 53 個、25,928 個。只有近處（`modelReach`）的車是模型，實例數不變，每個模型一個 draw。
+- **還是方塊**：磁浮、懸吊、單軌、蒸汽（參考庫與 #900 都沒有合適的做法）、貨車。
+
+**五個角度**：
+- 玩家：莒光號、藍皮、普悠瑪、太魯閣近看是自己的樣子，不再是一排白盒子；最後一節有尾燈，看得出車頭往哪走。
+- 鐵道迷：牽引的列車有機車與客車之分，E1000 動力車在兩端、DR1000 單節兩端都有駕駛台，六款機車各有自己的造型與原塗裝（E201 的上下兩色、R135 的黃黑 V 紋），顏色照參考庫車庫規格（出自照片）；不準的地方：機車拉長到和客車同長（車輛位置是 GameCore 算的）、佔掉一節客車的位置，集電弓畫成降下的樣子。
+- 開發：只動 GamePresentation 與它的測試；GameCore、存檔、golden、replay 不動；#900 的六個 Swift 檔照原樣帶進來，只把車種的做法整理成 `trainRecipe`；機車另寫在 `Map3DTrainLocomotives.swift`；新測試 `Map3DTrainSetTests` 6 個、`Map3DSceneKitTests` 7 個。
+- 美術：平塗頂點色、方塊與圓角，和決策 230 的通勤車並排看不突兀（預覽）；機車照參考庫的原塗裝（作者要的），零件細到集電弓、扶手，但仍是方塊組成；電聯車與客車是 AI 生成的素材表照著寫成程式的（README 標明）。
+- 音樂：無。
+
+**沒有選的做法**（預覽在 `docs/art/map3d-train-sets-2026-10-21/`，上半是方塊）：
+- **留方塊**：最便宜；但遊戲規劃把它排成第一件，方塊在近景最顯眼。
+- **整個合併 #900**：81 MB（62 MB PNG、11 MB GLB），App 用不到圖片；只帶需要的 Swift 檔。
+- **讀 #900 的 GLB 或 m3dmodel**：要打包檔案、多一條讀檔路徑；程式蓋的模型同樣是那份做法，App 少十幾 MB。
+- **只換顏色（方塊上色）**：便宜，但看不出機車與客車、車頭朝向。
+- **車頭全是直立的平面**（這個 PR 的第二版）：好做；但 E500、R200、E1000 的車頭都是後傾的，DR 是平的黃色車端不是流線型，EMU800 的車頭是藍的；作者要多方比較後修車頭的角度。對照圖 `docs/art/map3d-train-sets-2026-10-21/fronts.jpg`。
+- **#900 的通用機車上色**（這個 PR 的第一版）：E200、E500 同一個箱型、R100、R135 同一個舊型，車頂平的；作者看了 E201 之後要照原配色、換成各自的造型。
+- **直接放 E201 的 GLB**：最像；但 35,724 個三角形是一節車預算的 30 倍，而且原模型照搬不合 art-style §7。
+- **調色盤的顏色代替原塗裝**：和城市更一致；作者選了原配色。
+
+**參考與來源**：
+
+| 來源 | 拿了什麼 | 用在 |
+| --- | --- | --- |
+| #900 `Sources/GamePresentation/Map3DSceneKit*.swift`（私有參考庫 `Railway/generated-3d-assets-2026-10-21/scene-kit-pr900/`） | 原生程序化列車、機車、車頭的做法 | 照原樣帶進來；`trainRecipe`、`locomotive(... roof:)` |
+| #900 `docs/art/generated-2026-10-21-scene-kit/manifest.json` | 素材表的座標、描述、SHA-256 | `Map3DSceneKitTests` |
+| 參考庫 `Simulator/reference_snapshot/models/tra-e201/tra-e201.glb`（35,724 個三角形、12 個材質、無貼圖） | E201 的上下兩色與分界、車頂格柵、礙子、集電弓與高壓線的配置、三軸台車、黃色排障器（看比例，不取頂點） | `Map3DTrainLocomotive.e200`、`pantographs`、`running` |
+| 參考庫 `Railway/taiwan-rail-reference-clean/source/rail-3d/assets/garage-blender-v1/*.json`、`*.webp` | e200、e500、r100、r200、blue、bluecoach、juguang、ppcoach、e1000、dr1000、dr3100 的車身與飾帶色；`pantos`、`axles`、`sideVentPanels`、`front`；縮圖看各款的造型（R100 欄杆、R135 的 V 紋、R200 的風扇） | `Map3DTrainSet.all`、`Map3DTrainLocomotive` |
+| 外部專案 | 沒有找（列車外型的做法已在 #900） | — |
+
+**驗證**：
+- **VERIFIED**（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`Map3DTrainSetTests`、`Map3DSceneKitTests`、`Map3DModelTests` 與名字含 Map3D、StreetLife、TrainLivery 的測試全過。
+- **VERIFIED**（Linux，無頭 Chromium 的 WebGL 預覽，決策 238）：每一套的頭、中、尾並排（預覽圖）。
+- **UNVERIFIED**：App 的編譯（`ios-build.yml`）、3D 的 UI 測試（`only_testing`）、實機的樣子與幀數（TestFlight）。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。
