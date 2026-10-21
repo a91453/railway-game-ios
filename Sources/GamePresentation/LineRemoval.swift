@@ -18,10 +18,11 @@ extension GameWorld {
         return (trains.count, trains.reduce(Money.zero) { $0 + trainSaleQuote($1) })
     }
 
-    /// The train standing on no line and running no service that refused
-    /// `error` (decision 327): one that never moves on by itself, so the
-    /// track it holds stays held until it is sold or taken off. `nil` for
-    /// any other refusal.
+    /// The train standing on no line, running no service and with no path
+    /// ahead that refused `error` (decision 327): one that never moves on
+    /// by itself, so the track it holds stays held until it is sold or
+    /// taken off. `nil` for any other refusal, as for a train sent along a
+    /// path by hand, which passes.
     public func idleTrainInTheWay(of error: GameError) -> Train? {
         let candidate: Train?
         switch error {
@@ -35,7 +36,8 @@ extension GameWorld {
         default:
             candidate = nil
         }
-        guard let train = candidate, train.execution == nil, assignedLine(of: train.id) == nil else { return nil }
+        guard let train = candidate, train.execution == nil, train.movement.remainingEdges.isEmpty,
+              assignedLine(of: train.id) == nil else { return nil }
         return train
     }
 }

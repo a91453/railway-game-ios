@@ -14954,7 +14954,7 @@ $10,000 的價格照報告的建造、列車與利益算出（旅客那一項是
 **改法**（都在 GamePresentation 與 App，**GameCore 不動**；新的 `Sources/GamePresentation/LineRemoval.swift`）：
 1. **刪除路線一起賣掉它的列車**：新指令 `PlayerCommand.Edit.removeLineSellingTrains`：`removeLine`，再把原本配屬的每一列照下面第 2 點賣掉，全部成功或全部不做（`performEdit` 在副本上做）。路線面板的「刪除」先跳確認卡：「它的 N 列車會一起賣掉，取得 $X。」或「這條路線沒有列車。」完成訊息說賣了幾列、取得多少。
 2. **沒有路線的列車在原地賣掉**：新指令 `sellTrainWhereItStands`：還在跑自己的時刻表就停掉（`stopTrainService`），在軌道上就移出（`unplaceTrain`），再照決策 180 賣（`sellTrain`，帳面價值的 70 %，乘客照舊下車、貨物照舊損失）。還配屬在路線上的列車照舊不能賣（`trainInService`）。車隊清單在軌道上、沒有路線的列車也有「出售」；點地圖上的列車打開的列車卡也有。
-3. **拆除被擋時說出是哪一列並可賣掉**：`GameSession.refusal` 遇到 `trackReserved` 或 `trackEdgeInUse`，擋住的列車若沒有路線、也沒有在跑時刻表（`GameWorld.idleTrainInTheWay(of:)`；這種列車不會自己離開），訊息改成「列車 1 沒有路線，停在這裡擋住了。賣掉它就能拆除。」，訊息條多一個「出售 列車 1 $X」的按鈕（`StatusMessage.sellableTrain`）。賣掉可以復原。
+3. **拆除被擋時說出是哪一列並可賣掉**：`GameSession.refusal` 遇到 `trackReserved` 或 `trackEdgeInUse`，擋住的列車若沒有路線、沒有在跑時刻表、前面也沒有路徑（`GameWorld.idleTrainInTheWay(of:)`；這種列車不會自己離開。手動給了路徑的列車會開走，照舊說「請等它通過」），訊息改成「列車 1 沒有路線，停在這裡擋住了。賣掉它就能拆除。」，訊息條多一個「出售 列車 1 $X」的按鈕（`StatusMessage.sellableTrain`）。賣掉可以復原。
 
 舊的 `removeLine`、`sellTrain` 指令照舊留著，舊的指令紀錄重播得一樣。收購的線也一樣：它的列車照時刻表停在哪裡都一起賣掉，收購紀錄照決策 315 留著（那條真實路線仍是公司的）。
 
