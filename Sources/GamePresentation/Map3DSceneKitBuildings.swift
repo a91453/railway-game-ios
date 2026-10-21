@@ -24,7 +24,11 @@ extension SceneKitBuilder {
             if v==5 {
                 for level in 0..<3 {
                     box(10-Float(level)*2,Float(level)*6+0.45,0,8-Float(level),12,6,Map3DPalette.houseWalls[v].color)
-                    planter(11-Float(level)*2,Float(level+1)*6+0.45,3,size:1.6)
+                    // Put each planter on the exposed terrace, beyond the
+                    // storey above. The old centres were inside that storey,
+                    // leaving just foliage emerging through a vertical wall.
+                    let terraceX: Float=[12.7,10.2,8.25][level]
+                    planter(terraceX,Float(level+1)*6+0.45,3,size:level==2 ? 0.7 : 1.6)
                 }
             }
         case .traditional: traditional(v)
@@ -53,7 +57,9 @@ extension SceneKitBuilder {
         // A real arcade: the ground storey's front is recessed, with columns
         // under the upper floors, rather than dark rectangles on solid walls.
         let arcade=variant%3==0
-        box(x-(arcade ? 1 : 0),base+0.25,z,length-(arcade ? 2 : 0),width,3.1,wall)
+        let groundX=x-(arcade ? 1 : 0),groundLength=length-(arcade ? 2 : 0)
+        box(groundX,base+0.25,z,groundLength,width,floorHeight,wall)
+        windows(x:groundX,z:z,length:groundLength,width:width,floors:1,start:base+0.25)
         if arcade {
             for i in 0...max(2,Int(width/3)) {
                 let dz = -width/2+Float(i)*width/Float(max(2,Int(width/3)))
@@ -64,14 +70,23 @@ extension SceneKitBuilder {
             let y=base+0.25+Float(floor)*floorHeight
             box(x,y,z,length,width,floorHeight,wall)
             box(x,y,z,length+0.12,width+0.12,0.12,Map3DPalette.tileWhite)
+            windows(x:x,z:z,length:length,width:width,floors:1,start:y)
             if variant%2==0 {
-                let front=x+length/2+0.35
-                box(front,y,z,0.9,width*0.78,0.15,Map3DPalette.roof)
-                box(front+0.4,y+0.15,z,0.08,width*0.78,0.85,Map3DPalette.stone)
-                for dz: Float in [-width*0.39,width*0.39] { box(front,y+0.15,z+dz,0.9,0.08,0.85,Map3DPalette.stone) }
+                let face=x+length/2,front=face+0.4,balconyWidth=width*0.78
+                // Cantilever slab overlaps the structural floor by 25 cm.
+                box(front,y-0.12,z,1.3,balconyWidth,0.28,Map3DPalette.concrete)
+                for dz: Float in [-balconyWidth*0.36,balconyWidth*0.36] {
+                    beam(Map3DPoint(face-0.08,y-0.65,z+dz),Map3DPoint(face+0.85,y-0.1,z+dz),thickness:0.14,color:Map3DPalette.concrete)
+                }
+                // A full-height glazed door reaches the balcony, rather than
+                // a window sill with no access to the external floor.
+                box(face,y+0.16,z,0.08,1.2,2.35,Map3DPalette.tileWhite)
+                mesh.addFacet([Map3DPoint(face+0.047,y+0.24,z-0.49),Map3DPoint(face+0.047,y+2.37,z-0.49),
+                               Map3DPoint(face+0.047,y+2.37,z+0.49),Map3DPoint(face+0.047,y+0.24,z+0.49)],color:Self.glass)
+                box(front+0.59,y+0.16,z,0.09,balconyWidth,1.05,Map3DPalette.stone)
+                for dz: Float in [-balconyWidth/2,balconyWidth/2] { box(front,y+0.16,z+dz,1.3,0.09,1.05,Map3DPalette.stone) }
             }
         }
-        windows(x:x,z:z,length:length,width:width,floors:floors,start:base+0.25)
         let roof=base+0.25+Float(floors)*floorHeight
         box(x,roof,z,length+0.25,width+0.25,0.2,Map3DPalette.roof)
         for sign: Float in [-1,1] {
@@ -83,7 +98,11 @@ extension SceneKitBuilder {
         if variant%5==4 { gable(x,roof+0.4,z,length:length*0.8,width:width*0.8,rise:1.1,color:Map3DPalette.tinRoofs[variant%5]) }
         // Small AC units on the side, offset from the window bays.
         for floor in 0..<min(floors,7) {
-            box(x-length*0.28,base+1+Float(floor)*floorHeight,z-width/2-0.22,0.85,0.4,0.6,Map3DPalette.acUnit)
+            let y=base+1+Float(floor)*floorHeight,side=z-width/2
+            for dx: Float in [-0.3,0.3] {
+                beam(Map3DPoint(x-length*0.28+dx,y-0.25,side+0.03),Map3DPoint(x-length*0.28+dx,y,side-0.42),thickness:0.07,color:Self.steel)
+            }
+            box(x-length*0.28,y,side-0.19,0.85,0.4,0.6,Map3DPalette.acUnit)
         }
     }
 

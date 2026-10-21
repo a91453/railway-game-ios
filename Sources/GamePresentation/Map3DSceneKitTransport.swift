@@ -51,17 +51,35 @@ extension SceneKitBuilder {
             tint=v==0 || v==2 ? Map3DPalette.crown : v==1 ? Map3DPalette.shopAwnings[0] : v==5 ? Map3DPalette.platformEdge : Map3DPalette.canopy
         default: break
         }
+        if asset.family == .traModern && v==0 {
+            style.nose=3.2;style.drop=0.75;style.tuck=0.12;style.cap=0.28
+        }
         if isLocomotive {
             locomotive(variant:v,modern:asset.family == .traModern)
             style.nose=0.15;style.drop=0.05;style.doors=2;style.band=0.22...0.6
-            let coach=Map3DTrainBuilder(style:style,cab:false).model(named:asset.id+"-coach")
+            let coach=SceneKitCab.coach(style:style,named:asset.id+"-coach")
             addModel(coach,at:Map3DPoint(-19,0,0),tint:tint)
+            let end: Float = -19-style.length/2
+            box(end-0.025,1.0,0,0.08,1.04,2.4,Map3DTrainStyle.doorColour)
+            box(end-0.07,1.9,0,0.025,0.70,1.1,Map3DTrainStyle.glass)
+            box(end-0.08,0.8,0,0.22,1.5,0.18,Map3DTrainStyle.under)
+            for z: Float in [-1,1] {
+                let glowStart=mesh.vertices.count
+                box(end-0.05,1.5,z,0.10,0.17,0.17,Map3DPalette.lantern)
+                mesh.makeGlowing(from:glowStart)
+            }
         } else {
-            let head=Map3DTrainBuilder(style:style,cab:true).model(named:asset.id+"-head")
+            let head=SceneKitCab(style:style,asset:asset,tail:false,tint:tint).model()
             addModel(head,at:Map3DPoint(single ? 0 : style.length/2+0.18,0,0),tint:tint)
-            if !single {
-                let tail=Map3DTrainBuilder(style:style,cab:false,pantograph:asset.family == .traModern && v<3).model(named:asset.id+"-tail")
-                addModel(tail,at:Map3DPoint(-style.length/2-0.18,0,0),tint:tint)
+            let tail=SceneKitCab(style:style,asset:asset,tail:true,tint:tint).model()
+            if single {
+                // Join opposite halves of two cab cars, keeping one car's
+                // length and two real driving ends for a single railbus.
+                mesh=Map3DMesh()
+                addModel(SceneKitCab.clipped(head,maximumX:0,keepFront:true),tint:tint)
+                addModel(SceneKitCab.clipped(tail,maximumX:0,keepFront:true),angle:.pi,tint:tint)
+            } else {
+                addModel(tail,at:Map3DPoint(-style.length/2-0.18,0,0),angle:.pi,tint:tint)
                 box(0,0.75,0,0.65,1.7,1.9,Map3DTrainStyle.under)
             }
         }
@@ -85,6 +103,12 @@ extension SceneKitBuilder {
             wheel(x+dx,0.55,z,radius:0.5,width:0.2)
         }}}
         box(8.9,1.0,0,0.4,1.5,0.25,Self.ink)
+        box(modern || variant==5 ? 8.13 : 7.20,2.25,0,0.08,0.08,1.15,color)
+        for z: Float in [-0.94,0.94] {
+            let glowStart=mesh.vertices.count
+            box(modern || variant==5 ? 8.17 : 7.24,1.62,z,0.10,0.25,0.16,Map3DTrainStyle.headlamp)
+            mesh.makeGlowing(from:glowStart)
+        }
     }
 
     mutating func station(_ v: Int) {

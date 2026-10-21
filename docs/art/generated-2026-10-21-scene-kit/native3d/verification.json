@@ -5,10 +5,10 @@
   "orthographic_views": 936,
   "isometric_views": 156,
   "transparent_pngs": 1092,
-  "triangles": 72954,
-  "maximum_triangles": 2742,
+  "triangles": 109750,
+  "maximum_triangles": 3488,
   "checks": [
-    "156 original subject IDs covered",
+    "all original subject IDs covered",
     "native model SHA-256 and provenance",
     "GLB SHA-256 and complete native-vertex conversion",
     "GLB accessor byte ranges and embedded buffers",
@@ -38,36 +38,40 @@
     "failed_requests": [],
     "external_requests": []
   },
+  "swift": {
+    "status": "VERIFIED",
+    "version": "6.4.0",
+    "warnings_as_errors": true,
+    "tests": 16,
+    "regressions": [
+      "recessed arcade glazing has a backing wall within 12 cm",
+      "both exposed train ends have glazing and marker lights",
+      "curved front glazing and red cab face remain visible without holes"
+    ],
+    "old_geometry_regression_failures": 78
+  },
+  "visual_review": {
+    "status": "VERIFIED",
+    "previews": [
+      "previews/fixes.png",
+      "previews/transport-review.png",
+      "previews/housing-review.png",
+      "previews/style-review.png"
+    ],
+    "additional_residential_underside_views": 27,
+    "method": "actual native-geometry renders; six directions, oblique underside, four backgrounds, small sizes, blur and grayscale inspected; terrace planters moved onto exposed slabs"
+  },
   "png_full_decode": {
     "status": "VERIFIED",
-    "images": 1092,
-    "rgba_size": [
+    "count": 1092,
+    "mode": "RGBA",
+    "dimensions": [
       384,
       384
     ],
-    "alpha_range": [
+    "alpha_extrema": [
       0,
       255
-    ],
-    "visible_bounds_match": true
-  },
-  "swift_checks": {
-    "status": "VERIFIED",
-    "version": "6.4.0",
-    "warnings_as_errors_build": true,
-    "tests": 13,
-    "failures": 0
-  },
-  "node_tests": {
-    "status": "VERIFIED",
-    "tests": 4,
-    "failures": 0
-  },
-  "visually_inspected": [
-    "previews/overview.png",
-    "previews/directions.png",
-    "previews/viewer-desktop.png",
-    "previews/viewer-bottom.png",
-    "previews/viewer-mobile.png"
-  ]
+    ]
+  }
 }

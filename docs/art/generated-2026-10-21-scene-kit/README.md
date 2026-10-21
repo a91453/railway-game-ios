@@ -10,6 +10,8 @@
 
 ## 原生 3D 與七方向圖片
 
+修正版已補上車頭／反向尾端、紅尾燈，修正住宅騎樓窗戶浮空及陽台／冷氣接點。[查看修正版](native3d/previews/fixes.png)；後續生成從 [scene-kit 技能](../../../.claude/skills/scene-kit/SKILL.md) 與 `tools/scene-kit/rebuild.sh` 開始。
+
 已新增 [156 個原生程序化模型、GLB 及 1,092 張上下左右前後／立體透明 PNG](native3d/README.md)。[可旋轉檢視頁](native3d/index.html) 支援六方向、拖曳與縮放；[總覽](native3d/previews/overview.png) 與 [方向對照](native3d/previews/directions.png) 可直接查看。新模型重新組合量體、屋頂與設備，換成遊戲的霧面色票；不直接搬私有原模或貼原圖片。
 
 ## 原圖片素材清單

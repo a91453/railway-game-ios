@@ -26,6 +26,8 @@ for(const record of manifest.models){
  }
  models++;triangles+=record.triangles;
 }
-assert.equal(models,156);assert.equal(views,1092);
-const result={status:'VERIFIED',environment:'Linux / Swift 6.4 native geometry / Node / Chromium WebGL2',models,orthographic_views:models*6,isometric_views:models,transparent_pngs:views,triangles,maximum_triangles:Math.max(...manifest.models.map(a=>a.triangles)),checks:['156 original subject IDs covered','native model SHA-256 and provenance','GLB SHA-256 and complete native-vertex conversion','GLB accessor byte ranges and embedded buffers','no photographic or private model textures','1092 RGBA PNG headers, hashes and visible bounds','all seven views nonempty and unclipped'],not_verified:['Native Metal rendering and performance on an iPhone or iPad','Automatic placement in the live game map']};
+assert.equal(models,manifest.model_count);assert(models>0);assert.equal(views,models*7);
+const concepts=JSON.parse(readFileSync(new URL('../../docs/art/generated-2026-10-21-scene-kit/manifest.json',import.meta.url)));
+for(const asset of concepts.assets)for(const frame of asset.frames)assert(ids.has(frame.id),'Missing original subject '+frame.id);
+const result={status:'VERIFIED',environment:'Linux / Swift 6.4 native geometry / Node / Chromium WebGL2',models,orthographic_views:models*6,isometric_views:models,transparent_pngs:views,triangles,maximum_triangles:Math.max(...manifest.models.map(a=>a.triangles)),checks:['all original subject IDs covered','native model SHA-256 and provenance','GLB SHA-256 and complete native-vertex conversion','GLB accessor byte ranges and embedded buffers','no photographic or private model textures',views+' RGBA PNG headers, hashes and visible bounds','all seven views nonempty and unclipped'],not_verified:['Native Metal rendering and performance on an iPhone or iPad','Automatic placement in the live game map']};
 writeFileSync(resolve(root,'verification.json'),JSON.stringify(result,null,2)+'\n');console.log(JSON.stringify(result));

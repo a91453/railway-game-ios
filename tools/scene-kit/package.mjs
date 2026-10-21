@@ -44,6 +44,7 @@ if(process.argv[1]&&resolve(process.argv[1])===resolve(new URL(import.meta.url).
     const native=readFileSync(resolve(root,record.native)),model=readNative(native),glb=glbFromNative(model),file='models/'+record.id+'.glb';
     writeFileSync(resolve(root,file),glb);record.glb=file;record.native_sha256=createHash('sha256').update(native).digest('hex');record.glb_sha256=createHash('sha256').update(glb).digest('hex');
     record.views=Object.fromEntries(manifest.directions.map(d=>[d,'views/'+record.id+'/'+d+'.png']));
+    record.view_metrics={};
     record.source_image=concepts.get(record.id);
   }
   writeFileSync(resolve(root,'manifest.json'),JSON.stringify(manifest,null,2)+'\n');

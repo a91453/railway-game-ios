@@ -4,6 +4,14 @@
 
 [開啟可旋轉檢視頁](index.html) · [完整模型與圖片清單](manifest.json) · [全部模型總覽](previews/overview.png) · [六方向對照](previews/directions.png)
 
+**修正版（配方 v2）**：[車頭／住宅修正預覽](previews/fixes.png) · [全部列車前後端](previews/transport-review.png) · [住宅與下方接點](previews/housing-review.png)。
+
+- 車頭改為連續的面罩、前窗與燈，移除舊端面中心插色的放射狀白斑。保留 EMU3000 黑罩、普悠瑪紅罩、太魯閣配色與 700T 長鼻；前窗逐三角面裁切貼合車鼻。
+- 電聯車／捷運兩個外端均使用駕駛室，尾端反向並有紅燈；單節 DR1000 也有雙端。機車牽引客車另有尾門、尾窗、踏板與尾燈。
+- 住宅騎樓一樓的窗戶跟著真正牆面退縮；陽台樓板嵌入主樓板，增設陽台門及支撐，冷氣支架接牆。另有 27 張住宅下方斜視供檢查。
+
+後續 Claude／其他 agent 從 [scene-kit 技能](../../../../.claude/skills/scene-kit/SKILL.md) 開始；一鍵更新為 `tools/scene-kit/rebuild.sh`。入口已加到根目錄 `CLAUDE.md`；合入 main 後可直接重用，不依賴這次對話。
+
 ![同一模型的上下左右前後與立體視角](previews/directions.png)
 
 ## 查看與下載
@@ -36,7 +44,7 @@ if let asset = Map3DSceneKit.asset(id: "07_residential_low-04") {
 
 原生模型以公尺計，**+x 前、+y 左、+z 上**；GLB 轉成 **+x 前、+y 上、−z 左**。模型原點、包圍盒與尺寸在 manifest。地鐵入口的樓梯確實低於街面；一般建物有底面，屋頂、水塔、陽台、騎樓與設備均有實際幾何。列車保留輪廓與配色辨識，兩節為縮短的素材編組，不當作實際營運編組或工程規格。原生檔顏色已烘入頂點，不需要另給路線色。
 
-全批共 **72,954 個三角形**，單件最多 **2,742 個三角形**；這是模型檔的數量，並非遊戲實機的幀率量測。所有模型都低於既有原生讀取器的 15,000 面限制。
+全批共 **109,750 個三角形**，單件最多 **3,488 個三角形**；這是模型檔的數量，並非遊戲實機的幀率量測。所有模型都低於既有原生讀取器的 15,000 面限制。
 
 ## 視覺重組與參考
 
@@ -59,18 +67,19 @@ if let asset = Map3DSceneKit.asset(id: "07_residential_low-04") {
 
 ## 重建與驗證
 
-使用專案要求的 Swift 6.4、Node、已安裝的 Chromium／Playwright：
+使用專案要求的 Swift 6.4、Node、已安裝的 Chromium／Playwright，執行 `tools/scene-kit/rebuild.sh` 可完成整套流程。獨立步驟如下：
 
 ```sh
 tools/scene-kit/export.sh "$PWD/docs/art/generated-2026-10-21-scene-kit/native3d"
 node tools/scene-kit/render.mjs docs/art/generated-2026-10-21-scene-kit/native3d
+node tools/scene-kit/review.mjs docs/art/generated-2026-10-21-scene-kit/native3d
 node tools/scene-kit/verify.mjs docs/art/generated-2026-10-21-scene-kit/native3d
 node tools/scene-kit/browser-check.mjs docs/art/generated-2026-10-21-scene-kit/native3d
 ```
 
 `CHROMIUM_PATH` 可指定已安裝的瀏覽器路徑。工具不下載瀏覽器或套件，不需要 GPU 雲端服務。原生模型用既有 `Map3DModelFile` 讀回，GLB 是相同頂點的座標旋轉與封裝；PNG 從相同原生模型渲染，可重現。
 
-- **VERIFIED — Linux／Swift 6.4**：warnings-as-errors 完整建置；原生素材與模型讀取器共 13 個測試通過，涵蓋題材完整性、六面法線、底面、尺寸、可重現性、原生模型包入口及 156 個檔案逐頂點讀回。
+- **VERIFIED — Linux／Swift 6.4**：warnings-as-errors 完整建置；原生素材與模型讀取器共 16 個測試通過，涵蓋題材完整性、六面法線、底面、尺寸、可重現性、原生模型包入口及 156 個檔案逐頂點讀回；新增騎樓窗戶向內射線碰牆、列車兩端玻璃／燈與曲面前窗連續可見的回歸檢查。
 - **VERIFIED — Node**：4 個 GLB 匯出測試；156 組原生／GLB 完整頂點轉換、SHA-256、provenance、accessor 邊界及無外部貼圖／buffer。
 - **VERIFIED — Chromium WebGL 2**：1,092 張 RGBA 圖片全部非空、不碰邊；156 模型可互動載入；六方向、拖曳、縮放、PNG／GLB 下載、原圖對照、搜尋與 390 px 畫面通過，無 JavaScript 錯誤、缺失資源或外部請求。總覽、方向、底視與手機預覽已目視查看。詳見 [verification.json](verification.json)。
 - **UNVERIFIED**：iPhone／iPad Metal 的實際顯示與效能、實際地圖採用後的擺放與比例；WebGL 圖片不是 Metal 實機截圖。

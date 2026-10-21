@@ -43,7 +43,7 @@ try{
  // Native 3D screenshots: these show vertices rendered above, not edited PNGs.
  mkdirSync(resolve(root,'previews'),{recursive:true});
  const cards=manifest.models.map(a=>'<article><img src="'+a.views.isometric+'"><div>'+a.name+'</div></article>').join('');
- await page.setContent('<html><head><meta charset="utf-8"><base href="'+address+'/"><style>body{font:13px system-ui;color:#262c57;background:#eceef6;margin:16px}main{display:grid;grid-template-columns:repeat(8,1fr);gap:8px}article{border-radius:9px;background:white;padding:6px;min-width:0}img{width:100%;aspect-ratio:1;object-fit:contain}</style></head><body><h1>原生 3D｜156 個模型</h1><main>'+cards+'</main></body></html>');
+ await page.setContent('<html><head><meta charset="utf-8"><base href="'+address+'/"><style>body{font:13px system-ui;color:#262c57;background:#eceef6;margin:16px}main{display:grid;grid-template-columns:repeat(8,1fr);gap:8px}article{border-radius:9px;background:white;padding:6px;min-width:0}img{width:100%;aspect-ratio:1;object-fit:contain}</style></head><body><h1>原生 3D｜'+manifest.models.length+' 個模型</h1><main>'+cards+'</main></body></html>');
  await page.evaluate(()=>Promise.all([...document.images].map(i=>i.decode())));await page.screenshot({path:resolve(root,'previews/overview.png'),fullPage:true});
  const examples=manifest.models.filter((a,i)=>i===0||a.variant===0),labels={top:'上視',bottom:'下視',left:'左視',right:'右視',front:'前視',back:'後視',isometric:'立體'};
  const rows=examples.map(a=>'<section><h3>'+a.name+'</h3><div class="row">'+Object.entries(a.views).map(([v,p])=>'<div><img src="'+p+'"><p>'+labels[v]+'</p></div>').join('')+'</div></section>').join('');

@@ -404,6 +404,9 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
 - Before adding or changing any animation or transition in the app, read
   `.claude/skills/motion/SKILL.md`: the motion rules (`MotionRule`, decision
   253) and what Reduce Motion does.
+- For native procedural trains, buildings or scene assets, read
+  `.claude/skills/scene-kit/SKILL.md`; rebuild models and multi-view previews
+  with `tools/scene-kit/rebuild.sh`, then inspect their structural joins.
 - Prefer small, minimal changes. Avoid speculative architecture, abstractions
   with no current use, new dependencies, and unrelated refactors or formatting.
 - This repository is public: never commit secrets (API keys, `.p8`/`.p12`,

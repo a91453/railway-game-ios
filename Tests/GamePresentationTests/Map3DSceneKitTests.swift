@@ -11,8 +11,9 @@ final class Map3DSceneKitTests: XCTestCase {
         let sheets=try XCTUnwrap(manifest["assets"] as? [[String:Any]])
         let ids=Set(sheets.flatMap { ($0["frames"] as? [[String:Any]] ?? []).compactMap { $0["id"] as? String } })
         XCTAssertEqual(ids.count,156)
-        XCTAssertEqual(Set(Map3DSceneKit.assets.map(\.id)),ids)
-        XCTAssertEqual(Map3DSceneKit.assets.count,ids.count,"native IDs are unique")
+        let nativeIDs=Set(Map3DSceneKit.assets.map(\.id))
+        XCTAssertTrue(ids.isSubset(of:nativeIDs),"keep all original subjects when adding recipes")
+        XCTAssertEqual(Map3DSceneKit.assets.count,nativeIDs.count,"native IDs are unique")
         XCTAssertNil(Map3DSceneKit.asset(id:"not-an-asset"))
     }
 
@@ -83,5 +84,77 @@ final class Map3DSceneKitTests: XCTestCase {
             XCTAssertEqual(extra["assetId"] as? String,asset.id)
             XCTAssertEqual(extra["source"] as? String,"native-procedural")
         }
+    }
+
+    func testResidentialGlazingHasAWallImmediatelyBehindItIncludingTheArcade() {
+        for variant in 0..<6 {
+            var builder=SceneKitBuilder()
+            builder.home(x:0,z:0,length:9,width:6,floors:3,variant:variant)
+            let vertices=Map3DModelPack.Model.flat(named:"house",from:builder.mesh).vertices
+            for i in stride(from:0,to:vertices.count,by:3) {
+                let triangle=Array(vertices[i..<i+3])
+                guard triangle.allSatisfy({ $0.color == SceneKitBuilder.glass }) else { continue }
+                let a=triangle[0],normal=Map3DPoint(a.nx,a.ny,a.nz)
+                guard abs(normal.z)<0.1 else { continue }
+                let centre=triangle.reduce(Map3DPoint.zero) { $0+Map3DPoint($1.x,$1.y,$1.z)*(1/3) }
+                let distance=nearestSurface(from:centre-normal*0.001,direction: -normal,vertices:vertices)
+                XCTAssertLessThan(distance,0.12,"Floating pane in variant \(variant) at \(centre)")
+            }
+        }
+    }
+
+    func testExposedTrainEndsHaveGlazingAndMarkerLights() {
+        // Native box faces shade palette colours; swept panes keep the base.
+        let glazing=Set([Float(1),0.92,0.80,0.70,0.86].map { Map3DColor.shaded(Map3DTrainStyle.glass,$0) })
+        for asset in Map3DSceneKit.assets where [.traModern,.traClassic,.metro,.lightRail].contains(asset.family) {
+            let model=Map3DSceneKit.model(for:asset)
+            for sign: Float in [-1,1] {
+                let end=sign>0 ? model.maximum.x : -model.minimum.x
+                XCTAssertTrue(model.vertices.contains {
+                    $0.x*sign>end-model.length*0.24 && $0.nx*sign>0.1 && glazing.contains($0.color)
+                },"Missing outward glazing: \(asset.id), end \(sign)")
+                XCTAssertTrue(model.vertices.contains {
+                    $0.x*sign>end-model.length*0.24 && $0.glows
+                },"Missing end marker lights: \(asset.id), end \(sign)")
+            }
+        }
+    }
+
+    func testFrontWindscreenRemainsVisibleAcrossTheCurvedNose() throws {
+        let asset=try XCTUnwrap(Map3DSceneKit.asset(id:"01_TRA_modern_3x2-01"))
+        let model=Map3DSceneKit.model(for:asset)
+        for lateral: Float in [-0.4,0,0.4] {
+            for height: Float in [2.05,2.35,2.65] {
+                let hit=nearestHit(from:Map3DPoint(model.maximum.x+1,lateral,height),direction:Map3DPoint(-1,0,0),vertices:model.vertices)
+                XCTAssertEqual(hit.color,Map3DTrainStyle.glass,"Windscreen sinks through the nose at \(lateral), \(height)")
+            }
+        }
+        let puyuma=Map3DSceneKit.model(for:try XCTUnwrap(Map3DSceneKit.asset(id:"01_TRA_modern_3x2-02")))
+        for lateral: Float in [-0.3,0,0.3] {
+            for height: Float in [1.25,1.5] {
+                let hit=nearestHit(from:Map3DPoint(puyuma.maximum.x+1,lateral,height),direction:Map3DPoint(-1,0,0),vertices:puyuma.vertices)
+                XCTAssertEqual(hit.color,Map3DPalette.lantern,"Puyuma's red face has a gap")
+            }
+        }
+    }
+
+    private func nearestSurface(from origin: Map3DPoint,direction: Map3DPoint,vertices: [Map3DVertex]) -> Float {
+        nearestHit(from:origin,direction:direction,vertices:vertices).distance
+    }
+
+    private func nearestHit(from origin: Map3DPoint,direction: Map3DPoint,vertices: [Map3DVertex]) -> (distance: Float,color: UInt32) {
+        var nearest=Float.infinity,color: UInt32=0
+        for i in stride(from:0,to:vertices.count,by:3) {
+            let points=vertices[i..<i+3].map { Map3DPoint($0.x,$0.y,$0.z) }
+            let e1=points[1]-points[0],e2=points[2]-points[0],h=direction.cross(e2),det=e1.dot(h)
+            if abs(det)<0.000001 { continue }
+            let s=origin-points[0],u=s.dot(h)/det
+            if u < -0.00001 || u>1.00001 { continue }
+            let q=s.cross(e1),v=direction.dot(q)/det
+            if v < -0.00001 || u+v>1.00001 { continue }
+            let distance=e2.dot(q)/det
+            if distance>0.0001 && distance<nearest { nearest=distance;color=vertices[i].color }
+        }
+        return (nearest,color)
     }
 }

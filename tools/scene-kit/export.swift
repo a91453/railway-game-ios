@@ -19,7 +19,7 @@ for asset in Map3DSceneKit.assets {
     }
     let provenance: [String:Any]=[
         "asset":["generator":"Along the Line native procedural scene kit","version":"2.0"],
-        "extras":["assetId":asset.id,"recipeVersion":1,"source":"native-procedural","coordinateSystem":"metres; +x front, +y left, +z up"]
+        "extras":["assetId":asset.id,"recipeVersion":2,"source":"native-procedural","coordinateSystem":"metres; +x front, +y left, +z up"]
     ]
     let text=try JSONSerialization.data(withJSONObject:provenance,options:[.sortedKeys])
     var data=Data("M3DM".utf8)
@@ -47,7 +47,7 @@ for asset in Map3DSceneKit.assets {
     ])
 }
 let manifest: [String:Any]=[
-    "schema_version":1,"generator":"Map3DSceneKit","recipe_version":1,"model_count":records.count,
+    "schema_version":1,"generator":"Map3DSceneKit","recipe_version":2,"model_count":records.count,
     "native_coordinates":"metres; +x front, +y left, +z up",
     "gltf_coordinates":"metres; +x front, +y up, -z left",
     "directions":["top","bottom","left","right","front","back","isometric"],"models":records
