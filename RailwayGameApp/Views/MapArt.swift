@@ -1599,7 +1599,7 @@ enum MapArt {
             )
             let middle = screenPoint(Double(tile.area.minX + tile.area.maxX) / 2, Double(tile.area.minY + tile.area.maxY) / 2, projection)
             let price = Text(verbatim: tile.price.moneyText).font(.caption.weight(.bold)).monospacedDigit()
-            let label = tile.isUnlocked ? price : Text(Image(systemName: "lock.fill")).font(.caption) + Text(verbatim: " ") + price
+            let label = tile.isUnlocked ? price : Text(MapGlyph.lock.image).font(.caption) + Text(verbatim: " ") + price
             context.draw(label.foregroundStyle(Palette.ink), at: middle)
         }
     }
