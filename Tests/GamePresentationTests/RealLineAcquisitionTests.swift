@@ -122,6 +122,60 @@ final class RealLineAcquisitionTests: XCTestCase {
         XCTAssertEqual(rest.lines.count, all.lines.count - 1)
     }
 
+    /// A line bought is laid over the real ground with the real bridges,
+    /// viaducts and tunnels (decision 279), as the company's own traced
+    /// line is: sampled every 64 m along its main track, by the thresholds
+    /// of ``RealWorldDemoGroundTests/testTheTrackFollowsTheRealStructures()``.
+    func testALineBoughtFollowsTheRealStructures() throws {
+        var tunnel = (inside: 0, all: 0), carried = (up: 0, all: 0), ground = (off: 0, all: 0)
+        for network in ["PINGXI", "SHENAO", "JIJI", "NEIWAN"] {
+            let session = try game(round: network, side: 1 << 21, heights: true)
+            let offer = session.realLineOffer(for: try line(network, in: session))
+            let acquisition = try XCTUnwrap(offer.acquisition, "\(network): \(offer.problem ?? "")")
+            XCTAssertTrue(session.acquireRealLine(offer), "\(network): \(session.message?.text ?? "")")
+            let world = session.world
+            let frame = try XCTUnwrap(RealWorldFrame(world: world))
+            let structures = try XCTUnwrap(session.railways?.structures)
+            let path = WorldPath(acquisition.pieces[0].nodes.map { WorldVector($0) })
+            let real = structures.stretches(along: path, frame: frame, system: "tra_sched")
+            var built: [(point: WorldVector, kind: TrackSectionKind)] = []
+            for edge in world.network.edges {
+                let geometry = try XCTUnwrap(world.trackGeometry(of: edge.id))
+                for span in edge.sectionSpans where span.end > span.start {
+                    for point in geometry.points(from: span.start, to: span.end) {
+                        built.append((WorldVector(x: Double(point.x), y: Double(point.y)), span.kind))
+                    }
+                }
+            }
+            let metre = Double(WorldCoordinate.unitsPerMetre)
+            for distance in stride(from: 0, through: path.length, by: 64 * metre) {
+                let point = path.point(at: distance)
+                guard let kind = built.min(by: { ($0.point - point).length < ($1.point - point).length })?.kind else { continue }
+                if let stretch = real.first(where: {
+                    $0.range.upperBound - $0.range.lowerBound >= TrackRise.shortestCarried
+                        && ($0.range.lowerBound + TrackRise.carriedInset...$0.range.upperBound - TrackRise.carriedInset).contains(distance)
+                }) {
+                    if stretch.kind == .tunnel {
+                        tunnel.all += 1
+                        tunnel.inside += kind == .tunnel ? 1 : 0
+                    } else {
+                        carried.all += 1
+                        carried.up += [.viaduct, .bridge].contains(kind) ? 1 : 0
+                    }
+                } else if !real.contains(where: { ($0.range.lowerBound - 200 * metre...$0.range.upperBound + 200 * metre).contains(distance) }) {
+                    ground.all += 1
+                    ground.off += [.viaduct, .tunnel].contains(kind) ? 1 : 0
+                }
+            }
+        }
+        print("tunnels \(tunnel), bridges and viaducts \(carried), ground \(ground)")
+        XCTAssertGreaterThan(tunnel.all, 20)
+        XCTAssertGreaterThanOrEqual(Double(tunnel.inside), 0.85 * Double(tunnel.all), "\(tunnel)")
+        XCTAssertGreaterThanOrEqual(Double(carried.up), 0.85 * Double(carried.all), "\(carried)")
+        XCTAssertGreaterThan(ground.all, 300)
+        XCTAssertLessThanOrEqual(Double(ground.off), 0.04 * Double(ground.all), "\(ground)")
+    }
+
     /// Past the junction, the station card calls Taiwan Railway's riders
     /// the line's regulars; at the junction they still change from it.
     func testTheStationCardCallsTheRidersAlongALineBoughtItsRegulars() throws {
