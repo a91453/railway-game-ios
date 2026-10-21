@@ -11980,7 +11980,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 雨天只把畫面蓋一層灰（2D 地圖的作法）：3D 有光線與霧可以用，蓋一層會連夜裡的燈一起變灰。
 
 **接下來的兩步**（每一項一個 PR、一個決策號，開工時在 #231 取）：
-1. **雨絲**：等這個決策合併，而且 72.1 的 fps 回報沒有問題再做。
+1. **雨絲**：等這個決策合併，而且 72.1 的 fps 回報沒有問題再做。（2026-10-21 做了：決策 320。）
    - 照參考的作法：一層蓋在畫面上、平行的細線。
    - 數值：數量高 480、中 260、低 140（跟著 `Map3DStreetDetail`），速度 220、斜度 0.12、線寬 0.7，顏色 rgba(198, 215, 228, 0.24 × 雨量)。
    - 雷雨加閃電（照 2D 地圖的節奏）；颱風雨量加大。
@@ -14345,6 +14345,94 @@ session_0125dMtwyMdz7mzoBCRNa1pn 預約（#231）。這一節由那個 PR 填寫
 **沒有採用的做法**（預覽：`docs/art/new-game-chooser-2026-10-21/chosen-and-others.png`，示意圖，不是 App 截圖）：B. 兩張卡都留，選項列搬到兩張卡下面並寫「空白與實景都適用」：主選單仍多一張卡，「新遊戲」與「實景地圖」看起來仍是兩件事；C. 「新遊戲」卡裡放「空白｜實景」切換、按卡開始：切換在卡片裡不好點，實景還要再開選點畫面，切換和按卡的意思混在一起。
 
 **驗證**：`NewGameChoiceTests`（Linux）。App 的畫面（主選單、新遊戲頁、iPhone 橫拿與 iPad）只能靠 macOS CI 編譯與 UI 測試；實機的樣子由作者在 TestFlight 看。
+
+### 320. 3D 地圖的雨絲：照參考的一層平行細線，白天用 2D 的雨色；雷雨閃電；減少動態時不畫
+
+（2026-10-21，3D session_01Y25x9NJSKmAuP1M1K3Sf3C，遊戲規劃派工的第 5 項：決策 277「接下來的兩步」的第 1 步。號碼依 #231：決策 320。存檔版本、golden schema 不動；GameCore 不動。）
+
+**做什麼**：GameCore 下雨、雷雨、颱風的那天，3D 地圖除了決策 277 的光線與霧，畫面上還有雨絲落下；雷雨和颱風會閃電。
+
+1. **怎麼畫**（`Map3DRain`，GamePresentation）：照參考 `Railway/town-scene-reference-clean/source/weather.js` 的 `updateRain`，畫一層蓋在畫面上的平行細線，所以鏡頭怎麼轉、怎麼拉，雨絲都是平行的。
+   - 數量照 `QUALITY.*.rain`，跟著裝置畫多少街景（`Map3DStreetDetail`）：完整 480、減少 260、不畫街景 140。
+   - 速度照 `RAIN_SPEED`，220 點／秒；每條 0.85–1.15 倍。
+   - 斜度照 `RAIN_SLANT`，0.12。
+   - 長 5–11 點，線寬 0.7 點。
+   - 每條從哪裡開始、落多快，用位置雜湊 `map3DRandom`（salt 320），不用參考的 `Math.random()`；同一個時刻，雨絲永遠一樣（Linux 測試）。
+2. **雨多大**（`amount`）：
+   - 下雨 1（參考只有這一種）。
+   - 雷雨 1.25：雨絲多四分之一、更不透明。
+   - 颱風 1.5：雨絲多一半、更不透明，而且照 2D 地圖的作法被風吹得更斜（0.4）。
+3. **顏色**（`look(night:)`）：
+   - 夜裡照參考：`rgba(198, 215, 228, 0.24 × amount)`。
+   - 白天：參考的淡藍在本專案淺色的地面（決策 241、272）上幾乎看不到，見預覽右下。所以改用 2D 地圖的雨色 `4A5A80`（`Palette.rain` 的淺色版），不透明度 0.35 × amount。
+   - 兩者照 `Map3DLighting.night` 混合，傍晚慢慢從深藍灰變成淡藍。
+4. **閃電**：雷雨與颱風照 2D 地圖的節奏（`MapWeather.flash`，決策 182：每 9 秒一次，在一秒裡閃兩下）。畫面蓋上 0.35 × 亮度的白，和 2D 地圖一樣。
+5. **減少動態效果**：打開時不畫雨絲、不閃電，只留決策 277 的光線與霧。motion 技能第 3 節「天氣不自動循環播放」照做，所以不用 `MotionRule`。
+6. **App**（`Map3DPreviewScreen` 裡的 `Map3DRainLayer`）：
+   - 一層 SwiftUI `Canvas`，蓋在 Metal 畫面上、列車標籤下。
+   - `TimelineView(.animation(minimumInterval: 1/60))`，每秒最多畫 60 次。
+   - 不能點，VoiceOver 不讀。
+   - 晴天、減少動態時整層不在。
+   - 雨絲的數量跟著 `Map3DMetalView.Stats.streetDetail`，那一層自動降級，雨絲也跟著少。
+7. **預覽工具**：`tools/map3d-preview` 加 `MAP3D_WEATHER`，畫那種天氣的光線、霧與雨絲。
+   - 雨絲照手機畫：把 1600 × 900 的圖當成 533 × 300 點、每點 3 像素。
+   - 背景改用 `Map3DLighting.background`，霧的顏色與距離改用 `fogColour`、`fogScale`，和 `Map3DMetalView` 相同。
+   - 晴天這些值和以前相同，所以以前的預覽不變。
+
+**五個角度**：
+- **玩家**：GameCore 下雨那天，3D 裡看得到雨落下，雷雨會閃電，和 2D 地圖一致；晴天不變。雨絲很細、半透明，不擋列車與車站；不想看動態的人打開「減少動態效果」就沒有。
+- **鐵道迷**：
+  - 雨天跟著遊戲的天氣（決策 162），和營運受到的影響是同一天。
+  - 颱風的雨被風吹斜，和 2D 地圖一樣。
+  - 資料來源：GameCore 的天氣；畫法與數值照參考庫。
+- **開發**：
+  - 數值與算式在 GamePresentation，有 Linux 測試 `Map3DRainTests`（5 個）。
+  - 著色器、Metal 畫面都不改，只多一層 SwiftUI。
+  - 最多 720 條線（颱風、完整街景），每秒 60 次；Linux 量不到，幀數要看實機。
+- **美術**：
+  - 雨絲是參考調好的細線，不是造型，和平塗風不衝突。
+  - 白天換成 2D 地圖的雨色，讓淺色地面上看得見，兩張地圖的雨同一個顏色；夜裡照參考的淡藍。
+  - 閃電和 2D 一樣短、少，不會一直閃。
+- **音樂**：無。雨聲、雷聲不在這次範圍；參考的音樂沒有授權，不用。
+
+**沒有選的做法**（預覽 `docs/art/map3d-rain-2026-10-21/rain.jpg`）：
+
+| 做法 | 為什麼沒選 |
+| --- | --- |
+| 白天也用參考的淡藍 | 照搬最簡單，但在淺色地面上幾乎看不到（右下） |
+| 白天用參考的雨天天空色 `66778A`、0.30 | 試過；深色的路面上幾乎消失 |
+| 白天用 `56677D`、0.45 | 試過；最清楚，但像一層網蓋在畫面上 |
+| 用 2D 地圖的數值（90–200 條、700 點／秒、長 16 點） | 那是平面地圖從上往下看的雨；3D 斜看時參考的慢、短、多比較像 |
+| 在 Metal 場景裡畫立體的雨滴（有遠近、被建築擋住） | 最真實，但要改著色器、加實例與深度；參考本身也是蓋在畫面上的一層 |
+| 閃電改成把場景的光線調亮一下 | 要改 Metal 的光線；蓋一層白和 2D 地圖一樣，也夠明顯 |
+
+**參考與來源**：
+
+| 參考 | → 目標 |
+| --- | --- |
+| `Railway/town-scene-reference-clean/source/weather.js` 的 `QUALITY.*.rain`、`RAIN_SPEED`、`RAIN_SLANT`、`updateRain`（線寬、長度、速度範圍、夜裡的顏色） | `Map3DRain`：`streakCount`、`speed`、`referenceSlant`、`streaks(at:width:height:detail:)`、`nightColour`、`nightOpacity` |
+| 本專案的 `MapWeather.flash`、`Palette.rain`（決策 182） | `Map3DRain.flash(at:)`、`dayColour` |
+| `Railway/` rail-3d 的 `randomAt`（`map3DRandom`，已在用） | 每條雨絲的位置與速度 |
+| 外部專案 | 沒有找：參考已經有雨絲的作法 |
+
+**缺口**：
+- 雨聲、雷聲。
+- 雨天路面的反光與水窪：參考也沒有，決策 277 已經記下。
+- 雪：GameCore 沒有雪天。
+
+**驗證**：
+- **VERIFIED**（Linux，Swift 6.4）：
+  - `swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨。
+  - `Map3DRainTests` 5 個、`Map3DWeatherTests` 6 個通過；名字含 Map3D、MapWeather、WeatherText 的 XCTest 共 167 個全過（4 個 skip 是只在 `MAP3D_FRAME_REPORT=1` 時跑的報告）。
+  - 預覽工具改過之後，晴天的圖和改之前的工具畫的完全相同（pixelmatch 0 個像素不同）。
+  - `Map3DPreviewScreen.swift` 通過 `swiftc -parse`。
+- **VERIFIED**（Linux，無頭 Chromium 的 WebGL 預覽，決策 238）：
+  - 台北車站東邊，晴天、下雨、颱風的 14:00，與下雨的 20:30。
+  - pixelmatch 比對有沒有雨絲：0.56% 的像素不同。
+- **UNVERIFIED**：
+  - App 的編譯（`ios-build.yml`，PR 會跑）。
+  - 3D 的 UI 測試（`only_testing`）。
+  - 實機的雨、閃電與幀數（TestFlight）。
 
 ## 目前規則摘要
 
