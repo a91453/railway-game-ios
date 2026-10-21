@@ -1,5 +1,5 @@
 import Foundation
-import GameCore
+@testable import GameCore
 @testable import GamePresentation
 import XCTest
 
@@ -136,7 +136,7 @@ final class RealLineAcquisitionTests: XCTestCase {
             let world = session.world
             let frame = try XCTUnwrap(RealWorldFrame(world: world))
             let structures = try XCTUnwrap(session.railways?.structures)
-            let path = WorldPath(acquisition.pieces[0].nodes.map { WorldVector($0) })
+            let path = WorldPath(acquisition.pieces[0].nodes.map { WorldVector(x: Double($0.x), y: Double($0.y)) })
             let real = structures.stretches(along: path, frame: frame, system: "tra_sched")
             var built: [(point: WorldVector, kind: TrackSectionKind)] = []
             for edge in world.network.edges {
@@ -161,6 +161,9 @@ final class RealLineAcquisitionTests: XCTestCase {
                     } else {
                         carried.all += 1
                         carried.up += [.viaduct, .bridge].contains(kind) ? 1 : 0
+                        if ![.viaduct, .bridge].contains(kind) {
+                            print("\(network): \(kind) at \(Int(distance / metre)) m of a real \(Int((stretch.range.upperBound - stretch.range.lowerBound) / metre)) m bridge from \(Int(stretch.range.lowerBound / metre)) m")
+                        }
                     }
                 } else if !real.contains(where: { ($0.range.lowerBound - 200 * metre...$0.range.upperBound + 200 * metre).contains(distance) }) {
                     ground.all += 1

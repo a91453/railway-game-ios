@@ -29,7 +29,7 @@ import XCTest
 @MainActor
 final class AcquisitionReportTests: XCTestCase {
     static let networks = ["PINGXI", "SHENAO", "JIJI", "NEIWAN"]
-    static let checkpoints: [Int64] = [1, 30, 180, 360, 720]
+    static let checkpoints: [Int64] = [1, 2, 7, 30, 180, 360, 720]
 
     private func requestedDays() throws -> Int64 {
         guard let value = ProcessInfo.processInfo.environment["ACQUIRE_REPORT"] else {
