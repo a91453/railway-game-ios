@@ -9,9 +9,11 @@ final class Map3DModelTests: XCTestCase {
 
     func testEveryStyleHasACabAndAMiddleCarOfTheRightSize() {
         // Decision 244: and the street furniture after the trains;
-        // decision 259: then the people and vehicles.
+        // decision 259: then the people and vehicles; decision 318: then the
+        // sets'.
         let pantoStyles = Map3DTrainStyle.all.filter { !$0.pantographCars.isEmpty }.count
-        XCTAssertEqual(pack.models.count, Map3DTrainStyle.all.count * 2 + pantoStyles + Map3DProp.allCases.count + Map3DStreetModel.allCases.count)
+        let sets = Map3DTrainSet.all.map { $0.models().count }.reduce(0, +)
+        XCTAssertEqual(pack.models.count, Map3DTrainStyle.all.count * 2 + pantoStyles + Map3DProp.allCases.count + Map3DStreetModel.allCases.count + sets)
         for style in Map3DTrainStyle.all {
             var names = [style.name + "-cab", style.name + "-car"]
             if !style.pantographCars.isEmpty { names.append(style.name + "-panto") }
@@ -82,9 +84,9 @@ final class Map3DModelTests: XCTestCase {
 
     func testEveryTypeWithAStyleHasItsModels() {
         for type in TrainTypeCatalog.builtIn {
-            // Decisions 252 and 286: the Chu-Kuang sets and the Blue Train have
-            // no locomotive model yet.
-            let expected = !["MAGLEV", "SKYRAIL", "MONORAIL", "STEAM", "E200CK", "E500CK", "R100CK", "R200CK", "BLUE"].contains(type.code)
+            // Decision 318: the Chu-Kuang sets and the Blue Train have their
+            // locomotives now; the rest have no model.
+            let expected = !["MAGLEV", "SKYRAIL", "MONORAIL", "STEAM"].contains(type.code)
             XCTAssertEqual(pack.models(forType: type.code) != nil, expected, type.code)
         }
         XCTAssertNotNil(pack.models(forType: ""), "a train with no type is a commuter EMU")
