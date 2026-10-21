@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>台灣鐵道遊戲 3D 模型檢視器 (.m3dmodel + .glb)</title>
+<style>
+  :root {
+    --bg: #161A30;
+    --card: #202644;
+    --navy: #262C57;
+    --teal: #12A08F;
+    --teal-bright: #45D3C0;
+    --gold: #FFC86B;
+    --text: #ECEEF6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  header {
+    padding: 20px 28px;
+    border-bottom: 2px solid var(--teal);
+    background: #1B203C;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+  }
+  h1 { margin: 0 0 6px; font-size: 22px; }
+  .sub { color: var(--teal-bright); font-size: 13px; }
+  .controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  button {
+    background: var(--card);
+    color: var(--text);
+    border: 1.5px solid var(--teal);
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button.active {
+    background: var(--teal);
+    color: #fff;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 18px;
+    padding: 24px 28px;
+  }
+  .card {
+    background: var(--card);
+    border: 1.5px solid rgba(69, 211, 192, 0.45);
+    border-radius: 12px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .card-title { font-weight: 700; font-size: 15px; }
+  .card-id { font-family: Consolas, monospace; font-size: 12px; color: var(--gold); }
+  canvas {
+    width: 100%;
+    height: 230px;
+    background: radial-gradient(circle at 50% 45%, #283056, #14182C);
+    border-radius: 8px;
+    cursor: grab;
+  }
+  canvas:active { cursor: grabbing; }
+  .links {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--teal-bright);
+  }
+  .links a { color: var(--gold); text-decoration: none; font-weight: 600; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>台灣鐵道遊戲 3D 模型資產庫 (.m3dmodel + .glb 互動檢視器)</h1>
+    <div class="sub">拖曳畫面可 360° 旋轉檢視 | 支援日間平塗 (M3DM v1)、夜間發光 (Night Glow) 與網格線框 (Wireframe)</div>
+  </div>
+  <div class="controls">
+    <button id="btnDay" class="active">日間模式 (Daylight)</button>
+    <button id="btnNight">夜間發光 (Night Glow)</button>
+    <button id="btnWire">顯示線框 (Wireframe)</button>
+    <button id="btnSpin" class="active">自動旋轉 (Auto-Spin)</button>
+  </div>
+</header>
+<div class="grid" id="grid"></div>
+
+<script>
+const MODELS = [
+  { id: 'thsr-700t', name: '台灣高鐵 700T', stripe: [234, 106, 30] },
+  { id: 'tra-emu3000', name: '台鐵 EMU3000 新自強號', stripe: [224, 62, 54] },
+  { id: 'tra-puyuma', name: '台鐵 TEMU2000 普悠瑪號', stripe: [215, 40, 47] },
+  { id: 'tra-emu900', name: '台鐵 EMU900 微笑號區間車', stripe: [40, 180, 99] },
+  { id: 'tra-emu800', name: '台鐵 EMU800 區間車', stripe: [242, 194, 48] },
+  { id: 'tra-chukuang', name: '台鐵 E200 莒光號', stripe: [226, 102, 42] },
+  { id: 'tra-blue-train', name: '台鐵藍皮解憂號觀光列車', stripe: [52, 91, 122] },
+  { id: 'taipei-mrt-c381', name: '台北捷運 C381 高運量列車', stripe: [0, 112, 189] },
+  { id: 'mrt-wenhu', name: '台北捷運文湖線中運量列車', stripe: [196, 122, 44] },
+  { id: 'lrt-kaohsiung', name: '高雄環狀輕軌列車', stripe: [82, 183, 136] },
+  { id: 'station-classic-tra', name: '台鐵經典紅磚車站', stripe: [200, 90, 58] },
+  { id: 'station-elevated-mrt', name: '現代高架捷運站', stripe: [18, 160, 143] },
+  { id: 'platform-island-tra', name: '台鐵島式月台與雨棚', stripe: [255, 200, 107] },
+  { id: 'track-crossover-switch', name: '雙線鐵道與剪式橫渡線道岔', stripe: [142, 150, 168] },
+  { id: 'rail-level-crossing', name: '台鐵平交道與遮斷機組', stripe: [224, 62, 54] },
+  { id: 'rail-signal-mast', name: '鐵道三燈號誌機與繼電箱', stripe: [40, 205, 65] },
+  { id: 'building-shophouse-arcade', name: '台灣街屋騎樓連棟透天', stripe: [212, 106, 76] },
+  { id: 'building-commercial-mall', name: '都會商業百貨大樓', stripe: [56, 112, 160] },
+];
+
+let nightMode = false;
+let showWire = false;
+let autoSpin = true;
+
+document.getElementById('btnDay').onclick = () => {
+  nightMode = false;
+  document.getElementById('btnDay').classList.add('active');
+  document.getElementById('btnNight').classList.remove('active');
+};
+document.getElementById('btnNight').onclick = () => {
+  nightMode = true;
+  document.getElementById('btnNight').classList.add('active');
+  document.getElementById('btnDay').classList.remove('active');
+};
+document.getElementById('btnWire').onclick = (e) => {
+  showWire = !showWire;
+  e.target.classList.toggle('active', showWire);
+};
+document.getElementById('btnSpin').onclick = (e) => {
+  autoSpin = !autoSpin;
+  e.target.classList.toggle('active', autoSpin);
+};
+
+function parseM3DModel(buf, stripe) {
+  const view = new DataView(buf);
+  const trisCount = view.getUint32(8, true);
+  const provLen = view.getUint32(12, true);
+  const padded = Math.ceil(provLen / 4) * 4;
+  let offset = 16 + padded;
+  const tris = [];
+  for (let i = 0; i < trisCount; i++) {
+    const flags = view.getUint32(offset, true);
+    const pts = [];
+    let c0 = 0;
+    for (let k = 0; k < 3; k++) {
+      const at = offset + 4 + k * 16;
+      pts.push([view.getFloat32(at, true), view.getFloat32(at + 4, true), view.getFloat32(at + 8, true)]);
+      c0 = view.getUint32(at + 12, true);
+    }
+    offset += 52;
+    const ux = pts[1][0] - pts[0][0], uy = pts[1][1] - pts[0][1], uz = pts[1][2] - pts[0][2];
+    const vx = pts[2][0] - pts[0][0], vy = pts[2][1] - pts[0][1], vz = pts[2][2] - pts[0][2];
+    let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    const len = Math.hypot(nx, ny, nz) || 1;
+    nx /= len; ny /= len; nz /= len;
+    let r = c0 & 0xff, g = (c0 >> 8) & 0xff, b = (c0 >> 16) & 0xff, a = (c0 >>> 24) & 0xff;
+    if (a === 0) {
+      r = Math.round(r * 0.85 + stripe[0] * 0.15);
+      g = Math.round(g * 0.85 + stripe[1] * 0.15);
+      b = Math.round(b * 0.85 + stripe[2] * 0.15);
+    }
+    tris.push({ pts, nrm: [nx, ny, nz], r, g, b, glow: (flags & 1) !== 0 });
+  }
+  return tris;
+}
+
+const viewers = [];
+const grid = document.getElementById('grid');
+
+for (const item of MODELS) {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `
+    <div class="card-head">
+      <span class="card-title">${item.name}</span>
+      <span class="card-id">${item.id}</span>
+    </div>
+    <canvas width="360" height="230"></canvas>
+    <div class="links">
+      <span class="meta">載入中...</span>
+      <span>
+        <a href="3d-models/m3dmodel/${item.id}.m3dmodel" download>.m3dmodel</a> ·
+        <a href="3d-models/glb/${item.id}.glb" download>.glb</a>
+      </span>
+    </div>
+  `;
+  grid.appendChild(card);
+  const canvas = card.querySelector('canvas');
+  const metaEl = card.querySelector('.meta');
+  const ctx = canvas.getContext('2d');
+  const state = { canvas, ctx, tris: null, yaw: 0.62, pitch: 0.45, dragging: false, lx: 0, ly: 0 };
+
+  canvas.addEventListener('pointerdown', (e) => {
+    state.dragging = true;
+    state.lx = e.clientX;
+    state.ly = e.clientY;
+    canvas.setPointerCapture(e.pointerId);
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!state.dragging) return;
+    state.yaw += (e.clientX - state.lx) * 0.012;
+    state.pitch = Math.max(-0.2, Math.min(1.2, state.pitch + (e.clientY - state.ly) * 0.01));
+    state.lx = e.clientX;
+    state.ly = e.clientY;
+  });
+  canvas.addEventListener('pointerup', () => { state.dragging = false; });
+
+  fetch(`3d-models/m3dmodel/${item.id}.m3dmodel`)
+    .then((r) => r.arrayBuffer())
+    .then((buf) => {
+      state.tris = parseM3DModel(buf, item.stripe);
+      const glowCnt = state.tris.filter((t) => t.glow).length;
+      metaEl.textContent = `${state.tris.length} tris · ${glowCnt} glow`;
+    });
+
+  viewers.push(state);
+}
+
+function renderLoop() {
+  for (const v of viewers) {
+    if (!v.tris) continue;
+    if (autoSpin && !v.dragging) v.yaw += 0.006;
+    const { ctx, canvas, tris, yaw, pitch } = v;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const cy = Math.cos(yaw), sy = Math.sin(yaw);
+    const cp = Math.cos(pitch), sp = Math.sin(pitch);
+
+    const proj = tris.map((t) => {
+      const p = t.pts.map(([x, y, z]) => {
+        const rx = x * cy - y * sy, ry = x * sy + y * cy;
+        return [rx, -z * cp + ry * sp, ry * cp + z * sp];
+      });
+      return { t, p, depth: (p[0][2] + p[1][2] + p[2][2]) / 3 };
+    });
+    proj.sort((a, b) => a.depth - b.depth);
+
+    const scale = 15.5;
+    const ox = canvas.width / 2, oy = canvas.height * 0.62;
+    for (const { t, p } of proj) {
+      const dot = Math.abs(t.nrm[0] * 0.48 - t.nrm[1] * 0.56 + t.nrm[2] * 0.67);
+      let r, g, b;
+      if (nightMode) {
+        if (t.glow) {
+          r = Math.min(255, Math.round(t.r * 0.5 + 135));
+          g = Math.min(255, Math.round(t.g * 0.5 + 120));
+          b = Math.min(255, Math.round(t.b * 0.5 + 90));
+        } else {
+          const sh = 0.24 + dot * 0.18;
+          r = Math.round(t.r * sh * 0.75);
+          g = Math.round(t.g * sh * 0.85);
+          b = Math.round(t.b * sh * 1.1);
+        }
+      } else {
+        const sh = t.glow ? 1.1 : (0.65 + dot * 0.34 + Math.max(0, t.nrm[2]) * 0.14);
+        r = Math.min(255, Math.round(t.r * sh));
+        g = Math.min(255, Math.round(t.g * sh));
+        b = Math.min(255, Math.round(t.b * sh));
+      }
+      ctx.beginPath();
+      ctx.moveTo(ox + p[0][0] * scale, oy + p[0][1] * scale);
+      ctx.lineTo(ox + p[1][0] * scale, oy + p[1][1] * scale);
+      ctx.lineTo(ox + p[2][0] * scale, oy + p[2][1] * scale);
+      ctx.closePath();
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fill();
+      if (showWire) {
+        ctx.strokeStyle = 'rgba(69, 211, 192, 0.35)';
+        ctx.lineWidth = 0.7;
+        ctx.stroke();
+      }
+    }
+  }
+  requestAnimationFrame(renderLoop);
+}
+requestAnimationFrame(renderLoop);
+</script>
+</body>
+</html>
