@@ -289,12 +289,11 @@ extension GameWorld {
                 }
                 return onRing || group.direction == direction
             }
-            .enumerated()
-            .sorted { lhs, rhs in
-                let (left, right) = (reach[waiting[lhs.element].destination]!, reach[waiting[rhs.element].destination]!)
-                return left != right ? left > right : lhs.offset < rhs.offset
-            }
-            .map(\.element)
+            // Decision 328: each group's reach looked up once, not at
+            // every comparison.
+            .map { (reach: reach[waiting[$0].destination]!, index: $0) }
+            .sorted { lhs, rhs in lhs.reach != rhs.reach ? lhs.reach > rhs.reach : lhs.index < rhs.index }
+            .map(\.index)
         return (record, eligible)
     }
 

@@ -1,0 +1,39 @@
+{
+  "status": "VERIFIED",
+  "environment": "Linux / Swift 6.4 / Node / Chromium WebGL 2",
+  "parts": 24,
+  "examples": 4,
+  "models": 28,
+  "views": 196,
+  "triangles": 19252,
+  "maximum_triangles": 2880,
+  "checks": [
+    "all native vertices round-trip through the game loader",
+    "native / GLB / PNG SHA-256",
+    "complete native-to-GLB conversion",
+    "three categories: 8 homes, 8 boundary parts, 8 yard parts",
+    "all seven transparent views nonempty and unclipped",
+    "opaque finite native vertices and connector normals"
+  ],
+  "not_verified": [
+    "iPhone / iPad Metal rendering and performance",
+    "live map placement, collisions, vehicle clearance or pedestrian navigation",
+    "surveyed architectural dimensions",
+    "source pack browser rendering / pixel comparison; raw sources are not redistributed"
+  ],
+  "browser": {
+    "status": "VERIFIED",
+    "models_loaded": 28,
+    "images_fully_decoded": 196,
+    "checks": [
+      "three categories / examples / Chinese name filtering",
+      "seven directions",
+      "full RGBA decode, nonempty and unclipped bounds for every PNG",
+      "pointer orbit changes rendered geometry",
+      "zoom",
+      "PNG / native / GLB download hashes",
+      "390 px without horizontal overflow",
+      "no external requests / missing resources / JavaScript errors"
+    ]
+  }
+}
