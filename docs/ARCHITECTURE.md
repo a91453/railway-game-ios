@@ -12129,6 +12129,62 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 3. **描線**：照描的那條線的系統取資料（台鐵、高鐵、林鐵）。有真實結構時，新的端點固定在工具放的高度（地面），軌道從那裡爬上或降下到真實的高架或隧道；之前沒有固定，整段落在高架範圍裡時，第一條邊會太陡。`RealRailwayTracingTests.testATraceAlongTheHighSpeedRailFollowsItsViaduct`：彰化站前後各 3 km 沿高鐵描，站處與前後 1.5 km 都是高架；沒有結構資料時都在地面。
 4. **宜蘭線示範的側線不移**：新資料的宜蘭—二結高架（下行線 18.7–23.0 km）緊接宜蘭站南端，冬山高架（31.3–35.0 km）緊接蘇澳新側線。宜蘭側線往北移要放在中間站的北邊、從南邊進出，共用的建法沒有這種排法，空車要逆向；蘇澳新側線要 1.54 km，高架與蘇澳新兩端股道之間只剩約 1.3 km。四方：玩家，側線在高架上和真實不同，但不影響開車；開發，改建法並重驗一整天的風險大於畫面上的差別；美術，高架上的側線照常畫；音樂，無。所以照舊在高架上。
 
+**後來：捷運與輕軌**（2026-10-21，遊戲規劃派工：NEXT_PRIORITIES §21、PLAYER_FEEDBACK 78.1 #7；同一個決策號，GameCore、存檔、golden、replay 都不動）：
+1. **資料**：
+   - 工具多讀參考的 `metro-network.json`，sha256 一樣要和 `level-profiles.json` 的 `inputSha256` 對上。
+   - 系統多七個：`mrt`（台北捷運，含環狀線）、`tymc`（桃園機捷）、`ntdlrt`（淡海輕軌）、`ntalrt`（安坑輕軌）、`sanying`（三鶯線）、`krtc`（高雄捷運與環狀輕軌）、`tmrt`（台中捷運）。
+   - 結果共 2,430 段：前 1,925 段（台鐵、高鐵、林鐵）和之前逐位元相同，捷運與輕軌 505 段。
+   - 資料來源的國土測繪中心一筆多「捷運」（data.gov.tw 73222）。
+   - 參考替七個系統都判好了結構，所以沒有缺口，不用 OSM 的 `tunnel`／`bridge`／`layer` 補。
+2. **一站一站描時，端點照真實的高度**（`tracePlan`）：
+   - 規則：新的端點落在至少 160 m（`TrackRise.shortestCarried`）的真實高架或隧道上（離它的端點不到 16 m 也算），就不再固定在地面。那一段延伸過端點 64 m，所以端點不在兩端留給坡道的範圍裡；端點的高度照 `TrackRise` 求出來的。
+   - 為什麼要改：之前新端點一律在地面（第四步第 3 點）。整條線一次描沒問題，但玩家照真實的做法一站一站描時，站距約 1 km 的捷運幾乎整段在地面：地下 13 m 在 38‰ 的坡要 340 m，兩端加起來就沒有剩下。
+   - 遊戲本來就有地下與高架的月台：月台的高度與結構照軌道（`TrackPlatform`），斜的軌道點月台時會整平（決策 190）。所以照真實做。
+   - 端點在既有軌道上的照舊（照那條軌道的高度），所以下一段從地下的站接著描也在地下。
+3. **量測**（Linux；門檻照決策 315 的收購）：
+   - 整條線描（`MetroStructuresTests`，每 16 m，按長度）：七個系統每條 1 km 以上的線都過四個門檻，總計 332 km：
+
+     | | 門檻 | 結果 |
+     | --- | --- | --- |
+     | 參考是隧道，描線也是隧道 | ≥ 85% | 99.7% |
+     | 參考是橋或高架，描線也是 | ≥ 85% | 99.8% |
+     | 參考是地面，描線卻做成結構 | ≤ 4% | 0.0% |
+     | 結構長度是參考的 | 90–110% | 99.7% |
+
+     參考的地下與高架車站，整條線描時都不在地面。
+   - 一站一站描（`testMetroStationReport`，`METRO_STATION_REPORT=1` 才跑，約 4 分鐘）：每條線相鄰兩站各描一次，數兩端在真實結構上的站有幾個被做成地面。
+     - 結果：之前 391 個有 390 個在地面，之後 394 個只剩 14 個（兩次沒描的站對略有不同）。
+     - 有 37 對沒描：轉乘站點下去先接到另一條線。
+     - 剩下的 14 個：
+       - 地形太粗、範圍互相衝突被拿掉的：辛亥、六張犁、松山機場、大直、雙連、民權西路×2、中正紀念堂、小碧潭、忠孝敦化、竿蓁林×2、新和國小。
+       - 坡度不夠的：環北。它從興南的高架下到地下要 23 m，38‰ 的坡要 600 m。
+   - `testAMetroTracedAStationAtATimeKeepsItsStationsOffTheGround`：國父紀念館—市政府、頂溪—永安市場、中央公園—三多商圈在隧道；芝山—明德、台中市政府—水安宮在高架；高雄輕軌籬仔內—凱旋瑞田在地面。
+4. **缺口**：
+   - **同系統的兩條線上下重疊**：例如板南線在環狀線高架下的板橋、新莊線隧道在環狀線高架下的頭前庄。參考的結構不分是哪條線的，描線取比較早開始的那段，量到的 1.79 km 都取對了，但不是規則保證的。要分的話，工具要帶 OSM 的 `ref`，`stretches` 也要對線。
+   - **上面那 14 個站**：地形是 30 m 的高程，市區的高架與地下在它上面會互相衝突。這是決策 279 原本就有的限制（瑞芳的洞口也是）。
+   - **建造費預覽**：沒有寫出隧道佔多少（地下貴）。HANDOFF §5 原本那一列提過，留著。
+5. **四方**（加上鐵道迷）：
+   - 玩家：一站一站描捷運時，地下的站在地下、高架的在高架，不會整條壓在街上；要省錢照舊可以選「地面」。
+   - 鐵道迷：北捷有 66% 在地下、台中與三鶯整條在高架、高雄輕軌在街上，都照真實。資料是 OSM 加上國土測繪中心的捷運幾何，由參考判好。
+   - 開發：只動資料工具、資料檔與 GamePresentation 的描線。台鐵、高鐵、林鐵的資料逐位元不變。只有新端點落在真實結構上時描線才和之前不同；台鐵的兩個描線測試照舊通過。
+   - 美術：沿用現有的高架、隧道畫法。
+   - 音樂：無。
+6. **其他選項**（留給作者看）：
+   - 端點照舊在地面，讓玩家自己把高度設成 −13 m：可以，但一站一站描的捷運要每段手動改，而且照預設蓋出來是錯的。不用。
+   - 端點固定在結構的最低（隧道 −13 m）或最高（高架 +10 m）高度：和 `TrackRise` 求出來的差不多，但遇到兩旁地形衝突時會求不出來。不用。
+   - 用 OSM 的 `layer` 補：參考說 `layer` 不能單獨當證據（`structure-kind.js`），而且參考已經判好了。不用。
+
+**後來的參考對照**（`a91453/railway-reference-private` 的 `Railway/taiwan-rail-reference-clean/source/rail-3d/physical/`）：
+
+| 參考 | 本專案 |
+| --- | --- |
+| `metro-network.json` 的 `ways[*]`（`system`、`tags.service`、`coordinates`） | `extract_structures.py` 的 `METRO_SYSTEMS` → `rail_structures.json` |
+| `level-profiles.json` 的 `entries[*].kind`、`inputSha256["metro-network.json"]` | 同上，判定照用，sha256 比對 |
+| `level-profiles.json` 的 `sources`（data.gov.tw 73222） | `DataSourceCredits` 的 `nlsc` 加「捷運」 |
+| `structure-kind.js` 的 `classifyRailStructure` | 照它判好的結果，不重新判 |
+
+外部專案：沒有另外搜尋；參考已經有判好的資料，端點的高度是本專案自己的。
+
 **下一步**（交接，`docs/HANDOFF.md` §2 有一行指過來）：
 1. 高鐵示範照真實結構的建法：決策 281 做好了，開關等南港咽喉的調度修好再開（見決策 281 的「下一步」）。
 
@@ -14319,6 +14375,7 @@ session_0125dMtwyMdz7mzoBCRNa1pn 預約（#231）。這一節由那個 PR 填寫
 **驗證**：
 - **VERIFIED**（Linux，無頭 Chromium 的 WebGL 預覽，決策 238）：色帶的前後對照 `docs/art/map3d-labels-2026-10-21/bands-before-after.jpg`（左前右後；上近景的高架與地面線交叉，下中景的環狀線與兩條直線）。
 - **VERIFIED**（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`Map3DLineBandsTests`、`Map3DTrainLabelsTests`、`Map3DTests` 通過；`MAP3D_FRAME_REPORT=1` 的 `testTheLineBandsCost`、`testTheGPUBudget` 跑過（數字如上）；改到的 App 檔通過 `swiftc -parse`。
+- **VERIFIED**（Linux，無頭 Chromium 的 WebGL 預覽，決策 238）：示範地圖近景（140 m）不給與給色帶各畫一次，pixelmatch 差異圖（GAME_AI_TOOLS §6.3；作者 2026-10-21 同意加，#906 之後另開的小 PR 加進 `tools/map3d-preview/diff.cjs`）只標出軌道旁的色帶，1,440,000 個像素裡變了 9,321 個（0.65%），420 m 是 4,464 個（0.31%）；同一張自己比是 0。上中下是前、後、差異：`docs/art/map3d-labels-2026-10-21/bands-diff.jpg`。標籤畫在 SwiftUI 那層，預覽畫不到。
 - **UNVERIFIED**：App 的編譯（`ios-build.yml`）；3D 的 UI 測試（PR 用 `only_testing` 跑）；實機上標籤的大小、位置、跟車時的流暢度與色帶的樣子（TestFlight）。
 
 ### 316. 新遊戲一個入口：主選單只留「新遊戲」，點了選「空白地圖」或「實景地圖」，新遊戲選項標明兩種都套用
@@ -14401,6 +14458,62 @@ session_0125dMtwyMdz7mzoBCRNa1pn 預約（#231）。這一節由那個 PR 填寫
 - **VERIFIED**（Linux，Node 22，本機、不進 repo）：glTF-Validator 檢查公車的 GLB，0 錯誤、0 警告、1 個 info。
 - **VERIFIED**（Linux，無頭 Chromium 的 WebGL 預覽，決策 238）：台北車站附近，白天與 20:30，公車和轎車、機車並排（`city-bus.jpg`）；App 讀到的那台公車單獨從六個方向、四種塗裝、150 m 與夜裡畫（`bus-views.jpg`，three.js，鏡頭 28°）。
 - **UNVERIFIED**：App 的編譯與資源打包（`ios-build.yml`，PR 會跑）；3D 的 UI 測試（`only_testing`）；實機上公車的樣子與同一畫面有沒有公車的 fps 差（規格「怎麼判斷成功」第三條，要掉不到 3 fps；TestFlight）。
+
+### 318. 3D 地圖補上方塊列車的模型：莒光號、藍皮、推拉式自強號、普悠瑪、太魯閣、EMU800、柴油客車
+
+（2026-10-21，3D session_01Y25x9NJSKmAuP1M1K3Sf3C，遊戲規劃派工；預覽 `docs/art/map3d-train-sets-2026-10-21/`）
+
+**做什麼**：決策 230 的 3D 列車只有車型有樣式時近看才是模型，其他都是方塊。這次照 #900 的原生程序化列車與參考庫的 E201、車庫機車（`Map3DSceneKit*.swift`，只帶進程式與 `manifest.json`，圖片與 GLB 留在私有參考庫）給這些列車各做一套模型：
+
+- **一套** = 頭車、中間車、最後一節（`Map3DTrainSet`，模型名 `set-<key>-head／car／tail／single`），接在 `Map3DModelPack.standard` 的最後面，原本的模型 index 不變。
+- **牽引的列車**：莒光號 E200、E500、R100、R200 拖莒光號客車；藍皮是 R135 拖藍色客車。第 1 節是機車，中間是客車，最後一節是有尾門與兩盞紅尾燈的客車。
+- **機車**（`Map3DTrainLocomotive`）：每款一個造型、照參考庫的原塗裝（作者 2026-10-21：「照原有配色 反正模型都換了」）。比例與零件取自私有庫 `Simulator/reference_snapshot/models/tra-e201/tra-e201.glb`（上下兩色、車頂格柵、礙子與兩支集電弓、三軸台車、黃色排障器）與車庫規格（集電弓數、軸數、側面格柵片數、車頭型式），用方塊與細桿重新組成，沒有搬原模型的頂點：
+  - E200：上半米白、下半橘、米白裡一條橘線，車頭幾乎直立、擋風玻璃微微後傾，橘色車頭上一道米白 V 字，兩端駕駛室，兩支集電弓。
+  - E500：整台橘，擋風玻璃後傾、包到兩側的斜角，側面一排深色格柵，兩支集電弓。
+  - R100：橘色長車頭，米白細線與扶手欄杆，駕駛室靠前，短鼻。
+  - R200：白車身，一端駕駛室、車頭斜度最大的大擋風玻璃，引擎室一條深色格柵帶，車頂三個散熱風扇。
+  - R135：深藍，白線與扶手，短鼻上黃黑 V 紋。
+  - E1000 動力車：白車身，橘色、後傾、切角較大的車頭與一條橘色格柵帶，一支集電弓，後端是接客車的貫通門。
+  - 車頭的做法（`boxCab` 的 `Nose`）：下半直立，上半照 `rake` 往後傾到車頂，四角照 `chamfer` 切斜，擋風玻璃貼在斜面與兩個切角上；每款的斜度與切角照車庫模型的車頭型式（`front`：ge、toshiba、stadler-diesel、push-pull）量。
+- **推拉式自強號**：E1000 動力車在兩端（最後一節是頭車轉過來）。
+- **電聯車**：普悠瑪、太魯閣、EMU800 用 #900 的流線型車頭與 `Map3DTrainBuilder` 的中間車，最後一節是自己的尾車。EMU800 照車庫的原配色：灰車身、藍帶、藍色車頭。
+- **柴油客車**：1–2 節是 DR1000（單節時兩端都有駕駛台），3 節以上是 DR3100。車頭是平的黃色車端，中間貫通門、兩側擋風玻璃（車庫的 `yellowgangway`），車側一條細橘線。柴油客車與柴油自強號的性能曲線相同，分不出來，所以照節數挑。
+- **哪一套**：列車的車型代號有樣式或有一套就用它；沒有車型時照性能（普悠瑪、太魯閣、四種莒光號的性能各對到自己的一套）；都沒有就是方塊。`Map3DTrains.Heights` 記下每列車的 key。
+- **顏色**：參考庫車庫規格（`garage-blender-v1/*.json` 的 `specification.body`／`accent`）與 `TrainLivery` 的塗裝；模型自己的顏色，不吃路線色。
+- **量**：33 個模型、20,582 個三角形（每個 236–1,440；機車 1,074–1,440），啟動時建一次；整包從約 20 個模型、5.3 千個三角形變成 53 個、25,928 個。只有近處（`modelReach`）的車是模型，實例數不變，每個模型一個 draw。
+- **還是方塊**：磁浮、懸吊、單軌、蒸汽（參考庫與 #900 都沒有合適的做法）、貨車。
+
+**五個角度**：
+- 玩家：莒光號、藍皮、普悠瑪、太魯閣近看是自己的樣子，不再是一排白盒子；最後一節有尾燈，看得出車頭往哪走。
+- 鐵道迷：牽引的列車有機車與客車之分，E1000 動力車在兩端、DR1000 單節兩端都有駕駛台，六款機車各有自己的造型與原塗裝（E201 的上下兩色、R135 的黃黑 V 紋），顏色照參考庫車庫規格（出自照片）；不準的地方：機車拉長到和客車同長（車輛位置是 GameCore 算的）、佔掉一節客車的位置，集電弓畫成降下的樣子。
+- 開發：只動 GamePresentation 與它的測試；GameCore、存檔、golden、replay 不動；#900 的六個 Swift 檔照原樣帶進來，只把車種的做法整理成 `trainRecipe`；機車另寫在 `Map3DTrainLocomotives.swift`；新測試 `Map3DTrainSetTests` 6 個、`Map3DSceneKitTests` 7 個。
+- 美術：平塗頂點色、方塊與圓角，和決策 230 的通勤車並排看不突兀（預覽）；機車照參考庫的原塗裝（作者要的），零件細到集電弓、扶手，但仍是方塊組成；電聯車與客車是 AI 生成的素材表照著寫成程式的（README 標明）。
+- 音樂：無。
+
+**沒有選的做法**（預覽在 `docs/art/map3d-train-sets-2026-10-21/`，上半是方塊）：
+- **留方塊**：最便宜；但遊戲規劃把它排成第一件，方塊在近景最顯眼。
+- **整個合併 #900**：81 MB（62 MB PNG、11 MB GLB），App 用不到圖片；只帶需要的 Swift 檔。
+- **讀 #900 的 GLB 或 m3dmodel**：要打包檔案、多一條讀檔路徑；程式蓋的模型同樣是那份做法，App 少十幾 MB。
+- **只換顏色（方塊上色）**：便宜，但看不出機車與客車、車頭朝向。
+- **車頭全是直立的平面**（這個 PR 的第二版）：好做；但 E500、R200、E1000 的車頭都是後傾的，DR 是平的黃色車端不是流線型，EMU800 的車頭是藍的；作者要多方比較後修車頭的角度。對照圖 `docs/art/map3d-train-sets-2026-10-21/fronts.jpg`。
+- **#900 的通用機車上色**（這個 PR 的第一版）：E200、E500 同一個箱型、R100、R135 同一個舊型，車頂平的；作者看了 E201 之後要照原配色、換成各自的造型。
+- **直接放 E201 的 GLB**：最像；但 35,724 個三角形是一節車預算的 30 倍，而且原模型照搬不合 art-style §7。
+- **調色盤的顏色代替原塗裝**：和城市更一致；作者選了原配色。
+
+**參考與來源**：
+
+| 來源 | 拿了什麼 | 用在 |
+| --- | --- | --- |
+| #900 `Sources/GamePresentation/Map3DSceneKit*.swift`（私有參考庫 `Railway/generated-3d-assets-2026-10-21/scene-kit-pr900/`） | 原生程序化列車、機車、車頭的做法 | 照原樣帶進來；`trainRecipe`、`locomotive(... roof:)` |
+| #900 `docs/art/generated-2026-10-21-scene-kit/manifest.json` | 素材表的座標、描述、SHA-256 | `Map3DSceneKitTests` |
+| 參考庫 `Simulator/reference_snapshot/models/tra-e201/tra-e201.glb`（35,724 個三角形、12 個材質、無貼圖） | E201 的上下兩色與分界、車頂格柵、礙子、集電弓與高壓線的配置、三軸台車、黃色排障器（看比例，不取頂點） | `Map3DTrainLocomotive.e200`、`pantographs`、`running` |
+| 參考庫 `Railway/taiwan-rail-reference-clean/source/rail-3d/assets/garage-blender-v1/*.json`、`*.webp` | e200、e500、r100、r200、blue、bluecoach、juguang、ppcoach、e1000、dr1000、dr3100 的車身與飾帶色；`pantos`、`axles`、`sideVentPanels`、`front`；縮圖看各款的造型（R100 欄杆、R135 的 V 紋、R200 的風扇） | `Map3DTrainSet.all`、`Map3DTrainLocomotive` |
+| 外部專案 | 沒有找（列車外型的做法已在 #900） | — |
+
+**驗證**：
+- **VERIFIED**（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`Map3DTrainSetTests`、`Map3DSceneKitTests`、`Map3DModelTests` 與名字含 Map3D、StreetLife、TrainLivery 的測試全過。
+- **VERIFIED**（Linux，無頭 Chromium 的 WebGL 預覽，決策 238）：每一套的頭、中、尾並排（預覽圖）。
+- **UNVERIFIED**：App 的編譯（`ios-build.yml`）、3D 的 UI 測試（`only_testing`）、實機的樣子與幀數（TestFlight）。
 
 ## 目前規則摘要
 

@@ -353,6 +353,129 @@ final class RealRailwayTracingTests: XCTestCase {
         XCTAssertFalse(try trace(structures: false).contains(.viaduct), "without the structures, on the plain's ground")
     }
 
+    /// At one end of a metro traced a station at a time: the real line's
+    /// kind there (what ``RealRailStructures`` carries the station's stretch
+    /// on, `nil` for the ground), the built track's, and how far towards
+    /// the other end the built track first is as the real line (0 at the
+    /// station, `nil` not within 640 m).
+    struct MetroEnd {
+        let real: RealRailStructures.Kind?
+        let built: TrackSectionKind?
+        let reached: Double?
+    }
+
+    /// `system`'s line traced over real ground from station `first` to
+    /// station `second` with the tool's own choices, and each end.
+    private func metroTrace(_ system: String, from first: String, to second: String) throws -> (from: MetroEnd, to: MetroEnd)? {
+        let railways = try BundledRealData.railways()
+        let a = try BundledRealData.station(first, in: system), b = try BundledRealData.station(second, in: system)
+        var world = GameWorld.newGame(anchor: try XCTUnwrap(a.anchor))
+        try world.mapGround()
+        let session = GameSession(world: world, language: .english)
+        session.heights = try XCTUnwrap(Self.heights)
+        session.railways = railways
+        session.selectTool(.network)
+        session.setNetworkMode(.build)
+        session.networkTracesRealRailway = true
+        session.networkBuildsDouble = false
+        let from = try BundledRealData.point(a.coordinate, in: world), to = try BundledRealData.point(b.coordinate, in: world)
+        session.tapNetwork(at: from, reach: reach)
+        session.tapNetwork(at: to, reach: reach)
+        // Not traced (a station another line of the system also stops at).
+        guard let preview = session.networkPreview, preview.problem == nil, let picked = session.networkStart, let other = session.networkEnd,
+              session.tracePlan(from: picked, to: other) != nil else { return nil }
+        session.buildNetworkTrack()
+        guard session.message?.kind == .success else { return nil }
+        let built = session.world
+        var samples: [(point: WorldVector, kind: TrackSectionKind)] = []
+        for edge in built.network.edges {
+            let geometry = try XCTUnwrap(built.trackGeometry(of: edge.id))
+            for span in edge.sectionSpans where span.end > span.start {
+                samples += geometry.points(from: span.start, to: span.end).map { (WorldVector($0.plan), span.kind) }
+            }
+        }
+        // The real line's stretches along the built track, the way from
+        // the first station to the second.
+        let frame = try XCTUnwrap(RealWorldFrame(world: built))
+        let path = WorldPath(samples.map(\.point).sorted { ($0 - WorldVector(from)).length < ($1 - WorldVector(from)).length })
+        let stretches = try XCTUnwrap(railways.structures).stretches(along: path, frame: frame, system: system)
+            .filter { $0.range.upperBound - $0.range.lowerBound >= TrackRise.shortestCarried }
+        func end(_ point: PlanPoint, toward other: PlanPoint) -> MetroEnd {
+            let along = path.project(WorldVector(point))
+            let real = stretches.first { $0.range.lowerBound <= along + 32 * metre && along - 32 * metre <= $0.range.upperBound }?.kind
+            let start = WorldVector(point), way = (WorldVector(other) - start) * (1 / (WorldVector(other) - start).length)
+            func kind(at distance: Double) -> TrackSectionKind? {
+                let point = start + way * distance
+                return samples.min { ($0.point - point).length < ($1.point - point).length }?.kind
+            }
+            func matches(_ kind: TrackSectionKind?) -> Bool {
+                switch real {
+                case .tunnel?: kind == .tunnel
+                case .bridge?: kind == .viaduct || kind == .bridge
+                case nil: ![TrackSectionKind.viaduct, .bridge, .tunnel].contains(kind)
+                }
+            }
+            let reached = stride(from: 0.0, through: 640, by: 16).first { matches(kind(at: $0 * metre)) }
+            return MetroEnd(real: real, built: kind(at: 0), reached: reached)
+        }
+        return (end(from, toward: to), end(to, toward: from))
+    }
+
+    /// A metro laid a station at a time stands where its real stations do
+    /// (decision 279, later): under the street in the tunnels, over it on
+    /// the viaducts, the light rail on the street; the track between on the
+    /// real line's structure too.
+    func testAMetroTracedAStationAtATimeKeepsItsStationsOffTheGround() throws {
+        for (system, a, b, kind) in [
+            ("mrt", "國父紀念館", "市政府", TrackSectionKind.tunnel), ("mrt", "頂溪", "永安市場", .tunnel), ("mrt", "芝山", "明德", .viaduct),
+            ("tmrt", "市政府", "水安宮", .viaduct), ("krtc", "中央公園", "三多商圈", .tunnel), ("krtc", "籬仔內", "凱旋瑞田", .surface),
+        ] {
+            let found = try XCTUnwrap(try metroTrace(system, from: a, to: b), "\(a)–\(b)")
+            XCTAssertEqual(found.from.built, kind, a)
+            XCTAssertEqual(found.to.built, kind, b)
+            XCTAssertEqual(found.from.reached, 0, a)
+            XCTAssertEqual(found.to.reached, 0, b)
+        }
+    }
+
+    /// Only on request (`METRO_STATION_REPORT=1`, some minutes): every
+    /// metro and light rail line traced a station at a time, how many of
+    /// its stations on a real viaduct or in a real tunnel the trace leaves
+    /// on the ground, and how far from them the track reaches the real
+    /// line's structure.
+    func testMetroStationReport() throws {
+        guard ProcessInfo.processInfo.environment["METRO_STATION_REPORT"] != nil else { throw XCTSkip("METRO_STATION_REPORT not set") }
+        struct Feature: Decodable {
+            struct Properties: Decodable { let sys: String, lineKey: String, name: String }
+            let properties: Properties
+        }
+        struct Collection: Decodable { let features: [Feature] }
+        let features = try JSONDecoder().decode(Collection.self, from: BundledRealData.file("track_stations", "geojson")).features
+        let systems: Set<String> = ["mrt", "tymc", "ntdlrt", "ntalrt", "sanying", "krtc", "tmrt"]
+        var lines: [String: [Feature.Properties]] = [:], order: [String] = []
+        for feature in features where systems.contains(feature.properties.sys) {
+            if lines[feature.properties.lineKey] == nil { order.append(feature.properties.lineKey) }
+            lines[feature.properties.lineKey, default: []].append(feature.properties)
+        }
+        for key in order {
+            let stations = try XCTUnwrap(lines[key])
+            var ends = 0, carried = 0, grounded: [String] = [], ramps: [Double] = [], skipped = 0
+            for (a, b) in zip(stations, stations.dropFirst()) {
+                guard let found = try metroTrace(a.sys, from: a.name, to: b.name) else { skipped += 1; continue }
+                for (name, end) in [(a.name, found.from), (b.name, found.to)] {
+                    ends += 1
+                    guard end.real != nil else { continue }
+                    carried += 1
+                    if end.reached != 0 {
+                        grounded.append(name)
+                        ramps.append(end.reached ?? 640)
+                    }
+                }
+            }
+            print("METROSTATIONS \(key): \(stations.count) stations, \(stations.count - 1 - skipped) traced (\(skipped) not), ends \(ends), on a real structure \(carried), not on it \(grounded.count) \(grounded), reached after \(ramps.map { Int($0) }) m")
+        }
+    }
+
     // MARK: - Single or double, as the real line is (decision 247, later)
 
     /// A flat real-world game at TRA station `from`, the network tool

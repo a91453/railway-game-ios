@@ -49,6 +49,8 @@ public struct Map3DModelPack: Sendable {
         models += Map3DProp.allCases.map { $0.model() }
         // Decision 259: and the people, scooters and cars.
         models += Map3DStreetModel.allCases.map { $0.model() }
+        // Decision 318: and the sets that had none.
+        models += Map3DTrainSet.all.flatMap { $0.models() }
         self.models = models
     }
 
@@ -62,9 +64,9 @@ public struct Map3DModelPack: Sendable {
     }
 
     /// The style of each train type, by its code (`""` for a train with no
-    /// type: a commuter EMU). Types with no style (maglev, skyrail,
-    /// monorail, steam, the locomotive-hauled Chu-Kuang sets and Blue Train)
-    /// are drawn as boxes.
+    /// type: a commuter EMU). Types with neither a style nor a set
+    /// (``Map3DTrainSet``: maglev, skyrail, monorail, steam) are drawn as
+    /// boxes.
     public static let styleByType: [String: String] = [
         "": "commuter", "EMU3000": "express", "HSR": "highSpeed",
         // Decision 252: the flat-fronted EMUs as commuters (decision 286:
@@ -74,9 +76,14 @@ public struct Map3DModelPack: Sendable {
         "A": "metro", "B": "metro", "C": "metro", "L": "metro", "D": "metro", "APM": "peopleMover",
     ]
 
-    /// The cab and middle car models' indices for a train of type `code`,
-    /// or `nil` when it has none.
+    /// The cab and middle car models' indices for a train of type `code`
+    /// (or a set's key, ``Map3DTrainSet/key(type:performance:)``), or `nil`
+    /// when it has none.
     public func models(forType code: String) -> (head: Int, middle: Int)? {
+        if let set = Map3DTrainSet.byKey[code] {
+            guard let head = index(of: set.headName), let middle = index(of: set.middleName) else { return nil }
+            return (head, middle)
+        }
         guard let style = Self.styleByType[code], let head = index(of: style + "-cab"), let middle = index(of: style + "-car") else { return nil }
         return (head, middle)
     }
@@ -85,6 +92,12 @@ public struct Map3DModelPack: Sendable {
     /// of type `code`, using the pantograph car model on cars listed in the
     /// style's `pantographCars`.
     public func modelIndex(forType code: String, carIndex: Int, count: Int) -> Int? {
+        if let set = Map3DTrainSet.set(forKey: code, count: count) {
+            if count == 1, let single = index(of: set.singleName) { return single }
+            if carIndex == 0 { return index(of: set.headName) }
+            if carIndex == count - 1 { return index(of: set.tailName) ?? index(of: set.headName) }
+            return index(of: set.middleName)
+        }
         guard let styleName = Self.styleByType[code] else { return nil }
         if carIndex == 0 || carIndex == count - 1 {
             return index(of: styleName + "-cab")
@@ -95,6 +108,15 @@ public struct Map3DModelPack: Sendable {
             return panto
         }
         return index(of: styleName + "-car")
+    }
+
+    /// Whether car `carIndex` of a `count`-car train of type `code` is the
+    /// head car's model turned round: the last car, unless the set has a
+    /// tail of its own or the train is one car.
+    public func isTurned(forType code: String, carIndex: Int, count: Int) -> Bool {
+        guard count > 1, carIndex == count - 1 else { return false }
+        if let set = Map3DTrainSet.set(forKey: code, count: count) { return index(of: set.tailName) == nil }
+        return true
     }
 }
 

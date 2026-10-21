@@ -124,6 +124,30 @@ final class Map3DPreviewDump: XCTestCase {
             print("MAP3D_LIFE people \(frame.people) vehicles \(frame.vehicles) buses \(frame.buses) models \(Set(frame.instances.map(\.model)).count)")
             frame.instances.forEach(expand)
         }
+        // Decision 318: MAP3D_TRAINS=x:z, the trains' models in rows on a
+        // grey ground there, one row a set (and the commuter style's first,
+        // for comparison): its head, a middle car and its last car as the
+        // app draws them, coupled, the head toward +x.
+        if let at = ProcessInfo.processInfo.environment["MAP3D_TRAINS"].map({ $0.split(separator: ":").map { Float(String($0))! } }) {
+            let pack = Map3DModelPack.standard
+            let keys = [""] + Map3DTrainSet.all.map(\.key)
+            let first = UInt32(floats.count / 12)
+            let ground: Float = 0, span = Float(keys.count) * 7 + 20
+            for (x, z) in [(-45, -span / 2), (45, -span / 2), (45, span / 2), (-45, span / 2)] as [(Float, Float)] {
+                floats += [at[0] + x, ground - 0.02, at[1] + z, 0, 1, 0, 0.62, 0.63, 0.6, 0, 0, -1]
+            }
+            indices += [first, first + 3, first + 2, first, first + 2, first + 1]
+            for (row, key) in keys.enumerated() {
+                let z = at[1] + (Float(row) - Float(keys.count - 1) / 2) * 7
+                for car in 0..<3 {
+                    guard let model = pack.modelIndex(forType: key, carIndex: car, count: 3) else { continue }
+                    let front = at[0] + 30 - Float(car) * 20.5
+                    var a = Map3DPoint(front, ground, z), b = Map3DPoint(front - 20, ground, z)
+                    if pack.isTurned(forType: key, carIndex: car, count: 3) { swap(&a, &b) }
+                    expand(Map3DTrains.instance(of: pack.models[model], index: model, from: b, to: a, stripe: Map3DColor.rgb(0x2F6DB5)))
+                }
+            }
+        }
         var shadowFloats: [Float] = [], shadowIndices: [UInt32] = []
         for chunk in chunks {
             let base = shadowFloats.count / 7
