@@ -16,10 +16,15 @@ Only a directory's own JSON files are counted, as the tests that read them
 do (ReplayFixtures/Reports/ is not a replay fixture).
 
 The decisions: every `### N.` heading of docs/ARCHITECTURE.md appears once,
-every one has a row in the decision index (OVERVIEW §9; ARCHITECTURE points
-to it) and every row there has its heading. Headings or rows out of order,
-the numbers missing below the last one and the continuation headings
-(`### 204（續）.`) are listed as notes; they are not differences.
+every row of the decision index (OVERVIEW §9; ARCHITECTURE points to it)
+has its heading. A heading with no row yet is a note: since 2026-10-21 a
+pull request writes only its own reserved section (`### N. （預約）`, put on
+`main` when the work is handed out) and the game planner fills the index
+after merging, so parallel pull requests do not all change the same lines.
+For the same reason OVERVIEW §2 may leave the last decision to the index
+(no number before the remarks); it is compared only when stated. Headings
+or rows out of order, the numbers missing below the last one and the
+continuation headings (`### 204（續）.`) are notes too.
 
 Python 3 standard library only:
     python3 -I tools/golden-checks/doc_numbers.py            # report
@@ -174,6 +179,9 @@ def compare(root):
     table = []
     for key, name, source in items:
         doc, code = stated[key], actual[key]
+        if key == "last_decision" and doc is None and code is not None:
+            table.append((name, doc, source, code, "不列（見 §9）"))
+            continue
         if doc is None or code is None:
             result = "讀不到"
         else:
@@ -193,7 +201,7 @@ def compare(root):
     for number in duplicates(rows):
         differences.append(f"決策索引（OVERVIEW §9）的 {number} 不只一列")
     for number in sorted(set(numbers) - set(rows)):
-        differences.append(f"決策 {number} 不在決策索引（OVERVIEW §9）裡")
+        notes.append(f"決策 {number} 還沒進決策索引（OVERVIEW §9；遊戲規劃合併後補）")
     for number in sorted(set(rows) - set(numbers) - unused):
         differences.append(f"決策索引（OVERVIEW §9）有 {number}，ARCHITECTURE 沒有 ### {number}.")
     for number in sorted(unused & set(numbers)):
@@ -230,7 +238,7 @@ def report(root):
 
 # MARK: - Self-test
 
-def write_repository(root, *, overview_save="63", architecture_extra="", index_extra="", replay_reports=True):
+def write_repository(root, *, overview_save="63", decisions="1–2、4（3 沒有使用，#5）。之後以 #231 為準", architecture_extra="", index_extra="", replay_reports=True):
     """A small repository whose numbers all agree unless told otherwise."""
     root = pathlib.Path(root)
     files = {
@@ -243,7 +251,7 @@ def write_repository(root, *, overview_save="63", architecture_extra="", index_e
 | 存檔版本 | {overview_save}（說明，決策 2）；每個版本一個存檔 fixture，共 2 個 | `SavedGame.currentVersion` |
 | golden | schema 74（車站商業，#595），`GoldenScenarios/` 裡 3 個 JSON | `GoldenScenarios/` |
 | replay | 1 個指令紀錄（含 `a.json`，#468） | `ReplayFixtures/` |
-| 決策 | 1–2、4（3 沒有使用，#5）。之後以 #231 為準 | `docs/ARCHITECTURE.md` |
+| 決策 | {decisions} | `docs/ARCHITECTURE.md` |
 
 ## 9. 決策索引
 
@@ -315,9 +323,13 @@ def selftest():
     _, differences, _ = case("a decision twice", architecture_extra="\n### 2. 又是二\n")
     assert any(line.startswith("ARCHITECTURE 的 ### 2. 出現不只一次") for line in differences), differences
 
-    _, differences, _ = case("a decision not indexed", architecture_extra="\n### 5. 五\n")
-    assert "決策 5 不在決策索引（OVERVIEW §9）裡" in differences, differences
-    assert any(line.startswith("最後的決策：OVERVIEW §2 寫 4") for line in differences), differences
+    _, differences, notes = case("a decision not indexed is a note", architecture_extra="\n### 5. （預約）五\n")
+    assert "決策 5 還沒進決策索引（OVERVIEW §9；遊戲規劃合併後補）" in notes, notes
+    assert differences == ["最後的決策：OVERVIEW §2 寫 4，ARCHITECTURE 最大的 ### N. 是 5"], differences
+
+    table, differences, _ = case("the last decision left to the index", decisions="見決策索引（§9）", architecture_extra="\n### 5. 五\n")
+    assert differences == [], differences
+    assert table[5][4] == "不列（見 §9）", table
 
     _, differences, _ = case("an index row without its decision", index_extra="| 7 | 七 |")
     assert differences == ["決策索引（OVERVIEW §9）有 7，ARCHITECTURE 沒有 ### 7."], differences

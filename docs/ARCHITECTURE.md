@@ -14057,6 +14057,14 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 4. App：車站卡與路線清單的「收購這條線」、收購卡、「收購完成」卡、`SoundCue.lineAcquired`、String Catalog 兩種語言。
 5. push 之前先 `send_message` 遊戲規劃要 GameCore 名額（同時最多 2 個 GameCore PR 跑 CI，一次只有一件升存檔）。
 
+### 308. （預約）高鐵：沒有閉塞時的互等與追回時間
+
+session_0125dMtwyMdz7mzoBCRNa1pn 預約（#231）。這一節由那個 PR 填寫。
+
+### 314. （預約）3D 的列車標籤與路線色帶
+
+session_01Y25x9NJSKmAuP1M1K3Sf3C 預約（#231）。這一節由那個 PR 填寫。
+
 ### 316. 新遊戲一個入口：主選單只留「新遊戲」，點了選「空白地圖」或「實景地圖」，新遊戲選項標明兩種都套用
 
 2026-10-21。作者回報（iPad 主選單截圖）：「實景地圖也算新遊戲，要不要收進新遊戲，然後選空白跟實景，才不會誤以為選項只能套用空白地圖」。作者 2026-10-14、10-15 起的預設「session 五方決定」，遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 派工。號碼依 #231。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
