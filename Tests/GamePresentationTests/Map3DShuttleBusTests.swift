@@ -52,7 +52,8 @@ final class Map3DShuttleBusTests: XCTestCase {
         let a=life.frame(target:Map3DPoint(1000,0,0),distance:1200,time:60,detail:.full,activity:.init())
         XCTAssertGreaterThan(a.instances.filter { $0.model==old }.count,0)
         XCTAssertGreaterThan(a.instances.filter { $0.model==shuttle }.count,0)
-        XCTAssertEqual(a.buses,a.instances.filter { $0.model==old || $0.model==shuttle }.count)
+        let busIDs=Set(Map3DStreetModel.allCases.filter(\.isBus).compactMap { Map3DStreetLife.models[$0] })
+        XCTAssertEqual(a.buses,a.instances.filter { busIDs.contains($0.model) }.count)
         life.lanes=[.init(path:path,half:6,twoWay:true,speed:11,perHundred:5,scooters:true,seed:(3,4))]
         let b=life.frame(target:Map3DPoint(1000,0,0),distance:1200,time:60,detail:.full,activity:.init())
         XCTAssertEqual(a.vehicles,b.vehicles);XCTAssertEqual(b.buses,0)
