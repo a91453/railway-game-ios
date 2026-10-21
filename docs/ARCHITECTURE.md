@@ -14230,6 +14230,7 @@ session_0125dMtwyMdz7mzoBCRNa1pn 預約（#231）。這一節由那個 PR 填寫
 參考庫沒有軌道旁的路線色帶（網站 3D 的路線是畫在地圖上的線），這部分是本專案自己寫的。外部專案：沒有另外搜尋程式碼（投影與選色是幾行算式）。
 
 **驗證**：
+- **VERIFIED**（Linux，無頭 Chromium 的 WebGL 預覽，決策 238）：色帶的前後對照 `docs/art/map3d-labels-2026-10-21/bands-before-after.jpg`（左前右後；上近景的高架與地面線交叉，下中景的環狀線與兩條直線）。
 - **VERIFIED**（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`Map3DLineBandsTests`、`Map3DTrainLabelsTests`、`Map3DTests` 通過；`MAP3D_FRAME_REPORT=1` 的 `testTheLineBandsCost`、`testTheGPUBudget` 跑過（數字如上）；改到的 App 檔通過 `swiftc -parse`。
 - **UNVERIFIED**：App 的編譯（`ios-build.yml`）；3D 的 UI 測試（PR 用 `only_testing` 跑）；實機上標籤的大小、位置、跟車時的流暢度與色帶的樣子（TestFlight）。
 
