@@ -150,8 +150,7 @@ extension GameSession {
         guard nightSkipRun == nil, !isPausedForBuilding else { return nil }
         let now = world.clock.now
         if world.trains.contains(where: NightSkip.isRunning) { return nil }
-        if let memo = nightSkipMemo, memo.revision == commandRevision, memo.from <= now,
-           memo.firstMove.map({ now < $0 }) ?? (now.seconds < memo.from.seconds + GameTime.secondsPerHour) {
+        if let memo = nightSkipMemo, memo.covers(now, revision: commandRevision) {
             return memo.firstMove.flatMap { NightSkip.plan(from: now, firstMove: $0) }
         }
         let firstMove = NightSkip.firstMove(after: world)
@@ -240,8 +239,35 @@ extension GameSession {
 
 /// The run ahead behind ``GameSession/nightSkip``: the first move found
 /// from `from`, for the commands up to `revision`.
-struct NightSkipMemo {
+struct NightSkipMemo: Sendable {
     let revision: Int
     let from: GameTime
     let firstMove: GameTime?
+
+    /// Whether it still answers at `now` after the commands up to
+    /// `revision`: until the first move, or for an hour when none was
+    /// found.
+    func covers(_ now: GameTime, revision: Int) -> Bool {
+        revision == self.revision && from <= now
+            && firstMove.map({ now < $0 }) ?? (now.seconds < from.seconds + GameTime.secondsPerHour)
+    }
+}
+
+/// Decision 328: what a tick of the game loop needs to run ahead for the
+/// night skip off the main actor (``GameSession/LoopTick``), as
+/// ``GameSession/nightSkip`` would on it after the tick: the memo as it
+/// was, and the revision the tick began at.
+struct NightSkipProbe: Sendable {
+    let memo: NightSkipMemo?
+    let revision: Int
+
+    /// The first move after `world` (``NightSkip/firstMove(after:)``),
+    /// worked out only when ``GameSession/nightSkip`` would run ahead for
+    /// it: every train placed at rest and the memo not answering; `nil`
+    /// when it would not.
+    func firstMove(after world: GameWorld) -> NightSkipMemo? {
+        guard !world.trains.contains(where: NightSkip.isRunning),
+              !(memo?.covers(world.clock.now, revision: revision) ?? false) else { return nil }
+        return NightSkipMemo(revision: revision, from: world.clock.now, firstMove: NightSkip.firstMove(after: world))
+    }
 }

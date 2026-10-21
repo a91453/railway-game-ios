@@ -467,6 +467,29 @@ final class NightSkipTests: XCTestCase {
         XCTAssertNil(paused.nightSkipOffer, "a command while paused is looked at at once")
     }
 
+    /// Decision 328: the game loop's tick runs ahead off the main actor,
+    /// and the session takes what it found instead of running ahead
+    /// again; a tick the memo still answers for does not run ahead.
+    func testTheGameLoopRunsAheadOffTheMainActor() async throws {
+        let session = GameSession(world: try world())
+        let expected = try XCTUnwrap(session.nightSkip)
+        session.nightSkipMemo = nil
+        let tick = try XCTUnwrap(session.beginLoopTick())
+        let outcome = await tick.work()
+        let found = try XCTUnwrap(try outcome.get().nightSkip, "every train at rest and no memo: the tick runs ahead")
+        XCTAssertTrue(session.finish(tick, with: outcome))
+        let memo = try XCTUnwrap(session.nightSkipMemo)
+        XCTAssertEqual(memo.from, found.from)
+        XCTAssertEqual(memo.firstMove, found.firstMove)
+        XCTAssertEqual(memo.from, session.world.clock.now)
+        XCTAssertEqual(session.nightSkipOffer?.stop, expected.stop)
+        XCTAssertEqual(session.nightSkipOffer, NightSkip.plan(for: session.world), "as the main actor would have found it")
+
+        let next = try XCTUnwrap(session.beginLoopTick())
+        let again = try await next.work().get()
+        XCTAssertNil(again.nightSkip, "the memo still answers")
+    }
+
     // MARK: - Text
 
     func testTheTextSaysWhatItDoesInBothLanguages() throws {

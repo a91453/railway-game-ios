@@ -43,6 +43,7 @@ struct SettingsView: View {
     @AppStorage(MapAmbienceSettings.dayNightKey) private var showsDayNight = true
     @AppStorage(MapAmbienceSettings.weatherKey) private var showsWeather = true
     @AppStorage(MapAmbienceSettings.realTrainsKey) private var showsRealTrains = true
+    @AppStorage(MapAmbienceSettings.frameRateKey) private var showsFrameRate = false
     /// Decision 216: the lines' colours, on the device.
     @AppStorage(LinePalette.key) private var linePalette: LinePalette = .standard
 
@@ -148,7 +149,8 @@ struct SettingsView: View {
     }
 
     /// Decision 182: whether the map shows the time of day and the weather;
-    /// decision 304: and the real lines' trains.
+    /// decision 304: and the real lines' trains; decision 328: and its
+    /// frame readout.
     private var mapSection: some View {
         Section {
             Toggle(isOn: $showsDayNight) {
@@ -163,10 +165,14 @@ struct SettingsView: View {
                 Label("Real Trains", systemImage: "tram")
             }
             .accessibilityIdentifier("settings.realTrains")
+            Toggle(isOn: $showsFrameRate) {
+                Label("Frame Rate", systemImage: "speedometer")
+            }
+            .accessibilityIdentifier("settings.frameRate")
         } header: {
             Text("Map")
         } footer: {
-            Text("Day and night: the map gets dark at night, and stations, trains and windows light up. Weather effects: rain and lightning on rainy and stormy days, and a typhoon sign at the stations a typhoon hits. Real trains: on a real-world map, the real lines' trains run faintly by their timetables; they carry none of your passengers and never get in your trains' way.")
+            Text("Day and night: the map gets dark at night, and stations, trains and windows light up. Weather effects: rain and lightning on rainy and stormy days, and a typhoon sign at the stations a typhoon hits. Real trains: on a real-world map, the real lines' trains run faintly by their timetables; they carry none of your passengers and never get in your trains' way. Frame rate: the flat map shows how smoothly it draws; tap the number to see what takes the time.")
         }
     }
 
@@ -610,4 +616,6 @@ enum MapAmbienceSettings {
     static let weatherKey = "map.showsWeather"
     /// Decision 304: the real lines' trains on a real-world map.
     static let realTrainsKey = "map.showsRealTrains"
+    /// Decision 328: the flat map's frame readout.
+    static let frameRateKey = "map.showsFrameRate"
 }
