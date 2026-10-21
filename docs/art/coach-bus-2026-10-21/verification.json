@@ -5,8 +5,8 @@
   "comparison_models": 3,
   "models": 4,
   "views": 28,
-  "triangles": 8099,
-  "maximum_triangles": 2860,
+  "triangles": 8123,
+  "maximum_triangles": 2884,
   "checks": [
     "all native vertices round-trip through the game loader",
     "native / GLB / PNG SHA-256",
@@ -59,7 +59,7 @@
           0,
           255
         ],
-        "pixels": 22403
+        "pixels": 22385
       },
       {
         "path": "views/life-coachBus/bottom.png",
@@ -67,7 +67,7 @@
           0,
           255
         ],
-        "pixels": 22401
+        "pixels": 22383
       },
       {
         "path": "views/life-coachBus/left.png",
@@ -91,7 +91,7 @@
           0,
           255
         ],
-        "pixels": 72125
+        "pixels": 72067
       },
       {
         "path": "views/life-coachBus/back.png",
@@ -99,7 +99,7 @@
           0,
           255
         ],
-        "pixels": 72125
+        "pixels": 72067
       },
       {
         "path": "views/life-coachBus/isometric.png",
@@ -283,9 +283,9 @@
     "status": "VERIFIED",
     "toolchain": "Swift 6.4.0 Linux",
     "warnings_as_errors": true,
-    "xctest_count": 47,
+    "xctest_count": 48,
     "suites": {
-      "Map3DCoachBusTests": 5,
+      "Map3DCoachBusTests": 6,
       "Map3DLowFloorBusTests": 5,
       "Map3DShuttleBusTests": 5,
       "Map3DCityBusTests": 5,
@@ -293,7 +293,7 @@
       "Map3DModelTests": 8,
       "Map3DModelFileTests": 7
     },
-    "log_sha256": "d214acb8a1ffa19d5fafcb4ff6d27b48e259b9ea437e4f16e5423c2861320a3f"
+    "log_sha256": "005ca31521a66ce9fcb8efa332958fa9dd788686aee7b1a80283673846da7815"
   },
   "node": {
     "status": "VERIFIED",
@@ -302,18 +302,18 @@
   },
   "manual_review": {
     "status": "VERIFIED",
-    "environment": "Linux actual native vertices / WebGL preview",
+    "environment": "Linux actual native geometry / WebGL preview",
     "sheets": [
       "overview.png",
-      "directions.png",
+      "luggage-before-after.png",
       "style-checks.png",
       "fleet.png"
     ],
     "checks": [
-      "front / rear / left / right / top / bottom",
-      "backed glass / door placement / supported roof HVAC",
-      "same-scale coach / shuttle / low-floor / existing city bus",
-      "four backgrounds / small sizes / blurred silhouette / grayscale / underside"
+      "body-coloured flush doors / fine seams / small grips",
+      "no triangular depth artefacts",
+      "front / rear / side / underside and four backgrounds / small sizes",
+      "before render belongs to original delivered model"
     ]
   },
   "prior_model_geometry": {
@@ -330,5 +330,40 @@
       "prior_archive_sha256": "68673dab4b431e95b766049e0f43def9286d5d04789893e5f47839e2141452e0"
     }
   },
-  "test_sampling_note": "The first fixture reused overlapping (seed.x + index, seed.y +/- 1) vehicle keys: 12 roads gave only222 unique keys and no coach. Final test samples2400 distinct keys on12 independent road coordinates, retaining four-type reachability, population/share and real model-length separation assertions. Production selection unchanged."
+  "test_sampling_note": "The first fixture reused overlapping (seed.x + index, seed.y +/- 1) vehicle keys: 12 roads gave only222 unique keys and no coach. Final test samples2400 distinct keys on12 independent road coordinates, retaining four-type reachability, population/share and real model-length separation assertions. Production selection unchanged.",
+  "luggage_revision_scope": {
+    "life-shuttleBus": {
+      "status": "VERIFIED",
+      "native_and_glb_bytes_unchanged": true
+    },
+    "life-lowFloorBus": {
+      "status": "VERIFIED",
+      "native_and_glb_bytes_unchanged": true
+    },
+    "life-bus": {
+      "status": "VERIFIED",
+      "native_and_glb_bytes_unchanged": true
+    },
+    "coach_outside_luggage_region": {
+      "status": "VERIFIED",
+      "unchanged_triangles": 2640,
+      "sha256": "d42652f42bf63507148220650b71ac4ffa52b095c790ba40e1dfa410ce6a3cc6"
+    }
+  },
+  "luggage_regression": {
+    "status": "VERIFIED",
+    "test": "Map3DCoachBusTests/testLuggageDoorsUseBodyPaintAndFineFlushSeams",
+    "original_model_failed": true,
+    "insufficient_depth_separation_failed": true,
+    "current_model_passes": true,
+    "checks": [
+      "no steel luggage frame",
+      "unshaded original body paint",
+      "door and grip within12mm of body",
+      "paint at least2mm ahead of seam backing",
+      "body backing ray"
+    ],
+    "original_red_log_sha256": "32b8a6fbdf7ea1dd76f874b53c4fe751edae0f0421e292d9b758c5102544fddb",
+    "depth_red_log_sha256": "3d773d8b6c2b10d966e182932c210c57650efb889e11397dcf3a532bd5019ca5"
+  }
 }

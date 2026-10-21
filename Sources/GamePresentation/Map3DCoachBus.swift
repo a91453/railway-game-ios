@@ -16,6 +16,26 @@ public enum Map3DCoachBus {
 }
 
 extension StationKitBuilder {
+    /// Thin, closed body-coloured luggage door with a narrow seam and a
+    /// small flush grip. Direct face colours keep the paint identical to
+    /// the surrounding shell; addBox's shaded sides made the old doors grey.
+    mutating func coachLuggageDoor(_ x: Float,_ side: Float) {
+        let paint=Map3DCoachBus.bodyColor,seam=Map3DColor.shaded(paint,0.87)
+        let normal=Map3DPoint(0,0,side)
+        func outline(_ cx: Float,_ y: Float,_ z: Float,_ width: Float,_ height: Float,_ r: Float) -> [Map3DPoint] {
+            let a=cx-width/2,b=cx+width/2
+            return [Map3DPoint(a+r,y,z),Map3DPoint(b-r,y,z),Map3DPoint(b,y+r,z),Map3DPoint(b,y+height-r,z),Map3DPoint(b-r,y+height,z),Map3DPoint(a+r,y+height,z),Map3DPoint(a,y+height-r,z),Map3DPoint(a,y+r,z)]
+        }
+        let back=outline(x,0.64,side*1.249,1.43,0.83,0.045)
+        let front=outline(x,0.64,side*1.256,1.43,0.83,0.045)
+        let centre=Map3DPoint(x,1.055,side*1.2525)
+        face(back,inside:centre,color:seam);face(front,inside:centre,color:seam)
+        for i in 0..<8 { let j=(i+1)%8;face([back[i],back[j],front[j],front[i]],inside:centre,color:seam) }
+        // 12 mm reveal; separate paint/backing enough to avoid depth flicker.
+        // Paint is 9 mm proud; the small grip stays within 12 mm.
+        shuttlePanel(outline(x,0.652,side*1.259,1.406,0.806,0.035),normal:normal,color:paint)
+        shuttlePanel(outline(x+0.40,1.298,side*1.2615,0.14,0.026,0.006),normal:normal,color:Map3DStreetModel.trim)
+    }
     mutating func coachBus() {
         let white=Map3DCoachBus.bodyColor,red=Map3DCoachBus.accentColor
         let trim=Map3DStreetModel.trim,steel=Self.steel
@@ -56,9 +76,7 @@ extension StationKitBuilder {
             shuttlePanel([Map3DPoint(-6.03,1.65,side*1.272),Map3DPoint(4.65,1.65,side*1.272),Map3DPoint(5.95,1.93,side*1.272),Map3DPoint(5.95,2.00,side*1.272),Map3DPoint(-6.03,1.86,side*1.272)],normal:Map3DPoint(0,0,side),color:red)
             // Luggage hatches between the tandem rear and front axle.
             for x: Float in [-1.15,0.42,1.99] {
-                box(x,0.64,side*1.261,1.43,0.025,0.83,steel)
-                box(x,0.68,side*1.277,1.35,0.018,0.75,white)
-                box(x,1.28,side*1.289,0.22,0.016,0.045,trim)
+                coachLuggageDoor(x,side)
             }
             for (x,w): (Float,Float) in [(-5.35,1.58),(-0.08,3.82),(5.38,1.40)] { box(x,0.37,side*1.255,w,0.025,0.11,red) }
             box(-5.37,0.81,side*1.263,1.25,0.026,0.62,steel)

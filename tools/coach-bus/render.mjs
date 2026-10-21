@@ -1,5 +1,5 @@
 import {createServer} from 'node:http';
-import {readFileSync,writeFileSync,mkdirSync,copyFileSync,unlinkSync} from 'node:fs';
+import {readFileSync,writeFileSync,mkdirSync,copyFileSync,unlinkSync,existsSync} from 'node:fs';
 import {resolve,dirname,extname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createRequire} from 'node:module';
@@ -57,6 +57,7 @@ try{
  const bus=manifest.models[0],old=manifest.models[1],css='<style>body{font:18px system-ui;color:#262c57;background:#eceef6;margin:24px}h1{font-size:30px}h2{font-size:20px}main,.row{display:flex;gap:12px}section{background:white;border-radius:12px;padding:12px;flex:1;min-width:0}img{width:100%;object-fit:contain}p{margin:4px 0}.row section{text-align:center}.row img{aspect-ratio:1}.big{max-height:450px}</style>';
  async function sheet(name,html){await page.setContent('<meta charset="utf-8"><base href="'+address+'/">'+css+html);await page.evaluate(()=>Promise.all([...document.images].map(i=>i.decode())));await page.screenshot({path:resolve(root,'previews',name),fullPage:true});}
  await sheet('overview.png','<h1>三軸高車身遊覽車｜暖白 × 暖紅</h1><main><section><h2>雙斜面風擋・右側前門與行李艙</h2><img class="big" src="previews/'+bus.id+'-hero.png"></section><section><h2>三軸輪組・高車身與分離尾燈</h2><img class="big" src="previews/'+bus.id+'-rear.png"></section></main><div class="row">'+['front','back','left','right'].map(v=>'<section><img src="'+bus.views[v]+'"><p>'+({front:'前視',back:'後視',left:'左視',right:'右視'})[v]+'</p></section>').join('')+'</div>');
+ if(existsSync(resolve(root,'previews/luggage-before-hero.png')))await sheet('luggage-before-after.png','<h1>行李艙門修正｜車身同色・細接縫・小把手</h1><main><section><h2>修正前：厚灰框與突出蓋板</h2><img src="previews/luggage-before-hero.png"></section><section><h2>修正後：貼齊車身的同色艙門</h2><img src="previews/'+bus.id+'-hero.png"></section></main>');
  await sheet('directions.png','<h1>同一原生車型｜七向透明圖</h1><div class="row">'+Object.entries(bus.views).map(([v,p])=>'<section><img src="'+p+'"><p>'+v+'</p></section>').join('')+'</div>');
  await sheet('comparison.png','<h1>遊戲風格對照｜1款新遊覽車與3款已完成車型</h1><main>'+manifest.models.map(m=>'<section><h2>'+m.name+'</h2><img src="previews/'+m.id+'-hero.png"><p>長 '+(m.maximum[0]-m.minimum[0]).toFixed(2)+' m · '+m.triangles+' 三角形</p></section>').join('')+'</main>');
  await sheet('fleet.png','<h1>同尺度車隊｜小巴也已完成遊戲風格</h1><p>同一鏡頭與公尺比例，由近至遠：藍綠高頂小巴 → 白藍低地板 → 新暖紅三軸遊覽車 → 既有大型公車。</p><section><img src="previews/fleet-native.png"></section>');

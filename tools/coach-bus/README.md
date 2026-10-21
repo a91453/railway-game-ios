@@ -10,7 +10,7 @@ python3 -m http.server 8080 --directory /absolute/path/outside/public/checkout
 
 Open localhost:8080/index.html: filters/search, seven directions, rotate/zoom, backgrounds, PNG/native/GLB downloads. Existing station-kit binary/GLB/renderer and shuttle/civic closed geometry are reused; no new dependencies or external calls.
 
-Native axes +x front/+y left/+z up, metres. Approximate length13.19m, body2.50m wide, mirrors3.16m, equipment3.76m high, wheel bottom0. Three actual axles, open concave arches, raised glazing, right-front door and contact steps, luggage hatches, two physical windscreen slopes, supported mirrors and HVAC, head/tail glow. Matte opaque paint uses shopAwnings[3]/[1]. No logos, brands or raw copied textures/models.
+Native axes +x front/+y left/+z up, metres. Approximate length13.19m, body2.50m wide, mirrors3.16m, equipment3.76m high, wheel bottom0. Three actual axles, open concave arches, raised glazing, right-front door and contact steps, luggage hatches, two physical windscreen slopes, supported mirrors and HVAC, head/tail glow. Matte opaque paint uses shopAwnings[3]/[1]. The luggage doors have closed 7mm shells, body-matched unshaded faces,12mm fine seams and small flush grips; avoid addBox side shading turning them into grey boxes. No logos, brands or raw copied textures/models.
 
 The existing5% bus pool keeps30% shuttle and35% low-floor, then20% coach and15% old city bus. The first two seed selections are unchanged. Traffic density, bus cap, road eligibility and17m conservative spacing remain. No GameCore purchases/operations/save changes.
 

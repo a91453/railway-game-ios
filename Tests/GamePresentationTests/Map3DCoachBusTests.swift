@@ -23,6 +23,20 @@ final class Map3DCoachBusTests: XCTestCase {
         }
         XCTAssertEqual(m.vertices,Map3DCoachBus.model().vertices)
     }
+    func testLuggageDoorsUseBodyPaintAndFineFlushSeams() {
+        let m=Map3DCoachBus.model()
+        for x: Float in [-1.15,0.42,1.99] { for side: Float in [-1,1] {
+            let surface=m.vertices.filter { abs($0.x-x)<0.73 && $0.z>0.70 && $0.z<1.48 && $0.y*side>1.251 }
+            XCTAssertFalse(surface.isEmpty)
+            XCTAssertFalse(surface.contains { $0.color==Map3DPalette.tankStand },"No thick steel-coloured luggage boxes")
+            XCTAssertTrue(surface.contains { $0.color==Map3DCoachBus.bodyColor && $0.ny*side>0.9 },"The door face must match the body's unshaded paint")
+            XCTAssertLessThanOrEqual(surface.map { abs($0.y) }.max() ?? 0,1.262,"Door and handle stay within12mm of the body")
+            let paint=surface.filter { $0.color==Map3DCoachBus.bodyColor && $0.ny*side>0.9 }.map { abs($0.y) }.min() ?? 0
+            let seam=surface.filter { $0.color==Map3DColor.shaded(Map3DCoachBus.bodyColor,0.87) }.map { abs($0.y) }.max() ?? 0
+            XCTAssertGreaterThanOrEqual(paint-seam,0.002,"Paint must clear the seam backing enough to prevent depth flicker")
+            XCTAssertLessThan(ray(from:Map3DPoint(x,side*1.28,1.0),direction:Map3DPoint(0,-side,0),vertices:m.vertices),0.031,"Door remains backed by the body")
+        } }
+    }
     func testThreeSeparateAxlesHaveRealWheelOpenings() {
         let m=Map3DCoachBus.model()
         for x: Float in [-3.90,-2.60,3.80] {
