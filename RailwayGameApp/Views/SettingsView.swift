@@ -26,6 +26,9 @@ struct SettingsView: View {
     @State private var cityViewArea: CityViewArea?
     /// Decision 229: whether the game's own 3D map is open.
     @State private var showsMap3D = false
+    /// Decision 313: whether a pinch past the 2D map's closest zoom opens
+    /// the 3D map (on unless turned off; the 3D button always does).
+    @AppStorage(Map3DHandoff.pinchOpensKey) private var pinchOpens3D = true
     /// Whether the game's website is open (decision 163), in Safari's view
     /// in the app.
     @State private var showsWebsite = false
@@ -310,10 +313,18 @@ struct SettingsView: View {
                 }
             }
             .accessibilityIdentifier("settings.map3D")
+            Toggle(isOn: $pinchOpens3D) {
+                Label {
+                    Text(verbatim: language.text("Pinch Closer for 3D", "拉近自動變 3D"))
+                } icon: {
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                }
+            }
+            .accessibilityIdentifier("settings.pinchOpens3D")
         } footer: {
             Text(verbatim: language.text(
-                "See your own railway, trains and town in 3D. Pinch closer and the map tilts. The number in the corner shows how smoothly it runs on this device.",
-                "用 3D 看你自己的鐵路、列車與城鎮。兩指拉近，地圖就會傾斜。角落的數字是這台裝置跑起來的流暢度。"
+                "See your own railway, trains and town in 3D. Pinch closer and the map tilts. The number in the corner shows how smoothly it runs on this device. Pinch closer for 3D: pinching on past the flat map's closest view and letting go opens the 3D map; off, only the 3D button does.",
+                "用 3D 看你自己的鐵路、列車與城鎮。兩指拉近，地圖就會傾斜。角落的數字是這台裝置跑起來的流暢度。拉近自動變 3D：平面地圖拉到最近還繼續拉、放手就打開 3D 地圖；關掉時只有 3D 鈕會打開。"
             ))
         }
     }

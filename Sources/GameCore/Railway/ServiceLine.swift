@@ -352,6 +352,8 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
         var line = self
         line.lastDispatch = nil
         line.outerLastDispatch = nil
+        line.endLastDispatch = nil
+        line.opensPair = false
         line.runDays = []
         line.deadheadDistance = 0
         for index in line.patterns.indices { line.patterns[index].lastDispatch = nil }
@@ -386,6 +388,19 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     /// where their trips end. Set by ``GameWorld/setLineDepot(_:to:)`` and
     /// ``GameWorld/setLineDepots(_:to:)`` only.
     public internal(set) var depots: [StationID] = []
+    /// How the line's own service spaces its trains out (decision 309):
+    /// evenly, as every line before it, from both ends at once, or in
+    /// pairs a few minutes apart. Set by
+    /// ``GameWorld/setLineDispatchPattern(_:to:)`` only.
+    public internal(set) var dispatchPattern: DispatchPattern = .even
+    /// When the line last sent a train out from its last stop under
+    /// ``DispatchPattern/fromBothEnds`` (decision 309), or `nil` if it
+    /// never has; ``lastDispatch`` is then its first stop's.
+    public internal(set) var endLastDispatch: GameTime?
+    /// Whether, under ``DispatchPattern/staggered(minutes:)`` (decision
+    /// 309), the train the line last sent out was the first of a pair: the
+    /// next follows it the stagger later.
+    public internal(set) var opensPair: Bool = false
 
     /// The line's first depot, or `nil` if it has none: its only one but
     /// on a line given several (decision 221).
@@ -981,6 +996,7 @@ extension ServiceLine: Codable {
     private enum CodingKeys: String, CodingKey {
         case id, name, stops, performance, window, trainsInService, targetHeadways, trains, lastDispatch, patterns, ring, outerLastDispatch, routePreferences, color
         case runs, runDays, freight, deadheadDistance, dwellSeconds, depot, depots, code
+        case dispatchPattern, endLastDispatch, opensPair
     }
 
     /// Decodes a line, rejecting stops, a performance, a window, train counts or
@@ -1001,8 +1017,9 @@ extension ServiceLine: Codable {
     /// once it has sent a train out the outer way; a line that is not a
     /// ring has neither, which is how lines saved before rings read. A ring
     /// with fewer than three stops, the same station first and last,
-    /// patterns or an odd count of trains in service is rejected, and so is
-    /// an outer dispatch on a line that is not a ring.
+    /// patterns, an odd count of trains in service or a dispatch pattern
+    /// other than even (decision 309) is rejected, and so is an outer
+    /// dispatch on a line that is not a ring.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(LineID.self, forKey: .id)
@@ -1057,6 +1074,21 @@ extension ServiceLine: Codable {
                 forKey: .stops, in: container, debugDescription: "Line \(id.rawValue) needs two stops or more, none twice in a row."
             )
         }
+        // Decision 309 (save version 65): how the line spaces its trains,
+        // written unless even, with the far end's dispatch or the open
+        // pair that pattern keeps.
+        dispatchPattern = try container.decodeIfPresent(DispatchPattern.self, forKey: .dispatchPattern) ?? .even
+        endLastDispatch = try container.decodeIfPresent(GameTime.self, forKey: .endLastDispatch)
+        opensPair = try container.decodeIfPresent(Bool.self, forKey: .opensPair) ?? false
+        guard dispatchPattern.isValid, !container.contains(.dispatchPattern) || dispatchPattern != .even else {
+            throw DecodingError.dataCorruptedError(forKey: .dispatchPattern, in: container, debugDescription: "Line \(id.rawValue)'s dispatch pattern is not one a line can have, or is written though even.")
+        }
+        guard endLastDispatch == nil || dispatchPattern == .fromBothEnds, (endLastDispatch?.seconds ?? 0) >= 0 else {
+            throw DecodingError.dataCorruptedError(forKey: .endLastDispatch, in: container, debugDescription: "Line \(id.rawValue): only a line sending trains from both ends has a last stop's dispatch, never before second 0.")
+        }
+        guard !container.contains(.opensPair) || opensPair, !opensPair || dispatchPattern.staggerMinutes != nil else {
+            throw DecodingError.dataCorruptedError(forKey: .opensPair, in: container, debugDescription: "Line \(id.rawValue): only a staggered line has an open pair, written as true.")
+        }
         guard zip(trains, trains.dropFirst()).allSatisfy({ $0 < $1 }) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .trains, in: container, debugDescription: "Line \(id.rawValue)'s trains must be listed once each, in ascending order."
@@ -1076,7 +1108,7 @@ extension ServiceLine: Codable {
             throw DecodingError.dataCorruptedError(forKey: .routePreferences, in: container, debugDescription: "Route preferences must name distinct directed legs of their service and its destination station.")
         }
         if isRing {
-            guard Self.isRingStopList(stops), patterns.isEmpty,
+            guard Self.isRingStopList(stops), patterns.isEmpty, dispatchPattern == .even,
                   ServiceLevel.allCases.allSatisfy({ trainsInService[$0] % 2 == 0 })
             else {
                 throw DecodingError.dataCorruptedError(
@@ -1144,6 +1176,13 @@ extension ServiceLine: Codable {
             try container.encode(depots[0], forKey: .depot)
         } else if depots.count > 1 {
             try container.encode(depots, forKey: .depots)
+        }
+        if dispatchPattern != .even {
+            try container.encode(dispatchPattern, forKey: .dispatchPattern)
+        }
+        try container.encodeIfPresent(endLastDispatch, forKey: .endLastDispatch)
+        if opensPair {
+            try container.encode(true, forKey: .opensPair)
         }
         if hasRuns {
             try container.encode(runs, forKey: .runs)

@@ -13647,6 +13647,65 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 **驗證**：`RealWorldLoadingTests`、`InterfaceMotionTests`、`GameLauncherTests` 在 Linux 跑過；App 的畫面只能靠 macOS CI 編譯，實機外觀由作者在 TestFlight 看。
 
+### 309. 路線的發車方式：平均錯開（預設）、兩端對開、第二列晚 N 分
+
+2026-10-21。TestFlight 77.1 #1（PLAYER_FEEDBACK）；NEXT_PRIORITIES §19 第 1 名；遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 派工。號碼依 #231：當時 `main` 到 306，307、308 已在 #231 保留，取 309；存檔 65。
+
+**玩家原話**：「希望在交由路線自動派車時，兩班車的發車時間可以自行調整班距……加入第二列之後，可能沒辦法對開或者晚前一班車 10 分鐘後開。」
+
+**為什麼做不到**：派車（決策 23）照班距一班一班送；從終點發的車（決策 172）和第一站共用同一個 `lastDispatch`，所以兩端不能同時發車，第二列晚幾分鐘開也沒有地方設。「加開一列車」（決策 264）把班距設成「來回 ÷ 列車數」，兩列車永遠平均錯開。
+
+**規則**（`DispatchPattern.swift`、`GameWorld.swift` 的派車）：
+1. 路線多一個「發車方式」`ServiceLine.dispatchPattern`，命令 `setLineDispatchPattern(_:to:)`（免費；已出發的車跑完這趟，下一班照新方式）：
+   - **平均錯開**（`.even`，預設，每一條舊路線）：和以前逐行相同，兩端共用一個派車時刻，下一班在上一班之後一個班距。
+   - **兩端對開**（`.fromBothEnds`）：第一站與終點各有自己的派車時刻（`lastDispatch` 與新的 `endLastDispatch`）。終點分到一半的車（往下取整），第一站分到其餘；每一端的間隔是 `班距 × 列車數 ÷ 這一端的車數`，所以每一端自己的車平均錯開。終點的車比它分到的少時，第一站多出來的一列馬上空車回送到終點（決策 172 的空車回送，不占班距、不載客），到了就發車。兩端在同一步可以各發一班。需要彈性發車（決策 172，App 的新遊戲預設開），因為只有它會從終點發車；沒有時命令拒絕（`invalidDispatchPattern`），之後關掉彈性發車的世界照平均錯開。
+   - **第二列晚 N 分**（`.staggered(minutes:)`，N 是 2–30）：兩列一組，第二列在第一列之後 N 分，下一組在第一列之後兩個班距。N 超過班距時照另一列看（`min(N, 2×班距−N)`），至少 2 分（`minimumHeadwayMinutes`）。這一組有沒有開著記在 `opensPair`；第二列在兩個班距之後才發（例如過了一夜），就當新的一組。
+2. 只管路線自己的服務（停站模式與環線兩個方向照舊平均），有班次的路線（決策 133）與環線不能設；一條線只跑 1 列車時沒有「第二列」，照平均。
+3. 列車數的上限照舊（`running < planned.trains`）；機廠出庫（決策 209）的時間也照發車方式（第一站那一端）。
+4. 閒置快轉（`minutesUntilNextDispatch`、`minutesUntilLineWaitsChange`）照每一端的時刻醒來，整批推進與逐分推進相同（`DispatchPatternTests.testLongBatchesMatchSingleTicks`）。
+
+**App**：路線面板「班距與列車數」裡，班距選擇的下面，路線有 2 列車以上時多一個「發車方式」選單：平均錯開、兩端對開（有彈性發車才有）、第二列晚 2／3／5／10／15／20／30 分，下面一行說它做什麼（`LineDispatchPatternChoice`，GamePresentation）。指令記進指令紀錄（`PlayerCommand.Edit.setLineDispatchPattern`）。
+
+**量到的**（`DispatchPatternReportTests`，`DISPATCH_PATTERN_REPORT=1`，Linux debug，24 小時；Alpha–Beta–Gamma 一條單線，爬行速度一趟來回 11 分，2 列車，行車控制關、寫實營運開，Alpha 住宅 3,000、Beta 商業 1,000、Gamma 辦公 3,000 旅次）：
+
+| 發車方式 | 載客 | 平均候車（分） | 準點 | 趟數 |
+| --- | ---: | ---: | ---: | ---: |
+| 平均錯開 | 6,996 | 3.1 | 100.0 % | 179 |
+| 兩端對開 | 6,992 | 3.2 | 100.0 % | 180 |
+| 第二列晚 2 分 | 6,993 | 5.3 | 100.0 % | 180 |
+| 第二列晚 10 分 | 6,993 | 3.3 | 100.0 % | 179 |
+
+- 兩端對開與平均錯開一天下來幾乎一樣：兩列車平均錯開跑穩了，本來就是兩端同時發車、在中間交會。差別在開頭：平均錯開時第二列要在第一站等一個班距（每天早上、每次加車都一樣），兩端對開時它一開始就在終點，首班兩端一起開。
+- 第二列晚 2 分的平均候車多 2 分多：兩列擠在一起，下一組要等很久。這是玩家自己選的，選單的說明寫清楚「兩列一組」。
+- 載客差不到 0.1 %，經濟沒有目標要對（`no stated range — not judged`）。準點 100 % 是因為行車控制關著；單線開行車控制時兩端對開的車要在中途交會，需要待避線（決策 264 的「加開一列車」本來就會蓋），沒有另外量（**NOT ASSESSED**）。
+
+**存檔 65**：路線多 `"dispatchPattern"`（`{"kind": "fromBothEnds"}` 或 `{"kind": "staggered", "minutes": n}`，平均不寫）、`"endLastDispatch"`（只有兩端對開）、`"opensPair": true`（只有第二列晚 N 分）。只讀到 64 的 build 會丟掉它們，路線又變回平均錯開，所以升版；舊存檔沒有這些 key，讀成平均錯開。拒絕：寫了 `even`、N 不在 2–30、兩端對開以外有 `endLastDispatch`、不是錯開卻有 `opensPair`、`opensPair: false`、環線有發車方式、`endLastDispatch` 在時鐘之後。fixture `SaveFixtures/v65-dispatch-pattern.json`。
+
+**golden、replay**：不動，值一個都沒變（預設平均錯開走的是原本的程式：`nextDispatch` 的 `.even` 就是「上一班加一個班距」）。golden 的測試程式多一個新錯誤的名稱 `invalidDispatchPattern`（沒有 golden 用到它，schema 不動）。
+
+**參考庫與外部專案**（`a91453/railway-reference-private`）：
+
+| 參考 | 本專案 | 分類 |
+| --- | --- | --- |
+| `Railway/train_loop_reference_clean`、`Simulator/reference_snapshot` 的發車：都照時刻表或固定班距一端發車 | 無 | 參考庫沒有「兩端各自的派車時刻」或「錯開 N 分」（gap），本專案自己寫 |
+
+外部專案：OpenTTD 的「自動分隔」（timetable autoseparation）讓同一路線的車平均錯開，是這裡的「平均錯開」；兩端對開與錯開發車是鐵路營運的一般做法，沒有搬程式。程式是本專案自己的。
+
+**五方**：
+- 玩家：77.1 的原話兩種都做到：加了第二列，可以讓它從終點一起開（兩端對開），或晚第一列幾分開；預設不變，不選的人什麼都不會變。
+- 鐵道迷：單線兩列車兩端對開、在中間站交會，是平溪、集集這類支線的做法；首班車兩端同時開也一樣。「續行」（兩列緊接著開）真實鐵路也有。沒有新的資料來源。
+- 開發：派車的時刻集中在 `nextDispatch` 一個函式，平均錯開走原本的算法，golden、replay 不動；只管路線自己的服務，停站模式與環線不碰；升存檔 65、加 fixture。
+- 美術：路線面板多一個選單和一行字，和目標班距的選單同一種（`TickStable` 的 Menu），圖示用 SF Symbols 的 `arrow.left.arrow.right`。
+- 音樂：無。
+
+**沒選的**（預覽留在 PR）：(a) 只加「第二列晚 N 分」一個步進器：做不到兩端對開；(b) 每列車各自設發車時刻：等於手排時刻表，初學者用不到，而且有決策 133 的班次；(c) 分段選擇器：選項有 9 個，手機橫拿放不下。
+
+**下一步**（`docs/HANDOFF.md` §5 有一行指過來）：
+1. 實機確認選單在手機橫拿時的位置與字（TestFlight）。
+2. UI 測試沒有加（選單的內容與命令有 Linux 測試 `LineDispatchPatternChoiceTests`）；要加就放 full lane。
+3. 停站模式（決策 24 的 `patterns`）也要發車方式時，`dispatchPattern`／`endLastDispatch` 要搬到每個服務。
+4. 單線開行車控制時兩端對開的量測（需要待避線的世界）。
+
 ### 310. 地圖提示整理：不蓋「空位多」、列車的章改「滿載」、快速圖層的「車資與章」開關
 
 2026-10-21。作者同意遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 的排程（「照這樣做」，#231 04:58 與 04:59 的兩則），派工給 session_01GPnquCXT5GQzPfCztHj6Sz。號碼依工作登記 #231：main 到 306，307（甲線載入畫面）、308（追回後續）、309（派車錯開）已登記，取 310。GameCore、存檔版本、golden schema、SaveFixtures、ReplayFixtures 都不動。
@@ -13715,6 +13774,71 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 **沒有採用的做法**（預覽：`docs/art/real-world-start-2026-10-21/chosen-and-others.png`，網頁示意，不是 App 截圖）：A. 框自己可以拖、地圖不動：手機上手指常同時拖到地圖，兩個手勢搶；B. 原本的暖色底、深藍實線框：和購地的框不一樣，也沒有面積；C. 面積寫在地圖的框上：字擋到路線，拉遠時字比框大。
 
 **驗證**：`RealWorldStartAreaTests`（Linux）。App 的畫面（點地圖、框、卡片、最近用過）只能靠 macOS CI 編譯與 `RealWorldMapUITests`（開局流程沒有改變：清單、在這裡建造），實機手感由作者在 TestFlight 看。點地圖沒有加 UI 測試：Simulator 上的地圖圖磚與點的位置不穩，留給實機。
+
+### 313. 2D 與 3D 不搶畫面：交接只在放手時判斷，2D 拉到最近還繼續拉才進 3D；3D 加「2D」與「建設」鈕；設定「拉近自動變 3D」
+
+2026-10-21。作者實機回報：「2d常常跟3d搶畫面」（iPhone 17 Pro）。遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 整理規則、作者定案，派給 3D session_01Y25x9NJSKmAuP1M1K3Sf3C。號碼依工作登記 #231（遊戲規劃保留 313）。存檔版本、golden schema 不動；GameCore 不動。改的是決策 269 的交接。
+
+**原則**：2D 負責建造、規劃與操作；3D 負責觀賞、探索與跟車。兩邊可以快速來回，但不打斷玩家正在做的事：手指還在動時畫面不換。
+
+**原本的毛病**（決策 269）：2D 雙指拉到約 800 m 的比例（iPhone 直拿約每 16 m 27 點）就在手勢途中換成 3D，所以 2D 最近的那一段（27–64 點）用雙指拉不到；想看清楚 2D 的路口、月台，地圖卻變 3D。3D 裡不能點選與建造，要回 2D 只能拉遠或按關閉（回到原本的地方，不是現在看的地方）。
+
+1. **進 3D**（`Map3DHandoff.opensOnRelease(referenceSize:asked:)`，GamePresentation）：
+   - 只在雙指**放手時**判斷。手勢途中只動 2D。
+   - 2D 雙指可以一路拉到最近（`MapScale.largestSize`，每 16 m 64 點）。
+   - 放手時 2D 已經在最近，而且手指要的比例（手勢開始的比例 × 雙指的倍數，最近的比例會擋住它）超過最近的 1.3 倍（`pastClosest`）才進 3D。剛好拉到底、或拉過頭又退回來再放手，都留在 2D。
+   - 3D 從交接的距離起算傾斜：交接的相機記下 `Map3DCamera.tiltsFrom`（交接時的距離），從那裡正上方往下看，拉近才開始傾斜，傾到最大的距離是 `mostTiltedDistance(flatFrom:)`（120 m，或交接距離的 0.45 倍取小、不小於 60 m）。iPhone 直拿約 280 m 交接、橫拿約 150 m、iPad 約 400 m；畫面不跳。3D 按鈕開的 3D 照舊從 800 m（`flatFrom`）起算。
+   - 預先蓋 3D 場景（決策 269 的「後來」）改成在 2D 最近的四分之三以內停 0.4 秒（`buildsAhead(referenceSize:)`）。
+2. **回 2D**：
+   - 雙指交接進來的 3D：拉遠也只在放手時判斷（`handsBack(handedOverAt:from:to:)`：這次雙指是拉遠，而且放手時比交接時遠 1.5 倍以上，`closesPast`）。遠景 3D 的 CPU 貴（作者實機台北遠景 16.6 ms），所以保留自動交回。
+   - 3D 按鈕開的 3D 照舊不自動交回。
+   - 3D 左上原本的關閉鈕換成明確的「2D」鈕（地圖圖示加「2D」兩個字）：回到 3D 看的同一個中心、相近的比例（2D 的比例範圍會擋住），不管 3D 是怎麼打開的。設定裡的 3D 預覽下面沒有 2D 地圖，照舊是關閉鈕。
+3. **3D 的「建設」鈕**（在「2D」下面，鎚子圖示加「建設」，和下方工具列的「建設」同一個字）：回到同一個位置的 2D，並打開建造工具（和工具列的「建設」一樣是軌道工具）。建造時 2D 固定，不交接（決策 269 原本就是）。
+4. **設定「拉近自動變 3D」**（設定的 3D 地圖那一節，`Map3DHandoff.pinchOpensKey`，預設開）：關掉時雙指永遠不進 3D，只有 3D 鈕會開（Google Earth 的「縮放時自動傾斜」）。
+5. 切換照舊是直接切換、不滑上來（決策 269）；沒有新的動畫，「減少動態效果」也一樣（motion skill）。兩顆新鈕用 SF Symbols（art-style §2：工具列、面板的按鈕照舊用 SF Symbols），和關閉鈕同一個 `.regularMaterial` 底、44 點高。
+
+**程式**：
+- GamePresentation：`Map3DHandoff`（`opensOnRelease`、`pastClosest`、`handsBack`、`closesPast`、`buildsAhead(referenceSize:)`、`pinchOpensKey`、`hands(building:tutorialRuns:pinchOpens:)`；拿掉 `opensAt`、`closesAt`），`Map3DCamera.tiltsFrom`、`tilt(atDistance:from:)`、`mostTiltedDistance(flatFrom:)`。Linux 測試 `Map3DHandoffTests`。
+- App：`MapView.swift`（手勢的 coordinator 記下手指要的比例，放手時回報 `onPinchEnded`）、`Map3DPreviewScreen.swift`（放手才判斷交回；「2D」「建設」鈕；`Map3DCameraLink` 讓畫面讀到 Metal view 的相機）、`ContentView.swift`、`SettingsView.swift`。沒有新檔，xcodeproj 不用重新產生。
+- UI 測試（full lane 的第二個 job）：`MapInteractionTests/testPinchingCloseOpensTheThreeDMapAndPinchingOutComesBack` 照新規則（XCUITest 的 `pinch` 本來就會放手）；`testTheButtonsThreeDMapStaysThreeDWhenPinchedCloser` 加按「建設」回到 2D、工具打開。「2D」鈕沿用 `map3D.close` 的識別碼，按它關掉 3D 的測試不用改。
+
+**量測**：沒有新的幾何，畫的三角形與 draw 數不變（作者實機：近景 21–27 draws、約 13.4 萬三角形；遠景 192 draws、約 18.8 萬）。2D 雙指交接進來的 3D 比以前近（約 280 m，以前約 800 m），一開始畫的分塊更少。
+
+**五方**：
+- 玩家：雙指可以把 2D 拉到看清楚路口與月台，不會中途變 3D；想看 3D 時繼續拉、放手就進去；3D 裡一顆鈕回到同一個地方的 2D，一顆鈕直接去建造。不喜歡自動變 3D 的可以關掉。
+- 鐵道迷：2D 最近那一級看得到月台、道岔與號誌的細節（真實路網的資料都在 2D 上），現在雙指拉得到；和真實資料的來源無關。
+- 開發：判斷都在 GamePresentation，有 Linux 測試；App 只把「手勢途中」改成「放手時」，加兩顆鈕與一個設定；GameCore、存檔、golden 都不動。
+- 美術：交接時 3D 從交接的距離正上方往下看，比例相同，畫面不跳；新鈕用現有的材質底與 SF Symbols，和關閉鈕、指北針排成左上一欄。
+- 音樂：無。
+
+**沒有選的做法**（預覽在 `docs/art/map3d-handoff-2026-10-21/buttons.svg`）：
+- 鈕只放圖示的圓鈕（B）：「2D」是作者要的「明確」，只有地圖圖示認不出是回平面地圖；鎚子單獨也不一定讀成「建設」。
+- 「2D｜建設」放在畫面下方一列（C）：和下方的提示、跟車的列（之後）搶位置，手指也離左上的指北針遠。
+- 留著關閉鈕、另加「2D」鈕：兩顆都是回 2D，只差回到哪裡，玩家分不出。
+- 拉到底後在手勢途中就換（不等放手）：就是作者說的「搶畫面」。
+- 進 3D 不要求過頭 1.3 倍、拉到底放手就進：只想看最近一級 2D 的玩家每次都會進 3D。
+
+**之後**（這次不做）：
+- 兩指上下拖改傾斜角（Apple 地圖的做法）：現在傾斜跟著距離。
+- 不用 `fullScreenCover`，讓 2D 與 3D 共用同一套介面（HUD、工具列）。
+- 建造時 3D 把建物簡化（Cities: Skylines II 的做法），讓 3D 也能建造。
+- 3D 上的資料圖層（Transport Fever 2 的做法）。
+- HANDOFF §7.5：實機看「拉近自動變 3D」預設開是不是還會誤進 3D；常誤觸就把預設改成關，不必重做。
+
+**參考**：
+
+| 參考 | → 目標 |
+| --- | --- |
+| 決策 269 的 `Map3DHandoff`（比例與距離互換、`Plan`、`camera(from:)`、`plan(from:)`） | 沿用；判斷的時機從手勢途中改成放手 |
+| 參考庫 `Railway/railway_game_reference_clean/web_runtime/touch_pinch_zoom.js`（雙指縮放以兩指中點為準，`touchend` 才結束一次縮放） | 2D 雙指照舊以兩指中點為準；`UIPinchGestureRecognizer` 的 `.ended` 是放手的那一刻 |
+| 參考庫 `Railway/taiwan-rail-reference-clean/source/main-reference.js`、`MapBuilder/reference_snapshot/` 的 MapLibre／Mapbox 地圖 | 2D 與 3D 是同一張地圖、pitch 手動，沒有「兩張地圖交接」的規則：缺口，本專案自己的 |
+| Google Earth 的「縮放時自動傾斜」設定（只看行為，沒有程式碼） | 設定「拉近自動變 3D」 |
+
+外部專案：沒有另外搜尋程式碼（判斷是幾個比較）。程式碼是本專案自己的。
+
+**驗證**：
+- **VERIFIED**（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`Map3DHandoffTests`、`Map3DTests`、`Map3DCompassTests` 通過；改到的 App 檔通過 `swiftc -parse`。
+- **UNVERIFIED**：App 的編譯（`ios-build.yml`）；兩個交接的 UI 測試（full lane，PR 用 `only_testing` 跑）；實機的手感與誤觸（TestFlight，HANDOFF §7.5）。
 
 ## 目前規則摘要
 

@@ -1963,6 +1963,9 @@ public struct GameWorld: Equatable, Sendable {
         }
         if line.isRing {
             swap(&line.lastDispatch, &line.outerLastDispatch)
+        } else if line.dispatchPattern == .fromBothEnds {
+            // Decision 309: the ends change places, and their clocks.
+            swap(&line.lastDispatch, &line.endLastDispatch)
         }
         // Decision 133: each run calls at the same stations, the other way
         // along the reversed stops.
@@ -2033,6 +2036,7 @@ public struct GameWorld: Equatable, Sendable {
         copy.trainsInService = original.trainsInService
         copy.targetHeadways = original.targetHeadways
         copy.depots = original.depots
+        copy.dispatchPattern = original.dispatchPattern
         copy.patterns = original.patterns.map { pattern in
             var copied = pattern
             copied.trains = []
@@ -2139,6 +2143,28 @@ public struct GameWorld: Equatable, Sendable {
         if let seconds, !ServiceLine.dwellRange.contains(seconds) { throw .invalidLineDwell }
         lines[index].dwellSeconds = seconds
         abandonUnservedPassengers()
+    }
+
+    /// Sets how line `id`'s own service spaces its trains out (decision
+    /// 309). Free; a train on its way keeps its trip, and the next train
+    /// out follows the new pattern. The ends' dispatch times and an open
+    /// pair are forgotten on a change.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownLine(_:)`` or
+    ///   ``GameError/invalidDispatchPattern`` for a stagger outside
+    ///   ``DispatchPattern/staggerRange``, a pattern other than even on a
+    ///   ring or a line with runs, or from both ends in a world without
+    ///   flexible dispatch.
+    public mutating func setLineDispatchPattern(_ id: LineID, to pattern: DispatchPattern) throws(GameError) {
+        let index = try lineIndex(of: id)
+        let line = lines[index]
+        guard pattern.isValid, pattern == .even || !line.isRing && !line.hasRuns,
+              pattern != .fromBothEnds || flexDispatch
+        else { throw .invalidDispatchPattern }
+        guard pattern != line.dispatchPattern else { return }
+        lines[index].dispatchPattern = pattern
+        lines[index].endLastDispatch = nil
+        lines[index].opensPair = false
     }
 
     /// Sets when a line runs during the day (see ``ServiceWindow``).
@@ -2900,16 +2926,25 @@ public struct GameWorld: Equatable, Sendable {
                 }
                 continue
             }
-            for stream in lines[index].dispatchStreams where !lines[index].trains(of: stream).isEmpty {
+            // Decision 309: a line keeping a clock at each end may send a
+            // train out from each in the same step.
+            let streams = lines[index].dispatchStreams.flatMap { stream in
+                keepsEndClocks(lines[index], stream, at: now, memo: &memo) ? [stream, stream] : [stream]
+            }
+            for stream in streams where !lines[index].trains(of: stream).isEmpty {
                 let line = lines[index]
                 // Decision 172: a train that stands where the line does not
                 // send trains out from runs empty to the nearer end; it
                 // takes no headway slot.
                 var sending: (index: Int, trip: LineTrip, deadhead: Bool)?
-                if isDispatchDue(line, stream, at: now, memo: &memo), let (ready, trip) = readyTrain(of: line, stream, memo: &memo) {
+                if let (ready, trip) = dueTrain(of: line, stream, at: now, memo: &memo) {
                     sending = (ready, trip, false)
                 } else if isDispatchDue(line, stream, at: now, deadhead: true, memo: &memo),
                           let (ready, trip) = readyTrain(of: line, stream, deadhead: true, memo: &memo) {
+                    sending = (ready, trip, true)
+                } else if let (ready, trip) = trainToFarEnd(of: line, stream, at: now, memo: &memo) {
+                    // Decision 309: to the last stop, which sends its own
+                    // trains out.
                     sending = (ready, trip, true)
                 } else if let (ready, trip) = trainLeavingDepot(of: line, stream, memo: &memo) ?? trainEnteringDepot(of: line, stream, memo: &memo) {
                     // Decision 209: out of the depot in time for a trip, or
@@ -2929,11 +2964,33 @@ public struct GameWorld: Equatable, Sendable {
                 // arrived at the first call; it dwells there first.
                 trains[ready].times = ServiceTimes(arrival: now)
                 logArrival(of: ready)
-                if !deadhead { lines[index].recordDispatch(of: stream, at: now) }
+                if !deadhead { recordDispatch(ofLine: index, stream, from: trip.fromLastCall ? .last : .first, at: now, memo: &memo) }
                 dispatched = true
             }
         }
         return dispatched
+    }
+
+    /// Records that line `index`'s `stream` sent a train out from `end` at
+    /// `now`: the stream's dispatch, or under
+    /// ``DispatchPattern/fromBothEnds`` the end's; staggered, whether it
+    /// opened a pair (it does unless the pair is open and the second train
+    /// leaves within two headways of the first).
+    mutating func recordDispatch(ofLine index: Int, _ stream: DispatchStream, from end: DispatchEnd, at now: GameTime, memo: inout DispatchMemo) {
+        let line = lines[index]
+        let pattern = plannedService(of: line, stream.service, at: now, memo: &memo).map { planned in
+            (dispatchPattern(of: line, stream, planned: planned), planned.headway)
+        }
+        switch pattern {
+        case (.fromBothEnds, _)? where end == .last:
+            lines[index].endLastDispatch = now
+        case (.staggered, let headway)?:
+            let closes = line.opensPair && line.lastDispatch.flatMap { Self.time($0, plusMinutes: 2 * headway) }.map { now < $0 } == true
+            lines[index].opensPair = !closes
+            lines[index].recordDispatch(of: stream, at: now)
+        default:
+            lines[index].recordDispatch(of: stream, at: now)
+        }
     }
 
     /// Sends out a train for each run of line `index` due now that has one
@@ -2966,14 +3023,35 @@ public struct GameWorld: Equatable, Sendable {
     /// With `deadhead` (decision 172) it asks only whether the stream has
     /// room for one more train now, as an empty run to an end takes no
     /// headway slot.
-    func isDispatchDue(_ line: ServiceLine, _ stream: DispatchStream, at now: GameTime, deadhead: Bool = false, memo: inout DispatchMemo) -> Bool {
+    ///
+    /// Decision 309: the line's dispatch pattern decides when its next
+    /// train is due, for a train sent out from `end` (see
+    /// ``nextDispatch(of:_:from:planned:)``); even, as every line before
+    /// it, the end does not matter.
+    func isDispatchDue(_ line: ServiceLine, _ stream: DispatchStream, at now: GameTime, deadhead: Bool = false, from end: DispatchEnd = .first, memo: inout DispatchMemo) -> Bool {
         guard now.seconds >= 0, !line.hasRuns, let planned = plannedService(of: line, stream.service, at: now, memo: &memo) else { return false }
-        if !deadhead, let last = line.lastDispatch(of: stream) {
-            guard let due = Self.time(last, plusMinutes: planned.headway), due <= now else { return false }
+        if !deadhead, let due = nextDispatch(of: line, stream, from: end, planned: planned) {
+            guard due <= now else { return false }
         }
         // Decision 209: a train running empty to the depot is out of
         // service.
         return runningTrains(of: line, stream) < (stream.direction == nil ? planned.trains : planned.trains / 2)
+    }
+
+    /// The train of `line`'s `stream` to send out on a trip now, with that
+    /// trip, or `nil`: the first ready (see ``readyTrain(of:_:deadhead:from:memo:)``)
+    /// once the stream is due (see ``isDispatchDue(_:_:at:deadhead:from:memo:)``).
+    /// Decision 309: a line keeping a clock at each end sends the first
+    /// ready at an end that is due.
+    private func dueTrain(of line: ServiceLine, _ stream: DispatchStream, at now: GameTime, memo: inout DispatchMemo) -> (index: Int, trip: LineTrip)? {
+        guard keepsEndClocks(line, stream, at: now, memo: &memo) else {
+            guard isDispatchDue(line, stream, at: now, memo: &memo) else { return nil }
+            return readyTrain(of: line, stream, memo: &memo)
+        }
+        for end in [DispatchEnd.first, .last] where isDispatchDue(line, stream, at: now, from: end, memo: &memo) {
+            if let ready = readyTrain(of: line, stream, from: end, memo: &memo) { return ready }
+        }
+        return nil
     }
 
     /// The trains `line`'s service `service` runs at `now` and the headway
@@ -3029,11 +3107,13 @@ public struct GameWorld: Equatable, Sendable {
     /// also be able to take the route of its first departure now; one whose
     /// default and alternative routes cannot be taken is not ready, and
     /// tries again at the next step.
-    private func readyTrain(of line: ServiceLine, _ stream: DispatchStream, deadhead: Bool = false, memo: inout DispatchMemo) -> (index: Int, trip: LineTrip)? {
+    ///
+    /// With `end` (decision 309) only a train sent out from that end counts.
+    private func readyTrain(of line: ServiceLine, _ stream: DispatchStream, deadhead: Bool = false, from end: DispatchEnd? = nil, memo: inout DispatchMemo) -> (index: Int, trip: LineTrip)? {
         for id in line.trains(of: stream) {
             guard let index = trains.firstIndex(where: { $0.id == id }),
                   let trip = readyTrip(of: trains[index], on: line, stream.service, memo: &memo),
-                  (trip.deadhead != nil) == deadhead
+                  (trip.deadhead != nil) == deadhead, end.map({ ($0 == .last) == trip.fromLastCall }) ?? true
             else { continue }
             if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
                case .held = reservingDeparture(leaving, memo: &memo.directions) {
@@ -3074,7 +3154,11 @@ public struct GameWorld: Equatable, Sendable {
         } else if line.isRing, let stop = line.stops.indices.first(where: { isStopped(train, at: line.stops[$0]) }) {
             trip = self.trip(of: line, service: service, for: train, from: .ringStop(stop))
         } else if !line.isRing, isStopped(train, at: line.stops[calls[calls.count - 1]]) {
-            trip = self.trip(of: line, service: service, for: train, from: .last)
+            trip = self.trip(of: line, service: service, for: train, from: .last).map { trip in
+                var fromLast = trip
+                fromLast.fromLastCall = true
+                return fromLast
+            }
         } else {
             trip = deadheadTrip(of: line, service: service, for: train)
         }
@@ -3149,21 +3233,31 @@ public struct GameWorld: Equatable, Sendable {
                         : line.nextChange(after: now, in: serviceDay)
                     if let wake { soonest = min(soonest ?? .max, Self.minutes(from: now, until: wake)) }
                 }
-                guard readyTrain(of: line, stream, memo: &memo) != nil else { continue }
-                var wake: GameTime?
-                if now.seconds < 0 {
-                    wake = .zero
-                } else if isDispatchDue(line, stream, at: now, memo: &memo) {
-                    wake = now
-                } else {
-                    wake = line.nextChange(after: now, in: serviceDay)
-                    if let last = line.lastDispatch(of: stream), let planned = plannedService(of: line, stream.service, at: now, memo: &memo),
-                       let due = Self.time(last, plusMinutes: planned.headway), due > now {
-                        wake = min(wake ?? due, due)
-                    }
+                // Decision 309: a train to the last stop, which sends its
+                // own trains out, goes as soon as the stream has room.
+                if trainToFarEnd(of: line, stream, at: now, memo: &memo) != nil {
+                    soonest = min(soonest ?? .max, 0)
                 }
-                guard let wake else { continue }
-                soonest = min(soonest ?? .max, Self.minutes(from: now, until: wake))
+                // Decision 309: each end that keeps its own clock is woken
+                // for on its own.
+                let ends: [DispatchEnd?] = keepsEndClocks(line, stream, at: now, memo: &memo) ? [.first, .last] : [nil]
+                for end in ends {
+                    guard readyTrain(of: line, stream, from: end, memo: &memo) != nil else { continue }
+                    var wake: GameTime?
+                    if now.seconds < 0 {
+                        wake = .zero
+                    } else if isDispatchDue(line, stream, at: now, from: end ?? .first, memo: &memo) {
+                        wake = now
+                    } else {
+                        wake = line.nextChange(after: now, in: serviceDay)
+                        if let planned = plannedService(of: line, stream.service, at: now, memo: &memo),
+                           let due = nextDispatch(of: line, stream, from: end ?? .first, planned: planned), due > now {
+                            wake = min(wake ?? due, due)
+                        }
+                    }
+                    guard let wake else { continue }
+                    soonest = min(soonest ?? .max, Self.minutes(from: now, until: wake))
+                }
             }
         }
         return soonest
@@ -3202,10 +3296,15 @@ public struct GameWorld: Equatable, Sendable {
                     wake = .zero
                 } else {
                     wake = line.nextChange(after: now, in: serviceDay)
-                    if !isDispatchDue(line, stream, at: now, memo: &memo), let last = line.lastDispatch(of: stream),
-                       let planned = plannedService(of: line, stream.service, at: now, memo: &memo),
-                       let due = Self.time(last, plusMinutes: planned.headway), due > now {
-                        wake = min(wake ?? due, due)
+                    // Decision 309: each end's clock, under a pattern that
+                    // keeps one at each.
+                    let ends: [DispatchEnd] = keepsEndClocks(line, stream, at: now, memo: &memo) ? [.first, .last] : [.first]
+                    for end in ends {
+                        if !isDispatchDue(line, stream, at: now, from: end, memo: &memo),
+                           let planned = plannedService(of: line, stream.service, at: now, memo: &memo),
+                           let due = nextDispatch(of: line, stream, from: end, planned: planned), due > now {
+                            wake = min(wake ?? due, due)
+                        }
                     }
                 }
                 guard let wake else { continue }
@@ -5012,6 +5111,9 @@ extension GameWorld: Codable {
                 if let last = line.lastDispatch(ofService: service), last > clock.now {
                     return "Line \(line.id.rawValue) sent a train out after the current minute."
                 }
+            }
+            if let last = line.endLastDispatch, last > clock.now {
+                return "Line \(line.id.rawValue) sent a train out from its last stop after the current minute."
             }
             if let last = line.outerLastDispatch, last > clock.now {
                 return "Line \(line.id.rawValue) sent a train out the outer way after the current minute."

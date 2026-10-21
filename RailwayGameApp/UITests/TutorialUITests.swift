@@ -316,15 +316,18 @@ final class TutorialUITests: XCTestCase {
     /// stands elsewhere: a touch that began on the pill was cancelled as the
     /// step moved on, and the card did not open (main 6e86506's full lane,
     /// run 38709237236, the app's trace: cancelled 170 ms after it began).
-    /// Here the step waits four seconds before it moves on
-    /// (`-tutorial-advance-ms`), and a press of six seconds, begun before,
-    /// is held across it; the next step's card is open.
+    /// Here the step waits eight seconds before it moves on
+    /// (`-tutorial-advance-ms`), and a press of twelve seconds, begun
+    /// before, is held across it; the next step's card is open. Four and
+    /// six were too short: the press began 4.4 s after Zoom out, when the
+    /// pill had already moved, and fell on the map (main 01e3c9a's full
+    /// lane, run 39546432319, the app's trace).
     func testATouchHeldOnTheFoldedCardAsTheStepMovesOnOpensIt() {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchArguments = [
             "-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
-            "-tutorial-step", "map.move", "-tutorial-advance-ms", "4000",
+            "-tutorial-step", "map.move", "-tutorial-advance-ms", "8000",
         ]
         app.launch()
         defer { app.terminate() }
@@ -335,12 +338,12 @@ final class TutorialUITests: XCTestCase {
         let zoomOut = app.buttons["Zoom out"]
         XCTAssertTrue(zoomOut.becomesHittable())
         let before = folded.frame
-        // Done: the step moves on four seconds from now.
+        // Done: the step moves on eight seconds from now.
         zoomOut.tap()
         XCTAssertTrue(folded.label.contains("Zoom out to see the town"), "The step moved on before the touch: \(folded.label)")
         // Near the pill's leading end, by the station master, which stays
         // where it is whatever the next step's title.
-        folded.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.5)).press(forDuration: 6)
+        folded.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.5)).press(forDuration: 12)
         let progress = app.staticTexts.matching(identifier: "tutorial.progress").firstMatch
         XCTAssertTrue(
             card.appears(within: 5),

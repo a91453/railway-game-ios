@@ -50,7 +50,7 @@ extension GameWorld {
                 : .noRoundTrip(firstStop: firstStop)
         }
         let now = clock.now
-        guard isDispatchDue(line, stream, at: now, deadhead: trip.deadhead != nil, memo: &memo) else {
+        guard isDispatchDue(line, stream, at: now, deadhead: trip.deadhead != nil, from: trip.fromLastCall ? .last : .first, memo: &memo) else {
             guard let planned = plannedService(of: line, stream.service, at: now, memo: &memo) else { return nil }
             let room = stream.direction == nil ? planned.trains : planned.trains / 2
             let running = runningTrains(of: line, stream)
