@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420" font-family="-apple-system, 'PingFang TC', sans-serif">
+  <!-- Decision 314: the train label and the line band, chosen (A) and not chosen (B–F). Colours from Palette: ink #262C57, markerFill #FFFFFF, metroBlue #1273E0, metroGreen #219E5C, ballast grey. -->
+  <rect width="720" height="420" fill="#ECEEF6"/>
+  <g font-size="13" fill="#262C57" font-weight="600">
+    <text x="20" y="28">A（選用）：線號徽章＋載客／定員</text>
+    <text x="260" y="28">B：只有線號徽章</text>
+    <text x="500" y="28">C：兩行卡片（車名＋載客）</text>
+  </g>
+  <!-- A -->
+  <g transform="translate(40 50)">
+    <rect x="0" y="0" width="118" height="22" rx="11" fill="#FFFFFF" stroke="#262C57" stroke-width="1.5"/>
+    <rect x="6" y="4" width="34" height="14" rx="3" fill="#FFFFFF" stroke="#262C57" stroke-width="1.5"/>
+    <rect x="6.75" y="4.75" width="5" height="12.5" fill="#1273E0"/>
+    <text x="15" y="15" font-size="9" font-weight="800" fill="#262C57">BL</text>
+    <text x="46" y="15.5" font-size="11" font-weight="600" fill="#262C57">120／640</text>
+    <rect x="20" y="40" width="80" height="22" rx="4" fill="#1273E0" stroke="#262C57" stroke-width="1.5"/>
+  </g>
+  <!-- B -->
+  <g transform="translate(300 50)">
+    <rect x="0" y="4" width="34" height="14" rx="3" fill="#FFFFFF" stroke="#262C57" stroke-width="1.5"/>
+    <rect x="0.75" y="4.75" width="5" height="12.5" fill="#1273E0"/>
+    <text x="9" y="15" font-size="9" font-weight="800" fill="#262C57">BL</text>
+    <rect x="-20" y="40" width="80" height="22" rx="4" fill="#1273E0" stroke="#262C57" stroke-width="1.5"/>
+  </g>
+  <!-- C -->
+  <g transform="translate(520 44)">
+    <rect x="0" y="0" width="150" height="40" rx="8" fill="#FFFFFF" stroke="#262C57" stroke-width="1.5"/>
+    <text x="10" y="16" font-size="11" font-weight="700" fill="#262C57">區間車 1203 次</text>
+    <text x="10" y="32" font-size="11" fill="#262C57">載客 120 人 · 19%</text>
+    <rect x="35" y="56" width="80" height="22" rx="4" fill="#1273E0" stroke="#262C57" stroke-width="1.5"/>
+  </g>
+  <g font-size="13" fill="#262C57" font-weight="600">
+    <text x="20" y="200">D（選用）：道碴肩上一條細帶，共用時只畫最上面一線</text>
+    <text x="20" y="300">E：整片道碴塗線色</text>
+    <text x="380" y="300">F：共用的線並排幾條細帶</text>
+  </g>
+  <!-- D: track seen from above: ballast, two rails, band on the shoulder -->
+  <g transform="translate(40 215)">
+    <rect x="0" y="0" width="300" height="40" fill="#9A968C"/>
+    <rect x="0" y="13" width="300" height="2" fill="#5A5A64"/>
+    <rect x="0" y="25" width="300" height="2" fill="#5A5A64"/>
+    <rect x="0" y="34" width="180" height="4" fill="#1273E0"/>
+    <rect x="180" y="34" width="120" height="4" fill="#219E5C"/>
+  </g>
+  <!-- E -->
+  <g transform="translate(40 315)">
+    <rect x="0" y="0" width="300" height="40" fill="#1273E0"/>
+    <rect x="0" y="13" width="300" height="2" fill="#5A5A64"/>
+    <rect x="0" y="25" width="300" height="2" fill="#5A5A64"/>
+  </g>
+  <!-- F -->
+  <g transform="translate(400 315)">
+    <rect x="0" y="0" width="300" height="40" fill="#9A968C"/>
+    <rect x="0" y="13" width="300" height="2" fill="#5A5A64"/>
+    <rect x="0" y="25" width="300" height="2" fill="#5A5A64"/>
+    <rect x="0" y="30" width="300" height="2.5" fill="#1273E0"/>
+    <rect x="120" y="33" width="180" height="2.5" fill="#219E5C"/>
+    <rect x="200" y="36" width="100" height="2.5" fill="#E08514"/>
+  </g>
+</svg>

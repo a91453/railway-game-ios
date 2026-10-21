@@ -41,6 +41,7 @@ struct Map3DPreviewScreen: View {
     @State private var feed = Map3DTrainFeed()
     @State private var compass = Map3DCompassState()
     @State private var cameraLink = Map3DCameraLink()
+    @State private var trainLabels = Map3DTrainLabelState()
     @AppStorage(LinePalette.key) private var linePalette: LinePalette = .standard
     /// Decision 238's later note: the 3D look chosen in Settings.
     @AppStorage(Map3DQuality.key) private var quality: Map3DQuality = .automatic
@@ -49,11 +50,13 @@ struct Map3DPreviewScreen: View {
         let language = DisplayLanguage.app
         ZStack {
             Map3DView(scene: scene, sceneVersion: sceneVersion, lighting: Map3DLighting(at: session.world.clock.now),
-                      weather: Map3DWeather(MapWeather(world: session.world)), feed: feed,
+                      weather: Map3DWeather(MapWeather(world: session.world)), feed: feed, trainLabels: trainLabels,
                       start: handedOver, openedAt: openedAt, farOut: farOut, compass: compass, cameraLink: cameraLink, quality: quality,
                       onStats: { stats = $0 })
                 .ignoresSafeArea()
                 .accessibilityIdentifier("map3D.view")
+            Map3DTrainLabelsView(state: trainLabels, world: session.world)
+                .ignoresSafeArea()
             if scene == nil {
                 ProgressView()
                     .controlSize(.large)
@@ -136,8 +139,8 @@ struct Map3DPreviewScreen: View {
             }
             .padding()
         }
-        .task(id: Map3DSceneKey(world: session.world, hasHeights: session.heights != nil, focus: focus)) {
-            let built = await Map3DSceneCache.shared.scene(for: session, focus: focus)
+        .task(id: Map3DSceneKey(world: session.world, hasHeights: session.heights != nil, focus: focus, palette: linePalette)) {
+            let built = await Map3DSceneCache.shared.scene(for: session, focus: focus, palette: linePalette)
             // A newer world or the heights file started another build: a
             // cancelled one may finish after it and must not replace it.
             guard !Task.isCancelled else { return }
@@ -229,16 +232,17 @@ final class Map3DSceneCache {
     /// Starts building `session`'s scene round `focus` (decision 313,
     /// later: the point the 2D map looks at), unless it is built or
     /// building round a point near it (``Map3DScene/FocusArea``).
-    func prepare(for session: GameSession, focus: (x: Double, y: Double)?) {
-        _ = task(for: session, focus: focus)
+    /// Decision 314: its lines' bands in `palette`, the player's.
+    func prepare(for session: GameSession, focus: (x: Double, y: Double)?, palette: LinePalette) {
+        _ = task(for: session, focus: focus, palette: palette)
     }
 
-    func scene(for session: GameSession, focus: (x: Double, y: Double)?) async -> Map3DScene {
-        await task(for: session, focus: focus).value
+    func scene(for session: GameSession, focus: (x: Double, y: Double)?, palette: LinePalette) async -> Map3DScene {
+        await task(for: session, focus: focus, palette: palette).value
     }
 
-    private func task(for session: GameSession, focus: (x: Double, y: Double)?) -> Task<Map3DScene, Never> {
-        let key = Map3DSceneKey(world: session.world, hasHeights: session.heights != nil, focus: focus)
+    private func task(for session: GameSession, focus: (x: Double, y: Double)?, palette: LinePalette) -> Task<Map3DScene, Never> {
+        let key = Map3DSceneKey(world: session.world, hasHeights: session.heights != nil, focus: focus, palette: palette)
         if key == self.key, game === session, let building { return building }
         let world = session.world
         // The ground the world has not read yet, from the heights file,
@@ -253,7 +257,7 @@ final class Map3DSceneCache {
         let task = Task.detached(priority: .userInitiated) {
             let baseMap = tiles.flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }.flatMap { try? BaseMapTiles(data: $0) }
             return Map3DScene(world: world, focus: focus, baseMap: baseMap, cityTiles: city.map(CityTileArea.areas(in:)) ?? [],
-                              heights: heights)
+                              heights: heights, lineBands: Map3DLineBands(world: world, palette: palette))
         }
         self.key = key
         game = session
@@ -265,7 +269,10 @@ final class Map3DSceneCache {
 /// What makes the still scene change: track, platforms, the player's
 /// buildings, and the city, which grows by night, each week; and the
 /// heights file, which can arrive after the game opened; decision 313,
-/// later: and the place it is built round, to a few kilometres.
+/// later: and the place it is built round, to a few kilometres; decision
+/// 314: and the lines, whose colour bands run beside the track, in the
+/// player's palette, unless no `palette` is given (the 2D map's seeded
+/// streets, which have no bands).
 struct Map3DSceneKey: Hashable {
     let hasHeights: Bool
     let focus: Map3DScene.FocusArea?
@@ -274,8 +281,10 @@ struct Map3DSceneKey: Hashable {
     let platforms: Int
     let buildings: Int
     let week: Int64
+    let lines: Map3DLineBands.Signature?
+    let palette: LinePalette?
 
-    init(world: GameWorld, hasHeights: Bool, focus: (x: Double, y: Double)? = nil) {
+    init(world: GameWorld, hasHeights: Bool, focus: (x: Double, y: Double)? = nil, palette: LinePalette? = nil) {
         self.hasHeights = hasHeights
         self.focus = focus.map { Map3DScene.FocusArea(x: $0.x, y: $0.y) }
         edges = world.network.edges.count
@@ -283,6 +292,8 @@ struct Map3DSceneKey: Hashable {
         platforms = world.network.platforms.count
         buildings = world.placedBuildings.count
         week = world.clock.now.seconds / (7 * GameTime.secondsPerDay)
+        lines = palette == nil ? nil : Map3DLineBands.Signature(world: world)
+        self.palette = palette
     }
 }
 
@@ -296,12 +307,20 @@ final class Map3DTrainFeed {
     private var palette: LinePalette = .standard
     /// Decision 259: the stations' crowds, as the world's passengers say.
     private var activity = Map3DStreetLife.Activity()
+    /// Decision 314: what the trains' labels say.
+    private var labels = Map3DTrainLabels(infos: [:])
 
     func update(world: GameWorld, palette: LinePalette) {
         motion = TrainMotion(world: world, previous: motion, time: Date().timeIntervalSinceReferenceDate)
         heights = Map3DTrains.Heights(world: world)
         self.palette = palette
         activity = Map3DStreetLife.Activity(world: world)
+        labels = Map3DTrainLabels(world: world)
+    }
+
+    /// Decision 314: the labels of the trains whose fronts are at `heads`.
+    func labels(heads: [Map3DTrains.Head], camera: Map3DCamera) -> [Map3DTrainLabels.Label] {
+        labels.labels(heads: heads, camera: camera)
     }
 
     /// Decision 259: the people and vehicles of `scene` now, round the
@@ -327,6 +346,8 @@ private struct Map3DView: UIViewRepresentable {
     /// Decision 277: the day's weather on the map.
     let weather: Map3DWeather
     let feed: Map3DTrainFeed
+    /// Decision 314: where the trains' labels go.
+    let trainLabels: Map3DTrainLabelState
     /// Decision 269: the 2D map's view a pinch handed over, and what to do
     /// when a pinch out is let go far enough
     /// (``Map3DHandoff/handsBack(handedOverAt:from:to:)``).
@@ -386,6 +407,8 @@ private struct Map3DView: UIViewRepresentable {
         view.show(scene)
         let feed = feed, models = Map3DView.models
         view.trains = { eye in feed.frame(in: scene, models: models, eye: eye) }
+        let labels = trainLabels
+        view.trainHeads = { heads, camera in labels.show(feed.labels(heads: heads, camera: camera)) }
         view.streetLife = { camera, lights, detail in feed.streetLife(in: scene, camera: camera, lights: lights, detail: detail) }
         if first, let start {
             // Decision 269: where the 2D map was, as close, straight down.
@@ -584,5 +607,58 @@ private struct Map3DCompassNeedle: Shape {
         path.addLine(to: point(17, 22))
         path.closeSubpath()
         return path
+    }
+}
+
+/// Decision 314: the trains' labels now, set by the Metal view each frame
+/// and drawn by ``Map3DTrainLabelsView``; set only when they move a whole
+/// point or change, so a still map redraws nothing.
+@MainActor
+@Observable
+final class Map3DTrainLabelState {
+    private(set) var labels: [Map3DTrainLabels.Label] = []
+
+    func show(_ next: [Map3DTrainLabels.Label]) {
+        let rounded = next.map { Map3DTrainLabels.Label(train: $0.train, info: $0.info, x: $0.x.rounded(), y: $0.y.rounded()) }
+        if rounded != labels { labels = rounded }
+    }
+}
+
+/// Decision 314: over the front of a few trains near the middle, close up,
+/// the line's badge (decision 216) and its riders over its capacity, on a
+/// small tag whose foot points at the train. Not touchable: the map under
+/// it takes the fingers.
+private struct Map3DTrainLabelsView: View {
+    let state: Map3DTrainLabelState
+    let world: GameWorld
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            ForEach(state.labels, id: \.train) { label in
+                tag(label.info)
+                    .alignmentGuide(.leading) { $0[HorizontalAlignment.center] - CGFloat(label.x) }
+                    .alignmentGuide(.top) { $0[.bottom] - CGFloat(label.y) }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .allowsHitTesting(false)
+    }
+
+    private func tag(_ info: Map3DTrainLabels.Info) -> some View {
+        HStack(spacing: 4) {
+            LineCodeBadge(code: info.code, color: Palette.lineColor(info.line, custom: world.line(id: info.line)?.color), size: .small)
+            Text(verbatim: DisplayLanguage.app.text("\(info.riders)/\(info.capacity)", "\(info.riders)／\(info.capacity)"))
+                .font(.system(size: 11, weight: .semibold, design: .rounded).monospacedDigit())
+                .foregroundStyle(Palette.ink)
+                .lineLimit(1)
+                .fixedSize()
+        }
+        .padding(.horizontal, 5)
+        .padding(.vertical, 3)
+        .background(Palette.markerFill, in: Capsule())
+        .overlay(Capsule().strokeBorder(Palette.ink, lineWidth: 1.5))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: DisplayLanguage.app.text("Line \(info.code), \(info.riders) riding of \(info.capacity)",
+                                                                    "\(info.code) 線，載客 \(info.riders)／定員 \(info.capacity)")))
     }
 }
