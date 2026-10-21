@@ -13,6 +13,12 @@ final class Map3DPreviewDump: XCTestCase {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("RailwayGameApp/Resources/")
         func resource(_ path: String) throws -> Data { try Data(contentsOf: root.appendingPathComponent(path)) }
+        // Decision 326: the real railways, as the app hands a real-world
+        // map's scene them (no overhead line along the lines without one).
+        let railways = try RealRailways(
+            lines: resource("RealRailways/track_lines.geojson"), stations: resource("RealRailways/track_stations.geojson"),
+            names: resource("RealRailways/station_names.json"),
+            pingxiRuns: RealLineRuns(data: resource("RealRailways/tra_pingxi_runs.json")))
         switch ProcessInfo.processInfo.environment["MAP3D_WORLD"] {
         case "towns":
             let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
@@ -33,10 +39,6 @@ final class Map3DPreviewDump: XCTestCase {
         case "taichung":
             world = GameWorld.newGame(anchor: GeoAnchor(latitudeDegrees: 24.1371, longitudeDegrees: 120.6869)!)
         case "realdemo":
-            let railways = try RealRailways(
-                lines: resource("RealRailways/track_lines.geojson"), stations: resource("RealRailways/track_stations.geojson"),
-                names: resource("RealRailways/station_names.json"),
-                pingxiRuns: RealLineRuns(data: resource("RealRailways/tra_pingxi_runs.json")))
             let heights = try HeightGrid(data: resource("RealWorld/taiwan_heights.dat"))
             let water = try WaterGrid(data: resource("RealWorld/taiwan_water.json"))
             let frame = RealWorldFrame(anchor: RealWorldDemo.anchor, bounds: GameWorld.newGameBounds)
@@ -55,7 +57,7 @@ final class Map3DPreviewDump: XCTestCase {
         // not read its own, as the app passes it.
         let heights = ProcessInfo.processInfo.environment["MAP3D_HEIGHTS"] == "1"
             ? try HeightGrid(data: resource("RealWorld/taiwan_heights.dat")) : nil
-        let scene = Map3DScene(world: world, baseMap: tiles, cityTiles: cityTiles, heights: heights)
+        let scene = Map3DScene(world: world, baseMap: tiles, cityTiles: cityTiles, heights: heights, railways: railways)
         let crop = ProcessInfo.processInfo.environment["MAP3D_CROP"].map { $0.split(separator: ":").map { Float(String($0))! } }
         let chunks = scene.chunks.filter { chunk in
             guard let crop else { return true }

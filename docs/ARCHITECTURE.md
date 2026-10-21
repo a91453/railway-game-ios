@@ -14940,6 +14940,63 @@ $10,000 的價格照報告的建造、列車與利益算出（旅客那一項是
 
 **驗證**：見 PR（Linux，Swift 6.4 的 build 與測試）。
 
+### 326. 3D 的架空線：軌道上方的接觸線與吊線，旁邊每 40 m 以內一根電桿；月台留空，沒有電的真實路線不畫
+
+（2026-10-21，3D session_01Y25x9NJSKmAuP1M1K3Sf3C；作者 2026-10-21 說 Codex 的素材包「全部都可以用是他自己生成的」，`docs/HANDOFF.md` §3 的接入順序第 4 步「細節零件放到車站與軌道旁」；預覽 `docs/art/map3d-overhead-line-2026-10-21/`）
+
+**做什麼**：最近看（`.close`，決策 267 的「最近的細節」：鏡頭 450 m 以內、目標周圍 350 m 的格，和雨遮、晾衣一層）時，地面、高架、橋上的軌道都有架空線，寫在 `Map3DOverheadLine.swift`（`Map3DScene` 在 `addStations` 之後呼叫 `addOverheadLine`）：
+
+- **支點**（`wireSupports`）：照 Procedural Tokyo `rails.js` 的 `MAST_SPACING`，直線每 40 m 一個；彎道上縮短，讓兩支點之間的軌道離接觸線的弦不超過 0.3 m（每 2 m 量一次，往回退 2 m 直到合格，最短 4 m）。半徑 300 m 的彎道約每 25–30 m 一根。
+- **線**：接觸線在軌面上 5.2 m，左右交錯 ±0.2 m（之字形，真實的架空線也這樣磨受電弓）；吊線在 5.9 m，跨距中間垂 0.35 m；粗 7 cm，顏色照 rail-3d `garage-scenes/viaduct.js` 的電線 #4C4A46。每一跨放在它中點所在的格。
+- **電桿**（`addMast`）：離軌道中心 2.45 m，桿頂在軌面上 6.4 m，0.22 m 見方，顏色照 `viaduct.js` 的鋼 #B9BCB6；0.6 m 見方、0.25 m 高的混凝土基座；5.95 m 高的腕木伸到接觸線外 0.3 m，下面一根斜撐，靠桿的一段白色礙子，末端一根吊到接觸線。
+- **電桿站哪一邊**：旁邊 1.8–7.5 m 沒有別的軌道的一邊；兩邊都可以時，挑沒有月台的一邊；只有月台那邊可以時，站在月台的中線上（腳在月台面）。兩邊都有軌道的中間股道沒有自己的桿，線照樣畫（缺口：真實的做法是門型架或吊架）。2 m 內已有桿就不重複；一條線的起點正好是另一條線的終點時，起點不另立桿。
+- **不畫的地方**：隧道裡；畫出來的地面比軌道高 1 m 以上的地方（實景示範的高度檔把三貂嶺、十分一帶的地面畫在軌道上方約 6 m，原本就有的問題，桿不會從地面插出來）。
+- **真實路線沒有電的不畫**（`addRealLines`，只在有地理錨點、App 也載入了真實鐵路時）：有電的系統是臺鐵（`tra_sched`）、高鐵（`thsr_sched`）、淡海輕軌（`ntdlrt`）、安坑輕軌（`ntalrt`）；臺鐵的平溪線、深澳線、集集線、內灣線是柴油支線（照 `taiwan-rail-reference-clean/source/main-reference.js` 的 `DIESEL_BRANCH_IDS`）。內灣線新竹到竹中段有電，以線上最接近竹中站的點切開。其他系統（捷運是第三軌、阿里山林鐵是柴油、高雄輕軌全線沒有架空線）都不畫。軌道上一點看 30 m 內最近的真實路線，沒有真實路線就畫（玩家自己蓋的線）。
+
+**量**（`MAP3D_FRAME_REPORT=1 swift test --skip-build --filter Map3DFrameCostReportTests/testTheGPUBudget`，臺北車站一條 11 km 的線，三角形／draw）：
+
+| 視角 | 之前 | 之後 |
+| --- | --- | --- |
+| 近 280 m | 200,431／31 | 202,635／31（最近的細節 338 → 2,542） |
+| 中 800 m | 190,262／25 | 不變 |
+| 中 1,400 m | 15,080／8 | 不變 |
+| 遠 10.8 km | 259,564／223 | 不變 |
+
+不另加 draw：桿與線併在所在格的最近細節 mesh 裡。量的過程中改了兩次：
+- 第一版把一整條線的電線放在線中點的那一格，那一格的框就跨了整條線，從哪裡看都在畫面裡、都算近看，近 280 m 變成 266,217 個三角形、43 個 draw；改成每一跨放在它中點的格（`testALongLinesWiresStayInTheChunksTheyHangOver` 守住）。
+- 第二版放在近景（`.near`，1,600 m 內都畫），中 800 m 也多 2,204 個；但 800 m 外一根 0.22 m 的桿不到一個點寬，7 cm 的線更細，所以改放最近的細節。這也守住決策 238 的「近看有城市的格，遠看也有」（`Map3DDetailTests`）：架空線不是城市，遠看本來就不畫。
+
+**五個角度**：
+- 玩家：電車的線看得出是電車的線；平溪線、集集線這些沒有電的支線看起來就不一樣。
+- 鐵道迷：臺鐵、高鐵、輕軌有架空線，柴油支線、捷運（第三軌）、阿里山林鐵沒有；內灣線的電只到竹中，照真實的電化範圍。不準的地方：接觸線高度與桿距照東京的參考，不是臺鐵的規範；中間股道沒有門型架；公路橋下的線沒有壓低。
+- 開發：只動 GamePresentation（新檔 `Map3DOverheadLine.swift`、`Map3DScene` 的兩行與 `realLines`）、App 的 `Map3DPreviewScreen` 傳入真實鐵路、預覽工具；GameCore、存檔、golden、replay 不動；新測試 `Map3DOverheadLineTests` 8 個。
+- 美術：細、灰、平塗，最近看才有，遠一點不留閃爍的細線；顏色沿用 rail-3d 的高架場景，和決策 321 的車站、雨棚放在一起不搶眼。
+- 音樂：無。
+
+**沒有選的做法**：
+- **#900 的透天厝放到城市地塊**（原本的第 3 步，預覽 `option-900-kit.jpg`、`option-900-row.jpg`，對照現在的 `docs/art/map3d-arcade-life-2026-10-17/close.jpg`）：一塊 64 m、約 22 戶的地塊現在近看約 1,550 個三角形，換成 #900 的約 12,000 個（約 8 倍，每戶 520–1,016、公寓 840–2,348）；會失去決策 231／242 的牆面貼圖；#900 的房子是獨棟、四面開窗、底座寬，排不成連續的透天厝街屋。不做。
+- **#921 細節套件的 `catenaryInsulator`、`tensionWeights`**：每個約 250 個三角形，一根桿就超過整根桿現在的量；用幾個方塊做礙子。
+- **車站套件（#913）的電車線門架（`catenaryPortal`）**：中間股道可以有桿；但要另外算跨幾股、立在哪，留給下一步。
+- **近景（1,600 m 內）就畫**：800 m 外的桿與線不到一個點寬，只剩閃爍的像素，又多 2,204 個三角形；只在最近的細節畫。
+- **遠看也畫**：同上，更細。
+
+**參考與來源**（距離是這裡的公尺；世界座標每公尺 64 單位，`WorldCoordinate.unitsPerMetre`）：
+
+| 來源 | 拿了什麼 | 用在 |
+| --- | --- | --- |
+| `Web/CityView/src/world/rails.js`（Procedural Tokyo，MIT，Copyright (c) 2026 Yong Su，倉庫裡已 vendor） | `MAST_SPACING` 40 m、桿在軌道旁、腕木到接觸線、吊線 | `wireSupports`、`addMast`、`addOverheadLine` |
+| 私有庫 `Railway/taiwan-rail-reference-clean/source/rail-3d/garage-scenes/viaduct.js` 第 40 行 | 鋼 #B9BCB6、電線 #4C4A46 | `Map3DPalette.mastSteel`、`overheadWire` |
+| 同庫 `source/main-reference.js` 的 `DIESEL_BRANCH_IDS` | 平溪、深澳、集集、內灣是柴油支線 | `Map3DScene.dieselBranches` |
+| App 內的 `RealRailways`（`track_lines.geojson` 等，決策裡原有的來源與授權） | 各系統的路線與車站 | `addRealLines` |
+| 外部專案 | 沒有找到比 `rails.js` 更合用的；彎道縮桿距、選邊、月台的規則是這個專案自己的 | — |
+
+**缺口**（`docs/HANDOFF.md` §7.3）：中間股道沒有門型架或吊架；公路橋下的線沒有壓低；非實景地圖上玩家蓋的柴油支線也有線；號誌機、轉轍器還沒放；三貂嶺、十分一帶的軌道在高度檔的地面下（原有問題）。
+
+**驗證**：
+- **VERIFIED**（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`swift test --skip-build --filter Map3D` 227 個全過（`Map3DOverheadLineTests` 8 個新的；4 個只在要求時跑的跳過）；畫面成本報告（上面的數字）。
+- **VERIFIED**（Linux，無頭 Chromium 的 WebGL 預覽，決策 238）：示範地圖的高架、車站、環狀彎道，實景示範的瑞芳、猴硐有桿，十分、大華沒有，三貂嶺沒有從地面插出來的桿。
+- **UNVERIFIED**：App 的編譯（`ios-build.yml`）、3D 的 UI 測試（`only_testing`）、實機的樣子與幀數（TestFlight）。
+
 ### 327. 刪除路線時一起賣掉它的列車；停在軌道上、沒有路線的列車擋住拆除時，說出是哪一列並可直接賣掉
 
 2026-10-21，session_01FjFtzdpyVUGthz3tnZ4Faf，玩家回報（作者轉來，iPad Pro 12.9 吋第 5 代）：「刪除路線後列車疑似沒有跟著一起刪除（已跑完最後一趟），導致路線月台和軌道無法拆除重建（但也不確定是不是我沒看到列車移除的按鍵🥴🥴🥴」
