@@ -62,7 +62,7 @@ final class Map3DCityBusTests: XCTestCase {
     /// next; a road they do not run on has none.
     func testBusesRunOnMainRoadsKeepingApart() throws {
         let path = try XCTUnwrap(Map3DStreetLife.Path([Map3DPoint(0, 0, 0), Map3DPoint(2_000, 0, 0)]))
-        let busIndices = Set(try [Map3DStreetModel.bus,.shuttleBus].map { try XCTUnwrap(Map3DStreetLife.models[$0]) })
+        let busIndices = Set(try Map3DStreetModel.allCases.filter(\.isBus).map { try XCTUnwrap(Map3DStreetLife.models[$0]) })
         var life = Map3DStreetLife()
         life.lanes = [Map3DStreetLife.Lane(path: path, half: 6, twoWay: true, speed: 11, perHundred: 5, scooters: true, seed: (3, 4), buses: true)]
         var buses = 0, vehicles = 0
