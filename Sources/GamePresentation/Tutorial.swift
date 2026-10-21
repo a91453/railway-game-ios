@@ -650,9 +650,11 @@ extension Tutorial {
             goal: .createLine,
             panel: .lines,
             title: ("Tap ✓ to create the line", "按 ✓ 建立路線"),
+            // Decision 303: the ✓ raises the line's card; its Open Line
+            // makes the line.
             body: (
-                "Your line appears on the map.",
-                "新路線會畫在地圖上。"
+                "A card shows its hours and trains. Tap Open Line on it.",
+                "卡片會列出營運時間與列車，按卡片上的「開通路線」。"
             )
         ),
         // Reference step 7, "开始列车运营": the reference's lines come with

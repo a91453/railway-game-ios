@@ -524,6 +524,7 @@ final class LessonUITests: XCTestCase {
         reveal(create)
         XCTAssertTrue(create.isEnabled)
         tap(create)
+        app.openNewLineFromItsCard()
         if app.navigationBars["Lines"].exists { tap(app.navigationBars["Lines"].buttons["Done"]) }
         let speed = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Speed:'")).firstMatch
         tap(speed)

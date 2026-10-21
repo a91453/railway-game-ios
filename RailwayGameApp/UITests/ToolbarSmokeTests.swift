@@ -459,6 +459,26 @@ extension XCUIApplication {
             .tap()
     }
 
+    /// Decision 303: under simple rules a new line's ✓ (or Create Line)
+    /// raises the line's card, and its Open Line makes the line. Taps Open
+    /// Line once the card is up; with `required` false, a game whose ✓
+    /// makes the line at once (realistic rules) shows no card and nothing
+    /// is tapped.
+    func openNewLineFromItsCard(required: Bool = true, file: StaticString = #filePath, line: UInt = #line) {
+        let open = buttons["line.confirm.done"]
+        guard open.appears(within: required ? 10 : 5) else {
+            if required {
+                let up = buttons["line.confirm.back"].exists
+                XCTFail(up ? "The new line's card rose without Open Line" : "The new line's card did not rise", file: file, line: line)
+            }
+            return
+        }
+        XCTAssertTrue(open.becomesHittable(within: 10), "Open Line on the new line's card is covered", file: file, line: line)
+        open.waitUntilSettled()
+        open.tap()
+        XCTAssertTrue(open.disappears(within: 10), "The new line's card stayed up", file: file, line: line)
+    }
+
     /// Opens one of the start screen's demos (decision 135): the Demo Map
     /// button, then `identifier`'s row in its sheet (`demo.realWorld`,
     /// `demo.highSpeed` or `demo.simple`) once it is enabled: the
