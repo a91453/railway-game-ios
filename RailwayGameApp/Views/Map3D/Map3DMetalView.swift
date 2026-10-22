@@ -101,7 +101,8 @@ final class Map3DMetalView: MTKView {
     var quality = Map3DQuality.automatic {
         didSet { if quality != oldValue { applyQuality() } }
     }
-    /// Decision 352: with Reduce Motion the screens hold one picture.
+    /// Decision 352: with Reduce Motion the screens hold one picture;
+    /// decision 356: and the water's ripples stand still.
     var reduceMotion = false
     /// Decision 230: the train models, and a buffer of each one's vertices.
     private var models: (pack: Map3DModelPack, buffers: [MTLBuffer])?
@@ -610,7 +611,7 @@ final class Map3DMetalView: MTKView {
         moveCamera(heads: frame?.heads ?? [], at: start)
         let camera = camera
         let matrix = camera.viewProjection
-        let uniforms = uniformValues(matrix)
+        let uniforms = uniformValues(matrix, seconds: start)
         var visible: [Chunk] = []
         for index in chunks.indices {
             // Decision 238: in full near the camera, whether in view or not,
@@ -840,10 +841,12 @@ final class Map3DMetalView: MTKView {
     /// the eye and where the fog starts and ends (and decision 349's ground
     /// haze, ``Map3DGrade``), and the ground shadows'
     /// strength (decision 232) and how far the city's lights are on, then
-    /// the night windows' rules (decision 229 續). The lights are
+    /// the night windows' rules (decision 229 續), then decision 356's
+    /// reflections (``Map3DReflection/rows``: off on the saving quality,
+    /// the ripples still with Reduce Motion). The lights are
     /// `Map3DLighting`'s (`sunLight`, `skyLight`, `groundLight`, `lights`,
     /// `nightWindowRows`), worked out in GamePresentation.
-    private func uniformValues(_ matrix: Map3DMatrix) -> [Float] {
+    private func uniformValues(_ matrix: Map3DMatrix, seconds: Double) -> [Float] {
         func padded(_ light: SIMD3<Float>) -> [Float] { [light.x, light.y, light.z, 0] }
         let eye = camera.eye
         let far = camera.depthRange.far
@@ -859,6 +862,7 @@ final class Map3DMetalView: MTKView {
             + [camera.distance * 1.6 * fog.near, far * 0.9 * fog.far, Map3DGrade.hazeDensity, Map3DGrade.hazeHeight]
             + [Map3DShadow.strength(shown), shown.lights, 0, 0]
             + Map3DLighting.nightWindowRows
+            + Map3DReflection.rows(sky: Map3DSky(shown), sunLight: shown.sunLight, quality: quality, seconds: seconds, reduceMotion: reduceMotion)
     }
 
     private func record(cpu: Double, wait: Double, drawCalls: Int, triangles: Int) {

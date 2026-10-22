@@ -241,6 +241,10 @@ final class Map3DRealGroundTests: XCTestCase {
         XCTAssertLessThan(Map3DShadow.lift, Map3DScene.railLift - Map3DScene.Builder.bedDrop)
         // Parks and ponds the city's own open lots also have.
         XCTAssertTrue(painted.isSuperset(of: [Map3DPalette.cover(.park), Map3DPalette.cover(.water)]))
+        // Decision 356: the water, and only the water, mirrors.
+        let vertices = real.chunks.flatMap(\.mesh.vertices)
+        XCTAssertTrue(vertices.contains(where: \.isWater))
+        XCTAssertTrue(vertices.allSatisfy { $0.isWater == ($0.color == Map3DPalette.water) })
         // The real map's water and parks take some of the city's lots
         // round the station, and its streets leave the rest the room
         // beside them (decision 345; until then they took most):

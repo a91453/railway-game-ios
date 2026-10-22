@@ -215,6 +215,11 @@ final class Map3DPreviewDump: XCTestCase {
                 + padded(lighting.sunLight) + padded(lighting.skyLight) + padded(lighting.groundLight)
                 + [fog.x, fog.y, fog.z, 0] + [eye.x, eye.y, eye.z, 1] + [camera.distance * 1.6 * scale.near, far * 0.9 * scale.far, 0, 0]
                 + [Map3DShadow.strength(lighting), lighting.lights, 0, 0] + Map3DLighting.nightWindowRows
+                // Decision 356: the glass and water's reflections; MAP3D_MIRROR=0
+                // leaves them out (the saving quality), for a picture before.
+                + Map3DReflection.rows(sky: Map3DSky(lighting), sunLight: lighting.sunLight,
+                                       quality: ProcessInfo.processInfo.environment["MAP3D_MIRROR"] == "0" ? .saving : .automatic,
+                                       seconds: 0, reduceMotion: false)
         }
         let presets: [(String, Map3DPoint, Float, Float)] = (ProcessInfo.processInfo.environment["MAP3D_VIEWS"] ?? "close:0:0:140:35;mid:0:0:420:-25;far:0:0:1300:0")
             .split(separator: ";").map { part in

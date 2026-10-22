@@ -20,7 +20,9 @@ struct Map3DVertexIn {
 // 229 續: how far the city's lights are on in y; decision 349: the fog's
 // z and w, the ground haze's density and height), then the night windows'
 // rules (Map3DLighting.nightWindowRows: per surface layer, two to a row, the
-// share lit and the brightest glass).
+// share lit and the brightest glass), then decision 356's reflections
+// (Map3DReflection.rows): the strength (0 leaves them out), the ripples'
+// seconds and how much of the sun shows; the zenith; the glint's colour.
 struct Map3DUniforms {
     float4x4 viewProjection;
     float4 sunDirection;
@@ -32,6 +34,9 @@ struct Map3DUniforms {
     float4 fog;
     float4 shade;
     float4 nightWindows[12];
+    float4 mirror;
+    float4 zenith;
+    float4 glint;
 };
 
 struct Map3DVertexOut {
@@ -78,7 +83,7 @@ vertex Map3DVertexOut map3dInstancedVertex(Map3DVertexIn in [[stage_in]], consta
     out.world = world.xyz;
     out.surfaceAt = float2(0.0);
     // Decision 229 續: a street light's head glows (Map3DVertex.glowing).
-    out.layer = in.texture.z < -1.5 ? in.texture.z : -1.0;
+    out.layer = (in.texture.z < -1.5 && in.texture.z > -2.5) ? in.texture.z : -1.0;
     out.plane = 0.0;
     return out;
 }
@@ -133,12 +138,13 @@ float3 map3dFinish(float3 colour) {
 }
 
 // `base` lit by the sun and the sky on a face looking along `normal` at
-// `world`, its own light `glow` added, faded into the fog, and finished.
-// Decision 352: the signs end the same way.
-float4 map3dLit(float3 base, float3 glow, float3 normal, float3 world, constant Map3DUniforms &uniforms) {
+// `world`, then what it mirrors laid over it by its share (`mirrored`'s
+// alpha, decision 356), its own light `glow` added, faded into the fog,
+// and finished. Decision 352: the signs end the same way.
+float4 map3dLit(float3 base, float3 glow, float4 mirrored, float3 normal, float3 world, constant Map3DUniforms &uniforms) {
     float sun = max(dot(normal, uniforms.sunDirection.xyz), 0.0);
     float3 ambient = mix(uniforms.ambientGround.rgb, uniforms.ambientSky.rgb, normal.y * 0.5 + 0.5);
-    float3 lit = base * (ambient + uniforms.sunColor.rgb * sun);
+    float3 lit = mix(base * (ambient + uniforms.sunColor.rgb * sun), mirrored.rgb, mirrored.a);
     float far = distance(world, uniforms.eye.xyz);
     float fog = smoothstep(uniforms.fog.x, uniforms.fog.y, far);
     // Decision 349: and the haze on the ground on the way.
@@ -147,14 +153,67 @@ float4 map3dLit(float3 base, float3 glow, float3 normal, float3 world, constant 
     return float4(map3dFinish(mix(lit, uniforms.fogColor.rgb, fog) + glow * (1.0 - fog * 0.7)), 1.0);
 }
 
+// Decision 356: glass and water mirror the sky, the sun and at night the
+// city's lights, as Map3DReflection works it out (Web/CityView's
+// materials.js and reflections.js, MIT; the reference street scene's
+// display glass). Per surface layer, how much its glass mirrors and
+// whether it is a shop's display glass (Map3DReflection.glass).
+constant float2 glassMirror[24] = {
+    {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0.7, 0}, {0.7, 0},
+    {0.8, 1}, {0, 0}, {0.7, 0}, {1, 0}, {0, 0}, {0.8, 1}, {0.8, 1}, {0.8, 1},
+    {0.8, 1}, {0.5, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+};
+
+// What a mirror sees toward `way`: the sky from the horizon (the fog's
+// colour) to the zenith, or below the horizon the street, darker.
+static float3 map3dSeen(float3 way, constant Map3DUniforms &uniforms) {
+    if (way.y >= 0.0) { return mix(uniforms.fogColor.rgb, uniforms.zenith.rgb, sqrt(way.y)); }
+    return uniforms.fogColor.rgb * (1.0 - 0.45 * smoothstep(0.0, 0.4, -way.y));
+}
+
+// The water's slope along x and z: four crossing waves (materials.js's
+// `ripple`), each worked out, bent a little, and gone where it comes to
+// less than a few pixels.
+// Each wave: which way it runs, radians a metre and height; its speed and
+// phase.
+constant float4 rippleWaves[4] = {{0.92, 0.39, 1.1, 0.3}, {-0.45, 0.89, 1.6, 0.28}, {0.2, -0.98, 2.7, 0.22}, {-0.8, -0.6, 4.3, 0.14}};
+constant float2 rippleRuns[4] = {{1.1, 0.0}, {-1.4, 1.3}, {1.9, 4.0}, {-2.6, 0.0}};
+
+static float2 map3dRipple(float2 p, float t, float footprint) {
+    float2 bent = p + 2.0 * float2(sin(p.y * 0.11 + t * 0.03), sin(p.x * 0.11 - t * 0.03 + 9.0));
+    float2 slope = float2(0.0);
+    for (int i = 0; i < 4; i++) {
+        float4 w = rippleWaves[i];
+        float kept = 1.0 - smoothstep(0.2, 0.5, footprint * w.z / (2.0 * M_PI_F));
+        slope += w.xy * (w.w * w.z * cos(dot(w.xy, bent) * w.z + rippleRuns[i].x * t + rippleRuns[i].y) * kept);
+    }
+    return slope * 0.045;
+}
+
 float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d_array<float> surfaces) {
     constexpr sampler repeating(address::repeat, filter::linear, mip_filter::linear, max_anisotropy(8));
     float3 base = in.color;
     // Decision 229 續: light of its own at night, added after the fog.
     float3 glow = float3(0.0);
     float lights = uniforms.shade.y;
-    if (in.layer < -1.5) {
+    if (in.layer < -1.5 && in.layer > -2.5) {
         glow = base * 1.3 * lights;
+    }
+    // Decision 356: what the glass or water mirrors, and its share.
+    float4 mirrored = float4(0.0);
+    float3 normal = normalize(in.normal);
+    bool mirrors = uniforms.mirror.x > 0.0;
+    float3 toEye = normalize(uniforms.eye.xyz - in.world);
+    if (mirrors && in.layer < -2.5) {
+        // Water: tilted by its ripples, the sky by Fresnel's share, and
+        // the sun's glint on them.
+        float2 slope = map3dRipple(in.world.xz, uniforms.mirror.y, length(fwidth(in.world.xz)));
+        normal = normalize(float3(-slope.x, 1.0, -slope.y));
+        float3 r = reflect(-toEye, normal);
+        float fresnel = 0.05 + 0.95 * pow(1.0 - max(dot(toEye, normal), 0.0), 4.0);
+        mirrored = float4(map3dSeen(float3(r.x, abs(r.y), r.z), uniforms), fresnel * uniforms.mirror.x);
+        float s = max(dot(r, uniforms.sunDirection.xyz), 0.0);
+        glow += uniforms.glint.rgb * ((pow(s, 600.0) * 2.0 + pow(s, 60.0) * 0.2) * uniforms.mirror.z * uniforms.mirror.x);
     }
     if (in.layer >= 0.0) {
         uint packed = uint(in.layer + 0.5);
@@ -181,18 +240,51 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
         uint surface = packed % 64u;
         float4 row = uniforms.nightWindows[min(surface / 2u, 11u)];
         float2 rule = (surface % 2u == 0u) ? row.xy : row.zw;
-        if (lights > 0.0 && rule.x > 0.0) {
-            float glass = (1.0 - texel.a) * step(dot(texel.rgb, float3(0.2126, 0.7152, 0.0722)), rule.y);
-            float3 facing = normalize(in.normal);
-            float2 face = float2(floor(in.plane / 4.0), dot(round(facing * 4.0), float3(1.0, 17.0, 289.0)));
+        float2 pane = glassMirror[min(surface, 23u)];
+        float bright = dot(texel.rgb, float3(0.2126, 0.7152, 0.0722));
+        float mirrorGlass = mirrors ? (1.0 - texel.a) * step(bright, 0.45) * pane.x : 0.0;
+        if ((lights > 0.0 && rule.x > 0.0) || mirrorGlass > 0.0) {
+            float2 face = float2(floor(in.plane / 4.0), dot(round(normal * 4.0), float3(1.0, 17.0, 289.0)));
             float2 room = floor(in.surfaceAt) + fract(face * float2(0.1373, 0.2719)) * 512.0;
-            float busy = mix(0.5, 1.6, hash12(face * 0.37 + 11.0));
-            float on = step(1.0 - clamp(rule.x * busy, 0.0, 0.95), hash12(room + 23.0));
-            float3 warm = mix(float3(1.0, 0.6, 0.3), float3(1.0, 0.82, 0.6), hash12(room + 67.0));
-            glow += warm * mix(0.55, 1.1, hash12(room + 1.3)) * glass * on * lights;
+            float on = 0.0;
+            if (lights > 0.0 && rule.x > 0.0) {
+                float glass = (1.0 - texel.a) * step(bright, rule.y);
+                float busy = mix(0.5, 1.6, hash12(face * 0.37 + 11.0));
+                on = step(1.0 - clamp(rule.x * busy, 0.0, 0.95), hash12(room + 23.0)) * glass;
+                float3 warm = mix(float3(1.0, 0.6, 0.3), float3(1.0, 0.82, 0.6), hash12(room + 67.0));
+                glow += warm * mix(0.55, 1.1, hash12(room + 1.3)) * on * lights;
+            }
+            if (mirrorGlass > 0.0) {
+                // Each pane a little out of true (materials.js's wobble),
+                // so the sun's glint wanders from pane to pane.
+                float3 along = normalize(cross(float3(0.0, 1.0, 0.0), normal) + float3(1e-4, 0.0, 0.0));
+                float3 tilted = normalize(normal + (along * (hash12(room + 15.7) - 0.5) + float3(0.0, hash12(room + 19.3) - 0.5, 0.0)) * 0.035);
+                float3 r = reflect(-toEye, tilted);
+                float c = max(dot(toEye, tilted), 0.0);
+                float fresnel = pane.y > 0.5 ? 0.18 + 0.62 * pow(1.0 - c, 5.0) : 0.1 + 0.9 * pow(1.0 - c, 4.0);
+                float3 seen = map3dSeen(r, uniforms);
+                // At night the city's lights, where the mirrored ray meets
+                // the street (pane's floor up the face times a floor's
+                // height below it): a light every 26 m.
+                if (lights > 0.0 && r.y < -0.015) {
+                    float reach = max(in.surfaceAt.y, 0.3) * 3.2 / -r.y;
+                    float2 g = (in.world.xz + r.xz * reach) / 26.0, cell = floor(g);
+                    float2 at = float2(hash12(cell + 3.1), hash12(cell + 7.7));
+                    float d = length(fract(g) - at) * 26.0, kind = hash12(cell + 13.0);
+                    float spot = exp(-d * d / (3.0 + reach * 0.03)) * step(0.3, kind);
+                    float3 tint = kind > 0.8 ? float3(0.8, 0.9, 1.0) : (kind > 0.42 && kind < 0.5) ? float3(1.0, 0.25, 0.2) : float3(1.0, 0.72, 0.42);
+                    float3 city = tint * spot * 5.0 / (1.0 + reach * reach / 4.0e5) + float3(1.0, 0.75, 0.5) * 0.035 * smoothstep(0.0, 900.0, reach);
+                    glow += city * fresnel * mirrorGlass * lights * (1.0 - on * 0.9) * uniforms.mirror.x;
+                }
+                // A lit room shows itself, not a reflection.
+                mirrored = float4(seen, fresnel * mirrorGlass * (1.0 - 0.85 * lights * on) * uniforms.mirror.x);
+                float s = max(dot(r, uniforms.sunDirection.xyz), 0.0);
+                float glint = pow(s, 1400.0) * 3.0 + pow(s, 90.0) * 0.35 + pow(s, 7.0) * 0.1;
+                glow += uniforms.glint.rgb * (glint * mirrorGlass * step(0.0, dot(normal, uniforms.sunDirection.xyz)) * uniforms.mirror.z * uniforms.mirror.x);
+            }
         }
     }
-    return map3dLit(base, glow, normalize(in.normal), in.world, uniforms);
+    return map3dLit(base, glow, mirrored, normal, in.world, uniforms);
 }
 
 fragment float4 map3dFragment(Map3DVertexOut in [[stage_in]], constant Map3DUniforms &uniforms [[buffer(1)]],
@@ -450,6 +542,6 @@ fragment float4 map3dSignFragment(Map3DSignOut in [[stage_in]], constant Map3DUn
         base = colour;
         glow = colour * (1.1 * lights * in.lit);
     }
-    return map3dLit(base, glow, normal, in.world, uniforms);
+    return map3dLit(base, glow, float4(0.0), normal, in.world, uniforms);
 }
 

@@ -689,7 +689,9 @@ extension Map3DScene {
                     let middle = (a + c) * 0.5
                     mesh(at: middle) {
                         // Decision 241: the ground plain, as the 2D map's land.
+                        let start = $0.vertices.count
                         $0.addQuad(a + lift, b + lift, c + lift, d + lift, color: water ? Map3DPalette.water : Map3DPalette.ground)
+                        if water { $0.makeWater(from: start) }
                     }
                 }
             }
