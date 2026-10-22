@@ -496,25 +496,35 @@ final class BalanceReportTests: XCTestCase {
         )
         lines += [
             "",
-            "| House | Park cost | Park upkeep and tax a day | Land value under the house without / with | Rent a day without / with | Payback days |",
+            "| Office site (east, north of the station) | Park cost (building + land and buy-outs) | Park upkeep and tax a day | Land value under the office without / with | Office rent a day without / with | Payback days for one office |",
             "| --- | --: | --: | --: | --: | --: |",
         ]
-        for (name, kind) in [("small house", PlacedBuildingKind.house), ("office", .office)] {
-            var plain = try firstLine()
-            plain.economy.earn(Money(3_000_000_000))
-            let site = PlanPoint(x: station.point.x - 3_000, y: station.point.y - 6_000)
-            let house = try plain.placeBuilding(kind, at: site)
-            var parked = plain
-            let park = try parked.placeBuilding(.park, at: PlanPoint(x: site.x, y: site.y - 3_072))
-            let without = plain.dailyRent(of: house).amount
-            let withPark = parked.dailyRent(of: try XCTUnwrap(parked.placedBuilding(id: house.id))).amount
-            let (upkeep, tax) = parked.dailyUpkeep(of: park)
-            let gain = withPark - without - upkeep.amount - tax.amount
-            let value = { (world: GameWorld) in world.landValue(row: Land.cellIndex(site.y), column: Land.cellIndex(site.x))?.value ?? 0 }
-            lines.append(
-                "| \(name) | \(dollars(park.cost.amount)) | \(dollars(upkeep.amount + tax.amount)) | \(value(plain)) / \(value(parked)) | "
-                    + "\(dollars(without)) / \(dollars(withPark)) | \(gain > 0 ? String(park.cost.amount / gain) : "never") |"
-            )
+        // Offices (they let at once) on sites no city park reaches yet,
+        // each with a park 48 m north of it, measured on the day the
+        // first line has run `days` days.
+        var measured = 0
+        search: for dx in stride(from: Int64(-24_576), through: 24_576, by: 8_192) {
+            for dy in stride(from: Int64(-16_384), through: 16_384, by: 8_192) where dx != 0 || dy != 0 {
+                var plain = base
+                plain.economy.earn(Money(30_000_000_000))
+                let site = PlanPoint(x: station.point.x + dx, y: station.point.y + dy)
+                guard plain.landValue(row: Land.cellIndex(site.y), column: Land.cellIndex(site.x))?.parkPremium == 0,
+                      let office = try? plain.placeBuilding(.office, at: site) else { continue }
+                var parked = plain
+                guard let park = try? parked.placeBuilding(.park, at: PlanPoint(x: site.x, y: site.y - 3_072)) else { continue }
+                let without = plain.dailyRent(of: office).amount
+                let withPark = parked.dailyRent(of: try XCTUnwrap(parked.placedBuilding(id: office.id))).amount
+                let (upkeep, tax) = parked.dailyUpkeep(of: park)
+                let gain = withPark - without - upkeep.amount - tax.amount
+                let value = { (world: GameWorld) in world.landValue(row: Land.cellIndex(site.y), column: Land.cellIndex(site.x))?.value ?? 0 }
+                lines.append(
+                    "| \(dx / 64) m, \(dy / 64) m | \(dollars(park.cost.amount)) (\(dollars(park.buildingCost.amount)) + \(dollars(park.landCost.amount))) | "
+                        + "\(dollars(upkeep.amount + tax.amount)) | \(value(plain)) / \(value(parked)) | \(dollars(without)) / \(dollars(withPark)) | "
+                        + "\(gain > 0 ? String(park.cost.amount / gain) : "never") |"
+                )
+                measured += 1
+                if measured == 4 { break search }
+            }
         }
         print(lines.joined(separator: "\n"))
     }

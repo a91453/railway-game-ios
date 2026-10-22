@@ -56,7 +56,7 @@ public enum SubsidiaryRules {
     /// What a temple's visitor leaves, in cents (decision 361): offerings
     /// and incense, set so a temple pays back in some 800 days, inside
     /// the hotel's 720 to 1,440 (measured in decision 361).
-    public static let templeSpend: Int64 = 200
+    public static let templeSpend: Int64 = 3_000
     /// A temple's incense, lamps and festivals, in hundredths of what it
     /// takes (decision 361).
     public static let templeVariableCostPercent: Int64 = 40
