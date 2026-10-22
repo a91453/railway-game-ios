@@ -14723,6 +14723,10 @@ $10,000 的價格照報告的建造、列車與利益算出（旅客那一項是
 
 **之後**：第 3 步（HANDOFF §7.2）：實景地圖的土地用電信信令的鄉鎮日夜比（162907／162908）補上白天的人（工作），同一區裡的差別照舊由 OSM 地點分（研究 §2.6 的 D′）；`homeShare` 讀土地的居民與工作，所以會自己跟著變，GameCore 不必再動。要內附資料與鄉鎮對應（同名的區很多，用代碼與界線）。
 
+**後來**（2026-10-22，審查延後項目，session_01QiPq4nZdq5bVS9MZ4rkr4L，`docs/archive/PR911_944_REVIEW_HANDOFF.md` B5、B4）：
+- **自由模式不動需求，開關潮汐在回到經營模式時才生效**（遊戲規劃決定，程式不改）。不在經營模式時（`drawsDemandFromLand` 是 false），土地不設需求，`dailyTrips` 本來就凍結，`homeShare` 也一樣：關掉潮汐，車站留著原本的 `homeShare`；切回經營模式時 `setEconomyMode` 重算土地需求，才拿掉（或打開時才寫上）。第 4 條的「關掉就拿回去」指經營模式。測試 `TidalDemandTests.testAFreeCompanysTideWaitsForTheManagedOne` 鎖住這個行為。五方：玩家：自由模式是沙盒，切開關不該讓數字突然跳；鐵道迷：無；開發：不動程式，只補文件與測試；美術：無；音樂：無。
+- 車站卡在沒有起訖對時畫的示意曲線，也照今天的時段：開了每週需求的週末與假日用週末的形狀、不放潮汐（和 GameCore 的 `hourly(_:from:to:weekend:tidal:)` 一樣），平日照舊（`GameWorld.shared(_:by:tidal:weekend:)`，GamePresentation；測試 `StationDemandSessionTests.testAStationsShapeOnAWeekendHasNoTide`）。
+
 ### 320. 3D 地圖的雨絲：照參考的一層平行細線，白天用 2D 的雨色；雷雨閃電；減少動態時不畫
 
 （2026-10-21，3D session_01Y25x9NJSKmAuP1M1K3Sf3C，遊戲規劃派工的第 5 項：決策 277「接下來的兩步」的第 1 步。號碼依 #231：決策 320。存檔版本、golden schema 不動；GameCore 不動。）
