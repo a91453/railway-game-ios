@@ -118,6 +118,14 @@ public enum Map3DSurface: Int, CaseIterable, Sendable {
     case mosaicTile
     /// 洗石子: washed grit, a dividing groove every 0.9 m.
     case terrazzo
+    /// Decision 355: the road's paint, on asphalt that takes the road's
+    /// colour. A zebra crossing (斑馬線): one bar 0.45 m wide and its
+    /// gap across `u`, the bars running along the traffic (`v`).
+    case crosswalk
+    /// Decision 355: two lane arrows on 1.7 × 5 m, the far end (the way
+    /// the traffic goes) at `v` 0: through in `u` 0–0.5, through and left
+    /// in 0.5–1.
+    case laneArrows
 
     /// The shops a ground floor may be, and the windows a block of flats
     /// may have; one is picked by where it stands.

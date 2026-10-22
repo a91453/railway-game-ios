@@ -20,6 +20,31 @@ public enum Map3DProp: String, CaseIterable, Sendable {
     /// A concrete utility pole (電線桿) 10.2 m tall: two crossarms with
     /// their insulators and a pole-top transformer.
     case pole
+    /// Decision 355: a traffic signal (紅綠燈) at a junction's approach: a
+    /// 6.3 m mast at the kerb, a 3.4 m arm over the lanes and a level
+    /// head of three lights facing the traffic, red nearest the road's
+    /// middle. One lit green and one lit red, so the crossing roads show
+    /// the two; the lit light glows at night.
+    case signalGo
+    case signalStop
+    /// Decision 355: a bus stop (公車站): the station kit's shelter, bench
+    /// and glass made 4.4 m along the kerb and 1.9 m deep, and the stop's
+    /// sign on its pole.
+    case busStop
+    /// Decision 355: the station kit's unbranded vending machine, its
+    /// body the instance's colour.
+    case vending
+
+    /// Decision 355: what ``Map3DQuality/saving`` leaves out: the small
+    /// things on the pavement (the signals stay).
+    public static let leftOutWhenSaving: Set<Map3DProp> = [.busStop, .vending]
+
+    /// The models of ``leftOutWhenSaving`` in `pack`, when the map looks
+    /// as `quality` says; none otherwise.
+    public static func modelsLeftOut(_ quality: Map3DQuality, in pack: Map3DModelPack = .standard) -> Set<Int> {
+        guard quality == .saving else { return [] }
+        return Set(leftOutWhenSaving.compactMap { pack.index(of: $0.modelName) })
+    }
 
     /// The model's name in ``Map3DModelPack``.
     public var modelName: String { "prop-" + rawValue }
@@ -59,8 +84,76 @@ public enum Map3DProp: String, CaseIterable, Sendable {
                             side: Map3DColor.rgb(0xE6E4DC))
             }
             mesh.addCylinder(base: Map3DPoint(0, 7.3, 0.42), radius: 0.3, height: 0.85, sides: 8, top: steel, side: Map3DColor.rgb(0x8E949B))
+        case .signalGo, .signalStop:
+            Self.addSignal(&mesh, lit: self == .signalGo ? 2 : 0)
+        case .busStop:
+            var kit = StationKitBuilder()
+            Self.addBusStop(&kit)
+            mesh = Self.facingTheRoad(kit.mesh)
+        case .vending:
+            var kit = StationKitBuilder()
+            kit.part(.vendingMachine)
+            // The body takes the instance's colour.
+            mesh = Self.facingTheRoad(kit.mesh) { $0 == StationKitBuilder.white ? $0 & 0x00FF_FFFF : $0 }
         }
         return Map3DModelPack.Model.flat(named: modelName, from: mesh)
+    }
+
+    /// Decision 355: the signal's lights, from the road's middle out: red,
+    /// yellow, green, lit and unlit.
+    static let signalLights: [(lit: UInt32, unlit: UInt32)] = [
+        (Map3DColor.rgb(0xFF4433), Map3DColor.rgb(0x4A2422)), (Map3DColor.rgb(0xFFC23A), Map3DColor.rgb(0x4A3F22)),
+        (Map3DColor.rgb(0x35E89A), Map3DColor.rgb(0x1F4A3A)),
+    ]
+
+    /// A signal (`Web/CityView/src/world/props.js` `signalGeometry`, MIT:
+    /// mast 6.3 m, arm 3.4 m, head 1.3 m at 5.6 m), its light `lit` (an
+    /// index of ``signalLights``) glowing. The road is toward −z, the
+    /// traffic it faces comes from −x.
+    static func addSignal(_ mesh: inout Map3DMesh, lit: Int) {
+        let steel = Map3DColor.rgb(0x8A9099), dark = Map3DColor.rgb(0x2B2F36), across = Map3DPoint(0, 0, -1)
+        mesh.addCylinder(base: .zero, radius: 0.12, height: 6.3, sides: 6, top: steel, side: steel)
+        mesh.addBox(base: Map3DPoint(0, 6.0, -1.7), forward: across, length: 3.4, width: 0.1, height: 0.1, top: steel, side: steel)
+        mesh.addBox(base: Map3DPoint(0, 5.37, -3.05), forward: across, length: 1.3, width: 0.22, height: 0.46, top: dark, side: dark)
+        // The visor over the lights.
+        mesh.addBox(base: Map3DPoint(-0.04, 5.83, -3.05), forward: across, length: 1.34, width: 0.3, height: 0.05, top: dark, side: dark)
+        for (index, light) in signalLights.enumerated() {
+            let start = mesh.vertices.count
+            let colour = index == lit ? light.lit : light.unlit
+            mesh.addBox(base: Map3DPoint(-0.12, 5.45, -3.45 + Float(index) * 0.4), forward: across, length: 0.3, width: 0.04, height: 0.3,
+                        top: colour, side: colour)
+            if index == lit { mesh.makeGlowing(from: start) }
+        }
+    }
+
+    /// A bus stop in the station kit's axes (+x toward the road): its
+    /// shelter (``Map3DStationKit/Part/busShelter``'s posts, canopy,
+    /// benches and glass, made shallow for a pavement), and the sign on
+    /// its pole beyond the shelter's end (`props.js` `busStopGeometry`).
+    static func addBusStop(_ kit: inout StationKitBuilder) {
+        for z: Float in [-1.95, 1.95] { kit.box(-0.7, 0, z, 0.12, 0.12, 2.55, StationKitBuilder.steel) }
+        kit.canopy(-0.05, 2.5, 0, length: 1.9, width: 4.4, rise: 0.18, color: Map3DPalette.canopy)
+        kit.box(-0.72, 0.35, 0, 0.05, 3.7, 1.9, StationKitBuilder.glass)
+        for z: Float in [-0.95, 0.95] { kit.bench(-0.25, 0, z) }
+        kit.cylinder(0.6, 0, 2.7, radius: 0.05, height: 2.9, color: StationKitBuilder.steel, sides: 6)
+        kit.box(0.6, 1.0, 2.7, 0.5, 0.06, 0.8, StationKitBuilder.white)
+        kit.box(0.6, 2.2, 2.7, 0.6, 0.08, 0.6, Map3DPalette.canopy)
+        kit.box(0.6, 2.3, 2.7, 0.4, 0.1, 0.4, StationKitBuilder.white)
+    }
+
+    /// `mesh`, built in the station kit's axes with its front +x, turned
+    /// so its front faces −z (the road, the model's +y), each colour
+    /// changed by `colour`.
+    static func facingTheRoad(_ mesh: Map3DMesh, colour: (UInt32) -> UInt32 = { $0 }) -> Map3DMesh {
+        var turned = Map3DMesh()
+        for start in stride(from: 0, to: mesh.indices.count, by: 3) {
+            turned.appendTriangle((0..<3).map { corner in
+                let v = mesh.vertices[Int(mesh.indices[start + corner])]
+                return Map3DVertex(Map3DPoint(v.z, v.y, -v.x), normal: Map3DPoint(v.nz, v.ny, -v.nx), color: colour(v.color), u: v.u, v: v.v,
+                                   layer: v.layer)
+            })
+        }
+        return turned
     }
 
     /// A rough ball of twenty faces (a cap, two staggered rings of five
