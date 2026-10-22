@@ -19,12 +19,18 @@ final class TrainPackTests: XCTestCase {
         var pack = Map3DModelPack.standard
         pack.locked = TrainPack.locked(unlocked: false)
         XCTAssertEqual(names(pack, "", 3), ["commuter-cab", "commuter-car", "commuter-cab turned"])
+        // Decision 338, later: the light metro stays the green tram.
+        XCTAssertEqual(names(pack, "C", 3), ["set-greenTram-head", "set-greenTram-car", "set-greenTram-tail"])
         // The sets outside the pack stay as they are.
         XCTAssertEqual(names(pack, "", 2), ["set-greenCommuter-head", "set-greenCommuter-tail"])
         XCTAssertEqual(names(pack, "C", 2), ["set-greenTram-head", "set-greenTram-tail"])
         XCTAssertEqual(names(pack, "dieselExpress", 1), ["set-dieselRailcar-single"])
         pack.locked = TrainPack.locked(unlocked: true)
         XCTAssertEqual(names(pack, "", 3), ["set-threeCarUrban-head", "set-threeCarUrban-car", "set-threeCarUrban-tail"])
+        XCTAssertEqual(names(pack, "C", 2), ["set-fiveSectionLRT-head", "set-fiveSectionLRT-tail"])
+        XCTAssertEqual(names(pack, "C", 3), ["set-sevenSectionLRT-head", "set-sevenSectionLRT-car", "set-sevenSectionLRT-tail"])
+        XCTAssertEqual(names(pack, "C", 1), ["set-greenTram-single"], "one car, or four and more, stay the tram")
+        XCTAssertEqual(names(pack, "C", 4), ["set-greenTram-head", "set-greenTram-car", "set-greenTram-car", "set-greenTram-tail"])
     }
 
     func testOnlyATestBuildsSwitchUnlocksIt() {

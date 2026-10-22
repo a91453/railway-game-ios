@@ -14,23 +14,24 @@ final class Map3DTrainSetTests: XCTestCase {
     func testEverySetsCarsAreInThePack() throws {
         let lineColoured: Set = ["metroC381", "wenhu"]
         for set in Map3DTrainSet.all {
-            var names = [set.headName, set.middleName]
-            for name in [set.tailName, set.singleName, set.pantographName] where pack.index(of: name) != nil { names.append(name) }
+            var names = [set.headName]
+            for name in [set.middleName, set.tailName, set.singleName, set.pantographName] where pack.index(of: name) != nil { names.append(name) }
             for name in names {
                 let model = pack.models[try XCTUnwrap(pack.index(of: name), name)]
                 // Decision 331: a tram car is two of its sections.
                 let triangles = set.key == "greenTram" ? 2_500...3_200
-                    : ["greenCommuter", "threeCarUrban"].contains(set.key) ? 2_000...6_000 : 100...3_000
+                    : ["greenCommuter", "threeCarUrban", "fiveSectionLRT", "sevenSectionLRT"].contains(set.key) ? 2_000...6_000 : 100...3_000
                 XCTAssertTrue(triangles.contains(model.triangleCount), "\(name): \(model.triangleCount) triangles")
                 // #900's 700T is 24 m, its Wenhu car 12.6 m, #988's urban
                 // EMU 15 m; drawn at the train's car length.
+                // Decision 338, later: an articulated LRT's car from cut to cut.
                 let length: ClosedRange<Float> = set.key == "highSpeed" ? 23...25 : set.key == "wenhu" ? 12...13.5
-                    : set.key == "threeCarUrban" ? 15...16 : 17...22.5
+                    : set.key == "threeCarUrban" ? 15...16 : set.key == "sevenSectionLRT" ? 14...16 : 17...22.5
                 XCTAssertTrue(length.contains(model.length), "\(name): \(model.length) m long")
                 XCTAssertTrue((2.6...3.5).contains(model.maximum.y - model.minimum.y), "\(name): \(model.maximum.y - model.minimum.y) m wide")
                 XCTAssertEqual(model.minimum.z, 0, accuracy: 0.1, "\(name) stands on the rail")
                 // The low-floor tram is lower than a train.
-                let height: ClosedRange<Float> = set.key == "greenTram" ? 3.2...4.6 : 3.4...4.6
+                let height: ClosedRange<Float> = ["greenTram", "fiveSectionLRT", "sevenSectionLRT"].contains(set.key) ? 3.2...4.6 : 3.4...4.6
                 XCTAssertTrue(height.contains(model.maximum.z), "\(name): \(model.maximum.z) m tall")
                 if lineColoured.contains(set.key) {
                     XCTAssertTrue(model.vertices.contains { $0.color >> 24 == 0 }, "\(name): the band is the line's colour")
@@ -116,9 +117,9 @@ final class Map3DTrainSetTests: XCTestCase {
         for code in ["A", "B", "L", "D"] {
             XCTAssertEqual(names(code, 2), ["set-metroC381-head", "set-metroC381-tail"], code)
         }
-        // Decision 331: the light metro is the green tram.
+        // Decision 331: the light metro is the green tram (decision 338,
+        // later: but two or three cars of it an articulated LRT).
         XCTAssertEqual(names("C", 1), ["set-greenTram-single"])
-        XCTAssertEqual(names("C", 2), ["set-greenTram-head", "set-greenTram-tail"])
         XCTAssertEqual(names("C", 4), ["set-greenTram-head", "set-greenTram-car", "set-greenTram-car", "set-greenTram-tail"])
         XCTAssertEqual(names("APM", 2), ["set-wenhu-head", "set-wenhu-tail"])
     }
@@ -179,6 +180,114 @@ final class Map3DTrainSetTests: XCTestCase {
         XCTAssertEqual(Set(lamps.map { $0.y > 0 }).count, 2, "a lamp each side")
         XCTAssertFalse(pack.isTurned(forType: "", carIndex: 2, count: 3))
         XCTAssertEqual(Map3DTrainSet.reach(of: "threeCarUrban"), Map3DTrains.modelReach)
+    }
+
+    /// Decision 338, later: a two-car light metro is #992's five-section
+    /// LRT, a three-car one its seven-section LRT, each whole train cut
+    /// into its cars on plain body; one car, or four and more, stay the
+    /// green tram. The cars are as long as the cuts are apart, so stretched
+    /// to the light metro's car the sections keep their proportions; the
+    /// body at a cut is drawn on into the gap and closed.
+    func testTwoOrThreeLightMetroCarsAreAnArticulatedLRT() throws {
+        func names(_ key: String, _ count: Int) -> [String] {
+            (0..<count).map { car in
+                guard let index = pack.modelIndex(forType: key, carIndex: car, count: count) else { return "-" }
+                return pack.models[index].name + (pack.isTurned(forType: key, carIndex: car, count: count) ? " turned" : "")
+            }
+        }
+        func model(_ name: String) throws -> Map3DModelPack.Model { pack.models[try XCTUnwrap(pack.index(of: name), name)] }
+        XCTAssertEqual(names("C", 2), ["set-fiveSectionLRT-head", "set-fiveSectionLRT-tail"])
+        XCTAssertEqual(names("C", 3), ["set-sevenSectionLRT-head", "set-sevenSectionLRT-car", "set-sevenSectionLRT-tail"])
+        XCTAssertEqual(names("C", 1), ["set-greenTram-single"])
+        XCTAssertEqual(names("C", 4), ["set-greenTram-head", "set-greenTram-car", "set-greenTram-car", "set-greenTram-tail"])
+        XCTAssertEqual(names("L", 2), ["set-metroC381-head", "set-metroC381-tail"], "the linear-motor metro is no LRT")
+        XCTAssertNil(pack.index(of: "set-fiveSectionLRT-car"), "only ever two cars")
+
+        let carLength = Float(TrainType.c.spec.carLength) / Float(WorldCoordinate.unitsPerMetre) - Map3DTrains.carGap
+        // Each car: its length (cut to cut, or to its nose), the stretch
+        // to the light metro's car, and whether it is cut in front, behind.
+        let five = Map3DFiveSectionLRT.formation(), seven = Map3DSevenSectionLRT.formation()
+        let cars: [(String, Float, ClosedRange<Float>, Bool, Bool)] = [
+            ("set-fiveSectionLRT-head", five.maximum.x, 1.07...1.09, false, true),
+            ("set-fiveSectionLRT-tail", -five.minimum.x, 1.07...1.09, true, false),
+            ("set-sevenSectionLRT-head", seven.maximum.x - 7.08, 1.16...1.19, false, true),
+            ("set-sevenSectionLRT-car", 2 * 7.08, 1.28...1.31, true, true),
+            ("set-sevenSectionLRT-tail", -seven.minimum.x - 7.08, 1.16...1.19, true, false),
+        ]
+        for (name, length, stretch, cutInFront, cutBehind) in cars {
+            let car = try model(name)
+            XCTAssertEqual(car.length, length, accuracy: 0.01, name)
+            XCTAssertTrue(stretch.contains(carLength / car.length), "\(name): drawn \(carLength / car.length) times its length")
+            // Past a cut, half the gap once stretched; nothing past a nose.
+            let reach = Map3DTrains.carGap / 2 * car.length / carLength
+            let front = car.vertices.map(\.x).max() ?? 0, back = car.vertices.map(\.x).min() ?? 0
+            XCTAssertEqual(front - car.maximum.x, cutInFront ? reach : 0, accuracy: 0.01, name)
+            XCTAssertEqual(car.minimum.x - back, cutBehind ? reach : 0, accuracy: 0.01, name)
+            // Closed where it ends in the gap, across its whole body.
+            for (end, facing, cut) in [(front, Float(1), cutInFront), (back, Float(-1), cutBehind)] where cut {
+                let cap = car.vertices.filter { abs($0.x - end) < 1e-3 && $0.nx * facing > 0.99 }
+                XCTAssertGreaterThan((cap.map(\.y).max() ?? 0) - (cap.map(\.y).min() ?? 0), 2.6, "\(name): closed across its width")
+                XCTAssertGreaterThan(cap.map(\.z).max() ?? 0, 3.2, "\(name): closed up to its roof")
+            }
+        }
+        // The lamps: white at the head's nose, red at the tail's, none
+        // between; the pantograph only on the last car.
+        for key in ["fiveSectionLRT", "sevenSectionLRT"] {
+            let head = try model("set-\(key)-head"), tail = try model("set-\(key)-tail")
+            let front = head.vertices.filter(\.glows), back = tail.vertices.filter(\.glows)
+            XCTAssertTrue(front.contains { $0.color == Map3DTrainStyle.headlamp }, "\(key): white at the head")
+            XCTAssertFalse(front.contains { $0.color == Map3DPalette.lantern }, key)
+            XCTAssertTrue(back.contains { $0.color == Map3DPalette.lantern }, "\(key): red at the tail")
+            XCTAssertFalse(back.contains { $0.color == Map3DTrainStyle.headlamp }, key)
+            XCTAssertGreaterThan(front.map(\.x).min() ?? 0, head.maximum.x - 0.1, "\(key): at the nose, clear of its face")
+            XCTAssertLessThan(back.map(\.x).max() ?? 0, tail.minimum.x + 0.1, key)
+            XCTAssertEqual(Set(front.map { $0.y > 0 }).count, 2, "\(key): a lamp each side")
+            XCTAssertEqual(front.count, 2 * 36, "\(key): two lamps of twelve triangles")
+            XCTAssertLessThan(head.maximum.z, 3.5, "\(key): no pantograph on the head")
+            XCTAssertGreaterThan(tail.maximum.z, 4.3, "\(key): the pantograph on the last car")
+        }
+        XCTAssertFalse(try model("set-sevenSectionLRT-car").vertices.contains(where: \.glows), "no lamps between")
+        XCTAssertFalse(pack.isTurned(forType: "C", carIndex: 1, count: 2))
+        XCTAssertFalse(pack.isTurned(forType: "C", carIndex: 2, count: 3))
+        // Fewer triangles than the green tram's cars, so drawn as far.
+        XCTAssertEqual(try model("set-fiveSectionLRT-head").triangleCount, 2_628)
+        XCTAssertEqual(try model("set-fiveSectionLRT-tail").triangleCount, 2_756)
+        XCTAssertEqual(try model("set-sevenSectionLRT-head").triangleCount, 2_444)
+        XCTAssertEqual(try model("set-sevenSectionLRT-car").triangleCount, 2_720)
+        XCTAssertEqual(try model("set-sevenSectionLRT-tail").triangleCount, 2_572)
+        XCTAssertEqual(Map3DTrainSet.reach(of: "C"), Map3DTrainSet.tramReach)
+    }
+
+    /// Decision 338, later: a cut leaves the rest of the model as it was,
+    /// and closes every piece it cuts through.
+    func testACutKeepsTheModelAndClosesIt() {
+        var builder = StationKitBuilder()
+        builder.box(0, 0, 0, 4, 2, 2, 0xFF0000FF)
+        let box = Map3DModelPack.Model.flat(named: "box", from: builder.mesh)
+        let cut = box.cut(from: -1, to: 1, reach: (0.5, 0))
+        XCTAssertEqual(cut.minimum.x, -1.5, accuracy: 1e-5)
+        XCTAssertEqual(cut.maximum.x, 1, accuracy: 1e-5)
+        // Every edge is two triangles': the cut box is closed.
+        var edges: [String: Int] = [:]
+        for start in stride(from: 0, to: cut.vertices.count, by: 3) {
+            for i in 0..<3 {
+                let a = cut.vertices[start + i].position, b = cut.vertices[start + (i + 1) % 3].position
+                func key(_ p: Map3DPoint) -> String { String(format: "%.4f,%.4f,%.4f", p.x, p.y, p.z) }
+                edges[key(a) + "-" + key(b), default: 0] += 1
+                edges[key(b) + "-" + key(a), default: 0] -= 1
+            }
+        }
+        XCTAssertGreaterThan(cut.vertices.filter { abs($0.x + 1.5) < 1e-5 && $0.nx < -0.99 }.count, 0, "closed behind")
+        XCTAssertGreaterThan(cut.vertices.filter { abs($0.x - 1) < 1e-5 && $0.nx > 0.99 }.count, 0, "closed before")
+        XCTAssertEqual(box.cut(from: -5, to: 5, reach: (0, 0)).vertices.count, box.vertices.count, "nothing to cut")
+        // Every normal faces out.
+        for start in stride(from: 0, to: cut.vertices.count, by: 3) {
+            let t = cut.vertices[start..<start + 3].map(\.position)
+            let centre = (t[0] + t[1] + t[2]) * (1.0 / 3)
+            let n = Map3DPoint(cut.vertices[start].nx, cut.vertices[start].ny, cut.vertices[start].nz)
+            XCTAssertGreaterThan(n.dot(centre - Map3DPoint(-0.25, 0, 1)), 0)
+            XCTAssertGreaterThan(n.dot((t[1] - t[0]).cross(t[2] - t[0])), 0, "wound as it faces")
+        }
     }
 
     /// The 3D map asks each train of the world for its key.
