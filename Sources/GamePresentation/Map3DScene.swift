@@ -87,6 +87,9 @@ public struct Map3DScene: Sendable {
     public let seededStreets: SeededStreetPlan
     /// Decision 339: on a real-world map, the real timetables' trains.
     public let realTrains: Map3DRealTrains?
+    /// Decision 359: the player's track, where it runs in a tunnel and
+    /// the ground drawn over it.
+    public let trackCover: Map3DTrackCover
 
     public var triangleCount: Int { chunks.reduce(0) { $0 + $1.mesh.triangleCount } }
 
@@ -225,6 +228,7 @@ public struct Map3DScene: Sendable {
         if let lineBands { builder.addLineBands(lineBands, snapshot: snapshot) }
         builder.addPlatforms(snapshot)
         builder.addPortals(snapshot)
+        trackCover = Map3DTrackCover(snapshot, builder: &builder)
         // Decision 339: the real lines' track, clear of the player's, and
         // their trains on it.
         if let railways, let operations = railways.operations, let frame = RealWorldFrame(world: world) {
