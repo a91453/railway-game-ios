@@ -48,6 +48,10 @@ struct SettingsView: View {
     @AppStorage(LinePalette.key) private var linePalette: LinePalette = .standard
     /// Decision 338: the train pack, unlocked in a test build.
     @AppStorage(TrainPack.testUnlockKey) private var trainPackTestUnlocked = false
+    /// Decision 351: the demo mode's hidden switch, in a test build, and
+    /// the taps on the version row that show it.
+    @AppStorage(DemoMode.switchKey) private var demoModeOn = false
+    @State private var demoModeReveal = DemoMode.Reveal()
 
     var body: some View {
         NavigationStack {
@@ -441,6 +445,29 @@ struct SettingsView: View {
                 }
             }
             .accessibilityIdentifier("settings.version")
+            .contentShape(Rectangle())
+            .onTapGesture {
+                guard TestBuild.isTest else { return }
+                demoModeReveal.tap()
+            }
+            if TestBuild.isTest, demoModeReveal.isRevealed || demoModeOn {
+                Toggle(isOn: $demoModeOn) {
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(verbatim: language.text("Demo Mode", "演示模式"))
+                            Text(verbatim: language.text(
+                                "Every lesson is open, and new games have unlimited funds and the whole map. Games played with it on earn no achievements or stamps.",
+                                "所有課程都打開，新遊戲資金無限、整張地圖都能蓋。打開時玩的遊戲不算成就與紀念章。"
+                            ))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        }
+                    } icon: {
+                        Image(systemName: "sparkles.tv")
+                    }
+                }
+                .accessibilityIdentifier("settings.demoMode")
+            }
             ProblemReportRows(game: game, session: session, lessons: lessons)
             Button {
                 showsWebsite = true
