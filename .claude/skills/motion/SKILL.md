@@ -22,6 +22,7 @@ App 的介面動畫照一套規則走（ARCHITECTURE 決策 253）：每一種�
 | `refuse` | 0.36 | 兩端平滑 | 被拒絕的狀態訊息左右搖三次，一次比一次小（`RefusalShake`，±6 點） | `StatusBanner` 的 `keyframeAnimator` |
 | `builtRing` | 0.9 | 減速 | 蓋好東西的地方擴散的環（決策 117） | `BuildPulseMark` |
 | `turnNorth` | 0.24 | 減速 | 3D 地圖點指北針轉回北方（決策 269 的「後來」）；只移動，減少動態時直接轉回 | `Map3DPreviewScreen` 的 `CADisplayLink`，`Map3DCamera.turnedNorth` |
+| `cameraFlight` | 1.2 | 兩端平滑 | 3D 鏡頭飛到要跟的列車、換跟車視角、停止跟車（決策 333）；遠的路中間升高；只移動，減少動態時直接切過去 | `Map3DMetalView.follow`，`Map3DFlight` |
 | `loadingIn` | 0.7 | 減速 | 實景地圖的載入畫面淡入（決策 307）；只淡入 | `RootView` 的 `.animation(_:value:)` |
 | `loadingOut` | 0.45 | 加速 | 同一個畫面在遊戲上淡出（決策 307） | 同上 |
 

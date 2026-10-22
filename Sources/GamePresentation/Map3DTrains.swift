@@ -87,9 +87,21 @@ public enum Map3DTrains {
     }
 
     /// Decision 314: a train and the point just over its front car's roof.
+    /// Decision 333: and the way its front car faces, level, one metre
+    /// long, for the camera that follows it (``Map3DFollow``).
     public struct Head: Equatable, Sendable {
         public let train: TrainID
         public let point: Map3DPoint
+        public let forward: Map3DPoint
+
+        public init(train: TrainID, point: Map3DPoint, forward: Map3DPoint = Map3DPoint(0, 0, -1)) {
+            self.train = train
+            self.point = point
+            self.forward = forward
+        }
+
+        /// The rail under ``point``, where the follow camera looks.
+        public var rail: Map3DPoint { point - Map3DPoint(0, Map3DTrains.carHeight + Map3DTrains.headClearance, 0) }
     }
 
     /// How far over the roof a train's label stands, in metres.
@@ -139,7 +151,8 @@ public enum Map3DTrains {
                 let base = (a + b) * 0.5
                 if index == 0 {
                     frame.heads.append(Head(train: run.train, point: a + (b - a) * (min(4, length / 2) / length)
-                                                + Map3DPoint(0, carHeight + headClearance, 0)))
+                                                + Map3DPoint(0, carHeight + headClearance, 0),
+                                            forward: Map3DPoint(a.x - b.x, 0, a.z - b.z).normalized ?? Map3DPoint(0, 0, -1)))
                 }
                 // Decision 232: a soft shadow on the bed under the car.
                 let bed = Map3DPoint(0, 0.05 - Map3DScene.Builder.bedDrop, 0)
