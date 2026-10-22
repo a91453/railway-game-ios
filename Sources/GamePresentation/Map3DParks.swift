@@ -61,8 +61,11 @@ extension Map3DScene.Builder {
     /// first, one of the park kit's scenes: on the park's ground, on no
     /// cell in `cleared`, clear of track, platforms and roads, and
     /// ``parkSpacing`` from another; within ``parkTriangles``, and
-    /// ``parkChunkTriangles`` a chunk.
-    mutating func addParks(_ map: Map3DBaseMap, clearOf cleared: Set<Map3DScene.ChunkKey>) {
+    /// ``parkChunkTriangles`` a chunk. Returns the cells the scenes stand
+    /// on, so no city lot goes there however little of a cell the park
+    /// covers (review D, #990).
+    @discardableResult
+    mutating func addParks(_ map: Map3DBaseMap, clearOf cleared: Set<Map3DScene.ChunkKey>) -> Set<Map3DScene.ChunkKey> {
         let middle = point(x: (region.minX + region.maxX) / 2, y: (region.minY + region.maxY) / 2, height: 0)
         var parks: [(distance: Float, area: Double, centre: Map3DPoint, rings: [[Map3DPoint]], bounds: Map3DBaseMap.Bounds)] = []
         for area in map.areas where area.cover == .park {
@@ -75,9 +78,14 @@ extension Map3DScene.Builder {
         }
         parks.sort { ($0.distance, $0.centre.x, $0.centre.z) < ($1.distance, $1.centre.x, $1.centre.z) }
         var placed: [Map3DPoint] = [], triangles = 0, chunkTriangles: [Map3DScene.ChunkKey: Int] = [:]
+        var standing = Set<Map3DScene.ChunkKey>()
         for park in parks {
             guard !placed.contains(where: { ($0 - park.centre).length < Self.parkSpacing }) else { continue }
-            let pick = map3DRandom(Int32(truncatingIfNeeded: Int(park.centre.x.rounded())), Int32(truncatingIfNeeded: Int(park.centre.z.rounded())), salt: 31)
+            // Seeded from where the park is on the map, not in the scene:
+            // the scene's origin moves with the camera, and the park's
+            // scene must not (review D, #990).
+            let east = originX / Self.metre + Double(park.centre.x), south = originY / Self.metre + Double(park.centre.z)
+            let pick = map3DRandom(Int32(truncatingIfNeeded: Int(east.rounded())), Int32(truncatingIfNeeded: Int(south.rounded())), salt: 31)
             spots: for spot in Self.parkSpots(park.rings[0], bounds: park.bounds, centre: park.centre) {
                 guard !placed.contains(where: { ($0 - spot).length < Self.parkSpacing }) else { continue }
                 for example in Self.parkScenes(area: park.area, pick: pick) {
@@ -96,6 +104,7 @@ extension Map3DScene.Builder {
                         mesh(at: centre) { $0.append(model.mesh, at: foot, forward: facing) }
                         target = .base
                         placed.append(centre)
+                        standing.formUnion(cells(under: footprint))
                         triangles += model.triangles
                         chunkTriangles[chunk, default: 0] += model.triangles
                         break spots
@@ -103,6 +112,7 @@ extension Map3DScene.Builder {
                 }
             }
         }
+        return standing
     }
 
     /// Where in a park to try a scene, in turn: the middle of its outline,

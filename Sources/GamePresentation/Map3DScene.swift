@@ -271,9 +271,10 @@ public struct Map3DScene: Sendable {
         standing.formUnion(builder.addStationCommerce(clearOf: standing))
         builder.target = .near
         // Decision 331: the park kit's scenes in the real parks, on no
-        // station, real building, temple or commercial scene.
+        // station, real building, temple or commercial scene; no city lot
+        // on them.
         if let real {
-            builder.addParks(real, clearOf: stations.union(standing))
+            standing.formUnion(builder.addParks(real, clearOf: stations.union(standing)))
             builder.target = .near
         }
         builder.addCity(city, clearOf: stations.union(builder.realTrackCells), takenBy: taken.whole.union(standing), besideRoads: taken.byRoads)
