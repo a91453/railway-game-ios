@@ -2487,12 +2487,8 @@
           "kind" : "residential"
         },
         "overflowed" : 0,
-        "released" : 4,
+        "released" : 5,
         "remainders" : [
-          {
-            "destination" : 2,
-            "value" : 1800
-          },
           {
             "destination" : 3,
             "value" : 600
@@ -2538,7 +2534,7 @@
               "origin" : 1
             },
             "line" : 1,
-            "since" : 360
+            "since" : 240
           },
           {
             "count" : 1,
@@ -2559,6 +2555,26 @@
             },
             "line" : 1,
             "since" : 360
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 2,
+              "legs" : [
+                {
+                  "direction" : "outbound",
+                  "from" : 1,
+                  "line" : 1,
+                  "to" : 2
+                }
+              ],
+              "origin" : 1
+            },
+            "line" : 1,
+            "since" : 540
           },
           {
             "count" : 1,
@@ -2589,15 +2605,11 @@
           "kind" : "office"
         },
         "overflowed" : 0,
-        "released" : 2,
+        "released" : 3,
         "remainders" : [
           {
-            "destination" : 1,
-            "value" : 1800
-          },
-          {
             "destination" : 3,
-            "value" : 1800
+            "value" : 3000
           }
         ],
         "station" : 2,
@@ -2620,7 +2632,7 @@
               "origin" : 2
             },
             "line" : 1,
-            "since" : 360
+            "since" : 240
           },
           {
             "count" : 1,
@@ -2640,7 +2652,27 @@
               "origin" : 2
             },
             "line" : 1,
-            "since" : 360
+            "since" : 300
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 1,
+              "legs" : [
+                {
+                  "direction" : "inbound",
+                  "from" : 2,
+                  "line" : 1,
+                  "to" : 1
+                }
+              ],
+              "origin" : 2
+            },
+            "line" : 1,
+            "since" : 540
           }
         ]
       },
@@ -2655,7 +2687,7 @@
         "remainders" : [
           {
             "destination" : 2,
-            "value" : 1800
+            "value" : 3000
           }
         ],
         "station" : 3,
@@ -2682,26 +2714,6 @@
           },
           {
             "count" : 1,
-            "destination" : 1,
-            "direction" : "inbound",
-            "journey" : {
-              "current" : 0,
-              "destination" : 1,
-              "legs" : [
-                {
-                  "direction" : "inbound",
-                  "from" : 3,
-                  "line" : 1,
-                  "to" : 1
-                }
-              ],
-              "origin" : 3
-            },
-            "line" : 1,
-            "since" : 360
-          },
-          {
-            "count" : 1,
             "destination" : 2,
             "direction" : "outbound",
             "journey" : {
@@ -2713,6 +2725,26 @@
                   "from" : 3,
                   "line" : 1,
                   "to" : 2
+                }
+              ],
+              "origin" : 3
+            },
+            "line" : 1,
+            "since" : 300
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 1,
+              "legs" : [
+                {
+                  "direction" : "inbound",
+                  "from" : 3,
+                  "line" : 1,
+                  "to" : 1
                 }
               ],
               "origin" : 3

@@ -9,8 +9,8 @@ public struct ModeShift: Hashable, Codable, Sendable {
         /// Half the slowdown, at most ``ModeShift/simpleCap``: gentle for
         /// new games (decisions 254, 258).
         case simple
-        /// The whole slowdown, at most the area's share of trips by
-        /// scooter and car.
+        /// Three quarters of the slowdown, at most the area's share of
+        /// trips by scooter and car.
         case realistic
     }
 
@@ -80,12 +80,13 @@ public struct ModeShift: Hashable, Codable, Sendable {
     /// The share of a pair's trips that switch, in thousandths, when rail
     /// takes `railMinutes` door to door and the road `roadMinutes`: nothing
     /// while rail is no slower; otherwise the slowdown in thousandths
-    /// (truncated), halved by the simple rule, at most ``cap``.
+    /// (truncated), halved by the simple rule and three quarters of it
+    /// (truncated) by the realistic one, at most ``cap``.
     public func share(railMinutes: Int64, roadMinutes: Int64) -> Int64 {
         let slowdown = railMinutes * 1_000 / max(1, roadMinutes)
         guard slowdown > 1_000 else { return 0 }
         let over = slowdown - 1_000
-        return min(cap, rule == .simple ? over / 2 : over)
+        return min(cap, rule == .simple ? over / 2 : over * 3 / 4)
     }
 
     /// How many of `trips` switch at `share` thousandths, rounded half up.
