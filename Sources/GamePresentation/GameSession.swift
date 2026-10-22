@@ -158,6 +158,9 @@ public final class GameSession {
 
     /// What the building tool places where the player taps (decision 92).
     public var buildingKind: PlacedBuildingKind = .house
+    /// Which look the building tool puts up (decision 361), kept for each
+    /// kind the player has picked one for; the first otherwise.
+    public var buildingLooks: [PlacedBuildingKind: Int] = [:]
     /// Whether a tap with the building tool builds, demolishes (decision
     /// 94), sells (decision 130) or zones (decision 98).
     public var buildingMode: BuildingToolMode = .build {

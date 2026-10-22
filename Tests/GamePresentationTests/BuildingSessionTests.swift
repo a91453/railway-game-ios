@@ -42,7 +42,7 @@ final class BuildingSessionTests: XCTestCase {
     /// code, never its name: the office's Chinese name changed, its code
     /// ("office") did not, so every saved office still reads as an office.
     func testTheCodesTheSavesStoreDidNotMove() throws {
-        let codes = ["house", "shop", "office", "wharf", "marina", "departmentStore", "hotel", "amusementPark"]
+        let codes = ["house", "shop", "office", "wharf", "marina", "departmentStore", "hotel", "amusementPark", "park", "temple"]
         XCTAssertEqual(PlacedBuildingKind.allCases.map(\.rawValue), codes)
         for kind in PlacedBuildingKind.allCases {
             let data = try JSONEncoder().encode([kind])
@@ -52,6 +52,38 @@ final class BuildingSessionTests: XCTestCase {
         let before = Data("[\(codes.map { "\"\($0)\"" }.joined(separator: ","))]".utf8)
         XCTAssertEqual(try JSONDecoder().decode([PlacedBuildingKind].self, from: before), PlacedBuildingKind.allCases)
         XCTAssertEqual(PlacedBuildingKind.office.title(in: .traditionalChinese), "辦公大樓")
+    }
+
+    /// Decision 361: a park or a temple is built in the look chosen, each
+    /// kind keeping its own, and an edit written before looks reads as
+    /// the first.
+    func testAParkIsBuiltInTheLookChosen() throws {
+        let session = GameSession(world: try makeWorld(width: 20_480, height: 20_480), language: .english)
+        session.selectTool(.building)
+        session.buildingKind = .park
+        XCTAssertEqual(session.buildingLook, 0)
+        XCTAssertEqual((0..<PlacedBuildingKind.park.looks).map { PlacedBuildingKind.park.lookTitle($0, in: .english) },
+                       ["Garden", "Playground", "Pond garden"])
+        XCTAssertEqual(PlacedBuildingKind.temple.lookTitle(1, in: .traditionalChinese), "大廟")
+        XCTAssertNil(PlacedBuildingKind.house.lookTitle(0, in: .english))
+        XCTAssertNotNil(PlacedBuildingKind.park.effectText(in: .english))
+        XCTAssertNil(PlacedBuildingKind.house.effectText(in: .english))
+        session.buildingLook = 2
+        session.buildingLook = 7
+        XCTAssertEqual(session.buildingLook, 2, "a look the kind lacks is not taken")
+        session.buildingKind = .temple
+        XCTAssertEqual(session.buildingLook, 0, "each kind keeps its own")
+        session.buildingKind = .park
+        XCTAssertEqual(session.buildingLook, 2)
+        XCTAssertTrue(session.placeBuilding(at: PlanPoint(x: 5_000, y: 5_000)))
+        XCTAssertEqual(session.world.placedBuildings.map(\.look), [2])
+        session.undo()
+        XCTAssertTrue(session.world.placedBuildings.isEmpty)
+
+        let edit = PlayerCommand.Edit.placeBuilding(.park, at: PlanPoint(x: 1, y: 2), look: 2)
+        XCTAssertEqual(try JSONDecoder().decode(PlayerCommand.Edit.self, from: JSONEncoder().encode(edit)), edit)
+        let old = try JSONEncoder().encode(PlayerCommand.Edit.placeBuilding(.house, at: PlanPoint(x: 1, y: 2)))
+        XCTAssertFalse(String(decoding: old, as: UTF8.self).contains("look"), "an edit of the first look is written as before")
     }
 
     func testTheBuildingToolReadsInChinese() throws {

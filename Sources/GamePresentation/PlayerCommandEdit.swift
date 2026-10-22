@@ -114,8 +114,10 @@ extension PlayerCommand {
         case setLineDepots(LineID, [StationID])
 
         // MARK: Land and the city
-        /// The site's land read in (decision 95), then the building.
-        case placeBuilding(PlacedBuildingKind, at: PlanPoint)
+        /// The site's land read in (decision 95), then the building, in
+        /// its look (decision 361; none for the first, as every edit
+        /// before had).
+        case placeBuilding(PlacedBuildingKind, at: PlanPoint, look: Int? = nil)
         case sellBuilding(PlacedBuildingID)
         case demolishBuilding(PlacedBuildingID)
         /// A zone, or `nil` to clear.
@@ -297,12 +299,12 @@ extension GameSession {
         case .setLineDepot(let id, let depot): try world.setLineDepot(id, to: depot)
         case .setLineDepots(let id, let depots): try world.setLineDepots(id, to: depots)
 
-        case .placeBuilding(let kind, let point):
+        case .placeBuilding(let kind, let point, let look):
             // The site's land, read when it was picked, may have gone with an
             // undo since: read it again, as part of the edit (decision 95).
             Self.readLand(within: Self.buildingLandReach, of: [point], in: &world, population: population, places: places, water: water, coverage: coverage)
             outcome.number = world.placedBuildingQuote(kind, at: point)?.cleared.count ?? 0
-            outcome.building = try world.placeBuilding(kind, at: point)
+            outcome.building = try world.placeBuilding(kind, at: point, look: look ?? 0)
         case .sellBuilding(let id): outcome.sale = try world.sellPlacedBuilding(id)
         case .demolishBuilding(let id): try world.removePlacedBuilding(id)
         case .setZone(let choice, let rows, let columns): outcome.number = try world.setZone(choice.zone, rows: rows, columns: columns)

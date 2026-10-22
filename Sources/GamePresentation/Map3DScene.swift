@@ -1337,6 +1337,7 @@ extension Map3DScene {
                 let centre = point(x: x, y: y, height: 0)
                 let base = Map3DPoint(centre.x, ground(x: x, y: y), centre.z)
                 let side = Float(Double(building.kind.side) / Self.metre) - 2
+                if addPlacedKitBuilding(building, base: base, side: side) { continue }
                 let height = 1.5 + 3.5 * Float(building.kind.floors)
                 let windows = Map3DPaint.bays(.flatWindows, bay: 3.2, floors: Int(building.kind.floors))
                 mesh(at: base) { mesh in

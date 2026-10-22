@@ -367,9 +367,14 @@
 ///     that switch. A build that reads only an earlier version would drop
 ///     it, and the riders who switched would come back by train, so it
 ///     says the save is newer than it instead.
+/// 71. Parks and temples (decision 361): a placed building can be a
+///     `"park"` or a `"temple"`, have its `"look"`, and a temple its
+///     `"visitors"`. A build that reads only an earlier version cannot
+///     read the kinds and would drop the looks, so it says the save is
+///     newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 70
+    public static let currentVersion = 71
 
     public let world: GameWorld
 
@@ -547,6 +552,9 @@ extension SavedGame: Codable {
         // fare table, and every high-speed trip pays by the kilometre.
         // Version 69 to 70: a world without `"modeShift"` has it off: no
         // rider takes a scooter or a car instead.
+        // Version 70 to 71: a world before version 71 has no park or
+        // temple of the company's, and a building without `"look"` has its
+        // kind's first, as every one did.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

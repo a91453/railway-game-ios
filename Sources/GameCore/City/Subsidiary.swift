@@ -4,7 +4,9 @@
 // in what the passengers of the stations round it spend, pays its goods and
 // its staff, and books the profit or loss on its own account. Built early,
 // where the district has not grown yet, and sold once it has, it makes the
-// A-Train's loop of building, waiting and selling high.
+// A-Train's loop of building, waiting and selling high. A temple (decision
+// 361) trades too: its customers are the tourists it draws as a sight
+// (Tourism.swift), who leave offerings and buy incense and snacks.
 //
 // The reference has no property and A-Train 9's manual lists only the
 // categories (docs/research/CITY_BUILDING_STUDY.md §2): every number below
@@ -39,13 +41,25 @@ public enum SubsidiaryRules {
         case .departmentStore: 1_800
         case .hotel: 8_500
         case .amusementPark: 3_500
+        case .temple: SubsidiaryRules.templeSpend
         default: 0
         }
     }
     /// The goods and running costs, in hundredths of what is taken.
     public static func variableCostPercent(of kind: PlacedBuildingKind) -> Int64 {
-        kind == .departmentStore ? 65 : 55
+        switch kind {
+        case .departmentStore: 65
+        case .temple: templeVariableCostPercent
+        default: 55
+        }
     }
+    /// What a temple's visitor leaves, in cents (decision 361): offerings
+    /// and incense, set so a temple pays back in some 800 days, inside
+    /// the hotel's 720 to 1,440 (measured in decision 361).
+    public static let templeSpend: Int64 = 200
+    /// A temple's incense, lamps and festivals, in hundredths of what it
+    /// takes (decision 361).
+    public static let templeVariableCostPercent: Int64 = 40
     /// The staff, each day, in ten-thousandths of what the building cost,
     /// rounded up: 0.04 %.
     public static let staffBasisPoints: Int64 = 4
@@ -61,7 +75,7 @@ extension PlacedBuildingKind {
     /// Whether it trades (decision 173) rather than lets.
     public var isSubsidiary: Bool {
         switch self {
-        case .departmentStore, .hotel, .amusementPark: true
+        case .departmentStore, .hotel, .amusementPark, .temple: true
         default: false
         }
     }
@@ -166,6 +180,8 @@ extension GameWorld {
     }
 
     private func customers(of building: PlacedBuilding, onDay day: Int64, served: Set<StationID>, passes: DayPassDay) -> Int64 {
+        // Decision 361: a temple's customers are its own tourists.
+        if building.kind == .temple { return templeVisitors(of: building, onDay: day) }
         let reach = SubsidiaryRules.reach
         func weight(of station: Station) -> Int64 {
             let dx = station.point.x - building.centre.x, dy = station.point.y - building.centre.y
