@@ -92,8 +92,14 @@ final class LessonUITests: XCTestCase {
             // Use the actual curved alignment for the tap, away from its
             // stations and the opening's passing loops.
             let alignment = fixture.railwaySnapshot().edges.max { $0.geometry.length < $1.geometry.length }!
-            let point = alignment.geometry.location(at: alignment.geometry.length / 3).position
-            tapMap(bringMapPointIntoView(PlanPoint(x: point.x, y: point.y), from: fixture.stations[0].location))
+            // A train can stand on the tapped point when the game pauses (main
+            // a2374a0's full lane, run 39722267769: "Train 2 · running"); the
+            // game is paused, so another point along the same track finds it.
+            for (part, whole) in [(1, 3), (2, 5), (1, 4), (3, 5)] as [(Int64, Int64)] {
+                let point = alignment.geometry.location(at: alignment.geometry.length * part / whole).position
+                tapMap(bringMapPointIntoView(PlanPoint(x: point.x, y: point.y), from: fixture.stations[0].location))
+                if ((map.value as? String) ?? "").contains("Track") { break }
+            }
             XCTAssertTrue(((map.value as? String) ?? "").contains("Track"), "No track selected: \(String(describing: map.value))")
             openControls()
             XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'inspector.line.'")).firstMatch.becomesHittable(within: 5), "The selected track's line card must be open")

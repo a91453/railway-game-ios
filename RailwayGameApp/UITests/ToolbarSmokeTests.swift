@@ -119,7 +119,12 @@ final class LineRoutePreferenceUITests: XCTestCase {
         let lines = app.buttons["Lines"]
         XCTAssertTrue(lines.appears(within: 10)); lines.tap()
         setAdvanced(false, in: app)
-        XCTAssertTrue(app.staticTexts["lines.advanced.summary"].appears(within: 10))
+        // Scrolled to, not only waited for: a list builds no row off screen,
+        // and the summary sits under the switch, which can be the screen's
+        // last row (main a2374a0's full lane, run 39722267769).
+        let summary = app.staticTexts["lines.advanced.summary"]
+        if !summary.appears(within: 10) { bringIntoView(summary, in: app) }
+        XCTAssertTrue(summary.exists)
         XCTAssertFalse(app.buttons["line.route.-1.0.1"].exists)
         XCTAssertFalse(app.buttons["Split the Longest Band"].exists)
         setAdvanced(true, in: app)

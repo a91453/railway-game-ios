@@ -333,7 +333,16 @@ struct LinesPanel: View {
             Section {
                 Toggle(isOn: Binding(get: { showsAdvanced }, set: { storedShowsAdvanced = $0 })) {
                     Label {
-                        Text(verbatim: session.language.text("Advanced", "進階"))
+                        // Decision 336, later: what it holds, in words, not
+                        // only for VoiceOver; under the switch's own name, so
+                        // the summary below stays the row after the switch.
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(verbatim: session.language.text("Advanced", "進階"))
+                            Text(verbatim: AdvancedDetails.contentsText(in: session.language))
+                                .font(.caption)
+                                .foregroundStyle(Theme.textSecondary)
+                                .accessibilityIdentifier("lines.advanced.contents")
+                        }
                     } icon: {
                         Image(systemName: "slider.horizontal.3")
                     }
@@ -343,12 +352,6 @@ struct LinesPanel: View {
                     "Hidden, they keep working as set.",
                     "收起時，這些設定照常運作。"
                 )))
-                // Decision 336, later: what it holds, in words, not only
-                // for VoiceOver.
-                Text(verbatim: AdvancedDetails.contentsText(in: session.language))
-                    .font(.caption)
-                    .foregroundStyle(Theme.textSecondary)
-                    .accessibilityIdentifier("lines.advanced.contents")
                 if !showsAdvanced {
                     Text(verbatim: AdvancedDetails.networkSummary(of: session.world, in: session.language))
                         .font(.caption)
