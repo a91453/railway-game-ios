@@ -267,33 +267,38 @@
 
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
-作者 2026-10-22：「要不要全部所有換個session了 都一直在壓縮了」→「好，照表換」。各 session 在手上的 PR 合併、#231 的登記結束之後才換，不在做到一半時換；要接手的事寫在這裡。
+作者 2026-10-22：「要不要全部所有換個session了 都一直在壓縮了」→「好，照表換」；「壓縮到一定次數後幫我更換新session 指派的也一樣」。各 session 在手上的 PR 合併、#231 的登記結束之後才換，不在做到一半時換；要接手的事寫在這裡。
 
-**開著的 PR**（2026-10-22 10:35 UTC）：#1019（決策 344，GameCore，draft，CI 在跑）。
+**開著的 PR**（2026-10-22 12:00 UTC）：
+- #1020（決策 350，地圖的範圍、3D、縮放鈕，session_013fMmahDsHF9xHba1mJyASm）：ready，head d9fdb2bd。iPad 那個紅的 job 是手動的診斷 run，不是 PR 自己的；PR 自己的 iOS run 39761671036 綠。013f 在 d9fdb2b 跑一次只有 iPhone 的 `only_testing`，綠了就照第 1.2 節合併。`RealWorldMapUITests.testThePlatformConfirmStaysAboveTheDockUnderATallBanner` 在 main 71a3807 也紅（run 39765719731），不是 #1020 造成的。
+- #1025（決策 349，3D 色調，session_01H2iSUj5f1cCXAwjvuFvbsp）：draft，綠了它會轉 ready。
 
-**main 的批次**：上一個綠的 `ci.yml` push 是 d33defa7（#1018）。之後合了 2 個：#1016（車站紀念章，決策 348）、#1015（3D 天空，決策 347），main 6271ee3b。這一批還能再合 1 到 3 個。
+**main 的批次**：上一個綠的 `ci.yml` push 是 82ce09e9（#1021）。之後合了 4 個：#1019（決策 344，GameCore）、#1023（公園修正）、#1027（CI 優化的頻率）、#1026（演示模式 1/2，決策 351），main f565326f。這一批還能再合 1 個（#1020）；其他的等 f565326f（或之後最新的 push）的 `ci.yml` 綠了才合下一批。
+
+**下一個空的決策號是 352**（351 已用；有人在 #231 登記了更大的號就用那個加一）。
 
 | 線 | session | 做到哪 | 下一步 |
 | --- | --- | --- | --- |
-| 遊戲規劃 | session_01CHQg7B6JqzbScGSjyDwHos（接 session_014rYHMtmqA5bEMkBBuKu6PV） | 壓縮 1 次；#1012、#1013、#1014、#1015、#1016、#1017、#1018 已合併 | 第 1.1 節；壓縮 2 次就換手 |
-| 第一站 2 股以上的 bug（§22.2 第 12 名，決策 344，GameCore） | session_018gQPWzopcCfuR9gTAApKTj | #1019，重錄 `long-leg-traffic.json` 並逐值說明 | CI 綠、轉 ready 後合併；之後換手 |
-| 3D 城市（§22.10） | session_01H2iSUj5f1cCXAwjvuFvbsp | 第 1 項天空 #1015 已合併；第 2 項色調（決策 349）在 `claude/map3d-grade` | 已壓縮 1 次：第 2 項開 PR、合併後收工，第 3–6 項寫回這裡 |
-| 作者回報的三個 bug（2026-10-22） | session_013fMmahDsHF9xHba1mJyASm | (A) 3D 跟車與駕駛室沒有播放／暫停與速度；(B) iPad 直立時 3D、範圍、縮放鈕不見；(C) iPhone 橫放第一層面板時這些鈕在畫面中間、第二層沒有範圍鈕。要的是一律在下方、範圍鈕在 3D 旁邊。分支 `claude/map-buttons-layout` | 可拆成 (A) 與 (B)(C) 兩個 PR，用 `ios-build.yml` 的 `only_testing` 驗 |
-| 審查 D（#962 起的程式 PR） | session_01TCwdHtJTq9REwDrCSHzR11 | 剛開始；範圍最後一號它在 #231 寫 | 報告寫成 `docs/archive/PR962_<N>_REVIEW_HANDOFF.md`；第 1 節「多久審查一次」改成從 #N+1 起數 |
-| 演示模式（下面第 1 項） | session_01Q6ucfu4uY1YiX1buRCZzFr | 10:34 派工，提前開（作者：「演示模式做完 我就差不多要發文了」） | PR 1：隱藏開關、全解鎖、無限資金、成就不算；PR 2：一鍵鋪真實路線 |
+| 遊戲規劃 | 新 session（接 session_01CHQg7B6JqzbScGSjyDwHos，id 寫在 #231） | 舊的壓縮 2 次換手；#1012–#1019、#1021–#1024、#1026、#1027 已合併 | 第 1.1 節；開工先讀第 1 節、這一節、第 3 節開頭 |
+| 地圖按鈕（決策 350） | session_013fMmahDsHF9xHba1mJyASm | #1020 ready | 合併後收工 |
+| 3D 城市（§22.10） | session_01H2iSUj5f1cCXAwjvuFvbsp | 第 2 項色調 #1025 | 已壓縮 1 次：#1025 合併後收工，第 3–6 項寫回第 4 節 |
+| 演示模式（決策 351） | session_01Q6ucfu4uY1YiX1buRCZzFr | PR 1 #1026 已合併；PR 2「鋪好這一帶的真實路線」在 `claude/demo-mode-real-lines` | PR 2 綠了轉 ready 合併 |
+| 發版前小審查（#1019 起的程式 PR） | session_012YaVnnbN5pq9pjh53FF4RC | 進行中，範圍含 #1026 | 報告寫成 `docs/archive/PR1019_<N>_REVIEW_HANDOFF.md`；回報「可以發」或 P1、P2 修正 |
+| Threads 貼文草稿 | session_01QAC77cR5wi8UFqoLxMDVH6 | 照作者給的前幾天貼文排今天的發文 | 只寫草稿、用 SendUserFile 給作者，不 commit、不發文 |
 
-**發版前**（作者 2026-10-22：「做完這項看需不需要pr review 我就發那版 跟發文」）：
-- 審查 D 的 P1、P2 修正全部合併。
-- 審查 D 範圍之後才合併的程式 PR（演示模式、三個 bug、#1019 等）做一次小審查。不足 30 點也做，因為要發版。
-- 那個 commit 在 main 上的 `ci.yml` 與 full lane 都綠了，才告訴作者「可以發（commit X）」。
-- Threads 每日排程（`trig_01FZhfBNQCdDW8iDpowANLZS`）維持暫停；發文由作者自己發，規劃可以先擬好文字給作者。
+**發版前**（作者 2026-10-22：「演示模式做完 我就差不多要發文了 所以做完這項看需不需要pr review 我就發那版 跟發文」）：
+- 這次是 TestFlight 第 82 版（上一版 81 是 #1003，7fc0d373），新的是 #1004 起。
+- 演示模式兩個 PR 都合併；發版前小審查（上表）的 P1、P2 修正全部合併。
+- 選定的那個 commit 在 main 上的 `ci.yml` 與 full lane 都綠了，才告訴作者「可以發（commit X）」，並告訴 Threads 草稿 session。`testflight.yml` 由作者自己按。
+- Threads 每日排程（`trig_01FZhfBNQCdDW8iDpowANLZS`）維持暫停；它綁在舊規劃 session 上，新規劃照第 1 節那一列重建一個綁自己的（暫停），再刪舊的。發文由作者自己發。
+- 舊規劃的巡查提醒 `trig_0195QqR2dnriwyNw5SrQT7Jr` 換手時已刪，新規劃自己排巡查。
 
-**下一個空位依序派**（第 1 項已提前開）：
+**下一個空位依序派**（第 1 項演示模式已在做，見上表）：
 1. **演示模式**（作者 2026-10-22：「要不要設置一個開發者模式 解鎖所有東西跟路線 不然我要演示都只能自己拉」）。設定裡一個開關，預設關。**藏起來**（作者：「要藏隱密一點只有我按得到嗎」）：只在測試版出現（Xcode 與 TestFlight，用決策 338 的 `TestBuild.isTest`），App Store 版完全沒有，因為 Apple 審查不准有隱藏功能；測試版裡也要在設定的「版本」那一列連點 5 下才出現，別的測試者不會誤開。打開時：課程、挑戰全開；新局自動無限資金、地圖擴張全開；實景地圖多一顆「鋪好這一帶的真實路線」，照現有示範（`RealWorldDemo`、`HighSpeedDemo`、`TRADemo`）的建法，把畫面範圍內的台鐵、高鐵、捷運鋪好並排車；成就與紀念章不算（和示範一樣）。前三項一個 PR，一鍵鋪路線另一個 PR。不升存檔、不動 GameCore。五方：玩家（演示一開就有車跑，一般玩家看不到也碰不到）、鐵道迷（鋪的是真實走向）、開發（用現有指令與示範建法）、美術（一個開關一顆鈕）、音樂（無）。
 2. 網頁 `Web/CityView` 看得到的「技術試作」標示（NEXT_PRIORITIES 隨時可派的小修第一項）。
 3. 之後照 NEXT_PRIORITIES §22.2 的順序。
 
-已做完、2026-10-22 封存的：session_014APxWZsoEbwngV3qd6QZtr（#1016，車站紀念章）、session_01T8UdZRFmxs93DFtUKX5V73（#1012，雨聲雷聲）、session_01MsTCquc1D1FqFiEdn6j3fz（#998）、session_01RU6kM49KUK5VFvU5osr8eP（決策 333、334、337：3D 跟車視角、下一班飛到月台、前面展望）、session_01QiPq4nZdq5bVS9MZ4rkr4L（#966、#970、#984；A6 與 A11／B7 還開著，§7.1）、session_01VVzExSvZcTej5eCqxdUEpY（審查 C #945–#961）、session_014SH8oLiB8EPtSm4afuuxNn（決策 335）。
+已做完、2026-10-22 封存的：session_018gQPWzopcCfuR9gTAApKTj（#1019，決策 344）、session_01TCwdHtJTq9REwDrCSHzR11（#1024，審查 D）、session_014APxWZsoEbwngV3qd6QZtr（#1016，車站紀念章）、session_01T8UdZRFmxs93DFtUKX5V73（#1012，雨聲雷聲）、session_01MsTCquc1D1FqFiEdn6j3fz（#998）、session_01RU6kM49KUK5VFvU5osr8eP（決策 333、334、337：3D 跟車視角、下一班飛到月台、前面展望）、session_01QiPq4nZdq5bVS9MZ4rkr4L（#966、#970、#984；A6 與 A11／B7 還開著，§7.1）、session_01VVzExSvZcTej5eCqxdUEpY（審查 C #945–#961）、session_014SH8oLiB8EPtSm4afuuxNn（決策 335）。
 
 **作者 2026-10-22 回報、已修**：廟、公園、站前店畫成全黑（#1008，套件模型放進場景時法線是零）；1× 時跟車與駕駛室一頓一頓（#1010，1× 一個遊戲秒要 10 個 tick，列車只滑 0.1 秒就停 0.9 秒，改成整秒滑完）。兩個都待實機確認。
 
