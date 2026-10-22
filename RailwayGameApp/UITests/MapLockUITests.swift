@@ -42,27 +42,25 @@ final class MapLockUITests: XCTestCase {
         func probe(_ dx: CGFloat, _ dy: CGFloat, _ name: String) {
             guard lock.appears(within: 5) else { print("DIAG no lock before \(name)"); return }
             let frame = lock.frame
-            let at = CGPoint(x: frame.minX + frame.width * dx, y: frame.minY + frame.height * dy)
+            let at = CGPoint(x: frame.midX + dx, y: frame.midY + dy)
             app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: at.x, dy: at.y)).tap()
             let opened = buy.appears(within: 4)
-            print("DIAG \(name) (\(dx), \(dy)) lock \(frame) at \(at) opened: \(opened)")
+            print("DIAG \(name) lock \(frame) at \(at) opened: \(opened)")
             if opened {
                 expansion.tap()
                 _ = buy.disappears(within: 5)
                 sleep(1)
             }
         }
-        probe(0.5, 0.8, "A")
-        probe(0.15, 0.5, "B")
-        probe(0.5, 0.5, "C")
-        probe(0.5, 0.5, "D")
-        probe(0.5, 0.65, "E")
-        if zoomOut.isEnabled {
-            zoomOut.tap()
-            sleep(3)
-            probe(0.5, 0.5, "F zoomed")
-            probe(0.5, 0.8, "G zoomed")
-        }
+        // Offsets from the lock's middle, in points.
+        probe(0, 10, "A whole below")
+        probe(0, -10, "B whole above")
+        probe(0, 0.3, "C centre +0.3")
+        probe(0, -0.3, "D centre -0.3")
+        probe(0, 0, "E centre")
+        probe(0.3, 2, "F +0.3, 2 below")
+        probe(0, 2, "G whole 2 below")
+        probe(0, 5.1, "H 5.1 below")
         if lock.appears(within: 5) { lock.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2)).tap() }
         XCTAssertTrue(buy.appears(within: 5), "The lock opens the tile's card")
         XCTAssertEqual(expansion.label, "Stop expanding the map")
