@@ -854,6 +854,7 @@ extension TrainType {
         "BLUE": ("Blue Train sightseeing train", "藍皮解憂號"),
         "SHANLAN": ("Shan-Lan sightseeing train", "山嵐號"),
         "MINGRI": ("Ming-Ri sightseeing train", "鳴日號"),
+        "STAR": ("Formosa Star sightseeing train", "環島之星"),
     ]
 }
 

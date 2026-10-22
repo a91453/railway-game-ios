@@ -1656,6 +1656,8 @@ V 實際放行 → T、U（保證不互穿）
 | `source/rail-3d/assets/garage-blender-v1/shanlan.json` 的 `specification.body` `D4E48B`（「稻穗黃綠」） | `TrainLivery.shanLan` 的車身 `#D4E48B`；帶色 `#7FA845`、車頭 `#5E8C3A` 是本專案的 | 車身照用（模型 `body` 的線性色換成 sRGB 也是 `D4E48B`）；模型的其他顏色是黑框、玻璃、金屬，沒有可當帶色的 |
 | 決策 286 的後來：`namedTrains` `mingri`（「台鐵首款五星級觀光列車」「旗艦門面」、包車制、無固定車次）、`formations.js` `mingri`（推估機車 1 輛＋客車 5 輛、每輛 20 m） | `TrainType.mingRi`（`MINGRI`）：一個編組、節數是客車、20.0 m；`Tourism.starsPerLuxuryTrain`（加 1★） | 名稱、編組取用；「五星級」「旗艦」是加一顆星的根據；`story`、`status2026` 沒有用 |
 | `source/rail-3d/assets/garage-blender-v1/mingricoach.json`（`body` `292F31`、`accent` `D1773D`、每側 2 門）、`mingri.json`（`accent` `D57638`、GE 式車頭、電力） | `TrainLivery.mingRi`（車身 `#292F31`、帶色 `#D1773D`、車頭 `#D57638`）；`doorsPerCar` 2；3D 的 `Map3DTrainSet` `MINGRI`（現成的 E500 與黑色客車） | 顏色照用；3D 機車沿用本專案的 E500 模型，參考庫的 Blender 模型等 GLB 轉換器 |
+| 決策 286 的後來（第三次）：`namedTrains` `star`（「環島之星 萌旅號」、車次 1／2 每日環島、易遊網套裝行程、不單售車票）、`formations.js` `star`（推估 E500＋客車 6 輛、每輛 20 m）、`rail-3d/integration/FORMATIONS.md`（10500／10600 型莒光客車、2025 年起 E500 牽引） | `TrainType.formosaStar`（`STAR`）：一個編組、節數是客車、20.0 m、每側 2 門；`TrainPerformance.formosaStar`（E500＋6 客車）；`Tourism.starsPerRoundIslandTrain`（加 0.75★） | 名稱、編組、機車取用；`story`（三麗鷗彩繪、卡拉 OK、吧檯）只用在塗裝的方向；英文名照參考庫翻譯檔的「Formosa Star」 |
+| `source/rail-3d/assets/garage-blender-v1/e500.json`（`body` `F07532`） | 3D 的 `Map3DTrainSet` `STAR`（本專案現成的 E500 模型＋粉紅客車）；2D 的 `TrainLivery.formosaStar`（`#F3D3DF`／`#D9467E`）是本專案的 | 參考庫沒有環島之星客車的模型與顏色（gap）；E500 的橘當 2D 車頭會和 EMU100 分不開，沒有用 |
 | 參考庫沒有：觀光列車對景點、觀光客的規則 | `Tourism.starsPerSightseeingTrain`（0.5★） | 本專案自己的（gap） |
 | 外部開源專案（OpenTTD、Simutrans） | — | 沒有可用的：車輛沒有吸引遊客的規則 |
 

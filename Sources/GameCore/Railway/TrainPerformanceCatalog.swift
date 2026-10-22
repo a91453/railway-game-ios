@@ -52,6 +52,8 @@ public enum TrainPerformanceCatalog {
         .init(code: "haiFeng", performance: .haiFeng),
         // Decision 286, later.
         .init(code: "mingRi", performance: .mingRi),
+        // Decision 286, later (third).
+        .init(code: "formosaStar", performance: .formosaStar),
     ]
 
     /// Each code's row. Building it traps on a code listed twice.

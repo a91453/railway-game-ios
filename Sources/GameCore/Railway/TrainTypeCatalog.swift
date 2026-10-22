@@ -86,11 +86,22 @@
 //   prices are this project's: the E500 Chu-Kuang's and $100,000 and
 //   $20,000 a coach more, and a running weight 200 more for its kitchen
 //   and attendants.
+// - The Formosa Star (環島之星, decision 286, later, third) is six
+//   Chu-Kuang coaches behind an E500 (`namedTrains` `star`: trains 1 and 2
+//   round the island daily, sold as a package tour; `formations.js` `star`:
+//   an estimated E500 and six 20 m coaches; its `FORMATIONS.md`: 10500 and
+//   10600 Chu-Kuang coaches, E500 haulage from 2025). Newtalk (2019-02-22):
+//   four business coaches of 33 seats, a lounge of 27 and a dining car of
+//   14, 173 in six, 29 a coach rounded; two doors a side as the Chu-Kuang.
+//   It starts as the E500 Chu-Kuang would with six coaches
+//   (``TrainPerformance/formosaStar``). Its prices are this project's,
+//   halfway between the E500 Chu-Kuang's and the Ming-Ri's.
 // - A sightseeing type (decision 286) adds half a star to a sight one of
 //   its trains calls near (``Tourism/starsPerSightseeingTrain``): the Blue
 //   Train, the Hai-Feng and the Shan-Lan; the Ming-Ri a whole star
-//   (``Tourism/starsPerLuxuryTrain``). The most any train calling there
-//   adds is what counts.
+//   (``Tourism/starsPerLuxuryTrain``), the Formosa Star three quarters
+//   (``Tourism/starsPerRoundIslandTrain``). The most any train calling
+//   there adds is what counts.
 // - The families (metro, railway, high speed, special) are decision 224's
 //   catalogue of types; a high-speed set is the type whose family is high
 //   speed.
@@ -138,7 +149,8 @@ public struct TrainTypeSpec: Hashable, Sendable {
     /// What a sight one of its trains calls near gains, in hundredths of a
     /// star (decision 286): ``Tourism/starsPerSightseeingTrain`` for a
     /// sightseeing train, ``Tourism/starsPerLuxuryTrain`` for the Ming-Ri,
-    /// none for the rest.
+    /// ``Tourism/starsPerRoundIslandTrain`` for the Formosa Star, none for
+    /// the rest.
     public let sightseeingStars: Int
     /// Whether it is a sightseeing train (decision 286).
     public var isSightseeing: Bool { sightseeingStars > 0 }
@@ -221,6 +233,11 @@ public enum TrainTypeCatalog {
         .init(code: "MINGRI", family: .railway, offer: .added, capacity: 26, doors: 2, overloads: true,
               performance: .mingRi, firstDollars: 400_000, carDollars: 55_000, operatingPermille: 1_400, carMetres: (20, 0),
               sightseeingStars: Tourism.starsPerLuxuryTrain),
+        // Decision 286, later (third): halfway between the E500 Chu-Kuang
+        // and the Ming-Ri.
+        .init(code: "STAR", family: .railway, offer: .added, capacity: 29, doors: 2, overloads: true,
+              performance: .formosaStar, firstDollars: 375_000, carDollars: 45_000, operatingPermille: 1_300, carMetres: (20, 0),
+              sightseeingStars: Tourism.starsPerRoundIslandTrain),
     ]
 
     /// Each code's row. Building it traps on a code listed twice.

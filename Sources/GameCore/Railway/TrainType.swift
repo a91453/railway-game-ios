@@ -85,6 +85,9 @@ public struct TrainType: RawRepresentable, Hashable, Codable, CaseIterable, Send
     /// The Ming-Ri (鳴日號, decision 286, later): luxury coaches behind an
     /// E500, as one set whose cars are the coaches.
     public static let mingRi = TrainType(listed: "MINGRI")
+    /// The Formosa Star (環島之星, decision 286, later, third): Chu-Kuang
+    /// coaches behind an E500, round the island every day.
+    public static let formosaStar = TrainType(listed: "STAR")
 
     /// The reference's main types, offered everywhere
     /// (`LINE_TRAIN_TYPE_MAIN`); the others are its extras
@@ -134,7 +137,7 @@ public struct TrainType: RawRepresentable, Hashable, Codable, CaseIterable, Send
     public var isHighSpeed: Bool { TrainTypeCatalog.builtIn[row].family == .highSpeed }
 
     /// Whether it is a sightseeing train (decision 286): the Hai-Feng, the
-    /// Blue Train, the Shan-Lan and the Ming-Ri.
+    /// Blue Train, the Shan-Lan, the Ming-Ri and the Formosa Star.
     public var isSightseeing: Bool { TrainTypeCatalog.builtIn[row].isSightseeing }
 
     /// What one of its trains calling near a sight adds to the sight's

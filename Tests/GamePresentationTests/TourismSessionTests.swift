@@ -289,9 +289,9 @@ final class TourismSessionTests: XCTestCase {
         XCTAssertEqual(row.sightseeingTrainText, "A sightseeing train calls here (+0.5★)")
         XCTAssertEqual(world.attractionRows(in: .traditionalChinese)[0].sightseeingTrainText, "有觀光列車停靠（+0.5★）")
         XCTAssertTrue(world.tourismHelp(in: .english).hasSuffix(
-            "A sightseeing train (Hai-Feng sightseeing train, Blue Train sightseeing train, Shan-Lan sightseeing train) calling at a station within 800 m adds 0.5 stars; the Ming-Ri sightseeing train adds 1 star."
+            "A sightseeing train (Hai-Feng sightseeing train, Blue Train sightseeing train, Shan-Lan sightseeing train) calling at a station within 800 m adds 0.5 stars; the Formosa Star sightseeing train adds 0.75 stars; the Ming-Ri sightseeing train adds 1 star."
         ), world.tourismHelp(in: .english))
-        XCTAssertTrue(world.tourismHelp(in: .traditionalChinese).hasSuffix("觀光列車（海風號、藍皮解憂號、山嵐號）停靠 800 公尺內的車站時，景點加 0.5 星；鳴日號加 1 星。"))
+        XCTAssertTrue(world.tourismHelp(in: .traditionalChinese).hasSuffix("觀光列車（海風號、藍皮解憂號、山嵐號）停靠 800 公尺內的車站時，景點加 0.5 星；環島之星加 0.75 星；鳴日號加 1 星。"))
         // The train catalog's note: only under a sightseeing type, only with sights.
         XCTAssertEqual(world.sightseeingNote(for: .blueTrain, in: .traditionalChinese), "觀光列車：停靠景點 800 公尺內的車站時，景點加 0.5 星，觀光客會變多。")
         XCTAssertEqual(world.sightseeingNote(for: .haiFeng, in: .english),
@@ -302,11 +302,20 @@ final class TourismSessionTests: XCTestCase {
         XCTAssertEqual(world.sightseeingNote(for: .mingRi, in: .english),
                        "Sightseeing train: calling at a station within 800 m of a sight adds 1 star to it, so more tourists come.")
         XCTAssertEqual(world.sightseeingNote(for: .mingRi, in: .traditionalChinese), "觀光列車：停靠景點 800 公尺內的車站時，景點加 1 星，觀光客會變多。")
+        // Decision 286, later (third): the Formosa Star adds three quarters.
+        XCTAssertEqual(world.sightseeingNote(for: .formosaStar, in: .english),
+                       "Sightseeing train: calling at a station within 800 m of a sight adds 0.75 stars to it, so more tourists come.")
+        XCTAssertEqual(world.sightseeingNote(for: .formosaStar, in: .traditionalChinese), "觀光列車：停靠景點 800 公尺內的車站時，景點加 0.75 星，觀光客會變多。")
+        let star = try world.purchaseTrain(named: "Formosa Star").id
+        try world.setTrainType(star, to: .formosaStar)
+        try world.assignTrain(star, to: line)
+        XCTAssertEqual(world.attractionRows(in: .english)[0].sightseeingTrainText, "A sightseeing train calls here (+0.75★)")
+        XCTAssertEqual(world.attractionRows(in: .english)[0].starsText, "4.25★")
         let mingRi = try world.purchaseTrain(named: "Ming-Ri").id
         try world.setTrainType(mingRi, to: .mingRi)
         try world.assignTrain(mingRi, to: line)
         XCTAssertEqual(world.attractionRows(in: .english)[0].sightseeingTrainText, "A sightseeing train calls here (+1★)")
-        XCTAssertEqual(world.attractionRows(in: .english)[0].starsText, "4.5★", "the Ming-Ri's star, not the Blue Train's as well")
+        XCTAssertEqual(world.attractionRows(in: .english)[0].starsText, "4.5★", "the Ming-Ri's star, not the others' as well")
         XCTAssertNil(world.sightseeingNote(for: .r100ChuKuang, in: .english))
         XCTAssertNil(world.sightseeingNote(for: nil, in: .english))
         world.setTourism(nil)
