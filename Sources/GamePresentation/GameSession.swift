@@ -56,7 +56,10 @@ public final class GameSession {
     @ObservationIgnored private(set) var commandRevision = 0
     /// The losing line the station master names, kept between commands and
     /// days (decision 194, later; ``worstLosingLine``).
-    @ObservationIgnored private let lineLossLeaderMemo = LineLossLeaderMemo()
+    @ObservationIgnored let lineLossLeaderMemo = LineLossLeaderMemo()
+    /// Decision 330: the station master's advice the game loop's tick
+    /// worked out, for the world at ``worldRevision`` `revision`.
+    @ObservationIgnored var workedAdvice: (revision: Int, advice: WorkedAdvice)?
 
     /// ``GameWorld/worstLosingLine()``, worked out again only after a
     /// command or once a day has settled (decision 194, later): the station
@@ -1319,6 +1322,9 @@ public final class GameSession {
         /// Decision 328: the night skip's run ahead from ``world``, when
         /// the step worked it out.
         var nightSkip: NightSkipMemo?
+        /// Decision 330: the station master's advice for ``world``, when
+        /// the step worked it out.
+        var advice: WorkedAdvice?
     }
 
     /// `world` advanced by `ticks`, all or nothing. `listening` (sounds
@@ -1359,38 +1365,50 @@ public final class GameSession {
         }
         isApplyingTick = true
         defer { isApplyingTick = false }
+        // Decision 330: each piece timed for the map's frame readout.
+        let meter = FrameCostMeter.shared
         let closedBefore = world.accounts.years.last?.year
         let endedBefore = world.scenario?.outcome != nil
         let lastEntry = world.accounts.entries.last
         let dayBefore = world.clock.now.seconds / GameTime.secondsPerDay
         let timeBefore = world.clock.now
         let worldBefore = world
-        isLogging = true
-        world = step.world
-        isLogging = false
-        log(.advance(ticks: step.ticks), at: timeBefore)
-        // Decision 195: the ticks that ran, and the followed train's way.
-        ticksRun += Int64(step.ticks)
-        if let traffic = step.traffic { trafficMemo = (worldRevision, traffic) }
-        // Decision 328: worked out with the tick, off the main actor.
-        if let memo = step.nightSkip, memo.revision == commandRevision { nightSkipMemo = memo }
-        // Game time moved on: no edit before it can be undone.
-        undoHistory.removeAll()
-        redoHistory.removeAll()
-        editGestureHasSnapshot = false
-        endFollowIfGone()
-        trainSpeedometer.observe(followedTrainID, from: worldBefore, to: world)
-        platformUse.record(world)
-        if let playSound, let cue = SoundCue.arrivalCue(for: step.arrived, watched: watchedTrainIDs, speed: world.clock.speed, in: world) {
-            playSound(cue)
+        meter.measure(.stepWorld) {
+            isLogging = true
+            world = step.world
+            isLogging = false
+            log(.advance(ticks: step.ticks), at: timeBefore)
+            // Decision 195: the ticks that ran, and the followed train's way.
+            ticksRun += Int64(step.ticks)
+            if let traffic = step.traffic { trafficMemo = (worldRevision, traffic) }
+            // Decision 328: worked out with the tick, off the main actor.
+            if let memo = step.nightSkip, memo.revision == commandRevision { nightSkipMemo = memo }
+            // Decision 330: likewise, for this world only.
+            workedAdvice = step.advice.map { (worldRevision, $0) }
+            // Game time moved on: no edit before it can be undone.
+            undoHistory.removeAll()
+            redoHistory.removeAll()
+            editGestureHasSnapshot = false
         }
-        updateMusicDuck()
-        // Decision 117: fares and rent settled within the step.
-        noteIncome(since: lastEntry)
-        retireCoveredShortfall()
-        noteDayLoss(since: dayBefore)
+        meter.measure(.stepFollow) {
+            endFollowIfGone()
+            trainSpeedometer.observe(followedTrainID, from: worldBefore, to: world)
+        }
+        meter.measure(.stepPlatforms) { platformUse.record(world) }
+        meter.measure(.stepSound) {
+            if let playSound, let cue = SoundCue.arrivalCue(for: step.arrived, watched: watchedTrainIDs, speed: world.clock.speed, in: world) {
+                playSound(cue)
+            }
+            updateMusicDuck()
+        }
+        meter.measure(.stepIncome) {
+            // Decision 117: fares and rent settled within the step.
+            noteIncome(since: lastEntry)
+            retireCoveredShortfall()
+            noteDayLoss(since: dayBefore)
+        }
         // Decision 256: fares over the stations, goals met, towns grown.
-        noteActions(since: worldBefore)
+        meter.measure(.stepActions) { noteActions(since: worldBefore) }
         if let closed = world.accounts.years.last?.year, closed != closedBefore {
             yearEndYear = closed
         }
@@ -1398,12 +1416,12 @@ public final class GameSession {
             scenarioJustEnded = true
         }
         // Decision 175: the secretary room reads what the step changed.
-        observeNews(closedBefore: closedBefore)
+        meter.measure(.stepNews) { observeNews(closedBefore: closedBefore) }
         if world.clock.now.seconds / GameTime.secondsPerDay > dayBefore {
-            onMidnight?()
+            meter.measure(.stepMidnight) { onMidnight?() }
         }
         // Decision 305: the night's skip goes on, ends or starts.
-        continueNightSkip()
+        meter.measure(.stepNightSkip) { continueNightSkip() }
     }
 
     /// A tick of the game loop being worked out off the main actor
@@ -1429,6 +1447,9 @@ public final class GameSession {
         /// Decision 328: what the tick needs to run ahead for the night
         /// skip, when ``GameSession/nightSkip`` is looked at after it.
         var nightSkip: NightSkipProbe?
+        /// Decision 330: what the tick needs to work out the station
+        /// master's advice, which the news reads once a game hour.
+        var advice: AdviceProbe?
 
         /// Advances ``world`` by one tick off the main actor, and reads
         /// what traffic control shows of it there too (decision 64's later
@@ -1448,6 +1469,9 @@ public final class GameSession {
                         // Decision 328: some 100 ms on a big world, kept
                         // off the main actor.
                         step.nightSkip = tick.nightSkip?.firstMove(after: step.world)
+                        // Decision 330: some 40 ms on the Yilan Line, once
+                        // a game hour.
+                        step.advice = tick.advice?.advice(of: step.world)
                         return step
                     }
                 }
@@ -1463,7 +1487,8 @@ public final class GameSession {
             world: world, revision: worldRevision, listening: playSound != nil, train: selectedTrainID, language: language,
             previousTraffic: trafficMemo?.reading,
             // ``nightSkip`` runs ahead only with no skip under way.
-            nightSkip: nightSkipRun == nil && !isPausedForBuilding ? NightSkipProbe(memo: nightSkipMemo, revision: commandRevision) : nil
+            nightSkip: nightSkipRun == nil && !isPausedForBuilding ? NightSkipProbe(memo: nightSkipMemo, revision: commandRevision) : nil,
+            advice: AdviceProbe(hour: newsWatch.hour, leader: lineLossLeaderMemo.kept(atRevision: commandRevision))
         )
     }
 
@@ -1544,6 +1569,11 @@ public final class GameSession {
                     // Nor may a stop while the tick was worked out.
                     guard !Task.isCancelled else { return }
                     self.finish(tick, with: outcome)
+                    // Decision 330: the world the tick replaced is let go
+                    // here, timed for the map's frame readout.
+                    let releasing = ContinuousClock.now
+                    _ = consume tick
+                    FrameCostMeter.shared.record(.release, since: releasing)
                     if case .failure = outcome { break }
                 }
                 // Decision 195: how fast the game really ran.
