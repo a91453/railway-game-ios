@@ -90,6 +90,9 @@ public struct Map3DTrainSet: Sendable {
             // Decision 331, later: a two-car commuter as the green
             // two-car EMU, its two cab units as they are.
             greenCommuter("greenCommuter"),
+            // Decision 331, fourth: a three-car commuter as the three-car
+            // urban EMU, its three units as they are.
+            threeCarUrban("threeCarUrban"),
         ]
     }()
 
@@ -122,10 +125,12 @@ public struct Map3DTrainSet: Sendable {
     /// performance runs as the diesel express's (the same curves, so a
     /// train's key is always the express's), and one or two cars are a
     /// DR1000 railcar, more a DR3100 set; decision 331, later: a two-car
-    /// commuter EMU of no type is the green two-car EMU.
+    /// commuter EMU of no type is the green two-car EMU, a three-car one
+    /// the three-car urban EMU.
     static func set(forKey key: String, count: Int) -> Map3DTrainSet? {
         if key == "dieselExpress", count <= 2 { return byKey["dieselRailcar"] }
         if key == "", count == 2 { return byKey["greenCommuter"] }
+        if key == "", count == 3 { return byKey["threeCarUrban"] }
         return named(key)
     }
 
@@ -231,6 +236,23 @@ public struct Map3DTrainSet: Sendable {
             }
             let leading = unit(.leading, lamps: 9.69, colour: Map3DTrainStyle.headlamp)
             return Cars(head: leading, middle: leading, tail: unit(.trailing, lamps: -9.69, colour: Map3DPalette.lantern), single: nil)
+        }
+    }
+
+    /// Decision 331, fourth: #988's three units, the leading one's cab at
+    /// its front, the trailing one's at its back and the middle one with
+    /// none, their lamps lit over the cabs' white lamp blocks.
+    static func threeCarUrban(_ key: String) -> Map3DTrainSet {
+        Map3DTrainSet(key: key) {
+            func unit(_ unit: Map3DThreeCarUrban.Unit, lamps x: Float?, colour: UInt32) -> Map3DModelPack.Model {
+                var builder = StationKitBuilder()
+                builder.add(Map3DThreeCarUrban.model(unit), at: .zero)
+                if let x { builder.cabLamps(atX: x, colour: colour, height: 1.28, across: 1.02, width: 0.07, tall: 0.40) }
+                return .flat(named: key, from: builder.mesh)
+            }
+            return Cars(head: unit(.leading, lamps: 7.515, colour: Map3DTrainStyle.headlamp),
+                        middle: unit(.middle, lamps: nil, colour: 0),
+                        tail: unit(.trailing, lamps: -7.515, colour: Map3DPalette.lantern), single: nil)
         }
     }
 
