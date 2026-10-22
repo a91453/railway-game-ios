@@ -13659,6 +13659,41 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 4. 路線名與站名的英文。
 5. R3 轉乘照真實班次的時段。
 
+**後來**（2026-10-22，NEXT_PRIORITIES §22.2 第 9 名，來源 JAPAN_RAIL_DATA 研究 4.C；遊戲規劃 session_014rYHMtmqA5bEMkBBuKu6PV 派工，session_01T8UdZRFmxs93DFtUKX5V73 做；決策號、存檔版本、golden、replay 不動，GameCore 不動）：真實列車在站與站之間**加速出站、減速進站**，不再等速滑過去。上面規則 2 的「加減速不移植」取消。
+1. **曲線**（`RealRunProfile`）：照參考網站的 `buildProfile`，在時刻表給的運轉時間裡解出加速、等速、（高鐵）惰行、減速四段，再用 `profTimeToProg` 算出這一秒走到哪。停站、發車、到站的位置和以前完全一樣，只改兩站之間怎麼走。
+2. **每種車的性能**（`RealTrainPerformance`，加速、減速 km/h/s，最高 km/h）：
+   - 捷運與輕軌：網站給所有捷運、輕軌的 `TRTC_BOARD_PERF`，3.6／4.3／80。
+   - 高鐵：`PERF_HSR`，1.4／1.5／300，惰行 0.45 km/h/s、速度掉到 45% 開始煞車；時間太緊時依序試網站的備用值（減速 2.7，再加速 2.0）。
+   - 台鐵的班距列車：遊戲自己選網站 `PERF_BY_TYPE` 的「區間車」，2.5／3.0／120。網站沒有班距列車；決策 304 的 55 km/h 本來就照區間車定。
+3. **網站解不出時**（時間太短、加速不夠，或平均速度超過最高速）：用 Mini Tokyo 3D 的 `trainRepeat`（nagix/mini-tokyo-3d `220adf8`，MIT，Copyright (c) 2019-2026 Akihiko Kusanagi，程式註解保留）：短到到不了最高速，或照這個加速度在時間內跑不完的，一半時間加速、一半減速，加速度解成剛好；其他的加減速相同、用剛好的速度等速。網站解不出時是等速；換成這個，車不會在站前猛然停住。
+4. 只改 `RealTrainMotion.swift`：`RealTrainRun` 多一個 `performance`（`nil`＝照舊等速），`init?(stops:performance:)` 的新參數有預設值；`place(at:ringKm:)`、`places(of:...)`、`trains(at:...)` 的簽名不變（已告訴做決策 339 的 session）。
+
+**對照表**（參考 → 遊戲）：
+
+| 參考 | 遊戲 | 單位 |
+| --- | --- | --- |
+| `main-reference.js` `buildProfile`（4853 行） | `RealRunProfile.site(km:seconds:acceleration:braking:topSpeed:coast:)` | 公里、秒、km/h、km/h/s，進去換成公尺與 m/s |
+| `profTimeToProg`（4998 行，非 `obs` 那一支） | `RealRunProfile.progress(after:)` | 秒 → 0 到 1 |
+| `freqTrainPosRaw`、`metroProfileFor`（4535、4566 行） | `RealTrainRun.place(at:ringKm:)` | 秒；距離是兩站 `d` 的差（環狀線取短的那一邊） |
+| `TRTC_BOARD_PERF`（22160 行）、`PERF_HSR`（4617 行）、`PERF_BY_TYPE['區間車']`（4670 行） | `RealTrainPerformance.metro`、`.highSpeed`、`.local` | km/h/s、km/h |
+| 第 5127–5129 行的備用順序（`bAlt`，再 `aAlt`＋`bAlt`） | `RealRunProfile.make(km:seconds:performance:)` | |
+| Mini Tokyo 3D `src/map.js` `trainRepeat`（1489–1609 行） | `RealRunProfile.fallback(km:seconds:acceleration:topSpeed:)` | 公里與毫秒 → 公尺與秒 |
+
+參考沒用到的：`buildObsProfile`（照台鐵逐班時刻表的實測點，我們沒有打包）、`runSpeedZones`（分區限速）、`trtcHeadwayPosition` 的即時資料修正。
+
+**量**（`REAL_TRAINS_REPORT=1`，Linux debug 建置，200 幀平均）：每幀（整張地圖）臺北 0.58→0.64 ms、0.52→0.63 ms；板橋 0.49→0.69 ms、0.47→0.65 ms（高鐵的惰行要二分搜尋）；高雄 0.21→0.21 ms；臺中 0.08→0.09 ms。列車數不變。
+
+**五方**：
+- 玩家：進站慢下來、出站慢慢加速，看起來是真的車，不是滑過去的點。
+- 鐵道迷：速度形狀照同一個網站、同一份資料的性能值；高鐵有惰行。台鐵班距列車的性能是遊戲選的（寫明）。
+- 開發：一個 GamePresentation 的檔案、純計算，Linux 測試；函式簽名不變，3D 那條線照用。
+- 美術：同一個膠囊，只是動得不一樣。
+- 音樂：無。
+
+**沒選的**：只用 Mini Tokyo 3D（它的 80 km/h、3 km/h/s 一套給所有車，高鐵會太慢起步；參考庫的作者自己的數字優先）；用平滑的 ease-in-out 曲線（沒有物理意義，到站前的速度不對）；把曲線先算好存在每個區間（台北的時刻表有上萬個區間，每幀只算畫面上的車比較省記憶體）。
+
+**驗證**：Linux（`swift test --filter RealTrainMotionTests`）VERIFIED：網站曲線手算的值（10 km、600 秒的捷運解出 17.115 m/s，第一秒 0.5 m，到站前一秒差 0.6 m）、一路不倒退也不跳、高鐵惰行與兩層備用、Mini Tokyo 3D 的兩種退路、各系統的性能、環狀線。實機上看起來的樣子 UNVERIFIED，待 TestFlight。
+
 ### 305. 夜裡沒有車時的「快轉到早上」：跑到第一列車動起來前，照常逐 tick；設定可以自動，預設關
 
 2026-10-21。競品研究 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.15（第 79–81 張；NEXT_PRIORITIES §19 第 3）。作者 2026-10-14、10-15 起的預設「session 五方決定」，遊戲規劃 session_01WW7o3decEv5LY59nYVqnDN 派工。號碼依 #231：main 最大 303，304 由 R2 保留，取 305。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。

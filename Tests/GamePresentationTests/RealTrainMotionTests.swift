@@ -75,8 +75,126 @@ final class RealTrainMotionTests: XCTestCase {
         ])
         let trip = RealTimetableTrip(calls: [.init(stationIndex: 0, second: 100), .init(stationIndex: 1, second: 700)])
         let run = try XCTUnwrap(RealTrainRun(trip: trip, line: plain, stationKm: [0, 10]))
-        XCTAssertEqual(try XCTUnwrap(run.place(at: 400)).km, 5, accuracy: 1e-9)
+        // Halfway in time, a little short of halfway: a metro speeds up
+        // more gently than it brakes (the site's 3.6 and 4.3 km/h a second).
+        XCTAssertEqual(try XCTUnwrap(run.place(at: 400)).km, 4.988_08, accuracy: 1e-5)
         XCTAssertNil(RealTrainRun(trip: trip, line: plain, stationKm: [0]), "a station the line does not have")
+    }
+
+    /// The site's `buildProfile` worked by hand: 10 km in 600 s at a
+    /// metro's 1 m/s² up and 1.194 m/s² down solves to 17.115 m/s.
+    func testATrainSpeedsUpOutOfAStationAndBrakesIntoTheNext() throws {
+        let run = try XCTUnwrap(RealTrainRun(stops: [
+            .init(km: 0, arrival: 0, departure: 100), .init(km: 10, arrival: 700, departure: 730),
+        ], performance: .metro))
+        let profile = try XCTUnwrap(RealRunProfile.site(km: 10, seconds: 600, acceleration: 3.6, braking: 4.3, topSpeed: 80, coast: nil))
+        let a = 1.0, b = 4.3 / 3.6, d = 1 / (2 * a) + 1 / (2 * b)
+        let cruise = (600 - (600 * 600 - 4 * d * 10_000).squareRoot()) / (2 * d)
+        XCTAssertEqual(profile.cruise, cruise, accuracy: 1e-9)
+        XCTAssertEqual(profile.cruise * 3.6, 61.6, accuracy: 0.05)
+        XCTAssertEqual(profile.accelerating, cruise / a, accuracy: 1e-9)
+        XCTAssertEqual(profile.accelerating + profile.running + cruise / b, 600, accuracy: 1e-9)
+
+        // Standing, then off at 0.5 m in its first second, not 16.7 m.
+        XCTAssertEqual(try XCTUnwrap(run.place(at: 100)).km, 0)
+        XCTAssertEqual(try XCTUnwrap(run.place(at: 101)).km * 1_000, 0.5, accuracy: 1e-9)
+        // Braking into the next: 0.6 m short a second before it stops.
+        XCTAssertEqual((10 - (try XCTUnwrap(run.place(at: 699)).km)) * 1_000, b / 2, accuracy: 1e-6)
+        XCTAssertEqual(try XCTUnwrap(run.place(at: 700)).km, 10)
+        XCTAssertEqual(try XCTUnwrap(run.place(at: 730)).km, 10)
+
+        // Never backwards, never past the speed it solved for, and no jump
+        // anywhere (each second's way within the speed it can reach).
+        var last = 0.0, fastest = 0.0
+        for tenth in 1_000...7_000 {
+            let km = try XCTUnwrap(run.place(at: Double(tenth) / 10)).km
+            XCTAssertGreaterThanOrEqual(km, last)
+            fastest = max(fastest, (km - last) * 1_000 * 10)
+            last = km
+        }
+        XCTAssertEqual(fastest, cruise, accuracy: 0.01)
+
+        // Without a performance, one speed as before.
+        let plain = try XCTUnwrap(RealTrainRun(stops: run.stops))
+        XCTAssertEqual(try XCTUnwrap(plain.place(at: 101)).km * 1_000, 10_000.0 / 600, accuracy: 1e-9)
+    }
+
+    func testTheHighSpeedRailCoastsBeforeItBrakes() throws {
+        // About 板橋 to 桃園: 30 km in 12 minutes.
+        let profile = try XCTUnwrap(RealRunProfile.make(km: 30, seconds: 720, performance: .highSpeed))
+        XCTAssertEqual(profile.acceleration, 1.4 / 3.6, accuracy: 1e-12, "the usual, not the spare")
+        XCTAssertEqual(profile.coasting, 0.45 / 3.6, accuracy: 1e-12)
+        XCTAssertGreaterThan(profile.coastSeconds, 0)
+        XCTAssertEqual(profile.brakeFrom / profile.cruise, 0.45, accuracy: 1e-12, "brakes from 45% of its speed")
+        XCTAssertLessThanOrEqual(profile.cruise * 3.6, 300)
+        XCTAssertEqual(profile.progress(after: 720), 1)
+        XCTAssertEqual(profile.progress(after: 719.999), 1, accuracy: 1e-6)
+
+        // Too short a time for 1.4 and 1.5: the site's spare 2.0 and 2.7.
+        // First the spare braking alone, then both.
+        XCTAssertNil(RealRunProfile.site(km: 6, seconds: 230, acceleration: 1.4, braking: 1.5, topSpeed: 300, coast: (0.45, 0.45)))
+        let hurried = try XCTUnwrap(RealRunProfile.make(km: 6, seconds: 230, performance: .highSpeed))
+        XCTAssertEqual(hurried.acceleration * 3.6, 1.4, accuracy: 1e-12)
+        XCTAssertEqual(hurried.braking * 3.6, 2.7, accuracy: 1e-12)
+        let rushed = try XCTUnwrap(RealRunProfile.make(km: 6, seconds: 210, performance: .highSpeed))
+        XCTAssertEqual(rushed.acceleration * 3.6, 2.0, accuracy: 1e-12)
+        XCTAssertEqual(rushed.braking * 3.6, 2.7, accuracy: 1e-12)
+    }
+
+    /// Mini Tokyo 3D's `trainRepeat` where the site's curve has no answer.
+    func testWhereTheSitesCurveHasNoAnswerMiniTokyo3DsDoes() throws {
+        // 5 km in 200 s needs 90 km/h on average, past a metro's 80: speed
+        // up and brake alike at 1 m/s², running at 100 − √5,000 m/s.
+        XCTAssertNil(RealRunProfile.site(km: 5, seconds: 200, acceleration: 3.6, braking: 4.3, topSpeed: 80, coast: nil))
+        let fast = try XCTUnwrap(RealRunProfile.make(km: 5, seconds: 200, performance: .metro))
+        XCTAssertEqual(fast.cruise, 100 - 5_000.0.squareRoot(), accuracy: 1e-9)
+        XCTAssertEqual(fast.acceleration, 1, accuracy: 1e-12)
+        XCTAssertEqual(fast.braking, 1, accuracy: 1e-12)
+        XCTAssertEqual(fast.progress(after: 100), 0.5, accuracy: 1e-12)
+        XCTAssertEqual(fast.progress(after: 200), 1)
+
+        // 10 km in 120 s cannot be done at 1 m/s² at all: half the time
+        // speeding up, half braking, at 2 × 10,000 / 120 m/s at the top.
+        let impossible = try XCTUnwrap(RealRunProfile.make(km: 10, seconds: 120, performance: .metro))
+        XCTAssertEqual(impossible.cruise, 2 * 10_000.0 / 120, accuracy: 1e-9)
+        XCTAssertEqual(impossible.running, 0, accuracy: 1e-9)
+        XCTAssertEqual(impossible.progress(after: 60), 0.5, accuracy: 1e-12)
+
+        // 150 m in 40 s, too short to reach 80 km/h: the same, gently.
+        let short = try XCTUnwrap(RealRunProfile.fallback(km: 0.15, seconds: 40, acceleration: 3.6, topSpeed: 80))
+        XCTAssertEqual(short.acceleration, 4 * 150 / (40.0 * 40), accuracy: 1e-12)
+        XCTAssertEqual(short.accelerating, 20, accuracy: 1e-9)
+
+        XCTAssertNil(RealRunProfile.make(km: 0, seconds: 60, performance: .metro))
+        XCTAssertNil(RealRunProfile.make(km: 1, seconds: 0, performance: .metro))
+    }
+
+    func testEachSystemsTrainsRunAsTheSiteSays() throws {
+        XCTAssertEqual(RealTrainPerformance.of(system: "thsr"), .highSpeed)
+        XCTAssertEqual(RealTrainPerformance.of(system: "tra"), .local)
+        for system in ["trtc", "tymc", "ntdlrt", "ntalrt", "sanying", "krtc", "tmrt"] {
+            XCTAssertEqual(RealTrainPerformance.of(system: system), .metro, system)
+        }
+        XCTAssertNotEqual(RealTrainPerformance.metro, .local)
+
+        // A metro's timetable and its headways both run as a metro.
+        let (_, line) = try onlyLine(testOperations())
+        guard case .sets(_, let sets) = line.schedule else { return XCTFail("\(line.schedule)") }
+        XCTAssertEqual(sets.values.flatMap(\.runs).map(\.performance), Array(repeating: .metro, count: sets.values.map(\.runs.count).reduce(0, +)))
+        let (_, headway) = try onlyLine(testOperations(headwayOnly: true))
+        guard case .headway(let round, _) = headway.schedule else { return XCTFail("\(headway.schedule)") }
+        XCTAssertEqual(round.performance, .metro)
+
+        // The bundled High Speed Rail and Taiwan Railway.
+        let operations = try XCTUnwrap(try BundledRealData.railways().operations)
+        let traffic = RealTrainTraffic(operations: operations) { _ in true }
+        let hsr = try XCTUnwrap(traffic.lines.first { $0.system == "thsr" })
+        guard case .daily(let runs) = hsr.schedule else { return XCTFail("\(hsr.schedule)") }
+        XCTAssertFalse(runs.runs.isEmpty)
+        XCTAssertTrue(runs.runs.allSatisfy { $0.performance == .highSpeed })
+        let tra = try XCTUnwrap(traffic.lines.first { $0.system == "tra" })
+        guard case .headway(let local, _) = tra.schedule else { return XCTFail("\(tra.schedule)") }
+        XCTAssertEqual(local.performance, .local)
     }
 
     func testARingTakesTheShorterWayRound() throws {
@@ -88,6 +206,12 @@ final class RealTrainMotionTests: XCTestCase {
         XCTAssertEqual(try XCTUnwrap(run.place(at: 75, ringKm: 10)).km, 0.5, accuracy: 1e-9)
         // Not a ring: straight back along the line.
         XCTAssertEqual(try XCTUnwrap(run.place(at: 50)).km, 5, accuracy: 1e-9)
+
+        // Speeding up and braking over the 2 km the shorter way round.
+        let metro = try XCTUnwrap(RealTrainRun(stops: run.stops, performance: .metro))
+        let profile = try XCTUnwrap(RealRunProfile.make(km: 2, seconds: 100, performance: .metro))
+        XCTAssertEqual(try XCTUnwrap(metro.place(at: 25, ringKm: 10)).km, 9 + 2 * profile.progress(after: 25), accuracy: 1e-9)
+        XCTAssertEqual(try XCTUnwrap(metro.place(at: 75, ringKm: 10)).km, 2 * profile.progress(after: 75) - 1, accuracy: 1e-9)
     }
 
     func testTheDaysSetFollowsTheWeekdayAndHolidays() throws {
