@@ -13,7 +13,7 @@ public enum Map3DFiveSectionLRT {
             switch self { case .leading: 12.5; case .suspendedFront: 5.75; case .middle: 0; case .suspendedRear: -5.75; case .trailing: -12.5 }
         }
     }
-    public static let coral = Map3DPalette.shopAwnings[1]
+    public static let coral = Map3DPalette.shopAwnings[0] // Legacy symbol, now muted game teal; geometry unchanged.
     public static let cream = Map3DPalette.shopAwnings[3]
     public static let glass = Map3DColor.shaded(Map3DPalette.glazing,0.62)
     public static func model(_ unit: Unit) -> Map3DModelPack.Model {
@@ -135,7 +135,8 @@ extension StationKitBuilder {
             let root=ring(cab*(half-1.3)),tip=ring(cab*half)
             for pair in [(1,2),(5,6)] {
                 let a=root[pair.0],b=root[pair.1],c=tip[pair.1],d=tip[pair.0]
-                for triangle in [[a,b,c],[a,c,d]] {
+                let triangles=cab>0 ? [[a,b,c],[a,c,d]] : [[d,c,b],[d,b,a]]
+                for triangle in triangles {
                     let mid=triangle.reduce(Map3DPoint.zero) { $0+$1*(1/3) }
                     var n=(triangle[1]-triangle[0]).cross(triangle[2]-triangle[0]).normalized!
                     if n.dot(mid-centre)<0 { n=n * -1 }

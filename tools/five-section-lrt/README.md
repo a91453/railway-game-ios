@@ -1,5 +1,7 @@
 # 五節鉸接低地板輕軌
 
+> 最新五節綠松／七節霧藍請用 [lrt-pair 重建工具](../lrt-pair/README.md)。原型別 `coral` 是歷史名稱，目前實際取綠松色票；另修正反向端窗片的切面貼合。以下為前批工具格式紀錄，不是紅色仍在使用。
+
 唯一原生配方：`Sources/GamePresentation/Map3DFiveSectionLRT.swift`。五個獨立單元與完整靜態編組註冊在 `Map3DModelPack.standard`，不綁營運車種，不增加動畫、物理或存檔格式。既有三節電車、雙節通勤車及其遊戲整合不改。
 
 ## 展示尺度與組裝

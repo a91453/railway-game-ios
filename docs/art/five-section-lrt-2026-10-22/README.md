@@ -1,8 +1,10 @@
 # 五節鉸接低地板輕軌：新參考原生素材
 
+> **本頁以下為前批歷史紀錄。作者已要求五節取消紅色，並新增七節。最新五節綠松／七節霧藍、窗面修正及完整素材請用 [本輪入口](../lrt-pair-2026-10-22/README.md)，兩庫仍為 draft #992／#40。
+
 本批為作者五張新附圖的五節低地板輕軌，使用遊戲珊瑚橘、暖白細邊、灰藍窗與霧面頂點色。不是既有電車換車頭／換色。五個可組合單元和完整靜態編組已加入原生素材庫，**尚未綁營運車種，因此合併不會自動替換路網列車**。不更動既有車、GameCore、存檔、golden／replay、玩法或動畫。
 
-![最終實際原生模型總覽](overview.png)
+![最終實際原生模型總覽](../lrt-pair-2026-10-22/overview.png)
 
 - 工作 issue：[#991](https://github.com/a91453/railway-game-ios/issues/991)。公開 [draft PR #992](https://github.com/a91453/railway-game-ios/pull/992)，私有 draft PR 在 issue 記錄互鏈；兩庫 base 均為 main，沒有依賴未合併 #988。
 - [重建、軸向、尺寸與各節組裝](../../../tools/five-section-lrt/README.md)；[交接 §7.3](../../HANDOFF.md#73-3d-的後續)。
