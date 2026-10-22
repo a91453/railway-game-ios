@@ -131,6 +131,13 @@ struct Map3DPreviewScreen: View {
                         }
                     }
                     Spacer()
+                    // The 3D map covers the status pill: the same pause
+                    // and speeds, so a train followed here does not stand
+                    // still in a paused game (the owner, 2026-10-22).
+                    SpeedControl(session: session, tutorialTarget: nil)
+                        .padding(4)
+                        .background(.regularMaterial, in: Capsule())
+                        .accessibilityIdentifier("map3D.speed")
                     if let stats {
                         Button {
                             showsDetails.toggle()

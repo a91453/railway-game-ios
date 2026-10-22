@@ -1390,6 +1390,34 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(map.appears(within: 10))
     }
 
+    /// The owner, 2026-10-22: the 3D map covers the status pill, so a game
+    /// paused before it opened stood still there. It has the same pause
+    /// and speeds.
+    func testAGamePausedBeforeTheThreeDMapResumesThere() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-demo-layout", "-ui-testing-paused", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 30), "The demo map opens")
+
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 20), "The 3D map opens")
+
+        let speed = app.descendants(matching: .any)["map3D.speed"].firstMatch
+        XCTAssertTrue(speed.appears(within: 10), "The 3D map has the pause and speeds")
+        let resume = speed.buttons["Resume"]
+        XCTAssertTrue(resume.appears(within: 5), "Paused as the 2D map left it")
+        XCTAssertTrue(resume.becomesHittable(within: 10), "The play button is covered: \(resume.frame)")
+        resume.tap()
+        XCTAssertTrue(speed.buttons["Pause"].appears(within: 5), "The game runs again")
+        XCTAssertTrue(speed.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Speed'")).firstMatch.exists, "The speeds' menu")
+    }
+
     /// Decision 269, later fix (71.1, the owner: "3D 一放大就跳回 2D"): a
     /// 3D map the button opened stays 3D as it is pinched closer; only one
     /// a pinch handed over goes back to the 2D map, and only pinched out.
