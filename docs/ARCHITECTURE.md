@@ -13760,6 +13760,9 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 舊規則（只在號誌關時追回）下兩者相同，測試失敗。
 - 閉塞開時整批推進 10 分鐘與逐分推進相同。
 
+**後來**（2026-10-22，審查延後項目，session_01QiPq4nZdq5bVS9MZ4rkr4L，`docs/archive/PR873_910_REVIEW_HANDOFF.md` A6）：規則 2 的「不超過彎道限速」在真實時刻表的列車上沒有做到。`run(of:length:scheduled:)` 對有班次的路線，`scheduled` 在限速下跑不完時就把限速整個丟掉；這原本是給真實時刻表本身用的（真實路線的彎比畫的緩），但晚點的車拿到的 `scheduled` 是「到表定到站還剩幾秒」，所以晚了就用超過限速的速度追。現在 `run` 多一個 `timetabled`（這一段在時刻表上的時間，預設等於 `scheduled`）：只有 `timetabled` 本身在限速下跑不完才丟限速；出發（`leaving`）與改走別條路（`rerouted`）傳列車時刻表上這一段的時間，`resumeRun` 只剩一部分長度，照舊。準點的車兩者相同，所以行為不變。回歸測試 `CurveSpeedRunTests.testALateRealRunMakesUpTimeUnderTheLimits`（中途 M 站晚開，M–B 經過彎道；舊程式上紅：限速 0 個、126 秒）。golden、replay、存檔都不動（`GoldenScenarioTests`、`ReplayFixtureTests`、`SavedGameTests` 與高鐵、台鐵示範的 campaign 照舊通過）。
+- **沒修到的一種**：班次**晚派車**時，`RunTrip.timetable` 本來就把列車自己時刻表的第一段縮短（第一站的出發改成派車＋最短停站，下一站的到站不變），列車又沒有保存班次原本的時刻，所以第一段仍然分不出「時刻表本身跑不完」與「晚點」，可能照舊丟限速。要修得讓列車記住這一段在班次上的時間（存檔格式要改），交給下一個改決策 306 或 133 的 session（`docs/HANDOFF.md` §7.1 有一行指過來）。
+
 ### 307. 實景地圖的載入畫面：公司名、最近的地名、自己的路線色與跑來跑去的列車
 
 2026-10-21。競品研究 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.8（NEXT_PRIORITIES §19 第 6）。作者 2026-10-14、10-15 起的預設「session 五方決定」，遊戲規劃 session_01WW7o3decEv5LY59nYVqnDN 派工。號碼依 #231：main 最大 305，這次的登記保留 307。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
@@ -13853,6 +13856,8 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 4. 單線開行車控制時兩端對開的量測（需要待避線的世界）。
 
 **後來**（2026-10-21，PR #873–#910 審查 A 組，session_01SvQ285hMiSeRsER1EXzfT9，`docs/archive/PR873_910_REVIEW_HANDOFF.md` A1）：路線改成環線時，`setLineRing` 沒有把發車方式改回平均錯開。存檔要求環線只能平均錯開，所以「第二列晚 N 分」或「兩端對開」的路線改成環線後，存檔讀不回。現在改成環線時，發車方式回到平均錯開，`endLastDispatch`、`opensPair` 一起清掉。環線本來就照平均錯開派車（`dispatchPattern(of:_:planned:)` 只看路線自己的服務、不看方向），所以環線的行車不變，只是存檔讀得回；之後再改回一般路線，發車方式是平均錯開，要另外再選。回歸測試 `DispatchPatternTests.testALineMadeARingSpacesItsTrainsEvenly`。存檔版本、golden、replay 不動。
+
+**後來**（2026-10-22，審查延後項目，session_01QiPq4nZdq5bVS9MZ4rkr4L，`docs/archive/PR873_910_REVIEW_HANDOFF.md` A8）：`setLineRuns` 給路線班次時，發車方式也回到平均錯開，`endLastDispatch`、`opensPair` 一起清掉，和改成環線（A1）一樣；清掉班次（`[]`）時不動，所以舊的發車方式不會再回來。有班次的路線照班次的時刻派車，本來就不看發車方式，所以行車不變。舊存檔裡「有班次、又不是平均錯開」的路線（先選了發車方式、再給班次），**讀檔時正規化**成平均錯開，不擋：擋下來就是玩家的存檔讀不回（A1 那類 P1）；而那個發車方式在有班次時從來沒有派過車，丟掉它不改變任何東西。存檔格式沒有變，所以存檔版本不動、不加 fixture。回歸測試 `DispatchPatternTests.testALineGivenRunsSpacesItsTrainsEvenly`、`testASavedLineWithRunsAndAnotherPatternLoadsEven`（舊程式上都紅）。golden、replay 不動。
 
 ### 310. 地圖提示整理：不蓋「空位多」、列車的章改「滿載」、快速圖層的「車資與章」開關
 
@@ -15300,3 +15305,4 @@ Linux（release，`-enable-testing`）上，改之前量到的（毫秒）：
 2. 新台幣那輪拿掉 NT$10＝$1。
 3. 實景新遊戲裡玩家自己蓋的高鐵站若就在真實高鐵站旁，可以照同一張表收；要先決定「旁邊」多近（決策 298 的 450 m），這次沒做。
 
+**後來**（2026-10-22，審查延後項目，session_01QiPq4nZdq5bVS9MZ4rkr4L，`docs/archive/PR911_944_REVIEW_HANDOFF.md` B3）：`GameWorld` 的驗證（`invariantViolation`）也檢查票價表：每一組的站 ID 都在 1 到 `nextStationID` 之前。`setHighSpeedFares` 本來就只收存在的車站，所以只有被改過的存檔會被擋；車站 ID 只增不回收，沒擋的話，之後新建的車站會繼承那組票價。拆掉的車站留在表裡的那一組照舊讀得回（它的 ID 小於 `nextStationID`）。存檔版本、golden、replay 不動。回歸在 `HighSpeedTests.testVersionSixtyNineKeepsTheFareTable` 的拒絕清單（舊程式上紅）。

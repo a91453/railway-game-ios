@@ -193,10 +193,11 @@ public struct Map3DScene: Sendable {
     /// and `heights`' ground where the world has not read its own.
     /// Decision 314: `lineBands` beside the track. Decision 326: an
     /// overhead line over the track, but along `railways`' lines run
-    /// without one.
+    /// without one. Decision 331: on a real-world map, `temples` where
+    /// they stand.
     public init(world: GameWorld, snapshot: RailwaySnapshot? = nil, skyline: CitySkyline? = nil, focus: (x: Double, y: Double)? = nil,
                 baseMap: BaseMapTiles? = nil, cityTiles: [CityTileArea] = [], heights: HeightGrid? = nil, lineBands: Map3DLineBands? = nil,
-                railways: RealRailways? = nil) {
+                railways: RealRailways? = nil, temples: RealTemples? = nil) {
         (region, originX, originY) = Self.frame(world: world, focus: focus)
 
         var builder = Builder(originX: originX, originY: originY, region: region, world: world, heights: heights)
@@ -238,7 +239,12 @@ public struct Map3DScene: Sendable {
         // stand.
         let frame = real == nil ? nil : RealWorldFrame(world: world)
         builder.target = .near
-        let standing = frame.map { builder.addRealBuildings(cityTiles, frame: $0, clearOf: stations) } ?? []
+        var standing = frame.map { builder.addRealBuildings(cityTiles, frame: $0, clearOf: stations) } ?? []
+        // Decision 331: the real temples, on no station or real building.
+        if let temples, let frame = RealWorldFrame(world: world) {
+            standing.formUnion(builder.addTemples(temples, frame: frame, clearOf: stations.union(standing)))
+            builder.target = .near
+        }
         builder.addCity(city, clearOf: stations, takenBy: taken.union(standing))
         builder.target = .far
         if let frame { builder.addRealBuildings(cityTiles, frame: frame, clearOf: stations) }
