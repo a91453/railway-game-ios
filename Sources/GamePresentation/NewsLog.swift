@@ -252,6 +252,8 @@ extension StationMasterAdvice {
         case .touristsComing(let kind, _, _): (.holiday, "tourists:\(kind.rawValue)", nil)
         // Decision 183: the city's offers, once a month.
         case .newCityRequests(let month, _, _, _): (.goal, "requests:\(month)", nil)
+        // Decision 332: said once.
+        case .modeShift(let station): (.advice, "modeShift", .station(station.rawValue))
         }
     }
 }

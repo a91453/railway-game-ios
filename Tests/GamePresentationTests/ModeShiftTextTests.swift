@@ -95,4 +95,30 @@ final class ModeShiftTextTests: XCTestCase {
                        "About 4,000 a day on this line ride or drive instead; most from A to B")
         XCTAssertEqual(onLine.lineText(in: world, language: .traditionalChinese), "這條線每天約 4,000 人改騎車；最多的是A到B")
     }
+
+    func testTheStationMasterSaysItOnceWhenATenthSwitch() throws {
+        var world = try corridor()
+        XCTAssertNil(world.modeShiftHint(), "nobody switches without the rule")
+        XCTAssertFalse(ModeShiftHint.looks(in: world, seen: false, tutorialRuns: false))
+        try world.setModeShift(.simple)
+        XCTAssertTrue(ModeShiftHint.looks(in: world, seen: false, tutorialRuns: false))
+        XCTAssertFalse(ModeShiftHint.looks(in: world, seen: true, tutorialRuns: false), "once")
+        XCTAssertFalse(ModeShiftHint.looks(in: world, seen: false, tutorialRuns: true))
+
+        // 4,000 of 30,000 trips switch (13%), 2,000 of them from B.
+        let switched = [a, b, near].map { id in world.modeShiftLosses(from: id).reduce(0) { $0 + $1.switched } }
+        let riding = [a, b, near].map { id in world.dailyDemands(from: id).values.reduce(0, +) }
+        XCTAssertEqual(switched, [1_000, 2_000, 1_000])
+        XCTAssertEqual(riding.reduce(0, +), 26_000)
+        let hint = try XCTUnwrap(world.modeShiftHint())
+        XCTAssertEqual(hint, .modeShift(station: b))
+        XCTAssertFalse(hint.isWorry)
+        XCTAssertEqual(hint.text(in: .traditionalChinese), "有些客人覺得騎車比較快。加開班次就能把他們拉回來。")
+
+        // After the worries, before the rest.
+        XCTAssertEqual(ModeShiftHint.advice(.createLine, hint: hint), hint)
+        XCTAssertEqual(ModeShiftHint.advice(nil, hint: hint), hint)
+        XCTAssertEqual(ModeShiftHint.advice(.inDebt, hint: hint), .inDebt)
+        XCTAssertEqual(ModeShiftHint.advice(.createLine, hint: nil), .createLine)
+    }
 }

@@ -128,3 +128,47 @@ extension GameWorld {
         return ModeShiftSummary(losses.filter { !$0.isNear || $0.switched + $0.tooExpensive > 0 }, top: top.map { ($0.from, $0.to) })
     }
 }
+
+/// Decision 332: the station master's one-time word the first time more
+/// than a tenth of the trips take a scooter or a car instead. Remembered
+/// on the device, as ``TrackHoldHint`` is, not in the game.
+public enum ModeShiftHint {
+    /// The device's setting that says it has been said (`@AppStorage`).
+    public static let seenKey = "hints.modeShift.seen"
+    /// The share of the trips, in thousandths, that must switch for it.
+    public static let share: Int64 = 100
+
+    /// Whether to work the hint out at all: not said yet, riders can
+    /// switch, and not in the tutorial or a lesson.
+    public static func looks(in world: GameWorld, seen: Bool, tutorialRuns: Bool) -> Bool {
+        !seen && world.modeShift != nil && !tutorialRuns
+    }
+
+    /// What the station master says: the hint after the worries, else
+    /// `advice`.
+    public static func advice(_ advice: StationMasterAdvice?, hint: StationMasterAdvice?) -> StationMasterAdvice? {
+        guard let hint, advice?.isWorry != true else { return advice }
+        return hint
+    }
+}
+
+extension GameWorld {
+    /// Decision 332: ``StationMasterAdvice/modeShift(station:)`` at the
+    /// station most switch from (the lowest ID on a tie) when more than
+    /// ``ModeShiftHint/share`` of all the trips from the stations take a
+    /// scooter or a car instead; `nil` otherwise.
+    public func modeShiftHint() -> StationMasterAdvice? {
+        guard modeShift != nil else { return nil }
+        var switched: Int64 = 0
+        var riding: Int64 = 0
+        var top: (station: StationID, switched: Int64)?
+        for id in stations.map(\.id).sorted() {
+            let lost = modeShiftLosses(from: id).reduce(0) { $0 + $1.switched }
+            switched += lost
+            riding += dailyDemands(from: id).values.reduce(0, +)
+            if lost > (top?.switched ?? 0) { top = (id, lost) }
+        }
+        guard let top, switched * 1_000 > (switched + riding) * ModeShiftHint.share else { return nil }
+        return .modeShift(station: top.station)
+    }
+}

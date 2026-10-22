@@ -92,6 +92,10 @@ public enum StationMasterAdvice: Hashable, Sendable {
     /// them, the best paying `reward`), while the company can take one on;
     /// `target` is where the best paying one is.
     case newCityRequests(month: Int64, count: Int, reward: Money, target: PlanPoint?)
+    /// Decision 332: more than a tenth of the trips take a scooter or a
+    /// car instead, most of them from `station`; said once
+    /// (``ModeShiftHint``).
+    case modeShift(station: StationID)
 
     /// Decision 177: where the nearest town no station serves lies, from the
     /// railway's nearest station (``UnservedCluster``).
@@ -626,6 +630,11 @@ public enum StationMasterAdvice: Hashable, Sendable {
                 "The city has \(count) new request\(count == 1 ? "" : "s") for us, paying up to \(reward.moneyText). See Goals.",
                 "城市提出 \(count) 件新委託，最高補助 \(reward.moneyText)。到「目標」看看吧。"
             )
+        case .modeShift:
+            language.text(
+                "Some riders find a scooter quicker. More trains will win them back.",
+                "有些客人覺得騎車比較快。加開班次就能把他們拉回來。"
+            )
         case .fuelSpell(let percent, let days):
             percent >= 0
                 ? language.text(
@@ -646,7 +655,7 @@ public enum StationMasterAdvice: Hashable, Sendable {
         case .inDebt, .inDebtShortLine, .firstLineLosing, .stationFull, .lineWithoutTrains, .noPlaceToPass, .lineLosing, .stationCrowded, .underserved, .materialsShort, .shortSteamTrains,
              .typhoonComing, .sightUnreachable: true
         case .buildTrack, .buildStation, .buildSecondStation, .createLine, .townGrew, .holidayComing, .holidayOver, .scenarioWelcome,
-             .goalMet, .scenarioCompleted, .festivalComing, .fuelSpell, .touristsComing, .newCityRequests: false
+             .goalMet, .scenarioCompleted, .festivalComing, .fuelSpell, .touristsComing, .newCityRequests, .modeShift: false
         }
     }
 

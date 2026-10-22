@@ -1274,14 +1274,27 @@ struct LinesPanel: View {
 
     /// Decision 332: how many of the line's riders take a scooter or a car
     /// instead, between which stations most do, and what brings most of
-    /// them back; nothing without riders switching.
+    /// them back; nothing without riders switching. A tap opens the card
+    /// of the station most of them switch from.
     @ViewBuilder
     private func modeShiftSection(_ line: ServiceLine) -> some View {
         if let modeShift, modeShift.key.line == line.id, let summary = modeShift.value {
             Section {
-                ModeShiftRow(summary: summary, text: summary.lineText(in: session.world, language: session.language),
-                             language: session.language)
+                let row = ModeShiftRow(summary: summary, text: summary.lineText(in: session.world, language: session.language),
+                                       language: session.language)
+                if let from = summary.top?.from, let station = session.world.station(id: from) {
+                    Button {
+                        session.selectStation(from)
+                        session.lookAt(station.point)
+                        screen.panel = .station
+                    } label: {
+                        row.foregroundStyle(Theme.textPrimary)
+                    }
+                    .accessibilityHint(Text(verbatim: session.language.text("Shows the station's details.", "顯示車站的詳細資料。")))
                     .accessibilityIdentifier("line.modeShift")
+                } else {
+                    row.accessibilityIdentifier("line.modeShift")
+                }
             }
         }
     }

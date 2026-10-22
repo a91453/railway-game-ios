@@ -55,6 +55,11 @@ struct StationMasterCorner: View {
     /// Decision 224: the company's title it wears, worked out with the
     /// advice (the rank reads the whole network).
     @State private var title: StationMasterTitle?
+    /// Decision 332: the one-time word about riders who take a scooter or
+    /// a car instead, worked out off the main actor once a game day until
+    /// it has been said.
+    @State private var modeShiftHint: StationMasterAdvice?
+    @AppStorage(ModeShiftHint.seenKey) private var modeShiftHintSeen = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Decision 194, later: a losing line's bubble opens the line panel.
     @Environment(GameScreenState.self) private var screen
@@ -75,8 +80,14 @@ struct StationMasterCorner: View {
             }
         }
         .onChange(of: session.stationMasterRefreshKey, initial: true) {
-            advice = StationMasterAdvice(world: session.world, worstLosingLine: { session.worstLosingLine })
+            refreshAdvice()
             title = StationMasterTitle.isShown(in: session.world) ? StationMasterTitle(rank: CompanyRank(world: session.world)) : nil
+        }
+        .onChange(of: modeShiftHint) { refreshAdvice() }
+        .task(id: modeShiftHintDay) { await workOutModeShiftHint(modeShiftHintDay) }
+        // Once said and put away, the hint gives way to the other advice.
+        .onChange(of: isTalking) { _, talking in
+            if !talking, modeShiftHintSeen, modeShiftHint != nil { modeShiftHint = nil }
         }
         .onChange(of: advice, initial: true) { _, advice in
             if advice == nil { isTalking = false }
@@ -211,11 +222,36 @@ struct StationMasterCorner: View {
         switch advice {
         case .stationFull(let station, _), .stationCrowded(let station, _),
              .underserved(let station, _, _), .townGrew(let station, _, _),
-             .materialsShort(let station, _):
+             .materialsShort(let station, _), .modeShift(let station):
             station
         default:
             nil
         }
+    }
+
+    private func refreshAdvice() {
+        let own = StationMasterAdvice(world: session.world, worstLosingLine: { session.worstLosingLine })
+        advice = ModeShiftHint.advice(own, hint: modeShiftHint)
+    }
+
+    /// The game day the hint is worked out for, or `nil` once said, with
+    /// riders who cannot switch, or in the tutorial or a lesson.
+    private var modeShiftHintDay: Int64? {
+        let tutorialRuns = session.tutorial != nil || session.lesson != nil
+        guard ModeShiftHint.looks(in: session.world, seen: modeShiftHintSeen, tutorialRuns: tutorialRuns) else { return nil }
+        return session.world.clock.now.seconds / GameTime.secondsPerDay
+    }
+
+    /// Works out ``modeShiftHint`` off the main actor: it reads every
+    /// station's trips.
+    private func workOutModeShiftHint(_ day: Int64?) async {
+        guard day != nil else { return }
+        let world = session.world
+        let hint = await Task.detached(priority: .utility) {
+            world.modeShiftHint()
+        }.value
+        guard !Task.isCancelled else { return }
+        modeShiftHint = hint
     }
 
     /// Whether the bubble has the width it needs to show.
@@ -225,7 +261,14 @@ struct StationMasterCorner: View {
     /// room for the bubble it is kept, with its dot, until there is.
     private func sayIfNew(_ advice: StationMasterAdvice?) {
         guard let advice, advice != lastSpoken, hasRoom else { return }
-        lastSpoken = advice
+        if case .modeShift = advice {
+            // Decision 332: said once, leaving what was said before it as
+            // said, so that is not said again when the hint goes.
+            guard !modeShiftHintSeen else { return }
+            modeShiftHintSeen = true
+        } else {
+            lastSpoken = advice
+        }
         isTalking = true
         talk &+= 1
     }
