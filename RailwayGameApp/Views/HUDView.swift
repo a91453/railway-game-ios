@@ -42,6 +42,7 @@ struct HUDView: View {
                 time(short: false)
                 speed
                 requestsButton
+                sightsButton
                 newsBell
                 gameMenu
             }
@@ -50,6 +51,7 @@ struct HUDView: View {
                 time(short: true)
                 speed
                 requestsButton
+                sightsButton
                 newsBell
                 gameMenu
             }
@@ -60,6 +62,7 @@ struct HUDView: View {
                 }
                 speed
                 requestsButton
+                sightsButton
                 newsBell
                 gameMenu
             }
@@ -68,6 +71,7 @@ struct HUDView: View {
                     cash
                     speed
                     requestsButton
+                    sightsButton
                     newsBell
                     gameMenu
                 }
@@ -328,6 +332,26 @@ struct HUDView: View {
             .accessibilityLabel(Text(verbatim: session.language.text("City requests", "委託案")))
             .accessibilityValue(Text(verbatim: session.cityRequestsButtonValue))
             .accessibilityIdentifier("hud.requests")
+        }
+    }
+
+    /// The sights (decision 174), one tap from the status bar in a game
+    /// with them (decision 336, later); also under the game menu's More.
+    @ViewBuilder
+    private var sightsButton: some View {
+        if session.showsSightsButton {
+            Button {
+                screen.sightFocus = nil
+                screen.panel = .tourism
+            } label: {
+                Image(systemName: "star.fill")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(Theme.primary)
+                    .frame(width: 34, height: 32)
+            }
+            .buttonStyle(TouchTargetButtonStyle(size: CGSize(width: 34, height: 32)))
+            .accessibilityLabel(Text(verbatim: session.language.text("Sights", "觀光景點")))
+            .accessibilityIdentifier("hud.sights")
         }
     }
 

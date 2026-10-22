@@ -52,6 +52,7 @@ struct EconomyPanel: View {
                 }
                 faresSection
                 dayPassSection
+                fleetSection
                 if today == nil || showsAllReports {
                     trendSection
                     balanceSection
@@ -118,6 +119,23 @@ struct EconomyPanel: View {
             Text(verbatim: today.note(in: language))
         }
         .accessibilityIdentifier("economy.today")
+    }
+
+    /// Decision 336, later: the trains and their sale, from
+    /// the company's money too, not only behind Build → Train.
+    private var fleetSection: some View {
+        Section {
+            Button {
+                screen.panel = .fleet
+            } label: {
+                Label {
+                    Text(verbatim: session.language.text("Fleet Overview…", "車隊總覽…"))
+                } icon: {
+                    Image(systemName: "list.bullet.rectangle.portrait")
+                }
+            }
+            .accessibilityIdentifier("economy.fleet")
+        }
     }
 
     /// Shows or hides the reports under the "Today" card.
