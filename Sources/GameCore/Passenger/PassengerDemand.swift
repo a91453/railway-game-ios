@@ -379,6 +379,27 @@ extension GameWorld {
     /// The origin's daily trips to each station it reaches that has demand,
     /// by ascending station ID, leaving out those with no trips.
     func dailyDemand(from origin: StationID) -> [(destination: StationID, trips: Int64, trip: PassengerTrip)] {
+        dailyDemandDetails(from: origin).compactMap { $0.trips > 0 ? ($0.destination, $0.trips, $0.trip) : nil }
+    }
+
+    /// Each pair from `origin` that ``dailyDemand(from:)`` works out, with
+    /// what decisions 36 and 332 took off it, those with no trips left
+    /// too, by ascending station ID.
+    struct DemandDetail {
+        let destination: StationID
+        /// All the pair's trips, as ``dailyDemand(from:)`` gives them.
+        let trips: Int64
+        let trip: PassengerTrip
+        /// The ordinary trips the fare kept from going (decision 36).
+        let tooExpensive: Int64
+        /// The ordinary trips that took a scooter or a car instead
+        /// (decision 332).
+        let switched: Int64
+        /// The fastest route, in a network game.
+        let route: PassengerRoute?
+    }
+
+    func dailyDemandDetails(from origin: StationID) -> [DemandDetail] {
         // The reference releases passengers only where they may enter
         // (`metroStationAllowsEntryForLine`), for destinations that are not
         // closed (`metroStationAllowsPassengerDestination`).
@@ -391,7 +412,7 @@ extension GameWorld {
               allowsEntry(at: origin) else { return [] }
         var reached: [(destination: StationID, weight: Int64, trip: PassengerTrip)] = []
         let graph = network ? PassengerRouteGraph(world: self) : nil
-        var fastest: [StationID: Int64] = [:]
+        var fastest: [StationID: PassengerRoute] = [:]
         var destinations: [StationID: StationDemand] = [:]
         for record in passengers {
             guard let demand = record.demand, demand.dailyTrips > 0 || (network && demand.hinterland > 0) || tourists[record.station] != nil,
@@ -403,7 +424,7 @@ extension GameWorld {
                 let choices = passengerRouteChoices(from: origin, to: record.station, graph: graph)
                 if let leg = choices.first?.route.legs.first {
                     trip = PassengerTrip(line: leg.line, direction: leg.direction)
-                    fastest[record.station] = choices.map(\.route.totalMinutes).min()
+                    fastest[record.station] = choices.map(\.route).min { $0.totalMinutes < $1.totalMinutes }
                 } else {
                     trip = nil
                 }
@@ -415,21 +436,29 @@ extension GameWorld {
         }
         let shares = Self.apportion(trips(of: demand, at: origin), by: reached.map(\.weight))
         let typhoons = typhoonMultipliers()
-        return zip(reached, shares).compactMap { reached, trips in
-            var trips = keptTrips(trips, from: origin, to: reached.destination, typhoons: typhoons)
+        return zip(reached, shares).map { reached, trips in
+            // ``keptTrips(_:from:to:typhoons:)``, the fare's step apart.
+            let left = distancedTrips(Self.typhoonTrips(trips, from: origin, to: reached.destination, multipliers: typhoons),
+                                      from: origin, to: reached.destination)
+            var trips = faredTrips(left, from: origin, to: reached.destination)
+            let tooExpensive = left - trips
+            var switched: Int64 = 0
             // Decision 168: the pair's intercity trips, kept by the minutes
             // of the way as its others are.
             var between = network ? destinations[reached.destination].map {
                 intercityTrips(from: origin, demand, to: reached.destination, $0, typhoons: typhoons)
             } ?? 0 : 0
-            if let minutes = fastest[reached.destination] {
+            let route = fastest[reached.destination]
+            if let minutes = route?.totalMinutes {
                 // Decision 332: then some take a scooter or a car instead.
-                trips = modeShiftKept(PassengerCrowding.decayed(trips, minutes: minutes),
-                                      from: origin, to: reached.destination, minutes: minutes)
+                let decayed = PassengerCrowding.decayed(trips, minutes: minutes)
+                trips = modeShiftKept(decayed, from: origin, to: reached.destination, minutes: minutes)
+                switched = decayed - trips
                 between = PassengerCrowding.decayed(between, minutes: minutes)
             }
             let extra = (tourists[reached.destination]).map { $0.outbound + $0.back } ?? 0
-            return trips + between + extra > 0 ? (reached.destination, trips + between + extra, reached.trip) : nil
+            return DemandDetail(destination: reached.destination, trips: trips + between + extra, trip: reached.trip,
+                                tooExpensive: tooExpensive, switched: switched, route: route)
         }
     }
 

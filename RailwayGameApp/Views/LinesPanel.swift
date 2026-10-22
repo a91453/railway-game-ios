@@ -57,6 +57,10 @@ struct LinesPanel: View {
     /// game day (decision 194).
     @State private var lossMemo = LineLossMemo()
     @State private var satisfactionMemo = LineSatisfactionMemo()
+    /// Decision 332: who rides or drives instead of taking the selected
+    /// line, worked out off the main actor as the station panel's
+    /// ridership is, from every station's day.
+    @State private var modeShift: (key: LineModeShiftKey, value: ModeShiftSummary?)?
     /// Decision 184: the name typed to find a line, and which lines show.
     @State private var lineSearch = ListSearch()
     @State private var lineFilter: LineFilter = .all
@@ -133,6 +137,9 @@ struct LinesPanel: View {
                     }
                 }
                 .hardTopScrollEdge()
+                .task(id: modeShiftKey) {
+                    await workOutModeShift(modeShiftKey)
+                }
                 // The tutorial's targets in the form report their place on the
                 // screen themselves (`tutorialPanelTarget(_:)`); the overlay
                 // counts them only inside the panel.
@@ -1259,6 +1266,39 @@ struct LinesPanel: View {
                 feedbackSection(feedback)
             }
         }
+        modeShiftSection(line)
+    }
+
+    /// Decision 332: how many of the line's riders take a scooter or a car
+    /// instead, between which stations most do, and what brings most of
+    /// them back; nothing without riders switching.
+    @ViewBuilder
+    private func modeShiftSection(_ line: ServiceLine) -> some View {
+        if let modeShift, modeShift.key.line == line.id, let summary = modeShift.value {
+            Section {
+                ModeShiftRow(summary: summary, text: summary.lineText(in: session.world, language: session.language),
+                             language: session.language)
+                    .accessibilityIdentifier("line.modeShift")
+            }
+        }
+    }
+
+    /// What ``modeShift`` is worked out from for the selected line.
+    private var modeShiftKey: LineModeShiftKey? {
+        session.selectedLineID.map { LineModeShiftKey(world: session.world, line: $0) }
+    }
+
+    /// Works out ``modeShift`` for the line as `key` reads it, off the
+    /// main actor; kept until what it depends on changes.
+    private func workOutModeShift(_ key: LineModeShiftKey?) async {
+        guard let key else { return }
+        let world = session.world
+        let id = key.line
+        let value = await Task.detached(priority: .utility) {
+            world.lineModeShift(id)
+        }.value
+        guard !Task.isCancelled else { return }
+        modeShift = (key, value)
     }
 
     /// Decision 274: yesterday's fit of the line's trains, and the people
@@ -2358,5 +2398,17 @@ extension View {
     func renameAlert(title: String, name: Binding<String?>, language: DisplayLanguage,
                      rename: @escaping (String) -> Void) -> some View {
         modifier(RenameAlert(title: title, name: name, language: language, rename: rename))
+    }
+}
+
+/// What a line's ``GameWorld/lineModeShift(_:)`` is worked out from: the
+/// line and what every station's day reads (``RidershipInputs``).
+struct LineModeShiftKey: Equatable {
+    let line: LineID
+    let inputs: RidershipInputs
+
+    init(world: GameWorld, line: LineID) {
+        self.line = line
+        inputs = RidershipInputs(world: world)
     }
 }
