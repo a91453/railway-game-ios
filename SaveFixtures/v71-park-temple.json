@@ -58,8 +58,8 @@
           "fareRevenue" : 0,
           "maintenanceCost" : 0,
           "operatingCost" : 86400,
-          "propertyCost" : 13935,
-          "propertyRevenue" : 19200,
+          "propertyCost" : 121455,
+          "propertyRevenue" : 288000,
           "staffCost" : 124000
         }
       ],
@@ -680,14 +680,14 @@
           "time" : 86340
         },
         {
-          "amount" : 7587,
+          "amount" : 168867,
           "breakdown" : [
             {
-              "amount" : 19200,
+              "amount" : 288000,
               "item" : "subsidiarySales"
             },
             {
-              "amount" : -11613,
+              "amount" : -119133,
               "item" : "subsidiaryCost"
             }
           ],
@@ -735,7 +735,7 @@
       "speed" : "normal"
     },
     "economy" : {
-      "balance" : 999987077465,
+      "balance" : 999987238745,
       "costs" : {
         "station" : 1000,
         "track" : 100,
@@ -2164,11 +2164,11 @@
           ],
           "month" : 0,
           "thisMonth" : {
-            "cost" : 11613,
-            "sales" : 19200
+            "cost" : 119133,
+            "sales" : 288000
           },
-          "totalCost" : 11613,
-          "totalSales" : 19200
+          "totalCost" : 119133,
+          "totalSales" : 288000
         },
         "buildingCost" : 8192000,
         "centre" : {
