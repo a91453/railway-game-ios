@@ -356,7 +356,7 @@ final class RealRailwaysTests: XCTestCase {
             let sections = DataSourceCredits.sections(in: language)
             XCTAssertEqual(sections.map(\.id), ["railways", "population", "map", "cityView"])
             let credits = sections.flatMap(\.credits)
-            XCTAssertEqual(credits.map(\.id), ["tdx", "traOpenData", "ridership", "nlsc", "openStreetMap", "operators", "worldPop", "overtureBuildings", "appleMaps", "wikidata", "worldUrbanizationProspects", "taiwanBaseMap", "openFreeMap", "mapLibre", "map3DGround", "meshy", "temples", "copernicusDEM", "proceduralTokyo", "polyHaven"])
+            XCTAssertEqual(credits.map(\.id), ["tdx", "traOpenData", "ridership", "nlsc", "openStreetMap", "operators", "worldPop", "travelSurvey", "overtureBuildings", "appleMaps", "wikidata", "worldUrbanizationProspects", "taiwanBaseMap", "openFreeMap", "mapLibre", "map3DGround", "meshy", "temples", "copernicusDEM", "proceduralTokyo", "polyHaven"])
             for credit in credits {
                 XCTAssertFalse(credit.title.isEmpty || credit.detail.isEmpty || credit.notice.isEmpty, credit.id)
                 for link in credit.links {
@@ -391,6 +391,12 @@ final class RealRailwaysTests: XCTestCase {
             XCTAssertTrue(worldPop.notice.contains("CC BY 4.0"))
             XCTAssertTrue(worldPop.notice.contains("10.5258/SOTON/WP00840"))
             XCTAssertTrue(worldPop.links.contains { $0.url == "https://creativecommons.org/licenses/by/4.0/" })
+            // Decision 332: the travel survey, as its dataset asks to be
+            // credited, and its licence.
+            let survey = try XCTUnwrap(credits.first { $0.id == "travelSurvey" })
+            XCTAssertTrue(survey.notice.contains(language.text("National Travel Survey", "交通部統計處民眾日常使用運具狀況調查")), survey.notice)
+            XCTAssertTrue(survey.notice.contains(language.text("Open Government Data License, version 1.0", "政府資料開放授權條款第 1 版")), survey.notice)
+            XCTAssertTrue(survey.links.contains { $0.url == "https://data.gov.tw/dataset/6248" })
             // Decision 147: Overture's theme (ODbL) and the footprints it
             // takes in Taiwan, OpenStreetMap's and Shi et al.'s (CC BY 4.0).
             let overture = try XCTUnwrap(credits.first { $0.id == "overtureBuildings" })

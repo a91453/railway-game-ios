@@ -47,6 +47,7 @@ public enum DataSourceCredits {
     static let worldPopURL = "https://www.worldpop.org"
     static let copernicusDEMURL = "https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM"
     static let worldPopDatasetURL = "https://doi.org/10.5258/SOTON/WP00840"
+    static let travelSurveyURL = "https://data.gov.tw/dataset/6248"
     static let ccByURL = "https://creativecommons.org/licenses/by/4.0/"
     static let overtureURL = "https://overturemaps.org"
     static let overtureAttributionURL = "https://docs.overturemaps.org/attribution/"
@@ -220,8 +221,8 @@ public enum DataSourceCredits {
                         id: "openStreetMap",
                         title: "OpenStreetMap",
                         detail: language.text(
-                            "The track of every real railway line, station and platform positions, single and double track, where the TRA's, the High Speed Rail's, the Alishan Forest Railway's and the metros' and light rails' lines are on bridges and in tunnels; places such as shops, offices, schools and sights round new stations; the industrial land, parks, farmland, coastline, rivers and lakes of real-world maps; the names of the settlements, villages and townships new stations are named after; where the tourist sights of real-world maps stand; where the high-speed demo's depots and the TRA demo's Yilan and Su'aoxin sidings stand and how many platform tracks the high-speed demo's end stations have; the roads, parks and shop names of the 3D city preview.",
-                            "提供每條真實鐵道的軌道走向、車站與月台位置、單雙線資訊、台鐵、高鐵、林鐵與捷運、輕軌在橋梁與隧道上的路段；新車站周邊的商店、辦公室、學校、景點等地點；實景地圖上的工業區、公園、農地、海岸線、河川與湖泊；替新車站命名的聚落、村里與鄉鎮市區名稱；實景地圖上觀光景點的位置；高鐵示範的機廠與台鐵示範宜蘭、蘇澳新側線的位置、高鐵示範端點站的股道數；3D 城市預覽的道路、公園與店名。"
+                            "The track of every real railway line, station and platform positions, single and double track, where the TRA's, the High Speed Rail's, the Alishan Forest Railway's and the metros' and light rails' lines are on bridges and in tunnels; places such as shops, offices, schools and sights round new stations; the industrial land, parks, farmland, coastline, rivers and lakes of real-world maps; the names of the settlements, villages and townships new stations are named after, and the county each township is in; where the tourist sights of real-world maps stand; where the high-speed demo's depots and the TRA demo's Yilan and Su'aoxin sidings stand and how many platform tracks the high-speed demo's end stations have; the roads, parks and shop names of the 3D city preview.",
+                            "提供每條真實鐵道的軌道走向、車站與月台位置、單雙線資訊、台鐵、高鐵、林鐵與捷運、輕軌在橋梁與隧道上的路段；新車站周邊的商店、辦公室、學校、景點等地點；實景地圖上的工業區、公園、農地、海岸線、河川與湖泊；替新車站命名的聚落、村里與鄉鎮市區名稱及鄉鎮所屬的縣市；實景地圖上觀光景點的位置；高鐵示範的機廠與台鐵示範宜蘭、蘇澳新側線的位置、高鐵示範端點站的股道數；3D 城市預覽的道路、公園與店名。"
                         ),
                         // The ODbL asks for the derived files to be offered
                         // under the same licence: the source repository link
@@ -270,6 +271,25 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: "WorldPop", url: worldPopURL),
                             DataSourceCredit.Link(title: language.text("Dataset", "資料集"), url: worldPopDatasetURL),
                             DataSourceCredit.Link(title: "CC BY 4.0", url: ccByURL),
+                        ]
+                    ),
+                    // Decision 332: the private motor vehicles' share of
+                    // trips by county, the most riders who take a scooter
+                    // or a car instead on a real-world map (table 4).
+                    DataSourceCredit(
+                        id: "travelSurvey",
+                        title: language.text("National Travel Survey", "民眾日常使用運具狀況調查"),
+                        detail: language.text(
+                            "How many trips in each county and city of Taiwan are made by scooter or car: on a real-world map, at most that many of your riders ride or drive instead when the train is slower.",
+                            "台灣各縣市有多少行程騎機車或開車：在實景地圖上，火車比較慢時，最多這麼多的旅客改騎機車或開車。"
+                        ),
+                        notice: language.text(
+                            "Source: Ministry of Transportation and Communications, Department of Statistics, National Travel Survey, 2024 (table 4, the private motor vehicles' share of trips by county and city). Used under the Open Government Data License, version 1.0.",
+                            "資料來源：交通部統計處民眾日常使用運具狀況調查，113 年（表 4，各縣市運具次數之私人機動運具市占率）。依「政府資料開放授權條款第 1 版」使用。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("Dataset (data.gov.tw)", "資料集（政府資料開放平臺）"), url: travelSurveyURL),
+                            DataSourceCredit.Link(title: language.text("Open Government Data License", "政府資料開放授權條款"), url: openGovernmentLicenseURL),
                         ]
                     ),
                     // Decision 147: how much of the ground real buildings

@@ -12,7 +12,9 @@ import XCTest
 ///     BALANCE_REPORT=40 swift test -c release -Xswiftc -enable-testing \
 ///       --filter RealWorldExpansionReportTests
 ///
-/// `BALANCE_REPORT` is the days to play.
+/// `BALANCE_REPORT` is the days to play. `BALANCE_MODE_SHIFT=realistic`
+/// lets riders switch to scooters and cars up to each place's county share
+/// (decision 332).
 @MainActor
 final class RealWorldExpansionReportTests: XCTestCase {
     private static let root = URL(fileURLWithPath: #filePath)
@@ -31,6 +33,14 @@ final class RealWorldExpansionReportTests: XCTestCase {
     private static let places: PlaceGrid = {
         do {
             return try PlaceGrid(data: Data(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/RealWorld/taiwan_places.json")))
+        } catch {
+            preconditionFailure("\(error)")
+        }
+    }()
+
+    private static let placeNames: PlaceNames = {
+        do {
+            return try PlaceNames(data: Data(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/RealWorld/taiwan_place_names.json")))
         } catch {
             preconditionFailure("\(error)")
         }
@@ -79,6 +89,11 @@ final class RealWorldExpansionReportTests: XCTestCase {
             let catchments = [sites.0, sites.1].map { world.land.totals(within: Land.catchmentRadius, of: $0).residents }
             let before = world.economy.balance
             world = try newGameLine(through: [sites.0, sites.1], in: world)
+            // Decision 332: the realistic rule stops at the county's share,
+            // as a player's new game there does.
+            if world.modeShift?.rule == .realistic {
+                try world.setModeShift(ModeShift.realistic(cap: ModeShiftCounties.cap(at: place.anchor, in: Self.placeNames)))
+            }
             let cost = before - world.economy.balance
             // Decision 261: the days played by the shared player.
             var player = try reportPlayer(world)
