@@ -809,6 +809,8 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 
 ### 7.3 3D 的後續
 
+**五節鉸接低地板輕軌（Codex，#991，`codex/five-section-lrt-2026-10-22`）**：作者新五張橘色輕軌參考；全新長—短—長—短—長、兩端斜鼻／收窄、各長節每側兩組雙門、單端集電弓。五單元＋完整編組加入靜態庫，**未綁營運車種，不會只靠合併就換路網列車**。從main c6e2cbc5獨立，不依賴未合併#988。配方`Map3DFiveSectionLRT.swift`；[重建／組裝](../tools/five-section-lrt/README.md)；[外觀與技術驗收／私有素材入口](art/five-section-lrt-2026-10-22/README.md)。6新模型＋2比較、56七向、viewer與完整ZIP放私有；公開只保留配方／工具／必要測試／文件／一張總覽。VERIFIED Linux Swift6.4 warnings-as-errors、24相關XCTest、原生組裝／GLB、封閉邊／96主要玻璃支持及缺面／反面／浮空突變。外觀可見主要結構已核對，輪架隱藏配置為假設；真機Metal／效能／動畫／營運接入／工程尺寸仍UNVERIFIED。下一步若要上路網，由整合session按五個不同長度與共同軌面接入，不可把五節當五輛一般車；不修改GameCore／存檔／golden／replay。兩庫draft PR及最新CI狀態記錄在#991，未合併或啟動TestFlight。
+
 **接手**：3D 生活感 session 做完第 2 節的四步之後，由遊戲規劃排序。
 
 | 項目 | 出處 |
