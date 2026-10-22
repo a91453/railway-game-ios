@@ -1300,7 +1300,6 @@ struct LinesPanel: View {
         guard !Task.isCancelled else { return }
         modeShift = (key, value)
     }
-    }
 
     /// Decision 274: yesterday's fit of the line's trains, and the people
     /// waiting at each end now as one, two or three people (art style).
