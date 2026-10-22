@@ -636,6 +636,12 @@ public final class GameSession {
     @ObservationIgnored public var duckMusic: (@MainActor (Double) -> Void)?
     /// The factor last told to ``duckMusic``.
     @ObservationIgnored private var musicDuck = 1.0
+    /// Decision 343: the sound of the followed train running
+    /// (``RunningSound``), told to the app when it changes; `nil` for
+    /// silence. `nil` tells no one.
+    @ObservationIgnored public var runningSound: (@MainActor (RunningSound?) -> Void)?
+    /// The sound last told to ``runningSound``.
+    @ObservationIgnored private var lastRunningSound: RunningSound?
 
     /// The last thing the player put up, which the map marks (decision
     /// 117, ``notePutUp(at:)``); `nil` before any. Never saved.
@@ -861,7 +867,7 @@ public final class GameSession {
         selectedBuildingID = nil
         selectedTrackEdge = nil
         followedTrainID = nil
-        updateMusicDuck()
+        updateFollowSounds()
         message = nil
     }
 
@@ -903,18 +909,26 @@ public final class GameSession {
     public func followTrain(_ id: TrainID) {
         guard let train = world.train(id: id), train.position != nil else { return }
         followedTrainID = id
-        updateMusicDuck()
+        updateFollowSounds()
     }
 
     /// Stops following (the follow bar's unfollow button).
     public func stopFollowingTrain() {
         followedTrainID = nil
-        updateMusicDuck()
+        updateFollowSounds()
     }
 
-    /// Tells the app the factor on the music (``MusicDuck``) when it
-    /// changed: after a step, and when following starts or stops.
-    func updateMusicDuck() {
+    /// Tells the app the factor on the music (``MusicDuck``) and the
+    /// followed train's running sound (``RunningSound``, decision 343) when
+    /// they changed: after a step, and when following starts or stops.
+    func updateFollowSounds() {
+        if let runningSound {
+            let sound = RunningSound.of(following: followedTrain, in: world)
+            if sound != lastRunningSound {
+                lastRunningSound = sound
+                runningSound(sound)
+            }
+        }
         guard let duckMusic else { return }
         let gain = MusicDuck.gain(following: followedTrain, in: world)
         guard gain != musicDuck else { return }
@@ -951,7 +965,7 @@ public final class GameSession {
         }
         // Every edit ends here: one that stops the followed train's service
         // or ends following brings the music back now, not at the next step.
-        updateMusicDuck()
+        updateFollowSounds()
     }
 
     /// Estimates the 800-metre walking catchment population of station `id`
@@ -1403,7 +1417,7 @@ public final class GameSession {
             if let playSound, let cue = SoundCue.arrivalCue(for: step.arrived, watched: watchedTrainIDs, speed: world.clock.speed, in: world) {
                 playSound(cue)
             }
-            updateMusicDuck()
+            updateFollowSounds()
         }
         meter.measure(.stepIncome) {
             // Decision 117: fares and rent settled within the step.
@@ -2092,7 +2106,7 @@ public final class GameSession {
         // following one of them (`trackedTrainId` of a gone train).
         if removed != nil && followsLineTrain {
             followedTrainID = nil
-            updateMusicDuck()
+            updateFollowSounds()
         }
         selectedLineID = world.lines.first?.id
     }
@@ -2513,6 +2527,9 @@ public final class GameSession {
         change(&world)
         isLogging = false
         log(action)
+        // Decision 343: a pause or a change of speed starts or stops the
+        // followed train's sound at once, not at the next step.
+        updateFollowSounds()
     }
 
     // MARK: - Editing and undo

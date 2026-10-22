@@ -117,6 +117,60 @@ def whoosh(length):
     return out * np.sin(np.pi * u) ** 1.5
 
 
+# Decision 343: the running loops, made to the spectra of recordings of
+# trains running (`measure_running_spectrum.py`; the recordings, their
+# licences and the stretches measured are in README.md). Median
+# third-octave band levels from 31.5 Hz to 12.5 kHz, in dB below the
+# loudest band.
+RUNNING_BANDS = [1000 * 2 ** (n / 3) for n in range(-15, 12)]
+RUNNING_SPECTRA = {
+    # A KTX between two cars at speed (Wu's two are commuter trains).
+    "highSpeed": [-0, 0, -3, -2, -1, -4, -13, -11, -10, -8, -10, -14, -16, -19,
+                  -22, -21, -20, -26, -29, -32, -36, -39, -36, -42, -46, -49, -53],
+    # Two trains in Taiwan, near Guishan and near Banqiao, the mean of each.
+    "electric": [-3, -4, -4, -0, -4, -5, -1, 0, -5, -7, -10, -9, -15, -14,
+                 -16, -19, -22, -19, -19, -19, -21, -23, -27, -29, -31, -27, -33],
+}
+# 8 s at 48 kHz: whole IMA4 packets (64 frames), so the CAF loops without
+# a gap.
+RUNNING_FRAMES = 8 * SR
+
+
+def running(kind):
+    """An 8-second loop of a train running: seeded noise shaped to the
+    measured spectrum in one circular FFT, so its end runs into its start,
+    under a slow swell of about a decibel; the electric one with a rail
+    joint every 1.6 s (25 m rails at 60 km/h, the speed it plays at its
+    own rate), struck by both axles of the near bogie and then, softer,
+    of the far one."""
+    n = RUNNING_FRAMES
+    spectrum = np.fft.rfft(np.random.default_rng(343 + len(kind)).standard_normal(n))
+    freqs = np.fft.rfftfreq(n, 1 / SR)
+    # The levels are per band, a third of an octave wide: per bin, less by
+    # the band's width.
+    bands = np.array(RUNNING_BANDS)
+    density = np.array(RUNNING_SPECTRA[kind]) - 10 * np.log10(bands)
+    level = np.interp(np.log(np.maximum(freqs, 1)), np.log(bands), density)
+    gain = 10 ** (level / 20)
+    gain[(freqs < bands[0] * 2 ** (-1 / 6)) | (freqs > bands[-1] * 2 ** (1 / 6))] = 0
+    x = np.fft.irfft(spectrum * gain, n)
+    k = np.arange(n) / n
+    swell = 1 + 0.06 * np.sin(2 * np.pi * k) + 0.04 * np.sin(2 * np.pi * 3 * k + 1) + 0.03 * np.sin(2 * np.pi * 5 * k + 2)
+    x = x / np.sqrt(np.mean(x**2)) * swell
+    if kind == "electric":
+        joint = clack()
+        joint = joint / np.abs(joint).max() * 2.5
+        for start in np.arange(0.4, 8, 1.6):
+            for at, strength in [(0, 1.0), (0.126, 0.8), (0.84, 0.5), (0.966, 0.4)]:
+                first = int(round((start + at) * SR))
+                where = (first + np.arange(len(joint))) % n
+                x[where] += strength * joint
+    # Start where it crosses zero, as an IMA4 packet decodes from silence:
+    # a loop that started away from it would click at every turn.
+    turn = int(np.argmin(np.abs(x[: SR // 4]) + np.abs(np.diff(x[: SR // 4 + 1]))))
+    return np.roll(x, -turn)
+
+
 def music(cycles):
     """`cycles` cycles of the chords in steady state, so they loop seamlessly.
 
@@ -169,6 +223,20 @@ def write_wav(path, x):
         w.setsampwidth(2)
         w.setframerate(SR)
         w.writeframes(pcm.tobytes())
+
+
+def write_caf(path, loop):
+    """A loop as an IMA4 CAF, which loops without a gap when it is whole
+    packets."""
+    assert len(loop) % 64 == 0, "the loop must be whole IMA4 packets"
+    with tempfile.TemporaryDirectory() as tmp:
+        source = os.path.join(tmp, "loop.wav")
+        write_wav(source, loop)
+        subprocess.run(
+            ["ffmpeg", "-y", "-loglevel", "error", "-i", source, "-c:a", "adpcm_ima_qt",
+             "-map_metadata", "-1", "-fflags", "+bitexact", "-flags:a", "+bitexact", path],
+            check=True,
+        )
 
 
 # Decision 219: how long a struck voice rings when its note is shorter (a
@@ -325,6 +393,8 @@ SYNTH_SOURCES = {
     "coins.wav": "bell(), decision 117",
     "refused.wav": "pluck(), decision 184",
     "warning.wav": "bell(), decision 184",
+    "run-electric.caf": "running(\"electric\"), decision 343",
+    "run-highspeed.caf": "running(\"highSpeed\"), decision 343",
 }
 
 
@@ -349,7 +419,7 @@ def manifest(out_dir):
         if file in by_file:
             entry.update(by_file[file])
         else:
-            entry["kind"] = "music" if file.endswith(".caf") else "sound"
+            entry["kind"] = "running" if file.startswith("run-") else "music" if file.endswith(".caf") else "sound"
             entry["synth"] = f"make_game_audio.py {SYNTH_SOURCES[file]}"
         entry.update(measured(os.path.join(out_dir, file), loops=file.endswith(".caf")))
         files.append(entry)
@@ -374,17 +444,10 @@ def manifest(out_dir):
 def main(out_dir):
     os.makedirs(out_dir, exist_ok=True)
 
-    loop = normalized(music(cycles=2), 0.7)
-    assert len(loop) % 64 == 0, "the loop must be whole IMA4 packets"
-    with tempfile.TemporaryDirectory() as tmp:
-        source = os.path.join(tmp, "music.wav")
-        write_wav(source, loop)
-        subprocess.run(
-            ["ffmpeg", "-y", "-loglevel", "error", "-i", source, "-c:a", "adpcm_ima_qt",
-             "-map_metadata", "-1", "-fflags", "+bitexact", "-flags:a", "+bitexact",
-             os.path.join(out_dir, "music-loop.caf")],
-            check=True,
-        )
+    write_caf(os.path.join(out_dir, "music-loop.caf"), normalized(music(cycles=2), 0.7))
+    # Decision 343: the running loops.
+    write_caf(os.path.join(out_dir, "run-electric.caf"), normalized(running("electric"), 0.5))
+    write_caf(os.path.join(out_dir, "run-highspeed.caf"), normalized(running("highSpeed"), 0.5))
 
     # Decision 219: the station chimes from their scores. The local one is
     # decision 79's station chime, a bell on C6 and, 0.25 s later, a softer

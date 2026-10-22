@@ -28,6 +28,13 @@ final class GameAudio {
     /// Decision 219, stage 2: the factor on the music while a followed
     /// train runs into an interchange (``MusicDuck``); 1 otherwise.
     @ObservationIgnored private var musicDuck = 1.0
+    /// Decision 343: the followed train's running sound the session last
+    /// asked for (``RunningSound``), `nil` for none.
+    @ObservationIgnored private var running: RunningSound?
+    /// Its loops, made when first heard.
+    @ObservationIgnored private var runningLoops: [RunningSound.Loop: AVAudioPlayer] = [:]
+    /// The loop heard now, `nil` for none.
+    @ObservationIgnored private var audibleLoop: RunningSound.Loop?
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var music: AVAudioPlayer?
@@ -89,6 +96,7 @@ final class GameAudio {
     func setSoundsOn(_ on: Bool) {
         soundsOn = on
         defaults.set(on, forKey: Key.sounds)
+        updateRunning()
     }
 
     /// Sets one of the three volumes (decision 219, stage 2); the music
@@ -99,6 +107,18 @@ final class GameAudio {
         if category == .music {
             music?.volume = musicLevel
         }
+        if category == .effects {
+            updateRunning()
+        }
+    }
+
+    /// Plays the followed train's running sound (decision 343), or stops
+    /// it with `nil`: the loop fades in, follows the train's speed, and
+    /// fades out when it stops or is no longer followed.
+    func setRunning(_ sound: RunningSound?) {
+        guard sound != running else { return }
+        running = sound
+        updateRunning()
     }
 
     /// Takes the music down by `gain` (``MusicDuck``), fading there over
@@ -126,6 +146,7 @@ final class GameAudio {
             _ = try? AVAudioSession.sharedInstance().setActive(true)
         }
         updateMusic()
+        updateRunning()
     }
 
     /// Plays the sound for `cue`, unless sounds are off, the app is not
@@ -176,6 +197,48 @@ final class GameAudio {
             music?.pause()
         }
     }
+
+    /// Starts, moves or fades out the running loops (decision 343): the
+    /// one the train calls for at its volume and rate, fading over half a
+    /// second as the music's duck does; the other, and both when sounds
+    /// are off or the app is not active, faded to nothing and then paused.
+    private func updateRunning() {
+        let level = running.map { volumes.volume(Self.runningVolume * Float($0.volume), for: .effects) } ?? 0
+        let playing = plays && soundsOn && isActive && level > 0 ? running?.loop : nil
+        audibleLoop = playing
+        for loop in RunningSound.Loop.allCases {
+            if loop == playing, let running {
+                guard let player = runningLoops[loop] ?? loadRunning(loop) else { continue }
+                player.rate = Float(running.rate)
+                if !player.isPlaying {
+                    player.volume = 0
+                    player.play()
+                }
+                player.setVolume(level, fadeDuration: 0.5)
+            } else if let player = runningLoops[loop], player.isPlaying {
+                player.setVolume(0, fadeDuration: 0.5)
+                // Paused once faded, unless it was asked for again since.
+                Task { @MainActor [weak self, weak player] in
+                    try? await Task.sleep(for: .milliseconds(600))
+                    guard let self, let player, self.audibleLoop != loop else { return }
+                    player.pause()
+                }
+            }
+        }
+    }
+
+    private func loadRunning(_ loop: RunningSound.Loop) -> AVAudioPlayer? {
+        let file = loop.resource
+        guard let player = Self.player(named: file.name, extension: file.extension, volume: 0, rate: true) else { return nil }
+        player.numberOfLoops = -1
+        runningLoops[loop] = player
+        return player
+    }
+
+    /// The running loops' own volume at full speed, before the player's
+    /// (decision 343): under a watched train's chime, so the arrival is
+    /// heard over it.
+    private static let runningVolume: Float = 0.35
 
     /// The music's own volume, before the player's (decision 219, stage 2).
     private static let musicVolume: Float = 0.45
@@ -250,10 +313,12 @@ final class GameAudio {
         }
     }
 
-    private static func player(named name: String, extension ext: String, volume: Float) -> AVAudioPlayer? {
+    private static func player(named name: String, extension ext: String, volume: Float, rate: Bool = false) -> AVAudioPlayer? {
         guard let url = Bundle.main.url(forResource: name, withExtension: ext),
               let player = try? AVAudioPlayer(contentsOf: url)
         else { return nil }
+        // The rate can be set only before the player is prepared.
+        player.enableRate = rate
         player.volume = volume
         player.prepareToPlay()
         return player

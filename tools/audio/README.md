@@ -61,7 +61,7 @@ RailwayGameApp/Resources/Audio/*.wav ＋ manifest.json
 - 來源：樂譜與它的 SHA-256；從 MML 轉來的，另記 MML 原稿與它的 SHA-256；沒有樂譜的音效記下合成它的函式；
 - 音檔的 SHA-256、取樣數、秒數；
 - 峰值與 RMS（dBFS）、相鄰兩個取樣最大的落差（`largestStep`）；
-- 循環的音樂記 `loopSeam`（最後一個取樣跳回第一個的落差，比 `largestStep` 大就會聽到「喀」一聲），單次的音效記 `endLevel`（最後一個取樣的大小）。
+- 循環的音樂與行駛聲記 `loopSeam`（最後一個取樣跳回第一個的落差，比 `largestStep` 大就會聽到「喀」一聲），單次的音效記 `endLevel`（最後一個取樣的大小）。
 
 另外記下 `mml-core/core.js` 的來源 commit 與 SHA-256。三種到站鈴的 RMS 差超過 3 dB 時腳本停下（研究文件第 3 節）。
 
@@ -82,9 +82,26 @@ RailwayGameApp/Resources/Audio/*.wav ＋ manifest.json
 | `line-acquired.wav` | 地方小站到站鈴的 C6、G6 兩聲鐘，撥弦 D6、G5 往下落在 C6 的鐘聲，最後一聲低的「蓋章」（接縫聲疊 C4 撥弦），1.5 秒；樂譜 `scores/line-acquired.score.json`（照鈴聲的規則，不做動機檔） | 收購一條真實支線（決策 315），跟「音效」的音量 |
 | `refused.wav` | 兩個往下的低音撥弦（E、C#，小三度） | 遊戲拒絕玩家的操作（失敗訊息，決策 184） |
 | `warning.wav` | 兩個相隔一個全音的短鈴（A、B） | 新聞紀錄多了一則警訊：負債、期限、颱風、缺建材（決策 184） |
+| `run-electric.caf` | 8 秒、可無縫循環的一般電車行駛聲：照兩段台灣列車錄音的頻譜塑形的雜訊，每 1.6 秒一處鐵軌接縫（近的轉向架兩軸「喀噠」、遠的轉向架小聲一次）；IMA4 | 跟隨的列車（不是高速列車）在 60 倍速以下、5 km/h 以上行駛時循環播放，越快越大聲、音調越高（決策 343），跟「音效」的音量 |
+| `run-highspeed.caf` | 8 秒、可無縫循環的高速列車行駛聲：照 KTX 車廂連接處錄音的頻譜塑形的雜訊，沒有接縫聲；IMA4 | 同上，跟隨的是高速列車時（決策 343） |
 
 ## 來源與授權
 
-全部由這支腳本用正弦波與固定種子的雜訊產生，沒有取樣、現成音樂或第三方音源，是本專案自己的素材。都會轉運鈴的音高與節奏照搬作者的參考庫（`a91453/railway-reference-private` 的 `Ci/reference_snapshot/lib/audio/airport-pa/chime.mjs`，也是合成的、沒有音檔）。`mml-core/core.js` 是作者的 `a91453/mml-tools`（MIT），授權在 `mml-core/LICENSE`。
+全部由這支腳本用正弦波與固定種子的雜訊產生，沒有取樣、現成音樂或第三方音源（行駛聲只用了錄音量到的頻譜數字，見下），是本專案自己的素材。都會轉運鈴的音高與節奏照搬作者的參考庫（`a91453/railway-reference-private` 的 `Ci/reference_snapshot/lib/audio/airport-pa/chime.mjs`，也是合成的、沒有音檔）。`mml-core/core.js` 是作者的 `a91453/mml-tools`（MIT），授權在 `mml-core/LICENSE`。
 
-音樂兩輪和弦正好 1,843,200 個取樣，是 IMA4 封包（64 個取樣）的整數倍，所以 CAF 結尾沒有補零；腳本會檢查這一點。改節奏或長度時，要保持這個條件，否則循環會有短暫的空隙。
+行駛聲（決策 343）照真實錄音的頻譜合成，錄音本身不提交、不打包。`measure_running_spectrum.py` 量錄音一段的三分之一八度頻帶中位數（每 2 秒一窗），結果寫在 `make_game_audio.py` 的 `RUNNING_SPECTRA`；重產不需要錄音。量的錄音（都在 radio aporee ::: maps，Internet Archive 上）：
+
+| 錄音 | 錄音者 | 授權 | 量的段落 | 用在 |
+| --- | --- | --- | --- | --- |
+| [KTX high speed train to Busan](https://archive.org/details/aporee_65051_75140)（2024-08-10，車廂連接處，`KTX.mp3`） | abyssence | 公眾領域（Public Domain Mark 1.0） | 0–826 秒（全段） | `run-highspeed.caf` |
+| [Guishan, Taoyuan - On the train](https://archive.org/details/aporee_17319_20158)（2012-02-01，`SoundMap2012020110.ogg`） | 吳燦政（Wu, Tsan-Cheng） | 公眾領域（Public Domain Mark 1.0） | 0–166 秒（全段） | `run-electric.caf`，兩段的平均 |
+| [Banqiao District, New Taipei City - In the train compartment](https://archive.org/details/aporee_34085_39187)（2016-10-19，`soundmap201610191.ogg`） | 吳燦政（Wu, Tsan-Cheng） | CC BY 3.0 | 0–140 秒（行駛中；之後停站） | 同上 |
+
+```sh
+python3 -I tools/audio/measure_running_spectrum.py KTX.mp3 0 826
+python3 -I tools/audio/measure_running_spectrum.py SoundMap2012020110.ogg 0 166 soundmap201610191.ogg 0 140
+```
+
+板橋那段是 CC BY 3.0：遊戲的資料來源頁（`DataSourceCredits` 的「聲音」）寫明錄音者、標題、授權與連結，並說明遊戲的聲音是照它重新合成的。研究文件 §7.2 列的 OtoLogic 與 Freesound 在這個環境打不開（403），維基共享資源的原檔一直回 429，所以改用這三段。
+
+音樂兩輪和弦正好 1,843,200 個取樣，是 IMA4 封包（64 個取樣）的整數倍，所以 CAF 結尾沒有補零；腳本會檢查這一點。改節奏或長度時，要保持這個條件，否則循環會有短暫的空隙。行駛聲每段 384,000 個取樣（8 秒），也是整數倍；而且從零點附近開始：IMA4 的封包從靜音解起，離零點開始的循環每一圈都會「喀」一聲。
