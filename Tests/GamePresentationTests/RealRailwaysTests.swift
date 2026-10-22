@@ -356,7 +356,7 @@ final class RealRailwaysTests: XCTestCase {
             let sections = DataSourceCredits.sections(in: language)
             XCTAssertEqual(sections.map(\.id), ["railways", "population", "map", "cityView", "sounds"])
             let credits = sections.flatMap(\.credits)
-            XCTAssertEqual(credits.map(\.id), ["tdx", "traOpenData", "ridership", "nlsc", "openStreetMap", "operators", "worldPop", "travelSurvey", "overtureBuildings", "appleMaps", "wikidata", "worldUrbanizationProspects", "taiwanBaseMap", "openFreeMap", "mapLibre", "map3DGround", "meshy", "temples", "copernicusDEM", "proceduralTokyo", "polyHaven", "runningSound"])
+            XCTAssertEqual(credits.map(\.id), ["tdx", "traOpenData", "ridership", "nlsc", "openStreetMap", "operators", "worldPop", "travelSurvey", "overtureBuildings", "appleMaps", "wikidata", "worldUrbanizationProspects", "taiwanBaseMap", "openFreeMap", "mapLibre", "map3DGround", "meshy", "temples", "copernicusDEM", "proceduralTokyo", "polyHaven", "runningSound", "weatherSound"])
             for credit in credits {
                 XCTAssertFalse(credit.title.isEmpty || credit.detail.isEmpty || credit.notice.isEmpty, credit.id)
                 for link in credit.links {

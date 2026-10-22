@@ -5,7 +5,8 @@ import SwiftUI
 /// The achievements (decision 181): each with what it asks, how to get it
 /// (the reference's `how`), the day it was unlocked, and, from a game, how
 /// far the game is towards it. Opened from the start screen and from the
-/// company rank in a free game.
+/// company rank in a free game. From the start screen and the game menu
+/// it also opens the passport of station stamps (decision 348).
 struct AchievementsView: View {
     let language: DisplayLanguage
     let records: AchievementRecords
@@ -13,9 +14,27 @@ struct AchievementsView: View {
     var facts: AchievementFacts?
     /// Why the game counts none (decision 200), above the list.
     var note: String? = nil
+    /// The station stamps (decision 348), for the passport's link; `nil`
+    /// where the list is shown without it.
+    var stamps: StationStampRecords? = nil
+    var railways: RealRailways? = nil
 
     var body: some View {
         List {
+            if let stamps {
+                Section {
+                    NavigationLink {
+                        StationStampPassportView(language: language, records: stamps, railways: railways)
+                    } label: {
+                        Label {
+                            Text(verbatim: StationStampPassport.summary(count: stamps.count, total: nil, in: language))
+                        } icon: {
+                            Image(systemName: "seal")
+                        }
+                    }
+                    .accessibilityIdentifier("achievements.stamps")
+                }
+            }
             if let note {
                 Section {
                     Label {
@@ -95,6 +114,7 @@ struct AchievementsView: View {
 struct AchievementsSheet: View {
     let session: GameSession
     let records: AchievementRecords
+    var stamps: StationStampRecords? = nil
     @Environment(\.dismiss) private var dismiss
     @State private var facts: AchievementFacts?
 
@@ -103,7 +123,8 @@ struct AchievementsSheet: View {
         NavigationStack {
             AchievementsView(
                 language: session.language, records: records, facts: facts,
-                note: GameMenuLayout.achievementsNote(unlimitedFunds: session.world.economy.unlimitedFunds, in: session.language)
+                note: GameMenuLayout.achievementsNote(unlimitedFunds: session.world.economy.unlimitedFunds, in: session.language),
+                stamps: stamps, railways: session.railways
             )
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {

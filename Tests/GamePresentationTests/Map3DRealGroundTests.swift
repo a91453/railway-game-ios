@@ -138,6 +138,80 @@ final class Map3DRealGroundTests: XCTestCase {
         XCTAssertEqual(kept?.1, P(x: 10, z: 0))
     }
 
+    // MARK: - Room beside the roads (decision 345)
+
+    /// The room `builder` finds in cell (0, 0), its middle and side in
+    /// scene metres, with `roads` (middle line, half width) laid.
+    private func room(_ roads: [(points: [Map3DPoint], half: Float)], side: Int = 40) -> (x: Double, z: Double, side: Int)? {
+        var builder = builder()
+        builder.roadLines = roads
+        let key = Map3DScene.ChunkKey(column: 0, row: 0)
+        let metre = Double(WorldCoordinate.unitsPerMetre)
+        return builder.roomBesideRoads(column: 0, row: 0, side: side, in: builder.roadPieces(near: [key])[key] ?? [])
+            .map { ($0.x / metre, $0.y / metre, $0.side) }
+    }
+
+    /// Whether the square comes within half a metre of any road's strip,
+    /// to a tenth of a metre, or out of its cell's metre from the edge.
+    private func clear(_ room: (x: Double, z: Double, side: Int), of roads: [(points: [Map3DPoint], half: Float)]) -> Bool {
+        let half = Double(room.side) / 2
+        guard room.x - half >= 1, room.x + half <= 63, room.z - half >= 1, room.z + half <= 63 else { return false }
+        for (points, width) in roads {
+            for (a, b) in zip(points, points.dropFirst()) {
+                let length = Double((b - a).length), steps = Int(length * 10)
+                for step in 0...steps {
+                    let t = Double(step) / Double(max(steps, 1))
+                    let x = Double(a.x) + Double(b.x - a.x) * t, z = Double(a.z) + Double(b.z - a.z) * t
+                    let dx = max(abs(x - room.x) - half, 0), dz = max(abs(z - room.z) - half, 0)
+                    if (dx * dx + dz * dz).squareRoot() < Double(width) + 0.5 { return false }
+                }
+            }
+        }
+        return true
+    }
+
+    func testALotBesideALaneKeepsItsWholeSideClearOfIt() throws {
+        // A lane 5 m wide down the cell's west side.
+        let roads = [([Map3DPoint(8, 0, -40), Map3DPoint(8, 0, 120)], Float(2.5))]
+        let room = try XCTUnwrap(room(roads))
+        XCTAssertEqual(room.side, 40)
+        XCTAssertTrue(clear(room, of: roads))
+        // As near the middle as the lane lets it: its west side 11 m in.
+        XCTAssertEqual(room.x - 20, 11, accuracy: 1)
+        XCTAssertEqual(room.z, 32, accuracy: 1)
+    }
+
+    func testALotAMainRoadCrossesKeepsTheBiggestRoomBesideIt() throws {
+        // A main road and its pavements, 15 m, through the middle, north
+        // to south: some 22 m each side.
+        let through = [([Map3DPoint(32, 0, -40), Map3DPoint(32, 0, 120)], Float(7.5))]
+        let side = try XCTUnwrap(room(through))
+        XCTAssertTrue(clear(side, of: through))
+        XCTAssertEqual(side.side, 22)
+        // A crossroads of two: a quarter's corner, smaller still.
+        let crossroads = through + [([Map3DPoint(-40, 0, 32), Map3DPoint(120, 0, 32)], Float(7.5))]
+        let quarter = try XCTUnwrap(room(crossroads))
+        XCTAssertTrue(clear(quarter, of: crossroads))
+        XCTAssertEqual(quarter.side, 22)
+        // A slanting lane: still clear of it.
+        let slant = [([Map3DPoint(-10, 0, 0), Map3DPoint(70, 0, 50)], Float(2.5))]
+        XCTAssertTrue(clear(try XCTUnwrap(room(slant)), of: slant))
+        // No lot bigger than its own side.
+        XCTAssertEqual(room([], side: 28)?.side, 28)
+        XCTAssertEqual(room([], side: 28)?.x ?? 0, 32, accuracy: 1)
+    }
+
+    func testALotWithTooLittleRoomHasNone() {
+        // Lanes 14 m apart each way: nothing as wide as the smallest lot.
+        var lanes: [(points: [Map3DPoint], half: Float)] = []
+        for at in stride(from: Float(0), through: 64, by: 14) {
+            lanes.append(([Map3DPoint(at, 0, -10), Map3DPoint(at, 0, 74)], 1.75))
+            lanes.append(([Map3DPoint(-10, 0, at), Map3DPoint(74, 0, at)], 1.75))
+        }
+        XCTAssertNil(room(lanes))
+        XCTAssertEqual(Map3DScene.Builder.smallestLot, 16)
+    }
+
     // MARK: - The scene
 
     func testARealWorldSceneHasTheRealMapsRoadsWaterAndParks() throws {
@@ -167,7 +241,9 @@ final class Map3DRealGroundTests: XCTestCase {
         XCTAssertLessThan(Map3DShadow.lift, Map3DScene.railLift - Map3DScene.Builder.bedDrop)
         // Parks and ponds the city's own open lots also have.
         XCTAssertTrue(painted.isSuperset(of: [Map3DPalette.cover(.park), Map3DPalette.cover(.water)]))
-        // The real streets take most of the city's lots round the station:
+        // The real map's water and parks take some of the city's lots
+        // round the station, and its streets leave the rest the room
+        // beside them (decision 345; until then they took most):
         // a building never stands on a road.
         // (Their shadows, which are black; the street lights' pools,
         // decision 229 續, carry their light's colour.)
@@ -177,8 +253,8 @@ final class Map3DRealGroundTests: XCTestCase {
                     .filter { chunk.shadows.vertices[Int(chunk.shadows.indices[$0])].color & 0x00FF_FFFF == 0 }.count
             }
         }
-        XCTAssertLessThan(lots(real), lots(plain) / 2)
-        XCTAssertGreaterThan(lots(real), 0)
+        XCTAssertLessThan(lots(real), lots(plain))
+        XCTAssertGreaterThan(lots(real), lots(plain) * 3 / 4)
         // The same every time; and a blank map is as it was.
         XCTAssertEqual(Map3DScene(world: world, baseMap: tiles).chunks.map(\.mesh.vertices), real.chunks.map(\.mesh.vertices))
         let blank = GameWorld.newGame()

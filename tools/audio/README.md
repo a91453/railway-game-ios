@@ -61,7 +61,7 @@ RailwayGameApp/Resources/Audio/*.wav ＋ manifest.json
 - 來源：樂譜與它的 SHA-256；從 MML 轉來的，另記 MML 原稿與它的 SHA-256；沒有樂譜的音效記下合成它的函式；
 - 音檔的 SHA-256、取樣數、秒數；
 - 峰值與 RMS（dBFS）、相鄰兩個取樣最大的落差（`largestStep`）；
-- 循環的音樂與行駛聲記 `loopSeam`（最後一個取樣跳回第一個的落差，比 `largestStep` 大就會聽到「喀」一聲），單次的音效記 `endLevel`（最後一個取樣的大小）。
+- 循環的音樂、行駛聲與雨聲記 `loopSeam`（最後一個取樣跳回第一個的落差，比 `largestStep` 大就會聽到「喀」一聲），單次的音效記 `endLevel`（最後一個取樣的大小）。
 
 另外記下 `mml-core/core.js` 的來源 commit 與 SHA-256。三種到站鈴的 RMS 差超過 3 dB 時腳本停下（研究文件第 3 節）。
 
@@ -84,6 +84,9 @@ RailwayGameApp/Resources/Audio/*.wav ＋ manifest.json
 | `warning.wav` | 兩個相隔一個全音的短鈴（A、B） | 新聞紀錄多了一則警訊：負債、期限、颱風、缺建材（決策 184） |
 | `run-electric.caf` | 8 秒、可無縫循環的一般電車行駛聲：照兩段台灣列車錄音的頻譜塑形的雜訊，每 1.6 秒一處鐵軌接縫（近的轉向架兩軸「喀噠」、遠的轉向架小聲一次）；IMA4 | 跟隨的列車（不是高速列車）在 60 倍速以下、5 km/h 以上行駛時循環播放，越快越大聲、音調越高（決策 343），跟「音效」的音量 |
 | `run-highspeed.caf` | 8 秒、可無縫循環的高速列車行駛聲：照 KTX 車廂連接處錄音的頻譜塑形的雜訊，沒有接縫聲；IMA4 | 同上，跟隨的是高速列車時（決策 343） |
+| `rain-steady.caf` | 8 秒、可無縫循環的雨聲：照台北、淡水三段雨聲錄音的頻譜塑形的雜訊，音量照錄音每半秒的起伏（標準差 1.8 dB）緩緩漂動；IMA4 | 地圖下雨時循環播放（雷雨時大聲，下雨小 6 dB），跟「音效」的音量（決策 346） |
+| `rain-typhoon.caf` | 12 秒、可無縫循環的颱風風雨聲：照淡水颱風錄音的頻譜塑形的雜訊，一陣一陣的風（每半秒的起伏標準差 3 dB、約一秒一陣）；IMA4 | 颱風吹過地圖時循環播放（決策 346） |
+| `thunder.caf` | 10 秒的一聲雷：照三段雷聲錄音第一秒頻譜的「霹」，下面是照隆隆聲頻譜、每 1.5 到 2 秒滾一次、照量到的速度（每秒 −1.2 dB）消失的雷鳴，最後 1.5 秒淡出；IMA4（單次，不循環） | 雷雨與颱風時，地圖每道閃電之後 1 到 4 秒（越遠越小聲、越低沉，決策 346） |
 
 ## 來源與授權
 
@@ -104,4 +107,23 @@ python3 -I tools/audio/measure_running_spectrum.py SoundMap2012020110.ogg 0 166 
 
 板橋那段是 CC BY 3.0：遊戲的資料來源頁（`DataSourceCredits` 的「聲音」）寫明錄音者、標題、授權與連結，並說明遊戲的聲音是照它重新合成的。研究文件 §7.2 列的 OtoLogic 與 Freesound 在這個環境打不開（403），維基共享資源的原檔一直回 429，所以改用這三段。
 
-音樂兩輪和弦正好 1,843,200 個取樣，是 IMA4 封包（64 個取樣）的整數倍，所以 CAF 結尾沒有補零；腳本會檢查這一點。改節奏或長度時，要保持這個條件，否則循環會有短暫的空隙。行駛聲每段 384,000 個取樣（8 秒），也是整數倍；而且從零點附近開始：IMA4 的封包從靜音解起，離零點開始的循環每一圈都會「喀」一聲。
+雨聲、颱風與雷聲（決策 346）也一樣：只取錄音的數字，錄音本身不提交、不打包。雨與颱風用同一支 `measure_running_spectrum.py` 量（結果在 `WEATHER_SPECTRA`）；雷聲用 `measure_thunder.py`：給每聲雷開始的秒數與之前一段沒有雷的雨，量雷聲第一秒與 2 到 10 秒後的隆隆聲各自高出雨聲多少（三分之一八度，每 0.25 秒一窗），以及每秒最大的那 0.25 秒照直線消失的速度（結果在 `THUNDER`）。雨聲每半秒起伏的大小與快慢（`WEATHER_SWING`）是同樣的錄音每半秒的音量算的標準差與自相關。量的錄音都是吳燦政（Wu, Tsan-Cheng）錄的、CC BY 3.0，都在 radio aporee ::: maps：
+
+| 錄音 | 量的段落 | 用在 |
+| --- | --- | --- |
+| [富陽自然生態公園, 大安區,Taipei City - Rain and Thunder](https://archive.org/details/aporee_28503_32842)（2015-07-04，`SoundMap201507044.mp3`） | 0–219 秒（全段） | `rain-steady.caf`，三段的平均 |
+| [Taipei Railway Workshop, Taiwan - Thunderstorm](https://archive.org/details/aporee_24967_28963)（2014-09-24，臺北機廠，`SoundMap201409241.mp3`） | 0–80 秒（之後打雷） | 同上 |
+| [大仁街, Tamsui District - Rain and Thunder](https://archive.org/details/aporee_27593_31908)（2015-04-21，`SoundMap201504211.mp3`） | 雨 0–74 秒；雷 75.4 秒起（雨 0–74 秒） | 同上；`thunder.caf` |
+| [No.20, Daren St., Tamsui Dist., New Taipei City - typhoon](https://archive.org/details/aporee_29264_34673)（2015-09-28，`soundmap201509281.mp3`） | 0–268 秒（全段） | `rain-typhoon.caf` |
+| [敦安公園, 大安區, Taipei City - Thunder sound](https://archive.org/details/aporee_28950_33339)（2015-07-23，`SoundMap2015072319.mp3`） | 雷 31.9 秒起（雨 18–23 秒） | `thunder.caf`，三聲的平均 |
+| [松山文創園區,Taipei City - Thunder](https://archive.org/details/aporee_33407_38419)（2016-09-09，`soundmap201609091.mp3`） | 雷 46.2 秒起（雨 10–38 秒） | 同上 |
+
+```sh
+python3 -I tools/audio/measure_running_spectrum.py SoundMap201507044.mp3 0 219 SoundMap201409241.mp3 0 80 SoundMap201504211.mp3 0 74
+python3 -I tools/audio/measure_running_spectrum.py soundmap201509281.mp3 0 268
+python3 -I tools/audio/measure_thunder.py SoundMap201504211.mp3 75.4 0 74 SoundMap2015072319.mp3 31.9 18 23 soundmap201609091.mp3 46.2 10 38
+```
+
+資料來源頁的「聲音」多了一筆（`DataSourceCredits` 的 `weatherSound`），寫六段的標題、錄音者、授權與連結。
+
+音樂兩輪和弦正好 1,843,200 個取樣，是 IMA4 封包（64 個取樣）的整數倍，所以 CAF 結尾沒有補零；腳本會檢查這一點。改節奏或長度時，要保持這個條件，否則循環會有短暫的空隙。行駛聲每段 384,000 個取樣（8 秒），雨聲 8 秒、颱風 12 秒、雷聲 10 秒，也都是整數倍；而且從零點附近開始：IMA4 的封包從靜音解起，離零點開始的循環每一圈都會「喀」一聲。

@@ -192,6 +192,40 @@ final class TrainMotionTests: XCTestCase {
         XCTAssertNil(motion.head(of: TrainID(rawValue: 99), at: 10.2))
     }
 
+    /// At 1× a train moves once a game second, every tenth tick: it glides
+    /// on through the nine ticks that move nothing, over the whole second,
+    /// rather than standing still for them and then jumping.
+    func testAtOneTimesATrainGlidesOverItsWholeSecond() throws {
+        var world = try makeWorld(width: 16_384, height: 4_096, balance: 1_000_000, speed: .x1)
+        let west = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 2_048))
+        let east = try world.buildTrackNode(at: WorldCoordinate(x: 15_360, y: 2_048))
+        let edge = try world.buildTrackEdge(from: west, to: east)
+        let train = try world.purchaseTrain(named: "T1").id
+        try world.placeTrain(train, at: .onEdge(TrackTraversal(edge: edge, direction: .forward), offset: 1_024))
+        try world.setTrainMovementRate(train, to: 6_000)
+        var motion = TrainMotion(world: world, time: 10)
+        var heads: [Double] = []
+        for tick in 1...20 {
+            try world.advance(ticks: 1)
+            let time = 10 + Double(tick) / 10
+            motion = TrainMotion(world: world, previous: motion, time: time)
+            heads.append(try XCTUnwrap(motion.head(of: train, at: time + 0.05)).x)
+        }
+        // The second tick's second: one glide from the tenth tick on,
+        // lasting the second it came after.
+        XCTAssertEqual(motion.time, 12, accuracy: 1e-9)
+        XCTAssertEqual(motion.duration, 1, accuracy: 1e-9)
+        // Drawn half a tick after each tick, the head goes forward every
+        // tick of the second second, never standing still.
+        for index in 10..<19 {
+            XCTAssertGreaterThan(heads[index + 1], heads[index], "tick \(index + 2)")
+        }
+        // Faster than 1×, a glide is still a tick's.
+        world.setSpeed(.x10)
+        try world.advance(ticks: 1)
+        XCTAssertEqual(TrainMotion(world: world, previous: motion, time: 15).duration, 0.5, "never longer than the longest step")
+    }
+
     /// A train of several cars draws its whole body behind its gliding
     /// head, along the track it was on.
     func testABodyFollowsItsHead() throws {

@@ -35,6 +35,17 @@ final class GameAudio {
     @ObservationIgnored private var runningLoops: [RunningSound.Loop: AVAudioPlayer] = [:]
     /// The loop heard now, `nil` for none.
     @ObservationIgnored private var audibleLoop: RunningSound.Loop?
+    /// Decision 346: the sound of the weather the session last asked for
+    /// (``WeatherSound``), `nil` for a clear sky.
+    @ObservationIgnored private var weather: WeatherSound?
+    /// Its loops, made when first heard.
+    @ObservationIgnored private var weatherLoops: [WeatherSound.Loop: AVAudioPlayer] = [:]
+    /// The weather's loop heard now, `nil` for none.
+    @ObservationIgnored private var audibleWeather: WeatherSound.Loop?
+    /// The players of the thunder, two so a clap can ring into the next.
+    @ObservationIgnored private var thunderPlayers: [AVAudioPlayer] = []
+    /// Waits for each clap of thunder while a storm is heard.
+    @ObservationIgnored private var thunderTask: Task<Void, Never>?
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var music: AVAudioPlayer?
@@ -97,6 +108,7 @@ final class GameAudio {
         soundsOn = on
         defaults.set(on, forKey: Key.sounds)
         updateRunning()
+        updateWeather()
     }
 
     /// Sets one of the three volumes (decision 219, stage 2); the music
@@ -109,6 +121,7 @@ final class GameAudio {
         }
         if category == .effects {
             updateRunning()
+            updateWeather()
         }
     }
 
@@ -119,6 +132,15 @@ final class GameAudio {
         guard sound != running else { return }
         running = sound
         updateRunning()
+    }
+
+    /// Plays the sound of the weather the map shows (decision 346), or
+    /// stops it with `nil`: the rain fades in and out with the day's
+    /// weather, and in a storm thunder follows each flash of lightning.
+    func setWeather(_ sound: WeatherSound?) {
+        guard sound != weather else { return }
+        weather = sound
+        updateWeather()
     }
 
     /// Takes the music down by `gain` (``MusicDuck``), fading there over
@@ -147,6 +169,7 @@ final class GameAudio {
         }
         updateMusic()
         updateRunning()
+        updateWeather()
     }
 
     /// Plays the sound for `cue`, unless sounds are off, the app is not
@@ -226,6 +249,76 @@ final class GameAudio {
             }
         }
     }
+
+    /// Starts, moves or fades out the weather's loops (decision 346) as
+    /// ``updateRunning()`` does the running loops, over a second and a
+    /// half, as a shower comes and goes; and waits for each clap of
+    /// thunder while a storm is heard.
+    private func updateWeather() {
+        let level = weather.map { volumes.volume(Self.weatherVolume * Float($0.volume), for: .effects) } ?? 0
+        let playing = plays && soundsOn && isActive && level > 0 ? weather?.loop : nil
+        audibleWeather = playing
+        for loop in WeatherSound.Loop.allCases {
+            if loop == playing {
+                guard let player = weatherLoops[loop] ?? loadWeather(loop) else { continue }
+                if !player.isPlaying {
+                    player.volume = 0
+                    player.play()
+                }
+                player.setVolume(level, fadeDuration: 1.5)
+            } else if let player = weatherLoops[loop], player.isPlaying {
+                player.setVolume(0, fadeDuration: 1.5)
+                Task { @MainActor [weak self, weak player] in
+                    try? await Task.sleep(for: .milliseconds(1600))
+                    guard let self, let player, self.audibleWeather != loop else { return }
+                    player.pause()
+                }
+            }
+        }
+        if playing != nil, weather?.thunders == true {
+            guard thunderTask == nil else { return }
+            thunderTask = Task { @MainActor [weak self] in
+                while !Task.isCancelled {
+                    // The clock the map's lightning flashes by.
+                    let now = Date().timeIntervalSinceReferenceDate
+                    let clap = WeatherSound.thunder(after: now)
+                    try? await Task.sleep(for: .seconds(clap.time - now))
+                    guard !Task.isCancelled, let self else { return }
+                    self.playThunder(clap)
+                }
+            }
+        } else {
+            thunderTask?.cancel()
+            thunderTask = nil
+        }
+    }
+
+    /// Plays one clap of thunder on a free player.
+    private func playThunder(_ clap: WeatherSound.Thunder) {
+        if thunderPlayers.isEmpty {
+            let file = WeatherSound.thunderResource
+            thunderPlayers = (0..<2).compactMap { _ in Self.player(named: file.name, extension: file.extension, volume: 0, rate: true) }
+        }
+        guard let player = thunderPlayers.first(where: { !$0.isPlaying }) ?? thunderPlayers.first else { return }
+        player.volume = volumes.volume(Self.thunderVolume * Float(clap.volume), for: .effects)
+        player.rate = Float(clap.rate)
+        player.currentTime = 0
+        player.play()
+    }
+
+    private func loadWeather(_ loop: WeatherSound.Loop) -> AVAudioPlayer? {
+        let file = loop.resource
+        guard let player = Self.player(named: file.name, extension: file.extension, volume: 0) else { return nil }
+        player.numberOfLoops = -1
+        weatherLoops[loop] = player
+        return player
+    }
+
+    /// The weather's own volumes, before the player's (decision 346): the
+    /// rain under the running sound, so a followed train is heard through
+    /// it; the nearest thunder under a watched train's chime.
+    private static let weatherVolume: Float = 0.25
+    private static let thunderVolume: Float = 0.5
 
     private func loadRunning(_ loop: RunningSound.Loop) -> AVAudioPlayer? {
         let file = loop.resource
