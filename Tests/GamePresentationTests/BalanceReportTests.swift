@@ -365,7 +365,7 @@ final class BalanceReportTests: XCTestCase {
             "| Sight | Type | Tourists a day | Fares a day | Balance | Against the Chu-Kuang | Against the Hai-Feng | Against the Ming-Ri |",
             "| --: | --- | --: | --: | --: | --: | --: | --: |",
         ]
-        for stars in [200, 300, 400, 425, 450] {
+        for stars in [200, 300, 350, 400, 425, 450] {
             var balances: [Int64] = []
             for type in [TrainType.e500ChuKuang, .haiFeng, .mingRi, .formosaStar] {
                 var world = try firstLine(type: type)

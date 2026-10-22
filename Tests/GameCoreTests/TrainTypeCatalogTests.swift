@@ -44,7 +44,7 @@ final class TrainTypeCatalogTests: XCTestCase {
         .init(code: "BLUE", capacity: 50, doors: 2, overloads: true, performance: .r100ChuKuang, first: 260_000, car: 45_000, permille: 1_500),
         .init(code: "SHANLAN", capacity: 44, doors: 3, overloads: true, performance: .haiFeng, first: 240_000, car: 50_000, permille: 1_300),
         .init(code: "MINGRI", capacity: 26, doors: 2, overloads: true, performance: .mingRi, first: 400_000, car: 55_000, permille: 1_400),
-        .init(code: "STAR", capacity: 29, doors: 2, overloads: true, performance: .formosaStar, first: 350_000, car: 45_000, permille: 1_300),
+        .init(code: "STAR", capacity: 29, doors: 2, overloads: true, performance: .formosaStar, first: 375_000, car: 45_000, permille: 1_300),
     ]
 
     func testEveryTypeKeepsItsNumbers() throws {

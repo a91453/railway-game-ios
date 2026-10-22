@@ -236,7 +236,7 @@ public enum TrainTypeCatalog {
         // Decision 286, later (third): halfway between the E500 Chu-Kuang
         // and the Ming-Ri.
         .init(code: "STAR", family: .railway, offer: .added, capacity: 29, doors: 2, overloads: true,
-              performance: .formosaStar, firstDollars: 350_000, carDollars: 45_000, operatingPermille: 1_300, carMetres: (20, 0),
+              performance: .formosaStar, firstDollars: 375_000, carDollars: 45_000, operatingPermille: 1_300, carMetres: (20, 0),
               sightseeingStars: Tourism.starsPerRoundIslandTrain),
     ]
 

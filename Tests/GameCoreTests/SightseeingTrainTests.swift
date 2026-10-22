@@ -72,7 +72,7 @@ final class SightseeingTrainTests: XCTestCase {
         XCTAssertEqual(TrainType.formosaStar.doorsPerCar, 2)
         XCTAssertEqual(TrainType.formosaStar.performance, .formosaStar)
         XCTAssertEqual(TrainPerformance.formosaStar, TrainPerformance(acceleration: 2182, braking: 2600, topSpeed: 110))
-        XCTAssertEqual(TrainType.formosaStar.spec.pricing, RollingStockPricing(firstDollars: 350_000, carDollars: 45_000, operatingPermille: 1_300))
+        XCTAssertEqual(TrainType.formosaStar.spec.pricing, RollingStockPricing(firstDollars: 375_000, carDollars: 45_000, operatingPermille: 1_300))
         XCTAssertEqual(TrainType.formosaStar.spec.carLength, TrainType.e500ChuKuang.spec.carLength)
         XCTAssertEqual(TrainType.formosaStar.sightseeingStars, Tourism.starsPerRoundIslandTrain)
         XCTAssertEqual(Tourism.starsPerRoundIslandTrain, 75)
