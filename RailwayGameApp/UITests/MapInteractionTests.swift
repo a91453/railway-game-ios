@@ -1438,7 +1438,14 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(view.appears(within: 10))
         view.pinch(withScale: 3, velocity: 2)
         view.pinch(withScale: 3, velocity: 2)
-        XCTAssertFalse(close.disappears(within: 3), "Pinching closer must not go back to the 2D map")
+        // One look at the app can miss the button while it draws the city
+        // close up at 2 to 8 frames a second: the look after the pinches
+        // found no Close, yet the screen recording shows the 3D map with
+        // its 2D and Build buttons to the end (main 8c7b8e6's full lane,
+        // run 39810708037). Look again; back on the 2D map it stays gone.
+        if close.disappears(within: 3) {
+            XCTAssertTrue(close.appears(within: 10), "Pinching closer must not go back to the 2D map")
+        }
         // Decision 313: Build goes back to the 2D map with the tools out.
         let build = app.buttons["map3D.build"]
         XCTAssertTrue(build.becomesHittable(within: 10))
