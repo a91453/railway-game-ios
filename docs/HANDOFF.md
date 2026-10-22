@@ -60,8 +60,8 @@
 
 | 角色 | 現在的 session | 做什麼 | 交接 |
 | --- | --- | --- | --- |
-| 遊戲規劃（兼派工） | session_01CHQg7B6JqzbScGSjyDwHos（2026-10-22 起，照 §1.1 換手，作者：「要不要全部所有換個session了 都一直在壓縮了」→「好，照表換」；換手時的現況在第 2 節最前面；前任 session_014rYHMtmqA5bEMkBBuKu6PV（10-21 至 10-22，作者：「那你需要先接手嗎太長了」）、session_01NiR5WLMFjMJBktQAMkfmkm（10-21）、session_01WW7o3decEv5LY59nYVqnDN（10-20 至 10-21，作者：「接手 角色表中遊戲規劃的工作」）、session_01V1xd3H9vNkuZoSA3czNfGm（10-16 至 10-18）、session_018D6gYU1yiZMtxSmNNU1K17） | 從玩家、鐵道迷、開發、美術、音樂五個角度決定優先順序與設計，開實作 session 並派工，綠了的 PR 照 §1.2 合併（2026-10-21 起），收作者轉來的玩家回報與 bug（§1.3），寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1、1.3 節 |
-| 每日 Threads 開發日誌 | 排程「每日 Threads 開發日誌」（台灣時間每天 21:43，2026-10-18 起暫停）觸發遊戲規劃，由它開寫作 session。2026-10-22 換手時由前任建了綁到現任 session_01CHQg7B6JqzbScGSjyDwHos 的新排程 `trig_01FZhfBNQCdDW8iDpowANLZS`（暫停中），前任的 `trig_01NfzFV9BcdiyBJpAwnaTuK9`（再之前是 `trig_01SkNFNW6qN6cMUGkGCXZM1v`）已刪。排程的綁定改不了，以後換手時由現任遊戲規劃用同一份 prompt 建一個綁到自己的新排程，再刪掉舊的；作者沒說要開就維持暫停 | 寫當天的串文草稿，用 SendUserFile 交給作者；不 commit、不發布 | 派工單照 2026-10-14、10-15、10-16 的寫作 session |
+| 遊戲規劃（兼派工） | session_014nUBHbE9mSK4qXHHgm8xCQ（2026-10-22 22:30 UTC 起，接 session_01UsF4QYCGrzSeNSFq11i8Wu（18:15–22:30），再之前 session_01Ddr2wiXx1Xhn2m9qNBDnDh、session_01CHQg7B6JqzbScGSjyDwHos（2026-10-22 起，照 §1.1 換手，作者：「要不要全部所有換個session了 都一直在壓縮了」→「好，照表換」；換手時的現況在第 2 節最前面；前任 session_014rYHMtmqA5bEMkBBuKu6PV（10-21 至 10-22，作者：「那你需要先接手嗎太長了」）、session_01NiR5WLMFjMJBktQAMkfmkm（10-21）、session_01WW7o3decEv5LY59nYVqnDN（10-20 至 10-21，作者：「接手 角色表中遊戲規劃的工作」）、session_01V1xd3H9vNkuZoSA3czNfGm（10-16 至 10-18）、session_018D6gYU1yiZMtxSmNNU1K17） | 從玩家、鐵道迷、開發、美術、音樂五個角度決定優先順序與設計，開實作 session 並派工，綠了的 PR 照 §1.2 合併（2026-10-21 起），收作者轉來的玩家回報與 bug（§1.3），寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1、1.3 節 |
+| 每日 Threads 開發日誌 | 排程「每日 Threads 開發日誌」（台灣時間每天 21:43，2026-10-18 起暫停）觸發遊戲規劃，由它開寫作 session。2026-10-22 換手時由前任建了綁到 session_01CHQg7B6JqzbScGSjyDwHos 的新排程 `trig_01FZhfBNQCdDW8iDpowANLZS`（暫停中；之後每次換手都重建，現任的 id 寫在 #1041 接手的留言），前任的 `trig_01NfzFV9BcdiyBJpAwnaTuK9`（再之前是 `trig_01SkNFNW6qN6cMUGkGCXZM1v`）已刪。排程的綁定改不了，以後換手時由現任遊戲規劃用同一份 prompt 建一個綁到自己的新排程，再刪掉舊的；作者沒說要開就維持暫停 | 寫當天的串文草稿，用 SendUserFile 交給作者；不 commit、不發布 | 派工單照 2026-10-14、10-15、10-16 的寫作 session |
 
 不再常駐（2026-10-20 停用）：合併協調 session_01QoA24EvFCFbmbcM1EwaZT7（前任 session_016sNs4eeZwga9hz1CCHkpmX）、派工 session_01MJ7sdeid5DAFjSVbTkmdi3（前任 session_01AaAj4wvJMxJQuLWAoYu6S8）。兩個都從 2026-10-17 起沒有動作。
 
@@ -267,6 +267,20 @@
 ## 2. 正在做的線（2026-10-20）
 
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
+
+**第三次換手（2026-10-22 22:30 UTC，session_01UsF4QYCGrzSeNSFq11i8Wu 壓縮 2 次 → session_014nUBHbE9mSK4qXHHgm8xCQ）**。和下面不同時以這段為準。
+
+- **合併了**：#1037、#1039、#1040、#1043（決策 356）、#1044（決策 357）、#1045（鳴日號）、#1046（iPad 委託案旗子）、#1047（環島之星，main 24bd3875）、文件 #1049、#1050、#1051。這一批從 b136e84b 起只合了 #1047；等 24bd3875（或之後最新的 push）的 `ci.yml` 綠再合下一批。
+- **開著的 PR**：#1048（決策 358，3D 邊開邊載入，session_01DQGby5PQyfvKAmzTey1zVE，壓縮 1 次）、#1052（決策 359，隧道第一步：隧道裡的列車不畫、跟車鏡頭留在地面，session_0134bAxAfAEENYWu1NaK1RWW，壓縮 1 次）。都是 draft，綠了轉 ready 就合併；兩個 session 合併後收工。
+- **做中**：session_01KAjPfBFs9fKJcLV9JsgRC4，§22.2 第 10d 名自有建築（公園、廟），存檔 71、決策 361，`claude/owned-building-kits`。
+- **號碼**：決策 358、359、361 已登記未合併，360 預約；下一個空的決策號 362，存檔版本 72。
+- **排隊派工**：
+  1. #1048 合併後：決策 360（3D 駕駛艙速度上限）。兩個 PR：先在 3D 跟車時速度最高 10×（用 600× 開 3D 就改用 10×，離開 3D 回到 2D 原本的速度，2D 不變）；再做沿路線的走廊載入（往前 6 km、軌道兩側各一格，岔路兩邊各蓋一小段）加駕駛艙的霧（1.2 km 起、2 km 全白、天空色，俯瞰不加），停下、10× 以下或看側面時補蓋周圍 3 km；實機量過再調高上限（估 30–40×），跟不上自動降一檔，用現有的「跟不上」提示。作者原話：「邊開邊載入的上限是多少速度 例如最高600x 你在駕駛艙速度那欄就改600x 防止載不出來 但是原本2d的速度不變」「所以調窄 調霧有用摟」。細節在 #1041 22:09–22:14 的三則規劃留言。
+  2. #1052 合併後：隧道的下一步派新 session（0134 壓縮過，不接新工作）：隧道口接地形與路塹、隧道內部與隧道燈、地下月台，用現有的 3D 套件組（作者：「那要不要畫隧道燈的地下 跟隧道月台 用現有codex素材組的出來嗎」→ 要；「記得改成遊戲風格而不是照搬」：照 art-style §7 任意組合、成品跟原本不同）。見決策 359「下一步」。
+  3. 之後依序：§22.2 10e（3D 道路照真實高度）、10f（不同的高架橋），兩個都改 `Map3DScene.swift`，排在 359 之後；然後仲夏寶島號（第 11 名）、第 7 名其餘、第 14 名……
+- **TDX 查過沒有道路高度**（作者：「精確高度如果要抓的話Tdx抓的到嗎」→「好，去跑 TDX 查一下」；2026-10-22 `tdx-check.yml` run 39865308650、39865353614）：`/api/basic/v2/Road/Traffic/SectionShape/Freeway` 只有平面的 LINESTRING；`Section/Freeway` 有路名、里程、速限、LinkID，沒有高度、高架或橋梁欄位；TDX 的道路路網線型只有國道與省道。所以 10e 照圖磚的 `brunnel`／`layer`（每層約 6 m）做，不用 TDX。
+- **E1**：作者說還沒要上 App Store，不派、巡查不提（第 5 節）。
+- **排程**：Threads 每日排程由新規劃重建（暫停）、刪掉綁在 01UsF4 的 `trig_01YPQ4fTJtzar7o3upbBQBE9`；01UsF4 的巡查提醒換手時已刪，新規劃自己排。
 
 **第二次換手（2026-10-22 18:30 UTC，session_01Ddr2wiXx1Xhn2m9qNBDnDh 壓縮 2 次）**。這一段以下是上午換手時寫的，和這段不同時以這段為準。
 
