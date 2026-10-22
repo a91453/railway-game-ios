@@ -328,6 +328,23 @@ final class RealWorldMapUITests: XCTestCase {
         let site = origin.withOffset(CGVector(dx: siteX, dy: middle))
         site.tap()
         XCTAssertTrue(confirm.appears(within: 10), "No ✓ for the platform")
+        // Four cars, 80 m, as the steps below count. On an iPad on its side
+        // the map shows more of Taipei and the site takes Taipei station's
+        // name, so the platform took its real length, 16 cars, 320 m: the
+        // whole 254 m stretch, which climbs 17‰ and cannot be levelled
+        // (main 71a3807, run 39765719731). Set by hand, the length stays for
+        // the second platform too.
+        let cars = app.steppers.matching(NSPredicate(format: "label BEGINSWITH 'Platform for'")).firstMatch
+        print("DIAG steppers: \(app.steppers.allElementsBoundByIndex.map { "\($0.label) | \($0.value ?? "-") | \($0.buttons.allElementsBoundByIndex.map { "\($0.identifier)/\($0.label)" })" })")
+        if cars.appears(within: 5), !cars.label.hasPrefix("Platform for 4 cars") {
+            let fewer = cars.buttons.matching(NSPredicate(format: "identifier == 'Decrement' OR label == 'Decrement'")).firstMatch
+            for _ in 0..<20 where !cars.label.hasPrefix("Platform for 4 cars") {
+                XCTAssertTrue(fewer.becomesHittable(within: 5), "The platform length cannot be shortened: \(cars.label)")
+                fewer.tap()
+            }
+            XCTAssertTrue(cars.label.hasPrefix("Platform for 4 cars"), "The platform is not 4 cars: \(cars.label)")
+        }
+        XCTAssertTrue(confirm.appears(within: 5), "No ✓ for the platform of 4 cars")
         confirm.waitUntilSettled()
         confirm.tap()
         XCTAssertTrue(banner("Built station").appears(within: 10), "The platform was not built")

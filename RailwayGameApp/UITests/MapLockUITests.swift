@@ -36,9 +36,24 @@ final class MapLockUITests: XCTestCase {
         XCTAssertTrue(lock.appears(within: 5), "No lock on the tiles for sale")
         XCTAssertEqual(lock.label, "Locked land")
         XCTAssertTrue(lock.becomesHittable(within: 5), "The lock is not reachable")
+        // DIAGNOSTIC (claude/ipad-uitests-red), removed before review.
+        print("DIAG lock \(lock.identifier) frame \(lock.frame) enabled \(lock.isEnabled) app \(app.frame) expansion \(expansion.frame) zoomOut \(zoomOut.frame) dockBuild \(app.buttons["dock.build"].frame)")
         lock.tap()
 
         let buy = app.buttons["map.expansion.buy"]
+        if !buy.appears(within: 5) {
+            print("DIAG first tap missed; tree:\n\(app.debugDescription)")
+            lock.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2)).tap()
+            print("DIAG upper tap opened: \(buy.appears(within: 5))")
+            if !buy.exists, zoomOut.isEnabled {
+                zoomOut.tap()
+                _ = lock.appears(within: 3)
+                sleep(2)
+                print("DIAG after zoom: lock \(lock.identifier) frame \(lock.frame) exists \(lock.exists)")
+                if lock.exists { lock.tap() }
+                print("DIAG zoomed tap opened: \(buy.appears(within: 5))")
+            }
+        }
         XCTAssertTrue(buy.appears(within: 5), "The lock opens the tile's card")
         XCTAssertEqual(expansion.label, "Stop expanding the map")
         XCTAssertFalse(lock.exists, "The tiles show their prices while choosing, not locks")
