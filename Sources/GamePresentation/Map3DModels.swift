@@ -61,6 +61,11 @@ public struct Map3DModelPack: Sendable {
         models.append(Map3DGreenCommuter.formation())
         models += Map3DThreeCarUrban.Unit.allCases.map { Map3DThreeCarUrban.model($0) }
         models.append(Map3DThreeCarUrban.formation())
+        // Independent static five-section articulated LRT; no operating type binding.
+        models += Map3DFiveSectionLRT.Unit.allCases.map { Map3DFiveSectionLRT.model($0) }
+        models.append(Map3DFiveSectionLRT.formation())
+        models += Map3DSevenSectionLRT.Unit.allCases.map { Map3DSevenSectionLRT.model($0) }
+        models.append(Map3DSevenSectionLRT.formation())
         self.models = models
     }
 
