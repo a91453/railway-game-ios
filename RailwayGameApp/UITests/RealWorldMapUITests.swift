@@ -339,6 +339,9 @@ final class RealWorldMapUITests: XCTestCase {
         if cars.appears(within: 5), !cars.label.hasPrefix("Platform for 4 cars") {
             let fewer = cars.buttons.matching(NSPredicate(format: "identifier == 'Decrement' OR label == 'Decrement'")).firstMatch
             for _ in 0..<20 where !cars.label.hasPrefix("Platform for 4 cars") {
+                // On a phone on its side, with this text, the stepper is
+                // below the details card's fold (run 39812583222).
+                XCTAssertTrue(app.scrollUntilShown(fewer), "The platform length cannot be scrolled to: \(fewer.frame)")
                 XCTAssertTrue(fewer.becomesHittable(within: 5), "The platform length cannot be shortened: \(cars.label)")
                 fewer.tap()
             }

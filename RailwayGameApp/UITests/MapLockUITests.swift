@@ -45,10 +45,11 @@ final class MapLockUITests: XCTestCase {
             print("DIAG first tap missed")
             for (dx, dy) in [(0.5, 0.2), (0.5, 0.35), (0.5, 0.65), (0.5, 0.8), (0.15, 0.5), (0.85, 0.5)] as [(CGFloat, CGFloat)] {
                 guard lock.appears(within: 5) else { print("DIAG no lock before (\(dx), \(dy))"); break }
-                let point = lock.coordinate(withNormalizedOffset: CGVector(dx: dx, dy: dy))
-                point.tap()
+                let frame = lock.frame
+                let at = CGPoint(x: frame.minX + frame.width * dx, y: frame.minY + frame.height * dy)
+                app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: at.x, dy: at.y)).tap()
                 let opened = buy.appears(within: 4)
-                print("DIAG tap (\(dx), \(dy)) at \(point.screenPoint) opened: \(opened)")
+                print("DIAG tap (\(dx), \(dy)) at \(at) opened: \(opened)")
                 if opened {
                     expansion.tap()
                     _ = buy.disappears(within: 5)
