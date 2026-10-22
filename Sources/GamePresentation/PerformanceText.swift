@@ -59,6 +59,8 @@ public struct PerformancePreset: CaseIterable, Hashable, Sendable {
     public static let r100ChuKuang = PerformancePreset(listed: "r100ChuKuang")
     public static let r200ChuKuang = PerformancePreset(listed: "r200ChuKuang")
     public static let haiFeng = PerformancePreset(listed: "haiFeng")
+    /// Decision 286, later.
+    public static let mingRi = PerformancePreset(listed: "mingRi")
 
     /// Its row's code.
     public var code: String { TrainPerformanceCatalog.builtIn[row].code }
@@ -99,6 +101,7 @@ public struct PerformancePreset: CaseIterable, Hashable, Sendable {
         "r100ChuKuang": ("Chu-Kuang, R100 diesel", "莒光號（R100 柴電機車）"),
         "r200ChuKuang": ("Chu-Kuang, R200 diesel", "莒光號（R200 柴電機車）"),
         "haiFeng": ("Hai-Feng sightseeing train", "海風號"),
+        "mingRi": ("Ming-Ri sightseeing train", "鳴日號"),
     ]
 
     /// The first preset, in the order above, that accelerates, brakes and

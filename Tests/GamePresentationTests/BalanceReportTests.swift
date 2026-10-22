@@ -350,6 +350,46 @@ final class BalanceReportTests: XCTestCase {
         print(lines.joined(separator: "\n"))
     }
 
+    /// Decision 286, later: the Ming-Ri's whole star against the Hai-Feng's
+    /// half, beside a sight of 2, 3, 4 and 4.5 stars, with the E500
+    /// Chu-Kuang (the Ming-Ri's locomotive, no star) as the line without a
+    /// sightseeing train: the mean tourists and fares a day, and the cash
+    /// on the last day, each set four cars.
+    func testTheMingRiAtASight() throws {
+        let days = try requestedDays()
+        var lines = [
+            "### A first line beside a sight: E500 Chu-Kuang, Hai-Feng and Ming-Ri (four cars), \(days) days",
+            "",
+            "| Sight | Type | Tourists a day | Fares a day | Balance | Against the Chu-Kuang | Against the Hai-Feng |",
+            "| --: | --- | --: | --: | --: | --: | --: |",
+        ]
+        for stars in [200, 300, 400, 450] {
+            var balances: [Int64] = []
+            for type in [TrainType.e500ChuKuang, .haiFeng, .mingRi] {
+                var world = try firstLine(type: type)
+                let station = try XCTUnwrap(world.stations.last)
+                world.setTourism([Attraction(
+                    id: AttractionID(rawValue: 1), name: "Sight", englishName: "Sight",
+                    point: PlanPoint(x: station.point.x + 3_000, y: station.point.y), kind: .town, baseStars: stars
+                )])
+                try world.advance(ticks: 1)
+                var tourists: Int64 = 0, fares: Int64 = 0
+                for _ in 1...days {
+                    try world.advance(ticks: 1_440)
+                    tourists += world.attraction(id: AttractionID(rawValue: 1))?.yesterday ?? 0
+                    fares += world.financeReport(.day).previous.fareRevenue.amount
+                }
+                let balance = world.economy.balance.amount
+                balances.append(balance)
+                lines.append(
+                    "| \(StationMasterAdvice.starsText(stars)) | \(type.rawValue) | \(tourists / Int64(days)) | \(dollars(fares / Int64(days))) | "
+                        + "\(dollars(balance)) | \(dollars(balance - balances[0])) | \(balances.count > 1 ? dollars(balance - balances[1]) : "—") |"
+                )
+            }
+        }
+        print(lines.joined(separator: "\n"))
+    }
+
     /// Decision 174's hotels: a hotel built on day 10 beside a sight, whose
     /// guests are 80 per mille of its tourists, for a sight of 3, 4 and 4.5
     /// stars before it (a hotel adds a quarter star). The hotel's customers,

@@ -82,6 +82,9 @@ public struct TrainType: RawRepresentable, Hashable, Codable, CaseIterable, Send
     /// The Shan-Lan (山嵐號, decision 286, later): the Hai-Feng's sister, the
     /// same EMU500 rebuild.
     public static let shanLan = TrainType(listed: "SHANLAN")
+    /// The Ming-Ri (鳴日號, decision 286, later): luxury coaches behind an
+    /// E500, as one set whose cars are the coaches.
+    public static let mingRi = TrainType(listed: "MINGRI")
 
     /// The reference's main types, offered everywhere
     /// (`LINE_TRAIN_TYPE_MAIN`); the others are its extras
@@ -131,8 +134,13 @@ public struct TrainType: RawRepresentable, Hashable, Codable, CaseIterable, Send
     public var isHighSpeed: Bool { TrainTypeCatalog.builtIn[row].family == .highSpeed }
 
     /// Whether it is a sightseeing train (decision 286): the Hai-Feng, the
-    /// Blue Train and the Shan-Lan.
+    /// Blue Train, the Shan-Lan and the Ming-Ri.
     public var isSightseeing: Bool { TrainTypeCatalog.builtIn[row].isSightseeing }
+
+    /// What one of its trains calling near a sight adds to the sight's
+    /// rating, in hundredths of a star (decision 286): none for a type that
+    /// is not a sightseeing train.
+    public var sightseeingStars: Int { TrainTypeCatalog.builtIn[row].sightseeingStars }
 
     /// Reads a code; a code no type has does not read, as the type's codes
     /// did when they were an enum's raw values.

@@ -109,6 +109,10 @@ public struct Tourism: Hashable, Sendable {
     /// calling at a station within ``reach`` of an attraction adds to its
     /// rating, in hundredths of a star: half a star, however many call.
     public static let starsPerSightseeingTrain = 50
+    /// What the Ming-Ri, the luxury sightseeing train (decision 286, later),
+    /// adds the same way: a whole star. Where several sightseeing trains
+    /// call, the most any of them adds counts.
+    public static let starsPerLuxuryTrain = 100
     /// The share of an attraction's tourists who stay the night in a hotel
     /// near it, in thousandths (shared among the hotels there).
     public static let hotelStayPermille: Int64 = 80
@@ -445,44 +449,71 @@ extension GameWorld {
     /// The rating of `attraction` now, in hundredths of a star: its own
     /// (``Attraction/stars``, with its shop), a quarter star for each of
     /// the first two hotels near it and half a star when a sightseeing
-    /// train calls near it (decision 286), five stars at most.
+    /// train calls near it (decision 286; a whole star for the Ming-Ri),
+    /// five stars at most.
     public func stars(of attraction: Attraction) -> Int {
         stars(of: attraction, sightseeingStops: sightseeingStops())
     }
 
     /// The same, given ``sightseeingStops()``, worked out once for every
     /// sight.
-    func stars(of attraction: Attraction, sightseeingStops: [PlanPoint]) -> Int {
-        let train = Self.isNear(attraction, any: sightseeingStops) ? Tourism.starsPerSightseeingTrain : 0
+    func stars(of attraction: Attraction, sightseeingStops: [SightseeingStop]) -> Int {
+        let train = Self.sightseeingStars(near: attraction, of: sightseeingStops)
         return min(500, attraction.stars + Tourism.starsPerHotel * min(Tourism.hotelsCounted, hotelsNear(attraction)) + train)
     }
 
     /// Whether a sightseeing train (decision 286) calls at a station within
     /// ``Tourism/reach`` of `attraction`.
     public func hasSightseeingTrain(near attraction: Attraction) -> Bool {
-        Self.isNear(attraction, any: sightseeingStops())
+        sightseeingTrainStars(near: attraction) > 0
     }
 
-    /// The points of the stations that take passengers where a passenger
-    /// line, or one of its patterns, has a train of a sightseeing type
-    /// (decision 286) to call; empty, and quick, when the company has none.
-    func sightseeingStops() -> [PlanPoint] {
-        let sightseeing = Set(trains.lazy.filter { $0.type?.isSightseeing == true }.map(\.id))
-        guard !sightseeing.isEmpty else { return [] }
-        var called = Set<StationID>()
+    /// What the sightseeing trains calling within ``Tourism/reach`` of
+    /// `attraction` add to it, in hundredths of a star: the most any of
+    /// them adds (decision 286), none when none calls.
+    public func sightseeingTrainStars(near attraction: Attraction) -> Int {
+        Self.sightseeingStars(near: attraction, of: sightseeingStops())
+    }
+
+    /// A station a sightseeing train calls at, and the most a train calling
+    /// there adds (``TrainType/sightseeingStars``).
+    struct SightseeingStop {
+        let point: PlanPoint
+        let stars: Int
+    }
+
+    /// The stations that take passengers where a passenger line, or one of
+    /// its patterns, has a train of a sightseeing type (decision 286) to
+    /// call; empty, and quick, when the company has none.
+    func sightseeingStops() -> [SightseeingStop] {
+        var starsOfTrain: [TrainID: Int] = [:]
+        for train in trains {
+            if let stars = train.type?.sightseeingStars, stars > 0 { starsOfTrain[train.id] = stars }
+        }
+        guard !starsOfTrain.isEmpty else { return [] }
+        func most(_ trains: [TrainID]) -> Int { trains.reduce(0) { max($0, starsOfTrain[$1] ?? 0) } }
+        var called: [StationID: Int] = [:]
+        func call(_ station: StationID, _ stars: Int) { called[station] = max(called[station] ?? 0, stars) }
         for line in lines where !line.isFreight {
-            if line.trains.contains(where: sightseeing.contains) { called.formUnion(line.stops) }
-            for pattern in line.patterns where pattern.trains.contains(where: sightseeing.contains) {
-                for call in pattern.calls where line.stops.indices.contains(call) { called.insert(line.stops[call]) }
+            let stars = most(line.trains)
+            if stars > 0 { for station in line.stops { call(station, stars) } }
+            for pattern in line.patterns {
+                let stars = most(pattern.trains)
+                guard stars > 0 else { continue }
+                for index in pattern.calls where line.stops.indices.contains(index) { call(line.stops[index], stars) }
             }
         }
-        return stations.lazy.filter { called.contains($0.id) && self.allowsService(at: $0.id) }.map(\.point)
+        return stations.compactMap { station in
+            guard let stars = called[station.id], allowsService(at: station.id) else { return nil }
+            return SightseeingStop(point: station.point, stars: stars)
+        }
     }
 
-    static func isNear(_ attraction: Attraction, any points: [PlanPoint]) -> Bool {
-        points.contains { point in
-            let dx = point.x - attraction.point.x, dy = point.y - attraction.point.y
-            return dx * dx + dy * dy <= Tourism.reach * Tourism.reach
+    /// The most a stop within ``Tourism/reach`` of `attraction` adds.
+    static func sightseeingStars(near attraction: Attraction, of stops: [SightseeingStop]) -> Int {
+        stops.reduce(0) { most, stop in
+            let dx = stop.point.x - attraction.point.x, dy = stop.point.y - attraction.point.y
+            return dx * dx + dy * dy <= Tourism.reach * Tourism.reach ? max(most, stop.stars) : most
         }
     }
 
