@@ -74,9 +74,23 @@
 // - The Shan-Lan (山嵐號, decision 286, later) is the Hai-Feng's sister,
 //   the same EMU500 rebuild (`namedTrains` `shanlan`; `formations.js`
 //   `shanlan`: four cars, official): the Hai-Feng's numbers.
+// - The Ming-Ri (鳴日號, decision 286, later) is luxury coaches behind an
+//   E500 (`namedTrains` `mingri`; `formations.js` `mingri`: an estimated
+//   locomotive and five 20 m coaches; the garage model `mingri` an
+//   electric locomotive). As the Chu-Kuang trains, one set whose cars are
+//   the coaches, the locomotive in the first car's price. Chinese
+//   Wikipedia: E500s haul it since 2025, 110 km/h, and its 16 coaches seat
+//   415 (business 33, lounge 27, dining 14), 26 a coach rounded; two doors
+//   a side (the garage model `mingricoach`). It starts as the E500
+//   Chu-Kuang would with five coaches (``TrainPerformance/mingRi``). Its
+//   prices are this project's: the E500 Chu-Kuang's and $100,000 and
+//   $20,000 a coach more, and a running weight 200 more for its kitchen
+//   and attendants.
 // - A sightseeing type (decision 286) adds half a star to a sight one of
 //   its trains calls near (``Tourism/starsPerSightseeingTrain``): the Blue
-//   Train, the Hai-Feng and the Shan-Lan.
+//   Train, the Hai-Feng and the Shan-Lan; the Ming-Ri a whole star
+//   (``Tourism/starsPerLuxuryTrain``). The most any train calling there
+//   adds is what counts.
 // - The families (metro, railway, high speed, special) are decision 224's
 //   catalogue of types; a high-speed set is the type whose family is high
 //   speed.
@@ -121,14 +135,18 @@ public struct TrainTypeSpec: Hashable, Sendable {
     /// world with real car lengths (decision 227): the type's real coupler
     /// pitch, a middle car's.
     public let carLength: Int64
-    /// Whether it is a sightseeing train (decision 286): a sight one of its
-    /// trains calls near gains ``Tourism/starsPerSightseeingTrain``.
-    public let isSightseeing: Bool
+    /// What a sight one of its trains calls near gains, in hundredths of a
+    /// star (decision 286): ``Tourism/starsPerSightseeingTrain`` for a
+    /// sightseeing train, ``Tourism/starsPerLuxuryTrain`` for the Ming-Ri,
+    /// none for the rest.
+    public let sightseeingStars: Int
+    /// Whether it is a sightseeing train (decision 286).
+    public var isSightseeing: Bool { sightseeingStars > 0 }
 
     init(
         code: String, family: TrainFamily, offer: TrainTypeOffer, capacity: Int64, doors: Int64, overloads: Bool,
         performance: TrainPerformance?, firstDollars: Int64, carDollars: Int64, operatingPermille: Int64, carMetres: (Int64, Int64),
-        sightseeing: Bool = false
+        sightseeingStars: Int = 0
     ) {
         self.code = code
         self.family = family
@@ -139,7 +157,7 @@ public struct TrainTypeSpec: Hashable, Sendable {
         self.performance = performance
         pricing = RollingStockPricing(firstDollars: firstDollars, carDollars: carDollars, operatingPermille: operatingPermille)
         carLength = Self.worldUnits(metres: carMetres.0, tenths: carMetres.1)
-        isSightseeing = sightseeing
+        self.sightseeingStars = sightseeingStars
     }
 
     /// `metres.tenths` metres in world units (64 a metre), to the nearest.
@@ -190,15 +208,19 @@ public enum TrainTypeCatalog {
               performance: .r200ChuKuang, firstDollars: 280_000, carDollars: 35_000, operatingPermille: 1_400, carMetres: (20, 0)),
         .init(code: "HAIFENG", family: .railway, offer: .added, capacity: 44, doors: 3, overloads: true,
               performance: .haiFeng, firstDollars: 240_000, carDollars: 50_000, operatingPermille: 1_300, carMetres: (20, 3),
-              sightseeing: true),
+              sightseeingStars: Tourism.starsPerSightseeingTrain),
         // Decision 286.
         .init(code: "BLUE", family: .railway, offer: .added, capacity: 50, doors: 2, overloads: true,
               performance: .r100ChuKuang, firstDollars: 260_000, carDollars: 45_000, operatingPermille: 1_500, carMetres: (20, 0),
-              sightseeing: true),
+              sightseeingStars: Tourism.starsPerSightseeingTrain),
         // Decision 286, later: the Hai-Feng's numbers.
         .init(code: "SHANLAN", family: .railway, offer: .added, capacity: 44, doors: 3, overloads: true,
               performance: .haiFeng, firstDollars: 240_000, carDollars: 50_000, operatingPermille: 1_300, carMetres: (20, 3),
-              sightseeing: true),
+              sightseeingStars: Tourism.starsPerSightseeingTrain),
+        // Decision 286, later: the E500 Chu-Kuang's prices and more.
+        .init(code: "MINGRI", family: .railway, offer: .added, capacity: 26, doors: 2, overloads: true,
+              performance: .mingRi, firstDollars: 400_000, carDollars: 55_000, operatingPermille: 1_400, carMetres: (20, 0),
+              sightseeingStars: Tourism.starsPerLuxuryTrain),
     ]
 
     /// Each code's row. Building it traps on a code listed twice.

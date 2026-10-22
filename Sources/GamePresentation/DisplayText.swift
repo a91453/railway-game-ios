@@ -853,6 +853,7 @@ extension TrainType {
         "HAIFENG": ("Hai-Feng sightseeing train", "海風號"),
         "BLUE": ("Blue Train sightseeing train", "藍皮解憂號"),
         "SHANLAN": ("Shan-Lan sightseeing train", "山嵐號"),
+        "MINGRI": ("Ming-Ri sightseeing train", "鳴日號"),
     ]
 }
 

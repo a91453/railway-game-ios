@@ -126,7 +126,7 @@ extension GameWorld {
             return AttractionRow(
                 id: sight.id, name: sight.name(in: language), kind: sight.kind.title(in: language), stars: stars(of: sight),
                 starsText: starsText(of: sight), souvenir: sight.souvenir, hotels: hotelsNear(sight),
-                sightseeingTrainText: hasSightseeingTrain(near: sight) ? Self.sightseeingTrainText(in: language) : nil,
+                sightseeingTrainText: Self.sightseeingTrainText(stars: sightseeingTrainStars(near: sight), in: language),
                 status: status, statusText: status.title(in: language),
                 stationName: attractionStation(of: sight.id).flatMap { station(id: $0)?.name }, today: today,
                 yesterday: sight.yesterday, thisYear: sight.thisYear, lastYear: sight.lastYear, nextShop: offer, point: sight.point
@@ -135,27 +135,45 @@ extension GameWorld {
         return rows.sorted { $0.stars != $1.stars ? $0.stars > $1.stars : $0.id < $1.id }
     }
 
-    /// What the panel says of a sight a sightseeing train calls near.
-    static func sightseeingTrainText(in language: DisplayLanguage) -> String {
-        let stars = StationMasterAdvice.starsText(Tourism.starsPerSightseeingTrain)
+    /// What the panel says of a sight a sightseeing train calls near, the
+    /// trains there adding `stars`; `nil` when none does.
+    static func sightseeingTrainText(stars: Int, in language: DisplayLanguage) -> String? {
+        guard stars > 0 else { return nil }
+        let stars = StationMasterAdvice.starsText(stars)
         return language.text("A sightseeing train calls here (+\(stars))", "有觀光列車停靠（+\(stars)）")
+    }
+
+    /// `stars` hundredths as a count of stars: "0.5 stars", "1 star".
+    static func starsCount(_ stars: Int, in language: DisplayLanguage) -> String {
+        let number = StationMasterAdvice.starsText(stars).dropLast()
+        return language.text("\(number) \(stars == 100 ? "star" : "stars")", "\(number) 星")
     }
 
     /// What the train catalog says under a sightseeing type (decision 286),
     /// in a world with sights; `nil` for any other type or world.
     public func sightseeingNote(for type: TrainType?, in language: DisplayLanguage) -> String? {
-        guard hasTourism, type?.isSightseeing == true else { return nil }
-        let stars = StationMasterAdvice.starsText(Tourism.starsPerSightseeingTrain).dropLast()
+        guard hasTourism, let type, type.isSightseeing else { return nil }
+        let stars = Self.starsCount(type.sightseeingStars, in: language)
         return language.text(
-            "Sightseeing train: calling at a station within 800 m of a sight adds \(stars) stars to it, so more tourists come.",
-            "觀光列車：停靠景點 800 公尺內的車站時，景點加 \(stars) 星，觀光客會變多。"
+            "Sightseeing train: calling at a station within 800 m of a sight adds \(stars) to it, so more tourists come.",
+            "觀光列車：停靠景點 800 公尺內的車站時，景點加 \(stars)，觀光客會變多。"
         )
     }
 
-    /// The sightseeing train types (decision 286), by name: "Hai-Feng
-    /// sightseeing train, Blue Train sightseeing train".
-    static func sightseeingTrainNames(in language: DisplayLanguage) -> String {
-        TrainType.offered.filter(\.isSightseeing).map { $0.title(in: language) }.joined(separator: language.text(", ", "、"))
+    /// The sightseeing train types (decision 286) that add `stars`, by
+    /// name: "Hai-Feng sightseeing train, Blue Train sightseeing train".
+    static func sightseeingTrainNames(adding stars: Int, in language: DisplayLanguage) -> String {
+        TrainType.offered.filter { $0.sightseeingStars == stars }.map { $0.title(in: language) }.joined(separator: language.text(", ", "、"))
+    }
+
+    /// The help's sentence on sightseeing trains: the half-star ones, then
+    /// the Ming-Ri's whole star (decision 286, later).
+    static func sightseeingTrainHelp(in language: DisplayLanguage) -> String {
+        let half = Tourism.starsPerSightseeingTrain, whole = Tourism.starsPerLuxuryTrain
+        return language.text(
+            "A sightseeing train (\(sightseeingTrainNames(adding: half, in: language))) calling at a station within 800 m adds \(starsCount(half, in: language)); the \(sightseeingTrainNames(adding: whole, in: language)) adds \(starsCount(whole, in: language)).",
+            "觀光列車（\(sightseeingTrainNames(adding: half, in: language))）停靠 800 公尺內的車站時，景點加 \(starsCount(half, in: language))；\(sightseeingTrainNames(adding: whole, in: language))加 \(starsCount(whole, in: language))。"
+        )
     }
 
     /// The year's tourists at every sight, for the panel's heading.
@@ -166,8 +184,8 @@ extension GameWorld {
     /// The tourism panel's help text.
     public func tourismHelp(in language: DisplayLanguage) -> String {
         language.text(
-            "Tourists come to a sight from the outside connections and the busiest towns, more at weekends and holidays, by season and in fine weather, and ride to the station within 800 m. A souvenir shop adds a quarter star a level and earns \(Tourism.spendPerLevel / 100) dollars a tourist a level. A hotel within 800 m adds a quarter star too (two count) and takes in \(Tourism.hotelStayPermille / 10)% of the tourists as guests. A sightseeing train (\(Self.sightseeingTrainNames(in: language))) calling at a station within 800 m adds \(StationMasterAdvice.starsText(Tourism.starsPerSightseeingTrain).dropLast()) stars.",
-            "觀光客從外部連接站和最大的城鎮出發，週末與連假更多，看季節與天氣，搭車到 800 公尺內的車站。名產店每級加 0.25 星，每位觀光客每級在店裡花 \(Tourism.spendPerLevel / 100) 元。800 公尺內的飯店也各加 0.25 星（算兩家），並接待 \(Tourism.hotelStayPermille / 10)% 的觀光客住宿。觀光列車（\(Self.sightseeingTrainNames(in: language))）停靠 800 公尺內的車站時，景點加 \(StationMasterAdvice.starsText(Tourism.starsPerSightseeingTrain).dropLast()) 星。"
+            "Tourists come to a sight from the outside connections and the busiest towns, more at weekends and holidays, by season and in fine weather, and ride to the station within 800 m. A souvenir shop adds a quarter star a level and earns \(Tourism.spendPerLevel / 100) dollars a tourist a level. A hotel within 800 m adds a quarter star too (two count) and takes in \(Tourism.hotelStayPermille / 10)% of the tourists as guests. \(Self.sightseeingTrainHelp(in: language))",
+            "觀光客從外部連接站和最大的城鎮出發，週末與連假更多，看季節與天氣，搭車到 800 公尺內的車站。名產店每級加 0.25 星，每位觀光客每級在店裡花 \(Tourism.spendPerLevel / 100) 元。800 公尺內的飯店也各加 0.25 星（算兩家），並接待 \(Tourism.hotelStayPermille / 10)% 的觀光客住宿。\(Self.sightseeingTrainHelp(in: language))"
         )
     }
 }

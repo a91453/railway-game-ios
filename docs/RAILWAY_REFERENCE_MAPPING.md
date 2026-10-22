@@ -1654,6 +1654,8 @@ V 實際放行 → T、U（保證不互穿）
 | `source/data/tra_schedule.json` 的 5898／5899、6652、6676 | 無 | 真實班次只當出處；遊戲的列車由玩家的路線派 |
 | 決策 286 的後來：`namedTrains` `shanlan`（「海風號的姊妹車」、EMU500 改造）、`formations.js` `shanlan`（官方 4 輛） | `TrainType.shanLan`（`SHANLAN`），數字照 `HAIFENG` | 名稱與編組取用；`story`、季節（9/4–12/27 週五至週日）沒有用 |
 | `source/rail-3d/assets/garage-blender-v1/shanlan.json` 的 `specification.body` `D4E48B`（「稻穗黃綠」） | `TrainLivery.shanLan` 的車身 `#D4E48B`；帶色 `#7FA845`、車頭 `#5E8C3A` 是本專案的 | 車身照用（模型 `body` 的線性色換成 sRGB 也是 `D4E48B`）；模型的其他顏色是黑框、玻璃、金屬，沒有可當帶色的 |
+| 決策 286 的後來：`namedTrains` `mingri`（「台鐵首款五星級觀光列車」「旗艦門面」、包車制、無固定車次）、`formations.js` `mingri`（推估機車 1 輛＋客車 5 輛、每輛 20 m） | `TrainType.mingRi`（`MINGRI`）：一個編組、節數是客車、20.0 m；`Tourism.starsPerLuxuryTrain`（加 1★） | 名稱、編組取用；「五星級」「旗艦」是加一顆星的根據；`story`、`status2026` 沒有用 |
+| `source/rail-3d/assets/garage-blender-v1/mingricoach.json`（`body` `292F31`、`accent` `D1773D`、每側 2 門）、`mingri.json`（`accent` `D57638`、GE 式車頭、電力） | `TrainLivery.mingRi`（車身 `#292F31`、帶色 `#D1773D`、車頭 `#D57638`）；`doorsPerCar` 2；3D 的 `Map3DTrainSet` `MINGRI`（現成的 E500 與黑色客車） | 顏色照用；3D 機車沿用本專案的 E500 模型，參考庫的 Blender 模型等 GLB 轉換器 |
 | 參考庫沒有：觀光列車對景點、觀光客的規則 | `Tourism.starsPerSightseeingTrain`（0.5★） | 本專案自己的（gap） |
 | 外部開源專案（OpenTTD、Simutrans） | — | 沒有可用的：車輛沒有吸引遊客的規則 |
 

@@ -162,6 +162,10 @@ public struct TrainPerformance: Hashable, Sendable {
     /// six 286 kW motors, 96 t, to its 110 km/h in service in 119.5 seconds
     /// (estimated, as the E200's).
     public static let r200ChuKuang = TrainPerformance(acceleration: 920, braking: 2600, topSpeed: 110)
+    /// The Ming-Ri tourist train (decision 286, later): five coaches behind
+    /// an E500, sum as ``e500ChuKuang``'s with five 42 t coaches for eight,
+    /// to the coaches' 110 km/h in 44.3 seconds (estimated, as the E200's).
+    public static let mingRi = TrainPerformance(acceleration: 2481, braking: 2600, topSpeed: 110)
 
     /// Whether a train or line may have this performance (Stage W2c): every
     /// rate and the top speed in `1...RunningCurve.maximumRate`, and a coast

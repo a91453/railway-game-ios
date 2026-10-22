@@ -65,6 +65,9 @@ public struct Map3DTrainSet: Sendable {
             // Decision 286: the Blue Train's R135 and its old blue coaches.
             hauled("BLUE", locomotive: .r135,
                    coach: coach(TrainLivery.blueTrain, band: 0.38...0.43)),
+            // Decision 286, later: the Ming-Ri's black coaches with their
+            // orange line behind the E500.
+            hauled("MINGRI", locomotive: .e500, coach: coach(TrainLivery.mingRi, band: 0.38...0.43)),
             // The push-pull Tze-Chiang: an E1000 power car at each end.
             hauled("pushPull", locomotive: .e1000,
                    coach: coach(body: 0xC9CECC, band: 0xED822A), lastIsLocomotive: true),
@@ -165,7 +168,7 @@ public struct Map3DTrainSet: Sendable {
     /// (decision 252: the Chu-Kuang presets).
     static let aliases: [String: String] = [
         "e200ChuKuang": "E200CK", "e500ChuKuang": "E500CK", "r100ChuKuang": "R100CK", "r200ChuKuang": "R200CK",
-        "metro": "metroC381",
+        "mingRi": "MINGRI", "metro": "metroC381",
     ]
 
     /// The key of a train of `type` with `performance`: its type's code
