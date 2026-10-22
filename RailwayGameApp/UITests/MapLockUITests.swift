@@ -38,26 +38,32 @@ final class MapLockUITests: XCTestCase {
         XCTAssertTrue(lock.becomesHittable(within: 5), "The lock is not reachable")
         // DIAGNOSTIC (claude/ipad-uitests-red), removed before review.
         print("DIAG lock \(lock.identifier) frame \(lock.frame) enabled \(lock.isEnabled) app \(app.frame) expansion \(expansion.frame) zoomOut \(zoomOut.frame) dockBuild \(app.buttons["dock.build"].frame)")
-        lock.tap()
-
         let buy = app.buttons["map.expansion.buy"]
-        if !buy.appears(within: 5) {
-            print("DIAG first tap missed")
-            for (dx, dy) in [(0.5, 0.2), (0.5, 0.35), (0.5, 0.65), (0.5, 0.8), (0.15, 0.5), (0.85, 0.5)] as [(CGFloat, CGFloat)] {
-                guard lock.appears(within: 5) else { print("DIAG no lock before (\(dx), \(dy))"); break }
-                let frame = lock.frame
-                let at = CGPoint(x: frame.minX + frame.width * dx, y: frame.minY + frame.height * dy)
-                app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: at.x, dy: at.y)).tap()
-                let opened = buy.appears(within: 4)
-                print("DIAG tap (\(dx), \(dy)) at \(at) opened: \(opened)")
-                if opened {
-                    expansion.tap()
-                    _ = buy.disappears(within: 5)
-                    sleep(1)
-                }
+        func probe(_ dx: CGFloat, _ dy: CGFloat, _ name: String) {
+            guard lock.appears(within: 5) else { print("DIAG no lock before \(name)"); return }
+            let frame = lock.frame
+            let at = CGPoint(x: frame.minX + frame.width * dx, y: frame.minY + frame.height * dy)
+            app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: at.x, dy: at.y)).tap()
+            let opened = buy.appears(within: 4)
+            print("DIAG \(name) (\(dx), \(dy)) lock \(frame) at \(at) opened: \(opened)")
+            if opened {
+                expansion.tap()
+                _ = buy.disappears(within: 5)
+                sleep(1)
             }
-            if lock.appears(within: 5) { lock.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2)).tap() }
         }
+        probe(0.5, 0.8, "A")
+        probe(0.15, 0.5, "B")
+        probe(0.5, 0.5, "C")
+        probe(0.5, 0.5, "D")
+        probe(0.5, 0.65, "E")
+        if zoomOut.isEnabled {
+            zoomOut.tap()
+            sleep(3)
+            probe(0.5, 0.5, "F zoomed")
+            probe(0.5, 0.8, "G zoomed")
+        }
+        if lock.appears(within: 5) { lock.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2)).tap() }
         XCTAssertTrue(buy.appears(within: 5), "The lock opens the tile's card")
         XCTAssertEqual(expansion.label, "Stop expanding the map")
         XCTAssertFalse(lock.exists, "The tiles show their prices while choosing, not locks")
