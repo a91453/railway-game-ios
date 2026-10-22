@@ -12606,6 +12606,41 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - **驗證**：VERIFIED（Linux 雲端容器，Swift 6.4.0）：`swift build --build-tests -Xswiftc -warnings-as-errors`；`SightseeingTrainTests`（三款觀光車款、山嵐號的數字等於海風號）、`TrainTypeCatalogTests`、`TrainTypeTests`、`RealCarLengthTests`、`TrainTypeNameTests`、`TrainLiveryTests`、`Map3DModelTests`、`TourismSessionTests`、`PerformanceSessionTests`。UNVERIFIED：App 的車型選單與型錄只在 macOS CI 編譯，實機的顏色待看。
 - 「下一步」第 1 點剩下：鳴日號、環島之星、仲夏寶島號。
 
+**後來（第二次）**（2026-10-22，「下一步」第 1 點的第二款：鳴日號；遊戲規劃 session_01UsF4QYCGrzSeNSFq11i8Wu 派工。號碼不另取，寫在這裡；存檔版本、golden schema 不動）：
+- **車型**：車型表加一列 `MINGRI`（`TrainType.mingRi`，名稱「鳴日號」「Ming-Ri sightseeing train」）。照藍皮解憂號與莒光號，機車＋客車當成一個編組，節數是客車，機車算在第一節的價錢。
+  - 出處：參考庫 `namedTrains` `mingri`（「台鐵首款五星級觀光列車」「旗艦門面」，包車制、沒有固定車次）；`formations.js` `mingri`（推估機車 1 輛＋客車 5 輛、每輛 20 m）；garage 模型 `mingri`（電力機車）、`mingricoach`（每側 2 門）。中文維基百科「鳴日號」：2025 年起由 E500 型電力機車（E527、E528、E533、E534）牽引，最高 110 km/h；16 輛客車共 415 席（商務車 33、客廳車 27、餐車 14）。
+  - 定員：每節 **26**（415 ÷ 16 = 25.9，四捨五入）；每側 2 門；20.0 m。
+  - 性能（`TrainPerformance.mingRi`，型錄多一列「鳴日號」）：用 `e500ChuKuang` 同一個算法（280 kN、3,888 kW、機車 96 t），客車從 8 輛 42 t 換成 5 輛、到客車的 110 km/h：44.3 秒，起步 **2.481 km/h/s**、減速照莒光 2.6、最高 **110**（推估；客車重量照莒光）。`SightseeingTrainTests.testTheMingRiStartsAsItsLighterSetWould` 用同一條算式重算 E500 莒光的 1.657 與鳴日號的 2.481。
+  - 價錢（本專案的，決策 180 的做法）：E500 莒光（$300,000、每節 $35,000、營運權重 1,200）加 $100,000（同藍皮解憂號）、每節加 $20,000（豪華內裝，藍皮的兩倍）、權重加 200（餐車與服務員）：第一節 **$400,000**、每節 **$55,000**、權重 **1,400**。
+- **規則**（GameCore，這次唯一的規則改動）：觀光車款的加星改成每款一個值（`TrainTypeSpec.sightseeingStars`、`TrainType.sightseeingStars`，百分之一顆星；`isSightseeing` 是它大於 0）。海風號、藍皮解憂號、山嵐號照舊 **0.5★**（`Tourism.starsPerSightseeingTrain`）；鳴日號 **1★**（`Tourism.starsPerLuxuryTrain` = 100）。一個景點附近停了好幾款，**算最大的那一個**，不相加；仍然到 5★ 為止。`sightseeingStops()` 改成帶每站的星（該站停靠的列車裡最大的），`stars(of:)` 取 800 m 內最大的；新的 `GameWorld.sightseeingTrainStars(near:)`。沒有鳴日號的世界逐位元不變（其他三款的值、範圍、上限都沒動）。
+- **為什麼加一顆星**：照真的數字，鳴日號座位最少（26 對海風號 44、藍皮 50）、比海風號慢起步、又最貴；加的星若和其他三款一樣，它在任何景點都比海風號差，是「一面倒」的反面（沒人該選它）。參考庫自己說它是「五星級」「旗艦門面」，所以它的取捨是：花大錢、座位少，換更多觀光客。
+- **介面**（GamePresentation）：觀光面板的一列寫實際加的星（「有觀光列車停靠（+1★）」）；型錄那一行寫該款加幾星（「景點加 1 星」「adds 1 star」）；說明的句子變成「觀光列車（海風號、藍皮解憂號、山嵐號）停靠 800 公尺內的車站時，景點加 0.5 星；鳴日號加 1 星。」。
+- **外觀**（`TrainLivery.mingRi`）：車身 `#292F31`、帶色 `#D1773D`，是參考庫 `mingricoach` 的 `body`／`accent`（規格的 hex，和模型 drawGroups 的線性色換成 sRGB 一樣）；車頭 `#D57638` 是 `mingri` 機車的 `accent`（2D 的車頭畫成機車的橘）。過了 `TrainLiveryTests` 的顏色檢查，沒有調色。**3D**：決策 318 的機車牽引編組有現成做法，加一組 `MINGRI`（`Map3DTrainSet`）：本專案現成的 E500 模型＋黑色客車與橘色帶（`coach(TrainLivery.mingRi, band: 0.38...0.43)`，帶的位置照藍皮）；性能選鳴日號而沒指定車型的列車也畫成它。真車的 E500 是專用塗裝；參考庫的 Blender 模型等 GLB 轉換器（HANDOFF §2）。
+- **量到的**（`BalanceReportTests.testTheMingRiAtASight`，新的報告：第一條線、一列四節，最後一站 47 m 外一個景點；E500 莒光是同一個機車、沒有星的對照；`BALANCE_REPORT=60` 與 `180`，release，Linux 雲端容器，Swift 6.4.0，`claude/tourist-train-mingri` 的程式）。E500 莒光與海風號兩欄就是「改之前」（規則對它們逐位元不變）。現金差是鳴日號減海風號：
+
+  | 景點 | 觀光客／天（莒光、海風、鳴日，180 天平均） | 第 60 天 | 第 180 天 | 判 |
+  | --- | --- | --: | --: | --- |
+  | 2★ | 133、233、333 | −$160,944 | −$163,175 | 鳴日號追不回（多的車資抵不過營運費） |
+  | 3★ | 333、541、750 | −$89,329 | +$29,545 | 約第 150 天追過海風號 |
+  | 4★ | 750、1,125、1,500 | +$31,736 | +$344,410 | 約第 50 天追過 |
+  | 4.5★ | 1,125、1,500、1,500 | −$235,479 | −$356,760 | 都到 5★ 上限，鳴日號白花錢 |
+
+  - 錢從哪來：多的觀光客照付車資（4★ 時鳴日號每天比海風號多約 $3,900）；水槽是貴 $175,000 的車（四節）與權重多 100 的營運費（每天約 $1,100）。權重先試 1,500：鳴日號只在 4★ 贏（3★ 第 180 天仍差 $150,788），太窄；照 E500 莒光的 1,200 則除了 4.5★ 以上都贏，變成一面倒，所以取 1,400。
+  - 一面倒的選擇：沒有。海風號回本快、在 2★ 與 4.5★ 以上較好；鳴日號在 3–4★ 的景點長期較好；藍皮解憂號座位最多。座位少（四節 104 人、超載 114）在這個情境沒有不夠，大的觀光地才看得出來。
+  - 範圍兩端：見表；5★ 的景點什麼都不加；觀光客上限仍是決策 174 的 200‰。
+  - **判定：NOT ASSESSED**：觀光列車的回本天數在決策與測試裡沒有寫下的目標（`no stated range — not judged`）。沒有看到 CRITICAL 的跡象（錢的來源與水槽對得上、沒有無限增長、不是全面最好）。要調就調 `Tourism.starsPerLuxuryTrain` 或 `MINGRI` 的價錢與權重。
+  - 指令：`swift build -c release -Xswiftc -enable-testing --build-tests`，`BALANCE_REPORT=180 swift test -c release --skip-build --filter 'BalanceReportTests/testTheMingRiAtASight$'`（VERIFIED）。
+- **五方**：
+  - 玩家：多一個真的要想的選擇：鳴日號貴、座位少，但景點加一整顆星；放在三、四星的景點旁長期賺得比海風號多，放在小景點或快滿星的景點就虧。不多一件要管的事。
+  - 鐵道迷：E500 牽引、110 km/h、每節 26 席、黑橘塗裝都照真車與參考庫；「五星級」「旗艦」換成多一顆星；包車、加價、餐車料理留給下一步（加價、故事）。
+  - 開發：GameCore 把觀光標記從真假改成一個值，多一列車型與一個性能；存檔以代號存車型，舊存檔照讀；golden、replay 沒有觀光列車；沒有鳴日號的世界逐位元不變。會跑完整的 Swift tier。
+  - 美術：黑車身、橘帶、橘色車頭，照參考庫的模型；2D 地圖上和藍皮的深藍、莒光的橘分得開；3D 用現成的 E500 與客車，不畫新的。
+  - 音樂：無。
+- **沒選的**（預覽是玩家會看到的）：(B) 加的星和其他三款一樣（0.5★），只改數字：鳴日號在所有景點都比海風號差（預覽：型錄裡一款更貴、座位更少、效果一樣的車）；(C) 定員用商務車的 33：仍然最少，而且忽略了餐車與客廳車；(D) 加價（每位乘客多收）：決策「沒選的」B 說過要先決定誰付，留在「下一步」第 2 點；(E) 機車用 E400（2020 年的牽引）：參考庫的模型與維基都寫現在是 E500，型錄也已有 E500。
+- **測試**：`SightseeingTrainTests`（鳴日號的數字、性能的算式、加 1★、和海風號一起停只算最大的、別條線停靠也算）；`TourismSessionTests.testThePanelSaysASightseeingTrainCalls`（+1★ 的那一列、型錄那一行、說明）；`PerformanceSessionTests`（型錄的性能多一列）；`Map3DTrainSetTests`（`MINGRI` 有模型、性能鳴日號的列車的鍵）；`TrainTypeCatalogTests`、`TrainTypeTests`、`RealCarLengthTests`、`TrainTypeNameTests`、`TrainLiveryTests` 在列表後面加一項（前面的值不動）。這些在 origin/main 編譯不過（沒有 `TrainType.mingRi`）。
+- **沒有驗證的**：App 的型錄、觀光面板只在 macOS CI 編譯；3D 的鳴日號、2D 的黑色列車在實機上看起來如何待看。
+- 「下一步」第 1 點剩下：環島之星（E500＋6 客車；和鳴日號同一個機車，要另外找出取捨）、仲夏寶島號。
+
 ### 287. 閉塞區間：分界不設在列車停下來會妨礙別條軌道的地方
 
 2026-10-19。作者交辦（決策 283 的「下一步」第 1 點）：號誌開＋閉塞時，高鐵示範的左營咽喉白天就卡住，一天取消 86 班（決策 280 當時是 32 班）；先用 `TRAFFIC_TIMING_DUMP` 看第一個死結是哪幾組車、各自在等什麼，判斷是調度還是軌道（出入線和進站的車共用咽喉）。號碼依工作登記 #231：開工時取 285（284 是 `claude/feedback-70-73` 的登記）；之後 #818 合併了 285（複線上的月台）、#819 合併了 286（觀光列車），所以改成 287。存檔版本、golden schema 不動。量測與探針在 [`research/HSR_SIGNAL_BASELINE_2026-10-15.md`](research/HSR_SIGNAL_BASELINE_2026-10-15.md) 第 11 節。
