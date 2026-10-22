@@ -84,6 +84,9 @@ public enum Map3DTrains {
         public var shadows = Map3DMesh()
         /// Decision 314: over each train's front, where its label goes.
         public var heads: [Head] = []
+        /// Decision 342: each car's middle on its rails, for the buildings
+        /// seen through in front of it (``Map3DSeeThrough``).
+        public var cars: [Map3DPoint] = []
     }
 
     /// Decision 314: a train and the point just over its front car's roof.
@@ -161,6 +164,7 @@ public enum Map3DTrains {
                 if line.isEmpty { line.append(a) }
                 line.append(b)
                 let base = (a + b) * 0.5
+                frame.cars.append(base)
                 if index == 0 {
                     frame.heads.append(Head(train: run.train, point: a + (b - a) * (min(4, length / 2) / length)
                                                 + Map3DPoint(0, carHeight + headClearance, 0),

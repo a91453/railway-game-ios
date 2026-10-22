@@ -82,6 +82,8 @@ final class Map3DShadowTests: XCTestCase {
         let frame = Map3DTrains.frame(motion, progress: 1, heights: Map3DTrains.Heights(world.railwaySnapshot()), in: scene, models: nil, eye: nil)
         let cars = motion.runs.reduce(0) { $0 + TrainCars.count(length: $1.length, carPitch: $1.carPitch) }
         XCTAssertEqual(frame.shadows.triangleCount, cars * 10)
+        // Decision 342: and every car is listed for the see-through.
+        XCTAssertEqual(frame.cars.count, cars)
         // Under the cars, just over the bed's top: the rail less 0.3 m,
         // where the cars' boxes start 0.3 m over the rail.
         let floor = try XCTUnwrap(frame.boxes.bounds).min.y, lowest = try XCTUnwrap(frame.shadows.bounds).min.y

@@ -101,8 +101,7 @@ float hash12(float2 p) {
     return fract((q.x + q.y) * q.z);
 }
 
-fragment float4 map3dFragment(Map3DVertexOut in [[stage_in]], constant Map3DUniforms &uniforms [[buffer(1)]],
-                              texture2d_array<float> surfaces [[texture(0)]]) {
+float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d_array<float> surfaces) {
     constexpr sampler repeating(address::repeat, filter::linear, mip_filter::linear, max_anisotropy(8));
     float3 base = in.color;
     // Decision 229 續: light of its own at night, added after the fog.
@@ -153,6 +152,52 @@ fragment float4 map3dFragment(Map3DVertexOut in [[stage_in]], constant Map3DUnif
     float3 lit = base * (ambient + uniforms.sunColor.rgb * sun);
     float fog = smoothstep(uniforms.fog.x, uniforms.fog.y, distance(in.world, uniforms.eye.xyz));
     return float4(mix(lit, uniforms.fogColor.rgb, fog) + glow * (1.0 - fog * 0.7), 1.0);
+}
+
+fragment float4 map3dFragment(Map3DVertexOut in [[stage_in]], constant Map3DUniforms &uniforms [[buffer(1)]],
+                              texture2d_array<float> surfaces [[texture(0)]]) {
+    return map3dShade(in, uniforms, surfaces);
+}
+
+// Decision 342: the cars the buildings in front of are seen through, as
+// Map3DSeeThrough.floats lays them out: each car's middle on its rails,
+// then how many, the cones' radius at the car, the opacity in them and
+// the clearance over the rails, then how near the car nothing is seen
+// through and how high over the rails the cones aim.
+struct Map3DSeeThroughCars {
+    float4 cars[16];
+    float4 shape;
+    float4 more;
+};
+
+// Decision 342: the city of a chunk a cone crosses, with its alpha the
+// share of it that shows (Map3DSeeThrough.opacity(at:), worked out the
+// same way): the pipeline turns the alpha into the share of a pixel's
+// four samples it covers, so the train behind shows in the rest.
+fragment float4 map3dSeeThroughFragment(Map3DVertexOut in [[stage_in]], constant Map3DUniforms &uniforms [[buffer(1)]],
+                                        constant Map3DSeeThroughCars &see [[buffer(2)]],
+                                        texture2d_array<float> surfaces [[texture(0)]]) {
+    float4 colour = map3dShade(in, uniforms, surfaces);
+    float3 eye = uniforms.eye.xyz;
+    float3 v = in.world - eye;
+    float radius = see.shape.y, opacity = see.shape.z, clearance = see.shape.w;
+    float beside = see.more.x, bodyMiddle = see.more.y;
+    float shown = 1.0;
+    int count = min(int(see.shape.x), 16);
+    for (int index = 0; index < count; index++) {
+        float3 car = see.cars[index].xyz;
+        if (in.world.y <= car.y + clearance) { continue; }
+        float3 d = car + float3(0.0, bodyMiddle, 0.0) - eye;
+        float far = length(d);
+        if (far <= beside) { continue; }
+        float along = dot(v, d) / far;
+        if (along <= 0.0 || along >= far - beside) { continue; }
+        float t = along / far;
+        float off = length(v - d * t) / (radius * t);
+        shown = min(shown, opacity + (1.0 - opacity) * smoothstep(0.7, 1.0, off));
+    }
+    colour.a = shown;
+    return colour;
 }
 
 // Decision 232: the soft shadows on the ground, drawn last over what is
