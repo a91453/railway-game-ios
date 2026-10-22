@@ -13760,6 +13760,9 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 舊規則（只在號誌關時追回）下兩者相同，測試失敗。
 - 閉塞開時整批推進 10 分鐘與逐分推進相同。
 
+**後來**（2026-10-22，審查延後項目，session_01QiPq4nZdq5bVS9MZ4rkr4L，`docs/archive/PR873_910_REVIEW_HANDOFF.md` A6）：規則 2 的「不超過彎道限速」在真實時刻表的列車上沒有做到。`run(of:length:scheduled:)` 對有班次的路線，`scheduled` 在限速下跑不完時就把限速整個丟掉；這原本是給真實時刻表本身用的（真實路線的彎比畫的緩），但晚點的車拿到的 `scheduled` 是「到表定到站還剩幾秒」，所以晚了就用超過限速的速度追。現在 `run` 多一個 `timetabled`（這一段在時刻表上的時間，預設等於 `scheduled`）：只有 `timetabled` 本身在限速下跑不完才丟限速；出發（`leaving`）與改走別條路（`rerouted`）傳列車時刻表上這一段的時間，`resumeRun` 只剩一部分長度，照舊。準點的車兩者相同，所以行為不變。回歸測試 `CurveSpeedRunTests.testALateRealRunMakesUpTimeUnderTheLimits`（中途 M 站晚開，M–B 經過彎道；舊程式上紅：限速 0 個、126 秒）。golden、replay、存檔都不動（`GoldenScenarioTests`、`ReplayFixtureTests`、`SavedGameTests` 與高鐵、台鐵示範的 campaign 照舊通過）。
+- **沒修到的一種**：班次**晚派車**時，`RunTrip.timetable` 本來就把列車自己時刻表的第一段縮短（第一站的出發改成派車＋最短停站，下一站的到站不變），列車又沒有保存班次原本的時刻，所以第一段仍然分不出「時刻表本身跑不完」與「晚點」，可能照舊丟限速。要修得讓列車記住這一段在班次上的時間（存檔格式要改），交給下一個改決策 306 或 133 的 session（`docs/HANDOFF.md` §7.1 有一行指過來）。
+
 ### 307. 實景地圖的載入畫面：公司名、最近的地名、自己的路線色與跑來跑去的列車
 
 2026-10-21。競品研究 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.8（NEXT_PRIORITIES §19 第 6）。作者 2026-10-14、10-15 起的預設「session 五方決定」，遊戲規劃 session_01WW7o3decEv5LY59nYVqnDN 派工。號碼依 #231：main 最大 305，這次的登記保留 307。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
