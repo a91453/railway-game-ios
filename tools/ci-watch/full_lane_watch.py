@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tells the work registry (#231) when main's full lane turns red, fails in
+"""Tells the work registry (#1041) when main's full lane turns red, fails in
 other jobs than last time, or turns green again (decision 329).
 
 The full lane is ios-build.yml run on main by ios-full-lane.yml or by hand
@@ -28,7 +28,7 @@ Python 3 standard library only:
     python3 -I tools/ci-watch/full_lane_watch.py --run <id> --dry-run   # print, post nothing
     python3 -I tools/ci-watch/full_lane_watch.py --selftest
 Environment: GITHUB_REPOSITORY (owner/name), GH_TOKEN (not needed for
---dry-run on a public repository), ISSUE (default 231).
+--dry-run on a public repository), ISSUE (default 1041).
 """
 import argparse
 import json
@@ -139,7 +139,7 @@ def red_streak(earlier):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="main 的 full lane 紅了、換了紅的 job、綠回來時在 #231 留言。")
+    parser = argparse.ArgumentParser(description="main 的 full lane 紅了、換了紅的 job、綠回來時在工作登記（#1041）留言。")
     parser.add_argument("--run", type=int, help="ios-build.yml 的 run id")
     parser.add_argument("--dry-run", action="store_true", help="只印出留言，不送出")
     parser.add_argument("--selftest", action="store_true")
@@ -150,7 +150,7 @@ def main(argv=None):
         parser.error("--run is required")
     repository = os.environ.get("GITHUB_REPOSITORY", "a91453/railway-game-ios")
     token = os.environ.get("GH_TOKEN")
-    issue = int(os.environ.get("ISSUE", "231"))
+    issue = int(os.environ.get("ISSUE", "1041"))
 
     run = api(f"/repos/{repository}/actions/runs/{options.run}", token)
     if not is_full_lane(run):
