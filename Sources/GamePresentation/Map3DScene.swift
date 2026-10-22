@@ -132,10 +132,32 @@ public struct Map3DScene: Sendable {
         return (region, middle.x.rounded(), middle.y.rounded())
     }
 
+    /// The part of `world` a scene built round `focus` covers
+    /// (``frame(world:focus:)``), for a cache of scenes to tell whether it
+    /// holds another focus (``holds(_:in:world:)``).
+    public static func region(world: GameWorld, focus: (x: Double, y: Double)?) -> WorldRegion {
+        frame(world: world, focus: focus).region
+    }
+
+    /// Whether a scene covering `region` holds `focus` (kept within the
+    /// map) with half ``margin`` round it, as far as the map goes; any
+    /// scene holds no focus at all. Decision 313, later (PR #873–#910
+    /// review): a scene round a focus with nothing built near covers only
+    /// ``margin`` round it, less than a ``FocusArea``'s square, so a focus
+    /// in the same square can be off it.
+    public static func holds(_ focus: (x: Double, y: Double)?, in region: WorldRegion, world: GameWorld) -> Bool {
+        guard let focus else { return true }
+        let map = WorldRegion(bounds: world.bounds)
+        let half = margin / 2 * Double(WorldCoordinate.unitsPerMetre)
+        let x = min(max(focus.x, map.minX), map.maxX), y = min(max(focus.y, map.minY), map.maxY)
+        return region.minX <= max(map.minX, x - half) && min(map.maxX, x + half) <= region.maxX
+            && region.minY <= max(map.minY, y - half) && min(map.maxY, y + half) <= region.maxY
+    }
+
     /// Decision 313, later: which square of half ``reach`` a scene's focus
-    /// falls in. A scene built round a focus in the same square still holds
-    /// ``reach``'s half round any point of it, so the 3D map opens on a
-    /// scene already built; a focus further off builds anew.
+    /// falls in. A scene built round a focus in the same square is reused
+    /// when it holds the new focus (``holds(_:in:world:)``), so the 3D map
+    /// opens on a scene already built; a focus further off builds anew.
     public struct FocusArea: Hashable, Sendable {
         public let column: Int64
         public let row: Int64

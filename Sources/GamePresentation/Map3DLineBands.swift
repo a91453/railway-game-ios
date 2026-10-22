@@ -26,15 +26,20 @@ public struct Map3DLineBands: Hashable, Sendable {
     /// The bands of `lines` (``LineMap``): for each stretch of an edge the
     /// top line's colour, its own or the automatic one (decision 216),
     /// through `palette`. Freight lines too: they are lines on the map.
+    /// A line's stretch can reach over the shorter one of another, where
+    /// the other joining moves neither its place nor its width (a line one
+    /// way beside one ridden both ways): the edge is cut where any stretch
+    /// starts or ends, so no two bands cover the same track.
     public init(lines: LineMap, palette: LinePalette) {
-        var top: [Stretch: (line: LineID, rgb: Int)] = [:]
-        for stretch in lines.stretches {
-            let key = Stretch(edge: stretch.edge, start: stretch.start, end: stretch.end)
-            if let kept = top[key], kept.line > stretch.line { continue }
-            top[key] = (stretch.line, palette.color(for: stretch.color?.rgb ?? LineBadge.automaticColor(of: stretch.line)))
+        var bands: [Band] = []
+        for (edge, stretches) in Dictionary(grouping: lines.stretches, by: \.edge) {
+            let cuts = Set(stretches.flatMap { [$0.start, $0.end] }).sorted()
+            for (start, end) in zip(cuts, cuts.dropFirst()) {
+                guard let top = stretches.filter({ $0.start <= start && end <= $0.end }).max(by: { $0.line < $1.line }) else { continue }
+                bands.append(Band(edge: edge, start: start, end: end, rgb: palette.color(for: top.color?.rgb ?? LineBadge.automaticColor(of: top.line))))
+            }
         }
-        bands = top.map { Band(edge: $0.key.edge, start: $0.key.start, end: $0.key.end, rgb: $0.value.rgb) }
-            .sorted { ($0.edge, $0.start) < ($1.edge, $1.start) }
+        self.bands = bands.sorted { ($0.edge, $0.start) < ($1.edge, $1.start) }
     }
 
     /// The bands of `world`'s lines through `palette`.
@@ -77,12 +82,6 @@ public struct Map3DLineBands: Hashable, Sendable {
                      isRing: line.isRing, color: line.color)
             }
         }
-    }
-
-    private struct Stretch: Hashable {
-        let edge: TrackEdgeID
-        let start: Int64
-        let end: Int64
     }
 
     /// The band's width and how far it stands above the ballast or the
