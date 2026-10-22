@@ -86,7 +86,10 @@ struct StartView: View {
         }
         .sheet(isPresented: $showsAchievements) {
             NavigationStack {
-                AchievementsView(language: launcher.language, records: launcher.achievements)
+                AchievementsView(
+                    language: launcher.language, records: launcher.achievements,
+                    stamps: launcher.stationStamps, railways: launcher.railways
+                )
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) {
                             Button {

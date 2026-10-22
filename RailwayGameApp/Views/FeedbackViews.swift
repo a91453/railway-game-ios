@@ -232,11 +232,9 @@ private struct TripStampLabel: View {
             Text(verbatim: kind.title(in: language))
                 .font(.caption.weight(.heavy))
         }
-        .foregroundStyle(colour)
         .padding(.horizontal, 7)
         .padding(.vertical, 3)
-        .background(Theme.panel, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(colour, lineWidth: 2))
+        .inkStamp(colour)
         .rotationEffect(.degrees(-6))
         .fixedSize()
         .scaleEffect(reduceMotion || shown ? 1 : 0.6)
@@ -249,6 +247,30 @@ private struct TripStampLabel: View {
             try? await Task.sleep(for: .seconds(MotionRule.pop.seconds + TripStampBoard.hold))
             withAnimation(MotionRule.cardOut.running(reduceMotion: reduceMotion)?.animation) { gone = true }
         }
+    }
+}
+
+/// The look every stamp shares (decisions 276 and 348): the ink's colour
+/// on a flat panel inside a heavy border of the same ink; no shadow (art
+/// style). The trip stamps on the map and the passport's station stamps
+/// both wear it.
+struct InkStampFrame: ViewModifier {
+    let ink: Color
+    var cornerRadius: CGFloat = 6
+    var lineWidth: CGFloat = 2
+
+    func body(content: Content) -> some View {
+        content
+            .foregroundStyle(ink)
+            .background(Theme.panel, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).strokeBorder(ink, lineWidth: lineWidth))
+    }
+}
+
+extension View {
+    /// Dresses the view as a stamp in `ink` (``InkStampFrame``).
+    func inkStamp(_ ink: Color, cornerRadius: CGFloat = 6, lineWidth: CGFloat = 2) -> some View {
+        modifier(InkStampFrame(ink: ink, cornerRadius: cornerRadius, lineWidth: lineWidth))
     }
 }
 

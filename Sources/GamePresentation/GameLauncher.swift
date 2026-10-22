@@ -118,6 +118,9 @@ public final class GameLauncher {
     /// The achievements unlocked (decision 181), kept beside the challenge
     /// records in a file that is not a save.
     public private(set) var achievements: AchievementRecords
+    /// The station stamps collected (decision 348), kept beside the
+    /// achievements in a file that is not a save.
+    public private(set) var stationStamps: StationStampRecords
     @ObservationIgnored private var isActive = false
     @ObservationIgnored private var autosaveLoop: Task<Void, Never>?
     /// The world of the last autosave taken in turn, or of the game when
@@ -131,6 +134,7 @@ public final class GameLauncher {
         self.language = language
         records = ChallengeRecords(file: library.directory.appendingPathComponent("challenge-records.data"))
         achievements = AchievementRecords(file: library.directory.appendingPathComponent(AchievementRecords.fileName))
+        stationStamps = StationStampRecords(file: library.directory.appendingPathComponent(StationStampRecords.fileName))
         let read = LauncherPreferences.read(from: library.directory.appendingPathComponent(Self.preferencesFileName))
         isFirstLaunch = read == nil
         preferences = read ?? LauncherPreferences()
@@ -403,6 +407,19 @@ public final class GameLauncher {
         guard !session.news.isDemo, session.tutorial == nil, session.lesson == nil, !session.world.economy.unlimitedFunds else { return }
         let unlocked = achievements.unlock(meeting: AchievementFacts(world: session.world), at: date, only: Self.achievementScope(of: session.world))
         session.noteAchievements(unlocked)
+    }
+
+    /// Stamps the real stations `session`'s trains served yesterday
+    /// (decision 348) into the passport, and says so in the game. As the
+    /// achievements, the demos, the tutorial and the lessons count none:
+    /// their trains are not the player's. A game with unlimited funds
+    /// counts: a stamp is a visit, not a feat.
+    func checkStationStamps(of session: GameSession, at date: Date = Date()) {
+        guard !session.news.isDemo, session.tutorial == nil, session.lesson == nil, let railways = session.railways else { return }
+        let served = StationStamps.served(in: session.world)
+        guard !served.isEmpty else { return }
+        let new = stationStamps.collect(StationStamps.realStations(of: served, in: session.world, railways: railways), at: date)
+        session.noteStationStamps(new)
     }
 
     /// What a world may unlock: everything, but for the Pingxi challenge,
@@ -966,6 +983,8 @@ public final class GameLauncher {
         }
         started.onMidnight = { [weak self, weak started] in
             guard let self, let started else { return }
+            // An achievement, the rarer, has the status line last.
+            self.checkStationStamps(of: started)
             self.checkAchievements(of: started)
         }
         session = started
