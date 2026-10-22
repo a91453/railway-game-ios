@@ -45,6 +45,11 @@ public struct Map3DScene: Sendable {
         public let props: [Map3DInstance]
         public let minimum: Map3DPoint
         public let maximum: Map3DPoint
+        /// Decision 342: the top of its city (the rest of ``mesh`` and
+        /// ``far``) in each of its ``Map3DSeeThrough/cells`` by
+        /// ``Map3DSeeThrough/cells`` squares, row by row from the north
+        /// west; `-infinity` where none stands.
+        public let cityTops: [Float]
     }
 
     /// The side of a chunk, in metres.
@@ -594,7 +599,8 @@ extension Map3DScene {
                 let low = boxes.reduce(first.min) { Map3DPoint(min($0.x, $1.min.x), min($0.y, $1.min.y), min($0.z, $1.min.z)) }
                 let high = boxes.reduce(first.max) { Map3DPoint(max($0.x, $1.max.x), max($0.y, $1.max.y), max($0.z, $1.max.z)) }
                 return Chunk(column: key.column, row: key.row, mesh: mesh, baseIndexCount: baseIndexCount, far: far, close: close, shadows: shadows,
-                             props: props[key] ?? [], minimum: low, maximum: high)
+                             props: props[key] ?? [], minimum: low, maximum: high,
+                             cityTops: Map3DSeeThrough.tops(column: key.column, row: key.row, of: [(mesh, baseIndexCount), (far, 0)]))
             }
         }
 

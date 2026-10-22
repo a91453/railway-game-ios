@@ -73,15 +73,69 @@ public struct Map3DSeeThrough: Equatable, Sendable {
         return shown
     }
 
-    /// Whether the box from `minimum` to `maximum` may hold a point some
-    /// cone sees through: the Metal view draws such a chunk's city with
-    /// the see-through pipeline, and every other chunk as before.
-    public func cuts(minimum: Map3DPoint, maximum: Map3DPoint) -> Bool {
-        for car in cars where maximum.y > car.y + Self.clearance {
+    /// Whether chunk (`column`, `row`) may hold city a cone sees
+    /// through, by its ``Map3DScene/Chunk/cityTops``: some cone passes
+    /// over a square whose top stands over the car's rails and reaches up
+    /// into the cone. The Metal view draws such a chunk's city with the
+    /// see-through pipeline, and every other chunk as before.
+    public func cuts(column: Int, row: Int, tops: [Float]) -> Bool {
+        guard !cars.isEmpty, tops.count == Self.cells * Self.cells else { return false }
+        let side = Map3DScene.chunkSize, square = side / Float(Self.cells)
+        let west = Float(column) * side, north = Float(row) * side
+        let highest = tops.max() ?? -.infinity
+        for car in cars where highest > car.y + Self.clearance {
+            let middle = car + Map3DPoint(0, Self.bodyMiddle, 0)
             let grow = Map3DPoint(Self.radius, Self.radius, Self.radius)
-            if Self.segment(from: eye, to: car + Map3DPoint(0, Self.bodyMiddle, 0), meets: minimum - grow, maximum + grow) { return true }
+            guard Self.segment(from: eye, to: middle, meets: Map3DPoint(west, -.infinity, north) - grow,
+                               Map3DPoint(west + side, highest, north + side) + grow) else { continue }
+            let length = (middle - eye).length
+            guard length > Self.beside else { continue }
+            let end = length - Self.beside
+            // Along the line every ``step`` metres, each square the cone
+            // may reach there (half a step more each way).
+            var along: Float = 0
+            while along < end + Self.step {
+                let at = min(along, end)
+                let p = eye + (middle - eye) * (at / length)
+                let reach = Self.radius * at / length + Self.step / 2
+                let low = Int(((p.x - reach - west) / square).rounded(.down)), high = Int(((p.x + reach - west) / square).rounded(.down))
+                let top = Int(((p.z - reach - north) / square).rounded(.down)), bottom = Int(((p.z + reach - north) / square).rounded(.down))
+                if low < Self.cells, high >= 0, top < Self.cells, bottom >= 0 {
+                    for row in max(top, 0)...min(bottom, Self.cells - 1) {
+                        for column in max(low, 0)...min(high, Self.cells - 1) {
+                            let stands = tops[row * Self.cells + column]
+                            if stands > car.y + Self.clearance, stands > p.y - reach { return true }
+                        }
+                    }
+                }
+                along += Self.step
+            }
         }
         return false
+    }
+
+    /// A chunk's city tops are kept in this many squares a side (64 m,
+    /// the city's lots).
+    public static let cells = 8
+    /// How far apart along a cone ``cuts(column:row:tops:)`` looks.
+    static let step: Float = 16
+
+    /// The highest point of the triangles of each mesh from its index
+    /// given on, in each square of chunk (`column`, `row`)
+    /// (``Map3DScene/Chunk/cityTops``).
+    static func tops(column: Int, row: Int, of meshes: [(mesh: Map3DMesh, first: Int)]) -> [Float] {
+        var tops = [Float](repeating: -.infinity, count: cells * cells)
+        let side = Map3DScene.chunkSize, square = side / Float(cells)
+        let west = Float(column) * side, north = Float(row) * side
+        for (mesh, first) in meshes where first < mesh.indices.count {
+            for index in mesh.indices[first...] {
+                let vertex = mesh.vertices[Int(index)]
+                let x = min(max(Int(((vertex.x - west) / square).rounded(.down)), 0), cells - 1)
+                let z = min(max(Int(((vertex.z - north) / square).rounded(.down)), 0), cells - 1)
+                tops[z * cells + x] = max(tops[z * cells + x], vertex.y)
+            }
+        }
+        return tops
     }
 
     /// The floats the see-through fragment shader reads

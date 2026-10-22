@@ -94,6 +94,33 @@ final class Map3DDepthTests: XCTestCase {
         ]) * camera.view
     }
 
+    /// Every camera tells the ground's thinnest gap apart everywhere it
+    /// sees the ground, by more than a few of the depth buffer's steps.
+    func testTheThinnestGroundLayersNeverShareADepth() {
+        for (name, camera) in Self.cameras {
+            let fights = Self.fights(camera: camera, gap: Self.gaps[0])
+            XCTAssertGreaterThan(fights.seen, 0, name)
+            XCTAssertEqual(fights.wrong + fights.close, 0, name)
+        }
+    }
+
+    /// The depth runs from 1 at the near plane to 0 at the far one, and
+    /// the view still holds only what lies between them.
+    func testTheDepthIsReversed() throws {
+        let camera = Map3DCamera(target: .zero, distance: 1_000, viewport: (400, 800))
+        let look = (camera.target - camera.eye).normalized!
+        let (near, far) = camera.depthRange
+        XCTAssertEqual(try XCTUnwrap(camera.viewProjection.project(camera.eye + look * near)).z, 1, accuracy: 1e-4)
+        XCTAssertEqual(try XCTUnwrap(camera.viewProjection.project(camera.eye + look * far)).z, 0, accuracy: 1e-4)
+        let middle = try XCTUnwrap(camera.viewProjection.project(camera.target)).z
+        XCTAssertGreaterThan(middle, 0)
+        XCTAssertLessThan(middle, 1)
+        XCTAssertFalse(Map3DCamera.sees(minimum: camera.eye + look * (far * 1.5), maximum: camera.eye + look * (far * 1.5) + Map3DPoint(1, 1, 1),
+                                        through: camera.viewProjection), "past the far plane")
+        XCTAssertFalse(Map3DCamera.sees(minimum: camera.eye + look * (near * 0.2), maximum: camera.eye + look * (near * 0.2) + Map3DPoint(0.1, 0.1, 0.1),
+                                        through: camera.viewProjection), "before the near plane")
+    }
+
     /// The measurement in the decision, only on request
     /// (`MAP3D_FRAME_REPORT=1`): each camera, each gap, the old and the new
     /// projection.

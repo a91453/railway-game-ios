@@ -126,6 +126,11 @@ final class Map3DMetalView: MTKView {
         let props: (instances: MTLBuffer, runs: [(model: Int, first: Int, count: Int)])?
         let minimum: Map3DPoint
         let maximum: Map3DPoint
+        /// Decision 342: where it is and its city's tops, for the cones
+        /// of ``Map3DSeeThrough``.
+        let column: Int
+        let row: Int
+        let cityTops: [Float]
     }
 
     private let queue: MTLCommandQueue
@@ -483,7 +488,8 @@ final class Map3DMetalView: MTKView {
                 props = (instances, runs)
             }
             return Chunk(vertices: vertices, indices: indices, indexCount: chunk.mesh.indices.count, baseIndexCount: chunk.baseIndexCount,
-                         far: far, close: close, shadows: shadows, props: props, minimum: chunk.minimum, maximum: chunk.maximum)
+                         far: far, close: close, shadows: shadows, props: props, minimum: chunk.minimum, maximum: chunk.maximum,
+                         column: chunk.column, row: chunk.row, cityTops: chunk.cityTops)
         }
     }
 
@@ -610,7 +616,7 @@ final class Map3DMetalView: MTKView {
             let detailed = chunk.detailed
             // Decision 342: a chunk a cone crosses draws its city apart,
             // seen through in front of the trains.
-            let seen = !seeThrough.cars.isEmpty && seeThrough.cuts(minimum: chunk.minimum, maximum: chunk.maximum)
+            let seen = seeThrough.cuts(column: chunk.column, row: chunk.row, tops: chunk.cityTops)
             let count = detailed && !seen ? chunk.indexCount : chunk.baseIndexCount
             if count > 0 {
                 encoder.setVertexBuffer(chunk.vertices, offset: 0, index: 0)
@@ -619,21 +625,23 @@ final class Map3DMetalView: MTKView {
                 drawCalls += 1
                 triangles += count / 3
             }
-            if seen { encoder.setRenderPipelineState(seeThroughPipeline) }
-            defer { if seen { encoder.setRenderPipelineState(pipeline) } }
-            if detailed, seen, chunk.indexCount > chunk.baseIndexCount {
-                let city = chunk.indexCount - chunk.baseIndexCount
-                encoder.drawIndexedPrimitives(type: .triangle, indexCount: city, indexType: .uint32, indexBuffer: chunk.indices,
-                                              indexBufferOffset: chunk.baseIndexCount * MemoryLayout<UInt32>.stride)
-                drawCalls += 1
-                triangles += city / 3
-            }
+            // Decision 267's closest detail (the overhead line among it)
+            // stays solid.
             if chunk.closeUp, let close = chunk.close {
                 encoder.setVertexBuffer(close.vertices, offset: 0, index: 0)
                 encoder.drawIndexedPrimitives(type: .triangle, indexCount: close.indexCount, indexType: .uint32,
                                               indexBuffer: close.indices, indexBufferOffset: 0)
                 drawCalls += 1
                 triangles += close.indexCount / 3
+            }
+            if seen { encoder.setRenderPipelineState(seeThroughPipeline) }
+            if detailed, seen, chunk.indexCount > chunk.baseIndexCount {
+                let city = chunk.indexCount - chunk.baseIndexCount
+                encoder.setVertexBuffer(chunk.vertices, offset: 0, index: 0)
+                encoder.drawIndexedPrimitives(type: .triangle, indexCount: city, indexType: .uint32, indexBuffer: chunk.indices,
+                                              indexBufferOffset: chunk.baseIndexCount * MemoryLayout<UInt32>.stride)
+                drawCalls += 1
+                triangles += city / 3
             }
             if !detailed, let far = chunk.far {
                 encoder.setVertexBuffer(far.vertices, offset: 0, index: 0)
@@ -642,6 +650,7 @@ final class Map3DMetalView: MTKView {
                 drawCalls += 1
                 triangles += far.indexCount / 3
             }
+            if seen { encoder.setRenderPipelineState(pipeline) }
         }
         if let boxes = trainBoxes {
             encoder.setVertexBuffer(boxes.vertices, offset: 0, index: 0)
