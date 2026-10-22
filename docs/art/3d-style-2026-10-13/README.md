@@ -1,8 +1,10 @@
 # 3D 地圖畫風：三種方向（2026-10-13，請作者選）
 
+> 2026-10-22 起這個資料夾只留這份 README、總覽圖 `ftwplus-top.jpg` 和文字紀錄；其他 7 張圖搬到 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/`，檔名不變（作者 2026-10-21 的規則，`docs/HANDOFF.md` §2）。
+
 NEXT_PRIORITIES §0 第 14 項「同一張地圖拉近就傾斜」開工前要先定畫風。這裡把**同一個場景**畫成四種方向（D 是作者看了導航 App 的 3D 路況畫面後加的），每種都有正上方（建造時）、中間傾斜、拉近傾斜三張，再加一張手機橫拿的實際大小（iPhone 852×393 點、3 倍像素）。**只是示意圖，沒有改遊戲程式。**
 
-![四種方向並排](compare.jpg)
+四種方向並排（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/compare.jpg`）
 
 場景：一個車站（兩座側式月台、雨棚、站房、跨站天橋）、一段雙線（**靠左行駛**：往東的列車走北側那一股，決策 202）、一列 4 節的電聯車正要進站、玩家的暖黃建物（站房、商店、辦公大樓、住宅、百貨）、城市建物（住宅、商業、辦公、公共、工業，用 `Palette` 的土地用途色）、一座小山、一條河與鐵橋、平交道。地圖一律北朝上；正上方用正交投影，拉近時只是把同一張地圖往後傾斜（拉近那張多轉了 32°，讓車頭看得到）。
 
@@ -14,9 +16,9 @@ NEXT_PRIORITIES §0 第 14 項「同一張地圖拉近就傾斜」開工前要�
 
 | 正上方（建造時） | 中間傾斜 | 拉近傾斜 |
 | --- | --- | --- |
-| ![](a-flat-top.jpg) | ![](a-flat-mid.jpg) | ![](a-flat-close.jpg) |
+| `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/a-flat-top.jpg` | `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/a-flat-mid.jpg` | `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/a-flat-close.jpg` |
 
-![手機橫拿](a-flat-phone.jpg)
+手機橫拿（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/a-flat-phone.jpg`）
 
 - **感覺**：App 圖示站起來變成立體模型。藏青粗外框、平塗色塊、三段明暗（頂面最亮），沒有陰影與質感；淺底 `#ECEEF6`、綠松色軌道、暖黃玩家建物、`Palette` 的城市用途色。
 - **好處**：正上方幾乎就是現在的 2D 地圖（同樣的底色、軌道顏色、建物顏色），建造時切到正上方不會像換了一個遊戲；玩家「建造時看起來像 3D」的困擾（56.1 回報）在這個方向最小。最便宜（見下面的效能）。
@@ -28,9 +30,9 @@ NEXT_PRIORITIES §0 第 14 項「同一張地圖拉近就傾斜」開工前要�
 
 | 正上方（建造時） | 中間傾斜 | 拉近傾斜 |
 | --- | --- | --- |
-| ![](d-clay-top.jpg) | ![](d-clay-mid.jpg) | ![](d-clay-close.jpg) |
+| `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/d-clay-top.jpg` | `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/d-clay-mid.jpg` | `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/d-clay-close.jpg` |
 
-![手機橫拿](d-clay-phone.jpg)
+手機橫拿（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/d-clay-phone.jpg`）
 
 - **感覺**：沒有貼圖的白模，像建築模型。暖灰白的地面、深灰的路、白色車道線與路緣線、灰白的建物、低飽和的橄欖綠低多邊形樹；柔和的陰影和角落的環境遮蔽讓它有「現實感」，「線條」來自車道線、路緣線、月台邊線、軌道，不是物件的外框。玩家的建物仍是暖黃（作者 #752 的規則：玩家蓋的一律暖黃），在一片灰白裡最醒目。
 - **好處**：比 A 成熟、比 B 乾淨；玩家建物和城市建物用「有顏色／灰白」分開，比 A 的「暖黃／橘」清楚得多。沒有貼圖，資產和 A 一樣便宜。
@@ -40,14 +42,14 @@ NEXT_PRIORITIES §0 第 14 項「同一張地圖拉近就傾斜」開工前要�
 
 作者看過 D 之後問：最低已經是 iOS 17，畫面要不要好一點，不然怎麼跟對手比。D+ 是 D 加上美術 session 建議的幾樣東西，網格仍然不貼質感。
 
-![D 與 D+](compare-d-dplus.jpg)
+D 與 D+（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/compare-d-dplus.jpg`）
 
 | 正上方（建造時） | 中間傾斜 | 拉近傾斜（移軸） |
 | --- | --- | --- |
-| ![](dplus-top.jpg) | ![](dplus-mid.jpg) | ![](dplus-close.jpg) |
-| | ![](dplus-mid-night.jpg) | ![](dplus-close-night.jpg) |
+| `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/dplus-top.jpg` | `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/dplus-mid.jpg` | `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/dplus-close.jpg` |
+| | `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/dplus-mid-night.jpg` | `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/dplus-close-night.jpg` |
 
-![手機橫拿](dplus-phone.jpg)
+手機橫拿（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/dplus-phone.jpg`）
 
 加了什麼：
 
@@ -66,14 +68,14 @@ NEXT_PRIORITIES §0 第 14 項「同一張地圖拉近就傾斜」開工前要�
 
 作者問美術 session 會怎麼決定。美術 session 的判斷：不選 E（寫實這條路對手做得比我們多，照片質感拉遠變雜訊、建造時蓋過路網、之後每樣東西都要畫得更細），用 D+ 當底；從 E 只拿花費小、效果大的四樣；改掉 D+ 的三個缺點。作者同意，並要求融合《A列車で行こう はじまる観光計画》（Switch，手機等級的硬體）的畫風，作者認為那是最適合手機的方案。
 
-![D+、E、F](compare-dplus-e-f.jpg)
+D+、E、F（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/compare-dplus-e-f.jpg`）
 
 | 正上方（建造時） | 中間傾斜 | 拉近傾斜（移軸） |
 | --- | --- | --- |
-| ![](f-final-top.jpg) | ![](f-final-mid.jpg) | ![](f-final-close.jpg) |
-| | ![](f-final-mid-night.jpg) | ![](f-final-close-night.jpg) |
+| `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/f-final-top.jpg` | `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/f-final-mid.jpg` | `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/f-final-close.jpg` |
+| | `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/f-final-mid-night.jpg` | `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/f-final-close-night.jpg` |
 
-![手機橫拿](f-final-phone.jpg)
+手機橫拿（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/f-final-phone.jpg`）
 
 - **從 D+**：整套元素（壓平的建造地圖、玩家暖黃、台灣屋頂與騎樓招牌、人車、夜景、移軸）；建物仍是頂點色、共用一個材質。
 - **從 E 拿的四樣**：天空漸層與遠方的空氣感、水面反射、玻璃窗反射天空（實作時只在拉近開）、很淡的地面變化（手繪感的草地斑點，不用照片）。
@@ -85,18 +87,18 @@ NEXT_PRIORITIES §0 第 14 項「同一張地圖拉近就傾斜」開工前要�
 
 作者問怎樣才有特色、又是微縮而不失真，會不會撞到對手。美術 session 的判斷：微縮模型的畫法很多遊戲在用（觀光計画、Tiny Glade、Townscaper），沒有人能獨佔，畫法像不構成問題（風格不受保護，素材全部自己畫）；能拉開距離的是內容，目前沒有以台灣街景為主角的鐵道經營遊戲。「不失真」是比例和塗裝照真的、不做 Q 版；「微縮」只靠光線、乾淨的霧面與拉近時的移軸。
 
-![F 與 F 台灣版](compare-f-ftw.jpg)
+F 與 F 台灣版（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/compare-f-ftw.jpg`）
 
 | 正上方（建造時） | 中間傾斜 | 街景（拉近） |
 | --- | --- | --- |
-| ![](ftw-top.jpg) | ![](ftw-mid.jpg) | ![](ftw-street.jpg) |
-| ![](ftw-close.jpg) | ![](ftw-mid-night.jpg) | ![](ftw-street-night.jpg) |
+| `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/ftw-top.jpg` | `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/ftw-mid.jpg` | `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/ftw-street.jpg` |
+| `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/ftw-close.jpg` | `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/ftw-mid-night.jpg` | `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/ftw-street-night.jpg` |
 
 午後雷陣雨：
 
-![午後雷陣雨](ftw-street-storm.jpg)
+午後雷陣雨（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/ftw-street-storm.jpg`）
 
-![手機橫拿](ftw-phone.jpg)
+手機橫拿（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/ftw-phone.jpg`）
 
 比 F 多了：
 
@@ -114,14 +116,14 @@ NEXT_PRIORITIES §0 第 14 項「同一張地圖拉近就傾斜」開工前要�
 
 作者覺得參考庫的香港街景試作（`Railway/street_scene_reference_clean/`）風格適合：動畫不會太寫實而吃效能，畫面好看，又不是一堆方塊。作者選擇「照它的做法自己重畫，模型保留」：它的模型檔沒有載入、沒有複製，只當量尺（汽車 4.56 × 2.08 × 1.38 m、小巴 7.2 × 2.5 × 2.98 m、行人約 1.7 m，零件為腿、軀幹、手臂、頸、頭、頭髮、手、鞋、雨傘；軀幹中心 1.03 m），人車與細節全部是這裡的程式畫的（art-style §7）。
 
-![F 台灣版與 F 台灣版＋](compare-ftw-ftwplus.jpg)
+F 台灣版與 F 台灣版＋（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/compare-ftw-ftwplus.jpg`）
 
 | 正上方（建造時） | 中間傾斜 | 街景 |
 | --- | --- | --- |
-| ![](ftwplus-top.jpg) | ![](ftwplus-mid.jpg) | ![](ftwplus-street.jpg) |
-| ![](ftwplus-close.jpg) | ![](ftwplus-street-night.jpg) | ![](ftwplus-street-storm.jpg) |
+| ![](ftwplus-top.jpg) | `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/ftwplus-mid.jpg` | `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/ftwplus-street.jpg` |
+| `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/ftwplus-close.jpg` | `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/ftwplus-street-night.jpg` | `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/ftwplus-street-storm.jpg` |
 
-![手機橫拿](ftwplus-phone.jpg)
+手機橫拿（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/ftwplus-phone.jpg`）
 
 比 F 台灣版多了（街景的做法）：
 
@@ -139,14 +141,14 @@ NEXT_PRIORITIES §0 第 14 項「同一張地圖拉近就傾斜」開工前要�
 
 作者看過 D+ 之後問：能不能做到 3D 試作那樣，再融合 D+ 的元素。E 是 B 的畫法（天空漸層、環境反射、柔和陰影、草地與道碴與柏油的質感、ACES 色調）加上 D+ 的全部元素；牆面換成台灣常見的二丁掛磁磚質感，窗戶是會反射天空的玻璃。
 
-![B、D+、E](compare-b-dplus-e.jpg)
+B、D+、E（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/compare-b-dplus-e.jpg`）
 
 | 正上方（建造時） | 中間傾斜 | 拉近傾斜（移軸） |
 | --- | --- | --- |
-| ![](e-realplus-top.jpg) | ![](e-realplus-mid.jpg) | ![](e-realplus-close.jpg) |
-| | ![](e-realplus-mid-night.jpg) | ![](e-realplus-close-night.jpg) |
+| `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/e-realplus-top.jpg` | `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/e-realplus-mid.jpg` | `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/e-realplus-close.jpg` |
+| | `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/e-realplus-mid-night.jpg` | `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/e-realplus-close-night.jpg` |
 
-![手機橫拿](e-realplus-phone.jpg)
+手機橫拿（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/e-realplus-phone.jpg`）
 
 - **感覺**：和網站的 3D 城市同一家族，但有暖黃的玩家建物、台灣的屋頂與騎樓、人車與夜景，正上方仍是乾淨的地圖。
 - **和真正的 `/city/` 差在哪**：`/city/` 還有雲、水面倒影、照片立面、真實的建物輪廓（Overture／PLATEAU 的資料）。E 的建物是遊戲自己的方塊；要接上真實輪廓，是之後「城市資料」的工作，不是畫風。
@@ -157,9 +159,9 @@ NEXT_PRIORITIES §0 第 14 項「同一張地圖拉近就傾斜」開工前要�
 
 | 正上方（建造時） | 中間傾斜 | 拉近傾斜 |
 | --- | --- | --- |
-| ![](b-real-top.jpg) | ![](b-real-mid.jpg) | ![](b-real-close.jpg) |
+| `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/b-real-top.jpg` | `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/b-real-mid.jpg` | `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/b-real-close.jpg` |
 
-![手機橫拿](b-real-phone.jpg)
+手機橫拿（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/b-real-phone.jpg`）
 
 - **感覺**：照 `Web/CityView` 的設定畫（ACES 色調、柔和陰影、天空漸層與霧、草地與道碴的質感、立面窗格、白車身細紅線的台鐵電聯車）。真正的 `/city/` 還有雲、環境遮蔽、水面倒影與照片立面，所以實際會比這張更細緻、也更重。（本來想直接截網站的 `/city/`，這個環境只有軟體算圖，一張都算不出來。）
 - **好處**：拉近時最有「真的城市」的感覺，和已經上線的 3D 城市接得起來。
@@ -169,9 +171,9 @@ NEXT_PRIORITIES §0 第 14 項「同一張地圖拉近就傾斜」開工前要�
 
 | 正上方（建造時） | 中間傾斜 | 拉近傾斜 |
 | --- | --- | --- |
-| ![](c-mix-top.jpg) | ![](c-mix-mid.jpg) | ![](c-mix-close.jpg) |
+| `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/c-mix-top.jpg` | `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/c-mix-mid.jpg` | `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/c-mix-close.jpg` |
 
-![手機橫拿](c-mix-phone.jpg)
+手機橫拿（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/c-mix-phone.jpg`）
 
 - **感覺**：地面、道碴、水、天空、陰影是寫實的，建物、月台、樹與列車是 A 的扁平色塊加外框，像桌上的鐵道模型。
 - **好處**：比 A 有份量，建物和列車仍然一眼分得出是玩家的。

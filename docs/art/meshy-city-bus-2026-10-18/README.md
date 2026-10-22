@@ -1,5 +1,7 @@
 # Meshy 試做：市區公車（2026-10-18）
 
+> 2026-10-22 起這個資料夾只留這份 README、總覽圖 `reference-cc0.jpg` 和文字紀錄；其他 3 張圖搬到 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/meshy-city-bus-2026-10-18/`，檔名不變（作者 2026-10-21 的規則，`docs/HANDOFF.md` §2）。
+
 作者 2026-10-18：「Meshy 用圖片+對話生成的模型 比較好 你用搜尋圖片的方式加描述請meshy生成一個」。規格：`docs/research/MESHY_TRIAL_MODEL_SPEC_2026-10-17.md`；prompt 與設定：`tools/meshy/models.json` 的 `city-bus`；任務與點數：`tools/meshy/generated.json`。
 
 | 檔案 | 是什麼 |

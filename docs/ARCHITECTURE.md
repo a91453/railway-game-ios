@@ -9175,7 +9175,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
   - 音樂：無。
 - **驗證**：
   - Linux：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨，Map3D 測試 38 個通過。
-  - 預覽 `docs/art/map3d-surfaces-2026-10-15/shops.jpg`、`surfaces-shops.jpg` 用 WebGL 軟體算圖。
+  - 預覽 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-surfaces-2026-10-15/shops.jpg`、`surfaces-shops.jpg` 用 WebGL 軟體算圖。
   - 實機 UNVERIFIED。
 
 ### 232. 原生 3D 地圖第四步：接地陰影
@@ -9317,7 +9317,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
    - **疊放高度**（公尺，地面之上）：草地 0.04、沙地 0.08、濕地 0.12、林地 0.16、公園 0.20、水 0.24；一般與服務道路 0.28、三級到主要道路 0.32、快速道路與主要幹道 0.36。地面陰影（決策 232）從 0.08 提高到 0.4，蓋在這些上面、軌道道床下面（道床頂原本只有 0.1 m，其實在它們底下；#647–#682 的審查把 `railLift` 改成 0.85，道床頂 0.5 m，決策 231 第 4 點）。
    - 有底圖時，地面不再畫遊戲 64 m 的水格（底圖的海岸線比較細）；水格照舊是 GameCore 的規則，不能蓋軌道的地方不變。
 4. **城市的建物讓路**：遊戲自己的城市（`CitySkyline`，每格一棟）在實景地圖上會蓋在真實的道路上。道路或河道的帶子進到某格建物的 20 m 見方內（加半個路寬）、或水面／公園／林地蓋住那一格一半以上，那一格就不畫建物。台北車站一帶大部分的格子都有路經過，所以建物剩不到一半（測試鎖住「少於一半、但不是零」）；真實的建物是下一步。
-5. **顏色**（四個角度選 D，其他的預覽在 `docs/art/map3d-real-ground-2026-10-15/options.jpg`）：
+5. **顏色**（四個角度選 D，其他的預覽在 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-real-ground-2026-10-15/options.jpg`）：
    - A：淡暖灰、貼混凝土貼圖。B：深灰柏油（location modeler 的 `#62666d`）。C：同 D，但城市的建物不讓路。**D：白色道路、快速道路與主要幹道暖黃（`#FFD99A`，2D 的 `#FFE4B0` 深一點），不貼圖。**
    - 玩家：D 從遠處就看得出路網，和 2D 地圖同一套顏色，切換時認得出是同一個地方；C 的大樓蓋在高架道路上，看起來是錯的。
    - 開發：道路不貼圖，只是頂點色，沒有新的貼圖層；B 與 D 只差調色盤。
@@ -9363,7 +9363,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 - 沒有高度檔，或空白地圖、平地的實景地圖（決策 198，`groundHeight` 本來就是 0），照舊。
 - 3D 預覽在高度檔晚到時重做場景（`Map3DSceneKey` 多記有沒有高度檔）。
 - 沒有限制坡度或壓平地形：軌道的高度是真的地面量出來的，地形改平會讓軌道浮起或埋住；真的山坡照真的畫。
-- 結果（`Map3DNightAndGroundTests`，Linux，埔里盆地只讀一個區塊）：讀過的區塊邊上，地面與高度檔最多差 502 m → 0.5 m 以內；隔一個區塊的高差 434 m → 盆地本身的起伏。前後對照 `docs/art/map3d-night-terrain-2026-10-16/terrain-day.jpg`（瑞芳、猴硐的實景示範）。
+- 結果（`Map3DNightAndGroundTests`，Linux，埔里盆地只讀一個區塊）：讀過的區塊邊上，地面與高度檔最多差 502 m → 0.5 m 以內；隔一個區塊的高差 434 m → 盆地本身的起伏。前後對照 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-night-terrain-2026-10-16/terrain-day.jpg`（瑞芳、猴硐的實景示範）。
 
 四個角度：
 - 玩家：3D 地圖的山和平地照真的連起來，蓋了軌道的地方不會變成一塊台子。
@@ -9403,7 +9403,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 5. **屋頂的雜物**：
    - 透天厝：約四分之一的屋頂不放水塔，改加一間鐵皮屋（頂樓加蓋）：牆 2.4 m、20° 雙坡。
    - 公寓與大樓：加樓梯間與一到三台冷氣主機（city 的 rooftop air conditioner、japan 的 roof access house）。
-6. **顏色**（四個角度選 A，B 的預覽在 `docs/art/map3d-buildings-2026-10-15/options.jpg`）：
+6. **顏色**（四個角度選 A，B 的預覽在 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-buildings-2026-10-15/options.jpg`）：
    - A：工廠與加蓋多半是台灣常見的藍色鐵皮（`#5F8BC0`、`#6F9AC9`），其餘取素材庫的灰、褪色與鏽色鐵皮再調亮；廟是朱紅牆、橘色琉璃瓦、紅燕尾。
    - B：全部灰色鐵皮，廟用 japan 包的灰瓦與灰泥牆。
    - 玩家：藍鐵皮與紅廟一眼看得出是台灣，也分得出哪裡是工業區、哪裡是廟。
@@ -9643,7 +9643,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
    - 台中：47,492 → 85,987，遠版 36,994 → 73,317；
    - 蓋場景的時間約多 0.5 秒（背景執行緒）。
    - 比 #666 兩鎮地圖的 146,226 少，iPhone 的幀數 **UNVERIFIED**，要等 TestFlight。
-6. **選 A：照本專案的畫風**。B 的預覽在 `docs/art/map3d-real-buildings-2026-10-15/options.jpg`，是網站 3D 城市預覽那種單一灰色的量體。
+6. **選 A：照本專案的畫風**。B 的預覽在 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-real-buildings-2026-10-15/options.jpg`，是網站 3D 城市預覽那種單一灰色的量體。
    - 玩家：A 的店面、窗、水塔一看就是台灣街道，B 像建築模型；兩者位置都是真的。
    - 開發：兩案程式一樣，只差配色與牆面。
    - 美術：A 和地圖其他地方（決策 231、235 的城市與玩家建物）同一個畫風；B 的灰在 F 台灣版＋的明亮調色盤裡突兀。
@@ -9726,7 +9726,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
 作者 2026-10-15 說，比較喜歡網站 3D 城市（決策 152、163）與參考庫 `city_map_reference_clean`（城市地圖海報產生器，六種配色）的「素材底圖風格」，並交代「記得調整到遊戲風格而不是照搬」。
 
-先把兩邊和現在的畫面放在同一個高雄場景比（`docs/art/map3d-map-look-2026-10-15/options.jpg`）：
+先把兩邊和現在的畫面放在同一個高雄場景比（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-map-look-2026-10-15/options.jpg`）：
 - 網站：冷灰色、有人行道與標線；
 - city map：紙色的地面、深色的路、依等級分粗細。
 兩者共同的是「地圖感」：路網一眼看清楚，地面安靜。F 台灣版＋（決策 229、2026-10-13 定案）的草地貼圖與米白的路，在這點上最弱。
@@ -9944,7 +9944,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
    近處通常是 4 到 9 塊，也就是多約 13 萬到 30 萬個三角形，但只多 12 到 27 次 draw call。iPhone 上的幀數 **UNVERIFIED**，要等 TestFlight。
 
-**四方**（選「樹、燈、電線桿都放」；只有行道樹的預覽在 `docs/art/map3d-street-props-2026-10-15/options.jpg`）：
+**四方**（選「樹、燈、電線桿都放」；只有行道樹的預覽在 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-street-props-2026-10-15/options.jpg`）：
 - 玩家：
   - 實景地圖的街道有了網站 3D 城市那種生活感；
   - 大路兩旁是行道樹，巷子裡是台灣到處都有的電線桿，一眼看得出是台灣；
@@ -10598,7 +10598,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
 ### 259. 3D 地圖的行人、機車、汽車：拉近才出現，人數跟著旅客與城鎮
 
-2026-10-16。作者：「之前想要的 3D 跟現在實作的還是有點差異」，附了一張目標畫面：明亮的台灣街景，廟埕站滿人，路上有機車、汽車，騎樓有貨物。這張圖就是 F 台灣版＋（`docs/art/3d-style-2026-10-13/ftwplus-street.jpg`）的「＋」。遊戲規劃 session 派工，分四步，一次一個 PR：①行人與車輛（這一步）②店面與生活細節 ③廟埕與牌樓 ④主地圖拉近就變成傾斜的 3D。號碼依工作登記 #231：原本取 256，撞號後由規劃 session 排定為 259。存檔版本、golden schema 不動；GameCore 不動。
+2026-10-16。作者：「之前想要的 3D 跟現在實作的還是有點差異」，附了一張目標畫面：明亮的台灣街景，廟埕站滿人，路上有機車、汽車，騎樓有貨物。這張圖就是 F 台灣版＋（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/ftwplus-street.jpg`）的「＋」。遊戲規劃 session 派工，分四步，一次一個 PR：①行人與車輛（這一步）②店面與生活細節 ③廟埕與牌樓 ④主地圖拉近就變成傾斜的 3D。號碼依工作登記 #231：原本取 256，撞號後由規劃 session 排定為 259。存檔版本、golden schema 不動；GameCore 不動。
 
 1. **模型**（`Sources/GamePresentation/Map3DStreetLife.swift` 的 `Map3DStreetModel`，放進 `Map3DModelPack.standard` 街道設施之後）。都是本專案自己的方塊造型，平塗、頂點色：
    - **行人**：1.68 m，兩種姿勢（站著、跨步），走路時一步換一次。上衣與袖子是實例的顏色（alpha 0），十種亮色；褲子、膚色、頭髮固定。每個 70 個三角形。
@@ -11739,7 +11739,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 ### 272. 3D 地圖的亮度：白天的光強一成二，公園與樹更綠；地面與道路照決策 241
 
-2026-10-17。HANDOFF §4.4 的「配色」：決策 241 把 3D 的地面與道路換成 2D 地圖的色系，比作者的目標畫面（`docs/art/3d-style-2026-10-13/ftwplus-street.jpg`，明亮的晴天）灰。要求拿目標畫面並排出兩三個亮度方案，照四方決定，決策 241 的色系不整個推翻。遊戲規劃 session 排在 3D 四步之後。
+2026-10-17。HANDOFF §4.4 的「配色」：決策 241 把 3D 的地面與道路換成 2D 地圖的色系，比作者的目標畫面（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/ftwplus-street.jpg`，明亮的晴天）灰。要求拿目標畫面並排出兩三個亮度方案，照四方決定，決策 241 的色系不整個推翻。遊戲規劃 session 排在 3D 四步之後。
 
 號碼依工作登記 #231：決策 272。存檔版本、golden schema 不動；GameCore 不動，只動 GamePresentation 的光線與兩種綠。
 
@@ -11765,7 +11765,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 | 參考 | → 目標 |
 | --- | --- |
-| `docs/art/3d-style-2026-10-13/ftwplus-street.jpg`（畫風示意 session 的晴天：sun ×2.5、hemi ×1.35，HANDOFF §4.3 的「光」） | 只取「明亮的晴天」的方向：白天的光強一成二、綠更飽和 |
+| `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/ftwplus-street.jpg`（畫風示意 session 的晴天：sun ×2.5、hemi ×1.35，HANDOFF §4.3 的「光」） | 只取「明亮的晴天」的方向：白天的光強一成二、綠更飽和 |
 | 決策 241 的地圖色系 | 地面、道路、水照舊 |
 
 外部專案與參考庫：沒有另外搜尋。
@@ -14505,7 +14505,7 @@ $10,000 的價格照報告的建造、列車與利益算出（旅客那一項是
 **驗證**：
 - **VERIFIED**（Linux，無頭 Chromium 的 WebGL 預覽，決策 238）：色帶的前後對照 `docs/art/map3d-labels-2026-10-21/bands-before-after.jpg`（左前右後；上近景的高架與地面線交叉，下中景的環狀線與兩條直線）。
 - **VERIFIED**（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`Map3DLineBandsTests`、`Map3DTrainLabelsTests`、`Map3DTests` 通過；`MAP3D_FRAME_REPORT=1` 的 `testTheLineBandsCost`、`testTheGPUBudget` 跑過（數字如上）；改到的 App 檔通過 `swiftc -parse`。
-- **VERIFIED**（Linux，無頭 Chromium 的 WebGL 預覽，決策 238）：示範地圖近景（140 m）不給與給色帶各畫一次，pixelmatch 差異圖（GAME_AI_TOOLS §6.3；作者 2026-10-21 同意加，#906 之後另開的小 PR 加進 `tools/map3d-preview/diff.cjs`）只標出軌道旁的色帶，1,440,000 個像素裡變了 9,321 個（0.65%），420 m 是 4,464 個（0.31%）；同一張自己比是 0。上中下是前、後、差異：`docs/art/map3d-labels-2026-10-21/bands-diff.jpg`。標籤畫在 SwiftUI 那層，預覽畫不到。
+- **VERIFIED**（Linux，無頭 Chromium 的 WebGL 預覽，決策 238）：示範地圖近景（140 m）不給與給色帶各畫一次，pixelmatch 差異圖（GAME_AI_TOOLS §6.3；作者 2026-10-21 同意加，#906 之後另開的小 PR 加進 `tools/map3d-preview/diff.cjs`）只標出軌道旁的色帶，1,440,000 個像素裡變了 9,321 個（0.65%），420 m 是 4,464 個（0.31%）；同一張自己比是 0。上中下是前、後、差異：`a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-labels-2026-10-21/bands-diff.jpg`。標籤畫在 SwiftUI 那層，預覽畫不到。
 - **UNVERIFIED**：App 的編譯（`ios-build.yml`）；3D 的 UI 測試（PR 用 `only_testing` 跑）；實機上標籤的大小、位置、跟車時的流暢度與色帶的樣子（TestFlight）。
 
 ### 316. 新遊戲一個入口：主選單只留「新遊戲」，點了選「空白地圖」或「實景地圖」，新遊戲選項標明兩種都套用
@@ -14629,8 +14629,8 @@ $10,000 的價格照報告的建造、列車與利益算出（旅客那一項是
 - **只換顏色（方塊上色）**：便宜，但看不出機車與客車、車頭朝向。
 - **車頭全是直立的平面**（這個 PR 的第二版）：好做；但 E500、R200、E1000 的車頭都是後傾的；作者要多方比較後修車頭的角度。
 - **#900 自己的顏色**（EMU3000 紅線、700T 金橘帶、EMU800 銀車身藍帶、DR 銀色車頭）：和 #900 的圖一樣；作者要顏色用新版、弧形不變。對照圖 `fronts-900-emu3000-hsr-metro.jpg` 的上排，現在的樣子 `fronts-new-colours.jpg`。
-- **DR 平的黃色車端**（第三版，照車庫模型）：比較像真車的車端；作者看了覺得醜，要有弧度的車維持 #900 的形狀（顏色後來用了第三版的）。對照圖 `docs/art/map3d-train-sets-2026-10-21/fronts-flat-ends.jpg`（下排第 3–5 台）。
-- **EMU3000、高鐵、捷運留決策 230 的車頭**：不用改；作者看了 #900 的車覺得舊的醜。對照圖 `docs/art/map3d-train-sets-2026-10-21/fronts-900-emu3000-hsr-metro.jpg` 的下排。
+- **DR 平的黃色車端**（第三版，照車庫模型）：比較像真車的車端；作者看了覺得醜，要有弧度的車維持 #900 的形狀（顏色後來用了第三版的）。對照圖 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-train-sets-2026-10-21/fronts-flat-ends.jpg`（下排第 3–5 台）。
+- **EMU3000、高鐵、捷運留決策 230 的車頭**：不用改；作者看了 #900 的車覺得舊的醜。對照圖 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-train-sets-2026-10-21/fronts-900-emu3000-hsr-metro.jpg` 的下排。
 - **捷運也用 #900 的顏色（藍帶，不吃路線色）**：和 #900 的圖完全一樣；但每條捷運線都變藍色，近看分不出哪條線，決策 230 讓捷運吃路線色就是為了這個。沒有路線色時兩者相同。
 - **#900 的通用機車上色**（這個 PR 的第一版）：E200、E500 同一個箱型、R100、R135 同一個舊型，車頂平的；作者看了 E201 之後要照原配色、換成各自的造型。
 - **直接放 E201 的 GLB**：最像；但 35,724 個三角形是一節車預算的 30 倍，而且原模型照搬不合 art-style §7。
@@ -15038,7 +15038,7 @@ $10,000 的價格照報告的建造、列車與利益算出（旅客那一項是
 - 音樂：無。
 
 **沒有選的做法**：
-- **#900 的透天厝放到城市地塊**（原本的第 3 步，預覽 `option-900-kit.jpg`、`option-900-row.jpg`，對照現在的 `docs/art/map3d-arcade-life-2026-10-17/close.jpg`）：一塊 64 m、約 22 戶的地塊現在近看約 1,550 個三角形，換成 #900 的約 12,000 個（約 8 倍，每戶 520–1,016、公寓 840–2,348）；會失去決策 231／242 的牆面貼圖；#900 的房子是獨棟、四面開窗、底座寬，排不成連續的透天厝街屋。不做。
+- **#900 的透天厝放到城市地塊**（原本的第 3 步，預覽 `option-900-kit.jpg`、`option-900-row.jpg`，對照現在的 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-arcade-life-2026-10-17/close.jpg`）：一塊 64 m、約 22 戶的地塊現在近看約 1,550 個三角形，換成 #900 的約 12,000 個（約 8 倍，每戶 520–1,016、公寓 840–2,348）；會失去決策 231／242 的牆面貼圖；#900 的房子是獨棟、四面開窗、底座寬，排不成連續的透天厝街屋。不做。
 - **#921 細節套件的 `catenaryInsulator`、`tensionWeights`**：每個約 250 個三角形，一根桿就超過整根桿現在的量；用幾個方塊做礙子。
 - **車站套件（#913）的電車線門架（`catenaryPortal`）**：中間股道可以有桿；但要另外算跨幾股、立在哪，留給下一步。
 - **近景（1,600 m 內）就畫**：800 m 外的桿與線不到一個點寬，只剩閃爍的像素，又多 2,204 個三角形；只在最近的細節畫。

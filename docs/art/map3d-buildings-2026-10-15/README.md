@@ -1,5 +1,7 @@
 # 3D 地圖的程序化建物（2026-10-15）
 
+> 2026-10-22 起這個資料夾只留這份 README、總覽圖 `factories.jpg` 和文字紀錄；其他 6 張圖搬到 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-buildings-2026-10-15/`，檔名不變（作者 2026-10-21 的規則，`docs/HANDOFF.md` §2）。
+
 ARCHITECTURE 決策 235。素材庫 `procedural_assets_reference_clean/` 的 industrial、city、japan 三包產生器，取規則改寫成 Swift：工廠、學校、診所、消防隊、廟、商場，以及屋頂的頂樓加蓋、樓梯間與冷氣主機。
 
 這裡的圖都是軟體算圖：

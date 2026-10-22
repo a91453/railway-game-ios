@@ -1,5 +1,7 @@
 # 3D 建物的牆面材質（2026-10-15）
 
+> 2026-10-22 起這個資料夾只留這份 README、總覽圖 `materials.jpg` 和文字紀錄；其他 4 張圖搬到 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-materials-2026-10-15/`，檔名不變（作者 2026-10-21 的規則，`docs/HANDOFF.md` §2）。
+
 ARCHITECTURE 決策 242。作者問清水模這類素材能不能用、會不會成本太高，「四方建議，考慮完適合就做」，並交代配色要調成遊戲風格、不能全部採用。
 
 四種材質，都是灰階的細節：乘在調色盤的顏色上，所以牆的顏色仍是遊戲的；在場景裡依公尺鋪，200 m 到 600 m 之間淡出。

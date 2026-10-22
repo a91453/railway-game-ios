@@ -1,5 +1,7 @@
 # 空白地圖的種子道路與沿街的透天厝（決策 263）
 
+> 2026-10-22 起這個資料夾只留這份 README、總覽圖 `blank-map.jpg` 和文字紀錄；其他 2 張圖搬到 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-seeded-streets-2026-10-16/`，檔名不變（作者 2026-10-21 的規則，`docs/HANDOFF.md` §2）。
+
 用 `tools/map3d-preview` 畫：WebGL 照 `Map3DShaders.metal` 的算式重畫，不是 iPhone 的畫面。兩鎮地圖、下午 2 點、`MAP3D_BUSY=1`。
 
 - `blank-map.jpg`：透天厝街區，170 m。

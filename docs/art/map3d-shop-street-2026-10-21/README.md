@@ -1,5 +1,7 @@
 # 3D 的站前商店街（決策 322）
 
+> 2026-10-22 起這個資料夾只留這份 README、總覽圖 `1-overview.jpg` 和文字紀錄；其他 3 張圖搬到 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-shop-street-2026-10-21/`，檔名不變（作者 2026-10-21 的規則，`docs/HANDOFF.md` §2）。
+
 無頭 Chromium 的 WebGL 預覽（決策 238，`tools/map3d-preview/`），有影子的那一版。「前」是 main 加 #922（決策 321 的車站），「後」是這個 PR。
 
 | 圖 | 看什麼 |

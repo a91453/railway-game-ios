@@ -4,8 +4,13 @@
  *
  * Boots the existing CityView Vite server and drives headless Chrome via CDP
  * (using Node's built-in WebSocket — zero additional npm dependencies) to
- * render the 5 required comparison screenshots into:
- *   docs/art/town-scene-preview-2026-10-17/
+ * render the 5 required comparison screenshots into the directory given as
+ * its argument:
+ *   node Web/CityView/tools/town-preview/preview.cjs <output directory>
+ * The 2026-10-17 run is in a91453/railway-reference-private:
+ * Railway/game-art-previews/docs/art/town-scene-preview-2026-10-17/; this
+ * repository keeps only its README and one overview
+ * (docs/HANDOFF.md §2), so do not write the screenshots back into docs/art.
  */
 
 const fs = require('fs');
@@ -13,9 +18,12 @@ const path = require('path');
 const http = require('http');
 const { spawn } = require('child_process');
 
-const repoRoot = path.resolve(__dirname, '../../../..');
 const cityViewDir = path.resolve(__dirname, '../..');
-const outDir = path.join(repoRoot, 'docs/art/town-scene-preview-2026-10-17');
+if (!process.argv[2]) {
+  console.error('Usage: node Web/CityView/tools/town-preview/preview.cjs <output directory>');
+  process.exit(2);
+}
+const outDir = path.resolve(process.argv[2]);
 
 const SHOTS = [
   { file: 'a-kenney-sunny.png',  mode: 'A', view: 'overview', desc: 'A 照 Kenney 原樣（同一視角・晴）' },

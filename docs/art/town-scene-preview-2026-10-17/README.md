@@ -1,5 +1,7 @@
 # 台灣車站前 3D 城鎮試看與 Kenney 參考包評估（2026-10-17）
 
+> 2026-10-22 起這個資料夾只留這份 README、總覽圖 `a-kenney-sunny.png` 和文字紀錄；其他 4 張圖搬到 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/town-scene-preview-2026-10-17/`，檔名不變（作者 2026-10-21 的規則，`docs/HANDOFF.md` §2）。
+
 > **目的**：評估 `railway-reference-private/Railway/town-scene-reference-clean/` 內的 Kenney CC0 低多邊形模型包放入「台灣車站前」場景時的視覺效果、調色盤相容性、手機三角形預算，以及模型缺口。
 > **試看工具位置**：[`Web/CityView/tools/town-preview/`](../../../Web/CityView/tools/town-preview/index.html)（獨立預覽頁，不改動 `CityView` 主程式或 `package.json`）。
 > **模型與來源清單**：[`Web/CityView/public/models/town/SOURCES.json`](../../../Web/CityView/public/models/town/SOURCES.json)。
@@ -13,8 +15,8 @@
 | 模式 | 截圖 | 總三角形數 | 視覺與配置重點 |
 | --- | --- | ---: | --- |
 | **A｜照 Kenney 原樣（晴）** | ![A Kenney 原樣](./a-kenney-sunny.png) | **37,997 tris** | 保留 Kenney 原始色票（薄荷綠樹葉 `#29c9ab`、紅／橘／青／紫玩具感車色、預設紫橘人物服色）、玩具短胖車體比例、平面屋頂招牌，無騎樓／無機車／無透天厝頂樓鐵皮與水塔。 |
-| **B｜配成台灣版（晴）** | ![B 配成台灣版](./b-taiwan-sunny.png) | **39,797 tris** | 改用 [`docs/UI_THEME.md`](../../UI_THEME.md) 與 3D 畫風調色盤；人物拉回真人比例（**1.70 m**）、汽車拉回台灣常見車型尺寸（**4.45–4.60 m**）；5 家店（`站前便當`、`伴手禮`、`車站咖啡`、`便利商店`、`麵包坊`）加上**騎樓柱廊、條紋斜雨遮、2F/3F 鐵皮窗遮、直立招牌**；右側 3 棟**透天厝**加上鐵捲門、鐵窗、**頂樓綠／藍鐵皮加蓋與不鏽鋼／藍色水塔**；路邊機車格補上 3 台自製低面數機車。 |
-| **C｜台灣版＋午後雷陣雨** | ![C 台灣版＋雨天](./c-taiwan-rain.png) | **39,797 tris** | 完整套用 `weather.js` 的 `PRESETS.rain` 數值（`daySunScale: 0.56`、`dayHemiScale: 0.92`、`skyTint: #66778a (mix 0.24)`、`fogTint: #586777 (mix 0.24)`、`fogNear: 0.84`、`fogFar: 0.76`、`rain: 1` 480 條斜雨絲幕），搭配午後雷陣雨濕亮柏油路面與提早亮起的店招燈箱。 |
+| **B｜配成台灣版（晴）** | B 配成台灣版（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/town-scene-preview-2026-10-17/b-taiwan-sunny.png`） | **39,797 tris** | 改用 [`docs/UI_THEME.md`](../../UI_THEME.md) 與 3D 畫風調色盤；人物拉回真人比例（**1.70 m**）、汽車拉回台灣常見車型尺寸（**4.45–4.60 m**）；5 家店（`站前便當`、`伴手禮`、`車站咖啡`、`便利商店`、`麵包坊`）加上**騎樓柱廊、條紋斜雨遮、2F/3F 鐵皮窗遮、直立招牌**；右側 3 棟**透天厝**加上鐵捲門、鐵窗、**頂樓綠／藍鐵皮加蓋與不鏽鋼／藍色水塔**；路邊機車格補上 3 台自製低面數機車。 |
+| **C｜台灣版＋午後雷陣雨** | C 台灣版＋雨天（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/town-scene-preview-2026-10-17/c-taiwan-rain.png`） | **39,797 tris** | 完整套用 `weather.js` 的 `PRESETS.rain` 數值（`daySunScale: 0.56`、`dayHemiScale: 0.92`、`skyTint: #66778a (mix 0.24)`、`fogTint: #586777 (mix 0.24)`、`fogNear: 0.84`、`fogFar: 0.76`、`rain: 1` 480 條斜雨絲幕），搭配午後雷陣雨濕亮柏油路面與提早亮起的店招燈箱。 |
 
 ---
 
@@ -22,8 +24,8 @@
 
 | 視角 | 截圖 | 總三角形數 | 觀察重點 |
 | --- | --- | ---: | --- |
-| **D｜拉近特寫（人物臉部＋車輛細節）** | ![D 拉近特寫](./d-taiwan-closeup.png) | **39,797 tris** | 近距離檢視 1.70 m 行人的臉部五官（眼睛、眉毛、眼鏡、微笑嘴型、暖膚色 `#EDC4A0`/`#E8C9A8`）與台灣調色盤服裝（珊瑚紅 `#E8574A`、台鐵藍 `#3B7DD8`、琥珀黃 `#FFC86B`），以及兩側台灣黃計程車（`#F2C230`）與白色房車（`#F2F3F1`）的車頭燈、保險桿、擋風玻璃與輪圈細節。 |
-| **E｜中距離視角（遊戲 3D 地圖拉近高度）** | ![E 中距離視角](./e-taiwan-mid.png) | **39,797 tris** | 模擬遊戲 3D 地圖拉近時的俯角高度（約 `y = 23.5 m`、俯角 ~40°）：可清楚辨識月台側列車、`晴川站`、站前廣場斑馬線、5 家店面直立招牌與騎樓雨遮、3 棟透天厝頂樓鐵皮加蓋與水塔。 |
+| **D｜拉近特寫（人物臉部＋車輛細節）** | D 拉近特寫（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/town-scene-preview-2026-10-17/d-taiwan-closeup.png`） | **39,797 tris** | 近距離檢視 1.70 m 行人的臉部五官（眼睛、眉毛、眼鏡、微笑嘴型、暖膚色 `#EDC4A0`/`#E8C9A8`）與台灣調色盤服裝（珊瑚紅 `#E8574A`、台鐵藍 `#3B7DD8`、琥珀黃 `#FFC86B`），以及兩側台灣黃計程車（`#F2C230`）與白色房車（`#F2F3F1`）的車頭燈、保險桿、擋風玻璃與輪圈細節。 |
+| **E｜中距離視角（遊戲 3D 地圖拉近高度）** | E 中距離視角（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/town-scene-preview-2026-10-17/e-taiwan-mid.png`） | **39,797 tris** | 模擬遊戲 3D 地圖拉近時的俯角高度（約 `y = 23.5 m`、俯角 ~40°）：可清楚辨識月台側列車、`晴川站`、站前廣場斑馬線、5 家店面直立招牌與騎樓雨遮、3 棟透天厝頂樓鐵皮加蓋與水塔。 |
 
 ---
 

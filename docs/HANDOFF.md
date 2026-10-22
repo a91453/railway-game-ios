@@ -235,6 +235,8 @@
 
 已收工（2026-10-17／18）：#787 文件、#791 full lane 的兩個 UI 測試；玩家回報的修正 #759（建造確認卡換行）、#761（有月台的軌道也能整平）；自動待避線放不回路線的列車 #763；N700 審查修正 #764（Antigravity）與 #770；實景開局 UI 測試的同步 #775（Codex）。2026-10-16 以前：單線死結 #736、#750（決策 255）；語言選單 #727（決策 257）；實景城市 #746、#753（決策 262）；審查清理 #728–#743；PR #712–#754 審查 #757；CI 優化 #756、#758（決策 265）；高鐵 N700 #752；貨運開關說明 #754。
 
+**預覽圖放哪裡（2026-10-22，session_011DWN98Fo4KePt7PLmgsV9e，遊戲規劃派工）**：遊戲不讀的預覽圖、截圖放私有庫 `a91453/railway-reference-private` 的 `Railway/game-art-previews/`，路徑和這裡一樣（`docs/art/<資料夾>/`、`tools/cityview-benchmark/examples/`）。這次從 main 01956db 搬了 138 個檔、約 31.7 MB（逐檔 SHA-256 核對，清單是私有庫的 `Railway/game-art-previews/MOVED_2026-10-22.sha256.txt`）；每個資料夾留 README（開頭一行寫其他圖在哪）、一張總覽圖、文字紀錄（`.md`、`.json`、`.html`、`.svg`）和測試讀的 `meshy-city-bus-2026-10-18/city-bus.glb`、`city-bus.m3dmodel`。**以後的規則**：PR 只把 README、一張總覽圖和小的紀錄放進 `docs/art/`，其他圖先在私有庫開 PR；各 kit 的 `rebuild.sh` 本來就拒絕寫進公開 checkout，`Web/CityView/tools/town-preview/preview.cjs` 改成一定要給輸出資料夾。git 歷史裡的舊檔沒有改寫，`.git` 不會變小。
+
 ## 3. 作者說過的話、還在等作者的事、遊戲規劃代為決定的事
 
 | 事項 | 狀態 | 在哪裡 |
@@ -271,7 +273,7 @@
 - 242：材質
 - 244：街道設施
 
-預覽圖在 `docs/art/map3d-*-2026-10-1*/`。畫風在 `docs/art/3d-style-2026-10-13/`，最接近作者要的是 `ftwplus-street.jpg`。
+預覽圖在 `docs/art/map3d-*-2026-10-1*/`。畫風在 `docs/art/3d-style-2026-10-13/`（README 與總覽 `ftwplus-top.jpg`；其他圖在 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/`，同一相對路徑），最接近作者要的是 `ftwplus-street.jpg`。
 
 **作者 2026-10-16 的目標畫面**：明亮的 low-poly 台灣街景，白天，斜上方約 35° 俯看。
 - 左邊是紅牆橘瓦、雙層屋簷的廟，屋脊兩端翹起、綠色屋脊。廟前是淺色鋪面的廟埕，三四十個方塊小人，衣服顏色各異。廟埕前有一座紅色牌樓（兩根柱子加一道橫楣）。
@@ -600,7 +602,7 @@
 
 之後再做：汽車與公車、雷雨撐傘、擋住列車的建物淡出、接到主地圖。
 
-示意圖相關檔案：
+示意圖相關檔案（2026-10-22 起在 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/3d-style-2026-10-13/`）：
 - `ftwplus-street.jpg`：最接近作者要的畫面；
 - `ftwplus-street-storm.jpg`：撐傘；
 - `ftwplus-close.jpg`：列車、月台的人、平交道排隊；

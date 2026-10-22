@@ -1,5 +1,7 @@
 # 線號徽章與色盲色票的預覽（決策 216）
 
+> 2026-10-22 起這個資料夾只留這份 README、總覽圖 `badges.png` 和文字紀錄；其他 1 張圖搬到 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/line-badges-2026-10-14/`，檔名不變（作者 2026-10-21 的規則，`docs/HANDOFF.md` §2）。
+
 2026-10-14 給作者看的兩張預覽。作者請 session 從玩家、開發、美術三方考慮自己定案：**徽章 B、色票甲（加淺灰 `#BBBBBB`）**。規則與數字在 `docs/UI_THEME.md`「線號徽章與色盲配色」。
 
 - `badges.png`：徽章 A 色塊方牌（北捷式）、B 白底色條牌、C 色環圓牌（東京地鐵式），在淺色、深色地圖與面板上，各三欄：一般、灰階、綠色盲（deutan）模擬。示意的紅 R 與粉紅 PK 共線、藍 BL 分岔。

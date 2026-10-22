@@ -3,7 +3,7 @@ import GamePresentation
 import SwiftUI
 
 /// The company's titles as a line (ARCHITECTURE decision 224, option 1C,
-/// `docs/art/railway-ui-redesign-2026-10-14/s1-*.png`): each title a
+/// `a91453/railway-reference-private: Railway/game-art-previews/docs/art/railway-ui-redesign-2026-10-14/s1-*.png`): each title a
 /// station, the ones reached filled navy, the line teal as far as the
 /// score has come, and the company's train on a warm disc where it
 /// stands. The title held and the next are named; the rest are dots.

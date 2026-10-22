@@ -132,7 +132,7 @@
 
 ## 3. 畫面
 
-示意圖：`docs/art/station-commerce-2026-10-14/station-panel.png`（淺色與深色，還沒蓋、商店街兩種狀態）。
+示意圖：`a91453/railway-reference-private: Railway/game-art-previews/docs/art/station-commerce-2026-10-14/station-panel.png`（淺色與深色，還沒蓋、商店街兩種狀態）。
 
 ### 3.1 車站面板
 

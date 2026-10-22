@@ -1,5 +1,7 @@
 # 廟埕、牌樓與後院綠地（決策 268）
 
+> 2026-10-22 起這個資料夾只留這份 README、總覽圖 `temple.jpg` 和文字紀錄；其他 2 張圖搬到 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-temple-forecourt-2026-10-17/`，檔名不變（作者 2026-10-21 的規則，`docs/HANDOFF.md` §2）。
+
 用 `tools/map3d-preview` 畫：WebGL 照 `Map3DShaders.metal` 的算式重畫，不是 iPhone 的畫面。兩鎮地圖、下午 2 點。每張都是上半 `main`、下半新版。
 
 - `temple.jpg`：廟，90 m。
