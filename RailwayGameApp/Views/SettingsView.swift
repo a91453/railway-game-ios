@@ -46,6 +46,8 @@ struct SettingsView: View {
     @AppStorage(MapAmbienceSettings.frameRateKey) private var showsFrameRate = false
     /// Decision 216: the lines' colours, on the device.
     @AppStorage(LinePalette.key) private var linePalette: LinePalette = .standard
+    /// Decision 338: the train pack, unlocked in a test build.
+    @AppStorage(TrainPack.testUnlockKey) private var trainPackTestUnlocked = false
 
     var body: some View {
         NavigationStack {
@@ -61,6 +63,9 @@ struct SettingsView: View {
                     map3DSection(session)
                 }
                 previewSection
+                if TestBuild.isTest {
+                    testSection
+                }
                 aboutSection
             }
             .listStyle(.insetGrouped)
@@ -385,6 +390,30 @@ struct SettingsView: View {
         }
     }
 
+    /// Decision 338: the train pack's switch, only in Xcode's and
+    /// TestFlight's builds; before the App Store, the purchase takes its
+    /// place.
+    private var testSection: some View {
+        let language = DisplayLanguage.app
+        return Section {
+            Toggle(isOn: $trainPackTestUnlocked) {
+                Label {
+                    Text(verbatim: language.text("Train Pack", "列車包"))
+                } icon: {
+                    Image(systemName: "tram.fill")
+                }
+            }
+            .accessibilityIdentifier("settings.trainPack")
+        } header: {
+            Text(verbatim: language.text("Testing", "測試"))
+        } footer: {
+            Text(verbatim: language.text(
+                "Shows the train pack's trains on the 3D map, such as three-car trains as the three-car urban EMU. Only in test builds.",
+                "在 3D 地圖上顯示列車包的車，例如三節的列車畫成三節都市電聯車。只在測試版出現。"
+            ))
+        }
+    }
+
     /// Decision 127: the version testers quote, and a note to send about a
     /// problem, through the share sheet to wherever the player chooses.
     private var aboutSection: some View {
@@ -618,4 +647,16 @@ enum MapAmbienceSettings {
     static let realTrainsKey = "map.showsRealTrains"
     /// Decision 328: the flat map's frame readout.
     static let frameRateKey = "map.showsFrameRate"
+}
+
+/// Decision 338: whether this is a test build, Xcode's or TestFlight's,
+/// where the train pack's switch shows; the App Store's build is not.
+enum TestBuild {
+    static let isTest: Bool = {
+        #if DEBUG
+        return true
+        #else
+        return Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
+        #endif
+    }()
 }

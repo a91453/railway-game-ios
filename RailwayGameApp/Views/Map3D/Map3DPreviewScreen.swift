@@ -470,7 +470,15 @@ private struct Map3DView: UIViewRepresentable {
         let first = context.coordinator.shownVersion == nil
         context.coordinator.shownVersion = sceneVersion
         view.show(scene)
-        let feed = feed, models = Map3DView.models
+        // Decision 338: the train pack's sets as before them until it is
+        // unlocked.
+        let unlocked = TrainPack.isUnlocked(testBuild: TestBuild.isTest,
+                                            switchOn: UserDefaults.standard.bool(forKey: TrainPack.testUnlockKey))
+        let feed = feed, models = Map3DView.models.map { pack in
+            var pack = pack
+            pack.locked = TrainPack.locked(unlocked: unlocked)
+            return pack
+        }
         view.trains = { [weak view] eye in feed.frame(in: scene, models: models, eye: eye, ringed: view?.ringed) }
         let labels = trainLabels
         view.trainHeads = { heads, camera in labels.show(feed.labels(heads: heads, camera: camera)) }

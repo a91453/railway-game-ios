@@ -32,6 +32,8 @@ public struct Map3DModelPack: Sendable {
     }
 
     public let models: [Model]
+    /// Decision 338: the sets drawn as they were before them (``TrainPack``).
+    public var locked: Set<String> = []
 
     /// Every style's cab car and middle car, made once.
     public static let standard = Map3DModelPack(styles: Map3DTrainStyle.all)
@@ -105,7 +107,7 @@ public struct Map3DModelPack: Sendable {
     /// of type `code`, using the pantograph car model on cars listed in the
     /// style's `pantographCars`.
     public func modelIndex(forType code: String, carIndex: Int, count: Int) -> Int? {
-        if let set = Map3DTrainSet.set(forKey: code, count: count) {
+        if let set = Map3DTrainSet.set(forKey: code, count: count, locked: locked) {
             if count == 1, let single = index(of: set.singleName) { return single }
             if carIndex == 0 { return index(of: set.headName) }
             if carIndex == count - 1 { return index(of: set.tailName) ?? index(of: set.headName) }
@@ -129,7 +131,7 @@ public struct Map3DModelPack: Sendable {
     /// tail of its own or the train is one car.
     public func isTurned(forType code: String, carIndex: Int, count: Int) -> Bool {
         guard count > 1, carIndex == count - 1 else { return false }
-        if let set = Map3DTrainSet.set(forKey: code, count: count) { return index(of: set.tailName) == nil }
+        if let set = Map3DTrainSet.set(forKey: code, count: count, locked: locked) { return index(of: set.tailName) == nil }
         return true
     }
 }

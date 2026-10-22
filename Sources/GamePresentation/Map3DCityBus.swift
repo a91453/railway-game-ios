@@ -92,6 +92,8 @@ extension Map3DModelPack {
         guard let index = index(of: model.name) else { return self }
         var models = models
         models[index] = model
-        return Map3DModelPack(models: models)
+        var pack = Map3DModelPack(models: models)
+        pack.locked = locked
+        return pack
     }
 }
