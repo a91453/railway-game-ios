@@ -764,7 +764,8 @@ final class Map3DMetalView: MTKView {
     /// The uniforms the shaders read (`Map3DUniforms` in
     /// `Map3DShaders.metal`): the matrix, then the sun's way and light, the
     /// ambient light from the sky and from the ground, the fog's colour,
-    /// the eye and where the fog starts and ends, and the ground shadows'
+    /// the eye and where the fog starts and ends (and decision 349's ground
+    /// haze, ``Map3DGrade``), and the ground shadows'
     /// strength (decision 232) and how far the city's lights are on, then
     /// the night windows' rules (decision 229 續). The lights are
     /// `Map3DLighting`'s (`sunLight`, `skyLight`, `groundLight`, `lights`,
@@ -782,7 +783,7 @@ final class Map3DMetalView: MTKView {
             + padded(shown.groundLight)
             + padded(shown.fogColour)
             + [eye.x, eye.y, eye.z, 1]
-            + [camera.distance * 1.6 * fog.near, far * 0.9 * fog.far, 0, 0]
+            + [camera.distance * 1.6 * fog.near, far * 0.9 * fog.far, Map3DGrade.hazeDensity, Map3DGrade.hazeHeight]
             + [Map3DShadow.strength(shown), shown.lights, 0, 0]
             + Map3DLighting.nightWindowRows
     }

@@ -59,7 +59,9 @@ public struct Map3DSky: Equatable, Sendable {
     static let moonDisc = SIMD3<Float>(0.93, 0.92, 0.86)
     static let starLight = SIMD3<Float>(0.8, 0.85, 1)
 
-    /// The sky's colour toward `direction`.
+    /// The sky's colour toward `direction`, before the haze on the ground
+    /// and the picture's finish (decision 349, ``Map3DGrade``) the shader
+    /// puts on it.
     public func colour(toward direction: Map3DPoint) -> SIMD3<Float> {
         let d = direction.normalized ?? .up
         let high = max(d.y, 0)
@@ -99,12 +101,14 @@ public struct Map3DSky: Equatable, Sendable {
     /// `Map3DShaders.metal`): the camera's way, its right and its up, the
     /// lens's half width and height as tangents, then the horizon, the
     /// zenith, the sun and how much it shows, the moon and how much, and
-    /// the stars.
+    /// the stars, then (decision 349) the eye's height and the haze's
+    /// density and height (``Map3DGrade``).
     public func floats(camera: Map3DCamera) -> [Float] {
         let view = camera.view.columns
         let tall = tanf(camera.fieldOfViewTall / 2), wide = tall * camera.viewport.width / max(camera.viewport.height, 1)
         return [-view[2], -view[6], -view[10], 0, view[0], view[4], view[8], 0, view[1], view[5], view[9], 0, wide, tall, 0, 0,
                 horizon.x, horizon.y, horizon.z, 0, zenith.x, zenith.y, zenith.z, 0,
-                sun.x, sun.y, sun.z, sunShown, moon.x, moon.y, moon.z, moonShown, stars, 0, 0, 0]
+                sun.x, sun.y, sun.z, sunShown, moon.x, moon.y, moon.z, moonShown,
+                stars, camera.eye.y, Map3DGrade.hazeDensity, Map3DGrade.hazeHeight]
     }
 }
