@@ -16,7 +16,7 @@ Session：session_01SvQ285hMiSeRsER1EXzfT9，遊戲規劃 session_014rYHMtmqA5bE
 | --- | --- |
 | 發現 | **11**：P1 兩個、P2 三個、P3 六個 |
 | 已修 | **6**：A1–A5、A9 |
-| 延後（附重現與建議） | **5**：A6–A8、A10、A11 |
+| 延後（附重現與建議） | **5**：A6–A8、A10、A11（2026-10-22：A6、A8 由 #966、A7 由 #970 修掉；A10 交效能 session，A11 交 3D session） |
 
 全範圍的機械檢查（VERIFIED）：
 
@@ -34,9 +34,9 @@ Session：session_01SvQ285hMiSeRsER1EXzfT9，遊戲規劃 session_014rYHMtmqA5bE
 | A3 | #899（決策 313 後來） | P2 | 3D 場景的快取只用 `FocusArea`（3 km 的方格）當 key。附近什麼都沒蓋的時候，場景只涵蓋焦點四周 1.5 km（`margin`），所以同一格裡 2–3 km 外的新焦點會重用舊場景，3D 開在場景外的空地上。這正是 78.1 #3 回報的症狀。 | **已修**（Presentation PR）：加 `Map3DScene.region(world:focus:)` 與 `holds(_:in:world:)`；快取記住場景涵蓋的範圍，新焦點四周沒有半個 margin 時就重蓋。Linux 測試 `Map3DOpenHereTests.testASceneRoundAnotherFocusInTheSameSquareHoldsItOnlyWhenItCoversIt` 重現了前提：同一格、但不在場景裡。App 的快取改了 4 行，**UNVERIFIED LOCALLY**，要等 macOS 的 CI 編譯。 |
 | A4 | #875（決策 304） | P3 | 只有班距的真實路線（例如台鐵）在 00:00–05:00 地圖上沒有車（`headwayHours`），車站卡卻寫「約每 20 分一班」。 | **已修**（Presentation PR）：班距只在 `RealTrainTraffic.headwayHours` 內才顯示。回歸測試加在 `RealTrainMotionTests.testAStationsNextTrainsEachWay`。 |
 | A5 | #906（決策 314） | P3 | 3D 路線色帶「上面那條線」的判斷，是用 `(edge, start, end)` 完全相同來比。單向的線加入雙向線旁邊時，雙向線的位置與寬度都不變，`LineMap` 會把它的 stretch 合併成一段，蓋過單向線的那一段。結果兩條色帶畫在同一段軌道上，互相閃爍（z-fight）。 | **已修**（Presentation PR）：在一條邊上，每個 stretch 的起點、終點都切開，每一小段只留 ID 最大的線。沒有重疊時，結果和以前完全相同。回歸測試 `Map3DLineBandsTests.testAStretchOverAShorterOneIsCut`。 |
-| A6 | #883（決策 306） | P2 | 跟真實時刻表的列車（`followsRealTimetable`）晚點時，`run(of:length:scheduled:)` 拿到的是「到表定時刻還剩幾秒」。這段時間在彎道限速下跑不完，程式就把限速整個丟掉（原本的規則是給真實時刻表本身用的）。結果晚點車用超過彎道限速的速度追時間，違反決策 306 的「最快照車的性能與彎道限速」。 | **延後**，第三節。 |
-| A7 | #897（決策 316） | P2 | 實景地圖的載入畫面（決策 307）被「新遊戲」頁蓋住。`RealWorldPicker` 是 `NewGamePicker` 裡面的 sheet，按「在這裡開始」只關掉選地點那一層；載入畫面是 `RootView` 的 overlay，畫在仍開著的「新遊戲」sheet 下面。載入的 1–2 秒裡，玩家看到的是「新遊戲」頁；這時按「空白地圖」，正在蓋的實景世界會被默默丟掉（`guard session == nil`）。 | **延後**：只在 Simulator 看得到，Linux 測不出來。第三節。 |
-| A8 | #890（決策 309） | P3 | `setLineRuns` 不會把發車方式改回平均錯開，解碼也接受「有班次、又不是平均錯開」的路線。現在沒有影響（有班次的路線不照發車方式派車），但清掉班次後，舊的發車方式又會回來。 | **延後**：沒有錯誤的結果，只是規則不一致。交給下一個改決策 309 的 session，要不要比照 A1 一起改。 |
+| A6 | #883（決策 306） | P2 | 跟真實時刻表的列車（`followsRealTimetable`）晚點時，`run(of:length:scheduled:)` 拿到的是「到表定時刻還剩幾秒」。這段時間在彎道限速下跑不完，程式就把限速整個丟掉（原本的規則是給真實時刻表本身用的）。結果晚點車用超過彎道限速的速度追時間，違反決策 306 的「最快照車的性能與彎道限速」。 | **已修**（2026-10-22，#966，session_01QiPq4nZdq5bVS9MZ4rkr4L；晚派車的第一段沒修到，見決策 306 的「後來」）。原本：**延後**，第三節。 |
+| A7 | #897（決策 316） | P2 | 實景地圖的載入畫面（決策 307）被「新遊戲」頁蓋住。`RealWorldPicker` 是 `NewGamePicker` 裡面的 sheet，按「在這裡開始」只關掉選地點那一層；載入畫面是 `RootView` 的 overlay，畫在仍開著的「新遊戲」sheet 下面。載入的 1–2 秒裡，玩家看到的是「新遊戲」頁；這時按「空白地圖」，正在蓋的實景世界會被默默丟掉（`guard session == nil`）。 | **已修**（2026-10-22，#970，session_01QiPq4nZdq5bVS9MZ4rkr4L；Simulator 與實機 UNVERIFIED）。原本：**延後**：只在 Simulator 看得到，Linux 測不出來。第三節。 |
+| A8 | #890（決策 309） | P3 | `setLineRuns` 不會把發車方式改回平均錯開，解碼也接受「有班次、又不是平均錯開」的路線。現在沒有影響（有班次的路線不照發車方式派車），但清掉班次後，舊的發車方式又會回來。 | **已修**（2026-10-22，#966：給班次時回到平均錯開，舊存檔讀檔時正規化）。原本：**延後**：沒有錯誤的結果，只是規則不一致。交給下一個改決策 309 的 session，要不要比照 A1 一起改。 |
 | A9 | #907 | P3 | 預覽圖搬到私有庫之後，還有地方指向已經搬走的檔案：`generated-2026-10-14-micro3d/README.md` 連到 `../generated-2026-10-13/index.html`（連結斷了）；5 個 App 檔案的註解寫 `railway-ui-redesign-2026-10-14/s1–s5-*.png`；ARCHITECTURE 第 8493 行寫 `solid-outline.png`。 | **已修**斷掉的連結，改指向該資料夾的 README（Presentation PR）。註解與 ARCHITECTURE 不改：資料夾的 README 第「搬到私有庫」節寫了這些檔案在私有庫的位置。 |
 | A10 | #877（決策 305） | P3（效能） | 暫停中，`world` 的 `didSet` 每下一個指令都會呼叫 `refreshNightSkipOffer()`（`GameSession.swift:38`），可能在主執行緒重跑整天的試跑。決策 328 只把 tick 那條路移出主執行緒。 | **延後**：要在實機量才知道多慢。交給決策 328 的效能後續（HANDOFF §7.1「大世界的效能」）。 |
 | A11 | #910（決策 318） | P3 | `Map3DSceneKitBuildings.swift`、`Map3DSceneKitPlaces.swift`（約 430 行），以及 `Map3DSceneKit.assets` 的大部分，遊戲都沒有用到，只有測試讀它們；遊戲只用列車那幾項（`Map3DTrainSets.swift`）。 | **延後**：不是 bug。等 3D 決定要不要把建築與地點接進場景（HANDOFF §7.3），再決定留或刪。 |

@@ -615,6 +615,13 @@ private struct NewGamePicker: View {
         .sheet(isPresented: $choosesPlace) {
             RealWorldPicker(launcher: launcher)
         }
+        // A7 of the #873–#910 review: once a real-world map is being built,
+        // this page closes with the place picker on it, so the loading
+        // screen (decision 307) is not drawn under it and a blank map
+        // cannot be started meanwhile.
+        .onChange(of: launcher.realWorldLoading != nil) { _, isBuilding in
+            if isBuilding { dismiss() }
+        }
     }
 }
 

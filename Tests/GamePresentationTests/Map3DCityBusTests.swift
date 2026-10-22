@@ -16,6 +16,22 @@ final class Map3DCityBusTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: Self.bundled), try Data(contentsOf: art))
     }
 
+    /// A model with no height (only a floor, say) cannot be stretched to a
+    /// bus: the box-built bus stays, rather than one of infinite or NaN
+    /// corners (B6 of the #911–#944 review).
+    func testAFlatModelLeavesTheBoxBuiltBus() throws {
+        let flat = Map3DModelFileTests.file([
+            Map3DModelFileTests.Triangle(corners: [(-6, -1.25, 0), (6, -1.25, 0), (6, 1.25, 0)], colour: 0xFFF2_F3F1),
+        ])
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("flat-bus-\(UUID().uuidString).m3dmodel")
+        try Data(flat).write(to: url)
+        defer { try? FileManager.default.removeItem(at: url) }
+        XCTAssertFalse(Map3DCityBus.canFit(try Map3DModelFile(decoding: flat, named: Map3DCityBus.fileName).model))
+        let index = try XCTUnwrap(Map3DModelPack.standard.index(of: Map3DStreetModel.bus.modelName))
+        XCTAssertEqual(Map3DCityBus.pack(file: url).models[index].vertices, Map3DModelPack.standard.models[index].vertices)
+        XCTAssertTrue(Map3DCityBus.canFit(try Map3DModelFile(decoding: Data(contentsOf: Self.bundled), named: Map3DCityBus.fileName).model))
+    }
+
     /// Read from the file, the bus takes the box-built one's place, at its
     /// index: 12 × 2.5 × 3.3 m, its middle at the origin and its wheels on
     /// the ground, the generated model's 1,543 triangles and the lamps.
