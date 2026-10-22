@@ -453,8 +453,10 @@ public final class GameLauncher {
         guard !session.news.isDemo, session.tutorial == nil, session.lesson == nil, let railways = session.railways else { return }
         let served = StationStamps.served(in: session.world)
         guard !served.isEmpty else { return }
-        let new = stationStamps.collect(StationStamps.realStations(of: served, in: session.world, railways: railways), at: date)
-        session.noteStationStamps(new)
+        let found = StationStamps.realStations(of: served, in: session.world, railways: railways)
+        let new = stationStamps.collect(found, at: date)
+        session.collectedStamps = stationStamps.dates
+        session.noteStationStamps(new, at: found)
     }
 
     /// What a world may unlock: everything, but for the Pingxi challenge,
@@ -999,6 +1001,7 @@ public final class GameLauncher {
         started.coverage = coverage
         started.placeNames = placeNames
         started.railways = railways
+        started.collectedStamps = stationStamps.dates
         // Decision 88: land not read round a station built while the app
         // had no population.
         started.readLandRoundStations()

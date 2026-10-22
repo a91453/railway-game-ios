@@ -169,4 +169,129 @@ final class StationStampTests: XCTestCase {
         XCTAssertEqual(StationStampPassport.summary(count: 3, total: 412, in: .traditionalChinese), "車站紀念章 3/412")
         XCTAssertEqual(StationStampPassport.summary(count: 3, total: nil, in: .english), "Station stamps 3")
     }
+
+    // MARK: - Decision 353: the map, the station panel, the counties
+
+    private static let bundledPlaces: PlaceNames? = {
+        let url = BundledRealData.directory
+            .deletingLastPathComponent()
+            .appendingPathComponent("RealWorld/taiwan_place_names.json")
+        return (try? Data(contentsOf: url)).flatMap { try? PlaceNames(data: $0) }
+    }()
+
+    /// A game on the real map round 台北 with a station named after it and
+    /// one numbered, and the real railways read.
+    @MainActor
+    private func taipeiGame() throws -> (session: GameSession, real: Station, numbered: Station) {
+        let tra = try BundledRealData.station("臺北", in: "tra_sched")
+        var world = GameWorld.newGame(anchor: try XCTUnwrap(tra.anchor))
+        let taipei = try BundledRealData.point(tra.coordinate, in: world)
+        let real = try world.buildStation(named: "台北車站", at: taipei)
+        let numbered = try world.buildStation(named: "車站 2", at: PlanPoint(x: taipei.x + 2_000, y: taipei.y))
+        let session = GameSession(world: world, language: .traditionalChinese)
+        session.railways = try BundledRealData.railways()
+        return (session, real, numbered)
+    }
+
+    /// A new stamp lands over the game's station that is it; at most four
+    /// a pulse, though the status line names them all.
+    @MainActor
+    func testANewStampLandsOverItsStation() throws {
+        let (session, real, _) = try taipeiGame()
+        let railways = try XCTUnwrap(session.railways)
+        let found = StationStamps.realStations(of: [real], in: session.world, railways: railways)
+        XCTAssertEqual(found.map(\.station), [real.id], "A real station says which of the game's it is")
+
+        let day = Date(timeIntervalSince1970: 1_792_603_800)
+        let stamp = StationStamp(key: "台北", chinese: "臺北", english: "Taipei", system: "tra_sched", earned: day)
+        XCTAssertNil(session.stationStampPulse)
+        session.noteStationStamps([stamp], at: found)
+        let pulse = try XCTUnwrap(session.stationStampPulse)
+        XCTAssertEqual(pulse.marks.map(\.station), [real.id])
+        XCTAssertEqual(pulse.marks.first?.location, real.point)
+        XCTAssertEqual(pulse.marks.first?.stamp, stamp)
+        XCTAssertEqual(session.message?.text, "收集到紀念章：臺北")
+        XCTAssertEqual(session.collectedStamps["台北"], day)
+
+        // More than four: four land, the status line counts all.
+        let many = (0..<6).map { StationStamp(key: "s\($0)", chinese: "站\($0)", english: nil, system: "tra_sched", earned: day) }
+        let places = many.map { StationStamps.RealStation(key: $0.key, chinese: $0.chinese, english: nil, system: "tra_sched", station: real.id) }
+        session.noteStationStamps(many, at: places)
+        XCTAssertEqual(session.stationStampPulse?.marks.count, StationStampPulse.maximum)
+        XCTAssertEqual(session.stationStampPulse?.serial, pulse.serial + 1)
+        XCTAssertEqual(session.message?.text, "收集到紀念章：站0等 6 站")
+
+        // A stamp with no station of the game (as before decision 353)
+        // lands nowhere.
+        session.noteStationStamps([stamp])
+        XCTAssertEqual(session.stationStampPulse?.serial, pulse.serial + 1)
+    }
+
+    /// The station panel says whether a real station's stamp is in the
+    /// passport; a station that is no real one says nothing.
+    @MainActor
+    func testTheStationPanelSaysWhetherItsStampIsCollected() throws {
+        let (session, real, numbered) = try taipeiGame()
+        XCTAssertEqual(session.stationStampStatus(of: real.id), .notYet)
+        XCTAssertNil(session.stationStampStatus(of: numbered.id))
+        XCTAssertEqual(
+            StationStampStatus.notYet.text(in: .traditionalChinese),
+            "紀念章：還沒收集。列車在這裡載客，第二天就蓋上。"
+        )
+
+        let day = Date(timeIntervalSince1970: 1_792_603_800)
+        session.collectedStamps = ["台北": day]
+        XCTAssertEqual(session.stationStampStatus(of: real.id), .collected(day))
+        XCTAssertEqual(StationStampStatus.collected(day).text(in: .traditionalChinese), "紀念章：2026.10.22 已收集")
+        XCTAssertEqual(StationStampStatus.collected(day).text(in: .english), "Station stamp: collected 2026.10.22")
+
+        session.railways = nil
+        XCTAssertNil(session.stationStampStatus(of: real.id), "Not known before the real railways are read")
+    }
+
+    /// The launcher's record gives the game when each stamp was collected.
+    func testTheRecordsGiveEachStampsDate() throws {
+        var records = StationStampRecords(file: try temporaryFile())
+        let day = Date(timeIntervalSince1970: 1_792_603_800)
+        _ = records.collect([StationStamps.RealStation(key: "猴硐", chinese: "猴硐", english: "Houtong", system: "tra_sched")], at: day)
+        XCTAssertEqual(records.dates, ["猴硐": day])
+    }
+
+    /// The passport by county or city: every real place in one, 臺北 in
+    /// Taipei City and 猴硐 in New Taipei City, in the government's order.
+    func testTheStampsGroupByCounty() throws {
+        let railways = try BundledRealData.railways()
+        let places = try XCTUnwrap(Self.bundledPlaces, "The app's place names file reads")
+        let counties = StationStampCounties.counties(of: railways, in: places)
+        XCTAssertEqual(counties["台北"], "臺北市")
+        XCTAssertEqual(counties["猴硐"], "新北市")
+        XCTAssertEqual(counties["左營"], "高雄市")
+        XCTAssertGreaterThan(counties.count, StationStamps.total(in: railways) * 95 / 100, "Nearly every real place lies in a county")
+
+        let day = Date(timeIntervalSince1970: 1_792_603_800)
+        let stamps = [
+            StationStamp(key: "猴硐", chinese: "猴硐", english: "Houtong", system: "tra_sched", earned: day),
+            StationStamp(key: "台北", chinese: "臺北", english: "Taipei", system: "tra_sched", earned: day),
+            StationStamp(key: "gone", chinese: "舊站", english: nil, system: "tra_sched", earned: day),
+        ]
+        let groups = StationStampCounties.groups(of: stamps, counties: counties)
+        XCTAssertEqual(Array(groups.prefix(2).map(\.county)), ["臺北市", "新北市"])
+        XCTAssertEqual(groups.first?.collected.map(\.key), ["台北"])
+        XCTAssertEqual(groups.dropLast().reduce(0) { $0 + $1.total }, counties.count)
+        XCTAssertTrue(groups.dropLast().allSatisfy { $0.total > 0 }, "No county without a real station")
+        XCTAssertEqual(groups.last?.collected.map(\.key), ["gone"], "A stamp no county holds is listed last")
+
+        let taipei = try XCTUnwrap(groups.first)
+        XCTAssertEqual(taipei.title(in: .traditionalChinese), "臺北市 1/\(taipei.total)")
+        XCTAssertEqual(taipei.title(in: .english), "Taipei City 1/\(taipei.total)")
+        XCTAssertEqual(groups.last?.title(in: .traditionalChinese), "其他 1")
+        XCTAssertEqual(StationStampCounties.names.count, 22)
+        XCTAssertEqual(Set(StationStampCounties.names.map(\.chinese)), Set(ModeShiftCounties.shares.keys))
+    }
+
+    func testThePassportSortsByDateOrCounty() {
+        XCTAssertEqual(StationStampPassport.Arrangement.allCases, [.date, .county])
+        XCTAssertEqual(StationStampPassport.Arrangement.date.title(in: .traditionalChinese), "依時間")
+        XCTAssertEqual(StationStampPassport.Arrangement.county.title(in: .english), "By county")
+    }
 }

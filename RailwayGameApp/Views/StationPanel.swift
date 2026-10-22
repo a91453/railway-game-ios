@@ -608,15 +608,28 @@ struct StationPanel: View {
     // MARK: - Real station
 
     /// What the real data knows of the station, where it is a real one:
-    /// codes, grade, address, transfers (`GameSession.realStationDetails(of:)`).
+    /// codes, grade, address, transfers (`GameSession.realStationDetails(of:)`),
+    /// and whether its stamp is collected (decision 353).
     @ViewBuilder
     private func realStationSection(_ station: Station) -> some View {
         let details = session.realStationDetails(of: station.id)
-        if !details.isEmpty {
+        // Decision 353: whether its station stamp is in the passport.
+        let stamp = session.stationStampStatus(of: station.id)
+        if !details.isEmpty || stamp != nil {
             Section {
                 ForEach(details, id: \.self) { line in
                     Text(verbatim: line)
                         .font(.footnote)
+                }
+                if let stamp {
+                    Label {
+                        Text(verbatim: stamp.text(in: session.language))
+                    } icon: {
+                        Image(systemName: stamp.isCollected ? "checkmark.seal.fill" : "seal")
+                            .foregroundStyle(Theme.primary)
+                    }
+                    .font(.footnote)
+                    .accessibilityIdentifier("station.stamp")
                 }
             } header: {
                 Text("Real Station")
