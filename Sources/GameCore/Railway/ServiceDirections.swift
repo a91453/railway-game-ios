@@ -32,7 +32,14 @@ extension GameWorld {
             let end: TrainPlacement
             let call: Int
         }
-        var plans: [Plan: Set<TrackTraversal>] = [:]
+        /// A line plan's traversals (see ``plannedDirections(_:memo:)``).
+        struct Planned: Hashable {
+            var directions: Set<TrackTraversal> = []
+            /// Decision 344: those only a train standing at one berth of
+            /// the first call sets off along, from there.
+            var departures: Set<TrackTraversal> = []
+        }
+        var plans: [Plan: Planned] = [:]
         var walks: [Walk: Set<TrackTraversal>] = [:]
         /// Travelling services' traversals (see ``Travel``).
         var travels: [Travel: Set<TrackTraversal>] = [:]
@@ -81,7 +88,7 @@ extension GameWorld {
         var opposing: [TrainID: (trains: [Train], candidate: Train, traversals: Set<TrackTraversal>)] = [:]
         /// Each candidate's ``opposingParts(for:memo:)``, for the last
         /// trains and candidate asked about.
-        var opposingParts: [TrainID: (trains: [Train], candidate: Train, parts: (directions: [Set<TrackTraversal>], defaultWays: Set<TrackTraversal>))] = [:]
+        var opposingParts: [TrainID: (trains: [Train], candidate: Train, parts: OpposingParts)] = [:]
         /// Each train as its last releases of the track it has passed left
         /// it (see ``releasePassedTrack(_:before:distance:memo:)``): its
         /// reservation then held nothing outside its route envelope. A few
@@ -277,38 +284,60 @@ extension GameWorld {
         var stop = stop
         var visited: Set<DirectionState> = []
         while visited.insert(DirectionState(placement: place, stop: stop)).inserted {
-            let next = stop + 1 == plan.calls.count ? 0 : stop + 1
-            if next == 0 && !plan.repeats { break }
-            var from = plan.calls[stop].reverses ? turnedRound(place) : place
-            let preference = plan.routes.indices.contains(stop) ? plan.routes[stop] : nil
-            var chosen = preference.flatMap { preferredPath(from: from.position, preference: $0, length: plan.length) }
-                ?? path(from: from.position, toStation: plan.calls[next].station, length: plan.length)
-            if chosen == nil, plan.intermediateTurnbacks, stop > 0, stop < plan.calls.count - 1, !plan.calls[stop].reverses {
-                from = turnedRound(from)
-                chosen = preference.flatMap { preferredPath(from: from.position, preference: $0, length: plan.length) }
-                    ?? path(from: from.position, toStation: plan.calls[next].station, length: plan.length)
-            }
-            guard let path = chosen else { break }
-            directions.formUnion(self.directions(of: path, from: from))
-            place = placement(from, after: path)
-            stop = next
+            guard let leg = leg(of: plan, from: place, stop: stop) else { break }
+            directions.formUnion(leg.directions)
+            place = leg.place
+            stop = leg.stop
         }
         return directions
     }
 
+    /// The traversals of `plan`'s leg from a train at `start` standing for
+    /// call `stop` (see ``walkedDirections(_:from:stop:)``), where it ends
+    /// and the call it ends at; `nil` at the end of a plan that does not
+    /// repeat, or where there is no way on.
+    private func leg(of plan: DirectionMemo.Plan, from start: TrainPlacement, stop: Int) -> (directions: Set<TrackTraversal>, place: TrainPlacement, stop: Int)? {
+        let next = stop + 1 == plan.calls.count ? 0 : stop + 1
+        if next == 0 && !plan.repeats { return nil }
+        var from = plan.calls[stop].reverses ? turnedRound(start) : start
+        let preference = plan.routes.indices.contains(stop) ? plan.routes[stop] : nil
+        var chosen = preference.flatMap { preferredPath(from: from.position, preference: $0, length: plan.length) }
+            ?? path(from: from.position, toStation: plan.calls[next].station, length: plan.length)
+        if chosen == nil, plan.intermediateTurnbacks, stop > 0, stop < plan.calls.count - 1, !plan.calls[stop].reverses {
+            from = turnedRound(from)
+            chosen = preference.flatMap { preferredPath(from: from.position, preference: $0, length: plan.length) }
+                ?? path(from: from.position, toStation: plan.calls[next].station, length: plan.length)
+        }
+        guard let path = chosen else { return nil }
+        return (directions(of: path, from: from), placement(from, after: path), next)
+    }
+
     /// A line's plan from every fitting berth of its first call: a line
-    /// sends its trains out from wherever they stand there.
-    private func plannedDirections(_ plan: DirectionMemo.Plan, memo: inout DirectionMemo) -> Set<TrackTraversal> {
+    /// sends its trains out from wherever they stand there. Decision 344:
+    /// with the traversals of the first leg that no other berth's first
+    /// leg and nothing after it takes, which only a train standing at
+    /// that berth sets off along.
+    private func plannedDirections(_ plan: DirectionMemo.Plan, memo: inout DirectionMemo) -> DirectionMemo.Planned {
         if let known = memo.plans[plan] { return known }
-        var directions: Set<TrackTraversal> = []
+        var planned = DirectionMemo.Planned()
         if let first = plan.calls.first {
+            var firstLegs: [Set<TrackTraversal>] = []
+            var later: Set<TrackTraversal> = []
             for berth in berths(of: first.station, length: plan.length) {
                 let place = TrainPlacement(position: .onEdge(berth.traversal, offset: berth.offset), trailEdges: [], length: plan.length)
-                directions.formUnion(walkedDirections(plan, from: place, stop: 0))
+                guard let leg = leg(of: plan, from: place, stop: 0) else { continue }
+                firstLegs.append(leg.directions)
+                later.formUnion(walkedDirections(plan, from: leg.place, stop: leg.stop))
             }
+            var legsTaking: [TrackTraversal: Int] = [:]
+            for firstLeg in firstLegs {
+                for traversal in firstLeg { legsTaking[traversal, default: 0] += 1 }
+            }
+            planned.directions = later.union(legsTaking.keys)
+            planned.departures = Set(legsTaking.filter { $0.value == 1 && !later.contains($0.key) }.keys)
         }
-        memo.plans[plan] = directions
-        return directions
+        memo.plans[plan] = planned
+        return planned
     }
 
     /// A running service's traversals from where the train is: the rest of
@@ -410,7 +439,7 @@ extension GameWorld {
     /// running service's and line plan's apart, which turned round it
     /// forbids, but for `candidate`'s own default ways. Asking these of a
     /// few traversals is quicker than gathering them all.
-    func opposingParts(for candidate: Train, memo: inout DirectionMemo) -> (directions: [Set<TrackTraversal>], defaultWays: Set<TrackTraversal>) {
+    func opposingParts(for candidate: Train, memo: inout DirectionMemo) -> OpposingParts {
         if let known = memo.opposingParts[candidate.id], known.candidate == candidate, known.trains == trains { return known.parts }
         let parts = workedOutOpposingParts(for: candidate, memo: &memo)
         memo.opposingParts[candidate.id] = (trains, candidate, parts)
@@ -418,8 +447,9 @@ extension GameWorld {
     }
 
     /// ``opposingParts(for:memo:)``, worked out.
-    private func workedOutOpposingParts(for candidate: Train, memo: inout DirectionMemo) -> (directions: [Set<TrackTraversal>], defaultWays: Set<TrackTraversal>) {
+    private func workedOutOpposingParts(for candidate: Train, memo: inout DirectionMemo) -> OpposingParts {
         var directions: [Set<TrackTraversal>] = []
+        var departures: [Int: (station: StationID, traversals: Set<TrackTraversal>)] = [:]
         for train in trains where train.id != candidate.id && train.position != nil {
             directions.append(serviceDirections(of: train, memo: &memo))
         }
@@ -436,7 +466,11 @@ extension GameWorld {
                         DirectionMemo.Call(station: line.stops[station], reverses: !line.isRing && (index == order.count / 2 || index == order.count - 1))
                     }
                     for length in lengths {
-                        directions.append(plannedDirections(.init(calls: calls, length: length, repeats: true, routes: line.routes(ofService: service).isEmpty ? [] : zip(order, order.dropFirst()).map { pair in line.routes(ofService: service).first { $0.from == pair.0 && $0.to == pair.1 } } + [nil], intermediateTurnbacks: isTrafficControlEnabled && !line.isRing), memo: &memo))
+                        let planned = plannedDirections(.init(calls: calls, length: length, repeats: true, routes: line.routes(ofService: service).isEmpty ? [] : zip(order, order.dropFirst()).map { pair in line.routes(ofService: service).first { $0.from == pair.0 && $0.to == pair.1 } } + [nil], intermediateTurnbacks: isTrafficControlEnabled && !line.isRing), memo: &memo)
+                        if !planned.departures.isEmpty, let first = calls.first {
+                            departures[directions.count] = (first.station, planned.departures)
+                        }
+                        directions.append(planned.directions)
                     }
                 }
             }
@@ -444,6 +478,41 @@ extension GameWorld {
         // Default corridors may be shared in both directions (single track).
         // Only additional track borrowed by an alternative is restricted.
         let defaultWays = Set(routeStretches(of: candidate).stretches.filter { $0.to > $0.from }.map(\.traversal))
-        return (directions, defaultWays)
+        return OpposingParts(directions: directions, defaultWays: defaultWays, departures: departures)
+    }
+
+    /// Decision 344: the traversals of `path` into station `id` that only
+    /// lines with `id` as their first call are planned the other way
+    /// along, and only by the departures of one berth there (see
+    /// ``plannedDirections(_:memo:)``): those the direction protection of
+    /// decision 57 does not forbid on a way to `id`. A train sets off from
+    /// a berth only from standing at it, and a way to a berth is taken
+    /// only while it is free and then held, so the two never meet; as
+    /// into a terminus (decision 278), but without block sections too,
+    /// where such a way is taken whole.
+    func firstCallTraversals(along path: TrainPath, to id: StationID, parts: OpposingParts) -> Set<TrackTraversal> {
+        let departures = parts.departures.filter { $0.value.station == id }
+        guard !departures.isEmpty else { return [] }
+        return Set(path.traversals.filter { traversal in
+            let opposite = traversal.reversed
+            guard departures.values.contains(where: { $0.traversals.contains(opposite) }) else { return false }
+            return !parts.directions.indices.contains { index in
+                parts.directions[index].contains(opposite) && departures[index]?.traversals.contains(opposite) != true
+            }
+        })
+    }
+}
+
+extension GameWorld {
+    /// What ``GameWorld/opposingServiceTraversals(for:memo:)`` is made of
+    /// (see ``GameWorld/opposingParts(for:memo:)``).
+    struct OpposingParts {
+        /// Each running service's and line plan's traversals.
+        let directions: [Set<TrackTraversal>]
+        /// The candidate's own default ways.
+        let defaultWays: Set<TrackTraversal>
+        /// Decision 344: of the line plans among ``directions``, by index,
+        /// their first call and the departures from one of its berths.
+        let departures: [Int: (station: StationID, traversals: Set<TrackTraversal>)]
     }
 }

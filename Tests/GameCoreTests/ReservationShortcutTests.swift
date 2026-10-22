@@ -29,10 +29,14 @@ final class ReservationShortcutTests: XCTestCase {
         var world = try LongLegReplayTests.world()
         var states = [world]
         for operation in LongLegReplayTests.operations() {
+            // A state a minute (decision 344: since a train bound for A
+            // takes its loop, trains follow others in fewer of them).
             if case .advance(let ticks) = operation, ticks > 1 {
-                var half = world
-                _ = KernelDifferentialTests.apply(.advance(ticks / 2), to: &half)
-                states.append(half)
+                var part = world
+                for _ in 1..<ticks {
+                    _ = KernelDifferentialTests.apply(.advance(1), to: &part)
+                    states.append(part)
+                }
             }
             _ = KernelDifferentialTests.apply(operation, to: &world)
             states.append(world)
