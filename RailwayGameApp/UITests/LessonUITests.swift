@@ -278,6 +278,13 @@ final class LessonUITests: XCTestCase {
         XCTAssertTrue(lessons.appears(within: 15))
         app.bringStartButtonIntoView(lessons)
         tap(lessons)
+        // The press on Lessons can be cancelled as Start's can (the app's
+        // trace: "touch cancelled at (624, 145)" on PlatformGroupContainer,
+        // with its main thread stalled up to 9 s; PR #1037's run
+        // 39817977356), and no picker opens. Tap once more if it did not.
+        if !element("lessons.title").appears(within: 10), lessons.exists {
+            tap(lessons)
+        }
         XCTAssertTrue(element("lessons.title").appears(within: 10))
     }
 
