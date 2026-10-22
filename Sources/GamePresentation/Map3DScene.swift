@@ -208,7 +208,37 @@ public struct Map3DScene: Sendable {
     public init(world: GameWorld, snapshot: RailwaySnapshot? = nil, skyline: CitySkyline? = nil, focus: (x: Double, y: Double)? = nil,
                 baseMap: BaseMapTiles? = nil, cityTiles: [CityTileArea] = [], heights: HeightGrid? = nil, lineBands: Map3DLineBands? = nil,
                 railways: RealRailways? = nil, temples: RealTemples? = nil) {
-        (region, originX, originY) = Self.frame(world: world, focus: focus)
+        self.init(world: world, snapshot: snapshot, skyline: skyline, frame: Self.frame(world: world, focus: focus), baseMap: baseMap,
+                  cityTiles: cityTiles, heights: heights, lineBands: lineBands, railways: railways, temples: temples)
+    }
+
+    /// Decision 358: chunks `keys` of `streaming`'s scene (its origin),
+    /// each built as the whole scene builds it, from the same files: a
+    /// scene of the squares round them with ``Map3DStreaming/apron`` more
+    /// each way, on the map, of which only `keys`' chunks are kept (a
+    /// chunk with nothing in it is none). Its real trains and street life
+    /// are not kept.
+    public static func chunks(_ keys: some Collection<Map3DStreaming.Key>, of streaming: Map3DStreaming, world: GameWorld,
+                              snapshot: RailwaySnapshot? = nil, skyline: CitySkyline? = nil, baseMap: BaseMapTiles? = nil,
+                              cityTiles: [CityTileArea] = [], heights: HeightGrid? = nil, lineBands: Map3DLineBands? = nil,
+                              railways: RealRailways? = nil, temples: RealTemples? = nil) -> [Chunk] {
+        guard let box = streaming.region(of: keys) else { return [] }
+        let apron = Map3DStreaming.apron * Double(WorldCoordinate.unitsPerMetre), map = streaming.map
+        let region = WorldRegion(minX: max(map.minX, box.minX - apron), minY: max(map.minY, box.minY - apron),
+                                 maxX: min(map.maxX, box.maxX + apron), maxY: min(map.maxY, box.maxY + apron))
+        guard region.minX < region.maxX, region.minY < region.maxY else { return [] }
+        let scene = Map3DScene(world: world, snapshot: snapshot, skyline: skyline, frame: (region, streaming.originX, streaming.originY),
+                               baseMap: baseMap, cityTiles: cityTiles, heights: heights, lineBands: lineBands, railways: railways, temples: temples)
+        let wanted = Set(keys)
+        return scene.chunks.filter { wanted.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }
+    }
+
+    /// Decision 358: the scene of `frame`'s region round its origin (world
+    /// units), built as the public initializer builds it.
+    init(world: GameWorld, snapshot: RailwaySnapshot?, skyline: CitySkyline?, frame: (region: WorldRegion, originX: Double, originY: Double),
+         baseMap: BaseMapTiles?, cityTiles: [CityTileArea], heights: HeightGrid?, lineBands: Map3DLineBands?, railways: RealRailways?,
+         temples: RealTemples?) {
+        (region, originX, originY) = frame
 
         var builder = Builder(originX: originX, originY: originY, region: region, world: world, heights: heights)
         let snapshot = snapshot ?? world.railwaySnapshot()
