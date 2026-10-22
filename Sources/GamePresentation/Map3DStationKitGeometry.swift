@@ -72,7 +72,11 @@ struct StationKitBuilder {
         let c=cosf(angle),s=sinf(angle)
         for i in stride(from:0,to:model.vertices.count,by:3) {
             mesh.appendTriangle(model.vertices[i..<i+3].map { v in
-                Map3DVertex(Map3DPoint(c*v.x+s*v.y,v.z,s*v.x-c*v.y)+p,normal:.zero,color:v.color,layer:v.layer)
+                // The model's normal turned the same way: a scene that draws
+                // this mesh as it is (temples, parks, station shops) lights
+                // it by these, and a zero normal shades black.
+                Map3DVertex(Map3DPoint(c*v.x+s*v.y,v.z,s*v.x-c*v.y)+p,normal:Map3DPoint(c*v.nx+s*v.ny,v.nz,s*v.nx-c*v.ny),
+                            color:v.color,layer:v.layer)
             })
         }
     }

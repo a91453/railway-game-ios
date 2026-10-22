@@ -137,4 +137,27 @@ final class Map3DLandmarksTests: XCTestCase {
         func close(_ scene: Map3DScene) -> Int { scene.chunks.reduce(0) { $0 + $1.close.triangleCount } }
         XCTAssertGreaterThanOrEqual(close(real) - close(none), Map3DScene.Builder.templeModels[.large]!.triangles - 2_000)
     }
+
+    /// The kits' scenes the city draws as they are (temples, parks, the
+    /// shops before a station) are lit by their vertices' normals: each
+    /// one a unit long and facing out of its triangle's front, never the
+    /// zero that shaded them black.
+    func testTheKitScenesAreLit() throws {
+        let meshes = Map3DScene.Builder.templeModels.values.map(\.mesh)
+            + Map3DScene.Builder.parkModels.values.map(\.mesh)
+            + Map3DScene.Builder.commerceModels.map(\.model.mesh)
+        for mesh in meshes {
+            XCTAssertFalse(mesh.isEmpty)
+            for start in stride(from: 0, to: mesh.indices.count, by: 3) {
+                let corners = (0..<3).map { mesh.vertices[Int(mesh.indices[start + $0])] }
+                let points = corners.map(\.position)
+                guard let face = (points[1] - points[0]).cross(points[2] - points[0]).normalized else { continue }
+                for corner in corners {
+                    let normal = Map3DPoint(corner.nx, corner.ny, corner.nz)
+                    XCTAssertEqual(normal.length, 1, accuracy: 0.01)
+                    XCTAssertGreaterThan(normal.dot(face), 0.99)
+                }
+            }
+        }
+    }
 }
