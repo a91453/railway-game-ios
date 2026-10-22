@@ -15,7 +15,7 @@ Session：session_017M3NJsMXLafGDsSvidGhD6，遊戲規劃 session_014rYHMtmqA5bE
 | --- | --- |
 | 新發現 | **7**：P2 兩個（B1、B2），P3 五個（B3–B7） |
 | 已修 | **2**：B1、B2，都先在 main 上用測試重現成紅的，修好後轉綠 |
-| 沒修，交出去 | **5**：B3–B7，見第四節（2026-10-22：B3 由 #966、B4–B6 由 PR 2 處理；B7 交 3D session） |
+| 沒修，交出去 | **5**：B3–B7，見第四節（2026-10-22：B3 由 #966、B4–B6 由 #970 處理；B7 交 3D session） |
 
 讀 diff 的工作分給三個子代理：#912／#927、#918、3D 與介面。#934、#935、#936、#939 和只改文件的 PR 由本 session 自己讀。
 
@@ -71,9 +71,9 @@ PR 描述裡寫 VERIFIED 的測試數（架空線 8、車站 9、商店街 5、�
 | # | PR | 嚴重度 | 內容 | 為什麼沒修 | 交給誰 |
 | --- | --- | --- | --- | --- | --- |
 | B3 | #935 | P3 | 存檔裡 `highSpeedFares` 指到不存在的車站 ID 時，解碼器不會擋。`setHighSpeedFares` 會檢查，但解碼與世界驗證不會。車站 ID 只增不回收，所以只有在存檔被改過時，之後新建的車站才可能繼承那組票價 | 正常玩出不來；要補驗證就是改 GameCore 的解碼 | **已修**（2026-10-22，#966，session_01QiPq4nZdq5bVS9MZ4rkr4L）。原本：高鐵票價的作者，或下一個改 `Accounts.swift` 的人：在 `GameWorld` 的驗證裡檢查票價表的站 ID 小於 `nextStationID` |
-| B4 | #918 | P3 | 車站卡在「沒有起訖對」時畫的示意曲線，潮汐開著也一律用平日的形狀。週末時，住宅站顯示 08:00 的尖峰，但 GameCore 週末不放那個尖峰（`StationDemandText.swift` 約 307 行；`PassengerDemand.hourly` 的 `tide = tidal && !weekend`） | 原本就沒看週末，只是潮汐讓差距變大；只影響示意圖 | **已修**（2026-10-22，PR 2：週末與假日用週末的形狀、不放潮汐）。原本：潮汐或車站卡的作者：`shared(_:by:tidal:)` 也要帶上週末 |
-| B5 | #918 | P3 | 不在經營模式時（`drawsDemandFromLand` 是 false），關掉潮汐，`refreshLandDemand` 一開始就返回，車站留著舊的 `homeShare`；之後再打開潮汐，就用這個舊值。決策 319 第 4 條寫「關掉就拿回去」 | 自由模式本來就凍結了所有由土地來的需求，`dailyTrips` 也一樣；屬設計層面，要先決定自由模式要不要動需求 | **定案**（2026-10-22，遊戲規劃：自由模式不動需求，程式不改；決策 319 補「後來」，測試 `TidalDemandTests.testAFreeCompanysTideWaitsForTheManagedOne`，PR 2）。原本：決策 319 的作者 |
-| B6 | #914、#938 | P3 | (a) `Map3DCityBus.swift` 約 37 行，用 `length / size.x` 算縮放，沒有防護；模型檔在某一軸是扁的，或沒有頂點時，會得到 NaN，而不是改用方塊公車。只有壞掉或被換掉的素材才會發生。(b) `Map3DPreviewScreen.swift` 約 145、248 行，在沒有地理錨點的地圖上，railways 讀進來時整個 3D 場景會白白重建一次 | (a) 正常素材不會觸發；(b) 是 App 的程式，Linux 測不到，只影響效能 | **已修**（2026-10-22，PR 2：(a) 扁的或沒有頂點的模型改用方塊公車；(b) 沒有地理錨點的地圖 key 不看 railways）。原本：3D session：(a) 加 `size.x > 0 && size.y > 0 && size.z > 0` 的防護；(b) key 改用 `world.geoAnchor != nil && session.railways != nil` |
+| B4 | #918 | P3 | 車站卡在「沒有起訖對」時畫的示意曲線，潮汐開著也一律用平日的形狀。週末時，住宅站顯示 08:00 的尖峰，但 GameCore 週末不放那個尖峰（`StationDemandText.swift` 約 307 行；`PassengerDemand.hourly` 的 `tide = tidal && !weekend`） | 原本就沒看週末，只是潮汐讓差距變大；只影響示意圖 | **已修**（2026-10-22，#970：週末與假日用週末的形狀、不放潮汐）。原本：潮汐或車站卡的作者：`shared(_:by:tidal:)` 也要帶上週末 |
+| B5 | #918 | P3 | 不在經營模式時（`drawsDemandFromLand` 是 false），關掉潮汐，`refreshLandDemand` 一開始就返回，車站留著舊的 `homeShare`；之後再打開潮汐，就用這個舊值。決策 319 第 4 條寫「關掉就拿回去」 | 自由模式本來就凍結了所有由土地來的需求，`dailyTrips` 也一樣；屬設計層面，要先決定自由模式要不要動需求 | **定案**（2026-10-22，遊戲規劃：自由模式不動需求，程式不改；決策 319 補「後來」，測試 `TidalDemandTests.testAFreeCompanysTideWaitsForTheManagedOne`，#970）。原本：決策 319 的作者 |
+| B6 | #914、#938 | P3 | (a) `Map3DCityBus.swift` 約 37 行，用 `length / size.x` 算縮放，沒有防護；模型檔在某一軸是扁的，或沒有頂點時，會得到 NaN，而不是改用方塊公車。只有壞掉或被換掉的素材才會發生。(b) `Map3DPreviewScreen.swift` 約 145、248 行，在沒有地理錨點的地圖上，railways 讀進來時整個 3D 場景會白白重建一次 | (a) 正常素材不會觸發；(b) 是 App 的程式，Linux 測不到，只影響效能 | **已修**（2026-10-22，#970：(a) 扁的或沒有頂點的模型改用方塊公車；(b) 沒有地理錨點的地圖 key 不看 railways）。原本：3D session：(a) 加 `size.x > 0 && size.y > 0 && size.z > 0` 的防護；(b) key 改用 `world.geoAnchor != nil && session.railways != nil` |
 | B7 | #922 | P3 | 不是實景的地圖上，`addSeededStreets` 在 `addStations` 之前執行，所以車站的廣場格子沒有避開種子街道。只拿掉街道家具（`removeProps`），街道帶和車流（`Map3DStreetLife` 的車道）仍可能從站房下面穿過 | 子代理讀程式推論出來的，本 session 沒有寫出會紅的測試；要調整執行順序，或讓街道避開站房，屬 3D 排版的設計 | 3D session：先用新遊戲的世界寫測試，確認站房的範圍內有沒有 `seededStreets.edges` 的端點 |
 
 另外記下兩件，不算發現：
