@@ -112,6 +112,8 @@ struct MapView: View {
     /// The open panel, and the layer's opacity, hour and playback: kept
     /// above both layouts (``GameScreenState``).
     @Environment(GameScreenState.self) private var screen
+    /// Decision 351: the demo mode's switch, for its real lines' button.
+    @AppStorage(DemoMode.switchKey) private var demoModeOn = false
     /// The population grid laid out on this map, made once for a grid and
     /// a map (``PopulationHeatmap``), and a number that changes with it.
     @State private var heatmap: PopulationHeatmap?
@@ -805,6 +807,10 @@ struct MapView: View {
                         // sideways has no height for a fifth (decision 226).
                         if session.showsMapExpansionButton {
                             mapExpansionButton(viewport: viewport, cover: cover)
+                        }
+                        // Decision 351: the demo mode's real lines, in view.
+                        if DemoMode.isOn(testBuild: TestBuild.isTest, switchOn: demoModeOn), session.canLayDemoRealLines {
+                            DemoRealLinesButton(session: session) { projection.visibleRegion }
                         }
                     }
                     .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.mapArea)) } action: { bottomLeadingFrame = $0 }

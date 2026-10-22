@@ -415,6 +415,14 @@ public final class GameSession {
     /// How high a new node goes above the ground there (decision 124; in a
     /// world without ground, above 0 m), in world units (64 to a metre).
     public var networkHeight: Int64 = 0
+
+    /// How far the demo mode's real lines have got while they are laid
+    /// (decision 351, ``layDemoRealLines(in:)``); `nil` otherwise.
+    public internal(set) var demoRealLinesProgress: DemoRealLines.Progress?
+    /// Whether a trace keeps the real line's tunnels and viaducts at any
+    /// ``networkHeight``, as the demo mode's real lines are laid, each on
+    /// its own level where they would cross (decision 351).
+    var demoKeepsRealStructures = false
     /// Whether the next stretch continues the track at its ends smoothly
     /// (the default), or runs straight.
     public var networkFollowsTrack = true

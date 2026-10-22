@@ -238,6 +238,10 @@ struct TracePlan {
     /// Why GameCore refuses the edge after ``buildable``, as the player
     /// reads it.
     let problem: String?
+    /// For each platform span asked for, the index of its stretch: one
+    /// edge from one end of the span to the other (decision 351); `nil`
+    /// where the span is not one edge.
+    var platformStretches: [Int?] = []
 
     var stopped: Bool { buildable < stretches.count }
 }
@@ -306,15 +310,26 @@ extension GameSession {
     /// unless the tool traces and both ends are on real lines that join.
     /// On a copy of the world, with the ground read under the way; GameCore
     /// builds its edges one by one there to find the first it refuses.
-    func tracePlan(from start: NetworkAnchor, to end: NetworkAnchor) -> TracePlan? {
-        guard tracesRealRailway, var from = world.position(of: start, height: networkHeight),
+    ///
+    /// Decision 351: the demo mode's real lines give the way themselves
+    /// (`given`, from `start` to `end`, whether or not the tool traces),
+    /// and the `platforms` to lay along it, each from one point of the way
+    /// to another: each becomes one level edge, its ends nodes.
+    func tracePlan(
+        from start: NetworkAnchor, to end: NetworkAnchor, along given: [WorldVector]? = nil, platforms: [(WorldVector, WorldVector)] = []
+    ) -> TracePlan? {
+        guard given != nil || tracesRealRailway, var from = world.position(of: start, height: networkHeight),
               var to = world.position(of: end, height: networkHeight) else { return nil }
         // Generous: an end on existing track is up to a tap's reach from
         // the real line, and the way joins it there.
         let reach = Self.traceReach(NetworkBuilding.minimumSpacing * 2)
-        guard let way = tracedWay(from: from, to: to, reach: reach) else { return nil }
+        guard let way = given ?? tracedWay(from: from, to: to, reach: reach) else { return nil }
         let path = WorldPath(way).smoothed()
         guard path.points.count > 1, path.length >= Double(NetworkBuilding.minimumSpacing) else { return nil }
+        let spans = platforms.map { span -> ClosedRange<Double> in
+            let a = path.project(span.0), b = path.project(span.1)
+            return min(a, b)...max(a, b)
+        }
 
         // The ground under the way, every 32 m: the tool's ground (decision
         // 124) for a new end, and the track's heights between.
@@ -348,7 +363,7 @@ extension GameSession {
         // light rails'.
         var carried: [TrackRise.Carried] = []
         var carriedEnds = (start: false, end: false)
-        if mapped, networkStructure == .automatic, networkHeight == 0, let traces = realRailwayTraces, let frame = RealWorldFrame(world: draft),
+        if mapped, networkStructure == .automatic, networkHeight == 0 || demoKeepsRealStructures, let traces = realRailwayTraces, let frame = RealWorldFrame(world: draft),
            let snap = traces.snap(WorldVector(from.plan), within: reach), let structures = railways?.structures {
             carried = structures.stretches(along: path, frame: frame, system: traces.lines[snap.place.line].system)
             // A new end on a long viaduct or in a long tunnel (a metro's
@@ -375,11 +390,22 @@ extension GameSession {
                 if case .point = end, !carriedEnds.end { levels.append(TrackRise.Level(path.length...path.length, at: Double(to.z))) }
             }
         }
-        guard let rise = TrackRise(path: path, ground: ground, water: water, levels: levels, grade: Self.traceGrade, carried: carried) else {
+        guard var rise = TrackRise(path: path, ground: ground, water: water, levels: levels, grade: Self.traceGrade, carried: carried) else {
             return TracePlan(stretches: [], buildable: 0, problem: language.text(
                 "The track cannot climb from one end to the other along this line within the steepest grade, 40‰.",
                 "沿這段真實鐵路，從一端到另一端的高低差超過遊戲的坡度上限 40‰，鋪不上去。"
             ))
+        }
+        // Decision 351: each platform level, between the heights the track
+        // would have along it.
+        if !spans.isEmpty {
+            let flat = spans.map { span in
+                let heights = stride(from: span.lowerBound, through: span.upperBound, by: TrackRise.spacing).map { rise.height(at: $0) } + [rise.height(at: span.upperBound)]
+                return TrackRise.Level(span, from: heights.min() ?? 0, to: heights.max() ?? 0)
+            }
+            if let levelled = TrackRise(path: path, ground: ground, water: water, levels: levels + flat, grade: Self.traceGrade, carried: carried) {
+                rise = levelled
+            }
         }
         if carriedEnds.start { from = WorldCoordinate(x: from.x, y: from.y, z: rise.node(at: 0)) }
         if carriedEnds.end { to = WorldCoordinate(x: to.x, y: to.y, z: rise.node(at: path.length)) }
@@ -405,7 +431,7 @@ extension GameSession {
             }
         }
         let plan = RealWorldDemo.TrackPlan(
-            path, forced: [0, path.length], avoiding: [],
+            path, forced: [0, path.length] + spans.flatMap { [$0.lowerBound, $0.upperBound] }, avoiding: spans,
             start: (from.plan, startDirection), end: (to.plan, endDirection),
             rise: rise, structure: networkStructure
         )
@@ -445,7 +471,13 @@ extension GameSession {
                 break
             }
         }
-        return TracePlan(stretches: stretches, buildable: built, problem: problem)
+        var found = TracePlan(stretches: stretches, buildable: built, problem: problem)
+        found.platformStretches = spans.map { span in
+            plan.distances.indices.dropLast().first {
+                abs(plan.distances[$0] - span.lowerBound) < 1 && abs(plan.distances[$0 + 1] - span.upperBound) < 1
+            }
+        }
+        return found
     }
 }
 
