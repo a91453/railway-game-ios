@@ -724,9 +724,13 @@ private struct ForecastView: View {
 
 /// Pause or play, and a menu of the speeds from real time up (Stage W2a),
 /// labelled with the speed the game runs at. Everything is read from the
-/// world's clock.
-private struct SpeedControl: View {
+/// world's clock. Also on the 3D map (``Map3DPreviewScreen``), which covers
+/// the status pill.
+struct SpeedControl: View {
     let session: GameSession
+    /// What the tutorial points at; `nil` on the 3D map, which it never
+    /// shows.
+    var tutorialTarget: TutorialTarget? = .speedControl
 
     var body: some View {
         let clock = session.world.clock
@@ -746,7 +750,7 @@ private struct SpeedControl: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Game speed")
-        .tutorialTarget(.speedControl)
+        .tutorialTarget(tutorialTarget)
     }
 }
 
