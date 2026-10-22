@@ -126,7 +126,7 @@ public enum Map3DTrains {
     /// freight train, boxes.
     public static func frame(
         _ motion: TrainMotion, progress: Double, heights: Heights, in scene: Map3DScene,
-        models: Map3DModelPack?, eye: Map3DPoint?, palette: LinePalette = .standard
+        models: Map3DModelPack?, eye: Map3DPoint?, palette: LinePalette = .standard, ringed: TrainID? = nil
     ) -> Frame {
         var frame = Frame()
         let gap = Double(carGap) * Double(WorldCoordinate.unitsPerMetre)
@@ -139,6 +139,12 @@ public enum Map3DTrains {
             let (side, stripe) = colours(of: run.look, palette: palette)
             let trainType = heights.type(of: run.train)
             let hasModels = run.look != .freight && models?.models(forType: trainType) != nil
+            // Decision 334: the rails under the train, front to back, for
+            // its ring.
+            var line: [Map3DPoint] = []
+            defer {
+                if run.train == ringed { frame.boxes.addRing(round: line) }
+            }
             for (index, car) in cars.enumerated() {
                 guard let front = car.first, let back = car.last else { continue }
                 // On the rails, which stand ``Map3DScene/railLift`` over the
@@ -148,6 +154,8 @@ public enum Map3DTrains {
                 let b = scene.point(worldX: back.x, worldY: back.y, height: heights.height(of: run.train, x: back.x, y: back.y)) + lift
                 let length = (a - b).length
                 guard length > 1 else { continue }
+                if line.isEmpty { line.append(a) }
+                line.append(b)
                 let base = (a + b) * 0.5
                 if index == 0 {
                     frame.heads.append(Head(train: run.train, point: a + (b - a) * (min(4, length / 2) / length)
@@ -180,6 +188,19 @@ public enum Map3DTrains {
         }
         return frame
     }
+
+    /// Decision 334: the ring round a train asked about on a station's
+    /// board: a band ``ringWidth`` wide, ``ringGap`` clear of the cars on
+    /// both sides and at both ends, ``ringLift`` over the rails (over a
+    /// platform's edge, so the platform does not hide it), in
+    /// ``ringColour``, lit from within at night. Solid and flat, as the
+    /// art style draws (no glow or gradient).
+    public static let ringWidth: Float = 0.7
+    public static let ringGap: Float = 0.6
+    public static let ringLift: Float = 1.3
+    /// The 2D map's ring round a picked train, `trainSelection` (decision
+    /// 205, docs/UI_THEME.md): the warm yellow.
+    public static let ringColour: UInt32 = 0xFFC86B
 
     /// Model `model` stood on the rail from `back` to `front` (scene
     /// points at the rail's height), stretched along to fit, its front at
