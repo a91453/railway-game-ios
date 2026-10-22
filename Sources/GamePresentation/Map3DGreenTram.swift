@@ -10,7 +10,7 @@ public enum Map3DGreenTram {
     public static let gap: Float = 0.16
     public static let width: Float = 2.686 // door marker is widest, not just shell
     public static let bodyHeight: Float = 3.18
-    public static let body = Map3DPalette.crown
+    public static let body = Map3DPalette.shopAwnings[0] // muted game teal; legacy asset IDs stay stable
     public static let roof = Map3DPalette.tileWhite
     public static let glass = Map3DTrainStyle.glass
 
@@ -36,7 +36,7 @@ extension StationKitBuilder {
     mutating func greenTramSection(_ section: Map3DGreenTram.Section) {
         let white = Map3DGreenTram.roof, green = Map3DGreenTram.body
         let ink = Self.ink, glass = Map3DGreenTram.glass, steel = Self.steel
-        let pale = Map3DPalette.park, skirt = Map3DColor.shaded(green, 0.79)
+        let pale = Map3DPalette.tankWhite, skirt = Map3DColor.shaded(green, 0.79)
         let isCab = section != .middle
         let cabAtFront = section == .head
         let centre = Map3DPoint(0, 1.6, 0)

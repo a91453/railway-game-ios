@@ -6,7 +6,7 @@ public enum Map3DThreeCarUrban {
     public enum Unit: String, CaseIterable, Sendable { case leading, middle, trailing }
     public static let bodyLength: Float = 15
     public static let pitch: Float = 15.28
-    public static let green = Map3DPalette.crown
+    public static let green = Map3DPalette.containers[2] // soft game green; accent rather than whole-body paint
     public static let white = Map3DPalette.tileWhite
     public static let glass = Map3DTrainStyle.glass
 
@@ -48,13 +48,13 @@ extension StationKitBuilder {
         for k in 0..<3 {
             for i in section.indices {
                 let j = (i+1)%section.count
-                let color = i == 3 ? white : (i == 7 ? steel : green)
+                let color = i == 7 ? steel : ([0,2,4,6].contains(i) ? green : white)
                 face([rings[k][i],rings[k][j],rings[k+1][j]],inside:inside,color:color)
                 face([rings[k][i],rings[k+1][j],rings[k+1][i]],inside:inside,color:color)
             }
         }
-        face(rings[0],inside:inside,color:green)
-        face(rings[3],inside:inside,color:green)
+        face(rings[0],inside:inside,color:white)
+        face(rings[3],inside:inside,color:white)
         box(0,0.59,0,14.65,2.19,0.18,ink)
         // Two conventional bogies, each with two continuous supported axles.
         for centre: Float in [-4.98,4.98] {
@@ -93,7 +93,7 @@ extension StationKitBuilder {
             for x: Float in [-3.44,3.44] {
                 box(x,0.81,side*1.329,1.58,0.018,2.09,ink)
                 for leaf: Float in [-1,1] {
-                    box(x+leaf*0.384,0.84,side*1.343,0.737,0.012,2.01,steel)
+                    box(x+leaf*0.384,0.84,side*1.343,0.737,0.012,2.01,Map3DPalette.tankSteel)
                     box(x+leaf*0.384,1.95,side*1.352,0.51,0.009,0.79,ink)
                     box(x+leaf*0.384,2.00,side*1.360,0.43,0.006,0.69,glass)
                     box(x+leaf*0.384,2.59,side*1.364,0.35,0.002,0.05,Map3DColor.shaded(Map3DPalette.glazing,0.45))
@@ -131,7 +131,7 @@ extension StationKitBuilder {
                     (top-cut,half),(top,half-cut),(top,-half+cut),(top-cut,-half),(bottom+cut,-half)]
                 plate(points,lift,color)
             }
-            clippedPanel(0.96,3.14,1.13,0.16,0.012,steel)
+            clippedPanel(0.96,3.14,1.13,0.16,0.012,green)
             clippedPanel(1.04,3.07,0.96,0.12,0.022,ink)
             clippedPanel(1.39,2.91,0.77,0.06,0.033,glass)
             panel(2.70,2.81,-0.66,0.66,0.035,Map3DColor.shaded(Map3DPalette.glazing,0.45))

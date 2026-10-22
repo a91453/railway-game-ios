@@ -1,5 +1,7 @@
 # 三節都市軌道車：原生配方與重建
 
+> 三台配色已更新，完整最新重建請使用 [train-colors](../train-colors/README.md)。本入口保留舊批格式與 asset ID，幾何規格不變。
+
 唯一配方為 `Sources/GamePresentation/Map3DThreeCarUrban.swift`。新增三個獨立單元與一個靜態編組，註冊於 `Map3DModelPack.standard`；不變更營運選型、GameCore、存檔或玩法。
 
 使用專案指定 Swift 6.4（本次安裝 `/workspace/swift`，因 `/opt` 不可寫）：
