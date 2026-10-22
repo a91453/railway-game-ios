@@ -203,7 +203,7 @@ public struct RecentStartPlaces: Hashable, Sendable {
 
     /// The distance between two places on the ground, in metres
     /// (haversine on a sphere of the Earth's mean radius).
-    static func metres(from a: GeoAnchor, to b: GeoAnchor) -> Double {
+    public static func metres(from a: GeoAnchor, to b: GeoAnchor) -> Double {
         let radians = Double.pi / 180
         let dLatitude = (b.latitudeDegrees - a.latitudeDegrees) * radians
         let dLongitude = (b.longitudeDegrees - a.longitudeDegrees) * radians

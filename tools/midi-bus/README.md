@@ -16,6 +16,6 @@ Original5% bus pool becomes30% shuttle/35% low-floor/20% coach/10% midibus/5% ol
 
 5 native/5 GLB/35 seven-view RGBA PNGs; front/rear/underside, overview, direction/style/comparison/same-scale fleet sheets and interactive viewer. Verification covers native full vertex round-trip, full GLB reconstruction, hashes, PNG full decode/alpha/pixel counts, browser interactions, eight touched XCTest suites and Node packaging tests. Manually inspect actual sheets too. Device Metal/performance, wheel/door animation and vehicle collision physics remain unverified.
 
-Stacked on coach PR#945 while unmerged; it depends on#942 then#941. Verify current remote status before starting another task. Large outputs stay private in `Railway/game-art-previews/docs/art/midi-bus-2026-10-21/`.
+Open every PR against main. If it depends on an unmerged PR, wait for that one to merge or bring the needed parts in (#942, #949 and #957 once merged into stale branches). Verify current remote status before starting another task. Large outputs stay private in `Railway/game-art-previews/docs/art/midi-bus-2026-10-21/`.
 
 Streamline refinement: slimmer outward-facing window ribbons, swept headlamps and painted apron, an integrated destination brow clipped from actual planar roof triangles, and no square rooftop hatches. Optional `previews/streamline-before-hero.png` and `streamline-before-right.png` create a same-angle before/after sheet using previous native renders. These are previews, not new models.

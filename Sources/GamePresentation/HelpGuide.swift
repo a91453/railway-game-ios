@@ -104,8 +104,8 @@ public enum HelpGuide {
             "moveRemoveStation", .building,
             question: ("How do I rename, move or remove a station?", "如何改名、移動或拆除車站？"),
             answer: (
-                "Tap a station to select it, then tap its tag (or touch and hold the station) to open the station panel. There you can rename it, add a platform track beside a platform, remove one platform or demolish the whole station. To move one, remove it and build it again where you want it.",
-                "點選車站，再點它上方的標籤（或長按車站），打開車站面板，可以改名、在月台旁加月台軌道、拆除其中一座月台，或拆除整個車站。要搬移車站，就拆除後在想要的位置重新蓋一座。"
+                "Tap a station, then Station… on its details card (or touch and hold the station) to open the station panel; the pencil on the tag under the station opens it to rename. There you can rename it, add a platform track beside a platform, remove one platform or demolish the whole station. To move one, remove it and build it again where you want it.",
+                "點車站，再按詳細卡上的「車站…」（或長按車站），打開車站面板；車站下方標籤上的鉛筆會打開面板直接改名。在面板裡可以改名、在月台旁加月台軌道、拆除其中一座月台，或拆除整個車站。要搬移車站，就拆除後在想要的位置重新蓋一座。"
             ),
             keywords: "delete rename 刪除 移動 改名"
         ),
@@ -176,8 +176,8 @@ public enum HelpGuide {
             "whyLosing", .money,
             question: ("Why does my line lose money?", "為什麼我的路線會虧錢？"),
             answer: (
-                "Usually the stations are too close together and too few people live near them, while the train costs the same to run. Open Economy to see the day's fares against running costs. Fixes: extend the line to a bigger town, build stations where more people live, use fewer or shorter trains, and check the fares. A short first line often loses money at first; the station master reports the daily loss in the first month.",
-                "通常是車站太近、附近的人太少，列車的營運成本卻一樣。打開「經濟明細」可以看每天的票價收入和營運成本。解法：把路線延伸到更大的城鎮、在人口多的地方蓋站、減少列車或縮短編組、檢查票價。起步的短線一開始常常虧錢；頭一個月站長會告訴你每天虧多少。"
+                "Usually the stations are too close together and too few people live near them, while the train costs the same to run. Tap Data at the bottom to see the day's fares against running costs. Fixes: extend the line to a bigger town, build stations where more people live, use fewer or shorter trains, and check the fares. A short first line often loses money at first; the station master reports the daily loss in the first month.",
+                "通常是車站太近、附近的人太少，列車的營運成本卻一樣。按底部的「資料」可以看每天的票價收入和營運成本。解法：把路線延伸到更大的城鎮、在人口多的地方蓋站、減少列車或縮短編組、檢查票價。起步的短線一開始常常虧錢；頭一個月站長會告訴你每天虧多少。"
             ),
             keywords: "loss deficit red profit 虧損 賠錢 赤字 破產 負債"
         ),
@@ -203,8 +203,8 @@ public enum HelpGuide {
             "materials", .city,
             question: ("What are building materials?", "建材是什麼？"),
             answer: (
-                "Towns need building materials to grow, as in the real world. Build a freight yard to send materials (in the station panel's Freight section: tap a station, then its tag), give the station near the town a yard too, and the town grows at full speed. A freight line is an ordinary line switched to Freight line in Lines; it needs no special trains: any train carries \(Freight.tonsPerCar) t a car. A town short of materials grows slowly, and the station master says which one; tap its bubble on the map to open that station. A new game can turn this rule off in its options.",
-                "城市和現實一樣需要建材才能成長。蓋一座貨運場出建材（在車站面板的「貨運」：點車站，再點它的標籤），城鎮附近的車站也蓋一座，城市才能全速成長。貨運路線就是在「路線」裡把一條路線打開「貨運路線」，不需要特別的貨車：任何列車每節載 \(Freight.tonsPerCar) 噸。缺建材的城市成長很慢，站長會告訴你是哪一座；點地圖上「缺建材」的泡泡就會打開那座車站。新遊戲的選項可以關掉這個規則。"
+                "Towns need building materials to grow, as in the real world. Build a freight yard to send materials (in the station panel's Freight section: tap a station, then Station… on its details card), give the station near the town a yard too, and the town grows at full speed. A freight line is an ordinary line switched to Freight line in Lines; it needs no special trains: any train carries \(Freight.tonsPerCar) t a car. A town short of materials grows slowly, and the station master says which one; tap its bubble on the map to open that station. A new game can turn this rule off in its options.",
+                "城市和現實一樣需要建材才能成長。蓋一座貨運場出建材（在車站面板的「貨運」：點車站，再按詳細卡上的「車站…」），城鎮附近的車站也蓋一座，城市才能全速成長。貨運路線就是在「路線」裡把一條路線打開「貨運路線」，不需要特別的貨車：任何列車每節載 \(Freight.tonsPerCar) 噸。缺建材的城市成長很慢，站長會告訴你是哪一座；點地圖上「缺建材」的泡泡就會打開那座車站。新遊戲的選項可以關掉這個規則。"
             ),
             keywords: "freight yard material cargo 貨運 貨運場 材料"
         ),
@@ -212,17 +212,26 @@ public enum HelpGuide {
             "buyMap", .building,
             question: ("How do I buy more of the map?", "怎麼買地圖？"),
             answer: (
-                "On a map that is bought tile by tile, open the build tools and choose Expand the Map, then tap a tile next to one you own. The price depends on how many tiles you own, and you must have carried enough riders in a day to unlock the next. Track and stations can only be built on land you own.",
-                "在分區購買的地圖上，打開建設工具，選「擴建地圖」，點選和已擁有區塊相鄰的一塊。價格依你已擁有的區塊數而定，而且單日載客量要夠才能解鎖下一塊。軌道和車站只能蓋在你擁有的土地上。"
+                "On a map that is bought tile by tile, tap Expand Map at the bottom left of the map (put the build tools away first; while building, the message about land not yet yours has the same button), then tap a tile next to one you own. The price depends on how many tiles you own, and you must have carried enough riders in a day to unlock the next. Track and stations can only be built on land you own.",
+                "在分區購買的地圖上，按地圖左下角的「擴建地圖」（先收起建設工具；建造時跳出「這塊地還不是你的」，旁邊也有同一顆鈕），再點選和已擁有區塊相鄰的一塊。價格依你已擁有的區塊數而定，而且單日載客量要夠才能解鎖下一塊。軌道和車站只能蓋在你擁有的土地上。"
             ),
             keywords: "expand tile land purchase 擴建 買地 區塊 土地"
+        ),
+        HelpEntry(
+            "buyRealLine", .building,
+            question: ("How do I buy a real branch line?", "怎麼收購真實支線？"),
+            answer: (
+                "On a real-world map, open Lines: Real lines for sale lists the TRA branch lines whose stations are all on the map, such as the Pingxi or Jiji Line. Tap one to see its price; it comes with its track, stations, trains and real timetable. A station on such a line has the same button at the top of its panel. When none is listed, the line under the heading says why.",
+                "在實景地圖上打開「路線」，「可收購的真實路線」會列出車站都在地圖上的臺鐵支線，例如平溪線、集集線。點一條看價格，買下時軌道、車站、列車和真實班次一起過來。這種支線上的車站，車站面板最上面也有同一顆鈕。一條都沒有列出時，標題下面那一行會說明原因。"
+            ),
+            keywords: "buy acquire purchase real branch line TRA Pingxi Jiji Neiwan 收購 真實 支線 臺鐵 平溪線 集集線 內灣線 買線"
         ),
         HelpEntry(
             "loan", .money,
             question: ("How do I borrow money?", "怎麼借錢？"),
             answer: (
-                "Open Economy and choose Borrow in the Loan section. Each tap borrows one step, up to a limit, and the loan pays daily interest. Repay from the same place when you have cash. Only a managed company (not Free Play) can borrow.",
-                "打開「經濟明細」，在「貸款」區按「借入」。每按一次借一個單位，有上限，貸款每天計息。有現金時可從同一處還款。只有經營模式的公司（自由模式不行）才能貸款。"
+                "Tap Data at the bottom and choose Borrow in the Loan section, just under Today. Each tap borrows one step, up to a limit, and the loan pays daily interest. Repay from the same place when you have cash. Only a managed company (not Free Play) can borrow.",
+                "按底部的「資料」，在「今天」下面的「貸款」區按「借入」。每按一次借一個單位，有上限，貸款每天計息。有現金時可從同一處還款。只有經營模式的公司（自由模式不行）才能貸款。"
             ),
             keywords: "loan bank interest repay borrow 貸款 銀行 利息 還款"
         ),
@@ -230,8 +239,8 @@ public enum HelpGuide {
             "fares", .money,
             question: ("How do I set fares?", "票價怎麼設？"),
             answer: (
-                "Open Economy and look at the Fares section: choose a flat fare, or a distance-based fare. People find the standard fare fair; raise it and fewer ride, lower it and more ride but each pays less. Try small changes and watch the day's income.",
-                "打開「經濟明細」，在「票價」區選固定票價或依距離計費。乘客覺得標準票價合理；調高會讓搭車的人變少，調低則搭的人變多但每人付得少。小幅調整，再看當天的收入。"
+                "Tap Data at the bottom and look at the Fares section: choose a flat fare, or a distance-based fare. People find the standard fare fair; raise it and fewer ride, lower it and more ride but each pays less. Try small changes and watch the day's income.",
+                "按底部的「資料」，在「票價」區選固定票價或依距離計費。乘客覺得標準票價合理；調高會讓搭車的人變少，調低則搭的人變多但每人付得少。小幅調整，再看當天的收入。"
             ),
             keywords: "fare price ticket 票價 漲價 降價 收費"
         ),
@@ -302,8 +311,8 @@ public enum HelpGuide {
             "annualReport", .money,
             question: ("How do I read the annual report?", "怎麼看年報？"),
             answer: (
-                "When a year closes, the report opens by itself: revenue against costs, profit and what the company owns and owes. Compare it with last year's. Open Economy at any time for the day, week, month and year so far.",
-                "年度結算時年報會自動打開：收入、成本、利潤，以及公司的資產與負債。可以和去年比較。想隨時查看，打開「經濟明細」就能看到當日、當週、當月與今年的數字。"
+                "When a year closes, the report opens by itself: revenue against costs, profit and what the company owns and owes. Compare it with last year's. Tap Data at the bottom at any time for the day, week, month and year so far (under More reports and settings, when they are folded).",
+                "年度結算時年報會自動打開：收入、成本、利潤，以及公司的資產與負債。可以和去年比較。想隨時查看，按底部的「資料」就能看到當日、當週、當月與今年的數字（收起時在「更多報表與設定」裡）。"
             ),
             keywords: "year report statement profit 年度 報表 結算 損益"
         ),

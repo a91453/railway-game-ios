@@ -589,6 +589,9 @@ final class HighSpeedTests: XCTestCase {
             [pair(2, 1, 4_900)],
             [pair(1, 1, 4_900)],
             [pair(1, 2, 0)],
+            // B3 of the #911–#944 review: a station never handed out.
+            [pair(1, 99, 400)],
+            [pair(0, 1, 400)],
         ] {
             XCTAssertThrowsError(try JSONDecoder().decode(SavedGame.self, from: accounts { $0["highSpeedFares"] = bad }), "\(bad)")
         }

@@ -17,6 +17,11 @@ final class RealWorldMapUITests: XCTestCase {
         // Decision 316: New Game, then its real-world map.
         tappable(app.buttons.matching(identifier: "start.newGame"), name: "start.newGame").tap()
         tappable(app.buttons.matching(identifier: "newGame.realWorld"), name: "newGame.realWorld").tap()
+        // Decision 335: "Use my location" is there and a finger reaches it;
+        // not tapped, so no location is asked for on the Simulator.
+        let myLocation = app.buttons.matching(identifier: "realWorld.myLocation").firstMatch
+        XCTAssertTrue(myLocation.appears(within: 10), "Missing button: realWorld.myLocation")
+        XCTAssertTrue(myLocation.becomesHittable(within: 5), "realWorld.myLocation cannot be tapped")
 
         // Decision 262 put Taiwan's places under a group heading, so on a
         // landscape iPhone Taipei's row starts below the screen (and the

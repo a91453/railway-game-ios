@@ -109,6 +109,30 @@ final class TidalDemandTests: XCTestCase {
         XCTAssertEqual(world.stationDemand(of: home), StationDemand(kind: .residential, dailyTrips: 400))
     }
 
+    /// B5 of the #911–#944 review (decision 319, later): a free company's
+    /// land sets no demand, so turning the tide on or off leaves every
+    /// station's demand as it was, home share and all; it takes effect when
+    /// the company is managed again.
+    func testAFreeCompanysTideWaitsForTheManagedOne() throws {
+        var world = try landWorld()
+        world.setTidalDemand(true)
+        let tidal = StationDemand(kind: .residential, dailyTrips: 400, homeShare: 444)
+        XCTAssertEqual(world.stationDemand(of: home), tidal)
+
+        world.setEconomyMode(.free)
+        world.setTidalDemand(false)
+        XCTAssertFalse(world.tidalDemand)
+        XCTAssertEqual(world.stationDemand(of: home), tidal, "a free company's demand stays")
+        world.setEconomyMode(.management)
+        XCTAssertEqual(world.stationDemand(of: home), StationDemand(kind: .residential, dailyTrips: 400))
+
+        world.setEconomyMode(.free)
+        world.setTidalDemand(true)
+        XCTAssertEqual(world.stationDemand(of: home), StationDemand(kind: .residential, dailyTrips: 400), "a free company's demand stays")
+        world.setEconomyMode(.management)
+        XCTAssertEqual(world.stationDemand(of: home), tidal)
+    }
+
     func testVersionSixtySevenKeepsTheTide() throws {
         var world = try landWorld()
         world.setTidalDemand(true)

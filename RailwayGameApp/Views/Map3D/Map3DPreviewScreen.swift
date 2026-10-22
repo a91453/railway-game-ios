@@ -282,10 +282,13 @@ final class Map3DSceneCache {
         // Decision 239: and the real buildings round Kaohsiung and
         // Taichung Stations.
         let city = world.geoAnchor == nil ? nil : BaseMapFiles.city
+        // Decision 331: and Taiwan's temples.
+        let temples = world.geoAnchor == nil ? nil : BaseMapFiles.temples
         let task = Task.detached(priority: .userInitiated) {
             let baseMap = tiles.flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }.flatMap { try? BaseMapTiles(data: $0) }
             return Map3DScene(world: world, focus: focus, baseMap: baseMap, cityTiles: city.map(CityTileArea.areas(in:)) ?? [],
-                              heights: heights, lineBands: Map3DLineBands(world: world, palette: palette), railways: railways)
+                              heights: heights, lineBands: Map3DLineBands(world: world, palette: palette), railways: railways,
+                              temples: temples.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealTemples(data: $0) })
         }
         self.key = key
         game = session
@@ -302,7 +305,8 @@ final class Map3DSceneCache {
 /// 314: and the lines, whose colour bands run beside the track, in the
 /// player's palette, unless no `palette` is given (the 2D map's seeded
 /// streets, which have no bands); decision 326: and the real railways,
-/// which can arrive after the game opened too.
+/// which can arrive after the game opened too, on a map with a place on
+/// Earth (the only one that draws them: B6 of the #911–#944 review).
 struct Map3DSceneKey: Hashable {
     let hasHeights: Bool
     let hasRailways: Bool
@@ -317,7 +321,7 @@ struct Map3DSceneKey: Hashable {
 
     init(world: GameWorld, hasHeights: Bool, hasRailways: Bool = false, focus: (x: Double, y: Double)? = nil, palette: LinePalette? = nil) {
         self.hasHeights = hasHeights
-        self.hasRailways = hasRailways
+        self.hasRailways = hasRailways && world.geoAnchor != nil
         self.focus = focus.map { Map3DScene.FocusArea(x: $0.x, y: $0.y) }
         edges = world.network.edges.count
         lastEdge = world.network.edges.last?.id

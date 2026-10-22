@@ -34,8 +34,8 @@ public final class GameSession {
             worldRevision &+= 1
             if !isApplyingTick { commandRevision &+= 1 }
             // Decision 305: a paused game has no tick to look again after
-            // a command.
-            if !isApplyingTick, world.clock.isPaused { refreshNightSkipOffer() }
+            // a command (decision 330, later: off the main actor).
+            if !isApplyingTick, world.clock.isPaused { lookAgainForNightSkip() }
             // Decision 193: a change no recorded path made is logged as one.
             if !isLogging { log(.unrecorded("world")) }
         }
@@ -535,7 +535,7 @@ public final class GameSession {
     /// Counts the changes to ``railways`` (decision 328).
     @ObservationIgnored private(set) var railwaysRevision = 0
     /// ``buyableRealLines`` as last worked out, and from what.
-    @ObservationIgnored var buyableRealLinesMemo: (key: BuyableRealLinesKey, lines: [RealBranchLine])?
+    @ObservationIgnored var buyableRealLinesMemo: (key: BuyableRealLinesKey, sale: RealLineSale)?
 
     /// Taiwan's place names (decision 159), which a new station on a
     /// real-world map is named after when no real station is right there.
@@ -1062,6 +1062,10 @@ public final class GameSession {
 
     /// The run ahead behind ``nightSkip``.
     @ObservationIgnored var nightSkipMemo: NightSkipMemo?
+
+    /// The run ahead under way off the main actor after a command while
+    /// paused (decision 330, later), or `nil`.
+    @ObservationIgnored var nightSkipLookAhead: Task<Void, Never>?
 
     /// The first move of the night whose skip ended or was stopped, so the
     /// setting does not start it again.

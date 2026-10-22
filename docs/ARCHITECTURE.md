@@ -3279,6 +3279,13 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 - 城際需求（重力模型）與高鐵規則是步驟 C。
 - 參考庫沒有按需展開的土地（缺口，原生實作）。
 
+**後來**（2026-10-22，作者問「台灣地圖要開放嗎／一開始就開放好像就沒有公平性了／全台灣很吃效能要備注嗎」）：全台灣照舊一開始全開，和決策 167 的買地擴建並存；選點畫面的說明改成「一開始全部開放、不用買地。不計成就與排名。路網蓋得大時，較舊的裝置可能變慢。」拿掉「車站周圍 2 公里的土地在蓋站時才展開」（是做法，不是玩家得到的東西）。
+- **公平**：現在唯一比成績的是每週挑戰，用固定地圖，和全台灣無關。之後接 Game Center（NEXT_PRIORITIES §22.2）時，成就與排行榜只算固定地圖與買地擴建的遊戲，全台灣不算；說明先寫上，免得玩家以為會算。
+- **效能**：上表 600 站時城市圖層重建 3.3 s、讀檔 6.5 s（Linux），手機更慢，所以寫一句提醒；不寫數字與機型（玩家看的文字不寫內部的量）。
+- **五方**：玩家：想全開的照樣玩得到，要比的人知道全台灣不算；鐵道迷：高鐵、環島這種長線只有全台灣做得出來，不能拿掉；開發：只改一句字，不動規則與存檔；美術：無；音樂：無。
+- **沒選的**：(A) 拿掉全台灣，只留買地擴建：已有存檔的玩家打不開新局，長線與高鐵示範的測試地圖也沒了。(B) 全台灣要先在擴建模式買滿幾塊才解鎖：想直接蓋長線的玩家要先玩幾十天，而且現在沒有排名要保護。(C) 開局時跳一張效能警告卡：每次都擋一下，說明裡一句就夠。
+- **UNVERIFIED**：App 的編譯與字的長度在小螢幕上會不會擠（macOS CI 的 `ios-build.yml`，實機）。
+
 ### 89. 全島縮小時的畫面
 
 2026-10-08，步驟 B 的第二個 PR（決策 88 之後）。全台灣縮到整個島時，站名全部藏起來、城市圖層在主執行緒重建、地圖開在南投附近幾百公尺的地方。只改畫面：GameCore、存檔、golden、replay 都不變。
@@ -13760,6 +13767,9 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 舊規則（只在號誌關時追回）下兩者相同，測試失敗。
 - 閉塞開時整批推進 10 分鐘與逐分推進相同。
 
+**後來**（2026-10-22，審查延後項目，session_01QiPq4nZdq5bVS9MZ4rkr4L，`docs/archive/PR873_910_REVIEW_HANDOFF.md` A6）：規則 2 的「不超過彎道限速」在真實時刻表的列車上沒有做到。`run(of:length:scheduled:)` 對有班次的路線，`scheduled` 在限速下跑不完時就把限速整個丟掉；這原本是給真實時刻表本身用的（真實路線的彎比畫的緩），但晚點的車拿到的 `scheduled` 是「到表定到站還剩幾秒」，所以晚了就用超過限速的速度追。現在 `run` 多一個 `timetabled`（這一段在時刻表上的時間，預設等於 `scheduled`）：只有 `timetabled` 本身在限速下跑不完才丟限速；出發（`leaving`）與改走別條路（`rerouted`）傳列車時刻表上這一段的時間，`resumeRun` 只剩一部分長度，照舊。準點的車兩者相同，所以行為不變。回歸測試 `CurveSpeedRunTests.testALateRealRunMakesUpTimeUnderTheLimits`（中途 M 站晚開，M–B 經過彎道；舊程式上紅：限速 0 個、126 秒）。golden、replay、存檔都不動（`GoldenScenarioTests`、`ReplayFixtureTests`、`SavedGameTests` 與高鐵、台鐵示範的 campaign 照舊通過）。
+- **沒修到的一種**：班次**晚派車**時，`RunTrip.timetable` 本來就把列車自己時刻表的第一段縮短（第一站的出發改成派車＋最短停站，下一站的到站不變），列車又沒有保存班次原本的時刻，所以第一段仍然分不出「時刻表本身跑不完」與「晚點」，可能照舊丟限速。要修得讓列車記住這一段在班次上的時間（存檔格式要改），交給下一個改決策 306 或 133 的 session（`docs/HANDOFF.md` §7.1 有一行指過來）。
+
 ### 307. 實景地圖的載入畫面：公司名、最近的地名、自己的路線色與跑來跑去的列車
 
 2026-10-21。競品研究 `docs/research/CITY_TRANSPORT_MANAGER_STUDY_2026-10-19.md` 4.8（NEXT_PRIORITIES §19 第 6）。作者 2026-10-14、10-15 起的預設「session 五方決定」，遊戲規劃 session_01WW7o3decEv5LY59nYVqnDN 派工。號碼依 #231：main 最大 305，這次的登記保留 307。只改 GamePresentation 與 App；GameCore、存檔版本、golden schema、replay 都不動。
@@ -13854,6 +13864,8 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 **後來**（2026-10-21，PR #873–#910 審查 A 組，session_01SvQ285hMiSeRsER1EXzfT9，`docs/archive/PR873_910_REVIEW_HANDOFF.md` A1）：路線改成環線時，`setLineRing` 沒有把發車方式改回平均錯開。存檔要求環線只能平均錯開，所以「第二列晚 N 分」或「兩端對開」的路線改成環線後，存檔讀不回。現在改成環線時，發車方式回到平均錯開，`endLastDispatch`、`opensPair` 一起清掉。環線本來就照平均錯開派車（`dispatchPattern(of:_:planned:)` 只看路線自己的服務、不看方向），所以環線的行車不變，只是存檔讀得回；之後再改回一般路線，發車方式是平均錯開，要另外再選。回歸測試 `DispatchPatternTests.testALineMadeARingSpacesItsTrainsEvenly`。存檔版本、golden、replay 不動。
 
+**後來**（2026-10-22，審查延後項目，session_01QiPq4nZdq5bVS9MZ4rkr4L，`docs/archive/PR873_910_REVIEW_HANDOFF.md` A8）：`setLineRuns` 給路線班次時，發車方式也回到平均錯開，`endLastDispatch`、`opensPair` 一起清掉，和改成環線（A1）一樣；清掉班次（`[]`）時不動，所以舊的發車方式不會再回來。有班次的路線照班次的時刻派車，本來就不看發車方式，所以行車不變。舊存檔裡「有班次、又不是平均錯開」的路線（先選了發車方式、再給班次），**讀檔時正規化**成平均錯開，不擋：擋下來就是玩家的存檔讀不回（A1 那類 P1）；而那個發車方式在有班次時從來沒有派過車，丟掉它不改變任何東西。存檔格式沒有變，所以存檔版本不動、不加 fixture。回歸測試 `DispatchPatternTests.testALineGivenRunsSpacesItsTrainsEvenly`、`testASavedLineWithRunsAndAnotherPatternLoadsEven`（舊程式上都紅）。golden、replay 不動。
+
 ### 310. 地圖提示整理：不蓋「空位多」、列車的章改「滿載」、快速圖層的「車資與章」開關
 
 2026-10-21。作者同意遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 的排程（「照這樣做」，#231 04:58 與 04:59 的兩則），派工給 session_01GPnquCXT5GQzPfCztHj6Sz。號碼依工作登記 #231：main 到 306，307（甲線載入畫面）、308（追回後續）、309（派車錯開）已登記，取 310。GameCore、存檔版本、golden schema、SaveFixtures、ReplayFixtures 都不動。
@@ -13941,6 +13953,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 **沒做**：
 - **「用我的位置」**：要 CoreLocation 與 Info.plist 的用途字串，App Store 的隱私標籤要更新（App Store Connect 是作者的事）。等作者決定，寫在 `docs/HANDOFF.md` §3。
+  - **後來**（2026-10-22）：作者交給遊戲規劃決定，規劃決定做，見決策 335（`docs/decisions/335.md`）。隱私標籤不用加「位置」：位置只在裝置上用來移框，不傳出去。
 - **「已下載的地點」**：存檔的摘要（`SaveSummary`）沒有記錨點，要列出存檔的地點得讀每一個存檔或改摘要的格式。最近用過已經涵蓋「上次玩的地方」，所以先不做。
 - 公司名稱放在同一張卡（研究 4.6 的三步）：明信片已經有公司名（決策 307 的載入畫面也用它），不另外問。
 
@@ -14532,6 +14545,8 @@ $10,000 的價格照報告的建造、列車與利益算出（旅客那一項是
 
 **驗證**：`NewGameChoiceTests`（Linux）。App 的畫面（主選單、新遊戲頁、iPhone 橫拿與 iPad）只能靠 macOS CI 編譯與 UI 測試；實機的樣子由作者在 TestFlight 看。
 
+**後來**（2026-10-22，審查延後項目，session_01QiPq4nZdq5bVS9MZ4rkr4L，`docs/archive/PR873_910_REVIEW_HANDOFF.md` A7）：按「在這裡開始」之後，「新遊戲」頁在實景地圖開始蓋（`GameLauncher.realWorldLoading` 有值）時也關掉（`NewGamePicker` 的 `.onChange`），選地點那一層跟著關。載入畫面（決策 307）不再畫在它下面，蓋的期間也按不到「空白地圖」。只改 App 的一個 view，Linux 測不到，交 iOS 的 UI 測試與實機確認。
+
 ### 317. 3D 地圖的市區公車：Meshy 模型接進 App、上主要道路
 
 （2026-10-21，3D session_01Y25x9NJSKmAuP1M1K3Sf3C，遊戲規劃派工的第 4 項；規格 `docs/research/MESHY_TRIAL_MODEL_SPEC_2026-10-17.md`）
@@ -14722,6 +14737,10 @@ $10,000 的價格照報告的建造、列車與利益算出（旅客那一項是
 **驗證**：`TidalDemandTests`、`SavedGameTests`（v67 fixture）與上面列的類別（Linux，VERIFIED）。App 只改 GamePresentation 的開局與車站卡的形狀，不畫新東西；UI 測試由 macOS CI 跑。
 
 **之後**：第 3 步（HANDOFF §7.2）：實景地圖的土地用電信信令的鄉鎮日夜比（162907／162908）補上白天的人（工作），同一區裡的差別照舊由 OSM 地點分（研究 §2.6 的 D′）；`homeShare` 讀土地的居民與工作，所以會自己跟著變，GameCore 不必再動。要內附資料與鄉鎮對應（同名的區很多，用代碼與界線）。
+
+**後來**（2026-10-22，審查延後項目，session_01QiPq4nZdq5bVS9MZ4rkr4L，`docs/archive/PR911_944_REVIEW_HANDOFF.md` B5、B4）：
+- **自由模式不動需求，開關潮汐在回到經營模式時才生效**（遊戲規劃決定，程式不改）。不在經營模式時（`drawsDemandFromLand` 是 false），土地不設需求，`dailyTrips` 本來就凍結，`homeShare` 也一樣：關掉潮汐，車站留著原本的 `homeShare`；切回經營模式時 `setEconomyMode` 重算土地需求，才拿掉（或打開時才寫上）。第 4 條的「關掉就拿回去」指經營模式。測試 `TidalDemandTests.testAFreeCompanysTideWaitsForTheManagedOne` 鎖住這個行為。五方：玩家：自由模式是沙盒，切開關不該讓數字突然跳；鐵道迷：無；開發：不動程式，只補文件與測試；美術：無；音樂：無。
+- 車站卡在沒有起訖對時畫的示意曲線，也照今天的時段：開了每週需求的週末與假日用週末的形狀、不放潮汐（和 GameCore 的 `hourly(_:from:to:weekend:tidal:)` 一樣），平日照舊（`GameWorld.shared(_:by:tidal:weekend:)`，GamePresentation；測試 `StationDemandSessionTests.testAStationsShapeOnAWeekendHasNoTide`）。
 
 ### 320. 3D 地圖的雨絲：照參考的一層平行細線，白天用 2D 的雨色；雷雨閃電；減少動態時不畫
 
@@ -15299,3 +15318,4 @@ Linux（release，`-enable-testing`）上，改之前量到的（毫秒）：
 2. 新台幣那輪拿掉 NT$10＝$1。
 3. 實景新遊戲裡玩家自己蓋的高鐵站若就在真實高鐵站旁，可以照同一張表收；要先決定「旁邊」多近（決策 298 的 450 m），這次沒做。
 
+**後來**（2026-10-22，審查延後項目，session_01QiPq4nZdq5bVS9MZ4rkr4L，`docs/archive/PR911_944_REVIEW_HANDOFF.md` B3）：`GameWorld` 的驗證（`invariantViolation`）也檢查票價表：每一組的站 ID 都在 1 到 `nextStationID` 之前。`setHighSpeedFares` 本來就只收存在的車站，所以只有被改過的存檔會被擋；車站 ID 只增不回收，沒擋的話，之後新建的車站會繼承那組票價。拆掉的車站留在表裡的那一組照舊讀得回（它的 ID 小於 `nextStationID`）。存檔版本、golden、replay 不動。回歸在 `HighSpeedTests.testVersionSixtyNineKeepsTheFareTable` 的拒絕清單（舊程式上紅）。

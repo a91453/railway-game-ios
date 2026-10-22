@@ -138,6 +138,25 @@ struct MapBuildConfirm: View {
                 .accessibilityLabel(Text(verbatim: session.language.text("Take Back the Last Stop", "取消上一站")))
                 .accessibilityIdentifier("map.build.undo")
             }
+            // Decision 336: the land is not bought yet; this ends building
+            // and starts choosing a tile, as the map's own button (hidden
+            // while building, TestFlight 56.1) does.
+            if build.expandsMap {
+                Button {
+                    session.startChoosingMapTile()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "plus.square.dashed")
+                            .font(.body.weight(.bold))
+                        Text(verbatim: session.language.text("Expand Map", "擴建地圖"))
+                            .font(.subheadline.weight(.bold))
+                    }
+                    .padding(.horizontal, 6)
+                    .frame(minHeight: 40)
+                }
+                .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
+                .accessibilityIdentifier("map.build.expandMap")
+            }
             Button {
                 build.cancel()
             } label: {
@@ -271,6 +290,9 @@ private struct BuildConfirmation {
     let confirm: @MainActor () -> Void
     /// Takes back the new line's last stop (decision 100, later).
     var undo: (@MainActor () -> Void)?
+    /// Decision 336: what is drawn lies on land not bought yet, and the
+    /// pill offers to go and expand the map.
+    var expandsMap = false
 
     enum Kind {
         case track, platform, building, sale, mapTile, line, addStop
@@ -394,6 +416,7 @@ private struct BuildConfirmation {
             showsCatchment = false
             cancel = { session.clearNetworkDraft() }
             confirm = { session.buildNetworkTrack() }
+            expandsMap = session.offersMapExpansion(for: preview.problem)
         case .building where session.buildingMode == .sell:
             // Decision 130: the building chosen to sell, and what it brings.
             guard let sale = session.salePreview else { return nil }
@@ -421,6 +444,7 @@ private struct BuildConfirmation {
             showsCatchment = false
             cancel = { session.clearBuildingSite() }
             confirm = { _ = session.confirmBuilding() }
+            expandsMap = session.offersMapExpansion(for: preview.problem)
         case .select, .train:
             return nil
         }

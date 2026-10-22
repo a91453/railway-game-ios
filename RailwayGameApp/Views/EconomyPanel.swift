@@ -27,8 +27,9 @@ struct EconomyPanel: View {
     /// player moves it (decision 324).
     @State private var dayPassPrice: Int64?
     @State private var confirmsFreePlay = false
-    /// Whether the reports under the "Today" card show: `nil` until the
-    /// player chooses, when a game of simple rules shows only the card.
+    /// Whether the reports under the "Today" card, the loan and the fares
+    /// show: `nil` until the player chooses, when a game of simple rules
+    /// shows only those.
     @State private var showsReports: Bool?
 
     var body: some View {
@@ -42,16 +43,18 @@ struct EconomyPanel: View {
                 if session.world.scenario != nil {
                     goalsSection
                 }
+                // Decision 336: the loan and the fares under "Today", never
+                // folded away, so the insolvency bubble lands on Borrow.
+                // Decision 200: with unlimited funds there is nothing to
+                // borrow for, and no cash to sheet.
+                if !session.world.economy.unlimitedFunds {
+                    loanSection
+                }
+                faresSection
+                dayPassSection
                 if today == nil || showsAllReports {
                     trendSection
                     balanceSection
-                    // Decision 200: with unlimited funds there is nothing to
-                    // borrow for, and no cash to sheet.
-                    if !session.world.economy.unlimitedFunds {
-                        loanSection
-                    }
-                    faresSection
-                    dayPassSection
                     lastHourSection
                     reportSection
                     if !session.world.economy.unlimitedFunds {
@@ -84,8 +87,9 @@ struct EconomyPanel: View {
         session.world.accounts
     }
 
-    /// Decision 258's simple rules show only the "Today" card at first;
-    /// realistic games show every report, as before.
+    /// Decision 258's simple rules show only the "Today" card, the loan
+    /// and the fares at first (decision 336); realistic games show every
+    /// report, as before.
     private var showsAllReports: Bool {
         showsReports ?? (NewGameRules(of: session.world) == .realistic)
     }
@@ -123,8 +127,8 @@ struct EconomyPanel: View {
                 showsReports = !showsAllReports
             } label: {
                 Text(verbatim: showsAllReports
-                     ? session.language.text("Hide the other reports", "收起其他報表")
-                     : session.language.text("Show the other reports", "顯示其他報表"))
+                     ? session.language.text("Hide the other reports and settings", "收起其他報表與設定")
+                     : session.language.text("More reports and settings", "更多報表與設定"))
             }
             .accessibilityIdentifier("economy.reports")
         }

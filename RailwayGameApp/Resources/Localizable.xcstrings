@@ -1,6 +1,26 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Station…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "車站…"
+          }
+        }
+      }
+    },
+    "Opens the station panel: its platforms, shops, transfers, riders, depot and more." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打開車站面板：月台、商店、轉乘、客源、機廠等。"
+          }
+        }
+      }
+    },
 
     "Along the Line" : {
       "comment" : "Official player-facing brand name.",
@@ -2079,16 +2099,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "顯示路線與它們的時刻表。"
-          }
-        }
-      }
-    },
-    "Shows the station's ridership: what kind of place it serves, its trips and its passengers." : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "顯示車站的客源：服務的地區類型、旅次與乘客。"
           }
         }
       }

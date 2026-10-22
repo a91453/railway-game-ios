@@ -39,6 +39,9 @@ struct StationPanel: View {
         NavigationStack {
             Form {
                 if let station = session.selectedStation {
+                    // Decision 336: a real line on sale through here, above
+                    // everything else.
+                    buyLineSection(station)
                     // Decision 224: the platforms and the weather, first.
                     StationOperationsSection(session: session, station: station.id)
                     // Decision 222: the station's shops.
@@ -608,28 +611,37 @@ struct StationPanel: View {
     @ViewBuilder
     private func realStationSection(_ station: Station) -> some View {
         let details = session.realStationDetails(of: station.id)
-        // Decision 315: a real branch line on sale through here.
-        let buyable = session.buyableRealLine(at: station.id)
-        if !details.isEmpty || buyable != nil {
+        if !details.isEmpty {
             Section {
                 ForEach(details, id: \.self) { line in
                     Text(verbatim: line)
                         .font(.footnote)
                 }
-                if let buyable {
-                    Button {
-                        session.offerRealLine(buyable)
-                    } label: {
-                        Label {
-                            Text(verbatim: session.language.text("Buy This Line…", "收購這條線…"))
-                        } icon: {
-                            Image(systemName: "signature")
-                        }
-                    }
-                    .accessibilityIdentifier("station.acquireLine")
-                }
             } header: {
                 Text("Real Station")
+            }
+        }
+    }
+
+    /// Decision 315: a real branch line on sale through here; first in the
+    /// panel (decision 336).
+    @ViewBuilder
+    private func buyLineSection(_ station: Station) -> some View {
+        if let buyable = session.buyableRealLine(at: station.id) {
+            Section {
+                Button {
+                    session.offerRealLine(buyable)
+                } label: {
+                    Label {
+                        Text(verbatim: session.language.text(
+                            "Buy the \(buyable.name(in: session.language))…",
+                            "收購\(buyable.name(in: session.language))…"
+                        ))
+                    } icon: {
+                        Image(systemName: "signature")
+                    }
+                }
+                .accessibilityIdentifier("station.acquireLine")
             }
         }
     }

@@ -193,10 +193,11 @@ public struct Map3DScene: Sendable {
     /// and `heights`' ground where the world has not read its own.
     /// Decision 314: `lineBands` beside the track. Decision 326: an
     /// overhead line over the track, but along `railways`' lines run
-    /// without one.
+    /// without one. Decision 331: on a real-world map, `temples` where
+    /// they stand.
     public init(world: GameWorld, snapshot: RailwaySnapshot? = nil, skyline: CitySkyline? = nil, focus: (x: Double, y: Double)? = nil,
                 baseMap: BaseMapTiles? = nil, cityTiles: [CityTileArea] = [], heights: HeightGrid? = nil, lineBands: Map3DLineBands? = nil,
-                railways: RealRailways? = nil) {
+                railways: RealRailways? = nil, temples: RealTemples? = nil) {
         (region, originX, originY) = Self.frame(world: world, focus: focus)
 
         var builder = Builder(originX: originX, originY: originY, region: region, world: world, heights: heights)
@@ -216,14 +217,16 @@ public struct Map3DScene: Sendable {
         builder.addPortals(snapshot)
         // Decision 238: the city twice, in full and simplified for afar.
         let city = skyline ?? CitySkyline(world: world)
-        // Decision 263: on a map not of the real world, seeded streets
-        // between the lots, clear of the track and the platforms but where
-        // they cross it.
-        if real == nil, world.geoAnchor == nil { builder.addSeededStreets(city, clearOf: cleared) }
-        seededStreets = SeededStreetPlan(edges: builder.streetEdges)
         // Decision 321: the stations' canopies and buildings from the
         // station kit, a plaza where a building stands.
-        let stations = cleared.union(builder.addStations(snapshot, frame: RealWorldFrame(world: world)))
+        let stations = cleared.union(builder.addStations(snapshot, frame: RealWorldFrame(world: world), shops: false))
+        // Decision 263: on a map not of the real world, seeded streets
+        // between the lots, clear of the track and the platforms but where
+        // they cross it, and of the stations' buildings.
+        if real == nil, world.geoAnchor == nil { builder.addSeededStreets(city, clearOf: cleared) }
+        seededStreets = SeededStreetPlan(edges: builder.streetEdges)
+        // Decision 322: the shops, clear of the streets.
+        builder.addShopStreets()
         // Decision 326: the overhead line, its masts clear of the platforms;
         // on a real-world map, none along the real lines without one.
         if let railways, let frame = RealWorldFrame(world: world) { builder.addRealLines(railways, frame: frame) }
@@ -238,7 +241,12 @@ public struct Map3DScene: Sendable {
         // stand.
         let frame = real == nil ? nil : RealWorldFrame(world: world)
         builder.target = .near
-        let standing = frame.map { builder.addRealBuildings(cityTiles, frame: $0, clearOf: stations) } ?? []
+        var standing = frame.map { builder.addRealBuildings(cityTiles, frame: $0, clearOf: stations) } ?? []
+        // Decision 331: the real temples, on no station or real building.
+        if let temples, let frame = RealWorldFrame(world: world) {
+            standing.formUnion(builder.addTemples(temples, frame: frame, clearOf: stations.union(standing)))
+            builder.target = .near
+        }
         builder.addCity(city, clearOf: stations, takenBy: taken.union(standing))
         builder.target = .far
         if let frame { builder.addRealBuildings(cityTiles, frame: frame, clearOf: stations) }
@@ -431,6 +439,11 @@ extension Map3DScene {
         /// Decision 322: every road's middle line and how far either side
         /// its carriageway and pavement reach, metres.
         var roadLines: [(points: [Map3DPoint], half: Float)] = []
+        /// The corners of each station building's ground, and the
+        /// shop streets still to lay beside them.
+        var houseFootprints: [[Map3DPoint]] = []
+        var shopStreets: [(station: Map3DStationKit.Station, centre: Map3DPoint, forward: Map3DPoint, depth: Float, wide: Float,
+                           cells: Set<ChunkKey>)] = []
         /// Decision 326: on a real-world map, the real lines round the
         /// scene and whether each runs under an overhead line.
         var realLines: [(points: [Map3DPoint], wired: Bool)] = []

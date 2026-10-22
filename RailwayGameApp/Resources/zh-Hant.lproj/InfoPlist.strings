@@ -1,2 +1,4 @@
 /* Official localized Home Screen display name. */
 "CFBundleDisplayName" = "沿線";
+/* Decision 335: why the real-world picker's "Use My Location" asks for location. */
+"NSLocationWhenInUseUsageDescription" = "用一次你的位置，把實景地圖的起始方框移到你附近。位置不會傳到任何地方。";
