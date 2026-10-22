@@ -1,7 +1,7 @@
 import Foundation
 import GameCore
 
-// "Use my location" on the real-world picker (ARCHITECTURE decision 332,
+// "Use my location" on the real-world picker (ARCHITECTURE decision 335,
 // the competitor study's 4.6, after decision 312): one fix of where the
 // device is moves the start area there. Only the app asks the system for
 // the fix (CoreLocation); what the picker does with it, and what it says

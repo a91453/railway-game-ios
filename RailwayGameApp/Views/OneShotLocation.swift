@@ -2,7 +2,7 @@ import CoreLocation
 import GamePresentation
 
 /// One fix of where the device is, for the real-world picker's "Use my
-/// location" (ARCHITECTURE decision 332). It asks only for location while
+/// location" (ARCHITECTURE decision 335). It asks only for location while
 /// the app is in use, asks once for one fix (`requestLocation`), never
 /// tracks in the background, and keeps nothing: the caller moves the
 /// picker's frame with the fix and drops it.

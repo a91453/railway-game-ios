@@ -2,7 +2,7 @@ import GameCore
 @testable import GamePresentation
 import XCTest
 
-/// Decision 332: where "Use my location" moves the real-world picker's
+/// Decision 335: where "Use my location" moves the real-world picker's
 /// frame, and what it says when it cannot or when the place cannot grow.
 ///
 /// Expected values are worked out from the rules, never taken from a

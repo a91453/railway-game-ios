@@ -24,7 +24,7 @@ import SwiftUI
 /// the player types a name, matched as the site matches names.
 ///
 /// "Use my location" moves the square to where the device is, from one fix
-/// asked for while the app is in use (decision 332): the fix only moves the
+/// asked for while the app is in use (decision 335): the fix only moves the
 /// map, and is neither kept nor sent anywhere.
 struct RealWorldPicker: View {
     let launcher: GameLauncher
@@ -45,7 +45,7 @@ struct RealWorldPicker: View {
     /// The places a game was started at on this device (decision 312,
     /// ``RecentStartPlaces``): only their middles.
     @AppStorage("realWorld.recentStarts") private var recentStarts = ""
-    /// Decision 332: asks for the device's location once per tap; made at
+    /// Decision 335: asks for the device's location once per tap; made at
     /// the first tap.
     @State private var locator: OneShotLocation?
     @State private var isLocating = false
@@ -153,7 +153,7 @@ struct RealWorldPicker: View {
                 cameraDistance = context.camera.distance
             }
             .onMapCameraChange(frequency: .onEnd) { context in
-                // Decision 332: the line is about where the location put
+                // Decision 335: the line is about where the location put
                 // the square; once the map is elsewhere it goes.
                 guard locationMessage != nil, !isLocating else { return }
                 let centre = context.camera.centerCoordinate
@@ -171,7 +171,7 @@ struct RealWorldPicker: View {
                     .accessibilityHidden(true)
             }
             .accessibilityIdentifier("realWorld.map")
-            // Decision 332: under the search field, at the map's corner as
+            // Decision 335: under the search field, at the map's corner as
             // the system's maps put it.
             .overlay(alignment: .topTrailing) {
                 myLocationButton
@@ -188,7 +188,7 @@ struct RealWorldPicker: View {
         }
     }
 
-    /// Decision 332: moves the square to where the device is.
+    /// Decision 335: moves the square to where the device is.
     private var myLocationButton: some View {
         Button {
             useMyLocation()
