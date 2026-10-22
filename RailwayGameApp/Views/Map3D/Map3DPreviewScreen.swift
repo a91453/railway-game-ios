@@ -49,6 +49,8 @@ struct Map3DPreviewScreen: View {
     @AppStorage(LinePalette.key) private var linePalette: LinePalette = .standard
     /// Decision 238's later note: the 3D look chosen in Settings.
     @AppStorage(Map3DQuality.key) private var quality: Map3DQuality = .automatic
+    /// Decision 339: the real timetables' trains, as on the 2D map.
+    @AppStorage(MapAmbienceSettings.realTrainsKey) private var showsRealTrains = true
     /// Decision 333: from where the camera follows a train, kept.
     @AppStorage("map3DFollowView") private var followView: Map3DFollow.View = .back
 
@@ -168,6 +170,14 @@ struct Map3DPreviewScreen: View {
         }
         .onChange(of: session.world.trains, initial: true) { _, _ in
             feed.update(world: session.world, palette: linePalette)
+        }
+        .onChange(of: session.world.clock.now, initial: true) { _, _ in
+            // Decision 339: the real trains glide with the game clock.
+            feed.updateRealClock(world: session.world, shown: showsRealTrains,
+                                 glides: !session.world.clock.isPaused && !reduceMotion)
+        }
+        .onChange(of: showsRealTrains) { _, shown in
+            feed.updateRealClock(world: session.world, shown: shown, glides: !session.world.clock.isPaused && !reduceMotion)
         }
     }
 
@@ -318,6 +328,8 @@ struct Map3DSceneKey: Hashable {
     let week: Int64
     let lines: Map3DLineBands.Signature?
     let palette: LinePalette?
+    /// Decision 339: a real line bought runs no real trains.
+    let bought: Int
 
     init(world: GameWorld, hasHeights: Bool, hasRailways: Bool = false, focus: (x: Double, y: Double)? = nil, palette: LinePalette? = nil) {
         self.hasHeights = hasHeights
@@ -330,6 +342,7 @@ struct Map3DSceneKey: Hashable {
         week = world.clock.now.seconds / (7 * GameTime.secondsPerDay)
         lines = palette == nil ? nil : Map3DLineBands.Signature(world: world)
         self.palette = palette
+        bought = world.acquisitions.count
     }
 }
 
@@ -345,6 +358,10 @@ final class Map3DTrainFeed {
     private var activity = Map3DStreetLife.Activity()
     /// Decision 314: what the trains' labels say.
     private var labels = Map3DTrainLabels(infos: [:])
+    /// Decision 339: the clock the real trains are drawn at, `nil` while
+    /// they are hidden, and whether they glide between ticks.
+    private var realClock: RealTrainClock?
+    private var realGlides = true
 
     func update(world: GameWorld, palette: LinePalette) {
         motion = TrainMotion(world: world, previous: motion, time: Date().timeIntervalSinceReferenceDate)
@@ -352,6 +369,13 @@ final class Map3DTrainFeed {
         self.palette = palette
         activity = Map3DStreetLife.Activity(world: world)
         labels = Map3DTrainLabels(world: world)
+    }
+
+    /// Decision 339: the game clock the real trains are drawn at, or none
+    /// when the player hides them.
+    func updateRealClock(world: GameWorld, shown: Bool, glides: Bool) {
+        realClock = shown ? RealTrainClock(world: world, previous: realClock, time: Date().timeIntervalSinceReferenceDate) : nil
+        realGlides = glides
     }
 
     /// Decision 314: the labels of the trains whose fronts are at `heads`.
@@ -370,9 +394,16 @@ final class Map3DTrainFeed {
 
     /// The trains seen from `eye`, `ringed` with its ring (decision 334).
     func frame(in scene: Map3DScene, models: Map3DModelPack?, eye: Map3DPoint, ringed: TrainID?) -> Map3DTrains.Frame {
-        let progress = motion.isMoving ? motion.progress(at: Date().timeIntervalSinceReferenceDate) : 1
-        return Map3DTrains.frame(motion, progress: progress, heights: heights, in: scene, models: models, eye: eye, palette: palette,
-                                 ringed: ringed)
+        let now = Date().timeIntervalSinceReferenceDate
+        let progress = motion.isMoving ? motion.progress(at: now) : 1
+        var frame = Map3DTrains.frame(motion, progress: progress, heights: heights, in: scene, models: models, eye: eye, palette: palette,
+                                      ringed: ringed)
+        // Decision 339: and the real timetables' trains, on their own track.
+        if let real = scene.realTrains, let clock = realClock {
+            real.add(to: &frame, second: clock.second(at: now, glides: realGlides), day: clock.today, dayBefore: clock.dayBefore,
+                     models: models, eye: eye)
+        }
+        return frame
     }
 }
 
