@@ -38,12 +38,6 @@ public enum MapCornerRow {
     /// Between the buttons and what stands beside them.
     public static let gap: Double = 8
 
-    /// Whether the row stands under the panel: on a compact height (a phone
-    /// on its side) with a panel beside the map.
-    public static func standsUnderPanel(compactHeight: Bool, panelBesideMap: Bool) -> Bool {
-        compactHeight && panelBesideMap
-    }
-
     /// Where a row `width` points wide ends (its trailing x) in the credits'
     /// band of a view `viewportWidth` wide: left of the trailing-most credit
     /// (`credits`, the logo, the legal link and the credit button, in the
@@ -62,6 +56,49 @@ public enum MapCornerRow {
     /// the panel), otherwise the row's height and a gap.
     public static func panelRaise(underPanel: Bool, inBand: Bool) -> Double {
         underPanel && !inBand ? height + gap : 0
+    }
+}
+
+/// Decision 350: where the map's bottom-trailing buttons (coverage, 3D,
+/// zoom) stand, one rule however the device is held. On a phone on its
+/// side (a compact height; an iPhone is never held upright) they stand in
+/// a row of their own under whatever covers the map's trailing side, the
+/// building card as a panel (``MapCornerRow``); otherwise in the map's
+/// corner, beside it. They give way (decision 123) only where the map
+/// left beside it is too narrow for them, an iPad's narrowest split view,
+/// and never in the tutorial, which points at the zoom buttons.
+public enum MapCornerButtons: Equatable, Sendable {
+    /// In the map's bottom-trailing corner, beside a card or panel.
+    case corner
+    /// In a row at the screen's bottom edge, under the card or panel.
+    case underPanel
+    /// Not shown; a pinch still zooms.
+    case givesWay
+
+    /// How wide the map beside a card or panel must stay for the buttons
+    /// in its corner: the coverage, 3D and zoom buttons (44, 44 and 88
+    /// points), their paddings and a little of the map.
+    public static let cornerWidth: Double = 240
+
+    /// `coverWidth`: how much of the view's width the card or panel at the
+    /// trailing side takes (with its margin), 0 without one;
+    /// `besideCover`: whether the corner's buttons would stand beside it
+    /// rather than below a short card.
+    public static func place(compactHeight: Bool, coverWidth: Double, viewportWidth: Double,
+                             besideCover: Bool, tutorialRuns: Bool) -> MapCornerButtons {
+        guard coverWidth > 0 else { return .corner }
+        if compactHeight { return .underPanel }
+        if besideCover, !tutorialRuns, viewportWidth - coverWidth < cornerWidth { return .givesWay }
+        return .corner
+    }
+
+    /// Whether the zoom buttons show.
+    public var showsZoom: Bool { self != .givesWay }
+
+    /// Whether the 3D button shows (``Map3DShortcut``), and the coverage
+    /// button always with it.
+    public func shows3DAndCoverage(tutorialRuns: Bool) -> Bool {
+        Map3DShortcut.isShown(zoomButtonsShow: showsZoom, tutorialRuns: tutorialRuns)
     }
 }
 

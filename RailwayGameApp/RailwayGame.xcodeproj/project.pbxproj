@@ -131,6 +131,7 @@
 		AD539B90444E0B2C2F203078 /* MapRequestMarks.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8DD4857B9833F971AD18592 /* MapRequestMarks.swift */; };
 		AEA94B60157383F2A9A1D826 /* thsr-schedule.json in Resources */ = {isa = PBXBuildFile; fileRef = 86547460C77F513B1976E1A4 /* thsr-schedule.json */; };
 		AF80C7D3AA57530427081DFF /* StartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A23CAC8DC027701B44D9FEF2 /* StartView.swift */; };
+		AF92C9C88BE3029BAAEC6A23 /* MapButtonsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58125CB8705666FD497C6E13 /* MapButtonsUITests.swift */; };
 		B2E315F0FCFC44707DC846E7 /* whoosh.wav in Resources */ = {isa = PBXBuildFile; fileRef = 58D2ECE334BAC4B7C9744680 /* whoosh.wav */; };
 		B3A042E18BED57FDA9488905 /* GamePresentation in Frameworks */ = {isa = PBXBuildFile; productRef = 7B8018E9BA28EB5C1FC2CBAC /* GamePresentation */; };
 		B4C21D76AC6D8C7F15D03E7A /* krtc.json in Resources */ = {isa = PBXBuildFile; fileRef = F7E81C097849391C73D31AF5 /* krtc.json */; };
@@ -257,6 +258,7 @@
 		52815B08C6FE03A12ABC22D5 /* afr.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = afr.json; sourceTree = "<group>"; };
 		56ABC6AFF31D91F9079F6044 /* trtc.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = trtc.json; sourceTree = "<group>"; };
 		56F262A277C901B58885215F /* thsr_ridership.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = thsr_ridership.json; sourceTree = "<group>"; };
+		58125CB8705666FD497C6E13 /* MapButtonsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapButtonsUITests.swift; sourceTree = "<group>"; };
 		58D2ECE334BAC4B7C9744680 /* whoosh.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = whoosh.wav; sourceTree = "<group>"; };
 		5BF4BA3F66CFC369FCBE3407 /* warning.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = warning.wav; sourceTree = "<group>"; };
 		60AD430078BC348CA2F99EFB /* ntmc_circular_ridership.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ntmc_circular_ridership.json; sourceTree = "<group>"; };
@@ -654,6 +656,7 @@
 				00A3435B9D12725EEF9D3FA3 /* Feature284To286UITests.swift */,
 				C02012D8840DFEC5FEBCB494 /* LessonUITests.swift */,
 				091835300676F4F4DE9D6CE3 /* LineDraftSummaryUITests.swift */,
+				58125CB8705666FD497C6E13 /* MapButtonsUITests.swift */,
 				21275B6D1B1A72F75A29DA13 /* MapInteractionTests.swift */,
 				842D96D52074E3FCD6BCA749 /* MapLockUITests.swift */,
 				71EB126E20DDE2A8668CD619 /* NextStepChipUITests.swift */,
@@ -957,6 +960,7 @@
 				E0AAF4F80FFB96017A1C7714 /* Feature284To286UITests.swift in Sources */,
 				0EA0D456816BC0F34F34AD3A /* LessonUITests.swift in Sources */,
 				A081D0BA7AD605EAA7BCC85A /* LineDraftSummaryUITests.swift in Sources */,
+				AF92C9C88BE3029BAAEC6A23 /* MapButtonsUITests.swift in Sources */,
 				298E6F23EF908E81C6D9639F /* MapInteractionTests.swift in Sources */,
 				6BBE1EA08A01DA211217F819 /* MapLockUITests.swift in Sources */,
 				E6E0A7C92F1A3C01E0705817 /* NextStepChipUITests.swift in Sources */,
