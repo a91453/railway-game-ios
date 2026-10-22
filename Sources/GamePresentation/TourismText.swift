@@ -167,12 +167,19 @@ extension GameWorld {
     }
 
     /// The help's sentence on sightseeing trains: the half-star ones, then
-    /// the Ming-Ri's whole star (decision 286, later).
+    /// each that adds more, fewest stars first (decision 286, later).
     static func sightseeingTrainHelp(in language: DisplayLanguage) -> String {
-        let half = Tourism.starsPerSightseeingTrain, whole = Tourism.starsPerLuxuryTrain
+        let half = Tourism.starsPerSightseeingTrain
+        let more = Set(TrainType.offered.map(\.sightseeingStars).filter { $0 > half }).sorted()
+        let rest = more.map { stars in
+            language.text(
+                "; the \(sightseeingTrainNames(adding: stars, in: language)) adds \(starsCount(stars, in: language))",
+                "；\(sightseeingTrainNames(adding: stars, in: language))加 \(starsCount(stars, in: language))"
+            )
+        }.joined()
         return language.text(
-            "A sightseeing train (\(sightseeingTrainNames(adding: half, in: language))) calling at a station within 800 m adds \(starsCount(half, in: language)); the \(sightseeingTrainNames(adding: whole, in: language)) adds \(starsCount(whole, in: language)).",
-            "觀光列車（\(sightseeingTrainNames(adding: half, in: language))）停靠 800 公尺內的車站時，景點加 \(starsCount(half, in: language))；\(sightseeingTrainNames(adding: whole, in: language))加 \(starsCount(whole, in: language))。"
+            "A sightseeing train (\(sightseeingTrainNames(adding: half, in: language))) calling at a station within 800 m adds \(starsCount(half, in: language))\(rest).",
+            "觀光列車（\(sightseeingTrainNames(adding: half, in: language))）停靠 800 公尺內的車站時，景點加 \(starsCount(half, in: language))\(rest)。"
         )
     }
 

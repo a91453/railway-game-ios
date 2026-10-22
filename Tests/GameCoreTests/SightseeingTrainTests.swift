@@ -5,8 +5,8 @@ import XCTest
 /// Sightseeing trains (ARCHITECTURE decision 286): a train of a sightseeing
 /// type (the Hai-Feng, the Blue Train) whose line calls at a station within
 /// 800 m of a sight adds half a star to it, however many call; the Ming-Ri
-/// (decision 286, later) adds a whole star, and the most any of them adds is
-/// what counts. Every expectation is worked out by hand from the rules.
+/// (decision 286, later) adds a whole star, the Formosa Star three quarters,
+/// and the most any of them adds is what counts. Every expectation is worked out by hand from the rules.
 final class SightseeingTrainTests: XCTestCase {
     private let home = StationID(rawValue: 1), foot = StationID(rawValue: 2), far = StationID(rawValue: 3), beyond = StationID(rawValue: 4)
     private let sight = AttractionID(rawValue: 1)
@@ -41,8 +41,8 @@ final class SightseeingTrainTests: XCTestCase {
     }
 
     func testTheSightseeingTypes() {
-        XCTAssertEqual(TrainType.allCases.filter(\.isSightseeing), [.haiFeng, .blueTrain, .shanLan, .mingRi])
-        XCTAssertEqual(TrainType.allCases.map(\.sightseeingStars), Array(repeating: 0, count: 17) + [50, 50, 50, 100])
+        XCTAssertEqual(TrainType.allCases.filter(\.isSightseeing), [.haiFeng, .blueTrain, .shanLan, .mingRi, .formosaStar])
+        XCTAssertEqual(TrainType.allCases.map(\.sightseeingStars), Array(repeating: 0, count: 17) + [50, 50, 50, 100, 75])
         XCTAssertEqual(TrainType.blueTrain.ratedCapacityPerCar, 50)
         XCTAssertEqual(TrainType.blueTrain.doorsPerCar, 2)
         XCTAssertEqual(TrainType.blueTrain.performance, .r100ChuKuang)
@@ -66,6 +66,18 @@ final class SightseeingTrainTests: XCTestCase {
         XCTAssertEqual(TrainType.mingRi.spec.carLength, TrainType.blueTrain.spec.carLength)
         XCTAssertFalse(TrainType.mingRi.isHighSpeed)
         XCTAssertTrue(TrainType.offered.contains(.mingRi), "offered in a world without an era")
+        // Decision 286, later (third): the Formosa Star, an E500 and six
+        // Chu-Kuang coaches, 29 seats a coach (173 seats in six), 110 km/h.
+        XCTAssertEqual(TrainType.formosaStar.ratedCapacityPerCar, 29)
+        XCTAssertEqual(TrainType.formosaStar.doorsPerCar, 2)
+        XCTAssertEqual(TrainType.formosaStar.performance, .formosaStar)
+        XCTAssertEqual(TrainPerformance.formosaStar, TrainPerformance(acceleration: 2182, braking: 2600, topSpeed: 110))
+        XCTAssertEqual(TrainType.formosaStar.spec.pricing, RollingStockPricing(firstDollars: 350_000, carDollars: 45_000, operatingPermille: 1_300))
+        XCTAssertEqual(TrainType.formosaStar.spec.carLength, TrainType.e500ChuKuang.spec.carLength)
+        XCTAssertEqual(TrainType.formosaStar.sightseeingStars, Tourism.starsPerRoundIslandTrain)
+        XCTAssertEqual(Tourism.starsPerRoundIslandTrain, 75)
+        XCTAssertFalse(TrainType.formosaStar.isHighSpeed)
+        XCTAssertTrue(TrainType.offered.contains(.formosaStar), "offered in a world without an era")
     }
 
     /// The E500 Chu-Kuang's sum (``TrainPerformance/e500ChuKuang``) with
@@ -79,6 +91,8 @@ final class SightseeingTrainTests: XCTestCase {
         }
         XCTAssertEqual(Int64((120 / seconds(coaches: 8, to: 120) * 1_000).rounded()), TrainPerformance.e500ChuKuang.acceleration)
         XCTAssertEqual(Int64((110 / seconds(coaches: 5, to: 110) * 1_000).rounded()), TrainPerformance.mingRi.acceleration)
+        // Decision 286, later (third): the Formosa Star's six coaches.
+        XCTAssertEqual(Int64((110 / seconds(coaches: 6, to: 110) * 1_000).rounded()), TrainPerformance.formosaStar.acceleration)
     }
 
     func testASightseeingTrainCallingNearASightAddsHalfAStar() throws {
@@ -105,6 +119,20 @@ final class SightseeingTrainTests: XCTestCase {
         XCTAssertEqual(world.stars(of: attraction), 400, "the Ming-Ri's star, not both")
         try world.unassignTrain(id)
         XCTAssertEqual(world.stars(of: attraction), 350)
+    }
+
+    func testTheFormosaStarAddsThreeQuartersAndTheMostCounts() throws {
+        var (world, main, _) = try world()
+        let attraction = try XCTUnwrap(world.attraction(id: sight))
+        try train(&world, .haiFeng, on: main)
+        let star = try train(&world, .formosaStar, on: main)
+        XCTAssertEqual(world.sightseeingTrainStars(near: attraction), 75)
+        XCTAssertEqual(world.stars(of: attraction), 375, "the Formosa Star's three quarters, not the Hai-Feng's half as well")
+        let tour = try world.createLine(named: "Tour", stops: [far, foot]).id
+        try train(&world, .mingRi, on: tour)
+        XCTAssertEqual(world.stars(of: attraction), 400, "the Ming-Ri's whole star is the most")
+        try world.unassignTrain(star)
+        XCTAssertEqual(world.stars(of: attraction), 400)
     }
 
     func testTheMingRiOnAnotherLineThatCallsNearTheSight() throws {

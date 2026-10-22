@@ -26,6 +26,8 @@ final class TrainLiveryTests: XCTestCase {
         XCTAssertEqual(TrainLivery.of(type: .shanLan, performance: .haiFeng), .shanLan, "the Hai-Feng's performance, its own look")
         XCTAssertEqual(TrainLivery.of(type: .mingRi, performance: .standard), .mingRi)
         XCTAssertEqual(TrainLivery.of(type: nil, performance: .mingRi), .mingRi)
+        XCTAssertEqual(TrainLivery.of(type: .formosaStar, performance: .standard), .formosaStar)
+        XCTAssertEqual(TrainLivery.of(type: nil, performance: .formosaStar), .formosaStar)
         XCTAssertEqual(TrainLivery.of(type: nil, performance: .r200ChuKuang), .r200ChuKuang)
         XCTAssertEqual(TrainLivery.of(type: .b, performance: .haiFeng.withTopSpeed(90)), .haiFeng)
         XCTAssertEqual(TrainLivery.of(type: nil, performance: .semiExpress), .plain, "the reference's Chu-Kuang preset keeps its look")
