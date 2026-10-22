@@ -99,6 +99,13 @@ public final class GameLauncher {
         didSet { session?.runningSound = runningSound }
     }
 
+    /// The app's player of the weather's sound, handed to every game it
+    /// starts (``GameSession/weatherSound``, decision 346), which tells it
+    /// the game's weather at once; silent when a game ends.
+    @ObservationIgnored public var weatherSound: (@MainActor (WeatherSound?) -> Void)? {
+        didSet { session?.weatherSound = weatherSound }
+    }
+
     @ObservationIgnored let library: SaveLibrary
     /// Where the saves are written, one after another (decision 45,
     /// later): a save is encoded and written here, off the main thread,
@@ -951,6 +958,8 @@ public final class GameLauncher {
         duckMusic?(1)
         started.runningSound = runningSound
         runningSound?(nil)
+        weatherSound?(nil)
+        started.weatherSound = weatherSound
         if let news { started.restoreNews(news) }
         if isDemo { started.news.isDemo = true }
         started.onTutorialCompleted = { [weak self] in self?.noteTutorialCompleted() }
@@ -1167,6 +1176,7 @@ public final class GameLauncher {
         session = nil
         duckMusic?(1)
         runningSound?(nil)
+        weatherSound?(nil)
         message = nil
         refresh()
         if left {

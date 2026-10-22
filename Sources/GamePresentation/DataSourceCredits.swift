@@ -93,6 +93,16 @@ public enum DataSourceCredits {
     static let banqiaoRecordingURL = "https://archive.org/details/aporee_34085_39187"
     static let guishanRecordingURL = "https://archive.org/details/aporee_17319_20158"
     static let ktxRecordingURL = "https://archive.org/details/aporee_65051_75140"
+    /// Decision 346: the recordings the rain, the typhoon and the thunder
+    /// are made to, by Wu, Tsan-Cheng, on radio aporee ::: maps.
+    static let weatherRecordings: [(title: String, place: (english: String, chinese: String), id: String)] = [
+        ("富陽自然生態公園, 大安區,Taipei City - Rain and Thunder", ("Fuyang Park", "富陽公園"), "aporee_28503_32842"),
+        ("Taipei Railway Workshop, Taiwan - Thunderstorm", ("Taipei Railway Workshop", "臺北機廠"), "aporee_24967_28963"),
+        ("大仁街, Tamsui District - Rain and Thunder", ("Tamsui rain", "淡水雨聲"), "aporee_27593_31908"),
+        ("No.20, Daren St., Tamsui Dist., New Taipei City - typhoon", ("Tamsui typhoon", "淡水颱風"), "aporee_29264_34673"),
+        ("敦安公園, 大安區, Taipei City - Thunder sound", ("Dun'an Park", "敦安公園"), "aporee_28950_33339"),
+        ("松山文創園區,Taipei City - Thunder", ("Songshan Cultural Park", "松山文創園區"), "aporee_33407_38419"),
+    ]
 
     /// The short credit shown on a real-world map while Taiwan's railways
     /// are drawn on it.
@@ -579,6 +589,22 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: language.text("KTX recording", "KTX 錄音"), url: ktxRecordingURL),
                             DataSourceCredit.Link(title: "CC BY 3.0", url: ccBy3URL),
                         ]
+                    ),
+                    // Decision 346: the weather's sounds, made the same way.
+                    DataSourceCredit(
+                        id: "weatherSound",
+                        title: language.text("Rain and thunder recordings", "雨聲與雷聲錄音"),
+                        detail: language.text(
+                            "The rain, the typhoon's wind and the thunder: made by the game to sound like these recordings of rain, a typhoon and thunder in Taipei and Tamsui. The game plays none of the recordings themselves.",
+                            "雨聲、颱風的風雨聲與雷聲：遊戲依這些在台北與淡水錄下的雨、颱風與雷的聲音自己合成，不播放錄音本身。"
+                        ),
+                        notice: language.text(
+                            weatherRecordings.map { "“\($0.title)”" }.joined(separator: ", ") + ", all by Wu, Tsan-Cheng, under CC BY 3.0, on radio aporee ::: maps.",
+                            weatherRecordings.map { "〈\($0.title)〉" }.joined(separator: "、") + "，都是吳燦政錄音，依 CC BY 3.0 使用，在 radio aporee ::: maps。"
+                        ),
+                        links: weatherRecordings.map {
+                            DataSourceCredit.Link(title: language.text($0.place.english, $0.place.chinese), url: "https://archive.org/details/\($0.id)")
+                        } + [DataSourceCredit.Link(title: "CC BY 3.0", url: ccBy3URL)]
                     ),
                 ]
             ),

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Measure a recording of a train running for the running loops (decision 343).
+"""Measure a recording of a train running for the running loops (decision 343),
+or of rain for the weather's loops (decision 346).
 
 Prints the median third-octave band levels of a stretch of a recording, in
-dB below its loudest band, as `make_game_audio.py`'s `RUNNING_SPECTRA`
-holds them. Only these numbers go into the game: the recordings are not
+dB below its loudest band, as `make_game_audio.py`'s `RUNNING_SPECTRA` and
+`WEATHER_SPECTRA` hold them. Only these numbers go into the game: the recordings are not
 committed, bundled or copied (the research note
 `docs/research/JAPAN_RAIL_DATA_2026-10-21.md` §7.3). Where each was
 downloaded from, its licence and the stretch measured are in

@@ -136,27 +136,42 @@ RUNNING_SPECTRA = {
 RUNNING_FRAMES = 8 * SR
 
 
-def running(kind):
-    """An 8-second loop of a train running: seeded noise shaped to the
-    measured spectrum in one circular FFT, so its end runs into its start,
-    under a slow swell of about a decibel; the electric one with a rail
-    joint every 1.6 s (25 m rails at 60 km/h, the speed it plays at its
-    own rate), struck by both axles of the near bogie and then, softer,
-    of the far one."""
-    n = RUNNING_FRAMES
-    spectrum = np.fft.rfft(np.random.default_rng(343 + len(kind)).standard_normal(n))
+def shaped(levels, n, seed):
+    """`n` frames of seeded noise shaped to third-octave band `levels` (dB,
+    from 31.5 Hz to 12.5 kHz) in one circular FFT, so its end runs into its
+    start; RMS 1."""
+    spectrum = np.fft.rfft(np.random.default_rng(seed).standard_normal(n))
     freqs = np.fft.rfftfreq(n, 1 / SR)
     # The levels are per band, a third of an octave wide: per bin, less by
     # the band's width.
     bands = np.array(RUNNING_BANDS)
-    density = np.array(RUNNING_SPECTRA[kind]) - 10 * np.log10(bands)
+    density = np.array(levels) - 10 * np.log10(bands)
     level = np.interp(np.log(np.maximum(freqs, 1)), np.log(bands), density)
     gain = 10 ** (level / 20)
     gain[(freqs < bands[0] * 2 ** (-1 / 6)) | (freqs > bands[-1] * 2 ** (1 / 6))] = 0
     x = np.fft.irfft(spectrum * gain, n)
+    return x / np.sqrt(np.mean(x**2))
+
+
+def from_zero(x):
+    """`x` turned to start where it crosses zero, as an IMA4 packet decodes
+    from silence: a loop that started away from it would click at every
+    turn."""
+    turn = int(np.argmin(np.abs(x[: SR // 4]) + np.abs(np.diff(x[: SR // 4 + 1]))))
+    return np.roll(x, -turn)
+
+
+def running(kind):
+    """An 8-second loop of a train running: seeded noise shaped to the
+    measured spectrum (`shaped`) under a slow swell of about a decibel;
+    the electric one with a rail joint every 1.6 s (25 m rails at 60 km/h,
+    the speed it plays at its own rate), struck by both axles of the near
+    bogie and then, softer, of the far one."""
+    n = RUNNING_FRAMES
+    x = shaped(RUNNING_SPECTRA[kind], n, 343 + len(kind))
     k = np.arange(n) / n
     swell = 1 + 0.06 * np.sin(2 * np.pi * k) + 0.04 * np.sin(2 * np.pi * 3 * k + 1) + 0.03 * np.sin(2 * np.pi * 5 * k + 2)
-    x = x / np.sqrt(np.mean(x**2)) * swell
+    x = x * swell
     if kind == "electric":
         joint = clack()
         joint = joint / np.abs(joint).max() * 2.5
@@ -165,10 +180,78 @@ def running(kind):
                 first = int(round((start + at) * SR))
                 where = (first + np.arange(len(joint))) % n
                 x[where] += strength * joint
-    # Start where it crosses zero, as an IMA4 packet decodes from silence:
-    # a loop that started away from it would click at every turn.
-    turn = int(np.argmin(np.abs(x[: SR // 4]) + np.abs(np.diff(x[: SR // 4 + 1]))))
-    return np.roll(x, -turn)
+    return from_zero(x)
+
+
+# Decision 346: the weather's rain and the thunder of its storms, made to
+# recordings of rain and thunder in Taipei and Tamsui
+# (`measure_running_spectrum.py` and `measure_thunder.py`; the recordings,
+# their licences and what was measured are in README.md). Band levels as
+# RUNNING_SPECTRA's.
+WEATHER_SPECTRA = {
+    # Rain in Taipei (a park, the railway workshop) and Tamsui, the mean of
+    # each.
+    "rain": [-14, -11, -11, -4, -3, -6, -3, -3, -3, -2, -3, -2, -2, -1,
+             -0, 0, -1, -1, -2, -3, -4, -6, -8, -10, -11, -10, -12],
+    # A typhoon's wind and rain in Tamsui.
+    "typhoon": [-20, -20, -18, -13, -12, -7, -7, -13, -5, -5, -5, -2, -4, -3,
+                -5, -4, -3, -2, 0, -1, -3, -7, -12, -16, -17, -17, -20],
+}
+# How the loudness of each half second wanders (its standard deviation in
+# dB, measured from the same recordings), and how slowly: the typhoon's
+# gusts last about a second (their loudness half forgotten after one),
+# the rain drifts.
+WEATHER_SWING = {"rain": (1.8, 0.25), "typhoon": (3.0, 0.4)}
+# Whole IMA4 packets: the rain 8 s, the typhoon 12 s, so its gusts repeat
+# less often.
+WEATHER_FRAMES = {"rain": 8 * SR, "typhoon": 12 * SR}
+THUNDER = {
+    # The clap's first second, above the rain, and its rumble 2-10 s after.
+    "first": [-17, -13, -11, -4, -3, -2, 0, -3, -2, -3, -6, -9, -14, -18,
+              -22, -24, -33, -28, -34, -28, -29, -34, -40, -52, -57, -57, -59],
+    "rumble": [-17, -12, -15, -9, -6, -5, 0, -4, -5, -5, -8, -12, -17, -19,
+               -21, -24, -24, -25, -28, -29, -31, -33, -34, -38, -45, -43, -46],
+    # How fast the rumble dies away, in dB a second.
+    "diesAway": -1.2,
+}
+THUNDER_FRAMES = 10 * SR
+
+
+def weather(kind):
+    """A loop of rain (or of a typhoon's wind and rain): seeded noise shaped
+    to the measured spectrum, its loudness wandering as the recordings'
+    does, in a circular envelope so the loop still runs into its start."""
+    n = WEATHER_FRAMES[kind]
+    x = shaped(WEATHER_SPECTRA[kind], n, 346 + len(kind))
+    swing, below = WEATHER_SWING[kind]
+    wander = np.fft.rfft(np.random.default_rng(3460 + len(kind)).standard_normal(n))
+    freqs = np.fft.rfftfreq(n, 1 / SR)
+    wander[(freqs == 0) | (freqs > below)] = 0
+    db = np.fft.irfft(wander, n)
+    db = db / db.std() * swing
+    return from_zero(x * 10 ** (db / 20))
+
+
+def thunder():
+    """A clap of thunder, 10 s: a crack with the spectrum of the measured
+    claps' first second, gone in about a second, and under it the rumble's
+    spectrum rolling every 1.5 to 2 s (as the Tamsui clap's quarter
+    seconds do) and dying away at the measured rate, faded out over its
+    last 1.5 s."""
+    n = THUNDER_FRAMES
+    t = np.arange(n) / SR
+    crack = shaped(THUNDER["first"], n, 3461) * np.minimum(t / 0.01, 1) * np.exp(-t / 0.35)
+    rng = np.random.default_rng(3462)
+    rolls = np.zeros(n)
+    at = 0.6
+    while at < 10:
+        rolls += np.exp(-0.5 * ((t - at) / 0.35) ** 2)
+        at += 1.5 + 0.5 * rng.random()
+    swell = np.minimum(t / 0.2, 1) * (0.35 + rolls) * 10 ** (THUNDER["diesAway"] * t / 20)
+    rumble = shaped(THUNDER["rumble"], n, 3463) * swell
+    x = crack + 0.8 * rumble
+    fade = np.clip((10 - t) / 1.5, 0, 1)
+    return x * (0.5 - 0.5 * np.cos(np.pi * fade))
 
 
 def music(cycles):
@@ -395,6 +478,9 @@ SYNTH_SOURCES = {
     "warning.wav": "bell(), decision 184",
     "run-electric.caf": "running(\"electric\"), decision 343",
     "run-highspeed.caf": "running(\"highSpeed\"), decision 343",
+    "rain-steady.caf": "weather(\"rain\"), decision 346",
+    "rain-typhoon.caf": "weather(\"typhoon\"), decision 346",
+    "thunder.caf": "thunder(), decision 346",
 }
 
 
@@ -419,9 +505,16 @@ def manifest(out_dir):
         if file in by_file:
             entry.update(by_file[file])
         else:
-            entry["kind"] = "running" if file.startswith("run-") else "music" if file.endswith(".caf") else "sound"
+            entry["kind"] = (
+                "running" if file.startswith("run-")
+                else "weather" if file.startswith(("rain-", "thunder"))
+                else "music" if file.endswith(".caf")
+                else "sound"
+            )
             entry["synth"] = f"make_game_audio.py {SYNTH_SOURCES[file]}"
-        entry.update(measured(os.path.join(out_dir, file), loops=file.endswith(".caf")))
+        # The thunder is a CAF too (IMA4 keeps it small), but plays once.
+        loops = file.endswith(".caf") and not file.startswith("thunder")
+        entry.update(measured(os.path.join(out_dir, file), loops=loops))
         files.append(entry)
     data = {
         "about": "Made by tools/audio/make_game_audio.py (decision 219); never edit by hand.",
@@ -448,6 +541,10 @@ def main(out_dir):
     # Decision 343: the running loops.
     write_caf(os.path.join(out_dir, "run-electric.caf"), normalized(running("electric"), 0.5))
     write_caf(os.path.join(out_dir, "run-highspeed.caf"), normalized(running("highSpeed"), 0.5))
+    # Decision 346: the weather's loops and its thunder.
+    write_caf(os.path.join(out_dir, "rain-steady.caf"), normalized(weather("rain"), 0.5))
+    write_caf(os.path.join(out_dir, "rain-typhoon.caf"), normalized(weather("typhoon"), 0.5))
+    write_caf(os.path.join(out_dir, "thunder.caf"), normalized(thunder(), 0.7))
 
     # Decision 219: the station chimes from their scores. The local one is
     # decision 79's station chime, a bell on C6 and, 0.25 s later, a softer

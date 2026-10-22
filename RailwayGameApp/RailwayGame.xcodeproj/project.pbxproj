@@ -76,6 +76,7 @@
 		6531280599255B09E99C7E41 /* LinesPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17DDE7FD43D5C9514F89C9CA /* LinesPanel.swift */; };
 		65B04568A0BB91E5F70C0D7C /* TrainDiagramView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35B383D349E8080CFE435A11 /* TrainDiagramView.swift */; };
 		66CD628AEFF6AEC5001B87F0 /* track_lines.geojson in Resources */ = {isa = PBXBuildFile; fileRef = D8A3D706AFEA85A7941D8933 /* track_lines.geojson */; };
+		67082FEC0249F27345A32CDC /* thunder.caf in Resources */ = {isa = PBXBuildFile; fileRef = C51CA7B153E66D7649E1713A /* thunder.caf */; };
 		68C5B44129E827A4E417FB63 /* MapLibre-iOS-LICENSE.md in Resources */ = {isa = PBXBuildFile; fileRef = F093629816AA56C52D91E5B8 /* MapLibre-iOS-LICENSE.md */; };
 		6A899B2715257CD7BAC63CCF /* Map3DMetalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED45B563EF8CA610F22296E6 /* Map3DMetalView.swift */; };
 		6BBE1EA08A01DA211217F819 /* MapLockUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 842D96D52074E3FCD6BCA749 /* MapLockUITests.swift */; };
@@ -122,6 +123,7 @@
 		A46A996AC7AD764908BEE31C /* ntdlrt_ridership.json in Resources */ = {isa = PBXBuildFile; fileRef = 0FD517F96914B0874A416907 /* ntdlrt_ridership.json */; };
 		A63CC2F5042DB04F53E77F6D /* RealWorldMapUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 464ED7CD74C3D89609658AD5 /* RealWorldMapUITests.swift */; };
 		A6BE3F0BE2C0F8D6B5BB4B23 /* ToolbarSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C62092ABB8C906B420B7E61B /* ToolbarSmokeTests.swift */; };
+		A76D3CC09845C96D375B9D4B /* rain-typhoon.caf in Resources */ = {isa = PBXBuildFile; fileRef = 284ACFB4CDE85B405F4FC6FA /* rain-typhoon.caf */; };
 		A904805EE220E391FA3C4618 /* taiwan_coverage.dat in Resources */ = {isa = PBXBuildFile; fileRef = CF26D5EFF8FE10DB6A8376C9 /* taiwan_coverage.dat */; };
 		AA89DE59BE4AB10592AFA96C /* PopulationLegendView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBAD6AED84A8DA58D17AC1C7 /* PopulationLegendView.swift */; };
 		AB37C6000B8F37326B3FBCD5 /* NewGameOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6176ABC92A7FB39ABFE9BFB1 /* NewGameOptionsView.swift */; };
@@ -172,6 +174,7 @@
 		E8D91661A60476AD32234249 /* tra_branch_runs.json in Resources */ = {isa = PBXBuildFile; fileRef = EE37EC86D4CCF3E12B118693 /* tra_branch_runs.json */; };
 		EB5F149F1C5ED00E96A4BDB5 /* MiniMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81D550FDBEF9E69496D0BF4D /* MiniMapView.swift */; };
 		EBF4B51615CD5EA956ADD087 /* tra_station_class.json in Resources */ = {isa = PBXBuildFile; fileRef = F34F5FAD9996ED6204B4F23C /* tra_station_class.json */; };
+		F07F758009A9A5A53D4F075F /* rain-steady.caf in Resources */ = {isa = PBXBuildFile; fileRef = EC04F05461D58759373672F0 /* rain-steady.caf */; };
 		F46D9B04101FA9F89A33CB08 /* station-chime.wav in Resources */ = {isa = PBXBuildFile; fileRef = 4966256D18F5622FE1A080BB /* station-chime.wav */; };
 		F558913BB3ACD23EA6FB4CC7 /* StationOperationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5252AAF098DD4F7D13231B10 /* StationOperationsView.swift */; };
 		F616E84EA51C9BCB0921FBA7 /* track_stations.geojson in Resources */ = {isa = PBXBuildFile; fileRef = BDC928DD3917E8959E2930DD /* track_stations.geojson */; };
@@ -219,6 +222,7 @@
 		222E67E267AF07C25D4745C9 /* DataSourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataSourcesView.swift; sourceTree = "<group>"; };
 		22B3E573D7A6A1CB02F279FF /* NextStepChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextStepChip.swift; sourceTree = "<group>"; };
 		24B425FF34AEB844CE2FA815 /* StationMasterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationMasterView.swift; sourceTree = "<group>"; };
+		284ACFB4CDE85B405F4FC6FA /* rain-typhoon.caf */ = {isa = PBXFileReference; path = "rain-typhoon.caf"; sourceTree = "<group>"; };
 		2A779D8969EEF8D75DD97FF5 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		2A99E6EF4AC0C447E9D16F0E /* WebsiteScreenshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebsiteScreenshotTests.swift; sourceTree = "<group>"; };
 		2AE542814E8BBB6793FFBF91 /* chime-metro-motif.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "chime-metro-motif.wav"; sourceTree = "<group>"; };
@@ -327,6 +331,7 @@
 		C08B430E6B57DEDAF0C1964E /* EconomyPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EconomyPanel.swift; sourceTree = "<group>"; };
 		C12C3242BE7CC739B03D2613 /* tra_pingxi_runs.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra_pingxi_runs.json; sourceTree = "<group>"; };
 		C32DC68DE89FFF96A515EA04 /* chime-metro.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "chime-metro.wav"; sourceTree = "<group>"; };
+		C51CA7B153E66D7649E1713A /* thunder.caf */ = {isa = PBXFileReference; path = thunder.caf; sourceTree = "<group>"; };
 		C604A41EF44E46BC47C90819 /* ntalrt.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ntalrt.json; sourceTree = "<group>"; };
 		C62092ABB8C906B420B7E61B /* ToolbarSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarSmokeTests.swift; sourceTree = "<group>"; };
 		C639F6C2DB822D36E3F0AB8A /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
@@ -352,6 +357,7 @@
 		E6EEB9DC1C736BE4F98AD2BC /* GameAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameAudio.swift; sourceTree = "<group>"; };
 		E95E148A603B48CD12C8A714 /* TodaySettlementsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodaySettlementsSection.swift; sourceTree = "<group>"; };
 		EA92CA4D96486CF019CFB053 /* GoalsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalsPanel.swift; sourceTree = "<group>"; };
+		EC04F05461D58759373672F0 /* rain-steady.caf */ = {isa = PBXFileReference; path = "rain-steady.caf"; sourceTree = "<group>"; };
 		ED45B563EF8CA610F22296E6 /* Map3DMetalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Map3DMetalView.swift; sourceTree = "<group>"; };
 		EE37EC86D4CCF3E12B118693 /* tra_branch_runs.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra_branch_runs.json; sourceTree = "<group>"; };
 		F04BA3646C6BDB8801CF770B /* station_transfers.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = station_transfers.json; sourceTree = "<group>"; };
@@ -625,10 +631,13 @@
 				64FC0E6D263BA9DF11A366DD /* line-acquired.wav */,
 				37971520DEDE438F5E6272D6 /* music-loop.caf */,
 				AD6E3ED548E183F6E79E0111 /* rail-joint.wav */,
+				EC04F05461D58759373672F0 /* rain-steady.caf */,
+				284ACFB4CDE85B405F4FC6FA /* rain-typhoon.caf */,
 				E4631B47557CC9944903820E /* refused.wav */,
 				A0AD6227FA521E0662955DEC /* run-electric.caf */,
 				DBFC7FA3ED09CBDFFAD8866F /* run-highspeed.caf */,
 				4966256D18F5622FE1A080BB /* station-chime.wav */,
+				C51CA7B153E66D7649E1713A /* thunder.caf */,
 				5BF4BA3F66CFC369FCBE3407 /* warning.wav */,
 				58D2ECE334BAC4B7C9744680 /* whoosh.wav */,
 			);
@@ -798,6 +807,8 @@
 				FC936165E05580706AC8015F /* ntmc_circular_ridership.json in Resources */,
 				D4406F2AAF216CFD720F2A34 /* rail-joint.wav in Resources */,
 				D6C8E62EEC74F3D1A20A0B5B /* rail_structures.json in Resources */,
+				F07F758009A9A5A53D4F075F /* rain-steady.caf in Resources */,
+				A76D3CC09845C96D375B9D4B /* rain-typhoon.caf in Resources */,
 				585C09A427696BD99073713D /* refused.wav in Resources */,
 				90D833E8F70651BA68429E5D /* run-electric.caf in Resources */,
 				74BD5B61914AE9365DF955E5 /* run-highspeed.caf in Resources */,
@@ -816,6 +827,7 @@
 				AEA94B60157383F2A9A1D826 /* thsr-schedule.json in Resources */,
 				E210B606678501C84923D234 /* thsr_ridership.json in Resources */,
 				0F9E2782FAEA7F557182B7DA /* thsr_track.json in Resources */,
+				67082FEC0249F27345A32CDC /* thunder.caf in Resources */,
 				F720FC931D713539D1AF8CCC /* tmrt.json in Resources */,
 				481A5F7BE0BA94DF2592045D /* tmrt_ridership.json in Resources */,
 				BD4D73964A95133885864DC2 /* tmrt_times.json in Resources */,

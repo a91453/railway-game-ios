@@ -642,6 +642,21 @@ public final class GameSession {
     @ObservationIgnored public var runningSound: (@MainActor (RunningSound?) -> Void)?
     /// The sound last told to ``runningSound``.
     @ObservationIgnored private var lastRunningSound: RunningSound?
+    /// Decision 346: the sound of the weather the map shows
+    /// (``WeatherSound``), told to the app when it changes and at once
+    /// when set; `nil` for a clear sky. `nil` tells no one.
+    @ObservationIgnored public var weatherSound: (@MainActor (WeatherSound?) -> Void)? {
+        didSet {
+            weatherKey = nil
+            lastWeatherSound = nil
+            updateWeatherSound()
+        }
+    }
+    /// The sound last told to ``weatherSound``.
+    @ObservationIgnored private var lastWeatherSound: WeatherSound?
+    /// What the weather was last worked out from: the day and the world's
+    /// weather, all it changes with.
+    @ObservationIgnored private var weatherKey: WeatherKey?
 
     /// The last thing the player put up, which the map marks (decision
     /// 117, ``notePutUp(at:)``); `nil` before any. Never saved.
@@ -966,6 +981,9 @@ public final class GameSession {
         // Every edit ends here: one that stops the followed train's service
         // or ends following brings the music back now, not at the next step.
         updateFollowSounds()
+        // Decision 346: and one that changes the weather (its settings, an
+        // undo) changes its sound now.
+        updateWeatherSound()
     }
 
     /// Estimates the 800-metre walking catchment population of station `id`
@@ -2530,6 +2548,27 @@ public final class GameSession {
         // Decision 343: a pause or a change of speed starts or stops the
         // followed train's sound at once, not at the next step.
         updateFollowSounds()
+    }
+
+    /// What the weather's sound is worked out from (decision 346).
+    private struct WeatherKey: Equatable {
+        let day: Int64
+        let disruptions: Disruptions?
+    }
+
+    /// Tells the app the sound of the weather the map shows
+    /// (``WeatherSound``, decision 346) when it changed: worked out again
+    /// on a new day or a change of the world's weather (after a step or an
+    /// edit, ``endFollowIfGone()``), and when the app's player is set.
+    func updateWeatherSound() {
+        guard let weatherSound else { return }
+        let key = WeatherKey(day: world.clock.now.seconds / GameTime.secondsPerDay, disruptions: world.disruptions)
+        guard key != weatherKey else { return }
+        weatherKey = key
+        let sound = WeatherSound(weather: MapWeather(world: world))
+        guard sound != lastWeatherSound else { return }
+        lastWeatherSound = sound
+        weatherSound(sound)
     }
 
     // MARK: - Editing and undo

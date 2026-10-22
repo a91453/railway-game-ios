@@ -152,6 +152,30 @@
       "endLevel": 0.0
     },
     {
+      "file": "rain-steady.caf",
+      "kind": "weather",
+      "synth": "make_game_audio.py weather(\"rain\"), decision 346",
+      "sha256": "2541f569978f456f912ffd26910a366681164911074ab3630937b83f0d9de2f6",
+      "frames": 384000,
+      "seconds": 8.0,
+      "peakDbfs": -6.08,
+      "rmsDbfs": -20.63,
+      "largestStep": 0.19965,
+      "loopSeam": 0.00836
+    },
+    {
+      "file": "rain-typhoon.caf",
+      "kind": "weather",
+      "synth": "make_game_audio.py weather(\"typhoon\"), decision 346",
+      "sha256": "c0bd3cb30ad14e39303f4029421aeec355bbd839329e2bec2ad4cb9f4a593087",
+      "frames": 576000,
+      "seconds": 12.0,
+      "peakDbfs": -6.03,
+      "rmsDbfs": -24.17,
+      "largestStep": 0.1239,
+      "loopSeam": 0.00677
+    },
+    {
       "file": "refused.wav",
       "kind": "sound",
       "synth": "make_game_audio.py pluck(), decision 184",
@@ -199,6 +223,18 @@
       "rmsDbfs": -18.62,
       "largestStep": 0.14423,
       "endLevel": 0.00262
+    },
+    {
+      "file": "thunder.caf",
+      "kind": "weather",
+      "synth": "make_game_audio.py thunder(), decision 346",
+      "sha256": "e5aa1c5bc464f0b050d8724a41f7f2443219bdbb44fbd1728533ed73dd90537f",
+      "frames": 480000,
+      "seconds": 10.0,
+      "peakDbfs": -3.1,
+      "rmsDbfs": -21.54,
+      "largestStep": 0.02759,
+      "endLevel": 0.0
     },
     {
       "file": "warning.wav",
