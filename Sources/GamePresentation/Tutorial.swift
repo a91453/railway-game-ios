@@ -77,7 +77,7 @@ public enum TutorialTarget: String, CaseIterable, Hashable, Sendable {
     /// The ✓ of the bubble over the map that builds what the network tool
     /// picked (``GameSession/networkPreview``, a platform's site).
     case mapConfirm = "map.build.confirm"
-    /// The details card's Ridership button, for a selected station.
+    /// The details card's Station… button, for a selected station.
     case ridership = "inspector.ridership"
     /// The selected line's fares, costs and why it loses money in the lines
     /// panel (decision 194), there from its first full day.
@@ -747,7 +747,7 @@ extension Tutorial {
             id: "station.ridership", chapter: .passengers,
             targets: [.ridership, .sidePanel],
             goal: .read,
-            title: ("Tap Ridership to see who rides", "點「客源」看誰在搭車"),
+            title: ("Tap Station… to see who rides", "點「車站…」看誰在搭車"),
             body: (
                 "Trips by the hour and who is waiting. More homes and jobs nearby, more riders.",
                 "每小時的進出站人次和候車人數。附近住的、上班的人越多，搭車越多。"

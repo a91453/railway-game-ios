@@ -78,6 +78,17 @@ extension GameSession {
         buysMap && (isChoosingMapTile || (tool == .select && tutorial == nil))
     }
 
+    /// Decision 336: whether `problem`, shown while building or in the
+    /// banner, is the refusal of land not bought yet, in a game that buys
+    /// its map: beside it a button goes to expanding the map
+    /// (``startChoosingMapTile()``), which the map's own button is hidden
+    /// for while a building tool is out.
+    public func offersMapExpansion(for problem: String?) -> Bool {
+        guard buysMap, !isChoosingMapTile, tutorial == nil, let problem else { return false }
+        // The refusal names no tile: any tile's says the same.
+        return problem == GameError.mapTileNotOwned(MapTile(row: 0, column: 0)).playerMessage(in: language)
+    }
+
     /// The tiles of the map for the map to draw, or `nil` for a map that is
     /// not bought.
     public var mapExpansionOverlay: MapExpansionOverlay? {
