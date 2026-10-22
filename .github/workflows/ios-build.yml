@@ -76,6 +76,7 @@ on:
       - ".github/workflows/testflight*.yml"
       - ".github/workflows/website-screenshots.yml"
       - ".github/workflows/claude.yml"
+      - ".github/workflows/full-lane-watch.yml"
       - ".github/scripts/swift-shards*.sh"
       - ".github/scripts/testflight-*"
       - ".github/scripts/install-swift-linux.sh"
@@ -217,7 +218,7 @@ jobs:
             ':(exclude,glob).github/workflows/ci.yml' ':(exclude,glob).github/workflows/wasm-probe.yml' \
             ':(exclude,glob).github/workflows/ios-full-lane.yml' ':(exclude,glob).github/workflows/release-archive.yml' \
             ':(exclude,glob).github/workflows/testflight*.yml' ':(exclude,glob).github/workflows/website-screenshots.yml' \
-            ':(exclude,glob).github/workflows/claude.yml' \
+            ':(exclude,glob).github/workflows/claude.yml' ':(exclude,glob).github/workflows/full-lane-watch.yml' \
             ':(exclude,glob).github/scripts/swift-shards*.sh' ':(exclude,glob).github/scripts/testflight-*' \
             ':(exclude,glob).github/scripts/install-swift-linux.sh' ':(exclude,glob).github/testflight-whats-new.md' \
             | git patch-id --verbatim | cut -d' ' -f1)"
