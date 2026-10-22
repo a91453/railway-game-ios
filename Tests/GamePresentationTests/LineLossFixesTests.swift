@@ -313,4 +313,44 @@ final class LineLossFixesTests: XCTestCase {
         XCTAssertEqual(session.worstLosingLine, session.world.worstLosingLine())
         XCTAssertEqual(session.worstLosingLineWorkedOut, 2)
     }
+
+    /// Decision 330: the game loop works the station master's advice out
+    /// with the tick, off the main actor, and the news, the advice and
+    /// the losing line kept come out as when the main actor works it out
+    /// after each tick: every hour, over a midnight (the losing line
+    /// worked out again) and a command (the kept one no longer answering).
+    func testTheLoopWorksTheAdviceOutOffTheMainActorAsTheMainActorDoes() async throws {
+        var world = try tooManyTrains()
+        world.setSpeed(.fast)
+        let stepped = GameSession(world: world)
+        let looped = GameSession(world: world)
+        var worked = 0
+        for index in 0..<200 {
+            if index == 120 {
+                for session in [stepped, looped] {
+                    session.selectLine(Self.line)
+                    session.setSelectedLineColor(LineColor.presets[1])
+                }
+            }
+            stepped.advance(realElapsed: GameSession.tickInterval)
+            let tick = try XCTUnwrap(looped.beginLoopTick())
+            let outcome = await tick.work()
+            if case .success(let step) = outcome, let advice = step.advice {
+                worked += 1
+                XCTAssertEqual(advice.advice, StationMasterAdvice(world: step.world), "tick \(index)")
+            }
+            XCTAssertTrue(looped.finish(tick, with: outcome))
+            XCTAssertEqual(looped.world, stepped.world, "tick \(index)")
+            XCTAssertEqual(looped.news, stepped.news, "tick \(index)")
+            XCTAssertEqual(looped.newsWatch.adviceDays, stepped.newsWatch.adviceDays, "tick \(index)")
+            XCTAssertEqual(looped.worstLosingLineWorkedOut, stepped.worstLosingLineWorkedOut, "tick \(index)")
+        }
+        // An hour is six ticks at 6000×: every one of them worked out off
+        // the main actor.
+        XCTAssertEqual(worked, 200 / 6 + 1)
+        XCTAssertTrue(looped.news.items.contains { $0.english?.hasPrefix("Line 1 loses money") == true })
+        // The first, a midnight and the colour changed.
+        XCTAssertEqual(looped.worstLosingLineWorkedOut, 3)
+        XCTAssertEqual(looped.worstLosingLine, looped.world.worstLosingLine())
+    }
 }

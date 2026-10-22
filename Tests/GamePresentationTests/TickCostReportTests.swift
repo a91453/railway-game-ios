@@ -91,6 +91,84 @@ final class TickCostReportTests: XCTestCase {
         print("| Read | \(read) |\n| Install on the main actor | \(install) |")
     }
 
+    /// Decision 330: the owner's iPad on the Yilan Line (the TRA demo) at
+    /// 6000× showed the step after a tick on the main thread at 45.7 ms a
+    /// second, the longest 44.8 ms, and a frame of 114 ms. Plays the demo
+    /// as the game loop does (each tick worked out off the main actor,
+    /// put in place on it) for `TICK_REPORT_YILAN` ticks (1 to 10,000; a
+    /// day is 144) and prints, piece by piece, what the step after a tick
+    /// spends on average and at its longest, on the ticks that cross
+    /// midnight and on the rest, and the costliest ticks. Run on request:
+    ///
+    ///     TICK_REPORT_YILAN=432 swift test -c release -Xswiftc -enable-testing \
+    ///       --filter TickCostReportTests/testWhatTheStepAfterATickCostsOnTheYilanLine
+    func testWhatTheStepAfterATickCostsOnTheYilanLine() async throws {
+        guard let value = ProcessInfo.processInfo.environment["TICK_REPORT_YILAN"] else {
+            throw XCTSkip("set TICK_REPORT_YILAN=<ticks> to time the step after a tick on the Yilan Line")
+        }
+        let ticks = try XCTUnwrap(Int(value).flatMap { (1...10_000).contains($0) ? $0 : nil }, "TICK_REPORT_YILAN is 1 to 10,000 ticks")
+        let session = GameSession(world: try TRADemoTests.opened.get())
+        session.playSound = { _ in }
+        session.setSpeed(.fast)
+        let report = try await Self.timeTheLoop(of: session, ticks: ticks)
+        print(report.joined(separator: "\n"))
+    }
+
+    /// `ticks` of `session`'s game loop, one at a time, with the frame
+    /// meter on: each piece of the step after a tick, and the world it
+    /// replaced let go, in milliseconds.
+    static func timeTheLoop(of session: GameSession, ticks: Int) async throws -> [String] {
+        let meter = FrameCostMeter.shared
+        meter.isOn = true
+        defer { meter.isOn = false }
+        _ = meter.frame(at: 0)
+        struct Tick {
+            var time: GameTime
+            var midnight: Bool
+            var parts: [FrameCostPart: Double]
+        }
+        var timed: [Tick] = []
+        for index in 0..<ticks {
+            guard let tick = session.beginLoopTick() else { break }
+            let day = session.world.clock.now.seconds / GameTime.secondsPerDay
+            let outcome = await tick.work()
+            XCTAssertTrue(session.finish(tick, with: outcome))
+            let releasing = ContinuousClock.now
+            _ = consume tick
+            meter.record(.release, since: releasing)
+            // A window a tick long: one tick's parts.
+            let reading = try XCTUnwrap(meter.frame(at: Double(index + 1)))
+            timed.append(Tick(
+                time: session.world.clock.now, midnight: session.world.clock.now.seconds / GameTime.secondsPerDay > day,
+                parts: Dictionary(uniqueKeysWithValues: reading.parts.map { ($0.part, $0.longestMilliseconds) })
+            ))
+        }
+        let parts = FrameCostPart.allCases.filter { part in timed.contains { $0.parts[part] != nil } }
+        var rows = ["| Part | Ticks | Mean ms | Longest ms | Midnight mean | Midnight longest |", "| --- | ---: | ---: | ---: | ---: | ---: |"]
+        for part in parts {
+            func stats(_ ticks: [Tick]) -> (mean: Double, longest: Double) {
+                let values = ticks.map { $0.parts[part] ?? 0 }
+                return (values.reduce(0, +) / Double(max(1, values.count)), values.max() ?? 0)
+            }
+            let all = stats(timed), midnight = stats(timed.filter(\.midnight))
+            rows.append(String(
+                format: "| %@%@ | %d | %.2f | %.2f | %.2f | %.2f |", part.parent == nil ? "" : "· ", part.title(in: .english), timed.count,
+                all.mean, all.longest, midnight.mean, midnight.longest
+            ))
+        }
+        rows.append("\nCostliest steps after a tick:")
+        for tick in timed.sorted(by: { ($0.parts[.afterStep] ?? 0) > ($1.parts[.afterStep] ?? 0) }).prefix(8) {
+            let pieces = parts.filter { $0.parent == .afterStep }.compactMap { part in
+                tick.parts[part].flatMap { $0 >= 0.5 ? String(format: "%@ %.1f", part.title(in: .english), $0) : nil }
+            }
+            rows.append(String(
+                format: "- day %lld %@: after %.1f ms (%@), tick %.1f, release %.1f", tick.time.seconds / GameTime.secondsPerDay,
+                tick.time.clockText, tick.parts[.afterStep] ?? 0, pieces.joined(separator: ", "), tick.parts[.step] ?? 0, tick.parts[.release] ?? 0
+            ))
+        }
+        return rows
+    }
+
     /// The UI test's game (a blank new game, fifteen trains bought), and
     /// the two demo maps.
     static func games() -> [(String, GameWorld)] {

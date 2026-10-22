@@ -85,18 +85,30 @@ public struct Map3DTrainSet: Sendable {
                          face: 0xE89A27, single: true),
             multipleUnit("dieselExpress", asset: "05_TRA_classic_3x2-04", body: 0xBFC8C9, band: 0xE89A27, thinBand: true,
                          face: 0xE89A27),
+            // Decision 331: the light metro as the green low-floor tram.
+            lowFloorTram("greenTram"),
         ]
     }()
 
     static let byKey: [String: Map3DTrainSet] = Dictionary(uniqueKeysWithValues: all.map { ($0.key, $0) })
 
     /// The types drawn as a set of another key: the EMU3000 and the
-    /// high-speed set as their models, every metro size as the C381 and
-    /// the people mover as the Wenhu line's car.
+    /// high-speed set as their models, every metro size but the light
+    /// metro as the C381, the light metro as the green tram (decision 331)
+    /// and the people mover as the Wenhu line's car.
     static let byType: [String: String] = [
         "EMU3000": "emu3000", "HSR": "highSpeed",
-        "A": "metroC381", "B": "metroC381", "C": "metroC381", "L": "metroC381", "D": "metroC381", "APM": "wenhu",
+        "A": "metroC381", "B": "metroC381", "C": "greenTram", "L": "metroC381", "D": "metroC381", "APM": "wenhu",
     ]
+
+    /// How far from the eye a car of `key` is drawn with its model, in
+    /// metres: ``Map3DTrains/modelReach``, but the green tram's cars, ten
+    /// times a metro car's triangles, only half as far (decision 331).
+    static func reach(of key: String) -> Float {
+        named(key)?.key == "greenTram" ? tramReach : Map3DTrains.modelReach
+    }
+
+    static let tramReach: Float = 500
 
     /// The set of `key`: a set's own, or a type's (``byType``).
     static func named(_ key: String) -> Map3DTrainSet? {
@@ -178,6 +190,29 @@ public struct Map3DTrainSet: Sendable {
         }
     }
 
+    /// The green low-floor tram (#954, ``Map3DGreenTram``) as a train of
+    /// the light metro's 19 m cars (decision 331): each car two of its
+    /// sections coupled as the whole tram couples them, the head car's
+    /// front and the last car's back its cabs, their lamps lit. A car alone
+    /// is the two cab sections.
+    static func lowFloorTram(_ key: String) -> Map3DTrainSet {
+        Map3DTrainSet(key: key) {
+            func car(_ front: Map3DGreenTram.Section, _ back: Map3DGreenTram.Section) -> Map3DModelPack.Model {
+                var builder = StationKitBuilder()
+                let half = (Map3DGreenTram.sectionLength + Map3DGreenTram.gap) / 2
+                builder.add(Map3DGreenTram.model(front), at: Map3DPoint(half, 0, 0))
+                builder.add(Map3DGreenTram.model(back), at: Map3DPoint(-half, 0, 0))
+                // Over the section's white lamp blocks, a hand's breadth
+                // in front of its cab face.
+                if front == .head { builder.tramLamps(atX: half + 5.43, colour: Map3DTrainStyle.headlamp) }
+                if back == .tail { builder.tramLamps(atX: -half - 5.43, colour: Map3DPalette.lantern) }
+                return .flat(named: key, from: builder.mesh)
+            }
+            return Cars(head: car(.head, .middle), middle: car(.middle, .middle), tail: car(.middle, .tail),
+                        single: car(.head, .tail))
+        }
+    }
+
     /// A coach of the scene kit's locomotive-hauled subjects in `livery`'s
     /// colours: its body below and above, the stripe across the windows.
     struct Coach {
@@ -219,6 +254,17 @@ public struct Map3DTrainSet: Sendable {
         var builder = SceneKitBuilder()
         builder.addModel(model, tint: tint, keepsShares: keepsShares)
         return .flat(named: model.name, from: builder.mesh)
+    }
+}
+
+extension StationKitBuilder {
+    /// The tram's two lamps lit at `x`.
+    fileprivate mutating func tramLamps(atX x: Float, colour: UInt32) {
+        for z: Float in [-0.77, 0.77] {
+            let start = mesh.vertices.count
+            box(x, 0.88, z, 0.02, 0.24, 0.13, colour)
+            mesh.makeGlowing(from: start)
+        }
     }
 }
 

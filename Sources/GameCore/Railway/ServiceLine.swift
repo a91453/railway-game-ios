@@ -1089,11 +1089,14 @@ extension ServiceLine: Codable {
         guard !container.contains(.opensPair) || opensPair, !opensPair || dispatchPattern.staggerMinutes != nil else {
             throw DecodingError.dataCorruptedError(forKey: .opensPair, in: container, debugDescription: "Line \(id.rawValue): only a staggered line has an open pair, written as true.")
         }
-        // Decision 309, later (PR #945–#961 review): a line made a ring
-        // before #955 kept a stagger or both ends' dispatch, so its save
-        // was refused. It spaces its trains evenly, as making it a ring
-        // now does.
-        if isRing, dispatchPattern != .even {
+        if isRing || !runs.isEmpty, dispatchPattern != .even {
+            // A8 of the #873–#910 review: a save from before a line given
+            // runs was made even keeps the pattern set before them, which
+            // sent no train out while the runs were there; it loads even.
+            // Decision 309, later (PR #945–#961 review): a line made a
+            // ring before #955 kept a stagger or both ends' dispatch, so
+            // its save was refused. It spaces its trains evenly, as making
+            // it a ring now does.
             dispatchPattern = .even
             endLastDispatch = nil
             opensPair = false

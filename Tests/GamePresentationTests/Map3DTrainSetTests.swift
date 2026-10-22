@@ -18,14 +18,18 @@ final class Map3DTrainSetTests: XCTestCase {
             for name in [set.tailName, set.singleName, set.pantographName] where pack.index(of: name) != nil { names.append(name) }
             for name in names {
                 let model = pack.models[try XCTUnwrap(pack.index(of: name), name)]
-                XCTAssertTrue((100...3_000).contains(model.triangleCount), "\(name): \(model.triangleCount) triangles")
+                // Decision 331: a tram car is two of its sections.
+                let triangles = set.key == "greenTram" ? 2_500...3_200 : 100...3_000
+                XCTAssertTrue(triangles.contains(model.triangleCount), "\(name): \(model.triangleCount) triangles")
                 // #900's 700T is 24 m, its Wenhu car 12.6 m; drawn at the
                 // train's car length.
                 let length: ClosedRange<Float> = set.key == "highSpeed" ? 23...25 : set.key == "wenhu" ? 12...13.5 : 17...22.5
                 XCTAssertTrue(length.contains(model.length), "\(name): \(model.length) m long")
                 XCTAssertTrue((2.6...3.5).contains(model.maximum.y - model.minimum.y), "\(name): \(model.maximum.y - model.minimum.y) m wide")
                 XCTAssertEqual(model.minimum.z, 0, accuracy: 0.1, "\(name) stands on the rail")
-                XCTAssertTrue((3.4...4.6).contains(model.maximum.z), "\(name): \(model.maximum.z) m tall")
+                // The low-floor tram is lower than a train.
+                let height: ClosedRange<Float> = set.key == "greenTram" ? 3.2...4.6 : 3.4...4.6
+                XCTAssertTrue(height.contains(model.maximum.z), "\(name): \(model.maximum.z) m tall")
                 if lineColoured.contains(set.key) {
                     XCTAssertTrue(model.vertices.contains { $0.color >> 24 == 0 }, "\(name): the band is the line's colour")
                 } else {
@@ -99,10 +103,34 @@ final class Map3DTrainSetTests: XCTestCase {
         XCTAssertEqual(names("HSR", 12), ["set-highSpeed-head", "set-highSpeed-car", "set-highSpeed-car", "set-highSpeed-panto"]
             + Array(repeating: "set-highSpeed-car", count: 4) + ["set-highSpeed-panto", "set-highSpeed-car", "set-highSpeed-car", "set-highSpeed-tail"])
         XCTAssertEqual(names("EMU3000", 3), ["set-emu3000-head", "set-emu3000-car", "set-emu3000-tail"])
-        for code in ["A", "B", "C", "L", "D"] {
+        for code in ["A", "B", "L", "D"] {
             XCTAssertEqual(names(code, 2), ["set-metroC381-head", "set-metroC381-tail"], code)
         }
+        // Decision 331: the light metro is the green tram.
+        XCTAssertEqual(names("C", 1), ["set-greenTram-single"])
+        XCTAssertEqual(names("C", 2), ["set-greenTram-head", "set-greenTram-tail"])
+        XCTAssertEqual(names("C", 4), ["set-greenTram-head", "set-greenTram-car", "set-greenTram-car", "set-greenTram-tail"])
         XCTAssertEqual(names("APM", 2), ["set-wenhu-head", "set-wenhu-tail"])
+    }
+
+    /// Decision 331: a tram car is two of the tram's sections, as long as
+    /// the light metro's car once stretched to it; the cabs only at the
+    /// train's two ends, the pantograph on the last car.
+    func testTheLightMetroIsTheGreenTram() throws {
+        func model(_ name: String) throws -> Map3DModelPack.Model { pack.models[try XCTUnwrap(pack.index(of: name), name)] }
+        let section = Map3DGreenTram.model(.middle).triangleCount
+        XCTAssertEqual(try model("set-greenTram-car").triangleCount, 2 * section)
+        let head = try model("set-greenTram-head"), tail = try model("set-greenTram-tail")
+        XCTAssertEqual(head.length, 2 * Map3DGreenTram.sectionLength + Map3DGreenTram.gap + 0.11, accuracy: 0.2)
+        let carLength = Float(TrainType.c.spec.carLength) / Float(WorldCoordinate.unitsPerMetre) - Map3DTrains.carGap
+        XCTAssertTrue((0.8...0.9).contains(carLength / head.length), "drawn \(carLength / head.length) times its length")
+        XCTAssertLessThan(head.maximum.z, 3.4, "no pantograph on the head car")
+        XCTAssertGreaterThan(tail.maximum.z, 4, "the pantograph on the last")
+        XCTAssertFalse(try model("set-greenTram-car").vertices.contains(where: \.glows), "no lamps between")
+        // Ten times a metro car's triangles, so drawn half as far.
+        XCTAssertEqual(Map3DTrainSet.reach(of: "C"), 500)
+        XCTAssertEqual(Map3DTrainSet.reach(of: "greenTram"), 500)
+        for key in ["B", "", "EMU3000", "puyuma"] { XCTAssertEqual(Map3DTrainSet.reach(of: key), Map3DTrains.modelReach, key) }
     }
 
     /// The 3D map asks each train of the world for its key.

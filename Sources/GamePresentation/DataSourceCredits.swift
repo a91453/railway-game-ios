@@ -449,6 +449,28 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: language.text("Reference photograph", "參考照片"), url: busPhotoURL),
                         ]
                     ),
+                    // Decision 331: where the 3D map's temples stand, from
+                    // the geo-scene reference's temples file, whose points
+                    // each name one of these three sources.
+                    DataSourceCredit(
+                        id: "temples",
+                        title: language.text("Temples", "寺廟"),
+                        detail: language.text(
+                            "Where the temples on real-world 3D maps stand, and which are drawn larger: the Ministry of the Interior's register of temples, OpenStreetMap's places of worship and the Bureau of Cultural Heritage's monuments.",
+                            "實景 3D 地圖上寺廟的位置，以及哪些畫得比較大：內政部的寺廟登記、OpenStreetMap 的宗教場所與文化部文化資產局的古蹟。"
+                        ),
+                        notice: language.text(
+                            "Ministry of the Interior and Bureau of Cultural Heritage data under the Open Government Data License, version 1.0. OpenStreetMap data © OpenStreetMap contributors, under the Open Database License.",
+                            "內政部與文化部文化資產局的資料依政府資料開放授權條款第 1 版使用。OpenStreetMap 資料 © OpenStreetMap 貢獻者，依開放資料庫授權條款使用。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("National Religion Information Network", "全國宗教資訊網"), url: "https://religion.moi.gov.tw"),
+                            DataSourceCredit.Link(title: language.text("National Cultural Heritage Database", "國家文化資產網"), url: "https://nchdb.boch.gov.tw"),
+                            DataSourceCredit.Link(title: language.text("Open Government Data License", "政府資料開放授權條款"), url: openGovernmentLicenseURL),
+                            DataSourceCredit.Link(title: "OpenStreetMap", url: openStreetMapCopyrightURL),
+                            DataSourceCredit.Link(title: "ODbL", url: odblURL),
+                        ]
+                    ),
                     // Decision 115: the steep slopes, worked out from the
                     // Copernicus DEM, whose licence asks for this notice;
                     // decision 124: the ground's height, from the same

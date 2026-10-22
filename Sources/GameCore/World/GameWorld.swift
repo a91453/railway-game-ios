@@ -2007,7 +2007,8 @@ public struct GameWorld: Equatable, Sendable {
     /// Gives line `id` the runs of a real timetable (decision 133), or with
     /// `[]` takes them away: from then on the line sends its trains out at
     /// the runs' times, each from where the run starts, and not at a
-    /// headway. None of its runs has sent a train out yet. Free.
+    /// headway; given runs, it spaces its trains evenly (decision 309). None
+    /// of its runs has sent a train out yet. Free.
     ///
     /// - Throws, checked in this order: ``GameError/unknownLine(_:)``;
     ///   ``GameError/invalidLineRuns`` for runs that are not the line's
@@ -2024,6 +2025,13 @@ public struct GameWorld: Equatable, Sendable {
         }
         lines[index].runs = runs
         lines[index].runDays = Array(repeating: nil, count: runs.count)
+        if !runs.isEmpty {
+            // Decision 309: the runs' times send the trains out, so the
+            // line spaces them evenly, as a ring does.
+            lines[index].dispatchPattern = .even
+            lines[index].endLastDispatch = nil
+            lines[index].opensPair = false
+        }
         abandonUnservedPassengers()
     }
 
@@ -3928,12 +3936,13 @@ public struct GameWorld: Equatable, Sendable {
         // with traffic control on and block sections, as the app's new
         // games have it; never above what the train and the curves allow.
         // Decision 308: without block sections too.
+        let timetabled = train.scheduledArrival(of: next.stop, cycle: next.cycle).seconds - train.scheduledDeparture(of: stop, cycle: cycle).seconds
         let scheduled = realisticOperation || followsRealTimetable(train)
             ? secondsToScheduledArrival(of: train, stop: next.stop, cycle: next.cycle)
-            : train.scheduledArrival(of: next.stop, cycle: next.cycle).seconds - train.scheduledDeparture(of: stop, cycle: cycle).seconds
+            : timetabled
         moved.times = ServiceTimes(
             arrival: train.times?.arrival ?? now, departure: now,
-            run: run(of: moved, length: path.distance, scheduled: chosen.seconds ?? scheduled)
+            run: run(of: moved, length: path.distance, scheduled: chosen.seconds ?? scheduled, timetabled: chosen.seconds ?? timetabled)
         )
         return .setsOff(moved, distance: path.distance)
     }
@@ -3949,21 +3958,26 @@ public struct GameWorld: Equatable, Sendable {
     /// goes at its rate. With ``curveSpeedLimits`` on (decision 217) it
     /// keeps to the limits ahead of it on its path (see
     /// ``speedLimitsAhead(of:distance:)``), but on a line of real runs
-    /// never at the cost of its real time.
+    /// never at the cost of its real time: only when `timetabled`, the
+    /// seconds the timetable itself gives the run (`scheduled` when not
+    /// given), does not fit under them. A late train's `scheduled`, the
+    /// time left to its arrival, never drops them (A6 of the #873–#910
+    /// review; decision 306).
     ///
     /// - Precondition: `length >= 1`.
-    func run(of train: Train, length: Int64, scheduled: Int64? = nil) -> ServiceRun? {
+    func run(of train: Train, length: Int64, scheduled: Int64? = nil, timetabled: Int64? = nil) -> ServiceRun? {
         var limits = speedLimitsAhead(of: train, distance: length)
+        // A real timetable (decision 133) is kept as well as without the
+        // limits: where its time does not fit under them, the real line's
+        // curves are gentler than the drawn ones (or the real trains faster
+        // than the game's), and the run does without.
+        if let timetabled = timetabled ?? scheduled, (1...RunningCurve.maximumSeconds).contains(timetabled),
+           !limits.isEmpty, followsRealTimetable(train),
+           !RunCurve.fits(length: length, duration: timetabled * 1000, performance: train.performance, limits: limits) {
+            limits = []
+        }
         if let scheduled, (1...RunningCurve.maximumSeconds).contains(scheduled) {
             let duration = scheduled * 1000
-            // A real timetable (decision 133) is kept as well as without
-            // the limits: where its time does not fit under them, the real
-            // line's curves are gentler than the drawn ones (or the real
-            // trains faster than the game's), and the run does without.
-            if !limits.isEmpty, followsRealTimetable(train),
-               !RunCurve.fits(length: length, duration: duration, performance: train.performance, limits: limits) {
-                limits = []
-            }
             if RunCurve.fits(length: length, duration: duration, performance: train.performance, limits: limits) {
                 return ServiceRun(start: clock.now, length: length, seconds: scheduled, limits: limits)
             }
@@ -5134,6 +5148,11 @@ extension GameWorld: Codable {
         let stationIDs = stations.map(\.id.rawValue)
         guard Self.isStrictlyIncreasing(stationIDs, below: nextStationID) else {
             return "Station IDs must be unique, ascending and below nextStationID."
+        }
+        // Decision 325: the high-speed fare table names only stations that
+        // were handed out, so a station built later cannot take on a fare.
+        guard accounts.highSpeedFares.allSatisfy({ $0.from.rawValue >= 1 && $0.to.rawValue < nextStationID }) else {
+            return "High-speed fares must be between stations below nextStationID."
         }
         guard Self.isStrictlyIncreasing(trains.map(\.id.rawValue), below: nextTrainID) else {
             return "Train IDs must be unique, ascending and below nextTrainID."

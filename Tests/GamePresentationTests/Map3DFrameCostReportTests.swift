@@ -131,8 +131,10 @@ final class Map3DFrameCostReportTests: XCTestCase {
         let line = try LineBuilder.line(through: [PlanPoint(x: middle.x - across, y: middle.y - across / 2),
                                                   PlanPoint(x: middle.x, y: middle.y),
                                                   PlanPoint(x: middle.x + across, y: middle.y + across / 2)], in: world)
+        // Decision 331: and the real temples, as the app passes them.
+        let temples = try RealTemples(data: Data(contentsOf: baseMap.appendingPathComponent("taiwan_temples.json")))
         return Map3DScene(world: line, baseMap: tiles, cityTiles: CityTileArea.areas(in: baseMap.appendingPathComponent("city")),
-                          lineBands: bands ? Map3DLineBands(world: line, palette: .standard) : nil)
+                          lineBands: bands ? Map3DLineBands(world: line, palette: .standard) : nil, temples: temples)
     }
 
     /// Decision 314: what the line's colour bands add, in the near meshes
