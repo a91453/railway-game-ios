@@ -247,8 +247,12 @@ public struct Map3DScene: Sendable {
             standing.formUnion(builder.addTemples(temples, frame: frame, clearOf: stations.union(standing)))
             builder.target = .near
         }
+        // Decision 331: the commercial kit's scenes before the big
+        // stations, on no real building or temple.
+        standing.formUnion(builder.addStationCommerce(clearOf: standing))
+        builder.target = .near
         // Decision 331: the park kit's scenes in the real parks, on no
-        // station, real building or temple.
+        // station, real building, temple or commercial scene.
         if let real {
             builder.addParks(real, clearOf: stations.union(standing))
             builder.target = .near
@@ -448,6 +452,9 @@ extension Map3DScene {
         /// The corners of each station building's ground, and the
         /// shop streets still to lay beside them.
         var houseFootprints: [[Map3DPoint]] = []
+        /// Decision 331: the big stations' buildings, for their commercial
+        /// kit (`addStationCommerce`).
+        var bigStations: [(centre: Map3DPoint, forward: Map3DPoint, depth: Float)] = []
         var shopStreets: [(station: Map3DStationKit.Station, centre: Map3DPoint, forward: Map3DPoint, depth: Float, wide: Float,
                            cells: Set<ChunkKey>)] = []
         /// Decision 326: on a real-world map, the real lines round the
