@@ -22,6 +22,10 @@ import SwiftUI
 /// Taiwan's real railways (the `Railway/` site's) are drawn on the map, and
 /// every one of their stations is a place to start at: by railway, and as
 /// the player types a name, matched as the site matches names.
+///
+/// "Use my location" moves the square to where the device is, from one fix
+/// asked for while the app is in use (decision 335): the fix only moves the
+/// map, and is neither kept nor sent anywhere.
 struct RealWorldPicker: View {
     let launcher: GameLauncher
     @Environment(\.dismiss) private var dismiss
@@ -41,6 +45,16 @@ struct RealWorldPicker: View {
     /// The places a game was started at on this device (decision 312,
     /// ``RecentStartPlaces``): only their middles.
     @AppStorage("realWorld.recentStarts") private var recentStarts = ""
+    /// Decision 335: asks for the device's location once per tap; made at
+    /// the first tap.
+    @State private var locator: OneShotLocation?
+    @State private var isLocating = false
+    /// What the last "Use my location" says (``MyLocationStart``), shown
+    /// over the map until the player moves on.
+    @State private var locationMessage: String?
+    /// Where "Use my location" put the square, so the line goes once the
+    /// map is moved elsewhere.
+    @State private var locatedMiddle: GeoAnchor?
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -123,6 +137,7 @@ struct RealWorldPicker: View {
                 guard let tapped = reader.convert(location, from: .local),
                       let area = RealWorldStartArea(latitude: tapped.latitude, longitude: tapped.longitude)
                 else { return }
+                locationMessage = nil
                 withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) {
                     position = Self.camera(on: Self.coordinate(of: area.middle), distance: cameraDistance)
                 }
@@ -137,6 +152,17 @@ struct RealWorldPicker: View {
                 middle = context.camera.centerCoordinate
                 cameraDistance = context.camera.distance
             }
+            .onMapCameraChange(frequency: .onEnd) { context in
+                // Decision 335: the line is about where the location put
+                // the square; once the map is elsewhere it goes.
+                guard locationMessage != nil, !isLocating else { return }
+                let centre = context.camera.centerCoordinate
+                if let locatedMiddle, let now = GeoAnchor(latitudeDegrees: centre.latitude, longitudeDegrees: centre.longitude),
+                   RecentStartPlaces.metres(from: locatedMiddle, to: now) < RecentStartPlaces.samePlaceMetres {
+                    return
+                }
+                locationMessage = nil
+            }
             .overlay {
                 Image(systemName: "plus")
                     .font(.title2.weight(.semibold))
@@ -145,6 +171,91 @@ struct RealWorldPicker: View {
                     .accessibilityHidden(true)
             }
             .accessibilityIdentifier("realWorld.map")
+            // Decision 335: under the search field, at the map's corner as
+            // the system's maps put it.
+            .overlay(alignment: .topTrailing) {
+                myLocationButton
+                    .padding(10)
+            }
+            .overlay(alignment: .bottom) {
+                if let locationMessage {
+                    locationNote(locationMessage)
+                        .padding(10)
+                        .transition(.card(from: .bottom, reduceMotion: reduceMotion))
+                }
+            }
+            .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: locationMessage)
+        }
+    }
+
+    /// Decision 335: moves the square to where the device is.
+    private var myLocationButton: some View {
+        Button {
+            useMyLocation()
+        } label: {
+            Group {
+                if isLocating {
+                    ProgressView()
+                } else {
+                    Image(systemName: "location")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Theme.primary)
+                }
+            }
+            .frame(width: 44, height: 44)
+            .glassBackground(in: Circle(), interactive: true)
+        }
+        .buttonStyle(.plain)
+        .disabled(isLocating)
+        .accessibilityLabel(Text(verbatim: launcher.language.text("Use My Location", "用我的位置")))
+        .accessibilityIdentifier("realWorld.myLocation")
+    }
+
+    /// The line "Use my location" says, with a button to close it.
+    private func locationNote(_ text: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "info.circle")
+                .foregroundStyle(Theme.textSecondary)
+                .accessibilityHidden(true)
+            Text(verbatim: text)
+                .font(.footnote)
+                .foregroundStyle(Theme.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("realWorld.locationMessage")
+            Button {
+                locationMessage = nil
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Theme.textSecondary)
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text(verbatim: launcher.language.text("Close", "關閉")))
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .glassBackground(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    /// Asks for one fix and moves the square there, kept on the map, or
+    /// says why it could not (``MyLocationStart``). The fix is dropped.
+    private func useMyLocation() {
+        isLocating = true
+        locationMessage = nil
+        locatedMiddle = nil
+        let locator = locator ?? OneShotLocation()
+        self.locator = locator
+        Task {
+            let result = await locator.locate()
+            isLocating = false
+            locationMessage = result.message(in: launcher.language)
+            locatedMiddle = result.area?.middle
+            if let area = result.area {
+                withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) {
+                    position = Self.camera(on: Self.coordinate(of: area.middle))
+                }
+            }
         }
     }
 
