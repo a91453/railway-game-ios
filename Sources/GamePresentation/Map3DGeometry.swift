@@ -507,6 +507,31 @@ public struct Map3DMesh: Sendable {
         }
     }
 
+    /// Decision 334: a flat band round a train standing along `line` (its
+    /// rails, front to back): beside it on both sides and across both
+    /// ends, ``Map3DTrains/ringGap`` clear of its cars, lit from within at
+    /// night.
+    public mutating func addRing(round line: [Map3DPoint]) {
+        guard line.count > 1, let front = (line[0] - line[1]).normalized,
+              let back = (line[line.count - 1] - line[line.count - 2]).normalized else { return }
+        let start = vertices.count
+        let width = Map3DTrains.ringWidth
+        let out = Map3DTrains.carWidth / 2 + Map3DTrains.ringGap + width / 2
+        let colour = Map3DColor.rgb(Map3DTrains.ringColour)
+        let lift = Map3DTrains.ringLift
+        // The sides run on past the ends to meet the end bands.
+        let reach = Map3DTrains.ringGap + width
+        let stretched = [line[0] + front * reach] + line + [line[line.count - 1] + back * reach]
+        addRibbon(along: stretched, width: width, offset: out, lift: lift, top: colour)
+        addRibbon(along: stretched, width: width, offset: -out, lift: lift, top: colour)
+        for (end, away) in [(line[0], front), (line[line.count - 1], back)] {
+            let across = Map3DPoint(-away.z, 0, away.x)
+            let middle = end + away * (Map3DTrains.ringGap + width / 2)
+            addRibbon(along: [middle - across * out, middle + across * out], width: width, lift: lift, top: colour)
+        }
+        makeGlowing(from: start)
+    }
+
     /// The vertices added since `start` lit from within at night
     /// (``Map3DVertex/glowing``), keeping their colour.
     public mutating func makeGlowing(from start: Int) {

@@ -27,6 +27,9 @@ struct Map3DPreviewScreen: View {
     let session: GameSession
     var handedOver: Map3DHandoff.Plan? = nil
     var openedAt: Map3DHandoff.Plan? = nil
+    /// Decision 334: the train on a station's board it opened for, shown
+    /// at its platform, ringed.
+    var departure: Map3DNextDeparture? = nil
     let close: () -> Void
     var handBack: ((Map3DHandoff.Plan) -> Void)? = nil
     /// Decision 313: back to the 2D map at this view's middle and scale,
@@ -56,6 +59,7 @@ struct Map3DPreviewScreen: View {
                       weather: Map3DWeather(MapWeather(world: session.world)), feed: feed, trainLabels: trainLabels,
                       start: handedOver, openedAt: openedAt, farOut: farOut, compass: compass, cameraLink: cameraLink, quality: quality,
                       follow: session.followedTrain.map { Map3DFollow(train: $0.id, view: followView) },
+                      departure: departure, world: session.world,
                       onStats: { stats = $0 })
                 .ignoresSafeArea()
                 .accessibilityIdentifier("map3D.view")
@@ -364,9 +368,11 @@ final class Map3DTrainFeed {
                                       still: UIAccessibility.isReduceMotionEnabled, lights: lights, detail: detail, activity: activity)
     }
 
-    func frame(in scene: Map3DScene, models: Map3DModelPack?, eye: Map3DPoint) -> Map3DTrains.Frame {
+    /// The trains seen from `eye`, `ringed` with its ring (decision 334).
+    func frame(in scene: Map3DScene, models: Map3DModelPack?, eye: Map3DPoint, ringed: TrainID?) -> Map3DTrains.Frame {
         let progress = motion.isMoving ? motion.progress(at: Date().timeIntervalSinceReferenceDate) : 1
-        return Map3DTrains.frame(motion, progress: progress, heights: heights, in: scene, models: models, eye: eye, palette: palette)
+        return Map3DTrains.frame(motion, progress: progress, heights: heights, in: scene, models: models, eye: eye, palette: palette,
+                                 ringed: ringed)
     }
 }
 
@@ -395,6 +401,10 @@ private struct Map3DView: UIViewRepresentable {
     let quality: Map3DQuality
     /// Decision 333: the train the camera follows, and from where.
     let follow: Map3DFollow?
+    /// Decision 334: the train on a station's board the map opened for,
+    /// flown to at its platform, in `world`.
+    let departure: Map3DNextDeparture?
+    let world: GameWorld
     let onStats: @MainActor (Map3DMetalView.Stats) -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -416,6 +426,7 @@ private struct Map3DView: UIViewRepresentable {
         }
         context.coordinator.view = view
         cameraLink.view = view
+        view.landed = { [weak coordinator = context.coordinator] in coordinator?.showHeading() }
         if let models = Self.models {
             view.useModels(models)
         }
@@ -445,13 +456,22 @@ private struct Map3DView: UIViewRepresentable {
                 view.follow(follow, reduceMotion: context.environment.accessibilityReduceMotion)
                 if follow == nil { context.coordinator.showHeading() }
             }
+            // Decision 334: once there is a scene to fly over.
+            if let scene, context.coordinator.shownVersion != nil, let departure, context.coordinator.flownTo != departure {
+                context.coordinator.flownTo = departure
+                view.ringed = departure.train
+                let world = world
+                view.fly(reduceMotion: context.environment.accessibilityReduceMotion) { camera in
+                    departure.camera(in: world, scene: scene, from: camera)
+                }
+            }
         }
         guard let scene, context.coordinator.shownVersion != sceneVersion else { return }
         let first = context.coordinator.shownVersion == nil
         context.coordinator.shownVersion = sceneVersion
         view.show(scene)
         let feed = feed, models = Map3DView.models
-        view.trains = { eye in feed.frame(in: scene, models: models, eye: eye) }
+        view.trains = { [weak view] eye in feed.frame(in: scene, models: models, eye: eye, ringed: view?.ringed) }
         let labels = trainLabels
         view.trainHeads = { heads, camera in labels.show(feed.labels(heads: heads, camera: camera)) }
         view.streetLife = { camera, lights, detail in feed.streetLife(in: scene, camera: camera, lights: lights, detail: detail) }
@@ -475,6 +495,8 @@ private struct Map3DView: UIViewRepresentable {
     final class Coordinator: NSObject, UIGestureRecognizerDelegate {
         weak var view: Map3DMetalView?
         var shownVersion: Int?
+        /// Decision 334: the departure last flown to.
+        var flownTo: Map3DNextDeparture?
         var farOut: ((Map3DCamera) -> Void)?
         /// Decision 269: how far out the camera a pinch handed over opened;
         /// `nil` when the 3D button opened the map.
