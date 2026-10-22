@@ -26,7 +26,8 @@ struct StationPanel: View {
     /// the main actor (``RidershipKey``): drawn from the world on every
     /// tick, they held the main thread for seconds on a real-world map,
     /// and the panel stopped halfway as it slid in.
-    @State private var ridership: (key: RidershipKey, value: StationRidership)?
+    /// Decision 332: with them, who took a scooter or a car instead.
+    @State private var ridership: (key: RidershipKey, value: StationRidership, modeShift: ModeShiftSummary?)?
     /// Whether the "arriving soon" board is open (decision 178); kept for
     /// the next station and the next launch.
     @AppStorage("stationBoardExpanded") private var boardExpanded = true
@@ -127,11 +128,11 @@ struct StationPanel: View {
         let key = RidershipKey(world: session.world, station: session.selectedStationID)
         guard let id = key.station else { return }
         let world = session.world
-        let value = await Task.detached(priority: .userInitiated) {
-            world.stationRidership(of: id)
+        let (value, modeShift) = await Task.detached(priority: .userInitiated) {
+            (world.stationRidership(of: id), world.stationModeShift(of: id))
         }.value
         guard !Task.isCancelled else { return }
-        ridership = (key, value)
+        ridership = (key, value, modeShift)
     }
 
     /// Decision 178: the trains due at the station, a direction at a time,
@@ -888,7 +889,7 @@ struct StationPanel: View {
             if let flow = ridership.value.flow {
                 flowSection(flow)
             }
-            pairsSection(ridership.value.pairs)
+            pairsSection(ridership.value.pairs, modeShift: ridership.modeShift)
         } else {
             Section {
                 HStack(spacing: 8) {
@@ -904,7 +905,7 @@ struct StationPanel: View {
         }
     }
 
-    private func pairsSection(_ pairs: [StationDemandPair]) -> some View {
+    private func pairsSection(_ pairs: [StationDemandPair], modeShift: ModeShiftSummary?) -> some View {
         Section {
             if pairs.isEmpty {
                 Text("No trips to or from other stations yet.")
@@ -915,6 +916,12 @@ struct StationPanel: View {
                 Text(session.world.demandPairText(pair, in: session.language))
                     .font(.footnote)
                     .monospacedDigit()
+            }
+            // Decision 332: how many ride or drive instead, and what
+            // brings most of them back.
+            if let modeShift {
+                ModeShiftRow(summary: modeShift, text: modeShift.stationText(in: session.language), language: session.language)
+                    .accessibilityIdentifier("station.modeShift")
             }
         } header: {
             Text("Trips a day by station")
@@ -1104,5 +1111,31 @@ private struct TransferLinkMenu: View, Equatable {
             }
         }
         .accessibilityIdentifier("station.linkTransfer")
+    }
+}
+
+/// Decision 332: on the station and line cards, how many riders take a
+/// scooter or a car instead, and below it what brings most of them back.
+struct ModeShiftRow: View {
+    let summary: ModeShiftSummary
+    let text: String
+    let language: DisplayLanguage
+
+    var body: some View {
+        Label {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(verbatim: text)
+                    .monospacedDigit()
+                if summary.reason != .nearby {
+                    Text(verbatim: summary.reasonText(in: language))
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            }
+            .fixedSize(horizontal: false, vertical: true)
+        } icon: {
+            Image(systemName: summary.symbol)
+        }
+        .font(.footnote)
+        .accessibilityElement(children: .combine)
     }
 }
