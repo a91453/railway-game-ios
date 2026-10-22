@@ -20,7 +20,6 @@ struct MapLockMarks: View {
             ForEach(session.mapLocks(on: camera, viewport: viewport, clearOf: clear)) { lock in
                 mark(lock)
                     .fixedSize()
-                    .frame(width: 0, height: 0, alignment: .center)
                     .position(x: lock.at.x, y: lock.at.y)
             }
         }
