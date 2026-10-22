@@ -665,7 +665,8 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
     }
 
     /// Turns `world`'s disruptions, building materials, outside
-    /// connections, real transfers (on a real-world map), funds and rules (decision 258: simple rules have no
+    /// connections, real transfers (on a real-world map), riders switching
+    /// to scooters and cars (decision 332), funds and rules (decision 258: simple rules have no
     /// weather or building materials, whatever the options say) to these
     /// options. Free, and nothing else changes.
     public func apply(to world: inout GameWorld) {
@@ -683,6 +684,10 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
         // Decision 298: real-world maps only.
         world.setRealTransfers(realTransfers && world.geoAnchor != nil)
         world.setUnlimitedFunds(funds == .unlimited)
+        // Decision 332: riders take a scooter or a car instead of a slow
+        // train, gently with simple rules; real-world maps take the
+        // national share until the counties' are known.
+        try? world.setModeShift(rules == .simple ? .simple : ModeShift.realistic())
         rules.apply(to: &world)
     }
 

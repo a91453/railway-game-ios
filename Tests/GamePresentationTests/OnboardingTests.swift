@@ -237,7 +237,25 @@ final class OnboardingTests: XCTestCase {
         var world = GameWorld.newGame(eventSeed: 7, buysMap: true)
         let before = world
         options.apply(to: &world)
+        // Decision 332: riders switch to scooters and cars by the
+        // realistic rule; nothing else changes.
+        XCTAssertEqual(world.modeShift, ModeShift.realistic())
+        try? world.setModeShift(nil)
         XCTAssertEqual(world, before)
+    }
+
+    /// Decision 332: a player's new game lets riders switch to scooters and
+    /// cars, gently with simple rules; the worlds built without the options
+    /// (the challenges, the demos) do not.
+    func testTheOptionsLetRidersSwitchToScootersAndCars() {
+        var world = GameWorld.newGame(eventSeed: 7)
+        XCTAssertNil(world.modeShift)
+        NewGameOptions().apply(to: &world)
+        XCTAssertEqual(world.modeShift, .simple)
+        var options = NewGameOptions()
+        options.rules = .realistic
+        options.apply(to: &world)
+        XCTAssertEqual(world.modeShift, ModeShift(rule: .realistic, cap: ModeShift.nationalShare))
     }
 
     func testTheDifficultiesSetTheCashAndTheDisruptions() {
