@@ -356,7 +356,7 @@ final class RealRailwaysTests: XCTestCase {
             let sections = DataSourceCredits.sections(in: language)
             XCTAssertEqual(sections.map(\.id), ["railways", "population", "map", "cityView"])
             let credits = sections.flatMap(\.credits)
-            XCTAssertEqual(credits.map(\.id), ["tdx", "traOpenData", "ridership", "nlsc", "openStreetMap", "operators", "worldPop", "overtureBuildings", "appleMaps", "wikidata", "worldUrbanizationProspects", "taiwanBaseMap", "openFreeMap", "mapLibre", "map3DGround", "meshy", "copernicusDEM", "proceduralTokyo", "polyHaven"])
+            XCTAssertEqual(credits.map(\.id), ["tdx", "traOpenData", "ridership", "nlsc", "openStreetMap", "operators", "worldPop", "overtureBuildings", "appleMaps", "wikidata", "worldUrbanizationProspects", "taiwanBaseMap", "openFreeMap", "mapLibre", "map3DGround", "meshy", "temples", "copernicusDEM", "proceduralTokyo", "polyHaven"])
             for credit in credits {
                 XCTAssertFalse(credit.title.isEmpty || credit.detail.isEmpty || credit.notice.isEmpty, credit.id)
                 for link in credit.links {
@@ -372,6 +372,13 @@ final class RealRailwaysTests: XCTestCase {
             XCTAssertTrue(openStreetMap.detail.contains(language.text("Yilan and Su'aoxin sidings", "宜蘭、蘇澳新側線")), openStreetMap.detail)
             XCTAssertTrue(openStreetMap.links.contains { $0.url == "https://opendatacommons.org/licenses/odbl/1-0/" })
             XCTAssertTrue(credits.first { $0.id == "tdx" }?.links.contains { $0.url == "https://data.gov.tw/license" } == true)
+            // Decision 331: the temples' three sources and their licences.
+            let temples = try XCTUnwrap(credits.first { $0.id == "temples" })
+            for part in [language.text("Ministry of the Interior", "內政部"), language.text("Bureau of Cultural Heritage", "文化資產局"), "© OpenStreetMap",
+                         language.text("Open Government Data License, version 1.0", "政府資料開放授權條款第 1 版")] {
+                XCTAssertTrue(temples.notice.contains(part), part)
+            }
+            XCTAssertTrue(temples.links.contains { $0.url == "https://opendatacommons.org/licenses/odbl/1-0/" })
             // Decision 298: the open data under its licence, and the High
             // Speed Rail's statistics credited to the company.
             let ridership = try XCTUnwrap(credits.first { $0.id == "ridership" })
