@@ -94,9 +94,9 @@ final class MapMarkTapUITests: XCTestCase {
         let alert = alerts.allElementsBoundByIndex.first(where: \.isHittable)
         XCTAssertNotNil(alert, "A bubble is on screen")
         alert?.tap()
-        // Any of the panel's rows: which ones are on screen first depends
-        // on the screen's size.
-        let panel = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'station.'")).firstMatch
-        XCTAssertTrue(panel.appears(within: 5), "A tap on the bubble's middle opens its station")
+        // The panel's operations rows, on screen first on any size: on an
+        // iPhone its buttons start below them (run 39845867564).
+        let panel = app.descendants(matching: .any).matching(identifier: "station.operations").firstMatch
+        XCTAssertTrue(panel.appears(within: 10), "A tap on the bubble's middle opens its station")
     }
 }
