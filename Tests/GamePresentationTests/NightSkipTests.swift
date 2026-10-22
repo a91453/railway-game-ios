@@ -458,13 +458,46 @@ final class NightSkipTests: XCTestCase {
         session.skipToMorning()
         _ = runSkip(session)
         XCTAssertNil(session.nightSkipOffer, "nothing left to skip at the stop")
+    }
 
+    /// Decision 330, later: after a command while paused, the run ahead
+    /// the memo does not answer runs off the main actor, one at a time;
+    /// the offer stays as it was until it is found, and is then what the
+    /// main actor would have found.
+    func testACommandWhilePausedRunsAheadOffTheMainActor() async throws {
         let paused = GameSession(world: try world())
         paused.togglePause()
-        XCTAssertNotNil(paused.nightSkipOffer)
+        await settle(paused)
+        let offer = try XCTUnwrap(paused.nightSkipOffer)
+        XCTAssertEqual(offer, NightSkip.plan(for: paused.world))
+
         paused.setSelectedLineAllDay(true)
-        XCTAssertNil(paused.nightSkip, "the line now runs all night")
-        XCTAssertNil(paused.nightSkipOffer, "a command while paused is looked at at once")
+        XCTAssertNotNil(paused.nightSkipLookAhead, "the memo no longer answers")
+        XCTAssertEqual(paused.nightSkipOffer, offer, "the offer stays until the run ahead is found")
+        await settle(paused)
+        XCTAssertNil(NightSkip.plan(for: paused.world), "the line now runs all night")
+        XCTAssertNil(paused.nightSkipOffer)
+        XCTAssertEqual(paused.nightSkipMemo?.revision, paused.commandRevision)
+
+        // A command while one runs ahead: what it found is for a world
+        // that is gone, so it runs ahead again for the new one.
+        paused.setSelectedLineAllDay(false)
+        let first = try XCTUnwrap(paused.nightSkipLookAhead)
+        paused.setSelectedLineAllDay(true)
+        paused.setSelectedLineAllDay(false)
+        await first.value
+        XCTAssertNotNil(paused.nightSkipLookAhead, "the world changed meanwhile: it runs ahead again")
+        await settle(paused)
+        XCTAssertEqual(paused.nightSkipOffer, NightSkip.plan(for: paused.world), "as the main actor would have found it")
+        let memo = try XCTUnwrap(paused.nightSkipMemo)
+        XCTAssertEqual(memo.revision, paused.commandRevision)
+        XCTAssertEqual(memo.from, paused.world.clock.now)
+    }
+
+    /// Waits for the run ahead after a command while paused, and any it
+    /// started again.
+    private func settle(_ session: GameSession) async {
+        while let lookAhead = session.nightSkipLookAhead { await lookAhead.value }
     }
 
     /// Decision 328: the game loop's tick runs ahead off the main actor,

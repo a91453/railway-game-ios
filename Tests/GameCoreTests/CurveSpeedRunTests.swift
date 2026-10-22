@@ -103,6 +103,46 @@ final class CurveSpeedRunTests: XCTestCase {
         }
     }
 
+    /// A6 of the #873–#910 review: a train of a real timetable that runs
+    /// late makes up what it can, but under the curve limits its timetable
+    /// keeps to (decision 306); only where the timetable's own time does
+    /// not fit under them does it run without.
+    ///
+    /// Station M on the straight before the bend: the timetable gives A–M
+    /// 10 s, which no train makes, so the train leaves M late, and M–B,
+    /// through the bend, 170 s, which fit under the limit.
+    func testALateRealRunMakesUpTimeUnderTheLimits() throws {
+        var (world, train) = try build(limits: true, realistic: false)
+        let a = StationID(rawValue: 1), b = StationID(rawValue: 2)
+        let m = try world.buildStation(named: "M", at: PlanPoint(x: 8_192 + 4_096 + 32_000, y: 8_192 + 512)).id
+        try world.addTrackPlatform(m, on: .edge(2), from: 28_000, to: 32_096)
+        try world.setLineStops(main, to: [a, m, b])
+        try world.setLineRuns(main, to: [LineRun(from: 0, to: 2, times: [
+            LineRunTime(arrival: 600, departure: 600), LineRunTime(arrival: 610, departure: 640), LineRunTime(arrival: 810, departure: 810),
+        ])])
+        var run: ServiceRun?
+        for _ in 0..<1_200 where run == nil {
+            try world.advance(ticks: 1)
+            if case .travellingToStop(2, _)? = world.train(id: train)?.execution { run = world.train(id: train)?.times?.run }
+        }
+        let late = try XCTUnwrap(run)
+        XCTAssertGreaterThan(late.start.seconds, 640, "it leaves M late")
+        XCTAssertFalse(late.limits.isEmpty, "it keeps to the curve")
+        let moving = try XCTUnwrap(world.train(id: train))
+        XCTAssertEqual(late.seconds, RunCurve.leastSeconds(length: late.length, performance: moving.performance, limits: late.limits),
+                       "as fast as the curve lets it")
+        XCTAssertLessThan(late.seconds, 170, "making up time")
+
+        // Where the timetable's own time does not fit under the limits,
+        // the real time is kept without them, late or not.
+        let free = try XCTUnwrap(world.run(of: moving, length: late.length, scheduled: 60, timetabled: 100))
+        XCTAssertEqual(free.limits, [])
+        XCTAssertLessThan(free.seconds, late.seconds)
+        let lateFitting = try XCTUnwrap(world.run(of: moving, length: late.length, scheduled: 60, timetabled: 170))
+        XCTAssertFalse(lateFitting.limits.isEmpty)
+        XCTAssertEqual(lateFitting.seconds, RunCurve.leastSeconds(length: late.length, performance: moving.performance, limits: lateFitting.limits))
+    }
+
     func testWithTheSwitchOffARunMeetsNoLimit() throws {
         var (world, train) = try build(limits: false)
         for _ in 0..<300 {
