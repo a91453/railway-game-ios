@@ -166,7 +166,7 @@ public struct StationRidership: Hashable, Sendable {
 /// traffic control, the trains' lengths and seats, the service day, the
 /// transfer groups, how passengers are routed, the fares, the day and what
 /// changes demand by the day (weekly demand, events, holidays and
-/// weather), demand by distance, the outside connections and the map's
+/// weather), demand by distance, who takes a scooter or a car instead, the outside connections and the map's
 /// tiles owned. Not when a line last sent a train out, which changes every
 /// few minutes and none of it reads, nor who is waiting at a station
 /// without demand of its own. Within a day the service level that network
@@ -235,6 +235,8 @@ public struct RidershipInputs: Equatable, Sendable {
     /// hotel changes how many tourists come, as the passenger plan's key has.
     let tourism: Tourism?
     let tourismStars: [Int]
+    /// Decision 332: who takes a scooter or a car instead.
+    let modeShift: ModeShift?
 
     public init(world: GameWorld) {
         day = world.clock.now.seconds / GameTime.secondsPerDay
@@ -265,6 +267,7 @@ public struct RidershipInputs: Equatable, Sendable {
         ownedTiles = world.mapExpansion?.owned
         tourism = world.tourism
         tourismStars = world.tourism?.attractions.map { world.stars(of: $0) } ?? []
+        modeShift = world.modeShift
     }
 }
 
