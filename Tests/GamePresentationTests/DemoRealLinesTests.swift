@@ -93,6 +93,21 @@ final class DemoRealLinesTests: XCTestCase {
         XCTAssertNotEqual(running.trains.map(\.position), standing)
         XCTAssertGreaterThan(session.world.trains.count, session.world.lines.count, "more than one train a line")
 
+        // Decision 351, later: the place on the track nearest a point is
+        // the one every edge's geometry gives, near the track and away.
+        let world = session.world
+        var points: [PlanPoint] = []
+        for node in world.network.nodes.prefix(300) {
+            for (dx, dy) in [(0, 0), (7, -3), (-15, 15), (40, 2), (-200, 90)] {
+                points.append(PlanPoint(x: node.position.x + Int64(dx) * WorldCoordinate.unitsPerMetre / 4, y: node.position.y + Int64(dy) * WorldCoordinate.unitsPerMetre / 4))
+            }
+        }
+        for point in points {
+            for radius: Int64 in [16, 2 * WorldCoordinate.unitsPerMetre, 30 * WorldCoordinate.unitsPerMetre] {
+                XCTAssertEqual(world.trackEdgePoint(near: point, within: radius), Self.everyEdgePoint(near: point, within: radius, in: world), "\(point) \(radius)")
+            }
+        }
+
         session.undo()
         XCTAssertEqual(session.world.network, before.network, "one Undo")
         XCTAssertEqual(session.world.lines, before.lines)
@@ -142,6 +157,30 @@ final class DemoRealLinesTests: XCTestCase {
         XCTAssertEqual(session.world.stations, before.stations)
         XCTAssertEqual(session.world.lines, before.lines)
         XCTAssertEqual(session.world.trains, before.trains)
+    }
+
+    /// ``GameWorld/trackEdgePoint(near:within:)`` as it was before
+    /// decision 351's later change: every edge's geometry looked at.
+    private static func everyEdgePoint(near point: PlanPoint, within radius: Int64, in world: GameWorld) -> NetworkEdgePoint? {
+        let px = Double(point.x), py = Double(point.y)
+        let limit = Double(radius) * Double(radius)
+        var best: (point: NetworkEdgePoint, distance: Double)?
+        for edge in world.network.edges {
+            guard let geometry = world.trackGeometry(of: edge.id) else { continue }
+            for index in geometry.points.indices.dropLast() {
+                let a = geometry.points[index], b = geometry.points[index + 1]
+                let ax = Double(a.x), ay = Double(a.y)
+                let dx = Double(b.x) - ax, dy = Double(b.y) - ay
+                let span = dx * dx + dy * dy
+                let t = span > 0 ? min(1, max(0, ((px - ax) * dx + (py - ay) * dy) / span)) : 0
+                let ex = ax + t * dx - px, ey = ay + t * dy - py
+                let squared = ex * ex + ey * ey
+                guard squared <= limit, best == nil || squared < best!.distance else { continue }
+                let start = geometry.distances[index], end = geometry.distances[index + 1]
+                best = (NetworkEdgePoint(edge: edge.id, distance: start + Int64((Double(end - start) * t).rounded())), squared)
+            }
+        }
+        return best?.point
     }
 
     /// Outside a demo game, too wide a view or nothing in view: nothing is
