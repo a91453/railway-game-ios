@@ -115,6 +115,8 @@ Session：session_01SvQ285hMiSeRsER1EXzfT9，遊戲規劃 session_014rYHMtmqA5bE
 | `swift build --build-tests -Xswiftc -warnings-as-errors`（main，以及兩條分支） | **VERIFIED**，乾淨 |
 | A1、A2 的回歸測試在舊程式上（修之前） | **VERIFIED**，紅（錯誤訊息見第二節） |
 | A6 的探針 | **VERIFIED**，重現（600 秒有 1 個限速，30 秒變成 142 秒、0 個限速） |
-| GameCore PR：`DispatchPatternTests`、`LineAcquisitionTests`、`RingLineTests`、`StationRemovalTests`、`AssetAccountsTests`、`LineAccountsTests`、`LineEditingCommandTests`、`LineRunsTests`、`GoldenScenarioTests`、`SavedGameTests`、`ReplayFixtureTests`、`LongLegReplayTests`、`ReferenceWorldGoldenTests`，以及 property 類 `FlexDispatchPropertyTests`、`LineDispatchPropertyTests`、`ServiceLinePropertyTests`、`KernelDifferentialTests` | 見 PR 描述 |
-| Presentation PR：`Map3DOpenHereTests`、`Map3DLineBandsTests`、`RealTrainMotionTests`、`Map3DTests`、`LineMapTests` | 見 PR 描述 |
+| GameCore PR：`DispatchPatternTests`、`LineAcquisitionTests`、`RealLineAcquisitionTests`、`RingLineTests`、`StationRemovalTests`、`AssetAccountsTests`、`LineAccountsTests`、`LineEditingCommandTests`、`LineRunsTests`、`GoldenScenarioTests`、`SavedGameTests`、`ReplayFixtureTests`、`LongLegReplayTests`、`ReferenceWorldGoldenTests`，以及 property 類的 `FlexDispatchPropertyTests`、`LineDispatchPropertyTests`、`ServiceLinePropertyTests`、`KernelDifferentialTests`（debug） | **VERIFIED**，全過（兩次執行：第一次跑到 30 分鐘的上限時，前 15 個類別已經過了，剩下 3 個另外跑，49 個測試 672 秒）。golden 與 replay 都沒有移動 |
+| A4、A5 的回歸測試在舊程式上（把 `RealTrainMotion.swift`、`Map3DLineBands.swift` 換回 `main` 的版本） | **VERIFIED**，紅 |
+| Presentation PR：`Map3DOpenHereTests`、`Map3DLineBandsTests`、`RealTrainMotionTests`、`LineMapTests`、`Map3DOpenEveryStartTests` | **VERIFIED**，34 個測試全過（1 個照原本的條件跳過） |
+| 其他 GamePresentation 類別與 campaign shard | 交給 CI |
 | App 的 `Map3DPreviewScreen.swift`（A3 的 4 行） | **UNVERIFIED LOCALLY**，要等 macOS 的 CI（`ios-build.yml`） |
