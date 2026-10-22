@@ -199,6 +199,24 @@ final class DispatchPatternTests: XCTestCase {
         XCTAssertEqual(world.line(id: main)?.dispatchPattern, .even)
     }
 
+    /// A line made a ring spaces its trains evenly (a ring has no other
+    /// pattern), so its save loads: before, a staggered line made a ring
+    /// kept its stagger and the save was refused.
+    func testALineMadeARingSpacesItsTrainsEvenly() throws {
+        for pattern in [DispatchPattern.fromBothEnds, .staggered(minutes: 5)] {
+            var world = try makeWorld(secondAtGamma: true)
+            try world.setLineDispatchPattern(main, to: pattern)
+            try world.advance(ticks: 20)
+            try world.setLineStops(main, to: [alpha, StationID(rawValue: 2), gamma])
+            try world.setLineRing(main, to: true)
+            let ring = try XCTUnwrap(world.line(id: main))
+            XCTAssertEqual(ring.dispatchPattern, .even, "\(pattern)")
+            XCTAssertNil(ring.endLastDispatch, "\(pattern)")
+            XCTAssertFalse(ring.opensPair, "\(pattern)")
+            XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world, "\(pattern)")
+        }
+    }
+
     /// Fast-forwarding past idle minutes sends the same trains at the same
     /// times as a tick at a time, for each pattern.
     func testLongBatchesMatchSingleTicks() throws {
