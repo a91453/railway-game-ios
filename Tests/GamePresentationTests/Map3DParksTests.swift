@@ -147,4 +147,45 @@ final class Map3DParksTests: XCTestCase {
         let real = Map3DScene(world: world, baseMap: tiles)
         XCTAssertGreaterThan(close(real), placed / 2)
     }
+
+    /// Review D (#990): the cells a scene stands on go back to the scene, so
+    /// no city lot is drawn over it, however little of a cell the park
+    /// covers.
+    func testTheCellsItStandsOnAreTaken() throws {
+        let world = GameWorld.newGame(anchor: anchor)
+        var builder = builder(world)
+        let taken = builder.addParks(Map3DBaseMap(areas: [square(builder, x: 0, z: 0, side: 30)]), clearOf: [])
+        let bounds = try XCTUnwrap(builder.closeMeshes.values.first?.bounds)
+        let corners = [Map3DPoint(bounds.min.x, 0, bounds.min.z), Map3DPoint(bounds.max.x, 0, bounds.min.z),
+                       Map3DPoint(bounds.max.x, 0, bounds.max.z), Map3DPoint(bounds.min.x, 0, bounds.max.z)]
+        XCTAssertFalse(taken.isEmpty)
+        XCTAssertTrue(builder.cells(under: corners).isSubset(of: taken), "\(taken)")
+    }
+
+    /// Review D (#990): a big park's pond or sports ground is chosen by where
+    /// the park is on the map, not in the scene, whose middle moves with
+    /// the camera: the same park keeps its scene.
+    func testABigParkKeepsItsSceneWhereverTheCameraIs() throws {
+        let world = GameWorld.newGame(anchor: anchor)
+        let metre = Double(WorldCoordinate.unitsPerMetre)
+        let start = Map3DScene.frame(world: world, focus: nil)
+        for park in 0..<6 {
+            // A 200 m square park, fixed on the map.
+            let west = start.originX + Double(park * 433 - 1_300) * metre, north = start.originY + Double(park * 271 - 800) * metre
+            var scenes = Set<Int>()
+            for step in 0..<8 {
+                let focus = (x: start.originX + Double(step * 37) * metre, y: start.originY - Double(step * 53) * metre)
+                let (region, originX, originY) = Map3DScene.frame(world: world, focus: focus)
+                var builder = Map3DScene.Builder(originX: originX, originY: originY, region: region, world: world, heights: nil)
+                let corners = [(0.0, 0.0), (200.0, 0.0), (200.0, 200.0), (0.0, 200.0)].map {
+                    builder.point(x: west + $0.0 * metre, y: north + $0.1 * metre, height: 0)
+                }
+                let area = Map3DBaseMap.Area(cover: .park, rings: [corners.map { Map3DBaseMap.Point(x: Double($0.x), z: Double($0.z)) }],
+                                             bounds: Map3DBaseMap.Bounds(minX: -5_000, minZ: -5_000, maxX: 5_000, maxZ: 5_000))
+                builder.addParks(Map3DBaseMap(areas: [area]), clearOf: [])
+                scenes.insert(triangles(builder.closeMeshes))
+            }
+            XCTAssertEqual(scenes.count, 1, "park \(park): \(scenes)")
+        }
+    }
 }
