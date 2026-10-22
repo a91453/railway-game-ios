@@ -230,17 +230,20 @@ public struct Map3DScene: Sendable {
         let region = WorldRegion(minX: max(map.minX, box.minX - apron), minY: max(map.minY, box.minY - apron),
                                  maxX: min(map.maxX, box.maxX + apron), maxY: min(map.maxY, box.maxY + apron))
         guard region.minX < region.maxX, region.minY < region.maxY else { return [] }
+        // Decision 359: the whole scene's track cover, not the chunks'.
         let scene = Map3DScene(world: world, snapshot: snapshot, skyline: skyline, frame: (region, streaming.originX, streaming.originY),
-                               baseMap: baseMap, cityTiles: cityTiles, heights: heights, lineBands: lineBands, railways: railways, temples: temples)
+                               baseMap: baseMap, cityTiles: cityTiles, heights: heights, lineBands: lineBands, railways: railways, temples: temples,
+                               trackCover: Map3DTrackCover())
         let wanted = Set(keys)
         return scene.chunks.filter { wanted.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }
     }
 
     /// Decision 358: the scene of `frame`'s region round its origin (world
-    /// units), built as the public initializer builds it.
+    /// units), built as the public initializer builds it. Decision 359:
+    /// with `trackCover`, or the network's own when `nil`.
     init(world: GameWorld, snapshot: RailwaySnapshot?, skyline: CitySkyline?, frame: (region: WorldRegion, originX: Double, originY: Double),
          baseMap: BaseMapTiles?, cityTiles: [CityTileArea], heights: HeightGrid?, lineBands: Map3DLineBands?, railways: RealRailways?,
-         temples: RealTemples?) {
+         temples: RealTemples?, trackCover: Map3DTrackCover? = nil) {
         (region, originX, originY) = frame
 
         var builder = Builder(originX: originX, originY: originY, region: region, world: world, heights: heights)
@@ -258,7 +261,7 @@ public struct Map3DScene: Sendable {
         if let lineBands { builder.addLineBands(lineBands, snapshot: snapshot) }
         builder.addPlatforms(snapshot)
         builder.addPortals(snapshot)
-        trackCover = Map3DTrackCover(snapshot, builder: &builder)
+        self.trackCover = trackCover ?? Map3DTrackCover(snapshot, builder: &builder)
         // Decision 339: the real lines' track, clear of the player's, and
         // their trains on it.
         if let railways, let operations = railways.operations, let frame = RealWorldFrame(world: world) {
