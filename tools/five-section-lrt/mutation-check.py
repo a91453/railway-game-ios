@@ -29,15 +29,18 @@ for defect in ['missing-face','reversed-face','floating-glass']:
    # Exact palette glass of the current native; move all vertices as closed
    # pieces, so edge closure alone cannot catch this visible defect.
    glass=tuple(map(int,json.loads((root/'geometry-verification.json').read_text())['glass_rgba'].split(',')))
+   family={tuple(v if i==3 else int(v*f+0.5) for i,v in enumerate(glass)) for f in [1,.92,.80,.70,.86]}
    for triangle in range(struct.unpack_from('<I',blob,8)[0]):
     for vertex in range(3):
      at=start+triangle*52+4+vertex*16
-     if tuple(blob[at+12:at+16])==glass:
+     if tuple(blob[at+12:at+16]) in family:
       y=struct.unpack_from('<f',blob,at+4)[0]
       if abs(y)>1.1:struct.pack_into('<f',blob,at+4,y+(0.3 if y>0 else -0.3))
   (out/target).write_bytes(blob)
   run=subprocess.run(['node',str(audit),str(out)],capture_output=True,text=True)
   assert run.returncode!=0,f'Audit accepted {defect}'
+  if defect=='floating-glass':
+   assert 'unsupported glazing' in run.stderr,'Detached closed glass must fail its support ray, not closure'
   results.append({'defect':defect,'rejected':True,'diagnostic':run.stderr[-1800:]})
 (root/'mutation-verification.json').write_text(json.dumps({'status':'VERIFIED','mutants':results},indent=2)+'\n')
 print('VERIFIED actual-triangle mutations: missing face, inverted face, unsupported glass rejected')
