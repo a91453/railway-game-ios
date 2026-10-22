@@ -11194,6 +11194,15 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - Linux 測試 `AutoServiceTests.testEveryLoopIsPlannedOnTheSessionsGround`：海峽上地面 0 公尺的 10 公里單線，緊貼區塊列的邊界（北側的側線落在沒讀過的那一列），三列車加開第四列時蓋三處；修正前只有兩處。
 - 四方：玩家：實景地圖上按一次「加開一列車」，該蓋的交會處都會蓋；開發：只改 GamePresentation，副本讀的地面和真的蓋的時候一樣；美術：無；音樂：無。
 
+**之後的修正**（2026-10-22，NEXT_PRIORITIES §22.2 第 8 名，HANDOFF §7.1）：雙線的宜蘭線示範，站長說「TRA Local 沒有地方交會」。
+- 原因：兩個示範（高鐵、宜蘭線）的上行線在兩端月台前用一個轉轍器併進下行線（`HighSpeedDemo` 的版面）。頭城⇄頂埔、冬山⇄蘇澳新之間所有的路都經過那一段約 100 m 的邊，`lineTrackCounts` 算成 1 股；「沒有地方交會」把這兩段當成單線，8 條路線共 30 多列車、只有 8 個中間站可以交會，就說不夠。高鐵示範有同樣的轉轍器，只是列車數沒超過門檻。
+- 改法：只有 1 股的那一段，還要量它真正單線的長度（`singleTrackLength`：這段路線經過的邊裡，拿掉它就到不了下一站的那些，月台所在的邊也算，只要那站沒有別的月台接得到），超過這段距離的一半才算單線。宜蘭線兩端只有轉轍器那一條邊是單的（2.2 km 裡的 100 m、5.2 km 裡的 100 m），所以不算；玩家蓋的單線每一條邊都是單的，照舊算。這只會把「1 股」改判成「可以交會」，不會多出新的警告；一處長的待避線（超過這段的一半）也算可以交會。
+- 只改 GamePresentation（`AutoService.swift`）；GameCore、存檔、golden、replay 都不動。待避線的規劃也用同一個判斷，所以在這兩段不再規劃待避線。
+- 證實的假說：兩端的轉轍器讓整段算成 1 股。被推翻的：(1) 留置線或機廠的支線被算進路線（路線經過的邊沒有它們）；(2) 宜蘭線的中間站少了第二個月台（中間 8 段都是 2 股）。
+- Linux 測試 `TRADemoTests.testTheStationMasterFindsPlacesToPassOnTheDoubleTrack`：開局與 `.fast` 跑 60 個 tick 後都沒有「沒有地方交會」，修正前三個斷言都紅。`AutoServiceTests` 的單線案例不變。
+- 沒做：結果記住不重算。決策 330 已經把它放到主執行緒之外，一遊戲小時算一次；這次多出的只是 1 股那幾段的搜尋，比算股數的最大流小。
+- 五方：玩家：雙線的路線不再被要求蓋待避線；鐵道迷：車站咽喉的轉轍器本來就不是單線區間；開發：只改判斷，不動軌道與示範的版面；美術：無；音樂：無。
+
 ### 265. PR 的 gate 等同一個 commit 的 iOS App Build；full lane 不在每批合併後手動跑
 
 2026-10-16。作者：「不用凍結了 但也先不要開工我要做pr review 跟ci優化」；遊戲規劃 session_01V1xd3H9vNkuZoSA3czNfGm 派工給 CI 優化 session。號碼依工作登記 #231：決策 265；存檔版本、golden schema 不動。GameCore、App、測試都不動，存檔、golden、replay 也都不變。量測與其他方案見 `docs/research/CI_MEASURE_2026-10-16.md`。

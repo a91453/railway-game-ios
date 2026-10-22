@@ -128,8 +128,13 @@ extension GameWorld {
         of id: LineID, trains wanted: Int, readyFor: Int, edges cache: inout [LineID: Set<TrackEdgeID>]
     ) -> PassingPlaceShortfall? {
         guard let line = line(id: id), !line.isRing, let journey = lineJourney(id), let tracks = lineTrackCounts(id) else { return nil }
-        // The single-track legs out, each with its edges.
-        let single = Self.legEdges(of: journey).filter { $0.leg.to > $0.leg.from && $0.leg.from < tracks.count && tracks[$0.leg.from] == 1 }
+        // The single-track legs out, each with its edges: one track between
+        // the stops, and most of the way single, not just a station's
+        // throat (``singleTrackLength(of:from:to:)``).
+        let single = Self.legEdges(of: journey).filter {
+            $0.leg.to > $0.leg.from && $0.leg.from < tracks.count && tracks[$0.leg.from] == 1 && $0.leg.to < line.stops.count
+                && singleTrackLength(of: $0.edges, from: line.stops[$0.leg.from], to: line.stops[$0.leg.to]) * 2 > $0.leg.path.distance
+        }
         guard !single.isEmpty else { return nil }
         let singleEdges = Set(single.flatMap(\.edges))
         // The other lines over the same single track, and their trains.
@@ -157,6 +162,36 @@ extension GameWorld {
             legs: ordered.map { .init(from: $0.leg.from, to: $0.leg.to, edges: $0.edges, distance: $0.leg.path.distance) },
             others: others.sorted()
         )
+    }
+
+    /// How much of `edges`, a leg's from stop `a` to stop `b`, every way
+    /// from a platform of `a` to one of `b` runs over: the leg's single
+    /// track. A double track whose two ways join by a turnout short of a
+    /// station's platforms, as the demos' ends do (``HighSpeedDemo``), has
+    /// one track between the stations (``GameWorld/lineTrackCounts(_:)``)
+    /// but only the turnout's edge single: trains pass on the rest of it.
+    private func singleTrackLength(of edges: [TrackEdgeID], from a: StationID, to b: StationID) -> Int64 {
+        let starts = Set(network.platforms.filter { $0.station == a }.map(\.edge))
+        let goals = Set(network.platforms.filter { $0.station == b }.map(\.edge))
+        // Whether a platform of `b` is reached from one of `a` without `cut`.
+        func joined(without cut: TrackEdgeID) -> Bool {
+            var seen = starts.subtracting([cut])
+            var queue = Array(seen)
+            while let edge = queue.popLast() {
+                if edge != cut, goals.contains(edge) { return true }
+                guard let track = network.edge(edge) else { continue }
+                for node in [track.from, track.to] {
+                    for next in network.node(node)?.end(of: edge)?.exits ?? [] where next != cut && seen.insert(next).inserted {
+                        queue.append(next)
+                    }
+                }
+            }
+            return false
+        }
+        return Set(edges).reduce(0) { length, edge in
+            guard let track = network.edge(edge), !joined(without: edge) else { return length }
+            return length + track.length
+        }
     }
 
     /// Line `id`'s shortfall with the trains it has, when another line's
