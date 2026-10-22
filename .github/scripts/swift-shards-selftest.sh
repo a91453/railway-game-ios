@@ -31,13 +31,28 @@ make_list "$work/list.txt"
 # The fake swift. `swift test list` prints the list. `swift test --skip-build
 # [--filter R | --skip R]...` prints XCTest's started/passed lines for the
 # tests the arguments select (filters OR together, skips remove), then
-# misbehaves as FAKE_MODE says.
+# misbehaves as FAKE_MODE says. `swift build` exits with the next of
+# FAKE_BUILD's exit codes (0 past the last), counting in FAKE_COUNT.
 cat >"$work/bin/swift" <<'FAKE'
 #!/usr/bin/env bash
 set -euo pipefail
 if [[ "$1 $2" == "test list" ]]; then
   cat "$FAKE_LIST"
   exit 0
+fi
+# The how-manyth call of swift build or swift test this is, from 1.
+call() {
+  local n
+  n="$(cat "$FAKE_COUNT" 2>/dev/null || echo 0)"
+  echo $((n + 1)) >"$FAKE_COUNT"
+  echo $((n + 1))
+}
+if [[ "$1" == build ]]; then
+  read -r -a codes <<<"${FAKE_BUILD:-0}"
+  n="$(call)"
+  code="${codes[$((n - 1))]:-0}"
+  echo "fake swift build: exit code $code"
+  exit "$code"
 fi
 shift # test
 filters=() skips=()
@@ -66,7 +81,14 @@ if [[ -n "${FAKE_ARG_MAX:-}" && "$(sort -u "$selected" | paste -s -d , | wc -c)"
   exit 1
 fi
 sed -E 's#^[^.]+\.([^/]+)/(.*)$#\1.\2#' "$selected" | sort -u >"$selected.names"
+n="$(call)"
 case "${FAKE_MODE:-ok}" in
+  crash-first) ((n > 1)) || exit 139 ;;                       # swift test crashes before any test, once
+  crash-always) exit 139 ;;                                    # ... every time
+  crash-in-test)                                               # a test crashes the runner
+    echo "Test Case '$(head -1 "$selected.names")' started at 2026-01-01 00:00:00.000"
+    exit 139
+    ;;
   drop) sed -i '1d' "$selected.names" ;;                      # one selected test never runs
   extra) echo "UnitTests.testA" >>"$selected.names" ;;        # a test the shard did not select runs
 esac
@@ -83,6 +105,21 @@ FAKE
 chmod +x "$work/bin/swift"
 
 failures=0
+rm -f "$work/count"
+export FAKE_COUNT="$work/count"
+# calls <n>: swift build or swift test was called exactly n times since the
+# count was last cleared.
+calls() {
+  local got
+  got="$(cat "$work/count" 2>/dev/null || echo 0)"
+  if [[ "$got" == "$1" ]]; then
+    echo "ok   calls $1"
+  else
+    echo "FAIL expected $1 calls of swift, got $got"
+    failures=$((failures + 1))
+  fi
+  rm -f "$work/count"
+}
 # expect <pass|fail> <description> <command...>
 # A failing run must also say why: its output has to match $WHY, so a run
 # that fails for some other reason does not pass as the failure under test.
@@ -110,6 +147,26 @@ FAKE_MODE=exit1 WHY='swift test failed in shard rest' expect fail "swift test ex
 FAKE_MODE=failline WHY='tests failed in shard campaigns-1' expect fail "a failed test fails the shard" "$script" run campaigns-1
 
 SWIFT_SHARD_BATCH_CHARS=60 FAKE_ARG_MAX=80 expect pass "a shard too long for one argument runs in batches" "$script" run rest
+
+# A tool crash (killed by a signal) is tried once more; a compile error, a
+# failed test or a crash once a test has started is not (decision 329).
+rm -f "$work/count"
+expect pass "build: a clean build" "$script" build
+calls 1
+FAKE_BUILD="139 0" expect pass "build: swift-build killed by a signal builds once more" "$script" build
+calls 2
+FAKE_BUILD="1" WHY='swift build failed \(exit code 1\)' expect fail "build: a compile error is not built again" "$script" build
+calls 1
+FAKE_BUILD="139 139" WHY='swift build failed \(exit code 139\)' expect fail "build: a second crash fails" "$script" build
+calls 2
+FAKE_MODE=crash-first expect pass "run: swift test killed before any test started runs the batch once more" "$script" run campaigns-2
+calls 2
+FAKE_MODE=crash-always WHY='swift test failed in shard campaigns-2 \(exit code 139\)' expect fail "run: a second crash before any test fails the shard" "$script" run campaigns-2
+calls 2
+FAKE_MODE=crash-in-test WHY='swift test failed in shard campaigns-2 \(exit code 139\)' expect fail "run: a crash once a test has started is not run again" "$script" run campaigns-2
+calls 1
+FAKE_MODE=exit1 WHY='swift test failed in shard campaigns-2 \(exit code 1\)' expect fail "run: a failing batch is not run again" "$script" run campaigns-2
+calls 1
 SWIFT_SHARD_BATCH_CHARS=100000 FAKE_ARG_MAX=80 WHY='swift test failed in shard rest' expect fail "one batch too long for an argument fails the shard" "$script" run rest
 
 grep -v 'NetworkServicePropertyTests' "$work/list.txt" >"$work/renamed.txt"
@@ -581,6 +638,33 @@ WHY='Could not list the iOS App Build runs' expect fail "ios-gate: the API faili
 looks 3
 WHY='HEAD_SHA is not a commit' expect fail "ios-gate: no commit" ios_gate FAKE_IOS="completed:success" HEAD_SHA=
 WHY='GITHUB_REPOSITORY is not set' expect fail "ios-gate: no repository name" ios_gate FAKE_IOS="completed:success" GITHUB_REPOSITORY=
+
+# A cancelled pull request run asks whether the pull request moved on
+# (superseded). The fake `gh` answers pull request 7's head with FAKE_HEAD,
+# or fails when FAKE_HEAD is FAIL; it gives the commit's iOS App Build run as
+# cancelled.
+cat >"$work/bin/gh" <<'FAKE'
+#!/usr/bin/env bash
+if [[ "$2" == repos/owner/repo/actions/workflows/ios-build.yml/runs* ]]; then
+  echo "completed cancelled https://example.invalid/run"
+  exit 0
+fi
+[[ "$*" == "api repos/owner/repo/pulls/7 --jq .head.sha" ]] || { echo "gh: unexpected query: $*" >&2; exit 1; }
+[[ "$FAKE_HEAD" != FAIL ]] || { echo "gh: HTTP 502" >&2; exit 1; }
+echo "$FAKE_HEAD"
+FAKE
+chmod +x "$work/bin/gh"
+superseded() { env GITHUB_REPOSITORY=owner/repo HEAD_SHA="$sha_ios" PR=7 "$@" "$script" superseded 2>/dev/null; }
+newer=fedcba9876543210fedcba9876543210fedcba98
+WHY='^superseded=true$' expect pass "superseded: the pull request moved on" superseded FAKE_HEAD="$newer"
+grep -q -x 'superseded=true' "$work/out.txt" || { echo "FAIL superseded: no superseded=true"; failures=$((failures + 1)); }
+expect pass "superseded: the run is of the head (cancelled by hand)" superseded FAKE_HEAD="$sha_ios"
+grep -q -x 'superseded=false' "$work/out.txt" || { echo "FAIL superseded: the head is not superseded=false"; failures=$((failures + 1)); }
+expect pass "superseded: the head unreadable gives the gate its verdict" superseded FAKE_HEAD=FAIL
+grep -q -x 'superseded=false' "$work/out.txt" || { echo "FAIL superseded: an API failure is not superseded=false"; failures=$((failures + 1)); }
+WHY='PR is not a pull request number' expect fail "superseded: no pull request number" superseded FAKE_HEAD="$newer" PR=
+WHY='cancelled because a newer push replaced this commit of pull request #7' expect fail "ios-gate: a cancelled iOS run of a replaced commit says so" ios_gate PR=7 FAKE_HEAD="$newer"
+WHY='did not pass \(cancelled\)' expect fail "ios-gate: a cancelled iOS run of the head stays a plain failure" ios_gate PR=7 FAKE_HEAD="$sha_ios"
 
 if [[ "$failures" -ne 0 ]]; then
   echo "::error::swift-shards.sh self-test: $failures failures."

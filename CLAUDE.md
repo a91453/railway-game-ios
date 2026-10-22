@@ -177,7 +177,11 @@ needs OSM data reads the same extract.
   re-run the gate too (Re-run failed jobs). Pull requests and pushes to `main` that change
   nothing the package builds or tests skip the Swift jobs, and the `Swift CI
   (gate)` job always reports (but on a cancelled push run of `main`, decision
-  187); `main`'s branch rule requires that job, so never rename it. Pushes
+  187, and on a pull request run a newer push replaced, which shows it
+  skipped rather than red, decision 329); `main`'s branch rule requires that
+  job, so never rename it. When swift-build or swift test itself is killed
+  by a signal before any test started, the build or that batch runs once
+  more (decision 329); a compile error or a failing test never does. Pushes
   to `main` share one concurrency group: a burst of merges runs
   the run in progress and the newest one, the replaced runs show as
   cancelled with no result of their own, and a push is compared with the
