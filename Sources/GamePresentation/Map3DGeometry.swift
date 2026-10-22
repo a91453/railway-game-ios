@@ -36,9 +36,14 @@ public struct Map3DVertex: Hashable, Sendable {
     /// the shader adds its colour as light, as much as the city's lights
     /// are on (``Map3DLighting/lights``).
     public static let glowing: Float = -2
+    /// Decision 356: no texture, and water: the shader tilts it with
+    /// ripples and mirrors the sky in it (``Map3DReflection``).
+    public static let water: Float = -3
 
     /// Whether the vertex is lit from within at night.
-    public var glows: Bool { layer < -1.5 }
+    public var glows: Bool { layer < -1.5 && layer > -2.5 }
+    /// Decision 356: whether the vertex is water.
+    public var isWater: Bool { layer < -2.5 }
 
     public init(_ position: Map3DPoint, normal: Map3DPoint, color: UInt32, u: Float = 0, v: Float = 0, layer: Float = Map3DVertex.plain) {
         x = position.x
@@ -544,6 +549,12 @@ public struct Map3DMesh: Sendable {
     /// (``Map3DVertex/glowing``), keeping their colour.
     public mutating func makeGlowing(from start: Int) {
         for index in start..<vertices.count { vertices[index].layer = Map3DVertex.glowing }
+    }
+
+    /// Decision 356: the vertices added since `start` water
+    /// (``Map3DVertex/water``), keeping their colour.
+    public mutating func makeWater(from start: Int) {
+        for index in start..<vertices.count { vertices[index].layer = Map3DVertex.water }
     }
 
     /// Night light on the ground (a street light's pool): `colour` at

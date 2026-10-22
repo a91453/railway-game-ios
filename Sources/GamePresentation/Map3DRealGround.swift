@@ -75,7 +75,7 @@ extension Map3DScene.Builder {
         }
         for waterway in map.waterways {
             addStrip(waterway.points, bounds: waterway.bounds, width: waterway.kind.width,
-                     lift: Self.lift(of: .water), color: Map3DPalette.water, paint: nil, taking: &taken.whole)
+                     lift: Self.lift(of: .water), color: Map3DPalette.water, paint: nil, water: true, taking: &taken.whole)
         }
         addRoads(map.roads, taking: &taken.byRoads)
         taken.byRoads.subtract(taken.whole)
@@ -267,7 +267,12 @@ extension Map3DScene.Builder {
                     }
                     let middle = Map3DPoint(Float((westX + gridLine(column + 1, origin: originX)) / 2), 0,
                                             Float((northZ + gridLine(row + 1, origin: originY)) / 2))
-                    mesh(at: middle) { $0.addFlat(points, triangles: triangles, color: color, paint: paint) }
+                    mesh(at: middle) {
+                        let start = $0.vertices.count
+                        $0.addFlat(points, triangles: triangles, color: color, paint: paint)
+                        // Decision 356: water mirrors the sky.
+                        if area.cover == .water { $0.makeWater(from: start) }
+                    }
                 }
                 if takes && covered > cellArea / 2 {
                     taken.insert(Map3DScene.ChunkKey(column: column, row: row))
@@ -331,7 +336,7 @@ extension Map3DScene.Builder {
     /// ground's grid and its triangles' diagonals, and drawn a half width
     /// past its ends so bends close.
     mutating func addStrip(_ points: [Map3DBaseMap.Point], bounds: Map3DBaseMap.Bounds, width: Float, lift: Float, color: UInt32,
-                           paint: Map3DPaint?, taking taken: inout Set<Map3DScene.ChunkKey>) {
+                           paint: Map3DPaint?, water: Bool = false, taking taken: inout Set<Map3DScene.ChunkKey>) {
         let half = Double(width) / 2
         for index in 1..<points.count {
             guard let (start, end) = Self.clipSegment(points[index - 1], points[index], to: bounds) else { continue }
@@ -357,7 +362,11 @@ extension Map3DScene.Builder {
                     return Map3DPoint(x, drawnGround(x: x, z: z) + lift, z)
                 }
                 let middle = Map3DPoint(Float((a.x + b.x) / 2), 0, Float((a.z + b.z) / 2))
-                mesh(at: middle) { $0.addFlat(corners, triangles: [0, 1, 2, 0, 2, 3], color: color, paint: paint) }
+                mesh(at: middle) {
+                    let start = $0.vertices.count
+                    $0.addFlat(corners, triangles: [0, 1, 2, 0, 2, 3], color: color, paint: paint)
+                    if water { $0.makeWater(from: start) }
+                }
                 take(from: a, to: b, half: half, into: &taken)
             }
         }

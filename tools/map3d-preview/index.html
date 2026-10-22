@@ -1,7 +1,7 @@
 <!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#000}canvas{display:block}</style></head>
 <body><canvas id="c" width="1600" height="900"></canvas><canvas id="rain" width="1600" height="900" style="position:absolute;left:0;top:0"></canvas>
 <script>
-// A WebGL2 port of RailwayGameApp/Views/Map3D/Map3DShaders.metal (decisions 231, 242, 229 續's night lights), for previews on Linux.
+// A WebGL2 port of RailwayGameApp/Views/Map3D/Map3DShaders.metal (decisions 231, 242, 229 續's night lights, 356's reflections), for previews on Linux.
 const vs = `#version 300 es
 layout(location=0) in vec3 position; layout(location=1) in vec3 normal; layout(location=2) in vec3 color; layout(location=3) in vec3 tex;
 uniform mat4 viewProjection;
@@ -10,12 +10,25 @@ void main(){ vec4 p = viewProjection * vec4(position,1.0); p.z = 2.0*p.z - p.w; 
  vColor=color; vNormal=normal; vWorld=position; vUV=tex.xy; vLayer=tex.z; vPlane=dot(position, normalize(normal)); }`;
 const fs = `#version 300 es
 precision highp float; precision highp sampler2DArray;
-uniform vec4 sunDirection, sunColor, ambientSky, ambientGround, fogColor, eye, fog, shade; uniform vec4 nightWindows[12]; uniform sampler2DArray surfaces; uniform int textured;
+uniform vec4 sunDirection, sunColor, ambientSky, ambientGround, fogColor, eye, fog, shade; uniform vec4 nightWindows[12]; uniform vec4 mirror, zenith, glint; uniform sampler2DArray surfaces; uniform int textured;
 in vec3 vColor; in vec3 vNormal; in vec3 vWorld; in vec2 vUV; flat in float vLayer; flat in float vPlane; out vec4 outColor;
 const float detailRepeat[4] = float[4](3.6, 1.8, 1.8, 1.8);
+const vec2 glassMirror[24] = vec2[24](vec2(0,0), vec2(0,0), vec2(0,0), vec2(0,0), vec2(0,0), vec2(0,0), vec2(0.7,0), vec2(0.7,0),
+ vec2(0.8,1), vec2(0,0), vec2(0.7,0), vec2(1,0), vec2(0,0), vec2(0.8,1), vec2(0.8,1), vec2(0.8,1), vec2(0.8,1), vec2(0.5,0), vec2(0,0), vec2(0,0), vec2(0,0), vec2(0,0), vec2(0,0), vec2(0,0));
+const vec4 rippleWaves[4] = vec4[4](vec4(0.92,0.39,1.1,0.3), vec4(-0.45,0.89,1.6,0.28), vec4(0.2,-0.98,2.7,0.22), vec4(-0.8,-0.6,4.3,0.14));
+const vec2 rippleRuns[4] = vec2[4](vec2(1.1,0.0), vec2(-1.4,1.3), vec2(1.9,4.0), vec2(-2.6,0.0));
 float hash12(vec2 p){ vec3 q=fract(vec3(p.xyx)*0.1031); q+=dot(q,q.yzx+33.33); return fract((q.x+q.y)*q.z); }
+vec3 seenToward(vec3 w){ if (w.y >= 0.0) return mix(fogColor.rgb, zenith.rgb, sqrt(w.y)); return fogColor.rgb * (1.0 - 0.45 * smoothstep(0.0, 0.4, -w.y)); }
+vec2 ripple(vec2 p, float t, float footprint){ vec2 bent = p + 2.0 * vec2(sin(p.y*0.11 + t*0.03), sin(p.x*0.11 - t*0.03 + 9.0)); vec2 slope = vec2(0.0);
+ for (int i = 0; i < 4; i++) { vec4 w = rippleWaves[i]; float kept = 1.0 - smoothstep(0.2, 0.5, footprint * w.z / 6.2831853);
+  slope += w.xy * (w.w * w.z * cos(dot(w.xy, bent) * w.z + rippleRuns[i].x * t + rippleRuns[i].y) * kept); } return slope * 0.045; }
 void main(){ vec3 n = normalize(vNormal); vec3 base = vColor; vec3 glow = vec3(0.0); float lights = shade.y;
- if (vLayer < -1.5) glow = base * 1.3 * lights;
+ if (vLayer < -1.5 && vLayer > -2.5) glow = base * 1.3 * lights;
+ vec4 mirrored = vec4(0.0); bool mirrors = mirror.x > 0.0; vec3 toEye = normalize(eye.xyz - vWorld);
+ if (mirrors && vLayer < -2.5) { vec2 sl = ripple(vWorld.xz, mirror.y, length(fwidth(vWorld.xz))); n = normalize(vec3(-sl.x, 1.0, -sl.y));
+  vec3 r = reflect(-toEye, n); float fr = 0.05 + 0.95 * pow(1.0 - max(dot(toEye, n), 0.0), 4.0);
+  mirrored = vec4(seenToward(vec3(r.x, abs(r.y), r.z)), fr * mirror.x); float s = max(dot(r, sunDirection.xyz), 0.0);
+  glow += glint.rgb * ((pow(s, 600.0) * 2.0 + pow(s, 60.0) * 0.2) * mirror.z * mirror.x); }
  if (textured==1 && vLayer >= 0.0) { int packed = int(vLayer + 0.5); vec4 t = texture(surfaces, vec3(vUV, float(packed % 64)));
   vec3 tinted = base * t.rgb * 2.0; int material = packed / 64;
   if (material > 0) { int layer = material - 1; float metres = detailRepeat[min(layer - 18, 3)];
@@ -24,16 +37,33 @@ void main(){ vec3 n = normalize(vNormal); vec3 base = vColor; vec3 glow = vec3(0
    tinted *= mix(1.0, texture(surfaces, vec3(at / metres, float(layer))).r * 2.0, near); }
   base = mix(t.rgb, tinted, t.a);
   int surface = packed % 64; vec4 row = nightWindows[min(surface / 2, 11)]; vec2 rule = (surface % 2 == 0) ? row.xy : row.zw;
-  if (lights > 0.0 && rule.x > 0.0) {
-   float glass = (1.0 - t.a) * step(dot(t.rgb, vec3(0.2126, 0.7152, 0.0722)), rule.y);
+  vec2 pane = glassMirror[min(surface, 23)]; float bright = dot(t.rgb, vec3(0.2126, 0.7152, 0.0722));
+  float mirrorGlass = mirrors ? (1.0 - t.a) * step(bright, 0.45) * pane.x : 0.0;
+  if ((lights > 0.0 && rule.x > 0.0) || mirrorGlass > 0.0) {
    vec2 face = vec2(floor(vPlane / 4.0), dot(round(n * 4.0), vec3(1.0, 17.0, 289.0)));
-   vec2 room = floor(vUV) + fract(face * vec2(0.1373, 0.2719)) * 512.0;
-   float busy = mix(0.5, 1.6, hash12(face * 0.37 + 11.0));
-   float on = step(1.0 - clamp(rule.x * busy, 0.0, 0.95), hash12(room + 23.0));
-   vec3 warm = mix(vec3(1.0, 0.6, 0.3), vec3(1.0, 0.82, 0.6), hash12(room + 67.0));
-   glow += warm * mix(0.55, 1.1, hash12(room + 1.3)) * glass * on * lights; } }
+   vec2 room = floor(vUV) + fract(face * vec2(0.1373, 0.2719)) * 512.0; float on = 0.0;
+   if (lights > 0.0 && rule.x > 0.0) { float glass = (1.0 - t.a) * step(bright, rule.y);
+    float busy = mix(0.5, 1.6, hash12(face * 0.37 + 11.0));
+    on = step(1.0 - clamp(rule.x * busy, 0.0, 0.95), hash12(room + 23.0)) * glass;
+    vec3 warm = mix(vec3(1.0, 0.6, 0.3), vec3(1.0, 0.82, 0.6), hash12(room + 67.0));
+    glow += warm * mix(0.55, 1.1, hash12(room + 1.3)) * on * lights; }
+   if (mirrorGlass > 0.0) {
+    vec3 along = normalize(cross(vec3(0.0, 1.0, 0.0), n) + vec3(1e-4, 0.0, 0.0));
+    vec3 tilted = normalize(n + (along * (hash12(room + 15.7) - 0.5) + vec3(0.0, hash12(room + 19.3) - 0.5, 0.0)) * 0.035);
+    vec3 r = reflect(-toEye, tilted); float c = max(dot(toEye, tilted), 0.0);
+    float fr = pane.y > 0.5 ? 0.18 + 0.62 * pow(1.0 - c, 5.0) : 0.1 + 0.9 * pow(1.0 - c, 4.0);
+    vec3 seen = seenToward(r);
+    if (lights > 0.0 && r.y < -0.015) { float reach = max(vUV.y, 0.3) * 3.2 / -r.y; vec2 g = (vWorld.xz + r.xz * reach) / 26.0, cell = floor(g);
+     vec2 at = vec2(hash12(cell + 3.1), hash12(cell + 7.7)); float d = length(fract(g) - at) * 26.0, kind = hash12(cell + 13.0);
+     float spot = exp(-d * d / (3.0 + reach * 0.03)) * step(0.3, kind);
+     vec3 tint = kind > 0.8 ? vec3(0.8, 0.9, 1.0) : (kind > 0.42 && kind < 0.5) ? vec3(1.0, 0.25, 0.2) : vec3(1.0, 0.72, 0.42);
+     vec3 city = tint * spot * 5.0 / (1.0 + reach * reach / 4.0e5) + vec3(1.0, 0.75, 0.5) * 0.035 * smoothstep(0.0, 900.0, reach);
+     glow += city * fr * mirrorGlass * lights * (1.0 - on * 0.9) * mirror.x; }
+    mirrored = vec4(seen, fr * mirrorGlass * (1.0 - 0.85 * lights * on) * mirror.x);
+    float s = max(dot(r, sunDirection.xyz), 0.0); float gl = pow(s, 1400.0) * 3.0 + pow(s, 90.0) * 0.35 + pow(s, 7.0) * 0.1;
+    glow += glint.rgb * (gl * mirrorGlass * step(0.0, dot(n, sunDirection.xyz)) * mirror.z * mirror.x); } } }
  float sun = max(dot(n, sunDirection.xyz), 0.0); vec3 ambient = mix(ambientGround.rgb, ambientSky.rgb, n.y*0.5+0.5);
- vec3 lit = base * (ambient + sunColor.rgb * sun);
+ vec3 lit = mix(base * (ambient + sunColor.rgb * sun), mirrored.rgb, mirrored.a);
  float f = smoothstep(fog.x, fog.y, distance(vWorld, eye.xyz)); outColor = vec4(min(mix(lit, fogColor.rgb, f) + glow * (1.0 - f * 0.7), 1.0), 1.0); }`;
 // Decision 352: map3dSignVertex and map3dSignFragment, the same algebra.
 const signVS = `#version 300 es
@@ -122,6 +152,8 @@ void main(){ float f=smoothstep(fog.x,fog.y,distance(vWorld,eye.xyz));
   gl.uniformMatrix4fv(gl.getUniformLocation(p,'viewProjection'),false,new Float32Array(u.slice(0,16)));
   ['sunDirection','sunColor','ambientSky','ambientGround','fogColor','eye','fog','shade'].forEach((n,i)=>gl.uniform4fv(gl.getUniformLocation(p,n),new Float32Array(u.slice(16+i*4,20+i*4))));
   gl.uniform4fv(gl.getUniformLocation(p,'nightWindows'),new Float32Array(u.slice(48,96)));
+  // Decision 356: the reflections' rows (zeros in a dump from before them: nothing mirrors).
+  ['mirror','zenith','glint'].forEach((n,i)=>gl.uniform4fv(gl.getUniformLocation(p,n),new Float32Array(u.length>=108?u.slice(96+i*4,100+i*4):[0,0,0,0])));
   gl.uniform1i(gl.getUniformLocation(p,'textured'),textured?1:0); gl.uniform1i(gl.getUniformLocation(p,'surfaces'),0);
   const sky=window.meta.sky; gl.viewport(0,0,1600,900); gl.clearColor(sky[0],sky[1],sky[2],1); gl.enable(gl.DEPTH_TEST); gl.clearDepth(0); gl.depthFunc(gl.GREATER);
   gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT); gl.bindVertexArray(window.vao); gl.depthMask(true); gl.disable(gl.BLEND); gl.drawElements(gl.TRIANGLES,window.count,gl.UNSIGNED_INT,0);
