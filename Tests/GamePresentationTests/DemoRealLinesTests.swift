@@ -5,18 +5,22 @@ import XCTest
 
 /// Decision 351, its sequel: in the demo mode one tap lays the real lines
 /// whose stations are in view, on a real-world map at Taipei Main Station
-/// with the bundled lines.
+/// over its real ground, with the bundled lines.
 @MainActor
 final class DemoRealLinesTests: XCTestCase {
     private let metre = Double(WorldCoordinate.unitsPerMetre)
 
-    /// A demo game at Taipei Main Station with unlimited funds, and the
-    /// view `half` metres each way round it.
+    /// A demo game at Taipei Main Station over its real ground with
+    /// unlimited funds, and the view `half` metres each way round it.
     private func taipei(demo: Bool = true, half: Double = 1_500) throws -> (session: GameSession, view: WorldRegion) {
         let tra = try BundledRealData.station("臺北", in: "tra_sched")
         var world = GameWorld.newGame(anchor: try XCTUnwrap(tra.anchor))
+        try world.mapGround()
         world.setUnlimitedFunds(true)
         let session = GameSession(world: world, language: .traditionalChinese)
+        session.heights = try HeightGrid(
+            data: Data(contentsOf: BundledRealData.directory.deletingLastPathComponent().appendingPathComponent("RealWorld/taiwan_heights.dat"))
+        )
         session.railways = try BundledRealData.railways()
         session.news.isDemo = demo
         let centre = try BundledRealData.point(tra.coordinate, in: world)
@@ -69,6 +73,11 @@ final class DemoRealLinesTests: XCTestCase {
         for line in session.world.lines {
             XCTAssertFalse(line.assignedTrains.isEmpty, line.name)
         }
+        // Underground as the real lines are round Taipei Main Station, one
+        // deeper than another where they cross.
+        let platforms = session.world.railwaySnapshot().platforms
+        XCTAssertFalse(platforms.isEmpty)
+        XCTAssertTrue(platforms.allSatisfy { $0.structure == .tunnel }, "\(platforms.map(\.structure))")
         // Every station is in view.
         for station in session.world.stations {
             let point = station.location

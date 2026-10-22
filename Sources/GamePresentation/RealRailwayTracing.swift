@@ -363,7 +363,7 @@ extension GameSession {
         // light rails'.
         var carried: [TrackRise.Carried] = []
         var carriedEnds = (start: false, end: false)
-        if mapped, networkStructure == .automatic, networkHeight == 0, let traces = realRailwayTraces, let frame = RealWorldFrame(world: draft),
+        if mapped, networkStructure == .automatic, networkHeight == 0 || demoKeepsRealStructures, let traces = realRailwayTraces, let frame = RealWorldFrame(world: draft),
            let snap = traces.snap(WorldVector(from.plan), within: reach), let structures = railways?.structures {
             carried = structures.stretches(along: path, frame: frame, system: traces.lines[snap.place.line].system)
             // A new end on a long viaduct or in a long tunnel (a metro's

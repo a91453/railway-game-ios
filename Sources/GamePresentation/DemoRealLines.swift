@@ -84,16 +84,14 @@ public struct DemoRealLines: Sendable {
     /// How far apart the lines' levels are: more than the 8 m GameCore
     /// keeps between two tracks that cross (``GameError``'s crossing).
     static let levelStep = Int64(12) * WorldCoordinate.unitsPerMetre
-    /// The levels there are room for: 48 m below the ground to 48 m above.
-    static let levels: Int64 = 4
 
-    /// The level of the `number`th line laid: the ground, then 12 m below
-    /// it, 12 m above, 24 m below, and so on, round again after 48 m.
-    static func level(_ number: Int) -> Int64 {
-        let step = Int64(number) % (2 * levels + 1)
-        guard step > 0 else { return 0 }
-        let depth = (step + 1) / 2 * levelStep
-        return step % 2 == 1 ? -depth : depth
+    /// The levels a run of a line is tried at, its real tunnels and
+    /// viaducts kept at each: first as the real line is, then, where it
+    /// would cross another line laid, 12 m and 24 m deeper for a line
+    /// mostly underground, higher for the others.
+    static func levels(underground: Bool) -> [Int64] {
+        let step = underground ? -levelStep : levelStep
+        return [0, step, 2 * step]
     }
 
     /// The minutes between trains where the data has no headway: the
@@ -264,9 +262,11 @@ extension GameSession {
         if speed != nil { setSpeed(.paused) }
         networkHeight = 0
         networkStructure = .automatic
+        demoKeepsRealStructures = true
         beginEditGesture()
         defer {
             endEditGesture()
+            demoKeepsRealStructures = false
             networkHeight = tool.height
             networkStructure = tool.structure
             if let speed { setSpeed(speed) }
@@ -277,15 +277,14 @@ extension GameSession {
         let controlled = world.isTrafficControlEnabled
         if controlled { _ = try? performCommand(.edit(.setTrafficControl(false))) }
         var done = 0, lines = 0, stations = 0
-        for (number, route) in planned.routes.enumerated() {
-            // Each line on its own level, as the real lines cross over and
-            // under each other: at the ground, then below and above it.
-            networkHeight = DemoRealLines.level(number)
+        for route in planned.routes {
+            // Its real tunnels and viaducts.
+            let carried = railways.structures?.stretches(along: route.path, frame: frame, system: route.system.id) ?? []
             // A run from the first station on, then, where the track
             // stops short, another from the first station it missed.
             var index = 0
             while index < route.stops.count - 1 {
-                let laid = await layDemoRun(Array(route.stops[index...]), of: route)
+                let laid = await layDemoRun(Array(route.stops[index...]), of: route, carried: carried)
                 stations += laid.stations.count
                 if laid.stations.count >= 2, addDemoLine(route, calling: laid.stations) { lines += 1 }
                 index += laid.reached
@@ -330,7 +329,7 @@ extension GameSession {
     /// platform at each station it reaches. Returns the stations with a
     /// platform, in order, and how many stations of `run` the track
     /// reached.
-    private func layDemoRun(_ run: [DemoRealLines.Stop], of route: DemoRealLines.Route) async -> (stations: [StationID], reached: Int) {
+    private func layDemoRun(_ run: [DemoRealLines.Stop], of route: DemoRealLines.Route, carried: [TrackRise.Carried]) async -> (stations: [StationID], reached: Int) {
         guard let first = run.first, let last = run.last else { return ([], 0) }
         let path = route.path
         // On past the end platforms, for the crossovers there.
@@ -340,10 +339,28 @@ extension GameSession {
         let start = NetworkAnchor.point(path.point(at: lower).plan)
         let end = NetworkAnchor.point(path.point(at: upper).plan)
         let spans = run.map { (path.point(at: $0.platform.lowerBound), path.point(at: $0.platform.upperBound)) }
-        guard let plan = tracePlan(from: start, to: end, along: way, platforms: spans), plan.buildable > 0 else { return ([], 1) }
+        // As the real line is or, where it would cross another line laid,
+        // deeper or higher, as this stretch of it mostly runs: at the first
+        // level the track reaches every station at, or the one it reaches
+        // most at.
+        func length(_ kind: RealRailStructures.Kind) -> Double {
+            carried.filter { $0.kind == kind }.reduce(0) { $0 + max(0, min($1.range.upperBound, upper) - max($1.range.lowerBound, lower)) }
+        }
+        let heights = DemoRealLines.levels(underground: length(.tunnel) > max(length(.bridge), (upper - lower) / 2))
+        var best: (plan: TracePlan, reached: Int, height: Int64)?
+        for height in heights {
+            networkHeight = height
+            guard let plan = tracePlan(from: start, to: end, along: way, platforms: spans), plan.buildable > 0 else { continue }
+            // How many stations the track reaches: their platforms all built.
+            let reached = plan.platformStretches.prefix { $0.map { $0 < plan.buildable } ?? false }.count
+            if reached > best?.reached ?? -1 { best = (plan, reached, height) }
+            if reached == run.count { break }
+            await Task.yield()
+        }
+        guard let best else { return ([], 1) }
+        networkHeight = best.height
+        let plan = best.plan, reached = best.reached
         let built = Array(plan.stretches.prefix(plan.buildable))
-        // How many stations the track reaches: their platforms all built.
-        let reached = plan.platformStretches.prefix { $0.map { $0 < plan.buildable } ?? false }.count
 
         var command = PlayerCommand.buildTrackChain(built)
         let double = route.system.id == Self.traSystem
@@ -365,7 +382,11 @@ extension GameSession {
 
         var stations: [StationID] = []
         for (stop, index) in zip(run.prefix(reached), plan.platformStretches) {
-            guard let index, let edge = demoEdge(from: built[index].from.plan, to: built[index].to.plan) else { continue }
+            guard let index else { continue }
+            let stretch = built[index]
+            let middle = route.path.point(at: (stop.platform.lowerBound + stop.platform.upperBound) / 2)
+            guard let edge = demoEdge(from: stretch.from.plan, to: stretch.to.plan)
+                ?? demoEdge(through: middle.plan, at: (stretch.from.z + stretch.to.z) / 2) else { continue }
             if let station = addDemoPlatform(on: edge, named: stop.chinese, of: route) {
                 stations.append(station)
             }
@@ -383,6 +404,18 @@ extension GameSession {
         }
         return network.edges.last { edge in
             (near(edge.from, a) && near(edge.to, b)) || (near(edge.from, b) && near(edge.to, a))
+        }
+    }
+
+    /// The edge of the network through `point` at about `height`: the
+    /// platform's, where a crossover at the end of a run has split the
+    /// stretch it was laid as.
+    private func demoEdge(through point: PlanPoint, at height: Int64) -> TrackEdge? {
+        let metre = WorldCoordinate.unitsPerMetre
+        return world.network.edges.first { edge in
+            guard let found = world.nearestPoint(onEdge: edge.id, to: point),
+                  let location = world.trackGeometry(of: edge.id)?.location(at: found.distance).position else { return false }
+            return abs(location.x - point.x) <= metre && abs(location.y - point.y) <= metre && abs(location.z - height) <= 4 * metre
         }
     }
 
