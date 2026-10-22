@@ -13946,6 +13946,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 **沒做**：
 - **「用我的位置」**：要 CoreLocation 與 Info.plist 的用途字串，App Store 的隱私標籤要更新（App Store Connect 是作者的事）。等作者決定，寫在 `docs/HANDOFF.md` §3。
+  - **後來**（2026-10-22）：作者交給遊戲規劃決定，規劃決定做，見決策 335（`docs/decisions/335.md`）。隱私標籤不用加「位置」：位置只在裝置上用來移框，不傳出去。
 - **「已下載的地點」**：存檔的摘要（`SaveSummary`）沒有記錨點，要列出存檔的地點得讀每一個存檔或改摘要的格式。最近用過已經涵蓋「上次玩的地方」，所以先不做。
 - 公司名稱放在同一張卡（研究 4.6 的三步）：明信片已經有公司名（決策 307 的載入畫面也用它），不另外問。
 
