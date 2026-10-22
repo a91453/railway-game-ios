@@ -77,6 +77,8 @@ public struct Map3DScene: Sendable {
     let levelCrossings: [Map3DLevelCrossing]
     /// Decision 270: its seeded streets, for the 2D map to draw the same.
     public let seededStreets: SeededStreetPlan
+    /// Decision 339: on a real-world map, the real timetables' trains.
+    public let realTrains: Map3DRealTrains?
 
     public var triangleCount: Int { chunks.reduce(0) { $0 + $1.mesh.triangleCount } }
 
@@ -215,6 +217,18 @@ public struct Map3DScene: Sendable {
         if let lineBands { builder.addLineBands(lineBands, snapshot: snapshot) }
         builder.addPlatforms(snapshot)
         builder.addPortals(snapshot)
+        // Decision 339: the real lines' track, clear of the player's, and
+        // their trains on it.
+        if let railways, let operations = railways.operations, let frame = RealWorldFrame(world: world) {
+            let region = builder.region, margin = Map3DRealTrains.margin * Builder.metre
+            let traffic = RealTrainTraffic(operations: operations, bought: Set(world.acquisitions.map(\.realLine))) { coordinate in
+                let at = frame.worldPosition(latitude: coordinate.latitude, longitude: coordinate.longitude)
+                return at.x >= region.minX - margin && at.x <= region.maxX + margin && at.y >= region.minY - margin && at.y <= region.maxY + margin
+            }
+            realTrains = Map3DRealTrains(traffic: traffic, structures: railways.structures, frame: frame, snapshot: snapshot, builder: &builder)
+        } else {
+            realTrains = nil
+        }
         // Decision 238: the city twice, in full and simplified for afar.
         let city = skyline ?? CitySkyline(world: world)
         // Decision 321: the stations' canopies and buildings from the
@@ -257,10 +271,10 @@ public struct Map3DScene: Sendable {
             builder.addParks(real, clearOf: stations.union(standing))
             builder.target = .near
         }
-        builder.addCity(city, clearOf: stations, takenBy: taken.union(standing))
+        builder.addCity(city, clearOf: stations.union(builder.realTrackCells), takenBy: taken.union(standing))
         builder.target = .far
         if let frame { builder.addRealBuildings(cityTiles, frame: frame, clearOf: stations) }
-        builder.addCity(city, clearOf: stations, takenBy: taken.union(standing))
+        builder.addCity(city, clearOf: stations.union(builder.realTrackCells), takenBy: taken.union(standing))
         builder.target = .base
         builder.addPlacedBuildings()
         chunks = builder.chunks()
@@ -460,6 +474,9 @@ extension Map3DScene {
         /// Decision 326: on a real-world map, the real lines round the
         /// scene and whether each runs under an overhead line.
         var realLines: [(points: [Map3DPoint], wired: Bool)] = []
+        /// Decision 339: the 64 m cells the real lines' track runs through
+        /// above the ground, which keep no city lot.
+        var realTrackCells = Set<ChunkKey>()
         var nearMeshes: [ChunkKey: Map3DMesh] = [:]
         var farMeshes: [ChunkKey: Map3DMesh] = [:]
         var closeMeshes: [ChunkKey: Map3DMesh] = [:]
