@@ -211,6 +211,22 @@ final class TRADemoTests: XCTestCase {
         XCTAssertGreaterThan(world.trains.count { $0.execution != nil }, 5, "sets on their way")
     }
 
+    /// The Yilan Line is double track: the station master never says a
+    /// line of it has no place to pass (decision 264, HANDOFF §7.1). Its
+    /// two ways join by a turnout short of each end's platforms, so one
+    /// track joins Toucheng and Dingpu, and Dongshan and Su'aoxin, but only
+    /// that turnout's edge is single.
+    func testTheStationMasterFindsPlacesToPassOnTheDoubleTrack() throws {
+        var world = try Self.opened.get()
+        let local = try XCTUnwrap(world.lines.first)
+        XCTAssertEqual(world.lineTrackCounts(local.id), [1, 2, 2, 2, 2, 2, 2, 2, 1])
+        XCTAssertNil(world.firstLineWithoutPlaceToPass(), "at 07:00")
+        world.setSpeed(.fast)
+        try world.advance(ticks: 60)
+        XCTAssertNil(world.firstLineWithoutPlaceToPass(), "60 ticks on")
+        if case .noPlaceToPass(_, let name)? = StationMasterAdvice(world: world) { XCTFail("the station master says \(name) has no place to pass") }
+    }
+
     /// Decision 219: the stations ring the chime of what calls there:
     /// the interchanges where expresses call ring the metro chime, the
     /// small stations the local one.
