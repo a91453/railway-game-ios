@@ -441,8 +441,11 @@ public struct Map3DStreetLife: Sendable {
     public static let busShare: Float = 0.05
     public static let mostBuses = 30
     /// A bus takes a place only where the vehicles are this far apart, so
-    /// that, with each one's start drawn up to 0.4 of it early, the next
-    /// one never reaches it.
+    /// that, with each one's start drawn up to 0.4 of it early, the car
+    /// next to it never reaches it; and never right behind another bus
+    /// (the place before it, round the lane), so that two buses are at
+    /// least 1.6 of it apart, more than the longest bus
+    /// (``Map3DCoachBus``).
     static let busSpacing: Float = 17
 
     /// The scooters' paint.
@@ -558,13 +561,15 @@ public struct Map3DStreetLife: Sendable {
         let scooterSide = carSide + max(min(1.1, lane.half - carSide - 0.5), 0)
         for direction: Float in lane.twoWay ? [1, -1] : [1] {
             for index in 0..<count where frame.vehicles < budget {
-                let r = { (salt: Int32) in map3DRandom(lane.seed.0 &+ Int32(index), lane.seed.1 &+ Int32(direction), salt: salt) }
+                let draw = { (index: Int, salt: Int32) in map3DRandom(lane.seed.0 &+ Int32(index), lane.seed.1 &+ Int32(direction), salt: salt) }
+                let r = { (salt: Int32) in draw(index, salt) }
                 let start = (Float(index) + 0.4 * r(1)) * spacing
                 let travelled = (Double(start) + Double(lane.speed) * time).truncatingRemainder(dividingBy: Double(length))
                 let along = direction > 0 ? Float(travelled) : length - Float(travelled)
                 let kind = r(2)
                 let model: Map3DStreetModel
-                if lane.buses, spacing >= Self.busSpacing, frame.buses < Self.mostBuses, r(5) < Self.busShare {
+                if lane.buses, spacing >= Self.busSpacing, frame.buses < Self.mostBuses, r(5) < Self.busShare,
+                   count == 1 || draw((index + count - 1) % count, 5) >= Self.busShare {
                     let variant = r(6)
                     model = variant < 0.30 ? .shuttleBus : variant < 0.65 ? .lowFloorBus : variant < 0.85 ? .coachBus : variant < 0.95 ? .midiBus : .bus
                 } else if lane.scooters {
