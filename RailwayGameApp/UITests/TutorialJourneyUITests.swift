@@ -377,6 +377,14 @@ private final class TutorialJourney {
             XCTAssertEqual(next.label, "Finish", failure("The last step's button is not Finish"))
         }
         next.tap()
+        // The touch on Finish can be cancelled with the card standing still
+        // (main 29ebf5e's full lane, run 39802411409: the app's trace has
+        // "touch cancelled at (235, 257)" and no action), and the tutorial
+        // stays on its last step: tapped again while Finish is still there.
+        // Only Finish: a second Next could pass over a step that moved on late.
+        if finishing, !card.disappears(within: 5), next.exists, next.isEnabled, next.isHittable {
+            next.tap()
+        }
     }
 
     // MARK: - The map

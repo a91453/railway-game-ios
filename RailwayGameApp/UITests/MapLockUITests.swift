@@ -36,6 +36,8 @@ final class MapLockUITests: XCTestCase {
         XCTAssertTrue(lock.appears(within: 5), "No lock on the tiles for sale")
         XCTAssertEqual(lock.label, "Locked land")
         XCTAssertTrue(lock.becomesHittable(within: 5), "The lock is not reachable")
+        // On its middle: on an iPad the circle's middle row once fell
+        // through to the map (only_testing run 39826506139).
         lock.tap()
 
         let buy = app.buttons["map.expansion.buy"]
