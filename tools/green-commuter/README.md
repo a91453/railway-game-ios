@@ -1,5 +1,7 @@
 # Green two-car commuter EMU
 
+> 三台配色已更新，完整最新重建請使用 [train-colors](../train-colors/README.md)。本入口保留舊批格式與 asset ID，幾何規格不變。
+
 `Sources/GamePresentation/Map3DGreenCommuter.swift` is the native recipe. It builds distinct outward-facing leading and trailing cab units and a static two-car formation. `Map3DModelPack.standard` registers those three names only; no GameCore train type or route behaviour is changed.
 
 Use Swift 6.4 and rebuild outside the public repository:

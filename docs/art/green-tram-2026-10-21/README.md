@@ -1,5 +1,7 @@
 # 綠色三節低地板電車
 
+> **最新配色修訂**：本台已與另外兩台一起改為遊戲配色；幾何完全不變。[三台最新總覽、對照與素材包](../train-colors-2026-10-22/README.md)。下方原批的結構與來源紀錄保留作歷史，最新配色／匯出以整合包為準。
+
 ![完整編組總覽](overview.png)
 
 原生配方：[Map3DGreenTram.swift](../../../Sources/GamePresentation/Map3DGreenTram.swift)；重建與組裝：[tools/green-tram/README.md](../../../tools/green-tram/README.md)。公開庫只放配方、工具、驗證與本張總覽；完整單元／編組與既有輕軌對照的 `.m3dmodel`、GLB、35 張七向 PNG、互動 viewer、來源與 ZIP 在私有素材庫 `Railway/game-art-previews/docs/art/green-tram-2026-10-21/`。

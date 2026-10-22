@@ -8,7 +8,7 @@ public enum Map3DGreenCommuter {
     public static let pitch: Float = 19.72
     public static let shellWidth: Float = 2.90
     public static let roofHeight: Float = 3.63
-    public static let green = Map3DPalette.crown
+    public static let green = Map3DPalette.trimBlue // muted game blue; legacy property / IDs stay stable
     public static let cream = Map3DPalette.tileWhite
     public static let roof = Map3DPalette.tileWhite
     public static let glass = Map3DTrainStyle.glass
@@ -34,7 +34,7 @@ extension StationKitBuilder {
         let green = Map3DGreenCommuter.green
         let cream = Map3DGreenCommuter.cream
         let grey = Map3DGreenCommuter.roof
-        let pale = Map3DPalette.park
+        let pale = Map3DPalette.roof
         let skirt = Map3DColor.shaded(green, 0.79)
         let glass = Map3DGreenCommuter.glass
         let ink = Self.ink
