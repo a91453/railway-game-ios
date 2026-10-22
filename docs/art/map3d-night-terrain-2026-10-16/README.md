@@ -1,5 +1,7 @@
 # 3D 地圖：夜晚的燈光與地形的斷崖（2026-10-16）
 
+> 2026-10-22 起這個資料夾只留這份 README、總覽圖 `night-street.jpg` 和文字紀錄；其他 3 張圖搬到 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-night-terrain-2026-10-16/`，檔名不變（作者 2026-10-21 的規則，`docs/HANDOFF.md` §2）。
+
 作者在 TestFlight 問：「晚上 3D 是不是偏暗？然後地形能不能平緩一點，3D 直接突然突起。」後來又問：「還是只是沒路燈而已？」詳見決策 229、234 的「續（2026-10-16）」。
 
 每張圖都是上半 `main`、下半這次的修改，用 `tools/map3d-preview` 畫。這個工具和 `Map3DShaders.metal` 用同一個算式，但不是 iPhone 的畫面，實機請在 TestFlight 看。
@@ -7,9 +9,9 @@
 | 圖 | 地方、時間 | 看什麼 |
 | --- | --- | --- |
 | ![](night-street.jpg) | 台北車站附近，00:00 | 上半：沒有任何光源，整片深灰。下半：路燈的燈頭亮起來，地上有暖色的光圈，道路與街廓看得出來 |
-| ![](night-city.jpg) | 台北車站附近，00:00 | 下半：大樓與店面的窗戶有一部分亮著。每晚亮的是同一批窗，不會閃 |
-| ![](dusk-city.jpg) | 台北車站附近，18:30 | 黃昏的紫色調保留，燈已經亮了 |
-| ![](terrain-day.jpg) | 瑞芳、猴硐的實景示範，14:00 | 上半：軌道經過的 1 km 區塊站在真實高度上，旁邊沒讀的區塊是 0 m，中間一道直立的斷崖。下半：山坡照高度檔連起來 |
+| `a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-night-terrain-2026-10-16/night-city.jpg` | 台北車站附近，00:00 | 下半：大樓與店面的窗戶有一部分亮著。每晚亮的是同一批窗，不會閃 |
+| `a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-night-terrain-2026-10-16/dusk-city.jpg` | 台北車站附近，18:30 | 黃昏的紫色調保留，燈已經亮了 |
+| `a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-night-terrain-2026-10-16/terrain-day.jpg` | 瑞芳、猴硐的實景示範，14:00 | 上半：軌道經過的 1 km 區塊站在真實高度上，旁邊沒讀的區塊是 0 m，中間一道直立的斷崖。下半：山坡照高度檔連起來 |
 
 量到的數字在 `Map3DNightAndGroundTests`（Linux）。
 

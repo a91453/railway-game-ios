@@ -1,5 +1,7 @@
 # 狀態列的寬度（決策 251）
 
+> 2026-10-22 起這個資料夾只留這份 README、總覽圖 `a-chosen.png` 和文字紀錄；其他 3 張圖搬到 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/status-bar-width-2026-10-16/`，檔名不變（作者 2026-10-21 的規則，`docs/HANDOFF.md` §2）。
+
 iPhone 只能橫放（`project.yml`），所以三種寬度是橫向的：iPhone SE 667 pt（沒有瀏海，安全區就是整個寬）、iPhone 17 852 pt（安全區 734）、iPhone 17 Pro Max 956 pt（安全區 832），各減掉左右 10 點的邊距，就是狀態列能用的寬度。
 
 這些圖不是 App 截圖：在瀏覽器裡照 `HUDView` 的四種排法（`ViewThatFits`：一列、一列短日期、金額疊在時間上、時間自己一列）與間距、按鈕寬度畫的示意，字用 Inter 代替 SF Pro，數字一樣寬。挑排法的方式和 App 一樣：第一個放得下的。圖示是色塊代替。每種寬度畫四列：英文平常的一天（預設字級 15 pt）、英文最長的金額與日期再加連假（預設字級）、同樣在最大字級（xxxLarge，21 pt，`ContentView` 的上限）、中文最長在最大字級。

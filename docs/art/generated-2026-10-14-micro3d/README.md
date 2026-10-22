@@ -2,79 +2,79 @@
 
 接續 [前一批 43 張扁平素材](../generated-2026-10-13/README.md)，新增 **24 張原始透明 PNG**。沿用工作登記 #231 中作者較新的「微 3D」偏好：淺厚度、輕微等角透視與柔和光影，配色以暖黃、藏青、綠松和淺底為主。既有 art-style 的角色與 glyph 規範照舊；這批是面板候選插圖。
 
-- [離線檢視頁](index.html)：五類、名稱／用途搜尋、深淺色切換、四種底色、120／64／44／28 點、模糊與灰階。
+- 離線檢視頁（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/index.html`）：五類、名稱／用途搜尋、深淺色切換、四種底色、120／64／44／28 點、模糊與灰階。
 - [完整清單](manifest.json)：用途、題材、完整 prompt、建議最小尺寸、RGBA／留白量測、SHA-256。
 
 ## 用途與素材
 
 ### 玩家建物
 
-![玩家建物總覽](previews/building.png)
+玩家建物總覽（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/previews/building.png`）
 
-[四底色／尺寸／模糊／灰階](previews/checks-building.png)
+四底色／尺寸／模糊／灰階（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/previews/checks-building.png`）
 
 | 名稱 | 用途 | 建議尺寸 |
 | --- | --- | --- |
-| [暖黃住宅](png/building-house.png) | 住宅建造卡／建物面板 | 64 點以上 |
-| [暖黃商店](png/building-shop.png) | 商店建造卡／租金面板 | 64 點以上 |
-| [暖黃辦公樓](png/building-office.png) | 辦公樓建造卡／就業面板 | 64 點以上 |
-| [暖黃百貨](png/building-department-store.png) | 百貨建造卡／子公司面板 | 64 點以上 |
-| [暖黃飯店](png/building-hotel.png) | 飯店建造卡／住宿面板 | 64 點以上 |
-| [暖黃遊樂園](png/building-amusement-park.png) | 遊樂園建造卡／觀光面板 | 120 點以上 |
-| [暖黃遊艇港](png/building-marina.png) | 遊艇港建造卡／水岸觀光 | 120 點以上 |
-| [暖黃碼頭](png/building-wharf.png) | 碼頭建造卡／水岸建設 | 120 點以上 |
+| 暖黃住宅（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/png/building-house.png`） | 住宅建造卡／建物面板 | 64 點以上 |
+| 暖黃商店（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/png/building-shop.png`） | 商店建造卡／租金面板 | 64 點以上 |
+| 暖黃辦公樓（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/png/building-office.png`） | 辦公樓建造卡／就業面板 | 64 點以上 |
+| 暖黃百貨（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/png/building-department-store.png`） | 百貨建造卡／子公司面板 | 64 點以上 |
+| 暖黃飯店（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/png/building-hotel.png`） | 飯店建造卡／住宿面板 | 64 點以上 |
+| 暖黃遊樂園（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/png/building-amusement-park.png`） | 遊樂園建造卡／觀光面板 | 120 點以上 |
+| 暖黃遊艇港（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/png/building-marina.png`） | 遊艇港建造卡／水岸觀光 | 120 點以上 |
+| 暖黃碼頭（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/png/building-wharf.png`） | 碼頭建造卡／水岸建設 | 120 點以上 |
 
 ### 鐵路營運
 
-![鐵路營運總覽](previews/operations.png)
+鐵路營運總覽（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/previews/operations.png`）
 
-[四底色／尺寸／模糊／灰階](previews/checks-operations.png)
+四底色／尺寸／模糊／灰階（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/previews/checks-operations.png`）
 
 | 名稱 | 用途 | 建議尺寸 |
 | --- | --- | --- |
-| [列車機廠](png/ops-depot.png) | 機廠說明／車輛保養面板 | 64 點以上 |
-| [列車出入庫](png/ops-dispatch.png) | 機廠出入庫教學／營運說明 | 64 點以上 |
-| [複線與待避](png/ops-double-track.png) | 複線／待避線教學 | 120 點以上 |
-| [列車保養](png/ops-maintenance.png) | 保養面板／機廠教學 | 64 點以上 |
+| 列車機廠（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/png/ops-depot.png`） | 機廠說明／車輛保養面板 | 64 點以上 |
+| 列車出入庫（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/png/ops-dispatch.png`） | 機廠出入庫教學／營運說明 | 64 點以上 |
+| 複線與待避（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/png/ops-double-track.png`） | 複線／待避線教學 | 120 點以上 |
+| 列車保養（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/png/ops-maintenance.png`） | 保養面板／機廠教學 | 64 點以上 |
 
 ### 旅客與人潮
 
-![旅客與人潮總覽](previews/passenger.png)
+旅客與人潮總覽（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/previews/passenger.png`）
 
-[四底色／尺寸／模糊／灰階](previews/checks-passenger.png)
+四底色／尺寸／模糊／灰階（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/previews/checks-passenger.png`）
 
 | 名稱 | 用途 | 建議尺寸 |
 | --- | --- | --- |
-| [月台排隊](png/passenger-queue.png) | 月台人潮／車門擁擠說明 | 120 點以上 |
-| [旅客轉乘](png/passenger-interchange.png) | 旅程追蹤／轉乘說明 | 120 點以上 |
-| [無障礙乘車](png/passenger-accessibility.png) | 無障礙車站／旅客服務說明 | 120 點以上 |
-| [通勤旅客](png/passenger-commute.png) | 需求教學／居民與就業說明 | 64 點以上 |
+| 月台排隊（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/png/passenger-queue.png`） | 月台人潮／車門擁擠說明 | 120 點以上 |
+| 旅客轉乘（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/png/passenger-interchange.png`） | 旅程追蹤／轉乘說明 | 120 點以上 |
+| 無障礙乘車（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/png/passenger-accessibility.png`） | 無障礙車站／旅客服務說明 | 120 點以上 |
+| 通勤旅客（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/png/passenger-commute.png`） | 需求教學／居民與就業說明 | 64 點以上 |
 
 ### 天氣
 
-![天氣總覽](previews/weather.png)
+天氣總覽（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/previews/weather.png`）
 
-[四底色／尺寸／模糊／灰階](previews/checks-weather.png)
+四底色／尺寸／模糊／灰階（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/previews/checks-weather.png`）
 
 | 名稱 | 用途 | 建議尺寸 |
 | --- | --- | --- |
-| [晴天營運](png/weather-clear.png) | 天氣預報／晴天說明 | 64 點以上 |
-| [雨天營運](png/weather-rain.png) | 天氣預報／雨天需求 | 64 點以上 |
-| [颱風提醒](png/weather-typhoon.png) | 颱風停駛提醒／天氣教學 | 64 點以上 |
-| [午後雷陣雨](png/weather-thunderstorm.png) | 天氣預報／雷陣雨說明 | 64 點以上 |
+| 晴天營運（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/png/weather-clear.png`） | 天氣預報／晴天說明 | 64 點以上 |
+| 雨天營運（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/png/weather-rain.png`） | 天氣預報／雨天需求 | 64 點以上 |
+| 颱風提醒（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/png/weather-typhoon.png`） | 颱風停駛提醒／天氣教學 | 64 點以上 |
+| 午後雷陣雨（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/png/weather-thunderstorm.png`） | 天氣預報／雷陣雨說明 | 64 點以上 |
 
 ### 觀光
 
-![觀光總覽](previews/tourism.png)
+觀光總覽（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/previews/tourism.png`）
 
-[四底色／尺寸／模糊／灰階](previews/checks-tourism.png)
+四底色／尺寸／模糊／灰階（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/previews/checks-tourism.png`）
 
 | 名稱 | 用途 | 建議尺寸 |
 | --- | --- | --- |
-| [山岳觀光](png/tourism-mountain.png) | 山岳景點／季節需求說明 | 64 點以上 |
-| [溫泉觀光](png/tourism-hot-spring.png) | 溫泉景點／冬季需求說明 | 64 點以上 |
-| [老街觀光](png/tourism-old-street.png) | 城鎮景點／老街觀光說明 | 120 點以上 |
-| [名產店](png/tourism-souvenir.png) | 景點名產店／投資效果面板 | 64 點以上 |
+| 山岳觀光（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/png/tourism-mountain.png`） | 山岳景點／季節需求說明 | 64 點以上 |
+| 溫泉觀光（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/png/tourism-hot-spring.png`） | 溫泉景點／冬季需求說明 | 64 點以上 |
+| 老街觀光（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/png/tourism-old-street.png`） | 城鎮景點／老街觀光說明 | 120 點以上 |
+| 名產店（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-14-micro3d/png/tourism-souvenir.png`） | 景點名產店／投資效果面板 | 64 點以上 |
 
 ## 採用與視覺限制
 
@@ -90,7 +90,7 @@
 
 - 玩家：八種玩家建物有一致的暖黃插圖；近期的旅程、人潮、機廠與天氣功能有對應題材可選。
 - 開發：素材只新增在獨立目錄，原始檔與 prompt／雜湊可追溯；不占用 App 實作 session 的檔案。
-- 美術：沿用作者較新的微 3D 偏好；保留 [扁平原稿](../generated-2026-10-13/index.html) 作另一種方向比較，深色底與小尺寸也可檢查。
+- 美術：沿用作者較新的微 3D 偏好；保留 扁平原稿（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/generated-2026-10-13/index.html`） 作另一種方向比較，深色底與小尺寸也可檢查。
 
 來源對照：PlacedBuildingKind → 八種建物；機廠與高鐵機廠研究 → 四張營運插圖；決策 220／169 的旅程追蹤與車門擁擠 → 人潮與轉乘；決策 175 → 天氣；AttractionCatalog／景點 JSON → 山岳、溫泉、城鎮與名產店。沿用既有 PHASE8_ASSET_INVENTORY.md 了解用途。全部圖片由本工作階段以 image_gen 原創生成，沒有複製或描摹參考庫或商業遊戲素材；沒有新增依賴或遊戲規則。
 

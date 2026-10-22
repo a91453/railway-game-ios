@@ -44,7 +44,7 @@ rm Tests/GamePresentationTests/Map3DPreviewDump.swift
 | `MAP3D_DETAIL` | `far`：輸出遠處看到的簡化版城市（決策 238）；`near`：近版但不含最近一層（決策 267 的騎樓、遮雨棚、晾衣）；預設是最近的完整版（連街道設施一起，決策 244：每個實例展開成網格） |
 | `MAP3D_TRAINS` | `x:z`：在這一點的灰色地面上排出每一套列車（決策 318），一列一套：頭車、中間車、最後一節，最上面一列是一般通勤車；和 `MAP3D_CROP` 一起用 |
 
-前後對照：在 `main` 的 worktree 與分支上各跑一次同樣的鏡頭，再把兩張上下拼起來（`docs/art/*/` 的圖都是上半 `main`、下半新版）。
+前後對照：在 `main` 的 worktree 與分支上各跑一次同樣的鏡頭，再把兩張上下拼起來（`docs/art/*/` 的圖都是上半 `main`、下半新版）。PR 只把一張總覽放進 `docs/art/<資料夾>/`，其他圖放 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/<同一資料夾>/`（作者 2026-10-21 的規則，CLAUDE.md）。
 
 差異圖（`docs/research/GAME_AI_TOOLS_2026-10-15.md` §6.3）：前後兩張同一個鏡頭的圖，標出哪些像素變了、變了多少。只當審查的證據，不當通過門檻。
 

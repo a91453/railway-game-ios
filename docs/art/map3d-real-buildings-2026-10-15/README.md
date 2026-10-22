@@ -1,5 +1,7 @@
 # 3D 地圖的真實建物（2026-10-15）
 
+> 2026-10-22 起這個資料夾只留這份 README、總覽圖 `kaohsiung-mid.jpg` 和文字紀錄；其他 5 張圖搬到 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-real-buildings-2026-10-15/`，檔名不變（作者 2026-10-21 的規則，`docs/HANDOFF.md` §2）。
+
 ARCHITECTURE 決策 239：高雄車站、臺中車站周圍 1.5 × 1.5 km 的真實建物，讀 3D 城市預覽的圖塊（Overture Maps 的足跡、樓層與用途），用本專案的畫風拉高。
 
 圖是 `tools/map3d-preview/` 的軟體算圖（WebGL 照 `Map3DShaders.metal` 的算式），地圖是以車站為錨點的空白實景新局（`MAP3D_WORLD=kaohsiung`、`taichung`，`MAP3D_BASEMAP=1`）。**不是 Metal、不是 iPhone 的畫面**（UNVERIFIED），要等 TestFlight。

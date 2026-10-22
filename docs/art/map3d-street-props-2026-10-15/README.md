@@ -1,5 +1,7 @@
 # 3D 地圖的街道設施（2026-10-15）
 
+> 2026-10-22 起這個資料夾只留這份 README、總覽圖 `kaohsiung-low.jpg` 和文字紀錄；其他 3 張圖搬到 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-street-props-2026-10-15/`，檔名不變（作者 2026-10-21 的規則，`docs/HANDOFF.md` §2）。
+
 ARCHITECTURE 決策 244：實景地圖沿真實道路的行道樹、路燈、電線桿，只在近處畫，用列車的實例化繪製（決策 230）。
 
 圖是 `tools/map3d-preview/` 的軟體算圖（WebGL 照 `Map3DShaders.metal` 的算式；預覽把每個實例展開成網格，App 是實例化繪製）。**不是 Metal、不是 iPhone 的畫面**（UNVERIFIED），要等 TestFlight。

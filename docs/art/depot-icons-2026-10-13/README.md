@@ -1,10 +1,12 @@
 # 機廠美術候選（2026-10-13）
 
+> 2026-10-22 起這個資料夾只留這份 README、總覽圖 `preview.png` 和文字紀錄；其他 5 張圖搬到 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/depot-icons-2026-10-13/`，檔名不變（作者 2026-10-21 的規則，`docs/HANDOFF.md` §2）。
+
 **已定案**：作者選定的三個圖示由 #555 合併（決策 214）。下面保留定案前的說明。
 
 （定案前：）尚未定案。作者要求先開 draft PR，供另一個 AI 審查。本目錄是設計候選；沒有加入 App 的 Asset Catalog，也沒有改功能程式。推薦 D-A／S-A／I-B，仍須作者選定。
 
-先看 [方案總覽](preview.png)，或分別看 [機廠](choice-1.png)、[出入庫](choice-2.png)、[在庫](choice-3.png)。[標記與整組圖示對照](contexts.png) 包含灰階、各種路線色、既有 16 張地圖圖示，以及同一列車同時入庫和等待的情況。HTML 和 PNG 是同一份設計示意，不是 App 截圖。
+先看 [方案總覽](preview.png)，或分別看 機廠（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/depot-icons-2026-10-13/choice-1.png`）、出入庫（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/depot-icons-2026-10-13/choice-2.png`）、在庫（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/depot-icons-2026-10-13/choice-3.png`）。標記與整組圖示對照（`a91453/railway-reference-private: Railway/game-art-previews/docs/art/depot-icons-2026-10-13/contexts.png`） 包含灰階、各種路線色、既有 16 張地圖圖示，以及同一列車同時入庫和等待的情況。HTML 和 PNG 是同一份設計示意，不是 App 截圖。
 
 ## 方案
 

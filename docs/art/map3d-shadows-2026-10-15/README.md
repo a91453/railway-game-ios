@@ -1,5 +1,7 @@
 # 3D 地圖的接地陰影（2026-10-15）
 
+> 2026-10-22 起這個資料夾只留這份 README、總覽圖 `flats.jpg` 和文字紀錄；其他 3 張圖搬到 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-shadows-2026-10-15/`，檔名不變（作者 2026-10-21 的規則，`docs/HANDOFF.md` §2）。
+
 ARCHITECTURE 決策 232。每張圖上半是決策 231（有貼圖、沒有陰影），下半加上接地陰影。
 
 - 軟體算圖：場景從 Swift 輸出，WebGL 照 `Map3DShaders.metal` 的同一個算式在 Chromium 裡畫，光線是遊戲的下午兩點。

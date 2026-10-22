@@ -2,7 +2,7 @@ import GamePresentation
 import SwiftUI
 
 /// The layers used most, one tap each, under the status pill (ARCHITECTURE
-/// decision 224, option 5B, `docs/art/railway-ui-redesign-2026-10-14/s5-*.png`):
+/// decision 224, option 5B, `a91453/railway-reference-private: Railway/game-art-previews/docs/art/railway-ui-redesign-2026-10-14/s5-*.png`):
 /// station names, waiting counts, passenger load, population and the fares
 /// and stamps over the stations (decision 310), each an
 /// icon over its name, framed in teal when on, and More, which opens the full layer
