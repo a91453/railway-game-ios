@@ -81,13 +81,13 @@ void main(){ float f=smoothstep(fog.x,fog.y,distance(vWorld,eye.xyz));
   ['sunDirection','sunColor','ambientSky','ambientGround','fogColor','eye','fog','shade'].forEach((n,i)=>gl.uniform4fv(gl.getUniformLocation(p,n),new Float32Array(u.slice(16+i*4,20+i*4))));
   gl.uniform4fv(gl.getUniformLocation(p,'nightWindows'),new Float32Array(u.slice(48,96)));
   gl.uniform1i(gl.getUniformLocation(p,'textured'),textured?1:0); gl.uniform1i(gl.getUniformLocation(p,'surfaces'),0);
-  const sky=window.meta.sky; gl.viewport(0,0,1600,900); gl.clearColor(sky[0],sky[1],sky[2],1); gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LESS);
+  const sky=window.meta.sky; gl.viewport(0,0,1600,900); gl.clearColor(sky[0],sky[1],sky[2],1); gl.enable(gl.DEPTH_TEST); gl.clearDepth(0); gl.depthFunc(gl.GREATER);
   gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT); gl.bindVertexArray(window.vao); gl.depthMask(true); gl.disable(gl.BLEND); gl.drawElements(gl.TRIANGLES,window.count,gl.UNSIGNED_INT,0);
   if (shadows) { const sp=window.sprog; gl.useProgram(sp); gl.uniformMatrix4fv(gl.getUniformLocation(sp,'viewProjection'),false,new Float32Array(u.slice(0,16)));
     gl.uniform4fv(gl.getUniformLocation(sp,'eye'),new Float32Array(u.slice(36,40))); gl.uniform4fv(gl.getUniformLocation(sp,'fog'),new Float32Array(u.slice(40,44)));
     gl.uniform4fv(gl.getUniformLocation(sp,'shade'),new Float32Array(u.slice(44,48)));
-    gl.bindVertexArray(window.svao); gl.enable(gl.BLEND); gl.blendFuncSeparate(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA,gl.ZERO,gl.ONE); gl.depthMask(false); gl.depthFunc(gl.LEQUAL);
-    gl.drawElements(gl.TRIANGLES,window.scount,gl.UNSIGNED_INT,0); gl.depthFunc(gl.LESS); gl.depthMask(true); }
+    gl.bindVertexArray(window.svao); gl.enable(gl.BLEND); gl.blendFuncSeparate(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA,gl.ZERO,gl.ONE); gl.depthMask(false); gl.depthFunc(gl.GEQUAL);
+    gl.drawElements(gl.TRIANGLES,window.scount,gl.UNSIGNED_INT,0); gl.depthFunc(gl.GREATER); gl.depthMask(true); }
   // Decision 320: the rain's streaks over the picture, as the app's canvas draws them.
   const rc=document.getElementById('rain').getContext('2d'); rc.clearRect(0,0,1600,900);
   const rain=window.meta.rain||[]; if (rain.length) { const c=window.meta.rainColour; rc.strokeStyle=`rgba(${c[0]},${c[1]},${c[2]},${c[3]})`;

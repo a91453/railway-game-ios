@@ -121,6 +121,10 @@ public struct Map3DCamera: Hashable, Sendable {
         (max(1, distance * 0.02), distance * 6 + 4_000)
     }
 
+    /// Decision 342: the depth runs the other way, 1 at the near plane
+    /// and 0 at the far one ("reversed Z"), so the depth buffer's floats,
+    /// finest near 0, fall where the perspective leaves the fewest steps:
+    /// afar. The Metal view clears the depth to 0 and keeps the greater.
     public var projection: Map3DMatrix {
         let aspect = max(viewport.width, 1) / max(viewport.height, 1)
         let f = 1 / tanf(fieldOfViewTall / 2)
@@ -128,8 +132,8 @@ public struct Map3DCamera: Hashable, Sendable {
         return Map3DMatrix(columns: [
             f / aspect, 0, 0, 0,
             0, f, 0, 0,
-            0, 0, far / (near - far), -1,
-            0, 0, near * far / (near - far), 0,
+            0, 0, near / (far - near), -1,
+            0, 0, near * far / (far - near), 0,
         ])
     }
 

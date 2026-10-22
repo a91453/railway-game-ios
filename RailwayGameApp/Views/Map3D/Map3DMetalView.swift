@@ -132,6 +132,9 @@ final class Map3DMetalView: MTKView {
     private let pipeline: MTLRenderPipelineState
     /// Decision 230: the same, each vertex through its car's instance.
     private let instancedPipeline: MTLRenderPipelineState
+    /// Decision 342: the city in front of the trains, seen through
+    /// (``Map3DSeeThrough``).
+    private let seeThroughPipeline: MTLRenderPipelineState
     /// Decision 232: the ground shadows, blended over what is drawn,
     /// tested against the depth but not writing it.
     private let shadowPipeline: MTLRenderPipelineState
@@ -157,7 +160,8 @@ final class Map3DMetalView: MTKView {
               let fragmentFunction = library.makeFunction(name: "map3dFragment"),
               let instancedFunction = library.makeFunction(name: "map3dInstancedVertex"),
               let shadowVertex = library.makeFunction(name: "map3dShadowVertex"),
-              let shadowFragment = library.makeFunction(name: "map3dShadowFragment")
+              let shadowFragment = library.makeFunction(name: "map3dShadowFragment"),
+              let seeThroughFragment = library.makeFunction(name: "map3dSeeThroughFragment")
         else { return nil }
         let vertexDescriptor = MTLVertexDescriptor()
         vertexDescriptor.attributes[0].format = .float3
@@ -181,7 +185,9 @@ final class Map3DMetalView: MTKView {
         descriptor.depthAttachmentPixelFormat = .depth32Float
         descriptor.rasterSampleCount = samples
         let depthDescriptor = MTLDepthStencilDescriptor()
-        depthDescriptor.depthCompareFunction = .less
+        // Decision 342: the depth runs from 1 near to 0 far
+        // (``Map3DCamera/projection``), so the nearer is the greater.
+        depthDescriptor.depthCompareFunction = .greater
         depthDescriptor.isDepthWriteEnabled = true
         guard let pipeline = try? device.makeRenderPipelineState(descriptor: descriptor) else { return nil }
         descriptor.vertexFunction = instancedFunction
@@ -189,6 +195,13 @@ final class Map3DMetalView: MTKView {
               let depthState = device.makeDepthStencilState(descriptor: depthDescriptor),
               let surfaces = makeSurfaces(device: device, queue: queue)
         else { return nil }
+        // Decision 342: the city in front of a train, its alpha turned
+        // into the share of a pixel's samples it covers.
+        descriptor.vertexFunction = vertexFunction
+        descriptor.fragmentFunction = seeThroughFragment
+        descriptor.isAlphaToCoverageEnabled = true
+        guard let seeThroughPipeline = try? device.makeRenderPipelineState(descriptor: descriptor) else { return nil }
+        descriptor.isAlphaToCoverageEnabled = false
         // Decision 232: what is drawn times one less the shadow's alpha,
         // plus its tint times the alpha.
         descriptor.vertexFunction = shadowVertex
@@ -201,22 +214,24 @@ final class Map3DMetalView: MTKView {
         descriptor.colorAttachments[0].sourceAlphaBlendFactor = .zero
         descriptor.colorAttachments[0].destinationAlphaBlendFactor = .one
         let shadowDepthDescriptor = MTLDepthStencilDescriptor()
-        shadowDepthDescriptor.depthCompareFunction = .lessEqual
+        shadowDepthDescriptor.depthCompareFunction = .greaterEqual
         shadowDepthDescriptor.isDepthWriteEnabled = false
         guard let shadowPipeline = try? device.makeRenderPipelineState(descriptor: descriptor),
               let shadowDepthState = device.makeDepthStencilState(descriptor: shadowDepthDescriptor)
         else { return nil }
         return Map3DMetalView(device: device, queue: queue, pipeline: pipeline, instancedPipeline: instancedPipeline,
-                              shadowPipeline: shadowPipeline, shadowDepthState: shadowDepthState, depthState: depthState, surfaces: surfaces)
+                              seeThroughPipeline: seeThroughPipeline, shadowPipeline: shadowPipeline, shadowDepthState: shadowDepthState,
+                              depthState: depthState, surfaces: surfaces)
     }
 
     private init(
         device: MTLDevice, queue: MTLCommandQueue, pipeline: MTLRenderPipelineState, instancedPipeline: MTLRenderPipelineState,
-        shadowPipeline: MTLRenderPipelineState, shadowDepthState: MTLDepthStencilState, depthState: MTLDepthStencilState, surfaces: MTLTexture
+        seeThroughPipeline: MTLRenderPipelineState, shadowPipeline: MTLRenderPipelineState, shadowDepthState: MTLDepthStencilState, depthState: MTLDepthStencilState, surfaces: MTLTexture
     ) {
         self.queue = queue
         self.pipeline = pipeline
         self.instancedPipeline = instancedPipeline
+        self.seeThroughPipeline = seeThroughPipeline
         self.shadowPipeline = shadowPipeline
         self.shadowDepthState = shadowDepthState
         self.depthState = depthState
@@ -225,7 +240,8 @@ final class Map3DMetalView: MTKView {
         colorPixelFormat = .bgra8Unorm
         depthStencilPixelFormat = .depth32Float
         sampleCount = Self.samples
-        clearDepth = 1
+        // Decision 342: reversed depth, 0 the farthest.
+        clearDepth = 0
         preferredFramesPerSecond = 60
         streetDetail = Map3DStreetDetail.forGPUFamily(Self.appleFamily(of: device))
         applyQuality()
@@ -530,6 +546,8 @@ final class Map3DMetalView: MTKView {
             }
         }
         trainHeads?(frame?.heads ?? [], camera)
+        // Decision 342: the cars the city in front of is seen through.
+        let seeThrough = Map3DSeeThrough(eye: camera.eye, cars: frame?.cars ?? [], matrix: matrix)
         var trainBoxes: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int, triangles: Int)?
         if let mesh = frame?.boxes, !mesh.isEmpty, let vertices = makeBuffer(mesh.vertices), let indices = makeBuffer(mesh.indices) {
             trainBoxes = (vertices, indices, mesh.indices.count, mesh.triangleCount)
@@ -579,18 +597,36 @@ final class Map3DMetalView: MTKView {
             encoder.setVertexBytes(base, length: bytes.count, index: 1)
             encoder.setFragmentBytes(base, length: bytes.count, index: 1)
         }
+        if !seeThrough.cars.isEmpty {
+            seeThrough.floats.withUnsafeBytes { bytes in
+                guard let base = bytes.baseAddress else { return }
+                encoder.setFragmentBytes(base, length: bytes.count, index: 2)
+            }
+        }
         var drawCalls = 0, triangles = 0
         for chunk in visible {
             // Decision 238: the city in full near the camera; afar, the
             // ground and track, then the city simplified.
             let detailed = chunk.detailed
-            let count = detailed ? chunk.indexCount : chunk.baseIndexCount
+            // Decision 342: a chunk a cone crosses draws its city apart,
+            // seen through in front of the trains.
+            let seen = !seeThrough.cars.isEmpty && seeThrough.cuts(minimum: chunk.minimum, maximum: chunk.maximum)
+            let count = detailed && !seen ? chunk.indexCount : chunk.baseIndexCount
             if count > 0 {
                 encoder.setVertexBuffer(chunk.vertices, offset: 0, index: 0)
                 encoder.drawIndexedPrimitives(type: .triangle, indexCount: count, indexType: .uint32,
                                               indexBuffer: chunk.indices, indexBufferOffset: 0)
                 drawCalls += 1
                 triangles += count / 3
+            }
+            if seen { encoder.setRenderPipelineState(seeThroughPipeline) }
+            defer { if seen { encoder.setRenderPipelineState(pipeline) } }
+            if detailed, seen, chunk.indexCount > chunk.baseIndexCount {
+                let city = chunk.indexCount - chunk.baseIndexCount
+                encoder.drawIndexedPrimitives(type: .triangle, indexCount: city, indexType: .uint32, indexBuffer: chunk.indices,
+                                              indexBufferOffset: chunk.baseIndexCount * MemoryLayout<UInt32>.stride)
+                drawCalls += 1
+                triangles += city / 3
             }
             if chunk.closeUp, let close = chunk.close {
                 encoder.setVertexBuffer(close.vertices, offset: 0, index: 0)
