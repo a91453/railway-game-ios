@@ -145,6 +145,9 @@ final class Map3DMetalView: MTKView {
     private let shadowPipeline: MTLRenderPipelineState
     private let shadowDepthState: MTLDepthStencilState
     private let depthState: MTLDepthStencilState
+    /// Decision 347: the sky behind everything.
+    private let skyPipeline: MTLRenderPipelineState
+    private let skyDepthState: MTLDepthStencilState
     /// Decision 231: the surfaces' textures, one layer each.
     private let surfaces: MTLTexture
     private var chunks: [Chunk] = []
@@ -166,7 +169,9 @@ final class Map3DMetalView: MTKView {
               let instancedFunction = library.makeFunction(name: "map3dInstancedVertex"),
               let shadowVertex = library.makeFunction(name: "map3dShadowVertex"),
               let shadowFragment = library.makeFunction(name: "map3dShadowFragment"),
-              let seeThroughFragment = library.makeFunction(name: "map3dSeeThroughFragment")
+              let seeThroughFragment = library.makeFunction(name: "map3dSeeThroughFragment"),
+              let skyVertex = library.makeFunction(name: "map3dSkyVertex"),
+              let skyFragment = library.makeFunction(name: "map3dSkyFragment")
         else { return nil }
         let vertexDescriptor = MTLVertexDescriptor()
         vertexDescriptor.attributes[0].format = .float3
@@ -207,6 +212,18 @@ final class Map3DMetalView: MTKView {
         descriptor.isAlphaToCoverageEnabled = true
         guard let seeThroughPipeline = try? device.makeRenderPipelineState(descriptor: descriptor) else { return nil }
         descriptor.isAlphaToCoverageEnabled = false
+        // Decision 347: the sky, one triangle at the far plane, where the
+        // depth is still the cleared 0 (nothing drawn there).
+        descriptor.vertexFunction = skyVertex
+        descriptor.fragmentFunction = skyFragment
+        descriptor.vertexDescriptor = nil
+        let skyDepthDescriptor = MTLDepthStencilDescriptor()
+        skyDepthDescriptor.depthCompareFunction = .greaterEqual
+        skyDepthDescriptor.isDepthWriteEnabled = false
+        guard let skyPipeline = try? device.makeRenderPipelineState(descriptor: descriptor),
+              let skyDepthState = device.makeDepthStencilState(descriptor: skyDepthDescriptor)
+        else { return nil }
+        descriptor.vertexDescriptor = vertexDescriptor
         // Decision 232: what is drawn times one less the shadow's alpha,
         // plus its tint times the alpha.
         descriptor.vertexFunction = shadowVertex
@@ -226,12 +243,13 @@ final class Map3DMetalView: MTKView {
         else { return nil }
         return Map3DMetalView(device: device, queue: queue, pipeline: pipeline, instancedPipeline: instancedPipeline,
                               seeThroughPipeline: seeThroughPipeline, shadowPipeline: shadowPipeline, shadowDepthState: shadowDepthState,
-                              depthState: depthState, surfaces: surfaces)
+                              depthState: depthState, skyPipeline: skyPipeline, skyDepthState: skyDepthState, surfaces: surfaces)
     }
 
     private init(
         device: MTLDevice, queue: MTLCommandQueue, pipeline: MTLRenderPipelineState, instancedPipeline: MTLRenderPipelineState,
-        seeThroughPipeline: MTLRenderPipelineState, shadowPipeline: MTLRenderPipelineState, shadowDepthState: MTLDepthStencilState, depthState: MTLDepthStencilState, surfaces: MTLTexture
+        seeThroughPipeline: MTLRenderPipelineState, shadowPipeline: MTLRenderPipelineState, shadowDepthState: MTLDepthStencilState, depthState: MTLDepthStencilState,
+        skyPipeline: MTLRenderPipelineState, skyDepthState: MTLDepthStencilState, surfaces: MTLTexture
     ) {
         self.queue = queue
         self.pipeline = pipeline
@@ -240,6 +258,8 @@ final class Map3DMetalView: MTKView {
         self.shadowPipeline = shadowPipeline
         self.shadowDepthState = shadowDepthState
         self.depthState = depthState
+        self.skyPipeline = skyPipeline
+        self.skyDepthState = skyDepthState
         self.surfaces = surfaces
         super.init(frame: .zero, device: device)
         colorPixelFormat = .bgra8Unorm
@@ -697,6 +717,16 @@ final class Map3DMetalView: MTKView {
                 }
             }
         }
+        // Decision 347: the sky where nothing was drawn.
+        encoder.setRenderPipelineState(skyPipeline)
+        encoder.setDepthStencilState(skyDepthState)
+        Map3DSky(shown).floats(camera: camera).withUnsafeBytes { bytes in
+            guard let base = bytes.baseAddress else { return }
+            encoder.setFragmentBytes(base, length: bytes.count, index: 3)
+        }
+        encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
+        drawCalls += 1
+        triangles += 1
         // Decision 232: the ground shadows last, over everything drawn.
         encoder.setRenderPipelineState(shadowPipeline)
         encoder.setDepthStencilState(shadowDepthState)
