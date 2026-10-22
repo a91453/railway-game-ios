@@ -1,3 +1,4 @@
+import Foundation
 import GameCore
 import Observation
 
@@ -681,6 +682,15 @@ public final class GameSession {
     /// the map stamps at the stations they ended at (``TripStampBoard``);
     /// `nil` before any. Never saved.
     public internal(set) var tripStampPulse: TripStampPulse?
+    /// Decision 353: the station stamps the last midnight collected,
+    /// which the map lands over their stations; `nil` before any. Never
+    /// saved.
+    public internal(set) var stationStampPulse: StationStampPulse?
+    /// Decision 353: when each station stamp in the passport was
+    /// collected, by its key (``StationStampRecords/dates``), for the
+    /// station panel. The record is the launcher's file; this is its
+    /// copy for the game, never saved.
+    public internal(set) var collectedStamps: [String: Date] = [:]
     /// Decision 276: the fullest each running trip's train has been, read
     /// after every step for the stamps. Never saved.
     @ObservationIgnored var tripLoads = TripLoads()

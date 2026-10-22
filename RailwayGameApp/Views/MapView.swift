@@ -893,6 +893,12 @@ struct MapView: View {
                             .mask { attribution.fill() }
                     }
                 }
+                // Decision 353: a station stamp collected lands over its
+                // station, whatever the quick strip shows.
+                .overlay(alignment: .topLeading) {
+                    StationStampMarks(session: session, camera: projection)
+                        .mask { attribution.fill() }
+                }
                 .overlay {
                     GoalMetCheck(pulse: session.goalPulse, language: session.language)
                 }

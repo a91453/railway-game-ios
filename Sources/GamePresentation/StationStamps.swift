@@ -61,12 +61,16 @@ public enum StationStamps {
         public let chinese: String
         public let english: String?
         public let system: String
+        /// The game's station that is it (decision 353: where the map
+        /// shows a new stamp); `nil` where none was asked.
+        public let station: StationID?
 
-        public init(key: String, chinese: String, english: String?, system: String) {
+        public init(key: String, chinese: String, english: String?, system: String, station: StationID? = nil) {
             self.key = key
             self.chinese = chinese
             self.english = english
             self.system = system
+            self.station = station
         }
     }
 
@@ -94,7 +98,7 @@ public enum StationStamps {
             guard let real = railways.stations(named: station.name, near: here).first else { continue }
             let key = RealRailways.stationKey(real.chinese)
             guard seen.insert(key).inserted else { continue }
-            found.append(RealStation(key: key, chinese: real.chinese, english: real.english, system: real.system.id))
+            found.append(RealStation(key: key, chinese: real.chinese, english: real.english, system: real.system.id, station: station.id))
         }
         return found
     }
@@ -132,6 +136,12 @@ public struct StationStampRecords: Sendable {
     }
 
     public var count: Int { stamps.count }
+
+    /// When each stamp was collected, by its key (decision 353: the
+    /// station panel's line).
+    public var dates: [String: Date] {
+        Dictionary(stamps.map { ($0.key, $0.earned) }, uniquingKeysWith: min)
+    }
 
     public func contains(_ key: String) -> Bool {
         stamps.contains { $0.key == key }
@@ -274,6 +284,20 @@ public enum StationStampPassport {
         )
     }
 
+    /// How the passport lists its stamps (decision 353, the reference's
+    /// two tabs, `时间` and `城市`, in `voyager-collection.js`): pages in
+    /// the order collected, or a list by county or city.
+    public enum Arrangement: String, CaseIterable, Hashable, Sendable {
+        case date, county
+
+        public func title(in language: DisplayLanguage) -> String {
+            switch self {
+            case .date: language.text("By date", "依時間")
+            case .county: language.text("By county", "依縣市")
+            }
+        }
+    }
+
     /// What an empty passport says.
     public static func empty(in language: DisplayLanguage) -> String {
         language.text(
@@ -283,15 +307,150 @@ public enum StationStampPassport {
     }
 }
 
+/// Stamps just collected, for the map (decision 353): each lands over the
+/// game's station that is it, as a trip's stamp does (decision 276).
+public struct StationStampPulse: Hashable, Sendable {
+    /// One stamp over its station.
+    public struct Mark: Hashable, Sendable, Identifiable {
+        public let stamp: StationStamp
+        public let station: StationID
+        public let location: PlanPoint
+
+        public var id: String { stamp.key }
+    }
+
+    /// The most stamps one pulse shows: a first day can collect a whole
+    /// line, and the status line and the news name them all.
+    public static let maximum = 4
+    /// How long a stamp stays, in seconds: decision 253's `pop` in, a
+    /// hold long enough to read a station's name, its `cardOut` out; a
+    /// second longer than a trip's stamp (decision 276), which has two
+    /// words.
+    public static let lifetime = 3.0
+    public static var hold: Double {
+        lifetime - MotionRule.pop.seconds - MotionRule.cardOut.seconds
+    }
+
+    public let marks: [Mark]
+    /// Counts up with each pulse.
+    public let serial: Int
+}
+
+/// Whether a station's stamp is in the passport (decision 353), for the
+/// station panel.
+public enum StationStampStatus: Hashable, Sendable {
+    case collected(Date)
+    case notYet
+
+    public var isCollected: Bool {
+        if case .collected = self { true } else { false }
+    }
+
+    public func text(in language: DisplayLanguage) -> String {
+        switch self {
+        case .collected(let date):
+            let day = StationStampPassport.dateLabel(date)
+            return language.text("Station stamp: collected \(day)", "紀念章：\(day) 已收集")
+        case .notYet:
+            return language.text(
+                "Station stamp: not yet. Carry passengers here and it is stamped the next day.",
+                "紀念章：還沒收集。列車在這裡載客，第二天就蓋上。"
+            )
+        }
+    }
+}
+
+/// The passport by county or city (decision 353, the reference's
+/// `cityGroups` in `voyager-collection.js`): how many of each one's real
+/// stations are collected.
+public enum StationStampCounties {
+    /// Taiwan's counties and cities in the government's order, with their
+    /// English names.
+    public static let names: [(chinese: String, english: String)] = [
+        ("臺北市", "Taipei City"), ("新北市", "New Taipei City"), ("基隆市", "Keelung City"),
+        ("桃園市", "Taoyuan City"), ("新竹市", "Hsinchu City"), ("新竹縣", "Hsinchu County"),
+        ("苗栗縣", "Miaoli County"), ("臺中市", "Taichung City"), ("彰化縣", "Changhua County"),
+        ("南投縣", "Nantou County"), ("雲林縣", "Yunlin County"), ("嘉義市", "Chiayi City"),
+        ("嘉義縣", "Chiayi County"), ("臺南市", "Tainan City"), ("高雄市", "Kaohsiung City"),
+        ("屏東縣", "Pingtung County"), ("宜蘭縣", "Yilan County"), ("花蓮縣", "Hualien County"),
+        ("臺東縣", "Taitung County"), ("澎湖縣", "Penghu County"), ("金門縣", "Kinmen County"),
+        ("連江縣", "Lienchiang County"),
+    ]
+
+    /// One county or city: its real stations, and the stamps of them
+    /// collected, in the order collected.
+    public struct Group: Hashable, Sendable, Identifiable {
+        /// Its Chinese name; empty for the stamps no county holds.
+        public let county: String
+        public let total: Int
+        public let collected: [StationStamp]
+
+        public var id: String { county }
+
+        public func name(in language: DisplayLanguage) -> String {
+            guard !county.isEmpty else { return language.text("Elsewhere", "其他") }
+            let english = StationStampCounties.names.first { $0.chinese == county }?.english ?? county
+            return language.text(english, county)
+        }
+
+        /// "臺北市 5/40".
+        public func title(in language: DisplayLanguage) -> String {
+            total > 0 ? "\(name(in: language)) \(collected.count)/\(total)" : "\(name(in: language)) \(collected.count)"
+        }
+    }
+
+    /// The county or city of each real place (``RealRailways/stationKey(_:)``),
+    /// where its first station in the site's order lies.
+    public static func counties(of railways: RealRailways, in places: PlaceNames) -> [String: String] {
+        var found: [String: String] = [:]
+        var seen = Set<String>()
+        for station in railways.stations {
+            let key = RealRailways.stationKey(station.chinese)
+            guard seen.insert(key).inserted else { continue }
+            if let county = places.county(containing: station.coordinate) { found[key] = county }
+        }
+        return found
+    }
+
+    /// The groups of `stamps`: every county or city with a real station,
+    /// in the government's order, then the stamps of a place no county
+    /// holds (a station the railways no longer list), if any.
+    public static func groups(of stamps: [StationStamp], counties: [String: String]) -> [Group] {
+        var totals: [String: Int] = [:]
+        for county in counties.values { totals[county, default: 0] += 1 }
+        var collected: [String: [StationStamp]] = [:]
+        for stamp in stamps { collected[counties[stamp.key] ?? "", default: []].append(stamp) }
+        let known = names.map(\.chinese)
+        let others = totals.keys.filter { !known.contains($0) }.sorted()
+        var groups = (known + others).compactMap { county in
+            totals[county].map { Group(county: county, total: $0, collected: collected[county] ?? []) }
+        }
+        if let elsewhere = collected[""] { groups.append(Group(county: "", total: 0, collected: elsewhere)) }
+        return groups
+    }
+}
+
 extension GameSession {
     /// Says that `stamps` were collected (decision 348): an item each in
-    /// the news log, and the status line.
-    public func noteStationStamps(_ stamps: [StationStamp]) {
+    /// the news log, and the status line; and (decision 353) lands up to
+    /// ``StationStampPulse/maximum`` of them over the game's stations
+    /// `found` says they are.
+    public func noteStationStamps(_ stamps: [StationStamp], at found: [StationStamps.RealStation] = []) {
         guard let first = stamps.first else { return }
         for stamp in stamps {
+            collectedStamps[stamp.key] = min(collectedStamps[stamp.key] ?? stamp.earned, stamp.earned)
             news.add(day: world.clock.now.seconds / GameTime.secondsPerDay, .achievement) { language in
                 language.text("Station stamp collected: \(stamp.name(in: language))", "收集到紀念章：\(stamp.name(in: language))")
             }
+        }
+        let marks: [StationStampPulse.Mark] = stamps.compactMap { stamp in
+            guard let id = found.first(where: { $0.key == stamp.key })?.station, let station = world.station(id: id) else { return nil }
+            return StationStampPulse.Mark(stamp: stamp, station: id, location: station.point)
+        }
+        if !marks.isEmpty {
+            stationStampPulse = StationStampPulse(
+                marks: Array(marks.prefix(StationStampPulse.maximum)), serial: (stationStampPulse?.serial ?? 0) + 1
+            )
         }
         let more = stamps.count - 1
         isMessageKeptOutOfNews = true
@@ -302,5 +461,14 @@ extension GameSession {
             )
             : language.text("Station stamp collected: \(first.name(in: language))", "收集到紀念章：\(first.name(in: language))"))
         isMessageKeptOutOfNews = false
+    }
+
+    /// Whether the stamp of station `id` is in the passport (decision
+    /// 353), or `nil` where the station is not a real one (or the real
+    /// railways are not read yet).
+    public func stationStampStatus(of id: StationID) -> StationStampStatus? {
+        guard let railways, let station = world.station(id: id),
+              let real = StationStamps.realStations(of: [station], in: world, railways: railways).first else { return nil }
+        return collectedStamps[real.key].map(StationStampStatus.collected) ?? .notYet
     }
 }

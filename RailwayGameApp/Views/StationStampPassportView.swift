@@ -4,14 +4,22 @@ import SwiftUI
 /// The passport of station stamps (decision 348): pages of eight, swiped
 /// like a book, each stamp where the reference's layout puts it
 /// (``StationStampPassport/layout(_:)``), with the date it was collected.
-/// Opened from the achievements.
+/// Opened from the achievements; since decision 353 also listed by
+/// county or city.
 struct StationStampPassportView: View {
     let language: DisplayLanguage
     let records: StationStampRecords
     /// The real railways, for how many stamps there are; `nil` while they
     /// are read.
     var railways: RealRailways?
+    /// The counties and cities (decision 353), for the list by county;
+    /// `nil` while they are read.
+    var placeNames: PlaceNames? = nil
     @State private var total: Int?
+    /// Decision 353: pages by date, or the list by county.
+    @State private var arrangement = StationStampPassport.Arrangement.date
+    /// Each real place's county, worked out once both are read.
+    @State private var counties: [String: String]?
 
     var body: some View {
         let pages = StationStampPassport.pages(records.stamps)
@@ -26,15 +34,31 @@ struct StationStampPassportView: View {
                     .accessibilityIdentifier("stamps.empty")
                 Spacer()
             } else {
-                TabView {
-                    ForEach(pages.indices, id: \.self) { index in
-                        StationStampPage(stamps: pages[index], number: index + 1, language: language)
-                            .padding(.horizontal, 20)
-                            .padding(.bottom, 36)
+                Picker(selection: $arrangement) {
+                    ForEach(StationStampPassport.Arrangement.allCases, id: \.self) { choice in
+                        Text(verbatim: choice.title(in: language)).tag(choice)
                     }
+                } label: {
+                    Text(verbatim: language.text("Show", "顯示"))
                 }
-                .tabViewStyle(.page(indexDisplayMode: pages.count > 1 ? .always : .never))
-                .indexViewStyle(.page(backgroundDisplayMode: .always))
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .accessibilityIdentifier("stamps.arrangement")
+                switch arrangement {
+                case .date:
+                    TabView {
+                        ForEach(pages.indices, id: \.self) { index in
+                            StationStampPage(stamps: pages[index], number: index + 1, language: language)
+                                .padding(.horizontal, 20)
+                                .padding(.bottom, 36)
+                        }
+                    }
+                    .tabViewStyle(.page(indexDisplayMode: pages.count > 1 ? .always : .never))
+                    .indexViewStyle(.page(backgroundDisplayMode: .always))
+                case .county:
+                    countyList
+                }
             }
             Text(verbatim: StationStampPassport.footer(in: language))
                 .font(.footnote)
@@ -49,6 +73,50 @@ struct StationStampPassportView: View {
         .task(id: railways == nil) {
             guard let railways else { return }
             total = StationStamps.total(in: railways)
+        }
+        .task(id: arrangement == .county && railways != nil && placeNames != nil) {
+            guard arrangement == .county, counties == nil, let railways, let placeNames else { return }
+            counties = await Task.detached(priority: .userInitiated) {
+                StationStampCounties.counties(of: railways, in: placeNames)
+            }.value
+        }
+    }
+
+    /// Decision 353: each county or city with a real station, how many of
+    /// its stamps are collected and which, after the reference's
+    /// `cityGroups`.
+    @ViewBuilder
+    private var countyList: some View {
+        if let counties {
+            List(StationStampCounties.groups(of: records.stamps, counties: counties)) { group in
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text(verbatim: group.name(in: language))
+                            .fontWeight(.semibold)
+                        Spacer()
+                        Text(verbatim: group.total > 0 ? "\(group.collected.count)/\(group.total)" : "\(group.collected.count)")
+                            .font(.callout.monospacedDigit())
+                            .foregroundStyle(group.collected.isEmpty ? Theme.textSecondary : Theme.textPrimary)
+                    }
+                    if group.total > 0 {
+                        ProgressView(value: Double(group.collected.count), total: Double(group.total))
+                            .tint(Theme.primary)
+                    }
+                    if !group.collected.isEmpty {
+                        Text(verbatim: group.collected.map { $0.name(in: language) }.joined(separator: language.text(", ", "、")))
+                            .font(.caption)
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                }
+                .padding(.vertical, 2)
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("stamps.county.\(group.county)")
+            }
+            .scrollContentBackground(.hidden)
+        } else {
+            Spacer()
+            ProgressView()
+            Spacer()
         }
     }
 }
@@ -88,7 +156,7 @@ private struct StationStampPage: View {
 /// A station's stamp: its name in the game's language, the other
 /// language's beneath it, and the date, inside a heavy and a thin border
 /// of the railway's ink (``InkStampFrame``, as the trip stamps).
-private struct StationStampMark: View {
+struct StationStampMark: View {
     let stamp: StationStamp
     let language: DisplayLanguage
     let side: CGFloat
