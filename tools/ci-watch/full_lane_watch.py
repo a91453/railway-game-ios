@@ -17,7 +17,10 @@ same failing jobs is one comment, not one a run:
   and a job turned red";
 - green after a red run: "green again".
 A cancelled run says nothing (a newer full lane or a release check replaced
-it). The comment never holds an at sign: the account's comments by a person
+it). A run re-run (its attempt 2 or later) is compared with its own attempt
+before, which is what the last comment said about it: a red full lane re-run
+green says "green again". A run with a newer full lane already finished says
+nothing: it is no longer main's latest (PR #945–#961 review). The comment never holds an at sign: the account's comments by a person
 start claude.yml when they mention it, and job names come from the workflow.
 
 Python 3 standard library only:
@@ -110,6 +113,21 @@ def earlier_full_lanes(runs, run):
     return sorted(earlier, key=lambda r: r["created_at"], reverse=True)
 
 
+def newer_full_lanes(runs, run):
+    """The full lanes of main created after `run` that finished green or red."""
+    return [r for r in runs if is_full_lane(r) and r["id"] != run["id"] and r.get("status") == "completed"
+            and r.get("conclusion") in ("success", "failure") and r["created_at"] > run["created_at"]]
+
+
+def compared_with(attempt_before, earlier):
+    """What `run` is compared with: its own attempt before when it was
+    re-run and that attempt finished green or red, else the full lane
+    before it."""
+    if attempt_before and attempt_before.get("conclusion") in ("success", "failure"):
+        return attempt_before
+    return earlier[0] if earlier else None
+
+
 def red_streak(earlier):
     """The red runs at the head of `earlier`, up to the first green one."""
     streak = []
@@ -139,13 +157,30 @@ def main(argv=None):
         print(f"Run {options.run} is not a full lane of main ({run.get('event')}, {run.get('head_branch')}, {run.get('display_title')!r}); nothing to say.")
         return 0
     runs = api(f"/repos/{repository}/actions/workflows/ios-build.yml/runs?branch=main&status=completed&per_page=50", token)["workflow_runs"]
+    summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    newer = newer_full_lanes(runs, run)
+    if newer:
+        text = f"Run {run['id']} ({run.get('conclusion')}): a newer full lane ({newer[0]['id']}) has finished, so this is not main's latest; no comment."
+        print(text)
+        if summary:
+            with open(summary, "a", encoding="utf-8") as out:
+                out.write(text + "\n")
+        return 0
     earlier = earlier_full_lanes(runs, run)
-    previous = earlier[0] if earlier else None
+    attempt = run.get("run_attempt") or 1
+    attempt_before = api(f"/repos/{repository}/actions/runs/{run['id']}/attempts/{attempt - 1}", token) if attempt > 1 else None
+    previous = compared_with(attempt_before, earlier)
     jobs = lambda r: failed_jobs(api(f"/repos/{repository}/actions/runs/{r['id']}/jobs?per_page=100&filter=latest", token)["jobs"])
     failed = jobs(run)
-    streak_failed = sorted({name for r in red_streak(earlier) for name in jobs(r)}) if run.get("conclusion") == "failure" else []
+    streak_failed = []
+    if run.get("conclusion") == "failure":
+        streak_failed = {name for r in red_streak(earlier) for name in jobs(r)}
+        if previous is attempt_before and attempt_before.get("conclusion") == "failure":
+            # The jobs of the attempt before, not of the run's latest attempt.
+            before = api(f"/repos/{repository}/actions/runs/{run['id']}/attempts/{attempt - 1}/jobs?per_page=100", token)["jobs"]
+            streak_failed |= set(failed_jobs(before))
+        streak_failed = sorted(streak_failed)
     headline = news(run, failed, previous, streak_failed)
-    summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if headline is None:
         text = f"Run {run['id']} ({run.get('conclusion')}): nothing new since the last full lane ({previous['id'] if previous else 'none'}); no comment."
         print(text)
@@ -192,6 +227,16 @@ def selftest():
     assert [r["id"] for r in earlier] == [7, 2, 1], earlier
     assert red_streak(earlier) == []
     assert [r["id"] for r in red_streak(earlier[1:])] == [2]
+
+    # A red full lane re-run green is "green again": it is compared with its
+    # own red attempt, not the green run before it.
+    rerun = dict(red, conclusion="success", run_attempt=2)
+    assert news(rerun, [], compared_with(dict(red), [green]), a) == "main 的 full lane 綠了"
+    assert compared_with(None, [green]) is green and compared_with(None, []) is None
+    assert compared_with(run(2, "cancelled", "x"), [green]) is green
+    # A re-run of an older full lane says nothing once a newer one finished.
+    assert [r["id"] for r in newer_full_lanes([green, red, hand, nightly, newest], red)] == [7, 8]
+    assert newer_full_lanes([green, red, run(10, "cancelled", "2026-10-20T18:00:00Z")], red) == []
 
     assert failed_jobs([{"name": "b", "conclusion": "failure"}, {"name": "a", "conclusion": "timed_out"},
                         {"name": "c", "conclusion": "success"}, {"name": "d", "conclusion": "skipped"}]) == ["a", "b"]

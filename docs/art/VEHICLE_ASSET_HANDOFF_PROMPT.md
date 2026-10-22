@@ -8,9 +8,9 @@
 作者已授權：更改參考車的配色與形狀；可組合作者私有庫的素材，但必須改成遊戲自己的霧面頂點色、重新組合造型；完成後推 task branch 與 draft PR。不准直接在 main 開發、不准推 main、不准 merge 或 auto-merge。不要重問已授權的例行步驟。沒有明確要求時不另開平行子 agent。
 
 一、先接專案與工作範圍
-1. 讀 AGENTS.md、CLAUDE.md、docs/HANDOFF.md、.claude/skills/art-style/SKILL.md，再讀最接近的車輛 skill 與 tools/README。CLAUDE.md 對所有 agent 生效。需要診斷真正 bug 時，先讀 diagnosing-bugs skill，建立會失敗的重現，再修。
+1. 讀 AGENTS.md、CLAUDE.md、docs/HANDOFF.md、.claude/skills/art-style/SKILL.md，再讀最接近的車輛 skill 與它的 tools/<vehicle>/README.md。CLAUDE.md 對所有 agent 生效。需要診斷真正 bug 時，先讀 diagnosing-bugs skill，建立會失敗的重現，再修。
 2. git fetch origin，檢查最新 origin/main 與 GitHub #231 的所有認領／完成留言。先認領任務、獨立 codex/<vehicle>-<date> 分支、工作目錄、精確檔案；save version、決策編號、golden schema 都寫「不動」。不要覆蓋別人的工作或直接修改別人的分支；範圍重疊先協調。只加 #231 留言，不改 issue body，不在 GitHub 留觸發機器人的 mention。
-3. 檢查依賴 PR 的 merged 狀態與目前 head，不能假設上一台車已在 main。需要尚未合併的 helper／enum 時，從那個 head 開 stacked branch，以它的分支作 PR base；只讓本批差異出現在 PR。依賴合併後才轉 main。不要無故把每張 PR 都更新 main 或 cherry-pick 所有前批內容。
+3. 檢查依賴 PR 的 merged 狀態與目前 head，不能假設上一台車已在 main。PR 的 base 一律是 main：不要用別人還沒合併的分支當 base。那個 PR 先合併之後，疊在上面的 PR 會合進已經合過的舊分支，內容到不了 main（2026-10-21、22 的 #942、#949、#957 都是這樣，後來重開成 #951、#960、#961）。需要尚未合併的 helper／enum 時，等它合併再開；趕時間就把需要的部分帶進本 PR，並在說明寫出和哪個 PR 重疊。不要無故把每張 PR 都更新 main 或 cherry-pick 所有前批內容。
 4. 只改本批的 presentation 模型、自己的 tools／測試／素材說明／skill。車流整合若必要先認領 Map3DStreetLife.swift。docs/HANDOFF.md 只補一個可找到的交接連結，別重寫規劃。GameCore、save／golden／replay fixtures、ARCHITECTURE 決策、OVERVIEW、優先清單、其他人的模型不碰。App 接入若超出純模型自動註冊，另說明依賴，不冒稱已完成購車／營運玩法。
 
 二、先看參考再建模，做出不同造型
@@ -51,7 +51,7 @@
 1. 公開庫只放原生配方、工具、必要測試、skill、README、小型 verification 和一張 overview。大型輸出與 ZIP 放私有庫 Railway/game-art-previews/docs/art/<vehicle>-<date>/，保留 source.json（本批參考、來源映射、重組方法、recipe SHAs、實際 producer commit）與完整 viewer/manifest。
 2. 私有庫從當時 origin/main 開自己的資產分支，避免把其他尚未合併的素材批次帶進來。不要換 shared clone 分支時丟失別人的未提交檔案。處理 sparse checkout，不把 sparse 看不到當成遠端不存在。
 3. ZIP 包含全部必需 viewer、model、PNG、manifest／verification／source／README，無絕對路徑、..、秘密或原始私有來源。完整解壓 CRC，逐一比內容 bytes 和 SHA，記錄檔案數／bytes／ZIP SHA。不要只看 zip 檔存在。
-4. 本批 commit 帶 Agent: Codex（若實際 Claude，依它的 repo 規範）；推 task branch，開公開 draft PR 與私有 draft PR，互鏈，清楚寫 stacked base／合併先後、來源映射、五方理由、實跑 VERIFIED 與 UNVERIFIED、下一位接點。不要 merge／auto-merge／main／TestFlight，不用 force push 掩蓋他人工作。
+4. 本批 commit 帶 Agent: Codex（若實際 Claude，依它的 repo 規範）；推 task branch，開公開 draft PR 與私有 draft PR，互鏈，清楚寫依賴與合併先後（base 一律 main）、來源映射、五方理由、實跑 VERIFIED 與 UNVERIFIED、下一位接點。不要 merge／auto-merge／main／TestFlight，不用 force push 掩蓋他人工作。
 5. 更新 #231 完成留言，寫 head／PR／檢查／剩餘限制。HANDOFF 要有 repo 內可找到的指引，不只把交接留在聊天。推完查實際 CI 狀態；pending 就寫 pending，不假報綠。遇到 CI failure 修自己的問題，但不要搶修別人的 scope。
 6. 最後用繁體中文給我實際新車預覽圖、可下載 ZIP、公開／私有 PR、交接文件連結，以及一句檢查結果與真機限制。不要拿參考圖或上一台的圖片當本批結果，也不要把4台對照說成新增4款。
 
@@ -75,4 +75,4 @@
 | 私有成品分支 | `codex/midi-bus-assets-2026-10-21`；`Railway/game-art-previews/docs/art/midi-bus-2026-10-21/` |
 | 本批限制 | 靜態素材與既有街景車流整合；沒有購車、班表、物理碰撞或輪子／車門動畫；真機效果與效能未驗證 |
 
-完整讀完 prompt 再按目前遠端狀態更新分支判斷。上表是本次工作紀錄，不是要求未來固定沿用未合併的分支。
+完整讀完 prompt 再按目前遠端狀態更新分支判斷。上表是本次工作紀錄，不是要求未來固定沿用未合併的分支：#941、#945、#951（#942 的內容）、#960（#949 的內容）都已合併到 main，新的 PR 從 main 開、base 是 main（審查 C，`docs/archive/PR945_961_REVIEW_HANDOFF.md`）。

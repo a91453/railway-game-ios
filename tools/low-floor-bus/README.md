@@ -12,10 +12,10 @@ Open localhost:8080/index.html for search, category filters, seven views, rotati
 
 Native axes +x front/+y left/+z up, metres. Body width2.46m, mirror width3.05m, equipment height3.40m, tyre bottom0. The right (negative y) has front/middle double doors. The raked windscreen and side glazing have solid backing; concave wheel openings are ear-clipped; roof HVAC has contact feet and closed housing. No logos or brand text. Fixed opaque paint is taken from shopAwnings[3] and [2].
 
-The original5% bus pool now chooses30% shuttle,35% new low-floor and35% existing city bus. Shuttle selection remains unchanged. isBus covers all three; traffic density/cap, road eligibility and17m conservative spacing remain. No GameCore vehicle purchase, fares, save or simulation changes.
+The original5% bus pool now chooses30% shuttle,35% new low-floor and35% existing city bus. (Current mix: 30% shuttle, 35% low-floor, 20% coach, 10% midi, 5% old city bus; see `Map3DStreetLife.addVehicles`.) Shuttle selection remains unchanged. isBus covers all three; traffic density/cap, road eligibility and17m conservative spacing remain. No GameCore vehicle purchase, fares, save or simulation changes.
 
 Outputs: 2 native/2 GLB/14 transparent seven-view PNGs, front/rear/underside images, overview/directions/style/comparison sheets and interactive viewer. Verification covers native round-trip, full GLB reconstruction and SHA, decoded PNG alpha/pixels, browser operations and six intended XCTest suites. Inspect the actual sheets too. Device Metal appearance/performance, wheel/door animation and collision physics remain unverified.
 
-This task is stacked on shuttle-bus PR#941 while it is open. Keep that base until it merges, then retarget this PR to main; do not duplicate or squash the earlier task into this diff.
+Open every PR against main. If it depends on an unmerged PR, wait for that one to merge or bring the needed parts in (#942, #949 and #957 once merged into stale branches).
 
 [Extension workflow](../../.claude/skills/low-floor-bus/SKILL.md).
