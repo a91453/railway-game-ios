@@ -4776,6 +4776,12 @@ extension GameWorld: Codable {
         // has, and be dropped there all the same.
         passengerRouteBalances.removeAll { Set($0.journeys).count != $0.journeys.count }
         accounts = container.contains(.accounts) ? try container.decode(CompanyAccounts.self, forKey: .accounts) : CompanyAccounts()
+        // Decision 315, later (PR #945–#961 review): a bought line removed
+        // with its stations before #955 left its asset behind, so the save
+        // was refused. It goes as removing the line writes it off; the loss
+        // is not booked again.
+        let lineIDs = Set(lines.map(\.id.rawValue))
+        accounts.assets.removeAll { $0.kind == .acquiredLine && !lineIDs.contains($0.owner) }
         geoAnchor = container.contains(.geoAnchor) ? try container.decode(GeoAnchor.self, forKey: .geoAnchor) : nil
         land = container.contains(.land) ? try container.decode(Land.self, forKey: .land) : Land()
         if container.contains(.landBlocks) {
