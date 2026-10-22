@@ -300,6 +300,9 @@ public struct Map3DLighting: Hashable, Sendable {
     public let sunDirection: Map3DPoint
     /// Decision 277: the day's weather, clear unless it rains.
     public var weather: Map3DWeather = .clear
+    /// Decision 347: the hour of the day, 0 to 24, for the sky's sun and
+    /// moon (``Map3DSky``).
+    public let hour: Float
 
     struct Key {
         let hour: Float
@@ -333,6 +336,7 @@ public struct Map3DLighting: Hashable, Sendable {
         var m = minute.truncatingRemainder(dividingBy: 1_440)
         if m < 0 { m += 1_440 }
         let hour = Float(m / 60)
+        self.hour = hour
         var index = 1
         while index < Self.keys.count - 1, Self.keys[index].hour <= hour { index += 1 }
         let a = Self.keys[index - 1], b = Self.keys[index]

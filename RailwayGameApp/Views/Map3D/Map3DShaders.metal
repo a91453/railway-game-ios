@@ -227,3 +227,62 @@ fragment float4 map3dShadowFragment(Map3DShadowOut in [[stage_in]], constant Map
     }
     return float4(0.10, 0.12, 0.20, in.darkness * uniforms.shade.x * (1.0 - fog));
 }
+
+// Decision 347: the sky, one triangle over the whole screen at the far
+// plane (depth 0, decision 342), drawn where nothing else was. Laid out as
+// Map3DSky.floats writes it; the colour worked out as Map3DSky.colour(toward:)
+// (Web/CityView/src/world/sky.js's gradient, sun, moon and stars).
+struct Map3DSkyUniforms {
+    float4 look;
+    float4 side;
+    float4 up;
+    float4 lens;
+    float4 horizon;
+    float4 zenith;
+    float4 sun;
+    float4 moon;
+    float4 stars;
+};
+
+struct Map3DSkyOut {
+    float4 position [[position]];
+    float2 screen;
+};
+
+vertex Map3DSkyOut map3dSkyVertex(uint index [[vertex_id]]) {
+    // (-1, -1), (3, -1), (-1, 3): the screen and beyond.
+    float2 corner = float2(index == 1 ? 3.0 : -1.0, index == 2 ? 3.0 : -1.0);
+    Map3DSkyOut out;
+    out.position = float4(corner, 0.0, 1.0);
+    out.screen = corner;
+    return out;
+}
+
+static float map3dSkyHash(float2 p) {
+    float3 p3 = fract(float3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+fragment float4 map3dSkyFragment(Map3DSkyOut in [[stage_in]], constant Map3DSkyUniforms &sky [[buffer(3)]]) {
+    float3 d = normalize(sky.look.xyz + sky.side.xyz * (in.screen.x * sky.lens.x) + sky.up.xyz * (in.screen.y * sky.lens.y));
+    float high = max(d.y, 0.0);
+    float3 colour = mix(sky.horizon.rgb, sky.zenith.rgb, sqrt(high));
+    float towardSun = max(dot(d, sky.sun.xyz), 0.0);
+    colour += float3(1.0, 0.82, 0.6) * ((pow(towardSun, 12.0) * 0.18 + pow(towardSun, 180.0) * 0.5) * sky.sun.w);
+    colour = mix(colour, float3(1.0, 0.97, 0.9), smoothstep(0.9994, 0.9998, towardSun) * sky.sun.w);
+    float towardMoon = max(dot(d, sky.moon.xyz), 0.0);
+    colour += float3(0.6, 0.65, 0.75) * (pow(towardMoon, 80.0) * 0.12 * sky.moon.w);
+    colour = mix(colour, float3(0.93, 0.92, 0.86), smoothstep(0.9990, 0.9994, towardMoon) * sky.moon.w);
+    // A cell that holds a star (Map3DSky.star) shows it as a round point
+    // about a pixel across somewhere in the cell, not the whole cell: the
+    // cells come to several pixels in the cab's wide lens.
+    float2 cells = d.xz / (abs(d.y) + 0.35) * 220.0;
+    float2 grid = floor(cells);
+    float star = step(0.9975, map3dSkyHash(grid)) * smoothstep(0.1, 0.5, d.y);
+    float2 centre = grid + 0.25 + 0.5 * float2(map3dSkyHash(grid + 7.1), map3dSkyHash(grid + 3.7));
+    float pixel = max(length(fwidth(cells)), 1e-4);
+    float spot = 1.0 - smoothstep(0.6, 1.4, length(cells - centre) / pixel);
+    colour += float3(0.8, 0.85, 1.0) * (star * spot * 0.5 * sky.stars.x);
+    return float4(min(colour, float3(1.0)), 1.0);
+}
