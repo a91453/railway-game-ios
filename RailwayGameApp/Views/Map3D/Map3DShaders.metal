@@ -274,8 +274,15 @@ fragment float4 map3dSkyFragment(Map3DSkyOut in [[stage_in]], constant Map3DSkyU
     float towardMoon = max(dot(d, sky.moon.xyz), 0.0);
     colour += float3(0.6, 0.65, 0.75) * (pow(towardMoon, 80.0) * 0.12 * sky.moon.w);
     colour = mix(colour, float3(0.93, 0.92, 0.86), smoothstep(0.9990, 0.9994, towardMoon) * sky.moon.w);
-    float2 grid = floor(d.xz / (abs(d.y) + 0.35) * 220.0);
+    // A cell that holds a star (Map3DSky.star) shows it as a round point
+    // about a pixel across somewhere in the cell, not the whole cell: the
+    // cells come to several pixels in the cab's wide lens.
+    float2 cells = d.xz / (abs(d.y) + 0.35) * 220.0;
+    float2 grid = floor(cells);
     float star = step(0.9975, map3dSkyHash(grid)) * smoothstep(0.1, 0.5, d.y);
-    colour += float3(0.8, 0.85, 1.0) * (star * 0.5 * sky.stars.x);
+    float2 centre = grid + 0.25 + 0.5 * float2(map3dSkyHash(grid + 7.1), map3dSkyHash(grid + 3.7));
+    float pixel = max(length(fwidth(cells)), 1e-4);
+    float spot = 1.0 - smoothstep(0.6, 1.4, length(cells - centre) / pixel);
+    colour += float3(0.8, 0.85, 1.0) * (star * spot * 0.5 * sky.stars.x);
     return float4(min(colour, float3(1.0)), 1.0);
 }

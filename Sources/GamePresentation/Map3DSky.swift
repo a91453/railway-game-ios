@@ -75,7 +75,10 @@ public struct Map3DSky: Equatable, Sendable {
     }
 
     /// 1 where a star is, 0 elsewhere: one in 400 squares of a grid over
-    /// the sky (sky.js's), none low down.
+    /// the sky (sky.js's), none low down. The shader draws each as a round
+    /// point about a pixel across within its square (the squares come to
+    /// several pixels in the cab's wide lens); here the whole square
+    /// counts.
     static func star(_ d: Map3DPoint) -> Float {
         let x = (d.x / (abs(d.y) + 0.35) * 220).rounded(.down), z = (d.z / (abs(d.y) + 0.35) * 220).rounded(.down)
         return (hash(x, z) > 0.9975 ? 1 : 0) * Map3DSeeThrough.smoothstep(0.1, 0.5, d.y)
