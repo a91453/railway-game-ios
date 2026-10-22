@@ -204,8 +204,10 @@ final class Map3DStreamingTests: XCTestCase {
     /// A block is the first wanted chunk and those wanted in the three by
     /// three square round it.
     func testABlockRoundTheFirst() {
-        let wanted = [Key(column: 5, row: 0), Key(column: 9, row: 0), Key(column: 6, row: 1), Key(column: 4, row: -1), Key(column: 7, row: 0)]
-        XCTAssertEqual(Map3DStreaming.block(of: wanted), [Key(column: 4, row: -1), Key(column: 5, row: 0), Key(column: 6, row: 1)])
+        // Five by five round (5, 0): columns 3…7, rows -2…2.
+        let wanted = [Key(column: 5, row: 0), Key(column: 8, row: 0), Key(column: 6, row: 1), Key(column: 4, row: -1), Key(column: 7, row: 0),
+                      Key(column: 5, row: 3)]
+        XCTAssertEqual(Map3DStreaming.block(of: wanted), [Key(column: 4, row: -1), Key(column: 5, row: 0), Key(column: 7, row: 0), Key(column: 6, row: 1)])
         XCTAssertEqual(Map3DStreaming.block(of: []), [])
     }
 
@@ -239,7 +241,7 @@ final class Map3DStreamingTests: XCTestCase {
         let first = window.step(target: .zero, at: 0)
         XCTAssertEqual(first.drop, [])
         XCTAssertFalse(first.build.isEmpty)
-        XCTAssertLessThanOrEqual(first.build.count, 9)
+        XCTAssertLessThanOrEqual(first.build.count, Map3DStreaming.blockSide * Map3DStreaming.blockSide)
         XCTAssertTrue(first.build.allSatisfy { !window.built.contains($0) })
         XCTAssertEqual(first.build, Map3DStreaming.block(of: window.grid.plan(target: .zero, velocity: .zero, built: window.built).build))
         // Too soon, and then while it builds: nothing more.

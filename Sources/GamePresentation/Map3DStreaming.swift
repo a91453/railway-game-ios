@@ -55,9 +55,10 @@ public struct Map3DStreaming: Sendable {
     /// Slower than this, in metres a second, the target counts as still:
     /// a drag's last flick, not a journey.
     public static let still: Float = 2
-    /// The most chunks a build takes at once: a block of three by three,
-    /// which builds in less time than its chunks one by one.
-    public static let blockSide = 3
+    /// The most chunks a build takes at once: a block of five by five,
+    /// which builds in less time a chunk than three by three (4–10 ms
+    /// against 6–16, decision 358's numbers) and in a quarter second.
+    public static let blockSide = 5
 
     /// How much further each way than the chunks it keeps a block is
     /// built, in metres, so what stands across a chunk's edge is laid
