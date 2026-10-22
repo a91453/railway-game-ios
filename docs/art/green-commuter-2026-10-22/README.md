@@ -1,5 +1,7 @@
 # 綠色雙節通勤電聯車
 
+> **最新配色修訂**：本台已與另外兩台一起改為遊戲配色；幾何完全不變。[三台最新總覽、對照與素材包](../train-colors-2026-10-22/README.md)。下方原批的結構與來源紀錄保留作歷史，最新配色／匯出以整合包為準。
+
 ![實際原生模型總覽](overview.png)
 
 原生配方：[Map3DGreenCommuter.swift](../../../Sources/GamePresentation/Map3DGreenCommuter.swift)；重建與組裝：[tools/green-commuter/README.md](../../../tools/green-commuter/README.md)。公開庫只放原生配方、必要註冊、測試、工具、這張總覽與交接；完整單元／編組 native、GLB、35 張七向圖、viewer、白模／剪影、風格對照、SHA 與 ZIP 在私有 `Railway/game-art-previews/docs/art/green-commuter-2026-10-22/`。

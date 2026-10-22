@@ -1,5 +1,7 @@
 # Green three-section tram
 
+> 三台配色已更新，完整最新重建請使用 [train-colors](../train-colors/README.md)。本入口保留舊批格式與 asset ID，幾何規格不變。
+
 The source of truth is `Sources/GamePresentation/Map3DGreenTram.swift`. It builds head, middle, tail, and the static full formation. `Map3DModelPack.standard` registers all four by name. The set is not assigned to a GameCore train type; such assignment needs a separate decision about track pitch and representation of articulated units.
 
 Build with the project's Swift 6.4 toolchain:
