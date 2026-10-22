@@ -755,12 +755,14 @@ final class Map3DMetalView: MTKView {
             }
         }
         // Decision 244: the street furniture of the chunks drawn in full,
-        // one draw call a model and chunk.
+        // one draw call a model and chunk. Decision 355: Saving leaves the
+        // bus stops and vending machines out.
         if let models {
             encoder.setRenderPipelineState(instancedPipeline)
+            let leftOut = Map3DProp.modelsLeftOut(quality, in: models.pack)
             for chunk in visible where chunk.detailed {
                 guard let props = chunk.props else { continue }
-                for run in props.runs where run.model < models.buffers.count {
+                for run in props.runs where run.model < models.buffers.count && !leftOut.contains(run.model) {
                     encoder.setVertexBuffer(models.buffers[run.model], offset: 0, index: 0)
                     encoder.setVertexBuffer(props.instances, offset: run.first * Self.instanceStride, index: 2)
                     encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: models.pack.models[run.model].vertices.count,

@@ -207,3 +207,52 @@ final class Map3DRoadMarkingTests: XCTestCase {
         XCTAssertTrue(Map3DProp.modelsLeftOut(.high).isEmpty)
     }
 }
+
+/// Decision 355's numbers on the real-world Taipei map
+/// (``Map3DFrameCostReportTests/taipeiScene(bands:)``): the paint's
+/// vertices and the new furniture a chunk. Only on request:
+/// `MAP3D_FRAME_REPORT=1`.
+final class Map3DRoadMarkingReportTests: XCTestCase {
+    func testTheTaipeiCounts() throws {
+        guard ProcessInfo.processInfo.environment["MAP3D_FRAME_REPORT"] != nil else { throw XCTSkip("Set MAP3D_FRAME_REPORT=1.") }
+        let scene = try Map3DFrameCostReportTests.taipeiScene()
+        let pack = Map3DModelPack.standard
+        let new = [Map3DProp.signalGo, .signalStop, .busStop, .vending].map { ($0, pack.index(of: $0.modelName)!) }
+        var paint = 0, chunksWithPaint = 0, instances = [Map3DProp: Int](), models = 0, mostModels = 0
+        for chunk in scene.chunks {
+            let painted = chunk.mesh.vertices.filter { $0.surface == .crosswalk || $0.surface == .laneArrows }.count
+            paint += painted
+            if painted > 0 { chunksWithPaint += 1 }
+            var here = 0
+            for (prop, model) in new {
+                let count = chunk.props.filter { $0.model == model }.count
+                instances[prop, default: 0] += count
+                if count > 0 { here += 1 }
+            }
+            models += here
+            mostModels = max(mostModels, here)
+        }
+        let triangles = new.reduce(0) { $0 + pack.models[$1.1].triangleCount * instances[$1.0, default: 0] }
+        print("chunks: \(scene.chunks.count), with crossing or arrow paint: \(chunksWithPaint), their vertices: \(paint) (\(paint / 4) quads at most)")
+        print("instances: \(instances.sorted { $0.key.rawValue < $1.key.rawValue }), triangles all drawn: \(triangles)")
+        print("new draw calls if every chunk were detailed: \(models), most in one chunk: \(mostModels)")
+        // What one frame draws more, the chunks in full only.
+        for distance in [800, 280] as [Float] {
+            let camera = Map3DCamera(target: .zero, distance: distance, viewport: (402, 874))
+            var detailed = 0, draws = 0, drawn = 0, saving = 0, vertices = 0
+            for chunk in scene.chunks where Map3DCamera.sees(minimum: chunk.minimum, maximum: chunk.maximum, through: camera.viewProjection)
+                && camera.wantsDetail(minimum: chunk.minimum, maximum: chunk.maximum, wasDetailed: false) {
+                detailed += 1
+                vertices += chunk.mesh.vertices.filter { $0.surface == .crosswalk || $0.surface == .laneArrows }.count
+                for (prop, model) in new {
+                    let count = chunk.props.filter { $0.model == model }.count
+                    guard count > 0 else { continue }
+                    draws += 1
+                    drawn += pack.models[model].triangleCount * count
+                    if !Map3DProp.leftOutWhenSaving.contains(prop) { saving += pack.models[model].triangleCount * count }
+                }
+            }
+            print("\(distance) m: \(detailed) chunks in full, +\(draws) draw calls, +\(drawn) furniture triangles (Saving \(saving)), \(vertices) crossing and arrow vertices")
+        }
+    }
+}
