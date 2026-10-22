@@ -752,6 +752,8 @@ PR #873–#910 那一輪的 A 組（2026-10-21，session_01SvQ285hMiSeRsER1EXzfT
 
 PR #911–#944 那一輪（2026-10-21，審查 B，session_017M3NJsMXLafGDsSvidGhD6）：[PR911_944_REVIEW_HANDOFF.md](archive/PR911_944_REVIEW_HANDOFF.md)。修了兩個 P2：一日週遊券卡片建議的價格賣不出去（#934）、平交道路面上立著電桿（#938）。沒修的五個 P3 在它第四節，每項寫了交給誰：高鐵票價表沒驗站 ID、潮汐的車站示意圖沒看週末、自由模式關潮汐留著舊 `homeShare`、公車模型縮放沒防 NaN 與 3D 場景白白重建、站房可能壓到種子街道。
 
+PR #945–#961 那一輪（2026-10-22，審查 C，session_01VVzExSvZcTej5eCqxdUEpY）：[PR945_961_REVIEW_HANDOFF.md](archive/PR945_961_REVIEW_HANDOFF.md)。12 個發現，修了 8 個：#955 之前存下的環線交錯發車、拆站留下的收購資產讀不回（#974）；full lane 重跑轉綠不報、重跑舊的報過時消息；素材交接叫 session 疊在未合併的 PR 上（#942、#949、#957 的根因）。沒修的 4 個 P3 在它第四節：公車可能重疊、公車三角形超預算、商用套件 README 的零件名、還沒用到的通勤車模型；另有決策 332 被 #963 重用。
+
 **大世界的效能**（決策 328，`claude/perf-2d-sim-speed`，2026-10-21；玩家回報 78.1、79.1：三十幾站後 2D 約 5 FPS、加速跑不到設定）。已修：夜間快轉試跑移出主執行緒、乘客排隊二分搜尋、上車排序、實景支線可購清單記住。還沒做、還沒人接：
 - **2D 5 FPS 的主因**：Linux 量不到 SwiftUI 繪圖。要在實機打開「設定 → 地圖 → 幀數」，點開看哪一層（地面、軌道、列車、站名、天氣、推進後）每秒花最多。候選：`session.world` 每個 tick 都讓讀它的 view 重算；軌道畫布在交通覆蓋變了就整張重畫；站名畫布在候車數變了就重畫；夜色的 `.blendMode(.multiply)` 與站名的 `.colorMultiply`。量到哪層再對症改（拆出不常變的圖層、`drawingGroup`、降低重畫頻率）。
 - **1200× 在大世界的 GameCore**：第 730 天的測試存檔一個 tick 改之前約 7～9 ms、改之後約 4.5 ms（Linux release），隨等車人數變慢（放人、上車、`makeNetworkPassengerPlan`）。再快要把乘客佇列照路線分組，會改存檔格式。報告：`LONG_GAME_REPORT=730 swift test -c release -Xswiftc -enable-testing --filter LongGameCostReportTests`。
