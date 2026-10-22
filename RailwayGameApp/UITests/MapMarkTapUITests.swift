@@ -4,7 +4,9 @@ import XCTest
 /// lock's circular hit shape let a tap on its middle row fall through to
 /// the map (#1040, only_testing run 39826506139); these ask the same of
 /// the other marks drawn as a circle or a capsule: a request's flag, a
-/// sight's star and an alert's bubble. In the full lane (decision 199):
+/// sight's star and an alert's bubble. Before the flag took its square
+/// (run 39841822269), its test alone was red, on the iPad alone: the
+/// capsules' middle rows take the tap. In the full lane (decision 199):
 /// what a tap does is GamePresentation's; this asks only whether the
 /// finger reaches the mark, which only a Simulator can answer.
 @MainActor
@@ -85,16 +87,16 @@ final class MapMarkTapUITests: XCTestCase {
                                "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         defer { app.terminate() }
-        let map = app.descendants(matching: .any)["map"].firstMatch
-        XCTAssertTrue(map.appears(within: 120), "The scene opens")
+        // The bubbles, not the map: a query of every element timed out on
+        // an iPhone while the scene was being built (run 39841822269).
         let alerts = app.buttons.matching(identifier: "map.alert")
-        XCTAssertTrue(alerts.firstMatch.appears(within: 30), "The stations short of materials show")
+        XCTAssertTrue(alerts.firstMatch.appears(within: 150), "The stations short of materials show")
         let alert = alerts.allElementsBoundByIndex.first(where: \.isHittable)
         XCTAssertNotNil(alert, "A bubble is on screen")
         alert?.tap()
         // Any of the panel's rows: which ones are on screen first depends
         // on the screen's size.
-        let panel = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'station.'")).firstMatch
+        let panel = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'station.'")).firstMatch
         XCTAssertTrue(panel.appears(within: 5), "A tap on the bubble's middle opens its station")
     }
 }
