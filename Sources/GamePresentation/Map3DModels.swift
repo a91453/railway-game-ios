@@ -54,6 +54,9 @@ public struct Map3DModelPack: Sendable {
         // Static low-floor tram parts and a full formation for scene authors.
         models += Map3DGreenTram.Section.allCases.map { Map3DGreenTram.model($0) }
         models.append(Map3DGreenTram.formation())
+        // Separate high-floor two-car commuter set from the low-floor tram.
+        models += Map3DGreenCommuter.Unit.allCases.map { Map3DGreenCommuter.model($0) }
+        models.append(Map3DGreenCommuter.formation())
         self.models = models
     }
 
