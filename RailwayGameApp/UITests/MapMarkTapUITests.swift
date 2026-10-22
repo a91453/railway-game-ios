@@ -20,23 +20,28 @@ final class MapMarkTapUITests: XCTestCase {
         defer { app.terminate() }
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.appears(within: 10))
-        // "Show on map" brings the camera to the request; its card closed,
-        // the flag stays there, no longer pointed out.
+        // Taken on, the request keeps its flag; "Show on map" brings the
+        // camera to it, and with its card closed the flag stays there, no
+        // longer pointed out (one only on offer goes with its card).
         let requests = app.buttons["hud.requests"]
         XCTAssertTrue(requests.appears(within: 5), "the status bar's requests button")
         requests.tap()
         let show = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'requests.show.'")).firstMatch
         XCTAssertTrue(app.buttons["goals.done"].appears(within: 5), "the requests open")
         XCTAssertTrue(app.dragUntilWhollyOnScreen(show), "a request's Show on map never came into reach")
+        let id = show.identifier.replacingOccurrences(of: "requests.show.", with: "")
+        let accept = app.buttons["requests.accept.\(id)"]
+        XCTAssertTrue(accept.appears(within: 5), "the demo's request is on offer")
+        accept.tap()
+        XCTAssertTrue(accept.disappears(within: 5), "the request is taken on")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(show), "Show on map went out of reach")
         show.tap()
         let card = app.descendants(matching: .any)["map.request.card"].firstMatch
         XCTAssertTrue(card.appears(within: 5), "the request is pointed out")
         app.buttons["map.request.card.close"].tap()
         XCTAssertTrue(card.disappears(within: 5))
 
-        let flag = app.buttons.matching(NSPredicate(
-            format: "identifier BEGINSWITH 'map.request.' AND NOT identifier BEGINSWITH 'map.request.card' AND identifier != 'map.request.focus'"
-        )).firstMatch
+        let flag = app.buttons["map.request.\(id)"]
         XCTAssertTrue(flag.appears(within: 5), "the request's flag stays on the map")
         XCTAssertTrue(flag.becomesHittable(within: 5))
         flag.tap()
@@ -71,7 +76,8 @@ final class MapMarkTapUITests: XCTestCase {
     }
 
     /// An alert's bubble (decision 121), tapped on its middle: a station
-    /// short of building materials picks its station, whose tag shows.
+    /// short of building materials opens its station's panel (decision
+    /// 184), as every bubble of this scene is.
     func testAnAlertsBubbleTakesATapOnItsMiddle() {
         continueAfterFailure = false
         let app = XCUIApplication()
@@ -86,6 +92,9 @@ final class MapMarkTapUITests: XCTestCase {
         let alert = alerts.allElementsBoundByIndex.first(where: \.isHittable)
         XCTAssertNotNil(alert, "A bubble is on screen")
         alert?.tap()
-        XCTAssertTrue(app.buttons["map.stationTag"].appears(within: 5), "A tap on the bubble's middle picks its station")
+        // Any of the panel's rows: which ones are on screen first depends
+        // on the screen's size.
+        let panel = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'station.'")).firstMatch
+        XCTAssertTrue(panel.appears(within: 5), "A tap on the bubble's middle opens its station")
     }
 }
