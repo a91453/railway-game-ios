@@ -221,7 +221,7 @@ needs OSM data reads the same extract.
   Linux runner, billed to the Claude API key in the repository secret
   `ANTHROPIC_API_KEY`; decision 187's later amendment),
   `full-lane-watch.yml` (when an iOS App Build full lane of `main` finishes,
-  `tools/ci-watch/full_lane_watch.py` comments on #231 if it turned red, a
+  `tools/ci-watch/full_lane_watch.py` comments on the work registry (#1041) if it turned red, a
   job turned red that had not in this red streak, or it turned green again;
   as github-actions[bot], never with an at sign; decision 329).
 - Distribution: GitHub Actions → internal TestFlight
@@ -361,7 +361,9 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   adding a dependency, and reusing copyleft or unlicensed code; nor any
   "never" rule in this file.
 - Several sessions work in parallel. Before starting a task, read every
-  comment of the work registry, issue #231, and post a claim there: the
+  comment of the work registry, issue #1041 (it took over from #231, which
+  stopped taking comments at 2,500 on 2026-10-22; read #231's last unreleased
+  claims too), and post a claim there: the
   session, branch, task, main files, and the save version, ARCHITECTURE
   decision and golden schema the task reserves (or "不動"). Take each number
   as one more than the largest on `main` or in any claim not yet released.
@@ -373,7 +375,7 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   whose first heading is `### N. <title>` (`docs/decisions/README.md`,
   decision 329): do not append it to `docs/ARCHITECTURE.md` or add it to
   the index in `docs/OVERVIEW.md` §9, which every parallel pull request
-  would change at the same lines. The claim in #231 is the reservation.
+  would change at the same lines. The claim in the registry is the reservation.
   Decisions 1–328 and their later amendments stay in ARCHITECTURE. Check
   with `python3 -I tools/golden-checks/doc_numbers.py --check`.
 - Handoffs live on `main`, in `docs/HANDOFF.md` (owner, 2026-10-16). Read it
@@ -381,7 +383,7 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   or passed to another session, write that into `docs/HANDOFF.md` (or the
   decision's next step, with a line there pointing to it) in its last pull
   request. A handoff only in a `send_message`, a pull request's description
-  or an #231 comment is lost to the next session.
+  or a registry comment is lost to the next session.
 - Sessions comment on GitHub as the owner's account, so never write
   `@claude` in an issue, comment or review unless you mean to start
   `claude.yml`: every mention is a run billed to the API key.
