@@ -259,7 +259,7 @@ extension GameSession {
         // running again as it was after.
         let tool = (height: networkHeight, structure: networkStructure)
         let speed = world.clock.isPaused ? nil : world.clock.speed
-        if speed != nil { setSpeed(.paused) }
+        if speed != nil { changeSpeed(.paused) }
         networkHeight = 0
         networkStructure = .automatic
         demoKeepsRealStructures = true
@@ -269,7 +269,7 @@ extension GameSession {
             demoKeepsRealStructures = false
             networkHeight = tool.height
             networkStructure = tool.structure
-            if let speed { setSpeed(speed) }
+            if let speed { changeSpeed(speed) }
         }
         // As the real-line demos run (decision 228): a line's trains wait
         // one behind another where its trips start, and set off a headway

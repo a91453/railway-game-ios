@@ -163,6 +163,16 @@ What to Test 是當時自動列出的 PR 清單（#592 之前的做法）。
 4. **城市預覽**：載入中按 × 每次都關得掉嗎？
 5. **教學卡片**：手機橫拿時，卡片有沒有擋到要點的按鈕？
 
+### 0.5.0 (82.1)，2026-10-22
+
+從 `main` `e6e8f5a9` 建置，TestFlight run 82（`testflight.yml` run 39780002418，2026-10-22 12:38 UTC，作者發）。包含演示模式兩個 PR（#1026、#1029，決策 351 與續篇），發版前小審查 E（#1019–#1030）沒有 P1、P2。
+
+**這個 commit 的 full lane**（`ios-build.yml` run 39781136910）：lessons、second、iPad 綠；只有 smoke 的 `LineRoutePreferenceUITests.testTheAdvancedSwitchFoldsTheTracksAndTheServiceDay` 時紅時好（測試本身，#1033 在修）。App 本身沒有已知問題。
+
+**發版後先修的**（作者要拿演示模式去演示、發文）：審查 E 的 E2（一鍵鋪路線途中還能按播放與復原）與鋪設速度，`claude/demo-lines-e2-speed`（決策 351「後來」）。E1（審查員的機器也是沙盒收據）只影響送審 App Store，不影響 TestFlight，之後再做（HANDOFF §5）。
+
+**玩家回報**（82.1）：還沒有。
+
 ### 0.5.0 (79.1)，2026-10-21
 
 從 `main` `c9f646f` 建置，TestFlight run 79（2026-10-21 11:52 UTC，作者發）。包含 78.1 之後合併的 #882–#907。What to Test 沒有更新（檔案還是 72.1 的內容），測試者看到的是自動列出的 PR 清單。
