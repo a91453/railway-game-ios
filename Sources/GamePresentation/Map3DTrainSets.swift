@@ -23,7 +23,8 @@ public struct Map3DTrainSet: Sendable {
 
     struct Cars {
         var head: Map3DModelPack.Model
-        var middle: Map3DModelPack.Model
+        /// `nil` for a set only ever two cars long.
+        var middle: Map3DModelPack.Model?
         var tail: Map3DModelPack.Model?
         var single: Map3DModelPack.Model?
         var pantograph: Model? = nil
@@ -43,7 +44,8 @@ public struct Map3DTrainSet: Sendable {
         func named(_ model: Map3DModelPack.Model, _ name: String) -> Map3DModelPack.Model {
             Map3DModelPack.Model(name: name, vertices: model.vertices, minimum: model.minimum, maximum: model.maximum)
         }
-        var models = [named(cars.head, headName), named(cars.middle, middleName)]
+        var models = [named(cars.head, headName)]
+        if let middle = cars.middle { models.append(named(middle, middleName)) }
         if let tail = cars.tail { models.append(named(tail, tailName)) }
         if let single = cars.single { models.append(named(single, singleName)) }
         if let pantograph = cars.pantograph { models.append(named(pantograph, pantographName)) }
@@ -94,6 +96,13 @@ public struct Map3DTrainSet: Sendable {
             // urban EMU, its three units as they are; in the train pack
             // (decision 338).
             threeCarUrban("threeCarUrban"),
+            // Decision 338, later: a two-car light metro as #992's
+            // five-section LRT, a three-car one as its seven-section LRT,
+            // each whole train cut into its cars; in the train pack.
+            articulated("fiveSectionLRT", formation: Map3DFiveSectionLRT.formation(), cuts: [0],
+                        lamps: Lamps(x: 16.935, height: 0.79, across: 0.68, width: 0.30, tall: 0.09)),
+            articulated("sevenSectionLRT", formation: Map3DSevenSectionLRT.formation(), cuts: [7.08, -7.08],
+                        lamps: Lamps(x: 22.675, height: 0.81, across: 0.67, width: 0.28, tall: 0.10)),
         ]
     }()
 
@@ -115,6 +124,10 @@ public struct Map3DTrainSet: Sendable {
         named(key)?.key == "greenTram" ? tramReach : Map3DTrains.modelReach
     }
 
+    /// Decision 338, later: the light metro's articulated sets, by their
+    /// cars (the green tram's other sizes).
+    static let articulatedByCount: [Int: String] = [2: "fiveSectionLRT", 3: "sevenSectionLRT"]
+
     static let tramReach: Float = 500
 
     /// The set of `key`: a set's own, or a type's (``byType``).
@@ -128,7 +141,9 @@ public struct Map3DTrainSet: Sendable {
     /// DR1000 railcar, more a DR3100 set; decision 331, later: a two-car
     /// commuter EMU of no type is the green two-car EMU, a three-car one
     /// the three-car urban EMU. Decision 338: a set in `locked` (the train
-    /// pack's, until it is unlocked) is drawn as it was before it.
+    /// pack's, until it is unlocked) is drawn as it was before it; later, a
+    /// two- or three-car light metro is an articulated LRT
+    /// (``articulatedByCount``).
     static func set(forKey key: String, count: Int, locked: Set<String> = []) -> Map3DTrainSet? {
         let set: Map3DTrainSet?
         if key == "dieselExpress", count <= 2 {
@@ -137,6 +152,8 @@ public struct Map3DTrainSet: Sendable {
             set = byKey["greenCommuter"]
         } else if key == "", count == 3 {
             set = byKey["threeCarUrban"]
+        } else if named(key)?.key == "greenTram", let articulated = articulatedByCount[count] {
+            set = byKey[articulated]
         } else {
             set = named(key)
         }
@@ -266,6 +283,40 @@ public struct Map3DTrainSet: Sendable {
         }
     }
 
+    /// Where a cab's two lit lamps stand (``StationKitBuilder/cabLamps``).
+    struct Lamps {
+        var x, height, across, width, tall: Float
+    }
+
+    /// Decision 338, later: a whole articulated train (`formation`, its
+    /// front at +x) as the light metro's cars, cut at `cuts` (front to
+    /// back), the lamps lit over the cabs' lamp blocks at `lamps.x` and
+    /// −`lamps.x`. A car's length is from cut to cut (or to its nose), but
+    /// the train as it is at each cut is drawn on into the gap between the
+    /// cars, as far as meets the next car halfway once stretched to its
+    /// car, and closed there, so a curve never shows it hollow. The cuts
+    /// are on plain body, where drawing it on shows no seam.
+    static func articulated(_ key: String, formation: Map3DModelPack.Model, cuts: [Float], lamps: Lamps) -> Map3DTrainSet {
+        Map3DTrainSet(key: key) {
+            let carLength = Float(TrainType.c.spec.carLength) / Float(WorldCoordinate.unitsPerMetre) - Map3DTrains.carGap
+            let ends = [formation.maximum.x] + cuts + [formation.minimum.x]
+            func car(_ index: Int) -> Map3DModelPack.Model {
+                let front = ends[index], back = ends[index + 1]
+                // Half the gap, in the car's own metres before stretching.
+                let reach = Map3DTrains.carGap / 2 * (front - back) / carLength
+                var builder = StationKitBuilder()
+                builder.add(formation.cut(from: index < cuts.count ? back : back - 1, to: index > 0 ? front : front + 1,
+                                          reach: (index < cuts.count ? reach : 0, index > 0 ? reach : 0)), at: .zero)
+                if index == 0 { builder.cabLamps(lamps, atX: lamps.x, colour: Map3DTrainStyle.headlamp) }
+                if index == cuts.count { builder.cabLamps(lamps, atX: -lamps.x, colour: Map3DPalette.lantern) }
+                let model = Map3DModelPack.Model.flat(named: key, from: builder.mesh)
+                return Map3DModelPack.Model(name: key, vertices: model.vertices, minimum: Map3DPoint(back, model.minimum.y, model.minimum.z),
+                                            maximum: Map3DPoint(front, model.maximum.y, model.maximum.z))
+            }
+            return Cars(head: car(0), middle: cuts.count > 1 ? car(1) : nil, tail: car(cuts.count), single: nil)
+        }
+    }
+
     /// A coach of the scene kit's locomotive-hauled subjects in `livery`'s
     /// colours: its body below and above, the stripe across the windows.
     struct Coach {
@@ -316,6 +367,10 @@ extension StationKitBuilder {
         cabLamps(atX: x, colour: colour, height: 0.88, across: 0.77, width: 0.24, tall: 0.13)
     }
 
+    fileprivate mutating func cabLamps(_ lamps: Map3DTrainSet.Lamps, atX x: Float, colour: UInt32) {
+        cabLamps(atX: x, colour: colour, height: lamps.height, across: lamps.across, width: lamps.width, tall: lamps.tall)
+    }
+
     /// Two lit lamps `across` either side of the middle, `height` up.
     fileprivate mutating func cabLamps(atX x: Float, colour: UInt32, height: Float, across: Float, width: Float, tall: Float) {
         for z in [-across, across] {
@@ -335,6 +390,128 @@ extension Map3DModelPack.Model {
             v.x > from && v.color == colour ? Map3DVertex(Map3DPoint(v.x, v.y, v.z), normal: Map3DPoint(v.nx, v.ny, v.nz), color: paint, layer: v.layer) : v
         }
         return Map3DModelPack.Model(name: name, vertices: vertices, minimum: minimum, maximum: maximum)
+    }
+
+    /// Decision 338, later: this model's part from `back` to `front` along
+    /// its length, each cut drawn on, as it is there, `reach` farther out
+    /// (`reach.back` behind `back`, `reach.front` before `front`) and
+    /// closed: every closed piece it cuts through gets a face over its
+    /// outline there, in the colour most of its cut faces are.
+    func cut(from back: Float, to front: Float, reach: (back: Float, front: Float)) -> Map3DModelPack.Model {
+        typealias Segment = (a: Map3DPoint, b: Map3DPoint, normal: Map3DPoint, colour: UInt32)
+        var vertices: [Map3DVertex] = []
+        var cuts: [(plane: Float, outward: Float, reach: Float, segments: [Segment])] = [(back, -1, reach.back, []), (front, 1, reach.front, [])]
+        for start in stride(from: 0, to: self.vertices.count, by: 3) {
+            var polygon = Array(self.vertices[start..<start + 3])
+            let normal = Map3DPoint(polygon[0].nx, polygon[0].ny, polygon[0].nz)
+            for c in cuts.indices {
+                let plane = cuts[c].plane, outward = cuts[c].outward
+                var kept: [Map3DVertex] = [], crossing: [Map3DPoint] = []
+                for (i, a) in polygon.enumerated() {
+                    let b = polygon[(i + 1) % polygon.count]
+                    let inA = (a.x - plane) * outward <= 0, inB = (b.x - plane) * outward <= 0
+                    if inA { kept.append(a) }
+                    guard inA != inB else { continue }
+                    // From the same end of the edge each time, so the two
+                    // triangles sharing it cut it at the same point.
+                    let (p, q) = (a.x, a.y, a.z) < (b.x, b.y, b.z) ? (a, b) : (b, a)
+                    let t = (plane - p.x) / (q.x - p.x)
+                    var v = p
+                    v.x = plane
+                    v.y = p.y + (q.y - p.y) * t
+                    v.z = p.z + (q.z - p.z) * t
+                    kept.append(v)
+                    crossing.append(v.position)
+                }
+                if crossing.count == 2 { cuts[c].segments.append((crossing[0], crossing[1], normal, polygon[0].color)) }
+                polygon = kept
+                if polygon.count < 3 { break }
+            }
+            guard polygon.count >= 3 else { continue }
+            for j in 1..<polygon.count - 1 { vertices += [polygon[0], polygon[j], polygon[j + 1]] }
+        }
+        for cut in cuts where !cut.segments.isEmpty {
+            // The cut's outline drawn on, each side the face it cuts.
+            let shift = Map3DPoint(cut.outward * cut.reach, 0, 0)
+            for segment in cut.segments where cut.reach > 0 {
+                var quad = [segment.a, segment.b, segment.b + shift, segment.a + shift]
+                guard var normal = (quad[1] - quad[0]).cross(quad[3] - quad[0]).normalized else { continue }
+                if normal.dot(segment.normal) < 0 {
+                    quad.reverse()
+                    normal = normal * -1
+                }
+                for corner in [quad[0], quad[1], quad[2], quad[0], quad[2], quad[3]] {
+                    vertices.append(Map3DVertex(corner, normal: normal, color: segment.colour))
+                }
+            }
+            vertices += Self.caps(over: cut.segments.map { ($0.a, $0.b, $0.colour) }, at: cut.plane + shift.x, outward: cut.outward)
+        }
+        var low = Map3DPoint(.infinity, .infinity, .infinity), high = Map3DPoint(-.infinity, -.infinity, -.infinity)
+        for v in vertices {
+            low = Map3DPoint(min(low.x, v.x), min(low.y, v.y), min(low.z, v.z))
+            high = Map3DPoint(max(high.x, v.x), max(high.y, v.y), max(high.z, v.z))
+        }
+        return Map3DModelPack.Model(name: name, vertices: vertices, minimum: low, maximum: high)
+    }
+
+    /// The faces over a cut at x = `plane`: the cut's `segments` joined
+    /// where they meet into pieces, each piece's outline (its convex hull)
+    /// facing `outward` along x.
+    private static func caps(over segments: [(Map3DPoint, Map3DPoint, UInt32)], at plane: Float, outward: Float) -> [Map3DVertex] {
+        func key(_ p: Map3DPoint) -> [Int] { [Int((p.y * 10_000).rounded()), Int((p.z * 10_000).rounded())] }
+        var parent: [[Int]: [Int]] = [:]
+        func root(_ k: [Int]) -> [Int] {
+            var k = k
+            while let p = parent[k], p != k { k = p }
+            return k
+        }
+        for (a, b, _) in segments {
+            let ka = key(a), kb = key(b)
+            if parent[ka] == nil { parent[ka] = ka }
+            if parent[kb] == nil { parent[kb] = kb }
+            let ra = root(ka), rb = root(kb)
+            if ra != rb { parent[ra] = rb }
+        }
+        var pieces: [[Int]: (points: [(Float, Float)], colours: [UInt32: Int])] = [:]
+        for (a, b, colour) in segments {
+            let r = root(key(a))
+            pieces[r, default: ([], [:])].points += [(a.y, a.z), (b.y, b.z)]
+            pieces[r, default: ([], [:])].colours[colour, default: 0] += 1
+        }
+        var vertices: [Map3DVertex] = []
+        let normal = Map3DPoint(outward, 0, 0)
+        for root in pieces.keys.sorted(by: { $0.lexicographicallyPrecedes($1) }) {
+            guard let piece = pieces[root] else { continue }
+            let hull = convexHull(piece.points)
+            guard hull.count >= 3 else { continue }
+            let colour = piece.colours.max { ($0.value, $1.key) < ($1.value, $0.key) }?.key ?? 0
+            for j in 1..<hull.count - 1 {
+                // The hull runs anticlockwise in (y, z), so as seen from +x;
+                // turned round to face −x.
+                let corners = outward > 0 ? [hull[0], hull[j], hull[j + 1]] : [hull[0], hull[j + 1], hull[j]]
+                vertices += corners.map { Map3DVertex(Map3DPoint(plane, $0.0, $0.1), normal: normal, color: colour) }
+            }
+        }
+        return vertices
+    }
+
+    /// The anticlockwise convex hull of `points` (Andrew's monotone chain).
+    private static func convexHull(_ points: [(Float, Float)]) -> [(Float, Float)] {
+        let sorted = points.sorted { $0 < $1 }
+        guard sorted.count >= 3 else { return sorted }
+        func turn(_ o: (Float, Float), _ a: (Float, Float), _ b: (Float, Float)) -> Float {
+            (a.0 - o.0) * (b.1 - o.1) - (a.1 - o.1) * (b.0 - o.0)
+        }
+        var lower: [(Float, Float)] = [], upper: [(Float, Float)] = []
+        for p in sorted {
+            while lower.count >= 2, turn(lower[lower.count - 2], lower[lower.count - 1], p) <= 1e-7 { lower.removeLast() }
+            lower.append(p)
+        }
+        for p in sorted.reversed() {
+            while upper.count >= 2, turn(upper[upper.count - 2], upper[upper.count - 1], p) <= 1e-7 { upper.removeLast() }
+            upper.append(p)
+        }
+        return Array(lower.dropLast() + upper.dropLast())
     }
 
     /// This model turned round to face −x, so a train's last car can be
