@@ -51,6 +51,9 @@ public struct Map3DModelPack: Sendable {
         models += Map3DStreetModel.allCases.map { $0.model() }
         // Decision 318: and the sets that had none.
         models += Map3DTrainSet.all.flatMap { $0.models() }
+        // Static low-floor tram parts and a full formation for scene authors.
+        models += Map3DGreenTram.Section.allCases.map { Map3DGreenTram.model($0) }
+        models.append(Map3DGreenTram.formation())
         self.models = models
     }
 
