@@ -108,7 +108,7 @@ public enum Map3DTrains {
     }
 
     /// Every car of every train in `motion` at `progress`, in `scene`'s
-    /// space: within ``modelReach`` of `eye`, a car of a type `models` has
+    /// space: within ``modelReach`` of `eye` (``Map3DTrainSet/reach(of:)``), a car of a type `models` has
     /// is an instance of its model (the head car's model at both ends, the
     /// last one turned round; the middle cars' between); the rest, and a
     /// freight train, boxes.
@@ -146,7 +146,7 @@ public enum Map3DTrains {
                 frame.shadows.addShadow(
                     inner: Map3DMesh.footprint(centre: base + bed, forward: a - b, length: length, width: carWidth),
                     outer: Map3DMesh.footprint(centre: base + bed, forward: a - b, length: length + 1, width: carWidth + 1), darkness: 0.38)
-                if let models, hasModels, let eye, (base - eye).length < modelReach,
+                if let models, hasModels, let eye, (base - eye).length < Map3DTrainSet.reach(of: trainType),
                    let model = models.modelIndex(forType: trainType, carIndex: index, count: cars.count) {
                     // The last car is the head car's model turned round, or
                     // the set's own tail.

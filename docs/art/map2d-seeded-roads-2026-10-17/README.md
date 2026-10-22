@@ -1,5 +1,7 @@
 # 空白地圖的 2D 種子道路（決策 270）
 
+> 2026-10-22 起這個資料夾只留這份 README、總覽圖 `zoom-10.jpg` 和文字紀錄；其他 1 張圖搬到 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/map2d-seeded-roads-2026-10-17/`，檔名不變（作者 2026-10-21 的規則，`docs/HANDOFF.md` §2）。
+
 **這不是 App 的畫面**：Linux 上沒有 SwiftUI，這兩張是用 Python 依 `Map3DScene.seededStreets` 算出的同一份道路、`CitySkyline` 的地塊與軌道畫的近似圖。配色與寬度照 `MapArt.drawStreets`，建物只畫平面的地塊。App 的畫面要在 Simulator 或實機看。
 
 兩鎮地圖第一個城鎮的中心。每張都是上半 `main`（2D 沒有道路，這就是沒有選的「不畫」），下半新版。

@@ -1,5 +1,7 @@
 # 3D 地圖的實景地面（2026-10-15）
 
+> 2026-10-22 起這個資料夾只留這份 README、總覽圖 `taipei-mid.jpg` 和文字紀錄；其他 6 張圖搬到 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-real-ground-2026-10-15/`，檔名不變（作者 2026-10-21 的規則，`docs/HANDOFF.md` §2）。
+
 ARCHITECTURE 決策 234。3D 的實景地圖讀 App 打包的台灣底圖 `taiwan.pmtiles`（2D 地圖的同一個檔），把道路、河川、海、湖、林地、草地與公園鋪在地面上。城市的建物不蓋在真實的路上。
 
 這裡的圖都是軟體算圖：

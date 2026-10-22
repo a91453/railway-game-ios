@@ -1,5 +1,7 @@
 # 台灣高鐵 N700ST（700T）遊戲風格 3D 模型（Issue #231）
 
+> 2026-10-22 起這個資料夾只留這份 README、總覽圖 `options.png` 和文字紀錄；其他 1 張圖搬到 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/n700-game-style-2026-10-16/`，檔名不變（作者 2026-10-21 的規則，`docs/HANDOFF.md` §2）。
+
 本目錄收錄原生 3D 地圖（[`Map3DModels.swift`](../../../Sources/GamePresentation/Map3DModels.swift)、[`Map3DTrains.swift`](../../../Sources/GamePresentation/Map3DTrains.swift)）與 3D 城市檢視（[`trains.js`](../../../Web/CityView/src/world/trains.js)、[`build_train.mjs`](../../../tools/trains/build_train.mjs)、[`build_train.py`](../../../tools/trains/build_train.py)、`n700st-cab.glb`／`n700st-car.glb`）的高鐵 N700 遊戲風格模型對照圖與取捨紀錄。
 
 - `options.png`：原生 3D 地圖頂點色模型（`highSpeed-cab`＋`highSpeed-car`＋`highSpeed-panto`）的 **方案 A（採用）** 與 **方案 B（舊版 main）** 在 3/4 視角、正側面、正前方與夜間自發光四個鏡頭下的對照。

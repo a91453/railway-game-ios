@@ -1089,6 +1089,14 @@ extension ServiceLine: Codable {
         guard !container.contains(.opensPair) || opensPair, !opensPair || dispatchPattern.staggerMinutes != nil else {
             throw DecodingError.dataCorruptedError(forKey: .opensPair, in: container, debugDescription: "Line \(id.rawValue): only a staggered line has an open pair, written as true.")
         }
+        if !runs.isEmpty, dispatchPattern != .even {
+            // A8 of the #873–#910 review: a save from before a line given
+            // runs was made even keeps the pattern set before them, which
+            // sent no train out while the runs were there; it loads even.
+            dispatchPattern = .even
+            endLastDispatch = nil
+            opensPair = false
+        }
         guard zip(trains, trains.dropFirst()).allSatisfy({ $0 < $1 }) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .trains, in: container, debugDescription: "Line \(id.rawValue)'s trains must be listed once each, in ascending order."

@@ -165,6 +165,33 @@ extension GameSession {
         if offer != nightSkipOffer { nightSkipOffer = offer }
     }
 
+    /// ``refreshNightSkipOffer()`` after a command while paused (decision
+    /// 330, later): a run ahead the memo does not answer (some 30 ms a
+    /// night on the Yilan Line, 160 ms over midnight) runs off the main
+    /// actor on a copy of the world, one at a time. The offer stays as it
+    /// was until it is found; the session keeps what it found only if the
+    /// world has not changed since, and then looks again, which then runs
+    /// ahead no more. The shortcut itself still runs ahead at once when
+    /// the memo does not answer.
+    func lookAgainForNightSkip() {
+        guard nightSkipRun == nil, !isPausedForBuilding,
+              !world.trains.contains(where: NightSkip.isRunning),
+              !(nightSkipMemo?.covers(world.clock.now, revision: commandRevision) ?? false) else {
+            refreshNightSkipOffer()
+            return
+        }
+        guard nightSkipLookAhead == nil else { return }
+        let world = world, revision = commandRevision, worldRevision = worldRevision
+        nightSkipLookAhead = Task {
+            let memo = await Task.detached(priority: .userInitiated) {
+                NightSkipMemo(revision: revision, from: world.clock.now, firstMove: NightSkip.firstMove(after: world))
+            }.value
+            nightSkipLookAhead = nil
+            if self.worldRevision == worldRevision { nightSkipMemo = memo }
+            if self.world.clock.isPaused { lookAgainForNightSkip() }
+        }
+    }
+
     /// Runs the game at its fastest speed to the skip's stop (decision
     /// 305); does nothing when there is nothing to skip.
     public func skipToMorning() {

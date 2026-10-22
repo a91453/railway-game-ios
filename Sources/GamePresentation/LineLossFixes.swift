@@ -292,4 +292,26 @@ final class LineLossLeaderMemo {
         workedOut += 1
         return kept
     }
+
+    /// Decision 330: what it keeps while the commands stand at `revision`,
+    /// for a tick worked out off the main actor to ask instead of it.
+    func kept(atRevision revision: Int) -> KeptLineLossLeader? {
+        guard let key, key.revision == revision else { return nil }
+        return KeptLineLossLeader(day: key.day, leader: kept)
+    }
+
+    /// Keeps `worked`, worked out off the main actor for the world at
+    /// command revision `revision`, as ``leader(of:)`` would have.
+    func keep(_ worked: KeptLineLossLeader, atRevision revision: Int) {
+        key = Key(revision: revision, day: worked.day)
+        kept = worked.leader
+        workedOut += 1
+    }
+}
+
+/// The line that loses most (``GameWorld/worstLosingLine()``) for a world
+/// whose days settled through `day` (``GameWorld/lineLossSettledDay``).
+struct KeptLineLossLeader: Equatable, Sendable {
+    let day: Int64
+    let leader: LineLossLeader?
 }

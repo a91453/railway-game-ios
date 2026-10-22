@@ -1,5 +1,7 @@
 # 3D 地圖的貼圖：素材庫的圖改過再用（2026-10-15）
 
+> 2026-10-22 起這個資料夾只留這份 README、總覽圖 `options.jpg` 和文字紀錄；其他 11 張圖搬到 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-surfaces-2026-10-15/`，檔名不變（作者 2026-10-21 的規則，`docs/HANDOFF.md` §2）。
+
 ARCHITECTURE 決策 231。作者在參考庫加了素材庫 `Railway/procedural_assets_reference_clean/`，說：「裡面圖片素材都可以用 但不能跟原圖一模一樣 需有稍微修改 結合其他檔案的圖片也沒關係」（art-style §7）。
 
 這裡的圖都是軟體算圖：

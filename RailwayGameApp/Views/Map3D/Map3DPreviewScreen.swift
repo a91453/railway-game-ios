@@ -266,10 +266,13 @@ final class Map3DSceneCache {
         // Decision 239: and the real buildings round Kaohsiung and
         // Taichung Stations.
         let city = world.geoAnchor == nil ? nil : BaseMapFiles.city
+        // Decision 331: and Taiwan's temples.
+        let temples = world.geoAnchor == nil ? nil : BaseMapFiles.temples
         let task = Task.detached(priority: .userInitiated) {
             let baseMap = tiles.flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }.flatMap { try? BaseMapTiles(data: $0) }
             return Map3DScene(world: world, focus: focus, baseMap: baseMap, cityTiles: city.map(CityTileArea.areas(in:)) ?? [],
-                              heights: heights, lineBands: Map3DLineBands(world: world, palette: palette), railways: railways)
+                              heights: heights, lineBands: Map3DLineBands(world: world, palette: palette), railways: railways,
+                              temples: temples.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealTemples(data: $0) })
         }
         self.key = key
         game = session

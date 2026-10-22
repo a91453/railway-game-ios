@@ -1,5 +1,7 @@
 # 整個畫面的外框（決策 226）
 
+> 2026-10-22 起這個資料夾只留這份 README、總覽圖 `solid-groups.png` 和文字紀錄；其他 2 張圖搬到 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/screen-shell-2026-10-14/`，檔名不變（作者 2026-10-21 的規則，`docs/HANDOFF.md` §2）。
+
 2026-10-14。先在 `art/screen-shell-layout` 跑了一次 `website-screenshots.yml`（run 38600383416，iPhone 17 Pro 橫拿，874×402 點），用拍到的 13 張實機截圖量出現在的版面，再畫三個方案。
 
 美術 session 以四方角度定案 **C 路線圖的框**，理由寫在 `docs/ARCHITECTURE.md` 的決策 226。

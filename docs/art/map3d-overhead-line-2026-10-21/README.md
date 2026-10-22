@@ -1,5 +1,7 @@
 # 3D 的架空線（決策 326）
 
+> 2026-10-22 起這個資料夾只留這份 README、總覽圖 `overview.jpg` 和文字紀錄；其他 6 張圖搬到 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-overhead-line-2026-10-21/`，檔名不變（作者 2026-10-21 的規則，`docs/HANDOFF.md` §2）。
+
 無頭 Chromium 的 WebGL 預覽（決策 238，`tools/map3d-preview/`），有貼圖的那一版。
 
 | 圖 | 看什麼 |
@@ -9,7 +11,7 @@
 | `viaduct.jpg` | 高架的端點：桿、腕木、接觸線與吊線近看 |
 | `ring.jpg` | 半徑 300 m 的彎道：桿立在外側，間距縮到約 25–30 m，線是一段段的弦 |
 | `houtong.jpg` | 猴硐（實景示範，宜蘭線）：有電的臺鐵，桿立在沒有鄰軌的那一側 |
-| `option-900-kit.jpg`、`option-900-row.jpg` | 沒有選的做法：#900 的透天厝（獨棟、四面開窗、底座寬）與排成一排的樣子；現在的地塊見 `docs/art/map3d-arcade-life-2026-10-17/close.jpg` |
+| `option-900-kit.jpg`、`option-900-row.jpg` | 沒有選的做法：#900 的透天厝（獨棟、四面開窗、底座寬）與排成一排的樣子；現在的地塊見 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-arcade-life-2026-10-17/close.jpg` |
 
 十分、大華（平溪線，柴油支線）的預覽裡沒有任何一根桿；那一帶的軌道在高度檔的地面下（原有問題），圖沒有放。
 
