@@ -461,6 +461,11 @@ extension Map3DScene.Builder {
             }
         }
         addShadow(centre: base, forward: forward, length: size, width: size, spread: 4, darkness: 0.34)
+        // Decision 352: the band's word over the atrium.
+        let board = Map3DColor.hex(sign)
+        addSign(Map3DSign(kind: .across, centre: base + forward * ((size + 0.3) / 2 + 0.02) + Map3DPoint(0, height - 2.2 + 0.8, 0), facing: forward,
+                          width: size * 0.4, height: 1.6 * 0.85, picture: Map3DSignAtlas.word("商場") ?? 0, seed: 0, board: board,
+                          letters: Self.letters(on: board), closes: Map3DSignAtlas.closes(Map3DSignAtlas.word("商場") ?? 0, share: r(6))))
     }
 
     // MARK: Fronts (decision 238)
@@ -469,10 +474,12 @@ extension Map3DScene.Builder {
     /// each upper floor of a 透天厝 with balconies, an air conditioner
     /// under some windows of the rest, and a blade sign on a shop (the
     /// japan pack's balconies 0.95–1.05 m deep, its air conditioners
-    /// 0.8 m, its blade signs).
+    /// 0.8 m, its blade signs). Decision 352: returns the blade sign's
+    /// words.
+    @discardableResult
     static func addFrontDetail(_ mesh: inout Map3DMesh, close: inout Map3DMesh, front: Map3DPoint, facing: Map3DPoint, width: Float, groundFloor: Float,
                                upper: Float, floors: Int, wall: UInt32, balconies: Bool, sign: Bool, arcade: Bool = false,
-                               r: (Int32) -> Float) {
+                               r: (Int32) -> Float) -> [Map3DSign] {
         let across = Map3DPoint(-facing.z, 0, facing.x)
         // Decision 267: the arcade's pillars, and a shop's counter, crates
         // and low awning, in `close` (drawn only close up), as are the
@@ -504,11 +511,13 @@ extension Map3DScene.Builder {
                             length: 0.35, width: 0.8, height: 0.55, top: Map3DPalette.acUnit, side: Map3DPalette.acUnit)
             }
         }
-        if sign, r(12) < 0.7 {
-            let height: Float = floors >= 3 ? 3.2 : 2.4
-            mesh.addBox(base: front + facing * 0.45 + across * (width / 2 - 0.5) + Map3DPoint(0, groundFloor + 0.3, 0), forward: facing,
-                        length: 0.7, width: 0.25, height: height, top: Map3DPalette.tileWhite, side: pick(Map3DPalette.signs, r(13)))
-        }
+        guard sign, r(12) < 0.7 else { return [] }
+        let height: Float = floors >= 3 ? 3.2 : 2.4
+        let foot = front + facing * 0.45 + across * (width / 2 - 0.5) + Map3DPoint(0, groundFloor + 0.3, 0), board = pick(Map3DPalette.signs, r(13))
+        mesh.addBox(base: foot, forward: facing, length: 0.7, width: 0.25, height: height, top: Map3DPalette.tileWhite, side: board)
+        let word = pick(streetWords, r(14))
+        return bladeSigns(middle: foot + Map3DPoint(0, height / 2, 0), facing: facing, height: height, board: Map3DColor.hex(board), word: word,
+                          closes: Map3DSignAtlas.closes(word, share: r(15)))
     }
 
     /// Decision 267: what stands at a row house's foot. Under an arcade

@@ -88,6 +88,8 @@ extension Map3DScene.Builder {
             let middle = foot - slot.facing * (shop.depth / 2)
             target = .near
             mesh(at: middle) { $0.append(shop.mesh, at: middle, forward: slot.facing) }
+            // Decision 352: what its board says.
+            for sign in shop.signs { addSign(sign.placed(at: middle, forward: slot.facing)) }
             addShadow(centre: middle, forward: slot.facing, length: shop.depth, width: Self.shopFrontage, spread: 2, darkness: 0.3)
             let side = slot.facing.cross(.up), walk = foot + slot.facing * 2.4 + Map3DPoint(0, 0.05, 0)
             addShopLife(from: walk - side * (Self.shopFrontage / 2), to: walk + side * (Self.shopFrontage / 2), density: 2)
@@ -150,6 +152,9 @@ extension Map3DScene.Builder {
         let height: Float
         let wall: UInt32
         let roof: UInt32
+        /// Decision 352: its board's word (and the tallest's rooftop
+        /// sign's), built facing +x as the mesh is.
+        let signs: [Map3DSign]
     }
 
     /// The main colour of the shop in place `lane` of its row: neighbours
@@ -193,6 +198,14 @@ extension Map3DScene.Builder {
         var glow = b.mesh.vertices.count
         b.box(face + 0.25, 3.1, 0, 0.12, width * 0.72, 0.85, colour)
         b.mesh.makeGlowing(from: glow)
+        // Decision 352: on it, in the town scene's way, what the shop
+        // sells, and when it closes.
+        let words = food ? foodWords : retailWords
+        let word = words[min(Int(random(20) * Float(words.count)), words.count - 1)]
+        let board = Map3DColor.hex(colour), closes = Map3DSignAtlas.closes(word, share: random(21))
+        var signs = [Map3DSign(kind: .across, centre: Map3DPoint(face + 0.25 + 0.06 + 0.02, 3.1 + 0.425, 0), facing: Map3DPoint(1, 0, 0),
+                               width: width * 0.72 * 0.96, height: 0.85 * 0.86, picture: word, seed: 0, board: board,
+                               letters: letters(on: board), closes: closes)]
         // Out front: a food shop's counters (#900's) and stools, a shop's
         // boxes (the detail kit's).
         func part(_ part: Map3DDetailKit.Part, _ x: Float, _ z: Float, facing: Map3DPoint = Map3DPoint(1, 0, 0)) {
@@ -223,8 +236,11 @@ extension Map3DScene.Builder {
             glow = b.mesh.vertices.count
             b.box(face - 1.2, roof + 0.9, 0, 0.2, 4.6, 1.5, colour)
             b.mesh.makeGlowing(from: glow)
+            signs.append(Map3DSign(kind: .across, centre: Map3DPoint(face - 1.2 + 0.1 + 0.02, roof + 0.9 + 0.75, 0), facing: Map3DPoint(1, 0, 0),
+                                   width: 4.6 * 0.96, height: 1.5 * 0.88, picture: word, seed: 0, board: board, letters: letters(on: board),
+                                   closes: closes))
         }
         return Shop(mesh: b.mesh, depth: length, height: Float(floors) * 3.2 + 0.4,
-                    wall: Map3DPalette.officeWalls[v % Map3DPalette.officeWalls.count], roof: Map3DPalette.concreteWalls[v % 3])
+                    wall: Map3DPalette.officeWalls[v % Map3DPalette.officeWalls.count], roof: Map3DPalette.concreteWalls[v % 3], signs: signs)
     }
 }

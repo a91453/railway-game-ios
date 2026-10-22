@@ -59,6 +59,18 @@ extension Map3DScene.Builder {
             // The area's corners: none of it in the scene, nothing to read.
             let corners = [CityTileArea.Point(x: area.minX, z: area.minZ), CityTileArea.Point(x: area.maxX, z: area.maxZ)].map(world)
             guard corners[0].x <= region.maxX, corners[1].x >= region.minX, corners[0].y <= region.maxY, corners[1].y >= region.minY else { continue }
+            // Decision 352: near, its signs where the pipeline hung them,
+            // and `placeAds`' billboards round its station (the tiles'
+            // origin) on the walls that look onto a street.
+            let near = !isFar
+            let origin = point(x: world(CityTileArea.Point(x: 0, z: 0)).x, y: world(CityTileArea.Point(x: 0, z: 0)).y, height: 0)
+            var streets = Set<Map3DScene.ChunkKey>()
+            if near {
+                addTileSigns(area, world: world)
+                let box = corners.map { point(x: $0.x, y: $0.y, height: 0) }
+                streets = streetCells(within: [(Map3DPoint(min(box[0].x, box[1].x), 0, min(box[0].z, box[1].z)),
+                                                Map3DPoint(max(box[0].x, box[1].x), 0, max(box[0].z, box[1].z)))])
+            }
             for building in area.buildings {
                 let polygons = building.polygons.map { $0.map { $0.map(world) } }
                 let points = polygons.flatMap { $0.first ?? [] }
@@ -79,9 +91,31 @@ extension Map3DScene.Builder {
                 let rings = polygons.map { $0.map { ring in ring.map { point(x: $0.x, y: $0.y, height: 0) } } }
                 addRealBuilding(rings, ground: ground, height: max(3, building.height), storeys: max(1, building.storeys),
                                 kind: RealKind(usage: building.usage))
+                if near, (401...404).contains(building.usage) || building.usage == 413 || building.usage == 414,
+                   building.height >= 12, let outline = rings.first?.first, outline.count >= 3 {
+                    addRealAds(outline, ground: ground, height: building.height, origin: origin, streets: streets)
+                }
             }
         }
         return standing
+    }
+
+    /// Decision 352: `placeAds` on a real building of `outline` (scene
+    /// points) standing `height` metres on `ground`, by how far it is
+    /// from `origin`, its station.
+    mutating func addRealAds(_ outline: [Map3DPoint], ground: Float, height: Float, origin: Map3DPoint, streets: Set<Map3DScene.ChunkKey>) {
+        let first = outline[0], metre = Double(WorldCoordinate.unitsPerMetre)
+        let east = originX / metre + Double(first.x), south = originY / metre + Double(first.z)
+        let seed = (Int32(truncatingIfNeeded: Int((east * 10).rounded())), Int32(truncatingIfNeeded: Int((south * 10).rounded())))
+        let r = { (salt: Int32) in map3DRandom(seed.0, seed.1, salt: salt) }
+        let walls = Self.adWalls(outline) { Self.facesStreet(streets, middle: $0, normal: $1) }
+        guard let wall = walls.filter(\.street).max(by: { $0.length < $1.length }) else { return }
+        let middle = wall.start + wall.direction * (wall.length / 2)
+        let distance = Map3DPoint(middle.x - origin.x, 0, middle.z - origin.z).length
+        for ad in Self.ads(walls: walls, foot: ground, height: height, chances: .real(distance: distance), r: r) {
+            addSign(ad.sign)
+            addAdFrame(ad.sign, roof: ad.roof)
+        }
     }
 
     /// One real building: `polygons` (scene points, each polygon its

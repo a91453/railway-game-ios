@@ -485,6 +485,7 @@ private struct Map3DView: UIViewRepresentable {
         view.weather = weather
         view.onStats = onStats
         view.quality = quality
+        view.reduceMotion = context.environment.accessibilityReduceMotion
         context.coordinator.farOut = farOut
         defer {
             // Decision 333: once the first scene has its camera, so the

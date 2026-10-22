@@ -50,6 +50,9 @@ public struct Map3DScene: Sendable {
         /// ``Map3DSeeThrough/cells`` squares, row by row from the north
         /// west; `-infinity` where none stands.
         public let cityTops: [Float]
+        /// Decision 352: its signs, billboards and screens, drawn when it
+        /// is drawn in full.
+        public let signs: [Map3DSign]
     }
 
     /// The side of a chunk, in metres.
@@ -454,6 +457,8 @@ extension Map3DScene {
         var target = Target.base
         /// Decision 244: the street furniture, by chunk.
         var props: [ChunkKey: [Map3DInstance]] = [:]
+        /// Decision 352: the signs, by chunk.
+        var signs: [ChunkKey: [Map3DSign]] = [:]
         /// Decision 259: where people walk and vehicles drive.
         var streetLife = Map3DStreetLife()
         /// Decision 263: the track as laid (its centre line at the rails'
@@ -587,7 +592,7 @@ extension Map3DScene {
         }
 
         func chunks() -> [Chunk] {
-            Set(meshes.keys).union(shadows.keys).union(nearMeshes.keys).union(farMeshes.keys).union(closeMeshes.keys).union(props.keys).sorted().compactMap { key in
+            Set(meshes.keys).union(shadows.keys).union(nearMeshes.keys).union(farMeshes.keys).union(closeMeshes.keys).union(props.keys).union(signs.keys).sorted().compactMap { key in
                 var mesh = meshes[key] ?? Map3DMesh()
                 let baseIndexCount = mesh.indices.count
                 mesh.append(nearMeshes[key] ?? Map3DMesh())
@@ -595,13 +600,20 @@ extension Map3DScene {
                 // The props too: the renderer leaves out a chunk whose box
                 // is off screen, which cut off a pole's top still in view.
                 let propBoxes = (props[key] ?? []).compactMap { $0.bounds(in: .standard) }
-                let boxes = [mesh.bounds, far.bounds, shadows.bounds, close.bounds].compactMap { $0 } + propBoxes
+                // And the signs, a rooftop board above its building.
+                let signBoxes = (signs[key] ?? []).map { sign in
+                    sign.corners.reduce((min: sign.centre, max: sign.centre)) {
+                        (Map3DPoint(min($0.min.x, $1.x), min($0.min.y, $1.y), min($0.min.z, $1.z)), Map3DPoint(max($0.max.x, $1.x), max($0.max.y, $1.y), max($0.max.z, $1.z)))
+                    }
+                }
+                let boxes = [mesh.bounds, far.bounds, shadows.bounds, close.bounds].compactMap { $0 } + propBoxes + signBoxes
                 guard let first = boxes.first else { return nil }
                 let low = boxes.reduce(first.min) { Map3DPoint(min($0.x, $1.min.x), min($0.y, $1.min.y), min($0.z, $1.min.z)) }
                 let high = boxes.reduce(first.max) { Map3DPoint(max($0.x, $1.max.x), max($0.y, $1.max.y), max($0.z, $1.max.z)) }
                 return Chunk(column: key.column, row: key.row, mesh: mesh, baseIndexCount: baseIndexCount, far: far, close: close, shadows: shadows,
                              props: props[key] ?? [], minimum: low, maximum: high,
-                             cityTops: Map3DSeeThrough.tops(column: key.column, row: key.row, of: [(mesh, baseIndexCount), (far, 0)]))
+                             cityTops: Map3DSeeThrough.tops(column: key.column, row: key.row, of: [(mesh, baseIndexCount), (far, 0)]),
+                             signs: signs[key] ?? [])
             }
         }
 
@@ -955,7 +967,8 @@ extension Map3DScene {
                         addRowHouses(base: base, side: side, density: lot.density, shops: lot.use == .commercial, seed: seed,
                                      fronts: streetFronts(column: lot.column, row: lot.row))
                     } else {
-                        addBlock(base: base, side: side, density: lot.density, walls: Self.pickWall(seed), facade: .flatWindows, seed: seed)
+                        addBlock(base: base, side: side, density: lot.density, walls: Self.pickWall(seed), facade: .flatWindows, seed: seed,
+                                 commercial: lot.use == .commercial)
                     }
                 case .office:
                     addBlock(base: base, side: side, density: lot.density, walls: Self.pick(Map3DPalette.officeWalls, seed), facade: .officeGlass, seed: seed)
@@ -1086,6 +1099,8 @@ extension Map3DScene {
             guard depth > 4 else { return }
             // Decision 267: the street's smallest things, drawn only close.
             var closeDetail = Map3DMesh()
+            // Decision 352: the blade signs' words.
+            var blades: [Map3DSign] = []
             let flats = density >= 2
             let far = isFar
             mesh(at: base) { mesh in
@@ -1140,7 +1155,7 @@ extension Map3DScene {
                         // and the parapet's rim; afar, only the roof's tank
                         // or room, which read from far off.
                         if !far {
-                            Self.addFrontDetail(&mesh, close: &closeDetail, front: rowMiddle + front * (depth / 2), facing: front, width: width,
+                            blades += Self.addFrontDetail(&mesh, close: &closeDetail, front: rowMiddle + front * (depth / 2), facing: front, width: width,
                                                 groundFloor: groundFloor, upper: upper, floors: Int(floors), wall: wall,
                                                 balconies: balconies, sign: shops, arcade: arcade, r: r)
                             mesh.addBox(base: rowMiddle + Map3DPoint(0, height, 0), forward: front, length: depth, width: width - 0.1,
@@ -1180,6 +1195,7 @@ extension Map3DScene {
                     }
                 }
             }
+            for blade in blades { addSign(blade) }
             if !closeDetail.isEmpty {
                 let saved = target
                 target = .close
@@ -1230,7 +1246,8 @@ extension Map3DScene {
         /// Decision 231: every side windows of `facade`, a bay to each
         /// 3.2 m (an office's curtain wall 3 m) and floor; a tower's podium
         /// shops, or glass under offices.
-        mutating func addBlock(base: Map3DPoint, side: Float, density: Int, walls: UInt32, facade: Map3DSurface, seed: (Int32, Int32)) {
+        mutating func addBlock(base: Map3DPoint, side: Float, density: Int, walls: UInt32, facade: Map3DSurface, seed: (Int32, Int32),
+                               commercial: Bool = false) {
             let r = { (salt: Int32) in map3DRandom(seed.0, seed.1, salt: salt) }
             let bay: Float = facade == .officeGlass ? 3 : 3.2
             // Flats' windows with or without blinds, and the podium's shop,
@@ -1283,6 +1300,7 @@ extension Map3DScene {
                     }
                 }
             }
+            if !far { addBlockAds(base: base, side: side, density: density, office: facade == .officeGlass, commercial: commercial, r: r) }
             // Decision 259: shoppers round a tower's shops.
             if density >= 4, facade != .officeGlass {
                 let half = max(side - 4, 8) / 2 + 1.7

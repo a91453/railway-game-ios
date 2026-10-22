@@ -49,6 +49,7 @@
 		3F4E6EB1D04071F2D7E13A02 /* WebsiteScreenshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A99E6EF4AC0C447E9D16F0E /* WebsiteScreenshotTests.swift */; };
 		3FA9D3B90B7D1F9CBC07E2FE /* trtc_codes.json in Resources */ = {isa = PBXBuildFile; fileRef = 905E65E0102E822A86C5ECF8 /* trtc_codes.json */; };
 		44DB05AFB29842D0B2DC04C0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D490F999E435A0570BE04635 /* ContentView.swift */; };
+		47D1900E3FE4045E389BE121 /* Map3DSigns.png in Resources */ = {isa = PBXBuildFile; fileRef = 782C96DBD713D96F9EADF2EE /* Map3DSigns.png */; };
 		47D7D11A0F4705BFD3BE7E6A /* Map3DSurfaces.png in Resources */ = {isa = PBXBuildFile; fileRef = 70170091E76358BF8886BB8E /* Map3DSurfaces.png */; };
 		481A5F7BE0BA94DF2592045D /* tmrt_ridership.json in Resources */ = {isa = PBXBuildFile; fileRef = 05F7A5F3105B96C3E70DF1AA /* tmrt_ridership.json */; };
 		4936E4C3E4EF4FA3E29C6989 /* MapArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = A92B62C199B3DE4F7602175F /* MapArt.swift */; };
@@ -280,6 +281,7 @@
 		70170091E76358BF8886BB8E /* Map3DSurfaces.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Map3DSurfaces.png; sourceTree = "<group>"; };
 		71EB126E20DDE2A8668CD619 /* NextStepChipUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextStepChipUITests.swift; sourceTree = "<group>"; };
 		771361B568387359268A6B83 /* RollingStockCatalogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RollingStockCatalogView.swift; sourceTree = "<group>"; };
+		782C96DBD713D96F9EADF2EE /* Map3DSigns.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Map3DSigns.png; sourceTree = "<group>"; };
 		787EB9DDCEED2E78C0E0E237 /* FinanceTrendCharts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinanceTrendCharts.swift; sourceTree = "<group>"; };
 		79941FA523AF01C8B9E74433 /* BuildToolRail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildToolRail.swift; sourceTree = "<group>"; };
 		7E833A49B8766511EF574847 /* SettingsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsUITests.swift; sourceTree = "<group>"; };
@@ -582,6 +584,7 @@
 		5983417AAC9DD4A270355DFB /* Map3D */ = {
 			isa = PBXGroup;
 			children = (
+				782C96DBD713D96F9EADF2EE /* Map3DSigns.png */,
 				70170091E76358BF8886BB8E /* Map3DSurfaces.png */,
 			);
 			path = Map3D;
@@ -789,6 +792,7 @@
 				CDBCC1C27BD15017BA4A9E69 /* BaseMap in Resources */,
 				8AB926BA8AD3CB2CFD7351DC /* InfoPlist.strings in Resources */,
 				D7C2F05C8F97660E0404A588 /* Localizable.xcstrings in Resources */,
+				47D1900E3FE4045E389BE121 /* Map3DSigns.png in Resources */,
 				47D7D11A0F4705BFD3BE7E6A /* Map3DSurfaces.png in Resources */,
 				68C5B44129E827A4E417FB63 /* MapLibre-iOS-LICENSE.md in Resources */,
 				D9A96F6DD6A7A5B69078119E /* NotoSans-OFL.txt in Resources */,

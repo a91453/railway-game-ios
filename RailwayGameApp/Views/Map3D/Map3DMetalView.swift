@@ -101,6 +101,8 @@ final class Map3DMetalView: MTKView {
     var quality = Map3DQuality.automatic {
         didSet { if quality != oldValue { applyQuality() } }
     }
+    /// Decision 352: with Reduce Motion the screens hold one picture.
+    var reduceMotion = false
     /// Decision 230: the train models, and a buffer of each one's vertices.
     private var models: (pack: Map3DModelPack, buffers: [MTLBuffer])?
     var onStats: (@MainActor (Stats) -> Void)?
@@ -124,6 +126,8 @@ final class Map3DMetalView: MTKView {
         /// Decision 244: its street furniture's instances, sorted by model,
         /// and where each model's run of them starts.
         let props: (instances: MTLBuffer, runs: [(model: Int, first: Int, count: Int)])?
+        /// Decision 352: its signs' instances.
+        let signs: (instances: MTLBuffer, count: Int)?
         let minimum: Map3DPoint
         let maximum: Map3DPoint
         /// Decision 342: where it is and its city's tops, for the cones
@@ -150,6 +154,9 @@ final class Map3DMetalView: MTKView {
     private let skyDepthState: MTLDepthStencilState
     /// Decision 231: the surfaces' textures, one layer each.
     private let surfaces: MTLTexture
+    /// Decision 352: the signs' pipeline and their atlas; none where the
+    /// shader or the picture does not load (the map is drawn without).
+    private var signDrawing: (pipeline: MTLRenderPipelineState, atlas: MTLTexture)?
     private var chunks: [Chunk] = []
     private let gpuTimes = OSAllocatedUnfairLock(initialState: [Double]())
     private var cpuTimes: [Double] = []
@@ -241,9 +248,22 @@ final class Map3DMetalView: MTKView {
         guard let shadowPipeline = try? device.makeRenderPipelineState(descriptor: descriptor),
               let shadowDepthState = device.makeDepthStencilState(descriptor: shadowDepthDescriptor)
         else { return nil }
-        return Map3DMetalView(device: device, queue: queue, pipeline: pipeline, instancedPipeline: instancedPipeline,
-                              seeThroughPipeline: seeThroughPipeline, shadowPipeline: shadowPipeline, shadowDepthState: shadowDepthState,
-                              depthState: depthState, skyPipeline: skyPipeline, skyDepthState: skyDepthState, surfaces: surfaces)
+        let view = Map3DMetalView(device: device, queue: queue, pipeline: pipeline, instancedPipeline: instancedPipeline,
+                                  seeThroughPipeline: seeThroughPipeline, shadowPipeline: shadowPipeline, shadowDepthState: shadowDepthState,
+                                  depthState: depthState, skyPipeline: skyPipeline, skyDepthState: skyDepthState, surfaces: surfaces)
+        // Decision 352: the signs, four corners an instance, solid, tested
+        // and written into the depth as the city is.
+        if let signVertex = library.makeFunction(name: "map3dSignVertex"), let signFragment = library.makeFunction(name: "map3dSignFragment"),
+           let atlas = makeSignAtlas(device: device, queue: queue) {
+            let signs = MTLRenderPipelineDescriptor()
+            signs.vertexFunction = signVertex
+            signs.fragmentFunction = signFragment
+            signs.colorAttachments[0].pixelFormat = .bgra8Unorm
+            signs.depthAttachmentPixelFormat = .depth32Float
+            signs.rasterSampleCount = samples
+            if let signPipeline = try? device.makeRenderPipelineState(descriptor: signs) { view.signDrawing = (signPipeline, atlas) }
+        }
+        return view
     }
 
     private init(
@@ -326,6 +346,38 @@ final class Map3DMetalView: MTKView {
                                 withBytes: base + layer * layerBytes, bytesPerRow: side * 4, bytesPerImage: layerBytes)
             }
         }
+        if let commands = queue.makeCommandBuffer(), let blit = commands.makeBlitCommandEncoder() {
+            blit.generateMipmaps(for: texture)
+            blit.endEncoding()
+            commands.commit()
+        }
+        return texture
+    }
+
+    /// Decision 352: `Map3DSigns.png` with its first few mipmaps (to 128
+    /// pixels, a word's strip still 4 pixels high: smaller, the words
+    /// beside it would bleed in), or `nil` without the file.
+    private static func makeSignAtlas(device: MTLDevice, queue: MTLCommandQueue) -> MTLTexture? {
+        let side = Map3DSignAtlas.side
+        guard let url = Bundle.main.url(forResource: "Map3DSigns", withExtension: "png"),
+              let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let image = CGImageSourceCreateImageAtIndex(source, 0, nil),
+              image.width == side, image.height == side,
+              let space = CGColorSpace(name: CGColorSpace.sRGB)
+        else { return nil }
+        var pixels = [UInt8](repeating: 0, count: side * side * 4)
+        let drawn = pixels.withUnsafeMutableBytes { bytes -> Bool in
+            guard let context = CGContext(data: bytes.baseAddress, width: side, height: side, bitsPerComponent: 8, bytesPerRow: side * 4,
+                                          space: space, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)
+            else { return false }
+            context.draw(image, in: CGRect(x: 0, y: 0, width: side, height: side))
+            return true
+        }
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rgba8Unorm, width: side, height: side, mipmapped: true)
+        descriptor.mipmapLevelCount = 5
+        descriptor.usage = .shaderRead
+        guard drawn, let texture = device.makeTexture(descriptor: descriptor) else { return nil }
+        texture.replace(region: MTLRegionMake2D(0, 0, side, side), mipmapLevel: 0, withBytes: pixels, bytesPerRow: side * 4)
         if let commands = queue.makeCommandBuffer(), let blit = commands.makeBlitCommandEncoder() {
             blit.generateMipmaps(for: texture)
             blit.endEncoding()
@@ -507,8 +559,9 @@ final class Map3DMetalView: MTKView {
                 }
                 props = (instances, runs)
             }
+            let signs = makeBuffer(chunk.signs.flatMap(\.floats)).map { (instances: $0, count: chunk.signs.count) }
             return Chunk(vertices: vertices, indices: indices, indexCount: chunk.mesh.indices.count, baseIndexCount: chunk.baseIndexCount,
-                         far: far, close: close, shadows: shadows, props: props, minimum: chunk.minimum, maximum: chunk.maximum,
+                         far: far, close: close, shadows: shadows, props: props, signs: signs, minimum: chunk.minimum, maximum: chunk.maximum,
                          column: chunk.column, row: chunk.row, cityTops: chunk.cityTops)
         }
     }
@@ -715,6 +768,24 @@ final class Map3DMetalView: MTKView {
                     drawCalls += 1
                     triangles += models.pack.models[run.model].triangleCount * run.count
                 }
+            }
+        }
+        // Decision 352: the signs of the chunks drawn in full, one draw
+        // call a chunk, four corners a sign.
+        if let signDrawing, visible.contains(where: { $0.detailed && $0.signs != nil }) {
+            encoder.setRenderPipelineState(signDrawing.pipeline)
+            encoder.setFragmentTexture(signDrawing.atlas, index: 0)
+            Map3DSign.clock(seconds: start, hour: shown.hour, quality: quality, reduceMotion: reduceMotion).withUnsafeBytes { bytes in
+                guard let base = bytes.baseAddress else { return }
+                encoder.setVertexBytes(base, length: bytes.count, index: 3)
+                encoder.setFragmentBytes(base, length: bytes.count, index: 3)
+            }
+            for chunk in visible where chunk.detailed {
+                guard let signs = chunk.signs else { continue }
+                encoder.setVertexBuffer(signs.instances, offset: 0, index: 2)
+                encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: signs.count)
+                drawCalls += 1
+                triangles += 2 * signs.count
             }
         }
         // Decision 347: the sky where nothing was drawn.

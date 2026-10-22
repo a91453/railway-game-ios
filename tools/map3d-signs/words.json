@@ -1,0 +1,16 @@
+{
+  "note": "Decision 352: the words drawn into Map3DSigns.png. The order is the atlas's: Map3DSignAtlas.shopWords in GamePresentation must list the shop words in the same order (Map3DSignTests checks it). Invented and generic: no shop's, brand's or place's name (art-style §7).",
+  "posterWords": ["夜市", "珍珠奶茶", "牛肉麵", "小吃", "電玩", "大特價", "新開幕", "手搖飲", "火鍋", "鹹酥雞", "咖啡", "旅店", "電影", "音樂", "電器", "滷肉飯", "豆花", "剉冰", "卡拉OK", "藥妝"],
+  "posterLatin": ["NEON", "GAME", "LIVE", "SALE", "CAFE", "MUSIC", "OPEN", "KTV", "TECH", "HOTEL", "NIGHT", "TEA"],
+  "bannerWords": ["夜市", "牛肉麵", "電玩", "大特價", "旅店", "火鍋", "藥妝", "手搖飲"],
+  "shopWords": [
+    "便利商店", "超市", "早餐店", "豆花", "手搖飲", "麵店", "小吃", "便當",
+    "水餃", "牛肉麵", "滷肉飯", "咖啡", "麵包", "冰店", "鹹酥雞", "火鍋",
+    "自助餐", "飲料", "文具行", "雜貨店", "書店", "花店", "洗衣店", "水果行",
+    "五金行", "照相館", "藥局", "眼鏡行", "服飾", "鐘錶行", "電器行", "機車行",
+    "銀行", "診所", "牙醫", "旅館", "補習班", "美髮", "不動產", "電信",
+    "彩券行", "寵物", "中藥行", "腳踏車", "茶行", "米店", "肉圓", "燒臘",
+    "海產", "粥", "鞋店", "布行", "刻印", "冷氣", "瓦斯行", "影印",
+    "KTV", "按摩", "網咖", "電玩", "夜市", "飯店", "大樓", "商場"
+  ]
+}

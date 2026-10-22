@@ -35,6 +35,37 @@ void main(){ vec3 n = normalize(vNormal); vec3 base = vColor; vec3 glow = vec3(0
  float sun = max(dot(n, sunDirection.xyz), 0.0); vec3 ambient = mix(ambientGround.rgb, ambientSky.rgb, n.y*0.5+0.5);
  vec3 lit = base * (ambient + sunColor.rgb * sun);
  float f = smoothstep(fog.x, fog.y, distance(vWorld, eye.xyz)); outColor = vec4(min(mix(lit, fogColor.rgb, f) + glow * (1.0 - f * 0.7), 1.0), 1.0); }`;
+// Decision 352: map3dSignVertex and map3dSignFragment, the same algebra.
+const signVS = `#version 300 es
+layout(location=0) in vec4 middle; layout(location=1) in vec4 right; layout(location=2) in vec4 up; layout(location=3) in vec4 colours;
+uniform mat4 viewProjection; uniform vec4 eye, clock;
+out vec2 vAt; out vec3 vWorld; flat out vec3 vNormal; flat out float vKind, vPicture, vSeed, vAspect, vLit; flat out vec3 vBoard, vLetters;
+vec3 unpack(float p){ return vec3(mod(p,256.0), mod(floor(p/256.0),256.0), floor(p/65536.0))/255.0; }
+void main(){ vec2 at = vec2((gl_VertexID & 1) != 0 ? 1.0 : 0.0, (gl_VertexID & 2) != 0 ? 1.0 : 0.0);
+ vec3 world = middle.xyz + right.xyz*(at.x*2.0-1.0) + up.xyz*(at.y*2.0-1.0);
+ vec4 p = viewProjection*vec4(world,1.0); p.z = 2.0*p.z - p.w; gl_Position = p;
+ if (distance(middle.xyz, eye.xyz) > clock.z) gl_Position = vec4(0.0, 0.0, -2.0, 1.0);
+ vAt = at; vWorld = world; vNormal = normalize(cross(right.xyz, up.xyz)); vKind = middle.w; vPicture = right.w; vSeed = up.w;
+ vAspect = length(right.xyz)/max(length(up.xyz),1e-3); vBoard = unpack(colours.x); vLetters = unpack(colours.y); vLit = clock.y < colours.z ? 1.0 : 0.0; }`;
+const signFS = `#version 300 es
+precision highp float;
+uniform vec4 sunDirection, sunColor, ambientSky, ambientGround, fogColor, eye, fog, shade, clock; uniform sampler2D atlas;
+in vec2 vAt; in vec3 vWorld; flat in vec3 vNormal; flat in float vKind, vPicture, vSeed, vAspect, vLit; flat in vec3 vBoard, vLetters; out vec4 outColor;
+vec3 poster(float index, vec2 at){ float i=floor(index+0.5); vec2 cell=vec2(mod(i,8.0), floor(i/8.0)); return texture(atlas,(cell+clamp(vec2(at.x,1.0-at.y),0.004,0.996))/8.0).rgb; }
+float word(vec2 origin, vec2 size, float shape, float aspect, vec2 at){
+ vec2 f = aspect > shape ? vec2((at.x-0.5)*aspect/shape+0.5, at.y) : vec2(at.x, (at.y-0.5)*shape/aspect+0.5);
+ float inside = step(0.0, min(f.x,f.y))*step(max(f.x,f.y),1.0); return texture(atlas, origin+clamp(vec2(f.x,1.0-f.y),0.01,0.99)*size).r*inside; }
+void main(){ vec3 n = vNormal; vec2 at = vAt; if (dot(n, eye.xyz - vWorld) < 0.0) { n = -n; at.x = 1.0 - at.x; }
+ int kind = int(vKind+0.5); float lights = shade.y; vec3 colour, base, glow;
+ if (kind == 1) { float t = clock.x*0.16 + vSeed*9.0, wipe = smoothstep(0.86,1.0,fract(t)); float now = mod(vPicture+floor(t),24.0), next = mod(now+1.0,24.0);
+  colour = mix(poster(now,at), poster(next,at), step(at.x,wipe)); vec2 led = fract(at*vec2(160.0,90.0)); float fine = max(fwidth(at.x*160.0), fwidth(at.y*90.0));
+  colour *= mix(0.72+0.5*step(0.22,led.x)*step(0.22,led.y), 1.0, smoothstep(0.3,1.0,fine)); base = colour*0.35; glow = colour*(0.55+0.75*lights)*vLit; }
+ else if (kind <= 2) { colour = kind == 2 ? poster(24.0+vPicture, vec2(at.x/3.0, at.y)) : poster(vPicture, at); base = mix(colour*0.55+0.03, colour, lights); glow = colour*(0.1+1.6*lights*vLit); }
+ else { float i = floor(vPicture+0.5), strip = mod(i,4.0), across = kind == 3 ? 1.0 : 0.0, index = (kind == 3 ? 32.0 : 48.0) + floor(i/4.0);
+  vec2 origin = vec2(mod(index,8.0), floor(index/8.0))/8.0 + vec2(1.0-across, across)*(strip/32.0); vec2 size = kind == 3 ? vec2(0.125,0.03125) : vec2(0.03125,0.125);
+  colour = mix(vBoard, vLetters, word(origin, size, kind == 3 ? 4.0 : 0.25, vAspect, at)); base = colour; glow = colour*(1.1*lights*vLit); }
+ float sun = max(dot(n, sunDirection.xyz), 0.0); vec3 ambient = mix(ambientGround.rgb, ambientSky.rgb, n.y*0.5+0.5); vec3 lit = base*(ambient + sunColor.rgb*sun);
+ float f = smoothstep(fog.x, fog.y, distance(vWorld, eye.xyz)); outColor = vec4(min(mix(lit, fogColor.rgb, f) + glow*(1.0-f*0.7), 1.0), 1.0); }`;
 window.render = async function(view, textured, shadows) {
   const gl = document.getElementById('c').getContext('webgl2', {antialias:true, preserveDrawingBuffer:true});
   if (!window.prog) {
@@ -73,6 +104,17 @@ void main(){ float f=smoothstep(fog.x,fog.y,distance(vWorld,eye.xyz));
     const sib=gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,sib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,si,gl.STATIC_DRAW);
     gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0,3,gl.FLOAT,false,28,0); gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1,3,gl.FLOAT,false,28,12);
     gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2,1,gl.FLOAT,false,28,24);
+    // Decision 352: the signs, one instance each, and their atlas on unit 1.
+    const gp=gl.createProgram(); gl.attachShader(gp,sh(gl.VERTEX_SHADER,signVS)); gl.attachShader(gp,sh(gl.FRAGMENT_SHADER,signFS)); gl.linkProgram(gp);
+    if(!gl.getProgramParameter(gp,gl.LINK_STATUS)) throw gl.getProgramInfoLog(gp); window.gprog=gp;
+    const gs=new Float32Array(await (await fetch('/demo.signs')).arrayBuffer()); window.gcount=gs.length/16;
+    const gvao=gl.createVertexArray(); gl.bindVertexArray(gvao); const gb=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,gb); gl.bufferData(gl.ARRAY_BUFFER,gs.length?gs:new Float32Array(16),gl.STATIC_DRAW);
+    for(let l=0;l<4;l++){gl.enableVertexAttribArray(l);gl.vertexAttribPointer(l,4,gl.FLOAT,false,64,l*16);gl.vertexAttribDivisor(l,1);}
+    window.gvao=gvao;
+    const sim=new Image(); sim.src='/Map3DSigns.png'; await sim.decode(); gl.activeTexture(gl.TEXTURE1); const st=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,st);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,gl.RGBA,gl.UNSIGNED_BYTE,sim); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAX_LEVEL,4); gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE); gl.activeTexture(gl.TEXTURE0);
     window.svao=svao; window.vao=vao; gl.bindVertexArray(vao);
     const an=gl.getExtension('EXT_texture_filter_anisotropic'); if(an) gl.texParameterf(gl.TEXTURE_2D_ARRAY,an.TEXTURE_MAX_ANISOTROPY_EXT,8);
   }
@@ -83,6 +125,10 @@ void main(){ float f=smoothstep(fog.x,fog.y,distance(vWorld,eye.xyz));
   gl.uniform1i(gl.getUniformLocation(p,'textured'),textured?1:0); gl.uniform1i(gl.getUniformLocation(p,'surfaces'),0);
   const sky=window.meta.sky; gl.viewport(0,0,1600,900); gl.clearColor(sky[0],sky[1],sky[2],1); gl.enable(gl.DEPTH_TEST); gl.clearDepth(0); gl.depthFunc(gl.GREATER);
   gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT); gl.bindVertexArray(window.vao); gl.depthMask(true); gl.disable(gl.BLEND); gl.drawElements(gl.TRIANGLES,window.count,gl.UNSIGNED_INT,0);
+  if (window.gcount > 0) { const gp=window.gprog; gl.useProgram(gp); gl.uniformMatrix4fv(gl.getUniformLocation(gp,'viewProjection'),false,new Float32Array(u.slice(0,16)));
+    ['sunDirection','sunColor','ambientSky','ambientGround','fogColor','eye','fog','shade'].forEach((n,i)=>gl.uniform4fv(gl.getUniformLocation(gp,n),new Float32Array(u.slice(16+i*4,20+i*4))));
+    gl.uniform4fv(gl.getUniformLocation(gp,'clock'),new Float32Array(window.meta.signClock)); gl.uniform1i(gl.getUniformLocation(gp,'atlas'),1);
+    gl.bindVertexArray(window.gvao); gl.drawArraysInstanced(gl.TRIANGLE_STRIP,0,4,window.gcount); }
   if (shadows) { const sp=window.sprog; gl.useProgram(sp); gl.uniformMatrix4fv(gl.getUniformLocation(sp,'viewProjection'),false,new Float32Array(u.slice(0,16)));
     gl.uniform4fv(gl.getUniformLocation(sp,'eye'),new Float32Array(u.slice(36,40))); gl.uniform4fv(gl.getUniformLocation(sp,'fog'),new Float32Array(u.slice(40,44)));
     gl.uniform4fv(gl.getUniformLocation(sp,'shade'),new Float32Array(u.slice(44,48)));
