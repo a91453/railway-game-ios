@@ -232,15 +232,16 @@ struct InspectorView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "person.2.fill")
                             .font(.caption.weight(.bold))
-                        Text("Ridership")
+                        // Decision 336: named for the panel it opens.
+                        Text("Station…")
                             .font(.caption.weight(.semibold))
                     }
                     .padding(.horizontal, 8)
                     .frame(height: 30)
                 }
                 .buttonStyle(ThemeSelectableButtonStyle(isActive: screen.panel == .station))
-                .accessibilityLabel("Ridership")
-                .accessibilityHint("Shows the station's ridership: what kind of place it serves, its trips and its passengers.")
+                .accessibilityLabel("Station…")
+                .accessibilityHint("Opens the station panel: its platforms, shops, transfers, riders, depot and more.")
                 .accessibilityIdentifier("inspector.ridership")
                 // Decision 188: the tutorial's ridership step points at it.
                 .tutorialTarget(.ridership)

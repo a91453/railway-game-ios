@@ -582,7 +582,7 @@ extension GameError {
                 "路線不能走機廠的停車線，設成機廠會讓一條路線走不通。"
             )
         case .mapTileNotOwned:
-            language.text("You don't own this land yet: buy the tile with Expand the Map first.", "這塊地還不是你的，請先用「擴建地圖」買下這一塊。")
+            language.text("You don't own this land yet: buy the tile with Expand Map first.", "這塊地還不是你的，請先用「擴建地圖」買下這一塊。")
         case .invalidGround:
             language.text(
                 "Each block of the ground's heights must lie in the world and be read once.",

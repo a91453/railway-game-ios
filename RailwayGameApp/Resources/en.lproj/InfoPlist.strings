@@ -1,2 +1,4 @@
 /* Official localized Home Screen display name. */
 "CFBundleDisplayName" = "Along the Line";
+/* Decision 335: why the real-world picker's "Use My Location" asks for location. */
+"NSLocationWhenInUseUsageDescription" = "Your location is used once to move a real-world map's start square near you. It is not sent anywhere.";

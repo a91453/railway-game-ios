@@ -27,6 +27,9 @@ struct Map3DPreviewScreen: View {
     let session: GameSession
     var handedOver: Map3DHandoff.Plan? = nil
     var openedAt: Map3DHandoff.Plan? = nil
+    /// Decision 334: the train on a station's board it opened for, shown
+    /// at its platform, ringed.
+    var departure: Map3DNextDeparture? = nil
     let close: () -> Void
     var handBack: ((Map3DHandoff.Plan) -> Void)? = nil
     /// Decision 313: back to the 2D map at this view's middle and scale,
@@ -42,9 +45,12 @@ struct Map3DPreviewScreen: View {
     @State private var compass = Map3DCompassState()
     @State private var cameraLink = Map3DCameraLink()
     @State private var trainLabels = Map3DTrainLabelState()
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(LinePalette.key) private var linePalette: LinePalette = .standard
     /// Decision 238's later note: the 3D look chosen in Settings.
     @AppStorage(Map3DQuality.key) private var quality: Map3DQuality = .automatic
+    /// Decision 333: from where the camera follows a train, kept.
+    @AppStorage("map3DFollowView") private var followView: Map3DFollow.View = .back
 
     var body: some View {
         let language = DisplayLanguage.app
@@ -52,6 +58,8 @@ struct Map3DPreviewScreen: View {
             Map3DView(scene: scene, sceneVersion: sceneVersion, lighting: Map3DLighting(at: session.world.clock.now),
                       weather: Map3DWeather(MapWeather(world: session.world)), feed: feed, trainLabels: trainLabels,
                       start: handedOver, openedAt: openedAt, farOut: farOut, compass: compass, cameraLink: cameraLink, quality: quality,
+                      follow: session.followedTrain.map { Map3DFollow(train: $0.id, view: followView) },
+                      departure: departure, world: session.world,
                       onStats: { stats = $0 })
                 .ignoresSafeArea()
                 .accessibilityIdentifier("map3D.view")
@@ -116,7 +124,9 @@ struct Map3DPreviewScreen: View {
                                                                             "回到這裡的平面地圖，打開軌道、列車與建物的工具。")))
                             .accessibilityIdentifier("map3D.build")
                         }
-                        Map3DCompassButton(state: compass)
+                        if session.followedTrain == nil {
+                            Map3DCompassButton(state: compass)
+                        }
                     }
                     Spacer()
                     if let stats {
@@ -130,17 +140,23 @@ struct Map3DPreviewScreen: View {
                     }
                 }
                 Spacer()
-                Text(verbatim: handedOver == nil
-                     ? language.text("Pinch closer to tilt the map. Drag to move, two fingers to turn.",
-                                     "兩指拉近，地圖就會傾斜。拖曳移動，兩指旋轉。")
-                     : language.text("Pinch closer to tilt the map, or pinch out and let go to go back. Drag to move, two fingers to turn.",
-                                     "兩指拉近地圖就傾斜，拉遠放手就回到平面地圖。拖曳移動，兩指旋轉。"))
-                    .font(.footnote)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(.regularMaterial, in: Capsule())
+                if let train = session.followedTrain {
+                    Map3DFollowBar(train: train, session: session, view: $followView)
+                        .transition(.card(from: .bottom, reduceMotion: reduceMotion))
+                } else {
+                    Text(verbatim: handedOver == nil
+                         ? language.text("Pinch closer to tilt the map. Drag to move, two fingers to turn.",
+                                         "兩指拉近，地圖就會傾斜。拖曳移動，兩指旋轉。")
+                         : language.text("Pinch closer to tilt the map, or pinch out and let go to go back. Drag to move, two fingers to turn.",
+                                         "兩指拉近地圖就傾斜，拉遠放手就回到平面地圖。拖曳移動，兩指旋轉。"))
+                        .font(.footnote)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(.regularMaterial, in: Capsule())
+                }
             }
             .padding()
+            .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: session.followedTrain?.id)
         }
         .task(id: Map3DSceneKey(world: session.world, hasHeights: session.heights != nil, hasRailways: session.railways != nil, focus: focus, palette: linePalette)) {
             let built = await Map3DSceneCache.shared.scene(for: session, focus: focus, palette: linePalette)
@@ -266,10 +282,13 @@ final class Map3DSceneCache {
         // Decision 239: and the real buildings round Kaohsiung and
         // Taichung Stations.
         let city = world.geoAnchor == nil ? nil : BaseMapFiles.city
+        // Decision 331: and Taiwan's temples.
+        let temples = world.geoAnchor == nil ? nil : BaseMapFiles.temples
         let task = Task.detached(priority: .userInitiated) {
             let baseMap = tiles.flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }.flatMap { try? BaseMapTiles(data: $0) }
             return Map3DScene(world: world, focus: focus, baseMap: baseMap, cityTiles: city.map(CityTileArea.areas(in:)) ?? [],
-                              heights: heights, lineBands: Map3DLineBands(world: world, palette: palette), railways: railways)
+                              heights: heights, lineBands: Map3DLineBands(world: world, palette: palette), railways: railways,
+                              temples: temples.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealTemples(data: $0) })
         }
         self.key = key
         game = session
@@ -286,7 +305,8 @@ final class Map3DSceneCache {
 /// 314: and the lines, whose colour bands run beside the track, in the
 /// player's palette, unless no `palette` is given (the 2D map's seeded
 /// streets, which have no bands); decision 326: and the real railways,
-/// which can arrive after the game opened too.
+/// which can arrive after the game opened too, on a map with a place on
+/// Earth (the only one that draws them: B6 of the #911–#944 review).
 struct Map3DSceneKey: Hashable {
     let hasHeights: Bool
     let hasRailways: Bool
@@ -301,7 +321,7 @@ struct Map3DSceneKey: Hashable {
 
     init(world: GameWorld, hasHeights: Bool, hasRailways: Bool = false, focus: (x: Double, y: Double)? = nil, palette: LinePalette? = nil) {
         self.hasHeights = hasHeights
-        self.hasRailways = hasRailways
+        self.hasRailways = hasRailways && world.geoAnchor != nil
         self.focus = focus.map { Map3DScene.FocusArea(x: $0.x, y: $0.y) }
         edges = world.network.edges.count
         lastEdge = world.network.edges.last?.id
@@ -348,9 +368,11 @@ final class Map3DTrainFeed {
                                       still: UIAccessibility.isReduceMotionEnabled, lights: lights, detail: detail, activity: activity)
     }
 
-    func frame(in scene: Map3DScene, models: Map3DModelPack?, eye: Map3DPoint) -> Map3DTrains.Frame {
+    /// The trains seen from `eye`, `ringed` with its ring (decision 334).
+    func frame(in scene: Map3DScene, models: Map3DModelPack?, eye: Map3DPoint, ringed: TrainID?) -> Map3DTrains.Frame {
         let progress = motion.isMoving ? motion.progress(at: Date().timeIntervalSinceReferenceDate) : 1
-        return Map3DTrains.frame(motion, progress: progress, heights: heights, in: scene, models: models, eye: eye, palette: palette)
+        return Map3DTrains.frame(motion, progress: progress, heights: heights, in: scene, models: models, eye: eye, palette: palette,
+                                 ringed: ringed)
     }
 }
 
@@ -377,6 +399,12 @@ private struct Map3DView: UIViewRepresentable {
     /// Decision 313: where the screen reads the camera, for the 2D button.
     let cameraLink: Map3DCameraLink
     let quality: Map3DQuality
+    /// Decision 333: the train the camera follows, and from where.
+    let follow: Map3DFollow?
+    /// Decision 334: the train on a station's board the map opened for,
+    /// flown to at its platform, in `world`.
+    let departure: Map3DNextDeparture?
+    let world: GameWorld
     let onStats: @MainActor (Map3DMetalView.Stats) -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -398,6 +426,7 @@ private struct Map3DView: UIViewRepresentable {
         }
         context.coordinator.view = view
         cameraLink.view = view
+        view.landed = { [weak coordinator = context.coordinator] in coordinator?.showHeading() }
         if let models = Self.models {
             view.useModels(models)
         }
@@ -419,12 +448,30 @@ private struct Map3DView: UIViewRepresentable {
         view.onStats = onStats
         view.quality = quality
         context.coordinator.farOut = farOut
+        defer {
+            // Decision 333: once the first scene has its camera, so the
+            // flight starts from it.
+            if context.coordinator.shownVersion != nil,
+               view.following?.train != follow?.train || view.following?.view != follow?.view {
+                view.follow(follow, reduceMotion: context.environment.accessibilityReduceMotion)
+                if follow == nil { context.coordinator.showHeading() }
+            }
+            // Decision 334: once there is a scene to fly over.
+            if let scene, context.coordinator.shownVersion != nil, let departure, context.coordinator.flownTo != departure {
+                context.coordinator.flownTo = departure
+                view.ringed = departure.train
+                let world = world
+                view.fly(reduceMotion: context.environment.accessibilityReduceMotion) { camera in
+                    departure.camera(in: world, scene: scene, from: camera)
+                }
+            }
+        }
         guard let scene, context.coordinator.shownVersion != sceneVersion else { return }
         let first = context.coordinator.shownVersion == nil
         context.coordinator.shownVersion = sceneVersion
         view.show(scene)
         let feed = feed, models = Map3DView.models
-        view.trains = { eye in feed.frame(in: scene, models: models, eye: eye) }
+        view.trains = { [weak view] eye in feed.frame(in: scene, models: models, eye: eye, ringed: view?.ringed) }
         let labels = trainLabels
         view.trainHeads = { heads, camera in labels.show(feed.labels(heads: heads, camera: camera)) }
         view.streetLife = { camera, lights, detail in feed.streetLife(in: scene, camera: camera, lights: lights, detail: detail) }
@@ -448,6 +495,8 @@ private struct Map3DView: UIViewRepresentable {
     final class Coordinator: NSObject, UIGestureRecognizerDelegate {
         weak var view: Map3DMetalView?
         var shownVersion: Int?
+        /// Decision 334: the departure last flown to.
+        var flownTo: Map3DNextDeparture?
         var farOut: ((Map3DCamera) -> Void)?
         /// Decision 269: how far out the camera a pinch handed over opened;
         /// `nil` when the 3D button opened the map.
@@ -463,7 +512,10 @@ private struct Map3DView: UIViewRepresentable {
         init(compass: Map3DCompassState) {
             self.compass = compass
             super.init()
-            compass.turnNorth = { [weak self] reduceMotion in self?.turnNorth(reduceMotion: reduceMotion) }
+            compass.turnNorth = { [weak self] reduceMotion in
+                guard self?.view?.following == nil else { return }
+                self?.turnNorth(reduceMotion: reduceMotion)
+            }
         }
 
         /// Tells the compass the way the camera faces now.
@@ -508,6 +560,13 @@ private struct Map3DView: UIViewRepresentable {
         @objc func pan(_ recognizer: UIPanGestureRecognizer) {
             if recognizer.state == .began { stopTurningNorth() }
             guard let view else { return }
+            // Decision 333: following, the camera stays on the train, as
+            // Mini Tokyo 3D holds its map still while it tracks one.
+            guard view.following == nil else {
+                recognizer.setTranslation(.zero, in: view)
+                return
+            }
+            view.stopFlyingBack()
             let moved = recognizer.translation(in: view)
             view.camera = view.camera.panned(dx: Float(moved.x), dy: Float(moved.y))
             recognizer.setTranslation(.zero, in: view)
@@ -516,6 +575,13 @@ private struct Map3DView: UIViewRepresentable {
         @objc func pinch(_ recognizer: UIPinchGestureRecognizer) {
             if recognizer.state == .began { stopTurningNorth() }
             guard let view else { return }
+            // Decision 333: following, a pinch moves the camera in or out.
+            if view.following != nil {
+                view.zoomFollow(by: Float(recognizer.scale))
+                recognizer.scale = 1
+                return
+            }
+            view.stopFlyingBack()
             if recognizer.state == .began { pinchFrom = view.camera.distance }
             view.camera = view.camera.zoomed(by: Float(recognizer.scale))
             recognizer.scale = 1
@@ -537,6 +603,11 @@ private struct Map3DView: UIViewRepresentable {
         @objc func rotate(_ recognizer: UIRotationGestureRecognizer) {
             if recognizer.state == .began { stopTurningNorth() }
             guard let view else { return }
+            guard view.following == nil else {
+                recognizer.rotation = 0
+                return
+            }
+            view.stopFlyingBack()
             view.camera = view.camera.turned(by: -Float(recognizer.rotation))
             recognizer.rotation = 0
             showHeading()
@@ -724,5 +795,67 @@ private struct Map3DTrainLabelsView: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: DisplayLanguage.app.text("Line \(info.code), \(info.riders) riding of \(info.capacity)",
                                                                     "\(info.code) 線，載客 \(info.riders)／定員 \(info.capacity)")))
+    }
+}
+
+/// Decision 333: at the foot of the 3D map while the camera follows a
+/// train (``GameSession/followedTrain``): the train's line badge and name,
+/// the two places to follow it from (Mini Tokyo 3D's back and top back),
+/// and the stop, as the 2D map's follow bar has it (`取消跟隨`).
+private struct Map3DFollowBar: View {
+    let train: Train
+    let session: GameSession
+    @Binding var view: Map3DFollow.View
+
+    var body: some View {
+        let language = session.language
+        HStack(spacing: 9) {
+            if let line = session.world.followBarInfo(of: train.id, in: language)?.line {
+                LineCodeBadge(code: LineBadge.codes(for: session.world.lines)[line] ?? "",
+                              color: Palette.lineColor(line, custom: session.world.line(id: line)?.color), size: .small)
+            }
+            Text(verbatim: train.name)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(Theme.textPrimary)
+                .monospacedDigit()
+                .lineLimit(1)
+            ForEach(Map3DFollow.View.allCases, id: \.self) { option in
+                Button {
+                    view = option
+                } label: {
+                    Text(verbatim: option.text(in: language))
+                        .font(.caption.weight(.bold))
+                        .padding(.horizontal, 8)
+                        .frame(minHeight: 26)
+                        .background(view == option ? Theme.primary : Theme.chip, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        .foregroundStyle(view == option ? Theme.onPrimary : Theme.textPrimary)
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(view == option ? .isSelected : [])
+                .accessibilityIdentifier("map3D.follow.\(option.rawValue)")
+            }
+            Button {
+                session.stopFollowingTrain()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.caption.weight(.heavy))
+                    .frame(width: 26, height: 26)
+                    .background(Theme.error, in: Circle())
+                    .foregroundStyle(Theme.onError)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text(verbatim: language.text("Stop following", "取消跟隨")))
+            .accessibilityIdentifier("map3D.follow.stop")
+        }
+        .fixedSize()
+        .padding(.horizontal, 13)
+        .padding(.vertical, 2)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityElement(children: .contain)
+        .accessibilityHint(Text(verbatim: language.text("Pinch to move closer or farther.", "兩指縮放，拉近或拉遠。")))
     }
 }

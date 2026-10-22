@@ -20,12 +20,22 @@ public enum Map3DCityBus {
     public static let height: Float = 3.3
 
     /// The model pack with the bus read from `url`, or the standard pack,
-    /// with its box-built bus, when there is no file or it cannot be read.
+    /// with its box-built bus, when there is no file, it cannot be read or
+    /// it cannot be fitted (see ``canFit(_:)``).
     public static func pack(file url: URL?) -> Map3DModelPack {
-        guard let url, let data = try? Data(contentsOf: url), let file = try? Map3DModelFile(decoding: data, named: fileName) else {
+        guard let url, let data = try? Data(contentsOf: url), let file = try? Map3DModelFile(decoding: data, named: fileName),
+              canFit(file.model) else {
             return .standard
         }
         return Map3DModelPack.standard.replacing(model(from: file))
+    }
+
+    /// Whether `model` has some size along every axis, so
+    /// ``model(from:)`` can stretch it to the bus's: a flat one would be
+    /// stretched by an infinite scale (B6 of the #911–#944 review).
+    static func canFit(_ model: Map3DModelPack.Model) -> Bool {
+        let size = model.maximum - model.minimum
+        return !model.vertices.isEmpty && size.x > 0 && size.y > 0 && size.z > 0
     }
 
     /// The bus from `file`: its middle at the origin, its wheels on the

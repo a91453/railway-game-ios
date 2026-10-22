@@ -198,23 +198,67 @@ extension GameSession {
         // Decision 328: worked out again only when the map, the lines
         // bought or the railways change, not at every tick while a panel
         // asks (some 2 ms each time).
-        let key = BuyableRealLinesKey(bounds: world.bounds, anchor: world.geoAnchor, bought: world.acquisitions, railways: railwaysRevision)
-        if let memo = buyableRealLinesMemo, memo.key == key { return memo.lines }
-        let lines = workOutBuyableRealLines()
-        buyableRealLinesMemo = (key, lines)
-        return lines
+        realLineSale.lines
     }
 
-    private func workOutBuyableRealLines() -> [RealBranchLine] {
-        guard let railways, let frame = RealWorldFrame(world: world) else { return [] }
-        return RealBranchLine.names.keys.sorted().compactMap { network in
-            guard let runs = railways.branchRuns[network], let names = RealBranchLine.names[network] else { return nil }
+    /// The lines on sale and those the map holds only part of, worked out
+    /// again only when what they come from changes.
+    private var realLineSale: RealLineSale {
+        let key = BuyableRealLinesKey(bounds: world.bounds, anchor: world.geoAnchor, bought: world.acquisitions, railways: railwaysRevision)
+        if let memo = buyableRealLinesMemo, memo.key == key { return memo.sale }
+        let sale = workOutRealLineSale()
+        buyableRealLinesMemo = (key, sale)
+        return sale
+    }
+
+    private func workOutRealLineSale() -> RealLineSale {
+        guard let railways, let frame = RealWorldFrame(world: world) else { return RealLineSale(lines: [], partlyOnTheMap: [], bought: false) }
+        var sale = RealLineSale(lines: [], partlyOnTheMap: [], bought: false)
+        for network in RealBranchLine.names.keys.sorted() {
+            guard let runs = railways.branchRuns[network], let names = RealBranchLine.names[network] else { continue }
             let line = RealBranchLine(network: network, english: names.english, chinese: names.chinese, stops: runs.stops)
-            guard world.acquisition(of: line.id) == nil,
-                  runs.stops.allSatisfy({ name in realPoint(of: name, railways: railways, frame: frame).map { world.bounds.contains($0.plan) } ?? false })
-            else { return nil }
-            return line
+            guard world.acquisition(of: line.id) == nil else {
+                sale.bought = true
+                continue
+            }
+            let onTheMap = runs.stops.count { name in
+                realPoint(of: name, railways: railways, frame: frame).map { world.bounds.contains($0.plan) } ?? false
+            }
+            if onTheMap == runs.stops.count {
+                sale.lines.append(line)
+            } else if onTheMap > 0 {
+                sale.partlyOnTheMap.append(line)
+            }
         }
+        return sale
+    }
+
+    /// Decision 336: why the lines panel lists no real line for sale, in a
+    /// line; `nil` while it lists some, and in the tutorial or a lesson.
+    public var realLinesForSaleNote: String? {
+        guard tutorial == nil, lesson == nil else { return nil }
+        guard world.geoAnchor != nil else {
+            return language.text(
+                "Real branch lines are for sale on real-world maps.",
+                "真實支線只在實景地圖上可以收購。"
+            )
+        }
+        guard railways != nil else {
+            return language.text("The real railways are still loading.", "真實鐵路還在載入。")
+        }
+        let sale = realLineSale
+        guard sale.lines.isEmpty else { return nil }
+        if !sale.partlyOnTheMap.isEmpty {
+            let names = sale.partlyOnTheMap.map { $0.name(in: language) }.joined(separator: language.text(" and ", "、"))
+            return language.text(
+                "This map holds only part of the \(names). A line is for sale when all its stations are on the map.",
+                "這張地圖只框到\(names)的一部分。整條線的車站都在地圖上，才可以收購。"
+            )
+        }
+        if sale.bought {
+            return language.text("You own every real branch line on this map.", "這張地圖上的真實支線都是你的了。")
+        }
+        return language.text("No real branch line runs through this map.", "這張地圖上沒有可以收購的真實支線。")
     }
 
     /// The branch line on sale that real station `name` (its Chinese name)
@@ -708,4 +752,12 @@ struct BuyableRealLinesKey: Equatable {
     let bought: [LineAcquisition]
     /// ``GameSession/railwaysRevision``.
     let railways: Int
+}
+
+/// The real lines of a map (decision 336): on sale, held only in part,
+/// and whether the company has bought one.
+struct RealLineSale {
+    var lines: [RealBranchLine]
+    var partlyOnTheMap: [RealBranchLine]
+    var bought: Bool
 }

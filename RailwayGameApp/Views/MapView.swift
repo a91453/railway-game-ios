@@ -1605,10 +1605,19 @@ struct MapView: View {
                 .background(Theme.accent, in: Capsule())
                 .contentShape(Capsule())
             } else {
-                Image(systemName: "plus.square.dashed")
-                    .font(.title3)
-                    .frame(width: 44, height: 44)
-                    .glassBackground(in: Circle(), interactive: true)
+                // Decision 336: named, not an icon alone.
+                HStack(spacing: 6) {
+                    Image(systemName: "plus.square.dashed")
+                        .font(.title3)
+                    Text(verbatim: session.language.text("Expand Map", "擴建地圖"))
+                        .font(.subheadline.weight(.semibold))
+                }
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .padding(.horizontal, 12)
+                .frame(minHeight: 44)
+                .glassBackground(in: Capsule(), interactive: true)
+                .contentShape(Capsule())
             }
         }
         .accessibilityLabel(Text(verbatim: session.isChoosingMapTile

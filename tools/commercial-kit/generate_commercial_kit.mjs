@@ -2,7 +2,12 @@ import {writeFileSync, mkdirSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {PALETTE, MeshBuilder} from './mesh-builder.mjs';
 
-const outputDir = resolve(process.argv[2] || 'C:/Users/11407/.gemini/antigravity/scratch/railway-reference-private/Railway/game-art-previews/docs/art/commercial-kit-2026-10-21');
+// rebuild.sh does not run this; it writes the private preview models.
+if (!process.argv[2]) {
+  console.error('usage: node generate_commercial_kit.mjs <output-dir>');
+  process.exit(2);
+}
+const outputDir = resolve(process.argv[2]);
 const modelsDir = resolve(outputDir, 'models');
 mkdirSync(modelsDir, {recursive: true});
 

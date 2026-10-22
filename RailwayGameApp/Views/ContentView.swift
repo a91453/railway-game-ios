@@ -80,6 +80,7 @@ struct ContentView: View {
                 // where it looks, whichever way it opened, and Build there
                 // with the building tools out, as the dock's Build does.
                 Map3DPreviewScreen(session: session, handedOver: screen.map3DHandoff, openedAt: screen.map3DOpenedAt,
+                                   departure: screen.map3DDeparture,
                                    close: { screen.showsMap3D = false },
                                    handBack: screen.map3DHandoff == nil ? nil : { plan in back(to: plan) },
                                    toMap2D: { plan in back(to: plan) },
@@ -87,6 +88,10 @@ struct ContentView: View {
                     back(to: plan)
                     session.selectTool(.network)
                 })
+            }
+            // Decision 334: a station board's train is shown once.
+            .onChange(of: screen.showsMap3D) { _, shown in
+                if !shown { screen.map3DDeparture = nil }
             }
             .environment(screen)
             .onAppear(perform: syncSecretarySettings)
@@ -454,7 +459,16 @@ struct ContentView: View {
                                 }
                             }
                             if let followed {
-                                FollowBar(train: followed, session: session) {
+                                // Decision 333: the same train from behind
+                                // in 3D, over where the 2D map follows it
+                                // (not in the tutorial, as the map's 3D button).
+                                FollowBar(train: followed, session: session, open3D: session.tutorial == nil ? {
+                                    screen.map3DHandoff = nil
+                                    screen.map3DOpenedAt = mapCamera.map {
+                                        Map3DHandoff.Plan(x: $0.centerX, y: $0.centerY, referenceSize: $0.referenceSize)
+                                    }
+                                    screen.showsMap3D = true
+                                } : nil) {
                                     session.stopFollowingTrain()
                                 }
                                 .transition(.card(from: .top, reduceMotion: reduceMotion))
@@ -1094,6 +1108,9 @@ final class GameScreenState {
     /// Decision 313, later: the 2D map's view when the 3D button opened the
     /// 3D map, which opens over the same place.
     var map3DOpenedAt: Map3DHandoff.Plan?
+    /// Decision 334: the train on a station's board the 3D map opened
+    /// for, shown at its platform.
+    var map3DDeparture: Map3DNextDeparture?
     /// Whether the station panel, as it opens, puts up its rename alert
     /// at once: the station tag's pencil (TestFlight 60.1, renaming took
     /// three taps before a letter could be typed).

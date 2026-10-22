@@ -76,6 +76,10 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         GENERATE_INFOPLIST_FILE: "YES"
         INFOPLIST_KEY_CFBundleDisplayName: Along the Line
+        # Decision 335: "Use my location" on the real-world picker asks for
+        # one fix while the app is in use; the reason is localized in
+        # Resources/*.lproj/InfoPlist.strings.
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: Your location is used once to move a real-world map's start square near you. It is not sent anywhere.
         INFOPLIST_KEY_UILaunchScreen_Generation: "YES"
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: "YES"
         # Decision 106: a phone plays on its side, as builder games do.

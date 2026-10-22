@@ -194,6 +194,32 @@ final class StationDemandSessionTests: XCTestCase {
         XCTAssertEqual(world.stationDemandPairs(of: alpha), [])
     }
 
+    /// B4 of the #911–#944 review: a station no line links shows its shape
+    /// in today's hours, as GameCore shares a pair's trips: on a weekend
+    /// with weekly demand, the weekend's, with no tide (a home station has
+    /// no 08:00 rush); on a working day, the tide's.
+    func testAStationsShapeOnAWeekendHasNoTide() throws {
+        func flow(onDay day: Int64) throws -> StationFlow {
+            var world = GameWorld(
+                bounds: try WorldBounds(width: 8_192, height: 4_096),
+                economy: GameEconomy(balance: 100_000, costs: testCosts),
+                clock: GameClock(now: GameTime(seconds: day * GameTime.secondsPerDay), speed: .paused)
+            )
+            let alpha = try world.buildStation(named: "Alpha", at: TestLine.centre(1, 0)).id
+            try world.setStationDemand(alpha, to: StationDemand(kind: .residential, dailyTrips: 1_000))
+            world.setWeeklyDemand(true)
+            world.setTidalDemand(true)
+            return try XCTUnwrap(world.stationFlow(of: alpha))
+        }
+        let saturday = try flow(onDay: 5)
+        XCTAssertEqual(saturday.entries, GameWorld.shared(1_000, by: StationDemandKind.residential.departureShape, tidal: true, weekend: true))
+        XCTAssertEqual(saturday.exits, GameWorld.shared(1_000, by: StationDemandKind.residential.arrivalShape, tidal: true, weekend: true))
+        let monday = try flow(onDay: 7)
+        let tide = StationDemand(kind: .residential, dailyTrips: 1_000).departureShape(tidal: true)
+        XCTAssertEqual(monday.entries, GameWorld.shared(1_000, by: tide, tidal: true))
+        XCTAssertLessThan(saturday.entries[8], monday.entries[8], "no 08:00 rush on a Saturday")
+    }
+
     /// The station panel's one pass (``GameWorld/stationRidership(of:)``)
     /// gives what asking GameCore pair by pair gives, on the demo map's
     /// lines and ring, with network routing and with direct trips.

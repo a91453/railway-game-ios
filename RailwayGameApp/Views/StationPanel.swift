@@ -39,6 +39,9 @@ struct StationPanel: View {
         NavigationStack {
             Form {
                 if let station = session.selectedStation {
+                    // Decision 336: a real line on sale through here, above
+                    // everything else.
+                    buyLineSection(station)
                     // Decision 224: the platforms and the weather, first.
                     StationOperationsSection(session: session, station: station.id)
                     // Decision 222: the station's shops.
@@ -142,6 +145,9 @@ struct StationPanel: View {
     private func departureBoardSection(_ station: Station) -> some View {
         let language = session.language
         let board = DepartureBoard(world: session.world, station: station.id)
+        // Decision 334: a train calling here opens the 3D map at its
+        // platform; not in the tutorial, as the map's 3D button.
+        let shows3D = session.tutorial == nil && !session.world.trackPlatforms(of: station.id).isEmpty
         return Section {
             DisclosureGroup(isExpanded: $boardExpanded) {
                 if board.isEmpty {
@@ -156,7 +162,16 @@ struct StationPanel: View {
                         .font(.caption.weight(.bold))
                         .foregroundStyle(Theme.textSecondary)
                     ForEach(direction.rows) { row in
-                        departureRow(row, language: language)
+                        if shows3D, let train = row.train, !row.passes {
+                            departureRow(row, language: language, opens3D: true)
+                                .contentShape(Rectangle())
+                                .onTapGesture { showInThreeD(train, at: board.station) }
+                                .accessibilityAddTraits(.isButton)
+                                .accessibilityHint(Text(verbatim: language.text("Shows the train at its platform in 3D.", "在 3D 看這班車停的月台。")))
+                                .accessibilityAction { showInThreeD(train, at: board.station) }
+                        } else {
+                            departureRow(row, language: language)
+                        }
                     }
                 }
             } label: {
@@ -170,6 +185,18 @@ struct StationPanel: View {
         }
     }
 
+    /// Decision 334: the 3D map over the platform train `train` stops at
+    /// at `station`, flying there with the train ringed; following stops.
+    private func showInThreeD(_ train: TrainID, at station: StationID) {
+        let departure = Map3DNextDeparture(train: train, station: station, in: session.world)
+        guard let opening = departure.opening(in: session.world) else { return }
+        if session.followedTrain != nil { session.stopFollowingTrain() }
+        screen.map3DHandoff = nil
+        screen.map3DOpenedAt = opening
+        screen.map3DDeparture = departure
+        screen.showsMap3D = true
+    }
+
     /// A train on the board in two lines (TestFlight, the station card on
     /// a phone held sideways: in one line the capsule and the minutes left
     /// the train's name and its time a character or two wide, "區間／車",
@@ -178,7 +205,9 @@ struct StationPanel: View {
     /// time, the minutes and the capsule never break; where the line is
     /// short the capsule keeps only its symbol, then gives way, and the
     /// line and the way it goes are cut short first.
-    private func departureRow(_ row: DepartureBoard.Row, language: DisplayLanguage) -> some View {
+    /// `opens3D`: a tap shows it in 3D (decision 334), marked with the 3D
+    /// map's glyph after its minutes.
+    private func departureRow(_ row: DepartureBoard.Row, language: DisplayLanguage, opens3D: Bool = false) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             // Decision 216: the line's badge.
             LineCodeBadge(code: LineBadge.codes(for: session.world.lines)[row.line] ?? "", color: Palette.lineColor(row.line, custom: row.color), size: .small)
@@ -193,6 +222,14 @@ struct StationPanel: View {
                         .foregroundStyle(row.isBoarding ? Theme.primary : Theme.textPrimary)
                         .fixedSize()
                         .accessibilityIdentifier("station.board.row.away")
+                    if opens3D {
+                        Image("Glyph3DMap")
+                            .resizable()
+                            .renderingMode(.template)
+                            .frame(width: 14, height: 14)
+                            .foregroundStyle(Theme.textSecondary)
+                            .accessibilityHidden(true)
+                    }
                 }
                 // Decision 223: the time it is due, the timetable's struck
                 // through when late.
@@ -574,28 +611,37 @@ struct StationPanel: View {
     @ViewBuilder
     private func realStationSection(_ station: Station) -> some View {
         let details = session.realStationDetails(of: station.id)
-        // Decision 315: a real branch line on sale through here.
-        let buyable = session.buyableRealLine(at: station.id)
-        if !details.isEmpty || buyable != nil {
+        if !details.isEmpty {
             Section {
                 ForEach(details, id: \.self) { line in
                     Text(verbatim: line)
                         .font(.footnote)
                 }
-                if let buyable {
-                    Button {
-                        session.offerRealLine(buyable)
-                    } label: {
-                        Label {
-                            Text(verbatim: session.language.text("Buy This Line…", "收購這條線…"))
-                        } icon: {
-                            Image(systemName: "signature")
-                        }
-                    }
-                    .accessibilityIdentifier("station.acquireLine")
-                }
             } header: {
                 Text("Real Station")
+            }
+        }
+    }
+
+    /// Decision 315: a real branch line on sale through here; first in the
+    /// panel (decision 336).
+    @ViewBuilder
+    private func buyLineSection(_ station: Station) -> some View {
+        if let buyable = session.buyableRealLine(at: station.id) {
+            Section {
+                Button {
+                    session.offerRealLine(buyable)
+                } label: {
+                    Label {
+                        Text(verbatim: session.language.text(
+                            "Buy the \(buyable.name(in: session.language))…",
+                            "收購\(buyable.name(in: session.language))…"
+                        ))
+                    } icon: {
+                        Image(systemName: "signature")
+                    }
+                }
+                .accessibilityIdentifier("station.acquireLine")
             }
         }
     }

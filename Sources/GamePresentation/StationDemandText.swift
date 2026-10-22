@@ -303,9 +303,14 @@ extension GameWorld {
         guard entries.allSatisfy({ $0 == 0 }), exits.allSatisfy({ $0 == 0 }) else {
             return StationRidership(flow: StationFlow(entries: entries, exits: exits, isShape: false), pairs: pairs)
         }
+        // B4 of the #911–#944 review: today's hours, as GameCore shares a
+        // pair's trips (`hourly(_:from:to:weekend:tidal:)`): a weekend or
+        // holiday keeps no tide.
+        let weekend = isShapeWeekend
+        let tide = tidalDemand && !weekend
         let shape = StationFlow(
-            entries: Self.shared(demand.dailyTrips, by: demand.departureShape(tidal: tidalDemand), tidal: tidalDemand),
-            exits: Self.shared(demand.dailyTrips, by: demand.arrivalShape(tidal: tidalDemand), tidal: tidalDemand),
+            entries: Self.shared(demand.dailyTrips, by: demand.departureShape(tidal: tide), tidal: tidalDemand, weekend: weekend),
+            exits: Self.shared(demand.dailyTrips, by: demand.arrivalShape(tidal: tide), tidal: tidalDemand, weekend: weekend),
             isShape: true
         )
         return StationRidership(flow: shape, pairs: pairs)
@@ -318,12 +323,26 @@ extension GameWorld {
         stationRidership(of: id).flow
     }
 
+    /// Whether today's demand follows the weekend's hours: with weekly
+    /// demand, on a weekend or a holiday (GameCore's `isDemandWeekend`).
+    var isShapeWeekend: Bool {
+        let day = clock.now.seconds >= 0 ? clock.now.seconds / GameTime.secondsPerDay
+            : -((-clock.now.seconds - 1) / GameTime.secondsPerDay) - 1
+        return weeklyDemand && (StationDemand.isWeekend(day: day) || holiday(onDay: day) != nil)
+    }
+
     /// `trips` shared among the hours in proportion to
     /// ``StationDemand/dayShape`` (``StationDemand/tidalDayShape`` with the
-    /// tide) × `shape`, by largest remainder (ties to the earlier hour), as
-    /// GameCore shares a pair's trips.
-    static func shared(_ trips: Int64, by shape: [Int64], tidal: Bool = false) -> [Int64] {
-        let day = tidal ? StationDemand.tidalDayShape : StationDemand.dayShape
+    /// tide; on a weekend ``StationDemand/weekendShape`` or
+    /// ``StationDemand/tidalWeekendShape``) × `shape`, by largest remainder
+    /// (ties to the earlier hour), as GameCore shares a pair's trips.
+    static func shared(_ trips: Int64, by shape: [Int64], tidal: Bool = false, weekend: Bool = false) -> [Int64] {
+        let day = switch (tidal, weekend) {
+        case (false, false): StationDemand.dayShape
+        case (false, true): StationDemand.weekendShape
+        case (true, false): StationDemand.tidalDayShape
+        case (true, true): StationDemand.tidalWeekendShape
+        }
         let weights = (0..<24).map { day[$0] * shape[$0] }
         let sum = weights.reduce(0, +)
         var shares = weights.map { trips * $0 / sum }

@@ -31,6 +31,11 @@ final class InterfaceMotionTests: XCTestCase {
         XCTAssertTrue((0.2...0.35).contains(MotionRule.turnNorth.seconds))
         XCTAssertEqual(MotionRule.turnNorth.curve, .decelerate)
         XCTAssertNil(MotionRule.turnNorth.reduced, "with Reduce Motion the map faces north at once")
+        // Decision 333: the camera flying to a train, the reference's 1.2 s,
+        // smooth at both ends; with Reduce Motion it is there at once.
+        XCTAssertEqual(MotionRule.cameraFlight.seconds, 1.2)
+        XCTAssertEqual(MotionRule.cameraFlight.curve, .standard)
+        XCTAssertNil(MotionRule.cameraFlight.reduced, "with Reduce Motion the camera is there at once")
     }
 
     /// A small thing pops with a little overshoot; a card, a panel and a
@@ -40,7 +45,7 @@ final class InterfaceMotionTests: XCTestCase {
             guard case .spring(let bounce) = rule.curve else { return XCTFail("\(rule) springs") }
             XCTAssertTrue((0.05...0.25).contains(bounce), "\(rule): a little")
         }
-        for rule in [MotionRule.cardIn, .cardOut, .refuse, .change, .press, .turnNorth] {
+        for rule in [MotionRule.cardIn, .cardOut, .refuse, .change, .press, .turnNorth, .cameraFlight] {
             if case .spring = rule.curve { XCTFail("\(rule) does not spring") }
         }
     }

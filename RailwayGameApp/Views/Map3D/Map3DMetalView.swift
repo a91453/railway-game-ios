@@ -1,3 +1,4 @@
+import GameCore
 import GamePresentation
 import ImageIO
 import MetalKit
@@ -40,6 +41,22 @@ final class Map3DMetalView: MTKView {
     }
 
     var camera = Map3DCamera()
+    /// Decision 333: the train the camera follows, from behind
+    /// (``Map3DFollow``); set with ``follow(_:reduceMotion:)``.
+    private(set) var following: Map3DFollow?
+    /// Decision 333: the camera flying to the follow view (`to` is `nil`)
+    /// or to a still view (`to`), a frame at a time.
+    private var flying: (flight: Map3DFlight, to: Map3DCamera?)?
+    /// When the follow camera last moved, for how far it turns.
+    private var lastFollowStep: CFTimeInterval?
+    /// Decision 334: a flight asked for, its goal worked out at the next
+    /// frame from the camera as laid out (``fly(reduceMotion:to:)``).
+    private var flightAsked: (reduceMotion: Bool, goal: (Map3DCamera) -> Map3DCamera?)?
+    /// Decision 334: the train ringed, asked about on a station's board.
+    var ringed: TrainID?
+    /// Decision 334: called as a flight to a still view lands, for the
+    /// compass.
+    var landed: (@MainActor () -> Void)?
     var lighting = Map3DLighting(minute: 12 * 60)
     /// Decision 277: the day's weather. The first is shown at once; a
     /// later one turns the light over ``Map3DWeather/changeSeconds``.
@@ -325,6 +342,91 @@ final class Map3DMetalView: MTKView {
         camera.viewport = (Float(max(bounds.width, 1)), Float(max(bounds.height, 1)))
     }
 
+    /// Decision 333: follows `follow`'s train from now, flying there over
+    /// ``MotionRule/cameraFlight`` (at once with Reduce Motion) when the
+    /// train or the view changed; `nil` stops following, flying back to
+    /// the map's own tilt over the same place. A pinch's distance
+    /// (``Map3DFollow/scale``) stays while the same train is followed.
+    func follow(_ follow: Map3DFollow?, reduceMotion: Bool) {
+        let rule = MotionRule.cameraFlight.running(reduceMotion: reduceMotion)
+        guard let follow else {
+            guard following != nil else { return }
+            following = nil
+            lastFollowStep = nil
+            var free = camera
+            free.pitch = nil
+            flying = (Map3DFlight(from: camera, began: CACurrentMediaTime(), rule: rule), free)
+            return
+        }
+        guard let current = following, current.train == follow.train else {
+            following = follow
+            ringed = nil
+            flightAsked = nil
+            flying = (Map3DFlight(from: camera, began: CACurrentMediaTime(), rule: rule), nil)
+            return
+        }
+        guard current.view != follow.view else { return }
+        following?.view = follow.view
+        flying = (Map3DFlight(from: camera, began: CACurrentMediaTime(), rule: rule), nil)
+    }
+
+    /// Decision 334: flies to `goal` (worked out from the camera at the
+    /// next frame; `nil` stays) over ``MotionRule/cameraFlight``, at once
+    /// with Reduce Motion, and stays there, the map's own view.
+    func fly(reduceMotion: Bool, to goal: @escaping (Map3DCamera) -> Map3DCamera?) {
+        following = nil
+        lastFollowStep = nil
+        flightAsked = (reduceMotion, goal)
+    }
+
+    /// Decision 333: a finger on the map stops the flight back to the
+    /// map's own view where it is, and the camera tilts as the map's own
+    /// from there.
+    func stopFlyingBack() {
+        guard following == nil, let flying, let still = flying.to else { return }
+        camera.pitch = still.pitch
+        self.flying = nil
+    }
+
+    /// Decision 333: a pinch while following moves the camera in or out.
+    func zoomFollow(by factor: Float) {
+        following = following?.zoomed(by: factor)
+    }
+
+    /// Decision 333: the camera this frame: on its flight, or after the
+    /// followed train, whose front is among `heads`. A train not drawn
+    /// this frame leaves the camera where it is.
+    private func moveCamera(heads: [Map3DTrains.Head], at now: CFTimeInterval) {
+        if let asked = flightAsked {
+            flightAsked = nil
+            if let goal = asked.goal(camera) {
+                let rule = MotionRule.cameraFlight.running(reduceMotion: asked.reduceMotion)
+                flying = (Map3DFlight(from: camera, began: now, rule: rule), goal)
+            }
+        }
+        if let flying, let still = flying.to {
+            // The view as it is laid out now, turned or not.
+            let viewport = camera.viewport
+            camera = flying.flight.camera(toward: still, at: now)
+            camera.viewport = viewport
+            if flying.flight.isOver(at: now) {
+                self.flying = nil
+                landed?()
+            }
+            return
+        }
+        guard let following, let head = heads.first(where: { $0.train == following.train }) else { return }
+        let elapsed = lastFollowStep.map { now - $0 } ?? 0
+        lastFollowStep = now
+        if let flight = flying?.flight {
+            let goal = following.camera(following: head, from: camera, elapsed: 0, turnsAtOnce: true)
+            camera = flight.camera(toward: goal, at: now)
+            if flight.isOver(at: now) { flying = nil }
+        } else {
+            camera = following.camera(following: head, from: camera, elapsed: elapsed)
+        }
+    }
+
     /// Decision 230: draws the trains near the eye with `pack`'s models.
     func useModels(_ pack: Map3DModelPack) {
         let buffers = pack.models.compactMap { makeBuffer($0.vertices) }
@@ -405,6 +507,10 @@ final class Map3DMetalView: MTKView {
         shown.weather = weatherChange?.weather(at: start) ?? .clear
         let sky = shown.background
         clearColor = MTLClearColor(red: Double(sky.x), green: Double(sky.y), blue: Double(sky.z), alpha: 1)
+        // Decision 333: the trains first, so the camera following one
+        // looks at where it is this frame.
+        let frame = trains?(camera.eye)
+        moveCamera(heads: frame?.heads ?? [], at: start)
         let camera = camera
         let matrix = camera.viewProjection
         let uniforms = uniformValues(matrix)
@@ -421,7 +527,6 @@ final class Map3DMetalView: MTKView {
                 visible.append(chunks[index])
             }
         }
-        let frame = trains?(camera.eye)
         trainHeads?(frame?.heads ?? [], camera)
         var trainBoxes: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int, triangles: Int)?
         if let mesh = frame?.boxes, !mesh.isEmpty, let vertices = makeBuffer(mesh.vertices), let indices = makeBuffer(mesh.indices) {

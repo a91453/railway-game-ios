@@ -22,6 +22,11 @@ public struct Map3DCamera: Hashable, Sendable {
     /// 2D map over closer in (decision 313: the 2D map's closest zoom), so
     /// the handed-over map starts straight down and leans from there.
     public var tiltsFrom: Float = Map3DCamera.flatFrom
+    /// Decision 333: a tilt set outright, in radians from straight down,
+    /// in place of the one ``tilt(atDistance:from:)`` gives: a train's
+    /// follow view (``Map3DFollow``) and a flight to one
+    /// (``Map3DFlight``). `nil` tilts by the distance.
+    public var pitch: Float?
 
     public static let nearest: Float = 60
     public static let farthest: Float = 12_000
@@ -46,7 +51,7 @@ public struct Map3DCamera: Hashable, Sendable {
     }
 
     public static func == (a: Map3DCamera, b: Map3DCamera) -> Bool {
-        a.target == b.target && a.distance == b.distance && a.heading == b.heading && a.tiltsFrom == b.tiltsFrom
+        a.target == b.target && a.distance == b.distance && a.heading == b.heading && a.tiltsFrom == b.tiltsFrom && a.pitch == b.pitch
             && a.viewport.width == b.viewport.width && a.viewport.height == b.viewport.height
     }
 
@@ -55,6 +60,7 @@ public struct Map3DCamera: Hashable, Sendable {
         hasher.combine(distance)
         hasher.combine(heading)
         hasher.combine(tiltsFrom)
+        hasher.combine(pitch)
     }
 
     /// The tilt from straight down at `distance`, in radians: 0 from
@@ -77,7 +83,7 @@ public struct Map3DCamera: Hashable, Sendable {
         min(tiltedFrom, max(nearest, flat * 0.45))
     }
 
-    public var tilt: Float { Self.tilt(atDistance: distance, from: tiltsFrom) }
+    public var tilt: Float { pitch ?? Self.tilt(atDistance: distance, from: tiltsFrom) }
 
     /// The level way the view faces, and the way to its right.
     var forward: Map3DPoint { Map3DPoint(sinf(heading), 0, -cosf(heading)) }

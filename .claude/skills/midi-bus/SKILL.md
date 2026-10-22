@@ -18,6 +18,6 @@ tools/midi-bus/rebuild.sh /private/output/midi-bus-2026-10-21
 
 1新增＋4既有對照，5native／5GLB／35透明PNG。共用renderer與封裝器、同尺度車隊與viewer。工具檢查全量native/GLB讀回、PNG雙解碼與hash、viewer互動及八組XCTest；人工看真正產出圖。舊對照的幾何與封裝bytes不得變。
 
-原5%公車池：30%小巴／35%低地板／20%遊覽車／10%中巴／5%原大型；前三款seed選型不變。17m間距、數量密度、cap與道路不改。非GameCore營運功能。公開小型配方／工具／測試／總覽，完整成品與ZIP在私有game-art-previews/docs/art/midi-bus-2026-10-21/。以未合併#945為base的stacked draft PR；不推main、不合併。VERIFIED與UNVERIFIED分開，真機Metal／效能與車門輪子動畫待驗。
+原5%公車池：30%小巴／35%低地板／20%遊覽車／10%中巴／5%原大型；前三款seed選型不變。17m間距、數量密度、cap與道路不改。非GameCore營運功能。公開小型配方／工具／測試／總覽，完整成品與ZIP在私有game-art-previews/docs/art/midi-bus-2026-10-21/。PR一律以main為base；依賴的PR還沒合併就等它合併，或把需要的部分一起帶進來（#942、#949、#957曾合進過時分支）；不推main、不合併。VERIFIED與UNVERIFIED分開，真機Metal／效能與車門輪子動畫待驗。
 
 作者流線感回饋後：車頂用縱向loft與橫向圓肩，前窗由直立逐段彎入屋頂，深色窗帶連到前角；塗色面片必須凸分片，不能把有腰線折點的凹多邊形直接fan，否則第一角決定的normal會讓窗帶反向消失。目的地牌從真正的roof三角面裁出並沿法線微移，不能對非共面的quad做bilinear後假定仍在平面上。保留同角度前後對照，舊四車不改。

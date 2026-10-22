@@ -667,7 +667,7 @@ final class TutorialSessionTests: XCTestCase {
             "Tap Lines", "Tap one station, then the other", "Tap ✓ to create the line",
             "Tap Buy … and Start Service", "Tap \u{25B6}\u{FE0E} to run time", "Wait for your first fares",
             "Tap Lines to check your line", "Read your line's card",
-            "Tap one of your stations", "Tap Ridership to see who rides", "That's the tour",
+            "Tap one of your stations", "Tap Station… to see who rides", "That's the tour",
         ])
         XCTAssertEqual(steps.map { $0.title(in: .traditionalChinese) }, [
             "點「建設」", "縮小地圖看看城鎮", "點起點，再點終點", "按 ✓ 蓋好軌道",
@@ -676,7 +676,7 @@ final class TutorialSessionTests: XCTestCase {
             "點「路線」", "點一座車站，再點另一座", "按 ✓ 建立路線",
             "按「購買…列並開始營運」", "按 \u{25B6}\u{FE0E} 讓時間走", "等第一筆車資進帳",
             "點「路線」看營運收支", "看懂路線卡",
-            "點你的一座車站", "點「客源」看誰在搭車", "導覽結束",
+            "點你的一座車站", "點「車站…」看誰在搭車", "導覽結束",
         ])
         XCTAssertEqual(steps.map(\.chapter), [
             .track, .track, .track, .track, .stations, .stations, .stations, .stations, .stations, .stations,
