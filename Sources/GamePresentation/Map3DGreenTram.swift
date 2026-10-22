@@ -8,7 +8,7 @@ import Foundation
 public enum Map3DGreenTram {
     public static let sectionLength: Float = 10.88
     public static let gap: Float = 0.16
-    public static let width: Float = 2.684 // widest door trim, not just shell
+    public static let width: Float = 2.686 // door marker is widest, not just shell
     public static let bodyHeight: Float = 3.18
     public static let body = Map3DPalette.crown
     public static let roof = Map3DPalette.tileWhite

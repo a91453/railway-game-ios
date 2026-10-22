@@ -53,6 +53,6 @@ try {
   return out;
  },[all.native,comparison.native]);
  for(const [i,data] of matched.entries())writeFileSync(resolve(root,'previews',i?'scale-existing.png':'scale-new.png'),Buffer.from(data.split(',')[1],'base64'));
- await sheet('style-comparison.png','<h1>專案輕軌風格｜同公尺尺度、同鏡頭</h1><div class="row"><div><img src="previews/scale-new.png"><p>本次三節低地板電車 · 32.985 m</p></div><div><img src="previews/scale-existing.png"><p>既有 SceneKit 高雄輕軌示意車 · '+(comparison.maximum[0]-comparison.minimum[0]).toFixed(2)+' m</p></div></div><p>以完整編組的相機中心與範圍固定兩者，模型沒有個別放大。</p>');
+ await sheet('style-comparison.png','<h1>專案輕軌風格｜同公尺尺度、同鏡頭</h1><div class="row"><div><img src="previews/scale-new.png"><p>本次三節低地板電車 · '+(all.maximum[0]-all.minimum[0]).toFixed(2)+' m</p></div><div><img src="previews/scale-existing.png"><p>既有 SceneKit 高雄輕軌示意車 · '+(comparison.maximum[0]-comparison.minimum[0]).toFixed(2)+' m</p></div></div><p>以完整編組的相機中心與範圍固定兩者，模型沒有個別放大。</p>');
  console.log('Rendered 35 seven-direction PNGs and a real-metre fixed-camera style comparison.');
 } finally {if(browser)await browser.close();server.close();unlinkSync(resolve(root,'_render.html'));}
