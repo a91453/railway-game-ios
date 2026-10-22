@@ -10,7 +10,7 @@ public enum Map3DGreenCommuter {
     public static let roofHeight: Float = 3.63
     public static let green = Map3DPalette.crown
     public static let cream = Map3DPalette.tileWhite
-    public static let roof = Map3DPalette.roof
+    public static let roof = Map3DPalette.tileWhite
     public static let glass = Map3DTrainStyle.glass
 
     public enum Unit: String, CaseIterable, Sendable { case leading, trailing }
@@ -34,6 +34,8 @@ extension StationKitBuilder {
         let green = Map3DGreenCommuter.green
         let cream = Map3DGreenCommuter.cream
         let grey = Map3DGreenCommuter.roof
+        let pale = Map3DPalette.park
+        let skirt = Map3DColor.shaded(green, 0.79)
         let glass = Map3DGreenCommuter.glass
         let ink = Self.ink
         let steel = Self.steel
@@ -65,6 +67,7 @@ extension StationKitBuilder {
                 switch i {
                 case 2,12: color = cream
                 case 4...10: color = grey
+                case 0,14,15: color = skirt
                 default: color = green
                 }
                 let a = rings[k][i], b = rings[k][j]
@@ -101,12 +104,12 @@ extension StationKitBuilder {
         // cab access door is separate and only at the outer driving end.
         for side: Float in [-1,1] {
             box(0,3.02,side*1.448,17.12,0.020,0.075,green)
-            box(0,1.70,side*1.450,18.05,0.014,0.045,green)
-            box(0,0.80,side*1.434,18.25,0.014,0.075,Map3DColor.shaded(green,0.82))
+            box(0,1.70,side*1.450,18.05,0.014,0.045,pale)
+            box(0,0.80,side*1.434,18.25,0.014,0.16,skirt)
             let windows: [(Float,Float)] = [(-8.02,1.25),(-3.50,1.38),(-1.70,1.38),
                                              (1.70,1.38),(3.50,1.38),(7.72,1.26)]
             for (x,width) in windows {
-                box(x,1.94,side*1.455,width+0.07,0.012,0.96,cream)
+                box(x,1.94,side*1.455,width+0.11,0.012,0.96,pale)
                 box(x,1.99,side*1.464,width,0.008,0.86,ink)
                 box(x,2.02,side*1.470,width-0.05,0.006,0.81,glass)
             }
@@ -140,6 +143,7 @@ extension StationKitBuilder {
             face(p,inside:centre,color:color)
         }
         panel(1.63,3.03,-1.29,1.29,0.010,cream)
+        panel(0.88,1.04,-1.18,1.18,0.020,skirt)
         for side: Float in [-1,1] {
             let z0: Float = side < 0 ? -1.15 : 0.06
             let z1: Float = side < 0 ? -0.06 : 1.15
@@ -159,7 +163,7 @@ extension StationKitBuilder {
         // Shallow roof inspection covers seen in both oblique references.
         for x: Float in [-7.60,-5.25,-2.90,-0.55,1.80,4.15,6.50] {
             for z: Float in [-0.23,0.23] {
-                box(x,3.628,z,0.45,0.26,0.018,Map3DColor.shaded(grey,0.86))
+                box(x,3.628,z,0.45,0.26,0.018,Map3DPalette.roof)
             }
         }
     }
