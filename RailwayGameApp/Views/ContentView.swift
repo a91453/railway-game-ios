@@ -345,7 +345,7 @@ struct ContentView: View {
             let isOpen = sidePanel == nil && ControlDetails.isOpen(
                 session, choice: detailsChoice, foldsWhileDrawing: verticalSizeClass == .compact
             )
-            // Decisions 300 and 349: on a phone on its side the map's
+            // Decisions 300 and 350: on a phone on its side the map's
             // coverage, 3D and zoom buttons stand under the panel or the
             // details card rather than beside it in the middle of the map;
             // the panel or card ends above them where the credits' band has

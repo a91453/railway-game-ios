@@ -1,6 +1,6 @@
 import XCTest
 
-/// Decision 349 (the owner, 2026-10-22): the map's coverage, 3D and zoom
+/// Decision 350 (the owner, 2026-10-22): the map's coverage, 3D and zoom
 /// buttons stand the same way however the device is held. Where they stand
 /// for each way is `MapFocusTests` on Linux; this checks that they show and
 /// a finger reaches them. Full lane only (decision 199). Run by hand with

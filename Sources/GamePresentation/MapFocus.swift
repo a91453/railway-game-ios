@@ -59,7 +59,7 @@ public enum MapCornerRow {
     }
 }
 
-/// Decision 349: where the map's bottom-trailing buttons (coverage, 3D,
+/// Decision 350: where the map's bottom-trailing buttons (coverage, 3D,
 /// zoom) stand, one rule however the device is held. On a phone on its
 /// side (a compact height; an iPhone is never held upright) they stand in
 /// a row of their own under whatever covers the map's trailing side, the

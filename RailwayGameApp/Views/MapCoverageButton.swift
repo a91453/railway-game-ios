@@ -5,7 +5,7 @@ import SwiftUI
 /// the catchment coverage layer, another (or leaving the tool) puts back
 /// the layer there was. Decision 311: the building layer (where people are
 /// or coverage, ``BuildingLayerShortcut``) shows as building begins, and
-/// this puts it away or brings it back. Decision 349: always beside the 3D
+/// this puts it away or brings it back. Decision 350: always beside the 3D
 /// button, so it shows the layer while only looking at the map too. Round
 /// glass beside the 3D and zoom buttons, framed in teal while on, as the
 /// quick layers are.

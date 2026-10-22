@@ -30,7 +30,7 @@ final class MapFocusTests: XCTestCase {
         XCTAssertEqual(MapCornerRow.panelRaise(underPanel: false, inBand: false), 0)
     }
 
-    /// Decision 349: where the coverage, 3D and zoom buttons stand, the
+    /// Decision 350: where the coverage, 3D and zoom buttons stand, the
     /// same rule however the device is held (the owner, 2026-10-22: on an
     /// iPad held upright they were gone; on a phone on its side they stood
     /// in the middle of the map beside the building card, under the lines

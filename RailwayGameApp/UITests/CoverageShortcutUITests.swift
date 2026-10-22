@@ -4,7 +4,7 @@ import XCTest
 /// at once over the map, the switch beside the zoom buttons puts it away
 /// and brings it back, its legend switches to coverage and its share of
 /// residents and jobs, and leaving the tool puts the map back. Decision
-/// 349: the switch stands beside the 3D button while only looking at the
+/// 350: the switch stands beside the 3D button while only looking at the
 /// map too. Full lane
 /// only (decision 199): the rules and the numbers are
 /// `StationPotentialMapTests` and `CoverageSummaryTests` on Linux; this

@@ -278,7 +278,7 @@ struct MapView: View {
             // folded control card the edge is free.
             let besideTrailing = viewport.height - screenEdges.bottom - bottomTrailingHeight
                 < screenEdges.top + trailingInsetDepth
-            // Decisions 123 and 349: beside a card or panel that leaves the
+            // Decisions 123 and 350: beside a card or panel that leaves the
             // map too narrow for them (an iPad's narrowest split view) the
             // zoom buttons give way, as the overview map does, and a pinch
             // still zooms. Beside it: measured with their own fixed height
@@ -1781,7 +1781,7 @@ struct MapView: View {
     @ViewBuilder
     private func cornerButtons(camera: PlanCamera, limit: Double?, place: MapCornerButtons, compactReach: CGFloat? = nil) -> some View {
         HStack(alignment: .top, spacing: compactReach == nil ? 0 : 6) {
-            // Decisions 292, 311 and 349: the building layer, shown or put
+            // Decisions 292, 311 and 350: the building layer, shown or put
             // away with one tap, and this game's 3D map (decision 229,
             // later), always together beside the zoom buttons.
             if place.shows3DAndCoverage(tutorialRuns: session.tutorial != nil) {
