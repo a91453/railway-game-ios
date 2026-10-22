@@ -57,6 +57,8 @@ public struct Map3DModelPack: Sendable {
         // Separate high-floor two-car commuter set from the low-floor tram.
         models += Map3DGreenCommuter.Unit.allCases.map { Map3DGreenCommuter.model($0) }
         models.append(Map3DGreenCommuter.formation())
+        models += Map3DThreeCarUrban.Unit.allCases.map { Map3DThreeCarUrban.model($0) }
+        models.append(Map3DThreeCarUrban.formation())
         self.models = models
     }
 

@@ -811,6 +811,7 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 
 | 項目 | 出處 |
 | --- | --- |
+| 新參考三節都市軌道車（Codex，#987；靜態素材，尚未綁營運選型） | [本批外觀／技術驗收及私有素材連結](art/three-car-urban-2026-10-22/README.md)；[重建、單元組裝與 viewer](../tools/three-car-urban/README.md)。三單元共 12 軸，每側兩組門；兩庫 draft PR，真機 Metal／效能未驗證 |
 | 車輛素材跨 session 生成交接（原生配方、七向素材、驗證與兩庫 draft PR；從本批圓弧中巴往後續作） | [可直接複製給新 Codex／Claude 的完整 prompt](art/VEHICLE_ASSET_HANDOFF_PROMPT.md)；依當時 #231 與 PR merged 狀態選 base |
 | 移軸（tilt-shift）效果 | 決策 229 |
 | 路塹被 64 m 的地面格蓋住，地面沒跟著軌道切開 | 決策 229、231 |
