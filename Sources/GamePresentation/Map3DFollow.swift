@@ -41,6 +41,9 @@ public struct Map3DFollow: Hashable, Sendable {
         case back
         /// Above and behind it (`topback`).
         case aboveBack
+        /// Decision 337: from the cab, looking ahead down the line (the
+        /// owner's OpenWorld reference's `railDriverPose`).
+        case cab
 
         /// The tilt from straight down, in radians: Mini Tokyo 3D's pitch,
         /// 85° and 60°.
@@ -48,6 +51,7 @@ public struct Map3DFollow: Hashable, Sendable {
             switch self {
             case .back: 85 * .pi / 180
             case .aboveBack: 60 * .pi / 180
+            case .cab: .pi / 2 - Map3DFollow.cabLookDown
             }
         }
 
@@ -55,6 +59,7 @@ public struct Map3DFollow: Hashable, Sendable {
             switch self {
             case .back: language.text("Behind", "後方")
             case .aboveBack: language.text("Above", "上後方")
+            case .cab: language.text("Cab", "駕駛室")
             }
         }
     }
@@ -122,6 +127,25 @@ public struct Map3DFollow: Hashable, Sendable {
         atan2f(forward.x, -forward.z)
     }
 
+    /// Decision 337: the cab view, after the owner's OpenWorld reference
+    /// (`OpenWorld/reference_snapshot/play/src/game/rail-camera-pose.js`
+    /// `railDriverPose`, `world/train-model-specs.js`, `game/maglev-view.js`
+    /// `applyCamera`). The eye rides fixed to the front car (turned with it
+    /// at once, no easing), looking down the line `driverLook`
+    /// [0, −0.04, 2]: 1.15° under level.
+    public static let cabLookDown: Float = atanf(0.04 / 2)
+    /// The reference's lens seated in a train, 68° top to bottom.
+    public static let cabLens: Float = 68 * .pi / 180
+    /// The eye over the rail: the reference's `driverEye` stands 0.04 m
+    /// under the car body's middle (台鐵 −0.04, 高鐵 +0.05); the game's
+    /// body runs from 0.3 m over the rail to ``Map3DTrains/carHeight``.
+    public static let cabEyeHeight: Float = 0.3 + (Map3DTrains.carHeight - 0.3) / 2 - 0.04
+    /// How far ahead of the train's nose the eye stands. The reference
+    /// puts it in the cab (台鐵 2 m behind the nose) and hides that car's
+    /// body for a cab inside; the game's cars are closed boxes with no
+    /// inside, so the eye stands just in front of the windscreen.
+    public static let cabLead: Float = 0.6
+
     /// The camera following the train whose front is at `head`, `elapsed`
     /// seconds after `camera`: looking at the rail under the front, from
     /// the view's tilt and distance, turned after the train from where
@@ -129,6 +153,19 @@ public struct Map3DFollow: Hashable, Sendable {
     public func camera(following head: Map3DTrains.Head, from camera: Map3DCamera, elapsed: Double,
                        turnsAtOnce: Bool = false) -> Map3DCamera {
         var next = camera
+        if view == .cab {
+            // From the eye, the target the nearest distance ahead down the
+            // look; the eye stays where it is at any distance, so a pinch
+            // does nothing.
+            next.heading = Self.heading(of: head.forward)
+            next.pitch = view.tilt
+            next.lens = Self.cabLens
+            next.distance = Map3DCamera.nearest
+            let eye = head.nose + head.forward * Self.cabLead + Map3DPoint(0, Self.cabEyeHeight, 0)
+            next.target = eye + next.forward * (next.distance * sinf(view.tilt)) - Map3DPoint(0, next.distance * cosf(view.tilt), 0)
+            return next
+        }
+        next.lens = nil
         next.target = head.rail
         next.distance = min(max(Self.distance(viewportHeight: camera.viewport.height) * scale, Map3DCamera.nearest), Map3DCamera.farthest)
         next.pitch = view.tilt
@@ -182,6 +219,10 @@ public struct Map3DFlight: Hashable, Sendable {
         camera.target = start.target + (goal.target - start.target) * e
         camera.heading = Map3DCamera.turnFromNorth(start.heading + Map3DCamera.turnFromNorth(goal.heading - start.heading) * e)
         camera.pitch = start.tilt + (goal.tilt - start.tilt) * e
+        // Decision 337: into or out of the cab view's wider lens.
+        if start.lens != nil || goal.lens != nil {
+            camera.lens = start.fieldOfViewTall + (goal.fieldOfViewTall - start.fieldOfViewTall) * e
+        }
         // The distance by its logarithm, as the reference's zoom, rising by
         // `dip` over the middle when the way is longer than the view.
         let from = log2f(start.distance), to = log2f(goal.distance)

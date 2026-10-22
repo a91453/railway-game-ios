@@ -27,6 +27,10 @@ public struct Map3DCamera: Hashable, Sendable {
     /// follow view (``Map3DFollow``) and a flight to one
     /// (``Map3DFlight``). `nil` tilts by the distance.
     public var pitch: Float?
+    /// Decision 337: the view's height as an angle, set outright in place
+    /// of ``fieldOfView``: the cab view's wider lens (``Map3DFollow``).
+    /// `nil` is ``fieldOfView``.
+    public var lens: Float?
 
     public static let nearest: Float = 60
     public static let farthest: Float = 12_000
@@ -52,6 +56,7 @@ public struct Map3DCamera: Hashable, Sendable {
 
     public static func == (a: Map3DCamera, b: Map3DCamera) -> Bool {
         a.target == b.target && a.distance == b.distance && a.heading == b.heading && a.tiltsFrom == b.tiltsFrom && a.pitch == b.pitch
+            && a.lens == b.lens
             && a.viewport.width == b.viewport.width && a.viewport.height == b.viewport.height
     }
 
@@ -61,6 +66,7 @@ public struct Map3DCamera: Hashable, Sendable {
         hasher.combine(heading)
         hasher.combine(tiltsFrom)
         hasher.combine(pitch)
+        hasher.combine(lens)
     }
 
     /// The tilt from straight down at `distance`, in radians: 0 from
@@ -84,6 +90,9 @@ public struct Map3DCamera: Hashable, Sendable {
     }
 
     public var tilt: Float { pitch ?? Self.tilt(atDistance: distance, from: tiltsFrom) }
+
+    /// The view's height as an angle: ``lens``, or ``fieldOfView``.
+    public var fieldOfViewTall: Float { lens ?? Self.fieldOfView }
 
     /// The level way the view faces, and the way to its right.
     var forward: Map3DPoint { Map3DPoint(sinf(heading), 0, -cosf(heading)) }
@@ -114,7 +123,7 @@ public struct Map3DCamera: Hashable, Sendable {
 
     public var projection: Map3DMatrix {
         let aspect = max(viewport.width, 1) / max(viewport.height, 1)
-        let f = 1 / tanf(Self.fieldOfView / 2)
+        let f = 1 / tanf(fieldOfViewTall / 2)
         let (near, far) = depthRange
         return Map3DMatrix(columns: [
             f / aspect, 0, 0, 0,
@@ -205,7 +214,7 @@ public struct Map3DCamera: Hashable, Sendable {
 
     /// Metres on the ground per point on the screen at the target.
     public var metresPerPoint: Float {
-        2 * distance * tanf(Self.fieldOfView / 2) / max(viewport.height, 1)
+        2 * distance * tanf(fieldOfViewTall / 2) / max(viewport.height, 1)
     }
 
     /// The camera moved as a finger drags the map `dx`, `dy` points (right
