@@ -91,6 +91,37 @@ final class Map3DOpenHereTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(frame.region.maxX, built.maxX)
     }
 
+    /// Nothing built near: a scene round one focus covers only the margin
+    /// round it, so a focus in the same square kilometres off is not in
+    /// it, and the cache builds anew; the same focus, or one near it, is.
+    func testASceneRoundAnotherFocusInTheSameSquareHoldsItOnlyWhenItCoversIt() throws {
+        let world = GameWorld.newGame(anchor: try XCTUnwrap(GeoAnchor(latitudeDegrees: 25.0478, longitudeDegrees: 121.5170)))
+        let map = WorldRegion(bounds: world.bounds)
+        let side = Map3DScene.reach / 2 * Self.metre
+        let corner = (x: ((map.minX + map.maxX) / 2 / side).rounded(.down) * side, y: ((map.minY + map.maxY) / 2 / side).rounded(.down) * side)
+        let first = (x: corner.x + 100 * Self.metre, y: corner.y + 100 * Self.metre)
+        let far = (x: corner.x + 2_900 * Self.metre, y: corner.y + 2_900 * Self.metre)
+        XCTAssertEqual(Map3DScene.FocusArea(x: first.x, y: first.y), Map3DScene.FocusArea(x: far.x, y: far.y), "the same square")
+        let region = Map3DScene.region(world: world, focus: first)
+        XCTAssertFalse(region.minX <= far.x && far.x <= region.maxX, "off the scene")
+        XCTAssertFalse(Map3DScene.holds(far, in: region, world: world))
+        XCTAssertTrue(Map3DScene.holds(first, in: region, world: world))
+        XCTAssertTrue(Map3DScene.holds((x: first.x + 500 * Self.metre, y: first.y), in: region, world: world))
+        XCTAssertTrue(Map3DScene.holds(nil, in: region, world: world))
+        // Its own region holds the far focus.
+        XCTAssertTrue(Map3DScene.holds(far, in: Map3DScene.region(world: world, focus: far), world: world))
+    }
+
+    /// At the map's edge the scene stops where the map does, and still
+    /// holds its focus.
+    func testASceneAtTheMapsEdgeHoldsItsFocus() throws {
+        let world = GameWorld.newGame(anchor: try XCTUnwrap(GeoAnchor(latitudeDegrees: 25.0478, longitudeDegrees: 121.5170)))
+        let map = WorldRegion(bounds: world.bounds)
+        let focus = (x: map.maxX, y: map.minY)
+        XCTAssertTrue(Map3DScene.holds(focus, in: Map3DScene.region(world: world, focus: focus), world: world))
+        XCTAssertTrue(Map3DScene.holds((x: map.maxX + 1_000 * Self.metre, y: map.minY), in: Map3DScene.region(world: world, focus: focus), world: world))
+    }
+
     func testAFocusAFewKilometresOffBuildsAnew() {
         let metre = Self.metre
         let a = Map3DScene.FocusArea(x: 1_000 * metre, y: 1_000 * metre)

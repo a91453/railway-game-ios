@@ -215,6 +215,8 @@ final class Map3DSceneCache {
     private var key: Map3DSceneKey?
     private weak var game: GameSession?
     private var building: Task<Map3DScene, Never>?
+    /// What the scene built or building covers.
+    private var region: WorldRegion?
     private var memoryWarning: NSObjectProtocol?
 
     private init() {
@@ -230,11 +232,13 @@ final class Map3DSceneCache {
         key = nil
         game = nil
         building = nil
+        region = nil
     }
 
     /// Starts building `session`'s scene round `focus` (decision 313,
     /// later: the point the 2D map looks at), unless it is built or
-    /// building round a point near it (``Map3DScene/FocusArea``).
+    /// building round a point near it (``Map3DScene/FocusArea``) and holds
+    /// it (``Map3DScene/holds(_:in:world:)``).
     /// Decision 314: its lines' bands in `palette`, the player's.
     func prepare(for session: GameSession, focus: (x: Double, y: Double)?, palette: LinePalette) {
         _ = task(for: session, focus: focus, palette: palette)
@@ -246,7 +250,9 @@ final class Map3DSceneCache {
 
     private func task(for session: GameSession, focus: (x: Double, y: Double)?, palette: LinePalette) -> Task<Map3DScene, Never> {
         let key = Map3DSceneKey(world: session.world, hasHeights: session.heights != nil, hasRailways: session.railways != nil, focus: focus, palette: palette)
-        if key == self.key, game === session, let building { return building }
+        if key == self.key, game === session, let building, let region, Map3DScene.holds(focus, in: region, world: session.world) {
+            return building
+        }
         let world = session.world
         // The ground the world has not read yet, from the heights file,
         // so the blocks it has read do not stand up as cliffs.
@@ -268,6 +274,7 @@ final class Map3DSceneCache {
         self.key = key
         game = session
         building = task
+        region = Map3DScene.region(world: world, focus: focus)
         return task
     }
 }
