@@ -90,7 +90,7 @@ final class Map3DRealTrainsTests: XCTestCase {
         let stretch = stride(from: -1_000.0, through: 1_000, by: 50).map { x in
             (point: WorldVector(x: origin.x + x * metre, y: origin.y), km: (x + 1_000) / 1_000)
         }
-        let track = try XCTUnwrap(builder.realTrack(stretch, system: "tra_sched", structures: nil, frame: frame, clearOf: player))
+        let track = try XCTUnwrap(builder.realTrack(.init(points: stretch, core: 0...2), system: "tra_sched", structures: nil, frame: frame, clearOf: player))
         XCTAssertEqual(try XCTUnwrap(track.km.first), 0, accuracy: 1e-9)
         XCTAssertEqual(try XCTUnwrap(track.km.last), 2, accuracy: 1e-6)
         XCTAssertEqual(track.points.count, 251, "every 8 m")
