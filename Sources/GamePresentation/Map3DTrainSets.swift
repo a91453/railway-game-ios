@@ -91,7 +91,8 @@ public struct Map3DTrainSet: Sendable {
             // two-car EMU, its two cab units as they are.
             greenCommuter("greenCommuter"),
             // Decision 331, fourth: a three-car commuter as the three-car
-            // urban EMU, its three units as they are.
+            // urban EMU, its three units as they are; in the train pack
+            // (decision 338).
             threeCarUrban("threeCarUrban"),
         ]
     }()
@@ -126,12 +127,21 @@ public struct Map3DTrainSet: Sendable {
     /// train's key is always the express's), and one or two cars are a
     /// DR1000 railcar, more a DR3100 set; decision 331, later: a two-car
     /// commuter EMU of no type is the green two-car EMU, a three-car one
-    /// the three-car urban EMU.
-    static func set(forKey key: String, count: Int) -> Map3DTrainSet? {
-        if key == "dieselExpress", count <= 2 { return byKey["dieselRailcar"] }
-        if key == "", count == 2 { return byKey["greenCommuter"] }
-        if key == "", count == 3 { return byKey["threeCarUrban"] }
-        return named(key)
+    /// the three-car urban EMU. Decision 338: a set in `locked` (the train
+    /// pack's, until it is unlocked) is drawn as it was before it.
+    static func set(forKey key: String, count: Int, locked: Set<String> = []) -> Map3DTrainSet? {
+        let set: Map3DTrainSet?
+        if key == "dieselExpress", count <= 2 {
+            set = byKey["dieselRailcar"]
+        } else if key == "", count == 2 {
+            set = byKey["greenCommuter"]
+        } else if key == "", count == 3 {
+            set = byKey["threeCarUrban"]
+        } else {
+            set = named(key)
+        }
+        guard let set, locked.contains(set.key) else { return set }
+        return named(key).flatMap { locked.contains($0.key) ? nil : $0 }
     }
 
     /// The performances that are the same trains as a type with a set
