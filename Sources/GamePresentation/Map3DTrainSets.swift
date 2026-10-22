@@ -87,6 +87,9 @@ public struct Map3DTrainSet: Sendable {
                          face: 0xE89A27),
             // Decision 331: the light metro as the green low-floor tram.
             lowFloorTram("greenTram"),
+            // Decision 331, later: a two-car commuter as the green
+            // two-car EMU, its two cab units as they are.
+            greenCommuter("greenCommuter"),
         ]
     }()
 
@@ -118,9 +121,11 @@ public struct Map3DTrainSet: Sendable {
     /// The set of a `count`-car train of `key`: the diesel railcar's
     /// performance runs as the diesel express's (the same curves, so a
     /// train's key is always the express's), and one or two cars are a
-    /// DR1000 railcar, more a DR3100 set.
+    /// DR1000 railcar, more a DR3100 set; decision 331, later: a two-car
+    /// commuter EMU of no type is the green two-car EMU.
     static func set(forKey key: String, count: Int) -> Map3DTrainSet? {
         if key == "dieselExpress", count <= 2 { return byKey["dieselRailcar"] }
+        if key == "", count == 2 { return byKey["greenCommuter"] }
         return named(key)
     }
 
@@ -213,6 +218,22 @@ public struct Map3DTrainSet: Sendable {
         }
     }
 
+    /// Decision 331, later: #961's two units, the leading one's cab at its
+    /// front and the trailing one's at its back, their lamps lit over the
+    /// units' white lamp blocks.
+    static func greenCommuter(_ key: String) -> Map3DTrainSet {
+        Map3DTrainSet(key: key) {
+            func unit(_ unit: Map3DGreenCommuter.Unit, lamps x: Float, colour: UInt32) -> Map3DModelPack.Model {
+                var builder = StationKitBuilder()
+                builder.add(Map3DGreenCommuter.model(unit), at: .zero)
+                builder.cabLamps(atX: x, colour: colour, height: 1.26, across: 0.93, width: 0.30, tall: 0.16)
+                return .flat(named: key, from: builder.mesh)
+            }
+            let leading = unit(.leading, lamps: 9.69, colour: Map3DTrainStyle.headlamp)
+            return Cars(head: leading, middle: leading, tail: unit(.trailing, lamps: -9.69, colour: Map3DPalette.lantern), single: nil)
+        }
+    }
+
     /// A coach of the scene kit's locomotive-hauled subjects in `livery`'s
     /// colours: its body below and above, the stripe across the windows.
     struct Coach {
@@ -260,9 +281,14 @@ public struct Map3DTrainSet: Sendable {
 extension StationKitBuilder {
     /// The tram's two lamps lit at `x`.
     fileprivate mutating func tramLamps(atX x: Float, colour: UInt32) {
-        for z: Float in [-0.77, 0.77] {
+        cabLamps(atX: x, colour: colour, height: 0.88, across: 0.77, width: 0.24, tall: 0.13)
+    }
+
+    /// Two lit lamps `across` either side of the middle, `height` up.
+    fileprivate mutating func cabLamps(atX x: Float, colour: UInt32, height: Float, across: Float, width: Float, tall: Float) {
+        for z in [-across, across] {
             let start = mesh.vertices.count
-            box(x, 0.88, z, 0.02, 0.24, 0.13, colour)
+            box(x, height, z, 0.02, width, tall, colour)
             mesh.makeGlowing(from: start)
         }
     }
