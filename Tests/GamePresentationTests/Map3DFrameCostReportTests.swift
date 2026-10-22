@@ -216,7 +216,8 @@ final class Map3DFrameCostReportTests: XCTestCase {
     /// screenshot): of the city's lots round Taipei Main Station, how many
     /// stand, and how many the real map's roads, water and parks take
     /// (decision 234), with no real buildings there (decision 239 has only
-    /// Kaohsiung and Taichung).
+    /// Kaohsiung and Taichung); since decision 345, how big each building
+    /// is drawn in the room beside its roads.
     func testTaipeiLots() throws {
         guard ProcessInfo.processInfo.environment["MAP3D_FRAME_REPORT"] != nil else { throw XCTSkip("Set MAP3D_FRAME_REPORT=1.") }
         let world = GameWorld.newGame(anchor: GeoAnchor(latitudeDegrees: 25.0478, longitudeDegrees: 121.5170)!)
@@ -229,15 +230,29 @@ final class Map3DFrameCostReportTests: XCTestCase {
         let taken = builder.addBaseMap(real)
         let lots = CitySkyline(world: world).lots(in: region)
         let built = lots.filter { !$0.isOpenGround }
-        let free = built.filter { !taken.contains(Map3DScene.ChunkKey(column: $0.column, row: $0.row)) }
+        let pieces = builder.roadPieces(near: taken.byRoads)
+        // Decision 345: the side each lot's building is drawn at: the
+        // lot's own, the room beside its roads, or none (water, a park,
+        // or too little room).
+        func drawn(_ lot: CitySkyline.Lot) -> Int? {
+            let key = Map3DScene.ChunkKey(column: lot.column, row: lot.row), side = Int(lot.side / WorldCoordinate.unitsPerMetre)
+            if taken.whole.contains(key) { return nil }
+            guard taken.byRoads.contains(key) else { return side }
+            return builder.roomBesideRoads(column: lot.column, row: lot.row, side: side, in: pieces[key] ?? [])?.side
+        }
+        let whole = built.filter { drawn($0) == Int($0.side / WorldCoordinate.unitsPerMetre) }
+        let left = built.filter { drawn($0) != nil }
         let areas = CityTileArea.areas(in: Self.baseMap.appendingPathComponent("city")).map(\.id)
         print("Taipei: cell \(Land.cellLength / WorldCoordinate.unitsPerMetre) m; \(lots.count) lots in the scene, \(built.count) with buildings, "
-            + "\(free.count) left once the real roads, water and parks take theirs (\(taken.count) cells taken); real building areas: \(areas)")
+            + "\(left.count) drawn once the real roads, water and parks take theirs, \(whole.count) at their full side "
+            + "(\(taken.whole.count) cells taken whole, \(taken.byRoads.count) reached by roads); real building areas: \(areas)")
+        var sides: [Int: Int] = [:]
+        for lot in built { sides[drawn(lot) ?? 0, default: 0] += 1 }
+        print("  lots by the side drawn (m; 0 none): " + sides.keys.sorted(by: >).map { "\($0): \(sides[$0]!)" }.joined(separator: ", "))
         var byDensity: [Int: (all: Int, left: Int)] = [:]
         for lot in built {
-            let left = taken.contains(Map3DScene.ChunkKey(column: lot.column, row: lot.row)) ? 0 : 1
             byDensity[lot.density, default: (0, 0)].all += 1
-            byDensity[lot.density, default: (0, 0)].left += left
+            byDensity[lot.density, default: (0, 0)].left += drawn(lot) == nil ? 0 : 1
         }
         for density in byDensity.keys.sorted() { print("  density \(density): \(byDensity[density]!.all) lots, \(byDensity[density]!.left) left") }
     }
