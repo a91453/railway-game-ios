@@ -35,6 +35,7 @@ final class TrafficSpeedTests: XCTestCase {
                 if let free = world.path(from: position, toStation: station, length: candidate.length, avoiding: blocked),
                    overflow || free.distance <= limit {
                     let forbidden = world.opposingServiceTraversals(for: candidate, memo: &memo).subtracting(world.terminusTraversals(along: free, to: station))
+                        .subtracting(world.firstCallTraversals(along: free, to: station, parts: world.opposingParts(for: candidate, memo: &memo)))
                     if world.runsAlongAny(free, from: position, forbidden.contains) { against += 1 }
                     if let path = world.path(from: position, toStation: station, length: candidate.length, avoiding: blocked, forbidden: forbidden),
                        overflow || path.distance <= limit {

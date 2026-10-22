@@ -295,8 +295,10 @@ extension GameWorld {
         // The other trains' directions asked of a traversal at a time
         // (see ``opposingParts(for:memo:)``): the same as asking the set
         // of them, without gathering it.
-        let exempt = terminusTraversals(along: free, to: station)
         let parts = opposingParts(for: candidate, memo: &memo)
+        // Decision 344: nor, at a line's first call, the way into a berth
+        // only a train standing there sets off from.
+        let exempt = terminusTraversals(along: free, to: station).union(firstCallTraversals(along: free, to: station, parts: parts))
         let forbids = { (traversal: TrackTraversal) -> Bool in
             !exempt.contains(traversal) && !parts.defaultWays.contains(traversal) && parts.directions.contains { $0.contains(traversal.reversed) }
         }
