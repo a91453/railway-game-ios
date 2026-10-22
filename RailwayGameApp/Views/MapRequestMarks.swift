@@ -65,8 +65,11 @@ struct MapRequestMarks: View {
                 .frame(width: size, height: size)
                 .background(mark.isFocused ? Theme.primary : Theme.panel, in: Circle())
                 .overlay(Circle().strokeBorder(Theme.primary, lineWidth: 2))
-                .contentShape(Circle())
                 .frame(minWidth: 44, minHeight: 44)
+                // The whole finger's square, not the circle, as the locks
+                // (#1040): on an iPad a tap on the circle's middle row fell
+                // through to the map (MapMarkTapUITests, run 39841822269).
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text(verbatim: session.language.text("City request", "委託案")))
