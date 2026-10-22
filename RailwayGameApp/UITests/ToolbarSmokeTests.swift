@@ -179,28 +179,45 @@ final class LineRoutePreferenceUITests: XCTestCase {
         // (main bf12187's full lane, run 38641908091: (540, 314), the switch
         // drawn at about 735).
         let control = toggle.switches.firstMatch
-        // Once the list has stopped: a tap on a list still moving after the
-        // drags only stops it, and the switch, under the finger 350 ms, did
-        // not turn (PR #659's run 38729482700 and run 38863791023, the app's
-        // trace: both a second after a short last drag; the five launches
-        // without one each turned it at once).
-        (control.exists ? control : toggle).waitUntilSettled()
-        if control.exists {
-            // A center tap landed on the iOS 26 switch's glass thumb but
-            // left its value at 0 in full lane run 39094300227. Press the
-            // destination side of the track, as a finger turning it would.
-            control.coordinate(withNormalizedOffset: CGVector(dx: shown ? 0.8 : 0.2, dy: 0.5)).tap()
-        } else {
-            toggle.coordinate(withNormalizedOffset: CGVector(dx: 1, dy: 0.5)).withOffset(CGVector(dx: -42, dy: 0)).tap()
+        let wanted = shown ? "1" : "0"
+        // Up to three presses, each only while the switch still reads the
+        // old value: main e6e8f5a's full lane (run 39781136910) pressed the
+        // right point of the drawn switch, (759, 245) in {709, 231, 63, 28},
+        // and the app's trace shows the touch begin and then be cancelled
+        // 181 ms later, the main thread busy 186 ms meanwhile, so the switch
+        // never turned; the same press in the test before ended in 58 ms
+        // and turned it. A cancelled touch is no press at all, so it is
+        // pressed again, as a finger would; the value is read first each
+        // time, so a press that did turn it is never undone.
+        for attempt in 1...3 {
+            // Once the list has stopped: a tap on a list still moving after
+            // the drags only stops it, and the switch, under the finger
+            // 350 ms, did not turn (PR #659's run 38729482700 and run
+            // 38863791023, the app's trace: both a second after a short
+            // last drag; the five launches without one each turned it at
+            // once).
+            (control.exists ? control : toggle).waitUntilSettled()
+            if control.exists {
+                // A center tap landed on the iOS 26 switch's glass thumb but
+                // left its value at 0 in full lane run 39094300227. Press
+                // the destination side of the track, as a finger turning it
+                // would.
+                control.coordinate(withNormalizedOffset: CGVector(dx: shown ? 0.8 : 0.2, dy: 0.5)).tap()
+            } else {
+                toggle.coordinate(withNormalizedOffset: CGVector(dx: 1, dy: 0.5)).withOffset(CGVector(dx: -42, dy: 0)).tap()
+            }
+            // Twenty seconds for the last press: as a job's first test, on
+            // a cold Simulator with the real-world demo, one lookup took 10
+            // to 20 seconds, and the switch's value was first read 17
+            // seconds after the tap (run 38441429093); the same steps in
+            // the next test took a second. A slow lookup only delays the
+            // read below, which still sees a press that turned it.
+            let flipped = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", wanted), object: toggle)
+            if XCTWaiter.wait(for: [flipped], timeout: attempt < 3 ? 8 : 20) == .completed { return }
+            if toggle.value as? String == wanted { return }
+            recordRouteUI("Advanced switch still \(shown ? "off" : "on") after press \(attempt)", in: app)
         }
-        // Twenty seconds: as a job's first test, on a cold Simulator with
-        // the real-world demo, one lookup took 10 to 20 seconds, and the
-        // switch's value was first read 17 seconds after the tap (run
-        // 38441429093); the same steps in the next test took a second.
-        // One tap: on the Simulator a press of 0.05 to 1 second turned it
-        // each time (run 38862097826).
-        let flipped = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", shown ? "1" : "0"), object: toggle)
-        XCTAssertEqual(XCTWaiter.wait(for: [flipped], timeout: 20), .completed, "The Advanced switch did not turn \(shown ? "on" : "off")")
+        XCTFail("The Advanced switch did not turn \(shown ? "on" : "off")")
     }
 
     /// Dismisses the status message the sheet shows at its bottom, if
