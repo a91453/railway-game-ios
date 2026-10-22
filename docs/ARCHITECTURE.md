@@ -15304,3 +15304,4 @@ Linux（release，`-enable-testing`）上，改之前量到的（毫秒）：
 2. 新台幣那輪拿掉 NT$10＝$1。
 3. 實景新遊戲裡玩家自己蓋的高鐵站若就在真實高鐵站旁，可以照同一張表收；要先決定「旁邊」多近（決策 298 的 450 m），這次沒做。
 
+**後來**（2026-10-22，審查延後項目，session_01QiPq4nZdq5bVS9MZ4rkr4L，`docs/archive/PR911_944_REVIEW_HANDOFF.md` B3）：`GameWorld` 的驗證（`invariantViolation`）也檢查票價表：每一組的站 ID 都在 1 到 `nextStationID` 之前。`setHighSpeedFares` 本來就只收存在的車站，所以只有被改過的存檔會被擋；車站 ID 只增不回收，沒擋的話，之後新建的車站會繼承那組票價。拆掉的車站留在表裡的那一組照舊讀得回（它的 ID 小於 `nextStationID`）。存檔版本、golden、replay 不動。回歸在 `HighSpeedTests.testVersionSixtyNineKeepsTheFareTable` 的拒絕清單（舊程式上紅）。

@@ -5143,6 +5143,11 @@ extension GameWorld: Codable {
         guard Self.isStrictlyIncreasing(stationIDs, below: nextStationID) else {
             return "Station IDs must be unique, ascending and below nextStationID."
         }
+        // Decision 325: the high-speed fare table names only stations that
+        // were handed out, so a station built later cannot take on a fare.
+        guard accounts.highSpeedFares.allSatisfy({ $0.from.rawValue >= 1 && $0.to.rawValue < nextStationID }) else {
+            return "High-speed fares must be between stations below nextStationID."
+        }
         guard Self.isStrictlyIncreasing(trains.map(\.id.rawValue), below: nextTrainID) else {
             return "Train IDs must be unique, ascending and below nextTrainID."
         }
