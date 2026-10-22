@@ -9,6 +9,18 @@ import XCTest
 final class LessonUITests: XCTestCase {
     private var app: XCUIApplication!
 
+    nonisolated override func setUp() {
+        super.setUp()
+        // Passing lesson 1 through the UI takes about 3 minutes; on a
+        // runner two to three times slower than usual it took 8 min 20 s,
+        // past the 8 minutes a test gets by default, and the test was
+        // stopped as hung after its last check had passed (main 3a13edf's
+        // full lane, run 39742482762: "Failed to terminate" at the end).
+        // Ask for the most the lanes allow
+        // (`-maximum-test-execution-time-allowance 600`).
+        executionTimeAllowance = 600
+    }
+
     func testAFreshInstallShowsTenLessonsAndOnlyTheFirstCanStart() {
         defer { app?.terminate() }
         launch()
@@ -268,6 +280,13 @@ final class LessonUITests: XCTestCase {
         let start = app.buttons["lesson.\(number).start"]
         reveal(start)
         tap(start)
+        // The press on Start can be cancelled (the app's trace: "touch
+        // cancelled at (437, 303)" on the list's cell), and the picker
+        // stays open with no lesson started (PR #1032's run 39781911139,
+        // lesson 3). Tap once more if the picker did not close.
+        if !element("lessons.title").disappears(within: 10), start.exists {
+            tap(start)
+        }
         XCTAssertTrue(map.appears(within: 20))
         XCTAssertTrue(element("lessons.title").disappears(within: 5))
     }
@@ -296,9 +315,19 @@ final class LessonUITests: XCTestCase {
     /// screen: with that one the drags fell at x 798, on the panel's scroll
     /// bar, and scrubbed the panel up and down (Shops, Ridership, then
     /// Platforms again in main 614375c's full lane, run 39438209091).
+    ///
+    /// Measured while the station panel still slid in, the panel's left
+    /// edge was its old place by the screen's trailing edge: every one of
+    /// the 40 drags fell at x 797.8 and the list did not move (main
+    /// 82ce09e's full lane, run 39767194320; the green runs dragged at
+    /// x 537.4), as `reveal` once did. Wait for the panel to stop before
+    /// measuring it. Measure it once: the query finds the panel by its
+    /// first section, which the list drops once it scrolls away ("No
+    /// matches found" after two drags, PR #1032's run 39781911139).
     private func revealPastMenus(_ control: XCUIElement) {
         let panel = app.collectionViews.containing(.any, identifier: "station.operations").firstMatch
         XCTAssertTrue(panel.appears(within: 10), "Missing \(panel)")
+        panel.waitUntilStill()
         let onScreen = panel.frame.intersection(app.frame)
         let area = onScreen.isEmpty ? panel.frame : onScreen
         let band = area.insetBy(dx: 0, dy: 24)
