@@ -229,7 +229,22 @@ extension GameWorld {
         let limit = Double(radius) * Double(radius)
         var best: (point: NetworkEdgePoint, distance: Double)?
         for edge in network.edges {
-            guard let geometry = trackGeometry(of: edge.id) else { continue }
+            // An edge lies within the box of its ends and control points
+            // (a Bézier curve keeps to their hull): one whose box is
+            // farther than `radius` has no place near enough, so its
+            // geometry is not worked out (decision 351, later: the demo's
+            // crossovers looked some 270 times over a thousand edges).
+            guard let from = network.node(edge.from)?.position.plan, let to = network.node(edge.to)?.position.plan else { continue }
+            var (minX, maxX) = (min(from.x, to.x), max(from.x, to.x))
+            var (minY, maxY) = (min(from.y, to.y), max(from.y, to.y))
+            if case .cubic(let c1, let c2) = edge.curve {
+                (minX, maxX) = (min(minX, c1.x, c2.x), max(maxX, c1.x, c2.x))
+                (minY, maxY) = (min(minY, c1.y, c2.y), max(maxY, c1.y, c2.y))
+            }
+            // A unit more for the rounding of the points along it.
+            let reach = radius + 1
+            guard point.x >= minX - reach, point.x <= maxX + reach, point.y >= minY - reach, point.y <= maxY + reach,
+                  let geometry = trackGeometry(of: edge.id) else { continue }
             for index in geometry.points.indices.dropLast() {
                 let a = geometry.points[index], b = geometry.points[index + 1]
                 let ax = Double(a.x), ay = Double(a.y)

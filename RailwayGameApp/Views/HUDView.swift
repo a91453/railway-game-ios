@@ -748,6 +748,8 @@ struct SpeedControl: View {
             SpeedMenu(session: session, speed: clock.speed, runningSpeed: clock.runningSpeed, isPaused: clock.isPaused, language: language)
                 .equatable()
         }
+        // Review E's E2: waits while the demo lays the real lines.
+        .disabled(session.isLayingDemoRealLines)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Game speed")
         .tutorialTarget(tutorialTarget)

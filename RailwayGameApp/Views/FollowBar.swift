@@ -152,6 +152,7 @@ struct FollowBar: View {
                     .monospacedDigit()
             }
             .buttonStyle(FollowSpeedButtonStyle(isCurrent: isCurrent))
+            .disabled(session.isLayingDemoRealLines)
             .accessibilityLabel(Text(verbatim: speed.accessibilityName(in: language)))
             .accessibilityAddTraits(isCurrent ? .isSelected : [])
             .accessibilityIdentifier("follow.speed.\(speed.rawValue)")

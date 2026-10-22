@@ -250,6 +250,69 @@ private struct TripStampLabel: View {
     }
 }
 
+/// Decision 353: the station stamps the last midnight collected, landed
+/// over their stations as the passport prints them (``StationStampMark``),
+/// above where a trip's stamp shows, at most four at once. Each pops in,
+/// holds for a station's name and goes up and out within 3 s; with Reduce
+/// Motion it only fades. Rare (one a real station, ever), so at every
+/// speed and with the quick strip's Fares off; the status line and the
+/// news say it too. Takes no touches; VoiceOver hears the status line.
+struct StationStampMarks: View {
+    let session: GameSession
+    let camera: PlanCamera
+    @State private var shown: StationStampPulse?
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            if let shown {
+                ForEach(shown.marks) { mark in
+                    let at = camera.screenPoint(of: mark.location)
+                    StationStampLanding(stamp: mark.stamp, language: session.language)
+                        .position(x: at.x, y: at.y - 96)
+                }
+                .id(shown.serial)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+        .onChange(of: session.stationStampPulse) { _, pulse in
+            guard let pulse else { return }
+            shown = pulse
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(StationStampPulse.lifetime))
+                if shown?.serial == pulse.serial { shown = nil }
+            }
+        }
+    }
+}
+
+/// One station stamp landing: decision 253's `pop` in, a hold, `cardOut`
+/// up and out, as a trip's stamp.
+private struct StationStampLanding: View {
+    let stamp: StationStamp
+    let language: DisplayLanguage
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var shown = false
+    @State private var gone = false
+
+    var body: some View {
+        StationStampMark(stamp: stamp, language: language, side: 72)
+            .rotationEffect(.degrees(-6))
+            .fixedSize()
+            .scaleEffect(reduceMotion || shown ? 1 : 0.6)
+            .offset(y: reduceMotion || !gone ? 0 : -12)
+            .opacity(shown && !gone ? 1 : 0)
+            .task {
+                // A frame at the start first, so the change animates.
+                try? await Task.sleep(for: .milliseconds(16))
+                withAnimation(MotionRule.pop.running(reduceMotion: reduceMotion)?.animation) { shown = true }
+                try? await Task.sleep(for: .seconds(MotionRule.pop.seconds + StationStampPulse.hold))
+                withAnimation(MotionRule.cardOut.running(reduceMotion: reduceMotion)?.animation) { gone = true }
+            }
+    }
+}
+
 /// The look every stamp shares (decisions 276 and 348): the ink's colour
 /// on a flat panel inside a heavy border of the same ink; no shadow (art
 /// style). The trip stamps on the map and the passport's station stamps

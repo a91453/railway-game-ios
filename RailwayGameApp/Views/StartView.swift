@@ -88,7 +88,7 @@ struct StartView: View {
             NavigationStack {
                 AchievementsView(
                     language: launcher.language, records: launcher.achievements,
-                    stamps: launcher.stationStamps, railways: launcher.railways
+                    stamps: launcher.stationStamps, railways: launcher.railways, placeNames: launcher.placeNames
                 )
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) {

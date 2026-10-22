@@ -195,7 +195,7 @@ extension GameSession {
     /// Runs the game at its fastest speed to the skip's stop (decision
     /// 305); does nothing when there is nothing to skip.
     public func skipToMorning() {
-        guard let skip = nightSkip else { return }
+        guard !isLayingDemoRealLines, let skip = nightSkip else { return }
         let clock = world.clock
         isPausedForEvent = false
         nightSkipRun = NightSkipRun(

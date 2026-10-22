@@ -1,3 +1,4 @@
+import Foundation
 import GameCore
 import Observation
 
@@ -419,6 +420,13 @@ public final class GameSession {
     /// How far the demo mode's real lines have got while they are laid
     /// (decision 351, ``layDemoRealLines(in:)``); `nil` otherwise.
     public internal(set) var demoRealLinesProgress: DemoRealLines.Progress?
+
+    /// Whether the demo is laying the real lines now: the speed, pause,
+    /// the night skip, Undo and Redo wait until it is done (review E's
+    /// E2), so what it lays stays one Undo.
+    public var isLayingDemoRealLines: Bool {
+        demoRealLinesProgress != nil
+    }
     /// Whether a trace keeps the real line's tunnels and viaducts at any
     /// ``networkHeight``, as the demo mode's real lines are laid, each on
     /// its own level where they would cross (decision 351).
@@ -681,6 +689,15 @@ public final class GameSession {
     /// the map stamps at the stations they ended at (``TripStampBoard``);
     /// `nil` before any. Never saved.
     public internal(set) var tripStampPulse: TripStampPulse?
+    /// Decision 353: the station stamps the last midnight collected,
+    /// which the map lands over their stations; `nil` before any. Never
+    /// saved.
+    public internal(set) var stationStampPulse: StationStampPulse?
+    /// Decision 353: when each station stamp in the passport was
+    /// collected, by its key (``StationStampRecords/dates``), for the
+    /// station panel. The record is the launcher's file; this is its
+    /// copy for the game, never saved.
+    public internal(set) var collectedStamps: [String: Date] = [:]
     /// Decision 276: the fullest each running trip's train has been, read
     /// after every step for the stamps. Never saved.
     @ObservationIgnored var tripLoads = TripLoads()
@@ -1050,7 +1067,7 @@ public final class GameSession {
     /// Resumes the game ``pauseForBuilding()`` paused, unless the player
     /// has touched the speed since.
     func endPauseForBuilding() {
-        guard isPausedForBuilding else { return }
+        guard isPausedForBuilding, !isLayingDemoRealLines else { return }
         isPausedForBuilding = false
         if world.clock.isPaused { logging(.resume) { $0.resume() } }
     }
@@ -1067,7 +1084,15 @@ public final class GameSession {
     // MARK: - Speed
 
     /// Changes the game speed through the world's clock, the only record of it.
+    /// Waits while the demo lays the real lines (review E's E2): a tick
+    /// would split the one Undo it lays as.
     public func setSpeed(_ speed: GameSpeed) {
+        guard !isLayingDemoRealLines else { return }
+        changeSpeed(speed)
+    }
+
+    /// ``setSpeed(_:)`` whatever is under way.
+    func changeSpeed(_ speed: GameSpeed) {
         isPausedForBuilding = false
         isPausedForEvent = false
         dropNightSkip()
@@ -1138,6 +1163,7 @@ public final class GameSession {
     /// Pauses a running game, or resumes a paused one at the speed it ran
     /// at (see `GameClock.runningSpeed`).
     public func togglePause() {
+        guard !isLayingDemoRealLines else { return }
         isPausedForBuilding = false
         isPausedForEvent = false
         dropNightSkip()
@@ -2750,7 +2776,7 @@ public final class GameSession {
     /// Whether ``undo()`` has an edit to take back now: there is one since
     /// game time last moved, and no tutorial is on screen.
     public var canUndo: Bool {
-        !undoHistory.isEmpty && tutorial == nil
+        !undoHistory.isEmpty && tutorial == nil && !isLayingDemoRealLines
     }
 
     /// Takes back the latest edit (MapBuilder's `handleUndo`): the whole
@@ -2770,6 +2796,13 @@ public final class GameSession {
             message = StatusMessage(kind: .failure, text: language.text(
                 "Undo is off during the tutorial.",
                 "教學進行中無法復原。"
+            ))
+            return
+        }
+        guard !isLayingDemoRealLines else {
+            message = StatusMessage(kind: .failure, text: language.text(
+                "Undo waits until the real lines are laid.",
+                "真實路線鋪好後才能復原。"
             ))
             return
         }
@@ -2796,7 +2829,7 @@ public final class GameSession {
     /// not moved, and no tutorial is on screen (the same rule as
     /// ``canUndo``).
     public var canRedo: Bool {
-        !redoHistory.isEmpty && tutorial == nil
+        !redoHistory.isEmpty && tutorial == nil && !isLayingDemoRealLines
     }
 
     /// Makes again the edit ``undo()`` last took back (decision 184, the
@@ -2813,6 +2846,7 @@ public final class GameSession {
             ))
             return
         }
+        guard !isLayingDemoRealLines else { return }
         guard let restored = redoHistory.popLast() else {
             message = StatusMessage(kind: .failure, text: language.text("Nothing to redo.", "沒有可重做的編輯。"))
             return

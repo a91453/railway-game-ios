@@ -11,12 +11,14 @@ struct GoalsPanel: View {
     let session: GameSession
     /// The achievements unlocked (decision 181), for the rank's link.
     var achievements: AchievementRecords?
+    /// The station stamps (decision 353), for the passport's link.
+    var stamps: StationStampRecords? = nil
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
             Form {
-                GoalsSections(session: session, achievements: achievements)
+                GoalsSections(session: session, achievements: achievements, stamps: stamps)
             }
             .navigationTitle(Text(verbatim: session.world.scenarioTitle(in: session.language) ?? session.language.text("Goals", "目標")))
             .navigationBarTitleDisplayMode(.inline)
@@ -38,6 +40,7 @@ struct GoalsPanel: View {
 struct GoalsSections: View {
     let session: GameSession
     var achievements: AchievementRecords?
+    var stamps: StationStampRecords? = nil
 
     var body: some View {
         let language = session.language
@@ -52,7 +55,7 @@ struct GoalsSections: View {
         }
         if world.scenario == nil {
             // Decision 181: a free game's long-term goal.
-            CompanyRankSection(session: session, achievements: achievements)
+            CompanyRankSection(session: session, achievements: achievements, stamps: stamps)
         } else {
             Section {
                 if let status = world.scenarioStatusText(in: language) {
@@ -276,6 +279,8 @@ struct CityRequestsSection: View {
 struct CompanyRankSection: View {
     let session: GameSession
     let achievements: AchievementRecords?
+    /// Decision 353: the passport's link beside the achievements'.
+    var stamps: StationStampRecords? = nil
     @State private var rank: CompanyRank?
     @State private var town: UnservedCluster?
     /// What the achievements read, measured with the rank.
@@ -395,6 +400,23 @@ struct CompanyRankSection: View {
                         .font(.footnote)
                     }
                     .accessibilityIdentifier("goals.achievements")
+                }
+                // Decision 353: the passport too, which a game with
+                // unlimited funds still fills (decision 348).
+                if let stamps {
+                    NavigationLink {
+                        StationStampPassportView(
+                            language: language, records: stamps, railways: session.railways, placeNames: session.placeNames
+                        )
+                    } label: {
+                        Label {
+                            Text(verbatim: StationStampPassport.summary(count: stamps.count, total: nil, in: language))
+                        } icon: {
+                            Image(systemName: "seal")
+                        }
+                        .font(.footnote)
+                    }
+                    .accessibilityIdentifier("goals.stamps")
                 }
             } header: {
                 Text(verbatim: language.text("Next steps", "下一步"))

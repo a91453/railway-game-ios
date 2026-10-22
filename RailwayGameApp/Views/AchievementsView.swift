@@ -18,13 +18,15 @@ struct AchievementsView: View {
     /// where the list is shown without it.
     var stamps: StationStampRecords? = nil
     var railways: RealRailways? = nil
+    /// The counties, for the passport's list by county (decision 353).
+    var placeNames: PlaceNames? = nil
 
     var body: some View {
         List {
             if let stamps {
                 Section {
                     NavigationLink {
-                        StationStampPassportView(language: language, records: stamps, railways: railways)
+                        StationStampPassportView(language: language, records: stamps, railways: railways, placeNames: placeNames)
                     } label: {
                         Label {
                             Text(verbatim: StationStampPassport.summary(count: stamps.count, total: nil, in: language))
@@ -124,7 +126,7 @@ struct AchievementsSheet: View {
             AchievementsView(
                 language: session.language, records: records, facts: facts,
                 note: GameMenuLayout.achievementsNote(unlimitedFunds: session.world.economy.unlimitedFunds, in: session.language),
-                stamps: stamps, railways: session.railways
+                stamps: stamps, railways: session.railways, placeNames: session.placeNames
             )
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {
