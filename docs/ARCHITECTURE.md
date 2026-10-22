@@ -14532,6 +14532,8 @@ $10,000 的價格照報告的建造、列車與利益算出（旅客那一項是
 
 **驗證**：`NewGameChoiceTests`（Linux）。App 的畫面（主選單、新遊戲頁、iPhone 橫拿與 iPad）只能靠 macOS CI 編譯與 UI 測試；實機的樣子由作者在 TestFlight 看。
 
+**後來**（2026-10-22，審查延後項目，session_01QiPq4nZdq5bVS9MZ4rkr4L，`docs/archive/PR873_910_REVIEW_HANDOFF.md` A7）：按「在這裡開始」之後，「新遊戲」頁在實景地圖開始蓋（`GameLauncher.realWorldLoading` 有值）時也關掉（`NewGamePicker` 的 `.onChange`），選地點那一層跟著關。載入畫面（決策 307）不再畫在它下面，蓋的期間也按不到「空白地圖」。只改 App 的一個 view，Linux 測不到，交 iOS 的 UI 測試與實機確認。
+
 ### 317. 3D 地圖的市區公車：Meshy 模型接進 App、上主要道路
 
 （2026-10-21，3D session_01Y25x9NJSKmAuP1M1K3Sf3C，遊戲規劃派工的第 4 項；規格 `docs/research/MESHY_TRIAL_MODEL_SPEC_2026-10-17.md`）
