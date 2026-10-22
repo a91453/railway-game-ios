@@ -17,7 +17,8 @@ struct Map3DVertexIn {
 
 // Laid out as Map3DRenderer.uniforms writes it: a matrix, then eight
 // four-float rows (decision 232's shade: the shadows' strength in x; decision
-// 229 續: how far the city's lights are on in y), then the night windows'
+// 229 續: how far the city's lights are on in y; decision 349: the fog's
+// z and w, the ground haze's density and height), then the night windows'
 // rules (Map3DLighting.nightWindowRows: per surface layer, two to a row, the
 // share lit and the brightest glass).
 struct Map3DUniforms {
@@ -101,6 +102,36 @@ float hash12(float2 p) {
     return fract((q.x + q.y) * q.z);
 }
 
+// Decision 349: the picture's finish, as Map3DGrade works it out (the
+// web view's Neutral tone mapping's shoulder and its Picture at its
+// defaults, Web/CityView/src/world/atmosphere.js, MIT), and fog.js's haze
+// lying on the ground. Change both together.
+float map3dHaze(float eyeHeight, float3 way, float far, float density, float height) {
+    float start = max(eyeHeight / height, 0.0);
+    float k = way.y * far / height;
+    float end = max(start + k, -8.0);
+    float through = abs(k) > 1e-3 ? (exp(-start) - exp(-end)) / k : exp(-start);
+    return 1.0 - exp(-density * far * through);
+}
+
+float3 map3dFinish(float3 colour) {
+    float3 c = pow(max(colour, 0.0), 2.2);
+    float peak = max(c.r, max(c.g, c.b));
+    const float start = 0.8 - 0.04;
+    if (peak >= start) {
+        const float d = 1.0 - start;
+        float newPeak = 1.0 - d * d / (peak + d - start);
+        c *= newPeak / peak;
+        float g = 1.0 - 1.0 / (0.15 * (peak - newPeak) + 1.0);
+        c = mix(c, float3(newPeak), g);
+    }
+    c *= float3(1.0, 1.025, 1.0) * 0.9875;
+    float3 g = pow(c, 1.0 / 2.2);
+    float l = dot(g, float3(0.2126, 0.7152, 0.0722));
+    g += g * (0.009 * (1.0 - smoothstep(0.0, 0.5, l)) * (1.0 - l) / max(l, 0.05) * 0.5) + 0.045 * smoothstep(0.5, 1.0, l) * l;
+    return clamp(g, 0.0, 1.0);
+}
+
 float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d_array<float> surfaces) {
     constexpr sampler repeating(address::repeat, filter::linear, mip_filter::linear, max_anisotropy(8));
     float3 base = in.color;
@@ -150,8 +181,12 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
     float sun = max(dot(normal, uniforms.sunDirection.xyz), 0.0);
     float3 ambient = mix(uniforms.ambientGround.rgb, uniforms.ambientSky.rgb, normal.y * 0.5 + 0.5);
     float3 lit = base * (ambient + uniforms.sunColor.rgb * sun);
-    float fog = smoothstep(uniforms.fog.x, uniforms.fog.y, distance(in.world, uniforms.eye.xyz));
-    return float4(mix(lit, uniforms.fogColor.rgb, fog) + glow * (1.0 - fog * 0.7), 1.0);
+    float far = distance(in.world, uniforms.eye.xyz);
+    float fog = smoothstep(uniforms.fog.x, uniforms.fog.y, far);
+    // Decision 349: and the haze on the ground on the way.
+    float3 way = (in.world - uniforms.eye.xyz) / max(far, 1e-3);
+    fog = 1.0 - (1.0 - fog) * (1.0 - map3dHaze(uniforms.eye.y, way, far, uniforms.fog.z, uniforms.fog.w));
+    return float4(map3dFinish(mix(lit, uniforms.fogColor.rgb, fog) + glow * (1.0 - fog * 0.7)), 1.0);
 }
 
 fragment float4 map3dFragment(Map3DVertexOut in [[stage_in]], constant Map3DUniforms &uniforms [[buffer(1)]],
@@ -284,5 +319,8 @@ fragment float4 map3dSkyFragment(Map3DSkyOut in [[stage_in]], constant Map3DSkyU
     float pixel = max(length(fwidth(cells)), 1e-4);
     float spot = 1.0 - smoothstep(0.6, 1.4, length(cells - centre) / pixel);
     colour += float3(0.8, 0.85, 1.0) * (star * spot * 0.5 * sky.stars.x);
-    return float4(min(colour, float3(1.0)), 1.0);
+    // Decision 349: the haze on the ground (a ray that meets nothing taken
+    // 60 km), in the fog's colour, and the picture's finish, as on the city.
+    colour = mix(colour, sky.horizon.rgb, map3dHaze(sky.stars.y, d, 60000.0, sky.stars.z, sky.stars.w));
+    return float4(map3dFinish(colour), 1.0);
 }
