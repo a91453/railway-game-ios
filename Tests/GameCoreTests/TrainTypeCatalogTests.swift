@@ -44,6 +44,7 @@ final class TrainTypeCatalogTests: XCTestCase {
         .init(code: "BLUE", capacity: 50, doors: 2, overloads: true, performance: .r100ChuKuang, first: 260_000, car: 45_000, permille: 1_500),
         .init(code: "SHANLAN", capacity: 44, doors: 3, overloads: true, performance: .haiFeng, first: 240_000, car: 50_000, permille: 1_300),
         .init(code: "MINGRI", capacity: 26, doors: 2, overloads: true, performance: .mingRi, first: 400_000, car: 55_000, permille: 1_400),
+        .init(code: "STAR", capacity: 29, doors: 2, overloads: true, performance: .formosaStar, first: 375_000, car: 45_000, permille: 1_300),
     ]
 
     func testEveryTypeKeepsItsNumbers() throws {
@@ -65,10 +66,10 @@ final class TrainTypeCatalogTests: XCTestCase {
     func testTheListsKeepTheirTypesAndOrder() {
         XCTAssertEqual(TrainType.main.map(\.rawValue), ["A", "B", "C"])
         XCTAssertEqual(TrainType.reference.map(\.rawValue), ["A", "B", "C", "L", "D", "APM", "MAGLEV", "SKYRAIL", "MONORAIL"])
-        XCTAssertEqual(TrainType.offered.map(\.rawValue), ["A", "B", "C", "L", "D", "APM", "MAGLEV", "SKYRAIL", "MONORAIL", "HSR", "EMU3000", "EMU100", "E200CK", "E500CK", "R100CK", "R200CK", "HAIFENG", "BLUE", "SHANLAN", "MINGRI"])
+        XCTAssertEqual(TrainType.offered.map(\.rawValue), ["A", "B", "C", "L", "D", "APM", "MAGLEV", "SKYRAIL", "MONORAIL", "HSR", "EMU3000", "EMU100", "E200CK", "E500CK", "R100CK", "R200CK", "HAIFENG", "BLUE", "SHANLAN", "MINGRI", "STAR"])
         XCTAssertEqual(TrainType.referenceDefault.rawValue, "B")
         XCTAssertEqual([TrainType.a, .b, .c, .l, .d, .apm, .maglev, .skyRail, .monorail, .steam, .highSpeed, .emu3000,
-                        .emu100, .e200ChuKuang, .e500ChuKuang, .r100ChuKuang, .r200ChuKuang, .haiFeng, .blueTrain, .shanLan, .mingRi], TrainType.allCases)
+                        .emu100, .e200ChuKuang, .e500ChuKuang, .r100ChuKuang, .r200ChuKuang, .haiFeng, .blueTrain, .shanLan, .mingRi, .formosaStar], TrainType.allCases)
     }
 
     func testTheStandardCarKeepsItsNumbers() {

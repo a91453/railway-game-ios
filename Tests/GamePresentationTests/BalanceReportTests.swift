@@ -354,18 +354,20 @@ final class BalanceReportTests: XCTestCase {
     /// half, beside a sight of 2, 3, 4 and 4.5 stars, with the E500
     /// Chu-Kuang (the Ming-Ri's locomotive, no star) as the line without a
     /// sightseeing train: the mean tourists and fares a day, and the cash
-    /// on the last day, each set four cars.
+    /// on the last day, each set four cars. Decision 286, later (third):
+    /// and the Formosa Star's three quarters, against the Ming-Ri too, and
+    /// a sight of 4.25 stars, where the Ming-Ri's last quarter is lost.
     func testTheMingRiAtASight() throws {
         let days = try requestedDays()
         var lines = [
-            "### A first line beside a sight: E500 Chu-Kuang, Hai-Feng and Ming-Ri (four cars), \(days) days",
+            "### A first line beside a sight: E500 Chu-Kuang, Hai-Feng, Ming-Ri and Formosa Star (four cars), \(days) days",
             "",
-            "| Sight | Type | Tourists a day | Fares a day | Balance | Against the Chu-Kuang | Against the Hai-Feng |",
-            "| --: | --- | --: | --: | --: | --: | --: |",
+            "| Sight | Type | Tourists a day | Fares a day | Balance | Against the Chu-Kuang | Against the Hai-Feng | Against the Ming-Ri |",
+            "| --: | --- | --: | --: | --: | --: | --: | --: |",
         ]
-        for stars in [200, 300, 400, 450] {
+        for stars in [200, 300, 350, 400, 425, 450] {
             var balances: [Int64] = []
-            for type in [TrainType.e500ChuKuang, .haiFeng, .mingRi] {
+            for type in [TrainType.e500ChuKuang, .haiFeng, .mingRi, .formosaStar] {
                 var world = try firstLine(type: type)
                 let station = try XCTUnwrap(world.stations.last)
                 world.setTourism([Attraction(
@@ -383,7 +385,8 @@ final class BalanceReportTests: XCTestCase {
                 balances.append(balance)
                 lines.append(
                     "| \(StationMasterAdvice.starsText(stars)) | \(type.rawValue) | \(tourists / Int64(days)) | \(dollars(fares / Int64(days))) | "
-                        + "\(dollars(balance)) | \(dollars(balance - balances[0])) | \(balances.count > 1 ? dollars(balance - balances[1]) : "—") |"
+                        + "\(dollars(balance)) | \(dollars(balance - balances[0])) | \(balances.count > 1 ? dollars(balance - balances[1]) : "—") | "
+                        + "\(balances.count > 3 ? dollars(balance - balances[2]) : "—") |"
                 )
             }
         }

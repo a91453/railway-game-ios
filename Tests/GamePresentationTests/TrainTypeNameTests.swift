@@ -32,6 +32,7 @@ final class TrainTypeNameTests: XCTestCase {
         (.blueTrain, "Blue Train sightseeing train", "藍皮解憂號"),
         (.shanLan, "Shan-Lan sightseeing train", "山嵐號"),
         (.mingRi, "Ming-Ri sightseeing train", "鳴日號"),
+        (.formosaStar, "Formosa Star sightseeing train", "環島之星"),
     ]
 
     func testEveryTypeHasItsName() {
@@ -119,7 +120,7 @@ final class TrainTypeNameTests: XCTestCase {
     /// written before the names changed still reads, every code to the type
     /// it was.
     func testTheCodesTheSavesStoreDidNotMove() throws {
-        let codes = ["A", "B", "C", "L", "D", "APM", "MAGLEV", "SKYRAIL", "MONORAIL", "STEAM", "HSR", "EMU3000", "EMU100", "E200CK", "E500CK", "R100CK", "R200CK", "HAIFENG", "BLUE", "SHANLAN", "MINGRI"]
+        let codes = ["A", "B", "C", "L", "D", "APM", "MAGLEV", "SKYRAIL", "MONORAIL", "STEAM", "HSR", "EMU3000", "EMU100", "E200CK", "E500CK", "R100CK", "R200CK", "HAIFENG", "BLUE", "SHANLAN", "MINGRI", "STAR"]
         XCTAssertEqual(TrainType.allCases.map(\.rawValue), codes)
         for type in TrainType.allCases {
             let data = try JSONEncoder().encode([type])
