@@ -4,7 +4,7 @@
 
 ![最終實際原生模型總覽](overview.png)
 
-- 工作 issue：[#991](https://github.com/a91453/railway-game-ios/issues/991)。公開及私有 draft PR 會在 issue 記錄互鏈；兩庫 base 均為 main，沒有依賴未合併 #988。
+- 工作 issue：[#991](https://github.com/a91453/railway-game-ios/issues/991)。公開 [draft PR #992](https://github.com/a91453/railway-game-ios/pull/992)，私有 draft PR 在 issue 記錄互鏈；兩庫 base 均為 main，沒有依賴未合併 #988。
 - [重建、軸向、尺寸與各節組裝](../../../tools/five-section-lrt/README.md)；[交接 §7.3](../../HANDOFF.md#73-3d-的後續)。
 - [私有完整素材目錄](https://github.com/a91453/railway-reference-private/tree/codex/five-section-lrt-2026-10-22/Railway/game-art-previews/docs/art/five-section-lrt-2026-10-22)：8 native／8 GLB、56七向透明PNG、完整編組／各節、白模／剪影、固定尺度比較與實際模型修訂前後、兩種viewer、provenance／SHA／驗證紀錄及ZIP。
 - [可下載 ZIP](https://github.com/a91453/railway-reference-private/raw/refs/heads/codex/five-section-lrt-2026-10-22/Railway/game-art-previews/docs/art/five-section-lrt-2026-10-22/asset-package.zip) · [離線 viewer HTML](https://github.com/a91453/railway-reference-private/raw/refs/heads/codex/five-section-lrt-2026-10-22/Railway/game-art-previews/docs/art/five-section-lrt-2026-10-22/viewer-standalone.html)。私有下載需要帳號權限；下載HTML後可離線使用，並非GitHub可直接執行的網站。

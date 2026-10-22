@@ -10,7 +10,7 @@ var records: [[String: Any]] = []
     guard model.triangleCount > 0, model.triangleCount <= Map3DModelFile.maximumTriangles else { fatalError("triangle budget") }
     let provenance: [String: Any] = [
         "asset": ["generator": "Map3DFiveSectionLRT", "version": "1.0"],
-        "extras": ["assetId": model.name, "recipeVersion": 1, "source": "owner-five-view-proportional-reconstruction", "coordinateSystem": "metres; +x front, +y left, +z up"]
+        "extras": ["assetId": model.name, "recipeVersion": 1, "source": category == "comparison" ? "existing-project-style-comparison" : "owner-five-view-proportional-reconstruction", "coordinateSystem": "metres; +x front, +y left, +z up"]
     ]
     let metadata = try JSONSerialization.data(withJSONObject: provenance, options: .sortedKeys)
     var data = Data("M3DM".utf8)
