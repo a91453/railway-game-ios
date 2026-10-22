@@ -364,6 +364,45 @@ final class DoubleTrackUpgradeTests: XCTestCase {
         XCTAssertNil(session.trackUpgrade)
     }
 
+    /// A player's report (81.1 or earlier, iPad Air M3): with "Make
+    /// double track" drafted while the game ran at 10×, the game froze.
+    /// The select tool does not pause, and the draft was worked out again
+    /// at every tick. Game time moving on now leaves it as it is; a
+    /// command works it out again, and ✓ plans it once more on the world
+    /// it builds in.
+    func testGameTimeRunningDoesNotWorkTheDraftOutAgain() throws {
+        let (session, _, _) = try singleTrack()
+        session.setSpeed(.x10)
+        session.beginTrackUpgrade(.doubleTrack)
+        let preview = try XCTUnwrap(session.trackUpgradePreview)
+        XCTAssertNil(preview.problem, preview.problem ?? "")
+        XCTAssertEqual(session.trackUpgradeWorkedOut, 1)
+        let start = session.world.clock.now
+        for _ in 0..<30 {
+            session.advance(ticks: 1)
+            XCTAssertEqual(session.trackUpgradePreview, preview)
+        }
+        XCTAssertGreaterThan(session.world.clock.now, start, "game time ran")
+        XCTAssertEqual(session.trackUpgradeWorkedOut, 1, "worked out once, not at every tick")
+
+        session.trackUpgradeSide = .right
+        XCTAssertNotNil(session.trackUpgradePreview)
+        XCTAssertEqual(session.trackUpgradeWorkedOut, 2, "a change to the draft works it out again")
+        session.trackUpgradeSide = .left
+        XCTAssertEqual(session.trackUpgradePreview, preview)
+        XCTAssertEqual(session.trackUpgradeWorkedOut, 3)
+
+        session.advance(ticks: 1)
+        session.buildTrackUpgrade()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        XCTAssertEqual(session.trackUpgradeWorkedOut, 4, "planned once more on the world it builds in")
+        guard case .command(.buildDoubleTrackChain(_, let parallel, _, let crossovers))? = session.commandLog.entries.last?.action else {
+            return XCTFail("one double-track command")
+        }
+        XCTAssertEqual(parallel.count, 2)
+        XCTAssertEqual(crossovers.count, 2)
+    }
+
     func testTheChainCommandCodesAsItIs() throws {
         let (session, _, _) = try singleTrack()
         session.beginTrackUpgrade(.doubleTrack)

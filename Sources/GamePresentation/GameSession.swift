@@ -240,6 +240,8 @@ public final class GameSession {
     public var trackUpgradeSide: PlatformTrackSide = .left
     public var trackUpgradeWholeRun = true
     @ObservationIgnored var trackUpgradeMemo: TrackUpgradeMemo?
+    /// How many times the drafted upgrade was worked out (for the tests).
+    @ObservationIgnored var trackUpgradeWorkedOut = 0
 
     /// The train the camera follows: the `Ci/` reference's
     /// `trackedTrainId`, kept apart from the selection
