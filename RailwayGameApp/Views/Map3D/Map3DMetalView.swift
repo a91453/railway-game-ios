@@ -355,6 +355,7 @@ final class Map3DMetalView: MTKView {
             lastFollowStep = nil
             var free = camera
             free.pitch = nil
+            free.lens = nil
             flying = (Map3DFlight(from: camera, began: CACurrentMediaTime(), rule: rule), free)
             return
         }
@@ -385,6 +386,7 @@ final class Map3DMetalView: MTKView {
     func stopFlyingBack() {
         guard following == nil, let flying, let still = flying.to else { return }
         camera.pitch = still.pitch
+        camera.lens = still.lens
         self.flying = nil
     }
 

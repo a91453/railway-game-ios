@@ -66,5 +66,7 @@ final class Map3DTrainLabelsTests: XCTestCase {
         XCTAssertEqual(frame.heads.map(\.train), motion.runs.map(\.train))
         let roof = Map3DScene.railLift + Map3DTrains.carHeight
         XCTAssertTrue(frame.heads.allSatisfy { abs($0.point.y - roof - Map3DTrains.headClearance) < 0.01 })
+        // Decision 337: the nose, where the cab view looks out, is ahead of the label.
+        XCTAssertTrue(frame.heads.allSatisfy { ($0.nose - $0.rail).dot($0.forward) > 1 })
     }
 }

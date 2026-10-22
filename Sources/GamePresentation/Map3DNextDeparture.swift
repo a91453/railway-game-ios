@@ -76,6 +76,7 @@ public struct Map3DNextDeparture: Hashable, Sendable {
         var goal = camera
         goal.target = point
         goal.pitch = nil
+        goal.lens = nil
         goal.distance = min(max(length * 1.2 / (2 * tanf(Map3DCamera.fieldOfView / 2)), distances.lowerBound), distances.upperBound)
         let wide = camera.viewport.width >= camera.viewport.height
         let runs = Map3DFollow.heading(of: along)
