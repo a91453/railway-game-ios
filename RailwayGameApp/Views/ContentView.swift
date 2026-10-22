@@ -454,7 +454,16 @@ struct ContentView: View {
                                 }
                             }
                             if let followed {
-                                FollowBar(train: followed, session: session) {
+                                // Decision 333: the same train from behind
+                                // in 3D, over where the 2D map follows it
+                                // (not in the tutorial, as the map's 3D button).
+                                FollowBar(train: followed, session: session, open3D: session.tutorial == nil ? {
+                                    screen.map3DHandoff = nil
+                                    screen.map3DOpenedAt = mapCamera.map {
+                                        Map3DHandoff.Plan(x: $0.centerX, y: $0.centerY, referenceSize: $0.referenceSize)
+                                    }
+                                    screen.showsMap3D = true
+                                } : nil) {
                                     session.stopFollowingTrain()
                                 }
                                 .transition(.card(from: .top, reduceMotion: reduceMotion))

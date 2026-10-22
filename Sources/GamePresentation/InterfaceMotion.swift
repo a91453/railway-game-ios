@@ -83,6 +83,15 @@ extension MotionRule {
     /// with Reduce Motion the map faces north at once.
     public static let turnNorth = MotionRule(seconds: 0.24, curve: .decelerate, moves: true, fades: false)
 
+    /// Decision 333: the 3D map's camera flying to a train it starts to
+    /// follow (and decision 334, to a train at its platform): 1.2 s,
+    /// smooth at both ends, as the reference's map animates its camera
+    /// (`cameraMotion` in `rail-3d/integration/camera-motion.js`,
+    /// ``Map3DFlight``). A camera, not a card: longer than a card, as a
+    /// whole view moves. It only moves, so with Reduce Motion the camera
+    /// is there at once.
+    public static let cameraFlight = MotionRule(seconds: 1.2, curve: .standard, moves: true, fades: false)
+
     /// The loading screen of a real-world map fading in (decision 307):
     /// 0.7 s, decelerating, as the geographic dashboard's boot screen does
     /// (`boot-fade-in`, geo-scene `bootScreen.css`). It only fades.
@@ -92,7 +101,7 @@ extension MotionRule {
     public static let loadingOut = MotionRule(seconds: 0.45, curve: .accelerate, moves: false, fades: true)
 
     /// Every rule, for the tests.
-    public static let all: [MotionRule] = [.press, .change, .cardIn, .cardOut, .pop, .confirm, .refuse, .builtRing, .turnNorth, .loadingIn, .loadingOut]
+    public static let all: [MotionRule] = [.press, .change, .cardIn, .cardOut, .pop, .confirm, .refuse, .builtRing, .turnNorth, .cameraFlight, .loadingIn, .loadingOut]
 }
 
 /// Decision 253: a refusal shakes sideways three times, each smaller,

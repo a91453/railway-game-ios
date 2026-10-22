@@ -13,6 +13,9 @@ import SwiftUI
 struct FollowBar: View {
     let train: Train
     let session: GameSession
+    /// Decision 333: opens the 3D map following this train from behind;
+    /// `nil` hides the button.
+    var open3D: (() -> Void)? = nil
     let onUnfollow: () -> Void
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
@@ -44,6 +47,7 @@ struct FollowBar: View {
                     TrainStatusCapsule(card: card, language: language)
                 }
                 speeds
+                threeD
                 unfollow(short: false)
             }
             row {
@@ -54,17 +58,20 @@ struct FollowBar: View {
                     TrainStatusCapsule(card: card, language: language)
                 }
                 speeds
+                threeD
                 unfollow(short: true)
             }
             row {
                 badge(info)
                 name
                 speeds
+                threeD
                 unfollow(short: true)
             }
             row {
                 badge(info)
                 speeds
+                threeD
                 unfollow(short: true)
             }
             // Decision 251: the last of them always fits, down to the badge
@@ -148,6 +155,25 @@ struct FollowBar: View {
             .accessibilityLabel(Text(verbatim: speed.accessibilityName(in: language)))
             .accessibilityAddTraits(isCurrent ? .isSelected : [])
             .accessibilityIdentifier("follow.speed.\(speed.rawValue)")
+        }
+    }
+
+    /// Decision 333: the 3D map's button, following this train there.
+    @ViewBuilder
+    private var threeD: some View {
+        if let open3D {
+            Button(action: open3D) {
+                Image("Glyph3DMap")
+                    .resizable()
+                    .renderingMode(.template)
+                    .frame(width: 18, height: 18)
+                    .foregroundStyle(Theme.textPrimary)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text(verbatim: session.language.text("Follow in 3D", "在 3D 跟車")))
+            .accessibilityIdentifier("follow.map3D")
         }
     }
 
