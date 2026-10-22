@@ -16,12 +16,15 @@
 // Along the Line: the page's title in English when the page is not Chinese (index.html has the Chinese)
 if (!/^zh/i.test(navigator.language)) document.title = 'Along the Line — 3D City Preview';
 
-// Along the Line: the website link in the page's language (in the app, the web view's is the app's); none in the
-// game (?app=1), whose settings have their own
+// Along the Line: the website link and the technical-preview note in the page's language (in the app, the web
+// view's is the app's); neither in the game (?app=1), whose settings have their own link and whose 3D it is
 document.addEventListener('DOMContentLoaded', function () {
-  var link = document.getElementById('website');
-  if (new URLSearchParams(location.search).get('app') === '1') link.remove();
-  else if (/^zh/i.test(navigator.language)) link.querySelector('span').textContent = '官網';
+  var link = document.getElementById('website'), note = document.getElementById('preview-note');
+  if (new URLSearchParams(location.search).get('app') === '1') { link.remove(); note.remove(); }
+  else if (/^zh/i.test(navigator.language)) {
+    link.querySelector('span').textContent = '官網';
+    note.innerHTML = '<b>技術試作</b> · 這是網頁上的試作，遊戲裡的 3D 正逐步加入這些效果。';
+  }
 });
 
 // The atmosphere works out its tables (the sky's colours, the light on the clouds) in the browser's idle
