@@ -364,7 +364,7 @@ final class DoubleTrackUpgradeTests: XCTestCase {
         XCTAssertNil(session.trackUpgrade)
     }
 
-    /// A player's report (81.1 or earlier, iPad Air M3): with "Make
+    /// A player's report (80.1, iPad Air M3): with "Make
     /// double track" drafted while the game ran at 10×, the game froze.
     /// The select tool does not pause, and the draft was worked out again
     /// at every tick. Game time moving on now leaves it as it is; a
