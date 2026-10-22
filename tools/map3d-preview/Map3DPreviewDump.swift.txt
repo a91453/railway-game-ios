@@ -171,6 +171,10 @@ final class Map3DPreviewDump: XCTestCase {
         }
         try shadowFloats.withUnsafeBytes { try Data($0).write(to: URL(fileURLWithPath: out + ".svertices")) }
         try shadowIndices.withUnsafeBytes { try Data($0).write(to: URL(fileURLWithPath: out + ".sindices")) }
+        // Decision 352: the signs of the chunks drawn in full, sixteen
+        // floats each (MAP3D_SIGNS=0 leaves them out, for a before picture).
+        let signFloats = detailFar || ProcessInfo.processInfo.environment["MAP3D_SIGNS"] == "0" ? [] : chunks.flatMap(\.signs).flatMap(\.floats)
+        try signFloats.withUnsafeBytes { try Data($0).write(to: URL(fileURLWithPath: out + ".signs")) }
         try floats.withUnsafeBytes { try Data($0).write(to: URL(fileURLWithPath: out + ".vertices")) }
         try indices.withUnsafeBytes { try Data($0).write(to: URL(fileURLWithPath: out + ".indices")) }
         // Stations, to aim the camera.
@@ -239,6 +243,7 @@ final class Map3DPreviewDump: XCTestCase {
                 return ["x": p.x, "z": p.z, "d": lot.density, "use": lot.use.rawValue]
             }
         try JSONSerialization.data(withJSONObject: ["drawn": drawn, "drawnInFull": drawnInFull, "uses": uses, "stations": stations, "low": Array(low.prefix(400)), "triangles": indices.count / 3, "views": views, "sky": [lighting.background.x, lighting.background.y, lighting.background.z],
+                                                        "signClock": Map3DSign.clock(seconds: 0, hour: lighting.hour, quality: .automatic, reduceMotion: false),
                                                         "rain": streaks, "rainColour": [Double(look.colour >> 16 & 0xFF), Double(look.colour >> 8 & 0xFF),
                                                                                          Double(look.colour & 0xFF), look.opacity]])
             .write(to: URL(fileURLWithPath: out + ".json"))

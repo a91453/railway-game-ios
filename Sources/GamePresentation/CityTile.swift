@@ -5,7 +5,9 @@ import Foundation
 // buildings with their storeys and use), read for the native 3D map. A
 // port of the reader in `Web/CityView/src/shared/tileformat.js`
 // (`decodeTile`, format 7), keeping only the buildings: the rest of a tile
-// (road surfaces, street furniture, wires, signs) is read past.
+// (road surfaces, street furniture, wires) is read past. Decision 352: and
+// the signs, for where they hang (never what they say: the 3D map writes
+// a word of its own on each, ``Map3DSignAtlas``).
 
 /// One area of the city tiles: a square round a station, in metres east
 /// (x) and south (z) of its origin, the tiles' own local projection
@@ -30,6 +32,24 @@ public struct CityTileArea: Sendable {
         public var z: Float
     }
 
+    /// Decision 352: a sign `Web/CityView`'s pipeline hung on a building
+    /// (`tools/pipeline/signs.mjs`): where, how big, and the place's name
+    /// in OpenStreetMap.
+    public struct Sign: Sendable, Equatable {
+        /// `signs.mjs`'s `SIGN`: 0 a board over a shop front, 1 a blade
+        /// standing out from the wall, 2 a building's own name.
+        public var style: Int
+        /// The pipeline's colour (`SIGN_COLORS`, 0–13).
+        public var colour: Int
+        /// The middle, metres east, up from the ground and south.
+        public var x: Float, y: Float, z: Float
+        /// The wall's outward normal.
+        public var nx: Float, nz: Float
+        /// Its width (a blade's: out from the wall) and height, metres.
+        public var width: Float, height: Float
+        public var text: String
+    }
+
     public enum ReadError: Error {
         case notATile
         case version(Int)
@@ -44,6 +64,8 @@ public struct CityTileArea: Sendable {
     /// The square the tiles cover, in metres from the origin.
     public let minX: Float, maxX: Float, minZ: Float, maxZ: Float
     public let buildings: [Building]
+    /// Decision 352: the signs on them.
+    public let signs: [Sign]
 
     /// The format `tileformat.js` writes (`VERSION`).
     static let version = 7
@@ -68,12 +90,14 @@ public struct CityTileArea: Sendable {
         longitude = read.origin.lon
         latitude = read.origin.lat
         (minX, maxX, minZ, maxZ) = (read.bounds.minX, read.bounds.maxX, read.bounds.minZ, read.bounds.maxZ)
-        var buildings: [Building] = []
+        var buildings: [Building] = [], signs: [Sign] = []
         for entry in read.tiles where entry.buildings > 0 {
-            guard let bytes = tile(entry.file), let read = try? Self.buildings(in: [UInt8](bytes)) else { continue }
-            buildings += read
+            guard let bytes = tile(entry.file), let read = try? Self.contents(of: [UInt8](bytes)) else { continue }
+            buildings += read.buildings
+            signs += read.signs
         }
         self.buildings = buildings
+        self.signs = signs
     }
 
     /// Every area in `folder` (the app's `BaseMap/city`): those its
@@ -90,16 +114,24 @@ public struct CityTileArea: Sendable {
         }
     }
 
-    init(id: String, longitude: Double, latitude: Double, minX: Float, maxX: Float, minZ: Float, maxZ: Float, buildings: [Building]) {
+    init(id: String, longitude: Double, latitude: Double, minX: Float, maxX: Float, minZ: Float, maxZ: Float, buildings: [Building],
+         signs: [Sign] = []) {
         self.id = id
         self.longitude = longitude
         self.latitude = latitude
         (self.minX, self.maxX, self.minZ, self.maxZ) = (minX, maxX, minZ, maxZ)
         self.buildings = buildings
+        self.signs = signs
     }
 
     /// The buildings of one tile's bytes.
     static func buildings(in bytes: [UInt8]) throws -> [Building] {
+        try contents(of: bytes).buildings
+    }
+
+    /// The buildings and signs of one tile's bytes; no signs where the
+    /// rest does not read.
+    static func contents(of bytes: [UInt8]) throws -> (buildings: [Building], signs: [Sign]) {
         var reader = Reader(bytes: bytes)
         guard try reader.u32() == 0x3159_4B54 else { throw ReadError.notATile } // 'TKY1'
         let version = Int(try reader.u16())
@@ -108,7 +140,8 @@ public struct CityTileArea: Sendable {
         _ = try reader.u32() // tx
         _ = try reader.u32() // tz
         let count = Int(try reader.u32())
-        try reader.skip(5 * 4) // the areas, props, wires, walls and signs
+        let areas = Int(try reader.u32()), props = Int(try reader.u32()), wires = Int(try reader.u32())
+        let walls = Int(try reader.u32()), signCount = Int(try reader.u32())
         var buildings: [Building] = []
         buildings.reserveCapacity(count)
         for _ in 0..<count {
@@ -128,7 +161,29 @@ public struct CityTileArea: Sendable {
             }
             buildings.append(Building(usage: usage, storeys: storeys, base: base, height: height, polygons: polygons))
         }
-        return buildings
+        let signs = try? Self.signs(after: &reader, areas: areas, props: props, wires: wires, walls: walls, signs: signCount)
+        return (buildings, signs ?? [])
+    }
+
+    /// Decision 352: past the areas, props, wires and walls, the signs.
+    static func signs(after reader: inout Reader, areas: Int, props: Int, wires: Int, walls: Int, signs count: Int) throws -> [Sign] {
+        for _ in 0..<areas {
+            try reader.skip(4)
+            _ = try reader.polygons()
+        }
+        try reader.skip(props * 16 + wires * 16 + walls * 20)
+        var signs: [Sign] = []
+        signs.reserveCapacity(count)
+        for _ in 0..<count {
+            let style = Int(try reader.u8()), colour = Int(try reader.u8())
+            _ = try reader.u16()
+            let x = try reader.f32(), y = try reader.f32(), z = try reader.f32(), nx = try reader.f32(), nz = try reader.f32()
+            let width = try reader.f32(), height = try reader.f32()
+            let length = Int(try reader.u16())
+            let text = String(decoding: try reader.take(length), as: UTF8.self)
+            signs.append(Sign(style: style, colour: colour, x: x, y: y, z: z, nx: nx, nz: nz, width: width, height: height, text: text))
+        }
+        return signs
     }
 
     /// Little-endian numbers off the front of a tile.

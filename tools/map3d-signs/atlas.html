@@ -1,0 +1,167 @@
+<!doctype html>
+<!--
+  Decision 352: draws Map3DSigns.png, the native 3D map's sign atlas, once,
+  in headless Chromium (render.cjs). The posters are Web/CityView's
+  src/world/ads.js atlas (MIT, Copyright (c) 2026 Yong Su; the licence is
+  Web/CityView/LICENSE), its pictures and words made Taiwan's: a cup of
+  bubble tea, a bowl of noodles, a scooter, a train in place of its anime
+  face, lucky cat, Mount Fuji and shrine gate; the night backdrops the
+  game's navy. Then the shop words (words.json) as white on black masks,
+  across for a board over a shop and down for a blade sign; the shader
+  paints them in a sign's own two colours.
+-->
+<meta charset="utf-8">
+<link rel="stylesheet" href="http://local/font/900.css">
+<canvas id="c"></canvas>
+<script>
+const COLS = 8, SIZE = 256, POSTERS = 24, BANNERS = 8;
+const FONT = '"Noto Sans TC", sans-serif';
+// neon tubes: pink, cyan, yellow, green, orange, violet, red, white (ads.js)
+const NEON = ['#ff3d9a', '#22e6ff', '#ffe23d', '#4dff88', '#ff8a2b', '#b56bff', '#ff3838', '#f4f8ff'];
+// the backdrops: the game's navy (#262C57) and darker ones of its hue
+const NIGHT = ['#161a3a', '#1c2147', '#262c57', '#0f1330', '#1a1f40', '#20254d'];
+
+const tube = (g, colour, width = 0.05) => { g.strokeStyle = colour; g.fillStyle = colour; g.shadowColor = colour; g.shadowBlur = 13; g.lineWidth = width; g.lineCap = 'round'; g.lineJoin = 'round'; };
+const line = (g, pts, close = false) => { g.beginPath(); pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); if (close) g.closePath(); g.stroke(); };
+const ring = (g, x, y, r, fill = false) => { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); if (fill) g.fill(); else g.stroke(); };
+// Each draws in a box about 1 wide and 1 high centred on the origin.
+const PICTURES = [
+  function tea(g, a, b) { // a cup of bubble tea and its straw
+    tube(g, a); line(g, [[-0.24, -0.22], [0.24, -0.22], [0.18, 0.4], [-0.18, 0.4]], true);
+    line(g, [[-0.28, -0.22], [0.28, -0.22]]); tube(g, b, 0.045); line(g, [[0.06, -0.22], [0.16, -0.48]]);
+    tube(g, '#f4f8ff', 0.03); for (const [x, y] of [[-0.1, 0.3], [0, 0.32], [0.1, 0.3], [-0.05, 0.22], [0.06, 0.22]]) ring(g, x, y, 0.035, true);
+  },
+  function noodles(g, a, b) { // a steaming bowl and chopsticks (ads.js's ramen)
+    tube(g, a); g.beginPath(); g.arc(0, 0.02, 0.36, 0, Math.PI); g.closePath(); g.stroke(); line(g, [[-0.14, 0.38], [0.14, 0.38]]);
+    tube(g, '#ffe23d', 0.03); for (let k = 0; k < 4; k++) { g.beginPath(); g.moveTo(-0.24 + k * 0.14, 0.02); g.bezierCurveTo(-0.2 + k * 0.14, 0.1, -0.28 + k * 0.14, 0.14, -0.22 + k * 0.14, 0.2); g.stroke(); }
+    tube(g, b, 0.035); line(g, [[0.1, -0.02], [0.44, -0.3]]); line(g, [[0.16, 0], [0.48, -0.24]]);
+    tube(g, '#f4f8ff', 0.03); for (const x of [-0.16, 0, 0.14]) { g.beginPath(); g.moveTo(x, -0.1); g.bezierCurveTo(x + 0.08, -0.18, x - 0.08, -0.26, x, -0.36); g.stroke(); }
+  },
+  function lantern(g, a, b) { // a paper lantern
+    tube(g, a); g.beginPath(); g.ellipse(0, 0.02, 0.26, 0.32, 0, 0, Math.PI * 2); g.stroke(); line(g, [[-0.12, -0.32], [0.12, -0.32]]); line(g, [[-0.12, 0.36], [0.12, 0.36]]); line(g, [[0, -0.32], [0, -0.44]]);
+    tube(g, b, 0.03); for (const y of [-0.14, 0.02, 0.18]) { g.beginPath(); g.ellipse(0, y, 0.26 * Math.sqrt(1 - ((y - 0.02) / 0.32) ** 2), 0.03, 0, 0, Math.PI); g.stroke(); }
+  },
+  function mountains(g, a, b) { // a ridge of peaks under the sun
+    tube(g, '#ff8a2b'); ring(g, 0.24, -0.24, 0.13, true);
+    tube(g, a); line(g, [[-0.48, 0.34], [-0.26, -0.06], [-0.14, 0.08], [0.02, -0.22], [0.2, 0.1], [0.3, 0.0], [0.48, 0.34]]);
+    tube(g, b, 0.04); line(g, [[-0.48, 0.4], [0.48, 0.4]]);
+  },
+  function wave(g, a, b) { // the sea
+    tube(g, a); for (let k = 0; k < 3; k++) { g.beginPath(); g.arc(-0.2 + k * 0.22, 0.1 + k * 0.08, 0.26 - k * 0.04, Math.PI * 0.9, Math.PI * 2.1); g.stroke(); }
+    tube(g, b, 0.04); line(g, [[-0.48, 0.38], [-0.24, 0.3], [0, 0.38], [0.24, 0.3], [0.48, 0.38]]);
+  },
+  function scooter(g, a, b) { // a scooter
+    tube(g, a); line(g, [[-0.34, 0.1], [-0.3, -0.06], [0.04, -0.06], [0.16, 0.1], [0.3, -0.24], [0.22, -0.3]]);
+    line(g, [[-0.3, -0.06], [-0.22, -0.14], [-0.02, -0.14]]);
+    tube(g, b); for (const x of [-0.3, 0.3]) ring(g, x, 0.18, 0.1);
+    tube(g, '#f4f8ff', 0.03); for (let k = 0; k < 3; k++) line(g, [[-0.5 - k * 0.04, -0.1 + k * 0.1], [-0.4 - k * 0.06, -0.1 + k * 0.1]]);
+  },
+  function train(g, a, b) { // a train's face
+    tube(g, a); line(g, [[-0.3, -0.36], [0.3, -0.36], [0.34, 0.3], [-0.34, 0.3]], true);
+    tube(g, b); line(g, [[-0.22, -0.26], [0.22, -0.26], [0.24, -0.02], [-0.24, -0.02]], true);
+    tube(g, '#ffe23d'); ring(g, -0.18, 0.16, 0.05, true); ring(g, 0.18, 0.16, 0.05, true);
+    tube(g, a, 0.04); line(g, [[-0.24, 0.3], [-0.34, 0.44]]); line(g, [[0.24, 0.3], [0.34, 0.44]]); line(g, [[-0.44, 0.44], [0.44, 0.44]]);
+  },
+  function pad(g, a, b) { // a game pad (ads.js)
+    tube(g, a); line(g, [[-0.3, -0.16], [0.3, -0.16], [0.44, 0.2], [0.3, 0.24], [0.14, 0.06], [-0.14, 0.06], [-0.3, 0.24], [-0.44, 0.2]], true);
+    tube(g, b, 0.045); line(g, [[-0.26, -0.02], [-0.14, -0.02]]); line(g, [[-0.2, -0.08], [-0.2, 0.04]]);
+    tube(g, '#ffe23d'); ring(g, 0.16, -0.04, 0.03, true); tube(g, '#ff3d9a'); ring(g, 0.25, -0.08, 0.03, true); tube(g, '#22e6ff'); ring(g, 0.25, 0.02, 0.03, true);
+  },
+  function chip(g, a, b) { // a microchip (ads.js)
+    tube(g, a); line(g, [[-0.2, -0.2], [0.2, -0.2], [0.2, 0.2], [-0.2, 0.2]], true);
+    tube(g, b, 0.03); for (let k = -2; k <= 2; k++) { line(g, [[k * 0.09, -0.2], [k * 0.09, -0.34]]); line(g, [[k * 0.09, 0.2], [k * 0.09, 0.34]]); line(g, [[-0.2, k * 0.09], [-0.34, k * 0.09]]); line(g, [[0.2, k * 0.09], [0.34, k * 0.09]]); }
+    line(g, [[-0.1, -0.1], [0.1, -0.1], [0.1, 0.1], [-0.1, 0.1]], true);
+  },
+  function steamer(g, a, b) { // a bamboo steamer of dumplings
+    tube(g, a); line(g, [[-0.4, -0.02], [0.4, -0.02], [0.36, 0.3], [-0.36, 0.3]], true); line(g, [[-0.38, 0.14], [0.38, 0.14]]);
+    tube(g, b, 0.04); for (const x of [-0.22, 0, 0.22]) { g.beginPath(); g.arc(x, -0.04, 0.1, Math.PI, Math.PI * 2); g.stroke(); }
+    tube(g, '#f4f8ff', 0.03); for (const x of [-0.14, 0.12]) { g.beginPath(); g.moveTo(x, -0.18); g.bezierCurveTo(x + 0.08, -0.26, x - 0.08, -0.34, x, -0.44); g.stroke(); }
+  },
+  function blossom(g, a, b) { // plum blossoms (ads.js's sakura, five round petals)
+    for (const [x, y, r, c] of [[-0.2, -0.1, 0.2, a], [0.22, 0.12, 0.16, b], [0.16, -0.26, 0.1, a], [-0.24, 0.26, 0.09, b]]) {
+      tube(g, c, 0.035);
+      for (let k = 0; k < 5; k++) { const t = (k * Math.PI * 2) / 5 - Math.PI / 2; ring(g, x + Math.cos(t) * r * 0.55, y + Math.sin(t) * r * 0.55, r * 0.36); }
+      ring(g, x, y, r * 0.1, true);
+    }
+  },
+  function gate(g, a, b) { // a 牌樓: a tiled roof with a swallowtail ridge, a plaque, two red posts
+    tube(g, a, 0.06); line(g, [[-0.48, -0.16], [-0.34, -0.26], [0.34, -0.26], [0.48, -0.16]]);
+    line(g, [[-0.34, -0.26], [-0.26, -0.36], [0.26, -0.36], [0.34, -0.26]]);
+    line(g, [[-0.26, -0.36], [-0.36, -0.46]]); line(g, [[0.26, -0.36], [0.36, -0.46]]);
+    line(g, [[-0.26, -0.16], [-0.26, 0.42]]); line(g, [[0.26, -0.16], [0.26, 0.42]]); line(g, [[-0.34, 0.06], [0.34, 0.06]]);
+    tube(g, b, 0.035); line(g, [[-0.14, -0.14], [0.14, -0.14], [0.14, -0.02], [-0.14, -0.02]], true);
+  },
+];
+
+let seed = 11;
+const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+const pick = (a) => a[Math.floor(rnd() * a.length)];
+
+window.drawAtlas = async (words) => {
+  const all = [...words.posterWords, ...words.posterLatin, ...words.bannerWords, ...words.shopWords].join('');
+  await document.fonts.load(`900 64px ${FONT}`, all);
+  await document.fonts.ready;
+  const c = document.getElementById('c');
+  c.width = COLS * SIZE; c.height = COLS * SIZE;
+  const g = c.getContext('2d');
+  g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height);
+  const S = SIZE;
+  const cell = (i, draw) => {
+    g.save(); g.translate((i % COLS) * S, Math.floor(i / COLS) * S);
+    g.beginPath(); g.rect(0, 0, S, S); g.clip(); draw(); g.restore();
+  };
+  const backdrop = (w) => {
+    const grad = g.createLinearGradient(0, 0, w, S);
+    grad.addColorStop(0, pick(NIGHT)); grad.addColorStop(1, pick(NIGHT));
+    g.shadowBlur = 0; g.fillStyle = grad; g.fillRect(0, 0, w, S);
+  };
+  const neonWords = (text, x, y, size, colour, vertical) => {
+    g.font = `900 ${size}px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.shadowColor = colour; g.shadowBlur = 15; g.fillStyle = '#ffffff'; g.strokeStyle = colour; g.lineWidth = size * 0.09;
+    const chars = vertical ? [...text] : [text];
+    chars.forEach((ch, k) => { const yy = y + (k - (chars.length - 1) / 2) * size * 1.06; g.strokeText(ch, x, yy); g.fillText(ch, x, yy); });
+  };
+  // ---- posters: a picture on one side, words on the other, a tube round the edge (ads.js)
+  for (let i = 0; i < POSTERS; i++) cell(i, () => {
+    const a = NEON[i % NEON.length], b = NEON[(i * 3 + 2) % NEON.length], w = NEON[(i * 5 + 4) % NEON.length], left = i % 2 === 0;
+    backdrop(S);
+    g.lineWidth = 5; g.strokeStyle = w; g.shadowColor = w; g.shadowBlur = 12; g.strokeRect(11, 11, S - 22, S - 22);
+    g.save(); g.translate(S * (left ? 0.32 : 0.68), S * 0.5); g.scale(S * 0.5, S * 0.74); PICTURES[i % PICTURES.length](g, a, b); g.restore();
+    if (i % 3 !== 2) { const t = pick(words.posterWords), size = Math.min(S * 0.19, (S * 0.8) / [...t].length); neonWords(t, S * (left ? 0.78 : 0.22), S * 0.5, size, w, true); }
+    else { const t = pick(words.posterLatin); g.save(); g.translate(S * (left ? 0.74 : 0.26), S * 0.5); g.rotate(-Math.PI / 2); neonWords(t, 0, 0, Math.min(S * 0.16, (S * 0.8) / (t.length * 0.62)), w, false); g.restore(); }
+  });
+  // ---- banners: one column of big characters over a small picture, in the left third (ads.js)
+  for (let i = 0; i < BANNERS; i++) cell(POSTERS + i, () => {
+    const a = NEON[(i * 3) % NEON.length], b = NEON[(i * 3 + 5) % NEON.length], W = Math.round(S / 3);
+    backdrop(W);
+    g.lineWidth = 4; g.strokeStyle = a; g.shadowColor = a; g.shadowBlur = 11; g.strokeRect(6, 6, W - 12, S - 12);
+    const t = words.bannerWords[i], n = [...t].length;
+    neonWords(t, W / 2, S * 0.4, Math.min(W * 0.62, (S * 0.62) / n), a, true);
+    g.save(); g.translate(W / 2, S * 0.84); g.scale(W * 0.7, S * 0.2); PICTURES[(i * 5 + 1) % PICTURES.length](g, b, a); g.restore();
+  });
+  // ---- the shop words, white on black: across in 256 x 64 strips, down in 64 x 256 columns, four to a cell
+  const first = POSTERS + BANNERS;
+  words.shopWords.forEach((t, k) => {
+    const chars = [...t];
+    cell(first + Math.floor(k / 4), () => {
+      g.translate(0, (k % 4) * (S / 4));
+      g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.shadowBlur = 0;
+      const size = 46;
+      g.font = `900 ${size}px ${FONT}`;
+      const width = g.measureText(t).width, room = S - 24;
+      g.save(); g.translate(S / 2, S / 8 + 2);
+      if (width > room) g.scale(room / width, 1);
+      g.fillText(t, 0, 0); g.restore();
+    });
+    cell(first + 16 + Math.floor(k / 4), () => {
+      g.translate((k % 4) * (S / 4), 0);
+      g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.shadowBlur = 0;
+      // one character a cell, top to bottom; Latin letters upright too
+      const step = Math.min(52, (S - 16) / chars.length), size = Math.min(46, step * 0.92);
+      g.font = `900 ${size}px ${FONT}`;
+      chars.forEach((ch, i) => g.fillText(ch, S / 8, S / 2 + (i - (chars.length - 1) / 2) * step));
+    });
+  });
+  return c.toDataURL('image/png');
+};
+</script>

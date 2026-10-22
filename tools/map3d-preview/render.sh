@@ -14,7 +14,9 @@ repo=$(cd "$here/../.." && pwd)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 for part in vertices indices svertices sindices json; do ln -s "$(realpath "$1.$part")" "$work/demo.$part"; done
+# Decision 352: the signs, when the dump has them.
+if [ -f "$1.signs" ]; then ln -s "$(realpath "$1.signs")" "$work/demo.signs"; else : > "$work/demo.signs"; fi
 cp "$here/index.html" "$work/"
-cp "$repo/RailwayGameApp/Resources/Map3D/Map3DSurfaces.png" "$work/"
+cp "$repo/RailwayGameApp/Resources/Map3D/Map3DSurfaces.png" "$repo/RailwayGameApp/Resources/Map3D/Map3DSigns.png" "$work/"
 out=$(realpath -m "$2")
 cd "$here" && node render.cjs "$work" "$out" "$3"

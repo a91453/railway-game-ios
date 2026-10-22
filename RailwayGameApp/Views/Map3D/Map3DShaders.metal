@@ -132,6 +132,21 @@ float3 map3dFinish(float3 colour) {
     return clamp(g, 0.0, 1.0);
 }
 
+// `base` lit by the sun and the sky on a face looking along `normal` at
+// `world`, its own light `glow` added, faded into the fog, and finished.
+// Decision 352: the signs end the same way.
+float4 map3dLit(float3 base, float3 glow, float3 normal, float3 world, constant Map3DUniforms &uniforms) {
+    float sun = max(dot(normal, uniforms.sunDirection.xyz), 0.0);
+    float3 ambient = mix(uniforms.ambientGround.rgb, uniforms.ambientSky.rgb, normal.y * 0.5 + 0.5);
+    float3 lit = base * (ambient + uniforms.sunColor.rgb * sun);
+    float far = distance(world, uniforms.eye.xyz);
+    float fog = smoothstep(uniforms.fog.x, uniforms.fog.y, far);
+    // Decision 349: and the haze on the ground on the way.
+    float3 way = (world - uniforms.eye.xyz) / max(far, 1e-3);
+    fog = 1.0 - (1.0 - fog) * (1.0 - map3dHaze(uniforms.eye.y, way, far, uniforms.fog.z, uniforms.fog.w));
+    return float4(map3dFinish(mix(lit, uniforms.fogColor.rgb, fog) + glow * (1.0 - fog * 0.7)), 1.0);
+}
+
 float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d_array<float> surfaces) {
     constexpr sampler repeating(address::repeat, filter::linear, mip_filter::linear, max_anisotropy(8));
     float3 base = in.color;
@@ -177,16 +192,7 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
             glow += warm * mix(0.55, 1.1, hash12(room + 1.3)) * glass * on * lights;
         }
     }
-    float3 normal = normalize(in.normal);
-    float sun = max(dot(normal, uniforms.sunDirection.xyz), 0.0);
-    float3 ambient = mix(uniforms.ambientGround.rgb, uniforms.ambientSky.rgb, normal.y * 0.5 + 0.5);
-    float3 lit = base * (ambient + uniforms.sunColor.rgb * sun);
-    float far = distance(in.world, uniforms.eye.xyz);
-    float fog = smoothstep(uniforms.fog.x, uniforms.fog.y, far);
-    // Decision 349: and the haze on the ground on the way.
-    float3 way = (in.world - uniforms.eye.xyz) / max(far, 1e-3);
-    fog = 1.0 - (1.0 - fog) * (1.0 - map3dHaze(uniforms.eye.y, way, far, uniforms.fog.z, uniforms.fog.w));
-    return float4(map3dFinish(mix(lit, uniforms.fogColor.rgb, fog) + glow * (1.0 - fog * 0.7)), 1.0);
+    return map3dLit(base, glow, normalize(in.normal), in.world, uniforms);
 }
 
 fragment float4 map3dFragment(Map3DVertexOut in [[stage_in]], constant Map3DUniforms &uniforms [[buffer(1)]],
@@ -324,3 +330,126 @@ fragment float4 map3dSkyFragment(Map3DSkyOut in [[stage_in]], constant Map3DSkyU
     colour = mix(colour, sky.horizon.rgb, map3dHaze(sky.stars.y, d, 60000.0, sky.stars.z, sky.stars.w));
     return float4(map3dFinish(colour), 1.0);
 }
+
+// Decision 352: the signs, billboards and LED screens (Web/CityView's
+// ads.js, MIT), each an instance as Map3DSign.floats lays it out: its
+// middle and kind (0 a poster, 1 a screen, 2 a banner, 3 a word across,
+// 4 a word down), half its width toward the reader's right and the
+// picture, half its height and the seed, the board's and letters' colours
+// (red + green * 256 + blue * 65536) and the minutes after noon it goes
+// dark. Beside them, as Map3DSign.clock writes it: the seconds the screens
+// run on, the minutes after noon now, and how far from the eye signs are
+// drawn. The atlas (Map3DSigns.png, Map3DSignAtlas): 8 by 8 cells.
+struct Map3DSignIn {
+    float4 middle;
+    float4 right;
+    float4 up;
+    float4 colours;
+};
+
+struct Map3DSignOut {
+    float4 position [[position]];
+    float2 at;
+    float3 world;
+    float3 normal [[flat]];
+    float kind [[flat]];
+    float picture [[flat]];
+    float seed [[flat]];
+    float aspect [[flat]];
+    float3 board [[flat]];
+    float3 letters [[flat]];
+    float lit [[flat]];
+};
+
+static float3 map3dUnpack(float packed) {
+    return float3(fmod(packed, 256.0), fmod(floor(packed / 256.0), 256.0), floor(packed / 65536.0)) / 255.0;
+}
+
+vertex Map3DSignOut map3dSignVertex(uint corner [[vertex_id]], uint instance [[instance_id]], constant Map3DUniforms &uniforms [[buffer(1)]],
+                                    const device Map3DSignIn *signs [[buffer(2)]], constant float4 &clock [[buffer(3)]]) {
+    Map3DSignIn sign = signs[instance];
+    // A strip: bottom left, bottom right, top left, top right as read.
+    float2 at = float2((corner & 1u) ? 1.0 : 0.0, (corner & 2u) ? 1.0 : 0.0);
+    float3 world = sign.middle.xyz + sign.right.xyz * (at.x * 2.0 - 1.0) + sign.up.xyz * (at.y * 2.0 - 1.0);
+    Map3DSignOut out;
+    out.position = uniforms.viewProjection * float4(world, 1.0);
+    // Too far to read: every corner at one point past the far plane, so
+    // nothing is drawn.
+    if (distance(sign.middle.xyz, uniforms.eye.xyz) > clock.z) { out.position = float4(0.0, 0.0, -1.0, 1.0); }
+    out.at = at;
+    out.world = world;
+    out.normal = normalize(cross(sign.right.xyz, sign.up.xyz));
+    out.kind = sign.middle.w;
+    out.picture = sign.right.w;
+    out.seed = sign.up.w;
+    out.aspect = length(sign.right.xyz) / max(length(sign.up.xyz), 1e-3);
+    out.board = map3dUnpack(sign.colours.x);
+    out.letters = map3dUnpack(sign.colours.y);
+    out.lit = clock.y < sign.colours.z ? 1.0 : 0.0;
+    return out;
+}
+
+// A poster's cell (ads.js `poster`), `at` from its bottom left.
+static float3 map3dPoster(texture2d<float> atlas, sampler s, float index, float2 at) {
+    float i = floor(index + 0.5);
+    float2 cell = float2(fmod(i, 8.0), floor(i / 8.0));
+    return atlas.sample(s, (cell + clamp(float2(at.x, 1.0 - at.y), 0.004, 0.996)) / 8.0).rgb;
+}
+
+// How much of a word's letters cover `at` on a board `aspect` wide for
+// each metre high: the word's strip (`shape` wide for each high, at
+// `origin`, `size` of the atlas) fitted in the board's middle, the rest
+// the board's own colour.
+static float map3dWord(texture2d<float> atlas, sampler s, float2 origin, float2 size, float shape, float aspect, float2 at) {
+    float2 fitted = aspect > shape ? float2((at.x - 0.5) * aspect / shape + 0.5, at.y) : float2(at.x, (at.y - 0.5) * shape / aspect + 0.5);
+    // Sampled everywhere, so the pixels round it keep their mipmaps.
+    float inside = step(0.0, min(fitted.x, fitted.y)) * step(max(fitted.x, fitted.y), 1.0);
+    return atlas.sample(s, origin + clamp(float2(fitted.x, 1.0 - fitted.y), 0.01, 0.99) * size).r * inside;
+}
+
+fragment float4 map3dSignFragment(Map3DSignOut in [[stage_in]], constant Map3DUniforms &uniforms [[buffer(1)]],
+                                  constant float4 &clock [[buffer(3)]], texture2d<float> atlas [[texture(0)]]) {
+    constexpr sampler s(address::clamp_to_edge, filter::linear, mip_filter::linear, max_anisotropy(4));
+    // Read from behind (a blade sign's far side), the right way round.
+    float3 normal = in.normal;
+    float2 at = in.at;
+    if (dot(normal, uniforms.eye.xyz - in.world) < 0.0) {
+        normal = -normal;
+        at.x = 1.0 - at.x;
+    }
+    uint kind = uint(in.kind + 0.5);
+    float lights = uniforms.shade.y;
+    float3 colour, base, glow;
+    if (kind == 1u) {
+        // A screen: the next poster wipes in every few seconds; LED
+        // pixels show close up.
+        float t = clock.x * 0.16 + in.seed * 9.0, wipe = smoothstep(0.86, 1.0, fract(t));
+        float now = fmod(in.picture + floor(t), 24.0), next = fmod(now + 1.0, 24.0);
+        colour = mix(map3dPoster(atlas, s, now, at), map3dPoster(atlas, s, next, at), step(at.x, wipe));
+        float2 led = fract(at * float2(160.0, 90.0));
+        float fine = max(fwidth(at.x * 160.0), fwidth(at.y * 90.0));
+        colour *= mix(0.72 + 0.5 * step(0.22, led.x) * step(0.22, led.y), 1.0, smoothstep(0.3, 1.0, fine));
+        // Bright by day too; dark once switched off.
+        base = colour * 0.35;
+        glow = colour * (0.55 + 0.75 * lights) * in.lit;
+    } else if (kind <= 2u) {
+        // A neon poster or banner: by day dull glass on a dark board.
+        colour = kind == 2u ? map3dPoster(atlas, s, 24.0 + in.picture, float2(at.x / 3.0, at.y)) : map3dPoster(atlas, s, in.picture, at);
+        base = mix(colour * 0.55 + 0.03, colour, lights);
+        glow = colour * (0.1 + 1.6 * lights * in.lit);
+    } else {
+        // A shop's board, its word in its letters' colour, lit from
+        // inside after dark until the shop closes.
+        float i = floor(in.picture + 0.5), strip = fmod(i, 4.0);
+        float across = kind == 3u ? 1.0 : 0.0;
+        float index = (kind == 3u ? 32.0 : 48.0) + floor(i / 4.0);
+        float2 origin = float2(fmod(index, 8.0), floor(index / 8.0)) / 8.0 + float2(1.0 - across, across) * (strip / 32.0);
+        float2 size = kind == 3u ? float2(0.125, 0.03125) : float2(0.03125, 0.125);
+        float letter = map3dWord(atlas, s, origin, size, kind == 3u ? 4.0 : 0.25, in.aspect, at);
+        colour = mix(in.board, in.letters, letter);
+        base = colour;
+        glow = colour * (1.1 * lights * in.lit);
+    }
+    return map3dLit(base, glow, normal, in.world, uniforms);
+}
+
