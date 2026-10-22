@@ -280,6 +280,13 @@ final class LessonUITests: XCTestCase {
         let start = app.buttons["lesson.\(number).start"]
         reveal(start)
         tap(start)
+        // The press on Start can be cancelled (the app's trace: "touch
+        // cancelled at (437, 303)" on the list's cell), and the picker
+        // stays open with no lesson started (PR #1032's run 39781911139,
+        // lesson 3). Tap once more if the picker did not close.
+        if !element("lessons.title").disappears(within: 10), start.exists {
+            tap(start)
+        }
         XCTAssertTrue(map.appears(within: 20))
         XCTAssertTrue(element("lessons.title").disappears(within: 5))
     }
@@ -313,24 +320,21 @@ final class LessonUITests: XCTestCase {
     /// edge was its old place by the screen's trailing edge: every one of
     /// the 40 drags fell at x 797.8 and the list did not move (main
     /// 82ce09e's full lane, run 39767194320; the green runs dragged at
-    /// x 537.4), as `reveal` once did. Wait for the panel to stop, and
-    /// measure it again before each drag.
+    /// x 537.4), as `reveal` once did. Wait for the panel to stop before
+    /// measuring it. Measure it once: the query finds the panel by its
+    /// first section, which the list drops once it scrolls away ("No
+    /// matches found" after two drags, PR #1032's run 39781911139).
     private func revealPastMenus(_ control: XCUIElement) {
         let panel = app.collectionViews.containing(.any, identifier: "station.operations").firstMatch
         XCTAssertTrue(panel.appears(within: 10), "Missing \(panel)")
         panel.waitUntilStill()
-        var area = CGRect.zero
-        func measure() {
-            let onScreen = panel.frame.intersection(app.frame)
-            area = onScreen.isEmpty ? panel.frame : onScreen
-        }
-        measure()
+        let onScreen = panel.frame.intersection(app.frame)
+        let area = onScreen.isEmpty ? panel.frame : onScreen
+        let band = area.insetBy(dx: 0, dy: 24)
         func shown() -> Bool {
-            let band = area.insetBy(dx: 0, dy: 24)
-            return control.exists && band.minY <= control.frame.midY && control.frame.midY <= band.maxY
+            control.exists && band.minY <= control.frame.midY && control.frame.midY <= band.maxY
         }
         func drag(from: CGFloat, to: CGFloat) {
-            measure()
             let origin = app.coordinate(withNormalizedOffset: .zero)
             let x = area.minX + area.width * 0.02 - app.frame.minX
             origin.withOffset(CGVector(dx: x, dy: area.minY + area.height * from - app.frame.minY))
@@ -341,7 +345,7 @@ final class LessonUITests: XCTestCase {
             if shown() { break }
             if !control.exists {
                 drag(from: 0.85, to: 0.15)
-            } else if control.frame.midY < area.minY + 24 {
+            } else if control.frame.midY < band.minY {
                 drag(from: 0.35, to: 0.65)
             } else {
                 drag(from: 0.65, to: 0.35)
