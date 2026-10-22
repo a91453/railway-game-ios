@@ -428,6 +428,9 @@ private final class BackgroundSave {
 private struct RootView: View {
     let launcher: GameLauncher
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Decision 351: the demo mode's switch in the settings, read only in
+    /// a test build.
+    @AppStorage(DemoMode.switchKey) private var demoModeOn = false
 
     var body: some View {
         Group {
@@ -452,6 +455,9 @@ private struct RootView: View {
             (launcher.realWorldLoading == nil ? MotionRule.loadingOut : .loadingIn).running(reduceMotion: reduceMotion)?.animation,
             value: launcher.realWorldLoading == nil
         )
+        .onChange(of: demoModeOn, initial: true) { _, on in
+            launcher.isDemoMode = DemoMode.isOn(testBuild: TestBuild.isTest, switchOn: on)
+        }
         #if DEBUG
         .background {
             if UITestTrace.isOn {

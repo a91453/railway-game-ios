@@ -128,6 +128,12 @@ public final class GameLauncher {
     /// The station stamps collected (decision 348), kept beside the
     /// achievements in a file that is not a save.
     public private(set) var stationStamps: StationStampRecords
+
+    /// Whether the demo mode is on (decision 351): set by the app from its
+    /// hidden switch, only in a test build (``DemoMode``). While on, every
+    /// lesson is open, a new game has unlimited funds and the whole map,
+    /// and every game it starts counts nothing, as a demo.
+    public var isDemoMode = false
     @ObservationIgnored private var isActive = false
     @ObservationIgnored private var autosaveLoop: Task<Void, Never>?
     /// The world of the last autosave taken in turn, or of the game when
@@ -250,7 +256,7 @@ public final class GameLauncher {
     /// the new game turns on and the seed; and on a real-world map, the
     /// ground (decision 198).
     public func startNewGame(at anchor: GeoAnchor? = nil) {
-        begin(Self.newWorld(at: anchor, options: newGameOptions, data: newWorldData), keepingAutosave: true)
+        begin(Self.newWorld(at: anchor, options: newGameOptions, data: newWorldData, demo: isDemoMode), keepingAutosave: true)
     }
 
     /// What building a new game's world reads of the real-world data: a
@@ -273,21 +279,35 @@ public final class GameLauncher {
     /// The world ``startNewGame(at:)`` begins: its rules, without the
     /// launcher, so ``openRealWorldGame(at:)`` builds the same one off the
     /// main actor.
-    nonisolated static func newWorld(at anchor: GeoAnchor?, options: NewGameOptions, data: NewWorldData) -> GameWorld {
+    ///
+    /// In the demo mode (`demo`, decision 351) the world has unlimited
+    /// funds, and its map is not bought tile by tile: a place of Taiwan is
+    /// the same island-wide world with no tile to buy, its land read in
+    /// round the stations as on the whole of Taiwan, and a blank map is
+    /// whole from the start.
+    nonisolated static func newWorld(at anchor: GeoAnchor?, options: NewGameOptions, data: NewWorldData, demo: Bool = false) -> GameWorld {
         let seed = options.eventSeed()
         let cap = ModeShiftCounties.cap(at: anchor, in: data.placeNames)
         if let anchor, let population = data.population, let expansion = RealWorldExpansion(around: anchor) {
-            let step = expansion.ridersStep(population: population, places: data.places, water: data.water)
-            var world = GameWorld.newRealWorldExpansionGame(expansion, ridersStep: step, balance: options.startingBalance, eventSeed: seed)
+            var world: GameWorld
+            if demo {
+                world = GameWorld.newGame(anchor: expansion.anchor, bounds: expansion.bounds, balance: options.startingBalance, eventSeed: seed, land: [])
+                world.setLandOnDemand()
+            } else {
+                let step = expansion.ridersStep(population: population, places: data.places, water: data.water)
+                world = GameWorld.newRealWorldExpansionGame(expansion, ridersStep: step, balance: options.startingBalance, eventSeed: seed)
+            }
             options.apply(to: &world, modeShiftCap: cap)
+            if demo { world.setUnlimitedFunds(true) }
             return grounded(world, options.ground, heights: data.heights)
         }
         var world = GameWorld.newGame(
             anchor: anchor, balance: options.startingBalance, eventSeed: seed, land: anchor.flatMap { land(at: $0, data: data) },
             water: anchor.map { water(at: $0, data: data) } ?? [], steep: anchor.map { steep(at: $0, data: data) } ?? [],
-            buysMap: anchor == nil && options.buysMap
+            buysMap: anchor == nil && options.buysMap && !demo
         )
         options.apply(to: &world, modeShiftCap: cap)
+        if demo { world.setUnlimitedFunds(true) }
         return anchor == nil ? world : grounded(world, options.ground, heights: data.heights)
     }
 
@@ -305,12 +325,12 @@ public final class GameLauncher {
     public func openRealWorldGame(at anchor: GeoAnchor) -> Task<Void, Never>? {
         guard realWorldLoading == nil, !isOpeningADemo else { return nil }
         realWorldLoading = RealWorldLoading(place: RealWorldLoading.placeName(near: anchor, in: placeNames, language: language))
-        let (options, data) = (newGameOptions, newWorldData)
+        let (options, data, demo) = (newGameOptions, newWorldData, isDemoMode)
         return Task {
-            let world = await Task.detached(priority: .userInitiated) { Self.newWorld(at: anchor, options: options, data: data) }.value
+            let world = await Task.detached(priority: .userInitiated) { Self.newWorld(at: anchor, options: options, data: data, demo: demo) }.value
             realWorldLoading = nil
             guard session == nil else { return }
-            begin(world, keepingAutosave: true)
+            begin(world, keepingAutosave: true, isDemo: demo)
         }
     }
 
@@ -320,6 +340,7 @@ public final class GameLauncher {
         let options = newGameOptions
         var world = GameWorld.newWholeTaiwanGame(balance: options.startingBalance, eventSeed: options.eventSeed())
         options.apply(to: &world)
+        if isDemoMode { world.setUnlimitedFunds(true) }
         begin(Self.grounded(world, options.ground, heights: heights), keepingAutosave: true)
     }
 
@@ -399,8 +420,15 @@ public final class GameLauncher {
     /// Keeps the game's challenge result if it is the player's best
     /// (decision 87), and says so on the status line.
     public func recordChallengeResult(at date: Date = Date()) {
-        if let session { recordLessonResult(of: session.world) }
-        guard let session, records.record(session.world, at: date),
+        if let session { recordResult(of: session, at: date) }
+    }
+
+    /// ``recordChallengeResult(at:)`` of `session`. Decision 351: a game of
+    /// the demo mode, as a demo, keeps nothing.
+    func recordResult(of session: GameSession, at date: Date = Date()) {
+        guard !session.news.isDemo else { return }
+        recordLessonResult(of: session.world)
+        guard records.record(session.world, at: date),
               let record = session.world.scenario.flatMap({ records.best[$0.scenario.id] }) else { return }
         session.message = StatusMessage(kind: .success, text: language.text("New best! \(record.text(in: language))", "刷新紀錄！\(record.text(in: language))"))
     }
@@ -648,9 +676,10 @@ public final class GameLauncher {
     }
 
     /// Whether `lesson` can be played: the first always, each other once
-    /// the one before it was passed.
+    /// the one before it was passed; every one in the demo mode (decision
+    /// 351).
     public func isOpen(_ lesson: Lesson) -> Bool {
-        lesson.number == 1 || stars(of: Lesson.all[lesson.number - 2]) > 0
+        isDemoMode || lesson.number == 1 || stars(of: Lesson.all[lesson.number - 2]) > 0
     }
 
     /// Starts `lesson` (decision 266): its game, with its guide's first step
@@ -945,8 +974,11 @@ public final class GameLauncher {
 
     /// Plays `world`. Returns whether it started. A demo (`isDemo`)
     /// unlocks no achievements (decision 181), nor does its save later.
+    /// Decision 351: nor does any new game (one without `news`) begun in
+    /// the demo mode.
     @discardableResult
     private func begin(_ world: GameWorld, keepingAutosave: Bool, news: NewsLog? = nil, isDemo: Bool = false) -> Bool {
+        let isDemo = isDemo || (news == nil && isDemoMode)
         if keepingAutosave {
             do throws(SaveError) {
                 let library = library
