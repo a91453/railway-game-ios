@@ -149,7 +149,9 @@ public struct Map3DFollow: Hashable, Sendable {
     /// The camera following the train whose front is at `head`, `elapsed`
     /// seconds after `camera`: looking at the rail under the front, from
     /// the view's tilt and distance, turned after the train from where
-    /// `camera` faced (at once when `turnsAtOnce`).
+    /// `camera` faced (at once when `turnsAtOnce`). Where the ground
+    /// covers the train (``Map3DTrains/Head/ground``), at the ground over
+    /// it instead, so the camera stays out of the ground (decision 359).
     public func camera(following head: Map3DTrains.Head, from camera: Map3DCamera, elapsed: Double,
                        turnsAtOnce: Bool = false) -> Map3DCamera {
         var next = camera
@@ -161,12 +163,18 @@ public struct Map3DFollow: Hashable, Sendable {
             next.pitch = view.tilt
             next.lens = Self.cabLens
             next.distance = Map3DCamera.nearest
-            let eye = head.nose + head.forward * Self.cabLead + Map3DPoint(0, Self.cabEyeHeight, 0)
+            var eye = head.nose + head.forward * Self.cabLead + Map3DPoint(0, Self.cabEyeHeight, 0)
+            // Decision 359: over the ground where it covers the track (a
+            // tunnel the scene does not draw), not in it.
+            if let ground = head.ground { eye.y = max(eye.y, ground + Self.cabEyeHeight) }
             next.target = eye + next.forward * (next.distance * sinf(view.tilt)) - Map3DPoint(0, next.distance * cosf(view.tilt), 0)
             return next
         }
         next.lens = nil
         next.target = head.rail
+        // Decision 359: the ground over the train where it covers it, so
+        // the camera does not go under the ground with it.
+        if let ground = head.ground { next.target.y = max(next.target.y, ground) }
         next.distance = min(max(Self.distance(viewportHeight: camera.viewport.height) * scale, Map3DCamera.nearest), Map3DCamera.farthest)
         next.pitch = view.tilt
         let wanted = Self.heading(of: head.forward)

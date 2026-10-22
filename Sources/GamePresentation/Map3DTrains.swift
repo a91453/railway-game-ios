@@ -99,12 +99,18 @@ public enum Map3DTrains {
         /// Decision 337: the front of the train on the rail, where the
         /// cab view looks out from.
         public let nose: Map3DPoint
+        /// Decision 359: the drawn ground at ``nose``, which the camera
+        /// following the train stays over (in a tunnel, or a cutting the
+        /// ground covers); `nil` off the player's track.
+        public let ground: Float?
 
-        public init(train: TrainID, point: Map3DPoint, forward: Map3DPoint = Map3DPoint(0, 0, -1), nose: Map3DPoint? = nil) {
+        public init(train: TrainID, point: Map3DPoint, forward: Map3DPoint = Map3DPoint(0, 0, -1), nose: Map3DPoint? = nil,
+                    ground: Float? = nil) {
             self.train = train
             self.point = point
             self.forward = forward
             self.nose = nose ?? point - Map3DPoint(0, Map3DTrains.carHeight + Map3DTrains.headClearance, 0)
+            self.ground = ground
         }
 
         /// The rail under ``point``, where the follow camera looks.
@@ -161,15 +167,19 @@ public enum Map3DTrains {
                 let b = scene.point(worldX: back.x, worldY: back.y, height: heights.height(of: run.train, x: back.x, y: back.y)) + lift
                 let length = (a - b).length
                 guard length > 1 else { continue }
-                if line.isEmpty { line.append(a) }
-                line.append(b)
                 let base = (a + b) * 0.5
-                frame.cars.append(base)
                 if index == 0 {
                     frame.heads.append(Head(train: run.train, point: a + (b - a) * (min(4, length / 2) / length)
                                                 + Map3DPoint(0, carHeight + headClearance, 0),
-                                            forward: Map3DPoint(a.x - b.x, 0, a.z - b.z).normalized ?? Map3DPoint(0, 0, -1), nose: a))
+                                            forward: Map3DPoint(a.x - b.x, 0, a.z - b.z).normalized ?? Map3DPoint(0, 0, -1), nose: a,
+                                            ground: scene.trackCover.ground(at: a)?.height))
                 }
+                // Decision 359: not in a tunnel, which the scene does not
+                // draw, as the real trains are not (decision 339).
+                guard !scene.trackCover.isInTunnel(base) else { continue }
+                if line.isEmpty { line.append(a) }
+                line.append(b)
+                frame.cars.append(base)
                 // Decision 232: a soft shadow on the bed under the car.
                 let bed = Map3DPoint(0, 0.05 - Map3DScene.Builder.bedDrop, 0)
                 frame.shadows.addShadow(
