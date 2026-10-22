@@ -142,6 +142,28 @@ final class ModeShiftTests: XCTestCase {
         XCTAssertEqual(loaded, batched)
     }
 
+    /// What the cards read (decision 332): B loses 1,000 to the simple
+    /// rule, waiting 5 minutes against riding 4, quicker by scooter (10
+    /// minutes) than by car (12); Near is close by and loses no one.
+    func testTheLossesSayWhoSwitchedAndWhy() throws {
+        var world = try corridor(headway: 10)
+        XCTAssertEqual(world.modeShiftLosses(from: a), [])
+        try world.setModeShift(.simple)
+        let losses = world.modeShiftLosses(from: a)
+        XCTAssertEqual(losses.map(\.destination), [b, near])
+        let toB = losses[0]
+        XCTAssertEqual(toB.switched, 1_000)
+        XCTAssertEqual(toB.tooExpensive, 0)
+        XCTAssertTrue(toB.waitsLongest)
+        XCTAssertFalse(toB.byCar)
+        XCTAssertFalse(toB.isNear)
+        XCTAssertEqual(toB.lines, world.lines.map(\.id))
+        XCTAssertEqual(losses[1].switched, 0)
+        XCTAssertTrue(losses[1].isNear)
+        XCTAssertEqual(ModeShift.vehicleMinutes(metres: 2_144).scooter, 10)
+        XCTAssertEqual(ModeShift.vehicleMinutes(metres: 2_144).car, 12)
+    }
+
     // MARK: - The command
 
     func testACapOutsideZeroToAThousandIsRefused() throws {
