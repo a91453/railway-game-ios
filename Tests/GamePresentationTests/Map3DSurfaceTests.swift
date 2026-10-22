@@ -136,7 +136,8 @@ final class Map3DSurfaceTests: XCTestCase {
         // this order (Map3DShaders.metal's firstMaterial, detailRepeat).
         XCTAssertEqual(Map3DSurface.materials.map(\.rawValue), [18, 19, 20, 21])
         XCTAssertEqual(Map3DSurface.materials.map(\.detailRepeat), [3.6, 1.8, 1.8, 1.8])
-        XCTAssertEqual(Map3DSurface.allCases.count, 22)
+        // Decision 355: and the road paint after them.
+        XCTAssertEqual(Map3DSurface.allCases.count, 24)
         let paint = Map3DPaint.bays(.flatWindows, bay: 3.2, floors: 4).on(.brickTile)
         XCTAssertEqual(paint.layer, Float(Map3DSurface.flatWindows.rawValue + 64 * 20))
         XCTAssertEqual(paint.on(nil).layer, Float(Map3DSurface.flatWindows.rawValue))

@@ -191,12 +191,19 @@ extension Map3DScene.Builder {
                          color: Map3DPalette.road(kind), paint: nil, taking: &taken)
             }
         }
+        // Decision 355: the paint at the junctions, the centre lines
+        // stopping at their crossings.
+        let markings = Map3DRoadMarkings(roads)
         var lines = Set<Map3DScene.ChunkKey>()
-        for road in roads where Self.hasCentreLine(road) {
-            addStrip(road.points, bounds: road.bounds, width: 0.3, lift: Self.centreLineLift, color: Map3DPalette.centreLine, paint: nil,
-                     taking: &lines)
+        for (number, road) in roads.enumerated() where Self.hasCentreLine(road) {
+            for piece in markings.centreLines(of: road, number: number) {
+                addStrip(piece, bounds: road.bounds, width: 0.3, lift: Self.centreLineLift, color: Map3DPalette.centreLine, paint: nil,
+                         taking: &lines)
+            }
         }
+        addRoadMarkings(markings)
         addStreetProps(roads)
+        addStreetStops(roads, markings: markings)
         // Decision 259: their traffic and their pavements' people.
         for road in roads where road.points.count >= 2 { addStreetLife(road) }
     }

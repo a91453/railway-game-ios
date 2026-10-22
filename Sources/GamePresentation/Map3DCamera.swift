@@ -496,7 +496,7 @@ public enum Map3DNightWindows {
         case .officeGlass: (0.4, 0.45)
         case .homeWindows, .homeBalcony, .flatWindows, .flatBlinds: (0.35, 0.45)
         case .grass, .paving, .ballast, .concrete, .roof, .plaster, .shutter, .metalSheet,
-             .formConcrete, .brickTile, .mosaicTile, .terrazzo: (0, 0)
+             .formConcrete, .brickTile, .mosaicTile, .terrazzo, .crosswalk, .laneArrows: (0, 0)
         }
     }
 }
