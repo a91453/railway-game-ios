@@ -256,8 +256,12 @@ extension GameSession {
         }
         demoRealLinesProgress = DemoRealLines.Progress(done: 0, total: total)
 
-        // The track as the trace lays it with the tool's own choices.
+        // The track as the trace lays it with the tool's own choices; the
+        // clock stopped meanwhile, so no tick splits the one Undo, and
+        // running again as it was after.
         let tool = (height: networkHeight, structure: networkStructure)
+        let speed = world.clock.isPaused ? nil : world.clock.speed
+        if speed != nil { setSpeed(.paused) }
         networkHeight = 0
         networkStructure = .automatic
         beginEditGesture()
@@ -265,6 +269,7 @@ extension GameSession {
             endEditGesture()
             networkHeight = tool.height
             networkStructure = tool.structure
+            if let speed { setSpeed(speed) }
         }
         // As the real-line demos run (decision 228): a line's trains wait
         // one behind another where its trips start, and set off a headway

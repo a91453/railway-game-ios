@@ -54,8 +54,10 @@ final class DemoRealLinesTests: XCTestCase {
     /// it all back.
     func testOneTapLaysTheRealLinesInViewWithTrainsRunning() async throws {
         let (session, view) = try taipei()
+        session.setSpeed(.normal)
         let before = session.world
         let laid = await session.layDemoRealLines(in: view)
+        XCTAssertEqual(session.world.clock.speed, .normal, "running again as before")
         let outcome = try XCTUnwrap(laid)
         XCTAssertNil(session.demoRealLinesProgress, "done")
         XCTAssertGreaterThanOrEqual(outcome.lines, 3, session.message?.text ?? "")
@@ -83,7 +85,9 @@ final class DemoRealLinesTests: XCTestCase {
         XCTAssertGreaterThan(session.world.trains.count, session.world.lines.count, "more than one train a line")
 
         session.undo()
-        XCTAssertEqual(session.world, before, "one Undo")
+        XCTAssertEqual(session.world.network, before.network, "one Undo")
+        XCTAssertEqual(session.world.lines, before.lines)
+        XCTAssertEqual(session.world.trains, before.trains)
     }
 
     /// Outside a demo game, too wide a view or nothing in view: nothing is
