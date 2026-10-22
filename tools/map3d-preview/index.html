@@ -1,7 +1,7 @@
 <!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#000}canvas{display:block}</style></head>
 <body><canvas id="c" width="1600" height="900"></canvas><canvas id="rain" width="1600" height="900" style="position:absolute;left:0;top:0"></canvas>
 <script>
-// A WebGL2 port of RailwayGameApp/Views/Map3D/Map3DShaders.metal (decisions 231, 242, 229 續's night lights, 356's reflections), for previews on Linux.
+// A WebGL2 port of RailwayGameApp/Views/Map3D/Map3DShaders.metal (decisions 231, 242, 229 續's night lights, 356's reflections, 357's sun shadow map), for previews on Linux.
 const vs = `#version 300 es
 layout(location=0) in vec3 position; layout(location=1) in vec3 normal; layout(location=2) in vec3 color; layout(location=3) in vec3 tex;
 uniform mat4 viewProjection;
@@ -9,8 +9,9 @@ out vec3 vColor; out vec3 vNormal; out vec3 vWorld; out vec2 vUV; flat out float
 void main(){ vec4 p = viewProjection * vec4(position,1.0); p.z = 2.0*p.z - p.w; gl_Position = p;
  vColor=color; vNormal=normal; vWorld=position; vUV=tex.xy; vLayer=tex.z; vPlane=dot(position, normalize(normal)); }`;
 const fs = `#version 300 es
-precision highp float; precision highp sampler2DArray;
+precision highp float; precision highp sampler2DArray; precision highp sampler2DShadow;
 uniform vec4 sunDirection, sunColor, ambientSky, ambientGround, fogColor, eye, fog, shade; uniform vec4 nightWindows[12]; uniform vec4 mirror, zenith, glint; uniform sampler2DArray surfaces; uniform int textured;
+uniform mat4 sunMatrix; uniform vec4 sunShadow; uniform sampler2DShadow sunMap;
 in vec3 vColor; in vec3 vNormal; in vec3 vWorld; in vec2 vUV; flat in float vLayer; flat in float vPlane; out vec4 outColor;
 const float detailRepeat[4] = float[4](3.6, 1.8, 1.8, 1.8);
 const vec2 glassMirror[24] = vec2[24](vec2(0,0), vec2(0,0), vec2(0,0), vec2(0,0), vec2(0,0), vec2(0,0), vec2(0.7,0), vec2(0.7,0),
@@ -22,13 +23,19 @@ vec3 seenToward(vec3 w){ if (w.y >= 0.0) return mix(fogColor.rgb, zenith.rgb, sq
 vec2 ripple(vec2 p, float t, float footprint){ vec2 bent = p + 2.0 * vec2(sin(p.y*0.11 + t*0.03), sin(p.x*0.11 - t*0.03 + 9.0)); vec2 slope = vec2(0.0);
  for (int i = 0; i < 4; i++) { vec4 w = rippleWaves[i]; float kept = 1.0 - smoothstep(0.2, 0.5, footprint * w.z / 6.2831853);
   slope += w.xy * (w.w * w.z * cos(dot(w.xy, bent) * w.z + rippleRuns[i].x * t + rippleRuns[i].y) * kept); } return slope * 0.045; }
+// Decision 357: map3dSunSeen (the GL texture's rows run up, so no flip).
+float sunSeenAt(vec3 world, vec3 n){ if (sunShadow.x <= 0.0 || dot(n, sunDirection.xyz) <= 0.0) return 1.0;
+ vec4 at = sunMatrix * vec4(world + n * sunShadow.z, 1.0); float edge = max(abs(at.x), abs(at.y));
+ if (edge >= 1.0 || at.z <= 0.0 || at.z >= 1.0) return 1.0; vec2 uv = at.xy * 0.5 + 0.5; float t = sunShadow.y, d = at.z - sunShadow.w;
+ float seen = texture(sunMap, vec3(uv + vec2(-t,-t), d)) + texture(sunMap, vec3(uv + vec2(t,-t), d)) + texture(sunMap, vec3(uv + vec2(-t,t), d)) + texture(sunMap, vec3(uv + vec2(t,t), d));
+ return mix(1.0, seen * 0.25, sunShadow.x * (1.0 - smoothstep(0.85, 1.0, edge))); }
 void main(){ vec3 n = normalize(vNormal); vec3 base = vColor; vec3 glow = vec3(0.0); float lights = shade.y;
  if (vLayer < -1.5 && vLayer > -2.5) glow = base * 1.3 * lights;
- vec4 mirrored = vec4(0.0); bool mirrors = mirror.x > 0.0; vec3 toEye = normalize(eye.xyz - vWorld);
- if (mirrors && vLayer < -2.5) { vec2 sl = ripple(vWorld.xz, mirror.y, length(fwidth(vWorld.xz))); n = normalize(vec3(-sl.x, 1.0, -sl.y));
+ vec4 mirrored = vec4(0.0); bool mirrors = mirror.x > 0.0; vec3 toEye = normalize(eye.xyz - vWorld); float sunSeen = sunSeenAt(vWorld, n);
+ if (mirrors && vLayer < -2.5) { vec2 sl = ripple(vWorld.xz, mirror.y, length(fwidth(vWorld.xz))); n = normalize(vec3(-sl.x, 1.0, -sl.y)); sunSeen = sunSeenAt(vWorld, n);
   vec3 r = reflect(-toEye, n); float fr = 0.05 + 0.95 * pow(1.0 - max(dot(toEye, n), 0.0), 4.0);
   mirrored = vec4(seenToward(vec3(r.x, abs(r.y), r.z)), fr * mirror.x); float s = max(dot(r, sunDirection.xyz), 0.0);
-  glow += glint.rgb * ((pow(s, 600.0) * 2.0 + pow(s, 60.0) * 0.2) * mirror.z * mirror.x); }
+  glow += glint.rgb * ((pow(s, 600.0) * 2.0 + pow(s, 60.0) * 0.2) * mirror.z * mirror.x * sunSeen); }
  if (textured==1 && vLayer >= 0.0) { int packed = int(vLayer + 0.5); vec4 t = texture(surfaces, vec3(vUV, float(packed % 64)));
   vec3 tinted = base * t.rgb * 2.0; int material = packed / 64;
   if (material > 0) { int layer = material - 1; float metres = detailRepeat[min(layer - 18, 3)];
@@ -61,8 +68,8 @@ void main(){ vec3 n = normalize(vNormal); vec3 base = vColor; vec3 glow = vec3(0
      glow += city * fr * mirrorGlass * lights * (1.0 - on * 0.9) * mirror.x; }
     mirrored = vec4(seen, fr * mirrorGlass * (1.0 - 0.85 * lights * on) * mirror.x);
     float s = max(dot(r, sunDirection.xyz), 0.0); float gl = pow(s, 1400.0) * 3.0 + pow(s, 90.0) * 0.35 + pow(s, 7.0) * 0.1;
-    glow += glint.rgb * (gl * mirrorGlass * step(0.0, dot(n, sunDirection.xyz)) * mirror.z * mirror.x); } } }
- float sun = max(dot(n, sunDirection.xyz), 0.0); vec3 ambient = mix(ambientGround.rgb, ambientSky.rgb, n.y*0.5+0.5);
+    glow += glint.rgb * (gl * mirrorGlass * step(0.0, dot(n, sunDirection.xyz)) * mirror.z * mirror.x * sunSeen); } } }
+ float sun = max(dot(n, sunDirection.xyz), 0.0) * sunSeen; vec3 ambient = mix(ambientGround.rgb, ambientSky.rgb, n.y*0.5+0.5);
  vec3 lit = mix(base * (ambient + sunColor.rgb * sun), mirrored.rgb, mirrored.a);
  float f = smoothstep(fog.x, fog.y, distance(vWorld, eye.xyz)); outColor = vec4(min(mix(lit, fogColor.rgb, f) + glow * (1.0 - f * 0.7), 1.0), 1.0); }`;
 // Decision 352: map3dSignVertex and map3dSignFragment, the same algebra.
@@ -146,9 +153,32 @@ void main(){ float f=smoothstep(fog.x,fog.y,distance(vWorld,eye.xyz));
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE); gl.activeTexture(gl.TEXTURE0);
     window.svao=svao; window.vao=vao; gl.bindVertexArray(vao);
+    // Decision 357: the sun's shadow map, the scene's depth from the sun into a 2048 square on unit 2.
+    const dvs=`#version 300 es
+layout(location=0) in vec3 position; uniform mat4 sun; void main(){ vec4 p=sun*vec4(position,1.0); p.z=2.0*p.z-p.w; gl_Position=p; }`;
+    const dfs=`#version 300 es
+precision highp float; void main(){}`;
+    const dp=gl.createProgram(); gl.attachShader(dp,sh(gl.VERTEX_SHADER,dvs)); gl.attachShader(dp,sh(gl.FRAGMENT_SHADER,dfs)); gl.linkProgram(dp);
+    if(!gl.getProgramParameter(dp,gl.LINK_STATUS)) throw gl.getProgramInfoLog(dp); window.dprog=dp;
+    gl.activeTexture(gl.TEXTURE2); const dt=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,dt);
+    gl.texStorage2D(gl.TEXTURE_2D,1,gl.DEPTH_COMPONENT32F,2048,2048);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_COMPARE_MODE,gl.COMPARE_REF_TO_TEXTURE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_COMPARE_FUNC,gl.LEQUAL);
+    const fb=gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER,fb); gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.TEXTURE_2D,dt,0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER,null); gl.activeTexture(gl.TEXTURE0); window.sunFB=fb;
     const an=gl.getExtension('EXT_texture_filter_anisotropic'); if(an) gl.texParameterf(gl.TEXTURE_2D_ARRAY,an.TEXTURE_MAX_ANISOTROPY_EXT,8);
   }
-  const u=window.meta.views[view]; const p=window.prog; gl.useProgram(p);
+  const u=window.meta.views[view];
+  // Decision 357: the sun's rows (none in a dump from before them), and its map drawn first, biased by the depth's slope.
+  const sunRows = u.length>=128 ? u.slice(108,128) : [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1, 0,0,0,0];
+  if (sunRows[16] > 0) { gl.useProgram(window.dprog); gl.uniformMatrix4fv(gl.getUniformLocation(window.dprog,'sun'),false,new Float32Array(sunRows.slice(0,16)));
+    gl.bindFramebuffer(gl.FRAMEBUFFER,window.sunFB); gl.viewport(0,0,2048,2048); gl.enable(gl.DEPTH_TEST); gl.depthMask(true); gl.clearDepth(1); gl.depthFunc(gl.LESS);
+    gl.clear(gl.DEPTH_BUFFER_BIT); gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1.5, 0); gl.bindVertexArray(window.vao);
+    gl.drawElements(gl.TRIANGLES,window.count,gl.UNSIGNED_INT,0); gl.disable(gl.POLYGON_OFFSET_FILL); gl.bindFramebuffer(gl.FRAMEBUFFER,null); }
+  const p=window.prog; gl.useProgram(p);
+  gl.uniformMatrix4fv(gl.getUniformLocation(p,'sunMatrix'),false,new Float32Array(sunRows.slice(0,16)));
+  gl.uniform4fv(gl.getUniformLocation(p,'sunShadow'),new Float32Array(sunRows.slice(16,20))); gl.uniform1i(gl.getUniformLocation(p,'sunMap'),2);
   gl.uniformMatrix4fv(gl.getUniformLocation(p,'viewProjection'),false,new Float32Array(u.slice(0,16)));
   ['sunDirection','sunColor','ambientSky','ambientGround','fogColor','eye','fog','shade'].forEach((n,i)=>gl.uniform4fv(gl.getUniformLocation(p,n),new Float32Array(u.slice(16+i*4,20+i*4))));
   gl.uniform4fv(gl.getUniformLocation(p,'nightWindows'),new Float32Array(u.slice(48,96)));

@@ -158,6 +158,20 @@ final class Map3DMetalView: MTKView {
     /// Decision 352: the signs' pipeline and their atlas; none where the
     /// shader or the picture does not load (the map is drawn without).
     private var signDrawing: (pipeline: MTLRenderPipelineState, atlas: MTLTexture)?
+    /// Decision 357: the sun's shadow map's pipelines (the chunks, the
+    /// street furniture) and depth test; none where they do not load (the
+    /// map is drawn with decision 232's shadows alone).
+    private var sunDrawing: (chunks: MTLRenderPipelineState, instanced: MTLRenderPipelineState, depth: MTLDepthStencilState)?
+    /// Decision 357: the map, the region it was drawn for and when, and
+    /// whether the scene changed since. A texel of nothing in its place
+    /// while there is none, so the shaders always have one.
+    private var sunMap: MTLTexture?
+    private var sunDrawn: Map3DSunShadow.Region?
+    private var sunDrawnAt: CFTimeInterval = 0
+    private var sunSceneChanged = true
+    private var noSunMap: MTLTexture?
+    /// Decision 357: how the sun's shadows are drawn now (``Map3DSunShadow/plan(_:lowPower:heat:overBudget:)``).
+    private var sunPlan: Map3DSunShadow.Plan?
     private var chunks: [Chunk] = []
     private let gpuTimes = OSAllocatedUnfairLock(initialState: [Double]())
     private var cpuTimes: [Double] = []
@@ -264,6 +278,22 @@ final class Map3DMetalView: MTKView {
             signs.rasterSampleCount = samples
             if let signPipeline = try? device.makeRenderPipelineState(descriptor: signs) { view.signDrawing = (signPipeline, atlas) }
         }
+        // Decision 357: the city's depth from the sun, no colour.
+        if let sunVertex = library.makeFunction(name: "map3dSunDepthVertex"),
+           let sunInstanced = library.makeFunction(name: "map3dSunDepthInstancedVertex") {
+            let sun = MTLRenderPipelineDescriptor()
+            sun.vertexFunction = sunVertex
+            sun.vertexDescriptor = vertexDescriptor
+            sun.depthAttachmentPixelFormat = .depth32Float
+            let sunDepth = MTLDepthStencilDescriptor()
+            sunDepth.depthCompareFunction = .less
+            sunDepth.isDepthWriteEnabled = true
+            if let chunks = try? device.makeRenderPipelineState(descriptor: sun),
+               let depth = device.makeDepthStencilState(descriptor: sunDepth) {
+                sun.vertexFunction = sunInstanced
+                if let instanced = try? device.makeRenderPipelineState(descriptor: sun) { view.sunDrawing = (chunks, instanced, depth) }
+            }
+        }
         return view
     }
 
@@ -290,7 +320,109 @@ final class Map3DMetalView: MTKView {
         clearDepth = 0
         preferredFramesPerSecond = 60
         streetDetail = Map3DStreetDetail.forGPUFamily(Self.appleFamily(of: device))
+        noSunMap = makeSunMap(device: device, side: 1)
         applyQuality()
+    }
+
+    /// Decision 357: a depth texture `side` texels square for the sun's
+    /// shadow map, cleared to the farthest (nothing in the sun's way).
+    private func makeSunMap(device: MTLDevice, side: Int) -> MTLTexture? {
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .depth32Float, width: side, height: side, mipmapped: false)
+        descriptor.usage = [.renderTarget, .shaderRead]
+        descriptor.storageMode = .private
+        guard let texture = device.makeTexture(descriptor: descriptor) else { return nil }
+        let pass = MTLRenderPassDescriptor()
+        pass.depthAttachment.texture = texture
+        pass.depthAttachment.loadAction = .clear
+        pass.depthAttachment.storeAction = .store
+        pass.depthAttachment.clearDepth = 1
+        if let commands = queue.makeCommandBuffer(), let encoder = commands.makeRenderCommandEncoder(descriptor: pass) {
+            encoder.endEncoding()
+            commands.commit()
+        }
+        return texture
+    }
+
+    /// Decision 357: the region the sun's shadow map holds this frame, and
+    /// the region to draw it for first when it is out of date (the sun
+    /// turned, the target moved on, the camera pulled out a step, the
+    /// scene changed), not sooner than the plan's interval after the last
+    /// drawing unless the square itself changed. None at night, on
+    /// Saving, or out past ``Map3DSunShadow/farthestCamera``.
+    private func wantedSunRegion(at now: CFTimeInterval) -> (drawn: Map3DSunShadow.Region?, redraw: Map3DSunShadow.Region?) {
+        guard sunDrawing != nil, let plan = sunPlan, Map3DSunShadow.strength(shown) > 0, let device,
+              let wanted = Map3DSunShadow.region(target: camera.target, distance: camera.distance, sun: shown.sunDirection, size: plan.size)
+        else { return (nil, nil) }
+        if let drawn = sunDrawn {
+            if !sunSceneChanged, !drawn.isStale(for: wanted) { return (drawn, nil) }
+            if drawn.size == wanted.size, drawn.extent == wanted.extent, now - sunDrawnAt < plan.interval { return (drawn, nil) }
+        }
+        if sunMap?.width != plan.size {
+            sunMap = makeSunMap(device: device, side: plan.size)
+            sunDrawn = nil
+        }
+        guard sunMap != nil else { return (nil, nil) }
+        sunDrawn = wanted
+        sunDrawnAt = now
+        sunSceneChanged = false
+        return (wanted, wanted)
+    }
+
+    /// Decision 357: draws the city's depth from the sun into its map for
+    /// `region`: the chunks the sun sees there, in full where the camera
+    /// draws them in full (and their street furniture), simplified afar.
+    private func drawSunMap(_ region: Map3DSunShadow.Region, commands: MTLCommandBuffer, drawCalls: inout Int, triangles: inout Int) {
+        guard let sunDrawing, let sunMap else { return }
+        let pass = MTLRenderPassDescriptor()
+        pass.depthAttachment.texture = sunMap
+        pass.depthAttachment.loadAction = .clear
+        pass.depthAttachment.storeAction = .store
+        pass.depthAttachment.clearDepth = 1
+        guard let encoder = commands.makeRenderCommandEncoder(descriptor: pass) else {
+            sunDrawn = nil
+            return
+        }
+        encoder.setRenderPipelineState(sunDrawing.chunks)
+        encoder.setDepthStencilState(sunDrawing.depth)
+        encoder.setCullMode(.none)
+        encoder.setDepthBias(0, slopeScale: Map3DSunShadow.slopeScale, clamp: Map3DSunShadow.slopeClampDepth)
+        let matrix = region.matrix
+        matrix.columns.withUnsafeBytes { bytes in
+            guard let base = bytes.baseAddress else { return }
+            encoder.setVertexBytes(base, length: bytes.count, index: 1)
+        }
+        let seen = chunks.filter { Map3DCamera.sees(minimum: $0.minimum, maximum: $0.maximum, through: matrix) }
+        for chunk in seen {
+            let count = chunk.detailed ? chunk.indexCount : chunk.baseIndexCount
+            if count > 0 {
+                encoder.setVertexBuffer(chunk.vertices, offset: 0, index: 0)
+                encoder.drawIndexedPrimitives(type: .triangle, indexCount: count, indexType: .uint32, indexBuffer: chunk.indices, indexBufferOffset: 0)
+                drawCalls += 1
+                triangles += count / 3
+            }
+            if !chunk.detailed, let far = chunk.far {
+                encoder.setVertexBuffer(far.vertices, offset: 0, index: 0)
+                encoder.drawIndexedPrimitives(type: .triangle, indexCount: far.indexCount, indexType: .uint32, indexBuffer: far.indices, indexBufferOffset: 0)
+                drawCalls += 1
+                triangles += far.indexCount / 3
+            }
+        }
+        if let models {
+            encoder.setRenderPipelineState(sunDrawing.instanced)
+            let leftOut = Map3DProp.modelsLeftOut(quality, in: models.pack)
+            for chunk in seen where chunk.detailed {
+                guard let props = chunk.props else { continue }
+                for run in props.runs where run.model < models.buffers.count && !leftOut.contains(run.model) {
+                    encoder.setVertexBuffer(models.buffers[run.model], offset: 0, index: 0)
+                    encoder.setVertexBuffer(props.instances, offset: run.first * Self.instanceStride, index: 2)
+                    encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: models.pack.models[run.model].vertices.count,
+                                           instanceCount: run.count)
+                    drawCalls += 1
+                    triangles += models.pack.models[run.model].triangleCount * run.count
+                }
+            }
+        }
+        encoder.endEncoding()
     }
 
     /// The frames a second and the pixels a point that ``quality``, Low
@@ -300,6 +432,7 @@ final class Map3DMetalView: MTKView {
         let heat = Map3DQuality.Heat(rawValue: process.thermalState.rawValue) ?? .critical
         let plan = quality.plan(lowPower: process.isLowPowerModeEnabled, heat: heat)
         if preferredFramesPerSecond != plan.framesPerSecond { preferredFramesPerSecond = plan.framesPerSecond }
+        sunPlan = Map3DSunShadow.plan(quality, lowPower: process.isLowPowerModeEnabled, heat: heat, overBudget: gpuOverBudget)
         let fewer = plan.fewerPixels || (plan.lowersWhenOver && gpuOverBudget)
         if fewer != drawsFewerPixels {
             drawsFewerPixels = fewer
@@ -532,6 +665,7 @@ final class Map3DMetalView: MTKView {
 
     /// Draws `scene` from now on.
     func show(_ scene: Map3DScene) {
+        sunSceneChanged = true
         chunks = scene.chunks.compactMap { chunk in
             guard !chunk.mesh.isEmpty, let vertices = makeBuffer(chunk.mesh.vertices), let indices = makeBuffer(chunk.mesh.indices)
             else { return nil }
@@ -611,7 +745,10 @@ final class Map3DMetalView: MTKView {
         moveCamera(heads: frame?.heads ?? [], at: start)
         let camera = camera
         let matrix = camera.viewProjection
-        let uniforms = uniformValues(matrix, seconds: start)
+        // Decision 357: the sun's shadow map, drawn again when it is out
+        // of date (before the frame's own pass, in the same command buffer).
+        let sunRegion = wantedSunRegion(at: start)
+        let uniforms = uniformValues(matrix, seconds: start, sun: sunRegion.drawn)
         var visible: [Chunk] = []
         for index in chunks.indices {
             // Decision 238: in full near the camera, whether in view or not,
@@ -660,18 +797,29 @@ final class Map3DMetalView: MTKView {
             }
         }
         let waiting = CACurrentMediaTime()
-        guard let pass = currentRenderPassDescriptor, let drawable = currentDrawable,
-              let commands = queue.makeCommandBuffer(), let encoder = commands.makeRenderCommandEncoder(descriptor: pass)
+        guard let pass = currentRenderPassDescriptor, let drawable = currentDrawable, let commands = queue.makeCommandBuffer()
         else {
             // The street life buffer taken goes back unused.
             if lifeDraw != nil { lifeInFlight.signal() }
             return
         }
         waited += CACurrentMediaTime() - waiting
+        var drawCalls = 0, triangles = 0
+        if let redraw = sunRegion.redraw {
+            drawSunMap(redraw, commands: commands, drawCalls: &drawCalls, triangles: &triangles)
+        }
+        guard let encoder = commands.makeRenderCommandEncoder(descriptor: pass) else {
+            // The street life buffer taken goes back unused, and the sun's
+            // map is drawn again next frame.
+            if lifeDraw != nil { lifeInFlight.signal() }
+            if sunRegion.redraw != nil { sunDrawn = nil }
+            return
+        }
         encoder.setRenderPipelineState(pipeline)
         encoder.setDepthStencilState(depthState)
         encoder.setCullMode(.none)
         encoder.setFragmentTexture(surfaces, index: 0)
+        encoder.setFragmentTexture(sunRegion.drawn == nil ? noSunMap : sunMap, index: 1)
         uniforms.withUnsafeBytes { bytes in
             guard let base = bytes.baseAddress else { return }
             encoder.setVertexBytes(base, length: bytes.count, index: 1)
@@ -683,7 +831,6 @@ final class Map3DMetalView: MTKView {
                 encoder.setFragmentBytes(base, length: bytes.count, index: 2)
             }
         }
-        var drawCalls = 0, triangles = 0
         for chunk in visible {
             // Decision 238: the city in full near the camera; afar, the
             // ground and track, then the city simplified.
@@ -843,10 +990,12 @@ final class Map3DMetalView: MTKView {
     /// strength (decision 232) and how far the city's lights are on, then
     /// the night windows' rules (decision 229 續), then decision 356's
     /// reflections (``Map3DReflection/rows``: off on the saving quality,
-    /// the ripples still with Reduce Motion). The lights are
+    /// the ripples still with Reduce Motion), then decision 357's sun
+    /// shadow map (``Map3DSunShadow/rows(_:lighting:)``; with it, decision
+    /// 232's shadows fainter). The lights are
     /// `Map3DLighting`'s (`sunLight`, `skyLight`, `groundLight`, `lights`,
     /// `nightWindowRows`), worked out in GamePresentation.
-    private func uniformValues(_ matrix: Map3DMatrix, seconds: Double) -> [Float] {
+    private func uniformValues(_ matrix: Map3DMatrix, seconds: Double, sun: Map3DSunShadow.Region?) -> [Float] {
         func padded(_ light: SIMD3<Float>) -> [Float] { [light.x, light.y, light.z, 0] }
         let eye = camera.eye
         let far = camera.depthRange.far
@@ -860,9 +1009,10 @@ final class Map3DMetalView: MTKView {
             + padded(shown.fogColour)
             + [eye.x, eye.y, eye.z, 1]
             + [camera.distance * 1.6 * fog.near, far * 0.9 * fog.far, Map3DGrade.hazeDensity, Map3DGrade.hazeHeight]
-            + [Map3DShadow.strength(shown), shown.lights, 0, 0]
+            + [Map3DSunShadow.blobStrength(shown, drawn: sun != nil), shown.lights, 0, 0]
             + Map3DLighting.nightWindowRows
             + Map3DReflection.rows(sky: Map3DSky(shown), sunLight: shown.sunLight, quality: quality, seconds: seconds, reduceMotion: reduceMotion)
+            + Map3DSunShadow.rows(sun, lighting: shown)
     }
 
     private func record(cpu: Double, wait: Double, drawCalls: Int, triangles: Int) {
