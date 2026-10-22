@@ -280,8 +280,8 @@ struct RealWorldPicker: View {
                                         .font(.body)
                                         .foregroundStyle(Theme.textPrimary)
                                     Text(verbatim: launcher.language.text(
-                                        "The main island and Penghu, about 286 by 390 km. The land within 2 km of a station comes in as you build it.",
-                                        "本島加澎湖，約 286 × 390 公里。車站周圍 2 公里的土地在蓋站時才展開。"
+                                        "The main island and Penghu, about 286 by 390 km, all open from the start with no land to buy. Achievements and rankings do not count it. With a large network, older devices may slow down.",
+                                        "本島加澎湖，約 286 × 390 公里，一開始全部開放、不用買地。不計成就與排名。路網蓋得大時，較舊的裝置可能變慢。"
                                     ))
                                     .font(.footnote)
                                     .foregroundStyle(Theme.textSecondary)
