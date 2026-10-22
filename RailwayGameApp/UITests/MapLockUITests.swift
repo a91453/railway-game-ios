@@ -42,17 +42,20 @@ final class MapLockUITests: XCTestCase {
 
         let buy = app.buttons["map.expansion.buy"]
         if !buy.appears(within: 5) {
-            print("DIAG first tap missed; tree:\n\(app.debugDescription)")
-            lock.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2)).tap()
-            print("DIAG upper tap opened: \(buy.appears(within: 5))")
-            if !buy.exists, zoomOut.isEnabled {
-                zoomOut.tap()
-                _ = lock.appears(within: 3)
-                sleep(2)
-                print("DIAG after zoom: lock \(lock.identifier) frame \(lock.frame) exists \(lock.exists)")
-                if lock.exists { lock.tap() }
-                print("DIAG zoomed tap opened: \(buy.appears(within: 5))")
+            print("DIAG first tap missed")
+            for (dx, dy) in [(0.5, 0.2), (0.5, 0.35), (0.5, 0.65), (0.5, 0.8), (0.15, 0.5), (0.85, 0.5)] as [(CGFloat, CGFloat)] {
+                guard lock.appears(within: 5) else { print("DIAG no lock before (\(dx), \(dy))"); break }
+                let point = lock.coordinate(withNormalizedOffset: CGVector(dx: dx, dy: dy))
+                point.tap()
+                let opened = buy.appears(within: 4)
+                print("DIAG tap (\(dx), \(dy)) at \(point.screenPoint) opened: \(opened)")
+                if opened {
+                    expansion.tap()
+                    _ = buy.disappears(within: 5)
+                    sleep(1)
+                }
             }
+            if lock.appears(within: 5) { lock.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2)).tap() }
         }
         XCTAssertTrue(buy.appears(within: 5), "The lock opens the tile's card")
         XCTAssertEqual(expansion.label, "Stop expanding the map")
