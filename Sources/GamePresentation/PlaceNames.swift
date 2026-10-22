@@ -41,9 +41,11 @@ public struct PlaceNames: Sendable {
         let coordinate: RealRailways.Coordinate
     }
 
-    /// A township or district: its names and outline (rings, even-odd).
+    /// A township or district: its names, the county or city it is in
+    /// (縣市, decision 332) and its outline (rings, even-odd).
     struct Township: Sendable {
         let name: Name
+        let county: String?
         let rings: [[RealRailways.Coordinate]]
         let south, north, west, east: Double
 
@@ -112,6 +114,7 @@ public struct PlaceNames: Sendable {
             let points = rings.joined()
             return Township(
                 name: Name(chinese: township.name, english: township.en),
+                county: township.county,
                 rings: rings,
                 south: points.map(\.latitude).min() ?? 0, north: points.map(\.latitude).max() ?? 0,
                 west: points.map(\.longitude).min() ?? 0, east: points.map(\.longitude).max() ?? 0
@@ -154,6 +157,12 @@ public struct PlaceNames: Sendable {
         townships.first { $0.contains(coordinate) }?.name
     }
 
+    /// The county or city (縣市) `coordinate` is in, by its Chinese name
+    /// (臺北市, 彰化縣), or `nil` as ``township(containing:)``.
+    public func county(containing coordinate: RealRailways.Coordinate) -> String? {
+        townships.first { $0.contains(coordinate) }?.county
+    }
+
     private struct File: Decodable {
         struct Entry: Decodable {
             let latitude: Int
@@ -173,6 +182,7 @@ public struct PlaceNames: Sendable {
         struct TownshipEntry: Decodable {
             let name: String
             let en: String?
+            let county: String?
             let rings: [[Int]]
         }
 

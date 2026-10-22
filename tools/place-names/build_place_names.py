@@ -27,7 +27,9 @@ server while the player builds, so the names are read here once:
 - `townships`: the townships and districts (鄉、鎮、市、區; `admin_level` 7
   and 8, MapBuilder's most local level), as their outlines simplified to
   about TOLERANCE degrees (Douglas-Peucker), so the game can say which one
-  a station is in.
+  a station is in, each with the county or city it belongs to (`county`,
+  縣市; `admin_level` 4), for the share of trips by scooter and car there
+  (decision 332).
 
 Wards and townships are named as stations are: without the suffix (中和區
 → 中和, "Zhonghe District" → "Zhonghe"), unless one character would be
@@ -35,6 +37,15 @@ left (北區, 東區 keep theirs).
 
 Only Taiwan's: the extract reaches into Fujian, whose areas are named in
 simplified characters (区、乡、镇、街道) and left out by SUFFIXES.
+
+A township's county is read from the codes, not the outlines: a
+township's `nat_ref` (the government's administrative area code, such as
+鳳山區 64000120) begins with its county's (高雄市 64): two digits for the
+special municipalities (6x), five for the other counties and cities
+(10004 新竹縣, 09020 金門縣). Some counties' outlines (Kaohsiung's) do not
+close in the extract, and a township on a county's edge would sit on both
+outlines. A township without a code takes its `is_in:city` or
+`is_in:county` tag.
 
 Coordinates are in 1e-5 degrees (about a metre), the rings' points as
 differences from the one before. The data is OpenStreetMap's (ODbL 1.0),
@@ -131,8 +142,19 @@ def encode_ring(points):
     return out
 
 
+def county_code(code):
+    """The county's part of an administrative area code: '64000120' →
+    '64', '10004010' → '10004', '65000010' (New Taipei's own, tagged with
+    its first district's) → '65'."""
+    if not code or not code.isdigit():
+        return None
+    return code[:2] if code.startswith('6') else code[:5]
+
+
 def read(path):
     places, wards, townships = [], [], []
+    # County code → name, from the counties' and cities' relations.
+    counties = {}
     newest = ['']
 
     def stamp(obj):
@@ -145,6 +167,12 @@ def read(path):
         .with_filter(osmium.filter.EmptyTagFilter())
     for obj in processor:
         tags = obj.tags
+        if obj.is_relation():
+            if tags.get('boundary') == 'administrative' and tags.get('admin_level') == '4':
+                code = county_code(tags.get('nat_ref'))
+                if code and tags.get('name', '').endswith(('縣', '市')):
+                    counties[code] = tags['name']
+            continue
         if obj.is_node():
             if tags.get('place') in SETTLEMENTS and tags.get('name'):
                 zh, en = names(tags)
@@ -178,7 +206,10 @@ def read(path):
         encoded = [encode_ring(simplify(ring, TOLERANCE)) for ring in rings]
         encoded = [ring for ring in encoded if len(ring) >= 6]
         if encoded:
-            townships.append({'name': zh, 'en': en, 'level': level, 'rings': encoded})
+            township = {'name': zh, 'en': en, 'level': level, 'rings': encoded,
+                        'code': county_code(tags.get('nat_ref')),
+                        'is_in': tags.get('is_in:city') or tags.get('is_in:county')}
+            townships.append(township)
     # A settlement named as a village or ward is (科園里) is only its label:
     # the ward is there already.
     ward_names = {w[4] for w in wards}
@@ -187,6 +218,11 @@ def read(path):
     # One entry for the same name at the same point (a node mapped twice).
     places = sorted({(p[0], p[1], p[2]): p for p in places}.values())
     wards = sorted({(w[0], w[1], w[2]): w for w in wards}.values())
+    for township in townships:
+        county = counties.get(township.pop('code')) or township.pop('is_in', None)
+        township.pop('is_in', None)
+        if county in counties.values():
+            township['county'] = county
     townships.sort(key=lambda t: (t['name'], t['rings'][0][:2]))
     return places, wards, townships, newest[0]
 
@@ -206,7 +242,9 @@ def main():
     with open(out, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, separators=(',', ':'))
         f.write('\n')
-    print(f'{len(places)} places, {len(wards)} wards, {len(townships)} townships, '
+    without = [t['name'] for t in townships if 'county' not in t]
+    print(f'{len(places)} places, {len(wards)} wards, {len(townships)} townships '
+          f'({len(without)} without a county: {", ".join(without)}), '
           f'{os.path.getsize(out) / 1e6:.2f} MB, data to {newest}')
 
 

@@ -243,10 +243,13 @@ public final class GameLauncher {
         let water: WaterGrid?
         let coverage: CoverageGrid?
         let heights: HeightGrid?
+        /// The county a map starts in (decision 332).
+        var placeNames: PlaceNames?
     }
 
     var newWorldData: NewWorldData {
-        NewWorldData(population: population, places: places, water: water, coverage: coverage, heights: heights)
+        NewWorldData(population: population, places: places, water: water, coverage: coverage, heights: heights,
+                     placeNames: placeNames)
     }
 
     /// The world ``startNewGame(at:)`` begins: its rules, without the
@@ -254,10 +257,11 @@ public final class GameLauncher {
     /// main actor.
     nonisolated static func newWorld(at anchor: GeoAnchor?, options: NewGameOptions, data: NewWorldData) -> GameWorld {
         let seed = options.eventSeed()
+        let cap = ModeShiftCounties.cap(at: anchor, in: data.placeNames)
         if let anchor, let population = data.population, let expansion = RealWorldExpansion(around: anchor) {
             let step = expansion.ridersStep(population: population, places: data.places, water: data.water)
             var world = GameWorld.newRealWorldExpansionGame(expansion, ridersStep: step, balance: options.startingBalance, eventSeed: seed)
-            options.apply(to: &world)
+            options.apply(to: &world, modeShiftCap: cap)
             return grounded(world, options.ground, heights: data.heights)
         }
         var world = GameWorld.newGame(
@@ -265,7 +269,7 @@ public final class GameLauncher {
             water: anchor.map { water(at: $0, data: data) } ?? [], steep: anchor.map { steep(at: $0, data: data) } ?? [],
             buysMap: anchor == nil && options.buysMap
         )
-        options.apply(to: &world)
+        options.apply(to: &world, modeShiftCap: cap)
         return anchor == nil ? world : grounded(world, options.ground, heights: data.heights)
     }
 

@@ -668,8 +668,10 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
     /// connections, real transfers (on a real-world map), riders switching
     /// to scooters and cars (decision 332), funds and rules (decision 258: simple rules have no
     /// weather or building materials, whatever the options say) to these
-    /// options. Free, and nothing else changes.
-    public func apply(to world: inout GameWorld) {
+    /// options. Free, and nothing else changes. The realistic rule lets
+    /// at most `modeShiftCap` thousandths of a pair's trips switch: the
+    /// share of the county the map starts in (``ModeShiftCounties``).
+    public func apply(to world: inout GameWorld, modeShiftCap: Int64 = ModeShift.nationalShare) {
         switch disruption {
         case .off:
             world.setDisruptions(nil)
@@ -685,9 +687,8 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
         world.setRealTransfers(realTransfers && world.geoAnchor != nil)
         world.setUnlimitedFunds(funds == .unlimited)
         // Decision 332: riders take a scooter or a car instead of a slow
-        // train, gently with simple rules; real-world maps take the
-        // national share until the counties' are known.
-        try? world.setModeShift(rules == .simple ? .simple : ModeShift.realistic())
+        // train, gently with simple rules.
+        try? world.setModeShift(rules == .simple ? .simple : ModeShift.realistic(cap: modeShiftCap))
         rules.apply(to: &world)
     }
 
