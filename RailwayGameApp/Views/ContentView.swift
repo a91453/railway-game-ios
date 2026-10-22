@@ -321,7 +321,7 @@ struct ContentView: View {
         case .postcard:
             PostcardSheet(session: session)
         case .achievements:
-            AchievementsSheet(session: session, records: launcher.achievements)
+            AchievementsSheet(session: session, records: launcher.achievements, stamps: launcher.stationStamps)
                 .presentationDetents([.medium, .large])
         }
     }

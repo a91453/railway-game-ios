@@ -1664,3 +1664,14 @@ V 實際放行 → T、U（保證不互穿）
 | `Web/CityView/src/world/props.js`：`poleGeometry`、`lightGeometry`、`blobTreeGeometry` | `Map3DProp.model()` | 尺寸照用，形狀是自己的低多邊形、遊戲配色 |
 | 參考庫 `OpenWorld/reference_snapshot/play/assets/bridge/`（淡江大橋零件） | 未用 | 是斜張公路橋，不是鐵路高架；留給地標 |
 
+## 車站紀念章（決策 348）
+
+| 參考 | 本專案 | 怎麼改 |
+| --- | --- | --- |
+| `Ci/reference_snapshot/lib/voyager-passport.js` `paginateStamps` | `StationStampPassport.pages(_:)` | 照搬，一頁 8 枚 |
+| 同上 `stampLayout`（FNV-1a 種子、線性同餘產生器） | `StationStampPassport.layout(_:)` | 照移植，數字和參考相同（`StationStampTests` 用 Node 的結果比對） |
+| 同上 `stampDateLabel` | `StationStampPassport.dateLabel(_:)` | 格式相同，時區改台灣 |
+| `voyager-passport.css` `.passport-stamp`、紙張 | `StationStampPassportView` | 擺法相同；紙張用 `Theme.panel`，不用漸層 |
+| 同上 `passportPages`、`passportNumber`、`passportRankLabel`、`voyager-collection.js` | 未用 | 沒有持有人頁、帳號與全球排名；依城市分組留給以後 |
+| 章的圖（`/public/voyager/*.png`） | 未用 | 快照裡沒有；章用 SwiftUI 畫，照決策 276 的框 |
+
