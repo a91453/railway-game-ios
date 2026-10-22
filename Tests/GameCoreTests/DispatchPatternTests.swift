@@ -217,6 +217,44 @@ final class DispatchPatternTests: XCTestCase {
         }
     }
 
+    /// A line given runs sends its trains at their times, so it spaces them
+    /// evenly from then on and keeps no other pattern: taking the runs away
+    /// does not bring an old pattern back (A8 of the #873–#910 review).
+    func testALineGivenRunsSpacesItsTrainsEvenly() throws {
+        let runs = [LineRun(from: 0, to: 1, times: [LineRunTime(arrival: 600, departure: 600), LineRunTime(arrival: 1_800, departure: 1_800)])]
+        for pattern in [DispatchPattern.fromBothEnds, .staggered(minutes: 5)] {
+            var world = try makeWorld(secondAtGamma: true)
+            try world.setLineDispatchPattern(main, to: pattern)
+            try world.setLineRuns(main, to: runs)
+            var given = try XCTUnwrap(world.line(id: main))
+            XCTAssertEqual(given.dispatchPattern, .even, "\(pattern)")
+            XCTAssertNil(given.endLastDispatch, "\(pattern)")
+            XCTAssertFalse(given.opensPair, "\(pattern)")
+            try world.setLineRuns(main, to: [])
+            given = try XCTUnwrap(world.line(id: main))
+            XCTAssertEqual(given.dispatchPattern, .even, "\(pattern)")
+        }
+    }
+
+    /// A save from before A8 whose line has runs and another pattern (a
+    /// pattern set before the runs were) loads, spacing the line's trains
+    /// evenly: the pattern never sent a train out while the runs were
+    /// there.
+    func testASavedLineWithRunsAndAnotherPatternLoadsEven() throws {
+        var world = try makeWorld(secondAtGamma: true)
+        try world.setLineRuns(main, to: [LineRun(from: 0, to: 1, times: [LineRunTime(arrival: 600, departure: 600), LineRunTime(arrival: 1_800, departure: 1_800)])])
+        let data = try JSONEncoder().encode(world)
+        for (pattern, opensPair) in [(["kind": "staggered", "minutes": 5] as [String: Any], true), (["kind": "fromBothEnds"], false)] {
+            var object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+            var lines = try XCTUnwrap(object["lines"] as? [[String: Any]])
+            lines[0]["dispatchPattern"] = pattern
+            if opensPair { lines[0]["opensPair"] = true } else { lines[0]["endLastDispatch"] = 0 }
+            object["lines"] = lines
+            let loaded = try JSONDecoder().decode(GameWorld.self, from: JSONSerialization.data(withJSONObject: object))
+            XCTAssertEqual(loaded, world, "\(pattern)")
+        }
+    }
+
     /// Fast-forwarding past idle minutes sends the same trains at the same
     /// times as a tick at a time, for each pattern.
     func testLongBatchesMatchSingleTicks() throws {

@@ -255,11 +255,12 @@ extension GameWorld {
         // As on its own way (decision 207): with realistic operation the
         // time left to the scheduled arrival, so a late train makes up its
         // margin.
+        let timetabled = candidate.scheduledArrival(of: stop, cycle: cycle).seconds
+            - candidate.scheduledDeparture(of: previousStop, cycle: previousCycle).seconds
         let scheduled = realisticOperation
             ? secondsToScheduledArrival(of: candidate, stop: stop, cycle: cycle)
-            : candidate.scheduledArrival(of: stop, cycle: cycle).seconds
-                - candidate.scheduledDeparture(of: previousStop, cycle: previousCycle).seconds
-        let reroutedRun = run(of: rerouted, length: alternative.distance, scheduled: scheduled)
+            : timetabled
+        let reroutedRun = run(of: rerouted, length: alternative.distance, scheduled: scheduled, timetabled: timetabled)
         rerouted.times?.run = reroutedRun
         return rerouted
     }
