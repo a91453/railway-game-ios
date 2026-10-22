@@ -333,9 +333,15 @@ struct LinesPanel: View {
                 }
                 .accessibilityIdentifier("lines.advanced")
                 .accessibilityHint(Text(verbatim: session.language.text(
-                    "Shows the service day, stopping patterns, the tracks each leg takes, target headways and traffic control. Hidden, they keep working as set.",
-                    "顯示時段、停靠模式、各段股道、目標班距與行車控制。收起時，這些設定照常運作。"
+                    "Hidden, they keep working as set.",
+                    "收起時，這些設定照常運作。"
                 )))
+                // Decision 336, later: what it holds, in words, not only
+                // for VoiceOver.
+                Text(verbatim: AdvancedDetails.contentsText(in: session.language))
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
+                    .accessibilityIdentifier("lines.advanced.contents")
                 if !showsAdvanced {
                     Text(verbatim: AdvancedDetails.networkSummary(of: session.world, in: session.language))
                         .font(.caption)

@@ -9,6 +9,9 @@ import SwiftUI
 struct InspectorView: View {
     let session: GameSession
     @Environment(GameScreenState.self) private var screen
+    /// Decision 336, later: whether the track card's hint about holding a
+    /// line's track has been shown.
+    @AppStorage(TrackHoldHint.seenKey) private var trackHoldHintSeen = false
 
     var body: some View {
         inspector
@@ -63,13 +66,58 @@ struct InspectorView: View {
                     }
                 }
             }
+            // Decision 336, later: the train's timetable and the fleet
+            // (where trains are sold), not only behind Build → Train.
+            if session.tool == .select {
+                HStack(spacing: 6) {
+                    chip("calendar.badge.clock", session.language.text("Timetable", "時刻表"), id: "inspector.train.timetable") {
+                        session.selectTrain(train)
+                        screen.panel = .timetable
+                    }
+                    chip("list.bullet.rectangle.portrait", session.language.text("Fleet", "車隊總覽"), id: "inspector.train.fleet") {
+                        screen.panel = .fleet
+                    }
+                    Spacer(minLength: 0)
+                }
+            }
         } else if session.tool == .select, session.selectedStationID == nil, let edge = session.selectedTrackEdge {
             if let inspection = session.trackInspection(of: edge), !inspection.lines.isEmpty {
                 lineButtons(inspection.lines)
+                // Decision 336, later: once, that holding the track opens
+                // the line (decision 276).
+                if TrackHoldHint.shows(lines: inspection.lines, seen: trackHoldHintSeen, tutorialRuns: session.tutorial != nil) {
+                    Text(verbatim: TrackHoldHint.text(in: session.language))
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("inspector.track.holdHint")
+                        .onDisappear { trackHoldHintSeen = true }
+                }
             }
             // Decision 247: make it double, or add an X crossover.
             TrackUpgradeControls(session: session)
         }
+    }
+
+    /// A small capsule button of the card, as ``followButton(_:)`` looks.
+    private func chip(_ systemImage: String, _ title: String, id: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Image(systemName: systemImage)
+                    .font(.caption2.weight(.bold))
+                Text(verbatim: title)
+                    .font(.caption2.weight(.bold))
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Theme.chip)
+            .foregroundStyle(Theme.textPrimary)
+            .clipShape(Capsule())
+            .fixedSize()
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(id)
     }
 
     /// Follows train `id` with the camera, or stops; looks and acts as the
