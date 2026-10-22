@@ -36,32 +36,11 @@ final class MapLockUITests: XCTestCase {
         XCTAssertTrue(lock.appears(within: 5), "No lock on the tiles for sale")
         XCTAssertEqual(lock.label, "Locked land")
         XCTAssertTrue(lock.becomesHittable(within: 5), "The lock is not reachable")
-        // DIAGNOSTIC (claude/ipad-uitests-red), removed before review.
-        print("DIAG lock \(lock.identifier) frame \(lock.frame) enabled \(lock.isEnabled) app \(app.frame) expansion \(expansion.frame) zoomOut \(zoomOut.frame) dockBuild \(app.buttons["dock.build"].frame)")
+        // On its middle: on an iPad the circle's middle row once fell
+        // through to the map (only_testing run 39826506139).
+        lock.tap()
+
         let buy = app.buttons["map.expansion.buy"]
-        func probe(_ dx: CGFloat, _ dy: CGFloat, _ name: String) {
-            guard lock.appears(within: 5) else { print("DIAG no lock before \(name)"); return }
-            let frame = lock.frame
-            let at = CGPoint(x: frame.midX + dx, y: frame.midY + dy)
-            app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: at.x, dy: at.y)).tap()
-            let opened = buy.appears(within: 4)
-            print("DIAG \(name) lock \(frame) at \(at) opened: \(opened)")
-            if opened {
-                expansion.tap()
-                _ = buy.disappears(within: 5)
-                sleep(1)
-            }
-        }
-        // Offsets from the lock's middle, in points.
-        probe(0, 10, "A whole below")
-        probe(0, -10, "B whole above")
-        probe(0, 0.3, "C centre +0.3")
-        probe(0, -0.3, "D centre -0.3")
-        probe(0, 0, "E centre")
-        probe(0.3, 2, "F +0.3, 2 below")
-        probe(0, 2, "G whole 2 below")
-        probe(0, 5.1, "H 5.1 below")
-        if lock.appears(within: 5) { lock.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2)).tap() }
         XCTAssertTrue(buy.appears(within: 5), "The lock opens the tile's card")
         XCTAssertEqual(expansion.label, "Stop expanding the map")
         XCTAssertFalse(lock.exists, "The tiles show their prices while choosing, not locks")

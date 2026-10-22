@@ -335,7 +335,6 @@ final class RealWorldMapUITests: XCTestCase {
         // (main 71a3807, run 39765719731). Set by hand, the length stays for
         // the second platform too.
         let cars = app.steppers.matching(NSPredicate(format: "label BEGINSWITH 'Platform for'")).firstMatch
-        print("DIAG steppers: \(app.steppers.allElementsBoundByIndex.map { "\($0.label) | \($0.value ?? "-") | \($0.buttons.allElementsBoundByIndex.map { "\($0.identifier)/\($0.label)" })" })")
         if cars.appears(within: 5), !cars.label.hasPrefix("Platform for 4 cars") {
             let fewer = cars.buttons.matching(NSPredicate(format: "identifier == 'Decrement' OR label == 'Decrement'")).firstMatch
             for _ in 0..<20 where !cars.label.hasPrefix("Platform for 4 cars") {

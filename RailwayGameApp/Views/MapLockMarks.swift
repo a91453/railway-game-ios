@@ -41,8 +41,12 @@ struct MapLockMarks: View {
                 .frame(width: size, height: size)
                 .background(lock.isUnlocked ? Theme.accent : Theme.panel, in: Circle())
                 .overlay(Circle().strokeBorder(lock.isUnlocked ? Theme.onAccent : Theme.primary, lineWidth: 2))
-                .contentShape(Circle())
                 .frame(minWidth: 44, minHeight: 44)
+                // The whole finger's square, not the circle: on an iPad a
+                // tap on the circle's middle row (y ± 0.3 of its centre, the
+                // whole width) fell through to the map, and a tap 2 points
+                // off it opened the card (only_testing run 39826506139).
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text(verbatim: lock.isUnlocked
