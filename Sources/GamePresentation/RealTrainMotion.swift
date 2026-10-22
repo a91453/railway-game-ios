@@ -16,9 +16,12 @@ import GameCore
 // - a metro or light rail trip's place between two calls
 //   (`freqTrainPosRaw`): it leaves a station at its call's second, runs the
 //   segments' run time (`runBetween`) or the whole gap when that is shorter
-//   or unknown, and waits at the next station for its call; the site's
-//   acceleration profile (`buildProfile`) is left out, so a train runs at
-//   one speed between stations;
+//   or unknown, and waits at the next station for its call;
+// - how a train speeds up, runs, coasts and brakes between two stations in
+//   the time it has (`buildProfile`, `profTimeToProg`), with the site's
+//   performance of each kind of train (`TRTC_BOARD_PERF` for every metro
+//   and light rail, `PERF_HSR` with its spare `aAlt`/`bAlt`, the 區間車 of
+//   `PERF_BY_TYPE`);
 // - the shorter way round a ring (`posBetweenStations`);
 // - a scheduled train's (the High Speed Rail's) segment between a stop's
 //   departure and the next stop's arrival (`RailEngine` `findCurrentSegment`);
@@ -34,7 +37,12 @@ import GameCore
 // from the day before's set; the headway lines run from 05:00 to midnight
 // (the site's run all day); Taiwan Railway's speed, which the site does
 // not give (it draws every TRA train from its dense timetable, not
-// bundled); only the trains on the world's map and in the visible region.
+// bundled); only the trains on the world's map and in the visible region;
+// when the site's curve has no answer (the time too short for its
+// acceleration, or its top speed too low), Mini Tokyo 3D's (`map.js`
+// `trainRepeat`, nagix/mini-tokyo-3d `220adf8`, MIT, Copyright (c)
+// 2019-2026 Akihiko Kusanagi): the same speeding up and braking, as hard
+// as the time needs, instead of the site's one speed.
 
 /// Which of a timetable's sets a game day runs (decision 304): its weekday
 /// and whether it is a holiday of the game's calendar.
@@ -114,6 +122,160 @@ public struct RealLineShape: Hashable, Sendable {
     }
 }
 
+/// How hard a kind of real train speeds up and brakes, in km/h a second,
+/// and how fast it goes, in km/h (the site's `PERF_*`; decision 304).
+public struct RealTrainPerformance: Hashable, Sendable {
+    public let acceleration: Double
+    public let braking: Double
+    public let topSpeed: Double
+    /// The site's `coast`: how hard a coasting train slows (km/h a second)
+    /// and at what share of its speed it starts to brake; `nil` for none.
+    public let coast: (slowing: Double, brakeAt: Double)?
+    /// The site's `aAlt`/`bAlt`: tried when the time is too short for the
+    /// usual (the High Speed Rail's).
+    public let spare: (acceleration: Double, braking: Double)?
+
+    public static func == (a: Self, b: Self) -> Bool {
+        a.acceleration == b.acceleration && a.braking == b.braking && a.topSpeed == b.topSpeed
+            && a.coast?.slowing == b.coast?.slowing && a.coast?.brakeAt == b.coast?.brakeAt
+            && a.spare?.acceleration == b.spare?.acceleration && a.spare?.braking == b.spare?.braking
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(acceleration)
+        hasher.combine(braking)
+        hasher.combine(topSpeed)
+    }
+
+    /// The site's `TRTC_BOARD_PERF`, which it gives every metro and light
+    /// rail.
+    public static let metro = Self(acceleration: 3.6, braking: 4.3, topSpeed: 80, coast: nil, spare: nil)
+    /// The site's `PERF_HSR`.
+    public static let highSpeed = Self(acceleration: 1.4, braking: 1.5, topSpeed: 300, coast: (0.45, 0.45), spare: (2.0, 2.7))
+    /// The site's 區間車 (`PERF_BY_TYPE`): Taiwan Railway's headway lines
+    /// run as local trains (decision 304).
+    public static let local = Self(acceleration: 2.5, braking: 3.0, topSpeed: 120, coast: nil, spare: nil)
+
+    /// Each system's trains: the High Speed Rail's, Taiwan Railway's local
+    /// trains, a metro's for any other.
+    public static func of(system: String) -> Self {
+        switch system {
+        case "thsr": .highSpeed
+        case "tra": .local
+        default: .metro
+        }
+    }
+}
+
+/// How a train covers the way between two stations in the time it has
+/// (the site's `buildProfile` profile): speeding up, running, coasting,
+/// braking. In metres and seconds.
+struct RealRunProfile: Hashable, Sendable {
+    let duration: Double
+    let length: Double
+    let acceleration: Double
+    let braking: Double
+    let coasting: Double
+    /// The speed it runs at, and the one it starts to brake from.
+    let cruise: Double
+    let brakeFrom: Double
+    let accelerating: Double
+    let running: Double
+    let coastSeconds: Double
+
+    /// The site's `buildProfile`: `nil` when it has no answer, the time too
+    /// short for the acceleration and braking, or the speed past the top.
+    /// Speeds in km/h and km/h a second, `coast` as the site's.
+    static func site(km: Double, seconds T: Double, acceleration aK: Double, braking bK: Double, topSpeed vK: Double,
+                     coast: (slowing: Double, brakeAt: Double)?) -> Self? {
+        let L = km * 1_000, a = aK / 3.6, b = bK / 3.6, vmax = vK / 3.6
+        guard L > 0, T > 0, a > 0, b > 0 else { return nil }
+        let cc = coast.map { $0.slowing > 0 ? $0.slowing / 3.6 : 0 } ?? 0
+        let rho0 = cc > 0 && cc < b && (coast?.brakeAt ?? 1) >= 0 && (coast?.brakeAt ?? 1) < 1 ? coast?.brakeAt ?? 1 : 1
+        func solve(_ rho: Double) -> Self? {
+            let glide = rho < 1
+            let D = 1 / (2 * a) + (glide ? (1 - rho) * (1 - rho) / (2 * cc) : 0) + rho * (2 - rho) / (2 * b)
+            let disc = T * T - 4 * D * L
+            guard disc >= 0 else { return nil }
+            let vc = (T - disc.squareRoot()) / (2 * D)
+            guard vc > 0 else { return nil }
+            let vb = rho * vc
+            let tAcc = vc / a, tCoast = glide ? (vc - vb) / cc : 0, tDec = vb / b
+            let tCru = T - tAcc - tCoast - tDec
+            guard tCru >= 0 else { return nil }
+            return Self(duration: T, length: L, acceleration: a, braking: b, coasting: cc, cruise: vc, brakeFrom: vb,
+                        accelerating: tAcc, running: tCru, coastSeconds: tCoast)
+        }
+        guard var profile = solve(1), profile.cruise <= vmax else { return nil }
+        if rho0 < 1 {
+            if let deep = solve(rho0), deep.cruise <= vmax {
+                profile = deep
+            } else {
+                var lo = rho0, hi = 1.0
+                for _ in 0..<14 {
+                    let mid = (lo + hi) / 2
+                    if let p = solve(mid), p.cruise <= vmax { hi = mid; profile = p } else { lo = mid }
+                }
+            }
+        }
+        return profile
+    }
+
+    /// Mini Tokyo 3D's (`trainRepeat`, MIT, Copyright (c) 2019-2026
+    /// Akihiko Kusanagi): a way too short to reach `vK` km/h, or too long
+    /// for `aK` km/h a second in the time, speeds up for half the time and
+    /// brakes for the other half, as hard as it takes; any other speeds up
+    /// and brakes alike at `aK` and runs at the speed that fits the time.
+    static func fallback(km: Double, seconds T: Double, acceleration aK: Double, topSpeed vK: Double) -> Self? {
+        let L = km * 1_000
+        var a = aK / 3.6
+        guard L > 0, T > 0, a > 0 else { return nil }
+        let reach = (vK / 3.6) * (vK / 3.6) / (2 * a)
+        let v: Double
+        if L <= reach * 2 || L >= a * T * T / 4 {
+            v = 2 * L / T
+            a = 2 * v / T
+        } else {
+            v = a * T / 2 - (a * (a * T * T / 4 - L)).squareRoot()
+        }
+        let t = v / a
+        return Self(duration: T, length: L, acceleration: a, braking: a, coasting: 0, cruise: v, brakeFrom: v,
+                    accelerating: t, running: max(0, T - 2 * t), coastSeconds: 0)
+    }
+
+    /// The curve for `km` in `seconds` of a train of `performance`: the
+    /// site's, its spare acceleration's, then Mini Tokyo 3D's.
+    static func make(km: Double, seconds: Double, performance p: RealTrainPerformance) -> Self? {
+        site(km: km, seconds: seconds, acceleration: p.acceleration, braking: p.braking, topSpeed: p.topSpeed, coast: p.coast)
+            ?? p.spare.flatMap { site(km: km, seconds: seconds, acceleration: p.acceleration, braking: $0.braking, topSpeed: p.topSpeed, coast: p.coast) }
+            ?? p.spare.flatMap { site(km: km, seconds: seconds, acceleration: $0.acceleration, braking: $0.braking, topSpeed: p.topSpeed, coast: p.coast) }
+            ?? fallback(km: km, seconds: seconds, acceleration: p.acceleration, topSpeed: p.topSpeed)
+    }
+
+    /// The site's `profTimeToProg`: how far along, 0 to 1, after `t`
+    /// seconds.
+    func progress(after t: Double) -> Double {
+        if t <= 0 { return 0 }
+        if t >= duration { return 1 }
+        let distanceAccelerating = cruise * cruise / (2 * acceleration)
+        let distanceRunning = cruise * running
+        let distanceCoasting = coasting > 0 ? (cruise * cruise - brakeFrom * brakeFrom) / (2 * coasting) : 0
+        let d: Double
+        if t < accelerating {
+            d = 0.5 * acceleration * t * t
+        } else if t < accelerating + running {
+            d = distanceAccelerating + cruise * (t - accelerating)
+        } else if t < accelerating + running + coastSeconds {
+            let tk = t - accelerating - running
+            d = distanceAccelerating + distanceRunning + cruise * tk - 0.5 * coasting * tk * tk
+        } else {
+            let td = t - accelerating - running - coastSeconds
+            d = distanceAccelerating + distanceRunning + distanceCoasting + brakeFrom * td - 0.5 * braking * td * td
+        }
+        return min(1, max(0, d / length))
+    }
+}
+
 /// One real train's run along its line (decision 304): the places it stops
 /// at, how far along the line's shape each is, and when it arrives and
 /// leaves, in seconds of the service day (past 86,400 after midnight).
@@ -131,11 +293,14 @@ public struct RealTrainRun: Hashable, Sendable {
     }
 
     public let stops: [Stop]
+    /// How it speeds up and brakes between stops; `nil`: at one speed.
+    public let performance: RealTrainPerformance?
 
     /// `nil` for fewer than two stops.
-    public init?(stops: [Stop]) {
+    public init?(stops: [Stop], performance: RealTrainPerformance? = nil) {
         guard stops.count >= 2 else { return nil }
         self.stops = stops
+        self.performance = performance
     }
 
     public var start: Int { stops[0].arrival }
@@ -162,8 +327,15 @@ public struct RealTrainRun: Hashable, Sendable {
         let next = stops[lo + 1]
         if second <= Double(stop.departure) { return (stop.km, next.km) }
         let span = Double(next.arrival - stop.departure)
-        let f = span > 0 ? min(1, (second - Double(stop.departure)) / span) : 1
-        var km = stop.km + Self.way(from: stop.km, to: next.km, ringKm: ringKm) * f
+        let elapsed = second - Double(stop.departure)
+        let way = Self.way(from: stop.km, to: next.km, ringKm: ringKm)
+        var f = span > 0 ? min(1, elapsed / span) : 1
+        // Speeding up out of the station and braking into the next
+        // (`freqTrainPosRaw`).
+        if f > 0, f < 1, let performance, let profile = RealRunProfile.make(km: abs(way), seconds: span, performance: performance) {
+            f = profile.progress(after: elapsed)
+        }
+        var km = stop.km + way * f
         if let ringKm, ringKm > 0 { km = (km.truncatingRemainder(dividingBy: ringKm) + ringKm).truncatingRemainder(dividingBy: ringKm) }
         return (km, next.km)
     }
@@ -196,7 +368,7 @@ public struct RealTrainRun: Hashable, Sendable {
             let moving = run.map { $0 < span ? $0 : span } ?? span
             stops.append(Stop(km: stationKm[call.stationIndex], arrival: previous.second + max(0, moving), departure: call.second))
         }
-        self.init(stops: stops)
+        self.init(stops: stops, performance: .metro)
     }
 }
 
@@ -355,7 +527,7 @@ public struct RealTrainTraffic: Sendable {
             schedule = .daily(Runs(day.trains.compactMap { train in
                 RealTrainRun(stops: train.stops.compactMap { stop in
                     kmByName[stop.name].map { RealTrainRun.Stop(km: $0, arrival: stop.arrivalSecond, departure: stop.departureSecond) }
-                })
+                }, performance: .of(system: system))
             }))
         } else if let round = headwayRun(line, of: system, stationKm: stationKm, ringKm: ringKm),
                   line.peakHeadwaySec ?? line.offpeakHeadwaySec != nil {
@@ -393,7 +565,7 @@ public struct RealTrainTraffic: Sendable {
             stops.append(RealTrainRun.Stop(km: km, arrival: t, departure: t + dwell))
             t += dwell
         }
-        return RealTrainRun(stops: stops)
+        return RealTrainRun(stops: stops, performance: .of(system: system))
     }
 
     /// Where `line`'s trains are at second `second` of game day `day` (a
