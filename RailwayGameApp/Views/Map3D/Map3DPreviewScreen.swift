@@ -187,6 +187,10 @@ struct Map3DPreviewScreen: View {
         .onChange(of: showsRealTrains) { _, shown in
             feed.updateRealClock(world: session.world, shown: shown, glides: !session.world.clock.isPaused && !reduceMotion)
         }
+        // Decision 360: following a train here runs at 10× at most, and
+        // closing gives the 2D map its speed back.
+        .onAppear { session.setMap3DOpen(true) }
+        .onDisappear { session.setMap3DOpen(false) }
     }
 
     /// Decision 313, later: the world point the scene is built round.
