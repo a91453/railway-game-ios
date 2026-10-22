@@ -24,13 +24,51 @@ final class MapFocusTests: XCTestCase {
     /// Decision 300: on a phone on its side the zoom row stands under a
     /// panel, in the credits' band where it has room; elsewhere as before.
     func testTheZoomRowStandsUnderAPanelOnAPhoneOnItsSide() {
-        XCTAssertTrue(MapCornerRow.standsUnderPanel(compactHeight: true, panelBesideMap: true))
-        XCTAssertFalse(MapCornerRow.standsUnderPanel(compactHeight: true, panelBesideMap: false))
-        XCTAssertFalse(MapCornerRow.standsUnderPanel(compactHeight: false, panelBesideMap: true))
         // In the band the panel keeps its height; above it, it ends higher.
         XCTAssertEqual(MapCornerRow.panelRaise(underPanel: true, inBand: true), 0)
         XCTAssertEqual(MapCornerRow.panelRaise(underPanel: true, inBand: false), 36)
         XCTAssertEqual(MapCornerRow.panelRaise(underPanel: false, inBand: false), 0)
+    }
+
+    /// Decision 349: where the coverage, 3D and zoom buttons stand, the
+    /// same rule however the device is held (the owner, 2026-10-22: on an
+    /// iPad held upright they were gone; on a phone on its side they stood
+    /// in the middle of the map beside the building card, under the lines
+    /// or station panel without the coverage button).
+    func testTheMapButtonsStandTheSameWayHoweverTheDeviceIsHeld() {
+        func place(compactHeight: Bool, cover: Double, width: Double, beside: Bool = true, tutorial: Bool = false) -> MapCornerButtons {
+            MapCornerButtons.place(compactHeight: compactHeight, coverWidth: cover, viewportWidth: width, besideCover: beside, tutorialRuns: tutorial)
+        }
+        // A phone on its side (an iPhone 16 Pro Max, 956 points): under the
+        // building card (the first level) as under a panel (the second).
+        XCTAssertEqual(place(compactHeight: true, cover: 0, width: 956), .corner)
+        XCTAssertEqual(place(compactHeight: true, cover: 300 + 12, width: 956), .underPanel, "Beside the building card")
+        XCTAssertEqual(place(compactHeight: true, cover: 300 + 12, width: 956, beside: false), .underPanel, "Under a short card too")
+        XCTAssertEqual(place(compactHeight: true, cover: 264 + 12, width: 734), .underPanel)
+        XCTAssertEqual(place(compactHeight: true, cover: 264 + 12, width: 734, tutorial: true), .underPanel)
+        // An iPad on its side (1,180 points) and upright (820): in the
+        // corner beside the panel, which leaves the map room for them.
+        XCTAssertEqual(place(compactHeight: false, cover: 0, width: 1_180), .corner)
+        XCTAssertEqual(place(compactHeight: false, cover: 420 + 12, width: 1_180), .corner)
+        XCTAssertEqual(place(compactHeight: false, cover: 0, width: 820), .corner)
+        XCTAssertEqual(place(compactHeight: false, cover: 410 + 12, width: 820), .corner, "Beside the lines panel on an iPad held upright")
+        XCTAssertEqual(place(compactHeight: false, cover: 328 + 12, width: 820), .corner, "Beside the details card on an iPad held upright")
+        // The narrowest iPad split view (320 points): beside a panel the
+        // map has no room for them; a pinch still zooms. Not in the
+        // tutorial, which points at them, nor below a short card.
+        XCTAssertEqual(place(compactHeight: false, cover: 160 + 12, width: 320), .givesWay)
+        XCTAssertEqual(place(compactHeight: false, cover: 160 + 12, width: 320, tutorial: true), .corner)
+        XCTAssertEqual(place(compactHeight: false, cover: 160 + 12, width: 320, beside: false), .corner)
+
+        // The coverage button always stands with the 3D button, and the
+        // 3D button with the zoom buttons; neither in the tutorial.
+        for buttons in [MapCornerButtons.corner, .underPanel] {
+            XCTAssertTrue(buttons.showsZoom)
+            XCTAssertTrue(buttons.shows3DAndCoverage(tutorialRuns: false))
+            XCTAssertFalse(buttons.shows3DAndCoverage(tutorialRuns: true))
+        }
+        XCTAssertFalse(MapCornerButtons.givesWay.showsZoom)
+        XCTAssertFalse(MapCornerButtons.givesWay.shows3DAndCoverage(tutorialRuns: false))
     }
 
     /// Decision 300: an iPhone 16 Pro on its side (874 points, 62 of safe

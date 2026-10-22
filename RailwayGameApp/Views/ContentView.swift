@@ -341,17 +341,22 @@ struct ContentView: View {
             let cardWidth: CGFloat = SidePanelWidth.card(screenWidth: proxy.size.width, compactHeight: compactHeight)
             let sidePanel = screen.panel.flatMap { $0.isBesideMap ? $0 : nil }
             let sideWidth: CGFloat = SidePanelWidth.panel(screenWidth: proxy.size.width, compactHeight: compactHeight)
-            // Decision 300: on a phone on its side the map's zoom buttons
-            // stand under the panel rather than beside it in the middle of
-            // the map; the panel ends above them where the credits' band
-            // has no room for them.
-            let buttonsUnderPanel = MapCornerRow.standsUnderPanel(compactHeight: compactHeight, panelBesideMap: sidePanel != nil)
-            let panelBottom = strip + margin
-                + CGFloat(MapCornerRow.panelRaise(underPanel: buttonsUnderPanel, inBand: screen.mapRowInBand))
             // The details card gives way to a panel beside the map.
             let isOpen = sidePanel == nil && ControlDetails.isOpen(
                 session, choice: detailsChoice, foldsWhileDrawing: verticalSizeClass == .compact
             )
+            // Decisions 300 and 349: on a phone on its side the map's
+            // coverage, 3D and zoom buttons stand under the panel or the
+            // details card rather than beside it in the middle of the map;
+            // the panel or card ends above them where the credits' band has
+            // no room for them.
+            let buttonsUnderPanel = MapCornerButtons.place(
+                compactHeight: compactHeight,
+                coverWidth: sidePanel != nil ? sideWidth + margin : isOpen ? cardWidth + margin : 0,
+                viewportWidth: proxy.size.width, besideCover: true, tutorialRuns: session.tutorial != nil
+            ) == .underPanel
+            let rowRaise = CGFloat(MapCornerRow.panelRaise(underPanel: buttonsUnderPanel, inBand: screen.mapRowInBand))
+            let panelBottom = strip + margin + rowRaise
             // Decision 226: on a phone held sideways the tools are a column
             // down the leading edge, not a dock along the bottom; the map
             // keeps its height. `dockSize` measures either. In the tutorial
@@ -367,7 +372,7 @@ struct ContentView: View {
             // The card runs down to the screen's bottom edge, or stops above
             // the dock where both would not fit side by side.
             let besideDock = toolsColumn || dockSize.width + cardWidth + margin <= proxy.size.width
-            let cardBottom = strip + (besideDock ? 0 : dockSize.height)
+            let cardBottom = strip + (besideDock ? 0 : dockSize.height) + rowRaise
             let cardHeight = max(120, proxy.size.height - pillDepth - cardBottom - 2 * margin)
             // Decision 114: the tools down the leading edge while building,
             // between the pill and the dock.

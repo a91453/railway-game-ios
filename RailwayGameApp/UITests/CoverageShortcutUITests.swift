@@ -3,7 +3,9 @@ import XCTest
 /// Decisions 292 and 311: with the network tool, where people are shows
 /// at once over the map, the switch beside the zoom buttons puts it away
 /// and brings it back, its legend switches to coverage and its share of
-/// residents and jobs, and leaving the tool puts the map back. Full lane
+/// residents and jobs, and leaving the tool puts the map back. Decision
+/// 349: the switch stands beside the 3D button while only looking at the
+/// map too. Full lane
 /// only (decision 199): the rules and the numbers are
 /// `StationPotentialMapTests` and `CoverageSummaryTests` on Linux; this
 /// checks that it shows and a finger reaches it.
@@ -20,7 +22,8 @@ final class CoverageShortcutUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 30), "The demo map opens")
 
         let shortcut = app.buttons["map.coverageShortcut"]
-        XCTAssertFalse(shortcut.exists, "Not offered while only looking at the map")
+        XCTAssertTrue(shortcut.appears(within: 10), "Beside the 3D button while only looking at the map")
+        XCTAssertFalse(shortcut.isSelected, "Off until building begins")
 
         let build = app.buttons["dock.build"]
         XCTAssertTrue(build.appears(within: 10))
@@ -32,7 +35,7 @@ final class CoverageShortcutUITests: XCTestCase {
 
         let potential = app.descendants(matching: .any)["map.potentialLegend"].firstMatch
         XCTAssertTrue(potential.appears(within: 30), "Where people are shows as building begins")
-        XCTAssertTrue(shortcut.appears(within: 10), "Offered with the network tool")
+        XCTAssertTrue(shortcut.appears(within: 10), "Still there with the network tool")
         XCTAssertTrue(shortcut.becomesHittable(within: 10), "The switch is covered")
         shortcut.tap()
         XCTAssertTrue(potential.disappears(within: 10), "The switch puts it away")
@@ -47,7 +50,8 @@ final class CoverageShortcutUITests: XCTestCase {
         XCTAssertTrue(share.label.contains("straight-line estimate"), share.label)
 
         app.buttons["tool.select"].tap()
-        XCTAssertTrue(shortcut.disappears(within: 10), "Gone with the tool")
         XCTAssertTrue(share.disappears(within: 10), "The map's layer is put back")
+        XCTAssertTrue(shortcut.exists, "Still beside the 3D button")
+        XCTAssertFalse(shortcut.isSelected, "Off with the tool")
     }
 }

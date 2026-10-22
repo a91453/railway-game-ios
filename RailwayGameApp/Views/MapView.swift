@@ -278,17 +278,19 @@ struct MapView: View {
             // folded control card the edge is free.
             let besideTrailing = viewport.height - screenEdges.bottom - bottomTrailingHeight
                 < screenEdges.top + trailingInsetDepth
-            // Decision 123: beside a card or panel that takes more than a
-            // third of the width (a phone's), the zoom buttons would stand in
-            // the middle of the map, over what was selected; they give way,
-            // as the overview map does, and a pinch still zooms. Measured
-            // with their own fixed height (44 points and two paddings of
-            // 12 each side), not the column's, which they leave. The
-            // tutorial points at them, so they stay while it runs.
-            // Decision 300: under a phone's panel they have a row of their own.
-            let zoomGivesWay = !buttonsUnderPanel && session.tutorial == nil
-                && insets.trailing > viewport.width / 3
-                && viewport.height - screenEdges.bottom - 92 < screenEdges.top + trailingInsetDepth
+            // Decisions 123 and 349: beside a card or panel that leaves the
+            // map too narrow for them (an iPad's narrowest split view) the
+            // zoom buttons give way, as the overview map does, and a pinch
+            // still zooms. Beside it: measured with their own fixed height
+            // (44 points and two paddings of 12 each side), not the
+            // column's, which they leave. The tutorial points at them, so
+            // they stay while it runs. Decision 300: under a phone's panel
+            // or card they have a row of their own (``MapCornerButtons``).
+            let cornerPlace = MapCornerButtons.place(
+                compactHeight: verticalSizeClass == .compact, coverWidth: Double(insets.trailing), viewportWidth: viewport.width,
+                besideCover: viewport.height - screenEdges.bottom - 92 < screenEdges.top + trailingInsetDepth,
+                tutorialRuns: session.tutorial != nil
+            )
             // Decision 300: where the buttons' row under a phone's panel
             // ends in the credits' band, `nil` where it has no room there.
             let bandEnd: CGFloat? = buttonsUnderPanel && realWorld != nil
@@ -747,7 +749,7 @@ struct MapView: View {
                         // Decision 300: under a phone's panel they stand
                         // in a row of their own (below).
                         if !buttonsUnderPanel {
-                            cornerButtons(camera: projection, limit: zoomLimit, zoomGivesWay: zoomGivesWay)
+                            cornerButtons(camera: projection, limit: zoomLimit, place: cornerPlace)
                         }
                     }
                     .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.mapArea)) } action: { bottomTrailingFrame = $0 }
@@ -774,7 +776,7 @@ struct MapView: View {
                         let below: CGFloat = rowInBand ? safeArea.bottom + 1 : screenEdges.bottom + 2
                         let reach: CGFloat = min(CGFloat(MapCornerRow.reach - MapCornerRow.height), rowInBand || realWorld == nil ? below : 0)
                         let rowEnd: CGFloat = bandEnd ?? CGFloat(viewport.width) - screenEdges.trailing - CGFloat(MapCornerRow.gap)
-                        cornerButtons(camera: projection, limit: zoomLimit, zoomGivesWay: false, compactReach: reach)
+                        cornerButtons(camera: projection, limit: zoomLimit, place: .underPanel, compactReach: reach)
                             .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.mapArea)) } action: { cornerRowFrame = $0 }
                             .padding(.trailing, CGFloat(viewport.width) - rowEnd)
                             .padding(.bottom, below - reach)
@@ -1777,21 +1779,18 @@ struct MapView: View {
     /// they are as tall as the credit button, a finger's target reaching
     /// that many points below them; `nil` as they were.
     @ViewBuilder
-    private func cornerButtons(camera: PlanCamera, limit: Double?, zoomGivesWay: Bool, compactReach: CGFloat? = nil) -> some View {
+    private func cornerButtons(camera: PlanCamera, limit: Double?, place: MapCornerButtons, compactReach: CGFloat? = nil) -> some View {
         HStack(alignment: .top, spacing: compactReach == nil ? 0 : 6) {
-            // Decisions 292 and 311: the building layer, put away or
-            // brought back with one tap while building.
-            if session.offersCoverageShortcut {
+            // Decisions 292, 311 and 349: the building layer, shown or put
+            // away with one tap, and this game's 3D map (decision 229,
+            // later), always together beside the zoom buttons.
+            if place.shows3DAndCoverage(tutorialRuns: session.tutorial != nil) {
                 MapCoverageButton(isOn: buildingLayer.isOn, language: session.language, compactReach: compactReach) {
                     buildingLayerAutoShows = buildingLayer.toggle()
                 }
-            }
-            // Decision 229, later: this game's 3D map, one tap away, beside
-            // the zoom buttons.
-            if Map3DShortcut.isShown(zoomButtonsShow: !zoomGivesWay, tutorialRuns: session.tutorial != nil) {
                 map3DButton(compactReach: compactReach)
             }
-            if !zoomGivesWay {
+            if place.showsZoom {
                 zoomControls(camera: camera, limit: limit, compactReach: compactReach)
             }
         }
