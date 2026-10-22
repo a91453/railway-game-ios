@@ -9,6 +9,18 @@ import XCTest
 final class LessonUITests: XCTestCase {
     private var app: XCUIApplication!
 
+    nonisolated override func setUp() {
+        super.setUp()
+        // Passing lesson 1 through the UI takes about 3 minutes; on a
+        // runner two to three times slower than usual it took 8 min 20 s,
+        // past the 8 minutes a test gets by default, and the test was
+        // stopped as hung after its last check had passed (main 3a13edf's
+        // full lane, run 39742482762: "Failed to terminate" at the end).
+        // Ask for the most the lanes allow
+        // (`-maximum-test-execution-time-allowance 600`).
+        executionTimeAllowance = 600
+    }
+
     func testAFreshInstallShowsTenLessonsAndOnlyTheFirstCanStart() {
         defer { app?.terminate() }
         launch()
@@ -296,16 +308,29 @@ final class LessonUITests: XCTestCase {
     /// screen: with that one the drags fell at x 798, on the panel's scroll
     /// bar, and scrubbed the panel up and down (Shops, Ridership, then
     /// Platforms again in main 614375c's full lane, run 39438209091).
+    ///
+    /// Measured while the station panel still slid in, the panel's left
+    /// edge was its old place by the screen's trailing edge: every one of
+    /// the 40 drags fell at x 797.8 and the list did not move (main
+    /// 82ce09e's full lane, run 39767194320; the green runs dragged at
+    /// x 537.4), as `reveal` once did. Wait for the panel to stop, and
+    /// measure it again before each drag.
     private func revealPastMenus(_ control: XCUIElement) {
         let panel = app.collectionViews.containing(.any, identifier: "station.operations").firstMatch
         XCTAssertTrue(panel.appears(within: 10), "Missing \(panel)")
-        let onScreen = panel.frame.intersection(app.frame)
-        let area = onScreen.isEmpty ? panel.frame : onScreen
-        let band = area.insetBy(dx: 0, dy: 24)
+        panel.waitUntilStill()
+        var area = CGRect.zero
+        func measure() {
+            let onScreen = panel.frame.intersection(app.frame)
+            area = onScreen.isEmpty ? panel.frame : onScreen
+        }
+        measure()
         func shown() -> Bool {
-            control.exists && band.minY <= control.frame.midY && control.frame.midY <= band.maxY
+            let band = area.insetBy(dx: 0, dy: 24)
+            return control.exists && band.minY <= control.frame.midY && control.frame.midY <= band.maxY
         }
         func drag(from: CGFloat, to: CGFloat) {
+            measure()
             let origin = app.coordinate(withNormalizedOffset: .zero)
             let x = area.minX + area.width * 0.02 - app.frame.minX
             origin.withOffset(CGVector(dx: x, dy: area.minY + area.height * from - app.frame.minY))
@@ -316,7 +341,7 @@ final class LessonUITests: XCTestCase {
             if shown() { break }
             if !control.exists {
                 drag(from: 0.85, to: 0.15)
-            } else if control.frame.midY < band.minY {
+            } else if control.frame.midY < area.minY + 24 {
                 drag(from: 0.35, to: 0.65)
             } else {
                 drag(from: 0.65, to: 0.35)
