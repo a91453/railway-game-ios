@@ -23,8 +23,8 @@
 
 | 角色 | 現在的 session | 做什麼 | 交接 |
 | --- | --- | --- | --- |
-| 遊戲規劃（兼派工） | NEWPLANNER（2026-10-22 起，照 §1.1 換手，作者：「要不要全部所有換個session了 都一直在壓縮了」→「好，照表換」；換手時的現況在第 2 節最前面；前任 session_014rYHMtmqA5bEMkBBuKu6PV（10-21 至 10-22，作者：「那你需要先接手嗎太長了」）、session_01NiR5WLMFjMJBktQAMkfmkm（10-21）、session_01WW7o3decEv5LY59nYVqnDN（10-20 至 10-21，作者：「接手 角色表中遊戲規劃的工作」）、session_01V1xd3H9vNkuZoSA3czNfGm（10-16 至 10-18）、session_018D6gYU1yiZMtxSmNNU1K17） | 從玩家、鐵道迷、開發、美術、音樂五個角度決定優先順序與設計，開實作 session 並派工，綠了的 PR 照 §1.2 合併（2026-10-21 起），收作者轉來的玩家回報與 bug（§1.3），寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1、1.3 節 |
-| 每日 Threads 開發日誌 | 排程「每日 Threads 開發日誌」（台灣時間每天 21:43，2026-10-18 起暫停）觸發遊戲規劃，由它開寫作 session。2026-10-22 換手時由前任建了綁到現任 NEWPLANNER 的新排程 `NEWTRIGGER`（暫停中），前任的 `trig_01NfzFV9BcdiyBJpAwnaTuK9`（再之前是 `trig_01SkNFNW6qN6cMUGkGCXZM1v`）已刪。排程的綁定改不了，以後換手時由現任遊戲規劃用同一份 prompt 建一個綁到自己的新排程，再刪掉舊的；作者沒說要開就維持暫停 | 寫當天的串文草稿，用 SendUserFile 交給作者；不 commit、不發布 | 派工單照 2026-10-14、10-15、10-16 的寫作 session |
+| 遊戲規劃（兼派工） | session_01CHQg7B6JqzbScGSjyDwHos（2026-10-22 起，照 §1.1 換手，作者：「要不要全部所有換個session了 都一直在壓縮了」→「好，照表換」；換手時的現況在第 2 節最前面；前任 session_014rYHMtmqA5bEMkBBuKu6PV（10-21 至 10-22，作者：「那你需要先接手嗎太長了」）、session_01NiR5WLMFjMJBktQAMkfmkm（10-21）、session_01WW7o3decEv5LY59nYVqnDN（10-20 至 10-21，作者：「接手 角色表中遊戲規劃的工作」）、session_01V1xd3H9vNkuZoSA3czNfGm（10-16 至 10-18）、session_018D6gYU1yiZMtxSmNNU1K17） | 從玩家、鐵道迷、開發、美術、音樂五個角度決定優先順序與設計，開實作 session 並派工，綠了的 PR 照 §1.2 合併（2026-10-21 起），收作者轉來的玩家回報與 bug（§1.3），寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1、1.3 節 |
+| 每日 Threads 開發日誌 | 排程「每日 Threads 開發日誌」（台灣時間每天 21:43，2026-10-18 起暫停）觸發遊戲規劃，由它開寫作 session。2026-10-22 換手時由前任建了綁到現任 session_01CHQg7B6JqzbScGSjyDwHos 的新排程 `trig_01FZhfBNQCdDW8iDpowANLZS`（暫停中），前任的 `trig_01NfzFV9BcdiyBJpAwnaTuK9`（再之前是 `trig_01SkNFNW6qN6cMUGkGCXZM1v`）已刪。排程的綁定改不了，以後換手時由現任遊戲規劃用同一份 prompt 建一個綁到自己的新排程，再刪掉舊的；作者沒說要開就維持暫停 | 寫當天的串文草稿，用 SendUserFile 交給作者；不 commit、不發布 | 派工單照 2026-10-14、10-15、10-16 的寫作 session |
 
 不再常駐（2026-10-20 停用）：合併協調 session_01QoA24EvFCFbmbcM1EwaZT7（前任 session_016sNs4eeZwga9hz1CCHkpmX）、派工 session_01MJ7sdeid5DAFjSVbTkmdi3（前任 session_01AaAj4wvJMxJQuLWAoYu6S8）。兩個都從 2026-10-17 起沒有動作。
 
@@ -188,8 +188,8 @@
 
 | 線 | session | 做到哪 | 下一步 |
 | --- | --- | --- | --- |
-| 遊戲規劃 | NEWPLANNER（接 session_014rYHMtmqA5bEMkBBuKu6PV） | 這份交接 | 第 1.1 節 |
-| 3D 城市（§22.10） | NEW3D（接 session_01ShaLWGSyEn9fYcNjS8j5Gz） | #1006（決策 342）、#1009（決策 345，台北市中心建物）已合併；§22.10 第 1 項天空在 #231 登記了決策 347、分支 `claude/map3d-sky`，前任剛開始就換手，做了什麼看那個分支與前任在 #231 的轉交留言 | §22.10 第 1 到 6 項，一項一個 PR |
+| 遊戲規劃 | session_01CHQg7B6JqzbScGSjyDwHos（接 session_014rYHMtmqA5bEMkBBuKu6PV） | 這份交接 | 第 1.1 節 |
+| 3D 城市（§22.10） | session_01H2iSUj5f1cCXAwjvuFvbsp（接 session_01ShaLWGSyEn9fYcNjS8j5Gz） | #1006（決策 342）、#1009（決策 345，台北市中心建物）已合併；§22.10 第 1 項天空在 #231 登記了決策 347、分支 `claude/map3d-sky`，前任剛開始就換手，做了什麼看那個分支與前任在 #231 的轉交留言 | §22.10 第 1 到 6 項，一項一個 PR |
 | 汽機車分走旅客第 2 步（決策 332，GameCore，存檔 70） | session_018gQPWzopcCfuR9gTAApKTj | `claude/mode-shift-core`，本機在跑 shard，還沒開 PR | 開 PR、合併後換手；§22.2 第 12 名（第一站 2 股以上的 bug）派給下一個 session |
 | 聲音第二項：雨聲、雷聲（§22.2 第 7 名） | session_01T8UdZRFmxs93DFtUKX5V73 | `claude/weather-sounds`，找錄音參考中；第一項跟車行駛聲 #1007（決策 343）已合併 | 開 PR、合併後換手；第 7 名剩下的夜間配樂收小、一日券出票聲，寫在決策 343 的「下一步」 |
 
