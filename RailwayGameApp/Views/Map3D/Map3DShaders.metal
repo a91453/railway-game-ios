@@ -23,6 +23,9 @@ struct Map3DVertexIn {
 // share lit and the brightest glass), then decision 356's reflections
 // (Map3DReflection.rows): the strength (0 leaves them out), the ripples'
 // seconds and how much of the sun shows; the zenith; the glint's colour.
+// Decision 357: then the sun's shadow map (Map3DSunShadow.rows): from the
+// scene to the map, then its strength (0 leaves it out), a texel of it, the
+// normal's offset in metres and the depth's bias.
 struct Map3DUniforms {
     float4x4 viewProjection;
     float4 sunDirection;
@@ -37,6 +40,8 @@ struct Map3DUniforms {
     float4 mirror;
     float4 zenith;
     float4 glint;
+    float4x4 sunMatrix;
+    float4 sunShadow;
 };
 
 struct Map3DVertexOut {
@@ -141,8 +146,30 @@ float3 map3dFinish(float3 colour) {
 // `world`, then what it mirrors laid over it by its share (`mirrored`'s
 // alpha, decision 356), its own light `glow` added, faded into the fog,
 // and finished. Decision 352: the signs end the same way.
-float4 map3dLit(float3 base, float3 glow, float4 mirrored, float3 normal, float3 world, constant Map3DUniforms &uniforms) {
-    float sun = max(dot(normal, uniforms.sunDirection.xyz), 0.0);
+// Decision 357: how much of the sun reaches `world` on a face looking
+// along `normal`, 0 to 1: the sun's shadow map (Map3DSunShadow) looked up
+// a texel out along the normal and a little nearer the sun, four taps of
+// two by two each, faded out at the square's edge.
+float map3dSunSeen(float3 world, float3 normal, constant Map3DUniforms &uniforms, depth2d<float> sunShadow) {
+    float strength = uniforms.sunShadow.x;
+    if (strength <= 0.0 || dot(normal, uniforms.sunDirection.xyz) <= 0.0) { return 1.0; }
+    float4 at = uniforms.sunMatrix * float4(world + normal * uniforms.sunShadow.z, 1.0);
+    float edge = max(abs(at.x), abs(at.y));
+    if (edge >= 1.0 || at.z <= 0.0 || at.z >= 1.0) { return 1.0; }
+    constexpr sampler s(coord::normalized, filter::linear, address::clamp_to_edge, compare_func::less_equal);
+    float2 uv = float2(at.x * 0.5 + 0.5, 0.5 - at.y * 0.5);
+    float texel = uniforms.sunShadow.y, depth = at.z - uniforms.sunShadow.w;
+    float seen = 0.0;
+    seen += sunShadow.sample_compare(s, uv + float2(-texel, -texel), depth);
+    seen += sunShadow.sample_compare(s, uv + float2(texel, -texel), depth);
+    seen += sunShadow.sample_compare(s, uv + float2(-texel, texel), depth);
+    seen += sunShadow.sample_compare(s, uv + float2(texel, texel), depth);
+    return mix(1.0, seen * 0.25, strength * (1.0 - smoothstep(0.85, 1.0, edge)));
+}
+
+// Decision 357: `sunSeen` the share of the sun that reaches it.
+float4 map3dLit(float3 base, float3 glow, float4 mirrored, float3 normal, float3 world, float sunSeen, constant Map3DUniforms &uniforms) {
+    float sun = max(dot(normal, uniforms.sunDirection.xyz), 0.0) * sunSeen;
     float3 ambient = mix(uniforms.ambientGround.rgb, uniforms.ambientSky.rgb, normal.y * 0.5 + 0.5);
     float3 lit = mix(base * (ambient + uniforms.sunColor.rgb * sun), mirrored.rgb, mirrored.a);
     float far = distance(world, uniforms.eye.xyz);
@@ -190,7 +217,7 @@ static float2 map3dRipple(float2 p, float t, float footprint) {
     return slope * 0.045;
 }
 
-float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d_array<float> surfaces) {
+float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d_array<float> surfaces, depth2d<float> sunShadow) {
     constexpr sampler repeating(address::repeat, filter::linear, mip_filter::linear, max_anisotropy(8));
     float3 base = in.color;
     // Decision 229 續: light of its own at night, added after the fog.
@@ -204,16 +231,19 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
     float3 normal = normalize(in.normal);
     bool mirrors = uniforms.mirror.x > 0.0;
     float3 toEye = normalize(uniforms.eye.xyz - in.world);
+    // Decision 357: the sun's share, also on what glints in it.
+    float sunSeen = map3dSunSeen(in.world, normal, uniforms, sunShadow);
     if (mirrors && in.layer < -2.5) {
         // Water: tilted by its ripples, the sky by Fresnel's share, and
         // the sun's glint on them.
         float2 slope = map3dRipple(in.world.xz, uniforms.mirror.y, length(fwidth(in.world.xz)));
         normal = normalize(float3(-slope.x, 1.0, -slope.y));
+        sunSeen = map3dSunSeen(in.world, normal, uniforms, sunShadow);
         float3 r = reflect(-toEye, normal);
         float fresnel = 0.05 + 0.95 * pow(1.0 - max(dot(toEye, normal), 0.0), 4.0);
         mirrored = float4(map3dSeen(float3(r.x, abs(r.y), r.z), uniforms), fresnel * uniforms.mirror.x);
         float s = max(dot(r, uniforms.sunDirection.xyz), 0.0);
-        glow += uniforms.glint.rgb * ((pow(s, 600.0) * 2.0 + pow(s, 60.0) * 0.2) * uniforms.mirror.z * uniforms.mirror.x);
+        glow += uniforms.glint.rgb * ((pow(s, 600.0) * 2.0 + pow(s, 60.0) * 0.2) * uniforms.mirror.z * uniforms.mirror.x * sunSeen);
     }
     if (in.layer >= 0.0) {
         uint packed = uint(in.layer + 0.5);
@@ -280,16 +310,16 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
                 mirrored = float4(seen, fresnel * mirrorGlass * (1.0 - 0.85 * lights * on) * uniforms.mirror.x);
                 float s = max(dot(r, uniforms.sunDirection.xyz), 0.0);
                 float glint = pow(s, 1400.0) * 3.0 + pow(s, 90.0) * 0.35 + pow(s, 7.0) * 0.1;
-                glow += uniforms.glint.rgb * (glint * mirrorGlass * step(0.0, dot(normal, uniforms.sunDirection.xyz)) * uniforms.mirror.z * uniforms.mirror.x);
+                glow += uniforms.glint.rgb * (glint * mirrorGlass * step(0.0, dot(normal, uniforms.sunDirection.xyz)) * uniforms.mirror.z * uniforms.mirror.x * sunSeen);
             }
         }
     }
-    return map3dLit(base, glow, mirrored, normal, in.world, uniforms);
+    return map3dLit(base, glow, mirrored, normal, in.world, sunSeen, uniforms);
 }
 
 fragment float4 map3dFragment(Map3DVertexOut in [[stage_in]], constant Map3DUniforms &uniforms [[buffer(1)]],
-                              texture2d_array<float> surfaces [[texture(0)]]) {
-    return map3dShade(in, uniforms, surfaces);
+                              texture2d_array<float> surfaces [[texture(0)]], depth2d<float> sunShadow [[texture(1)]]) {
+    return map3dShade(in, uniforms, surfaces, sunShadow);
 }
 
 // Decision 342: the cars the buildings in front of are seen through, as
@@ -309,8 +339,8 @@ struct Map3DSeeThroughCars {
 // four samples it covers, so the train behind shows in the rest.
 fragment float4 map3dSeeThroughFragment(Map3DVertexOut in [[stage_in]], constant Map3DUniforms &uniforms [[buffer(1)]],
                                         constant Map3DSeeThroughCars &see [[buffer(2)]],
-                                        texture2d_array<float> surfaces [[texture(0)]]) {
-    float4 colour = map3dShade(in, uniforms, surfaces);
+                                        texture2d_array<float> surfaces [[texture(0)]], depth2d<float> sunShadow [[texture(1)]]) {
+    float4 colour = map3dShade(in, uniforms, surfaces, sunShadow);
     float3 eye = uniforms.eye.xyz;
     float3 v = in.world - eye;
     float radius = see.shape.y, opacity = see.shape.z, clearance = see.shape.w;
@@ -331,6 +361,18 @@ fragment float4 map3dSeeThroughFragment(Map3DVertexOut in [[stage_in]], constant
     }
     colour.a = shown;
     return colour;
+}
+
+// Decision 357: the sun's shadow map, the city's depth seen from the sun
+// (Map3DSunShadow.Region.matrix), no colour: the chunks' meshes, and the
+// street furniture through its instances.
+vertex float4 map3dSunDepthVertex(Map3DVertexIn in [[stage_in]], constant float4x4 &sun [[buffer(1)]]) {
+    return sun * float4(in.position, 1.0);
+}
+
+vertex float4 map3dSunDepthInstancedVertex(Map3DVertexIn in [[stage_in]], constant float4x4 &sun [[buffer(1)]],
+                                           const device Map3DInstance *instances [[buffer(2)]], uint instance [[instance_id]]) {
+    return sun * (instances[instance].transform * float4(in.position, 1.0));
 }
 
 // Decision 232: the soft shadows on the ground, drawn last over what is
@@ -500,7 +542,8 @@ static float map3dWord(texture2d<float> atlas, sampler s, float2 origin, float2 
 }
 
 fragment float4 map3dSignFragment(Map3DSignOut in [[stage_in]], constant Map3DUniforms &uniforms [[buffer(1)]],
-                                  constant float4 &clock [[buffer(3)]], texture2d<float> atlas [[texture(0)]]) {
+                                  constant float4 &clock [[buffer(3)]], texture2d<float> atlas [[texture(0)]],
+                                  depth2d<float> sunShadow [[texture(1)]]) {
     constexpr sampler s(address::clamp_to_edge, filter::linear, mip_filter::linear, max_anisotropy(4));
     // Read from behind (a blade sign's far side), the right way round.
     float3 normal = in.normal;
@@ -542,6 +585,6 @@ fragment float4 map3dSignFragment(Map3DSignOut in [[stage_in]], constant Map3DUn
         base = colour;
         glow = colour * (1.1 * lights * in.lit);
     }
-    return map3dLit(base, glow, float4(0.0), normal, in.world, uniforms);
+    return map3dLit(base, glow, float4(0.0), normal, in.world, map3dSunSeen(in.world, normal, uniforms, sunShadow), uniforms);
 }
 

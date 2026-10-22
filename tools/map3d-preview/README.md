@@ -44,6 +44,7 @@ rm Tests/GamePresentationTests/Map3DPreviewDump.swift
 | `MAP3D_DETAIL` | `far`：輸出遠處看到的簡化版城市（決策 238）；`near`：近版但不含最近一層（決策 267 的騎樓、遮雨棚、晾衣）；預設是最近的完整版（連街道設施一起，決策 244：每個實例展開成網格） |
 | `MAP3D_TRAINS` | `x:z`：在這一點的灰色地面上排出每一套列車（決策 318），一列一套：頭車、中間車、最後一節，最上面一列是一般通勤車；和 `MAP3D_CROP` 一起用 |
 | `MAP3D_MIRROR` | `0`：玻璃與水面不反光（決策 356，同省電畫質），當作「之前」的圖；預設照 `Map3DReflection` 畫天空的 Fresnel、太陽高光、夜裡玻璃裡的城市燈光、水面波紋（波紋停在第 0 秒） |
+| `MAP3D_SUN` | `0`：沒有太陽陰影貼圖（決策 357，同省電畫質；決策 232 的團狀影子照原本的深淺），當作「之前」的圖；預設照 `Map3DSunShadow` 的「自動」畫質畫（2048 見方，`index.html` 先從太陽畫一次深度）。預覽裡的招牌沒有接太陽陰影（App 有） |
 | `MAP3D_SIGNS` | `0`：不輸出招牌（決策 352），當作「之前」的圖；看板的外框還在，因為它是網格。預設輸出 `<前綴>.signs`（每塊 16 個 float），`render.sh` 一起畫，時鐘照 `MAP3D_MINUTE`，LED 螢幕停在第一張圖 |
 
 前後對照：在 `main` 的 worktree 與分支上各跑一次同樣的鏡頭，再把兩張上下拼起來（`docs/art/*/` 的圖都是上半 `main`、下半新版）。PR 只把一張總覽放進 `docs/art/<資料夾>/`，其他圖放 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/<同一資料夾>/`（作者 2026-10-21 的規則，CLAUDE.md）。

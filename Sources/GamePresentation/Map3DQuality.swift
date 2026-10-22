@@ -8,7 +8,8 @@ public enum Map3DQuality: String, CaseIterable, Sendable {
     /// (``Map3DDrawScale``); in Low Power Mode or when the phone runs hot,
     /// as ``saving``.
     case automatic
-    /// Fewer pixels and half the frames from the start.
+    /// Fewer pixels and half the frames from the start, and no sun shadows
+    /// (decision 357, ``Map3DSunShadow``).
     case saving
     /// The sharpest picture always, but when the phone is about to slow
     /// itself down for heat.
