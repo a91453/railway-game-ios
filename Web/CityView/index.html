@@ -19,21 +19,31 @@
         --edge-left: max(12px, env(safe-area-inset-left)); --edge-right: max(12px, env(safe-area-inset-right));
         --edge-bottom: max(12px, env(safe-area-inset-bottom)); --controls-bottom: var(--edge-bottom);
       }
-      #credits {
+      /* (the credits and, above them, the technical-preview note: one column, so a credit line that wraps lifts the
+         note rather than running under it) */
+      #footnotes {
         position: fixed; bottom: max(6px, env(safe-area-inset-bottom));
-        left: calc(var(--edge-left) + 80px); right: calc(var(--edge-right) + 120px); margin: 0 auto; width: fit-content;
-        box-sizing: border-box; padding: 1px 5px; border-radius: 4px;
+        left: calc(var(--edge-left) + 80px); right: calc(var(--edge-right) + 120px);
+        display: flex; flex-direction: column; align-items: center; gap: 4px; pointer-events: none;
+      }
+      #credits, #preview-note {
+        max-width: 100%; box-sizing: border-box; padding: 1px 5px; border-radius: 4px;
         font: 11px/1.4 -apple-system, system-ui, "PingFang TC", sans-serif; text-align: center; color: rgba(60, 60, 67, 0.75);
         background: rgba(255, 255, 255, 0.7); pointer-events: none;
       }
       #credits:empty { display: none; }
+      /* Along the Line: the page is a technical preview, not the game: said in the credits' look, above them */
+      #preview-note { max-width: 420px; padding: 2px 6px; }
+      #preview-note b { font-weight: 700; color: #262c57; }
       /* (a long line breaks between the sources, each with its dot, and inside one only when it alone is too wide) */
       #credits span { display: inline-block; max-width: 100%; }
       /* a narrow screen (a phone held upright): the credits take the whole bottom row, the switch and the website
          link sit above them */
       @media (max-width: 699px) {
         :root { --controls-bottom: calc(max(6px, env(safe-area-inset-bottom)) + 44px); }
-        #credits { left: var(--edge-left); right: var(--edge-right); }
+        #footnotes { left: var(--edge-left); right: var(--edge-right); }
+        /* (the note sits between the switch and the website link, which are on the row above the credits) */
+        #preview-note { max-width: calc(100% - 76px - 104px); margin: 0 104px 0 76px; }
       }
       /* Along the Line: the game's website, where jeantimex's GitHub link was (the app opens it in Safari) */
       #website {
@@ -111,7 +121,11 @@
     <a id="website" href="https://www.alongthelinegame.com">
       <img src="/assets/ui/brand-mark.png" alt="" /><span>Website</span>
     </a>
-    <div id="credits"></div>
+    <div id="footnotes">
+      <!-- Along the Line: what this page is (boot.js has the Chinese; none in the game, ?app=1) -->
+      <div id="preview-note"><b>Tech preview</b> · A technical preview on the web. The game's 3D is gaining these effects step by step.</div>
+      <div id="credits"></div>
+    </div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
