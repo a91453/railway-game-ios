@@ -274,6 +274,9 @@ public struct RealRailways: Sendable {
         public let sortKey: Int
         public let palette: Palette
         public let points: [Coordinate]
+        /// The system and the line it is a piece of (`mrt|BL`), as its
+        /// stations name it (``stops``).
+        public let lineKey: String
         let box: Box
     }
 
@@ -340,6 +343,10 @@ public struct RealRailways: Sendable {
     public let stationMarks: [StationMark]
     /// Every station once in each system, in the site's order.
     public let stations: [Station]
+    /// Each line's stations in the site's order, end to end, by line key
+    /// (``Line/lineKey``): each a station's Chinese name and where the site
+    /// draws it on that line.
+    public let stops: [String: [(chinese: String, coordinate: Coordinate)]]
     /// Real station operational metadata (classes, IDs, addresses, platforms, TRTC codes, track sections).
     public let stationData: RealStationData?
     /// Real system and line operational parameters (headways, dwell times, station sequences, timetables).
@@ -398,6 +405,7 @@ public struct RealRailways: Sendable {
                 sortKey: feature.properties.sortKey,
                 palette: try Self.palette(feature.properties.lineKey, in: system),
                 points: points,
+                lineKey: feature.properties.lineKey,
                 box: Box(points)
             )
         }
@@ -409,6 +417,11 @@ public struct RealRailways: Sendable {
                 palette: try Self.palette(feature.properties.lineKey, in: system)
             )
         }
+        var stops: [String: [(chinese: String, coordinate: Coordinate)]] = [:]
+        for (feature, mark) in zip(stationFeatures, stationMarks) {
+            stops[feature.properties.lineKey, default: []].append((feature.properties.name, mark.coordinate))
+        }
+        self.stops = stops
         var seen: Set<String> = []
         var stations: [Station] = []
         for (feature, mark) in zip(stationFeatures, stationMarks) {

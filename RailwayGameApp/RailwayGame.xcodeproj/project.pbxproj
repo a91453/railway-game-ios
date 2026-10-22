@@ -142,6 +142,7 @@
 		BEF6C6FD0A62EBDEDD8E4244 /* MapConstructionHUD.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BB64062D209FDE3EC54BAE7 /* MapConstructionHUD.swift */; };
 		C1EFF57A2944814982E3D1E7 /* TickStable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66DEEFE5F63CD7DD3B715B3B /* TickStable.swift */; };
 		C2A0206D4D8F4C5F50DE9083 /* warning.wav in Resources */ = {isa = PBXBuildFile; fileRef = 5BF4BA3F66CFC369FCBE3407 /* warning.wav */; };
+		C318C4DBF7381ACEFA41A082 /* DemoRealLinesButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40A496FD2BF3857D45FD0B8E /* DemoRealLinesButton.swift */; };
 		C5AE4EE9A27FB9506D2B3AB3 /* NightSkipUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F1B1CF5E7A5989229368AA /* NightSkipUITests.swift */; };
 		C61BAB200CEB800C0F50B796 /* TimetableEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBBC6A819CE29EEBC4FD844A /* TimetableEditor.swift */; };
 		C7A83471D6C3E093D4DA78C1 /* LineConfirmationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 937E1D33FAD3FAD9CF5A6E8C /* LineConfirmationCard.swift */; };
@@ -243,6 +244,7 @@
 		3D5BF8179644D02716F92269 /* OneShotLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OneShotLocation.swift; sourceTree = "<group>"; };
 		3EDAFCBFB7EEDE187DEFCAB1 /* tmrt_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tmrt_times.json; sourceTree = "<group>"; };
 		3FC137C507F9A22C91174E71 /* NetworkOverview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkOverview.swift; sourceTree = "<group>"; };
+		40A496FD2BF3857D45FD0B8E /* DemoRealLinesButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoRealLinesButton.swift; sourceTree = "<group>"; };
 		411F6A0DAE0C614613B6B4CE /* thsr_track.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = thsr_track.json; sourceTree = "<group>"; };
 		41251B12461A0FD34DFCB786 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		41B126494052744FF5AE9A8B /* CoverageShortcutUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverageShortcutUITests.swift; sourceTree = "<group>"; };
@@ -501,6 +503,7 @@
 				D490F999E435A0570BE04635 /* ContentView.swift */,
 				A07E2BC9805D886DEE596859 /* ControlPanel.swift */,
 				222E67E267AF07C25D4745C9 /* DataSourcesView.swift */,
+				40A496FD2BF3857D45FD0B8E /* DemoRealLinesButton.swift */,
 				C08B430E6B57DEDAF0C1964E /* EconomyPanel.swift */,
 				BF99D3AA87D898A7B9F0A295 /* FeedbackViews.swift */,
 				787EB9DDCEED2E78C0E0E237 /* FinanceTrendCharts.swift */,
@@ -872,6 +875,7 @@
 				44DB05AFB29842D0B2DC04C0 /* ContentView.swift in Sources */,
 				CDA0BE241DE1D06BA9047372 /* ControlPanel.swift in Sources */,
 				225C04C52DFBA47A1A6F22A4 /* DataSourcesView.swift in Sources */,
+				C318C4DBF7381ACEFA41A082 /* DemoRealLinesButton.swift in Sources */,
 				647CBFF4717FB3B4384775E6 /* EconomyPanel.swift in Sources */,
 				0E4EC2F54A6F330F9C0427F6 /* FeatureUITestWorld.swift in Sources */,
 				823389D4FCA1A54E1DDAB274 /* FeedbackViews.swift in Sources */,
