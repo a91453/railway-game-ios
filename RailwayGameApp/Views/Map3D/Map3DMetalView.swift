@@ -333,7 +333,6 @@ final class Map3DMetalView: MTKView {
         camera.viewport = (Float(max(bounds.width, 1)), Float(max(bounds.height, 1)))
     }
 
-    /// Decision 230: draws the trains near the eye with `pack`'s models.
     /// Decision 333: follows `follow`'s train from now, flying there over
     /// ``MotionRule/cameraFlight`` (at once with Reduce Motion) when the
     /// train or the view changed; `nil` stops following, flying back to
@@ -395,6 +394,7 @@ final class Map3DMetalView: MTKView {
         }
     }
 
+    /// Decision 230: draws the trains near the eye with `pack`'s models.
     func useModels(_ pack: Map3DModelPack) {
         let buffers = pack.models.compactMap { makeBuffer($0.vertices) }
         guard buffers.count == pack.models.count else { return }
