@@ -535,7 +535,7 @@ public final class GameSession {
     /// Counts the changes to ``railways`` (decision 328).
     @ObservationIgnored private(set) var railwaysRevision = 0
     /// ``buyableRealLines`` as last worked out, and from what.
-    @ObservationIgnored var buyableRealLinesMemo: (key: BuyableRealLinesKey, lines: [RealBranchLine])?
+    @ObservationIgnored var buyableRealLinesMemo: (key: BuyableRealLinesKey, sale: RealLineSale)?
 
     /// Taiwan's place names (decision 159), which a new station on a
     /// real-world map is named after when no real station is right there.
