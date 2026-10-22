@@ -1,6 +1,8 @@
 # Architecture
 
 > 現況、文件地圖與這份文件的決策索引在 [OVERVIEW.md](OVERVIEW.md)。這份是每個決策的逐條日誌，規則細節以各決策本文為準。
+>
+> **決策 329 起不寫在這份**：每個決策一個檔，在 [decisions/](decisions/README.md)（`docs/decisions/<N>.md`，決策 329）。這份只收 1–328 和它們的「後來」。
 
 ## 分層
 

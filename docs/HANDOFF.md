@@ -67,6 +67,8 @@
   - 決策 265 之後，PR 的 `Swift CI (gate)` 會等同一個 commit 的 `iOS App Build`，iOS 紅了 gate 就紅；所以 gate 綠就代表 iOS 也綠了。
   - iOS 失敗、重跑通過之後，gate 不會自己變綠：對 CI 那一輪按 Re-run failed jobs（`actions_run_trigger` 的 rerun_failed_jobs）。
   - 「Remember that this change passed」顯示 skipped 是正常的：同一個改動前一輪已經跑過。
+  - PR 舊 commit 的 `Swift CI (gate)` 是 skipped、旁邊有一個 `Superseded by a newer push?`：那一輪被新的 push 取代了，看 head 那一輪（決策 329）。head 上的 gate 是紅的、訊息寫「cancelled because a newer push replaced」，也是同一回事。
+  - 分片 log 裡的「swift build was killed by signal … Building once more」是工具崩潰後自動重建（決策 329），不是測試失敗；同一個 job 再崩潰一次才會紅。
   - Xcode build 有時跑兩輪，兩輪都要看。
 - main 最新一次 push 的 `ci.yml` 是綠的（`actions_list` 的 list_workflow_runs，條件 ci.yml、branch main、event push）。cancelled 是被新的 push 取代，不算紅；要看最新一個跑完的。
 
@@ -85,7 +87,7 @@
 - GameCore PR 的 base 比另一個已經合進去的 GameCore 改動舊時，請它 merge main（不要 rebase），重跑完整 tier 再合。
 
 **決策號與文件衝突**：
-- 兩個 PR 撞同一個決策號，或 ARCHITECTURE、OVERVIEW 衝突：請該 session 自己 merge main 解，決策照號碼排。
+- 兩個 PR 撞同一個決策號（329 起是兩個 `docs/decisions/<N>.md` 同名），照 #231 登記的先後，後登記的改號；ARCHITECTURE、OVERVIEW 衝突（改 1–328 的「後來」時還會有）：請該 session 自己 merge main 解。
 - 存檔版本與決策號以 main 加上 #231 還沒釋出的登記為準，取最大值加一。
 
 **full lane**（`ios-build.yml` 把 iPhone UI 測試全部跑一次：兩個 iPhone job 加 iPad 教學，約 42–45 分鐘，佔 3 台 macOS）：
@@ -151,7 +153,7 @@
 - 不改 golden、SaveFixtures、ReplayFixtures 的值；
 - 要協調的對象：改同一個檔案的 session；GameCore 的完整 tier 同時最多 2 個；
 - 驗證方式：本機只跑快速檢查；UI 測試只用 `ios-build.yml` 的 `only_testing`；
-- 決策號（2026-10-21 起）：派工前先在 main 的 ARCHITECTURE 放一節「### N. （預約）標題」（`## 目前規則摘要` 之前，一行說明是哪個 session），派工單寫「只填這一節，不改 OVERVIEW 的決策列與 §9」。合併後由遊戲規劃補 §9 的索引（`doc_numbers.py` 把「還沒進決策索引」列為附註）。以前每個 PR 都接在 ARCHITECTURE 最後、改 OVERVIEW 同一行，幾個 PR 並行時每合一個其他的就衝突、CI 重跑（#892 一天撞三次）；
+- 決策號：派工單寫好號碼（#231 的登記就是預約），PR 只加 `docs/decisions/<N>.md` 一個檔，不改 ARCHITECTURE 的最後、OVERVIEW 的決策列與 §9（決策 329，2026-10-21 晚）。不用再先在 main 放「### N. （預約）」一節，合併後也不用補 §9 的索引。以前每個 PR 都接在 ARCHITECTURE 最後、改 OVERVIEW 同一行；10-21 改成預約一節也擋不住，相鄰的預約節還是同一處（#934 三次衝突；三天 49 個 merge main 的 run，41 個是這兩份，佔 PR 的 Linux 用量四成，`docs/research/CI_MEASURE_2026-10-21.md`）；
 - 收尾：draft → 綠 → ready → 在 #231 留「可合併」→ 用 send_message 告訴遊戲規劃；
 - 禁止：合併、auto-merge、推 main、`testflight.yml`、`@claude`、在 repo 裡寫模型名稱。
 
@@ -743,6 +745,8 @@ PR #873–#910 那一輪的 A 組（2026-10-21，session_01SvQ285hMiSeRsER1EXzfT
 - **A6**（P2，GameCore）：晚點的真實時刻表列車追時間時，會把彎道限速丟掉（#883）。改了會動到示範日的數值，交給行車控制的 session。
 - **A7**（P2，App）：實景地圖的載入畫面被「新遊戲」頁蓋住（#897）。只在 Simulator 看得到，建議的修法與驗法寫在那裡，還沒有人接。
 - A8、A10、A11（P3）：有班次的路線保留發車方式；暫停中每個指令都重算快轉；SceneKit 的建築與地點沒有用到。
+
+PR #911–#944 那一輪（2026-10-21，審查 B，session_017M3NJsMXLafGDsSvidGhD6）：[PR911_944_REVIEW_HANDOFF.md](archive/PR911_944_REVIEW_HANDOFF.md)。修了兩個 P2：一日週遊券卡片建議的價格賣不出去（#934）、平交道路面上立著電桿（#938）。沒修的五個 P3 在它第四節，每項寫了交給誰：高鐵票價表沒驗站 ID、潮汐的車站示意圖沒看週末、自由模式關潮汐留著舊 `homeShare`、公車模型縮放沒防 NaN 與 3D 場景白白重建、站房可能壓到種子街道。
 
 **大世界的效能**（決策 328，`claude/perf-2d-sim-speed`，2026-10-21；玩家回報 78.1、79.1：三十幾站後 2D 約 5 FPS、加速跑不到設定）。已修：夜間快轉試跑移出主執行緒、乘客排隊二分搜尋、上車排序、實景支線可購清單記住。還沒做、還沒人接：
 - **2D 5 FPS 的主因**：Linux 量不到 SwiftUI 繪圖。要在實機打開「設定 → 地圖 → 幀數」，點開看哪一層（地面、軌道、列車、站名、天氣、推進後）每秒花最多。候選：`session.world` 每個 tick 都讓讀它的 view 重算；軌道畫布在交通覆蓋變了就整張重畫；站名畫布在候車數變了就重畫；夜色的 `.blendMode(.multiply)` 與站名的 `.colorMultiply`。量到哪層再對症改（拆出不常變的圖層、`drawingGroup`、降低重畫頻率）。

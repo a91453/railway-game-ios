@@ -59,4 +59,19 @@ final class DayPassCardTests: XCTestCase {
         XCTAssertNil(session.world.accounts.dayPass)
         XCTAssertEqual(session.message?.kind, .failure)
     }
+
+    /// The card's first price is one the game sells at and its stepper
+    /// holds: the editor's distance steps' $0.55 makes three of them
+    /// $1.65, which the pass refuses (whole dollars only).
+    func testTheSuggestedPriceSells() throws {
+        for rules in [FareRules.distance(FareRules.standardBands), .flat(Money(20_000))] {
+            var world = try world()
+            try world.setFareRules(rules)
+            let session = GameSession(world: world)
+            let card = DayPassCard(world: session.world)
+            XCTAssertTrue(DayPassCard.priceRange.contains(card.suggestedPrice.amount), "\(rules)")
+            session.setDayPass(card.suggestedPrice)
+            XCTAssertEqual(session.world.accounts.dayPass, card.suggestedPrice, "\(rules)")
+        }
+    }
 }

@@ -195,8 +195,11 @@ jobs:
       - name: Swift version
         run: swift --version
 
+      # swift build --build-tests -Xswiftc -warnings-as-errors, built once
+      # more when swift-build itself is killed by a signal (decision 329); a
+      # compile error is not built again.
       - name: Build (warnings as errors)
-        run: swift build --build-tests -Xswiftc -warnings-as-errors
+        run: .github/scripts/swift-shards.sh build
 
       # Runs this shard's tests and fails unless exactly those tests ran.
       # A partial tier's job is `selected` (SELECTED_TESTS, and its part of
@@ -208,17 +211,45 @@ jobs:
           SELECTED_TESTS: ${{ matrix.tests }}
           SELECTED_PART: ${{ matrix.part }}
 
+  # A cancelled pull request run: was it replaced by a newer push? Then the
+  # newer run gives the verdict and the gate is skipped here, not red on a
+  # commit no test failed on (decision 329). A run cancelled by hand on the
+  # pull request's head is not superseded and keeps its red gate.
+  superseded:
+    name: Superseded by a newer push?
+    needs: [changes, swift-current]
+    if: ${{ cancelled() && github.event_name == 'pull_request' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      superseded: ${{ steps.look.outputs.superseded }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: .github/scripts
+          sparse-checkout-cone-mode: false
+
+      - name: Look at the pull request's head
+        id: look
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: .github/scripts/swift-shards.sh superseded | tee -a "$GITHUB_OUTPUT"
+
   gate:
     name: Swift CI (gate)
-    needs: [changes, swift-current]
+    needs: [changes, swift-current, superseded]
     # A push run of main that was cancelled (by hand, or replaced while
     # waiting) has no verdict to give, so the gate is skipped there rather
     # than red on a commit where no test failed; the next push run tests its
     # changes (push-base). A shard that reaches its time limit does not
-    # cancel the run, so it still turns the gate red. A pull request and a
-    # manual run keep always(): their gate reports even when cancelled
+    # cancel the run, so it still turns the gate red. A pull request run
+    # that a newer push replaced is skipped too (the superseded job,
+    # decision 329); a pull request run cancelled any other way, and a
+    # manual run, keep always(): their gate reports even when cancelled
     # (decision 187).
-    if: ${{ always() && !(cancelled() && github.event_name == 'push') }}
+    if: ${{ always() && !(cancelled() && (github.event_name == 'push' || needs.superseded.outputs.superseded == 'true')) }}
     runs-on: ubuntu-24.04
     # A pull request's gate also waits for its iOS App Build run (below):
     # the macOS queue (up to about 35 minutes on 2026-10-16) and the build
@@ -254,4 +285,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR: ${{ github.event.pull_request.number }}
         run: .github/scripts/swift-shards.sh ios-gate

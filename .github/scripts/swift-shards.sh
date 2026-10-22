@@ -2,6 +2,9 @@
 # The Swift package's test selections for ci.yml, and a proof that each one ran
 # exactly the tests it was meant to run.
 #
+#   swift-shards.sh build            `swift build --build-tests -Xswiftc
+#                                    -warnings-as-errors`, once more when
+#                                    swift-build itself crashes (build_package)
 #   swift-shards.sh run <shard>      run one shard after `swift build --build-tests`
 #                                    (`selected`: the classes in SELECTED_TESTS)
 #   swift-shards.sh select <shard>   print the test IDs a shard selects (offline)
@@ -20,6 +23,8 @@
 #   swift-shards.sh gate             the "Swift CI (gate)" verdict
 #   swift-shards.sh ios-gate         a pull request's gate waits for its
 #                                    iOS App Build run (ios_gate below)
+#   swift-shards.sh superseded       whether a cancelled pull request run was
+#                                    replaced by a newer push (superseded)
 #
 # Shards (a test ID is `Module.Class/method`, as `swift test list` prints it):
 #   campaigns-1 .. campaigns-15   the long property, differential and mutation
@@ -561,6 +566,31 @@ check_partition() {
   fi
 }
 
+# A tool that dies of a signal (exit code above 128: 139 is SIGSEGV) is not
+# a compile error or a failed test, which exit 1 (decision 329). On main
+# b28a790 (run 39682926653, 2026-10-21) swift-build crashed in libdispatch
+# (_dispatch_event_loop_drain, signal 11) 19 seconds into planning, before
+# it had compiled anything, in one shard of 17; that was 1 of 2,320 shard
+# jobs in three days.
+killed_by_signal() { (($1 > 128)); }
+
+# The build every Swift job runs, once more when swift-build itself was
+# killed by a signal. A compile error exits 1 and is not tried again, and
+# neither is a second crash.
+build_package() {
+  local attempt rc
+  for attempt in 1 2; do
+    rc=0
+    # shellcheck disable=SC2086
+    swift build --build-tests -Xswiftc -warnings-as-errors ${SWIFT_EXTRA_ARGS:-} || rc=$?
+    ((rc != 0)) || return 0
+    if ! killed_by_signal "$rc" || ((attempt == 2)); then
+      die "swift build failed (exit code $rc)."
+    fi
+    echo "::warning::swift build was killed by signal $((rc - 128)) (exit code $rc): the tool crashed, this is not a compile error. Building once more."
+  done
+}
+
 run_shard() {
   local shard="$1"
   is_shard "$shard" || die "Unknown shard '$shard'. Shards: ${SHARDS[*]} all."
@@ -606,10 +636,22 @@ run_shard() {
   : >"$log"
   started="$(date +%s)"
   # A failed batch does not stop the others; the shard fails after them.
+  # A batch whose swift test was killed by a signal before any test started
+  # runs once more (decision 329): no test result is thrown away. Once a test
+  # has started, a crash may be the test's own and fails the shard.
+  local attempt batch_log="$WORK/batch.log"
   while IFS= read -r -u 3 classes; do
-    batch_rc=0
-    # shellcheck disable=SC2086
-    swift test --skip-build ${SWIFT_EXTRA_ARGS:-} --filter "$(pattern_for "$classes")" 2>&1 | tee -a "$log" || batch_rc=${PIPESTATUS[0]}
+    for attempt in 1 2; do
+      batch_rc=0
+      # shellcheck disable=SC2086
+      swift test --skip-build ${SWIFT_EXTRA_ARGS:-} --filter "$(pattern_for "$classes")" 2>&1 | tee "$batch_log" || batch_rc=${PIPESTATUS[0]}
+      cat "$batch_log" >>"$log"
+      if ((attempt == 1)) && killed_by_signal "$batch_rc" && ! grep -q -E "^Test Case '.*' started" "$batch_log"; then
+        echo "::warning::swift test was killed by signal $((batch_rc - 128)) (exit code $batch_rc) before any test started: the tool crashed. Running this batch once more."
+        continue
+      fi
+      break
+    done
     [[ "$batch_rc" -eq 0 ]] || rc=$batch_rc
   done 3<"$batches"
   local seconds=$(($(date +%s) - started))
@@ -1231,6 +1273,14 @@ ios_gate() {
         echo "iOS App Build passed ($conclusion): $url"
         return 0
         ;;
+      cancelled)
+        # A gate already waiting here when a newer push cancelled the run
+        # cannot be skipped any more (decision 329): say why it is red.
+        if [[ -n "${PR:-}" ]] && superseded 2>/dev/null | grep -q -x 'superseded=true'; then
+          die "iOS App Build was cancelled because a newer push replaced this commit of pull request #$PR: not a test failure; the newer commit's run gives the verdict ($url)."
+        fi
+        die "iOS App Build did not pass ($conclusion): $url. After a re-run of it passes, re-run this gate (Re-run failed jobs)."
+        ;;
       *)
         die "iOS App Build did not pass ($conclusion): $url. After a re-run of it passes, re-run this gate (Re-run failed jobs)."
         ;;
@@ -1238,7 +1288,34 @@ ios_gate() {
   done
 }
 
+# Prints superseded=true (the only line on stdout, for $GITHUB_OUTPUT) when this cancelled pull request run is for a
+# commit that is no longer the pull request's head: a newer push replaced it
+# (ci.yml's cancel-in-progress), and the newer run gives the verdict, so the
+# gate is skipped rather than red on a commit no test failed on (decision
+# 329; 33 of 36 cancelled runs from 2026-10-19 to 10-21 had a red gate).
+# superseded=false otherwise: a run cancelled by hand on the head, or the
+# head unreadable, keeps the red gate, which keeps the head from merging.
+superseded() {
+  local head
+  [[ -n "${GITHUB_REPOSITORY:-}" ]] || die "GITHUB_REPOSITORY is not set."
+  [[ "${HEAD_SHA:-}" =~ ^[0-9a-f]{40}$ ]] || die "HEAD_SHA is not a commit ('${HEAD_SHA:-}')."
+  [[ "${PR:-}" =~ ^[0-9]+$ ]] || die "PR is not a pull request number ('${PR:-}')."
+  if ! head="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" --jq .head.sha)" || [[ ! "$head" =~ ^[0-9a-f]{40}$ ]]; then
+    echo "::warning::Could not read the head of pull request #$PR; the gate gives its verdict." >&2
+    echo "superseded=false"
+  elif [[ "$head" != "$HEAD_SHA" ]]; then
+    echo "Pull request #$PR moved on to $head; the run of that commit gives the verdict." >&2
+    echo "superseded=true"
+  else
+    echo "$HEAD_SHA is still the head of pull request #$PR; the gate gives its verdict." >&2
+    echo "superseded=false"
+  fi
+}
+
 case "${1:-}" in
+  build)
+    build_package
+    ;;
   run)
     [[ $# -eq 2 ]] || die "usage: $0 run <shard>"
     run_shard "$2"
@@ -1281,7 +1358,10 @@ case "${1:-}" in
   ios-gate)
     ios_gate
     ;;
+  superseded)
+    superseded
+    ;;
   *)
-    die "usage: $0 run <shard> | select <shard> | shards | classes | matrix | relevant | push-base | plan | decide | gate | ios-gate"
+    die "usage: $0 build | run <shard> | select <shard> | shards | classes | matrix | relevant | push-base | plan | decide | gate | ios-gate | superseded"
     ;;
 esac
