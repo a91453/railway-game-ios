@@ -74,6 +74,13 @@ struct Map3DBaseMap: Sendable {
     var roads: [Road] = []
     var waterways: [Waterway] = []
 
+    /// A base map of the features given (a scene laid by hand).
+    init(areas: [Area] = [], roads: [Road] = [], waterways: [Waterway] = []) {
+        self.areas = areas
+        self.roads = roads
+        self.waterways = waterways
+    }
+
     /// The base map's features over `region` (world units) of the world laid
     /// on the Earth by `frame`, in the metres of a scene whose origin is
     /// the world point (`originX`, `originY`). Tiles that fail to read are

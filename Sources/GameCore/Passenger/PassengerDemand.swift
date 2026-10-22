@@ -423,7 +423,9 @@ extension GameWorld {
                 intercityTrips(from: origin, demand, to: reached.destination, $0, typhoons: typhoons)
             } ?? 0 : 0
             if let minutes = fastest[reached.destination] {
-                trips = PassengerCrowding.decayed(trips, minutes: minutes)
+                // Decision 332: then some take a scooter or a car instead.
+                trips = modeShiftKept(PassengerCrowding.decayed(trips, minutes: minutes),
+                                      from: origin, to: reached.destination, minutes: minutes)
                 between = PassengerCrowding.decayed(between, minutes: minutes)
             }
             let extra = (tourists[reached.destination]).map { $0.outbound + $0.back } ?? 0
@@ -575,6 +577,8 @@ extension GameWorld {
         let weeklyDemand: Bool
         /// Decision 319: the tidal hours.
         let tidalDemand: Bool
+        /// Decision 332: the riders who take a scooter or a car instead.
+        let modeShift: ModeShift?
         let demandEvents: DemandEventSchedule?
         /// Decision 154: the holidays.
         let disruptions: Disruptions?
@@ -617,7 +621,7 @@ extension GameWorld {
             levels: lines.map { serviceLevel(of: $0.id, at: clock.now) },
             records: passengers.map(\.station), demands: passengers.map(\.demand),
             economyMode: accounts.mode, fareRules: accounts.fareRules, fareBaseline: accounts.fareBaseline,
-            day: demandDay, weeklyDemand: weeklyDemand, tidalDemand: tidalDemand, demandEvents: demandEvents, disruptions: disruptions,
+            day: demandDay, weeklyDemand: weeklyDemand, tidalDemand: tidalDemand, modeShift: modeShift, demandEvents: demandEvents, disruptions: disruptions,
             distanceDemand: distanceDemand, outsideConnections: outsideConnections, tourism: tourism,
             tourismStars: tourismStars, realisticOperation: realisticOperation,
             curveSpeedLimits: curveSpeedLimits
@@ -758,7 +762,11 @@ extension GameWorld {
                 // Decision 168: the pair's intercity trips, kept by the
                 // minutes of the way like its ordinary ones.
                 let intercity = intercityTrips(from: record.station, origin, to: destination.station, destination.demand!, typhoons: typhoons)
-                let trips = PassengerCrowding.decayed(fared, minutes: minutes) + PassengerCrowding.decayed(intercity, minutes: minutes)
+                // Decision 332: then some of the ordinary trips take a
+                // scooter or a car instead.
+                let ordinary = modeShiftKept(PassengerCrowding.decayed(fared, minutes: minutes),
+                                             from: record.station, to: destination.station, minutes: minutes)
+                let trips = ordinary + PassengerCrowding.decayed(intercity, minutes: minutes)
                 let extra = tourists.trips(from: record.station, to: destination.station)
                 guard trips + extra > 0 else { continue }
                 drafts.append(Draft(origin: record.station, record: index, destination: destination,

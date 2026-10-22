@@ -449,6 +449,11 @@ extension GameError {
                 "A station starts 0 to \(Money(StationDemand.maximumDailyTrips).displayText) trips a day.",
                 "車站每天的出發旅次是 0 到 \(Money(StationDemand.maximumDailyTrips).displayText)。"
             )
+        case .invalidModeShift:
+            language.text(
+                "Between 0% and 100% of riders can switch to scooters or cars.",
+                "改騎機車或開車的旅客比例是 0% 到 100%。"
+            )
         case .invalidFareRules:
             language.text(
                 "Fares must be 0 or more, and distance steps must start at 0 km, follow on without gaps, and end with one that has no end.",

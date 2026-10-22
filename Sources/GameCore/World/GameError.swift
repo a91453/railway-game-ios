@@ -177,6 +177,8 @@ public enum GameError: Error, Hashable, Sendable {
     /// A station starts 0 to ``StationDemand/maximumDailyTrips`` trips a day
     /// (G1a).
     case invalidStationDemand
+    /// A mode shift's cap is 0 to 1000 thousandths (decision 332).
+    case invalidModeShift
     /// Fare rules out of range, or distance steps that do not cover every
     /// distance once from 0 with only the last open-ended (G1c; see
     /// ``FareRules/isValid``).

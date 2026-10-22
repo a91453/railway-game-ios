@@ -90,7 +90,7 @@ public struct Map3DTrainSet: Sendable {
             // Decision 331, later: a two-car commuter as the green
             // two-car EMU, its two cab units as they are.
             greenCommuter("greenCommuter"),
-            // Decision 331, third: a three-car commuter as the three-car
+            // Decision 331, fourth: a three-car commuter as the three-car
             // urban EMU, its three units as they are.
             threeCarUrban("threeCarUrban"),
         ]
@@ -239,7 +239,7 @@ public struct Map3DTrainSet: Sendable {
         }
     }
 
-    /// Decision 331, third: #988's three units, the leading one's cab at
+    /// Decision 331, fourth: #988's three units, the leading one's cab at
     /// its front, the trailing one's at its back and the middle one with
     /// none, their lamps lit over the cabs' white lamp blocks.
     static func threeCarUrban(_ key: String) -> Map3DTrainSet {

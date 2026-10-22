@@ -362,9 +362,14 @@
 ///     stations. A build that reads only an earlier version would drop
 ///     them, and the High Speed Rail demo's trips would pay by the
 ///     kilometre again, so it says the save is newer than it instead.
+/// 70. Riders switching to scooters and cars (decision 332): a world can
+///     have its `"modeShift"`, the rule and the most of a pair's trips
+///     that switch. A build that reads only an earlier version would drop
+///     it, and the riders who switched would come back by train, so it
+///     says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 69
+    public static let currentVersion = 70
 
     public let world: GameWorld
 
@@ -540,6 +545,8 @@ extension SavedGame: Codable {
         // Version 67 to 68: accounts without `"dayPass"` sell none.
         // Version 68 to 69: accounts without `"highSpeedFares"` have no
         // fare table, and every high-speed trip pays by the kilometre.
+        // Version 69 to 70: a world without `"modeShift"` has it off: no
+        // rider takes a scooter or a car instead.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

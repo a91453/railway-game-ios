@@ -102,7 +102,7 @@ final class Map3DTrainSetTests: XCTestCase {
         // one car, or a typed flat-fronted EMU, stays the commuter.
         XCTAssertEqual(names("", 2), ["set-greenCommuter-head", "set-greenCommuter-tail"])
         XCTAssertEqual(names("", 1), ["commuter-cab"])
-        // Decision 331, third: three cars of it are the three-car urban
+        // Decision 331, fourth: three cars of it are the three-car urban
         // EMU; four or more stay the commuter.
         XCTAssertEqual(names("", 3), ["set-threeCarUrban-head", "set-threeCarUrban-car", "set-threeCarUrban-tail"])
         XCTAssertEqual(names("", 4), ["commuter-cab", "commuter-car", "commuter-car", "commuter-cab turned"])
@@ -159,7 +159,7 @@ final class Map3DTrainSetTests: XCTestCase {
         XCTAssertTrue((2_000...6_000).contains(head.triangleCount), "\(head.triangleCount) triangles")
     }
 
-    /// Decision 331, third: the three-car urban EMU's cars are #988's three
+    /// Decision 331, fourth: the three-car urban EMU's cars are #988's three
     /// units as they are, the cabs only at the train's two ends, so no car
     /// is turned; drawn as far as the other trains.
     func testThreeCommuterCarsAreTheUrbanEMU() throws {
