@@ -107,9 +107,17 @@ final class LessonUITests: XCTestCase {
             // A train can stand on the tapped point when the game pauses (main
             // a2374a0's full lane, run 39722267769: "Train 2 · running"); the
             // game is paused, so another point along the same track finds it.
-            for (part, whole) in [(1, 3), (2, 5), (1, 4), (3, 5)] as [(Int64, Int64)] {
+            // The points lie more than a finger's reach apart: lesson 5's
+            // opening shows nearly the whole map, where the 24 points a tap
+            // reaches cover about 66,000 world units of its 378,527-unit
+            // track, and one train took the taps at 1/3, 2/5 and 1/4,
+            // 25,000 units apart (main 29ebf5e's full lane, run
+            // 39802411409). Its 3/5 point lies by the map's top edge, where
+            // that view cannot pan: all 16 drags left it at y 135.6, short
+            // of the clear area. Zoom in there, as lesson 9's sight does.
+            for (part, whole) in [(1, 3), (2, 3), (1, 2), (2, 5), (3, 5)] as [(Int64, Int64)] {
                 let point = alignment.geometry.location(at: alignment.geometry.length * part / whole).position
-                tapMap(bringMapPointIntoView(PlanPoint(x: point.x, y: point.y), from: fixture.stations[0].location))
+                tapMap(bringMapPointIntoView(PlanPoint(x: point.x, y: point.y), from: fixture.stations[0].location, zoomIfClamped: true))
                 if ((map.value as? String) ?? "").contains("Track") { break }
             }
             XCTAssertTrue(((map.value as? String) ?? "").contains("Track"), "No track selected: \(String(describing: map.value))")
@@ -270,6 +278,13 @@ final class LessonUITests: XCTestCase {
         XCTAssertTrue(lessons.appears(within: 15))
         app.bringStartButtonIntoView(lessons)
         tap(lessons)
+        // The press on Lessons can be cancelled as Start's can (the app's
+        // trace: "touch cancelled at (624, 145)" on PlatformGroupContainer,
+        // with its main thread stalled up to 9 s; PR #1037's run
+        // 39817977356), and no picker opens. Tap once more if it did not.
+        if !element("lessons.title").appears(within: 10), lessons.exists {
+            tap(lessons)
+        }
         XCTAssertTrue(element("lessons.title").appears(within: 10))
     }
 
