@@ -153,10 +153,8 @@ public struct MapWeather: Hashable, Sendable {
     /// has no lightning. Rare and short, so it never strobes.
     public func flash(at time: Double) -> Double {
         guard flashes, time >= 0 else { return 0 }
-        let period = Self.flashPeriod
-        let cycle = (time / period).rounded(.down)
-        let start = Self.noise(Int(cycle) % 10_000 + 53) * (period - 1)
-        let t = time - cycle * period - start
+        let cycle = (time / Self.flashPeriod).rounded(.down)
+        let t = time - Self.flashStart(inCycle: Int(cycle))
         switch t {
         case ..<0: return 0
         case ..<0.08: return 1
@@ -168,6 +166,14 @@ public struct MapWeather: Hashable, Sendable {
 
     /// The seconds between two flashes of lightning.
     public static let flashPeriod = 9.0
+
+    /// When the flash of `cycle` (the ``flashPeriod`` that starts at
+    /// `cycle` × the period) begins, in the same seconds as
+    /// ``flash(at:)``: at its own moment, at least a second before the
+    /// next cycle.
+    static func flashStart(inCycle cycle: Int) -> Double {
+        Double(cycle) * flashPeriod + noise(cycle % 10_000 + 53) * (flashPeriod - 1)
+    }
 
     /// The reference's noise: a number from 0 up to 1 that looks random but
     /// is always the same for `n`.

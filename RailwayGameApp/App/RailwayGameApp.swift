@@ -65,6 +65,7 @@ struct RailwayGameApp: App {
         launcher.playSound = { audio.play($0) }
         launcher.duckMusic = { audio.duckMusic($0) }
         launcher.runningSound = { audio.setRunning($0) }
+        launcher.weatherSound = { audio.setWeather($0) }
         _audio = State(initialValue: audio)
         _launcher = State(initialValue: launcher)
     }
