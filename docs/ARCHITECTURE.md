@@ -13857,6 +13857,8 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 **後來**（2026-10-21，PR #873–#910 審查 A 組，session_01SvQ285hMiSeRsER1EXzfT9，`docs/archive/PR873_910_REVIEW_HANDOFF.md` A1）：路線改成環線時，`setLineRing` 沒有把發車方式改回平均錯開。存檔要求環線只能平均錯開，所以「第二列晚 N 分」或「兩端對開」的路線改成環線後，存檔讀不回。現在改成環線時，發車方式回到平均錯開，`endLastDispatch`、`opensPair` 一起清掉。環線本來就照平均錯開派車（`dispatchPattern(of:_:planned:)` 只看路線自己的服務、不看方向），所以環線的行車不變，只是存檔讀得回；之後再改回一般路線，發車方式是平均錯開，要另外再選。回歸測試 `DispatchPatternTests.testALineMadeARingSpacesItsTrainsEvenly`。存檔版本、golden、replay 不動。
 
+**後來**（2026-10-22，審查延後項目，session_01QiPq4nZdq5bVS9MZ4rkr4L，`docs/archive/PR873_910_REVIEW_HANDOFF.md` A8）：`setLineRuns` 給路線班次時，發車方式也回到平均錯開，`endLastDispatch`、`opensPair` 一起清掉，和改成環線（A1）一樣；清掉班次（`[]`）時不動，所以舊的發車方式不會再回來。有班次的路線照班次的時刻派車，本來就不看發車方式，所以行車不變。舊存檔裡「有班次、又不是平均錯開」的路線（先選了發車方式、再給班次），**讀檔時正規化**成平均錯開，不擋：擋下來就是玩家的存檔讀不回（A1 那類 P1）；而那個發車方式在有班次時從來沒有派過車，丟掉它不改變任何東西。存檔格式沒有變，所以存檔版本不動、不加 fixture。回歸測試 `DispatchPatternTests.testALineGivenRunsSpacesItsTrainsEvenly`、`testASavedLineWithRunsAndAnotherPatternLoadsEven`（舊程式上都紅）。golden、replay 不動。
+
 ### 310. 地圖提示整理：不蓋「空位多」、列車的章改「滿載」、快速圖層的「車資與章」開關
 
 2026-10-21。作者同意遊戲規劃 session_01NiR5WLMFjMJBktQAMkfmkm 的排程（「照這樣做」，#231 04:58 與 04:59 的兩則），派工給 session_01GPnquCXT5GQzPfCztHj6Sz。號碼依工作登記 #231：main 到 306，307（甲線載入畫面）、308（追回後續）、309（派車錯開）已登記，取 310。GameCore、存檔版本、golden schema、SaveFixtures、ReplayFixtures 都不動。

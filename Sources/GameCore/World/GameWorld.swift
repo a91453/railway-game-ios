@@ -2007,7 +2007,8 @@ public struct GameWorld: Equatable, Sendable {
     /// Gives line `id` the runs of a real timetable (decision 133), or with
     /// `[]` takes them away: from then on the line sends its trains out at
     /// the runs' times, each from where the run starts, and not at a
-    /// headway. None of its runs has sent a train out yet. Free.
+    /// headway; given runs, it spaces its trains evenly (decision 309). None
+    /// of its runs has sent a train out yet. Free.
     ///
     /// - Throws, checked in this order: ``GameError/unknownLine(_:)``;
     ///   ``GameError/invalidLineRuns`` for runs that are not the line's
@@ -2024,6 +2025,13 @@ public struct GameWorld: Equatable, Sendable {
         }
         lines[index].runs = runs
         lines[index].runDays = Array(repeating: nil, count: runs.count)
+        if !runs.isEmpty {
+            // Decision 309: the runs' times send the trains out, so the
+            // line spaces them evenly, as a ring does.
+            lines[index].dispatchPattern = .even
+            lines[index].endLastDispatch = nil
+            lines[index].opensPair = false
+        }
         abandonUnservedPassengers()
     }
 
