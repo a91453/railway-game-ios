@@ -205,6 +205,8 @@ public struct TrainMotion: Sendable {
     public let time: Double
     public let duration: Double
     let samples: [TrainID: Sample]
+    /// The game second the trains were seen at: `nil` for nothing moving.
+    let second: Int64?
 
     /// Nothing moving.
     public init() {
@@ -212,6 +214,7 @@ public struct TrainMotion: Sendable {
         time = 0
         duration = TrainMotion.tickSeconds
         samples = [:]
+        second = nil
     }
 
     /// The glide's length when the tick before is not known: the game's
@@ -220,6 +223,10 @@ public struct TrainMotion: Sendable {
     /// The shortest and longest a glide lasts: ticks come at most this far
     /// apart when the game keeps up (``GameSession/maximumStepDuration``).
     static let durations = 0.05...0.5
+    /// At 1× the trains move once a game second, every tenth tick: a glide
+    /// lasts that second (and a little over, as ticks come late), so they
+    /// do not stand still for nine ticks and then jump.
+    static let longestSecondGlide = 1.25
     /// The furthest a train glides in one tick, in world units (40 km);
     /// further, it jumps.
     static let longestGlide = 40_000.0 * Double(WorldCoordinate.unitsPerMetre)
@@ -228,6 +235,14 @@ public struct TrainMotion: Sendable {
     /// caller's clock), each gliding from where `previous` saw it when it
     /// went along the way it was to go.
     public init(world: GameWorld, previous: TrainMotion? = nil, time: Double) {
+        // At 1× a tick that does not finish a game second moves no train:
+        // the glide begun at the last second goes on (the same trains, so a
+        // train bought or sold shows by the next second).
+        if world.clock.speed == .x1, let previous, previous.second == world.clock.now.seconds,
+           Set(previous.samples.keys) == Set(world.trains.lazy.filter { $0.position != nil }.map(\.id)) {
+            self = previous
+            return
+        }
         var looks: [TrainID: TrainLook] = [:]
         for line in world.lines {
             let look: TrainLook = line.isFreight ? .freight : .line(line.id, line.color)
@@ -268,8 +283,10 @@ public struct TrainMotion: Sendable {
         self.runs = runs
         self.samples = samples
         self.time = time
+        second = world.clock.now.seconds
         if let previous, previous.time > 0 {
-            duration = min(max(time - previous.time, Self.durations.lowerBound), Self.durations.upperBound)
+            let longest = world.clock.speed == .x1 ? Self.longestSecondGlide : Self.durations.upperBound
+            duration = min(max(time - previous.time, Self.durations.lowerBound), longest)
         } else {
             duration = Self.tickSeconds
         }
