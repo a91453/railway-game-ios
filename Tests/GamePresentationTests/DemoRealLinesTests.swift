@@ -99,6 +99,51 @@ final class DemoRealLinesTests: XCTestCase {
         XCTAssertEqual(session.world.trains, before.trains)
     }
 
+    /// Review E's E2: while it lays, the speed, pause, the night skip,
+    /// Undo and Redo do nothing, so no tick and no Undo splits what it
+    /// lays; afterwards one Undo takes all of it back.
+    func testWhileItLaysTheSpeedAndUndoWaitAndOneUndoTakesItAllBack() async throws {
+        let (session, view) = try taipei()
+        session.setSpeed(.normal)
+        let before = session.world
+        let laying = Task { await session.layDemoRealLines(in: view) }
+        // Until it has built something.
+        var spins = 0
+        while session.world.network.edges.isEmpty, spins < 10_000_000 {
+            await Task.yield()
+            spins += 1
+        }
+        XCTAssertNotNil(session.demoRealLinesProgress, "still laying")
+        XCTAssertFalse(session.canUndo, "Undo waits")
+        XCTAssertFalse(session.canRedo)
+        let halfway = session.world
+        session.undo()
+        XCTAssertTrue(session.world == halfway, "Undo does nothing while it lays")
+        session.redo()
+        XCTAssertTrue(session.world == halfway, "nor Redo")
+        session.setSpeed(.fast)
+        XCTAssertTrue(session.world.clock.isPaused, "the speed waits")
+        session.togglePause()
+        XCTAssertTrue(session.world.clock.isPaused, "play waits")
+        session.skipToMorning()
+        XCTAssertNil(session.nightSkipRun)
+        // The tick the game loop would run meanwhile does nothing.
+        session.advance(realElapsed: .seconds(5))
+        XCTAssertEqual(session.world.clock.now, before.clock.now)
+
+        let laid = await laying.value
+        XCTAssertNotNil(laid)
+        XCTAssertNil(session.demoRealLinesProgress)
+        XCTAssertEqual(session.world.clock.speed, .normal, "running again as before")
+        XCTAssertFalse(session.world.clock.isPaused)
+        XCTAssertTrue(session.canUndo)
+        session.undo()
+        XCTAssertEqual(session.world.network, before.network, "one Undo takes back all of it")
+        XCTAssertEqual(session.world.stations, before.stations)
+        XCTAssertEqual(session.world.lines, before.lines)
+        XCTAssertEqual(session.world.trains, before.trains)
+    }
+
     /// Outside a demo game, too wide a view or nothing in view: nothing is
     /// laid.
     func testNothingIsLaidOutsideADemoOrInTooWideAView() async throws {
