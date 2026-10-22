@@ -92,6 +92,13 @@ public final class GameLauncher {
         didSet { session?.duckMusic = duckMusic }
     }
 
+    /// The app's player of the followed train's running sound, handed to
+    /// every game it starts (``GameSession/runningSound``, decision 343);
+    /// silent when a game starts or ends.
+    @ObservationIgnored public var runningSound: (@MainActor (RunningSound?) -> Void)? {
+        didSet { session?.runningSound = runningSound }
+    }
+
     @ObservationIgnored let library: SaveLibrary
     /// Where the saves are written, one after another (decision 45,
     /// later): a save is encoded and written here, off the main thread,
@@ -942,6 +949,8 @@ public final class GameLauncher {
         started.playSound = playSound
         started.duckMusic = duckMusic
         duckMusic?(1)
+        started.runningSound = runningSound
+        runningSound?(nil)
         if let news { started.restoreNews(news) }
         if isDemo { started.news.isDemo = true }
         started.onTutorialCompleted = { [weak self] in self?.noteTutorialCompleted() }
@@ -1157,6 +1166,7 @@ public final class GameLauncher {
         session?.stopGameLoop()
         session = nil
         duckMusic?(1)
+        runningSound?(nil)
         message = nil
         refresh()
         if left {

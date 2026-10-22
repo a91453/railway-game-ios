@@ -87,6 +87,12 @@ public enum DataSourceCredits {
     static let wikidataURL = "https://www.wikidata.org"
     static let worldUrbanizationProspectsURL = "https://population.un.org/wup/"
     static let ccByIGOURL = "https://creativecommons.org/licenses/by/3.0/igo/"
+    static let ccBy3URL = "https://creativecommons.org/licenses/by/3.0/"
+    /// Decision 343: the recordings the running sounds are made to, on
+    /// radio aporee ::: maps at the Internet Archive.
+    static let banqiaoRecordingURL = "https://archive.org/details/aporee_34085_39187"
+    static let guishanRecordingURL = "https://archive.org/details/aporee_17319_20158"
+    static let ktxRecordingURL = "https://archive.org/details/aporee_65051_75140"
 
     /// The short credit shown on a real-world map while Taiwan's railways
     /// are drawn on it.
@@ -544,6 +550,34 @@ public enum DataSourceCredits {
                         links: [
                             DataSourceCredit.Link(title: "Poly Haven", url: polyHavenURL),
                             DataSourceCredit.Link(title: "CC0 1.0", url: cc0URL),
+                        ]
+                    ),
+                ]
+            ),
+            // Decision 343: the running sounds are the game's own, made to
+            // the spectra of these recordings (tools/audio/README.md); none
+            // of them is bundled. CC BY 3.0 asks for the author, the title,
+            // the licence and that the work was changed.
+            DataSourceSection(
+                id: "sounds",
+                title: language.text("Sounds", "聲音"),
+                credits: [
+                    DataSourceCredit(
+                        id: "runningSound",
+                        title: language.text("Train recordings", "列車錄音"),
+                        detail: language.text(
+                            "The sound of a train you follow: made by the game to sound like these recordings of trains running, a KTX in Korea and two trains in Taiwan. The game plays none of the recordings themselves.",
+                            "跟隨列車時的行駛聲：遊戲依這些列車行駛中的錄音（韓國的 KTX 與台灣的兩班列車）的聲音自己合成，不播放錄音本身。"
+                        ),
+                        notice: language.text(
+                            "“Banqiao District, New Taipei City - In the train compartment” by Wu, Tsan-Cheng, under CC BY 3.0. “Guishan, Taoyuan - On the train” by Wu, Tsan-Cheng and “KTX high speed train to Busan” by abyssence, in the public domain. All three on radio aporee ::: maps.",
+                            "〈Banqiao District, New Taipei City - In the train compartment〉，吳燦政錄音，依 CC BY 3.0 使用。〈Guishan, Taoyuan - On the train〉，吳燦政錄音，與〈KTX high speed train to Busan〉，abyssence 錄音，屬公眾領域。三者都在 radio aporee ::: maps。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("Banqiao recording", "板橋錄音"), url: banqiaoRecordingURL),
+                            DataSourceCredit.Link(title: language.text("Guishan recording", "龜山錄音"), url: guishanRecordingURL),
+                            DataSourceCredit.Link(title: language.text("KTX recording", "KTX 錄音"), url: ktxRecordingURL),
+                            DataSourceCredit.Link(title: "CC BY 3.0", url: ccBy3URL),
                         ]
                     ),
                 ]

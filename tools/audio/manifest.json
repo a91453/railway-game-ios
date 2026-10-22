@@ -164,6 +164,30 @@
       "endLevel": 0.0
     },
     {
+      "file": "run-electric.caf",
+      "kind": "running",
+      "synth": "make_game_audio.py running(\"electric\"), decision 343",
+      "sha256": "a616f9030635898d3927e2fe3576f0cefe45acd52a373d4c26a387dd9b82a487",
+      "frames": 384000,
+      "seconds": 8.0,
+      "peakDbfs": -6.04,
+      "rmsDbfs": -19.22,
+      "largestStep": 0.11819,
+      "loopSeam": 0.00095
+    },
+    {
+      "file": "run-highspeed.caf",
+      "kind": "running",
+      "synth": "make_game_audio.py running(\"highSpeed\"), decision 343",
+      "sha256": "527a7df8ec7be360cf2b754bde8998e8c906a3a953174f805079f67819a8b254",
+      "frames": 384000,
+      "seconds": 8.0,
+      "peakDbfs": -6.02,
+      "rmsDbfs": -19.68,
+      "largestStep": 0.01053,
+      "loopSeam": 0.00137
+    },
+    {
       "file": "station-chime.wav",
       "score": "tools/audio/scores/chime-local.score.json",
       "scoreSha256": "aeeb74117adde55953b76094b2d9e11d749947e7420069a59c1a3b9b8fa76e45",
