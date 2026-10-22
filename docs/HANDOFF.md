@@ -260,7 +260,6 @@
 | 3D 城市（§22.10） | session_01H2iSUj5f1cCXAwjvuFvbsp | 第 1 項天空 #1015 已合併；第 2 項色調（決策 349）在 `claude/map3d-grade` | 已壓縮 1 次：第 2 項開 PR、合併後收工，第 3–6 項寫回這裡 |
 | 作者回報的三個 bug（2026-10-22） | session_013fMmahDsHF9xHba1mJyASm | (A) 3D 跟車與駕駛室沒有播放／暫停與速度；(B) iPad 直立時 3D、範圍、縮放鈕不見；(C) iPhone 橫放第一層面板時這些鈕在畫面中間、第二層沒有範圍鈕。要的是一律在下方、範圍鈕在 3D 旁邊。分支 `claude/map-buttons-layout` | 可拆成 (A) 與 (B)(C) 兩個 PR，用 `ios-build.yml` 的 `only_testing` 驗 |
 | 審查 D（#962 起的程式 PR） | session_01TCwdHtJTq9REwDrCSHzR11 | 剛開始；範圍最後一號它在 #231 寫 | 報告寫成 `docs/archive/PR962_<N>_REVIEW_HANDOFF.md`；第 1 節「多久審查一次」改成從 #N+1 起數 |
-
 | 演示模式（下面第 1 項） | session_01Q6ucfu4uY1YiX1buRCZzFr | 10:34 派工，提前開（作者：「演示模式做完 我就差不多要發文了」） | PR 1：隱藏開關、全解鎖、無限資金、成就不算；PR 2：一鍵鋪真實路線 |
 
 **發版前**（作者 2026-10-22：「做完這項看需不需要pr review 我就發那版 跟發文」）：
