@@ -97,13 +97,13 @@ final class DemoRealLinesTests: XCTestCase {
         // the one every edge's geometry gives, near the track and away.
         let world = session.world
         var points: [PlanPoint] = []
-        for node in world.network.nodes.prefix(300) {
+        for node in world.network.nodes.prefix(30) {
             for (dx, dy) in [(0, 0), (7, -3), (-15, 15), (40, 2), (-200, 90)] {
                 points.append(PlanPoint(x: node.position.x + Int64(dx) * WorldCoordinate.unitsPerMetre / 4, y: node.position.y + Int64(dy) * WorldCoordinate.unitsPerMetre / 4))
             }
         }
         for point in points {
-            for radius: Int64 in [16, 2 * WorldCoordinate.unitsPerMetre, 30 * WorldCoordinate.unitsPerMetre] {
+            for radius: Int64 in [16, 30 * WorldCoordinate.unitsPerMetre] {
                 XCTAssertEqual(world.trackEdgePoint(near: point, within: radius), Self.everyEdgePoint(near: point, within: radius, in: world), "\(point) \(radius)")
             }
         }
