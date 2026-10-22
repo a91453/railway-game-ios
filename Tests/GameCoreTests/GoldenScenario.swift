@@ -1312,6 +1312,8 @@ extension StepOutcome: Codable {
             self = .rejected(.trainsShareTrack(TrainID(rawValue: ids[0]), TrainID(rawValue: ids[1])))
         case "invalidStationDemand":
             self = .rejected(.invalidStationDemand)
+        case "invalidModeShift":
+            self = .rejected(.invalidModeShift)
         case "invalidFareRules":
             self = .rejected(.invalidFareRules)
         case "invalidLoanAmount":
@@ -1549,6 +1551,8 @@ extension StepOutcome: Codable {
             try container.encode([first.rawValue, second.rawValue], forKey: .trains)
         case .rejected(.invalidStationDemand):
             try container.encode("invalidStationDemand", forKey: .result)
+        case .rejected(.invalidModeShift):
+            try container.encode("invalidModeShift", forKey: .result)
         case .rejected(.invalidFareRules):
             try container.encode("invalidFareRules", forKey: .result)
         case .rejected(.invalidLoanAmount):

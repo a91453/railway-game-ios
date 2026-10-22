@@ -119,6 +119,8 @@ final class RealWorldMapTests: XCTestCase {
             var expected = GameWorld.newGame(anchor: paris, eventSeed: seed, rules: .simple)
             // A real-world new game has riders changing from real railways (decision 298).
             expected.setRealTransfers(true)
+            // And riders switching to scooters and cars (decision 332).
+            try expected.setModeShift(.simple)
             XCTAssertEqual(launcher.session?.world, expected)
             launcher.returnToStart()
             let autosave = try XCTUnwrap(launcher.autosave)

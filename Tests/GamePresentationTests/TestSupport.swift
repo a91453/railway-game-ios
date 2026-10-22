@@ -25,9 +25,18 @@ func makeWorld(
 /// point), a line calling at them and one train of four cars running all
 /// day. A line through three points or more must run on without turning at
 /// them: two straight edges meet at a kink no train passes.
+/// `BALANCE_MODE_SHIFT=simple` or `realistic` lets riders switch to
+/// scooters and cars by that rule (decision 332), as a player's new game
+/// does; without it nobody switches, as the reports always measured.
 func newGameLine(through points: [PlanPoint], in start: GameWorld = .newGame()) throws -> GameWorld {
     // Decision 261: the scripts' line, one builder for the tests and them.
-    try LineBuilder.line(through: points, in: start)
+    var world = try LineBuilder.line(through: points, in: start)
+    switch ProcessInfo.processInfo.environment["BALANCE_MODE_SHIFT"] {
+    case "simple": try world.setModeShift(.simple)
+    case "realistic": try world.setModeShift(ModeShift.realistic())
+    default: break
+    }
+    return world
 }
 
 /// Decision 261: the player a report plays `world` with. `PLAY_PRESET`

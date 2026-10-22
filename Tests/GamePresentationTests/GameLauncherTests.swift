@@ -18,6 +18,14 @@ final class GameLauncherTests: XCTestCase {
         try? FileManager.default.removeItem(at: directory)
     }
 
+    /// The player's new game of the standard options: simple rules, and
+    /// riders switching to scooters and cars by them (decision 332).
+    private static func playersNewGame(_ seed: UInt32) -> GameWorld {
+        var world = GameWorld.newGame(eventSeed: seed, buysMap: true, rules: .simple)
+        try? world.setModeShift(.simple)
+        return world
+    }
+
     func testANewGameIsAutosavedAndContinued() async throws {
         let library = SaveLibrary(directory: directory)
         try await MainActor.run {
@@ -31,7 +39,7 @@ final class GameLauncherTests: XCTestCase {
             let session = try XCTUnwrap(launcher.session)
             // Item 4: each new game draws its events from a seed of its own.
             let seed = try XCTUnwrap(session.world.demandEvents?.seed)
-            XCTAssertEqual(session.world, .newGame(eventSeed: seed, buysMap: true, rules: .simple))
+            XCTAssertEqual(session.world, Self.playersNewGame(seed))
             XCTAssertNil(launcher.message)
             session.setSpeed(.double)
             launcher.returnToStart()
@@ -58,11 +66,11 @@ final class GameLauncherTests: XCTestCase {
             XCTAssertEqual(launcher.session?.world, DemoWorld.make(in: .english))
             XCTAssertNil(launcher.autosave, "moved aside")
             XCTAssertEqual(launcher.otherSaves.count, 1)
-            XCTAssertEqual(try library.load(launcher.otherSaves[0]), .newGame(eventSeed: seed, buysMap: true, rules: .simple))
+            XCTAssertEqual(try library.load(launcher.otherSaves[0]), Self.playersNewGame(seed))
 
             launcher.returnToStart()
             launcher.load(launcher.otherSaves[0])
-            XCTAssertEqual(launcher.session?.world, .newGame(eventSeed: seed, buysMap: true, rules: .simple))
+            XCTAssertEqual(launcher.session?.world, Self.playersNewGame(seed))
             XCTAssertEqual(launcher.otherSaves.count, 2, "the demo's autosave kept too")
         }
     }
