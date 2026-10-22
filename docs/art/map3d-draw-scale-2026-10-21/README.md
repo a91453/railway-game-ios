@@ -1,5 +1,7 @@
 # 3D 地圖少畫像素的對照（2026-10-21）
 
+> 2026-10-22 起這個資料夾只留這份 README、總覽圖 `crop-3x-vs-2x.jpg` 和文字紀錄；其他 1 張圖搬到 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-draw-scale-2026-10-21/`，檔名不變（作者 2026-10-21 的規則，`docs/HANDOFF.md` §2）。
+
 決策 238 的「後來」（2026-10-21）。用 `tools/map3d-preview/` 畫台北車站一帶（實景新局，`MAP3D_CROP=0:0:500`，鏡頭 280 m、30°），一張用整個畫布（當作 3×），一張用三分之二的寬高（當作 2×）再放大回原尺寸，和 iPhone 把 2× 的畫面放上 3× 螢幕的做法相同。WebGL 不是 Metal，只看像素多寡的差別。
 
 - `crop-3x-vs-2x.jpg`：同一塊放大兩倍，左是 3×，右是 2×。窗格線在 2× 變軟。

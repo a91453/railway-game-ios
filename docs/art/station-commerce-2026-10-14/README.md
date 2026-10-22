@@ -1,5 +1,7 @@
 # 車站商業的圖：方案預覽（2026-10-14，決策 222）
 
+> 2026-10-22 起這個資料夾只留這份 README、總覽圖 `glyphs-abc.png` 和文字紀錄；其他 5 張圖搬到 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/station-commerce-2026-10-14/`，檔名不變（作者 2026-10-21 的規則，`docs/HANDOFF.md` §2）。
+
 規則與數字在 `docs/research/STATION_COMMERCE_2026-10-14.md`。照 `.claude/skills/art-style/SKILL.md` 做：每張都看過淺色與深色的面板、地圖，大小、模糊、灰階。這些是**預覽**，還沒有放進 `Assets.xcassets`；第二段的畫面 PR 才放推薦的那一套。SVG 用 scratchpad 的 Python 腳本產生（不放進 repo，決策 121、122 的做法）。
 
 | 檔案 | 內容 |

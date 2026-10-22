@@ -3,7 +3,7 @@ import GamePresentation
 import SwiftUI
 
 /// The train types as a showroom (ARCHITECTURE decision 224, option 2A,
-/// `docs/art/railway-ui-redesign-2026-10-14/s2-*.png`): one type at a time,
+/// `a91453/railway-reference-private: Railway/game-art-previews/docs/art/railway-ui-redesign-2026-10-14/s2-*.png`): one type at a time,
 /// its train standing on a platform under a navy name board, arrows to the
 /// next in its family, four figures, the cars stepped on the train itself
 /// with the whole train's price on a tag, and a row of the family's other

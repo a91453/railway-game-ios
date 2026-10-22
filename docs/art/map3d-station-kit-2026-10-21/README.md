@@ -1,5 +1,7 @@
 # 3D 的車站用車站套件蓋（決策 321）
 
+> 2026-10-22 起這個資料夾只留這份 README、總覽圖 `1-taipei-taipei.jpg` 和文字紀錄；其他 7 張圖搬到 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-station-kit-2026-10-21/`，檔名不變（作者 2026-10-21 的規則，`docs/HANDOFF.md` §2）。
+
 無頭 Chromium 的 WebGL 預覽（決策 238，`tools/map3d-preview/`），每張左邊是 main、中間是這個 PR、右邊是 pixelmatch 的差異（`tools/map3d-preview/diff.cjs`，紅色是不同的像素）。
 
 | 圖 | 地圖 | 看什麼 | 不同的像素 |

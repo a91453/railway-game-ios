@@ -4,7 +4,7 @@ import SwiftUI
 
 /// While a new line's stations are picked on the map, the last two picked
 /// side by side (ARCHITECTURE decision 224, option 3B,
-/// `docs/art/railway-ui-redesign-2026-10-14/s3-*.png`): their names with
+/// `a91453/railway-reference-private: Railway/game-art-previews/docs/art/railway-ui-redesign-2026-10-14/s3-*.png`): their names with
 /// the distance and running time between them on a warm stamp, and each
 /// figure as two bars growing out from the middle, navy for the first and
 /// teal for the second, the figure at each end. Folds to its top line.

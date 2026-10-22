@@ -329,9 +329,20 @@ extension GameSession {
     }
 
     /// What the station master says now, written once while it stays the
-    /// same worry.
+    /// same worry. Decision 330: the game loop works it out with the tick
+    /// that made the world, off the main actor (``workedAdvice``); else
+    /// here.
     private func observeAdvice(_ today: Int64) {
-        guard let advice = StationMasterAdvice(world: world, worstLosingLine: { worstLosingLine }), let entry = advice.newsEntry else { return }
+        let worked = workedAdvice.flatMap { $0.revision == worldRevision ? $0.advice : nil }
+        workedAdvice = nil
+        let said: StationMasterAdvice?
+        if let worked {
+            if let leader = worked.leader { lineLossLeaderMemo.keep(leader, atRevision: commandRevision) }
+            said = worked.advice
+        } else {
+            said = StationMasterAdvice(world: world, worstLosingLine: { worstLosingLine })
+        }
+        guard let advice = said, let entry = advice.newsEntry else { return }
         if let last = newsWatch.adviceDays[entry.key], today - last < 10 { return }
         newsWatch.adviceDays[entry.key] = today
         let english = advice.text(in: .english), chinese = advice.text(in: .traditionalChinese)
@@ -339,4 +350,40 @@ extension GameSession {
         if news.items.prefix(30).contains(where: { $0.english == english && $0.chinese == chinese }) { return }
         news.add(day: today, entry.category, english: english, chinese: chinese, target: entry.target)
     }
+}
+
+/// Decision 330: the station master's advice (``StationMasterAdvice``),
+/// some 40 ms on the Yilan Line, worked out off the main actor with the
+/// tick that made the world (``GameSession/LoopTick``), as
+/// ``GameSession/observeNews(closedBefore:)`` would work it out on it
+/// after the tick: once a game hour, asking the losing line the session
+/// keeps while it still answers.
+struct AdviceProbe: Sendable {
+    /// ``NewsWatch/hour`` when the tick began.
+    let hour: Int64?
+    /// What the session's ``LineLossLeaderMemo`` keeps at the tick's
+    /// command revision, if anything.
+    let leader: KeptLineLossLeader?
+
+    /// The advice for `world`, when the hour it is in is not the one last
+    /// read; `nil` when it is.
+    func advice(of world: GameWorld) -> WorkedAdvice? {
+        guard world.clock.now.seconds / GameTime.secondsPerHour != hour else { return nil }
+        let day = world.lineLossSettledDay
+        var worked: KeptLineLossLeader?
+        let advice = StationMasterAdvice(world: world) {
+            if let leader, leader.day == day { return leader.leader }
+            let losing = world.worstLosingLine()
+            worked = KeptLineLossLeader(day: day, leader: losing)
+            return losing
+        }
+        return WorkedAdvice(advice: advice, leader: worked)
+    }
+}
+
+/// What ``AdviceProbe`` worked out: the advice, and the losing line when
+/// it worked that out too, for the session to keep.
+struct WorkedAdvice: Equatable, Sendable {
+    let advice: StationMasterAdvice?
+    let leader: KeptLineLossLeader?
 }

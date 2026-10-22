@@ -24,6 +24,42 @@ public enum FrameCostPart: String, CaseIterable, Hashable, Sendable {
     case labels
     /// Decision 182's rain and lightning.
     case weather
+    /// Decision 330: the world a tick replaced, let go on the main thread.
+    case release
+    // Decision 330: the pieces of ``afterStep``.
+    /// Putting the step's world in place, logging it, clearing undo.
+    case stepWorld
+    /// The followed train: ending a follow, its speedometer.
+    case stepFollow
+    /// The platforms the trains stand at (``PlatformUse``).
+    case stepPlatforms
+    /// The arrival sound and the music.
+    case stepSound
+    /// The income, the shortfall and the day's loss.
+    case stepIncome
+    /// Fares over the stations, trips stamped, goals met, towns grown.
+    case stepActions
+    /// The secretary room's news.
+    case stepNews
+    /// The host's work at midnight (the achievements).
+    case stepMidnight
+    /// The night skip going on, ending or starting.
+    case stepNightSkip
+
+    /// The part this one is a piece of, when it is one: its time is in
+    /// the parent's too.
+    public var parent: FrameCostPart? {
+        switch self {
+        case .stepWorld, .stepFollow, .stepPlatforms, .stepSound, .stepIncome, .stepActions, .stepNews, .stepMidnight, .stepNightSkip:
+            .afterStep
+        default:
+            nil
+        }
+    }
+
+    /// Whether it runs on the main thread, between two frames: all but
+    /// the tick.
+    var isOnMainThread: Bool { self != .step }
 
     /// Its short name in the readout.
     public func title(in language: DisplayLanguage) -> String {
@@ -36,6 +72,16 @@ public enum FrameCostPart: String, CaseIterable, Hashable, Sendable {
         case .realTrains: language.text("real trains", "真實列車")
         case .labels: language.text("names", "站名")
         case .weather: language.text("weather", "天氣")
+        case .release: language.text("clean-up", "清理")
+        case .stepWorld: language.text("update", "更新")
+        case .stepFollow: language.text("followed train", "跟隨列車")
+        case .stepPlatforms: language.text("platforms", "月台")
+        case .stepSound: language.text("sound", "音效")
+        case .stepIncome: language.text("income", "收入")
+        case .stepActions: language.text("map pulses", "地圖提示")
+        case .stepNews: language.text("news", "新聞")
+        case .stepMidnight: language.text("midnight", "午夜")
+        case .stepNightSkip: language.text("night skip", "夜間快轉")
         }
     }
 }
@@ -57,16 +103,37 @@ public struct FrameCostReading: Hashable, Sendable {
     /// The longest time between two frames, in milliseconds: the main
     /// thread busy for that long.
     public let longestGapMilliseconds: Double
+    /// Decision 330: of the longest frame, the time no part on the main
+    /// thread was timed in (SwiftUI working the views out again, and
+    /// whatever else is not timed), in milliseconds.
+    public let longestGapUntimedMilliseconds: Double
     /// The parts that ran, in ``FrameCostPart``'s order.
     public let parts: [Part]
 
-    /// The readout's lines under the frame rate: each part's time a
-    /// second and its longest, the costliest first.
+    public init(framesPerSecond: Double, longestGapMilliseconds: Double, longestGapUntimedMilliseconds: Double = 0, parts: [Part]) {
+        self.framesPerSecond = framesPerSecond
+        self.longestGapMilliseconds = longestGapMilliseconds
+        self.longestGapUntimedMilliseconds = longestGapUntimedMilliseconds
+        self.parts = parts
+    }
+
+    /// The readout's lines under the frame rate: the longest frame and
+    /// what of it was not timed, then each part's time a second and its
+    /// longest, the costliest first, each with its pieces under it.
     public func lines(in language: DisplayLanguage) -> [String] {
         let gap = String(format: "%.0f ms", longestGapMilliseconds)
-        return [language.text("longest frame \(gap)", "最長一幀 \(gap)")]
-            + parts.sorted { ($0.millisecondsPerSecond, $1.part.rawValue) > ($1.millisecondsPerSecond, $0.part.rawValue) }.map {
-                String(format: "%@ %.1f ms/s · ×%d · max %.1f ms", $0.part.title(in: language), $0.millisecondsPerSecond, $0.count, $0.longestMilliseconds)
+        let other = String(format: "%.0f ms", longestGapUntimedMilliseconds)
+        func costliestFirst(_ parts: [Part]) -> [Part] {
+            parts.sorted { ($0.millisecondsPerSecond, $1.part.rawValue) > ($1.millisecondsPerSecond, $0.part.rawValue) }
+        }
+        func line(_ part: Part, prefix: String = "") -> String {
+            prefix + String(
+                format: "%@ %.1f ms/s · ×%d · max %.1f ms", part.part.title(in: language), part.millisecondsPerSecond, part.count, part.longestMilliseconds
+            )
+        }
+        return [language.text("longest frame \(gap) · other \(other)", "最長一幀 \(gap) · 其他 \(other)")]
+            + costliestFirst(parts.filter { $0.part.parent == nil }).flatMap { part in
+                [line(part)] + costliestFirst(parts.filter { $0.part.parent == part.part }).map { line($0, prefix: "  · ") }
             }
     }
 }
@@ -91,6 +158,10 @@ public final class FrameCostMeter: @unchecked Sendable {
     private var windowStart: Double?
     private var lastFrame: Double?
     private var longestGap = 0.0
+    /// The main thread's timed time since the last frame, and of the
+    /// longest gap, what was not timed (decision 330).
+    private var timedSinceFrame = 0.0
+    private var longestGapUntimed = 0.0
 
     public init() {}
 
@@ -105,6 +176,8 @@ public final class FrameCostMeter: @unchecked Sendable {
                 windowStart = nil
                 lastFrame = nil
                 longestGap = 0
+                timedSinceFrame = 0
+                longestGapUntimed = 0
             }
         }
     }
@@ -118,6 +191,7 @@ public final class FrameCostMeter: @unchecked Sendable {
             tally.total += milliseconds
             tally.longest = max(tally.longest, milliseconds)
             tallies[part] = tally
+            if part.isOnMainThread, part.parent == nil { timedSinceFrame += milliseconds }
         }
     }
 
@@ -126,8 +200,14 @@ public final class FrameCostMeter: @unchecked Sendable {
         guard isOn else { return try work() }
         let start = ContinuousClock.now
         let result = try work()
-        record(part, milliseconds: Self.milliseconds(ContinuousClock.now - start))
+        record(part, since: start)
         return result
+    }
+
+    /// Counts the time since `start` as `part`, while on: for work that
+    /// cannot be put in a closure (a value let go).
+    public func record(_ part: FrameCostPart, since start: ContinuousClock.Instant) {
+        record(part, milliseconds: Self.milliseconds(ContinuousClock.now - start))
     }
 
     /// A frame drawn at `time` seconds (a display link's timestamp): once
@@ -136,8 +216,12 @@ public final class FrameCostMeter: @unchecked Sendable {
     public func frame(at time: Double) -> FrameCostReading? {
         lock.withLock {
             guard on else { return nil }
-            if let lastFrame { longestGap = max(longestGap, time - lastFrame) }
+            if let lastFrame, time - lastFrame > longestGap {
+                longestGap = time - lastFrame
+                longestGapUntimed = max(0, longestGap * 1_000 - timedSinceFrame)
+            }
             lastFrame = time
+            timedSinceFrame = 0
             guard let start = windowStart else {
                 windowStart = time
                 return nil
@@ -148,6 +232,7 @@ public final class FrameCostMeter: @unchecked Sendable {
             let reading = FrameCostReading(
                 framesPerSecond: Double(frames) / seconds,
                 longestGapMilliseconds: longestGap * 1_000,
+                longestGapUntimedMilliseconds: longestGapUntimed,
                 parts: FrameCostPart.allCases.compactMap { part in
                     tallies[part].map {
                         FrameCostReading.Part(part: part, count: $0.count, millisecondsPerSecond: $0.total / seconds, longestMilliseconds: $0.longest)
@@ -158,6 +243,7 @@ public final class FrameCostMeter: @unchecked Sendable {
             frames = 0
             windowStart = time
             longestGap = 0
+            longestGapUntimed = 0
             return reading
         }
     }

@@ -15,7 +15,7 @@ In the managed Linux environment, Playwright is at `/opt/codex/cua_node/lib/node
 
 The camera list and frozen settings are in `capture.cjs`. The two station cameras share the same position and differ only by clock hour. For a repeatability check, run `station-day` twice into different output directories and compare `views[0].drawCalls` and `views[0].frameMs` in the two JSON files.
 
-A Linux example capture with all three PNGs and its JSON is in [`examples/linux-2026-10-20/`](examples/linux-2026-10-20/).
+A Linux example capture is in [`examples/linux-2026-10-20/`](examples/linux-2026-10-20/): its JSON and `district-day.png`. The other two PNGs are in `a91453/railway-reference-private: Railway/game-art-previews/tools/cityview-benchmark/examples/linux-2026-10-20/`. Keep a new capture's PNGs out of this repository except one overview (`docs/HANDOFF.md` §2).
 
 ## Output
 

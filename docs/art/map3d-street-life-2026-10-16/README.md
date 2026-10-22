@@ -1,5 +1,7 @@
 # 3D 地圖的行人與車輛（決策 259）
 
+> 2026-10-22 起這個資料夾只留這份 README、總覽圖 `station.jpg` 和文字紀錄；其他 6 張圖搬到 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-street-life-2026-10-16/`，檔名不變（作者 2026-10-21 的規則，`docs/HANDOFF.md` §2）。
+
 用 `tools/map3d-preview` 畫：WebGL 照 `Map3DShaders.metal` 的算式重畫，不是 iPhone 的畫面。每張都是上下兩半，下午 2 點的光線。
 
 **上半 `main`、下半新版**：

@@ -1,5 +1,7 @@
 # 3D 地圖的地圖感（2026-10-15）
 
+> 2026-10-22 起這個資料夾只留這份 README、總覽圖 `kaohsiung-mid.jpg` 和文字紀錄；其他 5 張圖搬到 `a91453/railway-reference-private: Railway/game-art-previews/docs/art/map3d-map-look-2026-10-15/`，檔名不變（作者 2026-10-21 的規則，`docs/HANDOFF.md` §2）。
+
 ARCHITECTURE 決策 241。作者說比較喜歡網站 3D 城市與參考庫 `city_map_reference_clean` 的風格，並交代「記得調整到遊戲風格而不是照搬」。
 
 這一步只改地面與道路：

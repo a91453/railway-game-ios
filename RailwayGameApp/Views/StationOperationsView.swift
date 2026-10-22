@@ -3,7 +3,7 @@ import GamePresentation
 import SwiftUI
 
 /// The station panel's operations page (ARCHITECTURE decision 224, option
-/// A "月台俯視圖", `docs/art/railway-ui-redesign-2026-10-14/s4-*.png`): how
+/// A "月台俯視圖", `a91453/railway-reference-private: Railway/game-art-previews/docs/art/railway-ui-redesign-2026-10-14/s4-*.png`): how
 /// many wait, each platform as a track seen from above with the train
 /// standing at it now and how busy it has been, then the weather of the
 /// next days. ``StationOperations`` works it out from the world; this view
