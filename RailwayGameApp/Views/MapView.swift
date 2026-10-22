@@ -603,6 +603,7 @@ struct MapView: View {
                         // Decision 276: a line held where no station is opens
                         // its panel and traces its busiest trips.
                         let line = held == nil ? session.holdLine(at: point, reach: reach) : nil
+                        if line != nil { UserDefaults.standard.set(true, forKey: TrackHoldHint.seenKey) }
                         if held != nil || line != nil {
                             cellTooltip = nil
                             cityTooltip = nil

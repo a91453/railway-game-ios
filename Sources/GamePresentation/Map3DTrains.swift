@@ -93,11 +93,15 @@ public enum Map3DTrains {
         public let train: TrainID
         public let point: Map3DPoint
         public let forward: Map3DPoint
+        /// Decision 337: the front of the train on the rail, where the
+        /// cab view looks out from.
+        public let nose: Map3DPoint
 
-        public init(train: TrainID, point: Map3DPoint, forward: Map3DPoint = Map3DPoint(0, 0, -1)) {
+        public init(train: TrainID, point: Map3DPoint, forward: Map3DPoint = Map3DPoint(0, 0, -1), nose: Map3DPoint? = nil) {
             self.train = train
             self.point = point
             self.forward = forward
+            self.nose = nose ?? point - Map3DPoint(0, Map3DTrains.carHeight + Map3DTrains.headClearance, 0)
         }
 
         /// The rail under ``point``, where the follow camera looks.
@@ -160,7 +164,7 @@ public enum Map3DTrains {
                 if index == 0 {
                     frame.heads.append(Head(train: run.train, point: a + (b - a) * (min(4, length / 2) / length)
                                                 + Map3DPoint(0, carHeight + headClearance, 0),
-                                            forward: Map3DPoint(a.x - b.x, 0, a.z - b.z).normalized ?? Map3DPoint(0, 0, -1)))
+                                            forward: Map3DPoint(a.x - b.x, 0, a.z - b.z).normalized ?? Map3DPoint(0, 0, -1), nose: a))
                 }
                 // Decision 232: a soft shadow on the bed under the car.
                 let bed = Map3DPoint(0, 0.05 - Map3DScene.Builder.bedDrop, 0)

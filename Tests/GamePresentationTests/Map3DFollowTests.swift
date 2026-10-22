@@ -38,7 +38,7 @@ final class Map3DFollowTests: XCTestCase {
     func testTheCameraStandsBehindTheTrain() {
         let front = head(x: 100, z: -50, heading: .pi / 2)  // running east
         let start = Map3DCamera(target: .zero, distance: 1_000, heading: .pi / 2, viewport: (390, 844))
-        for view in Map3DFollow.View.allCases {
+        for view in [Map3DFollow.View.back, .aboveBack] {
             let camera = Map3DFollow(train: train, view: view).camera(following: front, from: start, elapsed: 1 / 60)
             XCTAssertEqual(camera.target, front.rail)
             XCTAssertEqual(camera.tilt, view.tilt)
@@ -136,11 +136,56 @@ final class Map3DFollowTests: XCTestCase {
         XCTAssertNotEqual(camera, Map3DCamera(distance: 2_000))
     }
 
+    /// Decision 337: the cab view stands just ahead of the nose at the
+    /// driver's eye, looks down the line 1.15° under level through a 68°
+    /// lens, and turns with the train at once; a pinch does not move it.
+    func testTheCabViewLooksAheadFromTheNose() {
+        let nose = Map3DPoint(100, 2, -50)
+        let forward = Map3DPoint(1, 0, 0)  // running east
+        let front = Map3DTrains.Head(train: train, point: nose + Map3DPoint(-4, Map3DTrains.carHeight + Map3DTrains.headClearance, 0),
+                                     forward: forward, nose: nose)
+        let start = Map3DCamera(target: .zero, distance: 1_000, heading: 0, viewport: (390, 844))
+        let follow = Map3DFollow(train: train, view: .cab)
+        let camera = follow.camera(following: front, from: start, elapsed: 1 / 60)
+        let eye = camera.eye
+        XCTAssertEqual(eye.x, nose.x + Map3DFollow.cabLead, accuracy: 0.01)
+        XCTAssertEqual(eye.y, nose.y + Map3DFollow.cabEyeHeight, accuracy: 0.01)
+        XCTAssertEqual(eye.z, nose.z, accuracy: 0.01)
+        XCTAssertEqual(Map3DFollow.cabEyeHeight, 1.935, accuracy: 0.001)
+        XCTAssertEqual(camera.heading, .pi / 2, accuracy: 0.0001, "facing the way it runs at once")
+        let look = (camera.target - eye).normalized ?? .zero
+        XCTAssertEqual(asinf(-look.y) * 180 / .pi, 1.146, accuracy: 0.01, "the reference's driverLook")
+        XCTAssertGreaterThan(look.x, 0.99)
+        XCTAssertEqual(camera.lens ?? 0, 68 * .pi / 180, accuracy: 0.0001)
+        XCTAssertEqual(camera.fieldOfViewTall, Map3DFollow.cabLens)
+        XCTAssertEqual(follow.zoomed(by: 2).camera(following: front, from: start, elapsed: 1 / 60), camera, "a pinch does not move it")
+        // Leaving the cab for behind puts the map's own lens back.
+        let behind = Map3DFollow(train: train, view: .back).camera(following: front, from: camera, elapsed: 1 / 60)
+        XCTAssertNil(behind.lens)
+        XCTAssertEqual(Map3DFollow.View.cab.text(in: .traditionalChinese), "駕駛室")
+    }
+
+    /// Decision 337: a wider lens draws the same distance smaller, and the
+    /// flight into the cab opens the lens on the way.
+    func testTheLensWidensTheViewAndFlies() {
+        var camera = Map3DCamera(distance: 600, viewport: (390, 844))
+        let narrow = camera.metresPerPoint
+        camera.lens = Map3DFollow.cabLens
+        XCTAssertGreaterThan(camera.metresPerPoint, narrow * 2)
+        XCTAssertLessThan(camera.projection.columns[5], Map3DCamera(distance: 600).projection.columns[5])
+        let start = Map3DCamera(distance: 230, viewport: (390, 844))
+        let flight = Map3DFlight(from: start, began: 0, rule: .cameraFlight)
+        let middle = flight.camera(toward: camera, at: 0.6)
+        XCTAssertEqual(middle.fieldOfViewTall, (Map3DCamera.fieldOfView + Map3DFollow.cabLens) / 2, accuracy: 0.0001)
+        XCTAssertNil(flight.camera(toward: start, at: 0.6).lens, "no lens either end, none on the way")
+    }
+
     /// The trains' fronts say the way their front car faces.
     func testAHeadSaysTheWayItsTrainFaces() {
         let head = Map3DTrains.Head(train: train, point: Map3DPoint(0, 10, 0))
         XCTAssertEqual(head.forward, Map3DPoint(0, 0, -1))
         XCTAssertEqual(head.rail.y, 10 - Map3DTrains.carHeight - Map3DTrains.headClearance, accuracy: 0.001)
+        XCTAssertEqual(head.nose, head.rail, "without a nose given, the rail under the label")
         XCTAssertEqual(Map3DFollow.heading(of: Map3DPoint(1, 0, 0)), .pi / 2, accuracy: 0.0001)
         XCTAssertEqual(Map3DFollow.heading(of: Map3DPoint(0, 0, -1)), 0, accuracy: 0.0001)
     }

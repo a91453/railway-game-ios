@@ -19,7 +19,7 @@ final class Map3DTrainSetTests: XCTestCase {
             for name in names {
                 let model = pack.models[try XCTUnwrap(pack.index(of: name), name)]
                 // Decision 331: a tram car is two of its sections.
-                let triangles = set.key == "greenTram" ? 2_500...3_200 : 100...3_000
+                let triangles = set.key == "greenTram" ? 2_500...3_200 : set.key == "greenCommuter" ? 2_000...6_000 : 100...3_000
                 XCTAssertTrue(triangles.contains(model.triangleCount), "\(name): \(model.triangleCount) triangles")
                 // #900's 700T is 24 m, its Wenhu car 12.6 m; drawn at the
                 // train's car length.
@@ -97,6 +97,11 @@ final class Map3DTrainSetTests: XCTestCase {
         XCTAssertEqual(names("dieselExpress", 3), ["set-dieselExpress-head", "set-dieselExpress-car", "set-dieselExpress-tail"], "a DR3100 set")
         XCTAssertEqual(names("puyuma", 3), ["set-puyuma-head", "set-puyuma-car", "set-puyuma-tail"])
         XCTAssertEqual(names("", 3), ["commuter-cab", "commuter-car", "commuter-cab turned"])
+        // Decision 331, later: two cars of it are the green two-car EMU;
+        // one car, or a typed flat-fronted EMU, stays the commuter.
+        XCTAssertEqual(names("", 2), ["set-greenCommuter-head", "set-greenCommuter-tail"])
+        XCTAssertEqual(names("", 1), ["commuter-cab"])
+        XCTAssertEqual(names("EMU100", 2), ["commuter-cab", "commuter-cab turned"])
         // As #900 has them (the author, 2026-10-21): the 700T with its two
         // pantograph cars, the EMU3000, every metro size a C381.
         XCTAssertEqual(names("HSR", 1), ["set-highSpeed-head"])
@@ -131,6 +136,22 @@ final class Map3DTrainSetTests: XCTestCase {
         XCTAssertEqual(Map3DTrainSet.reach(of: "C"), 500)
         XCTAssertEqual(Map3DTrainSet.reach(of: "greenTram"), 500)
         for key in ["B", "", "EMU3000", "puyuma"] { XCTAssertEqual(Map3DTrainSet.reach(of: key), Map3DTrains.modelReach, key) }
+    }
+
+    /// Decision 331, later: the green two-car EMU's cars are #961's two
+    /// units as they are, the trailing unit's cab at its back, so no car
+    /// is turned; drawn as far as the other trains.
+    func testTwoCommuterCarsAreTheGreenEMU() throws {
+        func model(_ name: String) throws -> Map3DModelPack.Model { pack.models[try XCTUnwrap(pack.index(of: name), name)] }
+        let head = try model("set-greenCommuter-head"), tail = try model("set-greenCommuter-tail")
+        // The units as they are, and two lamps (twelve triangles each).
+        XCTAssertEqual(head.triangleCount, Map3DGreenCommuter.model(.leading).triangleCount + 24)
+        XCTAssertEqual(tail.triangleCount, Map3DGreenCommuter.model(.trailing).triangleCount + 24)
+        XCTAssertEqual(head.length, Map3DGreenCommuter.model(.leading).length, accuracy: 0.05)
+        XCTAssertFalse(pack.isTurned(forType: "", carIndex: 1, count: 2))
+        XCTAssertTrue(pack.isTurned(forType: "", carIndex: 2, count: 3), "three cars: the commuter's cab turned")
+        XCTAssertEqual(Map3DTrainSet.reach(of: "greenCommuter"), Map3DTrains.modelReach)
+        XCTAssertTrue((2_000...6_000).contains(head.triangleCount), "\(head.triangleCount) triangles")
     }
 
     /// The 3D map asks each train of the world for its key.

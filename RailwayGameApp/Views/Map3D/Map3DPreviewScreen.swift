@@ -825,6 +825,7 @@ private struct Map3DFollowBar: View {
                 } label: {
                     Text(verbatim: option.text(in: language))
                         .font(.caption.weight(.bold))
+                        .fixedSize()
                         .padding(.horizontal, 8)
                         .frame(minHeight: 26)
                         .background(view == option ? Theme.primary : Theme.chip, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
@@ -851,7 +852,9 @@ private struct Map3DFollowBar: View {
             .accessibilityLabel(Text(verbatim: language.text("Stop following", "取消跟隨")))
             .accessibilityIdentifier("map3D.follow.stop")
         }
-        .fixedSize()
+        // Decision 337: three views; a long name gives way on a narrow
+        // phone, the buttons never.
+        .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal, 13)
         .padding(.vertical, 2)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
