@@ -50,25 +50,124 @@ extension Map3DScene.Builder {
         !road.isRamp && [.trunk, .primary, .secondary, .tertiary].contains(road.kind)
     }
 
-    /// Half a city lot's side: a road or water this near a lot's middle
-    /// (in both directions) takes the lot.
+    /// Half a city lot's side: water this near a lot's middle (in both
+    /// directions) takes the lot, and a road this near leaves it only the
+    /// room beside it (decision 345).
     static let lotReach: Float = 20
 
-    /// Lays `map` on the ground; the 64 m cells (by column and row) whose
-    /// city lot a road, a river or a park takes.
-    mutating func addBaseMap(_ map: Map3DBaseMap) -> Set<Map3DScene.ChunkKey> {
-        var taken = Set<Map3DScene.ChunkKey>()
+    /// The 64 m cells (by column and row) a real map's ground takes from
+    /// the city's lots.
+    struct TakenGround {
+        /// The cells whose lot water, a park or a river takes.
+        var whole = Set<Map3DScene.ChunkKey>()
+        /// Decision 345: the cells only roads reach, whose lot keeps
+        /// the room they leave (``roomBesideRoads(column:row:side:in:)``).
+        var byRoads = Set<Map3DScene.ChunkKey>()
+    }
+
+    /// Lays `map` on the ground; the cells it takes from the city's lots.
+    mutating func addBaseMap(_ map: Map3DBaseMap) -> TakenGround {
+        var taken = TakenGround()
         for cover in Map3DBaseMap.Cover.allCases {
             for area in map.areas where area.cover == cover {
-                addArea(area, taking: &taken)
+                addArea(area, taking: &taken.whole)
             }
         }
         for waterway in map.waterways {
             addStrip(waterway.points, bounds: waterway.bounds, width: waterway.kind.width,
-                     lift: Self.lift(of: .water), color: Map3DPalette.water, paint: nil, taking: &taken)
+                     lift: Self.lift(of: .water), color: Map3DPalette.water, paint: nil, taking: &taken.whole)
         }
-        addRoads(map.roads, taking: &taken)
+        addRoads(map.roads, taking: &taken.byRoads)
+        taken.byRoads.subtract(taken.whole)
         return taken
+    }
+
+    /// Decision 345: no lot's building is drawn narrower than this many
+    /// metres beside the roads (a row of 透天厝 each side of 7 m deep).
+    static let smallestLot = 16
+
+    /// The road pieces (``roadLines``) by the cells they come within their
+    /// half width of: each piece's ends, scene metres, and half width.
+    func roadPieces(near cells: Set<Map3DScene.ChunkKey>) -> [Map3DScene.ChunkKey: [(a: Map3DPoint, b: Map3DPoint, half: Float)]] {
+        var pieces: [Map3DScene.ChunkKey: [(a: Map3DPoint, b: Map3DPoint, half: Float)]] = [:]
+        guard !cells.isEmpty else { return pieces }
+        for (points, half) in roadLines {
+            for (a, b) in zip(points, points.dropFirst()) {
+                let reach = Double(half) + 1
+                let west = gridCell(Double(min(a.x, b.x)) - reach, origin: originX), east = gridCell(Double(max(a.x, b.x)) + reach, origin: originX)
+                let north = gridCell(Double(min(a.z, b.z)) - reach, origin: originY), south = gridCell(Double(max(a.z, b.z)) + reach, origin: originY)
+                for row in north...south {
+                    for column in west...east where cells.contains(Map3DScene.ChunkKey(column: column, row: row)) {
+                        pieces[Map3DScene.ChunkKey(column: column, row: row), default: []].append((a, b, half))
+                    }
+                }
+            }
+        }
+        return pieces
+    }
+
+    /// Decision 345: the biggest square of cell (`column`, `row`), up to
+    /// `side` metres, that keeps half a metre clear of `pieces` (the
+    /// roads and their pavements) and a metre in from the cell's edges,
+    /// the one nearest the cell's middle: its middle in world units and
+    /// its side in metres; `nil` when it is under ``smallestLot``.
+    func roomBesideRoads(column: Int, row: Int, side: Int, in pieces: [(a: Map3DPoint, b: Map3DPoint, half: Float)])
+        -> (x: Double, y: Double, side: Int)? {
+        let size = Int(Double(Land.cellLength) / Self.metre)
+        let west = Float(gridLine(column, origin: originX)), north = Float(gridLine(row, origin: originY))
+        // Each metre square of the cell, clear or not.
+        var clear = [Bool](repeating: true, count: size * size)
+        for j in 0..<size {
+            for i in 0..<size where i == 0 || j == 0 || i == size - 1 || j == size - 1 {
+                clear[j * size + i] = false
+            }
+        }
+        for piece in pieces {
+            // A square is not clear when any of it comes within half a
+            // metre of the piece's strip: its middle within half its
+            // diagonal more.
+            let reach = piece.half + 0.5 + 0.71
+            let lowI = max(0, Int((min(piece.a.x, piece.b.x) - reach - west).rounded(.down)))
+            let highI = min(size - 1, Int((max(piece.a.x, piece.b.x) + reach - west).rounded(.down)))
+            let lowJ = max(0, Int((min(piece.a.z, piece.b.z) - reach - north).rounded(.down)))
+            let highJ = min(size - 1, Int((max(piece.a.z, piece.b.z) + reach - north).rounded(.down)))
+            guard lowI <= highI, lowJ <= highJ else { continue }
+            let dx = piece.b.x - piece.a.x, dz = piece.b.z - piece.a.z
+            let length2 = dx * dx + dz * dz
+            for j in lowJ...highJ {
+                for i in lowI...highI where clear[j * size + i] {
+                    let px = west + Float(i) + 0.5 - piece.a.x, pz = north + Float(j) + 0.5 - piece.a.z
+                    let t = length2 > 0 ? min(max((px * dx + pz * dz) / length2, 0), 1) : 0
+                    let ox = px - dx * t, oz = pz - dz * t
+                    if ox * ox + oz * oz < reach * reach { clear[j * size + i] = false }
+                }
+            }
+        }
+        // The biggest clear square ending at each metre square (south-east
+        // corner), the usual running count.
+        var biggest = [Int](repeating: 0, count: size * size), most = 0
+        for j in 0..<size {
+            for i in 0..<size where clear[j * size + i] {
+                let n = i == 0 || j == 0 ? 1 : 1 + min(biggest[j * size + i - 1], biggest[(j - 1) * size + i], biggest[(j - 1) * size + i - 1])
+                biggest[j * size + i] = n
+                most = max(most, n)
+            }
+        }
+        let wanted = min(most, side)
+        guard wanted >= Self.smallestLot else { return nil }
+        var best: (i: Int, j: Int, off: Int)?
+        for j in 0..<size {
+            for i in 0..<size where biggest[j * size + i] >= wanted {
+                // Twice the square's middle less the cell's, each way.
+                let ox = 2 * i + 2 - wanted - size, oz = 2 * j + 2 - wanted - size
+                let off = ox * ox + oz * oz
+                if best.map({ off < $0.off }) ?? true { best = (i, j, off) }
+            }
+        }
+        guard let best else { return nil }
+        let middleX = Double(west) + Double(best.i + 1) - Double(wanted) / 2
+        let middleZ = Double(north) + Double(best.j + 1) - Double(wanted) / 2
+        return (originX + middleX * Self.metre, originY + middleZ * Self.metre, wanted)
     }
 
     /// Decision 241: `roads` on the ground, each with its sidewalks and

@@ -217,7 +217,7 @@ public struct Map3DScene: Sendable {
             real = Map3DBaseMap(tiles: baseMap, frame: frame, region: region, originX: originX, originY: originY)
         }
         builder.addGround(water: real == nil)
-        let taken = real.map { builder.addBaseMap($0) } ?? []
+        let taken = real.map { builder.addBaseMap($0) } ?? Builder.TakenGround()
         let cleared = builder.addTrack(snapshot)
         if let lineBands { builder.addLineBands(lineBands, snapshot: snapshot) }
         builder.addPlatforms(snapshot)
@@ -276,10 +276,10 @@ public struct Map3DScene: Sendable {
             builder.addParks(real, clearOf: stations.union(standing))
             builder.target = .near
         }
-        builder.addCity(city, clearOf: stations.union(builder.realTrackCells), takenBy: taken.union(standing))
+        builder.addCity(city, clearOf: stations.union(builder.realTrackCells), takenBy: taken.whole.union(standing), besideRoads: taken.byRoads)
         builder.target = .far
         if let frame { builder.addRealBuildings(cityTiles, frame: frame, clearOf: stations) }
-        builder.addCity(city, clearOf: stations.union(builder.realTrackCells), takenBy: taken.union(standing))
+        builder.addCity(city, clearOf: stations.union(builder.realTrackCells), takenBy: taken.whole.union(standing), besideRoads: taken.byRoads)
         builder.target = .base
         builder.addPlacedBuildings()
         chunks = builder.chunks()
@@ -911,16 +911,28 @@ extension Map3DScene {
         /// Every lot of the city in the scene, but those on cells the track
         /// runs through: row houses on low homes and shops, blocks for the
         /// rest, trees in the parks.
-        mutating func addCity(_ skyline: CitySkyline, clearOf cleared: Set<ChunkKey>, takenBy taken: Set<ChunkKey> = []) {
+        mutating func addCity(_ skyline: CitySkyline, clearOf cleared: Set<ChunkKey>, takenBy taken: Set<ChunkKey> = [],
+                              besideRoads: Set<ChunkKey> = []) {
             let cell = Double(Land.cellLength)
+            let pieces = roadPieces(near: besideRoads)
             for lot in skyline.lots(in: region) {
-                let x = (Double(lot.column) + 0.5) * cell, y = (Double(lot.row) + 0.5) * cell
-                // Decision 234: no lot where the real map has a road, water
-                // or a park.
-                guard contains(x: x, y: y), !taken.contains(ChunkKey(column: lot.column, row: lot.row)) else { continue }
+                var x = (Double(lot.column) + 0.5) * cell, y = (Double(lot.row) + 0.5) * cell
+                // Decision 234: no lot where the real map has water or a
+                // park.
+                let key = ChunkKey(column: lot.column, row: lot.row)
+                guard contains(x: x, y: y), !taken.contains(key) else { continue }
+                var side = Float(Double(lot.side) / Self.metre)
+                // Decision 345: where its roads reach, a building in the
+                // room they leave, if a big enough one fits.
+                if besideRoads.contains(key), !lot.isOpenGround, !cleared.contains(key) {
+                    guard let room = roomBesideRoads(column: lot.column, row: lot.row, side: Int(side.rounded(.down)), in: pieces[key] ?? [])
+                    else { continue }
+                    (x, y, side) = (room.x, room.y, Float(room.side))
+                } else if besideRoads.contains(key) {
+                    continue
+                }
                 let centre = point(x: x, y: y, height: 0)
                 let base = Map3DPoint(centre.x, ground(x: x, y: y), centre.z)
-                let side = Float(Double(lot.side) / Self.metre)
                 let seed = (Int32(truncatingIfNeeded: lot.column), Int32(truncatingIfNeeded: lot.row))
                 if lot.isOpenGround {
                     addOpenGround(lot, base: base, seed: seed)

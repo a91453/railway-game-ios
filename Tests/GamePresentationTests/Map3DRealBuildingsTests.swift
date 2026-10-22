@@ -150,8 +150,10 @@ final class Map3DRealBuildingsTests: XCTestCase {
         let real = Map3DScene(world: world, baseMap: tiles, cityTiles: areas)
         func triangles(_ scene: Map3DScene) -> Int { scene.chunks.reduce(0) { $0 + $1.mesh.triangleCount } }
         // Real buildings in the middle of the map: a temple's ridge and
-        // sheet-steel works among them.
-        XCTAssertGreaterThan(triangles(real), triangles(plain))
+        // sheet-steel works among them. (They take the cells they stand
+        // on from the city's own lots, which since decision 345 also fill
+        // the room beside the streets, so they need not add triangles.)
+        XCTAssertNotEqual(triangles(real), triangles(plain))
         let colors = Set(real.chunks.flatMap(\.mesh.vertices).map(\.color))
         XCTAssertTrue(colors.contains(Map3DPalette.templeRidge))
         // Afar, the same buildings, simplified: fewer triangles than near.
