@@ -194,7 +194,7 @@ public struct Map3DScene: Sendable {
     /// Decision 314: `lineBands` beside the track. Decision 326: an
     /// overhead line over the track, but along `railways`' lines run
     /// without one. Decision 331: on a real-world map, `temples` where
-    /// they stand.
+    /// they stand, and the park kit's scenes in the base map's parks.
     public init(world: GameWorld, snapshot: RailwaySnapshot? = nil, skyline: CitySkyline? = nil, focus: (x: Double, y: Double)? = nil,
                 baseMap: BaseMapTiles? = nil, cityTiles: [CityTileArea] = [], heights: HeightGrid? = nil, lineBands: Map3DLineBands? = nil,
                 railways: RealRailways? = nil, temples: RealTemples? = nil) {
@@ -245,6 +245,12 @@ public struct Map3DScene: Sendable {
         // Decision 331: the real temples, on no station or real building.
         if let temples, let frame = RealWorldFrame(world: world) {
             standing.formUnion(builder.addTemples(temples, frame: frame, clearOf: stations.union(standing)))
+            builder.target = .near
+        }
+        // Decision 331: the park kit's scenes in the real parks, on no
+        // station, real building or temple.
+        if let real {
+            builder.addParks(real, clearOf: stations.union(standing))
             builder.target = .near
         }
         builder.addCity(city, clearOf: stations, takenBy: taken.union(standing))
