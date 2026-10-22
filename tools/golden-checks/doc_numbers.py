@@ -32,8 +32,10 @@ docs/decisions/<N>.md, whose first `### N.` heading is its number: parallel
 pull requests then add different files and no longer change the same lines
 of ARCHITECTURE (decision 329). Those decisions have no row in the index;
 the files are their index (`--index` prints the whole table). A file whose
-name is not its heading's number, a file with no heading, or a number that
-is both a file and an ARCHITECTURE heading is a difference.
+name is not its heading's number, a file with no heading, a file other
+than README.md whose name is not a number (or is one written with leading
+zeros), a number that is both a file and an ARCHITECTURE heading, or an
+ARCHITECTURE heading of 329 or later is a difference.
 
 Python 3 standard library only:
     python3 -I tools/golden-checks/doc_numbers.py            # report
@@ -52,6 +54,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 OVERVIEW = "docs/OVERVIEW.md"
 ARCHITECTURE = "docs/ARCHITECTURE.md"
 DECISIONS = "docs/decisions"
+# Decision 329: decisions from this number on are files of their own.
+FIRST_FILED = 329
 SAVED_GAME = "Sources/GameCore/World/SavedGame.swift"
 GOLDEN_SCENARIO = "Tests/GameCoreTests/GoldenScenario.swift"
 
@@ -137,8 +141,11 @@ def decision_files(root, differences):
         return files
     for path in sorted(directory.glob("*.md")):
         relative = f"{DECISIONS}/{path.name}"
-        if not path.stem.isdigit():
-            continue  # README.md and the like
+        if path.name == "README.md":
+            continue
+        if not path.stem.isdigit() or path.stem != str(int(path.stem)):
+            differences.append(f"{relative} 的檔名不是決策號（應該是 <N>.md，例如 {FIRST_FILED}.md）")
+            continue
         found, _ = headings(path.read_text(encoding="utf-8"))
         if not found:
             differences.append(f"{relative} 沒有 ### N. 標題")
@@ -231,6 +238,8 @@ def compare(root):
     for number in duplicates([number for number, _ in found]):
         lines = "、".join(str(line) for n, line in found if n == number)
         differences.append(f"ARCHITECTURE 的 ### {number}. 出現不只一次（第 {lines} 行）")
+    for number in sorted({number for number, _ in found if number >= FIRST_FILED}):
+        differences.append(f"決策 {number} 寫在 ARCHITECTURE；{FIRST_FILED} 起每個決策寫在 {DECISIONS}/{number}.md")
     for number in sorted(set(filed) & {number for number, _ in found}):
         differences.append(f"決策 {number} 同時在 ARCHITECTURE 與 {DECISIONS}/{number}.md")
     indexed = index_rows(overview)
@@ -240,7 +249,7 @@ def compare(root):
     unused = {number for number, title in indexed if UNUSED in title}
     for number in duplicates(rows):
         differences.append(f"決策索引（OVERVIEW §9）的 {number} 不只一列")
-    for number in sorted({number for number, _ in found} - set(rows)):
+    for number in sorted({number for number, _ in found if number < FIRST_FILED} - set(rows)):
         notes.append(f"決策 {number} 還沒進決策索引（OVERVIEW §9；遊戲規劃合併後補）")
     for number in sorted(set(rows) - set(numbers) - unused):
         differences.append(f"決策索引（OVERVIEW §9）有 {number}，ARCHITECTURE 沒有 ### {number}.")
@@ -424,6 +433,16 @@ def selftest():
 
     _, differences, _ = case("a file with no heading", decision_files={"5.md": "五\n"})
     assert differences == ["docs/decisions/5.md 沒有 ### N. 標題"], differences
+
+    _, differences, _ = case("a file named with leading zeros", decisions="見決策索引（§9）", decision_files={"05.md": "### 5. 五\n"})
+    assert differences == [f"docs/decisions/05.md 的檔名不是決策號（應該是 <N>.md，例如 {FIRST_FILED}.md）"], differences
+
+    _, differences, _ = case("a file not named by a number", decision_files={"5-draft.md": "### 5. 五\n"})
+    assert differences == [f"docs/decisions/5-draft.md 的檔名不是決策號（應該是 <N>.md，例如 {FIRST_FILED}.md）"], differences
+
+    _, differences, notes = case("a new decision appended to ARCHITECTURE", decisions="見決策索引（§9）", architecture_extra=f"\n### {FIRST_FILED}. 新的\n")
+    assert differences == [f"決策 {FIRST_FILED} 寫在 ARCHITECTURE；{FIRST_FILED} 起每個決策寫在 docs/decisions/{FIRST_FILED}.md"], differences
+    assert not any("還沒進決策索引" in note for note in notes), notes
 
     _, differences, _ = case("a decision both in ARCHITECTURE and a file", decisions="見決策索引（§9）", architecture_extra="\n### 5. 五\n", decision_files={"5.md": "### 5. 五\n"})
     assert differences == ["決策 5 同時在 ARCHITECTURE 與 docs/decisions/5.md"], differences

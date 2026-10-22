@@ -343,6 +343,8 @@ extension Map3DScene.Builder {
         var crossingsOn: [Map3DSeededStreets.Edge: Map3DLevelCrossing] = [:]
         for (edge, kind) in streets.edges.sorted(by: { $0.key < $1.key }) {
             let (a, b) = edgeEnds(edge)
+            // None under a station's building, which stands first.
+            guard !nearHouse(a, b, reach: Map3DSeededStreets.clearance(kind)) else { continue }
             switch trackMeeting(from: a, to: b, half: Map3DSeededStreets.clearance(kind), segments: segments, index: index) {
             case .clear: kept[edge] = kind
             case .blocked: continue
@@ -406,6 +408,21 @@ extension Map3DScene.Builder {
         var taken = Set<Map3DScene.ChunkKey>()
         addRoads(roads, taking: &taken)
         for crossing in crossings { addLevelCrossing(crossing) }
+    }
+
+    /// Whether a street from `a` to `b`, reaching `reach` either side
+    /// of its middle, comes within a metre of a station's building.
+    func nearHouse(_ a: Map3DPoint, _ b: Map3DPoint, reach: Float) -> Bool {
+        let span = Map3DPoint(b.x - a.x, 0, b.z - a.z), steps = max(1, Int((span.length / 2).rounded(.up)))
+        return houseFootprints.contains { corners in
+            let middle = corners.reduce(Map3DPoint(0, 0, 0)) { $0 + $1 } * 0.25
+            guard let forward = (corners[1] - corners[0]).normalized, let side = (corners[3] - corners[0]).normalized else { return false }
+            let depth = (corners[1] - corners[0]).length / 2 + reach + 1, wide = (corners[3] - corners[0]).length / 2 + reach + 1
+            return (0...steps).contains { step in
+                let d = a + span * (Float(step) / Float(steps)) - middle
+                return abs(d.dot(forward)) < depth && abs(d.dot(side)) < wide
+            }
+        }
     }
 
     /// The level ends of `edge`, in the scene, west to east or north to

@@ -760,6 +760,22 @@ struct StatusBanner: View {
                 .foregroundStyle(Theme.textPrimary)
                 .accessibilityIdentifier("banner.sellTrain")
             }
+            // Decision 336: land not bought yet; this ends building and
+            // starts choosing a tile.
+            if session.offersMapExpansion(for: message.text) {
+                Button {
+                    session.startChoosingMapTile()
+                } label: {
+                    Text(verbatim: session.language.text("Expand Map", "擴建地圖"))
+                        .font(.caption.weight(.bold))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Theme.chip, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Theme.textPrimary)
+                .accessibilityIdentifier("banner.expandMap")
+            }
             Button {
                 session.dismissMessage()
             } label: {

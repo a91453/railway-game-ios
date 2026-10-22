@@ -196,6 +196,48 @@ final class Map3DStreetsTests: XCTestCase {
         XCTAssertEqual(Map3DScene(world: world).chunks.map(\.mesh.vertices), scene.chunks.map(\.mesh.vertices))
     }
 
+    /// On a map not of the real world, no seeded street runs under a
+    /// station's building; it ends at the building's ground.
+    func testNoStreetRunsUnderAStationsBuilding() throws {
+        let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+        // Lines along a row (or a column) of cells, through a town, some
+        // metres off its edge, so a street runs where the building would
+        // stand, and a slanting line between two towns.
+        let metre = WorldCoordinate.unitsPerMetre, cell = Land.cellLength
+        let row = (towns[0].y / cell) * cell, column = (towns[0].x / cell) * cell
+        var lines: [[PlanPoint]] = [[towns[0], towns[1]]]
+        for off in [Int64(-10), 6, 22] {
+            lines.append([PlanPoint(x: towns[0].x - 150 * metre, y: row + off * metre), PlanPoint(x: towns[0].x + 150 * metre, y: row + off * metre)])
+        }
+        lines.append([PlanPoint(x: column - 10 * metre, y: towns[0].y - 150 * metre), PlanPoint(x: column - 10 * metre, y: towns[0].y + 150 * metre)])
+        for points in lines {
+            let world = try newGameLine(through: points)
+            let scene = Map3DScene(world: world)
+            // Where the buildings stand: their placing reads only the
+            // ground, the track and the platforms.
+            var builder = Map3DScene.Builder(originX: scene.originX, originY: scene.originY, region: scene.region, world: world, heights: nil)
+            let snapshot = world.railwaySnapshot()
+            builder.addGround()
+            _ = builder.addTrack(snapshot)
+            builder.addPlatforms(snapshot)
+            _ = builder.addStations(snapshot, frame: nil)
+            XCTAssertFalse(builder.houseFootprints.isEmpty, "the stations have buildings")
+            let navy = Set([Map3DBaseMap.RoadKind.primary, .tertiary, .minor].map(Map3DPalette.road))
+            let roads = scene.chunks.flatMap(\.mesh.vertices).filter { navy.contains($0.color) }
+            XCTAssertGreaterThan(roads.count, 1_000)
+            for corners in builder.houseFootprints {
+                let middle = corners.reduce(Map3DPoint(0, 0, 0)) { $0 + $1 } * 0.25
+                let forward = try XCTUnwrap((corners[1] - corners[0]).normalized), side = try XCTUnwrap((corners[3] - corners[0]).normalized)
+                let depth = (corners[1] - corners[0]).length / 2, wide = (corners[3] - corners[0]).length / 2
+                let under = roads.filter { vertex in
+                    let d = Map3DPoint(vertex.x - middle.x, 0, vertex.z - middle.z)
+                    return abs(d.dot(forward)) < depth && abs(d.dot(side)) < wide
+                }
+                XCTAssertTrue(under.isEmpty, "\(under.count) street vertices under the building at \(middle.x), \(middle.z)")
+            }
+        }
+    }
+
     func testRowHousesFaceTheirStreets() {
         var builder = Map3DScene.Builder(originX: 0, originY: 0, region: WorldRegion(minX: -64_000, minY: -64_000, maxX: 64_000, maxY: 64_000),
                                          world: GameWorld.newGame())

@@ -92,6 +92,8 @@ struct LinesPanel: View {
                         linesSection
                         advancedSection
                         newLineRow
+                        // Decision 336: not folded into the new line's form.
+                        buyableLinesSection
                         if let line = session.selectedLine {
                             trainsSection(line)
                             depotSection(line)
@@ -113,6 +115,8 @@ struct LinesPanel: View {
                         if let line = session.selectedLine {
                             trainsSection(line)
                         }
+                        // Decision 336: with no line made too.
+                        buyableLinesSection
                         if showsAdvanced {
                             trafficSection
                             serviceDaySection
@@ -266,17 +270,23 @@ struct LinesPanel: View {
         }
         if showsNewLine {
             draftSection
-            buyableLinesSection
         }
     }
 
-    /// Decision 315: the real branch lines this map sells, under the new
-    /// line's form; none on a map that sells none.
+    /// Decision 315: the real branch lines this map sells; decision 336:
+    /// listed whether or not lines are made, and on a map that sells none,
+    /// a line saying why.
     @ViewBuilder
     private var buyableLinesSection: some View {
         let lines = session.buyableRealLines
-        if !lines.isEmpty {
+        if !lines.isEmpty || session.realLinesForSaleNote != nil {
             Section {
+                if lines.isEmpty, let note = session.realLinesForSaleNote {
+                    Text(verbatim: note)
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textSecondary)
+                        .accessibilityIdentifier("line.acquire.none")
+                }
                 ForEach(lines, id: \.id) { line in
                     Button {
                         session.offerRealLine(line)
@@ -323,9 +333,15 @@ struct LinesPanel: View {
                 }
                 .accessibilityIdentifier("lines.advanced")
                 .accessibilityHint(Text(verbatim: session.language.text(
-                    "Shows the service day, stopping patterns, the tracks each leg takes, target headways and traffic control. Hidden, they keep working as set.",
-                    "顯示時段、停靠模式、各段股道、目標班距與行車控制。收起時，這些設定照常運作。"
+                    "Hidden, they keep working as set.",
+                    "收起時，這些設定照常運作。"
                 )))
+                // Decision 336, later: what it holds, in words, not only
+                // for VoiceOver.
+                Text(verbatim: AdvancedDetails.contentsText(in: session.language))
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
+                    .accessibilityIdentifier("lines.advanced.contents")
                 if !showsAdvanced {
                     Text(verbatim: AdvancedDetails.networkSummary(of: session.world, in: session.language))
                         .font(.caption)

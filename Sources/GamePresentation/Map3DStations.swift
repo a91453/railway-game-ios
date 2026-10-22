@@ -198,7 +198,9 @@ extension Map3DScene.Builder {
     /// its platforms, its building or its entrances; the cells (64 m) its
     /// building stands on, for a plaza there and no city lot. On a
     /// real-world map (`frame`), the real stations' recipes.
-    mutating func addStations(_ snapshot: RailwaySnapshot, frame: RealWorldFrame?) -> Set<Map3DScene.ChunkKey> {
+    /// With `shops` false, the shop streets wait for
+    /// ``addShopStreets()``, after the streets they keep clear of.
+    mutating func addStations(_ snapshot: RailwaySnapshot, frame: RealWorldFrame?, shops: Bool = true) -> Set<Map3DScene.ChunkKey> {
         let saved = target
         defer { target = saved }
         addCanopies()
@@ -228,7 +230,19 @@ extension Map3DScene.Builder {
                 addEntrances(station, platforms: open, path: longest, middle: middle)
             }
         }
+        if shops { addShopStreets() }
         return cells
+    }
+
+    /// Decision 322: the shop streets of the stations' buildings laid so
+    /// far, on the plazas they leave.
+    mutating func addShopStreets() {
+        let saved = target
+        defer { target = saved }
+        for street in shopStreets {
+            addShopStreet(street.station, centre: street.centre, forward: street.forward, depth: street.depth, wide: street.wide, cells: street.cells)
+        }
+        shopStreets = []
     }
 
     /// The kit's canopy over the middle three fifths of each platform (as
@@ -354,8 +368,9 @@ extension Map3DScene.Builder {
         let columns = corners.map { index($0.x, originX) }, rows = corners.map { index($0.z, originY) }
         var cells = Set<Map3DScene.ChunkKey>()
         for row in rows.min()!...rows.max()! { for column in columns.min()!...columns.max()! { cells.insert(Map3DScene.ChunkKey(column: column, row: row)) } }
+        houseFootprints.append(corners)
         // Decision 322: the shop street on the plaza they leave.
-        addShopStreet(station, centre: centre, forward: forward, depth: depth, wide: wide, cells: cells)
+        shopStreets.append((station, centre, forward, depth, wide, cells))
         return cells
     }
 

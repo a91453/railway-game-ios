@@ -110,6 +110,32 @@ final class Map3DCityBusTests: XCTestCase {
     }
 
     /// Buses run on the trunk, primary and secondary roads.
+    /// Two buses one behind the other never overlap, even where the
+    /// vehicles are only ``Map3DStreetLife/busSpacing`` apart: the longest
+    /// bus, the coach, fits between their middles.
+    func testTwoBusesNeverOverlap() throws {
+        let path = try XCTUnwrap(Map3DStreetLife.Path([Map3DPoint(0, 0, 0), Map3DPoint(2_000, 0, 0)]))
+        let busIndices = Set(try Map3DStreetModel.allCases.filter(\.isBus).map { try XCTUnwrap(Map3DStreetLife.models[$0]) })
+        var pairs = 0
+        // All on a lane move alike, so the gaps are a lane's draws, not
+        // the time: many lanes, once each.
+        for seed in Int32(0)..<300 {
+            var life = Map3DStreetLife()
+            life.lanes = [Map3DStreetLife.Lane(path: path, half: 6, twoWay: true, speed: 11, perHundred: 5.8, scooters: false,
+                                               seed: (seed, 7), buses: true)]
+            let frame = life.frame(target: Map3DPoint(1_000, 0, 0), distance: 1_200, time: 40, detail: .full, activity: .init())
+            for direction: Float in [1, -1] {
+                let buses = frame.instances.filter { $0.transform[0] * direction > 0.5 && busIndices.contains($0.model) }
+                    .map { $0.transform[12] }.sorted()
+                for (a, b) in zip(buses, buses.dropFirst()) {
+                    pairs += 1
+                    XCTAssertGreaterThan(b - a, Map3DCoachBus.length, "seed \(seed)")
+                }
+            }
+        }
+        XCTAssertGreaterThan(pairs, 0)
+    }
+
     func testTheRoadsBusesRunOn() {
         XCTAssertEqual(Map3DScene.Builder.busRoutes, [.trunk, .primary, .secondary])
     }

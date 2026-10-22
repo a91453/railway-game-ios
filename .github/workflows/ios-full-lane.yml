@@ -49,6 +49,7 @@ on:
       - ".github/workflows/testflight*.yml"
       - ".github/workflows/website-screenshots.yml"
       - ".github/workflows/claude.yml"
+      - ".github/workflows/full-lane-watch.yml"
       - ".github/scripts/swift-shards*.sh"
       - ".github/scripts/testflight-*"
       - ".github/scripts/install-swift-linux.sh"
