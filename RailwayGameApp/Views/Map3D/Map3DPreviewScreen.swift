@@ -350,10 +350,11 @@ struct Map3DChunkSource: Sendable {
     }
 
     /// Decision 359 (續): with the scene's `trackCover`, which lays the
-    /// tunnels as the scene did.
-    func chunks(_ keys: [Map3DStreaming.Key], of grid: Map3DStreaming, trackCover: Map3DTrackCover) -> [Map3DScene.Chunk] {
+    /// tunnels as the scene did. Decision 368: the city in full only round
+    /// `detail`.
+    func chunks(_ keys: [Map3DStreaming.Key], of grid: Map3DStreaming, trackCover: Map3DTrackCover, detail: Map3DPoint) -> [Map3DScene.Chunk] {
         Map3DScene.chunks(keys, of: grid, world: world, snapshot: snapshot, skyline: skyline, baseMap: baseMap, cityTiles: cityTiles,
-                          heights: heights, lineBands: lineBands, railways: railways, temples: temples, trackCover: trackCover)
+                          heights: heights, lineBands: lineBands, railways: railways, temples: temples, trackCover: trackCover, detail: detail)
     }
 }
 
@@ -396,9 +397,9 @@ final class Map3DChunkStreamer {
         self.window = window
         if !drop.isEmpty { view?.remove(drop) }
         guard !build.isEmpty else { return }
-        let grid = window.grid, generation = window.generation, trackCover = trackCover
+        let grid = window.grid, generation = window.generation, trackCover = trackCover, detail = window.buildingAround
         Task.detached(priority: .utility) { [weak self] in
-            let chunks = source.chunks(build, of: grid, trackCover: trackCover)
+            let chunks = source.chunks(build, of: grid, trackCover: trackCover, detail: detail)
             await self?.finished(chunks, keys: build, generation: generation)
         }
     }

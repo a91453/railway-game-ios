@@ -138,6 +138,9 @@ final class Map3DMetalView: MTKView {
         let column: Int
         let row: Int
         let cityTops: [Float]
+        /// Decision 368: built without its city in full, so drawn
+        /// simplified until built again.
+        let coarse: Bool
     }
 
     private let queue: MTLCommandQueue
@@ -721,7 +724,7 @@ final class Map3DMetalView: MTKView {
         let signs = makeBuffer(chunk.signs.flatMap(\.floats)).map { (instances: $0, count: chunk.signs.count) }
         return Chunk(vertices: vertices, indices: indices, indexCount: chunk.mesh.indices.count, baseIndexCount: chunk.baseIndexCount,
                      far: far, close: close, shadows: shadows, props: props, signs: signs, minimum: chunk.minimum, maximum: chunk.maximum,
-                     column: chunk.column, row: chunk.row, cityTops: chunk.cityTops)
+                     column: chunk.column, row: chunk.row, cityTops: chunk.cityTops, coarse: chunk.coarse)
     }
 
     /// Decision 259: the most figures and vehicles a frame draws (the
@@ -777,8 +780,8 @@ final class Map3DMetalView: MTKView {
         for index in chunks.indices {
             // Decision 238: in full near the camera, whether in view or not,
             // so the margin holds.
-            chunks[index].detailed = camera.wantsDetail(minimum: chunks[index].minimum, maximum: chunks[index].maximum,
-                                                        wasDetailed: chunks[index].detailed)
+            chunks[index].detailed = !chunks[index].coarse
+                && camera.wantsDetail(minimum: chunks[index].minimum, maximum: chunks[index].maximum, wasDetailed: chunks[index].detailed)
             // Decision 267: and its closest detail, only close up.
             chunks[index].closeUp = chunks[index].detailed && chunks[index].close != nil
                 && camera.wantsClose(minimum: chunks[index].minimum, maximum: chunks[index].maximum, wasClose: chunks[index].closeUp)
