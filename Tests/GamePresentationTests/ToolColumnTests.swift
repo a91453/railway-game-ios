@@ -44,27 +44,31 @@ final class ToolColumnTests: XCTestCase {
         // 54, no layer strip while building: all of it fits.
         let se = ToolColumn.maxHeight(screenHeight: 375, top: 54, gap: 10, bottom: 10)
         XCTAssertGreaterThanOrEqual(se, ToolColumn.buildingHeight(tools: 3, toggle: true))
-        XCTAssertEqual(ToolColumn.buildingScrollHeight(maxHeight: se, tools: 3, toggle: true), 288 - 6 - 48)
+        // Where it does not, Done and Build stand at the foot, apart: the
+        // part over them, the toggle and the three tools, is 48 + 6 + 136.
+        XCTAssertEqual(ToolColumn.buildingScrollHeight(maxHeight: se, tools: 3, toggle: true), 190)
         // A 13 mini (354 inside the safe area), and an SE, with a
-        // real-world map's credits (30) under the column: it does not, and
-        // Build stands whole under a part cut between two buttons.
-        for screenHeight in [354.0, 375] {
+        // real-world map's credits (30) under the column: it does not fit,
+        // and Done and Build stand whole under a part cut between two
+        // buttons.
+        for (screenHeight, least) in [(354.0, 2), (375, 3)] {
             let maxHeight = ToolColumn.maxHeight(screenHeight: screenHeight, top: 54, gap: 10, bottom: 30 + 10)
             XCTAssertLessThan(maxHeight, ToolColumn.buildingHeight(tools: 3, toggle: true))
             let shown = ToolColumn.buildingScrollHeight(maxHeight: maxHeight, tools: 3, toggle: true)
-            XCTAssertLessThanOrEqual(shown + ToolColumn.tileGap + ToolColumn.tileHeight(buttons: 1), maxHeight)
+            XCTAssertLessThanOrEqual(shown + 2 * (ToolColumn.tileGap + ToolColumn.tileHeight(buttons: 1)), maxHeight)
             // The cut falls in a gap: every button above it whole.
             var buttons: [(top: Double, foot: Double)] = [(ToolColumn.tilePadding, ToolColumn.tilePadding + 40)]
             let tools = ToolColumn.tileHeight(buttons: 1) + ToolColumn.tileGap + ToolColumn.tilePadding
-            for index in 0..<4 {
+            for index in 0..<3 {
                 let top = tools + Double(index) * (40 + ToolColumn.buttonSpacing)
                 buttons.append((top, top + 40))
             }
             XCTAssertFalse(buttons.contains { $0.top < shown && shown < $0.foot }, "\(screenHeight): cut at \(shown)")
-            // At least the toggle and the three tools; Done (as Build) below.
-            XCTAssertGreaterThanOrEqual(buttons.filter { $0.foot <= shown }.count, 4, "\(screenHeight)")
+            // At least the toggle and a tool (two on the SE); Done and
+            // Build below, never scrolled away.
+            XCTAssertGreaterThanOrEqual(buttons.filter { $0.foot <= shown }.count, least, "\(screenHeight)")
         }
         // In a lesson's first steps: fewer tools, no toggle; all of it fits.
-        XCTAssertEqual(ToolColumn.buildingScrollHeight(maxHeight: 250, tools: 1, toggle: false), ToolColumn.tileHeight(buttons: 2))
+        XCTAssertEqual(ToolColumn.buildingScrollHeight(maxHeight: 250, tools: 1, toggle: false), ToolColumn.tileHeight(buttons: 1))
     }
 }

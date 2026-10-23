@@ -60,33 +60,36 @@ extension ToolColumn {
 
     /// The building column's height with its icons alone: the card's
     /// toggle when it shows (`toggle`), the `tools` building tools and
-    /// Done, and Build.
+    /// Done in one group, and Build.
     public static func buildingHeight(tools: Int, toggle: Bool) -> Double {
         scrollingContent(tools: tools, toggle: toggle).height + tileGap + tileHeight(buttons: 1)
     }
 
-    /// How tall the part over Build is shown when the column is no more
-    /// than `maxHeight`: all of it when it fits, else cut midway between
-    /// two buttons (or two groups), the rest scrolling, so no button shows
-    /// in part. Build stands under it, a gap below.
+    /// How tall the part over Done and Build is shown where the whole
+    /// column does not fit in `maxHeight`: the card's toggle and the
+    /// tools, all of them when they fit, else cut midway between two
+    /// buttons (or two groups), the rest scrolling, so no button shows in
+    /// part. Done and Build stand under it, each a gap below, so Done is
+    /// never scrolled out of reach.
     public static func buildingScrollHeight(maxHeight: Double, tools: Int, toggle: Bool) -> Double {
-        let content = scrollingContent(tools: tools, toggle: toggle)
-        let room = maxHeight - tileGap - tileHeight(buttons: 1)
+        let content = scrollingContent(tools: tools, toggle: toggle, done: false)
+        let room = maxHeight - 2 * (tileGap + tileHeight(buttons: 1))
         guard content.height > room else { return content.height }
         return content.cuts.last { $0 <= room } ?? content.cuts.first ?? 0
     }
 
-    /// The part over Build: its height and where it may be cut, midway
-    /// between each two buttons.
-    private static func scrollingContent(tools: Int, toggle: Bool) -> (height: Double, cuts: [Double]) {
+    /// The part over Build, Done in the tools' group (`done`) or not: its
+    /// height and where it may be cut, midway between each two buttons.
+    private static func scrollingContent(tools: Int, toggle: Bool, done: Bool = true) -> (height: Double, cuts: [Double]) {
         var cuts: [Double] = []
         var y = 0.0
+        let buttons = tools + (done ? 1 : 0)
         if toggle {
             y = tileHeight(buttons: 1)
+            guard buttons > 0 else { return (y, cuts) }
             cuts.append(y + tileGap / 2)
             y += tileGap
         }
-        let buttons = tools + 1
         for index in 0..<buttons {
             let foot = y + tilePadding + Double(index + 1) * compactButtonHeight + Double(index) * buttonSpacing
             if index < buttons - 1 { cuts.append(foot + buttonSpacing / 2) }

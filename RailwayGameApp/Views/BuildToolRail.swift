@@ -67,6 +67,9 @@ struct BuildToolRail: View {
 /// the map (``BuildToolRail``), or a group of the phone's tools column.
 struct BuildToolButtons: View {
     let session: GameSession
+    /// Whether Done closes the group: not where it stands apart, pinned
+    /// over Build (``BuildDoneButton``).
+    var includesDone = true
     @Environment(\.toolColumnStyle) private var column
 
     var body: some View {
@@ -75,11 +78,13 @@ struct BuildToolButtons: View {
             ForEach(ConstructionTool.networkTools.filter { $0 != .select && session.allows($0) }, id: \.self) { tool in
                 toolButton(tool)
             }
-            if column?.compact != true {
-                Divider()
-                    .padding(.horizontal, 6)
+            if includesDone {
+                if column?.compact != true {
+                    Divider()
+                        .padding(.horizontal, 6)
+                }
+                BuildDoneButton(session: session)
             }
-            doneButton
         }
     }
 
@@ -100,9 +105,13 @@ struct BuildToolButtons: View {
         .accessibilityAddTraits(isActive ? .isSelected : [])
         .tutorialTarget(TutorialTarget(tool: tool))
     }
+}
 
-    /// Back to looking at the map.
-    private var doneButton: some View {
+/// Done: back to looking at the map.
+struct BuildDoneButton: View {
+    let session: GameSession
+
+    var body: some View {
         let isActive = session.tool == .select
         return Button {
             UITestTrace.action("tool.select")
