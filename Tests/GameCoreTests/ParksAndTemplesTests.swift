@@ -114,6 +114,27 @@ final class ParksAndTemplesTests: XCTestCase {
         XCTAssertNil(world.tourism?.attractions.first { $0.id.rawValue < 0 })
     }
 
+    /// A temple built or sold in a running game changes the trips at once,
+    /// as in the same game loaded from a save (the plan worked out before
+    /// is not kept).
+    func testATempleBuiltOrSoldMidDayRunsAsIfLoaded() throws {
+        var world = try world()
+        world.setSpeed(.normal)
+        try world.advance(ticks: 60)
+        func continuesAsLoaded(_ label: String) throws {
+            var loaded = try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))).world
+            var running = world
+            try running.advance(ticks: 300)
+            try loaded.advance(ticks: 300)
+            XCTAssertEqual(running, loaded, label)
+        }
+        let temple = try world.placeBuilding(.temple, at: PlanPoint(x: 31_000, y: 26_768))
+        try continuesAsLoaded("built")
+        try world.advance(ticks: 60)
+        try world.sellPlacedBuilding(temple.id)
+        try continuesAsLoaded("sold")
+    }
+
     // MARK: - Saving
 
     func testParksAndTemplesRoundTripAndOldBuildingsHaveTheFirstLook() throws {
