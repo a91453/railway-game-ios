@@ -37,6 +37,29 @@ final class MapButtonsUITests: XCTestCase {
         }
     }
 
+    /// Decision 382 (TestFlight 85.1): on a phone on its side, with the
+    /// card folded, the zoom buttons stand on the bottom row, on the line
+    /// of the tools column's foot (the glass 4 points below Build), not 14
+    /// points above it. Where the lines are is `HUDMarginsTests` on Linux.
+    func testThePhonesZoomButtonsStandOnTheColumnsLine() throws {
+        try XCTSkipIf(UIDevice.current.userInterfaceIdiom != .phone, "a phone held on its side")
+        let app = launch(orientation: .landscapeLeft)
+        defer { app.terminate() }
+
+        let build = app.buttons["dock.build"]
+        XCTAssertTrue(build.appears(within: 10))
+        if app.descendants(matching: .any)["details.card"].firstMatch.exists {
+            app.buttons["controls.toggle"].tap()
+            XCTAssertTrue(app.descendants(matching: .any)["details.card"].firstMatch.disappears(within: 10), "The card folds")
+        }
+        let zoomIn = app.buttons["Zoom in"]
+        XCTAssertTrue(zoomIn.appears(within: 10))
+        XCTAssertTrue(zoomIn.becomesHittable(within: 10), "\(zoomIn) is covered: \(zoomIn.frame)")
+        build.waitUntilSettled()
+        let foot = build.frame.maxY + 4
+        XCTAssertLessThan(abs(zoomIn.frame.maxY - foot), 3, "On the column's line: \(zoomIn.frame) and \(build.frame)")
+    }
+
     /// On an iPad held upright they stand in the map's corner beside the
     /// lines panel, not gone.
     func testTheIPadsButtonsStayBesideThePanelHeldUpright() throws {

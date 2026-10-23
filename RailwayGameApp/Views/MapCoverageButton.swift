@@ -35,7 +35,6 @@ struct MapCoverageButton: View {
         )))
         .accessibilityAddTraits(isOn ? .isSelected : [])
         .accessibilityIdentifier("map.coverageShortcut")
-        .padding(.vertical, compactReach == nil ? 12 : 0)
     }
 }
 

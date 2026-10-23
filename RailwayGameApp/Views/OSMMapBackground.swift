@@ -156,7 +156,7 @@ final class FollowingMapLibreView: MLNMapView {
         // map is, and the attribution button lists its sources.
         logoView.isHidden = true
         attributionButtonPosition = .bottomRight
-        attributionButtonMargins = CGPoint(x: 10, y: 6)
+        attributionButtonMargins = CGPoint(x: HUDMargins.edge, y: 6)
         // The game's camera places the map, not the safe area.
         automaticallyAdjustsContentInset = false
         contentInset = .zero
@@ -257,7 +257,8 @@ final class FollowingMapLibreView: MLNMapView {
     /// the camera housing either way.
     private func placeAttributionButton() {
         let margins = CGPoint(
-            x: 10 + max(0, screenSafeArea.trailing - safeAreaInsets.right),
+            // Decision 382: on the trailing line of the map's buttons.
+            x: HUDMargins.edge + max(0, screenSafeArea.trailing - safeAreaInsets.right),
             y: 6 + max(0, screenSafeArea.bottom - safeAreaInsets.bottom)
         )
         if attributionButtonMargins != margins {
@@ -528,7 +529,7 @@ final class FollowingMapLibreView: MLNMapView {
         let height = size.height + 2
         let bottom = bounds.height - 6 - safe.bottom
         credit.place(
-            text: CGRect(x: 10 + safe.leading, y: bottom - height, width: max(0, width), height: height),
+            text: CGRect(x: HUDMargins.edge + safe.leading, y: bottom - height, width: max(0, width), height: height),
             bandTop: bottom - AppleMapBackground.attributionHeight + 6,
             bandBottom: bottom + 6
         )

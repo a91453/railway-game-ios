@@ -634,7 +634,9 @@ struct ContentView: View {
         }
     }
 
-    private static let margin: CGFloat = 10
+    /// Decision 382: one inset inside the safe area for everything floating
+    /// over the map (``HUDMargins``), and the gap between them.
+    private static let margin = CGFloat(HUDMargins.edge)
 
     private var map: some View {
         MapView(session: session, camera: $mapCamera)
