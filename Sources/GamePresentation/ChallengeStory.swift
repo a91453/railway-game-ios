@@ -3,8 +3,10 @@ import GameCore
 // A challenge's story after its opening words (decision 387): a few
 // characters who speak, one line each, at the moments of the challenge the
 // world can already tell (a day of it, its festival, a year's closing, the
-// first day in profit, the first midnight in the red, the riders' goal met,
-// how it ended). Data only: a challenge's script is a list of
+// first day in profit, the first midnight in the red, a milestone reached,
+// a share of the riders' goal first carried, the riders' goal met, how it
+// ended), some only after another (a beat told, a milestone reached). Data
+// only: a challenge's script is a list of
 // ``StoryBeat``s, and the triggers are worked out from the world as it
 // stands, so nothing is saved and GameCore does not change. The app tells a
 // beat when it sees its day begin (``StoryTeller``), so a loaded game does
@@ -22,6 +24,22 @@ public enum StoryCharacter: String, CaseIterable, Hashable, Sendable {
     /// Mia (Pingxi): a backpacker from Melbourne, in Taiwan for the
     /// lanterns.
     case mia
+    /// Ah-Shui (Liu Mingchuan): a soldier turned foreman of a track gang,
+    /// digging Shiqiuling from both ends.
+    case ahShui
+    /// Mr Walsh (Liu Mingchuan): Henry Walsh, the British driver of
+    /// Teng-Yun.
+    case walsh
+    /// Manager Ye (Liu Mingchuan): who keeps a tea house at Twatutia.
+    case ye
+    /// Master Lin (Jiji): who sawed timber in Checheng's mill when young.
+    case lin
+    /// Xiulan (Jiji): who keeps a shop by Jiji station, and saw it lean
+    /// after the 921 earthquake and rise again.
+    case xiulan
+    /// Ah-Kun's letters (Jiji): a worker on the Sun Moon Lake works in the
+    /// 1920s, who never appears; his letters to his mother do.
+    case ahKun
 
     public func name(in language: DisplayLanguage) -> String {
         switch self {
@@ -29,6 +47,12 @@ public enum StoryCharacter: String, CaseIterable, Hashable, Sendable {
         case .ahSong: language.text("Uncle Song", "阿松伯")
         case .xiaoWei: language.text("Xiaowei", "小葳")
         case .mia: language.text("Mia", "Mia")
+        case .ahShui: language.text("Ah-Shui", "阿水")
+        case .walsh: language.text("Mr Walsh", "華師傅")
+        case .ye: language.text("Manager Ye", "葉掌櫃")
+        case .lin: language.text("Master Lin", "林師傅")
+        case .xiulan: language.text("Xiulan", "秀蘭")
+        case .ahKun: language.text("Ah-Kun's letter home", "阿坤的家書")
         }
     }
 
@@ -40,6 +64,12 @@ public enum StoryCharacter: String, CaseIterable, Hashable, Sendable {
         case .ahSong: "StoryAhSong"
         case .xiaoWei: "StoryXiaoWei"
         case .mia: "StoryMia"
+        case .ahShui: "StoryAhShui"
+        case .walsh: "StoryWalsh"
+        case .ye: "StoryYe"
+        case .lin: "StoryLin"
+        case .xiulan: "StoryXiulan"
+        case .ahKun: "StoryAhKunLetter"
         }
     }
 }
@@ -64,6 +94,12 @@ public enum StoryMoment: Hashable, Sendable {
     case cashBelowZero
     /// The riders' goal was met at the last midnight.
     case ridersGoalMet
+    /// The challenge's goal `index` (a milestone, decision 153) was met at
+    /// the last midnight.
+    case milestone(Int)
+    /// The day that ended at the last midnight carried `percent`% of the
+    /// riders' goal, the first day of the challenge that did.
+    case riders(percent: Int64)
     /// The challenge was completed with `rating` at the last midnight.
     case completed(ScenarioRating)
     /// The challenge was lost at the last midnight.
@@ -76,6 +112,52 @@ public enum StoryMoment: Hashable, Sendable {
         default: false
         }
     }
+
+    /// Whether it comes back (every year, every time the cash goes red), or
+    /// is how it ended: what can come only once has a day of its own
+    /// (``StoryMoment/day(of:in:today:)``).
+    var recurs: Bool {
+        switch self {
+        case .festivalAnnounced, .festivalBegins, .festivalOver, .yearClosed, .cashBelowZero, .completed, .failed: true
+        case .day, .firstProfitableDay, .ridersGoalMet, .milestone, .riders: false
+        }
+    }
+}
+
+/// What a beat waits for (decision 387): a beat of its story told first
+/// (Ah-Kun's letters, in order), or a milestone reached (Jiji's station
+/// spoken of only once the line reaches it). The beat is then told on the
+/// later of its own day and that one's.
+public enum StoryPrerequisite: Hashable, Sendable {
+    /// The beat `id`, which comes only once.
+    case beat(String)
+    /// The challenge's goal `index`.
+    case milestone(Int)
+}
+
+/// The station master's word a beat says too, in one card (decision 387):
+/// the story's line over it, rather than the two apart.
+public enum StoryAdvice: Hashable, Sendable {
+    /// The festival to come (decision 90).
+    case festival
+    /// A steam train too short to pay (decision 153).
+    case shortSteamTrains
+    /// The challenge's first words: its line says them already, so the card
+    /// only stands for them.
+    case welcome
+    /// Cash below zero: its line says what to do, so the card only stands
+    /// for the station master's word.
+    case debt
+    /// A station full or crowded.
+    case crowding
+
+    /// Whether the card shows the station master's word under the line.
+    var showsLine: Bool {
+        switch self {
+        case .festival, .shortSteamTrains, .crowding: true
+        case .welcome, .debt: false
+        }
+    }
 }
 
 /// A line of a challenge's story: when, who and what.
@@ -86,28 +168,46 @@ public struct StoryBeat: Hashable, Sendable {
     public let speaker: StoryCharacter
     let english: String
     let chinese: String
-    /// Decision 387: the beat says the station master's word on the
-    /// festival to come too (``StationMasterAdvice/festivalComing(days:stations:percent:)``),
-    /// as the line under it, in one card.
-    public let carriesFestivalAdvice: Bool
+    /// The station master's word the beat says too, if any.
+    public let carries: StoryAdvice?
+    /// What it waits for, if anything; only a beat whose moment comes once
+    /// waits.
+    public let after: StoryPrerequisite?
 
-    init(_ id: String, _ moment: StoryMoment, _ speaker: StoryCharacter, _ english: String, _ chinese: String, carriesFestivalAdvice: Bool = false) {
+    init(
+        _ id: String, _ moment: StoryMoment, _ speaker: StoryCharacter, _ english: String, _ chinese: String,
+        carries: StoryAdvice? = nil, after: StoryPrerequisite? = nil
+    ) {
+        precondition(after == nil || !moment.recurs, "Only a beat that comes once waits: \(id)")
         self.id = id
         self.moment = moment
         self.speaker = speaker
         self.english = english
         self.chinese = chinese
-        self.carriesFestivalAdvice = carriesFestivalAdvice
+        self.carries = carries
+        self.after = after
     }
 
     public func text(in language: DisplayLanguage) -> String {
         language.text(english, chinese)
     }
 
-    /// The station master's line under the story's, if it carries one and
-    /// it applies in `world`.
+    /// The station master's word the beat stands for, if it carries one
+    /// and it applies in `world`: kept from being said again apart.
     public func advice(in world: GameWorld) -> StationMasterAdvice? {
-        carriesFestivalAdvice ? StationMasterAdvice.festival(in: world) : nil
+        switch carries {
+        case .festival?: StationMasterAdvice.festival(in: world)
+        case .shortSteamTrains?: StationMasterAdvice.shortSteamTrains(in: world)
+        case .welcome?: StationMasterAdvice.welcome(in: world)
+        case .debt?: StationMasterAdvice.debt(in: world)
+        case .crowding?: StationMasterAdvice.crowding(in: world)
+        case nil: nil
+        }
+    }
+
+    /// The line under the story's on the card, if any.
+    public func adviceLine(in world: GameWorld) -> StationMasterAdvice? {
+        carries?.showsLine == true ? advice(in: world) : nil
     }
 }
 
@@ -118,24 +218,49 @@ public struct ChallengeStory: Sendable {
     let beats: [StoryBeat]
 
     /// Every challenge's story there is.
-    static let all: [ChallengeStory] = [PingxiChallenge.story]
+    static let all: [ChallengeStory] = [PingxiChallenge.story, LiuMingchuanChallenge.story, BranchLineChallenge.jijiStory]
 
     /// The story of the challenge `id`, if it has one.
     public static func named(_ id: String) -> ChallengeStory? {
         all.first { $0.challengeID == id }
     }
 
-    /// The beats said at `moments`, in the script's order; how it ended,
-    /// when it did, alone.
-    func beats(at moments: [StoryMoment]) -> [StoryBeat] {
-        let ending = moments.filter(\.isEnding)
-        let said = ending.isEmpty ? moments : ending
-        return beats.filter { said.contains($0.moment) }
+    /// The beats told on game day `today` in `world`, in the script's
+    /// order: those whose moment comes back and came at the midnight that
+    /// began it, and those that come once and are due that day; how it
+    /// ended, when it did, alone.
+    func beats(on today: Int64, in world: GameWorld) -> [StoryBeat] {
+        let moments = StoryMoment.moments(in: world, today: today)
+        if let ending = moments.first(where: \.isEnding) {
+            return beats.filter { $0.moment == ending }
+        }
+        return beats.filter { beat in
+            beat.moment.recurs ? moments.contains(beat.moment) : day(of: beat, in: world, today: today) == today
+        }
+    }
+
+    /// The day the beat that comes once is told, as `world` stands on
+    /// game day `today`: the day its moment began, or the later day its
+    /// prerequisite's did; `nil` while either is to come or cannot be
+    /// told.
+    func day(of beat: StoryBeat, in world: GameWorld, today: Int64) -> Int64? {
+        guard let own = StoryMoment.day(of: beat.moment, in: world, today: today) else { return nil }
+        switch beat.after {
+        case nil:
+            return own
+        case .milestone(let goal)?:
+            guard let achieved = world.scenario?.achieved, achieved.indices.contains(goal), let met = achieved[goal] else { return nil }
+            return max(own, met + 1)
+        case .beat(let id)?:
+            guard let first = beats.first(where: { $0.id == id }), first.id != beat.id,
+                  let before = day(of: first, in: world, today: today) else { return nil }
+            return max(own, before)
+        }
     }
 
     /// The beats of the day that began at the last midnight in `world`.
     public func beatsToday(in world: GameWorld) -> [StoryBeat] {
-        beats(at: StoryMoment.moments(in: world, today: world.clock.now.seconds / GameTime.secondsPerDay))
+        beats(on: world.clock.now.seconds / GameTime.secondsPerDay, in: world)
     }
 
     /// How the challenge played in `world` ended, in its story's words, or
@@ -151,12 +276,13 @@ public struct ChallengeStory: Sendable {
 }
 
 extension StoryMoment {
-    /// The moments of game day `today` in `world`'s challenge: what happened
-    /// at the midnight that began it.
+    /// The moments that come back of game day `today` in `world`'s
+    /// challenge, and how it ended: what happened at the midnight that
+    /// began it.
     static func moments(in world: GameWorld, today: Int64) -> [StoryMoment] {
         guard let state = world.scenario, today > state.startDay else { return [] }
         let yesterday = today - 1
-        var moments: [StoryMoment] = [.day(state.elapsedDays(through: today))]
+        var moments: [StoryMoment] = []
         // Decision 90: a festival starts on day `dayOfYear` of a year,
         // announced `notice` days before, only after the challenge began,
         // at a station still standing, while demand events run
@@ -171,29 +297,45 @@ extension StoryMoment {
         if festivals.contains(where: { isFestivalStart(today - $0.days, $0) }) { moments.append(.festivalOver) }
         // A year closes at the midnight that ends its last day (decision
         // 86): one that ran since the challenge began.
-        if today % year == 0, today > state.startDay,
-           world.accounts.years.contains(where: { $0.year == today / year - 1 }) {
+        if today % year == 0, world.accounts.years.contains(where: { $0.year == today / year - 1 }) {
             moments.append(.yearClosed)
         }
-        // The first day in profit: only while every day of the challenge is
-        // still in the accounts (``CompanyAccounts/keptDays``).
-        let profit = { (day: DayAccount) in StationMasterAdvice.operatingResult(on: day) > .zero }
-        if yesterday >= state.startDay, yesterday - state.startDay < Int64(CompanyAccounts.keptDays) - 1,
-           let last = world.accounts.days.first(where: { $0.day == yesterday }), profit(last),
-           !world.accounts.days.contains(where: { $0.day >= state.startDay && $0.day < yesterday && profit($0) }) {
-            moments.append(.firstProfitableDay)
-        }
         if state.outcome == nil, state.insolventDays == 1 { moments.append(.cashBelowZero) }
-        if let riders = state.scenario.goals.firstIndex(where: { if case .dailyRiders = $0 { true } else { false } }),
-           state.achieved[riders] == yesterday {
-            moments.append(.ridersGoalMet)
-        }
         switch state.outcome {
         case .completed(let day, let rating)? where day == yesterday: moments.append(.completed(rating))
         case .failed(let day, _)? where day == yesterday: moments.append(.failed)
         default: break
         }
         return moments
+    }
+
+    /// The day the moment that comes once began (the day after it
+    /// happened), as `world` stands on game day `today`: `nil` while it is
+    /// to come, or when it can no longer be told. Never the day the
+    /// challenge started.
+    static func day(of moment: StoryMoment, in world: GameWorld, today: Int64) -> Int64? {
+        guard let state = world.scenario else { return nil }
+        let goals = state.scenario.goals
+        let ridersGoal = goals.firstIndex { if case .dailyRiders = $0 { true } else { false } }
+        // What the days' accounts tell: only while every day of the
+        // challenge is still in them (``CompanyAccounts/keptDays``).
+        let firstDay = { (counts: (DayAccount) -> Bool) -> Int64? in
+            guard today - 1 - state.startDay < Int64(CompanyAccounts.keptDays) - 1 else { return nil }
+            return world.accounts.days.first { $0.day >= state.startDay && counts($0) }.map { $0.day + 1 }
+        }
+        let day: Int64? = switch moment {
+        case .day(let n): state.startDay + n - 1
+        case .milestone(let goal): goals.indices.contains(goal) ? state.achieved[goal].map { $0 + 1 } : nil
+        case .ridersGoalMet: ridersGoal.flatMap { state.achieved[$0] }.map { $0 + 1 }
+        case .riders(let percent):
+            ridersGoal.flatMap { index -> Int64? in
+                guard case .dailyRiders(let target) = goals[index] else { return nil }
+                return firstDay { $0.fareTrips * 100 >= target * percent }
+            }
+        case .firstProfitableDay: firstDay { StationMasterAdvice.operatingResult(on: $0) > .zero }
+        case .festivalAnnounced, .festivalBegins, .festivalOver, .yearClosed, .cashBelowZero, .completed, .failed: nil
+        }
+        return day.flatMap { $0 > state.startDay ? $0 : nil }
     }
 }
 

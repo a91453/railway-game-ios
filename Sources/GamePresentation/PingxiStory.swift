@@ -42,7 +42,7 @@ extension PingxiChallenge {
             "pingxi.4", .festivalAnnounced, .stationMaster,
             "The Sky Lantern Festival is next week, and Shifen and Pingxi will be packed. The railway always added trains for it and turned some back at Shifen, so let's get extra trains ready while there's still time.",
             "下週就是天燈節，十分和平溪會擠滿人。以前每到這時候，鐵路局都會加開班次，還讓一部分列車只開到十分就折返，我們也趁現在多準備幾班車吧。",
-            carriesFestivalAdvice: true
+            carries: .festival
         ),
         StoryBeat(
             "pingxi.5", .festivalBegins, .mia,
@@ -67,7 +67,8 @@ extension PingxiChallenge {
         StoryBeat(
             "pingxi.9", .cashBelowZero, .stationMaster,
             "We're out of money, and if this goes on the company will go bankrupt. Cut the trains that run empty, then take a hard look at fares and costs.",
-            "帳上已經沒錢了，再這樣下去公司會破產。先把空車的班次減掉，再把票價和開支重新看一遍。"
+            "帳上已經沒錢了，再這樣下去公司會破產。先把空車的班次減掉，再把票價和開支重新看一遍。",
+            carries: .debt
         ),
         StoryBeat(
             "pingxi.10", .yearClosed, .ahSong,

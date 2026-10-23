@@ -27,7 +27,7 @@ final class ChallengeStoryTests: XCTestCase {
     }
 
     private func ids(_ world: GameWorld, today: Int64) -> [String] {
-        PingxiChallenge.story.beats(at: StoryMoment.moments(in: world, today: today)).map(\.id)
+        PingxiChallenge.story.beats(on: today, in: world).map(\.id)
     }
 
     func testThePingxiScriptHasItsTenBeatsAndFourEndings() {
@@ -39,10 +39,9 @@ final class ChallengeStoryTests: XCTestCase {
             XCTAssertFalse(beat.text(in: .english).isEmpty)
             XCTAssertFalse(beat.text(in: .traditionalChinese).isEmpty)
         }
-        XCTAssertEqual(beats.filter(\.carriesFestivalAdvice).map(\.id), ["pingxi.4"])
-        XCTAssertEqual(Set(beats.map(\.speaker)), Set(StoryCharacter.allCases))
+        XCTAssertEqual(beats.filter { $0.carries == .festival }.map(\.id), ["pingxi.4"])
+        XCTAssertEqual(Set(beats.map(\.speaker)), [.stationMaster, .ahSong, .xiaoWei, .mia])
         XCTAssertNotNil(ChallengeStory.named("history.pingxi"))
-        XCTAssertNil(ChallengeStory.named("history.liuMingchuan"), "its script has not come yet")
     }
 
     func testTheDaysOfTheChallenge() throws {
@@ -159,6 +158,10 @@ final class ChallengeStoryTests: XCTestCase {
         XCTAssertEqual(StoryCharacter.ahSong.name(in: .traditionalChinese), "阿松伯")
         XCTAssertEqual(StoryCharacter.xiaoWei.name(in: .english), "Xiaowei")
         XCTAssertNil(StoryCharacter.stationMaster.portrait)
-        XCTAssertEqual(StoryCharacter.allCases.compactMap(\.portrait), ["StoryAhSong", "StoryXiaoWei", "StoryMia"])
+        XCTAssertEqual(StoryCharacter.ahKun.name(in: .traditionalChinese), "阿坤的家書")
+        XCTAssertEqual(
+            StoryCharacter.allCases.compactMap(\.portrait),
+            ["StoryAhSong", "StoryXiaoWei", "StoryMia", "StoryAhShui", "StoryWalsh", "StoryYe", "StoryLin", "StoryXiulan", "StoryAhKunLetter"]
+        )
     }
 }

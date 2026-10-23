@@ -158,7 +158,9 @@ public enum LiuMingchuanChallenge {
         case 0: language.text("Through Shiqiuling! Trains from Keelung reach Badu.", "獅球嶺打通了！基隆的列車開得到八堵了。")
         case 1: language.text("Keelung to Twatutia is open, as in 1891!", "基隆到大稻埕通車了，就像 1891 年！")
         case 2: language.text("Over the Tamsui! The way to Taoyuan is open.", "跨過淡水河了！往桃仔園的路通了。")
-        default: language.text("On to Hsinchu! The railway Governor Liu planned is done, as in 1893.", "通車到新竹了！劉銘傳規劃的鐵路完成了，就像 1893 年。")
+        // Decision 387: Liu meant it to reach Tainan; Hsinchu is as far as
+        // the Qing railway got.
+        default: language.text("On to Hsinchu! This is as far as the Qing railway reached, as in 1893.", "通車到新竹了！清代的鐵路就鋪到這裡，就像 1893 年。")
         }
     }
 

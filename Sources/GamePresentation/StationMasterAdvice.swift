@@ -181,8 +181,8 @@ public enum StationMasterAdvice: Hashable, Sendable {
             self = losing
             return
         }
-        if world.accounts.mode == .management, world.economy.showsInTheRed {
-            self = Self.isShortRailway(world) ? .inDebtShortLine(hint: Self.extensionHint(in: world)) : .inDebt
+        if let debt = Self.debt(in: world) {
+            self = debt
             return
         }
         if let typhoon = Self.typhoon(in: world) {
@@ -260,7 +260,7 @@ public enum StationMasterAdvice: Hashable, Sendable {
     /// money yesterday (``lostMoney(on:)``) or is in the red. A freight
     /// line's train carries goods, not 50 people a car (decision 155), so
     /// its cars are not why.
-    private static func shortSteamTrains(in world: GameWorld) -> StationMasterAdvice? {
+    static func shortSteamTrains(in world: GameWorld) -> StationMasterAdvice? {
         guard world.accounts.mode == .management, world.scenario?.scenario.trainTypes?.contains(.steam) == true else { return nil }
         let yesterday = world.clock.now.seconds / GameTime.secondsPerDay - 1
         let day = world.accounts.days.first { $0.day == yesterday }
@@ -271,6 +271,26 @@ public enum StationMasterAdvice: Hashable, Sendable {
                 world.train(id: id).map { $0.type == .steam && $0.cars < shortSteamCars } ?? false
             }
             if short { return .shortSteamTrains(line: line.id, name: line.name) }
+        }
+        return nil
+    }
+
+    /// A managed company's cash below zero: on a short railway, extend it.
+    static func debt(in world: GameWorld) -> StationMasterAdvice? {
+        guard world.accounts.mode == .management, world.economy.showsInTheRed else { return nil }
+        return isShortRailway(world) ? .inDebtShortLine(hint: extensionHint(in: world)) : .inDebt
+    }
+
+    /// Decision 387: the first station full, else the first crowded, as
+    /// the advice has them.
+    static func crowding(in world: GameWorld) -> StationMasterAdvice? {
+        let alerts = world.mapAlerts()
+        let name = { (id: StationID) in world.station(id: id)?.name ?? "" }
+        if let full = alerts.first(where: { if case .full = $0.kind { true } else { false } }), let station = full.station {
+            return .stationFull(station: station, name: name(station))
+        }
+        if let crowded = alerts.first(where: { if case .crowded = $0.kind { true } else { false } }), let station = crowded.station {
+            return .stationCrowded(station: station, name: name(station))
         }
         return nil
     }
@@ -350,7 +370,7 @@ public enum StationMasterAdvice: Hashable, Sendable {
     }
 
     /// Decision 153: the playing scenario's first words, if it has them.
-    private static func welcome(in world: GameWorld) -> StationMasterAdvice? {
+    static func welcome(in world: GameWorld) -> StationMasterAdvice? {
         guard let state = world.scenario, state.outcome == nil,
               [Challenge.liuMingchuan.id, Challenge.pingxi.id].contains(state.scenario.id) || BranchLineChallenge.named(state.scenario.id) != nil
         else { return nil }
