@@ -646,6 +646,15 @@ def picked_storeys(table, group, density, size, metres, x, y):
     return high if guess >= middle + 1 else low if guess <= middle - 1 else middle
 
 
+def permit_fits(storeys, size):
+    """Whether a permit's storeys can be this footprint's (decision 389):
+    a permit's polygon is the whole site, so its tower's count also lands
+    on the podium, the station hall or a shed beside it. Not over Taipei
+    101's 101, not over eight times as tall as the footprint is across,
+    and no tower of 20 or more on a footprint over 5,000 m²."""
+    return storeys <= 101 and storeys * LEVEL_HEIGHT <= 8 * math.sqrt(size) and not (storeys >= 20 and size > 5000)
+
+
 def storeys(extract_path, population_path, heights_path, ghsl_dir, taichung, taipei, out):
     """Every building's storeys and where they came from (decision 386's
     point 6), for `build`."""
@@ -677,7 +686,7 @@ def storeys(extract_path, population_path, heights_path, ghsl_dir, taichung, tai
             value, origin = city[id_], STOREYS_FROM.index('cityMap')
         elif tagged:
             value, origin = tagged, STOREYS_FROM.index('tags')
-        elif id_ in permits:
+        elif id_ in permits and permit_fits(permits[id_], size):
             value, origin = permits[id_], STOREYS_FROM.index('permits')
         else:
             value = picked_storeys(table, group_of(subtype), density(lon, lat), size, ghsl(lon, lat),

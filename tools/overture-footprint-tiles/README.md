@@ -12,7 +12,7 @@
 - App 的 `RailwayGameApp/Resources/RealWorld/taiwan_population.json`（WorldPop，CC BY 4.0），`heights`、`storeys` 與 `window` 用。
 - `storeys` 的樓高來源（只在建檔時讀，都不打包；下載點與欄位在報告 §8）：
   - 臺中市建物圖 114 年版（data.gov.tw 158889，全市 29 區，7z）、113 年版（152106，19 區，RAR）、111 年版（162900，原臺中市，zip）；欄位 `B1D` 是樓層。
-  - 臺北市建築執照套繪圖（151936，zip）。
+  - 臺北市建築執照套繪圖（151936，zip）。一張建照的基地常蓋住裙樓與塔樓，所以只在合理時用（`permit_fits`：101 層以下、樓高不超過足跡邊長的 8 倍、20 層以上的足跡不超過 5,000 m²）。
   - GHS-BUILT-H ANBH R2023A 的 R6_C30、R7_C30 兩塊 GeoTIFF（`tiff.py` 讀）。
 - 解 113、114 年版的壓縮檔用 libarchive 的 `bsdtar`（BSD 授權；作者 2026-10-23 同意，只用在這個工具，不進 App）。macOS 內建；Linux 是 `apt-get install libarchive-tools`。檔名是 UTF-8，在沒有 UTF-8 locale 的環境要加 `LC_ALL=C.UTF-8`：
 
