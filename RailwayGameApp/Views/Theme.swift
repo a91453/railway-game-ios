@@ -179,13 +179,17 @@ extension View {
         #if DEBUG
         if UITestTrace.isOn {
             background {
-                Text(verbatim: identifier)
-                    .font(.system(size: 1))
-                    .foregroundStyle(.clear)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .allowsHitTesting(false)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityIdentifier(identifier)
+                // A container combined is as big as itself; a text alone
+                // would be as big as its letters.
+                ZStack {
+                    Color.clear
+                    Text(verbatim: identifier)
+                        .font(.system(size: 1))
+                        .foregroundStyle(.clear)
+                }
+                .allowsHitTesting(false)
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier(identifier)
             }
         } else {
             self
