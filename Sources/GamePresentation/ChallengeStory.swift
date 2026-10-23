@@ -40,6 +40,15 @@ public enum StoryCharacter: String, CaseIterable, Hashable, Sendable {
     /// Ah-Kun's letters (Jiji): a worker on the Sun Moon Lake works in the
     /// 1920s, who never appears; his letters to his mother do.
     case ahKun
+    /// Mr Chou (the sandbox challenges): the young founder of the company,
+    /// who keeps a close eye on its books.
+    case chou
+    /// Fang (the sandbox challenges): a reporter on the local paper, keen
+    /// to break every story first.
+    case fang
+    /// Mayor Chen (the sandbox challenges): mayor for twenty years, now
+    /// retired, who remembers when there were only rice paddies and buses.
+    case mayorChen
 
     public func name(in language: DisplayLanguage) -> String {
         switch self {
@@ -53,6 +62,9 @@ public enum StoryCharacter: String, CaseIterable, Hashable, Sendable {
         case .lin: language.text("Master Lin", "林師傅")
         case .xiulan: language.text("Xiulan", "秀蘭")
         case .ahKun: language.text("Ah-Kun's letter home", "阿坤的家書")
+        case .chou: language.text("Mr Chou", "周老闆")
+        case .fang: language.text("Fang", "阿芳")
+        case .mayorChen: language.text("Mayor Chen", "陳鎮長")
         }
     }
 
@@ -70,6 +82,9 @@ public enum StoryCharacter: String, CaseIterable, Hashable, Sendable {
         case .lin: "StoryLin"
         case .xiulan: "StoryXiulan"
         case .ahKun: "StoryAhKunLetter"
+        case .chou: "StoryChou"
+        case .fang: "StoryFang"
+        case .mayorChen: "StoryMayorChen"
         }
     }
 }
@@ -100,6 +115,12 @@ public enum StoryMoment: Hashable, Sendable {
     /// The day that ended at the last midnight carried `percent`% of the
     /// riders' goal, the first day of the challenge that did.
     case riders(percent: Int64)
+    /// The challenge's goal `goal` stood at `percent`% or more (as the
+    /// goals panel's bar has it) when the day began, the first day the
+    /// story's teller saw it so: population, high-rises, profit or worth
+    /// keep no past to tell the day it got there from, so only a teller
+    /// that saw the day before can (``StoryTeller``).
+    case progress(goal: Int, percent: Int64)
     /// The challenge was completed with `rating` at the last midnight.
     case completed(ScenarioRating)
     /// The challenge was lost at the last midnight.
@@ -119,7 +140,7 @@ public enum StoryMoment: Hashable, Sendable {
     var recurs: Bool {
         switch self {
         case .festivalAnnounced, .festivalBegins, .festivalOver, .yearClosed, .cashBelowZero, .completed, .failed: true
-        case .day, .firstProfitableDay, .ridersGoalMet, .milestone, .riders: false
+        case .day, .firstProfitableDay, .ridersGoalMet, .milestone, .riders, .progress: false
         }
     }
 }
@@ -218,7 +239,7 @@ public struct ChallengeStory: Sendable {
     let beats: [StoryBeat]
 
     /// Every challenge's story there is.
-    static let all: [ChallengeStory] = [PingxiChallenge.story, LiuMingchuanChallenge.story, BranchLineChallenge.jijiStory]
+    static let all: [ChallengeStory] = [PingxiChallenge.story, LiuMingchuanChallenge.story, BranchLineChallenge.jijiStory] + Challenge.sandboxStories
 
     /// The story of the challenge `id`, if it has one.
     public static func named(_ id: String) -> ChallengeStory? {
@@ -256,6 +277,37 @@ public struct ChallengeStory: Sendable {
                   let before = day(of: first, in: world, today: today) else { return nil }
             return max(own, before)
         }
+    }
+
+    /// The beats waiting on a goal's progress (``StoryMoment/progress(goal:percent:)``)
+    /// whose goal stands at their mark in `world` on game day `today` and
+    /// whose prerequisite is met, in the script's order, but for those in
+    /// `seen`, which takes them in: the beats a teller looking at this day
+    /// has not seen due before. None once the challenge is over.
+    func progressBeats(in world: GameWorld, today: Int64, seen: inout Set<String>) -> [StoryBeat] {
+        guard let state = world.scenario, state.outcome == nil else { return [] }
+        let fractions = world.goalProgress(in: .english).map(\.fraction)
+        var due: [StoryBeat] = []
+        for beat in beats where !seen.contains(beat.id) {
+            guard case .progress(let goal, let percent) = beat.moment, fractions.indices.contains(goal),
+                  fractions[goal] * 100 >= Double(percent) else { continue }
+            switch beat.after {
+            case nil:
+                break
+            case .milestone(let goal)?:
+                guard state.achieved.indices.contains(goal), let met = state.achieved[goal], met + 1 <= today else { continue }
+            case .beat(let id)?:
+                guard let first = beats.first(where: { $0.id == id }) else { continue }
+                if case .progress = first.moment {
+                    guard seen.contains(id) else { continue }
+                } else {
+                    guard let before = day(of: first, in: world, today: today), before <= today else { continue }
+                }
+            }
+            seen.insert(beat.id)
+            due.append(beat)
+        }
+        return due
     }
 
     /// The beats of the day that began at the last midnight in `world`.
@@ -333,7 +385,7 @@ extension StoryMoment {
                 return firstDay { $0.fareTrips * 100 >= target * percent }
             }
         case .firstProfitableDay: firstDay { StationMasterAdvice.operatingResult(on: $0) > .zero }
-        case .festivalAnnounced, .festivalBegins, .festivalOver, .yearClosed, .cashBelowZero, .completed, .failed: nil
+        case .progress, .festivalAnnounced, .festivalBegins, .festivalOver, .yearClosed, .cashBelowZero, .completed, .failed: nil
         }
         return day.flatMap { $0 > state.startDay ? $0 : nil }
     }
@@ -346,6 +398,9 @@ extension StoryMoment {
 /// a new game is a new teller.
 public struct StoryTeller: Sendable {
     private var lastDay: Int64?
+    /// The beats waiting on a goal's progress it has seen due, told or not
+    /// (those due on the day it first looked at are not told).
+    private var seen: Set<String> = []
 
     public init() {}
 
@@ -353,8 +408,13 @@ public struct StoryTeller: Sendable {
     public mutating func look(at world: GameWorld) -> [StoryBeat] {
         let today = world.clock.now.seconds / GameTime.secondsPerDay
         defer { lastDay = today }
-        guard let lastDay, today > lastDay,
+        let isNewDay = lastDay.map { today > $0 } ?? false
+        guard lastDay == nil || isNewDay,
               let story = world.scenario.flatMap({ ChallengeStory.named($0.scenario.id) }) else { return [] }
-        return story.beatsToday(in: world)
+        let progress = story.progressBeats(in: world, today: today, seen: &seen)
+        // The day it first looks at is noted, not told.
+        guard isNewDay else { return [] }
+        let told = Set((story.beatsToday(in: world) + progress).map(\.id))
+        return story.beats.filter { told.contains($0.id) }
     }
 }

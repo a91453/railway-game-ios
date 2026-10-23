@@ -161,7 +161,7 @@ final class ChallengeStoryTests: XCTestCase {
         XCTAssertEqual(StoryCharacter.ahKun.name(in: .traditionalChinese), "阿坤的家書")
         XCTAssertEqual(
             StoryCharacter.allCases.compactMap(\.portrait),
-            ["StoryAhSong", "StoryXiaoWei", "StoryMia", "StoryAhShui", "StoryWalsh", "StoryYe", "StoryLin", "StoryXiulan", "StoryAhKunLetter"]
+            ["StoryAhSong", "StoryXiaoWei", "StoryMia", "StoryAhShui", "StoryWalsh", "StoryYe", "StoryLin", "StoryXiulan", "StoryAhKunLetter", "StoryChou", "StoryFang", "StoryMayorChen"]
         )
     }
 }
