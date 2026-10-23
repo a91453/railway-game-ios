@@ -530,6 +530,9 @@ struct ContentView: View {
                             }
                         }
                     }
+                    // Decision 388: its edges, for the alignment UI test.
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier("hud.tools")
                     // Decision 226: faded while a finger draws under them.
                     .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { screen.toolsFrame = $0 }
                     .opacity(screen.isDrawingUnderTools ? 0.4 : 1)
@@ -805,6 +808,9 @@ private struct StatusPill: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 5)
             .glassBackground(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            // Decision 388: its edges, for the alignment UI test.
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("hud.bar")
     }
 }
 

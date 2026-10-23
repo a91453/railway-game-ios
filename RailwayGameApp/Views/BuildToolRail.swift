@@ -48,6 +48,9 @@ struct BuildToolRail: View {
         }
         .frame(width: Self.width)
         .glassBackground(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        // Decision 388: its edges, for the alignment UI test.
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("hud.rail")
         // Offered only the room between the pill and the dock, from the top.
         .frame(maxHeight: maxHeight, alignment: .top)
     }
