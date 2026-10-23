@@ -75,8 +75,9 @@ extension StationKitBuilder {
             for x: Float in [-2.63,2.63] {
                 box(x,0.86,sign*1.354,1.57,0.018,2.27,ink)
                 for leaf: Float in [-1,1] {
-                    box(x+leaf*0.372,0.90,sign*1.369,0.71,0.012,2.19,steel)
-                    box(x+leaf*0.372,1.91,sign*1.379,0.43,0.008,1.02,glass)
+                    box(x+leaf*0.377,0.90,sign*1.369,0.743,0.012,2.19,Map3DPalette.tankWhite)
+                    box(x+leaf*0.377,0.90,sign*1.379,0.743,0.006,0.23,sand)
+                    box(x+leaf*0.377,1.91,sign*1.380,0.57,0.008,1.11,glass)
                 }
                 box(x,0.86,sign*1.371,1.60,0.06,0.034,white)
             }

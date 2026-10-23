@@ -19,7 +19,7 @@
 | 檢修蓋中心x／高度 | ±4.05／.044 m |
 | 兩節殼間距 | .30 m；各帶半風琴，靜態直線組裝 |
 
-暖白 `shopAwnings[3]` 為主，金砂 `containers[3]` 用於車頭與腰下帶，深藍灰框／門與灰藍玻璃用既有 palette。霧面頂點色，無紅色漆、品牌、照片貼圖。風擋與側窗用封閉薄體，背後65mm內必須有車殼或支承，不接受玻璃與浮空框相互背書。整片底架最低.78m，輪頂.76m，保留20mm展示淨空；架體以中央承板支持。
+暖白 `shopAwnings[3]` 為主，金砂 `containers[3]` 用於車頭與腰下帶，深藍灰細框、淺暖灰門葉（tankWhite）與灰藍玻璃用既有 palette。霧面頂點色，無紅色漆、品牌、照片貼圖。風擋與側窗用封閉薄體，背後65mm內必須有車殼或支承，不接受玻璃與浮空框相互背書。整片底架最低.78m，輪頂.76m，保留20mm展示淨空；架體以中央承板支持。
 
 ## 組裝
 
@@ -69,3 +69,7 @@ python3 tools/four-car-metro/bundle.py OUT ACTUAL_PRODUCER_COMMIT
 公開庫僅配方、工具、測試、文字與一張 overview；完整七件原生／GLB、49七向圖、白模、風格比較、viewer、來源紀錄和ZIP在私庫 `Railway/game-art-previews/docs/art/four-car-metro-2026-10-23/`。初版真實模型另存 `-initial/`，幾何有修訂時用同相機／尺度比較。
 
 技術與外觀結論分開記錄於素材文件。Linux Swift／Blender／WebGL通過不代表真機Metal、效能、動畫或營運接入驗證；受管瀏覽器不支援 file://，單檔以斷網內嵌HTML驗證，OS雙擊未測。
+
+## 作者回報的門板修訂
+
+門位、1.57m開口、門高及雙扇排列不動。改淺暖灰門葉、細中縫、.57×1.11m玻璃，頂齊側窗，腰帶連續。`door-review.mjs OUT DOOR_BEFORE`讀真正上一版native，逐三角證明四車門以外全部相同；同相機生成門局部／整車／斜視前後對照。DOOR_BEFORE可解壓私庫commit3246cad87e867223e60356d4400084832d97ba2a的舊asset-package.zip取得（producer08e50f65）；不能拿本版冒充前版。新增7張門修訂PNG，最終共106張PNG。

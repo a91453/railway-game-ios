@@ -36,9 +36,9 @@ final class Map3DFourCarMetroTests: XCTestCase {
             let model=Map3DFourCarMetro.model(unit)
             for sign: Float in [-1,1] {
                 let panes=model.vertices.filter { colors.contains($0.color) && $0.y*sign>1.36 && $0.ny*sign>0.9 }
-                let doors=panes.filter { abs($0.x)>2 && abs($0.x)<4 }
+                let doors=panes.filter { abs($0.x)>1.8 && abs($0.x)<3.5 }
                 XCTAssertEqual(Set(doors.map { Int(($0.x*1000).rounded()) }).count,8)
-                let windows=panes.filter { abs($0.x)<2 || abs($0.x)>4 }
+                let windows=panes.filter { abs($0.x)<1.8 || abs($0.x)>3.5 }
                 XCTAssertEqual(Set(windows.map { Int(($0.x*1000).rounded()) }).count,6)
             }
             let frontGlass=model.vertices.filter { ($0.color == Map3DFourCarMetro.glass) && abs($0.nx)>0.9 && abs($0.y)<1.1 && $0.z>1.9 }
