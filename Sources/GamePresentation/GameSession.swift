@@ -163,8 +163,9 @@ public final class GameSession {
     /// from off the main actor; `nil` while no map shows them.
     @ObservationIgnored var shownGlide: TrainMotion?
     /// Decision 379: the glide the tick worked out for the world of
-    /// `revision`, from the shown glide seen at `from` (its time).
-    @ObservationIgnored var glideMemo: (revision: Int, from: Double, motion: TrainMotion)?
+    /// `revision`, from a glide of the trains seen in the world of
+    /// revision `from` (its ``TrainMotion/source``).
+    @ObservationIgnored var glideMemo: (revision: Int, from: Int, motion: TrainMotion)?
 
     /// The language of the session's messages and suggested names, and of
     /// the text the app derives from the world (Stage L1). Set once: iOS
@@ -1537,9 +1538,9 @@ public final class GameSession {
         /// Decision 330: the station master's advice for ``world``, when
         /// the step worked it out.
         var advice: WorkedAdvice?
-        /// Decision 379: the map's glide to ``world``, from the glide seen
-        /// at `from`, when the step worked it out.
-        var glide: (from: Double, motion: TrainMotion)?
+        /// Decision 379: the map's glide to ``world``, from the trains seen
+        /// in the world of revision `from`, when the step worked it out.
+        var glide: (from: Int, motion: TrainMotion)?
     }
 
     /// `world` advanced by `ticks`, all or nothing. `listening` (sounds
@@ -1599,7 +1600,11 @@ public final class GameSession {
             ticksRun += Int64(step.ticks)
             if let traffic = step.traffic { trafficMemo = (worldRevision, traffic) }
             // Decision 379: likewise, the map's glide.
-            glideMemo = step.glide.map { (worldRevision, $0.from, $0.motion) }
+            glideMemo = step.glide.map { glide in
+                var motion = glide.motion
+                motion.source = worldRevision
+                return (worldRevision, glide.from, motion)
+            }
             // Decision 330: likewise, for this world only.
             workedAdvice = step.advice.map { (worldRevision, $0) }
             // Game time moved on: no edit before it can be undone. Emptied
@@ -1692,7 +1697,9 @@ public final class GameSession {
                         // Decision 379: the map's glide, tens of ms on the
                         // High Speed Rail at 6000×; its time is given when
                         // it is shown.
-                        step.glide = tick.glide.map { ($0.time, TrainMotion(world: step.world, previous: $0, time: $0.time)) }
+                        step.glide = tick.glide.flatMap { previous in
+                            previous.source.map { ($0, TrainMotion(world: step.world, previous: previous, time: previous.time)) }
+                        }
                         return step
                     }
                 }
@@ -1708,8 +1715,19 @@ public final class GameSession {
             world: world, revision: worldRevision, listening: playSound != nil, train: selectedTrainID, language: language,
             previousTraffic: trafficMemo?.reading,
             advice: AdviceProbe(hour: newsWatch.hour, leader: lineLossLeaderMemo.kept(atRevision: commandRevision)),
-            glide: world.clock.speed == .x1 ? nil : shownGlide
+            glide: world.clock.speed == .x1 ? nil : glideToGoOnFrom
         )
+    }
+
+    /// The glide a tick beginning now goes on from: the one the last tick
+    /// worked out when the map has not shown it yet, or else the one the
+    /// map showed. Review G: a game loop running ticks back to back began
+    /// the next before the map showed the last, from the glide before it,
+    /// so the map worked out every glide but a step's first again here.
+    private var glideToGoOnFrom: TrainMotion? {
+        guard shownGlide != nil else { return nil }
+        if let memo = glideMemo, memo.revision == worldRevision { return memo.motion }
+        return shownGlide
     }
 
     // MARK: - The trains' glide on the map (decision 379)
@@ -1720,12 +1738,13 @@ public final class GameSession {
     /// worked out with the tick off the main actor when the tick glided on
     /// from this same `previous`, or else here.
     public func trainMotion(after previous: TrainMotion, at time: Double) -> TrainMotion {
-        let motion: TrainMotion
-        if let memo = glideMemo, memo.revision == worldRevision, memo.from == previous.time, world.clock.speed != .x1 {
+        var motion: TrainMotion
+        if let memo = glideMemo, memo.revision == worldRevision, memo.from == previous.source, world.clock.speed != .x1 {
             motion = memo.motion.seen(at: time, after: previous, speed: world.clock.speed)
         } else {
             motion = TrainMotion(world: world, previous: previous, time: time)
         }
+        motion.source = worldRevision
         glideMemo = nil
         shownGlide = motion
         return motion

@@ -245,6 +245,47 @@ final class LessonGuideTests: XCTestCase {
         lastStep(session, "time.play") { session.setSpeed(.normal) }
     }
 
+    /// Review G: lessons 6 and 7 taken up again after the app was closed
+    /// at a step that asks for a change to a line (its hours, its headway,
+    /// a stopping pattern, its depot): the change made after resuming
+    /// moves the guide on, as it does in a lesson never left.
+    func testALessonTakenUpAgainMovesOnWithAChangeToALine() throws {
+        let six = GameSession(world: .newGame(lesson: Lesson.all[5]), language: .english)
+        six.keepTutorialToResume(atStep: "lesson.6.hours")
+        six.resumeTutorial()
+        six.linesPanelDidChange(isShown: true)
+        let line = try XCTUnwrap(six.world.lines.first)
+        six.selectLine(line.id)
+        step(six, "lesson.6.hours") { six.setSelectedLineAllDay(line.window != .allDay) }
+        let change = try XCTUnwrap(GameWorld.staffingHeadways.lazy.compactMap { six.world.lineHeadwayChange(line.id, headway: $0) }
+            .first { !$0.isUnchanged && six.world.economy.canAfford($0.cost) })
+        step(six, "lesson.6.headway") { six.changeSelectedLineHeadway(change) }
+        step(six, "lesson.6.pattern") { six.addPatternToSelectedLine(from: 0, to: line.stops.count - 1, express: true) }
+
+        // Lesson 7, closed with its depot built, at the line's depot.
+        let seven = start(7)
+        seven.setSpeed(.paused)
+        step(seven, "lesson.7") { seven.selectTool(.network) }
+        step(seven, "lesson.7.mode") { seven.setNetworkMode(.depot) }
+        var built = false
+        for end in seven.tutorialPlacesToTap where !built {
+            seven.tapNetwork(at: end, reach: Self.reach)
+            guard seven.networkDepotPreview?.problem == nil else { continue }
+            seven.showNextTutorialStep()
+            seven.addDepotYard()
+            built = true
+        }
+        XCTAssertTrue(built, "an end a depot can go at")
+        let resumed = GameSession(world: seven.world, language: .english)
+        resumed.keepTutorialToResume(atStep: "lesson.7.depot")
+        resumed.resumeTutorial()
+        resumed.linesPanelDidChange(isShown: true)
+        let depotLine = try XCTUnwrap(resumed.world.lines.first)
+        resumed.selectLine(depotLine.id)
+        let depot = try XCTUnwrap(resumed.world.depotRow(of: depotLine.id, in: .english)?.choices.first)
+        step(resumed, "lesson.7.depot") { resumed.toggleSelectedLineDepot(depot.station) }
+    }
+
     /// Lesson 8: a freight yard at two stations, through the station
     /// panel, then a freight line between them from the new line's card.
     func testTheEighthLessonsGuide() throws {

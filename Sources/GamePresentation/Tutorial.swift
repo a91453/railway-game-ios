@@ -461,7 +461,7 @@ public struct Tutorial: Hashable, Sendable {
         precondition(steps.indices.contains(index), "resuming needs one of the steps")
         self.steps = steps
         self.index = index
-        whenFirstShown = Dictionary(uniqueKeysWithValues: (0 ... index).map { ($0, Snapshot.nothing) })
+        whenFirstShown = Dictionary(uniqueKeysWithValues: (0 ... index).map { ($0, Snapshot.resumed(over: world)) })
     }
 
     /// The step on screen.
@@ -561,14 +561,22 @@ public struct Tutorial: Hashable, Sendable {
         /// A world with nothing built: everything there is counts as new.
         static let nothing = Snapshot()
 
-        private init() {
+        /// Taking a tutorial up again over `world` (review G): nothing
+        /// built, as ``nothing``, but the lines run as they run now, so a
+        /// goal asking for a change to them (the hours, the headway, a
+        /// stopping pattern, a depot) is met by a change from here.
+        static func resumed(over world: GameWorld) -> Snapshot {
+            Snapshot(services: Dictionary(uniqueKeysWithValues: world.lines.map { ($0.id, LineService($0)) }), serviceDay: world.serviceDay)
+        }
+
+        private init(services: [LineID: LineService] = [:], serviceDay: ServiceDay? = nil) {
             edges = []
             stations = []
             lines = []
             assignedTrains = []
             lastEntry = nil
-            services = [:]
-            serviceDay = nil
+            self.services = services
+            self.serviceDay = serviceDay
             freightYards = []
             buildings = []
             requestsInHand = []

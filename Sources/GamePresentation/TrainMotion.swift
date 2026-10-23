@@ -205,6 +205,10 @@ public struct TrainMotion: Sendable {
     public let time: Double
     public let duration: Double
     let samples: [TrainID: Sample]
+    /// The ``GameSession/worldRevision`` of the world these trains were
+    /// seen in, when a session worked them out: what a glide the tick
+    /// worked out off the main actor went on from (decision 379; review G).
+    var source: Int?
     /// The game second the trains were seen at: `nil` for nothing moving.
     let second: Int64?
 
@@ -312,7 +316,9 @@ public struct TrainMotion: Sendable {
     /// main actor with the tick. Not at 1×, whose glide may go on from
     /// the last one (that init keeps `previous` as it is).
     func seen(at time: Double, after previous: TrainMotion?, speed: GameSpeed) -> TrainMotion {
-        TrainMotion(runs: runs, samples: samples, second: second, time: time, duration: Self.duration(at: time, after: previous, speed: speed))
+        var motion = TrainMotion(runs: runs, samples: samples, second: second, time: time, duration: Self.duration(at: time, after: previous, speed: speed))
+        motion.source = source
+        return motion
     }
 
     /// How far the glide has gone at `time`: 0 at the tick, 1 once it has
