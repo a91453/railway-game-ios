@@ -332,6 +332,8 @@ struct HUDView: View {
             .accessibilityLabel(Text(verbatim: session.language.text("City requests", "委託案")))
             .accessibilityValue(Text(verbatim: session.cityRequestsButtonValue))
             .accessibilityIdentifier("hud.requests")
+            // Decision 376: lesson 10's step points at it.
+            .tutorialTarget(.requestsButton)
         }
     }
 

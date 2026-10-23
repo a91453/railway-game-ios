@@ -694,6 +694,9 @@ struct LinesPanel: View {
                         }
                         .accessibilityAddTraits(choice.isChosen ? .isSelected : [])
                         .accessibilityIdentifier("line.depot.\(choice.station.rawValue)")
+                        // Decision 376: lesson 7's step points at the first.
+                        .tutorialPanelTarget(choice.id == row.choices.first?.id ? .lineDepot : nil)
+                        .id(choice.id == row.choices.first?.id ? AnyHashable(TutorialTarget.lineDepot) : AnyHashable(choice.id))
                     }
                 }
                 if row.inDepot > 0 {

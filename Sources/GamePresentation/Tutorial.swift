@@ -101,12 +101,21 @@ public enum TutorialTarget: String, CaseIterable, Hashable, Sendable {
     case serviceHours = "line.window"
     /// The Add of the lines panel's stopping pattern, under Advanced.
     case addPattern = "line.pattern.add"
+    /// The first depot the selected line can keep its trains at, in the
+    /// lines panel (decision 214), for lesson 7.
+    case lineDepot = "line.depots"
+    /// The station panel's Build Freight Yard (decision 155), for lesson 8.
+    case freightYard = "station.freight.build"
+    /// The building tool's Hotel, for lesson 9.
+    case hotelKind = "building.kind.hotel"
+    /// The status bar's city requests (decision 246), for lesson 10.
+    case requestsButton = "hud.requests"
 
     /// Whether the control is in the details card, which a step pointing
     /// at it opens (``TutorialStep/usesDetailsCard``).
     public var isInDetailsCard: Bool {
         switch self {
-        case .networkModes, .actionButton, .ridership, .doubleTrack: true
+        case .networkModes, .actionButton, .ridership, .doubleTrack, .hotelKind: true
         default: false
         }
     }
@@ -218,6 +227,30 @@ public enum TutorialGoal: Hashable, Sendable {
     case changeHeadway
     /// Give a line one more stopping pattern.
     case addPattern
+    /// Decision 376, lessons 7–10. Tap the end of a track with the
+    /// network tool's Depot mode.
+    case pickDepotEnd
+    /// Build a depot (a station flagged as one) since the chapter began.
+    case buildDepot
+    /// Change the depots of a line.
+    case chooseDepot
+    /// Select, with the Select tool, a station without a freight yard.
+    case selectStationForFreight
+    /// Open the station panel. The panel is the app's, so the app tells
+    /// the session (``GameSession/stationPanelDidChange(isShown:)``).
+    case openStationPanel
+    /// Have this many freight yards built since the chapter began.
+    case buildFreightYard(Int)
+    /// Open a new line that carries freight.
+    case createFreightLine
+    /// Choose this kind of building in the building tool.
+    case chooseBuildingKind(PlacedBuildingKind)
+    /// Tap the map with the building tool where it goes.
+    case pickBuildingSite
+    /// Put up a building of this kind since the chapter began.
+    case putUpBuilding(PlacedBuildingKind)
+    /// Take on one of the city's requests.
+    case acceptRequest
 }
 
 /// What the session does when a step is first shown, going forward
@@ -239,6 +272,9 @@ enum TutorialSetup: Hashable, Sendable {
     /// Select the newest line for the lines panel when none is (the `Ci/`
     /// line steps' `openUI` picks the first line with stations).
     case selectNewestLine
+    /// Select a line that can keep its trains at a depot, when the one
+    /// selected cannot (decision 376, lesson 7).
+    case selectDepotLine
 }
 
 /// The panel beside the map a step needs, which the app opens or closes
@@ -352,15 +388,16 @@ public struct TutorialStep: Hashable, Sendable, Identifiable {
         goal == .startPickingStops || goal == .pickLineStations
     }
 
-    /// The lines panel's button the step asks for, which the panel scrolls
-    /// into view.
+    /// The button in the lines or the station panel the step asks for,
+    /// which the panel scrolls into view.
     public var revealsInPanel: TutorialTarget? {
         targets.first { Self.panelTargets.contains($0) }
     }
 
-    /// The lines panel's controls a step can ask for.
+    /// The panels' controls a step can ask for.
     private static let panelTargets: Set<TutorialTarget> = [
-        .createLine, .staffLine, .lineLoss, .addTrain, .headwayChange, .advancedSwitch, .serviceHours, .addPattern,
+        .createLine, .staffLine, .lineLoss, .addTrain, .headwayChange, .advancedSwitch, .serviceHours, .addPattern, .lineDepot,
+        .freightYard,
     ]
 
     /// How long the card waits before it offers to skip a step that is not
@@ -495,6 +532,11 @@ public struct Tutorial: Hashable, Sendable {
         /// a change to it.
         let services: [LineID: LineService]
         let serviceDay: ServiceDay?
+        /// Decision 376, lessons 8–10: the stations with a freight yard,
+        /// the company's buildings and the city's requests in hand.
+        let freightYards: Set<StationID>
+        let buildings: Set<PlacedBuildingID>
+        let requestsInHand: Set<Int>
 
         /// When a line runs, how many trains how far apart, and its
         /// stopping patterns.
@@ -504,6 +546,7 @@ public struct Tutorial: Hashable, Sendable {
             let targetHeadways: TargetHeadways
             let trains: Int
             let patterns: Int
+            let depots: [StationID]
 
             init(_ line: ServiceLine) {
                 window = line.window
@@ -511,6 +554,7 @@ public struct Tutorial: Hashable, Sendable {
                 targetHeadways = line.targetHeadways
                 trains = line.trains.count
                 patterns = line.patterns.count
+                depots = line.depots
             }
         }
 
@@ -525,6 +569,9 @@ public struct Tutorial: Hashable, Sendable {
             lastEntry = nil
             services = [:]
             serviceDay = nil
+            freightYards = []
+            buildings = []
+            requestsInHand = []
         }
 
         init(of world: GameWorld) {
@@ -535,6 +582,9 @@ public struct Tutorial: Hashable, Sendable {
             lastEntry = world.accounts.entries.last
             services = Dictionary(uniqueKeysWithValues: world.lines.map { ($0.id, LineService($0)) })
             serviceDay = world.serviceDay
+            freightYards = Set(world.freight?.facilities.map(\.station) ?? [])
+            buildings = Set(world.placedBuildings.map(\.id))
+            requestsInHand = Set(world.cityRequests?.active.map(\.id) ?? [])
         }
     }
 }

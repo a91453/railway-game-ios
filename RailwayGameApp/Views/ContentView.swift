@@ -210,6 +210,9 @@ struct ContentView: View {
             .onChange(of: screen.panel == .lines, initial: true) { _, shown in
                 session.linesPanelDidChange(isShown: shown)
             }
+            .onChange(of: screen.panel == .station, initial: true) { _, shown in
+                session.stationPanelDidChange(isShown: shown)
+            }
             .onChange(of: ControlDetails.Subject(session, foldsWhileDrawing: verticalSizeClass == .compact)) { _, _ in
                 detailsChoice = nil
             }

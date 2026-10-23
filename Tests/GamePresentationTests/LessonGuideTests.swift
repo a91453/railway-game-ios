@@ -2,7 +2,7 @@ import GameCore
 @testable import GamePresentation
 import XCTest
 
-/// Decision 376: lessons 3–6 guided one action a step by the tutorial's
+/// Decision 376: lessons 3–10 guided one action a step by the tutorial's
 /// engine (decision 188), each step pointing at its control and moving on
 /// only once the player has done what it asks.
 @MainActor
@@ -23,13 +23,29 @@ final class LessonGuideTests: XCTestCase {
             "lesson.6", "lesson.6.advanced", "lesson.6.hours", "lesson.6.headway", "lesson.6.pattern", "time.play",
         ])
         let standard = Set(Tutorial.standardSteps.map(\.id))
-        for lesson in Lesson.all[2...5] {
+        XCTAssertEqual(Lesson.all[6].guide.map(\.id), [
+            "lesson.7", "lesson.7.mode", "lesson.7.end", "lesson.7.build", "lesson.7.done", "lesson.7.lines", "lesson.7.depot", "time.play",
+        ])
+        XCTAssertEqual(Lesson.all[7].guide.map(\.id), [
+            "lesson.8", "lesson.8.panel", "lesson.8.yard", "lesson.8.second", "lesson.8.panel2", "lesson.8.yard2",
+            "line.open", "lesson.8.stations", "lesson.8.freight", "time.play",
+        ])
+        XCTAssertEqual(Lesson.all[8].guide.map(\.id), [
+            "lesson.9", "lesson.9.track", "track.build", "station.mode", "lesson.9.site", "station.first.build", "lesson.9.done",
+            "line.open", "lesson.9.stations", "line.create", "lesson.9.buildings", "lesson.9.hotel", "lesson.9.site.hotel", "lesson.9.put",
+            "time.play",
+        ])
+        XCTAssertEqual(Lesson.all[9].guide.map(\.id), ["lesson.10", "time.play"])
+        for lesson in Lesson.all[2...9] {
             for step in lesson.guide where standard.contains(step.id) {
                 XCTAssertEqual(step, Tutorial.standardSteps.first { $0.id == step.id }, "\(step.id) is the tutorial's own")
             }
             XCTAssertTrue(lesson.guide.allSatisfy { $0.goal != .read }, "lesson \(lesson.number): every step is an action")
         }
-        for (number, id) in [(3, "lesson.addTrain"), (4, "lesson.4"), (5, "lesson.5"), (6, "lesson.6")] {
+        for (number, id) in [
+            (3, "lesson.addTrain"), (4, "lesson.4"), (5, "lesson.5"), (6, "lesson.6"),
+            (7, "lesson.7"), (8, "lesson.8"), (9, "lesson.9"), (10, "lesson.10"),
+        ] {
             let session = GameSession(world: .newGame(lesson: Lesson.all[number - 1]), language: .english)
             session.keepTutorialToResume(atStep: id)
             session.resumeTutorial()
@@ -40,7 +56,7 @@ final class LessonGuideTests: XCTestCase {
     /// Each step reads in both languages, as short as the tutorial's own,
     /// and points at something.
     func testTheGuidesReadInBothLanguages() {
-        for lesson in Lesson.all[2...5] {
+        for lesson in Lesson.all[2...9] {
             for step in lesson.guide {
                 XCTAssertFalse(step.targets.isEmpty, "\(step.id) points at something")
                 XCTAssertLessThanOrEqual(step.body(in: .english).count, 90, step.id)
@@ -59,6 +75,9 @@ final class LessonGuideTests: XCTestCase {
         XCTAssertEqual(Lesson.all[2].guide[1].revealsInPanel, .addTrain)
         XCTAssertEqual(Lesson.all[5].guide.map(\.revealsInPanel), [nil, .advancedSwitch, .serviceHours, .headwayChange, .addPattern, nil])
         XCTAssertTrue(Lesson.all[4].guide[1].usesDetailsCard, "Make double track is on the details card")
+        XCTAssertEqual(Lesson.all[6].guide[6].revealsInPanel, .lineDepot)
+        XCTAssertEqual(Lesson.all[7].guide.compactMap(\.revealsInPanel), [.freightYard, .freightYard])
+        XCTAssertTrue(Lesson.all[8].guide[11].usesDetailsCard, "Hotel is on the details card")
     }
 
     /// Lesson 3: Lines, Add a Train, the passing loop, time.
@@ -178,6 +197,170 @@ final class LessonGuideTests: XCTestCase {
         lastStep(session, "time.play") { session.setSpeed(.normal) }
     }
 
+    /// Lesson 7: Build, Depot, the end of a track, its sidings, Done,
+    /// Lines, the line's depot ticked, time.
+    func testTheSeventhLessonsGuide() throws {
+        let session = start(7)
+        session.setSpeed(.paused)
+        step(session, "lesson.7") { session.selectTool(.network) }
+        step(session, "lesson.7.mode") { session.setNetworkMode(.depot) }
+        let ends = session.tutorialPlacesToTap
+        XCTAssertFalse(ends.isEmpty, "the card keeps clear of the ends of the tracks")
+        XCTAssertEqual(session.tutorialHint?.text, "Tap where a track ends.")
+        var built = false
+        for end in ends where !built {
+            session.tapNetwork(at: end, reach: Self.reach)
+            guard session.networkDepotPreview?.problem == nil else {
+                XCTAssertEqual(session.tutorialHint?.isProblem, true, "a refused end says why")
+                continue
+            }
+            XCTAssertTrue(session.isTutorialStepDone, "lesson.7.end is done")
+            session.showNextTutorialStep()
+            step(session, "lesson.7.build") { session.addDepotYard() }
+            built = true
+        }
+        XCTAssertTrue(built, "an end a depot can go at")
+        step(session, "lesson.7.done") { session.selectTool(.select) }
+        step(session, "lesson.7.lines") { session.linesPanelDidChange(isShown: true) }
+        let line = try XCTUnwrap(session.selectedLine)
+        let depot = try XCTUnwrap(session.world.depotRow(of: line.id, in: .english)?.choices.first, "the line selected can use the depot")
+        step(session, "lesson.7.depot") { session.toggleSelectedLineDepot(depot.station) }
+        XCTAssertEqual(session.selectedLine?.depots, [depot.station])
+        lastStep(session, "time.play") { session.setSpeed(.normal) }
+    }
+
+    /// Lesson 8: a freight yard at two stations, through the station
+    /// panel, then a freight line between them from the new line's card.
+    func testTheEighthLessonsGuide() throws {
+        let session = start(8)
+        session.setSpeed(.paused)
+        let stations = session.world.stations.filter { GameSession.takesFreightYard($0, in: session.world) }
+        XCTAssertGreaterThanOrEqual(stations.count, 2)
+        XCTAssertEqual(Set(session.tutorialPlacesToTap), Set(stations.map(\.location)))
+        step(session, "lesson.8") { session.selectStation(stations[0].id) }
+        XCTAssertEqual(session.tutorialHint?.text, nil)
+        step(session, "lesson.8.panel") { session.stationPanelDidChange(isShown: true) }
+        step(session, "lesson.8.yard") { session.buildFreightYardAtSelectedStation() }
+        session.stationPanelDidChange(isShown: false)
+        XCTAssertEqual(session.tutorial?.step.id, "lesson.8.second")
+        XCTAssertFalse(session.isTutorialStepDone, "the first station has its yard")
+        XCTAssertEqual(session.tutorialHint?.text, "That station has a freight yard. Tap another one.")
+        let second = stations.last!
+        step(session, "lesson.8.second") { session.selectStation(second.id) }
+        step(session, "lesson.8.panel2") { session.stationPanelDidChange(isShown: true) }
+        step(session, "lesson.8.yard2") { session.buildFreightYardAtSelectedStation() }
+        session.stationPanelDidChange(isShown: false)
+        let lines = session.world.lines.count
+        step(session, "line.open") { session.startPickingLineStops(announces: false) }
+        step(session, "lesson.8.stations") {
+            session.tapMap(at: stations[0].location, reach: Self.reach)
+            session.tapMap(at: second.location, reach: Self.reach)
+        }
+        XCTAssertEqual(session.tutorial?.step.id, "lesson.8.freight")
+        session.confirmLineDraft()
+        XCTAssertTrue(session.lineConfirmationOffersFreight, "both stops have a freight yard")
+        // On the first morning the two yards leave too little for the
+        // train: the card says so, and the fares pay for it as time runs.
+        let shortfall = try XCTUnwrap(session.lineConfirmationPreview?.shortfall)
+        XCTAssertEqual(session.tutorialHint, TutorialHint(shortfall + " " + Self.faresRemedy, isProblem: true))
+        earn(session) { session.lineConfirmationPreview?.shortfall == nil }
+        XCTAssertNil(session.lineConfirmationPreview?.shortfall, "the fares paid for it")
+        XCTAssertEqual(session.tutorialHint?.text, "Turn on Freight line on the card.")
+        step(session, "lesson.8.freight") {
+            session.updateLineConfirmation { var card = $0; card.isFreight = true; return card }
+            XCTAssertNil(session.lineConfirmationPreview?.shortfall)
+            session.confirmLine()
+        }
+        XCTAssertEqual(session.world.lines.count, lines + 1)
+        let freight = try XCTUnwrap(session.world.lines.last)
+        XCTAssertTrue(freight.isFreight)
+        XCTAssertFalse(freight.assignedTrains.isEmpty, "the freight line opens with its train")
+        XCTAssertTrue(session.world.isFreightTrain(freight.assignedTrains[0]))
+        lastStep(session, "time.play") { session.setSpeed(.normal) }
+    }
+
+    /// Lesson 9: track from the second town's station to the sight, a
+    /// station there, a line to it, then a hotel beside it.
+    func testTheNinthLessonsGuide() throws {
+        let session = start(9)
+        session.setSpeed(.paused)
+        let towns = Lesson.towns(in: session.world.bounds)
+        let sight = Lesson.sight(in: session.world.bounds)
+        let second = try XCTUnwrap(session.world.stations.min { distance($0.location, towns[1]) < distance($1.location, towns[1]) })
+        step(session, "lesson.9") { session.selectTool(.network) }
+        let end = try XCTUnwrap(session.world.network.nodes.filter { $0.ends.count == 1 }.map { PlanPoint(x: $0.position.x, y: $0.position.y) }
+            .min { distance($0, second.location) < distance($1, second.location) })
+        step(session, "lesson.9.track") {
+            session.tapNetwork(at: end, reach: Self.reach)
+            session.tapNetwork(at: sight, reach: Self.reach)
+            XCTAssertNil(session.networkPreview?.problem)
+        }
+        step(session, "track.build") { session.buildNetworkTrack() }
+        step(session, "station.mode") { session.setNetworkMode(.platform) }
+        step(session, "lesson.9.site") { session.tapNetwork(at: sight, reach: Self.reach) }
+        // The track to the sight leaves too little for its station on the
+        // first morning: the card says to let the fares come in.
+        XCTAssertEqual(session.tutorial?.step.id, "station.first.build")
+        session.addNetworkPlatform()
+        let refused = try XCTUnwrap(session.message?.text)
+        XCTAssertEqual(session.tutorialHint, TutorialHint(refused + " " + Self.faresRemedy, isProblem: true))
+        earn(session) { session.networkPlatformCost.map(session.world.economy.canAfford) == true }
+        step(session, "station.first.build") { session.addNetworkPlatform() }
+        let new = try XCTUnwrap(session.world.stations.last)
+        step(session, "lesson.9.done") { session.selectTool(.select) }
+        step(session, "line.open") { session.startPickingLineStops(announces: false) }
+        step(session, "lesson.9.stations") {
+            session.tapMap(at: second.location, reach: Self.reach)
+            session.tapMap(at: new.location, reach: Self.reach)
+        }
+        let lines = session.world.lines.count
+        step(session, "line.create") { session.confirmLineDraft() }
+        XCTAssertEqual(session.world.lines.count, lines + 1)
+        step(session, "lesson.9.buildings") { session.selectTool(.building) }
+        XCTAssertNotEqual(session.buildingKind, .hotel)
+        step(session, "lesson.9.hotel") { session.buildingKind = .hotel }
+        // A site within the sight's reach, clear of the track: refused, if
+        // at all, only for the cash.
+        let attraction = try XCTUnwrap(session.world.tourism?.attractions.first { distance($0.point, sight) == 0 })
+        let around = (1...12).flatMap { ring in
+            (0..<8).map { turn -> PlanPoint in
+                let dx: [Int64] = [1, 1, 0, -1, -1, -1, 0, 1], dy: [Int64] = [0, 1, 1, 1, 0, -1, -1, -1]
+                return PlanPoint(x: sight.x + dx[turn] * Int64(ring) * Self.reach, y: sight.y + dy[turn] * Int64(ring) * Self.reach)
+            }
+        }
+        let site = try XCTUnwrap(around.first { point in
+            guard session.world.bounds.contains(point) else { return false }
+            session.buildingSite = point
+            defer { session.buildingSite = nil }
+            guard let preview = session.buildingPreview, let cost = preview.cost else { return false }
+            return preview.problem == nil || !session.world.economy.canAfford(cost)
+        })
+        // A hotel costs more than the first days leave: the card says to let
+        // the fares come in, and the site is taken once they have.
+        session.tapBuildingTool(at: site, reach: Self.reach)
+        let problem = try XCTUnwrap(session.buildingPreview?.problem)
+        XCTAssertEqual(session.tutorialHint, TutorialHint(problem + " " + Self.faresRemedy, isProblem: true))
+        XCTAssertEqual(session.tutorial?.step.id, "lesson.9.site.hotel")
+        earn(session, rounds: 240) { session.isTutorialStepDone }
+        XCTAssertNil(session.buildingPreview?.problem)
+        XCTAssertTrue(session.tutorialAdvancesByItself)
+        session.showNextTutorialStep()
+        step(session, "lesson.9.put") { session.confirmBuilding() }
+        XCTAssertEqual(session.world.placedBuildings.last?.kind, .hotel)
+        XCTAssertEqual(session.world.hotelsNear(attraction), 1, "the hotel adds to the sight's stars")
+        lastStep(session, "time.play") { session.setSpeed(.normal) }
+    }
+
+    /// Lesson 10: one of the city's requests taken on.
+    func testTheTenthLessonsGuide() throws {
+        let session = start(10)
+        session.setSpeed(.paused)
+        let offer = try XCTUnwrap(session.world.cityRequests?.offers.first, "the city asks from the lesson's first day")
+        step(session, "lesson.10") { session.acceptRequest(offer.id) }
+        XCTAssertEqual(session.world.cityRequests?.active.map(\.id), [offer.id])
+        lastStep(session, "time.play") { session.setSpeed(.normal) }
+    }
+
     /// A step that changes a line waits for the lines panel, and says so.
     func testTheLineStepsSayToOpenLines() {
         let session = start(6)
@@ -192,6 +375,21 @@ final class LessonGuideTests: XCTestCase {
     }
 
     // MARK: - Helpers
+
+    private static let faresRemedy = "Tap \u{25B6}\u{FE0E} and let fares come in."
+
+    /// Runs the game, an hour at a time for at most two days, until
+    /// `enough`, then pauses it again.
+    private func earn(_ session: GameSession, rounds: Int = 48, line: UInt = #line, until enough: () -> Bool) {
+        // ▶︎ again whenever an event paused the game.
+        for _ in 0..<rounds where !enough() {
+            session.setSpeed(.normal)
+            if session.world.clock.isPaused { session.togglePause() }
+            session.advance(ticks: 60)
+        }
+        session.setSpeed(.paused)
+        XCTAssertTrue(enough(), "the fares paid for it", line: line)
+    }
 
     /// Lesson `number`'s game with its guide on screen.
     private func start(_ number: Int) -> GameSession {
@@ -219,7 +417,7 @@ final class LessonGuideTests: XCTestCase {
         action()
         XCTAssertTrue(session.isTutorialStepDone, line: line)
         session.showNextTutorialStep()
-        XCTAssertNil(session.tutorial, "Finish ends the guide", line: line)
+        XCTAssertNil(session.tutorial?.step.id, "Finish ends the guide", line: line)
     }
 
     private func distance(_ a: PlanPoint, _ b: PlanPoint) -> Double {

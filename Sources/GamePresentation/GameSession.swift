@@ -620,6 +620,10 @@ public final class GameSession {
     /// (``linesAdvancedDidChange(isShown:)``), for the tutorial's
     /// ``TutorialGoal/showAdvanced`` (decision 376). Only UI state.
     public internal(set) var isLinesAdvancedShown = false
+    /// Whether the station panel is open, as the app tells it
+    /// (``stationPanelDidChange(isShown:)``), for the tutorial's
+    /// ``TutorialGoal/openStationPanel`` (decision 376). Only UI state.
+    public internal(set) var isStationPanelShown = false
     /// Called with the step a tutorial left now would be taken up again
     /// at, the one on screen or skipped (`nil` when there is none, as once
     /// it is finished), whenever it changes: the launcher keeps it, so the

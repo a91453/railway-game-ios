@@ -22,6 +22,11 @@ struct LineConfirmationCard: View {
                 if let card = session.lineConfirmation {
                     let preview = session.lineConfirmationPreview
                     nameSection(card, preview: preview, in: language)
+                    // Decision 376: a line between freight yards may carry
+                    // freight, set before its trains are bought.
+                    if session.lineConfirmationOffersFreight {
+                        freightSection(card, in: language)
+                    }
                     hoursSection(card, preview: preview, in: language)
                     if let preview {
                         trainsSection(preview, in: language)
@@ -81,6 +86,23 @@ struct LineConfirmationCard: View {
                 .accessibilityElement(children: .combine)
                 .accessibilityIdentifier("line.confirm.figures")
             }
+        }
+    }
+
+    private func freightSection(_ card: LineConfirmation, in language: DisplayLanguage) -> some View {
+        Section {
+            Toggle(isOn: Binding(
+                get: { session.lineConfirmation?.isFreight ?? false },
+                set: { freight in session.updateLineConfirmation { var card = $0; card.isFreight = freight; return card } }
+            )) {
+                Text(verbatim: language.text("Freight line", "貨運路線"))
+            }
+            .accessibilityIdentifier("line.confirm.freight")
+        } footer: {
+            Text(verbatim: language.text(
+                "Nobody rides a freight line: its trains load and unload goods at the stations with a freight yard.",
+                "貨運路線不載客：列車只在有貨運場的車站裝卸貨物。"
+            ))
         }
     }
 

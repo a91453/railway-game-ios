@@ -393,6 +393,8 @@ private struct BuildingControls: View {
                 .buttonStyle(ThemeSelectableButtonStyle(isActive: isActive))
                 .accessibilityIdentifier("building.kind.\(kind.rawValue)")
                 .accessibilityAddTraits(isActive ? .isSelected : [])
+                // Decision 376: lesson 9's step points at the hotel.
+                .tutorialTarget(kind == .hotel ? .hotelKind : nil)
             }
         }
         // Decision 361: the kind's looks, and what a park or a temple does.

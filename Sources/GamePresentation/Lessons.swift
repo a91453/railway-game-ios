@@ -287,7 +287,8 @@ extension Lesson {
         step: (
             ("Build, then Depot, then tap the end of a track", "按「建造」、「機廠」，再點軌道的盡頭"),
             ("Then choose the depot on the line card, under Advanced.", "接著在路線卡的「進階」選這座機廠。")
-        )
+        ),
+        guide: seventhGuide
     )
 
     /// Lesson 8: freight.
@@ -301,7 +302,8 @@ extension Lesson {
         step: (
             ("Tap a station, then Build Freight Yard", "點一座車站，再按「蓋貨運場」"),
             ("Do the same at a second station, then make a line between them carry freight.", "第二座車站也蓋一座，再把兩站之間的一條路線改成載貨。")
-        )
+        ),
+        guide: eighthGuide
     )
 
     /// Lesson 9: a sight, beyond the second town.
@@ -316,7 +318,8 @@ extension Lesson {
         step: (
             ("Lay track to the sight and build a station", "鋪軌道到景點，蓋一座車站"),
             ("Add the station to a line. A hotel beside it brings more visitors.", "把車站加進路線。旁邊蓋一間旅館，遊客會更多。")
-        )
+        ),
+        guide: ninthGuide
     )
 
     /// Lesson 10: the city's requests.
@@ -330,7 +333,8 @@ extension Lesson {
         step: (
             ("Open the city's requests and take one", "打開城市的委託，接下一件"),
             ("Each says what to do and by when. After this lesson every tool is yours.", "每件委託都寫著要做什麼、期限到何時。過了這關，所有工具都歸你。")
-        )
+        ),
+        guide: tenthGuide
     )
 
     /// The riders a day each lesson asks for (decision 266, measured with
@@ -535,6 +539,234 @@ extension Lesson {
             body: (
                 "Pick From and To, turn on Non-stop to skip the stops between, then tap Add.",
                 "選「起點」和「終點」，打開「直達車」跳過中間的站，再按「加入」。"
+            )
+        ),
+    ] + steps(["time.play"])
+
+    // Decision 376, later: lessons 7–10, as lessons 3–6. The first step of
+    // each keeps the id of the read step it takes over ("lesson.7" …
+    // "lesson.10").
+
+    /// Lesson 7: Build, Depot, the end of a track, its sidings, then the
+    /// line's depot.
+    static let seventhGuide: [TutorialStep] = [
+        TutorialStep(
+            id: "lesson.7", chapter: .track,
+            targets: [.buildEntry],
+            goal: .chooseTool(.network),
+            panel: .closed,
+            title: ("Tap Build", "點「建設」"),
+            body: ("A depot goes where a track ends.", "機廠蓋在軌道的盡頭。")
+        ),
+        TutorialStep(
+            id: "lesson.7.mode", chapter: .track,
+            targets: [.networkModes],
+            goal: .chooseNetworkMode(.depot),
+            setup: [.clearPicks],
+            title: ("Tap Depot", "點「機廠」"),
+            body: ("Sidings where your trains stand for the night.", "列車晚上停放的停車線。")
+        ),
+        TutorialStep(
+            id: "lesson.7.end", chapter: .track,
+            targets: [.map],
+            goal: .pickDepotEnd,
+            title: ("Tap the end of a track", "點軌道的盡頭"),
+            body: ("The sidings run on straight from it.", "停車線會從那裡直直往前鋪。")
+        ),
+        TutorialStep(
+            id: "lesson.7.build", chapter: .track,
+            targets: [.actionButton],
+            goal: .buildDepot,
+            title: ("Tap Lay Depot Sidings", "按「鋪機廠停車線」"),
+            body: ("The price is on the button.", "按鈕上就是價錢。")
+        ),
+        TutorialStep(
+            id: "lesson.7.done", chapter: .track,
+            targets: [.selectTool],
+            goal: .chooseTool(.select),
+            panel: .closed,
+            title: ("Tap Done to stop building", "點「完成」結束建造"),
+            body: ("Next, send a line's trains to the depot.", "接著讓路線的列車回機廠。")
+        ),
+        TutorialStep(
+            id: "lesson.7.lines", chapter: .service,
+            targets: [.linesButton],
+            goal: .openLines,
+            setup: [.selectDepotLine],
+            title: ("Tap Lines", "點「路線」"),
+            body: ("Your line's card lists the depots it can use.", "路線卡上列出它能用的機廠。")
+        ),
+        TutorialStep(
+            id: "lesson.7.depot", chapter: .service,
+            targets: [.lineDepot],
+            goal: .chooseDepot,
+            panel: .lines,
+            title: ("Tick your depot", "勾選你的機廠"),
+            body: (
+                "After the last train, they go there; before the first, they come out.",
+                "收班後列車回機廠，首班前再出庫。"
+            )
+        ),
+    ] + steps(["time.play"])
+
+    /// Lesson 8: a freight yard at two stations, then a freight line
+    /// between them.
+    static let eighthGuide: [TutorialStep] = [
+        TutorialStep(
+            id: "lesson.8", chapter: .stations,
+            targets: [.map],
+            goal: .selectStationForFreight,
+            setup: [.clearSelection],
+            panel: .closed,
+            title: ("Tap one of your stations", "點你的一座車站"),
+            body: ("A freight yard goes beside it.", "貨運場蓋在車站旁邊。")
+        ),
+        TutorialStep(
+            id: "lesson.8.panel", chapter: .stations,
+            targets: [.ridership],
+            goal: .openStationPanel,
+            title: ("Tap Station…", "點「車站…」"),
+            body: ("Freight is near the bottom of the station panel.", "貨運在車站面板的下方。")
+        ),
+        TutorialStep(
+            id: "lesson.8.yard", chapter: .stations,
+            targets: [.freightYard],
+            goal: .buildFreightYard(1),
+            title: ("Tap Build Freight Yard", "按「蓋貨運場」"),
+            body: ("The towns around it send and take goods here.", "附近的城鎮會在這裡寄貨、收貨。")
+        ),
+        TutorialStep(
+            id: "lesson.8.second", chapter: .stations,
+            targets: [.map],
+            goal: .selectStationForFreight,
+            panel: .closed,
+            title: ("Tap another station", "點另一座車站"),
+            body: ("Goods need a yard at each end.", "貨物兩端都要有貨運場。")
+        ),
+        TutorialStep(
+            id: "lesson.8.panel2", chapter: .stations,
+            targets: [.ridership],
+            goal: .openStationPanel,
+            title: ("Tap Station… again", "再點「車站…」"),
+            body: ("Freight is near the bottom again.", "貨運一樣在下方。")
+        ),
+        TutorialStep(
+            id: "lesson.8.yard2", chapter: .stations,
+            targets: [.freightYard],
+            goal: .buildFreightYard(2),
+            title: ("Tap Build Freight Yard again", "再按「蓋貨運場」"),
+            body: ("Next, a train to carry the goods.", "接著開一列車載貨。")
+        ),
+    ] + steps(["line.open"]) + [
+        TutorialStep(
+            id: "lesson.8.stations", chapter: .line,
+            targets: [.map],
+            goal: .pickLineStations,
+            panel: .lines,
+            title: ("Tap the two freight yards", "點兩座貨運場的車站"),
+            body: ("A freight line calls at the stations with yards.", "貨運路線停靠有貨運場的車站。")
+        ),
+        TutorialStep(
+            id: "lesson.8.freight", chapter: .line,
+            targets: [.mapConfirm],
+            goal: .createFreightLine,
+            panel: .lines,
+            title: ("Tap ✓, then Freight line", "按 ✓，再打開「貨運路線」"),
+            body: ("On the card, turn on Freight line, then tap Open Line.", "在卡片上打開「貨運路線」，再按「開通路線」。")
+        ),
+    ] + steps(["time.play"])
+
+    /// Lesson 9: track and a station to the sight, a line to it, then a
+    /// hotel beside it.
+    static let ninthGuide: [TutorialStep] = [
+        TutorialStep(
+            id: "lesson.9", chapter: .track,
+            targets: [.buildEntry],
+            goal: .chooseTool(.network),
+            panel: .closed,
+            title: ("Tap Build", "點「建設」"),
+            body: ("The sight lies beyond the second town.", "景點在第二座城鎮再過去。")
+        ),
+        TutorialStep(
+            id: "lesson.9.track", chapter: .track,
+            targets: [.map],
+            goal: .drawTrack,
+            setup: [.layTrack],
+            title: ("Tap a station, then the sight", "點車站，再點景點"),
+            body: (
+                "Start at the second town's station, so the new track joins your line's.",
+                "從第二座城鎮的車站開始鋪，新軌道才會接上路線。"
+            )
+        ),
+    ] + steps(["track.build", "station.mode"]) + [
+        TutorialStep(
+            id: "lesson.9.site", chapter: .stations,
+            targets: [.map],
+            goal: .pickPlatformSite(1),
+            title: ("Tap your track by the sight", "點景點旁的軌道"),
+            body: ("Visitors walk from the station to the sight.", "遊客從車站走路去景點。")
+        ),
+    ] + steps(["station.first.build"]) + [
+        TutorialStep(
+            id: "lesson.9.done", chapter: .stations,
+            targets: [.selectTool],
+            goal: .chooseTool(.select),
+            panel: .closed,
+            title: ("Tap Done to stop building", "點「完成」結束建造"),
+            body: ("Next, a line to the sight.", "接著開一條線到景點。")
+        ),
+    ] + steps(["line.open"]) + [
+        TutorialStep(
+            id: "lesson.9.stations", chapter: .line,
+            targets: [.map],
+            goal: .pickLineStations,
+            panel: .lines,
+            title: ("Tap the old station, then the new", "點舊車站，再點新車站"),
+            body: ("Pick the second town's station, then the sight's.", "先點第二座城鎮的車站，再點景點的車站。")
+        ),
+    ] + steps(["line.create"]) + [
+        TutorialStep(
+            id: "lesson.9.buildings", chapter: .passengers,
+            targets: [.buildEntry, .buildingTool],
+            goal: .chooseTool(.building),
+            panel: .closed,
+            title: ("Tap Build, then Buildings", "點「建設」，再點「建物」"),
+            body: ("A hotel near the sight brings more visitors.", "景點附近的飯店會帶來更多遊客。")
+        ),
+        TutorialStep(
+            id: "lesson.9.hotel", chapter: .passengers,
+            targets: [.hotelKind],
+            goal: .chooseBuildingKind(.hotel),
+            title: ("Tap Hotel", "點「飯店」"),
+            body: ("Its guests ride your trains too.", "住客也會搭你的車。")
+        ),
+        TutorialStep(
+            id: "lesson.9.site.hotel", chapter: .passengers,
+            targets: [.map],
+            goal: .pickBuildingSite,
+            title: ("Tap the map by the new station", "點新車站旁的地圖"),
+            body: ("Within a walk of the sight and the station.", "走路就能到景點和車站的地方。")
+        ),
+        TutorialStep(
+            id: "lesson.9.put", chapter: .passengers,
+            targets: [.mapConfirm],
+            goal: .putUpBuilding(.hotel),
+            title: ("Tap ✓ to build it", "按 ✓ 蓋好"),
+            body: ("The price is on the button.", "按鈕上就是價錢。")
+        ),
+    ] + steps(["time.play"])
+
+    /// Lesson 10: one of the city's requests taken on.
+    static let tenthGuide: [TutorialStep] = [
+        TutorialStep(
+            id: "lesson.10", chapter: .service,
+            targets: [.requestsButton],
+            goal: .acceptRequest,
+            panel: .closed,
+            title: ("Tap the requests, then Take on", "點委託，再按「承接」"),
+            body: (
+                "Each says what to do and by when. Meet it in time for a reward.",
+                "每件都寫著要做什麼、期限到何時，準時完成有獎勵。"
             )
         ),
     ] + steps(["time.play"])
