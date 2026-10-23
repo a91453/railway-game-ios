@@ -257,14 +257,18 @@ extension GameWorld {
     /// The indices, in `line`'s stops, of the calls of `train`'s timetable
     /// when it is a trip of `stream` as the line runs it now: the round
     /// trip from the service's first call, or with ``flexDispatch``
-    /// (decision 172) from its last, or a ring's lap from any of its
-    /// stops; `nil` for any other timetable.
+    /// (decision 172) from its last, or on a ring from any of its stops
+    /// round to the first (decision 364; or round to it again, as such a
+    /// trip went before); `nil` for any other timetable.
     private func routeOrder(of train: Train, on line: ServiceLine, stream: DispatchStream) -> [Int]? {
         let stations = train.timetable.map(\.station)
         var orders = [line.routeOrder(service: stream.service, direction: stream.direction ?? .inner)]
         if flexDispatch {
             if line.isRing {
-                orders += line.stops.indices.dropFirst().map { line.ringCalls(stream.direction ?? .inner, from: $0) }
+                // Decision 364: round to the first stop; a whole lap from
+                // another stop is a trip sent out before.
+                let way = stream.direction ?? .inner
+                orders += line.stops.indices.dropFirst().flatMap { [line.ringCallsToFirst(way, from: $0), line.ringCalls(way, from: $0)] }
             } else {
                 let back = Array(line.calls(ofService: stream.service).reversed())
                 orders.append(back + back.dropLast().reversed())

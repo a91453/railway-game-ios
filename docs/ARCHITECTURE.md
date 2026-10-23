@@ -5837,6 +5837,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 **之後的修正**（第三次全程式碼查 bug，2026-10-12）：
 - **反轉站序不再讓等車的乘客全部離開**：第 4 項起乘客的方向看路線站序，反轉後同一段行程的方向就換了，但等車的乘客、車上乘客之後的腿與分配路線的餘數（`passengerRouteBalances`）還記著舊方向，`abandonUnservedPassengers` 把他們全部算成 `abandoned`。決策 80 的規則是「路線不再經過他們的行程才離開」，所以 `reverseLineStops` 現在把這條線上的方向（環線是內外環）一起翻過來：同樣兩站、同樣的服務模式。`FlexDispatchTests.testReversingALineKeepsThePassengersWaitingForIt`。
 - **從末站（或環線的其他站）發出的車也照路徑偏好走**：偏好以 (from, to) 找、行程時間也照偏好算，但開車時 `routePreference(for:from:to:)` 只認從第一站起的時刻表，從末站起的那一趟一律走預設路徑（時間照一條算、實際走另一條，交通管制的預約也和計畫不同）。現在開關打開時，從末站起的往返與環線從任一站起的一圈也認得。`LineRoutePreferenceTests.testAFlexibleTripFromTheLastStopTakesThePreferredRoute`。
+- **後來（決策 364，2026-10-23，玩家回報 82.1 #2）**：環線上停在第一站以外的列車改成只繞到第一站（`ServiceLine.ringCallsToFirst(_:from:)`），之後從第一站起整圈。原本「繞一圈回到那站」讓之後每一圈都從那站起算，和旅客排的一圈（決策 49：從第一站起）對不上，在第一站等反方向去後面幾站的人上不了車。見 `docs/decisions/364.md`。
 
 ### 174. 觀光景點與觀光客：第二條需求曲線
 

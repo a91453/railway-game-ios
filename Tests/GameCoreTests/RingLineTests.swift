@@ -84,7 +84,7 @@ final class RingLineTests: XCTestCase {
     /// with `running` trains, and `count` trains standing at Alpha, the
     /// first facing east (the inner way, Alpha to Beta), the second west
     /// (the outer way, Alpha to Delta), and so on, assigned to it.
-    private func makeRingWorld(trains count: Int, running: TrainsInService, minute: Int64 = 0) throws -> GameWorld {
+    private func makeRingWorld(trains count: Int, running: TrainsInService, minute: Int64 = 0, outerBerth: TrainPosition? = nil) throws -> GameWorld {
         var world = try makeLoopWorld(minute: minute)
         try world.createLine(named: "Ring", stops: [alpha, beta, gamma, delta])
         try world.setLineRing(ring, to: true)
@@ -93,7 +93,7 @@ final class RingLineTests: XCTestCase {
         try world.setLineTrainsInService(ring, to: running)
         for index in 1...count {
             let train = try world.purchaseTrain(named: "T\(index)")
-            try world.placeTrain(train.id, at: index % 2 == 1 ? clockwise : anticlockwise)
+            try world.placeTrain(train.id, at: index % 2 == 1 ? clockwise : outerBerth ?? anticlockwise)
             if index % 2 == 0 {
                 // A placed train with no path runs to the end of its edge:
                 // the outer way's train keeps to its berth, mid-edge.
@@ -368,14 +368,71 @@ final class RingLineTests: XCTestCase {
         try world.advance(ticks: 1)
         XCTAssertEqual(world.train(id: outer)?.execution, .travellingToStop(1))
         XCTAssertEqual(world.train(id: outer)?.timetable[1].station, delta, "an outer lap: Alpha, Delta, …")
-        try world.unassignTrain(inner)
+        // Planned while the ring runs both ways: with one train left it
+        // runs only the inner way from its next lap (decision 364).
         let innerWay = try XCTUnwrap(world.passengerRoutes(from: delta, to: alpha).first { $0.legs.count == 1 })
         let outerWay = try XCTUnwrap(world.passengerRoutes(from: delta, to: gamma).first { $0.legs.count == 1 })
+        try world.unassignTrain(inner)
         let record = try XCTUnwrap(world.passengers.firstIndex { $0.station == delta })
         world.passengers[record].release(10, along: try XCTUnwrap(PassengerJourney(origin: delta, route: innerWay)), at: world.clock.now)
         world.passengers[record].release(10, along: try XCTUnwrap(PassengerJourney(origin: delta, route: outerWay)), at: world.clock.now)
         try world.advance(ticks: 5)
         XCTAssertEqual(world.riders(of: outer).map(\.destination), [gamma])
+    }
+
+    /// Decision 364: an outer train standing at Delta (82.1, a ring made
+    /// from a line whose trains stood at its two ends) first goes round
+    /// only to Alpha, the first stop, and from then on laps from there,
+    /// so passengers planned from Alpha the outer way past Delta (decision
+    /// 49: laps from the first stop) ride it. Before, every lap went from
+    /// Delta back to Delta, and at Alpha the train reached only Delta: the
+    /// passengers for Gamma waited for ever.
+    func testAnOuterTrainStartingElsewhereLapsFromTheFirstStop() throws {
+        let deltaAnticlockwise = TrainPosition.onEdge(TrackTraversal(edge: .edge(7), direction: .backward), offset: 512)
+        var world = try makeRingWorld(trains: 2, running: pairs(2), outerBerth: deltaAnticlockwise)
+        world.setFlexDispatch(true)
+        world.setPassengerRoutingMode(.network)
+        for station in [alpha, beta, gamma, delta] {
+            try world.setStationDemand(station, to: StationDemand(kind: .residential, dailyTrips: 0))
+        }
+        let outer = TrainID(rawValue: 2)
+        try world.advance(ticks: 1)
+        XCTAssertEqual(world.train(id: outer)?.timetable.map(\.station), [delta, gamma, beta, alpha], "round to the first stop")
+        let route = try XCTUnwrap(world.passengerRoutes(from: alpha, to: gamma).first {
+            $0.legs.count == 1 && $0.legs[0].direction == .inbound
+        }, "the outer way, Alpha, Delta, Gamma")
+        let record = try XCTUnwrap(world.passengers.firstIndex { $0.station == alpha })
+        world.passengers[record].release(10, along: try XCTUnwrap(PassengerJourney(origin: alpha, route: route)), at: world.clock.now)
+        try world.advance(ticks: 40)
+        XCTAssertEqual(world.passengerLedger(of: alpha).arrived, 10)
+        XCTAssertEqual(world.passengerLedger(of: alpha).abandoned, 0)
+        let lap = try XCTUnwrap(world.train(id: outer)?.timetable.map(\.station))
+        XCTAssertEqual(lap, [alpha, delta, gamma, beta, alpha], "then laps from the first stop")
+    }
+
+    /// Decision 364: a ring with one train runs it the inner way, so
+    /// passengers are planned only that way (from Alpha to Gamma by Beta,
+    /// not by Delta); with none yet, or a pair, both ways, as before.
+    func testARingWithOneTrainPlansOnlyTheInnerWay() throws {
+        func ways(_ world: GameWorld) -> Set<LineDirection> {
+            Set(world.passengerRoutes(from: alpha, to: gamma).filter { $0.legs.count == 1 }.map(\.legs[0].direction))
+        }
+        let two = try makeRingWorld(trains: 2, running: pairs(2))
+        XCTAssertEqual(ways(two), [.outbound, .inbound])
+        let outerLeg = try XCTUnwrap(two.passengerRoutes(from: alpha, to: gamma).first {
+            $0.legs.count == 1 && $0.legs[0].direction == .inbound
+        }.map { PassengerJourneyLeg($0.legs[0]) })
+        let one = try makeRingWorld(trains: 1, running: pairs(2))
+        XCTAssertEqual(ways(one), [.outbound])
+        XCTAssertTrue(two.isServed(outerLeg))
+        XCTAssertFalse(one.isServed(outerLeg))
+        var none = try makeLoopWorld()
+        try none.createLine(named: "Ring", stops: [alpha, beta, gamma, delta])
+        try none.setLineRing(ring, to: true)
+        try none.setLineServiceWindow(ring, to: .allDay)
+        try none.setLineTrainsInService(ring, to: pairs(2))
+        XCTAssertEqual(ways(none), [.outbound, .inbound])
+        XCTAssertTrue(none.isServed(outerLeg), "no trains yet: both ways, as a line with none")
     }
 
     /// Making a ring a line again while its trains carry passengers moves
