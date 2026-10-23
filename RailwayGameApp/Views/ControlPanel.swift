@@ -395,6 +395,28 @@ private struct BuildingControls: View {
                 .accessibilityAddTraits(isActive ? .isSelected : [])
             }
         }
+        // Decision 361: the kind's looks, and what a park or a temple does.
+        if session.buildingKind.looks > 1 {
+            Picker(selection: $session.buildingLook) {
+                ForEach(0..<session.buildingKind.looks, id: \.self) { look in
+                    Text(verbatim: session.buildingKind.lookTitle(look, in: session.language) ?? "\(look + 1)").tag(look)
+                }
+            } label: {
+                Text(verbatim: session.language.text("Look", "外觀"))
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("building.look")
+        }
+        if let effect = session.buildingKind.effectText(in: session.language) {
+            Label {
+                Text(verbatim: effect)
+            } icon: {
+                Image(systemName: "sparkles")
+            }
+            .font(.footnote)
+            .foregroundStyle(Theme.textSecondary)
+            .accessibilityIdentifier("building.effect")
+        }
         // Decision 103: one tap builds, for one building after another.
         Toggle(isOn: $session.buildingBuildsOnTap) {
             Text(verbatim: session.language.text("Build where I tap", "點一下直接蓋"))
@@ -545,6 +567,8 @@ extension PlacedBuildingKind {
         case .departmentStore: .departmentStore
         case .hotel: .hotel
         case .amusementPark: .amusementPark
+        case .park: .park
+        case .temple: .temple
         }
     }
 
@@ -560,6 +584,8 @@ extension PlacedBuildingKind {
         case .departmentStore: "BuildingDepartmentStore"
         case .hotel: "BuildingHotel"
         case .amusementPark: "BuildingAmusementPark"
+        case .park: "BuildingPark"
+        case .temple: "BuildingTemple"
         }
     }
 }

@@ -42,10 +42,17 @@ struct TrackUpgradeMemo {
         let point: PlanPoint?
         let side: PlatformTrackSide
         let wholeRun: Bool
-        let worldRevision: Int
+        /// ``GameSession/commandRevision``, not the world's: the select
+        /// tool does not pause the game, and a draft worked out again at
+        /// every tick held the main actor for the whole of each one (a
+        /// player's iPad Air froze with a run to the switches drafted at 10×).
+        let commandRevision: Int
     }
 
     let key: Key
+    /// ``GameSession/worldRevision`` it was worked out at, so ✓ after
+    /// game time moved on works it out once more on the world it builds in.
+    var worldRevision = 0
     let preview: TrackUpgradePreview
     let command: PlayerCommand?
 }
@@ -138,14 +145,16 @@ extension GameSession {
         _ = world
         let key = TrackUpgradeMemo.Key(
             kind: kind, edge: edge, point: kind == .scissors ? selectedPoint : nil, side: trackUpgradeSide,
-            wholeRun: trackUpgradeWholeRun, worldRevision: worldRevision
+            wholeRun: trackUpgradeWholeRun, commandRevision: commandRevision
         )
         if let memo = trackUpgradeMemo, memo.key == key { return memo }
-        let found = switch kind {
+        var found = switch kind {
         case .doubleTrack: doubleTrackUpgrade(of: edge, key: key)
         case .scissors: scissorsUpgrade(on: edge, key: key)
         }
+        found.worldRevision = worldRevision
         trackUpgradeMemo = found
+        trackUpgradeWorkedOut += 1
         return found
     }
 
@@ -159,6 +168,8 @@ extension GameSession {
 
     /// Builds the drafted upgrade, all or nothing, and forgets it.
     public func buildTrackUpgrade() {
+        // Trains moved since it was worked out: plan it on the world now.
+        if trackUpgradeMemo?.worldRevision != worldRevision { trackUpgradeMemo = nil }
         guard let draft = trackUpgradeDraft else { return }
         // Short of cash, GameCore refuses it and says so (decision 245).
         guard let command = draft.command else {
