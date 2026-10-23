@@ -872,7 +872,7 @@ private struct ToolsColumn: View {
 
     private func groups(compact: Bool) -> some View {
         VStack(alignment: .center, spacing: ControlPanel.tileGap) {
-            overBuild()
+            overBuild
             if BuildToolRail.isShown(session) {
                 // Build where it was, lit: a second tap closes the tools.
                 ControlPanel(session: session, arrangement: .buildEntry)
@@ -882,26 +882,27 @@ private struct ToolsColumn: View {
     }
 
     /// The card's toggle and the tools, or while building the building
-    /// tools and Done (but where Done is pinned over Build, `pinsDone`):
-    /// all but Build while building.
-    @ViewBuilder private func overBuild(pinsDone: Bool = false) -> some View {
+    /// tools and Done: all but Build while building.
+    @ViewBuilder private var overBuild: some View {
         // The card's toggle stays on top while building too: a chosen
         // tool keeps the card open, and folding it shows the map. Not
         // on the tutorial's steps that point into the card, which keep
         // it open, as in the dock.
         if showsToggle {
-            ControlDetailsToggle(isOpen: isOpen, action: toggle)
-                .disabled(!canToggle)
-                .controlTile()
+            cardToggle
         }
         if BuildToolRail.isShown(session) {
-            if !pinsDone || buildingTools > 0 {
-                BuildToolButtons(session: session, includesDone: !pinsDone)
-                    .controlTile()
-            }
+            BuildToolButtons(session: session)
+                .controlTile()
         } else {
             ControlPanel(session: session, arrangement: .toolsColumn)
         }
+    }
+
+    private var cardToggle: some View {
+        ControlDetailsToggle(isOpen: isOpen, action: toggle)
+            .disabled(!canToggle)
+            .controlTile()
     }
 
     /// The building tools the session offers, Done aside.
@@ -914,14 +915,23 @@ private struct ToolsColumn: View {
     /// Icons alone, scrolling, where even they have not the height. While
     /// building, Done and Build stand whole at the foot (decision 382,
     /// later: TestFlight 85.1 had Build cut in half, and Done scrolled out
-    /// of reach) and what scrolls over them is cut between two buttons,
-    /// fading there, so it shows more is below.
+    /// of reach) and what scrolls over them, the tools and under them the
+    /// card's toggle, is cut between two buttons, fading there, so it
+    /// shows more is below.
     @ViewBuilder private var scrolling: some View {
         if BuildToolRail.isShown(session) {
             let shown = ToolColumn.buildingScrollHeight(maxHeight: Double(maxHeight), tools: buildingTools, toggle: showsToggle)
             VStack(alignment: .center, spacing: ControlPanel.tileGap) {
                 ScrollView {
-                    VStack(alignment: .center, spacing: ControlPanel.tileGap) { overBuild(pinsDone: true) }
+                    VStack(alignment: .center, spacing: ControlPanel.tileGap) {
+                        if buildingTools > 0 {
+                            BuildToolButtons(session: session, includesDone: false)
+                                .controlTile()
+                        }
+                        if showsToggle {
+                            cardToggle
+                        }
+                    }
                 }
                 .scrollBounceBehavior(.basedOnSize)
                 .scrollIndicatorsFlash(onAppear: true)
