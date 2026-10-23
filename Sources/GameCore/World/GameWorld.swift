@@ -2407,15 +2407,25 @@ public struct GameWorld: Equatable, Sendable {
     /// of the day that ends at midnight `now`: `release`'s, worked out at
     /// `time`, unless that is `now` itself (a call that starts at
     /// midnight, or a service level that changes there, works out the new
-    /// day's plan first). Then the plan is worked out afresh as at the
-    /// day's last second, as a call across midnight has it, so a day's
+    /// day's plan first). Then the plan is the one as at the day's last
+    /// second, as a call across midnight has it, so a day's
     /// growth does not depend on where calls of ``advance(ticks:)`` end.
-    func reachedStations(endingDayAt now: GameTime, release: PassengerRelease?, workedOutAt time: GameTime) -> [StationID: Int] {
+    func reachedStations(endingDayAt now: GameTime, release: PassengerRelease?, workedOutAt time: GameTime, ended: PassengerPlanCache) -> [StationID: Int] {
         guard townGrowth != nil, accounts.mode == .management else { return [:] }
         guard time >= now, now.seconds > Int64.min else { return release.map(Self.reachedStations) ?? [:] }
         var day = self
         day.clock = GameClock(now: GameTime(seconds: now.seconds - 1))
+        // Decision 379: a network plan, `ended` (the one before the plan
+        // was last worked out again) or the current one, whose key is the
+        // same at the day's last second is that plan
+        // (`PassengerPlanKeyTests`), not worked out again.
         day.passengerPlan = PassengerPlanCache()
+        if passengerRoutingMode == .network {
+            let key = day.passengerPlanKey()
+            if let plan = [ended, passengerPlan].first(where: { $0.plan != nil && $0.key == key }) {
+                day.passengerPlan = plan
+            }
+        }
         return day.passengerRelease().map(Self.reachedStations) ?? [:]
     }
 
@@ -2655,6 +2665,9 @@ public struct GameWorld: Equatable, Sendable {
         // cost nothing.
         // A network plan kept from an earlier call is used only while all
         // it was worked out from is unchanged, the service level included.
+        // The plan before it was last worked out again, which midnight's
+        // growth may still read (decision 379).
+        var endedPlan = passengerPlan
         if remaining > 0 && passengerRoutingMode == .network, passengerPlan.plan != nil,
            passengerPlan.key != passengerPlanKey() {
             passengerPlan = PassengerPlanCache()
@@ -2678,6 +2691,7 @@ public struct GameWorld: Equatable, Sendable {
                     let levels = lines.map { serviceLevel(of: $0.id, at: start) }
                     if levels != passengerLevels {
                         if let release { keepRemainders(of: release) }
+                        endedPlan = passengerPlan
                         passengerPlan = PassengerPlanCache()
                         release = passengerRelease()
                         releasedFrom = start
@@ -2688,7 +2702,7 @@ public struct GameWorld: Equatable, Sendable {
                 // events start and end, at midnight.
                 let midnight = (demandEvents != nil || townGrowth != nil || tourism != nil) && start.seconds % GameTime.secondsPerDay == 0
                 if midnight {
-                    growTowns(reached: reachedStations(endingDayAt: start, release: release, workedOutAt: releasedFrom))
+                    growTowns(reached: reachedStations(endingDayAt: start, release: release, workedOutAt: releasedFrom, ended: endedPlan))
                     startDemandEventDay(dayIndex(of: start))
                     closeTourismDay(dayIndex(of: start) - 1)
                 }
@@ -2696,6 +2710,7 @@ public struct GameWorld: Equatable, Sendable {
                 // trips.
                 if midnight || demandDay != nil && passengerPlan.day != demandDay {
                     if let release { keepRemainders(of: release) }
+                    endedPlan = passengerPlan
                     passengerPlan = PassengerPlanCache()
                     release = passengerRelease()
                     releasedFrom = start
@@ -3379,7 +3394,10 @@ public struct GameWorld: Equatable, Sendable {
             // own (decision 283: or comes out along its track towards it).
             // Its run is kept: a longer way ends with a short run from a
             // stand.
-            if let path = freePlatformOnTheWay(of: trains[index], standing: standing, moving: moving, memo: &memo.directions.paths) {
+            // Decision 379: the train as a local, not `trains[index]` as an
+            // argument, which copied the whole world for each call.
+            let train = trains[index]
+            if let path = freePlatformOnTheWay(of: train, standing: standing, moving: moving, memo: &memo.directions.paths) {
                 follow(path, &trains[index])
                 changed = true
             }
@@ -3408,12 +3426,15 @@ public struct GameWorld: Equatable, Sendable {
     /// goes on exactly as above.
     private mutating func goOn(_ index: Int, held: inout [HeldRoute], memo: inout DispatchMemo) -> Bool {
         let plan = trafficPlan(memo: &memo.directions)
-        guard currentTrafficWait(trains[index], plan: plan, memo: &memo.directions) == nil,
-              let going = goingOn(trains[index]) else { return false }
+        // Decision 379: the train as a local, not `trains[index]` as an
+        // argument, which copied the whole world for each call.
+        let train = trains[index]
+        guard currentTrafficWait(train, plan: plan, memo: &memo.directions) == nil,
+              let going = goingOn(train) else { return false }
         // The whole routes tried before the default one and held: a step
         // ends when one frees, as for the default one (decision 55).
         var whole: [Train] = []
-        if let chosen = scheduledPath(for: trains[index], from: trains[index].position!, to: trains[index].timetable[trains[index].execution!.stop].station, plan: plan, memo: &memo.directions.paths) {
+        if let chosen = scheduledPath(for: train, from: train.position!, to: train.timetable[train.execution!.stop].station, plan: plan, memo: &memo.directions.paths) {
             var scheduled = going
             follow(chosen.path, &scheduled)
             let plannedRun = run(of: scheduled, length: chosen.path.distance, scheduled: chosen.seconds)
@@ -3424,7 +3445,7 @@ public struct GameWorld: Equatable, Sendable {
             }
             whole.append(scheduled)
         }
-        if let preferred = preferredGoingOn(trains[index]) {
+        if let preferred = preferredGoingOn(train) {
             if case .granted(let granted) = reserving(preferred, following: blockSections, memo: &memo.directions) {
                 setOff(index, as: granted)
                 return true
@@ -3631,7 +3652,10 @@ public struct GameWorld: Equatable, Sendable {
             if times.closing == nil, now.isWholeMinute {
                 // Decision 169: the crowd is taken before those who come
                 // get on.
-                let crowd = doorCrowd(of: trains[index].id, at: trains[index].timetable[stop].station)
+                // Decision 379: locals, not `trains[index]` as arguments,
+                // which copied the whole world for each call.
+                let train = trains[index]
+                let crowd = doorCrowd(of: train.id, at: train.timetable[stop].station)
                 let boarded = boardPassengers(trains[index], at: stop)
                 if boarded > 0 {
                     times.exchangeEnd = Self.saturating(max(end, now), plus: trains[index].exchangeSeconds(boarded, crowd: crowd))
@@ -3642,7 +3666,8 @@ public struct GameWorld: Equatable, Sendable {
             guard now >= Self.saturating(times.arrival, plus: ServiceDwell.doorOpening) else { return false }
             // Decision 169: the crowd at the doors as they have opened,
             // before anyone gets off or on.
-            let crowd = doorCrowd(of: trains[index].id, at: trains[index].timetable[stop].station)
+            let train = trains[index]
+            let crowd = doorCrowd(of: train.id, at: train.timetable[stop].station)
             let busy = exchangePassengers(index, at: stop, memo: &memo)
             times.exchangeEnd = Self.saturating(now, plus: trains[index].exchangeSeconds(busy, crowd: crowd))
             changed = true
@@ -3757,13 +3782,16 @@ public struct GameWorld: Equatable, Sendable {
               !unroutable.contains(trains[index].id),
               trains[index].placement != nil
         else { return false }
+        // Decision 379: the train as a local, not `trains[index]` as an
+        // argument, which copied the whole world for each call.
+        let waiting = trains[index]
         // Stage V3 (decision 59): a scheduled wait keeps it here.
         let plan = trafficPlan(memo: &memo.directions)
-        guard currentTrafficWait(trains[index], plan: plan, memo: &memo.directions) == nil else { return false }
-        let departure = leaving(trains[index], stop: stop, cycle: cycle, memo: &memo.directions.paths)
+        guard currentTrafficWait(waiting, plan: plan, memo: &memo.directions) == nil else { return false }
+        let departure = leaving(waiting, stop: stop, cycle: cycle, memo: &memo.directions.paths)
         guard let moved = departure.train else {
             // Nothing changes: the train is not turned round either.
-            unroutable.insert(trains[index].id)
+            unroutable.insert(waiting.id)
             return false
         }
         // Stage V3: the scheduled path, on the scheduled run, when the train
@@ -3776,10 +3804,10 @@ public struct GameWorld: Equatable, Sendable {
         // With block sections (decision 212) it may follow the trains ahead
         // on them too.
         if case .setsOff = departure,
-           case .setsOff(let scheduled, _)? = scheduledLeaving(trains[index], stop: stop, cycle: cycle, plan: plan, memo: &memo.directions.paths) {
+           case .setsOff(let scheduled, _)? = scheduledLeaving(waiting, stop: stop, cycle: cycle, plan: plan, memo: &memo.directions.paths) {
             if case .granted(let train) = reserving(scheduled, following: blockSections, memo: &memo.directions) { granted = train } else { whole.append(scheduled) }
         }
-        if granted == nil, case .setsOff(let preferred, _)? = preferredLeaving(trains[index], stop: stop, cycle: cycle, memo: &memo.directions.paths) {
+        if granted == nil, case .setsOff(let preferred, _)? = preferredLeaving(waiting, stop: stop, cycle: cycle, memo: &memo.directions.paths) {
             if case .granted(let train) = reserving(preferred, following: blockSections, memo: &memo.directions) { granted = train } else { whole.append(preferred) }
         }
         let train: Train
@@ -4022,9 +4050,11 @@ public struct GameWorld: Equatable, Sendable {
     private mutating func recordArrivals() -> Bool {
         var arrived = false
         for index in trains.indices {
-            guard case .travellingToStop(let stop, let cycle)? = trains[index].execution,
-                  isStopped(trains[index], at: trains[index].timetable[stop].station)
-            else { continue }
+            guard case .travellingToStop(let stop, let cycle)? = trains[index].execution else { continue }
+            // Decision 379: the train as a local, not `trains[index]` as an
+            // argument, which copied the whole world for each call.
+            let train = trains[index]
+            guard isStopped(train, at: train.timetable[stop].station) else { continue }
             trains[index].execution = .waitingAtStop(stop, cycle: cycle)
             trains[index].times = ServiceTimes(arrival: clock.now, departure: trains[index].times?.departure)
             arrived = true
@@ -4032,8 +4062,8 @@ public struct GameWorld: Equatable, Sendable {
             // Decision 207: a trip at its last call counts towards its
             // line's punctuality, as the reference counts a train's final
             // delay once a day.
-            if realisticOperation, stop == trains[index].timetable.count - 1, !trains[index].isDeadheading,
-               let line = assignedLine(of: trains[index].id), self.line(id: line)?.isFreight == false {
+            if realisticOperation, stop == train.timetable.count - 1, !train.isDeadheading,
+               let line = assignedLine(of: train.id), self.line(id: line)?.isFreight == false {
                 let scheduled = trains[index].scheduledArrival(of: stop, cycle: cycle)
                 countLineTrip(on: line, late: Self.gap(from: scheduled, to: clock.now))
             }
@@ -4189,10 +4219,12 @@ public struct GameWorld: Equatable, Sendable {
         for index in trains.indices {
             let movement = trains[index].movement
             guard let position = trains[index].position, movement.rate > 0 else { continue }
+            // Decision 379: `before`, not `trains[index]`, as the argument,
+            // which copied the whole world for each call.
             let before = trains[index]
-            let distance = travelShare(of: trains[index], from: start, memo: &memo)(span)
+            let distance = travelShare(of: before, from: start, memo: &memo)(span)
             guard distance > 0 else { continue }
-            let travel = travelling(trains[index], distance: distance, memo: &memo)
+            let travel = travelling(before, distance: distance, memo: &memo)
             // Decision 248: what it has gone of its allowance.
             if let allowance = spacingAllowances[trains[index].id], allowance.left != .max {
                 spacingAllowances[trains[index].id]?.left = allowance.left - min(distance, allowance.left)
@@ -4201,8 +4233,8 @@ public struct GameWorld: Equatable, Sendable {
             switch (position, travel.position) {
             case (.onEdge(let traversal, _), .onEdge(_, let reached)):
                 trains[index].trailEdges = networkTrail(
-                    after: traversal.edge, trail: trains[index].trailEdges,
-                    entered: movement.edges[movement.cursor..<travel.cursor], offset: reached, length: trains[index].length
+                    after: traversal.edge, trail: before.trailEdges,
+                    entered: movement.edges[movement.cursor..<travel.cursor], offset: reached, length: before.length
                 )
             }
             trains[index].position = travel.position
@@ -4232,11 +4264,13 @@ public struct GameWorld: Equatable, Sendable {
     private mutating func dropRunsHeldUp(endingAt end: GameTime, memo: inout DirectionMemo) -> Bool {
         var dropped = false
         for index in trains.indices {
-            guard case .travellingToStop? = trains[index].execution, let run = trains[index].times?.run,
-                  let curve = curve(of: run, for: trains[index].performance, memo: &memo)
-            else { continue }
+            guard case .travellingToStop? = trains[index].execution, let run = trains[index].times?.run else { continue }
+            // Decision 379: the train as a local, not `trains[index]` as an
+            // argument, which copied the whole world for each call.
+            let train = trains[index]
+            guard let curve = curve(of: run, for: train.performance, memo: &memo) else { continue }
             var left: Int64 = 0
-            for stretch in routeStretches(of: trains[index]).stretches {
+            for stretch in routeStretches(of: train).stretches {
                 let (sum, overflow) = left.addingReportingOverflow(stretch.to - stretch.from)
                 left = overflow ? .max : sum
             }
@@ -4246,7 +4280,7 @@ public struct GameWorld: Equatable, Sendable {
             // lost: it goes on at its pace once it can. Decision 248: as the
             // minute ends, as its allowances run (so the same however the
             // minute's seconds are stepped).
-            let spaced = !isTrafficControlEnabled && followsRealTimetable(trains[index])
+            let spaced = !isTrafficControlEnabled && followsRealTimetable(train)
             if spaced, !end.isWholeMinute { continue }
             if spaced, let late = runDelay(run, curve: curve, covered: run.length - left, at: end) {
                 trains[index].times?.run = run.delayed(by: late)
@@ -4346,31 +4380,34 @@ public struct GameWorld: Equatable, Sendable {
     /// ever shrinks: nothing is taken here, and nothing the train will
     /// still use is released.
     private mutating func releasePassedTrack(_ index: Int, before: Train, distance: Int64, memo: inout DirectionMemo) {
-        guard !trains[index].reservation.isEmpty else { return }
+        // Decision 379: the train as a local, not `trains[index]` as an
+        // argument, which copied the whole world for each call.
+        let train = trains[index]
+        guard !train.reservation.isEmpty else { return }
         // Nothing to release when its reservation held nothing outside its
         // route envelope as it was (as its last release left it, the train
         // unchanged since), it went no further than its length, and its
         // body covers all its body covered: the envelope it had is then
         // what its body covered and what its envelope covers now, its head
         // having gone only over track its body now covers.
-        if memo.released[before.id]?.contains(before) == true, distance <= before.length, routeStretches(of: trains[index]).moves {
-            let now = cover(of: bodyStretches(of: trains[index]))
+        if memo.released[before.id]?.contains(before) == true, distance <= before.length, routeStretches(of: train).moves {
+            let now = cover(of: bodyStretches(of: train))
             let was = bodyStretches(of: before)
             if resources(covering: was).allSatisfy(now.contains), foulingNodes(covering: was).allSatisfy(now.contains) {
-                memo.release(trains[index])
+                memo.release(train)
                 return
             }
         }
         defer { memo.release(trains[index]) }
         // Its route envelope (see ``routeEnvelope(of:)``), asked a resource
         // at a time (see ``TrackCover``).
-        let route = routeStretches(of: trains[index])
+        let route = routeStretches(of: train)
         guard route.moves else {
             trains[index].reservation = []
             return
         }
-        let envelope = cover(of: bodyStretches(of: trains[index]) + route.stretches)
-        trains[index].reservation = envelope.kept(of: trains[index].reservation)
+        let envelope = cover(of: bodyStretches(of: train) + route.stretches)
+        trains[index].reservation = envelope.kept(of: train.reservation)
     }
 
     /// Stage U2: every train that follows another, in ascending ID order,
@@ -4392,27 +4429,30 @@ public struct GameWorld: Equatable, Sendable {
         // Worked out again once a reservation changes.
         var holders: TrackHolders?
         for index in trains.indices {
-            guard let (held, envelopes) = authority(of: trains[index], memo: &memo) else { continue }
+            // Decision 379: the train as a local, not `trains[index]` as an
+            // argument, which copied the whole world for each call.
+            let train = trains[index]
+            guard let (held, envelopes) = authority(of: train, memo: &memo) else { continue }
             // Decision 294: a long leg of a line with runs, no farther than
             // its approach allows yet.
-            let limit = approachLimit(of: trains[index], envelopes)
+            let limit = approachLimit(of: train, envelopes)
             if let limit, held >= limit { continue }
             // Its route envelope (see ``routeEnvelope(of:)``): the base and
             // the track of every stretch, asked a resource at a time.
-            let route = followingCover(of: trains[index], envelopes, memo: &memo)
+            let route = followingCover(of: train, envelopes, memo: &memo)
             if holders == nil { holders = trackHolders(memo: &memo) }
-            if limit == nil, holder(of: route, except: trains[index].id, holders: holders!) == nil {
+            if limit == nil, holder(of: route, except: train.id, holders: holders!) == nil {
                 trains[index].reservation = Set(route.resources).sorted()
                 extended = true
                 holders = nil
                 continue
             }
-            if approachesStandingTrain(trains[index], along: route, holders: holders!) { continue }
-            let clear = clearOfBlocked(blockedTrack(except: trains[index].id, holders: holders!))
+            if approachesStandingTrain(train, along: route, holders: holders!) { continue }
+            let clear = clearOfBlocked(blockedTrack(except: train.id, holders: holders!))
             let free = longestAuthority(envelopes, from: held, clearBase: clear.base(envelopes.base), clear: clear.stretch)
             let authority = min(followingAuthority(envelopes, free: free), limit ?? .max)
             guard authority > held else { continue }
-            trains[index].reservation = reservation(trains[index].reservation, extending: envelopes, from: held, to: authority)
+            trains[index].reservation = reservation(train.reservation, extending: envelopes, from: held, to: authority)
             extended = true
             holders = nil
         }

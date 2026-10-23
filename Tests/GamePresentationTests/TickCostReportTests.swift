@@ -114,6 +114,63 @@ final class TickCostReportTests: XCTestCase {
         print(report.joined(separator: "\n"))
     }
 
+    /// Decision 379: on an iPhone 17 Pro (TestFlight 85.1) the High Speed
+    /// Rail demo at 6000× spent 500–690 ms a second advancing off the main
+    /// thread, the longest 194–305 ms. Plays the demo as the game loop
+    /// does for `TICK_REPORT_HSR` ticks (1 to 10,000; a day is 144) and
+    /// prints what a tick's world advance and its traffic reading spend,
+    /// on average and at their longest, and the costliest ticks. Run on
+    /// request:
+    ///
+    ///     TICK_REPORT_HSR=432 swift test -c release -Xswiftc -enable-testing \
+    ///       --filter TickCostReportTests/testWhatATickCostsOnTheHighSpeedRail
+    func testWhatATickCostsOnTheHighSpeedRail() throws {
+        guard let value = ProcessInfo.processInfo.environment["TICK_REPORT_HSR"] else {
+            throw XCTSkip("set TICK_REPORT_HSR=<ticks> to time the ticks of the High Speed Rail at 6000×")
+        }
+        let ticks = try XCTUnwrap(Int(value).flatMap { (1...10_000).contains($0) ? $0 : nil }, "TICK_REPORT_HSR is 1 to 10,000 ticks")
+        let session = try MapFrameCostReportTests.highSpeedSession()
+        session.setSpeed(.fast)
+        var world = session.world
+        let clock = ContinuousClock()
+        var advances: [(time: GameTime, ms: Double)] = []
+        var readings: [Double] = []
+        var previous: TrafficReading?
+        func ms(_ duration: Duration) -> Double {
+            Double(duration.components.seconds) * 1000 + Double(duration.components.attoseconds) / 1e15
+        }
+        for _ in 0..<ticks {
+            var next = world
+            let advance = try clock.measure { try next.advance(ticks: 1) }
+            advances.append((next.clock.now, ms(advance)))
+            var reading: TrafficReading?
+            readings.append(ms(clock.measure { reading = TrafficReading(world: next, train: nil, in: .english, previous: previous) }))
+            previous = reading
+            world = next
+        }
+        func stats(_ values: [Double]) -> String {
+            String(format: "mean %.2f ms, longest %.2f ms, total %.0f ms", values.reduce(0, +) / Double(max(1, values.count)), values.max() ?? 0, values.reduce(0, +))
+        }
+        var rows = [
+            "stations \(world.stations.count), lines \(world.lines.count), trains \(world.trains.count), traffic control \(world.isTrafficControlEnabled ? "on" : "off"), \(ticks) ticks at 6000×",
+            "advance(ticks: 1): \(stats(advances.map(\.ms)))",
+            "TrafficReading: \(stats(readings))",
+            "",
+            "Mean advance by hour of day:",
+        ]
+        var hours: [Int64: [Double]] = [:]
+        for tick in advances { hours[(tick.time.seconds % GameTime.secondsPerDay) / 3600, default: []].append(tick.ms) }
+        for hour in hours.keys.sorted() {
+            let values = hours[hour]!
+            rows.append(String(format: "- %02lld: %.2f ms (longest %.2f)", hour, values.reduce(0, +) / Double(values.count), values.max() ?? 0))
+        }
+        rows.append("\nCostliest advances:")
+        for tick in advances.sorted(by: { $0.ms > $1.ms }).prefix(8) {
+            rows.append(String(format: "- day %lld %@: %.1f ms", tick.time.seconds / GameTime.secondsPerDay, tick.time.clockText, tick.ms))
+        }
+        print(rows.joined(separator: "\n"))
+    }
+
     /// `ticks` of `session`'s game loop, one at a time, with the frame
     /// meter on: each piece of the step after a tick, and the world it
     /// replaced let go, in milliseconds.

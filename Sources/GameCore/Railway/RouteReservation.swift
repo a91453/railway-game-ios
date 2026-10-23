@@ -1339,7 +1339,10 @@ extension GameWorld {
     /// ``authority(of:)``) and the blocked test for one that would take
     /// more (see ``blockedTrack(except:)``): each asks a stretch whole.
     func clearOfBlocked(_ blocked: BlockedTrack) -> (base: ([TrackResource]) -> Bool, stretch: (TrackStretch) -> Bool) {
-        ({ !network.fouls($0, blocked.contains) }, { !blocked.blocks(cover(of: [$0]), in: network) })
+        // Decision 379: the first captures the network alone, not the
+        // whole world, which each closure copied.
+        let network = network
+        return ({ !network.fouls($0, blocked.contains) }, { !blocked.blocks(cover(of: [$0]), in: network) })
     }
 
     /// How far along its route `train` has world units of its route
