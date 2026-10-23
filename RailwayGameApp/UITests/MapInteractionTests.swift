@@ -1457,8 +1457,9 @@ final class MapInteractionTests: XCTestCase {
     /// Decision 384 (TestFlight 85.1): on a phone on its side the new
     /// line's station pair drawer covered the map's ✓ beside the last
     /// station, and the line could not be opened. A line started from a
-    /// station and its last station tapped: the ✓ is clear of the drawer, a
-    /// finger reaches it, and it opens the line. Where the drawer and the ✓
+    /// station and its last station tapped: the ✓ is clear of the drawer,
+    /// folded and with its bars open, a finger reaches it, and it opens the
+    /// line. Where the drawer and the ✓
     /// go is `StationPairDrawerLayoutTests` on Linux. Full lane only
     /// (decision 199); by hand with only_testing.
     func testTheNewLinesCheckIsClearOfTheStationPairDrawer() throws {
@@ -1521,6 +1522,13 @@ final class MapInteractionTests: XCTestCase {
         for id in ["Zoom in", "Zoom out", "map.open3D"] where app.buttons[id].exists {
             XCTAssertFalse(app.buttons[id].frame.intersects(drawer.frame), "\(id) is clear of the drawer \(drawer.frame)")
         }
+        // Its bars opened, as a player compares the two: the ✓ stays clear.
+        let fold = app.buttons["map.stationPair.fold"]
+        XCTAssertTrue(fold.appears(within: 10), "The comparison opens")
+        fold.tap()
+        drawer.waitUntilSettled()
+        XCTAssertTrue(confirm.becomesHittable(within: 10), "A finger reaches the ✓ with the bars open: \(confirm.frame), drawer \(drawer.frame)")
+        XCTAssertFalse(confirm.frame.intersects(drawer.frame), "Open, the ✓ \(confirm.frame) is clear of the drawer \(drawer.frame)")
         confirm.tap()
         // Decision 303: the line's card, where the game runs its trains,
         // or the line made at once.

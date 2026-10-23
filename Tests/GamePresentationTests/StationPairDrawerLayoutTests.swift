@@ -46,24 +46,65 @@ final class StationPairDrawerLayoutTests: XCTestCase {
         XCTAssertFalse(overlaps(drawer(folded: true, trailing: trailing), card))
     }
 
-    func testTheMapsCheckKeepsOffTheFoldedDrawer() {
-        XCTAssertTrue(StationPairDrawerLayout.startsFolded(compactHeight: true), "A phone on its side")
-        XCTAssertFalse(StationPairDrawerLayout.startsFolded(compactHeight: false), "An iPad keeps the bars open")
-        let trailing = StationPairDrawerLayout.trailingInset(panel: 0, card: 0, corner: width - corner.x)
-        let drawer = drawer(folded: true, trailing: trailing)
-        // The ✕, ↶ and ✓ with the line's caption over them, under the last
-        // station picked (小港 → 順苓), which stands just above the drawer.
-        let pill = ScreenSize(width: 200, height: 76)
-        let station = (x: drawer.x + drawer.width / 2, y: drawer.y - 10)
-        let highest = 54 + 10 + 46 + 10.0 // under the board and the layer strip
-        let placed = BuildConfirmLayout.keepingOff(
-            [drawer, corner], x: station.x - pill.width / 2, y: station.y + 22, width: pill.width, height: pill.height,
-            minX: leading + 8, maxX: width - trailing - pill.width - 8, highest: highest
-        )
-        let frame = ScreenFrame(x: placed.x, y: placed.y, width: pill.width, height: pill.height)
-        XCTAssertFalse(overlaps(frame, drawer), "\(frame) and \(drawer)")
-        XCTAssertFalse(overlaps(frame, corner), "\(frame) and \(corner)")
-        XCTAssertGreaterThanOrEqual(frame.y, highest)
+    /// On a phone on its side the drawer rides in the map's pill, beside
+    /// its words and its ✕ ↶ ✓, open or folded; before, open, it stood
+    /// over the ✓ (decision 384's first version, the planner's review).
+    func testOnTheSmallestPhonesTheOpenDrawerKeepsOffTheCheck() {
+        XCTAssertTrue(StationPairDrawerLayout.ridesInPill(compactHeight: true), "A phone on its side")
+        XCTAssertFalse(StationPairDrawerLayout.ridesInPill(compactHeight: false), "An iPad keeps it over the dock")
+        // The map's points (it runs under the safe area): an iPhone SE and
+        // a 13 mini on their sides, the smallest the app runs on (iOS 17),
+        // with a real-world map's credits band of 30. Above the pill, the
+        // status bar and the layer strip (ContentView's `mapTop`); below
+        // it, the station master standing at the column's foot and a
+        // margin (`dockBottom`); beside it, the tools column.
+        let phones: [(name: String, width: Double, height: Double, safe: ScreenInsets)] = [
+            ("SE", 667, 375, ScreenInsets(top: 0, leading: 0, bottom: 0, trailing: 0)),
+            ("13 mini", 812, 375, ScreenInsets(top: 0, leading: 50, bottom: 21, trailing: 50)),
+        ]
+        let margin = BuildConfirmLayout.margin, padding = StationPairDrawerLayout.pillPadding
+        for phone in phones {
+            let top = phone.safe.top + 10 + 44 + 10 + 36
+            let bottom = phone.safe.bottom + 30 + 44 + 25 + 10
+            let leading = phone.safe.leading + 10 + ToolColumn.width
+            let available = phone.height - top - bottom - 2 * margin
+            let pillWidth = BuildConfirmLayout.maximumWidth(viewportWidth: phone.width, leading: leading, trailing: phone.safe.trailing)
+            guard let maximum = StationPairDrawerLayout.maximumHeightInPill(available: available, pillWidth: pillWidth) else {
+                return XCTFail("\(phone.name): the drawer fits in the pill")
+            }
+            // Open: its top line and five figures' bars (15 tall, 6 apart),
+            // scrolling in the room left.
+            let bars = min(5 * 15 + 4 * 6.0, StationPairDrawerLayout.barsRoom(maximumHeight: maximum))
+            XCTAssertGreaterThan(bars, 15, "\(phone.name): a figure's bars show at least")
+            let drawerHeight = StationPairDrawerLayout.foldedHeight + (bars > 0 ? 6 + bars : 0)
+            XCTAssertLessThanOrEqual(drawerHeight, maximum, phone.name)
+            // The pill's words: the line's length, time and price on two
+            // lines, its contents on one, and the buttons.
+            let words = ScreenSize(width: pillWidth - 2 * padding - StationPairDrawerLayout.widthInPill - StationPairDrawerLayout.pillSpacing, height: 3 * 16 + 4 + 40)
+            XCTAssertGreaterThanOrEqual(words.width, BuildConfirmLayout.minimumWidth, phone.name)
+            let pillHeight = 2 * padding + max(drawerHeight, words.height)
+            // Its last station picked low on the map: the pill is held to
+            // the clear band, whole.
+            let pillY = min(max(phone.height - 60, top + margin), phone.height - bottom - margin - pillHeight)
+            XCTAssertGreaterThanOrEqual(pillY, top + margin, "\(phone.name): under the status bar")
+            let pillX = leading + margin
+            let drawer = ScreenFrame(x: pillX + padding, y: pillY + padding, width: StationPairDrawerLayout.widthInPill, height: drawerHeight)
+            let check = ScreenFrame(
+                x: drawer.x + drawer.width + StationPairDrawerLayout.pillSpacing, y: pillY + padding,
+                width: words.width, height: words.height
+            )
+            XCTAssertFalse(overlaps(drawer, check), "\(phone.name): \(drawer) and \(check)")
+            XCTAssertLessThanOrEqual(check.x + check.width + padding, phone.width - phone.safe.trailing - margin, "\(phone.name): within the map")
+        }
+    }
+
+    func testTheDrawerStaysOutOfThePillWithoutRoom() {
+        // Too short for its top line.
+        XCTAssertNil(StationPairDrawerLayout.maximumHeightInPill(available: 60, pillWidth: 600))
+        // Too narrow beside the narrowest words (a card open beside it).
+        XCTAssertNil(StationPairDrawerLayout.maximumHeightInPill(available: 200, pillWidth: 400))
+        XCTAssertEqual(StationPairDrawerLayout.maximumHeightInPill(available: 200, pillWidth: 600), 200 - 12)
+        XCTAssertEqual(StationPairDrawerLayout.barsRoom(maximumHeight: StationPairDrawerLayout.foldedHeight), 0)
     }
 
     func testTheCheckKeepsOffBesideWhenThereIsNoRoomAbove() {

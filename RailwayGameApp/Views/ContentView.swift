@@ -601,10 +601,11 @@ struct ContentView: View {
                         card: isOpen && besideDock ? cardWidth + margin : 0,
                         corner: corner
                     )
-                    if session.tutorial == nil, draft.count >= 2 {
+                    // On a phone on its side it rides in the map's ✓
+                    // pill instead (decision 384).
+                    if session.tutorial == nil, draft.count >= 2, !StationPairDrawerLayout.ridesInPill(compactHeight: compactHeight) {
                         StationPairDrawer(
-                            session: session, from: draft[draft.count - 2], to: draft[draft.count - 1],
-                            startsFolded: StationPairDrawerLayout.startsFolded(compactHeight: compactHeight)
+                            session: session, from: draft[draft.count - 2], to: draft[draft.count - 1]
                         )
                             // The map's ✓ keeps off it (decision 384).
                             .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { screen.stationPairFrame = $0 }

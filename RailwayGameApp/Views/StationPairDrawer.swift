@@ -16,15 +16,21 @@ struct StationPairDrawer: View {
     let to: StationID
     @State private var comparison: StationPairComparison?
     @State private var isFolded: Bool
+    @State private var barsHeight: CGFloat = 0
     private let startsFolded: Bool
+    private let maxHeight: CGFloat?
 
-    /// `startsFolded`: whether it opens folded to its top line
-    /// (``StationPairDrawerLayout/startsFolded(compactHeight:)``).
-    init(session: GameSession, from: StationID, to: StationID, startsFolded: Bool = false) {
+    /// `startsFolded`: whether it opens folded to its top line, and folds
+    /// again for each station picked (in the map's pill, decision 384);
+    /// `maxHeight`: the tallest it may be, its bars scrolling under its top
+    /// line beyond it (in the map's pill, decision 384), or `nil` for as
+    /// tall as they are.
+    init(session: GameSession, from: StationID, to: StationID, startsFolded: Bool = false, maxHeight: CGFloat? = nil) {
         self.session = session
         self.from = from
         self.to = to
         self.startsFolded = startsFolded
+        self.maxHeight = maxHeight
         _isFolded = State(initialValue: startsFolded)
     }
 
@@ -40,8 +46,21 @@ struct StationPairDrawer: View {
             if let comparison {
                 header(comparison, language: language)
                 if !isFolded {
-                    ForEach(comparison.measures, id: \.self) { measure in
-                        bars(measure, comparison, language: language)
+                    if let maxHeight {
+                        // Decision 384: in the map's pill, no taller than
+                        // the map's clear band; the top line alone when it
+                        // has no room for the bars.
+                        let room = StationPairDrawerLayout.barsRoom(maximumHeight: Double(maxHeight))
+                        if room > 0 {
+                            ScrollView {
+                                measures(comparison, language: language)
+                                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { barsHeight = $0 }
+                            }
+                            .scrollBounceBehavior(.basedOnSize)
+                            .frame(height: min(barsHeight, CGFloat(room)))
+                        }
+                    } else {
+                        measures(comparison, language: language)
                     }
                 }
             } else {
@@ -56,7 +75,7 @@ struct StationPairDrawer: View {
         .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Palette.ink, lineWidth: 1.5))
         .onChange(of: to) {
             // Decision 384: folded again for each station picked, so the
-            // map's ✓ beside it has room on a short screen.
+            // map's pill it rides in stays short.
             if startsFolded { isFolded = true }
         }
         .task(id: Pair(from: from, to: to, edits: session.editSerial)) {
@@ -109,6 +128,14 @@ struct StationPairDrawer: View {
             .accessibilityIdentifier("map.stationPair.fold")
         }
         .foregroundStyle(Theme.textPrimary)
+    }
+
+    private func measures(_ comparison: StationPairComparison, language: DisplayLanguage) -> some View {
+        VStack(spacing: 6) {
+            ForEach(comparison.measures, id: \.self) { measure in
+                bars(measure, comparison, language: language)
+            }
+        }
     }
 
     /// A square of the side's colour, so the bars' colours have a key.
