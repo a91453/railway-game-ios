@@ -130,6 +130,30 @@ final class LandImportTests: XCTestCase {
         XCTAssertEqual(demand.homeShare, 0)
     }
 
+    /// Decision 385 (續): no one lives on Xiaogang airport; its people move
+    /// to the rest of their WorldPop cells, so the map keeps everyone.
+    func testNoOneLivesOnTheAirport() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let noBuild = try RealNoBuildLand(data: Data(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/RealWorld/taiwan_no_build.json")))
+        let grid = try Self.bundled()
+        let open = try Self.bundledPlaces()
+        var closed = open
+        closed.noBuild = noBuild
+        let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: 22.5771, longitudeDegrees: 120.35))
+        let frame = Self.frame(anchor)
+        let before = try XCTUnwrap(LandImport.cells(population: grid, places: open, frame: frame, bounds: GameWorld.newGameBounds))
+        let after = try XCTUnwrap(LandImport.cells(population: grid, places: closed, frame: frame, bounds: GameWorld.newGameBounds))
+        func onAirport(_ cell: LandCell) -> Bool {
+            let place = frame.coordinate(worldX: Double(cell.middle.x), worldY: Double(cell.middle.y))
+            return noBuild.kind(atLatitude: place.latitude, longitude: place.longitude) == .airport
+        }
+        let airportBefore = before.filter(onAirport).reduce(Int64(0)) { $0 + $1.residents }
+        XCTAssertGreaterThan(airportBefore, 1_000, "WorldPop puts people on the airport")
+        XCTAssertEqual(after.filter(onAirport).reduce(Int64(0)) { $0 + $1.residents }, 0)
+        XCTAssertEqual(after.reduce(Int64(0)) { $0 + $1.residents }, before.reduce(Int64(0)) { $0 + $1.residents }, "everyone is kept")
+        XCTAssertEqual(after.reduce(Int64(0)) { $0 + $1.jobs }, before.reduce(Int64(0)) { $0 + $1.jobs }, "every job is kept")
+    }
+
     /// Phase 6c-1 (ARCHITECTURE decision 74): a new game of Taipei puts up
     /// a building on each of its cells, every one an ordinary city building
     /// holding all who live and work there.

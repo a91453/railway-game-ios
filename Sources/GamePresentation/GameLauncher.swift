@@ -1329,7 +1329,8 @@ public struct RealWorldData: Sendable {
 
     /// Reads `taiwan_population.json`, `taiwan_places.json`,
     /// `taiwan_water.json`, `taiwan_heights.dat`, `taiwan_coverage.dat`
-    /// (decision 147), `taiwan_place_names.json` (decision 159) and the
+    /// (decision 147), `taiwan_place_names.json` (decision 159),
+    /// `taiwan_no_build.json` (decision 385 (續)) and the
     /// railways' files
     /// (``RealRailways/load(file:)``) through `file` (a name and extension
     /// to its contents). About 5.3 MB of JSON is decoded, and 12 MB of heights
@@ -1346,7 +1347,9 @@ public struct RealWorldData: Sendable {
             }
         }
         let population = grid("taiwan_population", PopulationGrid.init(data:))
-        let places = grid("taiwan_places", PlaceGrid.init(data:))
+        var places = grid("taiwan_places", PlaceGrid.init(data:))
+        // Decision 385 (續): the land no one lives on goes with the places.
+        places?.noBuild = grid("taiwan_no_build", RealNoBuildLand.init(data:))
         let water = grid("taiwan_water", WaterGrid.init(data:))
         let heights = grid("taiwan_heights", ext: "dat", HeightGrid.init(data:))
         let coverage = grid("taiwan_coverage", ext: "dat", CoverageGrid.init(data:))

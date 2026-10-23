@@ -3,11 +3,11 @@
 
 Reads a whole OpenStreetMap extract of Taiwan (osmtoday.com's
 `asia/taiwan.pbf`, ODbL 1.0) and writes
-`RailwayGameApp/Resources/BaseMap/taiwan_no_build.json`, which
+`RailwayGameApp/Resources/RealWorld/taiwan_no_build.json`, which
 `GamePresentation`'s `RealNoBuildLand` reads:
 
     python3 -I tools/no-build-land/build_no_build.py taiwan.pbf \
-        RailwayGameApp/Resources/BaseMap/taiwan_no_build.json
+        RailwayGameApp/Resources/RealWorld/taiwan_no_build.json
 
 Kept: the outer rings of airports, military land, cemeteries, golf
 courses, railway land and ports (`KINDS`), of at least `SMALLEST` m²,
