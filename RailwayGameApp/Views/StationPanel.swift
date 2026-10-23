@@ -37,9 +37,11 @@ struct StationPanel: View {
     /// what was typed in it.
     @State private var choosingStation = false
     @State private var stationSearch = ListSearch()
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         NavigationStack {
+            ScrollViewReader { proxy in
             Form {
                 if let station = session.selectedStation {
                     // Decision 336: a real line on sale through here, above
@@ -83,6 +85,16 @@ struct StationPanel: View {
                     }
                 }
             }
+            // Decision 376: the button a tutorial step asks for (lesson 8's
+            // freight yard, last in the form) is scrolled into view.
+            .onChange(of: RevealKey(step: session.tutorial?.step.id, target: session.tutorial?.step.revealsInPanel, station: session.selectedStationID), initial: true) { _, key in
+                guard let target = key.target else { return }
+                Task { @MainActor in
+                    await Task.yield()
+                    withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) { proxy.scrollTo(target, anchor: .center) }
+                }
+            }
+            }
             .navigationTitle(session.selectedStation.map { Text(verbatim: $0.name) } ?? Text("Station"))
             .hardTopScrollEdge()
             .navigationBarTitleDisplayMode(.inline)
@@ -112,6 +124,14 @@ struct StationPanel: View {
         .task(id: RidershipKey(world: session.world, station: session.selectedStationID)) {
             await workOutRidership()
         }
+    }
+
+    /// What decides the tutorial's button to scroll to: the step, and the
+    /// station shown.
+    private struct RevealKey: Equatable {
+        let step: String?
+        let target: TutorialTarget?
+        let station: StationID?
     }
 
     /// Puts up the rename alert when the station tag's pencil opened the
@@ -484,6 +504,8 @@ struct StationPanel: View {
                         }
                     }
                     .accessibilityIdentifier("station.freight.build")
+                    .tutorialPanelTarget(.freightYard)
+                    .id(TutorialTarget.freightYard)
                 }
             } header: {
                 Text(verbatim: language.text("Freight", "貨運"))

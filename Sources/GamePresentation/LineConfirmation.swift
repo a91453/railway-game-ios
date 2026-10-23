@@ -69,13 +69,21 @@ public struct LineConfirmation: Equatable, Sendable {
     public var close: Int
     /// Trains at each level: the two peaks share one count.
     public var trains: TrainsInService
+    /// Decision 376: whether the line carries freight (decision 155)
+    /// rather than passengers, offered where one of its stops has a
+    /// freight yard (``GameSession/lineConfirmationOffersFreight``).
+    public var isFreight: Bool
 
-    public init(name: String, color: LineColor? = nil, open: Int = 360, close: Int = 1440, trains: TrainsInService = Self.automaticTrains) {
+    public init(
+        name: String, color: LineColor? = nil, open: Int = 360, close: Int = 1440, trains: TrainsInService = Self.automaticTrains,
+        isFreight: Bool = false
+    ) {
         self.name = name
         self.color = color
         self.open = open
         self.close = close
         self.trains = trains
+        self.isFreight = isFreight
     }
 
     /// One train at every level: what opening a line did before (decision 264).
@@ -254,6 +262,13 @@ extension GameSession {
         lineConfirmation = LineConfirmation(name: Self.suggestedLineName(for: world, in: language))
     }
 
+    /// Whether the card offers to make the line carry freight (decision
+    /// 376): in a game whose freight is shown, once one of the drafted
+    /// stops has a freight yard.
+    public var lineConfirmationOffersFreight: Bool {
+        showsFreight && lineDraftStops.contains { world.freightFacility(at: $0) != nil }
+    }
+
     /// Puts the card away; the draft stays, to change or confirm again.
     public func cancelLineConfirmation() {
         lineConfirmation = nil
@@ -325,7 +340,8 @@ extension GameSession {
             let service = TrainsInService(peak: min(card.trains.peak, wanted), offPeak: min(card.trains.offPeak, wanted), low: min(card.trains.low, wanted))
             let set = AutoService(
                 newLine: AutoService.NewLine(
-                    name: name, stops: plan.newLine?.stops ?? stops, targets: targets, color: card.color, window: card.window
+                    name: name, stops: plan.newLine?.stops ?? stops, targets: targets, color: card.color, window: card.window,
+                    isFreight: card.isFreight && lineConfirmationOffersFreight ? true : nil
                 ),
                 line: nil, loops: plan.loops, trains: plan.trains, cars: plan.cars, language: plan.language, service: service
             )

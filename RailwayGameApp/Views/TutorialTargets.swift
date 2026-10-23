@@ -67,21 +67,24 @@ extension View {
     /// `tutorialTarget(_:)`, from the overlay (the line step's card covered
     /// Pick on Map in run 38243536829), so this reports the view's place on
     /// the screen through ``GameScreenState`` instead, until it goes.
-    func tutorialPanelTarget(_ target: TutorialTarget) -> some View {
+    /// `nil` marks nothing.
+    func tutorialPanelTarget(_ target: TutorialTarget?) -> some View {
         modifier(TutorialPanelTarget(target: target))
     }
 }
 
 private struct TutorialPanelTarget: ViewModifier {
-    let target: TutorialTarget
+    let target: TutorialTarget?
     @Environment(GameScreenState.self) private var screen
 
     func body(content: Content) -> some View {
         content
             .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
+                guard let target else { return }
                 screen.tutorialPanelTargets[target] = frame
             }
             .onDisappear {
+                guard let target else { return }
                 screen.tutorialPanelTargets[target] = nil
             }
     }

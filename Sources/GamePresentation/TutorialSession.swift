@@ -95,6 +95,11 @@ extension GameSession {
             // Decision 376: the line's passing loops, which the player
             // did not build in the lesson.
             return world.stations.filter { Self.isPassingPlace($0, in: world) }.map(\.location)
+        case .pickDepotEnd:
+            // The ends of the tracks: a node only one edge ends at.
+            return world.network.nodes.filter { $0.ends.count == 1 }.map { PlanPoint(x: $0.position.x, y: $0.position.y) }
+        case .selectStationForFreight:
+            return world.stations.filter { Self.takesFreightYard($0, in: world) }.map(\.location)
         default:
             return []
         }
@@ -210,6 +215,13 @@ extension GameSession {
         isLinesAdvancedShown = isShown
     }
 
+    /// The app opened or closed the station panel (decision 376). Changes
+    /// the session only when it is so.
+    public func stationPanelDidChange(isShown: Bool) {
+        guard isStationPanelShown != isShown else { return }
+        isStationPanelShown = isShown
+    }
+
     /// Shows step `index` and sets it up if it is shown for the first time,
     /// then passes over the action steps after it that are already done.
     private func moveTutorialForward(to index: Int) {
@@ -258,6 +270,13 @@ extension GameSession {
                 // The line the tutorial made, unless the player chose one.
                 if selectedLine == nil, let newest = world.lines.last {
                     selectLine(newest.id)
+                }
+            case .selectDepotLine:
+                func reachesDepot(_ id: LineID) -> Bool {
+                    world.depotRow(of: id, in: language)?.choices.isEmpty == false
+                }
+                if selectedLineID.map(reachesDepot) != true, let line = world.lines.last(where: { reachesDepot($0.id) }) {
+                    selectLine(line.id)
                 }
             }
         }
@@ -343,7 +362,48 @@ extension GameSession {
             }
         case .addPattern:
             return world.lines.contains { line in before.services[line.id].map { line.patterns.count > $0.patterns } == true }
+        case .pickDepotEnd:
+            return (tool == .network && networkMode == .depot && networkDepotEnd != nil) || newDepot(since: before)
+        case .buildDepot:
+            return newDepot(since: before)
+        case .chooseDepot:
+            return world.lines.contains { line in before.services[line.id].map { $0.depots != line.depots } == true }
+        case .selectStationForFreight:
+            return tool == .select && selectedStation.map { Self.takesFreightYard($0, in: world) } == true
+        case .openStationPanel:
+            return isStationPanelShown
+        case .buildFreightYard(let count):
+            return newFreightYards(since: before) >= count
+        case .createFreightLine:
+            return world.lines.contains { !before.lines.contains($0.id) && $0.isFreight }
+        case .chooseBuildingKind(let kind):
+            return (tool == .building && buildingMode == .build && buildingKind == kind) || newBuilding(of: kind, since: before)
+        case .pickBuildingSite:
+            return (tool == .building && buildingMode == .build && buildingSite != nil && buildingPreview?.problem == nil)
+                || world.placedBuildings.contains { !before.buildings.contains($0.id) }
+        case .putUpBuilding(let kind):
+            return newBuilding(of: kind, since: before)
+        case .acceptRequest:
+            return world.cityRequests?.active.contains { !before.requestsInHand.contains($0.id) } == true
         }
+    }
+
+    private func newDepot(since before: Tutorial.Snapshot) -> Bool {
+        world.stations.contains { $0.isDepot && !before.stations.contains($0.id) }
+    }
+
+    private func newFreightYards(since before: Tutorial.Snapshot) -> Int {
+        world.freight?.facilities.count { !before.freightYards.contains($0.station) } ?? 0
+    }
+
+    private func newBuilding(of kind: PlacedBuildingKind, since before: Tutorial.Snapshot) -> Bool {
+        world.placedBuildings.contains { $0.kind == kind && !before.buildings.contains($0.id) }
+    }
+
+    /// Whether `station` is one a freight yard can go at that has none
+    /// yet: a station with a platform, not a depot.
+    static func takesFreightYard(_ station: Station, in world: GameWorld) -> Bool {
+        !station.isDepot && !isPassingPlace(station, in: world) && world.freightFacility(at: station.id) == nil
     }
 
     /// The length of the track built since `before`, in world units.
@@ -369,6 +429,12 @@ extension GameSession {
     }
 
     // MARK: - Hints
+
+    /// What a step short of cash adds (decision 376): building pauses the
+    /// game, and the lines earn while it runs.
+    private var faresRemedy: String {
+        language.text("Tap \u{25B6}\u{FE0E} and let fares come in.", "按 \u{25B6}\u{FE0E}，讓車資進帳。")
+    }
 
     /// What the card says under the step on screen while it is not done
     /// (decision 188): what is wrong, or what to do next; `nil` when the
@@ -411,7 +477,9 @@ extension GameSession {
             }
         case .pickPlatformSite, .buildStation:
             if case .buildStation = goal, let message, message.kind == .failure {
-                return TutorialHint(message.text, isProblem: true)
+                // Decision 376: short of cash, the fares pay for it.
+                let short = networkPlatformCost.map { !world.economy.canAfford($0) } == true
+                return TutorialHint(short ? message.text + " " + faresRemedy : message.text, isProblem: true)
             }
             if networkEdgePoint != nil, let id = platformStationID, let station = world.station(id: id) {
                 return TutorialHint(language.text(
@@ -446,6 +514,9 @@ extension GameSession {
                 return TutorialHint(language.text("Now tap the other station.", "再點另一座車站。"))
             }
         case .createLine, .startService:
+            if goal == .createLine, lineConfirmation != nil, let shortfall = lineConfirmationPreview?.shortfall {
+                return TutorialHint(shortfall + " " + faresRemedy, isProblem: true)
+            }
             let line = goal == .createLine ? world.lines.last { !before.lines.contains($0.id) }?.id : selectedLineID
             if let line, tutorialStaffingPlan(line) == nil {
                 return TutorialHint(language.text(
@@ -532,6 +603,94 @@ extension GameSession {
             }
             if goal == .addTrain, let message, message.kind == .failure {
                 return TutorialHint(message.text, isProblem: true)
+            }
+        case .pickDepotEnd, .buildDepot:
+            if tool != .network {
+                return TutorialHint(language.text("Tap Build to get the network tool back.", "點「建設」拿回路網工具。"))
+            }
+            if networkMode != .depot {
+                return TutorialHint(language.text("Tap Depot first.", "先點「機廠」。"))
+            }
+            if let problem = networkDepotPreview?.problem {
+                return TutorialHint(problem + " " + language.text("Try another end.", "試試別的盡頭。"), isProblem: true)
+            }
+            if networkDepotEnd == nil {
+                return TutorialHint(language.text("Tap where a track ends.", "點軌道的盡頭。"))
+            }
+        case .chooseDepot:
+            if !isLinesPanelShown {
+                return TutorialHint(language.text("Tap Lines to open your line.", "點「路線」打開你的路線。"))
+            }
+            if let line = selectedLine, world.depotRow(of: line.id, in: language)?.choices.isEmpty != false {
+                return TutorialHint(language.text(
+                    "This line can't reach the depot. Pick the line that runs past it.",
+                    "這條路線到不了機廠，請選經過機廠的路線。"
+                ), isProblem: true)
+            }
+        case .selectStationForFreight:
+            if tool != .select {
+                return TutorialHint(language.text("Tap Done first, then a station.", "先點「完成」，再點車站。"))
+            }
+            if let station = selectedStation, world.freightFacility(at: station.id) != nil {
+                return TutorialHint(language.text(
+                    "That station has a freight yard. Tap another one.",
+                    "這一站已經有貨運場，請點另一站。"
+                ))
+            }
+        case .openStationPanel:
+            if selectedStation == nil {
+                return TutorialHint(language.text("Tap a station first.", "先點一座車站。"))
+            }
+        case .buildFreightYard:
+            if let message, message.kind == .failure {
+                return TutorialHint(message.text, isProblem: true)
+            }
+            if !isStationPanelShown {
+                return TutorialHint(language.text("Tap Station… first.", "先點「車站…」。"))
+            }
+        case .createFreightLine:
+            // Two freight yards can leave too little for the train at first.
+            if lineConfirmation != nil, let shortfall = lineConfirmationPreview?.shortfall {
+                return TutorialHint(shortfall + " " + faresRemedy, isProblem: true)
+            }
+            if let card = lineConfirmation, !card.isFreight {
+                return TutorialHint(language.text("Turn on Freight line on the card.", "在卡片上打開「貨運路線」。"))
+            }
+            if lineConfirmation == nil, lineDraftStops.count < 2 {
+                return TutorialHint(language.text("Tap Lines, then the two freight yards.", "點「路線」，再點兩座貨運場。"))
+            }
+        case .chooseBuildingKind:
+            if tool != .building {
+                return TutorialHint(language.text("Tap Build, then Buildings.", "點「建設」，再點「建物」。"))
+            }
+        case .pickBuildingSite, .putUpBuilding:
+            if tool != .building {
+                return TutorialHint(language.text("Tap Build, then Buildings.", "點「建設」，再點「建物」。"))
+            }
+            if case .putUpBuilding(let kind) = goal, buildingKind != kind {
+                return TutorialHint(language.text(
+                    "Tap \(kind.title(in: .english)) first.", "先點「\(kind.title(in: .traditionalChinese))」。"
+                ))
+            }
+            if let preview = buildingPreview, let problem = preview.problem {
+                let short = preview.cost.map { !world.economy.canAfford($0) } == true
+                return TutorialHint(short ? problem + " " + faresRemedy : problem, isProblem: true)
+            }
+            if let message, message.kind == .failure {
+                return TutorialHint(message.text, isProblem: true)
+            }
+        case .acceptRequest:
+            if world.cityRequests?.offers.isEmpty != false {
+                return TutorialHint(language.text(
+                    "No requests yet. Tap \u{25B6}\u{FE0E}: the city asks before long.",
+                    "還沒有委託。按 \u{25B6}\u{FE0E}，城市很快就會提出。"
+                ))
+            }
+            if let requests = world.cityRequests, requests.active.count >= requests.capacity {
+                return TutorialHint(language.text(
+                    "Your hands are full. Finish or give up a request first.",
+                    "手上的委託已滿，先完成或放棄一件。"
+                ), isProblem: true)
             }
         case .read, .chooseTool, .moveMap, .chooseNetworkMode, .startPickingStops, .timeRuns, .openLines, .showAdvanced:
             break

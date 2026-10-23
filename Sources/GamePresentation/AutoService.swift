@@ -29,13 +29,21 @@ public struct AutoService: Hashable, Sendable, Codable {
         /// neither, and runs as it did.
         public let color: LineColor?
         public let window: ServiceWindow?
+        /// Decision 376: `true` for a line the card made carry freight
+        /// (decision 155), before its trains go on it; `nil` for one of
+        /// passengers, as a command recorded before has.
+        public let isFreight: Bool?
 
-        init(name: String, stops: [StationID], targets: TargetHeadways?, color: LineColor? = nil, window: ServiceWindow? = nil) {
+        init(
+            name: String, stops: [StationID], targets: TargetHeadways?, color: LineColor? = nil, window: ServiceWindow? = nil,
+            isFreight: Bool? = nil
+        ) {
             self.name = name
             self.stops = stops
             self.targets = targets
             self.color = color
             self.window = window
+            self.isFreight = isFreight
         }
     }
 
@@ -631,6 +639,8 @@ extension GameSession {
             if let targets = new.targets { try world.setLineTargetHeadways(line.id, to: targets, pattern: nil) }
             if let color = new.color { try world.setLineColor(line.id, to: color) }
             if let window = new.window { try world.setLineServiceWindow(line.id, to: window) }
+            // A line takes freight only while no train is on it.
+            if new.isFreight == true { try world.setLineFreight(line.id, to: true) }
             id = line.id
         } else {
             guard let line = plan.line, world.line(id: line) != nil else { throw .unknownLine(plan.line ?? LineID(rawValue: 0)) }

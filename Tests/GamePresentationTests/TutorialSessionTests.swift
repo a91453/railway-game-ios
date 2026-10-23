@@ -636,7 +636,8 @@ final class TutorialSessionTests: XCTestCase {
             "panel.action", "map", "map.zoom", "hud.lines", "hud.speed", "hud.cash", "hud.menu", "line.draft.pick",
             "line.draft.create", "panel.details", "panel.side", "map.build.confirm", "inspector.ridership", "line.loss",
             "line.loss.fix", "line.addTrain", "inspector.track.double", "line.staff.headway", "line.headway.change",
-            "lines.advanced", "line.window", "line.pattern.add",
+            "lines.advanced", "line.window", "line.pattern.add", "line.depots", "station.freight.build", "building.kind.hotel",
+            "hud.requests",
         ])
         for tool in ConstructionTool.allCases {
             XCTAssertEqual(TutorialTarget(tool: tool)?.rawValue, "tool.\(tool)", "every tool has its button")
