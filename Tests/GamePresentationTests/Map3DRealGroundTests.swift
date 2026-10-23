@@ -249,8 +249,11 @@ final class Map3DRealGroundTests: XCTestCase {
         XCTAssertTrue(vertices.allSatisfy { $0.isWater == ($0.color == Map3DPalette.water) })
         // The real map's water and parks take some of the city's lots
         // round the station, and its streets leave the rest the room
-        // beside them (decision 345; until then they took most):
-        // a building never stands on a road.
+        // beside them (decision 345; until then they took most); since
+        // decision 385 the low homes and shops stand along the streets
+        // instead, a shadow along each street's side of a lot's houses, so
+        // about as many shadows as the plain map's lots
+        // (`Map3DFrontageTests` checks no house stands on a road).
         // (Their shadows, which are black; the street lights' pools,
         // decision 229 續, carry their light's colour.)
         func lots(_ scene: Map3DScene) -> Int {
@@ -259,7 +262,7 @@ final class Map3DRealGroundTests: XCTestCase {
                     .filter { chunk.shadows.vertices[Int(chunk.shadows.indices[$0])].color & 0x00FF_FFFF == 0 }.count
             }
         }
-        XCTAssertLessThan(lots(real), lots(plain))
+        XCTAssertLessThan(lots(real), lots(plain) * 5 / 4)
         XCTAssertGreaterThan(lots(real), lots(plain) * 3 / 4)
         // The same every time; and a blank map is as it was.
         XCTAssertEqual(Map3DScene(world: world, baseMap: tiles).chunks.map(\.mesh.vertices), real.chunks.map(\.mesh.vertices))

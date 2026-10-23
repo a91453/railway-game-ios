@@ -8,7 +8,7 @@
 
 - `Map3DPreviewDump.swift.txt`：一個 XCTest，蓋好場景後寫出頂點、索引、陰影與鏡頭。不是測試，所以不放在 `Tests/` 裡；要用時複製過去，用完刪掉。
 - `index.html`：WebGL 頁，讀上面寫出的檔。
-- `render.cjs`：用 Playwright 開那一頁，每個鏡頭拍兩張（有、沒有陰影）。
+- `render.cjs`：用 Playwright 開那一頁，每個鏡頭拍兩張（有、沒有陰影）。檔案由本機 127.0.0.1 的一個小 HTTP 伺服器給（決策 385）：用 `page.route` 回應時，超過 100 MB 的場景會讓 DevTools 的管道斷掉。
 - `render.sh`：把上面串起來。
 
 需要 Node 與 Playwright（Apache-2.0，只在開發機用，不進 App）。雲端 session 已裝好 Chromium，不要再 `playwright install`。
@@ -30,8 +30,9 @@ rm Tests/GamePresentationTests/Map3DPreviewDump.swift
 | 變數 | 意思 |
 | --- | --- |
 | `MAP3D_DUMP` | 輸出檔的前綴（必填） |
-| `MAP3D_WORLD` | `towns`（測試用兩鎮地圖）、`demo`（示範地圖）、`taipei`（台北車站的實景新局）、`taipeiline`（穿過台北車站的一條線，同畫面成本報告；決策 321）、`kaohsiung`、`taichung`（兩個車站的實景新局）、`realdemo`（瑞芳、平溪的實景示範） |
+| `MAP3D_WORLD` | `towns`（測試用兩鎮地圖）、`demo`（示範地圖）、`taipei`（台北車站的實景新局）、`taipeiline`（穿過台北車站的一條線，同畫面成本報告；決策 321）、`kaohsiung`、`taichung`（兩個車站的實景新局）、`realdemo`（瑞芳、平溪的實景示範）、`xiaogang`（高鐵示範的世界讀進小港機場周圍 3 km 的真實人口與分區，焦點在機場；決策 385） |
 | `MAP3D_BASEMAP` | `1`：讀 App 的台灣底圖（決策 234） |
+| `MAP3D_NOBUILD` | `1`：讀 App 的不蓋區與機場建物（`taiwan_no_build.json`，決策 385）；不設就是改之前的畫法 |
 | `MAP3D_CITY` | `1`：讀高雄、台中車站周圍的城市圖塊（決策 239；要和 `MAP3D_BASEMAP=1` 一起用） |
 | `MAP3D_VIEWS` | 鏡頭，`名字:x:z:距離:方向角度` 以 `;` 分開，座標是場景的公尺；可再加 `:高度`，看那個高度的點（山上的車站，決策 321） |
 | `MAP3D_CROP` | `x:z:半徑`：只輸出這一圈內的分塊（大場景會讓瀏覽器記憶體不夠） |
