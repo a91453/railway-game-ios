@@ -224,12 +224,12 @@ public struct Map3DScene: Sendable {
     /// they stand, and the park kit's scenes in the base map's parks.
     public init(world: GameWorld, snapshot: RailwaySnapshot? = nil, skyline: CitySkyline? = nil, focus: (x: Double, y: Double)? = nil,
                 baseMap: BaseMapTiles? = nil, cityTiles: [CityTileArea] = [], heights: HeightGrid? = nil, lineBands: Map3DLineBands? = nil,
-                railways: RealRailways? = nil, temples: RealTemples? = nil) {
+                railways: RealRailways? = nil, temples: RealTemples? = nil, noBuild: RealNoBuildLand? = nil) {
         // Decision 368: on a map the camera builds ahead on (decision 358),
         // the city in full only round the middle, which the window builds
         // in full as the camera comes near.
         self.init(world: world, snapshot: snapshot, skyline: skyline, frame: Self.frame(world: world, focus: focus), baseMap: baseMap,
-                  cityTiles: cityTiles, heights: heights, lineBands: lineBands, railways: railways, temples: temples,
+                  cityTiles: cityTiles, heights: heights, lineBands: lineBands, railways: railways, temples: temples, noBuild: noBuild,
                   detail: Map3DStreaming.streams(world) ? Map3DPoint(0, 0, 0) : nil)
     }
 
@@ -245,8 +245,8 @@ public struct Map3DScene: Sendable {
     public static func chunks(_ keys: some Collection<Map3DStreaming.Key>, of streaming: Map3DStreaming, world: GameWorld,
                               snapshot: RailwaySnapshot? = nil, skyline: CitySkyline? = nil, baseMap: BaseMapTiles? = nil,
                               cityTiles: [CityTileArea] = [], heights: HeightGrid? = nil, lineBands: Map3DLineBands? = nil,
-                              railways: RealRailways? = nil, temples: RealTemples? = nil, trackCover: Map3DTrackCover? = nil,
-                              detail: Map3DPoint? = nil) -> [Chunk] {
+                              railways: RealRailways? = nil, temples: RealTemples? = nil, noBuild: RealNoBuildLand? = nil,
+                              trackCover: Map3DTrackCover? = nil, detail: Map3DPoint? = nil) -> [Chunk] {
         guard let box = streaming.region(of: keys) else { return [] }
         let apron = Map3DStreaming.apron * Double(WorldCoordinate.unitsPerMetre), map = streaming.map
         let region = WorldRegion(minX: max(map.minX, box.minX - apron), minY: max(map.minY, box.minY - apron),
@@ -256,7 +256,7 @@ public struct Map3DScene: Sendable {
         // scene's, or worked out again), which lays the tunnels.
         let scene = Map3DScene(world: world, snapshot: snapshot, skyline: skyline, frame: (region, streaming.originX, streaming.originY),
                                baseMap: baseMap, cityTiles: cityTiles, heights: heights, lineBands: lineBands, railways: railways, temples: temples,
-                               trackCover: trackCover, detail: detail)
+                               noBuild: noBuild, trackCover: trackCover, detail: detail)
         let wanted = Set(keys)
         return scene.chunks.filter { wanted.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }
     }
@@ -267,7 +267,7 @@ public struct Map3DScene: Sendable {
     /// with `detail`, the city in full only within ``detailRadius`` of it.
     init(world: GameWorld, snapshot: RailwaySnapshot?, skyline: CitySkyline?, frame: (region: WorldRegion, originX: Double, originY: Double),
          baseMap: BaseMapTiles?, cityTiles: [CityTileArea], heights: HeightGrid?, lineBands: Map3DLineBands?, railways: RealRailways?,
-         temples: RealTemples?, trackCover: Map3DTrackCover? = nil, detail: Map3DPoint? = nil) {
+         temples: RealTemples?, noBuild: RealNoBuildLand? = nil, trackCover: Map3DTrackCover? = nil, detail: Map3DPoint? = nil) {
         (region, originX, originY) = frame
 
         var builder = Builder(originX: originX, originY: originY, region: region, world: world, heights: heights)
@@ -279,6 +279,10 @@ public struct Map3DScene: Sendable {
         var real: Map3DBaseMap?
         if let baseMap, let frame = RealWorldFrame(world: world) {
             real = Map3DBaseMap(tiles: baseMap, frame: frame, region: region, originX: originX, originY: originY)
+            // Decision 385: the city's low homes and shops along the real
+            // roads, and none on the land OpenStreetMap keeps clear.
+            builder.streetFrontage = true
+            if let noBuild { builder.prepareNoBuild(noBuild, frame: frame) }
         }
         // Decision 359 (續): the whole network's, so a chunk built apart
         // lays a bore beside another as the whole scene does; decision 375:
@@ -339,6 +343,8 @@ public struct Map3DScene: Sendable {
         let frame = real == nil ? nil : RealWorldFrame(world: world)
         builder.target = .near
         var standing = landmarkCells.union(frame.map { builder.addRealBuildings(cityTiles, frame: $0, clearOf: stations.union(landmarkCells)) } ?? [])
+        // Decision 385: the airports' own buildings.
+        if let noBuild, let frame { builder.addAirportBuildings(noBuild, frame: frame, clearOf: stations.union(landmarkCells)) }
         // Decision 331: the real temples, on no station or real building.
         if let temples, let frame = RealWorldFrame(world: world) {
             standing.formUnion(builder.addTemples(temples, frame: frame, clearOf: stations.union(standing)))
@@ -358,6 +364,7 @@ public struct Map3DScene: Sendable {
         builder.addCity(city, clearOf: stations.union(builder.realTrackCells), takenBy: taken.whole.union(standing), besideRoads: taken.byRoads)
         builder.target = .far
         if let frame { builder.addRealBuildings(cityTiles, frame: frame, clearOf: stations.union(landmarkCells)) }
+        if let noBuild, let frame { builder.addAirportBuildings(noBuild, frame: frame, clearOf: stations.union(landmarkCells)) }
         builder.addCity(city, clearOf: stations.union(builder.realTrackCells), takenBy: taken.whole.union(standing), besideRoads: taken.byRoads)
         builder.target = .base
         builder.addPlacedBuildings()
@@ -565,6 +572,13 @@ extension Map3DScene {
         /// Decision 322: every road's middle line and how far either side
         /// its carriageway and pavement reach, metres.
         var roadLines: [(points: [Map3DPoint], half: Float)] = []
+        /// Decision 385: each of ``roadLines``' kind, and whether it is a
+        /// link road; on a real-world map, the houses along them
+        /// (``addFrontage``) and the land with none (``prepareNoBuild``).
+        var roadKinds: [(kind: Map3DBaseMap.RoadKind, ramp: Bool)] = []
+        var streetFrontage = false
+        var frontage = Frontage()
+        var noBuild = NoBuild()
         /// The corners of each station building's ground, and the
         /// shop streets still to lay beside them.
         var houseFootprints: [[Map3DPoint]] = []
@@ -1052,12 +1066,24 @@ extension Map3DScene {
                               besideRoads: Set<ChunkKey> = []) {
             let cell = Double(Land.cellLength)
             let pieces = roadPieces(near: besideRoads)
+            // Decision 385: on a real-world map, the houses along its roads,
+            // laid in the first pass and drawn again in the second.
+            if streetFrontage, frontage.pieces.isEmpty { prepareFrontage() }
+            let blocked = streetFrontage ? cleared.union(taken) : []
             for lot in skyline.lots(in: region) {
                 var x = (Double(lot.column) + 0.5) * cell, y = (Double(lot.row) + 0.5) * cell
                 // Decision 234: no lot where the real map has water or a
                 // park.
                 let key = ChunkKey(column: lot.column, row: lot.row)
                 guard contains(x: x, y: y), !taken.contains(key) else { continue }
+                // Decision 385: low homes and shops along the real roads,
+                // house by house clear of the no-build land; no other lot
+                // whose middle is on it.
+                if streetFrontage, !lot.isOpenGround, !cleared.contains(key), lot.use == .residential || lot.use == .commercial, lot.density <= 2 {
+                    addFrontage(column: lot.column, row: lot.row, density: lot.density, shops: lot.use == .commercial, blocked: blocked)
+                    continue
+                }
+                if onNoBuildLand(point(x: x, y: y, height: 0)) { continue }
                 var side = Float(Double(lot.side) / Self.metre)
                 // Decision 345: where its roads reach, a building in the
                 // room they leave, if a big enough one fits.
@@ -1238,10 +1264,6 @@ extension Map3DScene {
                         var width = flats ? 6.5 + r(1) * 6 : 4.4 + r(1) * 2.2
                         width = min(width, span.1 - x)
                         guard width >= 3.2 else { break }
-                        let floors: Float = flats ? Float(3 + Int(r(2) * 4)) : (r(2) < 0.375 ? 2 : r(2) < 0.875 ? 3 : 4)
-                        let groundFloor: Float = flats ? 3.5 + r(3) * 0.6 : 3.8 + r(3) * 0.5
-                        let upper: Float = flats ? 3.0 + r(4) * 0.25 : 3.4 + r(4) * 0.3
-                        let height = groundFloor + upper * (floors - 1)
                         let wall = Self.pickWall((seed.0 &+ salt, seed.1))
                         let middleX = x + width / 2
                         let front = Map3DPoint(0, 0, facing) // the way the house faces
@@ -1249,71 +1271,8 @@ extension Map3DScene {
                         // Decision 267: a shop below on a commercial lot, and
                         // on a busy street's houses now and then.
                         let shops = lotShops || r(13) < (fronts?.shopShare(facing: facing) ?? 0)
-                        let arcade = shops && r(5) < 0.8
-                        // Decision 231: the ground floor a shop or a
-                        // rolling shutter, the floors above windows (a
-                        // grille or a balcony on a 透天厝), the flanks
-                        // blank as row houses' walls are.
-                        let shop = Self.pick(Map3DSurface.shops, r(9))
-                        let groundPaint = Map3DPaint.bays(shops ? shop : .shutter, bay: 5.4, floors: 1)
-                        let balconies = !flats && r(8) >= 0.55
-                        // Decision 242: the house faced with tiles, grit or
-                        // paint, the floors above and the flanks alike.
-                        let facing = Self.homeMaterial(r(12))
-                        let upperPaint = (flats ? Map3DPaint.bays(Self.pick(Map3DSurface.flats, r(10)), bay: 3.2, floors: Int(floors) - 1)
-                            : Map3DPaint.bays(balconies ? .homeBalcony : .homeWindows, bay: 6, floors: Int(floors) - 1)).on(facing)
-                        if arcade {
-                            // The ground floor set back 3.4 m, dark; the
-                            // floors above over the arcade.
-                            mesh.addBox(base: rowMiddle - front * 1.7, forward: front, length: depth - 3.4, width: width - 0.1,
-                                        height: groundFloor, top: Map3DPalette.arcade, side: Map3DPalette.arcade,
-                                        frontPaint: groundPaint, flankPaint: Self.plaster, capped: false)
-                        } else {
-                            mesh.addBox(base: rowMiddle, forward: front, length: depth, width: width - 0.1, height: groundFloor,
-                                        top: Map3DPalette.roof, side: wall, frontPaint: groundPaint, flankPaint: Self.plaster, capped: false)
-                        }
-                        mesh.addBox(base: rowMiddle + Map3DPoint(0, groundFloor, 0), forward: front, length: depth, width: width - 0.1,
-                                    height: height - groundFloor, top: Map3DPalette.roof, side: wall,
-                                    topPaint: Self.roofing, frontPaint: upperPaint, flankPaint: Self.plaster.on(facing))
-                        // Decision 238: near, what stands out of the front
-                        // and the parapet's rim; afar, only the roof's tank
-                        // or room, which read from far off.
-                        if !far {
-                            blades += Self.addFrontDetail(&mesh, close: &closeDetail, front: rowMiddle + front * (depth / 2), facing: front, width: width,
-                                                groundFloor: groundFloor, upper: upper, floors: Int(floors), wall: wall,
-                                                balconies: balconies, sign: shops, arcade: arcade, r: r)
-                            mesh.addBox(base: rowMiddle + Map3DPoint(0, height, 0), forward: front, length: depth, width: width - 0.1,
-                                        height: 0.7, top: Map3DPalette.roof, side: Map3DColor.shaded(wall, 0.95),
-                                        topPaint: Self.roofing, frontPaint: Self.plaster, flankPaint: Self.plaster)
-                        }
-                        if r(6) < 0.75 {
-                            // Decision 267: on three in four roofs, a round water
-                            // tank (r 0.62 m, 1.1 m tall; HANDOFF §4.3) on its
-                            // stand, blue or stainless; afar one box in the
-                            // tank's colour, as few triangles as before.
-                            let tank = r(7) < 0.5 ? Map3DPalette.tankBlue : Map3DPalette.tankSteel
-                            let foot = rowMiddle + Map3DPoint(0, height + 0.7, 0) - front * (depth / 4)
-                            if far {
-                                mesh.addBox(base: foot, forward: front, length: 1.2, width: 1.2, height: 1.8, top: tank, side: tank)
-                            } else {
-                                mesh.addBox(base: foot, forward: front, length: 1.2, width: 1.2, height: 0.7, top: Map3DPalette.tankStand,
-                                            side: Map3DPalette.tankStand)
-                                mesh.addCylinder(base: foot + Map3DPoint(0, 0.7, 0), radius: 0.62, height: 1.1, sides: 8, top: tank, side: tank)
-                            }
-                        } else if r(6) < 0.92, width > 4 {
-                            // Decision 235: a sheet-steel room on the roof
-                            // (頂樓加蓋) over the back half, under a low gable
-                            // (the japan pack's shutter garage and shed
-                            // roofs: 2.4 m walls, a 20° pitch).
-                            let shack = rowMiddle + Map3DPoint(0, height + 0.7, 0) - front * (depth / 4)
-                            let roof = Self.pick(Map3DPalette.tinRoofs, r(11))
-                            mesh.addBox(base: shack, forward: front, length: depth / 2 - 0.4, width: width - 0.8, height: 2.4,
-                                        top: roof, side: Map3DColor.shaded(Map3DPalette.shedWalls[0], 0.95), frontPaint: Self.metal,
-                                        flankPaint: Self.metal, capped: false)
-                            mesh.addGableRoof(base: shack + Map3DPoint(0, 2.4, 0), forward: front, length: depth / 2 - 0.4, width: width - 0.8,
-                                              rise: (width - 0.8) / 2 * 0.36, overhang: 0.3, color: roof, gable: Map3DPalette.shedWalls[0],
-                                              paint: Self.metal)
-                        }
+                        Self.addTownHouse(&mesh, close: &closeDetail, blades: &blades, middle: rowMiddle, front: front, width: width,
+                                          depth: depth, flats: flats, shops: shops, wall: wall, far: far, r: r)
                         x += width
                         number += 1
                     }

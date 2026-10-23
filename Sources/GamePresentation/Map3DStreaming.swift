@@ -252,7 +252,7 @@ public struct Map3DStreaming: Sendable {
         /// The block being built, and the scene it is for.
         public private(set) var building: [Key] = []
         /// Decision 368: the scene point the block is built in full round
-        /// (``Map3DScene/chunks(_:of:world:snapshot:skyline:baseMap:cityTiles:heights:lineBands:railways:temples:trackCover:detail:)``'s
+        /// (``Map3DScene/chunks(_:of:world:snapshot:skyline:baseMap:cityTiles:heights:lineBands:railways:temples:noBuild:trackCover:detail:)``'s
         /// `detail`): the target when it was asked for.
         public private(set) var buildingAround = Map3DPoint(0, 0, 0)
         public let generation: Int
