@@ -84,8 +84,7 @@ struct FollowBar: View {
             }
         }
         .accessibilityElement(children: .contain)
-        // Decision 388: its edges, for the alignment UI test.
-        .accessibilityIdentifier("follow.bar")
+        .hudFrameMark("follow.bar")
     }
 
     private func row(@ViewBuilder _ content: () -> some View) -> some View {

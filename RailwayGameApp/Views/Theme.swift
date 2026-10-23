@@ -169,6 +169,31 @@ extension View {
             background(.regularMaterial, in: shape)
         }
     }
+
+    /// Decision 388: under `-ui-testing`, in a Debug build, an element
+    /// `identifier` as big as this view, its glass and padding and all, for
+    /// the alignment UI test (a container's own element reports only its
+    /// children's frames, a button's its touch area). Nothing otherwise.
+    @ViewBuilder
+    func hudFrameMark(_ identifier: String) -> some View {
+        #if DEBUG
+        if UITestTrace.isOn {
+            background {
+                Text(verbatim: identifier)
+                    .font(.system(size: 1))
+                    .foregroundStyle(.clear)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .allowsHitTesting(false)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier(identifier)
+            }
+        } else {
+            self
+        }
+        #else
+        self
+        #endif
+    }
 }
 
 // Decision 253: the interface's motion rules (``MotionRule``,

@@ -300,8 +300,6 @@ struct StationMasterCorner: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .strokeBorder(worry ? Theme.warning.opacity(0.6) : Theme.panelBorder, lineWidth: 1)
         )
-        // Decision 388: its edges, for the alignment UI test.
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("stationMaster.bubble")
+        .hudFrameMark("stationMaster.bubble")
     }
 }

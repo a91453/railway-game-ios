@@ -775,9 +775,7 @@ struct MapView: View {
                             cornerButtons(camera: projection, limit: zoomLimit, place: cornerPlace)
                         }
                     }
-                    // Decision 388: its edges, for the alignment UI test.
-                    .accessibilityElement(children: .contain)
-                    .accessibilityIdentifier("map.corner")
+                    .hudFrameMark("map.corner")
                     .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.mapArea)) } action: { bottomTrailingFrame = $0 }
                     .padding(CGFloat(HUDMargins.edge))
                     .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in

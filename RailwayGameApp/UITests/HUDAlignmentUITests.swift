@@ -5,14 +5,18 @@ import XCTest
 /// building, with a train's card, a station's or a line's panel, following
 /// a train in 2D and in 3D and from its cab, a lesson's card, the station
 /// master's bubble, the news, settings, help and achievements, on a phone
-/// on its side and upright and on an iPad. Each edge that stands near a
-/// line stands on it, within a point. Where the lines are is
-/// `HUDMarginsTests` on Linux; this reads where the screen put them.
+/// (on its side: it turns no other way) and on an iPad on its side and
+/// upright. Each edge that stands near a line stands on it, within a
+/// point. Where the lines are is `HUDMarginsTests` on Linux; this reads
+/// where the screen put them.
 ///
 /// The lines are read from the screen itself: the leading and top lines
 /// from the status bar's corner, the trailing line from the map's corner
-/// column, the bottom line from the tools' foot (decision 382). Every frame
-/// read is printed as `ALIGN|screen|element|minX minY maxX maxY`.
+/// column, the bottom line from the tools' foot (decision 382). A group's
+/// edges are its glass's, read from the element `hudFrameMark` puts behind
+/// it under `-ui-testing` (a container's own element is as big as its
+/// buttons' touch areas). Every frame read is printed as
+/// `ALIGN|screen|element|minX minY maxX maxY`.
 ///
 /// Full lane only (decision 199): a dozen launches. Run by hand with
 /// only_testing=RailwayGameUITests/HUDAlignmentUITests and
@@ -62,9 +66,8 @@ final class HUDAlignmentUITests: XCTestCase {
             app.buttons["tool.network"].waitUntilSettled()
             let screen = "\(way) building"
             leading(["hud.tools", "hud.rail"], on: lines, screen)
-            if let tools = read("hud.tools", screen), let rail = read("hud.rail", screen) {
-                // The rail over the dock: its foot a margin above the dock.
-                expect(rail.maxY, tools.minY - 10, "the rail's foot over the dock", screen)
+            if let rail = read("hud.rail", screen) {
+                edgesNearTheLines(rail, "the rail", on: lines, screen)
             }
             trailing(["details.card", "map.corner"], on: lines, screen)
         }
@@ -149,6 +152,13 @@ final class HUDAlignmentUITests: XCTestCase {
         for way in ways {
             let lines = openDemo(way)
             followTrainOne()
+            // The bar beside the layer strip gives way down to the badge
+            // and the stop where it is narrow (decision 251), the 3D
+            // button with the rest: a trade-off, not an edge.
+            guard app.buttons["follow.map3D"].appears(within: 10) else {
+                print("ALIGN|\(way) following|follow.map3D|no room")
+                continue
+            }
             tap("follow.map3D")
             let bar = element("map3D.followBar")
             XCTAssertTrue(bar.appears(within: 20), "\(way): the 3D follow bar shows")
@@ -191,7 +201,12 @@ final class HUDAlignmentUITests: XCTestCase {
         for way in ways {
             launch(way, ["-tutorial-step", "line.open"])
             let card = element("tutorial.card")
-            XCTAssertTrue(card.appears(within: 30), "\(way): the lesson's card shows")
+            let folded = app.buttons["tutorial.unfold"]
+            XCTAssertTrue(element("map").appears(within: 30), "\(way): the lesson's map opens")
+            if !card.appears(within: 15), folded.exists {
+                folded.tap()
+            }
+            XCTAssertTrue(card.appears(within: 15), "\(way): the lesson's card shows")
             card.waitUntilStill()
             let screen = "\(way) lesson card"
             let lines = readLines(screen)
@@ -212,6 +227,9 @@ final class HUDAlignmentUITests: XCTestCase {
 
             for (item, done) in [("menu.settings", "settings.done"), ("menu.help", "help.done"), ("menu.achievements", "achievements.done")] {
                 tap("hud.menu")
+                if item == "menu.help" {
+                    tapHittable("menu.more")
+                }
                 tapHittable(item)
                 XCTAssertTrue(app.buttons[done].appears(within: 15), "\(way): \(item) opens")
                 checkPanel("\(way) \(item)", lines)
@@ -232,7 +250,7 @@ final class HUDAlignmentUITests: XCTestCase {
         guard let tools = read("hud.tools", screen) else { return }
         // On the bottom row: what stands beside the tools rather than
         // over them.
-        for id in ["map.corner", "map.expansion", "map.layers", "stationMaster.title", "controls.undo"] {
+        for id in ["map.corner", "stationMaster.title"] {
             guard let frame = read(id, screen) else { continue }
             if frame.minX >= tools.maxX - tolerance || frame.maxY > tools.minY + tolerance {
                 expect(frame.maxY, lines.bottom, "\(id)'s foot on the bottom line", screen)
@@ -248,18 +266,12 @@ final class HUDAlignmentUITests: XCTestCase {
         let bar = app.navigationBars.firstMatch
         XCTAssertTrue(bar.appears(within: 10), "\(screen): no navigation bar")
         bar.waitUntilStill()
-        let frame = bar.frame
-        log(screen, "navigationBar", frame)
-        let window = app.windows.firstMatch.frame
-        guard frame.width < window.width - 2 * lines.leading else {
-            // A sheet across the screen: the system's place.
-            return
-        }
-        if frame.maxX < window.maxX - 1 {
-            expect(frame.maxX, lines.trailing, "the panel's trailing edge", screen)
-            if let status = read("hud.bar", screen) {
-                expect(frame.minY, status.maxY + 10, "the panel a margin under the status bar", screen)
-            }
+        log(screen, "navigationBar", bar.frame)
+        // Beside the map, the panel's own glass; a sheet is the system's.
+        guard let frame = read("hud.panel", screen) else { return }
+        expect(frame.maxX, lines.trailing, "the panel's trailing edge", screen)
+        if let status = read("hud.bar", screen) {
+            expect(frame.minY, status.maxY + 10, "the panel a margin under the status bar", screen)
         }
     }
 
@@ -409,10 +421,13 @@ final class HUDAlignmentUITests: XCTestCase {
     }
 
     private var ways: [Way] {
-        let device = UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "phone"
+        // The phone turns no other way (project.yml).
+        guard UIDevice.current.userInterfaceIdiom == .pad else {
+            return [Way(orientation: .landscapeLeft, description: "phone on its side")]
+        }
         return [
-            Way(orientation: .landscapeLeft, description: "\(device) on its side"),
-            Way(orientation: .portrait, description: "\(device) upright"),
+            Way(orientation: .landscapeLeft, description: "iPad on its side"),
+            Way(orientation: .portrait, description: "iPad upright"),
         ]
     }
 

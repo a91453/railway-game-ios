@@ -1014,8 +1014,7 @@ private struct Map3DFollowBar: View {
         .padding(.vertical, 2)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .accessibilityElement(children: .contain)
-        // Decision 388: its edges, for the alignment UI test.
-        .accessibilityIdentifier("map3D.followBar")
+        .hudFrameMark("map3D.followBar")
         .accessibilityHint(Text(verbatim: language.text("Pinch to move closer or farther.", "兩指縮放，拉近或拉遠。")))
     }
 }
