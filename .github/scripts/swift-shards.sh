@@ -325,6 +325,14 @@ set -euo pipefail
 #   campaigns-10  RealRailwayTracing 31, Map3DStreetLife 14, Map3D 11
 # Rest loses about 182 s (some 245 on a slow runner). These are
 # GamePresentation's, so no pull request's tier changes (see 2026-10-14).
+# 2026-10-23 (decision 368): two new GamePresentation classes,
+# Map3DSceneMemoryTests (it opens the high-speed demo and builds the 3D
+# scene round Banqiao: 154 s locally, about 190 on CI) and
+# Map3DCoarseChunkTests (26 s locally), go to campaigns-13, the shortest
+# job of main eb251ee's run 39889912827 (9 min, 5.6 of tests), not to rest
+# (19 min of its 20 on that run). The memory test sat in HighSpeedDemoTests
+# first and timed #1070's selected-3 out (run 39894227203); a class of its
+# own is dealt by its weight.
 classes_of() {
   case "$1" in
     campaigns-1) echo "ServiceRepeatingPropertyTests ScheduledTrafficPropertyTests WorldStateMachineTests" ;;
@@ -339,7 +347,7 @@ classes_of() {
     campaigns-10) echo "PassengerPlanKeyTests ReservationShortcutTests NetworkPostcardTests StationCommerceCardTests LineLossDiagnosisTests FlexDispatchPropertyTests RealRailwayTracingTests Map3DStreetLifeTests Map3DTests" ;;
     campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests HighSpeedDemoTests TRADemoTests" ;;
     campaigns-12) echo "TrafficControlPropertyTests ScheduledOvertakeTrackFinalPropertyTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests" ;;
-    campaigns-13) echo "BoardingPropertyTests TurnbackPropertyTests" ;;
+    campaigns-13) echo "BoardingPropertyTests TurnbackPropertyTests Map3DSceneMemoryTests Map3DCoarseChunkTests" ;;
     campaigns-14) echo "ServiceLinePropertyTests OnboardingTests CommandLogTests ScheduledTrafficTests TurnbackTests" ;;
     campaigns-15) echo "TrafficFollowingPropertyTests ScheduledOvertakeTrackLastPropertyTests NewGameSavePropertyTests RealWorldDemoTests" ;;
     campaigns-16) echo "HighSpeedDemoDayTests TRADemoDayTests HighSpeedDemoBatchTests" ;;
@@ -451,7 +459,7 @@ CLASS_WEIGHTS="BoardingPropertyTests:624 LineDispatchPropertyTests:602
   HolidayTextTests:4 BoardingTests:3 LandImportTests:3 NightSkipTests:57
   RealLineAcquisitionTests:52 RealRailwayTracingTests:38 PolicyTests:24
   Map3DOpenEveryStartTests:24 Map3DStreetLifeTests:19 LessonTests:18
-  Map3DTests:15"
+  Map3DTests:15 Map3DSceneMemoryTests:190 Map3DCoarseChunkTests:32"
 CLASS_WEIGHT_DEFAULT=1
 
 # With SELECTED_PART=k/n, the test IDs on stdin of the k-th of n parts. Each

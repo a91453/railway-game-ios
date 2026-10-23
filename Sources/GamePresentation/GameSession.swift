@@ -39,8 +39,12 @@ public final class GameSession {
             if !isApplyingTick, world.clock.isPaused { lookAgainForNightSkip() }
             // Decision 193: a change no recorded path made is logged as one.
             if !isLogging { log(.unrecorded("world")) }
+            refreshScreenFacts()
         }
     }
+    /// Decision 367: what the screen's frame shows of the world, changed
+    /// only when it changes (``ScreenFacts``), not at every tick.
+    public internal(set) var screenFacts = ScreenFacts()
     /// What reached ``world`` since this session began (decision 193).
     @ObservationIgnored public private(set) var commandLog: CommandLog
     /// Whether a path that logs its own change is changing ``world``.
@@ -155,7 +159,9 @@ public final class GameSession {
     /// copy of the station. Read the selected station through
     /// ``selectedStation``. A station is picked by where it stands
     /// (``tapMap(at:reach:)``) or by name (``selectStation(_:)``).
-    public private(set) var selectedStationID: StationID?
+    public private(set) var selectedStationID: StationID? {
+        didSet { refreshScreenFacts() }
+    }
 
     /// What the action button does.
     public private(set) var tool: ConstructionTool = .select
@@ -226,16 +232,23 @@ public final class GameSession {
     /// The train the last tap on the map picked (see ``tapMap(at:reach:)``),
     /// which the select tool's inspector shows; `nil` once a tap or a
     /// command selects a station or a point instead.
-    public private(set) var tappedTrainID: TrainID?
+    public private(set) var tappedTrainID: TrainID? {
+        didSet { refreshScreenFacts() }
+    }
 
     /// The company's building the last tap on the map picked with the
     /// select tool (decision 173), which the inspector shows; an ID only.
-    public private(set) var selectedBuildingID: PlacedBuildingID?
+    public private(set) var selectedBuildingID: PlacedBuildingID? {
+        didSet { refreshScreenFacts() }
+    }
     /// The track the last tap with the select tool picked where there was
     /// no station, train or building (decision 184), which the inspector
     /// shows (``GameWorld/trackInspectionText(of:in:)``); an ID only.
     public private(set) var selectedTrackEdge: TrackEdgeID? {
-        didSet { if selectedTrackEdge != oldValue { trackUpgrade = nil } }
+        didSet {
+            if selectedTrackEdge != oldValue { trackUpgrade = nil }
+            refreshScreenFacts()
+        }
     }
     /// What the track card is about to build on ``selectedTrackEdge``
     /// (decision 247, TrackUpgrade.swift): `nil` until the player picks
@@ -311,6 +324,7 @@ public final class GameSession {
     @ObservationIgnored var isRestoringNews = false
     public internal(set) var news = NewsLog() {
         didSet {
+            refreshScreenFacts()
             // Decision 184: a new worry (debt, a deadline, a typhoon, a town
             // short of materials) rings the warning. A refusal has its own
             // sound; a log read from a save rings nothing.
@@ -581,7 +595,10 @@ public final class GameSession {
     /// The tutorial on screen (Stage C5), or `nil`. Moved through the
     /// tutorial methods (see TutorialSession.swift); never saved.
     public internal(set) var tutorial: Tutorial? {
-        didSet { noteTutorialStepToResume() }
+        didSet {
+            noteTutorialStepToResume()
+            refreshScreenFacts()
+        }
     }
     /// Whether new lines wait for the player to buy their trains, under
     /// simple rules too (decision 264): for tests that staff lines by hand.
@@ -813,6 +830,7 @@ public final class GameSession {
         // What the first monthly report compares with.
         self.news.baseline = MonthlyBaseline(world: world)
         refreshNightSkipOffer()
+        refreshScreenFacts()
     }
 
     // MARK: - Selection
@@ -1196,7 +1214,8 @@ public final class GameSession {
     @ObservationIgnored var nightSkipRunAheadOnMain = 0
 
     /// The run ahead under way off the main actor after a command while
-    /// paused (decision 330, later), or `nil`.
+    /// paused (decision 330, later) or after the game loop's tick
+    /// (decision 369), or `nil`.
     @ObservationIgnored var nightSkipLookAhead: Task<Void, Never>?
 
     /// The first move of the night whose skip ended or was stopped, so the
@@ -1461,9 +1480,6 @@ public final class GameSession {
         var ticks: Int
         /// What traffic control shows of ``world``, when the step read it.
         var traffic: TrafficReading?
-        /// Decision 328: the night skip's run ahead from ``world``, when
-        /// the step worked it out.
-        var nightSkip: NightSkipMemo?
         /// Decision 330: the station master's advice for ``world``, when
         /// the step worked it out.
         var advice: WorkedAdvice?
@@ -1496,7 +1512,9 @@ public final class GameSession {
     /// the arrival sound, the income (decision 117), the year's close and
     /// the scenario's end. A refused step changes nothing and shows the
     /// refusal.
-    private func finish(_ outcome: Result<TickStep, GameError>) {
+    /// `fromLoop`: the game loop's tick, after which the night skip runs
+    /// ahead off the main actor (decision 369).
+    private func finish(_ outcome: Result<TickStep, GameError>, fromLoop: Bool = false) {
         let step: TickStep
         switch outcome {
         case .success(let advanced):
@@ -1523,13 +1541,14 @@ public final class GameSession {
             // Decision 195: the ticks that ran, and the followed train's way.
             ticksRun += Int64(step.ticks)
             if let traffic = step.traffic { trafficMemo = (worldRevision, traffic) }
-            // Decision 328: worked out with the tick, off the main actor.
-            if let memo = step.nightSkip, memo.revision == commandRevision { nightSkipMemo = memo }
             // Decision 330: likewise, for this world only.
             workedAdvice = step.advice.map { (worldRevision, $0) }
-            // Game time moved on: no edit before it can be undone.
-            undoHistory.removeAll()
-            redoHistory.removeAll()
+            // Game time moved on: no edit before it can be undone. Emptied
+            // only when not empty (decision 367): emptying an empty history
+            // still told everything reading Undo and Redo to look again,
+            // the screen's frame among them, at every tick.
+            if !undoHistory.isEmpty { undoHistory.removeAll() }
+            if !redoHistory.isEmpty { redoHistory.removeAll() }
             editGestureHasSnapshot = false
         }
         meter.measure(.stepFollow) {
@@ -1563,7 +1582,7 @@ public final class GameSession {
             meter.measure(.stepMidnight) { onMidnight?() }
         }
         // Decision 305: the night's skip goes on, ends or starts.
-        meter.measure(.stepNightSkip) { continueNightSkip() }
+        meter.measure(.stepNightSkip) { continueNightSkip(aheadOffTheMainActor: fromLoop) }
     }
 
     /// A tick of the game loop being worked out off the main actor
@@ -1586,9 +1605,6 @@ public final class GameSession {
         /// The last reading, whose kinds of scheduled waits the tick's
         /// reading keeps (decision 210).
         var previousTraffic: TrafficReading?
-        /// Decision 328: what the tick needs to run ahead for the night
-        /// skip, when ``GameSession/nightSkip`` is looked at after it.
-        var nightSkip: NightSkipProbe?
         /// Decision 330: what the tick needs to work out the station
         /// master's advice, which the news reads once a game hour.
         var advice: AdviceProbe?
@@ -1608,9 +1624,6 @@ public final class GameSession {
                         if tick.readsTraffic {
                             step.traffic = TrafficReading(world: step.world, train: tick.train, in: tick.language, previous: tick.previousTraffic)
                         }
-                        // Decision 328: some 100 ms on a big world, kept
-                        // off the main actor.
-                        step.nightSkip = tick.nightSkip?.firstMove(after: step.world)
                         // Decision 330: some 40 ms on the Yilan Line, once
                         // a game hour.
                         step.advice = tick.advice?.advice(of: step.world)
@@ -1628,8 +1641,6 @@ public final class GameSession {
         return LoopTick(
             world: world, revision: worldRevision, listening: playSound != nil, train: selectedTrainID, language: language,
             previousTraffic: trafficMemo?.reading,
-            // ``nightSkip`` runs ahead only with no skip under way.
-            nightSkip: nightSkipRun == nil && !isPausedForBuilding ? NightSkipProbe(memo: nightSkipMemo, revision: commandRevision) : nil,
             advice: AdviceProbe(hour: newsWatch.hour, leader: lineLossLeaderMemo.kept(atRevision: commandRevision))
         )
     }
@@ -1669,7 +1680,7 @@ public final class GameSession {
     @discardableResult
     func finish(_ tick: LoopTick, with outcome: Result<TickStep, GameError>) -> Bool {
         guard tick.revision == worldRevision else { return false }
-        FrameCostMeter.shared.measure(.afterStep) { finish(outcome) }
+        FrameCostMeter.shared.measure(.afterStep) { finish(outcome, fromLoop: true) }
         return true
     }
 
