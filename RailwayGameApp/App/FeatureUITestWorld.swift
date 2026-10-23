@@ -105,7 +105,7 @@ enum FeatureUITestWorld {
         let line = try world.createLine(named: "平溪線", stops: [shifen, pingxi]).id
         try world.assignTrain(try world.purchaseTrain(named: "T").id, to: line, pattern: nil)
         try world.startScenario(Scenario(
-            id: Challenge.pingxi.id, goals: [.dailyRiders(80_000), .annualNetProfit(Money(200_000_000))],
+            id: "history.pingxi", goals: [.dailyRiders(80_000), .annualNetProfit(Money(200_000_000))],
             goldDays: 360, silverDays: 720, deadlineDays: 1_080, insolvencyDays: 60
         ))
         // On to 22:00 of the challenge's first day, a minute a tick.
