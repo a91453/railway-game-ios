@@ -62,12 +62,13 @@ public final class GameSession {
     @ObservationIgnored private var isLogging = false
     /// The transfer points last worked out (decision 298) and what from.
     @ObservationIgnored var transferMemo: TransferMemo?
-    /// Counts the changes to ``world``, so what is worked out from it (the
-    /// track preview, ``networkPreview``) is kept until it changes.
+    /// Counts the changes to ``world``, so what is worked out from it is
+    /// kept until it changes.
     @ObservationIgnored private(set) var worldRevision = 0
     /// Counts the changes to ``world`` other than game time moving on (a
     /// command, an undo or redo, a setting), so what only those change
-    /// (the lines along the track, ``trackInspection(of:)``) is worked out
+    /// (the lines along the track, ``trackInspection(of:)``, the network
+    /// tool's previews, ``networkPreview``) is worked out
     /// once for them, not at every tick.
     @ObservationIgnored private(set) var commandRevision = 0
     /// The losing line the station master names, kept between commands and
@@ -115,8 +116,8 @@ public final class GameSession {
     /// The line whose train waits on single track, for the one-time card
     /// about passing loops (``PassingLoopHint``).
     public internal(set) var passingLoopHint: LineID?
-    /// The track preview of the picked ends, kept for the draft and world it
-    /// was worked out for (see ``networkPreview``).
+    /// The track preview of the picked ends, kept for the draft and command
+    /// it was worked out for (see ``networkPreview``).
     @ObservationIgnored var networkPreviewMemo: NetworkPreviewMemo?
     /// The passing loop at the picked place, kept as the track preview is.
     @ObservationIgnored var passingLoopMemo: PassingLoopMemo?
@@ -143,6 +144,9 @@ public final class GameSession {
     /// The levelling of the platform's stretch, kept likewise (see
     /// ``networkPlatformLevelling``).
     @ObservationIgnored var platformLevellingMemo: PlatformLevellingMemo?
+    /// How many times the network tool's previews (the track, a passing
+    /// loop, a depot, a platform's levelling) were worked out (for the tests).
+    @ObservationIgnored var buildPreviewsWorkedOut = 0
     /// The tutorial's staffing plan of a line, kept for the world it was
     /// worked out for (see ``tutorialStaffingPlan(_:)``).
     @ObservationIgnored var tutorialStaffingMemo: (revision: Int, line: LineID, plan: LineStaffingPlan?)?
@@ -2666,6 +2670,14 @@ public final class GameSession {
         return GameError.insufficientFundsText(
             required: cost, available: world.economy.balance, doing: action?.actionText(in: language), in: language
         )
+    }
+
+    /// Whether the cash in hand pays `cost`; `nil` without one. A preview
+    /// kept while game time runs (``networkPreview``) is worked out again
+    /// when this changes, so its ✓ opens once the cash covers it and its
+    /// problem says so once it does not.
+    func affords(_ cost: Money?) -> Bool? {
+        cost.map { world.economy.canAfford($0) }
     }
 
     /// Drops a refusal for want of cash that the cash now covers
