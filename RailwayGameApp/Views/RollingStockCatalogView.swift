@@ -9,6 +9,8 @@ import SwiftUI
 /// with the whole train's price on a tag, and a row of the family's other
 /// types. Choosing a type sets the type and cars the line's staffing
 /// buys; nothing is bought here. ``RollingStockCatalog`` lists the types.
+/// Decision 374: in a lesson, a type a later lesson opens is shown with
+/// that lesson in place of the choice.
 struct RollingStockCatalogView: View {
     let session: GameSession
     @Binding var type: TrainType?
@@ -54,14 +56,14 @@ struct RollingStockCatalogView: View {
             }
         }
         .onAppear {
-            shown = type ?? catalog.entries.first?.type
+            shown = type ?? catalog.firstOpen
             shownCars = cars
         }
         .accessibilityIdentifier("catalog")
     }
 
     private func current(_ catalog: RollingStockCatalog) -> TrainType? {
-        shown ?? catalog.entries.first?.type
+        shown ?? catalog.firstOpen
     }
 
     private func familyPicker(_ catalog: RollingStockCatalog, entry: RollingStockCatalog.Entry, language: DisplayLanguage) -> some View {
@@ -230,7 +232,25 @@ struct RollingStockCatalogView: View {
         .accessibilityElement(children: .combine)
     }
 
+    @ViewBuilder
     private func chooseButton(_ entry: RollingStockCatalog.Entry, language: DisplayLanguage) -> some View {
+        if let unlock = session.world.lessonUnlockText(for: entry.type, in: language) {
+            Label {
+                Text(verbatim: unlock)
+                    .font(.headline)
+            } icon: {
+                Image(systemName: "lock.fill")
+            }
+            .foregroundStyle(Theme.textSecondary)
+            .frame(minWidth: 96, minHeight: 44)
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("catalog.locked")
+        } else {
+            choose(entry, language: language)
+        }
+    }
+
+    private func choose(_ entry: RollingStockCatalog.Entry, language: DisplayLanguage) -> some View {
         Button {
             type = entry.type
             cars = shownCars
@@ -259,6 +279,17 @@ struct RollingStockCatalogView: View {
                                 .lineLimit(1)
                             CatalogTrain(stripe: stripe(other.family), cars: 2)
                                 .frame(width: 70, height: 20)
+                                .opacity(other.isOpen ? 1 : 0.4)
+                            if let unlock = session.world.lessonUnlockText(for: other.type, in: language) {
+                                Label {
+                                    Text(verbatim: unlock)
+                                } icon: {
+                                    Image(systemName: "lock.fill")
+                                }
+                                .font(.caption2)
+                                .foregroundStyle(Theme.textSecondary)
+                                .lineLimit(1)
+                            }
                         }
                         .padding(8)
                         .background(Theme.panel, in: RoundedRectangle(cornerRadius: 10, style: .continuous))

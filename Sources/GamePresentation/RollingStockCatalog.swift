@@ -3,7 +3,9 @@ import GameCore
 // Decision 224, option 2A: the train types as a showroom, one at a time on
 // a platform, grouped by family; the cars stepped on the train itself, the
 // price of the whole train beside it. The figures are the type menu's
-// (decision 180, ``TrainTypeCard``) and the world's prices.
+// (decision 180, ``TrainTypeCard``) and the world's prices. Decision 374:
+// in a lesson, the types a later lesson opens are listed too, with that
+// lesson, and cannot be chosen yet.
 
 /// The types a company can buy, as the showroom shows them.
 public struct RollingStockCatalog: Equatable, Sendable {
@@ -18,7 +20,13 @@ public struct RollingStockCatalog: Equatable, Sendable {
         public let family: Family
         public let card: TrainTypeCard
         public let doorsPerCar: Int64
+        /// The lesson that opens it, while it is shut (decision 374), or
+        /// `nil` when it can be chosen.
+        public let opensInLesson: Int?
         public var id: TrainType { type }
+
+        /// Whether it can be chosen now.
+        public var isOpen: Bool { opensInLesson == nil }
     }
 
     public let entries: [Entry]
@@ -28,9 +36,17 @@ public struct RollingStockCatalog: Equatable, Sendable {
         let offered = world.offeredTrainTypes
         entries = Family.allCases.flatMap { family in
             offered.filter { Family($0) == family }.map {
-                Entry(type: $0, family: family, card: world.trainTypeCard($0), doorsPerCar: $0.doorsPerCar)
+                Entry(
+                    type: $0, family: family, card: world.trainTypeCard($0), doorsPerCar: $0.doorsPerCar,
+                    opensInLesson: world.lessonUnlocking($0)
+                )
             }
         }
+    }
+
+    /// The first type that can be chosen, the showroom's first one shown.
+    public var firstOpen: TrainType? {
+        (entries.first(where: \.isOpen) ?? entries.first)?.type
     }
 
     /// The families that have a type to show.

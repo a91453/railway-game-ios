@@ -286,6 +286,10 @@ struct EconomyPanel: View {
             Text(verbatim: accounts.loanText(in: session.language))
                 .monospacedDigit()
                 .accessibilityIdentifier("economy.loan")
+            // Decision 374: what the next step costs, before it is borrowed.
+            if let preview = session.world.loanPreview() {
+                loanPreviewText(preview)
+            }
             HStack {
                 Button {
                     session.borrowLoanStep()
@@ -311,13 +315,51 @@ struct EconomyPanel: View {
         }
     }
 
+    /// Decision 374: the interest the next step adds each day, what it
+    /// comes to over a month and a year, and what the company would keep
+    /// a day with it, in red when that is a loss.
+    private func loanPreviewText(_ preview: LoanPreview) -> some View {
+        let language = session.language
+        return VStack(alignment: .leading, spacing: 2) {
+            Text(verbatim: preview.paymentText(in: language))
+                .font(.subheadline)
+            Text(verbatim: preview.totalText(in: language))
+                .font(.caption)
+                .foregroundStyle(Theme.textSecondary)
+            if let result = preview.resultText(in: language) {
+                Text(verbatim: result)
+                    .font(.caption)
+                    .foregroundStyle((preview.dailyResultAfter ?? .zero) < .zero ? Theme.error : Theme.textSecondary)
+            }
+        }
+        .monospacedDigit()
+        .fixedSize(horizontal: false, vertical: true)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("economy.loanPreview")
+    }
+
+    /// Decision 374: how many riders the fare on the stepper would keep,
+    /// against now.
+    @ViewBuilder
+    private func fareDemandText(_ rules: FareRules, id: String) -> some View {
+        if let hint = session.world.fareDemandHint(for: rules) {
+            Text(verbatim: hint.text(in: session.language))
+                .font(.caption)
+                .monospacedDigit()
+                .foregroundStyle(hint.isWarning ? Theme.warning : Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier(id)
+        }
+    }
+
     private var faresSection: some View {
-        Section("Fares") {
+        Section {
             LabeledContent("Rules", value: accounts.effectiveFareRules.displayText(in: session.language))
             Stepper(value: $flatFare, in: 0...10_000, step: 25) {
                 Text("Flat fare \(Money(flatFare).centsText)")
                     .monospacedDigit()
             }
+            fareDemandText(.flat(Money(flatFare)), id: "economy.flatFareDemand")
             Button("Charge a flat fare of \(Money(flatFare).centsText)") {
                 session.setFareRules(.flat(Money(flatFare)))
             }
@@ -343,12 +385,19 @@ struct EconomyPanel: View {
             .monospacedDigit()
             .foregroundStyle(Theme.textSecondary)
             .accessibilityIdentifier("economy.bandPreview")
+            fareDemandText(.distance(bands), id: "economy.bandDemand")
             Button {
                 session.setFareRules(.distance(bands))
             } label: {
                 Text(verbatim: language.text("Charge by distance from \(bands[0].fare.centsText)", "改收階梯票價（\(bands[0].fare.centsText) 起）"))
             }
             .accessibilityIdentifier("economy.chargeByDistance")
+        } header: {
+            Text("Fares")
+        } footer: {
+            if accounts.mode == .management {
+                Text(verbatim: FareDemandHint.usualFareText(accounts.fareBaseline, in: session.language))
+            }
         }
     }
 
