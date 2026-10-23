@@ -245,6 +245,10 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         saves.tap()
         let row = app.buttons["saves.row.save-broken.json"]
         XCTAssertTrue(row.appears(within: 10), "The unreadable save is listed")
+        // Decision 381: the row's "⋯" button shows what its swipe does.
+        let menu = app.buttons["saves.menu.save-broken.json"]
+        XCTAssertTrue(menu.appears(within: 5), "The unreadable save's row has no ⋯ button")
+        XCTAssertTrue(menu.becomesHittable(within: 5), "The ⋯ button cannot be tapped")
         row.swipeLeft()
         let delete = app.buttons["Delete"].firstMatch
         if !delete.appears(within: 5) { row.swipeLeft() }

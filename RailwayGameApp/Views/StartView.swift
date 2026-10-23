@@ -701,26 +701,18 @@ struct SaveListView: View {
                 if !launcher.olderAutosaves.isEmpty {
                     Section {
                         ForEach(launcher.olderAutosaves) { entry in
-                            Button {
-                                launcher.load(entry)
-                                if launcher.session != nil {
-                                    dismiss()
-                                }
-                            } label: {
-                                row(entry)
-                            }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button(role: .destructive) {
-                                    deleting = entry
-                                } label: {
-                                    Label {
-                                        Text(verbatim: language.text("Delete", "刪除"))
-                                    } icon: {
-                                        Image(systemName: "trash")
+                            rowWithMenu(entry)
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    Button(role: .destructive) {
+                                        deleting = entry
+                                    } label: {
+                                        Label {
+                                            Text(verbatim: language.text("Delete", "刪除"))
+                                        } icon: {
+                                            Image(systemName: "trash")
+                                        }
                                     }
                                 }
-                            }
-                            .accessibilityIdentifier("saves.row.\(entry.id)")
                         }
                     } header: {
                         Text(verbatim: language.text("Earlier Autosaves", "之前的自動存檔"))
@@ -733,61 +725,52 @@ struct SaveListView: View {
                 }
                 Section {
                     ForEach(saves) { entry in
-                        Button {
-                            launcher.load(entry)
-                            if launcher.session != nil {
-                                dismiss()
-                            }
-                        } label: {
-                            row(entry)
-                        }
-                        .disabled(entry.problem != nil)
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) {
-                                deleting = entry
-                            } label: {
-                                Label {
-                                    Text(verbatim: language.text("Delete", "刪除"))
-                                } icon: {
-                                    Image(systemName: "trash")
-                                }
-                            }
-                            if entry.kind == .manual {
-                                Button {
-                                    startRenaming(entry)
+                        rowWithMenu(entry)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    deleting = entry
                                 } label: {
                                     Label {
-                                        Text(verbatim: language.text("Rename", "重新命名"))
+                                        Text(verbatim: language.text("Delete", "刪除"))
                                     } icon: {
-                                        Image(systemName: "pencil")
+                                        Image(systemName: "trash")
                                     }
                                 }
-                                .tint(Theme.primary)
+                                if entry.kind == .manual {
+                                    Button {
+                                        startRenaming(entry)
+                                    } label: {
+                                        Label {
+                                            Text(verbatim: language.text("Rename", "重新命名"))
+                                        } icon: {
+                                            Image(systemName: "pencil")
+                                        }
+                                    }
+                                    .tint(Theme.primary)
+                                }
                             }
-                        }
-                        .contextMenu {
-                            if entry.kind == .manual {
-                                Button {
-                                    startRenaming(entry)
+                            .contextMenu {
+                                if entry.kind == .manual {
+                                    Button {
+                                        startRenaming(entry)
+                                    } label: {
+                                        Label {
+                                            Text(verbatim: language.text("Rename", "重新命名"))
+                                        } icon: {
+                                            Image(systemName: "pencil")
+                                        }
+                                    }
+                                }
+                                Button(role: .destructive) {
+                                    deleting = entry
                                 } label: {
                                     Label {
-                                        Text(verbatim: language.text("Rename", "重新命名"))
+                                        Text(verbatim: language.text("Delete", "刪除"))
                                     } icon: {
-                                        Image(systemName: "pencil")
+                                        Image(systemName: "trash")
                                     }
                                 }
                             }
-                            Button(role: .destructive) {
-                                deleting = entry
-                            } label: {
-                                Label {
-                                    Text(verbatim: language.text("Delete", "刪除"))
-                                } icon: {
-                                    Image(systemName: "trash")
-                                }
-                            }
-                        }
-                        .accessibilityIdentifier("saves.row.\(entry.id)")
                     }
                 }
             }
@@ -916,6 +899,67 @@ struct SaveListView: View {
         }
     }
 
+    /// A save's row: tap it to load it; its "⋯" button (decision 381)
+    /// holds what its swipe and long press do, so they can be seen.
+    private func rowWithMenu(_ entry: SaveLibrary.Entry) -> some View {
+        HStack(spacing: 8) {
+            Button {
+                launcher.load(entry)
+                if launcher.session != nil {
+                    dismiss()
+                }
+            } label: {
+                row(entry)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.borderless)
+            .disabled(entry.problem != nil)
+            .accessibilityIdentifier("saves.row.\(entry.id)")
+            rowMenu(entry)
+        }
+    }
+
+    /// The row's "⋯" menu: rename (the player's own saves), export, and
+    /// delete, which asks first (``SaveListText/RowAction``).
+    private func rowMenu(_ entry: SaveLibrary.Entry) -> some View {
+        let language = launcher.language
+        return Menu {
+            ForEach(SaveListText.RowAction.available(for: entry), id: \.self) { action in
+                switch action {
+                case .rename:
+                    Button {
+                        startRenaming(entry)
+                    } label: {
+                        Label(action.title(in: language), systemImage: action.systemImage)
+                    }
+                case .export:
+                    ShareLink(
+                        item: ExportedListSave(library: launcher.saveLibrary, entry: entry),
+                        preview: SharePreview(Text(verbatim: title(of: entry)))
+                    ) {
+                        Label(action.title(in: language), systemImage: action.systemImage)
+                    }
+                case .delete:
+                    Button(role: .destructive) {
+                        deleting = entry
+                    } label: {
+                        Label(action.title(in: language), systemImage: action.systemImage)
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: "ellipsis.circle")
+                .font(.title3)
+                .foregroundStyle(Theme.primary)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.borderless)
+        .accessibilityLabel(Text(verbatim: SaveListText.rowMenuLabel(in: language)))
+        .accessibilityIdentifier(SaveListText.rowMenuIdentifier(of: entry))
+    }
+
     /// The row that imports a save file, at the top of a list with saves.
     private var importButton: some View {
         let language = launcher.language
@@ -1011,5 +1055,19 @@ struct SaveListView: View {
             return name
         }
         return entry.savedAt?.formatted(date: .abbreviated, time: .shortened) ?? entry.id
+    }
+}
+
+/// A save in the list as a file to share (decision 381), written when the
+/// player shares it, as the game menu's Export Save writes the game being
+/// played.
+private struct ExportedListSave: Transferable {
+    let library: SaveLibrary
+    let entry: SaveLibrary.Entry
+
+    static var transferRepresentation: some TransferRepresentation {
+        FileRepresentation(exportedContentType: .json) { save in
+            SentTransferredFile(try save.library.exportFile(of: save.entry))
+        }
     }
 }

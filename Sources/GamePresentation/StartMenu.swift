@@ -94,6 +94,47 @@ public enum SaveListText {
 
     /// The import row's identifier, for the UI tests.
     public static let importIdentifier = "saves.import"
+
+    /// What VoiceOver says of a row's "⋯" button, which holds what the
+    /// row's swipe and long press do.
+    public static func rowMenuLabel(in language: DisplayLanguage) -> String {
+        language.text("Save Options", "存檔選項")
+    }
+
+    /// The row menu's choices: rename (the player's own saves only),
+    /// export, and delete, which asks first.
+    public enum RowAction: CaseIterable, Sendable {
+        case rename, export, delete
+
+        public func title(in language: DisplayLanguage) -> String {
+            switch self {
+            case .rename: language.text("Rename", "重新命名")
+            case .export: language.text("Export", "匯出")
+            case .delete: language.text("Delete", "刪除")
+            }
+        }
+
+        /// The SF Symbol beside the title.
+        public var systemImage: String {
+            switch self {
+            case .rename: "pencil"
+            case .export: "square.and.arrow.up"
+            case .delete: "trash"
+            }
+        }
+
+        /// The choices for `entry`: a save that cannot be read can only be
+        /// deleted; an autosave has no name of its own to change.
+        public static func available(for entry: SaveLibrary.Entry) -> [RowAction] {
+            if entry.problem != nil { return [.delete] }
+            return entry.kind == .manual ? [.rename, .export, .delete] : [.export, .delete]
+        }
+    }
+
+    /// A row's "⋯" button's identifier, for the UI tests.
+    public static func rowMenuIdentifier(of entry: SaveLibrary.Entry) -> String {
+        "saves.menu.\(entry.id)"
+    }
 }
 
 /// The way to the data sources and licences (``DataSourceCredits``): a row
