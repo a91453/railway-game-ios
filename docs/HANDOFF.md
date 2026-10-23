@@ -893,7 +893,7 @@
 
 **第 1 步做了**（session_01BnZ6aE54dfdknXcyjYqUvQ，`docs/decisions/370.md`）：全城換成 (e) 的顏色（`Map3DPalette`、新檔 `Map3DLook.swift`）、柔光、路面 layer −11 與路燈光（天空亮度 0.70 起開，0.50 全亮，比 (d) 早）。夜晚路面對地面 ΔL* 14.1；黃昏列車、白牆、公車對路面最小 7.8。板橋記憶體測試綠，頂點數不變。對照圖 `docs/art/map3d-mapbox-look-2026-10-23/game-e.jpg`。還沒做的：
 
-1. ~~第 2 步~~ 已做（同一 session，決策 370「第 2 步」）：101 與台北車站照 `landmarks.py` 做進遊戲（`Map3DTaipeiLandmarks.swift`，線條 layer −5、−8、−9）；玩家地面上的軌道穿過時地標讓路，台北車站畫出來時套件的台北站房不畫。板橋記憶體測試綠，網格 +0.03%（車站遠看的模型）。對照圖 `game-landmarks.jpg`。
+1. ~~第 2 步~~ 已做（同一 session，決策 370「第 2 步」）：101 與台北車站做進遊戲（`Map3DTaipeiLandmarks.swift`，線條 layer −5、−8、−9）。作者要照網頁版高雄車站的方法先抓規格，所以大小、高度、101 的塔位（在購物中心的角上，不在中間）照 OSM 的 building part，台北車站頂 30 m；細節照 `landmarks.py`。玩家地面上的軌道穿過時地標讓路，台北車站畫出來時套件的台北站房不畫。板橋記憶體測試綠，網格 +0.03%（車站遠看的模型）。對照圖 `game-landmarks.jpg`。
 2. 實機（TestFlight）看黃昏與夜晚的路、白天白牆對路面（只差 ΔL* 3–9.5，靠路緣與陰影分）。
 3. 天空與霧沒有改；要不要照預覽調淡，看實機再決定。
 

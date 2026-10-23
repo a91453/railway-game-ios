@@ -21,8 +21,8 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
 
     private static let wall = Map3DColor.rgb(0xF5F1E9)
 
-    /// The two as the preview builds them: 101 508 m to its spire, the
-    /// station's roof ridge 43 m; each within the ground it clears, lit by
+    /// The two as OSM has their heights: 101 508 m to its spire, the
+    /// station's roof 30 m; each within the ground it clears, lit by
     /// unit normals, drawn with the line patterns; from afar, fewer
     /// triangles.
     func testTheModels() {
@@ -32,7 +32,7 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
             XCTAssertLessThan(far.indices.count, full.indices.count * 2 / 3, "\(landmark)")
             for model in [full, far] {
                 let top = model.vertices.map(\.z).max() ?? 0
-                XCTAssertEqual(top, landmark == .taipei101 ? 508 : 43.4, accuracy: 0.01, "\(landmark)")
+                XCTAssertEqual(top, landmark == .taipei101 ? 508 : 30, accuracy: 0.01, "\(landmark)")
                 XCTAssertEqual(model.vertices.map(\.z).min(), 0)
                 for vertex in model.vertices {
                     XCTAssertLessThanOrEqual(abs(vertex.x), landmark.clearing.x)
