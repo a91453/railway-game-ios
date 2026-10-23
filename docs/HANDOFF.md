@@ -56,7 +56,7 @@
     - 開發：照點數開，常常開了沒事做，或該修時還沒到點；看數字才打到真的慢的地方。每週量一次，抓慢慢變長、還沒過線的趨勢。
     - 美術、鐵道迷：無（各選項一樣）。
     - 音樂：無。
-- 仍是作者的：TestFlight 發版、Apple 帳號與 App Store Connect、secrets、加依賴、copyleft 或沒授權的程式碼，以及 CLAUDE.md 所有的「never」（不跑 `testflight.yml`、不開 auto-merge、不 force-push `main`、不取消 `main` 的 push run）。原因是額度：常駐 session 每一輪都要重讀整段對話，連被 PR 事件或排程叫醒也一樣，對話越長越貴。舊的遊戲規劃 session 開了兩天，用量已經碰到每週額度的警告。舊文件裡寫「派工 session」的地方，現在都是遊戲規劃。
+- 仍是作者的：TestFlight 發版（發不發、什麼時候發；作者說「發」之後由遊戲規劃替作者按，§1.2）、Apple 帳號與 App Store Connect、secrets、加依賴、copyleft 或沒授權的程式碼，以及 CLAUDE.md 所有的「never」（不自己跑 `testflight.yml`、不開 auto-merge、不 force-push `main`、不取消 `main` 的 push run）。原因是額度：常駐 session 每一輪都要重讀整段對話，連被 PR 事件或排程叫醒也一樣，對話越長越貴。舊的遊戲規劃 session 開了兩天，用量已經碰到每週額度的警告。舊文件裡寫「派工 session」的地方，現在都是遊戲規劃。
 
 | 角色 | 現在的 session | 做什麼 | 交接 |
 | --- | --- | --- | --- |
@@ -162,7 +162,7 @@
 
 （合併協調 session 2026-10-16 寄來的交接原文，整理成條列。2026-10-20 起沒有常駐的合併協調。2026-10-21 起遊戲規劃照這一節合併（§1）；作者在別的 session 裡授權它合併，或要發版時開一個短 session 確認，那個 session 也照這一節。）
 
-**權限**：遊戲規劃（作者 2026-10-21 授權），或作者本人在那個 session 裡授權了的 session，才合併（CLAUDE.md 的「never merge a PR」只在這時放寬）。不開 auto-merge、不 force-push、不碰 `testflight.yml`。
+**權限**：遊戲規劃（作者 2026-10-21 授權），或作者本人在那個 session 裡授權了的 session，才合併（CLAUDE.md 的「never merge a PR」只在這時放寬）。不開 auto-merge、不 force-push、不碰 `testflight.yml`；只有作者在遊戲規劃 session 裡說「發」時，遊戲規劃替作者按（下面「發版前」）。
 
 **每個 PR 合併前確認**（`pull_request_read` 的 get 與 get_check_runs）：
 - 不是 draft，`mergeable_state` 是 `clean`。
@@ -210,7 +210,7 @@
 6. 對方可以用 `ios-build.yml` 的 `only_testing` 分段驗證（例如開 `claude/bisect-*` branch）。修正 PR 綠了就合，全部修完再跑一輪 full lane。
 7. 發版前紅了：立刻告訴作者「先不要發」，並說明原因。
 
-**發版前**（作者自己跑 `testflight.yml`，這裡只確認）：
+**發版前**（作者 2026-10-23：「改成我說可以發你才能替我發」。發不發由作者決定；作者在遊戲規劃 session 裡說「發」之後，遊戲規劃照下面確認，都綠才用 `workflow_dispatch` 在 `main` 跑一次 `testflight.yml`，輸入照作者上一次發版的 run，作者另外指定的話照作者說的。不是綠的就告訴作者哪裡紅，等作者再說一次才發。作者也可以自己按。實作 session 一律不碰）：
 - 要發的 commit 就是 main HEAD，它的 `ci.yml` 和它自己的 full lane 都要綠。
 - 看 #231 最後一則 `full-lane-watch.yml` 的自動留言：最後一則是「紅了」或「又有 job 紅了」、之後還沒有「綠了」，就是 main 的 full lane 還紅著，先不發（決策 329）。
 - 確認的時候如果 main 又合了改 App 的 PR，要在新的 HEAD 重跑 full lane。這時可以取消舊 commit 用 workflow_dispatch 跑的 full lane，讓出 macOS runner（上限 5 個）。
@@ -268,7 +268,7 @@
 - 只回報「完成」或「需要決定」，簡短白話。不要一直報中間進度，作者抱怨過「怎麼一堆回報」。
 - 回玩家的話要簡單、和藹、親近、簡短，不要兇。
 - 選項、外觀、預設值、順序、golden 值的變更，由 session 自己從各個角度決定（現在是玩家、鐵道迷、開發、美術、音樂五個），PR 裡每個角度寫一行。
-- 作者自己保留：TestFlight 發版、Apple 帳號與 App Store Connect、secrets、新增依賴、copyleft 或沒有授權的程式碼。
+- 作者自己保留：TestFlight 發版（作者說「發」，遊戲規劃才替作者按，§1.2）、Apple 帳號與 App Store Connect、secrets、新增依賴、copyleft 或沒有授權的程式碼。
 - 作者說過「不要限制，可以任意開 PR」：收尾時開幾個 PR 都可以，不用先問。
 
 **踩過的坑**：

@@ -280,8 +280,15 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   the dry run do not prove signing, upload or TestFlight; only a real
   `testflight.yml` run with the Apple account can, and it proves at most the
   upload, not TestFlight installation.
-- Never run `testflight.yml` or add a trigger to it, and never let pull
-  requests reach its secrets; the user starts releases.
+- Never add a trigger to `testflight.yml`, and never let pull requests
+  reach its secrets. Only the user decides a release, and no session runs
+  `testflight.yml` on its own. The one exception (owner, 2026-10-23: 「改成我
+  說可以發你才能替我發」): after the user says, in the game-planning
+  session itself, to release, that session may start `testflight.yml` with
+  `workflow_dispatch` on `main`, once, for `main`'s HEAD, and only when that
+  commit's full `ci.yml` run and full lane are green (`docs/HANDOFF.md`
+  §1.2). When either is not green, it tells the user what is red and starts
+  nothing until the user says to release again.
 - Whenever `RailwayGameApp/project.yml` or the app's file layout changes,
   regenerate the Xcode project with the XcodeGen release pinned in
   `.github/actions/setup-xcodegen/action.yml` (2.46.0) and commit the result.
@@ -356,8 +363,9 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   (more than about 2 MB in one pull request) go to
   a91453/railway-reference-private, `Railway/game-art-previews/docs/art/`
   (owner, 2026-10-21); the pull request keeps one overview image, the
-  README and the images code or docs link to. This does not change what stays the owner's: starting
-  a TestFlight release, Apple account and App Store Connect steps, secrets,
+  README and the images code or docs link to. This does not change what stays the owner's: deciding
+  a TestFlight release (the game-planning session presses it only on the
+  user's word, above), Apple account and App Store Connect steps, secrets,
   adding a dependency, and reusing copyleft or unlicensed code; nor any
   "never" rule in this file.
 - Several sessions work in parallel. Before starting a task, read every
@@ -412,7 +420,7 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
     to turn green before the next batch; check that `iOS App Build` is green
     too (or skipped because the same change passed), since only `Swift CI
     (gate)` is required.
-  - Before a TestFlight release (the user's), check that the commit's full
+  - Before a TestFlight release (the user's decision), check that the commit's full
     `ci.yml` run on `main` and its full lane are both green.
 - Text the game shows players (both languages) says only what a control or
   feature does for them, in a sentence or two: never design reasons, how it
