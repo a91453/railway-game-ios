@@ -191,6 +191,56 @@ public struct TrainMotion: Sendable {
             return (point, Point(x: -backward.x, y: -backward.y))
         }
 
+        /// Decision 380: its head at `progress`, where and which way it
+        /// faces, held steady: the track's sampled points, about a metre
+        /// apart and each rounded to the world's units, turn this way and
+        /// that by up to a degree, and its head (``head(at:)``) slides
+        /// sideways by up to half a unit as it passes each. A parabola
+        /// fitted to the track `span` world units back from the head
+        /// (least squares, ``steadySamples`` points), there; `nil` with
+        /// less than a tenth of `span` of track behind the head.
+        public func steadyHead(at progress: Double, over span: Double) -> (point: Point, heading: Point)? {
+            let along = lag * (1 - min(max(progress, 0), 1))
+            let reach = min(span, trail.length - along)
+            guard reach > span / 10, let head = trail.point(at: along) else { return nil }
+            var x = (value: 0.0, slope: 0.0), y = (value: 0.0, slope: 0.0)
+            for (index, weight) in Self.steadyWeights.enumerated() {
+                guard let p = trail.point(at: along + reach * Double(index) / Double(Self.steadySamples - 1)) else { return nil }
+                x = (x.value + weight.value * (p.x - head.x), x.slope + weight.slope * (p.x - head.x))
+                y = (y.value + weight.value * (p.y - head.y), y.slope + weight.slope * (p.y - head.y))
+            }
+            // The slope runs back along the track, from the head.
+            let size = (x.slope * x.slope + y.slope * y.slope).squareRoot()
+            guard size > 0 else { return nil }
+            return (Point(x: head.x + x.value, y: head.y + y.value), Point(x: -x.slope / size, y: -y.slope / size))
+        }
+
+        /// How many points of the track ``steadyHead(at:over:)`` fits.
+        static let steadySamples = 41
+
+        /// The least-squares parabola's value and slope at the first of
+        /// ``steadySamples`` evenly spaced points, as weights of the points.
+        static let steadyWeights: [(value: Double, slope: Double)] = {
+            let ts = (0..<steadySamples).map { Double($0) / Double(steadySamples - 1) }
+            var m = [[Double]](repeating: [0, 0, 0], count: 3)
+            for t in ts {
+                let f = [1, t, t * t]
+                for row in 0..<3 { for column in 0..<3 { m[row][column] += f[row] * f[column] } }
+            }
+            // The inverse of the symmetric 3 × 3 normal matrix, by cofactors.
+            func cofactor(_ r: Int, _ c: Int) -> Double {
+                let rows = (0..<3).filter { $0 != r }, columns = (0..<3).filter { $0 != c }
+                let minor = m[rows[0]][columns[0]] * m[rows[1]][columns[1]] - m[rows[0]][columns[1]] * m[rows[1]][columns[0]]
+                return (r + c).isMultiple(of: 2) ? minor : -minor
+            }
+            let determinant = (0..<3).reduce(0.0) { $0 + m[0][$1] * cofactor(0, $1) }
+            let inverse = (0..<3).map { r in (0..<3).map { c in cofactor(c, r) / determinant } }
+            return ts.map { t in
+                let f = [1, t, t * t]
+                return ((0..<3).reduce(0.0) { $0 + inverse[0][$1] * f[$1] }, (0..<3).reduce(0.0) { $0 + inverse[1][$1] * f[$1] })
+            }
+        }()
+
         /// Its body at `progress`, head first: ``length`` along the trail
         /// from its head.
         public func body(at progress: Double) -> [Point] {

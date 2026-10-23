@@ -121,6 +121,10 @@ public enum Map3DTrains {
         public var rail: Map3DPoint { point - Map3DPoint(0, Map3DTrains.carHeight + Map3DTrains.headClearance, 0) }
     }
 
+    /// Decision 380: how much track behind a train's head says the way it
+    /// faces (``TrainMotion/Run/steadyHead(at:over:)``): five cars' length.
+    static let steadySpan = 5 * TrainCars.drawnCarLength
+
     /// How far over the roof a train's label stands, in metres.
     static let headClearance: Float = 1
 
@@ -152,7 +156,11 @@ public enum Map3DTrains {
             let body = run.body(at: progress)
             // Decision 227: as many cars as stand its own car length apart.
             let count = TrainCars.count(length: run.length, carPitch: run.carPitch)
-            let cars = TrainCars.cars(body: body, heading: head.heading, count: count, gap: gap)
+            // Decision 380: facing the way the track runs behind the head,
+            // held steady, so the cars and the cab's view do not shake from
+            // one sampled point of the track to the next.
+            let steady = run.steadyHead(at: progress, over: Self.steadySpan)
+            let cars = TrainCars.cars(body: body, heading: steady?.heading ?? head.heading, count: count, gap: gap)
             let (side, stripe) = colours(of: run.look, palette: palette)
             let trainType = heights.type(of: run.train)
             let hasModels = run.look != .freight && models?.models(forType: trainType) != nil
@@ -174,10 +182,18 @@ public enum Map3DTrains {
                 let base = (a + b) * 0.5
                 if index == 0 {
                     let cover = scene.trackCover.ground(at: a)
+                    // Decision 380: the cab's eye at the steady head's nose,
+                    // facing the way it does.
+                    var forward = Map3DPoint(a.x - b.x, 0, a.z - b.z).normalized ?? Map3DPoint(0, 0, -1), nose = a
+                    if let steady {
+                        let half = TrainCars.drawnCarLength / 2
+                        let front = TrainMotion.Point(x: steady.point.x + steady.heading.x * half, y: steady.point.y + steady.heading.y * half)
+                        forward = Map3DPoint(Float(steady.heading.x), 0, Float(steady.heading.y))
+                        nose = scene.point(worldX: front.x, worldY: front.y, height: 0) + Map3DPoint(0, a.y, 0)
+                    }
                     frame.heads.append(Head(train: run.train, point: a + (b - a) * (min(4, length / 2) / length)
                                                 + Map3DPoint(0, carHeight + headClearance, 0),
-                                            forward: Map3DPoint(a.x - b.x, 0, a.z - b.z).normalized ?? Map3DPoint(0, 0, -1), nose: a,
-                                            ground: cover?.height, inTunnel: cover?.inTunnel ?? false))
+                                            forward: forward, nose: nose, ground: cover?.height, inTunnel: cover?.inTunnel ?? false))
                 }
                 if line.isEmpty { line.append(a) }
                 line.append(b)

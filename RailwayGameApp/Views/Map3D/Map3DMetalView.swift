@@ -782,9 +782,11 @@ final class Map3DMetalView: MTKView {
             // so the margin holds.
             chunks[index].detailed = !chunks[index].coarse
                 && camera.wantsDetail(minimum: chunks[index].minimum, maximum: chunks[index].maximum, wasDetailed: chunks[index].detailed)
-            // Decision 267: and its closest detail, only close up.
-            chunks[index].closeUp = chunks[index].detailed && chunks[index].close != nil
-                && camera.wantsClose(minimum: chunks[index].minimum, maximum: chunks[index].maximum, wasClose: chunks[index].closeUp)
+            // Decision 267: and its closest detail, only close up; decision
+            // 380: a coarse chunk's too, which holds only the overhead line.
+            chunks[index].closeUp = chunks[index].close != nil
+                && camera.drawsClose(minimum: chunks[index].minimum, maximum: chunks[index].maximum, detailed: chunks[index].detailed,
+                                     coarse: chunks[index].coarse, wasClose: chunks[index].closeUp)
             if Map3DCamera.sees(minimum: chunks[index].minimum, maximum: chunks[index].maximum, through: matrix) {
                 visible.append(chunks[index])
             }
