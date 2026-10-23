@@ -2,14 +2,18 @@ import GameCore
 @testable import GamePresentation
 import XCTest
 
-/// Decision 367: a tick that only moves the trains, the track they have
+/// Decision 371: a tick that only moves the trains, the track they have
 /// reserved and the people waiting redraws neither the railway nor the
 /// stations' names; an edit of the railway redraws both.
 @MainActor
 final class MapRedrawTests: XCTestCase {
     func testATickRedrawsNeitherTheRailwayNorTheNames() throws {
         let metre = WorldCoordinate.unitsPerMetre
-        let world = try newGameLine(through: (0..<4).map { PlanPoint(x: (1_000 + $0 * 1_500) * metre, y: 4_000 * metre) })
+        // Through the new game's towns (FeatureUITestWorld's big grid), so
+        // passengers come to wait.
+        var start = GameWorld.newGame()
+        start.setUnlimitedFunds(true)
+        let world = try newGameLine(through: (0..<11).map { PlanPoint(x: (3_000 + $0 * 700) * metre, y: 8_000 * metre) }, in: start)
         XCTAssertTrue(world.isTrafficControlEnabled)
         let session = GameSession(world: world)
         session.setSpeed(.x60)

@@ -368,7 +368,7 @@ struct MapView: View {
                             .equatable()
                             .transition(reduceMotion ? .identity : .opacity.animation(MotionRule.change.animation))
                     }
-                    // Decision 367: the railway, and over it traffic
+                    // Decision 371: the railway, and over it traffic
                     // control and the stations, each in a canvas of its
                     // own: a train reserving track further on (nearly every
                     // tick with traffic control on) redraws only the second.
@@ -443,7 +443,7 @@ struct MapView: View {
                     // Decision 182, later: following a gliding train, the
                     // camera follows its glide frame by frame.
                     if followsGlide {
-                        // Decision 367: each frame redraws the whole map.
+                        // Decision 371: each frame redraws the whole map.
                         TimelineView(.animation(minimumInterval: MapGlide.followMinimumInterval)) { timeline in
                             Color.clear.onChange(of: timeline.date) { last, now in
                                 centerOnFollowedTrain(
@@ -457,7 +457,7 @@ struct MapView: View {
                     // trains (docs/MAP_LAYERS.md 55–57), and the network
                     // tool's preview and the tracks' numbers over them;
                     // darkened with the map at night, as under the tint.
-                    // Decision 367: the names, the waiting counts and the
+                    // Decision 371: the names, the waiting counts and the
                     // network tool's marks, each in a canvas of its own.
                     ForEach([MapLabelCanvas.Part.names, .counts, .marks], id: \.self) { part in
                         MapLabelCanvas(
@@ -2124,13 +2124,13 @@ private struct MapCanvas: View, Equatable {
     /// over the trains instead, in ``MapLabelCanvas``.
     var drawsLabels = true
 
-    /// Decision 367: which part of the map it draws: on the map, the
+    /// Decision 371: which part of the map it draws: on the map, the
     /// railway and, over it, traffic control and the stations, each in a
     /// canvas of its own; the loupe draws them all.
     var part: MapArt.MapPart = .all
 
     /// The trains are drawn over it, by ``MapTrainCanvas`` (decision 182),
-    /// so a tick that only moves them does not redraw it. Decision 367: nor
+    /// so a tick that only moves them does not redraw it. Decision 371: nor
     /// does one that only moves traffic control's reserved track redraw
     /// the railway.
     nonisolated static func == (lhs: MapCanvas, rhs: MapCanvas) -> Bool {
@@ -2218,9 +2218,9 @@ private struct MapCanvas: View, Equatable {
 /// them, as before, the network tool's preview and the tracks' numbers
 /// (``MapArt/drawBuildMarks``). Redrawn when the camera, the stations,
 /// their lines, the track or the preview change, never for a moving train;
-/// the counts, in a canvas of their own, when one changes (decision 367).
+/// the counts, in a canvas of their own, when one changes (decision 371).
 private struct MapLabelCanvas: View, Equatable {
-    /// Decision 367: which of the three it draws, each in a canvas of its
+    /// Decision 371: which of the three it draws, each in a canvas of its
     /// own, one over the other in this order.
     enum Part: Hashable {
         /// The stations' names and their lines' badges.
@@ -2449,7 +2449,7 @@ private struct MapTrainCanvas: View, Equatable {
         // A deadlock beats even while paused; the other waits pulse while
         // the game runs (decision 210).
         let beats = !reduceMotion && (traffic.waits.contains(where: \.isDeadlocked) || (running && !traffic.waits.isEmpty))
-        // Decision 367: at most ``MapGlide/framesPerSecond`` frames a second.
+        // Decision 371: at most ``MapGlide/framesPerSecond`` frames a second.
         return TimelineView(.animation(minimumInterval: MapGlide.minimumInterval, paused: !animating && !beats)) { timeline in
             Canvas { context, size in
                 FrameCostMeter.shared.measure(.trains) {

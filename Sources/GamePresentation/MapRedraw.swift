@@ -1,13 +1,13 @@
 import GameCore
 
-// Decision 367: what of the world each of the flat map's canvases draws,
+// Decision 371: what of the world each of the flat map's canvases draws,
 // so that a tick redraws only the canvases whose part changed. On a map of
 // 44 stations with traffic control on, the one canvas of the track, the
 // stations and traffic control was drawn again on nearly every tick
 // because a train had reserved track further on, and the stations' names
 // whenever one more passenger waited.
 
-/// Which parts of the world the flat map's canvases compare (decision 367).
+/// Which parts of the world the flat map's canvases compare (decision 371).
 public enum MapRedraw {
     /// The railway canvas: the map's edge, the track, the lines over it
     /// and the catchment rings round the stations.
@@ -34,7 +34,7 @@ public enum MapRedraw {
     }
 }
 
-/// Decision 367: how often the flat map draws its trains between two ticks.
+/// Decision 371: how often the flat map draws its trains between two ticks.
 /// A tick moves them every tenth of a second and the map glides them from
 /// where they were; drawn at the screen's own rate (60 or 120 times a
 /// second) a large map drew every train that often for as long as the game

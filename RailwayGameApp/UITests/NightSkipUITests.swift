@@ -26,7 +26,7 @@ final class NightSkipUITests: XCTestCase {
     }
 }
 
-/// Decision 367: the flat map's frame readout on a map of 44 stations, by
+/// Decision 371: the flat map's frame readout on a map of 44 stations, by
 /// day at 1× and at night at the opening speed, printed to the log for a
 /// comparison between two commits on the same Simulator (the numbers are
 /// not a phone's). By hand only (`ios-build.yml`'s `only_testing`); the

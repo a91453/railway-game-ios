@@ -69,7 +69,7 @@ enum MapArt {
         }
     }
 
-    /// Decision 367: the parts of ``drawMap``, each in a canvas of its own
+    /// Decision 371: the parts of ``drawMap``, each in a canvas of its own
     /// on the map: the railway (the map's edge, the track, the lines),
     /// redrawn when the network or the lines change, and over it traffic
     /// control, the buildings and the stations, redrawn when a train
@@ -224,7 +224,7 @@ enum MapArt {
     /// 216), the names zoomed out (decision 89) and the waiting counts and
     /// crowded rings (decision 210): over the trains, so a train stopped at
     /// a station never covers its name or count (docs/MAP_LAYERS.md 55–57).
-    /// Decision 367: the map draws the `names` and the `counts` in two
+    /// Decision 371: the map draws the `names` and the `counts` in two
     /// canvases, so one more passenger waiting does not redraw the names.
     static func drawStationLabels(
         _ world: GameWorld,

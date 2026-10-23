@@ -3,7 +3,7 @@ import GameCore
 @testable import GamePresentation
 import XCTest
 
-/// Decision 367 (§22.2 10h; PLAYER_FEEDBACK 78.1, 79.1, 82.1: with some
+/// Decision 371 (§22.2 10h; PLAYER_FEEDBACK 78.1, 79.1, 82.1: with some
 /// thirty or forty stations the flat map ran at about 5 fps and the phone
 /// grew hot). What each canvas of the flat map is asked to draw again a
 /// second, and why, on the real map round Miaoli with four lines of eleven
@@ -130,17 +130,17 @@ final class MapFrameCostReportTests: XCTestCase {
 struct MapRedrawCount {
     enum Canvas: String, CaseIterable {
         /// `main`'s one canvas of the track, the stations and traffic
-        /// control (``MapCanvas`` before decision 367).
+        /// control (``MapCanvas`` before decision 371).
         case trackBefore = "track (main)"
-        /// Decision 367: the track and the lines alone.
+        /// Decision 371: the track and the lines alone.
         case railway = "railway"
-        /// Decision 367: traffic control, the buildings and the stations.
+        /// Decision 371: traffic control, the buildings and the stations.
         case trafficAndStations = "traffic + stations"
         /// `main`'s names with the waiting counts.
         case namesBefore = "names (main)"
-        /// Decision 367: the names alone.
+        /// Decision 371: the names alone.
         case names = "names"
-        /// Decision 367: the waiting counts alone.
+        /// Decision 371: the waiting counts alone.
         case waitingCounts = "waiting counts"
         /// The trains' canvas, a new glide.
         case trains = "trains (new glide)"

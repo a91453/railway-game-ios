@@ -67,13 +67,16 @@ enum FeatureUITestWorld {
         return world
     }
 
-    /// Decision 367's map for timing the flat map: a new game with four
+    /// Decision 371's map for timing the flat map: a new game with four
     /// lines of eleven stations each (44 stations, a train on each line,
     /// traffic control on), running at 1× from 08:00, or at the opening
     /// speed from 20:30 (`night`).
     private static func bigGrid(night: Bool) throws -> GameWorld {
         let metre = WorldCoordinate.unitsPerMetre
         var world = GameWorld.newGame(balance: 1_000_000_000)
+        // The fourth line cost more than a new game has (the launch crashed
+        // in run 39886381587); the map is for timing, not for money.
+        world.setUnlimitedFunds(true)
         for line in 0..<4 {
             let y = 8_000 * metre + Int64(line - 2) * 1_500 * metre
             let points = (0..<11).map { PlanPoint(x: 3_000 * metre + Int64($0) * 700 * metre, y: y) }
