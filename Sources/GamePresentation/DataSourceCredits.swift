@@ -9,6 +9,12 @@
 // License, version 1.0, and OpenStreetMap under the Open Database License.
 // The population that sets a real-world station's ridership is WorldPop's,
 // under CC BY 4.0 (PopulationGrid.swift).
+//
+// The website's credits page (a91453/railway-reference-private,
+// `Website/site/credits.html`) says the same in both languages: when a
+// source here is added, removed or reworded, change that page in the same
+// round, keeping its own notes on which screenshots use which base map and
+// the website's typeface, and with no links to the source repository.
 
 /// One source of the game's data.
 public struct DataSourceCredit: Identifiable, Hashable, Sendable {
