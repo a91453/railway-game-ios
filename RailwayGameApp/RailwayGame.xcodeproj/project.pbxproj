@@ -38,6 +38,7 @@
 		2829D526B58B594CFF039231 /* StationPairDrawer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10C54A651E2F6DD601FA3F15 /* StationPairDrawer.swift */; };
 		292756D8D1D213C17C8217E1 /* ticket-issued.wav in Resources */ = {isa = PBXBuildFile; fileRef = B9E396F04F921CD6475423B8 /* ticket-issued.wav */; };
 		2955C8F1CA4B38DCACFCE92A /* chime-metro-motif.wav in Resources */ = {isa = PBXBuildFile; fileRef = 2AE542814E8BBB6793FFBF91 /* chime-metro-motif.wav */; };
+		298500257AB33E58BA58A158 /* HUDAlignmentUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A45FAC99BF6E52A26A750C5 /* HUDAlignmentUITests.swift */; };
 		298E6F23EF908E81C6D9639F /* MapInteractionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21275B6D1B1A72F75A29DA13 /* MapInteractionTests.swift */; };
 		2AB6C1070610AFCEB0DD27A0 /* RealWorldPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B68167398B13543EA8C564A /* RealWorldPicker.swift */; };
 		2B45A912226EB245FACCA4F3 /* tymc_times.json in Resources */ = {isa = PBXBuildFile; fileRef = 360D54F266227011F79894B4 /* tymc_times.json */; };
@@ -292,6 +293,7 @@
 		782C96DBD713D96F9EADF2EE /* Map3DSigns.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Map3DSigns.png; sourceTree = "<group>"; };
 		787EB9DDCEED2E78C0E0E237 /* FinanceTrendCharts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinanceTrendCharts.swift; sourceTree = "<group>"; };
 		79941FA523AF01C8B9E74433 /* BuildToolRail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildToolRail.swift; sourceTree = "<group>"; };
+		7A45FAC99BF6E52A26A750C5 /* HUDAlignmentUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HUDAlignmentUITests.swift; sourceTree = "<group>"; };
 		7E833A49B8766511EF574847 /* SettingsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsUITests.swift; sourceTree = "<group>"; };
 		81D550FDBEF9E69496D0BF4D /* MiniMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniMapView.swift; sourceTree = "<group>"; };
 		825875E22D08C0197C0EC180 /* coins.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = coins.wav; sourceTree = "<group>"; };
@@ -672,6 +674,7 @@
 			children = (
 				41B126494052744FF5AE9A8B /* CoverageShortcutUITests.swift */,
 				00A3435B9D12725EEF9D3FA3 /* Feature284To286UITests.swift */,
+				7A45FAC99BF6E52A26A750C5 /* HUDAlignmentUITests.swift */,
 				C02012D8840DFEC5FEBCB494 /* LessonUITests.swift */,
 				091835300676F4F4DE9D6CE3 /* LineDraftSummaryUITests.swift */,
 				58125CB8705666FD497C6E13 /* MapButtonsUITests.swift */,
@@ -984,6 +987,7 @@
 			files = (
 				866964714A9713149D8697CD /* CoverageShortcutUITests.swift in Sources */,
 				E0AAF4F80FFB96017A1C7714 /* Feature284To286UITests.swift in Sources */,
+				298500257AB33E58BA58A158 /* HUDAlignmentUITests.swift in Sources */,
 				0EA0D456816BC0F34F34AD3A /* LessonUITests.swift in Sources */,
 				A081D0BA7AD605EAA7BCC85A /* LineDraftSummaryUITests.swift in Sources */,
 				AF92C9C88BE3029BAAEC6A23 /* MapButtonsUITests.swift in Sources */,

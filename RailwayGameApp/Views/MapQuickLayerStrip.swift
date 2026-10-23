@@ -57,6 +57,7 @@ struct MapQuickLayerStrip: View {
         // 2026-10-15): solid with a navy edge it was the one heavy piece
         // left on the map.
         .glassBackground(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .hudFrameMark("map.quickLayer.strip")
     }
 
     /// An icon over its name: teal on a light teal ground inside a teal

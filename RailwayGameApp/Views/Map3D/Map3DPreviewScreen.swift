@@ -166,7 +166,9 @@ struct Map3DPreviewScreen: View {
                         .background(.regularMaterial, in: Capsule())
                 }
             }
-            .padding()
+            // Decision 388: on the 2D map's lines (``HUDMargins``), not the
+            // 16 points of a plain padding, so nothing jumps between them.
+            .padding(CGFloat(HUDMargins.edge))
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: session.followedTrain?.id)
         }
         .task(id: Map3DSceneKey(world: session.world, hasHeights: session.heights != nil, hasRailways: session.railways != nil, focus: focus, palette: linePalette)) {
@@ -1023,6 +1025,7 @@ private struct Map3DFollowBar: View {
         .padding(.vertical, 2)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .accessibilityElement(children: .contain)
+        .hudFrameMark("map3D.followBar")
         .accessibilityHint(Text(verbatim: language.text("Pinch to move closer or farther.", "兩指縮放，拉近或拉遠。")))
     }
 }

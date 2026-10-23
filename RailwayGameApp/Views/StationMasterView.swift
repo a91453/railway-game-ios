@@ -460,5 +460,6 @@ struct StationMasterCorner: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .strokeBorder(worry ? Theme.warning.opacity(0.6) : Theme.panelBorder, lineWidth: 1)
         )
+        .hudFrameMark("stationMaster.bubble")
     }
 }

@@ -48,6 +48,7 @@ struct BuildToolRail: View {
         }
         .frame(width: Self.width)
         .glassBackground(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .hudFrameMark("hud.rail")
         // Offered only the room between the pill and the dock, from the top.
         .frame(maxHeight: maxHeight, alignment: .top)
     }

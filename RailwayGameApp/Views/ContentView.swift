@@ -533,6 +533,7 @@ struct ContentView: View {
                             }
                         }
                     }
+                    .hudFrameMark("hud.tools")
                     // Decision 226: faded while a finger draws under them.
                     .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { screen.toolsFrame = $0 }
                     .opacity(screen.isDrawingUnderTools ? 0.4 : 1)
@@ -631,6 +632,7 @@ struct ContentView: View {
                                 RoundedRectangle(cornerRadius: 24, style: .continuous)
                                     .strokeBorder(Theme.panelBorder, lineWidth: 1)
                             }
+                            .hudFrameMark("hud.panel")
                             // The tutorial's card keeps clear of it.
                             .tutorialTarget(.sidePanel)
                             .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
@@ -808,6 +810,7 @@ private struct StatusPill: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 5)
             .glassBackground(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .hudFrameMark("hud.bar")
     }
 }
 
@@ -1093,6 +1096,7 @@ private struct DetailsCard: View {
             pinned = nil
         }
         .glassBackground(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .hudFrameMark("hud.card")
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("details.card")
     }
