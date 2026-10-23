@@ -5,7 +5,7 @@ The same synth as the first promo video's soundtrack, so the game sounds as
 the video does: a pad, a plucked arpeggio and rail joints over I - vi - IV - V
 in C, a station chime, a whoosh, a rail joint, and the sounds of something
 put up and of money coming in (decision 117), and of something refused
-and a warning (decision 184). Everything is made here from
+and a warning (decision 184), and a ticket issued (decision 373). Everything is made here from
 sine waves and seeded noise: no samples or third-party audio. The output is
 the same on every run.
 
@@ -115,6 +115,40 @@ def whoosh(length):
         y += cut[j] * (noise[j] - y)
         out[j] = y
     return out * np.sin(np.pi * u) ** 1.5
+
+
+def ticket():
+    """Decision 373: a ticket issued, as a ticket machine prints one: the
+    printer's feed, a buzz of filtered noise pulsing at its stepper's 180
+    steps a second over the stepper's own faint 360 Hz, for a third of a
+    second; the cutter's snap; the ticket dropping into the tray."""
+    out = np.zeros(int(0.7 * SR))
+    feed = int(0.32 * SR)
+    k = np.arange(feed) / SR
+    noise = np.random.default_rng(373).standard_normal(feed)
+    # The difference of two one-pole low-passes: a band around 1.5-4 kHz.
+    lows = []
+    for cut in (0.45, 0.12):
+        y = 0.0
+        low = np.zeros(feed)
+        for j in range(feed):
+            y += cut * (noise[j] - y)
+            low[j] = y
+        lows.append(low)
+    band = lows[0] - lows[1]
+    steps = 0.55 + 0.45 * np.sin(2 * np.pi * 180 * k) ** 2
+    hum = 0.25 * np.sin(2 * np.pi * 360 * k)
+    # In and out over 20 ms, so the feed starts and stops without a click.
+    edge = np.minimum(1, np.minimum(k, k[-1] - k) / 0.02)
+    out[:feed] += 0.8 * edge * (band / np.abs(band).max() * steps + hum)
+    snap = clack()
+    snap = np.diff(snap, prepend=0.0)  # brighter: a blade, not a joint
+    start = int(0.35 * SR)
+    out[start : start + len(snap)] += 0.6 * snap / np.abs(snap).max()
+    drop = clack()
+    start = int(0.47 * SR)
+    out[start : start + len(drop)] += 0.5 * drop
+    return out
 
 
 # Decision 343: the running loops, made to the spectra of recordings of
@@ -481,6 +515,7 @@ SYNTH_SOURCES = {
     "rain-steady.caf": "weather(\"rain\"), decision 346",
     "rain-typhoon.caf": "weather(\"typhoon\"), decision 346",
     "thunder.caf": "thunder(), decision 346",
+    "ticket-issued.wav": "ticket(), decision 373",
 }
 
 
@@ -594,6 +629,9 @@ def main(out_dir):
         start = int(at * SR)
         warning[start : start + len(ding)] += ding[: len(warning) - start]
     write_wav(os.path.join(out_dir, "warning.wav"), normalized(warning, 0.45))
+
+    # Decision 373: a day pass on sale, a ticket printed, cut and dropped.
+    write_wav(os.path.join(out_dir, "ticket-issued.wav"), normalized(ticket(), 0.5))
 
 
 def check(out_dir):

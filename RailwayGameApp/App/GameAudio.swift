@@ -352,6 +352,7 @@ final class GameAudio {
         case .goalMet: 0.55
         // Decision 315: as loud as the goal-met tune.
         case .lineAcquired: 0.55
+        case .ticketIssued: 0.5
         }
     }
 
@@ -393,6 +394,7 @@ final class GameAudio {
         // Decision 256: goals met at the same midnight sound once.
         case .goalMet: .seconds(2)
         case .lineAcquired: .seconds(2)
+        case .ticketIssued: .milliseconds(700)
         }
     }
 
@@ -402,7 +404,7 @@ final class GameAudio {
         case .refused: .error
         case .warning: .warning
         case .built, .goalMet, .lineAcquired: .success
-        case .arrival, .track, .transition, .income: nil
+        case .arrival, .track, .transition, .income, .ticketIssued: nil
         }
     }
 
