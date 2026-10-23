@@ -622,3 +622,32 @@ final class RealWorldMapUITests: XCTestCase {
         return query.firstMatch
     }
 }
+
+/// Decision 367 (§22.2 25a; TestFlight 83.1: the whole High Speed Rail at
+/// 600×, 5 fps, 200 ms of a frame in "other"): the flat map's frame readout
+/// on the High Speed Rail demo, which runs at 600×, printed every five
+/// seconds for two commits to be compared. Run by hand only
+/// (`ios-build.yml`'s `only_testing`); the Simulator's unoptimised build is
+/// slower than a phone, so only the two runs' difference says anything.
+@MainActor
+final class FastForwardFrameUITests: XCTestCase {
+    func testTheFrameReadoutOnTheHighSpeedDemo() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-map.showsFrameRate", "YES", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+
+        app.openDemo("demo.highSpeed")
+
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 600), "The demo is built and opens")
+        let readout = app.buttons["map.frameRate"]
+        XCTAssertTrue(readout.appears(within: 30), "No frame readout")
+        readout.tap()
+        for second in 1...6 {
+            Thread.sleep(forTimeInterval: 5)
+            print("[frame-cost] high-speed demo, 600×, at \(second * 5) s: \(readout.label)")
+        }
+    }
+}

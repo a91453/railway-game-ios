@@ -278,11 +278,11 @@ final class CommandLogTests: XCTestCase {
         }
         XCTAssertEqual(
             report.attachmentText(in: .english),
-            "Attached: command-log.json, with the save this game started from, the 3 things done since (commands, game time, Undo and Redo) and the version 0.5.0 (56.1). Nothing about you or your device. Names in it: Home, Grandma's."
+            "Attached: command-log.json, with the save this game started from, the 3 things done since (commands, game time, Undo and Redo) and the version 0.5.0 (56.1). A real-world map's save holds the latitude and longitude of where it starts; nothing about your account or device. Names in it: Home, Grandma's."
         )
         XCTAssertEqual(
             report.attachmentText(in: .traditionalChinese, shown: 1),
-            "會附上 command-log.json：這局開始時的存檔、之後做的 3 件事（指令、遊戲時間、復原與重做），以及版本 0.5.0 (56.1)。不含你或裝置的任何資料。裡面的名稱：Home 等 2 個。"
+            "會附上 command-log.json：這局開始時的存檔、之後做的 3 件事（指令、遊戲時間、復原與重做），以及版本 0.5.0 (56.1)。實景地圖的存檔含這局起點的經緯度；不含帳號或裝置的資料。裡面的名稱：Home 等 2 個。"
         )
         XCTAssertEqual(CommandLogReport.digest(of: Data()), "cbf29ce484222325", "FNV-1a's offset")
         XCTAssertEqual(CommandLogReport.digest(of: Data("a".utf8)), "af63dc4c8601ec8c")

@@ -26,7 +26,8 @@ final class GameAudio {
     /// The player's three volumes (decision 219, stage 2).
     private(set) var volumes: SoundVolumes
     /// Decision 219, stage 2: the factor on the music while a followed
-    /// train runs into an interchange (``MusicDuck``); 1 otherwise.
+    /// train runs into an interchange (``MusicDuck``), or a quiet night is
+    /// skipped (decision 372); 1 otherwise.
     @ObservationIgnored private var musicDuck = 1.0
     /// Decision 343: the followed train's running sound the session last
     /// asked for (``RunningSound``), `nil` for none.
@@ -143,12 +144,15 @@ final class GameAudio {
         updateWeather()
     }
 
-    /// Takes the music down by `gain` (``MusicDuck``), fading there over
-    /// half a second, or brings it back with 1.
+    /// Takes the music down by `gain` (``MusicDuck``), or brings it back
+    /// with 1: the follow duck's steps over half a second, the quiet
+    /// night's larger move more slowly (decision 372,
+    /// ``MusicDuck/fadeSeconds(from:to:)``).
     func duckMusic(_ gain: Double) {
         guard gain != musicDuck else { return }
+        let fade = MusicDuck.fadeSeconds(from: musicDuck, to: gain)
         musicDuck = gain
-        music?.setVolume(musicLevel, fadeDuration: 0.5)
+        music?.setVolume(musicLevel, fadeDuration: fade)
     }
 
     /// What the music plays at: its own volume, the player's and the duck.
@@ -352,6 +356,7 @@ final class GameAudio {
         case .goalMet: 0.55
         // Decision 315: as loud as the goal-met tune.
         case .lineAcquired: 0.55
+        case .ticketIssued: 0.5
         }
     }
 
@@ -393,6 +398,7 @@ final class GameAudio {
         // Decision 256: goals met at the same midnight sound once.
         case .goalMet: .seconds(2)
         case .lineAcquired: .seconds(2)
+        case .ticketIssued: .milliseconds(700)
         }
     }
 
@@ -402,7 +408,7 @@ final class GameAudio {
         case .refused: .error
         case .warning: .warning
         case .built, .goalMet, .lineAcquired: .success
-        case .arrival, .track, .transition, .income: nil
+        case .arrival, .track, .transition, .income, .ticketIssued: nil
         }
     }
 

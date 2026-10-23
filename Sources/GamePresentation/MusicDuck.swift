@@ -24,6 +24,31 @@ public enum MusicDuck {
     /// between them.
     static let stepDecibels = 0.5
 
+    /// Decision 372: the factor on the music while a quiet night is
+    /// skipped (``NightSkipRun``), 12 dB down (about a quarter): the
+    /// night runs by at the fastest speed with no train to hear, and the
+    /// music stays, softly, under it.
+    public static let nightSkipGain = pow(10, -12.0 / 20)
+    /// How long the music takes to go down when the skip starts, in
+    /// seconds: slowly, as the night falls.
+    public static let nightFadeOutSeconds = 3.0
+    /// How long it takes to come back when the skip ends: quicker, as the
+    /// first train is ten minutes away.
+    public static let nightFadeInSeconds = 1.5
+    /// How long the follow duck's steps take (decision 219).
+    static let stepFadeSeconds = 0.5
+
+    /// How long the app fades the music from `old` to `new`: the follow
+    /// duck's steps (a decibel or less) over half a second, the night's
+    /// larger move over ``nightFadeOutSeconds`` down and
+    /// ``nightFadeInSeconds`` back.
+    public static func fadeSeconds(from old: Double, to new: Double) -> Double {
+        guard old > 0, new > 0 else { return stepFadeSeconds }
+        let decibels = 20 * log10(new / old)
+        if abs(decibels) <= 1 + 1e-9 { return stepFadeSeconds }
+        return decibels < 0 ? nightFadeOutSeconds : nightFadeInSeconds
+    }
+
     /// The factor on the music `metres` before an interchange: 1 from
     /// 800 m out, then down evenly in decibels to 6 dB down (about 0.5) at
     /// 300 m and nearer, in half-decibel steps.

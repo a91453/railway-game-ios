@@ -334,6 +334,43 @@ final class NightSkipTests: XCTestCase {
         XCTAssertEqual(stopped.world.clock.speed, .normal, "Stop goes back to the speed before")
     }
 
+    // MARK: - Music (decision 372)
+
+    /// The music goes down while the night is skipped and comes back when
+    /// the skip ends, by itself at its stop or because the player stopped
+    /// it; the app is told only when the level changes.
+    func testTheMusicGoesDownWhileTheNightIsSkipped() throws {
+        let session = GameSession(world: try world())
+        var told: [Double] = []
+        session.duckMusic = { told.append($0) }
+        session.skipToMorning()
+        XCTAssertEqual(told, [MusicDuck.nightSkipGain])
+        XCTAssertEqual(MusicDuck.nightSkipGain, pow(10, -12.0 / 20), accuracy: 1e-9)
+        session.advance(ticks: 3)
+        XCTAssertEqual(told.count, 1, "told once, not every tick")
+        _ = runSkip(session)
+        XCTAssertNil(session.nightSkipRun)
+        XCTAssertEqual(told, [MusicDuck.nightSkipGain, 1], "back at the stop")
+
+        let stopped = GameSession(world: try world())
+        var stoppedTold: [Double] = []
+        stopped.duckMusic = { stoppedTold.append($0) }
+        stopped.skipToMorning()
+        stopped.advance(ticks: 2)
+        stopped.setSpeed(.x60)
+        XCTAssertEqual(stoppedTold, [MusicDuck.nightSkipGain, 1], "back when the player chooses a speed")
+    }
+
+    /// Going down over the night is slow; the follow duck's half-decibel
+    /// steps keep their half second (decision 219).
+    func testTheMusicFadesSlowerForTheNight() {
+        XCTAssertEqual(MusicDuck.fadeSeconds(from: 1, to: MusicDuck.nightSkipGain), MusicDuck.nightFadeOutSeconds)
+        XCTAssertEqual(MusicDuck.fadeSeconds(from: MusicDuck.nightSkipGain, to: 1), MusicDuck.nightFadeInSeconds)
+        XCTAssertEqual(MusicDuck.fadeSeconds(from: 1, to: pow(10, -0.5 / 20)), 0.5)
+        XCTAssertEqual(MusicDuck.fadeSeconds(from: pow(10, -6.0 / 20), to: pow(10, -5.5 / 20)), 0.5)
+        XCTAssertGreaterThan(MusicDuck.nightFadeOutSeconds, MusicDuck.nightFadeInSeconds, "out slower than back")
+    }
+
     /// A skip pressed while paused runs, and is paused again at its stop.
     func testASkipFromAPauseEndsPaused() throws {
         var start = try world()
@@ -500,34 +537,46 @@ final class NightSkipTests: XCTestCase {
         while let lookAhead = session.nightSkipLookAhead { await lookAhead.value }
     }
 
-    /// Decision 328: the game loop's tick runs ahead off the main actor,
-    /// and the session takes what it found instead of running ahead
-    /// again; a tick the memo still answers for does not run ahead.
-    func testTheGameLoopRunsAheadOffTheMainActor() async throws {
+    /// Player feedback 80.1 (decision 369): with seven lines, a platform
+    /// added at night stopped game time. A command makes the memo not
+    /// answer, and the game loop's next tick ran ahead (some 600 ms round
+    /// Taipei) before it was done, again after every command meanwhile.
+    /// The tick now leaves the run ahead to a task of its own, off the
+    /// main actor, and the offer is then what the main actor would have
+    /// found.
+    func testTheGameLoopsTickDoesNotWaitForTheRunAhead() async throws {
         let session = GameSession(world: try world())
-        let expected = try XCTUnwrap(session.nightSkip)
-        session.nightSkipMemo = nil
+        try await loopTick(session)
+        XCTAssertNil(session.nightSkipLookAhead, "the memo answers")
+        let offer = try XCTUnwrap(session.nightSkipOffer)
+
+        session.renameSelectedLine(to: "Main Line")
+        let ranAhead = session.nightSkipRunAheadOnMain
+        let start = session.world.clock.now
         let tick = try XCTUnwrap(session.beginLoopTick())
         let outcome = await tick.work()
-        let found = try XCTUnwrap(try outcome.get().nightSkip, "every train at rest and no memo: the tick runs ahead")
         XCTAssertTrue(session.finish(tick, with: outcome))
-        let memo = try XCTUnwrap(session.nightSkipMemo)
-        XCTAssertEqual(memo.from, found.from)
-        XCTAssertEqual(memo.firstMove, found.firstMove)
-        XCTAssertEqual(memo.from, session.world.clock.now)
-        XCTAssertEqual(session.nightSkipOffer?.stop, expected.stop)
-        XCTAssertEqual(session.nightSkipOffer, NightSkip.plan(for: session.world), "as the main actor would have found it")
+        XCTAssertGreaterThan(session.world.clock.now, start, "game time went on")
+        XCTAssertNotNil(session.nightSkipLookAhead, "the run ahead goes on beside the tick, not in it")
+        XCTAssertEqual(session.nightSkipRunAheadOnMain, ranAhead)
+        XCTAssertEqual(session.nightSkipOffer, offer, "the offer stays until the run ahead is found")
 
-        let next = try XCTUnwrap(session.beginLoopTick())
-        let again = try await next.work().get()
-        XCTAssertNil(again.nightSkip, "the memo still answers")
+        // Ticks meanwhile only run the world on as the run ahead does:
+        // what it found still answers.
+        try await loopTick(session)
+        await settle(session)
+        XCTAssertEqual(session.nightSkipMemo?.revision, session.commandRevision)
+        XCTAssertEqual(session.nightSkipOffer, NightSkip.plan(for: session.world), "as the main actor would have found it")
+        XCTAssertEqual(session.nightSkipRunAheadOnMain, ranAhead)
+        try await loopTick(session)
+        XCTAssertNil(session.nightSkipLookAhead, "the memo still answers")
     }
 
     /// Player feedback 82.1 and 77.1: a speed tapped again within a tick,
     /// or a building tool let go after an edit, at night does not run
-    /// ahead on the main actor. Paused, it runs off it; running, the game
-    /// loop's next tick does, and the offer is then what the main actor
-    /// would have found.
+    /// ahead on the main actor. It runs off it, paused or running
+    /// (decision 369), and the offer is then what the main actor would
+    /// have found.
     func testASpeedTapOrLeavingABuildingToolDoesNotRunAheadOnTheMainActor() async throws {
         let session = GameSession(world: try world())
         let ranAhead = session.nightSkipRunAheadOnMain
@@ -536,6 +585,7 @@ final class NightSkipTests: XCTestCase {
         session.setSpeed(.normal)
         XCTAssertEqual(session.nightSkipRunAheadOnMain, ranAhead, "three taps within a tick")
         try await loopTick(session)
+        await settle(session)
         XCTAssertEqual(session.nightSkipOffer, NightSkip.plan(for: session.world))
 
         XCTAssertTrue(session.pauseForBuilding())

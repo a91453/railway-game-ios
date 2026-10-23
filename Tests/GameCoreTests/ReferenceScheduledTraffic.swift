@@ -290,6 +290,7 @@ extension ReferenceWorld {
         }
         scheduledMeets(&plan)
         for _ in 0..<8 { if !scheduledOvertakes(&plan) { break } }
+        headwayOvertakes(&plan)
         plan.waits.sort {
             if $0.train != $1.train { return $0.train < $1.train }
             if $0.cycle != $1.cycle { return $0.cycle < $1.cycle }
@@ -357,6 +358,9 @@ extension ReferenceWorld {
         return plan.waits.first {
             guard $0.train.rawValue == train.id && $0.stop == service.stop && $0.cycle == service.cycle && networkStops(of: train).contains($0.station) else { return false }
             let wait = $0
+            // Decision 366's waits (decision 294's hold): not past their
+            // hold after the doors have closed.
+            if let hold = wait.hold, service.waiting, let closing = service.closing, clockSeconds >= Self.capped(Self.capped(closing, 9), hold) { return false }
             return scheduledRelease(wait).map { clockSeconds < max($0, wait.departure.seconds) } ?? true
         }
     }

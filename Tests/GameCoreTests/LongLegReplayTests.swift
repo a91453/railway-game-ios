@@ -128,6 +128,18 @@ final class LongLegReplayTests: XCTestCase {
         return operations
     }
 
+    /// Decision 364: no train is ever deadlocked over the fixture's three
+    /// hours. Its ring trains stood at C send out round to A and on for a
+    /// whole lap; a first try that ended their trip at A left them standing
+    /// there, and all four deadlocked at 06:58.
+    func testNoTrainDeadlocksOverTheThreeHours() throws {
+        var world = try Self.world()
+        for _ in 0..<36 {
+            try world.advance(ticks: 5)
+            XCTAssertEqual(world.deadlockedTrains(), [], "at \(world.clock.now.minutes / 60):\(world.clock.now.minutes % 60)")
+        }
+    }
+
     /// Records the fixture, only on request, as `ReplayFixtureTests` records
     /// the campaign's: `REPLAY_RECORD=<directory>`. Recorded once, with the
     /// route reservation that came before it was made faster; recording

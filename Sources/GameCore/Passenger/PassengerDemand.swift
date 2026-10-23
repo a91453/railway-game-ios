@@ -345,7 +345,7 @@ extension GameWorld {
         else { return false }
         if line.isRing {
             let direction: RingDirection = leg.direction == .outbound ? .inner : .outer
-            guard journey(of: line, service: 0, direction: direction) != nil else { return false }
+            guard line.ringWayRuns(direction), journey(of: line, service: 0, direction: direction) != nil else { return false }
             let calls = line.ringCalls(direction).map { line.stops[$0] }
             return calls.indices.contains { index in
                 calls[index] == leg.from && calls.dropFirst(index + 1).contains(leg.to)
