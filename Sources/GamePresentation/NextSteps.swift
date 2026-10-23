@@ -107,6 +107,12 @@ public struct NextSteps: Equatable, Sendable {
     /// The steps of `world`: every one, the coverage step only on a map
     /// with land.
     public init(world: GameWorld) {
+        self.init(world: world) { world.catchmentCoverage() }
+    }
+
+    /// The steps of `world`, its coverage from `coverage`, asked only on a
+    /// map with land.
+    init(world: GameWorld, coverage: () -> CoverageSummary) {
         let lines = world.lines.filter { !$0.isFreight }
         let today = FinanceHistory.floorDay(world.clock.now)
         let paid = world.accounts.days.contains { day in
@@ -124,7 +130,7 @@ public struct NextSteps: Equatable, Sendable {
             NextStepProgress(step: .transferStation, value: mostLines >= 2 ? 1 : 0, target: 1),
         ]
         if !world.land.isEmpty {
-            steps.append(NextStepProgress(step: .halfCovered, value: world.catchmentCoverage().percent ?? 0, target: 50))
+            steps.append(NextStepProgress(step: .halfCovered, value: coverage().percent ?? 0, target: 50))
         }
         self.init(steps: steps)
     }
@@ -164,7 +170,39 @@ struct NextStepsMemo {
     let steps: NextSteps?
 }
 
+/// ``GameWorld/catchmentCoverage()`` as last counted, and what from: the
+/// map's size, its land and where its open stations stand (PLAYER_FEEDBACK
+/// 82.1: counted again after every edit, it was nearly all of an edit's
+/// time on a map of 44 stations).
+struct CoverageMemo {
+    struct Key: Equatable {
+        let bounds: WorldBounds
+        let land: Land
+        let stations: [PlanPoint]
+
+        init(world: GameWorld) {
+            bounds = world.bounds
+            land = world.land
+            stations = world.stations.filter { $0.operationMode != .closed }.map(\.location)
+        }
+    }
+
+    let key: Key
+    let summary: CoverageSummary
+}
+
 extension GameSession {
+    /// ``GameWorld/catchmentCoverage()``, counted again only when the land
+    /// or the open stations changed, not after every command.
+    var catchmentCoverage: CoverageSummary {
+        let key = CoverageMemo.Key(world: world)
+        if let memo = coverageMemo, memo.key == key { return memo.summary }
+        let summary = world.catchmentCoverage()
+        coverageMemo = CoverageMemo(key: key, summary: summary)
+        catchmentCoverageCounted += 1
+        return summary
+    }
+
     /// The next steps of a free game (``NextSteps``), or `nil` in a
     /// challenge, a lesson, the tutorial, a demo or free play without
     /// money. Worked out once for each command and game day, not at every
@@ -173,7 +211,7 @@ extension GameSession {
         guard world.scenario == nil, tutorial == nil, !news.isDemo, world.accounts.mode == .management else { return nil }
         let key = NextStepsMemo.Key(revision: commandRevision, day: FinanceHistory.floorDay(world.clock.now))
         if let memo = nextStepsMemo, memo.key == key { return memo.steps }
-        let steps = NextSteps(world: world)
+        let steps = NextSteps(world: world) { catchmentCoverage }
         nextStepsMemo = NextStepsMemo(key: key, steps: steps)
         return steps
     }

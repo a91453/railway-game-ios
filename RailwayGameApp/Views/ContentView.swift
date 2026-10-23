@@ -20,6 +20,8 @@ struct ContentView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Decision 175: the secretary room's settings, kept on the device.
     @AppStorage(SecretarySettings.pauseKey) private var pausesForImportantEvents = true
+    /// Decision 365: Off plays on the flat map only.
+    @AppStorage(Map3DQuality.key) private var map3DQuality: Map3DQuality = .forThisDevice
     @AppStorage(SecretarySettings.nightSkipKey) private var skipsQuietNights = false
     @AppStorage(SecretarySettings.monthlyKey) private var monthlyReportMode = MonthlyReportMode.openAndPause.rawValue
     /// Lives above the layout: rebuilding it must not discard the camera.
@@ -466,8 +468,8 @@ struct ContentView: View {
                             if let followed {
                                 // Decision 333: the same train from behind
                                 // in 3D, over where the 2D map follows it
-                                // (not in the tutorial, as the map's 3D button).
-                                FollowBar(train: followed, session: session, open3D: session.tutorial == nil ? {
+                                // (not in the tutorial or with 3D off, as the map's 3D button).
+                                FollowBar(train: followed, session: session, open3D: session.tutorial == nil && map3DQuality.shows3D ? {
                                     screen.map3DHandoff = nil
                                     screen.map3DOpenedAt = mapCamera.map {
                                         Map3DHandoff.Plan(x: $0.centerX, y: $0.centerY, referenceSize: $0.referenceSize)

@@ -154,6 +154,7 @@ extension GameSession {
             return memo.firstMove.flatMap { NightSkip.plan(from: now, firstMove: $0) }
         }
         let firstMove = NightSkip.firstMove(after: world)
+        nightSkipRunAheadOnMain += 1
         nightSkipMemo = NightSkipMemo(revision: commandRevision, from: now, firstMove: firstMove)
         return firstMove.flatMap { NightSkip.plan(from: now, firstMove: $0) }
     }
@@ -163,6 +164,25 @@ extension GameSession {
     func refreshNightSkipOffer() {
         let offer = nightSkip
         if offer != nightSkipOffer { nightSkipOffer = offer }
+    }
+
+    /// ``refreshNightSkipOffer()`` when a building tool or a tile lets go
+    /// of the pause, or the player changes the speed (player feedback
+    /// 82.1 and 77.1): a run ahead the memo does not answer, after an edit
+    /// or a second speed tap within a tick at night, ran on the main
+    /// actor, up to 160 ms a tap over midnight. Paused, it runs off the
+    /// main actor (``lookAgainForNightSkip()``); running, the game loop's
+    /// next tick works it out (decision 328), and the offer stays as it
+    /// was until then.
+    func refreshNightSkipOfferOffTheMainActor() {
+        let answered = nightSkipRun != nil || isPausedForBuilding
+            || world.trains.contains(where: NightSkip.isRunning)
+            || nightSkipMemo?.covers(world.clock.now, revision: commandRevision) == true
+        if answered {
+            refreshNightSkipOffer()
+        } else if world.clock.isPaused {
+            lookAgainForNightSkip()
+        }
     }
 
     /// ``refreshNightSkipOffer()`` after a command while paused (decision
