@@ -1099,6 +1099,7 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 | 在 macOS 上跑一部分套件測試，比對 Apple libm 的浮點值 | GAP_RESEARCH §4.2 |
 | 測試用的參照模型擴充到全網選路（`ReferenceWorldGoldenTests.swift:130` 還是 `preconditionFailure`） | GAP_RESEARCH §4.2 |
 | 跟著相關的 PR 一起加的工具（作者 2026-10-20 交給 session 判斷時機）：pixelmatch 差異圖 → 下一個改 3D 畫面的 PR；glTF-Validator → Meshy 公車接進 App 的 PR；OR-Tools 車輛運用量尺 → 決策 297 合併後、還有說不出原因的取消時；`performAccessibilityAudit()` → 實機 VoiceOver 有問題時。做那件事的 session 照表加，不必再等作者同意依賴 | GAME_AI_TOOLS §6.3 |
+| `ci.yml` 的 rest shard 撞 20 分上限（2026-10-23，session_01KcZCRGFREEAx22ncMXAMwJ，`claude/rest-shard-rebalance`）：main 43852fa 的 rest 有 953 s 測試、469 類，沒有一類特別大（最慢 5 類共 172 s）。6 s 以上的 GamePresentation 類別與 25 s 以上的 4 個 GameCore 類別（共 33 類、約 466 s）搬到 campaigns-16／-7／-15／-12，rest 估約 490 s；不加 shard、不改 timeout。**之後**：rest 再長，照 `swift-shards.sh` 的時間表註解再搬（run 摘要的「Slowest classes」只列 5 類，要整份 job log 才看得到每類時間）；小的 GameCore 類別不要搬，campaign shard 點名的類別在 `pr_plan` 會被當成「改到的 campaign」，讓改它的 PR 跑全套 | `swift-shards.sh` 2026-10-23 later 的註解 |
 | TDX（運輸資料流通服務）查資料：`.github/workflows/tdx-check.yml`——#850 已合併。Actions → Check TDX API → Run workflow，`path` 填 `/api/basic/` 或 `/api/advanced/` 開頭的 API 路徑與查詢（預設台鐵第一個車站），回答在 run 的 artifact `tdx-response`（保留 7 天）。session 用 GitHub 工具觸發（`actions_run_trigger`，`tdx-check.yml`，ref `main`）再下載 artifact。金鑰是 repository secrets `TDX_CLIENT_ID`、`TDX_CLIENT_SECRET`，只有這個 workflow 讀得到；不要貼在對話、不要存進 repository。TDX 有票價、時刻、站表、路線色，沒有各站運量 | #850、決策 298 |
 
 ### 7.5 只等實機確認的
