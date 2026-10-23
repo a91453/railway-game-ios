@@ -280,12 +280,15 @@ public struct Map3DScene: Sendable {
         if let baseMap, let frame = RealWorldFrame(world: world) {
             real = Map3DBaseMap(tiles: baseMap, frame: frame, region: region, originX: originX, originY: originY)
         }
+        // Decision 359 (續): the whole network's, so a chunk built apart
+        // lays a bore beside another as the whole scene does; decision 375:
+        // first, as its trenches are cut out of the ground and what lies
+        // on it.
+        builder.trackCover = trackCover ?? Map3DTrackCover(snapshot, builder: &builder)
         builder.addGround(water: real == nil)
         let taken = real.map { builder.addBaseMap($0) } ?? Builder.TakenGround()
-        // Decision 359 (續): the whole network's, so a chunk built apart
-        // lays a bore beside another as the whole scene does.
-        builder.trackCover = trackCover ?? Map3DTrackCover(snapshot, builder: &builder)
         let cleared = builder.addTrack(snapshot)
+        builder.addTrenches()
         if let lineBands { builder.addLineBands(lineBands, snapshot: snapshot) }
         builder.addPlatforms(snapshot)
         builder.addPortals(snapshot)
@@ -773,10 +776,33 @@ extension Map3DScene {
                     let water = drawsWater && world.isWater(row: row, column: column)
                     let lift = Map3DPoint(0, water ? 0.05 : 0, 0)
                     let middle = (a + c) * 0.5
+                    let colour = water ? Map3DPalette.water : Map3DPalette.ground
+                    // Decision 375: less the trenches, each triangle's
+                    // pieces at its own heights, lit as the whole square.
+                    let flat = { (p: Map3DPoint) in Map3DBaseMap.Point(x: Double(p.x), z: Double(p.z)) }
+                    let halves = [[a, b, c], [a, c, d]].map { outsideTrenches($0.map(flat)) }
+                    if halves.allSatisfy({ $0 == nil }) {
+                        mesh(at: middle) {
+                            // Decision 241: the ground plain, as the 2D map's land.
+                            let start = $0.vertices.count
+                            $0.addQuad(a + lift, b + lift, c + lift, d + lift, color: colour)
+                            if water { $0.makeWater(from: start) }
+                        }
+                        continue
+                    }
+                    guard let normal = Map3DMesh.normal(of: [a, b, c, d]) else { continue }
+                    var pieces: [[Map3DPoint]] = []
+                    for (corners, half) in zip([[a, b, c], [a, c, d]], halves) {
+                        for piece in half ?? [corners.map(flat)] {
+                            pieces.append(piece.map { p in
+                                let x = Float(p.x), z = Float(p.z)
+                                return Map3DPoint(x, drawnGround(x: x, z: z), z) + lift
+                            })
+                        }
+                    }
                     mesh(at: middle) {
-                        // Decision 241: the ground plain, as the 2D map's land.
                         let start = $0.vertices.count
-                        $0.addQuad(a + lift, b + lift, c + lift, d + lift, color: water ? Map3DPalette.water : Map3DPalette.ground)
+                        for piece in pieces { $0.addFan(piece, normal: normal, color: colour) }
                         if water { $0.makeWater(from: start) }
                     }
                 }

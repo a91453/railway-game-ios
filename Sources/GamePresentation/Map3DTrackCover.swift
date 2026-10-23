@@ -33,6 +33,8 @@ public struct Map3DTrackCover: Sendable {
     let pieces: [Piece]
     /// The pieces by the ``cell`` squares their boxes touch.
     let cells: [Map3DScene.ChunkKey: [Int]]
+    /// Decision 375: the trenches of the track below the drawn ground.
+    let trenches: Map3DTrenches
 
     /// The squares the pieces are found by, in metres.
     static let cell: Float = 32
@@ -49,16 +51,34 @@ public struct Map3DTrackCover: Sendable {
     public init() {
         pieces = []
         cells = [:]
+        trenches = Map3DTrenches()
     }
 
     /// `snapshot`'s track, laid out as `builder` lays it.
     init(_ snapshot: RailwaySnapshot, builder: inout Map3DScene.Builder) {
         var pieces: [Piece] = []
+        let portals = Set(snapshot.nodes.filter(\.isTunnelPortal).map(\.id))
+        var trenchLines: [(line: [Map3DPoint], runs: [ClosedRange<Int>], opens: (first: Bool, last: Bool))] = []
         for alignment in snapshot.edges {
-            for span in alignment.edge.sectionSpans where span.end > span.start {
+            let spans = alignment.edge.sectionSpans
+            for (number, span) in spans.enumerated() where span.end > span.start {
                 let line = builder.sample(alignment.geometry, from: span.start, to: span.end).map { builder.point($0) + Map3DScene.Builder.lifted }
                 guard line.count > 1 else { continue }
-                let grounds = line.map { builder.drawnGround(x: $0.x, z: $0.z) }
+                var grounds = line.map { builder.drawnGround(x: $0.x, z: $0.z) }
+                // Decision 375: where the track runs in a trench, its
+                // floor is the ground the camera stays over.
+                if span.kind != .tunnel {
+                    let runs = Self.trenchRuns(line, grounds: grounds)
+                    if !runs.isEmpty {
+                        // Where it opens into a tunnel, as `portalEnds` finds.
+                        let first = number == 0 ? portals.contains(alignment.edge.from) : spans[number - 1].kind == .tunnel
+                        let last = number == spans.count - 1 ? portals.contains(alignment.edge.to) : spans[number + 1].kind == .tunnel
+                        trenchLines.append((line, runs, (first, last)))
+                        for run in runs {
+                            for index in run { grounds[index] = min(grounds[index], line[index].y - Map3DScene.Builder.bedDrop) }
+                        }
+                    }
+                }
                 for index in 1..<line.count {
                     pieces.append(Piece(a: line[index - 1], b: line[index], groundA: grounds[index - 1], groundB: grounds[index],
                                         opensBefore: index == 1, opensAfter: index == line.count - 1, isTunnel: span.kind == .tunnel))
@@ -76,6 +96,7 @@ public struct Map3DTrackCover: Sendable {
         }
         self.pieces = pieces
         self.cells = cells
+        trenches = Self.trenches(trenchLines, builder: &builder)
     }
 
     static func key(x: Float, z: Float) -> Map3DScene.ChunkKey {

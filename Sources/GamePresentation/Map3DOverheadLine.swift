@@ -209,8 +209,11 @@ extension Map3DScene.Builder {
             for (order, distance) in supports.enumerated() {
                 let (p, along, right) = line.path.at(distance)
                 // None where the ground is drawn over the track (the
-                // heights file's ground above a track the world laid lower).
-                guard realLines.isEmpty || isWired(p), drawnGround(x: p.x, z: p.z) < p.y + 1 else {
+                // heights file's ground above a track the world laid lower),
+                // but in a trench cut for it (decision 375).
+                guard realLines.isEmpty || isWired(p),
+                      drawnGround(x: p.x, z: p.z) < p.y + 1 || trackCover.trenches.piece(at: Map3DBaseMap.Point(x: Double(p.x), z: Double(p.z))) != nil
+                else {
                     wires.append(nil)
                     continue
                 }

@@ -638,21 +638,40 @@ extension Map3DScene.Builder {
             }
         }
         let kind = road.kind
+        // Every 16 m at most, so the line keeps to the ground; decision
+        // 375: in pieces, apart where the road gives way to a trench
+        // (looked at every 2 m near one).
+        var lines: [[Map3DPoint]] = []
         for run in runs {
-            // Every 16 m at most, so the line keeps to the ground.
             var points: [Map3DPoint] = []
-            for (index, point) in run.enumerated() {
-                if index > 0 {
-                    let previous = run[index - 1]
-                    let length = ((point.x - previous.x) * (point.x - previous.x) + (point.z - previous.z) * (point.z - previous.z)).squareRoot()
-                    let steps = max(1, Int((length / 16).rounded(.up)))
-                    for step in 1..<steps {
-                        let t = Double(step) / Double(steps)
-                        points.append(groundPoint(x: previous.x + (point.x - previous.x) * t, z: previous.z + (point.z - previous.z) * t, lift: lift))
-                    }
+            func add(_ x: Double, _ z: Double, along: (x: Double, z: Double)) {
+                if givesWay(at: Map3DBaseMap.Point(x: x, z: z), along: along) {
+                    if points.count > 1 { lines.append(points) }
+                    points = []
+                } else {
+                    points.append(groundPoint(x: x, z: z, lift: lift))
                 }
-                points.append(groundPoint(x: point.x, z: point.z, lift: lift))
             }
+            for (index, point) in run.enumerated() {
+                guard index > 0 else {
+                    let next = run.count > 1 ? run[1] : point, length = max(0.01, ((next.x - point.x) * (next.x - point.x) + (next.z - point.z) * (next.z - point.z)).squareRoot())
+                    add(point.x, point.z, along: ((next.x - point.x) / length, (next.z - point.z) / length))
+                    continue
+                }
+                let previous = run[index - 1]
+                let length = ((point.x - previous.x) * (point.x - previous.x) + (point.z - previous.z) * (point.z - previous.z)).squareRoot()
+                let near = !trackCover.trenches.pieces(minX: min(previous.x, point.x), minZ: min(previous.z, point.z),
+                                                       maxX: max(previous.x, point.x), maxZ: max(previous.z, point.z)).isEmpty
+                let along = length > 0.01 ? ((point.x - previous.x) / length, (point.z - previous.z) / length) : (1.0, 0.0)
+                let steps = max(1, Int((length / (near ? 2 : 16)).rounded(.up)))
+                for step in 1...steps {
+                    let t = Double(step) / Double(steps)
+                    add(previous.x + (point.x - previous.x) * t, previous.z + (point.z - previous.z) * t, along: along)
+                }
+            }
+            if points.count > 1 { lines.append(points) }
+        }
+        for points in lines {
             guard let path = Map3DStreetLife.Path(points) else { continue }
             let middle = path.at(path.length / 2).point
             let level = Map3DStreetLife.townLevel(residentsAndJobs(near: middle))

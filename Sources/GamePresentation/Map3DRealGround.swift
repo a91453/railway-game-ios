@@ -256,7 +256,7 @@ extension Map3DScene.Builder {
                     guard net > 0.5 else { continue }
                     covered += net
                     let flat = piece.map { $0.map { (x: $0.x, y: $0.z) } }
-                    let triangles = Earcut.triangulate(flat)
+                    var triangles = Earcut.triangulate(flat)
                     guard !triangles.isEmpty else { continue }
                     var points: [Map3DPoint] = []
                     for ring in piece {
@@ -265,6 +265,9 @@ extension Map3DScene.Builder {
                             points.append(Map3DPoint(x, drawnGround(x: x, z: z) + lift, z))
                         }
                     }
+                    // Decision 375: none of it over a trench.
+                    (points, triangles) = outsideTrenches(points, triangles: triangles, lift: lift)
+                    guard !triangles.isEmpty else { continue }
                     let middle = Map3DPoint(Float((westX + gridLine(column + 1, origin: originX)) / 2), 0,
                                             Float((northZ + gridLine(row + 1, origin: originY)) / 2))
                     mesh(at: middle) {
@@ -348,6 +351,9 @@ extension Map3DScene.Builder {
             let first = Map3DBaseMap.Point(x: start.x - along.x * half, z: start.z - along.z * half)
             let last = Map3DBaseMap.Point(x: end.x + along.x * half, z: end.z + along.z * half)
             let cuts = splits(from: first, to: last)
+            // Decision 375: a road across a trench deep enough bridges it,
+            // the whole of this stretch; otherwise it gives way to it.
+            let bridges = bridgesTrench(from: first, to: last)
             for step in 1..<cuts.count {
                 let t0 = cuts[step - 1], t1 = cuts[step]
                 guard t1 - t0 > 1e-6 else { continue }
@@ -355,16 +361,18 @@ extension Map3DScene.Builder {
                 let b = Map3DBaseMap.Point(x: first.x + (last.x - first.x) * t1, z: first.z + (last.z - first.z) * t1)
                 // Left of the way along is (z, −x) in x east, z south.
                 let leftX = along.z * half, leftZ = -along.x * half
-                let corners = [
+                var corners = [
                     (a.x + leftX, a.z + leftZ), (a.x - leftX, a.z - leftZ), (b.x - leftX, b.z - leftZ), (b.x + leftX, b.z + leftZ),
                 ].map { corner -> Map3DPoint in
                     let x = Float(corner.0), z = Float(corner.1)
                     return Map3DPoint(x, drawnGround(x: x, z: z) + lift, z)
                 }
+                var triangles = [0, 1, 2, 0, 2, 3]
                 let middle = Map3DPoint(Float((a.x + b.x) / 2), 0, Float((a.z + b.z) / 2))
+                if !bridges { (corners, triangles) = outsideTrenches(corners, triangles: triangles, lift: lift) }
                 mesh(at: middle) {
                     let start = $0.vertices.count
-                    $0.addFlat(corners, triangles: [0, 1, 2, 0, 2, 3], color: color, paint: paint)
+                    $0.addFlat(corners, triangles: triangles, color: color, paint: paint)
                     if water { $0.makeWater(from: start) }
                 }
                 take(from: a, to: b, half: half, into: &taken)

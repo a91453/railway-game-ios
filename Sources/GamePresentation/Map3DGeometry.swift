@@ -343,6 +343,15 @@ public struct Map3DMesh: Sendable {
                 texture: paint?.coordinates(corners, normal: normal))
     }
 
+    /// Decision 375: a convex polygon as a fan round its first corner,
+    /// lit as facing `normal`.
+    public mutating func addFan(_ corners: [Map3DPoint], normal: Map3DPoint, color: UInt32) {
+        guard corners.count >= 3 else { return }
+        let base = UInt32(vertices.count)
+        for corner in corners { vertices.append(Map3DVertex(corner, normal: normal, color: color, u: 0, v: 0, layer: Map3DVertex.plain)) }
+        for index in 1..<UInt32(corners.count - 1) { indices += [base, base + index, base + index + 1] }
+    }
+
     /// Triangles lying on the ground (decision 234): `triangles` index
     /// `points`, three to a triangle in either turn, each turned to face up
     /// and painted with `paint` as a top is.
