@@ -5,7 +5,7 @@ import XCTest
 final class FrameCostMeterTests: XCTestCase {
     func testOffItTimesNothingAndReadsNothing() {
         let meter = FrameCostMeter()
-        meter.record(.track, milliseconds: 5)
+        meter.record(.railway, milliseconds: 5)
         XCTAssertEqual(meter.measure(.labels) { 7 }, 7)
         XCTAssertNil(meter.frame(at: 0))
         XCTAssertNil(meter.frame(at: 2))
@@ -18,15 +18,15 @@ final class FrameCostMeterTests: XCTestCase {
         let meter = FrameCostMeter()
         meter.isOn = true
         XCTAssertNil(meter.frame(at: 100))
-        meter.record(.track, milliseconds: 4)
-        meter.record(.track, milliseconds: 10)
+        meter.record(.railway, milliseconds: 4)
+        meter.record(.railway, milliseconds: 10)
         meter.record(.step, milliseconds: 2)
         XCTAssertNil(meter.frame(at: 100.25))
         XCTAssertNil(meter.frame(at: 100.75))
         let reading = try XCTUnwrap(meter.frame(at: 101))
         XCTAssertEqual(reading.framesPerSecond, 3, accuracy: 1e-9)
         XCTAssertEqual(reading.longestGapMilliseconds, 500, accuracy: 1e-6)
-        XCTAssertEqual(reading.parts.map(\.part), [.step, .track])
+        XCTAssertEqual(reading.parts.map(\.part), [.step, .railway])
         let track = try XCTUnwrap(reading.parts.last)
         XCTAssertEqual(track.count, 2)
         XCTAssertEqual(track.millisecondsPerSecond, 14, accuracy: 1e-9)
@@ -34,12 +34,33 @@ final class FrameCostMeterTests: XCTestCase {
         // The costliest first under the longest frame.
         XCTAssertEqual(reading.lines(in: .english), [
             "longest frame 500 ms · other 500 ms",
-            "track 14.0 ms/s · ×2 · max 10.0 ms",
+            "track and lines 14.0 ms/s · ×2 · max 10.0 ms",
             "tick 2.0 ms/s · ×1 · max 2.0 ms",
         ])
         // A new window begins with nothing counted.
         XCTAssertNil(meter.frame(at: 101.5))
         XCTAssertEqual(meter.frame(at: 102)?.parts, [])
+    }
+
+    /// Decision 377: why the railway was drawn again, counted beside its
+    /// time; off, nothing is counted, and a new window starts afresh.
+    func testTheReadoutSaysWhyTheRailwayWasDrawnAgain() throws {
+        let meter = FrameCostMeter()
+        meter.noteRedraw(.railway, because: .camera)
+        meter.isOn = true
+        XCTAssertNil(meter.frame(at: 0))
+        meter.noteRedraw(.railway, because: .flow)
+        meter.noteRedraw(.railway, because: .camera)
+        meter.noteRedraw(.railway, because: .camera)
+        meter.record(.railway, milliseconds: 30)
+        meter.record(.railway, milliseconds: 20)
+        meter.record(.railway, milliseconds: 10)
+        let reading = try XCTUnwrap(meter.frame(at: 1))
+        XCTAssertEqual(reading.parts.first?.reasons, [.camera: 2, .flow: 1])
+        XCTAssertEqual(reading.lines(in: .english).last, "track and lines 60.0 ms/s · ×3 · max 30.0 ms · view moved ×2 · passenger flow ×1")
+        XCTAssertEqual(reading.lines(in: .traditionalChinese).last, "軌道與路線 60.0 ms/s · ×3 · max 30.0 ms · 畫面移動 ×2 · 客流 ×1")
+        meter.record(.railway, milliseconds: 5)
+        XCTAssertEqual(meter.frame(at: 2)?.parts.first?.reasons, [:])
     }
 
     /// Decision 330: of the longest frame, what no part on the main thread

@@ -40,11 +40,22 @@ public final class GameSession {
             // Decision 193: a change no recorded path made is logged as one.
             if !isLogging { log(.unrecorded("world")) }
             refreshScreenFacts()
+            refreshMapMarks()
         }
     }
     /// Decision 367: what the screen's frame shows of the world, changed
     /// only when it changes (``ScreenFacts``), not at every tick.
     public internal(set) var screenFacts = ScreenFacts()
+    /// Decision 377: what the map's alert bubbles show of the world,
+    /// changed only when it changes (``MapMarks``).
+    public internal(set) var mapBubbles: [MapMarks.Bubble] = []
+    /// Decision 377: what the map's sight marks show, apart from the
+    /// bubbles, whose waiting counts change at most ticks.
+    public internal(set) var mapSights: [MapMarks.Sight] = []
+    /// Decision 377: the game hour the station master's corner last looked
+    /// at (``stationMasterRefreshKey``), changed only when a new hour
+    /// begins, so the corner is not told to look again at every tick.
+    public internal(set) var adviceHour: Int64 = 0
     /// What reached ``world`` since this session began (decision 193).
     @ObservationIgnored public private(set) var commandLog: CommandLog
     /// Whether a path that logs its own change is changing ``world``.
@@ -664,7 +675,9 @@ public final class GameSession {
     }
 
     public var stationMasterRefreshKey: AdviceRefreshKey {
-        AdviceRefreshKey(session: ObjectIdentifier(self), edit: editSerial, hour: world.clock.now.seconds / GameTime.secondsPerHour)
+        // Decision 377: the hour as ``refreshMapMarks()`` keeps it, not the
+        // world's clock, which every tick changes.
+        AdviceRefreshKey(session: ObjectIdentifier(self), edit: editSerial, hour: adviceHour)
     }
 
     /// Whether a control is being dragged (``beginEditGesture()``), so its
@@ -836,6 +849,7 @@ public final class GameSession {
         self.news.baseline = MonthlyBaseline(world: world)
         refreshNightSkipOffer()
         refreshScreenFacts()
+        refreshMapMarks()
     }
 
     // MARK: - Selection

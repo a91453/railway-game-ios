@@ -14,8 +14,12 @@ public enum FrameCostPart: String, CaseIterable, Hashable, Sendable {
     case afterStep
     /// The ground, the town and the population layer.
     case ground
-    /// The track, the stations and traffic control.
-    case track
+    /// Decision 377: the railway canvas, the track and the lines over it
+    /// (decision 371), and the track-drawing loupe.
+    case railway
+    /// Decision 377: the canvas over it, traffic control, the buildings
+    /// and the stations (decision 371).
+    case trafficAndStations
     /// The player's trains.
     case trains
     /// Decision 304's real trains.
@@ -67,7 +71,8 @@ public enum FrameCostPart: String, CaseIterable, Hashable, Sendable {
         case .step: language.text("tick", "推進")
         case .afterStep: language.text("after tick", "推進後")
         case .ground: language.text("ground", "地面")
-        case .track: language.text("track", "軌道")
+        case .railway: language.text("track and lines", "軌道與路線")
+        case .trafficAndStations: language.text("traffic and stations", "交通與車站")
         case .trains: language.text("trains", "列車")
         case .realTrains: language.text("real trains", "真實列車")
         case .labels: language.text("names", "站名")
@@ -86,6 +91,45 @@ public enum FrameCostPart: String, CaseIterable, Hashable, Sendable {
     }
 }
 
+/// Decision 377: what changed when a map canvas was drawn again, the first
+/// of its inputs found different, counted beside its time in the readout.
+public enum MapRedrawReason: String, CaseIterable, Hashable, Sendable {
+    case camera
+    case layers
+    case palette
+    /// The track, the stations or the map's bounds.
+    case railway
+    /// The network tool's preview.
+    case networkTool
+    case expansion
+    /// The edges' drawings, worked out again after the track changed.
+    case edges
+    case lines
+    case routePreview
+    /// The passenger load layer's strokes.
+    case flow
+    case lineCodes
+    case journey
+
+    /// Its short name in the readout.
+    public func title(in language: DisplayLanguage) -> String {
+        switch self {
+        case .camera: language.text("view moved", "畫面移動")
+        case .layers: language.text("layers", "圖層")
+        case .palette: language.text("colours", "配色")
+        case .railway: language.text("track or stations", "軌道或車站")
+        case .networkTool: language.text("building", "建造")
+        case .expansion: language.text("map area", "地圖範圍")
+        case .edges: language.text("track shapes", "軌道形狀")
+        case .lines: language.text("lines", "路線")
+        case .routePreview: language.text("route shown", "路線預覽")
+        case .flow: language.text("passenger flow", "客流")
+        case .lineCodes: language.text("line codes", "路線代號")
+        case .journey: language.text("journeys", "旅程")
+        }
+    }
+}
+
 /// What the flat map spent in one window of about a second (decision 328).
 public struct FrameCostReading: Hashable, Sendable {
     /// One part's time in the window.
@@ -97,6 +141,16 @@ public struct FrameCostReading: Hashable, Sendable {
         public let millisecondsPerSecond: Double
         /// The longest one, in milliseconds.
         public let longestMilliseconds: Double
+        /// Decision 377: why it was drawn again, and how many times.
+        public let reasons: [MapRedrawReason: Int]
+
+        public init(part: FrameCostPart, count: Int, millisecondsPerSecond: Double, longestMilliseconds: Double, reasons: [MapRedrawReason: Int] = [:]) {
+            self.part = part
+            self.count = count
+            self.millisecondsPerSecond = millisecondsPerSecond
+            self.longestMilliseconds = longestMilliseconds
+            self.reasons = reasons
+        }
     }
 
     public let framesPerSecond: Double
@@ -127,9 +181,12 @@ public struct FrameCostReading: Hashable, Sendable {
             parts.sorted { ($0.millisecondsPerSecond, $1.part.rawValue) > ($1.millisecondsPerSecond, $0.part.rawValue) }
         }
         func line(_ part: Part, prefix: String = "") -> String {
-            prefix + String(
+            let reasons = MapRedrawReason.allCases.compactMap { reason in
+                part.reasons[reason].map { " · \(reason.title(in: language)) ×\($0)" }
+            }
+            return prefix + String(
                 format: "%@ %.1f ms/s · ×%d · max %.1f ms", part.part.title(in: language), part.millisecondsPerSecond, part.count, part.longestMilliseconds
-            )
+            ) + reasons.joined()
         }
         return [language.text("longest frame \(gap) · other \(other)", "最長一幀 \(gap) · 其他 \(other)")]
             + costliestFirst(parts.filter { $0.part.parent == nil }).flatMap { part in
@@ -154,6 +211,8 @@ public final class FrameCostMeter: @unchecked Sendable {
     private let lock = NSLock()
     private var on = false
     private var tallies: [FrameCostPart: Tally] = [:]
+    /// Decision 377: why each part was drawn again in this window.
+    private var reasons: [FrameCostPart: [MapRedrawReason: Int]] = [:]
     private var frames = 0
     private var windowStart: Double?
     private var lastFrame: Double?
@@ -172,6 +231,7 @@ public final class FrameCostMeter: @unchecked Sendable {
             lock.withLock {
                 on = newValue
                 tallies = [:]
+                reasons = [:]
                 frames = 0
                 windowStart = nil
                 lastFrame = nil
@@ -192,6 +252,15 @@ public final class FrameCostMeter: @unchecked Sendable {
             tally.longest = max(tally.longest, milliseconds)
             tallies[part] = tally
             if part.isOnMainThread, part.parent == nil { timedSinceFrame += milliseconds }
+        }
+    }
+
+    /// Decision 377: counts that `part` is drawn again because of
+    /// `reason`, while on.
+    public func noteRedraw(_ part: FrameCostPart, because reason: MapRedrawReason) {
+        lock.withLock {
+            guard on else { return }
+            reasons[part, default: [:]][reason, default: 0] += 1
         }
     }
 
@@ -235,11 +304,15 @@ public final class FrameCostMeter: @unchecked Sendable {
                 longestGapUntimedMilliseconds: longestGapUntimed,
                 parts: FrameCostPart.allCases.compactMap { part in
                     tallies[part].map {
-                        FrameCostReading.Part(part: part, count: $0.count, millisecondsPerSecond: $0.total / seconds, longestMilliseconds: $0.longest)
+                        FrameCostReading.Part(
+                            part: part, count: $0.count, millisecondsPerSecond: $0.total / seconds, longestMilliseconds: $0.longest,
+                            reasons: reasons[part] ?? [:]
+                        )
                     }
                 }
             )
             tallies = [:]
+            reasons = [:]
             frames = 0
             windowStart = time
             longestGap = 0

@@ -69,6 +69,101 @@ final class MapFrameCostReportTests: XCTestCase {
         print(rows.joined(separator: "\n"))
     }
 
+    /// Decision 377 (TestFlight 84.1, the High Speed Rail demo at 6000×,
+    /// the names, the waiting counts and the fares and stamps on: 3 fps,
+    /// the track drawn twice a second at up to 375 ms each). Which canvas
+    /// a tick asks to draw again there, and which input changed. Run on
+    /// request:
+    ///
+    ///     MAP_FRAME_REPORT_HSR=100 swift test -c release -Xswiftc -enable-testing \
+    ///       --filter MapFrameCostReportTests/testWhatEachCanvasRedrawsOnTheHighSpeedRail
+    func testWhatEachCanvasRedrawsOnTheHighSpeedRail() throws {
+        guard let value = ProcessInfo.processInfo.environment["MAP_FRAME_REPORT_HSR"] else {
+            throw XCTSkip("set MAP_FRAME_REPORT_HSR=<ticks> to count the flat map's redraws on the High Speed Rail at 6000×")
+        }
+        let ticks = try XCTUnwrap(Int(value).flatMap { (1...10_000).contains($0) ? $0 : nil }, "MAP_FRAME_REPORT_HSR is 1 to 10,000 ticks")
+        let session = try Self.highSpeedSession()
+        session.setSpeed(.fast)
+        let count = try MapRedrawCount.run(session, ticks: ticks)
+        var rows = [
+            "stations \(session.world.stations.count), lines \(session.world.lines.count), trains \(session.world.trains.count), traffic control \(session.world.isTrafficControlEnabled ? "on" : "off"), \(ticks) ticks at 6000×",
+            "",
+            "| Canvas | redrawn, of \(ticks) ticks |", "| --- | --: |",
+        ]
+        rows += MapRedrawCount.Canvas.allCases.map { "| \($0.rawValue) | \(count.redraws[$0] ?? 0) |" }
+        rows += ["", "Inputs that changed (of \(ticks) ticks):"]
+        rows += count.reasons.sorted { $0.key < $1.key }.map { "- \($0.key): \($0.value)" }
+        rows += ["", "The points the railway canvas draws, the whole line on an iPhone 17 Pro held sideways (874×402):", ""]
+        rows += Self.railwayPoints(of: session.world)
+        print(rows.joined(separator: "\n"))
+    }
+
+    /// The points the railway canvas works out, the whole High Speed Rail
+    /// in view: of the track (one polyline an edge) and of the lines (one
+    /// a stretch, ``LineMap``), every sampled point as before decision 377
+    /// and those ``PolylineDetail`` keeps, and the time to project them.
+    static func railwayPoints(of world: GameWorld) -> [String] {
+        let focus = WorldRegion(enclosing: world.stations.map { WorldCoordinate(x: $0.point.x, y: $0.point.y) })
+        let camera = PlanCamera(bounds: world.bounds, viewport: ScreenSize(width: 874, height: 402), showing: focus)
+        let tolerance = PolylineDetail.tolerance(pointsPerUnit: camera.pointsPerUnit)
+        let clock = ContinuousClock()
+        var details: [TrackEdgeID: PolylineDetail] = [:]
+        let detailTime = clock.measure {
+            for edge in world.network.edges {
+                if let geometry = world.trackGeometry(of: edge.id) { details[edge.id] = PolylineDetail(geometry.points) }
+            }
+        }
+        let lines = LineMap(world: world)
+        func pieces(simplified: Bool) -> [[WorldCoordinate]] {
+            var pieces: [[WorldCoordinate]] = []
+            for edge in world.network.edges {
+                guard let geometry = world.trackGeometry(of: edge.id), let detail = details[edge.id] else { continue }
+                pieces.append(simplified ? geometry.points(from: 0, to: geometry.length, detail: detail, tolerance: tolerance) : geometry.points)
+            }
+            for stretch in lines.stretches {
+                guard let geometry = world.trackGeometry(of: stretch.edge), let detail = details[stretch.edge] else { continue }
+                let end = min(stretch.end, geometry.length)
+                guard stretch.start < end else { continue }
+                pieces.append(simplified
+                    ? geometry.points(from: stretch.start, to: end, detail: detail, tolerance: tolerance)
+                    : geometry.points(from: stretch.start, to: end))
+            }
+            return pieces
+        }
+        var rows = ["| | polylines | points | ms to pick and project them |", "| --- | --: | --: | --: |"]
+        for simplified in [false, true] {
+            var drawn: [[WorldCoordinate]] = []
+            var projected = 0
+            let spent = clock.measure {
+                drawn = pieces(simplified: simplified)
+                for piece in drawn { projected += piece.map { camera.screenPoint(of: $0) }.count }
+            }
+            rows.append("| \(simplified ? "kept (decision 377)" : "every sampled point (before)") | \(drawn.count) | \(projected) | \(LongGameCostReportTests.ms(spent)) |")
+        }
+        rows += [
+            "",
+            "edges \(world.network.edges.count), line stretches \(lines.stretches.count), tolerance \(String(format: "%.0f", tolerance)) world units (\(PolylineDetail.screenTolerance) pt), significance of every edge worked out once: \(LongGameCostReportTests.ms(detailTime)) ms",
+        ]
+        return rows
+    }
+
+    /// The High Speed Rail demo as the app opens it, with the real-world
+    /// data the map reads.
+    static func highSpeedSession() throws -> GameSession {
+        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let railways = try XCTUnwrap(data.railways)
+        let world = try HighSpeedDemo.make(
+            in: .traditionalChinese, railways: railways, population: data.population, places: data.places, water: data.water, coverage: data.coverage
+        )
+        let session = GameSession(world: world, language: .traditionalChinese)
+        session.population = data.population
+        session.places = data.places
+        session.water = data.water
+        session.coverage = data.coverage
+        session.railways = railways
+        return session
+    }
+
     static func minuteOfDay(_ time: GameTime) -> Int64 {
         (time.seconds % GameTime.secondsPerDay) / 60
     }
@@ -173,7 +268,18 @@ struct MapRedrawCount {
             note(.names, names)
             note(.waitingCounts, counts)
             note(.trains, last.world.trains != now.world.trains)
-            for (reason, changed) in [("railway", railway), ("stations", stations), ("traffic", traffic), ("lights", lights)] where changed {
+            let lines = !last.world.lines.elementsEqual(now.world.lines) {
+                $0.id == $1.id && $0.stops == $1.stops && $0.routePreferences == $1.routePreferences && $0.color == $1.color
+                    && $0.patterns.map(\.calls) == $1.patterns.map(\.calls) && $0.isRing == $1.isRing && $0.isHighSpeed == $1.isHighSpeed
+            }
+            let detail: [(String, Bool)] = [
+                ("railway", railway), ("stations", stations), ("traffic", traffic), ("lights", lights),
+                ("· world.bounds", last.world.bounds != now.world.bounds), ("· world.stations", last.world.stations != now.world.stations),
+                ("· world.network", last.world.network != now.world.network),
+                ("· world.placedBuildings", last.world.placedBuildings != now.world.placedBuildings),
+                ("· line map key (lines)", lines), ("· waiting counts", counts),
+            ]
+            for (reason, changed) in detail where changed {
                 count.reasons[reason, default: 0] += 1
             }
             last = now

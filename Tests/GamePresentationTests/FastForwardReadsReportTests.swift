@@ -1,5 +1,6 @@
 import Foundation
 import GameCore
+import Observation
 @testable import GamePresentation
 import XCTest
 
@@ -14,6 +15,8 @@ import XCTest
 ///
 ///     FAST_FORWARD_READS=50 swift test -c release -Xswiftc -enable-testing \
 ///       --filter FastForwardReadsReportTests
+///
+/// `FAST_FORWARD_SPEED=6000` runs it at 6000× (decision 377).
 @MainActor
 final class FastForwardReadsReportTests: XCTestCase {
     func testWhatTheScreenReadsAfterEachTickOnTheHighSpeedRail() throws {
@@ -32,7 +35,10 @@ final class FastForwardReadsReportTests: XCTestCase {
         session.water = data.water
         session.coverage = data.coverage
         session.railways = railways
-        session.setSpeed(.normal)
+        // Decision 377: `FAST_FORWARD_SPEED=6000` for 6000×, as TestFlight
+        // 84.1 was read at.
+        let fast = ProcessInfo.processInfo.environment["FAST_FORWARD_SPEED"] == "6000"
+        session.setSpeed(fast ? .fast : .normal)
         let reads = Self.reads(of: session)
         let clock = ContinuousClock()
         var total: [String: Duration] = [:], longest: [String: Duration] = [:]
@@ -47,7 +53,7 @@ final class FastForwardReadsReportTests: XCTestCase {
         }
         let all = total.values.reduce(Duration.zero, +)
         var rows = [
-            "sights \(session.world.tourism?.attractions.count ?? 0), sight marks shown \(session.sightMarksTakeTouches), stations \(session.world.stations.count), trains \(session.world.trains.count), lines \(session.world.lines.count), at \(session.world.clock.now.seconds / 60 % 1_440) min, \(ticks) ticks at 600×",
+            "sights \(session.world.tourism?.attractions.count ?? 0), sight marks shown \(session.sightMarksTakeTouches), stations \(session.world.stations.count), trains \(session.world.trains.count), lines \(session.world.lines.count), at \(session.world.clock.now.seconds / 60 % 1_440) min, \(ticks) ticks at \(fast ? "6000" : "600")×",
             "session.advance (GameCore and after), a tick: \(LongGameCostReportTests.ms(stepped, per: ticks)) ms",
             "every read below, a tick: \(LongGameCostReportTests.ms(all, per: ticks)) ms",
             "",
@@ -56,7 +62,47 @@ final class FastForwardReadsReportTests: XCTestCase {
         for (label, spent) in total.sorted(by: { $0.value > $1.value }) {
             rows.append("| \(label) | \(LongGameCostReportTests.ms(spent, per: ticks)) | \(LongGameCostReportTests.ms(longest[label] ?? .zero)) |")
         }
+        rows += ["", "| Decision 377: told to look again, of \(ticks) more ticks | before | now |", "| --- | --: | --: |"]
+        rows += Self.lookAgain(over: ticks, session).map { "| \($0.label) | \($0.before) | \($0.now) |" }
         print(rows.joined(separator: "\n"))
+    }
+
+    /// Decision 377: how many of `ticks` ticks change what each view read
+    /// of the session before decision 377 and what it reads now (a change
+    /// tells SwiftUI to work the view out again).
+    static func lookAgain(over ticks: Int, _ session: GameSession) -> [(label: String, before: Int, now: Int)] {
+        let views: [(String, before: () -> Void, now: () -> Void)] = [
+            ("MapAlertBubbles", { _ = session.world.mapAlerts() + session.situationAlerts }, { _ = session.mapBubbles }),
+            ("MapAttractionMarks", {
+                for sight in session.world.tourism?.attractions ?? [] { _ = session.world.stars(of: sight) }
+            }, { _ = session.mapSights }),
+            ("StationMasterView's stationMasterRefreshKey", { _ = session.world.clock.now.seconds / GameTime.secondsPerHour }, {
+                _ = session.stationMasterRefreshKey
+            }),
+            ("HUDView (round its four layouts)", {
+                _ = session.world.economy.balance
+                _ = session.world.scenario
+                _ = session.world.hasTourism
+            }, {
+                _ = session.screenFacts
+                _ = session.language
+            }),
+        ]
+        final class Flag: @unchecked Sendable { var raised = false }
+        var counts = views.map { _ in (before: 0, now: 0) }
+        for _ in 0..<ticks {
+            let flags = views.map { _ in (before: Flag(), now: Flag()) }
+            for (index, view) in views.enumerated() {
+                withObservationTracking(view.before) { flags[index].before.raised = true }
+                withObservationTracking(view.now) { flags[index].now.raised = true }
+            }
+            session.advance(realElapsed: GameSession.tickInterval)
+            for index in views.indices {
+                if flags[index].before.raised { counts[index].before += 1 }
+                if flags[index].now.raised { counts[index].now += 1 }
+            }
+        }
+        return views.indices.map { (views[$0].0, counts[$0].before, counts[$0].now) }
     }
 
     /// What the always-shown views read of the session in their bodies.

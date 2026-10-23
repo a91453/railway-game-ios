@@ -22,19 +22,23 @@ struct MapAttractionMarks: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            if session.sightMarksTakeTouches != isPassive, let sights = session.world.tourism?.attractions {
+            // Decision 377: the sights as the session keeps them, not read
+            // from the world, so a tick that leaves them as they were
+            // rebuilds nothing here.
+            let sights = session.sightMarksTakeTouches != isPassive ? session.mapSights : []
+            if !sights.isEmpty {
                 // Decision 250: a mark that would lie on a better-rated
                 // one waits until the map is brought closer.
                 let shown = SightMarks.shown(sights.compactMap { sight -> SightMarks.Mark? in
-                    let at = camera.screenPoint(of: sight.point)
+                    let at = camera.screenPoint(of: sight.attraction.point)
                     guard at.x > Double(insets.leading), at.x < viewport.width - Double(insets.trailing),
                           at.y > Double(insets.top) + 40, at.y < viewport.height - Double(insets.bottom) else { return nil }
-                    return SightMarks.Mark(id: sight.id, stars: session.world.stars(of: sight), x: at.x, y: at.y)
+                    return SightMarks.Mark(id: sight.attraction.id, stars: sight.stars, x: at.x, y: at.y)
                 })
                 // Only the marks shown, not every sight: the whole of Taiwan
                 // has 214, and this is worked out again as the world moves.
-                ForEach(sights.filter { shown.contains($0.id) }, id: \.id) { sight in
-                    let at = camera.screenPoint(of: sight.point)
+                ForEach(sights.filter { shown.contains($0.attraction.id) }, id: \.attraction.id) { sight in
+                    let at = camera.screenPoint(of: sight.attraction.point)
                     mark(sight)
                         .opacity(isPassive ? 0.5 : 1)
                         .allowsHitTesting(!isPassive)
@@ -50,11 +54,11 @@ struct MapAttractionMarks: View {
         .frame(width: viewport.width, height: viewport.height, alignment: .topLeading)
     }
 
-    private func mark(_ sight: Attraction) -> some View {
-        // Whether a station serves it (the panel says more): asked at every
-        // redraw, so nothing that builds the route graph.
-        let open = session.world.attractionStation(of: sight.id) != nil
-        let text = "\(sight.name(in: session.language)) \(session.world.starsText(of: sight))"
+    private func mark(_ fact: MapMarks.Sight) -> some View {
+        let sight = fact.attraction
+        // Whether a station serves it (the panel says more).
+        let open = fact.isServed
+        let text = "\(sight.name(in: session.language)) \(fact.starsText)"
         return Button {
             // Decision 250 (a player's report): the panel opens at this
             // sight's row.
@@ -68,7 +72,7 @@ struct MapAttractionMarks: View {
                     .frame(width: 13, height: 13)
                     .foregroundStyle(open ? Theme.accent : Theme.textSecondary)
                     .accessibilityHidden(true)
-                Text(verbatim: session.world.starsText(of: sight))
+                Text(verbatim: fact.starsText)
                     .font(.caption2.weight(.bold))
                     .monospacedDigit()
                     .foregroundStyle(Theme.textPrimary)

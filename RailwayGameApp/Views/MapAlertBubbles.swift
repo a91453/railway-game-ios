@@ -26,7 +26,7 @@ struct MapAlertBubbles: View {
                     // placed the bubbles only against each other, and the
                     // stack, as large as the bubbles, sat in the map's top
                     // left corner with all of them in it.
-                    bubble(item.alert)
+                    bubble(item.bubble)
                         .fixedSize()
                         .frame(width: 0, height: 0, alignment: .bottom)
                         .position(item.point)
@@ -40,10 +40,10 @@ struct MapAlertBubbles: View {
 
     /// An alert on screen, and where its bubble's bottom middle goes.
     private struct PlacedAlert: Identifiable {
-        let alert: MapAlert
+        let bubble: MapMarks.Bubble
         let point: CGPoint
         // Decision 184, later: the bubble's subject, not its figures.
-        var id: MapAlert.ID { alert.id }
+        var id: MapAlert.ID { bubble.alert.id }
     }
 
     /// The alerts on screen: each over its station (or train, or sight),
@@ -54,20 +54,24 @@ struct MapAlertBubbles: View {
         // Decision 210: over the waiting count's pill (and a crowded
         // station's ring) where the map draws them, not on it.
         let lift = MapProblems.level(referenceSize: camera.referenceSize) == .hidden ? 14 : MapArt.stationRadius(camera) + 30
-        return (session.world.mapAlerts() + session.situationAlerts).compactMap { alert in
+        // Decision 377: as the session keeps them, not read from the world,
+        // so a tick that leaves them as they were rebuilds nothing here.
+        return session.mapBubbles.compactMap { bubble in
+            let alert = bubble.alert
             let at = camera.screenPoint(of: alert.location)
             guard at.x > Double(insets.leading), at.x < viewport.width - Double(insets.trailing),
                   at.y > Double(insets.top) + 40, at.y < viewport.height - Double(insets.bottom)
             else { return nil }
             let index = perStation[alert.location, default: 0]
             perStation[alert.location] = index + 1
-            return PlacedAlert(alert: alert, point: CGPoint(x: at.x, y: at.y - lift - Double(index) * 46))
+            return PlacedAlert(bubble: bubble, point: CGPoint(x: at.x, y: at.y - lift - Double(index) * 46))
         }
     }
 
-    private func bubble(_ alert: MapAlert) -> some View {
-        let text = alert.text(in: session.language, lineName: lineName(of: alert), subject: subject(of: alert))
-        let why = reason(of: alert)
+    private func bubble(_ bubble: MapMarks.Bubble) -> some View {
+        let alert = bubble.alert
+        let text = alert.text(in: session.language, lineName: bubble.lineName, subject: subject(of: bubble))
+        let why = bubble.waitReason?.text(in: session.language)
         return Button {
             if session.respond(to: alert) {
                 screen.panel = .lines
@@ -128,30 +132,9 @@ struct MapAlertBubbles: View {
         .accessibilityIdentifier("map.alert")
     }
 
-    /// Why a crowded or full station's passengers wait (decision 210).
-    private func reason(of alert: MapAlert) -> String? {
-        switch alert.kind {
-        case .crowded, .full:
-            return alert.station.flatMap { session.world.stationWaitReason(of: $0) }?.text(in: session.language)
-        default: return nil
-        }
-    }
-
-    private func lineName(of alert: MapAlert) -> String? {
-        switch alert.kind {
-        case .lineWithoutTrains(let id), .lineLosingMoney(let id): return session.world.line(id: id)?.name
-        default: return nil
-        }
-    }
-
     /// The train's or the sight's name (decision 184).
-    private func subject(of alert: MapAlert) -> String? {
-        switch alert.kind {
-        case .trainStuck(let id): return session.world.train(id: id)?.name
-        case .sightWithoutStation(let id):
-            return session.world.attraction(id: id).map { session.language.text($0.englishName, $0.name) }
-        default: return nil
-        }
+    private func subject(of bubble: MapMarks.Bubble) -> String? {
+        bubble.trainName ?? bubble.sight.map { session.language.text($0.englishName, $0.name) }
     }
 
     private func glyph(_ alert: MapAlert) -> MapGlyph {
