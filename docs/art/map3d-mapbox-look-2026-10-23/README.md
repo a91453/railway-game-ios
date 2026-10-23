@@ -276,6 +276,10 @@
 - 窗燈的顏色在著色器裡多一次 `mix`，只算有開燈的窗。
 - 路燈照在路面的光和 (d) 一樣。
 
+### 做進遊戲（決策 370）
+
+`game-e.jpg`（260 m）與 `game-e-v1.jpg`（220 m）：左邊是 main 的 (a)，右邊是做進遊戲的 (e)，白天、黃昏、夜晚，用 `tools/map3d-preview/` 的預覽頁畫的（同一套 shader 算式）。數字與路燈門檻在 `docs/decisions/370.md`。
+
 ## 怎麼做的
 
 - 場景：`tools/map3d-preview/` 的同一套（Swift 輸出場景，WebGL 照 `Map3DShaders.metal` 的算式畫）。台北的實景新局（`MAP3D_WORLD=taipei`，台灣底圖與高度檔），信義區用以 101 為中心建的場景。預覽頁沒有決策 347／349 的天空與色調映射，顏色和 App 不完全一樣；實機還沒看。

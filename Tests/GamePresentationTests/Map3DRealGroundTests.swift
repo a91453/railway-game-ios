@@ -224,6 +224,8 @@ final class Map3DRealGroundTests: XCTestCase {
         let painted = colors(real)
         for color in [Map3DPalette.road(.trunk), Map3DPalette.road(.primary), Map3DPalette.road(.minor), Map3DPalette.cover(.grass)] {
             XCTAssertTrue(painted.contains(color), String(color, radix: 16))
+            // Decision 370: the grass the farms' atlas green too.
+            guard color != Map3DPalette.farm else { continue }
             XCTAssertFalse(colors(plain).contains(color), String(color, radix: 16))
         }
         // Decision 241: paved sidewalks along the main roads, and the

@@ -190,7 +190,8 @@ public enum Map3DProp: String, CaseIterable, Sendable {
 
     /// The street trees' greens, one picked for each tree (decision 272:
     /// livelier, as the parks').
-    public static let greens: [UInt32] = [0x5FAD48, 0x4E9E3E, 0x6FBA52, 0x58A240, 0x7CC058].map(Map3DColor.rgb)
+    /// Decision 370: in the model look (``Map3DLook``).
+    public static let greens: [UInt32] = [0x5FAD48, 0x4E9E3E, 0x6FBA52, 0x58A240, 0x7CC058].map { Map3DLook.colour(Map3DColor.rgb($0)) }
 }
 
 extension Map3DModelPack.Model {

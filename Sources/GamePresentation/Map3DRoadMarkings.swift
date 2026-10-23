@@ -387,7 +387,8 @@ extension Map3DScene.Builder {
 
     /// The vending machines' bodies (props.js `VENDING_BODY`), in the
     /// palette's softer tones: white, red, blue, cream.
-    static let vendingColours: [UInt32] = [0xECEDEA, 0xC8433F, 0x3F6FA8, 0xE8DDBF].map(Map3DColor.rgb)
+    /// Decision 370: in the model look (``Map3DLook``).
+    static let vendingColours: [UInt32] = [0xECEDEA, 0xC8433F, 0x3F6FA8, 0xE8DDBF].map { Map3DLook.colour(Map3DColor.rgb($0)) }
 
     /// `model` standing on the pavement at `at`, its left toward the road
     /// along level `forward`, no tree, light or pole within `clearing`
