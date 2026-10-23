@@ -68,6 +68,10 @@ public struct DepartureBoard: Equatable, Sendable {
         /// Decision 223: late, it seems, because the train before it in the
         /// same direction is late (see ``DepartureBoard/followWindowSeconds``).
         public internal(set) var followsLateTrain = false
+        /// Decision 354: the station the train calls at just before this
+        /// call, or `nil` when not known (the timetable's first call, or a
+        /// pass), to read the platform the line sends it to.
+        public internal(set) var comesFrom: StationID? = nil
 
         /// What the board's status capsule says (decision 223), in words
         /// and not only in colour.
@@ -127,6 +131,9 @@ public struct DepartureBoard: Equatable, Sendable {
     public let station: StationID
     /// The ways trains go, the one with the soonest train first.
     public let directions: [Direction]
+    /// Decision 354: every train in the next three hours, soonest first,
+    /// not only the first ``rowsPerDirection`` of each way.
+    public let rows: [Row]
 
     /// How far ahead the board looks: three hours, as the reference's.
     public static let horizonSeconds: Int64 = 3 * GameTime.secondsPerHour
@@ -140,9 +147,10 @@ public struct DepartureBoard: Equatable, Sendable {
 
     public var isEmpty: Bool { directions.isEmpty }
 
-    public init(station: StationID, directions: [Direction]) {
+    public init(station: StationID, directions: [Direction], rows: [Row]? = nil) {
         self.station = station
         self.directions = directions
+        self.rows = rows ?? directions.flatMap(\.rows).sorted { ($0.secondsAway, $0.id) < ($1.secondsAway, $1.id) }
     }
 
     /// The board of `station` in `world`.
@@ -169,12 +177,14 @@ public struct DepartureBoard: Equatable, Sendable {
             if grouped[key] == nil { order.append(key) }
             grouped[key, default: []].append(row)
         }
-        let directions = order.map { key -> Direction in
-            let rows = Array(Self.markingFollowers(grouped[key]!).prefix(max(1, perDirection)))
+        let marked = order.map { Self.markingFollowers(grouped[$0]!) }
+        let directions = marked.map { all -> Direction in
+            let rows = Array(all.prefix(max(1, perDirection)))
             return Direction(destination: rows[0].destination, endsHere: rows[0].endsHere, rows: rows)
         }
         // The reference lists the trains that end here last.
-        self.init(station: station, directions: directions.filter { !$0.endsHere } + directions.filter(\.endsHere))
+        self.init(station: station, directions: directions.filter { !$0.endsHere } + directions.filter(\.endsHere),
+                  rows: marked.flatMap { $0 }.sorted { ($0.secondsAway, $0.id) < ($1.secondsAway, $1.id) })
     }
 
     /// `rows`, one direction's soonest first, with each late train due
@@ -231,13 +241,15 @@ public struct DepartureBoard: Equatable, Sendable {
                     let expected = boarding ? now : max(now, scheduled + late)
                     guard expected - now <= horizonSeconds else { continue }
                     let target = destination(after: index)
+                    // The call before, round the end of a repeating timetable.
+                    let before = index > 0 ? timetable[index - 1].station : period == nil ? nil : timetable.last?.station
                     rows.append(Row(
                         id: "t\(train.id.rawValue)|\(cycle)|\(index)", train: train.id, trainName: train.name,
                         line: line.id, lineName: line.name, color: line.color,
                         destination: target.endsHere ? station : target.station, endsHere: target.endsHere,
                         passes: false, isBoarding: boarding, expected: GameTime(seconds: expected),
                         secondsAway: max(0, expected - now), lateMinutes: boarding ? 0 : lateMinutes,
-                        scheduled: GameTime(seconds: scheduled)))
+                        scheduled: GameTime(seconds: scheduled), comesFrom: before))
                 } else if let next, !line.isRing {
                     // A pass: the station is a stop of the line between two
                     // calls of this train, one after the other.
@@ -292,7 +304,7 @@ public struct DepartureBoard: Equatable, Sendable {
                     line: line.id, lineName: line.name, color: line.color,
                     destination: last ? station : line.stops[run.to], endsHere: last, passes: false, isBoarding: false,
                     expected: GameTime(seconds: time), secondsAway: max(0, time - now), lateMinutes: 0,
-                    scheduled: GameTime(seconds: time)))
+                    scheduled: GameTime(seconds: time), comesFrom: position > 0 ? line.stops[calls[position - 1]] : nil))
             }
         }
         return rows
