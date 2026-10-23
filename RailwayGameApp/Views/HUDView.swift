@@ -273,7 +273,7 @@ private struct HUDTime: View {
     // Decision 379: timed for the frame readout.
     var body: some View { timed(.hudBody) { timedBody } }
 
-    @ViewBuilder private var timedBody: some View {
+    private var timedBody: some View {
         let language = session.language
         let clock = session.world.clock
         let text = short ? clock.shortCalendarText(in: language) : clock.calendarText(in: language)
