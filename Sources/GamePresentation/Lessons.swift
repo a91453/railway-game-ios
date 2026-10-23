@@ -126,10 +126,12 @@ extension Lesson {
     }
 
     /// A lesson after the third: one goal of riders a day, its days for
-    /// 3, 2 and 1 stars, and what it teaches in a read step (decision 271).
+    /// 3, 2 and 1 stars, and what it teaches in a read step (decision 271),
+    /// or in `guide`'s steps, one action each (decision 376).
     private static func later(
         _ number: Int, titles: (String, String), stories: (String, String), goals: @escaping @Sendable ([PlanPoint], PlanPoint, WorldBounds) -> [Goal],
-        days: (Int64, Int64, Int64), unlocks: [UnlockableTool], step: (title: (String, String), body: (String, String))
+        days: (Int64, Int64, Int64), unlocks: [UnlockableTool], step: (title: (String, String), body: (String, String)),
+        guide: [TutorialStep]? = nil
     ) -> Lesson {
         Lesson(
             number: number,
@@ -143,7 +145,7 @@ extension Lesson {
                 }
             ),
             unlocks: unlocks,
-            guide: [TutorialStep(id: "lesson.\(number)", chapter: .service, targets: [], goal: .read, title: step.title, body: step.body)]
+            guide: guide ?? [TutorialStep(id: "lesson.\(number)", chapter: .service, targets: [], goal: .read, title: step.title, body: step.body)]
         )
     }
 
@@ -222,7 +224,7 @@ extension Lesson {
             }
         ),
         unlocks: [.addTrain, .passingLoop],
-        guide: [addTrainStep]
+        guide: thirdGuide
     )
 
     /// Lesson 4: a second line, from the first town to the third.
@@ -240,7 +242,8 @@ extension Lesson {
                 "Lay track from the first town's station to the third town and build a station there. Then open Lines, create a new line with the two and open it from its card.",
                 "從第一座城鎮的車站鋪軌道到第三座城鎮，在那裡蓋車站。再打開「路線」，用這兩站開新路線，在卡片上按「開通路線」。"
             )
-        )
+        ),
+        guide: fourthGuide
     )
 
     /// Lesson 5: double track (decision 203's one tap).
@@ -254,7 +257,8 @@ extension Lesson {
         step: (
             ("Tap a stretch of track, then Double Track", "點一段軌道，再按「雙線」"),
             ("The second track is laid beside the first, and the trains keep to their own.", "第二條軌道會鋪在旁邊，兩個方向的列車各走各的。")
-        )
+        ),
+        guide: fifthGuide
     )
 
     /// Lesson 6: the line's details under Advanced.
@@ -268,7 +272,8 @@ extension Lesson {
         step: (
             ("Open Lines, then Advanced", "打開「路線」，再打開「進階」"),
             ("Set the service day and how often trains come. Fewer trains cost less; more carry more.", "設定營運時段與班距。車少比較省，車多載得多。")
-        )
+        ),
+        guide: sixthGuide
     )
 
     /// Lesson 7: a depot.
@@ -352,17 +357,187 @@ extension Lesson {
         )
     )
 
-    /// Lesson 3's step: what to tap, read.
-    static let addTrainStep = TutorialStep(
-        id: "lesson.addTrain", chapter: .service,
-        targets: [.linesButton],
-        goal: .read,
-        title: ("Open Lines and tap Add a Train", "打開「路線」，按「加開一列車」"),
-        body: (
-            "Two trains on one track pass at a passing loop. If your line has none, the card adds one.",
-            "兩列車在單線上要靠待避線交會。路線還沒有待避線時，路線卡會幫你加一處。"
-        )
-    )
+    // Decision 376: lessons 3–6, one action each, as lesson 1's guide.
+    // A step taken over from an earlier guide keeps its id ("lesson.addTrain",
+    // "lesson.4", "lesson.5", "lesson.6"), the step the launcher keeps to
+    // take a guide up again at; the tutorial's own steps are used as they are.
+
+    /// Lesson 3: Lines, Add a Train, the passing loop it runs through, time.
+    static let thirdGuide: [TutorialStep] = [
+        TutorialStep(
+            id: "lesson.3.lines", chapter: .service,
+            targets: [.linesButton],
+            goal: .openLines,
+            setup: [.selectNewestLine],
+            title: ("Tap Lines", "點「路線」"),
+            body: ("Your line's card shows its trains.", "路線卡上有它的列車。")
+        ),
+        TutorialStep(
+            id: "lesson.addTrain", chapter: .service,
+            targets: [.addTrain],
+            goal: .addTrain,
+            panel: .lines,
+            title: ("Tap Add a Train", "按「加開一列車」"),
+            body: (
+                "A second train is bought and sent off, with a passing loop if the track needs one.",
+                "第二列車會買好發車，單線需要時也會加一處待避線。"
+            )
+        ),
+        TutorialStep(
+            id: "lesson.3.loop", chapter: .service,
+            targets: [.map],
+            goal: .selectPassingLoop,
+            setup: [.clearSelection],
+            panel: .closed,
+            title: ("Tap the passing loop", "點待避線"),
+            body: (
+                "Two tracks and no platform: a train waits there for the one coming the other way.",
+                "兩條軌道、沒有月台的地方，列車在這裡等對向車。"
+            )
+        ),
+    ] + steps(["time.play"])
+
+    /// Lesson 4: track on to the third town, its station, a second line.
+    static let fourthGuide: [TutorialStep] = [
+        TutorialStep(
+            id: "lesson.4", chapter: .track,
+            targets: [.buildEntry],
+            goal: .chooseTool(.network),
+            panel: .closed,
+            title: ("Tap Build", "點「建設」"),
+            body: (
+                "The third town needs track from the first town's station.",
+                "第三座城鎮需要一段從第一座城鎮車站鋪過去的軌道。"
+            )
+        ),
+        TutorialStep(
+            id: "lesson.4.track", chapter: .track,
+            targets: [.map],
+            goal: .drawTrack,
+            setup: [.layTrack],
+            title: ("Tap a station, then the third town", "點車站，再點第三座城鎮"),
+            body: (
+                "Start at the first town's station, so the new track joins your line's.",
+                "從第一座城鎮的車站開始鋪，新軌道才會接上路線。"
+            )
+        ),
+    ] + steps(["track.build", "station.mode"]) + [
+        TutorialStep(
+            id: "lesson.4.site", chapter: .stations,
+            targets: [.map],
+            goal: .pickPlatformSite(1),
+            title: ("Tap your track in the third town", "點第三座城鎮裡的軌道"),
+            body: ("The ring shows who lives within a walk.", "圓圈裡是走路就能到站的居民。")
+        ),
+    ] + steps(["station.first.build"]) + [
+        TutorialStep(
+            id: "lesson.4.done", chapter: .stations,
+            targets: [.selectTool],
+            goal: .chooseTool(.select),
+            panel: .closed,
+            title: ("Tap Done to stop building", "點「完成」結束建造"),
+            body: ("Time runs again. Next, a second line.", "時間會繼續走。接著開第二條線。")
+        ),
+    ] + steps(["line.open"]) + [
+        TutorialStep(
+            id: "lesson.4.stations", chapter: .line,
+            targets: [.map],
+            goal: .pickLineStations,
+            panel: .lines,
+            title: ("Tap the old station, then the new", "點舊車站，再點新車站"),
+            body: (
+                "Pick the first town's station: riders change between your two lines there.",
+                "先點第一座城鎮的車站，乘客會在那裡轉乘兩條線。"
+            )
+        ),
+    ] + steps(["line.create", "time.play"])
+
+    /// Lesson 5: a stretch of track picked, made double, built.
+    static let fifthGuide: [TutorialStep] = [
+        TutorialStep(
+            id: "lesson.5", chapter: .track,
+            targets: [.map],
+            goal: .selectTrack,
+            setup: [.clearSelection],
+            panel: .closed,
+            title: ("Tap a stretch of track", "點一段軌道"),
+            body: ("Pick the track between two stations, away from the trains.", "選兩站之間的軌道，避開列車。")
+        ),
+        TutorialStep(
+            id: "lesson.5.double", chapter: .track,
+            targets: [.doubleTrack],
+            goal: .draftDoubleTrack,
+            title: ("Tap Make double track", "按「升級為複線」"),
+            body: (
+                "The second track goes beside the first, as far as the switches at each end.",
+                "第二條軌道會鋪在旁邊，一直到兩端的道岔。"
+            )
+        ),
+        TutorialStep(
+            id: "lesson.5.build", chapter: .track,
+            targets: [.mapConfirm],
+            goal: .buildDoubleTrack,
+            title: ("Tap ✓ to build it", "按 ✓ 蓋好"),
+            body: (
+                "The price is on the button. On double track, the trains each way keep to their own.",
+                "按鈕上就是價錢。複線上，兩個方向的列車各走各的。"
+            )
+        ),
+    ] + steps(["time.play"])
+
+    /// Lesson 6: Lines, Advanced, the line's hours, its headway, a
+    /// stopping pattern.
+    static let sixthGuide: [TutorialStep] = [
+        TutorialStep(
+            id: "lesson.6", chapter: .service,
+            targets: [.linesButton],
+            goal: .openLines,
+            setup: [.selectNewestLine],
+            title: ("Tap Lines", "點「路線」"),
+            body: ("Your line's hours, trains and stops are set here.", "路線的營運時間、列車和停靠站都在這裡設定。")
+        ),
+        TutorialStep(
+            id: "lesson.6.advanced", chapter: .service,
+            targets: [.advancedSwitch],
+            goal: .showAdvanced,
+            panel: .lines,
+            title: ("Turn on Advanced", "打開「進階」"),
+            body: ("It shows the service day and the stopping patterns.", "會顯示營運時段和停靠模式。")
+        ),
+        TutorialStep(
+            id: "lesson.6.hours", chapter: .service,
+            targets: [.serviceHours],
+            goal: .changeServiceHours,
+            panel: .lines,
+            title: ("Change when your line runs", "改路線的營運時間"),
+            body: (
+                "Tap Run All Day for trains all night, or back to 06:00–24:00. Each hour costs to run.",
+                "按「全天營運」讓列車整夜行駛，或改回 06:00–24:00。"
+            )
+        ),
+        TutorialStep(
+            id: "lesson.6.headway", chapter: .service,
+            targets: [.headwayPicker, .headwayChange],
+            goal: .changeHeadway,
+            panel: .lines,
+            title: ("Pick the minutes, then Every … min", "選班距，再按「調整為每…分」"),
+            body: (
+                "Fewer minutes: more trains, more riders and more costs.",
+                "分鐘越少，列車越多、乘客越多，成本也越高。"
+            )
+        ),
+        TutorialStep(
+            id: "lesson.6.pattern", chapter: .service,
+            targets: [.addPattern],
+            goal: .addPattern,
+            panel: .lines,
+            title: ("Add a stopping pattern", "加一種停站模式"),
+            body: (
+                "Pick From and To, turn on Non-stop to skip the stops between, then tap Add.",
+                "選「起點」和「終點」，打開「直達車」跳過中間的站，再按「加入」。"
+            )
+        ),
+    ] + steps(["time.play"])
 }
 
 extension GameWorld {

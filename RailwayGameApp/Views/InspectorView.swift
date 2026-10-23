@@ -594,6 +594,8 @@ private struct TrackUpgradeControls: View {
                 upgradeButton(language.text("Make double track", "升級為複線"), systemImage: "equal", id: "inspector.track.double") {
                     session.beginTrackUpgrade(.doubleTrack)
                 }
+                // Decision 376: lesson 5's guide.
+                .tutorialTarget(.doubleTrack)
             } else if session.canAddScissorsOnSelectedTrack {
                 upgradeButton(language.text("Add X crossover", "加 X 渡線"), systemImage: "xmark", id: "inspector.track.scissors") {
                     session.beginTrackUpgrade(.scissors)

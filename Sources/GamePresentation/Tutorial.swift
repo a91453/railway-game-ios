@@ -85,12 +85,28 @@ public enum TutorialTarget: String, CaseIterable, Hashable, Sendable {
     /// The fix beside the first reason the line loses money (decision 194,
     /// later fix), there while it loses money for a reason with a fix.
     case lineLossFix = "line.loss.fix"
+    /// The selected line's Add a Train in the lines panel (decision 264),
+    /// for lesson 3 (decision 376).
+    case addTrain = "line.addTrain"
+    /// The details card's "Make double track", for picked single track
+    /// (decision 247), for lesson 5.
+    case doubleTrack = "inspector.track.double"
+    /// The lines panel's minutes between trains, for a line that runs.
+    case headwayPicker = "line.staff.headway"
+    /// The lines panel's button that runs the line at the minutes picked.
+    case headwayChange = "line.headway.change"
+    /// The lines panel's Advanced switch (decision 196), for lesson 6.
+    case advancedSwitch = "lines.advanced"
+    /// The selected line's Run All Day, or Run 06:00–24:00 Instead.
+    case serviceHours = "line.window"
+    /// The Add of the lines panel's stopping pattern, under Advanced.
+    case addPattern = "line.pattern.add"
 
     /// Whether the control is in the details card, which a step pointing
     /// at it opens (``TutorialStep/usesDetailsCard``).
     public var isInDetailsCard: Bool {
         switch self {
-        case .networkModes, .actionButton, .ridership: true
+        case .networkModes, .actionButton, .ridership, .doubleTrack: true
         default: false
         }
     }
@@ -179,6 +195,29 @@ public enum TutorialGoal: Hashable, Sendable {
     /// Open the lines panel. The panel is the app's, so the app tells the
     /// session (``GameSession/linesPanelDidChange(isShown:)``).
     case openLines
+    /// Decision 376: put a train that was not on a line when the chapter
+    /// began on one (the lines panel's Add a Train).
+    case addTrain
+    /// Select a passing loop's signal station with the Select tool.
+    case selectPassingLoop
+    /// Select a stretch of track with the Select tool.
+    case selectTrack
+    /// Start drafting double track on the picked track, or have built
+    /// track since the chapter began.
+    case draftDoubleTrack
+    /// Build track beside the line's (any new track since the chapter
+    /// began).
+    case buildDoubleTrack
+    /// Turn the lines panel's Advanced switch on. The switch is the
+    /// app's, so the app tells the session
+    /// (``GameSession/linesAdvancedDidChange(isShown:)``).
+    case showAdvanced
+    /// Change when a line runs, or the service day's levels.
+    case changeServiceHours
+    /// Change how many trains a line runs or how far apart.
+    case changeHeadway
+    /// Give a line one more stopping pattern.
+    case addPattern
 }
 
 /// What the session does when a step is first shown, going forward
@@ -316,8 +355,13 @@ public struct TutorialStep: Hashable, Sendable, Identifiable {
     /// The lines panel's button the step asks for, which the panel scrolls
     /// into view.
     public var revealsInPanel: TutorialTarget? {
-        targets.first { $0 == .createLine || $0 == .staffLine || $0 == .lineLoss }
+        targets.first { Self.panelTargets.contains($0) }
     }
+
+    /// The lines panel's controls a step can ask for.
+    private static let panelTargets: Set<TutorialTarget> = [
+        .createLine, .staffLine, .lineLoss, .addTrain, .headwayChange, .advancedSwitch, .serviceHours, .addPattern,
+    ]
 
     /// How long the card waits before it offers to skip a step that is not
     /// done (a problem offers it at once): longer for the first fares,
@@ -447,6 +491,28 @@ public struct Tutorial: Hashable, Sendable {
         let assignedTrains: Set<TrainID>
         /// The newest ledger row, which the fares are counted after.
         let lastEntry: LedgerEntry?
+        /// What each line runs (decision 376), for the goals that ask for
+        /// a change to it.
+        let services: [LineID: LineService]
+        let serviceDay: ServiceDay?
+
+        /// When a line runs, how many trains how far apart, and its
+        /// stopping patterns.
+        struct LineService: Hashable, Sendable {
+            let window: ServiceWindow
+            let trainsInService: TrainsInService
+            let targetHeadways: TargetHeadways
+            let trains: Int
+            let patterns: Int
+
+            init(_ line: ServiceLine) {
+                window = line.window
+                trainsInService = line.trainsInService
+                targetHeadways = line.targetHeadways
+                trains = line.trains.count
+                patterns = line.patterns.count
+            }
+        }
 
         /// A world with nothing built: everything there is counts as new.
         static let nothing = Snapshot()
@@ -457,6 +523,8 @@ public struct Tutorial: Hashable, Sendable {
             lines = []
             assignedTrains = []
             lastEntry = nil
+            services = [:]
+            serviceDay = nil
         }
 
         init(of world: GameWorld) {
@@ -465,6 +533,8 @@ public struct Tutorial: Hashable, Sendable {
             lines = Set(world.lines.map(\.id))
             assignedTrains = Set(world.trains.map(\.id).filter { world.assignedLine(of: $0) != nil })
             lastEntry = world.accounts.entries.last
+            services = Dictionary(uniqueKeysWithValues: world.lines.map { ($0.id, LineService($0)) })
+            serviceDay = world.serviceDay
         }
     }
 }

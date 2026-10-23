@@ -224,6 +224,10 @@ struct LinesPanel: View {
             .onChange(of: showsAdvanced) { _, shown in
                 if !shown { session.endRoutePreviews() }
             }
+            // Decision 376: lesson 6's guide waits for the switch.
+            .onChange(of: showsAdvanced, initial: true) { _, shown in
+                session.linesAdvancedDidChange(isShown: shown)
+            }
             // Taps on the map select again once the panel is closed.
             .onDisappear {
                 session.stopPickingLineStops()
@@ -348,6 +352,8 @@ struct LinesPanel: View {
                     }
                 }
                 .accessibilityIdentifier("lines.advanced")
+                .tutorialPanelTarget(.advancedSwitch)
+                .id(TutorialTarget.advancedSwitch)
                 .accessibilityHint(Text(verbatim: session.language.text(
                     "Hidden, they keep working as set.",
                     "收起時，這些設定照常運作。"
@@ -812,6 +818,10 @@ struct LinesPanel: View {
             Button(line.window == .allDay ? "Run 06:00–24:00 Instead" : "Run All Day") {
                 session.setSelectedLineAllDay(line.window != .allDay)
             }
+            .accessibilityIdentifier("line.window")
+            // Decision 376: lesson 6's guide.
+            .tutorialPanelTarget(.serviceHours)
+            .id(TutorialTarget.serviceHours)
             // Decision 49: a ring's trains go on from its last stop to the
             // first, half each way round.
             VStack(alignment: .leading, spacing: 4) {
@@ -1236,6 +1246,10 @@ struct LinesPanel: View {
             Button("Add") {
                 session.addPatternToSelectedLine(from: patternFirst, to: patternLast, express: patternExpress)
             }
+            .accessibilityIdentifier("line.pattern.add")
+            // Decision 376: lesson 6's guide.
+            .tutorialPanelTarget(.addPattern)
+            .id(TutorialTarget.addPattern)
         } header: {
             Text("Add a stopping pattern")
         } footer: {
@@ -1432,6 +1446,9 @@ struct LinesPanel: View {
                 }
                 .buttonStyle(ThemeProminentButtonStyle())
                 .accessibilityIdentifier("line.addTrain")
+                // Decision 376: lesson 3's guide.
+                .tutorialPanelTarget(.addTrain)
+                .id(TutorialTarget.addTrain)
             }
             if let shortfall {
                 Label {
@@ -1483,6 +1500,9 @@ struct LinesPanel: View {
                 .buttonStyle(ThemeProminentButtonStyle())
                 .disabled(change.isUnchanged || !session.world.economy.canAfford(change.cost))
                 .accessibilityIdentifier("line.headway.change")
+                // Decision 376: lesson 6's guide.
+                .tutorialPanelTarget(.headwayChange)
+                .id(TutorialTarget.headwayChange)
             }
         } header: {
             Text(verbatim: language.text("Headway and trains", "班距與列車數"))
@@ -1563,6 +1583,7 @@ struct LinesPanel: View {
             }
             .pickerStyle(.segmented)
             .accessibilityIdentifier("line.staff.headway")
+            .tutorialPanelTarget(.headwayPicker)
         }
     }
 
