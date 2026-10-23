@@ -148,32 +148,53 @@ public struct Map3DRealTrains: Sendable {
         }
     }
 
-    /// The parts of `line`'s shape within ``margin`` of `region`, each as
-    /// world points and how far along the shape each is, the points no
-    /// closer than a centimetre.
-    static func stretches(of line: RealTrainTraffic.Line, frame: RealWorldFrame, region: WorldRegion) -> [[(point: WorldVector, km: Double)]] {
+    /// Decision 358: a real line is laid in windows of this many
+    /// kilometres along it, each the same whatever the region asking for
+    /// it, so chunks built apart (``Map3DStreaming``) meet as the whole
+    /// scene's do; and its heights found over this much more of the line
+    /// either side of a window, so a window's ends rise and fall as its
+    /// neighbours' do.
+    static let window = 4.0
+    static let windowContext = 0.5
+
+    /// A window of a line's shape: its points (world points, and how far
+    /// along the shape each is), no closer than a centimetre, reaching
+    /// ``windowContext`` past `core`, the kilometres it is laid over.
+    struct Stretch {
+        let points: [(point: WorldVector, km: Double)]
+        let core: ClosedRange<Double>
+    }
+
+    /// The windows of `line`'s shape (``window``) with a point within
+    /// ``margin`` of `region`, or next to one.
+    static func stretches(of line: RealTrainTraffic.Line, frame: RealWorldFrame, region: WorldRegion) -> [Stretch] {
         let margin = Self.margin * Double(WorldCoordinate.unitsPerMetre)
         func near(_ p: WorldVector) -> Bool {
             p.x >= region.minX - margin && p.x <= region.maxX + margin && p.y >= region.minY - margin && p.y <= region.maxY + margin
         }
         let points = line.shape.points.map { WorldVector(frame.worldPosition(latitude: $0.latitude, longitude: $0.longitude)) }
-        var stretches: [[(point: WorldVector, km: Double)]] = []
-        var current: [(point: WorldVector, km: Double)] = []
-        for index in points.indices {
-            // A point is kept beside one that is near, so a stretch runs
-            // to the margin's edge.
-            let kept = near(points[index]) || (index > 0 && near(points[index - 1])) || (index + 1 < points.count && near(points[index + 1]))
-            if kept {
-                if current.last.map({ (points[index] - $0.point).length >= 0.64 }) ?? true {
-                    current.append((points[index], line.shape.cumulativeKm[index]))
-                }
-            } else if !current.isEmpty {
-                if current.count > 1 { stretches.append(current) }
-                current = []
-            }
+        let km = line.shape.cumulativeKm
+        func window(_ index: Int) -> Int { Int((km[index] / Self.window).rounded(.down)) }
+        // A point is wanted beside one that is near, so the line runs to
+        // the margin's edge.
+        var windows = Set<Int>()
+        for index in points.indices where near(points[index]) {
+            for neighbour in max(0, index - 1)...min(points.count - 1, index + 1) { windows.insert(window(neighbour)) }
         }
-        if current.count > 1 { stretches.append(current) }
-        return stretches
+        return windows.sorted().compactMap { window in
+            let core = Double(window) * Self.window...Double(window + 1) * Self.window
+            let reach = (core.lowerBound - Self.windowContext)...(core.upperBound + Self.windowContext)
+            var stretch: [(point: WorldVector, km: Double)] = []
+            for index in points.indices {
+                // The points within reach, and the one either side, so
+                // the stretch spans it.
+                let kept = reach.contains(km[index]) || (index + 1 < points.count && km[index] < reach.lowerBound && km[index + 1] >= reach.lowerBound)
+                    || (index > 0 && km[index] > reach.upperBound && km[index - 1] <= reach.upperBound)
+                guard kept else { continue }
+                if stretch.last.map({ (points[index] - $0.point).length >= 0.64 }) ?? true { stretch.append((points[index], km[index])) }
+            }
+            return stretch.count > 1 ? Stretch(points: stretch, core: core) : nil
+        }
     }
 
     /// Where the player's track runs, for what stays clear of it.
@@ -290,23 +311,36 @@ extension Map3DScene.Builder {
     /// its tunnels) but within ``Map3DRealTrains/playerClearance`` of
     /// `player`'s track. Returns where cars on it are drawn, or `nil` for
     /// a stretch too short to lay.
-    mutating func realTrack(_ stretch: [(point: WorldVector, km: Double)], system: String, structures: RealRailStructures?,
+    mutating func realTrack(_ window: Map3DRealTrains.Stretch, system: String, structures: RealRailStructures?,
                             frame: RealWorldFrame, clearOf player: Map3DRealTrains.PlayerTrack) -> Map3DRealTrains.Track? {
+        let stretch = window.points
         let path = WorldPath(stretch.map(\.point))
         guard path.points.count == stretch.count, path.length > 0 else { return nil }
         let carried = structures?.stretches(along: path, frame: frame, system: system) ?? []
         let rise = TrackRise(path: path, ground: { Double(ground(x: $0.x, y: $0.y)) * Self.metre }, water: { _ in false }, levels: [],
                              carried: carried)
         let spacing = Map3DRealTrains.spacing * Self.metre
-        let distances = rise?.distances ?? stride(from: 0, through: path.length, by: spacing).map { $0 } + [path.length]
-        guard distances.count > 1 else { return nil }
-        var km: [Double] = [], points: [Map3DPoint] = [], kinds: [TrackSectionKind] = [], shown: [Bool] = []
+        let sampled = rise?.distances ?? stride(from: 0, through: path.length, by: spacing).map { $0 } + [path.length]
+        // How far along the line each sample is.
+        var along: [Double] = []
         var segment = 0
-        for (index, distance) in distances.enumerated() {
+        for distance in sampled {
             while segment + 1 < path.distances.count - 1, path.distances[segment + 1] < distance { segment += 1 }
             let a = path.distances[segment], b = path.distances[segment + 1]
             let share = b > a ? min(max((distance - a) / (b - a), 0), 1) : 0
-            km.append(stretch[segment].km + (stretch[segment + 1].km - stretch[segment].km) * share)
+            along.append(stretch[segment].km + (stretch[segment + 1].km - stretch[segment].km) * share)
+        }
+        // Decision 358: laid over the window's core, from the last sample
+        // at or before its start to the first at or after its end, so the
+        // windows either side meet it.
+        let first = along.lastIndex { $0 <= window.core.lowerBound } ?? 0
+        let last = along.firstIndex { $0 >= window.core.upperBound } ?? (along.count - 1)
+        guard first < last else { return nil }
+        let laid = first...last
+        let distances = Array(sampled[laid])
+        var km: [Double] = [], points: [Map3DPoint] = [], kinds: [TrackSectionKind] = [], shown: [Bool] = []
+        for (index, distance) in zip(laid, distances) {
+            km.append(along[index])
             let at = path.point(at: distance)
             let flat = point(x: at.x, y: at.y, height: 0)
             let drawn = drawnGround(x: flat.x, z: flat.z)

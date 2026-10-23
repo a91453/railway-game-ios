@@ -107,6 +107,8 @@ final class Map3DMetalView: MTKView {
     /// Decision 230: the train models, and a buffer of each one's vertices.
     private var models: (pack: Map3DModelPack, buffers: [MTLBuffer])?
     var onStats: (@MainActor (Stats) -> Void)?
+    /// Decision 358: the camera each frame, once it has moved, and when.
+    var onCamera: (@MainActor (Map3DCamera, CFTimeInterval) -> Void)?
 
     private struct Chunk {
         let vertices: MTLBuffer
@@ -663,42 +665,63 @@ final class Map3DMetalView: MTKView {
         models = (pack, buffers)
     }
 
-    /// Draws `scene` from now on.
-    func show(_ scene: Map3DScene) {
+    /// Draws `scene` from now on; decision 358: but for the chunks at
+    /// `kept`, built ahead before it, which it does not hold whole.
+    func show(_ scene: Map3DScene, keeping kept: Set<Map3DStreaming.Key> = []) {
         sunSceneChanged = true
-        chunks = scene.chunks.compactMap { chunk in
-            guard !chunk.mesh.isEmpty, let vertices = makeBuffer(chunk.mesh.vertices), let indices = makeBuffer(chunk.mesh.indices)
-            else { return nil }
-            var shadows: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
-            if let shadowVertices = makeBuffer(chunk.shadows.vertices), let shadowIndices = makeBuffer(chunk.shadows.indices) {
-                shadows = (shadowVertices, shadowIndices, chunk.shadows.indices.count)
-            }
-            var far: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
-            if let farVertices = makeBuffer(chunk.far.vertices), let farIndices = makeBuffer(chunk.far.indices) {
-                far = (farVertices, farIndices, chunk.far.indices.count)
-            }
-            var close: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
-            if let closeVertices = makeBuffer(chunk.close.vertices), let closeIndices = makeBuffer(chunk.close.indices) {
-                close = (closeVertices, closeIndices, chunk.close.indices.count)
-            }
-            var props: (instances: MTLBuffer, runs: [(model: Int, first: Int, count: Int)])?
-            let sorted = chunk.props.sorted { $0.model < $1.model }
-            if let instances = makeBuffer(sorted.flatMap(\.floats)) {
-                var runs: [(model: Int, first: Int, count: Int)] = []
-                for (index, instance) in sorted.enumerated() {
-                    if let last = runs.last, last.model == instance.model {
-                        runs[runs.count - 1].count += 1
-                    } else {
-                        runs.append((instance.model, index, 1))
-                    }
-                }
-                props = (instances, runs)
-            }
-            let signs = makeBuffer(chunk.signs.flatMap(\.floats)).map { (instances: $0, count: chunk.signs.count) }
-            return Chunk(vertices: vertices, indices: indices, indexCount: chunk.mesh.indices.count, baseIndexCount: chunk.baseIndexCount,
-                         far: far, close: close, shadows: shadows, props: props, signs: signs, minimum: chunk.minimum, maximum: chunk.maximum,
-                         column: chunk.column, row: chunk.row, cityTops: chunk.cityTops)
+        let old = chunks.filter { kept.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }
+        let held = Set(old.map { Map3DStreaming.Key(column: $0.column, row: $0.row) })
+        chunks = scene.chunks.filter { !held.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }.compactMap(makeChunk) + old
+    }
+
+    /// Decision 358: draws `built` at `keys` (in place of what was there;
+    /// a key with no chunk is empty ground).
+    func place(_ built: [Map3DScene.Chunk], at keys: [Map3DStreaming.Key]) {
+        sunSceneChanged = true
+        let replaced = Set(keys)
+        chunks.removeAll { replaced.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }
+        chunks += built.compactMap(makeChunk)
+    }
+
+    /// Decision 358: lets go of the chunks at `keys`.
+    func remove(_ keys: [Map3DStreaming.Key]) {
+        let gone = Set(keys)
+        chunks.removeAll { gone.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }
+        sunSceneChanged = true
+    }
+
+    private func makeChunk(_ chunk: Map3DScene.Chunk) -> Chunk? {
+        guard !chunk.mesh.isEmpty, let vertices = makeBuffer(chunk.mesh.vertices), let indices = makeBuffer(chunk.mesh.indices)
+        else { return nil }
+        var shadows: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
+        if let shadowVertices = makeBuffer(chunk.shadows.vertices), let shadowIndices = makeBuffer(chunk.shadows.indices) {
+            shadows = (shadowVertices, shadowIndices, chunk.shadows.indices.count)
         }
+        var far: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
+        if let farVertices = makeBuffer(chunk.far.vertices), let farIndices = makeBuffer(chunk.far.indices) {
+            far = (farVertices, farIndices, chunk.far.indices.count)
+        }
+        var close: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
+        if let closeVertices = makeBuffer(chunk.close.vertices), let closeIndices = makeBuffer(chunk.close.indices) {
+            close = (closeVertices, closeIndices, chunk.close.indices.count)
+        }
+        var props: (instances: MTLBuffer, runs: [(model: Int, first: Int, count: Int)])?
+        let sorted = chunk.props.sorted { $0.model < $1.model }
+        if let instances = makeBuffer(sorted.flatMap(\.floats)) {
+            var runs: [(model: Int, first: Int, count: Int)] = []
+            for (index, instance) in sorted.enumerated() {
+                if let last = runs.last, last.model == instance.model {
+                    runs[runs.count - 1].count += 1
+                } else {
+                    runs.append((instance.model, index, 1))
+                }
+            }
+            props = (instances, runs)
+        }
+        let signs = makeBuffer(chunk.signs.flatMap(\.floats)).map { (instances: $0, count: chunk.signs.count) }
+        return Chunk(vertices: vertices, indices: indices, indexCount: chunk.mesh.indices.count, baseIndexCount: chunk.baseIndexCount,
+                     far: far, close: close, shadows: shadows, props: props, signs: signs, minimum: chunk.minimum, maximum: chunk.maximum,
+                     column: chunk.column, row: chunk.row, cityTops: chunk.cityTops)
     }
 
     /// Decision 259: the most figures and vehicles a frame draws (the
@@ -743,6 +766,7 @@ final class Map3DMetalView: MTKView {
         // looks at where it is this frame.
         let frame = trains?(camera.eye)
         moveCamera(heads: frame?.heads ?? [], at: start)
+        onCamera?(camera, start)
         let camera = camera
         let matrix = camera.viewProjection
         // Decision 357: the sun's shadow map, drawn again when it is out

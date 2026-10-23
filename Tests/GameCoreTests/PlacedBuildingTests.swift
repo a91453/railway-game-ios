@@ -26,11 +26,12 @@ final class PlacedBuildingTests: XCTestCase {
         // 16, 24 and 32 m (64 units a metre); since decision 111 a wharf
         // (24 m, shops) and a marina (32 m, a sight) on the shore; since
         // decision 173 a department store (48 m, shops), a hotel (32 m,
-        // shops) and an amusement park (112 m, a sight).
-        XCTAssertEqual(PlacedBuildingKind.allCases.map(\.side), [1_024, 1_536, 2_048, 1_536, 2_048, 3_072, 2_048, 7_168])
+        // shops) and an amusement park (112 m, a sight); since decision 361
+        // a park (24 m) and a temple (32 m, a sight).
+        XCTAssertEqual(PlacedBuildingKind.allCases.map(\.side), [1_024, 1_536, 2_048, 1_536, 2_048, 3_072, 2_048, 7_168, 1_536, 2_048])
         XCTAssertEqual(
             PlacedBuildingKind.allCases.map(\.use),
-            [.residential, .commercial, .office, .commercial, .leisure, .commercial, .commercial, .leisure]
+            [.residential, .commercial, .office, .commercial, .leisure, .commercial, .commercial, .leisure, .park, .leisure]
         )
         XCTAssertEqual([house.minX, house.minY, house.maxX, house.maxY], [488, 488, 1_512, 1_512])
         XCTAssertEqual([office.minX, office.minY, office.maxX, office.maxY], [8_976, 8_977, 11_024, 11_025])

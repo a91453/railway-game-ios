@@ -451,6 +451,87 @@ final class BalanceReportTests: XCTestCase {
         print(lines.joined(separator: "\n"))
     }
 
+    /// Decision 361's temple: built on day 10 beside the first line's last
+    /// station, with no other sight, a 2-star sight of its own whose
+    /// visitors are its customers. Its visitors, profit a day and the days
+    /// to pay back what it cost, against the hotel's aim of 2 to 4 years.
+    /// And its park: what a house beside it lets for a day with and
+    /// without a park built next to it on day 10, and the days the
+    /// difference takes to pay for the park and its upkeep.
+    func testATempleAndAParkOnTheFirstLine() throws {
+        let days = try requestedDays()
+        var lines = [
+            "### A temple and a park beside the first line's last station (built on day 10)",
+            "",
+            "| Temple cost | Visitors a day (mean) | Profit a day (mean) | Payback days | Balance with temple | without |",
+            "| --: | --: | --: | --: | --: | --: |",
+        ]
+        var base = try firstLine()
+        let station = try XCTUnwrap(base.stations.last)
+        // A sight far off, so tourism is on but draws nobody here.
+        base.setTourism([Attraction(id: AttractionID(rawValue: 1), name: "Far", englishName: "Far", point: PlanPoint(x: 0, y: 0), kind: .town, baseStars: 100)])
+        var with = base
+        var temple: PlacedBuildingID?
+        try base.advance(ticks: 1)
+        try with.advance(ticks: 1)
+        var visitors: Int64 = 0, profit: Int64 = 0, counted: Int64 = 0
+        for day in 1...days {
+            try base.advance(ticks: 1_440)
+            try with.advance(ticks: 1_440)
+            if day == 10 {
+                with.economy.earn(Money(3_000_000_000))
+                base.economy.earn(Money(3_000_000_000))
+                temple = try with.placeBuilding(.temple, at: PlanPoint(x: station.point.x + 3_000, y: station.point.y - 6_000)).id
+            }
+            if day > 10, let id = temple, let building = with.placedBuilding(id: id) {
+                let result = with.subsidiaryDay(of: building, onDay: Int64(day) - 1)
+                visitors += result.customers
+                profit += (result.sales - result.cost).amount
+                counted += 1
+            }
+        }
+        let building = try XCTUnwrap(temple.flatMap { with.placedBuilding(id: $0) })
+        let mean = max(1, counted)
+        let payback = profit > 0 ? building.cost.amount * mean / profit : 0
+        lines.append(
+            "| \(dollars(building.cost.amount)) | \(visitors / mean) | \(dollars(profit / mean)) | \(payback) | "
+                + "\(dollars(with.economy.balance.amount)) | \(dollars(base.economy.balance.amount)) |"
+        )
+        lines += [
+            "",
+            "| Office site (east, north of the station) | Park cost (building + land and buy-outs) | Park upkeep and tax a day | Land value under the office without / with | Office rent a day without / with | Payback days for one office |",
+            "| --- | --: | --: | --: | --: | --: |",
+        ]
+        // Offices (they let at once) on sites no city park reaches yet,
+        // each with a park 48 m north of it, measured on the day the
+        // first line has run `days` days.
+        var measured = 0
+        search: for dx in stride(from: Int64(-24_576), through: 24_576, by: 8_192) {
+            for dy in stride(from: Int64(-16_384), through: 16_384, by: 8_192) where dx != 0 || dy != 0 {
+                var plain = base
+                plain.economy.earn(Money(30_000_000_000))
+                let site = PlanPoint(x: station.point.x + dx, y: station.point.y + dy)
+                guard plain.landValue(row: Land.cellIndex(site.y), column: Land.cellIndex(site.x))?.parkPremium == 0,
+                      let office = try? plain.placeBuilding(.office, at: site) else { continue }
+                var parked = plain
+                guard let park = try? parked.placeBuilding(.park, at: PlanPoint(x: site.x, y: site.y - 3_072)) else { continue }
+                let without = plain.dailyRent(of: office).amount
+                let withPark = parked.dailyRent(of: try XCTUnwrap(parked.placedBuilding(id: office.id))).amount
+                let (upkeep, tax) = parked.dailyUpkeep(of: park)
+                let gain = withPark - without - upkeep.amount - tax.amount
+                let value = { (world: GameWorld) in world.landValue(row: Land.cellIndex(site.y), column: Land.cellIndex(site.x))?.value ?? 0 }
+                lines.append(
+                    "| \(dx / 64) m, \(dy / 64) m | \(dollars(park.cost.amount)) (\(dollars(park.buildingCost.amount)) + \(dollars(park.landCost.amount))) | "
+                        + "\(dollars(upkeep.amount + tax.amount)) | \(value(plain)) / \(value(parked)) | \(dollars(without)) / \(dollars(withPark)) | "
+                        + "\(gain > 0 ? String(park.cost.amount / gain) : "never") |"
+                )
+                measured += 1
+                if measured == 4 { break search }
+            }
+        }
+        print(lines.joined(separator: "\n"))
+    }
+
     /// Decision 183: the first line with the city's requests, against the
     /// same line without them, sights off in both. Every midnight the
     /// company takes on the best paying offers of riders and residents it

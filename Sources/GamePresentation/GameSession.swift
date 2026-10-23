@@ -158,6 +158,9 @@ public final class GameSession {
 
     /// What the building tool places where the player taps (decision 92).
     public var buildingKind: PlacedBuildingKind = .house
+    /// Which look the building tool puts up (decision 361), kept for each
+    /// kind the player has picked one for; the first otherwise.
+    public var buildingLooks: [PlacedBuildingKind: Int] = [:]
     /// Whether a tap with the building tool builds, demolishes (decision
     /// 94), sells (decision 130) or zones (decision 98).
     public var buildingMode: BuildingToolMode = .build {
@@ -240,6 +243,8 @@ public final class GameSession {
     public var trackUpgradeSide: PlatformTrackSide = .left
     public var trackUpgradeWholeRun = true
     @ObservationIgnored var trackUpgradeMemo: TrackUpgradeMemo?
+    /// How many times the drafted upgrade was worked out (for the tests).
+    @ObservationIgnored var trackUpgradeWorkedOut = 0
 
     /// The train the camera follows: the `Ci/` reference's
     /// `trackedTrainId`, kept apart from the selection
@@ -251,7 +256,9 @@ public final class GameSession {
     /// a drag, pinch or zoom of the map through ``mapDidMove()``, closing the
     /// train with ``clearSelection()``), or when the train leaves the track,
     /// stops existing or its line is removed.
-    public private(set) var followedTrainID: TrainID?
+    public private(set) var followedTrainID: TrainID? {
+        didSet { if followedTrainID != oldValue { updateMap3DSpeedCap() } }
+    }
 
     /// The way the selected train faces when it is placed: along its
     /// platform, the way nearer this compass point. Only used by
@@ -1088,7 +1095,59 @@ public final class GameSession {
     /// would split the one Undo it lays as.
     public func setSpeed(_ speed: GameSpeed) {
         guard !isLayingDemoRealLines else { return }
-        changeSpeed(speed)
+        changeSpeed(isSpeedCappedIn3D ? Map3DFollowSpeed.capped(speed) : speed)
+    }
+
+    /// The speeds the speed menu offers (decision 360): up to 10× while
+    /// following a train on the 3D map, every speed otherwise.
+    public var speedChoices: [GameSpeed] {
+        Map3DFollowSpeed.choices(capped: isSpeedCappedIn3D)
+    }
+
+    /// Tells the session the 3D map opened or closed (decision 360): while
+    /// it is open and the camera follows a train, the game runs at 10× at
+    /// most, and closing it gives back the speed the session lowered.
+    public func setMap3DOpen(_ open: Bool) {
+        guard open != isMap3DOpen else { return }
+        isMap3DOpen = open
+        updateMap3DSpeedCap()
+    }
+
+    @ObservationIgnored private var isMap3DOpen = false
+
+    /// Whether the speed is held to 10× at most now: the 3D map is open and
+    /// follows a train (decision 360).
+    public private(set) var isSpeedCappedIn3D = false
+
+    /// The speed the game ran at before following on the 3D map lowered
+    /// it, given back when following there ends; `nil` when it was not
+    /// lowered.
+    @ObservationIgnored private var speedBefore3D: GameSpeed?
+
+    private func updateMap3DSpeedCap() {
+        let capped = isMap3DOpen && followedTrainID != nil
+        guard capped != isSpeedCappedIn3D else { return }
+        isSpeedCappedIn3D = capped
+        if capped {
+            let running = world.clock.runningSpeed
+            let lowered = Map3DFollowSpeed.capped(running)
+            guard lowered != running else { return }
+            speedBefore3D = running
+            setRunningSpeed(lowered)
+        } else if let before = speedBefore3D {
+            speedBefore3D = nil
+            setRunningSpeed(before)
+        }
+    }
+
+    /// Runs the game at `speed`, or, paused, resumes it at `speed` later,
+    /// keeping the pause and what paused it.
+    private func setRunningSpeed(_ speed: GameSpeed) {
+        guard speed != world.clock.runningSpeed else { return }
+        dropNightSkip()
+        let paused = world.clock.isPaused
+        logging(.setSpeed(speed)) { $0.setSpeed(speed) }
+        if paused { logging(.pause) { $0.pause() } }
     }
 
     /// ``setSpeed(_:)`` whatever is under way.
@@ -1146,9 +1205,14 @@ public final class GameSession {
     /// autosaved on leaving the app, while a tool or the monthly report
     /// held it then goes on when continued, as the player left it running.
     public var worldToSave: GameWorld {
-        guard world.clock.isPaused, isPausedForBuilding || isPausedForEvent else { return world }
         var saved = world
-        saved.resume()
+        // Decision 360: the speed the 3D map lowered is saved as it was.
+        if let before = speedBefore3D {
+            let paused = saved.clock.isPaused
+            saved.setSpeed(before)
+            if paused { saved.pause() }
+        }
+        if saved.clock.isPaused, isPausedForBuilding || isPausedForEvent { saved.resume() }
         return saved
     }
 

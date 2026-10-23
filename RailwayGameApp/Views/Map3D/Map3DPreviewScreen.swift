@@ -37,7 +37,8 @@ struct Map3DPreviewScreen: View {
     /// tools out. `nil` from the settings, which have no 2D map below.
     var toMap2D: ((Map3DHandoff.Plan) -> Void)? = nil
     var build: ((Map3DHandoff.Plan) -> Void)? = nil
-    @State private var scene: Map3DScene?
+    @State private var built: Map3DBuiltScene?
+    private var scene: Map3DScene? { built?.scene }
     @State private var sceneVersion = 0
     @State private var stats: Map3DMetalView.Stats?
     @State private var showsDetails = false
@@ -57,7 +58,7 @@ struct Map3DPreviewScreen: View {
     var body: some View {
         let language = DisplayLanguage.app
         ZStack {
-            Map3DView(scene: scene, sceneVersion: sceneVersion, lighting: Map3DLighting(at: session.world.clock.now),
+            Map3DView(built: built, sceneVersion: sceneVersion, lighting: Map3DLighting(at: session.world.clock.now),
                       weather: Map3DWeather(MapWeather(world: session.world)), feed: feed, trainLabels: trainLabels,
                       start: handedOver, openedAt: openedAt, farOut: farOut, compass: compass, cameraLink: cameraLink, quality: quality,
                       follow: session.followedTrain.map { Map3DFollow(train: $0.id, view: followView) },
@@ -70,7 +71,7 @@ struct Map3DPreviewScreen: View {
                 .ignoresSafeArea()
             Map3DTrainLabelsView(state: trainLabels, world: session.world)
                 .ignoresSafeArea()
-            if scene == nil {
+            if built == nil {
                 ProgressView()
                     .controlSize(.large)
             }
@@ -172,7 +173,7 @@ struct Map3DPreviewScreen: View {
             // A newer world or the heights file started another build: a
             // cancelled one may finish after it and must not replace it.
             guard !Task.isCancelled else { return }
-            scene = built
+            self.built = built
             sceneVersion &+= 1
         }
         .onChange(of: session.world.trains, initial: true) { _, _ in
@@ -186,6 +187,10 @@ struct Map3DPreviewScreen: View {
         .onChange(of: showsRealTrains) { _, shown in
             feed.updateRealClock(world: session.world, shown: shown, glides: !session.world.clock.isPaused && !reduceMotion)
         }
+        // Decision 360: following a train here runs at 10× at most, and
+        // closing gives the 2D map its speed back.
+        .onAppear { session.setMap3DOpen(true) }
+        .onDisappear { session.setMap3DOpen(false) }
     }
 
     /// Decision 313, later: the world point the scene is built round.
@@ -247,7 +252,7 @@ final class Map3DSceneCache {
     static let shared = Map3DSceneCache()
     private var key: Map3DSceneKey?
     private weak var game: GameSession?
-    private var building: Task<Map3DScene, Never>?
+    private var building: Task<Map3DBuiltScene, Never>?
     /// What the scene built or building covers.
     private var region: WorldRegion?
     private var memoryWarning: NSObjectProtocol?
@@ -277,11 +282,11 @@ final class Map3DSceneCache {
         _ = task(for: session, focus: focus, palette: palette)
     }
 
-    func scene(for session: GameSession, focus: (x: Double, y: Double)?, palette: LinePalette) async -> Map3DScene {
+    func scene(for session: GameSession, focus: (x: Double, y: Double)?, palette: LinePalette) async -> Map3DBuiltScene {
         await task(for: session, focus: focus, palette: palette).value
     }
 
-    private func task(for session: GameSession, focus: (x: Double, y: Double)?, palette: LinePalette) -> Task<Map3DScene, Never> {
+    private func task(for session: GameSession, focus: (x: Double, y: Double)?, palette: LinePalette) -> Task<Map3DBuiltScene, Never> {
         let key = Map3DSceneKey(world: session.world, hasHeights: session.heights != nil, hasRailways: session.railways != nil, focus: focus, palette: palette)
         if key == self.key, game === session, let building, let region, Map3DScene.holds(focus, in: region, world: session.world) {
             return building
@@ -303,15 +308,103 @@ final class Map3DSceneCache {
         let temples = world.geoAnchor == nil ? nil : BaseMapFiles.temples
         let task = Task.detached(priority: .userInitiated) {
             let baseMap = tiles.flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }.flatMap { try? BaseMapTiles(data: $0) }
-            return Map3DScene(world: world, focus: focus, baseMap: baseMap, cityTiles: city.map(CityTileArea.areas(in:)) ?? [],
-                              heights: heights, lineBands: Map3DLineBands(world: world, palette: palette), railways: railways,
-                              temples: temples.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealTemples(data: $0) })
+            let source = Map3DChunkSource(world: world, snapshot: world.railwaySnapshot(), skyline: CitySkyline(world: world), baseMap: baseMap,
+                                          cityTiles: city.map(CityTileArea.areas(in:)) ?? [], heights: heights,
+                                          lineBands: Map3DLineBands(world: world, palette: palette), railways: railways,
+                                          temples: temples.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealTemples(data: $0) })
+            return Map3DBuiltScene(scene: source.scene(focus: focus), source: source)
         }
         self.key = key
         game = session
         building = task
         region = Map3DScene.region(world: world, focus: focus)
         return task
+    }
+}
+
+/// Decision 358: a scene built, and what it was built from, from which
+/// the chunks ahead of the camera are built as it moves.
+struct Map3DBuiltScene: Sendable {
+    let scene: Map3DScene
+    let source: Map3DChunkSource
+}
+
+/// Decision 358: what a scene is built from, read once (the files) and
+/// worked out once (the snapshot, the skyline), so the chunks built later
+/// are the scene's own.
+struct Map3DChunkSource: Sendable {
+    let world: GameWorld
+    let snapshot: RailwaySnapshot
+    let skyline: CitySkyline
+    let baseMap: BaseMapTiles?
+    let cityTiles: [CityTileArea]
+    let heights: HeightGrid?
+    let lineBands: Map3DLineBands
+    let railways: RealRailways?
+    let temples: RealTemples?
+
+    func scene(focus: (x: Double, y: Double)?) -> Map3DScene {
+        Map3DScene(world: world, snapshot: snapshot, skyline: skyline, focus: focus, baseMap: baseMap, cityTiles: cityTiles, heights: heights,
+                   lineBands: lineBands, railways: railways, temples: temples)
+    }
+
+    /// Decision 359 (續): with the scene's `trackCover`, which lays the
+    /// tunnels as the scene did.
+    func chunks(_ keys: [Map3DStreaming.Key], of grid: Map3DStreaming, trackCover: Map3DTrackCover) -> [Map3DScene.Chunk] {
+        Map3DScene.chunks(keys, of: grid, world: world, snapshot: snapshot, skyline: skyline, baseMap: baseMap, cityTiles: cityTiles,
+                          heights: heights, lineBands: lineBands, railways: railways, temples: temples, trackCover: trackCover)
+    }
+}
+
+/// Decision 358: builds the chunks ahead of the camera as it moves, a
+/// block at a time in the background (``Map3DStreaming/Window``), and lets
+/// those far behind go; only on a real-world map
+/// (``Map3DStreaming/streams(_:)``).
+@MainActor
+final class Map3DChunkStreamer {
+    weak var view: Map3DMetalView?
+    private var window: Map3DStreaming.Window?
+    private var source: Map3DChunkSource?
+    private var trackCover = Map3DTrackCover()
+    private var generation = 0
+
+    /// The chunks built since that `scene` (built anew round the same
+    /// place) does not hold whole: kept until built again.
+    func kept(for scene: Map3DScene) -> Set<Map3DStreaming.Key> {
+        guard let window, window.grid.originX == scene.originX, window.grid.originY == scene.originY else { return [] }
+        return window.built.subtracting(window.grid.keys(within: scene.region))
+    }
+
+    /// `built` is shown, with the view keeping `kept` from before.
+    func start(_ built: Map3DBuiltScene?, kept: Set<Map3DStreaming.Key>) {
+        generation += 1
+        guard let built, Map3DStreaming.streams(built.source.world) else {
+            window = nil
+            source = nil
+            return
+        }
+        window = Map3DStreaming.Window(scene: built.scene, map: WorldRegion(bounds: built.source.world.bounds), generation: generation, kept: kept)
+        source = built.source
+        trackCover = built.scene.trackCover
+    }
+
+    /// The camera this frame, at `time`.
+    func step(_ camera: Map3DCamera, at time: CFTimeInterval) {
+        guard var window, let source else { return }
+        let (drop, build) = window.step(target: camera.target, at: time)
+        self.window = window
+        if !drop.isEmpty { view?.remove(drop) }
+        guard !build.isEmpty else { return }
+        let grid = window.grid, generation = window.generation, trackCover = trackCover
+        Task.detached(priority: .utility) { [weak self] in
+            let chunks = source.chunks(build, of: grid, trackCover: trackCover)
+            await self?.finished(chunks, keys: build, generation: generation)
+        }
+    }
+
+    private func finished(_ chunks: [Map3DScene.Chunk], keys: [Map3DStreaming.Key], generation: Int) {
+        guard window?.finished(keys, generation: generation) == true else { return }
+        view?.place(chunks, at: keys)
     }
 }
 
@@ -416,7 +509,9 @@ final class Map3DTrainFeed {
 
 /// The Metal view in SwiftUI, with its gestures.
 private struct Map3DView: UIViewRepresentable {
-    let scene: Map3DScene?
+    /// Decision 358: the scene, and what it was built from.
+    let built: Map3DBuiltScene?
+    var scene: Map3DScene? { built?.scene }
     let sceneVersion: Int
     let lighting: Map3DLighting
     /// Decision 277: the day's weather on the map.
@@ -464,6 +559,9 @@ private struct Map3DView: UIViewRepresentable {
         }
         context.coordinator.view = view
         cameraLink.view = view
+        // Decision 358: the chunks ahead of the camera, built as it moves.
+        context.coordinator.streamer.view = view
+        view.onCamera = { [weak coordinator = context.coordinator] camera, time in coordinator?.streamer.step(camera, at: time) }
         view.landed = { [weak coordinator = context.coordinator] in coordinator?.showHeading() }
         if let models = Self.models {
             view.useModels(models)
@@ -508,7 +606,11 @@ private struct Map3DView: UIViewRepresentable {
         guard let scene, context.coordinator.shownVersion != sceneVersion else { return }
         let first = context.coordinator.shownVersion == nil
         context.coordinator.shownVersion = sceneVersion
-        view.show(scene)
+        // Decision 358: the chunks built ahead that the scene built anew
+        // round the same place does not hold, kept until built again.
+        let kept = context.coordinator.streamer.kept(for: scene)
+        view.show(scene, keeping: kept)
+        context.coordinator.streamer.start(built, kept: kept)
         // Decision 338: the train pack's sets as before them until it is
         // unlocked.
         let unlocked = TrainPack.isUnlocked(testBuild: TestBuild.isTest,
@@ -542,6 +644,8 @@ private struct Map3DView: UIViewRepresentable {
     final class Coordinator: NSObject, UIGestureRecognizerDelegate {
         weak var view: Map3DMetalView?
         var shownVersion: Int?
+        /// Decision 358.
+        let streamer = Map3DChunkStreamer()
         /// Decision 334: the departure last flown to.
         var flownTo: Map3DNextDeparture?
         var farOut: ((Map3DCamera) -> Void)?
