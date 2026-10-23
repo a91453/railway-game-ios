@@ -119,8 +119,9 @@ struct StationMasterCorner: View {
             }
         }
         .onChange(of: session.stationMasterRefreshKey, initial: true) {
-            lookForStory()
+            // The advice first: a goal's cheer the story waits for.
             refreshAdvice()
+            lookForStory()
             title = StationMasterTitle.isShown(in: session.world) ? StationMasterTitle(rank: CompanyRank(world: session.world)) : nil
         }
         .onChange(of: modeShiftHint) { refreshAdvice() }
@@ -128,6 +129,8 @@ struct StationMasterCorner: View {
         // Once said and put away, the hint gives way to the other advice.
         .onChange(of: isTalking) { _, talking in
             if !talking, modeShiftHintSeen, modeShiftHint != nil { modeShiftHint = nil }
+            // Decision 387: a beat waiting for the bubble follows it.
+            if !talking { tellNextBeat() }
         }
         .onChange(of: advice, initial: true) { _, advice in
             if advice == nil { isTalking = false }
@@ -307,15 +310,23 @@ struct StationMasterCorner: View {
     }
 
     /// Tells the next queued beat, when nothing else is being told and it
-    /// may. The station master's bubble gives way to it.
+    /// may. A goal's cheer not yet said goes first, and the card waits for
+    /// the bubble, never beside it (decision 387); a bubble saying what the
+    /// card stands for gives way to it.
     private func tellNextBeat() {
-        guard storyBeat == nil, canTell, !storyQueue.isEmpty else { return }
-        let beat = storyQueue.removeFirst()
-        storyAdvice = beat.advice(in: session.world)
-        if let storyAdvice {
+        guard storyBeat == nil, canTell, let beat = storyQueue.first else { return }
+        if case .goalMet? = advice, advice != lastSpoken, advice != coveredAdvice {
+            sayIfNew(advice)
+            return
+        }
+        let covered = beat.advice(in: session.world)
+        guard !isTalking || (covered != nil && covered == lastSpoken) else { return }
+        storyQueue.removeFirst()
+        storyAdvice = beat.adviceLine(in: session.world)
+        if let covered {
             // Decision 387: one card, not the story and the advice apart.
-            coveredAdvice = storyAdvice
-            lastSpoken = storyAdvice
+            coveredAdvice = covered
+            lastSpoken = covered
         }
         isTalking = false
         storyBeat = beat
