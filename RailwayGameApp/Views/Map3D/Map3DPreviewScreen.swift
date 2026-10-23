@@ -344,9 +344,11 @@ struct Map3DChunkSource: Sendable {
                    lineBands: lineBands, railways: railways, temples: temples)
     }
 
-    func chunks(_ keys: [Map3DStreaming.Key], of grid: Map3DStreaming) -> [Map3DScene.Chunk] {
+    /// Decision 359 (續): with the scene's `trackCover`, which lays the
+    /// tunnels as the scene did.
+    func chunks(_ keys: [Map3DStreaming.Key], of grid: Map3DStreaming, trackCover: Map3DTrackCover) -> [Map3DScene.Chunk] {
         Map3DScene.chunks(keys, of: grid, world: world, snapshot: snapshot, skyline: skyline, baseMap: baseMap, cityTiles: cityTiles,
-                          heights: heights, lineBands: lineBands, railways: railways, temples: temples)
+                          heights: heights, lineBands: lineBands, railways: railways, temples: temples, trackCover: trackCover)
     }
 }
 
@@ -359,6 +361,7 @@ final class Map3DChunkStreamer {
     weak var view: Map3DMetalView?
     private var window: Map3DStreaming.Window?
     private var source: Map3DChunkSource?
+    private var trackCover = Map3DTrackCover()
     private var generation = 0
 
     /// The chunks built since that `scene` (built anew round the same
@@ -378,6 +381,7 @@ final class Map3DChunkStreamer {
         }
         window = Map3DStreaming.Window(scene: built.scene, map: WorldRegion(bounds: built.source.world.bounds), generation: generation, kept: kept)
         source = built.source
+        trackCover = built.scene.trackCover
     }
 
     /// The camera this frame, at `time`.
@@ -387,9 +391,9 @@ final class Map3DChunkStreamer {
         self.window = window
         if !drop.isEmpty { view?.remove(drop) }
         guard !build.isEmpty else { return }
-        let grid = window.grid, generation = window.generation
+        let grid = window.grid, generation = window.generation, trackCover = trackCover
         Task.detached(priority: .utility) { [weak self] in
-            let chunks = source.chunks(build, of: grid)
+            let chunks = source.chunks(build, of: grid, trackCover: trackCover)
             await self?.finished(chunks, keys: build, generation: generation)
         }
     }
