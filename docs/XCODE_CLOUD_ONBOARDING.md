@@ -223,9 +223,9 @@ Archive action 使用 scheme 的 Archive 設定，即 **Release** configuration�
 
 ## 出口合規（Export Compliance）
 
-- 目前程式只 import SwiftUI、UIKit、Observation 與本專案的 GameCore / GamePresentation；沒有網路（`URLSession`、Network）、沒有 CryptoKit / CommonCrypto / Security / Keychain，也沒有第三方套件。`release-archive.yml` 會列出封存後 App 連結的函式庫作為佐證。
+- 現況（2026-10-23）：程式沒有自己的加密，沒有 CryptoKit / CommonCrypto / Security / Keychain。會連網的是系統與一個第三方套件，都只用作業系統提供的標準 HTTPS（TLS）：MapKit（Apple 地圖的圖磚與地點搜尋）、MapLibre Native 6.31.0（台灣以外的 OpenStreetMap 底圖，從 tiles.openfreemap.org 下載）、WebKit 與 SafariServices（設定裡的「3D 城市」與「官網」，alongthelinegame.com）。沒有 `URLSession` 或其他自己發的請求。`release-archive.yml` 會列出封存後 App 連結的函式庫作為佐證。
 - Apple：若 App（含連結的函式庫）不使用加密、或只使用豁免的加密，可在 Info.plist 設定 `ITSAppUsesNonExemptEncryption = NO`；沒有這個鍵時，App Store Connect 每次上傳都會問出口合規問卷。
-- **本 PR 刻意沒有加入這個鍵**：這是由你（開發者）對美國出口法規做的聲明，不應由工具替你假設。第一次上傳時請在 App Store Connect 依實際情況回答問卷；若確認不使用非豁免加密，之後可在 `project.yml` 加上 `INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO` 省去每次作答。將來加入網路、帳號、雲端存檔或加密功能時必須重新評估。
+- **本 PR 刻意沒有加入這個鍵**：這是由你（開發者）對美國出口法規做的聲明，不應由工具替你假設。第一次上傳時請在 App Store Connect 依實際情況回答問卷；若確認不使用非豁免加密，之後可在 `project.yml` 加上 `INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO` 省去每次作答。將來加入帳號、雲端存檔、新的連線或任何自己的加密功能時必須重新評估。
 
 ## 隱私
 
