@@ -91,6 +91,10 @@ extension GameSession {
         case .pickLineStations, .selectStation:
             let before = tutorial.snapshot(of: .stations)
             return world.stations.filter { before?.stations.contains($0.id) != true }.map(\.location)
+        case .selectPassingLoop:
+            // Decision 376: the line's passing loops, which the player
+            // did not build in the lesson.
+            return world.stations.filter { Self.isPassingPlace($0, in: world) }.map(\.location)
         default:
             return []
         }
@@ -196,6 +200,14 @@ extension GameSession {
     public func linesPanelDidChange(isShown: Bool) {
         guard isLinesPanelShown != isShown else { return }
         isLinesPanelShown = isShown
+    }
+
+    /// The lines panel's Advanced switch turned on or off (decision 376),
+    /// or the panel showed it as it was kept. Changes the session only
+    /// when it is so.
+    public func linesAdvancedDidChange(isShown: Bool) {
+        guard isLinesAdvancedShown != isShown else { return }
+        isLinesAdvancedShown = isShown
     }
 
     /// Shows step `index` and sets it up if it is shown for the first time,
@@ -308,6 +320,29 @@ extension GameSession {
             return tool == .select && selectedStationID != nil
         case .openLines:
             return isLinesPanelShown
+        case .addTrain:
+            return world.trains.contains { !before.assignedTrains.contains($0.id) && world.assignedLine(of: $0.id) != nil }
+        case .selectPassingLoop:
+            return tool == .select && selectedStation.map { Self.isPassingPlace($0, in: world) } == true
+        case .selectTrack:
+            return tool == .select && selectedTrackEdge != nil
+        case .draftDoubleTrack:
+            return (tool == .select && trackUpgrade == .doubleTrack) || newTrackLength(since: before) > 0
+        case .buildDoubleTrack:
+            return newTrackLength(since: before) > 0
+        case .showAdvanced:
+            return isLinesAdvancedShown
+        case .changeServiceHours:
+            return world.serviceDay != before.serviceDay && before.serviceDay != nil
+                || world.lines.contains { line in before.services[line.id].map { $0.window != line.window } == true }
+        case .changeHeadway:
+            return world.lines.contains { line in
+                guard let was = before.services[line.id] else { return false }
+                let now = Tutorial.Snapshot.LineService(line)
+                return now.trains != was.trains || now.trainsInService != was.trainsInService || now.targetHeadways != was.targetHeadways
+            }
+        case .addPattern:
+            return world.lines.contains { line in before.services[line.id].map { line.patterns.count > $0.patterns } == true }
         }
     }
 
@@ -441,7 +476,64 @@ extension GameSession {
             if tool != .select {
                 return TutorialHint(language.text("Tap Done first, then a station.", "先點「完成」，再點車站。"))
             }
-        case .read, .chooseTool, .moveMap, .chooseNetworkMode, .startPickingStops, .timeRuns, .openLines:
+        case .selectPassingLoop:
+            if tool != .select {
+                return TutorialHint(language.text("Tap Done first, then the passing loop.", "先點「完成」，再點待避線。"))
+            }
+            if tutorialPlacesToTap.isEmpty {
+                return TutorialHint(language.text(
+                    "Your line has no passing loop yet. Tap Add a Train in Lines first.",
+                    "路線還沒有待避線。先在「路線」按「加開一列車」。"
+                ), isProblem: true)
+            }
+            if selectedStation != nil {
+                return TutorialHint(language.text(
+                    "That is a station. The passing loop is the one with no platform.",
+                    "那是車站。待避線是沒有月台的那一處。"
+                ))
+            }
+        case .selectTrack:
+            if tool != .select {
+                return TutorialHint(language.text("Tap Done first, then the track.", "先點「完成」，再點軌道。"))
+            }
+            if selectedStation != nil || selectedTrainID != nil {
+                return TutorialHint(language.text(
+                    "Tap the track between two stations, away from the trains.",
+                    "點兩站之間的軌道，避開列車。"
+                ))
+            }
+        case .draftDoubleTrack:
+            if selectedTrackEdge == nil {
+                return TutorialHint(language.text("Tap a stretch of track first.", "先點一段軌道。"))
+            }
+            if !canDoubleSelectedTrack, trackUpgrade == nil {
+                return TutorialHint(language.text(
+                    "This stretch is double already. Tap another one.",
+                    "這一段已經是複線，請點別段。"
+                ), isProblem: true)
+            }
+        case .buildDoubleTrack:
+            // The card's pickers: the side the second track goes on and how far.
+            if let problem = trackUpgradePreview?.problem {
+                return TutorialHint(problem + " " + language.text(
+                    "Try the other side, This piece only, or another stretch.",
+                    "試試另一側、「只有這一段」，或別段軌道。"
+                ), isProblem: true)
+            }
+            if trackUpgrade == nil {
+                return TutorialHint(language.text(
+                    "Tap a stretch of track, then Make double track.",
+                    "點一段軌道，再按「升級為複線」。"
+                ))
+            }
+        case .addTrain, .changeServiceHours, .changeHeadway, .addPattern:
+            if !isLinesPanelShown {
+                return TutorialHint(language.text("Tap Lines to open your line.", "點「路線」打開你的路線。"))
+            }
+            if goal == .addTrain, let message, message.kind == .failure {
+                return TutorialHint(message.text, isProblem: true)
+            }
+        case .read, .chooseTool, .moveMap, .chooseNetworkMode, .startPickingStops, .timeRuns, .openLines, .showAdvanced:
             break
         }
         return nil

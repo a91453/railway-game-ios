@@ -47,8 +47,9 @@ final class LessonTests: XCTestCase {
         XCTAssertEqual(first.last, "first.fare")
         XCTAssertFalse(first.contains("line.staff"))
         XCTAssertEqual(Lesson.all[1].guide.map(\.id), ["lesson.extend", "line.card.open", "line.card.read", "station.select", "station.ridership"])
-        XCTAssertEqual(Lesson.all[2].guide.map(\.id), ["lesson.addTrain"])
-        XCTAssertEqual(Lesson.all.dropFirst(3).map { $0.guide.map(\.id) }, (4...10).map { ["lesson.\($0)"] })
+        // Decision 376: lessons 3–6 step by step (LessonGuideTests).
+        XCTAssertEqual(Lesson.all[2].guide.map(\.id).first, "lesson.3.lines")
+        XCTAssertEqual(Lesson.all.dropFirst(6).map { $0.guide.map(\.id) }, (7...10).map { ["lesson.\($0)"] })
 
         let world = GameWorld.newGame(lesson: Lesson.all[0])
         XCTAssertEqual(Tutorial.steps(over: world).map(\.id), first)
