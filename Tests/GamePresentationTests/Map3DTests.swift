@@ -205,16 +205,20 @@ final class Map3DTests: XCTestCase {
         XCTAssertTrue(mesh.vertices.contains { $0.color == Map3DPalette.railTop && $0.y == 12 })
     }
 
-    func testATunnelShowsNothingButARailOnTheGroundShowsItsBed() {
+    /// Decision 359 (續): a tunnel shows its bore round its bed and rails,
+    /// as track on the ground shows its bed.
+    func testATunnelShowsItsBoreAndARailOnTheGroundItsBed() {
         let world = GameWorld.newGame()
         var builder = Map3DScene.Builder(originX: 0, originY: 0, region: WorldRegion(bounds: world.bounds), world: world)
-        let line = [Map3DPoint(0, -10, 0), Map3DPoint(100, -10, 0)]
-        builder.addTrackPiece(line, kind: .tunnel)
-        XCTAssertTrue(builder.chunks().isEmpty)
-        builder.addTrackPiece([Map3DPoint(0, 0, 0), Map3DPoint(100, 0, 0)], kind: .surface)
+        builder.addTrackPiece([Map3DPoint(0, -10, 0), Map3DPoint(100, -10, 0)], kind: .tunnel)
+        let tunnel = builder.chunks().reduce(into: Map3DMesh()) { $0.append($1.mesh) }
+        XCTAssertTrue(tunnel.vertices.contains { $0.color == Map3DPalette.tunnelLining })
+        XCTAssertTrue(tunnel.vertices.contains { $0.color == Map3DPalette.ballast })
+        XCTAssertEqual(tunnel.vertices.filter { $0.color == Map3DPalette.railTop }.count, 2 * 4)
+        builder.addTrackPiece([Map3DPoint(0, 0, 50), Map3DPoint(100, 0, 50)], kind: .surface)
         let mesh = builder.chunks().reduce(into: Map3DMesh()) { $0.append($1.mesh) }
-        XCTAssertTrue(mesh.vertices.contains { $0.color == Map3DPalette.ballast })
-        XCTAssertEqual(mesh.vertices.filter { $0.color == Map3DPalette.railTop }.count, 2 * 4)
+        XCTAssertEqual(mesh.vertices.filter { $0.color == Map3DPalette.railTop }.count, 2 * 2 * 4)
+        XCTAssertTrue(mesh.vertices.contains { $0.color == Map3DPalette.ballast && $0.z == 50 + Map3DScene.Builder.bedTop / 2 })
     }
 
     // MARK: - Trains

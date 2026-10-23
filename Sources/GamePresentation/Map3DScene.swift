@@ -220,20 +220,22 @@ public struct Map3DScene: Sendable {
     /// scene of the squares round them with ``Map3DStreaming/apron`` more
     /// each way, on the map, of which only `keys`' chunks are kept (a
     /// chunk with nothing in it is none). Its real trains and street life
-    /// are not kept.
+    /// are not kept. Decision 359 (續): `trackCover` is the whole scene's
+    /// (``trackCover``), worked out again when `nil`.
     public static func chunks(_ keys: some Collection<Map3DStreaming.Key>, of streaming: Map3DStreaming, world: GameWorld,
                               snapshot: RailwaySnapshot? = nil, skyline: CitySkyline? = nil, baseMap: BaseMapTiles? = nil,
                               cityTiles: [CityTileArea] = [], heights: HeightGrid? = nil, lineBands: Map3DLineBands? = nil,
-                              railways: RealRailways? = nil, temples: RealTemples? = nil) -> [Chunk] {
+                              railways: RealRailways? = nil, temples: RealTemples? = nil, trackCover: Map3DTrackCover? = nil) -> [Chunk] {
         guard let box = streaming.region(of: keys) else { return [] }
         let apron = Map3DStreaming.apron * Double(WorldCoordinate.unitsPerMetre), map = streaming.map
         let region = WorldRegion(minX: max(map.minX, box.minX - apron), minY: max(map.minY, box.minY - apron),
                                  maxX: min(map.maxX, box.maxX + apron), maxY: min(map.maxY, box.maxY + apron))
         guard region.minX < region.maxX, region.minY < region.maxY else { return [] }
-        // Decision 359: the whole scene's track cover, not the chunks'.
+        // Decision 359: the whole network's track cover (`trackCover`, the
+        // scene's, or worked out again), which lays the tunnels.
         let scene = Map3DScene(world: world, snapshot: snapshot, skyline: skyline, frame: (region, streaming.originX, streaming.originY),
                                baseMap: baseMap, cityTiles: cityTiles, heights: heights, lineBands: lineBands, railways: railways, temples: temples,
-                               trackCover: Map3DTrackCover())
+                               trackCover: trackCover)
         let wanted = Set(keys)
         return scene.chunks.filter { wanted.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }
     }
@@ -257,11 +259,14 @@ public struct Map3DScene: Sendable {
         }
         builder.addGround(water: real == nil)
         let taken = real.map { builder.addBaseMap($0) } ?? Builder.TakenGround()
+        // Decision 359 (續): the whole network's, so a chunk built apart
+        // lays a bore beside another as the whole scene does.
+        builder.trackCover = trackCover ?? Map3DTrackCover(snapshot, builder: &builder)
         let cleared = builder.addTrack(snapshot)
         if let lineBands { builder.addLineBands(lineBands, snapshot: snapshot) }
         builder.addPlatforms(snapshot)
         builder.addPortals(snapshot)
-        self.trackCover = trackCover ?? Map3DTrackCover(snapshot, builder: &builder)
+        self.trackCover = builder.trackCover
         // Decision 339: the real lines' track, clear of the player's, and
         // their trains on it.
         if let railways, let operations = railways.operations, let frame = RealWorldFrame(world: world) {
@@ -353,6 +358,12 @@ public enum Map3DPalette {
     public static let concrete = Map3DColor.rgb(0xCFCBC2)
     public static let bridge = Map3DColor.rgb(0x8E9CA8)
     public static let portal = Map3DColor.rgb(0x8B9096)
+    /// Decision 359 (續): a tunnel's walls the ground's cool grey a step
+    /// deeper, its roof and floor deeper still (the bore's shade), and its
+    /// lamps the icon's warm yellow, lighter.
+    public static let tunnelWall = Map3DColor.rgb(0xA9AFBE)
+    public static let tunnelLining = Map3DColor.rgb(0x6E7487)
+    public static let tunnelLamp = Map3DColor.rgb(0xFFE2A6)
     public static let platform = Map3DColor.rgb(0xDCD6C8)
     public static let platformEdge = Map3DColor.rgb(0xF2C94C)
     /// Taiwanese station signs' blue, on the canopies.
@@ -533,6 +544,9 @@ extension Map3DScene {
         /// The ground's heights at the 64 m grid's corners, in metres, by
         /// row and column, as ``addGround()`` lays them.
         var corners: [ChunkKey: Float] = [:]
+        /// Decision 359 (續): the whole network's track, for the tunnels
+        /// beside a tunnel (``addBore(_:into:)``).
+        var trackCover = Map3DTrackCover()
 
         static let metre = Double(WorldCoordinate.unitsPerMetre)
 
@@ -807,7 +821,14 @@ extension Map3DScene {
             let middle = line[line.count / 2]
             switch kind {
             case .tunnel:
-                return
+                // Decision 359 (續): its bore round its bed.
+                var bore = Map3DMesh()
+                addBore(line, into: &bore)
+                mesh(at: middle) { mesh in
+                    mesh.append(bore)
+                    mesh.addRibbon(along: line, width: Self.bedTop, lift: -Self.bedDrop, depth: 0.6, top: Map3DPalette.ballast, side: Map3DPalette.ballast,
+                                   topPaint: Self.ballast, sidePaint: Self.concrete)
+                }
             case .viaduct, .bridge:
                 let deckColor = kind == .bridge ? Map3DPalette.bridge : Map3DPalette.concrete
                 let grounds = line.map { ground(at: $0) }
@@ -934,28 +955,6 @@ extension Map3DScene {
             for (point, distance) in zip(path.points, path.distances) where distance > from && distance < to { points.append(point) }
             points.append(path.at(to).point)
             return points
-        }
-
-        // MARK: Tunnel portals
-
-        /// A concrete frame where track enters the ground.
-        mutating func addPortals(_ snapshot: RailwaySnapshot) {
-            for node in snapshot.nodes where node.isTunnelPortal && contains(x: Double(node.position.x), y: Double(node.position.y)) {
-                guard let alignment = snapshot.edges.first(where: { $0.edge.from == node.id || $0.edge.to == node.id }) else { continue }
-                let direction = alignment.edge.from == node.id ? alignment.geometry.startDirection : alignment.geometry.endDirection
-                let forward = Map3DPoint(Float(direction.dx), 0, Float(direction.dy))
-                guard let along = forward.normalized else { continue }
-                let across = Map3DPoint(-along.z, 0, along.x)
-                let base = point(node.position) + Self.lifted + Map3DPoint(0, -Self.bedDrop, 0)
-                mesh(at: base) { mesh in
-                    for side: Float in [-1, 1] {
-                        mesh.addBox(base: base + across * (side * 3.6), forward: along, length: 1.2, width: 1.6, height: 6.4,
-                                    top: Map3DPalette.portal, side: Map3DPalette.portal, frontPaint: Self.concrete, flankPaint: Self.concrete)
-                    }
-                    mesh.addBox(base: base + Map3DPoint(0, 5.6, 0), forward: along, length: 1.2, width: 8.8, height: 1.4,
-                                top: Map3DPalette.portal, side: Map3DPalette.portal, frontPaint: Self.concrete, flankPaint: Self.concrete)
-                }
-            }
         }
 
         // MARK: City
