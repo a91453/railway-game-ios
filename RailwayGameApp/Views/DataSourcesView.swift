@@ -3,8 +3,9 @@ import SwiftUI
 
 /// Where the game's real-world data comes from and the licences it is used
 /// under (``DataSourceCredits``), after the `Railway/` site's data sources
-/// page: from the start screen, and from the map style menu of a real-world
-/// map.
+/// page: from Help and the foot of Settings (decision 381; the start
+/// screen had a capsule of its own), and from the map style menu of a
+/// real-world map.
 struct DataSourcesView: View {
     let launcher: GameLauncher
     @Environment(\.dismiss) private var dismiss

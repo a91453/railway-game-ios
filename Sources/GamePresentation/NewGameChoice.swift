@@ -50,8 +50,25 @@ public enum NewGameChoice: String, CaseIterable, Sendable {
 
     /// What the start screen's New Game says under its title.
     public static func entryDetail(in language: DisplayLanguage) -> String {
-        language.text("A blank map or a real place", "空白地圖或真實地點")
+        language.text("A blank map, a real place, or a challenge with goals", "空白地圖、真實地點，或有目標的挑戰")
     }
+
+    /// Decision 381: the page's last card, the challenges (decision 86:
+    /// a new game with goals), which used to be a start screen button.
+    public static func challengesTitle(in language: DisplayLanguage) -> String {
+        language.text("Challenges", "挑戰")
+    }
+
+    /// What the challenges' card says under its title.
+    public static func challengesDetail(in language: DisplayLanguage) -> String {
+        language.text(
+            "Goals to reach by a deadline, rated gold, silver or bronze",
+            "在期限內達成目標，依完成速度拿金、銀、銅牌"
+        )
+    }
+
+    /// The challenges' card's identifier, for the UI tests.
+    public static let challengesIdentifier = "newGame.challenges"
 
     /// The options' row: the rules, the difficulty and the cash.
     public static func optionsSummary(_ options: NewGameOptions, in language: DisplayLanguage) -> String {
