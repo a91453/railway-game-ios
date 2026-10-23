@@ -463,11 +463,17 @@ extension GameSession {
         isMessageKeptOutOfNews = false
     }
 
+    /// Whether this game collects station stamps (decision 353): not the
+    /// demo, the tutorial or a lesson.
+    var collectsStationStamps: Bool {
+        !news.isDemo && tutorial == nil && lesson == nil
+    }
+
     /// Whether the stamp of station `id` is in the passport (decision
     /// 353), or `nil` where the station is not a real one (or the real
-    /// railways are not read yet).
+    /// railways are not read yet) or the game collects none.
     public func stationStampStatus(of id: StationID) -> StationStampStatus? {
-        guard let railways, let station = world.station(id: id),
+        guard collectsStationStamps, let railways, let station = world.station(id: id),
               let real = StationStamps.realStations(of: [station], in: world, railways: railways).first else { return nil }
         return collectedStamps[real.key].map(StationStampStatus.collected) ?? .notYet
     }

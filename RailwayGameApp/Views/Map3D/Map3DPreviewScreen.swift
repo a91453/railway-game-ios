@@ -307,12 +307,20 @@ final class Map3DSceneCache {
         let city = world.geoAnchor == nil ? nil : BaseMapFiles.city
         // Decision 331: and Taiwan's temples.
         let temples = world.geoAnchor == nil ? nil : BaseMapFiles.temples
+        // Decision 389: and Taiwan's buildings.
+        let footprints = world.geoAnchor == nil ? nil : BaseMapFiles.footprints
+        // Decision 385: and the land with no town on it.
+        let noBuild = world.geoAnchor == nil ? nil : BaseMapFiles.noBuild
         let task = Task.detached(priority: .userInitiated) {
             let baseMap = tiles.flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }.flatMap { try? BaseMapTiles(data: $0) }
             let source = Map3DChunkSource(world: world, snapshot: world.railwaySnapshot(), skyline: CitySkyline(world: world), baseMap: baseMap,
-                                          cityTiles: city.map(CityTileArea.areas(in:)) ?? [], heights: heights,
+                                          cityTiles: city.map(CityTileArea.areas(in:)) ?? [],
+                                          footprints: footprints.flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }
+                                              .flatMap { try? FootprintTiles(data: $0) },
+                                          heights: heights,
                                           lineBands: Map3DLineBands(world: world, palette: palette), railways: railways,
-                                          temples: temples.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealTemples(data: $0) })
+                                          temples: temples.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealTemples(data: $0) },
+                                          noBuild: noBuild.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealNoBuildLand(data: $0) })
             return Map3DBuiltScene(scene: source.scene(focus: focus), source: source)
         }
         self.key = key
@@ -339,14 +347,16 @@ struct Map3DChunkSource: Sendable {
     let skyline: CitySkyline
     let baseMap: BaseMapTiles?
     let cityTiles: [CityTileArea]
+    let footprints: FootprintTiles?
     let heights: HeightGrid?
     let lineBands: Map3DLineBands
     let railways: RealRailways?
     let temples: RealTemples?
+    let noBuild: RealNoBuildLand?
 
     func scene(focus: (x: Double, y: Double)?) -> Map3DScene {
-        Map3DScene(world: world, snapshot: snapshot, skyline: skyline, focus: focus, baseMap: baseMap, cityTiles: cityTiles, heights: heights,
-                   lineBands: lineBands, railways: railways, temples: temples)
+        Map3DScene(world: world, snapshot: snapshot, skyline: skyline, focus: focus, baseMap: baseMap, cityTiles: cityTiles,
+                   footprints: footprints, heights: heights, lineBands: lineBands, railways: railways, temples: temples, noBuild: noBuild)
     }
 
     /// Decision 359 (續): with the scene's `trackCover`, which lays the
@@ -354,7 +364,8 @@ struct Map3DChunkSource: Sendable {
     /// `detail`.
     func chunks(_ keys: [Map3DStreaming.Key], of grid: Map3DStreaming, trackCover: Map3DTrackCover, detail: Map3DPoint) -> [Map3DScene.Chunk] {
         Map3DScene.chunks(keys, of: grid, world: world, snapshot: snapshot, skyline: skyline, baseMap: baseMap, cityTiles: cityTiles,
-                          heights: heights, lineBands: lineBands, railways: railways, temples: temples, trackCover: trackCover, detail: detail)
+                          footprints: footprints, heights: heights, lineBands: lineBands, railways: railways, temples: temples, noBuild: noBuild,
+                          trackCover: trackCover, detail: detail)
     }
 }
 

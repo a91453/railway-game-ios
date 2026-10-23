@@ -117,6 +117,7 @@
 		9108B7149F1546CA165D177A /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 0DE544A75839254BE9C37E2D /* PrivacyInfo.xcprivacy */; };
 		92F90DD1D5DAE3F80BACEB39 /* MapMarkTapUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CEAC255D3FFB54FF35BCF39 /* MapMarkTapUITests.swift */; };
 		945BE0F504200741317CF54C /* MapLayerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8363C536E3BE341871325469 /* MapLayerSheet.swift */; };
+		94E81FC86FD208CF85F36A0E /* taiwan_no_build.json in Resources */ = {isa = PBXBuildFile; fileRef = 69236EA935C27C1BCE988215 /* taiwan_no_build.json */; };
 		95294AB1D11D0C95F25EA89B /* tra_pingxi_runs.json in Resources */ = {isa = PBXBuildFile; fileRef = C12C3242BE7CC739B03D2613 /* tra_pingxi_runs.json */; };
 		991AFFBF0CFA0B43EA636257 /* TrainLoadBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F0A16C9226467AD2F29C92B /* TrainLoadBar.swift */; };
 		9A5C367B38AC3D80FBCE8038 /* StationMasterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24B425FF34AEB844CE2FA815 /* StationMasterView.swift */; };
@@ -279,6 +280,7 @@
 		6630BFF287E651429AA31CC3 /* tra-yilan-schedule.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "tra-yilan-schedule.json"; sourceTree = "<group>"; };
 		66DEEFE5F63CD7DD3B715B3B /* TickStable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TickStable.swift; sourceTree = "<group>"; };
 		68B0C0FD89F59C53A9685C67 /* sanying_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = sanying_times.json; sourceTree = "<group>"; };
+		69236EA935C27C1BCE988215 /* taiwan_no_build.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = taiwan_no_build.json; sourceTree = "<group>"; };
 		6A22BE1BF7A8EAABCEEAE25D /* StationPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationPanel.swift; sourceTree = "<group>"; };
 		6B5BA7FA721C9F96C83683A7 /* taiwan_population.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = taiwan_population.json; sourceTree = "<group>"; };
 		6F0A16C9226467AD2F29C92B /* TrainLoadBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainLoadBar.swift; sourceTree = "<group>"; };
@@ -438,6 +440,7 @@
 			children = (
 				CF26D5EFF8FE10DB6A8376C9 /* taiwan_coverage.dat */,
 				2C59CD3C076F73D4C4D5094B /* taiwan_heights.dat */,
+				69236EA935C27C1BCE988215 /* taiwan_no_build.json */,
 				CCCFEDE062F8A4532BBAA221 /* taiwan_place_names.json */,
 				894953309F6C9C2D5C1F0DB6 /* taiwan_places.json */,
 				6B5BA7FA721C9F96C83683A7 /* taiwan_population.json */,
@@ -846,6 +849,7 @@
 				A3C9D6B6FECF2BBDAD9C372A /* station_transfers.json in Resources */,
 				A904805EE220E391FA3C4618 /* taiwan_coverage.dat in Resources */,
 				D4FDC4F705567E31E0A61764 /* taiwan_heights.dat in Resources */,
+				94E81FC86FD208CF85F36A0E /* taiwan_no_build.json in Resources */,
 				4CC1E6E850C8B587B582C668 /* taiwan_place_names.json in Resources */,
 				8163932343EEB39A635118DD /* taiwan_places.json in Resources */,
 				19E3457A000AB98921141272 /* taiwan_population.json in Resources */,

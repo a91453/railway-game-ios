@@ -9,9 +9,12 @@ whole island and one per county.
     python3 tools/overture-footprint-tiles/build_footprint_tiles.py \\
         extract 2026-09-23.1 COUNTIES overture_footprints.parquet
     python3 tools/overture-footprint-tiles/build_footprint_tiles.py \\
-        build overture_footprints.parquet OUT [TOLERANCE]
-    python3 tools/overture-footprint-tiles/build_footprint_tiles.py \\
         heights overture_footprints.parquet POPULATION heights.json
+    python3 tools/overture-footprint-tiles/build_footprint_tiles.py \\
+        storeys overture_footprints.parquet POPULATION heights.json \\
+        GHSL_DIR TAICHUNG TAIPEI.shp storeys.parquet
+    python3 tools/overture-footprint-tiles/build_footprint_tiles.py \\
+        build overture_footprints.parquet OUT [TOLERANCE] [storeys.parquet]
     python3 tools/overture-footprint-tiles/build_footprint_tiles.py \\
         window OUT/taiwan.pmtiles LAT LON SIDE heights.json POPULATION window.json
 
@@ -28,20 +31,42 @@ boxes (Taiwan and Penghu, Kinmen, Matsu), with each building's use
 (`subtype`), and keeps those whose centroid lies in a county or within
 2 km of one, each with its county. Underground buildings are left out.
 
+`storeys` gives every building its storeys (decision 386's point 6,
+decision 389): the first of these that has a value, else the density
+guess. Each is written with where it came from (`STOREYS_FROM`), so a
+source added or dropped later is only a matter of running this again.
+
+    NLSC's national 3D buildings   (not used until the owner has asked)
+    a city's building map          Taichung's of 2025, 2024 and 2022
+                                   (data.gov.tw 158889, 152106, 162900)
+    OpenStreetMap's tags           Overture's `num_floors`, else `height`
+    Taipei's building permit map   (data.gov.tw 151936)
+    the density guess              `proposed_storeys`, GHSL picking p25,
+                                   the median or p75 (`picked_storeys`)
+
+TAICHUNG is Taichung's maps' shapefiles, newest first, joined by `:`
+(the 2025 and 2024 maps come as 7z and RAR archives: `bsdtar -xf`, see
+the README). They and TAIPEI.shp are matched as
+`measure_height_sources.py` matches them (overlap of at least half the
+footprint). GHSL_DIR holds
+GHS-BUILT-H ANBH R2023A's tiles R6_C30 and R7_C30, read by `tiff.py`.
+
 `build` writes OUT/taiwan.pmtiles, OUT/counties/<code>.pmtiles and
 OUT/report.json (sizes before and after compression, bytes a building,
 what simplification did to the shapes). TOLERANCE is Douglas-Peucker's, in
-metres (default 0.5). The same extract gives byte-identical files: rows,
-buildings and rings in a fixed order, gzip at level 9 without a time stamp.
+metres (default 0.5). With `storeys`' file, every building's storeys and
+where they came from; without, the tags' (0 when unknown). The same input
+gives byte-identical files: rows, buildings and rings in a fixed order,
+gzip at level 9 without a time stamp.
 
 A tile (before gzip), every number an unsigned LEB128 varint, signed ones
 zigzagged:
 
-    version (1), buildings
+    version (2), buildings
     each building:
-        attributes: storeys << 5 | use << 1 | source
-            storeys: Overture's `num_floors`, else `height` / 3.2 m
-                     rounded, 1–255; 0 when unknown
+        attributes: storeys << 8 | from << 5 | use << 1 | source
+            storeys: 1–255; 0 when unknown
+            from: STOREYS_FROM's index, where the storeys came from
             use: USES' index (0 unknown)
             source: 0 OpenStreetMap, 1 Shi et al.'s East Asian buildings
         rings (the outline first, then its holes)
@@ -70,6 +95,7 @@ import sys
 import zlib
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, '..', 'basemap'))
 sys.path.insert(0, os.path.join(HERE, '..', 'real-world-population'))
 
@@ -84,6 +110,10 @@ OSM = 'OpenStreetMap'
 # Overture's building subtypes; a building's `use` is the index + 1.
 USES = ['agricultural', 'civic', 'commercial', 'education', 'entertainment', 'industrial', 'medical',
         'military', 'outbuilding', 'religious', 'residential', 'service', 'transportation']
+# Where a building's storeys came from (3 bits); `nlsc` is kept for the
+# national 3D buildings, used once the owner has asked for them.
+STOREYS_FROM = ['guess', 'tags', 'cityMap', 'permits', 'nlsc']
+VERSION = 2
 # Rings smaller than these (m²) after simplifying are dropped.
 SMALLEST_OUTLINE = 2.0
 SMALLEST_HOLE = 1.0
@@ -276,7 +306,7 @@ def storeys_of(floors, height):
     return 0
 
 
-def encode_tile(key, rows, tolerance):
+def encode_tile(key, rows, tolerance, storeys=None):
     """One tile's bytes before gzip, and what simplifying did:
     [buildings, rings dropped, points before, points after, area before (m²),
     sum |area change| (m²), buildings whose area moved over 5 %, largest
@@ -288,8 +318,9 @@ def encode_tile(key, rows, tolerance):
     stats = [0, 0, 0, 0, 0.0, 0.0, 0, 0.0]
     buildings = []
     for _id, floors, height, subtype, dataset, _county, _lon, _lat, wkb in rows:
-        attributes = storeys_of(floors, height) << 5 | (USES.index(subtype) + 1 if subtype in USES else 0) << 1 \
-            | (0 if dataset == OSM else 1)
+        count, origin = storeys[_id] if storeys and _id in storeys else (storeys_of(floors, height), 1)
+        attributes = (count << 8 | (origin if count else 0) << 5 | (USES.index(subtype) + 1 if subtype in USES else 0) << 1
+                      | (0 if dataset == OSM else 1))
         for polygon in polygons(wkb):
             rings = []
             before = after = 0.0
@@ -331,7 +362,7 @@ def encode_tile(key, rows, tolerance):
     # Rows of 256 units, alternating direction, so steps stay short.
     buildings.sort(key=lambda b: (b[0][0], b[0][1] if b[0][0] % 2 == 0 else -b[0][1], b[0][2:]))
     out = bytearray()
-    varint(1, out)
+    varint(VERSION, out)
     varint(len(buildings), out)
     cursor = (0, 0)
     for _, attributes, rings in buildings:
@@ -348,7 +379,7 @@ def encode_tile(key, rows, tolerance):
 
 def decode_tile(data):
     """The buildings of a tile's bytes (unzipped): (storeys, use, source,
-    rings of (x, y) tile units)."""
+    rings of (x, y) tile units, where the storeys came from)."""
     at = 0
 
     def read():
@@ -366,7 +397,7 @@ def decode_tile(data):
         v = read()
         return (v >> 1) ^ -(v & 1)
 
-    assert read() == 1
+    assert read() == VERSION
     cursor = [0, 0]
     out = []
     for _ in range(read()):
@@ -379,14 +410,24 @@ def decode_tile(data):
                 cursor[1] += signed()
                 ring.append(tuple(cursor))
             rings.append(ring)
-        out.append((attributes >> 5, attributes >> 1 & 15, attributes & 1, rings))
+        out.append((attributes >> 8, attributes >> 1 & 15, attributes & 1, rings, attributes >> 5 & 7))
     assert at == len(data)
     return out
 
 
+STOREYS = {}
+
+
+def _load_storeys(path):
+    global STOREYS
+    import duckdb
+    STOREYS = {id_: (count, origin) for id_, count, origin in
+               duckdb.connect().sql(f"SELECT id, storeys, origin FROM read_parquet('{path}')").fetchall()}
+
+
 def work(job):
     key, rows, tolerance = job
-    raw, stats = encode_tile(key, rows, tolerance)
+    raw, stats = encode_tile(key, rows, tolerance, STOREYS)
     return key, raw, gzip.compress(raw, 9, mtime=0), stats, _mode([r[5] for r in rows])
 
 
@@ -412,12 +453,15 @@ def tiles_of(extract_path):
     return tiles
 
 
-def build(extract_path, out, tolerance='0.5'):
+def build(extract_path, out, tolerance='0.5', storeys_path=None):
     from build_basemap import tile_id, write_pmtiles
     tolerance = float(tolerance)
+    if storeys_path:
+        _load_storeys(storeys_path)
     tiles = tiles_of(extract_path)
     jobs = [(key, tiles[key], tolerance) for key in sorted(tiles)]
-    with multiprocessing.Pool() as pool:
+    # Forked: the workers share STOREYS as it is.
+    with multiprocessing.get_context('fork').Pool() as pool:
         results = pool.map(work, jobs, chunksize=64)
     os.makedirs(os.path.join(out, 'counties'), exist_ok=True)
     by_county, everything = {}, []
@@ -425,6 +469,7 @@ def build(extract_path, out, tolerance='0.5'):
     raw_bytes = 0
     sources = [0, 0]
     with_storeys = 0
+    origins = [0] * len(STOREYS_FROM)
     for key, raw, packed, stats, county in results:
         tid = tile_id(ZOOM, key[0], key[1])
         everything.append((tid, packed))
@@ -433,9 +478,10 @@ def build(extract_path, out, tolerance='0.5'):
         for i in range(7):
             totals[i] += stats[i]
         totals[7] = max(totals[7], stats[7])
-        for storeys, _, source, _ in decode_tile(raw):
+        for storeys, _, source, _, origin in decode_tile(raw):
             sources[source] += 1
             with_storeys += storeys > 0
+            origins[origin] += storeys > 0
     names = county_names(extract_path)
 
     def archive(path, entries):
@@ -444,10 +490,15 @@ def build(extract_path, out, tolerance='0.5'):
         east = (max(k[0] for k in keys) + 1) / (1 << ZOOM) * 360 - 180
         north = math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * min(k[1] for k in keys) / (1 << ZOOM)))))
         south = math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * (max(k[1] for k in keys) + 1) / (1 << ZOOM)))))
-        metadata = {'name': 'Taiwan building footprints', 'format': 'footprints/1', 'zoom': ZOOM, 'extent': EXTENT,
-                    'tolerance': tolerance, 'uses': USES,
+        metadata = {'name': 'Taiwan building footprints', 'format': f'footprints/{VERSION}', 'zoom': ZOOM, 'extent': EXTENT,
+                    'tolerance': tolerance, 'uses': USES, 'storeysFrom': STOREYS_FROM,
                     'attribution': 'Overture Maps Foundation (ODbL 1.0): OpenStreetMap contributors (ODbL 1.0), '
-                                   'Shi et al., East Asian buildings, doi:10.5281/zenodo.8174931 (CC BY 4.0)'}
+                                   'Shi et al., East Asian buildings, doi:10.5281/zenodo.8174931 (CC BY 4.0)'
+                                   + ('. Storeys: Taichung City Government, building maps of 2022, 2024 and 2025; '
+                                      'Taipei City Construction Management Office, building permit map '
+                                      '(Open Government Data License, version 1.0); European Commission JRC, GHS-BUILT-H '
+                                      'R2023A, doi:10.2905/85005901-3A49-48DD-9D19-6261354F56FE (CC BY 4.0); '
+                                      'WorldPop (CC BY 4.0)' if STOREYS else '')}
         write_pmtiles(path, [(t, b) for t, b, *_ in entries], metadata, (west, south, east, north),
                       ((west + east) / 2, (south + north) / 2, ZOOM), tile_type=0, tile_compression=2, zooms=(ZOOM, ZOOM))
         return os.path.getsize(path)
@@ -470,6 +521,7 @@ def build(extract_path, out, tolerance='0.5'):
         'buildings': totals[0],
         'fromOpenStreetMap': sources[0], 'fromShi': sources[1],
         'withStoreys': with_storeys,
+        'storeysFrom': dict(zip(STOREYS_FROM, origins)),
         'ringsDropped': totals[1],
         'pointsBefore': totals[2], 'pointsAfter': totals[3],
         'footprintKm2': round(totals[4] / 1e6, 2),
@@ -537,8 +589,7 @@ def heights(extract_path, population_path, out):
     """).fetchall()
     known, everyone = {}, {}
     for floors, height, subtype, lon, lat, size in rows:
-        group = 'industrial' if subtype in ('industrial', 'agricultural', 'outbuilding') else \
-            'other' if subtype not in (None, 'residential', 'commercial') else 'homes'
+        group = group_of(subtype)
         key = (group, band(density(lon, lat), DENSITY_BANDS), band(size, AREA_BANDS))
         everyone[key] = everyone.get(key, 0) + 1
         storeys = storeys_of(floors, height)
@@ -571,6 +622,91 @@ def proposed_storeys(table, group, density, size, x, y):
     return low + (h ^ (h >> 15)) % (high - low + 1)
 
 
+def group_of(subtype):
+    return 'industrial' if subtype in ('industrial', 'agricultural', 'outbuilding') else \
+        'other' if subtype not in (None, 'residential', 'commercial') else 'homes'
+
+
+def picked_storeys(table, group, density, size, metres, x, y):
+    """Decision 389: the density guess, GHSL's height of the 100 m cell
+    (`metres`, 0 or None where it has none) picking the band's p75 when a
+    storey or more above its median, p25 when a storey or more below, the
+    median else; where GHSL has nothing, `proposed_storeys`' hash of `x`
+    and `y`. A band with too few known buildings picks from its default
+    range alike."""
+    entry = table.get((group, band(density, DENSITY_BANDS), band(size, AREA_BANDS)))
+    if not entry or entry['known'] < 30:
+        low, high = (1, 2) if group == 'industrial' else (2, 4)
+        middle = (low + high) // 2
+    else:
+        low, middle, high = entry['p25'], entry['median'], max(entry['p25'], entry['p75'])
+    if not metres:
+        return proposed_storeys(table, group, density, size, x, y)
+    guess = metres / LEVEL_HEIGHT
+    return high if guess >= middle + 1 else low if guess <= middle - 1 else middle
+
+
+def permit_fits(storeys, size):
+    """Whether a permit's storeys can be this footprint's (decision 389):
+    a permit's polygon is the whole site, so its tower's count also lands
+    on the podium, the station hall or a shed beside it. Not over Taipei
+    101's 101, not over eight times as tall as the footprint is across,
+    and no tower of 20 or more on a footprint over 5,000 m²."""
+    return storeys <= 101 and storeys * LEVEL_HEIGHT <= 8 * math.sqrt(size) and not (storeys >= 20 and size > 5000)
+
+
+def storeys(extract_path, population_path, heights_path, ghsl_dir, taichung, taipei, out):
+    """Every building's storeys and where they came from (decision 386's
+    point 6), for `build`."""
+    import duckdb
+    import measure_height_sources as M
+    connection = M.connect(extract_path)
+    M.load_twd97(connection, 'taipei', taipei,
+                 "coalesce(nullif(bud_floor::INT, 0), try_cast(regexp_extract(budatt_no, '(\\d+)F$', 1) AS INT))")
+    # Taichung's maps newest first: a building takes the first that covers it.
+    city = {}
+    for index, path in enumerate(taichung.split(os.pathsep)):
+        M.load_twd97(connection, f'taichung{index}', path, 'B1D')
+        for k, v in M.matched(connection, f'taichung{index}').items():
+            city.setdefault(k, max(1, min(255, round(v))))
+        connection.sql(f'DROP TABLE taichung{index}')
+    permits = {k: max(1, min(255, round(v))) for k, v in M.matched(connection, 'taipei').items()}
+    ghsl = M.ghsl_lookup(ghsl_dir)
+    density = density_lookup(population_path)
+    table = {(e['group'], DENSITY_BANDS.index(e['density']), AREA_BANDS.index(e['area'])): e
+             for e in json.load(open(heights_path))['table']}
+    square = (math.radians(1) * EARTH) ** 2
+    rows = connection.sql(f"""
+        SELECT id, num_floors, height, subtype, lon, lat, ST_Area(geom) * {square} * cos(radians(lat)) FROM o ORDER BY id
+    """).fetchall()
+    out_rows, counts = [], [0] * len(STOREYS_FROM)
+    for id_, floors, height, subtype, lon, lat, size in rows:
+        tagged = storeys_of(floors, height)
+        if id_ in city:
+            value, origin = city[id_], STOREYS_FROM.index('cityMap')
+        elif tagged:
+            value, origin = tagged, STOREYS_FROM.index('tags')
+        elif id_ in permits and permit_fits(permits[id_], size):
+            value, origin = permits[id_], STOREYS_FROM.index('permits')
+        else:
+            value = picked_storeys(table, group_of(subtype), density(lon, lat), size, ghsl(lon, lat),
+                                   int(lon * 1e5), int(lat * 1e5))
+            origin = STOREYS_FROM.index('guess')
+        counts[origin] += 1
+        out_rows.append((id_, value, origin))
+    # Through a CSV beside `out`: DuckDB's row-by-row insert takes hours.
+    import csv
+    scratch = out + '.csv'
+    with open(scratch, 'w', newline='') as file:
+        csv.writer(file).writerows(out_rows)
+    duckdb.connect().sql(f"""
+        COPY (SELECT * FROM read_csv('{scratch}', header = false, columns = {{'id': 'VARCHAR', 'storeys': 'INTEGER', 'origin': 'INTEGER'}})
+              ORDER BY id) TO '{out}' (FORMAT parquet, COMPRESSION zstd)
+    """)
+    os.remove(scratch)
+    print(json.dumps(dict(zip(STOREYS_FROM, counts))), file=sys.stderr)
+
+
 # --- a window for the 3D map's measurement ----------------------------------
 
 def window(archive_path, lat, lon, side, heights_path, population_path, out):
@@ -594,7 +730,7 @@ def window(archive_path, lat, lon, side, heights_path, population_path, out):
             blob = entries.get(tile_id_of(tx, ty))
             if blob is None:
                 continue
-            for storeys, use, source, rings in decode_tile(gzip.decompress(blob)):
+            for storeys, use, source, rings, _ in decode_tile(gzip.decompress(blob)):
                 def geo(p):
                     wx, wy = tx + p[0] / EXTENT, ty + p[1] / EXTENT
                     return (math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * wy / (1 << ZOOM))))),
@@ -607,8 +743,7 @@ def window(archive_path, lat, lon, side, heights_path, population_path, out):
                 size = abs(sum((points[i - 1][1] * points[i][0] - points[i][1] * points[i - 1][0])
                                for i in range(len(points)))) / 2 * 111_320 ** 2 * cos
                 subtype = USES[use - 1] if use else None
-                group = 'industrial' if subtype in ('industrial', 'agricultural', 'outbuilding') else \
-                    'other' if subtype not in (None, 'residential', 'commercial') else 'homes'
+                group = group_of(subtype)
                 known = storeys > 0
                 if not known:
                     storeys = proposed_storeys(table, group, density(lo, la), size, *rings[0][0])
@@ -671,8 +806,10 @@ if __name__ == '__main__':
     command, arguments = (sys.argv[1], sys.argv[2:]) if len(sys.argv) > 1 else ('', [])
     if command == 'extract' and len(arguments) == 3:
         extract(*arguments)
-    elif command == 'build' and len(arguments) in (2, 3):
+    elif command == 'build' and len(arguments) in (2, 3, 4):
         build(*arguments)
+    elif command == 'storeys' and len(arguments) == 7:
+        storeys(*arguments)
     elif command == 'heights' and len(arguments) == 3:
         heights(*arguments)
     elif command == 'window' and len(arguments) == 7:

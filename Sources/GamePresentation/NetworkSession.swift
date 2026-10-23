@@ -133,7 +133,10 @@ extension GameSession {
     /// stretch). Building it on a copy of the world takes milliseconds, and
     /// the map, its build button and the panels read it many times a frame
     /// while a finger draws; so it is worked out once for each draft (the
-    /// ends and the tool's options) and world, and kept until one changes.
+    /// ends and the tool's options) and command, and kept until one changes.
+    /// Not for each tick: a player who presses play with a draft open had
+    /// it worked out again at every one (PLAYER_FEEDBACK 80.1 #1); ✓ plans
+    /// the build again on the world it builds in.
     var networkDraftPreview: (preview: NetworkPreview, crossing: [WorldCoordinate])? {
         guard networkMode == .build, let start = networkStart, let end = networkEnd else { return nil }
         // Read so that what shows the preview is redrawn when the world
@@ -142,9 +145,9 @@ extension GameSession {
         let key = NetworkPreviewMemo.Key(
             start: start, end: end, structure: networkStructure, height: networkHeight, followsTrack: networkFollowsTrack,
             buildsScissors: networkBuildsScissors, easesGrade: networkEasesGrade,
-            buildsDouble: networkBuildsDouble, doubleChosen: networkDoubleChosen, doubleSide: networkDoubleSide, traces: tracesRealRailway, worldRevision: worldRevision
+            buildsDouble: networkBuildsDouble, doubleChosen: networkDoubleChosen, doubleSide: networkDoubleSide, traces: tracesRealRailway, commandRevision: commandRevision
         )
-        if let memo = networkPreviewMemo, memo.key == key { return memo.preview }
+        if let memo = networkPreviewMemo, memo.key == key, memo.affordable == affords(memo.preview?.preview.cost) { return memo.preview }
         let found: (preview: NetworkPreview, crossing: [WorldCoordinate])? = if let scissors = scissorsPreview() {
             scissors
         } else if let traced = tracePreview(from: start, to: end) {
@@ -156,7 +159,8 @@ extension GameSession {
             // middle is: a second line.
             preview(from: start, to: end)
         }
-        networkPreviewMemo = NetworkPreviewMemo(key: key, preview: found)
+        networkPreviewMemo = NetworkPreviewMemo(key: key, preview: found, affordable: affords(found?.preview.cost))
+        buildPreviewsWorkedOut += 1
         return found
     }
 
@@ -1209,8 +1213,8 @@ extension MapScale {
 }
 
 /// The track preview of the picked ends, and what it was worked out for:
-/// the draft (the ends and the network tool's options) and the world's
-/// revision (``GameSession/networkDraftPreview``).
+/// the draft (the ends and the network tool's options) and the session's
+/// ``GameSession/commandRevision`` (``GameSession/networkDraftPreview``).
 struct NetworkPreviewMemo {
     struct Key: Equatable {
         let start: NetworkAnchor
@@ -1224,11 +1228,13 @@ struct NetworkPreviewMemo {
         let doubleChosen: Bool
         let doubleSide: PlatformTrackSide
         let traces: Bool
-        let worldRevision: Int
+        let commandRevision: Int
     }
 
     let key: Key
     let preview: (preview: NetworkPreview, crossing: [WorldCoordinate])?
+    /// Whether the cash paid for it then (``GameSession/affords(_:)``).
+    let affordable: Bool?
 }
 
 extension GameWorld {
