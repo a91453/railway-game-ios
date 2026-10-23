@@ -283,6 +283,8 @@ extension Map3DScene.Builder {
             let forth = (dx * along.x + dz * along.z) / mark.length + 0.5
             return (Float(u.0 + (u.1 - u.0) * across), Float(v.0 + (v.1 - v.0) * (1 - forth)))
         }
+        // Decision 375: none where the road gives way to a trench.
+        guard !givesWay(at: mark.centre, along: (mark.along.x, mark.along.z)) else { return }
         let lift = Self.centreLineLift
         for row in gridCell(corners.map(\.z).min()!, origin: originY)...gridCell(corners.map(\.z).max()!, origin: originY) {
             let top = gridLine(row, origin: originY), bottom = gridLine(row + 1, origin: originY)
