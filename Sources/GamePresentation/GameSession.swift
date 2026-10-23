@@ -154,6 +154,13 @@ public final class GameSession {
     /// ``routeWaitText(of:)``), kept for the ``worldRevision`` it was read
     /// for; the game loop reads it off the main actor with each tick.
     @ObservationIgnored var trafficMemo: (revision: Int, reading: TrafficReading)?
+    /// Decision 379: the trains' glide the map last showed
+    /// (``trainMotion(after:at:)``), which the game loop's tick glides on
+    /// from off the main actor; `nil` while no map shows them.
+    @ObservationIgnored var shownGlide: TrainMotion?
+    /// Decision 379: the glide the tick worked out for the world of
+    /// `revision`, from the shown glide seen at `from` (its time).
+    @ObservationIgnored var glideMemo: (revision: Int, from: Double, motion: TrainMotion)?
 
     /// The language of the session's messages and suggested names, and of
     /// the text the app derives from the world (Stage L1). Set once: iOS
@@ -1523,6 +1530,9 @@ public final class GameSession {
         /// Decision 330: the station master's advice for ``world``, when
         /// the step worked it out.
         var advice: WorkedAdvice?
+        /// Decision 379: the map's glide to ``world``, from the glide seen
+        /// at `from`, when the step worked it out.
+        var glide: (from: Double, motion: TrainMotion)?
     }
 
     /// `world` advanced by `ticks`, all or nothing. `listening` (sounds
@@ -1581,6 +1591,8 @@ public final class GameSession {
             // Decision 195: the ticks that ran, and the followed train's way.
             ticksRun += Int64(step.ticks)
             if let traffic = step.traffic { trafficMemo = (worldRevision, traffic) }
+            // Decision 379: likewise, the map's glide.
+            glideMemo = step.glide.map { (worldRevision, $0.from, $0.motion) }
             // Decision 330: likewise, for this world only.
             workedAdvice = step.advice.map { (worldRevision, $0) }
             // Game time moved on: no edit before it can be undone. Emptied
@@ -1648,6 +1660,9 @@ public final class GameSession {
         /// Decision 330: what the tick needs to work out the station
         /// master's advice, which the news reads once a game hour.
         var advice: AdviceProbe?
+        /// Decision 379: the glide the map showed last, which the tick's
+        /// glide goes on from; `nil` with no map, or at 1×.
+        var glide: TrainMotion?
 
         /// Advances ``world`` by one tick off the main actor, and reads
         /// what traffic control shows of it there too (decision 64's later
@@ -1667,6 +1682,10 @@ public final class GameSession {
                         // Decision 330: some 40 ms on the Yilan Line, once
                         // a game hour.
                         step.advice = tick.advice?.advice(of: step.world)
+                        // Decision 379: the map's glide, tens of ms on the
+                        // High Speed Rail at 6000×; its time is given when
+                        // it is shown.
+                        step.glide = tick.glide.map { ($0.time, TrainMotion(world: step.world, previous: $0, time: $0.time)) }
                         return step
                     }
                 }
@@ -1681,8 +1700,35 @@ public final class GameSession {
         return LoopTick(
             world: world, revision: worldRevision, listening: playSound != nil, train: selectedTrainID, language: language,
             previousTraffic: trafficMemo?.reading,
-            advice: AdviceProbe(hour: newsWatch.hour, leader: lineLossLeaderMemo.kept(atRevision: commandRevision))
+            advice: AdviceProbe(hour: newsWatch.hour, leader: lineLossLeaderMemo.kept(atRevision: commandRevision)),
+            glide: world.clock.speed == .x1 ? nil : shownGlide
         )
+    }
+
+    // MARK: - The trains' glide on the map (decision 379)
+
+    /// The map's trains for the world as it is now, gliding on from
+    /// `previous` (the glide it showed last) and seen at `time` (seconds
+    /// on the map's clock): ``TrainMotion/init(world:previous:time:)``,
+    /// worked out with the tick off the main actor when the tick glided on
+    /// from this same `previous`, or else here.
+    public func trainMotion(after previous: TrainMotion, at time: Double) -> TrainMotion {
+        let motion: TrainMotion
+        if let memo = glideMemo, memo.revision == worldRevision, memo.from == previous.time, world.clock.speed != .x1 {
+            motion = memo.motion.seen(at: time, after: previous, speed: world.clock.speed)
+        } else {
+            motion = TrainMotion(world: world, previous: previous, time: time)
+        }
+        glideMemo = nil
+        shownGlide = motion
+        return motion
+    }
+
+    /// The map no longer shows the trains: the ticks stop working out
+    /// their glide.
+    public func mapStoppedGliding() {
+        shownGlide = nil
+        glideMemo = nil
     }
 
     // MARK: - Traffic control on the map (decision 64)

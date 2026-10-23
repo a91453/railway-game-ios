@@ -564,6 +564,10 @@ enum BaseMapFiles {
     /// buildings on a real-world map; `nil` if the app has none.
     static let footprints = file("taiwan_buildings.pmtiles")
 
+    /// Decision 385: the land the 3D map builds no town on and its
+    /// airports' buildings; `nil` if the app has none.
+    static let noBuild = file("taiwan_no_build.json")
+
     private static func file(_ name: String) -> URL? {
         folder.map { $0.appendingPathComponent(name) }.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
     }
