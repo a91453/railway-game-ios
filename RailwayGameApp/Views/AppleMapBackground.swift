@@ -128,7 +128,7 @@ struct AppleMapBackground: UIViewRepresentable {
 
     func updateUIView(_ map: FollowingMapView, context: Context) {
         let margins = UIEdgeInsets(
-            top: 0, left: 10 + safeArea.leading, bottom: 6 + safeArea.bottom, right: 10 + safeArea.trailing
+            top: 0, left: HUDMargins.edge + safeArea.leading, bottom: 6 + safeArea.bottom, right: HUDMargins.edge + safeArea.trailing
         )
         if map.layoutMargins != margins {
             map.layoutMargins = margins

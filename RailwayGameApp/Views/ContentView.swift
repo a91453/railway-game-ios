@@ -654,7 +654,9 @@ struct ContentView: View {
         }
     }
 
-    private static let margin: CGFloat = 10
+    /// Decision 382: one inset inside the safe area for everything floating
+    /// over the map (``HUDMargins``), and the gap between them.
+    private static let margin = CGFloat(HUDMargins.edge)
 
     private var map: some View {
         MapView(session: session, camera: $mapCamera)
@@ -862,12 +864,7 @@ private struct ToolsColumn: View {
         ViewThatFits(in: .vertical) {
             groups(compact: false)
             groups(compact: true)
-            ScrollView {
-                groups(compact: true)
-            }
-            .scrollBounceBehavior(.basedOnSize)
-            .scrollIndicators(.hidden)
-            .tutorialClip()
+            scrolling
         }
         .frame(width: ToolColumnStyle.width)
         // Offered no more than that, and as tall as what it shows: a frame
@@ -878,25 +875,91 @@ private struct ToolsColumn: View {
 
     private func groups(compact: Bool) -> some View {
         VStack(alignment: .center, spacing: ControlPanel.tileGap) {
-            // The card's toggle stays on top while building too: a chosen
-            // tool keeps the card open, and folding it shows the map. Not
-            // on the tutorial's steps that point into the card, which keep
-            // it open, as in the dock.
-            if session.tutorial?.step.usesDetailsCard != true {
-                ControlDetailsToggle(isOpen: isOpen, action: toggle)
-                    .disabled(!canToggle)
-                    .controlTile()
-            }
+            overBuild
             if BuildToolRail.isShown(session) {
-                BuildToolButtons(session: session)
-                    .controlTile()
                 // Build where it was, lit: a second tap closes the tools.
                 ControlPanel(session: session, arrangement: .buildEntry)
-            } else {
-                ControlPanel(session: session, arrangement: .toolsColumn)
             }
         }
         .environment(\.toolColumnStyle, ToolColumnStyle(compact: compact))
+    }
+
+    /// The card's toggle and the tools, or while building the building
+    /// tools and Done: all but Build while building.
+    @ViewBuilder private var overBuild: some View {
+        // The card's toggle stays on top while building too: a chosen
+        // tool keeps the card open, and folding it shows the map. Not
+        // on the tutorial's steps that point into the card, which keep
+        // it open, as in the dock.
+        if showsToggle {
+            cardToggle
+        }
+        if BuildToolRail.isShown(session) {
+            BuildToolButtons(session: session)
+                .controlTile()
+        } else {
+            ControlPanel(session: session, arrangement: .toolsColumn)
+        }
+    }
+
+    private var cardToggle: some View {
+        ControlDetailsToggle(isOpen: isOpen, action: toggle)
+            .disabled(!canToggle)
+            .controlTile()
+    }
+
+    /// The building tools the session offers, Done aside.
+    private var buildingTools: Int {
+        ConstructionTool.networkTools.filter { $0 != .select && session.allows($0) }.count
+    }
+
+    private var showsToggle: Bool { session.tutorial?.step.usesDetailsCard != true }
+
+    /// Icons alone, scrolling, where even they have not the height. While
+    /// building, Done and Build stand whole at the foot (decision 382,
+    /// later: TestFlight 85.1 had Build cut in half, and Done scrolled out
+    /// of reach) and what scrolls over them, the tools and under them the
+    /// card's toggle, is cut between two buttons, fading there, so it
+    /// shows more is below.
+    @ViewBuilder private var scrolling: some View {
+        if BuildToolRail.isShown(session) {
+            let shown = ToolColumn.buildingScrollHeight(maxHeight: Double(maxHeight), tools: buildingTools, toggle: showsToggle)
+            VStack(alignment: .center, spacing: ControlPanel.tileGap) {
+                ScrollView {
+                    VStack(alignment: .center, spacing: ControlPanel.tileGap) {
+                        if buildingTools > 0 {
+                            BuildToolButtons(session: session, includesDone: false)
+                                .controlTile()
+                        }
+                        if showsToggle {
+                            cardToggle
+                        }
+                    }
+                }
+                .scrollBounceBehavior(.basedOnSize)
+                .scrollIndicatorsFlash(onAppear: true)
+                .tutorialClip()
+                .frame(height: CGFloat(shown))
+                .mask {
+                    VStack(spacing: 0) {
+                        Color.black
+                        LinearGradient(colors: [.black, .black.opacity(0.3)], startPoint: .top, endPoint: .bottom)
+                            .frame(height: 10)
+                    }
+                }
+                BuildDoneButton(session: session)
+                    .controlTile()
+                ControlPanel(session: session, arrangement: .buildEntry)
+            }
+            .environment(\.toolColumnStyle, ToolColumnStyle(compact: true))
+        } else {
+            ScrollView {
+                groups(compact: true)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .scrollIndicators(.hidden)
+            .tutorialClip()
+        }
     }
 }
 
