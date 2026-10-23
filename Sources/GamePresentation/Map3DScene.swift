@@ -566,6 +566,10 @@ extension Map3DScene {
             case base, near, far
             /// Decision 267: the closest detail.
             case close
+            /// Decision 380: the overhead line, in the closest detail but
+            /// in a coarse chunk too (decision 368 leaves the rest of the
+            /// closest detail out of one), so it runs all along the line.
+            case wires
         }
         var target = Target.base
         /// Decision 244: the street furniture, by chunk.
@@ -713,12 +717,12 @@ extension Map3DScene {
         mutating func mesh(at scene: Map3DPoint, _ build: (inout Map3DMesh) -> Void) {
             let key = key(of: scene)
             // Decision 368: none of the city in full in a coarse chunk.
-            guard target == .base || target == .far || !isCoarse(key) else { return }
+            guard target == .base || target == .far || target == .wires || !isCoarse(key) else { return }
             switch target {
             case .base: build(&meshes[key, default: Map3DMesh()])
             case .near: build(&nearMeshes[key, default: Map3DMesh()])
             case .far: build(&farMeshes[key, default: Map3DMesh()])
-            case .close: build(&closeMeshes[key, default: Map3DMesh()])
+            case .close, .wires: build(&closeMeshes[key, default: Map3DMesh()])
             }
         }
 
