@@ -110,6 +110,10 @@ public enum TutorialTarget: String, CaseIterable, Hashable, Sendable {
     case hotelKind = "building.kind.hotel"
     /// The status bar's city requests (decision 246), for lesson 10.
     case requestsButton = "hud.requests"
+    /// The lines panel's "Add … to …", for the station selected on the
+    /// map and the selected line (decision 196), for lesson 2 (decision
+    /// 390).
+    case addSelectedStation = "line.addSelectedStation"
 
     /// Whether the control is in the details card, which a step pointing
     /// at it opens (``TutorialStep/usesDetailsCard``).
@@ -251,6 +255,12 @@ public enum TutorialGoal: Hashable, Sendable {
     case putUpBuilding(PlacedBuildingKind)
     /// Take on one of the city's requests.
     case acceptRequest
+    /// Decision 390, lesson 2: select, with the Select tool, a station no
+    /// line calls at, or have added a stop to a line.
+    case selectStationOffLine
+    /// Decision 390, lesson 2: give a line one more stop since the chapter
+    /// began.
+    case addStopToLine
 }
 
 /// What the session does when a step is first shown, going forward
@@ -360,6 +370,12 @@ public struct TutorialStep: Hashable, Sendable, Identifiable {
         hasher.combine(distanceNote?.english)
     }
 
+    /// Decision 390: the step in a lesson's own words, its goal, targets,
+    /// setup and panel kept, without a distance note.
+    func retold(title: (english: String, chinese: String), body: (english: String, chinese: String)) -> TutorialStep {
+        TutorialStep(id: id, chapter: chapter, targets: targets, goal: goal, setup: setup, panel: panel, title: title, body: body)
+    }
+
     /// The step without what it says of demand by distance.
     func withoutDistanceNote() -> TutorialStep {
         var step = self
@@ -397,7 +413,7 @@ public struct TutorialStep: Hashable, Sendable, Identifiable {
     /// The panels' controls a step can ask for.
     private static let panelTargets: Set<TutorialTarget> = [
         .createLine, .staffLine, .lineLoss, .addTrain, .headwayChange, .advancedSwitch, .serviceHours, .addPattern, .lineDepot,
-        .freightYard,
+        .freightYard, .addSelectedStation,
     ]
 
     /// How long the card waits before it offers to skip a step that is not
@@ -538,8 +554,8 @@ public struct Tutorial: Hashable, Sendable {
         let buildings: Set<PlacedBuildingID>
         let requestsInHand: Set<Int>
 
-        /// When a line runs, how many trains how far apart, and its
-        /// stopping patterns.
+        /// When a line runs, how many trains how far apart, its
+        /// stopping patterns and (decision 390) how many stops it has.
         struct LineService: Hashable, Sendable {
             let window: ServiceWindow
             let trainsInService: TrainsInService
@@ -547,6 +563,7 @@ public struct Tutorial: Hashable, Sendable {
             let trains: Int
             let patterns: Int
             let depots: [StationID]
+            let stops: Int
 
             init(_ line: ServiceLine) {
                 window = line.window
@@ -555,6 +572,7 @@ public struct Tutorial: Hashable, Sendable {
                 trains = line.trains.count
                 patterns = line.patterns.count
                 depots = line.depots
+                stops = line.stops.count
             }
         }
 
@@ -769,12 +787,14 @@ extension Tutorial {
             targets: [.mapConfirm],
             goal: .createLine,
             panel: .lines,
-            title: ("Tap ✓ to create the line", "按 ✓ 建立路線"),
+            // Decision 390: the title names both taps; the card's Open
+            // Line makes the line, not the ✓ alone.
+            title: ("Tap ✓, then Open Line", "按 ✓，再按「開通路線」"),
             // Decision 303: the ✓ raises the line's card; its Open Line
             // makes the line.
             body: (
-                "A card shows its hours and trains. Tap Open Line on it.",
-                "卡片會列出營運時間與列車，按卡片上的「開通路線」。"
+                "The card shows the line's hours and trains.",
+                "卡片會列出路線的營運時間與列車。"
             )
         ),
         // Reference step 7, "开始列车运营": the reference's lines come with

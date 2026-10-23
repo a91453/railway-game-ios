@@ -339,6 +339,8 @@ extension Challenge {
     /// milestone (decision 153), or `nil`.
     static func milestoneTitle(of id: String, goal: Int, in language: DisplayLanguage) -> String? {
         if id == liuMingchuan.id { return LiuMingchuanChallenge.milestoneTitle(goal, in: language) }
+        // Decision 390: the lessons' towns and sight, by what they are.
+        if let lesson = Lesson.named(id) { return lesson.linkTitle(in: language) }
         return BranchLineChallenge.named(id)?.milestoneTitle(goal, in: language)
     }
 
