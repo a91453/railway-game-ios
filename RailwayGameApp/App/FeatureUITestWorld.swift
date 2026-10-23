@@ -10,6 +10,7 @@ import GamePresentation
 enum FeatureUITestWorld {
     static func make(_ name: String) throws -> GameWorld {
         if name == "big-grid" || name == "big-grid-night" { return try bigGrid(night: name == "big-grid-night") }
+        if name == "story" { return try story() }
         guard ["separate-tracks", "missing-platform", "double-platform", "catalog", "sightseeing", "quiet-night"].contains(name) else {
             preconditionFailure("Unknown -ui-test-world: \(name)")
         }
@@ -87,6 +88,29 @@ enum FeatureUITestWorld {
         world.setSpeed(.fast)
         try world.advance(ticks: night ? 123 : 48)
         world.setSpeed(night ? .normal : .x1)
+        return world
+    }
+
+    /// Decision 387's story card: the Pingxi challenge on a small map, its
+    /// first beat due at the next midnight, some 12 seconds away at the
+    /// speed it runs at (ten game minutes a second), so the card shows soon
+    /// after the game opens but not before it is watched.
+    private static func story() throws -> GameWorld {
+        var world = GameWorld.newGame(eventSeed: 1)
+        world.setDisruptions(nil)
+        world.setCityRequests(seed: nil)
+        let middle = PlanPoint(x: world.bounds.width / 2, y: world.bounds.height / 2)
+        let shifen = try world.buildStation(named: "十分", at: middle).id
+        let pingxi = try world.buildStation(named: "平溪", at: PlanPoint(x: middle.x + 64_000, y: middle.y)).id
+        let line = try world.createLine(named: "平溪線", stops: [shifen, pingxi]).id
+        try world.assignTrain(try world.purchaseTrain(named: "T").id, to: line, pattern: nil)
+        try world.startScenario(Scenario(
+            id: "history.pingxi", goals: [.dailyRiders(80_000), .annualNetProfit(Money(200_000_000))],
+            goldDays: 360, silverDays: 720, deadlineDays: 1_080, insolvencyDays: 60
+        ))
+        // On to 22:00 of the challenge's first day, a minute a tick.
+        world.setSpeed(.normal)
+        try world.advance(ticks: Int(1_440 + 22 * 60 - world.clock.now.seconds / 60))
         return world
     }
 

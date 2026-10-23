@@ -30,10 +30,11 @@ rm Tests/GamePresentationTests/Map3DPreviewDump.swift
 | 變數 | 意思 |
 | --- | --- |
 | `MAP3D_DUMP` | 輸出檔的前綴（必填） |
-| `MAP3D_WORLD` | `towns`（測試用兩鎮地圖）、`demo`（示範地圖）、`taipei`（台北車站的實景新局）、`taipeiline`（穿過台北車站的一條線，同畫面成本報告；決策 321）、`kaohsiung`、`taichung`（兩個車站的實景新局）、`realdemo`（瑞芳、平溪的實景示範）、`xiaogang`（高鐵示範的世界讀進小港機場周圍 3 km 的真實人口與分區，焦點在機場；決策 385） |
+| `MAP3D_WORLD` | `towns`（測試用兩鎮地圖）、`demo`（示範地圖）、`taipei`（台北車站的實景新局）、`taipeiline`（穿過台北車站的一條線，同畫面成本報告；決策 321）、`kaohsiung`、`taichung`、`douliu`（三個車站的實景新局；`douliu` 是決策 389 加的）、`realdemo`（瑞芳、平溪的實景示範）、`xiaogang`（高鐵示範的世界讀進小港機場周圍 3 km 的真實人口與分區，焦點在機場；決策 385） |
 | `MAP3D_BASEMAP` | `1`：讀 App 的台灣底圖（決策 234） |
 | `MAP3D_NOBUILD` | `1`：讀 App 的不蓋區與機場建物（`taiwan_no_build.json`，決策 385）；不設就是改之前的畫法 |
 | `MAP3D_CITY` | `1`：讀高雄、台中車站周圍的城市圖塊（決策 239；要和 `MAP3D_BASEMAP=1` 一起用） |
+| `MAP3D_FOOTPRINTS` | `1`：讀 App 的真實建物足跡（`taiwan_buildings.pmtiles`，決策 389；要和 `MAP3D_BASEMAP=1` 一起用） |
 | `MAP3D_VIEWS` | 鏡頭，`名字:x:z:距離:方向角度` 以 `;` 分開，座標是場景的公尺；可再加 `:高度`，看那個高度的點（山上的車站，決策 321） |
 | `MAP3D_CROP` | `x:z:半徑`：只輸出這一圈內的分塊（大場景會讓瀏覽器記憶體不夠） |
 | `MAP3D_MINUTE` | 一天裡的第幾分鐘（`0`–`1439`），照那時的光線畫；預設 `840`（14:00） |
