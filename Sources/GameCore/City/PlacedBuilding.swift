@@ -9,7 +9,9 @@
 // CompanyBuildings.swift). Since P0-C2 (decision 95) it buys out the city's
 // buildings in its way, and track and stations built later clear it. Since
 // P0-D (decision 130) it can be sold to the city, which takes it over
-// (BuildingSale.swift).
+// (BuildingSale.swift). Since decision 361 two kinds with an effect
+// of their own stand among them, a park and a temple, and a building can
+// have one of its kind's looks.
 
 /// Identifies a building the player placed. IDs are allocated by
 /// ``GameWorld`` from 1 and never handed out again.
@@ -25,8 +27,9 @@ public struct PlacedBuildingID: RawRepresentable, Hashable, Comparable, Codable,
     }
 }
 
-/// What the player can place: the three basic buildings, and since
-/// decision 111 two that stand on the shore.
+/// What the player can place: the three basic buildings, since decision
+/// 111 two that stand on the shore, since decision 173 three subsidiaries,
+/// and since decision 361 a park and a temple.
 public enum PlacedBuildingKind: String, CaseIterable, Codable, Sendable {
     /// A small house: 16 m a side.
     case house
@@ -49,13 +52,23 @@ public enum PlacedBuildingKind: String, CaseIterable, Codable, Sendable {
     /// An amusement park (decision 173): 112 m a side, one storey. A
     /// subsidiary.
     case amusementPark
+    /// A park (decision 361): 24 m a side, a lawn, a playground or a pond.
+    /// It holds no one and lets nothing; the land within
+    /// ``LandValueRules/parkReach`` of it is worth a park's more, as near
+    /// the city's own parks (decision 91), so the company's buildings there
+    /// let and sell for more.
+    case park
+    /// A temple (decision 361): 32 m a side, two storeys. A sight tourists
+    /// come to (Tourism.swift) and a subsidiary that takes their offerings
+    /// (Subsidiary.swift); it holds no one.
+    case temple
 
     /// The length of a side, in world units.
     public var side: Int64 {
         switch self {
         case .house: 1_024
-        case .shop, .wharf: 1_536
-        case .office, .marina, .hotel: 2_048
+        case .shop, .wharf, .park: 1_536
+        case .office, .marina, .hotel, .temple: 2_048
         case .departmentStore: 3_072
         case .amusementPark: 7_168
         }
@@ -67,7 +80,8 @@ public enum PlacedBuildingKind: String, CaseIterable, Codable, Sendable {
         case .house: .residential
         case .shop, .wharf, .departmentStore, .hotel: .commercial
         case .office: .office
-        case .marina, .amusementPark: .leisure
+        case .marina, .amusementPark, .temple: .leisure
+        case .park: .park
         }
     }
 
@@ -75,11 +89,11 @@ public enum PlacedBuildingKind: String, CaseIterable, Codable, Sendable {
     /// an office block 6.
     public var floors: Int64 {
         switch self {
-        case .house, .shop, .wharf, .marina: 2
+        case .house, .shop, .wharf, .marina, .temple: 2
         case .office: 6
         case .departmentStore: 8
         case .hotel: 14
-        case .amusementPark: 1
+        case .amusementPark, .park: 1
         }
     }
 
@@ -87,7 +101,7 @@ public enum PlacedBuildingKind: String, CaseIterable, Codable, Sendable {
     /// water, part on land. The others stand on land only.
     public var standsOnShore: Bool {
         switch self {
-        case .house, .shop, .office, .departmentStore, .hotel, .amusementPark: false
+        case .house, .shop, .office, .departmentStore, .hotel, .amusementPark, .park, .temple: false
         case .wharf, .marina: true
         }
     }
@@ -107,12 +121,28 @@ public enum PlacedBuildingKind: String, CaseIterable, Codable, Sendable {
     /// floor of its use that are homes, at 48 m² a resident, the rest jobs
     /// at 32 m², each rounded down. A house 9 residents and 2 jobs, a shop
     /// and a wharf 6 and 27, an office block 16 and 168, a marina 5 and 56.
+    /// A park and a temple (decision 361) hold no one.
     public var capacity: BuildingCapacity {
+        guard self != .park, self != .temple else { return BuildingCapacity(residents: 0, jobs: 0) }
         let homes = Building.homeEighths(of: use)
         return BuildingCapacity(
             residents: floorArea * homes / 8 / Building.areaPerResident,
             jobs: floorArea * (8 - homes) / 8 / Building.areaPerJob
         )
+    }
+}
+
+extension PlacedBuildingKind {
+    /// How many looks it comes in (decision 361): a park a lawn, a
+    /// playground or a garden with a pond; a temple a temple square with a
+    /// gate, or a large temple; the others one. A look is only how it is
+    /// drawn, numbered from 0.
+    public var looks: Int {
+        switch self {
+        case .park: 3
+        case .temple: 2
+        default: 1
+        }
     }
 }
 
@@ -135,11 +165,18 @@ public struct PlacedBuilding: Hashable, Sendable {
     public internal(set) var landCost: Money = .zero
     /// A subsidiary's trading books (decision 173); empty for the others.
     public internal(set) var books: SubsidiaryBooks = SubsidiaryBooks()
+    /// Which of its kind's ``PlacedBuildingKind/looks`` it has (decision
+    /// 361), 0 for the first: only how it is drawn.
+    public let look: Int
+    /// A temple's tourists of the day that last ended (decision 361); 0
+    /// for the others.
+    public internal(set) var visitors: Int64 = 0
 
-    public init(id: PlacedBuildingID, kind: PlacedBuildingKind, centre: PlanPoint) {
+    public init(id: PlacedBuildingID, kind: PlacedBuildingKind, centre: PlanPoint, look: Int = 0) {
         self.id = id
         self.kind = kind
         self.centre = centre
+        self.look = look
     }
 
     /// What was paid for it, together.
@@ -168,7 +205,8 @@ public enum PlacedBuildingRules {
 }
 
 extension GameWorld {
-    /// Places a building of `kind` centred on `centre` (decision 92):
+    /// Places a building of `kind` centred on `centre` (decision 92), in
+    /// its `look` (decision 361):
     /// numbered next, in no one's way, empty. Since decision 94 a managed
     /// company pays ``placedBuildingQuote(_:at:)`` for it, the building and
     /// the right to use the land, and keeps it on its books; free play pays
@@ -183,7 +221,9 @@ extension GameWorld {
     /// rest; a cell it finishes covering goes, its people all moved in
     /// (decision 146, later). Track in a tunnel is not in its way.
     ///
-    /// - Throws, checked in this order: ``GameError/outOfBounds(_:)`` naming
+    /// - Throws, checked in this order: ``GameError/invalidBuildingLook``
+    ///   unless `look` is one of the kind's ``PlacedBuildingKind/looks``;
+    ///   ``GameError/outOfBounds(_:)`` naming
     ///   `centre` unless the whole square lies in the world;
     ///   ``GameError/mapTileNotOwned(_:)`` naming the first tile of the map
     ///   it covers part of that the company does not own (decision 160);
@@ -201,7 +241,8 @@ extension GameWorld {
     ///   steep cell under it (decision 115); ``GameError/idsExhausted``; or
     ///   ``GameError/insufficientFunds(required:available:)``.
     @discardableResult
-    public mutating func placeBuilding(_ kind: PlacedBuildingKind, at centre: PlanPoint) throws(GameError) -> PlacedBuilding {
+    public mutating func placeBuilding(_ kind: PlacedBuildingKind, at centre: PlanPoint, look: Int = 0) throws(GameError) -> PlacedBuilding {
+        guard (0..<kind.looks).contains(look) else { throw .invalidBuildingLook }
         let candidate = PlacedBuilding(id: PlacedBuildingID(rawValue: nextPlacedBuildingID), kind: kind, centre: centre)
         guard Self.lies(candidate, in: bounds) else { throw .outOfBounds(centre) }
         // Decision 160: the whole square on the company's own ground.
@@ -228,7 +269,7 @@ extension GameWorld {
         let (id, next) = try Self.allocateID(from: nextPlacedBuildingID)
         let quote = placedBuildingQuote(kind, at: centre) ?? PlacedBuildingQuote(building: .zero, land: .zero)
         try economy.spend(quote.total)
-        var building = PlacedBuilding(id: PlacedBuildingID(rawValue: id), kind: kind, centre: centre)
+        var building = PlacedBuilding(id: PlacedBuildingID(rawValue: id), kind: kind, centre: centre, look: look)
         building.buildingCost = quote.building
         building.landCost = quote.land + quote.buyOut
         let cleared = areaBuyOut ? [] : cityCells(claimedBy: candidate)
@@ -355,6 +396,11 @@ extension GameWorld {
             guard building.books.isValid(for: building.kind) else {
                 return "Placed building \(building.id.rawValue) has trading books out of range."
             }
+            guard (0..<building.kind.looks).contains(building.look),
+                  building.kind == .temple ? (0...Self.maximumAccrued).contains(building.visitors) : building.visitors == 0
+            else {
+                return "Placed building \(building.id.rawValue) has a look or visitors out of range."
+            }
         }
         return nil
     }
@@ -362,13 +408,15 @@ extension GameWorld {
 
 extension PlacedBuilding: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, kind, centre, residents, jobs, buildingCost, landCost, books
+        case id, kind, centre, residents, jobs, buildingCost, landCost, books, look, visitors
     }
 
     /// Decodes `{"id", "kind", "centre"}` and, since save version 22
     /// (decision 94), `"residents"`, `"jobs"`, `"buildingCost"` and
     /// `"landCost"`, each written only when not 0: a building placed before
-    /// is empty and was paid nothing for.
+    /// is empty and was paid nothing for. Since save version 71 (decision
+    /// 361) `"look"` and a temple's `"visitors"`, each written only when
+    /// not 0: a building before has the first look.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(PlacedBuildingID.self, forKey: .id)
@@ -379,6 +427,8 @@ extension PlacedBuilding: Codable {
         buildingCost = try container.decodeIfPresent(Money.self, forKey: .buildingCost) ?? .zero
         landCost = try container.decodeIfPresent(Money.self, forKey: .landCost) ?? .zero
         books = try container.decodeIfPresent(SubsidiaryBooks.self, forKey: .books) ?? SubsidiaryBooks()
+        look = try container.decodeIfPresent(Int.self, forKey: .look) ?? 0
+        visitors = try container.decodeIfPresent(Int64.self, forKey: .visitors) ?? 0
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -391,5 +441,7 @@ extension PlacedBuilding: Codable {
         if buildingCost != .zero { try container.encode(buildingCost, forKey: .buildingCost) }
         if landCost != .zero { try container.encode(landCost, forKey: .landCost) }
         if books != SubsidiaryBooks() { try container.encode(books, forKey: .books) }
+        if look != 0 { try container.encode(look, forKey: .look) }
+        if visitors != 0 { try container.encode(visitors, forKey: .visitors) }
     }
 }

@@ -65,7 +65,7 @@ final class SubsidiaryTests: XCTestCase {
         XCTAssertEqual(PlacedBuildingKind.amusementPark.use, .leisure)
         // 48 m × 48 m × 8 storeys at $40 a m².
         XCTAssertEqual(PlacedBuildingKind.departmentStore.floorArea, 18_432)
-        XCTAssertEqual(PlacedBuildingKind.allCases.filter(\.isSubsidiary), [.departmentStore, .hotel, .amusementPark])
+        XCTAssertEqual(PlacedBuildingKind.allCases.filter(\.isSubsidiary), [.departmentStore, .hotel, .amusementPark, .temple])
     }
 
     // MARK: - A day's trade

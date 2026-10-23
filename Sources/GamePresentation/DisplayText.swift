@@ -504,6 +504,8 @@ extension GameError {
             language.text("The hillside is too steep to build or zone on.", "坡度太陡，不能蓋建物，也不能劃分區。")
         case .needsShore:
             language.text("A wharf or a marina goes on the shore, part over the water.", "漁人碼頭與遊艇港要蓋在岸邊，一部分在水上。")
+        case .invalidBuildingLook:
+            language.text("This building does not come in that look.", "這種建物沒有這個外觀。")
         case .groundNotLoaded:
             language.text("The ground there has not been read yet.", "那裡的地面高度還沒有讀入。")
         case .trackOverWater:

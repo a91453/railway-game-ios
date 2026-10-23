@@ -24,7 +24,8 @@
 //   1000 − floor(d² × 1000 / R²)` (ties to the lower station); S is that
 //   score, A its ``TownGrowth/Place/lastReached``;
 // - P, decision 91: 600 for a cell whose middle lies within 400 m of a
-//   park's (a park's own included), else 0;
+//   park's (a park's own included), else 0; since decision 361 the
+//   company's parks count, by their centres;
 // - C, decision 98: 600 for a cell zoned for a use whose middle lies
 //   within 400 m of the centre of one of the company's buildings, else 0
 //   (the A-Train's subsidiaries leading development; only zoned cells, so
@@ -194,11 +195,16 @@ extension GameWorld {
         }
     }
 
-    /// The middles of the parks (decision 91), by their row.
+    /// The middles of the parks (decision 91), by their row; and the
+    /// centres of the company's parks (decision 361), by the row of the
+    /// cell they lie in.
     private func landValueParks() -> [Int: [PlanPoint]] {
         var parks: [Int: [PlanPoint]] = [:]
         for cell in land.cells where cell.use == .park {
             parks[cell.row, default: []].append(cell.middle)
+        }
+        for building in placedBuildings where building.kind == .park {
+            parks[Land.cellIndex(building.centre.y), default: []].append(building.centre)
         }
         return parks
     }

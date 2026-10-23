@@ -42,6 +42,34 @@ extension PlacedBuildingKind {
         case .departmentStore: language.text("Department store", "百貨公司")
         case .hotel: language.text("Hotel", "飯店")
         case .amusementPark: language.text("Amusement park", "遊樂園")
+        case .park: language.text("Park", "公園")
+        case .temple: language.text("Temple", "廟")
+        }
+    }
+
+    /// What it does for the player beyond rent (decision 361), or `nil`.
+    public func effectText(in language: DisplayLanguage) -> String? {
+        switch self {
+        case .park:
+            language.text("Land nearby is worth more, so your buildings around it earn and sell for more.",
+                          "附近的地價變高，周圍你的建物租金和賣價都跟著漲。")
+        case .temple:
+            language.text("Draws visitors who ride your trains to it and leave offerings.",
+                          "吸引香客搭你的車來參拜，香油錢是它的收入。")
+        default: nil
+        }
+    }
+
+    /// The name of its look `look` (decision 361), or `nil` for a kind of
+    /// one look.
+    public func lookTitle(_ look: Int, in language: DisplayLanguage) -> String? {
+        switch (self, look) {
+        case (.park, 0): language.text("Garden", "社區花園")
+        case (.park, 1): language.text("Playground", "兒童遊戲場")
+        case (.park, 2): language.text("Pond garden", "池畔涼亭")
+        case (.temple, 0): language.text("Temple square", "廟埕")
+        case (.temple, 1): language.text("Grand temple", "大廟")
+        default: nil
         }
     }
 }
@@ -102,6 +130,13 @@ extension GameSession {
             point.x >= building.minX - reach && point.x < building.maxX + reach
                 && point.y >= building.minY - reach && point.y < building.maxY + reach
         }.min { distance($0, point) < distance($1, point) }
+    }
+
+    /// The look the building tool puts up ``buildingKind`` in (decision
+    /// 361): the one picked for it, or its first.
+    public var buildingLook: Int {
+        get { min(max(0, buildingLooks[buildingKind] ?? 0), buildingKind.looks - 1) }
+        set { buildingLooks[buildingKind] = min(max(0, newValue), buildingKind.looks - 1) }
     }
 
     /// Whether `point` lies on the building shown at ``buildingSite``.
@@ -235,8 +270,8 @@ extension GameSession {
     /// whether it was placed.
     @discardableResult
     public func placeBuilding(at point: PlanPoint) -> Bool {
-        let kind = buildingKind
-        let placed = perform(.placeBuilding(kind, at: point)) { outcome, _, world in
+        let kind = buildingKind, look = buildingLook
+        let placed = perform(.placeBuilding(kind, at: point, look: look == 0 ? nil : look)) { outcome, _, world in
             guard let building = outcome.building else { return "" }
             let cleared = outcome.number
             let english = kind.title(in: .english).lowercased(), chinese = kind.title(in: .traditionalChinese), id = building.id.rawValue
@@ -325,10 +360,11 @@ extension GameSession {
         let cost: Money?, problem: String?
         var movingIn: (residents: Int64, jobs: Int64) = (0, 0)
         do throws(GameError) {
-            let placed = try draft.placeBuilding(kind, at: site)
+            let look = buildingLook
+            let placed = try draft.placeBuilding(kind, at: site, look: look)
             cost = placed.cost
             movingIn = (placed.residents, placed.jobs)
-            problem = shortfallText(placed.cost, doing: .edit(.placeBuilding(kind, at: site)))
+            problem = shortfallText(placed.cost, doing: .edit(.placeBuilding(kind, at: site, look: look == 0 ? nil : look)))
         } catch {
             cost = nil
             problem = error.playerMessage(in: language)
