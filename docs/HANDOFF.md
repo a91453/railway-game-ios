@@ -865,6 +865,27 @@
 
 只推薦一個後續工具任務：報告§8的「無貼圖、無skin的靜態meshopt GLB → `.m3dmodel`橋接」，含節點選取與非AI來源紀錄；沿用§3已同意的tools-only glTF-Transform／meshoptimizer、固定版本／lockfile／README授權，不再列成未批准。正式工具尚未實作。WorldCover僅列視覺補漏候選；現有`addArea(.wood)`會影響程序城市展示地塊，不能直接灌分類。本環境香港下載403，但#820補充已有香港實際樣本、材質誤判與參考庫現成WorldCover，見主報告§3／§5；skin整體轉換與iOS／實機仍未驗證，無手機效能數字。初版functions間接LGPL漏查已更正；後續只用core／extensions4.5.1＋meshoptimizer1.3.0的五個MIT包，bridge lock／逐包授權與無functions重跑證據見附件，不把歷史offline lock視為已批准工具。原始參考GLB、加工腳本及原檔對照留scratch／私有交付，不放公開repo。排程仍由NEXT_PRIORITIES與遊戲規劃處理。
 
+### 4.6 3D 地圖的淡色模型樣子（決策 370，session_014cbL5XNksWgQgYNkhMDNxV，#1075）
+
+作者 2026-10-23 要 3D 像 Mapbox Standard。預覽、選定、「玩得清楚嗎」的對照與數字在 `docs/art/map3d-mapbox-look-2026-10-23/README.md`；原圖與腳本在參考庫同名資料夾（參考庫 #53 已合併，#54 是之後的重捏地標與 `play/`）。規劃選 (b)，做進遊戲的是 README 裡的 **(b'')**。
+
+做到哪：只有預覽，`Sources/GamePresentation/Map3D*` 與 App 都沒動。決策 370 的號碼保留，`docs/decisions/370.md` 還沒寫。
+
+接手的人要做的（#1070，決策 368 合併後）：
+
+1. 先在 #1041 更新登記。
+2. 寫 `docs/decisions/370.md`，寫清楚改了決策 241 的哪些部分、242 的哪些部分：
+   - 241：路面的藏青四階改成白（#FFFFFF–#F8F8F8），人行道改成路緣 #8F949E，黃色中線留。
+   - 242：牆面細節留，但淡（預覽裡細節對比乘 0.35，牆腳較暗，影子較深）。
+3. 先做 101 與台北車站。形狀照參考庫 `scripts/landmarks.py`，那是重新組的，不是原網格；顏色照 README 的表，101 玻璃天藍 #C0DDEE。
+4. 再做全城淡色：
+   - `Map3DPalette` 換色，照 `compose_play.py` 的 `REMAP`／`KEEP`／`pale()` 和 `roads` 選項；
+   - `map3dShade` 加上柔光，強度跟著時間（預覽頁 `index.html` 的 `look`）。
+5. 實機看夜晚的路：(b'') 的路面與地面夜晚只差 ΔL* 4.5。
+6. 跑 `Map3DSceneMemoryTests.testThe3DMapRoundBanqiaoFitsAPhone`，記憶體不能增加。淡色只換頂點色；留招牌就不省貼圖（約 30 MB 的數字在 README）。
+
+預覽工具：參考庫 `scripts/Map3DPreviewDump.patch`（`MAP3D_PLAY` 放列車與標籤位置），用法在那裡的 README。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |
