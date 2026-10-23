@@ -68,6 +68,8 @@ public struct Map3DModelPack: Sendable {
         models.append(Map3DSevenSectionLRT.formation())
         models += Map3DFourCarMetro.Unit.allCases.map { Map3DFourCarMetro.model($0) }
         models.append(Map3DFourCarMetro.formation())
+        models += Map3DSevenCarBlue.Unit.allCases.map { Map3DSevenCarBlue.model($0) }
+        models.append(Map3DSevenCarBlue.formation())
         self.models = models
     }
 
