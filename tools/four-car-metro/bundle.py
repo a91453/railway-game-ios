@@ -33,7 +33,7 @@ record = {
     'supplied_reference': 'five inline owner views: roof/front, two opposite side crops, two opposite full oblique views; all visually inspected; not available as local files, no invented image SHA',
     'other_source': 'existing project palette and closed low-level geometry; no previous vehicle body, chassis, cab or door recipe reused',
     'private_reference_commit': '60a76270cf3be9517100c2f3bbfd0dd87051e88f',
-    'private_reference_use': 'OpenWorld train-model-specs.js, world rolling-stock catalog-2026-10.json and procedural MODEL_CATALOG.json inspected; no uniquely matching dimensions. No private mesh/image/texture copied.',
+    'private_reference_use': 'OpenWorld train-model-specs.js, world rolling-stock catalog-2026-10.json / rail-3d/integration/formations.js and procedural MODEL_CATALOG.json inspected; no uniquely matching dimensions. No private mesh/image/texture copied.',
     'producer_files_sha256': {p.relative_to(source).as_posix():sha(p) for p in producer_files if p.is_file()},
     'limitations': ['static art only', 'dimensions are proportional display estimates', 'no device Metal / animation / performance verification'],
 }

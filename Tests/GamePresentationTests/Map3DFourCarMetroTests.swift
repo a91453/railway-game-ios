@@ -46,6 +46,16 @@ final class Map3DFourCarMetroTests: XCTestCase {
             else { XCTAssertFalse(frontGlass.isEmpty) }
         }
     }
+    func testGangwaysFollowTheShouldersToRoofHeightInsteadOfEndingBelowWindows() {
+        for unit in Map3DFourCarMetro.Unit.allCases {
+            let joint=Map3DFourCarMetro.model(unit).vertices.filter {
+                abs($0.x)>6.01 && abs($0.x)<6.14 && $0.z>1.2 && $0.color == StationKitBuilder.steel
+            }
+            XCTAssertFalse(joint.isEmpty)
+            XCTAssertGreaterThan(joint.map(\.z).max() ?? 0,3.60)
+            XCTAssertGreaterThan(joint.map { abs($0.y) }.max() ?? 0,1.32)
+        }
+    }
     func testTrianglesAreFiniteNondegenerateWithUnitOutwardNormals() {
         for unit in Map3DFourCarMetro.Unit.allCases {
             let m=Map3DFourCarMetro.model(unit)

@@ -30,12 +30,12 @@
 - 私有`previews/metro-units.png`、`metro-directions.png`、`metro-audit.png`、`metro-before-after.png`、`metro-cab-before-after.png`；原始49透明七向圖在`views/`。
 - [原生配方](../../../Sources/GamePresentation/Map3DFourCarMetro.swift)、[重建／尺寸／單元排列與組裝](../../../tools/four-car-metro/README.md)、[交接](../../HANDOFF.md#73-3d-的後續)。
 
-完整編組實際bounds **50.130 × 2.802 × 3.694m，7144三角**；每節原生1836／1736／1736／1836三角。殼長12m，中心x=18.45／6.15／−6.15／−18.45m，殼間距.30m。輪底z=0；原生+x前／+y左／+z上，只平移，不再旋轉或鏡射。
+完整編組實際bounds **50.130 × 2.802 × 3.694m，7528三角**；每節原生1900／1864／1864／1900三角。殼長12m，中心x=18.45／6.15／−6.15／−18.45m，殼間距.30m。輪底z=0；原生+x前／+y左／+z上，只平移，不再旋轉或鏡射。
 
 **目前是已註冊的靜態素材庫，尚未指派營運車型。合併不會自動替換路網列車。** 後續整合需按12.3m節距與新車種另行決定，不改GameCore、存檔、golden／replay或既有玩法。
 
 ## 技術結論
 
-**VERIFIED（Linux）：** Swift6.4.0 warnings-as-errors build含tests、19個相關測試；七件原生逐頂點／色彩／法線讀回；四單元逐頂點組裝；GLB精確轉換與Blender4.3.2獨立匯入；四單元封閉有向邊、116主要玻璃三角背框與車殼支持（最大33mm）、20mm輪頂淨空；前端及中間車各缺面／反面／整片玻璃浮空突變拒收。49透明七向與全99張PNG完整解碼、不裁邊。資料夾／斷網內嵌viewer七件載入、旋轉、縮放、逐件下載、390px；ZIP另做完整解壓、CRC與逐檔bytes比對，source-record綁實際producer commit。
+**VERIFIED（Linux）：** Swift6.4.0 warnings-as-errors build含tests、20個相關測試；七件原生逐頂點／色彩／法線讀回；四單元逐頂點組裝；GLB精確轉換與Blender4.3.2獨立匯入；四單元封閉有向邊、116主要玻璃三角背框與車殼支持（最大33mm）、20mm輪頂淨空；前端及中間車各缺面／反面／整片玻璃浮空突變拒收。49透明七向與全99張PNG完整解碼、不裁邊。資料夾／斷網內嵌viewer七件載入、旋轉、縮放、逐件下載、390px；ZIP另做完整解壓、CRC與逐檔bytes比對，source-record綁實際producer commit。
 
 **UNVERIFIED：** 真實工程尺寸與被遮擋設備、iPhone/iPad真機Metal／效能／動畫／營運指派。受管Chromium不開file://，離線單檔以斷網內嵌HTML驗證，OS雙擊未實測。最新CI以公開draft PR的實際head checks為準，不能把本機通過當CI已通過。

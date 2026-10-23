@@ -85,8 +85,17 @@ extension StationKitBuilder {
         // HVAC tower. Their absent reference details stay documented as unknown.
         for x: Float in [-4.05,4.05] { box(x,3.65,0,1.06,1.10,0.044,white) }
         for sign: Float in [-1,1] where sign != cab {
-            box(sign*6.065,0.98,0,0.17,2.04,2.31,ink)
-            for dx: Float in [0.04,0.08,0.12] { box(sign*(6.0+dx),1.01,0,0.022,2.13,2.25,steel) }
+            // Follow the actual shoulder section to the roof, rather than a
+            // narrow rectangular joint ending below the upper body.
+            func joint(_ x: Float,_ depth: Float,_ scale: Float,_ color: UInt32) {
+                let a=profile.map { h,z in Map3DPoint(x-depth/2,2.22+(h-2.22)*scale,z*scale) }
+                let b=profile.map { h,z in Map3DPoint(x+depth/2,2.22+(h-2.22)*scale,z*scale) }
+                let centre=Map3DPoint(x,2.22,0)
+                face(a,inside:centre,color:color);face(b,inside:centre,color:color)
+                for i in a.indices { let j=(i+1)%a.count;face([a[i],a[j],b[j],b[i]],inside:centre,color:color) }
+            }
+            joint(sign*6.065,0.17,0.97,ink)
+            for dx: Float in [0.04,0.08,0.12] { joint(sign*(6.0+dx),0.022,0.989,steel) }
             box(sign*6.05,0.54,0,0.22,0.35,0.20,steel)
         }
         if cab != 0 {

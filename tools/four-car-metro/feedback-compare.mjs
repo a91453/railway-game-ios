@@ -7,7 +7,7 @@ import {createRequire} from 'node:module';
 const {chromium}=createRequire(import.meta.url)('playwright');
 const current=resolve(process.argv[2]),prior=resolve(process.argv[3]);
 if(!prior)throw Error('Usage: node feedback-compare.mjs CURRENT_EXPORT PRIOR_EXPORT');
-const family=process.argv[4]==='cab'?'metro-cab':'metro',label='四節車身比例、寬扁風擋、連結器支承及輪組淨空修訂';
+const family=process.argv[4]==='cab'?'metro-cab':'metro',label='四節車身比例、寬扁風擋、連結器支承、輪組淨空及全高風琴修訂';
 const model=process.argv[4]==='cab'?'models/metro-four-leading.m3dmodel':'models/metro-four-formation.m3dmodel';
 const before='_feedback-before.m3dmodel',after='_feedback-after.m3dmodel',html='_feedback.html';
 copyFileSync(resolve(prior,model),resolve(current,before));

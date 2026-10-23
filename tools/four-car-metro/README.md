@@ -50,6 +50,7 @@ node tools/four-car-metro/clay.mjs OUT
 node tools/four-car-metro/art-checks.mjs OUT
 node tools/four-car-metro/feedback-compare.mjs OUT ACTUAL_INITIAL_EXPORT
 node tools/four-car-metro/feedback-compare.mjs OUT ACTUAL_INITIAL_EXPORT cab
+node tools/four-car-metro/revision-audit.mjs OUT ACTUAL_INITIAL_EXPORT
 node tools/four-car-metro/verify.mjs OUT
 node tools/four-car-metro/geometry-audit.mjs OUT
 python3 tools/four-car-metro/mutation-check.py OUT
