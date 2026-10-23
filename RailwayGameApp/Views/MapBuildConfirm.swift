@@ -25,10 +25,12 @@ struct MapBuildConfirm: View {
     /// The map's own buttons and keys near its edges (the layer and map
     /// buttons, the legend and the zoom buttons), in the map's
     /// coordinates: the pill keeps off them, which it went over on a phone
-    /// held sideways (a player's report).
+    /// held sideways (a player's report); and the new line's station pair
+    /// drawer, which covered its ✓ (decision 384).
     var avoiding: [CGRect] = []
     @Environment(GameScreenState.self) private var screen
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     @State private var pillSize = CGSize(width: 160, height: 44)
 
     var body: some View {
@@ -98,27 +100,59 @@ struct MapBuildConfirm: View {
     }
 
     private func pill(_ build: BuildConfirmation) -> some View {
-        WidthLimit(maxWidth: BuildConfirmLayout.maximumWidth(
+        let maxWidth = BuildConfirmLayout.maximumWidth(
             viewportWidth: viewport.width, leading: Double(insets.leading), trailing: Double(insets.trailing)
-        )) {
-            VStack(spacing: 4) {
-                if let caption = build.caption {
-                    // A long refusal wraps within the map's clear band rather
-                    // than running under the card beside it (TestFlight 67.1).
-                    Text(verbatim: caption)
-                        .font(.caption.weight(.semibold))
-                        .monospacedDigit()
-                        .multilineTextAlignment(.center)
-                        .foregroundStyle(Theme.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.horizontal, 8)
-                        .accessibilityIdentifier("map.build.catchment")
-                }
-                buttons(build)
-                    .fixedSize()
+        )
+        return WidthLimit(maxWidth: maxWidth) {
+            HStack(spacing: CGFloat(StationPairDrawerLayout.pillSpacing)) {
+                pairDrawer(pillWidth: maxWidth)
+                words(build)
             }
-            .padding(6)
+            .padding(CGFloat(StationPairDrawerLayout.pillPadding))
             .glassBackground(in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+        }
+    }
+
+    /// Decision 384: on a phone on its side the new line's last two
+    /// stations, compared, ride in the pill beside its words (not in the
+    /// tutorial, whose card leads), so the drawer and the ✓ move together
+    /// and neither covers the other, open or folded.
+    @ViewBuilder private func pairDrawer(pillWidth: Double) -> some View {
+        let draft = session.lineDraft
+        if StationPairDrawerLayout.ridesInPill(compactHeight: verticalSizeClass == .compact),
+           session.tutorial == nil, session.mapLineDraft != nil, draft.count >= 2,
+           let maxHeight = StationPairDrawerLayout.maximumHeightInPill(available: clearHeight, pillWidth: pillWidth) {
+            StationPairDrawer(
+                session: session, from: draft[draft.count - 2], to: draft[draft.count - 1],
+                startsFolded: true, maxHeight: CGFloat(maxHeight)
+            )
+            .frame(width: CGFloat(StationPairDrawerLayout.widthInPill))
+        }
+    }
+
+    /// The height the pill may stand in, between the controls along the
+    /// map's top and bottom edges.
+    private var clearHeight: Double {
+        viewport.height - Double(insets.top) - Double(insets.bottom) - 2 * BuildConfirmLayout.margin
+    }
+
+    /// What the pill says and its buttons.
+    private func words(_ build: BuildConfirmation) -> some View {
+        VStack(spacing: 4) {
+            if let caption = build.caption {
+                // A long refusal wraps within the map's clear band rather
+                // than running under the card beside it (TestFlight 67.1).
+                Text(verbatim: caption)
+                    .font(.caption.weight(.semibold))
+                    .monospacedDigit()
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(Theme.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 8)
+                    .accessibilityIdentifier("map.build.catchment")
+            }
+            buttons(build)
+                .fixedSize()
         }
     }
 
@@ -223,34 +257,10 @@ struct MapBuildConfirm: View {
         // tappable, rather than under the dock (decision 190's report).
         let highest = top <= bottom - height ? top : max(0, min(Double(mapTop) + margin, bottom - height))
         y = min(max(y, highest), max(highest, bottom - height))
-        let placed = Self.keepingOff(avoiding, x: x, y: y, width: width, height: height, minX: minX, maxX: maxX, highest: highest, margin: margin)
+        let placed = BuildConfirmLayout.keepingOff(
+            avoiding.map { ScreenFrame($0) }, x: x, y: y, width: width, height: height, minX: minX, maxX: maxX, highest: highest
+        )
         return CGSize(width: placed.x, height: placed.y)
-    }
-
-    /// The pill at `x`, `y` moved off what it covers of `obstacles`: up
-    /// over the one it covers where there is room, else beside it, within
-    /// `minX`…`maxX`; left where it is when neither has room.
-    private static func keepingOff(
-        _ obstacles: [CGRect], x: Double, y: Double, width: Double, height: Double,
-        minX: Double, maxX: Double, highest: Double, margin: Double
-    ) -> (x: Double, y: Double) {
-        var x = x, y = y
-        for obstacle in obstacles where !obstacle.isEmpty {
-            let pill = CGRect(x: x, y: y, width: width, height: height)
-            guard pill.intersects(obstacle.insetBy(dx: -margin / 2, dy: -margin / 2)) else { continue }
-            let above = Double(obstacle.minY) - margin - height
-            if above >= highest {
-                y = above
-                continue
-            }
-            let after = Double(obstacle.maxX) + margin, before = Double(obstacle.minX) - margin - width
-            if after <= maxX, after >= minX {
-                x = after
-            } else if before >= minX, before <= maxX {
-                x = before
-            }
-        }
-        return (x, y)
     }
 }
 
