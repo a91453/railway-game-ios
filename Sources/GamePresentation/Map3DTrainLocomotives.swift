@@ -12,6 +12,10 @@ import Foundation
 /// the head lamps glow at the front only.
 enum Map3DTrainLocomotive: Sendable {
     case e200, e500, r100, r200, r135, e1000
+    /// Decision 286, later (fourth): the CT273 steam locomotive's black
+    /// and gold (the reference's garage `ct273`) on the hood unit, until
+    /// there is a steam locomotive's shape.
+    case ct273
 
     var model: Map3DModelPack.Model {
         var b = SceneKitBuilder()
@@ -22,6 +26,7 @@ enum Map3DTrainLocomotive: Sendable {
         case .r200: b.r200()
         case .r135: b.hoodUnit(body: 0x232E48, stripe: 0xEEEDE4, rail: 0xEEEDE4, chevron: true, fans: 2)
         case .e1000: b.e1000()
+        case .ct273: b.hoodUnit(body: 0x262D2B, stripe: 0xBCAB74, rail: 0xBCAB74, chevron: false, fans: 0)
         }
         return .flat(named: "\(self)", from: b.mesh)
     }

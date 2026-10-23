@@ -6,15 +6,16 @@ import XCTest
 /// how many doors it has.
 final class TrainTypeTests: XCTestCase {
     func testTheReferenceTableAndItsCapacities() {
-        XCTAssertEqual(TrainType.allCases.map(\.rawValue), ["A", "B", "C", "L", "D", "APM", "MAGLEV", "SKYRAIL", "MONORAIL", "STEAM", "HSR", "EMU3000", "EMU100", "E200CK", "E500CK", "R100CK", "R200CK", "HAIFENG", "BLUE", "SHANLAN", "MINGRI", "STAR"])
-        XCTAssertEqual(TrainType.allCases.map(\.ratedCapacityPerCar), [310, 260, 200, 243, 230, 138, 240, 140, 224, 50, 80, 45, 45, 50, 50, 50, 50, 44, 50, 44, 26, 29])
+        XCTAssertEqual(TrainType.allCases.map(\.rawValue), ["A", "B", "C", "L", "D", "APM", "MAGLEV", "SKYRAIL", "MONORAIL", "STEAM", "HSR", "EMU3000", "EMU100", "E200CK", "E500CK", "R100CK", "R200CK", "HAIFENG", "BLUE", "SHANLAN", "MINGRI", "STAR", "SUMMER"])
+        XCTAssertEqual(TrainType.allCases.map(\.ratedCapacityPerCar), [310, 260, 200, 243, 230, 138, 240, 140, 224, 50, 80, 45, 45, 50, 50, 50, 50, 44, 50, 44, 26, 29, 50])
         // Decision 153: the reference's nine, and this project's steam train;
         // decision 168: and the high-speed set, which a world without an
         // era offers as well; decision 169: and the EMU3000; decision 252:
         // and more of the Taiwan Railway's; decision 286: and the Blue Train,
-        // the Shan-Lan, the Ming-Ri and the Formosa Star.
+        // the Shan-Lan, the Ming-Ri, the Formosa Star and the Midsummer
+        // Formosa.
         XCTAssertEqual(TrainType.reference, Array(TrainType.allCases.prefix(9)))
-        XCTAssertEqual(TrainType.offered, TrainType.reference + [.highSpeed, .emu3000, .emu100, .e200ChuKuang, .e500ChuKuang, .r100ChuKuang, .r200ChuKuang, .haiFeng, .blueTrain, .shanLan, .mingRi, .formosaStar])
+        XCTAssertEqual(TrainType.offered, TrainType.reference + [.highSpeed, .emu3000, .emu100, .e200ChuKuang, .e500ChuKuang, .r100ChuKuang, .r200ChuKuang, .haiFeng, .blueTrain, .shanLan, .mingRi, .formosaStar, .midsummerFormosa])
         XCTAssertEqual(TrainType.main, [.a, .b, .c])
         XCTAssertEqual(TrainType.referenceDefault, .b)
 
@@ -104,7 +105,7 @@ final class TrainTypeTests: XCTestCase {
     }
 
     func testDoorsSetHowFastPassengersGetOffAndOn() {
-        XCTAssertEqual(TrainType.allCases.map(\.doorsPerCar), [5, 4, 4, 3, 5, 2, 3, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 3, 2, 3, 2, 2])
+        XCTAssertEqual(TrainType.allCases.map(\.doorsPerCar), [5, 4, 4, 3, 5, 2, 3, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 3, 2, 3, 2, 2, 2])
         var train = Train(id: TrainID(rawValue: 1), name: "T")
         train.cars = 4
         // Standard: 4 doors × 2 a second × 4 cars, as before types.
@@ -193,7 +194,7 @@ final class TrainTypeTests: XCTestCase {
         XCTAssertEqual(TrainType.allCases.filter(\.isHighSpeed), [.highSpeed])
         XCTAssertEqual(TrainType.allCases.filter { !$0.overloads }, [.highSpeed])
         XCTAssertEqual(TrainFamily.allCases.map { family in TrainType.allCases.filter { $0.family == family }.map(\.rawValue) }, [
-            ["A", "B", "C", "L", "D", "APM"], ["STEAM", "EMU3000", "EMU100", "E200CK", "E500CK", "R100CK", "R200CK", "HAIFENG", "BLUE", "SHANLAN", "MINGRI", "STAR"], ["HSR"], ["MAGLEV", "SKYRAIL", "MONORAIL"],
+            ["A", "B", "C", "L", "D", "APM"], ["STEAM", "EMU3000", "EMU100", "E200CK", "E500CK", "R100CK", "R200CK", "HAIFENG", "BLUE", "SHANLAN", "MINGRI", "STAR", "SUMMER"], ["HSR"], ["MAGLEV", "SKYRAIL", "MONORAIL"],
         ])
         XCTAssertEqual(TrainType.allCases.filter { $0.spec.offer == .eraOnly }, [.steam])
     }

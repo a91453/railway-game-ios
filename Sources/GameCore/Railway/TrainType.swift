@@ -88,6 +88,10 @@ public struct TrainType: RawRepresentable, Hashable, Codable, CaseIterable, Send
     /// The Formosa Star (環島之星, decision 286, later, third): Chu-Kuang
     /// coaches behind an E500, round the island every day.
     public static let formosaStar = TrainType(listed: "STAR")
+    /// The Midsummer Formosa (仲夏寶島號, decision 286, later, fourth):
+    /// Chu-Kuang coaches behind the CT273 steam locomotive. Not the steam
+    /// train of decision 153 (``steam``), which only an era offers.
+    public static let midsummerFormosa = TrainType(listed: "SUMMER")
 
     /// The reference's main types, offered everywhere
     /// (`LINE_TRAIN_TYPE_MAIN`); the others are its extras
@@ -137,7 +141,8 @@ public struct TrainType: RawRepresentable, Hashable, Codable, CaseIterable, Send
     public var isHighSpeed: Bool { TrainTypeCatalog.builtIn[row].family == .highSpeed }
 
     /// Whether it is a sightseeing train (decision 286): the Hai-Feng, the
-    /// Blue Train, the Shan-Lan, the Ming-Ri and the Formosa Star.
+    /// Blue Train, the Shan-Lan, the Ming-Ri, the Formosa Star and the
+    /// Midsummer Formosa.
     public var isSightseeing: Bool { TrainTypeCatalog.builtIn[row].isSightseeing }
 
     /// What one of its trains calling near a sight adds to the sight's

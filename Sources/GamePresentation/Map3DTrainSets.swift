@@ -71,6 +71,10 @@ public struct Map3DTrainSet: Sendable {
             // Decision 286, later (third): the Formosa Star's pink coaches
             // behind the E500.
             hauled("STAR", locomotive: .e500, coach: coach(TrainLivery.formosaStar, band: 0.38...0.43)),
+            // Decision 286, later (fourth): the Midsummer Formosa's
+            // Chu-Kuang coaches behind the CT273, for now a black hood
+            // unit with its gold line (no steam locomotive model yet).
+            hauled("SUMMER", locomotive: .ct273, coach: chuKuang),
             // The push-pull Tze-Chiang: an E1000 power car at each end.
             hauled("pushPull", locomotive: .e1000,
                    coach: coach(body: 0xC9CECC, band: 0xED822A), lastIsLocomotive: true),
@@ -171,7 +175,7 @@ public struct Map3DTrainSet: Sendable {
     /// (decision 252: the Chu-Kuang presets).
     static let aliases: [String: String] = [
         "e200ChuKuang": "E200CK", "e500ChuKuang": "E500CK", "r100ChuKuang": "R100CK", "r200ChuKuang": "R200CK",
-        "mingRi": "MINGRI", "formosaStar": "STAR", "metro": "metroC381",
+        "mingRi": "MINGRI", "formosaStar": "STAR", "midsummerFormosa": "SUMMER", "metro": "metroC381",
     ]
 
     /// The key of a train of `type` with `performance`: its type's code

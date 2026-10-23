@@ -116,6 +116,9 @@ public struct Tourism: Hashable, Sendable {
     /// What the Formosa Star, the round-the-island tour train (decision 286,
     /// later, third), adds the same way: three quarters of a star.
     public static let starsPerRoundIslandTrain = 75
+    /// What the Midsummer Formosa, the CT273 steam train (decision 286,
+    /// later, fourth), adds the same way: a star and a quarter.
+    public static let starsPerSteamTrain = 125
     /// The share of an attraction's tourists who stay the night in a hotel
     /// near it, in thousandths (shared among the hotels there).
     public static let hotelStayPermille: Int64 = 80
@@ -453,7 +456,8 @@ extension GameWorld {
     /// (``Attraction/stars``, with its shop), a quarter star for each of
     /// the first two hotels near it and half a star when a sightseeing
     /// train calls near it (decision 286; a whole star for the Ming-Ri,
-    /// three quarters for the Formosa Star), five stars at most.
+    /// three quarters for the Formosa Star, a star and a quarter for the
+    /// Midsummer Formosa), five stars at most.
     public func stars(of attraction: Attraction) -> Int {
         stars(of: attraction, sightseeingStops: sightseeingStops())
     }

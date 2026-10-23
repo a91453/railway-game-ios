@@ -855,6 +855,7 @@ extension TrainType {
         "SHANLAN": ("Shan-Lan sightseeing train", "山嵐號"),
         "MINGRI": ("Ming-Ri sightseeing train", "鳴日號"),
         "STAR": ("Formosa Star sightseeing train", "環島之星"),
+        "SUMMER": ("Midsummer Formosa steam train", "仲夏寶島號"),
     ]
 }
 
