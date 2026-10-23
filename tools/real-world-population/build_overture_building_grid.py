@@ -88,8 +88,8 @@ def extract(release, out):
     connection.sql(f"""
         COPY (
             SELECT id, num_floors, height, is_underground, has_parts,
-                   list_transform(sources, s -> s.dataset) AS datasets,
-                   list_transform(sources, s -> s.license) AS licenses,
+                   list_transform(sources, lambda s: s.dataset) AS datasets,
+                   list_transform(sources, lambda s: s.license) AS licenses,
                    ST_AsWKB(geometry) AS footprint
             FROM read_parquet({sql_list(files)})
             WHERE bbox.xmax >= {west} AND bbox.xmin <= {east}
