@@ -15357,6 +15357,8 @@ Linux（release，`-enable-testing`）上，改之前量到的（毫秒）：
 - **美術**：幀數顯示用和 3D 統計一樣的材質圓角框，預設關，不改地圖的樣子。
 - **音樂**：無。
 
+**後來**（2026-10-23，決策 369，PLAYER_FEEDBACK 80.1 #2）：第 1 項的試跑不再放在 tick 的工作裡。七條線的世界一次試跑要約 0.6 秒（Linux release），tick 等它跑完，遊戲時間就停住，夜裡接連下指令會一直停。現在 tick 之後交給 `lookAgainForNightSkip()` 在旁邊跑，`NightSkipProbe` 拿掉；見 `docs/decisions/369.md`。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

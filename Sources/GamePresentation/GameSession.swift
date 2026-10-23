@@ -1196,7 +1196,8 @@ public final class GameSession {
     @ObservationIgnored var nightSkipRunAheadOnMain = 0
 
     /// The run ahead under way off the main actor after a command while
-    /// paused (decision 330, later), or `nil`.
+    /// paused (decision 330, later) or after the game loop's tick
+    /// (decision 369), or `nil`.
     @ObservationIgnored var nightSkipLookAhead: Task<Void, Never>?
 
     /// The first move of the night whose skip ended or was stopped, so the
@@ -1461,9 +1462,6 @@ public final class GameSession {
         var ticks: Int
         /// What traffic control shows of ``world``, when the step read it.
         var traffic: TrafficReading?
-        /// Decision 328: the night skip's run ahead from ``world``, when
-        /// the step worked it out.
-        var nightSkip: NightSkipMemo?
         /// Decision 330: the station master's advice for ``world``, when
         /// the step worked it out.
         var advice: WorkedAdvice?
@@ -1496,7 +1494,9 @@ public final class GameSession {
     /// the arrival sound, the income (decision 117), the year's close and
     /// the scenario's end. A refused step changes nothing and shows the
     /// refusal.
-    private func finish(_ outcome: Result<TickStep, GameError>) {
+    /// `fromLoop`: the game loop's tick, after which the night skip runs
+    /// ahead off the main actor (decision 369).
+    private func finish(_ outcome: Result<TickStep, GameError>, fromLoop: Bool = false) {
         let step: TickStep
         switch outcome {
         case .success(let advanced):
@@ -1523,8 +1523,6 @@ public final class GameSession {
             // Decision 195: the ticks that ran, and the followed train's way.
             ticksRun += Int64(step.ticks)
             if let traffic = step.traffic { trafficMemo = (worldRevision, traffic) }
-            // Decision 328: worked out with the tick, off the main actor.
-            if let memo = step.nightSkip, memo.revision == commandRevision { nightSkipMemo = memo }
             // Decision 330: likewise, for this world only.
             workedAdvice = step.advice.map { (worldRevision, $0) }
             // Game time moved on: no edit before it can be undone.
@@ -1563,7 +1561,7 @@ public final class GameSession {
             meter.measure(.stepMidnight) { onMidnight?() }
         }
         // Decision 305: the night's skip goes on, ends or starts.
-        meter.measure(.stepNightSkip) { continueNightSkip() }
+        meter.measure(.stepNightSkip) { continueNightSkip(aheadOffTheMainActor: fromLoop) }
     }
 
     /// A tick of the game loop being worked out off the main actor
@@ -1586,9 +1584,6 @@ public final class GameSession {
         /// The last reading, whose kinds of scheduled waits the tick's
         /// reading keeps (decision 210).
         var previousTraffic: TrafficReading?
-        /// Decision 328: what the tick needs to run ahead for the night
-        /// skip, when ``GameSession/nightSkip`` is looked at after it.
-        var nightSkip: NightSkipProbe?
         /// Decision 330: what the tick needs to work out the station
         /// master's advice, which the news reads once a game hour.
         var advice: AdviceProbe?
@@ -1608,9 +1603,6 @@ public final class GameSession {
                         if tick.readsTraffic {
                             step.traffic = TrafficReading(world: step.world, train: tick.train, in: tick.language, previous: tick.previousTraffic)
                         }
-                        // Decision 328: some 100 ms on a big world, kept
-                        // off the main actor.
-                        step.nightSkip = tick.nightSkip?.firstMove(after: step.world)
                         // Decision 330: some 40 ms on the Yilan Line, once
                         // a game hour.
                         step.advice = tick.advice?.advice(of: step.world)
@@ -1628,8 +1620,6 @@ public final class GameSession {
         return LoopTick(
             world: world, revision: worldRevision, listening: playSound != nil, train: selectedTrainID, language: language,
             previousTraffic: trafficMemo?.reading,
-            // ``nightSkip`` runs ahead only with no skip under way.
-            nightSkip: nightSkipRun == nil && !isPausedForBuilding ? NightSkipProbe(memo: nightSkipMemo, revision: commandRevision) : nil,
             advice: AdviceProbe(hour: newsWatch.hour, leader: lineLossLeaderMemo.kept(atRevision: commandRevision))
         )
     }
@@ -1669,7 +1659,7 @@ public final class GameSession {
     @discardableResult
     func finish(_ tick: LoopTick, with outcome: Result<TickStep, GameError>) -> Bool {
         guard tick.revision == worldRevision else { return false }
-        FrameCostMeter.shared.measure(.afterStep) { finish(outcome) }
+        FrameCostMeter.shared.measure(.afterStep) { finish(outcome, fromLoop: true) }
         return true
     }
 
