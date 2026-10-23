@@ -1032,7 +1032,7 @@ PR #1019–#1030 那一輪（2026-10-22，發版前小審查，TestFlight 第 82
 
 PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡需求燈只數這條線、座位圖換行、關卡「繼續玩」會繼續、3D 場景快取分局、長按的診斷 trace、決策 266 的文字），延後的 10 項（`main` 在 abb306a 的 full lane 紅、`testHoldingAStationTracesItsBusiestTrips` 的根因、整平時的轉乘乘客、72.1 沒有自己的綠 full lane 等）連同原因與建議做法，寫在 `docs/archive/PR755_784_REVIEW_HANDOFF.md` 第四節。
 
-第 5 關的複線（決策 376 寫測試時發現，還沒有人接）：最長的那段（第 4 關延到第三座城鎮的軌道，`edge(9)`）兩側、到道岔或只有這一段都說「旁邊不到 4 公尺有軌道」，蓋不了；可以蓋的那段（第 1 關的軌道）預覽在 Linux 除錯版要算約 18 秒（`trackUpgradePreview`，在主執行緒上算），實機（Release）多久沒量過。量法：`LessonGuideTests.testTheFifthLessonsGuide`。
+第 5 關的複線（決策 378，session_01USKsgntpPbW3M49z6oSHen，目標 86.1）：**已修**。最長那段被拒絕是第二條軌道的控制點平移在急彎中間只離 3.81 公尺，改成分段鋪；修好後那段要的錢比第 5 關的現金多，引導改指 S1 旁沒有列車的那段，一次蓋好。預覽慢在找渡線時白切長軌道，GameCore 加一個不改世界的切開查詢先問，Linux release 從 175–744 ms 降到 40–95 ms。剩下：實機 Release 讀數；要再快得改 GameCore 的 fouling 增量或把預覽移出主執行緒（決策 378「下一步」）。
 
 ### 7.2 遊戲功能的後續（決策與研究裡寫了「之後」的）
 
