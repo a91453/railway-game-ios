@@ -1093,6 +1093,7 @@ private struct DetailsCard: View {
             pinned = nil
         }
         .glassBackground(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .hudFrameMark("hud.card")
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("details.card")
     }

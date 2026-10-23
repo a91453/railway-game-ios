@@ -69,7 +69,7 @@ final class HUDAlignmentUITests: XCTestCase {
             if let rail = read("hud.rail", screen) {
                 edgesNearTheLines(rail, "the rail", on: lines, screen)
             }
-            trailing(["details.card", "map.corner"], on: lines, screen)
+            trailing(["hud.card", "map.corner"], on: lines, screen)
         }
     }
 
@@ -82,8 +82,8 @@ final class HUDAlignmentUITests: XCTestCase {
             XCTAssertTrue(card.appears(within: 10), "\(way): the train's card opens")
             card.waitUntilStill()
             let screen = "\(way) train card"
-            underTheBar(["details.card"], on: lines, screen)
-            trailing(["details.card"], on: lines, screen)
+            underTheBar(["hud.card"], on: lines, screen)
+            trailing(["hud.card"], on: lines, screen)
         }
     }
 
