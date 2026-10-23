@@ -197,7 +197,7 @@ struct PassengerRouteGraph: Equatable {
                                   capacities: Array(capacities.prefix(service + 1))).plans[service]?.headway
                 }
                 if line.isRing {
-                    for direction in [RingDirection.inner, .outer] {
+                    for direction in [RingDirection.inner, .outer] where line.ringWayRuns(direction) {
                         guard let lap = direction == .inner ? journey : world.journey(of: line, service: service, direction: .outer) else { continue }
                         let stationIDs = line.ringCalls(direction).map { line.stops[$0] }
                         let path = ServicePath(line: line.id, pattern: nil,

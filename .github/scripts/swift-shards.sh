@@ -333,6 +333,11 @@ set -euo pipefail
 # (19 min of its 20 on that run). The memory test sat in HighSpeedDemoTests
 # first and timed #1070's selected-3 out (run 39894227203); a class of its
 # own is dealt by its weight.
+# 2026-10-23 (decision 364): rest timed out at its 20 minutes twice on
+# #1065's run 39907268084, its tests still passing when cut off. That pull
+# request adds LongLegReplayTests' three hours without a deadlock (13 s
+# locally) and LoopLineBoardingTests (15 s), both in rest. They go to
+# campaigns-11, the shortest job of that run (10.5 min).
 # 2026-10-23, later: rest reached the 20-minute limit again on main 43852fa
 # (run 39906598034: cancelled after 15.9 minutes of tests; the re-run's
 # rest job 19m54s, 953 s of tests for 3526 tests in 469 classes), where
@@ -383,7 +388,7 @@ classes_of() {
     campaigns-8) echo "GoldenScenarioTests ScheduledOvertakeTrackMiddlePropertyTests TimetablePropertyTests ScreenshotSceneTests NewGameBalanceTests" ;;
     campaigns-9) echo "SaveMutationTests EconomySecondHalfPropertyTests NightSkipTests PolicyTests" ;;
     campaigns-10) echo "PassengerPlanKeyTests ReservationShortcutTests NetworkPostcardTests StationCommerceCardTests LineLossDiagnosisTests FlexDispatchPropertyTests RealRailwayTracingTests Map3DStreetLifeTests Map3DTests" ;;
-    campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests HighSpeedDemoTests TRADemoTests" ;;
+    campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests HighSpeedDemoTests TRADemoTests LongLegReplayTests LoopLineBoardingTests" ;;
     campaigns-12) echo "TrafficControlPropertyTests ScheduledOvertakeTrackFinalPropertyTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests Map3DStreetsTests LineConfirmationTests FreightSessionTests Map3DRealGroundTests SparseCityLandTests LinePanelMemoTests Map3DStationKitTests" ;;
     campaigns-13) echo "BoardingPropertyTests TurnbackPropertyTests Map3DSceneMemoryTests Map3DCoarseChunkTests" ;;
     campaigns-14) echo "ServiceLinePropertyTests OnboardingTests CommandLogTests ScheduledTrafficTests TurnbackTests" ;;
@@ -505,7 +510,8 @@ CLASS_WEIGHTS="BoardingPropertyTests:624 LineDispatchPropertyTests:602
   Map3DRealGroundTests:9 AutoServiceTests:9 Map3DHandoffTests:7
   Map3DSignTests:7 Map3DDetailTests:7 Map3DShadowTests:7
   Map3DStationKitTests:7 Map3DNightAndGroundTests:6 Map3DPropsTests:6
-  ShortTurnCardTests:6"
+  ShortTurnCardTests:6
+  LongLegReplayTests:16 LoopLineBoardingTests:19"
 CLASS_WEIGHT_DEFAULT=1
 
 # With SELECTED_PART=k/n, the test IDs on stdin of the k-th of n parts. Each

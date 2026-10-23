@@ -35,6 +35,9 @@ public enum SoundCue: Hashable, Sendable {
     /// A real line was bought (decision 315): the local station chime's
     /// two notes, a cadence onto the tonic and a low stamp.
     case lineAcquired
+    /// Day passes went on sale, or at a new price (decision 373): a
+    /// ticket machine printing one, its cutter, the ticket dropping.
+    case ticketIssued
 
     /// When each train in service last arrived at a call, as its service
     /// times record it (`ServiceTimes/arrival`), and whether it stands at
@@ -163,6 +166,7 @@ public enum SoundCue: Hashable, Sendable {
         case .warning: ("warning", "wav")
         case .goalMet: ("goal-met", "wav")
         case .lineAcquired: ("line-acquired", "wav")
+        case .ticketIssued: ("ticket-issued", "wav")
         }
     }
 }

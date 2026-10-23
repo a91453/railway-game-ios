@@ -53,6 +53,28 @@ final class DayPassCardTests: XCTestCase {
         XCTAssertNil(DayPassCard(world: session.world).todayText(in: .english))
     }
 
+    /// Decision 373: putting the pass on sale, or a new price, prints a
+    /// ticket; the same price again, stopping, or a refused price does
+    /// not.
+    func testSellingPrintsATicket() throws {
+        let session = GameSession(world: try world())
+        var heard: [SoundCue] = []
+        session.playSound = { heard.append($0) }
+        let tickets = { heard.filter { $0 == .ticketIssued }.count }
+        session.setDayPass(Money(800))
+        XCTAssertEqual(tickets(), 1, "on sale")
+        session.setDayPass(Money(800))
+        XCTAssertEqual(tickets(), 1, "the same price: nothing new")
+        session.setDayPass(Money(1_000))
+        XCTAssertEqual(tickets(), 2, "a new price")
+        session.setDayPass(Money(150))
+        XCTAssertEqual(tickets(), 2, "refused")
+        session.setDayPass(nil)
+        XCTAssertEqual(tickets(), 2, "stopped")
+        XCTAssertEqual(SoundCue.ticketIssued.category, .effects, "follows the effects' volume")
+        XCTAssertEqual(SoundCue.ticketIssued.resource.name, "ticket-issued")
+    }
+
     func testABadPriceIsRefused() throws {
         let session = GameSession(world: try world())
         session.setDayPass(Money(150))
