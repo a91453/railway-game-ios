@@ -468,22 +468,25 @@ selected_pattern() {
 }
 
 # Seconds of tests per class, for dealing a selection out into parts
-# (selected_part): the slowest of each class in the five full runs of main
-# the balance note above names, 2026-10-14. Every class of 3 s or more, in
-# either module, is listed: a partial tier is not only GamePresentation's
+# (selected_part). GameCore's: the slowest of each class in the five full
+# runs of main the balance note above names, 2026-10-14. GamePresentation's
+# (from HighSpeedDemoTests on): the slowest of each class in the nine
+# selected-N jobs of pull request runs 39980434405, 39981278980 and
+# 39983144028, 2026-10-23, where TRADemoTests (121 s) and LessonGuideTests
+# (62 s) had no weight and counted as a second each. Every class of 3 s or
+# more, in either module, is listed: a partial tier is not only GamePresentation's
 # classes, as a fixture directory or an edited test file adds GameCore ones
 # (GoldenScenarioTests 333 s, ReservationShortcutTests 154 s), which with the
 # default weight once counted like a class of a second and could load one
 # part with minutes more than the others. Any other class counts
-# CLASS_WEIGHT_DEFAULT (the 239 classes under 3 s took 0.5 s each on
-# average). Only the proportions matter: a stale or missing weight moves a
+# CLASS_WEIGHT_DEFAULT (the 272 GamePresentation classes under 3 s took
+# 0.5 s each on average, 2026-10-23). Only the proportions matter: a stale or missing weight moves a
 # class to another part, never out of the selection.
 CLASS_WEIGHTS="BoardingPropertyTests:624 LineDispatchPropertyTests:602
   ServiceLinePropertyTests:487 SaveMutationSecondHalfTests:478
-  TrafficControlPropertyTests:475 HighSpeedDemoDayTests:550 HighSpeedDemoBatchTests:245 TRADemoDayTests:190 HighSpeedDemoTests:640
-  TrafficFollowingPropertyTests:434 PassengerPlanKeyTests:405
-  LinePatternPropertyTests:401 ServicePropertyTests:398
-  ServiceRepeatingSecondHalfPropertyTests:395
+  TrafficControlPropertyTests:475 TrafficFollowingPropertyTests:434
+  PassengerPlanKeyTests:405 LinePatternPropertyTests:401
+  ServicePropertyTests:398 ServiceRepeatingSecondHalfPropertyTests:395
   ServiceRepeatingPropertyTests:390 SaveMutationTests:359
   EconomySecondHalfPropertyTests:350 GoldenScenarioTests:333
   NetworkServicePropertyTests:289 EconomyPropertyTests:288
@@ -495,42 +498,52 @@ CLASS_WEIGHTS="BoardingPropertyTests:624 LineDispatchPropertyTests:602
   KernelDifferentialTests:163 FlexDispatchPropertyTests:161
   ReservationShortcutTests:154 DeadlockPropertyTests:135
   PassengerPropertyTests:132 ScheduledOvertakeTrackLastPropertyTests:128
-  NewGameSavePropertyTests:87 OccupiedRoutingPropertyTests:78
-  OnboardingTests:77 WorldStateMachineTests:65 NetworkPostcardTests:63
-  CommandLogTests:59 RealWorldDemoTests:56 NetworkSectionPropertyTests:50
-  IdleTrainDeadlockTests:48 ScheduledTrafficTests:46 LineAccountsTests:35
-  TurnbackPropertyTests:33 TurnbackTests:32 LineLossFixesTests:31
-  ReplayFixtureTests:28 CityRequestsTests:26 LoadJourneyCacheTests:25
-  LineRoutePreferencePropertyTests:24 SingleTrackCapacityPropertyTests:24
-  StationCommerceCardTests:18 NewGameBalanceTests:17
-  RealWorldDemoGroundTests:17 LoadTrackCheckIndexTests:17
-  RealWorldDataLoadTests:16 MonthlyReportTests:14 ScreenshotSceneTests:14
-  AchievementsTests:14 CityGrowthTests:13 NewsSessionTests:16
-  LineLossDiagnosisTests:13 NewGameCampaignTests:12 TrainTripLogTests:12
-  TownGrowthTests:10 FreightSessionTests:10 ScheduledOvertakeTrackTests:10
-  StationOperationsTests:9 PassengerTransferTests:9 EconomyAccountsTests:9
-  LinePanelMemoTests:8 CurveSpeedRunTests:8 ReferenceWorldGoldenTests:8
-  SparseCityLandTests:8 RealWorldExpansionTests:7 LoadFoulingIndexTests:7
-  LineRoutePreferenceTests:7 PingxiChallengeTests:6 RunDepotTests:6
-  StationDemandSessionTests:6 SavedGameTests:6 CompanyRankTests:6
-  DeadlockTests:6 LineDispatchTests:5 DepartureBoardTests:5
-  TrafficControlTests:5 TrainWhereTextTests:5 TrackCheckShortcutTests:4
-  WholeTaiwanTests:4 WaterGridTests:4 ContinuousTrackTests:4 BuildingTests:4
-  BlockSectionsTests:4 TutorialSessionTests:9 LandDemandTests:4
-  TrafficOverlayTests:4 WebsiteTimelineTests:4 HighSpeedTests:4
-  HolidayTextTests:4 BoardingTests:3 LandImportTests:3 NightSkipTests:57
-  RealLineAcquisitionTests:52 RealRailwayTracingTests:38 PolicyTests:24
-  Map3DOpenEveryStartTests:24 Map3DStreetLifeTests:19 LessonTests:18
-  Map3DTests:15 Map3DSceneMemoryTests:190 Map3DCoarseChunkTests:32
-  LocalPassTests:59 DemoRealLinesTests:26 Map3DStreamingTests:23
-  Map3DStreetsTests:22 Map3DSurfaceTests:16 Map3DRealBuildingsTests:14
-  LineConfirmationTests:13 DemoAtTests:12 SeededStreetPlanTests:12
-  MetroStructuresTests:12 Map3DNextDepartureTests:10 Map3DBuildingsTests:9
-  Map3DRealGroundTests:9 AutoServiceTests:9 Map3DHandoffTests:7
-  Map3DSignTests:7 Map3DDetailTests:7 Map3DShadowTests:7
-  Map3DStationKitTests:7 Map3DNightAndGroundTests:6 Map3DPropsTests:6
-  ShortTurnCardTests:6
-  LongLegReplayTests:16 LoopLineBoardingTests:19"
+  OccupiedRoutingPropertyTests:78 WorldStateMachineTests:65
+  NetworkSectionPropertyTests:50 IdleTrainDeadlockTests:48
+  ScheduledTrafficTests:46 LineAccountsTests:35 TurnbackPropertyTests:33
+  TurnbackTests:32 ReplayFixtureTests:28 CityRequestsTests:26
+  LoadJourneyCacheTests:25 LineRoutePreferencePropertyTests:24
+  SingleTrackCapacityPropertyTests:24 LoadTrackCheckIndexTests:17
+  CityGrowthTests:13 TrainTripLogTests:12 TownGrowthTests:10
+  ScheduledOvertakeTrackTests:10 PassengerTransferTests:9
+  EconomyAccountsTests:9 CurveSpeedRunTests:8 ReferenceWorldGoldenTests:8
+  LoadFoulingIndexTests:7 LineRoutePreferenceTests:7 RunDepotTests:6
+  SavedGameTests:6 DeadlockTests:6 LineDispatchTests:5 TrafficControlTests:5
+  TrackCheckShortcutTests:4 ContinuousTrackTests:4 BuildingTests:4
+  BlockSectionsTests:4 LandDemandTests:4 HighSpeedTests:4 BoardingTests:3
+  LocalPassTests:59 LongLegReplayTests:16
+  HighSpeedDemoTests:393 HighSpeedDemoDayTests:328 TRADemoTests:121
+  HighSpeedDemoBatchTests:120 NewGameSavePropertyTests:89 TRADemoDayTests:75
+  OnboardingTests:70 CommandLogTests:66 LessonGuideTests:62
+  RealLineAcquisitionTests:62 NetworkPostcardTests:61 Map3DSceneMemoryTests:57
+  NightSkipTests:57 RealWorldDemoTests:51 LineLossFixesTests:49
+  Map3DCoarseChunkTests:31 Map3DStreetLifeTests:29 RealRailwayTracingTests:29
+  DemoRealLinesTests:26 Map3DStreamingTests:25 Map3DStreetsTests:25
+  Map3DOpenEveryStartTests:23 MonthlyReportTests:19 Map3DSurfaceTests:18
+  Map3DTests:18 RealWorldDataLoadTests:18 LessonTests:17
+  NewGameBalanceTests:17 NewsSessionTests:17 PolicyTests:17
+  RealWorldDemoGroundTests:17 Map3DRealBuildingsTests:15
+  StationCommerceCardTests:14 LineConfirmationTests:13
+  LineLossDiagnosisTests:13 ScreenshotSceneTests:13 DemoAtTests:12
+  MetroStructuresTests:12 AchievementsTests:11 SeededStreetPlanTests:11
+  FreightSessionTests:10 LoopLineBoardingTests:10 Map3DRealGroundTests:10
+  AutoServiceTests:9 Map3DBuildingsTests:9 MapMarksTests:9
+  PingxiChallengeTests:9 Map3DHandoffTests:8 Map3DNextDepartureTests:8
+  Map3DSignTests:8 NewGameCampaignTests:8 SparseCityLandTests:8
+  TrainSessionPropertyTests:8 TutorialSessionTests:8 CompanyRankTests:7
+  LinePanelMemoTests:7 Map3DModelTests:7 Map3DNightAndGroundTests:7
+  Map3DPropsTests:7 Map3DStationKitTests:7 Map3DDetailTests:6
+  Map3DRealTrainsTests:6 Map3DShadowTests:6 RealWorldExpansionTests:6
+  ScreenFactsTests:6 StationDemandSessionTests:6 DepartureBoardTests:5
+  HeadlessGameTests:5 HolidayTextTests:5 NextStepsTests:5 ShortTurnCardTests:5
+  StationOperationsTests:5 BackgroundSaveTests:4 LineSatisfactionTests:4
+  Map3DTaipeiLandmarksTests:4 Map3DTrainLabelsTests:4 MenuChoicesTests:4
+  TrainRosterTests:4 WaterGridTests:4 WebsiteTimelineTests:4
+  WholeTaiwanTests:4 AutosaveSlotsTests:3 DemoWorldTests:3
+  DoubleTrackUpgradeTests:3 GameLauncherTests:3 JourneyTraceTests:3
+  LandImportTests:3 LineDraftSummaryTests:3 Map3DParksTests:3
+  Map3DSceneKitTests:3 Map3DStationsTests:3 SimpleRulesTests:3
+  TodayAccountTests:3 TrafficOverlayTests:3"
 CLASS_WEIGHT_DEFAULT=1
 
 # With SELECTED_PART=k/n, the test IDs on stdin of the k-th of n parts. Each
@@ -1176,7 +1189,7 @@ path_plan() {
 #   parts=<how many jobs share it (SELECTED_PART)>
 # with one line per file on stderr: its tier and why.
 declare -A FIXTURE_PLANS=()
-PRESENTATION_PARTS=3
+PRESENTATION_PARTS=5
 pr_plan() {
   local path line tier rank best=0 tests="" edited="" plans
   code_cache
@@ -1201,8 +1214,11 @@ pr_plan() {
     # All the GamePresentation tests take longer than the rest of a partial
     # tier (452 s of tests locally on 2026-10-12, up to about 1.8 times that
     # on a slow runner, after a build of about 5 minutes); PRESENTATION_PARTS
-    # jobs share them by the classes' weights (selected_part): about 6.5
-    # minutes of tests each on 2026-10-14 (1,169 s in all).
+    # jobs share them by the classes' weights (selected_part). They grew from
+    # 1,169 s on 2026-10-14 to about 2,450 s on 2026-10-23, when three parts
+    # of up to 947 s plus about 4.5 minutes of container and build reached
+    # the job's 20 minutes; five parts are about 510 s each (about 13 minutes
+    # a job). When a part nears 15 minutes again, add a part.
     [[ " $tests " != *" GamePresentationTests.* "* ]] || parts="$PRESENTATION_PARTS"
     # An edited campaign file's class can take most of a job's 20 minutes
     # on its own (ServiceRepeatingPropertyTests 792 s of tests); two of
