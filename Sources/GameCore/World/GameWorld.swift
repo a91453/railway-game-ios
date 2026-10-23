@@ -599,34 +599,7 @@ public struct GameWorld: Equatable, Sendable {
     ///   track would come near a company building.
     @discardableResult
     public mutating func splitTrackEdge(_ id: TrackEdgeID, at distance: Int64) throws(GameError) -> TrackNodeID {
-        guard let edge = network.edge(id), let geometry = network.geometry(of: id),
-              let start = network.node(edge.from), let end = network.node(edge.to) else { throw .unknownTrackEdge(id) }
-        guard distance >= Self.minimumSplitPiece, distance <= geometry.length - Self.minimumSplitPiece,
-              !network.spacingExemptions.contains(where: { $0.contains(id) }),
-              let cut = Self.split(edge.curve, from: start.position.plan, to: end.position.plan, near: distance),
-              // Decision 233: on the steady grade, never on a vertical curve.
-              cut.chainage >= edge.profile.startTransition, cut.chainage <= geometry.length - edge.profile.endTransition
-        else { throw .invalidTrackGeometry }
-        guard geometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumTurnoutGrade) else { throw .turnoutTooSteep }
-        if let train = trains.first(where: { train in
-            if case .onEdge(let traversal, _)? = train.position, traversal.edge == id { return true }
-            return train.trailEdges.contains(id) || train.movement.remainingEdges.contains(id)
-                || train.reservation.contains { $0.isSpan(of: id) }
-        }) {
-            throw .trackReserved(train.id)
-        }
-        guard !network.platforms(on: id).contains(where: { $0.start < cut.chainage && cut.chainage < $0.end }) else {
-            throw .trackEdgeHasPlatform(id)
-        }
-        if let line = lines.first(where: { line in
-            (0..<line.serviceCount).contains { service in
-                line.routes(ofService: service).contains { route in
-                    route.platform.edge == id || route.tracks.contains { $0.edge == id }
-                }
-            }
-        }) {
-            throw .trackEdgeInLineRoute(line.id)
-        }
+        let (edge, geometry, start, end, cut) = try splitCut(id, at: distance)
         // Decision 233: the new node at the edge's height there, rounded as
         // the profile rounds it; the first part keeps the vertical curve at
         // the `from` end, the second the one at the `to` end, so each runs
@@ -730,6 +703,59 @@ public struct GameWorld: Equatable, Sendable {
         // other change to the track.
         abandonUnservedPassengers()
         return node
+    }
+
+    /// The refusal ``splitTrackEdge(_:at:)`` would meet first among the
+    /// checks it makes before working out the parts (decision 378): the
+    /// cut, the grade, the trains, a platform and the lines, in that order;
+    /// `nil` when they pass, though working out the parts may still refuse
+    /// the split. Changes nothing, and costs far less than splitting: a
+    /// preview trying many places (a double track's crossovers) skips those
+    /// these refuse.
+    public func trackEdgeSplitRefusal(_ id: TrackEdgeID, at distance: Int64) -> GameError? {
+        do throws(GameError) {
+            _ = try splitCut(id, at: distance)
+            return nil
+        } catch {
+            return error
+        }
+    }
+
+    /// ``splitTrackEdge(_:at:)``'s checks before it works out the parts,
+    /// and what they found: the edge, its geometry, its end nodes and the cut.
+    private func splitCut(_ id: TrackEdgeID, at distance: Int64) throws(GameError)
+        -> (edge: TrackEdge, geometry: TrackGeometry, start: TrackNode, end: TrackNode,
+            cut: (first: TrackCurve, second: TrackCurve, point: PlanPoint, chainage: Int64))
+    {
+        guard let edge = network.edge(id), let geometry = network.geometry(of: id),
+              let start = network.node(edge.from), let end = network.node(edge.to) else { throw .unknownTrackEdge(id) }
+        guard distance >= Self.minimumSplitPiece, distance <= geometry.length - Self.minimumSplitPiece,
+              !network.spacingExemptions.contains(where: { $0.contains(id) }),
+              let cut = Self.split(edge.curve, from: start.position.plan, to: end.position.plan, near: distance),
+              // Decision 233: on the steady grade, never on a vertical curve.
+              cut.chainage >= edge.profile.startTransition, cut.chainage <= geometry.length - edge.profile.endTransition
+        else { throw .invalidTrackGeometry }
+        guard geometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumTurnoutGrade) else { throw .turnoutTooSteep }
+        if let train = trains.first(where: { train in
+            if case .onEdge(let traversal, _)? = train.position, traversal.edge == id { return true }
+            return train.trailEdges.contains(id) || train.movement.remainingEdges.contains(id)
+                || train.reservation.contains { $0.isSpan(of: id) }
+        }) {
+            throw .trackReserved(train.id)
+        }
+        guard !network.platforms(on: id).contains(where: { $0.start < cut.chainage && cut.chainage < $0.end }) else {
+            throw .trackEdgeHasPlatform(id)
+        }
+        if let line = lines.first(where: { line in
+            (0..<line.serviceCount).contains { service in
+                line.routes(ofService: service).contains { route in
+                    route.platform.edge == id || route.tracks.contains { $0.edge == id }
+                }
+            }
+        }) {
+            throw .trackEdgeInLineRoute(line.id)
+        }
+        return (edge, geometry, start, end, cut)
     }
 
     /// Edge `curve` from `p0` to `p3` cut at its sampled point nearest
