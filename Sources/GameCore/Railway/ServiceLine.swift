@@ -595,14 +595,17 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     /// Decision 364: the calls of the trip a ring's train stopped at stop
     /// `start` runs the way `direction`: from there round to the first
     /// stop, where every lap the passengers plan on ends (decision 49),
-    /// and from then on whole laps (``ringCalls(_:)``). Stop 0 is a whole
-    /// lap.
+    /// and on through it for a whole lap (``ringCalls(_:)``), so the trip
+    /// never ends partway round the ring with the train standing in the
+    /// way; from then on whole laps. Stop 0 is a whole lap.
     func ringCallsToFirst(_ direction: RingDirection, from start: Int) -> [Int] {
         guard start > 0 else { return ringCalls(direction) }
+        let toFirst: [Int]
         switch direction {
-        case .inner: return Array(stops.indices[start...]) + [0]
-        case .outer: return Array(stops.indices[...start].reversed())
+        case .inner: toFirst = Array(stops.indices[start...])
+        case .outer: toFirst = Array(stops.indices[1...start].reversed())
         }
+        return toFirst + ringCalls(direction)
     }
 
     /// The line's streams of trains, each sent out from its first call on

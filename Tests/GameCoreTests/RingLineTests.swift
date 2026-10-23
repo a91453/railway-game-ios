@@ -382,9 +382,10 @@ final class RingLineTests: XCTestCase {
 
     /// Decision 364: an outer train standing at Delta (82.1, a ring made
     /// from a line whose trains stood at its two ends) first goes round
-    /// only to Alpha, the first stop, and from then on laps from there,
-    /// so passengers planned from Alpha the outer way past Delta (decision
-    /// 49: laps from the first stop) ride it. Before, every lap went from
+    /// to Alpha, the first stop, and on through it (the trip does not end
+    /// there) for a whole lap from it, then laps from there, so passengers
+    /// planned from Alpha the outer way past Delta (decision 49: laps from
+    /// the first stop) ride it. Before, every lap went from
     /// Delta back to Delta, and at Alpha the train reached only Delta: the
     /// passengers for Gamma waited for ever.
     func testAnOuterTrainStartingElsewhereLapsFromTheFirstStop() throws {
@@ -397,7 +398,7 @@ final class RingLineTests: XCTestCase {
         }
         let outer = TrainID(rawValue: 2)
         try world.advance(ticks: 1)
-        XCTAssertEqual(world.train(id: outer)?.timetable.map(\.station), [delta, gamma, beta, alpha], "round to the first stop")
+        XCTAssertEqual(world.train(id: outer)?.timetable.map(\.station), [delta, gamma, beta, alpha, delta, gamma, beta, alpha], "round to the first stop and on for a whole lap")
         let route = try XCTUnwrap(world.passengerRoutes(from: alpha, to: gamma).first {
             $0.legs.count == 1 && $0.legs[0].direction == .inbound
         }, "the outer way, Alpha, Delta, Gamma")

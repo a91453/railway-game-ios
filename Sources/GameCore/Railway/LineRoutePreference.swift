@@ -265,8 +265,8 @@ extension GameWorld {
         var orders = [line.routeOrder(service: stream.service, direction: stream.direction ?? .inner)]
         if flexDispatch {
             if line.isRing {
-                // Decision 364: round to the first stop; a whole lap from
-                // another stop is a trip sent out before.
+                // Decision 364: round to the first stop and a lap on; a
+                // whole lap from another stop is a trip sent out before.
                 let way = stream.direction ?? .inner
                 orders += line.stops.indices.dropFirst().flatMap { [line.ringCallsToFirst(way, from: $0), line.ringCalls(way, from: $0)] }
             } else {
