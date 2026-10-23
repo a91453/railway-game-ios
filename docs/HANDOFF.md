@@ -969,6 +969,7 @@ PR #1019–#1030 那一輪（2026-10-22，發版前小審查，TestFlight 第 82
 - **(c) §22.2 第 10h 名，2D 每幀**：`MapCanvas` 的 `==` 比較 `traffic` 與閉塞，所以交通覆蓋一變整張軌道畫布重畫；可把閉塞與等候畫進自己的畫布。`MapLabelCanvas` 在候車數變了就重畫站名。夜色的 multiply 混色。不操作時降 2D 幀率上限。先請作者在大存檔開「設定 → 地圖 → 幀數」，記下哪一層最慢。
 - **買一格地圖約 55 ms**（Linux release）：讀那一格的土地，`LandImport` 約 23 ms、GameCore `expandLand` 約 22 ms。可在玩家點選地塊時就在背景讀好（照地塊、範圍與資料組記住），按「買」時只套用。
 - 編輯後第一次讀 `trafficOverlay`、`situationAlerts` 各約 1.3 ms，沒動。
+- **遊戲規劃另外交代、給 (b)(c) 的人**（2026-10-23）：同一類還有 78.1 iPhone 17 Pro「手機發熱當機」、79.1 iPhone 17 Pro「6000 倍卡住」（79.1 還沒有決策 330）。(b) 先在 origin/main 量 6000× 的現況。發熱：看不操作、高倍速時 2D 是否一直以 120 Hz 重畫，可在 GamePresentation 定一個幀率上限規則（例如沒有手勢時 60 或 30），App 只接線，值與五方寫進新決策。TestFlight 沒有當機紀錄，分不出 watchdog 還是記憶體：入門 iPad（A16）記憶體較少，順便量大世界、高倍速時的記憶體峰值（批次推進時是否一次複製多份世界）。
 
 **高倍速的主執行緒**（決策 330，`claude/fast-forward-main-thread`，2026-10-22；作者 iPad 宜蘭線 6000×：最長一幀 114 ms、推進後 max 44.8 ms）。已修：整點的站長建議（約 40 ms，幾乎全在 `firstLineWithoutPlaceToPass()`）移到 `LoopTick.work()`；幀數讀數把「推進後」拆成九段、多一行「清理」（放掉舊世界）、第一行多「其他」。報告：`TICK_REPORT_YILAN=432 swift test -c release -Xswiftc -enable-testing --filter TickCostReportTests/testWhatTheStepAfterATickCostsOnTheYilanLine`。還沒做、還沒人接：
 - **請作者量**：宜蘭線 6000×，開「設定 → 地圖 → 幀數」，點開讀數，記下幾秒內的「最長一幀 · 其他」與「推進後」的 max。推進後的 max 應該從約 45 ms 降到幾 ms。
