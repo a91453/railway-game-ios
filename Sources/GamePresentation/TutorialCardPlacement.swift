@@ -127,8 +127,9 @@ public struct TutorialCardPlacement: Equatable, Sendable {
     /// (``folded``), one line as wide as its words.
     public var narrows = true
 
-    /// The card's distance from the screen's edges.
-    static let margin: Double = 16
+    /// The card's distance from the screen's edges: the map's other
+    /// floating controls' (``HUDMargins/edge``; decision 388, 16 before).
+    static let margin = HUDMargins.edge
     /// Its distance from its target.
     static let gap: Double = 12
     /// The depth of the band of the map left free beside the card.
