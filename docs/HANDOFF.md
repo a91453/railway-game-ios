@@ -1026,6 +1026,8 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 
 ### 7.3 3D 的後續
 
+**四節暖白金砂都市列車（Codex，#1081，`codex/four-car-metro-2026-10-23`）**：作者新五張圖，四節等長傳統轉向架，與前批五／七節輕軌不同。獨立`Map3DFourCarMetro.swift`；四節每側兩組雙門、16軸、近直立兩端、橫向風擋、雙緩衝塊／中央連結器。每節12m為比例推估，全bounds50.130×2.802×3.694m／7144三角；中心x±18.45、±6.15m，只平移。已修第一版偏長、風擋偏高與輪頂重疊；[外觀／技術、私有成品與限制](art/four-car-metro-2026-10-23/README.md)、[重建與組裝](../tools/four-car-metro/README.md)。7原生／7GLB、49七向、同相機前後、白模／剪影、viewer與ZIP在私庫新目錄。VERIFIED Linux Swift6.4 warnings-as-errors、19測試、原生／組裝／GLB、封閉邊／玻璃支持／20mm輪淨空、缺面／反面／玻璃浮空拒收、PNG和viewer；真機Metal／效能／動畫及工程尺寸UNVERIFIED。**只註冊靜態素材，未綁營運車種，合併不會自動替換路網列車**；後續整合按12.3m節距。無GameCore／存檔／決策／golden／replay變更；兩庫draft PR與CI見#1081，未合併／auto-merge／TestFlight。
+
 **五節改色＋七節輕軌（Codex，#991，公開draft #992／私有draft #40，`codex/five-section-lrt-2026-10-22`）**：作者要求兩台都不要紅，最終五節暖白綠松／七節暖白霧藍。新增獨立七節配方`Map3DSevenSectionLRT.swift`，長—短—長—短—長—短—長，2/0/2/0/2/0/2雙門／側、六鉸接、單端集電弓。五節保留尺寸／門位／輪位／設備／編組，只改色並修trailing側窗沿錯誤對角造成的破口；其餘三角與前producer5a2fd38e逐位元比對。最新[外觀／技術及私有包](art/lrt-pair-2026-10-22/README.md)、[重建／共同軌面／組裝](../tools/lrt-pair/README.md)。12單元＋2編組＋2比較、112七向、白模／剪影／同相機五節改色與七節窗面修訂、viewer／ZIP在私有新目錄lrt-pair-2026-10-22，舊包不覆蓋。VERIFIED Linux Swift6.4 warnings-as-errors、28相關測試、原生組裝／GLB、12單元封閉邊／216主要玻璃承板與車殼支持、六種故障案例。七節45.5m是比例推估，隱藏四架八軸為補全假設；真機Metal／效能／動畫／工程尺寸UNVERIFIED。**兩台均為靜態素材，未綁營運車種，合併不會自動換路網列車**；整合須按各節長度／共同軌面，不能當一般七輛車。不改GameCore／Map3DTrainSets／營運／存檔／決策／golden／replay；最新CI以#992 head為準。未合併／auto-merge或TestFlight。
 
 **接手**：3D 生活感 session 做完第 2 節的四步之後，由遊戲規劃排序。
