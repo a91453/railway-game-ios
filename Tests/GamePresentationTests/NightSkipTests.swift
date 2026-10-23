@@ -334,6 +334,43 @@ final class NightSkipTests: XCTestCase {
         XCTAssertEqual(stopped.world.clock.speed, .normal, "Stop goes back to the speed before")
     }
 
+    // MARK: - Music (decision 372)
+
+    /// The music goes down while the night is skipped and comes back when
+    /// the skip ends, by itself at its stop or because the player stopped
+    /// it; the app is told only when the level changes.
+    func testTheMusicGoesDownWhileTheNightIsSkipped() throws {
+        let session = GameSession(world: try world())
+        var told: [Double] = []
+        session.duckMusic = { told.append($0) }
+        session.skipToMorning()
+        XCTAssertEqual(told, [MusicDuck.nightSkipGain])
+        XCTAssertEqual(MusicDuck.nightSkipGain, pow(10, -12.0 / 20), accuracy: 1e-9)
+        session.advance(ticks: 3)
+        XCTAssertEqual(told.count, 1, "told once, not every tick")
+        _ = runSkip(session)
+        XCTAssertNil(session.nightSkipRun)
+        XCTAssertEqual(told, [MusicDuck.nightSkipGain, 1], "back at the stop")
+
+        let stopped = GameSession(world: try world())
+        var stoppedTold: [Double] = []
+        stopped.duckMusic = { stoppedTold.append($0) }
+        stopped.skipToMorning()
+        stopped.advance(ticks: 2)
+        stopped.setSpeed(.x60)
+        XCTAssertEqual(stoppedTold, [MusicDuck.nightSkipGain, 1], "back when the player chooses a speed")
+    }
+
+    /// Going down over the night is slow; the follow duck's half-decibel
+    /// steps keep their half second (decision 219).
+    func testTheMusicFadesSlowerForTheNight() {
+        XCTAssertEqual(MusicDuck.fadeSeconds(from: 1, to: MusicDuck.nightSkipGain), MusicDuck.nightFadeOutSeconds)
+        XCTAssertEqual(MusicDuck.fadeSeconds(from: MusicDuck.nightSkipGain, to: 1), MusicDuck.nightFadeInSeconds)
+        XCTAssertEqual(MusicDuck.fadeSeconds(from: 1, to: pow(10, -0.5 / 20)), 0.5)
+        XCTAssertEqual(MusicDuck.fadeSeconds(from: pow(10, -6.0 / 20), to: pow(10, -5.5 / 20)), 0.5)
+        XCTAssertGreaterThan(MusicDuck.nightFadeOutSeconds, MusicDuck.nightFadeInSeconds, "out slower than back")
+    }
+
     /// A skip pressed while paused runs, and is paused again at its stop.
     func testASkipFromAPauseEndsPaused() throws {
         var start = try world()

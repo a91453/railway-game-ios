@@ -675,8 +675,9 @@ public final class GameSession {
     /// saved.
     @ObservationIgnored public var playSound: (@MainActor (SoundCue) -> Void)?
     /// Decision 219, stage 2: the factor on the music while the followed
-    /// train runs into an interchange (``MusicDuck``), told to the app
-    /// when it changes; `nil` tells no one.
+    /// train runs into an interchange (``MusicDuck``), and while a quiet
+    /// night is skipped (decision 372), told to the app when it changes;
+    /// `nil` tells no one.
     @ObservationIgnored public var duckMusic: (@MainActor (Double) -> Void)?
     /// The factor last told to ``duckMusic``.
     @ObservationIgnored private var musicDuck = 1.0
@@ -998,8 +999,16 @@ public final class GameSession {
                 runningSound(sound)
             }
         }
+        updateMusicDuck()
+    }
+
+    /// Tells the app the factor on the music when it changed: the follow
+    /// duck (``MusicDuck``), and 12 dB down while a quiet night is
+    /// skipped (decision 372).
+    func updateMusicDuck() {
         guard let duckMusic else { return }
-        let gain = MusicDuck.gain(following: followedTrain, in: world)
+        let night = nightSkipRun == nil ? 1 : MusicDuck.nightSkipGain
+        let gain = MusicDuck.gain(following: followedTrain, in: world) * night
         guard gain != musicDuck else { return }
         musicDuck = gain
         duckMusic(gain)
@@ -1199,7 +1208,10 @@ public final class GameSession {
     public internal(set) var nightSkipOffer: NightSkip?
 
     /// The skip over a quiet night under way (decision 305), or `nil`.
-    public internal(set) var nightSkipRun: NightSkipRun?
+    public internal(set) var nightSkipRun: NightSkipRun? {
+        // Decision 372: the music goes down while the night is skipped.
+        didSet { if (oldValue == nil) != (nightSkipRun == nil) { updateMusicDuck() } }
+    }
 
     /// Whether a quiet night is skipped without the shortcut being pressed
     /// (decision 305, the settings; kept on the device, so the app sets
