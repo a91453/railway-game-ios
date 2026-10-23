@@ -222,14 +222,17 @@ public struct Map3DScene: Sendable {
     /// overhead line over the track, but along `railways`' lines run
     /// without one. Decision 331: on a real-world map, `temples` where
     /// they stand, and the park kit's scenes in the base map's parks.
+    /// Decision 389: on a real-world map, `footprints`' buildings, and the
+    /// city's own only where there are none.
     public init(world: GameWorld, snapshot: RailwaySnapshot? = nil, skyline: CitySkyline? = nil, focus: (x: Double, y: Double)? = nil,
-                baseMap: BaseMapTiles? = nil, cityTiles: [CityTileArea] = [], heights: HeightGrid? = nil, lineBands: Map3DLineBands? = nil,
-                railways: RealRailways? = nil, temples: RealTemples? = nil, noBuild: RealNoBuildLand? = nil) {
+                baseMap: BaseMapTiles? = nil, cityTiles: [CityTileArea] = [], footprints: FootprintTiles? = nil, heights: HeightGrid? = nil,
+                lineBands: Map3DLineBands? = nil, railways: RealRailways? = nil, temples: RealTemples? = nil, noBuild: RealNoBuildLand? = nil) {
         // Decision 368: on a map the camera builds ahead on (decision 358),
         // the city in full only round the middle, which the window builds
         // in full as the camera comes near.
         self.init(world: world, snapshot: snapshot, skyline: skyline, frame: Self.frame(world: world, focus: focus), baseMap: baseMap,
-                  cityTiles: cityTiles, heights: heights, lineBands: lineBands, railways: railways, temples: temples, noBuild: noBuild,
+                  cityTiles: cityTiles, footprints: footprints, heights: heights, lineBands: lineBands, railways: railways, temples: temples,
+                  noBuild: noBuild,
                   detail: Map3DStreaming.streams(world) ? Map3DPoint(0, 0, 0) : nil)
     }
 
@@ -244,8 +247,9 @@ public struct Map3DScene: Sendable {
     /// it in full (``Chunk/coarse``).
     public static func chunks(_ keys: some Collection<Map3DStreaming.Key>, of streaming: Map3DStreaming, world: GameWorld,
                               snapshot: RailwaySnapshot? = nil, skyline: CitySkyline? = nil, baseMap: BaseMapTiles? = nil,
-                              cityTiles: [CityTileArea] = [], heights: HeightGrid? = nil, lineBands: Map3DLineBands? = nil,
-                              railways: RealRailways? = nil, temples: RealTemples? = nil, noBuild: RealNoBuildLand? = nil,
+                              cityTiles: [CityTileArea] = [], footprints: FootprintTiles? = nil, heights: HeightGrid? = nil,
+                              lineBands: Map3DLineBands? = nil, railways: RealRailways? = nil, temples: RealTemples? = nil,
+                              noBuild: RealNoBuildLand? = nil,
                               trackCover: Map3DTrackCover? = nil, detail: Map3DPoint? = nil) -> [Chunk] {
         guard let box = streaming.region(of: keys) else { return [] }
         let apron = Map3DStreaming.apron * Double(WorldCoordinate.unitsPerMetre), map = streaming.map
@@ -255,8 +259,8 @@ public struct Map3DScene: Sendable {
         // Decision 359: the whole network's track cover (`trackCover`, the
         // scene's, or worked out again), which lays the tunnels.
         let scene = Map3DScene(world: world, snapshot: snapshot, skyline: skyline, frame: (region, streaming.originX, streaming.originY),
-                               baseMap: baseMap, cityTiles: cityTiles, heights: heights, lineBands: lineBands, railways: railways, temples: temples,
-                               noBuild: noBuild, trackCover: trackCover, detail: detail)
+                               baseMap: baseMap, cityTiles: cityTiles, footprints: footprints, heights: heights, lineBands: lineBands,
+                               railways: railways, temples: temples, noBuild: noBuild, trackCover: trackCover, detail: detail)
         let wanted = Set(keys)
         return scene.chunks.filter { wanted.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }
     }
@@ -266,8 +270,9 @@ public struct Map3DScene: Sendable {
     /// with `trackCover`, or the network's own when `nil`. Decision 368:
     /// with `detail`, the city in full only within ``detailRadius`` of it.
     init(world: GameWorld, snapshot: RailwaySnapshot?, skyline: CitySkyline?, frame: (region: WorldRegion, originX: Double, originY: Double),
-         baseMap: BaseMapTiles?, cityTiles: [CityTileArea], heights: HeightGrid?, lineBands: Map3DLineBands?, railways: RealRailways?,
-         temples: RealTemples?, noBuild: RealNoBuildLand? = nil, trackCover: Map3DTrackCover? = nil, detail: Map3DPoint? = nil) {
+         baseMap: BaseMapTiles?, cityTiles: [CityTileArea], footprints footprintTiles: FootprintTiles? = nil, heights: HeightGrid?,
+         lineBands: Map3DLineBands?, railways: RealRailways?, temples: RealTemples?, noBuild: RealNoBuildLand? = nil,
+         trackCover: Map3DTrackCover? = nil, detail: Map3DPoint? = nil) {
         (region, originX, originY) = frame
 
         var builder = Builder(originX: originX, originY: originY, region: region, world: world, heights: heights)
@@ -343,8 +348,9 @@ public struct Map3DScene: Sendable {
         let frame = real == nil ? nil : RealWorldFrame(world: world)
         builder.target = .near
         var standing = landmarkCells.union(frame.map { builder.addRealBuildings(cityTiles, frame: $0, clearOf: stations.union(landmarkCells)) } ?? [])
-        // Decision 385: the airports' own buildings.
-        if let noBuild, let frame { builder.addAirportBuildings(noBuild, frame: frame, clearOf: stations.union(landmarkCells)) }
+        // Decision 385: the airports' own buildings; decision 389: only
+        // with no footprints, which have them.
+        if footprintTiles == nil, let noBuild, let frame { builder.addAirportBuildings(noBuild, frame: frame, clearOf: stations.union(landmarkCells)) }
         // Decision 331: the real temples, on no station or real building.
         if let temples, let frame = RealWorldFrame(world: world) {
             standing.formUnion(builder.addTemples(temples, frame: frame, clearOf: stations.union(standing)))
@@ -361,10 +367,19 @@ public struct Map3DScene: Sendable {
             standing.formUnion(builder.addParks(real, clearOf: stations.union(standing)))
             builder.target = .near
         }
+        // Decision 389: the footprints' buildings, on no station, landmark,
+        // real building, temple or kit's scene; no city lot on them.
+        var footprints: Map3DFootprints?
+        if let frame, let tiles = footprintTiles {
+            footprints = Map3DFootprints(tiles: tiles, frame: frame, region: builder.region)
+        }
+        let beforeFootprints = standing
+        if let footprints { standing.formUnion(builder.addFootprints(footprints, clearOf: stations.union(landmarkCells), takenBy: beforeFootprints)) }
         builder.addCity(city, clearOf: stations.union(builder.realTrackCells), takenBy: taken.whole.union(standing), besideRoads: taken.byRoads)
         builder.target = .far
         if let frame { builder.addRealBuildings(cityTiles, frame: frame, clearOf: stations.union(landmarkCells)) }
-        if let noBuild, let frame { builder.addAirportBuildings(noBuild, frame: frame, clearOf: stations.union(landmarkCells)) }
+        if let footprints { builder.addFootprints(footprints, clearOf: stations.union(landmarkCells), takenBy: beforeFootprints) }
+        if footprintTiles == nil, let noBuild, let frame { builder.addAirportBuildings(noBuild, frame: frame, clearOf: stations.union(landmarkCells)) }
         builder.addCity(city, clearOf: stations.union(builder.realTrackCells), takenBy: taken.whole.union(standing), besideRoads: taken.byRoads)
         builder.target = .base
         builder.addPlacedBuildings()

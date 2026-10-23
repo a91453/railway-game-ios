@@ -176,8 +176,8 @@ final class Map3DFrontageTests: XCTestCase {
         let frame = try XCTUnwrap(RealWorldFrame(world: world))
         let airport = try XCTUnwrap(land.areas.first { $0.kind == .airport && abs($0.ring[0].latitude - 22.57) < 0.03 && $0.ring.count > 50 })
         let airportOnly = RealNoBuildLand(areas: [airport])
-        func standing(_ noBuild: RealNoBuildLand?) -> Int {
-            let scene = Map3DScene(world: world, baseMap: tiles, noBuild: noBuild)
+        func standing(_ noBuild: RealNoBuildLand?, footprints: FootprintTiles? = nil) -> Int {
+            let scene = Map3DScene(world: world, baseMap: tiles, footprints: footprints, noBuild: noBuild)
             let ring = airport.ring.map { place -> (x: Float, z: Float) in
                 let at = frame.worldPosition(latitude: place.latitude, longitude: place.longitude)
                 let point = scene.point(worldX: at.x, worldY: at.y, height: 0)
@@ -192,5 +192,10 @@ final class Map3DFrontageTests: XCTestCase {
         XCTAssertGreaterThan(town, 20 * bare, "the city's lots on the airport without its land")
         XCTAssertGreaterThan(built, bare + 1_000, "its terminals and hangars")
         XCTAssertLessThan(built, town / 5)
+        // Decision 389: with the real footprints, which have the terminals
+        // and hangars, those draw them instead of the airport's own.
+        let footprints = try FootprintTiles(data: Data(contentsOf: Self.root.appendingPathComponent("RailwayGameApp/Resources/BaseMap/taiwan_buildings.pmtiles"),
+                                                       options: .alwaysMapped))
+        XCTAssertGreaterThan(standing(land, footprints: footprints), bare + 1_000)
     }
 }

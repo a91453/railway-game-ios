@@ -12,6 +12,9 @@ extension Map3DScene.Builder {
     enum RealKind: Equatable {
         /// 413: a 透天厝 street's shophouse, shops under homes.
         case shophouse
+        /// Decision 389: a home of a few storeys, homes to the ground (a
+        /// footprint's, its use residential or unknown).
+        case house
         /// 414: a block of flats.
         case flats
         /// 401, 404: offices, hotels and shops.
@@ -146,6 +149,9 @@ extension Map3DScene.Builder {
             groundPaint = .bays(r(1) < 0.75 ? Self.pick(Map3DSurface.shops, r(2)) : .shutter, bay: 5.4, floors: 1)
             upperPaint = (storeys <= 5 ? Map3DPaint.bays(r(3) < 0.45 ? .homeBalcony : .homeWindows, bay: 6, floors: upperFloors)
                 : Map3DPaint.bays(Self.pick(Map3DSurface.flats, r(3)), bay: 3.2, floors: upperFloors)).on(homeFacing)
+        case .house:
+            wall = Self.pickWall(seed)
+            upperPaint = Map3DPaint.bays(r(3) < 0.45 ? .homeBalcony : .homeWindows, bay: 6, floors: storeys).on(homeFacing)
         case .flats:
             wall = Self.pickWall(seed)
             if r(1) < 0.5 {
@@ -252,7 +258,7 @@ extension Map3DScene.Builder {
             // Decision 235's roof clutter: on a house a water tank or a
             // sheet-steel room (頂樓加蓋); on a block, near, its stair
             // house and air conditioners.
-            let house = kind == .shophouse || (kind == .flats && storeys <= 6)
+            let house = kind == .shophouse || kind == .house || (kind == .flats && storeys <= 6)
             switch kind {
             case _ where house:
                 // Only on a house's roof, not a long terrace's or a hall's.
