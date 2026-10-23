@@ -185,7 +185,9 @@ final class Map3DMetalView: MTKView {
 
     /// The view, or `nil` where the device has no Metal or the shaders do
     /// not load.
-    static func make() -> Map3DMetalView? {
+    /// Decision 365: `samples` a pixel against jagged edges
+    /// (``Map3DQuality/samplesPerPixel``), fixed while the view lives.
+    static func make(samples: Int = 4) -> Map3DMetalView? {
         guard let device = MTLCreateSystemDefaultDevice(), let queue = device.makeCommandQueue(),
               let library = device.makeDefaultLibrary(),
               let vertexFunction = library.makeFunction(name: "map3dVertex"),
@@ -267,7 +269,8 @@ final class Map3DMetalView: MTKView {
         else { return nil }
         let view = Map3DMetalView(device: device, queue: queue, pipeline: pipeline, instancedPipeline: instancedPipeline,
                                   seeThroughPipeline: seeThroughPipeline, shadowPipeline: shadowPipeline, shadowDepthState: shadowDepthState,
-                                  depthState: depthState, skyPipeline: skyPipeline, skyDepthState: skyDepthState, surfaces: surfaces)
+                                  depthState: depthState, skyPipeline: skyPipeline, skyDepthState: skyDepthState, surfaces: surfaces,
+                                  samples: samples)
         // Decision 352: the signs, four corners an instance, solid, tested
         // and written into the depth as the city is.
         if let signVertex = library.makeFunction(name: "map3dSignVertex"), let signFragment = library.makeFunction(name: "map3dSignFragment"),
@@ -302,7 +305,7 @@ final class Map3DMetalView: MTKView {
     private init(
         device: MTLDevice, queue: MTLCommandQueue, pipeline: MTLRenderPipelineState, instancedPipeline: MTLRenderPipelineState,
         seeThroughPipeline: MTLRenderPipelineState, shadowPipeline: MTLRenderPipelineState, shadowDepthState: MTLDepthStencilState, depthState: MTLDepthStencilState,
-        skyPipeline: MTLRenderPipelineState, skyDepthState: MTLDepthStencilState, surfaces: MTLTexture
+        skyPipeline: MTLRenderPipelineState, skyDepthState: MTLDepthStencilState, surfaces: MTLTexture, samples: Int
     ) {
         self.queue = queue
         self.pipeline = pipeline
@@ -317,7 +320,7 @@ final class Map3DMetalView: MTKView {
         super.init(frame: .zero, device: device)
         colorPixelFormat = .bgra8Unorm
         depthStencilPixelFormat = .depth32Float
-        sampleCount = Self.samples
+        sampleCount = samples
         // Decision 342: reversed depth, 0 the farthest.
         clearDepth = 0
         preferredFramesPerSecond = 60
@@ -444,7 +447,7 @@ final class Map3DMetalView: MTKView {
 
     /// The newest Apple GPU family `device` belongs to, as a number (9 for
     /// `.apple9`), 0 for none.
-    private static func appleFamily(of device: MTLDevice) -> Int {
+    nonisolated static func appleFamily(of device: MTLDevice) -> Int {
         let families: [(MTLGPUFamily, Int)] = [(.apple9, 9), (.apple8, 8), (.apple7, 7), (.apple6, 6), (.apple5, 5), (.apple4, 4)]
         return families.first { device.supportsFamily($0.0) }?.1 ?? 0
     }
@@ -555,9 +558,6 @@ final class Map3DMetalView: MTKView {
         return layers
     }
 
-    /// Four samples a pixel smooth the thin rails; every iPhone and iPad
-    /// takes four.
-    private static let samples = 4
     /// An instance's bytes (`Map3DInstance` in `Map3DShaders.metal`): a
     /// matrix and a colour.
     private static let instanceStride = 80
@@ -1088,3 +1088,18 @@ final class Map3DMetalView: MTKView {
         return values.sorted()[values.count / 2]
     }
 }
+
+extension Map3DQuality {
+    /// Decision 365: what this device starts with until the player
+    /// chooses: Off on a GPU older than the A14's (the Simulator is no old
+    /// phone, so it starts on Automatic).
+    static let forThisDevice: Map3DQuality = {
+        #if targetEnvironment(simulator)
+        return .automatic
+        #else
+        guard let device = MTLCreateSystemDefaultDevice() else { return .off }
+        return startingChoice(gpuFamily: Map3DMetalView.appleFamily(of: device))
+        #endif
+    }()
+}
+
