@@ -333,7 +333,9 @@ struct ContentView: View {
     /// (``AppleMapBackground``).
     private var gameLayout: some View {
         GeometryReader { proxy in
-            let strip = RealWorldFrame(world: session.world) == nil ? 0 : AppleMapBackground.attributionHeight
+            // Decision 367: none of the frame reads the world itself, which
+            // changes at every tick and rebuilt the whole screen with it.
+            let strip = session.screenFacts.realWorldFrame == nil ? 0 : AppleMapBackground.attributionHeight
             let margin = Self.margin
             // Decision 106, later: narrower on a phone on its side, so the
             // map keeps about two thirds of the screen.
@@ -457,7 +459,7 @@ struct ContentView: View {
                                     screen.panel = .mapLayers
                                 }
                                 // CTM study M2: a free game's next step.
-                                if let steps = session.nextSteps {
+                                if let steps = session.screenFacts.nextSteps {
                                     NextStepChip(steps: steps, language: session.language) {
                                         screen.panel = .goals
                                     }
@@ -638,7 +640,7 @@ struct ContentView: View {
             // shows: not what the pill, the dock or the card float over.
             .overlay {
                 MapTutorialTarget(
-                    attributionHeight: RealWorldFrame(world: session.world) == nil ? 0 : AppleMapBackground.attributionHeight
+                    attributionHeight: session.screenFacts.realWorldFrame == nil ? 0 : AppleMapBackground.attributionHeight
                 )
             }
             // The status banner is at the top of the map view, above its
@@ -702,7 +704,7 @@ private enum ControlDetails {
             tool = session.tool
             station = session.selectedStationID
             train = session.tappedTrainID
-            hasSelection = session.selectionText() != nil
+            hasSelection = session.screenFacts.hasSelection
             drawsTrack = foldsWhileDrawing && ControlDetails.drawsTrack(session)
         }
     }
@@ -724,13 +726,13 @@ private enum ControlDetails {
             if step.usesDetailsCard { return true }
             if let choice { return choice }
             // The station's tag is hidden in the tutorial.
-            if session.tool == .select { return session.selectionText() != nil }
+            if session.tool == .select { return session.screenFacts.hasSelection }
             return !foldsWhileDrawing
         }
         if let choice { return choice }
         if session.tool != .select { return !(foldsWhileDrawing && drawsTrack(session)) }
         // Decision 119: a station's tag stands in for the card.
-        return session.selectedStationID == nil && session.selectionText() != nil
+        return session.selectedStationID == nil && session.screenFacts.hasSelection
     }
 }
 

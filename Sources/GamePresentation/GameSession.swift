@@ -39,8 +39,12 @@ public final class GameSession {
             if !isApplyingTick, world.clock.isPaused { lookAgainForNightSkip() }
             // Decision 193: a change no recorded path made is logged as one.
             if !isLogging { log(.unrecorded("world")) }
+            refreshScreenFacts()
         }
     }
+    /// Decision 367: what the screen's frame shows of the world, changed
+    /// only when it changes (``ScreenFacts``), not at every tick.
+    public internal(set) var screenFacts = ScreenFacts()
     /// What reached ``world`` since this session began (decision 193).
     @ObservationIgnored public private(set) var commandLog: CommandLog
     /// Whether a path that logs its own change is changing ``world``.
@@ -151,7 +155,9 @@ public final class GameSession {
     /// copy of the station. Read the selected station through
     /// ``selectedStation``. A station is picked by where it stands
     /// (``tapMap(at:reach:)``) or by name (``selectStation(_:)``).
-    public private(set) var selectedStationID: StationID?
+    public private(set) var selectedStationID: StationID? {
+        didSet { refreshScreenFacts() }
+    }
 
     /// What the action button does.
     public private(set) var tool: ConstructionTool = .select
@@ -222,16 +228,23 @@ public final class GameSession {
     /// The train the last tap on the map picked (see ``tapMap(at:reach:)``),
     /// which the select tool's inspector shows; `nil` once a tap or a
     /// command selects a station or a point instead.
-    public private(set) var tappedTrainID: TrainID?
+    public private(set) var tappedTrainID: TrainID? {
+        didSet { refreshScreenFacts() }
+    }
 
     /// The company's building the last tap on the map picked with the
     /// select tool (decision 173), which the inspector shows; an ID only.
-    public private(set) var selectedBuildingID: PlacedBuildingID?
+    public private(set) var selectedBuildingID: PlacedBuildingID? {
+        didSet { refreshScreenFacts() }
+    }
     /// The track the last tap with the select tool picked where there was
     /// no station, train or building (decision 184), which the inspector
     /// shows (``GameWorld/trackInspectionText(of:in:)``); an ID only.
     public private(set) var selectedTrackEdge: TrackEdgeID? {
-        didSet { if selectedTrackEdge != oldValue { trackUpgrade = nil } }
+        didSet {
+            if selectedTrackEdge != oldValue { trackUpgrade = nil }
+            refreshScreenFacts()
+        }
     }
     /// What the track card is about to build on ``selectedTrackEdge``
     /// (decision 247, TrackUpgrade.swift): `nil` until the player picks
@@ -307,6 +320,7 @@ public final class GameSession {
     @ObservationIgnored var isRestoringNews = false
     public internal(set) var news = NewsLog() {
         didSet {
+            refreshScreenFacts()
             // Decision 184: a new worry (debt, a deadline, a typhoon, a town
             // short of materials) rings the warning. A refusal has its own
             // sound; a log read from a save rings nothing.
@@ -577,7 +591,10 @@ public final class GameSession {
     /// The tutorial on screen (Stage C5), or `nil`. Moved through the
     /// tutorial methods (see TutorialSession.swift); never saved.
     public internal(set) var tutorial: Tutorial? {
-        didSet { noteTutorialStepToResume() }
+        didSet {
+            noteTutorialStepToResume()
+            refreshScreenFacts()
+        }
     }
     /// Whether new lines wait for the player to buy their trains, under
     /// simple rules too (decision 264): for tests that staff lines by hand.
@@ -809,6 +826,7 @@ public final class GameSession {
         // What the first monthly report compares with.
         self.news.baseline = MonthlyBaseline(world: world)
         refreshNightSkipOffer()
+        refreshScreenFacts()
     }
 
     // MARK: - Selection
@@ -1519,9 +1537,12 @@ public final class GameSession {
             if let memo = step.nightSkip, memo.revision == commandRevision { nightSkipMemo = memo }
             // Decision 330: likewise, for this world only.
             workedAdvice = step.advice.map { (worldRevision, $0) }
-            // Game time moved on: no edit before it can be undone.
-            undoHistory.removeAll()
-            redoHistory.removeAll()
+            // Game time moved on: no edit before it can be undone. Emptied
+            // only when not empty (decision 367): emptying an empty history
+            // still told everything reading Undo and Redo to look again,
+            // the screen's frame among them, at every tick.
+            if !undoHistory.isEmpty { undoHistory.removeAll() }
+            if !redoHistory.isEmpty { redoHistory.removeAll() }
             editGestureHasSnapshot = false
         }
         meter.measure(.stepFollow) {
