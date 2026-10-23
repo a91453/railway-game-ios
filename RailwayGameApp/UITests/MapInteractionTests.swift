@@ -124,6 +124,8 @@ final class MapInteractionTests: XCTestCase {
         let follow = app.buttons["inspector.train.follow"]
         XCTAssertTrue(follow.appears(within: 5))
         XCTAssertTrue(follow.becomesHittable(), "The follow button shows without scrolling the card")
+        // Decision 383: the card turns the train round too.
+        XCTAssertTrue(app.buttons["inspector.train.reverse"].exists, "The card's Reverse")
         follow.tap()
         XCTAssertTrue(unfollow.appears(within: 5), "Following shows the follow bar")
         XCTAssertTrue(follow.label.contains("Following"), "label: \(follow.label)")
@@ -861,14 +863,11 @@ final class MapInteractionTests: XCTestCase {
         network.waitUntilSettled()
         network.tap()
 
-        let advanced = app.buttons["network.advanced"]
-        XCTAssertTrue(advanced.appears(within: 10))
-        for _ in 0..<3 where !advanced.becomesHittable(within: 1) { app.swipeUp() }
-        advanced.tap()
-        // A toggle with its own style: a toggle (value 1 or 0) or a
-        // selected button, as the system reads it.
+        // Decision 383: beside Double, with the options folded. A toggle
+        // with its own style: a toggle (value 1 or 0) or a selected
+        // button, as the system reads it.
         let snap = app.descendants(matching: .any)["network.snap"].firstMatch
-        XCTAssertTrue(snap.appears(within: 5))
+        XCTAssertTrue(snap.appears(within: 10))
         // The options open below the fold of the details card, which
         // scrolls on its own: a swipe up from the middle of the screen
         // began on the zoom buttons, never moved the card, and twice opened

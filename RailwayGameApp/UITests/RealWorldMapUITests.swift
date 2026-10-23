@@ -518,7 +518,7 @@ final class RealWorldMapUITests: XCTestCase {
         // One line of footnote text in a bordered button: "複線"'s height.
         let double = app.descendants(matching: .any)["network.double"].firstMatch
         XCTAssertTrue(double.appears(within: 10), "No 複線 button")
-        for name in ["network.advanced", "network.trace"] {
+        for name in ["network.advanced", "network.snap", "network.trace"] {
             let button = app.descendants(matching: .any)[name].firstMatch
             XCTAssertTrue(button.appears(within: 5), "No \(name) button")
             XCTAssertLessThanOrEqual(

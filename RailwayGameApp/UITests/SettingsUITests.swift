@@ -145,7 +145,7 @@ final class SettingsUITests: XCTestCase {
         defer { app.terminate() }
 
         tapHittable("hud.menu", in: app)
-        tapHittable("menu.more", in: app)
+        // Decision 383: in the menu's first level.
         tapHittable("menu.report", in: app)
         XCTAssertTrue(app.buttons["settings.report"].appears(within: 10), "Missing Report a Problem")
         XCTAssertTrue(app.switches["settings.report.attach"].exists, "Missing the attach switch")
