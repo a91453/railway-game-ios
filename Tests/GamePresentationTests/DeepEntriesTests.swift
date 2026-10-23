@@ -43,8 +43,9 @@ final class DeepEntriesTests: XCTestCase {
         let session = GameSession(world: world, language: .english)
         XCTAssertEqual(session.trainCardActions(of: train.id), [])
         XCTAssertEqual(session.trainCardActions(of: TrainID(rawValue: 99)), [])
+        let selected = session.selectedTrainID
         session.runTrainCardAction(.reverse, on: TrainID(rawValue: 99))
-        XCTAssertNil(session.selectedTrainID, "an unknown train selects nothing")
+        XCTAssertEqual(session.selectedTrainID, selected, "an unknown train selects nothing")
     }
 
     func testTheCardsWordsAreInBothLanguages() {
