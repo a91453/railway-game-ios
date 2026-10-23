@@ -51,6 +51,51 @@ enum MapArt {
         journey: JourneyTrace? = nil,
         journeyProgress: Double = 1,
         drawsLabels: Bool = true,
+        part: MapPart = .all,
+        in context: GraphicsContext
+    ) {
+        if part != .trafficAndStations {
+            drawRailway(world, network: overlay, expansion: expansion, projection: projection, edges: edges, layers: layers, lines: lines,
+                        routePreview: routePreview, flowStrokes: flowStrokes, lineCodes: lineCodes, journey: journey,
+                        journeyProgress: journeyProgress, in: context)
+        }
+        if part != .railway {
+            drawTrafficAndStations(
+                world, selectedTrainID: selectedTrainID, highlightedTrainID: highlightedTrainID, selectedStationID: selectedStationID,
+                network: overlay, building: building, traffic: traffic, projection: projection, edges: edges, layers: layers,
+                waitingCounts: waitingCounts, labels: labels, latitude: latitude, lights: lights, lineCodes: lineCodes,
+                routePreview: routePreview, drawsLabels: drawsLabels, in: context
+            )
+        }
+    }
+
+    /// Decision 371: the parts of ``drawMap``, each in a canvas of its own
+    /// on the map: the railway (the map's edge, the track, the lines),
+    /// redrawn when the network or the lines change, and over it traffic
+    /// control, the buildings and the stations, redrawn when a train
+    /// reserves track further on. Drawn one over the other they are the
+    /// one drawing of ``all`` (the track-drawing loupe's).
+    enum MapPart: Hashable {
+        case all
+        case railway
+        case trafficAndStations
+    }
+
+    /// The lower part of ``drawMap``: everything under traffic control's
+    /// reserved track.
+    private static func drawRailway(
+        _ world: GameWorld,
+        network overlay: NetworkOverlay?,
+        expansion: MapExpansionOverlay?,
+        projection: some MapProjection,
+        edges: [TrackEdgeID: MapEdgeDrawing],
+        layers: MapLayerPreferences,
+        lines: LineMap,
+        routePreview: RoutePreview?,
+        flowStrokes: [SectionFlow.Stroke],
+        lineCodes: [LineID: String],
+        journey: JourneyTrace?,
+        journeyProgress: Double,
         in context: GraphicsContext
     ) {
         let bounds = WorldRegion(bounds: world.bounds)
@@ -99,6 +144,31 @@ enum MapArt {
         if let routePreview {
             drawRoutePreview(routePreview, world: world, projection: projection, cached: edges, in: context)
         }
+    }
+
+    /// The upper part of ``drawMap``: traffic control's reserved track, the
+    /// buildings, the stations, the names when the loupe draws them, and
+    /// traffic control's waits, over ``drawRailway``'s drawing.
+    private static func drawTrafficAndStations(
+        _ world: GameWorld,
+        selectedTrainID: TrainID?,
+        highlightedTrainID: TrainID?,
+        selectedStationID: StationID?,
+        network overlay: NetworkOverlay?,
+        building: BuildingOverlay?,
+        traffic: TrafficOverlay,
+        projection: some MapProjection,
+        edges: [TrackEdgeID: MapEdgeDrawing],
+        layers: MapLayerPreferences,
+        waitingCounts: [StationID: Int64],
+        labels: StationLabels,
+        latitude: Double,
+        lights: Double,
+        lineCodes: [LineID: String],
+        routePreview: RoutePreview?,
+        drawsLabels: Bool,
+        in context: GraphicsContext
+    ) {
         drawAuthorities(traffic, selectedTrainID: highlightedTrainID ?? selectedTrainID, projection: projection, in: context)
         if let building {
             drawCityBuildingSites(world, overlay: building, projection: projection, in: context)
@@ -154,6 +224,8 @@ enum MapArt {
     /// 216), the names zoomed out (decision 89) and the waiting counts and
     /// crowded rings (decision 210): over the trains, so a train stopped at
     /// a station never covers its name or count (docs/MAP_LAYERS.md 55–57).
+    /// Decision 371: the map draws the `names` and the `counts` in two
+    /// canvases, so one more passenger waiting does not redraw the names.
     static func drawStationLabels(
         _ world: GameWorld,
         layers: MapLayerPreferences,
@@ -162,9 +234,11 @@ enum MapArt {
         latitude: Double,
         lineCodes: [LineID: String],
         projection: some MapProjection,
+        names: Bool = true,
+        counts: Bool = true,
         in context: GraphicsContext
     ) {
-        if layers.showsStationNames {
+        if names, layers.showsStationNames {
             if projection.detail == .full {
                 // Decision 216: the badges of the lines calling at each
                 // station, under its name.
@@ -178,7 +252,7 @@ enum MapArt {
         }
         // Decision 210: the waiting counts and crowded rings, over every
         // station and name, at a middle zoom too.
-        if layers.showsWaitingCounts {
+        if counts, layers.showsWaitingCounts {
             drawStationProblems(world, waitingCounts: waitingCounts, projection: projection, in: context)
         }
     }
