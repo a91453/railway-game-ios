@@ -109,7 +109,10 @@ struct StationMasterCorner: View {
     /// bottom row, which what floats over the map keeps above.
     static let standingHeight: CGFloat = avatarSize + 28 - 3
 
-    var body: some View {
+    // Decision 379: timed for the frame readout.
+    var body: some View { timed(.stationMasterBody) { timedBody } }
+
+    @ViewBuilder private var timedBody: some View {
         ZStack(alignment: .bottomLeading) {
             if !isCovered {
                 corner

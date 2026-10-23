@@ -257,23 +257,33 @@ extension GameSession {
                 "這段路有一部分已經是複線。請選「只有這一段」，只把點的這一段升級。"
             ))
         }
-        guard let parallel = parallelChain(beside: segments, side: trackUpgradeSide, in: world) else {
+        // Each platform along the run, as it lies along the run's way.
+        let along: [[(platform: TrackPlatform, start: Int64, end: Int64)]] = run.enumerated().map { index, piece in
+            guard let main = segments[index].geometry else { return [] }
+            return world.network.platforms(on: piece.edge).map { platform in
+                piece.reversed ? (platform, main.length - platform.end, main.length - platform.start) : (platform, platform.start, platform.end)
+            }
+        }
+        // Decision 378: a long sharp curve's second track in pieces, never
+        // cut at a platform.
+        let pieces = offsetPieces(of: segments, side: trackUpgradeSide, keepWhole: along.map { $0.map { $0.start...$0.end } })
+        guard let parallel = parallelChain(beside: pieces.map(\.segment), side: trackUpgradeSide, in: world) else {
             return refused(language.text(
                 "There is no room for the second track 5 m beside this track. Try the other side.",
                 "這段旁邊 5 公尺放不下第二條軌道。請換另一側。"
             ))
         }
         // The stations' platforms, on the second track for the same
-        // stations, where they lie along the first.
+        // stations, where they lie along the first: on the piece beside
+        // where each lies.
         var platforms: [ChainPlatform] = []
         var stations: Set<StationID> = []
-        for (index, piece) in run.enumerated() {
-            guard let main = segments[index].geometry, let beside = ChainSegment(parallel[index]).geometry, main.length > 0 else { continue }
-            for platform in world.network.platforms(on: piece.edge) {
-                let start = piece.reversed ? main.length - platform.end : platform.start
-                let end = piece.reversed ? main.length - platform.start : platform.end
+        for (index, piece) in pieces.enumerated() {
+            guard let beside = ChainSegment(parallel[index]).geometry, piece.end > piece.start else { continue }
+            for (platform, start, end) in along[piece.index] where piece.start <= start && end <= piece.end {
                 func scaled(_ distance: Int64) -> Int64 {
-                    min(beside.length, max(0, Int64((Double(distance) * Double(beside.length) / Double(main.length)).rounded())))
+                    let length = piece.end - piece.start
+                    return min(beside.length, max(0, Int64((Double(distance - piece.start) * Double(beside.length) / Double(length)).rounded())))
                 }
                 platforms.append(ChainPlatform(station: platform.station, piece: index, start: scaled(start), end: scaled(end)))
                 stations.insert(platform.station)

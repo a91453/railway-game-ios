@@ -57,7 +57,10 @@ struct ContentView: View {
         withTransaction(cut) { screen.showsMap3D = false }
     }
 
-    var body: some View {
+    // Decision 379: timed for the frame readout.
+    var body: some View { timed(.screenBody) { timedBody } }
+
+    @ViewBuilder private var timedBody: some View {
         gameLayout
             // Inside the text size limit below: the tutorial's card shares the
             // screen with the controls it must not cover.
@@ -305,7 +308,7 @@ struct ContentView: View {
             DataSourcesView(launcher: launcher)
         case .settings:
             // Decision 127: a problem report from a game says what is in it.
-            SettingsView(audio: audio, game: session.problemReportGame, lessons: launcher.lessonReport(in: .app), session: session)
+            SettingsView(audio: audio, launcher: launcher, game: session.problemReportGame, lessons: launcher.lessonReport(in: .app), session: session)
         case .yearEnd:
             YearEndSheet(session: session)
                 .presentationDetents([.medium, .large])
@@ -322,7 +325,7 @@ struct ContentView: View {
             MonthlyReportSheet(session: session)
                 .presentationDetents([.medium, .large])
         case .help:
-            HelpView(language: session.language)
+            HelpView(language: session.language, launcher: launcher)
         case .postcard:
             PostcardSheet(session: session)
         case .achievements:
@@ -591,11 +594,28 @@ struct ContentView: View {
                 // beside the map; not in the tutorial, whose card leads.
                 .overlay(alignment: .bottom) {
                     let draft = session.lineDraft
-                    if session.tutorial == nil, draft.count >= 2 {
-                        StationPairDrawer(session: session, from: draft[draft.count - 2], to: draft[draft.count - 1])
+                    // Decision 384: clear of the details card and the map's
+                    // bottom-trailing column too, not only of a panel: it
+                    // stood over the small map and the zoom buttons
+                    // (TestFlight 85.1).
+                    let corner = screen.mapCornerFrame.isEmpty ? 0 : proxy.frame(in: .global).maxX - screen.mapCornerFrame.minX
+                    let trailing = StationPairDrawerLayout.trailingInset(
+                        panel: sidePanel != nil ? sideWidth + margin : 0,
+                        card: isOpen && besideDock ? cardWidth + margin : 0,
+                        corner: corner
+                    )
+                    // On a phone on its side it rides in the map's ✓
+                    // pill instead (decision 384).
+                    if session.tutorial == nil, draft.count >= 2, !StationPairDrawerLayout.ridesInPill(compactHeight: compactHeight) {
+                        StationPairDrawer(
+                            session: session, from: draft[draft.count - 2], to: draft[draft.count - 1]
+                        )
+                            // The map's ✓ keeps off it (decision 384).
+                            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { screen.stationPairFrame = $0 }
+                            .onDisappear { screen.stationPairFrame = .zero }
                             .padding(.horizontal, margin)
                             .padding(.leading, toolsColumn ? dockSize.width : 0)
-                            .padding(.trailing, sidePanel != nil ? sideWidth + margin : 0)
+                            .padding(.trailing, trailing)
                             // Beside the tools column, above the station
                             // master, who stands at its foot.
                             .padding(.bottom, strip + dockBottom + 2 * margin)
@@ -1142,6 +1162,9 @@ final class GameScreenState {
     /// buttons, a layer's key) stands on the screen, as the map measured
     /// it: the station master's bubble stops short of it.
     var mapCornerFrame: CGRect = .zero
+    /// Decision 384: where the new line's station pair drawer stands on the
+    /// screen, `.zero` while it does not show: the map's ✓ keeps off it.
+    var stationPairFrame: CGRect = .zero
     /// Decision 300: whether the map's buttons under a phone's panel found
     /// room in the credits' band, as the map measured it: where they did
     /// not, the panel ends above them.
@@ -1216,7 +1239,10 @@ private struct RouteHintCard: ViewModifier {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.verticalSizeClass) private var verticalSizeClass
 
-    func body(content: Content) -> some View {
+    // Decision 379: timed for the frame readout.
+    func body(content: Content) -> some View { timed(.screenBody) { timedBody(content: content) } }
+
+    @ViewBuilder private func timedBody(content: Content) -> some View {
         content
             .onChange(of: seen ? nil : RouteHintWatch(world: session.world), initial: true) { _, watch in
                 if watch != nil { session.watchRouteHint() }

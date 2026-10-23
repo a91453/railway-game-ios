@@ -559,8 +559,8 @@ expect_decision true full full "a push to main of one test file only is still fu
 expect_decision false none none "a push to main of docs skips" EVENT=push LISTED=true -- docs/ROADMAP.md
 expect_decision true full full "a push to main whose files could not be listed" EVENT=push LISTED=false --
 expect_decision true full full "a manual run" EVENT=workflow_dispatch LISTED=false --
-expect_decision true presentation '{"shard":"selected-3","tests":"GamePresentationTests.*","part":"3/3"}' \
-  "a pull request of GamePresentation runs it in 3 parts" EVENT=pull_request LISTED=true -- "${pr414[@]}"
+expect_decision true presentation '{"shard":"selected-5","tests":"GamePresentationTests.*","part":"5/5"}' \
+  "a pull request of GamePresentation runs it in 5 parts" EVENT=pull_request LISTED=true -- "${pr414[@]}"
 expect_decision true tests-only '{"include":[{"shard":"selected","tests":"FlexDispatchPropertyTests","part":"1/1"}]}' \
   "a pull request of one campaign file" EVENT=pull_request LISTED=true -- "${pr401[@]}"
 expect_decision true full full "a pull request labelled full-ci" EVENT=pull_request LISTED=true LABELS="full-ci" -- "${pr414[@]}"

@@ -68,9 +68,14 @@ final class WebsiteScreenshotTests: XCTestCase {
     func testLiuMingchuanChallenge() {
         let app = launch()
         defer { app.terminate() }
-        let challenges = app.buttons["start.challenges"]
+        // Decision 381: the challenges are on the new game's page.
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 10))
+        app.bringStartButtonIntoView(newGame)
+        newGame.tap()
+        let challenges = app.buttons["newGame.challenges"]
         XCTAssertTrue(challenges.appears(within: 10))
-        app.bringStartButtonIntoView(challenges)
+        XCTAssertTrue(challenges.becomesHittable(within: 5))
         challenges.tap()
         let liu = app.buttons["challenge.history.liuMingchuan"]
         XCTAssertTrue(liu.appears(within: 10))
