@@ -66,11 +66,12 @@ extension ToolColumn {
     }
 
     /// How tall the part over Done and Build is shown where the whole
-    /// column does not fit in `maxHeight`: the card's toggle and the
-    /// tools, all of them when they fit, else cut midway between two
+    /// column does not fit in `maxHeight`: the tools, then the card's
+    /// toggle, all of them when they fit, else cut midway between two
     /// buttons (or two groups), the rest scrolling, so no button shows in
     /// part. Done and Build stand under it, each a gap below, so Done is
-    /// never scrolled out of reach.
+    /// never scrolled out of reach, and the tools come before the toggle,
+    /// so building needs no scrolling.
     public static func buildingScrollHeight(maxHeight: Double, tools: Int, toggle: Bool) -> Double {
         let content = scrollingContent(tools: tools, toggle: toggle, done: false)
         let room = maxHeight - 2 * (tileGap + tileHeight(buttons: 1))
@@ -78,22 +79,24 @@ extension ToolColumn {
         return content.cuts.last { $0 <= room } ?? content.cuts.first ?? 0
     }
 
-    /// The part over Build, Done in the tools' group (`done`) or not: its
-    /// height and where it may be cut, midway between each two buttons.
+    /// The part over Build, Done in the tools' group (`done`) or not, and
+    /// the card's toggle under them: its height and where it may be cut,
+    /// midway between each two buttons.
     private static func scrollingContent(tools: Int, toggle: Bool, done: Bool = true) -> (height: Double, cuts: [Double]) {
         var cuts: [Double] = []
-        var y = 0.0
         let buttons = tools + (done ? 1 : 0)
-        if toggle {
-            y = tileHeight(buttons: 1)
-            guard buttons > 0 else { return (y, cuts) }
-            cuts.append(y + tileGap / 2)
-            y += tileGap
-        }
         for index in 0..<buttons {
-            let foot = y + tilePadding + Double(index + 1) * compactButtonHeight + Double(index) * buttonSpacing
+            let foot = tilePadding + Double(index + 1) * compactButtonHeight + Double(index) * buttonSpacing
             if index < buttons - 1 { cuts.append(foot + buttonSpacing / 2) }
         }
-        return (y + tileHeight(buttons: buttons), cuts)
+        var y = tileHeight(buttons: buttons)
+        if toggle {
+            if buttons > 0 {
+                cuts.append(y + tileGap / 2)
+                y += tileGap
+            }
+            y += tileHeight(buttons: 1)
+        }
+        return (y, cuts)
     }
 }
