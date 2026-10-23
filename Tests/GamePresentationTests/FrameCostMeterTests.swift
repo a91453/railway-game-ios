@@ -42,6 +42,27 @@ final class FrameCostMeterTests: XCTestCase {
         XCTAssertEqual(meter.frame(at: 102)?.parts, [])
     }
 
+    /// Decision 377: why the railway was drawn again, counted beside its
+    /// time; off, nothing is counted, and a new window starts afresh.
+    func testTheReadoutSaysWhyTheRailwayWasDrawnAgain() throws {
+        let meter = FrameCostMeter()
+        meter.noteRedraw(.railway, because: .camera)
+        meter.isOn = true
+        XCTAssertNil(meter.frame(at: 0))
+        meter.noteRedraw(.railway, because: .flow)
+        meter.noteRedraw(.railway, because: .camera)
+        meter.noteRedraw(.railway, because: .camera)
+        meter.record(.railway, milliseconds: 30)
+        meter.record(.railway, milliseconds: 20)
+        meter.record(.railway, milliseconds: 10)
+        let reading = try XCTUnwrap(meter.frame(at: 1))
+        XCTAssertEqual(reading.parts.first?.reasons, [.camera: 2, .flow: 1])
+        XCTAssertEqual(reading.lines(in: .english).last, "track and lines 60.0 ms/s · ×3 · max 30.0 ms · view moved ×2 · passenger flow ×1")
+        XCTAssertEqual(reading.lines(in: .traditionalChinese).last, "軌道與路線 60.0 ms/s · ×3 · max 30.0 ms · 畫面移動 ×2 · 客流 ×1")
+        meter.record(.railway, milliseconds: 5)
+        XCTAssertEqual(meter.frame(at: 2)?.parts.first?.reasons, [:])
+    }
+
     /// Decision 330: of the longest frame, what no part on the main thread
     /// was timed in; the pieces of the step after a tick under it.
     func testTheLongestFrameKeepsWhatWasNotTimedAndThePiecesFollowTheirPart() throws {

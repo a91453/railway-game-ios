@@ -2136,18 +2136,29 @@ private struct MapCanvas: View, Equatable {
     nonisolated static func == (lhs: MapCanvas, rhs: MapCanvas) -> Bool {
         guard lhs.part == rhs.part, lhs.drawsLabels == rhs.drawsLabels, lhs.camera == rhs.camera, lhs.layers == rhs.layers,
               lhs.linePalette == rhs.linePalette else { return false }
-        let railway = {
-            MapRedraw.sameRailway(lhs.world, rhs.world)
-                && lhs.network == rhs.network
-                && lhs.expansion == rhs.expansion
-                && lhs.edges == rhs.edges
-                && lhs.lines == rhs.lines
-                && lhs.routePreview == rhs.routePreview
-                && lhs.flowVersion == rhs.flowVersion
-                && lhs.lineCodes == rhs.lineCodes
-                && lhs.journey == rhs.journey
-                && lhs.journeyProgress == rhs.journeyProgress
+        // Decision 377: the first input found different, for the frame
+        // readout to say why the railway was drawn again.
+        func railwayChange() -> MapRedrawReason? {
+            if !MapRedraw.sameRailway(lhs.world, rhs.world) { return .railway }
+            if lhs.network != rhs.network { return .networkTool }
+            if lhs.expansion != rhs.expansion { return .expansion }
+            if lhs.edges != rhs.edges { return .edges }
+            if lhs.lines != rhs.lines { return .lines }
+            if lhs.routePreview != rhs.routePreview { return .routePreview }
+            if lhs.flowVersion != rhs.flowVersion { return .flow }
+            if lhs.lineCodes != rhs.lineCodes { return .lineCodes }
+            if lhs.journey != rhs.journey || lhs.journeyProgress != rhs.journeyProgress { return .journey }
+            return nil
         }
+        if lhs.part == .railway, rhs.part == .railway, lhs.drawsLabels == rhs.drawsLabels {
+            let change: MapRedrawReason? = lhs.camera != rhs.camera ? .camera
+                : lhs.layers != rhs.layers ? .layers
+                : lhs.linePalette != rhs.linePalette ? .palette
+                : railwayChange()
+            if let change { FrameCostMeter.shared.noteRedraw(.railway, because: change) }
+            return change == nil
+        }
+        let railway = { railwayChange() == nil }
         let stations = {
             // Drawn only with the names (``MapLabelCanvas`` otherwise).
             let labelsMatch = !lhs.drawsLabels || (lhs.waitingCounts == rhs.waitingCounts && lhs.labels == rhs.labels)
