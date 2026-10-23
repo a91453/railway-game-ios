@@ -139,45 +139,61 @@ final class LessonGuideTests: XCTestCase {
         lastStep(session, "time.play") { session.setSpeed(.normal) }
     }
 
-    /// Lesson 5: a stretch of track picked, Make double track, ✓. The
-    /// longest stretch, lesson 4's track on to the third town, has track
-    /// too near it for a second: the hint says so and what else to try,
-    /// and another stretch is picked, as a player would.
+    /// Lesson 5: a stretch of track, Make double track, ✓, time. Decision
+    /// 378: the card keeps clear of the stretch the guide points at, the
+    /// hint says where it is, and it is built at the first try.
     func testTheFifthLessonsGuide() throws {
         let session = start(5)
         session.setSpeed(.paused)
         XCTAssertEqual(session.tutorial?.step.id, "lesson.5")
+        let stretch = try XCTUnwrap(session.tutorialDoubleTrackStretch)
+        XCTAssertEqual(session.tutorialPlacesToTap.count, 1, "the card keeps clear of the stretch")
+        let place = try XCTUnwrap(session.tutorialPlacesToTap.first)
+        XCTAssertEqual(session.tutorialHint?.text, "Tap the track by \u{201C}S1\u{201D}, with no train on it.")
         session.selectStation(session.world.stations[0].id)
-        XCTAssertEqual(session.tutorialHint?.text, "Tap the track between two stations, away from the trains.")
-        let edges = session.world.network.edges.sorted { $0.length > $1.length }
-        func tapTrack(_ edge: TrackEdge) {
-            guard let geometry = session.world.trackGeometry(of: edge.id) else { return }
-            for (part, whole) in [(1, 2), (1, 3), (2, 3)] as [(Int64, Int64)] where session.selectedTrackEdge != edge.id {
-                let position = geometry.location(at: geometry.length * part / whole).position
-                session.tapMap(at: PlanPoint(x: position.x, y: position.y), reach: Self.reach)
-            }
-        }
-        step(session, "lesson.5") { tapTrack(edges[0]) }
+        XCTAssertFalse(session.isTutorialStepDone, "a station is not track")
+        step(session, "lesson.5") { session.tapMap(at: place, reach: Self.reach) }
+        XCTAssertEqual(session.selectedTrackEdge, stretch)
         XCTAssertTrue(session.canDoubleSelectedTrack)
         step(session, "lesson.5.double") { session.beginTrackUpgrade(.doubleTrack) }
         XCTAssertEqual(session.tutorial?.step.id, "lesson.5.build")
-        let problem = try XCTUnwrap(session.trackUpgradePreview?.problem)
-        XCTAssertEqual(session.tutorialHint, TutorialHint(problem + " Try the other side, This piece only, or another stretch.", isProblem: true))
-        var doubled = false
-        for edge in edges.dropFirst() where !doubled {
-            tapTrack(edge)
-            guard session.selectedTrackEdge == edge.id, session.canDoubleSelectedTrack else { continue }
-            session.beginTrackUpgrade(.doubleTrack)
-            session.trackUpgradeWholeRun = false
-            guard session.trackUpgradePreview?.problem == nil else { continue }
-            XCTAssertFalse(session.isTutorialStepDone, "drafted, not built")
-            session.buildTrackUpgrade()
-            doubled = true
-        }
-        XCTAssertTrue(doubled, "a stretch that can be made double")
+        let preview = try XCTUnwrap(session.trackUpgradePreview)
+        XCTAssertNil(preview.problem, preview.problem ?? "")
+        XCTAssertTrue(preview.note?.contains("Crossovers join the two tracks at both ends.") ?? false, preview.note ?? "")
+        XCTAssertNil(session.tutorialHint)
+        XCTAssertFalse(session.isTutorialStepDone, "drafted, not built")
+        session.buildTrackUpgrade()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
         XCTAssertTrue(session.isTutorialStepDone, "lesson.5.build is done")
         session.showNextTutorialStep()
         lastStep(session, "time.play") { session.setSpeed(.normal) }
+    }
+
+    /// Decision 378: lesson 5's longest track, out to the third town, is
+    /// no longer refused for running within 4 m of itself (its second
+    /// track is laid in pieces round its sharp curve); it costs more than
+    /// the lesson's cash, and the hint points to the stretch that can be
+    /// built.
+    func testTheFifthLessonsLongestTrackSaysWhatItCostsAndWhereToGo() throws {
+        for whole in [true, false] {
+            let session = start(5)
+            session.setSpeed(.paused)
+            let longest = try XCTUnwrap(session.world.network.edges.max { $0.length < $1.length })
+            XCTAssertNotEqual(longest.id, session.tutorialDoubleTrackStretch, "a train stands at its station")
+            let geometry = try XCTUnwrap(session.world.trackGeometry(of: longest.id))
+            session.tapMap(at: geometry.location(at: geometry.length / 3).position.plan, reach: Self.reach)
+            XCTAssertEqual(session.selectedTrackEdge, longest.id)
+            session.showNextTutorialStep()
+            session.trackUpgradeWholeRun = whole
+            session.beginTrackUpgrade(.doubleTrack)
+            session.showNextTutorialStep()
+            XCTAssertEqual(session.tutorial?.step.id, "lesson.5.build")
+            let draft = try XCTUnwrap(session.trackUpgradeDraft)
+            XCTAssertNotNil(draft.command, "the second track is laid: it is only too dear")
+            let problem = try XCTUnwrap(draft.preview.problem)
+            XCTAssertTrue(problem.hasPrefix("Not enough cash"), problem)
+            XCTAssertEqual(session.tutorialHint, TutorialHint(problem + " Tap the track by \u{201C}S1\u{201D}, with no train on it.", isProblem: true))
+        }
     }
 
     /// Lesson 6: Lines, Advanced, the line's hours, its headway, a

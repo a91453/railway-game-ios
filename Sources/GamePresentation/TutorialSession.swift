@@ -100,9 +100,34 @@ extension GameSession {
             return world.network.nodes.filter { $0.ends.count == 1 }.map { PlanPoint(x: $0.position.x, y: $0.position.y) }
         case .selectStationForFreight:
             return world.stations.filter { Self.takesFreightYard($0, in: world) }.map(\.location)
+        case .selectTrack:
+            // Decision 378: the middle of the stretch to make double.
+            guard let id = tutorialDoubleTrackStretch, let geometry = world.trackGeometry(of: id) else { return [] }
+            return [geometry.location(at: geometry.length / 2).position.plan]
         default:
             return []
         }
+    }
+
+    /// The stretch lesson 5's guide has the player make double (decision
+    /// 378): the longest single track, with none beside it, that a
+    /// crossover could be cut into at its middle (no train on it or on its
+    /// way along it, no platform there). Lesson 5's longest track, out to
+    /// the third town, has a train at its station and costs more than the
+    /// lesson's cash; the one the guide points at is built at once.
+    var tutorialDoubleTrackStretch: TrackEdgeID? {
+        world.network.edges
+            .filter { edge in world.trackEdgeSplitRefusal(edge.id, at: edge.length / 2) == nil && !hasTrackBeside(edge.id) }
+            .max { $0.length != $1.length ? $0.length < $1.length : $0.id > $1.id }?.id
+    }
+
+    /// Where ``tutorialDoubleTrackStretch`` is, as the player reads it:
+    /// "by" the station with a platform on it, or the track with no train.
+    private var tutorialDoubleTrackPlace: String {
+        let station = tutorialDoubleTrackStretch.flatMap { id in world.network.platforms(on: id).first }
+            .flatMap { platform in world.stations.first { $0.id == platform.station } }
+        return station.map { language.text("Tap the track by \u{201C}\($0.name)\u{201D}, with no train on it.", "點「\($0.name)」旁沒有列車的那段軌道。") }
+            ?? language.text("Tap the track with no train on it.", "點沒有列車的那段軌道。")
     }
 
     /// Next: the following step, or, on the last step, Finish, which ends
@@ -567,6 +592,9 @@ extension GameSession {
             if tool != .select {
                 return TutorialHint(language.text("Tap Done first, then the track.", "先點「完成」，再點軌道。"))
             }
+            if tutorialDoubleTrackStretch != nil {
+                return TutorialHint(tutorialDoubleTrackPlace)
+            }
             if selectedStation != nil || selectedTrainID != nil {
                 return TutorialHint(language.text(
                     "Tap the track between two stations, away from the trains.",
@@ -586,6 +614,10 @@ extension GameSession {
         case .buildDoubleTrack:
             // The card's pickers: the side the second track goes on and how far.
             if let problem = trackUpgradePreview?.problem {
+                // Decision 378: back to the stretch the guide points at.
+                if let stretch = tutorialDoubleTrackStretch, stretch != selectedTrackEdge {
+                    return TutorialHint(problem + " " + tutorialDoubleTrackPlace, isProblem: true)
+                }
                 return TutorialHint(problem + " " + language.text(
                     "Try the other side, This piece only, or another stretch.",
                     "試試另一側、「只有這一段」，或別段軌道。"
