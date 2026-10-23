@@ -72,4 +72,4 @@ python3 tools/four-car-metro/bundle.py OUT ACTUAL_PRODUCER_COMMIT
 
 ## 作者回報的門板修訂
 
-門位、1.57m開口、門高及雙扇排列不動。改淺暖灰門葉、細中縫、.57×1.11m玻璃，頂齊側窗，腰帶連續。`door-review.mjs OUT DOOR_BEFORE`讀真正上一版native，逐三角證明四車門以外全部相同；同相機生成門局部／整車／斜視前後對照。DOOR_BEFORE可解壓私庫commit3246cad87e867223e60356d4400084832d97ba2a的舊asset-package.zip取得（producer08e50f65）；不能拿本版冒充前版。新增7張門修訂PNG，最終共106張PNG。
+門位、1.57m開口、門高及雙扇排列不動。改淺暖灰門葉、細中縫、.57×1.11m玻璃，頂齊側窗，腰帶連續。`door-review.mjs OUT DOOR_BEFORE`讀真正上一版native，逐三角證明四車門以外全部相同；同相機生成門局部／整車／斜視前後對照。DOOR_BEFORE可解壓私庫commit3246cad87e867223e60356d4400084832d97ba2a的舊asset-package.zip取得（producer08e50f65）；不能拿本版冒充前版。局部圖刻意裁切周圍車身，白底不透明；七向圖仍完整透明且不裁邊。新增7張門修訂PNG，最終共106張PNG。

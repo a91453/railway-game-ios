@@ -26,7 +26,12 @@ try{
    renderer.load(b);renderer.centre=centre;renderer.extent=extent;
    if(view==='door'){renderer.centre=[2.63,0,2.0];renderer.extent=[1.4,1.4,1.4];renderer.render('left',{width:640,height:700,metresPerPixel:.0045});}
    else renderer.render(view,{width:900,height:600});
-   images[(i?'after':'before')+'-'+view]=renderer.png();
+   // The door detail deliberately crops the surrounding body; make its
+   // white background opaque so it cannot be mistaken for an uncropped
+   // seven-direction transparent asset.
+   let png=renderer.png();
+   if(view==='door'){const c=document.createElement('canvas');c.width=640;c.height=700;const context=c.getContext('2d');context.fillStyle='#fff';context.fillRect(0,0,640,700);context.drawImage(document.getElementById('canvas'),0,0);png=c.toDataURL('image/png');}
+   images[(i?'after':'before')+'-'+view]=png;
   }return images;
  });
  for(const[n,data]of Object.entries(result))writeFileSync(resolve(root,'previews','doors-'+n+'.png'),Buffer.from(data.split(',')[1],'base64'));
