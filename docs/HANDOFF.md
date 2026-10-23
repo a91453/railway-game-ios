@@ -910,15 +910,37 @@
 3. 小瑕疵：兩段溝接在一起的地方可能有細縫；溝坡上的電桿腳埋在坡裡；溝的端面只在隧道口封。
 4. 實機：TestFlight 上從高鐵示範的駕駛室看苗栗南的路塹（最深約 20 m），看坡的顏色、跨路的橋和 fps。
 
-### 4.8 全地圖用真實建物足跡（決策 386，session_0111G2MZyPt5YSXpsF6azF2e）
+### 4.8 全地圖用真實建物足跡（決策 386、389，session_0111G2MZyPt5YSXpsF6azF2e）
 
-第 1 步做完：`tools/overture-footprint-tiles/` 把 Overture 的台灣建物（196 萬棟）做成 z16 精簡圖塊，全台 29 MB；報告 `docs/research/OVERTURE_FOOTPRINT_TILES_2026-10-23.md`。資料檔沒有提交，照工具的 README 重建（約 2 分鐘）。還沒做的：
+第 1 到 4 步做完：
 
-1. **第 2 步：GamePresentation 讀足跡、有足跡的地方用足跡**。chunk 載入時用 `PMTilesArchive` 讀它碰到的 ≤ 4 塊 z16 格，重心在這個 chunk 的建物用決策 239 的 `addRealBuilding` 擠出（near 與 far），取代那裡的程序房子；樓層照決策 386 第 6 點的順序（報告 §8）；在那之前先讓工具 `build` 照這個順序把臺中市建物圖（111 年版）與臺北市建築執照套繪圖的樓層填進樓層 0 的建物，都沒有的照第 5 點推算（報告 §7 的表與 `proposed_storeys`）。沒有足跡的地方照舊程序生成，**沿真實道路的程序房子與不蓋區是決策 385（session_01AgFLCW9xSb9fyLr8k57iZ1）**：動 `addCity` 或程序房子的放置之前先 `send_message` 給它，對齊用途分類與人口密度的來源。要保持 `Map3DSceneMemoryTests` 的板橋數字不升；足跡房子要不要加立面細節是這一步的美術決定（每棟不超過程序房子一棟）。量測範本 `FootprintWindowMeasure.swift.txt` 可以重用。
-2. **第 3 步：打包**。決策 386 選全部打包：`taiwan.pmtiles` 改名（例 `RealWorld/taiwan_buildings.pmtiles`）加進 App 的資源與 `project.yml`、重產 Xcode 專案；看 TestFlight 的 App 檔案大小（報告裡 UNVERIFIED）。App 變得太大時的退路是 Background Assets 每縣市一包（工具已產出 `counties/`）。
-3. **第 4 步：署名**。`DataSourceCredits` 與官網 `credits.html` 加 Overture Maps（ODbL 1.0）、OpenStreetMap（已有）、Shi 等人 East Asian buildings（CC BY 4.0，doi:10.5281/zenodo.8174931）。
-4. 樓高來源還沒做完的（報告 §8）：推算在 p25–p75 裡改用 GHSL 挑高低（8.2，建檔時用 `tiff.py` 讀，App 不讀）；內政部 20 m DSM／DTM 從 TGOS 下載（這個環境 403）；臺中 113、114 年全市版是 RAR／7z（要解壓工具就是加依賴，先問作者）；國土測繪中心的授權由遊戲規劃轉給作者決定要不要問（要問的事在 §8.5）。
-5. Overture 每月出新版；換版本時重跑 `extract` 與 `build`，在 PR 寫新舊棟數與大小。
+- 第 1 步，決策 386：`tools/overture-footprint-tiles/` 把 Overture 的台灣建物（196 萬棟）做成 z16 精簡圖塊。報告 `docs/research/OVERTURE_FOOTPRINT_TILES_2026-10-23.md`。
+- 第 2 步，決策 389：工具填上樓層。3D 地圖有足跡的 64 m 格畫真實足跡，沒有的才放程序房子。
+- 第 3 步：打包成 `BaseMap/taiwan_buildings.pmtiles`，29.6 MB。
+- 第 4 步：`DataSourceCredits` 的 `overtureBuildings` 與 `buildingStoreys`。
+
+照工具的 README 重建約 3 分鐘。還沒做的：
+
+1. **和決策 385 對接**（PR #1127，session_01AgFLCW9xSb9fyLr8k57iZ1）。兩個 PR 誰後合併，誰在 `Map3DScene` 把 `addAirportBuildings` 包進 `if footprints == nil`：有足跡時機場的建物由足跡畫。決策 389 第 5 點。
+2. **官網 `credits.html`**（參考庫）加：
+   - Overture 建物：3D 地圖也用。
+   - 臺中市建物圖 111、113、114 年，臺北市建築執照套繪圖（政府資料開放授權條款第 1 版）。
+   - GHS-BUILT-H（CC BY 4.0）。
+
+   文字照 `DataSourceCredits` 的 `buildingStoreys`。
+3. **實機**（**UNVERIFIED**）：
+   - TestFlight 的 App 大小；
+   - 讀檔與建 chunk 的時間；
+   - 足跡房子在 Metal 上好不好看。
+4. **美術的後續**：
+   - 足跡房子沒有招牌與一樓店面：可以依用途（商業）與臨街加。
+   - 沒有放進 close（決策 267 的騎樓等）。
+   - 樓層 0 的不會出現：工具給每棟都填了。
+5. **樓高來源還沒做的**：
+   - 國土測繪中心的授權：作者還在考慮，要問的事在報告 §8.5。格式已留位置，接上只要改工具的順序重跑。
+   - 內政部 20 m DSM 減 DTM，能不能抓出 40 m 以上的高樓：TGOS 對這個環境 403，從 GitHub Actions 下載要另寫 workflow。報告 §12.4。
+   - 其他直轄市的建物圖：報告 §8.3。
+6. Overture 每月出新版；換版本時重跑 `extract`、`storeys` 與 `build`，在 PR 寫新舊棟數與大小。
 
 ## 5. 已知、還沒派的待辦
 

@@ -361,7 +361,7 @@ final class RealRailwaysTests: XCTestCase {
                 "tdx", "traOpenData", "nlsc", "openStreetMap",
                 "worldPop", "ridership", "travelSurvey", "overtureBuildings",
                 "appleMaps", "taiwanBaseMap", "openFreeMap", "mapLibre", "copernicusDEM", "wikidata", "worldUrbanizationProspects",
-                "map3DGround", "temples", "meshy",
+                "map3DGround", "temples", "buildingStoreys", "meshy",
                 "proceduralTokyo", "polyHaven", "runningSound", "weatherSound",
             ])
             XCTAssertEqual(Set(credits.map(\.id)).count, credits.count, "ids are unique")
@@ -432,6 +432,14 @@ final class RealRailwaysTests: XCTestCase {
                 XCTAssertTrue(overture.notice.contains(part), part)
             }
             XCTAssertTrue(overture.links.contains { $0.url == "https://doi.org/10.5281/zenodo.8174931" })
+            // Decision 389: the storeys' sources, the two city maps under
+            // the Open Government Data License and GHSL under CC BY 4.0.
+            let storeys = try XCTUnwrap(credits.first { $0.id == "buildingStoreys" })
+            for part in [language.text("Taichung building map", "臺中市建物圖"), language.text("Taipei building permit map", "臺北市建築執照套繪圖"),
+                         language.text("Open Government Data License, version 1.0", "政府資料開放授權條款第 1 版"), "GHS-BUILT-H R2023A", "CC BY 4.0"] {
+                XCTAssertTrue(storeys.notice.contains(part), part)
+            }
+            XCTAssertTrue(storeys.links.contains { $0.url == "https://data.gov.tw/license" })
             // Decision 151: Taiwan's own tiles, the OpenMapTiles schema they
             // follow, and Noto Sans's licence.
             let baseMap = try XCTUnwrap(credits.first { $0.id == "taiwanBaseMap" })

@@ -38,6 +38,9 @@ final class Map3DPreviewDump: XCTestCase {
             world = GameWorld.newGame(anchor: GeoAnchor(latitudeDegrees: 22.6394, longitudeDegrees: 120.3024)!)
         case "taichung":
             world = GameWorld.newGame(anchor: GeoAnchor(latitudeDegrees: 24.1371, longitudeDegrees: 120.6869)!)
+        // Decision 389: a township's station, for the footprints' previews.
+        case "douliu":
+            world = GameWorld.newGame(anchor: GeoAnchor(latitudeDegrees: 23.7117, longitudeDegrees: 120.5413)!)
         case "realdemo":
             let heights = try HeightGrid(data: resource("RealWorld/taiwan_heights.dat"))
             let water = try WaterGrid(data: resource("RealWorld/taiwan_water.json"))
@@ -57,7 +60,10 @@ final class Map3DPreviewDump: XCTestCase {
         // not read its own, as the app passes it.
         let heights = ProcessInfo.processInfo.environment["MAP3D_HEIGHTS"] == "1"
             ? try HeightGrid(data: resource("RealWorld/taiwan_heights.dat")) : nil
-        let scene = Map3DScene(world: world, baseMap: tiles, cityTiles: cityTiles, heights: heights, railways: railways)
+        // MAP3D_FOOTPRINTS=1: the app's real footprints (decision 389).
+        let footprints = ProcessInfo.processInfo.environment["MAP3D_FOOTPRINTS"] == "1"
+            ? try FootprintTiles(data: Data(contentsOf: root.appendingPathComponent("BaseMap/taiwan_buildings.pmtiles"), options: .alwaysMapped)) : nil
+        let scene = Map3DScene(world: world, baseMap: tiles, cityTiles: cityTiles, footprints: footprints, heights: heights, railways: railways)
         let crop = ProcessInfo.processInfo.environment["MAP3D_CROP"].map { $0.split(separator: ":").map { Float(String($0))! } }
         let chunks = scene.chunks.filter { chunk in
             guard let crop else { return true }
