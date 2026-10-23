@@ -1,3 +1,4 @@
+import Foundation
 @testable import GameCore
 @testable import GamePresentation
 import XCTest
@@ -155,5 +156,39 @@ final class Map3DSceneMemoryTests: XCTestCase {
         // The phone's view, 68° tall on 844 points: about 625 points a
         // radian, a point 0.0016 rad.
         XCTAssertLessThan(try XCTUnwrap(jerks.max()), 0.0008)
+    }
+
+    /// Decision 389: with the base map, the real footprints round Banqiao
+    /// in place of the game's own houses cost no more, near or far, than
+    /// those houses did (decision 386's budget), and the scene stays under
+    /// 1 GB. It builds the scene twice with the base map (nearly five
+    /// minutes), so only on request: `MAP3D_FOOTPRINT_REPORT=1`.
+    func testRealFootprintsRoundBanqiaoCostNoMoreThanTheGamesHouses() throws {
+        guard ProcessInfo.processInfo.environment["MAP3D_FOOTPRINT_REPORT"] != nil else { throw XCTSkip("Set MAP3D_FOOTPRINT_REPORT=1.") }
+        let world = try HighSpeedDemoTests.opened.get()
+        let banqiao = try Map3DOpenHereTests.point(25.0133, 121.4637, in: world)
+        let baseMap = Map3DFrameCostReportTests.baseMap
+        let tiles = try BaseMapTiles(data: Data(contentsOf: baseMap.appendingPathComponent("taiwan.pmtiles"), options: .alwaysMapped))
+        let footprints = try FootprintTiles(data: Data(contentsOf: baseMap.appendingPathComponent("taiwan_buildings.pmtiles"), options: .alwaysMapped))
+        func cost(_ footprints: FootprintTiles?) -> (near: Int, far: Int, bytes: Int) {
+            let scene = Map3DScene(world: world, snapshot: world.railwaySnapshot(), focus: banqiao, baseMap: tiles,
+                                   footprints: footprints, heights: HighSpeedDemoTests.heights,
+                                   railways: try? HighSpeedDemoTests.railways())
+            var near = 0, far = 0, bytes = 0
+            for chunk in scene.chunks {
+                near += chunk.mesh.triangleCount
+                far += chunk.far.triangleCount
+                for mesh in [chunk.mesh, chunk.far, chunk.close, chunk.shadows] {
+                    bytes += mesh.vertices.count * MemoryLayout<Map3DVertex>.stride + mesh.indices.count * MemoryLayout<UInt32>.stride
+                }
+            }
+            return (near, far, bytes)
+        }
+        let houses = cost(nil), real = cost(footprints)
+        print("Banqiao, the game's houses: near \(houses.near), far \(houses.far) triangles, \(houses.bytes / 1_000) KB")
+        print("Banqiao, real footprints:   near \(real.near), far \(real.far) triangles, \(real.bytes / 1_000) KB")
+        XCTAssertLessThanOrEqual(real.near, houses.near)
+        XCTAssertLessThanOrEqual(real.far, houses.far)
+        XCTAssertLessThan(real.bytes, 1_000_000_000)
     }
 }

@@ -333,10 +333,37 @@ extension GameSession {
                     "\(world.train(id: train)?.name ?? language.text("A train", "列車")) of \(line.name) is on a run. Wait for it to finish, or take it off the line first.",
                     "\(line.name) 的 \(world.train(id: train)?.name ?? "列車") 正在跑班次。請等它跑完，或先讓它離開路線。"
                 ))
+            } else if case .invalidLinePattern = error, let text = patternInTheWayText(of: line, newStops: stops) {
+                message = StatusMessage(kind: .failure, text: text)
             } else {
                 message = refusal(error)
             }
         }
+    }
+
+    /// Decision 291's next step: a new stop list without a stop a pattern
+    /// calls at is refused (a pattern never drops a stop by itself); says
+    /// which pattern and where to remove it, or `nil` when none does.
+    func patternInTheWayText(of line: ServiceLine, newStops stops: [StationID]) -> String? {
+        var left = Dictionary(stops.map { ($0, 1) }, uniquingKeysWith: +)
+        var gone: Set<Int> = []
+        for (index, station) in line.stops.enumerated() {
+            if let count = left[station], count > 0 { left[station] = count - 1 } else { gone.insert(index) }
+        }
+        guard let number = line.patterns.indices.first(where: { line.patterns[$0].calls.contains(where: gone.contains) }),
+              let call = line.patterns[number].calls.first(where: gone.contains)
+        else { return nil }
+        let title = world.serviceTitle(of: line, calls: line.patterns[number].calls, in: language)
+        let station = world.station(id: line.stops[call])?.name ?? "#\(line.stops[call].rawValue)"
+        return isLinesAdvancedShown
+            ? language.text(
+                "Pattern \(number + 1) (\(title)) calls at \(station). Remove that pattern first: in the Lines panel, tap Remove This Pattern under it.",
+                "停站模式 \(number + 1)（\(title)）停靠 \(station)。請先刪掉這個停站模式：在「路線」面板按它下面的「刪除這個停站模式」。"
+            )
+            : language.text(
+                "Pattern \(number + 1) (\(title)) calls at \(station). Remove that pattern first: in the Lines panel, turn on Advanced and tap Remove This Pattern under it.",
+                "停站模式 \(number + 1)（\(title)）停靠 \(station)。請先刪掉這個停站模式：在「路線」面板打開「進階」，按它下面的「刪除這個停站模式」。"
+            )
     }
 
     // MARK: - The service day

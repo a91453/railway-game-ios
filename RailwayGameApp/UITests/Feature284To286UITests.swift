@@ -68,7 +68,10 @@ final class Feature284To286UITests: XCTestCase {
         defer { app?.terminate() }
         launch("sightseeing")
         tap(app.buttons["hud.menu"])
-        tap(app.buttons["menu.more"])
+        // Decision 383: under More only in a game with goals too.
+        if !app.buttons["menu.tourism"].appears(within: 3) {
+            tap(app.buttons["menu.more"])
+        }
         tap(app.buttons["menu.tourism"])
         XCTAssertTrue(app.buttons["tourism.done"].appears(within: 10))
         let list = app.collectionViews.firstMatch

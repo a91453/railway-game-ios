@@ -93,6 +93,9 @@ struct LinesPanel: View {
                         // none being picked, the lines and the selected
                         // line's stops come first, a new line is one row,
                         // and the switches for every line go last.
+                        // Decision 383: the switches for every line, at
+                        // the top rather than at the bottom of Advanced.
+                        networkSection
                         linesSection
                         advancedSection
                         newLineRow
@@ -107,7 +110,6 @@ struct LinesPanel: View {
                             servicesSections(line)
                         }
                         if showsAdvanced {
-                            trafficSection
                             serviceDaySection
                         }
                     } else {
@@ -121,8 +123,8 @@ struct LinesPanel: View {
                         }
                         // Decision 336: with no line made too.
                         buyableLinesSection
+                        networkSection
                         if showsAdvanced {
-                            trafficSection
                             serviceDaySection
                         }
                         linesSection
@@ -371,13 +373,14 @@ struct LinesPanel: View {
     private func servicesSections(_ line: ServiceLine) -> some View {
         Group {
             ForEach(memo.serviceSummaries(line.id, of: session), id: \.pattern) { summary in
-                // Decision 196, later: a stopping pattern is an advanced detail.
-                if summary.pattern == nil || showsAdvanced {
-                    serviceSection(summary, of: line)
-                }
+                // Decision 383: a stopping pattern shows with Advanced
+                // folded too, as the button that adds it does.
+                serviceSection(summary, of: line)
             }
-            // A ring has no patterns.
-            if !line.isRing, showsAdvanced {
+            // A ring has no patterns. Decision 383: not behind Advanced,
+            // so an express is found on the line's own page; a lesson
+            // before the details are taught still leaves it out.
+            if !line.isRing, session.allows(UnlockableTool.lineDetails) {
                 addPatternSection(line)
             }
         }
@@ -389,9 +392,19 @@ struct LinesPanel: View {
 
     // MARK: - Traffic control
 
-    /// Traffic control, read from the world. Turning it on is refused while
-    /// two trains need the same track: the status banner says which, and
-    /// the switch stays off.
+    /// Traffic control and how passengers route, read from the world: the
+    /// switches for every line (decision 383: their own block at the top
+    /// of the panel, not at the bottom of Advanced). Turning traffic
+    /// control on is refused while two trains need the same track: the
+    /// status banner says which, and the switch stays off. Decision 266:
+    /// none in a lesson before the details are taught.
+    @ViewBuilder
+    private var networkSection: some View {
+        if session.allows(UnlockableTool.lineDetails) {
+            trafficSection
+        }
+    }
+
     private var trafficSection: some View {
         Section {
             Toggle("Traffic control", isOn: Binding(
@@ -402,6 +415,8 @@ struct LinesPanel: View {
                 get: { session.world.passengerRoutingMode == .network },
                 set: { session.setPassengerRoutingMode($0 ? .network : .direct) }
             ))
+        } header: {
+            Text(verbatim: NetworkSwitches.title(in: session.language))
         } footer: {
             Text("When on, a train takes its whole route before it leaves, and other trains wait until it has cleared it.")
             Text("With network routes, passengers change lines and walk to stations nearby; otherwise they ride only a line serving both stations.")
@@ -1254,7 +1269,7 @@ struct LinesPanel: View {
             .tutorialPanelTarget(.addPattern)
             .id(TutorialTarget.addPattern)
         } header: {
-            Text("Add a stopping pattern")
+            Text(verbatim: StoppingPatternEntry.title(in: session.language))
         } footer: {
             Text("Services share every stretch of the line: at most one train every 2 minutes each way, the line's own service first.")
         }

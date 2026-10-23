@@ -88,6 +88,21 @@ struct GoalsSections: View {
                         .font(.footnote)
                         .foregroundStyle(Theme.textSecondary)
                 }
+                // Decision 387: how it ended, in its story's words.
+                if let ending = world.scenario.flatMap({ ChallengeStory.named($0.scenario.id) })?.ending(in: world) {
+                    HStack(alignment: .top, spacing: 10) {
+                        StoryPortrait(speaker: ending.speaker, size: 36)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(verbatim: ending.speaker.name(in: language))
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(Theme.primary)
+                            Text(verbatim: ending.text(in: language))
+                                .font(.footnote)
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("goals.ending")
+                }
             } footer: {
                 if let ratings = world.scenarioRatingsText(in: language) {
                     Text(verbatim: ratings)
@@ -425,7 +440,8 @@ struct CompanyRankSection: View {
     }
 }
 
-/// The start screen's challenges (decision 86): the week's (decision 87),
+/// The new game page's challenges (decision 86; decision 381 moved them
+/// there from the start screen): the week's (decision 87),
 /// then the others, each with its story, goals, ratings and the player's
 /// best; choosing one starts a new game on a blank map with it.
 struct ChallengePicker: View {

@@ -315,9 +315,12 @@ public struct TrainMotion: Sendable {
             // station to the next, is spent within the tick).
             var entered = Array(train.movement.edges.prefix(train.movement.cursor))
             if case .onEdge(let now, _) = position, entered.last != now.edge { entered.append(now.edge) }
+            // Decision 379: no further than a glide goes, or the track
+            // covered is not worked out (at 6000× a high-speed train runs
+            // some 50 km a tick, and its points were made and dropped).
             if let before = previous?.samples[train.id],
-               let covered = Self.covered(from: before.position, along: before.ahead, to: position, in: world)
-                ?? Self.covered(from: before.position, along: before.ahead + entered, to: position, in: world) {
+               let covered = Self.covered(from: before.position, along: before.ahead, to: position, within: Self.longestGlide, in: world)
+                ?? Self.covered(from: before.position, along: before.ahead + entered, to: position, within: Self.longestGlide, in: world) {
                 let glide = Trail(covered.reversed())
                 if glide.length > 0, glide.length <= Self.longestGlide {
                     trail = Trail(Array(covered.reversed()) + before.body.dropFirst())
@@ -334,12 +337,32 @@ public struct TrainMotion: Sendable {
         self.samples = samples
         self.time = time
         second = world.clock.now.seconds
-        if let previous, previous.time > 0 {
-            let longest = world.clock.speed == .x1 ? Self.longestSecondGlide : Self.durations.upperBound
-            duration = min(max(time - previous.time, Self.durations.lowerBound), longest)
-        } else {
-            duration = Self.tickSeconds
-        }
+        duration = Self.duration(at: time, after: previous, speed: world.clock.speed)
+    }
+
+    private init(runs: [Run], samples: [TrainID: Sample], second: Int64?, time: Double, duration: Double) {
+        self.runs = runs
+        self.samples = samples
+        self.second = second
+        self.time = time
+        self.duration = duration
+    }
+
+    /// How long the glide seen at `time` after `previous` lasts.
+    private static func duration(at time: Double, after previous: TrainMotion?, speed: GameSpeed) -> Double {
+        guard let previous, previous.time > 0 else { return tickSeconds }
+        let longest = speed == .x1 ? longestSecondGlide : durations.upperBound
+        return min(max(time - previous.time, durations.lowerBound), longest)
+    }
+
+    /// Decision 379: these trains seen at `time` (seconds on the caller's
+    /// clock), after `previous`, at `speed`: what
+    /// ``init(world:previous:time:)`` gives at `time` when this was worked
+    /// out from the same world and `previous` at another time, off the
+    /// main actor with the tick. Not at 1×, whose glide may go on from
+    /// the last one (that init keeps `previous` as it is).
+    func seen(at time: Double, after previous: TrainMotion?, speed: GameSpeed) -> TrainMotion {
+        TrainMotion(runs: runs, samples: samples, second: second, time: time, duration: Self.duration(at: time, after: previous, speed: speed))
     }
 
     /// How far the glide has gone at `time`: 0 at the tick, 1 once it has
@@ -364,20 +387,32 @@ public struct TrainMotion: Sendable {
     /// The track from a head at `start` to one at `end`, going the way the
     /// edges `ahead` lead, in world coordinates; `nil` when `end` is not on
     /// that way: behind `start` on its edge, turned the other way, or on no
-    /// edge `ahead` names (or one that is no longer there).
-    static func covered(from start: TrainPosition, along ahead: [TrackEdgeID], to end: TrainPosition, in world: GameWorld) -> [Point]? {
+    /// edge `ahead` names (or one that is no longer there). Decision 379:
+    /// `nil` too once the way is longer than `limit` world units (along
+    /// the edges, which is the points' length), before its points are made.
+    static func covered(
+        from start: TrainPosition, along ahead: [TrackEdgeID], to end: TrainPosition, within limit: Double = .infinity, in world: GameWorld
+    ) -> [Point]? {
         guard case .onEdge(var traversal, let startOffset) = start, case .onEdge(let target, let endOffset) = end else { return nil }
-        var points: [Point] = []
+        // The stretches first, the points once the way is known and short
+        // enough.
+        var stretches: [(geometry: TrackGeometry, traversal: TrackTraversal, from: Int64, to: Int64)] = []
+        var travelled = 0.0
+        func add(_ geometry: TrackGeometry, _ traversal: TrackTraversal, from: Int64, to: Int64) -> Bool {
+            travelled += Double(min(max(to, 0), geometry.length) - min(max(from, 0), geometry.length))
+            stretches.append((geometry, traversal, from, to))
+            return travelled <= limit
+        }
         var offset = startOffset
         var next = ahead.makeIterator()
         while true {
             guard let edge = world.network.edge(traversal.edge), let geometry = world.trackGeometry(of: traversal.edge) else { return nil }
             if traversal == target, endOffset >= offset {
-                points += stretch(of: geometry, traversal, from: offset, to: endOffset)
-                return points
+                guard add(geometry, traversal, from: offset, to: endOffset) else { return nil }
+                return stretches.flatMap { stretch(of: $0.geometry, $0.traversal, from: $0.from, to: $0.to) }
             }
             if traversal.edge == target.edge, traversal.direction != target.direction { return nil }
-            points += stretch(of: geometry, traversal, from: offset, to: geometry.length)
+            guard add(geometry, traversal, from: offset, to: geometry.length) else { return nil }
             let node = traversal.direction == .forward ? edge.to : edge.from
             guard let id = next.next(), let following = world.network.edge(id) else { return nil }
             if following.from == node {

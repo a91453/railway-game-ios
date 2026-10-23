@@ -3,10 +3,10 @@ import GameCore
 /// The lines panel's "Advanced" switch (decision 196, later; TestFlight
 /// 54.1 #6: a phone is too crowded, and players do not want to manage
 /// platforms, grades and dispatch). Folded, the panel leaves out the
-/// service day, stopping patterns, the tracks each leg takes, target
-/// headways and the network's switches; the rules behind them run as they
-/// were, and what a game already set there is said in one line, so an old
-/// save's settings stay visible. Stops, assigning trains and the line's
+/// service day, the tracks each leg takes and target headways (decision
+/// 383: no longer the stopping patterns or the network's switches); the
+/// rules behind them run as they were, and what a game already set there
+/// is said in one line, so an old save's settings stay visible. Stops, assigning trains and the line's
 /// money are never folded.
 ///
 /// A choice of the device, not of the game: nothing here is saved.
@@ -25,13 +25,9 @@ public enum AdvancedDetails {
     /// What `line` has set among the folded details, in one line, or `nil`
     /// when it has nothing but the defaults there.
     public static func lineSummary(_ line: ServiceLine, in language: DisplayLanguage) -> String? {
+        // Decision 383: a stopping pattern is not folded any more, so it
+        // is not said here.
         var parts: [String] = []
-        if !line.patterns.isEmpty {
-            parts.append(language.text(
-                line.patterns.count == 1 ? "1 stopping pattern" : "\(line.patterns.count) stopping patterns",
-                "\(line.patterns.count) 種停靠模式"
-            ))
-        }
         let routed = line.routePreferences.count + line.patterns.reduce(0) { $0 + $1.routePreferences.count }
         if routed > 0 {
             parts.append(language.text(
@@ -46,20 +42,12 @@ public enum AdvancedDetails {
         return language.text("Advanced: ", "進階：") + parts.joined(separator: language.text(", ", "、"))
     }
 
-    /// The network's folded switches as they are now, in one line: traffic
-    /// control, how passengers route and the service day.
+    /// The network's folded setting as it is now, in one line: the
+    /// service day. Decision 383: traffic control and how passengers
+    /// route have their own block at the top of the panel, never folded.
     public static func networkSummary(of world: GameWorld, in language: DisplayLanguage) -> String {
-        [
-            language.text(
-                "Traffic control \(world.isTrafficControlEnabled ? "on" : "off")",
-                "行車控制\(world.isTrafficControlEnabled ? "開" : "關")"
-            ),
-            world.passengerRoutingMode == .network
-                ? language.text("passengers change lines", "旅客可轉乘")
-                : language.text("passengers ride one line", "旅客只搭一條線"),
-            world.serviceDay == .standard
-                ? language.text("standard service day", "標準時段")
-                : language.text("own service day", "自訂時段"),
-        ].joined(separator: language.text(" · ", "・"))
+        world.serviceDay == .standard
+            ? language.text("Standard service day", "標準時段")
+            : language.text("Own service day", "自訂時段")
     }
 }

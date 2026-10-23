@@ -40,19 +40,27 @@ final class AdvancedDetailsTests: XCTestCase {
         let line = try XCTUnwrap(world.line(id: main))
         XCTAssertEqual(
             AdvancedDetails.lineSummary(line, in: .english),
-            "Advanced: 1 stopping pattern, 1 leg on set tracks, target headways"
+            "Advanced: 1 leg on set tracks, target headways"
         )
-        XCTAssertEqual(AdvancedDetails.lineSummary(line, in: .traditionalChinese), "進階：1 種停靠模式、1 段指定進路、目標班距")
+        XCTAssertEqual(AdvancedDetails.lineSummary(line, in: .traditionalChinese), "進階：1 段指定進路、目標班距")
     }
 
-    func testTheNetworksFoldedSwitchesAreSaidAsTheyAre() throws {
+    /// Decision 383: a stopping pattern shows with Advanced folded, so the
+    /// folded line does not say it.
+    func testAStoppingPatternIsNotFolded() throws {
+        var (world, main) = try makeLineWorld()
+        _ = try world.addLinePattern(main, calling: [0, 2])
+        let line = try XCTUnwrap(world.line(id: main))
+        XCTAssertNil(AdvancedDetails.lineSummary(line, in: .english))
+    }
+
+    /// Decision 383: the network's switches have their own block, never
+    /// folded; the folded line says only the service day.
+    func testTheNetworksFoldedSettingIsSaidAsItIs() throws {
         var (world, _) = try makeLineWorld()
-        XCTAssertEqual(
-            AdvancedDetails.networkSummary(of: world, in: .english),
-            "Traffic control off · passengers ride one line · standard service day"
-        )
+        XCTAssertEqual(AdvancedDetails.networkSummary(of: world, in: .english), "Standard service day")
         try world.setTrafficControl(true)
         world.setPassengerRoutingMode(.network)
-        XCTAssertEqual(AdvancedDetails.networkSummary(of: world, in: .traditionalChinese), "行車控制開・旅客可轉乘・標準時段")
+        XCTAssertEqual(AdvancedDetails.networkSummary(of: world, in: .traditionalChinese), "標準時段")
     }
 }

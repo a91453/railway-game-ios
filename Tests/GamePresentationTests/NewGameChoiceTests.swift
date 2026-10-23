@@ -12,8 +12,8 @@ final class NewGameChoiceTests: XCTestCase {
         XCTAssertEqual(NewGameChoice.allCases.map(\.identifier), ["newGame.blank", "newGame.realWorld"])
         XCTAssertEqual(NewGameChoice.blank.title(in: .english), "Blank Map")
         XCTAssertEqual(NewGameChoice.realWorld.title(in: .traditionalChinese), "實景地圖")
-        XCTAssertEqual(NewGameChoice.entryDetail(in: .english), "A blank map or a real place")
-        XCTAssertEqual(NewGameChoice.entryDetail(in: .traditionalChinese), "空白地圖或真實地點")
+        XCTAssertEqual(NewGameChoice.entryDetail(in: .english), "A blank map, a real place, or a challenge with goals")
+        XCTAssertEqual(NewGameChoice.entryDetail(in: .traditionalChinese), "空白地圖、真實地點，或有目標的挑戰")
     }
 
     /// A blank map's card says its cash, from the options; a real-world

@@ -260,7 +260,14 @@ struct MapView: View {
     }
 
     var body: some View {
+        // Decision 379: timed for the frame readout, the keys its
+        // modifiers compare here and what the reader holds when laid out.
+        FrameCostMeter.shared.measure(.mapBody) { timedBody }
+    }
+
+    private var timedBody: some View {
         GeometryReader { proxy in
+            timed(.mapBody) {
             let bounds = session.world.bounds
             let realWorld = RealWorldFrame(world: session.world)
             // Decision 120: the map reaches the screen's edges, and what
@@ -286,13 +293,14 @@ struct MapView: View {
             // map too narrow for them (an iPad's narrowest split view) the
             // zoom buttons give way, as the overview map does, and a pinch
             // still zooms. Beside it: measured with their own fixed height
-            // (44 points and two paddings of 12 each side), not the
-            // column's, which they leave. The tutorial points at them, so
+            // (44 points and the corner's inset above and below them,
+            // decision 382), not the column's, which they leave. The tutorial points at them, so
             // they stay while it runs. Decision 300: under a phone's panel
             // or card they have a row of their own (``MapCornerButtons``).
+            let buttonsDepth: CGFloat = 44 + 2 * CGFloat(HUDMargins.edge)
             let cornerPlace = MapCornerButtons.place(
                 compactHeight: verticalSizeClass == .compact, coverWidth: Double(insets.trailing), viewportWidth: viewport.width,
-                besideCover: viewport.height - screenEdges.bottom - 92 < screenEdges.top + trailingInsetDepth,
+                besideCover: viewport.height - screenEdges.bottom - buttonsDepth < screenEdges.top + trailingInsetDepth,
                 tutorialRuns: session.tutorial != nil
             )
             // Decision 300: where the buttons' row under a phone's panel
@@ -311,7 +319,7 @@ struct MapView: View {
             // Decision 300: beside a phone's panel too, where the buttons
             // leave it alone.
             let legendBesideCard = buttonsUnderPanel || (insets.trailing > viewport.width / 3
-                && viewport.height - screenEdges.bottom - 92 < screenEdges.top + trailingInsetDepth)
+                && viewport.height - screenEdges.bottom - buttonsDepth < screenEdges.top + trailingInsetDepth)
             let zoomLimit: Double? = realWorld != nil && mapStyle != .openStreetMap ? baseMapZoomLimit : nil
             // What the camera's own framing keeps its places clear of (#593,
             // a player's report: the opening put a station under the zoom
@@ -712,7 +720,10 @@ struct MapView: View {
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { topColumnDepth = $0 }
                 }
                 .overlay(alignment: .bottomTrailing) {
-                    VStack(alignment: .trailing, spacing: 8) {
+                    // Decision 382: the legend, the overview map and the
+                    // buttons end on the status bar's trailing line, and the
+                    // buttons stand on the bottom row (``HUDMargins``).
+                    VStack(alignment: .trailing, spacing: CGFloat(HUDMargins.cornerStackGap)) {
                         if let mode = mapLayers.popTravelMode {
                             PopulationLegendView(
                                 mode: mode,
@@ -764,7 +775,6 @@ struct MapView: View {
                                 camera = projection.centered(atX: point.x, y: point.y)
                                 session.mapDidMove()
                             }
-                            .padding(.trailing, 12)
                         }
                         // Decision 300: under a phone's panel they stand
                         // in a row of their own (below).
@@ -773,7 +783,7 @@ struct MapView: View {
                         }
                     }
                     .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.mapArea)) } action: { bottomTrailingFrame = $0 }
-                    .padding(12)
+                    .padding(CGFloat(HUDMargins.edge))
                     .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
                         bottomTrailingHeight = frame.height
                         screen.mapCornerFrame = frame
@@ -795,7 +805,8 @@ struct MapView: View {
                     if buttonsUnderPanel {
                         let below: CGFloat = rowInBand ? safeArea.bottom + 1 : screenEdges.bottom + 2
                         let reach: CGFloat = min(CGFloat(MapCornerRow.reach - MapCornerRow.height), rowInBand || realWorld == nil ? below : 0)
-                        let rowEnd: CGFloat = bandEnd ?? CGFloat(viewport.width) - screenEdges.trailing - CGFloat(MapCornerRow.gap)
+                        // Decision 382: on the panel's trailing line above it.
+                        let rowEnd: CGFloat = bandEnd ?? CGFloat(viewport.width) - screenEdges.trailing - CGFloat(HUDMargins.edge)
                         cornerButtons(camera: projection, limit: zoomLimit, place: .underPanel, compactReach: reach)
                             .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.mapArea)) } action: { cornerRowFrame = $0 }
                             .padding(.trailing, CGFloat(viewport.width) - rowEnd)
@@ -833,11 +844,13 @@ struct MapView: View {
                     }
                     .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.mapArea)) } action: { bottomLeadingFrame = $0 }
                     .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { screen.mapLeadingRowFrame = $0 }
-                    .padding(12)
+                    // Decision 382: on the dock's or the column's leading
+                    // line, and on a phone's bottom row (``HUDMargins``).
+                    .padding(CGFloat(HUDMargins.edge))
                     // Above the dock (decision 106), beside the tools
                     // (decision 114); on a phone's bottom row beside the
                     // tools column (decision 226, 2026-10-15).
-                    .padding(.bottom, leadingRowFoot.map { screenEdges.bottom + $0 - 12 } ?? clear.bottom)
+                    .padding(.bottom, leadingRowFoot.map { screenEdges.bottom + $0 - CGFloat(HUDMargins.edge) } ?? clear.bottom)
                     .padding(.leading, clear.leading)
                 }
                 // Decision 174, later: the sights while building, faint
@@ -1075,7 +1088,7 @@ struct MapView: View {
             .onChange(of: session.world.clock) { _, _ in
                 // While its train glides, the frames move the camera.
                 guard !followsGlide else { return }
-                centerOnFollowedTrain(projection: projection)
+                FrameCostMeter.shared.measure(.mapTick) { centerOnFollowedTrain(projection: projection) }
             }
             .onChange(of: session.followedTrain?.id) { _, _ in
                 // A new follow snaps to its train, as the reference's
@@ -1106,20 +1119,28 @@ struct MapView: View {
                 openedCamera = OpenedCamera(camera: reopened, at: opened.at)
                 camera = reopened
             }
+            }
         }
+        // Decision 379: what follows a tick here is timed for the frame
+        // readout.
         .onChange(of: TrafficKey(world: session.world), initial: true) { _, _ in
             // Decision 64, later fix: read with the tick, off the main actor.
-            traffic = session.trafficOverlay
+            FrameCostMeter.shared.measure(.mapTraffic) { traffic = session.trafficOverlay }
         }
         .onChange(of: session.world.trains, initial: true) { _, _ in
             // Decision 182: each tick's trains glide from the last tick's.
-            trainMotion = TrainMotion(world: session.world, previous: trainMotion, time: Date().timeIntervalSinceReferenceDate)
+            FrameCostMeter.shared.measure(.mapGlide) {
+                // Decision 379: worked out with the tick, off the main actor.
+                trainMotion = session.trainMotion(after: trainMotion, at: Date().timeIntervalSinceReferenceDate)
+            }
             trainMotionVersion &+= 1
         }
         .onChange(of: session.world.clock.now, initial: true) { _, _ in
             // Decision 304: the real trains glide with the game clock.
             guard realTrains != nil else { return }
-            realTrainClock = RealTrainClock(world: session.world, previous: realTrainClock, time: Date().timeIntervalSinceReferenceDate)
+            FrameCostMeter.shared.measure(.mapTick) {
+                realTrainClock = RealTrainClock(world: session.world, previous: realTrainClock, time: Date().timeIntervalSinceReferenceDate)
+            }
         }
         .task(id: RealTrainsKey(
             realWorld: RealWorldFrame(world: session.world), bounds: session.world.bounds,
@@ -1129,7 +1150,7 @@ struct MapView: View {
             await workOutRealTrains()
         }
         .onChange(of: MapWeatherKey(world: session.world), initial: true) { _, _ in
-            mapWeather = MapWeather(world: session.world)
+            FrameCostMeter.shared.measure(.mapTick) { mapWeather = MapWeather(world: session.world) }
         }
         .task(id: JourneyTraceKey(world: session.world, station: tracedStationID, line: tracedLineID)) {
             await workOutJourneyTrace()
@@ -1321,6 +1342,7 @@ struct MapView: View {
             // nothing for it afterwards.
             buildAhead?.cancel()
             buildAhead = nil
+            session.mapStoppedGliding()
         }
     }
 
@@ -1854,7 +1876,6 @@ struct MapView: View {
         .accessibilityLabel(Text(verbatim: session.language.text("3D Map", "3D 地圖")))
         .accessibilityHint(Text(verbatim: session.language.text("Shows your railway, trains and town in 3D.", "用 3D 看你的鐵路、列車與城鎮。")))
         .accessibilityIdentifier("map.open3D")
-        .padding(.vertical, compactReach == nil ? 12 : 0)
     }
 
     /// `limit`: how close the base map lets the camera come
@@ -1876,7 +1897,9 @@ struct MapView: View {
                 .font(.title3)
                 .glassBackground(in: Capsule(), interactive: true)
                 .tutorialTarget(.zoomControls)
-                .padding(12)
+                // Decision 382: no margin of their own below or beside
+                // them; the corner's one inset (``HUDMargins``) places them.
+                .padding(.leading, CGFloat(HUDMargins.zoomGap))
         }
     }
 
@@ -3344,6 +3367,11 @@ private struct MapFrameReadout: View {
 private final class FrameReadoutLink: NSObject {
     private var link: CADisplayLink?
     private var onReading: ((FrameCostReading) -> Void)?
+    /// Decision 379: the first and last of the main run loop's observers
+    /// before it waits, between which SwiftUI updates the views and Core
+    /// Animation commits (``FrameCostPart/viewUpdate``).
+    private var observers: [CFRunLoopObserver] = []
+    private var updateStart: ContinuousClock.Instant?
 
     func start(_ onReading: @escaping (FrameCostReading) -> Void) {
         self.onReading = onReading
@@ -3352,16 +3380,37 @@ private final class FrameReadoutLink: NSObject {
         let link = CADisplayLink(target: self, selector: #selector(frame(_:)))
         link.add(to: .main, forMode: .common)
         self.link = link
+        let first = CFRunLoopObserverCreateWithHandler(nil, CFRunLoopActivity.beforeWaiting.rawValue, true, CFIndex.min) { [weak self] _, _ in
+            MainActor.assumeIsolated { self?.updateStart = .now }
+        }
+        let last = CFRunLoopObserverCreateWithHandler(nil, CFRunLoopActivity.beforeWaiting.rawValue, true, CFIndex.max) { [weak self] _, _ in
+            MainActor.assumeIsolated {
+                guard let self, let start = self.updateStart else { return }
+                self.updateStart = nil
+                FrameCostMeter.shared.record(.viewUpdate, since: start)
+            }
+        }
+        observers = [first, last].compactMap { $0 }
+        for observer in observers { CFRunLoopAddObserver(CFRunLoopGetMain(), observer, .commonModes) }
     }
 
     func stop() {
         link?.invalidate()
         link = nil
         onReading = nil
+        for observer in observers { CFRunLoopObserverInvalidate(observer) }
+        observers = []
+        updateStart = nil
         FrameCostMeter.shared.isOn = false
     }
 
     @objc private func frame(_ link: CADisplayLink) {
         if let reading = FrameCostMeter.shared.frame(at: link.timestamp) { onReading?(reading) }
     }
+}
+
+/// Decision 379: `content`, timed as `part` for the frame readout
+/// (``FrameCostMeter``) while it is worked out.
+func timed<Content: View>(_ part: FrameCostPart, @ViewBuilder _ content: () -> Content) -> Content {
+    FrameCostMeter.shared.measure(part, content)
 }

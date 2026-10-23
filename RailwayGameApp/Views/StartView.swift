@@ -6,32 +6,24 @@ import UniformTypeIdentifiers
 /// The start screen (Stage C4), after the `Ci/` reference's home screen and
 /// its saved-game card (`screen-save-load-ui`: go on with the saved game,
 /// or start fresh): continue the autosave, start a new game on a blank or a
-/// real-world map (Stage E2; decision 316: both behind New Game), open one
-/// of the demos (decision 135: the
+/// real-world map or a challenge (Stage E2; decision 316: all behind New
+/// Game), open one of the demos (decision 135: the
 /// real-world demo of Taiwan's real lines, or the simple demo), load one of
-/// the saves or import a save file.
+/// the saves or import a save file (decision 381: both behind Saves).
 ///
 /// Every action calls a ``GameLauncher`` method; the screen keeps nothing
 /// of the games but what it shows.
 struct StartView: View {
     let launcher: GameLauncher
     @State private var showsSaves = false
-    @State private var importsSave = false
     /// Decision 316: the new game's page, blank or real-world.
     @State private var choosesNewGame = false
-    @State private var choosesChallenge = false
     /// Decision 266: the lessons, in place of the tutorial.
     @State private var choosesLesson = false
     @State private var choosesDemo = false
-    @State private var showsDataSources = false
     @State private var showsSettings = false
     @State private var showsHelp = false
     @State private var showsAchievements = false
-    /// The language menu's choice, read from the app's settings.
-    @State private var languageChoice = LanguageChoice.saved
-    /// What the player is told after choosing a language: it takes effect
-    /// the next time the game opens.
-    @State private var languageNote: String?
     @Environment(GameAudio.self) private var audio
     /// Compact: a phone on its side.
     @Environment(\.verticalSizeClass) private var verticalSizeClass
@@ -76,10 +68,10 @@ struct StartView: View {
         }
         .background(Theme.background)
         .sheet(isPresented: $showsSettings) {
-            SettingsView(audio: audio, lessons: launcher.lessonReport(in: .app))
+            SettingsView(audio: audio, launcher: launcher, lessons: launcher.lessonReport(in: .app))
         }
         .sheet(isPresented: $showsHelp) {
-            HelpView(language: launcher.language)
+            HelpView(language: launcher.language, launcher: launcher)
         }
         .sheet(isPresented: $choosesNewGame) {
             NewGamePicker(launcher: launcher, loadingDetail: loadingDetail)
@@ -104,40 +96,36 @@ struct StartView: View {
         .sheet(isPresented: $showsSaves) {
             SaveListView(launcher: launcher)
         }
-        .sheet(isPresented: $choosesChallenge) {
-            ChallengePicker(launcher: launcher)
-        }
         .sheet(isPresented: $choosesLesson) {
             LessonPicker(launcher: launcher)
         }
         .sheet(isPresented: $choosesDemo) {
             DemoPicker(launcher: launcher, loadingDetail: loadingDetail)
         }
-        .sheet(isPresented: $showsDataSources) {
-            DataSourcesView(launcher: launcher)
-        }
-        .fileImporter(isPresented: $importsSave, allowedContentTypes: [.json]) { result in
-            launcher.importSave {
-                let url = try result.get()
-                // A file from Files is outside the app's container.
-                let isScoped = url.startAccessingSecurityScopedResource()
-                defer {
-                    if isScoped { url.stopAccessingSecurityScopedResource() }
-                }
-                return try Data(contentsOf: url)
-            }
-        }
         .onAppear {
             launcher.refresh()
         }
     }
 
-    /// The ways into a game.
+    /// The ways into a game (decision 381: ``StartMenuEntry``).
     private var buttons: some View {
         VStack(spacing: 12) {
             if launcher.showsFirstGameCard {
                 firstGameCard
             }
+            ForEach(StartMenuEntry.entries(hasAutosave: launcher.autosave != nil), id: \.self) { entry in
+                button(entry)
+                    // Stable across localizations for the UI tests.
+                    .accessibilityIdentifier(entry.identifier)
+            }
+        }
+    }
+
+    /// One of the start screen's buttons.
+    @ViewBuilder private func button(_ entry: StartMenuEntry) -> some View {
+        let language = launcher.language
+        switch entry {
+        case .continueGame:
             if let autosave = launcher.autosave {
                 StartButton(
                     title: String(localized: "Continue"),
@@ -149,29 +137,29 @@ struct StartView: View {
                     UITestTrace.action("start.continue")
                     launcher.continueGame()
                 }
-                .accessibilityIdentifier("start.continue")
             }
+        case .newGame:
             // Decision 316: one way into a new game, on a blank or a
-            // real-world map, with the options both start with.
+            // real-world map, with the options both start with; since
+            // decision 381 the challenges too.
             StartButton(
                 title: String(localized: "New Game"),
-                detail: NewGameChoice.entryDetail(in: launcher.language),
+                detail: NewGameChoice.entryDetail(in: language),
                 systemImage: "plus",
                 isPrimary: launcher.autosave == nil,
                 tone: .primary
             ) {
                 choosesNewGame = true
             }
-            // Stable across localizations for the UI smoke tests.
-            .accessibilityIdentifier("start.newGame")
+        case .lessons:
             // Decision 266: the lessons, where the tutorial was: its steps
             // are the first lessons' guide.
             StartButton(
-                title: launcher.language.text(
+                title: language.text(
                     "Lessons · ★ \(launcher.lessonStarTotal)/\(3 * Lesson.all.count)",
                     "入門 · ★ \(launcher.lessonStarTotal)/\(3 * Lesson.all.count)"
                 ),
-                detail: launcher.language.text(
+                detail: language.text(
                     "Short games that teach one thing each: build, run, and earn up to 3 stars",
                     "一關教一件事的短遊戲：蓋、開、賺，最多拿 3 顆星"
                 ),
@@ -180,7 +168,7 @@ struct StartView: View {
             ) {
                 choosesLesson = true
             }
-            .accessibilityIdentifier("start.lessons")
+        case .demoMap:
             // Decision 135: both demos behind one button, so the start
             // screen keeps to the ways into a game of one's own.
             StartButton(
@@ -191,48 +179,27 @@ struct StartView: View {
             ) {
                 choosesDemo = true
             }
-            .accessibilityIdentifier("start.demoMap")
-            // Decision 192: the older autosaves are listed there too.
-            if !launcher.otherSaves.isEmpty || !launcher.olderAutosaves.isEmpty {
-                StartButton(
-                    title: String(localized: "Saved Games"),
-                    detail: String(localized: "\(launcher.otherSaves.count + launcher.olderAutosaves.count) saves"),
-                    systemImage: "tray.full",
-                    tone: .plain
-                ) {
-                    showsSaves = true
-                }
-                .accessibilityIdentifier("start.savedGames")
-            }
+        case .saves:
+            // Decision 381: the saves and importing one, in one list;
+            // decision 192: the older autosaves are listed there too.
             StartButton(
-                title: String(localized: "Import a Save"),
-                detail: String(localized: "A save file from Files or another device"),
-                systemImage: "square.and.arrow.down",
+                title: StartMenuEntry.savesTitle(in: language),
+                detail: StartMenuEntry.savesDetail(
+                    count: launcher.otherSaves.count + launcher.olderAutosaves.count, in: language
+                ),
+                systemImage: "tray.full",
                 tone: .plain
             ) {
-                importsSave = true
+                showsSaves = true
             }
-            // Decision 86: a new game with goals. Last, after the
-            // buttons the UI tests reach.
-            StartButton(
-                title: launcher.language.text("Challenges", "挑戰"),
-                detail: launcher.language.text(
-                    "Goals to reach by a deadline, rated gold, silver or bronze",
-                    "在期限內達成目標，依完成速度拿金、銀、銅牌"
-                ),
-                systemImage: "flag.checkered",
-                tone: .accent
-            ) {
-                choosesChallenge = true
-            }
-            .accessibilityIdentifier("start.challenges")
+        case .achievements:
             // Decision 181: what the player has done across games.
             StartButton(
-                title: launcher.language.text(
+                title: language.text(
                     "Achievements \(launcher.achievements.count)/\(Achievement.all.count)",
                     "成就 \(launcher.achievements.count)/\(Achievement.all.count)"
                 ),
-                detail: launcher.language.text(
+                detail: language.text(
                     "Milestones of your own games, kept on this device",
                     "你自己的遊戲裡達成的里程碑，記錄在這台裝置上"
                 ),
@@ -241,7 +208,6 @@ struct StartView: View {
             ) {
                 showsAchievements = true
             }
-            .accessibilityIdentifier("start.achievements")
         }
     }
 
@@ -289,7 +255,7 @@ struct StartView: View {
         .accessibilityIdentifier("start.firstGame")
     }
 
-    /// The last message, and Language, Data Sources and Settings.
+    /// The last message, and Help and Settings.
     @ViewBuilder private var footer: some View {
         if let message = launcher.message {
             HStack(spacing: 8) {
@@ -340,45 +306,9 @@ struct StartView: View {
         launcher.language.text("Reading the real-world data…", "正在讀取實景資料…")
     }
 
-    /// Language, Data Sources and Settings, under the start screen's
-    /// buttons.
+    /// Help and Settings, under the start screen's buttons (decision 381:
+    /// the language is in Settings, the data sources in Help).
     @ViewBuilder private var chips: some View {
-        // Decision 257: the game's own language menu, as on the
-        // reference's home screen (iOS shows an app's language in
-        // Settings only on a device with two or more languages).
-        Menu {
-            Picker(selection: languageChoiceBinding) {
-                ForEach(LanguageChoice.allCases, id: \.self) { choice in
-                    Text(verbatim: choice.title(in: launcher.language)).tag(choice)
-                }
-            } label: {
-                EmptyView()
-            }
-        } label: {
-            chip(Label("Language", systemImage: "globe"))
-        }
-        .accessibilityIdentifier("start.language")
-        .accessibilityHint(Text(verbatim: launcher.language.text("Chooses the game's language.", "選擇遊戲的語言。")))
-        .alert(
-            Text(verbatim: launcher.language.text("Language", "語言")),
-            isPresented: Binding(get: { languageNote != nil }, set: { if !$0 { languageNote = nil } })
-        ) {
-            Button {
-                languageNote = nil
-            } label: {
-                Text(verbatim: launcher.language.text("OK", "好"))
-            }
-        } message: {
-            Text(verbatim: languageNote ?? "")
-        }
-        // Where the real-world data comes from (the `Railway/`
-        // site's data sources page).
-        Button {
-            showsDataSources = true
-        } label: {
-            chip(Label("Data Sources", systemImage: "info.circle"))
-        }
-        .accessibilityIdentifier("start.dataSources")
         // Decision 177: the help guide, searchable.
         Button {
             showsHelp = true
@@ -389,29 +319,15 @@ struct StartView: View {
                 Image(systemName: "questionmark.circle")
             })
         }
-        .accessibilityIdentifier("start.help")
-        // The music and sound effects on or off; the game
-        // menu opens the same settings.
+        .accessibilityIdentifier(StartMenuChip.help.identifier)
+        // The language, the music and sound effects; the game menu opens
+        // the same settings.
         Button {
             showsSettings = true
         } label: {
             chip(Label("Settings", systemImage: "gearshape"))
         }
-        .accessibilityIdentifier("start.settings")
-    }
-
-    /// The language menu's selection: saves the choice, and tells the
-    /// player to reopen the game when the language may change.
-    private var languageChoiceBinding: Binding<LanguageChoice> {
-        Binding {
-            languageChoice
-        } set: { choice in
-            if choice.needsRestart(from: languageChoice, showing: launcher.language) {
-                languageNote = choice.restartNote(in: launcher.language)
-            }
-            languageChoice = choice
-            choice.save()
-        }
+        .accessibilityIdentifier(StartMenuChip.settings.identifier)
     }
 
     /// A small capsule under the start buttons.
@@ -539,12 +455,15 @@ private struct DemoPicker: View {
 /// Decision 316: the new game's page, the maps a new game can start on
 /// (``NewGameChoice``): a blank map, which starts at once, and a real-world
 /// map, which opens the place picker (decision 312). Under them, the
-/// new game's options (decision 177), which both start with.
+/// new game's options (decision 177), which both start with. Last, the
+/// challenges (decision 381; decision 86: a new game with goals), which
+/// were a start screen button of their own.
 private struct NewGamePicker: View {
     let launcher: GameLauncher
     /// What the real-world map says while the real-world data is read.
     let loadingDetail: String
     @State private var choosesPlace = false
+    @State private var choosesChallenge = false
     @State private var showsOptions = false
     @Environment(\.dismiss) private var dismiss
 
@@ -596,6 +515,17 @@ private struct NewGamePicker: View {
                             .multilineTextAlignment(.center)
                     }
                     .padding(.top, 4)
+                    // After the options, which challenges set themselves.
+                    StartButton(
+                        title: NewGameChoice.challengesTitle(in: language),
+                        detail: NewGameChoice.challengesDetail(in: language),
+                        systemImage: "flag.checkered",
+                        tone: .accent
+                    ) {
+                        choosesChallenge = true
+                    }
+                    .padding(.top, 8)
+                    .accessibilityIdentifier(NewGameChoice.challengesIdentifier)
                 }
                 .frame(maxWidth: 420)
                 .padding()
@@ -617,6 +547,14 @@ private struct NewGamePicker: View {
         }
         .sheet(isPresented: $choosesPlace) {
             RealWorldPicker(launcher: launcher)
+        }
+        .sheet(isPresented: $choosesChallenge) {
+            ChallengePicker(launcher: launcher)
+        }
+        // A challenge started from the picker above leaves the start
+        // screen: this page closes with it.
+        .onChange(of: launcher.session != nil) { _, isPlaying in
+            if isPlaying { dismiss() }
         }
         // A7 of the #873–#910 review: once a real-world map is being built,
         // this page closes with the place picker on it, so the loading
@@ -725,10 +663,14 @@ private struct CardTapButtonStyle: ButtonStyle {
 /// name, a save can be named (swipe, or hold it), and deleting one asks
 /// first. Since decision 192 the older autosaves come first, the newest
 /// first, each saying how long ago it was saved: loading one goes back to
-/// the game as it was then.
+/// the game as it was then. Since decision 381 it is the start screen's
+/// Saves, and imports a save file too (the start screen's Import a Save
+/// was): a row at its top, or the empty list's button.
 struct SaveListView: View {
     let launcher: GameLauncher
     @Environment(\.dismiss) private var dismiss
+    /// Whether Files is open to choose a save file.
+    @State private var importsSave = false
     /// How the saves are ordered; kept for the next time.
     @AppStorage("saveListOrder") private var order: SaveLibrary.Order = .newest
     /// The save being named, and the name being typed.
@@ -740,6 +682,7 @@ struct SaveListView: View {
     var body: some View {
         let language = launcher.language
         let saves = SaveLibrary.sorted(launcher.otherSaves, by: order)
+        let isEmpty = launcher.otherSaves.isEmpty && launcher.olderAutosaves.isEmpty
         NavigationStack {
             List {
                 if let message = launcher.message {
@@ -749,29 +692,27 @@ struct SaveListView: View {
                             .foregroundStyle(Theme.warning)
                     }
                 }
+                // With no save, the empty list's own button imports one.
+                if !isEmpty {
+                    Section {
+                        importButton
+                    }
+                }
                 if !launcher.olderAutosaves.isEmpty {
                     Section {
                         ForEach(launcher.olderAutosaves) { entry in
-                            Button {
-                                launcher.load(entry)
-                                if launcher.session != nil {
-                                    dismiss()
-                                }
-                            } label: {
-                                row(entry)
-                            }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button(role: .destructive) {
-                                    deleting = entry
-                                } label: {
-                                    Label {
-                                        Text(verbatim: language.text("Delete", "刪除"))
-                                    } icon: {
-                                        Image(systemName: "trash")
+                            rowWithMenu(entry)
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    Button(role: .destructive) {
+                                        deleting = entry
+                                    } label: {
+                                        Label {
+                                            Text(verbatim: language.text("Delete", "刪除"))
+                                        } icon: {
+                                            Image(systemName: "trash")
+                                        }
                                     }
                                 }
-                            }
-                            .accessibilityIdentifier("saves.row.\(entry.id)")
                         }
                     } header: {
                         Text(verbatim: language.text("Earlier Autosaves", "之前的自動存檔"))
@@ -784,80 +725,102 @@ struct SaveListView: View {
                 }
                 Section {
                     ForEach(saves) { entry in
-                        Button {
-                            launcher.load(entry)
-                            if launcher.session != nil {
-                                dismiss()
-                            }
-                        } label: {
-                            row(entry)
-                        }
-                        .disabled(entry.problem != nil)
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) {
-                                deleting = entry
-                            } label: {
-                                Label {
-                                    Text(verbatim: language.text("Delete", "刪除"))
-                                } icon: {
-                                    Image(systemName: "trash")
-                                }
-                            }
-                            if entry.kind == .manual {
-                                Button {
-                                    startRenaming(entry)
+                        rowWithMenu(entry)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    deleting = entry
                                 } label: {
                                     Label {
-                                        Text(verbatim: language.text("Rename", "重新命名"))
+                                        Text(verbatim: language.text("Delete", "刪除"))
                                     } icon: {
-                                        Image(systemName: "pencil")
+                                        Image(systemName: "trash")
                                     }
                                 }
-                                .tint(Theme.primary)
+                                if entry.kind == .manual {
+                                    Button {
+                                        startRenaming(entry)
+                                    } label: {
+                                        Label {
+                                            Text(verbatim: language.text("Rename", "重新命名"))
+                                        } icon: {
+                                            Image(systemName: "pencil")
+                                        }
+                                    }
+                                    .tint(Theme.primary)
+                                }
                             }
-                        }
-                        .contextMenu {
-                            if entry.kind == .manual {
-                                Button {
-                                    startRenaming(entry)
+                            .contextMenu {
+                                if entry.kind == .manual {
+                                    Button {
+                                        startRenaming(entry)
+                                    } label: {
+                                        Label {
+                                            Text(verbatim: language.text("Rename", "重新命名"))
+                                        } icon: {
+                                            Image(systemName: "pencil")
+                                        }
+                                    }
+                                }
+                                Button(role: .destructive) {
+                                    deleting = entry
                                 } label: {
                                     Label {
-                                        Text(verbatim: language.text("Rename", "重新命名"))
+                                        Text(verbatim: language.text("Delete", "刪除"))
                                     } icon: {
-                                        Image(systemName: "pencil")
+                                        Image(systemName: "trash")
                                     }
                                 }
                             }
-                            Button(role: .destructive) {
-                                deleting = entry
-                            } label: {
-                                Label {
-                                    Text(verbatim: language.text("Delete", "刪除"))
-                                } icon: {
-                                    Image(systemName: "trash")
-                                }
-                            }
-                        }
-                        .accessibilityIdentifier("saves.row.\(entry.id)")
                     }
                 }
             }
             .overlay {
-                if launcher.otherSaves.isEmpty && launcher.olderAutosaves.isEmpty {
+                if isEmpty {
                     // Decision 122, later: the game's own picture, not the system's tray.
                     ContentUnavailableView {
                         Label {
-                            Text("No Saved Games")
+                            Text(verbatim: language.text("No Saves Yet", "還沒有存檔"))
                         } icon: {
                             Image("EmptySaves")
                                 .resizable()
                                 .frame(width: 96, height: 96)
                                 .accessibilityHidden(true)
                         }
+                    } description: {
+                        Text(verbatim: SaveListText.importDetail(in: language))
+                    } actions: {
+                        Button {
+                            importsSave = true
+                        } label: {
+                            Label {
+                                Text(verbatim: SaveListText.importTitle(in: language))
+                            } icon: {
+                                Image(systemName: "square.and.arrow.down")
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Theme.primary)
+                        .accessibilityIdentifier(SaveListText.importIdentifier)
                     }
                 }
             }
-            .navigationTitle("Saved Games")
+            .fileImporter(isPresented: $importsSave, allowedContentTypes: [.json]) { result in
+                launcher.importSave {
+                    let url = try result.get()
+                    // A file from Files is outside the app's container.
+                    let isScoped = url.startAccessingSecurityScopedResource()
+                    defer {
+                        if isScoped { url.stopAccessingSecurityScopedResource() }
+                    }
+                    return try Data(contentsOf: url)
+                }
+                // A save that was read opens at once; one that was not
+                // says why at the top of the list.
+                if launcher.session != nil {
+                    dismiss()
+                }
+            }
+            .navigationTitle(SaveListText.title(in: language))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -936,6 +899,99 @@ struct SaveListView: View {
         }
     }
 
+    /// A save's row: tap it to load it; its "⋯" button (decision 381)
+    /// holds what its swipe and long press do, so they can be seen.
+    private func rowWithMenu(_ entry: SaveLibrary.Entry) -> some View {
+        HStack(spacing: 8) {
+            Button {
+                launcher.load(entry)
+                if launcher.session != nil {
+                    dismiss()
+                }
+            } label: {
+                row(entry)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.borderless)
+            .disabled(entry.problem != nil)
+            .accessibilityIdentifier("saves.row.\(entry.id)")
+            rowMenu(entry)
+        }
+    }
+
+    /// The row's "⋯" menu: rename (the player's own saves), export, and
+    /// delete, which asks first (``SaveListText/RowAction``).
+    private func rowMenu(_ entry: SaveLibrary.Entry) -> some View {
+        let language = launcher.language
+        return Menu {
+            ForEach(SaveListText.RowAction.available(for: entry), id: \.self) { action in
+                switch action {
+                case .rename:
+                    Button {
+                        startRenaming(entry)
+                    } label: {
+                        Label(action.title(in: language), systemImage: action.systemImage)
+                    }
+                case .export:
+                    ShareLink(
+                        item: ExportedListSave(library: launcher.saveLibrary, entry: entry),
+                        preview: SharePreview(Text(verbatim: title(of: entry)))
+                    ) {
+                        Label(action.title(in: language), systemImage: action.systemImage)
+                    }
+                case .delete:
+                    Button(role: .destructive) {
+                        deleting = entry
+                    } label: {
+                        Label(action.title(in: language), systemImage: action.systemImage)
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: "ellipsis.circle")
+                .font(.title3)
+                .foregroundStyle(Theme.primary)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.borderless)
+        .accessibilityLabel(Text(verbatim: SaveListText.rowMenuLabel(in: language)))
+        .accessibilityIdentifier(SaveListText.rowMenuIdentifier(of: entry))
+    }
+
+    /// The row that imports a save file, at the top of a list with saves.
+    private var importButton: some View {
+        let language = launcher.language
+        return Button {
+            importsSave = true
+        } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Theme.primary.opacity(0.14))
+                        .frame(width: 36, height: 36)
+                    Image(systemName: "square.and.arrow.down")
+                        .font(.footnote.weight(.bold))
+                        .foregroundStyle(Theme.primary)
+                }
+                .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(verbatim: SaveListText.importTitle(in: language))
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text(verbatim: SaveListText.importDetail(in: language))
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(.vertical, 3)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier(SaveListText.importIdentifier)
+    }
+
     private func startRenaming(_ entry: SaveLibrary.Entry) {
         newName = entry.name ?? ""
         renaming = entry
@@ -999,5 +1055,19 @@ struct SaveListView: View {
             return name
         }
         return entry.savedAt?.formatted(date: .abbreviated, time: .shortened) ?? entry.id
+    }
+}
+
+/// A save in the list as a file to share (decision 381), written when the
+/// player shares it, as the game menu's Export Save writes the game being
+/// played.
+private struct ExportedListSave: Transferable {
+    let library: SaveLibrary
+    let entry: SaveLibrary.Entry
+
+    static var transferRepresentation: some TransferRepresentation {
+        FileRepresentation(exportedContentType: .json) { save in
+            SentTransferredFile(try save.library.exportFile(of: save.entry))
+        }
     }
 }
