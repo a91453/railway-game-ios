@@ -165,8 +165,9 @@ public struct Map3DFollow: Hashable, Sendable {
             next.distance = Map3DCamera.nearest
             var eye = head.nose + head.forward * Self.cabLead + Map3DPoint(0, Self.cabEyeHeight, 0)
             // Decision 359: over the ground where it covers the track (a
-            // tunnel the scene does not draw), not in it.
-            if let ground = head.ground { eye.y = max(eye.y, ground + Self.cabEyeHeight) }
+            // deep cutting), not in it; decision 359 (續): in a tunnel, in
+            // its bore.
+            if let ground = head.ground, !head.inTunnel { eye.y = max(eye.y, ground + Self.cabEyeHeight) }
             next.target = eye + next.forward * (next.distance * sinf(view.tilt)) - Map3DPoint(0, next.distance * cosf(view.tilt), 0)
             return next
         }
