@@ -1197,9 +1197,12 @@ public final class GameSession {
         isSpeedCappedIn3D = capped
         if capped {
             let running = world.clock.runningSpeed
-            let lowered = Map3DFollowSpeed.capped(running)
+            // A night skip (decision 305) runs at a speed of its own and
+            // ends here: the player's is the one it would go back to.
+            let own = nightSkipRun?.speed ?? running
+            let lowered = Map3DFollowSpeed.capped(own)
             guard lowered != running else { return }
-            speedBefore3D = running
+            if lowered != own { speedBefore3D = own }
             setRunningSpeed(lowered)
         } else if let before = speedBefore3D {
             speedBefore3D = nil

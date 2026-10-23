@@ -334,6 +334,26 @@ final class NightSkipTests: XCTestCase {
         XCTAssertEqual(stopped.world.clock.speed, .normal, "Stop goes back to the speed before")
     }
 
+    /// Following a train on the 3D map while the night is skipped ends
+    /// the skip at 10× (decision 360); leaving the 3D map gives back the
+    /// speed before the skip, not the skip's own (review F, #1057), and a
+    /// save meanwhile keeps that speed.
+    @MainActor
+    func testFollowingIn3DDuringTheSkipGivesBackThePlayersSpeed() throws {
+        let session = GameSession(world: try world())
+        session.skipToMorning()
+        session.advance(ticks: 3)
+        XCTAssertNotNil(session.nightSkipRun)
+        XCTAssertNotEqual(session.world.clock.speed, .normal, "the skip runs faster")
+        session.followTrain(session.world.trains[0].id)
+        session.setMap3DOpen(true)
+        XCTAssertNil(session.nightSkipRun)
+        XCTAssertEqual(session.world.clock.speed, .x10)
+        XCTAssertEqual(session.worldToSave.clock.speed, .normal)
+        session.setMap3DOpen(false)
+        XCTAssertEqual(session.world.clock.speed, .normal)
+    }
+
     // MARK: - Music (decision 372)
 
     /// The music goes down while the night is skipped and comes back when

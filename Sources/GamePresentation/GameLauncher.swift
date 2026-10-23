@@ -450,7 +450,7 @@ public final class GameLauncher {
     /// their trains are not the player's. A game with unlimited funds
     /// counts: a stamp is a visit, not a feat.
     func checkStationStamps(of session: GameSession, at date: Date = Date()) {
-        guard !session.news.isDemo, session.tutorial == nil, session.lesson == nil, let railways = session.railways else { return }
+        guard session.collectsStationStamps, let railways = session.railways else { return }
         let served = StationStamps.served(in: session.world)
         guard !served.isEmpty else { return }
         let found = StationStamps.realStations(of: served, in: session.world, railways: railways)
