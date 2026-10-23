@@ -60,7 +60,7 @@
 
 | 角色 | 現在的 session | 做什麼 | 交接 |
 | --- | --- | --- | --- |
-| 遊戲規劃（兼派工） | session_014nUBHbE9mSK4qXHHgm8xCQ（2026-10-22 22:30 UTC 起，接 session_01UsF4QYCGrzSeNSFq11i8Wu（18:15–22:30），再之前 session_01Ddr2wiXx1Xhn2m9qNBDnDh、session_01CHQg7B6JqzbScGSjyDwHos（2026-10-22 起，照 §1.1 換手，作者：「要不要全部所有換個session了 都一直在壓縮了」→「好，照表換」；換手時的現況在第 2 節最前面；前任 session_014rYHMtmqA5bEMkBBuKu6PV（10-21 至 10-22，作者：「那你需要先接手嗎太長了」）、session_01NiR5WLMFjMJBktQAMkfmkm（10-21）、session_01WW7o3decEv5LY59nYVqnDN（10-20 至 10-21，作者：「接手 角色表中遊戲規劃的工作」）、session_01V1xd3H9vNkuZoSA3czNfGm（10-16 至 10-18）、session_018D6gYU1yiZMtxSmNNU1K17） | 從玩家、鐵道迷、開發、美術、音樂五個角度決定優先順序與設計，開實作 session 並派工，綠了的 PR 照 §1.2 合併（2026-10-21 起），收作者轉來的玩家回報與 bug（§1.3），寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1、1.3 節 |
+| 遊戲規劃（兼派工） | session_01H5RHAwnA69n8EfAUSUrH52（2026-10-23 00:10 UTC 起，接 session_014nUBHbE9mSK4qXHHgm8xCQ（10-22 22:30–10-23 00:10），再之前 session_01UsF4QYCGrzSeNSFq11i8Wu（18:15–22:30），再之前 session_01Ddr2wiXx1Xhn2m9qNBDnDh、session_01CHQg7B6JqzbScGSjyDwHos（2026-10-22 起，照 §1.1 換手，作者：「要不要全部所有換個session了 都一直在壓縮了」→「好，照表換」；換手時的現況在第 2 節最前面；前任 session_014rYHMtmqA5bEMkBBuKu6PV（10-21 至 10-22，作者：「那你需要先接手嗎太長了」）、session_01NiR5WLMFjMJBktQAMkfmkm（10-21）、session_01WW7o3decEv5LY59nYVqnDN（10-20 至 10-21，作者：「接手 角色表中遊戲規劃的工作」）、session_01V1xd3H9vNkuZoSA3czNfGm（10-16 至 10-18）、session_018D6gYU1yiZMtxSmNNU1K17） | 從玩家、鐵道迷、開發、美術、音樂五個角度決定優先順序與設計，開實作 session 並派工，綠了的 PR 照 §1.2 合併（2026-10-21 起），收作者轉來的玩家回報與 bug（§1.3），寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1、1.3 節 |
 | 每日 Threads 開發日誌 | 排程「每日 Threads 開發日誌」（台灣時間每天 21:43，2026-10-18 起暫停）觸發遊戲規劃，由它開寫作 session。2026-10-22 換手時由前任建了綁到 session_01CHQg7B6JqzbScGSjyDwHos 的新排程 `trig_01FZhfBNQCdDW8iDpowANLZS`（暫停中；之後每次換手都重建，現任的 id 寫在 #1041 接手的留言），前任的 `trig_01NfzFV9BcdiyBJpAwnaTuK9`（再之前是 `trig_01SkNFNW6qN6cMUGkGCXZM1v`）已刪。排程的綁定改不了，以後換手時由現任遊戲規劃用同一份 prompt 建一個綁到自己的新排程，再刪掉舊的；作者沒說要開就維持暫停 | 寫當天的串文草稿，用 SendUserFile 交給作者；不 commit、不發布 | 派工單照 2026-10-14、10-15、10-16 的寫作 session |
 
 不再常駐（2026-10-20 停用）：合併協調 session_01QoA24EvFCFbmbcM1EwaZT7（前任 session_016sNs4eeZwga9hz1CCHkpmX）、派工 session_01MJ7sdeid5DAFjSVbTkmdi3（前任 session_01AaAj4wvJMxJQuLWAoYu6S8）。兩個都從 2026-10-17 起沒有動作。
@@ -292,6 +292,22 @@
 - **卡頓、發熱、6000×**：session_011kVCxFJEULkYyGGU7emgsx，決策 363，分三個 PR：(a) 三個動作與跨 24:00、06:00 切速度；(b) §22.2 第 25a 名（決策 330 第 3 步，高倍速每次換世界整個畫面重算）；(c) 第 10h 名 2D 每幀，含不操作時降 2D 幀率上限。它壓縮 1 次就停，剩下的寫在 §7.1，下一個規劃再派人接。
 - **環狀線沒載到人**：還沒派。作者在跟玩家要路線卡與車站卡的截圖；#1057 合併、空出一個 session 時，先派人在 Linux 用一條普通環狀線重現（哪個方向、哪些站的旅客沒上車），有截圖再對照。
 - 第 83 版：#1057、#1059 合併後，What to Test 在 `claude/testflight-83-notes`；其他修好的進 84。TestFlight 的「當機意見反應」只有文字、沒有當機紀錄（作者 2026-10-23 截圖）。
+
+**第四次換手（2026-10-23 00:10 UTC，session_014nUBHbE9mSK4qXHHgm8xCQ 壓縮 2 次 → session_01H5RHAwnA69n8EfAUSUrH52）**。和下面不同時以這段為準。
+
+- **合併了**（43b5b011 起這一批）：#1058（玩家回報 77.1–82.1）、#1057（決策 360 第一步，3D 跟車最高 10×）、#1059（升級複線卡住，80.1）→ main 4e18ee8b。之前還有 #1056、#1052（決策 359）、#1048（358）。main 的 `ci.yml` 在 719d3d09 綠，4e18ee8b 那次交接時還在跑。
+- **第 83 版**：程式到齊。What to Test 在文件 PR #1062（head 4150e4c9，gate 綠）；4e18ee8b 綠了就合，合併後的 commit 就是 83 的 commit，等它的 `ci.yml` 與 full lane 都綠再告訴作者「可以發（commit X）」。
+- **做中**（合併後收工，「可合併」留在 #1041 並 send_message 給規劃）：
+  - session_014NB8yWZmutMBX3jDsXC3Sm：#1061 隧道本體（決策 359 續一，壓縮 1 次，只做完這個）。地下月台與地下透視開關寫在 359.md「續一之後還沒做」，要再派。
+  - session_01KAjPfBFs9fKJcLV9JsgRC4：#1060 自有建築公園與廟（10d，存檔 71、決策 361，GameCore）。
+  - session_01Q3q6JL8VvzYZShXTQRTsoz：仲夏寶島號。
+  - session_011kVCxFJEULkYyGGU7emgsx：卡頓、發熱、6000×（決策 363，三個 PR，見上一段）。
+  - session_01Efb7Sr7mZC2SiNXUtd1ZAa：環狀線旅客沒被載到（決策 364，可能動 GameCore，算第 2 個 GameCore tier）。
+- **號碼**：決策 362 釋出，下一個 365；存檔下一個 72。
+- **排隊**：360 第二步（沿線預載、霧）、10g、10e、10f、20a（慢車自動待避）、§5 的同類預覽（`NetworkSession` 草稿、`PassingLoop`、`DepotYard`、`LevelPlatformTrack` 都以 worldRevision 為鍵）。
+- **審查**：從 #1031 起約 21 點（#1057、#1059 各 1），滿 30 開一輪。
+- **排程**：每日 Threads 開發日誌 `trig_016U9uyaff5jSPvx4fZNbAp1`（暫停）綁在前任；新任建一個綁到自己的、刪掉舊的，新 id 寫在 #1041 接手的留言。
+- **等作者**：環狀線玩家的路線卡與車站卡截圖；大存檔的幀數截圖。
 
 **第三次換手（2026-10-22 22:30 UTC，session_01UsF4QYCGrzSeNSFq11i8Wu 壓縮 2 次 → session_014nUBHbE9mSK4qXHHgm8xCQ）**。和下面不同時以這段為準。
 
