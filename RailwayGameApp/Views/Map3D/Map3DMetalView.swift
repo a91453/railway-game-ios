@@ -447,7 +447,7 @@ final class Map3DMetalView: MTKView {
 
     /// The newest Apple GPU family `device` belongs to, as a number (9 for
     /// `.apple9`), 0 for none.
-    static func appleFamily(of device: MTLDevice) -> Int {
+    nonisolated static func appleFamily(of device: MTLDevice) -> Int {
         let families: [(MTLGPUFamily, Int)] = [(.apple9, 9), (.apple8, 8), (.apple7, 7), (.apple6, 6), (.apple5, 5), (.apple4, 4)]
         return families.first { device.supportsFamily($0.0) }?.1 ?? 0
     }
