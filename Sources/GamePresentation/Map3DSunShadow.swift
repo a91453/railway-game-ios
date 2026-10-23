@@ -34,7 +34,7 @@ public enum Map3DSunShadow {
     /// (Saving, and Automatic when it saves), only decision 232's.
     public static func plan(_ quality: Map3DQuality, lowPower: Bool, heat: Map3DQuality.Heat, overBudget: Bool) -> Plan? {
         switch quality {
-        case .saving:
+        case .saving, .off:
             return nil
         case .automatic:
             if lowPower || heat >= .serious { return nil }

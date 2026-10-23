@@ -62,6 +62,8 @@ struct MapView: View {
     @AppStorage("mapShowsStationNames") private var showsStationNames = true
     /// Decision 313: whether a pinch past the closest zoom opens the 3D map.
     @AppStorage(Map3DHandoff.pinchOpensKey) private var pinchOpens3D = true
+    /// Decision 365: Off plays on the flat map only.
+    @AppStorage(Map3DQuality.key) private var map3DQuality: Map3DQuality = .forThisDevice
     @AppStorage("mapShowsWaitingCounts") private var showsWaitingCounts = true
     @AppStorage("mapShowsCatchmentRings") private var showsCatchmentRings = true
     /// Which population and travel layer is shown (``PopTravelMode``'s raw
@@ -620,7 +622,7 @@ struct MapView: View {
                         // Decision 269, later: resting near the closest
                         // zoom, the 3D scene starts building.
                         guard Map3DHandoff.hands(building: session.tool != .select, tutorialRuns: session.tutorial != nil,
-                                                 pinchOpens: pinchOpens3D),
+                                                 pinchOpens: pinchOpens3D && map3DQuality.shows3D),
                               !screen.showsMap3D else { return }
                         buildAheadIfResting(near: pinched)
                     }, onPinchEnded: { pinched, asked in
@@ -630,7 +632,7 @@ struct MapView: View {
                         // was and as close (not with a building tool out,
                         // in the tutorial, or with the setting off).
                         guard Map3DHandoff.hands(building: session.tool != .select, tutorialRuns: session.tutorial != nil,
-                                                 pinchOpens: pinchOpens3D),
+                                                 pinchOpens: pinchOpens3D && map3DQuality.shows3D),
                               !screen.showsMap3D,
                               Map3DHandoff.opensOnRelease(referenceSize: pinched.referenceSize, asked: asked) else { return }
                         UITestTrace.action("map.pinch let go past the closest zoom: 3D")
@@ -1430,10 +1432,11 @@ struct MapView: View {
     private func buildAheadIfResting(near pinched: PlanCamera) {
         buildAhead?.cancel()
         buildAhead = nil
-        guard Map3DHandoff.buildsAhead(referenceSize: pinched.referenceSize) else { return }
+        // Decision 365: with 3D off, nothing is built for it.
+        guard map3DQuality.shows3D, Map3DHandoff.buildsAhead(referenceSize: pinched.referenceSize) else { return }
         buildAhead = Task {
             try? await Task.sleep(for: .seconds(Map3DHandoff.buildsAfterResting))
-            guard !Task.isCancelled, !screen.showsMap3D,
+            guard !Task.isCancelled, !screen.showsMap3D, map3DQuality.shows3D,
                   let now = camera, Map3DHandoff.buildsAhead(referenceSize: now.referenceSize) else { return }
             Map3DSceneCache.shared.prepare(for: session, focus: (x: now.centerX, y: now.centerY), palette: linePalette)
         }
@@ -1800,7 +1803,9 @@ struct MapView: View {
                 MapCoverageButton(isOn: buildingLayer.isOn, language: session.language, compactReach: compactReach) {
                     buildingLayerAutoShows = buildingLayer.toggle()
                 }
-                map3DButton(compactReach: compactReach)
+                if map3DQuality.shows3D {
+                    map3DButton(compactReach: compactReach)
+                }
             }
             if place.showsZoom {
                 zoomControls(camera: camera, limit: limit, compactReach: compactReach)
