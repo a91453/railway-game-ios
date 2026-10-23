@@ -112,6 +112,7 @@
 		8FBF6253CD6BFB1226209F25 /* TodaySettlementsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = E95E148A603B48CD12C8A714 /* TodaySettlementsSection.swift */; };
 		901FBCAF3CF18040ABB7DCA1 /* MapLockMarks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362FE08DC4352F1A844AF86D /* MapLockMarks.swift */; };
 		90D833E8F70651BA68429E5D /* run-electric.caf in Resources */ = {isa = PBXBuildFile; fileRef = A0AD6227FA521E0662955DEC /* run-electric.caf */; };
+		9108B7149F1546CA165D177A /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 0DE544A75839254BE9C37E2D /* PrivacyInfo.xcprivacy */; };
 		92F90DD1D5DAE3F80BACEB39 /* MapMarkTapUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CEAC255D3FFB54FF35BCF39 /* MapMarkTapUITests.swift */; };
 		945BE0F504200741317CF54C /* MapLayerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8363C536E3BE341871325469 /* MapLayerSheet.swift */; };
 		95294AB1D11D0C95F25EA89B /* tra_pingxi_runs.json in Resources */ = {isa = PBXBuildFile; fileRef = C12C3242BE7CC739B03D2613 /* tra_pingxi_runs.json */; };
@@ -210,6 +211,7 @@
 		0A8A6A623CDA7792FB18C0A2 /* Palette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Palette.swift; sourceTree = "<group>"; };
 		0B4F958A2EC6D131F9218CDD /* MapAlertBubbles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapAlertBubbles.swift; sourceTree = "<group>"; };
 		0BB64062D209FDE3EC54BAE7 /* MapConstructionHUD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapConstructionHUD.swift; sourceTree = "<group>"; };
+		0DE544A75839254BE9C37E2D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		0E01CB29C26C0F92124DEE0C /* TutorialTargets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialTargets.swift; sourceTree = "<group>"; };
 		0FD517F96914B0874A416907 /* ntdlrt_ridership.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ntdlrt_ridership.json; sourceTree = "<group>"; };
 		10BAAEA97DA689ABA4004F2A /* tmrt.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tmrt.json; sourceTree = "<group>"; };
@@ -687,6 +689,7 @@
 			children = (
 				41251B12461A0FD34DFCB786 /* Assets.xcassets */,
 				319005DEFC37AC8A7F4BB927 /* Localizable.xcstrings */,
+				0DE544A75839254BE9C37E2D /* PrivacyInfo.xcprivacy */,
 				B3A6A45B19F662183005E4CB /* Audio */,
 				A0EEF6BF7DEFF9BA44F2679A /* InfoPlist.strings */,
 				8382CA8983A43BE4B8E22C4F /* Licenses */,
@@ -799,6 +802,7 @@
 				47D7D11A0F4705BFD3BE7E6A /* Map3DSurfaces.png in Resources */,
 				68C5B44129E827A4E417FB63 /* MapLibre-iOS-LICENSE.md in Resources */,
 				D9A96F6DD6A7A5B69078119E /* NotoSans-OFL.txt in Resources */,
+				9108B7149F1546CA165D177A /* PrivacyInfo.xcprivacy in Resources */,
 				1E9DD55C059CAB8D682CA656 /* afr.json in Resources */,
 				4DAC945C946CD6E54FCDFE63 /* build-done.wav in Resources */,
 				010E12EE6CB22C3D103E9907 /* chime-local-motif.wav in Resources */,

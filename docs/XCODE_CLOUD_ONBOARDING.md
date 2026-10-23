@@ -229,8 +229,12 @@ Archive action 使用 scheme 的 Archive 設定，即 **Release** configuration�
 
 ## 隱私
 
-- App 不蒐集、不傳送任何資料，沒有網路、帳號、追蹤或第三方 SDK。
-- Privacy manifest（`PrivacyInfo.xcprivacy`）：Apple 要求在使用「required reason API」（檔案時間戳、系統開機時間、磁碟空間、目前鍵盤、`UserDefaults`）時宣告理由。原始碼沒有直接使用這些 API；`release-archive.yml` 會掃描封存後的二進位檔並列出任何疑似引用。**目前沒有加入 privacy manifest**，也不為消除警告而虛構宣告。若 App Store Connect 寄來 ITMS-91053（Missing API declaration）之類的通知，依通知內容加入真實的理由。
+- App 不蒐集資料、沒有帳號、追蹤、廣告或分析 SDK。會連網的只有：Apple 地圖（MapKit 的圖磚與地點搜尋）、台灣以外的 OpenStreetMap 底圖（MapLibre 從 tiles.openfreemap.org 下載圖磚）、設定裡的「官網」與「3D 城市」（alongthelinegame.com）。「用我的位置」（決策 335）只在按下時要一次「使用 App 期間」的定位，取到約 1 公里，不儲存也不傳送。問題回報、存檔與明信片只經分享選單送到玩家選的地方。玩家看的說明是官網的隱私權政策（`a91453/railway-reference-private` 的 `Website/site/privacy.html`），改了這些功能要一起改。
+- Privacy manifest：`RailwayGameApp/Resources/PrivacyInfo.xcprivacy`（2026-10-23 加入；`Resources` 整個資料夾已是 App target 的來源，XcodeGen 把它當資源放進 App）。內容照程式碼實際用到的宣告：
+  - `NSPrivacyTracking` 為 false，沒有 tracking domain，`NSPrivacyCollectedDataTypes` 是空的（開發者不收任何資料；問題回報是玩家自己用分享選單寄的）。
+  - required reason API 只有 `UserDefaults`（約 27 個檔用 `@AppStorage` / `UserDefaults` 存設定，只有 App 自己讀寫）：`NSPrivacyAccessedAPICategoryUserDefaults`，理由 `CA92.1`。
+  - 查過沒有用到的（2026-10-23，`RailwayGameApp/` 與 `Sources/`）：檔案時間戳（`creationDate`、`modificationDate`、`attributesOfItem`、`stat` 系列、`resourceValues`；存檔清單只用 `contentsOfDirectory(atPath:)` 讀檔名）、系統開機時間（`systemUptime`、`mach_absolute_time`；3D 地圖用的 `CACurrentMediaTime` 不在 Apple 的清單上）、磁碟空間、目前鍵盤。MapLibre 的 xcframework 自帶它自己的 privacy manifest，不寫進 App 的這一份。
+  - `release-archive.yml` 確認封存的 App 裡有這個檔，並照舊列出二進位檔裡疑似的 required reason API 引用；新出現的引用，或 App Store Connect 寄來 ITMS-91053，就依實際用途加一項，不為消除警告而虛構宣告。
 - App Privacy（隱私營養標籤）是提交 App Store 審查時填寫的資訊；本輪只做內部 TestFlight，不送審。
 
 ## 常見失敗與定位
