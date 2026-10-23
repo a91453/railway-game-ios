@@ -17,11 +17,12 @@ import XCTest
 /// and joins the straight track along it, so keeping left takes a train
 /// into the loop by default (it is within decision 202's 50 m margin).
 final class LocalPassTests: XCTestCase {
-    static func world() throws -> (world: GameWorld, line: LineID, stations: [StationID]) {
+    static func world(loopBetween: Bool = false) throws -> (world: GameWorld, line: LineID, stations: [StationID]) {
+        let loop: Int64 = loopBetween ? 10_240 : 4_096
         var world = try GameWorld(bounds: WorldBounds(width: 870_400, height: 16_384), economy: GameEconomy(balance: 100_000_000, costs: ConstructionCosts(track: 0, station: 0, train: 0)), clock: GameClock(speed: .normal))
         for (x, y): (Int64, Int64) in [(1_024, 8_192), (30_720, 8_192), (400_384, 8_192), (440_320, 8_192), (811_008, 8_192), (860_160, 8_192),
                                        (1_024, 12_288), (26_624, 12_288), (806_912, 12_288), (860_160, 12_288),
-                                       (408_576, 4_096), (432_128, 4_096)] {
+                                       (408_576, loop), (432_128, loop)] {
             try world.buildTrackNode(at: WorldCoordinate(x: x, y: y))
         }
         try world.buildTrackEdge(from: .node(1), to: .node(2)) // e1 West, north
@@ -34,9 +35,9 @@ final class LocalPassTests: XCTestCase {
         try world.buildTrackEdge(from: .node(9), to: .node(10)) // e8 East, south
         try world.buildTrackEdge(from: .node(8), to: .node(2), curve: .cubic(PlanPoint(x: 28_672, y: 12_288), PlanPoint(x: 28_672, y: 8_192))) // e9
         try world.buildTrackEdge(from: .node(5), to: .node(9), curve: .cubic(PlanPoint(x: 808_960, y: 8_192), PlanPoint(x: 808_960, y: 12_288))) // e10
-        try world.buildTrackEdge(from: .node(3), to: .node(11), curve: .cubic(PlanPoint(x: 404_480, y: 8_192), PlanPoint(x: 404_480, y: 4_096))) // e11
+        try world.buildTrackEdge(from: .node(3), to: .node(11), curve: .cubic(PlanPoint(x: 404_480, y: 8_192), PlanPoint(x: 404_480, y: loop))) // e11
         try world.buildTrackEdge(from: .node(11), to: .node(12)) // e12 Middle's loop
-        try world.buildTrackEdge(from: .node(12), to: .node(4), curve: .cubic(PlanPoint(x: 436_224, y: 4_096), PlanPoint(x: 436_224, y: 8_192))) // e13
+        try world.buildTrackEdge(from: .node(12), to: .node(4), curve: .cubic(PlanPoint(x: 436_224, y: loop), PlanPoint(x: 436_224, y: 8_192))) // e13
         var ids: [StationID] = []
         for (name, x) in zip(["West", "A", "Middle", "B", "East"], [10_240, 220_160, 420_352, 620_544, 835_584] as [Int64]) {
             ids.append(try world.buildStation(named: name, at: PlanPoint(x: x, y: 14_336)).id)
@@ -63,8 +64,8 @@ final class LocalPassTests: XCTestCase {
     /// control and the simple rules' switches (no block sections). The
     /// express stands at West's westbound platform, so it is sent out 44
     /// seconds after the first stopping train, once its way is clear.
-    static func running() throws -> (world: GameWorld, local: TrainID, express: TrainID, stations: [StationID]) {
-        var (world, line, ids) = try Self.world()
+    static func running(loopBetween: Bool = false) throws -> (world: GameWorld, local: TrainID, express: TrainID, stations: [StationID]) {
+        var (world, line, ids) = try Self.world(loopBetween: loopBetween)
         let express = try world.addLinePattern(line, calling: [0, 4])
         try world.setLineServiceWindow(line, to: .allDay)
         try world.setLineTrainsInService(line, to: TrainsInService(peak: 2, offPeak: 2, low: 2))
@@ -97,7 +98,19 @@ final class LocalPassTests: XCTestCase {
     /// express goes by along the loop, and reaches East first: at 11:41,
     /// the stopping train at 16:15, 88 seconds later than before.
     func testTheStoppingTrainStandsAsideAtMiddleForTheExpress() throws {
-        var (world, local, express, ids) = try Self.running()
+        try assertStandsAside(loopBetween: false, on: .edge(3), "aside from the express's way through the loop")
+    }
+
+    /// The loop between the two tracks instead (south of the eastbound
+    /// one, at y 10240): keeping left takes trains straight through, so the
+    /// stopping train turns into the loop and the express runs by on the
+    /// straight track, as the report asks.
+    func testWithTheLoopBetweenTheTracksTheStoppingTrainTakesIt() throws {
+        try assertStandsAside(loopBetween: true, on: .edge(12), "in the loop, the straight track left to the express")
+    }
+
+    func assertStandsAside(loopBetween: Bool, on edge: TrackEdgeID, _ message: String, line: UInt = #line) throws {
+        var (world, local, express, ids) = try Self.running(loopBetween: loopBetween)
         var arrived: [TrainID: Int] = [:]
         var waits: [ScheduledTrafficWait] = []
         var stoodAt: Set<TrackEdgeID> = []
@@ -107,13 +120,14 @@ final class LocalPassTests: XCTestCase {
             for id in [local, express] where arrived[id] == nil && world.isStopped(world.train(id: id)!, at: ids[4]) { arrived[id] = second }
             if world.isStopped(world.train(id: local)!, at: ids[2]), case .onEdge(let standing, _)? = world.train(id: local)!.position { stoodAt.insert(standing.edge) }
         }
-        let wait = try XCTUnwrap(waits.first { $0.train == local }, "a wait planned for the stopping train")
-        XCTAssertEqual(wait.station, ids[2], "at Middle")
-        XCTAssertEqual(wait.other, express)
-        XCTAssertEqual(wait.kind, .overtake)
-        XCTAssertEqual(stoodAt, [.edge(3)], "aside from the express's way through the loop")
-        let fast = try XCTUnwrap(arrived[express]), stopping = try XCTUnwrap(arrived[local])
-        XCTAssertLessThan(fast, stopping, "the express reached East first")
+        let wait = try XCTUnwrap(waits.first { $0.train == local }, "a wait planned for the stopping train", line: line)
+        XCTAssertEqual(wait.station, ids[2], "at Middle", line: line)
+        XCTAssertEqual(wait.other, express, line: line)
+        XCTAssertEqual(wait.kind, .overtake, line: line)
+        XCTAssertEqual(stoodAt, [edge], message, line: line)
+        let fast = try XCTUnwrap(arrived[express], line: line), stopping = try XCTUnwrap(arrived[local], line: line)
+        XCTAssertLessThan(fast, stopping, "the express reached East first", line: line)
+        print("[local-pass] loopBetween \(loopBetween): express \(fast) s, stopping \(stopping) s")
     }
 
     /// The stopping train never waits on the westbound track, which a
