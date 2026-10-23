@@ -190,8 +190,9 @@ struct LandmarkMesh {
             let j = (k + 1) % r0.count
             let a0 = r0[k], b0 = r0[j], a1 = r1[k], b1 = r1[j]
             let w = Self.distance(a0, b0), main = k % 5 == 4
+            let v0 = glassLayer == Map3DVertex.towerGlass ? z0 - z1 : z0, v1 = glassLayer == Map3DVertex.towerGlass ? 0 : z1
             quad((a0.x, a0.y, z0), (b0.x, b0.y, z0), (b1.x, b1.y, z1), (a1.x, a1.y, z1), main ? glass : white, main ? glassLayer : Self.plain,
-                 [(0, z0), (w, z0), (w, z1), (0, z1)])
+                 [(0, v0), (w, v0), (w, v1), (0, v1)])
         }
     }
 
@@ -246,7 +247,7 @@ struct LandmarkMesh {
         // and on each face the white frame with stacked bars under the
         // coin. Its plan is OSM's: 54 m square, each corner stepped in
         // twice (5.4 m).
-        notchedBand(26.6, 5.4, 25, 26.0, 5.2, 98, glass: glass, white: white, glassLayer: Self.floors)
+        notchedBand(26.6, 5.4, 25, 26.0, 5.2, 98, glass: glass, white: white, glassLayer: Map3DVertex.towerGlass)
         if full {
             var bars: [(Float, Float, Float, Float, Float)] = [(-9.5, -8.0, 25, 78, 0.5), (8.0, 9.5, 25, 78, 0.5)]
             bars += stride(from: Float(30), to: 78, by: 4).map { (-8.0, 8.0, $0, $0 + 0.9, 0.35) }
@@ -259,17 +260,19 @@ struct LandmarkMesh {
         // plan, its corners turned up a little (the ruyi).
         for k in 0..<8 {
             let z0 = 98 + 36 * Float(k)
-            notchedBand(23.6, 4.8, z0, 26.2, 5.3, z0 + 34.4, glass: glass, white: white, glassLayer: Self.floors)
+            // Each section leans out 7° from foot to top (tan 7° × 34.4 m
+            // = 4.2 m), so its foot sits well inside the lip below it.
+            notchedBand(22.0, 4.5, z0, 26.2, 5.3, z0 + 34.4, glass: glass, white: white, glassLayer: Map3DVertex.towerGlass)
             // A white waist round the module's foot.
-            wallBand(Self.notched(23.9, 4.85), z0, Self.notched(24.1, 4.9), z0 + 1.4, white, Self.plain)
-            cap(Self.notched(24.1, 4.9), z0 + 1.4, white, Self.plain)
+            wallBand(Self.notched(22.3, 4.55), z0, Self.notched(22.5, 4.6), z0 + 1.4, white, Self.plain)
+            cap(Self.notched(22.5, 4.6), z0 + 1.4, white, Self.plain)
             let lip0 = Self.notched(26.8, 5.4), lip1 = Self.notched(27.2, 5.5)
-            wallBand(Self.notched(26.2, 5.3), z0 + 34.4, lip0, z0 + 34.8, white, Self.plain)
-            wallBand(lip0, z0 + 34.8, lip1, z0 + 36.0, white, Self.plain)
+            wallBand(Self.notched(26.2, 5.3), z0 + 34.4, lip0, z0 + 34.8, white, Map3DVertex.floodlit)
+            wallBand(lip0, z0 + 34.8, lip1, z0 + 36.0, white, Map3DVertex.floodlit)
             cap(lip1, z0 + 36.0, white, Self.plain)
             guard full else { continue }
             // Two white strips up each corner's steps, flaring with it.
-            let foot = Self.notched(23.6, 4.8), head = Self.notched(26.2, 5.3)
+            let foot = Self.notched(22.0, 4.5), head = Self.notched(26.2, 5.3)
             for k in foot.indices where k % 5 == 1 || k % 5 == 3 {
                 fin(from: foot[k], z0 + 1.4, to: head[k], z0 + 34.4, width: 0.5, depth: 0.5, white)
             }
@@ -291,7 +294,7 @@ struct LandmarkMesh {
         // the spire to the roof at 448 m; the spire to 508 m (OSM way
         // 615183623).
         let deck = Self.notched(28.0, 5.6)
-        wallBand(deck, 386, deck, 388.4, white, Self.plain)
+        wallBand(deck, 386, deck, 388.4, white, Map3DVertex.floodlit)
         cap(deck, 388.4, white, Self.plain)
         if full {
             for k in deck.indices {
@@ -312,10 +315,10 @@ struct LandmarkMesh {
         }
         wallBand(Self.notched(17.0, 3.0), 388.4, Self.notched(17.0, 3.0), 391.0, white, Self.plain)
         cap(Self.notched(17.0, 3.0), 391.0, white, Self.plain)
-        notchedBand(13.4, 2.6, 391.0, 17.6, 3.4, 430.6, glass: colour("glassTop"), white: white, glassLayer: Self.floors)
+        notchedBand(13.4, 2.6, 391.0, 17.6, 3.4, 430.6, glass: colour("glassTop"), white: white, glassLayer: Map3DVertex.towerGlass)
         wallBand(Self.notched(13.6, 2.6), 391.0, Self.notched(13.8, 2.65), 392.2, white, Self.plain)
-        wallBand(Self.notched(17.6, 3.4), 430.6, Self.notched(18.6, 3.6), 431.2, white, Self.plain)
-        wallBand(Self.notched(18.6, 3.6), 431.2, Self.notched(18.9, 3.7), 433.0, white, Self.plain)
+        wallBand(Self.notched(17.6, 3.4), 430.6, Self.notched(18.6, 3.6), 431.2, white, Map3DVertex.floodlit)
+        wallBand(Self.notched(18.6, 3.6), 431.2, Self.notched(18.9, 3.7), 433.0, white, Map3DVertex.floodlit)
         cap(Self.notched(18.9, 3.7), 433.0, white, Self.plain)
         if full {
             let foot = Self.notched(13.4, 2.6), head = Self.notched(17.6, 3.4)
@@ -324,12 +327,15 @@ struct LandmarkMesh {
             }
         }
         for (z0, z1, h, c) in [(Float(433), Float(438), Float(12.0), Float(3.0)), (438, 443, 9.0, 2.4), (443, 448, 6.2, 1.8)] {
-            wallBand(Self.chamfered(h, c), z0, Self.chamfered(h, c), z1, white, Self.plain)
+            // The crown floodlit at night.
+            wallBand(Self.chamfered(h, c), z0, Self.chamfered(h, c), z1, white, Map3DVertex.floodlit)
             cap(Self.chamfered(h, c), z1, white, Self.plain)
         }
         wallBand(Self.chamfered(3.2, 1.0), 448, Self.chamfered(2.6, 0.8), 456, white, Self.plain)
         cap(Self.chamfered(2.6, 0.8), 456, white, Self.plain)
-        wallBand(Self.chamfered(1.3, 0.4), 456, Self.chamfered(0.22, 0.07), 508, white, Self.plain)
+        // The spire, its last 5 m a white light after dark.
+        wallBand(Self.chamfered(1.3, 0.4), 456, Self.chamfered(0.324, 0.1), 503, white, Self.plain)
+        wallBand(Self.chamfered(0.324, 0.1), 503, Self.chamfered(0.22, 0.07), 508, white, Map3DVertex.glowing)
         if full {
             for z in [Float(466), 478, 490] {
                 let r = 1.3 - (z - 456) / 52 * 1.08 + 0.35

@@ -23,10 +23,12 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
 
     /// The two as OSM has their heights: 101 508 m to its spire, the
     /// station's roof 30 m; each within the ground it clears, lit by
-    /// unit normals, drawn with the line patterns; from afar, fewer
+    /// unit normals, drawn with the line patterns; 101 lit by its sections,
+    /// its ledges and its spire's tip after dark; from afar, fewer
     /// triangles.
     func testTheModels() {
-        let layers: Set<Float> = [Map3DVertex.plain, Map3DVertex.curtainGlass, Map3DVertex.roofTiles, Map3DVertex.floorLines]
+        let layers: Set<Float> = [Map3DVertex.plain, Map3DVertex.curtainGlass, Map3DVertex.roofTiles, Map3DVertex.floorLines,
+                                  Map3DVertex.towerGlass, Map3DVertex.floodlit, Map3DVertex.glowing]
         for landmark in Map3DTaipeiLandmark.allCases {
             let full = landmark.model(full: true), far = landmark.model(full: false)
             XCTAssertLessThan(far.indices.count, full.indices.count * 2 / 3, "\(landmark)")
@@ -43,7 +45,7 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
                 XCTAssertTrue(model.indices.allSatisfy { Int($0) < model.vertices.count })
             }
             let used = Set(full.vertices.map(\.layer))
-            XCTAssertTrue(used.isSuperset(of: landmark == .taipei101 ? [Map3DVertex.curtainGlass, Map3DVertex.floorLines]
+            XCTAssertTrue(used.isSuperset(of: landmark == .taipei101 ? [Map3DVertex.curtainGlass, Map3DVertex.towerGlass, Map3DVertex.floodlit, Map3DVertex.glowing]
                                                                    : [Map3DVertex.curtainGlass, Map3DVertex.roofTiles]), "\(landmark)")
         }
     }

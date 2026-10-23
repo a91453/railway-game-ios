@@ -50,6 +50,12 @@ public struct Map3DVertex: Hashable, Sendable {
     public static let roofTiles: Float = -8
     /// and a wall's floor lines (none on a roof).
     public static let floorLines: Float = -9
+    /// Taipei 101's glass: floor lines as ``floorLines`` by day; after
+    /// dark an even glow, brighter up to the top of each section, its `v`
+    /// the metres below that top (none of the city's random windows).
+    public static let towerGlass: Float = -10
+    /// No texture, and lit warm after dark as a floodlit ledge is.
+    public static let floodlit: Float = -12
 
     /// Whether the vertex is lit from within at night.
     public var glows: Bool { layer < -1.5 && layer > -2.5 }

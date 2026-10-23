@@ -290,7 +290,7 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
         base *= 1.0 - v;
     } else if (in.layer < -7.5 && in.layer > -8.5) {
         base *= 1.0 - map3dGridLine(in.surfaceAt.x, 0.9) * 0.07;
-    } else if (in.layer < -8.5 && in.layer > -9.5) {
+    } else if (in.layer < -8.5 && in.layer > -10.5) {
         float v = abs(normal.y) > 0.7 ? 0.0 : map3dGridLine(in.surfaceAt.y, 5.0) * 0.12 + map3dGridLine(in.surfaceAt.x, 1.6) * 0.045;
         base *= (1.0 - v) * 1.2;
     }
@@ -302,6 +302,15 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
         float2 face = float2(floor(in.plane / 4.0), dot(round(normal * 4.0), float3(1.0, 17.0, 289.0)));
         float2 room = floor(in.surfaceAt / bay) + fract(face * float2(0.1373, 0.2719)) * 512.0;
         glow += windowWarm * mix(0.55, 1.1, hash12(room + 1.3)) * step(0.66, hash12(room + 23.0)) * lights;
+    }
+    // Taipei 101 (Map3DVertex.towerGlass): an even faint glow, each
+    // section's top floors brighter, v being the metres below its top;
+    // and its floodlit ledges (Map3DVertex.floodlit).
+    if (in.layer < -9.5 && in.layer > -10.5 && lights > 0.0 && abs(normal.y) < 0.7) {
+        glow += windowWarm * (0.10 + 0.55 * smoothstep(-12.0, 0.0, in.surfaceAt.y)) * lights;
+    }
+    if (in.layer < -11.5 && in.layer > -12.5) {
+        glow += windowWarm * 0.75 * lights;
     }
     if (in.layer >= 0.0) {
         uint packed = uint(in.layer + 0.5);
