@@ -25,7 +25,7 @@ AppIcon 使用定稿 package 的兩張原始 1024×1024 PNG：Any／Default 為 
 
 ## 著作權
 
-著作權所有（[LICENSE](LICENSE)）。這個儲存庫公開供閱覽，未經授權不得重製、改作、散布，或用來上架任何 App；自帶授權的檔案與第三方資料依各自的授權，從 OpenStreetMap、Overture Maps 整理出的資料檔依 ODbL 1.0 提供。
+著作權所有（[LICENSE.md](LICENSE.md)）。這個儲存庫公開供閱覽，未經授權不得重製、改作、散布，或用來上架任何 App；自帶授權的檔案與第三方資料依各自的授權，從 OpenStreetMap、Overture Maps 整理出的資料檔依 ODbL 1.0 提供。
 
 ## 架構
 
