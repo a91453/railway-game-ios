@@ -523,6 +523,40 @@ final class NightSkipTests: XCTestCase {
         XCTAssertNil(again.nightSkip, "the memo still answers")
     }
 
+    /// Player feedback 82.1 and 77.1: a speed tapped again within a tick,
+    /// or a building tool let go after an edit, at night does not run
+    /// ahead on the main actor. Paused, it runs off it; running, the game
+    /// loop's next tick does, and the offer is then what the main actor
+    /// would have found.
+    func testASpeedTapOrLeavingABuildingToolDoesNotRunAheadOnTheMainActor() async throws {
+        let session = GameSession(world: try world())
+        let ranAhead = session.nightSkipRunAheadOnMain
+        session.setSpeed(.fast)
+        session.setSpeed(.x60)
+        session.setSpeed(.normal)
+        XCTAssertEqual(session.nightSkipRunAheadOnMain, ranAhead, "three taps within a tick")
+        try await loopTick(session)
+        XCTAssertEqual(session.nightSkipOffer, NightSkip.plan(for: session.world))
+
+        XCTAssertTrue(session.pauseForBuilding())
+        session.setSelectedLineAllDay(true)
+        session.setSelectedLineAllDay(false)
+        session.endPauseForBuilding()
+        XCTAssertFalse(session.world.clock.isPaused)
+        XCTAssertEqual(session.nightSkipRunAheadOnMain, ranAhead, "edits, then the tool let go")
+        await settle(session)
+        try await loopTick(session)
+        XCTAssertEqual(session.nightSkipOffer, NightSkip.plan(for: session.world))
+        XCTAssertEqual(session.nightSkipRunAheadOnMain, ranAhead)
+    }
+
+    /// One tick of the game loop, worked out off the main actor.
+    private func loopTick(_ session: GameSession) async throws {
+        let tick = try XCTUnwrap(session.beginLoopTick())
+        let outcome = await tick.work()
+        XCTAssertTrue(session.finish(tick, with: outcome))
+    }
+
     /// A train about to leave makes the first move the moment the memo was
     /// worked out: the main actor uses the tick's answer for that moment
     /// instead of running ahead again (decision 328).

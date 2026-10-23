@@ -117,6 +117,10 @@ public final class GameSession {
     /// those already answered with the check (``newlyMetNextSteps()``).
     @ObservationIgnored var nextStepsMemo: NextStepsMemo?
     @ObservationIgnored var nextStepsCelebrated: Set<NextStep>?
+    /// The coverage the next steps last counted (``catchmentCoverage``),
+    /// and how many times it was counted (for the tests).
+    @ObservationIgnored var coverageMemo: CoverageMemo?
+    @ObservationIgnored var catchmentCoverageCounted = 0
     /// Decision 264: the selected line's shortfall of places to pass.
     @ObservationIgnored var passingShortfallMemo: PassingShortfallMemo?
     /// The depot's sidings at the picked end, kept likewise.
@@ -1085,7 +1089,7 @@ public final class GameSession {
     /// Any speed change by the player, pausing and resuming included,
     /// lets go of it: the speed is then the player's.
     public private(set) var isPausedForBuilding = false {
-        didSet { refreshNightSkipOffer() }
+        didSet { refreshNightSkipOfferOffTheMainActor() }
     }
 
     // MARK: - Speed
@@ -1186,6 +1190,10 @@ public final class GameSession {
 
     /// The run ahead behind ``nightSkip``.
     @ObservationIgnored var nightSkipMemo: NightSkipMemo?
+
+    /// How many times ``nightSkip`` ran ahead on the main actor: what the
+    /// tests count (player feedback 82.1).
+    @ObservationIgnored var nightSkipRunAheadOnMain = 0
 
     /// The run ahead under way off the main actor after a command while
     /// paused (decision 330, later), or `nil`.
