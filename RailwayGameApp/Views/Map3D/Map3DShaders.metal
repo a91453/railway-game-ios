@@ -280,6 +280,20 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
         float s = max(dot(r, uniforms.sunDirection.xyz), 0.0);
         glow += uniforms.glint.rgb * ((pow(s, 600.0) * 2.0 + pow(s, 60.0) * 0.2) * uniforms.mirror.z * uniforms.mirror.x * sunSeen);
     }
+    // Decision 370 (step 2): the landmarks' line patterns along u, v in
+    // metres (Map3DVertex.curtainGlass, roofTiles, floorLines),
+    // as the reference's preview draws them.
+    if (in.layer < -4.5 && in.layer > -5.5) {
+        float v = abs(normal.y) > 0.7
+            ? map3dGridLine(in.surfaceAt.x, 3.0) * 0.12 + map3dGridLine(in.surfaceAt.y, 3.0) * 0.12
+            : map3dGridLine(in.surfaceAt.x, 3.0) * 0.10 + map3dGridLine(in.surfaceAt.y, 4.2) * 0.04;
+        base *= 1.0 - v;
+    } else if (in.layer < -7.5 && in.layer > -8.5) {
+        base *= 1.0 - map3dGridLine(in.surfaceAt.x, 0.9) * 0.07;
+    } else if (in.layer < -8.5 && in.layer > -9.5) {
+        float v = abs(normal.y) > 0.7 ? 0.0 : map3dGridLine(in.surfaceAt.y, 5.0) * 0.12 + map3dGridLine(in.surfaceAt.x, 1.6) * 0.045;
+        base *= (1.0 - v) * 1.2;
+    }
     if (in.layer >= 0.0) {
         uint packed = uint(in.layer + 0.5);
         float4 texel = surfaces.sample(repeating, in.surfaceAt, packed % 64u);
