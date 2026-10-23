@@ -72,7 +72,7 @@ final class Map3DPreviewDump: XCTestCase {
         // MAP3D_NOBUILD=1: the land with no town on it and the airports'
         // buildings (decision 385), as the app passes them.
         let noBuild = ProcessInfo.processInfo.environment["MAP3D_NOBUILD"] == "1"
-            ? try RealNoBuildLand(data: resource("BaseMap/taiwan_no_build.json")) : nil
+            ? try RealNoBuildLand(data: resource("RealWorld/taiwan_no_build.json")) : nil
         let scene = Map3DScene(world: world, focus: focus, baseMap: tiles, cityTiles: cityTiles, heights: heights, railways: railways, noBuild: noBuild)
         let crop = ProcessInfo.processInfo.environment["MAP3D_CROP"].map { $0.split(separator: ":").map { Float(String($0))! } }
         let chunks = scene.chunks.filter { chunk in

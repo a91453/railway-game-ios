@@ -928,7 +928,7 @@
 
 作者 85.1：「機場不要有住宅看起來好怪」「而且也太整齊了吧」。做完的：實景 3D 地圖在機場、軍事用地、墓地、高爾夫球場、鐵路用地與港區不畫城市的房子，機場畫 OSM 的航廈與機棚（`tools/no-build-land/`、`RealNoBuildLand`）；程序房子沿底圖的真實道路排、面向馬路，寬窄、退縮、樓高、種類有變化，沒有路碰到的格子不放（`Map3DFrontage.swift`）。三角形與記憶體不高於 main（決策 385 第 3 點）。還沒做的：
 
-1. **人口還在**：機場等地的格子仍有世界的居民（LandImport 的分區沒有這些地，決策 96），只是 3D 不畫。讓 LandImport 對這些地不給人口（GamePresentation 的資料工具）之後，GameCore 的城市成長才不會在那裡長；要不要升存檔、動不動 golden，到時量。沒有人接。
+1. **人口**：做完（決策 385 第 4 點，`claude/no-build-population`）：新開的實景地圖在這些地上不住人，人搬到同一個 WorldPop 格的其他格，總數守恆；存檔版本與 golden 不動，舊存檔已讀的地照舊、之後新讀的地塊用新規則。資料檔搬到 `Resources/RealWorld/`。
 2. **和決策 386 第 2 步對齊**（§4.8）：有 Overture 足跡的格子不放沿街的房子；兩邊的用途分類與人口密度來源要一致。動 `addCity` 的人先 `send_message` 給這兩個 session。
 3. **實機**：只在 Linux 的 WebGL 預覽看過（`docs/art/map3d-no-build-2026-10-23/`）；下一次 TestFlight 看 600 倍俯看小港與板橋，房子是不是太稀或太密（`Map3DScene.Builder.openShare` 與 `layFrontage` 的公寓比例）。
 

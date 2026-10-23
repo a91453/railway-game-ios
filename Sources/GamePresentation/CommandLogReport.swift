@@ -43,10 +43,11 @@ public struct CommandLogReport: Codable, Sendable {
     }
 
     /// The bundled files whose contents the world reads (decision 88, 124,
-    /// 147): the land's people, places and water, the ground's heights and
-    /// the coverage of the land data.
+    /// 147, 385 (續)): the land's people, places and water, the ground's
+    /// heights, the coverage of the land data and the land no one lives on.
     public static let dataFiles = [
         "taiwan_population.json", "taiwan_places.json", "taiwan_water.json", "taiwan_heights.dat", "taiwan_coverage.dat",
+        "taiwan_no_build.json",
     ]
 
     /// A digest of a data file: its FNV-1a 64-bit hash, in hexadecimal. It

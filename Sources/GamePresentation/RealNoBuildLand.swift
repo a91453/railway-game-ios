@@ -4,7 +4,8 @@ import Foundation
 // (airports, military land, cemeteries, golf courses, railway land and
 // ports) and the buildings standing in its airports, from OpenStreetMap
 // (ODbL 1.0), read once by `tools/no-build-land/build_no_build.py` into
-// the app's `Resources/BaseMap/taiwan_no_build.json`.
+// the app's `Resources/RealWorld/taiwan_no_build.json`. Decision 385
+// (續): no one lives on it either (`LandImport`).
 
 /// Land of Taiwan the 3D map builds no town on, and its airports' buildings.
 public struct RealNoBuildLand: Sendable {
@@ -39,10 +40,54 @@ public struct RealNoBuildLand: Sendable {
 
     public let areas: [Area]
     public let buildings: [Building]
+    /// The areas whose bounds reach each square of ``bucket`` degrees, by
+    /// ``key(_:_:)``, so ``kind(atLatitude:longitude:)`` tries a few.
+    private let index: [Int: [Int]]
+    private static let bucket = 0.01
 
     public init(areas: [Area], buildings: [Building] = []) {
         self.areas = areas
         self.buildings = buildings
+        var index: [Int: [Int]] = [:]
+        for (number, area) in areas.enumerated() {
+            let latitudes = area.ring.map(\.latitude), longitudes = area.ring.map(\.longitude)
+            guard let south = latitudes.min(), let north = latitudes.max(), let west = longitudes.min(), let east = longitudes.max() else {
+                continue
+            }
+            for row in Self.square(south)...Self.square(north) {
+                for column in Self.square(west)...Self.square(east) {
+                    index[Self.key(row, column), default: []].append(number)
+                }
+            }
+        }
+        self.index = index
+    }
+
+    private static func square(_ degrees: Double) -> Int {
+        Int((degrees / bucket).rounded(.down))
+    }
+
+    private static func key(_ row: Int, _ column: Int) -> Int {
+        row &* 100_000 &+ column
+    }
+
+    /// The kind of area `latitude`° north, `longitude`° east lies on (the
+    /// even-odd rule), or `nil` on none.
+    public func kind(atLatitude latitude: Double, longitude: Double) -> Kind? {
+        for number in index[Self.key(Self.square(latitude), Self.square(longitude))] ?? [] {
+            let ring = areas[number].ring
+            var inside = false
+            var last = ring[ring.count - 1]
+            for point in ring {
+                if (point.latitude > latitude) != (last.latitude > latitude),
+                   longitude < point.longitude + (latitude - point.latitude) * (last.longitude - point.longitude) / (last.latitude - point.latitude) {
+                    inside.toggle()
+                }
+                last = point
+            }
+            if inside { return areas[number].kind }
+        }
+        return nil
     }
 
     private struct File: Decodable {
@@ -60,18 +105,19 @@ public struct RealNoBuildLand: Sendable {
         guard file.kinds == Kind.allCases.map({ "\($0)" }) else {
             throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "The kinds are \(file.kinds)."))
         }
-        areas = try file.areas.map { numbers in
+        let areas = try file.areas.map { numbers in
             guard let first = numbers.first, let kind = Kind(rawValue: first) else {
                 throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "An area's kind is one of the kinds."))
             }
             return Area(kind: kind, ring: try Self.ring(numbers.dropFirst()))
         }
-        buildings = try file.buildings.map { numbers in
+        let buildings = try file.buildings.map { numbers in
             guard numbers.count > 2, let use = Building.Use(rawValue: numbers[1]) else {
                 throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "A building has a height and a use."))
             }
             return Building(height: Float(numbers[0]), use: use, ring: try Self.ring(numbers.dropFirst(2)))
         }
+        self.init(areas: areas, buildings: buildings)
     }
 
     /// A ring of 1e-5 degrees: the first point whole, each after it the
