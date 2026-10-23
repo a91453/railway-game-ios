@@ -1044,6 +1044,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Along the Line";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Your location is used once to move a real-world map's start square near you. It is not sent anywhere.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Saves your postcard to Photos when you choose Save Image.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -1208,6 +1209,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Along the Line";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Your location is used once to move a real-world map's start square near you. It is not sent anywhere.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Saves your postcard to Photos when you choose Save Image.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
