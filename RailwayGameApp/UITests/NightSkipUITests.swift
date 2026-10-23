@@ -25,3 +25,35 @@ final class NightSkipUITests: XCTestCase {
         XCTAssertFalse(app.buttons["hud.nightSkip"].exists, "offered again at its own stop")
     }
 }
+
+/// Decision 367: the flat map's frame readout on a map of 44 stations, by
+/// day at 1× and at night at the opening speed, printed to the log for a
+/// comparison between two commits on the same Simulator (the numbers are
+/// not a phone's). By hand only (`ios-build.yml`'s `only_testing`); the
+/// full lane skips it. It asserts nothing but that the readout shows.
+@MainActor
+final class MapFrameCostUITests: XCTestCase {
+    func testTheFrameReadoutOnABigMapByDay() {
+        readOut("big-grid")
+    }
+
+    func testTheFrameReadoutOnABigMapAtNight() {
+        readOut("big-grid-night")
+    }
+
+    private func readOut(_ world: String) {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-ui-testing", "-ui-test-world", world, "-map.showsFrameRate", "YES", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
+        ]
+        app.launch()
+        let readout = app.buttons["map.frameRate"]
+        XCTAssertTrue(readout.appears(within: 60), "no frame readout")
+        readout.tap()
+        for second in 1...4 {
+            Thread.sleep(forTimeInterval: 5)
+            print("[frame-cost] \(world) at \(second * 5) s: \(readout.label)")
+        }
+    }
+}
