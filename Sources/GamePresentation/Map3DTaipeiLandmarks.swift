@@ -414,39 +414,74 @@ struct LandmarkMesh {
 
     mutating func station() {
         let hx: Float = 72.8, hy: Float = 57.8
-        // A grey plinth, the ground storey's glass behind square columns.
+        // A grey plinth; an arcade round all four sides, square stone
+        // columns on the outer line and the ground storey's glass 4.5 m
+        // behind them.
         box(-hx - 2, -hy - 2, 0, hx + 2, hy + 2, 0.8, colour("plinth"), Self.plain, top: colour("plinth"))
-        let gx = hx - 2.5, gy = hy - 2.5
+        let gx = hx - 4.5, gy = hy - 4.5
         let ground: [P2] = [(-gx, -gy), (gx, -gy), (gx, gy), (-gx, gy)]
         wallBand(ground, 0.8, ground, 9, colour("groundGlass"), Self.curtain)
+        let outer: [P2] = [(-hx, -hy), (hx, -hy), (hx, hy), (-hx, hy)]
+        band(ground, [Float](repeating: 8.1, count: 4), outer, [Float](repeating: 8.1, count: 4), colour("soffit"), Self.plain)
         if full {
             let sides: [(P2, P2)] = [((-hx, -hy), (hx, -hy)), ((hx, -hy), (hx, hy)), ((hx, hy), (-hx, hy)), ((-hx, hy), (-hx, -hy))]
             for (a, b) in sides {
                 let n = Int((Self.distance(a, b) / 7.2).rounded())
                 for s in 0...n {
                     let x = a.x + (b.x - a.x) * Float(s) / Float(n), y = a.y + (b.y - a.y) * Float(s) / Float(n)
-                    box(x - 0.9, y - 0.9, 0.8, x + 0.9, y + 0.9, 9, colour("wall"), Self.plain)
+                    box(x - 0.8, y - 0.8, 0.8, x + 0.8, y + 0.8, 8.1, colour("wall"), Self.plain)
                 }
             }
         }
-        // The entrance porches at the middle of the long faces.
-        for sign in [Float(-1), 1] {
-            let y0 = sign * hy, y1 = sign * (hy + 9)
-            box(-16, min(y0, y1), 0.8, 16, max(y0, y1), 7.5, colour("groundGlass"), Self.curtain, top: colour("wall"))
-            box(-18, min(y0, y1) - (sign < 0 ? 0.6 : 0), 7.5, 18, max(y0, y1) + (sign > 0 ? 0.6 : 0), 9, colour("trim"), Self.plain,
-                top: colour("trim"))
+        // The gates where OSM's entrance nodes are (x is west, y south):
+        // 北1／北3 and 南1／南3 at x ±44, 東1／東3 and 西1／西3 at y ±28.6,
+        // 東2 and 西2 in the middle of the short faces; each a white
+        // canopy over the arcade between two wider piers.
+        var gates: [(at: P2, along: P2, out: P2)] = []
+        for x in [Float(-44), 44] { gates += [((x, -hy), (1, 0), (0, -1)), ((x, hy), (1, 0), (0, 1))] }
+        for y in [Float(-28.6), 0, 28.6] { gates += [((-hx, y), (0, 1), (-1, 0)), ((hx, y), (0, 1), (1, 0))] }
+        for g in gates {
+            func at(_ a: Float, _ o: Float) -> P2 { (g.at.x + g.along.x * a + g.out.x * o, g.at.y + g.along.y * a + g.out.y * o) }
+            let c0 = at(-6.5, -0.4), c1 = at(6.5, 2.6)
+            box(min(c0.x, c1.x), min(c0.y, c1.y), 6.4, max(c0.x, c1.x), max(c0.y, c1.y), 7.3, colour("trim"), Self.plain, top: colour("trim"))
             if full {
-                for x in [Float(-16.5), -5.5, 5.5, 16.5] {
-                    let yy = sign * (hy + 8.4)
-                    box(x - 0.6, yy - 0.6, 0.8, x + 0.6, yy + 0.6, 7.5, colour("wall"), Self.plain)
+                for a in [Float(-5.6), 5.6] {
+                    let p = at(a, 0.2)
+                    box(p.x - 1.1, p.y - 1.1, 0.8, p.x + 1.1, p.y + 1.1, 8.1, colour("wall"), Self.plain)
+                }
+            }
+        }
+        // The main entrances, 北2 and 南2, stand out from the middle of the
+        // long faces: glass behind columns under a tiled hip roof that
+        // meets the lower eave.
+        for sign in [Float(-1), 1] {
+            let y0 = sign * hy, y1 = sign * (hy + 9), yf = sign * (hy + 10.2)
+            box(-12, min(y0, y1), 0.8, 12, max(y0, y1), 7.4, colour("groundGlass"), Self.curtain, top: colour("wall"))
+            box(-13.6, min(y0, yf), 7.4, 13.6, max(y0, yf), 9.0, colour("trim"), Self.plain, top: colour("trim"))
+            let front0: P3 = (-14.4, sign * (hy + 11.0), 8.8), front1: P3 = (14.4, sign * (hy + 11.0), 8.8)
+            let back0: P3 = (-10.0, y0, 11.6), back1: P3 = (10.0, y0, 11.6)
+            let foot0: P3 = (-14.4, y0, 8.8), foot1: P3 = (14.4, y0, 8.8)
+            if sign < 0 {
+                quad(front0, front1, back1, back0, colour("roof"), Self.tiles, [(0, 0), (28.8, 0), (24.4, 11.4), (4.4, 11.4)])
+                tri(foot0, front0, back0, colour("roof"), Self.tiles)
+                tri(front1, foot1, back1, colour("roof"), Self.tiles)
+            } else {
+                quad(front1, front0, back0, back1, colour("roof"), Self.tiles, [(0, 0), (28.8, 0), (24.4, 11.4), (4.4, 11.4)])
+                tri(front0, foot0, back0, colour("roof"), Self.tiles)
+                tri(foot1, front1, back1, colour("roof"), Self.tiles)
+            }
+            if full {
+                for x in [Float(-12.5), -4.2, 4.2, 12.5] {
+                    let yy = sign * (hy + 9.4)
+                    box(x - 0.7, yy - 0.7, 0.8, x + 0.7, yy + 0.7, 7.4, colour("wall"), Self.plain)
                 }
             }
         }
         // The lower eave: a tiled skirt round the building over the
-        // colonnade, its corners turned up a little.
+        // arcade, its corners turned up.
         let (ringIn, nearIn) = Self.rectRing(hx, hy)
         let ringOut = ringIn.map { (x: $0.x * (hx + 4.2) / hx, y: $0.y * (hy + 4.2) / hy) }
-        let up = nearIn.map { n -> Float in let t = 1 - min(n, 0.25) / 0.25; return 0.9 * t * t }
+        let up = nearIn.map { n -> Float in let t = 1 - min(n, 0.25) / 0.25; return 1.4 * t * t }
         band(ringOut, up.map { 8.6 + $0 }, ringIn, up.map { _ in 11.4 }, colour("roof"), Self.tiles)
         band(ringOut, up.map { 8.1 + $0 }, ringOut, up.map { 8.6 + $0 }, colour("trim"), Self.plain)
         band(ringIn, up.map { _ in 8.1 }, ringOut, up.map { 8.1 + $0 }, colour("soffit"), Self.plain)
@@ -455,7 +490,11 @@ struct LandmarkMesh {
         // 23641610: 30 m, its roof from the lower eave 18 m high).
         let ux = hx - 1.2, uy = hy - 1.2
         cap([(-ux, -uy), (ux, -uy), (ux, uy), (-ux, uy)], 11.4, colour("wall"), Self.plain)
-        pilasters(ux, uy, 11.4, 18.0, step: 3.6, depth: 0.7, width: 1.3, colour("wall"), panel: colour("stripGlass"), panelLayer: Self.curtain)
+        // Plaster between the pilasters, and above the belt a band of
+        // square windows all the way round, which the pilasters divide.
+        pilasters(ux, uy, 11.4, 18.0, step: 3.6, depth: 0.7, width: 1.3, colour("wall"), panel: colour("wall"), panelLayer: Self.floors)
+        let windows: [P2] = [(-ux - 0.08, -uy - 0.08), (ux + 0.08, -uy - 0.08), (ux + 0.08, uy + 0.08), (-ux - 0.08, uy + 0.08)]
+        wallBand(windows, 15.4, windows, 17.5, colour("stripGlass"), Self.curtain)
         let belt: [P2] = [(-ux - 0.3, -uy - 0.3), (ux + 0.3, -uy - 0.3), (ux + 0.3, uy + 0.3), (-ux - 0.3, uy + 0.3)]
         wallBand(belt, 14.4, belt, 15.0, colour("wall"), Self.plain)
         // The cornice: a white band and a bracket course.
@@ -470,10 +509,10 @@ struct LandmarkMesh {
         for s in 0...steps {
             let t = Float(s) / Float(steps)
             let sx = ex - (ex - rx) * t, sy = ey - (ey - ry) * t
-            let sweep = 1.8 * (1 - t) * (1 - t) * (1 - t)
+            let sweep = 2.6 * (1 - t) * (1 - t) * (1 - t)
             let heights = near.map { n -> Float in
                 let corner = 1 - min(n, 0.3) / 0.3
-                return 20.2 + 8.4 * powf(t, 1.7) + sweep * corner * corner
+                return 20.2 + 7.6 * powf(t, 1.7) + sweep * corner * corner
             }
             rings.append((unit.map { (x: $0.x * sx, y: $0.y * sy) }, heights))
         }
@@ -501,15 +540,29 @@ struct LandmarkMesh {
         }
         let top = rings[steps].points, ztop = rings[steps].heights[0]
         let ridge = top.map { (x: $0.x * (rx + 1.2) / rx, y: $0.y * (ry + 1.2) / ry) }
-        band(ridge, top.map { _ in ztop - 0.3 }, ridge, top.map { _ in ztop + 1.4 }, colour("ridge"), Self.plain)
-        band(ridge, top.map { _ in ztop + 1.4 }, top, top.map { _ in ztop + 1.4 }, colour("ridge"), Self.plain)
+        band(ridge, top.map { _ in ztop - 0.3 }, ridge, top.map { _ in ztop + 1.0 }, colour("ridge"), Self.plain)
+        band(ridge, top.map { _ in ztop + 1.0 }, top, top.map { _ in ztop + 1.0 }, colour("ridge"), Self.plain)
         // The flat middle a little below the ridge, with a skylight and
         // plant.
         let well = Array(top.reversed())
-        band(well, well.map { _ in ztop - 2.2 }, well, well.map { _ in ztop + 1.4 }, colour("wellWall"), Self.plain)
+        band(well, well.map { _ in ztop - 2.2 }, well, well.map { _ in ztop + 1.0 }, colour("wellWall"), Self.plain)
         cap([(-rx, -ry), (rx, -ry), (rx, ry), (-rx, ry)], ztop - 2.2, colour("flatRoof"), Self.plain)
-        box(-24, -8, ztop - 2.2, 24, 8, ztop - 0.6, colour("skylight"), Self.curtain, top: colour("skylight"))
+        // The hall's skylight: a long glass gable over the middle.
+        let sz = ztop - 2.2, sh: Float = 2.4
+        box(-29, -11, sz, 29, 11, sz + 0.6, colour("trim"), Self.plain, top: colour("trim"))
+        quad((-28, -10, sz + 0.6), (28, -10, sz + 0.6), (28, 0, sz + 0.6 + sh), (-28, 0, sz + 0.6 + sh), colour("skylight"), Self.curtain,
+             [(0, 0), (56, 0), (56, 10.3), (0, 10.3)])
+        quad((28, 10, sz + 0.6), (-28, 10, sz + 0.6), (-28, 0, sz + 0.6 + sh), (28, 0, sz + 0.6 + sh), colour("skylight"), Self.curtain,
+             [(0, 0), (56, 0), (56, 10.3), (0, 10.3)])
+        tri((-28, 10, sz + 0.6), (-28, -10, sz + 0.6), (-28, 0, sz + 0.6 + sh), colour("skylight"), Self.curtain)
+        tri((28, -10, sz + 0.6), (28, 10, sz + 0.6), (28, 0, sz + 0.6 + sh), colour("skylight"), Self.curtain)
+        // Ornaments where the ridge turns, their tops the roof's 30 m.
+        for (x, y) in [(-rx - 1.2, -ry - 1.2), (rx + 1.2, -ry - 1.2), (rx + 1.2, ry + 1.2), (-rx - 1.2, ry + 1.2)] {
+            box(x - 1.0, y - 1.0, ztop + 1.0, x + 1.0, y + 1.0, ztop + 1.6, colour("ridge"), Self.plain)
+            box(x - 1.4, y - 0.5, ztop + 1.6, x + 1.4, y + 0.5, ztop + 2.2, colour("ridge"), Self.plain)
+        }
         if full {
+            box(-28.4, -0.35, sz + 0.6 + sh - 0.2, 28.4, 0.35, sz + 0.6 + sh + 0.3, colour("trim"), Self.plain)
             for (x, y) in [(Float(-36), Float(-18)), (-30, 18), (33, -17), (36, 17)] {
                 box(x - 3, y - 2, ztop - 2.2, x + 3, y + 2, ztop - 0.4, colour("plant"), Self.plain)
             }
