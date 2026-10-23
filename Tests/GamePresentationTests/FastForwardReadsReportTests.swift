@@ -107,7 +107,11 @@ final class FastForwardReadsReportTests: XCTestCase {
 
     /// What the always-shown views read of the session in their bodies.
     static func reads(of session: GameSession) -> [(String, () -> Void)] {
-        [
+        // Decision 379: the map's glide from the last tick's trains, as
+        // its `onChange(of: world.trains)` works it out after each tick.
+        final class Glide { var motion: TrainMotion? }
+        let glide = Glide()
+        return [
             ("nextSteps", { _ = session.nextSteps }),
             ("trafficOverlay", { _ = session.trafficOverlay }),
             ("situationAlerts", { _ = session.situationAlerts }),
@@ -149,6 +153,9 @@ final class FastForwardReadsReportTests: XCTestCase {
             ("LineBadge.codes", { _ = LineBadge.codes(for: session.world.lines) }),
             ("world.depotRuns()", { _ = session.world.depotRuns() }),
             ("TrainMotion(world:)", { _ = TrainMotion(world: session.world, time: 0) }),
+            ("TrainMotion(world:previous:), as the map after a tick", {
+                glide.motion = TrainMotion(world: session.world, previous: glide.motion, time: Double(session.world.clock.now.seconds))
+            }),
             ("MapWeather(world:)", { _ = MapWeather(world: session.world) }),
             ("RealWorldFrame(world:)", { _ = RealWorldFrame(world: session.world) }),
             ("world.todayHoliday()", { _ = session.world.todayHoliday() }),

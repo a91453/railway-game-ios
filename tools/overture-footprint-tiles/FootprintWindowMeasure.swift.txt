@@ -1,0 +1,88 @@
+// Decision 386: what Banqiao's 3 × 3 chunks (the 3D map's 512 m squares
+// round the scene's middle) cost now, with the procedural city, and what
+// they would cost drawn from real footprints with decision 239's
+// `addRealBuilding`. Not a test of the app: copy it into
+// Tests/GamePresentationTests/ as FootprintWindowMeasure.swift, run
+//   FOOTPRINT_WINDOW=/path/window.json swift test --filter FootprintWindowMeasure
+// with a window.json from `build_footprint_tiles.py window ... 25.0133
+// 121.4637 3072 ...`, and delete it again.
+@testable import GameCore
+@testable import GamePresentation
+import Foundation
+import XCTest
+
+final class FootprintWindowMeasure: XCTestCase {
+    struct Window: Decodable {
+        struct Building: Decodable { let storeys: Int; let known: Bool; let use: String; let shi: Int; let rings: [[[Double]]] }
+        let buildings: [Building]
+    }
+
+    struct Tally: CustomStringConvertible {
+        var vertices = 0, triangles = 0
+        mutating func add(_ mesh: Map3DMesh) { vertices += mesh.vertices.count; triangles += mesh.indices.count / 3 }
+        var bytes: Int { vertices * MemoryLayout<Map3DVertex>.stride + triangles * 3 * MemoryLayout<UInt32>.stride }
+        var description: String { "\(triangles) triangles, \(vertices) vertices, \(bytes / 1024) KB" }
+    }
+
+    func testBanqiaosWindow() throws {
+        let path = try XCTUnwrap(ProcessInfo.processInfo.environment["FOOTPRINT_WINDOW"])
+        let window = try JSONDecoder().decode(Window.self, from: Data(contentsOf: URL(fileURLWithPath: path)))
+        let world = try HighSpeedDemoTests.opened.get()
+        let banqiao = try Map3DOpenHereTests.point(25.0133, 121.4637, in: world)
+        let scene = Map3DScene(world: world, snapshot: world.railwaySnapshot(), focus: banqiao,
+                               heights: HighSpeedDemoTests.heights, railways: try HighSpeedDemoTests.railways())
+        // The chunk Banqiao is in, and the eight round it.
+        let probe = Map3DScene.Builder(originX: scene.originX, originY: scene.originY, region: scene.region, world: world)
+        let middle = probe.key(of: probe.point(x: banqiao.x, y: banqiao.y, height: 0))
+        let keys = Set((-1...1).flatMap { c in (-1...1).map { r in [middle.column + c, middle.row + r] } })
+        let low = (x: Float(middle.column - 1) * Map3DScene.chunkSize, z: Float(middle.row - 1) * Map3DScene.chunkSize)
+        print("Banqiao is in chunk \(middle.column), \(middle.row); \(scene.chunks.filter { keys.contains([$0.column, $0.row]) }.count) chunks")
+        var base = Tally(), near = Tally(), far = Tally(), close = Tally(), shadows = Tally()
+        for chunk in scene.chunks where keys.contains([chunk.column, chunk.row]) {
+            base.triangles += chunk.baseIndexCount / 3
+            near.triangles += (chunk.mesh.indices.count - chunk.baseIndexCount) / 3
+            base.vertices += chunk.mesh.vertices.count
+            far.add(chunk.far); close.add(chunk.close); shadows.add(chunk.shadows)
+        }
+        print("NOW base+near mesh: \(base) (city in full \(near.triangles) triangles)")
+        print("NOW far: \(far)")
+        print("NOW close: \(close)")
+        print("NOW shadows: \(shadows)")
+
+        let frame = try XCTUnwrap(RealWorldFrame(world: world))
+        for target in [Map3DScene.Builder.Target.near, .far] {
+            var builder = Map3DScene.Builder(originX: scene.originX, originY: scene.originY, region: scene.region, world: world,
+                                             heights: HighSpeedDemoTests.heights)
+            builder.target = target
+            var count = 0, known = 0
+            for building in window.buildings {
+                let rings = building.rings.map { ring in ring.map { p -> Map3DPoint in
+                    let w = frame.worldPosition(latitude: p[0], longitude: p[1])
+                    return builder.point(x: w.x, y: w.y, height: 0)
+                } }
+                let first = rings[0][0]
+                guard (low.x..<low.x + 3 * Map3DScene.chunkSize).contains(first.x),
+                      (low.z..<low.z + 3 * Map3DScene.chunkSize).contains(first.z) else { continue }
+                count += 1; known += building.known ? 1 : 0
+                let middle = rings[0].reduce(Map3DPoint(0, 0, 0)) { $0 + $1 } * (1 / Float(rings[0].count))
+                let kind: Map3DScene.Builder.RealKind = switch building.use {
+                case "commercial": .office
+                case "industrial", "agricultural": .industry
+                case "education", "medical", "civic": .civic
+                case "religious": .temple
+                case "transportation": .transport
+                default: building.storeys >= 5 ? .flats : .shophouse
+                }
+                builder.addRealBuilding([rings], ground: builder.ground(at: middle), height: Float(building.storeys) * 3.2,
+                                        storeys: building.storeys, kind: kind)
+            }
+            var tally = Tally(), shade = Tally()
+            for mesh in builder.meshes.values { tally.add(mesh) }
+            for mesh in builder.nearMeshes.values { tally.add(mesh) }
+            for mesh in builder.farMeshes.values { tally.add(mesh) }
+            for mesh in builder.closeMeshes.values { tally.add(mesh) }
+            for mesh in builder.shadows.values { shade.add(mesh) }
+            print("FOOTPRINTS \(target): \(count) buildings (\(known) with storeys): \(tally); shadows \(shade)")
+        }
+    }
+}

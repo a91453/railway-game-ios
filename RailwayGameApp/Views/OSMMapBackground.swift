@@ -561,6 +561,16 @@ enum BaseMapFiles {
     /// real-world map; `nil` if the app has none.
     static let temples = file("taiwan_temples.json")
 
+    /// Decision 389: Taiwan's building footprints, for the 3D map's
+    /// buildings on a real-world map; `nil` if the app has none.
+    static let footprints = file("taiwan_buildings.pmtiles")
+
+    /// Decision 385: the land the 3D map builds no town on and its
+    /// airports' buildings; `nil` if the app has none. Since decision 385
+    /// (續) it is with the land's files (`Resources/RealWorld`), as the
+    /// land is laid out by it too.
+    static let noBuild = Bundle.main.url(forResource: "taiwan_no_build", withExtension: "json")
+
     private static func file(_ name: String) -> URL? {
         folder.map { $0.appendingPathComponent(name) }.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
     }

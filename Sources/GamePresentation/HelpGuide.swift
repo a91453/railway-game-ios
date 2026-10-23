@@ -338,10 +338,10 @@ public enum HelpGuide {
             "saveGame", .running,
             question: ("How do I save, and where is my game?", "怎麼存檔？遊戲存在哪？"),
             answer: (
-                "The game saves itself whenever you leave it, and keeps one autosave for every 15 minutes of play, the last 5. Open the game menu (the three lines at the top) to Save Game, or Save, Export or Go Back to name a save, share it as a file, or go back to an autosave of some minutes before. Continue on the start screen resumes the latest autosave, and Saved Games lists the earlier ones and your own saves.",
-                "遊戲離開時會自動存檔，遊戲中每 15 分鐘也會另存一份，保留最近 5 份。打開遊戲選單（頂端的三條線）可以「儲存遊戲」，或在「另存、匯出或回到之前」裡為存檔命名、匯出成檔案，或回到幾分鐘前的自動存檔。開始畫面的「繼續」會接續最新的自動存檔，「存檔」則列出之前的自動存檔與你自己的存檔。"
+                "The game saves itself whenever you leave it, and keeps one autosave for every 15 minutes of play, the last 5. Open the game menu (the three lines at the top) to Save Game, or Save, Export or Go Back to name a save, share it as a file, or go back to an autosave of some minutes before. Continue on the start screen resumes the latest autosave, and Saves lists the earlier ones and your own saves, and imports a save file.",
+                "遊戲離開時會自動存檔，遊戲中每 15 分鐘也會另存一份，保留最近 5 份。打開遊戲選單（頂端的三條線）可以「儲存遊戲」，或在「另存、匯出或回到之前」裡為存檔命名、匯出成檔案，或回到幾分鐘前的自動存檔。開始畫面的「繼續」會接續最新的自動存檔，「存檔」則列出之前的自動存檔與你自己的存檔，也能匯入存檔檔案。"
             ),
-            keywords: "load autosave export 讀檔 自動存檔 匯出"
+            keywords: "load autosave export import 讀檔 自動存檔 匯出 匯入"
         ),
         HelpEntry(
             "tutorialAgain", .running,

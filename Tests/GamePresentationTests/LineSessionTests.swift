@@ -322,4 +322,39 @@ final class LineSessionTests: XCTestCase {
             XCTAssertEqual(second.message?.text, GameError.trainServiceNotActive(Self.first).playerMessage(in: .english))
         }
     }
+
+    /// Decision 291's next step (PLAYER_FEEDBACK 75.1 #2): removing a stop
+    /// a pattern calls at is refused, and the refusal names the pattern
+    /// and where to remove it, with "Advanced" when the patterns are hidden.
+    func testRemovingAPatternsStopSaysWhichPatternToRemoveFirst() async throws {
+        try await MainActor.run {
+            let world = try Self.makeLineWorld()
+            let session = GameSession(world: world, language: .english)
+            session.removeStopFromSelectedLine(at: 3)
+            XCTAssertEqual(session.message?.kind, .failure)
+            XCTAssertEqual(
+                session.message?.text,
+                "Pattern 2 (Non-stop Alpha–Delta) calls at Delta. Remove that pattern first: in the Lines panel, "
+                    + "turn on Advanced and tap Remove This Pattern under it."
+            )
+            XCTAssertEqual(session.world, world, "nothing changed")
+
+            session.linesAdvancedDidChange(isShown: true)
+            session.removeStopFromSelectedLine(at: 1)
+            XCTAssertEqual(
+                session.message?.text,
+                "Pattern 1 (Short working Beta–Gamma) calls at Beta. Remove that pattern first: in the Lines panel, "
+                    + "tap Remove This Pattern under it."
+            )
+
+            let chinese = GameSession(world: world, language: .traditionalChinese)
+            chinese.removeStopFromSelectedLine(at: 3)
+            XCTAssertEqual(
+                chinese.message?.text,
+                "停站模式 2（直達車 Alpha–Delta）停靠 Delta。請先刪掉這個停站模式：在「路線」面板打開「進階」，按它下面的「刪除這個停站模式」。"
+            )
+            XCTAssertEqual(chinese.world, world)
+
+        }
+    }
 }

@@ -104,15 +104,16 @@ extension GameSession {
 
     /// What a passing loop at ``networkEdgePoint`` on ``networkLoopSide``
     /// would cost, or why it cannot be built, and where it would run;
-    /// worked out once for each place, side and world, as the track
+    /// worked out once for each place, side and command, as the track
     /// preview is (the map reads it many times a frame).
     public var networkLoopPreview: PassingLoopPreview? {
         guard networkMode == .passingLoop, let point = networkEdgePoint else { return nil }
         _ = world
-        let key = PassingLoopMemo.Key(point: point, side: networkLoopSide, worldRevision: worldRevision)
-        if let memo = passingLoopMemo, memo.key == key { return memo.preview }
+        let key = PassingLoopMemo.Key(point: point, side: networkLoopSide, commandRevision: commandRevision)
+        if let memo = passingLoopMemo, memo.key == key, memo.affordable == affords(memo.preview.cost) { return memo.preview }
         let preview = passingLoopPreview(at: point, side: networkLoopSide)
-        passingLoopMemo = PassingLoopMemo(key: key, preview: preview)
+        passingLoopMemo = PassingLoopMemo(key: key, preview: preview, affordable: affords(preview.cost))
+        buildPreviewsWorkedOut += 1
         return preview
     }
 
@@ -183,9 +184,11 @@ struct PassingLoopMemo {
     struct Key: Equatable {
         let point: NetworkEdgePoint
         let side: PlatformTrackSide
-        let worldRevision: Int
+        let commandRevision: Int
     }
 
     let key: Key
     let preview: PassingLoopPreview
+    /// Whether the cash paid for it then (``GameSession/affords(_:)``).
+    let affordable: Bool?
 }

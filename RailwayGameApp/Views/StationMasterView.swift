@@ -35,6 +35,27 @@ struct StationMasterAvatar: View {
     }
 }
 
+/// A face of a challenge's story (decision 387): the station master's, or
+/// the character's portrait from the asset catalog, in a circle.
+struct StoryPortrait: View {
+    let speaker: StoryCharacter
+    var size: CGFloat = 40
+
+    var body: some View {
+        if let portrait = speaker.portrait {
+            Image(portrait)
+                .resizable()
+                .scaledToFill()
+                .frame(width: size, height: size)
+                .clipShape(Circle())
+                .overlay(Circle().strokeBorder(Theme.panelBorder, lineWidth: 1))
+                .accessibilityHidden(true)
+        } else {
+            StationMasterAvatar(size: size)
+        }
+    }
+}
+
 /// The station master beside the dock (decision 118): says the advice in a
 /// bubble when it changes, for a few seconds, and again when tapped. A dot
 /// on the face while there is advice not on screen. Not during the
@@ -60,12 +81,27 @@ struct StationMasterCorner: View {
     /// it has been said.
     @State private var modeShiftHint: StationMasterAdvice?
     @AppStorage(ModeShiftHint.seenKey) private var modeShiftHintSeen = false
+    /// Decision 387: the challenge's story, told here, a beat at a time,
+    /// in the bubble's place and with its speaker's face.
+    @State private var teller = StoryTeller()
+    /// The game the teller has looked at: another is told afresh.
+    @State private var tellerGame: ObjectIdentifier?
+    @State private var storyQueue: [StoryBeat] = []
+    @State private var storyBeat: StoryBeat?
+    /// The station master's line under the story's (the festival to come),
+    /// worked out when the beat is told.
+    @State private var storyAdvice: StationMasterAdvice?
+    /// Advice a story card has said already, not said again by itself.
+    @State private var coveredAdvice: StationMasterAdvice?
+    @State private var storyTalk = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Decision 194, later: a losing line's bubble opens the line panel.
     @Environment(GameScreenState.self) private var screen
 
     /// How long the bubble stays.
     private static let speakingTime = Duration.seconds(7)
+    /// How long a story card stays: a longer line than the advice's.
+    private static let storyTime = Duration.seconds(14)
     /// The avatar's side.
     static let avatarSize: CGFloat = 44
     /// How tall the avatar stands with the title under it (the title's
@@ -73,14 +109,19 @@ struct StationMasterCorner: View {
     /// bottom row, which what floats over the map keeps above.
     static let standingHeight: CGFloat = avatarSize + 28 - 3
 
-    var body: some View {
+    // Decision 379: timed for the frame readout.
+    var body: some View { timed(.stationMasterBody) { timedBody } }
+
+    @ViewBuilder private var timedBody: some View {
         ZStack(alignment: .bottomLeading) {
             if !isCovered {
                 corner
             }
         }
         .onChange(of: session.stationMasterRefreshKey, initial: true) {
+            // The advice first: a goal's cheer the story waits for.
             refreshAdvice()
+            lookForStory()
             title = StationMasterTitle.isShown(in: session.world) ? StationMasterTitle(rank: CompanyRank(world: session.world)) : nil
         }
         .onChange(of: modeShiftHint) { refreshAdvice() }
@@ -88,6 +129,8 @@ struct StationMasterCorner: View {
         // Once said and put away, the hint gives way to the other advice.
         .onChange(of: isTalking) { _, talking in
             if !talking, modeShiftHintSeen, modeShiftHint != nil { modeShiftHint = nil }
+            // Decision 387: a beat waiting for the bubble follows it.
+            if !talking { tellNextBeat() }
         }
         .onChange(of: advice, initial: true) { _, advice in
             if advice == nil { isTalking = false }
@@ -96,6 +139,22 @@ struct StationMasterCorner: View {
         // Advice that came while a side panel left no room for the bubble
         // is said once the room is back.
         .onChange(of: hasRoom) { _, _ in sayIfNew(advice) }
+        // Decision 387: not while paused or building, nor without room;
+        // a card put away by that comes back when play goes on.
+        .onChange(of: canTell) { _, can in
+            if can {
+                tellNextBeat()
+            } else if let beat = storyBeat {
+                storyQueue.insert(beat, at: 0)
+                storyBeat = nil
+            }
+        }
+        .task(id: storyTalk) {
+            guard storyTalk > 0 else { return }
+            try? await Task.sleep(for: Self.storyTime)
+            guard !Task.isCancelled else { return }
+            finishBeat()
+        }
         .task(id: talk) {
             try? await Task.sleep(for: Self.speakingTime)
             guard !Task.isCancelled else { return }
@@ -108,7 +167,9 @@ struct StationMasterCorner: View {
             // Decision 224 (6C): the company's title under the avatar.
             VStack(spacing: -3) {
             Button {
-                if isTalking {
+                if storyBeat != nil {
+                    finishBeat()
+                } else if isTalking {
                     // Decision 175, later: a second tap, while it talks,
                     // puts the bubble away. The news log is the bell's.
                     isTalking = false
@@ -119,7 +180,13 @@ struct StationMasterCorner: View {
                     talk &+= 1
                 }
             } label: {
-                StationMasterAvatar(size: Self.avatarSize, mood: mood(advice))
+                Group {
+                    if let storyBeat {
+                        StoryPortrait(speaker: storyBeat.speaker, size: Self.avatarSize)
+                    } else {
+                        StationMasterAvatar(size: Self.avatarSize, mood: mood(advice))
+                    }
+                }
                     // Decision 122: a hop each time it speaks, not with
                     // Reduce Motion.
                     .keyframeAnimator(initialValue: 0.0, trigger: reduceMotion ? 0 : talk) { content, lift in
@@ -129,7 +196,7 @@ struct StationMasterCorner: View {
                         SpringKeyframe(0, duration: 0.35, spring: .bouncy)
                     }
                     .overlay(alignment: .topTrailing) {
-                        if let advice, !isTalking {
+                        if let advice, !isTalking, storyBeat == nil {
                             Circle()
                                 .fill(advice.isWorry ? Theme.warning : Theme.primary)
                                 .frame(width: 11, height: 11)
@@ -139,14 +206,16 @@ struct StationMasterCorner: View {
                     .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(Text(verbatim: session.language.text("Station master", "站長")))
-            .accessibilityValue(Text(verbatim: said(advice)))
+            .accessibilityLabel(Text(verbatim: storyBeat?.speaker.name(in: session.language) ?? session.language.text("Station master", "站長")))
+            .accessibilityValue(Text(verbatim: storyBeat.map { $0.text(in: session.language) } ?? said(advice)))
             .accessibilityIdentifier("stationMaster")
             if let title, StationMasterTitle.isShown(in: session.world) {
                 titleBadge(title)
             }
             }
-            if isTalking, hasRoom {
+            if let storyBeat, hasRoom {
+                storyCard(storyBeat)
+            } else if isTalking, hasRoom {
                 let width = min(maxBubbleWidth, 320)
                 let worry = advice?.isWorry ?? false
                 // One line when it fits, else wrapped at the width it has.
@@ -180,6 +249,97 @@ struct StationMasterCorner: View {
             }
         }
         .animation(.spring(duration: 0.3, bounce: 0.3), value: isTalking)
+        .animation(MotionRule.pop.layout(reduceMotion: reduceMotion), value: storyBeat)
+    }
+
+    /// Decision 387: a beat of the challenge's story, who says it over what
+    /// they say, and under it the station master's word it carries; a tap
+    /// puts it away.
+    private func storyCard(_ beat: StoryBeat) -> some View {
+        let language = session.language
+        return VStack(alignment: .leading, spacing: 4) {
+            Text(verbatim: beat.speaker.name(in: language))
+                .font(.caption.weight(.bold))
+                .foregroundStyle(Theme.primary)
+            Text(verbatim: beat.text(in: language))
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(Theme.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+            if let storyAdvice {
+                Divider()
+                Text(verbatim: storyAdvice.text(in: language))
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(width: min(maxBubbleWidth, 340), alignment: .leading)
+        .glassBackground(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Theme.panelBorder, lineWidth: 1))
+        .contentShape(Rectangle())
+        .onTapGesture { finishBeat() }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityIdentifier("storyCard")
+        .transition(.pop(anchor: .bottomLeading, reduceMotion: reduceMotion))
+    }
+
+    /// Whether a story card may show now: the game running, not building,
+    /// with room for it. Not while the building tools are out or the map
+    /// shows a ✓ (a new line picked with Select, say), even with the clock
+    /// running: the card then waits rather than standing near them.
+    private var canTell: Bool {
+        !isCovered && hasRoom && !session.world.clock.isPaused && !session.isPausedForBuilding
+            && !BuildToolRail.isShown(session) && !MapBuildConfirm.isShown(session, panel: screen.panel)
+    }
+
+    /// The beats of a day the teller sees begin, queued; another game
+    /// starts the teller afresh.
+    private func lookForStory() {
+        let game = ObjectIdentifier(session)
+        if tellerGame != game {
+            tellerGame = game
+            teller = StoryTeller()
+            storyQueue = []
+            storyBeat = nil
+        }
+        storyQueue += teller.look(at: session.world)
+        tellNextBeat()
+    }
+
+    /// Tells the next queued beat, when nothing else is being told and it
+    /// may. A goal's cheer not yet said goes first, and the card waits for
+    /// the bubble, never beside it (decision 387); a bubble saying what the
+    /// card stands for gives way to it.
+    private func tellNextBeat() {
+        guard storyBeat == nil, canTell, let beat = storyQueue.first else { return }
+        if case .goalMet? = advice, advice != lastSpoken, advice != coveredAdvice {
+            sayIfNew(advice)
+            return
+        }
+        let covered = beat.advice(in: session.world)
+        guard !isTalking || (covered != nil && covered == lastSpoken) else { return }
+        storyQueue.removeFirst()
+        storyAdvice = beat.adviceLine(in: session.world)
+        if let covered {
+            // Decision 387: one card, not the story and the advice apart.
+            coveredAdvice = covered
+            lastSpoken = covered
+        }
+        isTalking = false
+        storyBeat = beat
+        storyTalk &+= 1
+    }
+
+    /// Puts the card away; the next beat, else the advice waiting, follows.
+    private func finishBeat() {
+        guard storyBeat != nil else { return }
+        storyBeat = nil
+        storyAdvice = nil
+        tellNextBeat()
+        if storyBeat == nil { sayIfNew(advice) }
     }
 
     /// The title on a warm plate with a navy edge, and under it how far to
@@ -260,7 +420,7 @@ struct StationMasterCorner: View {
     /// New advice is said once by itself; the same again is not. Without
     /// room for the bubble it is kept, with its dot, until there is.
     private func sayIfNew(_ advice: StationMasterAdvice?) {
-        guard let advice, advice != lastSpoken, hasRoom else { return }
+        guard let advice, advice != lastSpoken, advice != coveredAdvice, storyBeat == nil, hasRoom else { return }
         if case .modeShift = advice {
             // Decision 332: said once, leaving what was said before it as
             // said, so that is not said again when the hint goes.
