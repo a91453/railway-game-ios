@@ -311,9 +311,16 @@ public struct Map3DScene: Sendable {
         }
         // Decision 238: the city twice, in full and simplified for afar.
         let city = skyline ?? CitySkyline(world: world)
+        // Decision 370: Taipei 101 and Taipei Main Station, clear of the
+        // track; on ground no real building, temple, scene or city lot
+        // takes.
+        let landmarks = RealWorldFrame(world: world).map { builder.addTaipeiLandmarks(frame: $0) } ?? [:]
+        let landmarkCells = landmarks.values.reduce(into: Set<ChunkKey>()) { $0.formUnion($1) }
         // Decision 321: the stations' canopies and buildings from the
-        // station kit, a plaza where a building stands.
-        let stations = cleared.union(builder.addStations(snapshot, frame: RealWorldFrame(world: world), shops: false))
+        // station kit, a plaza where a building stands; Taipei's the
+        // landmark, where it stands (decision 370).
+        let stations = cleared.union(builder.addStations(snapshot, frame: RealWorldFrame(world: world), shops: false,
+                                                         drawnElsewhere: landmarks[.taipeiMainStation] == nil ? [] : [.taipei]))
         // Decision 263: on a map not of the real world, seeded streets
         // between the lots, clear of the track and the platforms but where
         // they cross it, and of the stations' buildings.
@@ -326,8 +333,8 @@ public struct Map3DScene: Sendable {
         if let railways, let frame = RealWorldFrame(world: world) { builder.addRealLines(railways, frame: frame) }
         builder.addOverheadLine()
         // Decision 244: no street furniture where the track runs (nor
-        // where a station's building stands).
-        builder.removeProps(on: stations)
+        // where a station's building or a landmark stands).
+        builder.removeProps(on: stations.union(landmarkCells))
         // Decision 229 續: the street lights' pools, seen at night.
         builder.addLampPools()
         // Decision 239: on a real-world map, the real buildings round
@@ -335,9 +342,9 @@ public struct Map3DScene: Sendable {
         // stand.
         let frame = real == nil ? nil : RealWorldFrame(world: world)
         builder.target = .near
-        var standing = frame.map { builder.addRealBuildings(cityTiles, frame: $0, clearOf: stations) } ?? []
+        var standing = landmarkCells.union(frame.map { builder.addRealBuildings(cityTiles, frame: $0, clearOf: stations.union(landmarkCells)) } ?? [])
         // Decision 385: the airports' own buildings.
-        if let noBuild, let frame { builder.addAirportBuildings(noBuild, frame: frame, clearOf: stations) }
+        if let noBuild, let frame { builder.addAirportBuildings(noBuild, frame: frame, clearOf: stations.union(landmarkCells)) }
         // Decision 331: the real temples, on no station or real building.
         if let temples, let frame = RealWorldFrame(world: world) {
             standing.formUnion(builder.addTemples(temples, frame: frame, clearOf: stations.union(standing)))
@@ -356,8 +363,8 @@ public struct Map3DScene: Sendable {
         }
         builder.addCity(city, clearOf: stations.union(builder.realTrackCells), takenBy: taken.whole.union(standing), besideRoads: taken.byRoads)
         builder.target = .far
-        if let frame { builder.addRealBuildings(cityTiles, frame: frame, clearOf: stations) }
-        if let noBuild, let frame { builder.addAirportBuildings(noBuild, frame: frame, clearOf: stations) }
+        if let frame { builder.addRealBuildings(cityTiles, frame: frame, clearOf: stations.union(landmarkCells)) }
+        if let noBuild, let frame { builder.addAirportBuildings(noBuild, frame: frame, clearOf: stations.union(landmarkCells)) }
         builder.addCity(city, clearOf: stations.union(builder.realTrackCells), takenBy: taken.whole.union(standing), besideRoads: taken.byRoads)
         builder.target = .base
         builder.addPlacedBuildings()

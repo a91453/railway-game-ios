@@ -112,6 +112,34 @@ final class SaveLibraryTests: XCTestCase {
         XCTAssertEqual(try SaveLibrary.decode(Data(contentsOf: url)), DemoWorld.make(in: .english))
     }
 
+    /// Decision 381: a save in the list is exported as the game menu
+    /// exports the game being played, named by when it was saved; the
+    /// row's menu offers what each kind of save can do.
+    func testASaveInTheListIsExportedAndItsMenuFitsItsKind() throws {
+        let library = SaveLibrary(directory: directory)
+        let demo = DemoWorld.make(in: .english)
+        try library.save(demo, as: .manual, at: date(60))
+        try library.save(.newGame(), as: .autosave, at: date(30))
+        try Data("not a save".utf8).write(to: directory.appendingPathComponent("save-broken.json"))
+        let entries = library.entries()
+        let manual = try XCTUnwrap(entries.first { $0.kind == .manual && $0.problem == nil })
+        let autosave = try XCTUnwrap(entries.first { $0.kind == .autosave })
+        let broken = try XCTUnwrap(entries.first { $0.problem != nil })
+
+        let url = try library.exportFile(of: manual)
+        defer { try? FileManager.default.removeItem(at: url) }
+        XCTAssertEqual(url.lastPathComponent, "Along the Line 2026-10-02 120100.json")
+        XCTAssertEqual(try SaveLibrary.decode(Data(contentsOf: url)), demo)
+        XCTAssertThrowsError(try library.exportFile(of: broken))
+
+        XCTAssertEqual(SaveListText.RowAction.available(for: manual), [.rename, .export, .delete])
+        XCTAssertEqual(SaveListText.RowAction.available(for: autosave), [.export, .delete])
+        XCTAssertEqual(SaveListText.RowAction.available(for: broken), [.delete])
+        XCTAssertEqual(SaveListText.rowMenuIdentifier(of: manual), "saves.menu.\(manual.id)")
+        XCTAssertEqual(SaveListText.RowAction.allCases.map { $0.title(in: .traditionalChinese) }, ["重新命名", "匯出", "刪除"])
+        XCTAssertEqual(SaveListText.rowMenuLabel(in: .english), "Save Options")
+    }
+
     /// 2026-10-02 12:00:00 UTC plus `seconds`.
     private func date(_ seconds: TimeInterval) -> Date {
         Date(timeIntervalSince1970: 1_790_942_400 + seconds)

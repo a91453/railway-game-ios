@@ -417,6 +417,13 @@ public struct SaveLibrary: Sendable {
         return url
     }
 
+    /// `entry` as a file to share (decision 381: the saves list's row
+    /// menu), the same as the game menu's Export Save writes: its world
+    /// and its news log, named by when it was saved.
+    public func exportFile(of entry: Entry) throws(SaveError) -> URL {
+        try Self.exportFile(for: load(entry), news: news(for: entry), at: entry.savedAt ?? Date())
+    }
+
     // MARK: - The file
 
     /// The file for `world` saved at `date`, with the news log `news` when

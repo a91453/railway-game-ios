@@ -25,7 +25,10 @@ struct HUDView: View {
     /// 127 and 193; TestFlight 54.1).
     @State private var reportingProblem = false
 
-    var body: some View {
+    // Decision 379: timed for the frame readout.
+    var body: some View { timed(.hudBody) { timedBody } }
+
+    @ViewBuilder private var timedBody: some View {
         // One row in one glass pill, as wide as what it shows; then one row
         // with the shorter date ("2 年 5/12（六）08:40", decision 226); only
         // then do cash and time stack. With the largest text the time gets
@@ -99,7 +102,7 @@ struct HUDView: View {
             .accessibilityIdentifier("menu.saveGameAs.confirm")
         } message: {
             Text(verbatim: session.language.text(
-                "A name for this save, to find it in Saved Games.",
+                "A name for this save, to find it in Saves.",
                 "為這個存檔取個名字，方便在「存檔」裡找到。"
             ))
         }
@@ -187,7 +190,10 @@ private struct HUDCash: View {
     /// with unlimited funds an "∞" capsule instead, in the text colour (not
     /// the green of money coming in), without the income float.
     @ViewBuilder
-    var body: some View {
+    // Decision 379: timed for the frame readout.
+    var body: some View { timed(.hudBody) { timedBody } }
+
+    @ViewBuilder private var timedBody: some View {
         if session.world.economy.unlimitedFunds {
             Button {
                 screen.panel = .economy
@@ -264,7 +270,10 @@ private struct HUDTime: View {
     /// The date and time (decision 175), today's weather and holiday; it
     /// opens the forecast of the next days. `short`: the board's shorter
     /// date (decision 226), which keeps it to one row.
-    var body: some View {
+    // Decision 379: timed for the frame readout.
+    var body: some View { timed(.hudBody) { timedBody } }
+
+    private var timedBody: some View {
         let language = session.language
         let clock = session.world.clock
         let text = short ? clock.shortCalendarText(in: language) : clock.calendarText(in: language)
@@ -720,7 +729,10 @@ private struct GameMenu: View, Equatable {
 private struct ForecastView: View {
     let session: GameSession
 
-    var body: some View {
+    // Decision 379: timed for the frame readout.
+    var body: some View { timed(.hudBody) { timedBody } }
+
+    @ViewBuilder private var timedBody: some View {
         let language = session.language
         let days = session.world.forecast()
         VStack(alignment: .leading, spacing: 8) {
@@ -802,7 +814,10 @@ private struct ViewingReadout: View {
     let session: GameSession
     @State private var showsLag = false
 
-    var body: some View {
+    // Decision 379: timed for the frame readout.
+    var body: some View { timed(.hudBody) { timedBody } }
+
+    @ViewBuilder private var timedBody: some View {
         let viewing = session.viewingSpeed
         let language = session.language
         let lag = viewing.lagText(in: language)

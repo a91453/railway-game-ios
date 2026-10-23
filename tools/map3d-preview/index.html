@@ -41,6 +41,14 @@ void main(){ vec3 n = normalize(vNormal); vec3 base = vColor; vec3 glow = vec3(0
   vec3 r = reflect(-toEye, n); float fr = 0.05 + 0.95 * pow(1.0 - max(dot(toEye, n), 0.0), 4.0);
   mirrored = vec4(seenToward(vec3(r.x, abs(r.y), r.z)), fr * mirror.x); float s = max(dot(r, sunDirection.xyz), 0.0);
   glow += glint.rgb * ((pow(s, 600.0) * 2.0 + pow(s, 60.0) * 0.2) * mirror.z * mirror.x * sunSeen); }
+ if (vLayer < -4.5 && vLayer > -5.5) { float v = abs(n.y) > 0.7 ? gridLine(vUV.x, 3.0) * 0.12 + gridLine(vUV.y, 3.0) * 0.12 : gridLine(vUV.x, 3.0) * 0.10 + gridLine(vUV.y, 4.2) * 0.04; base *= 1.0 - v; }
+ else if (vLayer < -7.5 && vLayer > -8.5) { base *= 1.0 - gridLine(vUV.x, 0.9) * 0.07; }
+ else if (vLayer < -8.5 && vLayer > -10.5) { float v = abs(n.y) > 0.7 ? 0.0 : gridLine(vUV.y, 5.0) * 0.12 + gridLine(vUV.x, 1.6) * 0.045; base *= (1.0 - v) * 1.2; }
+ if (((vLayer < -4.5 && vLayer > -5.5) || (vLayer < -8.5 && vLayer > -9.5)) && lights > 0.0 && abs(n.y) < 0.7) { vec2 bay = vLayer < -8.5 ? vec2(3.2, 5.0) : vec2(3.0, 4.2);
+  vec2 face = vec2(floor(vPlane / 4.0), dot(round(n * 4.0), vec3(1.0, 17.0, 289.0))); vec2 room = floor(vUV / bay) + fract(face * vec2(0.1373, 0.2719)) * 512.0;
+  glow += WINDOW_WARM * mix(0.55, 1.1, hash12(room + 1.3)) * step(0.66, hash12(room + 23.0)) * lights; }
+ if (vLayer < -9.5 && vLayer > -10.5 && lights > 0.0 && abs(n.y) < 0.7) glow += WINDOW_WARM * (0.10 + 0.55 * smoothstep(-12.0, 0.0, vUV.y)) * lights;
+ if (vLayer < -11.5 && vLayer > -12.5) glow += WINDOW_WARM * 0.75 * lights;
  if (textured==1 && vLayer >= 0.0) { int packed = int(vLayer + 0.5); vec4 t = texture(surfaces, vec3(vUV, float(packed % 64)));
   vec2 pane = glassMirror[min(packed % 64, 23)]; vec3 tinted = base; if (pane.x > 0.6 && pane.y < 0.5) tinted = mix(tinted, vec3(0.80, 0.87, 0.93), 0.6);
   tinted *= mix(1.0, clamp(dot(t.rgb, vec3(0.2126, 0.7152, 0.0722)) * 2.0, 0.6, 1.2), 0.35); int material = packed / 64;

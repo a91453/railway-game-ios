@@ -260,7 +260,14 @@ struct MapView: View {
     }
 
     var body: some View {
+        // Decision 379: timed for the frame readout, the keys its
+        // modifiers compare here and what the reader holds when laid out.
+        FrameCostMeter.shared.measure(.mapBody) { timedBody }
+    }
+
+    private var timedBody: some View {
         GeometryReader { proxy in
+            timed(.mapBody) {
             let bounds = session.world.bounds
             let realWorld = RealWorldFrame(world: session.world)
             // Decision 120: the map reaches the screen's edges, and what
@@ -1075,7 +1082,7 @@ struct MapView: View {
             .onChange(of: session.world.clock) { _, _ in
                 // While its train glides, the frames move the camera.
                 guard !followsGlide else { return }
-                centerOnFollowedTrain(projection: projection)
+                FrameCostMeter.shared.measure(.mapTick) { centerOnFollowedTrain(projection: projection) }
             }
             .onChange(of: session.followedTrain?.id) { _, _ in
                 // A new follow snaps to its train, as the reference's
@@ -1106,20 +1113,28 @@ struct MapView: View {
                 openedCamera = OpenedCamera(camera: reopened, at: opened.at)
                 camera = reopened
             }
+            }
         }
+        // Decision 379: what follows a tick here is timed for the frame
+        // readout.
         .onChange(of: TrafficKey(world: session.world), initial: true) { _, _ in
             // Decision 64, later fix: read with the tick, off the main actor.
-            traffic = session.trafficOverlay
+            FrameCostMeter.shared.measure(.mapTraffic) { traffic = session.trafficOverlay }
         }
         .onChange(of: session.world.trains, initial: true) { _, _ in
             // Decision 182: each tick's trains glide from the last tick's.
-            trainMotion = TrainMotion(world: session.world, previous: trainMotion, time: Date().timeIntervalSinceReferenceDate)
+            FrameCostMeter.shared.measure(.mapGlide) {
+                // Decision 379: worked out with the tick, off the main actor.
+                trainMotion = session.trainMotion(after: trainMotion, at: Date().timeIntervalSinceReferenceDate)
+            }
             trainMotionVersion &+= 1
         }
         .onChange(of: session.world.clock.now, initial: true) { _, _ in
             // Decision 304: the real trains glide with the game clock.
             guard realTrains != nil else { return }
-            realTrainClock = RealTrainClock(world: session.world, previous: realTrainClock, time: Date().timeIntervalSinceReferenceDate)
+            FrameCostMeter.shared.measure(.mapTick) {
+                realTrainClock = RealTrainClock(world: session.world, previous: realTrainClock, time: Date().timeIntervalSinceReferenceDate)
+            }
         }
         .task(id: RealTrainsKey(
             realWorld: RealWorldFrame(world: session.world), bounds: session.world.bounds,
@@ -1129,7 +1144,7 @@ struct MapView: View {
             await workOutRealTrains()
         }
         .onChange(of: MapWeatherKey(world: session.world), initial: true) { _, _ in
-            mapWeather = MapWeather(world: session.world)
+            FrameCostMeter.shared.measure(.mapTick) { mapWeather = MapWeather(world: session.world) }
         }
         .task(id: JourneyTraceKey(world: session.world, station: tracedStationID, line: tracedLineID)) {
             await workOutJourneyTrace()
@@ -1321,6 +1336,7 @@ struct MapView: View {
             // nothing for it afterwards.
             buildAhead?.cancel()
             buildAhead = nil
+            session.mapStoppedGliding()
         }
     }
 
@@ -3344,6 +3360,11 @@ private struct MapFrameReadout: View {
 private final class FrameReadoutLink: NSObject {
     private var link: CADisplayLink?
     private var onReading: ((FrameCostReading) -> Void)?
+    /// Decision 379: the first and last of the main run loop's observers
+    /// before it waits, between which SwiftUI updates the views and Core
+    /// Animation commits (``FrameCostPart/viewUpdate``).
+    private var observers: [CFRunLoopObserver] = []
+    private var updateStart: ContinuousClock.Instant?
 
     func start(_ onReading: @escaping (FrameCostReading) -> Void) {
         self.onReading = onReading
@@ -3352,16 +3373,37 @@ private final class FrameReadoutLink: NSObject {
         let link = CADisplayLink(target: self, selector: #selector(frame(_:)))
         link.add(to: .main, forMode: .common)
         self.link = link
+        let first = CFRunLoopObserverCreateWithHandler(nil, CFRunLoopActivity.beforeWaiting.rawValue, true, CFIndex.min) { [weak self] _, _ in
+            MainActor.assumeIsolated { self?.updateStart = .now }
+        }
+        let last = CFRunLoopObserverCreateWithHandler(nil, CFRunLoopActivity.beforeWaiting.rawValue, true, CFIndex.max) { [weak self] _, _ in
+            MainActor.assumeIsolated {
+                guard let self, let start = self.updateStart else { return }
+                self.updateStart = nil
+                FrameCostMeter.shared.record(.viewUpdate, since: start)
+            }
+        }
+        observers = [first, last].compactMap { $0 }
+        for observer in observers { CFRunLoopAddObserver(CFRunLoopGetMain(), observer, .commonModes) }
     }
 
     func stop() {
         link?.invalidate()
         link = nil
         onReading = nil
+        for observer in observers { CFRunLoopObserverInvalidate(observer) }
+        observers = []
+        updateStart = nil
         FrameCostMeter.shared.isOn = false
     }
 
     @objc private func frame(_ link: CADisplayLink) {
         if let reading = FrameCostMeter.shared.frame(at: link.timestamp) { onReading?(reading) }
     }
+}
+
+/// Decision 379: `content`, timed as `part` for the frame readout
+/// (``FrameCostMeter``) while it is worked out.
+func timed<Content: View>(_ part: FrameCostPart, @ViewBuilder _ content: () -> Content) -> Content {
+    FrameCostMeter.shared.measure(part, content)
 }
