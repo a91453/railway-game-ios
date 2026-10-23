@@ -88,6 +88,21 @@ struct GoalsSections: View {
                         .font(.footnote)
                         .foregroundStyle(Theme.textSecondary)
                 }
+                // Decision 387: how it ended, in its story's words.
+                if let ending = world.scenario.flatMap({ ChallengeStory.named($0.scenario.id) })?.ending(in: world) {
+                    HStack(alignment: .top, spacing: 10) {
+                        StoryPortrait(speaker: ending.speaker, size: 36)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(verbatim: ending.speaker.name(in: language))
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(Theme.primary)
+                            Text(verbatim: ending.text(in: language))
+                                .font(.footnote)
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("goals.ending")
+                }
             } footer: {
                 if let ratings = world.scenarioRatingsText(in: language) {
                     Text(verbatim: ratings)

@@ -47,6 +47,7 @@
 		376974C84B7F85117BB54C8D /* MapAlertBubbles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B4F958A2EC6D131F9218CDD /* MapAlertBubbles.swift */; };
 		3C6F0ECE58408BF72082F7C2 /* BuildToolRail.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79941FA523AF01C8B9E74433 /* BuildToolRail.swift */; };
 		3CD0719BA9F8CDD5FC42B134 /* tymc.json in Resources */ = {isa = PBXBuildFile; fileRef = 9066371AFA922B8308EA3748 /* tymc.json */; };
+		3D33656D59BCB77B82347CA8 /* StoryCardUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2C27C444707F74B8AF2F918 /* StoryCardUITests.swift */; };
 		3F4E6EB1D04071F2D7E13A02 /* WebsiteScreenshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A99E6EF4AC0C447E9D16F0E /* WebsiteScreenshotTests.swift */; };
 		3FA9D3B90B7D1F9CBC07E2FE /* trtc_codes.json in Resources */ = {isa = PBXBuildFile; fileRef = 905E65E0102E822A86C5ECF8 /* trtc_codes.json */; };
 		44DB05AFB29842D0B2DC04C0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D490F999E435A0570BE04635 /* ContentView.swift */; };
@@ -318,6 +319,7 @@
 		A19B41254DC18939B0BA2CB0 /* TrainRosterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainRosterView.swift; sourceTree = "<group>"; };
 		A1B80E3285C9871A9D98DECB /* krtc_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = krtc_times.json; sourceTree = "<group>"; };
 		A23CAC8DC027701B44D9FEF2 /* StartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartView.swift; sourceTree = "<group>"; };
+		A2C27C444707F74B8AF2F918 /* StoryCardUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryCardUITests.swift; sourceTree = "<group>"; };
 		A32E5B7462B864BC37E88A37 /* Map3DPreviewScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Map3DPreviewScreen.swift; sourceTree = "<group>"; };
 		A66F0D046BFE66DC6D9329D2 /* CityView3D.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CityView3D.swift; sourceTree = "<group>"; };
 		A78EE664114638279C7BCC3A /* StationStampPassportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationStampPassportView.swift; sourceTree = "<group>"; };
@@ -681,6 +683,7 @@
 				464ED7CD74C3D89609658AD5 /* RealWorldMapUITests.swift */,
 				7E833A49B8766511EF574847 /* SettingsUITests.swift */,
 				B2CB75E448956BC3D8E7FE02 /* StartSaveFlowSmokeTests.swift */,
+				A2C27C444707F74B8AF2F918 /* StoryCardUITests.swift */,
 				C62092ABB8C906B420B7E61B /* ToolbarSmokeTests.swift */,
 				B79ADC872C8814C1468A48EA /* TutorialJourneyUITests.swift */,
 				3BA3B0B2889A228FC08F83B8 /* TutorialUITests.swift */,
@@ -992,6 +995,7 @@
 				A63CC2F5042DB04F53E77F6D /* RealWorldMapUITests.swift in Sources */,
 				5816A50B5D199B14095EB3AA /* SettingsUITests.swift in Sources */,
 				CC783E4053798355ECF17075 /* StartSaveFlowSmokeTests.swift in Sources */,
+				3D33656D59BCB77B82347CA8 /* StoryCardUITests.swift in Sources */,
 				A6BE3F0BE2C0F8D6B5BB4B23 /* ToolbarSmokeTests.swift in Sources */,
 				E185710E92BEBBD011BAA363 /* TutorialJourneyUITests.swift in Sources */,
 				4EE0D41AC5A9913840A83374 /* TutorialUITests.swift in Sources */,

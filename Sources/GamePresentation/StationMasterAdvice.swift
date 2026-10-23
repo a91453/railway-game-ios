@@ -358,7 +358,7 @@ public enum StationMasterAdvice: Hashable, Sendable {
     }
 
     /// Decision 153: the first festival announced and not yet begun.
-    private static func festival(in world: GameWorld) -> StationMasterAdvice? {
+    static func festival(in world: GameWorld) -> StationMasterAdvice? {
         let today = world.clock.now.seconds / GameTime.secondsPerDay
         let coming = (world.demandEvents?.events ?? []).filter { $0.kind == .festival && $0.start > today && $0.announced <= today }
         guard let first = coming.min(by: { $0.start < $1.start }) else { return nil }
