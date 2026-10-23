@@ -37,6 +37,14 @@ public struct Map3DNextDeparture: Hashable, Sendable {
     public static func platform(of train: TrainID, at station: StationID, in world: GameWorld) -> TrackPlatform? {
         let platforms = world.trackPlatforms(of: station)
         guard !platforms.isEmpty else { return nil }
+        return routedPlatform(of: train, at: station, in: world) ?? platforms.first
+    }
+
+    /// The platform of `station` train `train` stands along now, or the
+    /// first on the track it is routed over from where it is; `nil` when
+    /// not routed that far yet (decision 354's board, which then does not
+    /// guess the station's first).
+    public static func routedPlatform(of train: TrainID, at station: StationID, in world: GameWorld) -> TrackPlatform? {
         if let standing = world.trackPlatformsAlongWholeTrain(train).first(where: { $0.station == station }) {
             return standing
         }
@@ -47,7 +55,7 @@ public struct Map3DNextDeparture: Hashable, Sendable {
                 }
             }
         }
-        return platforms.first
+        return nil
     }
 
     /// The platform's middle in `scene`'s space and the way it runs

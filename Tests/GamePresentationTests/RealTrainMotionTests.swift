@@ -378,6 +378,22 @@ final class RealTrainMotionTests: XCTestCase {
                 XCTAssertGreaterThanOrEqual(Int(time.output.1)! * 60 + Int(time.output.2)!, 8 * 60, line)
             }
         }
+        // Decision 354: each way lists its trains within 15 minutes, or
+        // its next one; the metro at Taipei Main has more than one that soon.
+        var sawMore = false
+        for line in lines where line.contains("下一班") {
+            for way in line.split(separator: "；") {
+                let times = way.matches(of: /(\d\d):(\d\d)/).map { Int($0.output.1)! * 60 + Int($0.output.2)! }
+                XCTAssertFalse(times.isEmpty, line)
+                XCTAssertLessThanOrEqual(times.count, RealRailwayOperations.realTrainsPerWay, line)
+                XCTAssertEqual(times, times.sorted(), line)
+                if times.count > 1 {
+                    sawMore = true
+                    XCTAssertTrue(times.allSatisfy { $0 <= 8 * 60 + 15 }, line)
+                }
+            }
+        }
+        XCTAssertTrue(sawMore, "\(lines)")
         // English names the destinations in English.
         let english = GameSession(world: session.world, language: .english)
         english.railways = session.railways

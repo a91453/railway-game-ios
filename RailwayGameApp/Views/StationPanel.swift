@@ -144,7 +144,9 @@ struct StationPanel: View {
     /// carries "N min late" from its lateness, a fast train that does not
     /// call "Passes", and a fixed-timetable line's runs not yet sent out
     /// are listed at their timetable's time. Read from the world on every
-    /// tick; collapsible.
+    /// tick; collapsible. Decision 354: a platform at a time, each with its
+    /// trains due within 15 minutes or, when none is, its next one at its
+    /// time; a train whose platform is not known yet under the way it goes.
     private func departureBoardSection(_ station: Station) -> some View {
         let language = session.language
         let board = DepartureBoard(world: session.world, station: station.id)
@@ -158,13 +160,16 @@ struct StationPanel: View {
                         .font(.footnote)
                         .foregroundStyle(Theme.textSecondary)
                 }
-                ForEach(board.directions) { direction in
-                    Text(verbatim: direction.endsHere
-                        ? language.text("Ending here", "抵達本站")
-                        : language.text("To \(session.world.station(id: direction.destination)?.name ?? "")", "往 \(session.world.station(id: direction.destination)?.name ?? "")"))
+                ForEach(board.byPlatform(in: session.world)) { group in
+                    Text(verbatim: group.title(in: language, world: session.world))
                         .font(.caption.weight(.bold))
                         .foregroundStyle(Theme.textSecondary)
-                    ForEach(direction.rows) { row in
+                    if let note = group.noteText(in: language) {
+                        Text(verbatim: note)
+                            .font(.caption)
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                    ForEach(group.rows) { row in
                         if shows3D, let train = row.train, !row.passes {
                             departureRow(row, language: language, opens3D: true)
                                 .contentShape(Rectangle())

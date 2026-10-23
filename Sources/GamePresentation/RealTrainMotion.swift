@@ -670,7 +670,10 @@ extension RealRailwayOperations {
     /// Speed Rail's day of trains, those that leave from the station, not
     /// end there; or a headway line's headway at that hour, while its
     /// trains run (``RealTrainTraffic/headwayHours``). Lines in the site's
-    /// order, each way by the time it leaves.
+    /// order, each way by the time it leaves. Decision 354: each way's
+    /// trains within ``DepartureBoard/soonSeconds`` (at most
+    /// ``realTrainsPerWay``), or its next one when none is that soon; the
+    /// data has no platforms, so a way stands for one.
     public func service(atStationNamed name: String, siteSystem: String, after second: Int, on day: RealServiceDay, dayBefore: RealServiceDay) -> [RealStationService] {
         let key = RealRailways.stationKey(name)
         var found: [RealStationService] = []
@@ -678,10 +681,10 @@ extension RealRailwayOperations {
             for line in system.lines {
                 guard let index = line.stations.firstIndex(where: { RealRailways.stationKey($0.name) == key }) else { continue }
                 let lineName = Self.shortName(line.name)
-                var best: [String: Int] = [:]
+                var times: [String: Set<Int>] = [:]
                 func consider(_ destination: String, _ time: Int) {
                     guard time >= second, destination != line.stations[index].name else { return }
-                    if best[destination].map({ time < $0 }) ?? true { best[destination] = time }
+                    times[destination, default: []].insert(time)
                 }
                 if let timetable = timetable(forSystem: system.id)?.lines[line.id] {
                     for (set, offset) in [(timetable.setName(for: day), 0), (timetable.setName(for: dayBefore), -86_400)] {
@@ -708,13 +711,23 @@ extension RealRailwayOperations {
                     found.append(.headway(system: system.id, line: line.id, lineName: lineName, seconds: headway))
                     continue
                 }
-                let trains = best.map { RealNextTrain(system: system.id, line: line.id, lineName: lineName, destination: $0.key, second: $0.value) }
-                    .sorted { ($0.second, $0.destination) < ($1.second, $1.destination) }
+                let soon = second + Int(DepartureBoard.soonSeconds)
+                let trains = times.flatMap { destination, all -> [RealNextTrain] in
+                    let sorted = all.sorted()
+                    let listed = sorted.prefix { $0 <= soon }.prefix(Self.realTrainsPerWay)
+                    return (listed.isEmpty ? sorted.prefix(1) : listed).map {
+                        RealNextTrain(system: system.id, line: line.id, lineName: lineName, destination: destination, second: $0)
+                    }
+                }
+                .sorted { ($0.second, $0.destination) < ($1.second, $1.destination) }
                 if !trains.isEmpty { found.append(.next(trains)) }
             }
         }
         return found
     }
+
+    /// Decision 354: the most trains one way lists within the 15 minutes.
+    public static let realTrainsPerWay = 3
 
     /// A line's name without the stretch in brackets.
     static func shortName(_ name: String) -> String {
@@ -732,7 +745,8 @@ extension GameSession {
     /// that station `id` is (its name within 450 m, as the rest of the card
     /// reads it, ``realStations(named:at:)``), or else the real place it
     /// changes with (``transferPlace(of:)``), one line of text each:
-    /// "板南線 下一班：往頂埔 08:12、往南港展覽館 08:15", or
+    /// "板南線 下一班：往頂埔 08:12、08:18；往南港展覽館 08:15" (decision
+    /// 354: each way's trains within 15 minutes, or its next one), or
     /// "縱貫線北段：約每 10 分一班" for a line with only headways. Empty on
     /// a blank map or for a station that is no real one.
     public func realServiceText(of id: StationID) -> [String] {
@@ -752,10 +766,14 @@ extension GameSession {
                 switch service {
                 case .next(let trains):
                     guard let first = trains.first, seen.insert("\(first.system)|\(first.line)").inserted else { continue }
-                    let ways = trains.prefix(2).map { train in
-                        let to = destinationName(train.destination, siteSystem: real.system.id)
-                        return language.text("to \(to) \(Self.realClockText(train.second))", "往\(to) \(Self.realClockText(train.second))")
-                    }.joined(separator: language.text(", ", "、"))
+                    var order: [String] = []
+                    for train in trains where !order.contains(train.destination) { order.append(train.destination) }
+                    let ways = order.prefix(2).map { destination in
+                        let to = destinationName(destination, siteSystem: real.system.id)
+                        let clocks = trains.filter { $0.destination == destination }.map { Self.realClockText($0.second) }
+                            .joined(separator: language.text(", ", "、"))
+                        return language.text("to \(to) \(clocks)", "往\(to) \(clocks)")
+                    }.joined(separator: language.text("; ", "；"))
                     lines.append(language.text("\(first.lineName) next: \(ways)", "\(first.lineName) 下一班：\(ways)"))
                 case .headway(let system, let line, let name, let seconds):
                     guard seen.insert("\(system)|\(line)").inserted else { continue }
