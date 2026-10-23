@@ -326,13 +326,16 @@ final class WebsiteScreenshotTests: XCTestCase {
         return Int(label[time].split(separator: ":")[0])
     }
 
-    /// Opens `item` of the game menu's "More" submenu. The clock is paused
-    /// first: its ticks would rebuild the native menu while XCTest targets
-    /// an action in it (the start and save flow's rule).
+    /// Opens `item` of the game menu: in its first level, or under "More"
+    /// in a game with both goals and sights (decision 383). The clock is
+    /// paused first: its ticks would rebuild the native menu while XCTest
+    /// targets an action in it (the start and save flow's rule).
     private func openFromGameMenu(_ item: String, in app: XCUIApplication) {
         pauseTheClock(in: app)
         tapButton("hud.menu", in: app)
-        tapButton("menu.more", in: app)
+        if !app.buttons[item].appears(within: 3) {
+            tapButton("menu.more", in: app)
+        }
         tapButton(item, in: app)
     }
 

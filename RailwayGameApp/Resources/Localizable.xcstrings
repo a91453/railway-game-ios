@@ -415,16 +415,6 @@
         }
       }
     },
-    "Add a stopping pattern" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新增停站模式"
-          }
-        }
-      }
-    },
     "An empty map and %@ to build with" : {
       "localizations" : {
         "zh-Hant" : {

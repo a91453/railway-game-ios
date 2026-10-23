@@ -31,8 +31,9 @@ public enum UnlockableTool: String, CaseIterable, Codable, Sendable {
     case trainTool
     /// The Building tool.
     case buildingTool
-    /// The lines panel's details under Advanced: stopping patterns,
-    /// routes, service day, target headways, depots (#497).
+    /// The lines panel's details under Advanced: routes, service day,
+    /// target headways, depots (#497); and, outside it since decision 383,
+    /// stopping patterns and the network's switches.
     case lineDetails
     /// Decision 271: the track panel's one-tap double track (decision 203's
     /// upgrade).
@@ -506,7 +507,7 @@ extension Lesson {
             goal: .showAdvanced,
             panel: .lines,
             title: ("Turn on Advanced", "打開「進階」"),
-            body: ("It shows the service day and the stopping patterns.", "會顯示營運時段和停靠模式。")
+            body: ("It shows the service day and the tracks each leg takes.", "會顯示營運時段和各段股道。")
         ),
         TutorialStep(
             id: "lesson.6.hours", chapter: .service,

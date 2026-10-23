@@ -257,8 +257,8 @@ public enum HelpGuide {
             "oneTrain", .running,
             question: ("Why does my line run only one train at a time?", "為什麼我的路線一次只跑一列車？"),
             answer: (
-                "A new game has Traffic control on: a train takes its whole route before it leaves, so on single track with nowhere to pass, only one train fits. Give trains somewhere to pass: open the station panel of a station in the middle and add a platform track to make a passing loop; or turn Snap to track off in Network and lay a second track 4 m or more beside the first, for double track; or add a second platform at the end stations. Turning Traffic control off lets trains run regardless: in Lines, switch on Advanced, and the switch is at the bottom.",
-                "新遊戲預設開啟「交通控制」：列車要先取得整段路線才會發車，所以單線又沒有地方會車時，只能跑一列。讓列車有地方會車：打開中間某站的車站面板，用「加月台軌道」做一條待避線；或在「路網」關掉「吸附軌道」，在旁邊相距 4 公尺以上鋪第二條軌道，做成雙線；或在終點站加第二股月台。關掉「交通控制」，列車也能照開：在「路線」打開「進階」，開關在最下面。"
+                "A new game has Traffic control on: a train takes its whole route before it leaves, so on single track with nowhere to pass, only one train fits. Give trains somewhere to pass: open the station panel of a station in the middle and add a platform track to make a passing loop; or turn Snap to track off in Network and lay a second track 4 m or more beside the first, for double track; or add a second platform at the end stations. Turning Traffic control off lets trains run regardless: the switch is under Whole network at the top of Lines.",
+                "新遊戲預設開啟「交通控制」：列車要先取得整段路線才會發車，所以單線又沒有地方會車時，只能跑一列。讓列車有地方會車：打開中間某站的車站面板，用「加月台軌道」做一條待避線；或在「路網」關掉「吸附軌道」，在旁邊相距 4 公尺以上鋪第二條軌道，做成雙線；或在終點站加第二股月台。關掉「交通控制」，列車也能照開：開關在「路線」最上面的「整個路網」。"
             ),
             keywords: "single track passing loop double one train capacity signal 單線 會車 待避 雙線 一列 列車數 上限"
         ),
@@ -284,8 +284,8 @@ public enum HelpGuide {
             "trafficControl", .running,
             question: ("What is traffic control (signalling)?", "什麼是號誌控制？"),
             answer: (
-                "With Traffic control on, a train takes its whole route before it leaves, so two trains never share a track at once. Trains may wait for the route ahead to clear, and a busy line carries fewer trains. Turn it on or off in the Lines panel: switch on Advanced, and the switch is at the bottom.",
-                "開啟「交通控制」後，列車要先取得整段路線才會發車，所以兩列車不會同時佔用同一段軌道。列車可能會等前方路線淨空，繁忙的路線能容納的列車也比較少。開關在「路線」面板：打開「進階」，在最下面。"
+                "With Traffic control on, a train takes its whole route before it leaves, so two trains never share a track at once. Trains may wait for the route ahead to clear, and a busy line carries fewer trains. Turn it on or off under Whole network at the top of the Lines panel.",
+                "開啟「交通控制」後，列車要先取得整段路線才會發車，所以兩列車不會同時佔用同一段軌道。列車可能會等前方路線淨空，繁忙的路線能容納的列車也比較少。開關在「路線」面板最上面的「整個路網」。"
             ),
             keywords: "signal signalling block 號誌 閉塞 交通控制 等待"
         ),
@@ -302,8 +302,8 @@ public enum HelpGuide {
             "express", .running,
             question: ("How do I run a non-stop or a short working?", "怎麼開直達車或短程班次？"),
             answer: (
-                "Open Lines, pick the line, and under Add a stopping pattern at the bottom choose the first and last stop and tap Add: a run over part of the line is a short working; switch on Non-stop to call at the two ends only. They run beside the all-stops trains, so give the line enough trains for all of them.",
-                "打開「路線」，選這條路線，在最下方的「新增停站模式」選起點與終點，按「加入」：只跑其中一段就是短程班次；開啟「直達車」就只停兩端。它們與各站停車並行，所以路線要有足夠的列車都跑得動。"
+                "Open Lines, pick the line, and under Add an express (stopping pattern) on the line's page choose the first and last stop and tap Add: a run over part of the line is a short working; switch on Non-stop to call at the two ends only. They run beside the all-stops trains, so give the line enough trains for all of them.",
+                "打開「路線」，選這條路線，在路線頁的「加快車（停車模式）」選起點與終點，按「加入」：只跑其中一段就是短程班次；開啟「直達車」就只停兩端。它們與各站停車並行，所以路線要有足夠的列車都跑得動。"
             ),
             keywords: "pattern skip stop limited express non-stop short working 快車 直達車 快速列車 短程班次 越站 停站模式 通過"
         ),
@@ -356,8 +356,8 @@ public enum HelpGuide {
             "reportProblem", .running,
             question: ("Where do I send a problem or an idea?", "問題或意見要送到哪裡？"),
             answer: (
-                "Open the game menu (the three lines at the top), choose More, then Report a Problem. It writes a note with the version, your device and what is in the game, for Mail, Messages or any app you choose; you may also attach the game's save and what you did since, so the problem can be played again. Nothing is sent until you send it. Settings has the same button.",
-                "打開遊戲選單（頂端的三條線），選「更多」→「回報問題」。它會寫好一則附上版本、裝置與這局狀態的訊息，由你選擇用郵件、訊息或其他 App 傳送；也可以附上這局的存檔和之後做過的事，讓問題可以重現。你按下傳送前不會送出任何東西。設定頁也有同一個按鈕。"
+                "Open the game menu (the three lines at the top) and choose Report a Problem. It writes a note with the version, your device and what is in the game, for Mail, Messages or any app you choose; you may also attach the game's save and what you did since, so the problem can be played again. Nothing is sent until you send it. Settings has the same button.",
+                "打開遊戲選單（頂端的三條線），選「回報問題」。它會寫好一則附上版本、裝置與這局狀態的訊息，由你選擇用郵件、訊息或其他 App 傳送；也可以附上這局的存檔和之後做過的事，讓問題可以重現。你按下傳送前不會送出任何東西。設定頁也有同一個按鈕。"
             ),
             keywords: "report bug problem feedback idea suggestion send 回報 問題 意見 建議 錯誤 送"
         ),

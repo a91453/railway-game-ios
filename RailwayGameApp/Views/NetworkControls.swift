@@ -61,6 +61,7 @@ struct NetworkControls: View {
             ChipFlow(spacing: 8) {
                 advancedButton
                 doubleToggle
+                snapToggle
                 traceToggle
                 clearButton
             }
@@ -160,14 +161,15 @@ struct NetworkControls: View {
     }
 
     // Decision 107: how the track is built is chosen for the player
-    // (ground, smooth, easy grade, snapping); changing it is one tap
+    // (ground, smooth, easy grade; decision 383: snapping is beside
+    // Double); changing it is one tap
     // further away, folded until wanted.
     private var advancedButton: some View {
         Button {
             withAnimation(.easeInOut(duration: 0.2)) { showsAdvanced.toggle() }
         } label: {
             Label {
-                Text(verbatim: session.language.text("Track options", "進階選項"))
+                Text(verbatim: NetworkOptionsEntry.title(in: session.language))
             } icon: {
                 Image(systemName: showsAdvanced ? "chevron.down" : "chevron.right")
             }
@@ -185,6 +187,15 @@ struct NetworkControls: View {
         }
         .toggleStyle(OnOffButtonToggleStyle())
         .accessibilityIdentifier("network.double")
+    }
+
+    /// Off: every tap is a new point, for a parallel track a few metres
+    /// beside another (closer than a tap reaches). Decision 383: beside
+    /// Double, not among the folded options.
+    private var snapToggle: some View {
+        Toggle("Snap to track", isOn: $session.networkSnapsToTrack)
+            .toggleStyle(OnOffButtonToggleStyle())
+            .accessibilityIdentifier("network.snap")
     }
 
     /// Decision 213: on a real-world map, follow the real railway drawn
@@ -252,17 +263,11 @@ struct NetworkControls: View {
                 .font(.footnote)
                 .accessibilityIdentifier("network.doubleSide")
             }
-            // Off: every tap is a new point, for a parallel track a few
-            // metres beside another (closer than a tap reaches).
-            Toggle("Snap to track", isOn: $session.networkSnapsToTrack)
-                .toggleStyle(OnOffButtonToggleStyle())
-                .font(.footnote)
-                .accessibilityIdentifier("network.snap")
             // Decision 107, later: a player did not know how to lay a
             // second track beside the first.
             Text(verbatim: session.language.text(
-                "Turn it off to lay a parallel track 4 m or more beside another by hand; \"Double\" lays both at once.",
-                "關掉後可以自己鋪相距 4 m 以上的平行軌；「複線」會一次鋪好兩條。"
+                "Turn off Snap to track to lay a parallel track 4 m or more beside another by hand; \"Double\" lays both at once.",
+                "關掉「吸附軌道」可以自己鋪相距 4 m 以上的平行軌；「複線」會一次鋪好兩條。"
             ))
             .font(.caption)
             .foregroundStyle(Theme.textSecondary)
@@ -272,13 +277,12 @@ struct NetworkControls: View {
     }
 
     /// The options folded away, in a line: the structure, and those of the
-    /// three switches that are off.
+    /// two switches that are off.
     private var advancedSummary: String {
         let language = session.language
         var parts = [session.networkStructure.name(in: language)]
         if !session.networkFollowsTrack { parts.append(language.text("sharp curves", "不平順曲線")) }
         if !session.networkEasesGrade { parts.append(language.text("steep grade", "不緩和坡度")) }
-        if !session.networkSnapsToTrack { parts.append(language.text("no snapping", "不吸附軌道")) }
         if session.networkDoubleShown {
             parts.append(session.networkDoubleSide == .left
                 ? language.text("second track left", "第二條在左") : language.text("second track right", "第二條在右"))
