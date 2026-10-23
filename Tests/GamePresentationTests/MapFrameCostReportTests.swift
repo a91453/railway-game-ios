@@ -188,7 +188,7 @@ struct MapRedrawCount {
         let lights: Double
         let waiting: [StationID: Int64]
 
-        init(_ session: GameSession) {
+        @MainActor init(_ session: GameSession) {
             world = session.world
             traffic = session.trafficOverlay
             lights = DayNight.step(DayNight.tint(at: session.world.clock.now).lights)
