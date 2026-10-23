@@ -1117,7 +1117,8 @@ struct MapView: View {
         .onChange(of: session.world.trains, initial: true) { _, _ in
             // Decision 182: each tick's trains glide from the last tick's.
             FrameCostMeter.shared.measure(.mapTick) {
-                trainMotion = TrainMotion(world: session.world, previous: trainMotion, time: Date().timeIntervalSinceReferenceDate)
+                // Decision 379: worked out with the tick, off the main actor.
+                trainMotion = session.trainMotion(after: trainMotion, at: Date().timeIntervalSinceReferenceDate)
             }
             trainMotionVersion &+= 1
         }
@@ -1328,6 +1329,7 @@ struct MapView: View {
             // nothing for it afterwards.
             buildAhead?.cancel()
             buildAhead = nil
+            session.mapStoppedGliding()
         }
     }
 
