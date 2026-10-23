@@ -78,3 +78,7 @@
 側／正／俯／斜的配色、白模與剪影已重新親看，再重匯出全部最終圖／GLB／viewer／ZIP。[前導輪局部同相機前後](https://github.com/a91453/railway-reference-private/blob/codex/steam-tender-2026-10-23/Railway/game-art-previews/docs/art/steam-tender-2026-10-23/previews/steam-front-side-by-side.png)另附完整三視角及整車對照；局部明示固定相機裁切，不當作七向完整圖。
 
 外觀結論：前導輪上方空洞已補足，前端的實體輪廓與支承層次已符合這批可見參考；精確車型／工程尺寸／隱藏機構仍資料不足。新驗證以18條雙側射線檢查實際表面，真正前版與「移走外罩」突變均遭拒收；不是只核對配方數值或零件名稱。最新head的CI仍須獨立查PR Checks，舊head selected-1 cancelled所造成的gate failure不視為本輪通過。
+
+## CI 紅字修復（2026-10-23）
+
+公開PR #1106 的 run39981124318／selected-1 被20分鐘job上限取消，annotation為 `The job has exceeded the maximum execution time of 20m0s`；selected-2／3及Xcode已成功，gate因取消而紅，並非本模型測試斷言失敗。同步已合併main的#1120（GamePresentation三份→五份及實測權重），不拉長timeout、不停用測試、不重複維護另一份CI修法。CI腳本self-test、Swift6.4 warnings-as-errors及20相關測試、5native＋5GLB與原交付逐位元組核對於本機驗證；最新遠端結果見#1106 Checks／#1103。素材producer維持 `1da739cac6bbd7675af0dee04b328192a5b16a6a`，造型／配色／圖片／viewer／ZIP均未修改，CI整合commit與素材producer分開記錄。真機Metal／效能／動畫仍UNVERIFIED。
