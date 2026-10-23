@@ -41,6 +41,8 @@ targets:
     sources:
       - path: App
       - path: Views
+      # Resources also brings the privacy manifest, PrivacyInfo.xcprivacy
+      # (docs/XCODE_CLOUD_ONBOARDING.md, 隱私), into the app as a resource.
       - path: Resources
         excludes:
           - "BaseMap"
