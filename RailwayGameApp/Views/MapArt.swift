@@ -10,6 +10,8 @@ struct MapEdgeDrawing: Equatable, Sendable {
     let bounds: WorldRegion
     /// Decision 124, H3: the side slopes of its embankments and cuttings.
     let slopes: [TrackSlope]
+    /// Decision 377: how much of its centre line each zoom draws.
+    let detail: PolylineDetail
 
     init?(edge: TrackEdge, world: GameWorld) {
         guard let geometry = world.trackGeometry(of: edge.id),
@@ -17,10 +19,18 @@ struct MapEdgeDrawing: Equatable, Sendable {
         self.edge = edge
         self.geometry = geometry
         self.bounds = bounds
+        detail = PolylineDetail(geometry.points)
         // Only an automatic edge has embankments and cuttings.
         slopes = edge.structure == .automatic
             ? world.longSection(of: edge.id).map { TrackSlope.slopes(of: $0, geometry: geometry) } ?? []
             : []
+    }
+
+    /// Its centre line from `start` to `end` as drawn at `tolerance`
+    /// (``PolylineDetail/tolerance(pointsPerUnit:)``): decision 377, the
+    /// points a quarter of a point of the screen would not show left out.
+    func points(from start: Int64, to end: Int64, tolerance: Double) -> [WorldCoordinate] {
+        geometry.points(from: start, to: end, detail: detail, tolerance: tolerance)
     }
 }
 
@@ -588,12 +598,16 @@ enum MapArt {
         if detail == .full {
             drawSlopes(edges.flatMap(\.slopes), projection: projection, in: context)
         }
+        // Decision 377: each edge with the points this zoom shows.
+        let tolerance = PolylineDetail.tolerance(pointsPerUnit: projection.pointsPerUnit)
         for drawing in edges {
             // Decision 124: an automatic edge stretch by stretch, as the
             // ground carries it; an explicit one whole.
             let spans = drawing.edge.sectionSpans
             for span in spans {
-                let points = spans.count == 1 ? drawing.geometry.points : drawing.geometry.points(from: span.start, to: span.end)
+                let points = spans.count == 1
+                    ? drawing.points(from: 0, to: drawing.geometry.length, tolerance: tolerance)
+                    : drawing.points(from: span.start, to: span.end, tolerance: tolerance)
                 // A tunnel is dashed: cut where the view ends, its dashes
                 // would restart at the cut and shift as the map pans. Draw
                 // it whole.
@@ -827,13 +841,15 @@ enum MapArt {
         // badge (layer 24.5).
         var longest: [LineID: (points: [CGPoint], length: Double, color: Color)] = [:]
         let view = context.clipBoundingRect
+        // Decision 377: each stretch with the points this zoom shows.
+        let tolerance = PolylineDetail.tolerance(pointsPerUnit: projection.pointsPerUnit)
         for stretch in lines.stretches {
             guard let drawing = drawings[stretch.edge] ?? cached[stretch.edge] ?? world.network.edge(stretch.edge).flatMap({ MapEdgeDrawing(edge: $0, world: world) }) else { continue }
             drawings[stretch.edge] = drawing
             guard region.intersects(drawing.bounds) else { continue }
             let end = min(stretch.end, drawing.geometry.length)
             guard stretch.start < end else { continue }
-            let points = drawing.geometry.points(from: stretch.start, to: end).map { cgPoint(projection.screenPoint(of: $0)) }
+            let points = drawing.points(from: stretch.start, to: end, tolerance: tolerance).map { cgPoint(projection.screenPoint(of: $0)) }
             let path = offsetPolyline(points, by: stretch.offset * width)
             let color = Palette.lineColor(stretch.line, custom: stretch.color)
             // Decision 124: in an automatic edge's tunnel too.
@@ -1009,6 +1025,8 @@ enum MapArt {
     private static func drawSectionFlow(_ strokes: [SectionFlow.Stroke], world: GameWorld, projection: some MapProjection, cached: [TrackEdgeID: MapEdgeDrawing], in context: GraphicsContext) {
         let region = drawingRegion(projection)
         var drawings: [TrackEdgeID: MapEdgeDrawing] = [:]
+        // Decision 377: as the lines, with the points this zoom shows.
+        let tolerance = PolylineDetail.tolerance(pointsPerUnit: projection.pointsPerUnit)
         for stroke in strokes {
             let width = projection.detail == .full ? stroke.width : max(1.5, stroke.width * 0.6)
             let color = Color(stroke.color)
@@ -1018,7 +1036,7 @@ enum MapArt {
                 guard region.intersects(drawing.bounds) else { continue }
                 let end = min(piece.end, drawing.geometry.length)
                 guard piece.start < end else { continue }
-                let points = drawing.geometry.points(from: piece.start, to: end).map { cgPoint(projection.screenPoint(of: $0)) }
+                let points = drawing.points(from: piece.start, to: end, tolerance: tolerance).map { cgPoint(projection.screenPoint(of: $0)) }
                 // The left of the way it is ridden: the edge's own left when
                 // ridden forward, its right when ridden backward.
                 let path = offsetPolyline(points, by: (piece.forward ? 1 : -1) * width / 2)

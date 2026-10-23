@@ -14,8 +14,12 @@ public enum FrameCostPart: String, CaseIterable, Hashable, Sendable {
     case afterStep
     /// The ground, the town and the population layer.
     case ground
-    /// The track, the stations and traffic control.
-    case track
+    /// Decision 377: the railway canvas, the track and the lines over it
+    /// (decision 371), and the track-drawing loupe.
+    case railway
+    /// Decision 377: the canvas over it, traffic control, the buildings
+    /// and the stations (decision 371).
+    case trafficAndStations
     /// The player's trains.
     case trains
     /// Decision 304's real trains.
@@ -67,7 +71,8 @@ public enum FrameCostPart: String, CaseIterable, Hashable, Sendable {
         case .step: language.text("tick", "推進")
         case .afterStep: language.text("after tick", "推進後")
         case .ground: language.text("ground", "地面")
-        case .track: language.text("track", "軌道")
+        case .railway: language.text("track and lines", "軌道與路線")
+        case .trafficAndStations: language.text("traffic and stations", "交通與車站")
         case .trains: language.text("trains", "列車")
         case .realTrains: language.text("real trains", "真實列車")
         case .labels: language.text("names", "站名")

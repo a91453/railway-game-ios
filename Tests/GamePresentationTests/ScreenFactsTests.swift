@@ -57,7 +57,9 @@ final class ScreenFactsTests: XCTestCase {
         let station = try XCTUnwrap(session.world.stations.first?.id)
         func check(_ step: String, line: UInt = #line) {
             let fresh = ScreenFacts(
-                realWorldFrame: RealWorldFrame(world: session.world), nextSteps: session.nextSteps, hasSelection: session.selectionText() != nil
+                realWorldFrame: RealWorldFrame(world: session.world), nextSteps: session.nextSteps, hasSelection: session.selectionText() != nil,
+                showsGoals: session.world.scenario != nil || session.world.hasCityRequests || session.nextSteps != nil,
+                showsTourism: session.world.hasTourism
             )
             XCTAssertEqual(session.screenFacts, fresh, step, line: line)
         }

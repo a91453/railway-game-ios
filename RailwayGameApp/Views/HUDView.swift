@@ -14,8 +14,6 @@ struct HUDView: View {
     let session: GameSession
     let launcher: GameLauncher
     @Environment(GameScreenState.self) private var screen
-    /// Whether the forecast of the next days is open (decision 175).
-    @State private var showsForecast = false
     /// Decision 184: whether Save As's name is being asked, and the name.
     @State private var namingSave = false
     @State private var saveName = ""
@@ -38,44 +36,44 @@ struct HUDView: View {
         // game runs.
         ViewThatFits(in: .horizontal) {
             HStack(spacing: 16) {
-                cash
-                time(short: false)
+                HUDCash(session: session)
+                HUDTime(session: session, short: false)
                 speed
-                requestsButton
-                sightsButton
-                newsBell
+                HUDRequestsButton(session: session)
+                HUDSightsButton(session: session)
+                HUDNewsBell(session: session)
                 gameMenu
             }
             HStack(spacing: 16) {
-                cash
-                time(short: true)
+                HUDCash(session: session)
+                HUDTime(session: session, short: true)
                 speed
-                requestsButton
-                sightsButton
-                newsBell
+                HUDRequestsButton(session: session)
+                HUDSightsButton(session: session)
+                HUDNewsBell(session: session)
                 gameMenu
             }
             HStack(spacing: 10) {
                 VStack(alignment: .leading, spacing: 2) {
-                    cash
-                    time(short: false)
+                    HUDCash(session: session)
+                    HUDTime(session: session, short: false)
                 }
                 speed
-                requestsButton
-                sightsButton
-                newsBell
+                HUDRequestsButton(session: session)
+                HUDSightsButton(session: session)
+                HUDNewsBell(session: session)
                 gameMenu
             }
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 10) {
-                    cash
+                    HUDCash(session: session)
                     speed
-                    requestsButton
-                    sightsButton
-                    newsBell
+                    HUDRequestsButton(session: session)
+                    HUDSightsButton(session: session)
+                    HUDNewsBell(session: session)
                     gameMenu
                 }
-                time(short: false)
+                HUDTime(session: session, short: false)
                     .minimumScaleFactor(0.75)
             }
         }
@@ -161,8 +159,10 @@ struct HUDView: View {
             session: session,
             launcher: launcher,
             screen: screen,
-            showsGoals: session.world.scenario != nil || session.world.hasCityRequests || session.nextSteps != nil,
-            showsTourism: session.world.hasTourism,
+            // Decision 377: as the session keeps them, not read from the
+            // world, so a tick leaves the bar as it was.
+            showsGoals: session.screenFacts.showsGoals,
+            showsTourism: session.screenFacts.showsTourism,
             language: session.language,
             askSaveName: {
                 saveName = ""
@@ -173,12 +173,21 @@ struct HUDView: View {
         )
         .equatable()
     }
+}
+
+// Decision 377: each part of the bar that a tick can change is a view of
+// its own, which reads the world in its own body, so a tick rebuilds that
+// part, not the bar's four layouts round it.
+
+private struct HUDCash: View {
+    let session: GameSession
+    @Environment(GameScreenState.self) private var screen
 
     /// The balance in dollars; it opens the economy panel. Decision 200:
     /// with unlimited funds an "∞" capsule instead, in the text colour (not
     /// the green of money coming in), without the income float.
     @ViewBuilder
-    private var cash: some View {
+    var body: some View {
         if session.world.economy.unlimitedFunds {
             Button {
                 screen.panel = .economy
@@ -243,11 +252,19 @@ struct HUDView: View {
         // Decision 125: the tutorial's first fares come in here.
         .tutorialTarget(.cash)
     }
+}
+
+private struct HUDTime: View {
+    let session: GameSession
+    /// The shorter date (decision 226).
+    let short: Bool
+    /// Whether the forecast of the next days is open (decision 175).
+    @State private var showsForecast = false
 
     /// The date and time (decision 175), today's weather and holiday; it
     /// opens the forecast of the next days. `short`: the board's shorter
     /// date (decision 226), which keeps it to one row.
-    private func time(short: Bool) -> some View {
+    var body: some View {
         let language = session.language
         let clock = session.world.clock
         let text = short ? clock.shortCalendarText(in: language) : clock.calendarText(in: language)
@@ -300,12 +317,17 @@ struct HUDView: View {
         .accessibilityHint(Text(verbatim: language.text("Shows the forecast of the next seven days.", "顯示未來七天的預報。")))
         .accessibilityIdentifier("hud.time")
     }
+}
+
+private struct HUDRequestsButton: View {
+    let session: GameSession
+    @Environment(GameScreenState.self) private var screen
 
     /// Decision 246: the city's requests, one tap from the status bar,
     /// with the number in hand; tinted while offers wait that the company
     /// has room for. Only in a game with them.
     @ViewBuilder
-    private var requestsButton: some View {
+    var body: some View {
         if let held = session.cityRequestsInHand {
             let offers = session.hasCityRequestOffers
             Button {
@@ -334,11 +356,16 @@ struct HUDView: View {
             .accessibilityIdentifier("hud.requests")
         }
     }
+}
+
+private struct HUDSightsButton: View {
+    let session: GameSession
+    @Environment(GameScreenState.self) private var screen
 
     /// The sights (decision 174), one tap from the status bar in a game
     /// with them (decision 336, later); also under the game menu's More.
     @ViewBuilder
-    private var sightsButton: some View {
+    var body: some View {
         if session.showsSightsButton {
             Button {
                 screen.sightFocus = nil
@@ -354,10 +381,15 @@ struct HUDView: View {
             .accessibilityIdentifier("hud.sights")
         }
     }
+}
+
+private struct HUDNewsBell: View {
+    let session: GameSession
+    @Environment(GameScreenState.self) private var screen
 
     /// The news log's bell (decision 175), with the number of items not
     /// yet seen.
-    private var newsBell: some View {
+    var body: some View {
         let unread = session.news.unread
         let language = session.language
         return Button {

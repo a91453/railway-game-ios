@@ -2179,8 +2179,9 @@ private struct MapCanvas: View, Equatable {
         let labels = labels, latitude = world.geoAnchor?.latitudeDegrees ?? 0, flowStrokes = flowStrokes
         let routePreview = routePreview, journey = journey, journeyProgress = journeyProgress, drawsLabels = drawsLabels, part = part
         return Canvas { context, size in
-            // Decision 328: timed for the frame readout.
-            FrameCostMeter.shared.measure(.track) {
+            // Decision 328: timed for the frame readout; decision 377, each
+            // canvas on a line of its own (the loupe's with the railway).
+            FrameCostMeter.shared.measure(part == .trafficAndStations ? .trafficAndStations : .railway) {
                 context.clip(to: Path(CGRect(origin: .zero, size: size)))
                 MapArt.drawMap(
                     world,

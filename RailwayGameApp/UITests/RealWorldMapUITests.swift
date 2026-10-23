@@ -650,4 +650,38 @@ final class FastForwardFrameUITests: XCTestCase {
             print("[frame-cost] high-speed demo, 600×, at \(second * 5) s: \(readout.label)")
         }
     }
+
+    /// Decision 377 (TestFlight 84.1: 3 fps at 6000×, "track and lines"
+    /// 329 ms a second, twice a second): the same readout at 6000×, with
+    /// the railway and the traffic and stations canvases on lines of
+    /// their own.
+    func testTheFrameReadoutOnTheHighSpeedDemoAt6000Times() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-map.showsFrameRate", "YES", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+
+        app.openDemo("demo.highSpeed")
+
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 600), "The demo is built and opens")
+        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Speed:'")).firstMatch)
+        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH '6000 times real time'")).firstMatch)
+        if app.buttons["Resume"].exists { tap(app.buttons["Resume"]) }
+        let readout = app.buttons["map.frameRate"]
+        XCTAssertTrue(readout.appears(within: 30), "No frame readout")
+        readout.tap()
+        for second in 1...6 {
+            Thread.sleep(forTimeInterval: 5)
+            print("[frame-cost] high-speed demo, 6000×, at \(second * 5) s: \(readout.label)")
+        }
+    }
+
+    private func tap(_ control: XCUIElement) {
+        XCTAssertTrue(control.appears(within: 10), "Missing \(control)")
+        XCTAssertTrue(control.becomesHittable(within: 10), "Covered \(control)")
+        control.waitUntilSettled()
+        control.tap()
+    }
 }

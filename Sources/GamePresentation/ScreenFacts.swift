@@ -14,11 +14,21 @@ public struct ScreenFacts: Equatable, Sendable {
     /// Whether the inspector has something to say of the selection
     /// (``GameSession/selectionText()`` is not `nil`).
     public var hasSelection: Bool
+    /// Decision 377: whether the game menu shows the goals (a challenge,
+    /// the city's requests or the next steps; decisions 86 and 183).
+    public var showsGoals: Bool
+    /// Decision 377: whether the game menu shows the sights (decision 174).
+    public var showsTourism: Bool
 
-    public init(realWorldFrame: RealWorldFrame? = nil, nextSteps: NextSteps? = nil, hasSelection: Bool = false) {
+    public init(
+        realWorldFrame: RealWorldFrame? = nil, nextSteps: NextSteps? = nil, hasSelection: Bool = false,
+        showsGoals: Bool = false, showsTourism: Bool = false
+    ) {
         self.realWorldFrame = realWorldFrame
         self.nextSteps = nextSteps
         self.hasSelection = hasSelection
+        self.showsGoals = showsGoals
+        self.showsTourism = showsTourism
     }
 }
 
@@ -28,8 +38,10 @@ extension GameSession {
     /// a tick that leaves them as they were tells nothing reading it to
     /// look again.
     func refreshScreenFacts() {
+        let steps = nextSteps
         let facts = ScreenFacts(
-            realWorldFrame: RealWorldFrame(world: world), nextSteps: nextSteps, hasSelection: selectionText() != nil
+            realWorldFrame: RealWorldFrame(world: world), nextSteps: steps, hasSelection: selectionText() != nil,
+            showsGoals: world.scenario != nil || world.hasCityRequests || steps != nil, showsTourism: world.hasTourism
         )
         if facts != screenFacts { screenFacts = facts }
     }
