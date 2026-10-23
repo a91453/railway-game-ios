@@ -338,6 +338,44 @@ set -euo pipefail
 # request adds LongLegReplayTests' three hours without a deadlock (13 s
 # locally) and LoopLineBoardingTests (15 s), both in rest. They go to
 # campaigns-11, the shortest job of that run (10.5 min).
+# 2026-10-23, later: rest reached the 20-minute limit again on main 43852fa
+# (run 39906598034: cancelled after 15.9 minutes of tests; the re-run's
+# rest job 19m54s, 953 s of tests for 3526 tests in 469 classes), where
+# ffb3ee8's rest took 11 minutes on a fast runner. No class dominates: the
+# five slowest took 172 s, the 440 classes under 6 s about 400. So 33
+# classes of 6 s or more leave rest for the four shortest jobs of that run
+# (campaigns-16 4.8, -7 5.9, -15 6.5, -12 6.6 minutes of tests): every
+# GamePresentation class of 6 s or more, whose file runs the presentation
+# tier wherever its class runs, and the four GameCore classes over 25 s
+# (LocalPass 59, LineAccounts 33, CityRequests 28, LoadJourneyCache 27).
+# The smaller GameCore classes stay, as a class a campaign shard names
+# counts as an edited campaign in pr_plan; AchievementsTests and
+# TrainSessionPropertyTests stay as the self-test's ordinary classes.
+# Seconds of tests on that run, dealt heaviest first to the lightest shard
+# (the classes in the order they were dealt):
+#   campaigns-16  288 -> about 467 (LocalPass, LineAccounts, LoadJourney-
+#                 Cache, NewsSession, DemoAt, Map3DNextDeparture,
+#                 TutorialSession, Map3DSign, Map3DProps)
+#   campaigns-7   354 -> about 474 (CityRequests, DemoRealLines,
+#                 Map3DSurface, SeededStreetPlan, Map3DBuildings,
+#                 AutoService, Map3DHandoff, Map3DDetail, Map3DNightAndGround)
+#   campaigns-15  390 -> about 476 (Map3DStreaming, Map3DRealBuildings,
+#                 MetroStructures, NewGameCampaign, PingxiChallenge,
+#                 RealWorldExpansion, Map3DShadow, ShortTurnCard)
+#   campaigns-12  396 -> about 470 (Map3DStreets, LineConfirmation,
+#                 FreightSession, Map3DRealGround, SparseCityLand,
+#                 LinePanelMemo, Map3DStationKit)
+#   rest          953 -> about 490
+# On this change's first run (39919727863) rest took 510 s of tests (its
+# classes as fast as on 43852fa's run: TrafficSpeedTests 17.9 s there, 17.1
+# here), but campaigns-7's own two campaigns took 603 s (LinePattern 337,
+# NetworkService 266) where they had taken 354, and with the nine classes
+# 721 s (12.1 minutes). So those nine go on to the two shards that were
+# short on both runs: CityRequests and DemoRealLines to campaigns-6 (8.2
+# and 5.9 minutes of tests), the seven Map3D and street classes (about
+# 66 s) to campaigns-16 (6.3 minutes with its first nine). Rest is some 11
+# minutes on a runner 1.34 times slower (see 2026-10-21); the longest job
+# stays campaigns-10 (13.6 and 13.8 minutes of tests on the two runs).
 classes_of() {
   case "$1" in
     campaigns-1) echo "ServiceRepeatingPropertyTests ScheduledTrafficPropertyTests WorldStateMachineTests" ;;
@@ -345,17 +383,17 @@ classes_of() {
     campaigns-3) echo "LineDispatchPropertyTests IdleTrainDeadlockTests LineRoutePreferencePropertyTests" ;;
     campaigns-4) echo "OccupiedRoutingPropertyTests ContinuousTrackPropertyTests PassengerPropertyTests KernelDifferentialTests DeadlockPropertyTests" ;;
     campaigns-5) echo "SaveMutationSecondHalfTests ScheduledOvertakeTrackPropertyTests LineLossFixesTests" ;;
-    campaigns-6) echo "ServiceRepeatingSecondHalfPropertyTests EconomyPropertyTests" ;;
+    campaigns-6) echo "ServiceRepeatingSecondHalfPropertyTests EconomyPropertyTests CityRequestsTests DemoRealLinesTests" ;;
     campaigns-7) echo "LinePatternPropertyTests NetworkServicePropertyTests" ;;
     campaigns-8) echo "GoldenScenarioTests ScheduledOvertakeTrackMiddlePropertyTests TimetablePropertyTests ScreenshotSceneTests NewGameBalanceTests" ;;
     campaigns-9) echo "SaveMutationTests EconomySecondHalfPropertyTests NightSkipTests PolicyTests" ;;
     campaigns-10) echo "PassengerPlanKeyTests ReservationShortcutTests NetworkPostcardTests StationCommerceCardTests LineLossDiagnosisTests FlexDispatchPropertyTests RealRailwayTracingTests Map3DStreetLifeTests Map3DTests" ;;
     campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests HighSpeedDemoTests TRADemoTests LongLegReplayTests LoopLineBoardingTests" ;;
-    campaigns-12) echo "TrafficControlPropertyTests ScheduledOvertakeTrackFinalPropertyTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests" ;;
+    campaigns-12) echo "TrafficControlPropertyTests ScheduledOvertakeTrackFinalPropertyTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests Map3DStreetsTests LineConfirmationTests FreightSessionTests Map3DRealGroundTests SparseCityLandTests LinePanelMemoTests Map3DStationKitTests" ;;
     campaigns-13) echo "BoardingPropertyTests TurnbackPropertyTests Map3DSceneMemoryTests Map3DCoarseChunkTests" ;;
     campaigns-14) echo "ServiceLinePropertyTests OnboardingTests CommandLogTests ScheduledTrafficTests TurnbackTests" ;;
-    campaigns-15) echo "TrafficFollowingPropertyTests ScheduledOvertakeTrackLastPropertyTests NewGameSavePropertyTests RealWorldDemoTests" ;;
-    campaigns-16) echo "HighSpeedDemoDayTests TRADemoDayTests HighSpeedDemoBatchTests" ;;
+    campaigns-15) echo "TrafficFollowingPropertyTests ScheduledOvertakeTrackLastPropertyTests NewGameSavePropertyTests RealWorldDemoTests Map3DStreamingTests Map3DRealBuildingsTests MetroStructuresTests NewGameCampaignTests PingxiChallengeTests RealWorldExpansionTests Map3DShadowTests ShortTurnCardTests" ;;
+    campaigns-16) echo "HighSpeedDemoDayTests TRADemoDayTests HighSpeedDemoBatchTests LocalPassTests LineAccountsTests LoadJourneyCacheTests NewsSessionTests DemoAtTests Map3DNextDepartureTests TutorialSessionTests Map3DSignTests Map3DPropsTests Map3DSurfaceTests SeededStreetPlanTests Map3DBuildingsTests AutoServiceTests Map3DHandoffTests Map3DDetailTests Map3DNightAndGroundTests" ;;
     *) return 1 ;;
   esac
 }
@@ -448,7 +486,7 @@ CLASS_WEIGHTS="BoardingPropertyTests:624 LineDispatchPropertyTests:602
   StationCommerceCardTests:18 NewGameBalanceTests:17
   RealWorldDemoGroundTests:17 LoadTrackCheckIndexTests:17
   RealWorldDataLoadTests:16 MonthlyReportTests:14 ScreenshotSceneTests:14
-  AchievementsTests:14 CityGrowthTests:13 NewsSessionTests:13
+  AchievementsTests:14 CityGrowthTests:13 NewsSessionTests:16
   LineLossDiagnosisTests:13 NewGameCampaignTests:12 TrainTripLogTests:12
   TownGrowthTests:10 FreightSessionTests:10 ScheduledOvertakeTrackTests:10
   StationOperationsTests:9 PassengerTransferTests:9 EconomyAccountsTests:9
@@ -459,12 +497,20 @@ CLASS_WEIGHTS="BoardingPropertyTests:624 LineDispatchPropertyTests:602
   DeadlockTests:6 LineDispatchTests:5 DepartureBoardTests:5
   TrafficControlTests:5 TrainWhereTextTests:5 TrackCheckShortcutTests:4
   WholeTaiwanTests:4 WaterGridTests:4 ContinuousTrackTests:4 BuildingTests:4
-  BlockSectionsTests:4 TutorialSessionTests:4 LandDemandTests:4
+  BlockSectionsTests:4 TutorialSessionTests:9 LandDemandTests:4
   TrafficOverlayTests:4 WebsiteTimelineTests:4 HighSpeedTests:4
   HolidayTextTests:4 BoardingTests:3 LandImportTests:3 NightSkipTests:57
   RealLineAcquisitionTests:52 RealRailwayTracingTests:38 PolicyTests:24
   Map3DOpenEveryStartTests:24 Map3DStreetLifeTests:19 LessonTests:18
   Map3DTests:15 Map3DSceneMemoryTests:190 Map3DCoarseChunkTests:32
+  LocalPassTests:59 DemoRealLinesTests:26 Map3DStreamingTests:23
+  Map3DStreetsTests:22 Map3DSurfaceTests:16 Map3DRealBuildingsTests:14
+  LineConfirmationTests:13 DemoAtTests:12 SeededStreetPlanTests:12
+  MetroStructuresTests:12 Map3DNextDepartureTests:10 Map3DBuildingsTests:9
+  Map3DRealGroundTests:9 AutoServiceTests:9 Map3DHandoffTests:7
+  Map3DSignTests:7 Map3DDetailTests:7 Map3DShadowTests:7
+  Map3DStationKitTests:7 Map3DNightAndGroundTests:6 Map3DPropsTests:6
+  ShortTurnCardTests:6
   LongLegReplayTests:16 LoopLineBoardingTests:19"
 CLASS_WEIGHT_DEFAULT=1
 
