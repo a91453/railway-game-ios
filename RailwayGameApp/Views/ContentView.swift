@@ -57,7 +57,10 @@ struct ContentView: View {
         withTransaction(cut) { screen.showsMap3D = false }
     }
 
-    var body: some View {
+    // Decision 379: timed for the frame readout.
+    var body: some View { timed(.screenBody) { timedBody } }
+
+    @ViewBuilder private var timedBody: some View {
         gameLayout
             // Inside the text size limit below: the tutorial's card shares the
             // screen with the controls it must not cover.
@@ -1216,7 +1219,10 @@ private struct RouteHintCard: ViewModifier {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.verticalSizeClass) private var verticalSizeClass
 
-    func body(content: Content) -> some View {
+    // Decision 379: timed for the frame readout.
+    func body(content: Content) -> some View { timed(.screenBody) { timedBody(content: content) } }
+
+    @ViewBuilder private func timedBody(content: Content) -> some View {
         content
             .onChange(of: seen ? nil : RouteHintWatch(world: session.world), initial: true) { _, watch in
                 if watch != nil { session.watchRouteHint() }
