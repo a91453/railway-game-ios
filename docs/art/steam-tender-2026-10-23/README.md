@@ -39,9 +39,9 @@
 
 | 模型 | 實際bounds min → max（m） | 三角形 |
 | --- | --- | --- |
-| 機車 | (−7.10,−1.540,0) → (7.67,1.540,4.565) | 9,672 |
+| 機車 | (−7.10,−1.540,0) → (7.67,1.540,4.565) | 10,080 |
 | 煤水車 | (−4.50,−1.391,0) → (4.50,1.391,3.750) | 4,000 |
-| 完整編組 | (−11.75,−1.540,0) → (12.02,1.540,4.565) | 13,672 |
+| 完整編組 | (−11.75,−1.540,0) → (12.02,1.540,4.565) | 14,080 |
 
 精確Float32值以manifest為準。另附`metro-four-leading`、`lrt-seven-leading`只作霧面、色票、細節密度與同公尺尺度比較；沒有複製它們的結構。色彩使用現有shopAwnings[0]／playerRim／containers[3]／tankSteel，霧綠、石墨與少量金砂，無紅色漆、品牌或照片貼圖。GLB roughness=1、metallic=0，頂點色、單面實體幾何。
 
@@ -60,10 +60,21 @@
 
 ## 技術驗證與交接
 
-**VERIFIED（Linux）**：Swift6.4 warnings-as-errors build、19個相關測試；Swift原生逐頂點／法線／顏色讀回；封閉有向邊與正體積；489零件的真實三角面支承接觸圖；玻璃到cab-wall射線、輪組淨空、完整組裝及既有模型共存。缺面、反面、封閉玻璃浮空、踏板切輪、封閉鐘浮空的故障植入均遭拒收。Blender獨立GLB匯入、軸向／bounds／三角數／頂點色／霧面材質；所有PNG完整解碼、35標準圖透明且不裁邊；viewer載入五件、七方向、拖曳旋轉、縮放、native／GLB／PNG／ZIP實際下載與SHA。ZIP完整解壓、CRC、成員集合及逐檔bytes，並確認所有配方／工具與實際producer commit一致。各原始驗證JSON與log在私庫。
+**VERIFIED（Linux）**：Swift6.4 warnings-as-errors build、20個相關測試；Swift原生逐頂點／法線／顏色讀回；封閉有向邊與正體積；521零件的真實三角面支承接觸圖；玻璃到cab-wall射線、輪組淨空、完整組裝及既有模型共存。缺面、反面、封閉玻璃浮空、踏板切輪、封閉鐘浮空的故障植入均遭拒收。Blender獨立GLB匯入、軸向／bounds／三角數／頂點色／霧面材質；所有PNG完整解碼、35標準圖透明且不裁邊；viewer載入五件、七方向、拖曳旋轉、縮放、native／GLB／PNG／ZIP實際下載與SHA。ZIP完整解壓、CRC、成員集合及逐檔bytes，並確認所有配方／工具與實際producer commit一致。各原始驗證JSON與log在私庫。
 
 **UNVERIFIED**：實體iPhone／iPad的Metal顯示、效能、記憶體、輪組／連桿動畫、動態淨空、物理與營運指派；OS雙擊file://。單檔viewer以斷網內嵌HTML操作驗證，不把它當OS雙擊。沒有執行TestFlight。
 
 **CI獨立記錄**：以上為本機檢查，不能當最新CI綠燈。兩張draft PR的最新head、Checks與衝突狀態在PR與issue #1103更新；`source-record.json`記實際public producer，避免文件提交後假指舊head。私庫沒有對此目錄設定CI；無check runs不等於passed。
 
 下一位從本目錄README、`tools/steam-tender/README.md`及私庫source-record／manifest接手。需要讓遊戲出現此車時另做車型／編組映射與動態呈現，先確認使用這套參考造型，不擅自綁到真實CT273或替換STEAM／SUMMER。不需改存檔或fixture來接入純顯示。
+
+
+## 作者回報修訂：前導輪區過空
+
+作者指出前方車輪「太空」。重新對照03／06／08原圖與側視，確認前版把汽缸外罩、煙箱承座及導輪架過度簡化；前版「無主要可見偏差」的結論未抓到這一處。本輪只新增32個前端實體（408三角）：斜角汽缸側罩／薄檢修板／汽室、煙箱下承座、導輪架側梁／軸承／葉簧與吊架，補回參考圖的厚度與份量，沒有靠配色掩飾。
+
+`history/front-before`保留真正producer843e6db8的模型、配方與來源。`front-revision-verification.json`逐頂點證明原機車9,672三角與煤水車4,000三角全部不變；輪位／直徑／輪數、鍋爐、駕駛室、連桿、煤水車、編組與配色均保持。新增外罩距前導輪頂40mm，架體與輪圈側向最小45mm；隱藏橫梁仍是展示補全假設。
+
+側／正／俯／斜的配色、白模與剪影已重新親看，再重匯出全部最終圖／GLB／viewer／ZIP。[前導輪局部同相機前後](https://github.com/a91453/railway-reference-private/blob/codex/steam-tender-2026-10-23/Railway/game-art-previews/docs/art/steam-tender-2026-10-23/previews/steam-front-side-by-side.png)另附完整三視角及整車對照；局部明示固定相機裁切，不當作七向完整圖。
+
+外觀結論：前導輪上方空洞已補足，前端的實體輪廓與支承層次已符合這批可見參考；精確車型／工程尺寸／隱藏機構仍資料不足。新驗證以18條雙側射線檢查實際表面，真正前版與「移走外罩」突變均遭拒收；不是只核對配方數值或零件名稱。最新head的CI仍須獨立查PR Checks，舊head selected-1 cancelled所造成的gate failure不視為本輪通過。

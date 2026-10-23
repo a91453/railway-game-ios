@@ -21,8 +21,24 @@ export function audit(vs,components,id){
  for(const p of wheels){assert(Math.abs(p.low[2])<1e-5,p.name+' floats/below rail');}
  let minBoardClearance=Infinity;
  if(id==='steam-locomotive')for(const p of large)for(const q of parts.filter(q=>q.name.startsWith('running-board'))){const d=q.low[2]-p.high[2];assert(d>.049,'running board cuts driver crown');minBoardClearance=Math.min(minBoardClearance,d);}
+ let frontCasingRays=0,frontWheelGap=null;
+ if(id==='steam-locomotive'){
+  const all=parts.flatMap(p=>p.ts);
+  // Reference-backed silhouette/support contract: the cylinder casing fills
+  // the upper-front running-gear region on BOTH sides. The prior thin platform
+  // fails these rays even though its solids are closed and connected.
+  for(const side of [-1,1])for(const x of [4.2,4.65,5.1])for(const h of [1.18,1.52,1.78]){
+   const distance=Math.min(...all.map(t=>ray([x,side*2,h],[0,-side,0],t)));
+   assert(distance<.70,'front cylinder region too empty at '+[x,side,h]);frontCasingRays++;
+  }
+  const leading=wheels.filter(p=>p.high[0]>4),casings=parts.filter(p=>p.role==='front-casing');
+  assert.equal(casings.length,2,'missing front cylinder casing');
+  frontWheelGap=Math.min(...casings.map(p=>p.low[2]))-Math.max(...leading.map(p=>p.high[2]));
+  assert(frontWheelGap>.03,'front cylinder casing cuts leading wheel crown');
+  for(const p of parts.filter(p=>p.name.startsWith('front-truck-')))assert(Math.max(Math.abs(p.low[1]),Math.abs(p.high[1]))<.90,'front truck intersects wheel rims laterally');
+ }
  if(id==='steam-tender'){assert.equal(parts.filter(p=>p.role==='glass'||p.name.includes('headlamp')).length,0,'tender must not carry a cab');const frame=parts.find(p=>p.name==='tender-frame');assert(frame.low[2]-Math.max(...wheels.map(p=>p.high[2]))>.049,'tender underframe intersects wheel crowns');}
- return{id,components:parts.length,triangles:vs.length/3,closed_directed_edges:edgeCount,positive_volume_solids:true,glazing_rays:glassChecks,max_glass_wall_gap_m:maxGlassDistance,wheel_rims:wheels.length,large_driver_rims:large.length,running_board_clearance_m:Number.isFinite(minBoardClearance)?minBoardClearance:null};
+ return{id,front_casing_ray_checks:frontCasingRays,front_casing_wheel_gap_m:frontWheelGap,components:parts.length,triangles:vs.length/3,closed_directed_edges:edgeCount,positive_volume_solids:true,glazing_rays:glassChecks,max_glass_wall_gap_m:maxGlassDistance,wheel_rims:wheels.length,large_driver_rims:large.length,running_board_clearance_m:Number.isFinite(minBoardClearance)?minBoardClearance:null};
 }
 if(process.argv[1]===new URL(import.meta.url).pathname){const root=resolve(process.argv[2]),components=JSON.parse(readFileSync(resolve(root,'components.json'))),manifest=JSON.parse(readFileSync(resolve(root,'manifest.json'))),models=[];
  for(const m of manifest.models.filter(m=>m.category==='section'))models.push(audit(readNative(readFileSync(resolve(root,m.native))).vertices,components[m.id],m.id));

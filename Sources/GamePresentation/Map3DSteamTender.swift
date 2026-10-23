@@ -135,6 +135,29 @@ private struct SteamTenderBuilder {
         axle("trailing",-5.10,0.50)
         box("leading-truck","frame",5.2,0.65,0,2.4,1.30,0.18,dark)
         box("trailing-truck","frame",-5.1,0.72,0,1.6,1.35,0.20,dark)
+        // Reference correction: the front carrying wheels sit beneath a deep
+        // cylinder casing and smokebox saddle, not an exposed flat platform.
+        // The concealed cross members remain a display reconstruction.
+        box("front-smokebox-saddle","support",4.35,1.09,0,1.70,1.72,0.98,dark)
+        box("front-truck-bolster","support",5.22,0.81,0,0.62,1.62,0.40,dark)
+        for side: Float in [-1,1] {
+            // Chamfered side casing surrounds the steam cylinder, above the
+            // rear leading wheel; it stops short of the foremost wheel.
+            let outline: [(Float,Float)]=[(3.98,1.05),(4.12,0.94),(5.10,0.94),(5.29,1.14),(5.29,1.94),(4.15,1.94),(3.98,1.76)]
+            sweep("front-cylinder-casing-\(side)","front-casing",[Float(0.78),1.42].map { z in outline.map { Map3DPoint($0.0,$0.1,side*z) } },body)
+            box("front-valve-chest-\(side)","equipment",4.63,1.93,side*0.99,1.06,0.56,0.16,body)
+            // Thin inspection panel is supported directly by the casing.
+            box("front-casing-panel-\(side)","equipment",4.64,1.10,side*1.426,0.79,0.018,0.65,trim)
+            box("front-casing-panel-inset-\(side)","equipment",4.64,1.13,side*1.439,0.73,0.012,0.59,body)
+            box("front-truck-sideframe-\(side)","frame",5.24,0.63,side*0.76,2.36,0.20,0.30,dark)
+            for x: Float in [4.55,6.0] {
+                box("front-truck-bearing-\(side)-\(x)","support",x,0.40,side*0.76,0.29,0.25,0.39,dark)
+                // Springs stay inboard of wheel rims, leaving 45mm lateral gap.
+                for i in 0..<3 { box("front-truck-spring-\(side)-\(x)-\(i)","equipment",x,0.91+Float(i)*0.045,side*0.76,0.52-Float(i)*0.07,0.18,0.034,steel) }
+                box("front-truck-spring-hanger-\(side)-\(x)","support",x,0.88,side*0.76,0.10,0.20,0.19,dark)
+            }
+        }
+
         for side: Float in [-1,1] {
             // Running boards sit above the wheel crowns, rather than clipping.
             box("running-board-\(side)","frame",0.15,2.055,side*1.18,10.5,0.48,0.12,body)

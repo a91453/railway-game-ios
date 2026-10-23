@@ -38,7 +38,7 @@ python3 tools/steam-tender/bundle.py OUT ACTUAL_PRODUCER_COMMIT
 node tools/steam-tender/browser-check.mjs OUT --no-write
 ```
 
-`components.json`的triangle ranges對應最終native，不是額外替代模型。幾何稽核逐封閉實體檢查有向邊、正體積、玻璃到真實cab-wall的反向射線、動輪上緣與踏板間隙、煤水車輪頂與底架間隙。support-audit用實際三角面交線／點面距離／包含測試建立接觸圖，AABB只作候選篩選，12mm為數值與裝配容差；489零件皆連到接地輪組。不是機械強度、動態淨空或物理模擬。突變測試拒收缺面、反面、整片封閉玻璃浮空、踏板切動輪、整個封閉鐘浮空。
+`components.json`的triangle ranges對應最終native，不是額外替代模型。幾何稽核逐封閉實體檢查有向邊、正體積、玻璃到真實cab-wall的反向射線、動輪上緣與踏板間隙、煤水車輪頂與底架間隙。support-audit用實際三角面交線／點面距離／包含測試建立接觸圖，AABB只作候選篩選，12mm為數值與裝配容差；521零件皆連到接地輪組。不是機械強度、動態淨空或物理模擬。突變測試拒收缺面、反面、整片封閉玻璃浮空、踏板切動輪、整個封閉鐘浮空。
 
 五件（兩單元＋完整編組＋兩件風格比較）各七向透明512PNG，兩單元共用尺度，每件七向固定m/pixel；編組正交圖0.020m/pixel。hero／正面局部另取景，風格比較共用相機與尺度。配色／白模／剪影全部來自相同native三角形。最終圖全批重新生成，不混舊圖。`revision-audit`證明鍋爐、車體、窗、管線及其他非修訂零件逐頂點穩定。
 
@@ -47,3 +47,9 @@ ZIP先驗證實際Git producer的所有Map3D配方、這批工具及共用render
 資料夾viewer解壓後 `python3 -m http.server --directory OUT 8000`，開localhost:8000。單檔`viewer-standalone.html`內嵌模型與PNG，可斷網旋轉、縮放、下載native／GLB／目前PNG；完整ZIP另附。已測實際瀏覽器下載的SHA。GitHub blob頁不會直接執行HTML，先下載單檔或ZIP。OS雙擊file://未測，斷網內嵌HTML已測。
 
 Linux WebGL、Swift與Blender驗證不代表真機Metal、效能、連桿動畫、車輛物理或營運指派。CI須看最新head Checks，與本機技術／外觀結論分開。
+
+
+前導輪回報修訂：以真正producer843e6db8的匯出目錄作PRIOR。
+`node tools/steam-tender/feedback-compare.mjs OUT PRIOR front`產生固定相機裁切的局部與單列前後；
+`node tools/steam-tender/revision-audit.mjs OUT PRIOR --front-only`嚴格要求每個既有零件的頂點／法線／顏色／順序皆相同，只允許新增front-實體，輸出front-revision-verification.json。
+幾何稽核新增18條雙側表面射線，讓真正舊版的前端過空也會失敗；突變測試再移走封閉外罩重現。新增側罩距輪頂40mm，架體在輪圈內側，沒有移輪或擴張既有外廓。

@@ -58,6 +58,24 @@ final class Map3DSteamTenderTests: XCTestCase {
             XCTAssertGreaterThan(volume,0,part.name+" inward or zero volume")
         } }
     }
+    func testFrontCasingFillsReferenceRegionAndClearsLeadingWheels() {
+        let parts=Map3DSteamTender.components(.locomotive)
+        let casings=parts.filter { $0.role == "front-casing" }
+        XCTAssertEqual(casings.count,2)
+        let wheels=parts.filter { $0.role == "wheel" && $0.model.minimum.x>3.9 }
+        XCTAssertEqual(wheels.count,4)
+        for casing in casings {
+            XCTAssertGreaterThan(casing.model.minimum.z-(wheels.map { $0.model.maximum.z }.max() ?? 0),0.03)
+            // Actual solid cross section must cover the visible upper truck area.
+            XCTAssertLessThan(casing.model.minimum.x,4.1)
+            XCTAssertGreaterThan(casing.model.maximum.x,5.2)
+            XCTAssertGreaterThan(casing.model.maximum.z,1.9)
+            XCTAssertGreaterThan(max(abs(casing.model.minimum.y),abs(casing.model.maximum.y)),1.3)
+        }
+        for p in parts.filter({ $0.name.hasPrefix("front-truck-") }) {
+            XCTAssertLessThan(max(abs(p.model.minimum.y),abs(p.model.maximum.y)),0.9)
+        }
+    }
     func testTenderHasNoCabGlazingOrHeadlightsAndLocomotiveHasAsymmetricPipework() {
         let engine=Map3DSteamTender.components(.locomotive),tender=Map3DSteamTender.components(.tender)
         XCTAssertTrue(tender.filter { $0.role == "glass" || $0.name.contains("headlamp") }.isEmpty)
