@@ -99,7 +99,7 @@ struct HUDView: View {
             .accessibilityIdentifier("menu.saveGameAs.confirm")
         } message: {
             Text(verbatim: session.language.text(
-                "A name for this save, to find it in Saved Games.",
+                "A name for this save, to find it in Saves.",
                 "為這個存檔取個名字，方便在「存檔」裡找到。"
             ))
         }

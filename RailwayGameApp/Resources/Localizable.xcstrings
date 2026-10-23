@@ -285,34 +285,6 @@
         }
       }
     },
-    "%lld saves" : {
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld save"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld saves"
-                }
-              }
-            }
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld 個存檔"
-          }
-        }
-      }
-    },
     "%lld units per game minute" : {
       "localizations" : {
         "zh-Hant" : {
@@ -379,16 +351,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "套用預設時，車站的每日人次不變；旅客會前往路線能到的車站。"
-          }
-        }
-      }
-    },
-    "A save file from Files or another device" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "從「檔案」或其他裝置匯入的存檔"
           }
         }
       }
@@ -1083,16 +1045,6 @@
         }
       }
     },
-    "Import a Save" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "匯入存檔"
-          }
-        }
-      }
-    },
     "Insert Before" : {
       "localizations" : {
         "zh-Hant" : {
@@ -1289,16 +1241,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "下一步"
-          }
-        }
-      }
-    },
-    "No Saved Games" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "沒有存檔"
           }
         }
       }
@@ -1939,16 +1881,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "儲存於 %@"
-          }
-        }
-      }
-    },
-    "Saved Games" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "存檔"
           }
         }
       }
