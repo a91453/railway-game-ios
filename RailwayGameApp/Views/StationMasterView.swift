@@ -281,9 +281,12 @@ struct StationMasterCorner: View {
     }
 
     /// Whether a story card may show now: the game running, not building,
-    /// with room for it.
+    /// with room for it. Not while the building tools are out or the map
+    /// shows a ✓ (a new line picked with Select, say), even with the clock
+    /// running: the card then waits rather than standing near them.
     private var canTell: Bool {
         !isCovered && hasRoom && !session.world.clock.isPaused && !session.isPausedForBuilding
+            && !BuildToolRail.isShown(session) && !MapBuildConfirm.isShown(session, panel: screen.panel)
     }
 
     /// The beats of a day the teller sees begin, queued; another game
