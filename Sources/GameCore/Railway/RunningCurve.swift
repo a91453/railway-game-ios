@@ -169,6 +169,13 @@ public struct TrainPerformance: Hashable, Sendable {
     /// The Formosa Star tour train (decision 286, later, third): six coaches
     /// behind an E500, the same sum with six, to 110 km/h in 50.4 seconds.
     public static let formosaStar = TrainPerformance(acceleration: 2182, braking: 2600, topSpeed: 110)
+    /// The Midsummer Formosa (decision 286, later, fourth): six Chu-Kuang
+    /// coaches behind the CT273, a JNR C57 (Japanese Wikipedia's class
+    /// figures: 10,330 kgf at the rails' grip, 1,040 PS continuous, 115.5 t
+    /// with its tender, 100 km/h). The same sum as ``e500ChuKuang``'s with
+    /// six 42 t coaches: 100 km/h in 199.1 seconds (estimated, as the
+    /// E200's); it brakes as the coaches do.
+    public static let midsummerFormosa = TrainPerformance(acceleration: 502, braking: 2600, topSpeed: 100)
 
     /// Whether a train or line may have this performance (Stage W2c): every
     /// rate and the top speed in `1...RunningCurve.maximumRate`, and a coast

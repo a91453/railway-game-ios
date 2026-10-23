@@ -59,7 +59,7 @@ final class Map3DTrainSetTests: XCTestCase {
     /// The types that were boxes now have their models; maglev, skyrail,
     /// monorail and steam still have none.
     func testTheTypesThatWereBoxes() {
-        for code in ["E200CK", "E500CK", "R100CK", "R200CK", "BLUE", "MINGRI", "STAR"] {
+        for code in ["E200CK", "E500CK", "R100CK", "R200CK", "BLUE", "MINGRI", "STAR", "SUMMER"] {
             XCTAssertNotNil(pack.models(forType: code), code)
         }
         for code in ["MAGLEV", "SKYRAIL", "MONORAIL", "STEAM"] {
@@ -82,6 +82,8 @@ final class Map3DTrainSetTests: XCTestCase {
         XCTAssertEqual(Map3DTrainSet.key(type: nil, performance: .mingRi), "MINGRI", "the performance's set")
         XCTAssertEqual(Map3DTrainSet.key(type: .formosaStar, performance: .formosaStar), "STAR")
         XCTAssertEqual(Map3DTrainSet.key(type: nil, performance: .formosaStar), "STAR", "the performance's set")
+        XCTAssertEqual(Map3DTrainSet.key(type: .midsummerFormosa, performance: .midsummerFormosa), "SUMMER")
+        XCTAssertEqual(Map3DTrainSet.key(type: nil, performance: .midsummerFormosa), "SUMMER", "the performance's set")
         XCTAssertEqual(Map3DTrainSet.key(type: .steam, performance: .steam), "STEAM")
         XCTAssertEqual(Map3DTrainSet.key(type: nil, performance: .metroC381), "metroC381")
         XCTAssertEqual(Map3DTrainSet.key(type: nil, performance: .metro), "metroC381", "a metro is a C381")

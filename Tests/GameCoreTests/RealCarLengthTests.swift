@@ -25,6 +25,8 @@ final class RealCarLengthTests: XCTestCase {
             "MINGRI": 1_280,
             // Decision 286, later: the Formosa Star's Chu-Kuang coaches, 20.0 m.
             "STAR": 1_280,
+            // Decision 286, later (fourth): the Midsummer Formosa's Chu-Kuang coaches, 20.0 m.
+            "SUMMER": 1_280,
         ]
         XCTAssertEqual(Set(metres.keys), Set(TrainType.allCases.map(\.rawValue)))
         for type in TrainType.allCases {

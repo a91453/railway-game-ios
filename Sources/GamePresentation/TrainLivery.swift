@@ -104,6 +104,10 @@ public struct TrainLivery: Hashable, Sendable {
     /// character wraps of its Sanrio years; the E500's orange front would
     /// be the EMU100's on the map).
     public static let formosaStar = TrainLivery(body: 0xF3D3DF, stripe: 0xD9467E, cab: 0xD9467E, nose: .flat)
+    /// The Midsummer Formosa (decision 286, later, fourth): its Chu-Kuang
+    /// coaches, and the CT273's black (the reference's garage model
+    /// `ct273`, its `body`) for a front rounded as a smokebox.
+    public static let midsummerFormosa = TrainLivery(body: chuKuangCoach, stripe: 0xECE2BC, cab: 0x262D2B, nose: .round)
     /// A Chu-Kuang coach's orange (the cream above its white line is the
     /// stripe).
     static let chuKuangCoach = 0xE2662A
@@ -114,6 +118,7 @@ public struct TrainLivery: Hashable, Sendable {
         "HSR": highSpeed, "EMU3000": emu3000,
         "EMU100": emu100, "E200CK": e200ChuKuang, "E500CK": e500ChuKuang, "R100CK": r100ChuKuang, "R200CK": r200ChuKuang,
         "HAIFENG": haiFeng, "BLUE": blueTrain, "SHANLAN": shanLan, "MINGRI": mingRi, "STAR": formosaStar,
+        "SUMMER": midsummerFormosa,
     ]
     /// The livery of each real model's performance, by its preset's code
     /// (``TrainPerformanceSpec/code``), for a train whose type has none.
@@ -122,6 +127,7 @@ public struct TrainLivery: Hashable, Sendable {
         "emu800": emu800, "metroC381": metroC381,
         "emu100": emu100, "e200ChuKuang": e200ChuKuang, "e500ChuKuang": e500ChuKuang, "r100ChuKuang": r100ChuKuang,
         "r200ChuKuang": r200ChuKuang, "haiFeng": haiFeng, "mingRi": mingRi, "formosaStar": formosaStar,
+        "midsummerFormosa": midsummerFormosa,
     ]
 
     /// A train's livery: its type's, else its performance's model's
