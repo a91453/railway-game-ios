@@ -964,6 +964,12 @@ PR #1019–#1030 那一輪（2026-10-22，發版前小審查，TestFlight 第 82
 - **1200× 在大世界的 GameCore**：第 730 天的測試存檔一個 tick 改之前約 7～9 ms、改之後約 4.5 ms（Linux release），隨等車人數變慢（放人、上車、`makeNetworkPassengerPlan`）。再快要把乘客佇列照路線分組，會改存檔格式。報告：`LONG_GAME_REPORT=730 swift test -c release -Xswiftc -enable-testing --filter LongGameCostReportTests`。
 - **Simulator 上的效能 UI 測試**沒有做：CI 的 Simulator 數字和實機差很多，先靠幀數顯示。
 
+**82.1 的卡頓**（決策 363，`claude/perf-actions-82-1`，session_011kVCxFJEULkYyGGU7emgsx，2026-10-23；分三個 PR 的第一個，它壓縮 1 次後停在這裡）。已修：每次編輯重算整張地的車站涵蓋率、夜裡切速度與離開建設工具在主執行緒上試跑一整晚。報告：`ACTION_COST_REPORT=30 swift test -c release -Xswiftc -enable-testing --filter ActionCostReportTests/testWhatTheThreeActionsCost`（44 站、4 條線；`ACTION_COST_PROFILE=1` 跑給 callgrind 用的 50 次編輯）。還沒做、還沒人接：
+- **(b) §22.2 第 25a 名**：高倍速每次換世界整個畫面重算（見下面「高倍速少換幾次世界」），要作者的幀數讀數。
+- **(c) §22.2 第 10h 名，2D 每幀**：`MapCanvas` 的 `==` 比較 `traffic` 與閉塞，所以交通覆蓋一變整張軌道畫布重畫；可把閉塞與等候畫進自己的畫布。`MapLabelCanvas` 在候車數變了就重畫站名。夜色的 multiply 混色。不操作時降 2D 幀率上限。先請作者在大存檔開「設定 → 地圖 → 幀數」，記下哪一層最慢。
+- **買一格地圖約 55 ms**（Linux release）：讀那一格的土地，`LandImport` 約 23 ms、GameCore `expandLand` 約 22 ms。可在玩家點選地塊時就在背景讀好（照地塊、範圍與資料組記住），按「買」時只套用。
+- 編輯後第一次讀 `trafficOverlay`、`situationAlerts` 各約 1.3 ms，沒動。
+
 **高倍速的主執行緒**（決策 330，`claude/fast-forward-main-thread`，2026-10-22；作者 iPad 宜蘭線 6000×：最長一幀 114 ms、推進後 max 44.8 ms）。已修：整點的站長建議（約 40 ms，幾乎全在 `firstLineWithoutPlaceToPass()`）移到 `LoopTick.work()`；幀數讀數把「推進後」拆成九段、多一行「清理」（放掉舊世界）、第一行多「其他」。報告：`TICK_REPORT_YILAN=432 swift test -c release -Xswiftc -enable-testing --filter TickCostReportTests/testWhatTheStepAfterATickCostsOnTheYilanLine`。還沒做、還沒人接：
 - **請作者量**：宜蘭線 6000×，開「設定 → 地圖 → 幀數」，點開讀數，記下幾秒內的「最長一幀 · 其他」與「推進後」的 max。推進後的 max 應該從約 45 ms 降到幾 ms。
 - **高倍速少換幾次世界**（派工的第 3 步，沒做）：看上面量到的「其他」。若 6000× 時「其他」常常 30 ms 以上、暫停時沒有，就是每次換世界 SwiftUI 重算整個畫面：先找最常重畫、讀 `session.world` 的 view，讓它只讀需要的值（@Observable 已在用）；還不夠再在 ≥1000× 時每次 `advance(by:)` 多走幾個 tick、每秒換 4–5 次（守住決策 143 的一次一份工作、落後變慢不追趕，決策 248、195，以及批次與逐 tick 相同）。「其他」不大就不用做。
