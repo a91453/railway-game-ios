@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+  <rect x="0" y="0" width="120" height="120" fill="#BDEFE7"/>
+  <path d="M12 124 C14 101 34 91 60 91 C86 91 106 101 108 124 Z" fill="#FFFFFF" stroke="#262C57" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M36 103 C40 98 48 96 50 96 L50 124 L70 124 L70 96 C72 96 80 98 84 103 L84 124 L36 124 Z" fill="#12A08F" stroke="#262C57" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M28 64 C24 36 40 26 60 26 C80 26 96 36 92 64 L92 84 C86 88 78 86 76 82 L44 82 C42 86 34 88 28 84 Z" fill="#262C57" stroke="#262C57" stroke-width="3" stroke-linejoin="round"/>
+  <circle cx="60" cy="89" r="7" fill="#F7D3B5" stroke="#262C57" stroke-width="3" stroke-linejoin="round"/>
+  <circle cx="33" cy="63" r="5.5" fill="#F7D3B5" stroke="#262C57" stroke-width="3" stroke-linejoin="round"/>
+  <circle cx="87" cy="63" r="5.5" fill="#F7D3B5" stroke="#262C57" stroke-width="3" stroke-linejoin="round"/>
+  <circle cx="60" cy="61" r="27" fill="#F7D3B5" stroke="#262C57" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M33 58 C33 38 44 31 60 31 C76 31 87 38 87 58 C80 50 74 46 70 42 C64 48 52 51 33 58 Z" fill="#262C57" stroke="#262C57" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M73 37 L81 33 L83 39 L75 42 Z" fill="#FFC86B" stroke="#262C57" stroke-width="3" stroke-linejoin="round"/>
+  <circle cx="49" cy="63" r="3.8" fill="#262C57"/>
+  <circle cx="71" cy="63" r="3.8" fill="#262C57"/>
+  <circle cx="50.3" cy="61.7" r="1.3" fill="#FFFFFF"/>
+  <circle cx="72.3" cy="61.7" r="1.3" fill="#FFFFFF"/>
+  <path d="M54 73 Q60 77.5 66 73" fill="none" stroke="#262C57" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="95" cy="88" r="12" fill="#FFE9BC"/>
+  <path d="M87 78 C87 75 103 75 103 78 L100 98 C100 100 90 100 90 98 Z" fill="#FFC86B" stroke="#262C57" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M95 76 L95 99" fill="none" stroke="#262C57" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M90 94 L100 94 L100 98 C100 100 90 100 90 98 Z" fill="#F0A93C" stroke="#262C57" stroke-width="3" stroke-linejoin="round"/>
+</svg>
