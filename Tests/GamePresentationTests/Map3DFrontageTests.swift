@@ -13,7 +13,7 @@ final class Map3DFrontageTests: XCTestCase {
     private static let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
 
     private static let land: Result<RealNoBuildLand, Error> = Result {
-        try RealNoBuildLand(data: Data(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/BaseMap/taiwan_no_build.json")))
+        try RealNoBuildLand(data: Data(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/RealWorld/taiwan_no_build.json")))
     }
 
     // MARK: - The file

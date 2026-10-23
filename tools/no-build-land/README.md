@@ -1,6 +1,6 @@
 # 不蓋房子的地與機場建物
 
-決策 385。實景 3D 地圖在機場、軍事用地、墓地、高爾夫球場、鐵路用地與港區不畫城市的房子；機場只畫 OpenStreetMap 的航廈、機棚等建物。這個工具把它們從台灣的 OSM 整包檔取出，寫成 App 打包的 `RailwayGameApp/Resources/BaseMap/taiwan_no_build.json`，由 `GamePresentation` 的 `RealNoBuildLand` 讀。
+決策 385。實景 3D 地圖在機場、軍事用地、墓地、高爾夫球場、鐵路用地與港區不畫城市的房子；機場只畫 OpenStreetMap 的航廈、機棚等建物。這個工具把它們從台灣的 OSM 整包檔取出，寫成 App 打包的 `RailwayGameApp/Resources/RealWorld/taiwan_no_build.json`，由 `GamePresentation` 的 `RealNoBuildLand` 讀。
 
 ## 重建
 
@@ -9,7 +9,7 @@
 ```sh
 curl -LO https://osmtoday.com/asia/taiwan.pbf
 python3 -I tools/no-build-land/build_no_build.py taiwan.pbf \
-  RailwayGameApp/Resources/BaseMap/taiwan_no_build.json
+  RailwayGameApp/Resources/RealWorld/taiwan_no_build.json
 ```
 
 ## 取哪些
