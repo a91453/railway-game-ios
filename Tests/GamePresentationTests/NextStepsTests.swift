@@ -156,6 +156,28 @@ final class NextStepsTests: XCTestCase {
         XCTAssertFalse(steps.steps.map(\.step).contains(.halfCovered))
     }
 
+    /// PLAYER_FEEDBACK 82.1: the coverage step counts the map's people
+    /// again only when the land or the open stations change, not after
+    /// every edit (it was nearly all of an edit's time on a map of 44
+    /// stations), and the steps stay what a fresh count makes them.
+    func testTheCoverageIsCountedAgainOnlyWhenStationsOrLandChange() throws {
+        let (world, a, b, _) = try world()
+        let session = GameSession(world: world, language: .english)
+        XCTAssertEqual(session.nextSteps, NextSteps(world: session.world))
+        XCTAssertEqual(session.catchmentCoverageCounted, 1)
+
+        let corner = WorldCoordinate(x: 2_000 * WorldCoordinate.unitsPerMetre, y: 2_000 * WorldCoordinate.unitsPerMetre)
+        try session.performEdit { world throws(GameError) in _ = try world.buildTrackNode(at: corner) }
+        openLine([a, b], in: session)
+        session.undo()
+        XCTAssertEqual(session.nextSteps, NextSteps(world: session.world))
+        XCTAssertEqual(session.catchmentCoverageCounted, 1, "track, a line and an undo move no station")
+
+        try session.performEdit { world throws(GameError) in _ = try world.buildStation(named: "D", at: PlanPoint(x: corner.x, y: corner.y)) }
+        XCTAssertEqual(session.nextSteps, NextSteps(world: session.world))
+        XCTAssertEqual(session.catchmentCoverageCounted, 2, "a new station")
+    }
+
     func testAllDone() {
         let done = NextSteps(steps: NextStep.allCases.map { NextStepProgress(step: $0, value: 100, target: 1) })
         XCTAssertNil(done.current)

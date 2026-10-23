@@ -354,9 +354,17 @@ final class RealRailwaysTests: XCTestCase {
     func testEverySourceIsCredited() throws {
         for language in DisplayLanguage.allCases {
             let sections = DataSourceCredits.sections(in: language)
-            XCTAssertEqual(sections.map(\.id), ["railways", "population", "map", "cityView", "sounds"])
+            XCTAssertEqual(sections.map(\.id), ["railways", "railwayData", "population", "map", "map3D", "cityView", "sounds"])
             let credits = sections.flatMap(\.credits)
-            XCTAssertEqual(credits.map(\.id), ["tdx", "traOpenData", "ridership", "nlsc", "openStreetMap", "operators", "worldPop", "travelSurvey", "overtureBuildings", "appleMaps", "wikidata", "worldUrbanizationProspects", "taiwanBaseMap", "openFreeMap", "mapLibre", "map3DGround", "meshy", "temples", "copernicusDEM", "proceduralTokyo", "polyHaven", "runningSound", "weatherSound"])
+            XCTAssertEqual(credits.map(\.id), [
+                "realRailways", "tra", "thsr", "afr", "taipeiMetro", "newTaipeiMetro", "taoyuanMetro", "taichungMetro", "kaohsiungMetro", "operators",
+                "tdx", "traOpenData", "nlsc", "openStreetMap",
+                "worldPop", "ridership", "travelSurvey", "overtureBuildings",
+                "appleMaps", "taiwanBaseMap", "openFreeMap", "mapLibre", "copernicusDEM", "wikidata", "worldUrbanizationProspects",
+                "map3DGround", "temples", "meshy",
+                "proceduralTokyo", "polyHaven", "runningSound", "weatherSound",
+            ])
+            XCTAssertEqual(Set(credits.map(\.id)).count, credits.count, "ids are unique")
             for credit in credits {
                 XCTAssertFalse(credit.title.isEmpty || credit.detail.isEmpty || credit.notice.isEmpty, credit.id)
                 for link in credit.links {
@@ -371,7 +379,27 @@ final class RealRailwaysTests: XCTestCase {
             // OpenStreetMap's yards are; its north end's are the demo's own.
             XCTAssertTrue(openStreetMap.detail.contains(language.text("Yilan and Su'aoxin sidings", "宜蘭、蘇澳新側線")), openStreetMap.detail)
             XCTAssertTrue(openStreetMap.links.contains { $0.url == "https://opendatacommons.org/licenses/odbl/1-0/" })
-            XCTAssertTrue(credits.first { $0.id == "tdx" }?.links.contains { $0.url == "https://data.gov.tw/license" } == true)
+            // Every source under the Open Government Data License links it
+            // and gives the provider and the year its annex asks for.
+            for id in ["tdx", "traOpenData", "nlsc"] {
+                let credit = try XCTUnwrap(credits.first { $0.id == id })
+                XCTAssertTrue(credit.links.contains { $0.url == "https://data.gov.tw/license" }, id)
+                XCTAssertTrue(credit.notice.contains("2026"), id)
+                XCTAssertTrue(credit.notice.contains(language.text("Open Government Data License, version 1.0", "政府資料開放授權條款（Open Government Data License）第 1 版")), id)
+            }
+            for id in ["ridership", "travelSurvey", "temples"] {
+                XCTAssertTrue(credits.first { $0.id == id }?.links.contains { $0.url == "https://data.gov.tw/license" } == true, id)
+            }
+            // Each railway system in the game is named on the page with
+            // where its station order and colours come from.
+            for system in RealRailways.System.all {
+                XCTAssertTrue(credits.contains { $0.title.contains(system.name(in: language)) || $0.detail.contains(system.name(in: language)) }, system.id)
+            }
+            for credit in credits[1 ... 8] {
+                XCTAssertTrue(credit.notice.contains(language.text("Colour", "路線色")), credit.id)
+                XCTAssertTrue(credit.notice.contains(language.text("Station order", "站序")), credit.id)
+            }
+            XCTAssertTrue(credits[0].notice.contains("© OpenStreetMap"), credits[0].notice)
             // Decision 331: the temples' three sources and their licences.
             let temples = try XCTUnwrap(credits.first { $0.id == "temples" })
             for part in [language.text("Ministry of the Interior", "內政部"), language.text("Bureau of Cultural Heritage", "文化資產局"), "© OpenStreetMap",
@@ -443,12 +471,12 @@ final class RealRailwaysTests: XCTestCase {
         let licence = try String(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/Licenses/MapLibre-iOS-LICENSE.md"), encoding: .utf8)
         XCTAssertTrue(licence.contains("Copyright (c) 2021 MapLibre contributors"))
         XCTAssertTrue(licence.contains("Redistributions in binary form must reproduce the above copyright"))
-        // TDX's notice is the licence's attribution (above); Taiwan
-        // Railway's open data keeps the short one.
-        XCTAssertEqual(
-            DataSourceCredits.sections(in: .traditionalChinese).first?.credits.first { $0.id == "traOpenData" }?.notice,
-            "依「政府資料開放授權條款第 1 版」使用。"
-        )
+        // Taiwan Railway's open data carries the licence's attribution
+        // too: the provider by its own name, the year and the data.
+        let traOpenData = try XCTUnwrap(DataSourceCredits.sections(in: .traditionalChinese).flatMap(\.credits).first { $0.id == "traOpenData" })
+        for part in ["國營臺灣鐵路股份有限公司", "2026 年", "列車時刻表", "政府資料開放授權條款"] {
+            XCTAssertTrue(traOpenData.notice.contains(part), part)
+        }
         // Decision 279: the National Land Surveying and Mapping Center's
         // railway, with the licence's attribution.
         let nlsc = try XCTUnwrap(DataSourceCredits.sections(in: .traditionalChinese).flatMap(\.credits).first { $0.id == "nlsc" })
@@ -458,6 +486,19 @@ final class RealRailwaysTests: XCTestCase {
         XCTAssertTrue(nlsc.links.contains { $0.url == "https://data.gov.tw/dataset/73220" })
         XCTAssertTrue(nlsc.links.contains { $0.url == "https://data.gov.tw/dataset/73221" })
         XCTAssertTrue(nlsc.links.contains { $0.url == "https://data.gov.tw/dataset/73222" })
+    }
+
+    /// New Taipei Metro runs four lines, and the data sources page names
+    /// every one of them, not only the Sanying Line.
+    func testTheDataSourcesNameNewTaipeiMetrosFourLines() throws {
+        for language in DisplayLanguage.allCases {
+            let credit = try XCTUnwrap(DataSourceCredits.sections(in: language).flatMap(\.credits).first { $0.id == "newTaipeiMetro" })
+            XCTAssertEqual(credit.title, language.text("New Taipei Metro", "新北捷運"))
+            for line in [language.text("Circular Line", "環狀線"), language.text("Danhai Light Rail", "淡海輕軌"),
+                         language.text("Ankeng Light Rail", "安坑輕軌"), language.text("Sanying Line", "三鶯線")] {
+                XCTAssertTrue(credit.detail.contains(line), line)
+            }
+        }
     }
 
     func testTheBundledRealRailwaysWithOperationalData() throws {

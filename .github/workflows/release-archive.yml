@@ -41,6 +41,7 @@ on:
       - RailwayGameApp/Resources/Assets.xcassets/**
       - RailwayGameApp/Resources/*.lproj/**
       - RailwayGameApp/Resources/Localizable.xcstrings
+      - RailwayGameApp/Resources/PrivacyInfo.xcprivacy
       - .github/scripts/check-app-localizations.sh
       - RailwayGameApp/App/**
       - .github/workflows/release-archive.yml
@@ -147,6 +148,17 @@ jobs:
       # Decision 257: the app iOS installs offers both languages.
       - name: Check the archived app has English and Traditional Chinese
         run: .github/scripts/check-app-localizations.sh "$ARCHIVE_PATH/Products/Applications/RailwayGame.app"
+
+      # The privacy manifest (docs/XCODE_CLOUD_ONBOARDING.md, 隱私) must be
+      # in the app as a resource, and still a valid property list.
+      - name: Check the archived app has its privacy manifest
+        run: |
+          manifest="$ARCHIVE_PATH/Products/Applications/RailwayGame.app/PrivacyInfo.xcprivacy"
+          if [[ ! -f "$manifest" ]]; then
+            echo "::error::The archived app has no PrivacyInfo.xcprivacy."
+            exit 1
+          fi
+          plutil -lint "$manifest"
 
       # Evidence for the privacy and export-compliance answers in
       # docs/XCODE_CLOUD_ONBOARDING.md, not a gate: which libraries the app

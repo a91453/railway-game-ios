@@ -31,6 +31,8 @@ struct StationPanel: View {
     /// Whether the "arriving soon" board is open (decision 178); kept for
     /// the next station and the next launch.
     @AppStorage("stationBoardExpanded") private var boardExpanded = true
+    /// Decision 365: Off plays on the flat map only.
+    @AppStorage(Map3DQuality.key) private var map3DQuality: Map3DQuality = .forThisDevice
     /// Decision 184: whether the searchable list of stations is up, and
     /// what was typed in it.
     @State private var choosingStation = false
@@ -147,8 +149,8 @@ struct StationPanel: View {
         let language = session.language
         let board = DepartureBoard(world: session.world, station: station.id)
         // Decision 334: a train calling here opens the 3D map at its
-        // platform; not in the tutorial, as the map's 3D button.
-        let shows3D = session.tutorial == nil && !session.world.trackPlatforms(of: station.id).isEmpty
+        // platform; not in the tutorial or with 3D off, as the map's 3D button.
+        let shows3D = session.tutorial == nil && map3DQuality.shows3D && !session.world.trackPlatforms(of: station.id).isEmpty
         return Section {
             DisclosureGroup(isExpanded: $boardExpanded) {
                 if board.isEmpty {

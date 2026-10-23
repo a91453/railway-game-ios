@@ -30,7 +30,36 @@ final class Map3DQualityTests: XCTestCase {
     }
 
     func testTheChoiceIsKeptByName() {
-        XCTAssertEqual(Map3DQuality.allCases.map(\.rawValue), ["automatic", "saving", "high"])
+        XCTAssertEqual(Map3DQuality.allCases.map(\.rawValue), ["automatic", "saving", "high", "off"])
         XCTAssertEqual(Map3DQuality.key, "map3D.quality")
+    }
+
+    // Decision 365.
+    func testOldGPUsStartWithTheFlatMapOnly() {
+        XCTAssertEqual(Map3DQuality.startingChoice(gpuFamily: 0), .off)
+        XCTAssertEqual(Map3DQuality.startingChoice(gpuFamily: 5), .off)
+        XCTAssertEqual(Map3DQuality.startingChoice(gpuFamily: 6), .off)
+        XCTAssertEqual(Map3DQuality.startingChoice(gpuFamily: 7), .automatic)
+        XCTAssertEqual(Map3DQuality.startingChoice(gpuFamily: 9), .automatic)
+    }
+
+    func testOffPutsAway3DAndDrawsTheLightestLookIfOpened() {
+        XCTAssertFalse(Map3DQuality.off.shows3D)
+        for quality in [Map3DQuality.automatic, .saving, .high] {
+            XCTAssertTrue(quality.shows3D)
+            XCTAssertEqual(quality.drawn, quality)
+        }
+        XCTAssertEqual(Map3DQuality.off.drawn, .saving)
+        XCTAssertNil(Map3DSunShadow.plan(.off, lowPower: false, heat: .nominal, overBudget: false))
+    }
+
+    func testOnlySavingDrawsOneSampleAPixel() {
+        XCTAssertEqual(Map3DQuality.allCases.map(\.samplesPerPixel), [4, 1, 4, 1])
+    }
+
+    func testAKeptChoiceReadsBackAsItWas() {
+        for quality in Map3DQuality.allCases {
+            XCTAssertEqual(Map3DQuality(rawValue: quality.rawValue), quality)
+        }
     }
 }

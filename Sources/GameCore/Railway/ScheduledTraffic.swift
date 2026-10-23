@@ -28,8 +28,9 @@ public struct ScheduledTrafficWait: Hashable, Sendable {
     public let departure: GameTime
     public let clearance: Int64
     /// Decision 294: for an overtake a real timetable has (see
-    /// ``GameWorld/timetabledOvertakeHold``), the most seconds it keeps
-    /// its train past when the train is due to leave; `nil` for any other.
+    /// ``GameWorld/timetabledOvertakeHold``), and decision 366 for one of
+    /// lines that run at a headway, the most seconds it keeps its train
+    /// past when the train is due to leave; `nil` for any other.
     public internal(set) var hold: Int64? = nil
 }
 
@@ -144,13 +145,16 @@ extension GameWorld {
     }
 
     /// What the plan is derived from: which trains run or have run, and
-    /// where in their timetables. Everything else it reads (timetables,
-    /// the network, the trains' lengths) cannot change within an advance.
+    /// where in their timetables, and (decision 366) when they arrived at
+    /// or left their last call. Everything else it reads (timetables, the
+    /// network, the trains' lengths) cannot change within an advance.
     struct TrafficPlanKey: Equatable {
         struct Entry: Equatable {
             var id: TrainID
             var execution: TimetableExecution?
             var visitedCycle: Int64?
+            var arrival: GameTime?
+            var departure: GameTime?
         }
         var enabled: Bool
         var entries: [Entry]
@@ -158,7 +162,8 @@ extension GameWorld {
 
     func trafficPlanKey() -> TrafficPlanKey {
         TrafficPlanKey(enabled: isTrafficControlEnabled, entries: trains.compactMap { train in
-            train.position == nil ? nil : .init(id: train.id, execution: train.execution, visitedCycle: train.trafficVisits.last?.cycle)
+            train.position == nil ? nil : .init(id: train.id, execution: train.execution, visitedCycle: train.trafficVisits.last?.cycle,
+                                                arrival: train.times?.arrival, departure: train.times?.departure)
         })
     }
 
@@ -218,6 +223,8 @@ extension GameWorld {
         for _ in 0..<8 {
             if !planTrafficOvertakes(&plan) { break }
         }
+        // Decision 366: trips of lines that run at a headway.
+        planHeadwayOvertakes(&plan)
         plan.waits.sort {
             if $0.train != $1.train { return $0.train < $1.train }
             if $0.cycle != $1.cycle { return $0.cycle < $1.cycle }

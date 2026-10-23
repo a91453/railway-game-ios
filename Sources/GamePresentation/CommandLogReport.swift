@@ -6,8 +6,10 @@ import GameCore
 /// with the save it starts from, so the problem can be replayed on Linux.
 /// Nothing else: the app's version and build, and a digest of each data
 /// file the replay needs to read the same land and ground. No device
-/// identifier, no account, no place; the player sees the names in the save
-/// (``typedNames``) before choosing, and sends it where they choose.
+/// identifier and no account; the save holds where a real-world map
+/// starts (its latitude and longitude, ``GameWorld/geoAnchor``), and the
+/// player is told so and sees the names in the save (``typedNames``) before
+/// choosing, and sends it where they choose.
 public struct CommandLogReport: Codable, Sendable {
     public static let schemaVersion = 1
     /// The file's name in the share sheet.
@@ -96,8 +98,8 @@ public struct CommandLogReport: Codable, Sendable {
     /// typed (at most `shown` of them, then how many more).
     public func attachmentText(in language: DisplayLanguage, shown: Int = 20) -> String {
         var text = language.text(
-            "Attached: \(Self.fileName), with the save this game started from, the \(entries.count) things done since (commands, game time, Undo and Redo) and the version \(version) (\(build)). Nothing about you or your device.",
-            "會附上 \(Self.fileName)：這局開始時的存檔、之後做的 \(entries.count) 件事（指令、遊戲時間、復原與重做），以及版本 \(version) (\(build))。不含你或裝置的任何資料。"
+            "Attached: \(Self.fileName), with the save this game started from, the \(entries.count) things done since (commands, game time, Undo and Redo) and the version \(version) (\(build)). A real-world map's save holds the latitude and longitude of where it starts; nothing about your account or device.",
+            "會附上 \(Self.fileName)：這局開始時的存檔、之後做的 \(entries.count) 件事（指令、遊戲時間、復原與重做），以及版本 \(version) (\(build))。實景地圖的存檔含這局起點的經緯度；不含帳號或裝置的資料。"
         )
         let names = typedNames
         if !names.isEmpty {

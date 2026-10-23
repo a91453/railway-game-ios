@@ -48,8 +48,9 @@ struct Map3DPreviewScreen: View {
     @State private var trainLabels = Map3DTrainLabelState()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(LinePalette.key) private var linePalette: LinePalette = .standard
-    /// Decision 238's later note: the 3D look chosen in Settings.
-    @AppStorage(Map3DQuality.key) private var quality: Map3DQuality = .automatic
+    /// Decision 238's later note: the 3D look chosen in Settings; decision
+    /// 365: Off (opened from Settings anyway) draws as Battery Saver.
+    @AppStorage(Map3DQuality.key) private var quality: Map3DQuality = .forThisDevice
     /// Decision 339: the real timetables' trains, as on the 2D map.
     @AppStorage(MapAmbienceSettings.realTrainsKey) private var showsRealTrains = true
     /// Decision 333: from where the camera follows a train, kept.
@@ -60,7 +61,7 @@ struct Map3DPreviewScreen: View {
         ZStack {
             Map3DView(built: built, sceneVersion: sceneVersion, lighting: Map3DLighting(at: session.world.clock.now),
                       weather: Map3DWeather(MapWeather(world: session.world)), feed: feed, trainLabels: trainLabels,
-                      start: handedOver, openedAt: openedAt, farOut: farOut, compass: compass, cameraLink: cameraLink, quality: quality,
+                      start: handedOver, openedAt: openedAt, farOut: farOut, compass: compass, cameraLink: cameraLink, quality: quality.drawn,
                       follow: session.followedTrain.map { Map3DFollow(train: $0.id, view: followView) },
                       departure: departure, world: session.world,
                       onStats: { stats = $0 })
@@ -349,10 +350,11 @@ struct Map3DChunkSource: Sendable {
     }
 
     /// Decision 359 (續): with the scene's `trackCover`, which lays the
-    /// tunnels as the scene did.
-    func chunks(_ keys: [Map3DStreaming.Key], of grid: Map3DStreaming, trackCover: Map3DTrackCover) -> [Map3DScene.Chunk] {
+    /// tunnels as the scene did. Decision 368: the city in full only round
+    /// `detail`.
+    func chunks(_ keys: [Map3DStreaming.Key], of grid: Map3DStreaming, trackCover: Map3DTrackCover, detail: Map3DPoint) -> [Map3DScene.Chunk] {
         Map3DScene.chunks(keys, of: grid, world: world, snapshot: snapshot, skyline: skyline, baseMap: baseMap, cityTiles: cityTiles,
-                          heights: heights, lineBands: lineBands, railways: railways, temples: temples, trackCover: trackCover)
+                          heights: heights, lineBands: lineBands, railways: railways, temples: temples, trackCover: trackCover, detail: detail)
     }
 }
 
@@ -395,9 +397,9 @@ final class Map3DChunkStreamer {
         self.window = window
         if !drop.isEmpty { view?.remove(drop) }
         guard !build.isEmpty else { return }
-        let grid = window.grid, generation = window.generation, trackCover = trackCover
+        let grid = window.grid, generation = window.generation, trackCover = trackCover, detail = window.buildingAround
         Task.detached(priority: .utility) { [weak self] in
-            let chunks = source.chunks(build, of: grid, trackCover: trackCover)
+            let chunks = source.chunks(build, of: grid, trackCover: trackCover, detail: detail)
             await self?.finished(chunks, keys: build, generation: generation)
         }
     }
@@ -550,7 +552,7 @@ private struct Map3DView: UIViewRepresentable {
         file: Bundle.main.url(forResource: Map3DCityBus.fileName, withExtension: Map3DCityBus.fileExtension))
 
     func makeUIView(context: Context) -> UIView {
-        guard let view = Map3DMetalView.make() else {
+        guard let view = Map3DMetalView.make(samples: quality.samplesPerPixel) else {
             let label = UILabel()
             label.text = DisplayLanguage.app.text("3D isn't available on this device.", "這台裝置無法顯示 3D。")
             label.textAlignment = .center

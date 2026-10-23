@@ -96,12 +96,21 @@
 //   It starts as the E500 Chu-Kuang would with six coaches
 //   (``TrainPerformance/formosaStar``). Its prices are this project's,
 //   halfway between the E500 Chu-Kuang's and the Ming-Ri's.
+// - The Midsummer Formosa (仲夏寶島號, decision 286, later, fourth) is six
+//   Chu-Kuang coaches behind the CT273 steam locomotive (`namedTrains`
+//   `steam`: summer runs between Yuli and Taitung, three in 2026; the
+//   garage model `ct273`; `formations.js` has none). The coaches are
+//   ordinary Chu-Kuang coaches: rated 50, two doors a side, 20.0 m. The
+//   CT273 is a JNR C57 (``TrainPerformance/midsummerFormosa``). It is
+//   not the era's steam train above. Its prices are this project's: a
+//   cheap locomotive to buy, dear to run (coal, water and its crew).
 // - A sightseeing type (decision 286) adds half a star to a sight one of
 //   its trains calls near (``Tourism/starsPerSightseeingTrain``): the Blue
 //   Train, the Hai-Feng and the Shan-Lan; the Ming-Ri a whole star
 //   (``Tourism/starsPerLuxuryTrain``), the Formosa Star three quarters
-//   (``Tourism/starsPerRoundIslandTrain``). The most any train calling
-//   there adds is what counts.
+//   (``Tourism/starsPerRoundIslandTrain``), the Midsummer Formosa a star
+//   and a quarter (``Tourism/starsPerSteamTrain``). The most any train
+//   calling there adds is what counts.
 // - The families (metro, railway, high speed, special) are decision 224's
 //   catalogue of types; a high-speed set is the type whose family is high
 //   speed.
@@ -149,7 +158,8 @@ public struct TrainTypeSpec: Hashable, Sendable {
     /// What a sight one of its trains calls near gains, in hundredths of a
     /// star (decision 286): ``Tourism/starsPerSightseeingTrain`` for a
     /// sightseeing train, ``Tourism/starsPerLuxuryTrain`` for the Ming-Ri,
-    /// ``Tourism/starsPerRoundIslandTrain`` for the Formosa Star, none for
+    /// ``Tourism/starsPerRoundIslandTrain`` for the Formosa Star,
+    /// ``Tourism/starsPerSteamTrain`` for the Midsummer Formosa, none for
     /// the rest.
     public let sightseeingStars: Int
     /// Whether it is a sightseeing train (decision 286).
@@ -238,6 +248,10 @@ public enum TrainTypeCatalog {
         .init(code: "STAR", family: .railway, offer: .added, capacity: 29, doors: 2, overloads: true,
               performance: .formosaStar, firstDollars: 375_000, carDollars: 45_000, operatingPermille: 1_300, carMetres: (20, 0),
               sightseeingStars: Tourism.starsPerRoundIslandTrain),
+        // Decision 286, later (fourth): the CT273 and six Chu-Kuang coaches.
+        .init(code: "SUMMER", family: .railway, offer: .added, capacity: 50, doors: 2, overloads: true,
+              performance: .midsummerFormosa, firstDollars: 350_000, carDollars: 35_000, operatingPermille: 1_650, carMetres: (20, 0),
+              sightseeingStars: Tourism.starsPerSteamTrain),
     ]
 
     /// Each code's row. Building it traps on a code listed twice.

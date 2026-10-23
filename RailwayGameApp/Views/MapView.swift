@@ -62,6 +62,8 @@ struct MapView: View {
     @AppStorage("mapShowsStationNames") private var showsStationNames = true
     /// Decision 313: whether a pinch past the closest zoom opens the 3D map.
     @AppStorage(Map3DHandoff.pinchOpensKey) private var pinchOpens3D = true
+    /// Decision 365: Off plays on the flat map only.
+    @AppStorage(Map3DQuality.key) private var map3DQuality: Map3DQuality = .forThisDevice
     @AppStorage("mapShowsWaitingCounts") private var showsWaitingCounts = true
     @AppStorage("mapShowsCatchmentRings") private var showsCatchmentRings = true
     /// Which population and travel layer is shown (``PopTravelMode``'s raw
@@ -331,6 +333,9 @@ struct MapView: View {
             let lights = DayNight.step(tint.lights)
             // Once for the map and its loupe, not once for each canvas.
             let waitingCounts = MapLayers.waitingPassengerCounts(in: session.world)
+            let networkOverlay = session.networkOverlay, buildingOverlay = session.buildingOverlay
+            let expansionOverlay = session.mapExpansionOverlay, routePreview = session.routePreview
+            let lineCodes = LineBadge.codes(for: session.world.lines)
 
             VStack(spacing: 0) {
                 ZStack {
@@ -363,34 +368,41 @@ struct MapView: View {
                             .equatable()
                             .transition(reduceMotion ? .identity : .opacity.animation(MotionRule.change.animation))
                     }
-                    MapCanvas(
-                        world: session.world,
-                        selectedTrainID: session.selectedTrainID,
-                        highlightedTrainID: session.followedTrain?.id,
-                        selectedStationID: session.selectedStation?.id,
-                        network: session.networkOverlay,
-                        building: session.buildingOverlay,
-                        expansion: session.mapExpansionOverlay,
-                        traffic: traffic,
-                        camera: projection,
-                        edges: edges,
-                        layers: mapLayers,
-                        waitingCounts: waitingCounts,
-                        lines: lineMap,
-                        routePreview: session.routePreview,
-                        labels: stationLabels,
-                        flowStrokes: mapLayers.popTravelMode == .sectionFlow ? flowStrokes : [],
-                        flowVersion: flowStrokesVersion,
-                        lights: lights,
-                        lineCodes: LineBadge.codes(for: session.world.lines),
-                        linePalette: linePalette,
-                        // Only the traced station's: not the last one's while
-                        // the next is worked out, nor once its panel closes.
-                        journey: journeyTrace.flatMap { $0.station == tracedStationID && $0.line == tracedLineID ? $0 : nil },
-                        journeyProgress: journeyProgress,
-                        drawsLabels: false
-                    )
-                    .equatable()
+                    // Decision 371: the railway, and over it traffic
+                    // control and the stations, each in a canvas of its
+                    // own: a train reserving track further on (nearly every
+                    // tick with traffic control on) redraws only the second.
+                    ForEach([MapArt.MapPart.railway, .trafficAndStations], id: \.self) { part in
+                        MapCanvas(
+                            world: session.world,
+                            selectedTrainID: session.selectedTrainID,
+                            highlightedTrainID: session.followedTrain?.id,
+                            selectedStationID: session.selectedStation?.id,
+                            network: networkOverlay,
+                            building: buildingOverlay,
+                            expansion: expansionOverlay,
+                            traffic: traffic,
+                            camera: projection,
+                            edges: edges,
+                            layers: mapLayers,
+                            waitingCounts: waitingCounts,
+                            lines: lineMap,
+                            routePreview: routePreview,
+                            labels: stationLabels,
+                            flowStrokes: mapLayers.popTravelMode == .sectionFlow ? flowStrokes : [],
+                            flowVersion: flowStrokesVersion,
+                            lights: lights,
+                            lineCodes: lineCodes,
+                            linePalette: linePalette,
+                            // Only the traced station's: not the last one's while
+                            // the next is worked out, nor once its panel closes.
+                            journey: journeyTrace.flatMap { $0.station == tracedStationID && $0.line == tracedLineID ? $0 : nil },
+                            journeyProgress: journeyProgress,
+                            drawsLabels: false,
+                            part: part
+                        )
+                        .equatable()
+                    }
                     // Decision 182: the time of day over the ground, the
                     // town, the track and the stations; the trains and the
                     // weather stay over it.
@@ -431,7 +443,8 @@ struct MapView: View {
                     // Decision 182, later: following a gliding train, the
                     // camera follows its glide frame by frame.
                     if followsGlide {
-                        TimelineView(.animation) { timeline in
+                        // Decision 371: each frame redraws the whole map.
+                        TimelineView(.animation(minimumInterval: MapGlide.followMinimumInterval)) { timeline in
                             Color.clear.onChange(of: timeline.date) { last, now in
                                 centerOnFollowedTrain(
                                     projection: projection, at: now.timeIntervalSinceReferenceDate, elapsed: now.timeIntervalSince(last)
@@ -444,20 +457,25 @@ struct MapView: View {
                     // trains (docs/MAP_LAYERS.md 55–57), and the network
                     // tool's preview and the tracks' numbers over them;
                     // darkened with the map at night, as under the tint.
-                    MapLabelCanvas(
-                        world: session.world,
-                        camera: projection,
-                        layers: mapLayers,
-                        waitingCounts: waitingCounts,
-                        labels: stationLabels,
-                        lineCodes: LineBadge.codes(for: session.world.lines),
-                        linePalette: linePalette,
-                        network: session.networkOverlay,
-                        routePreview: session.routePreview,
-                        edges: edges
-                    )
-                    .equatable()
-                    .colorMultiply(Palette.dimming(tint))
+                    // Decision 371: the names, the waiting counts and the
+                    // network tool's marks, each in a canvas of its own.
+                    ForEach([MapLabelCanvas.Part.names, .counts, .marks], id: \.self) { part in
+                        MapLabelCanvas(
+                            part: part,
+                            world: session.world,
+                            camera: projection,
+                            layers: mapLayers,
+                            waitingCounts: waitingCounts,
+                            labels: stationLabels,
+                            lineCodes: lineCodes,
+                            linePalette: linePalette,
+                            network: networkOverlay,
+                            routePreview: routePreview,
+                            edges: edges
+                        )
+                        .equatable()
+                        .colorMultiply(Palette.dimming(tint))
+                    }
                     if showsWeather, mapWeather.sky != .clear || !mapWeather.typhoonStations.isEmpty {
                         MapWeatherLayer(
                             weather: mapWeather,
@@ -620,7 +638,7 @@ struct MapView: View {
                         // Decision 269, later: resting near the closest
                         // zoom, the 3D scene starts building.
                         guard Map3DHandoff.hands(building: session.tool != .select, tutorialRuns: session.tutorial != nil,
-                                                 pinchOpens: pinchOpens3D),
+                                                 pinchOpens: pinchOpens3D && map3DQuality.shows3D),
                               !screen.showsMap3D else { return }
                         buildAheadIfResting(near: pinched)
                     }, onPinchEnded: { pinched, asked in
@@ -630,7 +648,7 @@ struct MapView: View {
                         // was and as close (not with a building tool out,
                         // in the tutorial, or with the setting off).
                         guard Map3DHandoff.hands(building: session.tool != .select, tutorialRuns: session.tutorial != nil,
-                                                 pinchOpens: pinchOpens3D),
+                                                 pinchOpens: pinchOpens3D && map3DQuality.shows3D),
                               !screen.showsMap3D,
                               Map3DHandoff.opensOnRelease(referenceSize: pinched.referenceSize, asked: asked) else { return }
                         UITestTrace.action("map.pinch let go past the closest zoom: 3D")
@@ -1430,10 +1448,11 @@ struct MapView: View {
     private func buildAheadIfResting(near pinched: PlanCamera) {
         buildAhead?.cancel()
         buildAhead = nil
-        guard Map3DHandoff.buildsAhead(referenceSize: pinched.referenceSize) else { return }
+        // Decision 365: with 3D off, nothing is built for it.
+        guard map3DQuality.shows3D, Map3DHandoff.buildsAhead(referenceSize: pinched.referenceSize) else { return }
         buildAhead = Task {
             try? await Task.sleep(for: .seconds(Map3DHandoff.buildsAfterResting))
-            guard !Task.isCancelled, !screen.showsMap3D,
+            guard !Task.isCancelled, !screen.showsMap3D, map3DQuality.shows3D,
                   let now = camera, Map3DHandoff.buildsAhead(referenceSize: now.referenceSize) else { return }
             Map3DSceneCache.shared.prepare(for: session, focus: (x: now.centerX, y: now.centerY), palette: linePalette)
         }
@@ -1800,7 +1819,9 @@ struct MapView: View {
                 MapCoverageButton(isOn: buildingLayer.isOn, language: session.language, compactReach: compactReach) {
                     buildingLayerAutoShows = buildingLayer.toggle()
                 }
-                map3DButton(compactReach: compactReach)
+                if map3DQuality.shows3D {
+                    map3DButton(compactReach: compactReach)
+                }
             }
             if place.showsZoom {
                 zoomControls(camera: camera, limit: limit, compactReach: compactReach)
@@ -2103,36 +2124,52 @@ private struct MapCanvas: View, Equatable {
     /// over the trains instead, in ``MapLabelCanvas``.
     var drawsLabels = true
 
+    /// Decision 371: which part of the map it draws: on the map, the
+    /// railway and, over it, traffic control and the stations, each in a
+    /// canvas of its own; the loupe draws them all.
+    var part: MapArt.MapPart = .all
+
     /// The trains are drawn over it, by ``MapTrainCanvas`` (decision 182),
-    /// so a tick that only moves them does not redraw it.
+    /// so a tick that only moves them does not redraw it. Decision 371: nor
+    /// does one that only moves traffic control's reserved track redraw
+    /// the railway.
     nonisolated static func == (lhs: MapCanvas, rhs: MapCanvas) -> Bool {
-        // Drawn only with the names (``MapLabelCanvas`` otherwise).
-        let labelsMatch = !lhs.drawsLabels || (lhs.waitingCounts == rhs.waitingCounts && lhs.labels == rhs.labels)
-        return lhs.world.bounds == rhs.world.bounds
-            && lhs.world.stations == rhs.world.stations
-            && lhs.world.network == rhs.world.network
-            && lhs.world.placedBuildings == rhs.world.placedBuildings
-            && lhs.selectedTrainID == rhs.selectedTrainID
-            && lhs.highlightedTrainID == rhs.highlightedTrainID
-            && lhs.selectedStationID == rhs.selectedStationID
-            && lhs.network == rhs.network
-            && lhs.building == rhs.building
-            && lhs.expansion == rhs.expansion
-            && (lhs.building == nil || lhs.world.land == rhs.world.land)
-            && lhs.traffic == rhs.traffic
-            && lhs.camera == rhs.camera
-            && lhs.edges == rhs.edges
-            && lhs.layers == rhs.layers
-            && labelsMatch
-            && lhs.lines == rhs.lines
-            && lhs.routePreview == rhs.routePreview
-            && lhs.flowVersion == rhs.flowVersion
-            && lhs.lights == rhs.lights
-            && lhs.lineCodes == rhs.lineCodes
-            && lhs.linePalette == rhs.linePalette
-            && lhs.journey == rhs.journey
-            && lhs.journeyProgress == rhs.journeyProgress
-            && lhs.drawsLabels == rhs.drawsLabels
+        guard lhs.part == rhs.part, lhs.drawsLabels == rhs.drawsLabels, lhs.camera == rhs.camera, lhs.layers == rhs.layers,
+              lhs.linePalette == rhs.linePalette else { return false }
+        let railway = {
+            MapRedraw.sameRailway(lhs.world, rhs.world)
+                && lhs.network == rhs.network
+                && lhs.expansion == rhs.expansion
+                && lhs.edges == rhs.edges
+                && lhs.lines == rhs.lines
+                && lhs.routePreview == rhs.routePreview
+                && lhs.flowVersion == rhs.flowVersion
+                && lhs.lineCodes == rhs.lineCodes
+                && lhs.journey == rhs.journey
+                && lhs.journeyProgress == rhs.journeyProgress
+        }
+        let stations = {
+            // Drawn only with the names (``MapLabelCanvas`` otherwise).
+            let labelsMatch = !lhs.drawsLabels || (lhs.waitingCounts == rhs.waitingCounts && lhs.labels == rhs.labels)
+            return MapRedraw.sameStations(lhs.world, rhs.world, comparesLand: lhs.building != nil)
+                && lhs.selectedTrainID == rhs.selectedTrainID
+                && lhs.highlightedTrainID == rhs.highlightedTrainID
+                && lhs.selectedStationID == rhs.selectedStationID
+                && lhs.network == rhs.network
+                && lhs.building == rhs.building
+                && lhs.traffic == rhs.traffic
+                && lhs.edges == rhs.edges
+                && lhs.lines == rhs.lines
+                && lhs.routePreview == rhs.routePreview
+                && lhs.lights == rhs.lights
+                && lhs.lineCodes == rhs.lineCodes
+                && labelsMatch
+        }
+        switch lhs.part {
+        case .railway: return railway()
+        case .trafficAndStations: return stations()
+        case .all: return railway() && stations()
+        }
     }
 
     var body: some View {
@@ -2140,7 +2177,7 @@ private struct MapCanvas: View, Equatable {
         let world = world, selectedTrainID = selectedTrainID, highlightedTrainID = highlightedTrainID
         let selectedStationID = selectedStationID, network = network, building = building, expansion = expansion, traffic = traffic, camera = camera, edges = edges, layers = layers, waitingCounts = waitingCounts, lines = lines
         let labels = labels, latitude = world.geoAnchor?.latitudeDegrees ?? 0, flowStrokes = flowStrokes
-        let routePreview = routePreview, journey = journey, journeyProgress = journeyProgress, drawsLabels = drawsLabels
+        let routePreview = routePreview, journey = journey, journeyProgress = journeyProgress, drawsLabels = drawsLabels, part = part
         return Canvas { context, size in
             // Decision 328: timed for the frame readout.
             FrameCostMeter.shared.measure(.track) {
@@ -2168,6 +2205,7 @@ private struct MapCanvas: View, Equatable {
                     journey: journey,
                     journeyProgress: journeyProgress,
                     drawsLabels: drawsLabels,
+                    part: part,
                     in: context
                 )
             }
@@ -2179,9 +2217,22 @@ private struct MapCanvas: View, Equatable {
 /// the trains: a train stopped at a station never covers them; and over
 /// them, as before, the network tool's preview and the tracks' numbers
 /// (``MapArt/drawBuildMarks``). Redrawn when the camera, the stations,
-/// their lines, the counts, the track or the preview change, never for a
-/// moving train.
+/// their lines, the track or the preview change, never for a moving train;
+/// the counts, in a canvas of their own, when one changes (decision 371).
 private struct MapLabelCanvas: View, Equatable {
+    /// Decision 371: which of the three it draws, each in a canvas of its
+    /// own, one over the other in this order.
+    enum Part: Hashable {
+        /// The stations' names and their lines' badges.
+        case names
+        /// The waiting counts and crowded rings, redrawn as people come
+        /// and go without the names.
+        case counts
+        /// The network tool's preview and the tracks' numbers.
+        case marks
+    }
+
+    let part: Part
     let world: GameWorld
     let camera: PlanCamera
     let layers: MapLayerPreferences
@@ -2194,34 +2245,38 @@ private struct MapLabelCanvas: View, Equatable {
     let edges: [TrackEdgeID: MapEdgeDrawing]
 
     nonisolated static func == (lhs: MapLabelCanvas, rhs: MapLabelCanvas) -> Bool {
-        lhs.world.stations == rhs.world.stations
-            // The badges under the names: each line's stops and colour.
-            && lhs.world.lines.elementsEqual(rhs.world.lines) { $0.id == $1.id && $0.stops == $1.stops && $0.color == $1.color }
-            && lhs.world.geoAnchor == rhs.world.geoAnchor
-            && lhs.camera == rhs.camera
-            && lhs.layers == rhs.layers
-            && lhs.waitingCounts == rhs.waitingCounts
-            && lhs.labels == rhs.labels
-            && lhs.lineCodes == rhs.lineCodes
-            && lhs.linePalette == rhs.linePalette
-            && lhs.world.network == rhs.world.network
-            && lhs.network == rhs.network
-            && lhs.routePreview == rhs.routePreview
-            && lhs.edges == rhs.edges
+        guard lhs.part == rhs.part, lhs.camera == rhs.camera, lhs.layers == rhs.layers else { return false }
+        switch lhs.part {
+        case .names:
+            return MapRedraw.sameNames(lhs.world, rhs.world)
+                && lhs.labels == rhs.labels
+                && lhs.lineCodes == rhs.lineCodes
+                && lhs.linePalette == rhs.linePalette
+        case .counts:
+            return lhs.world.stations == rhs.world.stations && lhs.waitingCounts == rhs.waitingCounts
+        case .marks:
+            return MapRedraw.sameNames(lhs.world, rhs.world)
+                && lhs.network == rhs.network
+                && lhs.routePreview == rhs.routePreview
+                && lhs.edges == rhs.edges
+        }
     }
 
     var body: some View {
-        let world = world, camera = camera, layers = layers, waitingCounts = waitingCounts
+        let world = world, camera = camera, layers = layers, waitingCounts = waitingCounts, part = part
         let labels = labels, lineCodes = lineCodes, latitude = world.geoAnchor?.latitudeDegrees ?? 0
         let network = network, routePreview = routePreview, edges = edges
         return Canvas { context, size in
             FrameCostMeter.shared.measure(.labels) {
                 context.clip(to: Path(CGRect(origin: .zero, size: size)))
-                MapArt.drawStationLabels(
-                    world, layers: layers, waitingCounts: waitingCounts, labels: labels, latitude: latitude,
-                    lineCodes: lineCodes, projection: camera, in: context
-                )
-                MapArt.drawBuildMarks(world, network: network, routePreview: routePreview, projection: camera, cached: edges, in: context)
+                if part == .marks {
+                    MapArt.drawBuildMarks(world, network: network, routePreview: routePreview, projection: camera, cached: edges, in: context)
+                } else {
+                    MapArt.drawStationLabels(
+                        world, layers: layers, waitingCounts: waitingCounts, labels: labels, latitude: latitude,
+                        lineCodes: lineCodes, projection: camera, names: part == .names, counts: part == .counts, in: context
+                    )
+                }
             }
         }
         .allowsHitTesting(false)
@@ -2394,7 +2449,8 @@ private struct MapTrainCanvas: View, Equatable {
         // A deadlock beats even while paused; the other waits pulse while
         // the game runs (decision 210).
         let beats = !reduceMotion && (traffic.waits.contains(where: \.isDeadlocked) || (running && !traffic.waits.isEmpty))
-        return TimelineView(.animation(paused: !animating && !beats)) { timeline in
+        // Decision 371: at most ``MapGlide/framesPerSecond`` frames a second.
+        return TimelineView(.animation(minimumInterval: MapGlide.minimumInterval, paused: !animating && !beats)) { timeline in
             Canvas { context, size in
                 FrameCostMeter.shared.measure(.trains) {
                     context.clip(to: Path(CGRect(origin: .zero, size: size)))
@@ -2442,7 +2498,7 @@ private struct RealTrainCanvas: View, Equatable {
 
     var body: some View {
         let traffic = traffic, clock = clock, frame = frame, animating = animating, camera = camera
-        return TimelineView(.animation(paused: !animating)) { timeline in
+        return TimelineView(.animation(minimumInterval: MapGlide.minimumInterval, paused: !animating)) { timeline in
             Canvas { context, size in
                 guard RealTrainTraffic.isShown(referenceSize: camera.referenceSize) else { return }
                 FrameCostMeter.shared.measure(.realTrains) {

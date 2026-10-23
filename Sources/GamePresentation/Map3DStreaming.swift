@@ -132,6 +132,14 @@ public struct Map3DStreaming: Sendable {
         return keys
     }
 
+    /// Decision 368: how far scene point `point` is from `key`'s square,
+    /// seen from above, in metres (0 in it).
+    public static func distance(of key: Key, to point: Map3DPoint) -> Float {
+        let side = Map3DScene.chunkSize
+        let low = SIMD2(Float(key.column) * side, Float(key.row) * side), at = SIMD2(point.x, point.z)
+        return simd_length(simd_clamp(at, low, low + side) - at)
+    }
+
     /// Whether any of `key`'s square is on the map.
     func isOnMap(_ key: Key) -> Bool {
         let square = region(of: key)
@@ -237,8 +245,16 @@ public struct Map3DStreaming: Sendable {
         /// Of them, those kept from before the scene was built anew,
         /// built again when nothing else is wanted.
         public private(set) var stale: Set<Key>
+        /// Decision 368: of them, those built without the city in full
+        /// (``Map3DScene/Chunk/coarse``), built again in full when the
+        /// target comes within ``Map3DScene/detailRadius``.
+        public private(set) var coarse: Set<Key>
         /// The block being built, and the scene it is for.
         public private(set) var building: [Key] = []
+        /// Decision 368: the scene point the block is built in full round
+        /// (``Map3DScene/chunks(_:of:world:snapshot:skyline:baseMap:cityTiles:heights:lineBands:railways:temples:trackCover:detail:)``'s
+        /// `detail`): the target when it was asked for.
+        public private(set) var buildingAround = Map3DPoint(0, 0, 0)
         public let generation: Int
         public private(set) var motion = Motion()
         private var planned: Double?
@@ -248,16 +264,19 @@ public struct Map3DStreaming: Sendable {
         /// the view keeps from the scene before it (where the new one has
         /// none whole), built again in time.
         public init(scene: Map3DScene, map: WorldRegion, generation: Int = 0, kept: Set<Key> = []) {
-            self.init(grid: Map3DStreaming(scene: scene, map: map), region: scene.region, generation: generation, kept: kept)
+            self.init(grid: Map3DStreaming(scene: scene, map: map), region: scene.region, generation: generation, kept: kept,
+                      coarse: Set(scene.chunks.filter(\.coarse).map { Key(column: $0.column, row: $0.row) }))
         }
 
-        /// The same for a scene of `region` round `grid`'s origin.
-        public init(grid: Map3DStreaming, region: WorldRegion, generation: Int = 0, kept: Set<Key> = []) {
+        /// The same for a scene of `region` round `grid`'s origin, whose
+        /// chunks at `coarse` are built without the city in full.
+        public init(grid: Map3DStreaming, region: WorldRegion, generation: Int = 0, kept: Set<Key> = [], coarse: Set<Key> = []) {
             self.grid = grid
             let whole = grid.keys(within: region)
             scene = whole
             stale = kept.subtracting(whole)
             built = whole.union(stale)
+            self.coarse = coarse.intersection(whole)
             self.generation = generation
         }
 
@@ -276,13 +295,32 @@ public struct Map3DStreaming: Sendable {
             let drop = plan.drop.filter { !scene.contains($0) }
             built.subtract(drop)
             stale.subtract(drop)
+            coarse.subtract(drop)
             guard building.isEmpty else { return (drop, []) }
             var block = Map3DStreaming.block(of: plan.build)
+            func nearest(_ keys: some Sequence<Key>) -> [Key] {
+                keys.map { (key: $0, distance: Map3DStreaming.distance(of: $0, to: target)) }.sorted { ($0.distance, $0.key) < ($1.distance, $1.key) }.map(\.key)
+            }
             if block.isEmpty {
-                // Nothing missing: the kept chunks again, the soonest first.
+                // Decision 368: nothing missing: the coarse chunks near the
+                // target in full, the nearest first.
+                block = Map3DStreaming.block(of: nearest(coarse.filter { Map3DStreaming.distance(of: $0, to: target) <= Map3DScene.detailRadius }))
+            }
+            if block.isEmpty {
+                // The kept chunks again, the soonest first.
                 block = Map3DStreaming.block(of: grid.wanted(target: target, velocity: velocity).filter(stale.contains))
             }
+            if block.isEmpty {
+                // Decision 368: the chunks in full left far behind (the
+                // scene's are never let go, the others only beyond the
+                // plan's reach) simplified again, so the city in full stays
+                // round the target only.
+                let far = built.subtracting(coarse).subtracting(stale)
+                    .filter { Map3DStreaming.distance(of: $0, to: target) > Map3DScene.detailRadius + Map3DStreaming.slack }
+                block = Map3DStreaming.block(of: nearest(far))
+            }
             building = block
+            if !block.isEmpty { buildingAround = target }
             return (drop, block)
         }
 
@@ -294,6 +332,9 @@ public struct Map3DStreaming: Sendable {
             building = []
             built.formUnion(keys)
             stale.subtract(keys)
+            for key in keys {
+                if Map3DStreaming.distance(of: key, to: buildingAround) > Map3DScene.detailRadius { coarse.insert(key) } else { coarse.remove(key) }
+            }
             planned = nil
             return true
         }
