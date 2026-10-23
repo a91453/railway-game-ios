@@ -63,8 +63,12 @@ public enum FrameCostPart: String, CaseIterable, Hashable, Sendable {
     /// The flat map's body, with the keys its modifiers compare.
     case mapBody
     /// What the flat map works out when a tick changed the world: the
-    /// trains' glide, traffic control, the real trains' clock, the weather.
+    /// real trains' clock, the weather, the followed train's camera.
     case mapTick
+    /// The trains' glide the flat map takes after a tick.
+    case mapGlide
+    /// Traffic control the flat map takes after a tick.
+    case mapTraffic
     /// The screen's frame (``ContentView``) and the route hint it watches.
     case screenBody
     /// The status bar.
@@ -78,7 +82,7 @@ public enum FrameCostPart: String, CaseIterable, Hashable, Sendable {
         switch self {
         case .stepWorld, .stepFollow, .stepPlatforms, .stepSound, .stepIncome, .stepActions, .stepNews, .stepMidnight, .stepNightSkip:
             .afterStep
-        case .mapBody, .mapTick, .screenBody, .hudBody, .stationMasterBody:
+        case .mapBody, .mapTick, .mapGlide, .mapTraffic, .screenBody, .hudBody, .stationMasterBody:
             .viewUpdate
         default:
             nil
@@ -120,6 +124,8 @@ public enum FrameCostPart: String, CaseIterable, Hashable, Sendable {
         case .viewUpdate: language.text("view update", "畫面更新")
         case .mapBody: language.text("map", "地圖")
         case .mapTick: language.text("map after tick", "地圖跟著推進")
+        case .mapGlide: language.text("map glide", "地圖列車滑行")
+        case .mapTraffic: language.text("map traffic", "地圖車流")
         case .screenBody: language.text("screen", "畫面框架")
         case .hudBody: language.text("status bar", "狀態列")
         case .stationMasterBody: language.text("station master", "站長")

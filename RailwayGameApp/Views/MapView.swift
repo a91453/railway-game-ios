@@ -1119,11 +1119,11 @@ struct MapView: View {
         // readout.
         .onChange(of: TrafficKey(world: session.world), initial: true) { _, _ in
             // Decision 64, later fix: read with the tick, off the main actor.
-            FrameCostMeter.shared.measure(.mapTick) { traffic = session.trafficOverlay }
+            FrameCostMeter.shared.measure(.mapTraffic) { traffic = session.trafficOverlay }
         }
         .onChange(of: session.world.trains, initial: true) { _, _ in
             // Decision 182: each tick's trains glide from the last tick's.
-            FrameCostMeter.shared.measure(.mapTick) {
+            FrameCostMeter.shared.measure(.mapGlide) {
                 // Decision 379: worked out with the tick, off the main actor.
                 trainMotion = session.trainMotion(after: trainMotion, at: Date().timeIntervalSinceReferenceDate)
             }
