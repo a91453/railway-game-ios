@@ -321,7 +321,7 @@ public enum DataSourceCredits {
                         ),
                         notice: language.text(
                             "Taiwan Railway Corporation, 2026: train timetables, from TRA open data (ods.railway.gov.tw). ",
-                            "國營臺灣鐵路股份有限公司 2026 年列車時刻表，取自臺鐵開放資料（ods.railway.gov.tw）"
+                            "國營臺灣鐵路股份有限公司 2026 年列車時刻表，取自臺鐵開放資料 ods.railway.gov.tw"
                         ) + openGovernmentAttribution(in: language),
                         links: [
                             DataSourceCredit.Link(title: language.text("TRA open data", "臺鐵開放資料"), url: traOpenDataURL),
