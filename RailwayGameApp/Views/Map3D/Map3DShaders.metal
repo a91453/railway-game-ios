@@ -177,7 +177,10 @@ float4 map3dLit(float3 base, float3 glow, float4 mirrored, float3 normal, float3
     float3 light;
     if (soft) {
         float sun = max(dot(normal, uniforms.sunDirection.xyz), 0.0) * (1.0 - (1.0 - sunSeen) * 0.55);
-        light = float3(0.80 + 0.02 * max(normal.y, 0.0) + 0.15 * sun) * mix(float3(0.94, 0.96, 1.0), float3(1.0, 0.99, 0.97), sun);
+        // By day 0.05 more, so the sunlit ground at 14:00 is its own colour
+        // (#ECEEF6), back to 0.80 as the city's lights come on.
+        float sky = 0.85 - 0.05 * uniforms.shade.y;
+        light = float3(sky + 0.02 * max(normal.y, 0.0) + 0.15 * sun) * mix(float3(0.94, 0.96, 1.0), float3(1.0, 0.99, 0.97), sun);
         light *= (uniforms.ambientSky.rgb + uniforms.sunColor.rgb * 0.5) / float3(0.925, 0.871, 0.806);
     } else {
         float sun = max(dot(normal, uniforms.sunDirection.xyz), 0.0) * sunSeen;

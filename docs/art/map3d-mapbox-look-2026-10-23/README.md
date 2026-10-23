@@ -280,6 +280,8 @@
 
 `game-e.jpg`（260 m）與 `game-e-v1.jpg`（220 m）：左邊是 main 的 (a)，右邊是做進遊戲的 (e)，白天、黃昏、夜晚，用 `tools/map3d-preview/` 的預覽頁畫的（同一套 shader 算式）。數字與路燈門檻在 `docs/decisions/370.md`。
 
+`haze-close.jpg`：作者 84.1 說白天近看「太暗、像多一層霧」，同一個近看鏡頭的晴天、雨天、黃昏，左起 main、(e) 第一次推的、白天光修正後。原因與數字在決策 370。
+
 ## 怎麼做的
 
 - 場景：`tools/map3d-preview/` 的同一套（Swift 輸出場景，WebGL 照 `Map3DShaders.metal` 的算式畫）。台北的實景新局（`MAP3D_WORLD=taipei`，台灣底圖與高度檔），信義區用以 101 為中心建的場景。預覽頁沒有決策 347／349 的天空與色調映射，顏色和 App 不完全一樣；實機還沒看。
