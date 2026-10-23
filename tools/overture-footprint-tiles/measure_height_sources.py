@@ -4,7 +4,7 @@ Taiwan (decision 386, the report's "樓高來源"). Nothing in the app reads thi
 
     python3 tools/overture-footprint-tiles/measure_height_sources.py \\
         footprints.parquet taiwan_population.json heights.json \\
-        GLOBFP_DIR TAICHUNG.shp TAIPEI.shp out.json
+        GLOBFP_DIR TAICHUNG.shp TAIPEI.shp out.json [GHSL_DIR]
 
 GLOBFP_DIR holds 3D-GloBFP's shapefiles of the grids that reach Taiwan,
 Kinmen and Matsu (2257, 2274, 2275, 2277, 2412, 2413; Che et al. 2024, CC BY
@@ -12,7 +12,10 @@ Kinmen and Matsu (2257, 2274, 2275, 2277, 2412, 2413; Che et al. 2024, CC BY
 is Taichung's building map of 2022 (data.gov.tw 162900, the original city,
 TWD97, `B1D` storeys); TAIPEI.shp is Taipei's building permit map
 (data.gov.tw 151936, TWD97, `bud_floor`). Both are under the Government Open
-Data License 1.0.
+Data License 1.0. GHSL_DIR holds GHS-BUILT-H ANBH R2023A's 100 m Mollweide
+tiles R6_C30 and R7_C30 (JRC, CC BY 4.0, doi:10.2905/85005901-3A49-48DD-
+9D19-6261354F56FE), read by `tiff.py`: a footprint takes the value of the
+cell its centroid is in (0 = no building there).
 
 A source's polygons are matched to an Overture footprint by overlap: the
 footprint takes the area-weighted mean of the polygons over it when they
@@ -33,6 +36,34 @@ import build_footprint_tiles as T  # noqa: E402
 
 BOXES = T.BOXES
 COVER = 0.5
+# The three samples the game-planning session asked for: two city centres
+# (west, south, east, north) and a rural county.
+SAMPLES = {'臺北市中心': (121.50, 25.02, 121.57, 25.07), '高雄市區': (120.28, 22.60, 120.35, 22.66),
+           '雲林縣': '10009'}
+
+
+def mollweide(lon, lat):
+    """ESRI:54009, World Mollweide on the sphere of radius 6,378,137 m."""
+    phi = math.radians(lat)
+    theta = phi
+    for _ in range(30):
+        theta -= (2 * theta + math.sin(2 * theta) - math.pi * math.sin(phi)) / (2 + 2 * math.cos(2 * theta))
+    return (2 * math.sqrt(2) / math.pi * T.EARTH * math.radians(lon) * math.cos(theta),
+            math.sqrt(2) * T.EARTH * math.sin(theta))
+
+
+def ghsl_lookup(directory):
+    from tiff import Raster
+    rasters = [Raster(path, cache=4000) for path in sorted(glob.glob(os.path.join(directory, '**', '*.tif'), recursive=True))]
+
+    def at(lon, lat):
+        x, y = mollweide(lon, lat)
+        for raster in rasters:
+            value = raster.at(x, y)
+            if value is not None:
+                return value
+        return None
+    return at
 
 
 def connect(extract_path):
@@ -92,13 +123,61 @@ def errors(pairs):
             'bias': at(signed, 0.5)}
 
 
-def main(extract_path, population_path, heights_path, globfp_dir, taichung, taipei, out):
+def ghsl_report(rows, ghsl, globfp_metres, taichung_storeys, known, guess):
+    """GHSL's cell height for every footprint, against the same truths;
+    and in the three samples, cell by cell, against 3D-GloBFP."""
+    cells, height, in_sample = {}, {}, {}
+    for id_, county, lon, lat in rows:
+        metres = ghsl(lon, lat)
+        height[id_] = metres
+        x, y = mollweide(lon, lat)
+        cell = (int(x // 100), int(y // 100))
+        for name, where in SAMPLES.items():
+            inside = county == where if isinstance(where, str) else \
+                where[0] <= lon < where[2] and where[1] <= lat < where[3]
+            if inside:
+                in_sample.setdefault(name, set()).add(cell)
+                entry = cells.setdefault((name, cell), [metres, 0.0, 0.0])
+                if id_ in globfp_metres:
+                    entry[1] += globfp_metres[id_]
+                    entry[2] += 1
+    storeys = {k: max(1, round(v / T.LEVEL_HEIGHT)) for k, v in height.items() if v}
+
+    def against(truth, estimate, only=None):
+        return errors([(estimate[k], v) for k, v in truth.items() if k in estimate and (only is None or k in only)])
+    samples = {}
+    for name in SAMPLES:
+        rows_here = [cells[(name, c)] for c in sorted(in_sample.get(name, ()))]
+        both = [(g, total / n) for g, total, n in rows_here if g and n]
+        gaps = sorted(abs(g - b) for g, b in both)
+        samples[name] = {
+            'cellsWithBuildings': len(rows_here),
+            'noGhsl': round(sum(1 for g, _, _ in rows_here if not g) / max(1, len(rows_here)), 3),
+            'noGlobfp': round(sum(1 for _, _, n in rows_here if not n) / max(1, len(rows_here)), 3),
+            'neither': round(sum(1 for g, _, n in rows_here if not g and not n) / max(1, len(rows_here)), 3),
+            'medianGapMetres': round(gaps[len(gaps) // 2], 1) if gaps else None,
+            'p90GapMetres': round(gaps[int(0.9 * len(gaps))], 1) if gaps else None,
+            'medianGhslMetres': round(sorted(g for g, _ in both)[len(both) // 2], 1) if both else None,
+            'medianGlobfpMetres': round(sorted(b for _, b in both)[len(both) // 2], 1) if both else None,
+        }
+    return {
+        'covered': len(storeys),
+        'againstTaichung': against(taichung_storeys, storeys),
+        'densityGuessOnSameTaichung': against(taichung_storeys, guess, storeys),
+        'againstTagged': against(known, storeys),
+        'densityGuessOnSameTagged': against(known, guess, storeys),
+        'samples': samples,
+    }
+
+
+def main(extract_path, population_path, heights_path, globfp_dir, taichung, taipei, out, ghsl_dir=None):
     connection = connect(extract_path)
     load_globfp(connection, globfp_dir)
     load_twd97(connection, 'taichung', taichung, 'B1D')
     load_twd97(connection, 'taipei', taipei,
                "coalesce(nullif(bud_floor::INT, 0), try_cast(regexp_extract(budatt_no, '(\\d+)F$', 1) AS INT))")
-    globfp = {k: max(1, round(v / T.LEVEL_HEIGHT)) for k, v in matched(connection, 'g').items()}
+    globfp_metres = matched(connection, 'g')
+    globfp = {k: max(1, round(v / T.LEVEL_HEIGHT)) for k, v in globfp_metres.items()}
     taichung_storeys = {k: max(1, round(v)) for k, v in matched(connection, 'taichung').items()}
     taipei_storeys = {k: max(1, round(v)) for k, v in matched(connection, 'taipei').items()}
 
@@ -156,12 +235,15 @@ def main(extract_path, population_path, heights_path, globfp_dir, taichung, taip
             'densityGuess': against(taipei_storeys, guess),
         },
     }
+    if ghsl_dir:
+        report['ghsl'] = ghsl_report([(b[0], b[5], b[6], b[7]) for b in buildings], ghsl_lookup(ghsl_dir),
+                                     globfp_metres, taichung_storeys, known, guess)
     with open(out, 'w') as file:
         json.dump(report, file, ensure_ascii=False, indent=1)
     print(json.dumps(report, ensure_ascii=False, indent=1))
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 8:
+    if len(sys.argv) not in (8, 9):
         sys.exit(__doc__)
     main(*sys.argv[1:])

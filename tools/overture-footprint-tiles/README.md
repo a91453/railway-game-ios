@@ -28,7 +28,7 @@ python3 $T heights footprints.parquet $P heights.json
 python3 $T window out/taiwan.pmtiles 25.0133 121.4637 3072 heights.json $P window.json
 ```
 
-`measure_height_sources.py` 量各個樓高來源（3D-GloBFP、臺中市建物圖、臺北市建築執照套繪圖）對 Overture 足跡的覆蓋與誤差，用法在它的開頭；結果在報告 §8。
+`measure_height_sources.py` 量各個樓高來源（3D-GloBFP、GHSL、臺中市建物圖、臺北市建築執照套繪圖）對 Overture 足跡的覆蓋與誤差，用法在它的開頭；結果在報告 §8。GHSL 的 GeoTIFF 用 `tiff.py` 讀（只用標準函式庫，BigTIFF、LZW／deflate、方塊或條帶）；測試 `python3 -I tools/overture-footprint-tiles/test_tiff.py`，CI 沒有跑，改讀檔器時在本機跑。
 
 `FootprintWindowMeasure.swift.txt` 是量板橋 3 × 3 的測試範本：暫時複製進 `Tests/GamePresentationTests/`，用 `FOOTPRINT_WINDOW=window.json swift test --filter FootprintWindowMeasure` 跑，跑完刪掉（同 `tools/map3d-preview/` 的做法）。
 
