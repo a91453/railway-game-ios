@@ -129,13 +129,169 @@ public enum DataSourceCredits {
         }
     }
 
-    /// Every source, by the part of the game that uses it. The same wording
-    /// as the data sources page of the game's website.
+    /// The Open Government Data License, linked from every source under it.
+    static func openGovernmentLicense(in language: DisplayLanguage) -> DataSourceCredit.Link {
+        DataSourceCredit.Link(title: language.text("Open Government Data License", "政府資料開放授權條款"), url: openGovernmentLicenseURL)
+    }
+
+    /// The attribution the Open Government Data License, version 1.0, asks
+    /// for after the provider, the year and the datasets (its annex).
+    static func openGovernmentAttribution(in language: DisplayLanguage) -> String {
+        language.text(
+            "This open data is released to the public under the Open Government Data License, version 1.0; users may use it provided they comply with the terms of the licence.",
+            "（此開放資料依政府資料開放授權條款（Open Government Data License）第 1 版進行公眾釋出，使用者於遵守本條款各項規定之前提下，得利用之。）"
+        )
+    }
+
+    /// Every source, by what the player sees of it (rewritten 2026-10-23 at
+    /// the owner's request: each railway system on its own, where its
+    /// station order, colours and times come from, checked against
+    /// `tools/real-railways/README.md` and each data file's `source_notes`).
     public static func sections(in language: DisplayLanguage) -> [DataSourceSection] {
         [
+            // What the real railways on the map are, and where each
+            // system's data comes from (`RealRailways.System.all`).
             DataSourceSection(
                 id: "railways",
                 title: language.text("Taiwan’s Railways", "台灣的鐵道"),
+                credits: [
+                    DataSourceCredit(
+                        id: "realRailways",
+                        title: language.text("The real railways on the map", "地圖上的真實鐵道"),
+                        detail: language.text(
+                            "Real-world maps of Taiwan show the lines and stations of the railways below; Real Railways in the map style menu fades or hides them. With Real Trains on in Settings, their trains run on the map to their timetables.",
+                            "台灣的實景地圖畫出下面各家鐵道的路線與車站，地圖樣式選單的「真實鐵道」可以調淡或隱藏。打開設定的「真實列車」，它們的列車會照時刻表在地圖上跑。"
+                        ),
+                        notice: language.text(
+                            "Every line’s track and station positions follow OpenStreetMap’s track (© OpenStreetMap contributors, ODbL 1.0); the few stretches where OpenStreetMap is out of date or has no track follow MOTC TDX. Where each line’s station order, names, colours and times come from is under its operator below.",
+                            "每條線的軌道走向與車站位置照 OpenStreetMap 的軌道畫（© OpenStreetMap 貢獻者，ODbL 1.0），少數 OpenStreetMap 過時或沒有軌道的路段照交通部 TDX。各線的站序、站名、路線色與時刻從哪裡來，寫在下面各營運機構。"
+                        ),
+                        links: []
+                    ),
+                    DataSourceCredit(
+                        id: "tra",
+                        title: language.text("TRA", "台鐵"),
+                        detail: language.text(
+                            "The Western Trunk, Mountain, Coast, Chengzhui, Pingtung, South-Link, Taitung, North-Link and Yilan Lines, and six branch lines: Pingxi, Shenao, Neiwan, Liujia, Jiji and Shalun, all in TRA blue. On a real-world map you can buy the six branch lines, and their trains keep TRA’s real times.",
+                            "縱貫線、山線、海線、成追線、屏東線、南迴線、台東線、北迴線、宜蘭線，以及平溪、深澳、內灣、六家、集集、沙崙六條支線，全部畫成台鐵藍。實景地圖上可以買下這六條支線，列車照台鐵的真實時刻開。"
+                        ),
+                        notice: language.text(
+                            "Station order and names: TRA’s published station order. Colour: the blue of TRA’s logo. Branch line times: TRA open data.",
+                            "站序與站名：台鐵公布的站序。路線色：台鐵標誌的藍色。支線時刻：台鐵開放資料。"
+                        ),
+                        links: []
+                    ),
+                    DataSourceCredit(
+                        id: "thsr",
+                        title: language.text("High Speed Rail", "高鐵"),
+                        detail: language.text(
+                            "The line from Nangang to Zuoying and its 12 stations, in the High Speed Rail’s orange. The High-Speed Rail Demo and Real Trains run to its real timetable of 29 September 2026, and the demo charges its real fares.",
+                            "南港到左營的高鐵線與 12 個車站，畫成高鐵橘。高鐵示範與真實列車照 2026 年 9 月 29 日的真實班表開，示範的票價也是高鐵的票價。"
+                        ),
+                        notice: language.text(
+                            "Station order, names, timetable and fares: MOTC TDX. Colour: the orange of the High Speed Rail’s logo.",
+                            "站序、站名、班表與票價：交通部 TDX。路線色：高鐵標誌的橘色。"
+                        ),
+                        links: []
+                    ),
+                    DataSourceCredit(
+                        id: "afr",
+                        title: language.text("Alishan Forest Railway", "阿里山林鐵"),
+                        detail: language.text(
+                            "The Main Line from Chiayi to Alishan and the Shenmu, Zhaoping and Zhushan Lines, in the Alishan Forest Railway’s red.",
+                            "本線（嘉義到阿里山）、神木線、沼平線與祝山線，畫成阿里山林鐵紅。"
+                        ),
+                        notice: language.text(
+                            "Station order and names: MOTC TDX. Colour: the red of the Alishan Forest Railway’s logo.",
+                            "站序與站名：交通部 TDX。路線色：阿里山林鐵標誌的紅色。"
+                        ),
+                        links: []
+                    ),
+                    DataSourceCredit(
+                        id: "taipeiMetro",
+                        title: language.text("Taipei Metro", "台北捷運"),
+                        detail: language.text(
+                            "The Wenhu, Tamsui–Xinyi (with the Xinbeitou branch), Songshan–Xindian (with the Xiaobitan branch), Zhonghe–Xinlu and Bannan Lines, each in its own colour.",
+                            "文湖線、淡水信義線（含新北投支線）、松山新店線（含小碧潭支線）、中和新蘆線與板南線，每條線用自己的路線色。"
+                        ),
+                        notice: language.text(
+                            "Station order and names: MOTC TDX. Colours: Taipei Metro’s website. Times: MOTC TDX’s station timetables; the Wenhu Line’s are set from its official headways and first and last trains.",
+                            "站序與站名：交通部 TDX。路線色：台北捷運官網。時刻：交通部 TDX 的各站時刻表；文湖線照官方班距與首末班車排出。"
+                        ),
+                        links: []
+                    ),
+                    DataSourceCredit(
+                        id: "newTaipeiMetro",
+                        title: language.text("New Taipei Metro", "新北捷運"),
+                        detail: language.text(
+                            "All four of its lines: the Circular Line, the Danhai Light Rail (Green Mountain and Blue Coast Lines), the Ankeng Light Rail and the Sanying Line, each in its own colour. On the map the Circular Line is grouped with Taipei Metro’s lines.",
+                            "四條線都有：環狀線、淡海輕軌（綠山線與藍海線）、安坑輕軌與三鶯線，每條線用自己的路線色。地圖上環狀線跟台北捷運的路線歸在一起。"
+                        ),
+                        notice: language.text(
+                            "Station order and names: MOTC TDX; the Sanying Line’s from New Taipei Metro’s website. Colours: the Circular Line’s from Taipei Metro’s website, the other three from MOTC TDX. Times: MOTC TDX’s station timetables; the Sanying Line’s are set from New Taipei Metro’s announced headways and TDX’s times between stations.",
+                            "站序與站名：交通部 TDX；三鶯線取自新北捷運官網。路線色：環狀線取自台北捷運官網，其他三線取自交通部 TDX。時刻：交通部 TDX 的各站時刻表；三鶯線照新北捷運公告的班距與 TDX 的站間時間排出。"
+                        ),
+                        links: []
+                    ),
+                    DataSourceCredit(
+                        id: "taoyuanMetro",
+                        title: language.text("Taoyuan Airport MRT", "桃園機捷"),
+                        detail: language.text(
+                            "The Airport MRT from Taipei Main Station to Laojie River, with its commuter and express trains at their real times.",
+                            "台北車站到老街溪的機場捷運，普通車與直達車都照真實時刻跑。"
+                        ),
+                        notice: language.text(
+                            "Station order, names and times: MOTC TDX. Colour: MOTC TDX.",
+                            "站序、站名與時刻：交通部 TDX。路線色：交通部 TDX。"
+                        ),
+                        links: []
+                    ),
+                    DataSourceCredit(
+                        id: "taichungMetro",
+                        title: language.text("Taichung Metro", "台中捷運"),
+                        detail: language.text(
+                            "The Green Line (Wuri–Wenxin–Beitun) from Beitun Main Station to HSR Taichung Station.",
+                            "綠線（烏日文心北屯線），北屯總站到高鐵台中站。"
+                        ),
+                        notice: language.text(
+                            "Station order and names: MOTC TDX. Colour: MOTC TDX. Times: set from TDX’s official headways and first and last trains.",
+                            "站序與站名：交通部 TDX。路線色：交通部 TDX。時刻：照 TDX 的官方班距與首末班車排出。"
+                        ),
+                        links: []
+                    ),
+                    DataSourceCredit(
+                        id: "kaohsiungMetro",
+                        title: language.text("Kaohsiung Metro", "高雄捷運"),
+                        detail: language.text(
+                            "The Red Line, the Orange Line and the Circular Light Rail, each in its own colour.",
+                            "紅線、橘線與環狀輕軌，每條線用自己的路線色。"
+                        ),
+                        notice: language.text(
+                            "Station order and names: MOTC TDX. Colours: Kaohsiung Metro’s website. Times: MOTC TDX’s station timetables.",
+                            "站序與站名：交通部 TDX。路線色：高雄捷運官網。時刻：交通部 TDX 的各站時刻表。"
+                        ),
+                        links: []
+                    ),
+                    DataSourceCredit(
+                        id: "operators",
+                        title: language.text("Names and operators", "名稱與營運機構"),
+                        detail: language.text(
+                            "The English line and station names are compiled by Along the Line.",
+                            "英文的路線名與站名由《沿線》整理。"
+                        ),
+                        notice: language.text(
+                            "The game is not affiliated with any of the operators above.",
+                            "本遊戲與上列各營運機構沒有任何關係。"
+                        ),
+                        links: []
+                    ),
+                ]
+            ),
+            // The datasets behind the railways above, each with the notice
+            // its licence asks for.
+            DataSourceSection(
+                id: "railwayData",
+                title: language.text("Railway Data", "鐵道資料"),
                 credits: [
                     DataSourceCredit(
                         id: "tdx",
@@ -144,66 +300,32 @@ public enum DataSourceCredits {
                             "交通部運輸資料流通服務平臺（TDX）"
                         ),
                         detail: language.text(
-                            "Routes, station order and names of the High Speed Rail, metro, light rail and Alishan Forest Railway lines; the positions of some TRA stations; official line colours, station codes, addresses and headways; the High Speed Rail demo's fares between stations.",
-                            "提供高鐵、捷運、輕軌與阿里山林鐵的路線、站序與站名，部分台鐵車站的位置，各線的官方路線色、車站代碼、地址與營運班距；高鐵示範各站之間的票價。"
+                            "Most of the station order, station names, station codes and addresses above; the High Speed Rail’s, the metros’ and the light rails’ timetables; the High-Speed Rail Demo’s fares; and some lines’ colours.",
+                            "上面大部分路線的站序、站名、車站代碼與地址，高鐵、捷運與輕軌的時刻表，高鐵示範的票價，以及部分路線的路線色。"
                         ),
                         notice: language.text(
-                            "Ministry of Transportation and Communications, Transport Data eXchange (TDX), 2026: rail stations, lines, station order of lines, line shapes, travel times between stations, headways, station timetables, the High Speed Rail's daily timetable and its origin–destination fares. This open data is released to the public under the Open Government Data License, version 1.0; users may use it provided they comply with the terms of the licence.",
-                            "交通部運輸資料流通服務平臺（TDX）2026 年軌道車站、路線、路線站序、路線線型、站間行駛時間、班距、車站時刻表、高鐵每日時刻表與高鐵起訖站票價（此開放資料依政府資料開放授權條款（Open Government Data License）第 1 版進行公眾釋出，使用者於遵守本條款各項規定之前提下，得利用之。）"
-                        ),
+                            "Ministry of Transportation and Communications, Transport Data eXchange (TDX), 2026: rail stations, lines, station order of lines, line shapes, travel times between stations, headways, station timetables, the High Speed Rail’s daily timetable and its origin–destination fares. ",
+                            "交通部運輸資料流通服務平臺（TDX）2026 年軌道車站、路線、路線站序、路線線型、站間行駛時間、班距、車站時刻表、高鐵每日時刻表與高鐵起訖站票價"
+                        ) + openGovernmentAttribution(in: language),
                         links: [
                             DataSourceCredit.Link(title: "TDX", url: tdxURL),
-                            DataSourceCredit.Link(
-                                title: language.text("Open Government Data License", "政府資料開放授權條款"),
-                                url: openGovernmentLicenseURL
-                            ),
+                            openGovernmentLicense(in: language),
                         ]
                     ),
                     DataSourceCredit(
                         id: "traOpenData",
-                        title: language.text("Taiwan Railway open data", "臺鐵開放資料"),
+                        title: language.text("TRA open data", "台鐵開放資料"),
                         detail: language.text(
-                            "The timetables of the Pingxi Line's and the Yilan Line's trains, which the real-world demo and the TRA demo run at their real times.",
-                            "平溪線與宜蘭線各班列車的時刻表，實景示範與台鐵示範照真實時刻開車。"
+                            "The real times of TRA’s trains: the Pingxi Line in the Real-World Demo, the Yilan Line in the TRA Demo, and the six branch lines you can buy on a real-world map.",
+                            "台鐵列車的真實時刻：實景示範的平溪線、台鐵示範的宜蘭線，以及實景地圖上可以買下的六條支線。"
                         ),
                         notice: language.text(
-                            "Used under the Open Government Data License, version 1.0.",
-                            "依「政府資料開放授權條款第 1 版」使用。"
-                        ),
+                            "Taiwan Railway Corporation, 2026: train timetables, from TRA open data (ods.railway.gov.tw). ",
+                            "國營臺灣鐵路股份有限公司 2026 年列車時刻表，取自臺鐵開放資料（ods.railway.gov.tw）"
+                        ) + openGovernmentAttribution(in: language),
                         links: [
-                            DataSourceCredit.Link(title: language.text("Taiwan Railway open data", "臺鐵開放資料"), url: traOpenDataURL),
-                            DataSourceCredit.Link(
-                                title: language.text("Open Government Data License", "政府資料開放授權條款"),
-                                url: openGovernmentLicenseURL
-                            ),
-                        ]
-                    ),
-                    // Decision 298: the real stations' riders a day, which
-                    // the transfers of a station by one follow
-                    // (`tools/real-ridership/`).
-                    DataSourceCredit(
-                        id: "ridership",
-                        title: language.text("Riders by station", "各站運量"),
-                        detail: language.text(
-                            "How many people use each TRA, High Speed Rail, Taipei Metro, New Taipei Metro, Taoyuan Airport MRT, Taichung Metro and Kaohsiung Metro station a day: a station of yours beside one gets riders changing from the real trains in proportion.",
-                            "台鐵、高鐵、台北捷運、新北捷運、桃園機捷、台中捷運與高雄捷運各站平均每天的進出人數：你的車站在真實車站旁，轉乘過來的旅客照它的人數多寡。"
-                        ),
-                        notice: language.text(
-                            "Taiwan Railway Corporation, daily entries and exits by station; Taipei Rapid Transit Corporation, hourly entries and exits by station; Taichung Mass Rapid Transit Corporation, riders by station; Kaohsiung City Government, entries and exits by station of the Kaohsiung Metro: used under the Open Government Data License, version 1.0. Taiwan High Speed Rail Corporation, passengers entering and leaving each station; New Taipei Metro Corporation, daily riders by station; Taoyuan Metro Corporation, riders by station: from their published operating statistics.",
-                            "國營臺灣鐵路股份有限公司「臺鐵每日各站點進出站人數」、臺北大眾捷運股份有限公司「臺北捷運各站分時進出量統計」、臺中捷運股份有限公司「臺中捷運股份有限公司捷運各站旅運量」、高雄市政府「高雄都會區大眾捷運系統各站旅運量入站、出站」，依「政府資料開放授權條款第 1 版」使用；台灣高速鐵路股份有限公司「客運運輸情形：各站進出旅客人數」、新北大眾捷運股份有限公司「營運統計數據：每日全線各站運量統計表」、桃園大眾捷運股份有限公司「各站旅運量統計」，取自其公布的營運統計。"
-                        ),
-                        links: [
-                            DataSourceCredit.Link(title: language.text("TRA entries and exits", "臺鐵各站進出站人數"), url: "https://data.gov.tw/dataset/8792"),
-                            DataSourceCredit.Link(title: language.text("Taipei Metro entries and exits", "臺北捷運各站進出量"), url: "https://data.gov.tw/dataset/128506"),
-                            DataSourceCredit.Link(title: language.text("Taichung Metro riders by station", "臺中捷運各站旅運量"), url: "https://data.gov.tw/dataset/175718"),
-                            DataSourceCredit.Link(title: language.text("Kaohsiung Metro entries and exits", "高雄捷運各站旅運量"), url: "https://data.gov.tw/dataset/159641"),
-                            DataSourceCredit.Link(title: language.text("High Speed Rail operating statistics", "高鐵客運運輸情形"), url: "https://www.thsrc.com.tw/corp/9571df11-8524-4935-8a46-0d5a72e6bc7c"),
-                            DataSourceCredit.Link(title: language.text("New Taipei Metro operating statistics", "新北捷運統計資料"), url: "https://www.ntmetro.com.tw/basic/?node=10145"),
-                            DataSourceCredit.Link(title: language.text("Taoyuan Metro operating statistics", "桃園捷運統計資料"), url: "https://www.tymetro.com.tw/tymetro-new/tw/_pages/about/statistics.html"),
-                            DataSourceCredit.Link(
-                                title: language.text("Open Government Data License", "政府資料開放授權條款"),
-                                url: openGovernmentLicenseURL
-                            ),
+                            DataSourceCredit.Link(title: language.text("TRA open data", "臺鐵開放資料"), url: traOpenDataURL),
+                            openGovernmentLicense(in: language),
                         ]
                     ),
                     // Decision 279: through the reference's
@@ -214,31 +336,26 @@ public enum DataSourceCredits {
                         id: "nlsc",
                         title: language.text("National Land Surveying and Mapping Center", "內政部國土測繪中心"),
                         detail: language.text(
-                            "Where the TRA's, the High Speed Rail's and the metros' and light rails' lines run on bridges and viaducts or through tunnels, which the demos' track and track traced along them follow.",
-                            "台鐵、高鐵與捷運、輕軌各線在橋梁、高架與隧道上的路段，示範的軌道與沿真實鐵路描的軌道照著蓋。"
+                            "Which stretches of the TRA, the High Speed Rail, the metros and the light rails are on bridges and viaducts or in tunnels: the demos’ track and the track you trace along a real railway rise and dip to match.",
+                            "台鐵、高鐵、捷運與輕軌哪些路段在橋上、高架上或隧道裡：示範地圖的軌道，以及你沿真實鐵路描的軌道，照著蓋高架與隧道。"
                         ),
                         notice: language.text(
-                            "National Land Surveying and Mapping Center, Ministry of the Interior, 2026: Taiwan Railway, High Speed Railway and Mass Rapid Transit. This open data is released to the public under the Open Government Data License, version 1.0; users may use it provided they comply with the terms of the licence.",
-                            "內政部國土測繪中心 2026 年臺灣鐵路、高速鐵路、捷運（此開放資料依政府資料開放授權條款（Open Government Data License）第 1 版進行公眾釋出，使用者於遵守本條款各項規定之前提下，得利用之。）"
-                        ),
+                            "National Land Surveying and Mapping Center, Ministry of the Interior, 2026: Taiwan Railway, High Speed Railway and Mass Rapid Transit. ",
+                            "內政部國土測繪中心 2026 年臺灣鐵路、高速鐵路、捷運"
+                        ) + openGovernmentAttribution(in: language),
                         links: [
                             DataSourceCredit.Link(title: language.text("Taiwan Railway (data.gov.tw)", "臺灣鐵路（政府資料開放平臺）"), url: nlscRailwayURL),
-                            DataSourceCredit.Link(
-                                title: language.text("High Speed Railway (data.gov.tw)", "高速鐵路（政府資料開放平臺）"), url: nlscHighSpeedRailURL
-                            ),
+                            DataSourceCredit.Link(title: language.text("High Speed Railway (data.gov.tw)", "高速鐵路（政府資料開放平臺）"), url: nlscHighSpeedRailURL),
                             DataSourceCredit.Link(title: language.text("Mass Rapid Transit (data.gov.tw)", "捷運（政府資料開放平臺）"), url: nlscMetroURL),
-                            DataSourceCredit.Link(
-                                title: language.text("Open Government Data License", "政府資料開放授權條款"),
-                                url: openGovernmentLicenseURL
-                            ),
+                            openGovernmentLicense(in: language),
                         ]
                     ),
                     DataSourceCredit(
                         id: "openStreetMap",
                         title: "OpenStreetMap",
                         detail: language.text(
-                            "The track of every real railway line, station and platform positions, single and double track, where the TRA's, the High Speed Rail's, the Alishan Forest Railway's and the metros' and light rails' lines are on bridges and in tunnels; places such as shops, offices, schools and sights round new stations; the industrial land, parks, farmland, coastline, rivers and lakes of real-world maps; the names of the settlements, villages and townships new stations are named after, and the county each township is in; where the tourist sights of real-world maps stand; where the high-speed demo's depots and the TRA demo's Yilan and Su'aoxin sidings stand and how many platform tracks the high-speed demo's end stations have; the roads, parks and shop names of the 3D city preview.",
-                            "提供每條真實鐵道的軌道走向、車站與月台位置、單雙線資訊、台鐵、高鐵、林鐵與捷運、輕軌在橋梁與隧道上的路段；新車站周邊的商店、辦公室、學校、景點等地點；實景地圖上的工業區、公園、農地、海岸線、河川與湖泊；替新車站命名的聚落、村里與鄉鎮市區名稱及鄉鎮所屬的縣市；實景地圖上觀光景點的位置；高鐵示範的機廠與台鐵示範宜蘭、蘇澳新側線的位置、高鐵示範端點站的股道數；3D 城市預覽的道路、公園與店名。"
+                            "Railways: the track, where stations and platforms stand, single or double track, bridges and tunnels. Real-world maps: the settlements, villages and townships new stations are named after, industrial land, parks, farmland, rivers, lakes and the coast, tourist sights, and the shops, schools and other places round new stations. Demos: the High-Speed Rail Demo’s depots and end-station tracks, and the TRA Demo’s Yilan and Su'aoxin sidings. The 3D city preview’s roads, parks and shop names.",
+                            "鐵道：軌道走向、車站與月台的位置、單線或雙線、橋與隧道。實景地圖：新車站取名用的聚落、村里與鄉鎮，工業區、公園、農地、河川、湖泊與海岸線，觀光景點，以及新車站附近的商店、學校等地點。示範地圖：高鐵示範的機廠與端點站股道、台鐵示範的宜蘭、蘇澳新側線。3D 城市預覽的道路、公園與店名。"
                         ),
                         // The ODbL asks for the derived files to be offered
                         // under the same licence: the source repository link
@@ -253,40 +370,52 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: language.text("Source repository", "原始碼儲存庫"), url: repositoryURL),
                         ]
                     ),
-                    DataSourceCredit(
-                        id: "operators",
-                        title: language.text("Railway operators", "鐵道營運機構"),
-                        detail: language.text(
-                            "Station order of the TRA lines (TRA open data) and the Sanying Line (New Taipei Metro); Taipei and Kaohsiung Metro line colours from the operators’ websites; TRA, High Speed Rail and Alishan Forest Railway colours after each operator’s own colours.",
-                            "台鐵與三鶯線的站序取自台鐵公開資料與新北捷運公司；台北捷運、高雄捷運的路線色取自各營運機構網站；台鐵、高鐵與阿里山林鐵的路線色參考各機構的代表色。"
-                        ),
-                        notice: language.text(
-                            "English line and station names are compiled by Along the Line. The game is not affiliated with any operator.",
-                            "路線與車站的英文名稱由《沿線》整理。本遊戲與各營運機構沒有任何關係。"
-                        ),
-                        links: []
-                    ),
                 ]
             ),
             DataSourceSection(
                 id: "population",
-                title: language.text("Population and Ridership", "人口與客源"),
+                title: language.text("People and Riders", "人口與旅客"),
                 credits: [
                     DataSourceCredit(
                         id: "worldPop",
                         title: "WorldPop",
                         detail: language.text(
-                            "When you build a station on a real-world map of Taiwan, the game uses WorldPop’s 2025 population estimates per square kilometre (R2025A) to work out the people and ridership around it. The population grid layer uses the same data.",
-                            "在台灣實景地圖上蓋車站時，遊戲用 WorldPop 2025 年每平方公里的人口估計（R2025A）計算車站周邊的人口與客源。人口網格圖層也使用這份資料。"
+                            "How many people live round a station you build on a real-world map of Taiwan, and so how many riders it gets. The population grid layer shows the same data.",
+                            "在台灣實景地圖上蓋車站時，車站周圍住多少人、因此有多少旅客。人口網格圖層畫的也是這份資料。"
                         ),
                         notice: language.text(
-                            "WorldPop (www.worldpop.org), University of Southampton, under the Creative Commons Attribution 4.0 International licence (CC BY 4.0); DOI 10.5258/SOTON/WP00840. The game rounds each square to whole people.",
-                            "WorldPop（www.worldpop.org），英國南安普敦大學，依創用 CC 姓名標示 4.0 國際授權（CC BY 4.0）使用，DOI 10.5258/SOTON/WP00840。遊戲將每格人數四捨五入為整數。"
+                            "WorldPop (www.worldpop.org), University of Southampton: population estimates per square kilometre, 2025 (R2025A), DOI 10.5258/SOTON/WP00840, under the Creative Commons Attribution 4.0 International licence (CC BY 4.0). The game rounds each square to whole people.",
+                            "WorldPop（www.worldpop.org），英國南安普敦大學：2025 年每平方公里人口估計（R2025A），DOI 10.5258/SOTON/WP00840，依創用 CC 姓名標示 4.0 國際授權（CC BY 4.0）使用。遊戲將每格人數四捨五入為整數。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: "WorldPop", url: worldPopURL),
                             DataSourceCredit.Link(title: language.text("Dataset", "資料集"), url: worldPopDatasetURL),
                             DataSourceCredit.Link(title: "CC BY 4.0", url: ccByURL),
+                        ]
+                    ),
+                    // Decision 298: the real stations' riders a day, which
+                    // the transfers of a station by one follow
+                    // (`tools/real-ridership/`).
+                    DataSourceCredit(
+                        id: "ridership",
+                        title: language.text("Riders by station", "各站運量"),
+                        detail: language.text(
+                            "How many people use each station of the TRA, the High Speed Rail, Taipei Metro, New Taipei Metro’s four lines, the Taoyuan Airport MRT, Taichung Metro and Kaohsiung Metro’s Red and Orange Lines a day: build a station beside one, and riders change to it in proportion.",
+                            "台鐵、高鐵、台北捷運、新北捷運四條線、桃園機捷、台中捷運與高雄捷運紅橘線各站每天進出多少人：你的車站蓋在真實車站旁，轉乘過來的旅客照它的人數多寡。"
+                        ),
+                        notice: language.text(
+                            "Taiwan Railway Corporation, daily entries and exits by station; Taipei Rapid Transit Corporation, hourly entries and exits by station; Taichung Mass Rapid Transit Corporation, riders by station; Kaohsiung City Government, entries and exits by station of the Kaohsiung Metro: used under the Open Government Data License, version 1.0. Taiwan High Speed Rail Corporation, passengers entering and leaving each station; New Taipei Metro Corporation, daily riders by station; Taoyuan Metro Corporation, riders by station: from their published operating statistics.",
+                            "國營臺灣鐵路股份有限公司「臺鐵每日各站點進出站人數」、臺北大眾捷運股份有限公司「臺北捷運各站分時進出量統計」、臺中捷運股份有限公司「臺中捷運股份有限公司捷運各站旅運量」、高雄市政府「高雄都會區大眾捷運系統各站旅運量入站、出站」，依「政府資料開放授權條款第 1 版」使用；台灣高速鐵路股份有限公司「客運運輸情形：各站進出旅客人數」、新北大眾捷運股份有限公司「營運統計數據：每日全線各站運量統計表」、桃園大眾捷運股份有限公司「各站旅運量統計」，取自其公布的營運統計。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("TRA entries and exits", "臺鐵各站進出站人數"), url: "https://data.gov.tw/dataset/8792"),
+                            DataSourceCredit.Link(title: language.text("Taipei Metro entries and exits", "臺北捷運各站進出量"), url: "https://data.gov.tw/dataset/128506"),
+                            DataSourceCredit.Link(title: language.text("Taichung Metro riders by station", "臺中捷運各站旅運量"), url: "https://data.gov.tw/dataset/175718"),
+                            DataSourceCredit.Link(title: language.text("Kaohsiung Metro entries and exits", "高雄捷運各站旅運量"), url: "https://data.gov.tw/dataset/159641"),
+                            DataSourceCredit.Link(title: language.text("High Speed Rail operating statistics", "高鐵客運運輸情形"), url: "https://www.thsrc.com.tw/corp/9571df11-8524-4935-8a46-0d5a72e6bc7c"),
+                            DataSourceCredit.Link(title: language.text("New Taipei Metro operating statistics", "新北捷運統計資料"), url: "https://www.ntmetro.com.tw/basic/?node=10145"),
+                            DataSourceCredit.Link(title: language.text("Taoyuan Metro operating statistics", "桃園捷運統計資料"), url: "https://www.tymetro.com.tw/tymetro-new/tw/_pages/about/statistics.html"),
+                            openGovernmentLicense(in: language),
                         ]
                     ),
                     // Decision 332: the private motor vehicles' share of
@@ -296,8 +425,8 @@ public enum DataSourceCredits {
                         id: "travelSurvey",
                         title: language.text("National Travel Survey", "民眾日常使用運具狀況調查"),
                         detail: language.text(
-                            "How many trips in each county and city of Taiwan are made by scooter or car: on a real-world map, at most that many of your riders ride or drive instead when the train is slower.",
-                            "台灣各縣市有多少行程騎機車或開車：在實景地圖上，火車比較慢時，最多這麼多的旅客改騎機車或開車。"
+                            "How many trips in each county and city of Taiwan are made by scooter or car: on a real-world map, when your trains are slower, at most that share of your riders ride or drive instead.",
+                            "台灣各縣市有多少行程騎機車或開車：在實景地圖上，你的列車比較慢時，最多這個比例的旅客改騎機車或開車。"
                         ),
                         notice: language.text(
                             "Source: Ministry of Transportation and Communications, Department of Statistics, National Travel Survey, 2024 (table 4, the private motor vehicles' share of trips by county and city). Used under the Open Government Data License, version 1.0.",
@@ -305,7 +434,7 @@ public enum DataSourceCredits {
                         ),
                         links: [
                             DataSourceCredit.Link(title: language.text("Dataset (data.gov.tw)", "資料集（政府資料開放平臺）"), url: travelSurveyURL),
-                            DataSourceCredit.Link(title: language.text("Open Government Data License", "政府資料開放授權條款"), url: openGovernmentLicenseURL),
+                            openGovernmentLicense(in: language),
                         ]
                     ),
                     // Decision 147: how much of the ground real buildings
@@ -318,12 +447,12 @@ public enum DataSourceCredits {
                         id: "overtureBuildings",
                         title: language.text("Overture Maps buildings", "Overture Maps 建物"),
                         detail: language.text(
-                            "How much of the ground real buildings cover on real-world maps of Taiwan and Penghu, from the footprints of Overture Maps’ buildings (release 2026-09-23.1): it sets what buying out the city’s buildings costs, so a car park costs little and a dense block a lot. The buildings round Kaohsiung and Taichung Stations, in the 3D city preview and the 3D map, are its footprints too.",
-                            "台灣與澎湖實景地圖上真實建物佔地的比例，取自 Overture Maps 建物的足跡（2026-09-23.1 版）：決定收購城市建物的費用，停車場便宜、密集的街區貴。高雄車站與臺中車站周圍的建物（3D 城市預覽與 3D 地圖）也是它的足跡。"
+                            "How much of the ground real buildings cover on real-world maps of Taiwan and Penghu, which sets what buying out the city’s buildings costs: a car park costs little, a dense block a lot. The buildings round Kaohsiung and Taichung Stations in the 3D city preview and the 3D map are its too.",
+                            "台灣與澎湖實景地圖上真實建物佔地多少，決定收購城市建物的價錢：停車場便宜，密集的街區貴。3D 城市預覽與 3D 地圖裡高雄車站、台中車站周圍的建物也是它的。"
                         ),
                         notice: language.text(
-                            "Overture Maps Foundation (overturemaps.org), under the Open Database License (ODbL) 1.0. Its footprints in Taiwan are © OpenStreetMap contributors (ODbL 1.0) and, where OpenStreetMap has none, from Qian Shi et al., “A first high-quality vector data of buildings in East Asian countries based on a comprehensive large-scale mapping framework”, Zenodo, 2023 (CC BY 4.0). The coverage file and the city tiles the game derives from them are available under the same licence from the source repository.",
-                            "Overture Maps Foundation（overturemaps.org），依開放資料庫授權（ODbL）1.0 使用。台灣的足跡來自 © OpenStreetMap 貢獻者（ODbL 1.0），OpenStreetMap 沒有的地方來自 Qian Shi 等人〈A first high-quality vector data of buildings in East Asian countries based on a comprehensive large-scale mapping framework〉，Zenodo，2023（CC BY 4.0）。遊戲據此整理的建蔽率檔與城市圖塊以相同授權提供，可從原始碼儲存庫取得。"
+                            "Overture Maps Foundation (overturemaps.org), buildings, release 2026-09-23.1, under the Open Database License (ODbL) 1.0. Its footprints in Taiwan are © OpenStreetMap contributors (ODbL 1.0) and, where OpenStreetMap has none, from Qian Shi et al., “A first high-quality vector data of buildings in East Asian countries based on a comprehensive large-scale mapping framework”, Zenodo, 2023 (CC BY 4.0). The coverage file and the city tiles the game derives from them are available under the same licence from the source repository.",
+                            "Overture Maps Foundation（overturemaps.org）建物，2026-09-23.1 版，依開放資料庫授權（ODbL）1.0 使用。台灣的足跡來自 © OpenStreetMap 貢獻者（ODbL 1.0），OpenStreetMap 沒有的地方來自 Qian Shi 等人〈A first high-quality vector data of buildings in East Asian countries based on a comprehensive large-scale mapping framework〉，Zenodo，2023（CC BY 4.0）。遊戲據此整理的建蔽率檔與城市圖塊以相同授權提供，可從原始碼儲存庫取得。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: "Overture Maps", url: overtureURL),
@@ -344,7 +473,7 @@ public enum DataSourceCredits {
                         id: "appleMaps",
                         title: language.text("Apple Maps", "Apple 地圖"),
                         detail: language.text(
-                            "The base map and place search for real-world maps.",
+                            "The base map and place search of real-world maps.",
                             "實景地圖的底圖與地點搜尋。"
                         ),
                         notice: language.text(
@@ -353,53 +482,18 @@ public enum DataSourceCredits {
                         ),
                         links: []
                     ),
-                    // Decision 262: where the large cities' main stations
-                    // stand, the places a real-world game can start at.
-                    DataSourceCredit(
-                        id: "wikidata",
-                        title: "Wikidata",
-                        detail: language.text(
-                            "Where the main stations of many of the cities in the real-world map’s list stand.",
-                            "實景地圖城市清單裡許多城市主要車站的位置。"
-                        ),
-                        notice: language.text(
-                            "Wikidata’s data is available under CC0 1.0 (public domain).",
-                            "Wikidata 的資料依 CC0 1.0（公眾領域）提供。"
-                        ),
-                        links: [
-                            DataSourceCredit.Link(title: "Wikidata", url: wikidataURL),
-                            DataSourceCredit.Link(title: "CC0 1.0", url: cc0URL),
-                        ]
-                    ),
-                    // Decision 262: which of the list's cities are largest.
-                    DataSourceCredit(
-                        id: "worldUrbanizationProspects",
-                        title: language.text("United Nations World Urbanization Prospects 2025", "聯合國《世界都市化展望》2025"),
-                        detail: language.text(
-                            "How many people live in each city of the real-world map’s list, which puts the largest first.",
-                            "實景地圖城市清單裡各城市的人口，清單依它從大排到小。"
-                        ),
-                        notice: language.text(
-                            "United Nations, Department of Economic and Social Affairs, Population Division (2025). World Urbanization Prospects: The 2025 Revision. Under the Creative Commons Attribution 3.0 IGO licence; the game rounds each city’s figure to thousands.",
-                            "聯合國經濟和社會事務部人口司（2025），《世界都市化展望：2025 年修訂版》。依創用 CC 姓名標示 3.0 IGO 授權使用；遊戲把各城市的人數四捨五入到千人。"
-                        ),
-                        links: [
-                            DataSourceCredit.Link(title: language.text("World Urbanization Prospects", "世界都市化展望"), url: worldUrbanizationProspectsURL),
-                            DataSourceCredit.Link(title: "CC BY 3.0 IGO", url: ccByIGOURL),
-                        ]
-                    ),
                     // Decision 151: Taiwan's base map, the app's own tiles
                     // of OpenStreetMap and their glyphs.
                     DataSourceCredit(
                         id: "taiwanBaseMap",
                         title: language.text("Taiwan’s OpenStreetMap base map", "台灣的 OpenStreetMap 底圖"),
                         detail: language.text(
-                            "The OpenStreetMap base map of real-world maps in Taiwan (OSM in the map style menu), which works without a network: sea, rivers, woods, parks, roads, boundaries and place names, with labels in Noto Sans. The 3D map lays its sea, rivers, woods, parks and roads on the ground.",
-                            "台灣實景地圖的 OpenStreetMap 底圖（地圖樣式選單的「OSM」），不用網路也能顯示：海、河川、森林、公園、道路、行政界與地名，文字用 Noto Sans。3D 地圖把其中的海、河川、森林、公園與道路鋪在地面上。"
+                            "The OSM base map of real-world maps in Taiwan (OSM in the map style menu), which works without a network: sea, rivers, woods, parks, roads, boundaries and place names. The 3D map lays its sea, rivers, woods, parks and roads on the ground.",
+                            "台灣實景地圖的 OSM 底圖（地圖樣式選單的「OSM」），不用網路也能顯示：海、河川、森林、公園、道路、行政界與地名。3D 地圖把其中的海、河川、森林、公園與道路鋪在地面上。"
                         ),
                         notice: language.text(
-                            "© OpenMapTiles © OpenStreetMap contributors. The map data is © OpenStreetMap contributors, under the Open Database License (ODbL) 1.0; the tiles and the tool that makes them are in the game’s public repository under the same licence. The tiles’ layers follow the OpenMapTiles schema (CC BY 4.0). Noto Sans is © The Noto Project Authors, under the SIL Open Font License 1.1, which comes with the app.",
-                            "© OpenMapTiles © OpenStreetMap 貢獻者。地圖資料 © OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用；圖磚與產生它的工具依同一授權放在遊戲公開的原始碼儲存庫。圖層照 OpenMapTiles 的格式（CC BY 4.0）。Noto Sans © The Noto Project Authors，依 SIL Open Font License 1.1 使用，授權條款隨 App 提供。"
+                            "© OpenMapTiles © OpenStreetMap contributors. The map data is © OpenStreetMap contributors, under the Open Database License (ODbL) 1.0; the tiles and the tool that makes them are in the game’s public repository under the same licence. The tiles’ layers follow the OpenMapTiles schema (CC BY 4.0). Labels in Noto Sans, © The Noto Project Authors, under the SIL Open Font License 1.1, which comes with the app.",
+                            "© OpenMapTiles © OpenStreetMap 貢獻者。地圖資料 © OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用；圖磚與產生它的工具依同一授權放在遊戲公開的原始碼儲存庫。圖層照 OpenMapTiles 的格式（CC BY 4.0）。文字用 Noto Sans，© The Noto Project Authors，依 SIL Open Font License 1.1 使用，授權條款隨 App 提供。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: openStreetMapCopyrightURL),
@@ -416,8 +510,8 @@ public enum DataSourceCredits {
                         id: "openFreeMap",
                         title: "OpenFreeMap",
                         detail: language.text(
-                            "The OpenStreetMap base map of real-world maps outside Taiwan (the map style menu’s OSM): OpenFreeMap’s vector tiles, in the game’s own style.",
-                            "台灣以外的實景地圖的 OpenStreetMap 底圖（地圖樣式選單的「OSM」）：OpenFreeMap 的向量圖磚，用遊戲自己的樣式。"
+                            "The OSM base map of real-world maps outside Taiwan (OSM in the map style menu).",
+                            "台灣以外實景地圖的 OSM 底圖（地圖樣式選單的「OSM」）。"
                         ),
                         notice: language.text(
                             "OpenFreeMap © OpenMapTiles Data from OpenStreetMap. The map data is © OpenStreetMap contributors, under the Open Database License (ODbL) 1.0.",
@@ -433,8 +527,8 @@ public enum DataSourceCredits {
                         id: "mapLibre",
                         title: "MapLibre Native",
                         detail: language.text(
-                            "The software that draws the OpenStreetMap base map.",
-                            "繪製 OpenStreetMap 底圖的軟體。"
+                            "Draws the OSM base map.",
+                            "繪製 OSM 底圖。"
                         ),
                         notice: language.text(
                             "Copyright (c) 2021 MapLibre contributors, (c) 2018-2021 MapTiler.com, (c) 2014-2020 Mapbox, under the BSD 2-Clause License. The licence and the notices of the software it includes come with the app and are at the link below.",
@@ -445,6 +539,63 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: language.text("Licence", "授權條款"), url: mapLibreLicenseURL),
                         ]
                     ),
+                    // Decision 115: the steep slopes, worked out from the
+                    // Copernicus DEM, whose licence asks for this notice;
+                    // decision 124: the ground's height, from the same
+                    // data, and the licence's sentence on liability.
+                    DataSourceCredit(
+                        id: "copernicusDEM",
+                        title: "Copernicus DEM",
+                        detail: language.text(
+                            "The lie of the land in Taiwan, Penghu, Kinmen and Matsu: how high the ground is on real-world maps, the hillsides steeper than 30 % where nothing new can be built, and the shaded hills of Taiwan’s OSM base map.",
+                            "台灣、澎湖、金門與馬祖的地形：實景地圖的地面高低、坡度超過 30%、不能新蓋的山坡地，以及台灣 OSM 底圖上山的陰影。"
+                        ),
+                        notice: "Copernicus DEM GLO-30 (Matsu: GLO-90). Produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved. The organisations in charge of the Copernicus programme by law or by delegation do not incur any liability for any use of the Copernicus WorldDEM-30.",
+                        links: [
+                            DataSourceCredit.Link(title: "Copernicus DEM", url: copernicusDEMURL),
+                        ]
+                    ),
+                    // Decision 262: where the large cities' main stations
+                    // stand, the places a real-world game can start at.
+                    DataSourceCredit(
+                        id: "wikidata",
+                        title: "Wikidata",
+                        detail: language.text(
+                            "Where the main stations of many cities in the real-world map’s city list stand.",
+                            "實景地圖城市清單裡許多城市主要車站的位置。"
+                        ),
+                        notice: language.text(
+                            "Wikidata’s data is available under CC0 1.0 (public domain).",
+                            "Wikidata 的資料依 CC0 1.0（公眾領域）提供。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: "Wikidata", url: wikidataURL),
+                            DataSourceCredit.Link(title: "CC0 1.0", url: cc0URL),
+                        ]
+                    ),
+                    // Decision 262: which of the list's cities are largest.
+                    DataSourceCredit(
+                        id: "worldUrbanizationProspects",
+                        title: language.text("United Nations World Urbanization Prospects 2025", "聯合國《世界都市化展望》2025"),
+                        detail: language.text(
+                            "How many people live in each city of the real-world map’s city list, which puts the largest first.",
+                            "實景地圖城市清單裡各城市的人口，清單照它從大排到小。"
+                        ),
+                        notice: language.text(
+                            "United Nations, Department of Economic and Social Affairs, Population Division (2025). World Urbanization Prospects: The 2025 Revision. Under the Creative Commons Attribution 3.0 IGO licence; the game rounds each city’s figure to thousands.",
+                            "聯合國經濟和社會事務部人口司（2025），《世界都市化展望：2025 年修訂版》。依創用 CC 姓名標示 3.0 IGO 授權使用；遊戲把各城市的人數四捨五入到千人。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("World Urbanization Prospects", "世界都市化展望"), url: worldUrbanizationProspectsURL),
+                            DataSourceCredit.Link(title: "CC BY 3.0 IGO", url: ccByIGOURL),
+                        ]
+                    ),
+                ]
+            ),
+            DataSourceSection(
+                id: "map3D",
+                title: language.text("3D Map", "3D 地圖"),
+                credits: [
                     // Decision 234: what reads the base map's tiles and cuts
                     // its shapes for the 3D map, ported into the game: ISC
                     // asks for its notice in every copy; zlib's licence
@@ -453,8 +604,8 @@ public enum DataSourceCredits {
                         id: "map3DGround",
                         title: "earcut, puff",
                         detail: language.text(
-                            "The software that lays the base map's roads, rivers, woods and parks on the 3D map's ground.",
-                            "把底圖的道路、河川、森林與公園鋪在 3D 地圖地面上的軟體。"
+                            "Lay the base map’s roads, rivers, woods and parks on the 3D map’s ground.",
+                            "把底圖的道路、河川、森林與公園鋪在 3D 地圖的地面上。"
                         ),
                         notice: language.text(
                             "earcut: Copyright (c) 2016, Mapbox, under the ISC License. puff: Copyright (C) 2002-2013 Mark Adler, under the zlib License. Both are altered from the originals.",
@@ -465,6 +616,28 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: "puff", url: puffURL),
                         ]
                     ),
+                    // Decision 331: where the 3D map's temples stand, from
+                    // the geo-scene reference's temples file, whose points
+                    // each name one of these three sources.
+                    DataSourceCredit(
+                        id: "temples",
+                        title: language.text("Temples", "寺廟"),
+                        detail: language.text(
+                            "Where the temples of real-world 3D maps stand, and which are drawn larger, from the Ministry of the Interior’s register of temples, OpenStreetMap’s places of worship and the Bureau of Cultural Heritage’s monuments.",
+                            "實景 3D 地圖上寺廟的位置，以及哪些畫得比較大，取自內政部的寺廟登記、OpenStreetMap 的宗教場所與文化部文化資產局的古蹟。"
+                        ),
+                        notice: language.text(
+                            "Ministry of the Interior and Bureau of Cultural Heritage data under the Open Government Data License, version 1.0. OpenStreetMap data © OpenStreetMap contributors, under the Open Database License.",
+                            "內政部與文化部文化資產局的資料依政府資料開放授權條款第 1 版使用。OpenStreetMap 資料 © OpenStreetMap 貢獻者，依開放資料庫授權條款使用。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("National Religion Information Network", "全國宗教資訊網"), url: "https://religion.moi.gov.tw"),
+                            DataSourceCredit.Link(title: language.text("National Cultural Heritage Database", "國家文化資產網"), url: "https://nchdb.boch.gov.tw"),
+                            openGovernmentLicense(in: language),
+                            DataSourceCredit.Link(title: "OpenStreetMap", url: openStreetMapCopyrightURL),
+                            DataSourceCredit.Link(title: "ODbL", url: odblURL),
+                        ]
+                    ),
                     // The 3D map's city buses (Map3DCityBus): generated by
                     // the owner with Meshy on a paid plan, so the output is
                     // theirs (Meshy's terms §3.2); told as generated, as
@@ -473,7 +646,7 @@ public enum DataSourceCredits {
                         id: "meshy",
                         title: "Meshy",
                         detail: language.text(
-                            "The city buses on the 3D map's streets: a model generated with Meshy's AI from a description and a photograph.",
+                            "The city buses on the 3D map’s streets: a model generated with Meshy’s AI from a description and a photograph.",
                             "3D 地圖街上的公車：用 Meshy 的 AI 依描述與照片生成的模型。"
                         ),
                         notice: language.text(
@@ -483,44 +656,6 @@ public enum DataSourceCredits {
                         links: [
                             DataSourceCredit.Link(title: "Meshy", url: meshyURL),
                             DataSourceCredit.Link(title: language.text("Reference photograph", "參考照片"), url: busPhotoURL),
-                        ]
-                    ),
-                    // Decision 331: where the 3D map's temples stand, from
-                    // the geo-scene reference's temples file, whose points
-                    // each name one of these three sources.
-                    DataSourceCredit(
-                        id: "temples",
-                        title: language.text("Temples", "寺廟"),
-                        detail: language.text(
-                            "Where the temples on real-world 3D maps stand, and which are drawn larger: the Ministry of the Interior's register of temples, OpenStreetMap's places of worship and the Bureau of Cultural Heritage's monuments.",
-                            "實景 3D 地圖上寺廟的位置，以及哪些畫得比較大：內政部的寺廟登記、OpenStreetMap 的宗教場所與文化部文化資產局的古蹟。"
-                        ),
-                        notice: language.text(
-                            "Ministry of the Interior and Bureau of Cultural Heritage data under the Open Government Data License, version 1.0. OpenStreetMap data © OpenStreetMap contributors, under the Open Database License.",
-                            "內政部與文化部文化資產局的資料依政府資料開放授權條款第 1 版使用。OpenStreetMap 資料 © OpenStreetMap 貢獻者，依開放資料庫授權條款使用。"
-                        ),
-                        links: [
-                            DataSourceCredit.Link(title: language.text("National Religion Information Network", "全國宗教資訊網"), url: "https://religion.moi.gov.tw"),
-                            DataSourceCredit.Link(title: language.text("National Cultural Heritage Database", "國家文化資產網"), url: "https://nchdb.boch.gov.tw"),
-                            DataSourceCredit.Link(title: language.text("Open Government Data License", "政府資料開放授權條款"), url: openGovernmentLicenseURL),
-                            DataSourceCredit.Link(title: "OpenStreetMap", url: openStreetMapCopyrightURL),
-                            DataSourceCredit.Link(title: "ODbL", url: odblURL),
-                        ]
-                    ),
-                    // Decision 115: the steep slopes, worked out from the
-                    // Copernicus DEM, whose licence asks for this notice;
-                    // decision 124: the ground's height, from the same
-                    // data, and the licence's sentence on liability.
-                    DataSourceCredit(
-                        id: "copernicusDEM",
-                        title: "Copernicus DEM",
-                        detail: language.text(
-                            "The heights of Taiwan, Penghu, Kinmen and Matsu (GLO-30, 30 m; Matsu GLO-90): the ground's height on real-world maps, the hillsides of more than 30 % where nothing new can be built, and the shading of the hills on Taiwan's OpenStreetMap base map.",
-                            "台灣、澎湖、金門與馬祖的地形高度（GLO-30，30 公尺；馬祖為 GLO-90）：實景地圖的地面高度、坡度超過 30%、不能新蓋的山坡地，以及台灣 OpenStreetMap 底圖的山的陰影。"
-                        ),
-                        notice: "Produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved. The organisations in charge of the Copernicus programme by law or by delegation do not incur any liability for any use of the Copernicus WorldDEM-30.",
-                        links: [
-                            DataSourceCredit.Link(title: "Copernicus DEM", url: copernicusDEMURL),
                         ]
                     ),
                 ]
@@ -534,12 +669,12 @@ public enum DataSourceCredits {
                         id: "proceduralTokyo",
                         title: "Procedural Tokyo",
                         detail: language.text(
-                            "The software that draws the 3D city round Kaohsiung and Taichung Stations from Overture Maps’ buildings and OpenStreetMap’s roads, parks and places: buildings, street furniture, traffic, trains, sky and light. With three.js, postprocessing, N8AO, takram three-geospatial, ez-tree, lil-gui and earcut bundled into it.",
-                            "繪製高雄車站與臺中車站周圍 3D 城市的軟體（建物、街道設施、車流、列車、天空與光線），資料來自 Overture Maps 的建物與 OpenStreetMap 的道路、公園與地點。內含 three.js、postprocessing、N8AO、takram three-geospatial、ez-tree、lil-gui 與 earcut。"
+                            "Draws the 3D city round Kaohsiung and Taichung Stations: buildings, street furniture, traffic, trains, sky and light.",
+                            "畫出高雄車站與台中車站周圍的 3D 城市：建物、街道設施、車流、列車、天空與光線。"
                         ),
                         notice: language.text(
-                            "Copyright (c) 2026 Yong Su, under the MIT License. The page is on the game's website, and the licences of the libraries it bundles (MIT, Zlib, ISC) are next to it, at the link below.",
-                            "Copyright (c) 2026 Yong Su，依 MIT 授權使用。網頁放在遊戲官網，它內含的程式庫的授權條款（MIT、Zlib、ISC）也在官網，可以從下方連結閱讀。"
+                            "Copyright (c) 2026 Yong Su, under the MIT License. It bundles three.js, postprocessing, N8AO, takram three-geospatial, ez-tree, lil-gui and earcut; the page is on the game's website, and their licences (MIT, Zlib, ISC) are next to it, at the link below.",
+                            "Copyright (c) 2026 Yong Su，依 MIT 授權使用。內含 three.js、postprocessing、N8AO、takram three-geospatial、ez-tree、lil-gui 與 earcut；網頁放在遊戲官網，這些程式庫的授權條款（MIT、Zlib、ISC）也在官網，可以從下方連結閱讀。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: "Procedural Tokyo", url: proceduralTokyoURL),
@@ -576,12 +711,12 @@ public enum DataSourceCredits {
                         id: "runningSound",
                         title: language.text("Train recordings", "列車錄音"),
                         detail: language.text(
-                            "The sound of a train you follow: made by the game to sound like these recordings of trains running, a KTX in Korea and two trains in Taiwan. The game plays none of the recordings themselves.",
-                            "跟隨列車時的行駛聲：遊戲依這些列車行駛中的錄音（韓國的 KTX 與台灣的兩班列車）的聲音自己合成，不播放錄音本身。"
+                            "The sound of a train you follow, which the game makes to sound like these recordings: a KTX in Korea and two trains in Taiwan.",
+                            "跟隨列車時的行駛聲，遊戲照這些錄音自己合成：韓國的 KTX 與台灣的兩班列車。"
                         ),
                         notice: language.text(
-                            "“Banqiao District, New Taipei City - In the train compartment” by Wu, Tsan-Cheng, under CC BY 3.0. “Guishan, Taoyuan - On the train” by Wu, Tsan-Cheng and “KTX high speed train to Busan” by abyssence, in the public domain. All three on radio aporee ::: maps.",
-                            "〈Banqiao District, New Taipei City - In the train compartment〉，吳燦政錄音，依 CC BY 3.0 使用。〈Guishan, Taoyuan - On the train〉，吳燦政錄音，與〈KTX high speed train to Busan〉，abyssence 錄音，屬公眾領域。三者都在 radio aporee ::: maps。"
+                            "“Banqiao District, New Taipei City - In the train compartment” by Wu, Tsan-Cheng, under CC BY 3.0. “Guishan, Taoyuan - On the train” by Wu, Tsan-Cheng and “KTX high speed train to Busan” by abyssence, in the public domain. All three on radio aporee ::: maps. The game plays none of the recordings themselves: its sounds are made after them.",
+                            "〈Banqiao District, New Taipei City - In the train compartment〉，吳燦政錄音，依 CC BY 3.0 使用。〈Guishan, Taoyuan - On the train〉，吳燦政錄音，與〈KTX high speed train to Busan〉，abyssence 錄音，屬公眾領域。三者都在 radio aporee ::: maps。遊戲不播放錄音本身，聲音是照它們合成的。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: language.text("Banqiao recording", "板橋錄音"), url: banqiaoRecordingURL),
@@ -595,12 +730,12 @@ public enum DataSourceCredits {
                         id: "weatherSound",
                         title: language.text("Rain and thunder recordings", "雨聲與雷聲錄音"),
                         detail: language.text(
-                            "The rain, the typhoon's wind and the thunder: made by the game to sound like these recordings of rain, a typhoon and thunder in Taipei and Tamsui. The game plays none of the recordings themselves.",
-                            "雨聲、颱風的風雨聲與雷聲：遊戲依這些在台北與淡水錄下的雨、颱風與雷的聲音自己合成，不播放錄音本身。"
+                            "The rain, the typhoon’s wind and the thunder, which the game makes to sound like these recordings in Taipei and Tamsui.",
+                            "雨聲、颱風的風雨聲與雷聲，遊戲照這些在台北與淡水錄的聲音自己合成。"
                         ),
                         notice: language.text(
-                            weatherRecordings.map { "“\($0.title)”" }.joined(separator: ", ") + ", all by Wu, Tsan-Cheng, under CC BY 3.0, on radio aporee ::: maps.",
-                            weatherRecordings.map { "〈\($0.title)〉" }.joined(separator: "、") + "，都是吳燦政錄音，依 CC BY 3.0 使用，在 radio aporee ::: maps。"
+                            weatherRecordings.map { "“\($0.title)”" }.joined(separator: ", ") + ", all by Wu, Tsan-Cheng, under CC BY 3.0, on radio aporee ::: maps. The game plays none of the recordings themselves: its sounds are made after them.",
+                            weatherRecordings.map { "〈\($0.title)〉" }.joined(separator: "、") + "，都是吳燦政錄音，依 CC BY 3.0 使用，在 radio aporee ::: maps。遊戲不播放錄音本身，聲音是照它們合成的。"
                         ),
                         links: weatherRecordings.map {
                             DataSourceCredit.Link(title: language.text($0.place.english, $0.place.chinese), url: "https://archive.org/details/\($0.id)")
