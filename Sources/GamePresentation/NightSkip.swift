@@ -167,32 +167,35 @@ extension GameSession {
     }
 
     /// ``refreshNightSkipOffer()`` when a building tool or a tile lets go
-    /// of the pause, or the player changes the speed (player feedback
-    /// 82.1 and 77.1): a run ahead the memo does not answer, after an edit
-    /// or a second speed tap within a tick at night, ran on the main
-    /// actor, up to 160 ms a tap over midnight. Paused, it runs off the
-    /// main actor (``lookAgainForNightSkip()``); running, the game loop's
-    /// next tick works it out (decision 328), and the offer stays as it
-    /// was until then.
+    /// of the pause, the player changes the speed (player feedback 82.1
+    /// and 77.1), or the game loop's tick is done (decision 369): a run
+    /// ahead the memo does not answer, after an edit or a second speed tap
+    /// within a tick at night, ran on the main actor, up to 160 ms a tap
+    /// over midnight. It runs off the main actor
+    /// (``lookAgainForNightSkip()``), paused or running, and the offer
+    /// stays as it was until then.
     func refreshNightSkipOfferOffTheMainActor() {
         let answered = nightSkipRun != nil || isPausedForBuilding
             || world.trains.contains(where: NightSkip.isRunning)
             || nightSkipMemo?.covers(world.clock.now, revision: commandRevision) == true
         if answered {
             refreshNightSkipOffer()
-        } else if world.clock.isPaused {
+        } else {
             lookAgainForNightSkip()
         }
     }
 
     /// ``refreshNightSkipOffer()`` after a command while paused (decision
-    /// 330, later): a run ahead the memo does not answer (some 30 ms a
-    /// night on the Yilan Line, 160 ms over midnight) runs off the main
-    /// actor on a copy of the world, one at a time. The offer stays as it
-    /// was until it is found; the session keeps what it found only if the
-    /// world has not changed since, and then looks again, which then runs
-    /// ahead no more. The shortcut itself still runs ahead at once when
-    /// the memo does not answer.
+    /// 330, later), or after the game loop's tick (decision 369): a run
+    /// ahead the memo does not answer (some 30 ms a night on the Yilan
+    /// Line, 160 ms over midnight, 600 ms on seven lines round Taipei)
+    /// runs off the main actor on a copy of the world, one at a time,
+    /// beside the game loop rather than in its tick, so game time goes on
+    /// meanwhile. The offer stays as it was until it is found; the session
+    /// keeps what it found only if no command changed the world since
+    /// (ticks since only ran it on as the run ahead did), and then looks
+    /// again, which then runs ahead no more. The shortcut itself still
+    /// runs ahead at once when the memo does not answer.
     func lookAgainForNightSkip() {
         guard nightSkipRun == nil, !isPausedForBuilding,
               !world.trains.contains(where: NightSkip.isRunning),
@@ -201,14 +204,14 @@ extension GameSession {
             return
         }
         guard nightSkipLookAhead == nil else { return }
-        let world = world, revision = commandRevision, worldRevision = worldRevision
+        let world = world, revision = commandRevision
         nightSkipLookAhead = Task {
             let memo = await Task.detached(priority: .userInitiated) {
                 NightSkipMemo(revision: revision, from: world.clock.now, firstMove: NightSkip.firstMove(after: world))
             }.value
             nightSkipLookAhead = nil
-            if self.worldRevision == worldRevision { nightSkipMemo = memo }
-            if self.world.clock.isPaused { lookAgainForNightSkip() }
+            if commandRevision == revision { nightSkipMemo = memo }
+            lookAgainForNightSkip()
         }
     }
 
@@ -241,11 +244,14 @@ extension GameSession {
 
     /// After a tick (decision 305): goes on with the skip under way, at
     /// the speed whose tick lands on its stop, or ends it; or starts one
-    /// when the setting asks to.
-    func continueNightSkip() {
-        defer { refreshNightSkipOffer() }
+    /// when the setting asks to. `aheadOffTheMainActor` (the game loop's
+    /// tick, decision 369): a run ahead the memo does not answer runs off
+    /// the main actor, and the setting's skip starts after a later tick.
+    func continueNightSkip(aheadOffTheMainActor: Bool = false) {
+        defer { aheadOffTheMainActor ? refreshNightSkipOfferOffTheMainActor() : refreshNightSkipOffer() }
         guard let run = nightSkipRun else {
-            if skipsQuietNights, !world.clock.isPaused, tutorial == nil, let skip = nightSkip, autoSkipDeclined != skip.firstMove {
+            let answered = !aheadOffTheMainActor || nightSkipMemo?.covers(world.clock.now, revision: commandRevision) == true
+            if skipsQuietNights, !world.clock.isPaused, tutorial == nil, answered, let skip = nightSkip, autoSkipDeclined != skip.firstMove {
                 skipToMorning()
             }
             return
@@ -293,30 +299,11 @@ struct NightSkipMemo: Sendable {
 
     /// Whether it still answers at `now` after the commands up to
     /// `revision`: at the moment it was worked out (a train about to
-    /// leave makes the first move that moment, and the game loop's tick
-    /// has just worked it out off the main actor, decision 328), then
-    /// until the first move, or for an hour when none was found.
+    /// leave makes the first move that moment, and it has just been worked
+    /// out off the main actor, decisions 328 and 369), then until the
+    /// first move, or for an hour when none was found.
     func covers(_ now: GameTime, revision: Int) -> Bool {
         revision == self.revision && from <= now
             && (now == from || firstMove.map({ now < $0 }) ?? (now.seconds < from.seconds + GameTime.secondsPerHour))
-    }
-}
-
-/// Decision 328: what a tick of the game loop needs to run ahead for the
-/// night skip off the main actor (``GameSession/LoopTick``), as
-/// ``GameSession/nightSkip`` would on it after the tick: the memo as it
-/// was, and the revision the tick began at.
-struct NightSkipProbe: Sendable {
-    let memo: NightSkipMemo?
-    let revision: Int
-
-    /// The first move after `world` (``NightSkip/firstMove(after:)``),
-    /// worked out only when ``GameSession/nightSkip`` would run ahead for
-    /// it: every train placed at rest and the memo not answering; `nil`
-    /// when it would not.
-    func firstMove(after world: GameWorld) -> NightSkipMemo? {
-        guard !world.trains.contains(where: NightSkip.isRunning),
-              !(memo?.covers(world.clock.now, revision: revision) ?? false) else { return nil }
-        return NightSkipMemo(revision: revision, from: world.clock.now, firstMove: NightSkip.firstMove(after: world))
     }
 }
