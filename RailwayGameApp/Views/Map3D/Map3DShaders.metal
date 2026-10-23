@@ -257,9 +257,10 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
     if (in.layer < -1.5 && in.layer > -2.5) {
         glow = base * 1.3 * lights;
     }
+    float sky = dot(uniforms.ambientSky.rgb, float3(0.2126, 0.7152, 0.0722));
+    float3 streetLight = float3(1.0, 0.90, 0.74) * roadLamp * lights * (1.0 - smoothstep(roadLampSky.x, roadLampSky.y, sky));
     if (in.layer < -10.5 && in.layer > -11.5) {
-        float sky = dot(uniforms.ambientSky.rgb, float3(0.2126, 0.7152, 0.0722));
-        glow += base * float3(1.0, 0.90, 0.74) * roadLamp * lights * (1.0 - smoothstep(roadLampSky.x, roadLampSky.y, sky));
+        glow += base * streetLight;
     }
     // Decision 356: what the glass or water mirrors, and its share.
     float4 mirrored = float4(0.0);
@@ -344,6 +345,14 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
         }
         if (abs(normal.y) < 0.6) { tinted *= mix(0.70, 1.0, smoothstep(0.0, 10.0, in.surfaceAt.y * 3.2)); }
         base = tinted;
+        // The road's paint (crosswalk 22, laneArrows 23): its own white on
+        // the road's colour, lit by the street lights as the road is; the
+        // model look's faint detail left the paint grey and the marks
+        // darker than the road around them.
+        if (packed == 22u || packed == 23u) {
+            base = mix(texel.rgb, in.color, texel.a);
+            glow += base * streetLight;
+        }
         // A lit window: its glass (untinted and dark enough, or a shop's
         // whole front) where the hash of its bay, floor and face says so.
         uint surface = packed % 64u;

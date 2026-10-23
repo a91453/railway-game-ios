@@ -270,12 +270,13 @@ struct LandmarkMesh {
             wallBand(Self.notched(26.2, 5.3), z0 + 34.4, lip0, z0 + 34.8, white, Map3DVertex.floodlit)
             wallBand(lip0, z0 + 34.8, lip1, z0 + 36.0, white, Map3DVertex.floodlit)
             cap(lip1, z0 + 36.0, white, Self.plain)
-            guard full else { continue }
-            // Two white strips up each corner's steps, flaring with it.
+            // White strips up each corner's steps, flaring with it and lit
+            // after dark: two close by, one from afar.
             let foot = Self.notched(22.0, 4.5), head = Self.notched(26.2, 5.3)
-            for k in foot.indices where k % 5 == 1 || k % 5 == 3 {
+            for k in foot.indices where k % 5 == 1 || (full && k % 5 == 3) {
                 fin(from: foot[k], z0 + 1.4, to: head[k], z0 + 34.4, width: 0.5, depth: 0.5, white)
             }
+            guard full else { continue }
             for q in 0..<4 {
                 let angle = Float(q) * .pi / 2 + .pi / 4
                 let r = 27.2 * Float(2).squareRoot() - 2.4
@@ -357,7 +358,7 @@ struct LandmarkMesh {
 
     /// A white strip `width` wide standing `depth` proud along the
     /// diagonal from the point `a` at `za` to `b` at `zb`, as a tower's
-    /// corner strips run up its steps.
+    /// corner strips run up its steps, floodlit after dark.
     mutating func fin(from a: P2, _ za: Float, to b: P2, _ zb: Float, width: Float, depth: Float, _ color: UInt32) {
         func ring(_ p: P2) -> [P2] {
             let r = (p.x * p.x + p.y * p.y).squareRoot(), ux = p.x / r, uy = p.y / r, w = width / 2
@@ -367,7 +368,7 @@ struct LandmarkMesh {
         let ra = ring(a), rb = ring(b)
         for k in 0..<4 {
             let j = (k + 1) % 4
-            quad((ra[k].x, ra[k].y, za), (ra[j].x, ra[j].y, za), (rb[j].x, rb[j].y, zb), (rb[k].x, rb[k].y, zb), color, Self.plain)
+            quad((ra[k].x, ra[k].y, za), (ra[j].x, ra[j].y, za), (rb[j].x, rb[j].y, zb), (rb[k].x, rb[k].y, zb), color, Map3DVertex.floodlit)
         }
     }
 
