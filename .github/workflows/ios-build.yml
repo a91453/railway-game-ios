@@ -513,6 +513,9 @@ jobs:
             # Decision 165: the website's screenshots are taken by
             # website-screenshots.yml alone; they test nothing.
             only=(-skip-testing:RailwayGameUITests/WebsiteScreenshotTests)
+            # Decision 367: the frame readout on the High Speed Rail demo,
+            # read by hand (only_testing) to compare two commits.
+            only+=(-skip-testing:RailwayGameUITests/FastForwardFrameUITests)
             # These classes run in the other iPhone jobs.
             for class in $FULL_LANE_SECOND_JOB $FULL_LANE_LESSONS_JOB; do
               only+=("-skip-testing:RailwayGameUITests/$class")
