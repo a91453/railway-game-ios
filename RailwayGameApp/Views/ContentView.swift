@@ -844,12 +844,7 @@ private struct ToolsColumn: View {
         ViewThatFits(in: .vertical) {
             groups(compact: false)
             groups(compact: true)
-            ScrollView {
-                groups(compact: true)
-            }
-            .scrollBounceBehavior(.basedOnSize)
-            .scrollIndicators(.hidden)
-            .tutorialClip()
+            scrolling
         }
         .frame(width: ToolColumnStyle.width)
         // Offered no more than that, and as tall as what it shows: a frame
@@ -860,25 +855,71 @@ private struct ToolsColumn: View {
 
     private func groups(compact: Bool) -> some View {
         VStack(alignment: .center, spacing: ControlPanel.tileGap) {
-            // The card's toggle stays on top while building too: a chosen
-            // tool keeps the card open, and folding it shows the map. Not
-            // on the tutorial's steps that point into the card, which keep
-            // it open, as in the dock.
-            if session.tutorial?.step.usesDetailsCard != true {
-                ControlDetailsToggle(isOpen: isOpen, action: toggle)
-                    .disabled(!canToggle)
-                    .controlTile()
-            }
+            overBuild
             if BuildToolRail.isShown(session) {
-                BuildToolButtons(session: session)
-                    .controlTile()
                 // Build where it was, lit: a second tap closes the tools.
                 ControlPanel(session: session, arrangement: .buildEntry)
-            } else {
-                ControlPanel(session: session, arrangement: .toolsColumn)
             }
         }
         .environment(\.toolColumnStyle, ToolColumnStyle(compact: compact))
+    }
+
+    /// The card's toggle and the tools, or while building the building
+    /// tools and Done: all but Build while building.
+    @ViewBuilder private var overBuild: some View {
+        // The card's toggle stays on top while building too: a chosen
+        // tool keeps the card open, and folding it shows the map. Not
+        // on the tutorial's steps that point into the card, which keep
+        // it open, as in the dock.
+        if showsToggle {
+            ControlDetailsToggle(isOpen: isOpen, action: toggle)
+                .disabled(!canToggle)
+                .controlTile()
+        }
+        if BuildToolRail.isShown(session) {
+            BuildToolButtons(session: session)
+                .controlTile()
+        } else {
+            ControlPanel(session: session, arrangement: .toolsColumn)
+        }
+    }
+
+    private var showsToggle: Bool { session.tutorial?.step.usesDetailsCard != true }
+
+    /// Icons alone, scrolling, where even they have not the height. While
+    /// building, Build stands whole at the foot (decision 382, later:
+    /// TestFlight 85.1 had it cut in half) and what scrolls over it is cut
+    /// between two buttons, fading there, so it shows more is below.
+    @ViewBuilder private var scrolling: some View {
+        if BuildToolRail.isShown(session) {
+            let tools = ConstructionTool.networkTools.filter { $0 != .select && session.allows($0) }.count
+            let shown = ToolColumn.buildingScrollHeight(maxHeight: Double(maxHeight), tools: tools, toggle: showsToggle)
+            VStack(alignment: .center, spacing: ControlPanel.tileGap) {
+                ScrollView {
+                    VStack(alignment: .center, spacing: ControlPanel.tileGap) { overBuild }
+                }
+                .scrollBounceBehavior(.basedOnSize)
+                .scrollIndicatorsFlash(onAppear: true)
+                .tutorialClip()
+                .frame(height: CGFloat(shown))
+                .mask {
+                    VStack(spacing: 0) {
+                        Color.black
+                        LinearGradient(colors: [.black, .black.opacity(0.3)], startPoint: .top, endPoint: .bottom)
+                            .frame(height: 10)
+                    }
+                }
+                ControlPanel(session: session, arrangement: .buildEntry)
+            }
+            .environment(\.toolColumnStyle, ToolColumnStyle(compact: true))
+        } else {
+            ScrollView {
+                groups(compact: true)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .scrollIndicators(.hidden)
+            .tutorialClip()
+        }
     }
 }
 

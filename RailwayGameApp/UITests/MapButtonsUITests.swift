@@ -60,6 +60,31 @@ final class MapButtonsUITests: XCTestCase {
         XCTAssertLessThan(abs(zoomIn.frame.maxY - foot), 3, "On the column's line: \(zoomIn.frame) and \(build.frame)")
     }
 
+    /// Decision 382, later (TestFlight 85.1): while building, Build stood
+    /// half cut at the column's foot, scrolled past its height. It stands
+    /// whole there now, a finger reaches it and it closes the tools. Where
+    /// the column is cut is `ToolColumnTests` on Linux.
+    func testThePhonesBuildStandsWholeWhileBuilding() throws {
+        try XCTSkipIf(UIDevice.current.userInterfaceIdiom != .phone, "a phone held on its side")
+        let app = launch(orientation: .landscapeLeft)
+        defer { app.terminate() }
+
+        let build = app.buttons["dock.build"]
+        XCTAssertTrue(build.appears(within: 10))
+        build.tap()
+        XCTAssertTrue(app.buttons["tool.network"].appears(within: 10), "The building tools open")
+        build.waitUntilSettled()
+        XCTAssertTrue(build.becomesHittable(within: 10), "Build is covered: \(build.frame)")
+        let window = app.windows.firstMatch.frame
+        XCTAssertLessThanOrEqual(build.frame.maxY, window.maxY - 10, "Whole above the screen's foot: \(build.frame)")
+        let toggle = app.buttons["controls.toggle"]
+        if toggle.exists {
+            XCTAssertLessThanOrEqual(toggle.frame.maxY, build.frame.minY, "The column's top over Build: \(toggle.frame)")
+        }
+        build.tap()
+        XCTAssertTrue(app.buttons["tool.network"].disappears(within: 10), "Build closes the tools")
+    }
+
     /// On an iPad held upright they stand in the map's corner beside the
     /// lines panel, not gone.
     func testTheIPadsButtonsStayBesideThePanelHeldUpright() throws {
