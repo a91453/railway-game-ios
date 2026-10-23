@@ -165,7 +165,7 @@ What to Test 是當時自動列出的 PR 清單（#592 之前的做法）。
 
 ### 0.5.0 (84.1)，2026-10-23
 
-從 `main` `43852fab`（#1080 的合併）建置，TestFlight run 84（`testflight.yml` run 39931145796，2026-10-23 09:20 UTC，作者按；archive_signing `adhoc`、testing_scope `external`，同 83）。作者 08:03 UTC 在遊戲規劃 session 說「發」，當時這個 commit 的 `ci.yml`（run 39906598034，第二輪；第一輪 rest shard 撞 20 分鐘上限，#1087 修）與 full lane（ios-build run 39906626855，第二輪；第一輪 `MapInteractionTests/testTheStationTagsPencilRenamesAtOnce` 打字只進一半，單獨重跑 run 39913310246 通過，判為偶發）都綠；遊戲規劃照 #1079 去按時被 session 的權限檢查擋下，改由作者自己按。這一版沒有另寫 What to Test，由 `testflight-changes.py` 列出 83 之後合併的 PR 標題。
+從 `main` `43852fab`（#1080 的合併）建置，TestFlight run 84（`testflight.yml` run 39931145796，2026-10-23 09:20 UTC，作者按；archive_signing `adhoc`、testing_scope `external`，同 83）。作者 08:03 UTC 在遊戲規劃 session 說「發」，當時這個 commit 的 `ci.yml`（run 39906598034，第二輪；第一輪 rest shard 撞 20 分鐘上限，#1087 修）與 full lane（ios-build run 39906626855，第二輪；第一輪 `MapInteractionTests/testTheStationTagsPencilRenamesAtOnce` 打字只進一半，單獨重跑 run 39913310246 通過，判為偶發）都綠；遊戲規劃照 #1079 去按時被 session 的權限檢查擋下，改由作者自己按。這一版遊戲規劃漏寫 What to Test，`testflight-changes.py` 填進的是 83 之後合併的 PR 標題（作者：「每次都改我這個 說了幾次」）；遊戲規劃事後寫了給玩家看的版本，請作者在 App Store Connect 貼上取代。
 
 83.1 之後新進的（`01457e97..43852fab`）：
 - 3D 跟車閃退：3D 地圖只在鏡頭附近蓋完整城市（#1070，決策 368）。待實機確認：高鐵示範 600×、跟車進 3D 不再被殺。
