@@ -559,6 +559,15 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
         trains.indices.filter { ($0 % 2 == 0) == (direction == .inner) }.map { trains[$0] }
     }
 
+    /// Decision 364: whether passengers are planned onto a ring's way
+    /// `direction`: both ways, but a ring with one train runs it only the
+    /// ``RingDirection/inner`` way (``ringDirection(of:)``), so nobody
+    /// waits for an outer train that never comes. A ring with no trains
+    /// yet offers both, as a line with none does.
+    func ringWayRuns(_ direction: RingDirection) -> Bool {
+        direction == .inner || trains.count != 1
+    }
+
     /// The index of `station` among the line's stops, if it is a stop of
     /// the line exactly once.
     func uniqueStop(_ station: StationID) -> Int? {
@@ -573,13 +582,30 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     }
 
     /// The calls of a ring's lap `direction` that starts at stop `start`
-    /// (decision 172: a train stopped at any stop of the ring goes on from
-    /// there): `start`, round to it again.
+    /// (decision 172 sent a train stopped at any stop of the ring round
+    /// from there; since decision 364 it goes only as far as the first
+    /// stop, ``ringCallsToFirst(_:from:)``): `start`, round to it again.
     func ringCalls(_ direction: RingDirection, from start: Int) -> [Int] {
         switch direction {
         case .inner: Array(stops.indices[start...]) + Array(stops.indices[..<start]) + [start]
         case .outer: Array(stops.indices[...start].reversed()) + Array(stops.indices[(start + 1)...].reversed()) + [start]
         }
+    }
+
+    /// Decision 364: the calls of the trip a ring's train stopped at stop
+    /// `start` runs the way `direction`: from there round to the first
+    /// stop, where every lap the passengers plan on ends (decision 49),
+    /// and on through it for a whole lap (``ringCalls(_:)``), so the trip
+    /// never ends partway round the ring with the train standing in the
+    /// way; from then on whole laps. Stop 0 is a whole lap.
+    func ringCallsToFirst(_ direction: RingDirection, from start: Int) -> [Int] {
+        guard start > 0 else { return ringCalls(direction) }
+        let toFirst: [Int]
+        switch direction {
+        case .inner: toFirst = Array(stops.indices[start...])
+        case .outer: toFirst = Array(stops.indices[1...start].reversed())
+        }
+        return toFirst + ringCalls(direction)
     }
 
     /// The line's streams of trains, each sent out from its first call on

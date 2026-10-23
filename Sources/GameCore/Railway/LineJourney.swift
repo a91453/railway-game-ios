@@ -357,10 +357,10 @@ extension GameWorld {
         let ahead: LineJourney?, turned: LineJourney?
         if line.isRing {
             // Decision 172: a ring's train goes on round from the stop it
-            // stands at.
+            // stands at; decision 364: as far as the first stop.
             let way = line.ringDirection(of: train.id) ?? .inner
             let lap: [Int]
-            if case .ringStop(let stop) = start { lap = line.ringCalls(way, from: stop) } else { lap = line.ringCalls(way) }
+            if case .ringStop(let stop) = start { lap = line.ringCallsToFirst(way, from: stop) } else { lap = line.ringCalls(way) }
             ahead = driveLap(line, calling: lap, from: placement, routes: line.routes(ofService: service))
             turned = driveLap(line, calling: lap, from: turnedRound(placement), routes: line.routes(ofService: service))
         } else {

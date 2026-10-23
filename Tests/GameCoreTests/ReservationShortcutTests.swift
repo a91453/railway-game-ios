@@ -24,7 +24,8 @@ import XCTest
 /// memo that kept an answer for trains that have changed is caught.
 final class ReservationShortcutTests: XCTestCase {
     /// Every state of the long-leg replay, command by command, with the
-    /// trains of each as they are half way through its advance too.
+    /// trains of each as they are half way through its advance too, and
+    /// then two hours more.
     private func longLegStates() throws -> [GameWorld] {
         var world = try LongLegReplayTests.world()
         var states = [world]
@@ -39,6 +40,13 @@ final class ReservationShortcutTests: XCTestCase {
                 }
             }
             _ = KernelDifferentialTests.apply(operation, to: &world)
+            states.append(world)
+        }
+        // Decision 364: two more hours a minute at a time, since the ring
+        // trains that stood at C lap from A, and trains follow others in
+        // the fixture's three hours only twice.
+        for _ in 0..<120 {
+            _ = KernelDifferentialTests.apply(.advance(1), to: &world)
             states.append(world)
         }
         return states
