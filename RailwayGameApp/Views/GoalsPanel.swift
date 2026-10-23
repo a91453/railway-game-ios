@@ -425,7 +425,8 @@ struct CompanyRankSection: View {
     }
 }
 
-/// The start screen's challenges (decision 86): the week's (decision 87),
+/// The new game page's challenges (decision 86; decision 381 moved them
+/// there from the start screen): the week's (decision 87),
 /// then the others, each with its story, goals, ratings and the player's
 /// best; choosing one starts a new game on a blank map with it.
 struct ChallengePicker: View {

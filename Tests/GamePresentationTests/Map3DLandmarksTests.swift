@@ -131,7 +131,9 @@ final class Map3DLandmarksTests: XCTestCase {
 
     /// The scene asks for them on a real-world map only.
     func testTheSceneTakesThem() throws {
-        let temples = RealTemples(temples: [temple(north: 0, east: 0, .large)])
+        // 400 m north of Taipei Main Station, which stands on the middle
+        // (decision 370).
+        let temples = RealTemples(temples: [temple(north: 400, east: 0, .large)])
         let real = Map3DScene(world: GameWorld.newGame(anchor: anchor), temples: temples)
         let none = Map3DScene(world: GameWorld.newGame(anchor: anchor))
         func close(_ scene: Map3DScene) -> Int { scene.chunks.reduce(0) { $0 + $1.close.triangleCount } }

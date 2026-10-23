@@ -10,9 +10,10 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         checkFlow(language: "zh-Hant", locale: "zh_TW")
     }
 
-    /// Decision 257: the start screen's Language opens the game's own menu
-    /// of languages, each named in itself. Nothing is chosen, so the
-    /// Simulator's app settings stay as they were. Full lane only.
+    /// Decision 257: Language opens the game's own menu of languages, each
+    /// named in itself; since decision 381 it is the first row of
+    /// Settings. Nothing is chosen, so the Simulator's app settings stay as
+    /// they were. Full lane only.
     func testLanguageOpensTheGamesLanguageMenu() {
         continueAfterFailure = false
         let app = XCUIApplication()
@@ -20,12 +21,41 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         app.launch()
         defer { app.terminate() }
 
-        requiredButton("start.language", in: app).tap()
+        requiredButton(StartID.settings, in: app).tap()
+        let language = app.buttons["settings.language"].firstMatch
+        XCTAssertTrue(language.appears(within: 10), "Settings has no Language. \(screenText(in: app))")
+        XCTAssertTrue(language.becomesHittable(within: 5), "Language cannot be tapped")
+        language.tap()
         for name in ["Same as iPhone", "English", "繁體中文"] {
             let item = app.buttons[name].firstMatch
             XCTAssertTrue(item.appears(within: 5), "The language menu has no \(name). \(screenText(in: app))")
             XCTAssertTrue(item.becomesHittable(within: 5), "\(name) cannot be tapped")
         }
+    }
+
+    /// Decision 381: the data sources and licences are two taps from the
+    /// start screen (Help, then its first row), and Saves on a clean launch
+    /// offers to import a save. Full lane only.
+    func testHelpReachesTheDataSourcesAndSavesOffersAnImport() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+
+        requiredButton(StartID.help, in: app).tap()
+        let sources = app.buttons["help.dataSources"].firstMatch
+        XCTAssertTrue(sources.appears(within: 10), "Help has no data sources row. \(screenText(in: app))")
+        XCTAssertTrue(sources.becomesHittable(within: 5), "The data sources row cannot be tapped")
+        sources.tap()
+        XCTAssertTrue(app.navigationBars["Data Sources"].appears(within: 10), "The data sources did not open")
+        app.terminate()
+
+        app.launch()
+        requiredButton(StartID.saves, in: app).tap()
+        let importButton = app.buttons["saves.import"].firstMatch
+        XCTAssertTrue(importButton.appears(within: 10), "The empty saves list offers no import. \(screenText(in: app))")
+        XCTAssertTrue(importButton.becomesHittable(within: 5), "Import from Files cannot be tapped")
     }
 
     /// City building P0-A (decision 92): on a blank map, choose the house,
@@ -168,11 +198,14 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         tapMenuAction("menu.backToStart", in: app)
         _ = requiredButton("start.newGame", in: app)
         _ = requiredButton("start.continue", in: app)
-        // Back to Start creates only an autosave. This separate button also
-        // proves that Save Game wrote a manual save rather than doing nothing.
-        // That it is there is the proof: on a phone on its side (decision
-        // 106) it is further down the start screen's column.
-        XCTAssertTrue(app.buttons["start.savedGames"].appears(within: 10), "Missing UI flow button: start.savedGames")
+        // Back to Start creates only an autosave. Saves counting one save
+        // also proves that Save Game wrote a manual save rather than doing
+        // nothing (decision 381: the button always shows; with no save it
+        // offers an import and has no number). On a phone on its side
+        // (decision 106) it is further down the start screen's column.
+        let saves = app.buttons[StartID.saves]
+        XCTAssertTrue(saves.appears(within: 10), "Missing UI flow button: \(StartID.saves)")
+        XCTAssertTrue(saves.label.contains("1"), "Saves does not count the manual save: \(saves.label)")
         XCTAssertTrue(app.buttons["start.demoMap"].exists, "Missing UI flow button: start.demoMap")
 
         requiredButton("start.continue", in: app).tap()
@@ -195,11 +228,11 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         app.launchArguments = ["-ui-testing", "-broken-save", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         defer { app.terminate() }
-        // On a phone on its side Saved Games lies below the screen, in the
+        // On a phone on its side Saves lies below the screen, in the
         // start screen's column beside the title, which the shared helper
         // did not find (run 38260619251): drag that column at the button's
         // own x until it can be tapped.
-        let saves = app.buttons["start.savedGames"]
+        let saves = app.buttons[StartID.saves]
         XCTAssertTrue(saves.appears(within: 10), "An unreadable save is still listed")
         let origin = app.coordinate(withNormalizedOffset: .zero)
         for _ in 0..<6 where !saves.isHittable {
@@ -208,10 +241,14 @@ final class StartSaveFlowSmokeTests: XCTestCase {
                 .press(forDuration: 0.1, thenDragTo: origin.withOffset(CGVector(dx: x, dy: app.frame.height * 0.35)),
                        withVelocity: .slow, thenHoldForDuration: 0.3)
         }
-        XCTAssertTrue(saves.isHittable, "Saved Games can be brought into view: \(saves.frame)")
+        XCTAssertTrue(saves.isHittable, "Saves can be brought into view: \(saves.frame)")
         saves.tap()
         let row = app.buttons["saves.row.save-broken.json"]
         XCTAssertTrue(row.appears(within: 10), "The unreadable save is listed")
+        // Decision 381: the row's "⋯" button shows what its swipe does.
+        let menu = app.buttons["saves.menu.save-broken.json"]
+        XCTAssertTrue(menu.appears(within: 5), "The unreadable save's row has no ⋯ button")
+        XCTAssertTrue(menu.becomesHittable(within: 5), "The ⋯ button cannot be tapped")
         row.swipeLeft()
         let delete = app.buttons["Delete"].firstMatch
         if !delete.appears(within: 5) { row.swipeLeft() }
@@ -444,7 +481,11 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         _ = requiredButton("start.newGame", in: app)
         _ = requiredButton("start.demoMap", in: app)
         XCTAssertFalse(app.buttons["start.continue"].exists, "A clean launch must not offer Continue")
-        XCTAssertFalse(app.buttons["start.savedGames"].exists, "A clean launch must not list saved games")
+        // Decision 381: Saves always shows; with no save it offers an
+        // import, with no number of saves.
+        let saves = app.buttons[StartID.saves]
+        XCTAssertTrue(saves.appears(within: 10), "Missing UI flow button: \(StartID.saves)")
+        XCTAssertFalse(saves.label.contains(where: \.isNumber), "A clean launch must not count saves: \(saves.label)")
     }
 
     private func assertGame(in app: XCUIApplication) {
@@ -607,4 +648,12 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: element)
         XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: timeout), .completed, message)
     }
+}
+
+/// Decision 381: the start screen's identifiers these tests reach
+/// (``StartMenuEntry/identifier``, ``StartMenuChip/identifier``).
+enum StartID {
+    static let help = "start.help"
+    static let saves = "start.saves"
+    static let settings = "start.settings"
 }

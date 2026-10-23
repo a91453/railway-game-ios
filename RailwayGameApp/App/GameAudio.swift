@@ -50,7 +50,8 @@ final class GameAudio {
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var music: AVAudioPlayer?
-    @ObservationIgnored private var sounds: [SoundCue: [AVAudioPlayer]] = [:]
+    /// Decision 379: the cues' players, played on a queue of their own.
+    @ObservationIgnored private let cues = CuePlayers()
     @ObservationIgnored private var lastPlayed: [SoundCue: ContinuousClock.Instant] = [:]
     @ObservationIgnored private var isActive = false
     /// Decision 184: the latest tap of the phone a cue asked for, which
@@ -200,17 +201,12 @@ final class GameAudio {
             lastPlayed[spaced] = now
             return
         }
-        let players = sounds[cue] ?? loadSound(cue)
-        // A free player of the sound's few, so a sound can overlap itself.
-        guard let player = players.first(where: { !$0.isPlaying }) ?? players.first else { return }
         lastPlayed[spaced] = now
         if case .arrival(true, _, _) = cue {
             // The others' chime would only echo it.
             lastPlayed[.arrival(watched: false)] = now
         }
-        player.volume = volume
-        player.currentTime = 0
-        player.play()
+        cues.play(cue, volume: volume)
     }
 
     private func updateMusic() {
@@ -341,7 +337,7 @@ final class GameAudio {
     private static let musicVolume: Float = 0.45
 
     /// A cue's own volume, before the player's (decision 219, stage 2).
-    private static func baseVolume(of cue: SoundCue) -> Float {
+    fileprivate nonisolated static func baseVolume(of cue: SoundCue) -> Float {
         switch cue {
         case .arrival(true, _, _): 0.55
         case .arrival(false, _, _): 0.2
@@ -360,15 +356,6 @@ final class GameAudio {
         }
     }
 
-    /// Decision 219: the file is the cue's (``SoundCue/resource``): the
-    /// station's chime, or its motif at high speed. Each play sets its
-    /// volume.
-    private func loadSound(_ cue: SoundCue) -> [AVAudioPlayer] {
-        let file = cue.resource
-        let players = (0..<3).compactMap { _ in Self.player(named: file.name, extension: file.extension, volume: Self.baseVolume(of: cue)) }
-        sounds[cue] = players
-        return players
-    }
 
     /// What a cue's spacing is kept by: an arrival by whether it is
     /// watched and a motif, whichever station's chime it is.
@@ -412,7 +399,7 @@ final class GameAudio {
         }
     }
 
-    private static func player(named name: String, extension ext: String, volume: Float, rate: Bool = false) -> AVAudioPlayer? {
+    fileprivate nonisolated static func player(named name: String, extension ext: String, volume: Float, rate: Bool = false) -> AVAudioPlayer? {
         guard let url = Bundle.main.url(forResource: name, withExtension: ext),
               let player = try? AVAudioPlayer(contentsOf: url)
         else { return nil }
@@ -421,5 +408,41 @@ final class GameAudio {
         player.volume = volume
         player.prepareToPlay()
         return player
+    }
+}
+
+/// Decision 379: the cues' players (``SoundCue``), made and played on a
+/// serial queue of their own. `play()` waits for the audio output, some 10
+/// to 30 ms on an iPhone 17 Pro (TestFlight 85.1, the High Speed Rail at
+/// 6000×: the arrival's 29 ms and the coins' 22 ms after a tick), which
+/// held the frame on the main thread. ``GameAudio`` still decides on the
+/// main thread what plays and when; the players are touched only here.
+private final class CuePlayers: @unchecked Sendable {
+    private let queue = DispatchQueue(label: "RailwayGame.cues", qos: .userInitiated)
+    /// Each cue's few players, so a sound can overlap itself; only on
+    /// ``queue``.
+    private var players: [SoundCue: [AVAudioPlayer]] = [:]
+
+    /// Plays `cue` at `volume`, on a free player of its few, soon after.
+    func play(_ cue: SoundCue, volume: Float) {
+        queue.async { [self] in
+            FrameCostMeter.shared.measure(.soundPlayback) {
+                let players = players[cue] ?? load(cue)
+                guard let player = players.first(where: { !$0.isPlaying }) ?? players.first else { return }
+                player.volume = volume
+                player.currentTime = 0
+                player.play()
+            }
+        }
+    }
+
+    /// Decision 219: the file is the cue's (``SoundCue/resource``): the
+    /// station's chime, or its motif at high speed. Each play sets its
+    /// volume.
+    private func load(_ cue: SoundCue) -> [AVAudioPlayer] {
+        let file = cue.resource
+        let made = (0..<3).compactMap { _ in GameAudio.player(named: file.name, extension: file.extension, volume: GameAudio.baseVolume(of: cue)) }
+        players[cue] = made
+        return made
     }
 }

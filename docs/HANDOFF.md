@@ -895,9 +895,13 @@
 
 **第 1 步做了**（session_01BnZ6aE54dfdknXcyjYqUvQ，`docs/decisions/370.md`）：全城換成 (e) 的顏色（`Map3DPalette`、新檔 `Map3DLook.swift`）、柔光、路面 layer −11 與路燈光（天空亮度 0.70 起開，0.50 全亮，比 (d) 早）。夜晚路面對地面 ΔL* 14.1；黃昏列車、白牆、公車對路面最小 7.8。板橋記憶體測試綠，頂點數不變。對照圖 `docs/art/map3d-mapbox-look-2026-10-23/game-e.jpg`。還沒做的：
 
-1. 第 2 步：101 與台北車站照參考庫 `scripts/landmarks.py` 重組形狀，顏色照 README 的表（101 玻璃 #C0DDEE）；做完再跑一次板橋記憶體測試。
+1. ~~第 2 步~~ 已做（同一 session，決策 370「第 2 步」）：101 與台北車站做進遊戲（`Map3DTaipeiLandmarks.swift`，線條 layer −5、−8、−9）。作者要照網頁版高雄車站的方法先抓規格，所以大小、高度、101 的塔位（在購物中心的角上，不在中間）照 OSM 的 building part，台北車站頂 30 m；細節照 `landmarks.py`。玩家地面上的軌道穿過時地標讓路，台北車站畫出來時套件的台北站房不畫。板橋記憶體測試綠，網格 +0.03%（車站遠看的模型）。對照圖 `game-landmarks.jpg`。之後作者要 101 上半部更好看：加了白色平台與四個玻璃小箱、倒梯形頂層、三階退台、細尖塔（508 m），每節白腰帶與四角白直條，八節照真的外斜 7°，夜裡每節一圈光帶、白簷與頂冠打燈、尖塔頂一點白光（新的 layer −10、−12；`taipei101-crown.jpg`）。台北車站照三步（參考庫起點、OSM 規格與 entrance 節點、照片只看）加了四面騎樓、十二個門、南北中門的門廳與小瓦頂、方窗帶、屋角起翹、脊飾、雙坡天窗（`station-detail.jpg`）。作者看過預覽，2026-10-23 說兩棟都可以合併（PR #1107）。
 2. 實機（TestFlight）看黃昏與夜晚的路、白天白牆對路面（只差 ΔL* 3–9.5，靠路緣與陰影分）。
 3. 天空與霧沒有改；要不要照預覽調淡，看實機再決定。
+4. 地標還沒做的：
+   - 實機看 101 的夜景（光帶、角落燈條、尖塔頂）與台北車站的窗帶，看亮度要不要調（`Map3DShaders.metal` 的 −10、−12 分支）；
+   - 台北一帶沒有真實建物圖塊（決策 239 只有高雄、台中），101 周圍是城市的建物；要不要加是另一件事；
+   - 之後的地標照 §3 的三步做（參考庫起點、OSM 規格、照片只看），夜裡要特別的燈就用 `towerGlass`／`floodlit`。
 
 預覽工具：參考庫 `scripts/Map3DPreviewDump.patch`（`MAP3D_PLAY` 放列車與標籤位置），用法在那裡的 README。
 
@@ -909,6 +913,24 @@
 2. 真實路線（`Map3DRealTrains`）的路塹沒有挖。
 3. 小瑕疵：兩段溝接在一起的地方可能有細縫；溝坡上的電桿腳埋在坡裡；溝的端面只在隧道口封。
 4. 實機：TestFlight 上從高鐵示範的駕駛室看苗栗南的路塹（最深約 20 m），看坡的顏色、跨路的橋和 fps。
+
+### 4.8 全地圖用真實建物足跡（決策 386，session_0111G2MZyPt5YSXpsF6azF2e）
+
+第 1 步做完：`tools/overture-footprint-tiles/` 把 Overture 的台灣建物（196 萬棟）做成 z16 精簡圖塊，全台 29 MB；報告 `docs/research/OVERTURE_FOOTPRINT_TILES_2026-10-23.md`。資料檔沒有提交，照工具的 README 重建（約 2 分鐘）。還沒做的：
+
+1. **第 2 步：GamePresentation 讀足跡、有足跡的地方用足跡**。chunk 載入時用 `PMTilesArchive` 讀它碰到的 ≤ 4 塊 z16 格，重心在這個 chunk 的建物用決策 239 的 `addRealBuilding` 擠出（near 與 far），取代那裡的程序房子；樓層照決策 386 第 6 點的順序（報告 §8）；在那之前先讓工具 `build` 照這個順序把臺中市建物圖（111 年版）與臺北市建築執照套繪圖的樓層填進樓層 0 的建物，都沒有的照第 5 點推算（報告 §7 的表與 `proposed_storeys`）。沒有足跡的地方照舊程序生成，**沿真實道路的程序房子與不蓋區是決策 385（session_01AgFLCW9xSb9fyLr8k57iZ1）**：動 `addCity` 或程序房子的放置之前先 `send_message` 給它，對齊用途分類與人口密度的來源。要保持 `Map3DSceneMemoryTests` 的板橋數字不升；足跡房子要不要加立面細節是這一步的美術決定（每棟不超過程序房子一棟）。量測範本 `FootprintWindowMeasure.swift.txt` 可以重用。
+2. **第 3 步：打包**。決策 386 選全部打包：`taiwan.pmtiles` 改名（例 `RealWorld/taiwan_buildings.pmtiles`）加進 App 的資源與 `project.yml`、重產 Xcode 專案；看 TestFlight 的 App 檔案大小（報告裡 UNVERIFIED）。App 變得太大時的退路是 Background Assets 每縣市一包（工具已產出 `counties/`）。
+3. **第 4 步：署名**。`DataSourceCredits` 與官網 `credits.html` 加 Overture Maps（ODbL 1.0）、OpenStreetMap（已有）、Shi 等人 East Asian buildings（CC BY 4.0，doi:10.5281/zenodo.8174931）。
+4. 樓高來源還沒做完的（報告 §8）：推算在 p25–p75 裡改用 GHSL 挑高低（8.2，建檔時用 `tiff.py` 讀，App 不讀）；內政部 20 m DSM／DTM 從 TGOS 下載（這個環境 403）；臺中 113、114 年全市版是 RAR／7z（要解壓工具就是加依賴，先問作者）；國土測繪中心的授權由遊戲規劃轉給作者決定要不要問（要問的事在 §8.5）。
+5. Overture 每月出新版；換版本時重跑 `extract` 與 `build`，在 PR 寫新舊棟數與大小。
+
+### 4.9 機場等地不蓋房子、程序房子沿真實的街（決策 385，session_01AgFLCW9xSb9fyLr8k57iZ1）
+
+作者 85.1：「機場不要有住宅看起來好怪」「而且也太整齊了吧」。做完的：實景 3D 地圖在機場、軍事用地、墓地、高爾夫球場、鐵路用地與港區不畫城市的房子，機場畫 OSM 的航廈與機棚（`tools/no-build-land/`、`RealNoBuildLand`）；程序房子沿底圖的真實道路排、面向馬路，寬窄、退縮、樓高、種類有變化，沒有路碰到的格子不放（`Map3DFrontage.swift`）。三角形與記憶體不高於 main（決策 385 第 3 點）。還沒做的：
+
+1. **人口還在**：機場等地的格子仍有世界的居民（LandImport 的分區沒有這些地，決策 96），只是 3D 不畫。讓 LandImport 對這些地不給人口（GamePresentation 的資料工具）之後，GameCore 的城市成長才不會在那裡長；要不要升存檔、動不動 golden，到時量。沒有人接。
+2. **和決策 386 第 2 步對齊**（§4.8）：有 Overture 足跡的格子不放沿街的房子；兩邊的用途分類與人口密度來源要一致。動 `addCity` 的人先 `send_message` 給這兩個 session。
+3. **實機**：只在 Linux 的 WebGL 預覽看過（`docs/art/map3d-no-build-2026-10-23/`）；下一次 TestFlight 看 600 倍俯看小港與板橋，房子是不是太稀或太密（`Map3DScene.Builder.openShare` 與 `layFrontage` 的公寓比例）。
 
 ## 5. 已知、還沒派的待辦
 
@@ -1029,11 +1051,12 @@ PR #1019–#1030 那一輪（2026-10-22，發版前小審查，TestFlight 第 82
 - **2D 大世界掉幀**（§22.2 10h，決策 371，`claude/perf-2d-map-frame`，2026-10-23 session_015LxxfmrvhBFnxLie4gd2Bs 從 session_018DNqCBcwA7znTnrzbUpTVF 的 `c075037` 接手完成）：軌道畫布拆成「軌道與路線」和「交通、建物、車站」，站名畫布拆成名字、候車數、標記三張，列車滑行限 30 fps（跟車 60）。Linux release 600×：軌道與站名每秒重畫從 9.6、10 次降到 0。還沒做：**84.1 已重量**（作者實機，高鐵示範 6000×：3 fps、軌道 329 ms/s ×2、其他 360 ms），接續是決策 377（下一條）；交通那張若還重，下一步是 `TrafficOverlay` 帶版本號、只比版本（現在逐項比 1.2 ms／tick）。細節在決策 371。拋棄用的 `claude/perf-2d-map-frame-baseline` 可以刪（proxy 擋刪除）。
 - **2D 高鐵 6000× 3 fps**（TestFlight 84.1，決策 377，`claude/map-track-redraw-cost`，2026-10-23 session_01UxzgXQsTohBZKf3mrBWq27）：幀數表的「軌道」拆成「軌道與路線」「交通與車站」兩行；軌道、路線、區間車流的折線照螢幕 0.25 點簡化（整條高鐵 177 萬點 → 5,578 點，Linux 挑點與投影 180 → 76 ms）；地圖泡泡、景點標記、站長、狀態列只在顯示的東西變了才重算。Linux 找不到每秒兩次軌道重畫是誰叫的（世界一次都沒有叫）；Simulator 上是「軌道與路線」那一張、只在開地圖後 15–25 秒，所以幀數表的那一行後面加了重畫的原因（例「畫面移動 ×2」）。**請作者在高鐵示範 6000×（站名、候車數、票價與紀念章打開）開「設定 → 地圖 → 幀數」重量**，記下：fps、最長一幀與其中「其他」、「軌道與路線」與「交通與車站」各幾 ms/s、×幾、最長，以及「軌道與路線」後面寫的原因；下一步在決策 377「還沒做的」。**推進 106.6 ms/s（§22.2 第 41 名）沒有動**，依派工。
 - **地圖上浮動控制項的邊距**（TestFlight 85.1 作者截圖，決策 382，`claude/hud-margins-86-1`，2026-10-23 session_013WiLkQHTAxZL85F5PYxJuL）：共用 `HUDMargins`（安全區域內 10 pt），右下角按鈕、小地圖、圖例往外、往下各 14 pt，對齊狀態列右緣與工具欄底線。**請作者在 86.1 手機橫放看**：右緣（狀態列、小地圖、縮放）與底下一排（工具欄最後一格、擴建地圖、站務員、縮放）是否各在一條線上；左緣約 4 pt 的差在程式裡找不到（三者都在 10 pt），若還看得到，多半是圓角不同（決策 382「還沒驗證」）。建設模式時工具欄放不下，× 與鐵鎚固定在底下，上面三個工具與卡片開關那段捲動、切在兩個按鈕之間，放不下時開關排在工具下面；× 與鐵鎚沒合併（理由在決策 382 第 7 點）。**留給遊戲規劃**：手機開著面板時，下面那一排縮放與 3D 的下緣仍在決策 300 的位置（出處條裡），沒有抬到工具欄底線（第 8 點）。
+- **2D 高鐵 6000× 主執行緒**（TestFlight 85.1 作者實機：26–41 fps，最長一幀 173–200 ms 幾乎全是「其他」，推進後 · 音效 max 29 ms、收入 max 22 ms；決策 379，`claude/fast-forward-sound-income-other`，2026-10-23 session_019RS5qZNMdEtyEF7MkVyR4c）：「其他」最大的一塊是地圖每 tick 在主執行緒算列車滑行（Simulator「地圖跟著推進」每次 1.5–2.2 秒，Linux debug 504 ms），改在背景的 tick 裡算、地圖只補時間；音效與收入的時間判斷是 `AVAudioPlayer.play()`，提示音改在 App 自己的佇列播放（聲音、音量、間隔不變），幀數表多「播放音效」一行；幀數表把「其他」拆開：多「畫面更新」（run loop 等待前，SwiftUI 與 Core Animation）與底下的地圖、地圖跟著推進、畫面框架、狀態列、站長，第一行寫「最長一幀 · 其他（畫面更新）」。**請作者用同一個高鐵示範 6000× 重量**（步驟在決策 379 第 3 段），照「畫面更新」的分項修；下一步寫在決策 379「還沒做的」。推進（背景）是另一個 session 的；它每 tick 多算了滑行（原本在主執行緒），若推進成了瓶頸，照決策 379 第 4 段的下一步。
 - **開新路線的比較抽屜蓋住 ✓**（TestFlight 85.1，決策 384，`claude/line-draft-drawer-checkmark`，2026-10-23 session_013WiLkQHTAxZL85F5PYxJuL）：抽屜讓開細節卡與右下角那一組；手機橫放時抽屜放進 ✓ 膠囊裡、在說明左邊，展開長條也不蓋 ✓。**還沒驗證**：實機上膠囊裡的抽屜好不好看、300 寬的長條讀不讀得清楚（決策 384）。
 
 PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡需求燈只數這條線、座位圖換行、關卡「繼續玩」會繼續、3D 場景快取分局、長按的診斷 trace、決策 266 的文字），延後的 10 項（`main` 在 abb306a 的 full lane 紅、`testHoldingAStationTracesItsBusiestTrips` 的根因、整平時的轉乘乘客、72.1 沒有自己的綠 full lane 等）連同原因與建議做法，寫在 `docs/archive/PR755_784_REVIEW_HANDOFF.md` 第四節。
 
-第 5 關的複線（決策 376 寫測試時發現，還沒有人接）：最長的那段（第 4 關延到第三座城鎮的軌道，`edge(9)`）兩側、到道岔或只有這一段都說「旁邊不到 4 公尺有軌道」，蓋不了；可以蓋的那段（第 1 關的軌道）預覽在 Linux 除錯版要算約 18 秒（`trackUpgradePreview`，在主執行緒上算），實機（Release）多久沒量過。量法：`LessonGuideTests.testTheFifthLessonsGuide`。
+第 5 關的複線（決策 378，session_01USKsgntpPbW3M49z6oSHen，目標 86.1）：**已修**。最長那段被拒絕是第二條軌道的控制點平移在急彎中間只離 3.81 公尺，改成分段鋪；修好後那段要的錢比第 5 關的現金多，引導改指 S1 旁沒有列車的那段，一次蓋好。預覽慢在找渡線時白切長軌道，GameCore 加一個不改世界的切開查詢先問，Linux release 從 175–744 ms 降到 40–95 ms。剩下：實機 Release 讀數；要再快得改 GameCore 的 fouling 增量或把預覽移出主執行緒（決策 378「下一步」）。
 
 ### 7.2 遊戲功能的後續（決策與研究裡寫了「之後」的）
 
@@ -1081,6 +1104,8 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 | 匿名的本機操作計時（附在「回報問題」裡） | CORE_LOOP §1.6 第 6 點 | 核心玩法第 4 個 PR（關卡）時一起做，TestFlight 才問得出「第 1 關花幾分鐘」 |
 
 ### 7.3 3D 的後續
+
+**Codex 蒸汽機車＋煤水車（2026-10-23，issue #1103）**：作者回報前導輪區過空後，新增汽缸外罩／煙箱承座／導輪架共408三角，其餘原模型13,672三角逐頂點不變；真正前版與同相機局部對照在私庫history/front-before及previews/steam-front-side-by-side.png。本輪10張參考的獨立兩單元原生靜態素材，霧綠／石墨／金砂、無紅色。配方`Map3DSteamTender.swift`，入口僅靜態註冊；完整編組14,080三角。公開只配方／工具／必要測試／文件／一張總覽，完整native／GLB／35七向／白模／剪影／同尺度／真前後／viewer／來源與ZIP在私庫`Railway/game-art-previews/docs/art/steam-tender-2026-10-23/`。重建與外觀／技術結論見[本批交接](art/steam-tender-2026-10-23/README.md)與`tools/steam-tender/README.md`，兩庫互鏈draft PR與最新head CI見issue #1103。 作者續報#1106紅字：selected-1在20分鐘job上限取消（無測試失敗），已同步main的#1120五份測試／新權重；模型與素材producer仍為1da739ca，原生／GLB逐bytes核對保持。最新CI狀態與timeout證據見#1103／#1106；不重複改CI分份規則。Linux Swift6.4 warnings-as-errors與20相關測試、實際幾何／支承／故障拒收、GLB／PNG／viewer／ZIP已驗證；真機Metal／效能／動畫及工程尺寸／真實車型仍未驗證。不改GameCore／存檔／golden／replay。**合併只增加靜態素材，不會讓營運列車自動換成這台**；車型映射、煤水車跟隨與連桿動畫是另案，不擅稱CT273。
 
 **七節暖白霧藍低裙板都市電車（Codex，#1094，`codex/seven-car-blue-2026-10-23`）**：作者新七圖，兩端＋五中節近等長，端每側1／中每側2雙門、九屋頂箱、單端集電弓；獨立`Map3DSevenCarBlue.swift`，不是前批長短交替七節或四節底盤改殼。只新增靜態註冊。最終54.679×2.731×4.120m／13968三角為展示推估；隱藏28軸是補全假設、確切型號／工程尺寸不足。已修下裙露輪過多、車頭下方與接節下緣缺口，全部門窗玻璃逐三角不變。[外觀／技術／私有ZIP與viewer](art/seven-car-blue-2026-10-23/README.md)、[特徵與重建組裝](../tools/seven-car-blue/README.md)。10native／10GLB／70七向、實際白模／剪影／同相機前後在私庫。VERIFIED Linux Swift6.4 warnings-as-errors、19相關測試、原生讀回／精確組裝、封閉邊／真實殼支持／輪頂50mm淨空與遮擋／接節連續、六故障拒收、Blender／PNG／viewer。真機Metal／效能／動畫／工程規格UNVERIFIED；合併不會自動替換營運列車。無GameCore／存檔／golden／replay變更；兩庫draft與最新CI見#1094，未合併／auto-merge／TestFlight。
 

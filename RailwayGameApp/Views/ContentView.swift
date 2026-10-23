@@ -57,7 +57,10 @@ struct ContentView: View {
         withTransaction(cut) { screen.showsMap3D = false }
     }
 
-    var body: some View {
+    // Decision 379: timed for the frame readout.
+    var body: some View { timed(.screenBody) { timedBody } }
+
+    @ViewBuilder private var timedBody: some View {
         gameLayout
             // Inside the text size limit below: the tutorial's card shares the
             // screen with the controls it must not cover.
@@ -305,7 +308,7 @@ struct ContentView: View {
             DataSourcesView(launcher: launcher)
         case .settings:
             // Decision 127: a problem report from a game says what is in it.
-            SettingsView(audio: audio, game: session.problemReportGame, lessons: launcher.lessonReport(in: .app), session: session)
+            SettingsView(audio: audio, launcher: launcher, game: session.problemReportGame, lessons: launcher.lessonReport(in: .app), session: session)
         case .yearEnd:
             YearEndSheet(session: session)
                 .presentationDetents([.medium, .large])
@@ -322,7 +325,7 @@ struct ContentView: View {
             MonthlyReportSheet(session: session)
                 .presentationDetents([.medium, .large])
         case .help:
-            HelpView(language: session.language)
+            HelpView(language: session.language, launcher: launcher)
         case .postcard:
             PostcardSheet(session: session)
         case .achievements:
@@ -1299,7 +1302,10 @@ private struct RouteHintCard: ViewModifier {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.verticalSizeClass) private var verticalSizeClass
 
-    func body(content: Content) -> some View {
+    // Decision 379: timed for the frame readout.
+    func body(content: Content) -> some View { timed(.screenBody) { timedBody(content: content) } }
+
+    @ViewBuilder private func timedBody(content: Content) -> some View {
         content
             .onChange(of: seen ? nil : RouteHintWatch(world: session.world), initial: true) { _, watch in
                 if watch != nil { session.watchRouteHint() }

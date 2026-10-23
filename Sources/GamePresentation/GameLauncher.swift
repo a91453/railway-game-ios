@@ -1238,6 +1238,11 @@ public final class GameLauncher {
         }
     }
 
+    /// The saves' folder, for exporting a save from the list
+    /// (``SaveLibrary/exportFile(of:)``, decision 381), written when it is
+    /// shared.
+    public var saveLibrary: SaveLibrary { library }
+
     /// Names the player's save `entry` `name`, or takes its name away when
     /// `name` is empty (decision 184).
     public func rename(_ entry: SaveLibrary.Entry, to name: String) {

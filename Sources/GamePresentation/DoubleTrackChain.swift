@@ -286,6 +286,16 @@ extension GameSession {
                 let onParallel = fromStart ? inward + reach : parallelLength - inward - reach
                 guard let to = position(first, at: onMain), let from = position(second, at: onParallel),
                       let stretch = crossoverStretch(from: from, to: to, in: world) else { continue }
+                // Decision 378: a place where either track would not be cut
+                // (a train or a line on it, a platform there) is passed by
+                // before cutting the second track, which on a long one
+                // works its fouling out again: a run of such places held
+                // the preview most of a second. Building it would have been
+                // refused the same way, so the same place is found.
+                guard ![stretch.start, stretch.end].contains(where: { anchor in
+                    if case .track(let point) = anchor { world.trackEdgeSplitRefusal(point.edge, at: point.distance) != nil } else { false }
+                }) else { continue }
+                crossoverTrials += 1
                 var trial = world
                 guard (try? stretch.build(in: &trial, heights: heights)) != nil else { continue }
                 world = trial
@@ -294,5 +304,186 @@ extension GameSession {
             }
         }
         return (stretches, stretches.count == wanted ? .built(wanted) : .noRoom)
+    }
+}
+
+/// A piece of a chain's segment the second track runs beside
+/// (``GameSession/offsetPieces(of:side:keepWhole:)``): the whole segment,
+/// or part of a long curve.
+struct OffsetPiece {
+    let segment: ChainSegment
+    /// Which of the chain's segments it is part of.
+    let index: Int
+    /// Where along that segment it starts and ends.
+    let start: Int64
+    let end: Int64
+}
+
+extension DoubleTrack {
+    /// How far the second track beside a curve, its control points moved
+    /// out by ``spacing``, may stray from the spacing before the curve is
+    /// halved for it (decision 378): 0.5 m, so it stays well clear of the
+    /// 4 m the network keeps and is still found beside it.
+    static let offsetTolerance: Int64 = WorldCoordinate.unitsPerMetre / 2
+    /// How many times a curve is halved at most: into 16 pieces.
+    static let offsetHalvings = 4
+}
+
+extension GameSession {
+    /// `segments` in pieces for the second track beside them on `side`
+    /// (decision 378): a curve's control points moved out by the spacing
+    /// make a curve that strays from it along a long one with a sharp turn
+    /// (lesson 5's track to the third town came within 3.8 m and was
+    /// refused), so such a curve is halved, each half its own cubic, until
+    /// no piece strays more than ``DoubleTrack/offsetTolerance``. A
+    /// straight segment, one whose second track keeps the spacing, and one
+    /// that cannot be cut cleanly stay whole, as before. Never cut inside
+    /// `keepWhole[i]` (stretches along segment `i`, its platforms).
+    func offsetPieces(of segments: [ChainSegment], side: PlatformTrackSide, keepWhole: [[ClosedRange<Int64>]] = []) -> [OffsetPiece] {
+        segments.enumerated().flatMap { index, segment in
+            let whole = [OffsetPiece(segment: segment, index: index, start: 0, end: segment.geometry?.length ?? 0)]
+            guard case .cubic(let c1, let c2) = segment.curve, let geometry = segment.geometry, geometry.length > 0 else { return whole }
+            let curve = OffsetCubic(segment.from.plan, c1, c2, segment.to.plan)
+            let keep = index < keepWhole.count ? keepWhole[index] : []
+            // Where along the segment parameter `t` lies: its samples are
+            // evenly apart in `t`.
+            let steps = Double(geometry.distances.count - 1)
+            func chainage(_ t: Double) -> Int64 { geometry.distances[Int((t * steps).rounded())] }
+            func parameter(_ distance: Int64) -> Double {
+                var (low, high) = (0, geometry.distances.count - 1)
+                while low < high {
+                    let middle = (low + high) / 2
+                    if geometry.distances[middle] < distance { low = middle + 1 } else { high = middle }
+                }
+                return Double(low) / steps
+            }
+            func cuts(_ a: Double, _ b: Double, depth: Int) -> [Double] {
+                guard depth < DoubleTrack.offsetHalvings, curve.part(a, b).strays(side: side) > Double(DoubleTrack.offsetTolerance) else { return [] }
+                var middle = (a + b) / 2
+                // Off a platform, 8 m past its nearer end, when that is still
+                // well inside the part.
+                if let platform = keep.first(where: { $0.contains(chainage(middle)) }) {
+                    let ends = [parameter(platform.lowerBound - DoubleTrack.crossoverStep), parameter(platform.upperBound + DoubleTrack.crossoverStep)]
+                    guard let end = ends.filter({ $0 > a + (b - a) / 4 && $0 < b - (b - a) / 4 }).min(by: { abs($0 - middle) < abs($1 - middle) })
+                    else { return [] }
+                    middle = end
+                }
+                return cuts(a, middle, depth: depth + 1) + [middle] + cuts(middle, b, depth: depth + 1)
+            }
+            let inner = cuts(0, 1, depth: 0)
+            guard !inner.isEmpty else { return whole }
+            let bounds = [0.0] + inner + [1.0]
+            var pieces: [OffsetPiece] = []
+            for part in 0..<(bounds.count - 1) {
+                let (a, b) = (bounds[part], bounds[part + 1])
+                let cubic = curve.part(a, b).rounded
+                let first = part == 0, last = part == bounds.count - 2
+                let start = first ? 0 : chainage(a), end = last ? geometry.length : chainage(b)
+                let from = first ? segment.from : WorldCoordinate(x: cubic.p0.x, y: cubic.p0.y, z: geometry.location(at: start).position.z)
+                let to = last ? segment.to : WorldCoordinate(x: cubic.p3.x, y: cubic.p3.y, z: geometry.location(at: end).position.z)
+                let piece = ChainSegment(
+                    from: from, to: to, curve: .cubic(cubic.c1, cubic.c2),
+                    profile: TrackProfile(startTransition: first ? segment.profile.startTransition : 0, endTransition: last ? segment.profile.endTransition : 0),
+                    structure: segment.structure
+                )
+                guard start < end, piece.geometry != nil else { return whole }
+                pieces.append(OffsetPiece(segment: piece, index: index, start: start, end: end))
+            }
+            return pieces
+        }
+    }
+}
+
+/// A cubic Bézier in plan, in floating point, for working out where to
+/// cut a curve (``GameSession/offsetPieces(of:side:keepWhole:)``).
+private struct OffsetCubic {
+    typealias Point = (x: Double, y: Double)
+    let p: [Point]
+
+    init(_ p0: PlanPoint, _ c1: PlanPoint, _ c2: PlanPoint, _ p3: PlanPoint) {
+        p = [p0, c1, c2, p3].map { (Double($0.x), Double($0.y)) }
+    }
+
+    private init(_ points: [Point]) {
+        p = points
+    }
+
+    private static func lerp(_ a: Point, _ b: Point, _ t: Double) -> Point {
+        (a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)
+    }
+
+    /// Where it is at `t` (de Casteljau), and its halves there.
+    private func split(_ t: Double) -> (OffsetCubic, OffsetCubic) {
+        let a = Self.lerp(p[0], p[1], t), b = Self.lerp(p[1], p[2], t), c = Self.lerp(p[2], p[3], t)
+        let ab = Self.lerp(a, b, t), bc = Self.lerp(b, c, t), m = Self.lerp(ab, bc, t)
+        return (OffsetCubic([p[0], a, ab, m]), OffsetCubic([m, bc, c, p[3]]))
+    }
+
+    /// The same curve from `a` to `b` (0 ≤ a < b ≤ 1).
+    func part(_ a: Double, _ b: Double) -> OffsetCubic {
+        let left = b < 1 ? split(b).0 : self
+        return a > 0 ? left.split(a / b).1 : left
+    }
+
+    var rounded: (p0: PlanPoint, c1: PlanPoint, c2: PlanPoint, p3: PlanPoint) {
+        let q = p.map { PlanPoint(x: Int64($0.x.rounded()), y: Int64($0.y.rounded())) }
+        return (q[0], q[1], q[2], q[3])
+    }
+
+    private func point(_ t: Double, of q: [Point]) -> Point {
+        let u = 1 - t
+        let (w0, w1, w2, w3) = (u * u * u, 3 * u * u * t, 3 * u * t * t, t * t * t)
+        return (w0 * q[0].x + w1 * q[1].x + w2 * q[2].x + w3 * q[3].x, w0 * q[0].y + w1 * q[1].y + w2 * q[2].y + w3 * q[3].y)
+    }
+
+    private func tangent(_ t: Double) -> Point {
+        let u = 1 - t
+        let (w0, w1, w2) = (3 * u * u, 6 * u * t, 3 * t * t)
+        return (w0 * (p[1].x - p[0].x) + w1 * (p[2].x - p[1].x) + w2 * (p[3].x - p[2].x),
+                w0 * (p[1].y - p[0].y) + w1 * (p[2].y - p[1].y) + w2 * (p[3].y - p[2].y))
+    }
+
+    private func bend(_ t: Double) -> Point {
+        let u = 1 - t
+        return (6 * (u * (p[2].x - 2 * p[1].x + p[0].x) + t * (p[3].x - 2 * p[2].x + p[1].x)),
+                6 * (u * (p[2].y - 2 * p[1].y + p[0].y) + t * (p[3].y - 2 * p[2].y + p[1].y)))
+    }
+
+    /// How far, at most, the curve beside it on `side` that
+    /// ``GameSession/parallelChain(beside:side:in:)`` lays (each control
+    /// point moved out by the spacing beside its end) strays from the
+    /// spacing: looked at 15 places along it, each against the nearest
+    /// point of this curve.
+    func strays(side: PlatformTrackSide) -> Double {
+        let spacing = Double(DoubleTrack.spacing)
+        func out(_ way: Point) -> Point {
+            let length = (way.x * way.x + way.y * way.y).squareRoot()
+            guard length > 0 else { return (0, 0) }
+            let scale = (side == .left ? 1 : -1) * spacing / length
+            return (way.y * scale, -way.x * scale)
+        }
+        let start = out((p[1].x - p[0].x, p[1].y - p[0].y)), end = out((p[3].x - p[2].x, p[3].y - p[2].y))
+        let beside: [Point] = [
+            (p[0].x + start.x, p[0].y + start.y), (p[1].x + start.x, p[1].y + start.y),
+            (p[2].x + end.x, p[2].y + end.y), (p[3].x + end.x, p[3].y + end.y),
+        ]
+        var most = 0.0
+        for step in 1..<16 {
+            let t = Double(step) / 16
+            let o = point(t, of: beside)
+            // The nearest point of this curve, by Newton's method from `t`.
+            var s = t
+            for _ in 0..<6 {
+                let q = point(s, of: p), d = tangent(s), dd = bend(s)
+                let (rx, ry) = (q.x - o.x, q.y - o.y)
+                let slope = d.x * d.x + d.y * d.y + rx * dd.x + ry * dd.y
+                guard slope > 0 else { break }
+                s = min(1, max(0, s - (rx * d.x + ry * d.y) / slope))
+            }
+            let q = point(s, of: p)
+            let distance = ((q.x - o.x) * (q.x - o.x) + (q.y - o.y) * (q.y - o.y)).squareRoot()
+            most = max(most, abs(distance - spacing))
+        }
+        return most
     }
 }

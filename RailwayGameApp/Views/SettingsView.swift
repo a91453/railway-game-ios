@@ -3,14 +3,18 @@ import GamePresentation
 import SwiftUI
 import UIKit
 
-/// The app's settings: the music and the sound effects on or off, and
-/// their three volumes (``GameAudio``, decision 219), from the start
-/// screen and the game menu. Kept on the
+/// The app's settings: the game's language (decision 257; decision 381
+/// moved it here from the start screen), the music and the sound effects
+/// on or off, and their three volumes (``GameAudio``, decision 219), from
+/// the start screen and the game menu. Kept on the
 /// device, never in a save. Under them, from a game, that game's own
 /// settings (decision 154); the 3D city preview (decision 152); the app's
-/// version and a way to report a problem (decision 127).
+/// version and a way to report a problem (decision 127), and the data
+/// sources and licences (decision 381).
 struct SettingsView: View {
     let audio: GameAudio
+    /// For the data sources (``DataSourcesView``) and Help's row to them.
+    let launcher: GameLauncher
     /// What is in the game the settings were opened from
     /// (``GameSession/problemReportGame``), for a problem report; `nil`
     /// from the start screen.
@@ -39,6 +43,14 @@ struct SettingsView: View {
     @AppStorage(SecretarySettings.monthlyKey) private var monthlyReportMode = MonthlyReportMode.openAndPause.rawValue
     /// Whether the help guide is open (decision 177).
     @State private var showsHelp = false
+    /// Whether the data sources and licences are open (decision 381).
+    @State private var showsDataSources = false
+    /// The language menu's choice, read from the app's settings
+    /// (decision 257).
+    @State private var languageChoice = LanguageChoice.saved
+    /// What the player is told after choosing a language: it takes effect
+    /// the next time the game opens.
+    @State private var languageNote: String?
     /// Decision 182: the map's time of day and weather, on the device.
     @AppStorage(MapAmbienceSettings.dayNightKey) private var showsDayNight = true
     @AppStorage(MapAmbienceSettings.weatherKey) private var showsWeather = true
@@ -56,6 +68,7 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
+                languageSection
                 soundSection
                 mapSection
                 lineColoursSection
@@ -82,7 +95,22 @@ struct SettingsView: View {
                 }
             }
             .sheet(isPresented: $showsHelp) {
-                HelpView(language: .app)
+                HelpView(language: .app, launcher: launcher)
+            }
+            .sheet(isPresented: $showsDataSources) {
+                DataSourcesView(launcher: launcher)
+            }
+            .alert(
+                Text(verbatim: DisplayLanguage.app.text("Language", "語言")),
+                isPresented: Binding(get: { languageNote != nil }, set: { if !$0 { languageNote = nil } })
+            ) {
+                Button {
+                    languageNote = nil
+                } label: {
+                    Text(verbatim: DisplayLanguage.app.text("OK", "好"))
+                }
+            } message: {
+                Text(verbatim: languageNote ?? "")
             }
             .sheet(isPresented: $showsWebsite) {
                 if let url = URL(string: GameWebsite.home) {
@@ -100,6 +128,45 @@ struct SettingsView: View {
                     .accessibilityIdentifier("settings.done")
                 }
             }
+        }
+    }
+
+    /// Decision 257: the game's own language menu, as on the reference's
+    /// home screen (iOS shows an app's language in Settings only on a
+    /// device with two or more languages). At the top since decision 381,
+    /// where a player who cannot read the current language finds it: each
+    /// choice is named in itself.
+    private var languageSection: some View {
+        let language = DisplayLanguage.app
+        return Section {
+            Picker(selection: languageChoiceBinding) {
+                ForEach(LanguageChoice.allCases, id: \.self) { choice in
+                    Text(verbatim: choice.title(in: language)).tag(choice)
+                }
+            } label: {
+                Label("Language", systemImage: "globe")
+            }
+            .pickerStyle(.menu)
+            .accessibilityIdentifier("settings.language")
+        } footer: {
+            Text(verbatim: language.text(
+                "A new language shows the next time the game opens.",
+                "換了語言，下次開啟遊戲時生效。"
+            ))
+        }
+    }
+
+    /// The language menu's selection: saves the choice, and tells the
+    /// player to reopen the game when the language may change.
+    private var languageChoiceBinding: Binding<LanguageChoice> {
+        Binding {
+            languageChoice
+        } set: { choice in
+            if choice.needsRestart(from: languageChoice, showing: .app) {
+                languageNote = choice.restartNote(in: .app)
+            }
+            languageChoice = choice
+            choice.save()
         }
     }
 
@@ -437,6 +504,17 @@ struct SettingsView: View {
                 }
             }
             .accessibilityIdentifier("settings.help")
+            // Decision 381: the data sources and licences, also in Help.
+            Button {
+                showsDataSources = true
+            } label: {
+                Label {
+                    Text(verbatim: DataSourcesEntry.title(in: language))
+                } icon: {
+                    Image(systemName: "doc.text.magnifyingglass")
+                }
+            }
+            .accessibilityIdentifier(DataSourcesEntry.settingsIdentifier)
             LabeledContent {
                 Text(verbatim: report.versionText)
                     .textSelection(.enabled)
