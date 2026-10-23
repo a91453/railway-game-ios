@@ -860,7 +860,14 @@ struct MapView: View {
                     MapBuildConfirm(session: session, camera: projection, viewport: viewport, insets: EdgeInsets(
                         top: max(clear.top, topColumnDepth), leading: clear.leading,
                         bottom: clear.bottom, trailing: clear.trailing
-                    ), mapTop: clear.top, avoiding: [bottomLeadingFrame, bottomTrailingFrame, buttonsUnderPanel ? cornerRowFrame : .zero])
+                    ), mapTop: clear.top, avoiding: [
+                        bottomLeadingFrame, bottomTrailingFrame, buttonsUnderPanel ? cornerRowFrame : .zero,
+                        // Decision 384: the new line's station pair drawer,
+                        // measured on the screen, in the map's points.
+                        screen.stationPairFrame.isEmpty ? .zero : screen.stationPairFrame.offsetBy(
+                            dx: -proxy.frame(in: .global).minX, dy: -proxy.frame(in: .global).minY
+                        )
+                    ])
                     // Its flags and ring are where the track and the site
                     // are, which may be by the attribution.
                     .mask { attribution.fill() }

@@ -25,7 +25,8 @@ struct MapBuildConfirm: View {
     /// The map's own buttons and keys near its edges (the layer and map
     /// buttons, the legend and the zoom buttons), in the map's
     /// coordinates: the pill keeps off them, which it went over on a phone
-    /// held sideways (a player's report).
+    /// held sideways (a player's report); and the new line's station pair
+    /// drawer, which covered its ✓ (decision 384).
     var avoiding: [CGRect] = []
     @Environment(GameScreenState.self) private var screen
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -223,34 +224,10 @@ struct MapBuildConfirm: View {
         // tappable, rather than under the dock (decision 190's report).
         let highest = top <= bottom - height ? top : max(0, min(Double(mapTop) + margin, bottom - height))
         y = min(max(y, highest), max(highest, bottom - height))
-        let placed = Self.keepingOff(avoiding, x: x, y: y, width: width, height: height, minX: minX, maxX: maxX, highest: highest, margin: margin)
+        let placed = BuildConfirmLayout.keepingOff(
+            avoiding.map { ScreenFrame($0) }, x: x, y: y, width: width, height: height, minX: minX, maxX: maxX, highest: highest
+        )
         return CGSize(width: placed.x, height: placed.y)
-    }
-
-    /// The pill at `x`, `y` moved off what it covers of `obstacles`: up
-    /// over the one it covers where there is room, else beside it, within
-    /// `minX`…`maxX`; left where it is when neither has room.
-    private static func keepingOff(
-        _ obstacles: [CGRect], x: Double, y: Double, width: Double, height: Double,
-        minX: Double, maxX: Double, highest: Double, margin: Double
-    ) -> (x: Double, y: Double) {
-        var x = x, y = y
-        for obstacle in obstacles where !obstacle.isEmpty {
-            let pill = CGRect(x: x, y: y, width: width, height: height)
-            guard pill.intersects(obstacle.insetBy(dx: -margin / 2, dy: -margin / 2)) else { continue }
-            let above = Double(obstacle.minY) - margin - height
-            if above >= highest {
-                y = above
-                continue
-            }
-            let after = Double(obstacle.maxX) + margin, before = Double(obstacle.minX) - margin - width
-            if after <= maxX, after >= minX {
-                x = after
-            } else if before >= minX, before <= maxX {
-                x = before
-            }
-        }
-        return (x, y)
     }
 }
 

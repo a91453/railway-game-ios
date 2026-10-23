@@ -591,11 +591,27 @@ struct ContentView: View {
                 // beside the map; not in the tutorial, whose card leads.
                 .overlay(alignment: .bottom) {
                     let draft = session.lineDraft
+                    // Decision 384: clear of the details card and the map's
+                    // bottom-trailing column too, not only of a panel: it
+                    // stood over the small map and the zoom buttons
+                    // (TestFlight 85.1).
+                    let corner = screen.mapCornerFrame.isEmpty ? 0 : proxy.frame(in: .global).maxX - screen.mapCornerFrame.minX
+                    let trailing = StationPairDrawerLayout.trailingInset(
+                        panel: sidePanel != nil ? sideWidth + margin : 0,
+                        card: isOpen && besideDock ? cardWidth + margin : 0,
+                        corner: corner
+                    )
                     if session.tutorial == nil, draft.count >= 2 {
-                        StationPairDrawer(session: session, from: draft[draft.count - 2], to: draft[draft.count - 1])
+                        StationPairDrawer(
+                            session: session, from: draft[draft.count - 2], to: draft[draft.count - 1],
+                            startsFolded: StationPairDrawerLayout.startsFolded(compactHeight: compactHeight)
+                        )
+                            // The map's ✓ keeps off it (decision 384).
+                            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { screen.stationPairFrame = $0 }
+                            .onDisappear { screen.stationPairFrame = .zero }
                             .padding(.horizontal, margin)
                             .padding(.leading, toolsColumn ? dockSize.width : 0)
-                            .padding(.trailing, sidePanel != nil ? sideWidth + margin : 0)
+                            .padding(.trailing, trailing)
                             // Beside the tools column, above the station
                             // master, who stands at its foot.
                             .padding(.bottom, strip + dockBottom + 2 * margin)
@@ -1142,6 +1158,9 @@ final class GameScreenState {
     /// buttons, a layer's key) stands on the screen, as the map measured
     /// it: the station master's bubble stops short of it.
     var mapCornerFrame: CGRect = .zero
+    /// Decision 384: where the new line's station pair drawer stands on the
+    /// screen, `.zero` while it does not show: the map's ✓ keeps off it.
+    var stationPairFrame: CGRect = .zero
     /// Decision 300: whether the map's buttons under a phone's panel found
     /// room in the credits' band, as the map measured it: where they did
     /// not, the panel ends above them.

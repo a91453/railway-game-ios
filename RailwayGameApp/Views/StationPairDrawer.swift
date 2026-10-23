@@ -15,7 +15,18 @@ struct StationPairDrawer: View {
     let from: StationID
     let to: StationID
     @State private var comparison: StationPairComparison?
-    @State private var isFolded = false
+    @State private var isFolded: Bool
+    private let startsFolded: Bool
+
+    /// `startsFolded`: whether it opens folded to its top line
+    /// (``StationPairDrawerLayout/startsFolded(compactHeight:)``).
+    init(session: GameSession, from: StationID, to: StationID, startsFolded: Bool = false) {
+        self.session = session
+        self.from = from
+        self.to = to
+        self.startsFolded = startsFolded
+        _isFolded = State(initialValue: startsFolded)
+    }
 
     private struct Pair: Hashable {
         let from: StationID
@@ -40,9 +51,14 @@ struct StationPairDrawer: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .frame(maxWidth: 460)
+        .frame(maxWidth: StationPairDrawerLayout.maximumWidth)
         .background(Theme.panel, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Palette.ink, lineWidth: 1.5))
+        .onChange(of: to) {
+            // Decision 384: folded again for each station picked, so the
+            // map's ✓ beside it has room on a short screen.
+            if startsFolded { isFolded = true }
+        }
         .task(id: Pair(from: from, to: to, edits: session.editSerial)) {
             let world = session.world
             let (a, b) = (from, to)
