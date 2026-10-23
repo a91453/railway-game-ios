@@ -410,13 +410,13 @@ extension GameSession {
     /// a copy, with what levelling it costs, or why it cannot be levelled.
     /// `nil` where the stretch is level already or nothing is picked. The
     /// map's pill reads it every frame, so it is kept for the stretch and
-    /// world it was worked out for, as ``networkPreview`` is.
+    /// command it was worked out for, as ``networkPreview`` is.
     public var networkPlatformLevelling: PlatformLevellingPreview? {
         guard let grade = networkPlatformGrade, let stretch = networkPlatformStretch else { return nil }
         _ = world
         let key = PlatformLevellingMemo.Key(
             edge: stretch.edge, start: stretch.start, end: stretch.end, easesGrade: networkEasesGrade,
-            language: language, worldRevision: worldRevision
+            language: language, commandRevision: commandRevision
         )
         if let memo = platformLevellingMemo, memo.key == key { return memo.preview }
         var draft = world
@@ -443,6 +443,7 @@ extension GameSession {
             }
         }
         platformLevellingMemo = PlatformLevellingMemo(key: key, preview: preview)
+        buildPreviewsWorkedOut += 1
         return preview
     }
 }
@@ -469,7 +470,7 @@ struct PlatformLevellingMemo {
         let end: Int64
         let easesGrade: Bool
         let language: DisplayLanguage
-        let worldRevision: Int
+        let commandRevision: Int
     }
 
     let key: Key
