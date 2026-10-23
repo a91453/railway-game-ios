@@ -237,6 +237,18 @@
       "endLevel": 0.0
     },
     {
+      "file": "ticket-issued.wav",
+      "kind": "sound",
+      "synth": "make_game_audio.py ticket(), decision 373",
+      "sha256": "dbf39d9ae6bf725efb84dd421cdef78a6ce8c3feb096cc09f2d500c07d66fbef",
+      "frames": 33600,
+      "seconds": 0.7,
+      "peakDbfs": -6.02,
+      "rmsDbfs": -20.69,
+      "largestStep": 0.5365,
+      "endLevel": 0.0
+    },
+    {
       "file": "warning.wav",
       "kind": "sound",
       "synth": "make_game_audio.py bell(), decision 184",

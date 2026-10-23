@@ -13,7 +13,7 @@ final class SoundVolumesTests: XCTestCase {
                 }
             }
         }
-        for cue: SoundCue in [.track, .transition, .built, .income, .refused, .warning, .goalMet, .lineAcquired] {
+        for cue: SoundCue in [.track, .transition, .built, .income, .refused, .warning, .goalMet, .lineAcquired, .ticketIssued] {
             XCTAssertEqual(cue.category, .effects, "\(cue)")
         }
     }
