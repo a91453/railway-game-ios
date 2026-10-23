@@ -370,14 +370,19 @@ public enum Map3DPalette {
     /// deeper and cooler so they read under the warm sun; the water a
     /// clearer blue than the 2D map's #C3CEEA, so a river never reads as
     /// one of the navy roads, and the farms a softer green.
-    public static let ground = Map3DColor.rgb(0xD9DFEF)
-    public static let water = Map3DColor.rgb(0x92C4E6)
+    /// Decision 370 ((e), ``Map3DLook``): the ground the icon's pale
+    /// #ECEEF6; the water, parks, farms and plazas the reference's
+    /// `mapbox-palette.js` watercolor and atlas colours.
+    public static let ground = Map3DColor.rgb(0xECEEF6)
+    public static let water = Map3DColor.rgb(0x86D3E3)
     /// Decision 272: the parks' green and the trees' livelier, nearer the
     /// owner's sunny target picture; the ground and roads as decision 241.
-    public static let park = Map3DColor.rgb(0xA6D68A)
-    public static let farm = Map3DColor.rgb(0xD6DEB4)
-    public static let plaza = Map3DColor.rgb(0xD9D4C8)
-    public static let ballast = Map3DColor.rgb(0xA39B8E)
+    public static let park = Map3DColor.rgb(0xC8DFC0)
+    public static let farm = Map3DColor.rgb(0xE2EBCF)
+    public static let plaza = Map3DColor.rgb(0xEAD9BF)
+    /// Decision 370: a step deeper, so the track stands off the pale ground
+    /// and the trains off their bed.
+    public static let ballast = Map3DColor.rgb(0x7E786D)
     public static let embankment = Map3DColor.rgb(0x9DB07E)
     public static let rail = Map3DColor.rgb(0x6E7379)
     public static let railTop = Map3DColor.rgb(0xC9CED4)
@@ -399,7 +404,7 @@ public enum Map3DPalette {
     public static let tankBlue = Map3DColor.rgb(0x3B7DD8)
     public static let tankSteel = Map3DColor.rgb(0xC8CDD2)
     public static let trunk = Map3DColor.rgb(0x8A6A4F)
-    public static let crown = Map3DColor.rgb(0x5FAD48)
+    public static let crown = Map3DColor.rgb(0x8DC27A)
     /// The player's buildings (decision 205) and the navy rim that marks
     /// them apart from the city's offices in grey (the art direction's
     /// note).
@@ -412,10 +417,10 @@ public enum Map3DPalette {
     /// ground. Decision 241: the 2D map's own colours, deepened alike.
     static func cover(_ cover: Map3DBaseMap.Cover) -> UInt32 {
         switch cover {
-        case .grass: rgb(0xD1E3C4)
-        case .sand: rgb(0xE9E1CA)
-        case .wetland: rgb(0xC8D5E3)
-        case .wood: rgb(0xA6CA98)
+        case .grass: rgb(0xE2EBCF)
+        case .sand: rgb(0xF2E2BD)
+        case .wetland: rgb(0xD7E4EA)
+        case .wood: rgb(0xB6DDCA)
         case .park: park
         case .water: water
         }
@@ -426,20 +431,25 @@ public enum Map3DPalette {
     /// biggest), in the game's navy rather than its black: the motorways
     /// the navy of the app's text, the main roads its map shadow, lanes
     /// its accent. Plain (untextured) so they read from afar.
+    /// Decision 370 ((e)): a mid grey darker than the ground (CIE L* 62,
+    /// 64, 66, 69, the smaller roads a step lighter), with the hue of the
+    /// icon's navy #262C57 (CIE LCh h −67°) at chroma 6, so it still reads
+    /// as asphalt; lit by its street lights after dark (``Map3DLook``).
     static func road(_ kind: Map3DBaseMap.RoadKind) -> UInt32 {
         switch kind {
-        case .motorway, .trunk: rgb(0x3A4272)
-        case .primary, .secondary: rgb(0x4E5682)
-        case .tertiary: rgb(0x5E6690)
-        case .minor, .service: rgb(0x8E95B6)
+        case .motorway, .trunk: rgb(0x9595A0)
+        case .primary, .secondary: rgb(0x9B9AA5)
+        case .tertiary: rgb(0xA09FAA)
+        case .minor, .service: rgb(0xA8A7B2)
         }
     }
 
-    /// Decision 241: the sidewalks, the light grey of the 2D map's road
-    /// casing, paved.
-    public static let sidewalk = Map3DColor.rgb(0xC9CEDF)
-    /// Taiwan's yellow centre line, the platform edge's yellow.
-    public static let centreLine = platformEdge
+    /// Decision 241: the sidewalks, paved. Decision 370: a white kerb that
+    /// outlines the grey road.
+    public static let sidewalk = Map3DColor.rgb(0xF7F7F4)
+    /// Decision 370: the centre line in the icon's warm yellow #FFC86B; the
+    /// platform edge keeps the safety yellow #F2C94C.
+    public static let centreLine = Map3DColor.rgb(0xFFC86B)
 
     /// Row house walls: `city_world_reference`'s shophouse palette (white
     /// 4, #F2E2D6 2, #E0D0C8 1, #D6C2B0 1) and four tile colours common in
@@ -563,6 +573,9 @@ extension Map3DScene {
         /// above the ground, which keep no city lot.
         var realTrackCells = Set<ChunkKey>()
         var nearMeshes: [ChunkKey: Map3DMesh] = [:]
+        /// Decision 370: colours the model look leaves as they are besides
+        /// ``Map3DLook``'s own (the lines' bands).
+        var keptColours = Set<UInt32>()
         var farMeshes: [ChunkKey: Map3DMesh] = [:]
         var closeMeshes: [ChunkKey: Map3DMesh] = [:]
         /// Whether what is being built is the simplified city.
@@ -685,7 +698,12 @@ extension Map3DScene {
                 var mesh = meshes[key] ?? Map3DMesh()
                 let baseIndexCount = mesh.indices.count
                 mesh.append(nearMeshes[key] ?? Map3DMesh())
-                let far = farMeshes[key] ?? Map3DMesh(), shadows = shadows[key] ?? Map3DMesh(), close = closeMeshes[key] ?? Map3DMesh()
+                var far = farMeshes[key] ?? Map3DMesh(), close = closeMeshes[key] ?? Map3DMesh()
+                let shadows = shadows[key] ?? Map3DMesh()
+                // Decision 370: the city in the model look.
+                Map3DLook.restyle(&mesh, keeping: keptColours)
+                Map3DLook.restyle(&far, keeping: keptColours)
+                Map3DLook.restyle(&close, keeping: keptColours)
                 // The props too: the renderer leaves out a chunk whose box
                 // is off screen, which cut off a pole's top still in view.
                 let propBoxes = (props[key] ?? []).compactMap { $0.bounds(in: .standard) }

@@ -168,10 +168,26 @@ float map3dSunSeen(float3 world, float3 normal, constant Map3DUniforms &uniforms
 }
 
 // Decision 357: `sunSeen` the share of the sun that reaches it.
-float4 map3dLit(float3 base, float3 glow, float4 mirrored, float3 normal, float3 world, float sunSeen, constant Map3DUniforms &uniforms) {
-    float sun = max(dot(normal, uniforms.sunDirection.xyz), 0.0) * sunSeen;
-    float3 ambient = mix(uniforms.ambientGround.rgb, uniforms.ambientSky.rgb, normal.y * 0.5 + 0.5);
-    float3 lit = mix(base * (ambient + uniforms.sunColor.rgb * sun), mirrored.rgb, mirrored.a);
+// Decision 370: `soft`, the model look's light (the city, its trains and
+// vehicles): mostly sky, a little sun, its shadows at 55 %, following the
+// time of day (1 at 14:00, darker and warmer at dusk and night); the signs
+// keep the sun and sky as they were.
+float4 map3dLit(float3 base, float3 glow, float4 mirrored, float3 normal, float3 world, float sunSeen, constant Map3DUniforms &uniforms,
+                bool soft = false) {
+    float3 light;
+    if (soft) {
+        float sun = max(dot(normal, uniforms.sunDirection.xyz), 0.0) * (1.0 - (1.0 - sunSeen) * 0.55);
+        // By day 0.05 more, so the sunlit ground at 14:00 is its own colour
+        // (#ECEEF6), back to 0.80 as the city's lights come on.
+        float sky = 0.85 - 0.05 * uniforms.shade.y;
+        light = float3(sky + 0.02 * max(normal.y, 0.0) + 0.15 * sun) * mix(float3(0.94, 0.96, 1.0), float3(1.0, 0.99, 0.97), sun);
+        light *= (uniforms.ambientSky.rgb + uniforms.sunColor.rgb * 0.5) / float3(0.925, 0.871, 0.806);
+    } else {
+        float sun = max(dot(normal, uniforms.sunDirection.xyz), 0.0) * sunSeen;
+        float3 ambient = mix(uniforms.ambientGround.rgb, uniforms.ambientSky.rgb, normal.y * 0.5 + 0.5);
+        light = ambient + uniforms.sunColor.rgb * sun;
+    }
+    float3 lit = mix(base * light, mirrored.rgb, mirrored.a);
     float far = distance(world, uniforms.eye.xyz);
     float fog = smoothstep(uniforms.fog.x, uniforms.fog.y, far);
     // Decision 349: and the haze on the ground on the way.
@@ -217,6 +233,21 @@ static float2 map3dRipple(float2 p, float t, float footprint) {
     return slope * 0.045;
 }
 
+// Decision 370: a thin line at every whole `step` of `t`, about a pixel
+// wide however far away (the model look's window grid).
+static float map3dGridLine(float t, float step) {
+    float x = t / step, w = fwidth(x), d = abs(fract(x - 0.5) - 0.5);
+    return 1.0 - smoothstep(0.0, max(w * 1.2, 1e-4), d - w * 0.15);
+}
+
+// Decision 370: the street lights on the roads (Map3DVertex.road), as
+// strong as the city's lights are on, from when the sky's brightness falls
+// below roadLampSky.y to full below roadLampSky.x; and the lit windows in
+// the icon's warm yellow #FFC86B.
+constant float roadLamp = 0.5;
+constant float2 roadLampSky = {0.50, 0.70};
+constant float3 windowWarm = {1.0, 0.784, 0.420};
+
 float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d_array<float> surfaces, depth2d<float> sunShadow) {
     constexpr sampler repeating(address::repeat, filter::linear, mip_filter::linear, max_anisotropy(8));
     float3 base = in.color;
@@ -226,6 +257,10 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
     if (in.layer < -1.5 && in.layer > -2.5) {
         glow = base * 1.3 * lights;
     }
+    if (in.layer < -10.5 && in.layer > -11.5) {
+        float sky = dot(uniforms.ambientSky.rgb, float3(0.2126, 0.7152, 0.0722));
+        glow += base * float3(1.0, 0.90, 0.74) * roadLamp * lights * (1.0 - smoothstep(roadLampSky.x, roadLampSky.y, sky));
+    }
     // Decision 356: what the glass or water mirrors, and its share.
     float4 mirrored = float4(0.0);
     float3 normal = normalize(in.normal);
@@ -233,7 +268,7 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
     float3 toEye = normalize(uniforms.eye.xyz - in.world);
     // Decision 357: the sun's share, also on what glints in it.
     float sunSeen = map3dSunSeen(in.world, normal, uniforms, sunShadow);
-    if (mirrors && in.layer < -2.5) {
+    if (mirrors && in.layer < -2.5 && in.layer > -3.5) {
         // Water: tilted by its ripples, the sky by Fresnel's share, and
         // the sun's glint on them.
         float2 slope = map3dRipple(in.world.xz, uniforms.mirror.y, length(fwidth(in.world.xz)));
@@ -248,7 +283,15 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
     if (in.layer >= 0.0) {
         uint packed = uint(in.layer + 0.5);
         float4 texel = surfaces.sample(repeating, in.surfaceAt, packed % 64u);
-        float3 tinted = base * texel.rgb * 2.0;
+        // Decision 370: the model look. The face is its own colour, the
+        // surface's brightness and decision 242's material only a faint
+        // detail on it (0.35 of their contrast), an office's glass pale
+        // blue, thin lines between its bays and floors, and its foot a
+        // little darker (ambient occlusion, the 10 m nearest its foot).
+        float2 pane = glassMirror[min(packed % 64u, 23u)];
+        float3 tinted = base;
+        if (pane.x > 0.6 && pane.y < 0.5) { tinted = mix(tinted, float3(0.80, 0.87, 0.93), 0.6); }
+        tinted *= mix(1.0, clamp(dot(texel.rgb, float3(0.2126, 0.7152, 0.0722)) * 2.0, 0.6, 1.2), 0.35);
         uint material = packed / 64u;
         if (material > 0u) {
             uint layer = material - 1u;
@@ -261,16 +304,19 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
             // the pattern has faded out.
             if (near > 0.0) {
                 float detail = surfaces.sample(repeating, at / metres, layer).r * 2.0;
-                tinted *= mix(1.0, detail, near);
+                tinted *= mix(1.0, detail, near * 0.35);
             }
         }
-        base = mix(texel.rgb, tinted, texel.a);
+        if (abs(normal.y) < 0.7) {
+            tinted *= 1.0 - 0.13 * max(map3dGridLine(in.surfaceAt.x, 1.0) * 0.7, map3dGridLine(in.surfaceAt.y, 1.0));
+        }
+        if (abs(normal.y) < 0.6) { tinted *= mix(0.70, 1.0, smoothstep(0.0, 10.0, in.surfaceAt.y * 3.2)); }
+        base = tinted;
         // A lit window: its glass (untinted and dark enough, or a shop's
         // whole front) where the hash of its bay, floor and face says so.
         uint surface = packed % 64u;
         float4 row = uniforms.nightWindows[min(surface / 2u, 11u)];
         float2 rule = (surface % 2u == 0u) ? row.xy : row.zw;
-        float2 pane = glassMirror[min(surface, 23u)];
         float bright = dot(texel.rgb, float3(0.2126, 0.7152, 0.0722));
         float mirrorGlass = mirrors ? (1.0 - texel.a) * step(bright, 0.45) * pane.x : 0.0;
         if ((lights > 0.0 && rule.x > 0.0) || mirrorGlass > 0.0) {
@@ -281,8 +327,7 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
                 float glass = (1.0 - texel.a) * step(bright, rule.y);
                 float busy = mix(0.5, 1.6, hash12(face * 0.37 + 11.0));
                 on = step(1.0 - clamp(rule.x * busy, 0.0, 0.95), hash12(room + 23.0)) * glass;
-                float3 warm = mix(float3(1.0, 0.6, 0.3), float3(1.0, 0.82, 0.6), hash12(room + 67.0));
-                glow += warm * mix(0.55, 1.1, hash12(room + 1.3)) * on * lights;
+                glow += windowWarm * mix(0.55, 1.1, hash12(room + 1.3)) * on * lights;
             }
             if (mirrorGlass > 0.0) {
                 // Each pane a little out of true (materials.js's wobble),
@@ -314,7 +359,7 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
             }
         }
     }
-    return map3dLit(base, glow, mirrored, normal, in.world, sunSeen, uniforms);
+    return map3dLit(base, glow, mirrored, normal, in.world, sunSeen, uniforms, true);
 }
 
 fragment float4 map3dFragment(Map3DVertexOut in [[stage_in]], constant Map3DUniforms &uniforms [[buffer(1)]],
@@ -400,7 +445,8 @@ fragment float4 map3dShadowFragment(Map3DShadowOut in [[stage_in]], constant Map
     if (any(in.light > 0.0)) {
         return float4(in.light, in.darkness * uniforms.shade.y * (1.0 - fog));
     }
-    return float4(0.10, 0.12, 0.20, in.darkness * uniforms.shade.x * (1.0 - fog));
+    // Decision 370: the model look's shadows, lighter.
+    return float4(0.10, 0.12, 0.20, in.darkness * uniforms.shade.x * 0.65 * (1.0 - fog));
 }
 
 // Decision 347: the sky, one triangle over the whole screen at the far
@@ -585,6 +631,8 @@ fragment float4 map3dSignFragment(Map3DSignOut in [[stage_in]], constant Map3DUn
         base = colour;
         glow = colour * (1.1 * lights * in.lit);
     }
+    // Decision 370: by day, halfway to the model look's pale grey.
+    base = mix(base, mix(base, float3(0.94, 0.94, 0.93), 0.55), 1.0 - lights);
     return map3dLit(base, glow, float4(0.0), normal, in.world, map3dSunSeen(in.world, normal, uniforms, sunShadow), uniforms);
 }
 

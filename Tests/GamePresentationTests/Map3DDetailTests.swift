@@ -48,8 +48,9 @@ final class Map3DDetailTests: XCTestCase {
         // Afar, the city is a good part lighter; near, it has its
         // balconies' air conditioners and signs, afar none.
         XCTAssertLessThan(Double(far), Double(near) * 0.8, "near \(near), far \(far)")
-        XCTAssertTrue(nearColors.contains(Map3DPalette.acUnit))
-        XCTAssertFalse(farColors.contains(Map3DPalette.acUnit))
+        // Decision 370: in the model look.
+        XCTAssertTrue(nearColors.contains(Map3DLook.colour(Map3DPalette.acUnit)))
+        XCTAssertFalse(farColors.contains(Map3DLook.colour(Map3DPalette.acUnit)))
         // The shadows are made once.
         let again = Map3DScene(world: world)
         XCTAssertEqual(again.chunks.map(\.shadows.vertices), scene.chunks.map(\.shadows.vertices))

@@ -128,8 +128,9 @@ final class Map3DBuildingsTests: XCTestCase {
         let world = try newGameLine(through: [towns[0], towns[1]])
         let scene = Map3DScene(world: world)
         let colors = Set(scene.chunks.flatMap(\.mesh.vertices).map(\.color))
-        // Sheet-steel roofs, on factories and on the houses' roof rooms.
-        XCTAssertFalse(colors.isDisjoint(with: Map3DPalette.tinRoofs.flatMap { [$0, Map3DColor.shaded($0, 0.95), Map3DColor.shaded($0, 0.82)] }))
+        // Sheet-steel roofs, on factories and on the houses' roof rooms
+        // (decision 370: in the model look).
+        XCTAssertFalse(colors.isDisjoint(with: Map3DPalette.tinRoofs.flatMap { [$0, Map3DColor.shaded($0, 0.95), Map3DColor.shaded($0, 0.82)] }.map(Map3DLook.colour)))
         XCTAssertEqual(Map3DScene(world: world).chunks.map(\.mesh.vertices), scene.chunks.map(\.mesh.vertices))
     }
 }

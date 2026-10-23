@@ -124,6 +124,8 @@ extension Map3DScene.Builder {
         for alignment in snapshot.edges {
             for band in bands.on(alignment.edge.id) {
                 let color = Map3DColor.rgb(UInt32(band.rgb))
+                // Decision 370: the player's line keeps its colour.
+                keptColours.insert(color)
                 for span in alignment.edge.sectionSpans where span.kind != .tunnel {
                     let start = max(span.start, band.start), end = min(span.end, band.end)
                     guard end > start else { continue }

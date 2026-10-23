@@ -39,11 +39,14 @@ public struct Map3DVertex: Hashable, Sendable {
     /// Decision 356: no texture, and water: the shader tilts it with
     /// ripples and mirrors the sky in it (``Map3DReflection``).
     public static let water: Float = -3
+    /// Decision 370: no texture, and a road's carriageway: the shader lights
+    /// it with its street lights once the sky is dark (``Map3DLook``).
+    public static let road: Float = -11
 
     /// Whether the vertex is lit from within at night.
     public var glows: Bool { layer < -1.5 && layer > -2.5 }
     /// Decision 356: whether the vertex is water.
-    public var isWater: Bool { layer < -2.5 }
+    public var isWater: Bool { layer < -2.5 && layer > -3.5 }
 
     public init(_ position: Map3DPoint, normal: Map3DPoint, color: UInt32, u: Float = 0, v: Float = 0, layer: Float = Map3DVertex.plain) {
         x = position.x
@@ -313,6 +316,12 @@ public struct Map3DMesh: Sendable {
         let base = UInt32(vertices.count)
         vertices += corners
         indices += [base, base + 1, base + 2]
+    }
+
+    /// Decision 370: each vertex changed in place by `change`, the
+    /// triangles as they are (``Map3DLook``).
+    mutating func restyleVertices(_ change: (inout Map3DVertex) -> Void) {
+        for index in vertices.indices { change(&vertices[index]) }
     }
 
     public mutating func append(_ other: Map3DMesh) {
