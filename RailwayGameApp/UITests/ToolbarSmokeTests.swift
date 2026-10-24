@@ -390,7 +390,9 @@ extension XCUIApplication {
     /// navigation bar: a row "wholly on screen" there lay behind the bar,
     /// and the tap went to its one uncovered corner and opened no menu
     /// (main 2ec70b2's full lane, run 38720199489).
-    func dragUntilWhollyOnScreen(_ element: XCUIElement, in list: XCUIElement? = nil, below: CGFloat? = nil) -> Bool {
+    /// `drags`: how many drags before giving up, for a list longer than
+    /// the default reaches.
+    func dragUntilWhollyOnScreen(_ element: XCUIElement, in list: XCUIElement? = nil, below: CGFloat? = nil, drags: Int? = nil) -> Bool {
         let area = list.map(\.frame) ?? frame
         let top = max(list == nil ? frame.minY + 140 : area.minY + 8, (below ?? -.infinity) + 8)
         let bottom = list == nil ? frame.maxY - 120 : area.maxY - 8
@@ -404,7 +406,7 @@ extension XCUIApplication {
         // lost 5 of its 16 to the list's bottom edge, where the touch fell
         // on the scroll edge's own view and nothing moved (main 27b1dde,
         // run 38773737363): 24 leaves room for both.
-        for _ in 0..<(list == nil ? 24 : 40) {
+        for _ in 0..<(drags ?? (list == nil ? 24 : 40)) {
             if element.exists {
                 let place = element.frame
                 if place.minY >= top, place.maxY <= bottom, element.isHittable { return true }

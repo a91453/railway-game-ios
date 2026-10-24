@@ -17,15 +17,21 @@ final class SettingsUITests: XCTestCase {
         let sounds = app.switches["settings.sounds"]
         XCTAssertTrue(music.appears(within: 10), "Missing the music switch")
         XCTAssertTrue(sounds.appears(within: 10), "Missing the sound effects switch")
-        // Decision 219, stage 2: the three volumes under the switches.
-        for volume in ["music", "chimes", "effects"] {
-            XCTAssertTrue(app.sliders["settings.volume.\(volume)"].exists, "Missing the \(volume) volume")
-        }
         let before = switchValue(sounds)
 
         XCTAssertTrue(flip(sounds, from: before), "The sound effects switch did not change")
         XCTAssertTrue(flip(sounds, from: switchValue(sounds)), "The sound effects switch did not change back")
         XCTAssertEqual(switchValue(sounds), before)
+
+        // Decision 219, stage 2: the three volumes under the switches. On
+        // a phone on its side, since the Language section above them
+        // (decision 381), they start below the fold, and a List makes a
+        // row only as it comes near (full lane 40026341039). Checked after
+        // the switch: at the list's top the switch stays above the band
+        // the drags bring a row into (run 40046083471).
+        for volume in ["music", "chimes", "effects"] {
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(app.sliders["settings.volume.\(volume)"]), "Missing the \(volume) volume")
+        }
 
         tap(app.buttons["settings.done"], name: "settings.done")
         // The start screen's buttons exist under the sheet too: what shows
@@ -123,7 +129,11 @@ final class SettingsUITests: XCTestCase {
 
         openSettingsFromTheGameMenu(app)
         let attach = app.switches["settings.report.attach"]
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(attach), "The attach switch never came into view")
+        // The screen's drags reached it after 21 of their 24 before
+        // decision 381 lengthened the settings, and ran out after it (full
+        // lane 40026341039). Drags on the list's own left edge, on a phone
+        // on its side, moved nothing (run 40044305336).
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(attach, drags: 40), "The attach switch never came into view")
         XCTAssertEqual(switchValue(attach), "0", "off until the player turns it on")
         XCTAssertTrue(flip(attach, from: "0"), "The attach switch did not turn on")
         let attached = app.staticTexts["settings.report.attached"]
