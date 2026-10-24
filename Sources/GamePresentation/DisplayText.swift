@@ -574,6 +574,17 @@ extension GameError {
             language.text("This line is already yours.", "這條線已經是你的了。")
         case .invalidAcquisition:
             language.text("This line can't be bought as it is.", "這條線現在不能收購。")
+        case .roadsNotEnabled:
+            language.text("This game has no roads to build on.", "這局遊戲沒有道路。")
+        case .invalidRoads:
+            language.text("The roads could not be read for this part of the map.", "這一帶的道路讀不進來。")
+        case .stationOnRoad:
+            language.text("A road already reaches this station.", "這個車站已經有路接到了。")
+        case .roadTooFar:
+            language.text(
+                "The roads haven't grown this far yet: a station road reaches at most 512 m.",
+                "路還沒長到這裡：站前路最長 512 公尺。"
+            )
         case .depotInUse:
             language.text("A line keeps its trains at this depot: untick it on that line's depots first.", "有路線把列車停在這個機廠：先在那條路線的機廠清單取消勾選。")
         case .depotListedTwice:

@@ -32,8 +32,17 @@ struct Map3DSeededStreets: Sendable {
     /// density: every edge with a built lot on either side, of its line's
     /// kind; a lane next to dense lots widened to a street; now and then a
     /// lane between two low lots left out, so they share a block.
-    init(built: [Map3DScene.ChunkKey: Int]) {
+    ///
+    /// Decision 400: every side of a cell in `roads` (the world's road
+    /// grid) is a street too, of its line's kind, never left out.
+    init(built: [Map3DScene.ChunkKey: Int], roads: Set<Map3DScene.ChunkKey> = []) {
         var edges: [Edge: Map3DBaseMap.RoadKind] = [:]
+        for cell in roads {
+            for edge in [Edge(horizontal: true, line: cell.row, along: cell.column), Edge(horizontal: true, line: cell.row + 1, along: cell.column),
+                         Edge(horizontal: false, line: cell.column, along: cell.row), Edge(horizontal: false, line: cell.column + 1, along: cell.row)] {
+                edges[edge] = Self.kind(ofLine: edge.line, horizontal: edge.horizontal)
+            }
+        }
         for (cell, _) in built {
             let sides = [Edge(horizontal: true, line: cell.row, along: cell.column), Edge(horizontal: true, line: cell.row + 1, along: cell.column),
                          Edge(horizontal: false, line: cell.column, along: cell.row), Edge(horizontal: false, line: cell.column + 1, along: cell.row)]
@@ -337,7 +346,12 @@ extension Map3DScene.Builder {
                                                      y: (Double(lot.row) + 0.5) * Double(Land.cellLength)) else { continue }
             built[cell] = lot.density
         }
-        let streets = Map3DSeededStreets(built: built)
+        var roadCells = Set<Map3DScene.ChunkKey>()
+        for cell in world.roads?.cells ?? [] where !cleared.contains(Map3DScene.ChunkKey(column: cell.column, row: cell.row))
+            && contains(x: (Double(cell.column) + 0.5) * Double(Land.cellLength), y: (Double(cell.row) + 0.5) * Double(Land.cellLength)) {
+            roadCells.insert(Map3DScene.ChunkKey(column: cell.column, row: cell.row))
+        }
+        let streets = Map3DSeededStreets(built: built, roads: roadCells)
         let (segments, index) = trackSegments()
         var kept: [Map3DSeededStreets.Edge: Map3DBaseMap.RoadKind] = [:]
         var crossingsOn: [Map3DSeededStreets.Edge: Map3DLevelCrossing] = [:]

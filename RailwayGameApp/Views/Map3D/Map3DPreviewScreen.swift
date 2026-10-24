@@ -480,6 +480,8 @@ struct Map3DSceneKey: Hashable {
     let palette: LinePalette?
     /// Decision 339: a real line bought runs no real trains.
     let bought: Int
+    /// Decision 400: a station road shows at once.
+    let roads: Int
 
     init(world: GameWorld, hasHeights: Bool, hasRailways: Bool = false, focus: (x: Double, y: Double)? = nil, palette: LinePalette? = nil) {
         self.hasHeights = hasHeights
@@ -493,6 +495,7 @@ struct Map3DSceneKey: Hashable {
         lines = palette == nil ? nil : Map3DLineBands.Signature(world: world)
         self.palette = palette
         bought = world.acquisitions.count
+        roads = world.roads?.cells.count ?? 0
     }
 }
 

@@ -1,5 +1,5 @@
 import Foundation
-import GameCore
+@testable import GameCore
 import GamePresentation
 import XCTest
 
@@ -103,6 +103,9 @@ final class RealWorldMapTests: XCTestCase {
         blank.setTourism(nil)
         var plain = GameWorld.newGame()
         plain.setTourism(nil)
+        // A blank map's towns have roads, a real-world map none yet (decision 400).
+        XCTAssertNotNil(plain.roads)
+        plain.roads = nil
         XCTAssertEqual(blank, plain)
         XCTAssertNil(GameWorld.newGame().geoAnchor)
     }
