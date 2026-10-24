@@ -454,6 +454,14 @@ final class HUDAlignmentUITests: XCTestCase {
     /// Follows Train 1 from the fleet list (as `MapInteractionTests`).
     private func followTrainOne() {
         tap("dock.build")
+        // The press on Build can be cancelled while the app's main thread
+        // stalls (the app's trace: "touch cancelled at (100, 344)" after
+        // gaps of 12.8 s and 17.9 s between frames; main 12c1235's full
+        // lane, run 40085460126), and the tools never open. Tap once more
+        // if they did not, as LessonUITests does for Lessons.
+        if !app.buttons["tool.train"].appears(within: 10), app.buttons["dock.build"].exists {
+            tap("dock.build")
+        }
         tap("tool.train")
         let fleet = app.buttons["train.fleetOverview"]
         XCTAssertTrue(fleet.appears(within: 5))
