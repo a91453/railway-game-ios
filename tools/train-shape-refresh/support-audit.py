@@ -19,7 +19,8 @@ def nearest(origin,direction,triangles):
  return float(np.min(t[mask])) if mask.any() else float('inf')
 for m in manifest['models']:
  if m['category']!='section':continue
- p,c=read(root/m['native']);glass=np.all(c==(79|(90<<8)|(97<<16)),axis=1);other=p[~glass];distances=[]
+ p,c=read(root/m['native']);glass_color=(79|(90<<8)|(97<<16)) if m['id']=='refresh-e200' else manifest['livery']['high_speed']['glass_argb']&0xffffff
+ glass=np.all(c==glass_color,axis=1);other=p[~glass];distances=[]
  for t in p[glass]:
   n=np.cross(t[1]-t[0],t[2]-t[0]);area=np.linalg.norm(n)/2
   if area<0.03:continue

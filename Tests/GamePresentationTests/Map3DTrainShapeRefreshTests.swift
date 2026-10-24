@@ -37,17 +37,17 @@ final class Map3DTrainShapeRefreshTests: XCTestCase {
         XCTAssertLessThan(cab.maximum.x,12.6,"Unrequested long paddle returned")
         XCTAssertGreaterThan(cab.vertices.filter { abs($0.x-9.1)<0.002 && $0.color==teal }.map { abs($0.y) }.max()!,1.6)
     }
-    func testShoulderKeepsWidthWhileWhiteNoseNarrowsInsideIt() {
+    func testShoulderKeepsWidthWhileCentralNoseNarrowsInsideIt() {
         let m=Map3DTrainShapeRefresh.model("refresh-700t-cab")
         let section=m.vertices.filter { abs($0.x-10.5)<0.0001 }
         let width=section.map(\.y).max()!-section.map(\.y).min()!
         XCTAssertGreaterThan(width,3.20,"Lower shoulder still collapses with the upper nose")
-        let white=section.filter { $0.color==Map3DPalette.shopAwnings[3] }
-        let whiteWidth=white.map(\.y).max()!-white.map(\.y).min()!
-        XCTAssertLessThan(whiteWidth/width,0.85,"White nose covers the broad coloured shoulder")
-        let front=m.vertices.filter { abs($0.x-11.9)<0.0001 && $0.color==Map3DPalette.shopAwnings[3] }
+        let central=section.filter { $0.color==Map3DTrainShapeRefresh.highSpeedBodyColor }
+        let centralWidth=central.map(\.y).max()!-central.map(\.y).min()!
+        XCTAssertLessThan(centralWidth/width,0.85,"Central nose covers the broad coloured shoulder")
+        let front=m.vertices.filter { abs($0.x-11.9)<0.0001 && $0.color==Map3DTrainShapeRefresh.highSpeedBodyColor }
         XCTAssertFalse(front.isEmpty)
-        XCTAssertLessThan(front.map(\.y).max()!-front.map(\.y).min()!,1.2,"White inset fails to taper inside the front lip")
+        XCTAssertLessThan(front.map(\.y).max()!-front.map(\.y).min()!,1.2,"Central inset fails to taper inside the front lip")
         // Check the body join on both sides from actual coloured vertices.
         let band=m.vertices.filter { $0.color==Map3DPalette.shopAwnings[0] }
         let h0=band.filter { abs($0.x)<0.0001 }.map(\.z).max()!
@@ -56,7 +56,7 @@ final class Map3DTrainShapeRefreshTests: XCTestCase {
     }
     func testPassengerGlassHasRoundedCornersInsteadOfRectangle() {
         let m=Map3DTrainShapeRefresh.model("refresh-700t-middle")
-        let glass=Map3DColor.shaded(Map3DPalette.glazing,0.5)
+        let glass=Map3DTrainShapeRefresh.highSpeedGlassColor
         let pane=m.vertices.filter { $0.color==glass && $0.x > -9.56 && $0.x < -9.04 && $0.y>1.0 }
         XCTAssertFalse(pane.isEmpty)
         let xs=Set(pane.map { Int(($0.x*10000).rounded()) })

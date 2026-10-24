@@ -9,7 +9,7 @@ def triangles(path):
  return [b''.join(b[start+i*52+4+j*16:start+i*52+16+j*16] for j in range(3)) for i in range(n)]
 def points(ts):return np.array([struct.unpack('<9f',t) for t in ts],dtype=float).reshape(-1,3,3)
 records=[]
-for id in ['refresh-700t-cab','refresh-700t-tail']:
+for id in ['refresh-700t-cab','refresh-700t-middle','refresh-700t-panto','refresh-700t-tail']:
  old=triangles(prior/'models'/(id+'.m3dmodel'));new=triangles(root/'models'/(id+'.m3dmodel'))
  removed=list((Counter(old)-Counter(new)).elements());added=list((Counter(new)-Counter(old)).elements())
  assert removed and added,(id,'no geometry subdivision to check')

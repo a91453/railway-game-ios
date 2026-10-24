@@ -61,6 +61,7 @@ let manifest: [String: Any] = ["schema_version": 1, "generator": "native-train-s
     "native_coordinates": "metres; +x front, +y left, +z up", "gltf_coordinates": "metres; +x front, +y up, -z left",
     "directions": ["top", "bottom", "left", "right", "front", "back", "isometric"], "models": records,
     "assemblies": ["refresh": ["centres_x_m": (0..<12).map { Float(11-2*$0)*12.7 }, "body_gap_m": 0.4, "note": "Display estimates; two cabs and ten middle cars, pantographs on cars 4 and 9"]],
+    "livery": ["high_speed": ["name":"warm-white-body-teal-and-black-stripes", "body_argb":Map3DTrainShapeRefresh.highSpeedBodyColor,"glass_argb":Map3DTrainShapeRefresh.highSpeedGlassColor,"accent_argb":Map3DTrainShapeRefresh.highSpeedAccentColor],"e200":"unchanged-warm-white-and-teal"],
     "static": true]
 
 try JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]).write(to: output.appendingPathComponent("manifest.json"), options: .atomic)

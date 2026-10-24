@@ -2,6 +2,9 @@ import Foundation
 
 /// Independent photo-led static studies. Not assigned to operating train types.
 public enum Map3DTrainShapeRefresh {
+    public static let highSpeedBodyColor=Map3DPalette.shopAwnings[3]
+    public static let highSpeedAccentColor=Map3DColor.shaded(Map3DPalette.tankStand,0.42)
+    public static let highSpeedGlassColor=Map3DColor.shaded(Map3DPalette.glazing,0.5)
     public static let ids = ["refresh-e200", "refresh-700t-cab", "refresh-700t-middle", "refresh-700t-panto", "refresh-700t-tail"]
     public static func model(_ id: String) -> Map3DModelPack.Model {
         var b = StationKitBuilder()
@@ -159,6 +162,8 @@ extension StationKitBuilder {
         beam(Map3DPoint(-4.8,4.17,0.43),Map3DPoint(4.8,4.17,0.43),0.04,Self.ink)
     }
     mutating func refreshHighSpeed(cab: Bool,panto: Bool) {
+        let hsrBody=Map3DTrainShapeRefresh.highSpeedBodyColor
+        let hsrGlass=Map3DTrainShapeRefresh.highSpeedGlassColor
         let segments=40, bottom: Float=0.78
         let xs: [Float] = cab ? [-12.5,-6,0,3.7,4.2,4.8,5.8,6.3,6.7,7.1,7.5,7.9,8.3,8.7,9.1,9.5,9.7,10,10.5,11,11.5,11.9,12.2,12.4,12.5] : [-12.5,12.5]
         func interpolate(_ t: Float,_ points: [(Float,Float)])->Float {
@@ -201,19 +206,19 @@ extension StationKitBuilder {
             // around the sculpted shoulder instead of drawing a flat stripe.
             let baseline: Float=1.7852976
             func ease(_ t: Float)->Float { let u=max(0,min(1,t));return u*u*(3-2*u) }
-            if x<=6.7 { return baseline }
+            if !cab || x<=6.7 { return baseline }
             return baseline+(1.23-baseline)*ease((x-6.7)/5.8)
         }
-        func clip(_ polygon: [Map3DPoint],at x0: Float,_ x1: Float,upper: Bool)->[Map3DPoint] {
+        func clip(_ polygon: [Map3DPoint],at x0: Float,_ x1: Float,upper: Bool,offset: Float = 0)->[Map3DPoint] {
             let h0=bandHeight(x0),h1=bandHeight(x1)
             func distance(_ p: Map3DPoint)->Float {
                 let (_,w)=dimensions(p.x)
-                let t=max(0,min(1,(p.x-3.7)/7.2)),ease=t*t*(3-2*t)
+                let t=cab ? max(0,min(1,(p.x-3.7)/7.2)):0,ease=t*t*(3-2*t)
                 let flank=abs(p.z)/w
                 // The coloured rim climbs around the sides, leaving a tapered
                 // white inset. A flat height cut erased this in the prior version.
                 let height=h0+(h1-h0)*(p.x-x0)/(x1-x0)+0.70*ease*flank*flank
-                let d=p.y-height
+                let d=p.y-height-offset
                 return abs(d)<0.000001 ? 0:d
             }
             var out: [Map3DPoint]=[]
@@ -232,6 +237,13 @@ extension StationKitBuilder {
             }
             return out
         }
+        func orientedTriangles(_ polygon: [Map3DPoint],inside: Map3DPoint)->[[Map3DPoint]] {
+            guard polygon.count>=3 else { return [] }
+            let normal=(polygon[1]-polygon[0]).cross(polygon[2]-polygon[0])
+            let centre=polygon.reduce(Map3DPoint.zero) { $0+$1*(1/Float(polygon.count)) }
+            let points=normal.dot(centre-inside)>=0 ? polygon:Array(polygon.reversed())
+            return (1..<points.count-1).map { [points[0],points[$0],points[$0+1]] }
+        }
         for k in 0..<rings.count-1 {
             let h=(dimensions(xs[k]).0+dimensions(xs[k+1]).0)/2
             let inside=Map3DPoint((xs[k]+xs[k+1])/2,(bottom+h)/2,0)
@@ -239,19 +251,37 @@ extension StationKitBuilder {
                 let j=(i+1)%segments
                 let shoulderBand = cab && xs[k]>=3.7
                 let teal = shoulderBand ? (20...23).contains(i) || (36...39).contains(i) : [21,22,23,36,37,38].contains(i)
-                let color: UInt32 = (24...35).contains(i) ? Self.steel : teal ? refreshTeal:refreshWhite
+                let color: UInt32 = (24...35).contains(i) ? Self.steel : teal ? refreshTeal:hsrBody
                 for triangle in [[rings[k][i],rings[k][j],rings[k+1][j]],[rings[k][i],rings[k+1][j],rings[k+1][i]]] {
-                    if cab && xs[k]>=0 && !(24...35).contains(i) {
+                    if !(24...35).contains(i) {
                         // Split the final sculpted shell along its shared paint boundary.
                         // No overlapping colour decal or separate lip box.
-                        face(clip(triangle,at:xs[k],xs[k+1],upper:true),inside:inside,color:refreshWhite)
+                        let upper=clip(triangle,at:xs[k],xs[k+1],upper:true)
+                        // Preserve the previous triangulation before adding the
+                        // fine stripe within its planes.
+                        for panel in orientedTriangles(upper,inside:inside) {
+                            face(clip(panel,at:xs[k],xs[k+1],upper:true,offset:0.055),inside:inside,color:hsrBody)
+                            face(clip(panel,at:xs[k],xs[k+1],upper:false,offset:0.055),inside:inside,color:Map3DTrainShapeRefresh.highSpeedAccentColor)
+                        }
                         face(clip(triangle,at:xs[k],xs[k+1],upper:false),inside:inside,color:refreshTeal)
                     } else { face(triangle,inside:inside,color:color) }
                 }
             }
         }
-        face(rings[0],inside:Map3DPoint(0,2,0),color:refreshWhite)
-        face(rings.last!,inside:Map3DPoint(0,2,0),color:cab ? refreshTeal:refreshWhite)
+        for end in [0,rings.count-1] {
+            let inside=Map3DPoint(0,2,0),cap=rings[end],x=xs[end]
+            if cab && end==rings.count-1 { face(cap,inside:inside,color:refreshTeal);continue }
+            // Matching subdivisions on the white end caps close the side
+            // stripe's new edge vertices; no T-junction is left at the ends.
+            for panel in orientedTriangles(cap,inside:inside) {
+                face(clip(panel,at:x-1,x+1,upper:false),inside:inside,color:hsrBody)
+                let upper=clip(panel,at:x-1,x+1,upper:true)
+                for part in orientedTriangles(upper,inside:inside) {
+                    face(clip(part,at:x-1,x+1,upper:true,offset:0.055),inside:inside,color:hsrBody)
+                    face(clip(part,at:x-1,x+1,upper:false,offset:0.055),inside:inside,color:Map3DTrainShapeRefresh.highSpeedAccentColor)
+                }
+            }
+        }
         refreshRunning([-8.8,cab ? 3.4:8.8],axles:[-1.25,1.25],radius:0.40,gauge:1.435)
         box(cab ? -3.7:0,0.92,0,cab ? 17.4:23.8,2.55,0.12,Self.ink)
         func flank(_ h: Float)->Float {
@@ -266,15 +296,15 @@ extension StationKitBuilder {
                 let gasket=refreshRoundedOutline(x: x,y:2.345,width:0.56,height:0.75,radius:0.12)
                 refreshPanel(gasket.map { side($0.0,$0.1,0.012) },thickness:0.028,color:Self.ink)
                 let pane=refreshRoundedOutline(x:x,y:2.345,width:0.49,height:0.68,radius:0.10)
-                refreshPanel(pane.map { side($0.0,$0.1,0.024) },thickness:0.028,color:refreshGlass)
+                refreshPanel(pane.map { side($0.0,$0.1,0.024) },thickness:0.028,color:hsrGlass)
             }
             for x: Float in cab ? [-11,3.1]:[-11,11] {
                 let frame=refreshRoundedOutline(x:x,y:2.04,width:0.83,height:1.96,radius:0.11)
                 refreshPanel(frame.map { side($0.0,$0.1,0.012) },thickness:0.025,color:Self.steel)
                 let leaf=refreshRoundedOutline(x:x,y:2.04,width:0.77,height:1.90,radius:0.09)
-                refreshPanel(leaf.map { side($0.0,$0.1,0.024) },thickness:0.035,color:refreshWhite)
+                refreshPanel(leaf.map { side($0.0,$0.1,0.024) },thickness:0.035,color:hsrBody)
                 let pane=refreshRoundedOutline(x:x,y:2.37,width:0.34,height:0.61,radius:0.07)
-                refreshPanel(pane.map { side($0.0,$0.1,0.033) },thickness:0.035,color:refreshGlass)
+                refreshPanel(pane.map { side($0.0,$0.1,0.033) },thickness:0.035,color:hsrGlass)
                 box(x+0.25,1.82,sign*(flank(1.82)+0.045),0.07,0.028,0.05,Self.steel)
             }
         }
@@ -292,9 +322,9 @@ extension StationKitBuilder {
                 }
             for row in 0..<6 { for col in 0..<12 {
                 let p=[screen(row,col),screen(row,col+1),screen(row+1,col+1),screen(row+1,col)]
-                refreshPanel(p,thickness:0.035,color:refreshGlass)
+                refreshPanel(p,thickness:0.035,color:hsrGlass)
             } }
-            let rim=Map3DColor.shaded(refreshGlass,0.72)
+            let rim=Map3DColor.shaded(hsrGlass,0.72)
             for c in 0..<12 { for r in [0,6] { beam(screen(r,c),screen(r,c+1),0.025,rim) } }
             for r in 0..<6 { for c in [0,12] { beam(screen(r,c),screen(r+1,c),0.025,rim) } }
             // Two low lens clusters, two actual warm-white lamps in each.

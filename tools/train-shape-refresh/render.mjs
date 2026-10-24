@@ -52,7 +52,7 @@ try {
  async function sheet(name,body){await page.setContent('<meta charset="utf-8"><base href="'+address+'/">'+html+body);await page.evaluate(()=>Promise.all([...document.images].map(i=>i.decode())));await page.screenshot({path:resolve(root,'previews',name),fullPage:true});}
  for(const family of ['refresh']){
   const train=manifest.models.find(m=>m.family===family&&m.category==='formation'),sections=manifest.models.filter(m=>m.family===family&&m.category==='section');
-  const title='E200 / 700T・暖白綠松';
+  const title='E200 暖白綠松 / 700T 白車身綠松黑線';
   await sheet(family+'-overview.png','<h1>'+title+'｜實際原生模型</h1><div class="row"><div><img src="previews/'+train.id+'-hero.png"></div></div><div class="row"><div><img src="previews/'+sections[0].id+'-detail-front.png"><p>駕駛端局部放大</p></div><div><img src="'+train.views.left+'"><p>側面</p></div><div><img src="'+train.views.top+'"><p>上視</p></div></div>');
   await sheet(family+'-units.png','<h1>'+title+'｜獨立單元（立體各自取景）</h1>'+[sections.slice(0,4),sections.slice(4)].map(row=>'<div class="row">'+row.map(m=>'<div><img src="previews/'+m.id+'-hero.png"><p>'+m.id+' · '+m.triangles+' 三角</p></div>').join('')+'</div>').join(''));
   await sheet(family+'-audit.png','<h1>'+title+'｜正交各列 .035m/pixel</h1>'+['left','right','top','bottom'].map(v=>'<div style="background:white"><img src="previews/'+train.id+'-detail-'+v+'.png"><p>'+v+'</p></div>').join(''));
@@ -72,6 +72,8 @@ try {
 
  for(const [i,data] of matched.entries())writeFileSync(resolve(root,'previews','scale-'+i+'.png'),Buffer.from(data.split(',')[1],'base64'));
  await sheet('overview.png','<h1>E200 / 700T｜原生靜態外形研究</h1>'+manifest.models.filter(m=>m.category==='section').map(m=>'<div style="background:white"><img src="previews/'+m.id+'-hero.png"><p>'+m.id+'</p></div>').join(''));
+ const cab=manifest.models.find(m=>m.id==='refresh-700t-cab');
+ await sheet('700t-livery.png','<h1>700T｜白車身・綠松 × 黑細線・實際原生模型</h1><div style="background:white;border-radius:12px"><img src="previews/'+cab.id+'-hero.png"></div><div class="row"><div><img src="previews/refresh-700t-nose-detail-colour-isometric.png"><p>車頭局部｜白車身／黑細線／暖白燈</p></div><div><img src="previews/refresh-700t-cab-colour-left.png"><p>整車側面｜綠松主色帶／黑色細輔線</p></div></div>');
  await sheet('style-comparison.png','<h1>同相機、公尺尺度風格比較</h1>'+unitsMatched.map((_,i)=>'<div style="background:white"><img src="previews/style-unit-'+i+'.png"></div>').join(''));
  console.log('Rendered49 seven-way PNGs, orthographic sheets and fixed-camera fleet comparison.');
 } finally {if(browser)await browser.close();server.close();unlinkSync(resolve(root,'_render.html'));}

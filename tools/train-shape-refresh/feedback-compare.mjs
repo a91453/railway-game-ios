@@ -9,7 +9,7 @@ const current=resolve(process.argv[2]),prior=resolve(process.argv[3]);
 if(!prior)throw Error('Usage: node feedback-compare.mjs CURRENT_EXPORT PRIOR_EXPORT');
 const mode=process.argv[4]||'formation',electric=mode==='e200';
 const id=electric?'refresh-e200':mode==='formation'?'refresh-700t-formation':'refresh-700t-'+(mode==='nose'?'cab':mode);
-const family=electric?'e200':mode==='nose'?'700t-nose':mode==='cab'?'blue-cab':'700t-'+mode,label=electric?'E200 端面／輪架／屋頂修訂':'700T 前唇與肩部色帶修訂';
+const family=electric?'e200':mode==='nose'?'700t-nose':mode==='cab'?'blue-cab':'700t-'+mode,label=electric?'E200 端面／輪架／屋頂修訂':'700T 白車身綠松／黑細線修訂';
 const currentModel=JSON.parse(readFileSync(resolve(current,'manifest.json'))).models.find(m=>m.id===id);
 const priorModel=JSON.parse(readFileSync(resolve(prior,'manifest.json'))).models.find(m=>m.id===id);
 const before='_feedback-before.m3dmodel',after='_feedback-after.m3dmodel',html='_feedback.html';
