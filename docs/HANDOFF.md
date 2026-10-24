@@ -332,7 +332,17 @@
   5. 記進 PLAYER_FEEDBACK，留「發版凍結解除」。
 - **開著的 PR 與做中的 session**（都會 send_message 規劃「可合併」；新任接手後 send_message 每個 session 改通知新任）：
   - #1166（398 自有建築套件，session_01E26h8gQVHa51w79DJRAyv2，ready）：手動跑的 `LessonUITests.testDoubleTrackIsAbsentInTheFourthLessonAndReachableInTheFifth` 在舊 head 990cdcb9 兩次都在 `dismissGuide`（`LessonUITests.swift:413`）紅。對照：main 684caac 同一個測試綠（run 40074319020）。原因是分支沒有 #1163 改過的 `showGuide`／`pause`（先等卡片最多 10 秒、Pause 點不到再點）。01E26h8 把 main 合進去（只有 merge commit），**head 70fae6c7c19ef89f1483c24fbc94336a88148999**，正在用 `only_testing` 跑整個 `LessonUITests`（run 40076267074）。它會 send_message「可合併」，連同 40 字 sha 與 run 號碼；綠了且 PR 的 CI 綠就照 §1.2 合。合了之後封存 01E26h8；RecreationKit（自有建築第 2 批）照分數再排。
-  - #1175（決策 401 第 1 件：收購支線時一起買下線底下的地塊，session_019YxcVGrDSUjGBqxpWQ5Mnc，draft）：GameCore 完整 tier。動 GameCore 指令，不動存檔，不用獨立審查；綠了就合。019Yxc 的第 2 個 PR 是**實景地圖的 3D 真實鐵路**（決策 339，`Map3DRealTrains.swift`；不是示範模式的 `DemoRealLines`）：照真實資料畫單線或複線；高度照參考庫 `Railway/taiwan-rail-reference-clean/source/rail-3d/physical/level-profiles.json`、`metro-display-profiles.json`，交會時誰在上照 `data/rail_crossing_levels.json`（OSM 的 layer）；補上玩家軌道旁 `playerClearance` 留下的缺口。作者 10-24 問「要不要改成真實複線或單線 還有高度也是」，說清楚是「實景地圖裡面鋪的」，規劃答這和 401 第 2 件是同一件，作者「好」。
+  - #1175（決策 401 第 1 件：收購支線時一起買下線底下的地塊，session_019YxcVGrDSUjGBqxpWQ5Mnc，draft）：GameCore 完整 tier。上一輪 `rest` shard 在 20 分鐘上限被取消，不是這個 PR 的問題（main 的 `rest` 也要 18.5 分鐘，PR 上有說明），正在重跑。動 GameCore 指令，不動存檔，不用獨立審查；綠了 019Yxc 會改 ready、留「可合併」，就照 §1.2 合。019Yxc 壓縮了 1 次，**第 2 件交回，要另派**。它查完沒修，寫進 #1175 的 `docs/decisions/401.md`「下一步」與 HANDOFF §5：
+    - 地圖底下畫的真實鐵路，走向是對的（和 OSM、官方測量的中位偏差 2.2 m）。看起來不對的是資料簡化後的長直段，最長約 4.8 km。
+    - 示範模式（`DemoRealLines`）鋪的軌道有三種問題：
+      - 真實雙線鋪成單線：`layDemoRun` 鋪雙線失敗時默默退回單線。縱貫線臺北–板橋、捷運環狀線是 trackTooClose；崎頂–竹南、新左營–高雄、海線竹南–談文是 trackTooSteep；高捷紅線美麗島–左營是 trackOverWater。
+      - 斷軌：最小半徑 40 m，文湖線斷 2 處、環狀輕軌斷 4 處。
+      - 跳站：R 象山–台北車站、KR 前鎮高中–中央公園、O 永安市場–東門，中間沒鋪。
+    - **作者問的是另一件，還沒有人做**：實景地圖 3D 畫的真實鐵路（決策 339，`Map3DRealTrains.swift`）。作者 10-24 問「要不要改成真實複線或單線 還有高度也是」，再補「不是示範鋪的是實景地圖裡面鋪的」，規劃答要做，作者「好」。要做的：
+      - 照真實資料畫單線或複線（現在只畫一條）；
+      - 高度照參考庫 `Railway/taiwan-rail-reference-clean/source/rail-3d/physical/level-profiles.json`、`metro-display-profiles.json`，交會時誰在上照 `data/rail_crossing_levels.json`（OSM 的 layer），參考 `docs/rail-levels-0909.md`；
+      - 補上玩家軌道旁 `playerClearance` 留下的缺口。
+    - 新任開一個實作 session 做 3D 這件（只動 GamePresentation，決策號另登記）；示範模式的三種問題照分數排在後面。
   - #1176（391 續篇三：並排的橋只留外緣護欄，session_01T3bLvXC3Wm9dpcDF5WMjCj，draft）：只動 GamePresentation，綠了就合；它接著做「斷路接起來」（§4.12 第 6 點）。
   - session_018gwb44aL5MFmY8312pE3hD：10i-1（道路格子、路自己長、站前路，決策 400，**存檔 72**）。PR 綠了先開一個獨立審查 session（只給 PR 號碼與 CLAUDE.md），審過才合。它和 #1175 是同時跑完整 tier 的上限 2 個。
 - **號碼**：決策 400 已合；401（#1175）登記了；下一個 **402**。存檔版本 72 由 10i-1 預約；golden 不動。
