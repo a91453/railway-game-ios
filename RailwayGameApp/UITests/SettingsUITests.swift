@@ -21,11 +21,10 @@ final class SettingsUITests: XCTestCase {
         // a phone on its side, since the Language section above them
         // (decision 381), they start below the fold, and a List makes a
         // row only as it comes near (full lane 40026341039).
-        let list = settingsList(in: app), bar = settingsBarBottom(in: app)
         for volume in ["music", "chimes", "effects"] {
-            XCTAssertTrue(app.dragUntilWhollyOnScreen(app.sliders["settings.volume.\(volume)"], in: list, below: bar), "Missing the \(volume) volume")
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(app.sliders["settings.volume.\(volume)"]), "Missing the \(volume) volume")
         }
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(sounds, in: list, below: bar), "The sound effects switch went out of reach")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(sounds), "The sound effects switch went out of reach")
         let before = switchValue(sounds)
 
         XCTAssertTrue(flip(sounds, from: before), "The sound effects switch did not change")
@@ -128,10 +127,11 @@ final class SettingsUITests: XCTestCase {
 
         openSettingsFromTheGameMenu(app)
         let attach = app.switches["settings.report.attach"]
-        // On the list's own long drags: the screen's short ones needed 21
-        // of their 24 before decision 381 lengthened the settings, and ran
-        // out after it (full lane 40026341039).
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(attach, in: settingsList(in: app), below: settingsBarBottom(in: app)), "The attach switch never came into view")
+        // The screen's drags reached it after 21 of their 24 before
+        // decision 381 lengthened the settings, and ran out after it (full
+        // lane 40026341039). Drags on the list's own left edge, on a phone
+        // on its side, moved nothing (run 40044305336).
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(attach, drags: 40), "The attach switch never came into view")
         XCTAssertEqual(switchValue(attach), "0", "off until the player turns it on")
         XCTAssertTrue(flip(attach, from: "0"), "The attach switch did not turn on")
         let attached = app.staticTexts["settings.report.attached"]
@@ -257,18 +257,6 @@ final class SettingsUITests: XCTestCase {
     private func tap(_ element: XCUIElement, name: String) {
         XCTAssertTrue(element.appears(within: 30), "Missing \(name)")
         element.tap()
-    }
-
-    /// The settings' own list, the one holding the music switch.
-    private func settingsList(in app: XCUIApplication) -> XCUIElement {
-        app.collectionViews.containing(.switch, identifier: "settings.music").firstMatch
-    }
-
-    /// The bottom of the settings' navigation bar (its Done button), which
-    /// the list runs on under: a row counts as in reach only below it.
-    private func settingsBarBottom(in app: XCUIApplication) -> CGFloat? {
-        let bar = app.navigationBars.containing(.button, identifier: "settings.done").firstMatch
-        return bar.exists ? bar.frame.maxY : nil
     }
 
     /// Taps the switch itself (a tap on a toggle row's label does not
