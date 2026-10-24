@@ -110,6 +110,35 @@ final class Map3DRoadBridgeTests: XCTestCase {
         }
     }
 
+    /// Decision 391 (續): the app's tiles keep OpenStreetMap's `layer` on
+    /// a bridge two levels or more up, so 台北's stacked viaducts (環河、
+    /// 市民大道 over the streets and the railway's own crossings) stand 12 m
+    /// and 18 m: z14 tiles round Taipei Main and Banqiao.
+    func testTheTilesKeepABridgesLayer() throws {
+        let tiles = try BaseMapTiles(data: Data(contentsOf: Map3DTrenchTests.root.appendingPathComponent("RailwayGameApp/Resources/BaseMap/taiwan.pmtiles"),
+                                                options: .alwaysMapped))
+        func tile(_ latitude: Double, _ longitude: Double) -> (x: Int, y: Int) {
+            let n = Double(1 << BaseMapTiles.zoom), phi = latitude * .pi / 180
+            return (Int((longitude + 180) / 360 * n), Int((1 - log(tan(phi) + 1 / cos(phi)) / .pi) / 2 * n))
+        }
+        var levels: [Int: Int] = [:]
+        for centre in [tile(25.0478, 121.5170), tile(25.0133, 121.4637)] {
+            for y in centre.y - 3...centre.y + 3 {
+                for x in centre.x - 3...centre.x + 3 {
+                    guard let bytes = try tiles.archive.tile(zoom: BaseMapTiles.zoom, x: x, y: y) else { continue }
+                    let decoded = try VectorTile(bytes, layers: ["transportation"])
+                    for layer in decoded.layers.values {
+                        for feature in layer.features where feature.kind == .line { levels[Map3DBaseMap.bridgeLevel(feature), default: 0] += 1 }
+                    }
+                }
+            }
+        }
+        XCTAssertGreaterThan(levels[1] ?? 0, 100, "\(levels)")
+        XCTAssertGreaterThan(levels[2] ?? 0, 10, "two levels up: \(levels)")
+        XCTAssertGreaterThan(levels[3] ?? 0, 0, "three levels up: \(levels)")
+        print("Map3DRoadBridgeTests: road features by bridge level round Taipei Main and Banqiao: \(levels.sorted { $0.key < $1.key })")
+    }
+
     /// The concrete of the bridges (girders, parapets, walls, piers).
     private static let concrete = Set([0.92, 0.80, 0.70, 0.86, 1].map { Map3DColor.shaded(Map3DPalette.concrete, Float($0)) })
 
