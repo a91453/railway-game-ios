@@ -1077,6 +1077,13 @@
    - 開發：同一套高度與坡道。
    - 美術：開口用同一組墩與梁。
    - 音樂：無。
+
+   session_01AhfV8HVyDQfkoqCY2FNbmY 做完第 1 點後壓縮到第 1 次，照規則不接這件，只留下量過的數字與設計（沒寫程式；分支 `claude/road-joins-391` 是 main，沒有提交）：
+   - **main 上量到的**（示範地圖整片＋底圖，實景地面道路與非隧道軌道的交點，Linux 臨時測試）：路堤（軌面高出地面 1 m 以上）40 處，高出量四分位 1.2／1.8／2.7／7.8／12.1 m；淺路塹 43；深路塹（≥ 6.5 m，375 已架橋）25；高架 2,451；平地 51；斜交小於 30° 的 30。月台：地面 19、高架 57。
+   - **設計**：`Map3DRoadBridges` 加 `joins`（點、路的方向、半寬、絕對高度、地板或天花板、平台長、坡度），以 32 m 格子查；`roadRise` 對不在橋面上的路，沿路方向距交點 d 算地板抬升 `F − grade·max(0, d − plateau) − ground` 或下挖 `C + grade·…`。路堤：天花板 = 軌面 − `underViaduct` − 路的抬升，平台 = (bedBottom/2 + min(e, 4.7) + 1)/sin。路塹深 ≥ 2 m 或月台：地板 = 軌面 + `overTrack`。下挖的走廊要從地面、面域與別的路切掉（把 `Map3DTrenches.cut` 推廣到任意環），擋牆朝內（反向的 `addRampWalls`）。路堤本體的帶子延後畫、在開口處斷開，開口上加一段 `girderDepth` 的梁與橋台端面。
+   - **種子道路**：`trackMeeting` 現在對路堤、路塹與任何月台回 `.blocked`（`Map3DStreetsTests.testTheTrackComesFirst` 守著），要改成新的 `.joined`（斜交 > 0.5、兩側都有街），2D 地圖用同一個 `SeededStreetPlan`，要一起看。`real == nil` 時 `addGround` 要移到 `addSeededStreets` 之後才切得到下挖。
+   - **要先寫的紅測試**：平坦 20 m 的世界，軌道在 24 m（路堤）與 16 m（路塹），路在 x = 500 斜穿：路要連續、頂面 ≤ 軌面 − `underViaduct` 或 ≥ 軌面 + 6.5、交點上沒有路堤的顏色、下挖處沒有地面蓋住；再加兩鎮種子地圖被丟掉的交叉段數。
+   - **風險**：分塊邊界上的一致性（`groundRoads` 已讀 450 m 外圍，但它不帶路的等級，要加），`Map3DStreamingTests` 守著。
 7. PR 收尾若這個 session 沒做完：CI 綠 → 標 ready → #1041 留「可合併」→ 告訴遊戲規劃。
 
 ## 5. 已知、還沒派的待辦
