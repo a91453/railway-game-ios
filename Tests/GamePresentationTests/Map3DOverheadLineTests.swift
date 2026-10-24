@@ -133,10 +133,50 @@ final class Map3DOverheadLineTests: XCTestCase {
         XCTAssertTrue(footings.allSatisfy { abs($0.y - (Map3DScene.railLift + Builder.platformHeight + 0.25)) < 0.01 })
     }
 
-    func testNoOverheadLineInATunnelNorWhereTheGroundCoversTheTrack() {
+    /// Decision 395: in a tunnel, no mast; the wires hang from brackets
+    /// under the bore's roof, drawn with the ground and track (so the cab
+    /// deep in the tunnel, decision 394, still sees them).
+    func testInATunnelTheWiresHangFromTheRoof() {
         var b = builder(kind: .tunnel)
         b.addOverheadLine()
-        XCTAssertTrue(mastTops(b.closeMeshes).isEmpty && wires(b.closeMeshes).isEmpty)
+        XCTAssertTrue(b.closeMeshes.isEmpty, "nothing in the closest detail")
+        XCTAssertTrue(mastTops(b.meshes).isEmpty, "no mast")
+        let wire = wires(b.meshes)
+        XCTAssertFalse(wire.isEmpty)
+        let rails = Map3DScene.railLift
+        XCTAssertTrue(wire.allSatisfy { $0.y > rails + Builder.contactHeight - 0.5 && $0.y < rails + Builder.boreCrown }, "under the roof")
+        // A bracket at every support, 40 m apart at most, just under the
+        // roof and inside the bore's flat; at the ends, 3 m in (out of a
+        // portal's opening).
+        let brackets = b.meshes.values.flatMap(\.vertices).filter { $0.color == Map3DPalette.mastSteel && $0.y > rails + Builder.boreCrown - 0.1 }
+        XCTAssertTrue(brackets.allSatisfy { $0.y <= rails + Builder.boreCrown + 0.01 && abs($0.z) < Builder.boreHalfWidth - Builder.boreSlope })
+        let xs = Set(brackets.map { Int($0.x.rounded()) }).sorted()
+        XCTAssertEqual(xs.first, -197)
+        XCTAssertEqual(xs.last, 197)
+        XCTAssertGreaterThanOrEqual(Set(brackets.map { Int(($0.x / 10).rounded()) }).count, 11, "a bracket every 40 m")
+    }
+
+    /// Decision 395: the contact wire runs on through the portal: the
+    /// tunnel's starts where the open line's ends.
+    func testTheWireRunsOnThroughThePortal() {
+        var b = builder()
+        // 200 m in the open (supports at 0, 40, … 200 m: the last's wire
+        // swung the other way from a first's), then 200 m in the tunnel.
+        b.trackLines = [(stride(from: Float(-200), through: 0, by: 16).map { Map3DPoint($0, Map3DScene.railLift, 0) } + [Map3DPoint(0, Map3DScene.railLift, 0)], .surface),
+                        (stride(from: Float(0), through: 200, by: 16).map { Map3DPoint($0, Map3DScene.railLift, 0) }, .tunnel)]
+        b.addOverheadLine()
+        let height = Map3DScene.railLift + Builder.contactHeight
+        func contactEnd(_ meshes: [Map3DScene.ChunkKey: Map3DMesh]) -> Float? {
+            let ends = wires(meshes).filter { abs($0.x) < 0.1 && abs($0.y - height) < 0.1 }
+            return ends.isEmpty ? nil : ends.reduce(0) { $0 + $1.z } / Float(ends.count)
+        }
+        let outside = contactEnd(b.closeMeshes), inside = contactEnd(b.meshes)
+        XCTAssertNotNil(outside)
+        XCTAssertNotNil(inside)
+        if let outside, let inside { XCTAssertEqual(outside, inside, accuracy: 0.01, "the contact wire breaks at the portal") }
+    }
+
+    func testNoOverheadLineWhereTheGroundCoversTheTrack() {
         var buried = builder()
         buried.trackLines = [(line(0).map { $0 - Map3DPoint(0, 6, 0) }, .surface)]
         buried.addOverheadLine()
