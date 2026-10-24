@@ -772,6 +772,11 @@ struct SaveListView: View {
                                 }
                             }
                     }
+                } footer: {
+                    // Decision 397: said only when the saves are in iCloud.
+                    if !isEmpty, let note = launcher.cloudSaves.footnote(in: language) {
+                        Text(verbatim: note)
+                    }
                 }
             }
             .overlay {
