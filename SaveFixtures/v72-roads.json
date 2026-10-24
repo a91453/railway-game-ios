@@ -1,0 +1,145 @@
+{
+  "saveVersion" : 72,
+  "world" : {
+    "accounts" : {
+      "assets" : [
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 30,
+          "depreciation" : 4,
+          "kind" : "station",
+          "owner" : 1
+        },
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 30,
+          "depreciation" : 4,
+          "kind" : "station",
+          "owner" : 2
+        }
+      ],
+      "capitalDays" : [
+        {
+          "capitalSpending" : 1282000,
+          "day" : 0
+        },
+        {
+          "day" : 7,
+          "depreciation" : 2
+        },
+        {
+          "day" : 14,
+          "depreciation" : 2
+        },
+        {
+          "day" : 21,
+          "depreciation" : 2
+        },
+        {
+          "day" : 28,
+          "depreciation" : 2
+        }
+      ],
+      "days" : [
+
+      ],
+      "entries" : [
+
+      ],
+      "mode" : "management",
+      "openedAt" : 2592000,
+      "pending" : {
+        "departures" : 0,
+        "fareRevenue" : 0,
+        "fareTrips" : 0,
+        "passengers" : 0,
+        "seats" : 0,
+        "trainDistance" : 0
+      }
+    },
+    "bounds" : {
+      "height" : 65536,
+      "width" : 131072
+    },
+    "clock" : {
+      "now" : 2592600,
+      "resumeSpeed" : "fast",
+      "speed" : "fast"
+    },
+    "economy" : {
+      "balance" : 998718000,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "nextStationID" : 3,
+    "nextTrainID" : 1,
+    "roads" : {
+      "blocks" : [
+        {
+          "column" : 1,
+          "count" : 1,
+          "row" : 0
+        }
+      ],
+      "cells" : [
+        {
+          "column" : 20,
+          "count" : 1,
+          "row" : 2
+        },
+        {
+          "column" : 10,
+          "count" : 1,
+          "row" : 6
+        },
+        {
+          "column" : 9,
+          "count" : 3,
+          "row" : 7
+        },
+        {
+          "column" : 9,
+          "count" : 7,
+          "row" : 8
+        },
+        {
+          "column" : 9,
+          "count" : 3,
+          "row" : 9
+        }
+      ],
+      "towns" : [
+        {
+          "column" : 10,
+          "row" : 8
+        }
+      ]
+    },
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "East",
+        "point" : {
+          "x" : 63488,
+          "y" : 34816
+        }
+      },
+      {
+        "id" : 2,
+        "name" : "North",
+        "point" : {
+          "x" : 43008,
+          "y" : 22528
+        }
+      }
+    ],
+    "trains" : [
+
+    ]
+  }
+}

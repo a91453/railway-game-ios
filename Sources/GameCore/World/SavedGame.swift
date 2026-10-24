@@ -372,9 +372,14 @@
 ///     `"visitors"`. A build that reads only an earlier version cannot
 ///     read the kinds and would drop the looks, so it says the save is
 ///     newer than it instead.
+/// 72. Roads (decision 400): a world can have its `"roads"`, the 64 m
+///     cells with a road, the towns whose roads grow and the blocks whose
+///     base-map roads were read. A build that reads only an earlier version
+///     would drop them, and the roads grown and built would be lost, so it
+///     says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 71
+    public static let currentVersion = 72
 
     public let world: GameWorld
 
@@ -555,6 +560,8 @@ extension SavedGame: Codable {
         // Version 70 to 71: a world before version 71 has no park or
         // temple of the company's, and a building without `"look"` has its
         // kind's first, as every one did.
+        // Version 71 to 72: a world without `"roads"` has none: no road
+        // grows and no station road can be built.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

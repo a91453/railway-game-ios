@@ -79,6 +79,8 @@ extension PlayerCommand {
         case unlinkTransfer(StationID)
         case buildFreightYard(StationID)
         case removeFreightYard(StationID)
+        /// A road from the station to the nearest road (decision 400).
+        case buildStationRoad(StationID)
         case setFreightProduct(StationID, CargoKind)
         /// A depot, or an ordinary station again (decision 209).
         case setStationDepot(StationID, Bool)
@@ -271,6 +273,7 @@ extension GameSession {
         case .unlinkTransfer(let id): try world.unlinkTransfer(id)
         case .buildFreightYard(let id): try world.buildFreightFacility(at: id)
         case .removeFreightYard(let id): try world.removeFreightFacility(at: id)
+        case .buildStationRoad(let id): try world.buildStationRoad(at: id)
         case .setFreightProduct(let id, let kind): try world.setFreightProduct(at: id, to: kind)
         case .setStationDepot(let id, let isDepot): try world.setStationDepot(id, to: isDepot)
 

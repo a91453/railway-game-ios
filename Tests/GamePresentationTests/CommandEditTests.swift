@@ -119,6 +119,7 @@ final class CommandEditTests: XCTestCase {
             .renameStation(station, name: "北門"), .removeStation(station), .setStationDemand(station, demand), .setStationDemand(station, nil),
             .applyStationDemand(demand, to: [station, StationID(rawValue: 5)]), .setStationOperationMode(station, StationOperationMode.allCases[0]),
             .linkTransfer(station, StationID(rawValue: 5)), .unlinkTransfer(station), .buildFreightYard(station), .removeFreightYard(station),
+            .buildStationRoad(station),
             .setFreightProduct(station, CargoKind.allCases[0]),
             .createLine(name: "Main", stops: [station, StationID(rawValue: 5)], targets: TargetHeadways(peak: 10, offPeak: 15)),
             .createLine(name: "Branch", stops: [station], targets: nil), .duplicateLine(line, name: "Main - Fork"), .removeLine(line),

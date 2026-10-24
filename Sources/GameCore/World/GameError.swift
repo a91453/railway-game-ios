@@ -321,4 +321,14 @@ public enum GameError: Error, Hashable, Sendable {
     /// A purchase of a real line names no line, too many riders, or a line
     /// without a timetable or one that has run it (decision 315).
     case invalidAcquisition
+    /// A road command in a world without roads (decision 400).
+    case roadsNotEnabled
+    /// The base map's roads name a block outside the world or a cell
+    /// outside the blocks read (decision 400).
+    case invalidRoads
+    /// The station's cell has a road already (decision 400): the station.
+    case stationOnRoad(StationID)
+    /// No road lies within ``RoadGrid/stationRoadMetres`` of the station
+    /// (decision 400): the roads have not grown there yet.
+    case roadTooFar
 }
