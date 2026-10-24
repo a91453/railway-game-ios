@@ -35,6 +35,8 @@ struct Map3DRoadMarkings {
         let along: Map3DBaseMap.Point
         let length: Double
         let width: Double
+        /// Review H6: whether its road is a bridge's (on its deck).
+        var onDeck = false
     }
 
     /// A signal at an approach's kerb: its foot, the way the traffic it
@@ -69,6 +71,8 @@ struct Map3DRoadMarkings {
     struct Arm {
         let road: Int
         let kind: Map3DBaseMap.RoadKind
+        /// Review H6: whether the road is a bridge's.
+        var onDeck = false
         /// From the junction outward.
         let points: [Map3DBaseMap.Point]
         /// Where the junction is along the road, and which way out.
@@ -124,7 +128,7 @@ struct Map3DRoadMarkings {
                 for forward in [true, false] {
                     let way = forward ? Array(points[index...]) : Array(points[...index].reversed())
                     guard way.count >= 2 else { continue }
-                    let arm = Arm(road: road, kind: roads[road].kind, points: way, at: sums[index], forward: forward)
+                    let arm = Arm(road: road, kind: roads[road].kind, onDeck: roads[road].bridgeLevel > 0, points: way, at: sums[index], forward: forward)
                     // The same road from two tiles: one arm.
                     guard let out = arm.place(min(6, arm.length))?.out,
                           !arms.contains(where: { other in other.place(min(6, other.length)).map { Self.dot($0.out, out) > 0.98 } ?? false })
@@ -172,10 +176,11 @@ struct Map3DRoadMarkings {
             func moved(_ p: Map3DBaseMap.Point, _ way: Map3DBaseMap.Point, _ by: Double) -> Map3DBaseMap.Point {
                 Map3DBaseMap.Point(x: p.x + way.x * by, z: p.z + way.z * by)
             }
-            marks.append(Mark(kind: .crosswalk, centre: zebra.point, along: toward(zebra.out), length: Self.crosswalkDepth, width: 2 * half))
+            marks.append(Mark(kind: .crosswalk, centre: zebra.point, along: toward(zebra.out), length: Self.crosswalkDepth, width: 2 * half,
+                              onDeck: arm.onDeck))
             let way = toward(line.out)
             marks.append(Mark(kind: .stopLine, centre: moved(line.point, right(way), half / 2), along: way, length: Self.stopDepth,
-                              width: half - 0.3))
+                              width: half - 0.3, onDeck: arm.onDeck))
             if length >= arrow + Self.arrowLength / 2 + 3, let place = arm.place(arrow) {
                 let way = toward(place.out)
                 // Two lanes each way on a road this wide, the inner one
@@ -183,7 +188,7 @@ struct Map3DRoadMarkings {
                 let lanes = half >= 5 ? 2 : 1, lane = half / Double(lanes)
                 for index in 0..<lanes {
                     marks.append(Mark(kind: .arrow(left: lanes > 1 && index == 0), centre: moved(place.point, right(way), (Double(index) + 0.5) * lane),
-                                      along: way, length: Self.arrowLength, width: Self.arrowWidth))
+                                      along: way, length: Self.arrowLength, width: Self.arrowWidth, onDeck: arm.onDeck))
                 }
             }
             // The signal at the kerb by the stop line, on the pavement.
@@ -285,10 +290,12 @@ extension Map3DScene.Builder {
         }
         // Decision 391: none on a bridge's deck (a junction there is rare),
         // at the road's height on a ramp; decision 375: none where the road
-        // gives way to a trench.
+        // gives way to a trench. Review H6: on its own road's deck only, not
+        // one over it.
         let way = (mark.along.x, mark.along.z)
-        guard !roadRise(at: mark.centre, along: way, onDeck: true).onBridge, !givesWay(at: mark.centre, along: way) else { return }
-        let lift = Self.centreLineLift + roadRise(at: mark.centre, along: way, onDeck: false).rise
+        let raised = roadRise(at: mark.centre, along: way, onDeck: mark.onDeck)
+        guard !raised.onBridge, !givesWay(at: mark.centre, along: way) else { return }
+        let lift = Self.centreLineLift + raised.rise
         for row in gridCell(corners.map(\.z).min()!, origin: originY)...gridCell(corners.map(\.z).max()!, origin: originY) {
             let top = gridLine(row, origin: originY), bottom = gridLine(row + 1, origin: originY)
             for column in gridCell(corners.map(\.x).min()!, origin: originX)...gridCell(corners.map(\.x).max()!, origin: originX) {

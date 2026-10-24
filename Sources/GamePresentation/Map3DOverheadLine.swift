@@ -149,7 +149,9 @@ extension Map3DScene.Builder {
                     for z in low.z...high.z { pieces[Cell(x: x, z: z), default: []].append((line.index, a, b)) }
                 }
             }
-            if let last = line.path.points.last { ends[cell(last), default: []].append((line.index, last)) }
+            // Decision 395 rule 7 (review H5): not a tunnel's: out of one,
+            // the mast outside holds the portal's point.
+            if line.kind != .tunnel, let last = line.path.points.last { ends[cell(last), default: []].append((line.index, last)) }
         }
         func around(_ p: Map3DPoint) -> [Cell] {
             let c = cell(p)
