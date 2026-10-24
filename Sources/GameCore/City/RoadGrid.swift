@@ -340,8 +340,10 @@ extension RoadGrid: Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         var cells: Set<CellPosition> = []
         var last: CellPosition?
+        // No cell past the widest world's, so no sum below can overflow.
+        let side = Int(WorldBounds.maximumSide / Land.cellLength)
         for run in try container.decodeIfPresent([Run].self, forKey: .cells) ?? [] {
-            guard run.count >= 1, run.row >= 0, run.column >= 0, run.count <= Int(WorldBounds.maximumSide / Land.cellLength),
+            guard run.count >= 1, (0..<side).contains(run.row), (0..<side).contains(run.column), run.count <= side - run.column,
                   last.map({ ($0.row, $0.column) < (run.row, run.column) }) ?? true
             else {
                 throw DecodingError.dataCorruptedError(forKey: .cells, in: container, debugDescription: "Roads must be runs of cells, in order, apart.")

@@ -257,6 +257,8 @@ final class RoadGridTests: XCTestCase {
         XCTAssertNoThrow(try load(["cells": [["row": 0, "column": 0, "count": 32]]]))
         XCTAssertThrowsError(try load(["cells": [["row": 0, "column": 0, "count": 33]]]), "past the world's edge")
         XCTAssertThrowsError(try load(["cells": [["row": 0, "column": 0, "count": 0]]]), "an empty run")
+        XCTAssertThrowsError(try load(["cells": [["row": 0, "column": Int.max - 1, "count": 5]]]), "a run past the largest column")
+        XCTAssertThrowsError(try load(["cells": [["row": Int.max, "column": 0, "count": 1]]]), "a row past the largest")
         XCTAssertThrowsError(try load(["cells": [["row": 1, "column": 0, "count": 1], ["row": 0, "column": 0, "count": 1]]]), "out of order")
         XCTAssertThrowsError(try load(["cells": [["row": 0, "column": 0, "count": 3], ["row": 0, "column": 2, "count": 1]]]), "overlapping")
         XCTAssertThrowsError(try load(["towns": [["row": 16, "column": 0]]]), "a town outside the world")
