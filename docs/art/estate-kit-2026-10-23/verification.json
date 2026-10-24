@@ -1,0 +1,67 @@
+{
+  "status": "VERIFIED",
+  "environment": "Linux / Swift 6.4 / Node / Chromium WebGL 2",
+  "parts": 24,
+  "examples": 4,
+  "models": 28,
+  "views": 196,
+  "triangles": 61336,
+  "maximum_triangles": 11740,
+  "checks": [
+    "all native vertices round-trip through the game loader",
+    "native / GLB / PNG SHA-256",
+    "complete native-to-GLB conversion",
+    "four categories of 6 distinct player-owned buildings / attractions",
+    "all seven transparent views nonempty and unclipped",
+    "opaque finite native vertices and connector normals",
+    "all four layouts have non-overlapping rotated footprints"
+  ],
+  "not_verified": [
+    "iPhone / iPad Metal rendering and performance",
+    "live map placement, collisions, interior navigation or animation",
+    "economy rules, building engineering or ride motion simulation"
+  ],
+  "browser": {
+    "status": "VERIFIED",
+    "models_loaded": 28,
+    "checks": [
+      "four categories / examples / Chinese name filtering",
+      "seven directions",
+      "pointer orbit changes rendered geometry",
+      "zoom changes rendered image",
+      "four background controls",
+      "PNG / native / GLB download hashes",
+      "390 px without horizontal overflow",
+      "no external requests / missing resources / JavaScript errors"
+    ]
+  },
+  "swift": {
+    "status": "VERIFIED",
+    "toolchain": "Swift 6.4 (swift-6.4-RELEASE), Linux x86_64",
+    "warnings_as_errors": true,
+    "tests": 26,
+    "suites": [
+      "Map3DEstateKitTests (11)",
+      "Map3DStationKitTests (8)",
+      "Map3DModelFileTests (7)"
+    ],
+    "full_suite": "UNVERIFIED locally; left to CI"
+  },
+  "node_tests": {
+    "status": "VERIFIED",
+    "tests": 4
+  },
+  "manual_review": {
+    "status": "VERIFIED",
+    "parts": 24,
+    "examples": 4,
+    "all_seven_directions_and_undersides": true,
+    "neutral_clay_source_comparison": 8,
+    "existing_native_style_comparison": true
+  },
+  "current_build_export_consistency": {
+    "status": "VERIFIED",
+    "byte_identical_files": 56
+  },
+  "overview_sha256": "de2e05314ac94cefa486f490e599df2566153178f0a7b830633acddaaabaccbd"
+}
