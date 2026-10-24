@@ -23,12 +23,15 @@ public struct BaseMapTiles: Sendable {
 /// its far zone (`RKFAR.build` in
 /// `Railway/location_modeler_reference_clean/source/js/app.js`): the
 /// OpenMapTiles classes, tunnels left out, each tile's features kept to the
-/// tile itself so the tiles' overlap is not drawn twice.
+/// tile itself so the tiles' overlap is not drawn twice. Decision 391: the
+/// road bridges (`brunnel`, `layer`), and those of the tiles round it, so
+/// a scene built apart raises them as the whole one does.
 struct Map3DBaseMap: Sendable {
     /// The land's cover, in the order it is laid: each over the ones
-    /// before it where they overlap.
+    /// before it where they overlap. Decision 393: farmland first, under
+    /// every other.
     enum Cover: Int, CaseIterable, Sendable {
-        case grass, sand, wetland, wood, park, water
+        case farmland, grass, sand, wetland, wood, park, water
     }
 
     /// A road's class (the tiles' `class`), from the least.
@@ -62,6 +65,18 @@ struct Map3DBaseMap: Sendable {
         let isRamp: Bool
         let points: [Point]
         let bounds: Bounds
+        /// Decision 391: on a bridge, its level (the tiles' `layer`, 1
+        /// when it has none); 0 off one.
+        var bridgeLevel = 0
+    }
+
+    /// Decision 391: a road bridge kept to its tile's own square, whole
+    /// tiles round the scene's region too, so the tiles' bridges meet end
+    /// to end where they cross a tile's edge.
+    struct Bridge: Sendable {
+        let kind: RoadKind
+        let level: Int
+        let points: [Point]
     }
 
     struct Waterway: Sendable {
@@ -73,12 +88,49 @@ struct Map3DBaseMap: Sendable {
     var areas: [Area] = []
     var roads: [Road] = []
     var waterways: [Waterway] = []
+    var bridges: [Bridge] = []
+    /// Decision 391: the roads on the ground (out of a tunnel, on no
+    /// bridge) as far round as ``bridges``, each kept to its tile: what a
+    /// bridge may cross over.
+    var groundRoads: [[Point]] = []
 
-    /// A base map of the features given (a scene laid by hand).
+    /// A base map of the features given (a scene laid by hand): its
+    /// bridges the roads' on bridges, each kept to its bounds, and the
+    /// others its ground roads.
     init(areas: [Area] = [], roads: [Road] = [], waterways: [Waterway] = []) {
         self.areas = areas
         self.roads = roads
         self.waterways = waterways
+        for road in roads {
+            for part in Self.parts(of: road.points, in: road.bounds) {
+                if road.bridgeLevel > 0 {
+                    bridges.append(Bridge(kind: road.kind, level: road.bridgeLevel, points: part))
+                } else {
+                    groundRoads.append(part)
+                }
+            }
+        }
+    }
+
+    /// Decision 391: how far round the scene's region its bridges and the
+    /// roads they cross are read, metres: past the longest ramp down from
+    /// a bridge's end (``Map3DRoadBridges``), and past a 6 m ramp's 120 m
+    /// and the 270 m a crossing lifts a deck over, so a chunk built apart
+    /// raises and ramps its roads as the whole scene does.
+    static let bridgeReach: Double = 450
+
+    /// The runs of `points` inside `bounds`.
+    static func parts(of points: [Point], in bounds: Bounds) -> [[Point]] {
+        var runs: [[Point]] = []
+        for index in 1..<max(points.count, 1) {
+            guard let (a, b) = Map3DScene.Builder.clipSegment(points[index - 1], points[index], to: bounds) else { continue }
+            if let last = runs.last?.last, abs(last.x - a.x) < 1e-6, abs(last.z - a.z) < 1e-6 {
+                runs[runs.count - 1].append(b)
+            } else {
+                runs.append([a, b])
+            }
+        }
+        return runs
     }
 
     /// The base map's features over `region` (world units) of the world laid
@@ -100,12 +152,18 @@ struct Map3DBaseMap: Sendable {
         }
         let low = (x: (region.minX - originX) / metre, z: (region.minY - originY) / metre)
         let high = (x: (region.maxX - originX) / metre, z: (region.maxY - originY) / metre)
-        let columns = tile(low.x, shift: shiftX, anchor: anchorX)...tile(high.x, shift: shiftX, anchor: anchorX)
-        let rows = tile(low.z, shift: shiftZ, anchor: anchorY)...tile(high.z, shift: shiftZ, anchor: anchorY)
+        let reach = Self.bridgeReach
+        let columns = tile(low.x - reach, shift: shiftX, anchor: anchorX)...tile(high.x + reach, shift: shiftX, anchor: anchorX)
+        let rows = tile(low.z - reach, shift: shiftZ, anchor: anchorY)...tile(high.z + reach, shift: shiftZ, anchor: anchorY)
+        let drawn = (columns: tile(low.x, shift: shiftX, anchor: anchorX)...tile(high.x, shift: shiftX, anchor: anchorX),
+                     rows: tile(low.z, shift: shiftZ, anchor: anchorY)...tile(high.z, shift: shiftZ, anchor: anchorY))
         for row in rows {
             for column in columns {
+                // Decision 391: the tiles round the region only for their
+                // bridges.
+                let isDrawn = drawn.columns.contains(column) && drawn.rows.contains(row)
                 guard let bytes = try? tiles.archive.tile(zoom: zoom, x: column, y: row),
-                      let decoded = try? VectorTile(bytes, layers: ["water", "landcover", "park", "waterway", "transportation"])
+                      let decoded = try? VectorTile(bytes, layers: isDrawn ? ["water", "landcover", "park", "waterway", "transportation"] : ["transportation"])
                 else { continue }
                 for layer in decoded.layers.values {
                     // A tile unit to a scene metre.
@@ -113,12 +171,40 @@ struct Map3DBaseMap: Sendable {
                     let westX = (Double(column) * tilePoints - anchorX) / pointsPerMetre + shiftX
                     let northZ = (Double(row) * tilePoints - anchorY) / pointsPerMetre + shiftZ
                     let span = Double(layer.extent) * scale
-                    let bounds = Bounds(minX: max(westX, low.x), minZ: max(northZ, low.z), maxX: min(westX + span, high.x), maxZ: min(northZ + span, high.z))
-                    guard bounds.minX < bounds.maxX, bounds.minZ < bounds.maxZ else { continue }
                     func scene(_ point: VectorTile.Point) -> Point {
                         Point(x: westX + Double(point.x) * scale, z: northZ + Double(point.y) * scale)
                     }
+                    if layer.name == "transportation" {
+                        addBridges(layer, tile: Bounds(minX: westX, minZ: northZ, maxX: westX + span, maxZ: northZ + span), scene: scene)
+                    }
+                    guard isDrawn else { continue }
+                    let bounds = Bounds(minX: max(westX, low.x), minZ: max(northZ, low.z), maxX: min(westX + span, high.x), maxZ: min(northZ + span, high.z))
+                    guard bounds.minX < bounds.maxX, bounds.minZ < bounds.maxZ else { continue }
                     add(layer, bounds: bounds, scene: scene)
+                }
+            }
+        }
+    }
+
+    /// Decision 391: a road feature's bridge level: the tiles' `layer`
+    /// (at least 1) on a bridge, 1 when it has none; 0 off a bridge.
+    static func bridgeLevel(_ feature: VectorTile.Feature) -> Int {
+        guard feature.string("brunnel") == "bridge" else { return 0 }
+        if case .number(let layer) = feature.properties["layer"], layer.isFinite { return min(max(Int(layer.rounded()), 1), 5) }
+        return 1
+    }
+
+    private mutating func addBridges(_ layer: VectorTile.Layer, tile: Bounds, scene: (VectorTile.Point) -> Point) {
+        for feature in layer.features where feature.kind == .line {
+            guard feature.string("brunnel") != "tunnel", let kind = Self.roadKind(feature.string("class")) else { continue }
+            let level = Self.bridgeLevel(feature)
+            for part in feature.parts where part.count >= 2 {
+                for run in Self.parts(of: part.map(scene), in: tile) {
+                    if level > 0 {
+                        bridges.append(Bridge(kind: kind, level: level, points: run))
+                    } else {
+                        groundRoads.append(run)
+                    }
                 }
             }
         }
@@ -136,8 +222,9 @@ struct Map3DBaseMap: Sendable {
                 guard feature.string("brunnel") != "tunnel", let kind = Self.roadKind(feature.string("class")) else { continue }
                 let isRamp: Bool
                 if case .number(let ramp) = feature.properties["ramp"] { isRamp = ramp != 0 } else { isRamp = false }
+                let level = Self.bridgeLevel(feature)
                 for part in feature.parts where part.count >= 2 {
-                    roads.append(Road(kind: kind, isRamp: isRamp, points: part.map(scene), bounds: bounds))
+                    roads.append(Road(kind: kind, isRamp: isRamp, points: part.map(scene), bounds: bounds, bridgeLevel: level))
                 }
             case ("waterway", .line):
                 guard feature.string("brunnel") != "tunnel", let kind = Self.waterwayKind(feature.string("class")) else { continue }
@@ -160,6 +247,7 @@ struct Map3DBaseMap: Sendable {
             case "grass": return .grass
             case "wetland": return .wetland
             case "sand": return .sand
+            case "farmland": return .farmland
             default: return nil
             }
         }

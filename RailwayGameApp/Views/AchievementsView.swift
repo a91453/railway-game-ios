@@ -20,9 +20,15 @@ struct AchievementsView: View {
     var railways: RealRailways? = nil
     /// The counties, for the passport's list by county (decision 353).
     var placeNames: PlaceNames? = nil
+    /// Decision 396: the links to Game Center, when the player is signed
+    /// in or can sign in.
+    @Environment(GameCenterLink.self) private var gameCenter: GameCenterLink?
 
     var body: some View {
         List {
+            if let gameCenter, gameCenter.isAvailable {
+                gameCenterSection(gameCenter)
+            }
             if let stamps {
                 Section {
                     NavigationLink {
@@ -66,6 +72,48 @@ struct AchievementsView: View {
             "Achievements \(records.count)/\(Achievement.all.count)", "成就 \(records.count)/\(Achievement.all.count)"
         )))
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func gameCenterSection(_ gameCenter: GameCenterLink) -> some View {
+        Section {
+            if gameCenter.isSignedIn {
+                Button {
+                    gameCenter.showLeaderboards()
+                } label: {
+                    Label {
+                        Text(verbatim: GameCenterText.leaderboard(in: language))
+                    } icon: {
+                        Image(systemName: "list.number")
+                    }
+                }
+                .accessibilityIdentifier("achievements.gameCenterLeaderboard")
+                Button {
+                    gameCenter.showAchievements()
+                } label: {
+                    Label {
+                        Text(verbatim: GameCenterText.achievements(in: language))
+                    } icon: {
+                        Image(systemName: "gamecontroller.fill")
+                    }
+                }
+                .accessibilityIdentifier("achievements.gameCenterAchievements")
+            } else {
+                Button {
+                    gameCenter.signIn()
+                } label: {
+                    Label {
+                        Text(verbatim: GameCenterText.signIn(in: language))
+                    } icon: {
+                        Image(systemName: "person.crop.circle")
+                    }
+                }
+                .accessibilityIdentifier("achievements.gameCenterSignIn")
+            }
+        } header: {
+            Text(verbatim: "Game Center")
+        } footer: {
+            Text(verbatim: GameCenterText.footer(in: language))
+        }
     }
 
     private func row(_ achievement: Achievement) -> some View {

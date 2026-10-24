@@ -64,6 +64,8 @@ public enum BaseMapStyle {
         let park: String
         let sand: String
         let wetland: String
+        /// Decision 393: the game's own farm lots' (`Palette.farmGround`).
+        let farmland: String
         let road: String
         let roadMajor: String
         let motorway: String
@@ -80,7 +82,7 @@ public enum BaseMapStyle {
 
         static let light = Colors(
             land: "#ECEEF6", water: "#C3CEEA", waterLabel: "#344C8A",
-            wood: "#D9E7D3", grass: "#E2EDDB", park: "#D2E8C4", sand: "#F1EBD8", wetland: "#D6E0EA",
+            wood: "#D9E7D3", grass: "#E2EDDB", park: "#D2E8C4", sand: "#F1EBD8", wetland: "#D6E0EA", farmland: "#F1E6C8",
             road: "#FFFFFF", roadMajor: "#FFFFFF", motorway: "#FFE4B0",
             casing: "#CDD1E4", motorwayCasing: "#E2B866",
             boundary: "#262C57", shadow: "#4A5482", highlight: "#FFFFFF", accent: "#8D95BA",
@@ -88,7 +90,7 @@ public enum BaseMapStyle {
         )
         static let dark = Colors(
             land: "#262C57", water: "#1A1F45", waterLabel: "#93A7DB",
-            wood: "#2B4458", grass: "#2D3F60", park: "#2F4D52", sand: "#3A3B5C", wetland: "#293360",
+            wood: "#2B4458", grass: "#2D3F60", park: "#2F4D52", sand: "#3A3B5C", wetland: "#293360", farmland: "#5A5236",
             road: "#363D72", roadMajor: "#424A84", motorway: "#6E6475",
             casing: "#1E2348", motorwayCasing: "#1E2348",
             boundary: "#ECEEF6", shadow: "#0D1029", highlight: "#5A63A3", accent: "#171B3D",
@@ -162,6 +164,7 @@ public enum BaseMapStyle {
     static func layers(_ c: Colors) -> [[String: Any]] {
         var layers: [[String: Any]] = [
             ["id": "background", "type": "background", "paint": ["background-color": c.land]],
+            fill("landcover-farmland", "landcover", ["==", ["get", "class"], "farmland"], c.farmland, minzoom: 9),
             fill("landcover-wood", "landcover", ["==", ["get", "class"], "wood"], c.wood, minzoom: 7),
             fill("landcover-grass", "landcover", ["==", ["get", "class"], "grass"], c.grass, minzoom: 9),
             fill("landcover-sand", "landcover", ["==", ["get", "class"], "sand"], c.sand, minzoom: 9),

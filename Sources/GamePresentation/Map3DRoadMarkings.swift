@@ -283,9 +283,12 @@ extension Map3DScene.Builder {
             let forth = (dx * along.x + dz * along.z) / mark.length + 0.5
             return (Float(u.0 + (u.1 - u.0) * across), Float(v.0 + (v.1 - v.0) * (1 - forth)))
         }
-        // Decision 375: none where the road gives way to a trench.
-        guard !givesWay(at: mark.centre, along: (mark.along.x, mark.along.z)) else { return }
-        let lift = Self.centreLineLift
+        // Decision 391: none on a bridge's deck (a junction there is rare),
+        // at the road's height on a ramp; decision 375: none where the road
+        // gives way to a trench.
+        let way = (mark.along.x, mark.along.z)
+        guard !roadRise(at: mark.centre, along: way, onDeck: true).onBridge, !givesWay(at: mark.centre, along: way) else { return }
+        let lift = Self.centreLineLift + roadRise(at: mark.centre, along: way, onDeck: false).rise
         for row in gridCell(corners.map(\.z).min()!, origin: originY)...gridCell(corners.map(\.z).max()!, origin: originY) {
             let top = gridLine(row, origin: originY), bottom = gridLine(row + 1, origin: originY)
             for column in gridCell(corners.map(\.x).min()!, origin: originX)...gridCell(corners.map(\.x).max()!, origin: originX) {
@@ -359,12 +362,14 @@ extension Map3DScene.Builder {
                     let seed = (Int32(truncatingIfNeeded: Int(((centre.x + east) * 2).rounded())), Int32(truncatingIfNeeded: Int(((centre.z + south) * 2).rounded())))
                     if pavement >= 2.5, let model = Self.propModels[.busStop] {
                         // The shelter stands back from the kerb.
-                        place(model, at: out(width / 2 + pavement - 1.05), forward: forward, clearing: 3, tint: Map3DColor.rgb(0xFFFFFF))
+                        place(model, at: out(width / 2 + pavement - 1.05), forward: forward, clearing: 3, tint: Map3DColor.rgb(0xFFFFFF),
+                              onDeck: road.bridgeLevel > 0)
                         guard map3DRandom(seed.0, seed.1, salt: 356) < 0.4 else { continue }
                     }
                     if let model = Self.propModels[.vending] {
                         let tint = Self.pick(Self.vendingColours, map3DRandom(seed.0, seed.1, salt: 357))
-                        place(model, at: out(width / 2 + pavement - 0.6, ahead: pavement >= 2.5 ? 3.4 : 0), forward: forward, clearing: 1.2, tint: tint)
+                        place(model, at: out(width / 2 + pavement - 0.6, ahead: pavement >= 2.5 ? 3.4 : 0), forward: forward, clearing: 1.2, tint: tint,
+                              onDeck: road.bridgeLevel > 0)
                     }
                 }
             }
@@ -393,7 +398,10 @@ extension Map3DScene.Builder {
     /// `model` standing on the pavement at `at`, its left toward the road
     /// along level `forward`, no tree, light or pole within `clearing`
     /// metres of it.
-    private mutating func place(_ model: Int, at: Map3DBaseMap.Point, forward: Map3DBaseMap.Point, clearing: Float, tint: UInt32) {
+    private mutating func place(_ model: Int, at: Map3DBaseMap.Point, forward: Map3DBaseMap.Point, clearing: Float, tint: UInt32,
+                                onDeck: Bool = false) {
+        // Decision 391: none on a bridge or its ramp.
+        guard roadRise(at: at, along: nil, onDeck: onDeck).rise < Self.propRise else { return }
         let x = Float(at.x), z = Float(at.z)
         let foot = Map3DPoint(x, drawnGround(x: x, z: z) + Self.sidewalkLift, z)
         let key = key(of: foot)
