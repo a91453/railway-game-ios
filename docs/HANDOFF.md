@@ -1059,7 +1059,7 @@
 
 作者 2026-10-22：「目前道路要不要改照真實高度而不是全部在地面」。做完的：跨過軌道、地面道路或較低的橋的公路橋，在交點抬到一層 6 m，兩端照 5%／6%／8% 的坡度下到地面；高架鐵路下的路留 4.6 m 淨空。國道最高的 5 座橋照 data.gov.tw/dataset/30616。梁、墩、坡道擋牆在 `Map3DElevatedLook.roadBridge`，`Map3DRoadBridge.swift`。main 上 29 個交點不夠高，這裡是 0。這個 session 壓縮到第 2 次後在這裡停。還沒做的：
 
-1. **圖磚沒有 `layer`**：`tools/basemap/build_basemap.py` 要把 OSM 的 `layer` 放進 transportation 層，並重建 `taiwan.pmtiles`。#1157（決策 393，農地）也重切了 pmtiles，所以要等它合併後，從 main 的 `build_basemap.py` 切。之後雙層、三層的橋才有 12 m、18 m（`Map3DBaseMap.bridgeLevel(_:)` 已經讀 `layer`，沒有時當 1）。
+1. ~~**圖磚沒有 `layer`**~~：做完了（[決策 391 續篇一](decisions/391.md)，session_01AhfV8HVyDQfkoqCY2FNbmY）。`build_basemap.py` 在 2 層以上的橋寫 `layer`，`taiwan.pmtiles` 從 main 重切；板橋場景 +0.8%。
 2. **10f**：換墩的款式（改 `Map3DElevatedLook.roadBridge` 或加一組），以及橋下的陰影。
 3. 決策 375 留下的真實路線（`Map3DRealTrains`）路塹（§4.7 第 2 點）。
 4. **實機**（UNVERIFIED）：TestFlight 上看板橋、苗栗南的跨線橋、坡道與 fps。板橋周圍的場景大了 9%。
