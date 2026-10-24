@@ -106,6 +106,11 @@ public enum Map3DTrains {
         /// Decision 359 (續): whether ``nose`` is in a tunnel, where the
         /// cab view stays in it.
         public let inTunnel: Bool
+        /// Decision 403 (續): the middle of its cars on the rail, and how
+        /// long they run front to back in metres, for the view from beside
+        /// it (the reference's watch view looks at the cars' average).
+        public var middle: Map3DPoint?
+        public var length: Float = 0
 
         public init(train: TrainID, point: Map3DPoint, forward: Map3DPoint = Map3DPoint(0, 0, -1), nose: Map3DPoint? = nil,
                     ground: Float? = nil, inTunnel: Bool = false) {
@@ -173,8 +178,15 @@ public enum Map3DTrains {
             // Decision 334: the rails under the train, front to back, for
             // its ring.
             var line: [Map3DPoint] = []
+            // Decision 403 (續): the cars' middles, for the head's middle.
+            var bases: [Map3DPoint] = []
+            let headIndex = frame.heads.count
             defer {
                 if run.train == ringed { frame.boxes.addRing(round: line) }
+                if frame.heads.count > headIndex, !bases.isEmpty {
+                    frame.heads[headIndex].middle = bases.reduce(Map3DPoint.zero, +) * (1 / Float(bases.count))
+                    frame.heads[headIndex].length = zip(line, line.dropFirst()).reduce(0) { $0 + ($1.0 - $1.1).length }
+                }
             }
             for (index, car) in cars.enumerated() {
                 guard let front = car.first, let back = car.last else { continue }
@@ -186,6 +198,7 @@ public enum Map3DTrains {
                 let length = (a - b).length
                 guard length > 1 else { continue }
                 let base = (a + b) * 0.5
+                bases.append(base)
                 if index == 0 {
                     let cover = scene.trackCover.ground(at: a)
                     // Decision 380: the cab's eye at the steady head's nose,

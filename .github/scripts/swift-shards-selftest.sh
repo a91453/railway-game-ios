@@ -201,7 +201,7 @@ says() {
     failures=$((failures + 1))
   fi
 }
-JOB_STARTED=$(($(date +%s) - 1000)) says 'warning title=Shard campaigns-2 near its 20-minute limit::campaigns-2 took 1[67]m' \
+JOB_STARTED=$(($(date +%s) - 1050)) says 'warning title=Shard campaigns-2 near its 20-minute limit::campaigns-2 took 1[78]m' \
   "a shard past SHARD_WARN_SECONDS of its job warns" "$script" run campaigns-2
 JOB_STARTED="$(date +%s)" says '!near its 20-minute limit' "a short job does not warn" "$script" run campaigns-2
 says '!near its 20-minute limit' "without JOB_STARTED (locally) no job warning" "$script" run campaigns-2

@@ -78,7 +78,13 @@ final class Map3DTunnelTests: XCTestCase {
                 var follow = Map3DFollow(train: train, view: view)
                 follow.scale = scale
                 let camera = follow.camera(following: head, from: start, elapsed: 0, turnsAtOnce: true)
-                if view == .cab {
+                if view == .side {
+                    // Decision 403 (續): looking at the ground over the
+                    // train from beside it.
+                    XCTAssertGreaterThan(camera.eye.y, ground + 0.5, "beside at \(scale): the eye in the ground")
+                    let look = (camera.target - camera.eye).normalized!
+                    XCTAssertLessThan(look.y, 0, "beside at \(scale): looking down at it")
+                } else if view == .cab {
                     XCTAssertEqual(camera.eye.y, head.nose.y + Map3DFollow.cabEyeHeight, accuracy: 0.05, "at \(scale): the cab's eye in the tunnel")
                 } else {
                     XCTAssertGreaterThan(camera.eye.y, ground + 0.5, "\(view) at \(scale): the eye in the ground")

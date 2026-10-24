@@ -226,7 +226,8 @@ extension GameWorld {
     /// pays as it does for track. On a blank map the tile grows its towns
     /// (``Land/towns(seed:in:)`` drawn from the tile's own seed), and their
     /// buildings, but not where land or the company's buildings already
-    /// are, nor on water or steep slopes. The stations by its side stop
+    /// are, nor on water or steep slopes, and with the roads on (decision
+    /// 400) each town's first square of roads. The stations by its side stop
     /// being outside connections.
     ///
     /// - Throws, checked in this order:
@@ -254,6 +255,11 @@ extension GameWorld {
         acquireAsset(.mapTile, owner: mapTileNumber(tile), cost: price)
         if let seed = expansion.townSeed {
             foundTowns(in: tile, seed: MapExpansion.townSeed(of: tile, from: seed))
+            // Decision 400's sequel: and their roads, as a new game's towns.
+            if var grid = roads {
+                seedRoads(of: townCentres(of: tile, seed: seed), in: &grid)
+                roads = grid
+            }
         }
         passengerPlan = PassengerPlanCache()
         refreshLandDemand()

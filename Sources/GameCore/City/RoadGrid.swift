@@ -155,8 +155,16 @@ extension GameWorld {
     /// station draws the nearest toward it. Any roads the world had are
     /// replaced. Points outside the world are left out.
     public mutating func enableRoads(towns: [PlanPoint] = []) {
-        let rows = Land.rows(in: bounds), columns = Land.columns(in: bounds)
         var grid = RoadGrid()
+        seedRoads(of: towns, in: &grid)
+        roads = grid
+    }
+
+    /// Adds `towns` to `grid`'s, each with the 3 × 3 square of cells round
+    /// its middle that are off the water and steep slopes; a town outside
+    /// the world, or in the cell of one `grid` has, is left out.
+    func seedRoads(of towns: [PlanPoint], in grid: inout RoadGrid) {
+        let rows = Land.rows(in: bounds), columns = Land.columns(in: bounds)
         for town in towns where town.x >= 0 && town.y >= 0 {
             let middle = CellPosition(row: Int(town.y / Land.cellLength), column: Int(town.x / Land.cellLength))
             // Two towns in one cell are one: its roads grow once a month.
@@ -170,6 +178,28 @@ extension GameWorld {
                     }
                 }
             }
+        }
+    }
+
+    /// The middles of the towns a bought `tile` grows on a blank map
+    /// (``buyMapTile(_:passingMilestone:)``), where they lie in the world.
+    func townCentres(of tile: MapTile, seed: UInt32) -> [PlanPoint] {
+        let length = MapExpansion.tileLength
+        return Land.townCentres(seed: MapExpansion.townSeed(of: tile, from: seed), in: .standard).map {
+            PlanPoint(x: Int64(tile.column) * length + $0.x, y: Int64(tile.row) * length + $0.y)
+        }
+    }
+
+    /// Gives the towns of the tiles a blank map's company bought their
+    /// roads, where a save of version 72 bought them without (decision
+    /// 400's sequel): each tile owned with none of the roads' towns in it,
+    /// by row and then column. The tile the company started on holds the
+    /// map's own towns, so it is left as it is; run again it changes
+    /// nothing.
+    mutating func seedBoughtTilesRoads() {
+        guard var grid = roads, let expansion = mapExpansion, let seed = expansion.townSeed else { return }
+        for tile in expansion.owned where !grid.towns.contains(where: { MapExpansion.tile(ofCellRow: $0.row, column: $0.column) == tile }) {
+            seedRoads(of: townCentres(of: tile, seed: seed), in: &grid)
         }
         roads = grid
     }
@@ -266,8 +296,9 @@ extension GameWorld {
 
     /// The roads grow (decision 400 B.2), at the midnight that begins every
     /// ``RoadGrid/growthDays``-th day. Each town in turn, toward the station
-    /// nearest its middle (the lower station ID of equally near ones), or,
-    /// on a map with no towns, each station in turn, toward itself: from
+    /// nearest its middle (the lower station ID of equally near ones), and
+    /// then each other station in turn (decision 400's sequel), or, on a
+    /// map with no towns, each station in turn, toward itself: from
     /// the road cell nearest the station's cell (``RoadGrid/nearestRoad(to:within:)``)
     /// one cell, into one of its eight neighbours nearer the station, in
     /// the world and off the water and steep slopes; a cell where someone
@@ -281,7 +312,7 @@ extension GameWorld {
         if grid.towns.isEmpty {
             targets = stations.map { roadCell(of: $0.point) }
         } else {
-            targets = grid.towns.map { town in
+            let towns = grid.towns.map { town in
                 var nearest: (squared: Int, id: StationID, cell: CellPosition)?
                 for station in stations {
                     let cell = roadCell(of: station.point), squared = RoadGrid.squared(cell, town)
@@ -291,6 +322,10 @@ extension GameWorld {
                 }
                 return nearest!.cell
             }
+            // Decision 400's sequel: then every other station, so none
+            // waits for ever because no town is nearer it than another.
+            let drawn = Set(towns)
+            targets = towns + stations.map { roadCell(of: $0.point) }.filter { !drawn.contains($0) }
         }
         for target in targets where !grid.cells.contains(target) {
             guard let from = grid.nearestRoad(to: target, within: RoadGrid.growthReach) else { continue }

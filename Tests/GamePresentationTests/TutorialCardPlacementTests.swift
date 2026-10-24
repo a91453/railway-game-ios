@@ -479,6 +479,76 @@ final class TutorialCardPlacementTests: XCTestCase {
         }
     }
 
+    /// The map step on that phone, folded: the pill beside the zoom
+    /// buttons, which the step asks for.
+    private static var mapMoveStep: TutorialCardPlacement {
+        TutorialCardPlacement(
+            target: zoomAlone, controls: hud + dock + [zoomAlone, layers], required: [zoomAlone], map: mapAlone
+        ).folded
+    }
+
+    /// The folded pill narrows when "Skip this step" goes, the step done
+    /// (main 947c23a's full lane, run 40093122899: 334 points wide with it,
+    /// the touch at its leading end fell on the map). Placed afresh it is
+    /// centred again and its leading end moves; placed where it stood
+    /// (``TutorialCardPlacement/previous``), its leading end, the station
+    /// master, stays, and a touch there still lands on it.
+    func testAFoldedCardThatNarrowsKeepsItsLeadingEnd() {
+        let withSkip = { (proposal: Size) in Size(width: min(334, proposal.width), height: 44) }
+        let withoutSkip = { (proposal: Size) in Size(width: min(230, proposal.width), height: 44) }
+        let placement = Self.mapMoveStep
+        let before = placement.frame(in: Self.screen, measure: withSkip)
+        XCTAssertTrue(placement.leavesStepFree(before), "pill \(before)")
+        let touch = (x: before.minX + before.width * 0.1, y: before.midY)
+
+        let afresh = placement.frame(in: Self.screen, measure: withoutSkip)
+        XCTAssertNotEqual(afresh.minX, before.minX, "placed afresh, the narrower pill is centred again")
+
+        var staying = placement
+        staying.previous = before
+        let after = staying.frame(in: Self.screen, measure: withoutSkip)
+        XCTAssertEqual(after.minX, before.minX, "pill \(before) then \(after)")
+        XCTAssertEqual(after.minY, before.minY, "pill \(before) then \(after)")
+        XCTAssertTrue((after.minX ... after.maxX).contains(touch.x) && (after.minY ... after.maxY).contains(touch.y), "pill \(after), touch \(touch)")
+        XCTAssertTrue(staying.leavesStepFree(after), "pill \(after)")
+    }
+
+    /// Lesson 5's stretch to make double (decision 378) moves from station
+    /// to station as trains pass, and with it the place to tap. Placed
+    /// afresh, the card went wherever the newest place left free, every few
+    /// seconds; placed where it stood, it stays while it covers none of
+    /// them, and moves only off a place that comes under it.
+    func testTheCardStaysPutAsThePlaceToTapMovesElsewhere() {
+        let controls = Self.hud + Self.dock + [Self.zoomAlone, Self.layers]
+        func step(_ site: Frame) -> TutorialCardPlacement {
+            TutorialCardPlacement(
+                target: Self.mapAlone, controls: controls, required: [], sites: [site], map: Self.mapAlone, maxWidth: 320
+            )
+        }
+        // The stretch by the first station: at the map's top trailing
+        // corner, where the card goes first, so it goes elsewhere.
+        let first = Frame(x: 560, y: 90, width: 48, height: 48)
+        let placed = step(first).frame(in: Self.screen, measure: Self.mapStepCard)
+        XCTAssertFalse(placed.intersects(first), "card \(placed)")
+        // The stretch by another station, clear of the card.
+        let second = Frame(x: 100, y: 240, width: 48, height: 48)
+        XCTAssertFalse(placed.intersects(second), "card \(placed)")
+        let afresh = step(second).frame(in: Self.screen, measure: Self.mapStepCard)
+        XCTAssertNotEqual(afresh, placed, "placed afresh, the card moves to the corner the first stretch had")
+
+        var staying = step(second)
+        staying.previous = placed
+        XCTAssertEqual(staying.frame(in: Self.screen, measure: Self.mapStepCard), placed)
+
+        // A stretch under the card: it moves off it.
+        let under = Frame(x: placed.midX - 24, y: placed.midY - 24, width: 48, height: 48)
+        var covering = step(under)
+        covering.previous = placed
+        let moved = covering.frame(in: Self.screen, measure: Self.mapStepCard)
+        XCTAssertFalse(moved.intersects(under), "card \(moved) covers the stretch \(under)")
+        XCTAssertTrue(covering.leavesStepFree(moved), "card \(moved)")
+    }
+
     /// The frames are the screen's, and a layout's bounds may start
     /// elsewhere: the card is placed in the bounds' coordinates.
     func testTheCardIsPlacedInTheBoundsCoordinates() {

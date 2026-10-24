@@ -641,8 +641,13 @@ private struct Map3DView: UIViewRepresentable {
         defer {
             // Decision 333: once the first scene has its camera, so the
             // flight starts from it.
+            // Decision 403 (續): from the station, where it stands now.
+            var follow = follow
+            if let id = follow?.train, follow?.view == .station, let scene {
+                follow?.lookout = Map3DFollow.lookout(of: id, in: world, scene: scene)
+            }
             if context.coordinator.shownVersion != nil,
-               view.following?.train != follow?.train || view.following?.view != follow?.view {
+               view.following?.train != follow?.train || view.following?.view != follow?.view || view.following?.lookout != follow?.lookout {
                 view.follow(follow, reduceMotion: context.environment.accessibilityReduceMotion)
                 if follow == nil { context.coordinator.showHeading() }
             }
@@ -1006,7 +1011,8 @@ private struct Map3DTrainLabelsView: View {
 
 /// Decision 333: at the foot of the 3D map while the camera follows a
 /// train (``GameSession/followedTrain``): the train's line badge and name,
-/// the two places to follow it from (Mini Tokyo 3D's back and top back),
+/// the places to follow it from (Mini Tokyo 3D's back and top back; the
+/// cab, decision 337; beside it and from the station, decision 403 (續)),
 /// and the stop, as the 2D map's follow bar has it (`取消跟隨`).
 private struct Map3DFollowBar: View {
     let train: Train
@@ -1014,59 +1020,83 @@ private struct Map3DFollowBar: View {
     @Binding var view: Map3DFollow.View
 
     var body: some View {
-        let language = session.language
-        HStack(spacing: 9) {
-            if let line = session.world.followBarInfo(of: train.id, in: language)?.line {
-                LineCodeBadge(code: LineBadge.codes(for: session.world.lines)[line] ?? "",
-                              color: Palette.lineColor(line, custom: session.world.line(id: line)?.color), size: .small)
+        // Decision 403 (續): five views; where they do not fit beside the
+        // name in one row, they take a row of their own under it.
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 9) {
+                title
+                choices
+                stop
             }
-            Text(verbatim: train.name)
-                .font(.subheadline.weight(.bold))
-                .foregroundStyle(Theme.textPrimary)
-                .monospacedDigit()
-                .lineLimit(1)
-            ForEach(Map3DFollow.View.allCases, id: \.self) { option in
-                Button {
-                    view = option
-                } label: {
-                    Text(verbatim: option.text(in: language))
-                        .font(.caption.weight(.bold))
-                        .fixedSize()
-                        .padding(.horizontal, 8)
-                        .frame(minHeight: 26)
-                        .background(view == option ? Theme.primary : Theme.chip, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-                        .foregroundStyle(view == option ? Theme.onPrimary : Theme.textPrimary)
-                        .frame(minHeight: 44)
-                        .contentShape(Rectangle())
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: 9) {
+                    title
+                    Spacer(minLength: 0)
+                    stop
                 }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(view == option ? .isSelected : [])
-                .accessibilityIdentifier("map3D.follow.\(option.rawValue)")
+                HStack(spacing: 9) { choices }
             }
-            Button {
-                session.stopFollowingTrain()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.caption.weight(.heavy))
-                    .frame(width: 26, height: 26)
-                    .background(Theme.error, in: Circle())
-                    .foregroundStyle(Theme.onError)
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text(verbatim: language.text("Stop following", "取消跟隨")))
-            .accessibilityIdentifier("map3D.follow.stop")
         }
-        // Decision 337: three views; a long name gives way on a narrow
-        // phone, the buttons never.
+        // Decision 337: a long name gives way on a narrow phone, the
+        // buttons never.
         .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal, 13)
         .padding(.vertical, 2)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .accessibilityElement(children: .contain)
         .hudFrameMark("map3D.followBar")
-        .accessibilityHint(Text(verbatim: language.text("Pinch to move closer or farther.", "兩指縮放，拉近或拉遠。")))
+        .accessibilityHint(Text(verbatim: session.language.text("Pinch to move closer or farther.", "兩指縮放，拉近或拉遠。")))
+    }
+
+    @ViewBuilder private var title: some View {
+        if let line = session.world.followBarInfo(of: train.id, in: session.language)?.line {
+            LineCodeBadge(code: LineBadge.codes(for: session.world.lines)[line] ?? "",
+                          color: Palette.lineColor(line, custom: session.world.line(id: line)?.color), size: .small)
+        }
+        Text(verbatim: train.name)
+            .font(.subheadline.weight(.bold))
+            .foregroundStyle(Theme.textPrimary)
+            .monospacedDigit()
+            .lineLimit(1)
+    }
+
+    private var choices: some View {
+        ForEach(Map3DFollow.View.allCases, id: \.self) { option in
+            Button {
+                view = option
+            } label: {
+                Text(verbatim: option.text(in: session.language))
+                    .font(.caption.weight(.bold))
+                    .fixedSize()
+                    .padding(.horizontal, 8)
+                    .frame(minHeight: 26)
+                    .background(view == option ? Theme.primary : Theme.chip, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .foregroundStyle(view == option ? Theme.onPrimary : Theme.textPrimary)
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint(Text(verbatim: option.hint(in: session.language)))
+            .accessibilityAddTraits(view == option ? .isSelected : [])
+            .accessibilityIdentifier("map3D.follow.\(option.rawValue)")
+        }
+    }
+
+    private var stop: some View {
+        Button {
+            session.stopFollowingTrain()
+        } label: {
+            Image(systemName: "xmark")
+                .font(.caption.weight(.heavy))
+                .frame(width: 26, height: 26)
+                .background(Theme.error, in: Circle())
+                .foregroundStyle(Theme.onError)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(verbatim: session.language.text("Stop following", "取消跟隨")))
+        .accessibilityIdentifier("map3D.follow.stop")
     }
 }
 
