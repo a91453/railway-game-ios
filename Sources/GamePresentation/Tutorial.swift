@@ -553,6 +553,12 @@ public struct Tutorial: Hashable, Sendable {
         let freightYards: Set<StationID>
         let buildings: Set<PlacedBuildingID>
         let requestsInHand: Set<Int>
+        /// Whether the map had stations (decision 390's hold for the
+        /// places to reach). Review H: taken up again, whether the lesson
+        /// began with them (every lesson after the first begins with its
+        /// line, ``GameWorld/newGame(lesson:)``), though ``stations`` is
+        /// empty so that all of them count as new.
+        let hadStations: Bool
 
         /// When a line runs, how many trains how far apart, its
         /// stopping patterns and (decision 390) how many stops it has.
@@ -584,10 +590,11 @@ public struct Tutorial: Hashable, Sendable {
         /// goal asking for a change to them (the hours, the headway, a
         /// stopping pattern, a depot) is met by a change from here.
         static func resumed(over world: GameWorld) -> Snapshot {
-            Snapshot(services: Dictionary(uniqueKeysWithValues: world.lines.map { ($0.id, LineService($0)) }), serviceDay: world.serviceDay)
+            Snapshot(services: Dictionary(uniqueKeysWithValues: world.lines.map { ($0.id, LineService($0)) }), serviceDay: world.serviceDay,
+                     hadStations: world.lesson.map { $0.number > 1 } ?? false)
         }
 
-        private init(services: [LineID: LineService] = [:], serviceDay: ServiceDay? = nil) {
+        private init(services: [LineID: LineService] = [:], serviceDay: ServiceDay? = nil, hadStations: Bool = false) {
             edges = []
             stations = []
             lines = []
@@ -598,6 +605,7 @@ public struct Tutorial: Hashable, Sendable {
             freightYards = []
             buildings = []
             requestsInHand = []
+            self.hadStations = hadStations
         }
 
         init(of world: GameWorld) {
@@ -611,6 +619,7 @@ public struct Tutorial: Hashable, Sendable {
             freightYards = Set(world.freight?.facilities.map(\.station) ?? [])
             buildings = Set(world.placedBuildings.map(\.id))
             requestsInHand = Set(world.cityRequests?.active.map(\.id) ?? [])
+            hadStations = !world.stations.isEmpty
         }
     }
 }
