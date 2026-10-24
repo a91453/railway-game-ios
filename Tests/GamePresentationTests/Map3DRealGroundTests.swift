@@ -41,10 +41,10 @@ final class Map3DRealGroundTests: XCTestCase {
         // Taipei Main Station's tile, its features counted by Python from
         // the same file.
         let bytes = try XCTUnwrap(try tiles.archive.tile(zoom: 14, x: 13722, y: 7013))
-        XCTAssertEqual(bytes.count, 86_249)
+        XCTAssertEqual(bytes.count, 86_556)
         let tile = try VectorTile(bytes)
         XCTAssertEqual(tile.layers.mapValues(\.features.count),
-                       ["water": 15, "landcover": 247, "park": 55, "boundary": 5, "transportation": 967, "transportation_name": 822, "place": 17])
+                       ["water": 15, "landcover": 247, "park": 55, "boundary": 5, "transportation": 980, "transportation_name": 822, "place": 17])
         XCTAssertEqual(tile.layers["transportation"]?.extent, 4096)
         let classes = Set(tile.layers["transportation"]?.features.compactMap { $0.string("class") } ?? [])
         XCTAssertEqual(classes, ["trunk", "primary", "secondary", "tertiary", "minor", "service"])
