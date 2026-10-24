@@ -10,7 +10,7 @@
 - Game Center 把成就圖裁成圓形顯示，所以圖都畫在中間的圓裡：綠松色的底和圈、淺色的圓面，中間一個藏青的圖示。
 - 同一系列用同一個圖示，等級寫在下面的暖黃標籤上（1K、10K、10 km、25……）。數字中英文通用，所以兩種語言用同一張。
 - 載客的系列照 art-style「等級用同一種人形的人數表示」：1K 一個人、10K 兩個人、100K 三個人，1M 是三個人頭上再加三顆星。
-- 用到 App 裡現有的圖示：`MapGlyphPerson`、`MapGlyphCrowd`、`MapGlyphFull`、`MapGlyphStar`、`MapGlyphTyphoon`、`MapGlyphOffice`、`MapGlyphHouse`、`MapGlyphShop`、`MapGlyphDepartmentStore`、`MapGlyphAmusementPark`、`MapGlyphHotel`、`MapGlyphTrain`。其他（車票、軌道、站點、箭頭、停靠點、日出、月亮、環狀軌道、轉乘站、流線車頭、貨箱、地圖格、金牌、天燈、旗子、相機、長條圖、長編組、三種車頭、一疊鈔票）是這次新畫的，同樣 24 格、實心、圓角。
+- 用到 App 裡現有的圖示：`MapGlyphPerson`、`MapGlyphCrowd`、`MapGlyphFull`、`MapGlyphStar`、`MapGlyphTyphoon`、`MapGlyphOffice`、`MapGlyphHouse`、`MapGlyphShop`、`MapGlyphDepartmentStore`、`MapGlyphAmusementPark`、`MapGlyphHotel`、`MapGlyphTrain`。其他（車票、軌道、站點、箭頭、停靠點、日出、月亮、環狀軌道、轉乘站、流線車頭、貨箱、地圖網格、金牌、天燈、騰雲號、購物袋、相機、長條圖、長編組、三種車頭、一疊鈔票）是這次新畫的，同樣 24 格、實心、圓角。
 - 沒有用參考庫的圖，也沒有用 SF Symbols（Apple 的授權不准把 SF Symbols 用在 App 以外的圖上）。
 
 ## 美術審查後改了什麼（2026-10-24）
@@ -32,6 +32,12 @@
 - 夜行者：星星離開月牙。
 
 每張都在 64 和 40 px 的圓形裁切、模糊、灰階下看過。
+
+作者看過總覽後，遊戲規劃用 40 px 灰階再看一次，改了：
+- 劉銘傳：騰雲號（劉銘傳時代的蒸汽機車）的側面剪影，矮車身、高煙囪、大動輪，車頭朝右（原本的格子旗是賽車的終點旗）。
+- 開疆闢土：一張地圖的細線網格，其中一格填暖黃，是買下的那一格（原本的 3×3 圓角方格像手機桌面）。
+- 多角經營：購物袋上一顆星（原本像公事包或急救箱）。
+- 轉乘：兩條線的兩端收在圓面裡，不碰綠圈。
 
 第二輪審查（session_01XHRSea，`claude/art-review-1158:docs/game-center/review/round2.png`）之後：
 - 轉乘：改成路線圖的轉乘站記號，一個白底、藏青粗框的膠囊形站體，一條水平線、一條斜線穿過它，兩端都接到圓面邊緣（原本的橢圓加六根輻條像蜘蛛或雪花，斷在站外的版本像太陽）。
