@@ -446,6 +446,8 @@ public enum Map3DPalette {
     /// ground. Decision 241: the 2D map's own colours, deepened alike.
     static func cover(_ cover: Map3DBaseMap.Cover) -> UInt32 {
         switch cover {
+        // Decision 393: decision 370's farm, as the game's own fields.
+        case .farmland: farm
         case .grass: rgb(0xE2EBCF)
         case .sand: rgb(0xF2E2BD)
         case .wetland: rgb(0xD7E4EA)
