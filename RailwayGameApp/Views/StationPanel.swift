@@ -544,8 +544,8 @@ struct StationPanel: View {
                 Text(verbatim: language.text("Road", "道路"))
             } footer: {
                 Text(verbatim: language.text(
-                    "Roads grow toward your stations by themselves each month. A station road joins the nearest one now.",
-                    "道路每個月會自己往你的車站長。站前路現在就接上最近的路。"
+                    "Each month the nearest road grows a little closer to this station. A station road joins it to the nearest road now.",
+                    "最近的路每個月會往這座車站長一點。站前路現在就把車站接上最近的路。"
                 ))
             }
         }
