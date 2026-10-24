@@ -210,6 +210,10 @@ final class RealLineAcquisitionTests: XCTestCase {
             XCTAssertTrue(rich.acquireRealLine(offer), "\(network): \(rich.message?.text ?? "")")
             XCTAssertTrue(under.allSatisfy { rich.world.ownsMapTile($0) }, network)
             XCTAssertTrue(tiles.allSatisfy { tile in rich.world.landBlocks?.contains(tile.landBlocks(in: rich.world.bounds)[0]) ?? false }, "\(network): the tiles' land read in")
+            // One command: one Undo takes the land back with the line.
+            rich.undo()
+            XCTAssertNil(rich.world.acquisition(of: line.id), network)
+            XCTAssertEqual(rich.world.mapExpansion?.owned, owned, network)
         }
         // Started in Taipei, the Jiji Line's land does not touch the
         // company's: the card says what to do.
