@@ -196,7 +196,7 @@ needs OSM data reads the same extract.
   and the iPad tutorial tests only when it touches the tutorial's own files;
   the full lane runs every UI test, its iPhone tests split over three jobs
   (`FULL_LANE_SECOND_JOB` names the second's classes and
-  `FULL_LANE_LESSONS_JOB` the third's, just `LessonUITests`), and the iPad
+  `FULL_LANE_LESSONS_JOB` the third's; the build job runs the rest), and the iPad
   tutorial tests (the
   missing-button proof nightly and on request) on `main` after a merge, at
   most every three hours (`ios-full-lane.yml` starts it unless `main`'s

@@ -117,8 +117,26 @@ permissions:
 # 7:36 standalone (only_testing, 39341335419) to the lessons job's 42:56
 # (39332055254): about 50:32 against its 75-minute limit. The second job
 # stays at 47:24. Keep at least ten minutes spare when adding tests here.
+#
+# 2026-10-24: the second job's UI step reached its 50 minutes (b6ca9af,
+# 40020950220). Each class's tests in minutes, summed from the logs of the
+# six full lanes 09640f5 to 584bddd (39957090683, 39966648040,
+# 39992945211, 40020950220, 40026341039, 40051175469), slowest normal
+# runner -> b6ca9af,
+# whose runners were 2-5 times slower for each job's first 20 minutes:
+# MapInteractionTests 21.7 -> 35.3, RealWorldMapUITests 13.9 -> 11.7,
+# SettingsUITests 5.7, LessonUITests 30.5, Feature284To286UITests 7.2; the
+# build job's own classes 37.2 -> 46.7 (UI step 52.6 of 75, job 73 of 95).
+# RealWorldMapUITests moved to the build job and second's UI step got 55
+# minutes like lessons': second about 30 (43.5 of 55 on a runner like
+# b6ca9af's), lessons 40.6 at most (of 55), build about 56 (64 of 75, job
+# 85 of 95). Measured on the branch (40055148286, d0c0376): second 27.1,
+# lessons 38.1, build 60.0 of 75 (RealWorldMapUITests 15.3 there; job 71.8
+# of 95), so build has the least room. The next class to add goes where that leaves
+# ten minutes; when none can take it, split a class by test method
+# (Class/testMethod works in these lists) or ask for a fourth job.
 env:
-  FULL_LANE_SECOND_JOB: "MapInteractionTests RealWorldMapUITests SettingsUITests"
+  FULL_LANE_SECOND_JOB: "MapInteractionTests SettingsUITests"
   FULL_LANE_LESSONS_JOB: "LessonUITests Feature284To286UITests"
 
 # A newer push to a pull request cancels its older run. Every other run (the
@@ -758,8 +776,10 @@ jobs:
         id: ui-partition
         # Lessons' latest UI step was 36:44 (39332055254). Adding the
         # feature checks' standalone 7:36 gives 44:20; 55 leaves 10:40 spare.
-        # The job still has its 75-minute cap; second keeps its old limit.
-        timeout-minutes: ${{ matrix.partition == 'lessons' && 55 || 50 }}
+        # The job still has its 75-minute cap. Second got 55 too on
+        # 2026-10-24: about 43.5 minutes on a runner as slow as b6ca9af's
+        # (see FULL_LANE_SECOND_JOB), and some 58 for the whole job.
+        timeout-minutes: 55
         run: |
           case "$PARTITION" in
             second) classes="$FULL_LANE_SECOND_JOB" ;;
