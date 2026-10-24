@@ -267,6 +267,81 @@ final class SaveSyncTests: XCTestCase {
         XCTAssertEqual(sync(phone).uploaded, ["autosave"])
     }
 
+    func testTheAutosavesTakenInTurnStayOnTheDevice() throws {
+        let phone = device("phone"), pad = device("pad")
+        try phone.library.save(world(cash: 60), as: .autosave, at: date(0))
+        try phone.library.saveAutosaveSlot(world(cash: 50), at: date(1))
+        try phone.library.saveAutosaveSlot(world(cash: 55), at: date(2))
+        XCTAssertEqual(sync(phone).uploaded, ["autosave"])
+        XCTAssertEqual(cloudFiles(), ["autosave.json"], "only the latest goes")
+        sync(pad)
+        XCTAssertEqual(try cash(on: pad), [60])
+        // The pad's own, numbered as the phone's are, never meet them.
+        try pad.library.saveAutosaveSlot(world(cash: 70), at: date(3))
+        XCTAssertEqual(sync(pad), SaveSync.Outcome())
+        XCTAssertEqual(try cash(on: phone), [50, 55, 60])
+    }
+
+    /// `world` saved as a later build would: a save version this build
+    /// does not read.
+    private func laterBuildsSave(_ world: GameWorld, at seconds: TimeInterval) throws -> Data {
+        var file = try XCTUnwrap(JSONSerialization.jsonObject(with: SaveLibrary.encode(world, at: date(seconds))) as? [String: Any])
+        var game = try XCTUnwrap(file["game"] as? [String: Any])
+        game["saveVersion"] = SavedGame.currentVersion + 1
+        file["game"] = game
+        return try JSONSerialization.data(withJSONObject: file)
+    }
+
+    func testALaterBuildsSaveIsNeverWrittenOverHereNorWritesOverOne() throws {
+        let phone = device("phone"), pad = device("pad")
+        try phone.library.save(world(cash: 60), as: .autosave, at: date(0))
+        sync(phone)
+        sync(pad)
+        // The phone is updated and saves in the later version.
+        let later = try laterBuildsSave(world(cash: 900), at: 100)
+        try later.write(to: phone.library.directory.appendingPathComponent("autosave.json"))
+        try laterBuildsSave(world(cash: 800), at: 90).write(to: phone.library.directory.appendingPathComponent("save-later.json"))
+        sync(phone)
+
+        // The pad, not updated, keeps going with its own autosave; the
+        // phone's own save comes, listed as needing an update.
+        let waiting = sync(pad)
+        XCTAssertEqual(waiting.downloaded, ["save-later"])
+        XCTAssertEqual(try pad.library.load(XCTUnwrap(pad.library.newestAutosave())), try world(cash: 60))
+        let listed = try XCTUnwrap(pad.library.entries().first { $0.id == "save-later.json" })
+        XCTAssertEqual(listed.problem, .newerVersion(SavedGame.currentVersion + 1))
+        XCTAssertTrue(listed.problem?.playerMessage(in: .traditionalChinese).contains("請更新 App") == true)
+        XCTAssertEqual(sync(pad), SaveSync.Outcome(), "and waits, round after round")
+
+        // The pad plays on: the later game is kept beside it, never lost.
+        try pad.library.save(world(cash: 70), as: .autosave, at: date(200))
+        let kept = sync(pad)
+        XCTAssertEqual(kept.keptBoth.count, 1)
+        let copy = try XCTUnwrap(pad.library.entries().first { $0.name == "From another device" })
+        XCTAssertEqual(copy.problem, .newerVersion(SavedGame.currentVersion + 1))
+        sync(phone)
+        // (In this test the phone is this build too, so the later saves
+        // are compared byte for byte instead of loaded.)
+        XCTAssertEqual(try phone.library.load(XCTUnwrap(phone.library.newestAutosave())), try world(cash: 70))
+        let files = try phone.files().filter { $0.hasSuffix(".json") }.map { try Data(contentsOf: phone.library.directory.appendingPathComponent($0)) }
+        XCTAssertTrue(files.contains(later), "the later game is on the phone still: none was written over")
+        XCTAssertEqual(phone.library.entries().filter { $0.problem == .newerVersion(SavedGame.currentVersion + 1) }.count, 2)
+    }
+
+    @MainActor
+    func testContinueOnABuildThatCannotReadTheAutosave() async throws {
+        try FileManager.default.createDirectory(at: cloudDirectory, withIntermediateDirectories: true)
+        try laterBuildsSave(world(cash: 900), at: 100).write(to: cloudDirectory.appendingPathComponent("autosave.json"))
+        let cloud = cloudDirectory
+        let pad = GameLauncher(library: SaveLibrary(directory: root.appendingPathComponent("pad")), language: .english)
+        pad.cloudSaveFolder = { DirectorySaveFolder(directory: cloud) }
+        await pad.syncSaves()?.value
+        XCTAssertNil(pad.autosave, "not taken as the autosave")
+        pad.continueGame()
+        XCTAssertNil(pad.session)
+        XCTAssertNotNil(pad.message)
+    }
+
     func testOnlySavesAreCopied() throws {
         let phone = device("phone")
         try phone.library.save(world(cash: 60), as: .autosave, at: date(0))

@@ -1,4 +1,5 @@
 import Foundation
+import GameCore
 
 // Decision 397: the saves kept in step with a second folder, the player's
 // own iCloud (iCloud Drive's container of the app; the app hands the folder
@@ -78,9 +79,10 @@ public struct DirectorySaveFolder: SaveSyncFolder {
 ///
 /// A save is its file and the files kept beside it, its news log and its
 /// name (``SaveLibrary``): `<stem>.json`, `<stem>.news.json`,
-/// `<stem>.name`, copied together. Nothing else in the folder is copied:
-/// the preferences, the challenge records, the achievements and the
-/// stamps stay on the device.
+/// `<stem>.name`, copied together. Only the player's own saves and the
+/// latest autosave are copied: the autosaves taken in turn (decision 192)
+/// stay on the device, as do the preferences, the challenge records, the
+/// achievements and the stamps.
 ///
 /// Each round compares each save on the two sides with how it was when
 /// they were last the same (``State``), so it knows which side changed:
@@ -94,7 +96,9 @@ public struct DirectorySaveFolder: SaveSyncFolder {
 /// - deleted on one side and changed on the other: the changed one is kept
 ///   on both;
 /// - a save whose file is on its way from iCloud, or that cannot be read:
-///   left as it is for a later round.
+///   left as it is for a later round;
+/// - a later build's save, which this build cannot read: never written
+///   over a save here, nor as the autosave (`SaveGroup.canTakeInPlace`).
 ///
 /// Nothing is ever written over or deleted that was not, the round before,
 /// the same on both sides, so no save is lost to another device's.
@@ -230,7 +234,7 @@ public enum SaveSync {
                 } else if l == base {
                     // Changed in the other folder only.
                     if let theirs {
-                        guard mode == .full || mine == nil else { continue }
+                        guard mode == .full || mine == nil, theirs.canTakeInPlace(over: mine) else { continue }
                         try theirs.write(to: local, over: mine)
                         outcome.downloaded.append(stem)
                     } else {
@@ -256,6 +260,7 @@ public enum SaveSync {
                     state.synced[stem] = l
                 } else if let theirs {
                     // Deleted on the device, changed in the other folder.
+                    guard theirs.canTakeInPlace(over: nil) else { continue }
                     try theirs.write(to: local, over: nil)
                     outcome.downloaded.append(stem)
                     state.synced[stem] = c
@@ -320,11 +325,13 @@ public enum SaveSync {
         return candidate
     }
 
-    /// The saves among `files`: each stem whose `<stem>.json` is there, and
-    /// the names of its files.
+    /// The saves among `files` that are copied: each stem whose
+    /// `<stem>.json` is there, and the names of its files. The autosaves
+    /// taken in turn (decision 192) are the device's own way back and stay
+    /// on it: only the latest autosave goes to the other device.
     static func saves(in files: [String: SaveSyncFolderFile]) -> [String: [String]] {
         var saves: [String: [String]] = [:]
-        for name in files.keys where name.hasSuffix(".json") && !name.hasSuffix(SaveLibrary.newsSuffix) {
+        for name in files.keys where name.hasSuffix(".json") && !name.hasSuffix(SaveLibrary.newsSuffix) && SaveLibrary.slotNumber(of: name) == nil {
             let stem = String(name.dropLast(".json".count))
             saves[stem] = [name, stem + SaveLibrary.newsSuffix, stem + SaveLibrary.nameSuffix].filter { files[$0] != nil }
         }
@@ -396,6 +403,30 @@ private struct SaveGroup {
             hash = (hash ^ SaveSync.fingerprint(files[name] ?? Data())) &* 0x0000_0100_0000_01b3
         }
         return hash
+    }
+
+    /// Whether a save another device wrote may take its own name on this
+    /// one, over `old` or where there is none: always, unless this build
+    /// cannot read it (a later build's, of a newer save version). Then
+    /// only a save of the player's own where there is none: the app never
+    /// writes over those, and lists it as needing an update. An autosave
+    /// of a later build would be written over by this build's next one,
+    /// and that copied back over the later build's game; it waits, for
+    /// the app to be updated, or for this device's next autosave, when
+    /// the two are kept twice.
+    func canTakeInPlace(over old: SaveGroup?) -> Bool {
+        guard isNewerThanThisBuild else { return true }
+        return old == nil && !SaveLibrary.isAutosave(stem + ".json")
+    }
+
+    /// Whether its file is of a save version later than this build reads.
+    var isNewerThanThisBuild: Bool {
+        struct Head: Decodable {
+            struct Game: Decodable { let saveVersion: Int }
+            let game: Game
+        }
+        guard let data = files[stem + ".json"], let head = try? JSONDecoder().decode(Head.self, from: data) else { return false }
+        return head.game.saveVersion > SavedGame.currentVersion
     }
 
     /// When it was saved, from its file's head, or `nil`.

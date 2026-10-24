@@ -3,7 +3,8 @@
 決策 397。這些是 Apple 帳號裡的設定，只有作者能做；程式（`SaveSync`、`ICloudSaveFolder`）已經在 App 裡，沒有權限時照舊只存本機。這份文件不需要、也不會要任何密碼、2FA 驗證碼或金鑰。
 
 - 容器名稱：**`iCloud.io.github.a91453.RailwayGame`**
-- 用到的服務：iCloud Documents（iCloud Drive）。**不用** CloudKit 的 record，也不需要在 CloudKit Console 部署 schema。
+- 用到的服務：iCloud Documents（iCloud Drive）。**不用** CloudKit 的 record，也不需要在 CloudKit Console 部署 schema（TestFlight 的 build 用的是 production 環境；CloudKit 沒部署 schema 的話，TestFlight 上會不能用。iCloud Drive 沒有這一步，TestFlight 一裝上就能測）。
+- TestFlight 的測試員用的是自己真正的 iCloud 帳號，存檔是真的資料：衝突時一定兩份都留（決策 397）。
 - 和 Game Center（`docs/GAME_CENTER_SETUP.md`，決策 396）一起做，最後一個 PR 一起加兩個 entitlement。
 
 ## 1. Apple Developer：建 iCloud 容器
