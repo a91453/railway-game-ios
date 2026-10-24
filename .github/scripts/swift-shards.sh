@@ -448,6 +448,12 @@ set -euo pipefail
 # -15 then about 642, -14 644, -17 631, -5 665, -16 648, -11 575, -1 455,
 # -7 522, -4 532, -9 559; the longest are -6 (694) and -3 (676), about
 # 16.5 minutes of job.
+# The next full run (40087061202) put campaigns-10 past 20 minutes twice
+# (over 15 minutes of tests each time). Its classes took 839 s of tests on a
+# 4-core Linux machine (PassengerPlanKey 343, ReservationShortcut 209,
+# VerticalRailway 194, FlexDispatch 84), not the 596 the fast runner gave, so
+# VerticalRailway moves on to -11, the shard with the most room on both
+# runs (519 to about 575 s before it).
 classes_of() {
   case "$1" in
     campaigns-1) echo "ServiceRepeatingPropertyTests ScheduledTrafficPropertyTests OnboardingTests" ;;
@@ -459,8 +465,8 @@ classes_of() {
     campaigns-7) echo "LinePatternPropertyTests NetworkServicePropertyTests Map3DStreetsTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests Map3DRealGroundTests" ;;
     campaigns-8) echo "GoldenScenarioTests ScheduledOvertakeTrackMiddlePropertyTests ScreenshotSceneTests NewGameBalanceTests LessonGuideTests" ;;
     campaigns-9) echo "SaveMutationTests EconomySecondHalfPropertyTests NightSkipTests PolicyTests LocalPassTests" ;;
-    campaigns-10) echo "PassengerPlanKeyTests ReservationShortcutTests FlexDispatchPropertyTests VerticalRailwayPropertyTests" ;;
-    campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests HighSpeedDemoTests LongLegReplayTests LoopLineBoardingTests Map3DPlatformClearanceTests WorldStateMachineTests" ;;
+    campaigns-10) echo "PassengerPlanKeyTests ReservationShortcutTests FlexDispatchPropertyTests" ;;
+    campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests HighSpeedDemoTests LongLegReplayTests LoopLineBoardingTests Map3DPlatformClearanceTests WorldStateMachineTests VerticalRailwayPropertyTests" ;;
     campaigns-12) echo "TrafficControlPropertyTests LineConfirmationTests FreightSessionTests SparseCityLandTests LinePanelMemoTests Map3DStationKitTests NetworkPostcardTests" ;;
     campaigns-13) echo "BoardingPropertyTests TurnbackPropertyTests Map3DCoarseChunkTests RealRailwayTracingTests Map3DStreamingTests OccupiedRoutingPropertyTests" ;;
     campaigns-14) echo "ServiceLinePropertyTests CommandLogTests ScheduledTrafficTests TurnbackTests" ;;
