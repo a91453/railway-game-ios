@@ -406,6 +406,10 @@ public final class GameSession {
     /// the card is open.
     public var shownRealLineOffer: RealLineOffer?
 
+    /// The real station offered on its purchase card (decision 400 A.8),
+    /// while the card is open.
+    public var shownRealStationOffer: RealStationOffer?
+
     /// The stations picked, in order, for the next line. Only a draft:
     /// GameCore checks them when ``createLineFromDraft()`` creates the line.
     public private(set) var lineDraft: [StationID] = []

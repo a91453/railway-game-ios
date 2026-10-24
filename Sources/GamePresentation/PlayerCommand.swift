@@ -64,6 +64,11 @@ public enum PlayerCommand: Hashable, Sendable {
     /// its track, stations, trains and real timetable, and the purchase
     /// GameCore records, all or none.
     case acquireRealLine(RealLineAcquisition)
+    /// A real station bought (decision 400 A.8, ``GameSession/realStationOffer(for:system:)``):
+    /// a short stretch of track along the real line, traced as
+    /// ``buildTrackChain(_:)`` lays it, and the station's platform the
+    /// whole of one of its edges, all or none.
+    case buyRealStation(RealStationPurchase)
 
     /// A stretch of track as the network tool lays it: a node for each new
     /// end (splitting an edge for an end on one), then the edge, with the
@@ -212,6 +217,7 @@ public enum PlayerCommand: Hashable, Sendable {
         case .buildDoubleTrackChain: "buildDoubleTrackChain"
         case .autoService: "autoService"
         case .acquireRealLine: "acquireRealLine"
+        case .buyRealStation: "buyRealStation"
         }
     }
 }
@@ -302,6 +308,8 @@ extension GameSession {
         case .acquireRealLine(let acquisition):
             _ = try build(acquisition, in: &world)
             outcome.line = world.acquisition(of: acquisition.realLine).flatMap { world.line(id: $0.line) }
+        case .buyRealStation(let purchase):
+            outcome.station = try build(purchase, in: &world)
         case .removeTrack(let id):
             guard let edge = world.network.edge(id) else { throw .unknownTrackEdge(id) }
             try world.removeTrackEdge(id)
@@ -387,6 +395,9 @@ extension PlayerCommand: Codable {
         /// its platforms.
         var parallelChain: [PlayerCommand]?
         var platforms: [ChainPlatform]?
+        /// Decision 400 A.8: which of the chain's stretches a real
+        /// station bought has its platform on.
+        var platformStretch: Int?
     }
 
     public init(from decoder: any Decoder) throws {
@@ -488,6 +499,20 @@ extension PlayerCommand: Codable {
         case "acquireRealLine":
             guard let acquisition = record.acquisition else { throw invalid("a line bought needs its layout") }
             self = .acquireRealLine(acquisition)
+        case "buyRealStation":
+            let stretches = try (record.stretches ?? []).map { command in
+                guard case .buildTrack(let stretch) = command else { throw invalid("a chain's piece is a stretch") }
+                return stretch
+            }
+            guard !stretches.isEmpty, let platform = record.platformStretch, stretches.indices.contains(platform),
+                  let name = record.name, let point = try points(record.point).first, let demand = record.demand,
+                  let kind = StationDemandKind(rawValue: demand.kind) else {
+                throw invalid("a station bought needs its track, platform, name, point and demand")
+            }
+            self = .buyRealStation(RealStationPurchase(
+                stretches: stretches, platform: platform, name: name, at: point,
+                demand: StationDemand(kind: kind, dailyTrips: demand.dailyTrips, hinterland: demand.hinterland)
+            ))
         case "edit":
             guard let edit = record.edit else { throw invalid("an edit needs its value") }
             self = .edit(edit)
@@ -590,6 +615,12 @@ extension PlayerCommand: Codable {
             record.autoService = plan
         case .acquireRealLine(let acquisition):
             record.acquisition = acquisition
+        case .buyRealStation(let purchase):
+            record.stretches = purchase.stretches.map(PlayerCommand.buildTrack)
+            record.platformStretch = purchase.platform
+            record.name = purchase.name
+            record.point = [purchase.at.x, purchase.at.y]
+            record.demand = Record.Demand(kind: purchase.demand.kind.rawValue, dailyTrips: purchase.demand.dailyTrips, hinterland: purchase.demand.hinterland)
         }
         try record.encode(to: encoder)
     }
@@ -640,6 +671,8 @@ extension PlayerCommand {
             }
         case .acquireRealLine(let acquisition):
             language.text("buy \(acquisition.lineName)", "收購\(acquisition.lineName)")
+        case .buyRealStation(let purchase):
+            language.text("buy \(purchase.name) station", "收購\(purchase.name)站")
         case .removePlatform, .removeTrack:
             nil
         case .edit(let edit):
