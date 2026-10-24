@@ -149,6 +149,7 @@
 		BB5F13C5775274242DF7E68C /* PostcardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEAD664FAAE1ADFB437DDCA2 /* PostcardView.swift */; };
 		BD4D73964A95133885864DC2 /* tmrt_times.json in Resources */ = {isa = PBXBuildFile; fileRef = 3EDAFCBFB7EEDE187DEFCAB1 /* tmrt_times.json */; };
 		BEF6C6FD0A62EBDEDD8E4244 /* MapConstructionHUD.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BB64062D209FDE3EC54BAE7 /* MapConstructionHUD.swift */; };
+		C067788F4EEC569365740088 /* ICloudSaveFolder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F535381372C4F02DE0EF39B /* ICloudSaveFolder.swift */; };
 		C1EFF57A2944814982E3D1E7 /* TickStable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66DEEFE5F63CD7DD3B715B3B /* TickStable.swift */; };
 		C2A0206D4D8F4C5F50DE9083 /* warning.wav in Resources */ = {isa = PBXBuildFile; fileRef = 5BF4BA3F66CFC369FCBE3407 /* warning.wav */; };
 		C318C4DBF7381ACEFA41A082 /* DemoRealLinesButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40A496FD2BF3857D45FD0B8E /* DemoRealLinesButton.swift */; };
@@ -230,6 +231,7 @@
 		1CEAC255D3FFB54FF35BCF39 /* MapMarkTapUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapMarkTapUITests.swift; sourceTree = "<group>"; };
 		1D8FCC5E34CD27136469F2A8 /* chime-local-motif.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "chime-local-motif.wav"; sourceTree = "<group>"; };
 		1EA7B218F095D335A00243D1 /* tra_overtake_tracks.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra_overtake_tracks.json; sourceTree = "<group>"; };
+		1F535381372C4F02DE0EF39B /* ICloudSaveFolder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ICloudSaveFolder.swift; sourceTree = "<group>"; };
 		1FC5AEB0936E154EABD2610F /* YearEndReport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YearEndReport.swift; sourceTree = "<group>"; };
 		21275B6D1B1A72F75A29DA13 /* MapInteractionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapInteractionTests.swift; sourceTree = "<group>"; };
 		222E67E267AF07C25D4745C9 /* DataSourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataSourcesView.swift; sourceTree = "<group>"; };
@@ -460,6 +462,7 @@
 				CF11EF43ACFDD9FA340D2081 /* FeatureUITestWorld.swift */,
 				E6EEB9DC1C736BE4F98AD2BC /* GameAudio.swift */,
 				81D9DBA602A1D4B5ECC848F8 /* GameCenterLink.swift */,
+				1F535381372C4F02DE0EF39B /* ICloudSaveFolder.swift */,
 				76E2973BBBB24FACFFCBE7AD /* RailwayGame.entitlements */,
 				9D5672CF6C6C6FF4659709AE /* RailwayGameApp.swift */,
 			);
@@ -920,6 +923,7 @@
 				E0751BAC4F08ABCE62170267 /* GoalsPanel.swift in Sources */,
 				4E6FB096EF541BCE135C2911 /* HUDView.swift in Sources */,
 				CA2D393EB1EEDB99A27C093F /* HelpView.swift in Sources */,
+				C067788F4EEC569365740088 /* ICloudSaveFolder.swift in Sources */,
 				9C344F54682319D6B608F56A /* InspectorView.swift in Sources */,
 				C7A83471D6C3E093D4DA78C1 /* LineConfirmationCard.swift in Sources */,
 				D1C3F36C8C5DBFCA1036E603 /* LineDraftSummaryRow.swift in Sources */,
