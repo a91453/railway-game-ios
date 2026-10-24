@@ -150,7 +150,6 @@ final class RoadGridTests: XCTestCase {
     func testATownsRoadsGrowACellAMonthTowardItsNearestStation() throws {
         var world = try world()
         try world.buildStation(named: "Far", at: middle(8, 20))
-        try world.buildStation(named: "Farther", at: middle(2, 30))
         let start = world.roads
         try run(&world, toDay: 29)
         XCTAssertEqual(world.roads, start, "nothing grows before the month is out")
@@ -205,6 +204,86 @@ final class RoadGridTests: XCTestCase {
         try often.advance(ticks: 1)
         XCTAssertEqual(once.roads, often.roads)
         XCTAssertEqual(once.roads?.cells.count, 9 + 3)
+    }
+
+    // MARK: - Bought tiles
+
+    /// A blank world of 5 × 5 tiles owning the middle one, its towns and
+    /// roads drawn from seed 7 as a new game's are (all three in the
+    /// middle tile), and tile (2, 3), east of it, bought.
+    private func boughtWorld() throws -> (world: GameWorld, tile: MapTile) {
+        let length = MapExpansion.tileLength
+        var world = GameWorld(bounds: try WorldBounds(width: 5 * length, height: 5 * length),
+                              economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .fast))
+        world.setEconomyMode(.management)
+        world.enableRoads(towns: Land.townCentres(seed: 7, in: world.bounds))
+        try world.enableMapExpansion(owning: MapTile(row: 2, column: 2), townSeed: 7)
+        let tile = MapTile(row: 2, column: 3)
+        try world.buyMapTile(tile, passingMilestone: true)
+        return (world, tile)
+    }
+
+    /// The middle cells of the towns tile `tile` grows from seed 7.
+    private func townCells(of tile: MapTile) -> [CellPosition] {
+        let length = MapExpansion.tileLength
+        return Land.townCentres(seed: MapExpansion.townSeed(of: tile, from: 7), in: .standard).map {
+            CellPosition(row: Int((Int64(tile.row) * length + $0.y) / cell), column: Int((Int64(tile.column) * length + $0.x) / cell))
+        }
+    }
+
+    func testABoughtTilesTownsStartWithASquareOfRoads() throws {
+        let (world, tile) = try boughtWorld()
+        let towns = townCells(of: tile)
+        XCTAssertEqual(towns.count, 3)
+        XCTAssertEqual(world.roads?.towns.suffix(3), towns[...], "the tile's towns grow after the first three")
+        for town in towns {
+            XCTAssertTrue(cells((town.row - 1)...(town.row + 1), (town.column - 1)...(town.column + 1)).isSubset(of: world.roads?.cells ?? []))
+        }
+    }
+
+    func testABoughtTilesStationsGetTheirRoads() throws {
+        var (world, tile) = try boughtWorld()
+        // Twelve cells east of the tile's first town: eleven from its
+        // square, past a station road's eight.
+        let town = townCells(of: tile)[0]
+        let station = try world.buildStation(named: "East", at: middle(town.row, town.column + 12))
+        XCTAssertThrowsGameError(try world.stationRoadQuote(at: station.id), .roadTooFar)
+        // The only station is every town's nearest: each of the six draws
+        // a cell toward it, from the tile's square.
+        try run(&world, toDay: 30)
+        XCTAssertEqual(world.roads?.hasRoad(row: town.row, column: town.column + 2), true, "a cell toward the station")
+        XCTAssertNoThrow(try world.stationRoadQuote(at: station.id), "within a station road's reach")
+    }
+
+    func testAStationNoTownIsNearestDrawsTheNearestRoad() throws {
+        var world = try world()
+        try world.buildStation(named: "Far", at: middle(8, 20))
+        try world.buildStation(named: "Farther", at: middle(2, 30))
+        // The town grows toward Far, (8, 12); then Farther draws the road
+        // cell nearest it, (8, 12), toward it: (7, 13).
+        try run(&world, toDay: 30)
+        XCTAssertEqual(world.roads?.cells.subtracting(cells(7...9, 9...11)), [CellPosition(row: 8, column: 12), CellPosition(row: 7, column: 13)])
+        // From (7, 13), now nearest Far, to (8, 14); from (8, 14), now
+        // nearest Farther, to (7, 15).
+        try run(&world, toDay: 60)
+        XCTAssertEqual(world.roads?.cells.subtracting(cells(7...9, 9...11)), [
+            CellPosition(row: 8, column: 12), CellPosition(row: 7, column: 13), CellPosition(row: 8, column: 14), CellPosition(row: 7, column: 15),
+        ])
+    }
+
+    func testAnOldSaveGetsItsBoughtTilesRoads() throws {
+        let (world, tile) = try boughtWorld()
+        // A save of version 72 bought the tile with no roads for its towns.
+        var old = world
+        old.roads?.towns.removeLast(3)
+        old.roads?.cells = Set(try XCTUnwrap(world.roads).cells.filter { MapExpansion.tile(ofCellRow: $0.row, column: $0.column) != tile })
+        var object = try XCTUnwrap(try JSONSerialization.jsonObject(with: JSONEncoder().encode(SavedGame(world: old))) as? [String: Any])
+        object["saveVersion"] = 72
+        let loaded = try JSONDecoder().decode(SavedGame.self, from: JSONSerialization.data(withJSONObject: object)).world
+        XCTAssertEqual(loaded.roads, world.roads)
+        // Loaded again, nothing more.
+        let again = try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: loaded))).world
+        XCTAssertEqual(again, loaded)
     }
 
     // MARK: - Saves

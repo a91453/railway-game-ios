@@ -27,6 +27,20 @@ final class MapExpansionSessionTests: XCTestCase {
         XCTAssertNil(GameWorld.newGame(eventSeed: 9).mapExpansion)
     }
 
+    /// Review H's H1 (decision 400's sequel): a tile bought on a new blank
+    /// game has roads in its towns, as the middle tile's have.
+    func testATileBoughtOnANewGameHasRoads() throws {
+        var world = GameWorld.newGame(balance: 1_000_000_000, eventSeed: 7, buysMap: true)
+        let east = MapTile(row: 2, column: 3)
+        try world.buyMapTile(east, passingMilestone: true)
+        let roads = try XCTUnwrap(world.roads)
+        // The east tile's cells: rows 512 to 767, columns 768 to 1,023.
+        func inEast(_ row: Int, _ column: Int) -> Bool { (512..<768).contains(row) && (768..<1_024).contains(column) }
+        XCTAssertGreaterThan(world.land.cells.filter { inEast($0.row, $0.column) }.count, 0, "the tile's towns")
+        XCTAssertGreaterThanOrEqual(roads.cells.filter { inEast($0.row, $0.column) }.count, 9, "at least one town's square")
+        XCTAssertEqual(roads.towns.count, 6)
+    }
+
     func testChoosingAndBuyingATile() throws {
         var world = GameWorld.newGame(balance: 1_000_000_000, eventSeed: 9, buysMap: true)
         let session = GameSession(world: world, language: .english)

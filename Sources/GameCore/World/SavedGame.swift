@@ -562,8 +562,14 @@ extension SavedGame: Codable {
         // kind's first, as every one did.
         // Version 71 to 72: a world without `"roads"` has none: no road
         // grows and no station road can be built.
+        // Version 72 itself: a tile a blank map's company bought before
+        // decision 400's sequel has no roads for its towns; they get them
+        // now (``GameWorld/seedBoughtTilesRoads()``, which a save that has
+        // them leaves as it is).
         // Later versions add their steps here.
-        world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
+        var world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
+        if version == 72 { world.seedBoughtTilesRoads() }
+        self.world = world
     }
 
     /// Encodes the world in the current version.
