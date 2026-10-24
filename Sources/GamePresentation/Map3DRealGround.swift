@@ -393,8 +393,10 @@ extension Map3DScene.Builder {
                 }
                 var triangles = [0, 1, 2, 0, 2, 3]
                 let middle = Map3DPoint(Float((a.x + b.x) / 2), 0, Float((a.z + b.z) / 2))
-                // Decision 391: a bridge's deck is over any trench.
-                if !bridges && !(riseA.onBridge && riseB.onBridge) {
+                // Decision 391: a bridge's deck is over any trench, and so
+                // is a road a metre or more over the ground (續篇二: a road
+                // lifted over a cutting, onto its deck).
+                if !bridges && !(riseA.onBridge && riseB.onBridge) && min(riseA.rise, riseB.rise) < 1 {
                     (corners, triangles) = outsideTrenches(corners, triangles: triangles, lift: lift)
                 }
                 mesh(at: middle) {
