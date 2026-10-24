@@ -41,6 +41,15 @@ def main(root,pipeline):
         for placement in assembly['placements']:
             assert placement['nativeModel'] in rows
             assert placement['rotationDegrees'] in (0,180)
+        aggregate=trimesh.load(folder/'models'/f'railway-{variant}-source-ten-body-draft.glb',force='mesh')
+        assert len(aggregate.faces)==2*sum(item['triangles'] for item in stats)
+        assert np.isfinite(aggregate.vertices).all()
+        by_name={item['model']:item for item in stats}
+        for first,second in zip(assembly['placements'],assembly['placements'][1:]):
+            left=by_name[first['nativeModel']]['bounds'];right=by_name[second['nativeModel']]['bounds']
+            separation=first['translationX']-second['translationX']
+            expected=(left[1][0]-left[0][0]+right[1][0]-right[0][0])/2+first['gapSourceUnits']
+            assert abs(separation-expected)<.001
         images=list((folder/'previews').glob('**/*.png'));assert len(images)==54,len(images)
         for f in images:
             with Image.open(f) as im:
