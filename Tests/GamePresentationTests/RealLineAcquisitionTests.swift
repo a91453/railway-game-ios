@@ -159,6 +159,64 @@ final class RealLineAcquisitionTests: XCTestCase {
         }
     }
 
+    /// A normal game on a place of Taiwan, bought tile by tile (decision
+    /// 167), started at `latitude`, `longitude`, with the app's data, as
+    /// the launcher begins it; with money enough, `unlimited`.
+    private func tiledGame(at latitude: Double, _ longitude: Double, data: RealWorldData, unlimited: Bool = false) throws -> GameSession {
+        let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: latitude, longitudeDegrees: longitude))
+        var world = GameLauncher.newWorld(at: anchor, options: NewGameOptions(), data: GameLauncher.NewWorldData(
+            population: data.population, places: data.places, water: data.water, coverage: data.coverage, heights: data.heights
+        ))
+        XCTAssertNotNil(world.mapExpansion, "bought tile by tile")
+        if unlimited { world.setUnlimitedFunds(true) }
+        let session = GameSession(world: world, language: .traditionalChinese)
+        session.population = data.population
+        session.places = data.places
+        session.water = data.water
+        session.heights = data.heights
+        session.coverage = data.coverage
+        session.railways = data.railways
+        return session
+    }
+
+    /// Decision 401: on a map bought tile by tile, a line reaching past the
+    /// land owned buys the tiles under it too (decision 315 §1's price),
+    /// whatever the riders' milestone. The Jiji and Neiwan Lines cross
+    /// three tiles; a game starts with one, so neither could be bought, nor
+    /// the Pingxi Line from its junction: "this land is not yours yet".
+    func testALineReachingPastTheLandOwnedBuysTheTilesUnderIt() throws {
+        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        for network in ["PINGXI", "SHENAO", "JIJI", "NEIWAN", "LIUJIA", "SHALUN"] {
+            let junction = try BundledRealData.station(try XCTUnwrap(data.railways?.branchRuns[network]?.stops.first), in: "tra_sched").coordinate
+            let session = try tiledGame(at: junction.latitude, junction.longitude, data: data)
+            let line = try line(network, in: session)
+            let offer = session.realLineOffer(for: line)
+            XCTAssertNil(offer.problem, "\(network): \(offer.problem ?? "")")
+            guard let acquisition = offer.acquisition, let price = offer.price else { continue }
+            let owned = try XCTUnwrap(session.world.mapExpansion?.owned)
+            let under = Set((acquisition.pieces.flatMap(\.ground) + acquisition.stops.map(\.at)).map { MapExpansion.tile(at: $0) })
+            let tiles = acquisition.tiles ?? []
+            XCTAssertTrue(Set(tiles).isDisjoint(with: owned), network)
+            XCTAssertTrue(under.subtracting(owned).isSubset(of: tiles), network)
+            XCTAssertEqual(price.land > .zero, !tiles.isEmpty, network)
+            if ["JIJI", "NEIWAN", "PINGXI"].contains(network) { XCTAssertFalse(tiles.isEmpty, "\(network) reaches past the first tile") }
+            print("\(network): \(tiles.count) tiles for \(price.land.moneyText), total \(price.total.moneyText)")
+            XCTAssertEqual(offer.priceRows(in: .traditionalChinese).dropLast().map(\.amount).reduce(.zero, +), price.total, network)
+            // Bought with money enough (the prices above are a standard
+            // game's: unlimited funds price nothing).
+            let rich = try tiledGame(at: junction.latitude, junction.longitude, data: data, unlimited: true)
+            XCTAssertTrue(rich.acquireRealLine(offer), "\(network): \(rich.message?.text ?? "")")
+            XCTAssertTrue(under.allSatisfy { rich.world.ownsMapTile($0) }, network)
+            XCTAssertTrue(tiles.allSatisfy { tile in rich.world.landBlocks?.contains(tile.landBlocks(in: rich.world.bounds)[0]) ?? false }, "\(network): the tiles' land read in")
+        }
+        // Started in Taipei, the Jiji Line's land does not touch the
+        // company's: the card says what to do.
+        let taipei = try tiledGame(at: 25.047882, 121.517219, data: data)
+        let offer = taipei.realLineOffer(for: try line("JIJI", in: taipei))
+        XCTAssertNil(offer.acquisition)
+        XCTAssertEqual(offer.problem, "這條線經過的地和你的地不相連。先用「擴建地圖」買到這條線旁邊，再收購。")
+    }
+
     /// A line bought runs the company's trains: the map draws no real ones
     /// on it, and still those of the lines not bought.
     func testTheMapDrawsNoRealTrainsOnALineBought() throws {

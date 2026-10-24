@@ -225,6 +225,18 @@ final class MapExpansionTests: XCTestCase {
         XCTAssertEqual(MapExpansion.ridersNeeded(toOwn: 25), 2_400_000)
     }
 
+    /// Decision 401: a tile under a real line bought with it passes the
+    /// milestone, at the same price; the other checks stand.
+    func testATileBoughtWithARealLinePassesTheMilestone() throws {
+        var world = try world(seed: nil)
+        XCTAssertThrowsGameError(try world.buyMapTile(MapTile(row: 2, column: 1)), .mapExpansionLocked(ridersNeeded: 100_000))
+        XCTAssertThrowsGameError(try world.buyMapTile(MapTile(row: 1, column: 1), passingMilestone: true), .mapTileNotAdjacent)
+        try world.buyMapTile(MapTile(row: 2, column: 1), passingMilestone: true)
+        try world.buyMapTile(MapTile(row: 2, column: 0), passingMilestone: true)
+        XCTAssertEqual(world.economy.balance, 8_500_000_000)
+        XCTAssertEqual(world.mapExpansion?.owned, [MapTile(row: 2, column: 0), MapTile(row: 2, column: 1), middle])
+    }
+
     /// A managed company books a tile as land, never written down.
     func testATileIsLandOnTheBooks() throws {
         var world = try world(seed: nil)
