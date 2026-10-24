@@ -363,6 +363,9 @@ public struct RealRailways: Sendable {
     /// Where the real TRA lines are on bridges and in tunnels
     /// (`rail_structures.json`, decision 279).
     public let structures: RealRailStructures?
+    /// Every running track of the real railways, at its height
+    /// (`rail_tracks.json`, decision 402).
+    public let tracks: RealRailTracks?
     /// How many people use each real station a day (decision 298); `nil`
     /// without any of its files.
     public let ridership: RealRidership?
@@ -386,6 +389,7 @@ public struct RealRailways: Sendable {
         pingxiRuns: RealLineRuns? = nil,
         branchRuns: [String: RealLineRuns] = [:],
         structures: RealRailStructures? = nil,
+        tracks: RealRailTracks? = nil,
         ridership: RealRidership? = nil,
         loadIssues: [RealDataLoadIssue] = []
     ) throws {
@@ -442,6 +446,7 @@ public struct RealRailways: Sendable {
         self.pingxiRuns = pingxiRuns
         self.branchRuns = branchRuns
         self.structures = structures
+        self.tracks = tracks
         self.ridership = ridership
         self.loadIssues = loadIssues + (operations?.loadIssues ?? [])
         var byKey: [String: [Int]] = [:]
@@ -734,6 +739,9 @@ extension RealRailways {
         let structures = read("rail_structures", "json").flatMap { data in
             parse("rail_structures.json") { try RealRailStructures(data: data) }
         }
+        let tracks = read("rail_tracks", "json").flatMap { data in
+            parse("rail_tracks.json") { try RealRailTracks(data: data) }
+        }
         // Decision 298: each system's ridership on its own; one that cannot
         // be read leaves the others.
         func ridershipTable(_ name: String, byName: Bool) -> RealRidership.Table? {
@@ -765,6 +773,7 @@ extension RealRailways {
                 pingxiRuns: pingxiRuns,
                 branchRuns: branchRuns ?? [:],
                 structures: structures,
+                tracks: tracks,
                 ridership: ridership,
                 loadIssues: issues
             )

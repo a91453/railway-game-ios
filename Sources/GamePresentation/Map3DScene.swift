@@ -310,7 +310,15 @@ public struct Map3DScene: Sendable {
                 let at = frame.worldPosition(latitude: coordinate.latitude, longitude: coordinate.longitude)
                 return at.x >= region.minX - margin && at.x <= region.maxX + margin && at.y >= region.minY - margin && at.y <= region.maxY + margin
             }
-            realTrains = Map3DRealTrains(traffic: traffic, structures: railways.structures, frame: frame, snapshot: snapshot, builder: &builder)
+            // Decision 402: the real tracks, clear of the lines the
+            // player bought.
+            let bought = world.acquisitions.compactMap { acquisition -> (system: String, shape: [RealRailways.Coordinate])? in
+                let parts = acquisition.realLine.split(separator: ":", maxSplits: 1).map(String.init)
+                guard parts.count == 2, let line = operations.system(id: parts[0])?.lines.first(where: { $0.id == parts[1] }) else { return nil }
+                return (parts[0], line.shape)
+            }
+            realTrains = Map3DRealTrains(traffic: traffic, structures: railways.structures, railTracks: railways.tracks, bought: bought,
+                                         frame: frame, snapshot: snapshot, builder: &builder)
         } else {
             realTrains = nil
         }
@@ -994,10 +1002,25 @@ extension Map3DScene {
                 let lifts = line.map { $0.y - ground(at: $0) }
                 let depth = max(0.45, (lifts.reduce(0, +) / Float(lifts.count)) - Self.bedDrop)
                 let bank = kind == .embankment ? Map3DPalette.embankment : Map3DPalette.ballast
+                // Decision 391 (續篇二): open over a road passing under it.
+                let (banks, spans) = kind == .embankment ? openings(of: line) : ([line], [])
                 mesh(at: middle) { mesh in
-                    if kind == .embankment {
-                        mesh.addRibbon(along: line, width: Self.bedBottom + min(depth, 4.7) * 2, lift: -Self.bedDrop - 0.05, depth: depth, top: bank, side: bank,
+                    let width = Self.bedBottom + min(depth, 4.7) * 2
+                    for part in banks where kind == .embankment {
+                        mesh.addRibbon(along: part, width: width, lift: -Self.bedDrop - 0.05, depth: depth, top: bank, side: bank,
                                        topPaint: Self.bank, sidePaint: Self.bank)
+                    }
+                    for span in spans {
+                        mesh.addRibbon(along: span, width: Self.bedBottom, lift: -Self.bedDrop - 0.05, depth: Self.girderDepth, top: Map3DPalette.concrete,
+                                       side: Map3DPalette.concrete, topPaint: Self.concrete, sidePaint: Self.concrete)
+                        // The bank's ends each side: its abutments.
+                        for (end, inward) in [(span[0], span[1] - span[0]), (span[span.count - 1], span[span.count - 2] - span[span.count - 1])] {
+                            guard let forward = Map3DPoint(inward.x, 0, inward.z).normalized else { continue }
+                            let across = Map3DPoint(-forward.z, 0, forward.x) * (width / 2)
+                            let top = end + Map3DPoint(0, -Self.bedDrop - 0.05, 0), foot = top + Map3DPoint(0, -depth, 0)
+                            mesh.addQuad(foot - across, foot + across, top + across, top - across, color: bank, paint: Self.bank)
+                            mesh.addQuad(foot + across, foot - across, top - across, top + across, color: bank, paint: Self.bank)
+                        }
                     }
                     mesh.addRibbon(along: line, width: Self.bedTop, lift: -Self.bedDrop, depth: min(depth, 0.6), top: Map3DPalette.ballast, side: Map3DPalette.ballast,
                                    topPaint: Self.ballast, sidePaint: Self.concrete)
@@ -1011,6 +1034,54 @@ extension Map3DScene {
                                    top: Map3DPalette.railTop, side: Map3DPalette.rail)
                 }
             }
+        }
+
+        /// Decision 391 (續篇二): `line` (an embankment's rails) in the
+        /// stretches of bank and the spans open over a road passing under
+        /// (``Map3DRoadBridges/openings``), each split where they meet.
+        func openings(of line: [Map3DPoint]) -> (banks: [[Map3DPoint]], spans: [[Map3DPoint]]) {
+            var travelled: [Float] = [0]
+            for index in 1..<line.count { travelled.append(travelled[index - 1] + Map3DPoint(line[index].x - line[index - 1].x, 0, line[index].z - line[index - 1].z).length) }
+            // The open stretches, by the way along the line.
+            var open: [ClosedRange<Float>] = []
+            for opening in roadBridges.openings {
+                for index in 1..<line.count {
+                    let a = Map3DBaseMap.Point(x: Double(line[index - 1].x), z: Double(line[index - 1].z)), b = Map3DBaseMap.Point(x: Double(line[index].x), z: Double(line[index].z))
+                    let on = Map3DRoadBridges.nearest(opening.point, a, b)
+                    guard on.distance < 1 else { continue }
+                    let at = travelled[index - 1] + Float(((on.point.x - a.x) * (on.point.x - a.x) + (on.point.z - a.z) * (on.point.z - a.z)).squareRoot())
+                    open.append(max(0, at - opening.half)...min(travelled[travelled.count - 1], at + opening.half))
+                    break
+                }
+            }
+            guard !open.isEmpty else { return ([line], []) }
+            open.sort { $0.lowerBound < $1.lowerBound }
+            var merged: [ClosedRange<Float>] = []
+            for range in open {
+                if let last = merged.last, range.lowerBound <= last.upperBound {
+                    merged[merged.count - 1] = last.lowerBound...max(last.upperBound, range.upperBound)
+                } else {
+                    merged.append(range)
+                }
+            }
+            func point(at distance: Float) -> Map3DPoint {
+                let index = max(1, min(line.count - 1, travelled.firstIndex { $0 >= distance } ?? line.count - 1))
+                let length = travelled[index] - travelled[index - 1]
+                let share = length > 0 ? (distance - travelled[index - 1]) / length : 0
+                return line[index - 1] + (line[index] - line[index - 1]) * min(max(share, 0), 1)
+            }
+            func part(_ from: Float, _ to: Float) -> [Map3DPoint] {
+                [point(at: from)] + line.indices.filter { travelled[$0] > from && travelled[$0] < to }.map { line[$0] } + [point(at: to)]
+            }
+            var banks: [[Map3DPoint]] = [], spans: [[Map3DPoint]] = []
+            var from: Float = 0
+            for range in merged {
+                if range.lowerBound > from { banks.append(part(from, range.lowerBound)) }
+                if range.upperBound > range.lowerBound { spans.append(part(range.lowerBound, range.upperBound)) }
+                from = range.upperBound
+            }
+            if travelled[travelled.count - 1] > from { banks.append(part(from, travelled[travelled.count - 1])) }
+            return (banks, spans)
         }
 
         /// Decision 232: the deck's shadow on the ground under a viaduct

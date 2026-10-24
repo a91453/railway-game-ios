@@ -395,21 +395,38 @@ set -euo pipefail
 #   campaigns-10  891 -> about 729; -11 812 -> about 690; -15 793 -> 632
 # campaigns-1, -2 and -14 (12.3 to 13.5 minutes of tests on their longest
 # runs) take nothing.
+# 2026-10-24: rest timed out on main 82fffc7 (run 40081281220): 15m03s of
+# tests, 458 classes passed (868 s) and 26 small ones (TransferGroupSession
+# to Zoning, some 30 s) not reached, after a 4m17s build. A new class,
+# Map3DPlatformClearanceTests (113 s), had landed in rest. campaigns-13 took
+# 19m16s of its 20 (825 s of tests: BoardingProperty 421 and
+# Map3DSceneMemoryTests 274, whose weight said 57; #1070's runs had 258).
+# The shortest jobs' test steps on that run: campaigns-3 393 s (left alone:
+# LineDispatchPropertyTests swings 322 to 602), campaigns-1 397, -11 412,
+# -12 434, -4 434, -8 440. Five GamePresentation classes move (no pull
+# request's tier changes), seconds on that run:
+#   campaigns-11  412 -> about 686 (Map3DSceneMemory 274, from -13)
+#   campaigns-1   397 -> about 510 (Map3DPlatformClearance 113, from rest)
+#   campaigns-4   434 -> about 526 (NewGameSaveProperty 92, from rest)
+#   campaigns-12  434 -> about 498 (NetworkPostcard 64, from rest)
+#   campaigns-8   440 -> about 500 (LessonGuide 60, from rest)
+#   rest          some 900 -> about 570; campaigns-13 825 -> about 551
+# The longest jobs are then campaigns-2 (749 s of tests) and -10 (745).
 classes_of() {
   case "$1" in
-    campaigns-1) echo "ServiceRepeatingPropertyTests ScheduledTrafficPropertyTests WorldStateMachineTests" ;;
+    campaigns-1) echo "ServiceRepeatingPropertyTests ScheduledTrafficPropertyTests WorldStateMachineTests Map3DPlatformClearanceTests" ;;
     campaigns-2) echo "ServicePropertyTests VerticalRailwayPropertyTests NetworkSectionPropertyTests SingleTrackCapacityPropertyTests RealLineAcquisitionTests Map3DOpenEveryStartTests LessonTests" ;;
     campaigns-3) echo "LineDispatchPropertyTests IdleTrainDeadlockTests LineRoutePreferencePropertyTests TRADemoTests" ;;
-    campaigns-4) echo "OccupiedRoutingPropertyTests ContinuousTrackPropertyTests PassengerPropertyTests KernelDifferentialTests DeadlockPropertyTests RealWorldDemoTests" ;;
+    campaigns-4) echo "OccupiedRoutingPropertyTests ContinuousTrackPropertyTests PassengerPropertyTests KernelDifferentialTests DeadlockPropertyTests RealWorldDemoTests NewGameSavePropertyTests" ;;
     campaigns-5) echo "SaveMutationSecondHalfTests ScheduledOvertakeTrackPropertyTests LineLossFixesTests" ;;
     campaigns-6) echo "ServiceRepeatingSecondHalfPropertyTests EconomyPropertyTests CityRequestsTests DemoRealLinesTests Map3DStreetLifeTests StationCommerceCardTests Map3DTests LineLossDiagnosisTests" ;;
     campaigns-7) echo "LinePatternPropertyTests NetworkServicePropertyTests" ;;
-    campaigns-8) echo "GoldenScenarioTests ScheduledOvertakeTrackMiddlePropertyTests TimetablePropertyTests ScreenshotSceneTests NewGameBalanceTests" ;;
+    campaigns-8) echo "GoldenScenarioTests ScheduledOvertakeTrackMiddlePropertyTests TimetablePropertyTests ScreenshotSceneTests NewGameBalanceTests LessonGuideTests" ;;
     campaigns-9) echo "SaveMutationTests EconomySecondHalfPropertyTests NightSkipTests PolicyTests" ;;
     campaigns-10) echo "PassengerPlanKeyTests ReservationShortcutTests FlexDispatchPropertyTests" ;;
-    campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests HighSpeedDemoTests LongLegReplayTests LoopLineBoardingTests" ;;
-    campaigns-12) echo "TrafficControlPropertyTests ScheduledOvertakeTrackFinalPropertyTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests Map3DStreetsTests LineConfirmationTests FreightSessionTests Map3DRealGroundTests SparseCityLandTests LinePanelMemoTests Map3DStationKitTests" ;;
-    campaigns-13) echo "BoardingPropertyTests TurnbackPropertyTests Map3DSceneMemoryTests Map3DCoarseChunkTests RealRailwayTracingTests Map3DStreamingTests" ;;
+    campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests HighSpeedDemoTests LongLegReplayTests LoopLineBoardingTests Map3DSceneMemoryTests" ;;
+    campaigns-12) echo "TrafficControlPropertyTests ScheduledOvertakeTrackFinalPropertyTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests Map3DStreetsTests LineConfirmationTests FreightSessionTests Map3DRealGroundTests SparseCityLandTests LinePanelMemoTests Map3DStationKitTests NetworkPostcardTests" ;;
+    campaigns-13) echo "BoardingPropertyTests TurnbackPropertyTests Map3DCoarseChunkTests RealRailwayTracingTests Map3DStreamingTests" ;;
     campaigns-14) echo "ServiceLinePropertyTests OnboardingTests CommandLogTests ScheduledTrafficTests TurnbackTests" ;;
     campaigns-15) echo "TrafficFollowingPropertyTests ScheduledOvertakeTrackLastPropertyTests Map3DRealBuildingsTests MetroStructuresTests NewGameCampaignTests PingxiChallengeTests RealWorldExpansionTests Map3DShadowTests ShortTurnCardTests" ;;
     campaigns-16) echo "HighSpeedDemoDayTests TRADemoDayTests HighSpeedDemoBatchTests LocalPassTests LineAccountsTests LoadJourneyCacheTests NewsSessionTests DemoAtTests Map3DNextDepartureTests TutorialSessionTests Map3DSignTests Map3DPropsTests Map3DSurfaceTests SeededStreetPlanTests Map3DBuildingsTests AutoServiceTests Map3DHandoffTests Map3DDetailTests Map3DNightAndGroundTests" ;;
@@ -513,9 +530,10 @@ CLASS_WEIGHTS="BoardingPropertyTests:624 LineDispatchPropertyTests:602
   BlockSectionsTests:4 LandDemandTests:4 HighSpeedTests:4 BoardingTests:3
   LocalPassTests:59 LongLegReplayTests:16
   HighSpeedDemoTests:393 HighSpeedDemoDayTests:328 TRADemoTests:121
-  HighSpeedDemoBatchTests:120 NewGameSavePropertyTests:89 TRADemoDayTests:75
+  HighSpeedDemoBatchTests:120 NewGameSavePropertyTests:92 TRADemoDayTests:75
   OnboardingTests:70 CommandLogTests:66 LessonGuideTests:62
-  RealLineAcquisitionTests:62 NetworkPostcardTests:61 Map3DSceneMemoryTests:57
+  RealLineAcquisitionTests:62 NetworkPostcardTests:64 Map3DSceneMemoryTests:274
+  Map3DPlatformClearanceTests:113
   NightSkipTests:57 RealWorldDemoTests:51 LineLossFixesTests:49
   Map3DCoarseChunkTests:31 Map3DStreetLifeTests:29 RealRailwayTracingTests:29
   DemoRealLinesTests:26 Map3DStreamingTests:25 Map3DStreetsTests:25

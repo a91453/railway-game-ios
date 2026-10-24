@@ -93,8 +93,9 @@ final class Map3DRealTrainsTests: XCTestCase {
         let track = try XCTUnwrap(builder.realTrack(.init(points: stretch, core: 0...2), system: "tra_sched", structures: nil, frame: frame, clearOf: player))
         XCTAssertEqual(try XCTUnwrap(track.km.first), 0, accuracy: 1e-9)
         XCTAssertEqual(try XCTUnwrap(track.km.last), 2, accuracy: 1e-6)
-        XCTAssertEqual(track.points.count, 251, "every 8 m")
-        for (point, shown) in zip(track.points, track.shown) {
+        XCTAssertEqual(track.lanes[0].count, 251, "every 8 m")
+        XCTAssertEqual(track.lanes[0], track.lanes[1], "one track both ways")
+        for (point, shown) in zip(track.lanes[0], track.shown[0]) {
             XCTAssertEqual(shown, abs(point.x) >= Map3DRealTrains.playerClearance, "\(point.x)")
         }
         XCTAssertNotNil(track.point(atKm: 0.5))
@@ -128,12 +129,12 @@ final class Map3DRealTrainsTests: XCTestCase {
         // Under Taipei Main Station, nothing of the High Speed Rail's.
         let thsr = try XCTUnwrap(real.traffic.lines.firstIndex { $0.system == "thsr" })
         let taipeiKm = real.traffic.lines[thsr].stationKm[1]
-        let underMain = real.tracks[thsr].flatMap { zip($0.km, $0.shown) }.filter { abs($0.0 - taipeiKm) < 1 }
+        let underMain = real.tracks[thsr].flatMap { zip($0.km, $0.shown[0]) }.filter { abs($0.0 - taipeiKm) < 1 }
         XCTAssertFalse(underMain.isEmpty)
         XCTAssertTrue(underMain.allSatisfy { !$0.1 }, "underground through Taipei")
         // The Wenhu line on its viaduct, over the ground.
         let wenhu = try XCTUnwrap(real.traffic.lines.firstIndex { $0.line.id == "BR" })
-        XCTAssertGreaterThan(real.tracks[wenhu].flatMap(\.shown).filter { $0 }.count, 100)
+        XCTAssertGreaterThan(real.tracks[wenhu].flatMap { $0.shown[0] }.filter { $0 }.count, 100)
     }
 
     /// Without the real railways, or off the real world, none.
@@ -163,7 +164,7 @@ final class Map3DRealTrainsTests: XCTestCase {
             _ = Map3DScene(world: world, focus: (scene.originX, scene.originY), railways: try XCTUnwrap(Self.railways))
             let time = Date().timeIntervalSince(built)
             let real = try XCTUnwrap(scene.realTrains)
-            let samples = real.tracks.flatMap { $0 }.flatMap(\.shown)
+            let samples = real.tracks.flatMap { $0 }.flatMap { $0.shown[0] }
             print("\(name): \(real.traffic.lines.count) lines; scene built in \(String(format: "%.2f", time)) s (\(String(format: "%.2f", plainTime)) s without);"
                   + " real track \(scene.triangleCount - plain.triangleCount) triangles; \(samples.filter { $0 }.count) of \(samples.count) samples shown")
             for (view, eye) in [("close", Map3DPoint(0, 200, 0)), ("far", Map3DPoint(0, 8_000, 0))] {

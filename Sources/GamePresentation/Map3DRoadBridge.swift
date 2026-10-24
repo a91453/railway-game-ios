@@ -79,7 +79,56 @@ struct Map3DRoadBridges: Sendable {
     var grounds: [(kind: Map3DBaseMap.RoadKind, points: [Map3DBaseMap.Point])] = []
     var groundCells: [Map3DScene.ChunkKey: [(road: Int, index: Int)]] = [:]
 
-    var isEmpty: Bool { pieces.isEmpty }
+    /// Decision 391 (續篇二): where a road on the ground crosses the track
+    /// on an embankment or in a cutting, the road over it, and the
+    /// ``cell`` squares each one's ramps reach.
+    var joins: [Join] = []
+    var joinCells: [Map3DScene.ChunkKey: [Int]] = [:]
+    /// Where a road on the ground passes under an embankment high enough
+    /// for it: the bank open over the road for `half` metres along the
+    /// track each side of `point` (on the track's middle), a girder over it.
+    var openings: [(point: Map3DBaseMap.Point, half: Float)] = []
+    /// What each crossing of a road on the ground and the track out of a
+    /// tunnel was taken as (``Crossing``), for the tests.
+    var crossings: [Crossing: Int] = [:]
+
+    var isEmpty: Bool { pieces.isEmpty && joins.isEmpty }
+
+    /// Decision 391 (續篇二): a road on the ground lifted over the track
+    /// where it crosses: at `point`, running along `along` (level, a metre
+    /// long), `half` wide each side, its way `height` (metres over the sea,
+    /// under its own lift) for `plateau` metres each side of the point
+    /// along it, then down at `grade`; `reach` metres along it each way
+    /// its ramps end.
+    struct Join: Sendable {
+        let point: Map3DBaseMap.Point
+        let along: Map3DBaseMap.Point
+        let half: Float
+        let height: Float
+        let plateau: Float
+        let grade: Float
+        let reach: Float
+    }
+
+    /// How a road on the ground meets the track out of a tunnel.
+    enum Crossing: Hashable, Sendable {
+        /// On the level: a level crossing.
+        case level
+        /// Under a viaduct or a bridge.
+        case underViaduct
+        /// Over a cutting deep enough for a train (decision 375's bridge).
+        case overDeepCutting
+        /// Lifted over a shallower cutting, or over an embankment.
+        case overCutting, overEmbankment
+        /// Under an embankment high enough for it, the bank open over it.
+        case underEmbankment
+        /// Along the track (under 30° off it): no join.
+        case alongside
+    }
+
+    /// The least height of the track's bed over the drawn ground that is an
+    /// embankment a road goes over, metres.
+    static let embankment: Float = 1
 
     static let cell: Double = 32
     /// How far apart two bridges' lines may be and be one, metres: the
@@ -176,7 +225,6 @@ extension Map3DScene.Builder {
     mutating func bridgeDecks(of map: Map3DBaseMap, frame: RealWorldFrame?) -> Map3DRoadBridges {
         var result = Map3DRoadBridges()
         let bridges = map.bridges.filter { $0.points.count >= 2 }
-        guard !bridges.isEmpty else { return result }
         typealias Point = Map3DBaseMap.Point
         // Each bridge's segments by the squares they touch.
         var cells: [Map3DScene.ChunkKey: [(piece: Int, index: Int)]] = [:]
@@ -323,6 +371,7 @@ extension Map3DScene.Builder {
                 }
             }
         }
+        addJoins(of: map, into: &result)
         if let frame {
             for tall in Map3DRoadBridges.tallestFreewayBridges {
                 let world = frame.worldPosition(latitude: tall.latitude, longitude: tall.longitude)
@@ -375,6 +424,119 @@ extension Map3DScene.Builder {
                                      grade: Map3DRoadBridges.grade(kind)))
         }
         return result
+    }
+
+    /// Decision 391 (續篇二, HANDOFF §4.12 第 6 點): where each road on the
+    /// ground of `map` crosses the track out of a tunnel more than 30° off it, on an
+    /// embankment or in a cutting, the road lifted over it: its way the
+    /// height a deck over the track takes (``Map3DRoadBridges/overTrack``
+    /// over the bed), across the bed or the cutting and a little more,
+    /// then down at its grade. Over a cutting deep enough already (decision
+    /// 375), under a viaduct and on the level, it stays.
+    mutating func addJoins(of map: Map3DBaseMap, into result: inout Map3DRoadBridges) {
+        typealias Point = Map3DBaseMap.Point
+        guard !trackCover.isEmpty else { return }
+        var found: [Map3DRoadBridges.Join] = []
+        var openings: [(point: Point, half: Float)] = []
+        for road in map.groundRoads where road.points.count >= 2 {
+            let line = road.points
+            for index in 1..<line.count {
+                let a = line[index - 1], b = line[index]
+                let dx = b.x - a.x, dz = b.z - a.z, length = (dx * dx + dz * dz).squareRoot()
+                guard length > 0.01 else { continue }
+                var seen = Set<Int>()
+                let low = Map3DTrackCover.key(x: Float(min(a.x, b.x)), z: Float(min(a.z, b.z)))
+                let high = Map3DTrackCover.key(x: Float(max(a.x, b.x)), z: Float(max(a.z, b.z)))
+                for row in low.row...high.row {
+                    for column in low.column...high.column {
+                        for track in trackCover.cells[Map3DScene.ChunkKey(column: column, row: row)] ?? [] where seen.insert(track).inserted {
+                            let piece = trackCover.pieces[track]
+                            guard !piece.isTunnel else { continue }
+                            let c = Point(x: Double(piece.a.x), z: Double(piece.a.z)), d = Point(x: Double(piece.b.x), z: Double(piece.b.z))
+                            guard let share = Map3DRoadBridges.crossing(a, b, c, d) else { continue }
+                            let at = Point(x: a.x + dx * share, z: a.z + dz * share)
+                            // Not where the road ends: it meets the track there.
+                            func far(_ q: Point) -> Bool { (at.x - q.x) * (at.x - q.x) + (at.z - q.z) * (at.z - q.z) > 4 }
+                            guard far(line[0]), far(line[line.count - 1]) else { continue }
+                            let crossing: Map3DRoadBridges.Crossing
+                            defer { result.crossings[crossing, default: 0] += 1 }
+                            let trackLength = (piece.b - piece.a).length
+                            guard trackLength > 0 else { crossing = .alongside; continue }
+                            let sine = Float(abs(dx * Double(piece.b.z - piece.a.z) - dz * Double(piece.b.x - piece.a.x)) / length) / trackLength
+                            guard sine >= 0.5 else { crossing = .alongside; continue }
+                            if piece.isViaduct { crossing = .underViaduct; continue }
+                            let t = Float(((at.x - c.x) * (d.x - c.x) + (at.z - c.z) * (d.z - c.z)) / Double(trackLength * trackLength))
+                            let bed = piece.a.y + (piece.b.y - piece.a.y) * min(max(t, 0), 1) - Self.bedDrop
+                            let surface = drawnGround(x: Float(at.x), z: Float(at.z))
+                            // How far across the track's ground it takes,
+                            // metres, either side of its middle.
+                            let across: Float
+                            if bed <= surface - Map3DRoadBridges.overTrack {
+                                crossing = .overDeepCutting
+                                continue
+                            } else if trackCover.trenches.piece(at: at) != nil {
+                                crossing = .overCutting
+                                // The trench's rim: its floor's reach, then 1 : 1 up.
+                                across = Map3DTrenches.floorReach + surface - bed + Map3DTrenches.floorDrop
+                            } else if bed - surface >= Map3DRoadBridges.embankment {
+                                let bank = Self.bedBottom / 2 + min(bed - surface, 4.7)
+                                if bed - surface >= Map3DRoadBridges.underViaduct + Self.lift(of: road.kind) {
+                                    // Room under it: the bank opens over the
+                                    // road's width (its slant across the
+                                    // bank's) and a metre each side.
+                                    crossing = .underEmbankment
+                                    let cosine = (1 - sine * sine).squareRoot()
+                                    let rail = Map3DRoadBridges.nearest(at, c, d).point
+                                    openings.append((rail, (Map3DRoadBridges.half(road.kind) + 1) / sine + bank * cosine / sine))
+                                    continue
+                                }
+                                crossing = .overEmbankment
+                                across = bank
+                            } else {
+                                crossing = .level
+                                continue
+                            }
+                            let half = Map3DRoadBridges.half(road.kind), grade = Map3DRoadBridges.grade(road.kind)
+                            // Its deck clear of the track's ground, its own
+                            // width's slant included.
+                            let plateau = (across + 2) / sine + half * (1 - sine * sine).squareRoot() / sine
+                            // Clear of the rails all under it: the line's
+                            // highest within the plateau, as it climbs.
+                            var highest = bed
+                            let reachLow = Map3DTrackCover.key(x: Float(at.x) - plateau, z: Float(at.z) - plateau)
+                            let reachHigh = Map3DTrackCover.key(x: Float(at.x) + plateau, z: Float(at.z) + plateau)
+                            for row in reachLow.row...reachHigh.row {
+                                for column in reachLow.column...reachHigh.column {
+                                    for other in trackCover.cells[Map3DScene.ChunkKey(column: column, row: row)] ?? [] {
+                                        let near = trackCover.pieces[other]
+                                        guard !near.isTunnel, !near.isViaduct,
+                                              Map3DRoadBridges.nearest(at, Point(x: Double(near.a.x), z: Double(near.a.z)),
+                                                                       Point(x: Double(near.b.x), z: Double(near.b.z))).distance <= Double(plateau) else { continue }
+                                        for y in [near.a.y, near.b.y] where abs(y - Self.bedDrop - bed) < 2 { highest = max(highest, y - Self.bedDrop) }
+                                    }
+                                }
+                            }
+                            let height = highest + Map3DRoadBridges.overTrack
+                            let join = Map3DRoadBridges.Join(point: at, along: Point(x: dx / length, z: dz / length), half: half, height: height,
+                                                             plateau: plateau, grade: grade,
+                                                             reach: plateau + min((height - surface) / grade, Map3DRoadBridges.longestRamp))
+                            found.append(join)
+                        }
+                    }
+                }
+            }
+        }
+        // In one order whatever order the roads came in (a road's highest
+        // join wins where they meet, so the order changes nothing drawn).
+        for join in found.sorted(by: { ($0.point.x, $0.point.z, $0.height) < ($1.point.x, $1.point.z, $1.height) }) {
+            let reach = Double(join.reach + join.half) + 4
+            let low = Map3DRoadBridges.key(join.point.x - reach, join.point.z - reach), high = Map3DRoadBridges.key(join.point.x + reach, join.point.z + reach)
+            for row in low.row...high.row {
+                for column in low.column...high.column { result.joinCells[Map3DScene.ChunkKey(column: column, row: row), default: []].append(result.joins.count) }
+            }
+            result.joins.append(join)
+        }
+        result.openings = openings.sorted { ($0.point.x, $0.point.z, $0.half) < ($1.point.x, $1.point.z, $1.half) }
     }
 
     /// Decision 391: how far `deck` stands over the drawn ground at `p`,
@@ -438,6 +600,18 @@ extension Map3DScene.Builder {
             guard Float(max(out, 0)) <= Map3DRoadBridges.longestRamp else { continue }
             best.rise = max(best.rise, rise)
         }
+        // Decision 391 (續篇二): a road on the ground lifted over the
+        // track, on its deck across the track's ground.
+        for number in onDeck ? [] : bridges.joinCells[key] ?? [] {
+            let join = bridges.joins[number]
+            let vx = p.x - join.point.x, vz = p.z - join.point.z
+            let out = Float(abs(vx * join.along.x + vz * join.along.z))
+            guard out <= join.reach, Float(abs(vx * join.along.z - vz * join.along.x)) <= join.half + 0.5 + 0.1 * max(0, out - join.plateau) else { continue }
+            if let along, abs(along.x * join.along.x + along.z * join.along.z) < 0.9 { continue }
+            let rise = join.height - join.grade * max(0, out - join.plateau) - drawnGround(x: Float(p.x), z: Float(p.z))
+            guard rise > 0 else { continue }
+            best = (max(best.rise, rise), best.onBridge || out <= join.plateau)
+        }
         return best
     }
 
@@ -484,7 +658,7 @@ extension Map3DScene.Builder {
         for row in low.row...high.row {
             for column in low.column...high.column {
                 let key = Map3DScene.ChunkKey(column: column, row: row)
-                if roadBridges.segments[key] != nil || roadBridges.endCells[key] != nil { return true }
+                if roadBridges.segments[key] != nil || roadBridges.endCells[key] != nil || roadBridges.joinCells[key] != nil { return true }
             }
         }
         return false
@@ -671,7 +845,8 @@ extension Map3DScene.Builder {
                         guard mark < d.travelled || (mark == d.travelled && d.travelled == run.last!.travelled) else { continue }
                         let share = Float((mark - c.travelled) / max(d.travelled - c.travelled, 1e-9))
                         let top = c.top + (d.top - c.top) * share
-                        guard !nearTrack(x: top.x, z: top.z, within: look.column / 2 + 3) else { continue }
+                        guard !nearTrack(x: top.x, z: top.z, within: look.column / 2 + 3),
+                              trackCover.trenches.piece(at: Point(x: Double(top.x), z: Double(top.z))) == nil else { continue }
                         let foot = Map3DPoint(top.x, drawnGround(x: top.x, z: top.z), top.z)
                         built.addPier(foot: foot, deckTop: top.y - lift, forward: d.top - c.top, width: width, look: look)
                     }
