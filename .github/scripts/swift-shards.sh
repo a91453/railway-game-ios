@@ -747,6 +747,74 @@ build_package() {
   done
 }
 
+# Decision 404: say so before a shard reaches its job limit, not after.
+# Every rebalance above came after a red main, when a shard had drifted
+# past ci.yml's 20 minutes (timeout-minutes) as classes were added or grew;
+# a cancelled job prints no summary, so its class times had to be read off
+# the whole job log. JOB_STARTED (epoch seconds, set by the job's first step
+# in ci.yml) gives the job's time so far; the container's start, some 40 s,
+# comes before it. Without it (locally) only the class checks run.
+SHARD_WARN_SECONDS="${SHARD_WARN_SECONDS:-900}"
+SHARD_WATCHDOG_SECONDS="${SHARD_WATCHDOG_SECONDS:-1110}"
+# A class this long whose weight is missing, or less than half its time,
+# is reported: the selected parts are dealt by weight (selected_part).
+CLASS_WARN_SECONDS="${CLASS_WARN_SECONDS:-60}"
+
+# Seconds per class from XCTest's lines in the given logs, slowest first:
+# "<seconds> <class>".
+class_seconds() {
+  cat "$@" 2>/dev/null |
+    sed -n -E "s/^Test Case '([^.']+)\\.[^']*' (passed|failed) \\(([0-9.]+) seconds\\)/\\3 \\1/p" |
+    awk '{ t[$2] += $1 } END { for (c in t) printf "%.0f %s\n", t[c], c }' | sort -rn
+}
+
+# "a 274 s, b 113 s, c 92 s" from class_seconds lines on stdin.
+slowest_text() {
+  awk 'NR <= 3 { printf "%s%s %s s", (NR > 1 ? ", " : ""), $2, $1 }'
+}
+
+job_seconds() {
+  [[ "${JOB_STARTED:-}" =~ ^[0-9]+$ ]] || return 1
+  echo $(($(date +%s) - JOB_STARTED))
+}
+
+# time_warnings <shard> <class seconds file>: the warnings decision 404
+# prints once a shard's tests are done (they show on the run's summary and
+# on a pull request's checks).
+time_warnings() {
+  local shard="$1" times="$2" job
+  if job="$(job_seconds)" && ((job >= SHARD_WARN_SECONDS)); then
+    echo "::warning title=Shard $shard near its 20-minute limit::$shard took $((job / 60))m$(printf '%02d' $((job % 60)))s of its 20 minutes (slowest: $(slowest_text <"$times")). Move a class to a shorter shard in classes_of (.github/scripts/swift-shards.sh, decision 404)."
+    [[ -z "${GITHUB_STEP_SUMMARY:-}" ]] || echo "- :warning: $((job / 60))m$(printf '%02d' $((job % 60)))s of the job's 20 minutes (warns from $((SHARD_WARN_SECONDS / 60)))" >>"$GITHUB_STEP_SUMMARY"
+  fi
+  local secs class weight
+  while read -r secs class; do
+    ((secs >= CLASS_WARN_SECONDS)) || break
+    weight="$(tr -s ' \n' '\n' <<<"$CLASS_WEIGHTS" | sed -n "s/^$class:\\([0-9]*\\)$/\\1/p")"
+    if [[ -z "$weight" ]]; then
+      echo "::warning title=$class has no weight::$class took $secs s in $shard and has no CLASS_WEIGHTS entry (.github/scripts/swift-shards.sh, decision 404)."
+    elif ((secs > 2 * weight)); then
+      echo "::warning title=$class weight out of date::$class took $secs s in $shard; CLASS_WEIGHTS says $weight (.github/scripts/swift-shards.sh, decision 404)."
+    fi
+  done <"$times"
+}
+
+# Runs in the background while a shard's tests run: shortly before the job
+# limit cancels the job (and its summary with it), print what ran slowest
+# so far.
+watchdog() {
+  local shard="$1" job
+  shift
+  job="$(job_seconds)" || return 0
+  ((job < SHARD_WATCHDOG_SECONDS)) || return 0
+  # Killed when the tests end first: take the sleep with it.
+  sleep $((SHARD_WATCHDOG_SECONDS - job)) &
+  local nap=$!
+  trap 'kill "$nap" 2>/dev/null; exit 0' TERM
+  wait "$nap"
+  echo "::warning title=Shard $shard about to reach its 20-minute limit::$shard has run $((SHARD_WATCHDOG_SECONDS / 60))m$(printf '%02d' $((SHARD_WATCHDOG_SECONDS % 60)))s; slowest classes so far: $(class_seconds "$@" | slowest_text). Move a class to a shorter shard in classes_of (.github/scripts/swift-shards.sh, decision 404)."
+}
+
 run_shard() {
   local shard="$1"
   is_shard "$shard" || die "Unknown shard '$shard'. Shards: ${SHARDS[*]} all."
@@ -791,11 +859,15 @@ run_shard() {
   echo "Shard $shard: $(wc -l <"$batches" | tr -d ' ') swift test runs."
   : >"$log"
   started="$(date +%s)"
+  local batch_log="$WORK/batch.log" watcher=""
+  : >"$batch_log"
+  watchdog "$shard" "$log" "$batch_log" &
+  watcher=$!
   # A failed batch does not stop the others; the shard fails after them.
   # A batch whose swift test was killed by a signal before any test started
   # runs once more (decision 329): no test result is thrown away. Once a test
   # has started, a crash may be the test's own and fails the shard.
-  local attempt batch_log="$WORK/batch.log"
+  local attempt
   while IFS= read -r -u 3 classes; do
     for attempt in 1 2; do
       batch_rc=0
@@ -811,6 +883,8 @@ run_shard() {
     [[ "$batch_rc" -eq 0 ]] || rc=$batch_rc
   done 3<"$batches"
   local seconds=$(($(date +%s) - started))
+  kill "$watcher" 2>/dev/null || true
+  wait "$watcher" 2>/dev/null || true
 
   local executed="$WORK/executed.txt"
   sed -n -E "s/^Test Case '([^']+)' started.*/\\1/p" "$log" | sort >"$executed"
@@ -833,6 +907,7 @@ run_shard() {
   sed -n -E "s/^Test Case '([^.']+)\\.[^']*' passed \\(([0-9.]+) seconds\\)/\\2 \\1/p" "$log" |
     awk '{ t[$2] += $1 } END { for (c in t) printf "%8.1fs  %s\n", t[c], c }' | sort -rn | awk 'NR <= 5'
   echo "::endgroup::"
+  class_seconds "$log" >"$WORK/class-seconds.txt"
 
   if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
     {
@@ -845,6 +920,8 @@ run_shard() {
       fi
     } >>"$GITHUB_STEP_SUMMARY"
   fi
+
+  time_warnings "$shard" "$WORK/class-seconds.txt"
 
   [[ "$rc" -eq 0 ]] || die "swift test failed in shard $shard (exit code $rc)."
   [[ "$failed_count" -eq 0 ]] || die "$failed_count tests failed in shard $shard."

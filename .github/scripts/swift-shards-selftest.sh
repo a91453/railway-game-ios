@@ -97,9 +97,10 @@ while IFS= read -r name; do
   if [[ "${FAKE_MODE:-ok}" == failline && "$name" == *testOne ]]; then
     echo "Test Case '$name' failed (0.001 seconds)"
   else
-    echo "Test Case '$name' passed (0.001 seconds)"
+    echo "Test Case '$name' passed (${FAKE_SECONDS:-0.001} seconds)"
   fi
 done <"$selected.names"
+[[ -z "${FAKE_SLEEP:-}" ]] || sleep "$FAKE_SLEEP"
 [[ "${FAKE_MODE:-ok}" != exit1 ]] || exit 1
 FAKE
 chmod +x "$work/bin/swift"
@@ -176,6 +177,38 @@ FAKE_LIST="$work/renamed.txt" WHY='NetworkServicePropertyTests .* has no tests' 
 FAKE_LIST="$work/other-format.txt" WHY='cannot follow' expect fail "a test ID in another format fails" "$script" run rest
 
 WHY="Unknown shard 'campaigns-99'" expect fail "an unknown shard fails" "$script" run campaigns-99
+
+# The time warnings (decision 404): a shard near its job limit, a slow class
+# with no weight or one far past its weight, and the watchdog shortly before
+# the limit. They warn; the shard still passes.
+# says <pattern> <description> <command...>: passes and prints the pattern;
+# says '!<pattern>' ...: passes and does not.
+says() {
+  local pattern="$1" what="$2" rc=0 found=0
+  shift 2
+  PATH="$work/bin:$PATH" FAKE_LIST="$work/list.txt" "$@" >"$work/out.txt" 2>&1 || rc=$?
+  grep -q -E "${pattern#!}" "$work/out.txt" && found=1
+  if [[ "$rc" -eq 0 && ( ("$pattern" == !* && "$found" -eq 0) || ("$pattern" != !* && "$found" -eq 1) ) ]]; then
+    echo "ok   says  $what"
+  else
+    echo "FAIL expected a pass that says $pattern, exit code $rc: $what"
+    sed 's/^/     | /' "$work/out.txt" | tail -15
+    failures=$((failures + 1))
+  fi
+}
+JOB_STARTED=$(($(date +%s) - 1000)) says 'warning title=Shard campaigns-2 near its 20-minute limit::campaigns-2 took 1[67]m' \
+  "a shard past SHARD_WARN_SECONDS of its job warns" "$script" run campaigns-2
+JOB_STARTED="$(date +%s)" says '!near its 20-minute limit' "a short job does not warn" "$script" run campaigns-2
+says '!near its 20-minute limit' "without JOB_STARTED (locally) no job warning" "$script" run campaigns-2
+FAKE_SECONDS=70 says 'warning title=UnitTests has no weight::UnitTests took 70 s in rest' \
+  "a slow class with no weight warns" "$script" run rest
+FAKE_SECONDS=40 says 'warning title=SingleTrackCapacityPropertyTests weight out of date::.*took 80 s.*says 24' \
+  "a class past twice its weight warns" "$script" run campaigns-2
+FAKE_SECONDS=40 says '!ServicePropertyTests (has no weight|weight out of date)' \
+  "a class within its weight does not warn" "$script" run campaigns-2
+JOB_STARTED=$(($(date +%s) - 1108)) FAKE_SLEEP=4 says 'warning title=Shard rest about to reach its 20-minute limit::rest has run 18m30s; slowest classes so far: ' \
+  "the watchdog warns before the limit, with the slowest classes so far" "$script" run rest
+JOB_STARTED=$(($(date +%s) - 1000)) says '!about to reach' "the watchdog is stopped when the tests end first" "$script" run rest
 
 # The shard selections must split a list exactly; a class named twice would not.
 # (Checked offline: the five selections of the synthetic list add up to it.)
