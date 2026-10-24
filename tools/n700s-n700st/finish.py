@@ -52,6 +52,14 @@ def main(pipeline,root,commit):
         # Existing self-contained viewer is parameterized only by vehicle name.
         script=(pipeline/'make_viewer.py').read_text().replace('railway-n700s','railway-'+variant).replace('N700S',variant.upper())
         script=script.replace('Bogies/wheels and engineering scale unresolved.','Wheel gear is a provisional visual placement; engineering scale unresolved.')
+        script=script.replace(
+            "function geometry(){let m=MODELS[+select.value||0],v=m.triangles.flat(),lo=[0,1,2].map(k=>Math.min(...v.map(p=>p[k]))),hi=[0,1,2].map(k=>Math.max(...v.map(p=>p[k])));return {m,lo,hi,center:lo.map((a,k)=>(a+hi[k])/2)};}",
+            "function geometry(){let m=MODELS[+select.value||0],lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity];for(const t of m.triangles)for(const p of t)for(let k=0;k<3;k++){lo[k]=Math.min(lo[k],p[k]);hi[k]=Math.max(hi[k],p[k]);}return {m,lo,hi,center:lo.map((a,k)=>(a+hi[k])/2)};}")
+        script=script.replace(
+            "let proj=m.triangles.map(t=>t.map(project)),v=proj.flat(),sx=Math.max(...v.map(p=>p[0]))-Math.min(...v.map(p=>p[0])),sz=Math.max(...v.map(p=>p[1]))-Math.min(...v.map(p=>p[1]));",
+            "let proj=m.triangles.map(t=>t.map(project)),xl=Infinity,xh=-Infinity,zl=Infinity,zh=-Infinity;for(const t of proj)for(const p of t){xl=Math.min(xl,p[0]);xh=Math.max(xh,p[0]);zl=Math.min(zl,p[1]);zh=Math.max(zh,p[1]);}let sx=xh-xl,sz=zh-zl;")
+        if 'm.triangles.flat()' in script or 'Math.max(...v.map' in script:
+            raise ValueError('Large formation viewer still uses spread extrema')
         code=dst/'_make_viewer.py';code.write_text(script)
         local_renderer=dst/'render_delivery.py'
         local_renderer.write_text((pipeline/'render_delivery.py').read_text().replace('n700s',variant).replace('N700S',variant.upper()))
