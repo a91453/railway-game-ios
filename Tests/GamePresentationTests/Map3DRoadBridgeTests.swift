@@ -11,14 +11,15 @@ final class Map3DRoadBridgeTests: XCTestCase {
     private static let lineY: Int64 = 32_768
 
     /// A world 1,024 m square whose ground stands 20 m high, `track` along
-    /// y = 512 m from 64 m to 960 m at the ground.
-    private func flatWorld(track: Bool) throws -> GameWorld {
+    /// y = 512 m from 64 m to 960 m, its rails' base `trackHeight` metres
+    /// over the sea (the ground's 20 m unless given).
+    private func flatWorld(track: Bool, trackHeight: Int64 = 20) throws -> GameWorld {
         var world = try GameWorld(bounds: WorldBounds(width: 65_536, height: 65_536),
                                   economy: GameEconomy(balance: 100_000_000, costs: testCosts), clock: GameClock(speed: .normal))
         let side = GroundBlock.side
         try world.setGround([try XCTUnwrap(GroundBlock(block: LandBlock(row: 0, column: 0), heights: [Int16](repeating: 20, count: side * side)))])
         if track {
-            let nodes = try [64, 960].map { x in try world.buildTrackNode(at: WorldCoordinate(x: Int64(x) * 64, y: Self.lineY, z: 20 * 64)) }
+            let nodes = try [64, 960].map { x in try world.buildTrackNode(at: WorldCoordinate(x: Int64(x) * 64, y: Self.lineY, z: trackHeight * 64)) }
             try world.buildTrackEdge(from: nodes[0], to: nodes[1], structure: .automatic)
         }
         return world
@@ -137,6 +138,43 @@ final class Map3DRoadBridgeTests: XCTestCase {
         XCTAssertGreaterThan(levels[2] ?? 0, 10, "two levels up: \(levels)")
         XCTAssertGreaterThan(levels[3] ?? 0, 0, "three levels up: \(levels)")
         print("Map3DRoadBridgeTests: road features by bridge level round Taipei Main and Banqiao: \(levels.sorted { $0.key < $1.key })")
+    }
+
+    /// Decision 391 (續篇二, HANDOFF §4.12 第 6 點; the owner: 「路面橋在照高度的時候要不要順便補道路鋪設」):
+    /// a road on the ground across track in a cutting or on an embankment
+    /// ran into it, cut by the cutting and under the bank. It goes over
+    /// now, clear of a train and its wires, ramping up and down at its
+    /// grade, unbroken; across track on the level it stays a level
+    /// crossing.
+    func testARoadCrossingACuttingOrAnEmbankmentGoesOverIt() throws {
+        let lift = Map3DScene.Builder.lift(of: .secondary)
+        for (height, crossing) in [(Int64(18), Map3DRoadBridges.Crossing.overCutting), (22, .overEmbankment), (20, .level)] {
+            let world = try flatWorld(track: true, trackHeight: height)
+            let builder = built(world, roads: [road([(500, 300), (500, 724)]), road([(100, 300), (400, 300)])])
+            XCTAssertEqual(builder.roadBridges.crossings, [crossing: 1], "track at \(height) m")
+            let meshes = meshes(builder)
+            let bed = Float(height) + Map3DScene.railLift - Map3DScene.Builder.bedDrop
+            let over = roadTop(500, 512, in: meshes)
+            if crossing == .level {
+                XCTAssertEqual(try XCTUnwrap(over, "on the level"), 20 + lift, accuracy: 0.01)
+                continue
+            }
+            XCTAssertGreaterThanOrEqual(try XCTUnwrap(over, "over the track at \(height) m"), bed + Map3DRoadBridges.overTrack, "track at \(height) m")
+            // Unbroken, on the ground away from it, never steeper than its grade.
+            var previous = try XCTUnwrap(roadTop(500, 310, in: meshes))
+            XCTAssertEqual(previous, 20 + lift, accuracy: 0.01)
+            XCTAssertEqual(try XCTUnwrap(roadTop(500, 714, in: meshes)), 20 + lift, accuracy: 0.01)
+            for z in stride(from: Float(314), through: 714, by: 4) {
+                let top = try XCTUnwrap(roadTop(500, z, in: meshes), "a road at \(z), track at \(height) m")
+                XCTAssertLessThanOrEqual(abs(top - previous), 4 * Map3DRoadBridges.grade(.secondary) + 0.02, "the grade at \(z)")
+                previous = top
+            }
+            // The road along the track stays on the ground.
+            XCTAssertEqual(try XCTUnwrap(roadTop(250, 300, in: meshes)), 20 + lift, accuracy: 0.01)
+            // Its traffic over the track.
+            let lanes = builder.streetLife.lanes.flatMap(\.path.points)
+            XCTAssertTrue(lanes.contains { abs($0.x - 500) < 1 && abs($0.z - 512) < 2 && $0.y > bed + Map3DRoadBridges.overTrack }, "traffic over it")
+        }
     }
 
     /// The concrete of the bridges (girders, parapets, walls, piers).
@@ -278,5 +316,59 @@ extension Map3DSceneMemoryTests {
               "raised \(after.count) short (most \(after.max() ?? 0) m)")
         XCTAssertGreaterThan(crossings, 20, "bridges cross the line")
         XCTAssertTrue(after.isEmpty, "\(after.count) crossings short of clearing the track, most \(after.max() ?? 0) m")
+    }
+
+    /// Decision 391 (續篇二, HANDOFF §4.12 第 6 點): where the base map's
+    /// roads on the ground cross the demo's track out of a tunnel, the
+    /// whole network. Before, each on an embankment or in a cutting ran
+    /// into it (under the bank, cut by the cutting); now each goes over,
+    /// clear of a train over the bed.
+    func testTheDemosRoadsOnTheGroundGoOverItsEmbankmentsAndCuttings() throws {
+        let world = try HighSpeedDemoTests.opened.get()
+        let tiles = try BaseMapTiles(data: Data(contentsOf: Map3DTrenchTests.root.appendingPathComponent("RailwayGameApp/Resources/BaseMap/taiwan.pmtiles"),
+                                                options: .alwaysMapped))
+        let frame = try XCTUnwrap(RealWorldFrame(world: world))
+        let snapshot = world.railwaySnapshot()
+        let metre = Map3DScene.Builder.metre
+        var builder = Map3DScene.Builder(originX: 0, originY: 0, region: WorldRegion(minX: 0, minY: 0, maxX: 1, maxY: 1), world: world,
+                                         heights: HighSpeedDemoTests.heights)
+        builder.trackCover = Map3DTrackCover(snapshot, builder: &builder)
+        let side = 2_048.0
+        var squares = Set<Map3DScene.ChunkKey>()
+        for piece in builder.trackCover.pieces where !piece.isTunnel {
+            for p in [piece.a, piece.b] { squares.insert(Map3DScene.ChunkKey(column: Int((Double(p.x) / side).rounded(.down)), row: Int((Double(p.z) / side).rounded(.down)))) }
+        }
+        var kinds: [Map3DRoadBridges.Crossing: Int] = [:], banks: [Float] = [], short: [Float] = [], unopened = 0
+        for square in squares.sorted(by: { ($0.row, $0.column) < ($1.row, $1.column) }) {
+            let region = WorldRegion(minX: Double(square.column) * side * metre, minY: Double(square.row) * side * metre,
+                                     maxX: Double(square.column + 1) * side * metre, maxY: Double(square.row + 1) * side * metre)
+            let map = Map3DBaseMap(tiles: tiles, frame: frame, region: region, originX: 0, originY: 0)
+            // The square's own roads on the ground, each crossing counted once.
+            var own = builder
+            own.roadBridges = own.bridgeDecks(of: Map3DBaseMap(roads: map.roads.filter { $0.bridgeLevel == 0 }), frame: frame)
+            for (kind, count) in own.roadBridges.crossings { kinds[kind, default: 0] += count }
+            builder.roadBridges = builder.bridgeDecks(of: map, frame: frame)
+            for join in own.roadBridges.joins {
+                let ground = builder.drawnGround(x: Float(join.point.x), z: Float(join.point.z))
+                let bed = join.height - Map3DRoadBridges.overTrack
+                if bed > ground { banks.append(bed - ground) }
+                let rise = builder.roadRise(at: join.point, along: (join.along.x, join.along.z), onDeck: false).rise
+                if ground + rise < join.height - 0.05 { short.append(join.height - ground - rise) }
+            }
+            // Under an embankment tall enough, the road stays on the
+            // ground and the bank opens over it.
+            for opening in own.roadBridges.openings {
+                let pieces = own.trackCover.pieces.filter { !$0.isTunnel && Map3DRoadBridges.nearest(opening.point, Map3DBaseMap.Point(x: Double($0.a.x), z: Double($0.a.z)),
+                                                                                                 Map3DBaseMap.Point(x: Double($0.b.x), z: Double($0.b.z))).distance < 1 }
+                if !pieces.contains(where: { !own.openings(of: [$0.a, $0.b]).spans.isEmpty }) { unopened += 1 }
+            }
+        }
+        banks.sort()
+        let quartiles = banks.isEmpty ? [] : [0, 0.25, 0.5, 0.75, 1].map { banks[Int(Float(banks.count - 1) * $0)] }
+        print("Map3DSceneMemoryTests: roads on the ground across the demo's track:", kinds.sorted { "\($0.key)" < "\($1.key)" },
+              "; embankments gone over, quartiles", quartiles.map { String(format: "%.1f", $0) })
+        XCTAssertGreaterThan((kinds[.overCutting] ?? 0) + (kinds[.overEmbankment] ?? 0), 20)
+        XCTAssertTrue(short.isEmpty, "\(short.count) crossings short of clearing the track, most \(short.max() ?? 0) m")
+        XCTAssertEqual(unopened, 0, "embankments not open over the road under them")
     }
 }
