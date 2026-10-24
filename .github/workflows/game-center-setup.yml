@@ -1,0 +1,82 @@
+name: Game Center setup
+
+# Creates the game's Game Center leaderboard and achievements in App Store
+# Connect from docs/game-center/game-center.json, with the App Store Connect
+# team API key TestFlight releases use (decision 396). The steps for the
+# owner: docs/GAME_CENTER_SETUP.md, steps 3 and 4.
+#
+# Started only by hand (Actions -> Game Center setup -> Run workflow) and only
+# from main: there is no other trigger, and the job does not run on any other
+# branch. The key lives in the "testflight" environment, which only main may
+# use; pull requests never reach it. "dry-run" (the default) only reads App
+# Store Connect and lists what "apply" would create; "apply" lists the same,
+# then creates it. Nothing App Store Connect already has is changed or
+# deleted. The script is tested with a fake App Store Connect and no secret
+# by testflight-checks.yml.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: >-
+          "dry-run" (default): read App Store Connect and list what would be
+          created; nothing is written. "apply": list the same, then create
+          it. Leaderboards and achievements cannot be deleted once they are
+          live, so read the dry run's list first.
+        type: choice
+        options:
+          - dry-run
+          - apply
+        default: dry-run
+      only:
+        description: >-
+          What to look at: "all" (default), only the "leaderboards", or only
+          the "achievements".
+        type: choice
+        options:
+          - all
+          - leaderboards
+          - achievements
+        default: all
+
+permissions:
+  contents: read
+
+# One run at a time, so two applies never create the same item twice; a
+# running one is never cancelled half way.
+concurrency:
+  group: game-center-setup
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  setup:
+    name: Game Center leaderboard and achievements (${{ inputs.mode }})
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: testflight
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      # The key reaches only this step. The script writes it to a private
+      # temporary file and prints no key, key ID, issuer ID or token.
+      - name: List (and with apply, create) the leaderboard and achievements
+        env:
+          MODE: ${{ inputs.mode }}
+          ONLY: ${{ inputs.only }}
+          ASC_APP_ID: ${{ vars.ASC_APP_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+        run: |
+          arguments=(--only "$ONLY")
+          if [[ "$MODE" == apply ]]; then
+            arguments+=(--apply)
+          fi
+          python3 -I tools/game-center-setup/game_center_setup.py "${arguments[@]}"

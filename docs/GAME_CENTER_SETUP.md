@@ -6,7 +6,7 @@
 ## 順序（重要）
 
 1. **第一個 PR（決策 396 的程式）**：遊戲已經會呼叫 Game Center，但 App 裡**還沒有** Game Center 的 entitlement。這時 Game Center 一律登入失敗，遊戲照舊，不跳任何訊息；TestFlight 照常可以發。
-2. **作者照下面第 1–4 步設定**（Apple Developer 與 App Store Connect）。
+2. **作者照下面第 1–4 步設定**：第 1、2 步在 Apple Developer 與 App Store Connect 按，第 3、4 步在 GitHub 按一次 workflow。
 3. 作者在遊戲規劃 session 說「Game Center 設好了」。
 4. **第二個 PR** 才加 entitlement（`com.apple.developer.game-center`）和成就圖。合併後的下一次 TestFlight，玩家登入 Game Center 就看得到排行榜和成就。
 
@@ -26,11 +26,64 @@
 2. 上方分頁選 **Features（功能）**（有的帳號叫 **Services（服務）**），左邊選 **Game Center**。
 3. 第一次會問要不要用 Game Center：選 **Enable for Single Game（只用在這個遊戲）**。
 
-## 第 3 步：建立每週排行榜（recurring leaderboard）
+## 第 3、4 步：用 GitHub 一次建好排行榜和 38 個成就
 
-在 Game Center 頁面的 **Leaderboards** 旁按 **＋**，選 **Recurring Leaderboard**，照下表填：
+不用一個一個在 App Store Connect 填。GitHub 上的「Game Center setup」會用發 TestFlight 那把 App Store Connect API key，照下面的表建好每週排行榜（含兩種語言）和 38 個成就（含兩種語言與圖）。
 
-| 欄位 | 填什麼 |
+### 先確認 key 的權限（只要看一次）
+
+建 Game Center 的項目，key 的角色要是 **Admin** 或 **App Manager**。發 TestFlight 那把 key 當初建的是 Admin（`docs/TESTFLIGHT_GITHUB_ACTIONS.md`），多半不用改。要確認的話：
+
+1. 打開 <https://appstoreconnect.apple.com>，上方選 **使用者和存取權限（Users and Access）**。
+2. 上方分頁選 **整合（Integrations）**，左邊選 **App Store Connect API**，再選 **團隊金鑰（Team Keys）**。
+3. 找名稱是發 TestFlight 用的那把（例如 `GitHub Actions TestFlight`），看 **存取權限（Access）** 那一欄：寫 **Admin** 或 **App Manager** 就可以。
+
+只看角色就好：不用下載、複製或貼上任何 key，也不用把任何東西給 session。
+
+### 按 Run workflow
+
+1. 打開 <https://github.com/a91453/railway-game-ios/actions>，左邊選 **Game Center setup**。
+2. 右邊按 **Run workflow**：
+   - **Use workflow from**：`main`（只能在 `main` 跑，選別的分支會直接失敗）。
+   - **mode**：先選 **dry-run**。
+   - **only**：**all**。
+   - 按綠色的 **Run workflow**。
+3. 等它跑完（一兩分鐘），點進去，看 **Summary** 的清單。dry run 只讀 App Store Connect，不會建任何東西。清單長這樣：
+   - `排行榜 weekly.days.v2：新建：……`，下面兩行 `加語言 en-US`、`加語言 zh-Hant`。
+   - `成就 achievement.firstFare：新建：First Fare，5 點，不隱藏，不可重複`，下面兩行語言、兩行上傳圖。
+   - 最上面一行是總數：第一次跑應該是「新的項目 39 個、語言 78 個、圖 76 張」。
+4. 清單沒問題，再按一次 **Run workflow**，這次 **mode** 選 **apply**。它會先印出同一份清單，再一個一個建，最後寫「全部建好了」。
+
+**排行榜和成就上線之後就刪不掉了**（隨 App 版本送審通過之後），所以 apply 之前一定先看 dry run 的清單。apply 只是建立，還沒上線：在第 5 步送審之前，都可以在 App Store Connect 自己改或刪。
+
+### 跑第二次也安全
+
+- 已經有的 ID 一律跳過，**不刪、不改** App Store Connect 已經有的任何東西。
+- 已經有的項目跟下面的表不一樣時，清單會寫「注意（不會改）：……」，要改請自己在 App Store Connect 改。
+- 中途失敗（例如網路斷了）：前面建好的會留著，再跑一次 apply 只會補還沒建的。
+
+### 成就圖還沒進 `main` 時
+
+App Store Connect 的成就要有圖。38 張圖在成就圖的 PR（#1158）裡；它合併之前，清單會寫「先不建，the image … is not in the repository yet」，只建排行榜。#1158 合併之後再跑一次（dry run、再 apply），就會建成就。
+
+### 權限不夠或 key 不對
+
+| 看到的錯誤（在失敗的步驟裡） | 原因 | 怎麼辦 |
+| --- | --- | --- |
+| `HTTP 403 (This request is forbidden for security reasons: The API key in use does not allow this request)`，後面接「這把 key 的角色不能建 Game Center 的項目」 | key 的角色不是 Admin 或 App Manager | 照上面「先確認 key 的權限」看角色。角色建好後不能改，要另產生一把 Admin 的 key，照 `docs/TESTFLIGHT_GITHUB_ACTIONS.md` 換掉 `testflight` environment 裡的 secrets（這會換掉發 TestFlight 用的 key） |
+| `HTTP 401 (Authentication credentials are missing or invalid…)` | key 被撤銷，或 secrets 填錯 | 發 TestFlight 也會一起壞，照 `docs/TESTFLIGHT_GITHUB_ACTIONS.md` 檢查 |
+| `this app has no Game Center in App Store Connect yet` | 第 2 步還沒做 | 做第 2 步，再跑 |
+| `ASC_KEY_ID is not set.` 之類 | `testflight` environment 少了 secret | 照 `docs/TESTFLIGHT_GITHUB_ACTIONS.md` 補 |
+| `HTTP 409` 或其他 `HTTP 4xx`，在排行榜那一項 | App Store Connect 不收排行榜的某個欄位 | 告訴遊戲規劃 session 那一行錯誤。成就可以先建：**only** 選 **achievements** 再跑；排行榜也可以照下面的表在 App Store Connect 手動建 |
+
+### 會建的內容
+
+這三張表和工具讀的是同一份資料：`docs/game-center/game-center.json`。要改內容請改那個檔，再執行 `python3 tools/game-center-setup/game_center_setup.py --write-doc` 更新這裡（CI 會檢查兩邊一樣）。
+
+**每週排行榜**（Recurring Leaderboard）：
+
+<!-- leaderboard: generated from docs/game-center/game-center.json by tools/game-center-setup/game_center_setup.py --write-doc; do not edit by hand -->
+| 欄位 | 內容 |
 | --- | --- |
 | Reference Name | `Weekly challenge days v2` |
 | Leaderboard ID | `weekly.days.v2` |
@@ -38,39 +91,27 @@
 | Submission Type | **Best Score** |
 | Sort Order | **Low to High**（天數越少越前面） |
 | Score Range | 最小 `1`、最大 `1080`（最長的挑戰是 3 年） |
-| Start Date | 設定那天之後的**下一個星期一 00:00（台灣時間）**。畫面若是 UTC，就填**前一天（星期日）16:00** |
+| Start Date | 執行那天之後的**下一個星期一 00:00（台灣時間）**（UTC 是前一天星期日 16:00） |
 | Duration | **1 Week** |
 | Restarts Every | **1 Week** |
+<!-- end leaderboard -->
 
-按 **Save**，然後在 **Leaderboard Localization** 按 **＋** 加兩種語言：
+排行榜的兩種語言：
 
+<!-- leaderboard-localizations: generated from docs/game-center/game-center.json by tools/game-center-setup/game_center_setup.py --write-doc; do not edit by hand -->
 | 語言 | Display Name | Score Format | Formatter Suffix（單數／複數） |
 | --- | --- | --- | --- |
 | English (U.S.) | `Weekly Challenge` | Integer | ` day` ／ ` days` |
 | Chinese (Traditional) | `每週挑戰` | Integer | ` 天` ／ ` 天` |
+<!-- end leaderboard-localizations -->
 
-排行榜的圖可以不放（之後第二個 PR 會附一張，想放再放）。
+排行榜的圖不放。
 
-**之後挑戰的目標改了**（程式裡的 `ChallengeRecords.rulesVersion` 換版本）：要另建一個新的排行榜（ID 例如 `weekly.days.v3`），session 會在那個 PR 裡寫好。舊的不用刪。
+**之後挑戰的目標改了**（程式裡的 `ChallengeRecords.rulesVersion` 換版本）：要另建一個新的排行榜（ID 例如 `weekly.days.v3`）。session 會在那個 PR 把它加進 `game-center.json`，作者再跑一次這個 workflow。舊的不用刪。
 
-## 第 4 步：建立 38 個成就
+**38 個成就**：每一個都是 **Hidden** No（遊戲裡的成就清單本來就全部看得到）、**Achievable More Than Once** No；點數共 800 點，Game Center 上限 1,000，留給之後的成就。兩種語言的 **Pre-earned Description** 與 **Earned Description** 都是表裡的說明，**Image** 是 `docs/game-center/achievements/<ID>.png`。
 
-圖：第二個 PR 會把 38 張 1024×1024 的成就圖放進 `docs/game-center/achievements/`（檔名就是成就 ID）。App Store Connect 要圖才能存語言，所以這一步可以等第二個 PR 開了再做。
-
-每一個成就：在 **Achievements** 旁按 **＋**，填：
-
-- **Reference Name**：下表的英文名稱
-- **Achievement ID**：下表的 ID
-- **Point Value**：下表的點數（38 個共 800 點，Game Center 上限 1,000，留給之後的成就）
-- **Hidden**：No（遊戲裡的成就清單本來就全部看得到）
-- **Achievable More Than Once**：No
-
-按 **Save**，再在 **Achievement Localization** 按 **＋** 加兩種語言：
-
-- **Title**：下表的名稱
-- **Pre-earned Description** 與 **Earned Description**：都填下表的說明
-- **Image**：`docs/game-center/achievements/<ID>.png`
-
+<!-- achievements: generated from docs/game-center/game-center.json by tools/game-center-setup/game_center_setup.py --write-doc; do not edit by hand -->
 | # | ID | 點數 | 隱藏 | 中文名稱 | 中文說明 | 英文名稱 | 英文說明 |
 | --: | --- | --: | --- | --- | --- | --- | --- |
 | 1 | `achievement.firstFare` | 5 | 否 | 第一筆票收 | 收到第一位旅客的車資 | First Fare | Take a passenger's first fare |
@@ -111,6 +152,7 @@
 | 36 | `achievement.mixedFleet` | 10 | 否 | 車種齊全 | 車隊有三種以上車種 | Mixed Fleet | Trains of three types |
 | 37 | `achievement.longTrain` | 10 | 否 | 長編組 | 一列 10 節以上的列車 | Long Train | A train of 10 cars or more |
 | 38 | `achievement.fleetInvestment` | 10 | 否 | 車隊投資 | 車隊的購置成本達 $5,000,000 | Rolling Stock Investor | Spend $5,000,000 on trains |
+<!-- end achievements -->
 
 ## 第 5 步：送審的版本加上 Game Center
 
