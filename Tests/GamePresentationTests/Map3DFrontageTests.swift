@@ -166,6 +166,12 @@ final class Map3DFrontageTests: XCTestCase {
 
     // MARK: - The scene
 
+    /// The colours of a road and what holds a raised one up, in the look.
+    private static let raisedRoad: Set<UInt32> = Set(
+        (Map3DBaseMap.RoadKind.allCases.map { Map3DPalette.road($0) } + [Map3DPalette.sidewalk, Map3DPalette.centreLine, Map3DPalette.concrete]
+            + [0.92, 0.82, 0.80, 0.72, 0.70, 0.86].map { Map3DColor.shaded(Map3DPalette.concrete, Float($0)) }).map(Map3DLook.colour)
+    )
+
     /// A real-world map round Kaohsiung's airport: with the airport's
     /// land, nothing but its own buildings stands on it.
     func testNoTownOnTheAirport() throws {
@@ -183,8 +189,10 @@ final class Map3DFrontageTests: XCTestCase {
                 let point = scene.point(worldX: at.x, worldY: at.y, height: 0)
                 return (point.x, point.z)
             }
+            // Decision 391: not the raised roads (the terminal's
+            // departure deck), their girders or piers.
             return scene.chunks.flatMap { [$0.mesh, $0.far] }.reduce(0) { total, mesh in
-                total + mesh.vertices.filter { $0.y > 2.5 && Map3DScene.Builder.NoBuild.inside($0.x, $0.z, ring) }.count
+                total + mesh.vertices.filter { $0.y > 2.5 && !Self.raisedRoad.contains($0.color) && Map3DScene.Builder.NoBuild.inside($0.x, $0.z, ring) }.count
             }
         }
         // What stays on the bare airport is the base map's own buildings.

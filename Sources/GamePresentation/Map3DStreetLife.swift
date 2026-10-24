@@ -640,16 +640,19 @@ extension Map3DScene.Builder {
         let kind = road.kind
         // Every 16 m at most, so the line keeps to the ground; decision
         // 375: in pieces, apart where the road gives way to a trench
-        // (looked at every 2 m near one).
+        // (looked at every 2 m near one, and near a bridge, decision 391).
         var lines: [[Map3DPoint]] = []
         for run in runs {
             var points: [Map3DPoint] = []
             func add(_ x: Double, _ z: Double, along: (x: Double, z: Double)) {
-                if givesWay(at: Map3DBaseMap.Point(x: x, z: z), along: along) {
+                // Decision 391: at the road's height on a bridge or its
+                // ramp, over any trench.
+                let raised = roadRise(at: Map3DBaseMap.Point(x: x, z: z), along: along, onDeck: road.bridgeLevel > 0)
+                if !raised.onBridge && givesWay(at: Map3DBaseMap.Point(x: x, z: z), along: along) {
                     if points.count > 1 { lines.append(points) }
                     points = []
                 } else {
-                    points.append(groundPoint(x: x, z: z, lift: lift))
+                    points.append(groundPoint(x: x, z: z, lift: lift) + Map3DPoint(0, raised.rise, 0))
                 }
             }
             for (index, point) in run.enumerated() {
@@ -662,6 +665,7 @@ extension Map3DScene.Builder {
                 let length = ((point.x - previous.x) * (point.x - previous.x) + (point.z - previous.z) * (point.z - previous.z)).squareRoot()
                 let near = !trackCover.trenches.pieces(minX: min(previous.x, point.x), minZ: min(previous.z, point.z),
                                                        maxX: max(previous.x, point.x), maxZ: max(previous.z, point.z)).isEmpty
+                    || nearRaisedRoad(from: previous, to: point)
                 let along = length > 0.01 ? ((point.x - previous.x) / length, (point.z - previous.z) / length) : (1.0, 0.0)
                 let steps = max(1, Int((length / (near ? 2 : 16)).rounded(.up)))
                 for step in 1...steps {

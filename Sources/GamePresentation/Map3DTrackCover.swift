@@ -28,6 +28,9 @@ public struct Map3DTrackCover: Sendable {
         let opensBefore: Bool
         let opensAfter: Bool
         let isTunnel: Bool
+        /// Decision 391: on a viaduct or bridge, which a road may pass
+        /// under.
+        var isViaduct = false
     }
 
     let pieces: [Piece]
@@ -86,7 +89,8 @@ public struct Map3DTrackCover: Sendable {
                 }
                 for index in 1..<line.count {
                     pieces.append(Piece(a: line[index - 1], b: line[index], groundA: grounds[index - 1], groundB: grounds[index],
-                                        opensBefore: index == 1, opensAfter: index == line.count - 1, isTunnel: span.kind == .tunnel))
+                                        opensBefore: index == 1, opensAfter: index == line.count - 1, isTunnel: span.kind == .tunnel,
+                                        isViaduct: span.kind == .viaduct || span.kind == .bridge))
                 }
             }
         }

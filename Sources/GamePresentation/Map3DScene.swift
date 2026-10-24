@@ -628,6 +628,8 @@ extension Map3DScene {
         /// Decision 359 (續): the whole network's track, for the tunnels
         /// beside a tunnel (``addBore(_:into:)``).
         var trackCover = Map3DTrackCover()
+        /// Decision 391: the base map's road bridges and their decks.
+        var roadBridges = Map3DRoadBridges()
         /// Decision 368: the scene point within ``Map3DScene/detailRadius``
         /// of which the city is built in full; everywhere when `nil`.
         var detail: Map3DPoint?
