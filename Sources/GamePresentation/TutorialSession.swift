@@ -337,7 +337,10 @@ extension GameSession {
             guard tool == .network, let preview = networkPreview else { return false }
             return preview.problem == nil && preview.cost != nil && built + preview.length >= Tutorial.minimumTrackLength && reaches
         case .buildTrack:
+            // Review H: the stretch built, not one still drawn, reaches the
+            // place.
             return newTrackLength(since: before) >= Tutorial.minimumTrackLength
+                && (!holdsForPlaces(before) || newTrackReachesEveryPlace(since: before, drawn: false))
         case .chooseNetworkMode(let mode):
             if tool == .network, networkMode == mode { return true }
             return mode == .platform && newStationCount(since: before) >= 1
@@ -460,15 +463,15 @@ extension GameSession {
     /// to run it from town to town (holding it is in HANDOFF, with the UI
     /// tests that lay it inside one town).
     private func holdsForPlaces(_ before: Tutorial.Snapshot) -> Bool {
-        !before.stations.isEmpty && tutorialPlacesToReach?.places.isEmpty == false
+        before.hadStations && tutorialPlacesToReach?.places.isEmpty == false
     }
 
-    /// Whether the track built since `before`, with the stretch picked,
-    /// passes near every place to reach.
-    private func newTrackReachesEveryPlace(since before: Tutorial.Snapshot) -> Bool {
+    /// Whether the track built since `before`, with the stretch picked
+    /// when `drawn`, passes near every place to reach.
+    private func newTrackReachesEveryPlace(since before: Tutorial.Snapshot, drawn: Bool = true) -> Bool {
         guard let reach = tutorialPlacesToReach else { return true }
         var lines = world.network.edges.filter { !before.edges.contains($0.id) }.compactMap { world.trackGeometry(of: $0.id)?.points }
-        if tool == .network, let preview = networkPreview, preview.problem == nil { lines.append(preview.points) }
+        if drawn, tool == .network, let preview = networkPreview, preview.problem == nil { lines.append(preview.points) }
         return reach.places.allSatisfy { place in lines.contains { Self.passes($0, within: reach.radius, of: place) } }
     }
 

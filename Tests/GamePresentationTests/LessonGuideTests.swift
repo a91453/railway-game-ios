@@ -386,6 +386,51 @@ final class LessonGuideTests: XCTestCase {
         step(resumed, "lesson.7.depot") { resumed.toggleSelectedLineDepot(depot.station) }
     }
 
+    /// Review H: in lesson 2, a short stretch built with ✓ short of the
+    /// third town, then a stretch drawn on to the town, leaves the guide
+    /// at "Tap ✓", not past it: the stretch that reaches is not built yet.
+    func testTheSecondLessonWaitsForTheStretchThatReachesTheTownToBeBuilt() throws {
+        let session = start(2)
+        session.setSpeed(.paused)
+        let town = Lesson.towns(in: session.world.bounds)[2]
+        func distance(_ a: PlanPoint, _ b: PlanPoint) -> Double {
+            let dx = Double(a.x - b.x), dy = Double(a.y - b.y)
+            return (dx * dx + dy * dy).squareRoot()
+        }
+        let nearest = try XCTUnwrap(session.world.stations.min { distance($0.location, town) < distance($1.location, town) })
+        session.selectTool(.network)
+        session.showNextTutorialStep()
+        XCTAssertEqual(session.tutorial?.step.id, "lesson.2.track")
+        let end = try XCTUnwrap(session.world.network.nodes.filter { $0.ends.count == 1 }.map { PlanPoint(x: $0.position.x, y: $0.position.y) }
+            .min { distance($0, nearest.location) < distance($1, nearest.location) })
+        session.tapNetwork(at: end, reach: Self.reach)
+        session.tapNetwork(at: PlanPoint(x: (end.x + town.x) / 2, y: (end.y + town.y) / 2), reach: Self.reach)
+        XCTAssertFalse(session.isTutorialStepDone)
+        session.buildNetworkTrack()
+        let edges = session.world.network.edges.count
+        session.tapNetwork(at: town, reach: Self.reach)
+        XCTAssertTrue(session.isTutorialStepDone, "the stretch drawn reaches the town")
+        session.showNextTutorialStep()
+        XCTAssertEqual(session.tutorial?.step.id, "track.build")
+        XCTAssertFalse(session.isTutorialStepDone, "the stretch that reaches the town is not built yet")
+        XCTAssertEqual(session.world.network.edges.count, edges)
+        session.buildNetworkTrack()
+        XCTAssertTrue(session.isTutorialStepDone)
+    }
+
+    /// Review H: lesson 2 taken up again at its track step (the app closed
+    /// there) still waits for track to the third town, as a lesson never
+    /// left does: the railway the lesson began with is not that track.
+    func testTheSecondLessonTakenUpAgainStillWaitsForTrackToTheTown() throws {
+        let session = GameSession(world: .newGame(lesson: Lesson.all[1]), language: .english)
+        session.setSpeed(.paused)
+        session.keepTutorialToResume(atStep: "lesson.2.track")
+        session.resumeTutorial()
+        XCTAssertEqual(session.tutorial?.step.id, "lesson.2.track")
+        session.selectTool(.network)
+        XCTAssertFalse(session.isTutorialStepDone, "nothing is built toward the third town")
+    }
+
     /// Lesson 8: a freight yard at two stations, through the station
     /// panel, then a freight line between them from the new line's card.
     func testTheEighthLessonsGuide() throws {
