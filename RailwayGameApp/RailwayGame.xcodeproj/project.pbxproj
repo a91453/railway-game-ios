@@ -292,6 +292,7 @@
 		6F8DA1B59CC2DD5AF84AEA1C /* PromotionLineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromotionLineView.swift; sourceTree = "<group>"; };
 		70170091E76358BF8886BB8E /* Map3DSurfaces.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Map3DSurfaces.png; sourceTree = "<group>"; };
 		71EB126E20DDE2A8668CD619 /* NextStepChipUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextStepChipUITests.swift; sourceTree = "<group>"; };
+		76E2973BBBB24FACFFCBE7AD /* RailwayGame.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = RailwayGame.entitlements; sourceTree = "<group>"; };
 		771361B568387359268A6B83 /* RollingStockCatalogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RollingStockCatalogView.swift; sourceTree = "<group>"; };
 		782C96DBD713D96F9EADF2EE /* Map3DSigns.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Map3DSigns.png; sourceTree = "<group>"; };
 		787EB9DDCEED2E78C0E0E237 /* FinanceTrendCharts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinanceTrendCharts.swift; sourceTree = "<group>"; };
@@ -462,6 +463,7 @@
 				E6EEB9DC1C736BE4F98AD2BC /* GameAudio.swift */,
 				81D9DBA602A1D4B5ECC848F8 /* GameCenterLink.swift */,
 				1F535381372C4F02DE0EF39B /* ICloudSaveFolder.swift */,
+				76E2973BBBB24FACFFCBE7AD /* RailwayGame.entitlements */,
 				9D5672CF6C6C6FF4659709AE /* RailwayGameApp.swift */,
 			);
 			path = App;
@@ -1062,6 +1064,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = App/RailwayGame.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -1227,6 +1230,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = App/RailwayGame.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
