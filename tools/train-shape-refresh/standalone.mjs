@@ -14,6 +14,6 @@ let html=readFileSync(resolve(source,'viewer.html'),'utf8');
 html=html.replace("import {NativeRenderer} from './renderer.js';",renderer)
  .replace("response=await fetch('manifest.json')",'response=new Response('+JSON.stringify(JSON.stringify(manifest))+')')
  .replace(/<a id="zip"[^>]*>.*?<\/a>/,'<span class="tag">完整 ZIP 請另行下載</span>')
- .replace("$('glb').href=asset.glb;$('native').href=asset.native;","$('glb').href=asset.glb;$('glb').download=asset.id+'.glb';$('native').href=asset.native;$('native').download=asset.id+'.m3dmodel';");
+ .replace("$('glb').href=asset.glb;$('native').href=asset.native;","$('glb').href=asset.glb;$('glb').download=asset.id+'.glb';$('native').href=asset.native;$('native').download=asset.id+(asset.native_kind==='assembly'?'.m3dscene.json':'.m3dmodel');");
 writeFileSync(resolve(root,'viewer-standalone.html'),html);
 console.log('Created self-contained offline viewer; native / GLB / PNG downloads embedded.');

@@ -8,6 +8,7 @@ const {chromium}=createRequire(import.meta.url)('playwright');
 const source=dirname(fileURLToPath(import.meta.url)),root=resolve(process.argv[2]);
 const manifest=JSON.parse(readFileSync(resolve(root,'manifest.json'))),sha=b=>createHash('sha256').update(b).digest('hex');
 copyFileSync(resolve(source,'../station-kit/renderer.js'),resolve(root,'renderer.js'));
+writeFileSync(resolve(root,'renderer.js'),readFileSync(resolve(source,'scene.js'),'utf8').replace('export function assemblyNative','function assemblyNative')+'\n'+readFileSync(resolve(root,'renderer.js'),'utf8').replace(' load(buffer){',' prepare(buffer){return assemblyNative(buffer);}\n load(buffer){buffer=assemblyNative(buffer);').replace('count>15000','count>200000'));
 // This batch adds an explicit metre/pixel option without changing the shared renderer.
 const rendererPath=resolve(root,'renderer.js');writeFileSync(rendererPath,readFileSync(rendererPath,'utf8').replace('zoom=1,vector}={}', 'zoom=1,vector,metresPerPixel}={}').replace('const radius=Math.max(', 'const radius=metresPerPixel ? height*metresPerPixel/2/zoom : Math.max('));
 copyFileSync(resolve(source,'viewer.html'),resolve(root,'index.html'));
@@ -45,7 +46,7 @@ try {
   }
  }
  if(errors.length)throw Error(errors.join('\n'));
- manifest.render_verification={backend:'Chromium WebGL2, exact native vertices',views:49,transparent:true,nonempty:true,unclipped:true,scale:'same metres/pixel for all seven views of each model; all seven modules share one scale'};
+ manifest.render_verification={backend:'Chromium WebGL2, exact native vertices',views:49,transparent:true,nonempty:true,unclipped:true,scale:'same metres/pixel for all seven views of each model; all five new units share one scale'};
  writeFileSync(resolve(root,'manifest.json'),JSON.stringify(manifest,null,2)+'\n');
  const html='<style>body{font:18px system-ui;color:#262c57;background:#eceef6;margin:24px}h1{font-size:28px}.row{display:flex;gap:12px}.row>div{background:white;border-radius:12px;padding:10px;flex:1;min-width:0;text-align:center}img{width:100%;object-fit:contain}</style>';
  async function sheet(name,body){await page.setContent('<meta charset="utf-8"><base href="'+address+'/">'+html+body);await page.evaluate(()=>Promise.all([...document.images].map(i=>i.decode())));await page.screenshot({path:resolve(root,'previews',name),fullPage:true});}

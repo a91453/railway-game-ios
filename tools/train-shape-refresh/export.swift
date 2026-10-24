@@ -6,11 +6,31 @@ let output = URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true)
 let models = output.appendingPathComponent("models", isDirectory: true)
 try FileManager.default.createDirectory(at: models, withIntermediateDirectories: true)
 var records: [[String: Any]] = []
+var nativeUnits: [String:String] = [:]
 @MainActor func export(_ model: Map3DModelPack.Model, category: String, family: String = "comparison") throws {
+    if category == "formation" {
+        let ids=Map3DTrainShapeRefresh.ids
+        let placements: [[String:Any]]=(0..<12).map { i in
+            let id=i == 0 ? ids[1] : i == 11 ? ids[4] : [3,8].contains(i) ? ids[3] : ids[2]
+            return ["unit":id,"translation":[Float(11-2*i)*12.7,Float(0),Float(0)]]
+        }
+        var expected=Data()
+        func appendWord(_ n: UInt32) { for shift: UInt32 in [0,8,16,24] { expected.append(UInt8((n>>shift)&255)) } }
+        for i in stride(from:0,to:model.vertices.count,by:3) {
+            let triangle=model.vertices[i..<i+3];appendWord(triangle.contains { $0.glows } ? 1:0)
+            for v in triangle { appendWord(v.x.bitPattern);appendWord(v.y.bitPattern);appendWord(v.z.bitPattern);appendWord(v.color) }
+        }
+        try expected.write(to:output.appendingPathComponent("assembly-expected.bin"))
+        let scene: [String:Any] = ["format":"M3DAssembly","version":1,"coordinates":"metres +X front +Y left +Z up","units":nativeUnits,"placements":placements]
+        let file="models/\(model.name).m3dscene.json"
+        try JSONSerialization.data(withJSONObject:scene,options:[.sortedKeys]).write(to:output.appendingPathComponent(file))
+        records.append(["id":model.name,"name":model.name,"category":category,"family":family,"native":file,"native_kind":"assembly","assembly_expected":"assembly-expected.bin","triangles":model.triangleCount,"minimum":[model.minimum.x,model.minimum.y,model.minimum.z],"maximum":[model.maximum.x,model.maximum.y,model.maximum.z]])
+        return
+    }
     guard model.triangleCount > 0, model.triangleCount <= Map3DModelFile.maximumTriangles else { fatalError("triangle budget") }
     let provenance: [String: Any] = [
         "asset": ["generator": "native-train-shape-refresh-export", "version": "1.0"],
-        "extras": ["assetId": model.name, "recipeVersion": 1, "source": category == "comparison" ? "existing-project-style-comparison" : "photo-led-e200-and-700t-static-reconstruction", "coordinateSystem": "metres; +x front, +y left, +z up"]
+        "extras": ["assetId": model.name, "recipeVersion": 2, "source": category == "comparison" ? "existing-project-style-comparison" : "photo-led-e200-and-700t-static-reconstruction", "coordinateSystem": "metres; +x front, +y left, +z up"]
     ]
     let metadata = try JSONSerialization.data(withJSONObject: provenance, options: .sortedKeys)
     var data = Data("M3DM".utf8)
@@ -30,13 +50,14 @@ var records: [[String: Any]] = []
               abs(a.nx - b.nx) < 0.00001, abs(a.ny - b.ny) < 0.00001, abs(a.nz - b.nz) < 0.00001 else { fatalError("readback mismatch") }
     }
     try data.write(to: models.appendingPathComponent(model.name + ".m3dmodel"), options: .atomic)
+    nativeUnits[model.name]=data.base64EncodedString()
     records.append(["id": model.name, "name": model.name, "category": category, "family": family, "native": "models/\(model.name).m3dmodel", "triangles": model.triangleCount,
                     "minimum": [model.minimum.x, model.minimum.y, model.minimum.z], "maximum": [model.maximum.x, model.maximum.y, model.maximum.z]])
 }
 for id in Map3DTrainShapeRefresh.ids { try export(Map3DTrainShapeRefresh.model(id), category: "section", family: "refresh") }
 try export(Map3DTrainShapeRefresh.formation(), category: "formation", family: "refresh")
 try export(Map3DFourCarMetro.model(.leading), category: "comparison")
-let manifest: [String: Any] = ["schema_version": 1, "generator": "native-train-shape-refresh-export", "recipe_version": 1, "model_count": records.count,
+let manifest: [String: Any] = ["schema_version": 1, "generator": "native-train-shape-refresh-export", "recipe_version": 2, "model_count": records.count,
     "native_coordinates": "metres; +x front, +y left, +z up", "gltf_coordinates": "metres; +x front, +y up, -z left",
     "directions": ["top", "bottom", "left", "right", "front", "back", "isometric"], "models": records,
     "assemblies": ["refresh": ["centres_x_m": (0..<12).map { Float(11-2*$0)*12.7 }, "body_gap_m": 0.4, "note": "Display estimates; two cabs and ten middle cars, pantographs on cars 4 and 9"]],

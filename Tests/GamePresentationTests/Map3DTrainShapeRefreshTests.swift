@@ -27,9 +27,21 @@ final class Map3DTrainShapeRefreshTests: XCTestCase {
             XCTAssertEqual(a.z,b.z,accuracy:0.00001)
         }
     }
+    func testPassengerGlassHasRoundedCornersInsteadOfRectangle() {
+        let m=Map3DTrainShapeRefresh.model("refresh-700t-middle")
+        let glass=Map3DColor.shaded(Map3DPalette.glazing,0.5)
+        let pane=m.vertices.filter { $0.color==glass && $0.x > -9.56 && $0.x < -9.04 && $0.y>1.0 }
+        XCTAssertFalse(pane.isEmpty)
+        let xs=Set(pane.map { Int(($0.x*10000).rounded()) })
+        let heights=Set(pane.map { Int(($0.z*10000).rounded()) })
+        XCTAssertGreaterThan(xs.count,4)
+        XCTAssertGreaterThan(heights.count,4)
+        let low=pane.map(\.z).min()!,left=pane.map(\.x).min()!
+        XCTAssertFalse(pane.contains { abs($0.z-low)<0.001 && abs($0.x-left)<0.001 },"Square lower glass corner returned")
+    }
     func testAssemblyUsesExactFinalUnitsWithStableVertexColors() {
         let train=Map3DTrainShapeRefresh.formation()
-        XCTAssertLessThanOrEqual(train.triangleCount,15000)
+        XCTAssertGreaterThan(train.triangleCount,15000) // Rebuilt from legal independent native units, not one native file.
         var offset=0
         for i in 0..<12 {
             let id=i == 0 ? "refresh-700t-cab" : i == 11 ? "refresh-700t-tail" : [3,8].contains(i) ? "refresh-700t-panto" : "refresh-700t-middle"

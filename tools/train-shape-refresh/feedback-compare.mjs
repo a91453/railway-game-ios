@@ -1,5 +1,5 @@
 // Compare two actual exported native formations with identical camera bounds.
-// The prior export is an input supplied at runtime and never enters the ZIP.
+// The actual prior delivery is preserved separately under history/.
 import {createServer} from 'node:http';
 import {copyFileSync,readFileSync,writeFileSync,unlinkSync} from 'node:fs';
 import {resolve,extname} from 'node:path';
@@ -7,12 +7,14 @@ import {createRequire} from 'node:module';
 const {chromium}=createRequire(import.meta.url)('playwright');
 const current=resolve(process.argv[2]),prior=resolve(process.argv[3]);
 if(!prior)throw Error('Usage: node feedback-compare.mjs CURRENT_EXPORT PRIOR_EXPORT');
-const electric=process.argv[4]==='e200';
-const family=electric?'e200':process.argv[4]==='cab'?'blue-cab':'blue',label=electric?'E200 端面／前窗修訂':'700T 鼻部／風擋修訂';
-const model=electric?'models/refresh-e200.m3dmodel':process.argv[4]==='cab'?'models/refresh-700t-cab.m3dmodel':'models/refresh-700t-formation.m3dmodel';
+const mode=process.argv[4]||'formation',electric=mode==='e200';
+const id=electric?'refresh-e200':mode==='formation'?'refresh-700t-formation':'refresh-700t-'+mode;
+const family=electric?'e200':mode==='cab'?'blue-cab':'700t-'+mode,label=electric?'E200 端面／輪架／屋頂修訂':'700T 曲面／門窗／走行部修訂';
+const currentModel=JSON.parse(readFileSync(resolve(current,'manifest.json'))).models.find(m=>m.id===id);
+const priorModel=JSON.parse(readFileSync(resolve(prior,'manifest.json'))).models.find(m=>m.id===id);
 const before='_feedback-before.m3dmodel',after='_feedback-after.m3dmodel',html='_feedback.html';
-copyFileSync(resolve(prior,model),resolve(current,before));
-copyFileSync(resolve(current,model),resolve(current,after));
+copyFileSync(resolve(prior,priorModel.native),resolve(current,before));
+copyFileSync(resolve(current,currentModel.native),resolve(current,after));
 writeFileSync(resolve(current,html),'<canvas id="canvas"></canvas><script type="module">import{NativeRenderer}from"./renderer.js";window.renderer=new NativeRenderer(document.getElementById("canvas"));window.ready=true;</script>');
 const server=createServer((req,res)=>{try{const p=resolve(current,'.'+decodeURIComponent(new URL(req.url,'http://localhost').pathname));if(!p.startsWith(current+'/'))throw Error();res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.png':'image/png'})[extname(p)]||'application/octet-stream');res.end(readFileSync(p));}catch{res.writeHead(404);res.end();}});
 await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;

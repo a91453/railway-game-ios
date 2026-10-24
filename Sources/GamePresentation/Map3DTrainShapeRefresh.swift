@@ -31,26 +31,41 @@ extension StationKitBuilder {
     private var refreshTeal: UInt32 { Map3DPalette.shopAwnings[0] }
     private var refreshGlass: UInt32 { Map3DColor.shaded(Map3DPalette.glazing,0.5) }
     private mutating func refreshRunning(_ centres: [Float], axles: [Float], radius: Float, gauge: Float) {
-        // Six-sided wheel cross sections have extrema at sin(60°).
-        let contactHeight=radius*sqrtf(3)/2
+        // Twelve-sided cross sections include the true bottom contact point.
+        let contactHeight=radius
         for x in centres {
             box(x,0.49,0,axles.last! - axles.first! + 0.8,gauge+0.22,0.25,Self.ink)
             for dx in axles {
                 civicTube(Map3DPoint(x+dx,contactHeight,-gauge/2),Map3DPoint(x+dx,contactHeight,gauge/2),radius:0.075,color:Self.steel,sides:6)
                 for s: Float in [-1,1] {
-                    civicTube(Map3DPoint(x+dx,contactHeight,s*(gauge/2-0.04)),Map3DPoint(x+dx,contactHeight,s*(gauge/2+0.15)),radius:radius,color:Map3DStreetModel.tyre,sides:6)
+                    civicTube(Map3DPoint(x+dx,contactHeight,s*(gauge/2-0.04)),Map3DPoint(x+dx,contactHeight,s*(gauge/2+0.15)),radius:radius,color:Map3DStreetModel.tyre,sides:12)
                 }
             }
             box(x,0.72,0,1.2,gauge,0.35,Self.steel)
+            for side: Float in [-1,1] {
+                let outer=side*(gauge/2+0.22)
+                box(x,0.48,outer,axles.last!-axles.first!+0.74,0.16,0.23,Self.steel)
+                for dx in axles {
+                    box(x+dx,0.36,outer,0.37,0.19,0.28,Self.ink)
+                    civicTube(Map3DPoint(x+dx,contactHeight,outer),Map3DPoint(x+dx,contactHeight,outer+side*0.035),radius:radius*0.43,color:Self.steel,sides:12)
+                    for coil: Float in [-0.3,0.3] { cylinder(x+dx+coil,0.58,outer,radius:0.10,height:0.23,color:Self.ink,sides:8) }
+                }
+            }
         }
     }
-    private mutating func refreshPanto(_ x: Float, roof: Float) {
+    private mutating func refreshPanto(_ x: Float, roof: Float, singleArm: Bool = false) {
         box(x,roof,0,1.8,1.15,0.12,Self.steel)
         for z: Float in [-0.43,0.43] {
             cylinder(x,roof+0.12,z,radius:0.12,height:0.18,color:refreshWhite,sides:8)
-            for sign: Float in [-1,1] {
-                beam(Map3DPoint(x,roof+0.28,z),Map3DPoint(x+sign*0.65,roof+0.57,z),0.045,Self.ink)
-                beam(Map3DPoint(x+sign*0.65,roof+0.57,z),Map3DPoint(x,roof+0.9,z),0.045,Self.ink)
+            if singleArm {
+                let hand: Float = x>=0 ? 1:-1
+                beam(Map3DPoint(x-hand*0.45,roof+0.28,z),Map3DPoint(x+hand*0.65,roof+0.58,z),0.055,Self.ink)
+                beam(Map3DPoint(x+hand*0.65,roof+0.58,z),Map3DPoint(x,roof+0.90,z),0.045,Self.ink)
+            } else {
+                for sign: Float in [-1,1] {
+                    beam(Map3DPoint(x,roof+0.28,z),Map3DPoint(x+sign*0.65,roof+0.57,z),0.045,Self.ink)
+                    beam(Map3DPoint(x+sign*0.65,roof+0.57,z),Map3DPoint(x,roof+0.9,z),0.045,Self.ink)
+                }
             }
         }
         box(x,roof+0.88,0,0.16,1.5,0.07,Self.steel)
@@ -80,22 +95,32 @@ extension StationKitBuilder {
             for x: Float in [-7.2,7.2] {
                 box(x,1.3,s*1.49,0.63,0.018,2.05,Map3DPalette.tankWhite)
                 box(x,2.65,s*1.502,0.44,0.012,0.57,refreshGlass)
-                box(x+(x>0 ? 0.63:-0.63),2.73,s*1.49,0.53,0.02,0.55,refreshGlass)
+                box(x+(x>0 ? 0.65:-0.65),2.73,s*1.49,0.84,0.02,0.59,refreshGlass)
             }
-            // Recessed-looking engine-room seams, not oversized vent boxes.
-            for x: Float in [-4.5,-2.7,-0.9,0.9,2.7,4.5] {
-                box(x,2.86,s*1.49,1.45,0.014,0.39,Self.steel)
-                for j in 0..<5 { box(x,2.9+Float(j)*0.063,s*1.5,1.34,0.008,0.019,refreshWhite) }
+            // Photo shows broad smooth side panels; vents belong on the roof.
+            for x: Float in [-5.9,0,5.9] {
+                box(x,1.35,s*1.493,0.025,0.014,2.0,Self.steel)
+                for h: Float in [1.62,2.16,2.74,3.15] { box(x, h,s*1.502,0.06,0.018,0.055,Self.ink) }
             }
             let x=s*half
             // Two front windows; face panel is almost upright below shoulder.
             for z: Float in [-0.68,0.68] {
-                for (lo,hi): (Float,Float) in [(2.96,3.35),(3.35,3.61)] {
-                    func front(_ h: Float)->Float { x-s*max(0,h-3.35)*0.18/0.57+s*0.022 }
-                    let p=[Map3DPoint(front(lo),lo,z-0.58),Map3DPoint(front(lo),lo,z+0.58),Map3DPoint(front(hi),hi,z+0.58),Map3DPoint(front(hi),hi,z-0.58)]
+                let outline=refreshRoundedOutline(x:z,y:3.285,width:1.16,height:0.65,radius:0.075)
+                for upper in [false,true] {
+                    var clipped: [(Float,Float)]=[]
+                    for i in outline.indices {
+                        let a=outline[i],b=outline[(i+1)%outline.count]
+                        let ia=upper ? a.1>=3.35:a.1<=3.35,ib=upper ? b.1>=3.35:b.1<=3.35
+                        if ia { clipped.append(a) }
+                        if ia != ib { let t=(3.35-a.1)/(b.1-a.1);clipped.append((a.0+(b.0-a.0)*t,3.35)) }
+                    }
+                    let p=clipped.map { lateral,h in Map3DPoint(x-s*max(0,h-3.35)*0.18/0.57+s*0.022,h,lateral) }
                     refreshPanel(p,thickness:0.025,color:refreshGlass)
                 }
-                box(x,3.68,z*0.3,0.035,0.22,0.19,Map3DPalette.platformEdge)
+            }
+            box(x-s*0.12,3.70,0,0.24,0.62,0.18,Self.steel)
+            for z: Float in [-0.15,0.15] {
+                civicTube(Map3DPoint(x-s*0.01,3.79,z),Map3DPoint(x+s*0.035,3.79,z),radius:0.095,color:Map3DPalette.tunnelLamp,sides:12)
             }
             for z: Float in [-1,1] {
                 beam(Map3DPoint(x+s*0.02,2.66,z*1.35),Map3DPoint(x+s*0.02,1.91,0),0.065,refreshWhite)
@@ -103,83 +128,156 @@ extension StationKitBuilder {
             box(x,0.54,0,0.11,2.55,0.48,Self.steel)
             box(x+s*0.15,0.83,0,0.44,0.34,0.22,Self.ink)
         }
-        for x: Float in [-4.8,4.8] { refreshPanto(x,roof:3.92) }
-        box(0,3.92,0,5.8,1.9,0.13,Self.steel)
+        for x: Float in [-4.8,4.8] { refreshPanto(x,roof:3.92,singleArm:true) }
+        // E201 source study: asymmetric roof equipment, rebuilt in simple solids.
+        // Its source mesh/texture is not copied and its dimensions are not used.
+        box(1.72,3.92,0,3.85,1.88,0.14,Self.steel)
+        box(1.72,4.06,0,3.58,1.55,0.23,refreshWhite)
+        for side: Float in [-1,1] { for i in 0..<3 {
+            box(0.55+Float(i)*1.14,4.11,side*0.786,1.00,0.025,0.14,Self.ink)
+            for j in 0..<4 { box(0.55+Float(i)*1.14,4.12+Float(j)*0.033,side*0.804,0.94,0.012,0.009,Self.steel) }
+        } }
+        for x: Float in [-7.45,7.45] {
+            box(x,3.92,0,0.9,1.3,0.18,refreshWhite)
+            cylinder(x,4.10,0,radius:0.43,height:0.035,color:Self.ink,sides:16)
+            for j in -2...2 { box(x+Float(j)*0.14,4.14,0,0.025,0.70,0.018,Self.steel) }
+        }
+        for lateral: Float in [-0.47,0.47] {
+            box(-2.15,3.92,lateral,2.75,0.28,0.10,Self.steel)
+            for i in 0..<9 { cylinder(-3.2+Float(i)*0.26,4.02,lateral,radius:0.10,height:0.19,color:refreshWhite,sides:8) }
+        }
+        for sign: Float in [-1,1] { for x: Float in [-7.15,7.15] {
+            for j in 0..<3 { box(x,0.56+Float(j)*0.22,sign*1.39,0.64,0.24,0.07,Self.steel) }
+            for dx: Float in [-0.30,0.30] { beam(Map3DPoint(x+dx,0.55,sign*1.4),Map3DPoint(x+dx,1.3,sign*1.4),0.045,Self.ink) }
+        } }
+        box(0,0.38,0,4.9,1.95,0.59,Self.steel)
+        for side: Float in [-1,1] { for j in 0..<9 { box(-2.1+Float(j)*0.52,0.52,side*0.987,0.33,0.025,0.27,Self.ink) } }
+        for x: Float in [-3.45,3.45] {
+            cylinder(x,3.92,0,radius:0.16,height:0.43,color:refreshWhite,sides:10)
+            for j in 0..<4 { cylinder(x,4.00+Float(j)*0.085,0,radius:0.20,height:0.035,color:Self.steel,sides:10) }
+        }
+        beam(Map3DPoint(-4.8,4.17,0.43),Map3DPoint(4.8,4.17,0.43),0.04,Self.ink)
     }
     mutating func refreshHighSpeed(cab: Bool,panto: Bool) {
-        // Display dimensions: 25 m body, 3.38 m wide, 3.65 m roof.
-        // Nose has a broad low tip and a rising cockpit, not an ellipsoid cap.
-        let inside=Map3DPoint(0,2,0), segments=24
-        let xs: [Float] = cab ? [-12.5,-10,-6,0,4.7,5.4,6.2,7,7.8,8.6,9.4,10.2,11,11.7,12.2,12.45,12.5] : [-12.5,12.5]
-        func ring(_ x: Float)->[Map3DPoint] {
-            let t=cab ? max(0,(x-4.7)/7.8):0
-            let h: Float = 3.65-2.55*(t*t*(3-2*t))
-            let width: Float = max(0.025,1.69*sqrtf(max(0,1-powf(t,6))))
-            return (0..<segments).map { i in
-                let a=Float(i)*2*Float.pi/Float(segments),c=cosf(a),s=sinf(a)
-                let z=width*(c>=0 ? 1:-1)*powf(abs(c),0.58)
-                let y: Float=0.78+(h-0.78)*(0.5+0.5*(s>=0 ? 1:-1)*powf(abs(s),0.65))
-                return Map3DPoint(x,y,z)
+        let segments=40, bottom: Float=0.78
+        let xs: [Float] = cab ? [-12.5,-6,0,5.8,6.3,6.7,7.1,7.5,7.9,8.3,8.7,9.1,9.5,10,10.5,11,11.5,11.9,12.2,12.4,12.5] : [-12.5,12.5]
+        func interpolate(_ t: Float,_ points: [(Float,Float)])->Float {
+            for i in 1..<points.count where t<=points[i].0 {
+                let a=points[i-1],b=points[i]
+                return a.1+(b.1-a.1)*(t-a.0)/(b.0-a.0)
+            }
+            return points.last!.1
+        }
+        func dimensions(_ x: Float)->(Float,Float) {
+            if !cab || x<=5.8 { return (3.65,1.69) }
+            let t=(x-5.8)/6.7
+            let h=interpolate(t,[(0,3.65),(0.16,3.65),(0.28,3.52),(0.40,3.16),(0.52,2.69),(0.65,2.12),(0.80,1.60),(0.92,1.34),(1,1.18)])
+            let w=interpolate(t,[(0,1.69),(0.3,1.69),(0.5,1.66),(0.7,1.54),(0.85,1.32),(0.95,0.90),(0.985,0.48),(1,0.08)])
+            return (h,w)
+        }
+        func surface(_ x: Float,_ a: Float)->Map3DPoint {
+            let (h,w)=dimensions(x),c=cosf(a),s=sinf(a)
+            let z=w*(c>=0 ? 1:-1)*powf(abs(c),0.58)
+            let y=bottom+(h-bottom)*(0.5+0.5*(s>=0 ? 1:-1)*powf(abs(s),0.65))
+            return Map3DPoint(x,y,z)
+        }
+        let rings=xs.map { x in (0..<segments).map { surface(x,Float($0)*2*Float.pi/Float(segments)) } }
+        for k in 0..<rings.count-1 {
+            let h=(dimensions(xs[k]).0+dimensions(xs[k+1]).0)/2
+            let inside=Map3DPoint((xs[k]+xs[k+1])/2,(bottom+h)/2,0)
+            for i in 0..<segments {
+                let j=(i+1)%segments
+                let color: UInt32 = (24...35).contains(i) ? Self.steel : [21,22,23,36,37,38].contains(i) ? refreshTeal:refreshWhite
+                face([rings[k][i],rings[k][j],rings[k+1][j]],inside:inside,color:color)
+                face([rings[k][i],rings[k+1][j],rings[k+1][i]],inside:inside,color:color)
             }
         }
-        let rings=xs.map(ring)
-        for k in 0..<rings.count-1 { for i in 0..<segments {
-            let j=(i+1)%segments
-            let localCentre=Map3DPoint((xs[k]+xs[k+1])/2,(rings[k].map(\.y).max()!+rings[k+1].map(\.y).max()!+1.56)/4,0)
-            let color: UInt32 = (14...21).contains(i) ? Self.steel : [12,13,22,23].contains(i) ? refreshTeal:refreshWhite
-            face([rings[k][i],rings[k][j],rings[k+1][j]],inside:localCentre,color:color)
-            face([rings[k][i],rings[k+1][j],rings[k+1][i]],inside:localCentre,color:color)
-        } }
-        face(rings[0],inside:inside,color:refreshWhite);face(rings.last!,inside:inside,color:refreshWhite)
-        refreshRunning([-8.8, cab ? 3.4:8.8],axles:[-1.25,1.25],radius:0.40,gauge:1.435)
-        box(0,0.92,0,cab ? 17:23.8,2.55,0.12,Self.ink)
-        // Conformal window and door solids follow the actual cross section.
+        face(rings[0],inside:Map3DPoint(0,2,0),color:refreshWhite)
+        face(rings.last!,inside:Map3DPoint(0,2,0),color:refreshWhite)
+        refreshRunning([-8.8,cab ? 3.4:8.8],axles:[-1.25,1.25],radius:0.40,gauge:1.435)
+        box(cab ? -3.7:0,0.92,0,cab ? 17.4:23.8,2.55,0.12,Self.ink)
         func flank(_ h: Float)->Float {
-            let s=(h-0.78)/(3.65-0.78)*2-1
+            let s=(h-bottom)/(3.65-bottom)*2-1
             return 1.69*powf(max(0,1-powf(abs(s),2/0.65)),0.58/2)
         }
         for sign: Float in [-1,1] {
             box(cab ? -3.7:0,0.55,sign*1.42,cab ? 17.4:23.8,0.09,0.67,Self.steel)
+            func side(_ x: Float,_ h: Float,_ offset: Float)->Map3DPoint { Map3DPoint(x,h,sign*(flank(h)+offset)) }
             for i in 0..<(cab ? 12:18) {
                 let x: Float = -9.3+Float(i)*0.81
-                let bottom: Float=2.0,top: Float=2.69
-                let p=[Map3DPoint(x-0.25,bottom,sign*(flank(bottom)+0.014)),Map3DPoint(x+0.25,bottom,sign*(flank(bottom)+0.014)),Map3DPoint(x+0.25,top,sign*(flank(top)+0.014)),Map3DPoint(x-0.25,top,sign*(flank(top)+0.014))]
-                refreshPanel(p,thickness:0.025,color:refreshGlass)
+                let gasket=refreshRoundedOutline(x: x,y:2.345,width:0.56,height:0.75,radius:0.12)
+                refreshPanel(gasket.map { side($0.0,$0.1,0.012) },thickness:0.028,color:Self.ink)
+                let pane=refreshRoundedOutline(x:x,y:2.345,width:0.49,height:0.68,radius:0.10)
+                refreshPanel(pane.map { side($0.0,$0.1,0.024) },thickness:0.028,color:refreshGlass)
             }
             for x: Float in cab ? [-11,3.1]:[-11,11] {
-                for k in 0..<3 {
-                    let lo: Float=1.1+Float(k)*0.6267,hi=lo+0.6267
-                    let p=[Map3DPoint(x-0.38,lo,sign*(flank(lo)+0.014)),Map3DPoint(x+0.38,lo,sign*(flank(lo)+0.014)),Map3DPoint(x+0.38,hi,sign*(flank(hi)+0.014)),Map3DPoint(x-0.38,hi,sign*(flank(hi)+0.014))]
-                    refreshPanel(p,thickness:0.025,color:k == 2 ? refreshGlass:Map3DPalette.tankWhite)
-                }
+                let frame=refreshRoundedOutline(x:x,y:2.04,width:0.83,height:1.96,radius:0.11)
+                refreshPanel(frame.map { side($0.0,$0.1,0.012) },thickness:0.025,color:Self.steel)
+                let leaf=refreshRoundedOutline(x:x,y:2.04,width:0.77,height:1.90,radius:0.09)
+                refreshPanel(leaf.map { side($0.0,$0.1,0.024) },thickness:0.035,color:refreshWhite)
+                let pane=refreshRoundedOutline(x:x,y:2.37,width:0.34,height:0.61,radius:0.07)
+                refreshPanel(pane.map { side($0.0,$0.1,0.033) },thickness:0.035,color:refreshGlass)
+                box(x+0.25,1.82,sign*(flank(1.82)+0.045),0.07,0.028,0.05,Self.steel)
             }
         }
         if cab {
-            // Windshield mapped onto the upper nose rings, backed by the shell.
-            for k in 6...8 { for i in 2...9 {
-                let j=i+1
-                let p=[rings[k][i],rings[k][j],rings[k+1][j],rings[k+1][i]].map { Map3DPoint($0.x,$0.y+0.015,$0.z) }
-                refreshPanel(p,thickness:0.025,color:refreshGlass)
-                if k == 8 && [3,4,7,8].contains(i) {
-                    let centre=p.reduce(Map3DPoint.zero) { $0+$1*0.25 }
-                    let lamp=p.map { centre+($0-centre)*0.48+Map3DPoint(0,0.014,0) }
-                    refreshPanel(lamp,thickness:0.025,color:Map3DPalette.tunnelLamp)
+            // Rounded trapezoidal cockpit mapped onto the real nose surface.
+            // Each small prism is backed by that same shell; no billboard box.
+                func screen(_ r: Int,_ c: Int)->Map3DPoint {
+                    let v=Float(r)/6,u=Float(c)/12
+                    let a: Float=0.92+u*(Float.pi-1.84)
+                    let round=sinf(u*Float.pi)
+                    let rear: Float=7.30-0.16*round,front: Float=9.55+0.13*round
+                    let x=rear+(front-rear)*v
+                    let p=surface(x,a)
+                    return p+Map3DPoint(0,0.018,0)
                 }
+            for row in 0..<6 { for col in 0..<12 {
+                let p=[screen(row,col),screen(row,col+1),screen(row+1,col+1),screen(row+1,col)]
+                refreshPanel(p,thickness:0.035,color:refreshGlass)
             } }
+            let rim=Map3DColor.shaded(refreshGlass,0.72)
+            for c in 0..<12 { for r in [0,6] { beam(screen(r,c),screen(r,c+1),0.025,rim) } }
+            for r in 0..<6 { for c in [0,12] { beam(screen(r,c),screen(r+1,c),0.025,rim) } }
+            // Two low lens clusters, two actual warm-white lamps in each.
+            for side: Float in [-1,1] {
+                let a: Float = side>0 ? 1.28:Float.pi-1.28
+                let centre=surface(9.34,a)+Map3DPoint(0,0.041,0)
+                let along=Map3DPoint(0,0,side)
+                let across=(surface(9.49,a)-surface(9.19,a)).normalized!
+                let housing=refreshRoundedOutline(x:0,y:0,width:0.66,height:0.29,radius:0.07)
+                refreshPanel(housing.map { centre+along*$0.0+across*$0.1 },thickness:0.045,color:Self.steel)
+                for offset: Float in [-0.16,0.16] {
+                    let lens=refreshRoundedOutline(x:offset,y:0,width:0.21,height:0.15,radius:0.045)
+                    refreshPanel(lens.map { centre+along*$0.0+across*$0.1+Map3DPoint(0,0.019,0) },thickness:0.025,color:Map3DPalette.tunnelLamp)
+                }
+            }
         }
         for end: Float in cab ? [-1]:[-1,1] {
             box(end*12.58,1.05,0,0.18,2.15,2.07,Self.ink)
+            for dx: Float in [-0.055,0,0.055] { box(end*12.58+dx,1.05,0,0.018,2.19,2.07,Self.steel) }
             box(end*12.58,0.66,0,0.32,0.35,0.3,Self.steel)
         }
-        if panto { refreshPanto(6.8,roof:3.65) }
+        if panto { refreshPanto(6.8,roof:3.65,singleArm:true) }
+    }
+    /// Twelve-vertex rounded rectangle, shared only by this Codex recipe.
+    private func refreshRoundedOutline(x: Float,y: Float,width: Float,height: Float,radius: Float)->[(Float,Float)] {
+        let r=min(radius,min(width,height)/2)
+        let corners: [(Float,Float,Float)]=[(x+width/2-r,y+height/2-r,0),(x-width/2+r,y+height/2-r,90),(x-width/2+r,y-height/2+r,180),(x+width/2-r,y-height/2+r,270)]
+        var result: [(Float,Float)]=[]
+        for (cx,cy,start) in corners {
+            for i in 0...2 { let a=(start+Float(i)*45)*Float.pi/180;result.append((cx+cosf(a)*r,cy+sinf(a)*r)) }
+        }
+        return result
     }
     private mutating func refreshPanel(_ p: [Map3DPoint],thickness: Float,color: UInt32) {
-        let raw=(p[1]-p[0]).cross(p[2]-p[0]).normalized!
-        let centre=p.reduce(Map3DPoint.zero) { $0+$1*0.25 }
+        var raw=Map3DPoint.zero
+        for i in 2..<p.count { if let n=(p[1]-p[0]).cross(p[i]-p[0]).normalized { raw=n;break } }
+        let centre=p.reduce(Map3DPoint.zero) { $0+$1*(1/Float(p.count)) }
         let normal=raw.dot(centre-Map3DPoint(0,2,0))>=0 ? raw:raw*(-1)
         let back=p.map { $0-normal*thickness }
-        let c=(p+back).reduce(Map3DPoint.zero) { $0+$1*(1/8) }
+        let c=(p+back).reduce(Map3DPoint.zero) { $0+$1*(1/Float(p.count*2)) }
         face(p,inside:c,color:color);face(back,inside:c,color:color)
-        for i in 0..<4 { let j=(i+1)%4;face([p[i],back[i],back[j],p[j]],inside:c,color:color) }
+        for i in p.indices { let j=(i+1)%p.count;face([p[i],back[i],back[j],p[j]],inside:c,color:color) }
     }
 }

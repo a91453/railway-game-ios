@@ -1,27 +1,35 @@
-# E200 / 700T 原生外形研究
+# E200 / 700T 原生外形修訂（二版）
 
-獨立配方 `Map3DTrainShapeRefresh.swift`，既有列車只作色票與密度比較。入口只新增靜態單元註冊，**不替換營運車輛**。沒有 GameCore、存檔、golden、replay 或玩法變更。
+獨立配方 `Map3DTrainShapeRefresh.swift`，以本次前版Codex producer `d476304b` 為基底。依使用者新規則：Codex列車可沿用／拆件，非Codex模型只參考。沒有複製E201來源mesh／貼圖。入口仍只註冊五個靜態單元，**不替換營運E200／高鐵**。GameCore／存檔／golden／replay不動。
 
-## 建模前特徵表
+## 建模前判讀與本輪來源
 
-| 特徵 | E200 | 700T |
+| 特徵 | E200家族研究 | 700T研究 |
 |---|---|---|
-| 類別／編組 | 雙端電力機車，獨立單機；不捏造牽引客車編組 | 兩頭車＋十中間車，反向尾車；第4、9車集電設備沿用專案排列，非照片完整確認 |
-| 側／前／俯輪廓 | 長直身、直立雙窗端面、上角收肩、雙菱形弓 | 寬扁圓鼻、上升風擋、圓肩、低裙板；中間車平端 |
-| 頭尾／左右 | 雙端同型；不可見側的門／設備鏡置為補全假設 | 頭尾旋轉180°，中間無駕駛窗；兩側鏡置 |
-| 尺寸 | 車體17.049m、寬2.972m取私庫附出處catalog；4.1m為資料中的降弓全高，展示弓升起高度另量 | 車體25m、寬3.38m、屋頂3.65m、節距25.4m皆**比例推估**，不宣稱工程尺寸 |
-| 門窗設備 | 端側窄門、雙前窗、側設備縫、頂部設備 | 小客窗、薄門、寬風擋；頭車／中車／集電車獨立 |
-| 走行系統 | 兩架三軸；輪徑／架距推估 | 兩架兩軸、裙板遮輪；底部設備與輪徑推估 |
-| 缺口 | 駕駛室內裝、車底不可見細節、精確門／設備座標 | 工程尺寸、完整設備順序、另一側細部、車底與動畫 |
+| 類別／編組 | 雙端電力機車、獨立單機；不自行指定牽引客車 | 外向頭尾＋十中車；第4、9車集電設備沿專案配置，非照片全數確認 |
+| 側／前／俯輪廓 | 長直側板、收肩雙窗端面；平滑機器室側面、前後不同屋頂設備 | 寬扁圓鼻、飽滿肩線、駕駛艙分段起伏；中間車平端 |
+| 頭尾／左右 | 雙端同型；左右未見細部鏡置是補全假設 | 尾車旋轉180°；中車無駕駛窗／燈；兩側門窗鏡置 |
+| 門窗設備 | 圓角前窗、窄側門、寬駕駛側窗、圓燈；端部冷卻箱、單側設備罩／另一側高壓元件、踏階 | 圓角小客窗、薄貼身單門、25mm風擋緣、兩組各雙燈；單臂弓有底座絕緣支承 |
+| 尺寸 | 車體17.049m／寬2.972m取私庫附來源catalog；屋頂／升弓等位置推估 | 殼25m／寬3.38m／頂3.65m／節距25.4m全為**比例推估**，非工程尺寸 |
+| 走行 | 兩架三軸，12輪；補架框、軸箱／輪轂／懸吊，輪徑與位置推估 | 兩架兩軸，8輪，裙板遮輪上緣；車底、輪徑、懸吊為展示補全 |
+| 缺口 | E201來源模型不是工程圖；不同編號／年代弓型與設備差異未核定，不能稱精確E201復刻 | 真實工程規格、全部設備次序、另一側門窗與車底不可見細部 |
 
-## 來源與隱私
+1. 實際照片：https://blair-train.blogspot.com/2010/02/e200.html 、https://blair-train.blogspot.com/2010/02/700t.html 。前輪逐張查看，本輪重看700T正面／斜視與E200側面。原照片不隨包散布。
+2. 使用者指定[PR #1203](https://github.com/a91453/railway-game-ios/pull/1203)，實際查看head `524058ef` 的總覽與交接。學習駕駛艙／肩線／鼻部曲面分段和圓角窗；**沒有把N700S殼直接當700T**，不改其分支。
+3. 私庫 `Simulator/reference_snapshot/models/tra-e201/tra-e201.glb`：在本機Blender渲染並查看側、正、俯、斜四視角，只判讀屋頂不對稱、端冷卻箱、輪架與踏階。來源不是已確認Codex，所以不搬來源頂點／貼圖／商標，不把其17.97×3.25×5.335來源bounds當工程尺寸。SHA見私包reference-review.json。
+4. E200長寬來源沿catalog的Train Collection／Toshiba Review 79(5)連結；原有Codex暖白綠松霧面保持。維基403沒有假裝讀到；官網安全六圖是內裝，不作外形證據。私有素材未送外部生成服務。
 
-私庫 Taiwan catalog 的 E200 尺寸（Train Collection、Toshiba Review 79(5)）與 garage / blender manifest 的攝影來源連結；沒有取任何私有 mesh 或貼圖。
-原始攝影文章：https://blair-train.blogspot.com/2010/02/e200.html 、https://blair-train.blogspot.com/2010/02/700t.html 。實際查看下載的每張檔案；含重複縮圖、E200兩側照、正面與700T側面／斜視／正面。照片只作視覺研究，不隨包散布、不送生成服務。Wikipedia/Commons請求403，沒有假裝讀到。高鐵官網安全六圖也看過，但均為內裝，不作外形依據。
+## 原生與組裝
 
-## 重建
+原生公尺 +x前／+y左／+z上，builder x前／y上／z右，只在flat轉一次，軌面z=0。五新單元＋既有Codex風格比較各為合法M3DM v1（單件≤15,000三角）。全12節細節合計約7萬三角，**不寫入超限的單一M3DM**；交付 `refresh-700t-formation.m3dscene.json`，自含合法單元base64與以下placements。這是本工具的組裝契約，遊戲既有Map3DModelFile只讀其中各M3DM單元，未新增遊戲scene載入器。
 
-Swift6.4，原生公尺 +x前/+y左/+z上；builder x前/y上/z右，只在flat轉一次。軌面z=0。尾車為旋轉，不鏡射。12節中心x為139.7、114.3、88.9、63.5、38.1、12.7、−12.7、−38.1、−63.5、−88.9、−114.3、−139.7m；殼長25m，殼間0.4m，平移不另旋轉（尾單元已反向）。連結器／風琴可能跨過殼端，實際bounds見manifest。
+中心x：139.7、114.3、88.9、63.5、38.1、12.7、−12.7、−38.1、−63.5、−88.9、−114.3、−139.7m。頭／尾用cab／tail，其餘用middle，索引3、8用panto。tail已含180°旋轉，重建只平移，不另旋轉或鏡射。殼間0.4m，風琴跨過殼端。實際bounds與三角數以manifest為準。
+
+`scene.js`依單元M3DM原始三角順序、Float32平移重建完整幾何；JS結果與Swift直接組裝的 `assembly-expected.bin` 逐bytes核對。該bin只是稽核資料，不是可載入遊戲的原生檔。完整GLB／viewer／七向／白模剪影皆取這份相同最終組裝，不使用較粗的替代編組。移開一節1m必須被拒收。
+
+## 重建與驗證
+
+OUT用公開庫外全新目錄。Swift6.4、Node/Playwright/Chromium、Python/Pillow/NumPy、Blender；沒有新增遊戲依賴。
 
 ```sh
 export PATH=/workspace/swift/usr/bin:$PATH
@@ -29,16 +37,20 @@ swift build --build-tests -Xswiftc -warnings-as-errors -j 4
 swift test --skip-build --filter 'Map3DTrainShapeRefreshTests|Map3DModelFileTests|Map3DModelTests'
 tools/train-shape-refresh/export.sh OUT
 node tools/train-shape-refresh/review.mjs OUT
-# 實際查看配色／白模／剪影，再做批次
-node tools/train-shape-refresh/render.mjs OUT
+# 查看配色／白模／剪影四向，修幾何須重新匯出與查看
 node tools/train-shape-refresh/verify.mjs OUT
 python3 tools/train-shape-refresh/wheel-audit.py OUT
+node tools/train-shape-refresh/render.mjs OUT
+for part in cab e200 middle formation; do
+  node tools/train-shape-refresh/feedback-compare.mjs OUT PRIOR "$part"
+done
 blender --background --python tools/train-shape-refresh/glb-audit.py -- OUT
 python3 tools/train-shape-refresh/verify-png.py OUT
 node tools/train-shape-refresh/standalone.mjs OUT
 node tools/train-shape-refresh/browser-check.mjs OUT
 node tools/train-shape-refresh/browser-check.mjs OUT --standalone
-python3 tools/train-shape-refresh/bundle.py OUT PRODUCER_COMMIT
+python3 tools/train-shape-refresh/bundle.py OUT ACTUAL_PRODUCER_COMMIT
+# bundle後重測真ZIP下載、再bundle，最後確認現有ZIP每個member仍等於live bytes
 ```
 
-公開只配方、工具、必要測試、文件與一張總覽。完整成品在私庫同名目錄；不用舊包覆寫。驗證結果以實際執行紀錄為準。Linux WebGL不等於Metal／效能／動畫驗證，也不代表作者認可。
+舊完整交付在history/d476304b，不是臨時重捏前版；四種比較同相機／公尺尺度。公開只有配方／工具／必要測試／文件／一張總覽，完整包留私庫原目錄新增 `revision-2/`，不覆蓋舊包。來源記實際producer，不用未提交版本冒充commit。Linux抽樣射線／WebGL不代表完整碰撞、真機Metal、動畫或效能驗證。

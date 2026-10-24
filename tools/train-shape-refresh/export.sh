@@ -25,4 +25,4 @@ else
 fi
 swiftc -swift-version 6 -warnings-as-errors "${includes[@]}" tools/train-shape-refresh/export.swift "${objects[@]}" -o "$work/train-shape-refresh-export"
 "$work/train-shape-refresh-export" "$output"
-node tools/station-kit/package.mjs "$output"
+node tools/train-shape-refresh/package.mjs "$output"
