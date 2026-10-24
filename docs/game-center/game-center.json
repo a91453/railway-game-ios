@@ -1,0 +1,796 @@
+{
+  "about": "Game Center leaderboards and achievements of the app (decision 396). The one source for docs/GAME_CENTER_SETUP.md's tables and for tools/game-center-setup/game_center_setup.py, which creates them in App Store Connect. Images are relative to this file.",
+  "leaderboards": [
+    {
+      "vendorIdentifier": "weekly.days.v2",
+      "referenceName": "Weekly challenge days v2",
+      "defaultFormatter": "INTEGER",
+      "submissionType": "BEST_SCORE",
+      "scoreSortType": "ASC",
+      "scoreRangeStart": "1",
+      "scoreRangeEnd": "1080",
+      "recurrence": {
+        "start": "next Monday 00:00",
+        "utcOffsetHours": 8,
+        "duration": "PT168H",
+        "rule": "FREQ=DAILY;INTERVAL=7"
+      },
+      "localizations": [
+        {
+          "locale": "en-US",
+          "name": "Weekly Challenge",
+          "formatterSuffixSingular": " day",
+          "formatterSuffix": " days"
+        },
+        {
+          "locale": "zh-Hant",
+          "name": "每週挑戰",
+          "formatterSuffixSingular": " 天",
+          "formatterSuffix": " 天"
+        }
+      ]
+    }
+  ],
+  "achievements": [
+    {
+      "vendorIdentifier": "achievement.firstFare",
+      "referenceName": "First Fare",
+      "points": 5,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.firstFare.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "第一筆票收",
+          "description": "收到第一位旅客的車資"
+        },
+        {
+          "locale": "en-US",
+          "name": "First Fare",
+          "description": "Take a passenger's first fare"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.riders1k",
+      "referenceName": "Regulars",
+      "points": 10,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.riders1k.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "月台常客",
+          "description": "單日旅客 1,000 人次"
+        },
+        {
+          "locale": "en-US",
+          "name": "Regulars",
+          "description": "1,000 riders in a day"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.riders10k",
+      "referenceName": "Railway Soul",
+      "points": 20,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.riders10k.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "鐵道魂",
+          "description": "單日旅客 10,000 人次"
+        },
+        {
+          "locale": "en-US",
+          "name": "Railway Soul",
+          "description": "10,000 riders in a day"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.riders100k",
+      "referenceName": "Rush Hour",
+      "points": 40,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.riders100k.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "尖峰時刻",
+          "description": "單日旅客 100,000 人次"
+        },
+        {
+          "locale": "en-US",
+          "name": "Rush Hour",
+          "description": "100,000 riders in a day"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.riders1m",
+      "referenceName": "A Million a Day",
+      "points": 80,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.riders1m.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "百萬運量",
+          "description": "單日旅客 1,000,000 人次"
+        },
+        {
+          "locale": "en-US",
+          "name": "A Million a Day",
+          "description": "1,000,000 riders in a day"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.track10",
+      "referenceName": "Ten Kilometres",
+      "points": 5,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.track10.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "十公里",
+          "description": "路網長度 10 km"
+        },
+        {
+          "locale": "en-US",
+          "name": "Ten Kilometres",
+          "description": "Build 10 km of track"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.track50",
+      "referenceName": "Across the County",
+      "points": 15,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.track50.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "跨越縣境",
+          "description": "路網長度 50 km"
+        },
+        {
+          "locale": "en-US",
+          "name": "Across the County",
+          "description": "Build 50 km of track"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.track200",
+      "referenceName": "A Thousand Li",
+      "points": 30,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.track200.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "千里鐵道",
+          "description": "路網長度 200 km"
+        },
+        {
+          "locale": "en-US",
+          "name": "A Thousand Li",
+          "description": "Build 200 km of track"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.track1000",
+      "referenceName": "The Thousand-Kilometre Club",
+      "points": 80,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.track1000.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "千公里俱樂部",
+          "description": "路網長度 1,000 km"
+        },
+        {
+          "locale": "en-US",
+          "name": "The Thousand-Kilometre Club",
+          "description": "Build 1,000 km of track"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.longLine",
+      "referenceName": "In One Go",
+      "points": 25,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.longLine.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "一氣呵成",
+          "description": "一條 50 km 以上的路線（站間直線）"
+        },
+        {
+          "locale": "en-US",
+          "name": "In One Go",
+          "description": "A line 50 km long, station to station"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.stoppingLine",
+      "referenceName": "Every Station Is a View",
+      "points": 15,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.stoppingLine.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "站站是風景",
+          "description": "一條停靠 20 站以上的路線"
+        },
+        {
+          "locale": "en-US",
+          "name": "Every Station Is a View",
+          "description": "A line calling at 20 stations"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.earlyBird",
+      "referenceName": "Early Bird",
+      "points": 10,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.earlyBird.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "早鳥",
+          "description": "一條 05:00 前就發出首班車的路線"
+        },
+        {
+          "locale": "en-US",
+          "name": "Early Bird",
+          "description": "A line whose first train leaves before 05:00"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.nightOwl",
+      "referenceName": "Night Owl",
+      "points": 10,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.nightOwl.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "夜行者",
+          "description": "一條跨午夜營運的路線"
+        },
+        {
+          "locale": "en-US",
+          "name": "Night Owl",
+          "description": "A line that runs past midnight"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.ringLine",
+      "referenceName": "Round and Round",
+      "points": 15,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.ringLine.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "繞圈圈",
+          "description": "第一條營運中的環狀線"
+        },
+        {
+          "locale": "en-US",
+          "name": "Round and Round",
+          "description": "Run a ring line"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.hub",
+      "referenceName": "Interchange",
+      "points": 15,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.hub.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "轉乘樞紐",
+          "description": "三條路線共用一站"
+        },
+        {
+          "locale": "en-US",
+          "name": "Interchange",
+          "description": "Three lines calling at one station"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.highSpeed",
+      "referenceName": "Bullet Train",
+      "points": 15,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.highSpeed.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "子彈列車",
+          "description": "一列高鐵性能的列車"
+        },
+        {
+          "locale": "en-US",
+          "name": "Bullet Train",
+          "description": "Run a train of the High Speed Rail's performance"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.fleet20",
+      "referenceName": "Fleet",
+      "points": 15,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.fleet20.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "車隊成形",
+          "description": "擁有 20 列車"
+        },
+        {
+          "locale": "en-US",
+          "name": "Fleet",
+          "description": "Own 20 trains"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.stations25",
+      "referenceName": "Station Tour",
+      "points": 10,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.stations25.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "車站巡禮",
+          "description": "車站 25 座"
+        },
+        {
+          "locale": "en-US",
+          "name": "Station Tour",
+          "description": "Build 25 stations"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.stations50",
+      "referenceName": "Fifty Stations",
+      "points": 20,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.stations50.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "五十站",
+          "description": "車站 50 座"
+        },
+        {
+          "locale": "en-US",
+          "name": "Fifty Stations",
+          "description": "Build 50 stations"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.stations100",
+      "referenceName": "A Hundred Stations",
+      "points": 40,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.stations100.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "百站達成",
+          "description": "車站 100 座"
+        },
+        {
+          "locale": "en-US",
+          "name": "A Hundred Stations",
+          "description": "Build 100 stations"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.firstBuilding",
+      "referenceName": "Developer",
+      "points": 10,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.firstBuilding.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "建商起步",
+          "description": "第一棟公司建物"
+        },
+        {
+          "locale": "en-US",
+          "name": "Developer",
+          "description": "Put up the company's first building"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.firstFreight",
+      "referenceName": "First Tonne",
+      "points": 10,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.firstFreight.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "第一噸貨",
+          "description": "第一次送達貨物"
+        },
+        {
+          "locale": "en-US",
+          "name": "First Tonne",
+          "description": "Deliver freight"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.firstTile",
+      "referenceName": "New Ground",
+      "points": 10,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.firstTile.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "開疆闢土",
+          "description": "買下第一格地圖"
+        },
+        {
+          "locale": "en-US",
+          "name": "New Ground",
+          "description": "Buy a tile of the map"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.tower",
+      "referenceName": "Station Tower",
+      "points": 15,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.tower.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "站前大樓",
+          "description": "車站 800 公尺內出現高樓"
+        },
+        {
+          "locale": "en-US",
+          "name": "Station Tower",
+          "description": "A high-rise within 800 m of a station"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.typhoonSeason",
+      "referenceName": "Weathered the Storms",
+      "points": 15,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.typhoonSeason.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "安然度颱",
+          "description": "颱風季結束時沒有負債"
+        },
+        {
+          "locale": "en-US",
+          "name": "Weathered the Storms",
+          "description": "End the typhoon season with no debt"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.challengeGold",
+      "referenceName": "Gold Medal",
+      "points": 40,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.challengeGold.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "挑戰金牌",
+          "description": "以金牌完成一項挑戰"
+        },
+        {
+          "locale": "en-US",
+          "name": "Gold Medal",
+          "description": "Complete a challenge with gold"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.pingxi",
+      "referenceName": "Pingxi Line",
+      "points": 30,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.pingxi.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "平溪線",
+          "description": "完成平溪線劇本"
+        },
+        {
+          "locale": "en-US",
+          "name": "Pingxi Line",
+          "description": "Complete the Pingxi challenge"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.liuMingchuan",
+      "referenceName": "Liu Mingchuan's Railway",
+      "points": 30,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.liuMingchuan.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "劉銘傳鐵路",
+          "description": "完成劉銘傳劇本"
+        },
+        {
+          "locale": "en-US",
+          "name": "Liu Mingchuan's Railway",
+          "description": "Complete the Liu Mingchuan challenge"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.firstTourists",
+      "referenceName": "Day Trippers",
+      "points": 10,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.firstTourists.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "一日遊",
+          "description": "第一次把觀光客載到景點"
+        },
+        {
+          "locale": "en-US",
+          "name": "Day Trippers",
+          "description": "Bring tourists to an attraction"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.tourists100k",
+      "referenceName": "Tourist Season",
+      "points": 25,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.tourists100k.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "觀光旺季",
+          "description": "一年 100,000 位觀光客"
+        },
+        {
+          "locale": "en-US",
+          "name": "Tourist Season",
+          "description": "100,000 tourists in a year"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.souvenirShop",
+      "referenceName": "Local Specialties",
+      "points": 15,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.souvenirShop.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "名產名店",
+          "description": "一間名產店升到最高級"
+        },
+        {
+          "locale": "en-US",
+          "name": "Local Specialties",
+          "description": "A souvenir shop at its highest level"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.fiveStars",
+      "referenceName": "Five Stars",
+      "points": 25,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.fiveStars.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "五星景點",
+          "description": "一處五星的景點"
+        },
+        {
+          "locale": "en-US",
+          "name": "Five Stars",
+          "description": "An attraction rated five stars"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.firstSubsidiary",
+      "referenceName": "In Business",
+      "points": 10,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.firstSubsidiary.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "多角經營",
+          "description": "開第一間百貨公司、飯店或遊樂園"
+        },
+        {
+          "locale": "en-US",
+          "name": "In Business",
+          "description": "Open a department store, hotel or amusement park"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.allBusinesses",
+      "referenceName": "Group",
+      "points": 25,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.allBusinesses.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "企業集團",
+          "description": "百貨公司、飯店、遊樂園各一間"
+        },
+        {
+          "locale": "en-US",
+          "name": "Group",
+          "description": "Run a department store, a hotel and an amusement park"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.businessProfit",
+      "referenceName": "Paying Business",
+      "points": 25,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.businessProfit.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "生意興隆",
+          "description": "一間事業開業以來賺進 $1,000,000"
+        },
+        {
+          "locale": "en-US",
+          "name": "Paying Business",
+          "description": "A business that has made $1,000,000 since it opened"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.mixedFleet",
+      "referenceName": "Mixed Fleet",
+      "points": 10,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.mixedFleet.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "車種齊全",
+          "description": "車隊有三種以上車種"
+        },
+        {
+          "locale": "en-US",
+          "name": "Mixed Fleet",
+          "description": "Trains of three types"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.longTrain",
+      "referenceName": "Long Train",
+      "points": 10,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.longTrain.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "長編組",
+          "description": "一列 10 節以上的列車"
+        },
+        {
+          "locale": "en-US",
+          "name": "Long Train",
+          "description": "A train of 10 cars or more"
+        }
+      ]
+    },
+    {
+      "vendorIdentifier": "achievement.fleetInvestment",
+      "referenceName": "Rolling Stock Investor",
+      "points": 10,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.fleetInvestment.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "車隊投資",
+          "description": "車隊的購置成本達 $5,000,000"
+        },
+        {
+          "locale": "en-US",
+          "name": "Rolling Stock Investor",
+          "description": "Spend $5,000,000 on trains"
+        }
+      ]
+    }
+  ]
+}

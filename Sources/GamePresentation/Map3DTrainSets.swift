@@ -19,6 +19,15 @@ public struct Map3DTrainSet: Sendable {
     public let key: String
     /// The middle cars with a pantograph (``Map3DTrainStyle/pantographCars``).
     var pantographCars: Set<Int> = []
+    /// Decision 399: the cars drawn at their models' own lengths
+    /// (``Map3DModelPack/layout(forType:count:)``), not stretched to the
+    /// 20 m every other train's are, each touching the next (their models
+    /// reach to their couplers or gangways), but the coaches behind a
+    /// tender ``Map3DTrains/carGap`` apart.
+    var ownLengths = false
+    /// Decision 399: a fixed formation of this many cars, whatever the
+    /// train's count (the seven-section car).
+    var fixedCars: Int? = nil
     let build: @Sendable () -> Cars
 
     struct Cars {
@@ -28,6 +37,9 @@ public struct Map3DTrainSet: Sendable {
         var tail: Map3DModelPack.Model?
         var single: Map3DModelPack.Model?
         var pantograph: Model? = nil
+        /// Decision 399: a steam locomotive's tender, a car of its own
+        /// between it and the coaches.
+        var tender: Model? = nil
         typealias Model = Map3DModelPack.Model
     }
 
@@ -37,6 +49,7 @@ public struct Map3DTrainSet: Sendable {
     var tailName: String { "set-\(key)-tail" }
     var singleName: String { "set-\(key)-single" }
     var pantographName: String { "set-\(key)-panto" }
+    var tenderName: String { "set-\(key)-tender" }
 
     /// The four model names and their models, in the pack's order.
     func models() -> [Map3DModelPack.Model] {
@@ -49,6 +62,7 @@ public struct Map3DTrainSet: Sendable {
         if let tail = cars.tail { models.append(named(tail, tailName)) }
         if let single = cars.single { models.append(named(single, singleName)) }
         if let pantograph = cars.pantograph { models.append(named(pantograph, pantographName)) }
+        if let tender = cars.tender { models.append(named(tender, tenderName)) }
         return models
     }
 
@@ -72,9 +86,12 @@ public struct Map3DTrainSet: Sendable {
             // behind the E500.
             hauled("STAR", locomotive: .e500, coach: coach(TrainLivery.formosaStar, band: 0.38...0.43)),
             // Decision 286, later (fourth): the Midsummer Formosa's
-            // Chu-Kuang coaches behind the CT273, for now a black hood
-            // unit with its gold line (no steam locomotive model yet).
-            hauled("SUMMER", locomotive: .ct273, coach: chuKuang),
+            // Chu-Kuang coaches; decision 399: behind #1103's steam
+            // locomotive and its tender, in place of the black hood unit.
+            steam("SUMMER", formation: .steamTender, coach: chuKuang),
+            // Decision 399: the steam train as #1118's duplex locomotive
+            // and its tender, the Blue Train's old blue coaches behind.
+            steam("STEAM", formation: .duplex, coach: coach(TrainLivery.blueTrain, band: 0.38...0.43)),
             // The push-pull Tze-Chiang: an E1000 power car at each end.
             hauled("pushPull", locomotive: .e1000,
                    coach: coach(body: 0xC9CECC, band: 0xED822A), lastIsLocomotive: true),
@@ -113,6 +130,15 @@ public struct Map3DTrainSet: Sendable {
                         lamps: Lamps(x: 16.935, height: 0.79, across: 0.68, width: 0.30, tall: 0.09)),
             articulated("sevenSectionLRT", formation: Map3DSevenSectionLRT.formation(), cuts: [7.08, -7.08],
                         lamps: Lamps(x: 22.675, height: 0.81, across: 0.67, width: 0.28, tall: 0.10)),
+            // Decision 399: the linear-motor metro as #1081's four-car
+            // metro, and a four-car light metro as #1094's seven-section
+            // car, each car at its own length; in the train pack.
+            ownLength("fourCarMetro", head: Map3DFourCarMetro.model(.leading), middle: Map3DFourCarMetro.model(.middleFront),
+                      tail: Map3DFourCarMetro.model(.trailing),
+                      lamps: Lamps(x: 5.99, height: 1.49, across: 0.82, width: 0.26, tall: 0.09)),
+            ownLength("blueSeven", head: Map3DSevenCarBlue.model(.leading), middle: Map3DSevenCarBlue.model(.middleOne),
+                      tail: Map3DSevenCarBlue.model(.trailing), cars: 7,
+                      lamps: Lamps(x: 4.02, height: 1.005, across: 0.65, width: 0.32, tall: 0.17)),
         ]
     }()
 
@@ -129,14 +155,23 @@ public struct Map3DTrainSet: Sendable {
 
     /// How far from the eye a car of `key` is drawn with its model, in
     /// metres: ``Map3DTrains/modelReach``, but the green tram's cars, ten
-    /// times a metro car's triangles, only half as far (decision 331).
+    /// times a metro car's triangles, only half as far (decision 331);
+    /// decision 399: and the steam trains, their locomotives eight to ten
+    /// thousand triangles.
     static func reach(of key: String) -> Float {
-        named(key)?.key == "greenTram" ? tramReach : Map3DTrains.modelReach
+        named(key).map { nearOnly.contains($0.key) } == true ? tramReach : Map3DTrains.modelReach
     }
 
+    static let nearOnly: Set = ["greenTram", "SUMMER", "STEAM"]
+
     /// Decision 338, later: the light metro's articulated sets, by their
-    /// cars (the green tram's other sizes).
-    static let articulatedByCount: [Int: String] = [2: "fiveSectionLRT", 3: "sevenSectionLRT"]
+    /// cars (the green tram's other sizes); decision 399: four cars of it
+    /// the seven-section car.
+    static let articulatedByCount: [Int: String] = [2: "fiveSectionLRT", 3: "sevenSectionLRT", 4: "blueSeven"]
+
+    /// Decision 399: the types drawn as a set in the train pack, and as
+    /// ``byType`` has them while it is locked.
+    static let packByType: [String: String] = ["L": "fourCarMetro"]
 
     static let tramReach: Float = 500
 
@@ -153,7 +188,8 @@ public struct Map3DTrainSet: Sendable {
     /// the three-car urban EMU. Decision 338: a set in `locked` (the train
     /// pack's, until it is unlocked) is drawn as it was before it; later, a
     /// two- or three-car light metro is an articulated LRT
-    /// (``articulatedByCount``).
+    /// (``articulatedByCount``); decision 399: a type in ``packByType``
+    /// its set there.
     static func set(forKey key: String, count: Int, locked: Set<String> = []) -> Map3DTrainSet? {
         let set: Map3DTrainSet?
         if key == "dieselExpress", count <= 2 {
@@ -164,6 +200,8 @@ public struct Map3DTrainSet: Sendable {
             set = byKey["threeCarUrban"]
         } else if named(key)?.key == "greenTram", let articulated = articulatedByCount[count] {
             set = byKey[articulated]
+        } else if let packed = packByType[key] {
+            set = byKey[packed]
         } else {
             set = named(key)
         }
@@ -199,6 +237,56 @@ public struct Map3DTrainSet: Sendable {
             let head = locomotive.model
             let middle = baked(SceneKitCab.coach(style: coach.style, named: key), tint: coach.tint)
             return Cars(head: head, middle: middle, tail: lastIsLocomotive ? nil : tailCoach(coach, named: key), single: nil)
+        }
+    }
+
+    /// Decision 399: a steam locomotive and its tender (`formation`'s
+    /// two units, at their own lengths), the locomotive's headlamp lit,
+    /// and `coach`es behind, the last one's end lit red.
+    static func steam(_ key: String, formation: SteamFormation, coach: Coach) -> Map3DTrainSet {
+        Map3DTrainSet(key: key, ownLengths: true) {
+            var builder = StationKitBuilder()
+            builder.add(formation.locomotive, at: .zero)
+            let lamp = formation.lamp
+            builder.lamp(atX: lamp.x, height: lamp.height, across: 0, width: lamp.size, tall: lamp.size, colour: Map3DTrainStyle.headlamp)
+            return Cars(head: .flat(named: key, from: builder.mesh), middle: baked(SceneKitCab.coach(style: coach.style, named: key), tint: coach.tint),
+                        tail: tailCoach(coach, named: key), single: nil, tender: formation.tender)
+        }
+    }
+
+    /// Decision 399: the two steam locomotives, and where each one's
+    /// headlamp lens is (its front, its bottom, its size).
+    enum SteamFormation {
+        case steamTender, duplex
+
+        var locomotive: Map3DModelPack.Model {
+            self == .steamTender ? Map3DSteamTender.model(.locomotive) : Map3DDuplexSteam.model(.locomotive)
+        }
+
+        var tender: Map3DModelPack.Model {
+            self == .steamTender ? Map3DSteamTender.model(.tender) : Map3DDuplexSteam.model(.tender)
+        }
+
+        var lamp: (x: Float, height: Float, size: Float) {
+            self == .steamTender ? (5.67, 2.695, 0.27) : (7.13, 4.0, 0.26)
+        }
+    }
+
+    /// Decision 399: a set of `head`, `middle` and `tail` units drawn at
+    /// their own lengths, coupled as their models meet, their cabs' lamps
+    /// lit at `lamps.x` and −`lamps.x`; `cars` of them whatever the train's
+    /// count when given.
+    static func ownLength(_ key: String, head: Map3DModelPack.Model, middle: Map3DModelPack.Model, tail: Map3DModelPack.Model,
+                          cars: Int? = nil, lamps: Lamps) -> Map3DTrainSet {
+        Map3DTrainSet(key: key, ownLengths: true, fixedCars: cars) {
+            func unit(_ model: Map3DModelPack.Model, lamp x: Float?, colour: UInt32) -> Map3DModelPack.Model {
+                var builder = StationKitBuilder()
+                builder.add(model, at: .zero)
+                if let x { builder.cabLamps(lamps, atX: x, colour: colour) }
+                return .flat(named: key, from: builder.mesh)
+            }
+            return Cars(head: unit(head, lamp: lamps.x, colour: Map3DTrainStyle.headlamp), middle: unit(middle, lamp: nil, colour: 0),
+                        tail: unit(tail, lamp: -lamps.x, colour: Map3DPalette.lantern), single: nil)
         }
     }
 
@@ -383,11 +471,14 @@ extension StationKitBuilder {
 
     /// Two lit lamps `across` either side of the middle, `height` up.
     fileprivate mutating func cabLamps(atX x: Float, colour: UInt32, height: Float, across: Float, width: Float, tall: Float) {
-        for z in [-across, across] {
-            let start = mesh.vertices.count
-            box(x, height, z, 0.02, width, tall, colour)
-            mesh.makeGlowing(from: start)
-        }
+        for z in [-across, across] { lamp(atX: x, height: height, across: z, width: width, tall: tall, colour: colour) }
+    }
+
+    /// One lit lamp `across` from the middle, `height` up.
+    fileprivate mutating func lamp(atX x: Float, height: Float, across z: Float, width: Float, tall: Float, colour: UInt32) {
+        let start = mesh.vertices.count
+        box(x, height, z, 0.02, width, tall, colour)
+        mesh.makeGlowing(from: start)
     }
 }
 

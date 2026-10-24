@@ -395,8 +395,15 @@ final class LessonUITests: XCTestCase {
 
     private func showGuide() {
         let folded = app.buttons["tutorial.unfold"]
-        if folded.appears(within: 2) { tap(folded) }
-        XCTAssertTrue(app.staticTexts["tutorial.title"].appears(within: 10))
+        let title = app.staticTexts["tutorial.title"]
+        // The card, open or folded, can take longer than 2 s to be seen on
+        // a slow runner (one look took 2-3 s in main b55b7d0's full lane,
+        // run 40060038516): wait for either before choosing.
+        let card = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier IN %@", ["tutorial.title", "tutorial.unfold"])).firstMatch
+        XCTAssertTrue(card.appears(within: 10), "Missing the lesson's card")
+        if !title.exists, folded.exists { tap(folded) }
+        XCTAssertTrue(title.appears(within: 10))
     }
 
     private func dismissGuide() {
@@ -415,8 +422,18 @@ final class LessonUITests: XCTestCase {
 
     private func pause() {
         let pause = app.buttons["Pause"]
-        if pause.appears(within: 2) { tap(pause) }
-        XCTAssertTrue(app.buttons["Resume"].appears(within: 5))
+        let resume = app.buttons["Resume"]
+        let clock = app.buttons.matching(NSPredicate(format: "label IN %@", ["Pause", "Resume"])).firstMatch
+        XCTAssertTrue(clock.appears(within: 10), "Missing the clock's Pause or Resume")
+        // A touch on Pause just after the lesson's card closes can be lost:
+        // main b55b7d0's full lane (run 40060038516) tapped it and saw no
+        // Resume in 5 s. Touch it again only while the clock still runs,
+        // after a wait long enough that a slow answer is not toggled back.
+        for _ in 0..<3 where !resume.exists && pause.exists {
+            tap(pause)
+            if resume.appears(within: 10) { break }
+        }
+        XCTAssertTrue(resume.appears(within: 5))
     }
 
     private func openControls() {

@@ -15,23 +15,32 @@ final class Map3DTrainSetTests: XCTestCase {
         let lineColoured: Set = ["metroC381", "wenhu"]
         for set in Map3DTrainSet.all {
             var names = [set.headName]
-            for name in [set.middleName, set.tailName, set.singleName, set.pantographName] where pack.index(of: name) != nil { names.append(name) }
+            for name in [set.middleName, set.tailName, set.singleName, set.pantographName, set.tenderName] where pack.index(of: name) != nil { names.append(name) }
             for name in names {
                 let model = pack.models[try XCTUnwrap(pack.index(of: name), name)]
                 // Decision 331: a tram car is two of its sections.
                 let triangles = set.key == "greenTram" ? 2_500...3_200
-                    : ["greenCommuter", "threeCarUrban", "fiveSectionLRT", "sevenSectionLRT"].contains(set.key) ? 2_000...6_000 : 100...3_000
+                    : ["greenCommuter", "threeCarUrban", "fiveSectionLRT", "sevenSectionLRT"].contains(set.key) ? 2_000...6_000
+                    // Decision 399: a steam locomotive, eight to ten thousand.
+                    : name == set.headName && ["SUMMER", "STEAM"].contains(set.key) ? 8_000...10_500 : 100...4_100
                 XCTAssertTrue(triangles.contains(model.triangleCount), "\(name): \(model.triangleCount) triangles")
                 // #900's 700T is 24 m, its Wenhu car 12.6 m, #988's urban
                 // EMU 15 m; drawn at the train's car length.
                 // Decision 338, later: an articulated LRT's car from cut to cut.
+                // Decision 399: the steam locomotives 14.8 and 15.4 m, their
+                // tenders 9 and 9.5 m, the four-car metro's cars 12.3 m and
+                // the seven-section car's 7.6 to 8.3 m, as they are.
                 let length: ClosedRange<Float> = set.key == "highSpeed" ? 23...25 : set.key == "wenhu" ? 12...13.5
-                    : set.key == "threeCarUrban" ? 15...16 : set.key == "sevenSectionLRT" ? 14...16 : 17...22.5
+                    : set.key == "threeCarUrban" ? 15...16 : set.key == "sevenSectionLRT" ? 14...16
+                    : name == set.headName && ["SUMMER", "STEAM"].contains(set.key) ? 14.5...15.5
+                    : name == set.tenderName ? 8.9...9.6 : set.key == "fourCarMetro" ? 12.3...12.8
+                    : set.key == "blueSeven" ? 7.5...8.4 : 17...22.5
                 XCTAssertTrue(length.contains(model.length), "\(name): \(model.length) m long")
                 XCTAssertTrue((2.6...3.5).contains(model.maximum.y - model.minimum.y), "\(name): \(model.maximum.y - model.minimum.y) m wide")
                 XCTAssertEqual(model.minimum.z, 0, accuracy: 0.1, "\(name) stands on the rail")
                 // The low-floor tram is lower than a train.
-                let height: ClosedRange<Float> = ["greenTram", "fiveSectionLRT", "sevenSectionLRT"].contains(set.key) ? 3.2...4.6 : 3.4...4.6
+                let height: ClosedRange<Float> = ["greenTram", "fiveSectionLRT", "sevenSectionLRT"].contains(set.key) ? 3.2...4.6
+                    : set.key == "STEAM" ? 3.4...4.7 : 3.4...4.6
                 XCTAssertTrue(height.contains(model.maximum.z), "\(name): \(model.maximum.z) m tall")
                 if lineColoured.contains(set.key) {
                     XCTAssertTrue(model.vertices.contains { $0.color >> 24 == 0 }, "\(name): the band is the line's colour")
@@ -57,14 +66,57 @@ final class Map3DTrainSetTests: XCTestCase {
     }
 
     /// The types that were boxes now have their models; maglev, skyrail,
-    /// monorail and steam still have none.
+    /// monorail still have none.
     func testTheTypesThatWereBoxes() {
-        for code in ["E200CK", "E500CK", "R100CK", "R200CK", "BLUE", "MINGRI", "STAR", "SUMMER"] {
+        // Decision 399: and the steam train.
+        for code in ["E200CK", "E500CK", "R100CK", "R200CK", "BLUE", "MINGRI", "STAR", "SUMMER", "STEAM"] {
             XCTAssertNotNil(pack.models(forType: code), code)
         }
-        for code in ["MAGLEV", "SKYRAIL", "MONORAIL", "STEAM"] {
+        for code in ["MAGLEV", "SKYRAIL", "MONORAIL"] {
             XCTAssertNil(pack.models(forType: code), code)
         }
+    }
+
+    /// Decision 399: the sets drawn at their own lengths. The Midsummer
+    /// Formosa and the steam train: the locomotive, its tender against it
+    /// and the coaches 0.6 m apart, the last one lit; the linear-motor
+    /// metro's cars 12.3 m apart; four light metro cars the seven-section
+    /// car, seven units whatever its count. The rest stay 20 m a car.
+    func testTheSetsDrawnAtTheirOwnLengths() throws {
+        func layout(_ key: String, _ count: Int) throws -> [(String, Float, Float)] {
+            try XCTUnwrap(pack.layout(forType: key, count: count), key).map { (pack.models[$0.model].name, $0.length, $0.gap) }
+        }
+        let summer = try layout("SUMMER", 4)
+        XCTAssertEqual(summer.map(\.0), ["set-SUMMER-head", "set-SUMMER-tender", "set-SUMMER-car", "set-SUMMER-car", "set-SUMMER-tail"])
+        for (car, (length, gap)) in zip(summer, zip([14.77, 9, 19.4, 19.4, 19.59] as [Float], [0, 0.6, 0.6, 0.6, 0] as [Float])) {
+            XCTAssertEqual(car.1, length, accuracy: 0.01, car.0)
+            XCTAssertEqual(car.2, gap, accuracy: 1e-6, car.0)
+        }
+        XCTAssertEqual(try layout("STEAM", 1).map(\.0), ["set-STEAM-head", "set-STEAM-tender"], "a locomotive alone keeps its tender")
+        XCTAssertEqual(try layout("STEAM", 2).map(\.0), ["set-STEAM-head", "set-STEAM-tender", "set-STEAM-tail"])
+        let four = try layout("L", 4)
+        XCTAssertEqual(four.map(\.0), ["set-fourCarMetro-head", "set-fourCarMetro-car", "set-fourCarMetro-car", "set-fourCarMetro-tail"])
+        // #1081's 12.3 m pitch: the middle cars' bounds are their pitch,
+        // the cab cars' reach on to their couplers.
+        XCTAssertEqual(four[1].1, 12.32, accuracy: 0.01)
+        XCTAssertTrue(four.allSatisfy { $0.2 == 0 })
+        let seven = try layout("C", 4)
+        XCTAssertEqual(seven.map(\.0), ["set-blueSeven-head"] + Array(repeating: "set-blueSeven-car", count: 5) + ["set-blueSeven-tail"])
+        XCTAssertEqual(seven.reduce(0) { $0 + $1.1 }, Map3DSevenCarBlue.formation().length, accuracy: 0.01, "as long as #1094's whole car")
+        let steam = try layout("STEAM", 3)
+        XCTAssertEqual(steam[0].1 + steam[0].2 + steam[1].1, Map3DDuplexSteam.formation().length, accuracy: 0.01,
+                       "the locomotive and tender as #1118 couples them")
+        for key in ["R100CK", "", "C", "A", "emu800"] { XCTAssertNil(pack.layout(forType: key, count: 3), key) }
+        // Only half as far as other cars: the steam locomotives are eight
+        // to ten thousand triangles.
+        XCTAssertEqual(Map3DTrainSet.reach(of: "SUMMER"), Map3DTrainSet.tramReach)
+        XCTAssertEqual(Map3DTrainSet.reach(of: "STEAM"), Map3DTrainSet.tramReach)
+        XCTAssertEqual(Map3DTrainSet.reach(of: "L"), Map3DTrains.modelReach)
+        // The locomotive's headlamp lit at its smokebox's lens.
+        let head = pack.models[try XCTUnwrap(pack.index(of: "set-SUMMER-head"))]
+        let lamp = head.vertices.filter(\.glows)
+        XCTAssertFalse(lamp.isEmpty)
+        XCTAssertTrue(lamp.allSatisfy { abs($0.x - 5.67) < 0.02 && abs($0.z - 2.83) < 0.14 && abs($0.y) < 0.14 })
     }
 
     /// A train's key: its type's when the type has a style or a set, else
@@ -120,13 +172,16 @@ final class Map3DTrainSetTests: XCTestCase {
         XCTAssertEqual(names("HSR", 12), ["set-highSpeed-head", "set-highSpeed-car", "set-highSpeed-car", "set-highSpeed-panto"]
             + Array(repeating: "set-highSpeed-car", count: 4) + ["set-highSpeed-panto", "set-highSpeed-car", "set-highSpeed-car", "set-highSpeed-tail"])
         XCTAssertEqual(names("EMU3000", 3), ["set-emu3000-head", "set-emu3000-car", "set-emu3000-tail"])
-        for code in ["A", "B", "L", "D"] {
+        for code in ["A", "B", "D"] {
             XCTAssertEqual(names(code, 2), ["set-metroC381-head", "set-metroC381-tail"], code)
         }
+        // Decision 399: the linear-motor metro is the four-car metro.
+        XCTAssertEqual(names("L", 2), ["set-fourCarMetro-head", "set-fourCarMetro-tail"])
         // Decision 331: the light metro is the green tram (decision 338,
-        // later: but two or three cars of it an articulated LRT).
+        // later: but two or three cars of it an articulated LRT; decision
+        // 399: four the seven-section car).
         XCTAssertEqual(names("C", 1), ["set-greenTram-single"])
-        XCTAssertEqual(names("C", 4), ["set-greenTram-head", "set-greenTram-car", "set-greenTram-car", "set-greenTram-tail"])
+        XCTAssertEqual(names("C", 5), ["set-greenTram-head", "set-greenTram-car", "set-greenTram-car", "set-greenTram-car", "set-greenTram-tail"])
         XCTAssertEqual(names("APM", 2), ["set-wenhu-head", "set-wenhu-tail"])
     }
 
@@ -205,8 +260,8 @@ final class Map3DTrainSetTests: XCTestCase {
         XCTAssertEqual(names("C", 2), ["set-fiveSectionLRT-head", "set-fiveSectionLRT-tail"])
         XCTAssertEqual(names("C", 3), ["set-sevenSectionLRT-head", "set-sevenSectionLRT-car", "set-sevenSectionLRT-tail"])
         XCTAssertEqual(names("C", 1), ["set-greenTram-single"])
-        XCTAssertEqual(names("C", 4), ["set-greenTram-head", "set-greenTram-car", "set-greenTram-car", "set-greenTram-tail"])
-        XCTAssertEqual(names("L", 2), ["set-metroC381-head", "set-metroC381-tail"], "the linear-motor metro is no LRT")
+        XCTAssertEqual(names("C", 5), ["set-greenTram-head", "set-greenTram-car", "set-greenTram-car", "set-greenTram-car", "set-greenTram-tail"])
+        XCTAssertEqual(names("L", 2), ["set-fourCarMetro-head", "set-fourCarMetro-tail"], "the linear-motor metro is no LRT")
         XCTAssertNil(pack.index(of: "set-fiveSectionLRT-car"), "only ever two cars")
 
         let carLength = Float(TrainType.c.spec.carLength) / Float(WorldCoordinate.unitsPerMetre) - Map3DTrains.carGap
