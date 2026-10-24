@@ -310,7 +310,15 @@ public struct Map3DScene: Sendable {
                 let at = frame.worldPosition(latitude: coordinate.latitude, longitude: coordinate.longitude)
                 return at.x >= region.minX - margin && at.x <= region.maxX + margin && at.y >= region.minY - margin && at.y <= region.maxY + margin
             }
-            realTrains = Map3DRealTrains(traffic: traffic, structures: railways.structures, frame: frame, snapshot: snapshot, builder: &builder)
+            // Decision 402: the real tracks, clear of the lines the
+            // player bought.
+            let bought = world.acquisitions.compactMap { acquisition -> (system: String, shape: [RealRailways.Coordinate])? in
+                let parts = acquisition.realLine.split(separator: ":", maxSplits: 1).map(String.init)
+                guard parts.count == 2, let line = operations.system(id: parts[0])?.lines.first(where: { $0.id == parts[1] }) else { return nil }
+                return (parts[0], line.shape)
+            }
+            realTrains = Map3DRealTrains(traffic: traffic, structures: railways.structures, railTracks: railways.tracks, bought: bought,
+                                         frame: frame, snapshot: snapshot, builder: &builder)
         } else {
             realTrains = nil
         }
