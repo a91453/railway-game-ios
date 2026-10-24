@@ -1019,6 +1019,9 @@ struct LinesPanel: View {
                     }
                 }
                 .accessibilityIdentifier("line.addSelectedStation")
+                // Decision 390: lesson 2's guide.
+                .tutorialPanelTarget(.addSelectedStation)
+                .id(TutorialTarget.addSelectedStation)
             }
             AddStopMenu(session: session, place: .end(line.stops.count), choices: stations)
                 .equatable()

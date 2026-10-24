@@ -93,12 +93,24 @@ public struct Lesson: Sendable, Identifiable {
         case 2: language.text("Extend a line and read its card.", "延長路線，看懂路線卡。")
         case 3: language.text("Run a second train: Add a Train and a passing loop.", "加開第二列車：加開一列車與待避線。")
         case 4: language.text("Open a second line; riders change trains where the lines meet.", "開第二條線，乘客在兩線交會的車站轉乘。")
-        case 5: language.text("Double the track so trains no longer wait to pass.", "把單線改成雙線，列車不用再等交會。")
+        case 5: language.text("Double the track so trains no longer wait to pass.", "把單線改成複線，列車不用再等交會。")
         case 6: language.text("Set when a line runs, how often and where it stops.", "設定路線的營運時段、班距與停靠。")
-        case 7: language.text("Build a depot where the trains rest at night.", "蓋一座機廠，列車晚上回去休息。")
+        case 7: language.text("Build a depot and rest the trains there at night.", "蓋一座機廠，讓列車夜裡回去休息。")
         case 8: language.text("Carry freight between two freight yards.", "在兩座貨運場之間載貨。")
         case 9: language.text("Take visitors to a sight and build beside it.", "把遊客載到景點，在旁邊蓋建物。")
         default: language.text("Take on the city's requests for a reward.", "接下城市的委託，完成就有獎勵。")
+        }
+    }
+
+    /// What the goal of linking places is called on the goals panel and
+    /// the lesson's card (decision 390), where "Link all 2 towns" read
+    /// wrong; `nil` for a lesson without one.
+    func linkTitle(in language: DisplayLanguage) -> String? {
+        switch number {
+        case 1, 3: language.text("Link the two towns by rail", "用鐵路連通兩座城鎮")
+        case 2, 4: language.text("Link all three towns by rail", "用鐵路連通三座城鎮")
+        case 9: language.text("Take the railway on to Seaview Point", "把鐵路延伸到望海岬")
+        default: nil
         }
     }
 }
@@ -127,12 +139,12 @@ extension Lesson {
     }
 
     /// A lesson after the third: one goal of riders a day, its days for
-    /// 3, 2 and 1 stars, and what it teaches in a read step (decision 271),
-    /// or in `guide`'s steps, one action each (decision 376).
+    /// 3, 2 and 1 stars (decision 271), and what it teaches in `guide`'s
+    /// steps, one action each (decision 376; decision 390 took out the read
+    /// step each had kept from decision 271, which no lesson showed).
     private static func later(
         _ number: Int, titles: (String, String), stories: (String, String), goals: @escaping @Sendable ([PlanPoint], PlanPoint, WorldBounds) -> [Goal],
-        days: (Int64, Int64, Int64), unlocks: [UnlockableTool], step: (title: (String, String), body: (String, String)),
-        guide: [TutorialStep]? = nil
+        days: (Int64, Int64, Int64), unlocks: [UnlockableTool], guide: [TutorialStep]
     ) -> Lesson {
         Lesson(
             number: number,
@@ -146,7 +158,7 @@ extension Lesson {
                 }
             ),
             unlocks: unlocks,
-            guide: guide ?? [TutorialStep(id: "lesson.\(number)", chapter: .service, targets: [], goal: .read, title: step.title, body: step.body)]
+            guide: guide
         )
     }
 
@@ -169,18 +181,15 @@ extension Lesson {
                 return Scenario(
                     id: "lesson.1",
                     goals: [.connect(points: Array(towns.prefix(2)), radius: Land.catchmentRadius), .dailyRiders(Lesson.firstRiders)],
-                    goldDays: 1, silverDays: 2, deadlineDays: 3
+                    // Decision 390: a first player opening the line on the
+                    // second afternoon, after reading every card, still
+                    // earns gold.
+                    goldDays: 2, silverDays: 3, deadlineDays: 5
                 )
             }
         ),
         unlocks: [],
-        // The tutorial's first part (decision 188): the line is opened with
-        // its train (decision 264), so "Buy … and Start Service" is gone.
-        guide: steps([
-            "build.network", "map.move", "track.draw", "track.build", "station.mode", "station.first.site", "station.first.build",
-            "station.second.site", "station.second.build", "build.done", "line.open", "line.stations", "line.create", "time.play",
-            "first.fare",
-        ])
+        guide: firstGuide
     )
 
     /// Lesson 2: the third town, on the same line.
@@ -202,7 +211,7 @@ extension Lesson {
             }
         ),
         unlocks: [],
-        guide: [extendStep] + steps(["line.card.open", "line.card.read", "station.select", "station.ridership"])
+        guide: secondGuide
     )
 
     /// Lesson 3: a second train on the first line.
@@ -232,33 +241,22 @@ extension Lesson {
     static let fourth = later(
         4, titles: ("Two Lines", "兩條線"),
         stories: (
-            "The third town has no railway yet. Open a second line to it from the first town's station: riders change trains there.",
-            "第三座城鎮還沒有鐵路。從第一座城鎮的車站開第二條線過去，乘客會在那一站轉乘。"
+            "The third town has no railway yet. Open a second line to it from the station nearest it: riders change trains there.",
+            "第三座城鎮還沒有鐵路。從離它最近的車站開第二條線過去，乘客會在那一站轉乘。"
         ),
         goals: { towns, _, _ in [.connect(points: towns, radius: Land.catchmentRadius), .dailyRiders(Lesson.fourthRiders)] },
         days: (2, 3, 5), unlocks: [],
-        step: (
-            ("Open a second line to the third town", "開第二條線到第三座城鎮"),
-            (
-                "Lay track from the first town's station to the third town and build a station there. Then open Lines, create a new line with the two and open it from its card.",
-                "從第一座城鎮的車站鋪軌道到第三座城鎮，在那裡蓋車站。再打開「路線」，用這兩站開新路線，在卡片上按「開通路線」。"
-            )
-        ),
         guide: fourthGuide
     )
 
     /// Lesson 5: double track (decision 203's one tap).
     static let fifth = later(
-        5, titles: ("Double Track", "雙線"),
+        5, titles: ("Double Track", "複線"),
         stories: (
-            "On single track, trains wait for each other at the passing loops. Double the busiest stretch and they run straight through.",
-            "單線上，列車要在待避線等對向車。把最忙的那一段改成雙線，列車就能一路開過去。"
+            "On single track, trains wait for each other at the passing loops. Make a stretch double track and they run through it.",
+            "單線上，列車要在待避線等對向車。把一段改成複線，列車就能一路開過去。"
         ),
         goals: { _, _, _ in [.dailyRiders(Lesson.laterRiders)] }, days: (3, 4, 6), unlocks: [.doubleTrack],
-        step: (
-            ("Tap a stretch of track, then Double Track", "點一段軌道，再按「雙線」"),
-            ("The second track is laid beside the first, and the trains keep to their own.", "第二條軌道會鋪在旁邊，兩個方向的列車各走各的。")
-        ),
         guide: fifthGuide
     )
 
@@ -266,14 +264,10 @@ extension Lesson {
     static let sixth = later(
         6, titles: ("Line Details", "路線的細節"),
         stories: (
-            "A line can run all day or only at the busy hours, as often as you like, and skip stops. A new line's card sets its hours and trains; later, open Advanced on the line card.",
-            "路線可以全天開或只在尖峰開，班距隨你定，也可以跳過某些站。新路線的卡片可以設營運時間與列車；之後再打開路線卡的「進階」。"
+            "A line can run all day or from 06:00 to 24:00, every few minutes or fewer, and some trains can skip stops. All three are set in Lines.",
+            "路線可以全天營運或只開 06:00–24:00，班距隨你定，也能讓部分列車跳過某些站。這三件事都在「路線」裡設定。"
         ),
         goals: { _, _, _ in [.dailyRiders(Lesson.laterRiders)] }, days: (3, 4, 6), unlocks: [.lineDetails],
-        step: (
-            ("Open Lines, then Advanced", "打開「路線」，再打開「進階」"),
-            ("Set the service day and how often trains come. Fewer trains cost less; more carry more.", "設定營運時段與班距。車少比較省，車多載得多。")
-        ),
         guide: sixthGuide
     )
 
@@ -281,14 +275,10 @@ extension Lesson {
     static let seventh = later(
         7, titles: ("The Depot", "機廠"),
         stories: (
-            "Trains that stop for the night need somewhere to rest. Build a depot at the end of a line and send its trains there.",
-            "晚上停駛的列車要有地方休息。在路線的盡頭蓋一座機廠，讓列車回去。"
+            "Your lines run all night. Build a depot at the end of a track, then let a line rest its trains there at night.",
+            "你的路線整夜都在跑。在軌道的盡頭蓋一座機廠，再讓路線的列車夜裡回去休息。"
         ),
-        goals: { _, _, _ in [.dailyRiders(Lesson.laterRiders)] }, days: (3, 4, 6), unlocks: [.depot],
-        step: (
-            ("Build, then Depot, then tap the end of a track", "按「建造」、「機廠」，再點軌道的盡頭"),
-            ("Then choose the depot on the line card, under Advanced.", "接著在路線卡的「進階」選這座機廠。")
-        ),
+        goals: { _, _, _ in [.dailyRiders(Lesson.seventhRiders)] }, days: (3, 4, 6), unlocks: [.depot],
         guide: seventhGuide
     )
 
@@ -300,10 +290,6 @@ extension Lesson {
             "城鎮會生產貨物，也需要貨物。在兩座車站蓋貨運場，開一列貨運列車往返。"
         ),
         goals: { _, _, _ in [.dailyRiders(Lesson.laterRiders)] }, days: (3, 4, 6), unlocks: [.freight],
-        step: (
-            ("Tap a station, then Build Freight Yard", "點一座車站，再按「蓋貨運場」"),
-            ("Do the same at a second station, then make a line between them carry freight.", "第二座車站也蓋一座，再把兩站之間的一條路線改成載貨。")
-        ),
         guide: eighthGuide
     )
 
@@ -316,10 +302,6 @@ extension Lesson {
         ),
         goals: { towns, sight, _ in [.connect(points: [towns[1], sight], radius: Land.catchmentRadius), .dailyRiders(Lesson.laterRiders)] },
         days: (3, 4, 6), unlocks: [.buildingTool],
-        step: (
-            ("Lay track to the sight and build a station", "鋪軌道到景點，蓋一座車站"),
-            ("Add the station to a line. A hotel beside it brings more visitors.", "把車站加進路線。旁邊蓋一間旅館，遊客會更多。")
-        ),
         guide: ninthGuide
     )
 
@@ -331,10 +313,6 @@ extension Lesson {
             "城市會提出委託：更多乘客、在某處蓋站、運送貨物。接下委託，在期限內完成就有獎勵。"
         ),
         goals: { _, _, _ in [.dailyRiders(Lesson.laterRiders)] }, days: (3, 4, 6), unlocks: [.trainTool],
-        step: (
-            ("Open the city's requests and take one", "打開城市的委託，接下一件"),
-            ("Each says what to do and by when. After this lesson every tool is yours.", "每件委託都寫著要做什麼、期限到何時。過了這關，所有工具都歸你。")
-        ),
         guide: tenthGuide
     )
 
@@ -349,18 +327,128 @@ extension Lesson {
     /// lines (provisional until measured).
     static let fourthRiders: Int64 = 65_000
     static let laterRiders: Int64 = 69_000
+    /// Decision 390: lesson 7 rests a line's trains at night, which carries
+    /// fewer riders than running all night (some 65,400 a day with both
+    /// lines resting, against 68,000 all night, on its first day).
+    static let seventhRiders: Int64 = 65_000
 
-    /// Lesson 2's first step: what to build, read.
-    static let extendStep = TutorialStep(
-        id: "lesson.extend", chapter: .line,
-        targets: [.linesButton],
-        goal: .read,
-        title: ("Extend your line to the third town", "把路線延伸到第三個城鎮"),
-        body: (
-            "Lay track from your line's end to the third town and build a station there. Then open Lines and add it to the line's stops.",
-            "從路線的終點把軌道鋪到第三座小鎮，在那裡蓋一座車站，再打開「路線」把它加進停靠站。"
-        )
-    )
+    /// Lesson 1's guide: the tutorial's first part (decision 188), the
+    /// line opened with its train (decision 264), so "Buy … and Start
+    /// Service" is gone. Decision 390: in the lesson's own words, as its
+    /// goal links two towns: the track runs from one to the other and a
+    /// station goes in each, where the tutorial's words had it laid across
+    /// one town.
+    static let firstGuide: [TutorialStep] = steps([
+        "build.network", "map.move", "track.draw", "track.build", "station.mode", "station.first.site", "station.first.build",
+        "station.second.site", "station.second.build", "build.done", "line.open", "line.stations", "line.create", "time.play",
+        "first.fare",
+    ]).map { step in
+        switch step.id {
+        case "build.network":
+            step.retold(
+                title: ("Tap Build", "點「建設」"),
+                body: (
+                    "Your goal: link the two towns by rail. Track and stations are under Build.",
+                    "目標：用鐵路連通兩座城鎮。軌道和車站都在「建設」裡蓋。"
+                )
+            )
+        case "map.move":
+            step.retold(
+                title: ("Zoom out to see both towns", "縮小地圖，看到兩座城鎮"),
+                body: (
+                    "Pinch or tap − to zoom, drag to move. Blocks: green homes, blue shops, orange offices.",
+                    "兩指或按「−」縮放，拖曳移動。方塊是建物：綠住宅、藍商業、橘辦公。"
+                )
+            )
+        case "track.draw":
+            step.retold(
+                title: ("Tap one town, then the other", "點一座城鎮，再點另一座"),
+                body: (
+                    "Run the track from town to town, so a station fits in each.",
+                    "軌道從一座城鎮鋪到另一座，兩邊才都能蓋車站。"
+                )
+            )
+        case "station.first.site":
+            step.retold(
+                title: ("Tap your track in one town", "點一座城鎮裡的軌道"),
+                body: ("The ring shows who lives within a walk.", "圓圈裡是走路就能到站的居民。")
+            )
+        case "station.second.site":
+            step.retold(
+                title: ("Tap your track in the other town", "點另一座城鎮裡的軌道"),
+                body: ("A line needs a station at each end.", "路線兩端各要一座車站。")
+            )
+        default:
+            step
+        }
+    }
+
+    /// Lesson 2's guide (decision 390): track on to the third town, its
+    /// station, the station added to the line, then the line's card and a
+    /// station's riders. Its first step keeps the id of the read step it
+    /// takes over ("lesson.extend"), where the launcher takes a guide up.
+    static let secondGuide: [TutorialStep] = [
+        TutorialStep(
+            id: "lesson.extend", chapter: .track,
+            targets: [.buildEntry],
+            goal: .chooseTool(.network),
+            panel: .closed,
+            title: ("Tap Build", "點「建設」"),
+            body: ("The third town has no station yet. Track goes there first.", "第三座城鎮還沒有車站，要先鋪軌道過去。")
+        ),
+        TutorialStep(
+            id: "lesson.2.track", chapter: .track,
+            targets: [.map],
+            goal: .drawTrack,
+            setup: [.layTrack],
+            title: ("Tap a station, then the third town", "點車站，再點第三座城鎮"),
+            body: (
+                "Start at the station nearest the third town, so the track joins your line.",
+                "從離第三座城鎮最近的車站開始，軌道才會接上路線。"
+            )
+        ),
+    ] + steps(["track.build", "station.mode"]) + [
+        TutorialStep(
+            id: "lesson.2.site", chapter: .stations,
+            targets: [.map],
+            goal: .pickPlatformSite(1),
+            title: ("Tap your track in the third town", "點第三座城鎮裡的軌道"),
+            body: ("The ring shows who lives within a walk.", "圓圈裡是走路就能到站的居民。")
+        ),
+    ] + steps(["station.first.build"]) + [
+        TutorialStep(
+            id: "lesson.2.done", chapter: .stations,
+            targets: [.selectTool],
+            goal: .chooseTool(.select),
+            panel: .closed,
+            title: ("Tap Done to stop building", "點「完成」結束建造"),
+            body: ("Time runs again. Next, add the station to your line.", "時間會繼續走。接著把新車站加進路線。")
+        ),
+        TutorialStep(
+            id: "lesson.2.station", chapter: .line,
+            targets: [.map],
+            goal: .selectStationOffLine,
+            panel: .closed,
+            title: ("Tap the new station", "點新車站"),
+            body: ("Your line takes the station you picked.", "路線會加入你點選的車站。")
+        ),
+        TutorialStep(
+            id: "lesson.2.lines", chapter: .line,
+            targets: [.linesButton],
+            goal: .openLines,
+            setup: [.selectNewestLine],
+            title: ("Tap Lines", "點「路線」"),
+            body: ("Your line's card lists its stops.", "路線卡上列出它的停靠站。")
+        ),
+        TutorialStep(
+            id: "lesson.2.add", chapter: .line,
+            targets: [.addSelectedStation],
+            goal: .addStopToLine,
+            panel: .lines,
+            title: ("Add the station to your line", "把新車站加進路線"),
+            body: ("Tap Add … to … under its stops.", "按停靠站下方的「把…加入…」。")
+        ),
+    ] + steps(["line.card.open", "line.card.read", "station.select", "station.ridership"])
 
     // Decision 376: lessons 3–6, one action each, as lesson 1's guide.
     // A step taken over from an earlier guide keeps its id ("lesson.addTrain",
@@ -422,8 +510,8 @@ extension Lesson {
             setup: [.layTrack],
             title: ("Tap a station, then the third town", "點車站，再點第三座城鎮"),
             body: (
-                "Start at the first town's station, so the new track joins your line's.",
-                "從第一座城鎮的車站開始鋪，新軌道才會接上路線。"
+                "Start at the station nearest the third town, so the track joins your line.",
+                "從離第三座城鎮最近的車站開始，軌道才會接上路線。"
             )
         ),
     ] + steps(["track.build", "station.mode"]) + [
@@ -451,8 +539,8 @@ extension Lesson {
             panel: .lines,
             title: ("Tap the old station, then the new", "點舊車站，再點新車站"),
             body: (
-                "Pick the first town's station: riders change between your two lines there.",
-                "先點第一座城鎮的車站，乘客會在那裡轉乘兩條線。"
+                "Pick the station your new track starts at: riders change lines there.",
+                "先點新軌道起點的車站，乘客會在那裡轉乘兩條線。"
             )
         ),
     ] + steps(["line.create", "time.play"])
@@ -516,8 +604,8 @@ extension Lesson {
             panel: .lines,
             title: ("Change when your line runs", "改路線的營運時間"),
             body: (
-                "Tap Run All Day for trains all night, or back to 06:00–24:00. Each hour costs to run.",
-                "按「全天營運」讓列車整夜行駛，或改回 06:00–24:00。"
+                "Run All Day runs trains all night; 06:00–24:00 rests them and costs less.",
+                "「全天營運」整夜有車；06:00–24:00 夜裡停駛，比較省。"
             )
         ),
         TutorialStep(
@@ -608,6 +696,19 @@ extension Lesson {
                 "收班後列車回機廠，首班前再出庫。"
             )
         ),
+        // Decision 390: the lessons' lines run all day (decision 271), so
+        // trains had no last train to go to the depot after.
+        TutorialStep(
+            id: "lesson.7.hours", chapter: .service,
+            targets: [.serviceHours],
+            goal: .changeServiceHours,
+            panel: .lines,
+            title: ("Rest the trains at night", "讓列車夜裡休息"),
+            body: (
+                "Tap Run 06:00–24:00 Instead: after the last train, they go to the depot.",
+                "按「改為 06:00–24:00 營運」，收班後列車就回機廠。"
+            )
+        ),
     ] + steps(["time.play"])
 
     /// Lesson 8: a freight yard at two stations, then a freight line
@@ -686,7 +787,7 @@ extension Lesson {
             goal: .chooseTool(.network),
             panel: .closed,
             title: ("Tap Build", "點「建設」"),
-            body: ("The sight lies beyond the second town.", "景點在第二座城鎮再過去。")
+            body: ("Seaview Point's mark is on the map, past the end of your lines.", "地圖上有望海岬的標記，在路線終點再過去。")
         ),
         TutorialStep(
             id: "lesson.9.track", chapter: .track,
@@ -695,8 +796,8 @@ extension Lesson {
             setup: [.layTrack],
             title: ("Tap a station, then the sight", "點車站，再點景點"),
             body: (
-                "Start at the second town's station, so the new track joins your line's.",
-                "從第二座城鎮的車站開始鋪，新軌道才會接上路線。"
+                "Start at the station nearest the sight, so the track joins your line.",
+                "從離景點最近的車站開始，軌道才會接上路線。"
             )
         ),
     ] + steps(["track.build", "station.mode"]) + [
@@ -723,7 +824,7 @@ extension Lesson {
             goal: .pickLineStations,
             panel: .lines,
             title: ("Tap the old station, then the new", "點舊車站，再點新車站"),
-            body: ("Pick the second town's station, then the sight's.", "先點第二座城鎮的車站，再點景點的車站。")
+            body: ("Pick the station your new track starts at, then the sight's.", "先點新軌道起點的車站，再點景點的車站。")
         ),
     ] + steps(["line.create"]) + [
         TutorialStep(

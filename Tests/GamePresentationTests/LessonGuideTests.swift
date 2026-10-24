@@ -24,7 +24,8 @@ final class LessonGuideTests: XCTestCase {
         ])
         let standard = Set(Tutorial.standardSteps.map(\.id))
         XCTAssertEqual(Lesson.all[6].guide.map(\.id), [
-            "lesson.7", "lesson.7.mode", "lesson.7.end", "lesson.7.build", "lesson.7.done", "lesson.7.lines", "lesson.7.depot", "time.play",
+            "lesson.7", "lesson.7.mode", "lesson.7.end", "lesson.7.build", "lesson.7.done", "lesson.7.lines", "lesson.7.depot", "lesson.7.hours",
+            "time.play",
         ])
         XCTAssertEqual(Lesson.all[7].guide.map(\.id), [
             "lesson.8", "lesson.8.panel", "lesson.8.yard", "lesson.8.second", "lesson.8.panel2", "lesson.8.yard2",
@@ -54,9 +55,9 @@ final class LessonGuideTests: XCTestCase {
     }
 
     /// Each step reads in both languages, as short as the tutorial's own,
-    /// and points at something.
+    /// and points at something (decision 390: lessons 1 and 2 too).
     func testTheGuidesReadInBothLanguages() {
-        for lesson in Lesson.all[2...9] {
+        for lesson in Lesson.all {
             for step in lesson.guide {
                 XCTAssertFalse(step.targets.isEmpty, "\(step.id) points at something")
                 XCTAssertLessThanOrEqual(step.body(in: .english).count, 90, step.id)
@@ -78,6 +79,100 @@ final class LessonGuideTests: XCTestCase {
         XCTAssertEqual(Lesson.all[6].guide[6].revealsInPanel, .lineDepot)
         XCTAssertEqual(Lesson.all[7].guide.compactMap(\.revealsInPanel), [.freightYard, .freightYard])
         XCTAssertTrue(Lesson.all[8].guide[11].usesDetailsCard, "Hotel is on the details card")
+        XCTAssertEqual(Lesson.all[1].guide.compactMap(\.revealsInPanel), [.addSelectedStation, .lineLoss])
+        XCTAssertEqual(Lesson.all[6].guide[7].revealsInPanel, .serviceHours)
+    }
+
+    /// Decision 390: lesson 1's cards say to run the track from one town
+    /// to the other and put a station in each, which its goal asks for,
+    /// and the card keeps clear of the two towns. The step is not held for
+    /// it (docs/HANDOFF.md).
+    func testTheFirstLessonsCardsLinkTheTwoTowns() throws {
+        let guide = Lesson.all[0].guide
+        XCTAssertEqual(guide.map(\.id), [
+            "build.network", "map.move", "track.draw", "track.build", "station.mode", "station.first.site", "station.first.build",
+            "station.second.site", "station.second.build", "build.done", "line.open", "line.stations", "line.create", "time.play",
+            "first.fare",
+        ])
+        XCTAssertEqual(guide[2].title(in: .english), "Tap one town, then the other")
+        XCTAssertEqual(guide[7].title(in: .traditionalChinese), "點另一座城鎮裡的軌道")
+        for step in guide {
+            let standard = try XCTUnwrap(Tutorial.standardSteps.first { $0.id == step.id }, step.id)
+            XCTAssertEqual(step.goal, standard.goal, step.id)
+            XCTAssertEqual(step.targets, standard.targets, step.id)
+        }
+
+        let session = start(1)
+        session.setSpeed(.paused)
+        let towns = Lesson.towns(in: session.world.bounds)
+        step(session, "build.network") { session.selectTool(.network) }
+        session.mapDidMove()
+        session.showNextTutorialStep()
+        XCTAssertEqual(session.tutorial?.step.id, "track.draw")
+        XCTAssertEqual(Set(session.tutorialPlacesToTap), Set(towns.prefix(2)), "the card keeps clear of the two towns")
+        // 400 m inside the first town: long enough, but short of the other.
+        session.tapNetwork(at: towns[0], reach: Self.reach)
+        session.tapNetwork(at: PlanPoint(x: towns[0].x + 400 * WorldCoordinate.unitsPerMetre, y: towns[0].y), reach: Self.reach)
+        XCTAssertNil(session.networkPreview?.problem)
+        XCTAssertTrue(session.isTutorialStepDone, "lesson 1's first track is not held")
+        XCTAssertEqual(session.tutorialHint, nil, "a step done says nothing more")
+        XCTAssertFalse(GameSession.passes(session.networkPreview?.points ?? [], within: Land.catchmentRadius, of: towns[1]))
+        session.tapNetwork(at: towns[1], reach: Self.reach)
+        XCTAssertTrue(GameSession.passes(session.networkPreview?.points ?? [], within: Land.catchmentRadius, of: towns[1]))
+    }
+
+    /// Decision 390, lesson 2: track from the station nearest the third
+    /// town on to it, a station there and the station added to the line,
+    /// one action each. Track or a station short of the town is not taken.
+    func testTheSecondLessonsGuide() throws {
+        let session = start(2)
+        session.setSpeed(.paused)
+        let towns = Lesson.towns(in: session.world.bounds)
+        let line = try XCTUnwrap(session.world.lines.first)
+        let first = try XCTUnwrap(session.world.stations.min { distance($0.location, towns[2]) < distance($1.location, towns[2]) })
+        step(session, "lesson.extend") { session.selectTool(.network) }
+        XCTAssertEqual(session.tutorialPlacesToTap, [towns[2]], "the card keeps clear of the third town")
+        let end = try XCTUnwrap(session.world.network.nodes.filter { $0.ends.count == 1 }.map { PlanPoint(x: $0.position.x, y: $0.position.y) }
+            .min { distance($0, first.location) < distance($1, first.location) })
+        XCTAssertEqual(session.tutorial?.step.id, "lesson.2.track")
+        session.tapNetwork(at: end, reach: Self.reach)
+        // Halfway: long enough for stations, but not into the town.
+        session.tapNetwork(at: PlanPoint(x: (end.x + towns[2].x) / 2, y: (end.y + towns[2].y) / 2), reach: Self.reach)
+        XCTAssertNil(session.networkPreview?.problem)
+        XCTAssertFalse(session.isTutorialStepDone, "track short of the third town is not taken")
+        XCTAssertEqual(session.tutorialHint?.text, "It doesn't reach the town yet. Tap the end among its houses.")
+        session.tapNetwork(at: towns[2], reach: Self.reach)
+        XCTAssertTrue(session.isTutorialStepDone, "lesson.2.track is done")
+        session.showNextTutorialStep()
+        step(session, "track.build") { session.buildNetworkTrack() }
+        step(session, "station.mode") { session.setNetworkMode(.platform) }
+        XCTAssertEqual(session.tutorial?.step.id, "lesson.2.site")
+        // On the new track, but outside the town.
+        let track = try XCTUnwrap(session.world.network.edges.last.flatMap { session.world.trackGeometry(of: $0.id) })
+        session.tapNetwork(at: track.location(at: track.length / 4).position.plan, reach: Self.reach)
+        XCTAssertNotNil(session.platformSitePlanPoint)
+        XCTAssertFalse(session.isTutorialStepDone, "a station outside the third town is not taken")
+        XCTAssertEqual(
+            session.tutorialHint?.text, "That spot is outside the town that needs a station. Tap your track there."
+        )
+        session.tapNetwork(at: towns[2], reach: Self.reach)
+        XCTAssertTrue(session.isTutorialStepDone, "lesson.2.site is done")
+        session.showNextTutorialStep()
+        step(session, "station.first.build") { session.addNetworkPlatform() }
+        let new = try XCTUnwrap(session.world.stations.last)
+        step(session, "lesson.2.done") { session.selectTool(.select) }
+        XCTAssertEqual(session.tutorialPlacesToTap, [new.location])
+        session.selectStation(first.id)
+        XCTAssertFalse(session.isTutorialStepDone, "a station on the line already")
+        XCTAssertEqual(session.tutorialHint?.text, "That station is on a line already. Tap the new one.")
+        step(session, "lesson.2.station") { session.selectStation(new.id) }
+        step(session, "lesson.2.lines") { session.linesPanelDidChange(isShown: true) }
+        XCTAssertEqual(session.selectedLineID, line.id)
+        XCTAssertEqual(session.selectedStationID, new.id, "the station stays picked for the button")
+        step(session, "lesson.2.add") { session.addStationToSelectedLine(new.id) }
+        XCTAssertTrue(session.world.lines.first?.stops.contains(new.id) == true)
+        XCTAssertEqual(session.tutorial?.step.id, "line.card.read", "the panel is open: its step is passed over")
+        XCTAssertTrue(session.world.isMet(Lesson.all[1].challenge.scenario(seed: Lesson.seed, in: session.world.bounds).goals[0]))
     }
 
     /// Lesson 3: Lines, Add a Train, the passing loop, time.
@@ -242,6 +337,11 @@ final class LessonGuideTests: XCTestCase {
         let depot = try XCTUnwrap(session.world.depotRow(of: line.id, in: .english)?.choices.first, "the line selected can use the depot")
         step(session, "lesson.7.depot") { session.toggleSelectedLineDepot(depot.station) }
         XCTAssertEqual(session.selectedLine?.depots, [depot.station])
+        // Decision 390: the lessons' lines run all day; at 06:00–24:00 the
+        // trains go to the depot after the last.
+        XCTAssertEqual(session.selectedLine?.window, .allDay)
+        step(session, "lesson.7.hours") { session.setSelectedLineAllDay(false) }
+        XCTAssertNotEqual(session.selectedLine?.window, .allDay)
         lastStep(session, "time.play") { session.setSpeed(.normal) }
     }
 
