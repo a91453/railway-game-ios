@@ -323,7 +323,13 @@
 
 **第十次換手（2026-10-24 14:00 UTC，session_013dJ7tvDYJnhe7XjXCE5cNi 壓縮 2 次 → 作者從 claude.ai 開的新規劃）**。和下面不同時以這段為準。新任開工：讀第 1 節、這一段、第 3 節最上面幾列；#1041 只讀「session_013dJ7tvDYJnhe7XjXCE5cNi 壓縮第 2 次」那則之後的留言。
 
-- **新任接手後派的**（session_019yHzrc1rgGJgdXSSwRNqgM，15:10 UTC）：審查 H session_01G5KnXReBk4W8w69FWWX4LW（#1137–#1188）；#1189 的新負責人 session_01PGYZVEDnKApav7UJwBzzRT（merge main、`full-ci`、404.md 記第 18 片）；教學卡片移位與 `TutorialUITests` 不穩 session_01CjUqsd4Y3crAW7N5kQ6CD3（決策要的話 406）；10m（403 第 2 個 PR）session_01ECniun7ySv3N8EbHxvmefb。做中的 session_01Eak3iwKWPyEfezUqQtTX59（自有建築剷除實景建物，決策要的話 405）改通知新任。87.1 已記進 PLAYER_FEEDBACK。下面「還沒派」裡的第 5 課卡片與 403 第 2 個 PR 因此已派。
+- **新任接手後的現況**（session_019yHzrc1rgGJgdXSSwRNqgM，16:30 UTC 更新；壓縮前寫下，以 #1041 本任最後一則為準）：
+  - 合併了：#1191（交接）、#1189（決策 404，分片警告，`--parallel` 試過退回逐一，d05ff44e）、#1192（自有建築剷除實景建物、近看飯店百貨不再是方塊，092470fc）、#1196（審查 H 交接，315a7d2a）。main 的 `ci.yml` 在 d05ff44e 跑中、315a7d2a 排隊（092470fc 那輪被取代）。**下一批等 315a7d2a 綠了再合。**
+  - 可合併、等下一批：#1195（審查 H 修 H2、H3，只動 GamePresentation，head 534b31ac）。
+  - 做中（都會 send_message 規劃「可合併」）：#1193 教學卡片不跳（session_01CjUqsd4Y3crAW7N5kQ6CD3，動 App，合前看 only_testing 兩次綠）；#1194 403 續「旁邊」「從車站看」（session_01ECniun7ySv3N8EbHxvmefb）；CI 重新分配分片（session_01PGYZVEDnKApav7UJwBzzRT，**決策 405**，完整 tier；同一輪逐一跑 campaigns-11 19:09、-12 18:31，過了 CI 線）；H1 擴地後新地塊沒有路（session_01FLaCWgVfSpfyhXgpUdfufF，GameCore 完整 tier，決策 400 續或 **406**，存檔要升就 **73**，升的話合前開獨立審查）；H4–H6 3D 道路與隧道口電桿（session_01RmR8895Ba2LuiZZJL1XUyg，391、395 續）。
+  - 審查 H（session_01G5KnXReBk4W8w69FWWX4LW）做完，#1195 合了就封存；01Eak3 已封存。下一輪審查從 #1189 起數。H7（iCloud 衝突副本）、H8（底圖 `layer=inf`）在審查交接第四節，沒派。
+  - 還沒派（照 §22.2）：10n（403 第 3 個 PR 鳴笛與快照，等 #1194 合）、401 第 2 件、10i 的公車、10f、10d、10k、11。
+  - 週額度：10-24 15:30 起 `rate_limit_info` 是 seven_day 的 allowed_warning，同時開的 session 不要再多。
 - **合併了**（10-24，第九次換手之後）：#1177（交接）、#1166（398）、#1175（401 第 1 件）、#1176（391 續篇三）、#1180、#1185、#1187（87 的 What to Test）、#1181、#1188（full lane 的 UI 測試）、#1179（391 續篇二）、#1182（決策 402）、#1183（決策 403 第 1 個 PR）、#1184、#1186（CI 第 18 片 `campaigns-17`）、#1178（10i-1 道路格子，**存檔 72**，合前有獨立審查 session_013mpDRYLdRh5jv8tqnwg7hx），main **947c23ad**。main 的 `ci.yml` 在 947c23ad 綠（run 40093112308）。
 - **第 87 版**（作者：「好 綠了就幫我發」「等全部綠了再合沒關係我可以等」；作者去看演唱會，不在）：候選 947c23ad，What to Test 已在 main（`.github/testflight-whats-new.md`，0.5.0 (87.1)）。full lane 40093122899 第 1 次只有 Xcode build job 紅，在 `TutorialUITests.testATouchHeldOnTheFoldedCardAsTheStepMovesOnOpensIt`（`TutorialUITests.swift:359`，卡片在步驟換掉時移了位置）。這支測試在 30e34922 也紅過一次，在 b7793b97 綠，這版沒有改到教學，所以只重跑那個 job 一次（第 2 次）。**作者 14:02 UTC 自己按了 `testflight.yml`（run 40100730344，947c23ad，成功：帶 iCloud entitlement 的匯出與上傳都過了），說好「你過了再給玩家」。重跑的 UI 測試綠了（13:47–14:44），剩翻譯檢查；最後結果、有沒有告訴作者「可以給玩家」，看 #1041 本任最後的留言。** 原本的做法：
   - 綠了，本任就照 §1.2 寫健康報告，按 `testflight.yml` 一次（`archive_signing=adhoc`、`testing_scope=external`）。87 是第一個帶 iCloud entitlement 的匯出：匯出失敗時先看錯誤說的是哪個 capability，是 iCloud 就 `git revert d9b9cc6`；
