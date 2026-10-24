@@ -110,6 +110,59 @@ final class Map3DRoadBridgeTests: XCTestCase {
         }
     }
 
+    /// The concrete of the bridges (girders, parapets, walls, piers).
+    private static let concrete = Set([0.92, 0.80, 0.70, 0.86, 1].map { Map3DColor.shaded(Map3DPalette.concrete, Float($0)) })
+
+    /// The owner (2026-10-24): 「想問高架 應該不用那麼多的邊線怎麼感覺道路有超多條圍欄」. Two
+    /// decks side by side (a road's two carriageways, mapped apart) are
+    /// one deck to look at: a parapet along its outer edges only, none
+    /// between them.
+    func testDecksSideBySideKeepOnlyTheirOuterParapets() throws {
+        let world = try flatWorld(track: false)
+        let half = Map3DRoadBridges.half(.secondary)
+        let north: Double = 600, south = north + 2 * Double(half)
+        let builder = built(world, roads: [road([(100, north), (400, north)], level: 1), road([(400, south), (100, south)], level: 1),
+                                           road([(250, 500), (250, 750)], kind: .minor)])
+        let meshes = meshes(builder)
+        let top = try XCTUnwrap(roadTop(230, Float(north), in: meshes))
+        XCTAssertEqual(top, 20 + Map3DScene.Builder.lift(of: .secondary) + 6, accuracy: 0.01, "both decks a level up")
+        // Parapets' tops, a metre over the decks.
+        let over = top + 0.5
+        let parapets: [Float] = meshes.flatMap(\.vertices).filter { (vertex: Map3DVertex) -> Bool in
+            Self.concrete.contains(vertex.color) && vertex.x > 100 && vertex.x < 400 && vertex.y > over
+        }.map(\.z)
+        let outer: (north: Float, south: Float) = (Float(north) - half, Float(south) + half)
+        let seam: Float = Float(north) + half
+        let between = parapets.filter { abs($0 - seam) < 1 }
+        XCTAssertTrue(parapets.contains { abs($0 - outer.north) < 0.5 }, "the outer parapet, north")
+        XCTAssertTrue(parapets.contains { abs($0 - outer.south) < 0.5 }, "the outer parapet, south")
+        XCTAssertTrue(between.isEmpty, "a parapet between the decks: \(between.count) points")
+    }
+
+    /// A ramp's walls stand only where it is a parapet's height (1 m) or
+    /// more over the ground: lower, the road meets the ground it lies on.
+    func testARampNearTheGroundHasNoWalls() throws {
+        let world = try flatWorld(track: true)
+        let builder = built(world, roads: [road([(512, 300), (512, 470)]), road([(512, 470), (512, 554)], level: 1), road([(512, 554), (512, 724)])])
+        let lift = Map3DScene.Builder.lift(of: .secondary), half = Map3DRoadBridges.half(.secondary)
+        let walls = meshes(builder).flatMap(\.vertices).filter { (vertex: Map3DVertex) -> Bool in
+            let offRamp = vertex.z < 470 || vertex.z > 554
+            return Self.concrete.contains(vertex.color) && abs(abs(vertex.x - 512) - half) < 0.05 && vertex.y > 20.05 && offRamp
+        }
+        XCTAssertFalse(walls.isEmpty, "the ramps' walls")
+        let lowest: Float = 20 + lift + Map3DElevatedLook.roadBridge.parapet - 0.1
+        let low = walls.filter { $0.y < lowest }
+        XCTAssertTrue(low.isEmpty, "\(low.count) wall tops under a metre, the lowest \(low.map(\.y).min() ?? 0)")
+    }
+
+    /// Roads on the ground, and a bridge left at the ground (over a river),
+    /// draw no parapet or wall.
+    func testRoadsOnTheGroundHaveNoParapets() throws {
+        let world = try flatWorld(track: false)
+        let builder = built(world, roads: [road([(100, 300), (400, 300)]), road([(100, 600), (400, 600)], level: 1), road([(250, 100), (250, 250)])])
+        XCTAssertFalse(meshes(builder).flatMap(\.vertices).contains { Self.concrete.contains($0.color) })
+    }
+
     /// The tallest freeway bridges stand at their real decks: 國姓高架橋's
     /// 265.55 m over the sea at its tallest pier.
     func testTheTallestFreewayBridgeStandsAtItsRealDeck() throws {
