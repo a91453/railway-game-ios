@@ -5,12 +5,12 @@
 
 ## 順序（重要）
 
-1. **第一個 PR（決策 396 的程式）**：遊戲已經會呼叫 Game Center，但 App 裡**還沒有** Game Center 的 entitlement。這時 Game Center 一律登入失敗，遊戲照舊，不跳任何訊息；TestFlight 照常可以發。
-2. **作者照下面第 1–4 步設定**：第 1、2 步在 Apple Developer 與 App Store Connect 按，第 3、4 步在 GitHub 按一次 workflow。
-3. 作者在遊戲規劃 session 說「Game Center 設好了」。
-4. **第二個 PR** 才加 entitlement（`com.apple.developer.game-center`）和成就圖。合併後的下一次 TestFlight，玩家登入 Game Center 就看得到排行榜和成就。
+1. **第一個 PR（決策 396 的程式，#1156，已合併）**：遊戲已經會呼叫 Game Center，但 App 裡**還沒有** Game Center 的 entitlement。這時 Game Center 一律登入失敗，遊戲照舊，不跳任何訊息；TestFlight 照常可以發。
+2. **作者照下面第 1、2 步打開 Game Center**（Apple Developer 與 App Store Connect；2026-10-24 已完成）。
+3. **第二個 PR（#1158）** 才加 entitlement（`com.apple.developer.game-center`）和成就圖。entitlement 只要第 1 步做完就不會擋發版。
+4. **作者照第 3、4 步在 GitHub 按一次 Game Center setup workflow**（先 dry run、再 apply；成就要等 #1158 的成就圖進 `main`），送審時照第 5 步勾 Game Center。建好之後的 TestFlight，玩家登入 Game Center 就看得到排行榜和成就。
 
-為什麼要分兩個 PR：App 有 Game Center 的 entitlement，而 App ID 還沒開 Game Center 時，發版時匯出 App Store 版本會因為 provisioning profile 沒有這一項而失敗（Apple 的說明見決策 396）。先設定、再加 entitlement，就不會擋發版。萬一第二個 PR 之後發版失敗，把那個 PR revert 就回到第 1 步的狀態。
+為什麼要分兩個 PR：App 有 Game Center 的 entitlement，而 App ID 還沒開 Game Center 時，發版時匯出 App Store 版本會因為 provisioning profile 沒有這一項而失敗（Apple 的說明見決策 396）。先設定、再加 entitlement，就不會擋發版。萬一第二個 PR 之後發版失敗，revert 它的 entitlement commit（`431a69f`）就回到第一個 PR 的狀態。
 
 ## 第 1 步：App ID 打開 Game Center
 
@@ -172,4 +172,4 @@ App Store Connect 的成就要有圖。38 張圖在成就圖的 PR（#1158）裡
 
 ## 設好之後
 
-在遊戲規劃 session 說「Game Center 設好了」。規劃會合第二個 PR（entitlement 與成就圖），再照平常的發版流程發下一版。
+第 3、4 步的 apply 跑完後，在遊戲規劃 session 說「Game Center 設好了」。排行榜與成就建好之後才發下一版（entitlement 與成就圖在 #1158），照平常的發版流程。
