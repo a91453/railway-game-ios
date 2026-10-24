@@ -496,11 +496,27 @@ extension Map3DScene.Builder {
                                 crossing = .level
                                 continue
                             }
-                            let height = bed + Map3DRoadBridges.overTrack
                             let half = Map3DRoadBridges.half(road.kind), grade = Map3DRoadBridges.grade(road.kind)
                             // Its deck clear of the track's ground, its own
                             // width's slant included.
                             let plateau = (across + 2) / sine + half * (1 - sine * sine).squareRoot() / sine
+                            // Clear of the rails all under it: the line's
+                            // highest within the plateau, as it climbs.
+                            var highest = bed
+                            let reachLow = Map3DTrackCover.key(x: Float(at.x) - plateau, z: Float(at.z) - plateau)
+                            let reachHigh = Map3DTrackCover.key(x: Float(at.x) + plateau, z: Float(at.z) + plateau)
+                            for row in reachLow.row...reachHigh.row {
+                                for column in reachLow.column...reachHigh.column {
+                                    for other in trackCover.cells[Map3DScene.ChunkKey(column: column, row: row)] ?? [] {
+                                        let near = trackCover.pieces[other]
+                                        guard !near.isTunnel, !near.isViaduct,
+                                              Map3DRoadBridges.nearest(at, Point(x: Double(near.a.x), z: Double(near.a.z)),
+                                                                       Point(x: Double(near.b.x), z: Double(near.b.z))).distance <= Double(plateau) else { continue }
+                                        for y in [near.a.y, near.b.y] where abs(y - Self.bedDrop - bed) < 2 { highest = max(highest, y - Self.bedDrop) }
+                                    }
+                                }
+                            }
+                            let height = highest + Map3DRoadBridges.overTrack
                             let join = Map3DRoadBridges.Join(point: at, along: Point(x: dx / length, z: dz / length), half: half, height: height,
                                                              plateau: plateau, grade: grade,
                                                              reach: plateau + min((height - surface) / grade, Map3DRoadBridges.longestRamp))
