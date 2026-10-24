@@ -648,7 +648,15 @@ extension Map3DScene {
         // their edge 1.6 m from the track's middle (no reference: gap).
         static let platformHeight: Float = 1.15
         static let platformEdge: Float = 1.6
+        /// Decision 392: a high-speed station's platform edge, 1.76 m from
+        /// the track's middle, as the Shinkansen standard the Taiwan High
+        /// Speed Rail was built to (JRTT 新幹線鉄道実施基準, on the
+        /// straight).
+        static let highSpeedPlatformEdge: Float = 1.76
         static let platformWidth: Float = 3.2
+        /// Decision 392: the narrowest platform drawn; where less room is
+        /// left between a track and the next, none is.
+        static let narrowestPlatform: Float = 2
         static let canopyHeight: Float = 4.4
         /// How finely track is laid between its samples, in metres.
         static let trackStep: Double = 16
@@ -1019,44 +1027,51 @@ extension Map3DScene {
         // MARK: Platforms
 
         /// Each platform beside its track: towards the other platform of
-        /// its station within 15 m (an island between them), else on the
-        /// side clear of other track, the left first; with a canopy.
+        /// its station across the next track within 15 m (an island
+        /// between them), else on the side clear of other track, the left
+        /// first; with a canopy. Decision 392: only where it stands clear
+        /// of every other track, its edge as far from that one's middle as
+        /// from its own, and at least ``narrowestPlatform`` wide; where
+        /// there is no such room either side (the high-speed demo's through
+        /// tracks between their loops, 5 m apart), none.
         mutating func addPlatforms(_ snapshot: RailwaySnapshot) {
             let platforms = snapshot.platforms.filter { $0.points.count > 1 && $0.structure != .tunnel }
             let middles = platforms.map { point($0.points[$0.points.count / 2]) }
             let others = snapshot.edges.map { ($0.edge.id, $0.geometry.points.map(point)) }
+            let fast = world.highSpeedStations
             for (index, platform) in platforms.enumerated() {
                 guard platform.points.contains(where: { contains(x: Double($0.x), y: Double($0.y)) }) else { continue }
                 let line = platform.points.map { point($0) + Self.lifted }
                 let across = Map3DMesh.acrossDirections(line)[line.count / 2]
                 let middle = middles[index]
-                var side: Float = -1, width = Self.platformWidth
+                let edge = fast.contains(platform.platform.station) ? Self.highSpeedPlatformEdge : Self.platformEdge
+                let near = Self.nearestTracks(beside: line, others: others.filter { $0.0 != platform.platform.edge }.map(\.1))
+                // The other platforms of its station across the nearest
+                // track either side.
                 let partner = platforms.indices
                     .filter { $0 != index && platforms[$0].platform.station == platform.platform.station && platforms[$0].platform.edge != platform.platform.edge }
-                    .map { (index: $0, distance: (middles[$0] - middle).length) }
-                    .filter { $0.distance < 15 && $0.distance > 2 * Self.platformEdge + 1 }
-                    .min { $0.distance < $1.distance }
-                if let partner {
-                    side = (middles[partner.index] - middle).dot(across) >= 0 ? 1 : -1
-                    width = partner.distance / 2 - Self.platformEdge
+                    .map { (index: $0, lateral: (middles[$0] - middle).dot(across)) }
+                    .filter { abs($0.lateral) < 15 && abs(abs($0.lateral) - near[$0.lateral >= 0 ? 1 : 0]) < 1 }
+                    .min { abs($0.lateral) < abs($1.lateral) }
+                var side: Float = -1, width = Self.platformWidth
+                if let partner, abs(partner.lateral) / 2 - edge >= Self.narrowestPlatform / 2 {
+                    side = partner.lateral >= 0 ? 1 : -1
+                    width = abs(partner.lateral) / 2 - edge
                 } else {
-                    func blocked(_ side: Float) -> Bool {
-                        let probe = middle + across * (side * (Self.platformEdge + Self.platformWidth / 2))
-                        return others.contains { id, points in
-                            id != platform.platform.edge && points.contains { abs($0.x - probe.x) < 3 && abs($0.z - probe.z) < 3 && ($0 - probe).length < 2.6 }
-                        }
-                    }
-                    if blocked(-1), !blocked(1) { side = 1 }
+                    func room(_ side: Float) -> Float { min(Self.platformWidth, near[side > 0 ? 1 : 0] - 2 * edge) }
+                    if room(-1) < Self.platformWidth, room(1) > room(-1) { side = 1 }
+                    width = room(side)
                 }
-                let offset = side * (Self.platformEdge + width / 2)
                 platformLines.append(line) // Decision 263: no street over it.
+                guard width >= Self.narrowestPlatform else { continue }
+                let offset = side * (edge + width / 2)
                 // Decision 259: its waiting crowd, and the station's
                 // passengers outside.
                 addStationLife(line: line, offset: offset, width: width, station: platform.platform.station)
                 mesh(at: middle) { mesh in
                     mesh.addRibbon(along: line, width: width, offset: offset, lift: Self.platformHeight, depth: Self.platformHeight + Self.bedDrop,
                                    top: Map3DPalette.platform, side: Map3DPalette.platform, topPaint: Self.paving, sidePaint: Self.concrete)
-                    mesh.addRibbon(along: line, width: 0.3, offset: side * (Self.platformEdge + 0.35), lift: Self.platformHeight + 0.01,
+                    mesh.addRibbon(along: line, width: 0.3, offset: side * (edge + 0.35), lift: Self.platformHeight + 0.01,
                                    top: Map3DPalette.platformEdge)
                 }
                 // Decision 321: its canopy and its station's building come
@@ -1064,6 +1079,40 @@ extension Map3DScene {
                 laidPlatforms.append(LaidPlatform(station: platform.platform.station, line: line, offset: offset, width: width,
                                                   structure: platform.structure))
             }
+        }
+
+        /// Decision 392: how far beside `line` the nearest of `others`'
+        /// middles runs within 15 m (beyond 1.5 m), on its left (across
+        /// it, negative) and its right, alongside it and at its level;
+        /// `.infinity` where none does.
+        static func nearestTracks(beside line: [Map3DPoint], others: [[Map3DPoint]]) -> [Float] {
+            let reach: Float = 15, step: Float = 2
+            let across = Map3DMesh.acrossDirections(line)
+            let minX = line.map(\.x).min()! - reach, maxX = line.map(\.x).max()! + reach
+            let minZ = line.map(\.z).min()! - reach, maxZ = line.map(\.z).max()! + reach
+            var nearest: [Float] = [.infinity, .infinity]
+            func consider(_ point: Map3DPoint) {
+                guard point.x > minX, point.x < maxX, point.z > minZ, point.z < maxZ,
+                      let index = line.indices.min(by: { (line[$0] - point).length < (line[$1] - point).length })
+                else { return }
+                let offset = point - line[index], forward = Map3DPoint(across[index].z, 0, -across[index].x)
+                let beyond = forward.dot(offset)
+                guard abs(offset.y) < 3, !(index == 0 && beyond < -1), !(index == line.count - 1 && beyond > 1) else { return }
+                let lateral = across[index].dot(offset)
+                // Closer than any other track could be: the platform's own,
+                // past a node.
+                guard abs(lateral) < reach, abs(lateral) > 1.5 else { return }
+                let side = lateral >= 0 ? 1 : 0
+                nearest[side] = min(nearest[side], abs(lateral))
+            }
+            for points in others {
+                for (a, b) in zip(points, points.dropFirst()) {
+                    guard max(a.x, b.x) > minX, min(a.x, b.x) < maxX, max(a.z, b.z) > minZ, min(a.z, b.z) < maxZ else { continue }
+                    let pieces = max(1, Int(((b - a).length / step).rounded(.up)))
+                    for piece in 0...pieces { consider(a + (b - a) * (Float(piece) / Float(pieces))) }
+                }
+            }
+            return nearest
         }
 
         /// The middle `share` of `line`, by length.
