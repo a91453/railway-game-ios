@@ -135,12 +135,14 @@ public enum PlacedBuildingKind: String, CaseIterable, Codable, Sendable {
 extension PlacedBuildingKind {
     /// How many looks it comes in (decision 361): a park a lawn, a
     /// playground or a garden with a pond; a temple a temple square with a
-    /// gate, or a large temple; the others one. A look is only how it is
-    /// drawn, numbered from 0.
+    /// gate, or a large temple; decision 398: a hotel a tower, a resort or
+    /// a hot-spring inn; a department store a mall or halls for shows and
+    /// banquets; the others one. A look is only how it is drawn, numbered
+    /// from 0.
     public var looks: Int {
         switch self {
-        case .park: 3
-        case .temple: 2
+        case .park, .hotel: 3
+        case .temple, .departmentStore: 2
         default: 1
         }
     }
