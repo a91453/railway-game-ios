@@ -323,15 +323,26 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第十一次換手（2026-10-24 22:50 UTC，session_019yHzrc1rgGJgdXSSwRNqgM 壓縮 2 次 → 作者從 claude.ai 開的新規劃）**。新任開工：讀第 1 節、下面「新任接手後的現況」、第 3 節最上面幾列；#1041 只讀「session_019yHzrc1rgGJgdXSSwRNqgM 壓縮第 2 次」那則之後的留言。
+
 **第十次換手（2026-10-24 14:00 UTC，session_013dJ7tvDYJnhe7XjXCE5cNi 壓縮 2 次 → 作者從 claude.ai 開的新規劃）**。和下面不同時以這段為準。新任開工：讀第 1 節、這一段、第 3 節最上面幾列；#1041 只讀「session_013dJ7tvDYJnhe7XjXCE5cNi 壓縮第 2 次」那則之後的留言。
 
-- **新任接手後的現況**（session_019yHzrc1rgGJgdXSSwRNqgM，18:45 UTC 更新；本任已壓縮 1 次，以 #1041 本任最後一則為準）：
-  - 合併了（10-24 15:07 起）：#1191（交接）、#1189（決策 404）、#1192（自有建築剷除實景建物）、#1196（審查 H 交接）、#1197（交接）、#1195（審查 H 的 H2、H3）、#1194（403 續「旁邊」「從車站看」，10m）、#1193（教學卡片留在原位，第 5 課卡片跳動與 TouchHeld 不穩一起修好）、#1199（H1 買下的地塊有路，決策 400 續，存檔不升）、#1198（**決策 405**：分片重排、加 `campaigns-18`，完整 tier **21 個 job**，警告線 17 分）、#1204（H4–H6，391 續篇四、395 續篇），main **cddc3237**。main 的 `ci.yml` 到 8ed3a64f 都綠（第一次 21 個 job 的完整 tier）；cddc3237 的還在跑。
-  - 審查 H 的 8 個發現：H1–H6 都已合；H7（iCloud 衝突副本）、H8（底圖 `layer=inf`）照 `docs/archive/PR1137_1188_REVIEW_HANDOFF.md` 第四節延後。下一輪審查從 #1189 起數（到 #1204 為止，程式 PR：#1192、#1193、#1194、#1195、#1199〔GameCore〕、#1204）。
-  - 本任派的 session 都已封存，**現在沒有做中的派工 session**。Codex 的 #1201、#1203（列車外形素材，draft）是作者自己叫 Codex 做的，規劃不合、不管。
-  - 還沒派（照 §22.2，派之前在 #1041 寫分數）：10n（403 第 3 個 PR：鳴笛與 3D 快照）、401 第 2 件、10i 的公車與底圖道路（作者選 B，規則見下面「公車」）、10f、10d、10k、11。
-  - 號碼：下一個決策 **406**，存檔 **73**；golden 不動。
-  - 週額度：10-24 15:30 起 `rate_limit_info` 是 seven_day 的 allowed_warning，本任 18:45 起不開新 session，等額度回來再派上面那些。
+- **新任接手後的現況**（session_019yHzrc1rgGJgdXSSwRNqgM，10-24 22:50 UTC，本任已壓縮 2 次，換手；見上面第十一次換手）：
+  - 合併了（10-24 15:07 起）：#1191、#1189（決策 404）、#1192、#1196、#1197、#1195、#1194（10m）、#1193（教學卡片留在原位）、#1199（H1，買下的地塊有路，存檔不升）、#1198（**決策 405**：完整 tier **21 個 job**，警告線 17 分）、#1204（H4–H6）、#1205（交接）；作者 22:23 自己合了 Codex 的 #1203（N700S/N700ST），main **e105e889**。`ci.yml` 在 main 綠。
+  - 審查 H：H1–H6 都已合；H7、H8 照 `docs/archive/PR1137_1188_REVIEW_HANDOFF.md` 第四節延後。下一輪審查從 #1189 起數（程式 PR：#1192、#1193、#1194、#1195、#1199〔GameCore〕、#1204）。
+  - **full lane 紅，發版前要先綠**：
+    - nightly 40131283541（921c62f1）所有 UI 測試都過，只有每晚的「Prove a missing toolbar button fails the smoke test」一秒就停：決策 382 把「完成」改成 `BuildDoneButton`（在 `BuildToolRail.swift`、`ContentView.swift` 各叫一次），腳本還找舊的 `doneButton`。
+    - 修正是 **#1206**（本任開的，只改 `.github/scripts/ui-smoke-missing-button.sh`，PR 會跑完整 tier）。本任在分支上手動跑了 `ios-build.yml`（`verify_missing_button=true`、`only_testing=ToolbarSmokeTests/testEnglishToolbar`），綠了才算證明拿掉「完成」會讓 smoke test 失敗。
+    - #1206 的 gate 和那次手動 run 都綠了，就照 §1.2 合，等下一次 full lane。
+    - 更早的 40109459200（7ca9d6d1）是 lessons job 紅，在 #1193（教學卡片）合併之前，921c62f1 的 lessons 已經綠，不另外追。
+  - **做中的派工 session**（都是本任 22:27 UTC 派的，派工留言 #1041 6390317632）：
+    - session_01P5gjwSg3taxPLmdNHrMbLb：10n，決策 403 第 3 個 PR（照車種的鳴笛、3D 快照），分支 `claude/map3d-horn-snapshot`，不升存檔。
+    - session_013AAhuBSsBFF5MAzis3q8UC：401 第 2 件（`Map3DRealTrains` 的真實列車軌道：照真實單複線、高度、不斷軌），**決策 406**，分支 `claude/real-train-tracks-406`。
+    - 它們說「可合併」時，新任查過 gate 與 iOS 都綠就照 §1.2 合，在 #1041 記下，再封存 session。
+  - Codex 的 PR（#1201 還開著；#1203 作者已自己合）是作者自己叫 Codex 做的，規劃不合、不管。
+  - 還沒派（照 §22.2，派之前在 #1041 寫分數）：10i 的公車與底圖道路（作者選 B，規則見下面「公車」）、10f、10d、10k、11。
+  - 號碼：下一個決策 **407**，存檔 **73**；golden 不動。
+  - 週額度：seven_day 是 allowed_warning，10-27 14:00 UTC 重置。作者問「怎麼不做了」，意思是照做，所以同時最多 2 個派工 session。
   - `tools/golden-checks/doc_numbers.py --check` 在 main 上本來就不過（OVERVIEW 的存檔版本與 ARCHITECTURE 舊順序），不是哪個 PR 弄壞的，沒有人接。
 - **合併了**（10-24，第九次換手之後）：#1177（交接）、#1166（398）、#1175（401 第 1 件）、#1176（391 續篇三）、#1180、#1185、#1187（87 的 What to Test）、#1181、#1188（full lane 的 UI 測試）、#1179（391 續篇二）、#1182（決策 402）、#1183（決策 403 第 1 個 PR）、#1184、#1186（CI 第 18 片 `campaigns-17`）、#1178（10i-1 道路格子，**存檔 72**，合前有獨立審查 session_013mpDRYLdRh5jv8tqnwg7hx），main **947c23ad**。main 的 `ci.yml` 在 947c23ad 綠（run 40093112308）。
 - **第 87 版**（作者：「好 綠了就幫我發」「等全部綠了再合沒關係我可以等」；作者去看演唱會，不在）：候選 947c23ad，What to Test 已在 main（`.github/testflight-whats-new.md`，0.5.0 (87.1)）。full lane 40093122899 第 1 次只有 Xcode build job 紅，在 `TutorialUITests.testATouchHeldOnTheFoldedCardAsTheStepMovesOnOpensIt`（`TutorialUITests.swift:359`，卡片在步驟換掉時移了位置）。這支測試在 30e34922 也紅過一次，在 b7793b97 綠，這版沒有改到教學，所以只重跑那個 job 一次（第 2 次）。**作者 14:02 UTC 自己按了 `testflight.yml`（run 40100730344，947c23ad，成功：帶 iCloud entitlement 的匯出與上傳都過了），說好「你過了再給玩家」。重跑的 UI 測試綠了（13:47–14:44），剩翻譯檢查；最後結果、有沒有告訴作者「可以給玩家」，看 #1041 本任最後的留言。** 原本的做法：
