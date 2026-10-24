@@ -98,8 +98,14 @@ final class LessonUITests: XCTestCase {
         defer { app?.terminate() }
         for number in [4, 5] {
             startLesson(number)
-            dismissGuide()
+            // Pause first: lesson 5's card stands beside the stretch with
+            // no train on it (decision 378), which changes as the trains
+            // run, so the card moves between S0, S1 and S2 every few
+            // seconds and a touch on Skip found where it was lands on the
+            // map (the screen recording of main 12c1235's full lane, run
+            // 40085460126). With the clock stopped it stays put.
             pause()
+            dismissGuide()
             let fixture = GameWorld.newGame(lesson: Lesson.all[number - 1])
             // Use the actual curved alignment for the tap, away from its
             // stations and the opening's passing loops.

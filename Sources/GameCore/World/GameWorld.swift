@@ -193,6 +193,12 @@ public struct GameWorld: Equatable, Sendable {
     /// bought them. None in a new world and in saves from before it. Set by
     /// ``recordLineAcquisition(line:realLine:dailyRiders:)`` only.
     public internal(set) var acquisitions: [LineAcquisition] = []
+    /// The roads on the land's grid (decision 400), or `nil` for a world
+    /// without them. Off in a new world and in saves from before it; the
+    /// player's new games turn them on. Set by ``enableRoads(towns:)``,
+    /// ``setRoads(_:in:)``, ``buildStationRoad(at:)`` and their growth once
+    /// a month only.
+    public internal(set) var roads: RoadGrid?
     /// The city's demand for homes, shops and work (decision 139), or `nil`
     /// for a city that grows as before. Off in a new world and in saves
     /// from before it; the app's new games turn it on. Set by
@@ -2727,6 +2733,12 @@ public struct GameWorld: Equatable, Sendable {
                 // Items 4 and 5: towns grow from the day that ended, and
                 // events start and end, at midnight.
                 let midnight = (demandEvents != nil || townGrowth != nil || tourism != nil) && start.seconds % GameTime.secondsPerDay == 0
+                // Decision 400: the roads grow at the midnight that begins
+                // each month.
+                if roads != nil, start.seconds % GameTime.secondsPerDay == 0 {
+                    let day = dayIndex(of: start)
+                    if day > 0, day % RoadGrid.growthDays == 0 { growRoads() }
+                }
                 if midnight {
                     growTowns(reached: reachedStations(endingDayAt: start, release: release, workedOutAt: releasedFrom, ended: endedPlan))
                     startDemandEventDay(dayIndex(of: start))
@@ -2859,12 +2871,13 @@ public struct GameWorld: Equatable, Sendable {
                     passengerWake = nil
                 }
                 // Weekly demand, events and town growth: the next day
-                // releases its own trips. The second of the day, without
+                // releases its own trips; and roads (decision 400) grow at
+                // a midnight. The second of the day, without
                 // multiplying back (a save's clock may be near the end of
                 // time). At midnight itself that is 0: the next step handles
                 // it, and skipping it would lose the day's growth and events.
                 let day = GameTime.secondsPerDay
-                let dayWake: Int64? = demandDay != nil || townGrowth != nil ? {
+                let dayWake: Int64? = demandDay != nil || townGrowth != nil || roads != nil ? {
                     let intoDay = (clock.now.seconds % day + day) % day
                     let left = (day - intoDay) % day
                     return (left + GameTime.secondsPerMinute - 1) / GameTime.secondsPerMinute
@@ -4772,7 +4785,7 @@ extension GameWorld: Codable {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, tidalDemand, modeShift, demandEvents, disruptions, townGrowth, accounts, geoAnchor
         case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, blockSections, curveSpeedLimits, realCarLengths, spacingAllowances, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, realTransfers, acquisitions, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
-        case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion
+        case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion, roads
     }
 
     /// Decodes a world, rejecting data that breaks cross-object invariants
@@ -4925,6 +4938,7 @@ extension GameWorld: Codable {
         ground = container.contains(.ground) ? try container.decode(Ground.self, forKey: .ground) : Ground()
         freight = try container.decodeIfPresent(FreightState.self, forKey: .freight)
         mapExpansion = try container.decodeIfPresent(MapExpansion.self, forKey: .mapExpansion)
+        roads = try container.decodeIfPresent(RoadGrid.self, forKey: .roads)
         if madeBeforeSpacing {
             guard network.spacingExemptions.isEmpty else {
                 throw DecodingError.dataCorrupted(DecodingError.Context(
@@ -5079,6 +5093,7 @@ extension GameWorld: Codable {
             try container.encode(freight, forKey: .freight)
         }
         try container.encodeIfPresent(mapExpansion, forKey: .mapExpansion)
+        try container.encodeIfPresent(roads, forKey: .roads)
         if cityFootprints {
             try container.encode(true, forKey: .cityFootprints)
         }
@@ -5353,7 +5368,7 @@ extension GameWorld: Codable {
             return problem
         }
         return land.problem(in: bounds) ?? landBlocksProblem() ?? buildingProblem() ?? zones.problem(in: bounds) ?? terrainProblem()
-            ?? ground.problem(in: bounds) ?? mapExpansionProblem()
+            ?? ground.problem(in: bounds) ?? mapExpansionProblem() ?? roads?.problem(in: bounds)
     }
 
     /// Why the trains' reservations break a Stage T rule (ARCHITECTURE

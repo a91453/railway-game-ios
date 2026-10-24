@@ -47,6 +47,9 @@ struct Map3DPreviewScreen: View {
     @State private var cameraLink = Map3DCameraLink()
     @State private var trainLabels = Map3DTrainLabelState()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Decision 403: an iPhone on its side, where the driving strip sits in
+    /// the top row so the middle of the screen stays clear.
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     @AppStorage(LinePalette.key) private var linePalette: LinePalette = .standard
     /// Decision 238's later note: the 3D look chosen in Settings; decision
     /// 365: Off (opened from Settings anyway) draws as Battery Saver.
@@ -58,6 +61,7 @@ struct Map3DPreviewScreen: View {
 
     var body: some View {
         let language = DisplayLanguage.app
+        let driver = self.driver
         ZStack {
             Map3DView(built: built, sceneVersion: sceneVersion, lighting: Map3DLighting(at: session.world.clock.now),
                       weather: Map3DWeather(MapWeather(world: session.world)), feed: feed, trainLabels: trainLabels,
@@ -132,7 +136,11 @@ struct Map3DPreviewScreen: View {
                             Map3DCompassButton(state: compass)
                         }
                     }
-                    Spacer()
+                    Spacer(minLength: 8)
+                    if verticalSizeClass == .compact, let driver {
+                        Map3DDriverStrip(hud: driver, world: session.world)
+                        Spacer(minLength: 8)
+                    }
                     // The 3D map covers the status pill: the same pause
                     // and speeds, so a train followed here does not stand
                     // still in a paused game (the owner, 2026-10-22).
@@ -150,7 +158,25 @@ struct Map3DPreviewScreen: View {
                         .accessibilityIdentifier("map3D.stats")
                     }
                 }
+                if verticalSizeClass != .compact, let driver {
+                    Map3DDriverStrip(hud: driver, world: session.world)
+                        .padding(.top, 8)
+                        .transition(.card(from: .top, reduceMotion: reduceMotion))
+                }
+                if let prompt = driver?.promptText(in: language) {
+                    Map3DDriverPrompt(text: prompt)
+                        .padding(.top, 8)
+                        .transition(.card(from: .top, reduceMotion: reduceMotion))
+                }
                 Spacer()
+                if let driver {
+                    HStack {
+                        Map3DSpeedCard(hud: driver)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.bottom, 8)
+                    .transition(.card(from: .bottom, reduceMotion: reduceMotion))
+                }
                 if let train = session.followedTrain {
                     Map3DFollowBar(train: train, session: session, view: $followView)
                         .transition(.card(from: .bottom, reduceMotion: reduceMotion))
@@ -170,6 +196,7 @@ struct Map3DPreviewScreen: View {
             // 16 points of a plain padding, so nothing jumps between them.
             .padding(CGFloat(HUDMargins.edge))
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: session.followedTrain?.id)
+            .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: driver?.prompt == nil)
         }
         .task(id: Map3DSceneKey(world: session.world, hasHeights: session.heights != nil, hasRailways: session.railways != nil, focus: focus, palette: linePalette)) {
             let built = await Map3DSceneCache.shared.scene(for: session, focus: focus, palette: linePalette)
@@ -194,6 +221,11 @@ struct Map3DPreviewScreen: View {
         // closing gives the 2D map its speed back.
         .onAppear { session.setMap3DOpen(true) }
         .onDisappear { session.setMap3DOpen(false) }
+    }
+
+    /// Decision 403: the driving display of the train followed.
+    private var driver: Map3DDriverHUD? {
+        session.followedTrain.flatMap { session.world.map3DDriverHUD(of: $0.id, in: DisplayLanguage.app) }
     }
 
     /// Decision 313, later: the world point the scene is built round.
@@ -448,6 +480,8 @@ struct Map3DSceneKey: Hashable {
     let palette: LinePalette?
     /// Decision 339: a real line bought runs no real trains.
     let bought: Int
+    /// Decision 400: a station road shows at once.
+    let roads: Int
 
     init(world: GameWorld, hasHeights: Bool, hasRailways: Bool = false, focus: (x: Double, y: Double)? = nil, palette: LinePalette? = nil) {
         self.hasHeights = hasHeights
@@ -461,6 +495,7 @@ struct Map3DSceneKey: Hashable {
         lines = palette == nil ? nil : Map3DLineBands.Signature(world: world)
         self.palette = palette
         bought = world.acquisitions.count
+        roads = world.roads?.cells.count ?? 0
     }
 }
 
@@ -1032,5 +1067,144 @@ private struct Map3DFollowBar: View {
         .accessibilityElement(children: .contain)
         .hudFrameMark("map3D.followBar")
         .accessibilityHint(Text(verbatim: language.text("Pinch to move closer or farther.", "兩指縮放，拉近或拉遠。")))
+    }
+}
+
+/// Decision 403: at the top of the 3D map while it follows a train: the
+/// line, the way it runs, the next stop (or the one it stands at), how far
+/// it is and how late the train runs.
+private struct Map3DDriverStrip: View {
+    let hud: Map3DDriverHUD
+    let world: GameWorld
+
+    var body: some View {
+        let language = DisplayLanguage.app
+        HStack(alignment: .center, spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 5) {
+                    if let line = hud.line {
+                        LineCodeBadge(code: LineBadge.codes(for: world.lines)[line] ?? "",
+                                      color: Palette.lineColor(line, custom: world.line(id: line)?.color), size: .small)
+                    }
+                    if let route = hud.routeText ?? hud.lineName {
+                        Text(verbatim: route)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(Theme.textSecondary)
+                            .lineLimit(1)
+                    }
+                }
+                if let name = hud.placeName {
+                    HStack(alignment: .firstTextBaseline, spacing: 5) {
+                        if let label = hud.placeLabel(in: language) {
+                            Text(verbatim: label)
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                        Text(verbatim: name)
+                            .font(.headline.weight(.heavy))
+                            .foregroundStyle(Theme.textPrimary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    }
+                }
+            }
+            .layoutPriority(1)
+            Spacer(minLength: 0)
+            VStack(alignment: .trailing, spacing: 2) {
+                if let lateness = hud.lateness {
+                    Text(verbatim: Map3DDriverHUD.latenessText(lateness, in: language))
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(lateness > 0 ? Theme.warning : Theme.success)
+                }
+                if let distance = hud.distanceText {
+                    Text(verbatim: distance)
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(Theme.textPrimary)
+                }
+            }
+            .monospacedDigit()
+            .fixedSize()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .frame(maxWidth: 420)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("map3D.driver.strip")
+        .hudFrameMark("map3D.driver.strip")
+    }
+}
+
+/// Decision 403: the followed train's speed, the curve limit it keeps to
+/// now (a red ring) and the next one ahead (an amber ring, with how far).
+private struct Map3DSpeedCard: View {
+    let hud: Map3DDriverHUD
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                Text(verbatim: "\(hud.speed)")
+                    .font(.title2.weight(.heavy))
+                    .foregroundStyle(Theme.textPrimary)
+                Text(verbatim: "km/h")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            if let here = hud.limitHere {
+                LimitSign(speed: here, ring: Theme.error, size: 34)
+            }
+            if let ahead = hud.limitAhead {
+                VStack(spacing: 1) {
+                    LimitSign(speed: ahead.speed, ring: Theme.warning, size: 26)
+                    Text(verbatim: Map3DDriverHUD.distanceText(ahead.metres))
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(Theme.textPrimary)
+                }
+            }
+        }
+        .monospacedDigit()
+        .fixedSize()
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: hud.speedLabel(in: DisplayLanguage.app)))
+        .accessibilityIdentifier("map3D.driver.speed")
+        .hudFrameMark("map3D.driver.speed")
+    }
+
+    /// A round speed sign: the limit on the panel's colour inside a ring.
+    private struct LimitSign: View {
+        let speed: Int64
+        let ring: Color
+        let size: CGFloat
+
+        var body: some View {
+            Text(verbatim: "\(speed)")
+                .font(.system(size: size * 0.36, weight: .heavy))
+                .foregroundStyle(Theme.textPrimary)
+                .minimumScaleFactor(0.6)
+                .frame(width: size, height: size)
+                .background(Theme.panel, in: Circle())
+                .overlay(Circle().strokeBorder(ring, lineWidth: size * 0.12))
+        }
+    }
+}
+
+/// Decision 403: a line under the strip near a stop ("Next stop Taoyuan,
+/// 640 m") and for a moment after it stands there ("On time").
+private struct Map3DDriverPrompt: View {
+    let text: String
+
+    var body: some View {
+        Text(verbatim: text)
+            .font(.subheadline.weight(.bold))
+            .foregroundStyle(Theme.textPrimary)
+            .monospacedDigit()
+            .lineLimit(1)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(.regularMaterial, in: Capsule())
+            .accessibilityIdentifier("map3D.driver.prompt")
     }
 }

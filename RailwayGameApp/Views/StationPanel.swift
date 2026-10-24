@@ -71,6 +71,7 @@ struct StationPanel: View {
                     realStationSection(station)
                     catchmentPopulationSection(station)
                     landSection(station)
+                    roadSection(station)
                     demandSection(station)
                     eventsSection(station)
                     ridershipSections(station)
@@ -511,6 +512,41 @@ struct StationPanel: View {
                 Text(verbatim: language.text("Freight", "貨運"))
             } footer: {
                 Text(verbatim: world.freightYardHelp(in: language))
+            }
+        }
+    }
+
+    /// Decision 400: a road from the station to the nearest road, or why
+    /// none can be built yet. Shown only while the roads do not reach it.
+    @ViewBuilder
+    private func roadSection(_ station: Station) -> some View {
+        let language = session.language
+        if let offer = session.world.stationRoadOffer(of: station.id, in: language) {
+            Section {
+                if offer.canBuild {
+                    Button {
+                        session.buildStationRoadAtSelectedStation()
+                    } label: {
+                        Label {
+                            Text(verbatim: offer.text)
+                        } icon: {
+                            Image(systemName: "road.lanes")
+                        }
+                    }
+                    .accessibilityIdentifier("station.road.build")
+                } else {
+                    Text(verbatim: offer.text)
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textSecondary)
+                        .accessibilityIdentifier("station.road.status")
+                }
+            } header: {
+                Text(verbatim: language.text("Road", "道路"))
+            } footer: {
+                Text(verbatim: language.text(
+                    "Roads grow toward your stations by themselves each month. A station road joins the nearest one now.",
+                    "道路每個月會自己往你的車站長。站前路現在就接上最近的路。"
+                ))
             }
         }
     }

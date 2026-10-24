@@ -1230,6 +1230,14 @@ extension StepOutcome: Codable {
             self = .rejected(.lineAlreadyAcquired)
         case "invalidAcquisition":
             self = .rejected(.invalidAcquisition)
+        case "roadsNotEnabled":
+            self = .rejected(.roadsNotEnabled)
+        case "invalidRoads":
+            self = .rejected(.invalidRoads)
+        case "stationOnRoad":
+            self = try .rejected(.stationOnRoad(container.decodeStation(forKey: .station)))
+        case "roadTooFar":
+            self = .rejected(.roadTooFar)
         case "trainServiceActive":
             self = try .rejected(.trainServiceActive(container.decodeTrain(forKey: .train)))
         case "trainServiceNotActive":
@@ -1653,6 +1661,15 @@ extension StepOutcome: Codable {
             try container.encode("lineAlreadyAcquired", forKey: .result)
         case .rejected(.invalidAcquisition):
             try container.encode("invalidAcquisition", forKey: .result)
+        case .rejected(.roadsNotEnabled):
+            try container.encode("roadsNotEnabled", forKey: .result)
+        case .rejected(.invalidRoads):
+            try container.encode("invalidRoads", forKey: .result)
+        case .rejected(.stationOnRoad(let id)):
+            try container.encode("stationOnRoad", forKey: .result)
+            try container.encode(id.rawValue, forKey: .station)
+        case .rejected(.roadTooFar):
+            try container.encode("roadTooFar", forKey: .result)
         case .rejected(.freightNotEnabled):
             try container.encode("freightNotEnabled", forKey: .result)
         case .rejected(.freightFacilityExists(let id)):
