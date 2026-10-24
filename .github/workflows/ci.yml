@@ -214,6 +214,9 @@ jobs:
           SHARD: ${{ matrix.tests && 'selected' || matrix.shard }}
           SELECTED_TESTS: ${{ matrix.tests }}
           SELECTED_PART: ${{ matrix.part }}
+          # Each batch on all the runner's cores, with swift test --parallel
+          # (decision 404).
+          SWIFT_TEST_WORKERS: auto
 
   # A cancelled pull request run: was it replaced by a newer push? Then the
   # newer run gives the verdict and the gate is skipped here, not red on a

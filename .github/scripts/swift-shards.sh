@@ -768,6 +768,28 @@ class_seconds() {
     awk '{ t[$2] += $1 } END { for (c in t) printf "%.0f %s\n", t[c], c }' | sort -rn
 }
 
+# Decision 404: SWIFT_TEST_WORKERS > 1 runs each batch with swift test
+# --parallel on that many workers (auto: the machine's cores; ci.yml sets
+# auto); 1, the default and what a local run gets, is the serial run of
+# decisions 185 and 329. Each test then runs in a test runner process of its
+# own. With --verbose swift test prints each test's whole XCTest output
+# (started, passed or failed, seconds) once the test ends, one test at a
+# time, so the coverage check, the failure count and class_seconds read the
+# log as before. (Its --xunit-output report is no help: it gives tests
+# that ran side by side the same time, the moment their results came in.)
+# Sets WORKERS (not a subshell: die has to end the script).
+test_workers() {
+  WORKERS="${SWIFT_TEST_WORKERS:-1}"
+  [[ "$WORKERS" != auto ]] || WORKERS="$(nproc 2>/dev/null || echo 1)"
+  [[ "$WORKERS" =~ ^[1-9][0-9]*$ ]] || die "SWIFT_TEST_WORKERS must be a positive number or auto, not '$WORKERS'."
+}
+
+# The Class.method names XCTest's lines in the given logs say have started:
+# in a parallel run, the tests that have ended.
+started_tests() {
+  cat "$@" 2>/dev/null | sed -n -E "s/^Test Case '([^']+)' started.*/\\1/p" | sort -u
+}
+
 # "a 274 s, b 113 s, c 92 s" from class_seconds lines on stdin.
 slowest_text() {
   awk 'NR <= 3 { printf "%s%s %s s", (NR > 1 ? ", " : ""), $2, $1 }'
@@ -812,7 +834,12 @@ watchdog() {
   local nap=$!
   trap 'kill "$nap" 2>/dev/null; exit 0' TERM
   wait "$nap"
-  echo "::warning title=Shard $shard about to reach its 20-minute limit::$shard has run $((SHARD_WATCHDOG_SECONDS / 60))m$(printf '%02d' $((SHARD_WATCHDOG_SECONDS % 60)))s; slowest classes so far: $(class_seconds "$@" | slowest_text). Move a class to a shorter shard in classes_of (.github/scripts/swift-shards.sh, decision 404)."
+  local what="slowest classes so far: $(class_seconds "$@" | slowest_text)"
+  if [[ -n "${WATCH_EXPECTED:-}" ]]; then
+    # A parallel run prints a test only once it ends: name those still running.
+    what="$what; still running: $(started_tests "$@" | comm -23 "$WATCH_EXPECTED" - | awk 'NR <= 4 { printf "%s%s", (NR > 1 ? ", " : ""), $0 }')"
+  fi
+  echo "::warning title=Shard $shard about to reach its 20-minute limit::$shard has run $((SHARD_WATCHDOG_SECONDS / 60))m$(printf '%02d' $((SHARD_WATCHDOG_SECONDS % 60)))s; $what. Move a class to a shorter shard in classes_of (.github/scripts/swift-shards.sh, decision 404)."
 }
 
 run_shard() {
@@ -854,14 +881,21 @@ run_shard() {
   [[ "$expected_count" -gt 0 ]] || die "Shard $shard selects no tests."
   echo "Shard $shard: $expected_count of $total tests in the package."
 
-  local batches="$WORK/batches.txt" classes batch_rc started rc=0
+  local batches="$WORK/batches.txt" classes batch_rc started rc=0 workers parallel=()
+  test_workers
+  workers="$WORKERS"
+  ((workers == 1)) || parallel=(--parallel --num-workers "$workers" --verbose)
   batch_classes "$shard" "$list" >"$batches"
-  echo "Shard $shard: $(wc -l <"$batches" | tr -d ' ') swift test runs."
+  echo "Shard $shard: $(wc -l <"$batches" | tr -d ' ') swift test runs$( ((workers == 1)) || echo ", each on $workers workers")."
   : >"$log"
   started="$(date +%s)"
   local batch_log="$WORK/batch.log" watcher=""
   : >"$batch_log"
-  watchdog "$shard" "$log" "$batch_log" &
+  if ((workers > 1)); then
+    WATCH_EXPECTED="$expected" watchdog "$shard" "$log" "$batch_log" &
+  else
+    watchdog "$shard" "$log" "$batch_log" &
+  fi
   watcher=$!
   # A failed batch does not stop the others; the shard fails after them.
   # A batch whose swift test was killed by a signal before any test started
@@ -872,7 +906,7 @@ run_shard() {
     for attempt in 1 2; do
       batch_rc=0
       # shellcheck disable=SC2086
-      swift test --skip-build ${SWIFT_EXTRA_ARGS:-} --filter "$(pattern_for "$classes")" 2>&1 | tee "$batch_log" || batch_rc=${PIPESTATUS[0]}
+      swift test --skip-build ${SWIFT_EXTRA_ARGS:-} ${parallel[@]+"${parallel[@]}"} --filter "$(pattern_for "$classes")" 2>&1 | tee "$batch_log" || batch_rc=${PIPESTATUS[0]}
       cat "$batch_log" >>"$log"
       if ((attempt == 1)) && killed_by_signal "$batch_rc" && ! grep -q -E "^Test Case '.*' started" "$batch_log"; then
         echo "::warning::swift test was killed by signal $((batch_rc - 128)) (exit code $batch_rc) before any test started: the tool crashed. Running this batch once more."

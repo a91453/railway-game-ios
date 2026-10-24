@@ -60,7 +60,8 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --filter) filters+=("$2"); shift 2 ;;
     --skip) skips+=("$2"); shift 2 ;;
-    *) shift ;;
+    --num-workers) echo "--num-workers $2" >>"${FAKE_ARGS:-/dev/null}"; shift 2 ;;
+    *) echo "$1" >>"${FAKE_ARGS:-/dev/null}"; shift ;;
   esac
 done
 selected="$(mktemp)"
@@ -92,7 +93,11 @@ case "${FAKE_MODE:-ok}" in
   drop) sed -i '1d' "$selected.names" ;;                      # one selected test never runs
   extra) echo "UnitTests.testA" >>"$selected.names" ;;        # a test the shard did not select runs
 esac
+last="$(tail -1 "$selected.names")"
 while IFS= read -r name; do
+  # held-last: the last test is still running for FAKE_SLEEP seconds (a
+  # parallel run prints a test once it ends).
+  [[ "${FAKE_MODE:-ok}" != held-last || "$name" != "$last" ]] || sleep "${FAKE_SLEEP:-0}"
   echo "Test Case '$name' started at 2026-01-01 00:00:00.000"
   if [[ "${FAKE_MODE:-ok}" == failline && "$name" == *testOne ]]; then
     echo "Test Case '$name' failed (0.001 seconds)"
@@ -100,7 +105,7 @@ while IFS= read -r name; do
     echo "Test Case '$name' passed (${FAKE_SECONDS:-0.001} seconds)"
   fi
 done <"$selected.names"
-[[ -z "${FAKE_SLEEP:-}" ]] || sleep "$FAKE_SLEEP"
+[[ -z "${FAKE_SLEEP:-}" || "${FAKE_MODE:-ok}" == held-last ]] || sleep "$FAKE_SLEEP"
 [[ "${FAKE_MODE:-ok}" != exit1 ]] || exit 1
 FAKE
 chmod +x "$work/bin/swift"
@@ -209,6 +214,31 @@ FAKE_SECONDS=40 says '!ServicePropertyTests (has no weight|weight out of date)' 
 JOB_STARTED=$(($(date +%s) - 1108)) FAKE_SLEEP=4 says 'warning title=Shard rest about to reach its 20-minute limit::rest has run 18m30s; slowest classes so far: ' \
   "the watchdog warns before the limit, with the slowest classes so far" "$script" run rest
 JOB_STARTED=$(($(date +%s) - 1000)) says '!about to reach' "the watchdog is stopped when the tests end first" "$script" run rest
+JOB_STARTED=$(($(date +%s) - 1108)) SWIFT_TEST_WORKERS=2 FAKE_MODE=held-last FAKE_SLEEP=4 says 'about to reach its 20-minute limit::.*still running: [A-Za-z]+\.test' \
+  "in a parallel run the watchdog names the tests still running" "$script" run campaigns-2
+
+# swift test --parallel (decision 404): SWIFT_TEST_WORKERS > 1 asks for it,
+# with --verbose so XCTest's lines still reach the log; 1 and unset do not.
+rm -f "$work/args"
+FAKE_ARGS="$work/args" SWIFT_TEST_WORKERS=3 expect pass "parallel: SWIFT_TEST_WORKERS=3 runs the shard" "$script" run campaigns-2
+if grep -qx -- --parallel "$work/args" && grep -qx -- '--num-workers 3' "$work/args" && grep -qx -- --verbose "$work/args"; then
+  echo "ok   pass  parallel: swift test gets --parallel --num-workers 3 --verbose"
+else
+  echo "FAIL parallel: swift test got: $(tr '\n' ' ' <"$work/args" 2>/dev/null)"
+  failures=$((failures + 1))
+fi
+rm -f "$work/args"
+FAKE_ARGS="$work/args" expect pass "serial: without SWIFT_TEST_WORKERS the shard runs" "$script" run campaigns-2
+if grep -q -- --parallel "$work/args" 2>/dev/null; then
+  echo "FAIL serial: swift test got --parallel without SWIFT_TEST_WORKERS"
+  failures=$((failures + 1))
+else
+  echo "ok   pass  serial: swift test gets no --parallel without SWIFT_TEST_WORKERS"
+fi
+SWIFT_TEST_WORKERS=auto expect pass "parallel: SWIFT_TEST_WORKERS=auto runs the shard" "$script" run campaigns-2
+SWIFT_TEST_WORKERS=many WHY='SWIFT_TEST_WORKERS must be a positive number or auto' expect fail "parallel: a SWIFT_TEST_WORKERS that is no number fails" "$script" run campaigns-2
+SWIFT_TEST_WORKERS=2 FAKE_MODE=drop WHY='not the tests the shard selects' expect fail "parallel: a selected test that does not run fails the shard" "$script" run campaigns-2
+SWIFT_TEST_WORKERS=2 FAKE_MODE=failline WHY='tests failed in shard campaigns-1' expect fail "parallel: a failed test fails the shard" "$script" run campaigns-1
 
 # The shard selections must split a list exactly; a class named twice would not.
 # (Checked offline: the five selections of the synthetic list add up to it.)
