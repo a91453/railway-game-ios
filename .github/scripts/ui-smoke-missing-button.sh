@@ -2,24 +2,26 @@
 # Manual CI proof using the real app and the same English smoke test.
 set -euo pipefail
 # Decision 114: the tools are in the rail at the map's edge, and Select is
-# its Done button.
-source_file=RailwayGameApp/Views/BuildToolRail.swift
-backup="$(mktemp)"
-cp "$source_file" "$backup"
-trap 'cp "$backup" "$source_file"; rm -f "$backup"' EXIT
+# its Done button. Decision 382 pinned Done over Build where the building
+# column scrolls, so BuildDoneButton is called from both files; remove it
+# from each.
+source_files=(RailwayGameApp/Views/BuildToolRail.swift RailwayGameApp/Views/ContentView.swift)
+backup_dir="$(mktemp -d)"
+for f in "${source_files[@]}"; do cp "$f" "$backup_dir/$(basename "$f")"; done
+trap 'for f in "${source_files[@]}"; do cp "$backup_dir/$(basename "$f")" "$f"; done; rm -rf "$backup_dir"' EXIT
 
-python3 - "$source_file" <<'PY'
+python3 - "${source_files[@]}" <<'PY'
 from pathlib import Path
-import sys
-source = Path(sys.argv[1])
-text = source.read_text()
-# The rail's Done button, called with whatever arguments it takes (#281
-# added the compact layout's).
 import re
-pattern = re.compile(r"^[ \t]*doneButton(\([^)\n]*\))?[ \t]*\n", re.MULTILINE)
-if len(pattern.findall(text)) != 1:
-    raise SystemExit("Could not remove exactly one Select (Done) toolbar button")
-source.write_text(pattern.sub("", text, count=1))
+import sys
+# Each file's one BuildDoneButton call, with the modifier lines under it.
+pattern = re.compile(r"^[ \t]*BuildDoneButton\([^)\n]*\)[ \t]*\n(?:[ \t]*\.[A-Za-z][^\n]*\n)*", re.MULTILINE)
+for name in sys.argv[1:]:
+    source = Path(name)
+    text = source.read_text()
+    if len(pattern.findall(text)) != 1:
+        raise SystemExit(f"Could not remove exactly one Select (Done) toolbar button from {name}")
+    source.write_text(pattern.sub("", text, count=1))
 PY
 
 set +e
