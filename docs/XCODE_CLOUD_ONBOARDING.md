@@ -229,7 +229,7 @@ Archive action 使用 scheme 的 Archive 設定，即 **Release** configuration�
 
 ## 隱私
 
-- App 不蒐集資料、沒有帳號、追蹤、廣告或分析 SDK。會連網的只有：Apple 地圖（MapKit 的圖磚與地點搜尋）、台灣以外的 OpenStreetMap 底圖（MapLibre 從 tiles.openfreemap.org 下載圖磚）、設定裡的「官網」與「3D 城市」（alongthelinegame.com）。「用我的位置」（決策 335）只在按下時要一次「使用 App 期間」的定位，取到約 1 公里，不儲存也不傳送。問題回報、存檔與明信片只經分享選單送到玩家選的地方。玩家看的說明是官網的隱私權政策（`a91453/railway-reference-private` 的 `Website/site/privacy.html`），改了這些功能要一起改。
+- App 不蒐集資料、沒有帳號、追蹤、廣告或分析 SDK。會連網的只有：Apple 地圖（MapKit 的圖磚與地點搜尋）、台灣以外的 OpenStreetMap 底圖（MapLibre 從 tiles.openfreemap.org 下載圖磚）、設定裡的「官網」與「3D 城市」（alongthelinegame.com）。「用我的位置」（決策 335）只在按下時要一次「使用 App 期間」的定位，取到約 1 公里，不儲存也不傳送。問題回報、存檔與明信片只經分享選單送到玩家選的地方。Game Center（決策 396）：玩家登入時，每週挑戰的完成天數與當天載客數、成就的進度送到 Apple 的 Game Center；App 不讀玩家的 Game Center 名字或 ID，也不把任何資料傳給開發者或第三方。Apple 的 App 隱私說明寫「Apple 蒐集的資料不由開發者揭露」（https://developer.apple.com/app-store/app-privacy-details/ ，Apple frameworks 那一節），所以隱私標籤維持「不蒐集資料」，privacy manifest 也不用加項目（GameKit 不是 required reason API）；官網的隱私權政策在加 Game Center entitlement 的那個 PR 同一輪補一句。玩家看的說明是官網的隱私權政策（`a91453/railway-reference-private` 的 `Website/site/privacy.html`），改了這些功能要一起改。
 - Privacy manifest：`RailwayGameApp/Resources/PrivacyInfo.xcprivacy`（2026-10-23 加入；`Resources` 整個資料夾已是 App target 的來源，XcodeGen 把它當資源放進 App）。內容照程式碼實際用到的宣告：
   - `NSPrivacyTracking` 為 false，沒有 tracking domain，`NSPrivacyCollectedDataTypes` 是空的（開發者不收任何資料；問題回報是玩家自己用分享選單寄的）。
   - required reason API 只有 `UserDefaults`（約 27 個檔用 `@AppStorage` / `UserDefaults` 存設定，只有 App 自己讀寫）：`NSPrivacyAccessedAPICategoryUserDefaults`，理由 `CA92.1`。
