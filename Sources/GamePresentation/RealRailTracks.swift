@@ -37,6 +37,10 @@ public struct RealRailTracks: Sendable, Equatable {
 
     public let tracks: [Track]
 
+    init(tracks: [Track]) {
+        self.tracks = tracks
+    }
+
     /// Reads the file. Throws for one out of shape: a track of fewer than
     /// two points, its points not in threes, a system it does not list, or
     /// a point off the Earth.

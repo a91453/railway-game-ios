@@ -102,6 +102,10 @@ public struct Map3DRealTrains: Sendable {
     static let laneReach: Float = 30
     static let laneSpread: Float = 12
     static let laneAlong: Float = 0.866
+    /// Decision 406: how far a train's track may move across from one
+    /// sample to the next, metres: more is another track, which it keeps
+    /// off while its own runs on (a sample along, 8 m, and a little).
+    static let laneStep: Float = 10
     /// Decision 402: the systems whose trains keep to the right, the
     /// metros and light rails (each of the site's `metro-network.json`
     /// routes runs on the right of its other way's); the TRA's, the High
@@ -481,7 +485,8 @@ extension Map3DRealTrains {
         /// nearest the middle on the side its system keeps to
         /// (``Map3DRealTrains/rightHand``), the other way the other side's;
         /// on single track, both the one. `nil` with no track there.
-        func lanes(at p: Map3DPoint, along: Map3DPoint, system: String) -> [(point: Map3DPoint, shown: Bool)]? {
+        func lanes(at p: Map3DPoint, along: Map3DPoint, system: String,
+                   after previous: [Map3DPoint?] = [nil, nil]) -> [(point: Map3DPoint, shown: Bool)]? {
             guard let cells = segments[system] else { return nil }
             let length = (along.x * along.x + along.z * along.z).squareRoot()
             guard length > 0 else { return nil }
@@ -518,14 +523,28 @@ extension Map3DRealTrains {
             }
             let middle = (line.map(\.across).min()! + line.map(\.across).max()!) / 2
             let keepsRight = Map3DRealTrains.rightHand.contains(system)
-            func lane(leftward: Bool) -> (point: Map3DPoint, shown: Bool) {
+            func lane(leftward: Bool, after previous: Map3DPoint?) -> (point: Map3DPoint, shown: Bool) {
                 let side = line.filter { leftward ? $0.across > middle : $0.across < middle }
                 let pick = (side.isEmpty ? line : side).min { abs($0.across - middle) < abs($1.across - middle) }!
+                // Decision 406: a train stays on the track it was on a
+                // sample before while that runs on (where another line's
+                // track, or a station's next, comes nearer the middle),
+                // rather than stepping across to it.
+                if let previous, Self.across(pick.point, previous) > Map3DRealTrains.laneStep,
+                   let kept = found.min(by: { Self.across($0.point, previous) < Self.across($1.point, previous) }),
+                   Self.across(kept.point, previous) <= Map3DRealTrains.laneStep {
+                    return (kept.point, kept.shown)
+                }
                 return (pick.point, pick.shown)
             }
             // Going along, a train keeping to the left runs left of the
             // middle; going back, right of it (left of its own way).
-            return [lane(leftward: !keepsRight), lane(leftward: keepsRight)]
+            return [lane(leftward: !keepsRight, after: previous[0]), lane(leftward: keepsRight, after: previous[1])]
+        }
+
+        /// How far apart `a` and `b` are, seen from above.
+        static func across(_ a: Map3DPoint, _ b: Map3DPoint) -> Float {
+            ((a.x - b.x) * (a.x - b.x) + (a.z - b.z) * (a.z - b.z)).squareRoot()
         }
 
         /// `window` of a line of `system` (``Map3DRealTrains/stretches``),
@@ -551,16 +570,18 @@ extension Map3DRealTrains {
             let last = along.firstIndex { $0 >= window.core.upperBound } ?? (along.count - 1)
             guard first < last else { return nil }
             var km: [Double] = [], lanes: [[Map3DPoint]] = [[], []], shown: [[Bool]] = [[], []]
+            var previous: [Map3DPoint?] = [nil, nil]
             for index in first...last {
                 let at = path.point(at: sampled[index])
                 let ahead = path.point(at: min(sampled[index] + metre, path.length)), behind = path.point(at: max(sampled[index] - metre, 0))
                 let p = builder.point(x: at.x, y: at.y, height: 0)
                 let direction = builder.point(x: ahead.x, y: ahead.y, height: 0) - builder.point(x: behind.x, y: behind.y, height: 0)
                 km.append(along[index])
-                let found = self.lanes(at: p, along: direction, system: system)
+                let found = self.lanes(at: p, along: direction, system: system, after: previous)
                 for lane in 0..<2 {
                     lanes[lane].append(found?[lane].point ?? p)
                     shown[lane].append(found?[lane].shown ?? false)
+                    previous[lane] = found?[lane].point
                 }
             }
             return Map3DRealTrains.Track(km: km, lanes: lanes, shown: shown)
@@ -619,6 +640,18 @@ extension Map3DScene.Builder {
                 wanted.insert(window(index))
             }
             guard !wanted.isEmpty else { continue }
+            // Decision 406: a tunnel the site draws at the ground (its
+            // flat map has no hills: a mountain's, not a subway's) bored
+            // straight from one mouth to the other, under the game's own
+            // ground only where that rises over it; its mouths' ground as
+            // any region round them draws it, so chunks built apart agree.
+            var bore: ((Double) -> Float)?
+            if track.kind == .tunnel, track.heights.allSatisfy({ $0 > -Double(Map3DRealTrains.tunnelDepth) }),
+               let start = samples.first, let end = samples.last, end.along > 0 {
+                let from = point(x: start.x, y: start.y, height: 0), to = point(x: end.x, y: end.y, height: 0)
+                let a = steadyGround(x: from.x, z: from.z) + Float(start.height), b = steadyGround(x: to.x, z: to.z) + Float(end.height)
+                bore = { a + (b - a) * Float($0 / end.along) }
+            }
             let siteBought = bought[track.system]
             var points: [Map3DPoint?] = Array(repeating: nil, count: samples.count)
             var kinds: [TrackSectionKind] = Array(repeating: .tunnel, count: samples.count)
@@ -634,8 +667,14 @@ extension Map3DScene.Builder {
                     let sample = samples[index]
                     let flat = point(x: sample.x, y: sample.y, height: 0)
                     let drawn = drawnGround(x: flat.x, z: flat.z)
-                    let height = Float(sample.height)
-                    let inTunnel = track.kind == .tunnel || height < -Map3DRealTrains.tunnelDepth
+                    var height = Float(sample.height)
+                    let inTunnel: Bool
+                    if let bore {
+                        height = bore(sample.along) - drawn
+                        inTunnel = height < -Map3DRealTrains.tunnelDepth
+                    } else {
+                        inTunnel = track.kind == .tunnel || height < -Map3DRealTrains.tunnelDepth
+                    }
                     let rail = Map3DPoint(flat.x, drawn + (inTunnel ? height : max(height, 0)), flat.z) + Self.lifted
                     points[index] = rail
                     kinds[index] = inTunnel ? .tunnel : height > Map3DRealTrains.viaductHeight ? .viaduct
