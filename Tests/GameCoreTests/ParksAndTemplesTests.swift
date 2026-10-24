@@ -28,7 +28,7 @@ final class ParksAndTemplesTests: XCTestCase {
     // MARK: - Looks
 
     func testEachKindHasItsLooks() throws {
-        XCTAssertEqual(PlacedBuildingKind.allCases.map(\.looks), [1, 1, 1, 1, 1, 1, 1, 1, 3, 2])
+        XCTAssertEqual(PlacedBuildingKind.allCases.map(\.looks), [1, 1, 1, 1, 1, 2, 3, 1, 3, 2])
         var world = try world()
         XCTAssertThrowsError(try world.placeBuilding(.park, at: PlanPoint(x: 20_000, y: 10_000), look: 3)) {
             XCTAssertEqual($0 as? GameError, .invalidBuildingLook)

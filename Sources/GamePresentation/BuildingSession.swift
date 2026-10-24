@@ -69,6 +69,11 @@ extension PlacedBuildingKind {
         case (.park, 2): language.text("Pond garden", "池畔涼亭")
         case (.temple, 0): language.text("Temple square", "廟埕")
         case (.temple, 1): language.text("Grand temple", "大廟")
+        case (.hotel, 0): language.text("Tower", "高塔飯店")
+        case (.hotel, 1): language.text("Resort", "度假飯店")
+        case (.hotel, 2): language.text("Hot spring", "溫泉旅館")
+        case (.departmentStore, 0): language.text("Mall", "購物中心")
+        case (.departmentStore, 1): language.text("Halls", "展覽宴會館")
         default: nil
         }
     }
