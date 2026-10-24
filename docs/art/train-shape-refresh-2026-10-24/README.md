@@ -1,38 +1,30 @@
-# E200 / 700T 暖白綠松：第八版收低風擋罩修訂
+# E200／700T 原生素材，第九版：圓角風擋、圓鼻尖與下裙板
 
-依使用者回饋，沿用前版Codex配方，參考[PR #1203](https://github.com/a91453/railway-game-ios/pull/1203)的駕駛艙／肩線與圓角窗，以及私庫E201四向渲染的輪架／屋頂布局。E201只作參考，未搬來源mesh、貼圖、商標或來源尺寸。[判讀、來源、重建與組裝](../../../tools/train-shape-refresh/README.md)。
+實際查看使用者新附IMG_4456.jpg正面模型圖，再對照700T實車正面近照／斜視，發現第八版仍有黑罩偏方、玻璃與燈區未分、白鼻尖太尖、輪架外露的差異。本輪修頭尾鼻部x≥3.7m，保留白車身、綠松主帶＋黑細線色票。原生曲面與色界先修，再補上玻璃、簡化雨刷與實體支點、收內燈位；下裙板與車殼封閉相連。兩次檢視再收薄深色區並修色界接點。
 
-![第八版實際原生模型](overview.png)
+![第九版實際原生模型](overview.png)
 
-[公開draft #1201](https://github.com/a91453/railway-game-ios/pull/1201)／[私有draft #70](https://github.com/a91453/railway-reference-private/pull/70)互鏈。最新producer與CI見[issue #1200](https://github.com/a91453/railway-game-ios/issues/1200)。完整新包在私庫原目錄的[revision-8](https://github.com/a91453/railway-reference-private/tree/codex/train-shape-refresh-2026-10-24/Railway/game-art-previews/docs/art/train-shape-refresh-2026-10-24/revision-8)，原交付保留。
+[公開draft #1201](https://github.com/a91453/railway-game-ios/pull/1201)／[私有draft #70](https://github.com/a91453/railway-reference-private/pull/70)互鏈。[判讀、配方、來源與重建交接](../../../tools/train-shape-refresh/README.md)。最新producer與CI單獨記在[issue #1200](https://github.com/a91453/railway-game-ios/issues/1200)。
 
-交付6合法M3DM（5新單元＋1Codex風格對照）、1自含單元的原生組裝JSON、7 GLB、49七向透明PNG、白模／剪影四向、同尺度風格比較、完整12節、viewer、來源／SHA與ZIP。完整編組72,892三角，以相同最終單元重建，不強塞進15,000上限的單檔。組裝JSON是工具契約，未加入遊戲scene loader。
+完整[第九版私有包](https://github.com/a91453/railway-reference-private/tree/codex/train-shape-refresh-2026-10-24/Railway/game-art-previews/docs/art/train-shape-refresh-2026-10-24/revision-9)包含原生、七向透明PNG、單元／完整12節、配色／白模／剪影四向、同尺度風格比較、同相機真正前後、GLB、viewer、來源／SHA、ZIP。前版f60f0d92原生／GLB／配方／來源留history/f60f0d92；完整revision-8及更早包保持。七向在views，局部正面對照windscreen-front-before-after.png與四向700t-nose-before-after.png在previews。
 
-## 外觀結論
+## 外觀自檢
 
-| 判定 | 本輪結論 |
+| 判定 | 結論 |
 |---|---|
-| 已符合本輪目標 | 鼻部與肩部重新分段、風擋下移收窄與25mm細緣、雙燈罩各雙暖白燈、圓角客窗、薄門葉／窄門窗；E200圓角前窗／圓燈、12面輪胎、輪架軸箱輪轂／懸吊、踏階；移除虛構車側通風格，補前後不同屋頂設備 |
-| 維持 | 暖白綠松無紅色、霧面無照片貼圖；車殼長寬／編組節距／門數／基本窗位；中車無駕駛窗或頭燈，尾車旋轉向外 |
-| 仍簡化 | 雨刷、駕駛室內裝、車底管線、設備銘牌與小型緊固件；玻璃以不透明霧面色呈現，沒有玻璃反射或透視內裝 |
-| 資料不足 | 700T工程尺寸與完整設備序、E200各車號／年代弓型與屋頂差異、另一側精確細部；本模型不是經工程確認的E201或特定編號復刻 |
+| 已符合本輪目標 | 黑罩四角收圓、下側略窄，上玻璃／下燈區與兩支雨刷可區分；保留車頂白邊。白鼻尖從尖V收成圓底U，下裙板連續包覆鼻部，減少原先外露橫桿與輪架 |
+| 維持 | 白車身、綠松＋黑色票、鼻長／外包bounds、門窗／輪架／編組；E200、中車、集電車、Codex比較車native及GLB逐bytes相同；中車無駕駛窗與頭燈，尾車向外 |
+| 仍不符合完整復刻 | 玻璃／雨刷仍簡化，無透明反射與內裝；車底小設備、不同中車精確門窗／設備差異仍不足 |
+| 資料不足 | 新圖模型來源／相機／尺寸、700T鼻部與風擋工程尺寸、完整設備順序與另一側細節；E200特定編號／年代設備差異 |
 
-以上是本次自檢，**不代表作者已認可或工程級復刻**。本輪真正前版為已交付producer `2b7eb826`，保留完整原生檔；`previews/blue-cab-before-after.png`、`700t-formation-before-after.png`均是固定相機、共同bounds與同公尺尺度。舊稿未被改造後冒充前版。
+已親自查看最終原生模型側、正、俯、斜配色／白模／剪影及固定相機同公尺尺度前後。以上是自檢，**不代表作者認可、工程復刻或相似度評分**。新圖是模型正面參考，其他既有六圖中五張為模型、一張為實車，不能混稱工程照片。原圖、私庫來源mesh／貼圖不隨包散布或送外部生成服務。
 
 ## 技術與CI分開記錄
 
-**VERIFIED，本輪Linux**：Swift6.4 warnings-as-errors build --build-tests及22相關測試（含風擋白色留邊與高寬比檢查）；六單元原生讀回／normal；完整組裝JS與Swift預期三角payload逐bytes相同，偏移1m故障拒收；封閉有向邊／正體積、缺面與反面拒收；玻璃承板射線與750mm浮空拒收；44輪胎實際連通件貼軌、輪頂外緣向上射線淨空；Blender4.3.2獨立GLB匯入／bounds／三角數／頂點色／霧面；PNG完整解碼透明與邊界；folder及offline viewer旋轉縮放、單元／組裝／GLB／PNG／ZIP真下載與390px版面；ZIP解壓CRC逐檔bytes、producer SHA核對。確切數量與距離見新包verification檔。
+**VERIFIED，Linux本輪**：Swift6.4 warnings-as-errors build --build-tests及23相關測試；新測試在真正前版先失敗兩項，修後通過。原生讀回／既有註冊共存、封閉有向邊／正體積、缺面／反面拒收；完整編組JS與Swift逐bytes一致、移車1m拒收；玻璃背板射線與750mm浮空拒收；44輪胎連通件貼軌與輪頂淨空抽檢；前輪上緣40點正面射線由前版4點覆蓋改善至40點覆蓋。Blender4.3.2獨立匯入全部7GLB／三角數／bounds／頂點色／霧面；49七向及全部PNG完整解碼透明不裁邊；folder／離線HTML viewer載入旋轉縮放、單元／組裝／GLB／PNG／ZIP實際下載與390px版面；ZIP完整解壓CRC逐檔bytes、producer來源SHA一致。確切值見各verification.json。
 
-**UNVERIFIED**：完整設備接觸圖、全表面穿模／閃爍、動態輪組／轉彎／懸吊、真機Metal／效能／動畫、OS雙擊HTML與完整工程規格。射線抽檢不等於完整碰撞證明。最新head CI單獨更新issue，不能拿本機22測試或WebGL當Xcode／真機全綠。
+六單元合法M3DM各≤15,000三角，完整12節用自含合法單元與placements的組裝JSON，不寫入超限單檔；未加入遊戲scene loader。展示單位公尺，+X前／+Y左／+Z上、軌面Z=0；尺寸除有來源E200車體長寬外仍比例推估。
 
-**仍是靜態素材註冊，未替換營運映射；合併也不會自動把遊戲E200／高鐵換成此版。** 不改GameCore、存檔、golden／replay或玩法；不合併／auto-merge／TestFlight。下一位整合需依每節原生長度與組裝表、做LOD及真機檢查。
+**UNVERIFIED**：完整設備接觸圖／全表面穿模閃爍、真機Metal／效能／動畫／動態轉彎懸吊、工程完整性、OS雙擊file://。射線抽檢及Linux WebGL不代表完整碰撞或iOS驗證。**最新head實際CI另記issue，不能拿本機23測試代替。**
 
-## 第八版：風擋罩收低、白色車頂留邊增加
-
-已重新看700T四張實車照，尤其正面近照／前斜視及使用者前輪圖。前版黑罩幾乎碰車頂且偏高、縱向範圍偏長。本輪只收低罩體上緣、縮短高度、略收寬並圓角，沿原鼻面貼合，不下移穿模。原白車身、綠松主帶＋黑細輔線、車殼／肩部／前唇、燈／門窗／輪架與編組保持。
-
-實際模型量測：黑罩頂3.625→3.326m、高度1.239→0.974m、寬高比2.04→2.41；本模型車頂白色留邊0.025→0.324m。不是從照片像素宣稱實車工程尺寸。新測試真前版四項失敗、修後22相關測試通過。
-
-windscreen-audit證明每端只改1296個風擋／細緣三角，其餘7012三角bytes完全相同；E200／中車／集電車／比較車native及GLB不變。真2b7eb826前版與完整revision-7保留；聚焦正面對照windscreen-front-before-after.png和四向同相機同尺度前後均來自實際原生模型。
-
-已看最終側正俯斜配色／白模／剪影與局部；外觀自檢改善罩體過高與白色留邊不足，仍未達玻璃分層／雨刷／內裝／工程級完整還原，不代表作者認可。來源、資料缺口與技術限制同上；**仍靜態素材，合併不替換營運。**
+**本次是靜態素材；素材註冊未替換營運E200／高鐵，合併不會自動出現在遊戲中。** 後續整合需配置營運映射、LOD、單節長度與動態／真機驗證。GameCore／存檔／golden／replay與玩法未改；PR保持draft，不合併／auto-merge／TestFlight。

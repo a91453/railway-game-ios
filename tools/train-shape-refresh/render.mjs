@@ -55,7 +55,7 @@ try {
   const title='E200 暖白綠松 / 700T 白車身綠松黑線';
   await sheet(family+'-overview.png','<h1>'+title+'｜實際原生模型</h1><div class="row"><div><img src="previews/'+train.id+'-hero.png"></div></div><div class="row"><div><img src="previews/'+sections[0].id+'-detail-front.png"><p>駕駛端局部放大</p></div><div><img src="'+train.views.left+'"><p>側面</p></div><div><img src="'+train.views.top+'"><p>上視</p></div></div>');
   await sheet(family+'-units.png','<h1>'+title+'｜獨立單元（立體各自取景）</h1>'+[sections.slice(0,4),sections.slice(4)].map(row=>'<div class="row">'+row.map(m=>'<div><img src="previews/'+m.id+'-hero.png"><p>'+m.id+' · '+m.triangles+' 三角</p></div>').join('')+'</div>').join(''));
-  await sheet(family+'-audit.png','<h1>'+title+'｜正交各列 .035m/pixel</h1>'+['left','right','top','bottom'].map(v=>'<div style="background:white"><img src="previews/'+train.id+'-detail-'+v+'.png"><p>'+v+'</p></div>').join(''));
+  await sheet(family+'-audit.png','<h1>'+title+'｜正交各列 .20m/pixel</h1>'+['left','right','top','bottom'].map(v=>'<div style="background:white"><img src="previews/'+train.id+'-detail-'+v+'.png"><p>'+v+'</p></div>').join(''));
   await sheet(family+'-directions.png','<h1>'+title+'｜同公尺尺度七向透明圖</h1><div class="row">'+manifest.directions.map(v=>'<div><img src="'+train.views[v]+'"><p>'+v+'</p></div>').join('')+'</div>');
  }
  // Match camera and metre scale across both entire formations and legacy style.
@@ -67,13 +67,13 @@ try {
   return buffers.map(b=>{renderer.load(b);renderer.centre=centre;renderer.extent=extent;renderer.render('isometric',{width:1400,height:470});return renderer.png();});
  };
  const matched=await page.evaluate(compareCamera,manifest.models.filter(m=>m.category==='formation'||m.category==='comparison'));
- const unitsMatched=await page.evaluate(compareCamera,[manifest.models.find(m=>m.category==='section'),...manifest.models.filter(m=>m.category==='comparison')]);
+ const unitsMatched=await page.evaluate(compareCamera,[manifest.models.find(m=>m.id==='refresh-e200'),manifest.models.find(m=>m.id==='refresh-700t-cab'),...manifest.models.filter(m=>m.category==='comparison')]);
  for(const [i,data] of unitsMatched.entries())writeFileSync(resolve(root,'previews','style-unit-'+i+'.png'),Buffer.from(data.split(',')[1],'base64'));
 
  for(const [i,data] of matched.entries())writeFileSync(resolve(root,'previews','scale-'+i+'.png'),Buffer.from(data.split(',')[1],'base64'));
  await sheet('overview.png','<h1>E200 / 700T｜原生靜態外形研究</h1>'+manifest.models.filter(m=>m.category==='section').map(m=>'<div style="background:white"><img src="previews/'+m.id+'-hero.png"><p>'+m.id+'</p></div>').join(''));
  const cab=manifest.models.find(m=>m.id==='refresh-700t-cab');
  await sheet('700t-livery.png','<h1>700T｜白車身・綠松 × 黑細線・實際原生模型</h1><div style="background:white;border-radius:12px"><img src="previews/'+cab.id+'-hero.png"></div><div class="row"><div><img src="previews/refresh-700t-nose-detail-colour-isometric.png"><p>車頭局部｜白車身／黑細線／暖白燈</p></div><div><img src="previews/refresh-700t-cab-colour-left.png"><p>整車側面｜綠松主色帶／黑色細輔線</p></div></div>');
- await sheet('style-comparison.png','<h1>同相機、公尺尺度風格比較</h1>'+unitsMatched.map((_,i)=>'<div style="background:white"><img src="previews/style-unit-'+i+'.png"></div>').join(''));
+ await sheet('style-comparison.png','<h1>同相機、公尺尺度風格比較</h1>'+unitsMatched.map((_,i)=>'<div style="background:white"><img src="previews/style-unit-'+i+'.png"><p>'+['E200','700T leading cab','existing Codex metro'][i]+'</p></div>').join(''));
  console.log('Rendered49 seven-way PNGs, orthographic sheets and fixed-camera fleet comparison.');
 } finally {if(browser)await browser.close();server.close();unlinkSync(resolve(root,'_render.html'));}

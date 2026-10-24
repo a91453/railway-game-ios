@@ -1,6 +1,21 @@
-# E200 / 700T 原生外形修訂（八版：收低風擋罩、保留白車身與綠松黑線）
+# E200 / 700T 原生外形修訂（九版：圓角風擋、圓鼻尖與連續下裙板）
 
-獨立配方 `Map3DTrainShapeRefresh.swift`，本輪以實際已交付Codex producer `2b7eb826` 為真正前版；本輪只修駕駛端風擋罩／細緣，原殼面／燈／門窗／輪架／塗裝／編組保持。依使用者新規則：Codex列車可沿用／拆件，非Codex模型只參考。沒有複製E201來源mesh／貼圖。入口仍只註冊五個靜態單元，**不替換營運E200／高鐵**。GameCore／存檔／golden／replay不動。
+獨立配方 `Map3DTrainShapeRefresh.swift`；本輪以真正交付producer `f60f0d92`（完整revision-8保留）作前版。實際查看使用者新附IMG_4456.jpg正面模型圖，以及700T實車正面近照與斜視，修頭尾x≥3.7m的罩體／玻璃與雨刷／燈橫向位置／白鼻尖色帶界線／下裙板。白車身、綠松主帶＋黑細線色票、鼻長與外包bounds、門窗／輪架／編組保持；其他四個單元native與GLB逐bytes相同。Codex列車可沿用，非Codex只參考，無來源mesh／貼圖搬用。入口仍只註冊五個靜態單元，**不替換營運E200／高鐵；合併不會出現在遊戲中**。GameCore／存檔／golden／replay不動。
+
+## 第九版特徵與外觀自檢
+
+新附圖是模型正面渲染，來源作者／尺寸／相機未知，不稱實車工程圖。實際照片再核對700t-2正面、700t-1斜視：罩體四角收圓、下側收窄，上部玻璃與下部雙燈區分開；白鼻尖為較寬的圓底U形；深色下裙板沿鼻面連續包覆。先修整體閉合曲面與白鼻尖輪廓，再補罩／玻璃／兩支簡化雨刷與燈位，最後調裙板色界。本輪模型與圖中橘色不共用塗裝，保留使用者指定白車身與綠松黑線。
+
+| 判定 | 觀察與修正 |
+|---|---|
+| 已符合本輪自檢 | 避免整片寬方黑板：罩寬收窄、四角收圓、下緣收窄，保留白車頂邊；補貼合罩面的上玻璃／細框與兩雨刷；燈組略往內收 |
+| 已符合本輪自檢 | 白鼻尖從尖V改為圓底U；沿原殼面分色，黑細線與主帶連續銜接；鼻長／外包bounds保持 |
+| 已符合本輪自檢 | 鼻部下殼連續向下包覆並封閉，深色裙板上緣隨鼻面彎曲；二次檢視後收薄深色區，減少輪架露出；未直接加外掛箱遮醜 |
+| 維持 | 白車身／綠松＋黑色票、原門窗與輪架、E200／中車／集電車／比較車及編組；真前版可重現 |
+| 仍不符合完整復刻 | 雨刷與玻璃只有簡化實體，無駕駛室內裝／透明反射；小管線、各中車精確差異與所有細節仍不足 |
+| 資料不足 | 新圖來源模型與相機，700T風擋／鼻部工程尺寸、完整底部與另一側設備細節；展示尺寸仍比例推估 |
+
+最終原生模型的側、正、俯、斜配色／白模／剪影與同相機同公尺前後均重新輸出並親自查看。技術通過不當外觀合格，也不代表作者已認可。不散布新附圖／原照片／來源GLB，不描摹或送外部生成服務。來源SHA與逐張查看紀錄在私包reference-review.json。
 
 ## 建模前判讀與本輪來源
 
@@ -39,8 +54,8 @@ tools/train-shape-refresh/export.sh OUT
 node tools/train-shape-refresh/review.mjs OUT
 # 查看配色／白模／剪影四向，修幾何須重新匯出與查看
 node tools/train-shape-refresh/verify.mjs OUT
-python3 tools/train-shape-refresh/windscreen-audit.py OUT PRIOR
-# colour-audit / paint-audit適用歷史第七版細線；本輪確實移動風擋，不跑這兩項。
+python3 tools/train-shape-refresh/front-audit.py OUT PRIOR
+# colour-audit / paint-audit適用歷史第七版細線；本輪確實改動鼻部幾何／風擋／色界，不跑這兩項。
 python3 tools/train-shape-refresh/band-audit.py OUT PRIOR
 # 合併N700S參考GLB本機四向白模研究（來源檔不隨本包散布）
 blender --background --python tools/train-shape-refresh/reference-study.py -- PRIVATE_N700S_GLB OUT/reference-study
@@ -58,9 +73,9 @@ python3 tools/train-shape-refresh/bundle.py OUT ACTUAL_PRODUCER_COMMIT
 # bundle後重測真ZIP下載、再bundle，最後確認現有ZIP每個member仍等於live bytes
 ```
 
-本輪真前版模型與來源在history/2b7eb826，第二版完整包仍留私庫revision-2；早期交付在revision-2/history/d476304b，不是臨時重捏前版；四種比較同相機／公尺尺度。公開只有配方／工具／必要測試／文件／一張總覽，完整包留私庫原目錄新增 `revision-8/`，不覆蓋舊包。來源記實際producer，不用未提交版本冒充commit。Linux抽樣射線／WebGL不代表完整碰撞、真機Metal、動畫或效能驗證。
+本輪真前版模型與來源在history/f60f0d92，第二版完整包仍留私庫revision-2；早期交付在revision-2/history/d476304b，不是臨時重捏前版；四種比較同相機／公尺尺度。公開只有配方／工具／必要測試／文件／一張總覽，完整包留私庫原目錄新增 `revision-9/`，不覆蓋舊包。來源記實際producer，不用未提交版本冒充commit。Linux抽樣射線／WebGL不代表完整碰撞、真機Metal、動畫或效能驗證。
 
-## 第八版：比對照片後收低風擋罩上緣
+## 歷史第八版：比對照片後收低風擋罩上緣（第九版前稿）
 
 使用者指出車頭黑色方框太高，已重新實際查看四張既有700T實車照片，尤其700t-2正面近照、700t-1前斜視，並對照前輪六圖及IMG4456立面。實車罩體上方有明顯白車身留邊；前版模型黑罩幾乎碰到車頂，且縱向範圍過長。這是形狀與位置問題，不能只換色。
 
@@ -73,3 +88,7 @@ windscreen-audit逐三角bytes證明頭尾各只有1296個風擋／細緣三角�
 真前版2b7eb826模型／GLB／manifest／來源／配方留history/2b7eb826，完整revision-7保留；固定相機同公尺尺度四向比較在blue-cab-before-after.png／700t-nose-before-after.png／700t-formation-before-after.png，另有windscreen-front-before-after.png的聚焦正面對照。最終原生配色／白模／剪影側正俯斜及鼻部局部都重匯出並查看。
 
 本輪外觀自檢改善黑罩過高與留白不足；罩內玻璃分層、雨刷、駕駛室／中車細部仍簡化，不稱工程復刻或作者認可。既有六圖（五模型、一實車）、合併N700S GLB四向研究與IMG4456只視覺參考的來源脈絡保持，原始照片／mesh不上公開庫或外部生成服務。仍為靜態素材，合併不替換營運；真機Metal／效能／動畫／全碰撞等保持UNVERIFIED。
+
+## 第九版原生量測與範圍稽核
+
+front-audit直接讀最終M3DM：罩寬2.349→2.209m，白車頂留邊0.324m保持；x=11.9m白鼻尖寬0.512→1.094m；鼻下殼最低0.780→0.240m。40個實際前輪上緣頂點的正面射線，前殼覆蓋4→40，原輪頂淨空保持。每端5425個其餘三角bytes相同，全部修改在x≥3.7／尾端x≤−3.7；其他四單元native／GLB與全部placements完全相同。這是展示幾何／取樣證據，不是實車工程尺寸或全碰撞證明。23相關測試及各項資產驗證明細見私包；歷史windscreen-audit僅適用第八版，不用它宣稱本輪只動罩體。

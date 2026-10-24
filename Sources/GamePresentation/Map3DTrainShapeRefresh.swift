@@ -185,7 +185,13 @@ extension StationKitBuilder {
         func surface(_ x: Float,_ a: Float)->Map3DPoint {
             let (h,w)=dimensions(x),c=cosf(a),s=sinf(a)
             let z=w*(c>=0 ? 1:-1)*powf(abs(c),0.58)
-            let y=bottom+(h-bottom)*(0.5+0.5*(s>=0 ? 1:-1)*powf(abs(s),0.65))
+            var y=bottom+(h-bottom)*(0.5+0.5*(s>=0 ? 1:-1)*powf(abs(s),0.65))
+            if cab && x>5.8 && s<0 {
+                let t=max(0,min(1,(x-5.8)/1.3)),ease=t*t*(3-2*t)
+                // Continuous lower fairing, part of the closed body shell.
+                // The leading bogie at x<=4.65 retains its original clearance.
+                y -= 0.54*ease*powf(-s,0.50)
+            }
             return Map3DPoint(x,y,z)
         }
         let rings=xs.map { x in (0..<segments).map { i in
@@ -217,7 +223,7 @@ extension StationKitBuilder {
                 let flank=abs(p.z)/w
                 // The coloured rim climbs around the sides, leaving a tapered
                 // white inset. A flat height cut erased this in the prior version.
-                let height=h0+(h1-h0)*(p.x-x0)/(x1-x0)+0.70*ease*flank*flank
+                let height=h0+(h1-h0)*(p.x-x0)/(x1-x0)+0.70*ease*powf(flank,4)
                 let d=p.y-height-offset
                 return abs(d)<0.000001 ? 0:d
             }
@@ -244,6 +250,35 @@ extension StationKitBuilder {
             let points=normal.dot(centre-inside)>=0 ? polygon:Array(polygon.reversed())
             return (1..<points.count-1).map { [points[0],points[$0],points[$0+1]] }
         }
+        func skirtHeight(_ x: Float)->Float {
+            guard cab else { return bottom-0.01 }
+            return bottom-0.01-0.01*max(0,min(1,(x-3.7)/2.1))
+        }
+        func skirtClip(_ polygon: [Map3DPoint],_ x0: Float,_ x1: Float,upper: Bool)->[Map3DPoint] {
+            func distance(_ p: Map3DPoint)->Float {
+                let h=skirtHeight(x0)+(skirtHeight(x1)-skirtHeight(x0))*(p.x-x0)/(x1-x0)
+                let t=max(0,min(1,(p.x-3.7)/2.1)),ease=t*t*(3-2*t)
+                let flank=abs(p.z)/1.69
+                let d=p.y-h-0.18*ease*flank*flank
+                return abs(d)<0.000001 ? 0:d
+            }
+            var result: [Map3DPoint]=[]
+            for i in polygon.indices {
+                let a=polygon[i],b=polygon[(i+1)%polygon.count],da=distance(a),db=distance(b)
+                let ia=upper ? da>=0:da<=0,ib=upper ? db>=0:db<=0
+                if ia { result.append(a) }
+                if ia != ib && da != 0 && db != 0 {
+                    let lo=a.x<b.x || (a.x==b.x && a.z<b.z) ? a:b,hi=lo==a ? b:a
+                    let dl=distance(lo),dh=distance(hi)
+                    result.append(lo+(hi-lo)*(dl/(dl-dh)))
+                }
+            }
+            return result
+        }
+        func hullParts(_ polygon: [Map3DPoint],_ x0: Float,_ x1: Float)->([Map3DPoint],[Map3DPoint]) {
+            guard cab else { return (polygon,[]) }
+            return (skirtClip(polygon,x0,x1,upper:true),skirtClip(polygon,x0,x1,upper:false))
+        }
         for k in 0..<rings.count-1 {
             let h=(dimensions(xs[k]).0+dimensions(xs[k+1]).0)/2
             let inside=Map3DPoint((xs[k]+xs[k+1])/2,(bottom+h)/2,0)
@@ -263,14 +298,27 @@ extension StationKitBuilder {
                             face(clip(panel,at:xs[k],xs[k+1],upper:true,offset:0.055),inside:inside,color:hsrBody)
                             face(clip(panel,at:xs[k],xs[k+1],upper:false,offset:0.055),inside:inside,color:Map3DTrainShapeRefresh.highSpeedAccentColor)
                         }
-                        face(clip(triangle,at:xs[k],xs[k+1],upper:false),inside:inside,color:refreshTeal)
-                    } else { face(triangle,inside:inside,color:color) }
+                        let parts=hullParts(clip(triangle,at:xs[k],xs[k+1],upper:false),xs[k],xs[k+1])
+                        face(parts.0,inside:inside,color:refreshTeal)
+                        face(parts.1,inside:inside,color:Map3DTrainShapeRefresh.highSpeedAccentColor)
+                    } else {
+                        let parts=hullParts(triangle,xs[k],xs[k+1])
+                        face(parts.0,inside:inside,color:color)
+                        face(parts.1,inside:inside,color:Map3DTrainShapeRefresh.highSpeedAccentColor)
+                    }
                 }
             }
         }
         for end in [0,rings.count-1] {
             let inside=Map3DPoint(0,2,0),cap=rings[end],x=xs[end]
-            if cab && end==rings.count-1 { face(cap,inside:inside,color:refreshTeal);continue }
+            if cab && end==rings.count-1 {
+                for panel in orientedTriangles(cap,inside:inside) {
+                    let parts=hullParts(panel,x-1,x+1)
+                    face(parts.0,inside:inside,color:refreshTeal)
+                    face(parts.1,inside:inside,color:Map3DTrainShapeRefresh.highSpeedAccentColor)
+                }
+                continue
+            }
             // Matching subdivisions on the white end caps close the side
             // stripe's new edge vertices; no T-junction is left at the ends.
             for panel in orientedTriangles(cap,inside:inside) {
@@ -311,28 +359,42 @@ extension StationKitBuilder {
         if cab {
             // Rounded trapezoidal cockpit mapped onto the real nose surface.
             // Each small prism is backed by that same shell; no billboard box.
-                func screen(_ r: Int,_ c: Int)->Map3DPoint {
-                    let v=Float(r)/6,u=Float(c)/12
-                    let a: Float=1.0+u*(Float.pi-2.0)
-                    // Keep a visible white roof margin. Rounded rear/front
-                    // corners are mapped down the actual sloping nose surface.
-                    let corner=max(0,(abs(2*u-1)-0.72)/0.28)
-                    let cap=sqrtf(max(0,1-corner*corner))
-                    let rear: Float=8.15+0.18*(1-cap),front: Float=9.60+0.10*cap
-                    let x=rear+(front-rear)*v
-                    let p=surface(x,a)
-                    return p+Map3DPoint(0,0.018,0)
-                }
+            func screen(_ v: Float,_ u: Float)->Map3DPoint {
+                let a=Float.pi/2+(u-0.5)*(1.02-0.16*v)
+                let corner=max(0,(abs(2*u-1)-0.60)/0.40)
+                let cap=sqrtf(max(0,1-corner*corner))
+                let rear: Float=8.15+0.36*(1-cap),front: Float=9.78-0.27*(1-cap)
+                return surface(rear+(front-rear)*v,a)+Map3DPoint(0,0.018,0)
+            }
             for row in 0..<6 { for col in 0..<12 {
-                let p=[screen(row,col),screen(row,col+1),screen(row+1,col+1),screen(row+1,col)]
+                let v=Float(row)/6,u=Float(col)/12
+                let p=[screen(v,u),screen(v,u+1/12),screen(v+1/6,u+1/12),screen(v+1/6,u)]
                 refreshPanel(p,thickness:0.035,color:hsrGlass)
             } }
             let rim=Map3DColor.shaded(hsrGlass,0.72)
-            for c in 0..<12 { for r in [0,6] { beam(screen(r,c),screen(r,c+1),0.025,rim) } }
-            for r in 0..<6 { for c in [0,12] { beam(screen(r,c),screen(r+1,c),0.025,rim) } }
+            for c in 0..<12 { for v: Float in [0,1] { beam(screen(v,Float(c)/12),screen(v,Float(c+1)/12),0.025,rim) } }
+            for r in 0..<6 { for u: Float in [0,1] { beam(screen(Float(r)/6,u),screen(Float(r+1)/6,u),0.025,rim) } }
+            // Upper glazing follows the supported mask instead of reading as
+            // one featureless black plate. Small cells follow its curvature.
+            let pane=Map3DColor.shaded(Map3DPalette.glazing,0.68)
+            func glass(_ v: Float,_ u: Float)->Map3DPoint { screen(0.17+v*0.34,0.13+u*0.74)+Map3DPoint(0,0.012,0) }
+            for r in 0..<2 { for c in 0..<8 {
+                let v=Float(r)/2,u=Float(c)/8
+                refreshPanel([glass(v,u),glass(v,u+1/8),glass(v+1/2,u+1/8),glass(v+1/2,u)],thickness:0.018,color:pane)
+            } }
+            for c in 0..<8 { for v: Float in [0,1] { beam(glass(v,Float(c)/8),glass(v,Float(c+1)/8),0.018,rim) } }
+            for r in 0..<2 { for u: Float in [0,1] { beam(glass(Float(r)/2,u),glass(Float(r+1)/2,u),0.018,rim) } }
+            for u: Float in [0.20,0.80] {
+                let hand: Float=u<0.5 ? 1:-1
+                let base=glass(0.91,u)+Map3DPoint(0,0.014,0)
+                let elbow=glass(0.70,u+hand*0.10)+Map3DPoint(0,0.014,0)
+                let tip=glass(0.12,u+hand*0.10)+Map3DPoint(0,0.014,0)
+                civicTube(glass(0.91,u)-Map3DPoint(0,0.008,0),base+Map3DPoint(0,0.008,0),radius:0.022,color:rim,sides:8)
+                beam(base,elbow,0.014,rim);beam(elbow,tip,0.018,rim)
+            }
             // Two low lens clusters, two actual warm-white lamps in each.
             for side: Float in [-1,1] {
-                let a: Float = side>0 ? 1.28:Float.pi-1.28
+                let a: Float = side>0 ? 1.34:Float.pi-1.34
                 let centre=surface(9.34,a)+Map3DPoint(0,0.041,0)
                 let along=Map3DPoint(0,0,side)
                 let across=(surface(9.49,a)-surface(9.19,a)).normalized!

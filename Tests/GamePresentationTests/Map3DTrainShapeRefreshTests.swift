@@ -65,6 +65,14 @@ final class Map3DTrainShapeRefreshTests: XCTestCase {
         XCTAssertGreaterThan(width/(high-low),2.2,"Mask reads as a tall rectangular box")
         XCTAssertGreaterThan(mask.map(\.x).min()!,8.0,"Mask extends too far up the roof")
     }
+    func testFrontMaskNarrowsAndFairingCoversFrontRunningGear() {
+        let cab=Map3DTrainShapeRefresh.model("refresh-700t-cab")
+        let mask=cab.vertices.filter { $0.x>7 && $0.color==Map3DTrainShapeRefresh.highSpeedGlassColor }
+        let width=mask.map(\.y).max()!-mask.map(\.y).min()!
+        XCTAssertLessThan(width,2.25,"Front mask still spreads too far across the white nose")
+        let fairing=cab.vertices.filter { $0.x>7 }
+        XCTAssertLessThan(fairing.map(\.z).min()!,0.45,"Lower front fairing leaves the running gear exposed")
+    }
     func testPassengerGlassHasRoundedCornersInsteadOfRectangle() {
         let m=Map3DTrainShapeRefresh.model("refresh-700t-middle")
         let glass=Map3DTrainShapeRefresh.highSpeedGlassColor
