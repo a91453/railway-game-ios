@@ -9,7 +9,7 @@ const current=resolve(process.argv[2]),prior=resolve(process.argv[3]);
 if(!prior)throw Error('Usage: node feedback-compare.mjs CURRENT_EXPORT PRIOR_EXPORT');
 const mode=process.argv[4]||'formation',electric=mode==='e200';
 const id=electric?'refresh-e200':mode==='formation'?'refresh-700t-formation':'refresh-700t-'+(mode==='nose'?'cab':mode);
-const family=electric?'e200':mode==='nose'?'700t-nose':mode==='cab'?'blue-cab':'700t-'+mode,label=electric?'E200 端面／輪架／屋頂修訂':'700T 白車身綠松／黑細線修訂';
+const family=electric?'e200':mode==='nose'?'700t-nose':mode==='cab'?'blue-cab':'700t-'+mode,label=electric?'E200 端面／輪架／屋頂修訂':'700T 風擋罩高度／車頂留白修訂';
 const currentModel=JSON.parse(readFileSync(resolve(current,'manifest.json'))).models.find(m=>m.id===id);
 const priorModel=JSON.parse(readFileSync(resolve(prior,'manifest.json'))).models.find(m=>m.id===id);
 const before='_feedback-before.m3dmodel',after='_feedback-after.m3dmodel',html='_feedback.html';
@@ -49,5 +49,10 @@ try{
  await page.setContent('<meta charset="utf-8"><base href="'+base+'/"/><style>body{font:19px system-ui;color:#26385c;background:#eceef6;margin:24px}h1{font-size:29px}.row{display:flex;gap:16px}.row>div{background:white;border-radius:12px;padding:12px;flex:1;text-align:center}img{width:100%}p{margin:5px}</style><h1>'+label+'｜實際模型修訂前後</h1>'+cards+'<p>'+detailNote+'</p><p>兩版使用相同原生模型座標、相機中心與範圍；截圖為 Chromium WebGL 2。</p>');
  await page.evaluate(()=>Promise.all([...document.images].map(i=>i.decode())));
  await page.screenshot({path:resolve(current,'previews',family+'-before-after.png'),fullPage:true});
+ if(mode==='nose'){
+  await page.setContent('<meta charset="utf-8"><base href="'+base+'/"/><style>body{font:20px system-ui;color:#26385c;background:#eceef6;margin:24px}h1{font-size:28px}.row{display:flex;gap:16px}.row>div{flex:1;background:white;border-radius:12px;padding:12px;text-align:center}img{width:100%}</style><h1>700T 風擋罩｜同相機、同公尺尺度正面對照</h1><div class="row"><div><img src="previews/'+family+'-before-front.png"><p>修正前</p></div><div><img src="previews/'+family+'-after-front.png"><p>修正後</p></div></div><p>實際原生局部模型。白車身、綠松主色帶與黑細輔線保持。</p>');
+  await page.evaluate(()=>Promise.all([...document.images].map(i=>i.decode())));
+  await page.screenshot({path:resolve(current,'previews','windscreen-front-before-after.png'),fullPage:true});
+ }
  console.log('Matched native-model before/after left, front and isometric views.');
 }finally{if(browser)await browser.close();server.close();for(const p of [before,after,html])unlinkSync(resolve(current,p));}

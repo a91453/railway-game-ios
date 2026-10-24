@@ -54,6 +54,17 @@ final class Map3DTrainShapeRefreshTests: XCTestCase {
         let h1=band.filter { abs($0.x-3.7)<0.0001 }.map(\.z).max()!
         XCTAssertLessThan(abs(h1-h0),0.015,"Body paint join has a step")
     }
+    func testWindscreenHasWhiteRoofMarginAndLowMaskProportions() {
+        let cab=Map3DTrainShapeRefresh.model("refresh-700t-cab")
+        let mask=cab.vertices.filter { $0.x>7 && $0.color==Map3DTrainShapeRefresh.highSpeedGlassColor }
+        XCTAssertFalse(mask.isEmpty)
+        let high=mask.map(\.z).max()!,low=mask.map(\.z).min()!
+        let width=mask.map(\.y).max()!-mask.map(\.y).min()!
+        XCTAssertGreaterThan(cab.maximum.z-high,0.23,"Windscreen touches the roof with no white margin")
+        XCTAssertLessThan(high-low,1.0,"Black mask is too tall")
+        XCTAssertGreaterThan(width/(high-low),2.2,"Mask reads as a tall rectangular box")
+        XCTAssertGreaterThan(mask.map(\.x).min()!,8.0,"Mask extends too far up the roof")
+    }
     func testPassengerGlassHasRoundedCornersInsteadOfRectangle() {
         let m=Map3DTrainShapeRefresh.model("refresh-700t-middle")
         let glass=Map3DTrainShapeRefresh.highSpeedGlassColor

@@ -313,9 +313,12 @@ extension StationKitBuilder {
             // Each small prism is backed by that same shell; no billboard box.
                 func screen(_ r: Int,_ c: Int)->Map3DPoint {
                     let v=Float(r)/6,u=Float(c)/12
-                    let a: Float=0.92+u*(Float.pi-1.84)
-                    let round=sinf(u*Float.pi)
-                    let rear: Float=7.30-0.16*round,front: Float=9.55+0.13*round
+                    let a: Float=1.0+u*(Float.pi-2.0)
+                    // Keep a visible white roof margin. Rounded rear/front
+                    // corners are mapped down the actual sloping nose surface.
+                    let corner=max(0,(abs(2*u-1)-0.72)/0.28)
+                    let cap=sqrtf(max(0,1-corner*corner))
+                    let rear: Float=8.15+0.18*(1-cap),front: Float=9.60+0.10*cap
                     let x=rear+(front-rear)*v
                     let p=surface(x,a)
                     return p+Map3DPoint(0,0.018,0)

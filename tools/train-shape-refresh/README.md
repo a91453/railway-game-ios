@@ -1,6 +1,6 @@
-# E200 / 700T 原生外形修訂（七版：白車身、綠松／黑細線）
+# E200 / 700T 原生外形修訂（八版：收低風擋罩、保留白車身與綠松黑線）
 
-獨立配方 `Map3DTrainShapeRefresh.swift`，本輪以實際已交付Codex producer `262bc3ef` 為真正前版；本輪白車身保持、只加黑細輔線；原殼面／硬體／編組保持，新增共面分色切分。依使用者新規則：Codex列車可沿用／拆件，非Codex模型只參考。沒有複製E201來源mesh／貼圖。入口仍只註冊五個靜態單元，**不替換營運E200／高鐵**。GameCore／存檔／golden／replay不動。
+獨立配方 `Map3DTrainShapeRefresh.swift`，本輪以實際已交付Codex producer `2b7eb826` 為真正前版；本輪只修駕駛端風擋罩／細緣，原殼面／燈／門窗／輪架／塗裝／編組保持。依使用者新規則：Codex列車可沿用／拆件，非Codex模型只參考。沒有複製E201來源mesh／貼圖。入口仍只註冊五個靜態單元，**不替換營運E200／高鐵**。GameCore／存檔／golden／replay不動。
 
 ## 建模前判讀與本輪來源
 
@@ -39,11 +39,9 @@ tools/train-shape-refresh/export.sh OUT
 node tools/train-shape-refresh/review.mjs OUT
 # 查看配色／白模／剪影四向，修幾何須重新匯出與查看
 node tools/train-shape-refresh/verify.mjs OUT
-python3 tools/train-shape-refresh/colour-audit.py OUT PRIOR
-python3 tools/train-shape-refresh/paint-audit.py OUT PRIOR
-# nose-audit.py只用於先前僅改鼻殼的修訂；此輪四個HSR單元都換色，不跑該項。
+python3 tools/train-shape-refresh/windscreen-audit.py OUT PRIOR
+# colour-audit / paint-audit適用歷史第七版細線；本輪確實移動風擋，不跑這兩項。
 python3 tools/train-shape-refresh/band-audit.py OUT PRIOR
-# paint-audit在第七版逐新增三角檢查原面內與覆蓋面積；第六版殼形修訂不適用。
 # 合併N700S參考GLB本機四向白模研究（來源檔不隨本包散布）
 blender --background --python tools/train-shape-refresh/reference-study.py -- PRIVATE_N700S_GLB OUT/reference-study
 python3 tools/train-shape-refresh/wheel-audit.py OUT
@@ -60,18 +58,18 @@ python3 tools/train-shape-refresh/bundle.py OUT ACTUAL_PRODUCER_COMMIT
 # bundle後重測真ZIP下載、再bundle，最後確認現有ZIP每個member仍等於live bytes
 ```
 
-本輪真前版模型與來源在history/262bc3ef，第二版完整包仍留私庫revision-2；早期交付在revision-2/history/d476304b，不是臨時重捏前版；四種比較同相機／公尺尺度。公開只有配方／工具／必要測試／文件／一張總覽，完整包留私庫原目錄新增 `revision-7/`，不覆蓋舊包。來源記實際producer，不用未提交版本冒充commit。Linux抽樣射線／WebGL不代表完整碰撞、真機Metal、動畫或效能驗證。
+本輪真前版模型與來源在history/2b7eb826，第二版完整包仍留私庫revision-2；早期交付在revision-2/history/d476304b，不是臨時重捏前版；四種比較同相機／公尺尺度。公開只有配方／工具／必要測試／文件／一張總覽，完整包留私庫原目錄新增 `revision-8/`，不覆蓋舊包。來源記實際producer，不用未提交版本冒充commit。Linux抽樣射線／WebGL不代表完整碰撞、真機Metal、動畫或效能驗證。
 
-## 第七版：白車身、綠松主色帶＋黑細輔線
+## 第八版：比對照片後收低風擋罩上緣
 
-使用者更正「車身白色，線條什麼顏色搭黑色」，依此保留原暖白車身／鼻罩／門葉、玻璃與暖白燈，選綠松主色帶＋石墨黑細輔線。黑色沿綠松上緣，標稱高度55mm為本模型造型推估；前唇與車側連續，沒有外掛箱或貼片。先前黑車身只是未提交本機試稿，未作為交付。E200維持原色。
+使用者指出車頭黑色方框太高，已重新實際查看四張既有700T實車照片，尤其700t-2正面近照、700t-1前斜視，並對照前輪六圖及IMG4456立面。實車罩體上方有明顯白車身留邊；前版模型黑罩幾乎碰到車頂，且縱向範圍過長。這是形狀與位置問題，不能只換色。
 
-全部沿既有色票：暖白shopAwnings[3]、綠松shopAwnings[0]、黑色tankStand×0.42、玻璃glazing×0.5。未打光sRGB對比綠松／白3.45、黑／白11.48、黑／綠3.32、玻璃／白6.21，詳UI_THEME與colour-verification；不代表所有打光像素或真機已驗。
+本輪只修頭尾的風擋罩和25mm細緣：上緣沿原鼻面往前下收，罩體縮短、略收寬，前後角用圓弧映射；下端燈組保持原位。罩體仍貼合原鼻殼、有實體背板，不直接下移穿入車身。中央鼻罩／肩部／前唇、原白車身／綠松主色帶／55mm黑細輔線、門窗／輪架／燈及編組保持。
 
-本輪IMG_4456.PNG已實際看，是12節立面插畫，署名K.Y.Chung／Nanyue Express、標示CC BY-NC-ND 4.0；僅視覺參考，無描摹、圖素貼圖取用、改作該圖或原圖散布。其各中車門窗／設備差異仍未完整重建；此輪只修線條配色，不宣稱工程編組完全符合。原圖SHA與用途留私包reference-review／source-record。
+獨立windscreen-audit量真正前版與最終原生頂點：罩體頂由3.625降到3.326m、垂直高度1.239→0.974m、寬高比2.04→2.41；距本模型3.65m車頂的白色留邊0.025→0.324m。這些是**模型展示座標**，不是從照片像素推得的實車工程尺寸。新測試先在真前版四項失敗，修後22相關測試通過。
 
-colour-audit逐bytes鎖住四HSR單元的綠松面與發光燈組，確認只移除原暖白三角、加入白或黑的子三角；E200／比較車native及GLB完整bytes不變。paint-audit獨立檢查每個新增三角都位於唯一原三角內，原面覆蓋面積一致；原車殼表面、bounds與編組placements不變，三角數因分色細分增加，依manifest實記，不能宣稱頂點／三角數完全相同。沒有用換色移動門窗或輪組。
+windscreen-audit逐三角bytes證明頭尾各只有1296個風擋／細緣三角改動，各7012個其餘三角完全相同；所有變更都在各自x>7／x<−7且色彩只限玻璃／細緣。E200／中車／集電車／Codex比較車native及GLB全bytes相同，編組placements不變。白車身綠松黑線、車殼、燈組等沒有順手改。外形與三角數／bounds記manifest。
 
-真前版262bc3ef模型／GLB／manifest／來源／配方留history/262bc3ef，完整revision-6保持。前後同相機同尺度圖在blue-cab-before-after.png／700t-nose-before-after.png／700t-formation-before-after.png；700t-livery.png為白車身配綠松／黑線預覽。實際原生配色／白模／剪影四向、單元／完整編組與七向都重匯出並查看。
+真前版2b7eb826模型／GLB／manifest／來源／配方留history/2b7eb826，完整revision-7保留；固定相機同公尺尺度四向比較在blue-cab-before-after.png／700t-nose-before-after.png／700t-formation-before-after.png，另有windscreen-front-before-after.png的聚焦正面對照。最終原生配色／白模／剪影側正俯斜及鼻部局部都重匯出並查看。
 
-前輪已合併N700S GLB的四向研究沿用，沒有新搬來源頂點／貼圖。21既有相關測試繼續檢查同一原生外形，既有色彩選取調整為明確livery欄位；不為可逆換色加常數鏡像測試。原生／GLB／PNG／viewer／ZIP與實際producer重新驗證。外觀仍自檢，工程級還原／不同中車細節、真機Metal／效能／動畫／全碰撞仍UNVERIFIED；靜態素材合併不替換營運。
+本輪外觀自檢改善黑罩過高與留白不足；罩內玻璃分層、雨刷、駕駛室／中車細部仍簡化，不稱工程復刻或作者認可。既有六圖（五模型、一實車）、合併N700S GLB四向研究與IMG4456只視覺參考的來源脈絡保持，原始照片／mesh不上公開庫或外部生成服務。仍為靜態素材，合併不替換營運；真機Metal／效能／動畫／全碰撞等保持UNVERIFIED。
