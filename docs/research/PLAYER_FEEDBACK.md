@@ -163,6 +163,20 @@ What to Test 是當時自動列出的 PR 清單（#592 之前的做法）。
 4. **城市預覽**：載入中按 × 每次都關得掉嗎？
 5. **教學卡片**：手機橫拿時，卡片有沒有擋到要點的按鈕？
 
+### 0.5.0 (87.1)，2026-10-24
+
+從 `main` `947c23ad`（#1186 的合併；What to Test 87.1 在 #1187）建置，TestFlight run 87（`testflight.yml` run 40100730344，2026-10-24 14:02 UTC 作者按，成功）。這是第一個帶 iCloud entitlement（與 Game Center）的匯出，匯出與上傳都過了，不用 revert d9b9cc6。作者：「你過了再給玩家」；遊戲規劃在 full lane 綠了之後告訴作者「可以給玩家」，發版凍結 14:57 UTC 解除。
+
+**這個 commit 的檢查**：
+- `ci.yml` run 40093112308 綠（第 18 片 `campaigns-17` 第一次上場）。
+- full lane（`ios-build.yml` run 40093122899）第 1 次只有 Xcode build job 紅，在 `TutorialUITests.testATouchHeldOnTheFoldedCardAsTheStepMovesOnOpensIt`（`TutorialUITests.swift:359`，卡片在步驟換掉時移了位置）；這版沒改到教學，只重跑那個 job，第 2 次綠。這支在 7 天內紅了 2 次（30e34922、947c23ad），交 session_01CjUqsd4Y3crAW7N5kQ6CD3 照 diagnosing-bugs 查，連同第 5 課卡片跳動（HANDOFF §5）。
+
+86.1 之後新進的，照 What to Test：iCloud 存檔（決策 397）、Game Center 每週排行榜與 38 個成就（決策 396）、實景買下單一真實車站（決策 400）、收購支線時一起買地（決策 401）、3D 自有建築用 EstateKit／CoastalKit（決策 398）、3D 公路橋照真實高度（決策 391）、3D 真實鐵路照真實股道與高度（決策 402）、3D 農地（決策 393）、3D 跟車的列車資訊（決策 403）、道路自己長與站前路（決策 400，存檔 72）、四款新列車（決策 399）；修好的：隧道裡不畫地面與隧道架空線（決策 394、395）、高鐵示範月台（決策 392）。
+
+以下是**作者看 87.1** 時提的：
+- 「為什麼蓋自有建築物沒有剷除地上建物」（實景 3D，玩家的建築和真實建物疊在一起）：`Map3DScene` 畫真實建物時只避開軌道、車站與地標，沒避開玩家建築。交 session_01Eak3iwKWPyEfezUqQtTX59（`claude/placed-building-clears-real`）。
+- 「然後已經開高畫質怎麼還是方塊」：和畫質設定無關，是同一件（近看的方塊是那棟被疊住的真實建物），一起修。
+
 ### 0.5.0 (86.1)，2026-10-24
 
 從 `main` `584bddd`（#1145 的合併，What to Test 86.1）建置，TestFlight run 86（`testflight.yml` run 40051143234，2026-10-24 01:44 UTC 作者按，02:05 成功）。作者先自己試用（「我要先發86.1自己測了 如果ci綠了再提醒我 我再發給玩家」），之後在 full lane 綠之前就發給玩家（「我已經發86.1了不用凍結了」）。
