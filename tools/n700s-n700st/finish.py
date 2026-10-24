@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Render, package and hash the final native bytes for both paint variants."""
-import argparse,hashlib,json,sys,zipfile
+import argparse,hashlib,json,shutil,sys,zipfile
 from pathlib import Path
 import numpy as np
 from PIL import Image,ImageDraw,ImageFont
@@ -39,6 +39,8 @@ def main(pipeline,root,commit):
         previous=root/'repair-before'/variant/'models'/f'railway-{variant}-a.m3dmodel'
         original=(root/'source-body'/'previews'/f'railway-n700s-a'/'isometric.png')
         if previous.exists():
+            snapshot=dst/'revision-before'
+            shutil.copytree(root/'repair-before'/variant,snapshot,dirs_exist_ok=True)
             old_t,old_c,_=decode(previous.read_bytes())
             original=root/'repair-before'/variant/'previews'/f'railway-{variant}-a'/'isometric.png'
             original.parent.mkdir(parents=True,exist_ok=True)
