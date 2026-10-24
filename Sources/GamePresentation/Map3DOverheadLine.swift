@@ -6,7 +6,9 @@ import GameCore
 // wire stays over the track, on the side away from other track and clear
 // of a platform where it can; a cantilever arm across to the wire; the
 // contact wire, zigzagging a little either side of the middle, and the
-// messenger wire sagging above it. None in a tunnel; a track with other
+// messenger wire sagging above it. Decision 395: in a tunnel, no mast:
+// the wires hang from a bracket under the bore's roof, and they are part
+// of what is under the ground (the chunk's base). A track with other
 // track either side hangs its wires from its neighbours' masts. On a
 // real-world map, none on track laid along a real line run without one:
 // the four diesel branch lines (`main-reference.js` `DIESEL_BRANCH_IDS`),
@@ -85,6 +87,15 @@ extension Map3DScene.Builder {
     static let wireStray: Float = 0.3
     /// How thick a wire is drawn: more than a real one, so it shows.
     static let wireThickness: Float = 0.07
+    /// Decision 395: in a tunnel, the bracket under the bore's flat roof
+    /// (``boreCrown``, 6 m over the rails) the wires hang from, this far
+    /// either side of the track's middle and this deep; the messenger and
+    /// contact wires as high as in the open, so they run on through the
+    /// portal unbroken.
+    static let tunnelBracketHalfWidth: Float = 0.9
+    static let tunnelBracketDepth: Float = 0.08
+    /// How far into the tunnel the bracket at either end of its line hangs.
+    static let tunnelEndInset: Float = 3
 
     /// The supports of `path`'s wire, as distances along it: its start,
     /// then each as far on as ``mastSpacing`` allows with the track no
@@ -116,8 +127,13 @@ extension Map3DScene.Builder {
     /// ``Map3DScene/Chunk/close``): farther off a mast is under a pixel
     /// wide and a wire less. Decision 380: in a coarse chunk too, where
     /// the rest of the closest detail is left out.
+    ///
+    /// Decision 395: in a tunnel too, its wires hung from the bore's roof
+    /// (``addTunnelHanger(at:right:contact:)``) and drawn with the chunk's
+    /// ground and track, as the bore is; where two lines meet (a portal),
+    /// the second's contact wire ends where the first's does.
     mutating func addOverheadLine() {
-        let lines = trackLines.enumerated().filter { $0.element.kind != .tunnel }.compactMap { item in
+        let lines = trackLines.enumerated().compactMap { item in
             Map3DStreetLife.Path(item.element.points).map { (index: item.offset, path: $0, kind: item.element.kind) }
         }
         // Every piece of track in the open by 32 m cell, to find a track's
@@ -203,24 +219,53 @@ extension Map3DScene.Builder {
             }
         }
         var masts: [Cell: [Map3DPoint]] = [:]
-        target = .wires
+        // Decision 395: each line's contact wire's ends, and whether it is
+        // in a tunnel.
+        var wireEnds: [Cell: [(point: Map3DPoint, inTunnel: Bool)]] = [:]
         for line in lines {
+            let inTunnel = line.kind == .tunnel
+            target = inTunnel ? .base : .wires
             let supports = Self.wireSupports(line.path)
             var wires: [(contact: Map3DPoint, messenger: Map3DPoint)?] = []
             for (order, distance) in supports.enumerated() {
                 let (p, along, right) = line.path.at(distance)
                 // None where the ground is drawn over the track (the
                 // heights file's ground above a track the world laid lower),
-                // but in a trench cut for it (decision 375).
+                // but in a trench cut for it (decision 375) or a tunnel
+                // (decision 395).
                 guard realLines.isEmpty || isWired(p),
-                      drawnGround(x: p.x, z: p.z) < p.y + 1 || trackCover.trenches.piece(at: Map3DBaseMap.Point(x: Double(p.x), z: Double(p.z))) != nil
+                      inTunnel || drawnGround(x: p.x, z: p.z) < p.y + 1
+                        || trackCover.trenches.piece(at: Map3DBaseMap.Point(x: Double(p.x), z: Double(p.z))) != nil
                 else {
                     wires.append(nil)
                     continue
                 }
                 let stagger: Float = order.isMultiple(of: 2) ? Self.wireStagger : -Self.wireStagger
-                let contact = p + right * stagger + Map3DPoint(0, Self.contactHeight, 0)
+                var contact = p + right * stagger + Map3DPoint(0, Self.contactHeight, 0)
+                // Decision 395: at a portal, on from the wire on the other
+                // side of it.
+                let isEnd = order == 0 || order == supports.count - 1
+                if isEnd {
+                    let wanted = contact
+                    let others = around(p).flatMap { wireEnds[$0] ?? [] }
+                    if let other = others.first(where: { $0.inTunnel != inTunnel && level($0.point - wanted).length < 1.5 && abs($0.point.y - wanted.y) < 1 }) {
+                        contact = other.point
+                    }
+                }
                 wires.append((contact, p + Map3DPoint(0, Self.messengerHeight, 0)))
+                if isEnd { wireEnds[cell(p), default: []].append((contact, inTunnel)) }
+                if inTunnel {
+                    // At its ends, a little way in: not in a portal's
+                    // opening, where the mast outside holds the wire.
+                    var at = p
+                    if isEnd {
+                        let inward = order == 0 ? min(Self.tunnelEndInset, line.path.length / 2)
+                            : max(line.path.length - Self.tunnelEndInset, line.path.length / 2)
+                        at = line.path.at(inward).point
+                    }
+                    addTunnelHanger(at: at, right: right, contact: contact + (at - p))
+                    continue
+                }
                 // Where another line ends, its mast holds this one's wire.
                 if order == 0, around(p).contains(where: { (ends[$0] ?? []).contains { $0.line != line.index && level($0.point - p).length < 1.5 } }) {
                     continue
@@ -257,6 +302,20 @@ extension Map3DScene.Builder {
             }
         }
         target = .base
+    }
+
+    /// Decision 395: what holds the wires over `p` in a tunnel: a bar
+    /// across under the bore's roof, its white insulator, and a drop to
+    /// the contact wire.
+    mutating func addTunnelHanger(at p: Map3DPoint, right: Map3DPoint, contact: Map3DPoint) {
+        let roof = p.y + Self.boreCrown - Self.tunnelBracketDepth / 2
+        let middle = Map3DPoint(p.x, roof, p.z), half = right * Self.tunnelBracketHalfWidth
+        mesh(at: middle) { mesh in
+            mesh.addWire(from: middle - half, to: middle + half, thickness: Self.tunnelBracketDepth, color: Map3DPalette.mastSteel)
+            let hanger = Map3DPoint(contact.x, roof, contact.z)
+            mesh.addWire(from: hanger, to: hanger - Map3DPoint(0, 0.2, 0), thickness: 0.16, color: Map3DPalette.tileWhite)
+            mesh.addWire(from: hanger - Map3DPoint(0, 0.2, 0), to: contact, thickness: 0.06, color: Map3DPalette.mastSteel)
+        }
     }
 
     /// One mast `offset` to `out` of the track's middle `p`, standing at
