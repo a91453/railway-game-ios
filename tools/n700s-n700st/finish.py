@@ -36,7 +36,13 @@ def main(pipeline,root,commit):
         paste(f'railway-{variant}-source-ten-body-draft','right',0,920,1400,155)
         d.text((35,1090),'Source order is a visual draft; rail plane and engineering dimensions unverified.',fill='#262C57')
         overview.save(dst/f'Railway_{variant.upper()}_Overview.png')
+        previous=root/'repair-before'/variant/'models'/f'railway-{variant}-a.m3dmodel'
         original=(root/'source-body'/'previews'/f'railway-n700s-a'/'isometric.png')
+        if previous.exists():
+            old_t,old_c,_=decode(previous.read_bytes())
+            original=root/'repair-before'/variant/'previews'/f'railway-{variant}-a'/'isometric.png'
+            original.parent.mkdir(parents=True,exist_ok=True)
+            render(old_t,old_c,'isometric',scale=48).save(original)
         if original.exists():
             before=Image.open(original).convert('RGBA');after=Image.open(dst/'previews'/f'railway-{variant}-a'/'isometric.png').convert('RGBA')
             comparison=Image.new('RGBA',(before.width*2,before.height),'white');comparison.paste(before,(0,0),before);comparison.paste(after,(before.width,0),after)

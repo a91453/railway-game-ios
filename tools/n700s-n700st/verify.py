@@ -19,6 +19,11 @@ def main(root,pipeline):
         assert len(assembly['placements'])==10
         for f in sorted((folder/'models').glob(f'railway-{variant}-?.m3dmodel')):
             t,c,meta=decode(f.read_bytes());rgba=c[:,0];bounds=np.array([t.min((0,1)),t.max((0,1))]);assert len(t)<15000
+            letter=f.stem[-1]
+            source_body,source_colors,_=decode((root/'source-body'/'models'/f'railway-n700s-{letter}.m3dmodel').read_bytes())
+            top=t[:len(source_body)].copy();top[:,:,2]-=.74
+            assert np.max(np.linalg.norm((top-source_body).reshape(-1,3),axis=1))<.001
+            if variant=='n700s':assert np.array_equal(rgba[:len(source_body)],source_colors[:,0])
             # Wheel tread reaches local rail plane, and each of two bogies has four wheels.
             wheel=np.all(rgba[:,:3]==[43,49,57],axis=1);assert wheel.sum()==384,(f,wheel.sum())
             assert abs(t[:,:,2].min())<2e-5,(f,t[:,:,2].min())
@@ -26,8 +31,13 @@ def main(root,pipeline):
             assert len({tuple(x) for x in rgba})>=6
             m=trimesh.load(f.with_suffix('.glb'),force='mesh');assert len(m.faces)==len(t)
             assert np.isfinite(m.vertices).all()
+            # The GLB importer must recover the same closed surfaces after
+            # Float32 native serialization, not only a recipe-side count.
+            m.merge_vertices(digits_vertex=5)
+            assert m.is_watertight and m.is_winding_consistent and m.volume>0,f
+            assert all(part.is_watertight and part.volume>0 for part in m.split(only_watertight=False)),f
             assert bounds[0,0]<-10 and bounds[1,0]>10
-            rows.append(f.name);stats.append(dict(model=f.name,triangles=len(t),bounds=bounds.tolist(),wheelTriangles=int(wheel.sum()),nativeReadback=True,glbImport=True))
+            rows.append(f.name);stats.append(dict(model=f.name,triangles=len(t),bounds=bounds.tolist(),wheelTriangles=int(wheel.sum()),nativeReadback=True,glbImport=True,watertight=True,outwardWinding=True))
         for placement in assembly['placements']:
             assert placement['nativeModel'] in rows
             assert placement['rotationDegrees'] in (0,180)

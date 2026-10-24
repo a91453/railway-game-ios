@@ -5,6 +5,7 @@ The five owner-supplied GLBs stay private. The model units are provisional sourc
 units; the rail plane and engineering dimensions need real-world calibration.
 """
 import argparse, importlib.util, json, math, sys
+from collections import defaultdict
 from pathlib import Path
 import numpy as np
 
@@ -43,6 +44,73 @@ def running_gear(length,cab=False):
             for side in (-1,1):add(wheel(ax,side*.98,.36),[43,49,57,255])
     return np.concatenate([p for p,c in parts]),np.concatenate([c for p,c in parts])
 
+def close_surface(triangles, colors, thickness=.012):
+    """Give each source surface fan a sealed thin back and boundary wall.
+
+    The source contains open panels touching at vertices. A touching vertex
+    with separate face fans must be split before adding the boundary walls;
+    otherwise the apparent closure has four incident edges and is not a
+    manifold. The tiny fan separation survives Float32 native serialization.
+    """
+    import trimesh
+    mesh=trimesh.Trimesh(vertices=np.asarray(triangles).reshape(-1,3),
+                         faces=np.arange(len(triangles)*3).reshape(-1,3),process=False)
+    mesh.merge_vertices(digits_vertex=5)
+    faces=mesh.faces.copy();vertices=mesh.vertices.tolist()
+    incident=defaultdict(set);edge_faces=defaultdict(list)
+    for face_index,face in enumerate(faces):
+        for vertex in face:incident[int(vertex)].add(face_index)
+        for a,b in zip(face,np.roll(face,-1)):
+            edge_faces[tuple(sorted((int(a),int(b))))].append(face_index)
+    if any(len(shared)>2 for shared in edge_faces.values()):
+        raise ValueError('Source has a nonmanifold edge before closure')
+    adjacent=defaultdict(lambda:defaultdict(set))
+    for (a,b),shared in edge_faces.items():
+        if len(shared)==2:
+            for vertex in (a,b):
+                adjacent[vertex][shared[0]].add(shared[1])
+                adjacent[vertex][shared[1]].add(shared[0])
+    split_vertices=0
+    for vertex,face_ids in incident.items():
+        pending=set(face_ids);first=True;ordinal=0
+        while pending:
+            start=pending.pop();fan=[start];queue=[start]
+            while queue:
+                for nxt in adjacent[vertex][queue.pop()]:
+                    if nxt in pending:
+                        pending.remove(nxt);queue.append(nxt);fan.append(nxt)
+            if first:
+                first=False;continue
+            ordinal+=1
+            normal=mesh.face_normals[fan].mean(axis=0)
+            normal/=max(np.linalg.norm(normal),1e-12)
+            new=len(vertices)
+            vertices.append((np.asarray(vertices[vertex])+normal*(.0002*ordinal)).tolist())
+            split_vertices+=1
+            for face_index in fan:faces[face_index][faces[face_index]==vertex]=new
+    surface=trimesh.Trimesh(vertices=np.asarray(vertices),faces=faces,process=False)
+    if not surface.is_winding_consistent:raise ValueError('Source surface winding is inconsistent')
+    directed=faces[:,[[0,1],[1,2],[2,0]]].reshape(-1,2)
+    _,first,count=np.unique(np.sort(directed,axis=1),axis=0,return_index=True,return_counts=True)
+    boundary=directed[first[count==1]];boundary_colors=np.asarray(colors)[first[count==1]//3]
+    normals=surface.vertex_normals.copy()
+    normals[np.linalg.norm(normals,axis=1)<1e-10]=[0,0,1]
+    normals/=np.linalg.norm(normals,axis=1)[:,None]
+    n=len(vertices)
+    points=np.vstack([surface.vertices,surface.vertices-thickness*normals])
+    back=faces[:,[0,2,1]]+n
+    sides=np.asarray([[a,a+n,b+n] for a,b in boundary]+[[a,b+n,b] for a,b in boundary],dtype=int)
+    all_faces=np.vstack([faces,back,sides])
+    all_colors=np.concatenate([colors,colors,boundary_colors,boundary_colors])
+    closed=points[all_faces].astype(np.float32)
+    check=trimesh.Trimesh(vertices=closed.reshape(-1,3),
+                          faces=np.arange(len(closed)*3).reshape(-1,3),process=False)
+    check.merge_vertices(digits_vertex=5)
+    if not check.is_watertight or not check.is_winding_consistent:
+        raise ValueError('Closed native readback failed manifold checks')
+    return closed,all_colors,{'splitFanVertices':split_vertices,'boundaryEdges':len(boundary),
+                              'shellTriangles':len(closed),'shellThicknessSourceUnits':thickness}
+
 def rebuild(pipe,source,out,producer):
     original=out/'source-body'
     if not (original/'assembly.json').exists():pipe.convert_set(source,original,producer)
@@ -62,11 +130,13 @@ def rebuild(pipe,source,out,producer):
                 c=np.array([palette.get(tuple(color),color) for color in c],dtype=np.uint8)
             # The source body's bottom begins at z=0. New wheel tread defines z=0.
             t=t.copy();t[:,:,2]+=.74
+            t,c,closure=close_surface(t,c)
             length=np.ptp(t[:,:,0]);gear,gc=running_gear(length,cab=letter=='a')
             t=np.concatenate((t,gear));c=np.concatenate((c,gc))
             meta=dict(meta);meta.update(kind=f'Railway {variant.upper()} static visual candidate',producerCommit=producer,
                 wheelRailPlane='provisional wheel tread z=0; source units, not certified metres',
                 visualChanges='two bogies, eight supported wheels per unit; N700ST has logo-free ivory/amber HSR-inspired paint' if variant=='n700st' else 'two bogies, eight supported wheels per unit; original N700S paint retained',
+                surfaceClosure=closure,
                 limitations=['engineering dimensions and exact bogie anchors unverified','complete 16-car formation unverified','no animation'])
             path=target/'models'/f'railway-{variant}-{letter}.m3dmodel'
             stats=pipe.write_native(path,t,c,meta);rows.append(stats);units[letter]=(t,c)
