@@ -73,6 +73,11 @@ struct Map3DRoadBridges: Sendable {
     /// ``cell`` squares they reach.
     var segments: [Map3DScene.ChunkKey: [(piece: Int, index: Int)]] = [:]
     var endCells: [Map3DScene.ChunkKey: [Int]] = [:]
+    /// The roads on the ground, and their segments (road, first point) by
+    /// the ``cell`` squares their surfaces reach: what may lie beside a
+    /// raised road at its height.
+    var grounds: [(kind: Map3DBaseMap.RoadKind, points: [Map3DBaseMap.Point])] = []
+    var groundCells: [Map3DScene.ChunkKey: [(road: Int, index: Int)]] = [:]
 
     var isEmpty: Bool { pieces.isEmpty }
 
@@ -104,6 +109,11 @@ struct Map3DRoadBridges: Sendable {
     /// ``Map3DBaseMap/bridgeReach``, so a chunk built apart ramps as the
     /// whole scene.
     static let longestRamp: Float = 360
+    /// How far past a raised road's edge another road's surface makes the
+    /// two one to look at, metres: no parapet or wall between them (the
+    /// owner, 2026-10-24: a road's carriageways and link roads, each its
+    /// own line on the map, drew a parapet each side).
+    static let beside: Float = 1.5
 
     /// The grade a road climbs at onto a bridge (the reference city's
     /// `A`: 5 % on an expressway, 6 % on a main road, 8 % on a street).
@@ -273,15 +283,21 @@ extension Map3DScene.Builder {
         // The lower roads it crosses: a road on the ground or a bridge of a
         // lower level, not where either ends (a junction at its end).
         var ground: [Map3DScene.ChunkKey: [(road: Int, index: Int)]] = [:]
-        for (number, line) in map.groundRoads.enumerated() where line.count >= 2 {
+        for (number, road) in map.groundRoads.enumerated() where road.points.count >= 2 {
+            let line = road.points, pad = Double(Map3DRoadBridges.half(road.kind))
             for index in 1..<line.count {
                 let a = line[index - 1], b = line[index]
                 let low = Map3DRoadBridges.key(min(a.x, b.x), min(a.z, b.z)), high = Map3DRoadBridges.key(max(a.x, b.x), max(a.z, b.z))
                 for row in low.row...high.row {
                     for column in low.column...high.column { ground[Map3DScene.ChunkKey(column: column, row: row), default: []].append((number, index)) }
                 }
+                let wide = (low: Map3DRoadBridges.key(min(a.x, b.x) - pad, min(a.z, b.z) - pad), high: Map3DRoadBridges.key(max(a.x, b.x) + pad, max(a.z, b.z) + pad))
+                for row in wide.low.row...wide.high.row {
+                    for column in wide.low.column...wide.high.column { result.groundCells[Map3DScene.ChunkKey(column: column, row: row), default: []].append((number, index)) }
+                }
             }
         }
+        result.grounds = map.groundRoads
         let opens = Set(openEnds.map { "\($0.piece) \($0.last)" })
         func apart(_ p: Point, from line: [Point], ends: (first: Bool, last: Bool) = (true, true)) -> Bool {
             func far(_ q: Point) -> Bool { (p.x - q.x) * (p.x - q.x) + (p.z - q.z) * (p.z - q.z) > 4 }
@@ -296,7 +312,7 @@ extension Map3DScene.Builder {
                 for row in low.row...high.row {
                     for column in low.column...high.column {
                         let key = Map3DScene.ChunkKey(column: column, row: row)
-                        var lines: [(points: [Point], index: Int)] = (ground[key] ?? []).map { (map.groundRoads[$0.road], $0.index) }
+                        var lines: [(points: [Point], index: Int)] = (ground[key] ?? []).map { (map.groundRoads[$0.road].points, $0.index) }
                         lines += (cells[key] ?? []).filter { bridges[$0.piece].level < bridge.level }.map { (bridges[$0.piece].points, $0.index) }
                         for (line, at) in lines {
                             guard let share = Map3DRoadBridges.crossing(a, b, line[at - 1], line[at]) else { continue }
@@ -425,6 +441,41 @@ extension Map3DScene.Builder {
         return best
     }
 
+    /// Decision 391 (the owner, 2026-10-24: too many parapets): whether
+    /// another road's surface (a deck, or a road on the ground or ramping
+    /// onto a deck) covers level point `probe` within `within` metres of
+    /// `height` over the sea: a road beside the one along `centre`, at its
+    /// height, so no parapet or wall stands between them.
+    mutating func roadBeside(_ probe: Map3DBaseMap.Point, of centre: Map3DBaseMap.Point, at height: Float, within: Float) -> Bool {
+        let bridges = roadBridges
+        let key = Map3DRoadBridges.key(probe.x, probe.z)
+        // Over the probe, and not the road along `centre` itself.
+        func covers(_ a: Map3DBaseMap.Point, _ b: Map3DBaseMap.Point, half: Float) -> Bool {
+            Map3DRoadBridges.nearest(probe, a, b).distance <= Double(half)
+                && Map3DRoadBridges.nearest(centre, a, b).distance > Double(half) + 0.5
+        }
+        let ground = drawnGround(x: Float(probe.x), z: Float(probe.z))
+        for (number, index) in bridges.segments[key] ?? [] {
+            let piece = bridges.pieces[number]
+            let a = piece.points[index - 1], b = piece.points[index]
+            guard covers(a, b, half: Map3DRoadBridges.half(piece.kind)) else { continue }
+            let dx = b.x - a.x, dz = b.z - a.z, length = (dx * dx + dz * dz).squareRoot()
+            let share = length > 0 ? ((probe.x - a.x) * dx + (probe.z - a.z) * dz) / (length * length) : 0.5
+            if share < 0 && index == 1 && piece.opens.first || share > 1 && index == piece.points.count - 1 && piece.opens.last { continue }
+            let top = ground + Self.lift(of: piece.kind) + deckRise(bridges.decks[piece.deck], at: probe)
+            if abs(top - height) < within { return true }
+        }
+        for (number, index) in bridges.groundCells[key] ?? [] {
+            let road = bridges.grounds[number]
+            let a = road.points[index - 1], b = road.points[index]
+            let dx = b.x - a.x, dz = b.z - a.z, length = (dx * dx + dz * dz).squareRoot()
+            guard length > 0.01, covers(a, b, half: Map3DRoadBridges.half(road.kind)) else { continue }
+            let top = ground + Self.lift(of: road.kind) + roadRise(at: probe, along: (dx / length, dz / length), onDeck: false).rise
+            if abs(top - height) < within { return true }
+        }
+        return false
+    }
+
     /// Decision 391: whether a road from `a` to `b` may come near a
     /// raised road (a bridge or a ramp onto one).
     func nearRaisedRoad(from a: Map3DBaseMap.Point, to b: Map3DBaseMap.Point) -> Bool {
@@ -469,8 +520,10 @@ struct Map3DElevatedLook: Sendable {
 
 extension Map3DMesh {
     /// Decision 391: a girder `look.girderDepth` deep under `deck` (the
-    /// deck's top along its middle) and `width` wide, with its parapets.
-    mutating func addGirder(along deck: [Map3DPoint], width: Float, look: Map3DElevatedLook) {
+    /// deck's top along its middle) and `width` wide, with its parapets:
+    /// along the lines of `parapets` on each side (left, right of the
+    /// way), or the whole deck's when `nil`.
+    mutating func addGirder(along deck: [Map3DPoint], width: Float, look: Map3DElevatedLook, parapets: [[[Map3DPoint]]]? = nil) {
         guard deck.count > 1 else { return }
         addRibbon(along: deck, width: width, lift: -0.04, depth: look.girderDepth, top: look.colour, side: look.colour,
                   topPaint: look.paint, sidePaint: look.paint)
@@ -482,9 +535,11 @@ extension Map3DMesh {
             addQuad(a - across[index - 1] * half, b - across[index] * half, b + across[index] * half, a + across[index - 1] * half,
                     color: look.colour, paint: look.paint)
         }
-        for side: Float in [-1, 1] {
-            addRibbon(along: deck, width: 0.3, offset: side * (width / 2 - 0.15), lift: look.parapet, depth: look.parapet + 0.04,
-                      top: look.colour, side: look.colour, topPaint: look.paint, sidePaint: look.paint)
+        for (number, side) in [Float(-1), 1].enumerated() {
+            for run in parapets?[number] ?? [deck] {
+                addRibbon(along: run, width: 0.3, offset: side * (width / 2 - 0.15), lift: look.parapet, depth: look.parapet + 0.04,
+                          top: look.colour, side: look.colour, topPaint: look.paint, sidePaint: look.paint)
+            }
         }
     }
 
@@ -537,6 +592,16 @@ extension Map3DScene.Builder {
                                           travelled: travelled + length * t, corner: step == steps))
                 }
             }
+            // A parapet or wall on each side (left, right of the way) only
+            // where no other road lies beside it at its height.
+            let across = Map3DMesh.acrossDirections(samples.map(\.top))
+            var open = [[Bool]](repeating: [true, true], count: samples.count)
+            for (number, sample) in samples.enumerated() where sample.rise > 0.05 {
+                for (index, side) in [Float(-1), 1].enumerated() {
+                    let probe = sample.top + across[number] * (side * (width / 2 + Map3DRoadBridges.beside))
+                    open[number][index] = !roadBeside(Point(x: Double(probe.x), z: Double(probe.z)), of: sample.at, at: sample.top.y, within: look.parapet)
+                }
+            }
             // Runs of the same kind in the same chunk, each step's middle
             // in the road's tile.
             var index = 1
@@ -574,10 +639,30 @@ extension Map3DScene.Builder {
                             || Self.bends([before.top.y - lift - before.rise, ground, after.top.y - lift - after.rise])
                     }
                 }
-                let line = run.indices.filter { $0 == 0 || $0 == run.count - 1 || run[$0].corner || bent(first + $0) }.map { run[$0].top }
+                func laid(_ part: [Int]) -> [Map3DPoint] {
+                    part.indices.filter { $0 == 0 || $0 == part.count - 1 || run[part[$0]].corner || bent(first + part[$0]) }.map { run[part[$0]].top }
+                }
+                let line = laid(Array(run.indices))
+                // Each side's parapet or walls (left, right of the way) on
+                // the stretches of the run where it stands, each laid as the
+                // girder is; walls only a parapet's height or more over the
+                // ground: lower, the road meets the ground it lies on.
+                let barriers: [[[Map3DPoint]]] = (0..<2).map { side in
+                    var stretches: [[Int]] = [], stretch: [Int] = []
+                    for number in run.indices {
+                        if open[first + number][side] && (clear || run[number].rise >= look.parapet) {
+                            stretch.append(number)
+                        } else {
+                            if stretch.count > 1 { stretches.append(stretch) }
+                            stretch = []
+                        }
+                    }
+                    if stretch.count > 1 { stretches.append(stretch) }
+                    return stretches.map(laid)
+                }
                 if clear {
                     var built = Map3DMesh()
-                    built.addGirder(along: line, width: width, look: look)
+                    built.addGirder(along: line, width: width, look: look, parapets: barriers)
                     // A pier wherever the road's way from its first point
                     // passes a spacing's middle, clear of the track.
                     let spacing = Double(look.pierSpacing)
@@ -592,28 +677,31 @@ extension Map3DScene.Builder {
                     }
                     mesh(at: Map3DPoint(Float(middle.x), 0, Float(middle.z))) { $0.append(built) }
                 } else {
-                    addRampWalls(line, width: width, look: look)
+                    addRampWalls(barriers, at: line[line.count / 2], width: width, look: look)
                 }
             }
         }
     }
 
-    /// Decision 391: the walls of a ramp (or a low deck) along `line`, its
-    /// top's middle, from its edges down to the drawn ground.
-    mutating func addRampWalls(_ line: [Map3DPoint], width: Float, look: Map3DElevatedLook) {
-        guard line.count > 1 else { return }
-        let across = Map3DMesh.acrossDirections(line)
+    /// Decision 391: the walls of a ramp (or a low deck) along the lines
+    /// of `sides` (left, right of the way), its top's middle, from its
+    /// edges down to the drawn ground, in the chunk `at` is in.
+    mutating func addRampWalls(_ sides: [[[Map3DPoint]]], at: Map3DPoint, width: Float, look: Map3DElevatedLook) {
         var built = Map3DMesh()
-        for side: Float in [-1, 1] {
-            let edges = line.indices.map { line[$0] + across[$0] * (side * width / 2) + Map3DPoint(0, -0.04, 0) }
-            let feet = edges.map { Map3DPoint($0.x, drawnGround(x: $0.x, z: $0.z) - 0.3, $0.z) }
-            for index in 1..<line.count {
-                // Facing out from the road.
-                let (a, b) = side > 0 ? (index - 1, index) : (index, index - 1)
-                built.addQuad(feet[a], feet[b], edges[b], edges[a], color: look.colour, paint: look.paint)
+        for (lines, side) in zip(sides, [Float(-1), 1]) {
+            for line in lines where line.count > 1 {
+                let across = Map3DMesh.acrossDirections(line)
+                let edges = line.indices.map { line[$0] + across[$0] * (side * width / 2) + Map3DPoint(0, -0.04, 0) }
+                let feet = edges.map { Map3DPoint($0.x, drawnGround(x: $0.x, z: $0.z) - 0.3, $0.z) }
+                for index in 1..<line.count {
+                    // Facing out from the road.
+                    let (a, b) = side > 0 ? (index - 1, index) : (index, index - 1)
+                    built.addQuad(feet[a], feet[b], edges[b], edges[a], color: look.colour, paint: look.paint)
+                }
             }
         }
-        mesh(at: line[line.count / 2]) { $0.append(built) }
+        guard !built.vertices.isEmpty else { return }
+        mesh(at: at) { $0.append(built) }
     }
 
     /// Decision 391: whether scene point (`x`, `z`) lies within `within`

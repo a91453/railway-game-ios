@@ -24,7 +24,8 @@ OpenFreeMap's tiles outside Taiwan alike:
   the game's zones' tags (decision 393), so the land between the stations,
   where the game reads in no zones, is not blank.
 - `park` (class national_park, nature_reserve, park).
-- `transportation` (class motorway … service; ramp, brunnel) and
+- `transportation` (class motorway … service; ramp, brunnel, layer on
+  bridges of layer 2 and up) and
   `transportation_name` (name, ref, class): no railways (the game draws
   the real ones), paths, tracks or parking aisles.
 - `place` (class city … hamlet, island; name) and `boundary` (admin_level
@@ -336,6 +337,12 @@ def read(path):
                         zoom = max(zoom, LINK_ZOOM)
                     if tags.get('bridge') not in (None, 'no'):
                         props['brunnel'] = 'bridge'
+                        # Decision 391: the 3D map raises a bridge 6 m per
+                        # level; a bridge with no layer, or layer 1, is one
+                        # level, so only higher ones carry it.
+                        level = osm_layer(tags.get('layer'))
+                        if level >= 2:
+                            props['layer'] = level
                     elif tags.get('tunnel') not in (None, 'no') or tags.get('covered') == 'yes':
                         props['brunnel'] = 'tunnel'
                     f = line_feature('transportation', zoom, props, points)
@@ -417,6 +424,14 @@ def label_point(points):
         if (y1 > y) != (y2 > y) and x < x1 + (y - y1) * (x2 - x1) / (y2 - y1):
             inside = not inside
     return (x, y) if inside else points[0]
+
+
+def osm_layer(value):
+    """OSM's `layer` as a whole number (0 when missing or not a number)."""
+    try:
+        return int(round(float((value or '0').split(';')[0])))
+    except ValueError:
+        return 0
 
 
 def merge_lines(features):
@@ -1000,7 +1015,7 @@ def main(extract, out):
             {'id': 'park', 'fields': {'class': 'String', 'name': 'String'}, 'minzoom': 6, 'maxzoom': MAX_ZOOM},
             {'id': 'waterway', 'fields': {'class': 'String', 'name': 'String', 'brunnel': 'String'}, 'minzoom': 8, 'maxzoom': MAX_ZOOM},
             {'id': 'boundary', 'fields': {'admin_level': 'Number', 'maritime': 'Number'}, 'minzoom': 5, 'maxzoom': MAX_ZOOM},
-            {'id': 'transportation', 'fields': {'class': 'String', 'ramp': 'Number', 'brunnel': 'String'}, 'minzoom': 5, 'maxzoom': MAX_ZOOM},
+            {'id': 'transportation', 'fields': {'class': 'String', 'ramp': 'Number', 'brunnel': 'String', 'layer': 'Number'}, 'minzoom': 5, 'maxzoom': MAX_ZOOM},
             {'id': 'transportation_name', 'fields': {'class': 'String', 'name': 'String', 'ref': 'String'}, 'minzoom': 10, 'maxzoom': MAX_ZOOM},
             {'id': 'place', 'fields': {'class': 'String', 'name': 'String'}, 'minzoom': 4, 'maxzoom': MAX_ZOOM},
         ],

@@ -236,13 +236,15 @@ extension GameWorld {
     ///   ``GameError/mapTileNotAdjacent`` unless it is beside one owned;
     ///   ``GameError/mapExpansionLocked(ridersNeeded:)`` for a managed
     ///   company whose best day has not passed the milestone for one more
-    ///   tile; ``GameError/insufficientFunds(required:available:)``.
-    public mutating func buyMapTile(_ tile: MapTile) throws(GameError) {
+    ///   tile, unless `passingMilestone` (decision 401: a tile under a real
+    ///   line bought with it, whose riders come with it);
+    ///   ``GameError/insufficientFunds(required:available:)``.
+    public mutating func buyMapTile(_ tile: MapTile, passingMilestone: Bool = false) throws(GameError) {
         guard var expansion = mapExpansion else { throw .mapExpansionNotEnabled }
         guard isOnMap(tile) else { throw .invalidMapTile }
         guard !expansion.owns(tile) else { throw .mapTileOwned }
         guard tile.neighbours.contains(where: expansion.owns) else { throw .mapTileNotAdjacent }
-        if accounts.mode == .management, expansion.owned.count >= expansion.allowance {
+        if accounts.mode == .management, !passingMilestone, expansion.owned.count >= expansion.allowance {
             throw .mapExpansionLocked(ridersNeeded: expansion.ridersNeeded(toOwn: expansion.owned.count + 1))
         }
         let price = expansion.nextPrice

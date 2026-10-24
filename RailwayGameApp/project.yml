@@ -61,11 +61,19 @@ targets:
     # Decision 396: Game Center, for the weekly leaderboard and the
     # achievements. The App ID has Game Center turned on
     # (docs/GAME_CENTER_SETUP.md, steps 1 and 2), so the App Store profile
-    # the export makes carries it too.
+    # the export makes carries it too. Decision 397: iCloud Drive (iCloud
+    # Documents) for the saves; the container and the App ID's iCloud are
+    # set up (docs/ICLOUD_SAVE_SETUP.md, steps 1 to 3).
     entitlements:
       path: App/RailwayGame.entitlements
       properties:
         com.apple.developer.game-center: true
+        com.apple.developer.icloud-container-identifiers:
+          - iCloud.io.github.a91453.RailwayGame
+        com.apple.developer.icloud-services:
+          - CloudDocuments
+        com.apple.developer.ubiquity-container-identifiers:
+          - iCloud.io.github.a91453.RailwayGame
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.github.a91453.RailwayGame
