@@ -1,6 +1,6 @@
-# E200 / 700T 原生外形修訂（三版：鴨嘴鼻部）
+# E200 / 700T 原生外形修訂（四版：照片橘色區域的前唇／肩部）
 
-獨立配方 `Map3DTrainShapeRefresh.swift`，本輪以實際已交付Codex producer `7096130e` 為基底。依使用者新規則：Codex列車可沿用／拆件，非Codex模型只參考。沒有複製E201來源mesh／貼圖。入口仍只註冊五個靜態單元，**不替換營運E200／高鐵**。GameCore／存檔／golden／replay不動。
+獨立配方 `Map3DTrainShapeRefresh.swift`，本輪以實際已交付Codex producer `39b819a3` 為真正前版；鼻長退回7096130e，修前唇／肩部曲面與色帶。依使用者新規則：Codex列車可沿用／拆件，非Codex模型只參考。沒有複製E201來源mesh／貼圖。入口仍只註冊五個靜態單元，**不替換營運E200／高鐵**。GameCore／存檔／golden／replay不動。
 
 ## 建模前判讀與本輪來源
 
@@ -10,7 +10,7 @@
 | 側／前／俯輪廓 | 長直側板、收肩雙窗端面；平滑機器室側面、前後不同屋頂設備 | 寬扁圓鼻、飽滿肩線、駕駛艙分段起伏；中間車平端 |
 | 頭尾／左右 | 雙端同型；左右未見細部鏡置是補全假設 | 尾車旋轉180°；中車無駕駛窗／燈；兩側門窗鏡置 |
 | 門窗設備 | 圓角前窗、窄側門、寬駕駛側窗、圓燈；端部冷卻箱、單側設備罩／另一側高壓元件、踏階 | 圓角小客窗、薄貼身單門、25mm風擋緣、兩組各雙燈；單臂弓有底座絕緣支承 |
-| 尺寸 | 車體17.049m／寬2.972m取私庫附來源catalog；屋頂／升弓等位置推估 | 中車殼25m，頭車鼻端從x12.5延至13.55（殼26.05m）／寬3.38m／頂3.65m／節距25.4m全為**比例推估**，非工程尺寸 |
+| 尺寸 | 車體17.049m／寬2.972m取私庫附來源catalog；屋頂／升弓等位置推估 | 中車殼25m，頭車殼25m（撤回上一輪多加的1.05m鼻長）／寬3.38m／頂3.65m／節距25.4m全為**比例推估**，非工程尺寸 |
 | 走行 | 兩架三軸，12輪；補架框、軸箱／輪轂／懸吊，輪徑與位置推估 | 兩架兩軸，8輪，裙板遮輪上緣；車底、輪徑、懸吊為展示補全 |
 | 缺口 | E201來源模型不是工程圖；不同編號／年代弓型與設備差異未核定，不能稱精確E201復刻 | 真實工程規格、全部設備次序、另一側門窗與車底不可見細部 |
 
@@ -21,7 +21,7 @@
 
 ## 原生與組裝
 
-原生公尺 +x前／+y左／+z上，builder x前／y上／z右，只在flat轉一次，軌面z=0。五新單元＋既有Codex風格比較各為合法M3DM v1（單件≤15,000三角）。全12節細節合計70,904三角，**不寫入超限的單一M3DM**；交付 `refresh-700t-formation.m3dscene.json`，自含合法單元base64與以下placements。這是本工具的組裝契約，遊戲既有Map3DModelFile只讀其中各M3DM單元，未新增遊戲scene載入器。
+原生公尺 +x前／+y左／+z上，builder x前／y上／z右，只在flat轉一次，軌面z=0。五新單元＋既有Codex風格比較各為合法M3DM v1（單件≤15,000三角）。全12節細節合計實際manifest所列三角，**不寫入超限的單一M3DM**；交付 `refresh-700t-formation.m3dscene.json`，自含合法單元base64與以下placements。這是本工具的組裝契約，遊戲既有Map3DModelFile只讀其中各M3DM單元，未新增遊戲scene載入器。
 
 中心x：139.7、114.3、88.9、63.5、38.1、12.7、−12.7、−38.1、−63.5、−88.9、−114.3、−139.7m。頭／尾用cab／tail，其餘用middle，索引3、8用panto。tail已含180°旋轉，重建只平移，不另旋轉或鏡射。殼間0.4m，風琴跨過殼端。實際bounds與三角數以manifest為準。
 
@@ -40,9 +40,10 @@ node tools/train-shape-refresh/review.mjs OUT
 # 查看配色／白模／剪影四向，修幾何須重新匯出與查看
 node tools/train-shape-refresh/verify.mjs OUT
 python3 tools/train-shape-refresh/nose-audit.py OUT PRIOR
+python3 tools/train-shape-refresh/band-audit.py OUT PRIOR
 python3 tools/train-shape-refresh/wheel-audit.py OUT
 node tools/train-shape-refresh/render.mjs OUT
-for part in cab e200 middle formation; do
+for part in cab nose e200 middle formation; do
   node tools/train-shape-refresh/feedback-compare.mjs OUT PRIOR "$part"
 done
 blender --background --python tools/train-shape-refresh/glb-audit.py -- OUT
@@ -54,12 +55,12 @@ python3 tools/train-shape-refresh/bundle.py OUT ACTUAL_PRODUCER_COMMIT
 # bundle後重測真ZIP下載、再bundle，最後確認現有ZIP每個member仍等於live bytes
 ```
 
-本輪真前版模型與來源在history/7096130e，第二版完整包仍留私庫revision-2；早期交付在revision-2/history/d476304b，不是臨時重捏前版；四種比較同相機／公尺尺度。公開只有配方／工具／必要測試／文件／一張總覽，完整包留私庫原目錄新增 `revision-2/`，不覆蓋舊包。來源記實際producer，不用未提交版本冒充commit。Linux抽樣射線／WebGL不代表完整碰撞、真機Metal、動畫或效能驗證。
+本輪真前版模型與來源在history/39b819a3，第二版完整包仍留私庫revision-2；早期交付在revision-2/history/d476304b，不是臨時重捏前版；四種比較同相機／公尺尺度。公開只有配方／工具／必要測試／文件／一張總覽，完整包留私庫原目錄新增 `revision-4/`，不覆蓋舊包。來源記實際producer，不用未提交版本冒充commit。Linux抽樣射線／WebGL不代表完整碰撞、真機Metal、動畫或效能驗證。
 
-## 第三版鼻部修正的範圍與證據
+## 第四版：使用者指的是照片中橘色區域
 
-再次查看700T真實照片的側面／斜前／正面近照後，認定前版缺少寬扁前緣。只改頭尾駕駛艙前方殼面：保留x≤9.7的surface參數，將更前方下壓成寬扁bill，前緣延至x13.55；x12.2截面模型寬3.12m、厚約0.406m，是本模型的**展示推估**，不是實車工程尺寸。
+實際查看使用者本輪附上的700T側面照片。橘色區域是包過低鼻前緣、在兩側隆起再收回車側的連續帶；上一輪整鼻加長成扁板，理解有誤。本輪撤回多出的1.05m鼻長，從本專案Codex配方重建肩部曲面：側面局部外鼓最大65mm（造型推估），頂點共享的色帶邊界隨鼻部起伏並包過低前緣，沿用暖白／綠松，不照搬真實品牌塗裝。不使用外掛色片或厚箱。
 
-新輪廓必須在白模與剪影也辨識得出，不靠色帶。未另加外掛嘴唇箱。車體、門窗、風擋、燈、輪架與編組placements不變；尾端仍是相同單元180°旋轉。nose-audit逐bytes證明E200／middle／panto／比較車native與GLB不變；頭尾所有新增／移除三角都在各自鼻部x≥9.5／x≤−9.5，且各自5768個後段三角完全相同。
+車頭向前的殼面三角有重新細分；與39b819a3比對，所有移除／新增三角均在頭車x≥0、尾車x≤0；各自5768個門窗、風擋、燈組與輪架等後段三角逐bytes相同。E200／中車／集電車／既有Codex比較車native與GLB逐bytes保持。前版真正模型、GLB、manifest、來源、配方留history/39b819a3，完整revision-3也保留；同相機同尺度比較見blue-cab-before-after.png／700t-formation-before-after.png。
 
-Swift測試從真實頂點量bill寬厚與前伸，舊7096130e跑紅（三項失敗）、修後通過；不修改golden、save或replay。完整編組長度因兩端嘴緣合計增加2.1m，中心與節距保持，不能仍宣稱舊車頭25m。實際bounds以新manifest為準。
+每次修改後重新原生匯出，查看側、正、俯、斜的配色／白模／剪影。測試量實際色帶頂點的肩部高度、包前緣範圍及整體鼻長，舊稿應失敗。展示尺寸仍不是工程尺寸；沒有宣稱使用者已認可。

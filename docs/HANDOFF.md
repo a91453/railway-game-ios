@@ -1455,3 +1455,5 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 **Codex E200／700T 第三版鼻部（#1200，`codex/train-shape-refresh-2026-10-24`）**：已依使用者指定參考PR#1203與私庫E201四向渲染；E201非已確認Codex來源只作參考，不搬來源mesh。鼻部／風擋／雙燈罩／圓角窗薄門、E200輪架／屋頂／踏階已修，暖白綠松保持。6合法M3DM＋自含單元組裝JSON＋7GLB／49七向／白模剪影／同尺度與真正d476304b前後／viewer／ZIP在私庫原目錄新增revision-2，舊包保留。約7萬三角編組不塞進15,000上限；JS重建與Swift三角payload逐bytes核對，單元仍由原生ModelFile讀回。[外觀、驗證與交接](art/train-shape-refresh-2026-10-24/README.md)。20相關測試與Swift6.4 warnings-as-errors、原生／封閉朝向／缺面反面浮空及組裝偏移拒收、玻璃支承／輪胎淨空抽檢、Blender／PNG／viewer／ZIP已驗；完整碰撞／設備接觸圖／真機Metal／效能／動畫未驗。**仍是靜態素材，合併不自動替換營運E200／高鐵**；無GameCore／存檔／golden／replay變更。互鏈draft#1201／私有#70、最新producer與CI見#1200；不合併／auto-merge／TestFlight。
 
 #1200第三輪：使用者指出鴨嘴不足，只修頭尾x±9.5以外鼻殼，前緣前伸1.05m並保留寬扁截面；完整bounds長306.5m為造型推估。E200／middle／panto／比較車native和GLB逐bytes不變，頭尾各5768後段三角不變；真正7096130e前版、四向同尺度前後與完整包放revision-3，舊revision-2保留。測試先紅後綠（20測試）；仍靜態素材，不替換營運，不合併／auto-merge／TestFlight。
+
+#1200第四輪：使用者附700T照片明確指橘色前唇／肩帶。上一輪誤加長整鼻已撤回，重建有局部外鼓的肩部與連續包前緣綠松帶；暖白、原風擋／燈／門窗／輪架保持。真前版39b819a3留history及舊revision-3，私庫新包revision-4。E200／中車／集電車／比較車native、GLB逐bytes相同，頭尾各5768後段三角不變。仍靜態素材，合併不替換營運；最新producer／CI見issue1200。

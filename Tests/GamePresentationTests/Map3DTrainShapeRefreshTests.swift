@@ -27,15 +27,15 @@ final class Map3DTrainShapeRefreshTests: XCTestCase {
             XCTAssertEqual(a.z,b.z,accuracy:0.00001)
         }
     }
-    func testDuckbillHasBroadLowForwardProjection() {
+    func testColouredShoulderWrapsTheNoseWithoutExtendingItsLength() {
         let cab=Map3DTrainShapeRefresh.model("refresh-700t-cab")
-        let bill=cab.vertices.filter { abs($0.x-12.2)<0.002 }
-        XCTAssertFalse(bill.isEmpty)
-        let width=bill.map(\.y).max()!-bill.map(\.y).min()!
-        let thickness=bill.map(\.z).max()!-bill.map(\.z).min()!
-        XCTAssertGreaterThan(width,2.5,"Bill narrows to a pointed cone")
-        XCTAssertGreaterThan(width/thickness,5.5,"Bill lacks a flattened cross-section")
-        XCTAssertGreaterThan(cab.maximum.x,13.4,"Low bill does not project forward")
+        let teal=Map3DPalette.shopAwnings[0]
+        let band=cab.vertices.filter { $0.color==teal && $0.x>5.7 && $0.x<9.2 }
+        XCTAssertGreaterThan(band.map(\.z).max()!,2.2,"Coloured shoulder remains a narrow lower stripe")
+        let front=cab.vertices.filter { $0.color==teal && $0.x>11.8 }
+        XCTAssertGreaterThan(front.map(\.z).max()!,1.25,"Band fails to wrap over the low front lip")
+        XCTAssertLessThan(cab.maximum.x,12.6,"Unrequested long paddle returned")
+        XCTAssertGreaterThan(cab.vertices.filter { abs($0.x-9.1)<0.002 && $0.color==teal }.map { abs($0.y) }.max()!,1.6)
     }
     func testPassengerGlassHasRoundedCornersInsteadOfRectangle() {
         let m=Map3DTrainShapeRefresh.model("refresh-700t-middle")

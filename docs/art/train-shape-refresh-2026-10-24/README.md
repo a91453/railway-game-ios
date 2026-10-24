@@ -1,12 +1,12 @@
-# E200 / 700T 暖白綠松：第三版鴨嘴鼻部修訂
+# E200 / 700T 暖白綠松：第四版前唇／肩部色帶修訂
 
 依使用者回饋，沿用前版Codex配方，參考[PR #1203](https://github.com/a91453/railway-game-ios/pull/1203)的駕駛艙／肩線與圓角窗，以及私庫E201四向渲染的輪架／屋頂布局。E201只作參考，未搬來源mesh、貼圖、商標或來源尺寸。[判讀、來源、重建與組裝](../../../tools/train-shape-refresh/README.md)。
 
-![第二版實際原生模型](overview.png)
+![第四版實際原生模型](overview.png)
 
-[公開draft #1201](https://github.com/a91453/railway-game-ios/pull/1201)／[私有draft #70](https://github.com/a91453/railway-reference-private/pull/70)互鏈。最新producer與CI見[issue #1200](https://github.com/a91453/railway-game-ios/issues/1200)。完整新包在私庫原目錄的[revision-3](https://github.com/a91453/railway-reference-private/tree/codex/train-shape-refresh-2026-10-24/Railway/game-art-previews/docs/art/train-shape-refresh-2026-10-24/revision-3)，原交付保留。
+[公開draft #1201](https://github.com/a91453/railway-game-ios/pull/1201)／[私有draft #70](https://github.com/a91453/railway-reference-private/pull/70)互鏈。最新producer與CI見[issue #1200](https://github.com/a91453/railway-game-ios/issues/1200)。完整新包在私庫原目錄的[revision-4](https://github.com/a91453/railway-reference-private/tree/codex/train-shape-refresh-2026-10-24/Railway/game-art-previews/docs/art/train-shape-refresh-2026-10-24/revision-4)，原交付保留。
 
-交付6合法M3DM（5新單元＋1Codex風格對照）、1自含單元的原生組裝JSON、7 GLB、49七向透明PNG、白模／剪影四向、同尺度風格比較、完整12節、viewer、來源／SHA與ZIP。完整編組70,904三角，以相同最終單元重建，不強塞進15,000上限的單檔。組裝JSON是工具契約，未加入遊戲scene loader。
+交付6合法M3DM（5新單元＋1Codex風格對照）、1自含單元的原生組裝JSON、7 GLB、49七向透明PNG、白模／剪影四向、同尺度風格比較、完整12節、viewer、來源／SHA與ZIP。完整編組70,584三角，以相同最終單元重建，不強塞進15,000上限的單檔。組裝JSON是工具契約，未加入遊戲scene loader。
 
 ## 外觀結論
 
@@ -17,20 +17,18 @@
 | 仍簡化 | 雨刷、駕駛室內裝、車底管線、設備銘牌與小型緊固件；玻璃以不透明霧面色呈現，沒有玻璃反射或透視內裝 |
 | 資料不足 | 700T工程尺寸與完整設備序、E200各車號／年代弓型與屋頂差異、另一側精確細部；本模型不是經工程確認的E201或特定編號復刻 |
 
-以上是本次自檢，**不代表作者已認可或工程級復刻**。本輪真正前版為已交付producer `7096130e`，保留完整原生檔；`previews/blue-cab-before-after.png`、`700t-formation-before-after.png`均是固定相機、共同bounds與同公尺尺度。舊稿未被改造後冒充前版。
+以上是本次自檢，**不代表作者已認可或工程級復刻**。本輪真正前版為已交付producer `39b819a3`，保留完整原生檔；`previews/blue-cab-before-after.png`、`700t-formation-before-after.png`均是固定相機、共同bounds與同公尺尺度。舊稿未被改造後冒充前版。
 
 ## 技術與CI分開記錄
 
 **VERIFIED，本輪Linux**：Swift6.4 warnings-as-errors build --build-tests及20相關測試（新增實際圓角玻璃檢查）；六單元原生讀回／normal；完整組裝JS與Swift預期三角payload逐bytes相同，偏移1m故障拒收；封閉有向邊／正體積、缺面與反面拒收；玻璃承板射線與750mm浮空拒收；44輪胎實際連通件貼軌、輪頂外緣向上射線淨空；Blender4.3.2獨立GLB匯入／bounds／三角數／頂點色／霧面；PNG完整解碼透明與邊界；folder及offline viewer旋轉縮放、單元／組裝／GLB／PNG／ZIP真下載與390px版面；ZIP解壓CRC逐檔bytes、producer SHA核對。確切數量與距離見新包verification檔。
 
-**UNVERIFIED**：完整設備接觸圖、全表面穿模／閃爍、動態輪組／轉彎／懸吊、真機Metal／效能／動畫、OS雙擊HTML與完整工程規格。射線抽檢不等於完整碰撞證明。最新head CI單獨更新issue，不能拿本機19測試或WebGL當Xcode／真機全綠。
+**UNVERIFIED**：完整設備接觸圖、全表面穿模／閃爍、動態輪組／轉彎／懸吊、真機Metal／效能／動畫、OS雙擊HTML與完整工程規格。射線抽檢不等於完整碰撞證明。最新head CI單獨更新issue，不能拿本機20測試或WebGL當Xcode／真機全綠。
 
 **仍是靜態素材註冊，未替換營運映射；合併也不會自動把遊戲E200／高鐵換成此版。** 不改GameCore、存檔、golden／replay或玩法；不合併／auto-merge／TestFlight。下一位整合需依每節原生長度與組裝表、做LOD及真機檢查。
 
-## 本輪針對「鴨嘴突出不足」的修正
+## 本輪針對使用者照片「車頭橘色部分」修正
 
-前版將寬度連續收成錐體，沒有照片中的寬扁前緣。本輪只修駕駛艙前方鼻部，讓低嘴緣向前伸、兩側保持寬度；配色、門窗、風擋／燈組、走行部、E200及中車不變。側／正／俯／斜四向的配色、白模與剪影已實際查看，寬扁bill在無色狀態也可辨識；未用裝飾箱補嘴唇。
+已實際查看本輪附圖：指的是包過前緣、兩側隆起並接回車側的色帶。上一輪加長整鼻的理解有誤，撤回多出的1.05m鼻長，原鼻長恢復。重建連續肩部曲面、局部外鼓與隨形的綠松色帶，包住低前唇；幾何與分色共同修正。維持暖白綠松、不複製真實品牌標識。側／正／俯／斜的配色、白模、剪影親自查看；這是自檢，不代表作者認可或精確實車復刻。
 
-真前版模型／manifest／來源與配方在history/7096130e，完整第二版包仍留原revision-2；同相機比較為blue-cab-before-after.png與700t-formation-before-after.png。nose-verification.json逐三角／逐bytes證明E200、中車、集電車和比較車native／GLB不變，頭尾各5768個非鼻部後段三角保持。新測試在真前版出現三項失敗、修後20項測試通過。
-
-前緣在展示座標向前1.05m，頭車殼由25m變26.05m，完整組裝bounds長由304.4m變306.5m；均為造型推估，不是工程規格。編組中心、節距與內端接口不改。仍未接入遊戲營運、不代表作者認可；小細節與完整物理／真機限制同上。
+真前版39b819a3原生／GLB、來源與配方留history/39b819a3，revision-3完整保留。E200／中車／集電車／比較車native和GLB逐bytes一致；頭尾各5768個門窗、風擋、燈組、輪架等後段三角不變。新增／移除殼三角限頭車x≥0與尾車x≤0（包含原長面細分）。完整編組bounds長恢復304.4m；其他三角、bounds和抽檢距離見最終manifest／verification。

@@ -160,7 +160,7 @@ extension StationKitBuilder {
     }
     mutating func refreshHighSpeed(cab: Bool,panto: Bool) {
         let segments=40, bottom: Float=0.78
-        let xs: [Float] = cab ? [-12.5,-6,0,5.8,6.3,6.7,7.1,7.5,7.9,8.3,8.7,9.1,9.5,9.7,10,10.5,11,11.5,11.9,12.2,12.4,12.5,12.9,13.15,13.35,13.5,13.55] : [-12.5,12.5]
+        let xs: [Float] = cab ? [-12.5,-6,0,3.7,4.2,4.8,5.8,6.3,6.7,7.1,7.5,7.9,8.3,8.7,9.1,9.5,9.7,10,10.5,11,11.5,11.9,12.2,12.4,12.5] : [-12.5,12.5]
         func interpolate(_ t: Float,_ points: [(Float,Float)])->Float {
             for i in 1..<points.count where t<=points[i].0 {
                 let a=points[i-1],b=points[i]
@@ -173,12 +173,9 @@ extension StationKitBuilder {
             let t=(x-5.8)/6.7
             let h=interpolate(t,[(0,3.65),(0.16,3.65),(0.28,3.52),(0.40,3.16),(0.52,2.69),(0.65,2.12),(0.80,1.60),(0.92,1.34),(1,1.18)])
             let w=interpolate(t,[(0,1.69),(0.3,1.69),(0.5,1.66),(0.7,1.54),(0.85,1.32),(0.95,0.90),(0.985,0.48),(1,0.08)])
-            if x<=9.7 { return (h,w) }
-            // Broad, thin bill projects beyond the upper nose. Only the shell
-            // forward of the existing cockpit changes; no ornamental lip box.
-            let billHeight=interpolate(x,[(9.7,2.417762),(10,2.10),(10.5,1.70),(11,1.40),(11.5,1.23),(12,1.19),(12.5,1.18),(12.9,1.17),(13.15,1.14),(13.35,1.10),(13.5,1.02),(13.55,0.97)])
-            let billWidth=interpolate(x,[(9.7,1.610746),(10,1.65),(10.5,1.70),(11,1.70),(11.5,1.68),(12,1.60),(12.2,1.56),(12.5,1.50),(12.9,1.38),(13.15,1.18),(13.35,0.90),(13.5,0.48),(13.55,0.08)])
-            return (billHeight,billWidth)
+            // Restore the original nose length. The photo's coloured shoulder
+            // carries the lip; extending the whole nose made a flat paddle.
+            return (h,w)
         }
         func surface(_ x: Float,_ a: Float)->Map3DPoint {
             let (h,w)=dimensions(x),c=cosf(a),s=sinf(a)
@@ -186,19 +183,34 @@ extension StationKitBuilder {
             let y=bottom+(h-bottom)*(0.5+0.5*(s>=0 ? 1:-1)*powf(abs(s),0.65))
             return Map3DPoint(x,y,z)
         }
-        let rings=xs.map { x in (0..<segments).map { surface(x,Float($0)*2*Float.pi/Float(segments)) } }
+        func shellAngle(_ x: Float,_ i: Int)->Float {
+            let original=Float(i)*2*Float.pi/Float(segments)
+            guard cab && x>=3.7 else { return original }
+            // Shared ring vertices put the colour boundary in the actual shell.
+            // The band swells behind the nose, then wraps over its low front.
+            let a=interpolate(x,[(3.7,-0.157),(4.8,-0.07),(5.8,-0.015),(7.5,0.02),(9.1,0.20),(10,0.53),(10.5,0.76),(11,1.0),(11.5,1.30),(11.9,1.46),(12.5,1.46)])
+            return interpolate(Float(i),[(0,a),(10,Float.pi/2),(20,Float.pi-a),(24,Float.pi+0.63),(30,1.5*Float.pi),(36,2*Float.pi-0.63),(40,2*Float.pi+a)])
+        }
+        let rings=xs.map { x in (0..<segments).map { i in
+            let a=shellAngle(x,i),p=surface(x,a)
+            let shoulder = cab && x>3.7 ? interpolate(x,[(3.7,0),(5.8,0.035),(8.7,0.065),(10.5,0.045),(11.9,0.018),(12.5,0)]) : 0
+            let swell=shoulder*powf(max(0,1-abs(sinf(a))),4)
+            return Map3DPoint(p.x,p.y,p.z+(cosf(a)>=0 ? swell:-swell))
+        } }
         for k in 0..<rings.count-1 {
             let h=(dimensions(xs[k]).0+dimensions(xs[k+1]).0)/2
             let inside=Map3DPoint((xs[k]+xs[k+1])/2,(bottom+h)/2,0)
             for i in 0..<segments {
                 let j=(i+1)%segments
-                let color: UInt32 = (24...35).contains(i) ? Self.steel : [21,22,23,36,37,38].contains(i) ? refreshTeal:refreshWhite
+                let shoulderBand = cab && xs[k]>=3.7
+                let teal = shoulderBand ? (20...23).contains(i) || (36...39).contains(i) : [21,22,23,36,37,38].contains(i)
+                let color: UInt32 = (24...35).contains(i) ? Self.steel : teal ? refreshTeal:refreshWhite
                 face([rings[k][i],rings[k][j],rings[k+1][j]],inside:inside,color:color)
                 face([rings[k][i],rings[k+1][j],rings[k+1][i]],inside:inside,color:color)
             }
         }
         face(rings[0],inside:Map3DPoint(0,2,0),color:refreshWhite)
-        face(rings.last!,inside:Map3DPoint(0,2,0),color:refreshWhite)
+        face(rings.last!,inside:Map3DPoint(0,2,0),color:cab ? refreshTeal:refreshWhite)
         refreshRunning([-8.8,cab ? 3.4:8.8],axles:[-1.25,1.25],radius:0.40,gauge:1.435)
         box(cab ? -3.7:0,0.92,0,cab ? 17.4:23.8,2.55,0.12,Self.ink)
         func flank(_ h: Float)->Float {
