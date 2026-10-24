@@ -160,10 +160,16 @@ public enum Map3DTrains {
             // held steady, so the cars and the cab's view do not shake from
             // one sampled point of the track to the next.
             let steady = run.steadyHead(at: progress, over: Self.steadySpan)
-            let cars = TrainCars.cars(body: body, heading: steady?.heading ?? head.heading, count: count, gap: gap)
             let (side, stripe) = colours(of: run.look, palette: palette)
             let trainType = heights.type(of: run.train)
             let hasModels = run.look != .freight && models?.models(forType: trainType) != nil
+            // Decision 399: or each car at its model's own length.
+            let layout = hasModels ? models?.layout(forType: trainType, count: count) : nil
+            let heading = steady?.heading ?? head.heading
+            let units = Double(WorldCoordinate.unitsPerMetre)
+            let cars = layout.map {
+                TrainCars.cars(body: body, heading: heading, lengths: $0.map { Double($0.length) * units }, gaps: $0.map { Double($0.gap) * units })
+            } ?? TrainCars.cars(body: body, heading: heading, count: count, gap: gap)
             // Decision 334: the rails under the train, front to back, for
             // its ring.
             var line: [Map3DPoint] = []
@@ -206,10 +212,10 @@ public enum Map3DTrains {
                     inner: Map3DMesh.footprint(centre: base + bed, forward: a - b, length: length, width: carWidth),
                     outer: Map3DMesh.footprint(centre: base + bed, forward: a - b, length: length + 1, width: carWidth + 1), darkness: 0.38)
                 if let models, hasModels, let eye, (base - eye).length < Map3DTrainSet.reach(of: trainType),
-                   let model = models.modelIndex(forType: trainType, carIndex: index, count: cars.count) {
+                   let model = layout?[index].model ?? models.modelIndex(forType: trainType, carIndex: index, count: cars.count) {
                     // The last car is the head car's model turned round, or
                     // the set's own tail.
-                    let turned = models.isTurned(forType: trainType, carIndex: index, count: cars.count)
+                    let turned = layout == nil && models.isTurned(forType: trainType, carIndex: index, count: cars.count)
                     frame.instances.append(instance(of: models.models[model], index: model, from: turned ? a : b, to: turned ? b : a,
                                                     stripe: stripe ?? band))
                     continue

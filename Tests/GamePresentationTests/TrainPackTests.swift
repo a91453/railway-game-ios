@@ -21,6 +21,14 @@ final class TrainPackTests: XCTestCase {
         XCTAssertEqual(names(pack, "", 3), ["commuter-cab", "commuter-car", "commuter-cab turned"])
         // Decision 338, later: the light metro stays the green tram.
         XCTAssertEqual(names(pack, "C", 3), ["set-greenTram-head", "set-greenTram-car", "set-greenTram-tail"])
+        // Decision 399: four cars of it too, and the linear-motor metro the
+        // C381, each 20 m a car.
+        XCTAssertEqual(names(pack, "C", 4), ["set-greenTram-head", "set-greenTram-car", "set-greenTram-car", "set-greenTram-tail"])
+        XCTAssertNil(pack.layout(forType: "C", count: 4))
+        XCTAssertEqual(names(pack, "L", 2), ["set-metroC381-head", "set-metroC381-tail"])
+        XCTAssertNil(pack.layout(forType: "L", count: 2))
+        // The steam trains are outside it.
+        XCTAssertNotNil(pack.layout(forType: "SUMMER", count: 3))
         // The sets outside the pack stay as they are.
         XCTAssertEqual(names(pack, "", 2), ["set-greenCommuter-head", "set-greenCommuter-tail"])
         XCTAssertEqual(names(pack, "C", 2), ["set-greenTram-head", "set-greenTram-tail"])
@@ -29,8 +37,11 @@ final class TrainPackTests: XCTestCase {
         XCTAssertEqual(names(pack, "", 3), ["set-threeCarUrban-head", "set-threeCarUrban-car", "set-threeCarUrban-tail"])
         XCTAssertEqual(names(pack, "C", 2), ["set-fiveSectionLRT-head", "set-fiveSectionLRT-tail"])
         XCTAssertEqual(names(pack, "C", 3), ["set-sevenSectionLRT-head", "set-sevenSectionLRT-car", "set-sevenSectionLRT-tail"])
-        XCTAssertEqual(names(pack, "C", 1), ["set-greenTram-single"], "one car, or four and more, stay the tram")
-        XCTAssertEqual(names(pack, "C", 4), ["set-greenTram-head", "set-greenTram-car", "set-greenTram-car", "set-greenTram-tail"])
+        XCTAssertEqual(names(pack, "C", 1), ["set-greenTram-single"], "one car, or five and more, stay the tram")
+        XCTAssertEqual(names(pack, "C", 5), ["set-greenTram-head", "set-greenTram-car", "set-greenTram-car", "set-greenTram-car", "set-greenTram-tail"])
+        // Decision 399: the four-car metro and the seven-section car.
+        XCTAssertEqual(names(pack, "L", 2), ["set-fourCarMetro-head", "set-fourCarMetro-tail"])
+        XCTAssertNotNil(pack.layout(forType: "C", count: 4))
     }
 
     func testOnlyATestBuildsSwitchUnlocksIt() {

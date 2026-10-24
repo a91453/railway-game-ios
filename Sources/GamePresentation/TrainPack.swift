@@ -10,8 +10,9 @@ import Foundation
 /// game is on the App Store the switch gives way to the purchase.
 public enum TrainPack {
     /// The pack's sets (``Map3DTrainSet/key``): the three-car urban EMU
-    /// and, later, the light metro's five- and seven-section LRTs.
-    public static let sets: Set<String> = ["threeCarUrban", "fiveSectionLRT", "sevenSectionLRT"]
+    /// and, later, the light metro's five- and seven-section LRTs; decision
+    /// 399: the four-car metro and the seven-section car.
+    public static let sets: Set<String> = ["threeCarUrban", "fiveSectionLRT", "sevenSectionLRT", "fourCarMetro", "blueSeven"]
 
     /// The settings switch that unlocks the pack in a test build.
     public static let testUnlockKey = "trainPack.testUnlocked"
