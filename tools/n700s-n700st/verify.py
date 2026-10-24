@@ -5,10 +5,10 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 import trimesh
-from build import box,wheel
+from build import box,wheel as wheel_primitive
 
 def main(root,pipeline):
-    for primitive,center in [(box((0,0,0),(2,2,2)),np.zeros(3)),(wheel(0,0,.36),np.array([0,0,.36]))]:
+    for primitive,center in [(box((0,0,0),(2,2,2)),np.zeros(3)),(wheel_primitive(0,0,.36),np.array([0,0,.36]))]:
         normal=np.cross(primitive[:,1]-primitive[:,0],primitive[:,2]-primitive[:,0])
         midpoint=primitive.mean(axis=1)
         assert (np.sum(normal*(midpoint-center),axis=1)>0).all()
