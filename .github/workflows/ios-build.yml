@@ -120,8 +120,9 @@ permissions:
 #
 # 2026-10-24: the second job's UI step reached its 50 minutes (b6ca9af,
 # 40020950220). Each class's tests in minutes, summed from the logs of the
-# five full lanes 09640f5 to ff8e4dd (39957090683, 39966648040,
-# 39992945211, 40020950220, 40026341039), slowest normal runner -> b6ca9af,
+# six full lanes 09640f5 to 584bddd (39957090683, 39966648040,
+# 39992945211, 40020950220, 40026341039, 40051175469), slowest normal
+# runner -> b6ca9af,
 # whose runners were 2-5 times slower for each job's first 20 minutes:
 # MapInteractionTests 21.7 -> 35.3, RealWorldMapUITests 13.9 -> 11.7,
 # SettingsUITests 5.7, LessonUITests 30.5, Feature284To286UITests 7.2; the
