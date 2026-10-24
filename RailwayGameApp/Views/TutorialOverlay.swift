@@ -218,6 +218,11 @@ private struct TutorialCardSlot: View {
     @State private var fold = TutorialCardFold()
     /// Where the card is laid out, in the overlay's coordinates.
     @State private var bounds: CGRect = .zero
+    /// Where the card stands, folded or open, in the overlay's
+    /// coordinates: it stays there while that place does as well as any
+    /// (``TutorialCardPlacement/previous``). Opening or folding it places
+    /// it afresh.
+    @State private var placed: (folded: Bool, frame: CGRect)?
     /// The step has waited long enough to offer "Skip this step".
     @State private var waitedForSkip = false
     /// Compact height: a phone, held on its side.
@@ -275,6 +280,9 @@ private struct TutorialCardSlot: View {
         let compact = verticalSizeClass == .compact
         placement.maxWidth = compact ? 320 : 340
         placement.maxHeight = compact ? TutorialCardPlacement.compactMaxHeight : .infinity
+        if let placed, placed.folded == isFolded {
+            placement.previous = TutorialCardPlacement.Frame(placed.frame)
+        }
         return placement
     }
 
@@ -313,6 +321,9 @@ private struct TutorialCardSlot: View {
             } keyframes: { _ in
                 MoveKeyframe(0.0)
                 SpringKeyframe(1.0, duration: settle.seconds, spring: settle.spring)
+            }
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(tutorialOverlaySpace)) } action: { frame in
+                placed = (isFolded, frame)
             }
         }
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(tutorialOverlaySpace)) } action: { bounds = $0 }
