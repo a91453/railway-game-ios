@@ -2,6 +2,8 @@
 
 > 讀者：每一個新開的 session，以及接手某條線的 session。先讀 [OVERVIEW.md](OVERVIEW.md)，再讀這份。
 > 這份記錄「誰在做什麼、做到哪、下一步交給誰」。規則細節以 `docs/ARCHITECTURE.md` 的決策為準，優先順序以 `docs/research/NEXT_PRIORITIES_2026-10-12.md` 為準，號碼以工作登記 #231 為準。
+
+> N700S／N700ST 靜態素材候選（#1202）：公開重建配方與外觀交接見 `docs/art/n700s-n700st/README.md`，完整模型與可下載 viewer 在私庫同名 draft PR。車殼修訂版已通過最終 GLB 的 watertight 檢查；尺寸、台車錨點及實車編組仍未校準。本輪沒有接入遊戲，合併後也不會自動顯示。後續確認工程尺寸與排列，再做 Metal 真機驗收及遊戲接入。
 > 作者 2026-10-16：「把所有沒交接在 main 的用 PR 在 main 做交接，防止之後新 session 不知道怎麼做。」交接只放在 session 之間的訊息或 PR 說明裡的，都要搬到這裡。
 
 ## 怎麼用這份
