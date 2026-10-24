@@ -13,7 +13,7 @@
         "start": "next Monday 00:00",
         "utcOffsetHours": 8,
         "duration": "PT168H",
-        "rule": "FREQ=WEEKLY;INTERVAL=1"
+        "rule": "FREQ=DAILY;INTERVAL=7"
       },
       "localizations": [
         {
