@@ -299,6 +299,26 @@
 - **環狀線沒載到人**：#1065（決策 364，session_01Efb7Sr7mZC2SiNXUtd1ZAa，`claude/loop-line-boarding`）可合併：環線列車停在第一站以外時每一圈都從那站起算，和旅客排的一圈對不上，改成繞過第一站再跑一整圈、之後從第一站起算；一列車的環線只排內環。`ReplayFixtures/long-leg-traffic.json` 重錄 checksum 1–5（作者同意）。還沒做的：作者轉來玩家的路線卡與車站卡截圖時，對照玩家的路線是不是環線、幾列車；兩種都不是就再查（決策 364「下一步」）；實機確認放進下一版的 What to Test。
 - 第 83 版：#1057、#1059 合併後，What to Test 在 `claude/testflight-83-notes`；其他修好的進 84。TestFlight 的「當機意見反應」只有文字、沒有當機紀錄（作者 2026-10-23 截圖）。
 
+**第六次換手（2026-10-24 00:45 UTC，暫代 session_01PGibJmGNcvu2d7dJWWhWVb → 作者從 claude.ai 開的新規劃）**。作者：「權限全部交接 記得看清楚」。01PGib 是換手鏈第 8 層（§1.1「換手」），`create_session`、`send_later`、建排程都被擋，只做合併與留言；新任是第 0 層，**全部權限交給新任**，01PGib 在新任接手後由新任封存。和下面不同時以這段為準。
+
+- **交給新任的權限與職責**（全部照原文，不多不少）：
+  - **合併**（作者 2026-10-21 授權，§1.2）：綠了的 PR 用 merge commit、帶 `expectedHeadSha` 合；一批 3–5 個，兩批之間等 main 的 `ci.yml` 綠；只改文件、只改 UI 測試或 CI 腳本的隨時可合。不開 auto-merge、不 force-push、不推 main、不取消 main 的 push run。
+  - **派工**（§1.3）：用 `create_session` 開實作 session，照 NEXT_PRIORITIES §22 一條線一次一個 PR；實作 session 同時最多 3–4 個；同時跑全套 Swift CI 的 GameCore PR 最多 2 個；派工單寫好決策號、存檔版本。
+  - **封存**（作者 2026-10-23）：PR 開了、CI 綠、#1041 有「可合併」、後續寫進本檔的實作 session 就封存，不用等合併。**新任確定在動後，封存 01PGib**（標題改成「【舊・已換手】…→ 改用 <新任 id>」）。
+  - **巡查**：自己用 `send_later` 排（01PGib 排不了，沒有留下任何提醒）。
+  - **TestFlight**（作者 2026-10-23「改成我說可以發你才能替我發」）：只在作者在**遊戲規劃 session 裡**說「發」之後，`main` HEAD 的完整 `ci.yml` 與 full lane 都綠、What to Test 已合進 main，才用 `workflow_dispatch` 跑一次 `testflight.yml`；否則告訴作者哪裡紅。自動模式可能擋下，就照 §1.2 請作者自己按。
+  - **審查**：滿 30 點開一輪（§1）；下一輪從 #1137 起算，目前約 1 點（#1137 GamePresentation、#1140 只改 UI 測試 0 點）。
+  - **五方**寫進 PR 與派工單；頭像與美術先照 art-style 審過再給作者看；What to Test 每版都要寫。
+  - 作者保留、新任也不能做的：Apple 帳號與 App Store Connect、secrets、加依賴、copyleft 或沒授權的程式碼、在作者沒說「發」時發版。
+- **排程**：每日 Threads 開發日誌現在是 `trig_01Hre19DLcYMRt2yiktxHWFY`（綁 01PGib，暫停）。新任用同一份 prompt（`get_trigger` 讀得到）建一個綁到自己的新排程（作者沒說要開就維持暫停），再刪掉這個。
+- **開著的 PR（00:45 UTC）**：
+  - #1119（Codex 雙聯蒸汽，head 1f1ebbe4）、#1121（Codex EstateKit，head 31ef7ef0）：CI 跑中，綠了轉 ready 合併（Codex 沒有 session 可通知）。
+  - #1128（決策 379（續），session_01MhQXufQK6jhjrKXY6iUTDB）：在併 main、解衝突，要跑全套 GameCore CI；它會通知規劃。
+- **做中**：session_01GaPJUuAAMyqKsvxJjpnhEf（SettingsUITests 兩支）。它和 01MhQX 都被告知「通知規劃」；新任接手後在 #1041 留言，並用 `send_message` 告訴這兩個改通知新任。
+- **main**：6426b9c9（#1141）。`ci.yml`：08fe5ab6 綠，73753863 跑中，6426b9c9 排隊。
+- **號碼**：下一個決策 391；存檔版本 72（main 是 71）；golden 不動。
+- **等作者**：同第五次換手的「等作者」三項。
+
 **第五次換手（2026-10-24 00:35 UTC，session_01H5RHAwnA69n8EfAUSUrH52 壓縮 2 次 → session_01PGibJmGNcvu2d7dJWWhWVb）**。作者：「你要不要換新session 壓縮已經超過2次以上了吧」。和下面不同時以這段為準。
 
 - **量到的**：前任做了約 24.5 小時、壓縮 2 次以上，約 $116（`get_session` 的 `usage`），換手時 28 萬。
