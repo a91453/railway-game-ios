@@ -190,6 +190,10 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.changes.outputs.matrix) }}
     steps:
+      # The test step warns when the job nears its timeout (decision 404).
+      - name: Note the job's start
+        run: echo "JOB_STARTED=$(date +%s)" >>"$GITHUB_ENV"
+
       - uses: actions/checkout@v5
 
       - name: Swift version
@@ -210,6 +214,11 @@ jobs:
           SHARD: ${{ matrix.tests && 'selected' || matrix.shard }}
           SELECTED_TESTS: ${{ matrix.tests }}
           SELECTED_PART: ${{ matrix.part }}
+          # One test at a time. swift test --parallel runs each test in a
+          # process of its own, so a class's shared fixture is built once per
+          # test, not once per class: on #1189's full run campaigns-11 passed
+          # 20 minutes (decision 404).
+          SWIFT_TEST_WORKERS: 1
 
   # A cancelled pull request run: was it replaced by a newer push? Then the
   # newer run gives the verdict and the gate is skipped here, not red on a

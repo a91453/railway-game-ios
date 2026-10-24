@@ -59,13 +59,25 @@ final class SeededStreetPlanTests: XCTestCase {
 
     func testItCostsLittleOfBuildingTheScene() throws {
         let world = try towns()
-        let start = Date()
+        // With swift test --parallel (decision 404) each test runs in a
+        // process of its own: the first plan paid for loading what both
+        // share, and the wall clock counted the other tests on the cores
+        // too (plan 7.26 s, scene 7.23 s). So one plan first, then this
+        // thread's CPU time.
         _ = Map3DScene.seededStreets(world: world)
-        let plan = Date().timeIntervalSince(start)
-        let sceneStart = Date()
+        let start = threadSeconds()
+        _ = Map3DScene.seededStreets(world: world)
+        let plan = threadSeconds() - start
+        let sceneStart = threadSeconds()
         _ = Map3DScene(world: world)
-        let scene = Date().timeIntervalSince(sceneStart)
+        let scene = threadSeconds() - sceneStart
         print("SEEDED plan \(plan) s, scene \(scene) s")
         XCTAssertLessThan(plan, scene)
+    }
+
+    private func threadSeconds() -> Double {
+        var time = timespec()
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &time)
+        return Double(time.tv_sec) + Double(time.tv_nsec) / 1e9
     }
 }
