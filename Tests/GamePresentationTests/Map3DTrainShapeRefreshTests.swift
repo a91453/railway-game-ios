@@ -27,6 +27,16 @@ final class Map3DTrainShapeRefreshTests: XCTestCase {
             XCTAssertEqual(a.z,b.z,accuracy:0.00001)
         }
     }
+    func testDuckbillHasBroadLowForwardProjection() {
+        let cab=Map3DTrainShapeRefresh.model("refresh-700t-cab")
+        let bill=cab.vertices.filter { abs($0.x-12.2)<0.002 }
+        XCTAssertFalse(bill.isEmpty)
+        let width=bill.map(\.y).max()!-bill.map(\.y).min()!
+        let thickness=bill.map(\.z).max()!-bill.map(\.z).min()!
+        XCTAssertGreaterThan(width,2.5,"Bill narrows to a pointed cone")
+        XCTAssertGreaterThan(width/thickness,5.5,"Bill lacks a flattened cross-section")
+        XCTAssertGreaterThan(cab.maximum.x,13.4,"Low bill does not project forward")
+    }
     func testPassengerGlassHasRoundedCornersInsteadOfRectangle() {
         let m=Map3DTrainShapeRefresh.model("refresh-700t-middle")
         let glass=Map3DColor.shaded(Map3DPalette.glazing,0.5)

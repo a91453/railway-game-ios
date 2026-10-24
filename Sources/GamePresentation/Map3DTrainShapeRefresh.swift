@@ -160,7 +160,7 @@ extension StationKitBuilder {
     }
     mutating func refreshHighSpeed(cab: Bool,panto: Bool) {
         let segments=40, bottom: Float=0.78
-        let xs: [Float] = cab ? [-12.5,-6,0,5.8,6.3,6.7,7.1,7.5,7.9,8.3,8.7,9.1,9.5,10,10.5,11,11.5,11.9,12.2,12.4,12.5] : [-12.5,12.5]
+        let xs: [Float] = cab ? [-12.5,-6,0,5.8,6.3,6.7,7.1,7.5,7.9,8.3,8.7,9.1,9.5,9.7,10,10.5,11,11.5,11.9,12.2,12.4,12.5,12.9,13.15,13.35,13.5,13.55] : [-12.5,12.5]
         func interpolate(_ t: Float,_ points: [(Float,Float)])->Float {
             for i in 1..<points.count where t<=points[i].0 {
                 let a=points[i-1],b=points[i]
@@ -173,7 +173,12 @@ extension StationKitBuilder {
             let t=(x-5.8)/6.7
             let h=interpolate(t,[(0,3.65),(0.16,3.65),(0.28,3.52),(0.40,3.16),(0.52,2.69),(0.65,2.12),(0.80,1.60),(0.92,1.34),(1,1.18)])
             let w=interpolate(t,[(0,1.69),(0.3,1.69),(0.5,1.66),(0.7,1.54),(0.85,1.32),(0.95,0.90),(0.985,0.48),(1,0.08)])
-            return (h,w)
+            if x<=9.7 { return (h,w) }
+            // Broad, thin bill projects beyond the upper nose. Only the shell
+            // forward of the existing cockpit changes; no ornamental lip box.
+            let billHeight=interpolate(x,[(9.7,2.417762),(10,2.10),(10.5,1.70),(11,1.40),(11.5,1.23),(12,1.19),(12.5,1.18),(12.9,1.17),(13.15,1.14),(13.35,1.10),(13.5,1.02),(13.55,0.97)])
+            let billWidth=interpolate(x,[(9.7,1.610746),(10,1.65),(10.5,1.70),(11,1.70),(11.5,1.68),(12,1.60),(12.2,1.56),(12.5,1.50),(12.9,1.38),(13.15,1.18),(13.35,0.90),(13.5,0.48),(13.55,0.08)])
+            return (billHeight,billWidth)
         }
         func surface(_ x: Float,_ a: Float)->Map3DPoint {
             let (h,w)=dimensions(x),c=cosf(a),s=sinf(a)
