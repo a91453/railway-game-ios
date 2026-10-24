@@ -130,7 +130,9 @@ permissions:
 # RealWorldMapUITests moved to the build job and second's UI step got 55
 # minutes like lessons': second about 30 (43.5 of 55 on a runner like
 # b6ca9af's), lessons 40.6 at most (of 55), build about 56 (64 of 75, job
-# 85 of 95). The next class to add goes where that leaves
+# 85 of 95). Measured on the branch (40055148286, d0c0376): second 27.1,
+# lessons 38.1, build 60.0 of 75 (RealWorldMapUITests 15.3 there; job 71.8
+# of 95), so build has the least room. The next class to add goes where that leaves
 # ten minutes; when none can take it, split a class by test method
 # (Class/testMethod works in these lists) or ask for a fourth job.
 env:
