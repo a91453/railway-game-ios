@@ -161,6 +161,37 @@ final class TownGrowthTests: XCTestCase {
         }
     }
 
+    /// The same with network routing and a line that closes at midnight
+    /// (decision 379): a call that starts at midnight works the new day's
+    /// plan out first, with the line closed and no trips, and growth still
+    /// reads the plan of the day that ended, each station reaching the
+    /// other, whether that plan was kept from before or worked out again.
+    func testMidnightReadsTheEndedDaysNetworkPlanHoweverTheCallsFall() throws {
+        var world = try world()
+        world.setPassengerRoutingMode(.network)
+        try world.setLineServiceWindow(world.lines[0].id, to: .standard)
+        try world.advance(ticks: 1_440 * 2 - 5)
+
+        var batched = world
+        try batched.advance(ticks: 10)
+        var split = world
+        try split.advance(ticks: 5)
+        XCTAssertEqual(split.clock.now.seconds % GameTime.secondsPerDay, 0)
+        var reachingBoth = split
+        reachingBoth.growTowns(reached: [a: 1, b: 1])
+        var reachingNone = split
+        reachingNone.growTowns(reached: [:])
+        XCTAssertNotEqual(reachingBoth.townGrowth, reachingNone.townGrowth)
+        var loaded = try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(split))
+        try split.advance(ticks: 5)
+        try loaded.advance(ticks: 5)
+        for other in [batched, split, loaded] {
+            XCTAssertEqual(other.townGrowth, reachingBoth.townGrowth)
+            XCTAssertEqual(other.stationDemand(of: a), reachingBoth.stationDemand(of: a))
+            XCTAssertEqual(other.stationDemand(of: b), reachingBoth.stationDemand(of: b))
+        }
+    }
+
     /// Demand set by the player is the new start: growth neither pulls it
     /// back up to the old start nor records growth out of range.
     func testSetDemandStartsGrowthAgain() throws {
