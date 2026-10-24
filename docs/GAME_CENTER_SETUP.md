@@ -40,6 +40,8 @@
 
 只看角色就好：不用下載、複製或貼上任何 key，也不用把任何東西給 session。
 
+順便確認一次：GitHub 的 repository → **Settings** → **Environments** → **testflight** → **Deployment branches and tags**，應該只有 `main`。真正擋住其他分支拿到 key 的是這個設定（發 TestFlight 也靠它），不是 workflow 檔裡的那一行。
+
 ### 按 Run workflow
 
 1. 打開 <https://github.com/a91453/railway-game-ios/actions>，左邊選 **Game Center setup**。
@@ -60,7 +62,8 @@
 
 - 已經有的 ID 一律跳過，**不刪、不改** App Store Connect 已經有的任何東西。
 - 已經有的項目跟下面的表不一樣時，清單會寫「注意（不會改）：……」，要改請自己在 App Store Connect 改。
-- 中途失敗（例如網路斷了）：前面建好的會留著，再跑一次 apply 只會補還沒建的。
+- 中途失敗（例如網路斷了）：前面建好的會留著，再跑一次 apply 只會補還沒建的排行榜、成就和語言。
+- **例外是傳到一半的成就圖**：清單若寫「注意（不會改）：en-US: its image is AWAITING_UPLOAD; not touched」之類，表示那張圖的位置建了、檔案沒傳完。工具不會刪它，也不會補傳。到 App Store Connect 打開那個成就、那個語言，把圖刪掉，再跑一次 apply，就會重新上傳。
 
 ### 成就圖還沒進 `main` 時
 
@@ -74,6 +77,7 @@ App Store Connect 的成就要有圖。38 張圖在成就圖的 PR（#1158）裡
 | `HTTP 401 (Authentication credentials are missing or invalid…)` | key 被撤銷，或 secrets 填錯 | 發 TestFlight 也會一起壞，照 `docs/TESTFLIGHT_GITHUB_ACTIONS.md` 檢查 |
 | `this app has no Game Center in App Store Connect yet` | 第 2 步還沒做 | 做第 2 步，再跑 |
 | `ASC_KEY_ID is not set.` 之類 | `testflight` environment 少了 secret | 照 `docs/TESTFLIGHT_GITHUB_ACTIONS.md` 補 |
+| 清單寫 `its image is AWAITING_UPLOAD`（或 `FAILED`）`; not touched` | 上次那張成就圖傳到一半 | 在 App Store Connect 那個成就的那個語言把圖刪掉，再跑 apply |
 | `HTTP 409` 或其他 `HTTP 4xx`，在排行榜那一項 | App Store Connect 不收排行榜的某個欄位 | 告訴遊戲規劃 session 那一行錯誤。成就可以先建：**only** 選 **achievements** 再跑；排行榜也可以照下面的表在 App Store Connect 手動建 |
 
 ### 會建的內容

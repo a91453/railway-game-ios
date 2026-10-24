@@ -8,11 +8,12 @@ name: Game Center setup
 # Started only by hand (Actions -> Game Center setup -> Run workflow) and only
 # from main: there is no other trigger, and the job does not run on any other
 # branch. The key lives in the "testflight" environment, which only main may
-# use; pull requests never reach it. "dry-run" (the default) only reads App
+# use (that setting, not the job's `if`, is what keeps other branches out);
+# pull requests never reach it. "dry-run" (the default) only reads App
 # Store Connect and lists what "apply" would create; "apply" lists the same,
 # then creates it. Nothing App Store Connect already has is changed or
 # deleted. The script is tested with a fake App Store Connect and no secret
-# by testflight-checks.yml.
+# by game-center-setup-checks.yml.
 
 on:
   workflow_dispatch:
