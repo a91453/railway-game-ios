@@ -605,8 +605,19 @@ final class Map3DMetalView: MTKView {
             flying = (Map3DFlight(from: camera, began: CACurrentMediaTime(), rule: rule), nil)
             return
         }
-        guard current.view != follow.view else { return }
+        if current.view == follow.view {
+            // Decision 403 (續): from the station, flying on to the next
+            // stop's platform; staying on the one it left until it is
+            // well past, and on one the train is still running to while
+            // it is the same.
+            guard follow.view == .station, current.lookout != follow.lookout else { return }
+            if let old = current.lookout, let new = follow.lookout, old.station == new.station, new.left || old.eye == new.eye { return }
+            following?.lookout = follow.lookout
+            flying = (Map3DFlight(from: camera, began: CACurrentMediaTime(), rule: rule), nil)
+            return
+        }
         following?.view = follow.view
+        following?.lookout = follow.lookout
         flying = (Map3DFlight(from: camera, began: CACurrentMediaTime(), rule: rule), nil)
     }
 

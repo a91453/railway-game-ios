@@ -44,14 +44,26 @@ public struct Map3DFollow: Hashable, Sendable {
         /// Decision 337: from the cab, looking ahead down the line (the
         /// owner's OpenWorld reference's `railDriverPose`).
         case cab
+        /// Decision 403 (續): beside the train, moving along with it, the
+        /// whole of it in view (the owner's OpenWorld reference's watch
+        /// view, `maglev-view.js` `applyCamera`).
+        case side
+        /// Decision 403 (續): standing on the platform of the stop ahead,
+        /// watching the train come in (``Lookout``).
+        case station
 
         /// The tilt from straight down, in radians: Mini Tokyo 3D's pitch,
-        /// 85° and 60°.
+        /// 85° and 60°. Beside the train and from the station, the camera
+        /// looks at the train from where it stands, and this is only where
+        /// it starts: beside, the reference's 10 m up for 36.7 m across
+        /// and back; from the station, level.
         public var tilt: Float {
             switch self {
             case .back: 85 * .pi / 180
             case .aboveBack: 60 * .pi / 180
             case .cab: .pi / 2 - Map3DFollow.cabLookDown
+            case .side: atan2f(Map3DFollow.sideAway, Map3DFollow.sideUp)
+            case .station: .pi / 2
             }
         }
 
@@ -60,12 +72,45 @@ public struct Map3DFollow: Hashable, Sendable {
             case .back: language.text("Behind", "後方")
             case .aboveBack: language.text("Above", "上後方")
             case .cab: language.text("Cab", "駕駛室")
+            case .side: language.text("Side", "旁邊")
+            case .station: language.text("Station", "從車站看")
             }
+        }
+
+        /// What the button does, for VoiceOver.
+        public func hint(in language: DisplayLanguage) -> String {
+            switch self {
+            case .back: language.text("Follows the train from behind.", "從列車後方跟著看。")
+            case .aboveBack: language.text("Follows the train from above and behind.", "從列車後上方跟著看。")
+            case .cab: language.text("Looks ahead from the driver's seat.", "從駕駛座看前方。")
+            case .side: language.text("Moves alongside the train, showing all of it.", "在列車旁邊一起移動，看得到整列。")
+            case .station: language.text("Watches the train arrive from the platform of its next stop.", "站在下一站的月台，看列車進站。")
+            }
+        }
+    }
+
+    /// Decision 403 (續): where the station view stands: on a platform of
+    /// the stop the train runs to (or stands at, or has just left), at a
+    /// person's eye over it.
+    public struct Lookout: Hashable, Sendable {
+        public let station: StationID
+        /// The eye, in the scene's space.
+        public let eye: Map3DPoint
+        /// Whether the train has left this stop (and is still near it).
+        public let left: Bool
+
+        public init(station: StationID, eye: Map3DPoint, left: Bool = false) {
+            self.station = station
+            self.eye = eye
+            self.left = left
         }
     }
 
     public let train: TrainID
     public var view: View
+    /// Decision 403 (續): where the station view stands; `nil` follows
+    /// from behind instead.
+    public var lookout: Lookout?
     /// How far the camera stands, as a share of ``distance(viewportHeight:)``:
     /// a pinch while following moves it in or out.
     public var scale: Float = 1
@@ -146,6 +191,62 @@ public struct Map3DFollow: Hashable, Sendable {
     /// inside, so the eye stands just in front of the windscreen.
     public static let cabLead: Float = 0.6
 
+    /// Decision 403 (續): the view beside the train, after the owner's
+    /// OpenWorld reference's watch view
+    /// (`OpenWorld/reference_snapshot/play/src/game/maglev-view.js`
+    /// `applyCamera`, a train watched but not ridden): the eye 33 m out to
+    /// the train's left, 16 m back and 10 m up from the middle of its cars,
+    /// looking at it, through a 58° lens; all of it times the train's
+    /// length over the reference's one car (27.75 m, at least 1) and, on a
+    /// screen narrower than 0.92 wide to 1 tall, by as much (at most 2.3,
+    /// for 0.4). Left: the side clear of the other track where trains keep
+    /// left, as Taiwan's railways do.
+    public static let sideAcross: Float = 33
+    public static let sideBack: Float = 16
+    public static let sideUp: Float = 10
+    /// The reference's one car, the length the offsets are for.
+    public static let sideTrainLength: Float = 27.75
+    /// The reference's watch lens, 58° top to bottom, beside the train and
+    /// from the station.
+    public static let watchLens: Float = 58 * .pi / 180
+    /// How far out the eye stands, level, from the middle of the cars.
+    static var sideAway: Float { (sideAcross * sideAcross + sideBack * sideBack).squareRoot() }
+    /// How far right of the train's heading the camera beside it faces.
+    public static let sideBearing: Float = atan2f(sideAcross, sideBack)
+
+    /// The offsets' scale for a train `length` metres long seen in `viewport`.
+    public static func sideScale(length: Float, viewport: (width: Float, height: Float)) -> Float {
+        let aspect = max(viewport.width, 1) / max(viewport.height, 1)
+        let narrow = max(1, 0.92 / max(0.4, aspect))
+        return narrow * max(1, length / sideTrainLength)
+    }
+
+    /// Decision 403 (續): the eye on the station's platform: a person's
+    /// 1.6 m over its top (``Map3DScene/Builder/platformHeight``, 1.15 m
+    /// over the rail), and as far beside the rail as the platform's middle
+    /// (its edge 1.6 m out and half its 3.2 m).
+    public static let stationEyeHeight: Float = 1.15 + 1.6
+    public static let stationEyeAcross: Float = 1.6 + 3.2 / 2
+    /// How far past the stop it left the station view stays there: the
+    /// train's length and as much again, so its last car is seen leaving.
+    public static func stationLingerMetres(trainLength: Int64) -> Int64 { 2 * max(trainLength, 0) / WorldCoordinate.unitsPerMetre + 100 }
+
+    /// The camera at `eye` looking at `target`, through `lens`: as close
+    /// as ``Map3DCamera/nearest`` lets it, the target farther along the
+    /// same look when it is nearer.
+    static func camera(at eye: Map3DPoint, looking target: Map3DPoint, lens: Float, from camera: Map3DCamera) -> Map3DCamera {
+        var next = camera
+        let look = target - eye
+        let level = Map3DPoint(look.x, 0, look.z).length
+        guard let way = look.normalized, level > 0.001 else { return camera }
+        next.heading = heading(of: look)
+        next.pitch = atan2f(level, -look.y)
+        next.lens = lens
+        next.distance = min(max(look.length, Map3DCamera.nearest), Map3DCamera.farthest)
+        next.target = eye + way * next.distance
+        return next
+    }
+
     /// The camera following the train whose front is at `head`, `elapsed`
     /// seconds after `camera`: looking at the rail under the front, from
     /// the view's tilt and distance, turned after the train from where
@@ -155,6 +256,26 @@ public struct Map3DFollow: Hashable, Sendable {
     public func camera(following head: Map3DTrains.Head, from camera: Map3DCamera, elapsed: Double,
                        turnsAtOnce: Bool = false) -> Map3DCamera {
         var next = camera
+        if view == .side {
+            // Turned after the train as from behind, its heading read back
+            // from the way the camera faces.
+            let wanted = Self.heading(of: head.forward)
+            let was = camera.heading - Self.sideBearing
+            let share = turnsAtOnce ? 1 : Self.headingShare(elapsed: elapsed)
+            let turned = was + Map3DCamera.turnFromNorth(wanted - was) * share
+            let forward = Map3DPoint(sinf(turned), 0, -cosf(turned)), left = Map3DPoint(forward.z, 0, -forward.x)
+            var target = (head.middle ?? head.rail) + Map3DPoint(0, Map3DTrains.carHeight / 2, 0)
+            if let ground = head.ground { target.y = max(target.y, ground) }
+            let k = Self.sideScale(length: head.length, viewport: camera.viewport) * scale
+            let eye = target + left * (Self.sideAcross * k) - forward * (Self.sideBack * k) + Map3DPoint(0, Self.sideUp * k, 0)
+            return Self.camera(at: eye, looking: target, lens: Self.watchLens, from: camera)
+        }
+        if view == .station, let lookout {
+            // At the front of the train, half way up it; a pinch does
+            // nothing, the eye stays on the platform.
+            return Self.camera(at: lookout.eye, looking: head.nose + Map3DPoint(0, Map3DTrains.carHeight / 2, 0),
+                               lens: Self.watchLens, from: camera)
+        }
         if view == .cab {
             // From the eye, the target the nearest distance ahead down the
             // look; the eye stays where it is at any distance, so a pinch
@@ -177,7 +298,8 @@ public struct Map3DFollow: Hashable, Sendable {
         // the camera does not go under the ground with it.
         if let ground = head.ground { next.target.y = max(next.target.y, ground) }
         next.distance = min(max(Self.distance(viewportHeight: camera.viewport.height) * scale, Map3DCamera.nearest), Map3DCamera.farthest)
-        next.pitch = view.tilt
+        // From the station with no platform to stand on: from behind.
+        next.pitch = (view == .station ? View.back : view).tilt
         let wanted = Self.heading(of: head.forward)
         let share = turnsAtOnce ? 1 : Self.headingShare(elapsed: elapsed)
         next.heading = Map3DCamera.turnFromNorth(camera.heading + Map3DCamera.turnFromNorth(wanted - camera.heading) * share)
@@ -250,5 +372,56 @@ public struct Map3DFlight: Hashable, Sendable {
         let aspect = max(b.viewport.width, 1) / max(b.viewport.height, 1)
         let seesWay = way / (2 * tanf(Map3DCamera.fieldOfView / 2) * aspect)
         return max(0, log2f(seesWay) - (log2f(a.distance) + log2f(b.distance)) / 2)
+    }
+}
+
+extension GameWorld {
+    /// Decision 403 (續): the stop the station view watches train `id`
+    /// from: the one it stands at, or runs to; just after leaving one,
+    /// that one, until it is ``Map3DFollow/stationLingerMetres(trainLength:)``
+    /// past it (`left`). `nil` for a train with no service.
+    public func map3DLookoutStop(of id: TrainID) -> (station: StationID, left: Bool)? {
+        guard let train = train(id: id), let execution = train.execution, train.timetable.indices.contains(execution.stop)
+        else { return nil }
+        switch execution {
+        case .waitingAtStop(let stop, _):
+            return (train.timetable[stop].station, false)
+        case .travellingToStop(let stop, let cycle):
+            // The stop before: the last of the cycle before, for the first.
+            let previous = stop > 0 ? stop - 1 : (cycle > 0 ? train.timetable.count - 1 : nil)
+            if let previous, let run = train.times?.run, let curve = runCurve(of: run, for: train.performance) {
+                let elapsed = max(0, clock.now.seconds - run.start.seconds)
+                let done = elapsed >= run.seconds ? run.length : curve.distance(at: elapsed * 1000)
+                if done / WorldCoordinate.unitsPerMetre < Map3DFollow.stationLingerMetres(trainLength: train.length) {
+                    return (train.timetable[previous].station, true)
+                }
+            }
+            return (train.timetable[stop].station, false)
+        }
+    }
+}
+
+extension Map3DFollow {
+    /// Decision 403 (續): where the station view of train `train` stands
+    /// in `scene`: on the platform it stops at (as the station's board
+    /// reads it, ``Map3DNextDeparture/platform(of:at:in:)``), at its
+    /// middle, on the side the scene lays it (towards its island partner
+    /// across the next track within 15 m, else the left), a person's eye
+    /// over it. `nil` with no stop, no platform, or a platform in a
+    /// tunnel (the scene lays none there).
+    public static func lookout(of train: TrainID, in world: GameWorld, scene: Map3DScene) -> Lookout? {
+        guard let stop = world.map3DLookoutStop(of: train),
+              let platform = Map3DNextDeparture.platform(of: train, at: stop.station, in: world),
+              let middle = Map3DNextDeparture.middle(of: platform, in: world, scene: scene),
+              !scene.trackCover.isInTunnel(middle.point) else { return nil }
+        let right = Map3DPoint(-middle.along.z, 0, middle.along.x)
+        let partner = world.trackPlatforms(of: stop.station)
+            .filter { $0.edge != platform.edge }
+            .compactMap { Map3DNextDeparture.middle(of: $0, in: world, scene: scene).map { ($0.point - middle.point).dot(right) } }
+            .filter { abs($0) < 15 }
+            .min { abs($0) < abs($1) }
+        let side: Float = (partner ?? -1) >= 0 ? 1 : -1
+        return Lookout(station: stop.station, eye: middle.point + right * (side * stationEyeAcross) + Map3DPoint(0, stationEyeHeight, 0),
+                       left: stop.left)
     }
 }

@@ -165,14 +165,18 @@ final class HUDAlignmentUITests: XCTestCase {
             bar.waitUntilStill()
             check3D("\(way) 3D following", lines)
             followBar3D("\(way) 3D following", lines)
-            let cab = app.buttons["map3D.follow.cab"]
-            if cab.appears(within: 5) {
-                cab.tap()
-                bar.waitUntilStill()
-                check3D("\(way) cab", lines)
-                followBar3D("\(way) cab", lines)
-            } else {
-                XCTFail("\(way): no cab view to follow from")
+            // Decision 403 (續): beside the train and from the station too;
+            // five buttons, in one row or two, all reachable.
+            for view in ["cab", "side", "station"] {
+                let button = app.buttons["map3D.follow.\(view)"]
+                if button.becomesHittable(within: 5) {
+                    button.tap()
+                    bar.waitUntilStill()
+                    check3D("\(way) \(view)", lines)
+                    followBar3D("\(way) \(view)", lines)
+                } else {
+                    XCTFail("\(way): no \(view) view to follow from")
+                }
             }
         }
     }
