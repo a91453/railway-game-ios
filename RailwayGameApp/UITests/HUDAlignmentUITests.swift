@@ -178,6 +178,17 @@ final class HUDAlignmentUITests: XCTestCase {
                     XCTFail("\(way): no \(view) view to follow from")
                 }
             }
+            // Decision 403 (續二): the horn and the photo, whose sheet has
+            // the share button.
+            let horn = app.buttons["map3D.follow.horn"]
+            XCTAssertTrue(horn.becomesHittable(within: 5), "\(way): the horn button is reachable")
+            horn.tap()
+            let photo = app.buttons["map3D.follow.photo"]
+            XCTAssertTrue(photo.becomesHittable(within: 5), "\(way): the photo button is reachable")
+            photo.tap()
+            XCTAssertTrue(app.buttons["map3D.snapshot.share"].appears(within: 15), "\(way): the photo's sheet offers to share it")
+            app.buttons["map3D.snapshot.done"].tap()
+            XCTAssertTrue(app.buttons["map3D.snapshot.share"].disappears(within: 10), "\(way): and closes")
         }
     }
 

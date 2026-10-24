@@ -115,6 +115,66 @@
       "endLevel": 0.0
     },
     {
+      "file": "horn-diesel.wav",
+      "kind": "sound",
+      "synth": "make_game_audio.py horn(\"diesel\"), decision 403",
+      "sha256": "9877b5f8ef62cdf48f2445744548999a8074650b3a9e58592702bf5a5562ea75",
+      "frames": 75360,
+      "seconds": 1.57,
+      "peakDbfs": -2.6,
+      "rmsDbfs": -12.0,
+      "largestStep": 0.12158,
+      "endLevel": 0.0
+    },
+    {
+      "file": "horn-electric.wav",
+      "kind": "sound",
+      "synth": "make_game_audio.py horn(\"electric\"), decision 403",
+      "sha256": "a2cc5bdd7dcf7d0c3024de1f09a65030b735d9bcd13fa7b75e54da58e435568f",
+      "frames": 51360,
+      "seconds": 1.07,
+      "peakDbfs": -4.16,
+      "rmsDbfs": -12.0,
+      "largestStep": 0.19421,
+      "endLevel": 0.0
+    },
+    {
+      "file": "horn-highSpeed.wav",
+      "kind": "sound",
+      "synth": "make_game_audio.py horn(\"highSpeed\"), decision 403",
+      "sha256": "e3438b42f06659a018bc56e38d60bebf7c0f3e28e700d716966c3e3b6e7daafb",
+      "frames": 35280,
+      "seconds": 0.735,
+      "peakDbfs": -6.85,
+      "rmsDbfs": -12.0,
+      "largestStep": 0.14148,
+      "endLevel": 0.0
+    },
+    {
+      "file": "horn-metro.wav",
+      "kind": "sound",
+      "synth": "make_game_audio.py horn(\"metro\"), decision 403",
+      "sha256": "6e48c7a0cb6c2d2c972bde99c4641581da7102dfefe795bb53bd606c1c47e2a7",
+      "frames": 17760,
+      "seconds": 0.37,
+      "peakDbfs": -5.23,
+      "rmsDbfs": -12.0,
+      "largestStep": 0.27957,
+      "endLevel": 0.0
+    },
+    {
+      "file": "horn-steam.wav",
+      "kind": "sound",
+      "synth": "make_game_audio.py horn(\"steam\"), decision 403",
+      "sha256": "ac57297b0a9388efa66ff8c4dd421a42e3f52893e81926cc90bec4788e833448",
+      "frames": 89280,
+      "seconds": 1.86,
+      "peakDbfs": -4.41,
+      "rmsDbfs": -12.0,
+      "largestStep": 0.15158,
+      "endLevel": 0.0
+    },
+    {
       "file": "line-acquired.wav",
       "score": "tools/audio/scores/line-acquired.score.json",
       "scoreSha256": "e3cc3e0af7be8f2f9f688c08a86b6af1fcb3ac9c63906584c37e6af0face05c6",

@@ -57,6 +57,9 @@ final class Map3DMetalView: MTKView {
     private var flightAsked: (reduceMotion: Bool, goal: (Map3DCamera) -> Map3DCamera?)?
     /// Decision 334: the train ringed, asked about on a station's board.
     var ringed: TrainID?
+    /// Decision 403 (續二): who waits for the next frame drawn, as a
+    /// picture (``capture(_:)``).
+    private var captures: [@MainActor @Sendable (UIImage?) -> Void] = []
     /// Decision 394: whether the cab is deep in a tunnel this frame, and
     /// where the scene's tunnels open (``Map3DTrackCover/openings``).
     private var underground = Map3DUnderground()
@@ -1049,6 +1052,9 @@ final class Map3DMetalView: MTKView {
             triangles += shadows.triangles
         }
         encoder.endEncoding()
+        if !captures.isEmpty, !drawable.texture.isFramebufferOnly {
+            copyForCapture(drawable.texture, commands: commands)
+        }
         let gpuTimes = gpuTimes
         if lifeDraw != nil {
             let inFlight = lifeInFlight
@@ -1062,6 +1068,46 @@ final class Map3DMetalView: MTKView {
         commands.commit()
         lastLife = (life?.people ?? 0, life?.vehicles ?? 0)
         record(cpu: CACurrentMediaTime() - start - waited, wait: waited, drawCalls: drawCalls, triangles: triangles)
+    }
+
+    /// Decision 403 (續二): the next frame drawn, as a picture the size of
+    /// the drawable, for `done` (`nil` when it could not be copied), as the
+    /// reference's photo journal copies its canvas after the next render
+    /// (`commuter_journey` `PhotoJournal.afterRender`). The screen's
+    /// drawables are only drawn into, which is quicker; one that can be
+    /// read is asked for until the frame is copied.
+    func capture(_ done: @escaping @MainActor @Sendable (UIImage?) -> Void) {
+        captures.append(done)
+        framebufferOnly = false
+    }
+
+    /// Copies the frame drawn into `texture` into a buffer as the frame's
+    /// commands end, and hands the picture to those waiting.
+    private func copyForCapture(_ texture: MTLTexture, commands: MTLCommandBuffer) {
+        let waiting = captures
+        captures = []
+        framebufferOnly = true
+        let width = texture.width, height = texture.height
+        // Rows on 256 bytes, as a copy into a buffer may need.
+        let bytesPerRow = (width * 4 + 255) / 256 * 256
+        guard let device, let blit = commands.makeBlitCommandEncoder(),
+              let buffer = device.makeBuffer(length: bytesPerRow * height, options: .storageModeShared)
+        else {
+            for done in waiting { done(nil) }
+            return
+        }
+        blit.copy(from: texture, sourceSlice: 0, sourceLevel: 0, sourceOrigin: MTLOrigin(x: 0, y: 0, z: 0),
+                  sourceSize: MTLSize(width: width, height: height, depth: 1),
+                  to: buffer, destinationOffset: 0, destinationBytesPerRow: bytesPerRow, destinationBytesPerImage: bytesPerRow * height)
+        blit.endEncoding()
+        let copied = Map3DCapturedFrame(buffer: buffer, width: width, height: height, bytesPerRow: bytesPerRow)
+        let scale = contentScaleFactor
+        commands.addCompletedHandler { @Sendable _ in
+            Task { @MainActor in
+                let image = copied.image(scale: scale)
+                for done in waiting { done(image) }
+            }
+        }
     }
 
     /// The uniforms the shaders read (`Map3DUniforms` in
@@ -1162,3 +1208,31 @@ extension Map3DQuality {
     }()
 }
 
+/// Decision 403 (續二): a frame copied out of the 3D map's drawable
+/// (``Map3DMetalView/capture(_:)``), read once the GPU has written it.
+private final class Map3DCapturedFrame: @unchecked Sendable {
+    private let buffer: MTLBuffer
+    private let width: Int
+    private let height: Int
+    private let bytesPerRow: Int
+
+    init(buffer: MTLBuffer, width: Int, height: Int, bytesPerRow: Int) {
+        self.buffer = buffer
+        self.width = width
+        self.height = height
+        self.bytesPerRow = bytesPerRow
+    }
+
+    /// The frame as a picture: the drawable's blue, green, red and an alpha
+    /// the opaque layer ignores, in sRGB.
+    func image(scale: CGFloat) -> UIImage? {
+        let data = Data(bytes: buffer.contents(), count: bytesPerRow * height)
+        guard let provider = CGDataProvider(data: data as CFData),
+              let space = CGColorSpace(name: CGColorSpace.sRGB),
+              let image = CGImage(width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: bytesPerRow, space: space,
+                                  bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue),
+                                  provider: provider, decode: nil, shouldInterpolate: true, intent: .defaultIntent)
+        else { return nil }
+        return UIImage(cgImage: image, scale: scale, orientation: .up)
+    }
+}

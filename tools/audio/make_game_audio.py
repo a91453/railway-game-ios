@@ -5,7 +5,8 @@ The same synth as the first promo video's soundtrack, so the game sounds as
 the video does: a pad, a plucked arpeggio and rail joints over I - vi - IV - V
 in C, a station chime, a whoosh, a rail joint, and the sounds of something
 put up and of money coming in (decision 117), and of something refused
-and a warning (decision 184), and a ticket issued (decision 373). Everything is made here from
+and a warning (decision 184), a ticket issued (decision 373), and the
+followed train's horn (decision 403). Everything is made here from
 sine waves and seeded noise: no samples or third-party audio. The output is
 the same on every run.
 
@@ -149,6 +150,93 @@ def ticket():
     start = int(0.47 * SR)
     out[start : start + len(drop)] += 0.5 * drop
     return out
+
+
+# Decision 403 (續二): the followed train's horn, by the kind of train. The
+# owner's OpenWorld reference sounds a car's horn as two square waves a
+# major third apart (365 and 455 Hz) in one short envelope: in over 25 ms,
+# held to 0.18 s, out by 0.32 s (`engine/audio.js` `horn()`). The trains'
+# horns keep its shape, two or three tones sounded together, with each
+# kind's own tones, timbre and length; the tones are notes of the music's
+# C major (the music plays under them), near the pitch of each kind's real
+# horn (no recording is measured: estimated, as README.md says).
+HORNS = {
+    # A Taiwan Railway EMU's or electric locomotive's air horn: two
+    # tones a major third apart, G4 and B4, brassy, a second long.
+    "electric": {"notes": [67, 71], "shape": "saw", "attack": 0.04, "hold": 0.8, "release": 0.18, "bright": 2600},
+    # A diesel locomotive's three-chime air horn, lower, longer and fuller:
+    # A3, C4 and E4, an A minor chord, as the chimes of a locomotive horn
+    # are tuned to a chord.
+    "diesel": {"notes": [57, 60, 64], "shape": "saw", "attack": 0.07, "hold": 1.2, "release": 0.25, "bright": 1800},
+    # A steam whistle: breath first, a D5 over its octave, slow to speak.
+    "steam": {"notes": [74, 86], "shape": "whistle", "attack": 0.16, "hold": 1.3, "release": 0.35, "bright": 4000},
+    # The high-speed train's electronic horn: E5 and G5, smooth and short.
+    "highSpeed": {"notes": [76, 79], "shape": "square", "attack": 0.015, "hold": 0.55, "release": 0.12, "bright": 3000},
+    # A metro train's electronic horn: OpenWorld's envelope as it is, on
+    # A5 and C#6 (its own third, an octave and a fifth above its car's).
+    "metro": {"notes": [81, 85], "shape": "square", "attack": 0.025, "hold": 0.155, "release": 0.14, "bright": 5000},
+}
+
+
+# Each horn's RMS: -12 dBFS, about the station chimes' loudness.
+HORN_RMS = 10 ** (-12 / 20)
+
+
+def horn(kind):
+    """Decision 403 (續二): one blow of `kind`'s horn (``HORNS``): its tones
+    sounded together, each a band-limited saw (an air horn's), square (an
+    electronic horn's, OpenWorld's) or a whistle's sine with breath,
+    softened above the kind's `bright` cut, in OpenWorld's envelope (in
+    over `attack`, held, out over `release`, both curved as its
+    exponential ramps). An air horn's pitch rises the last 3% as the air
+    comes in, as real ones do."""
+    h = HORNS[kind]
+    length = h["attack"] + h["hold"] + h["release"]
+    n = int(round((length + 0.05) * SR))
+    t = np.arange(n) / SR
+    out = np.zeros(n)
+    for i, m in enumerate(h["notes"]):
+        f = note_hz(m)
+        bend = np.ones(n)
+        if h["shape"] == "saw":
+            bend = 1 - 0.03 * np.exp(-t / max(h["attack"], 0.01))
+        phase = 2 * np.pi * np.cumsum(f * bend) / SR
+        tone = np.zeros(n)
+        harmonic = 1
+        while harmonic * f < min(h["bright"] * 3, SR / 2 - 1000):
+            # A gentle low-pass: each harmonic above the cut down by its
+            # share past it.
+            soft = 1 / (1 + (harmonic * f / h["bright"]) ** 2)
+            if h["shape"] == "saw":
+                tone += soft * np.sin(harmonic * phase) / harmonic
+            elif h["shape"] == "square" and harmonic % 2:
+                tone += soft * np.sin(harmonic * phase) / harmonic
+            elif h["shape"] == "whistle" and harmonic == 1:
+                tone += np.sin(phase)
+            harmonic += 1
+        out += tone * (1.0 - 0.15 * i)
+    if h["shape"] == "whistle":
+        # The steam's breath: noise in a band round the whistle's tone
+        # (the difference of two one-pole low-passes, about 300 Hz to
+        # 2 kHz, as the ticket's feed), louder as it speaks than once it
+        # sings.
+        noise = np.random.default_rng(403).standard_normal(n)
+        lows = []
+        for cut in (0.25, 0.04):
+            y = 0.0
+            low = np.zeros(n)
+            for j in range(n):
+                y += cut * (noise[j] - y)
+                low[j] = y
+            lows.append(low)
+        breath = lows[0] - lows[1]
+        breath = breath / np.abs(breath).max()
+        out = out / np.abs(out).max() + breath * (0.15 + 0.45 * np.exp(-t / 0.2))
+    a, hold, r = h["attack"], h["hold"], h["release"]
+    rise = np.clip(t / a, 0, 1)
+    fall = np.clip((t - a - hold) / r, 0, 1)
+    env = (1 - (1 - rise) ** 3) * (1 - fall) ** 3
+    return out * env
 
 
 # Decision 343: the running loops, made to the spectra of recordings of
@@ -516,6 +604,7 @@ SYNTH_SOURCES = {
     "rain-typhoon.caf": "weather(\"typhoon\"), decision 346",
     "thunder.caf": "thunder(), decision 346",
     "ticket-issued.wav": "ticket(), decision 373",
+    **{f"horn-{kind}.wav": f"horn(\"{kind}\"), decision 403" for kind in HORNS},
 }
 
 
@@ -632,6 +721,17 @@ def main(out_dir):
 
     # Decision 373: a day pass on sale, a ticket printed, cut and dropped.
     write_wav(os.path.join(out_dir, "ticket-issued.wav"), normalized(ticket(), 0.5))
+
+    # Decision 403 (續二): the followed train's horn, one for each kind.
+    # Levelled by RMS, not peak: an air horn's in-phase harmonics peak
+    # some 7 dB higher than an electronic horn's square at the same
+    # loudness.
+    for kind in HORNS:
+        x = horn(kind)
+        x = x * HORN_RMS / np.sqrt(np.mean(x**2))
+        if np.abs(x).max() > 0.95:
+            raise SystemExit(f"horn {kind} would clip")
+        write_wav(os.path.join(out_dir, f"horn-{kind}.wav"), x)
 
 
 def check(out_dir):
