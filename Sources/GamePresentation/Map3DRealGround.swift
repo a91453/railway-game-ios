@@ -70,6 +70,8 @@ extension Map3DScene.Builder {
     /// Lays `map` on the ground; the cells it takes from the city's lots.
     mutating func addBaseMap(_ map: Map3DBaseMap) -> TakenGround {
         var taken = TakenGround()
+        // Decision 391: its bridges' decks, before the roads on them.
+        roadBridges = bridgeDecks(of: map, frame: RealWorldFrame(world: world))
         for cover in Map3DBaseMap.Cover.allCases {
             for area in map.areas where area.cover == cover {
                 addArea(area, taking: &taken.whole)
@@ -80,9 +82,14 @@ extension Map3DScene.Builder {
                      lift: Self.lift(of: .water), color: Map3DPalette.water, paint: nil, water: true, taking: &taken.whole)
         }
         addRoads(map.roads, taking: &taken.byRoads)
+        addRoadBridges(map.roads)
         taken.byRoads.subtract(taken.whole)
         return taken
     }
+
+    /// Decision 391: no street furniture on a road this far over the
+    /// ground (a bridge or its ramp), metres.
+    static let propRise: Float = 0.3
 
     /// Decision 345: no lot's building is drawn narrower than this many
     /// metres beside the roads (a row of 透天厝 each side of 7 m deep).
@@ -186,12 +193,13 @@ extension Map3DScene.Builder {
         // under it, so both edges show and they close at the junctions.
         for road in roads where Self.sidewalk(of: road.kind) > 0 && !road.isRamp {
             addStrip(road.points, bounds: road.bounds, width: road.kind.width(ramp: false) + 2 * Self.sidewalk(of: road.kind),
-                     lift: Self.sidewalkLift, color: Map3DPalette.sidewalk, paint: Self.paving, taking: &taken)
+                     lift: Self.sidewalkLift, color: Map3DPalette.sidewalk, paint: Self.paving, raised: true, onDeck: road.bridgeLevel > 0,
+                     taking: &taken)
         }
         for kind in Map3DBaseMap.RoadKind.allCases {
             for road in roads where road.kind == kind {
                 addStrip(road.points, bounds: road.bounds, width: kind.width(ramp: road.isRamp), lift: Self.lift(of: kind),
-                         color: Map3DPalette.road(kind), paint: nil, taking: &taken)
+                         color: Map3DPalette.road(kind), paint: nil, raised: true, onDeck: road.bridgeLevel > 0, taking: &taken)
             }
         }
         // Decision 355: the paint at the junctions, the centre lines
@@ -201,7 +209,7 @@ extension Map3DScene.Builder {
         for (number, road) in roads.enumerated() where Self.hasCentreLine(road) {
             for piece in markings.centreLines(of: road, number: number) {
                 addStrip(piece, bounds: road.bounds, width: 0.3, lift: Self.centreLineLift, color: Map3DPalette.centreLine, paint: nil,
-                         taking: &lines)
+                         raised: true, onDeck: road.bridgeLevel > 0, taking: &lines)
             }
         }
         addRoadMarkings(markings)
@@ -340,9 +348,13 @@ extension Map3DScene.Builder {
     /// A strip `width` metres wide along `points`, kept to `bounds`, `lift`
     /// over the drawn ground: each segment split where it crosses the
     /// ground's grid and its triangles' diagonals, and drawn a half width
-    /// past its ends so bends close.
+    /// past its ends so bends close. Decision 391: a `raised` strip (a
+    /// road's) on a bridge's ramps at their height, and `onDeck` (a
+    /// bridge's) on its deck too, split every ``raisedStep`` metres near
+    /// one.
     mutating func addStrip(_ points: [Map3DBaseMap.Point], bounds: Map3DBaseMap.Bounds, width: Float, lift: Float, color: UInt32,
-                           paint: Map3DPaint?, water: Bool = false, taking taken: inout Set<Map3DScene.ChunkKey>) {
+                           paint: Map3DPaint?, water: Bool = false, raised: Bool = false, onDeck: Bool = false,
+                           taking taken: inout Set<Map3DScene.ChunkKey>) {
         let half = Double(width) / 2
         for index in 1..<points.count {
             guard let (start, end) = Self.clipSegment(points[index - 1], points[index], to: bounds) else { continue }
@@ -353,7 +365,10 @@ extension Map3DScene.Builder {
             // Out a half width past each end, so bends and joins close.
             let first = Map3DBaseMap.Point(x: start.x - along.x * half, z: start.z - along.z * half)
             let last = Map3DBaseMap.Point(x: end.x + along.x * half, z: end.z + along.z * half)
-            let cuts = splits(from: first, to: last)
+            var cuts = splits(from: first, to: last)
+            // Decision 391: a road near a raised one at its height.
+            let lifted = raised && nearRaisedRoad(from: first, to: last)
+            if raised { cuts = merged(cuts, raisedCuts(from: first, to: last, anchor: points[index - 1], along: along, onDeck: onDeck)) }
             // Decision 375: a road across a trench deep enough bridges it,
             // the whole of this stretch; otherwise it gives way to it.
             let bridges = bridgesTrench(from: first, to: last)
@@ -362,17 +377,26 @@ extension Map3DScene.Builder {
                 guard t1 - t0 > 1e-6 else { continue }
                 let a = Map3DBaseMap.Point(x: first.x + (last.x - first.x) * t0, z: first.z + (last.z - first.z) * t0)
                 let b = Map3DBaseMap.Point(x: first.x + (last.x - first.x) * t1, z: first.z + (last.z - first.z) * t1)
+                // Decision 391: each end at the road's height over the
+                // ground there.
+                let level: (rise: Float, onBridge: Bool) = (0, false)
+                let riseA = lifted ? roadRise(at: a, along: along, onDeck: onDeck) : level,
+                    riseB = lifted ? roadRise(at: b, along: along, onDeck: onDeck) : level
                 // Left of the way along is (z, −x) in x east, z south.
                 let leftX = along.z * half, leftZ = -along.x * half
                 var corners = [
-                    (a.x + leftX, a.z + leftZ), (a.x - leftX, a.z - leftZ), (b.x - leftX, b.z - leftZ), (b.x + leftX, b.z + leftZ),
+                    (a.x + leftX, a.z + leftZ, riseA.rise), (a.x - leftX, a.z - leftZ, riseA.rise),
+                    (b.x - leftX, b.z - leftZ, riseB.rise), (b.x + leftX, b.z + leftZ, riseB.rise),
                 ].map { corner -> Map3DPoint in
                     let x = Float(corner.0), z = Float(corner.1)
-                    return Map3DPoint(x, drawnGround(x: x, z: z) + lift, z)
+                    return Map3DPoint(x, drawnGround(x: x, z: z) + lift + corner.2, z)
                 }
                 var triangles = [0, 1, 2, 0, 2, 3]
                 let middle = Map3DPoint(Float((a.x + b.x) / 2), 0, Float((a.z + b.z) / 2))
-                if !bridges { (corners, triangles) = outsideTrenches(corners, triangles: triangles, lift: lift) }
+                // Decision 391: a bridge's deck is over any trench.
+                if !bridges && !(riseA.onBridge && riseB.onBridge) {
+                    (corners, triangles) = outsideTrenches(corners, triangles: triangles, lift: lift)
+                }
                 mesh(at: middle) {
                     let start = $0.vertices.count
                     $0.addFlat(corners, triangles: triangles, color: color, paint: paint)
@@ -381,6 +405,75 @@ extension Map3DScene.Builder {
                 take(from: a, to: b, half: half, into: &taken)
             }
         }
+    }
+
+    /// Decision 391: how finely a road near a raised one is laid, metres,
+    /// so its ramps keep their grade.
+    static let raisedStep: Double = 4
+
+    /// `cuts` and `extra` (fractions of the way, from 0 to 1) in order,
+    /// each once.
+    func merged(_ cuts: [Double], _ extra: [Double]) -> [Double] {
+        guard !extra.isEmpty else { return cuts }
+        var kept: [Double] = []
+        for cut in (cuts + extra).sorted() where kept.last.map({ cut - $0 > 1e-9 }) ?? true {
+            kept.append(cut)
+        }
+        return kept
+    }
+
+    /// Where the way from `first` to `last`, along `along` on the line
+    /// through `anchor`, is cut near a raised road, as fractions of it:
+    /// on the ``raisedStep`` metres from `anchor`, where its rise over the
+    /// ground (`onDeck` as ``roadRise(at:along:onDeck:)``) bends, seen a
+    /// step, four or sixteen either side (``Map3DScene/Builder/bends(_:)``);
+    /// the ground's own bends are its grid's cuts. Measured from the line,
+    /// not the way, which a tile or a chunk cuts short, so a chunk built
+    /// apart cuts it where the whole scene does.
+    mutating func raisedCuts(from first: Map3DBaseMap.Point, to last: Map3DBaseMap.Point, anchor: Map3DBaseMap.Point,
+                             along: (x: Double, z: Double), onDeck: Bool) -> [Double] {
+        guard !roadBridges.isEmpty else { return [] }
+        let step = Self.raisedStep
+        let start = (first.x - anchor.x) * along.x + (first.z - anchor.z) * along.z
+        let end = (last.x - anchor.x) * along.x + (last.z - anchor.z) * along.z
+        guard end - start > 1e-9 else { return [] }
+        func at(_ distance: Double) -> Map3DBaseMap.Point {
+            Map3DBaseMap.Point(x: anchor.x + along.x * distance, z: anchor.z + along.z * distance)
+        }
+        let reach = Double(Self.bendScales.last!) * step
+        guard nearRaisedRoad(from: at(start - reach), to: at(end + reach)) else { return [] }
+        // The rise on each step's multiple, worked out once.
+        var rises: [Int: Float] = [:]
+        func rise(_ number: Int) -> Float {
+            if let known = rises[number] { return known }
+            let found = roadRise(at: at(Double(number) * step), along: along, onDeck: onDeck).rise
+            rises[number] = found
+            return found
+        }
+        var cuts: [Double] = []
+        var number = Int((start / step).rounded(.up))
+        while Double(number) * step < end {
+            defer { number += 1 }
+            let distance = Double(number) * step
+            guard distance > start else { continue }
+            let bent = Self.bendScales.contains { scale in
+                number % scale == 0 && Self.bends([rise(number - scale), rise(number), rise(number + scale)])
+            }
+            if bent { cuts.append((distance - start) / (end - start)) }
+        }
+        return cuts
+    }
+
+    /// Decision 391: the steps a raised road's bends are looked for over,
+    /// in ``raisedStep``s: a step, four and sixteen, each on its own
+    /// multiples, so a long gentle bend is cut at most 64 m apart and a
+    /// level stretch not at all.
+    static let bendScales = [1, 4, 16]
+
+    /// Whether the middle of three heights an even step apart lies off the
+    /// line through the other two by more than 1 cm.
+    static func bends(_ heights: [Float]) -> Bool {
+        abs(heights[1] - (heights[0] + heights[2]) / 2) > 0.01
     }
 
     /// Where the segment from `a` to `b` crosses the ground's grid lines
@@ -576,6 +669,9 @@ extension Map3DScene.Builder {
                             // Now and then a gap, as a real street has.
                             guard map3DRandom(seed.0, seed.1, salt: 71) >= (rule.prop == .tree ? 0.18 : 0.08), !nearJunction(x, z),
                                   let model = Self.propModels[rule.prop] else { continue }
+                            // Decision 391: none on a bridge or its ramp.
+                            guard roadRise(at: Map3DBaseMap.Point(x: centre.x, z: centre.z), along: along, onDeck: road.bridgeLevel > 0).rise < Self.propRise
+                            else { continue }
                             let foot = Map3DPoint(Float(x), drawnGround(x: Float(x), z: Float(z)) + Self.sidewalkLift, Float(z))
                             // Its left, where a light's arm reaches, toward the road.
                             let forward = side > 0 ? Map3DPoint(Float(-along.x), 0, Float(-along.z)) : Map3DPoint(Float(along.x), 0, Float(along.z))
