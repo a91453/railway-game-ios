@@ -183,33 +183,37 @@ extension StationKitBuilder {
             let y=bottom+(h-bottom)*(0.5+0.5*(s>=0 ? 1:-1)*powf(abs(s),0.65))
             return Map3DPoint(x,y,z)
         }
-        func shellAngle(_ x: Float,_ i: Int)->Float {
-            let original=Float(i)*2*Float.pi/Float(segments)
-            guard cab && x>=3.7 else { return original }
-            // Preserve the delivered shell sampling. Paint is clipped separately
-            // below so its boundary cannot inherit this angular height wave.
-            let a=interpolate(x,[(3.7,-0.157),(4.8,-0.07),(5.8,-0.015),(7.5,0.02),(9.1,0.20),(10,0.53),(10.5,0.76),(11,1.0),(11.5,1.30),(11.9,1.46),(12.5,1.46)])
-            return interpolate(Float(i),[(0,a),(10,Float.pi/2),(20,Float.pi-a),(24,Float.pi+0.63),(30,1.5*Float.pi),(36,2*Float.pi-0.63),(40,2*Float.pi+a)])
-        }
         let rings=xs.map { x in (0..<segments).map { i in
-            let a=shellAngle(x,i),p=surface(x,a)
-            let shoulder = cab && x>3.7 ? interpolate(x,[(3.7,0),(5.8,0.035),(8.7,0.065),(10.5,0.045),(11.9,0.018),(12.5,0)]) : 0
-            let swell=shoulder*powf(max(0,1-abs(sinf(a))),4)
-            return Map3DPoint(p.x,p.y,p.z+(cosf(a)>=0 ? swell:-swell))
+            let a=Float(i)*2*Float.pi/Float(segments),p=surface(x,a)
+            guard cab && x>5.8 else { return p }
+            // Photo-led rounded shoulder: keep width below the narrowing white
+            // nose. N700S GLB informed the section relationship, not these vertices.
+            let (h,_)=dimensions(x),u=max(0,min(1,(x-5.8)/6.7))
+            let amplitude: Float=0.20*powf(max(0,sinf(Float.pi*u)),1.5)
+            let shoulderHeight=bottom+0.32*(h-bottom),radius=0.22*(h-bottom)+0.08
+            let distance=(p.y-shoulderHeight)/radius
+            let swell=amplitude*expf(-distance*distance)
+            let lateral=min(1.69,abs(p.z)+swell)
+            return Map3DPoint(p.x,p.y,p.z>=0 ? lateral:-lateral)
         } }
         func bandHeight(_ x: Float)->Float {
-            // C1-continuous joins to the straight body stripe and low lip.
-            // Evaluate height directly: angular colours made the old wavy hump.
+            // Smooth centreline height; the flank term below wraps this boundary
+            // around the sculpted shoulder instead of drawing a flat stripe.
             let baseline: Float=1.7852976
             func ease(_ t: Float)->Float { let u=max(0,min(1,t));return u*u*(3-2*u) }
-            if x<=3.7 { return baseline }
-            if x<=6.7 { return baseline+(1.98-baseline)*ease((x-3.7)/3) }
-            return 1.98+(1.30-1.98)*ease((x-6.7)/5.8)
+            if x<=6.7 { return baseline }
+            return baseline+(1.23-baseline)*ease((x-6.7)/5.8)
         }
         func clip(_ polygon: [Map3DPoint],at x0: Float,_ x1: Float,upper: Bool)->[Map3DPoint] {
             let h0=bandHeight(x0),h1=bandHeight(x1)
             func distance(_ p: Map3DPoint)->Float {
-                let d=p.y-(h0+(h1-h0)*(p.x-x0)/(x1-x0))
+                let (_,w)=dimensions(p.x)
+                let t=max(0,min(1,(p.x-3.7)/7.2)),ease=t*t*(3-2*t)
+                let flank=abs(p.z)/w
+                // The coloured rim climbs around the sides, leaving a tapered
+                // white inset. A flat height cut erased this in the prior version.
+                let height=h0+(h1-h0)*(p.x-x0)/(x1-x0)+0.70*ease*flank*flank
+                let d=p.y-height
                 return abs(d)<0.000001 ? 0:d
             }
             var out: [Map3DPoint]=[]
@@ -238,8 +242,8 @@ extension StationKitBuilder {
                 let color: UInt32 = (24...35).contains(i) ? Self.steel : teal ? refreshTeal:refreshWhite
                 for triangle in [[rings[k][i],rings[k][j],rings[k+1][j]],[rings[k][i],rings[k+1][j],rings[k+1][i]]] {
                     if cab && xs[k]>=0 && !(24...35).contains(i) {
-                        // Subdivide the existing planar triangle for paint only;
-                        // never move the original surface to chase a colour edge.
+                        // Split the final sculpted shell along its shared paint boundary.
+                        // No overlapping colour decal or separate lip box.
                         face(clip(triangle,at:xs[k],xs[k+1],upper:true),inside:inside,color:refreshWhite)
                         face(clip(triangle,at:xs[k],xs[k+1],upper:false),inside:inside,color:refreshTeal)
                     } else { face(triangle,inside:inside,color:color) }

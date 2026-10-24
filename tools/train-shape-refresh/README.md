@@ -1,6 +1,6 @@
-# E200 / 700T 原生外形修訂（五版：平順接回車身的分色曲線）
+# E200 / 700T 原生外形修訂（六版：N700S實際GLB研究與700T肩部／白鼻罩關係）
 
-獨立配方 `Map3DTrainShapeRefresh.swift`，本輪以實際已交付Codex producer `05248513` 為真正前版，只修分色邊界，不改已交付車殼表面。依使用者新規則：Codex列車可沿用／拆件，非Codex模型只參考。沒有複製E201來源mesh／貼圖。入口仍只註冊五個靜態單元，**不替換營運E200／高鐵**。GameCore／存檔／golden／replay不動。
+獨立配方 `Map3DTrainShapeRefresh.swift`，本輪以實際已交付Codex producer `7c3dbc4a` 為真正前版；本輪修真實肩部截面與共形分色，非單純改色。依使用者新規則：Codex列車可沿用／拆件，非Codex模型只參考。沒有複製E201來源mesh／貼圖。入口仍只註冊五個靜態單元，**不替換營運E200／高鐵**。GameCore／存檔／golden／replay不動。
 
 ## 建模前判讀與本輪來源
 
@@ -41,7 +41,9 @@ node tools/train-shape-refresh/review.mjs OUT
 node tools/train-shape-refresh/verify.mjs OUT
 python3 tools/train-shape-refresh/nose-audit.py OUT PRIOR
 python3 tools/train-shape-refresh/band-audit.py OUT PRIOR
-python3 tools/train-shape-refresh/paint-audit.py OUT PRIOR
+# paint-audit.py僅適用歷史第五版的純分色修訂；第六版有幾何改動，不跑此項。
+# 合併N700S參考GLB本機四向白模研究（來源檔不隨本包散布）
+blender --background --python tools/train-shape-refresh/reference-study.py -- PRIVATE_N700S_GLB OUT/reference-study
 python3 tools/train-shape-refresh/wheel-audit.py OUT
 node tools/train-shape-refresh/render.mjs OUT
 for part in cab nose e200 middle formation; do
@@ -56,14 +58,18 @@ python3 tools/train-shape-refresh/bundle.py OUT ACTUAL_PRODUCER_COMMIT
 # bundle後重測真ZIP下載、再bundle，最後確認現有ZIP每個member仍等於live bytes
 ```
 
-本輪真前版模型與來源在history/05248513，第二版完整包仍留私庫revision-2；早期交付在revision-2/history/d476304b，不是臨時重捏前版；四種比較同相機／公尺尺度。公開只有配方／工具／必要測試／文件／一張總覽，完整包留私庫原目錄新增 `revision-5/`，不覆蓋舊包。來源記實際producer，不用未提交版本冒充commit。Linux抽樣射線／WebGL不代表完整碰撞、真機Metal、動畫或效能驗證。
+本輪真前版模型與來源在history/7c3dbc4a，第二版完整包仍留私庫revision-2；早期交付在revision-2/history/d476304b，不是臨時重捏前版；四種比較同相機／公尺尺度。公開只有配方／工具／必要測試／文件／一張總覽，完整包留私庫原目錄新增 `revision-6/`，不覆蓋舊包。來源記實際producer，不用未提交版本冒充commit。Linux抽樣射線／WebGL不代表完整碰撞、真機Metal、動畫或效能驗證。
 
-## 第五版：只修色帶過渡，維持原來車殼表面
+## 第六版：重新檢視六張圖與已合併N700S GLB
 
-使用者指出綠色帶「一下往上又往下」，未平順接回車身。真正前版05248513的色帶跟著截面角度走，高度因此出現局部波峰與折點。本輪以連續三次曲線定義色帶高度，車身直帶接點與低前唇的解析切線均為零，降低／拉寬肩帶高點；實際網格以同一xs分段線性近似。曲線是造型推估，不是實車工程尺寸。
+本輪六張附圖均實際查看：圖1高斜視模型、圖2鼻側微距模型、圖3側斜雙車模型、圖4前斜雙車模型、圖5單節商品模型、圖6實車側面。前五張是模型照片，不拿透視像素或玩具比例當實車工程尺寸。共同可見：橘色區域是厚實但圓潤的連續肩部／前唇，從車側包住較窄的白色鼻罩；深灰下裙在它下方。先前只修平面色線，仍缺此截面關係。本輪沿用遊戲暖白／綠松，不留商標、編號或來源貼圖。
 
-不改原車殼採樣、風擋、燈、門窗、輪架或其他車輛；以平面裁切原三角，產生白／綠松分色共邊，不用漸層、貼片、裝飾遮波。每端124個原三角分成370個共面子三角；paint-audit獨立證明每個新增三角都在唯一原三角內、覆蓋面積一致，最大平面誤差小於0.000001m。每端7640個幾何三角原位不變。這是Float32幾何穩定的證據，不是工程精度宣稱。
+已查公開PR1203於e105e889合併、私有PR71於e2a9d4a9合併；從私庫origin/main實際取 `Railway/n700s-n700st-2026-10-24/n700s/models/railway-n700s-a.glb`，Blender4.3.2獨立匯入並看側、正、俯、斜四向。原GLB SHA256 `4ff10510191f1efe1d982c566418c99769c069f38d64e8a046fc19c75aee8c2c`，bounds20.75×2.8006×4.46為未校準來源單位，**不是工程公尺**。`reference-study.py`可重做中性白模視覺研究，輸出只留私庫reference-study。學的是中央收窄／下方肩部留寬／回車身的關係；沒有複製其來源頂點、貼圖、N700S門窗、單元或編組。
 
-nose-audit逐bytes維持E200／middle／panto／比較車的native／GLB、頭尾5768個非殼面後段三角。真正前版模型、GLB、manifest、來源、配方留history/05248513，完整revision-4未覆蓋；同相機同尺度比較見blue-cab-before-after.png、700t-nose-before-after.png（原生局部完整三角選取）、700t-formation-before-after.png。
+700T新原生殼面保留原鼻長、中心線屋頂高度與接口；用圓潤的下肩截面取代單一收縮錐面，側向鼓起受車身半寬1.69m限制，不做N700S尖翼或外掛嘴唇箱。白鼻罩的分色邊界隨側肩上繞，中央收成尖圓端，綠松前唇連續包覆；車身接點保持同高，避免先前色帶突跳。這些都是造型比例推估，非工程規格。
 
-先在未修的真正前版跑新增Swift測試，抓到8個高度／斜率／折點失敗；修後21個相關測試通過。獨立band-audit讀匯出頂點：車身接點高度差為0、最高色帶1.98m、最大分段斜率約0.176、最大相鄰斜率差約0.047；前版峰高2.323m、斜率約0.363、差約0.175。這些是本模型可見分色幾何量，不是相似度分數。每次修改後重匯出與查看配色／白模／剪影側正俯斜。外觀是自檢，不是作者已認可。
+真正前版模型、GLB、manifest、來源、配方留history/7c3dbc4a，完整revision-5保留。nose-audit證明E200／middle／panto／比較車native、GLB不變；頭尾各5768個風擋、燈、門窗、輪架等後段三角逐bytes不變。新增／移除殼三角限頭x≥0／尾x≤0，包含細分原長面。本輪有實際殼面變化，**不沿用第五版『車殼不變』或paint-verification結論**。
+
+新測試在真前版先出現三項失敗，修後21相關測試通過。獨立band-audit從實際匯出頂點量x10.5截面：肩寬約3.340m（前版3.141）、白鼻罩寬／肩寬約0.741（前版0.992）；x11.9白鼻罩寬約0.829m（前版1.585）；車身分色接點高度差0。分色上緣最高約2.190m，相鄰分段斜率差約0.089，並檢查無尖銳折點。這是可見幾何缺陷檢查，不是相似度分數或實車尺寸確認。
+
+先看實際原生配色／白模／剪影四向再批次匯出；另加原生x≥3.7完整三角的局部四向白模／剪影預覽，完整七向仍提供全車。側、正、俯、斜同相機同尺度真正前後在blue-cab-before-after.png／700t-nose-before-after.png／700t-formation-before-after.png。外觀自檢改善本輪指定結構；風擋細分、雨刷、內裝和小設備仍簡化，不宣稱作者認可或工程復刻。
