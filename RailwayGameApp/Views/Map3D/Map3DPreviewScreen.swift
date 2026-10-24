@@ -68,7 +68,7 @@ struct Map3DPreviewScreen: View {
                 .ignoresSafeArea()
                 .accessibilityIdentifier("map3D.view")
             Map3DRainLayer(rain: Map3DRain(MapWeather(world: session.world)), detail: stats?.streetDetail ?? .full,
-                           night: Map3DLighting(at: session.world.clock.now).night)
+                           night: Map3DLighting(at: session.world.clock.now).night, underground: stats?.underground ?? false)
                 .ignoresSafeArea()
             Map3DTrainLabelsView(state: trainLabels, world: session.world)
                 .ignoresSafeArea()
@@ -231,6 +231,9 @@ struct Map3DPreviewScreen: View {
                     Text(verbatim: String(format: "wait %.1f ms · %.0f×", stats.waitMilliseconds, stats.drawScale))
                     Text(verbatim: "\(stats.drawCalls) draws · \(stats.triangles.formatted()) triangles")
                     Text(verbatim: "\(stats.people) people · \(stats.vehicles) vehicles · \(stats.streetDetail)")
+                    // Decision 394: the cab deep in a tunnel draws only
+                    // what is under the ground.
+                    if stats.underground { Text(verbatim: "underground") }
                 }
                 .font(.caption.monospacedDigit())
             }
@@ -888,10 +891,12 @@ private struct Map3DRainLayer: View, Equatable {
     let detail: Map3DStreetDetail
     /// How far the day's light has gone (``Map3DLighting/night``).
     let night: Float
+    /// Decision 394: the cab deep in a tunnel, where no rain falls.
+    let underground: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     nonisolated static func == (lhs: Map3DRainLayer, rhs: Map3DRainLayer) -> Bool {
-        lhs.rain == rhs.rain && lhs.detail == rhs.detail && lhs.night == rhs.night
+        lhs.rain == rhs.rain && lhs.detail == rhs.detail && lhs.night == rhs.night && lhs.underground == rhs.underground
     }
 
     var body: some View {
@@ -900,7 +905,7 @@ private struct Map3DRainLayer: View, Equatable {
         let colour = Color(.sRGB, red: Double(look.colour >> 16 & 0xFF) / 255, green: Double(look.colour >> 8 & 0xFF) / 255,
                            blue: Double(look.colour & 0xFF) / 255, opacity: look.opacity)
         return Group {
-            if rain.amount > 0, !reduceMotion {
+            if rain.amount > 0, !reduceMotion, !underground {
                 // At most 60 a second: the rain looks no smoother faster.
                 TimelineView(.animation(minimumInterval: 1.0 / 60)) { timeline in
                     Canvas { context, size in
