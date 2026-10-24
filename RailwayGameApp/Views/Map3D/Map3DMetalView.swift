@@ -131,6 +131,9 @@ final class Map3DMetalView: MTKView {
         /// frame.
         let close: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
         var closeUp = false
+        /// The boxes standing in for some of `close`'s models: drawn in
+        /// full, but not close up.
+        let standIn: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
         /// Decision 232: its shadows, if it has any.
         let shadows: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
         /// Decision 244: its street furniture's instances, sorted by model,
@@ -414,6 +417,13 @@ final class Map3DMetalView: MTKView {
                 encoder.drawIndexedPrimitives(type: .triangle, indexCount: count, indexType: .uint32, indexBuffer: chunk.indices, indexBufferOffset: 0)
                 drawCalls += 1
                 triangles += count / 3
+            }
+            if chunk.detailed, let standIn = chunk.standIn {
+                encoder.setVertexBuffer(standIn.vertices, offset: 0, index: 0)
+                encoder.drawIndexedPrimitives(type: .triangle, indexCount: standIn.indexCount, indexType: .uint32, indexBuffer: standIn.indices,
+                                              indexBufferOffset: 0)
+                drawCalls += 1
+                triangles += standIn.indexCount / 3
             }
             if !chunk.detailed, let far = chunk.far {
                 encoder.setVertexBuffer(far.vertices, offset: 0, index: 0)
@@ -716,6 +726,10 @@ final class Map3DMetalView: MTKView {
         if let closeVertices = makeBuffer(chunk.close.vertices), let closeIndices = makeBuffer(chunk.close.indices) {
             close = (closeVertices, closeIndices, chunk.close.indices.count)
         }
+        var standIn: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
+        if let standInVertices = makeBuffer(chunk.standIn.vertices), let standInIndices = makeBuffer(chunk.standIn.indices) {
+            standIn = (standInVertices, standInIndices, chunk.standIn.indices.count)
+        }
         var props: (instances: MTLBuffer, runs: [(model: Int, first: Int, count: Int)])?
         let sorted = chunk.props.sorted { $0.model < $1.model }
         if let instances = makeBuffer(sorted.flatMap(\.floats)) {
@@ -731,7 +745,7 @@ final class Map3DMetalView: MTKView {
         }
         let signs = makeBuffer(chunk.signs.flatMap(\.floats)).map { (instances: $0, count: chunk.signs.count) }
         return Chunk(vertices: vertices, indices: indices, indexCount: chunk.mesh.indices.count, baseIndexCount: chunk.baseIndexCount,
-                     far: far, close: close, shadows: shadows, props: props, signs: signs, minimum: chunk.minimum, maximum: chunk.maximum,
+                     far: far, close: close, standIn: standIn, shadows: shadows, props: props, signs: signs, minimum: chunk.minimum, maximum: chunk.maximum,
                      column: chunk.column, row: chunk.row, cityTops: chunk.cityTops, coarse: chunk.coarse)
     }
 
@@ -909,6 +923,14 @@ final class Map3DMetalView: MTKView {
                                               indexBufferOffset: chunk.baseIndexCount * MemoryLayout<UInt32>.stride)
                 drawCalls += 1
                 triangles += city / 3
+            }
+            // The kit buildings' boxes, but not over their models close up.
+            if detailed, !chunk.closeUp, let standIn = chunk.standIn {
+                encoder.setVertexBuffer(standIn.vertices, offset: 0, index: 0)
+                encoder.drawIndexedPrimitives(type: .triangle, indexCount: standIn.indexCount, indexType: .uint32,
+                                              indexBuffer: standIn.indices, indexBufferOffset: 0)
+                drawCalls += 1
+                triangles += standIn.indexCount / 3
             }
             if !detailed, let far = chunk.far {
                 encoder.setVertexBuffer(far.vertices, offset: 0, index: 0)

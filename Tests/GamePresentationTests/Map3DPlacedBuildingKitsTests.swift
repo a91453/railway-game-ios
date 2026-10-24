@@ -106,9 +106,26 @@ final class Map3DPlacedBuildingKitsTests: XCTestCase {
         try world.placeBuilding(.amusementPark, at: PlanPoint(x: 20_480, y: 20_480))
         var builder = builder(world)
         builder.addPlacedBuildings()
-        let close = triangles(builder.closeMeshes), far = triangles(builder.farMeshes), near = triangles(builder.nearMeshes)
+        let close = triangles(builder.closeMeshes), far = triangles(builder.farMeshes), standIn = triangles(builder.standInMeshes)
         XCTAssertGreaterThan(close, 5_000)
         XCTAssertLessThan(far, 200)
-        XCTAssertEqual(near, far)
+        XCTAssertEqual(standIn, far)
+        // The boxes are not in the full mesh drawn under the models.
+        XCTAssertEqual(triangles(builder.nearMeshes), 0)
+    }
+
+    /// Close up a hotel or department store is its models, not the box
+    /// round them: the box is drawn in full only where its model is not.
+    func testTheBoxesGiveWayToTheModelsCloseUp() throws {
+        var world = try makeWorld(width: 40_960, height: 40_960, balance: 1_000_000_000)
+        try world.placeBuilding(.hotel, at: PlanPoint(x: 12_288, y: 20_480))
+        try world.placeBuilding(.departmentStore, at: PlanPoint(x: 28_672, y: 20_480))
+        let scene = Map3DScene(world: world, snapshot: world.railwaySnapshot())
+        for chunk in scene.chunks where !chunk.standIn.isEmpty {
+            // The models close up; their boxes apart, the same as from afar.
+            XCTAssertFalse(chunk.close.isEmpty)
+            XCTAssertEqual(chunk.standIn.triangleCount, chunk.far.triangleCount)
+        }
+        XCTAssertEqual(scene.chunks.filter { !$0.standIn.isEmpty }.count, 2)
     }
 }

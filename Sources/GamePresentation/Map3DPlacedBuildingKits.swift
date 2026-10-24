@@ -63,7 +63,8 @@ extension Map3DScene.Builder {
             }
             target = .close
             mesh(at: base) { $0.append(model, at: base, forward: facing) }
-            for level in [Target.near, .far] {
+            // The boxes round the models hide them: not drawn close up.
+            for level in [Target.standIn, .far] {
                 target = level
                 mesh(at: base) { mesh in
                     for box in layout.boxes {

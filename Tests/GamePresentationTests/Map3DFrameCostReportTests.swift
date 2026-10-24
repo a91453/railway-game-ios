@@ -81,6 +81,9 @@ final class Map3DFrameCostReportTests: XCTestCase {
                 } else {
                     add("city (far)", chunk.far.triangleCount, Self.pixels(chunk.far, upTo: chunk.far.indices.count, through: matrix), 1)
                 }
+                if detailed, !closeUp, !chunk.standIn.isEmpty {
+                    add("kit buildings' boxes", chunk.standIn.triangleCount, Self.pixels(chunk.standIn, upTo: chunk.standIn.indices.count, through: matrix), 1)
+                }
                 if closeUp {
                     add("close-up things", chunk.close.triangleCount, Self.pixels(chunk.close, upTo: chunk.close.indices.count, through: matrix), 1)
                 }
@@ -142,6 +145,7 @@ final class Map3DFrameCostReportTests: XCTestCase {
                 all.triangles += (detailed ? chunk.mesh.indices.count : chunk.baseIndexCount + chunk.far.indices.count) / 3
                 all.draws += 1 + (detailed || chunk.far.isEmpty ? 0 : 1)
                 if closeUp, !chunk.close.isEmpty { all.triangles += chunk.close.triangleCount; all.draws += 1 }
+                if detailed, !closeUp, !chunk.standIn.isEmpty { all.triangles += chunk.standIn.triangleCount; all.draws += 1 }
                 if detailed {
                     all.triangles += chunk.props.reduce(0) { $0 + (models.models.indices.contains($1.model) ? models.models[$1.model].triangleCount : 0) }
                     all.draws += Set(chunk.props.map(\.model)).count + (chunk.signs.isEmpty ? 0 : 1)

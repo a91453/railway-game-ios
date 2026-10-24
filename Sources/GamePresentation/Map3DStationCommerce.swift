@@ -72,7 +72,7 @@ extension Map3DScene.Builder {
                 for (index, slot) in free.enumerated() {
                     let footprint = Self.parkFootprint(model, centre: slot, facing: facing)
                     let cells = cells(under: footprint)
-                    guard cleared.isDisjoint(with: cells), !Self.overlaps(footprint, houseFootprints + placed),
+                    guard cleared.isDisjoint(with: cells), !Self.overlaps(footprint, houseFootprints + placed), !onPlacedGround(footprint),
                           isClear(footprint, facing: facing) else { continue }
                     let foot = Map3DPoint(slot.x, footprint.map { drawnGround(x: $0.x, z: $0.z) }.min() ?? 0, slot.z)
                     target = .close

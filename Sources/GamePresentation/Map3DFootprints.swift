@@ -186,8 +186,11 @@ extension Map3DScene.Builder {
                     standing.insert(Map3DScene.ChunkKey(column: column, row: row))
                 }
             }
-            let storeys = building.drawnStoreys
             let rings = building.rings.map { $0.map { point(x: $0.x, y: $0.y, height: 0) } }
+            // Cleared for a building of the player's: its cells still keep
+            // no city lot.
+            guard !onPlacedGround(rings[0]) else { continue }
+            let storeys = building.drawnStoreys
             addRealBuilding([rings], ground: ground(x: middle.x, y: middle.y), height: Float(storeys) * Self.storeyHeight,
                             storeys: storeys, kind: building.kind)
         }

@@ -19,7 +19,7 @@ final class Map3DSceneMemoryTests: XCTestCase {
                                heights: HighSpeedDemoTests.heights, railways: try HighSpeedDemoTests.railways())
         var bytes = 0
         for chunk in scene.chunks {
-            for mesh in [chunk.mesh, chunk.far, chunk.close, chunk.shadows] {
+            for mesh in [chunk.mesh, chunk.far, chunk.close, chunk.standIn, chunk.shadows] {
                 bytes += mesh.vertices.count * MemoryLayout<Map3DVertex>.stride + mesh.indices.count * MemoryLayout<UInt32>.stride
             }
         }
@@ -178,7 +178,7 @@ final class Map3DSceneMemoryTests: XCTestCase {
             for chunk in scene.chunks {
                 near += chunk.mesh.triangleCount
                 far += chunk.far.triangleCount
-                for mesh in [chunk.mesh, chunk.far, chunk.close, chunk.shadows] {
+                for mesh in [chunk.mesh, chunk.far, chunk.close, chunk.standIn, chunk.shadows] {
                     bytes += mesh.vertices.count * MemoryLayout<Map3DVertex>.stride + mesh.indices.count * MemoryLayout<UInt32>.stride
                 }
             }

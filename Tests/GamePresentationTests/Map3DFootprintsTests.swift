@@ -109,6 +109,72 @@ final class Map3DFootprintsTests: XCTestCase {
         XCTAssertEqual(top, Float(7) * 3.2 + tall.ground(x: middle.x, y: middle.y), accuracy: 3)
     }
 
+    /// As in the A-Train, a building the player puts up clears the real
+    /// ones it reaches: none of them is drawn, near or far, while one
+    /// beside it that it does not reach still is.
+    func testAPlacedBuildingClearsTheFootprintsItReaches() {
+        var world = GameWorld.newGame()
+        let m = Double(WorldCoordinate.unitsPerMetre), cell = Double(Land.cellLength)
+        let region = WorldRegion(bounds: world.bounds)
+        let middle = (x: (region.minX + region.maxX) / 2, y: (region.minY + region.maxY) / 2)
+        let x0 = (middle.x / cell).rounded(.down) * cell + 20 * m, y0 = (middle.y / cell).rounded(.down) * cell + 20 * m
+        // Two 10 × 12 m houses 14 m apart.
+        func house(_ x: Double) -> Map3DFootprints.Building {
+            Map3DFootprints.Building(storeys: 3, storeysFrom: .guess, use: 11,
+                                     rings: [[(x, y0), (x, y0 + 12 * m), (x + 10 * m, y0 + 12 * m), (x + 10 * m, y0)]])
+        }
+        let footprints = Map3DFootprints(buildings: [house(x0), house(x0 + 24 * m)])
+        // A 16 m house of the player's over the first one's east half.
+        world.placedBuildings.append(PlacedBuilding(id: PlacedBuildingID(rawValue: 1), kind: .house,
+                                                    centre: PlanPoint(x: Int64(x0 + 2 * m), y: Int64(y0 + 6 * m))))
+        func triangles(_ world: GameWorld, _ target: Map3DScene.Builder.Target) -> Int {
+            var builder = Map3DScene.Builder(originX: middle.x, originY: middle.y, region: region, world: world)
+            builder.target = target
+            let standing = builder.addFootprints(footprints, clearOf: [], takenBy: [])
+            // Its cell keeps no city lot either way.
+            XCTAssertFalse(standing.isEmpty)
+            return (target == .near ? builder.nearMeshes : builder.farMeshes).values.reduce(0) { $0 + $1.triangleCount }
+        }
+        var bare = world
+        bare.placedBuildings = []
+        var one = world
+        one.placedBuildings = [PlacedBuilding(id: PlacedBuildingID(rawValue: 1), kind: .house,
+                                              centre: PlanPoint(x: Int64(x0 + 50 * m), y: Int64(y0 + 6 * m)))]
+        for target in [Map3DScene.Builder.Target.near, .far] {
+            let both = triangles(bare, target), cleared = triangles(world, target)
+            XCTAssertGreaterThan(cleared, 0, "the house beside it still stands")
+            XCTAssertLessThan(cleared, both, "the house under it is gone")
+            // A placed building that reaches neither leaves both.
+            XCTAssertEqual(triangles(one, target), both)
+        }
+    }
+
+    /// What reaches a placed building's ground: an outline crossing its
+    /// square, or round it; not one beside it, past the clearance.
+    func testWhatReachesAPlacedBuildingsGround() {
+        var world = GameWorld.newGame()
+        let region = WorldRegion(bounds: world.bounds)
+        let middle = (x: (region.minX + region.maxX) / 2, y: (region.minY + region.maxY) / 2)
+        let m = Double(WorldCoordinate.unitsPerMetre)
+        world.placedBuildings.append(PlacedBuilding(id: PlacedBuildingID(rawValue: 1), kind: .house,
+                                                    centre: PlanPoint(x: Int64(middle.x), y: Int64(middle.y))))
+        let builder = Map3DScene.Builder(originX: middle.x, originY: middle.y, region: region, world: world)
+        // The 16 m square, grown by the 2 m clearance: ±10 m.
+        XCTAssertEqual(builder.placedGround.first?.maxX ?? 0, Float(PlacedBuildingKind.house.side / 2 + PlacedBuildingRules.clearance) / Float(m),
+                       accuracy: 0.01)
+        func square(_ x: Float, _ z: Float, _ half: Float) -> [Map3DPoint] {
+            [Map3DPoint(x - half, 0, z - half), Map3DPoint(x - half, 0, z + half), Map3DPoint(x + half, 0, z + half), Map3DPoint(x + half, 0, z - half)]
+        }
+        XCTAssertTrue(builder.onPlacedGround(square(0, 0, 3)), "inside")
+        XCTAssertTrue(builder.onPlacedGround(square(0, 0, 40)), "round it")
+        XCTAssertTrue(builder.onPlacedGround(square(12, 0, 4)), "over its edge")
+        // A long thin one across it, no corner inside.
+        XCTAssertTrue(builder.onPlacedGround([Map3DPoint(-30, 0, -1), Map3DPoint(-30, 0, 1), Map3DPoint(30, 0, 1), Map3DPoint(30, 0, -1)]))
+        XCTAssertFalse(builder.onPlacedGround(square(16, 0, 4)), "beside it")
+        XCTAssertFalse(Map3DScene.Builder(originX: middle.x, originY: middle.y, region: region, world: GameWorld.newGame())
+            .onPlacedGround(square(0, 0, 3)), "no building of the player's")
+    }
+
     /// The app's file, read where it is: Taipei 101 stands where it is, as
     /// tall as OpenStreetMap says, among buildings that all have storeys.
     func testTheAppsFileHasTaipei101() throws {
