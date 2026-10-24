@@ -36,6 +36,10 @@ public struct Map3DScene: Sendable {
         /// (``Map3DCamera/wantsClose(minimum:maximum:wasClose:)``) on top
         /// of the full mesh.
         public let close: Map3DMesh
+        /// What stands in for some of ``close``'s models (the player's kit
+        /// buildings' boxes): drawn with the full mesh, but not when
+        /// ``close`` is, which they would hide.
+        public let standIn: Map3DMesh
         /// Decision 232: the soft shadows on its ground, drawn after
         /// everything else.
         public let shadows: Map3DMesh
@@ -576,6 +580,9 @@ extension Map3DScene {
             case base, near, far
             /// Decision 267: the closest detail.
             case close
+            /// The boxes standing in for the closest detail's models,
+            /// drawn in full but not close up (``Chunk/standIn``).
+            case standIn
             /// Decision 380: the overhead line, in the closest detail but
             /// in a coarse chunk too (decision 368 leaves the rest of the
             /// closest detail out of one), so it runs all along the line.
@@ -628,6 +635,7 @@ extension Map3DScene {
         var keptColours = Set<UInt32>()
         var farMeshes: [ChunkKey: Map3DMesh] = [:]
         var closeMeshes: [ChunkKey: Map3DMesh] = [:]
+        var standInMeshes: [ChunkKey: Map3DMesh] = [:]
         /// Whether what is being built is the simplified city.
         var isFar: Bool { target == .far }
         /// The ground's heights at the 64 m grid's corners, in metres, by
@@ -746,6 +754,7 @@ extension Map3DScene {
             case .near: build(&nearMeshes[key, default: Map3DMesh()])
             case .far: build(&farMeshes[key, default: Map3DMesh()])
             case .close, .wires: build(&closeMeshes[key, default: Map3DMesh()])
+            case .standIn: build(&standInMeshes[key, default: Map3DMesh()])
             }
         }
 
@@ -757,16 +766,17 @@ extension Map3DScene {
         }
 
         func chunks() -> [Chunk] {
-            Set(meshes.keys).union(shadows.keys).union(nearMeshes.keys).union(farMeshes.keys).union(closeMeshes.keys).union(props.keys).union(signs.keys).sorted().compactMap { key in
+            Set(meshes.keys).union(shadows.keys).union(nearMeshes.keys).union(farMeshes.keys).union(closeMeshes.keys).union(standInMeshes.keys).union(props.keys).union(signs.keys).sorted().compactMap { key in
                 var mesh = meshes[key] ?? Map3DMesh()
                 let baseIndexCount = mesh.indices.count
                 mesh.append(nearMeshes[key] ?? Map3DMesh())
-                var far = farMeshes[key] ?? Map3DMesh(), close = closeMeshes[key] ?? Map3DMesh()
+                var far = farMeshes[key] ?? Map3DMesh(), close = closeMeshes[key] ?? Map3DMesh(), standIn = standInMeshes[key] ?? Map3DMesh()
                 let shadows = shadows[key] ?? Map3DMesh()
                 // Decision 370: the city in the model look.
                 Map3DLook.restyle(&mesh, keeping: keptColours)
                 Map3DLook.restyle(&far, keeping: keptColours)
                 Map3DLook.restyle(&close, keeping: keptColours)
+                Map3DLook.restyle(&standIn, keeping: keptColours)
                 // The props too: the renderer leaves out a chunk whose box
                 // is off screen, which cut off a pole's top still in view.
                 let propBoxes = (props[key] ?? []).compactMap { $0.bounds(in: .standard) }
@@ -776,13 +786,13 @@ extension Map3DScene {
                         (Map3DPoint(min($0.min.x, $1.x), min($0.min.y, $1.y), min($0.min.z, $1.z)), Map3DPoint(max($0.max.x, $1.x), max($0.max.y, $1.y), max($0.max.z, $1.z)))
                     }
                 }
-                let boxes = [mesh.bounds, far.bounds, shadows.bounds, close.bounds].compactMap { $0 } + propBoxes + signBoxes
+                let boxes = [mesh.bounds, far.bounds, shadows.bounds, close.bounds, standIn.bounds].compactMap { $0 } + propBoxes + signBoxes
                 guard let first = boxes.first else { return nil }
                 let low = boxes.reduce(first.min) { Map3DPoint(min($0.x, $1.min.x), min($0.y, $1.min.y), min($0.z, $1.min.z)) }
                 let high = boxes.reduce(first.max) { Map3DPoint(max($0.x, $1.max.x), max($0.y, $1.max.y), max($0.z, $1.max.z)) }
-                return Chunk(column: key.column, row: key.row, mesh: mesh, baseIndexCount: baseIndexCount, far: far, close: close, shadows: shadows,
+                return Chunk(column: key.column, row: key.row, mesh: mesh, baseIndexCount: baseIndexCount, far: far, close: close, standIn: standIn, shadows: shadows,
                              props: props[key] ?? [], minimum: low, maximum: high,
-                             cityTops: Map3DSeeThrough.tops(column: key.column, row: key.row, of: [(mesh, baseIndexCount), (far, 0)]),
+                             cityTops: Map3DSeeThrough.tops(column: key.column, row: key.row, of: [(mesh, baseIndexCount), (far, 0), (standIn, 0)]),
                              signs: signs[key] ?? [], coarse: isCoarse(key))
             }
         }
