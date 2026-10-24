@@ -60,7 +60,7 @@
 
 | 角色 | 現在的 session | 做什麼 | 交接 |
 | --- | --- | --- | --- |
-| 遊戲規劃（兼派工） | session_01H5RHAwnA69n8EfAUSUrH52（2026-10-23 00:10 UTC 起，接 session_014nUBHbE9mSK4qXHHgm8xCQ（10-22 22:30–10-23 00:10），再之前 session_01UsF4QYCGrzSeNSFq11i8Wu（18:15–22:30），再之前 session_01Ddr2wiXx1Xhn2m9qNBDnDh、session_01CHQg7B6JqzbScGSjyDwHos（2026-10-22 起，照 §1.1 換手，作者：「要不要全部所有換個session了 都一直在壓縮了」→「好，照表換」；換手時的現況在第 2 節最前面；前任 session_014rYHMtmqA5bEMkBBuKu6PV（10-21 至 10-22，作者：「那你需要先接手嗎太長了」）、session_01NiR5WLMFjMJBktQAMkfmkm（10-21）、session_01WW7o3decEv5LY59nYVqnDN（10-20 至 10-21，作者：「接手 角色表中遊戲規劃的工作」）、session_01V1xd3H9vNkuZoSA3czNfGm（10-16 至 10-18）、session_018D6gYU1yiZMtxSmNNU1K17） | 從玩家、鐵道迷、開發、美術、音樂五個角度決定優先順序與設計，開實作 session 並派工，綠了的 PR 照 §1.2 合併（2026-10-21 起），收作者轉來的玩家回報與 bug（§1.3），寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1、1.3 節 |
+| 遊戲規劃（兼派工） | session_01PGibJmGNcvu2d7dJWWhWVb（2026-10-24 00:35 UTC 起，接 session_01H5RHAwnA69n8EfAUSUrH52（10-23 00:10–10-24 00:35），再之前 session_014nUBHbE9mSK4qXHHgm8xCQ（10-22 22:30–10-23 00:10），再之前 session_01UsF4QYCGrzSeNSFq11i8Wu（18:15–22:30），再之前 session_01Ddr2wiXx1Xhn2m9qNBDnDh、session_01CHQg7B6JqzbScGSjyDwHos（2026-10-22 起，照 §1.1 換手，作者：「要不要全部所有換個session了 都一直在壓縮了」→「好，照表換」；換手時的現況在第 2 節最前面；前任 session_014rYHMtmqA5bEMkBBuKu6PV（10-21 至 10-22，作者：「那你需要先接手嗎太長了」）、session_01NiR5WLMFjMJBktQAMkfmkm（10-21）、session_01WW7o3decEv5LY59nYVqnDN（10-20 至 10-21，作者：「接手 角色表中遊戲規劃的工作」）、session_01V1xd3H9vNkuZoSA3czNfGm（10-16 至 10-18）、session_018D6gYU1yiZMtxSmNNU1K17） | 從玩家、鐵道迷、開發、美術、音樂五個角度決定優先順序與設計，開實作 session 並派工，綠了的 PR 照 §1.2 合併（2026-10-21 起），收作者轉來的玩家回報與 bug（§1.3），寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1、1.3 節 |
 | 每日 Threads 開發日誌 | 排程「每日 Threads 開發日誌」（台灣時間每天 21:43，2026-10-18 起暫停）觸發遊戲規劃，由它開寫作 session。2026-10-22 換手時由前任建了綁到 session_01CHQg7B6JqzbScGSjyDwHos 的新排程 `trig_01FZhfBNQCdDW8iDpowANLZS`（暫停中；之後每次換手都重建，現任的 id 寫在 #1041 接手的留言），前任的 `trig_01NfzFV9BcdiyBJpAwnaTuK9`（再之前是 `trig_01SkNFNW6qN6cMUGkGCXZM1v`）已刪。排程的綁定改不了，以後換手時由現任遊戲規劃用同一份 prompt 建一個綁到自己的新排程，再刪掉舊的；作者沒說要開就維持暫停 | 寫當天的串文草稿，用 SendUserFile 交給作者；不 commit、不發布 | 派工單照 2026-10-14、10-15、10-16 的寫作 session |
 
 不再常駐（2026-10-20 停用）：合併協調 session_01QoA24EvFCFbmbcM1EwaZT7（前任 session_016sNs4eeZwga9hz1CCHkpmX）、派工 session_01MJ7sdeid5DAFjSVbTkmdi3（前任 session_01AaAj4wvJMxJQuLWAoYu6S8）。兩個都從 2026-10-17 起沒有動作。
@@ -297,6 +297,21 @@
 - **卡頓、發熱、6000×**：session_011kVCxFJEULkYyGGU7emgsx，決策 363，分三個 PR：(a) 三個動作與跨 24:00、06:00 切速度；(b) §22.2 第 25a 名（決策 330 第 3 步，高倍速每次換世界整個畫面重算）；(c) 第 10h 名 2D 每幀，含不操作時降 2D 幀率上限。它壓縮 1 次就停，剩下的寫在 §7.1，下一個規劃再派人接。
 - **環狀線沒載到人**：#1065（決策 364，session_01Efb7Sr7mZC2SiNXUtd1ZAa，`claude/loop-line-boarding`）可合併：環線列車停在第一站以外時每一圈都從那站起算，和旅客排的一圈對不上，改成繞過第一站再跑一整圈、之後從第一站起算；一列車的環線只排內環。`ReplayFixtures/long-leg-traffic.json` 重錄 checksum 1–5（作者同意）。還沒做的：作者轉來玩家的路線卡與車站卡截圖時，對照玩家的路線是不是環線、幾列車；兩種都不是就再查（決策 364「下一步」）；實機確認放進下一版的 What to Test。
 - 第 83 版：#1057、#1059 合併後，What to Test 在 `claude/testflight-83-notes`；其他修好的進 84。TestFlight 的「當機意見反應」只有文字、沒有當機紀錄（作者 2026-10-23 截圖）。
+
+**第五次換手（2026-10-24 00:35 UTC，session_01H5RHAwnA69n8EfAUSUrH52 壓縮 2 次 → session_01PGibJmGNcvu2d7dJWWhWVb）**。作者：「你要不要換新session 壓縮已經超過2次以上了吧」。和下面不同時以這段為準。
+
+- **量到的**：前任做了約 24.5 小時、壓縮 2 次以上，約 $116（`get_session` 的 `usage`），換手時 28 萬。
+- **合併了**（10-23 這一天）：#1110、#1108（379）、#1127、#1129、#1133（審查 F）、#1130、#1134、#1135、#1136、#1124、#1132、#1126、#1113、#1115、#1138、#1122、#1139（審查 G）、#1125、#1137（390）、#1140；作者另合了 #1131。作者睡前「綠了就合併 滿30點記得pr review 現在這批都過了才加新功能」：那一批已合完，可以照 NEXT_PRIORITIES §22 再派新功能。
+- **main**：73753863。`ci.yml` 8ebefabd 綠，08fe5ab6 跑中，73753863 排隊；最新的綠了才合下一批。
+- **開著的 PR**：
+  - #1128（決策 379（續），GameCore tick 加速，session_01MhQXufQK6jhjrKXY6iUTDB）：#1108 先用了 379，它把自己那段改成「379（續）」，正在併 main、跑 golden／存檔／重播測試；綠了轉 ready、通知規劃。全套 GameCore CI。
+  - #1119（Codex 雙聯蒸汽機車）：前任把 main 併進去（1f1ebbe4，`Map3DModelTests` 的模型數兩組都算、§7.3 兩段都留），本機建置與模型測試過，CI 跑中。綠了轉 ready 合併。
+  - #1121（Codex 住宅街廓 24 棟＋4 景）：沒有衝突，CI 跑中。綠了轉 ready 合併。美術：屋頂與牆全是米色、灰色，接上地圖時要加顏色變化。
+- **做中**：session_01GaPJUuAAMyqKsvxJjpnhEf（`claude/settings-tests-landscape`）：ff8e4dda nightly full lane（run 40026341039）兩個 SettingsUITests 紅。
+- **號碼**：下一個決策 391；存檔版本 72（main 是 71）；golden 不動。
+- **審查**：審查 G 到 #1136；下一輪從 #1137 起算，約 1 點。
+- **等作者**：railway-reference-private PR #67（頭像預覽）合併（規劃被自動權限擋下）；#1125 的三個對齊取捨要實機看；下一版 What to Test 放高鐵 6000× 的實機重量。
+- **排程**：前任的巡查提醒已刪；每日 Threads 開發日誌改成 `trig_01Hre19DLcYMRt2yiktxHWFY`（綁新任，暫停），舊的 `trig_014ibKY35K534uorD2a3L5us` 已刪。
 
 **第四次換手（2026-10-23 00:10 UTC，session_014nUBHbE9mSK4qXHHgm8xCQ 壓縮 2 次 → session_01H5RHAwnA69n8EfAUSUrH52）**。和下面不同時以這段為準。
 
