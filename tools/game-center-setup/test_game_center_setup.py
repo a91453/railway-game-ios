@@ -307,7 +307,7 @@ class SetupTests(selftest.Fixture):
             "defaultFormatter": "INTEGER", "submissionType": "BEST_SCORE", "scoreSortType": "ASC",
             "scoreRangeStart": "1", "scoreRangeEnd": "1080",
             "recurrenceStartDate": "2026-10-25T16:00:00Z", "recurrenceDuration": "PT168H",
-            "recurrenceRule": "FREQ=WEEKLY;INTERVAL=1"})
+            "recurrenceRule": "FREQ=DAILY;INTERVAL=7"})
         self.assertEqual(sorted((item["attributes"]["locale"], item["attributes"]["name"],
                                  item["attributes"]["formatterSuffixSingular"], item["attributes"]["formatterSuffix"])
                                 for item in self.posted("/v2/gameCenterLeaderboardLocalizations")),
