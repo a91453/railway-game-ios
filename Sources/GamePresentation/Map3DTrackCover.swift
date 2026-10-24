@@ -35,6 +35,10 @@ public struct Map3DTrackCover: Sendable {
     let cells: [Map3DScene.ChunkKey: [Int]]
     /// Decision 375: the trenches of the track below the drawn ground.
     let trenches: Map3DTrenches
+    /// Decision 394: where each tunnel opens to the open air, on the rails
+    /// (``Map3DScene/Builder/portalEnds(_:)``), for the cab view in a
+    /// tunnel (``Map3DUnderground``).
+    public let openings: [Map3DPoint]
 
     /// The squares the pieces are found by, in metres.
     static let cell: Float = 32
@@ -52,6 +56,7 @@ public struct Map3DTrackCover: Sendable {
         pieces = []
         cells = [:]
         trenches = Map3DTrenches()
+        openings = []
     }
 
     /// `snapshot`'s track, laid out as `builder` lays it.
@@ -97,6 +102,7 @@ public struct Map3DTrackCover: Sendable {
         self.pieces = pieces
         self.cells = cells
         trenches = Self.trenches(trenchLines, builder: &builder)
+        openings = builder.portalEnds(snapshot).map(\.point)
     }
 
     static func key(x: Float, z: Float) -> Map3DScene.ChunkKey {
