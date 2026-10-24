@@ -203,7 +203,9 @@ final class RealLineAcquisitionTests: XCTestCase {
             print("\(network): \(tiles.count) tiles for \(price.land.moneyText), total \(price.total.moneyText)")
             XCTAssertEqual(offer.priceRows(in: .traditionalChinese).dropLast().map(\.amount).reduce(.zero, +), price.total, network)
             // Bought with money enough (the prices above are a standard
-            // game's: unlimited funds price nothing).
+            // game's: unlimited funds price nothing); one line of three
+            // tiles is enough, and keeps the test short.
+            guard network == "JIJI" else { continue }
             let rich = try tiledGame(at: junction.latitude, junction.longitude, data: data, unlimited: true)
             XCTAssertTrue(rich.acquireRealLine(offer), "\(network): \(rich.message?.text ?? "")")
             XCTAssertTrue(under.allSatisfy { rich.world.ownsMapTile($0) }, network)

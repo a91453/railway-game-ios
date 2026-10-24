@@ -1101,6 +1101,7 @@
 
 | 事項 | 來源 | 狀態 |
 | --- | --- | --- |
+| 真實路線鋪出來的軌道：真實雙線鋪成單線（縱貫線臺北–板橋、崎頂–竹南、新左營–高雄，海線竹南–談文，捷運環狀線，高捷紅線美麗島–左營）、文湖線與環狀輕軌因最小半徑 40 m 斷軌、一段停下就跳過到下一站的軌道。地圖底下畫的真實鐵路本身是對的 | 作者 2026-10-24「有些也沒照真實路線有些還是單線 而且有斷軌」，session_019YxcVGrDSUjGBqxpWQ5Mnc 查完、壓縮後依派工不修 | 沒有人接；逐線的段落、原因與修法在 [決策 401](decisions/401.md)「下一步」 |
 | iCloud 存檔（決策 397）：程式已在 App 裡（`SaveSync`、`ICloudSaveFolder`），但**沒有 iCloud entitlement**，所以現在不會動。作者 2026-10-24 已建好容器 `iCloud.io.github.a91453.RailwayGame`、App ID 也勾了 iCloud（`docs/ICLOUD_SAVE_SETUP.md` 第 1、2 步），接著由 Game Center（決策 396）的最後一個 entitlement PR 一起加；之後兩台實機驗證（UNVERIFIED）。官網隱私權政策加一句、挑戰紀錄與成就的同步沒有做 | 作者 2026-10-24「那CloudKit可以當雲端存檔保存這樣就好了嗎」，session_01MsxSwi6ituX5dsw6ZQNmEx | 等 entitlement PR；之後的步驟在 [決策 397](decisions/397.md)「下一步」 |
 | 隧道裡的架空線（決策 395）只在 Linux 的幾何測試看過，實機上沒看過；台鐵用的是有主吊線的柔性吊架（監察院糾正案的台北—松山隧道斷線紀錄），高鐵隧道用哪一種沒查到，是假設 | 作者 2026-10-24「隧道裡面要有架空架嗎」，session_01AdAQTbXs639m7Yd3ZoxLE7 | 下一次 TestFlight 照 [決策 395](decisions/395.md)「下一步」看；查到高鐵隧道的型式再改 |
 | 遊戲跑著時，以 `worldRevision` 記住的預覽每個 tick 都重算：複線升級（選取工具，不暫停）在 80.1 讓 iPad 卡死，`claude/double-track-upgrade-hang` 改成以 `commandRevision` 記。同樣以 `worldRevision` 記的還有建造工具的 `NetworkSession` 草稿、`PassingLoop`、`DepotYard`、`LevelPlatformTrack`：建造工具會自動暫停，但玩家在草稿開著時按播放就會一樣每個 tick 重算。另外第一次算長的「到兩端道岔」預覽在 Linux debug 要 0.4–1 秒（一次的停頓），實機沒量 | PLAYER_FEEDBACK 80.1 #1 | **做了**（#1129，`claude/preview-command-revision`，session_01HgUU1aeQ39gLnPvqAiWBF2）：四個預覽改以 `commandRevision` 記，現金跨過價格時重算一次（✓ 才打得開），✓ 照舊在當下的世界重新規劃（`BuildPreviewTickTests`）。剩下：第一次算長的「到兩端道岔」預覽的一次停頓，實機沒量 |
