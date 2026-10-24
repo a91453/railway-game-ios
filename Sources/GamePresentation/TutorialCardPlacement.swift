@@ -27,6 +27,10 @@
 ///
 /// When even then the card covers what the step asks for
 /// (``leavesStepFree(_:)``), the app folds it to its title.
+///
+/// A card already on screen (``previous``) stays where it is, its top
+/// leading corner fixed, while that place does as well as any: it moves
+/// only when it would cover something the new place does not.
 public struct TutorialCardPlacement: Equatable, Sendable {
     /// A rectangle in the screen's points, `Frame`'s geometry for what the
     /// placement needs.
@@ -126,6 +130,16 @@ public struct TutorialCardPlacement: Equatable, Sendable {
     /// band of the map free: the open card; not the folded one
     /// (``folded``), one line as wide as its words.
     public var narrows = true
+    /// Where the card stands now, in the screen's coordinates: its top
+    /// leading corner is tried first, so the card stays put while it
+    /// changes size or the places to tap move, unless somewhere else
+    /// covers less. Re-centred on every change, it jumped: lesson 5's
+    /// stretch moved from station to station as trains passed, and the
+    /// card with it, under the player's finger (decision 378's guide);
+    /// a folded card narrowed as "Skip this step" went when its step was
+    /// done, and a touch on its leading end fell on the map (main
+    /// 947c23a's full lane, run 40093122899). `nil`: placed afresh.
+    public var previous: Frame?
 
     /// The card's distance from the screen's edges: the map's other
     /// floating controls' (``HUDMargins/edge``; decision 388, 16 before).
@@ -254,7 +268,13 @@ public struct TutorialCardPlacement: Equatable, Sendable {
         // The frames are in the screen's coordinates. A layout's bounds can
         // have a nonzero origin, so put them in that same coordinate space
         // before comparing candidates.
-        guard let target = target?.offsetBy(dx: bounds.minX, dy: bounds.minY) else { return (centred, 0) }
+        let stay = previous.map { Point(x: $0.x + bounds.minX, y: $0.y + bounds.minY) }
+        guard let target = target?.offsetBy(dx: bounds.minX, dy: bounds.minY) else {
+            if let stay, available.contains(Frame(x: stay.x, y: stay.y, width: size.width, height: size.height)) {
+                return (stay, 0)
+            }
+            return (centred, 0)
+        }
         let obstacles = controls.map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
         let required = (self.required + sites + panels).map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
         let backdrops = self.backdrops.map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
@@ -262,7 +282,9 @@ public struct TutorialCardPlacement: Equatable, Sendable {
         let gap = Self.gap
         let x = max(available.minX, min(target.midX - size.width / 2, available.maxX - size.width))
         let y = max(available.minY, min(target.midY - size.height / 2, available.maxY - size.height))
-        var candidates = [
+        // Where the card stands now, first: it wins ties.
+        var candidates = stay.map { [$0] } ?? []
+        candidates += [
             Point(x: x, y: target.maxY + gap),
             Point(x: x, y: target.minY - gap - size.height),
             Point(x: target.maxX + gap, y: y),

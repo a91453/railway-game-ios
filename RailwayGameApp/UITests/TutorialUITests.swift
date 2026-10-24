@@ -327,7 +327,11 @@ final class TutorialUITests: XCTestCase {
     /// at ten frames a second, had the touch 4 s after that, 10 s after
     /// Zoom out). So the point is worked out before Zoom out, nothing is
     /// asked between the two touches, and the step waits twenty seconds,
-    /// the press held thirty.
+    /// the press held thirty. On a slow runner the pill had "Skip this
+    /// step" when it was measured, and lost it as Zoom out did the step:
+    /// narrower, it was centred again and the press fell beside its leading
+    /// end (main 947c23a's full lane, run 40093122899). The pill now keeps
+    /// its place while it changes size (``TutorialCardPlacement/previous``).
     func testATouchHeldOnTheFoldedCardAsTheStepMovesOnOpensIt() {
         continueAfterFailure = false
         let app = XCUIApplication()
