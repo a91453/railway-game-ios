@@ -233,6 +233,17 @@
 - 看 #231 最後一則 `full-lane-watch.yml` 的自動留言：最後一則是「紅了」或「又有 job 紅了」、之後還沒有「綠了」，就是 main 的 full lane 還紅著，先不發（決策 329）。
 - 確認的時候如果 main 又合了改 App 的 PR，要在新的 HEAD 重跑 full lane。這時可以取消舊 commit 用 workflow_dispatch 跑的 full lane，讓出 macOS runner（上限 5 個）。
 - 確認後通知遊戲規劃與作者「可以發（commit X）」，並請各 session 發版前別再合改 App 的 PR。
+- **健康報告**（作者 2026-10-24：「健康報告也開始做」；作者不看程式碼，「我也不知道你有沒有做錯」）：說「可以發」時一起給作者一張白話的紅綠燈表，不寫程式名詞。用 🟢 綠、🔴 紅、⚪ 還沒驗：
+  | 項目 | 看什麼 |
+  | --- | --- |
+  | 規則與存檔 | 這個 commit 的 `ci.yml`（golden、舊存檔、replay） |
+  | 畫面與操作 | 它自己的 full lane（iPhone、iPad 的 UI 測試） |
+  | 發版 | `release-archive.yml`，或上一次 TestFlight 用同樣設定成功 |
+  | 這版改了什麼 | 照 What to Test，三到五行 |
+  | 測試管不到、要作者在手機上看的 | 決策裡寫 UNVERIFIED 的（實機 GPU、手感、樣子） |
+  | 風險 | 有沒有碰到存檔、帳號、隱私、entitlement、伺服器；有的話，獨立審查的結果 |
+  紅或⚪的寫原因與要不要擋發版；作者已經先發的，報告照樣給，並記進 PLAYER_FEEDBACK。
+- **獨立審查**（作者 2026-10-24：「重要的 PR 加一次獨立審查」）：會碰到存檔讀寫、帳號、隱私、entitlement、伺服器，或付費的 PR，合併前另開一個沒參與製作的 session 審查。只給它 PR 號與 CLAUDE.md，不給製作過程的結論，請它用白話回報「什麼情況會出事、玩家看到什麼、多嚴重」，結果附在健康報告。最重要的幾個（例如加 Game Center／iCloud 的 entitlement），作者可以另外用自己的 Claude Pro 帳號再看一次，提示照 2026-10-24 遊戲規劃給作者的那段。
 - 作者在收到「可以發（commit X）」之前就發了，要在 PLAYER_FEEDBACK 記下實際發的 commit 與它 full lane 的結果（72.1：作者 10:47 UTC 發 8c305a6，它的 full lane 才剛開始、後來紅；與全綠的 c3a3ec7 只差一個 UI 測試檔，App 相同。審查 #785 第二節）。
 - 發版後在 #231 寫「發版凍結解除」。
 
