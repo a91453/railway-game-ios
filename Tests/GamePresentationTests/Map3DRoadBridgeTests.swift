@@ -230,6 +230,53 @@ final class Map3DRoadBridgeTests: XCTestCase {
         XCTAssertFalse(meshes(builder).flatMap(\.vertices).contains { Self.concrete.contains($0.color) })
     }
 
+    /// Review H4: a road on the ground beside a bridge's end, running
+    /// alongside the road that ramps down from it, stays on the ground;
+    /// the ramp itself still comes down from the deck, bent as well as
+    /// straight (decision 391: the ramp follows the road on from the end).
+    func testOnlyTheRoadOnFromABridgesEndRampsDown() throws {
+        let world = try flatWorld(track: false)
+        let minorLift = Map3DScene.Builder.lift(of: .minor), lift = Map3DScene.Builder.lift(of: .secondary)
+        // A bridge over a street, its east end at 400 m a level up (150 m
+        // from where it crosses), a straight ramp on east of it.
+        let bridge = [road([(100, 300), (400, 300)], level: 1), road([(250, 200), (250, 400)], kind: .minor), road([(400, 300), (700, 300)])]
+        for offset in [12.0, 15, 18] {
+            // Alongside, from 46 m past the end: a road of its own.
+            let side = road([(446, 300 + offset), (700, 300 + offset)], kind: .minor)
+            let meshes = meshes(built(world, roads: bridge + [side]))
+            for x: Float in [450, 470, 490] {
+                XCTAssertEqual(try XCTUnwrap(roadTop(x, 300 + Float(offset), in: meshes, kind: .minor)), 20 + minorLift, accuracy: 0.01,
+                               "the road \(offset) m beside the ramp, at \(x)")
+            }
+            XCTAssertGreaterThan(try XCTUnwrap(roadTop(450, 300, in: meshes)), 20 + lift + 2, "the ramp")
+        }
+        // A ramp on from the west end bending away, 100 m round.
+        let bend = (0...12).map { step -> (Double, Double) in
+            let angle = Double(step) * 0.05
+            return (100 - 100 * sin(angle), 400 - 100 * cos(angle))
+        }
+        let meshes = meshes(built(world, roads: [road([(100, 300), (400, 300)], level: 1), road([(250, 200), (250, 400)], kind: .minor), road(bend)]))
+        // 30 m round it: some 4 m down from the deck's 6 m.
+        let at = (x: Float(100 - 100 * sin(0.3)), z: Float(400 - 100 * cos(0.3)))
+        XCTAssertGreaterThan(try XCTUnwrap(roadTop(at.x, at.z, in: meshes)), 20 + lift + 3, "the bent ramp")
+    }
+
+    /// Review H6: a junction on the ground under a viaduct running along
+    /// its road keeps its paint; none is painted on the deck over it.
+    func testAJunctionUnderAViaductKeepsItsPaint() throws {
+        let world = try flatWorld(track: false)
+        let roads = [road([(100, 600), (500, 600)], level: 1),
+                     road([(150, 600), (300, 600), (450, 600)], kind: .primary), road([(300, 400), (300, 600), (300, 800)])]
+        let builder = built(world, roads: roads)
+        let crosswalks = builder.nearMeshes.values.flatMap(\.vertices).filter { $0.surface == .crosswalk }
+        // Across the road under the viaduct, either side of the junction.
+        let under = crosswalks.filter { abs($0.z - 600) < 5 && abs($0.x - 300) > 5 && abs($0.x - 300) < 30 }
+        XCTAssertFalse(under.isEmpty, "the crossings of the road under the viaduct")
+        let ground = Set(under.map { Int(($0.x - 300).sign == .minus ? -1 : 1) })
+        XCTAssertEqual(ground, [-1, 1], "both arms along it")
+        XCTAssertTrue(under.allSatisfy { $0.y < 20 + 1 }, "on the ground, not the deck")
+    }
+
     /// The tallest freeway bridges stand at their real decks: 國姓高架橋's
     /// 265.55 m over the sea at its tallest pier.
     func testTheTallestFreewayBridgeStandsAtItsRealDeck() throws {

@@ -176,6 +176,24 @@ final class Map3DOverheadLineTests: XCTestCase {
         if let outside, let inside { XCTAssertEqual(outside, inside, accuracy: 0.01, "the contact wire breaks at the portal") }
     }
 
+    /// Decision 395 rule 7: the portal's point is held by the mast
+    /// outside, whichever way the track runs through it (review H5: out of
+    /// a tunnel, the open line's first mast was left out, taking the
+    /// tunnel's end for another line's mast).
+    func testAMastStandsAtThePortalEitherWay() {
+        let open = stride(from: Float(0), through: 200, by: 16).map { Map3DPoint($0, Map3DScene.railLift, 0) }
+        let bore = stride(from: Float(-200), through: 0, by: 16).map { Map3DPoint($0, Map3DScene.railLift, 0) } + [Map3DPoint(0, Map3DScene.railLift, 0)]
+        for (name, lines) in [("into the tunnel", [(open.reversed() as [Map3DPoint], TrackSectionKind.surface), (bore.reversed() as [Map3DPoint], .tunnel)]),
+                              ("out of the tunnel", [(bore, .tunnel), (open, .surface)])] {
+            var b = builder()
+            b.trackLines = lines
+            b.addOverheadLine()
+            let nearest = mastTops(b.closeMeshes).map { abs($0.x) }.min()
+            XCTAssertNotNil(nearest, name)
+            XCTAssertLessThan(nearest ?? .infinity, 2, "\(name): no mast at the portal")
+        }
+    }
+
     func testNoOverheadLineWhereTheGroundCoversTheTrack() {
         var buried = builder()
         buried.trackLines = [(line(0).map { $0 - Map3DPoint(0, 6, 0) }, .surface)]
