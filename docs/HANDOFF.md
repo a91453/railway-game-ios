@@ -1078,7 +1078,7 @@
 
 作者 2026-10-22：「目前道路要不要改照真實高度而不是全部在地面」。做完的：跨過軌道、地面道路或較低的橋的公路橋，在交點抬到一層 6 m，兩端照 5%／6%／8% 的坡度下到地面；高架鐵路下的路留 4.6 m 淨空。國道最高的 5 座橋照 data.gov.tw/dataset/30616。梁、墩、坡道擋牆在 `Map3DElevatedLook.roadBridge`，`Map3DRoadBridge.swift`。main 上 29 個交點不夠高，這裡是 0。這個 session 壓縮到第 2 次後在這裡停。還沒做的：
 
-1. **圖磚沒有 `layer`**：`tools/basemap/build_basemap.py` 要把 OSM 的 `layer` 放進 transportation 層，並重建 `taiwan.pmtiles`。#1157（決策 393，農地）也重切了 pmtiles，所以要等它合併後，從 main 的 `build_basemap.py` 切。之後雙層、三層的橋才有 12 m、18 m（`Map3DBaseMap.bridgeLevel(_:)` 已經讀 `layer`，沒有時當 1）。
+1. ~~**圖磚沒有 `layer`**~~：做完了（[決策 391 續篇一](decisions/391.md)，session_01AhfV8HVyDQfkoqCY2FNbmY）。`build_basemap.py` 在 2 層以上的橋寫 `layer`，`taiwan.pmtiles` 從 main 重切；板橋場景 +0.8%。
 2. **10f**：換墩的款式（改 `Map3DElevatedLook.roadBridge` 或加一組），以及橋下的陰影。
 3. 決策 375 留下的真實路線（`Map3DRealTrains`）路塹（§4.7 第 2 點）。
 4. **實機**（UNVERIFIED）：TestFlight 上看板橋、苗栗南的跨線橋、坡道與 fps。板橋周圍的場景大了 9%。
@@ -1096,6 +1096,13 @@
    - 開發：同一套高度與坡道。
    - 美術：開口用同一組墩與梁。
    - 音樂：無。
+
+   session_01AhfV8HVyDQfkoqCY2FNbmY 做完第 1 點後壓縮到第 1 次，照規則不接這件，只留下量過的數字與設計（沒寫程式；分支 `claude/road-joins-391` 是 main，沒有提交）：
+   - **main 上量到的**（示範地圖整片＋底圖，實景地面道路與非隧道軌道的交點，Linux 臨時測試）：路堤（軌面高出地面 1 m 以上）40 處，高出量四分位 1.2／1.8／2.7／7.8／12.1 m；淺路塹 43；深路塹（≥ 6.5 m，375 已架橋）25；高架 2,451；平地 51；斜交小於 30° 的 30。月台：地面 19、高架 57。
+   - **設計**：`Map3DRoadBridges` 加 `joins`（點、路的方向、半寬、絕對高度、地板或天花板、平台長、坡度），以 32 m 格子查；`roadRise` 對不在橋面上的路，沿路方向距交點 d 算地板抬升 `F − grade·max(0, d − plateau) − ground` 或下挖 `C + grade·…`。路堤：天花板 = 軌面 − `underViaduct` − 路的抬升，平台 = (bedBottom/2 + min(e, 4.7) + 1)/sin。路塹深 ≥ 2 m 或月台：地板 = 軌面 + `overTrack`。下挖的走廊要從地面、面域與別的路切掉（把 `Map3DTrenches.cut` 推廣到任意環），擋牆朝內（反向的 `addRampWalls`）。路堤本體的帶子延後畫、在開口處斷開，開口上加一段 `girderDepth` 的梁與橋台端面。
+   - **種子道路**：`trackMeeting` 現在對路堤、路塹與任何月台回 `.blocked`（`Map3DStreetsTests.testTheTrackComesFirst` 守著），要改成新的 `.joined`（斜交 > 0.5、兩側都有街），2D 地圖用同一個 `SeededStreetPlan`，要一起看。`real == nil` 時 `addGround` 要移到 `addSeededStreets` 之後才切得到下挖。
+   - **要先寫的紅測試**：平坦 20 m 的世界，軌道在 24 m（路堤）與 16 m（路塹），路在 x = 500 斜穿：路要連續、頂面 ≤ 軌面 − `underViaduct` 或 ≥ 軌面 + 6.5、交點上沒有路堤的顏色、下挖處沒有地面蓋住；再加兩鎮種子地圖被丟掉的交叉段數。
+   - **風險**：分塊邊界上的一致性（`groundRoads` 已讀 450 m 外圍，但它不帶路的等級，要加），`Map3DStreamingTests` 守著。
 7. PR 收尾若這個 session 沒做完：CI 綠 → 標 ready → #1041 留「可合併」→ 告訴遊戲規劃。
 
 ## 5. 已知、還沒派的待辦
