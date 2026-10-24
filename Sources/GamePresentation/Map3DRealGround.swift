@@ -178,6 +178,7 @@ extension Map3DScene.Builder {
         for road in roads {
             roadLines.append((road.points.map { Map3DPoint(Float($0.x), 0, Float($0.z)) },
                               road.kind.width(ramp: road.isRamp) / 2 + Self.sidewalk(of: road.kind)))
+            roadKinds.append((road.kind, road.isRamp))
         }
         // Decision 241: the sidewalks first, a strip wider than the road
         // under it, so both edges show and they close at the junctions.

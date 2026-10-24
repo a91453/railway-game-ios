@@ -42,7 +42,7 @@ final class TutorialUITests: XCTestCase {
 
         // Stage E1: zooming out moves the map; the card leaves the zoom
         // buttons free.
-        waitForStep(app, title: "Zoom out to see the town")
+        waitForStep(app, title: "Zoom out to see both towns")
         // Folded from the second step: open it, for the rest of the chapter.
         openCard(app)
         let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
@@ -53,7 +53,7 @@ final class TutorialUITests: XCTestCase {
             XCTAssertFalse(card.frame.intersects(zoomOut.frame), "The tutorial card covers the zoom buttons")
         }
         zoomOut.tap()
-        waitForStep(app, title: "Tap the start, then the end")
+        waitForStep(app, title: "Tap one town, then the other")
 
         // Tap the map where the card leaves it free: the card may sit on
         // the map (it may cover part of it, never a control).
@@ -340,7 +340,7 @@ final class TutorialUITests: XCTestCase {
         let before = folded.frame
         // Done: the step moves on eight seconds from now.
         zoomOut.tap()
-        XCTAssertTrue(folded.label.contains("Zoom out to see the town"), "The step moved on before the touch: \(folded.label)")
+        XCTAssertTrue(folded.label.contains("Zoom out to see both towns"), "The step moved on before the touch: \(folded.label)")
         // Near the pill's leading end, by the station master, which stays
         // where it is whatever the next step's title.
         folded.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.5)).press(forDuration: 12)

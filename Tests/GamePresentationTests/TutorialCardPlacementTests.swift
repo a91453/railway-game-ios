@@ -497,14 +497,14 @@ final class TutorialCardPlacementTests: XCTestCase {
         // A card that keeps its own width, whatever it is offered (the
         // folded card did: `fixedSize`).
         let stubborn = placement.frame(in: upright) { _ in Size(width: 520, height: 52) }
-        XCTAssertLessThanOrEqual(stubborn.width, upright.width - 32)
+        XCTAssertLessThanOrEqual(stubborn.width, upright.width - 2 * HUDMargins.edge)
         XCTAssertGreaterThanOrEqual(stubborn.minX, upright.minX)
         XCTAssertLessThanOrEqual(stubborn.maxX, upright.maxX)
 
         // The folded card offered the screen's width, its title cut short.
         let longTitle = { (proposal: Size) in Size(width: min(520, proposal.width), height: 52) }
         let folded = placement.folded.frame(in: upright, measure: longTitle)
-        XCTAssertEqual(folded.width, upright.width - 32)
+        XCTAssertEqual(folded.width, upright.width - 2 * HUDMargins.edge)
         XCTAssertGreaterThanOrEqual(folded.minX, upright.minX)
         XCTAssertLessThanOrEqual(folded.maxX, upright.maxX)
         // On a wide screen it keeps its whole title, wider than the open
@@ -531,7 +531,7 @@ final class TutorialCardPlacementTests: XCTestCase {
             foldedOffered.append(proposal)
             return wide(proposal)
         }
-        XCTAssertEqual(foldedOffered, [Size(width: Self.screen.width - 32, height: Self.screen.height - 32)])
+        XCTAssertEqual(foldedOffered, [Size(width: Self.screen.width - 2 * HUDMargins.edge, height: Self.screen.height - 2 * HUDMargins.edge)])
     }
 
     /// No target on screen: the middle.

@@ -68,9 +68,14 @@ final class WebsiteScreenshotTests: XCTestCase {
     func testLiuMingchuanChallenge() {
         let app = launch()
         defer { app.terminate() }
-        let challenges = app.buttons["start.challenges"]
+        // Decision 381: the challenges are on the new game's page.
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 10))
+        app.bringStartButtonIntoView(newGame)
+        newGame.tap()
+        let challenges = app.buttons["newGame.challenges"]
         XCTAssertTrue(challenges.appears(within: 10))
-        app.bringStartButtonIntoView(challenges)
+        XCTAssertTrue(challenges.becomesHittable(within: 5))
         challenges.tap()
         let liu = app.buttons["challenge.history.liuMingchuan"]
         XCTAssertTrue(liu.appears(within: 10))
@@ -321,13 +326,16 @@ final class WebsiteScreenshotTests: XCTestCase {
         return Int(label[time].split(separator: ":")[0])
     }
 
-    /// Opens `item` of the game menu's "More" submenu. The clock is paused
-    /// first: its ticks would rebuild the native menu while XCTest targets
-    /// an action in it (the start and save flow's rule).
+    /// Opens `item` of the game menu: in its first level, or under "More"
+    /// in a game with both goals and sights (decision 383). The clock is
+    /// paused first: its ticks would rebuild the native menu while XCTest
+    /// targets an action in it (the start and save flow's rule).
     private func openFromGameMenu(_ item: String, in app: XCUIApplication) {
         pauseTheClock(in: app)
         tapButton("hud.menu", in: app)
-        tapButton("menu.more", in: app)
+        if !app.buttons[item].appears(within: 3) {
+            tapButton("menu.more", in: app)
+        }
         tapButton(item, in: app)
     }
 

@@ -1,0 +1,74 @@
+{
+  "status": "VERIFIED",
+  "environment": "Linux / Swift 6.4 / Node / Chromium WebGL 2",
+  "parts": 24,
+  "examples": 4,
+  "models": 28,
+  "views": 196,
+  "triangles": 22256,
+  "ball_return_contacts": {
+    "status": "VERIFIED",
+    "gap_metres": [
+      -0.0020296125508092455,
+      -0.0020296125507998086
+    ]
+  },
+  "maximum_triangles": 4578,
+  "checks": [
+    "all native vertices round-trip through the game loader",
+    "native / GLB / PNG SHA-256",
+    "complete native-to-GLB conversion",
+    "four categories of 6 distinct sports assets",
+    "all seven transparent views nonempty and unclipped",
+    "opaque finite native vertices and connector normals",
+    "both actual ball-return rail contacts; indoor fixture clearance, venue separation, pool-deck height and cantilever clearance"
+  ],
+  "not_verified": [
+    "iPhone / iPad Metal rendering and performance",
+    "live map placement, collisions, interior navigation or animation",
+    "sports physics, equipment animation or structural safety"
+  ],
+  "browser": {
+    "status": "VERIFIED",
+    "models_loaded": 28,
+    "checks": [
+      "four categories / examples / Chinese name filtering",
+      "seven directions",
+      "pointer orbit changes rendered geometry",
+      "zoom changes rendered image",
+      "four background controls",
+      "PNG / native / GLB download hashes",
+      "390 px without horizontal overflow",
+      "no external requests / missing resources / JavaScript errors"
+    ]
+  },
+  "swift": {
+    "status": "VERIFIED",
+    "toolchain": "Swift 6.4 (swift-6.4-RELEASE), Linux x86_64",
+    "warnings_as_errors": true,
+    "tests": 28,
+    "suites": [
+      "Map3DRecreationKitTests (13)",
+      "Map3DStationKitTests (8)",
+      "Map3DModelFileTests (7)"
+    ],
+    "full_suite": "UNVERIFIED locally; left to CI"
+  },
+  "node_tests": {
+    "status": "VERIFIED",
+    "tests": 4
+  },
+  "manual_review": {
+    "status": "VERIFIED",
+    "models_in_seven_directions": 28,
+    "part_undersides": 24,
+    "full_scene_interiors": 4,
+    "neutral_clay_source_factories": 6,
+    "existing_native_kit_style_comparison": true
+  },
+  "current_build_export_consistency": {
+    "status": "VERIFIED",
+    "byte_identical_files": 56
+  },
+  "overview_sha256": "9021c37898f42e864cc6348df1053aad0fe60b8bc095eef7574ef7f0df6df6fe"
+}

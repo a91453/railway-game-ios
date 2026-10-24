@@ -110,6 +110,30 @@ final class FrameCostMeterTests: XCTestCase {
         XCTAssertEqual(reading.longestGapUntimedMilliseconds, 54, accuracy: 1e-6)
     }
 
+    /// Decision 379: the view update holds the canvases, so the longest
+    /// frame's "other" leaves it in and says how much of the frame it was;
+    /// the sounds, off the main thread, are not taken off either.
+    func testTheViewUpdateIsShownBesideTheLongestFrameNotTakenOff() throws {
+        let meter = FrameCostMeter()
+        meter.isOn = true
+        XCTAssertNil(meter.frame(at: 0))
+        meter.record(.railway, milliseconds: 20)
+        meter.record(.mapBody, milliseconds: 30)
+        meter.record(.viewUpdate, milliseconds: 150)
+        meter.record(.soundPlayback, milliseconds: 29)
+        XCTAssertNil(meter.frame(at: 0.2))
+        for frame in 1...47 { XCTAssertNil(meter.frame(at: 0.2 + Double(frame) / 60)) }
+        let reading = try XCTUnwrap(meter.frame(at: 1.05))
+        XCTAssertEqual(reading.longestGapMilliseconds, 200, accuracy: 1e-6)
+        XCTAssertEqual(reading.longestGapUntimedMilliseconds, 180, accuracy: 1e-6)
+        XCTAssertEqual(reading.longestGapViewUpdateMilliseconds, 150, accuracy: 1e-6)
+        let lines = reading.lines(in: .traditionalChinese)
+        XCTAssertEqual(lines.first, "最長一幀 200 ms · 其他 180 ms（畫面更新 150 ms）")
+        XCTAssertEqual(lines.firstIndex { $0.hasPrefix("  · 地圖 ") }, lines.firstIndex { $0.hasPrefix("畫面更新 ") }.map { $0 + 1 })
+        XCTAssertEqual(FrameCostPart.mapBody.parent, .viewUpdate)
+        XCTAssertFalse(FrameCostPart.soundPlayback.isOnMainThread)
+    }
+
     func testEveryPartHasANameInBothLanguages() {
         for part in FrameCostPart.allCases {
             XCTAssertFalse(part.title(in: .english).isEmpty)

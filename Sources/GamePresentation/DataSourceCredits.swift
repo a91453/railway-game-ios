@@ -448,17 +448,18 @@ public enum DataSourceCredits {
                     // costs. Overture's buildings theme is ODbL 1.0; in
                     // Taiwan its footprints are OpenStreetMap's and Shi et
                     // al.'s (CC BY 4.0), each credited as it asks. Decision
-                    // 239: the 3D map's real buildings are its footprints.
+                    // 239: the 3D map's real buildings are its footprints;
+                    // decision 389: everywhere in Taiwan.
                     DataSourceCredit(
                         id: "overtureBuildings",
                         title: language.text("Overture Maps buildings", "Overture Maps 建物"),
                         detail: language.text(
-                            "How much of the ground real buildings cover on real-world maps of Taiwan and Penghu, which sets what buying out the city’s buildings costs: a car park costs little, a dense block a lot. The buildings round Kaohsiung and Taichung Stations in the 3D city preview and the 3D map are its too.",
-                            "台灣與澎湖實景地圖上真實建物佔地多少，決定收購城市建物的價錢：停車場便宜，密集的街區貴。3D 城市預覽與 3D 地圖裡高雄車站、台中車站周圍的建物也是它的。"
+                            "How much of the ground real buildings cover on real-world maps of Taiwan and Penghu, which sets what buying out the city’s buildings costs: a car park costs little, a dense block a lot. The buildings of 3D maps in Taiwan, Penghu, Kinmen and Matsu, and of the 3D city preview round Kaohsiung and Taichung Stations, are its too.",
+                            "台灣與澎湖實景地圖上真實建物佔地多少，決定收購城市建物的價錢：停車場便宜，密集的街區貴。台灣、澎湖、金門、馬祖實景 3D 地圖上的建物，以及 3D 城市預覽裡高雄車站、台中車站周圍的建物，也是它的。"
                         ),
                         notice: language.text(
-                            "Overture Maps Foundation (overturemaps.org), buildings, release 2026-09-23.1, under the Open Database License (ODbL) 1.0. Its footprints in Taiwan are © OpenStreetMap contributors (ODbL 1.0) and, where OpenStreetMap has none, from Qian Shi et al., “A first high-quality vector data of buildings in East Asian countries based on a comprehensive large-scale mapping framework”, Zenodo, 2023 (CC BY 4.0). The coverage file and the city tiles the game derives from them are available under the same licence from the source repository.",
-                            "Overture Maps Foundation（overturemaps.org）建物，2026-09-23.1 版，依開放資料庫授權（ODbL）1.0 使用。台灣的足跡來自 © OpenStreetMap 貢獻者（ODbL 1.0），OpenStreetMap 沒有的地方來自 Qian Shi 等人〈A first high-quality vector data of buildings in East Asian countries based on a comprehensive large-scale mapping framework〉，Zenodo，2023（CC BY 4.0）。遊戲據此整理的建蔽率檔與城市圖塊以相同授權提供，可從原始碼儲存庫取得。"
+                            "Overture Maps Foundation (overturemaps.org), buildings, release 2026-09-23.1, under the Open Database License (ODbL) 1.0. Its footprints in Taiwan are © OpenStreetMap contributors (ODbL 1.0) and, where OpenStreetMap has none, from Qian Shi et al., “A first high-quality vector data of buildings in East Asian countries based on a comprehensive large-scale mapping framework”, Zenodo, 2023 (CC BY 4.0). The coverage file, the city tiles and the footprint tiles the game derives from them are available under the same licence from the source repository.",
+                            "Overture Maps Foundation（overturemaps.org）建物，2026-09-23.1 版，依開放資料庫授權（ODbL）1.0 使用。台灣的足跡來自 © OpenStreetMap 貢獻者（ODbL 1.0），OpenStreetMap 沒有的地方來自 Qian Shi 等人〈A first high-quality vector data of buildings in East Asian countries based on a comprehensive large-scale mapping framework〉，Zenodo，2023（CC BY 4.0）。遊戲據此整理的建蔽率檔、城市圖塊與足跡圖塊以相同授權提供，可從原始碼儲存庫取得。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: "Overture Maps", url: overtureURL),
@@ -640,6 +641,48 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: language.text("National Religion Information Network", "全國宗教資訊網"), url: "https://religion.moi.gov.tw"),
                             DataSourceCredit.Link(title: language.text("National Cultural Heritage Database", "國家文化資產網"), url: "https://nchdb.boch.gov.tw"),
                             openGovernmentLicense(in: language),
+                            DataSourceCredit.Link(title: "OpenStreetMap", url: openStreetMapCopyrightURL),
+                            DataSourceCredit.Link(title: "ODbL", url: odblURL),
+                        ]
+                    ),
+                    // Decision 389: the storeys of the footprints' buildings
+                    // in the 3D map, from two city maps and GHSL's heights.
+                    DataSourceCredit(
+                        id: "buildingStoreys",
+                        title: language.text("Building storeys", "建物樓層"),
+                        detail: language.text(
+                            "How many storeys the real buildings of 3D maps in Taiwan have, from Taichung’s building map and Taipei’s building permit map, and elsewhere how tall the buildings round them are.",
+                            "台灣實景 3D 地圖上真實建物的樓層，取自臺中市建物圖與臺北市建築執照套繪圖，其他地方參考周圍建物的高度。"
+                        ),
+                        notice: language.text(
+                            "Taichung City Government, Taichung building map (2022, 2024 and 2025), and Taipei City Government, Taipei building permit map, used under the Open Government Data License, version 1.0. European Commission, Joint Research Centre (2023): GHS-BUILT-H R2023A, average building height, doi:10.2905/85005901-3A49-48DD-9D19-6261354F56FE, under CC BY 4.0.",
+                            "臺中市政府「臺中市建物圖」（111、113、114 年）與臺北市政府「臺北市建築執照套繪圖」，依政府資料開放授權條款第 1 版使用。European Commission, Joint Research Centre (2023): GHS-BUILT-H R2023A（平均建物高度），doi:10.2905/85005901-3A49-48DD-9D19-6261354F56FE，依 CC BY 4.0 使用。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("Taichung building map (2022)", "臺中市建物圖（111 年）"), url: "https://data.gov.tw/dataset/162900"),
+                            DataSourceCredit.Link(title: language.text("Taichung building map (2024)", "臺中市建物圖（113 年）"), url: "https://data.gov.tw/dataset/152106"),
+                            DataSourceCredit.Link(title: language.text("Taichung building map (2025)", "臺中市建物圖（114 年）"), url: "https://data.gov.tw/dataset/158889"),
+                            DataSourceCredit.Link(title: language.text("Taipei building permit map", "臺北市建築執照套繪圖"), url: "https://data.gov.tw/dataset/151936"),
+                            openGovernmentLicense(in: language),
+                            DataSourceCredit.Link(title: "GHS-BUILT-H", url: "https://doi.org/10.2905/85005901-3A49-48DD-9D19-6261354F56FE"),
+                            DataSourceCredit.Link(title: "CC BY 4.0", url: ccByURL),
+                        ]
+                    ),
+                    // Decision 385: the land the 3D map's town keeps off and
+                    // the airports' buildings, from OpenStreetMap's
+                    // Taiwan extract (tools/no-build-land).
+                    DataSourceCredit(
+                        id: "noBuildLand",
+                        title: language.text("Airports and open land", "機場與空地"),
+                        detail: language.text(
+                            "Where real-world 3D maps keep houses off airports, military land, cemeteries, golf courses, railway land and ports, and the airports’ terminals and hangars, from OpenStreetMap.",
+                            "實景 3D 地圖上機場、軍事用地、墓地、高爾夫球場、鐵路用地與港區不蓋房子的範圍，以及機場的航廈與機棚，取自 OpenStreetMap。"
+                        ),
+                        notice: language.text(
+                            "OpenStreetMap data © OpenStreetMap contributors, under the Open Database License.",
+                            "OpenStreetMap 資料 © OpenStreetMap 貢獻者，依開放資料庫授權條款使用。"
+                        ),
+                        links: [
                             DataSourceCredit.Link(title: "OpenStreetMap", url: openStreetMapCopyrightURL),
                             DataSourceCredit.Link(title: "ODbL", url: odblURL),
                         ]

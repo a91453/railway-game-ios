@@ -1,0 +1,79 @@
+{
+  "status": "VERIFIED",
+  "environment": "Linux / Swift 6.4 / Node / Chromium WebGL 2",
+  "parts": 24,
+  "examples": 4,
+  "models": 28,
+  "views": 196,
+  "triangles": 13504,
+  "maximum_triangles": 1948,
+  "checks": [
+    "all native vertices round-trip through the game loader",
+    "native / GLB / PNG SHA-256",
+    "complete native-to-GLB conversion",
+    "three categories of 8 distinct coastal, harbor and camping assets",
+    "all seven transparent views nonempty and unclipped",
+    "opaque finite native vertices and connector normals",
+    "camp layout has non-overlapping rotated footprints"
+  ],
+  "not_verified": [
+    "iPhone / iPad Metal rendering and performance",
+    "live map placement, collisions, interior navigation or animation",
+    "marine engineering, lifeguard or camping safety simulation",
+    "source pack browser rendering / pixel comparison; raw sources are not redistributed"
+  ],
+  "browser": {
+    "status": "VERIFIED",
+    "models_loaded": 28,
+    "checks": [
+      "three categories / examples / Chinese name filtering",
+      "seven directions",
+      "pointer orbit changes rendered geometry",
+      "zoom changes rendered image",
+      "four background controls",
+      "PNG / native / GLB download hashes",
+      "390 px without horizontal overflow",
+      "no external requests / missing resources / JavaScript errors"
+    ]
+  },
+  "maximum_part_triangles": 602,
+  "maximum_example_triangles": 1948,
+  "swift": {
+    "status": "VERIFIED",
+    "version": "6.4.0",
+    "warnings_as_errors": true,
+    "suites": {
+      "Map3DCoastalKitTests": 10,
+      "Map3DStationKitTests": 8,
+      "Map3DModelFileTests": 7
+    },
+    "total": 25,
+    "full_suite": "UNVERIFIED locally; left to repository CI"
+  },
+  "node_encoding_tests": {
+    "status": "VERIFIED",
+    "count": 4
+  },
+  "image_decoding": {
+    "status": "VERIFIED",
+    "decoder": "Pillow 12.3.0",
+    "seven_view_pngs": 196,
+    "review_pngs": 26,
+    "checks": [
+      "full RGBA decode",
+      "independent alpha count and bounds match renderer",
+      "transparent background, opaque geometry, unclipped",
+      "SHA-256"
+    ]
+  },
+  "visual_review": {
+    "status": "VERIFIED",
+    "scope": "All 24 assets on category/parts/overview sheets; four assemblies, representative seven directions, undersides, four backgrounds, small/blur/grayscale; actual images opened by Codex. Compared with existing CivicKit overview.",
+    "regressions": [
+      "tent porch back corners: two failing ray assertions before narrowing canopy; passing after",
+      "camp layout: kayak rack/hammock rotated footprints overlapped before moving rack; passing after",
+      "skiff seat corners: four unbacked bottom samples before narrowing seats; zero after, Swift regression retained"
+    ],
+    "not_verified": "source factories rendered in original browser side by side"
+  }
+}

@@ -335,10 +335,18 @@ public final class RealWorldFiles {
         try Data(contentsOf: folder.appendingPathComponent(name))
     }
 
+    /// The bundled places, with the land no one lives on when the folder
+    /// has it (decision 385 (續), as the app reads them).
+    private func bundledPlaces() throws -> PlaceGrid {
+        var places = try PlaceGrid(data: data("taiwan_places.json"))
+        places.noBuild = try? RealNoBuildLand(data: data("taiwan_no_build.json"))
+        return places
+    }
+
     /// The bundled people and places of Taiwan, read once.
     func peopleAndPlaces() throws -> (PopulationGrid, PlaceGrid) {
         population = try population ?? PopulationGrid(data: data("taiwan_population.json"))
-        places = try places ?? PlaceGrid(data: data("taiwan_places.json"))
+        places = try places ?? bundledPlaces()
         return (population!, places!)
     }
 
@@ -349,7 +357,7 @@ public final class RealWorldFiles {
             session.population = population
         }
         if set.places, session.places == nil {
-            places = try places ?? PlaceGrid(data: data("taiwan_places.json"))
+            places = try places ?? bundledPlaces()
             session.places = places
         }
         if set.water, session.water == nil {

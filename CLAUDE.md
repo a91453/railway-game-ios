@@ -165,7 +165,7 @@ needs OSM data reads the same extract.
   files need (ARCHITECTURE decision 185, `swift-shards.sh plan`): every shard
   for GameCore, the package, the CI scripts or a test file other test files
   use, or two edited campaigns (or one beside GamePresentation); all the
-  GamePresentation tests (in three jobs) for GamePresentation, its tests, the
+  GamePresentation tests (in five jobs) for GamePresentation, its tests, the
   app's bundled data or a `tools/` file they read; the classes that read the fixtures
   for `GoldenScenarios/`, `SaveFixtures/` or `ReplayFixtures/`; the classes a
   GameCore test file declares when no other file uses it; the union when

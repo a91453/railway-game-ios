@@ -285,34 +285,6 @@
         }
       }
     },
-    "%lld saves" : {
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld save"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld saves"
-                }
-              }
-            }
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld 個存檔"
-          }
-        }
-      }
-    },
     "%lld units per game minute" : {
       "localizations" : {
         "zh-Hant" : {
@@ -383,16 +355,6 @@
         }
       }
     },
-    "A save file from Files or another device" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "從「檔案」或其他裝置匯入的存檔"
-          }
-        }
-      }
-    },
     "A service starts at the first stop: put the train there and run it. An early train waits for its departure; a late one leaves once boarding is done." : {
       "localizations" : {
         "zh-Hant" : {
@@ -449,16 +411,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在最後加入停靠站"
-          }
-        }
-      }
-    },
-    "Add a stopping pattern" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新增停站模式"
           }
         }
       }
@@ -1083,16 +1035,6 @@
         }
       }
     },
-    "Import a Save" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "匯入存檔"
-          }
-        }
-      }
-    },
     "Insert Before" : {
       "localizations" : {
         "zh-Hant" : {
@@ -1289,16 +1231,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "下一步"
-          }
-        }
-      }
-    },
-    "No Saved Games" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "沒有存檔"
           }
         }
       }
@@ -1939,16 +1871,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "儲存於 %@"
-          }
-        }
-      }
-    },
-    "Saved Games" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "存檔"
           }
         }
       }

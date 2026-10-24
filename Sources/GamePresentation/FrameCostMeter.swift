@@ -49,6 +49,32 @@ public enum FrameCostPart: String, CaseIterable, Hashable, Sendable {
     case stepMidnight
     /// The night skip going on, ending or starting.
     case stepNightSkip
+    /// Decision 379: the sounds the app plays, on a queue of their own
+    /// (the arrival's chime, the coins), off the main thread.
+    case soundPlayback
+    /// Decision 379: the main thread's work before it waits for the next
+    /// event: SwiftUI working the views out again and laying them out, and
+    /// Core Animation's commit, the canvases drawn in it. Not in what the
+    /// longest frame's "other" leaves out: the canvases are counted
+    /// already. Timed by the app around each turn of the main run loop.
+    case viewUpdate
+    // Decision 379: pieces of ``viewUpdate``, each view's own body (its
+    // children's bodies are theirs).
+    /// The flat map's body, with the keys its modifiers compare.
+    case mapBody
+    /// What the flat map works out when a tick changed the world: the
+    /// real trains' clock, the weather, the followed train's camera.
+    case mapTick
+    /// The trains' glide the flat map takes after a tick.
+    case mapGlide
+    /// Traffic control the flat map takes after a tick.
+    case mapTraffic
+    /// The screen's frame (``ContentView``) and the route hint it watches.
+    case screenBody
+    /// The status bar.
+    case hudBody
+    /// The station master in the corner.
+    case stationMasterBody
 
     /// The part this one is a piece of, when it is one: its time is in
     /// the parent's too.
@@ -56,14 +82,21 @@ public enum FrameCostPart: String, CaseIterable, Hashable, Sendable {
         switch self {
         case .stepWorld, .stepFollow, .stepPlatforms, .stepSound, .stepIncome, .stepActions, .stepNews, .stepMidnight, .stepNightSkip:
             .afterStep
+        case .mapBody, .mapTick, .mapGlide, .mapTraffic, .screenBody, .hudBody, .stationMasterBody:
+            .viewUpdate
         default:
             nil
         }
     }
 
     /// Whether it runs on the main thread, between two frames: all but
-    /// the tick.
-    var isOnMainThread: Bool { self != .step }
+    /// the tick and the sounds.
+    var isOnMainThread: Bool { self != .step && self != .soundPlayback }
+
+    /// Whether its time is taken from the longest frame's "other": a part
+    /// on the main thread that holds no other part (decision 379: the
+    /// view update holds the canvases).
+    var isTimedApart: Bool { isOnMainThread && parent == nil && self != .viewUpdate }
 
     /// Its short name in the readout.
     public func title(in language: DisplayLanguage) -> String {
@@ -87,6 +120,15 @@ public enum FrameCostPart: String, CaseIterable, Hashable, Sendable {
         case .stepNews: language.text("news", "新聞")
         case .stepMidnight: language.text("midnight", "午夜")
         case .stepNightSkip: language.text("night skip", "夜間快轉")
+        case .soundPlayback: language.text("sound playback", "播放音效")
+        case .viewUpdate: language.text("view update", "畫面更新")
+        case .mapBody: language.text("map", "地圖")
+        case .mapTick: language.text("map after tick", "地圖跟著推進")
+        case .mapGlide: language.text("map glide", "地圖列車滑行")
+        case .mapTraffic: language.text("map traffic", "地圖車流")
+        case .screenBody: language.text("screen", "畫面框架")
+        case .hudBody: language.text("status bar", "狀態列")
+        case .stationMasterBody: language.text("station master", "站長")
         }
     }
 }
@@ -161,13 +203,20 @@ public struct FrameCostReading: Hashable, Sendable {
     /// thread was timed in (SwiftUI working the views out again, and
     /// whatever else is not timed), in milliseconds.
     public let longestGapUntimedMilliseconds: Double
+    /// Decision 379: of the longest frame, the view update's time
+    /// (``FrameCostPart/viewUpdate``), in milliseconds.
+    public let longestGapViewUpdateMilliseconds: Double
     /// The parts that ran, in ``FrameCostPart``'s order.
     public let parts: [Part]
 
-    public init(framesPerSecond: Double, longestGapMilliseconds: Double, longestGapUntimedMilliseconds: Double = 0, parts: [Part]) {
+    public init(
+        framesPerSecond: Double, longestGapMilliseconds: Double, longestGapUntimedMilliseconds: Double = 0,
+        longestGapViewUpdateMilliseconds: Double = 0, parts: [Part]
+    ) {
         self.framesPerSecond = framesPerSecond
         self.longestGapMilliseconds = longestGapMilliseconds
         self.longestGapUntimedMilliseconds = longestGapUntimedMilliseconds
+        self.longestGapViewUpdateMilliseconds = longestGapViewUpdateMilliseconds
         self.parts = parts
     }
 
@@ -188,7 +237,12 @@ public struct FrameCostReading: Hashable, Sendable {
                 format: "%@ %.1f ms/s · ×%d · max %.1f ms", part.part.title(in: language), part.millisecondsPerSecond, part.count, part.longestMilliseconds
             ) + reasons.joined()
         }
-        return [language.text("longest frame \(gap) · other \(other)", "最長一幀 \(gap) · 其他 \(other)")]
+        // Decision 379: and how much of it the view update was, when timed.
+        let update = longestGapViewUpdateMilliseconds > 0
+            ? language.text(" (view update \(String(format: "%.0f ms", longestGapViewUpdateMilliseconds)))",
+                            "（畫面更新 \(String(format: "%.0f ms", longestGapViewUpdateMilliseconds))）")
+            : ""
+        return [language.text("longest frame \(gap) · other \(other)", "最長一幀 \(gap) · 其他 \(other)") + update]
             + costliestFirst(parts.filter { $0.part.parent == nil }).flatMap { part in
                 [line(part)] + costliestFirst(parts.filter { $0.part.parent == part.part }).map { line($0, prefix: "  · ") }
             }
@@ -221,6 +275,9 @@ public final class FrameCostMeter: @unchecked Sendable {
     /// longest gap, what was not timed (decision 330).
     private var timedSinceFrame = 0.0
     private var longestGapUntimed = 0.0
+    /// Decision 379: likewise, the view update's time.
+    private var viewUpdateSinceFrame = 0.0
+    private var longestGapViewUpdate = 0.0
 
     public init() {}
 
@@ -238,6 +295,8 @@ public final class FrameCostMeter: @unchecked Sendable {
                 longestGap = 0
                 timedSinceFrame = 0
                 longestGapUntimed = 0
+                viewUpdateSinceFrame = 0
+                longestGapViewUpdate = 0
             }
         }
     }
@@ -251,7 +310,8 @@ public final class FrameCostMeter: @unchecked Sendable {
             tally.total += milliseconds
             tally.longest = max(tally.longest, milliseconds)
             tallies[part] = tally
-            if part.isOnMainThread, part.parent == nil { timedSinceFrame += milliseconds }
+            if part.isTimedApart { timedSinceFrame += milliseconds }
+            if part == .viewUpdate { viewUpdateSinceFrame += milliseconds }
         }
     }
 
@@ -288,9 +348,11 @@ public final class FrameCostMeter: @unchecked Sendable {
             if let lastFrame, time - lastFrame > longestGap {
                 longestGap = time - lastFrame
                 longestGapUntimed = max(0, longestGap * 1_000 - timedSinceFrame)
+                longestGapViewUpdate = viewUpdateSinceFrame
             }
             lastFrame = time
             timedSinceFrame = 0
+            viewUpdateSinceFrame = 0
             guard let start = windowStart else {
                 windowStart = time
                 return nil
@@ -302,6 +364,7 @@ public final class FrameCostMeter: @unchecked Sendable {
                 framesPerSecond: Double(frames) / seconds,
                 longestGapMilliseconds: longestGap * 1_000,
                 longestGapUntimedMilliseconds: longestGapUntimed,
+                longestGapViewUpdateMilliseconds: longestGapViewUpdate,
                 parts: FrameCostPart.allCases.compactMap { part in
                     tallies[part].map {
                         FrameCostReading.Part(
@@ -317,6 +380,7 @@ public final class FrameCostMeter: @unchecked Sendable {
             windowStart = time
             longestGap = 0
             longestGapUntimed = 0
+            longestGapViewUpdate = 0
             return reading
         }
     }

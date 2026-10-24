@@ -29,3 +29,39 @@ public enum BuildConfirmLayout {
         return min(max(anchorX - width / 2, minX), max(minX, maxX))
     }
 }
+
+extension BuildConfirmLayout {
+    /// The pill at `x`, `y`, `width` by `height`, moved off what it covers
+    /// of `obstacles`: up over the one it covers where there is room (no
+    /// higher than `highest`), else beside it, within `minX`…`maxX`; left
+    /// where it is when neither has room. Decision 384: the new line's
+    /// station pair drawer is one of them, which covered its ✓
+    /// (TestFlight 85.1).
+    public static func keepingOff(
+        _ obstacles: [ScreenFrame], x: Double, y: Double, width: Double, height: Double,
+        minX: Double, maxX: Double, highest: Double
+    ) -> (x: Double, y: Double) {
+        var x = x, y = y
+        for obstacle in obstacles where obstacle.width > 0 && obstacle.height > 0 {
+            guard overlaps(x: x, y: y, width: width, height: height, obstacle, by: margin / 2) else { continue }
+            let above = obstacle.y - margin - height
+            if above >= highest {
+                y = above
+                continue
+            }
+            let after = obstacle.x + obstacle.width + margin, before = obstacle.x - margin - width
+            if after <= maxX, after >= minX {
+                x = after
+            } else if before >= minX, before <= maxX {
+                x = before
+            }
+        }
+        return (x, y)
+    }
+
+    /// Whether the pill at `x`, `y` comes within `gap` of `frame`.
+    public static func overlaps(x: Double, y: Double, width: Double, height: Double, _ frame: ScreenFrame, by gap: Double = 0) -> Bool {
+        x < frame.x + frame.width + gap && x + width > frame.x - gap
+            && y < frame.y + frame.height + gap && y + height > frame.y - gap
+    }
+}

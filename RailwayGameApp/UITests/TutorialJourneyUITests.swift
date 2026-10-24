@@ -38,18 +38,18 @@ private final class TutorialJourney {
     /// with them, decision 264): step `n` is `titles[n - 1]`.
     static let titles = [
         "Tap Build",
-        "Zoom out to see the town",
-        "Tap the start, then the end",
+        "Zoom out to see both towns",
+        "Tap one town, then the other",
         "Tap ✓ to build the track",
         "Tap Platform",
-        "Tap your track near one end",
+        "Tap your track in one town",
         "Tap ✓ to build the station",
-        "Tap the track near the other end",
+        "Tap your track in the other town",
         "Tap ✓ for the second station",
         "Tap Done to stop building",
         "Tap Lines",
         "Tap one station, then the other",
-        "Tap ✓ to create the line",
+        "Tap ✓, then Open Line",
         "Tap \u{25B6}\u{FE0E} to run time",
         "Wait for your first fares",
     ]

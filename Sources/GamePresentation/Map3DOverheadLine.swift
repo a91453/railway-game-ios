@@ -114,7 +114,8 @@ extension Map3DScene.Builder {
     /// (``trackLines``), its masts beside the platforms laid
     /// (``laidPlatforms``); in the closest detail only (decision 267's
     /// ``Map3DScene/Chunk/close``): farther off a mast is under a pixel
-    /// wide and a wire less.
+    /// wide and a wire less. Decision 380: in a coarse chunk too, where
+    /// the rest of the closest detail is left out.
     mutating func addOverheadLine() {
         let lines = trackLines.enumerated().filter { $0.element.kind != .tunnel }.compactMap { item in
             Map3DStreetLife.Path(item.element.points).map { (index: item.offset, path: $0, kind: item.element.kind) }
@@ -202,7 +203,7 @@ extension Map3DScene.Builder {
             }
         }
         var masts: [Cell: [Map3DPoint]] = [:]
-        target = .close
+        target = .wires
         for line in lines {
             let supports = Self.wireSupports(line.path)
             var wires: [(contact: Map3DPoint, messenger: Map3DPoint)?] = []

@@ -31,6 +31,11 @@ final class PingxiChallengeTests: XCTestCase {
         // (`GoalsTests.testAFestivalComesBackOnItsDayEveryYear`): playing
         // the demo 38 days to see it takes too long in a debug build.
         XCTAssertTrue(state.scenario.events.allSatisfy { $0.dayOfYear == 62 && $0.days == 3 && $0.boost == 1_500 && $0.notice == 7 })
+        // Decision 387: its story is told on the festival's days.
+        let story = try XCTUnwrap(ChallengeStory.named(state.scenario.id))
+        XCTAssertEqual(story.beats(on: 55, in: world).map(\.id), ["pingxi.4"])
+        XCTAssertEqual(story.beats(on: 62, in: world).map(\.id), ["pingxi.5"])
+        XCTAssertEqual(story.beats(on: 65, in: world).map(\.id), ["pingxi.6"])
         XCTAssertEqual(world.scenarioTitle(in: .traditionalChinese), "平溪線：天燈之鄉")
         XCTAssertEqual(Challenge.named("history.pingxi")?.map, .pingxi)
         XCTAssertTrue(Challenge.pingxi.story(in: .traditionalChinese).contains("1921"))

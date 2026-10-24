@@ -450,7 +450,7 @@ public final class GameLauncher {
     /// their trains are not the player's. A game with unlimited funds
     /// counts: a stamp is a visit, not a feat.
     func checkStationStamps(of session: GameSession, at date: Date = Date()) {
-        guard !session.news.isDemo, session.tutorial == nil, session.lesson == nil, let railways = session.railways else { return }
+        guard session.collectsStationStamps, let railways = session.railways else { return }
         let served = StationStamps.served(in: session.world)
         guard !served.isEmpty else { return }
         let found = StationStamps.realStations(of: served, in: session.world, railways: railways)
@@ -1238,6 +1238,11 @@ public final class GameLauncher {
         }
     }
 
+    /// The saves' folder, for exporting a save from the list
+    /// (``SaveLibrary/exportFile(of:)``, decision 381), written when it is
+    /// shared.
+    public var saveLibrary: SaveLibrary { library }
+
     /// Names the player's save `entry` `name`, or takes its name away when
     /// `name` is empty (decision 184).
     public func rename(_ entry: SaveLibrary.Entry, to name: String) {
@@ -1329,7 +1334,8 @@ public struct RealWorldData: Sendable {
 
     /// Reads `taiwan_population.json`, `taiwan_places.json`,
     /// `taiwan_water.json`, `taiwan_heights.dat`, `taiwan_coverage.dat`
-    /// (decision 147), `taiwan_place_names.json` (decision 159) and the
+    /// (decision 147), `taiwan_place_names.json` (decision 159),
+    /// `taiwan_no_build.json` (decision 385 (續)) and the
     /// railways' files
     /// (``RealRailways/load(file:)``) through `file` (a name and extension
     /// to its contents). About 5.3 MB of JSON is decoded, and 12 MB of heights
@@ -1346,7 +1352,9 @@ public struct RealWorldData: Sendable {
             }
         }
         let population = grid("taiwan_population", PopulationGrid.init(data:))
-        let places = grid("taiwan_places", PlaceGrid.init(data:))
+        var places = grid("taiwan_places", PlaceGrid.init(data:))
+        // Decision 385 (續): the land no one lives on goes with the places.
+        places?.noBuild = grid("taiwan_no_build", RealNoBuildLand.init(data:))
         let water = grid("taiwan_water", WaterGrid.init(data:))
         let heights = grid("taiwan_heights", ext: "dat", HeightGrid.init(data:))
         let coverage = grid("taiwan_coverage", ext: "dat", CoverageGrid.init(data:))

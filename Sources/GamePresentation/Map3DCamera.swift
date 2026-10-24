@@ -214,6 +214,14 @@ public struct Map3DCamera: Hashable, Sendable {
         return dx * dx + dz * dz <= reach * reach
     }
 
+    /// Decision 380: whether a chunk from `minimum` to `maximum` draws its
+    /// closest detail: close up, and drawn in full (`detailed`), or built
+    /// coarse (decision 368), when its closest detail is the overhead
+    /// line alone, which runs all along the line.
+    public func drawsClose(minimum: Map3DPoint, maximum: Map3DPoint, detailed: Bool, coarse: Bool, wasClose: Bool = false) -> Bool {
+        (detailed || coarse) && wantsClose(minimum: minimum, maximum: maximum, wasClose: wasClose)
+    }
+
     // MARK: - Gestures
 
     /// Metres on the ground per point on the screen at the target.
