@@ -28,6 +28,15 @@ public protocol SaveSyncFolder: Sendable {
     func otherVersions(of name: String) -> [Data]
     /// Forgets the other versions of `name`, once they are kept as saves.
     func discardOtherVersions(of name: String)
+    /// Whose folder it is (a fingerprint of the iCloud account), or `nil`
+    /// when that cannot be told. A round finding another than the last
+    /// one's compares every save as new: another account's saves are not
+    /// how this device's were left.
+    var owner: UInt64? { get }
+}
+
+extension SaveSyncFolder {
+    public var owner: UInt64? { nil }
 }
 
 /// A file in a ``SaveSyncFolder``.
@@ -119,9 +128,13 @@ public enum SaveSync {
     /// in a file that is not a save (``stateFileName``).
     public struct State: Codable, Hashable, Sendable {
         public var synced: [String: UInt64]
+        /// The other folder's ``SaveSyncFolder/owner`` when `synced` was
+        /// recorded.
+        public var owner: UInt64?
 
-        public init(synced: [String: UInt64] = [:]) {
+        public init(synced: [String: UInt64] = [:], owner: UInt64? = nil) {
             self.synced = synced
+            self.owner = owner
         }
 
         /// The state in `url`, or none yet (a first round, or a file that
@@ -176,12 +189,26 @@ public enum SaveSync {
         }
         let localSaves = saves(in: localFiles)
         let cloudSaves = saves(in: cloudFiles)
+        // Another account's folder, or one that lists none of the saves the
+        // last round left there (the account's iCloud data deleted, a
+        // backup put back before iCloud listed them): what the device has
+        // is not how the last round left it there. Every save is then
+        // compared as new, so nothing on the device is deleted for not
+        // being in the other folder; at worst a save is kept twice.
+        if state.owner != cloud.owner
+            || (!state.synced.isEmpty && state.synced.keys.allSatisfy { cloudSaves[$0] == nil }) {
+            state = State(owner: cloud.owner)
+        }
         // Names taken on either side, so a save kept twice takes a free one.
         var taken = Set(localFiles.keys).union(cloudFiles.keys)
 
         // First, what iCloud itself kept twice: another device wrote the
         // same file at the same moment.
         for stem in cloudSaves.keys.sorted() {
+            // The news log's and name's other versions are not kept: the
+            // save's own are, each with its own name.
+            cloud.discardOtherVersions(of: stem + SaveLibrary.newsSuffix)
+            cloud.discardOtherVersions(of: stem + SaveLibrary.nameSuffix)
             let file = stem + ".json"
             let versions = cloud.otherVersions(of: file)
             guard !versions.isEmpty else { continue }
@@ -218,6 +245,10 @@ public enum SaveSync {
                 continue
             }
             let (l, c) = (mine?.fingerprint, theirs?.fingerprint)
+            // While a game is open, nothing is written as the autosave,
+            // even where the device has none: the game being played saves
+            // there next, and would be copied over the other device's.
+            let mayDownload = mode == .full || !SaveLibrary.isAutosave(stem + ".json")
             do {
                 if l == c {
                     state.synced[stem] = l
@@ -234,7 +265,7 @@ public enum SaveSync {
                 } else if l == base {
                     // Changed in the other folder only.
                     if let theirs {
-                        guard mode == .full || mine == nil, theirs.canTakeInPlace(over: mine) else { continue }
+                        guard mode == .full || mine == nil, mayDownload, theirs.canTakeInPlace(over: mine) else { continue }
                         try theirs.write(to: local, over: mine)
                         outcome.downloaded.append(stem)
                     } else {
@@ -260,7 +291,7 @@ public enum SaveSync {
                     state.synced[stem] = l
                 } else if let theirs {
                     // Deleted on the device, changed in the other folder.
-                    guard theirs.canTakeInPlace(over: nil) else { continue }
+                    guard mayDownload, theirs.canTakeInPlace(over: nil) else { continue }
                     try theirs.write(to: local, over: nil)
                     outcome.downloaded.append(stem)
                     state.synced[stem] = c
@@ -362,7 +393,7 @@ public enum SaveSync {
 
     /// FNV-1a, 64 bits: the same bytes give the same number on every
     /// device and every build.
-    static func fingerprint(_ data: Data) -> UInt64 {
+    public static func fingerprint(_ data: Data) -> UInt64 {
         var hash: UInt64 = 0xcbf2_9ce4_8422_2325
         data.withUnsafeBytes { bytes in
             for byte in bytes {

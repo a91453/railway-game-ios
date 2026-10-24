@@ -10,6 +10,9 @@ import GamePresentation
 /// device yet is asked for and listed as not there yet.
 struct ICloudSaveFolder: SaveSyncFolder {
     let directory: URL
+    /// The iCloud account's token, archived and fingerprinted: another
+    /// account signed in on the device gives another.
+    let owner: UInt64?
 
     /// The folder, or `nil`: no iCloud account, iCloud Drive off for the
     /// app, or a build without the iCloud entitlement (the container is
@@ -17,9 +20,13 @@ struct ICloudSaveFolder: SaveSyncFolder {
     /// thread.
     static func current() -> ICloudSaveFolder? {
         let manager = FileManager.default
-        guard manager.ubiquityIdentityToken != nil,
+        guard let token = manager.ubiquityIdentityToken,
               let container = manager.url(forUbiquityContainerIdentifier: nil) else { return nil }
-        return ICloudSaveFolder(directory: container.appendingPathComponent("Saves", isDirectory: true))
+        let archived = try? NSKeyedArchiver.archivedData(withRootObject: token, requiringSecureCoding: false)
+        return ICloudSaveFolder(
+            directory: container.appendingPathComponent("Saves", isDirectory: true),
+            owner: archived.map(SaveSync.fingerprint)
+        )
     }
 
     func files() throws -> [String: SaveSyncFolderFile] {

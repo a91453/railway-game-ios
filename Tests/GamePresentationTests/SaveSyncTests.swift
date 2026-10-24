@@ -239,12 +239,77 @@ final class SaveSyncTests: XCTestCase {
         try phone.library.save(world(cash: 60), as: .autosave, at: date(0))
         sync(phone)
         let cloud = TestFolder(directory: cloudDirectory)
-        cloud.versions = ["autosave.json": [try SaveLibrary.encode(world(cash: 75), at: date(30))]]
+        cloud.versions = [
+            "autosave.json": [try SaveLibrary.encode(world(cash: 75), at: date(30))],
+        ]
+        // Only a name written at the same moment: forgotten too.
+        try phone.library.save(world(cash: 1), as: .manual, at: date(1), named: "Named")
+        sync(phone)
+        cloud.versions["save-2026-10-02 120001.name"] = [Data("Other".utf8)]
         let outcome = sync(phone, with: cloud)
         XCTAssertEqual(outcome.keptBoth, ["save-2026-10-02 120030-other.json"])
         XCTAssertTrue(cloud.versions.isEmpty, "then forgotten by iCloud")
-        XCTAssertEqual(try cash(on: phone), [60, 75])
+        XCTAssertEqual(try cash(on: phone), [1, 60, 75])
         XCTAssertTrue(cloudFiles().contains("save-2026-10-02 120030-other.json"))
+    }
+
+    func testAnEmptyICloudOrAnotherAccountsDeletesNothingHere() throws {
+        let phone = device("phone")
+        try phone.library.save(world(cash: 60), as: .autosave, at: date(0))
+        try phone.library.save(world(cash: 5), as: .manual, at: date(1), named: "Mine")
+        sync(phone)
+
+        // The account's iCloud data deleted (or a backup put back before
+        // iCloud lists the saves): the folder is empty, and the saves here
+        // are put back there, not deleted.
+        try FileManager.default.removeItem(at: cloudDirectory)
+        let emptied = sync(phone)
+        XCTAssertTrue(emptied.deleted.isEmpty)
+        XCTAssertEqual(Set(emptied.uploaded), ["autosave", "save-2026-10-02 120001"])
+        XCTAssertEqual(try cash(on: phone), [5, 60])
+
+        // Another account, whose iCloud has another device's autosave: the
+        // two are kept, not one copied over the other.
+        let first = TestFolder(directory: cloudDirectory)
+        first.owner = 1
+        sync(phone, with: first)
+        let otherDirectory = root.appendingPathComponent("other iCloud", isDirectory: true)
+        let pad = device("pad")
+        try pad.library.save(world(cash: 500), as: .autosave, at: date(50))
+        _ = SaveSync.run(
+            local: pad.folder, cloud: DirectorySaveFolder(directory: otherDirectory), state: &pad.state,
+            language: .english, now: date(50)
+        )
+        let second = TestFolder(directory: otherDirectory)
+        second.owner = 2
+        let switched = sync(phone, with: second, at: 60)
+        XCTAssertTrue(switched.deleted.isEmpty)
+        XCTAssertTrue(switched.downloaded.isEmpty)
+        XCTAssertEqual(switched.keptBoth.count, 1)
+        XCTAssertEqual(try phone.library.load(XCTUnwrap(phone.library.newestAutosave())), try world(cash: 60))
+        XCTAssertEqual(try cash(on: phone), [5, 60, 500])
+        XCTAssertEqual(phone.state.owner, 2)
+    }
+
+    func testWhileAGameIsOpenNoAutosaveIsTakenWhereThereIsNone() throws {
+        let phone = device("phone"), pad = device("pad")
+        try pad.library.save(world(cash: 60), as: .autosave, at: date(0))
+        sync(pad)
+
+        // A new game on the phone, not saved yet: the pad's autosave would
+        // be written over by the phone's next one, and that copied back.
+        XCTAssertTrue(sync(phone, mode: .keepingDevice).downloaded.isEmpty)
+        XCTAssertNil(phone.library.newestAutosave())
+        XCTAssertEqual(sync(phone).downloaded, ["autosave"], "on the start screen")
+
+        // Its autosave deleted on the phone, changed on the pad: the same.
+        try phone.library.delete(XCTUnwrap(phone.library.entries().first { $0.kind == .autosave }))
+        try pad.library.save(world(cash: 90), as: .autosave, at: date(90))
+        sync(pad)
+        XCTAssertTrue(sync(phone, mode: .keepingDevice).downloaded.isEmpty)
+        XCTAssertNil(phone.library.newestAutosave())
+        XCTAssertEqual(sync(phone).downloaded, ["autosave"])
+        XCTAssertEqual(try cash(on: phone), [90])
     }
 
     func testAFullICloudLeavesTheSavesOnTheDevice() throws {
@@ -435,6 +500,7 @@ private final class TestFolder: SaveSyncFolder, @unchecked Sendable {
     var failsWrites = false
     var failsListing = false
     var versions: [String: [Data]] = [:]
+    var owner: UInt64?
 
     struct Refused: Error {}
 
