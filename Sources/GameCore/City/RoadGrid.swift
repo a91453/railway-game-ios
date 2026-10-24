@@ -159,7 +159,8 @@ extension GameWorld {
         var grid = RoadGrid()
         for town in towns where town.x >= 0 && town.y >= 0 {
             let middle = CellPosition(row: Int(town.y / Land.cellLength), column: Int(town.x / Land.cellLength))
-            guard (0..<rows).contains(middle.row), (0..<columns).contains(middle.column) else { continue }
+            // Two towns in one cell are one: its roads grow once a month.
+            guard (0..<rows).contains(middle.row), (0..<columns).contains(middle.column), !grid.towns.contains(middle) else { continue }
             grid.towns.append(middle)
             let reach = RoadGrid.seedReach
             for row in (middle.row - reach)...(middle.row + reach) {
@@ -355,6 +356,9 @@ extension RoadGrid: Codable {
         }
         self.cells = cells
         towns = (try container.decodeIfPresent([Town].self, forKey: .towns) ?? []).map { CellPosition(row: $0.row, column: $0.column) }
+        guard Set(towns).count == towns.count else {
+            throw DecodingError.dataCorruptedError(forKey: .towns, in: container, debugDescription: "Each town's cell must be named once.")
+        }
         guard let blocks = LandBlockRun.blocks(of: try container.decodeIfPresent([LandBlockRun].self, forKey: .blocks) ?? []),
               zip(blocks, blocks.dropFirst()).allSatisfy({ $0 < $1 })
         else {

@@ -52,9 +52,10 @@ final class RoadGridTests: XCTestCase {
         let world = try world()
         XCTAssertEqual(world.roads?.cells, cells(7...9, 9...11))
         XCTAssertEqual(world.roads?.towns, [CellPosition(row: 8, column: 10)])
-        // By the world's corner only the cells in it; off the world none.
+        // By the world's corner only the cells in it; off the world none;
+        // a second town in the same cell is the first.
         var corner = world
-        corner.enableRoads(towns: [PlanPoint(x: 0, y: 0), PlanPoint(x: 40 * cell, y: 0)])
+        corner.enableRoads(towns: [PlanPoint(x: 0, y: 0), PlanPoint(x: 40 * cell, y: 0), PlanPoint(x: cell / 2, y: cell / 2)])
         XCTAssertEqual(corner.roads?.cells, cells(0...1, 0...1))
         XCTAssertEqual(corner.roads?.towns, [CellPosition(row: 0, column: 0)])
     }
@@ -262,6 +263,7 @@ final class RoadGridTests: XCTestCase {
         XCTAssertThrowsError(try load(["cells": [["row": 1, "column": 0, "count": 1], ["row": 0, "column": 0, "count": 1]]]), "out of order")
         XCTAssertThrowsError(try load(["cells": [["row": 0, "column": 0, "count": 3], ["row": 0, "column": 2, "count": 1]]]), "overlapping")
         XCTAssertThrowsError(try load(["towns": [["row": 16, "column": 0]]]), "a town outside the world")
+        XCTAssertThrowsError(try load(["towns": [["row": 8, "column": 10], ["row": 8, "column": 10]]]), "a town twice")
         XCTAssertThrowsError(try load(["blocks": [["row": 0, "column": 2, "count": 1]]]), "a block outside the world")
     }
 }
