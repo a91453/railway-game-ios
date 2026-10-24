@@ -46,6 +46,8 @@ struct Map3DPreviewScreen: View {
     @State private var compass = Map3DCompassState()
     @State private var cameraLink = Map3DCameraLink()
     @State private var trainLabels = Map3DTrainLabelState()
+    /// Decision 403 (續二): the photo of the 3D map just taken, to share.
+    @State private var photo = Map3DPhotoState()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Decision 403: an iPhone on its side, where the driving strip sits in
     /// the top row so the middle of the screen stays clear.
@@ -178,7 +180,7 @@ struct Map3DPreviewScreen: View {
                     .transition(.card(from: .bottom, reduceMotion: reduceMotion))
                 }
                 if let train = session.followedTrain {
-                    Map3DFollowBar(train: train, session: session, view: $followView)
+                    Map3DFollowBar(train: train, session: session, view: $followView, takePhoto: takePhoto)
                         .transition(.card(from: .bottom, reduceMotion: reduceMotion))
                 } else {
                     Text(verbatim: handedOver == nil
@@ -221,6 +223,50 @@ struct Map3DPreviewScreen: View {
         // closing gives the 2D map its speed back.
         .onAppear { session.setMap3DOpen(true) }
         .onDisappear { session.setMap3DOpen(false) }
+        .sheet(item: $photo.snapshot) { snapshot in
+            Map3DSnapshotSheet(snapshot: snapshot, language: language)
+        }
+    }
+
+    /// Decision 403 (續二): the 3D map as drawn next, without the cards
+    /// over it, to share as the postcard is shared (decision 215).
+    private func takePhoto() {
+        guard let view = cameraLink.view else { return }
+        let title = session.followedTrain.map(\.name) ?? DisplayLanguage.app.text("3D Map", "3D 地圖")
+        let photo = photo
+        // A real-world map's data, written on the photo as the postcard
+        // writes its credit (decision 215).
+        let credit = DataSourceCredits.map3DPhoto(realWorld: session.world.geoAnchor != nil, in: DisplayLanguage.app)
+        view.capture { image in
+            guard let image else { return }
+            photo.snapshot = Map3DSnapshot(image: Self.credited(image, credit), title: title)
+        }
+    }
+
+    /// `image` with `credit` in small type in its lower right corner, on a
+    /// dark band so it reads on any sky or ground; as it is when there is
+    /// none.
+    private static func credited(_ image: UIImage, _ credit: String) -> UIImage {
+        guard !credit.isEmpty else { return image }
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = image.scale
+        format.opaque = true
+        return UIGraphicsImageRenderer(size: image.size, format: format).image { _ in
+            image.draw(at: .zero)
+            let size = max(9, image.size.width / 48)
+            let text = NSAttributedString(string: credit, attributes: [
+                .font: UIFont.systemFont(ofSize: size, weight: .medium),
+                .foregroundColor: UIColor.white,
+            ])
+            let bounds = text.boundingRect(with: CGSize(width: image.size.width - size * 2, height: .greatestFiniteMagnitude),
+                                           options: [.usesLineFragmentOrigin], context: nil)
+            let pad = size * 0.5
+            let band = CGRect(x: image.size.width - bounds.width - pad * 3, y: image.size.height - bounds.height - pad * 3,
+                              width: bounds.width + pad * 2, height: bounds.height + pad * 2)
+            UIColor.black.withAlphaComponent(0.55).setFill()
+            UIBezierPath(roundedRect: band, cornerRadius: pad).fill()
+            text.draw(with: band.insetBy(dx: pad, dy: pad), options: [.usesLineFragmentOrigin], context: nil)
+        }
     }
 
     /// Decision 403: the driving display of the train followed.
@@ -1018,6 +1064,8 @@ private struct Map3DFollowBar: View {
     let train: Train
     let session: GameSession
     @Binding var view: Map3DFollow.View
+    /// Decision 403 (續二): takes a photo of the 3D map.
+    let takePhoto: () -> Void
 
     var body: some View {
         // Decision 403 (續): five views; where they do not fit beside the
@@ -1026,12 +1074,14 @@ private struct Map3DFollowBar: View {
             HStack(spacing: 9) {
                 title
                 choices
+                actions
                 stop
             }
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 9) {
                     title
                     Spacer(minLength: 0)
+                    actions
                     stop
                 }
                 HStack(spacing: 9) { choices }
@@ -1080,6 +1130,41 @@ private struct Map3DFollowBar: View {
             .accessibilityAddTraits(view == option ? .isSelected : [])
             .accessibilityIdentifier("map3D.follow.\(option.rawValue)")
         }
+    }
+
+    /// Decision 403 (續二): the horn (the train's own, by its kind) and the
+    /// photo, round buttons beside the stop.
+    @ViewBuilder private var actions: some View {
+        Button {
+            session.soundHorn()
+        } label: {
+            roundIcon(Self.hornSymbol)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(verbatim: session.language.text("Horn", "鳴笛")))
+        .accessibilityHint(Text(verbatim: session.language.text("Sounds the train's horn.", "讓列車鳴笛。")))
+        .accessibilityIdentifier("map3D.follow.horn")
+        Button(action: takePhoto) {
+            roundIcon("camera.fill")
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(verbatim: session.language.text("Take Photo", "拍照")))
+        .accessibilityHint(Text(verbatim: session.language.text("Saves the 3D view as a picture to share.", "把現在的 3D 畫面存成照片，可以分享。")))
+        .accessibilityIdentifier("map3D.follow.photo")
+    }
+
+    /// The horn's symbol: SF Symbols 5's horn, or a speaker where a system
+    /// has none.
+    private static let hornSymbol = UIImage(systemName: "horn.blast.fill") != nil ? "horn.blast.fill" : "speaker.wave.3.fill"
+
+    private func roundIcon(_ name: String) -> some View {
+        Image(systemName: name)
+            .font(.caption.weight(.heavy))
+            .frame(width: 26, height: 26)
+            .background(Theme.chip, in: Circle())
+            .foregroundStyle(Theme.textPrimary)
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(Rectangle())
     }
 
     private var stop: some View {
@@ -1236,5 +1321,67 @@ private struct Map3DDriverPrompt: View {
             .padding(.vertical, 6)
             .background(.regularMaterial, in: Capsule())
             .accessibilityIdentifier("map3D.driver.prompt")
+    }
+}
+
+/// Decision 403 (續二): the photo of the 3D map just taken, shown in its
+/// sheet until it is closed; a class on the main actor, so the frame's
+/// copy can hand it over when the GPU is done.
+@MainActor
+@Observable
+final class Map3DPhotoState {
+    var snapshot: Map3DSnapshot?
+}
+
+/// Decision 403 (續二): a photo of the 3D map, and what to call it.
+struct Map3DSnapshot: Identifiable {
+    let id = UUID()
+    let image: UIImage
+    let title: String
+}
+
+/// Decision 403 (續二): the photo just taken of the 3D map, and the share
+/// button, which hands it to the system's share sheet as the postcard's
+/// does (decision 215): to the photos, LINE, or anywhere else.
+private struct Map3DSnapshotSheet: View {
+    let snapshot: Map3DSnapshot
+    let language: DisplayLanguage
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        let image = Image(uiImage: snapshot.image)
+        NavigationStack {
+            VStack(spacing: 16) {
+                image
+                    .resizable()
+                    .scaledToFit()
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .accessibilityLabel(Text(verbatim: snapshot.title))
+                    .accessibilityIdentifier("map3D.snapshot.image")
+                ShareLink(item: image, preview: SharePreview(Text(verbatim: snapshot.title), image: image)) {
+                    Label {
+                        Text(verbatim: language.text("Share Photo", "分享照片"))
+                    } icon: {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(ThemeProminentButtonStyle())
+                .accessibilityIdentifier("map3D.snapshot.share")
+            }
+            .padding()
+            .frame(maxWidth: 480)
+            .frame(maxWidth: .infinity)
+            .background(Theme.background)
+            .navigationTitle(language.text("3D Photo", "3D 照片"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(language.text("Done", "完成")) { dismiss() }
+                        .accessibilityIdentifier("map3D.snapshot.done")
+                }
+            }
+        }
     }
 }

@@ -135,6 +135,17 @@ public enum DataSourceCredits {
         }
     }
 
+    /// Decision 403 (續二): the credit written on a photo of the 3D map, or
+    /// empty for the player's own map. A real-world map's 3D view draws
+    /// the railways (OpenStreetMap, TDX), the buildings' footprints
+    /// (Overture Maps, OpenStreetMap's under the ODbL) and the ground's
+    /// heights (Copernicus DEM): the photo, shared away from the game's
+    /// data sources page, names them all.
+    public static func map3DPhoto(realWorld: Bool, in language: DisplayLanguage) -> String {
+        guard realWorld else { return "" }
+        return "© OpenStreetMap · Overture Maps · Copernicus DEM · \(language.text("MOTC TDX", "交通部 TDX"))"
+    }
+
     /// The Open Government Data License, linked from every source under it.
     static func openGovernmentLicense(in language: DisplayLanguage) -> DataSourceCredit.Link {
         DataSourceCredit.Link(title: language.text("Open Government Data License", "政府資料開放授權條款"), url: openGovernmentLicenseURL)

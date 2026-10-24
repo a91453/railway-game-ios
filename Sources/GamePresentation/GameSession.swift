@@ -1187,6 +1187,37 @@ public final class GameSession {
 
     @ObservationIgnored private var isMap3DOpen = false
 
+    /// Decision 403 (續二): blows the followed train's horn (``TrainHorn``),
+    /// the 3D follow bar's button. Nothing when no train is followed; the
+    /// app plays it as the other sounds, so the sound switch, the effects'
+    /// volume and the phone's silent switch keep it quiet.
+    public func soundHorn() {
+        guard let train = followedTrain else { return }
+        playSound?(.horn(TrainHorn.of(train)))
+    }
+
+    /// Decision 403 (續二): where the followed train was after the last
+    /// step, for its horn that blows by itself; `nil` while it cannot.
+    @ObservationIgnored private var hornPlace: TrainHorn.Place?
+
+    /// Blows the followed train's horn by itself after a step
+    /// (``TrainHorn/blowsByItself(from:to:)``): on the 3D map, while the
+    /// game runs at 1×, for a train whose horn does
+    /// (``TrainHorn/blowsByItself``).
+    private func noteHorn() {
+        guard let playSound, isMap3DOpen, let train = followedTrain, !world.clock.isPaused,
+              world.clock.speed.tenthsPerTick <= TrainHorn.byItselfUpTo.tenthsPerTick
+        else {
+            hornPlace = nil
+            return
+        }
+        let place = world.hornPlace(of: train.id)
+        defer { hornPlace = place }
+        let horn = TrainHorn.of(train)
+        guard horn.blowsByItself, let place, TrainHorn.blowsByItself(from: hornPlace, to: place) else { return }
+        playSound(.horn(horn))
+    }
+
     /// Whether the speed is held to 10× at most now: the 3D map is open and
     /// follows a train (decision 360).
     public private(set) var isSpeedCappedIn3D = false
@@ -1629,6 +1660,7 @@ public final class GameSession {
                 playSound(cue)
             }
             updateFollowSounds()
+            noteHorn()
         }
         meter.measure(.stepIncome) {
             // Decision 117: fares and rent settled within the step.

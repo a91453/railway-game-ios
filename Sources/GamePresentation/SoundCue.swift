@@ -38,6 +38,10 @@ public enum SoundCue: Hashable, Sendable {
     /// Day passes went on sale, or at a new price (decision 373): a
     /// ticket machine printing one, its cutter, the ticket dropping.
     case ticketIssued
+    /// The followed train's horn (decision 403, 續二): the 3D follow
+    /// bar's button, or a Taiwan Railway train nearing a stop or running
+    /// into a tunnel (``TrainHorn``).
+    case horn(TrainHorn)
 
     /// When each train in service last arrived at a call, as its service
     /// times record it (`ServiceTimes/arrival`), and whether it stands at
@@ -167,6 +171,7 @@ public enum SoundCue: Hashable, Sendable {
         case .goalMet: ("goal-met", "wav")
         case .lineAcquired: ("line-acquired", "wav")
         case .ticketIssued: ("ticket-issued", "wav")
+        case .horn(let horn): horn.resource
         }
     }
 }
