@@ -259,6 +259,10 @@ public final class GameLauncher {
     /// player's own (``SaveSync/Outcome/keptBoth``).
     @ObservationIgnored private var keptTwiceToTell = 0
 
+    /// Whether a game is open, for a round on the saves' queue: a game
+    /// started while a start screen's round runs is not written under.
+    @ObservationIgnored private let gameIsOpen = GameOpenFlag()
+
     /// Keeps the saves and the copy in iCloud in step (decision 397), after
     /// the saves queued before, off the main thread. On the start screen
     /// both ways; in a game, the device's saves are never written over or
@@ -268,11 +272,11 @@ public final class GameLauncher {
     @discardableResult
     public func syncSaves(at date: Date = Date()) -> Task<Void, Never>? {
         guard let folder = cloudSaveFolder else { return nil }
-        let (library, language) = (library, language)
+        let (library, language, gameIsOpen) = (library, language, gameIsOpen)
         let mode: SaveSync.Mode = session == nil ? .full : .keepingDevice
         let (done, report) = AsyncStream.makeStream(of: SaveSync.Outcome?.self)
         saveQueue.async {
-            report.yield(Self.syncRound(library: library, cloud: folder(), mode: mode, language: language, at: date))
+            report.yield(Self.syncRound(library: library, cloud: folder(), mode: mode, language: language, at: date, isGameOpen: gameIsOpen))
             report.finish()
         }
         return Task {
@@ -285,13 +289,15 @@ public final class GameLauncher {
     /// One round between `library` and `cloud`, from and to the state kept
     /// beside the saves; `nil` without `cloud`.
     private nonisolated static func syncRound(
-        library: SaveLibrary, cloud: (any SaveSyncFolder)?, mode: SaveSync.Mode, language: DisplayLanguage, at date: Date
+        library: SaveLibrary, cloud: (any SaveSyncFolder)?, mode: SaveSync.Mode, language: DisplayLanguage, at date: Date,
+        isGameOpen: GameOpenFlag
     ) -> SaveSync.Outcome? {
         guard let cloud else { return nil }
         let stateFile = library.directory.appendingPathComponent(SaveSync.stateFileName)
         var state = SaveSync.State.read(from: stateFile)
         var outcome = SaveSync.run(
-            local: DirectorySaveFolder(directory: library.directory), cloud: cloud, state: &state, mode: mode, language: language, now: date
+            local: DirectorySaveFolder(directory: library.directory), cloud: cloud, state: &state, mode: mode, language: language, now: date,
+            isGameOpen: { isGameOpen.value }
         )
         // A state left as it was is safe: what the round did left both
         // sides the same, and the next round sees them so.
@@ -1115,6 +1121,7 @@ public final class GameLauncher {
             self.checkAchievements(of: started)
         }
         session = started
+        gameIsOpen.value = true
         startLessonClock()
         lastSlotWorld = started.worldToSave
         message = nil
@@ -1311,6 +1318,7 @@ public final class GameLauncher {
         let left = session != nil
         session?.stopGameLoop()
         session = nil
+        gameIsOpen.value = false
         duckMusic?(1)
         runningSound?(nil)
         weatherSound?(nil)
@@ -1454,5 +1462,16 @@ public struct RealWorldData: Sendable {
             railways: railways.railways,
             issues: issues + railways.issues
         )
+    }
+}
+
+/// Whether a game is open, read on the saves' queue (decision 397).
+final class GameOpenFlag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var isOpen = false
+
+    var value: Bool {
+        get { lock.withLock { isOpen } }
+        set { lock.withLock { isOpen = newValue } }
     }
 }

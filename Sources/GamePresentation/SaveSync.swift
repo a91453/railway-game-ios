@@ -95,8 +95,10 @@ public struct DirectorySaveFolder: SaveSyncFolder {
 ///
 /// Each round compares each save on the two sides with how it was when
 /// they were last the same (``State``), so it knows which side changed:
-/// - changed on one side only: copied to the other, or deleted there when
-///   it was deleted;
+/// - changed on one side only: copied to the other. Deleted on the device:
+///   deleted in the other folder. Deleted in the other folder: kept on the
+///   device as it is (only the player deletes a save there), not copied
+///   back unless changed;
 /// - changed on both, the same way: nothing to do;
 /// - changed on both, differently: both are kept. The device's stays as it
 ///   is; the other's is added to the device as a save of the player's own,
@@ -117,9 +119,9 @@ public enum SaveSync {
         /// On the start screen: copies both ways.
         case full
         /// While a game is open: copies from the device and adds saves new
-        /// to it, but never writes over or deletes a save on the device,
-        /// which may be the game being played; that waits for the start
-        /// screen.
+        /// to it, but never writes over a save on the device, which may be
+        /// the game being played, nor the autosave where there is none;
+        /// that waits for the start screen.
         case keepingDevice
     }
 
@@ -131,10 +133,26 @@ public enum SaveSync {
         /// The other folder's ``SaveSyncFolder/owner`` when `synced` was
         /// recorded.
         public var owner: UInt64?
+        /// The other folder's mark (``markFileName``) when `synced` was
+        /// recorded.
+        public var mark: String?
+        /// The saves another device deleted, kept on this one as they were
+        /// (their fingerprints): not copied back, not deleted here.
+        public var leftHere: [String: UInt64]
 
-        public init(synced: [String: UInt64] = [:], owner: UInt64? = nil) {
+        public init(synced: [String: UInt64] = [:], owner: UInt64? = nil, mark: String? = nil, leftHere: [String: UInt64] = [:]) {
             self.synced = synced
             self.owner = owner
+            self.mark = mark
+            self.leftHere = leftHere
+        }
+
+        public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            synced = try container.decode([String: UInt64].self, forKey: .synced)
+            owner = try container.decodeIfPresent(UInt64.self, forKey: .owner)
+            mark = try container.decodeIfPresent(String.self, forKey: .mark)
+            leftHere = try container.decodeIfPresent([String: UInt64].self, forKey: .leftHere) ?? [:]
         }
 
         /// The state in `url`, or none yet (a first round, or a file that
@@ -156,7 +174,8 @@ public enum SaveSync {
         public var downloaded: [String] = []
         /// Saves copied from the device to the other folder.
         public var uploaded: [String] = []
-        /// Saves deleted on one side because they were deleted on the other.
+        /// Saves deleted in the other folder because they were deleted on
+        /// the device. A round never deletes a save on the device.
         public var deleted: [String] = []
         /// The saves another device changed too, each kept on the device as
         /// a save of the player's own beside the device's: their new file
@@ -174,12 +193,19 @@ public enum SaveSync {
     /// no build lists it as a save, and not copied.
     public static let stateFileName = "save-sync.data"
 
+    /// The file in the other folder that tells it apart: a random mark,
+    /// written by the first round that finds none. A folder emptied (the
+    /// account's iCloud data deleted) and filled again by another device
+    /// has another mark, so this device knows the saves there are not how
+    /// it left them. Not `.json`, so not a save.
+    public static let markFileName = "save-sync.id"
+
     /// Runs a round between the device's saves `local` and `cloud`, from
     /// and to `state`, in `mode`. A save kept twice is named in `language`,
     /// stamped `now` when its own date cannot be read.
     public static func run(
         local: any SaveSyncFolder, cloud: any SaveSyncFolder, state: inout State,
-        mode: Mode = .full, language: DisplayLanguage, now: Date
+        mode: Mode = .full, language: DisplayLanguage, now: Date, isGameOpen: () -> Bool = { false }
     ) -> Outcome {
         var outcome = Outcome()
         guard let localFiles = try? local.files().filter({ downloadingName($0.key) == nil }),
@@ -189,15 +215,30 @@ public enum SaveSync {
         }
         let localSaves = saves(in: localFiles)
         let cloudSaves = saves(in: cloudFiles)
-        // Another account's folder, or one that lists none of the saves the
-        // last round left there (the account's iCloud data deleted, a
-        // backup put back before iCloud listed them): what the device has
-        // is not how the last round left it there. Every save is then
-        // compared as new, so nothing on the device is deleted for not
-        // being in the other folder; at worst a save is kept twice.
-        if state.owner != cloud.owner
-            || (!state.synced.isEmpty && state.synced.keys.allSatisfy { cloudSaves[$0] == nil }) {
-            state = State(owner: cloud.owner)
+        // Another account's folder, or another folder of the same account
+        // (its iCloud data deleted, then filled again, or not listed yet):
+        // the saves there are not how the last round left them. Every save
+        // is then compared as new: at worst one is kept twice.
+        let mark: String
+        switch cloudFiles[markFileName]?.isAvailable {
+        case true?:
+            guard let data = try? cloud.read(markFileName), let read = String(data: data, encoding: .utf8) else {
+                outcome.isIncomplete = true
+                return outcome
+            }
+            mark = read
+        case false?:
+            outcome.isIncomplete = true
+            return outcome
+        case nil:
+            mark = UUID().uuidString
+            guard (try? cloud.write(Data(mark.utf8), to: markFileName)) != nil else {
+                outcome.isIncomplete = true
+                return outcome
+            }
+        }
+        if state.owner != cloud.owner || state.mark != mark {
+            state = State(owner: cloud.owner, mark: mark)
         }
         // Names taken on either side, so a save kept twice takes a free one.
         var taken = Set(localFiles.keys).union(cloudFiles.keys)
@@ -245,10 +286,16 @@ public enum SaveSync {
                 continue
             }
             let (l, c) = (mine?.fingerprint, theirs?.fingerprint)
+            // Deleted on another device, kept here as it was: left alone.
+            if let left = state.leftHere[stem] {
+                if theirs == nil, l == left { continue }
+                state.leftHere[stem] = nil
+            }
             // While a game is open, nothing is written as the autosave,
             // even where the device has none: the game being played saves
-            // there next, and would be copied over the other device's.
-            let mayDownload = mode == .full || !SaveLibrary.isAutosave(stem + ".json")
+            // there next, and would be copied over the other device's. A
+            // game started while the round runs counts too.
+            let mayDownload = !SaveLibrary.isAutosave(stem + ".json") || (mode == .full && !isGameOpen())
             do {
                 if l == c {
                     state.synced[stem] = l
@@ -269,9 +316,12 @@ public enum SaveSync {
                         try theirs.write(to: local, over: mine)
                         outcome.downloaded.append(stem)
                     } else {
-                        guard mode == .full else { continue }
-                        try mine?.remove(from: local)
-                        outcome.deleted.append(stem)
+                        // Deleted in the other folder: kept here, as only
+                        // the player deletes a save on this device. Not
+                        // copied back either, unless changed here.
+                        state.synced[stem] = nil
+                        if let l { state.leftHere[stem] = l }
+                        continue
                     }
                     state.synced[stem] = c
                 } else if let mine, let theirs {
@@ -471,13 +521,28 @@ private struct SaveGroup {
 
     /// Writes its files to `folder`, the save's own file last so a save
     /// appears there whole, and deletes the files of `old` it no longer has.
+    /// When a file cannot be written (the folder full), the files written
+    /// are put back as `old` had them, so `old` is left whole.
     func write(to folder: any SaveSyncFolder, over old: SaveGroup?) throws {
         let save = stem + ".json"
-        for (name, data) in files where name != save {
-            try folder.write(data, to: name)
-        }
-        if let data = files[save] {
-            try folder.write(data, to: save)
+        var written: [String] = []
+        do {
+            for (name, data) in files.sorted(by: { $0.key < $1.key }) where name != save {
+                try folder.write(data, to: name)
+                written.append(name)
+            }
+            if let data = files[save] {
+                try folder.write(data, to: save)
+            }
+        } catch {
+            for name in written {
+                if let data = old?.files[name] {
+                    try? folder.write(data, to: name)
+                } else {
+                    try? folder.remove(name)
+                }
+            }
+            throw error
         }
         for name in (old?.files.keys).map(Array.init) ?? [] where files[name] == nil {
             try folder.remove(name)

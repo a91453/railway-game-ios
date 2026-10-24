@@ -52,8 +52,9 @@ final class SaveSyncTests: XCTestCase {
         )
     }
 
+    /// The files in iCloud but its mark.
     private func cloudFiles() -> [String] {
-        ((try? FileManager.default.contentsOfDirectory(atPath: cloudDirectory.path)) ?? []).sorted()
+        ((try? FileManager.default.contentsOfDirectory(atPath: cloudDirectory.path)) ?? []).filter { $0 != SaveSync.markFileName }.sorted()
     }
 
     /// The cash of every save on `device`, the least first: each test's
@@ -147,7 +148,7 @@ final class SaveSyncTests: XCTestCase {
         XCTAssertEqual(pad.files(), ["autosave.json"])
     }
 
-    func testADeletedSaveIsDeletedOnTheOtherUnlessItChangedThere() throws {
+    func testASaveDeletedOnAnotherDeviceStaysHere() throws {
         let phone = device("phone"), pad = device("pad")
         let kept = try phone.library.save(world(cash: 30), as: .manual, at: date(0), named: "Old")
         let changed = try phone.library.save(world(cash: 40), as: .manual, at: date(1))
@@ -155,13 +156,17 @@ final class SaveSyncTests: XCTestCase {
         sync(pad)
         XCTAssertEqual(pad.library.entries().count, 2)
 
+        // Deleted on the phone: gone from iCloud, kept on the pad (only the
+        // player deletes a save on a device), and not copied back.
         try phone.library.delete(kept)
         XCTAssertEqual(sync(phone).deleted, ["save-2026-10-02 120000"])
-        XCTAssertEqual(sync(pad).deleted, ["save-2026-10-02 120000"])
-        XCTAssertEqual(pad.files(), ["save-2026-10-02 120001.json"], "with its name file")
+        XCTAssertEqual(sync(pad), SaveSync.Outcome())
+        XCTAssertEqual(try cash(on: pad), [30, 40])
+        XCTAssertEqual(sync(pad), SaveSync.Outcome(), "nor later")
+        XCTAssertFalse(cloudFiles().contains("save-2026-10-02 120000.json"))
 
         // Renamed on the pad, deleted on the phone: the pad's is kept.
-        try pad.library.rename(XCTUnwrap(pad.library.entries().first), to: "Keep me")
+        try pad.library.rename(XCTUnwrap(pad.library.entries().first { $0.name == nil }), to: "Keep me")
         try phone.library.delete(changed)
         sync(phone)
         let outcome = sync(pad)
@@ -191,8 +196,8 @@ final class SaveSyncTests: XCTestCase {
         // Back on the start screen.
         let start = sync(phone)
         XCTAssertEqual(start.downloaded, ["autosave"])
-        XCTAssertEqual(start.deleted, ["save-2026-10-02 120001"])
-        XCTAssertEqual(try cash(on: phone), [7, 200])
+        XCTAssertTrue(start.deleted.isEmpty, "the pad's deletion leaves the phone's")
+        XCTAssertEqual(try cash(on: phone), [5, 7, 200])
 
         // Saved in the game meanwhile instead: both are kept.
         let other = device("other")
@@ -203,7 +208,7 @@ final class SaveSyncTests: XCTestCase {
         let saved = sync(phone, mode: .keepingDevice)
         XCTAssertEqual(saved.keptBoth.count, 1)
         XCTAssertEqual(try phone.library.load(XCTUnwrap(phone.library.newestAutosave())), try world(cash: 260))
-        XCTAssertEqual(try cash(on: phone), [7, 260, 900])
+        XCTAssertEqual(try cash(on: phone), [5, 7, 260, 900])
     }
 
     func testASaveOnItsWayFromICloudWaits() throws {
@@ -289,6 +294,58 @@ final class SaveSyncTests: XCTestCase {
         XCTAssertEqual(try phone.library.load(XCTUnwrap(phone.library.newestAutosave())), try world(cash: 60))
         XCTAssertEqual(try cash(on: phone), [5, 60, 500])
         XCTAssertEqual(phone.state.owner, 2)
+    }
+
+    func testAnEmptiedICloudFilledByAnOlderDeviceFirst() throws {
+        let phone = device("phone"), pad = device("pad")
+        try phone.library.save(world(cash: 60), as: .autosave, at: date(0))
+        sync(phone)
+        sync(pad)
+        try phone.library.save(world(cash: 700), as: .autosave, at: date(100))
+        try phone.library.save(world(cash: 5), as: .manual, at: date(101), named: "Mine")
+        sync(phone)
+        // The account's iCloud data deleted; the pad, left since, first.
+        try FileManager.default.removeItem(at: cloudDirectory)
+        XCTAssertEqual(sync(pad, at: 200).uploaded, ["autosave"])
+        let outcome = sync(phone, at: 300)
+        XCTAssertTrue(outcome.deleted.isEmpty)
+        XCTAssertTrue(outcome.downloaded.isEmpty)
+        XCTAssertEqual(outcome.keptBoth.count, 1)
+        XCTAssertEqual(try phone.library.load(XCTUnwrap(phone.library.newestAutosave())), try world(cash: 700))
+        XCTAssertEqual(try cash(on: phone), [5, 60, 700])
+    }
+
+    func testAGameStartedWhileTheRoundRunsIsNotWrittenUnder() throws {
+        let phone = device("phone"), pad = device("pad")
+        try pad.library.save(world(cash: 60), as: .autosave, at: date(0))
+        try pad.library.save(world(cash: 5), as: .manual, at: date(1))
+        sync(pad)
+        let outcome = SaveSync.run(
+            local: phone.folder, cloud: DirectorySaveFolder(directory: cloudDirectory), state: &phone.state,
+            language: .english, now: date(0), isGameOpen: { true }
+        )
+        XCTAssertEqual(outcome.downloaded, ["save-2026-10-02 120001"])
+        XCTAssertNil(phone.library.newestAutosave())
+    }
+
+    func testASaveHalfWrittenToAFullDeviceIsPutBack() throws {
+        let phone = device("phone"), pad = device("pad")
+        try phone.library.save(world(cash: 60), news: NewsLog(), as: .autosave, at: date(0))
+        sync(phone)
+        sync(pad)
+        let before = try pad.files().map { try Data(contentsOf: pad.library.directory.appendingPathComponent($0)) }
+        try phone.library.save(world(cash: 120), as: .autosave, at: date(100))
+        try Data("another news log".utf8).write(to: phone.library.directory.appendingPathComponent("autosave.news.json"))
+        sync(phone)
+        // The pad's folder takes the news log, then is full.
+        let full = TestFolder(directory: pad.library.directory)
+        full.failsWritesOf = ["autosave.json"]
+        let outcome = SaveSync.run(
+            local: full, cloud: DirectorySaveFolder(directory: cloudDirectory), state: &pad.state, language: .english, now: date(0)
+        )
+        XCTAssertTrue(outcome.isIncomplete)
+        XCTAssertEqual(try pad.files().map { try Data(contentsOf: pad.library.directory.appendingPathComponent($0)) }, before)
+        XCTAssertEqual(sync(pad).downloaded, ["autosave"], "and comes whole next time")
     }
 
     func testWhileAGameIsOpenNoAutosaveIsTakenWhereThereIsNone() throws {
@@ -498,6 +555,7 @@ private final class TestFolder: SaveSyncFolder, @unchecked Sendable {
     let base: DirectorySaveFolder
     var unavailable: Set<String> = []
     var failsWrites = false
+    var failsWritesOf: Set<String> = []
     var failsListing = false
     var versions: [String: [Data]] = [:]
     var owner: UInt64?
@@ -522,7 +580,7 @@ private final class TestFolder: SaveSyncFolder, @unchecked Sendable {
     }
 
     func write(_ data: Data, to name: String) throws {
-        if failsWrites { throw Refused() }
+        if failsWrites || failsWritesOf.contains(name) { throw Refused() }
         try base.write(data, to: name)
     }
 
