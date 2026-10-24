@@ -19,6 +19,9 @@ struct RailwayGameApp: App {
     /// The music and sounds, for the app's lifetime: the launcher hands
     /// its player to every game.
     @State private var audio: GameAudio
+    /// Game Center (decision 396): signed in in the background, never in
+    /// the way of the start.
+    @State private var gameCenter: GameCenterLink
     /// The combined phase of all the app's scenes.
     @Environment(\.scenePhase) private var scenePhase
 
@@ -68,12 +71,24 @@ struct RailwayGameApp: App {
         launcher.weatherSound = { audio.setWeather($0) }
         _audio = State(initialValue: audio)
         _launcher = State(initialValue: launcher)
+        let gameCenter = GameCenterLink()
+        #if DEBUG
+        // UI tests play signed out: no sign-in to come up over a test.
+        let signsIn = !DebugLaunch.isSet("-ui-testing")
+        #else
+        let signsIn = true
+        #endif
+        if signsIn {
+            gameCenter.start(launcher: launcher)
+        }
+        _gameCenter = State(initialValue: gameCenter)
     }
 
     var body: some Scene {
         WindowGroup {
             RootView(launcher: launcher)
                 .environment(audio)
+                .environment(gameCenter)
                 // Decision 184: the taps the sounds' cues ask for.
                 .sensoryFeedback(trigger: audio.haptic) { _, pulse in pulse?.feedback }
         }
