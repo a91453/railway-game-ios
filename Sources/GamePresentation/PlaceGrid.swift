@@ -20,7 +20,8 @@ import GameCore
 // The same file holds OpenStreetMap's industrial land, parks and farmland
 // as areas on a finer cut of the grid (decision 93, `zones`, by
 // `build_zone_grid.py`), which a real-world map's land is laid out by
-// (`LandImport`).
+// (`LandImport`), and, since decision 385 (續), the land no one lives on
+// (`noBuild`).
 
 /// OpenStreetMap's places per cell of WorldPop's grid of Taiwan.
 public struct PlaceGrid: Sendable {
@@ -52,6 +53,12 @@ public struct PlaceGrid: Sendable {
     /// The zone cells at least half of which is one kind of land: the kind
     /// most of it is, ties to industrial land, then parks, then farmland.
     let zoneOfCell: [GridCounts.Cell: Zone]
+
+    /// Decision 385 (續): the land no one lives on (airports, military
+    /// land, cemeteries, golf courses, railway land and ports), from its
+    /// own file (`taiwan_no_build.json`), given with the places when the
+    /// app has it; `nil` without it.
+    public var noBuild: RealNoBuildLand?
 
     /// Reads the app's places file: the grid's north-west corner and cell
     /// size, runs of places per cell for every kind and, when it has them,

@@ -12970,6 +12970,8 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 
 **下一步**（交接，`docs/HANDOFF.md` §5 有一行指過來）：刪掉快車停的站被拒絕時，玩家看到的字仍是 `invalidLinePattern` 的「停站模式至少要依路線的順序，停靠路線上的兩站以上……」，沒有說是哪個停站模式、要先刪掉它；`GameSession` 的 `setStops(of:to:)` 可以像 `trainServiceActive` 那樣另給一句（GamePresentation，不動 GameCore）。
 
+**後來**（`claude/preview-command-revision`，2026-10-23）：做了。`setStops(of:to:)` 遇到 `invalidLinePattern`、且新站序少了某個模式停的站時，改說「停站模式 2（直達車 A–D）停靠 D。請先刪掉這個停站模式：在「路線」面板按它下面的「刪除這個停站模式」」，路線面板的「進階」關著時多說要先打開它（`patternInTheWayText(of:newStops:)`，`LineSessionTests.testRemovingAPatternsStopSaysWhichPatternToRemoveFirst`）。幾個模式都停時說第一個；其他原因的 `invalidLinePattern` 照舊。
+
 **驗證**：`LineRoutePreferenceTests.testNewStopsCarryPreferencesAndCallsWithTheirStations`（在最前面加一站：路線與模式的偏好、模式的停靠都往後移一個；刪掉中間站：到它的偏好拿掉、模式的偏好保留；少了模式停的站照舊拒絕、世界不變；每一步都和 `ReferenceWorld` 相同）、`testStopIndicesFollowStationsThroughInsertsRemovalsAndMoves`（插入、刪除、移動、同一站停兩次、整串倒過來）。前者在 `main` 上第一步就失敗（`invalidLineRoutePreference`）。
 
 ### 292. 建站、建線時一鍵切換「腹地涵蓋」層，並說出車站涵蓋多少居民與工作

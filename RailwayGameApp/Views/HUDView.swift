@@ -25,7 +25,10 @@ struct HUDView: View {
     /// 127 and 193; TestFlight 54.1).
     @State private var reportingProblem = false
 
-    var body: some View {
+    // Decision 379: timed for the frame readout.
+    var body: some View { timed(.hudBody) { timedBody } }
+
+    @ViewBuilder private var timedBody: some View {
         // One row in one glass pill, as wide as what it shows; then one row
         // with the shorter date ("2 年 5/12（六）08:40", decision 226); only
         // then do cash and time stack. With the largest text the time gets
@@ -99,7 +102,7 @@ struct HUDView: View {
             .accessibilityIdentifier("menu.saveGameAs.confirm")
         } message: {
             Text(verbatim: session.language.text(
-                "A name for this save, to find it in Saved Games.",
+                "A name for this save, to find it in Saves.",
                 "為這個存檔取個名字，方便在「存檔」裡找到。"
             ))
         }
@@ -187,7 +190,10 @@ private struct HUDCash: View {
     /// with unlimited funds an "∞" capsule instead, in the text colour (not
     /// the green of money coming in), without the income float.
     @ViewBuilder
-    var body: some View {
+    // Decision 379: timed for the frame readout.
+    var body: some View { timed(.hudBody) { timedBody } }
+
+    @ViewBuilder private var timedBody: some View {
         if session.world.economy.unlimitedFunds {
             Button {
                 screen.panel = .economy
@@ -264,7 +270,10 @@ private struct HUDTime: View {
     /// The date and time (decision 175), today's weather and holiday; it
     /// opens the forecast of the next days. `short`: the board's shorter
     /// date (decision 226), which keeps it to one row.
-    var body: some View {
+    // Decision 379: timed for the frame readout.
+    var body: some View { timed(.hudBody) { timedBody } }
+
+    private var timedBody: some View {
         let language = session.language
         let clock = session.world.clock
         let text = short ? clock.shortCalendarText(in: language) : clock.calendarText(in: language)
@@ -559,23 +568,15 @@ private struct GameMenu: View, Equatable {
                 }
             }
             .controlGroupStyle(.compactMenu)
-        case .more:
-            // The panels opened less often, in one row whatever the game
-            // has: on a phone on its side the menu shows about six rows,
-            // and the goals (decisions 86 and 183) and the sights (decision
-            // 174) pushed Back to Start out of reach.
-            Menu {
-                ForEach(layout.moreRows, id: \.self) { row in
-                    self.moreRow(row)
-                }
-            } label: {
-                Label {
-                    Text(verbatim: language.text("More", "更多"))
-                } icon: {
-                    Image(systemName: "ellipsis.circle")
+        case .help:
+            // Decision 383: Help and Report a Problem side by side where
+            // More stood, with what More held when it is one row.
+            ControlGroup {
+                ForEach(layout.helpRow, id: \.self) { item in
+                    self.helpItem(item, in: layout)
                 }
             }
-            .accessibilityIdentifier("menu.more")
+            .controlGroupStyle(.compactMenu)
         case .settings:
             Button {
                 screen.panel = .settings
@@ -658,60 +659,89 @@ private struct GameMenu: View, Equatable {
         }
     }
 
-    /// One row under More.
+    /// One item of the help row (decision 383).
     @ViewBuilder
-    private func moreRow(_ row: GameMenuLayout.MoreRow) -> some View {
-        switch row {
-        case .goals:
-            // Decision 86: a game with a challenge shows its goals;
-            // decision 183: and one with the city's requests.
-            Button {
-                screen.panel = .goals
+    private func helpItem(_ item: GameMenuLayout.HelpItem, in layout: GameMenuLayout) -> some View {
+        switch item {
+        case .help: helpButton
+        case .report: reportButton
+        case .goals: goalsButton
+        case .tourism: tourismButton
+        case .more:
+            // The panels opened less often, when the game has both.
+            Menu {
+                ForEach(layout.moreRows, id: \.self) { row in
+                    switch row {
+                    case .goals: goalsButton
+                    case .tourism: tourismButton
+                    }
+                }
             } label: {
                 Label {
-                    Text(verbatim: language.text("Goals", "目標"))
+                    Text(verbatim: language.text("More", "更多"))
                 } icon: {
-                    Image(systemName: "flag.checkered")
+                    Image(systemName: "ellipsis.circle")
                 }
             }
-            .accessibilityIdentifier("menu.goals")
-        case .tourism:
-            // Decision 174: a game with sights shows them.
-            Button {
-                screen.sightFocus = nil
-                screen.panel = .tourism
-            } label: {
-                Label {
-                    Text(verbatim: language.text("Sights", "觀光景點"))
-                } icon: {
-                    Image(systemName: "star")
-                }
-            }
-            .accessibilityIdentifier("menu.tourism")
-        case .help:
-            Button {
-                screen.panel = .help
-            } label: {
-                Label {
-                    Text(verbatim: language.text("Help", "說明"))
-                } icon: {
-                    Image(systemName: "questionmark.circle")
-                }
-            }
-            .accessibilityIdentifier("menu.help")
-        case .report:
-            // TestFlight 54.1: where to send a note, from the game.
-            Button {
-                reportProblem()
-            } label: {
-                Label {
-                    Text(verbatim: language.text("Report a Problem", "回報問題"))
-                } icon: {
-                    Image(systemName: "exclamationmark.bubble")
-                }
-            }
-            .accessibilityIdentifier("menu.report")
+            .accessibilityIdentifier("menu.more")
         }
+    }
+
+    /// Decision 86: a game with a challenge shows its goals; decision 183:
+    /// and one with the city's requests.
+    private var goalsButton: some View {
+        Button {
+            screen.panel = .goals
+        } label: {
+            Label {
+                Text(verbatim: language.text("Goals", "目標"))
+            } icon: {
+                Image(systemName: "flag.checkered")
+            }
+        }
+        .accessibilityIdentifier("menu.goals")
+    }
+
+    /// Decision 174: a game with sights shows them.
+    private var tourismButton: some View {
+        Button {
+            screen.sightFocus = nil
+            screen.panel = .tourism
+        } label: {
+            Label {
+                Text(verbatim: language.text("Sights", "觀光景點"))
+            } icon: {
+                Image(systemName: "star")
+            }
+        }
+        .accessibilityIdentifier("menu.tourism")
+    }
+
+    private var helpButton: some View {
+        Button {
+            screen.panel = .help
+        } label: {
+            Label {
+                Text(verbatim: language.text("Help", "說明"))
+            } icon: {
+                Image(systemName: "questionmark.circle")
+            }
+        }
+        .accessibilityIdentifier("menu.help")
+    }
+
+    /// TestFlight 54.1: where to send a note, from the game.
+    private var reportButton: some View {
+        Button {
+            reportProblem()
+        } label: {
+            Label {
+                Text(verbatim: language.text("Report a Problem", "回報問題"))
+            } icon: {
+                Image(systemName: "exclamationmark.bubble")
+            }
+        }
+        .accessibilityIdentifier("menu.report")
     }
 }
 
@@ -720,7 +750,10 @@ private struct GameMenu: View, Equatable {
 private struct ForecastView: View {
     let session: GameSession
 
-    var body: some View {
+    // Decision 379: timed for the frame readout.
+    var body: some View { timed(.hudBody) { timedBody } }
+
+    @ViewBuilder private var timedBody: some View {
         let language = session.language
         let days = session.world.forecast()
         VStack(alignment: .leading, spacing: 8) {
@@ -802,7 +835,10 @@ private struct ViewingReadout: View {
     let session: GameSession
     @State private var showsLag = false
 
-    var body: some View {
+    // Decision 379: timed for the frame readout.
+    var body: some View { timed(.hudBody) { timedBody } }
+
+    @ViewBuilder private var timedBody: some View {
         let viewing = session.viewingSpeed
         let language = session.language
         let lag = viewing.lagText(in: language)

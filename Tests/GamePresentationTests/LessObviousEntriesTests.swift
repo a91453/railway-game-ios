@@ -21,7 +21,7 @@ final class LessObviousEntriesTests: XCTestCase {
     func testAdvancedSaysWhatItHolds() {
         XCTAssertEqual(
             AdvancedDetails.contentsText(in: .traditionalChinese),
-            "時段、停靠模式、各段股道、目標班距與行車控制。"
+            "時段、各段股道與目標班距。"
         )
         XCTAssertNotEqual(AdvancedDetails.contentsText(in: .english), AdvancedDetails.contentsText(in: .traditionalChinese))
     }

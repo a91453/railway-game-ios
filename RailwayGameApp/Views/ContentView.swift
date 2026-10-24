@@ -57,7 +57,10 @@ struct ContentView: View {
         withTransaction(cut) { screen.showsMap3D = false }
     }
 
-    var body: some View {
+    // Decision 379: timed for the frame readout.
+    var body: some View { timed(.screenBody) { timedBody } }
+
+    @ViewBuilder private var timedBody: some View {
         gameLayout
             // Inside the text size limit below: the tutorial's card shares the
             // screen with the controls it must not cover.
@@ -305,7 +308,7 @@ struct ContentView: View {
             DataSourcesView(launcher: launcher)
         case .settings:
             // Decision 127: a problem report from a game says what is in it.
-            SettingsView(audio: audio, game: session.problemReportGame, lessons: launcher.lessonReport(in: .app), session: session)
+            SettingsView(audio: audio, launcher: launcher, game: session.problemReportGame, lessons: launcher.lessonReport(in: .app), session: session)
         case .yearEnd:
             YearEndSheet(session: session)
                 .presentationDetents([.medium, .large])
@@ -322,7 +325,7 @@ struct ContentView: View {
             MonthlyReportSheet(session: session)
                 .presentationDetents([.medium, .large])
         case .help:
-            HelpView(language: session.language)
+            HelpView(language: session.language, launcher: launcher)
         case .postcard:
             PostcardSheet(session: session)
         case .achievements:
@@ -530,6 +533,7 @@ struct ContentView: View {
                             }
                         }
                     }
+                    .hudFrameMark("hud.tools")
                     // Decision 226: faded while a finger draws under them.
                     .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { screen.toolsFrame = $0 }
                     .opacity(screen.isDrawingUnderTools ? 0.4 : 1)
@@ -591,11 +595,28 @@ struct ContentView: View {
                 // beside the map; not in the tutorial, whose card leads.
                 .overlay(alignment: .bottom) {
                     let draft = session.lineDraft
-                    if session.tutorial == nil, draft.count >= 2 {
-                        StationPairDrawer(session: session, from: draft[draft.count - 2], to: draft[draft.count - 1])
+                    // Decision 384: clear of the details card and the map's
+                    // bottom-trailing column too, not only of a panel: it
+                    // stood over the small map and the zoom buttons
+                    // (TestFlight 85.1).
+                    let corner = screen.mapCornerFrame.isEmpty ? 0 : proxy.frame(in: .global).maxX - screen.mapCornerFrame.minX
+                    let trailing = StationPairDrawerLayout.trailingInset(
+                        panel: sidePanel != nil ? sideWidth + margin : 0,
+                        card: isOpen && besideDock ? cardWidth + margin : 0,
+                        corner: corner
+                    )
+                    // On a phone on its side it rides in the map's ✓
+                    // pill instead (decision 384).
+                    if session.tutorial == nil, draft.count >= 2, !StationPairDrawerLayout.ridesInPill(compactHeight: compactHeight) {
+                        StationPairDrawer(
+                            session: session, from: draft[draft.count - 2], to: draft[draft.count - 1]
+                        )
+                            // The map's ✓ keeps off it (decision 384).
+                            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { screen.stationPairFrame = $0 }
+                            .onDisappear { screen.stationPairFrame = .zero }
                             .padding(.horizontal, margin)
                             .padding(.leading, toolsColumn ? dockSize.width : 0)
-                            .padding(.trailing, sidePanel != nil ? sideWidth + margin : 0)
+                            .padding(.trailing, trailing)
                             // Beside the tools column, above the station
                             // master, who stands at its foot.
                             .padding(.bottom, strip + dockBottom + 2 * margin)
@@ -611,6 +632,7 @@ struct ContentView: View {
                                 RoundedRectangle(cornerRadius: 24, style: .continuous)
                                     .strokeBorder(Theme.panelBorder, lineWidth: 1)
                             }
+                            .hudFrameMark("hud.panel")
                             // The tutorial's card keeps clear of it.
                             .tutorialTarget(.sidePanel)
                             .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
@@ -634,7 +656,9 @@ struct ContentView: View {
         }
     }
 
-    private static let margin: CGFloat = 10
+    /// Decision 382: one inset inside the safe area for everything floating
+    /// over the map (``HUDMargins``), and the gap between them.
+    private static let margin = CGFloat(HUDMargins.edge)
 
     private var map: some View {
         MapView(session: session, camera: $mapCamera)
@@ -786,6 +810,7 @@ private struct StatusPill: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 5)
             .glassBackground(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .hudFrameMark("hud.bar")
     }
 }
 
@@ -842,12 +867,7 @@ private struct ToolsColumn: View {
         ViewThatFits(in: .vertical) {
             groups(compact: false)
             groups(compact: true)
-            ScrollView {
-                groups(compact: true)
-            }
-            .scrollBounceBehavior(.basedOnSize)
-            .scrollIndicators(.hidden)
-            .tutorialClip()
+            scrolling
         }
         .frame(width: ToolColumnStyle.width)
         // Offered no more than that, and as tall as what it shows: a frame
@@ -858,25 +878,91 @@ private struct ToolsColumn: View {
 
     private func groups(compact: Bool) -> some View {
         VStack(alignment: .center, spacing: ControlPanel.tileGap) {
-            // The card's toggle stays on top while building too: a chosen
-            // tool keeps the card open, and folding it shows the map. Not
-            // on the tutorial's steps that point into the card, which keep
-            // it open, as in the dock.
-            if session.tutorial?.step.usesDetailsCard != true {
-                ControlDetailsToggle(isOpen: isOpen, action: toggle)
-                    .disabled(!canToggle)
-                    .controlTile()
-            }
+            overBuild
             if BuildToolRail.isShown(session) {
-                BuildToolButtons(session: session)
-                    .controlTile()
                 // Build where it was, lit: a second tap closes the tools.
                 ControlPanel(session: session, arrangement: .buildEntry)
-            } else {
-                ControlPanel(session: session, arrangement: .toolsColumn)
             }
         }
         .environment(\.toolColumnStyle, ToolColumnStyle(compact: compact))
+    }
+
+    /// The card's toggle and the tools, or while building the building
+    /// tools and Done: all but Build while building.
+    @ViewBuilder private var overBuild: some View {
+        // The card's toggle stays on top while building too: a chosen
+        // tool keeps the card open, and folding it shows the map. Not
+        // on the tutorial's steps that point into the card, which keep
+        // it open, as in the dock.
+        if showsToggle {
+            cardToggle
+        }
+        if BuildToolRail.isShown(session) {
+            BuildToolButtons(session: session)
+                .controlTile()
+        } else {
+            ControlPanel(session: session, arrangement: .toolsColumn)
+        }
+    }
+
+    private var cardToggle: some View {
+        ControlDetailsToggle(isOpen: isOpen, action: toggle)
+            .disabled(!canToggle)
+            .controlTile()
+    }
+
+    /// The building tools the session offers, Done aside.
+    private var buildingTools: Int {
+        ConstructionTool.networkTools.filter { $0 != .select && session.allows($0) }.count
+    }
+
+    private var showsToggle: Bool { session.tutorial?.step.usesDetailsCard != true }
+
+    /// Icons alone, scrolling, where even they have not the height. While
+    /// building, Done and Build stand whole at the foot (decision 382,
+    /// later: TestFlight 85.1 had Build cut in half, and Done scrolled out
+    /// of reach) and what scrolls over them, the tools and under them the
+    /// card's toggle, is cut between two buttons, fading there, so it
+    /// shows more is below.
+    @ViewBuilder private var scrolling: some View {
+        if BuildToolRail.isShown(session) {
+            let shown = ToolColumn.buildingScrollHeight(maxHeight: Double(maxHeight), tools: buildingTools, toggle: showsToggle)
+            VStack(alignment: .center, spacing: ControlPanel.tileGap) {
+                ScrollView {
+                    VStack(alignment: .center, spacing: ControlPanel.tileGap) {
+                        if buildingTools > 0 {
+                            BuildToolButtons(session: session, includesDone: false)
+                                .controlTile()
+                        }
+                        if showsToggle {
+                            cardToggle
+                        }
+                    }
+                }
+                .scrollBounceBehavior(.basedOnSize)
+                .scrollIndicatorsFlash(onAppear: true)
+                .tutorialClip()
+                .frame(height: CGFloat(shown))
+                .mask {
+                    VStack(spacing: 0) {
+                        Color.black
+                        LinearGradient(colors: [.black, .black.opacity(0.3)], startPoint: .top, endPoint: .bottom)
+                            .frame(height: 10)
+                    }
+                }
+                BuildDoneButton(session: session)
+                    .controlTile()
+                ControlPanel(session: session, arrangement: .buildEntry)
+            }
+            .environment(\.toolColumnStyle, ToolColumnStyle(compact: true))
+        } else {
+            ScrollView {
+                groups(compact: true)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .scrollIndicators(.hidden)
+            .tutorialClip()
+        }
     }
 }
 
@@ -1010,6 +1096,7 @@ private struct DetailsCard: View {
             pinned = nil
         }
         .glassBackground(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .hudFrameMark("hud.card")
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("details.card")
     }
@@ -1142,6 +1229,9 @@ final class GameScreenState {
     /// buttons, a layer's key) stands on the screen, as the map measured
     /// it: the station master's bubble stops short of it.
     var mapCornerFrame: CGRect = .zero
+    /// Decision 384: where the new line's station pair drawer stands on the
+    /// screen, `.zero` while it does not show: the map's ✓ keeps off it.
+    var stationPairFrame: CGRect = .zero
     /// Decision 300: whether the map's buttons under a phone's panel found
     /// room in the credits' band, as the map measured it: where they did
     /// not, the panel ends above them.
@@ -1216,7 +1306,10 @@ private struct RouteHintCard: ViewModifier {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.verticalSizeClass) private var verticalSizeClass
 
-    func body(content: Content) -> some View {
+    // Decision 379: timed for the frame readout.
+    func body(content: Content) -> some View { timed(.screenBody) { timedBody(content: content) } }
+
+    @ViewBuilder private func timedBody(content: Content) -> some View {
         content
             .onChange(of: seen ? nil : RouteHintWatch(world: session.world), initial: true) { _, watch in
                 if watch != nil { session.watchRouteHint() }

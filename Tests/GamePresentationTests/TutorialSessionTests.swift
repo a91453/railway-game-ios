@@ -565,7 +565,9 @@ final class TutorialSessionTests: XCTestCase {
             XCTAssertNil(session.world.disruptions)
             XCTAssertNil(session.world.tourism)
             XCTAssertEqual(session.tutorial?.index, 0)
-            XCTAssertEqual(session.tutorial?.steps.first, Tutorial.standardSteps.first)
+            // Decision 390: in lesson 1's words.
+            XCTAssertEqual(session.tutorial?.steps.first?.id, Tutorial.standardSteps.first?.id)
+            XCTAssertEqual(session.tutorial?.steps.first?.goal, Tutorial.standardSteps.first?.goal)
             XCTAssertEqual(session.tutorial?.steps.last?.id, "first.fare")
         }
     }
@@ -637,7 +639,7 @@ final class TutorialSessionTests: XCTestCase {
             "line.draft.create", "panel.details", "panel.side", "map.build.confirm", "inspector.ridership", "line.loss",
             "line.loss.fix", "line.addTrain", "inspector.track.double", "line.staff.headway", "line.headway.change",
             "lines.advanced", "line.window", "line.pattern.add", "line.depots", "station.freight.build", "building.kind.hotel",
-            "hud.requests",
+            "hud.requests", "line.addSelectedStation",
         ])
         for tool in ConstructionTool.allCases {
             XCTAssertEqual(TutorialTarget(tool: tool)?.rawValue, "tool.\(tool)", "every tool has its button")
@@ -666,7 +668,7 @@ final class TutorialSessionTests: XCTestCase {
             "Tap Build", "Zoom out to see the town", "Tap the start, then the end", "Tap ✓ to build the track",
             "Tap Platform", "Tap your track near one end", "Tap ✓ to build the station", "Tap the track near the other end",
             "Tap ✓ for the second station", "Tap Done to stop building",
-            "Tap Lines", "Tap one station, then the other", "Tap ✓ to create the line",
+            "Tap Lines", "Tap one station, then the other", "Tap ✓, then Open Line",
             "Tap Buy … and Start Service", "Tap \u{25B6}\u{FE0E} to run time", "Wait for your first fares",
             "Tap Lines to check your line", "Read your line's card",
             "Tap one of your stations", "Tap Station… to see who rides", "That's the tour",
@@ -675,7 +677,7 @@ final class TutorialSessionTests: XCTestCase {
             "點「建設」", "縮小地圖看看城鎮", "點起點，再點終點", "按 ✓ 蓋好軌道",
             "點「月台」", "點軌道靠近一端的地方", "按 ✓ 蓋車站", "點軌道另一端的地方", "按 ✓ 蓋第二座車站",
             "點「完成」結束建造",
-            "點「路線」", "點一座車站，再點另一座", "按 ✓ 建立路線",
+            "點「路線」", "點一座車站，再點另一座", "按 ✓，再按「開通路線」",
             "按「購買…列並開始營運」", "按 \u{25B6}\u{FE0E} 讓時間走", "等第一筆車資進帳",
             "點「路線」看營運收支", "看懂路線卡",
             "點你的一座車站", "點「車站…」看誰在搭車", "導覽結束",

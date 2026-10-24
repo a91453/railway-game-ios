@@ -95,6 +95,149 @@ final class TrainMotionTests: XCTestCase {
         XCTAssertLessThan(jumps, glides / 10, "it jumps only when it turns back")
     }
 
+    /// Decision 379: the map's glide, worked out with the game loop's tick
+    /// off the main actor and seen when the map shows it, is the glide the
+    /// map would work out itself; a command between them leaves it to the
+    /// map.
+    @MainActor
+    func testTheGlideWorkedOutWithTheTickIsTheMapsOwn() async throws {
+        var world = try makeWorld(width: 8_192, height: 4_096, balance: 1_000_000, speed: .x10)
+        let track = TestLine(tiles: 7, row: 1)
+        try track.build(in: &world)
+        let alpha = try track.buildStation(named: "Alpha", beside: 1, at: 0, in: &world)
+        let gamma = try track.buildStation(named: "Gamma", beside: 5, at: 0, in: &world)
+        let main = try world.createLine(named: "Main", stops: [alpha, gamma]).id
+        try world.setLineServiceWindow(main, to: .allDay)
+        try world.setLineTrainsInService(main, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        let train = try world.purchaseTrain(named: "T1")
+        try world.placeTrain(train.id, at: track.at(1, facingEast: true))
+        try world.setTrainMovementRate(train.id, to: 1_024)
+        try world.assignTrain(train.id, to: main)
+        let session = GameSession(world: world)
+
+        var shown = session.trainMotion(after: TrainMotion(), at: 1)
+        var fromTheTick = 0
+        for tick in 1...200 {
+            let loop = try XCTUnwrap(session.beginLoopTick())
+            XCTAssertNotNil(loop.glide)
+            let outcome = await loop.work()
+            XCTAssertTrue(session.finish(loop, with: outcome))
+            if session.glideMemo != nil { fromTheTick += 1 }
+            let time = 1 + Double(tick) / 10
+            let own = TrainMotion(world: session.world, previous: shown, time: time)
+            shown = session.trainMotion(after: shown, at: time)
+            XCTAssertEqual(shown.time, own.time)
+            XCTAssertEqual(shown.duration, own.duration)
+            XCTAssertEqual(shown.runs.map(\.lag), own.runs.map(\.lag), "tick \(tick)")
+            for progress in [0, 0.5, 1.0] {
+                XCTAssertEqual(shown.runs.first?.head(at: progress)?.point, own.runs.first?.head(at: progress)?.point)
+            }
+        }
+        XCTAssertEqual(fromTheTick, 200)
+        // A command since the tick: the map works it out itself.
+        let loop = try XCTUnwrap(session.beginLoopTick())
+        let outcome = await loop.work()
+        session.togglePause()
+        XCTAssertFalse(session.finish(loop, with: outcome))
+        XCTAssertNil(session.glideMemo)
+        session.mapStoppedGliding()
+        session.togglePause()
+        XCTAssertNil(session.beginLoopTick()?.glide)
+    }
+
+    /// Review G (decision 379): the game loop runs a step's ticks back to
+    /// back, so the next tick begins before the map has shown the last
+    /// (the map draws while the next is worked out). Its glide still goes
+    /// on from the glide the map shows next, so the map takes it rather
+    /// than working it out again, and it is the one the map would make.
+    @MainActor
+    func testTicksBackToBackStillGlideOffTheMainActor() async throws {
+        var world = try makeWorld(width: 8_192, height: 4_096, balance: 1_000_000, speed: .x10)
+        let track = TestLine(tiles: 7, row: 1)
+        try track.build(in: &world)
+        let alpha = try track.buildStation(named: "Alpha", beside: 1, at: 0, in: &world)
+        let gamma = try track.buildStation(named: "Gamma", beside: 5, at: 0, in: &world)
+        let main = try world.createLine(named: "Main", stops: [alpha, gamma]).id
+        try world.setLineServiceWindow(main, to: .allDay)
+        try world.setLineTrainsInService(main, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        let train = try world.purchaseTrain(named: "T1")
+        try world.placeTrain(train.id, at: track.at(1, facingEast: true))
+        try world.setTrainMovementRate(train.id, to: 1_024)
+        try world.assignTrain(train.id, to: main)
+        let session = GameSession(world: world)
+
+        var shown = session.trainMotion(after: TrainMotion(), at: 1)
+        var fromTheTick = 0
+        var time = 1.0
+        for step in 1...50 {
+            // The step's first tick.
+            let first = try XCTUnwrap(session.beginLoopTick())
+            let firstOutcome = await first.work()
+            XCTAssertTrue(session.finish(first, with: firstOutcome))
+            // The second begins at once; the map shows the first while it
+            // is worked out.
+            let second = try XCTUnwrap(session.beginLoopTick())
+            time += 0.1
+            shown = session.trainMotion(after: shown, at: time)
+            let secondOutcome = await second.work()
+            XCTAssertTrue(session.finish(second, with: secondOutcome))
+            // The map shows the second.
+            time += 0.1
+            if session.glideMemo.map({ $0.from == shown.source }) == true { fromTheTick += 1 }
+            let own = TrainMotion(world: session.world, previous: shown, time: time)
+            shown = session.trainMotion(after: shown, at: time)
+            XCTAssertEqual(shown.time, own.time)
+            XCTAssertEqual(shown.duration, own.duration)
+            XCTAssertEqual(shown.runs.map(\.lag), own.runs.map(\.lag), "step \(step)")
+            for progress in [0, 0.5, 1.0] {
+                XCTAssertEqual(shown.runs.first?.head(at: progress)?.point, own.runs.first?.head(at: progress)?.point)
+            }
+        }
+        XCTAssertEqual(fromTheTick, 50)
+    }
+
+    /// Decision 379: the track covered within a limit is the same track
+    /// when it is no longer than the limit, and none (worked out no
+    /// further) when it is longer: a glide that long jumps anyway.
+    func testTheTrackCoveredWithinALimitIsTheSameOrNone() throws {
+        var world = try makeWorld(width: 8_192, height: 4_096, balance: 1_000_000, speed: .x10)
+        let track = TestLine(tiles: 7, row: 1)
+        try track.build(in: &world)
+        let alpha = try track.buildStation(named: "Alpha", beside: 1, at: 0, in: &world)
+        let gamma = try track.buildStation(named: "Gamma", beside: 5, at: 0, in: &world)
+        let main = try world.createLine(named: "Main", stops: [alpha, gamma]).id
+        try world.setLineServiceWindow(main, to: .allDay)
+        try world.setLineTrainsInService(main, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        let train = try world.purchaseTrain(named: "T1")
+        try world.placeTrain(train.id, at: track.at(1, facingEast: true))
+        try world.setTrainMovementRate(train.id, to: 1_024)
+        try world.assignTrain(train.id, to: main)
+
+        var motion = TrainMotion(world: world, time: 0)
+        var same = 0, none = 0
+        for tick in 1...1_500 {
+            let before = try XCTUnwrap(motion.samples[train.id])
+            try world.advance(ticks: 1)
+            let position = try XCTUnwrap(world.train(id: train.id)?.position)
+            if let whole = TrainMotion.covered(from: before.position, along: before.ahead, to: position, in: world) {
+                let length = TrainMotion.Trail(whole).length
+                // Shorter than most of a tick's way, so both cases come up.
+                let limit = 24.0
+                let within = TrainMotion.covered(from: before.position, along: before.ahead, to: position, within: limit, in: world)
+                if length <= limit - 1 {
+                    XCTAssertEqual(within, whole, "tick \(tick)")
+                    same += 1
+                } else if length > limit + 1 {
+                    XCTAssertNil(within, "tick \(tick)")
+                    none += 1
+                }
+            }
+            motion = TrainMotion(world: world, previous: motion, time: Double(tick) / 10)
+        }
+        XCTAssertGreaterThan(same, 10)
+        XCTAssertGreaterThan(none, 10)
+    }
+
     /// Six seconds a tick, a train comes to a call and sets off from it
     /// within one tick: it glides on along its new path rather than jumping, and
     /// jumps only where it turns back at the line's ends (decision 182,

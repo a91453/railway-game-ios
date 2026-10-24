@@ -1,0 +1,7 @@
+# RecreationKit exporter
+
+See [the skill](../../.claude/skills/recreation-kit/SKILL.md) for recipes, coordinates, support contracts and rebuild commands. Output must be outside this public checkout.
+
+`export.sh` checks Swift 6.4 warnings-as-errors, generates all native models, verifies every vertex with the loader and uses the shared StationKit GLB encoder. `render.mjs` creates seven transparent views and actual full-model review sheets, including low front interior views. `verify.mjs` re-encodes all GLBs, checks SHA/PNG bounds, both ball-return rail contacts, indoor equipment clearance, venue separation, raised pool-deck mounting and the diving-board cantilever. `browser-check.mjs` exercises every model, search, four categories, seven directions, pointer orbit, zoom, backgrounds, downloads and mobile width. `decode-images.py` independently decodes all RGBA images and checks alpha metrics. `rebuild.sh` additionally runs the affected Swift suites and four shared Node tests; `bundle.py` inventories and decompresses every ZIP member.
+
+After the final clean public producer commit, rerun `python3 tools/recreation-kit/bundle.py OUTPUT`. Keep a clean producer in source.json. Build from a stable working tree, then independently re-export all native/GLB bytes to ensure the artifacts correspond to the final source. Actual image inspection remains required; a passing hash does not prove a support is attached or a scene looks reasonable.

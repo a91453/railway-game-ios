@@ -187,14 +187,15 @@ extension GameSession {
     /// The depot's sidings at ``networkDepotEnd`` (``networkDepotSidings``
     /// of them, on ``networkDepotSide``): what they cost or why they cannot
     /// be built, and where they run; worked out once for each end, choice
-    /// and world, as the track preview is.
+    /// and command, as the track preview is.
     public var networkDepotPreview: DepotYardPreview? {
         guard networkMode == .depot, let end = networkDepotEnd else { return nil }
         _ = world
-        let key = DepotYardMemo.Key(end: end, sidings: networkDepotSidings, side: networkDepotSide, worldRevision: worldRevision)
-        if let memo = depotYardMemo, memo.key == key { return memo.preview }
+        let key = DepotYardMemo.Key(end: end, sidings: networkDepotSidings, side: networkDepotSide, commandRevision: commandRevision)
+        if let memo = depotYardMemo, memo.key == key, memo.affordable == affords(memo.preview.cost) { return memo.preview }
         let preview = depotYardPreview(from: end, sidings: networkDepotSidings, side: networkDepotSide)
-        depotYardMemo = DepotYardMemo(key: key, preview: preview)
+        depotYardMemo = DepotYardMemo(key: key, preview: preview, affordable: affords(preview.cost))
+        buildPreviewsWorkedOut += 1
         return preview
     }
 
@@ -283,11 +284,13 @@ struct DepotYardMemo {
         let end: TrackNodeID
         let sidings: Int
         let side: PlatformTrackSide
-        let worldRevision: Int
+        let commandRevision: Int
     }
 
     let key: Key
     let preview: DepotYardPreview
+    /// Whether the cash paid for it then (``GameSession/affords(_:)``).
+    let affordable: Bool?
 }
 
 extension GameSession {

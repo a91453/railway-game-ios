@@ -199,8 +199,11 @@ extension Map3DScene.Builder {
     /// building stands on, for a plaza there and no city lot. On a
     /// real-world map (`frame`), the real stations' recipes.
     /// With `shops` false, the shop streets wait for
-    /// ``addShopStreets()``, after the streets they keep clear of.
-    mutating func addStations(_ snapshot: RailwaySnapshot, frame: RealWorldFrame?, shops: Bool = true) -> Set<Map3DScene.ChunkKey> {
+    /// ``addShopStreets()``, after the streets they keep clear of. No
+    /// building of the profiles in `drawnElsewhere` (decision 370: Taipei
+    /// Main Station's, where its landmark stands).
+    mutating func addStations(_ snapshot: RailwaySnapshot, frame: RealWorldFrame?, shops: Bool = true,
+                              drawnElsewhere: Set<Map3DStationKit.Profile> = []) -> Set<Map3DScene.ChunkKey> {
         let saved = target
         defer { target = saved }
         addCanopies()
@@ -224,7 +227,9 @@ extension Map3DScene.Builder {
                 : .surface(platforms: open.count, longest: longest.length)
             let world = (x: originX + Double(middle.point.x) * Self.metre, y: originY + Double(middle.point.z) * Self.metre)
             let station = Map3DStationKit.recipe(for: id, at: world, layout: layout, frame: frame)
-            if Map3DStationKit.hasHouse(station.profile) {
+            if drawnElsewhere.contains(station.profile) {
+                continue
+            } else if Map3DStationKit.hasHouse(station.profile) {
                 cells.formUnion(addHouse(station, platforms: open, middle: middle))
             } else {
                 addEntrances(station, platforms: open, path: longest, middle: middle)

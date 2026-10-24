@@ -118,7 +118,7 @@ struct RailwayGameApp: App {
                     session.selectStation(station.id)
                     session.addSelectedStationToLineDraft()
                 }
-            } else if !name.hasPrefix("big-grid"), let line = session.world.lines.first {
+            } else if !name.hasPrefix("big-grid"), name != "story", let line = session.world.lines.first {
                 session.selectLine(line.id)
             }
         }

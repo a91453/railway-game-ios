@@ -216,7 +216,7 @@ final class LessonUITests: XCTestCase {
         tap(app.buttons["lessonResult.next"])
         XCTAssertTrue(element("lessonResult.title").disappears(within: 10))
         showGuide()
-        XCTAssertEqual(app.staticTexts["tutorial.title"].label, "Extend your line to the third town")
+        XCTAssertEqual(app.staticTexts["tutorial.title"].label, "Tap Build")
         XCTAssertGreaterThanOrEqual(stationPoints().count, 2, "Lesson 2 starts with the first line")
     }
 

@@ -10,7 +10,7 @@ final class GameMenuLayoutTests: XCTestCase {
         let layout = GameMenuLayout(showsGoals: true, showsTourism: true)
         XCTAssertTrue(layout.sections.flatMap { $0 }.contains(.shortcuts))
         XCTAssertEqual(layout.shortcuts, [.tutorial, .postcard, .achievements], "One row, side by side")
-        XCTAssertEqual(layout.moreRows, [.goals, .tourism, .help, .report], "More keeps the rest, without the postcard")
+        XCTAssertEqual(layout.moreRows, [.goals, .tourism], "More keeps the rest, without the postcard")
     }
 
     func testTheFirstLevelKeepsToSixRowsWithBackToStartThird() {
@@ -21,13 +21,33 @@ final class GameMenuLayoutTests: XCTestCase {
         XCTAssertLessThanOrEqual(first.count, GameMenuLayout.rowsInReach)
         XCTAssertEqual(GameMenuLayout.rowsInReach, 6)
         XCTAssertEqual(first.firstIndex(of: .backToStart), 2)
-        XCTAssertEqual(first, [.saveGame, .saveOptions, .backToStart, .shortcuts, .more, .settings])
+        XCTAssertEqual(first, [.saveGame, .saveOptions, .backToStart, .shortcuts, .help, .settings])
+        XCTAssertEqual(GameMenuLayout(showsGoals: true, showsTourism: true).sections, GameMenuLayout(showsGoals: false, showsTourism: false).sections)
     }
 
+    /// Decision 383: Help and Report a Problem in the first level, one tap
+    /// after the menu, in every game.
+    func testHelpAndReportStandInTheFirstLevel() {
+        for goals in [false, true] {
+            for tourism in [false, true] {
+                let layout = GameMenuLayout(showsGoals: goals, showsTourism: tourism)
+                XCTAssertTrue(layout.sections.flatMap { $0 }.contains(.help))
+                XCTAssertEqual(Array(layout.helpRow.prefix(2)), [.help, .report])
+                XCTAssertLessThanOrEqual(layout.helpRow.count, GameMenuLayout.itemsInRow, "one row, side by side")
+                XCTAssertEqual(layout.helpRow.contains(.more), !layout.moreRows.isEmpty, "More only with something under it")
+            }
+        }
+    }
+
+    /// Decision 383: what More held comes up beside Help when it is one
+    /// row; with two, More keeps them.
     func testMoreListsOnlyWhatTheGameHas() {
-        XCTAssertEqual(GameMenuLayout(showsGoals: false, showsTourism: false).moreRows, [.help, .report])
-        XCTAssertEqual(GameMenuLayout(showsGoals: true, showsTourism: false).moreRows, [.goals, .help, .report])
-        XCTAssertEqual(GameMenuLayout(showsGoals: false, showsTourism: true).moreRows, [.tourism, .help, .report])
+        XCTAssertEqual(GameMenuLayout(showsGoals: false, showsTourism: false).helpRow, [.help, .report])
+        XCTAssertEqual(GameMenuLayout(showsGoals: true, showsTourism: false).helpRow, [.help, .report, .goals])
+        XCTAssertEqual(GameMenuLayout(showsGoals: false, showsTourism: true).helpRow, [.help, .report, .tourism])
+        XCTAssertEqual(GameMenuLayout(showsGoals: true, showsTourism: true).helpRow, [.help, .report, .more])
+        XCTAssertEqual(GameMenuLayout(showsGoals: false, showsTourism: true).moreRows, [])
+        XCTAssertEqual(GameMenuLayout(showsGoals: true, showsTourism: true).moreRows, [.goals, .tourism])
     }
 
     func testTheAchievementsSayWhyTheyCountNoneWithUnlimitedFunds() {

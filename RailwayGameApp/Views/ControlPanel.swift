@@ -104,7 +104,7 @@ struct ControlPanel: View {
     }
 
     /// The space between tiles (decision 226): the map shows through it.
-    static let tileGap: CGFloat = 6
+    static let tileGap = CGFloat(ToolColumn.tileGap)
 }
 
 extension View {

@@ -54,6 +54,9 @@ public struct Map3DModelPack: Sendable {
         models += Map3DStreetModel.allCases.map { $0.model() }
         // Decision 318: and the sets that had none.
         models += Map3DTrainSet.all.flatMap { $0.models() }
+        // Independent second steam asset; static, no operating type binding.
+        models += Map3DDuplexSteam.Unit.allCases.map { Map3DDuplexSteam.model($0) }
+        models.append(Map3DDuplexSteam.formation())
         // Static low-floor tram parts and a full formation for scene authors.
         models += Map3DGreenTram.Section.allCases.map { Map3DGreenTram.model($0) }
         models.append(Map3DGreenTram.formation())
@@ -71,6 +74,8 @@ public struct Map3DModelPack: Sendable {
         models.append(Map3DFourCarMetro.formation())
         models += Map3DSevenCarBlue.Unit.allCases.map { Map3DSevenCarBlue.model($0) }
         models.append(Map3DSevenCarBlue.formation())
+        models += Map3DSteamTender.Unit.allCases.map { Map3DSteamTender.model($0) }
+        models.append(Map3DSteamTender.formation())
         self.models = models
     }
 
