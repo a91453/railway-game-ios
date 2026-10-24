@@ -84,6 +84,7 @@ struct FollowBar: View {
             }
         }
         .accessibilityElement(children: .contain)
+        .hudFrameMark("follow.bar")
     }
 
     private func row(@ViewBuilder _ content: () -> some View) -> some View {

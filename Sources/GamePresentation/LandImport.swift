@@ -43,6 +43,14 @@ import GameCore
 /// above; a WorldPop cell whose cells in the world are all water keeps no
 /// one (they live on the part of it outside the world, or on a coast the
 /// grids draw differently).
+///
+/// Decision 385 (續): a 64 m cell whose middle lies on land no one lives on
+/// (``PlaceGrid/noBuild``: airports, military land, cemeteries, golf
+/// courses, railway land and ports) hosts no one, as a park does: the
+/// WorldPop cell's people and its places' jobs go to its other dry cells,
+/// and the cell keeps only its zone's own (a port's factory jobs). Where
+/// every dry cell of a WorldPop cell is such land, it hosts them as before,
+/// so no one is lost.
 public enum LandImport {
     /// The jobs of each kind of place: a shop or restaurant 25, an office
     /// 500, a school 300 (its staff and pupils draw trips alike), a sight
@@ -148,6 +156,17 @@ public enum LandImport {
             guard let (water, lookup) = wet, let source = lookup.rows[row], let target = lookup.columns[column] else { return false }
             return water.isWater(row: source, column: target)
         }
+        // Decision 385 (續): the land no one lives on, by each 64 m row's
+        // latitude and column's longitude, as the WorldPop cell is found.
+        let closedLand = places?.noBuild
+        var latitudes: [Double] = [], longitudes: [Double] = []
+        if closedLand != nil {
+            latitudes = (0..<rows).map { frame.coordinate(worldX: 0.5 * length, worldY: (Double($0) + 0.5) * length).latitude }
+            longitudes = (0..<columns).map { frame.coordinate(worldX: (Double($0) + 0.5) * length, worldY: 0.5 * length).longitude }
+        }
+        func isClosed(row: Int, column: Int) -> Bool {
+            closedLand?.kind(atLatitude: latitudes[row], longitude: longitudes[column]) != nil
+        }
         var sources = Set(grid.counts.keys)
         if let places {
             for layer in places.layers.values {
@@ -175,15 +194,23 @@ public enum LandImport {
             let allJobs = work.office + work.shop + work.civic + work.leisure
             // Its 64 m cells by zone, in row-major order (decision 93), and
             // which are water (decision 105), whose zone does not count.
-            var zones: [PlaceGrid.Zone?] = [], wetCells: [Bool] = []
+            var zones: [PlaceGrid.Zone?] = [], wetCells: [Bool] = [], closedCells: [Bool] = []
             for row in rowSpan {
                 for column in columnSpan {
                     zones.append(zone(row: row, column: column))
-                    wetCells.append(isWater(row: row, column: column))
+                    let wet = isWater(row: row, column: column)
+                    wetCells.append(wet)
+                    closedCells.append(!wet && isClosed(row: row, column: column))
                 }
             }
             let dryZones = zip(zones, wetCells).filter { !$0.1 }.map(\.0)
             guard !dryZones.isEmpty else { continue }
+            // Decision 385 (續): the dry cells someone may live on, or all
+            // of them where none may.
+            if zip(wetCells, closedCells).allSatisfy({ $0 || $1 }) {
+                closedCells = closedCells.map { _ in false }
+            }
+            let openZones = zip(zones, zip(wetCells, closedCells)).filter { !$0.1.0 && !$0.1.1 }.map(\.0)
             let working = dryZones.contains { $0 == .industrial || $0 == .farmland }
             guard people > 0 || allJobs > 0 || dryZones.contains(where: { $0 != nil }) else { continue }
             if people > 0 || allJobs > 0 || working {
@@ -207,12 +234,12 @@ public enum LandImport {
             // Decision 93: the people and the places' jobs live and work in
             // the cells of no zone; where every cell is one, in its farms,
             // else its factories, else (parks only) in all of them.
-            let parksOnly = !dryZones.contains { $0 != .park }
-            let hostZone: PlaceGrid.Zone? = dryZones.contains { $0 == nil } ? nil : dryZones.contains(.farmland) ? .farmland : .industrial
+            let parksOnly = !openZones.contains { $0 != .park }
+            let hostZone: PlaceGrid.Zone? = openZones.contains { $0 == nil } ? nil : openZones.contains(.farmland) ? .farmland : .industrial
             func hosts(_ zone: PlaceGrid.Zone?) -> Bool {
                 parksOnly || zone == hostZone
             }
-            let hostCount = Int64(dryZones.filter(hosts).count)
+            let hostCount = Int64(openZones.filter(hosts).count)
             let (residents, placeJobs) = (kept(people), kept(allJobs))
             func share(_ total: Int64, _ index: Int) -> Int64 {
                 let (base, extra) = total.quotientAndRemainder(dividingBy: hostCount)
@@ -224,7 +251,7 @@ public enum LandImport {
                     let index = (row - rowSpan.lowerBound) * columnSpan.count + column - columnSpan.lowerBound
                     let cellZone = zones[index]
                     // Water has no land (decision 105).
-                    let isHost = !wetCells[index] && hosts(cellZone)
+                    let isHost = !wetCells[index] && !closedCells[index] && hosts(cellZone)
                     defer { if isHost { host += 1 } }
                     if wetCells[index] { continue }
                     if let blocks, !blocks.contains(LandBlock(cellRow: row, column: column)) { continue }
@@ -232,7 +259,9 @@ public enum LandImport {
                     if isHost {
                         (cellResidents, cellJobs) = (share(residents, host), share(placeJobs, host))
                     }
-                    switch parksOnly ? nil : cellZone {
+                    // A park-only WorldPop cell's parks host everyone; land
+                    // no one lives on keeps its zone (decision 385 (續)).
+                    switch parksOnly && !closedCells[index] ? nil : cellZone {
                     case .industrial?:
                         cellUse = .industrial
                         cellJobs = min(Land.maximumPerCell, cellJobs + industrialJobsPerCell)

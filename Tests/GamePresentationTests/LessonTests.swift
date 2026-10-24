@@ -25,7 +25,7 @@ final class LessonTests: XCTestCase {
         ])
         XCTAssertEqual(Lesson.all.last?.tools, Set(UnlockableTool.allCases))
         XCTAssertEqual(Lesson.all.map { $0.challenge.title(in: .traditionalChinese) }, [
-            "第一條線", "第三個城鎮", "多一列車", "兩條線", "雙線", "路線的細節", "機廠", "貨運", "觀光景點", "城市的委託",
+            "第一條線", "第三個城鎮", "多一列車", "兩條線", "複線", "路線的細節", "機廠", "貨運", "觀光景點", "城市的委託",
         ])
         XCTAssertEqual(Set(Lesson.all.map { $0.teaches(in: .english) }).count, 10, "each teaches its own thing")
         for lesson in Lesson.all {
@@ -37,16 +37,35 @@ final class LessonTests: XCTestCase {
         }
     }
 
+    /// Decision 390: a lesson's goal of linking places says which ("Link
+    /// all 2 towns" read wrong, and lesson 9's second place is a sight);
+    /// lesson 1's gold is open on the second day, and lesson 7 asks for
+    /// what its lines carry resting at night.
+    func testTheLessonsGoalsSayWhatToLink() {
+        XCTAssertEqual(Lesson.all[0].challenge.goalsText(in: .english).first, "Link the two towns by rail")
+        XCTAssertEqual(Lesson.all[1].challenge.goalsText(in: .traditionalChinese).first, "用鐵路連通三座城鎮")
+        XCTAssertEqual(Lesson.all[3].challenge.goalsText(in: .english).first, "Link all three towns by rail")
+        XCTAssertEqual(Lesson.all[8].challenge.goalsText(in: .english).first, "Take the railway on to Seaview Point")
+        XCTAssertEqual(Lesson.all[0].starsText(in: .english), "★★★ within 2 days · ★★ within 3 days · ★ within 5 days")
+        XCTAssertEqual(Lesson.all[6].challenge.goalsText(in: .english), ["65,000 riders a day"])
+        let world = GameWorld.newGame(lesson: Lesson.all[8])
+        XCTAssertEqual(world.goalProgress(in: .english).first?.title, "Take the railway on to Seaview Point")
+    }
+
     /// The tutorial's step engine guides lessons 1 and 2: lesson 1 is the
     /// first line until its first fares, without buying its trains (the
     /// line opens with one, decision 264); lesson 2 the line's card and a
-    /// station's riders.
+    /// station's riders, after (decision 390) the track, station and stop
+    /// on to the third town, one action each.
     func testTheTutorialIsTheFirstLessonsGuide() {
         let first = Lesson.all[0].guide.map(\.id)
         XCTAssertEqual(first.first, "build.network")
         XCTAssertEqual(first.last, "first.fare")
         XCTAssertFalse(first.contains("line.staff"))
-        XCTAssertEqual(Lesson.all[1].guide.map(\.id), ["lesson.extend", "line.card.open", "line.card.read", "station.select", "station.ridership"])
+        XCTAssertEqual(Lesson.all[1].guide.map(\.id), [
+            "lesson.extend", "lesson.2.track", "track.build", "station.mode", "lesson.2.site", "station.first.build", "lesson.2.done",
+            "lesson.2.station", "lesson.2.lines", "lesson.2.add", "line.card.open", "line.card.read", "station.select", "station.ridership",
+        ])
         // Decision 376: lessons 3–10 step by step (LessonGuideTests), each
         // after the third starting at its earlier read step's id.
         XCTAssertEqual(Lesson.all[2].guide.map(\.id).first, "lesson.3.lines")
@@ -220,10 +239,10 @@ final class LessonTests: XCTestCase {
         clock += 60
         XCTAssertEqual(
             launcher.lessonReport(in: .english),
-            "1 ★3 9 min, passed after 6 min, left at step 1 of 15; 2 ★0 1 min, left at step 1 of 5, started 2 times"
+            "1 ★3 9 min, passed after 6 min, left at step 1 of 15; 2 ★0 1 min, left at step 1 of 14, started 2 times"
         )
         let report = ProblemReport(version: "1.0", build: "1", system: "iOS", device: "iPhone", lessons: launcher.lessonReport(in: .english))
-        XCTAssertTrue(report.text(in: .english).hasSuffix("Lessons: 1 ★3 9 min, passed after 6 min, left at step 1 of 15; 2 ★0 1 min, left at step 1 of 5, started 2 times"))
+        XCTAssertTrue(report.text(in: .english).hasSuffix("Lessons: 1 ★3 9 min, passed after 6 min, left at step 1 of 15; 2 ★0 1 min, left at step 1 of 14, started 2 times"))
         XCTAssertFalse(ProblemReport(version: "1.0", build: "1", system: "iOS", device: "iPhone").text(in: .english).contains("Lessons"))
     }
 

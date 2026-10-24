@@ -91,6 +91,13 @@ extension GameSession {
         case .pickLineStations, .selectStation:
             let before = tutorial.snapshot(of: .stations)
             return world.stations.filter { before?.stations.contains($0.id) != true }.map(\.location)
+        case .selectStationOffLine:
+            // Decision 390: the station lesson 2 built, on no line yet.
+            return world.stations.filter { isOffEveryLine($0) }.map(\.location)
+        case .drawTrack:
+            // Decision 390: in a lesson, the places its goal links that
+            // have no station yet, where the track is to go.
+            return tutorialPlacesToReach?.places ?? []
         case .selectPassingLoop:
             // Decision 376: the line's passing loops, which the player
             // did not build in the lesson.
@@ -100,9 +107,34 @@ extension GameSession {
             return world.network.nodes.filter { $0.ends.count == 1 }.map { PlanPoint(x: $0.position.x, y: $0.position.y) }
         case .selectStationForFreight:
             return world.stations.filter { Self.takesFreightYard($0, in: world) }.map(\.location)
+        case .selectTrack:
+            // Decision 378: the middle of the stretch to make double.
+            guard let id = tutorialDoubleTrackStretch, let geometry = world.trackGeometry(of: id) else { return [] }
+            return [geometry.location(at: geometry.length / 2).position.plan]
         default:
             return []
         }
+    }
+
+    /// The stretch lesson 5's guide has the player make double (decision
+    /// 378): the longest single track, with none beside it, that a
+    /// crossover could be cut into at its middle (no train on it or on its
+    /// way along it, no platform there). Lesson 5's longest track, out to
+    /// the third town, has a train at its station and costs more than the
+    /// lesson's cash; the one the guide points at is built at once.
+    var tutorialDoubleTrackStretch: TrackEdgeID? {
+        world.network.edges
+            .filter { edge in world.trackEdgeSplitRefusal(edge.id, at: edge.length / 2) == nil && !hasTrackBeside(edge.id) }
+            .max { $0.length != $1.length ? $0.length < $1.length : $0.id > $1.id }?.id
+    }
+
+    /// Where ``tutorialDoubleTrackStretch`` is, as the player reads it:
+    /// "by" the station with a platform on it, or the track with no train.
+    private var tutorialDoubleTrackPlace: String {
+        let station = tutorialDoubleTrackStretch.flatMap { id in world.network.platforms(on: id).first }
+            .flatMap { platform in world.stations.first { $0.id == platform.station } }
+        return station.map { language.text("Tap the track by \u{201C}\($0.name)\u{201D}, with no train on it.", "點「\($0.name)」旁沒有列車的那段軌道。") }
+            ?? language.text("Tap the track with no train on it.", "點沒有列車的那段軌道。")
     }
 
     /// Next: the following step, or, on the last step, Finish, which ends
@@ -297,20 +329,25 @@ extension GameSession {
             return tutorial.hasMovedMap(on: index)
         case .drawTrack:
             // A stretch that lengthens a short one built on the step counts
-            // with it.
+            // with it. Decision 390: extending a railway, it reaches the
+            // place the lesson's goal is waiting for.
             let built = newTrackLength(since: before)
-            if built >= Tutorial.minimumTrackLength { return true }
+            let reaches = !holdsForPlaces(before) || newTrackReachesEveryPlace(since: before)
+            if built >= Tutorial.minimumTrackLength, reaches { return true }
             guard tool == .network, let preview = networkPreview else { return false }
-            return preview.problem == nil && preview.cost != nil && built + preview.length >= Tutorial.minimumTrackLength
+            return preview.problem == nil && preview.cost != nil && built + preview.length >= Tutorial.minimumTrackLength && reaches
         case .buildTrack:
             return newTrackLength(since: before) >= Tutorial.minimumTrackLength
         case .chooseNetworkMode(let mode):
             if tool == .network, networkMode == mode { return true }
             return mode == .platform && newStationCount(since: before) >= 1
         case .pickPlatformSite(let count):
-            if newStationCount(since: before) >= count { return true }
+            // Decision 390: extending a railway, the station goes at the
+            // place the lesson's goal is waiting for.
+            let held = holdsForPlaces(before)
+            if newStationCount(since: before) >= count, !held { return true }
             return platformSitePlanPoint != nil && networkPlatformStretch != nil && platformStationID == nil
-                && networkPlatformLevelling?.problem == nil
+                && networkPlatformLevelling?.problem == nil && (!held || platformSiteIsAtAPlace)
         case .buildStation(let count):
             return newStationCount(since: before) >= count
         case .startPickingStops:
@@ -385,7 +422,93 @@ extension GameSession {
             return newBuilding(of: kind, since: before)
         case .acceptRequest:
             return world.cityRequests?.active.contains { !before.requestsInHand.contains($0.id) } == true
+        case .selectStationOffLine:
+            return (tool == .select && selectedStation.map(isOffEveryLine) == true) || addedStop(since: before)
+        case .addStopToLine:
+            return addedStop(since: before)
         }
+    }
+
+    /// Whether `station` is one a player's line could take on: a station
+    /// with a platform, not a depot, that no line calls at (decision 390).
+    private func isOffEveryLine(_ station: Station) -> Bool {
+        !station.isDepot && !Self.isPassingPlace(station, in: world) && !world.lines.contains { $0.stops.contains(station.id) }
+    }
+
+    /// Whether a line has more stops than when `before` was taken.
+    private func addedStop(since before: Tutorial.Snapshot) -> Bool {
+        world.lines.contains { line in before.services[line.id].map { line.stops.count > $0.stops } == true }
+    }
+
+    /// The places the lesson's goal links that no station is near yet
+    /// (decision 390), with how near a station must be: the towns, or
+    /// lesson 9's sight. `nil` outside a lesson or without such a goal.
+    var tutorialPlacesToReach: (places: [PlanPoint], radius: Int64)? {
+        guard lesson != nil, let goals = world.scenario?.scenario.goals else { return nil }
+        for case .connect(let points, let radius) in goals {
+            let stations = world.stations.filter { !$0.isDepot && !Self.isPassingPlace($0, in: world) }
+            let places = points.filter { point in !stations.contains { Self.squaredDistance($0.point, point) <= radius * radius } }
+            return (places, radius)
+        }
+        return nil
+    }
+
+    /// Whether the track and station steps wait for the places to reach
+    /// (decision 390): when the railway is being extended to them, the map
+    /// having had stations when the chapter began (lessons 2, 4 and 9).
+    /// Lesson 1's first track, on a blank map, is not held: its cards say
+    /// to run it from town to town (holding it is in HANDOFF, with the UI
+    /// tests that lay it inside one town).
+    private func holdsForPlaces(_ before: Tutorial.Snapshot) -> Bool {
+        !before.stations.isEmpty && tutorialPlacesToReach?.places.isEmpty == false
+    }
+
+    /// Whether the track built since `before`, with the stretch picked,
+    /// passes near every place to reach.
+    private func newTrackReachesEveryPlace(since before: Tutorial.Snapshot) -> Bool {
+        guard let reach = tutorialPlacesToReach else { return true }
+        var lines = world.network.edges.filter { !before.edges.contains($0.id) }.compactMap { world.trackGeometry(of: $0.id)?.points }
+        if tool == .network, let preview = networkPreview, preview.problem == nil { lines.append(preview.points) }
+        return reach.places.allSatisfy { place in lines.contains { Self.passes($0, within: reach.radius, of: place) } }
+    }
+
+    /// Whether the platform's site picked is near a place to reach.
+    private var platformSiteIsAtAPlace: Bool {
+        guard let site = platformSitePlanPoint, let reach = tutorialPlacesToReach else { return false }
+        return reach.places.contains { Self.squaredDistance(site, $0) <= reach.radius * reach.radius }
+    }
+
+    /// Whether the line through `points` passes within `radius` of `place`.
+    static func passes(_ points: [WorldCoordinate], within radius: Int64, of place: PlanPoint) -> Bool {
+        let px = Double(place.x), py = Double(place.y), limit = Double(radius) * Double(radius)
+        func squared(_ x: Double, _ y: Double) -> Double { (x - px) * (x - px) + (y - py) * (y - py) }
+        guard let first = points.first else { return false }
+        if squared(Double(first.x), Double(first.y)) <= limit { return true }
+        return zip(points, points.dropFirst()).contains { a, b in
+            let (ax, ay, bx, by) = (Double(a.x), Double(a.y), Double(b.x), Double(b.y))
+            let (dx, dy) = (bx - ax, by - ay), span = dx * dx + dy * dy
+            let t = span == 0 ? 0 : min(1, max(0, ((px - ax) * dx + (py - ay) * dy) / span))
+            return squared(ax + t * dx, ay + t * dy) <= limit
+        }
+    }
+
+    /// Where the place to reach is, as the hints name it: the sight, or
+    /// the town.
+    private var placesToReachText: (track: String, site: String)? {
+        guard let reach = tutorialPlacesToReach, !reach.places.isEmpty else { return nil }
+        if reach.places == [Lesson.sight(in: world.bounds)] {
+            return (
+                language.text("It doesn't reach the sight yet. Tap the end beside it.", "還沒到景點，終點要點在景點旁。"),
+                language.text("Too far from the sight. Tap your track beside it.", "離景點太遠，點景點旁的軌道。")
+            )
+        }
+        return (
+            language.text("It doesn't reach the town yet. Tap the end among its houses.", "還沒到城鎮，終點要點在房子之間。"),
+            language.text(
+                "That spot is outside the town that needs a station. Tap your track there.",
+                "這裡不在還沒有車站的城鎮，請點那座城鎮裡的軌道。"
+            )
+        )
     }
 
     private func newDepot(since before: Tutorial.Snapshot) -> Bool {
@@ -463,11 +586,15 @@ extension GameSession {
                     "再拉長一點：至少 \(Tutorial.minimumTrackMetres) 公尺，才放得下兩座車站。"
                 ))
             }
-            if built > 0 {
+            if built > 0, built < Tutorial.minimumTrackLength {
                 return TutorialHint(language.text(
                     "Too short for two stations. Tap farther on from its end, then ✓.",
                     "太短，放不下兩座車站。從尾端再點遠一點，然後按 ✓。"
                 ))
+            }
+            // Decision 390: short of the places the lesson's goal links.
+            if built > 0 || networkPreview != nil, !newTrackReachesEveryPlace(since: before), let text = placesToReachText {
+                return TutorialHint(text.track)
             }
             if networkStart != nil, networkEnd == nil {
                 return TutorialHint(language.text("Now tap where it ends.", "再點終點。"))
@@ -496,6 +623,10 @@ extension GameSession {
                     "No one lives in the ring, so few would ride. Try nearer the houses.",
                     "圓圈裡沒有人住，搭車的人會很少。往房子近一點試試。"
                 ), isProblem: true)
+            }
+            // Decision 390: away from the places the lesson's goal links.
+            if case .pickPlatformSite = goal, platformSitePlanPoint != nil, !platformSiteIsAtAPlace, let text = placesToReachText {
+                return TutorialHint(text.site)
             }
             if case .buildStation = goal, networkEdgePoint == nil {
                 return TutorialHint(language.text("Tap the track again to pick the spot.", "再點一次軌道，選好位置。"))
@@ -567,6 +698,9 @@ extension GameSession {
             if tool != .select {
                 return TutorialHint(language.text("Tap Done first, then the track.", "先點「完成」，再點軌道。"))
             }
+            if tutorialDoubleTrackStretch != nil {
+                return TutorialHint(tutorialDoubleTrackPlace)
+            }
             if selectedStation != nil || selectedTrainID != nil {
                 return TutorialHint(language.text(
                     "Tap the track between two stations, away from the trains.",
@@ -586,6 +720,10 @@ extension GameSession {
         case .buildDoubleTrack:
             // The card's pickers: the side the second track goes on and how far.
             if let problem = trackUpgradePreview?.problem {
+                // Decision 378: back to the stretch the guide points at.
+                if let stretch = tutorialDoubleTrackStretch, stretch != selectedTrackEdge {
+                    return TutorialHint(problem + " " + tutorialDoubleTrackPlace, isProblem: true)
+                }
                 return TutorialHint(problem + " " + language.text(
                     "Try the other side, This piece only, or another stretch.",
                     "試試另一側、「只有這一段」，或別段軌道。"
@@ -691,6 +829,26 @@ extension GameSession {
                     "Your hands are full. Finish or give up a request first.",
                     "手上的委託已滿，先完成或放棄一件。"
                 ), isProblem: true)
+            }
+        case .selectStationOffLine:
+            if tool != .select {
+                return TutorialHint(language.text("Tap Done first, then a station.", "先點「完成」，再點車站。"))
+            }
+            if let station = selectedStation, !isOffEveryLine(station) {
+                return TutorialHint(language.text(
+                    "That station is on a line already. Tap the new one.",
+                    "這一站已經在路線上，請點新蓋的那一站。"
+                ))
+            }
+        case .addStopToLine:
+            if let message, message.kind == .failure {
+                return TutorialHint(message.text, isProblem: true)
+            }
+            if selectedStation.map(isOffEveryLine) != true {
+                return TutorialHint(language.text("Tap the new station on the map first.", "先在地圖上點新車站。"))
+            }
+            if !isLinesPanelShown {
+                return TutorialHint(language.text("Tap Lines to open your line.", "點「路線」打開你的路線。"))
             }
         case .read, .chooseTool, .moveMap, .chooseNetworkMode, .startPickingStops, .timeRuns, .openLines, .showAdvanced:
             break

@@ -42,6 +42,20 @@ public struct Map3DVertex: Hashable, Sendable {
     /// Decision 370: no texture, and a road's carriageway: the shader lights
     /// it with its street lights once the sky is dark (``Map3DLook``).
     public static let road: Float = -11
+    /// Decision 370 (step 2): the landmarks' line patterns, drawn by the
+    /// shader along the vertex's `u`, `v` (in metres): a curtain wall's
+    /// mullions and floors,
+    public static let curtainGlass: Float = -5
+    /// a roof's tile rows,
+    public static let roofTiles: Float = -8
+    /// and a wall's floor lines (none on a roof).
+    public static let floorLines: Float = -9
+    /// Taipei 101's glass: floor lines as ``floorLines`` by day; after
+    /// dark an even glow, brighter up to the top of each section, its `v`
+    /// the metres below that top (none of the city's random windows).
+    public static let towerGlass: Float = -10
+    /// No texture, and lit warm after dark as a floodlit ledge is.
+    public static let floodlit: Float = -12
 
     /// Whether the vertex is lit from within at night.
     public var glows: Bool { layer < -1.5 && layer > -2.5 }
@@ -294,6 +308,14 @@ public struct Map3DMesh: Sendable {
     public private(set) var indices: [UInt32] = []
 
     public init() {}
+
+    /// The vertices and their triangles as they are (decision 370's
+    /// landmarks, built in their own metres and then stood in place).
+    init(vertices: [Map3DVertex], indices: [UInt32]) {
+        precondition(indices.allSatisfy { Int($0) < vertices.count })
+        self.vertices = vertices
+        self.indices = indices
+    }
 
     public var triangleCount: Int { indices.count / 3 }
     public var isEmpty: Bool { indices.isEmpty }

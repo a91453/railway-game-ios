@@ -249,6 +249,16 @@ final class StationStampTests: XCTestCase {
         XCTAssertNil(session.stationStampStatus(of: real.id), "Not known before the real railways are read")
     }
 
+    /// The demo collects no stamps (``GameLauncher/checkStationStamps(of:at:)``),
+    /// so its station panel promises none (review F, #1034).
+    @MainActor
+    func testTheDemoPromisesNoStamp() throws {
+        let (session, real, _) = try taipeiGame()
+        XCTAssertEqual(session.stationStampStatus(of: real.id), .notYet)
+        session.news.isDemo = true
+        XCTAssertNil(session.stationStampStatus(of: real.id))
+    }
+
     /// The launcher's record gives the game when each stamp was collected.
     func testTheRecordsGiveEachStampsDate() throws {
         var records = StationStampRecords(file: try temporaryFile())

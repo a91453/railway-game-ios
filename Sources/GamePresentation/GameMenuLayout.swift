@@ -16,7 +16,9 @@ public struct GameMenuLayout: Equatable, Sendable {
         case saveGame, saveOptions, backToStart
         /// The ``shortcuts``, side by side in one row.
         case shortcuts
-        case more
+        /// Decision 383: the ``helpRow``, side by side in one row, where
+        /// More stood.
+        case help
         case settings
     }
 
@@ -25,37 +27,68 @@ public struct GameMenuLayout: Equatable, Sendable {
         case tutorial, postcard, achievements
     }
 
+    /// Decision 383: one of the second row's items side by side: Help and
+    /// Report a Problem always, then the goals or the sights where the game
+    /// has one of them, or More where it has both.
+    public enum HelpItem: String, CaseIterable, Sendable {
+        case help, report, goals, tourism, more
+    }
+
     /// A row under More.
     public enum MoreRow: String, CaseIterable, Sendable {
-        case goals, tourism, help, report
+        case goals, tourism
     }
 
     /// How many rows of the first level a phone on its side shows without
     /// scrolling (TestFlight 54.1).
     public static let rowsInReach = 6
 
+    /// How many items one row side by side holds: the system's compact
+    /// group shows three.
+    public static let itemsInRow = 3
+
     /// The first level, section by section (a divider between two).
     public let sections: [[Row]]
     /// The shortcuts' row, in order.
     public let shortcuts: [Shortcut]
-    /// The rows under More.
+    /// Decision 383: the help row, in order.
+    public let helpRow: [HelpItem]
+    /// The rows under More; empty when the help row has no More.
     public let moreRows: [MoreRow]
 
     /// `showsGoals`: a game with a challenge or the city's requests
     /// (decisions 86 and 183); `showsTourism`: one with sights (decision
     /// 174).
+    ///
+    /// Decision 383: Help and Report a Problem were two taps down, under
+    /// More; they stand in the first level now, side by side as the
+    /// shortcuts do, so the first level keeps its six rows. What More held
+    /// besides comes up beside them when it is one row, and stays under
+    /// More when it is two.
     public init(showsGoals: Bool, showsTourism: Bool) {
         sections = [
             [.saveGame, .saveOptions, .backToStart],
-            [.shortcuts, .more],
+            [.shortcuts, .help],
             [.settings],
         ]
         shortcuts = [.tutorial, .postcard, .achievements]
         var more: [MoreRow] = []
         if showsGoals { more.append(.goals) }
         if showsTourism { more.append(.tourism) }
-        more += [.help, .report]
-        moreRows = more
+        switch more {
+        case []:
+            helpRow = [.help, .report]
+            moreRows = []
+        case [.goals]:
+            helpRow = [.help, .report, .goals]
+            moreRows = []
+        case [.tourism]:
+            helpRow = [.help, .report, .tourism]
+            moreRows = []
+        default:
+            helpRow = [.help, .report, .more]
+            moreRows = more
+        }
     }
 
     /// Decision 200: why a game with unlimited funds counts no

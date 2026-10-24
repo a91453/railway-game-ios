@@ -68,8 +68,10 @@ struct InspectorView: View {
             }
             // Decision 336, later: the train's timetable and the fleet
             // (where trains are sold), not only behind Build → Train.
+            // Decision 383: holding, resuming and turning it round too, in
+            // rows as wide as the card allows.
             if session.tool == .select {
-                HStack(spacing: 6) {
+                ChipFlow(spacing: 6) {
                     chip("calendar.badge.clock", session.language.text("Timetable", "時刻表"), id: "inspector.train.timetable") {
                         session.selectTrain(train)
                         screen.panel = .timetable
@@ -77,12 +79,19 @@ struct InspectorView: View {
                     chip("list.bullet.rectangle.portrait", session.language.text("Fleet", "車隊總覽"), id: "inspector.train.fleet") {
                         screen.panel = .fleet
                     }
-                    Spacer(minLength: 0)
+                    ForEach(session.trainCardActions(of: train), id: \.self) { action in
+                        chip(Self.systemImage(of: action), action.title(in: session.language), id: "inspector.train.\(action.rawValue)") {
+                            session.runTrainCardAction(action, on: train)
+                        }
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         } else if session.tool == .select, session.selectedStationID == nil, let edge = session.selectedTrackEdge {
             if let inspection = session.trackInspection(of: edge), !inspection.lines.isEmpty {
-                lineButtons(inspection.lines)
+                // Decision 383: "Open …" in words, not only by holding the
+                // track.
+                lineButtons(inspection.lines, opens: true)
                 // Decision 336, later: once, that holding the track opens
                 // the line (decision 276).
                 if TrackHoldHint.shows(lines: inspection.lines, seen: trackHoldHintSeen, tutorialRuns: session.tutorial != nil) {
@@ -96,6 +105,16 @@ struct InspectorView: View {
             }
             // Decision 247: make it double, or add an X crossover.
             TrackUpgradeControls(session: session)
+        }
+    }
+
+    /// The symbol of a train card's action (decision 383), as the train
+    /// tool's buttons show them.
+    private static func systemImage(of action: TrainCardAction) -> String {
+        switch action {
+        case .hold: "pause.fill"
+        case .resume: "play.fill"
+        case .reverse: "arrow.uturn.backward"
         }
     }
 
@@ -146,8 +165,9 @@ struct InspectorView: View {
         .accessibilityIdentifier("inspector.train.follow")
     }
 
-    /// A chip for each of `lines` that opens the line's details.
-    private func lineButtons(_ lines: [LineID]) -> some View {
+    /// A chip for each of `lines` that opens the line's details; with
+    /// `opens`, its name says so in words (decision 383).
+    private func lineButtons(_ lines: [LineID], opens: Bool = false) -> some View {
         let codes = LineBadge.codes(for: session.world.lines)
         return ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
@@ -160,7 +180,7 @@ struct InspectorView: View {
                             HStack(spacing: 4) {
                                 // Decision 216: the line's badge.
                                 LineCodeBadge(code: codes[id] ?? "", color: Palette.lineColor(id, custom: line.color), size: .small)
-                                Text(verbatim: line.name)
+                                Text(verbatim: opens ? TrackHoldHint.openTitle(line.name, in: session.language) : line.name)
                                     .font(.caption.weight(.semibold))
                                     .lineLimit(1)
                                 Image(systemName: "chevron.right")
@@ -171,7 +191,7 @@ struct InspectorView: View {
                             .frame(height: 30)
                         }
                         .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
-                        .accessibilityLabel(Text(verbatim: session.language.text("Open \(line.name)", "開啟 \(line.name)")))
+                        .accessibilityLabel(Text(verbatim: TrackHoldHint.openTitle(line.name, in: session.language)))
                         .accessibilityIdentifier("inspector.line.\(id.rawValue)")
                     }
                 }

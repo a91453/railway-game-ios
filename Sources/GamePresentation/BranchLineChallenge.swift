@@ -181,7 +181,8 @@ public struct BranchLineChallenge: Sendable {
 // The history in its story is from public sources (the owner's
 // `Railway/taiwan-rail-reference-clean/source/data/tra_special_trains.json`
 // `branchLines` `jiji`; the English and Chinese Wikipedia's "Jiji line" /
-// 「集集線」; Kurogane Rail's "Taiwan 45→C33"): Taiwan Power laid the line in
+// 「集集線」; Kurogane Rail's "Taiwan 45→C33"): the Taiwan Electric Power Company
+// (臺灣電力株式會社, not today's Taipower; decision 387) laid the line in
 // the early 1920s (sources give 1921 or 1922) to carry materials for the
 // Sun Moon Lake hydroelectric works, and the Government-General bought it
 // in 1927 and named it the Jiji Line; at 29.7 km it is the Taiwan Railway's
@@ -196,8 +197,8 @@ extension BranchLineChallenge {
         id: "jiji",
         titles: ("Jiji Line: Timber and Water", "集集線：木業與水力"),
         stories: (
-            "In the early 1920s Taiwan Power laid a line from Ershui into the hills to carry materials for the Sun Moon Lake hydroelectric works; the Government-General bought it in 1927 and named it the Jiji Line. Lay it again, Ershui to Checheng, the longest branch of the Taiwan Railway: past Jiji's wooden station, wrecked by the 921 earthquake and rebuilt, to Checheng's timber village at its end, and fill its trains with visitors.",
-            "1920 年代初，台灣電力從二水往山裡鋪了一條鐵路，運送興建日月潭水力發電廠的器材；1927 年由總督府收購，改名集集線。把它重新鋪回來：從二水到車埕，台鐵最長的支線。經過 921 地震毀損又重建的木造集集車站，一路到終點保留木業聚落的車埕，讓列車載滿遊客。"
+            "In the early 1920s the Taiwan Electric Power Company laid a line from Ershui into the hills to carry materials for the Sun Moon Lake hydroelectric works; the Government-General bought it in 1927 and named it the Jiji Line. Lay it again, Ershui to Checheng, the longest branch of the Taiwan Railway: past Jiji's wooden station, wrecked by the 921 earthquake and rebuilt, to Checheng's timber village at its end, and fill its trains with visitors.",
+            "1920 年代初，臺灣電力株式會社從二水往山裡鋪了一條鐵路，運送興建日月潭水力發電廠的器材；1927 年由總督府收購，改名集集線。把它重新鋪回來：從二水到車埕，台鐵最長的支線。經過 921 地震毀損又重建的木造集集車站，一路到終點保留木業聚落的車埕，讓列車載滿遊客。"
         ),
         west: 120.58, east: 120.90, north: 23.87, south: 23.78,
         places: [

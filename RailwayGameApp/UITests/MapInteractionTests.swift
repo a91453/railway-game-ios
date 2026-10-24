@@ -124,6 +124,8 @@ final class MapInteractionTests: XCTestCase {
         let follow = app.buttons["inspector.train.follow"]
         XCTAssertTrue(follow.appears(within: 5))
         XCTAssertTrue(follow.becomesHittable(), "The follow button shows without scrolling the card")
+        // Decision 383: the card turns the train round too.
+        XCTAssertTrue(app.buttons["inspector.train.reverse"].exists, "The card's Reverse")
         follow.tap()
         XCTAssertTrue(unfollow.appears(within: 5), "Following shows the follow bar")
         XCTAssertTrue(follow.label.contains("Following"), "label: \(follow.label)")
@@ -861,14 +863,11 @@ final class MapInteractionTests: XCTestCase {
         network.waitUntilSettled()
         network.tap()
 
-        let advanced = app.buttons["network.advanced"]
-        XCTAssertTrue(advanced.appears(within: 10))
-        for _ in 0..<3 where !advanced.becomesHittable(within: 1) { app.swipeUp() }
-        advanced.tap()
-        // A toggle with its own style: a toggle (value 1 or 0) or a
-        // selected button, as the system reads it.
+        // Decision 383: beside Double, with the options folded. A toggle
+        // with its own style: a toggle (value 1 or 0) or a selected
+        // button, as the system reads it.
         let snap = app.descendants(matching: .any)["network.snap"].firstMatch
-        XCTAssertTrue(snap.appears(within: 5))
+        XCTAssertTrue(snap.appears(within: 10))
         // The options open below the fold of the details card, which
         // scrolls on its own: a swipe up from the middle of the screen
         // began on the zoom buttons, never moved the card, and twice opened
@@ -1452,5 +1451,89 @@ final class MapInteractionTests: XCTestCase {
         build.tap()
         XCTAssertTrue(close.disappears(within: 10), "Build goes back to the 2D map")
         XCTAssertTrue(app.buttons["tool.select"].appears(within: 10), "Build takes the building tools out")
+    }
+
+    /// Decision 384 (TestFlight 85.1): on a phone on its side the new
+    /// line's station pair drawer covered the map's ✓ beside the last
+    /// station, and the line could not be opened. A line started from a
+    /// station and its last station tapped: the ✓ is clear of the drawer,
+    /// folded and with its bars open, a finger reaches it, and it opens the
+    /// line. Where the drawer and the ✓
+    /// go is `StationPairDrawerLayoutTests` on Linux. Full lane only
+    /// (decision 199); by hand with only_testing.
+    func testTheNewLinesCheckIsClearOfTheStationPairDrawer() throws {
+        try XCTSkipIf(UIDevice.current.userInterfaceIdiom != .phone, "a phone held on its side")
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-demo-layout", "-ui-testing-paused", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 30), "The demo map opens")
+        let stations = app.descendants(matching: .any)["map.stations"].firstMatch
+        XCTAssertTrue(stations.appears(within: 10))
+        func places() -> [CGPoint] {
+            ((stations.value as? String) ?? "").split(separator: ";").compactMap { pair in
+                let xy = pair.split(separator: ",").compactMap { Double($0) }
+                return xy.count == 2 ? CGPoint(x: xy[0], y: xy[1]) : nil
+            }
+        }
+        // Once the opening camera has settled (as the hold's test above).
+        let opened = Date()
+        var last = places()
+        while Date() < opened.addingTimeInterval(12) {
+            Thread.sleep(forTimeInterval: 1)
+            let now = places()
+            if !now.isEmpty, now == last, Date().timeIntervalSince(opened) > 3 { break }
+            last = now
+        }
+        let middle = CGPoint(x: map.frame.width / 2, y: map.frame.height / 2)
+        let nearest = last.sorted { hypot($0.x - middle.x, $0.y - middle.y) < hypot($1.x - middle.x, $1.y - middle.y) }
+        guard nearest.count >= 2 else {
+            XCTFail("The demo has stations")
+            return
+        }
+        func tap(_ point: CGPoint) {
+            map.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: point.x, dy: point.y)).tap()
+        }
+        tap(nearest[0])
+        let card = app.descendants(matching: .any)["details.card"].firstMatch
+        if !card.appears(within: 5) {
+            app.buttons["controls.toggle"].tap()
+        }
+        let newLine = app.buttons["station.newLine"]
+        XCTAssertTrue(newLine.appears(within: 10), "The station's card offers a new line")
+        newLine.tap()
+        // As on the owner's screenshot: the card folded, the map open.
+        if card.exists {
+            app.buttons["controls.toggle"].tap()
+            XCTAssertTrue(card.disappears(within: 10), "The card folds")
+        }
+        tap(nearest[1])
+        let drawer = app.descendants(matching: .any)["map.stationPair"].firstMatch
+        XCTAssertTrue(drawer.appears(within: 10), "The two stations are compared")
+        let confirm = app.buttons["map.build.confirm"]
+        XCTAssertTrue(confirm.appears(within: 10))
+        XCTAssertTrue(confirm.becomesHittable(within: 10), "A finger reaches the ✓: \(confirm.frame), drawer \(drawer.frame)")
+        drawer.waitUntilSettled()
+        XCTAssertFalse(confirm.frame.intersects(drawer.frame), "The ✓ \(confirm.frame) is clear of the drawer \(drawer.frame)")
+        for id in ["Zoom in", "Zoom out", "map.open3D"] where app.buttons[id].exists {
+            XCTAssertFalse(app.buttons[id].frame.intersects(drawer.frame), "\(id) is clear of the drawer \(drawer.frame)")
+        }
+        // Its bars opened, as a player compares the two: the ✓ stays clear.
+        let fold = app.buttons["map.stationPair.fold"]
+        XCTAssertTrue(fold.appears(within: 10), "The comparison opens")
+        fold.tap()
+        drawer.waitUntilSettled()
+        XCTAssertTrue(confirm.becomesHittable(within: 10), "A finger reaches the ✓ with the bars open: \(confirm.frame), drawer \(drawer.frame)")
+        XCTAssertFalse(confirm.frame.intersects(drawer.frame), "Open, the ✓ \(confirm.frame) is clear of the drawer \(drawer.frame)")
+        confirm.tap()
+        // Decision 303: the line's card, where the game runs its trains,
+        // or the line made at once.
+        let lineCard = app.descendants(matching: .any)["line.confirm.name"].firstMatch
+        let deadline = Date().addingTimeInterval(10)
+        while drawer.exists && !lineCard.exists && Date() < deadline { Thread.sleep(forTimeInterval: 0.25) }
+        XCTAssertTrue(!drawer.exists || lineCard.exists, "The ✓ opens the line")
     }
 }
