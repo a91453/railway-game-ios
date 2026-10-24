@@ -126,9 +126,10 @@ permissions:
 # MapInteractionTests 21.7 -> 35.3, RealWorldMapUITests 13.9 -> 11.7,
 # SettingsUITests 5.7, LessonUITests 30.5, Feature284To286UITests 7.2; the
 # build job's own classes 37.2 -> 46.7 (UI step 52.6 of 75, job 73 of 95).
-# RealWorldMapUITests moved to the build job: second about 30 (43.5 on a
-# runner like b6ca9af's), lessons 40.6 at most (of 55), build about 56
-# (64 of 75, job 85 of 95). The next class to add goes where that leaves
+# RealWorldMapUITests moved to the build job and second's UI step got 55
+# minutes like lessons': second about 30 (43.5 of 55 on a runner like
+# b6ca9af's), lessons 40.6 at most (of 55), build about 56 (64 of 75, job
+# 85 of 95). The next class to add goes where that leaves
 # ten minutes; when none can take it, split a class by test method
 # (Class/testMethod works in these lists) or ask for a fourth job.
 env:
@@ -772,8 +773,10 @@ jobs:
         id: ui-partition
         # Lessons' latest UI step was 36:44 (39332055254). Adding the
         # feature checks' standalone 7:36 gives 44:20; 55 leaves 10:40 spare.
-        # The job still has its 75-minute cap; second keeps its old limit.
-        timeout-minutes: ${{ matrix.partition == 'lessons' && 55 || 50 }}
+        # The job still has its 75-minute cap. Second got 55 too on
+        # 2026-10-24: about 43.5 minutes on a runner as slow as b6ca9af's
+        # (see FULL_LANE_SECOND_JOB), and some 58 for the whole job.
+        timeout-minutes: 55
         run: |
           case "$PARTITION" in
             second) classes="$FULL_LANE_SECOND_JOB" ;;
