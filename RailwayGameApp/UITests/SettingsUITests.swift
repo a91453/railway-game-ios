@@ -17,19 +17,21 @@ final class SettingsUITests: XCTestCase {
         let sounds = app.switches["settings.sounds"]
         XCTAssertTrue(music.appears(within: 10), "Missing the music switch")
         XCTAssertTrue(sounds.appears(within: 10), "Missing the sound effects switch")
-        // Decision 219, stage 2: the three volumes under the switches. On
-        // a phone on its side, since the Language section above them
-        // (decision 381), they start below the fold, and a List makes a
-        // row only as it comes near (full lane 40026341039).
-        for volume in ["music", "chimes", "effects"] {
-            XCTAssertTrue(app.dragUntilWhollyOnScreen(app.sliders["settings.volume.\(volume)"]), "Missing the \(volume) volume")
-        }
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(sounds), "The sound effects switch went out of reach")
         let before = switchValue(sounds)
 
         XCTAssertTrue(flip(sounds, from: before), "The sound effects switch did not change")
         XCTAssertTrue(flip(sounds, from: switchValue(sounds)), "The sound effects switch did not change back")
         XCTAssertEqual(switchValue(sounds), before)
+
+        // Decision 219, stage 2: the three volumes under the switches. On
+        // a phone on its side, since the Language section above them
+        // (decision 381), they start below the fold, and a List makes a
+        // row only as it comes near (full lane 40026341039). Checked after
+        // the switch: at the list's top the switch stays above the band
+        // the drags bring a row into (run 40046083471).
+        for volume in ["music", "chimes", "effects"] {
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(app.sliders["settings.volume.\(volume)"]), "Missing the \(volume) volume")
+        }
 
         tap(app.buttons["settings.done"], name: "settings.done")
         // The start screen's buttons exist under the sheet too: what shows
