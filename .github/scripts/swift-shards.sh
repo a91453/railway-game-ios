@@ -790,7 +790,10 @@ build_package() {
 # the whole job log. JOB_STARTED (epoch seconds, set by the job's first step
 # in ci.yml) gives the job's time so far; the container's start, some 40 s,
 # comes before it. Without it (locally) only the class checks run.
-SHARD_WARN_SECONDS="${SHARD_WARN_SECONDS:-900}"
+# The warning line was 15 minutes; decision 405 put it at 17, since the
+# rebalanced shards run to about 16.5 on slow runners and a warning on
+# most runs goes unread.
+SHARD_WARN_SECONDS="${SHARD_WARN_SECONDS:-1020}"
 SHARD_WATCHDOG_SECONDS="${SHARD_WATCHDOG_SECONDS:-1110}"
 # A class this long whose weight is missing, or less than half its time,
 # is reported: the selected parts are dealt by weight (selected_part).

@@ -42,7 +42,7 @@
     - 最長的 shard 超過中位數的 1.5 倍（`swift-shards.sh` 的 `classes_of` 該重排）。
     - pull request 的 iOS gate，UI 測試超過約 6 分（CLAUDE.md、決策 199）。
     - full lane 任何一個 job 接近它的時間上限（差不到 10 分）。
-    - main 的 `ci.yml` run 的 Annotations 裡有 Swift 分片「near its 20-minute limit」或「about to reach its 20-minute limit」的警告（決策 404：job 用到 15 分、或 18 分 30 秒還沒跑完就印）。
+    - main 的 `ci.yml` run 的 Annotations 裡有 Swift 分片「near its 20-minute limit」或「about to reach its 20-minute limit」的警告（決策 404：job 用到 17 分〔決策 405；原本 15 分〕、或 18 分 30 秒還沒跑完就印）。
     - 同一個測試 7 天內沒有程式原因紅了 2 次（不穩的測試，照 diagnosing-bugs 查）。
     - pull request 的 macOS job 常常排隊超過 20 分。
   - 五方（權重同上；選項：A 每 30 點、B 每 60 點、C 每週一次、D 看數字過線才開、E D 再加每週量一次）：
