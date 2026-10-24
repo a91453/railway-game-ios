@@ -688,12 +688,15 @@ extension Map3DScene {
         /// The heights file's ground round the region, for the blocks the
         /// world has not read yet; `nil` without the file or off the Earth.
         let fileGround: FileGround?
+        /// The ground the player's buildings take (``onPlacedGround(_:)``).
+        let placedGround: [PlacedSquare]
 
         init(originX: Double, originY: Double, region: WorldRegion, world: GameWorld, heights: HeightGrid? = nil) {
             self.originX = originX
             self.originY = originY
             self.region = region
             self.world = world
+            placedGround = Self.placedSquares(world, region: region, originX: originX, originY: originY)
             fileGround = heights.flatMap { grid in RealWorldFrame(world: world).map { FileGround(grid, frame: $0, region: region) } }
         }
 

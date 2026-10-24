@@ -96,7 +96,7 @@ extension Map3DScene.Builder {
                     for facing in Self.templeFacings {
                         let footprint = Self.parkFootprint(model, centre: centre, facing: facing)
                         guard footprint.allSatisfy({ Self.within($0, park.bounds) && Self.inside($0, park.rings) }),
-                              Self.inside(centre, park.rings), cleared.isDisjoint(with: cells(under: footprint)),
+                              Self.inside(centre, park.rings), cleared.isDisjoint(with: cells(under: footprint)), !onPlacedGround(footprint),
                               isClear(footprint, facing: facing) else { continue }
                         let ground = footprint.map { drawnGround(x: $0.x, z: $0.z) }.min() ?? 0
                         let foot = Map3DPoint(centre.x, ground + Self.lift(of: .park), centre.z)

@@ -177,7 +177,7 @@ extension Map3DScene.Builder {
             let middle = (x: places.reduce(0) { $0 + $1.x } / Double(places.count), y: places.reduce(0) { $0 + $1.y } / Double(places.count))
             guard contains(x: middle.x, y: middle.y) else { continue }
             let ring = places.map { point(x: $0.x, y: $0.y, height: 0) }
-            guard cleared.isDisjoint(with: ring.map { chunk(of: $0) }) else { continue }
+            guard cleared.isDisjoint(with: ring.map { chunk(of: $0) }), !onPlacedGround(ring) else { continue }
             let kind: RealKind
             switch building.use {
             case .hangar: kind = .industry
@@ -385,6 +385,7 @@ extension Map3DScene.Builder {
             guard contains(x: originX + Double(spot.x) * Self.metre, y: originY + Double(spot.z) * Self.metre),
                   !blocked.contains(chunk(of: spot)), !onNoBuildLand(spot) else { return false }
         }
+        guard !onPlacedGround(corners) else { return false }
         let radius = (house.width * house.width + house.depth * house.depth).squareRoot() / 2
         for index in near {
             let piece = frontage.pieces[index]

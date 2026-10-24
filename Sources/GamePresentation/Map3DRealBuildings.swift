@@ -90,8 +90,11 @@ extension Map3DScene.Builder {
                         standing.insert(Map3DScene.ChunkKey(column: column, row: row))
                     }
                 }
-                let ground = self.ground(x: middle.x, y: middle.y)
                 let rings = polygons.map { $0.map { ring in ring.map { point(x: $0.x, y: $0.y, height: 0) } } }
+                // Cleared for a building of the player's: its cells still
+                // keep no city lot.
+                guard !rings.contains(where: { onPlacedGround($0.first ?? []) }) else { continue }
+                let ground = self.ground(x: middle.x, y: middle.y)
                 addRealBuilding(rings, ground: ground, height: max(3, building.height), storeys: max(1, building.storeys),
                                 kind: RealKind(usage: building.usage))
                 if near, (401...404).contains(building.usage) || building.usage == 413 || building.usage == 414,
