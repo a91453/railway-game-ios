@@ -116,6 +116,10 @@ public struct RealLineAcquisition: Hashable, Sendable, Codable {
     /// The real riders a day of its stations past the junction (decision
     /// 298), which its price pays for.
     public let dailyRiders: Int64
+    /// Decision 401: the tiles under it the company does not own yet, on a
+    /// map bought tile by tile, in the order they are bought, each beside
+    /// one owned by then; `nil` for none (and in the logs of before).
+    public let tiles: [MapTile]?
 
     /// Cars per train: the DR1000's three (decision 315's reference row).
     static let carsPerTrain = 3
@@ -128,17 +132,34 @@ public struct RealLineAcquisition: Hashable, Sendable, Codable {
     static let junctionReach = 450 * metre
     /// How far a real station may be from its line's centre line.
     static let stationReach = 150 * metre
+
+    /// Decision 401: `tiles` in an order the company can buy them, each
+    /// beside one owned or bought before it (``GameWorld/buyMapTile(_:passingMilestone:)``),
+    /// by row and then column among those it could buy next; `nil` when
+    /// some never touch the land owned.
+    static func buyingOrder(of tiles: Set<MapTile>, owned: [MapTile]) -> [MapTile]? {
+        var reached = Set(owned), left = tiles.subtracting(reached), order: [MapTile] = []
+        while !left.isEmpty {
+            guard let next = left.sorted().first(where: { $0.neighbours.contains(where: reached.contains) }) else { return nil }
+            order.append(next)
+            reached.insert(next)
+            left.remove(next)
+        }
+        return order
+    }
 }
 
 /// What buying a line costs, item by item (decision 315 §2).
 public struct RealLineAcquisitionPrice: Hashable, Sendable {
+    /// The tiles under it not owned yet (decision 401).
+    public let land: Money
     /// Its track, stations and platforms, at the game's prices.
     public let building: Money
     public let trains: Money
     /// Its riders (``LineAcquisition/value(ofDailyRiders:)``).
     public let riders: Money
 
-    public var total: Money { building + trains + riders }
+    public var total: Money { land + building + trains + riders }
 }
 
 /// The offer of a line: what the purchase lays and costs, or why it
@@ -153,7 +174,11 @@ public struct RealLineOffer: Sendable {
     /// The card's price rows (decision 315 §2), and the total last.
     public func priceRows(in language: DisplayLanguage) -> [(label: String, amount: Money)] {
         guard let price, let acquisition else { return [] }
-        return [
+        let tiles = acquisition.tiles?.count ?? 0
+        let land = tiles == 0 ? [] : [
+            (label: language.text("\(tiles) \(tiles == 1 ? "tile" : "tiles") of land along it", "沿線的 \(tiles) 塊地"), amount: price.land),
+        ]
+        return land + [
             (language.text("Track, stations and platforms", "軌道、車站與月台"), price.building),
             (language.text("\(acquisition.trains.count) trains", "\(acquisition.trains.count) 列車"), price.trains),
             (language.text("Its regulars along the line", "沿線的常客"), price.riders),
@@ -296,6 +321,12 @@ extension GameSession {
         func refused(_ english: String, _ chinese: String) -> RealLineOffer {
             RealLineOffer(line: line, acquisition: nil, price: nil, problem: language.text(english, chinese))
         }
+        func refusedForLand() -> RealLineOffer {
+            refused(
+                "The land this line crosses does not touch yours. Use Expand Map to buy up to the line first, then buy it.",
+                "這條線經過的地和你的地不相連。先用「擴建地圖」買到這條線旁邊，再收購。"
+            )
+        }
         guard let railways, let frame = RealWorldFrame(world: world), let runs = railways.branchRuns[line.network],
               let traces = realRailwayTraces else {
             return refused("This map has no real railway to buy.", "這張地圖沒有可以收購的真實鐵路。")
@@ -331,11 +362,26 @@ extension GameSession {
         }
 
         // The ground under the way, read in on a copy.
-        var draft = world
+        var draft = world.pricingCopy()
         let step = 32 * RealLineAcquisition.metre, side = 16 * RealLineAcquisition.metre
         let samples = (0...Int(path.length / step)).flatMap { index -> [PlanPoint] in
             let point = path.point(at: Double(index) * step)
             return [(-side, -side), (-side, side), (side, -side), (side, side)].map { dx, dy in WorldVector(x: point.x + dx, y: point.y + dy).plan }
+        }
+        // Decision 401: on a map bought tile by tile, the tiles under the
+        // way not owned yet are bought with the line, their land and water
+        // read in before the track is laid over them.
+        var tiles: [MapTile] = []
+        if let expansion = world.mapExpansion {
+            let wanted = Set(samples.map { MapExpansion.tile(at: $0) }).filter { world.isOnMap($0) && !expansion.owns($0) }
+            guard let order = RealLineAcquisition.buyingOrder(of: wanted, owned: expansion.owned) else { return refusedForLand() }
+            tiles = order
+            for tile in tiles {
+                try? draft.buyMapTile(tile, passingMilestone: true)
+            }
+            if !tiles.isEmpty {
+                Self.readLand(roundStationsOf: &draft, population: population, places: places, water: self.water, coverage: coverage)
+            }
         }
         try? draft.readGround(under: samples, from: heights)
         let mapped = draft.ground.isMapped
@@ -514,18 +560,30 @@ extension GameSession {
         }
         let color = railways.lines.first { $0.system.id == "tra_sched" && $0.name.hasPrefix(line.chinese) }
             .flatMap { LineColor(rgb: Int($0.palette.color.red) << 16 | Int($0.palette.color.green) << 8 | Int($0.palette.color.blue)) }
-        let acquisition = RealLineAcquisition(
-            realLine: line.id, pieces: pieces, stops: stops, platforms: platforms, lineName: lineName, color: color, runs: lineRuns,
-            trains: starts, cars: RealLineAcquisition.carsPerTrain, dailyRiders: min(riders, LineAcquisition.maximumDailyRiders)
-        )
+        func acquisition(buying tiles: [MapTile]) -> RealLineAcquisition {
+            RealLineAcquisition(
+                realLine: line.id, pieces: pieces, stops: stops, platforms: platforms, lineName: lineName, color: color, runs: lineRuns,
+                trains: starts, cars: RealLineAcquisition.carsPerTrain, dailyRiders: min(riders, LineAcquisition.maximumDailyRiders),
+                tiles: tiles.isEmpty ? nil : tiles
+            )
+        }
 
-        // GameCore's answer and the price, on a funded copy.
-        var probe = world.pricingCopy()
-        do throws(GameError) {
-            let price = try build(acquisition, in: &probe)
-            return RealLineOffer(line: line, acquisition: acquisition, price: price, problem: nil)
-        } catch {
-            return RealLineOffer(line: line, acquisition: nil, price: nil, problem: error.playerMessage(in: language))
+        // GameCore's answer and the price, on a funded copy. A tile the
+        // track reaches between the samples is bought with the others.
+        while true {
+            let bought = acquisition(buying: tiles)
+            var probe = world.pricingCopy()
+            do throws(GameError) {
+                let price = try build(bought, in: &probe)
+                return RealLineOffer(line: line, acquisition: bought, price: price, problem: nil)
+            } catch {
+                if case .mapTileNotOwned(let tile) = error, let owned = world.mapExpansion?.owned, !tiles.contains(tile) {
+                    guard let order = RealLineAcquisition.buyingOrder(of: Set(tiles + [tile]), owned: owned) else { return refusedForLand() }
+                    tiles = order
+                    continue
+                }
+                return RealLineOffer(line: line, acquisition: nil, price: nil, problem: error.playerMessage(in: language))
+            }
         }
     }
 
@@ -561,6 +619,15 @@ extension GameSession {
 
     func build(_ acquisition: RealLineAcquisition, in world: inout GameWorld, recording: Bool = true) throws(GameError) -> RealLineAcquisitionPrice {
         let opening = world.economy.balance
+        // Decision 401: the tiles under it first, their land and water read
+        // in before the track is laid over them.
+        if let tiles = acquisition.tiles {
+            for tile in tiles {
+                try world.buyMapTile(tile, passingMilestone: true)
+            }
+            Self.readLand(roundStationsOf: &world, population: population, places: places, water: water, coverage: coverage)
+        }
+        let landed = world.economy.balance
         var nodes: [[TrackNodeID]] = []
         var edges: [[TrackEdgeID]] = []
         for piece in acquisition.pieces {
@@ -662,7 +729,7 @@ extension GameSession {
             try world.recordLineAcquisition(line: line.id, realLine: acquisition.realLine, dailyRiders: acquisition.dailyRiders)
         }
         return RealLineAcquisitionPrice(
-            building: opening - built, trains: built - bought, riders: bought - world.economy.balance
+            land: opening - landed, building: landed - built, trains: built - bought, riders: bought - world.economy.balance
         )
     }
 }
