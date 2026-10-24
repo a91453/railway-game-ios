@@ -84,7 +84,7 @@ permissions:
 #   request at once. Push a change when it is ready, not piece by piece.
 # - Merge in batches of 3 to 5 green pull requests, then wait for this
 #   workflow to turn green on main before the next batch. Keep at most 2
-#   pull requests that change GameCore running CI at once (a full tier is 18
+#   pull requests that change GameCore running CI at once (a full tier is 21
 #   jobs of the account's 40).
 concurrency:
   group: ${{ github.event_name == 'push' && 'ci-main' || format('ci-{0}', github.event_name == 'pull_request' && github.ref || github.sha) }}

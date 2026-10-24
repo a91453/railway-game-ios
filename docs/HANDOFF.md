@@ -206,7 +206,7 @@
 - 先合正在等的那一個：有 PR 為了解衝突重跑 CI 時，先不要合另一個也改 OVERVIEW、ARCHITECTURE 或這份的 PR，否則它要再解一次（2026-10-21：先合 #876，#875 第二次衝突）。
 
 **GameCore 名額**：
-- 同時最多 2 個要跑完整 tier（20 個 job，決策 404）的 PR 在跑 CI。改 `.github/scripts/swift-shards.sh` 這類 CI 腳本也算完整 tier。
+- 同時最多 2 個要跑完整 tier（21 個 job，決策 405）的 PR 在跑 CI。改 `.github/scripts/swift-shards.sh` 這類 CI 腳本也算完整 tier。
 - session 問能不能推：當下在跑的完整 tier 不到 2 個就答可以。
 - GameCore PR 的 base 比另一個已經合進去的 GameCore 改動舊時，請它 merge main（不要 rebase），重跑完整 tier 再合。
 
