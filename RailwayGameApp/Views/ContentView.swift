@@ -170,6 +170,16 @@ struct ContentView: View {
                         .presentationDetents([.medium, .large])
                 }
             }
+            // Decision 400 A.8: a real station offered from its pin.
+            .sheet(isPresented: Binding(
+                get: { session.shownRealStationOffer != nil },
+                set: { if !$0 { session.shownRealStationOffer = nil } }
+            )) {
+                if let offer = session.shownRealStationOffer {
+                    RealStationOfferCard(session: session, offer: offer)
+                        .presentationDetents([.medium, .large])
+                }
+            }
             // Decision 303: a new line's hours and trains, before they are
             // bought; the lines panel shows the line once it is open.
             .sheet(isPresented: Binding(

@@ -113,15 +113,17 @@ final class RealStationSuggestionTests: XCTestCase {
         XCTAssertEqual(session.stationName, "Houtong")
     }
 
-    func testWithoutTrackNearAPinNothingIsPicked() throws {
+    /// Decision 400 A.8: without track within 400 m, the pin offers the
+    /// station for sale instead (``RealStationPurchaseTests``).
+    func testWithoutTrackNearAPinNothingIsPickedAndTheStationIsOffered() throws {
         let (session, _) = try makeSession(trackOffsetMetres: 500)
         session.selectTool(.network)
         session.setNetworkMode(.platform)
         let pin = try XCTUnwrap(session.realStationSuggestions.first { $0.name(in: .traditionalChinese) == "猴硐" })
         session.pickRealStation(pin)
         XCTAssertNil(session.platformSitePlanPoint)
-        XCTAssertEqual(session.message?.kind, .failure)
-        XCTAssertEqual(session.message?.text, "猴硐 400 公尺內還沒有軌道。先在那裡鋪軌，再點一次 猴硐。")
+        XCTAssertNil(session.message)
+        XCTAssertEqual(session.shownRealStationOffer?.suggestion.id, pin.id)
     }
 }
 
