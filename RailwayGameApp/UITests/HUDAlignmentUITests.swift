@@ -227,9 +227,8 @@ final class HUDAlignmentUITests: XCTestCase {
 
             for (item, done) in [("menu.settings", "settings.done"), ("menu.help", "help.done"), ("menu.achievements", "achievements.done")] {
                 tap("hud.menu")
-                if item == "menu.help" {
-                    tapHittable("menu.more")
-                }
+                // Help stands on the menu's first row (decision 383), not
+                // under More.
                 tapHittable(item)
                 XCTAssertTrue(app.buttons[done].appears(within: 15), "\(way): \(item) opens")
                 checkPanel("\(way) \(item)", lines)
