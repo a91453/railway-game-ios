@@ -94,10 +94,17 @@ struct RailwayGameApp: App {
 
     private static func makeLauncher() -> GameLauncher {
         let launcher = GameLauncher(library: makeSaveLibrary(), language: .app)
+        // Decision 397: the saves kept in the player's iCloud too, when
+        // there is one; asked off the main thread before every round.
+        launcher.cloudSaveFolder = { ICloudSaveFolder.current() }
         // About 2.4 MB of JSON: decoded off the main thread, so the
         // start screen shows at once; its real-world maps wait for it.
         launcher.loadRealWorldData { RailwayGameApp.bundledRealWorldData() }
         #if DEBUG
+        // UI tests keep their cleared save folder on the Simulator alone.
+        if DebugLaunch.isSet("-ui-testing") {
+            launcher.cloudSaveFolder = nil
+        }
         // Decision 177: UI tests start from an empty save folder, where the
         // start screen's first-time card would push the buttons they tap
         // below the fold; they start with it closed unless a test asks for

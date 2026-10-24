@@ -242,6 +242,89 @@ public final class GameLauncher {
         entries = saveQueue.sync { library.entries() }
     }
 
+    // MARK: - iCloud (decision 397)
+
+    /// The saves' folder in the player's iCloud, or `nil` without one
+    /// (iCloud signed out, iCloud Drive off for the app, or a build that
+    /// may not use it): set by the app. Asked on the saves' queue, off the
+    /// main thread, before every round. `nil` (as in the tests) keeps the
+    /// saves on the device alone, as before.
+    @ObservationIgnored public var cloudSaveFolder: (@Sendable () -> (any SaveSyncFolder)?)?
+
+    /// Whether the saves are kept in iCloud too, after the last round.
+    public private(set) var cloudSaves: CloudSaves = .off
+
+    /// The saves kept twice since the player last heard of them: changed
+    /// here and on another device, the other's added as a save of the
+    /// player's own (``SaveSync/Outcome/keptBoth``).
+    @ObservationIgnored private var keptTwiceToTell = 0
+
+    /// Keeps the saves and the copy in iCloud in step (decision 397), after
+    /// the saves queued before, off the main thread. On the start screen
+    /// both ways; in a game, the device's saves are never written over or
+    /// deleted (``SaveSync/Mode/keepingDevice``). Does nothing, and `nil`,
+    /// without ``cloudSaveFolder``. The list of saves is read again on the
+    /// start screen when the round changed the device's saves.
+    @discardableResult
+    public func syncSaves(at date: Date = Date()) -> Task<Void, Never>? {
+        guard let folder = cloudSaveFolder else { return nil }
+        let (library, language) = (library, language)
+        let mode: SaveSync.Mode = session == nil ? .full : .keepingDevice
+        let (done, report) = AsyncStream.makeStream(of: SaveSync.Outcome?.self)
+        saveQueue.async {
+            report.yield(Self.syncRound(library: library, cloud: folder(), mode: mode, language: language, at: date))
+            report.finish()
+        }
+        return Task {
+            for await outcome in done {
+                noteSync(outcome)
+            }
+        }
+    }
+
+    /// One round between `library` and `cloud`, from and to the state kept
+    /// beside the saves; `nil` without `cloud`.
+    private nonisolated static func syncRound(
+        library: SaveLibrary, cloud: (any SaveSyncFolder)?, mode: SaveSync.Mode, language: DisplayLanguage, at date: Date
+    ) -> SaveSync.Outcome? {
+        guard let cloud else { return nil }
+        let stateFile = library.directory.appendingPathComponent(SaveSync.stateFileName)
+        var state = SaveSync.State.read(from: stateFile)
+        var outcome = SaveSync.run(
+            local: DirectorySaveFolder(directory: library.directory), cloud: cloud, state: &state, mode: mode, language: language, now: date
+        )
+        // A state left as it was is safe: what the round did left both
+        // sides the same, and the next round sees them so.
+        do {
+            try FileManager.default.createDirectory(at: library.directory, withIntermediateDirectories: true)
+            try state.write(to: stateFile)
+        } catch {
+            outcome.isIncomplete = true
+        }
+        return outcome
+    }
+
+    private func noteSync(_ outcome: SaveSync.Outcome?) {
+        guard let outcome else {
+            cloudSaves = .off
+            return
+        }
+        cloudSaves = outcome.isIncomplete ? .incomplete : .on
+        keptTwiceToTell += outcome.keptBoth.count
+        guard session == nil else { return }
+        if !outcome.downloaded.isEmpty || !outcome.deleted.isEmpty || !outcome.keptBoth.isEmpty {
+            refresh()
+        }
+        tellOfSavesKeptTwice()
+    }
+
+    /// Says on the start screen that saves were kept twice, once.
+    private func tellOfSavesKeptTwice() {
+        guard keptTwiceToTell > 0 else { return }
+        message = StatusMessage(kind: .success, text: CloudSaves.keptTwiceText(keptTwiceToTell, in: language))
+        keptTwiceToTell = 0
+    }
+
     // MARK: - Starting a game
 
     /// Starts a new game: on a blank map, bought tile by tile as the
@@ -1233,6 +1316,8 @@ public final class GameLauncher {
         weatherSound?(nil)
         message = nil
         refresh()
+        tellOfSavesKeptTwice()
+        syncSaves()
         if left {
             playSound?(.transition)
         }
@@ -1277,6 +1362,8 @@ public final class GameLauncher {
         isActive = active
         if active {
             startLessonClock()
+            // Decision 397: what another device saved, before Continue.
+            syncSaves()
             session?.startGameLoop()
             autosaveLoop = Task { [weak self] in
                 while true {
@@ -1295,6 +1382,8 @@ public final class GameLauncher {
             stopLessonClock()
             session?.stopGameLoop()
             autosaveInBackground()
+            // After the autosave, in the time the app is given to write it.
+            syncSaves()
         }
     }
 }
