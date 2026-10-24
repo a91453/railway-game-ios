@@ -330,7 +330,7 @@
 - **做中的 session**：
   - session_01E26h8gQVHa51w79DJRAyv2：決策 398，玩家自有建築用 EstateKit／CoastalKit 的模型。
   - session_01AhfV8HVyDQfkoqCY2FNbmY：決策 391 第二個 PR（圖磚照 `layer` 重切、§4.12 第 1、6 點「斷路接起來」），決策號沿用 391。
-- **作者的 Game Center 步驟**：06:06 跑的 `game-center-setup.yml`（run 40068870832）是 **dry run**，只讀了 App Store Connect、列出 1 個排行榜與 38 個成就（含圖），沒有建立任何東西；讀取成功，表示 API key 能用。作者接著選 `apply` 跑（run 40069135297），第一項的每週排行榜就被 Apple 退回（HTTP 409：`recurrenceDuration` 不收 `P7D`，要帶時間部分），所以什麼都還沒建。#1165 改成 `P7DT0H0M0S`；合併後請作者再跑一次 `apply`（已經有的會跳過）。若 Apple 還是不收排行榜，先用 `only: achievements` 建成就，排行榜照 `docs/GAME_CENTER_SETUP.md` 的表手動建。作者說「Game Center 設好了」之後，新任到 App Store Connect 的截圖或 run log 確認項目都在，再照 `docs/GAME_CENTER_SETUP.md` 第 5 步提醒作者送審時勾 Game Center。apply 失敗就讀 log（每週重置的格式是 UNVERIFIED）。
+- **作者的 Game Center 步驟**：06:06 跑的 `game-center-setup.yml`（run 40068870832）是 **dry run**，只讀了 App Store Connect、列出 1 個排行榜與 38 個成就（含圖），沒有建立任何東西；讀取成功，表示 API key 能用。作者接著選 `apply` 跑（run 40069135297），第一項的每週排行榜就被 Apple 退回（HTTP 409：`recurrenceDuration` 不收 `P7D`，要帶時間部分），所以什麼都還沒建。#1165 改成 `P7DT0H0M0S`，作者再跑（run 40069474297）也被退回；下一個 PR 改成只有時間部分的 `PT168H`，合併後請作者再跑一次 `apply`（已經有的會跳過）。若 Apple 還是不收排行榜，先用 `only: achievements` 建成就，排行榜照 `docs/GAME_CENTER_SETUP.md` 的表手動建。作者說「Game Center 設好了」之後，新任到 App Store Connect 的截圖或 run log 確認項目都在，再照 `docs/GAME_CENTER_SETUP.md` 第 5 步提醒作者送審時勾 Game Center。apply 失敗就讀 log（每週重置的格式是 UNVERIFIED）。
 - **號碼**：決策 396（已合）、397（#1160）、398（01E26h8）、399（#1164）；下一個 400。存檔版本 72 沒用；golden 不動。
 - **審查**：從 #1137 起算，還沒精算；新任先數一次，滿 30 點開一輪。
 - **排程**：每日 Threads 開發日誌 `trig_01ABYQAarHbVxBbEShiVWDr3`（綁 01Axcy，暫停）：新任用同一份 prompt 建綁自己的（暫停），刪掉它。本任的巡查提醒已刪；新任自己用 `send_later` 排。
