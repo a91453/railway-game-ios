@@ -120,6 +120,44 @@ final class Map3DFrameCostReportTests: XCTestCase {
         }
     }
 
+    /// Decision 394: what the cab deep in a tunnel under the middle of
+    /// Taipei leaves out: the triangles and draw calls of the chunks in
+    /// its view (the Metal view's own count, ``Map3DMetalView/Stats``),
+    /// everything against only each chunk's ground, track and roads.
+    func testTheCabUnderTaipei() throws {
+        guard ProcessInfo.processInfo.environment["MAP3D_FRAME_REPORT"] != nil else { throw XCTSkip("Set MAP3D_FRAME_REPORT=1.") }
+        let scene = try Self.taipeiScene()
+        let models = Map3DCityBus.pack(file: Self.baseMap.deletingLastPathComponent().appendingPathComponent("Models/city-bus.m3dmodel"))
+        for (name, forward) in [("east", Map3DPoint(1, 0, 0)), ("north", Map3DPoint(0, 0, -1))] {
+            let head = Map3DTrains.Head(train: TrainID(rawValue: 1), point: .zero, forward: forward, nose: Map3DPoint(0, -15, 0), ground: 0, inTunnel: true)
+            let camera = Map3DFollow(train: head.train, view: .cab)
+                .camera(following: head, from: Map3DCamera(viewport: (402, 874)), elapsed: 0, turnsAtOnce: true)
+            let matrix = camera.viewProjection
+            var all = (triangles: 0, draws: 0), under = (triangles: 0, draws: 0)
+            for chunk in scene.chunks where Map3DCamera.sees(minimum: chunk.minimum, maximum: chunk.maximum, through: matrix) {
+                let detailed = !chunk.coarse && camera.wantsDetail(minimum: chunk.minimum, maximum: chunk.maximum, wasDetailed: false)
+                let closeUp = camera.drawsClose(minimum: chunk.minimum, maximum: chunk.maximum, detailed: detailed, coarse: chunk.coarse)
+                under.triangles += chunk.baseIndexCount / 3
+                under.draws += chunk.baseIndexCount > 0 ? 1 : 0
+                all.triangles += (detailed ? chunk.mesh.indices.count : chunk.baseIndexCount + chunk.far.indices.count) / 3
+                all.draws += 1 + (detailed || chunk.far.isEmpty ? 0 : 1)
+                if closeUp, !chunk.close.isEmpty { all.triangles += chunk.close.triangleCount; all.draws += 1 }
+                if detailed {
+                    all.triangles += chunk.props.reduce(0) { $0 + (models.models.indices.contains($1.model) ? models.models[$1.model].triangleCount : 0) }
+                    all.draws += Set(chunk.props.map(\.model)).count + (chunk.signs.isEmpty ? 0 : 1)
+                    all.triangles += 2 * chunk.signs.count
+                }
+                if !chunk.shadows.isEmpty { all.triangles += chunk.shadows.triangleCount; all.draws += 1 }
+            }
+            let life = scene.streetLife.frame(target: camera.target, distance: camera.distance, time: 1_000, lights: 1, detail: .full,
+                                              activity: Map3DStreetLife.Activity())
+            all.triangles += life.instances.reduce(0) { $0 + (models.models.indices.contains($1.model) ? models.models[$1.model].triangleCount : 0) }
+            all.draws += Set(life.instances.map(\.model)).count + 1
+            print("cab under Taipei, facing \(name): everything \(all.triangles) triangles, \(all.draws) draws (and the sun's map);"
+                  + " underground \(under.triangles) triangles, \(under.draws) draws")
+        }
+    }
+
     /// Decision 314: with its line's colour bands, as the app builds it,
     /// unless `bands` is false.
     static func taipeiScene(bands: Bool = true) throws -> Map3DScene {

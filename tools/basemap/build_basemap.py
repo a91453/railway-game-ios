@@ -20,8 +20,9 @@ OpenFreeMap's tiles outside Taiwan alike:
   `build_water_grid.coastline`); fish ponds are farms (decision 96), not
   water.
 - `waterway` (class river, canal, stream; name): no drains or ditches.
-- `landcover` (class wood, grass, wetland, sand): no farmland, which the
-  game's zones draw.
+- `landcover` (class wood, grass, wetland, sand, farmland): farmland by
+  the game's zones' tags (decision 393), so the land between the stations,
+  where the game reads in no zones, is not blank.
 - `park` (class national_park, nature_reserve, park).
 - `transportation` (class motorway … service; ramp, brunnel) and
   `transportation_name` (name, ref, class): no railways (the game draws
@@ -254,6 +255,9 @@ def water_class(tags):
     return None
 
 
+FARMLAND = ('farmland', 'orchard', 'vineyard', 'aquaculture', 'farmyard', 'greenhouse_horticulture', 'plant_nursery')
+
+
 def landcover_class(tags):
     natural, landuse = tags.get('natural'), tags.get('landuse')
     if natural == 'wood' or landuse == 'forest':
@@ -264,6 +268,10 @@ def landcover_class(tags):
         return 'wetland'
     if natural in ('sand', 'beach', 'dune'):
         return 'sand'
+    # Decision 393: farmland, by the game's own zones' tags
+    # (`build_zone_grid.py`'s TAGS, decision 96: fishponds are farming).
+    if landuse in FARMLAND:
+        return 'farmland'
     return None
 
 

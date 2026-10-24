@@ -26,9 +26,10 @@ public struct BaseMapTiles: Sendable {
 /// tile itself so the tiles' overlap is not drawn twice.
 struct Map3DBaseMap: Sendable {
     /// The land's cover, in the order it is laid: each over the ones
-    /// before it where they overlap.
+    /// before it where they overlap. Decision 393: farmland first, under
+    /// every other.
     enum Cover: Int, CaseIterable, Sendable {
-        case grass, sand, wetland, wood, park, water
+        case farmland, grass, sand, wetland, wood, park, water
     }
 
     /// A road's class (the tiles' `class`), from the least.
@@ -160,6 +161,7 @@ struct Map3DBaseMap: Sendable {
             case "grass": return .grass
             case "wetland": return .wetland
             case "sand": return .sand
+            case "farmland": return .farmland
             default: return nil
             }
         }

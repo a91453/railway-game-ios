@@ -38,6 +38,9 @@ final class Map3DMetalView: MTKView {
         var streetDetail: Map3DStreetDetail
         /// The pixels a point drawn (``Map3DDrawScale``).
         var drawScale: Double
+        /// Decision 394: whether the cab is deep in a tunnel, drawing only
+        /// what is under the ground (``Map3DUnderground``).
+        var underground: Bool
     }
 
     var camera = Map3DCamera()
@@ -54,6 +57,10 @@ final class Map3DMetalView: MTKView {
     private var flightAsked: (reduceMotion: Bool, goal: (Map3DCamera) -> Map3DCamera?)?
     /// Decision 334: the train ringed, asked about on a station's board.
     var ringed: TrainID?
+    /// Decision 394: whether the cab is deep in a tunnel this frame, and
+    /// where the scene's tunnels open (``Map3DTrackCover/openings``).
+    private var underground = Map3DUnderground()
+    private var openings: [Map3DPoint] = []
     /// Decision 334: called as a flight to a still view lands, for the
     /// compass.
     var landed: (@MainActor () -> Void)?
@@ -672,6 +679,7 @@ final class Map3DMetalView: MTKView {
     /// `kept`, built ahead before it, which it does not hold whole.
     func show(_ scene: Map3DScene, keeping kept: Set<Map3DStreaming.Key> = []) {
         sunSceneChanged = true
+        openings = scene.trackCover.openings
         let old = chunks.filter { kept.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }
         let held = Set(old.map { Map3DStreaming.Key(column: $0.column, row: $0.row) })
         chunks = scene.chunks.filter { !held.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }.compactMap(makeChunk) + old
@@ -770,11 +778,17 @@ final class Map3DMetalView: MTKView {
         let frame = trains?(camera.eye)
         moveCamera(heads: frame?.heads ?? [], at: start)
         onCamera?(camera, start)
+        // Decision 394: deep in a tunnel, the cab sees nothing on the
+        // ground, so none of it is drawn (nor let go: it is all there the
+        // frame it is seen again).
+        underground.update(view: following?.view, head: frame?.heads.first(where: { $0.train == following?.train }), flying: flying != nil,
+                           camera: camera, openings: openings)
+        let below = underground.isUnderground
         let camera = camera
         let matrix = camera.viewProjection
         // Decision 357: the sun's shadow map, drawn again when it is out
         // of date (before the frame's own pass, in the same command buffer).
-        let sunRegion = wantedSunRegion(at: start)
+        let sunRegion: (drawn: Map3DSunShadow.Region?, redraw: Map3DSunShadow.Region?) = below ? (nil, nil) : wantedSunRegion(at: start)
         let uniforms = uniformValues(matrix, seconds: start, sun: sunRegion.drawn)
         var visible: [Chunk] = []
         for index in chunks.indices {
@@ -810,7 +824,7 @@ final class Map3DMetalView: MTKView {
             if let buffer = makeBuffer(sorted.flatMap(\.floats)) { cars = (sorted, buffer) }
         }
         // Decision 259: the people and vehicles near the target.
-        let life = streetLife?(camera, shown.lights, streetDetail)
+        let life = below ? nil : streetLife?(camera, shown.lights, streetDetail)
         var lifeDraw: (sorted: [Map3DInstance], buffer: MTLBuffer)?
         if let instances = life?.instances, !instances.isEmpty, models != nil {
             let waiting = CACurrentMediaTime()
@@ -867,7 +881,7 @@ final class Map3DMetalView: MTKView {
             // Decision 342: a chunk a cone crosses draws its city apart,
             // seen through in front of the trains.
             let seen = seeThrough.cuts(column: chunk.column, row: chunk.row, tops: chunk.cityTops)
-            let count = detailed && !seen ? chunk.indexCount : chunk.baseIndexCount
+            let count = detailed && !seen && !below ? chunk.indexCount : chunk.baseIndexCount
             if count > 0 {
                 encoder.setVertexBuffer(chunk.vertices, offset: 0, index: 0)
                 encoder.drawIndexedPrimitives(type: .triangle, indexCount: count, indexType: .uint32,
@@ -875,6 +889,9 @@ final class Map3DMetalView: MTKView {
                 drawCalls += 1
                 triangles += count / 3
             }
+            // Decision 394: under the ground, only its ground, track and
+            // roads, where the tunnels are.
+            if below { continue }
             // Decision 267's closest detail (the overhead line among it)
             // stays solid.
             if chunk.closeUp, let close = chunk.close {
@@ -934,7 +951,7 @@ final class Map3DMetalView: MTKView {
         // Decision 244: the street furniture of the chunks drawn in full,
         // one draw call a model and chunk. Decision 355: Saving leaves the
         // bus stops and vending machines out.
-        if let models {
+        if let models, !below {
             encoder.setRenderPipelineState(instancedPipeline)
             let leftOut = Map3DProp.modelsLeftOut(quality, in: models.pack)
             for chunk in visible where chunk.detailed {
@@ -951,7 +968,7 @@ final class Map3DMetalView: MTKView {
         }
         // Decision 352: the signs of the chunks drawn in full, one draw
         // call a chunk, four corners a sign.
-        if let signDrawing, visible.contains(where: { $0.detailed && $0.signs != nil }) {
+        if let signDrawing, !below, visible.contains(where: { $0.detailed && $0.signs != nil }) {
             encoder.setRenderPipelineState(signDrawing.pipeline)
             encoder.setFragmentTexture(signDrawing.atlas, index: 0)
             Map3DSign.clock(seconds: start, hour: shown.hour, quality: quality, reduceMotion: reduceMotion).withUnsafeBytes { bytes in
@@ -968,19 +985,22 @@ final class Map3DMetalView: MTKView {
             }
         }
         // Decision 347: the sky where nothing was drawn.
-        encoder.setRenderPipelineState(skyPipeline)
-        encoder.setDepthStencilState(skyDepthState)
-        Map3DSky(shown).floats(camera: camera).withUnsafeBytes { bytes in
-            guard let base = bytes.baseAddress else { return }
-            encoder.setFragmentBytes(base, length: bytes.count, index: 3)
+        if !below {
+            encoder.setRenderPipelineState(skyPipeline)
+            encoder.setDepthStencilState(skyDepthState)
+            Map3DSky(shown).floats(camera: camera).withUnsafeBytes { bytes in
+                guard let base = bytes.baseAddress else { return }
+                encoder.setFragmentBytes(base, length: bytes.count, index: 3)
+            }
+            encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
+            drawCalls += 1
+            triangles += 1
         }
-        encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
-        drawCalls += 1
-        triangles += 1
-        // Decision 232: the ground shadows last, over everything drawn.
+        // Decision 232: the ground shadows last, over everything drawn;
+        // decision 394: under the ground, only the trains'.
         encoder.setRenderPipelineState(shadowPipeline)
         encoder.setDepthStencilState(shadowDepthState)
-        for chunk in visible {
+        for chunk in visible where !below {
             guard let shadows = chunk.shadows else { continue }
             encoder.setVertexBuffer(shadows.vertices, offset: 0, index: 0)
             encoder.drawIndexedPrimitives(type: .triangle, indexCount: shadows.indexCount, indexType: .uint32,
@@ -1066,7 +1086,8 @@ final class Map3DMetalView: MTKView {
             people: lastLife.people,
             vehicles: lastLife.vehicles,
             streetDetail: streetDetail,
-            drawScale: Double(contentScaleFactor)
+            drawScale: Double(contentScaleFactor),
+            underground: underground.isUnderground
         )
         // Decision 259: a device that cannot hold its frame rate while
         // drawing street life draws less of it.

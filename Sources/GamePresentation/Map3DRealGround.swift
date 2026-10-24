@@ -16,8 +16,10 @@ extension Map3DScene.Builder {
     /// each cover over the ones before it, the roads over the water, the
     /// bigger roads over the smaller, and all of them under the shadows
     /// (``Map3DShadow/lift``) and the track (``Map3DScene/railLift``).
+    /// Decision 393: 0.035 m apart (0.04 before farmland came first), so
+    /// the water stays under the sidewalks.
     static func lift(of cover: Map3DBaseMap.Cover) -> Float {
-        0.04 * Float(cover.rawValue + 1)
+        0.035 * Float(cover.rawValue + 1)
     }
 
     static func lift(of road: Map3DBaseMap.RoadKind) -> Float {

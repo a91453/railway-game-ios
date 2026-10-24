@@ -60,7 +60,7 @@
 
 | 角色 | 現在的 session | 做什麼 | 交接 |
 | --- | --- | --- | --- |
-| 遊戲規劃（兼派工） | session_01XsVqbA1A5wGtJbuAa881oT（2026-10-24 01:30 UTC 起，作者從 claude.ai 開，第 0 層；接暫代的 session_01PGibJmGNcvu2d7dJWWhWVb（10-24 00:35–01:30，已封存），再之前 session_01H5RHAwnA69n8EfAUSUrH52（10-23 00:10–10-24 00:35），再之前 session_014nUBHbE9mSK4qXHHgm8xCQ（10-22 22:30–10-23 00:10），再之前 session_01UsF4QYCGrzSeNSFq11i8Wu（18:15–22:30），再之前 session_01Ddr2wiXx1Xhn2m9qNBDnDh、session_01CHQg7B6JqzbScGSjyDwHos（2026-10-22 起，照 §1.1 換手，作者：「要不要全部所有換個session了 都一直在壓縮了」→「好，照表換」；換手時的現況在第 2 節最前面；前任 session_014rYHMtmqA5bEMkBBuKu6PV（10-21 至 10-22，作者：「那你需要先接手嗎太長了」）、session_01NiR5WLMFjMJBktQAMkfmkm（10-21）、session_01WW7o3decEv5LY59nYVqnDN（10-20 至 10-21，作者：「接手 角色表中遊戲規劃的工作」）、session_01V1xd3H9vNkuZoSA3czNfGm（10-16 至 10-18）、session_018D6gYU1yiZMtxSmNNU1K17） | 從玩家、鐵道迷、開發、美術、音樂五個角度決定優先順序與設計，開實作 session 並派工，綠了的 PR 照 §1.2 合併（2026-10-21 起），收作者轉來的玩家回報與 bug（§1.3），寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1、1.3 節 |
+| 遊戲規劃（兼派工） | 下一任（作者從 claude.ai 開，id 寫在 #1041 接手的留言；2026-10-24 05:00 UTC 起）；前任 session_01XsVqbA1A5wGtJbuAa881oT（10-24 01:30–05:00，壓縮 2 次照 §1.1 換手，現況在 §2.0 最前面「第七次換手」）；再之前接暫代的 session_01PGibJmGNcvu2d7dJWWhWVb（10-24 00:35–01:30，已封存），再之前 session_01H5RHAwnA69n8EfAUSUrH52（10-23 00:10–10-24 00:35），再之前 session_014nUBHbE9mSK4qXHHgm8xCQ（10-22 22:30–10-23 00:10），再之前 session_01UsF4QYCGrzSeNSFq11i8Wu（18:15–22:30），再之前 session_01Ddr2wiXx1Xhn2m9qNBDnDh、session_01CHQg7B6JqzbScGSjyDwHos（2026-10-22 起，照 §1.1 換手，作者：「要不要全部所有換個session了 都一直在壓縮了」→「好，照表換」；換手時的現況在第 2 節最前面；前任 session_014rYHMtmqA5bEMkBBuKu6PV（10-21 至 10-22，作者：「那你需要先接手嗎太長了」）、session_01NiR5WLMFjMJBktQAMkfmkm（10-21）、session_01WW7o3decEv5LY59nYVqnDN（10-20 至 10-21，作者：「接手 角色表中遊戲規劃的工作」）、session_01V1xd3H9vNkuZoSA3czNfGm（10-16 至 10-18）、session_018D6gYU1yiZMtxSmNNU1K17） | 從玩家、鐵道迷、開發、美術、音樂五個角度決定優先順序與設計，開實作 session 並派工，綠了的 PR 照 §1.2 合併（2026-10-21 起），收作者轉來的玩家回報與 bug（§1.3），寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1、1.3 節 |
 | 每日 Threads 開發日誌 | 排程「每日 Threads 開發日誌」（台灣時間每天 21:43，2026-10-18 起暫停）觸發遊戲規劃，由它開寫作 session。現在是 `trig_01AFVLnSeazUGc5ve1SprEqV`（綁 session_01XsVqbA1A5wGtJbuAa881oT，暫停；2026-10-24 由它重建，舊的 `trig_01Hre19DLcYMRt2yiktxHWFY` 已刪）。2026-10-22 換手時由前任建了綁到 session_01CHQg7B6JqzbScGSjyDwHos 的新排程 `trig_01FZhfBNQCdDW8iDpowANLZS`（暫停中；之後每次換手都重建，現任的 id 寫在 #1041 接手的留言），前任的 `trig_01NfzFV9BcdiyBJpAwnaTuK9`（再之前是 `trig_01SkNFNW6qN6cMUGkGCXZM1v`）已刪。排程的綁定改不了，以後換手時由現任遊戲規劃用同一份 prompt 建一個綁到自己的新排程，再刪掉舊的；作者沒說要開就維持暫停 | 寫當天的串文草稿，用 SendUserFile 交給作者；不 commit、不發布 | 派工單照 2026-10-14、10-15、10-16 的寫作 session |
 
 不再常駐（2026-10-20 停用）：合併協調 session_01QoA24EvFCFbmbcM1EwaZT7（前任 session_016sNs4eeZwga9hz1CCHkpmX）、派工 session_01MJ7sdeid5DAFjSVbTkmdi3（前任 session_01AaAj4wvJMxJQuLWAoYu6S8）。兩個都從 2026-10-17 起沒有動作。
@@ -233,6 +233,17 @@
 - 看 #231 最後一則 `full-lane-watch.yml` 的自動留言：最後一則是「紅了」或「又有 job 紅了」、之後還沒有「綠了」，就是 main 的 full lane 還紅著，先不發（決策 329）。
 - 確認的時候如果 main 又合了改 App 的 PR，要在新的 HEAD 重跑 full lane。這時可以取消舊 commit 用 workflow_dispatch 跑的 full lane，讓出 macOS runner（上限 5 個）。
 - 確認後通知遊戲規劃與作者「可以發（commit X）」，並請各 session 發版前別再合改 App 的 PR。
+- **健康報告**（作者 2026-10-24：「健康報告也開始做」；作者不看程式碼，「我也不知道你有沒有做錯」）：說「可以發」時一起給作者一張白話的紅綠燈表，不寫程式名詞。用 🟢 綠、🔴 紅、⚪ 還沒驗：
+  | 項目 | 看什麼 |
+  | --- | --- |
+  | 規則與存檔 | 這個 commit 的 `ci.yml`（golden、舊存檔、replay） |
+  | 畫面與操作 | 它自己的 full lane（iPhone、iPad 的 UI 測試） |
+  | 發版 | `release-archive.yml`，或上一次 TestFlight 用同樣設定成功 |
+  | 這版改了什麼 | 照 What to Test，三到五行 |
+  | 測試管不到、要作者在手機上看的 | 決策裡寫 UNVERIFIED 的（實機 GPU、手感、樣子） |
+  | 風險 | 有沒有碰到存檔、帳號、隱私、entitlement、伺服器；有的話，獨立審查的結果 |
+  紅或⚪的寫原因與要不要擋發版；作者已經先發的，報告照樣給，並記進 PLAYER_FEEDBACK。
+- **獨立審查**（作者 2026-10-24：「重要的 PR 加一次獨立審查」）：會碰到存檔讀寫、帳號、隱私、entitlement、伺服器，或付費的 PR，合併前另開一個沒參與製作的 session 審查。只給它 PR 號與 CLAUDE.md，不給製作過程的結論，請它用白話回報「什麼情況會出事、玩家看到什麼、多嚴重」，結果附在健康報告。最重要的幾個（例如加 Game Center／iCloud 的 entitlement），作者可以另外用自己的 Claude Pro 帳號再看一次，提示照 2026-10-24 遊戲規劃給作者的那段。
 - 作者在收到「可以發（commit X）」之前就發了，要在 PLAYER_FEEDBACK 記下實際發的 commit 與它 full lane 的結果（72.1：作者 10:47 UTC 發 8c305a6，它的 full lane 才剛開始、後來紅；與全綠的 c3a3ec7 只差一個 UI 測試檔，App 相同。審查 #785 第二節）。
 - 發版後在 #231 寫「發版凍結解除」。
 
@@ -305,6 +316,26 @@
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
+
+**第七次換手（2026-10-24 05:00 UTC，session_01XsVqbA1A5wGtJbuAa881oT 壓縮 2 次 → 作者從 claude.ai 開的新規劃）**。和下面不同時以這段為準。新任開工：讀第 1 節、這一段、第 3 節最上面幾列；#1041 只讀「壓縮第 2 次」那則之後的留言。
+
+- **86.1 已發**（TestFlight run 40051143234，commit 584bddd，作者已發給測試者；凍結解除）。紀錄在 PLAYER_FEEDBACK「0.5.0 (86.1)」。
+- **合併了**（10-24）：#1146、#1145（86.1）、#1151（392）、#1153（86.1 full lane）、#1154（10k）、#1155（395）、#1152（394）、#1157（393 農地，main 85660009）。main 的 `ci.yml`：edaa7f00 綠，87b1c48d（40061101609）跑中，85660009 排隊。這一批 edaa7f00 綠了之後合了 #1152、#1157；再合 1–3 個就等最新的綠。
+- **開著的 PR 與 session**（全部由規劃開的，都會 send_message 規劃「可合併」；新任接手後 send_message 每個做中的 session 改通知新任）：
+  - #1150（full lane 重新分配，session_01VZJVMsPVmSxC3WeNiv9Yuw）：只改 CI 與 UI 測試，綠了隨時可合，之後封存 01VZJV。
+  - #1159（決策 391，公路橋照 `layer` 架高，session_01MZ2KiwLCyJErN9jbfH6p78）：CI 跑中。#1157 已合，它要照 §4.12 用 `layer` 重切圖磚（若和農地圖磚衝突就併 main）。
+  - #1156（決策 396 Game Center 第一個 PR，不含 entitlement，session_01V99archiZKLqZkwqTnsajc）：綠了可合。
+  - #1158（396 成就圖 38 張）：美術審查 session_01T1XUaZrPxBZmiPFch6oLWZ 審完，13 張要改、全套要 1024 px，總覽在 `claude/art-review-1158:docs/game-center/review/overview.png`；01V99 改完再合，總覽圖用 SendUserFile 給作者看（作者：「那你記得請美術重新看過一次成就圖片」）。01T1XU 可封存。
+  - session_01UNbeShXpVCYqZfpuchUPVe：Game Center 用 App Store Connect API 自動建排行榜與成就的工具（作者「用 B」；`game-center-setup.yml`，先 dry run 再 apply）。碰 secrets，**合併前要獨立審查**（§1.2）。
+  - #1160（決策 397 iCloud 存檔，session_01MsxSwi6ituX5dsw6ZQNmEx）：在補兩項（新版存檔在舊 App 打開時顯示「請更新 App」、只同步玩家存檔與最新自動存檔）。碰存檔，**合併前要獨立審查**。存檔格式現在不改（規劃 10-24 判斷）。
+  - session_01NDDS2s5myyGvhD26ZW26zB（`claude/lesson-pause-retry`）：86.1 分支 full lane 的 lessons 紅（`LessonUITests.pause()` 只給 Pause 鈕 2 秒，慢 runner 要約 4 秒，`testFreightYardsStartInTheEighthLesson`），修好推了、等 run 40063446628。只改 UI 測試，綠了可合，之後封存。
+  - session_01QnjGxTmCx1sAYpH4wacqhH：#1151、#1157 都合了（「我就停在這裡」），可封存。session_01AdAQTbXs639m7Yd3ZoxLE7：394、395 合了，可封存。
+- **作者的 Apple 步驟**（作者保留）：Game Center 的 ASC 頁面已開好（作者「我好了」）；iCloud：在 Identifiers 建 container `iCloud.io.github.a91453.RailwayGame`、App ID 勾 iCloud（iCloud Documents，不用 CloudKit schema），**還在等作者的截圖**。之後在 #1158 與工具合併後跑 `game-center-setup.yml`（dry run → apply），並確認 API key 的角色是 Admin 或 App Manager。entitlement 的 PR 在作者做完 Apple 步驟之後才開（可 revert）。TestFlight 也能用 Game Center 與 iCloud。
+- **健康報告**：§1.2 的規則在本次的文件 PR。86.1 的第一份：規則與存檔綠（`ci.yml` 40051132292）；畫面與操作黃（full lane 4 個測試問題 #1153 修了；分支 lane 40060038516 second、iPad 綠，lessons 紅是測試等太短，01NDDS 在修）；發版綠（已上 TestFlight）；手機上要看的：隧道不畫地面是否省電、隧道裡的架空線、月台不撞、農地顏色。
+- **號碼**：決策 391–397 已登記（391 #1159、392–395 已合、396 #1156／#1158、397 #1160）；下一個 398。存檔版本：397 若要改格式才用 72（現在不改）；golden 不動。
+- **審查**：從 #1137 起算，估計還沒到 30 點（沒有逐個精算，新任開下一輪前數一次）。
+- **排程**：每日 Threads 開發日誌 `trig_01AFVLnSeazUGc5ve1SprEqV`（綁 01XsVq，暫停）：新任用同一份 prompt 建綁自己的（暫停），刪掉它。01XsVq 沒有留巡查提醒；實作 session 自己的檢查提醒照舊。
+- **之後**：照 NEXT_PRIORITIES §22 下一件；10k（玩家分享路網，不用伺服器，3.10）排在 Game Center、iCloud 之後。
 
 **作者 2026-10-22 晚上的問題、規劃的決定**（五方都在 #1041）：地下透視做，開關預設關，排在隧道內部與地下月台之後（§22.2 10c）；只玩 2D、省電檔不做多重取樣、3D 不搬網頁（10g，在 10e 之前派）；五項效能排進 §22.2（10h 2D 大世界掉幀，要作者在大存檔與宜蘭線 6000× 的幀數截圖；25a、25b、41、42）。
 
@@ -1020,10 +1051,15 @@
 
 作者 86.1：「過站的時候會撞到月台」。原因是月台配對把高鐵示範錯開 10 m、只隔 5 m 的正線與側線月台當成島式月台，月台蓋到另一條軌道上；已改成只認橫向距離、放不下就不畫（`Map3DScene.Builder.addPlatforms`）。剩下的：台北、板橋真實是島式月台、快車停正線，遊戲的 5 m 股道間放不下，3D 裡這兩站的快車停在沒有月台的正線；要畫就得在高鐵示範把這兩站的股道拉開（動示範的軌道，沒有人接，決策 392 下一步）。
 
+### 4.11 隧道裡的駕駛視角不畫地面（決策 394，session_01AdAQTbXs639m7Yd3ZoxLE7）
+
+作者 2026-10-24：「如果在隧道或是地下能不能不要算地面上的建築物等切換視角的時候再計算會省gpu嗎」。做完的：駕駛視角在隧道深處、300 m 內沒有洞口、視野裡也看不到洞口時，只畫每個 chunk 的地面、軌道與道路（bore 與洞口在這裡）和列車，其他（城市、遠近細節、街具、招牌、人車、日影 pass、地面陰影、雨、天空）都不畫，mesh 留在記憶體（`Map3DUnderground`）。剩下的：**實機 GPU 數字還沒量**，下一次 TestFlight 照 [決策 394](decisions/394.md)「怎麼在實機上看」量；看到洞口前城市晚出現，就把 `Map3DUnderground.near` 調大。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |
 | --- | --- | --- |
+| 隧道裡的架空線（決策 395）只在 Linux 的幾何測試看過，實機上沒看過；台鐵用的是有主吊線的柔性吊架（監察院糾正案的台北—松山隧道斷線紀錄），高鐵隧道用哪一種沒查到，是假設 | 作者 2026-10-24「隧道裡面要有架空架嗎」，session_01AdAQTbXs639m7Yd3ZoxLE7 | 下一次 TestFlight 照 [決策 395](decisions/395.md)「下一步」看；查到高鐵隧道的型式再改 |
 | 遊戲跑著時，以 `worldRevision` 記住的預覽每個 tick 都重算：複線升級（選取工具，不暫停）在 80.1 讓 iPad 卡死，`claude/double-track-upgrade-hang` 改成以 `commandRevision` 記。同樣以 `worldRevision` 記的還有建造工具的 `NetworkSession` 草稿、`PassingLoop`、`DepotYard`、`LevelPlatformTrack`：建造工具會自動暫停，但玩家在草稿開著時按播放就會一樣每個 tick 重算。另外第一次算長的「到兩端道岔」預覽在 Linux debug 要 0.4–1 秒（一次的停頓），實機沒量 | PLAYER_FEEDBACK 80.1 #1 | **做了**（#1129，`claude/preview-command-revision`，session_01HgUU1aeQ39gLnPvqAiWBF2）：四個預覽改以 `commandRevision` 記，現金跨過價格時重算一次（✓ 才打得開），✓ 照舊在當下的世界重新規劃（`BuildPreviewTickTests`）。剩下：第一次算長的「到兩端道岔」預覽的一次停頓，實機沒量 |
 | 高鐵示範快轉只有約八成速度（一個 tick 123 ms，間隔 100 ms） | 決策 248、#709 | 排在核心玩法之後 |
 | 高鐵的長進路／閉塞區間死結、台南—左營交會 | #669，機廠 session session_01YNBmv76sfS8gJUnyRKEqHV（不再接新工作） | 沒有人接。機廠出庫已由 #678 處理；B 方案（`claude/hsr-depot-exit-priority`）量測失敗、放棄，紀錄在 #685。決策 255（單線提早折返）**沒有**解這一項：高鐵是單向的班次（決策 133），時刻表不會回到同一站，不會用到折返 |
@@ -1267,6 +1303,7 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 | `ci.yml` 的 rest shard 撞 20 分上限（2026-10-23，session_01KcZCRGFREEAx22ncMXAMwJ，`claude/rest-shard-under-limit`）：main 43852fa 的 rest 有 953 s 測試、469 類，沒有一類特別大（最慢 5 類共 172 s）。6 s 以上的 GamePresentation 類別與 25 s 以上的 4 個 GameCore 類別（共 33 類、約 466 s）搬到 campaigns-16／-6／-15／-12（PR #1087），rest 在 PR 的 run 上 510 s；不加 shard、不改 timeout。campaigns-7 自己的兩個 campaign 一次 354 s、一次 603 s，搖擺很大，不要再往裡面放東西。**之後**：rest 再長，照 `swift-shards.sh` 的時間表註解再搬（run 摘要的「Slowest classes」只列 5 類，要整份 job log 才看得到每類時間）；小的 GameCore 類別不要搬，campaign shard 點名的類別在 `pr_plan` 會被當成「改到的 campaign」，讓改它的 PR 跑全套 | `swift-shards.sh` 2026-10-23 later 的註解 |
 | campaign shard 再平衡（2026-10-23，session_01KcZCRGFREEAx22ncMXAMwJ，`claude/campaign-shards-under-limit`）：#1087 合併後 main 4d2c8ce 的 run 39932184002 上 campaigns-10 job 19.0 分（測試 891 s）、-11 812 s、-15 793 s。只搬 GamePresentation 類別（不改任何 PR 的 tier）：TRADemo → -3、RealWorldDemo → -4、Map3DStreetLife／StationCommerceCard／Map3D／LineLossDiagnosis → -6、RealRailwayTracing／Map3DStreaming → -13、NetworkPostcard／NewGameSaveProperty 回 rest；FlexDispatchPropertyTests（GameCore、自我測試用到）不動。不加 shard、不改 timeout。**之後**：同一組類別在不同 runner 上可差到 1.9 倍（campaigns-1 一次 384 s、一次 738 s），看分片空間要用它最長的那次；campaigns-1、-2、-14 最長已 12.3–13.5 分測試，不要再放 | `swift-shards.sh` 2026-10-23 after #1087 的註解 |
 | full lane 的餘裕（2026-10-23，session_01GaPJUuAAMyqKsvxJjpnhEf，PR #1140）：main b6ca9af2 的 full lane（ios-build.yml run 40020950220）紅了三個，判為慢 runner。(1) 「UI tests, second」撞 50 分上限：三次都有跑的 40 個測試合計 09640f5（run 39957090683）28.1 分 → 0149127（run 39992945211）34.6 分 → b6ca9af 46.4 分；測試數沒變，先跑的（20:53–21:16）慢了 2–5 倍，後面的持平，暖機也從 1.5 分變 3.6–5.3 分。正常要 41–44 分，離上限不到 10 分。(2) `ShellLayoutUITests/testTheStatusBarKeepsItsWidthAsTheDaysGoBy`：在 main ff8e4dd 用 only_testing 重跑（run 40032432984）綠，但 6000× 的觀察迴圈用了 65 s（0149127 是 28 s），換日來得晚，餘裕小；#1139 的 G1 會減少 6000× 的 CPU 負擔。(3) 同一晚 ff8e4dd 的 nightly（run 40026341039）紅的兩個 SettingsUITests（音效開關與音量、回報問題附存檔的開關）**不是**慢 runner：在 main 6b28e76 用 only_testing 重跑（run 40044073708）一樣紅在同幾行。原因是決策 381 在設定最上面加了語言區、說明下加了資料來源，手機橫放時音量列和附存檔開關落到更下面，List 還沒捲近就不建那一列；畫面拖動的 24 次也不夠。修法（分支 `claude/settings-tests-landscape`）：附存檔開關多拖幾次（`dragUntilWhollyOnScreen` 新增 `drags:`，這裡給 40），音效開關先切換再往下找音量；拖 List 自己左緣在橫放時捲不動，不用。綠（run 40047802171）。**之後**：second 在正常速度下還逾時，就把它拆成兩個 job，或放寬這一步的上限（job 上限 75 分）；狀態列測試在正常 runner 上再紅，先看 6000× 主執行緒的負擔，不要放寬門檻 | `ios-build.yml` 的 `FULL_LANE_SECOND_JOB` 註解；PR #1140 說明 |
+| 86.1 的 full lane（2026-10-24，session_01NDDS2s5myyGvhD26ZW26zB，`claude/full-lane-86-1-fix`）：main 584bddd 的 run 40051175469 紅四個，都不是 App 的退步。`HUDAlignmentUITests` 的說明測試還在點決策 383 拿掉的 `menu.more`（292db69 也紅），改成直接點 `menu.help`；其餘三個是慢 runner 上測試太緊：`StartSaveFlowSmokeTests` 的列車選單選好 Train 5 後收起，2 秒前列出的那一列再讀就失敗（`touchable` 改讀 snapshot），`MapInteractionTests` 改名欄一次查詢要 4 秒、5 秒只看了一次（等 20 秒，仍然不點欄位），`LessonUITests` 第 5 課的「略過」在卡片滑入時按空（還在就再按一次）。**之後**：同一類「元素在列出與讀取之間消失」的失敗，照 `touchable` 用 `try? snapshot()`，不要加長等待 | 這個 PR 的說明 |
 | TDX（運輸資料流通服務）查資料：`.github/workflows/tdx-check.yml`——#850 已合併。Actions → Check TDX API → Run workflow，`path` 填 `/api/basic/` 或 `/api/advanced/` 開頭的 API 路徑與查詢（預設台鐵第一個車站），回答在 run 的 artifact `tdx-response`（保留 7 天）。session 用 GitHub 工具觸發（`actions_run_trigger`，`tdx-check.yml`，ref `main`）再下載 artifact。金鑰是 repository secrets `TDX_CLIENT_ID`、`TDX_CLIENT_SECRET`，只有這個 workflow 讀得到；不要貼在對話、不要存進 repository。TDX 有票價、時刻、站表、路線色，沒有各站運量 | #850、決策 298 |
 
 ### 7.5 只等實機確認的
