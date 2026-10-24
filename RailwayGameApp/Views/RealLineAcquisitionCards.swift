@@ -190,3 +190,114 @@ struct AcquisitionCompleteCard: View {
         .rotationEffect(.degrees(-8))
     }
 }
+
+/// Decision 400 A.8: the card that offers a real station, opened from its
+/// pin on the map where no track is within 400 m. What it brings, the line
+/// the track follows where several stop there, its price, and what is in
+/// the way, if anything; Buy only when nothing is and the cash is there.
+/// The offer is the session's (``GameSession/shownRealStationOffer``); this
+/// view only draws it.
+struct RealStationOfferCard: View {
+    let session: GameSession
+    let offer: RealStationOffer
+
+    var body: some View {
+        let language = session.language
+        let name = offer.suggestion.name(in: language)
+        let systems = session.realStationSystems(of: offer.suggestion)
+        let shortfall = offer.shortfallText(balance: session.world.economy.balance, in: language)
+        NavigationStack {
+            Form {
+                Section {
+                    Text(verbatim: offer.summaryText(in: language))
+                        .font(.subheadline)
+                }
+                if systems.count > 1 {
+                    Section {
+                        Picker(selection: Binding(
+                            get: { offer.system.id },
+                            set: { session.chooseRealStationSystem($0) }
+                        )) {
+                            ForEach(systems) { system in
+                                Text(verbatim: system.name(in: language)).tag(system.id)
+                            }
+                        } label: {
+                            Text(verbatim: language.text("Along", "沿著"))
+                        }
+                        .accessibilityIdentifier("buyStation.system")
+                    } header: {
+                        Text(verbatim: language.text("Which line the track follows", "軌道沿哪一條線"))
+                    }
+                }
+                if let price = offer.price {
+                    Section {
+                        HStack {
+                            Text(verbatim: language.text("Track, station and platform", "軌道、車站與月台"))
+                                .font(.subheadline.weight(.semibold))
+                            Spacer()
+                            Text(verbatim: price.moneyText)
+                                .font(Font.subheadline.weight(.semibold).monospacedDigit())
+                        }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityIdentifier("buyStation.price")
+                    } header: {
+                        Text(verbatim: language.text("Price", "價格"))
+                    }
+                }
+                if let problem = offer.problem {
+                    Label {
+                        Text(verbatim: problem)
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                    }
+                    .font(.footnote)
+                    .foregroundStyle(Theme.warning)
+                    .accessibilityIdentifier("buyStation.problem")
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                VStack(alignment: .leading, spacing: 6) {
+                    if let shortfall, offer.problem == nil {
+                        Text(verbatim: shortfall)
+                            .font(.footnote)
+                            .foregroundStyle(Theme.warning)
+                            .accessibilityIdentifier("buyStation.shortfall")
+                    }
+                    Button {
+                        session.buyRealStation(offer)
+                    } label: {
+                        Label {
+                            Text(verbatim: language.text("Buy \(name) station", "收購\(name)站"))
+                        } icon: {
+                            Image(systemName: "checkmark")
+                        }
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    // Decision 110: the card's main action, as the theme draws one.
+                    .buttonStyle(ThemeProminentButtonStyle())
+                    .disabled(offer.purchase == nil || shortfall != nil)
+                    .accessibilityIdentifier("buyStation.buy")
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Theme.panel)
+                .overlay(alignment: .top) {
+                    Rectangle().fill(Theme.panelBorder).frame(height: 1)
+                }
+            }
+            .navigationTitle(Text(verbatim: language.text("Buy \(name) station", "收購\(name)站")))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        session.shownRealStationOffer = nil
+                    } label: {
+                        Text(verbatim: language.text("Cancel", "取消"))
+                    }
+                    .accessibilityIdentifier("buyStation.cancel")
+                }
+            }
+        }
+    }
+}

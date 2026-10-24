@@ -121,10 +121,11 @@ struct RealRailwayTraces: Sendable {
     }
 
     /// The place on any line nearest `point` within `reach` world units,
-    /// on a line of group `group` when one is given.
-    func snap(_ point: WorldVector, within reach: Double, group: Int? = nil) -> Snap? {
+    /// on a line of group `group` when one is given, and of `system` (a
+    /// site system's ID) when one is given.
+    func snap(_ point: WorldVector, within reach: Double, group: Int? = nil, system: String? = nil) -> Snap? {
         var best: Snap?
-        for line in lines where group == nil || groups[line.id] == group {
+        for line in lines where (group == nil || groups[line.id] == group) && (system == nil || line.system == system) {
             guard point.x >= line.minX - reach, point.x <= line.maxX + reach,
                   point.y >= line.minY - reach, point.y <= line.maxY + reach else { continue }
             guard let found = Self.nearest(to: point, on: line, within: best?.distance ?? reach) else { continue }
@@ -315,9 +316,16 @@ extension GameSession {
     /// (`given`, from `start` to `end`, whether or not the tool traces),
     /// and the `platforms` to lay along it, each from one point of the way
     /// to another: each becomes one level edge, its ends nodes.
+    ///
+    /// Decision 400 A.8: `onGround`, all of it on the ground, as the game's
+    /// stations are (decision 132), whatever the tool's height and
+    /// structure and the real line's tunnels and viaducts.
     func tracePlan(
-        from start: NetworkAnchor, to end: NetworkAnchor, along given: [WorldVector]? = nil, platforms: [(WorldVector, WorldVector)] = []
+        from start: NetworkAnchor, to end: NetworkAnchor, along given: [WorldVector]? = nil, platforms: [(WorldVector, WorldVector)] = [],
+        onGround: Bool = false
     ) -> TracePlan? {
+        let networkHeight = onGround ? 0 : self.networkHeight
+        let networkStructure = onGround ? TrackStructure.automatic : self.networkStructure
         guard given != nil || tracesRealRailway, var from = world.position(of: start, height: networkHeight),
               var to = world.position(of: end, height: networkHeight) else { return nil }
         // Generous: an end on existing track is up to a tap's reach from
@@ -363,7 +371,7 @@ extension GameSession {
         // light rails'.
         var carried: [TrackRise.Carried] = []
         var carriedEnds = (start: false, end: false)
-        if mapped, networkStructure == .automatic, networkHeight == 0 || demoKeepsRealStructures, let traces = realRailwayTraces, let frame = RealWorldFrame(world: draft),
+        if mapped, !onGround, networkStructure == .automatic, networkHeight == 0 || demoKeepsRealStructures, let traces = realRailwayTraces, let frame = RealWorldFrame(world: draft),
            let snap = traces.snap(WorldVector(from.plan), within: reach), let structures = railways?.structures {
             carried = structures.stretches(along: path, frame: frame, system: traces.lines[snap.place.line].system)
             // A new end on a long viaduct or in a long tunnel (a metro's

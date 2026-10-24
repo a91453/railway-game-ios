@@ -142,7 +142,10 @@ extension GameSession {
     /// would (``tapNetwork(at:reach:)``), and names a new station after
     /// it, replacing even a name the player typed: the pin was asked for.
     /// A platform beside a station of the world joins that one, as any
-    /// other does. Where no track is that near, says so and picks nothing.
+    /// other does. Where no track is that near, offers the station for
+    /// sale (decision 400 A.8, ``offerRealStation(_:)``); in the tutorial
+    /// and the lessons, which sell nothing (decision 336), says so and
+    /// picks nothing.
     public func pickRealStation(_ suggestion: RealStationSuggestion) {
         guard networkMode == .platform else { return }
         message = nil
@@ -150,6 +153,10 @@ extension GameSession {
         guard let place = world.trackEdgePoint(near: suggestion.point, within: reach) else {
             networkEdgePoint = nil
             platformStationID = nil
+            if tutorial == nil, lesson == nil {
+                offerRealStation(suggestion)
+                return
+            }
             let name = suggestion.name(in: language)
             message = StatusMessage(kind: .failure, text: language.text(
                 "No track within 400 m of \(name) yet. Lay track there first, then tap \(name) again.",
