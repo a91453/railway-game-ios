@@ -27,7 +27,7 @@
 #                                    replaced by a newer push (superseded)
 #
 # Shards (a test ID is `Module.Class/method`, as `swift test list` prints it):
-#   campaigns-1 .. campaigns-15   the long property, differential and mutation
+#   campaigns-1 .. campaigns-17   the long property, differential and mutation
 #                                campaigns, and the golden scenarios, named
 #                                below
 #   rest                         every test that no campaign shard names: the
@@ -412,28 +412,74 @@ set -euo pipefail
 #   campaigns-8   440 -> about 500 (LessonGuide 60, from rest)
 #   rest          some 900 -> about 570; campaigns-13 825 -> about 551
 # The longest jobs are then campaigns-2 (749 s of tests) and -10 (745).
+# 2026-10-24, later: #1184's full run (40083863654) passed, but on slow
+# runners (every build over 4 minutes) six jobs took 18m42s to 19m31s, and
+# all 17 shards together held 11,712 s of tests, about 650 s a shard if
+# spread over 18. So campaigns-17, one job more (a full tier is 20 jobs;
+# game planning's call, decision 404). Seconds of tests on that run, and
+# where a class's slower run elsewhere was longer, that one:
+#   campaigns-17  new: ScheduledOvertakeTrackFinal 168 and five small
+#                 GamePresentation classes 103 (from -12), Timetable 169
+#                 (from -8), Map3DSceneMemory 156 (274 on main's run, from
+#                 -11): about 596, 714 at the slower
+#   campaigns-12  857 -> about 586
+#   campaigns-8   827 -> about 658
+#   campaigns-11  838 -> about 682
+#   campaigns-4   818 -> about 652 (OccupiedRouting 78 to -13,
+#                 NewGameSaveProperty 88 to rest)
+#   campaigns-2   831 -> about 627 (VerticalRailway 204 to -10)
+#   campaigns-1   819 -> about 656 (Map3DPlatformClearance 101 and
+#                 WorldStateMachine 62 to -15)
+#   campaigns-10  432 -> about 636; -13 559 -> about 637; -15 469 ->
+#                 about 632; rest 559 -> about 647
+# The longest shard is then about 690 s of tests, some 16.5 minutes of job
+# with a 4.5-minute build. Campaign classes moved only between campaign
+# shards, so no pull request's tier changes.
+# That PR's own full run (40085496377, builds about 4m15s) put campaigns-15
+# at 815 s of tests (18m46s of job: TrafficFollowing 440 there), -14 at
+# 737, -17 at 734, -5 at 712 and -16 at 706, while -1 had 362, -11 402,
+# -7 419, -4 485 and -9 501. So, by that run's seconds:
+#   Map3DPlatformClearance 109, WorldStateMachine 64   -15 -> -11
+#   Onboarding 93                                      -14 -> -1
+#   Map3DStreets, RealWorldDemoGround, RealWorldDataLoad, Map3DRealGround,
+#   MonthlyReport (103 together)                       -17 -> -7
+#   LineLossFixes 47                                   -5  -> -4
+#   LocalPass 58                                       -16 -> -9
+# -15 then about 642, -14 644, -17 631, -5 665, -16 648, -11 575, -1 455,
+# -7 522, -4 532, -9 559; the longest are -6 (694) and -3 (676), about
+# 16.5 minutes of job.
+# The next full run (40087061202) put campaigns-10 past 20 minutes twice
+# (over 15 minutes of tests each time). Its classes took 839 s of tests on a
+# 4-core Linux machine (PassengerPlanKey 343, ReservationShortcut 209,
+# VerticalRailway 194, FlexDispatch 84), not the 596 the fast runner gave, so
+# VerticalRailway moved on to -11 (519 to about 575 s before it), and the
+# run after that (40090204048) put -11 past 20 minutes in turn while -10
+# took 428. The same shard takes up to twice as long on one runner as on
+# another, so VerticalRailway goes to -12, the shortest shard on all three
+# full runs (593, 423 and 333 s): about 800 at its slowest.
 classes_of() {
   case "$1" in
-    campaigns-1) echo "ServiceRepeatingPropertyTests ScheduledTrafficPropertyTests WorldStateMachineTests Map3DPlatformClearanceTests" ;;
-    campaigns-2) echo "ServicePropertyTests VerticalRailwayPropertyTests NetworkSectionPropertyTests SingleTrackCapacityPropertyTests RealLineAcquisitionTests Map3DOpenEveryStartTests LessonTests" ;;
+    campaigns-1) echo "ServiceRepeatingPropertyTests ScheduledTrafficPropertyTests OnboardingTests" ;;
+    campaigns-2) echo "ServicePropertyTests NetworkSectionPropertyTests SingleTrackCapacityPropertyTests RealLineAcquisitionTests Map3DOpenEveryStartTests LessonTests" ;;
     campaigns-3) echo "LineDispatchPropertyTests IdleTrainDeadlockTests LineRoutePreferencePropertyTests TRADemoTests" ;;
-    campaigns-4) echo "OccupiedRoutingPropertyTests ContinuousTrackPropertyTests PassengerPropertyTests KernelDifferentialTests DeadlockPropertyTests RealWorldDemoTests NewGameSavePropertyTests" ;;
-    campaigns-5) echo "SaveMutationSecondHalfTests ScheduledOvertakeTrackPropertyTests LineLossFixesTests" ;;
+    campaigns-4) echo "ContinuousTrackPropertyTests PassengerPropertyTests KernelDifferentialTests DeadlockPropertyTests RealWorldDemoTests LineLossFixesTests" ;;
+    campaigns-5) echo "SaveMutationSecondHalfTests ScheduledOvertakeTrackPropertyTests" ;;
     campaigns-6) echo "ServiceRepeatingSecondHalfPropertyTests EconomyPropertyTests CityRequestsTests DemoRealLinesTests Map3DStreetLifeTests StationCommerceCardTests Map3DTests LineLossDiagnosisTests" ;;
-    campaigns-7) echo "LinePatternPropertyTests NetworkServicePropertyTests" ;;
-    campaigns-8) echo "GoldenScenarioTests ScheduledOvertakeTrackMiddlePropertyTests TimetablePropertyTests ScreenshotSceneTests NewGameBalanceTests LessonGuideTests" ;;
-    campaigns-9) echo "SaveMutationTests EconomySecondHalfPropertyTests NightSkipTests PolicyTests" ;;
+    campaigns-7) echo "LinePatternPropertyTests NetworkServicePropertyTests Map3DStreetsTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests Map3DRealGroundTests" ;;
+    campaigns-8) echo "GoldenScenarioTests ScheduledOvertakeTrackMiddlePropertyTests ScreenshotSceneTests NewGameBalanceTests LessonGuideTests" ;;
+    campaigns-9) echo "SaveMutationTests EconomySecondHalfPropertyTests NightSkipTests PolicyTests LocalPassTests" ;;
     campaigns-10) echo "PassengerPlanKeyTests ReservationShortcutTests FlexDispatchPropertyTests" ;;
-    campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests HighSpeedDemoTests LongLegReplayTests LoopLineBoardingTests Map3DSceneMemoryTests" ;;
-    campaigns-12) echo "TrafficControlPropertyTests ScheduledOvertakeTrackFinalPropertyTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests Map3DStreetsTests LineConfirmationTests FreightSessionTests Map3DRealGroundTests SparseCityLandTests LinePanelMemoTests Map3DStationKitTests NetworkPostcardTests" ;;
-    campaigns-13) echo "BoardingPropertyTests TurnbackPropertyTests Map3DCoarseChunkTests RealRailwayTracingTests Map3DStreamingTests" ;;
-    campaigns-14) echo "ServiceLinePropertyTests OnboardingTests CommandLogTests ScheduledTrafficTests TurnbackTests" ;;
+    campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests HighSpeedDemoTests LongLegReplayTests LoopLineBoardingTests Map3DPlatformClearanceTests WorldStateMachineTests" ;;
+    campaigns-12) echo "TrafficControlPropertyTests LineConfirmationTests FreightSessionTests SparseCityLandTests LinePanelMemoTests Map3DStationKitTests NetworkPostcardTests VerticalRailwayPropertyTests" ;;
+    campaigns-13) echo "BoardingPropertyTests TurnbackPropertyTests Map3DCoarseChunkTests RealRailwayTracingTests Map3DStreamingTests OccupiedRoutingPropertyTests" ;;
+    campaigns-14) echo "ServiceLinePropertyTests CommandLogTests ScheduledTrafficTests TurnbackTests" ;;
     campaigns-15) echo "TrafficFollowingPropertyTests ScheduledOvertakeTrackLastPropertyTests Map3DRealBuildingsTests MetroStructuresTests NewGameCampaignTests PingxiChallengeTests RealWorldExpansionTests Map3DShadowTests ShortTurnCardTests" ;;
-    campaigns-16) echo "HighSpeedDemoDayTests TRADemoDayTests HighSpeedDemoBatchTests LocalPassTests LineAccountsTests LoadJourneyCacheTests NewsSessionTests DemoAtTests Map3DNextDepartureTests TutorialSessionTests Map3DSignTests Map3DPropsTests Map3DSurfaceTests SeededStreetPlanTests Map3DBuildingsTests AutoServiceTests Map3DHandoffTests Map3DDetailTests Map3DNightAndGroundTests" ;;
+    campaigns-16) echo "HighSpeedDemoDayTests TRADemoDayTests HighSpeedDemoBatchTests LineAccountsTests LoadJourneyCacheTests NewsSessionTests DemoAtTests Map3DNextDepartureTests TutorialSessionTests Map3DSignTests Map3DPropsTests Map3DSurfaceTests SeededStreetPlanTests Map3DBuildingsTests AutoServiceTests Map3DHandoffTests Map3DDetailTests Map3DNightAndGroundTests" ;;
+    campaigns-17) echo "ScheduledOvertakeTrackFinalPropertyTests TimetablePropertyTests Map3DSceneMemoryTests" ;;
     *) return 1 ;;
   esac
 }
-CAMPAIGN_SHARDS=(campaigns-1 campaigns-2 campaigns-3 campaigns-4 campaigns-5 campaigns-6 campaigns-7 campaigns-8 campaigns-9 campaigns-10 campaigns-11 campaigns-12 campaigns-13 campaigns-14 campaigns-15 campaigns-16)
+CAMPAIGN_SHARDS=(campaigns-1 campaigns-2 campaigns-3 campaigns-4 campaigns-5 campaigns-6 campaigns-7 campaigns-8 campaigns-9 campaigns-10 campaigns-11 campaigns-12 campaigns-13 campaigns-14 campaigns-15 campaigns-16 campaigns-17)
 SHARDS=("${CAMPAIGN_SHARDS[@]}" rest)
 
 WORK=""
