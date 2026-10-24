@@ -60,7 +60,7 @@
 
 | 角色 | 現在的 session | 做什麼 | 交接 |
 | --- | --- | --- | --- |
-| 遊戲規劃（兼派工） | 下一任（作者從 claude.ai 開，id 寫在 #1041 接手的留言；2026-10-24 05:00 UTC 起）；前任 session_01XsVqbA1A5wGtJbuAa881oT（10-24 01:30–05:00，壓縮 2 次照 §1.1 換手，現況在 §2.0 最前面「第七次換手」）；再之前接暫代的 session_01PGibJmGNcvu2d7dJWWhWVb（10-24 00:35–01:30，已封存），再之前 session_01H5RHAwnA69n8EfAUSUrH52（10-23 00:10–10-24 00:35），再之前 session_014nUBHbE9mSK4qXHHgm8xCQ（10-22 22:30–10-23 00:10），再之前 session_01UsF4QYCGrzSeNSFq11i8Wu（18:15–22:30），再之前 session_01Ddr2wiXx1Xhn2m9qNBDnDh、session_01CHQg7B6JqzbScGSjyDwHos（2026-10-22 起，照 §1.1 換手，作者：「要不要全部所有換個session了 都一直在壓縮了」→「好，照表換」；換手時的現況在第 2 節最前面；前任 session_014rYHMtmqA5bEMkBBuKu6PV（10-21 至 10-22，作者：「那你需要先接手嗎太長了」）、session_01NiR5WLMFjMJBktQAMkfmkm（10-21）、session_01WW7o3decEv5LY59nYVqnDN（10-20 至 10-21，作者：「接手 角色表中遊戲規劃的工作」）、session_01V1xd3H9vNkuZoSA3czNfGm（10-16 至 10-18）、session_018D6gYU1yiZMtxSmNNU1K17） | 從玩家、鐵道迷、開發、美術、音樂五個角度決定優先順序與設計，開實作 session 並派工，綠了的 PR 照 §1.2 合併（2026-10-21 起），收作者轉來的玩家回報與 bug（§1.3），寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1、1.3 節 |
+| 遊戲規劃（兼派工） | 下一任（作者從 claude.ai 開，id 寫在 #1041 接手的留言；2026-10-24 06:30 UTC 起）；前任 session_01AxcyajwHdF6j4ryDMghASM（10-24 05:00–06:30，壓縮 2 次照 §1.1 換手，現況在 §2.0 最前面「第八次換手」）；再之前 session_01XsVqbA1A5wGtJbuAa881oT（10-24 01:30–05:00，「第七次換手」）；再之前接暫代的 session_01PGibJmGNcvu2d7dJWWhWVb（10-24 00:35–01:30，已封存），再之前 session_01H5RHAwnA69n8EfAUSUrH52（10-23 00:10–10-24 00:35），再之前 session_014nUBHbE9mSK4qXHHgm8xCQ（10-22 22:30–10-23 00:10），再之前 session_01UsF4QYCGrzSeNSFq11i8Wu（18:15–22:30），再之前 session_01Ddr2wiXx1Xhn2m9qNBDnDh、session_01CHQg7B6JqzbScGSjyDwHos（2026-10-22 起，照 §1.1 換手，作者：「要不要全部所有換個session了 都一直在壓縮了」→「好，照表換」；換手時的現況在第 2 節最前面；前任 session_014rYHMtmqA5bEMkBBuKu6PV（10-21 至 10-22，作者：「那你需要先接手嗎太長了」）、session_01NiR5WLMFjMJBktQAMkfmkm（10-21）、session_01WW7o3decEv5LY59nYVqnDN（10-20 至 10-21，作者：「接手 角色表中遊戲規劃的工作」）、session_01V1xd3H9vNkuZoSA3czNfGm（10-16 至 10-18）、session_018D6gYU1yiZMtxSmNNU1K17） | 從玩家、鐵道迷、開發、美術、音樂五個角度決定優先順序與設計，開實作 session 並派工，綠了的 PR 照 §1.2 合併（2026-10-21 起），收作者轉來的玩家回報與 bug（§1.3），寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1、1.3 節 |
 | 每日 Threads 開發日誌 | 排程「每日 Threads 開發日誌」（台灣時間每天 21:43，2026-10-18 起暫停）觸發遊戲規劃，由它開寫作 session。現在是 `trig_01AFVLnSeazUGc5ve1SprEqV`（綁 session_01XsVqbA1A5wGtJbuAa881oT，暫停；2026-10-24 由它重建，舊的 `trig_01Hre19DLcYMRt2yiktxHWFY` 已刪）。2026-10-22 換手時由前任建了綁到 session_01CHQg7B6JqzbScGSjyDwHos 的新排程 `trig_01FZhfBNQCdDW8iDpowANLZS`（暫停中；之後每次換手都重建，現任的 id 寫在 #1041 接手的留言），前任的 `trig_01NfzFV9BcdiyBJpAwnaTuK9`（再之前是 `trig_01SkNFNW6qN6cMUGkGCXZM1v`）已刪。排程的綁定改不了，以後換手時由現任遊戲規劃用同一份 prompt 建一個綁到自己的新排程，再刪掉舊的；作者沒說要開就維持暫停 | 寫當天的串文草稿，用 SendUserFile 交給作者；不 commit、不發布 | 派工單照 2026-10-14、10-15、10-16 的寫作 session |
 
 不再常駐（2026-10-20 停用）：合併協調 session_01QoA24EvFCFbmbcM1EwaZT7（前任 session_016sNs4eeZwga9hz1CCHkpmX）、派工 session_01MJ7sdeid5DAFjSVbTkmdi3（前任 session_01AaAj4wvJMxJQuLWAoYu6S8）。兩個都從 2026-10-17 起沒有動作。
@@ -172,6 +172,9 @@
   - 給實作 session 的派工單要對照 art-style §7 的現行規則：參考庫的模型「任意組合、成品跟原本不同」，不是「能搬就搬」。
   - 同時開好幾個 session，它們會在幾分鐘內登記同一個決策號（2026-10-16：三個都登記 256；2026-10-17：#774 與 #776 都用 271，照登記先後 #776 改成 272）。派工單裡直接寫好號碼；或開完之後看一次 #231，照登記先後重排並留言。
 
+- **作者提新事時，先排序再動手**（2026-10-24，作者：「我一直很怕我一提你就做了 沒先考慮其他順序」）：作者提一件新功能或改動時，先回三件事：它在 NEXT_PRIORITIES §22.2 排第幾（或該排第幾）、提前做會擠掉哪幾件、建議（照排、提前或先不做），作者說好再派。只有 bug、玩家回報的當機卡頓、或本來就排最前面的，才直接派。
+  - 例：Game Center（§22.2 約第 40 名）與 iCloud 存檔是作者明說才提前的，前任沒有說它們跳過了約 30 件；Codex 列車接進營運（第 16 名）曾被派在還沒派的 10e「斷路接起來」之前，後來補派 391 第二個 PR。
+  - **只重排還沒開始的事**（作者：「可是叫他停不就白做了等他先做完一個段落吧」）：已經在做的 session 不叫停，讓它做到能停的地方（commit、push、開 PR）再換順序；做完的東西開 PR 留著，不要丟。
 - **換手**（2026-10-16，作者：「你太長了接手」）：遊戲規劃的對話太長時，開新 session 接手。新 session 的派工單要寫清楚現在進行到哪、等誰；每日開發日誌的排程改到新 session；在 #231 留言；第 1 節表格的 session 改成新的。
   - **下一任由作者從 claude.ai 直接開，不要由 session 用 `create_session` 開**（2026-10-24）：session 開的 session 會多一層，到第 8 層就不能再 `create_session`、`send_later`、建排程（session_01PGibJmGNcvu2d7dJWWhWVb 就是第 8 層，只剩合併、留言、`send_message`），規劃就不能派工。換手時前任把交接寫進 §2.0、開文件 PR，再請作者在 claude.ai 開一個新 session，貼上一句「你是遊戲規劃兼派工，照 docs/HANDOFF.md §1 與 §2.0 最上面一段接手」。實作 session 照舊由規劃開（規劃那時是第 1 層，實作是第 2 層）。
 
@@ -316,6 +319,23 @@
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
+
+**第八次換手（2026-10-24 06:30 UTC，session_01AxcyajwHdF6j4ryDMghASM 壓縮 2 次 → 作者從 claude.ai 開的新規劃）**。和下面不同時以這段為準。新任開工：讀第 1 節（含 §1.1 新加的「作者提新事時，先排序再動手」）、這一段、第 3 節最上面幾列；#1041 只讀「01AxcyajwHdF6j4ryDMghASM（遊戲規劃）壓縮第 2 次」那則之後的留言。
+
+- **合併了**（10-24，第七次換手之後）：#1150、#1159（391 公路橋）、#1156（396 Game Center 第一個 PR）、#1162（Game Center setup 工具，main ca411626）、#1158（成就圖 38 張與 entitlement，main da7a9fb6）。main 的 `ci.yml`：b69d02c9、ca411626、da7a9fb6 都綠。這一批（#1162、#1158）已綠，下一批可以開始。
+- **開著的 PR**（實作 session 都會 send_message 規劃「可合併」；新任接手後 send_message 每個 session 改通知新任）：
+  - #1163（session_01NDDS2s5myyGvhD26ZW26zB，`LessonUITests` 的 Pause 再按一次，只改 UI 測試）：gate 綠了就合，合後封存 01NDDS。
+  - #1164（決策 399，Codex 的四款列車接進營運，session_01MTVUoTThcFpBwCqex6bNyb，branch `claude/codex-trains-into-service-399`，head 732b679）：本機 215 個 Map3D 測試綠；CI 綠了就合（GamePresentation，算 1 點）。01MTVUo 做完已停，可封存。
+  - #1160（決策 397 iCloud 存檔，session_01MsxSwi6ituX5dsw6ZQNmEx，head e248bff，draft）：獨立審查已過；和 main 合併後（e296a40）程式 diff 和審過的 bf5b522 一樣，只差文件。CI 綠了先改 ready、再用 merge commit 合；合後封存 01MsxSw，再派 **iCloud entitlement 的 PR**（container `iCloud.io.github.a91453.RailwayGame`；作者的 Apple 步驟已做完）。
+- **做中的 session**：
+  - session_01E26h8gQVHa51w79DJRAyv2：決策 398，玩家自有建築用 EstateKit／CoastalKit 的模型。
+  - session_01AhfV8HVyDQfkoqCY2FNbmY：決策 391 第二個 PR（圖磚照 `layer` 重切、§4.12 第 1、6 點「斷路接起來」），決策號沿用 391。
+- **作者的 Game Center 步驟**：06:06 跑的 `game-center-setup.yml`（run 40068870832）是 **dry run**，只讀了 App Store Connect、列出 1 個排行榜與 38 個成就（含圖），沒有建立任何東西；讀取成功，表示 API key 能用。作者接著選 `apply` 跑（run 40069135297），第一項的每週排行榜就被 Apple 退回（HTTP 409：`recurrenceDuration` 不收 `P7D`，要帶時間部分），所以什麼都還沒建。#1165 改成 `P7DT0H0M0S`；合併後請作者再跑一次 `apply`（已經有的會跳過）。若 Apple 還是不收排行榜，先用 `only: achievements` 建成就，排行榜照 `docs/GAME_CENTER_SETUP.md` 的表手動建。作者說「Game Center 設好了」之後，新任到 App Store Connect 的截圖或 run log 確認項目都在，再照 `docs/GAME_CENTER_SETUP.md` 第 5 步提醒作者送審時勾 Game Center。apply 失敗就讀 log（每週重置的格式是 UNVERIFIED）。
+- **號碼**：決策 396（已合）、397（#1160）、398（01E26h8）、399（#1164）；下一個 400。存檔版本 72 沒用；golden 不動。
+- **審查**：從 #1137 起算，還沒精算；新任先數一次，滿 30 點開一輪。
+- **排程**：每日 Threads 開發日誌 `trig_01ABYQAarHbVxBbEShiVWDr3`（綁 01Axcy，暫停）：新任用同一份 prompt 建綁自己的（暫停），刪掉它。本任的巡查提醒已刪；新任自己用 `send_later` 排。
+- **還沒派**（照 §22.2）：RecreationKit 要新的建築種類（自有建築第 2 批，等 398 合併）；10/31 之後研究「2D 改用 3D 渲染器的俯視圖、不再用 MapLibre」。
+- **MapLibre**（作者 10-24 問「需要不依賴 maplibre 用自製 map 了嗎」，規劃答「現在不用」，作者「好 那就照你說的」）：2D 的效能問題（決策 371、377、379）都在遊戲自己的程式，不在 MapLibre。等到這三件之一才重新評估：2D 與 3D 要做兩次的工作變常見；當機紀錄或幀數讀數指向 MapLibre；2D 要 MapLibre 做不到的功能。
 
 **第七次換手（2026-10-24 05:00 UTC，session_01XsVqbA1A5wGtJbuAa881oT 壓縮 2 次 → 作者從 claude.ai 開的新規劃）**。和下面不同時以這段為準。新任開工：讀第 1 節、這一段、第 3 節最上面幾列；#1041 只讀「壓縮第 2 次」那則之後的留言。
 

@@ -306,7 +306,7 @@ class SetupTests(selftest.Fixture):
             "referenceName": "Weekly challenge days v2", "vendorIdentifier": "weekly.days.v2",
             "defaultFormatter": "INTEGER", "submissionType": "BEST_SCORE", "scoreSortType": "ASC",
             "scoreRangeStart": "1", "scoreRangeEnd": "1080",
-            "recurrenceStartDate": "2026-10-25T16:00:00Z", "recurrenceDuration": "P7D",
+            "recurrenceStartDate": "2026-10-25T16:00:00Z", "recurrenceDuration": "P7DT0H0M0S",
             "recurrenceRule": "FREQ=WEEKLY;INTERVAL=1"})
         self.assertEqual(sorted((item["attributes"]["locale"], item["attributes"]["name"],
                                  item["attributes"]["formatterSuffixSingular"], item["attributes"]["formatterSuffix"])
