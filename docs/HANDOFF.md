@@ -322,16 +322,14 @@
 
 **第八次換手（2026-10-24 06:30 UTC，session_01AxcyajwHdF6j4ryDMghASM 壓縮 2 次 → 作者從 claude.ai 開的新規劃）**。和下面不同時以這段為準。新任開工：讀第 1 節（含 §1.1 新加的「作者提新事時，先排序再動手」）、這一段、第 3 節最上面幾列；#1041 只讀「01AxcyajwHdF6j4ryDMghASM（遊戲規劃）壓縮第 2 次」那則之後的留言。
 
-- **合併了**（10-24，第七次換手之後）：#1150、#1159（391 公路橋）、#1156（396 Game Center 第一個 PR）、#1162（Game Center setup 工具，main ca411626）、#1158（成就圖 38 張與 entitlement，main da7a9fb6）。main 的 `ci.yml`：b69d02c9、ca411626、da7a9fb6 都綠。這一批（#1162、#1158）已綠，下一批可以開始。
-- **開著的 PR**（實作 session 都會 send_message 規劃「可合併」；新任接手後 send_message 每個 session 改通知新任）：
-  - #1163（session_01NDDS2s5myyGvhD26ZW26zB，`LessonUITests` 的 Pause 再按一次，只改 UI 測試）：gate 綠了就合，合後封存 01NDDS。
-  - #1164（決策 399，Codex 的四款列車接進營運，session_01MTVUoTThcFpBwCqex6bNyb，branch `claude/codex-trains-into-service-399`，head 732b679）：本機 215 個 Map3D 測試綠；CI 綠了就合（GamePresentation，算 1 點）。01MTVUo 做完已停，可封存。
-  - #1160（決策 397 iCloud 存檔，session_01MsxSwi6ituX5dsw6ZQNmEx，head e248bff，draft）：獨立審查已過；和 main 合併後（e296a40）程式 diff 和審過的 bf5b522 一樣，只差文件。CI 綠了先改 ready、再用 merge commit 合；合後封存 01MsxSw，再派 **iCloud entitlement 的 PR**（container `iCloud.io.github.a91453.RailwayGame`；作者的 Apple 步驟已做完）。
+- **合併了**（10-24，第七次換手之後）：#1150、#1159（391 公路橋）、#1156（396 Game Center 第一個 PR）、#1162（Game Center setup 工具）、#1158（成就圖 38 張與 entitlement）、#1165（本交接）、#1167、#1168（Game Center 排行榜格式）、#1164（399 Codex 列車，main 1c9dda03）、#1163（Lesson UI 測試，main e1bda5bd）。main 的 `ci.yml` 到 da7a9fb6 都綠；#1164 之後的還沒看，新任先看 main 最新的 run 再合下一批。
+- **開著的 PR**（實作 session 都會 send_message 規劃「可合併」；新任接手後 send_message 每個 session 改通知新任；01MTVUo、01NDDS 已封存）：
+  - #1166（決策 398，自有建築用 EstateKit／CoastalKit，session_01E26h8gQVHa51w79DJRAyv2）：draft、CI 跑中；第 9 課選飯店時建造選單多一排外觀選擇器，要看 iPhone UI 測試。改 GameCore 的 `looks`，算 2 點。
+  - #1160（決策 397 iCloud 存檔，session_01MsxSwi6ituX5dsw6ZQNmEx，head d4216e6（又併過 main 解 project.pbxproj 衝突），draft）：獨立審查已過；和 main 合併後（e296a40）程式 diff 和審過的 bf5b522 一樣，只差文件。CI 綠了先改 ready、再用 merge commit 合；合後封存 01MsxSw，再派 **iCloud entitlement 的 PR**（container `iCloud.io.github.a91453.RailwayGame`；作者的 Apple 步驟已做完）。
 - **做中的 session**：
-  - session_01E26h8gQVHa51w79DJRAyv2：決策 398，玩家自有建築用 EstateKit／CoastalKit 的模型。
   - session_01AhfV8HVyDQfkoqCY2FNbmY：決策 391 第二個 PR（圖磚照 `layer` 重切、§4.12 第 1、6 點「斷路接起來」），決策號沿用 391。
-- **作者的 Game Center 步驟**：06:06 跑的 `game-center-setup.yml`（run 40068870832）是 **dry run**，只讀了 App Store Connect、列出 1 個排行榜與 38 個成就（含圖），沒有建立任何東西；讀取成功，表示 API key 能用。作者接著選 `apply` 跑（run 40069135297），第一項的每週排行榜就被 Apple 退回（HTTP 409：`recurrenceDuration` 不收 `P7D`，要帶時間部分），所以什麼都還沒建。#1165 改成 `P7DT0H0M0S`，作者再跑（run 40069474297）也被退回；#1167 改成只有時間部分的 `PT168H`，Apple 收了，但改退 `recurrenceRule`（只收 MINUTELY、HOURLY、DAILY）；下一個 PR 改成 `FREQ=DAILY;INTERVAL=7`，合併後請作者再跑一次 `apply`（已經有的會跳過）。若 Apple 還是不收排行榜，先用 `only: achievements` 建成就，排行榜照 `docs/GAME_CENTER_SETUP.md` 的表手動建。作者說「Game Center 設好了」之後，新任到 App Store Connect 的截圖或 run log 確認項目都在，再照 `docs/GAME_CENTER_SETUP.md` 第 5 步提醒作者送審時勾 Game Center。apply 失敗就讀 log（每週重置的格式是 UNVERIFIED）。
-- **號碼**：決策 396（已合）、397（#1160）、398（01E26h8）、399（#1164）；下一個 400。存檔版本 72 沒用；golden 不動。
+- **Game Center**：`game-center-setup.yml` 的 `apply` 在第 5 次成功（run 40070031235，06:30）：1 個排行榜、38 個成就與圖都建好了。前幾次失敗是格式：Apple 的 `recurrenceDuration` 只收只有時間部分的寫法（`PT168H`），`recurrenceRule` 只收 MINUTELY、HOURLY、DAILY（每週寫成 `FREQ=DAILY;INTERVAL=7`），修在 #1165、#1167、#1168。新任把決策 396 裡「Apple 收不收……仍是 UNVERIFIED」那句改成 VERIFIED（run 40070031235）。還沒做：第 5 步（送審時勾 Game Center，作者的事）、privacy.html。
+- **號碼**：決策 396、399 已合，397（#1160）、398（#1166）開著；下一個 400。存檔版本 72 沒用；golden 不動。
 - **審查**：從 #1137 起算，還沒精算；新任先數一次，滿 30 點開一輪。
 - **排程**：每日 Threads 開發日誌 `trig_01ABYQAarHbVxBbEShiVWDr3`（綁 01Axcy，暫停）：新任用同一份 prompt 建綁自己的（暫停），刪掉它。本任的巡查提醒已刪；新任自己用 `send_later` 排。
 - **還沒派**（照 §22.2）：RecreationKit 要新的建築種類（自有建築第 2 批，等 398 合併）；10/31 之後研究「2D 改用 3D 渲染器的俯視圖、不再用 MapLibre」。
