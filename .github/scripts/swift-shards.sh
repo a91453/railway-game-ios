@@ -769,13 +769,15 @@ class_seconds() {
 }
 
 # Decision 404: SWIFT_TEST_WORKERS > 1 runs each batch with swift test
-# --parallel on that many workers (auto: the machine's cores; ci.yml sets
-# auto); 1, the default and what a local run gets, is the serial run of
-# decisions 185 and 329. Each test then runs in a test runner process of its
-# own. With --verbose swift test prints each test's whole XCTest output
-# (started, passed or failed, seconds) once the test ends, one test at a
-# time, so the coverage check, the failure count and class_seconds read the
-# log as before. (Its --xunit-output report is no help: it gives tests
+# --parallel on that many workers (auto: the machine's cores); 1, the
+# default and what ci.yml sets, is the serial run of decisions 185 and 329.
+# Each test then runs in a test runner process of its own, so a class's
+# static fixture is built once per test: on CI that made the shards with
+# costly fixtures slower, not faster (decision 404, the table). With
+# --verbose swift test prints each test's whole XCTest output (started,
+# passed or failed, seconds), one test at a time, so the coverage check,
+# the failure count and class_seconds read the log as before; on Swift 6.4
+# it prints them all when the batch ends, so the watchdog sees none. (Its --xunit-output report is no help: it gives tests
 # that ran side by side the same time, the moment their results came in.)
 # Sets WORKERS (not a subshell: die has to end the script).
 test_workers() {
