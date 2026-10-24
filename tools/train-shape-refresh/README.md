@@ -1,6 +1,6 @@
-# E200 / 700T 原生外形修訂（四版：照片橘色區域的前唇／肩部）
+# E200 / 700T 原生外形修訂（五版：平順接回車身的分色曲線）
 
-獨立配方 `Map3DTrainShapeRefresh.swift`，本輪以實際已交付Codex producer `39b819a3` 為真正前版；鼻長退回7096130e，修前唇／肩部曲面與色帶。依使用者新規則：Codex列車可沿用／拆件，非Codex模型只參考。沒有複製E201來源mesh／貼圖。入口仍只註冊五個靜態單元，**不替換營運E200／高鐵**。GameCore／存檔／golden／replay不動。
+獨立配方 `Map3DTrainShapeRefresh.swift`，本輪以實際已交付Codex producer `05248513` 為真正前版，只修分色邊界，不改已交付車殼表面。依使用者新規則：Codex列車可沿用／拆件，非Codex模型只參考。沒有複製E201來源mesh／貼圖。入口仍只註冊五個靜態單元，**不替換營運E200／高鐵**。GameCore／存檔／golden／replay不動。
 
 ## 建模前判讀與本輪來源
 
@@ -41,6 +41,7 @@ node tools/train-shape-refresh/review.mjs OUT
 node tools/train-shape-refresh/verify.mjs OUT
 python3 tools/train-shape-refresh/nose-audit.py OUT PRIOR
 python3 tools/train-shape-refresh/band-audit.py OUT PRIOR
+python3 tools/train-shape-refresh/paint-audit.py OUT PRIOR
 python3 tools/train-shape-refresh/wheel-audit.py OUT
 node tools/train-shape-refresh/render.mjs OUT
 for part in cab nose e200 middle formation; do
@@ -55,12 +56,14 @@ python3 tools/train-shape-refresh/bundle.py OUT ACTUAL_PRODUCER_COMMIT
 # bundle後重測真ZIP下載、再bundle，最後確認現有ZIP每個member仍等於live bytes
 ```
 
-本輪真前版模型與來源在history/39b819a3，第二版完整包仍留私庫revision-2；早期交付在revision-2/history/d476304b，不是臨時重捏前版；四種比較同相機／公尺尺度。公開只有配方／工具／必要測試／文件／一張總覽，完整包留私庫原目錄新增 `revision-4/`，不覆蓋舊包。來源記實際producer，不用未提交版本冒充commit。Linux抽樣射線／WebGL不代表完整碰撞、真機Metal、動畫或效能驗證。
+本輪真前版模型與來源在history/05248513，第二版完整包仍留私庫revision-2；早期交付在revision-2/history/d476304b，不是臨時重捏前版；四種比較同相機／公尺尺度。公開只有配方／工具／必要測試／文件／一張總覽，完整包留私庫原目錄新增 `revision-5/`，不覆蓋舊包。來源記實際producer，不用未提交版本冒充commit。Linux抽樣射線／WebGL不代表完整碰撞、真機Metal、動畫或效能驗證。
 
-## 第四版：使用者指的是照片中橘色區域
+## 第五版：只修色帶過渡，維持原來車殼表面
 
-實際查看使用者本輪附上的700T側面照片。橘色區域是包過低鼻前緣、在兩側隆起再收回車側的連續帶；上一輪整鼻加長成扁板，理解有誤。本輪撤回多出的1.05m鼻長，從本專案Codex配方重建肩部曲面：側面局部外鼓最大65mm（造型推估），頂點共享的色帶邊界隨鼻部起伏並包過低前緣，沿用暖白／綠松，不照搬真實品牌塗裝。不使用外掛色片或厚箱。
+使用者指出綠色帶「一下往上又往下」，未平順接回車身。真正前版05248513的色帶跟著截面角度走，高度因此出現局部波峰與折點。本輪以連續三次曲線定義色帶高度，車身直帶接點與低前唇的解析切線均為零，降低／拉寬肩帶高點；實際網格以同一xs分段線性近似。曲線是造型推估，不是實車工程尺寸。
 
-車頭向前的殼面三角有重新細分；與39b819a3比對，所有移除／新增三角均在頭車x≥0、尾車x≤0；各自5768個門窗、風擋、燈組與輪架等後段三角逐bytes相同。E200／中車／集電車／既有Codex比較車native與GLB逐bytes保持。前版真正模型、GLB、manifest、來源、配方留history/39b819a3，完整revision-3也保留；同相機同尺度比較見blue-cab-before-after.png／700t-formation-before-after.png。
+不改原車殼採樣、風擋、燈、門窗、輪架或其他車輛；以平面裁切原三角，產生白／綠松分色共邊，不用漸層、貼片、裝飾遮波。每端124個原三角分成370個共面子三角；paint-audit獨立證明每個新增三角都在唯一原三角內、覆蓋面積一致，最大平面誤差小於0.000001m。每端7640個幾何三角原位不變。這是Float32幾何穩定的證據，不是工程精度宣稱。
 
-每次修改後重新原生匯出，查看側、正、俯、斜的配色／白模／剪影。測試量實際色帶頂點的肩部高度、包前緣範圍及整體鼻長，舊稿應失敗。展示尺寸仍不是工程尺寸；沒有宣稱使用者已認可。
+nose-audit逐bytes維持E200／middle／panto／比較車的native／GLB、頭尾5768個非殼面後段三角。真正前版模型、GLB、manifest、來源、配方留history/05248513，完整revision-4未覆蓋；同相機同尺度比較見blue-cab-before-after.png、700t-nose-before-after.png（原生局部完整三角選取）、700t-formation-before-after.png。
+
+先在未修的真正前版跑新增Swift測試，抓到8個高度／斜率／折點失敗；修後21個相關測試通過。獨立band-audit讀匯出頂點：車身接點高度差為0、最高色帶1.98m、最大分段斜率約0.176、最大相鄰斜率差約0.047；前版峰高2.323m、斜率約0.363、差約0.175。這些是本模型可見分色幾何量，不是相似度分數。每次修改後重匯出與查看配色／白模／剪影側正俯斜。外觀是自檢，不是作者已認可。

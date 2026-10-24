@@ -1,12 +1,12 @@
-# E200 / 700T 暖白綠松：第四版前唇／肩部色帶修訂
+# E200 / 700T 暖白綠松：第五版平順分色過渡修訂
 
 依使用者回饋，沿用前版Codex配方，參考[PR #1203](https://github.com/a91453/railway-game-ios/pull/1203)的駕駛艙／肩線與圓角窗，以及私庫E201四向渲染的輪架／屋頂布局。E201只作參考，未搬來源mesh、貼圖、商標或來源尺寸。[判讀、來源、重建與組裝](../../../tools/train-shape-refresh/README.md)。
 
-![第四版實際原生模型](overview.png)
+![第五版實際原生模型](overview.png)
 
-[公開draft #1201](https://github.com/a91453/railway-game-ios/pull/1201)／[私有draft #70](https://github.com/a91453/railway-reference-private/pull/70)互鏈。最新producer與CI見[issue #1200](https://github.com/a91453/railway-game-ios/issues/1200)。完整新包在私庫原目錄的[revision-4](https://github.com/a91453/railway-reference-private/tree/codex/train-shape-refresh-2026-10-24/Railway/game-art-previews/docs/art/train-shape-refresh-2026-10-24/revision-4)，原交付保留。
+[公開draft #1201](https://github.com/a91453/railway-game-ios/pull/1201)／[私有draft #70](https://github.com/a91453/railway-reference-private/pull/70)互鏈。最新producer與CI見[issue #1200](https://github.com/a91453/railway-game-ios/issues/1200)。完整新包在私庫原目錄的[revision-5](https://github.com/a91453/railway-reference-private/tree/codex/train-shape-refresh-2026-10-24/Railway/game-art-previews/docs/art/train-shape-refresh-2026-10-24/revision-5)，原交付保留。
 
-交付6合法M3DM（5新單元＋1Codex風格對照）、1自含單元的原生組裝JSON、7 GLB、49七向透明PNG、白模／剪影四向、同尺度風格比較、完整12節、viewer、來源／SHA與ZIP。完整編組70,584三角，以相同最終單元重建，不強塞進15,000上限的單檔。組裝JSON是工具契約，未加入遊戲scene loader。
+交付6合法M3DM（5新單元＋1Codex風格對照）、1自含單元的原生組裝JSON、7 GLB、49七向透明PNG、白模／剪影四向、同尺度風格比較、完整12節、viewer、來源／SHA與ZIP。完整編組71,076三角，以相同最終單元重建，不強塞進15,000上限的單檔。組裝JSON是工具契約，未加入遊戲scene loader。
 
 ## 外觀結論
 
@@ -17,18 +17,20 @@
 | 仍簡化 | 雨刷、駕駛室內裝、車底管線、設備銘牌與小型緊固件；玻璃以不透明霧面色呈現，沒有玻璃反射或透視內裝 |
 | 資料不足 | 700T工程尺寸與完整設備序、E200各車號／年代弓型與屋頂差異、另一側精確細部；本模型不是經工程確認的E201或特定編號復刻 |
 
-以上是本次自檢，**不代表作者已認可或工程級復刻**。本輪真正前版為已交付producer `39b819a3`，保留完整原生檔；`previews/blue-cab-before-after.png`、`700t-formation-before-after.png`均是固定相機、共同bounds與同公尺尺度。舊稿未被改造後冒充前版。
+以上是本次自檢，**不代表作者已認可或工程級復刻**。本輪真正前版為已交付producer `05248513`，保留完整原生檔；`previews/blue-cab-before-after.png`、`700t-formation-before-after.png`均是固定相機、共同bounds與同公尺尺度。舊稿未被改造後冒充前版。
 
 ## 技術與CI分開記錄
 
-**VERIFIED，本輪Linux**：Swift6.4 warnings-as-errors build --build-tests及20相關測試（新增實際圓角玻璃檢查）；六單元原生讀回／normal；完整組裝JS與Swift預期三角payload逐bytes相同，偏移1m故障拒收；封閉有向邊／正體積、缺面與反面拒收；玻璃承板射線與750mm浮空拒收；44輪胎實際連通件貼軌、輪頂外緣向上射線淨空；Blender4.3.2獨立GLB匯入／bounds／三角數／頂點色／霧面；PNG完整解碼透明與邊界；folder及offline viewer旋轉縮放、單元／組裝／GLB／PNG／ZIP真下載與390px版面；ZIP解壓CRC逐檔bytes、producer SHA核對。確切數量與距離見新包verification檔。
+**VERIFIED，本輪Linux**：Swift6.4 warnings-as-errors build --build-tests及21相關測試（新增實際圓角玻璃檢查）；六單元原生讀回／normal；完整組裝JS與Swift預期三角payload逐bytes相同，偏移1m故障拒收；封閉有向邊／正體積、缺面與反面拒收；玻璃承板射線與750mm浮空拒收；44輪胎實際連通件貼軌、輪頂外緣向上射線淨空；Blender4.3.2獨立GLB匯入／bounds／三角數／頂點色／霧面；PNG完整解碼透明與邊界；folder及offline viewer旋轉縮放、單元／組裝／GLB／PNG／ZIP真下載與390px版面；ZIP解壓CRC逐檔bytes、producer SHA核對。確切數量與距離見新包verification檔。
 
-**UNVERIFIED**：完整設備接觸圖、全表面穿模／閃爍、動態輪組／轉彎／懸吊、真機Metal／效能／動畫、OS雙擊HTML與完整工程規格。射線抽檢不等於完整碰撞證明。最新head CI單獨更新issue，不能拿本機20測試或WebGL當Xcode／真機全綠。
+**UNVERIFIED**：完整設備接觸圖、全表面穿模／閃爍、動態輪組／轉彎／懸吊、真機Metal／效能／動畫、OS雙擊HTML與完整工程規格。射線抽檢不等於完整碰撞證明。最新head CI單獨更新issue，不能拿本機21測試或WebGL當Xcode／真機全綠。
 
 **仍是靜態素材註冊，未替換營運映射；合併也不會自動把遊戲E200／高鐵換成此版。** 不改GameCore、存檔、golden／replay或玩法；不合併／auto-merge／TestFlight。下一位整合需依每節原生長度與組裝表、做LOD及真機檢查。
 
-## 本輪針對使用者照片「車頭橘色部分」修正
+## 本輪針對綠色帶過渡不順修正
 
-已實際查看本輪附圖：指的是包過前緣、兩側隆起並接回車側的色帶。上一輪加長整鼻的理解有誤，撤回多出的1.05m鼻長，原鼻長恢復。重建連續肩部曲面、局部外鼓與隨形的綠松色帶，包住低前唇；幾何與分色共同修正。維持暖白綠松、不複製真實品牌標識。側／正／俯／斜的配色、白模、剪影親自查看；這是自檢，不代表作者認可或精確實車復刻。
+前版按截面角度分色，車頭高度變化把邊界帶成局部波峰與折點。本輪只重切白／綠松分色，改用兩段相切的三次曲線，平順接回車身直帶，降低並拉寬肩帶高點；網格為分段線性近似。**車殼表面、風擋、燈、門窗、輪架均維持**，不靠漸層或外掛片。
 
-真前版39b819a3原生／GLB、來源與配方留history/39b819a3，revision-3完整保留。E200／中車／集電車／比較車native和GLB逐bytes一致；頭尾各5768個門窗、風擋、燈組、輪架等後段三角不變。新增／移除殼三角限頭車x≥0與尾車x≤0（包含原長面細分）。完整編組bounds長恢復304.4m；其他三角、bounds和抽檢距離見最終manifest／verification。
+真前版05248513留history/05248513及完整revision-4。獨立paint-audit證明每端124個原三角分成370個共面子三角、覆蓋面積一致，其餘7640個幾何三角原位不變；最大平面誤差約0.00000022m為Float32比對誤差，不是實車工程精度。E200／中車／集電車／比較車native及GLB、每端5768個非殼面後段三角逐bytes保持。完整bounds不變304.4×3.4794×4.6m，三角數依manifest。
+
+新增測試先在真正前版跑紅（8處），修後21相關測試通過。band-audit量最終匯出頂點，車身接點差0、峰高1.98m、斜率約0.176、相鄰斜率差約0.047；不捏造相似度分數。側正俯斜配色、白模／剪影及同相機同尺度前後已查看；外觀自檢已符合本輪平順接帶目標，仍非作者認可／工程復刻。既有簡化、資料缺口與技術UNVERIFIED見上節。

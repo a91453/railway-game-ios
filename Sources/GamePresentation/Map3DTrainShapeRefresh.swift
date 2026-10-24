@@ -186,8 +186,8 @@ extension StationKitBuilder {
         func shellAngle(_ x: Float,_ i: Int)->Float {
             let original=Float(i)*2*Float.pi/Float(segments)
             guard cab && x>=3.7 else { return original }
-            // Shared ring vertices put the colour boundary in the actual shell.
-            // The band swells behind the nose, then wraps over its low front.
+            // Preserve the delivered shell sampling. Paint is clipped separately
+            // below so its boundary cannot inherit this angular height wave.
             let a=interpolate(x,[(3.7,-0.157),(4.8,-0.07),(5.8,-0.015),(7.5,0.02),(9.1,0.20),(10,0.53),(10.5,0.76),(11,1.0),(11.5,1.30),(11.9,1.46),(12.5,1.46)])
             return interpolate(Float(i),[(0,a),(10,Float.pi/2),(20,Float.pi-a),(24,Float.pi+0.63),(30,1.5*Float.pi),(36,2*Float.pi-0.63),(40,2*Float.pi+a)])
         }
@@ -197,6 +197,37 @@ extension StationKitBuilder {
             let swell=shoulder*powf(max(0,1-abs(sinf(a))),4)
             return Map3DPoint(p.x,p.y,p.z+(cosf(a)>=0 ? swell:-swell))
         } }
+        func bandHeight(_ x: Float)->Float {
+            // C1-continuous joins to the straight body stripe and low lip.
+            // Evaluate height directly: angular colours made the old wavy hump.
+            let baseline: Float=1.7852976
+            func ease(_ t: Float)->Float { let u=max(0,min(1,t));return u*u*(3-2*u) }
+            if x<=3.7 { return baseline }
+            if x<=6.7 { return baseline+(1.98-baseline)*ease((x-3.7)/3) }
+            return 1.98+(1.30-1.98)*ease((x-6.7)/5.8)
+        }
+        func clip(_ polygon: [Map3DPoint],at x0: Float,_ x1: Float,upper: Bool)->[Map3DPoint] {
+            let h0=bandHeight(x0),h1=bandHeight(x1)
+            func distance(_ p: Map3DPoint)->Float {
+                let d=p.y-(h0+(h1-h0)*(p.x-x0)/(x1-x0))
+                return abs(d)<0.000001 ? 0:d
+            }
+            var out: [Map3DPoint]=[]
+            for i in polygon.indices {
+                let a=polygon[i],b=polygon[(i+1)%polygon.count],da=distance(a),db=distance(b)
+                let ia=upper ? da>=0:da<=0,ib=upper ? db>=0:db<=0
+                if ia { out.append(a) }
+                if ia != ib && da != 0 && db != 0 {
+                    // Sort edge endpoints so both neighbouring triangles produce
+                    // exactly the same intersection, avoiding cracks/T-junctions.
+                    let lo=a.x<b.x || (a.x==b.x && a.z<b.z) ? a:b
+                    let hi=lo==a ? b:a
+                    let dl=distance(lo),dh=distance(hi)
+                    out.append(lo+(hi-lo)*(dl/(dl-dh)))
+                }
+            }
+            return out
+        }
         for k in 0..<rings.count-1 {
             let h=(dimensions(xs[k]).0+dimensions(xs[k+1]).0)/2
             let inside=Map3DPoint((xs[k]+xs[k+1])/2,(bottom+h)/2,0)
@@ -205,8 +236,14 @@ extension StationKitBuilder {
                 let shoulderBand = cab && xs[k]>=3.7
                 let teal = shoulderBand ? (20...23).contains(i) || (36...39).contains(i) : [21,22,23,36,37,38].contains(i)
                 let color: UInt32 = (24...35).contains(i) ? Self.steel : teal ? refreshTeal:refreshWhite
-                face([rings[k][i],rings[k][j],rings[k+1][j]],inside:inside,color:color)
-                face([rings[k][i],rings[k+1][j],rings[k+1][i]],inside:inside,color:color)
+                for triangle in [[rings[k][i],rings[k][j],rings[k+1][j]],[rings[k][i],rings[k+1][j],rings[k+1][i]]] {
+                    if cab && xs[k]>=0 && !(24...35).contains(i) {
+                        // Subdivide the existing planar triangle for paint only;
+                        // never move the original surface to chase a colour edge.
+                        face(clip(triangle,at:xs[k],xs[k+1],upper:true),inside:inside,color:refreshWhite)
+                        face(clip(triangle,at:xs[k],xs[k+1],upper:false),inside:inside,color:refreshTeal)
+                    } else { face(triangle,inside:inside,color:color) }
+                }
             }
         }
         face(rings[0],inside:Map3DPoint(0,2,0),color:refreshWhite)

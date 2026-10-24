@@ -31,11 +31,24 @@ final class Map3DTrainShapeRefreshTests: XCTestCase {
         let cab=Map3DTrainShapeRefresh.model("refresh-700t-cab")
         let teal=Map3DPalette.shopAwnings[0]
         let band=cab.vertices.filter { $0.color==teal && $0.x>5.7 && $0.x<9.2 }
-        XCTAssertGreaterThan(band.map(\.z).max()!,2.2,"Coloured shoulder remains a narrow lower stripe")
+        XCTAssertGreaterThan(band.map(\.z).max()!,1.9,"Coloured shoulder remains a narrow lower stripe")
         let front=cab.vertices.filter { $0.color==teal && $0.x>11.8 }
         XCTAssertGreaterThan(front.map(\.z).max()!,1.25,"Band fails to wrap over the low front lip")
         XCTAssertLessThan(cab.maximum.x,12.6,"Unrequested long paddle returned")
         XCTAssertGreaterThan(cab.vertices.filter { abs($0.x-9.1)<0.002 && $0.color==teal }.map { abs($0.y) }.max()!,1.6)
+    }
+    func testBandJoinsBodyWithoutStepOrSharpWave() {
+        let m=Map3DTrainShapeRefresh.model("refresh-700t-cab")
+        let band=m.vertices.filter { $0.color==Map3DPalette.shopAwnings[0] }
+        let stations: [Float]=[0,3.7,4.2,4.8,5.8,6.3,6.7,7.1,7.5,7.9,8.3,8.7,9.1,9.5,9.7,10,10.5,11,11.5,11.9]
+        let heights=stations.map { x in band.filter { abs($0.x-x)<0.0001 }.map(\.z).max()! }
+        XCTAssertLessThan(abs(heights[1]-heights[0]),0.015,"Body/shoulder paint boundary jumps at the join")
+        XCTAssertLessThan(heights.max()!,2.05,"Abrupt high shoulder hump returned")
+        let slopes=(1..<stations.count).map { (heights[$0]-heights[$0-1])/(stations[$0]-stations[$0-1]) }
+        XCTAssertLessThan(slopes.map { abs($0) }.max()!,0.22,"Paint edge climbs/drops too sharply")
+        for i in 1..<slopes.count {
+            XCTAssertLessThan(abs(slopes[i]-slopes[i-1]),0.12,"Paint edge has a sharp wave or kink")
+        }
     }
     func testPassengerGlassHasRoundedCornersInsteadOfRectangle() {
         let m=Map3DTrainShapeRefresh.model("refresh-700t-middle")
