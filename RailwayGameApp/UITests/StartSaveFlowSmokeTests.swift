@@ -482,10 +482,11 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         _ = requiredButton("start.demoMap", in: app)
         XCTAssertFalse(app.buttons["start.continue"].exists, "A clean launch must not offer Continue")
         // Decision 381: Saves always shows; with no save it offers an
-        // import, with no number of saves.
+        // import, with no number of saves. The count is written in digits
+        // ("2 個存檔"); \.isNumber alone also counts the 一 of 另一台.
         let saves = app.buttons[StartID.saves]
         XCTAssertTrue(saves.appears(within: 10), "Missing UI flow button: \(StartID.saves)")
-        XCTAssertFalse(saves.label.contains(where: \.isNumber), "A clean launch must not count saves: \(saves.label)")
+        XCTAssertFalse(saves.label.contains(where: { $0.isASCII && $0.isNumber }), "A clean launch must not count saves: \(saves.label)")
     }
 
     private func assertGame(in app: XCUIApplication) {
