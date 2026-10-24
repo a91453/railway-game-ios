@@ -120,7 +120,7 @@ def doc_tables(data):
     leaderboard = data["leaderboards"][0]
     sort = {"ASC": "**Low to High**（天數越少越前面）", "DESC": "**High to Low**"}[leaderboard["scoreSortType"]]
     submission = {"BEST_SCORE": "**Best Score**", "MOST_RECENT_SCORE": "**Most Recent Score**"}
-    weeks = {"P7D": "**1 Week**"}
+    weeks = {"P7DT0H0M0S": "**1 Week**"}
     rules = {"FREQ=WEEKLY;INTERVAL=1": "**1 Week**"}
     recurrence = leaderboard["recurrence"]
     fields = [
