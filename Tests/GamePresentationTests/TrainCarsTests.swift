@@ -33,6 +33,22 @@ final class TrainCarsTests: XCTestCase {
         }
     }
 
+    /// Decision 399: cars at their own lengths, each gap behind its car,
+    /// the nose where every train's is.
+    func testCarsAtTheirOwnLengths() {
+        let body = [Point(x: 0, y: 0), Point(x: -spacing, y: 0)]
+        let m = Double(WorldCoordinate.unitsPerMetre)
+        let cars = TrainCars.cars(body: body, heading: Point(x: 1, y: 0), lengths: [14.77 * m, 9 * m, 19.4 * m], gaps: [0, 0.6 * m, 0])
+        XCTAssertEqual(cars.count, 3)
+        XCTAssertEqual(cars[0].first!.x, car / 2, accuracy: 1e-6)
+        XCTAssertEqual(cars[0].last!.x, car / 2 - 14.77 * m, accuracy: 1e-3)
+        XCTAssertEqual(cars[1].first!.x, cars[0].last!.x, accuracy: 1e-3, "the tender against the locomotive")
+        XCTAssertEqual(cars[2].first!.x, cars[1].last!.x - 0.6 * m, accuracy: 1e-3)
+        // Past the body's 16 m, straight on.
+        XCTAssertEqual(cars[2].last!.x, car / 2 - (14.77 + 9 + 0.6 + 19.4) * m, accuracy: 1e-3)
+        XCTAssertTrue(TrainCars.cars(body: [], heading: Point(x: 1, y: 0), lengths: [m], gaps: []).isEmpty)
+    }
+
     func testTheGapIsLeftBetweenCarsNotAtTheEnds() {
         let body = [Point(x: 0, y: 0), Point(x: -spacing, y: 0)]
         let gap = 100.0

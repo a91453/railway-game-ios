@@ -54,7 +54,8 @@ public struct Map3DModelPack: Sendable {
         models += Map3DStreetModel.allCases.map { $0.model() }
         // Decision 318: and the sets that had none.
         models += Map3DTrainSet.all.flatMap { $0.models() }
-        // Independent second steam asset; static, no operating type binding.
+        // Independent second steam asset (decision 399: the steam train's
+        // set is built from it).
         models += Map3DDuplexSteam.Unit.allCases.map { Map3DDuplexSteam.model($0) }
         models.append(Map3DDuplexSteam.formation())
         // Static low-floor tram parts and a full formation for scene authors.
@@ -90,8 +91,7 @@ public struct Map3DModelPack: Sendable {
 
     /// The style of each train type, by its code (`""` for a train with no
     /// type: a commuter EMU). Types with neither a style nor a set
-    /// (``Map3DTrainSet``: maglev, skyrail, monorail, steam) are drawn as
-    /// boxes.
+    /// (``Map3DTrainSet``: maglev, skyrail, monorail) are drawn as boxes.
     public static let styleByType: [String: String] = [
         "": "commuter", "EMU3000": "express", "HSR": "highSpeed",
         // Decision 252: the flat-fronted EMUs as commuters (decision 286:
@@ -134,6 +134,38 @@ public struct Map3DModelPack: Sendable {
             return panto
         }
         return index(of: styleName + "-car")
+    }
+
+    /// Decision 399: a car drawn at its own length, metres, and how far
+    /// behind it the next car is.
+    public struct LaidCar: Equatable, Sendable {
+        public let model: Int
+        public let length: Float
+        public let gap: Float
+    }
+
+    /// Decision 399: the cars of a `count`-car train of type `code` whose
+    /// set is drawn at its models' own lengths
+    /// (``Map3DTrainSet/ownLengths``), front to back: a steam locomotive,
+    /// its tender and its coaches, or the set's cab units with their
+    /// middle units between (as many as its fixed formation has); `nil`
+    /// for a train drawn 20 m a car.
+    public func layout(forType code: String, count: Int) -> [LaidCar]? {
+        guard let set = Map3DTrainSet.set(forKey: code, count: count, locked: locked), set.ownLengths,
+              let head = index(of: set.headName), let middle = index(of: set.middleName) else { return nil }
+        let tail = index(of: set.tailName) ?? middle
+        var cars: [(model: Int, gap: Float)]
+        if let tender = index(of: set.tenderName) {
+            // The locomotive is the train's first car; its coaches the rest.
+            cars = [(head, 0), (tender, Map3DTrains.carGap)]
+                + (1..<max(count, 1)).map { ($0 == count - 1 ? tail : middle, Map3DTrains.carGap) }
+        } else {
+            let units = set.fixedCars ?? count
+            cars = (0..<max(units, 1)).map { ($0 == 0 ? head : $0 == units - 1 ? tail : middle, 0) }
+        }
+        return cars.enumerated().map { index, car in
+            LaidCar(model: car.model, length: models[car.model].length, gap: index < cars.count - 1 ? car.gap : 0)
+        }
     }
 
     /// Whether car `carIndex` of a `count`-car train of type `code` is the
