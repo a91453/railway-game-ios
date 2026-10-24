@@ -1015,7 +1015,11 @@
    - 動 `addCity` 的人先 `send_message` 給這兩個 session。
 3. **實機**：只在 Linux 的 WebGL 預覽看過（`docs/art/map3d-no-build-2026-10-23/`）；下一次 TestFlight 看 600 倍俯看小港與板橋，房子是不是太稀或太密（`Map3DScene.Builder.openShare` 與 `layFrontage` 的公寓比例）。
 
-### 4.10 隧道裡的駕駛視角不畫地面（決策 394，session_01AdAQTbXs639m7Yd3ZoxLE7）
+### 4.10 3D 月台只畫在放得下的地方（決策 392，session_01QnjGxTmCx1sAYpH4wacqhH）
+
+作者 86.1：「過站的時候會撞到月台」。原因是月台配對把高鐵示範錯開 10 m、只隔 5 m 的正線與側線月台當成島式月台，月台蓋到另一條軌道上；已改成只認橫向距離、放不下就不畫（`Map3DScene.Builder.addPlatforms`）。剩下的：台北、板橋真實是島式月台、快車停正線，遊戲的 5 m 股道間放不下，3D 裡這兩站的快車停在沒有月台的正線；要畫就得在高鐵示範把這兩站的股道拉開（動示範的軌道，沒有人接，決策 392 下一步）。
+
+### 4.11 隧道裡的駕駛視角不畫地面（決策 394，session_01AdAQTbXs639m7Yd3ZoxLE7）
 
 作者 2026-10-24：「如果在隧道或是地下能不能不要算地面上的建築物等切換視角的時候再計算會省gpu嗎」。做完的：駕駛視角在隧道深處、300 m 內沒有洞口、視野裡也看不到洞口時，只畫每個 chunk 的地面、軌道與道路（bore 與洞口在這裡）和列車，其他（城市、遠近細節、街具、招牌、人車、日影 pass、地面陰影、雨、天空）都不畫，mesh 留在記憶體（`Map3DUnderground`）。剩下的：**實機 GPU 數字還沒量**，下一次 TestFlight 照 [決策 394](decisions/394.md)「怎麼在實機上看」量；看到洞口前城市晚出現，就把 `Map3DUnderground.near` 調大。
 
