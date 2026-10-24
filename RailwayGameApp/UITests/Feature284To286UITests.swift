@@ -23,9 +23,18 @@ final class Feature284To286UITests: XCTestCase {
         defer { app?.terminate() }
         launch("double-platform")
         tap(app.buttons["dock.build"])
-        let controls = app.buttons["controls.toggle"]
-        if controls.appears(within: 5), controls.label == "展開控制項" { tap(controls) }
-        tap(app.segmentedControls.buttons["月台"].firstMatch)
+        // The track tool opens the details card by itself. On a slow
+        // runner the toggle's label was read before the app had drawn the
+        // track tool, still the Select tool's ("展開控制項"), and the
+        // toggle then folded the open card (main 30e3492's full lane, run
+        // 40076217572). So the card's own mode first, the toggle only when
+        // the card stays folded.
+        let platformMode = app.segmentedControls.buttons["月台"].firstMatch
+        if !platformMode.appears(within: 10) {
+            let controls = app.buttons["controls.toggle"]
+            if controls.appears(within: 5), controls.label == "展開控制項" { tap(controls) }
+        }
+        tap(platformMode)
         coordinate(stationPoint()).tap()
 
         let summary = element("inspector.status")

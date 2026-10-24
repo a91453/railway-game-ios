@@ -316,18 +316,24 @@ final class TutorialUITests: XCTestCase {
     /// stands elsewhere: a touch that began on the pill was cancelled as the
     /// step moved on, and the card did not open (main 6e86506's full lane,
     /// run 38709237236, the app's trace: cancelled 170 ms after it began).
-    /// Here the step waits eight seconds before it moves on
-    /// (`-tutorial-advance-ms`), and a press of twelve seconds, begun
-    /// before, is held across it; the next step's card is open. Four and
+    /// Here the step waits a while before it moves on
+    /// (`-tutorial-advance-ms`), and a longer press, begun before, is held
+    /// across it; the next step's card is open. Four and
     /// six were too short: the press began 4.4 s after Zoom out, when the
     /// pill had already moved, and fell on the map (main 01e3c9a's full
-    /// lane, run 39546432319, the app's trace).
+    /// lane, run 39546432319, the app's trace). Eight was too short on a
+    /// slow runner (main 30e3492's full lane, run 40076217572: XCTest asked
+    /// for the pill twice and checked for interruptions, 6 s, and the app,
+    /// at ten frames a second, had the touch 4 s after that, 10 s after
+    /// Zoom out). So the point is worked out before Zoom out, nothing is
+    /// asked between the two touches, and the step waits twenty seconds,
+    /// the press held thirty.
     func testATouchHeldOnTheFoldedCardAsTheStepMovesOnOpensIt() {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchArguments = [
             "-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
-            "-tutorial-step", "map.move", "-tutorial-advance-ms", "8000",
+            "-tutorial-step", "map.move", "-tutorial-advance-ms", "20000",
         ]
         app.launch()
         defer { app.terminate() }
@@ -337,13 +343,18 @@ final class TutorialUITests: XCTestCase {
         folded.waitUntilSettled()
         let zoomOut = app.buttons["Zoom out"]
         XCTAssertTrue(zoomOut.becomesHittable())
+        XCTAssertTrue(folded.label.contains("Zoom out to see both towns"), "Not the map step: \(folded.label)")
         let before = folded.frame
-        // Done: the step moves on eight seconds from now.
-        zoomOut.tap()
-        XCTAssertTrue(folded.label.contains("Zoom out to see both towns"), "The step moved on before the touch: \(folded.label)")
         // Near the pill's leading end, by the station master, which stays
-        // where it is whatever the next step's title.
-        folded.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.5)).press(forDuration: 12)
+        // where it is whatever the next step's title; measured now, as the
+        // pill stands until the step moves on.
+        let screen = app.frame
+        let pill = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(
+            dx: before.minX + before.width * 0.1 - screen.minX, dy: before.midY - screen.minY
+        ))
+        // Done: the step moves on twenty seconds from now.
+        zoomOut.tap()
+        pill.press(forDuration: 30)
         let progress = app.staticTexts.matching(identifier: "tutorial.progress").firstMatch
         XCTAssertTrue(
             card.appears(within: 5),
