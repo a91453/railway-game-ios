@@ -619,11 +619,15 @@ final class StartSaveFlowSmokeTests: XCTestCase {
     /// ViewThatFits exposes, or a menu row still being laid out) whether it
     /// is hittable fails the test outright ("Failed to determine
     /// hittability … Activation point invalid", full lane run 38296188423,
-    /// whose recording shows the menu drawn and still).
+    /// whose recording shows the menu drawn and still). The frame comes
+    /// from a snapshot, which a gone copy fails without failing the test: a
+    /// menu row can close between the query listing it and this read (main
+    /// 584bddd's full lane, run 40051175469: Train 5 was chosen, the menu
+    /// closed, and its row, listed 2 s before, was read as an element).
     private func touchable(_ element: XCUIElement) -> Bool {
-        let frame = element.frame
-        guard !frame.isEmpty, XCUIApplication().frame.contains(CGPoint(x: frame.midX, y: frame.midY)) else { return false }
-        return element.isHittable
+        guard let frame = try? element.snapshot().frame, !frame.isEmpty,
+              XCUIApplication().frame.contains(CGPoint(x: frame.midX, y: frame.midY)) else { return false }
+        return element.exists && element.isHittable
     }
 
     private func requiredButton(_ query: XCUIElementQuery, name: String) -> XCUIElement {

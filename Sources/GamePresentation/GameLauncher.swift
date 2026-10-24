@@ -106,6 +106,18 @@ public final class GameLauncher {
         didSet { session?.weatherSound = weatherSound }
     }
 
+    /// The app's link to Game Center (decision 396), told what to report
+    /// each time an achievement is checked or a challenge result kept;
+    /// `nil` reports nothing.
+    @ObservationIgnored public var reportToGameCenter: (@MainActor (GameCenterReport) -> Void)?
+
+    /// Everything Game Center should know now (decision 396): the
+    /// achievements unlocked and this week's best result, for the app to
+    /// send once the player is signed in.
+    public func gameCenterReport(at date: Date = Date()) -> GameCenterReport {
+        GameCenterReport(achievements: achievements, challenges: records, at: date)
+    }
+
     @ObservationIgnored let library: SaveLibrary
     /// Where the saves are written, one after another (decision 45,
     /// later): a save is encoded and written here, off the main thread,
@@ -430,6 +442,7 @@ public final class GameLauncher {
         recordLessonResult(of: session.world)
         guard records.record(session.world, at: date),
               let record = session.world.scenario.flatMap({ records.best[$0.scenario.id] }) else { return }
+        reportToGameCenter?(gameCenterReport(at: date))
         session.message = StatusMessage(kind: .success, text: language.text("New best! \(record.text(in: language))", "刷新紀錄！\(record.text(in: language))"))
     }
 
@@ -440,8 +453,12 @@ public final class GameLauncher {
     func checkAchievements(of session: GameSession, at date: Date = Date()) {
         // Decision 266: nor do the lessons count.
         guard !session.news.isDemo, session.tutorial == nil, session.lesson == nil, !session.world.economy.unlimitedFunds else { return }
-        let unlocked = achievements.unlock(meeting: AchievementFacts(world: session.world), at: date, only: Self.achievementScope(of: session.world))
+        let facts = AchievementFacts(world: session.world)
+        let scope = Self.achievementScope(of: session.world)
+        let unlocked = achievements.unlock(meeting: facts, at: date, only: scope)
         session.noteAchievements(unlocked)
+        // Decision 396: the progress too, so Game Center shows how far.
+        reportToGameCenter?(GameCenterReport(achievements: achievements, facts: facts, scope: scope, challenges: records, at: date))
     }
 
     /// Stamps the real stations `session`'s trains served yesterday

@@ -401,8 +401,16 @@ final class LessonUITests: XCTestCase {
 
     private func dismissGuide() {
         showGuide()
-        tap(app.buttons["tutorial.skip"])
-        XCTAssertTrue(app.buttons["tutorial.skip"].disappears(within: 5))
+        let skip = app.buttons["tutorial.skip"]
+        tap(skip)
+        // A touch on the card while it still slides in can be lost: main
+        // 584bddd's full lane (run 40051175469) found no hit point for Skip
+        // at its first try, and XCTest's own retry touched nothing, so the
+        // card stayed. Touch it once more, only while it is still there.
+        if !skip.disappears(within: 5), skip.exists {
+            tap(skip)
+        }
+        XCTAssertTrue(skip.disappears(within: 5))
     }
 
     private func pause() {
