@@ -1395,6 +1395,32 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 - N700S-G 的 B、E（門位、E 的鰭）沒有畫，中間車都是 C：要讓 set 有好幾種中間車。
 - E200 的遠景模型（現在 900 m 內都是 5,512 個三角形）；舊的 `Map3DTrainLocomotive.e200` 不再被 set 用到，可以一併清掉。
 - 作者的 N700ST（橘色，私庫 `Railway/n700s-n700st-2026-10-24/n700st/`）沒有接；要接時同 N700S-G：`decimate.py` 加一組 `UNITS`／`COLOURS`。
+- **使用者給的參考照片（2026-10-25，減面版實機檢查時對照用；在 session_01EYjQttfohUR8HPL2aYisHw 的對話裡）**：六張真的台灣高鐵 N700ST，有側面線圖、700T／N700ST 並排的海報、出廠與卸船的照片。照片有著作權（線圖是 CC BY-NC-ND，其他是新聞與官方宣傳照），**不放進任何一個 repo**，只照下面這些特徵檢查減面後的樣子：
+  - 鼻：長而低、上下扁的「鴨嘴」，鼻尖寬而圓。兩側從車身肩部往前有一道銳利的稜線，把鼻分成上面的圓背與兩側往下收的「翼」（N700S 的 dual-supreme-wing，700T 沒有這道稜線）。
+  - 駕駛室：一個獨立凸起的透明圓罩，在鼻的後段，四周是黑色的玻璃框。
+  - 頭燈：細長的「眼」，在兩翼的稜線上、鼻的中段，不是在鼻尖。
+  - 下半：鼻下與裙部是一整片淺灰（不是黑），從鼻尖一路接到轉向架。
+  - 車窗：小，四角圓，一排間距大；門在頭車駕駛室後面。
+  - 真車的塗裝是橘帶加一條深藍細線，在門附近往下斜切到裙部；遊戲的 N700S-G 照作者給的深綠兩條線（決策 408 不叫它 N700ST），要不要另做橘色的 N700ST 由接手的 session 依五方決定。
+
+**列車建模照 700T 升級（使用者 2026-10-25：「寫一份 700T 參考後更新現有 3D 製作模組……寫出更新腳本讓列車產生更好看」；新工作，交給新 session，本 session 已壓縮兩次）**：#1201 的 700T（`Map3DTrainShapeRefresh.refreshHighSpeed`）使用者說「好漂亮」，要把它的做法搬進現有的列車建模，讓用建模產生的列車一起變好看。新 session 先在 #1041 認領（新決策號、存檔／golden 不動）。
+- **要改的**：`Map3DTrainBuilder`（`Sources/GamePresentation/Map3DModels.swift`，決策 230；`Map3DTrainStyle.all` 的 commuter、express、highSpeed、metro、peopleMover，與 `Map3DTrainSet.multipleUnit` 每一款場景套件列車的中間車），與 `SceneKitCab`（`Map3DSceneKitCabs.swift`，那些列車的頭車）。
+- **700T 好看在哪**（逐項搬，每項一張前後對照）：
+  1. 斷面：超橢圓（`surface(x,a)`，側面指數 0.58、上下 0.65）一圈 40 段，車身圓潤；現在 `ring(at:t:)` 段數少、角硬。
+  2. 鼻：沿車長一張高、寬的表（`dimensions(x)`），再加肩部隆起（高斯 `swell`）與下方整流罩（`ease`），鼻的輪廓是量出來的曲線，不是 `drop`／`lift`／`tuck` 三個參數。
+  3. 塗裝：色帶照多邊形精確切開（`clip`、`hullParts`、`nosePaintParts`），邊緣銳利、順著鼻往下收（`bandHeight`），兩端蓋板同樣切開，不留 T 形接縫；現在是頂點色依高度上色，邊緣會暈開。
+  4. 窗：圓角（`refreshRoundedOutline`，十二點）、外框加內嵌玻璃兩層（框比玻璃大 0.07 m），貼著車身的曲面（`flank`）；現在是方塊。
+  5. 風擋：照鼻的曲面映射的圓角梯形，玻璃分小格跟著曲率、四周黑框，有車身在後面撐住，不是一片貼片。
+  6. 燈：燈罩加兩顆真的燈（`tunnelLamp`），貼在鼻面、沿面的切線擺；頭車白、尾車紅（`Map3DTrainSet.lit(_:front:)`）。
+  7. 顏色只用調色盤（`Map3DPalette`），霧面平塗、每個三角形自己的法線（`.flat`）。
+- **要守的**：
+  - 700T、E200、N700S-G 的 `refresh-*` 模型一個位元組都不變（決策 408 那次用的頂點 FNV checksum 測試，比對完不 commit）。
+  - Codex 的列車（列車包、蒸汽機車等）不碰。
+  - 三角形預算：建模的列車很多、多數沒有遠景，中間車建議 ≤ 2,000、頭車 ≤ 4,000（現在約 400–1,100；700T 是 5,600–9,100，只在 500 m 內畫）。超過時同決策 408 加 `nearOnly` 與遠景 `far`。
+  - 先讀 `.claude/skills/art-style/SKILL.md`。
+  - `Map3DTrainSetTests` 的三角形與尺寸範圍、`Map3DModelTests`、`Map3DSceneKit*Tests` 跟著改，並寫明為什麼。
+- **怎麼做比較穩**：把 700T 配方裡跟車型無關的部分（超橢圓斷面、多邊形切色帶、圓角窗、曲面風擋、燈）抽成共用的函式。`refreshHighSpeed` 改呼叫它們時，checksum 要不變；不變就改呼叫，會變就先複製一份。`Map3DTrainBuilder` 再用同一組函式，一次換一項、每項出前後對照圖（`tools/hsr-trains-408/` 的 export 與 `render.mjs` 可以照抄），給使用者看過再合併。
+- **參考**：私庫的 `Railway/train-shape-refresh-2026-10-24/`（#1200／#1201 的照片與七向圖），`docs/art/train-shape-refresh-2026-10-24/README.md`。
 
 **接手**：3D 生活感 session 做完第 2 節的四步之後，由遊戲規劃排序。
 
