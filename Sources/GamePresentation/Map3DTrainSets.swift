@@ -91,7 +91,8 @@ public struct Map3DTrainSet: Sendable {
             // their locomotive, the last coach's end lit red.
             // Decision 408: the E200 as #1201's, its front lamps lit.
             hauled("E200CK", head: { lit(Map3DTrainShapeRefresh.model("refresh-e200"), front: true) }, coach: chuKuang),
-            hauled("E500CK", locomotive: .e500, coach: chuKuang),
+            e500Hauled("E500CK", coach: chuKuang),
+            e500Hauled("E500CK", far: true, coach: chuKuang),
             hauled("R100CK", locomotive: .r100, coach: chuKuang),
             hauled("R200CK", locomotive: .r200, coach: chuKuang),
             // Decision 286: the Blue Train's R135 and its old blue coaches.
@@ -99,10 +100,12 @@ public struct Map3DTrainSet: Sendable {
                    coach: coach(TrainLivery.blueTrain, band: 0.38...0.43)),
             // Decision 286, later: the Ming-Ri's black coaches with their
             // orange line behind the E500.
-            hauled("MINGRI", locomotive: .e500, coach: coach(TrainLivery.mingRi, band: 0.38...0.43)),
+            e500Hauled("MINGRI", coach: coach(TrainLivery.mingRi, band: 0.38...0.43)),
+            e500Hauled("MINGRI", far: true, coach: coach(TrainLivery.mingRi, band: 0.38...0.43)),
             // Decision 286, later (third): the Formosa Star's pink coaches
             // behind the E500.
-            hauled("STAR", locomotive: .e500, coach: coach(TrainLivery.formosaStar, band: 0.38...0.43)),
+            e500Hauled("STAR", coach: coach(TrainLivery.formosaStar, band: 0.38...0.43)),
+            e500Hauled("STAR", far: true, coach: coach(TrainLivery.formosaStar, band: 0.38...0.43)),
             // Decision 286, later (fourth): the Midsummer Formosa's
             // Chu-Kuang coaches; decision 399: behind #1103's steam
             // locomotive and its tender, in place of the black hood unit.
@@ -193,7 +196,7 @@ public struct Map3DTrainSet: Sendable {
 
     /// Decision 408: and the 700T and the N700S-G, 5,600 to 9,100 a car
     /// (their ``far`` sets between).
-    static let nearOnly: Set = ["greenTram", "SUMMER", "STEAM", "highSpeed", "n700sG", "emu3000"]
+    static let nearOnly: Set = ["E500CK", "MINGRI", "STAR", "greenTram", "SUMMER", "STEAM", "highSpeed", "n700sG", "emu3000"]
 
     /// Decision 408: the set a train of `key` numbered `number` is drawn
     /// as: half the high-speed trains, the odd-numbered, the N700S-G, the
@@ -279,6 +282,12 @@ public struct Map3DTrainSet: Sendable {
     }
 
     // MARK: Building
+
+    /// E500-only substitution. Retains the original coaches and all pack/lock/fallback lookup rules.
+    static func e500Hauled(_ key: String, far: Bool = false, coach: Coach) -> Map3DTrainSet {
+        let legacy = hauled(key, head: { Map3DE500.model(far: far) }, coach: coach)
+        return Map3DTrainSet(key: far ? key+"Far" : key, ownLengths: true, far: far ? nil : key+"Far", build: legacy.build)
+    }
 
     static func hauled(_ key: String, locomotive: Map3DTrainLocomotive, coach: Coach, lastIsLocomotive: Bool = false) -> Map3DTrainSet {
         hauled(key, head: { locomotive.model }, coach: coach, lastIsLocomotive: lastIsLocomotive)
