@@ -114,6 +114,8 @@ public enum TutorialTarget: String, CaseIterable, Hashable, Sendable {
     /// map and the selected line (decision 196), for lesson 2 (decision
     /// 390).
     case addSelectedStation = "line.addSelectedStation"
+    /// The bus tool (decision 400, 10i-5): no step points at it yet.
+    case busTool = "tool.bus"
 
     /// Whether the control is in the details card, which a step pointing
     /// at it opens (``TutorialStep/usesDetailsCard``).
@@ -132,7 +134,7 @@ public enum TutorialTarget: String, CaseIterable, Hashable, Sendable {
         case .network: self = .networkTool
         case .train: self = .trainTool
         case .building: self = .buildingTool
-        case .bus: return nil
+        case .bus: self = .busTool
         }
     }
 }
