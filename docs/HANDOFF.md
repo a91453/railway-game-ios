@@ -337,6 +337,17 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**2026-10-25 14:10 UTC 的現況（session_0164nEyu2aMPVTpvQww43kj1）**。和下面「第十三次換手」不同時以這段為準。
+- 88.1 上傳成功（run #88，c4fc5b6）。full lane（run 40192919013）第 1 次紅 3 支舊的不穩測試，14:03 重跑失敗的 job；綠了才告訴作者可以做 export compliance、加測試群組。88.1 已上傳，重跑測的是 c4fc5b6，main 往前走不影響，所以**凍結已解除**：#1241（交接）、#1237（預覽只留 PNG）已合。
+- 做中的 session：
+  | session | 做什麼 | 下一步 |
+  | --- | --- | --- |
+  | session_01LARTBYik4n6iAeQXeQs8z4 | 作者實機回報：3D 跟車高鐵「後方」視角 N700S-G 車廂沒跟軌道、車頭外殼分開（PLAYER_FEEDBACK 88.1 #1） | 只動 GamePresentation，先做紅的回歸測試；綠了說「可合併」 |
+  | session_01E4WpZZcxv2EC9rroJFg6ka | 獨立審查 #1232（存檔 74）與 #1239（10j-3），兩個 PR 的 CI 都已綠 | 審查沒有擋合併的問題就照 §1.2 合（一次一個 GameCore；#1239 先轉 ready） |
+  | session_01ATrwF1t4xfwDoTrLvMvRAY | full lane 不穩的 5 支 UI 測試修穩，順便查 `full-lane-watch.yml` 為什麼沒在 #1041 留言 | 用 `only_testing` 每支綠 2 次再開 PR |
+- 審查點數：#1189–#1241 已合的程式 PR 約 28 點，#1232、#1239 合了就過 30，開審查 I。
+- 等作者：遊戲內成就清單改用 Game Center 的 38 張圖（PLAYER_FEEDBACK 88.1 #2，NEXT_PRIORITIES §22.2「等作者」）。
+
 **第十三次換手（2026-10-25 12:40 UTC，session_0138XhXTjToUd3fpKV7kebeH 壓縮 5 次，作者說「交接」→ 作者從 claude.ai 開的新規劃）**。新任開工：讀第 1 節、這一段；#1041 只讀「session_0138XhXTjToUd3fpKV7kebeH（遊戲企劃）壓縮第 5 次」那則之後的留言。和下面「第十二次換手」不同時以這段為準。前任超過 §1「第 3 次壓縮快到時換」才換，下一任照表在第 3 次壓縮前換。
 
 - **88.1（0.5.0）發版中，main 凍結**（10-25 12:25 UTC 起）。發版 commit 是 main 的 **c4fc5b6**（#1240 What to Test 的合併）：`ci.yml` run 40192915948 綠；它自己的 full lane（`ios-build.yml` run 40192919013，作者 12:23 手動開）還在跑，預計 13:30–13:50 UTC 結束，smoke 那個 job 最慢。
