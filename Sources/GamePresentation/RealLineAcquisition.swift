@@ -16,17 +16,63 @@ import GameCore
 // table): its data (the timetable, the stations' riders) and the ground
 // demo's layout are what is reused.
 
-/// A TRA branch line a company can buy (decision 315).
+/// A TRA branch line a company can buy (decision 315), or a light rail
+/// (decision 400, 10j-2).
 public struct RealBranchLine: Hashable, Sendable {
-    /// Its `tra.json` id: `PINGXI`.
+    /// Its `tra.json` id (`PINGXI`), or its line's id in its system's
+    /// `<system>.json` (`VB`).
     public let network: String
     public let english: String
     public let chinese: String
     /// Its stations by their Chinese names, the junction first.
     public let stops: [String]
+    /// The site's system of its stations and track: `tra_sched`, `ntdlrt`.
+    public let system: String
+    /// Decision 400: the line already bought that it shares its first
+    /// stations with (`ntdlrt:V`), when it is laid only from where they
+    /// part; `nil` for the whole line.
+    public let after: String?
 
-    /// The name GameCore records it by (``LineAcquisition/realLine``).
-    public var id: String { "tra:\(network)" }
+    public init(network: String, english: String, chinese: String, stops: [String], system: String = RealBranchLine.tra, after: String? = nil) {
+        self.network = network
+        self.english = english
+        self.chinese = chinese
+        self.stops = stops
+        self.system = system
+        self.after = after
+    }
+
+    /// The name GameCore records it by (``LineAcquisition/realLine``):
+    /// `tra:PINGXI`, `ntdlrt:VB`.
+    public var id: String { system == Self.tra ? "tra:\(network)" : "\(system):\(network)" }
+
+    public static let tra = "tra_sched"
+
+    /// Whether it is a light rail rather than a TRA branch line.
+    var isLightRail: Bool { system != Self.tra }
+
+    /// Whether it is laid with a second track beside the first.
+    var isDoubleTrack: Bool { isLightRail || Self.doubleTrack.contains(network) }
+
+    /// Cars of its trains: the DR1000's three on the branch lines
+    /// (decision 315's reference row), as the demo's on the light rails
+    /// (``DemoRealLines/cars(ofSystem:)``).
+    var cars: Int { isLightRail ? DemoRealLines.cars(ofSystem: system) : RealLineAcquisition.carsPerTrain }
+
+    /// Whether its price pays for the riders of its first station: not at a
+    /// branch line's junction, which is the main line's, nor where a light
+    /// rail joins the one bought before, whose riders that paid for.
+    var paysForFirstStop: Bool { isLightRail && after == nil }
+
+    /// The light rails on sale (decision 400, 10j-2): their system, line,
+    /// names and the line whose first stations they share. Kaohsiung's
+    /// Circular Light Rail is not: its trains run one way round the loop,
+    /// and a line of the game runs end to end and turns back.
+    static let lightRails: [(system: String, network: String, english: String, chinese: String, shares: String?)] = [
+        ("ntdlrt", "V", "Danhai LRT Green Mountain Line", "淡海輕軌綠山線", "ntdlrt:VB"),
+        ("ntdlrt", "VB", "Danhai LRT Blue Coast Line", "淡海輕軌藍海線", "ntdlrt:V"),
+        ("ntalrt", "K", "Ankeng LRT", "安坑輕軌", nil),
+    ]
 
     public func name(in language: DisplayLanguage) -> String {
         language.text(english, chinese)
@@ -46,6 +92,33 @@ public struct RealBranchLine: Hashable, Sendable {
     /// beside the first (decision 315's later note); the others run on a
     /// single track with passing loops.
     static let doubleTrack: Set<String> = ["LIUJIA", "SHALUN"]
+}
+
+/// How a line's stations are laid (decision 315; decision 400 for the
+/// light rails): how far each loop reaches from its station, how long it
+/// takes to move out, how far it stands off the track it leaves, and how
+/// many deep the loops of an end station may lie either side.
+struct RealLineLayout {
+    let loopReach: Double
+    let loopRamp: Double
+    let loopOffset: Double
+    let endLevels: Int
+
+    /// A branch line's: the ground demo's loops, one either side.
+    static let branch = RealLineLayout(
+        loopReach: RealWorldDemo.loopReach, loopRamp: RealWorldDemo.loopRamp, loopOffset: RealWorldDemo.groundLoopOffset, endLevels: 1
+    )
+    /// A light rail's: its stations 500 m to 1.4 km apart and its trains
+    /// short, a loop reaches 100 m and moves out over 50 m; the trains an
+    /// end stands at once on loops two deep either side, the outer one its
+    /// ramp further out and longer, so neither crosses the other.
+    static let lightRail = RealLineLayout(
+        loopReach: 100 * RealLineAcquisition.metre, loopRamp: 50 * RealLineAcquisition.metre, loopOffset: RealWorldDemo.groundLoopOffset, endLevels: 2
+    )
+
+    /// The `level`th loop out (from 1): its reach and its ramp.
+    func reach(level: Int) -> Double { loopReach + Double(level - 1) * loopRamp }
+    func ramp(level: Int) -> Double { Double(level) * loopRamp }
 }
 
 /// A real line bought, as the session laid it out: every node, edge,
@@ -113,6 +186,9 @@ public struct RealLineAcquisition: Hashable, Sendable, Codable {
     public let runs: [LineRun]
     public let trains: [Start]
     public let cars: Int
+    /// Decision 400: the type of its trains, the game's light metro on a
+    /// light rail; `nil` for the game's first (and in the logs of before).
+    public let trainType: TrainType?
     /// The real riders a day of its stations past the junction (decision
     /// 298), which its price pays for.
     public let dailyRiders: Int64
@@ -120,6 +196,24 @@ public struct RealLineAcquisition: Hashable, Sendable, Codable {
     /// map bought tile by tile, in the order they are bought, each beside
     /// one owned by then; `nil` for none (and in the logs of before).
     public let tiles: [MapTile]?
+
+    public init(
+        realLine: String, pieces: [Piece], stops: [Stop], platforms: [Platform], lineName: String, color: LineColor?, runs: [LineRun],
+        trains: [Start], cars: Int, trainType: TrainType? = nil, dailyRiders: Int64, tiles: [MapTile]?
+    ) {
+        self.realLine = realLine
+        self.pieces = pieces
+        self.stops = stops
+        self.platforms = platforms
+        self.lineName = lineName
+        self.color = color
+        self.runs = runs
+        self.trains = trains
+        self.cars = cars
+        self.trainType = trainType
+        self.dailyRiders = dailyRiders
+        self.tiles = tiles
+    }
 
     /// Cars per train: the DR1000's three (decision 315's reference row).
     static let carsPerTrain = 3
@@ -239,17 +333,31 @@ extension GameSession {
     private func workOutRealLineSale() -> RealLineSale {
         guard let railways, let frame = RealWorldFrame(world: world) else { return RealLineSale(lines: [], partlyOnTheMap: [], bought: false) }
         var sale = RealLineSale(lines: [], partlyOnTheMap: [], bought: false)
-        for network in RealBranchLine.names.keys.sorted() {
-            guard let runs = railways.branchRuns[network], let names = RealBranchLine.names[network] else { continue }
-            let line = RealBranchLine(network: network, english: names.english, chinese: names.chinese, stops: runs.stops)
+        var lines = RealBranchLine.names.keys.sorted().compactMap { network -> RealBranchLine? in
+            guard let runs = railways.branchRuns[network], let names = RealBranchLine.names[network] else { return nil }
+            return RealBranchLine(network: network, english: names.english, chinese: names.chinese, stops: runs.stops)
+        }
+        // Decision 400: the light rails; one sharing its first stations
+        // with a line bought, from where they part, or not at all where its
+        // trips from there do not fit.
+        for rail in RealBranchLine.lightRails {
+            let id = "\(rail.system):\(rail.network)"
+            let after = rail.shares.flatMap { world.acquisition(of: $0) == nil ? nil : $0 }
+            guard let runs = railways.metroRuns[after.map { "\(id) after \($0)" } ?? id] else {
+                if world.acquisition(of: id) != nil { sale.bought = true }
+                continue
+            }
+            lines.append(RealBranchLine(network: rail.network, english: rail.english, chinese: rail.chinese, stops: runs.stops, system: rail.system, after: after))
+        }
+        for line in lines {
             guard world.acquisition(of: line.id) == nil else {
                 sale.bought = true
                 continue
             }
-            let onTheMap = runs.stops.count { name in
-                realPoint(of: name, railways: railways, frame: frame).map { world.bounds.contains($0.plan) } ?? false
+            let onTheMap = line.stops.count { name in
+                realPoint(of: name, system: line.system, railways: railways, frame: frame).map { world.bounds.contains($0.plan) } ?? false
             }
-            if onTheMap == runs.stops.count {
+            if onTheMap == line.stops.count {
                 sale.lines.append(line)
             } else if onTheMap > 0 {
                 sale.partlyOnTheMap.append(line)
@@ -287,9 +395,10 @@ extension GameSession {
     }
 
     /// The branch line on sale that real station `name` (its Chinese name)
-    /// is on past its junction, if any.
-    public func buyableRealLine(through name: String) -> RealBranchLine? {
-        buyableRealLines.first { $0.stops.dropFirst().contains(name) }
+    /// is on past its junction, if any; or, of `system`, the line on sale
+    /// of that system (a light rail's first station is its own).
+    public func buyableRealLine(through name: String, system: String = RealBranchLine.tra) -> RealBranchLine? {
+        buyableRealLines.first { $0.system == system && ($0.paysForFirstStop ? $0.stops[...] : $0.stops.dropFirst()).contains(name) }
     }
 
     /// The branch line on sale that station `id` stands on past its
@@ -297,7 +406,7 @@ extension GameSession {
     public func buyableRealLine(at id: StationID) -> RealBranchLine? {
         guard let station = world.station(id: id), !station.isDepot,
               let place = nearestRealStation(to: station.point) else { return nil }
-        return place.stations.lazy.filter { $0.system.id == "tra_sched" }.compactMap { self.buyableRealLine(through: $0.chinese) }.first
+        return place.stations.lazy.compactMap { self.buyableRealLine(through: $0.chinese, system: $0.system.id) }.first
     }
 
     /// Opens the purchase card for `line`, laid out and priced now.
@@ -305,8 +414,8 @@ extension GameSession {
         shownRealLineOffer = realLineOffer(for: line)
     }
 
-    private func realPoint(of name: String, railways: RealRailways, frame: RealWorldFrame) -> WorldVector? {
-        railways.stations.first { $0.id == "tra_sched|\(name)" }.map {
+    private func realPoint(of name: String, system: String, railways: RealRailways, frame: RealWorldFrame) -> WorldVector? {
+        railways.stations.first { $0.id == "\(system)|\(name)" }.map {
             WorldVector(frame.worldPosition(latitude: $0.coordinate.latitude, longitude: $0.coordinate.longitude))
         }
     }
@@ -327,22 +436,25 @@ extension GameSession {
                 "這條線經過的地和你的地不相連。先用「擴建地圖」買到這條線旁邊，再收購。"
             )
         }
-        guard let railways, let frame = RealWorldFrame(world: world), let runs = railways.branchRuns[line.network],
+        let runsKey = line.isLightRail ? line.after.map { "\(line.id) after \($0)" } ?? line.id : line.network
+        guard let railways, let frame = RealWorldFrame(world: world),
+              let runs = line.isLightRail ? railways.metroRuns[runsKey] : railways.branchRuns[runsKey],
               let traces = realRailwayTraces else {
             return refused("This map has no real railway to buy.", "這張地圖沒有可以收購的真實鐵路。")
         }
         guard world.acquisition(of: line.id) == nil else {
             return refused("This line is already yours.", "這條線已經是你的了。")
         }
-        let points = runs.stops.compactMap { realPoint(of: $0, railways: railways, frame: frame) }
+        let points = runs.stops.compactMap { realPoint(of: $0, system: line.system, railways: railways, frame: frame) }
         guard points.count == runs.stops.count, points.allSatisfy({ world.bounds.contains($0.plan) }) else {
             return refused("The whole line is not on this map.", "這張地圖框不住整條線。")
         }
         // The real line's way from the junction to the terminal, run on
         // straight past each end (Checheng stands 81 m past the end of
         // the Jiji Line's drawing).
-        let reach = RealLineAcquisition.stationReach
-        guard let first = traces.snap(points[0], within: reach),
+        // A light rail's own track, not the metro's beside it.
+        let reach = RealLineAcquisition.stationReach, ownSystem = line.isLightRail ? line.system : nil
+        guard let first = traces.snap(points[0], within: reach, system: ownSystem),
               let last = traces.snap(points[points.count - 1], within: reach, group: traces.groups[first.place.line]),
               let way = traces.path(from: first.place, to: last.place) else {
             return refused("The real line's track could not be followed here.", "這裡沒辦法沿著真實鐵路鋪軌。")
@@ -398,14 +510,16 @@ extension GameSession {
         // Each station level, its loops' stretch with it. On a double track
         // a station between the ends has the second track's platform too,
         // and a loop only on the other side.
-        let half = Double(Int64(RealLineAcquisition.carsPerTrain + 1) * Train.carLength) / 2
-        let platformLength = Int64(RealLineAcquisition.carsPerTrain + 1) * Train.carLength
-        let double = RealBranchLine.doubleTrack.contains(line.network)
+        let cars = line.cars
+        let half = Double(Int64(cars + 1) * Train.carLength) / 2
+        let platformLength = Int64(cars + 1) * Train.carLength
+        let double = line.isDoubleTrack
+        let layout = line.isLightRail ? RealLineLayout.lightRail : .branch
         var forced = [0, path.length]
         var levels: [TrackRise.Level] = []
         var zones: [ClosedRange<Double>] = []
         var spans: [ClosedRange<Double>] = []
-        var loopSpans: [(stop: Int, a: Double, b: Double, offsets: [Double])] = []
+        var loopSpans: [(stop: Int, a: Double, b: Double, offset: Double, ramp: Double)] = []
         for (index, name) in runs.stops.enumerated() {
             let at = along[index].along
             let zone = (at - half)...(at + half)
@@ -414,16 +528,24 @@ extension GameSession {
             let loops = (runs.tracks[name] ?? 1) - (between ? 2 : 1)
             // A positive offset is on the right going up the line; on a
             // double track the second track is on the left, so a loop
-            // between the ends is on the right.
-            let offset = RealWorldDemo.groundLoopOffset
-            let sides = between ? [offset] : [offset, -offset]
+            // between the ends is on the right. An end station's loops lie
+            // either side, the deeper ones (decision 400) further out.
+            let offset = layout.loopOffset
+            let sides = between
+                ? [(offset, 1)]
+                : (1...layout.endLevels).flatMap { level in [(Double(level) * offset, level), (-Double(level) * offset, level)] }
             guard loops <= sides.count else {
                 return refused("A station of the line has no room for its tracks here.", "這條線有一站放不下它要的股道。")
             }
             let span: ClosedRange<Double>
             if loops > 0 {
-                span = (at - RealWorldDemo.loopReach)...(at + RealWorldDemo.loopReach)
-                loopSpans.append((index, span.lowerBound, span.upperBound, Array(sides.prefix(loops))))
+                let deepest = sides.prefix(loops).map(\.1).max() ?? 1
+                span = (at - layout.reach(level: deepest))...(at + layout.reach(level: deepest))
+                for (side, level) in sides.prefix(loops) {
+                    let reach = layout.reach(level: level)
+                    loopSpans.append((index, at - reach, at + reach, side, layout.ramp(level: level)))
+                    forced += [at - reach, at + reach]
+                }
             } else {
                 span = (zone.lowerBound - RealWorldDemo.platformMargin)...(zone.upperBound + RealWorldDemo.platformMargin)
             }
@@ -449,16 +571,21 @@ extension GameSession {
             forced += [a, a + ramp, b - ramp, b]
             second = (a, b)
         }
-        let carried = railways.structures?.stretches(along: path, frame: frame, system: "tra_sched") ?? []
+        let carried = railways.structures?.stretches(along: path, frame: frame, system: line.system) ?? []
         guard let rise = TrackRise(path: path, ground: ground, water: water, levels: levels, carried: carried) else {
             return refused(
                 "The track cannot climb along this line within the steepest grade.",
                 "沿這條線的高低差超過遊戲的坡度上限，鋪不上去。"
             )
         }
-        let ramps = second.map { [$0.a...($0.a + ramp), ($0.b - ramp)...$0.b] } ?? []
+        // Not cut close over the second track's ramps: an edge of the
+        // first cut short in one would meet the second's whole ramp at the
+        // joint with tangents of different lengths, and a train keeping
+        // left (decision 202) would tell the two ways apart by their
+        // rounding, not by the side they lead to (Danhai's Blue Coast Line
+        // sent its trains back on the wrong track).
         let main = RealWorldDemo.TrackPlan(
-            path, forced: forced, avoiding: zones, close: loopSpans.map { $0.a...$0.b } + ramps, rise: rise, structure: .automatic
+            path, forced: forced, avoiding: zones, close: loopSpans.map { $0.a...$0.b }, rise: rise, structure: .automatic
         )
         var plans: [(plan: RealWorldDemo.TrackPlan, start: RealLineAcquisition.NodeAt?, end: RealLineAcquisition.NodeAt?, together: Bool)] = [
             (main, nil, nil, false),
@@ -479,8 +606,8 @@ extension GameSession {
             platformsAt += zones.indices.dropFirst().dropLast().map { ($0, plans.count - 1, zones[$0]) }
         }
         for loop in loopSpans {
-            for offset in loop.offsets {
-                let loopPath = path.offset(from: loop.a, to: loop.b, by: offset, ramp: RealWorldDemo.loopRamp)
+            for offset in [loop.offset] {
+                let loopPath = path.offset(from: loop.a, to: loop.b, by: offset, ramp: loop.ramp)
                 guard let loopRise = TrackRise(
                     path: loopPath, ground: ground, water: water, levels: [TrackRise.Level(0...loopPath.length, at: Double(rise.node(at: loop.a)))]
                 ), let startNode = main.node(at: loop.a), let endNode = main.node(at: loop.b),
@@ -512,15 +639,25 @@ extension GameSession {
             )
         }
 
-        // The stations: the company's own by the junction, if it has one.
+        // The stations: the company's own by the junction, if it has one;
+        // and, decision 400, any other by its real name within 450 m (a
+        // transfer to the company's line, or the line bought before): the
+        // line's platforms join it.
         let junctionStation = world.stations
             .filter { (WorldVector($0.location) - points[0]).length <= RealLineAcquisition.junctionReach }
             .min { (WorldVector($0.location) - points[0]).length < (WorldVector($1.location) - points[0]).length }
+        func sameName(_ index: Int) -> StationID? {
+            let real = railways.stations.first { $0.id == "\(line.system)|\(runs.stops[index])" }
+            let names = Set([runs.stops[index], real?.name(in: language)].compactMap { $0 })
+            return world.stations
+                .filter { !$0.isDepot && names.contains($0.name) && (WorldVector($0.location) - points[index]).length <= RealLineAcquisition.junctionReach }
+                .min { (WorldVector($0.location) - points[index]).length < (WorldVector($1.location) - points[index]).length }?.id
+        }
         let stops = runs.stops.enumerated().map { index, name in
             let at = path.point(at: along[index].along).plan
-            let real = railways.stations.first { $0.id == "tra_sched|\(name)" }
+            let real = railways.stations.first { $0.id == "\(line.system)|\(name)" }
             return RealLineAcquisition.Stop(
-                name: real?.name(in: language) ?? name, at: at, existing: index == 0 ? junctionStation?.id : nil, demand: newStationDemand(at: at)
+                name: real?.name(in: language) ?? name, at: at, existing: index == 0 ? junctionStation?.id : sameName(index), demand: newStationDemand(at: at)
             )
         }
         let platforms = platformsAt.map {
@@ -528,17 +665,25 @@ extension GameSession {
         }
 
         // The trains where the real ones stand at midnight, one to a track,
-        // each facing up the line but at the terminal.
+        // each facing up the line but at the terminal. Decision 400: a light
+        // rail's train an end has no track for stands at a station between,
+        // on the track toward the end nearer it, facing it.
         var starts: [RealLineAcquisition.Start] = []
+        let lastStop = runs.stops.count - 1
         for (name, count) in runs.overnight.sorted(by: { $0.key < $1.key }) {
             guard let stop = runs.stops.firstIndex(of: name) else { continue }
-            let tracks = platformsAt.filter { $0.stop == stop }
+            var tracks = platformsAt.filter { $0.stop == stop }
+            var forward = stop < lastStop
+            if double, stop > 0, stop < lastStop {
+                forward = 2 * stop > lastStop
+                tracks = forward ? tracks.filter { $0.piece != 0 } + tracks.filter { $0.piece == 0 } : tracks
+            }
             guard count <= tracks.count else {
                 return refused("The line's trains have no room to stand overnight.", "這條線的列車晚上沒有地方停。")
             }
             for track in tracks.prefix(count) {
                 starts.append(RealLineAcquisition.Start(
-                    name: "", at: RealLineAcquisition.PieceAt(piece: track.piece, distance: track.zone.lowerBound), forward: stop < runs.stops.count - 1
+                    name: "", at: RealLineAcquisition.PieceAt(piece: track.piece, distance: track.zone.lowerBound), forward: forward
                 ))
             }
         }
@@ -554,16 +699,16 @@ extension GameSession {
                 days: run.days.reduce(0) { $0 | 1 << $1 }
             )
         }
-        let riders = runs.stops.dropFirst().reduce(Int64(0)) { total, name in
-            guard let real = railways.stations.first(where: { $0.id == "tra_sched|\(name)" }) else { return total }
+        let riders = (line.paysForFirstStop ? runs.stops[...] : runs.stops.dropFirst()).reduce(Int64(0)) { total, name in
+            guard let real = railways.stations.first(where: { $0.id == "\(line.system)|\(name)" }) else { return total }
             return total + Int64(railways.ridership?.riders(of: real, data: railways.stationData) ?? 0)
         }
-        let color = railways.lines.first { $0.system.id == "tra_sched" && $0.name.hasPrefix(line.chinese) }
+        let color = railways.lines.first { line.isLightRail ? $0.lineKey == "\(line.system)|\(line.network)" : $0.system.id == RealBranchLine.tra && $0.name.hasPrefix(line.chinese) }
             .flatMap { LineColor(rgb: Int($0.palette.color.red) << 16 | Int($0.palette.color.green) << 8 | Int($0.palette.color.blue)) }
         func acquisition(buying tiles: [MapTile]) -> RealLineAcquisition {
             RealLineAcquisition(
                 realLine: line.id, pieces: pieces, stops: stops, platforms: platforms, lineName: lineName, color: color, runs: lineRuns,
-                trains: starts, cars: RealLineAcquisition.carsPerTrain, dailyRiders: min(riders, LineAcquisition.maximumDailyRiders),
+                trains: starts, cars: cars, trainType: line.isLightRail ? .c : nil, dailyRiders: min(riders, LineAcquisition.maximumDailyRiders),
                 tiles: tiles.isEmpty ? nil : tiles
             )
         }
@@ -714,7 +859,12 @@ extension GameSession {
         try world.setLineTrainsInService(line.id, to: TrainsInService(peak: count, offPeak: count, low: count))
         let length = Int64(acquisition.cars + 1) * Train.carLength
         for start in acquisition.trains {
-            let train = try world.purchaseTrain(named: start.name).id
+            let train: TrainID
+            if let type = acquisition.trainType {
+                train = try world.purchaseTrain(named: start.name, as: type).id
+            } else {
+                train = try world.purchaseTrain(named: start.name).id
+            }
             try world.setTrainCars(train, to: acquisition.cars)
             let (on, at) = try berth(start.at, length: length)
             let edgeLength = world.network.edge(on)?.length ?? 0
