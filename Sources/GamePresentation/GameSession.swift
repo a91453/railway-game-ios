@@ -2901,8 +2901,17 @@ public final class GameSession {
     /// Undo takes both back; a game that starts does it for the stations
     /// built while the app had no population. Not an edit: nothing to undo.
     public func readLandRoundStations() {
+        readLandRoundStations(roads: nil)
+    }
+
+    /// ``readLandRoundStations()``, the roads in `roads` read off the main
+    /// actor already (decision 400's sequel): the same roads, not read
+    /// again.
+    func readLandRoundStations(roads: RoadsReadAhead?) {
         var read = world
-        Self.readLand(roundStationsOf: &read, population: population, places: places, water: water, coverage: coverage, baseMap: baseMap)
+        Self.readLand(
+            roundStationsOf: &read, population: population, places: places, water: water, coverage: coverage, baseMap: baseMap, roads: roads
+        )
         // Decision 193: the data's arrival is logged even when no land is
         // read, so a replay has it from then on.
         let data = realWorldData

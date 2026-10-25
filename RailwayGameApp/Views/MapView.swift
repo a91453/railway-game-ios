@@ -758,6 +758,8 @@ struct MapView: View {
                                 ),
                                 coverage: mode == .coverage ? cityMap?.coverage : nil,
                                 building: buildingLayer.isOn ? buildingLegend : nil,
+                                onShowRanking: mode == .sectionFlow && session.showsNetworkFlowReport
+                                    ? { screen.panel = .networkFlow } : nil,
                                 // TestFlight 83.1: under the status bar, the
                                 // layer strip and the banner, over the buttons.
                                 maxHeight: CGFloat(HUDMargins.legendMaximumHeight(

@@ -590,7 +590,7 @@ extension GameWorld {
         guard !busRoutes.isEmpty else { return nil }
         guard roads != nil else { return "Bus routes run only on a world's roads." }
         let ids = Set(stations.map(\.id))
-        guard busRoutes.allSatisfy({ $0.isValid && $0.id.rawValue < nextBusRouteID && ids.contains($0.station)
+        guard busRoutes.allSatisfy({ $0.isValid && (1..<nextBusRouteID).contains($0.id.rawValue) && ids.contains($0.station)
                   && $0.stops.allSatisfy { (0..<Land.rows(in: bounds)).contains($0.row) && (0..<Land.columns(in: bounds)).contains($0.column) } }),
               zip(busRoutes, busRoutes.dropFirst()).allSatisfy({ $0.id < $1.id })
         else {

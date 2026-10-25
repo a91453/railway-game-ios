@@ -141,6 +141,7 @@
 		945BE0F504200741317CF54C /* MapLayerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8363C536E3BE341871325469 /* MapLayerSheet.swift */; };
 		94E81FC86FD208CF85F36A0E /* taiwan_no_build.json in Resources */ = {isa = PBXBuildFile; fileRef = 69236EA935C27C1BCE988215 /* taiwan_no_build.json */; };
 		95294AB1D11D0C95F25EA89B /* tra_pingxi_runs.json in Resources */ = {isa = PBXBuildFile; fileRef = C12C3242BE7CC739B03D2613 /* tra_pingxi_runs.json */; };
+		97798F204464B6B8C8086DA7 /* NetworkFlowSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F124C2763D812BDC46B49132 /* NetworkFlowSheet.swift */; };
 		991AFFBF0CFA0B43EA636257 /* TrainLoadBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F0A16C9226467AD2F29C92B /* TrainLoadBar.swift */; };
 		9A5C367B38AC3D80FBCE8038 /* StationMasterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24B425FF34AEB844CE2FA815 /* StationMasterView.swift */; };
 		9C344F54682319D6B608F56A /* InspectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 908DF494BE421AA1D9D8EE60 /* InspectorView.swift */; };
@@ -454,6 +455,7 @@
 		F04BA3646C6BDB8801CF770B /* station_transfers.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = station_transfers.json; sourceTree = "<group>"; };
 		F093629816AA56C52D91E5B8 /* MapLibre-iOS-LICENSE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "MapLibre-iOS-LICENSE.md"; sourceTree = "<group>"; };
 		F0F5EA47E14A5423014B49B8 /* NotoSans-OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "NotoSans-OFL.txt"; sourceTree = "<group>"; };
+		F124C2763D812BDC46B49132 /* NetworkFlowSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkFlowSheet.swift; sourceTree = "<group>"; };
 		F34F5FAD9996ED6204B4F23C /* tra_station_class.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra_station_class.json; sourceTree = "<group>"; };
 		F488A7BFC7F63D86EDB96548 /* TutorialOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialOverlay.swift; sourceTree = "<group>"; };
 		F655E31850005DBAC32D5142 /* OSMMapBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OSMMapBackground.swift; sourceTree = "<group>"; };
@@ -629,6 +631,7 @@
 				81D550FDBEF9E69496D0BF4D /* MiniMapView.swift */,
 				FFC0DA778E9B720DF0A4177A /* MonthlyReport.swift */,
 				080B5EA4C72E50F138757E75 /* NetworkControls.swift */,
+				F124C2763D812BDC46B49132 /* NetworkFlowSheet.swift */,
 				3FC137C507F9A22C91174E71 /* NetworkOverview.swift */,
 				6176ABC92A7FB39ABFE9BFB1 /* NewGameOptionsView.swift */,
 				DE2E4A53A2F134FC8BD9D4F7 /* NewsLogView.swift */,
@@ -1089,6 +1092,7 @@
 				EB5F149F1C5ED00E96A4BDB5 /* MiniMapView.swift in Sources */,
 				B8B325969899BBA81E72BD3B /* MonthlyReport.swift in Sources */,
 				622D1DA8B4621C37B231D926 /* NetworkControls.swift in Sources */,
+				97798F204464B6B8C8086DA7 /* NetworkFlowSheet.swift in Sources */,
 				72BB385B24C1703F13EF0B20 /* NetworkOverview.swift in Sources */,
 				AB37C6000B8F37326B3FBCD5 /* NewGameOptionsView.swift in Sources */,
 				FC698A6F5A2379335FC7CC65 /* NewsLogView.swift in Sources */,
