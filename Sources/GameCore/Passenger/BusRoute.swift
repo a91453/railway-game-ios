@@ -7,6 +7,12 @@
 // place of one end's walk in the mode shift (decision 332), and each pays
 // one bus fare, booked to the route's own day (`dailyBuses`).
 //
+// The balance (decision 400's sequel of 2026-10-25): the land a stop
+// reaches rides half as much as the land a station reaches on foot
+// (``BusRoute/riderShare``), riders take the bus home again from the
+// train, and a route costs ``BusRoute/costPerKilometre`` for every
+// kilometre its buses run.
+//
 // The player draws a route from its stops, and GameCore finds the way
 // along the roads; a real route the app sells is laid with its real
 // lengths, motorway stretches and all (the roads GameCore keeps have no
@@ -112,8 +118,14 @@ public struct BusRoute: Hashable, Sendable {
     public static let busPrice = Money(5_000_000)
     /// A rider's fare: one fare segment, $5.
     public static let fare = Money(500)
-    /// What a bus costs a day to run: driver, fuel and upkeep.
-    public static let dailyCostPerBus = Money(300_000)
+    /// What a bus costs for each kilometre it runs, driver, fuel and
+    /// upkeep: $20 (Taiwan's city buses, NT$52–66 a bus-kilometre, at
+    /// NT$3 a dollar).
+    public static let costPerKilometre = Money(2_000)
+    /// The part of the land a stop reaches that rides as much as the land
+    /// a station reaches on foot: a half, the rest taking a scooter or
+    /// staying near home.
+    public static let riderShare: (numerator: Int64, denominator: Int64) = (1, 2)
     /// The most stops and buses a route has.
     public static let maximumStops = 64
     public static let maximumBuses = 99
@@ -140,6 +152,24 @@ public struct BusRoute: Hashable, Sendable {
         guard buses > 0 else { return nil }
         let fewest = (roundTripMinutes + Int64(buses) - 1) / Int64(buses)
         return max(service.minutesApart, fewest)
+    }
+
+    /// The buses that leave its first stop a day, and as many back: one
+    /// each headway all day, or its runs, as many as its buses keep; none
+    /// without a bus.
+    public var dailyDepartures: Int64 {
+        guard let headway else { return 0 }
+        let kept = GameTime.minutesPerDay / headway
+        switch service {
+        case .every: return kept
+        case .runs(let minutes): return min(Int64(minutes.count), max(1, kept))
+        }
+    }
+
+    /// What its buses cost a day: ``costPerKilometre`` for each kilometre
+    /// there and back of each departure, rounded half up to the cent.
+    public var dailyCost: Money {
+        Money((dailyDepartures * 2 * metres * Self.costPerKilometre.amount + 500) / 1_000)
     }
 
     /// Minutes on board from stop `index` to the station, rounded half up.
@@ -452,7 +482,8 @@ extension GameWorld {
     /// goes whole to its nearest stop (then the lower route, then the
     /// earlier stop). Its minutes are the walk, half the headway rounded
     /// up and the ride, a day at most; a route's, its people's average,
-    /// rounded half up.
+    /// rounded half up. A route's share is its people times
+    /// ``BusRoute/riderShare``.
     /// Returns each station's added share. Without land demand every
     /// route's figures are 0. Called by ``refreshLandDemand()``.
     mutating func refreshBusFeeders() -> [StationID: LandDemand.Share] {
@@ -495,6 +526,7 @@ extension GameWorld {
             }
             for position in busRoutes.indices {
                 let people = shares[position].people
+                shares[position].scale(BusRoute.riderShare)
                 guard people > 0, let trips = shares[position].demand?.dailyTrips else { continue }
                 figures[position] = (trips, (weighted[position] * 2 + people) / (2 * people))
                 var share = added[busRoutes[position].station] ?? LandDemand.Share()
@@ -515,8 +547,9 @@ extension GameWorld {
         busRoutes.compactMap { $0.station == origin && $0.feederTrips > 0 ? ($0.feederTrips, $0.feederMinutes) : nil }
     }
 
-    /// `boarded` riders set out from `station` by train: the share of them
-    /// each of its feeders brought rides the bus, counted in thousandths.
+    /// `boarded` riders set out from `station` by train, or arrived there
+    /// at the end of their journey: the share of them each of its feeders
+    /// brought (or takes home) rides the bus, counted in thousandths.
     mutating func countBusRiders(_ boarded: Int64, at station: StationID) {
         guard boarded > 0, accounts.mode == .management, !busRoutes.isEmpty,
               let trips = passengers.first(where: { $0.station == station })?.demand?.dailyTrips, trips > 0 else { return }
@@ -528,7 +561,7 @@ extension GameWorld {
     }
 
     /// The day's buses, a row for them all: each route's riders'
-    /// ``BusRoute/fare`` in, ``BusRoute/dailyCostPerBus`` a bus out, kept
+    /// ``BusRoute/fare`` in, its ``BusRoute/dailyCost`` out, kept
     /// on the route for ``BusRoute/keptDays`` days.
     mutating func settleBuses(day: Int64, time: GameTime) {
         guard accounts.mode == .management, !busRoutes.isEmpty else { return }
@@ -536,7 +569,7 @@ extension GameWorld {
         for index in busRoutes.indices {
             let route = busRoutes[index]
             let routeFares = Money(route.ridersToday * BusRoute.fare.amount)
-            let routeCost = Money(Int64(route.buses) * BusRoute.dailyCostPerBus.amount)
+            let routeCost = route.dailyCost
             fares = fares + routeFares
             cost = cost + routeCost
             busRoutes[index].days.append(BusDay(day: day, riders: route.ridersToday, fares: routeFares, cost: routeCost))
@@ -578,6 +611,15 @@ extension LandDemand.Share {
         case .leisure: leisureJobs += jobs
         case .residential, .commercial, .park: shopJobs += jobs
         }
+    }
+
+    /// Its people times `fraction`, each kind rounded down.
+    mutating func scale(_ fraction: (numerator: Int64, denominator: Int64)) {
+        residents = residents * fraction.numerator / fraction.denominator
+        officeJobs = officeJobs * fraction.numerator / fraction.denominator
+        shopJobs = shopJobs * fraction.numerator / fraction.denominator
+        civicJobs = civicJobs * fraction.numerator / fraction.denominator
+        leisureJobs = leisureJobs * fraction.numerator / fraction.denominator
     }
 
     /// Adds `other`'s people.
