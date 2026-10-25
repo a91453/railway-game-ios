@@ -117,6 +117,24 @@ final class Map3DEMU3000Tests: XCTestCase {
         XCTAssertGreaterThan(chin.count,10,"substantial white chin, not a needle")
         XCTAssertLessThan(m.vertices.filter {$0.x>9.5}.map(\.z).max() ?? 10,2.5)
     }
+    func testHeadlampsAreIndividualModulesAndTailHasOnlyTwoMarkers() {
+        func modules(_ model:Map3DModelPack.Model)->Int {
+            func key(_ v:Map3DVertex)->String {[v.x,v.y,v.z].map {String(Int(($0*100000).rounded()))}.joined(separator:",")}
+            var parts:[Set<String>]=[]
+            for i in stride(from:0,to:model.vertices.count,by:3) {
+                let t=Array(model.vertices[i..<i+3]);guard t.allSatisfy(\.glows) else {continue}
+                var keys=Set(t.map(key))
+                for k in parts.indices.reversed() where !parts[k].isDisjoint(with:keys) {keys.formUnion(parts.remove(at:k))}
+                parts.append(keys)
+            }
+            return parts.count
+        }
+        for far in [false,true] {
+            XCTAssertEqual(modules(Map3DEMU3000.model(.ed,far:far)),4,"two upper headlamps and two cheek headlights")
+            let tail=Map3DEMU3000.model(.tail,far:far)
+            XCTAssertEqual(modules(tail),2,"only lower red markers; upper headlamps off")
+        }
+    }
     private enum Defect: Error {case openOrInverted}
     private func closed(_ vertices:[Map3DVertex]) throws {
         func key(_ v:Map3DVertex)->String {[v.x,v.y,v.z].map {String(Int(($0*100000).rounded()))}.joined(separator:",")}

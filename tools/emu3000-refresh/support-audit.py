@@ -1,4 +1,4 @@
-"""Independent native triangle rays: glazing backing, roof contact graph, wheel clearance.
+"""Independent native triangle distances/rays: glazing backing, roof contacts, wheel clearance.
 No recipe station/door/axle tables are imported. Tolerances/limits are recorded.
 """
 import sys,json,struct,collections
@@ -16,6 +16,20 @@ def nearest(origin,direction,triangles,allow_contact=False):
  f=np.zeros_like(det);f[valid]=1/det[valid];s=origin-a;u=f*np.einsum('ij,ij->i',s,h);q=np.cross(s,e1);v=f*np.einsum('j,ij->i',direction,q);t=f*np.einsum('ij,ij->i',e2,q)
  mask=valid&(u>=-1e-6)&(v>=-1e-6)&(u+v<=1.000001)&(t>=-0.000001 if allow_contact else t>0.00001)
  return float(np.min(t[mask])) if mask.any() else float('inf')
+def backing_distance(origin,triangles):
+ # Exact point-to-triangle distance: planar projection when inside, otherwise
+ # closest point on each edge. Unlike a tangent normal ray, a pane's thin
+ # perimeter cannot manufacture a false gap to its supporting body.
+ a=triangles[:,0];e=triangles[:,1]-a;f=triangles[:,2]-a;w=origin-a
+ ee=np.einsum('ij,ij->i',e,e);ef=np.einsum('ij,ij->i',e,f);ff=np.einsum('ij,ij->i',f,f)
+ ew=np.einsum('ij,ij->i',e,w);fw=np.einsum('ij,ij->i',f,w);den=ee*ff-ef*ef
+ good=den>1e-16;u=np.zeros(len(a));v=np.zeros(len(a));u[good]=(ff[good]*ew[good]-ef[good]*fw[good])/den[good];v[good]=(ee[good]*fw[good]-ef[good]*ew[good])/den[good]
+ inside=good&(u>=0)&(v>=0)&(u+v<=1)
+ projected=a+e*u[:,None]+f*v[:,None];best=np.where(inside,np.einsum('ij,ij->i',origin-projected,origin-projected),np.inf)
+ for j in range(3):
+  x=triangles[:,j];d=triangles[:,(j+1)%3]-x;length=np.einsum('ij,ij->i',d,d);t=np.clip(np.divide(np.einsum('ij,ij->i',origin-x,d),length,out=np.zeros(len(x)),where=length>1e-16),0,1)
+  delta=origin-x-d*t[:,None];best=np.minimum(best,np.einsum('ij,ij->i',delta,delta))
+ return float(np.sqrt(best.min()))
 def components(p):
  parent=list(range(len(p)));edges={}
  def find(i):
@@ -36,16 +50,12 @@ for m in manifest['models']:
   n=np.cross(t[1]-t[0],t[2]-t[0]);area=np.linalg.norm(n)/2
   if area<0.012:continue
   n/=np.linalg.norm(n);o=t.mean(axis=0)
-  radial=np.array([0.,o[1],o[2]-2.1]);radial/=np.linalg.norm(radial)
-  # Check exterior glazing faces. Thin perimeter walls point tangentially,
-  # and backs point into the car: their long normal rays are not a backing gap.
-  if np.dot(n,radial)<0.5:continue
-  dist.append(min(nearest(o,n,back),nearest(o,-n,back)));origins.append((o,n))
+  dist.append(backing_distance(o,back));origins.append((o,n))
  assert dist and max(dist)<=0.12,(m['id'],'unsupported glass',max(dist,default=None))
  # Move a genuine side pane 1m OUT along its actual normal, keeping rest unchanged.
- o,n=next((o,n) for o,n in origins if abs(n[1])>0.9)
+ o,n=next((o,n) for o,n in origins if abs(n[1])>0.9 and abs(o[0])<5 and n[1]*o[1]>0)
  moved=o+n
- assert min(nearest(moved,n,back),nearest(moved,-n,back))>0.12,'floating-glass mutation missed'
+ assert backing_distance(moved,back)>0.12,'floating-glass mutation missed'
  black=np.all(c==tire,axis=1);tp=p[black];wheel=[]
  for ids in components(tp):
   points=tp[ids].reshape(-1,3);lo=points.min(axis=0);hi=points.max(axis=0);size=hi-lo
@@ -81,5 +91,5 @@ for m in manifest['models']:
   for j in graph[stack.pop()]-reached:reached.add(j);stack.append(j)
  assert set(roof)<=reached,(m['id'],'roof solids have no support path',set(roof)-reached)
  records.append({'id':m['id'],'glazing_face_samples':len(dist),'maximum_glazing_backing_distance_m':max(dist),'actual_tires':len(wheel),'minimum_upper_tire_clearance_m':min(wheel),'roof_solids_reaching_body':len(roof),'floating_glass_and_raised_wheel_mutations_rejected':True})
-result={'status':'VERIFIED','method':'exterior glazing triangle normal rays (120mm backing; tangential perimeter and inward backs excluded); actual tire connected components with tread and upper clearance rays; actual roof solid proximity graph to body (65mm contact tolerance, <=40 points per solid, 6 directions)','models':records,'limits':'sampled geometric support/clearance; no complete all-surface collision, suspension dynamics, overhead-wire contact or animated collector verification'}
+result={'status':'VERIFIED','method':'exact nearest-triangle distance from all sampled glazing faces including perimeter/back (120mm backing); actual tire connected components with tread and upper clearance rays; actual roof solid proximity graph to body (65mm contact tolerance, <=40 points per solid, 6 directions)','models':records,'limits':'sampled geometric support/clearance; no complete all-surface collision, suspension dynamics, overhead-wire contact or animated collector verification'}
 (root/'support-verification.json').write_text(json.dumps(result,indent=2)+'\n');print('VERIFIED glazing, 8 tires and roof support paths for',len(records),'near/far units')

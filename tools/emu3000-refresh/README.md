@@ -1,4 +1,4 @@
-# EMU3000 原生重建與遊戲替換
+# EMU3000 第二版原生重建與遊戲替換
 
 先讀 [車輛製作手冊](../../docs/art/native-vehicle-modeling/README.md) 與 [本次外觀／重建交接](../../docs/art/emu3000-refresh-2026-10-25/README.md)。本工具只處理這次 EMU3000，不能把其門窗／編組／估計尺寸當通用列車規格。
 
@@ -16,6 +16,7 @@ PRODUCER_COMMIT=$(git rev-parse HEAD) EMU_BASELINE=/tmp/emu-baseline EMU_FINGERP
   tools/emu3000-refresh/export.sh OUT
 node tools/emu3000-refresh/verify.mjs OUT
 python3 tools/emu3000-refresh/support-audit.py OUT
+python3 tools/emu3000-refresh/revision-audit.py ACTUAL_REVISION_1 OUT
 python3 tools/emu3000-refresh/coexistence.py /tmp/emu-baseline /tmp/emu-current-pack OUT
 node tools/emu3000-refresh/review.mjs OUT
 # 親自打開 ED／EP3／完整編組配色、白模、剪影的側／正／上／斜四向；不合格就修幾何。
@@ -37,7 +38,9 @@ python3 tools/emu3000-refresh/bundle.py OUT ACTUAL_PRODUCER_COMMIT
 
 `verify.mjs` 查單元閉合有向邊、正體積、與 GLB 相同幾何；拒絕缺面／反面／位移組裝變異。完整編組以已稽核單元與 Swift 逐 bytes 組裝驗證。修改前模型僅保存比對，不宣稱符合新品質標準。
 
-`support-audit.py` 用實際匯出三角：外露玻璃法線射線取樣，120mm背襯距離；辨識真正8個輪胎連通體、輪底z=0、上方淨空；實際屋頂實體透過65mm接觸容差的取樣圖連回車身。薄玻璃側壁／內面不能拿切向長射線誤判為正面浮空。此法不證明所有表面互不穿插、動態懸吊或真實接觸網接觸；完整碰撞與真機驗證仍列 UNVERIFIED。
+`support-audit.py` 用實際匯出三角：所有大於取樣面積的玻璃面（含邊及背面）到非玻璃背襯三角的精確最近距離，120mm門檻；辨識真正8個輪胎連通體、輪底z=0、上方淨空；實際屋頂實體透過65mm接觸容差的取樣圖連回車身。第二版由最近點量測取代玻璃切向法線射線，因為邊壁長射線不能表示正面浮空；仍對移開真實玻璃1m的變異重新量距並拒收。此法不證明所有表面互不穿插、動態懸吊或真實接觸高度，完整碰撞與真機仍UNVERIFIED。
+
+真正已交付前版producer3ab84550的原生單元／組裝／manifest／配方放 `OUT/history/3ab84550/`，完整revision-1在私庫保持不變；`render.mjs`加 `revision-1-vs-2.png` 同相機／公尺尺度對照。`bundle.py`逐件比原前版manifest內native SHA，禁止把新模型當舊模型。`revision-audit.py`另證明6種近景中間車3.39m以下三角與6種遠景中間車全幾何不變，並量實際前後鼻部截面。這是虛擬模型量測，不能說成真車工程尺寸。
 
 `coexistence.py` 比較每個原有非EMU模型的實際 Float32位置、顏色、layer bytes；並保存 SHA256。不是只比配方常數。`glb-audit.py` 用獨立 Blender glTF importer 校驗實際 bounds／三角／頂點色／霧面無貼圖。
 

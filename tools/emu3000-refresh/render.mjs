@@ -47,7 +47,7 @@ try {
  await sheet('formation','EMU3000｜完整編組，各列相同公尺尺度',['left','right','top','bottom'].map(v=>'<div class="row"><div><img src="previews/emu3000-formation-detail-'+v+'.png"><p>'+v+'</p></div></div>').join(''));
  await sheet('seven-directions','EMU3000｜各單元七向透明圖（每格同公尺尺度）',near.map(m=>'<h2>'+m.id+'</h2><div class="row">'+manifest.directions.map(v=>'<div><img src="'+m.views[v]+'"><p>'+v+'</p></div>').join('')+'</div>').join(''));
  async function match(ids,label){
-  await stage();const ms=ids.map(id=>manifest.models.find(m=>m.id===id)||(id==='first-pass-ed'?{id,native:'history/first-pass/models/emu3000-ed.m3dmodel'}:null));
+  await stage();const ms=ids.map(id=>manifest.models.find(m=>m.id===id)||(id==='first-pass-ed'?{id,native:'history/first-pass/models/emu3000-ed.m3dmodel'}:id==='previous-ed'?{id,native:'history/3ab84550/models/emu3000-ed.m3dmodel'}:null));
   const out=await page.evaluate(async ms=>{
    const buffers=await Promise.all(ms.map(async m=>(await fetch(m.native)).arrayBuffer())),bounds=buffers.map(b=>{renderer.load(b);return renderer.bounds;});
    const low=[0,1,2].map(i=>Math.min(...bounds.map(b=>b.low[i]))),high=[0,1,2].map(i=>Math.max(...bounds.map(b=>b.high[i]))),centre=low.map((n,i)=>(n+high[i])/2),extent=low.map((n,i)=>(high[i]-n)/2),out={};
@@ -58,6 +58,7 @@ try {
   writeFileSync(resolve(root,label+'-camera.json'),JSON.stringify({ids,centre:out.centre,extent:out.extent,width:1000,height:500},null,2));
   await sheet(label,label+'｜同相機、同公尺尺度（原生幾何）',['left','front','top','isometric'].map(v=>'<h2>'+v+'</h2><div class="row">'+ms.map((m,i)=>'<div><img src="previews/'+label+'-'+i+'-'+v+'.png"><p>'+m.id+'</p></div>').join('')+'</div>').join(''));
  }
+ if(existsSync(resolve(root,'history/3ab84550/models/emu3000-ed.m3dmodel')))await match(['previous-ed','emu3000-ed'],'revision-1-vs-2');
  await match(['before-set-emu3000-head','emu3000-ed'],'before-after');
  if(existsSync(resolve(root,'history/first-pass/models/emu3000-ed.m3dmodel')))await match(['first-pass-ed','emu3000-ed'],'first-pass-vs-final');
  await match(['before-formation','emu3000-formation'],'formation-before-after');

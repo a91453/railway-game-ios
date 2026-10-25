@@ -1,4 +1,4 @@
-# EMU3000：原生外觀重建、單元差異與遊戲替換
+# EMU3000 第二版：縮短圓厚車鼻、重排風擋與燈組
 
 對應 [issue #1226](https://github.com/a91453/railway-game-ios/issues/1226)。公開／私有互鏈 draft PR 及最新 CI 以該 issue 的交付留言為準。本頁為重建交接，不代表使用者已認可此版本。
 
@@ -6,12 +6,14 @@
 
 這次包含 **遊戲實際模型替換**：`EMU3000` 的 3D 營運映射改用專用近／遠景單元，沿用既有原生 renderer。合併公開 PR 後，使用標準模型包且未鎖定舊 set 的 EMU3000 會顯示新模型；既有存檔不須轉換。不增加新列車或改玩法。未合併前，main 與已安裝 App 不會因此改變。私有包是相同幾何的靜態原生／GLB／預覽交付，**不是把 GLB 匯入遊戲**；車門、車輪和集電弓仍不動畫。
 
+使用者回報第一版仍有怪感，本輪重新比對實車，修改車鼻／黑罩／風擋、斜列圓燈、白下巴接縫與冷氣格柵。保留白車身、細綠松線、門窗、編組與走行系統；第1版 `3ab84550` 完整素材仍在私庫 `revision-1`，這次完整包在 `revision-2`，並提供 `previews/revision-1-vs-2.png` 同相機、公尺尺度對照。原版技術通過與外觀認可分開記錄，未宣稱使用者已認可新版。
+
 ## 接手與保護範圍
 
 - public base：`85d9aa359dfcd6213f76a6559abebd9155806e97`，建模手冊 #1224 已合併。700T／E200 的 #1201 與遊戲接入 #1217 已合併；它們不再被說成「只有靜態註冊」。
 - private base：`81e935fd`。自己的 `codex/emu3000-native-refresh-2026-10-25` worktrees，不寫 main、不合併、不開 auto-merge、不啟動 TestFlight。
 - 已讀 AGENTS、CLAUDE、HANDOFF、art-style skill、車輛手冊、相關原生／匯出工具文件及私庫尺寸／編組 catalog。
-- 與 Claude 的共用車殼 [#1227](https://github.com/a91453/railway-game-ios/pull/1227) 在 #1041／該 PR 協調，對方已回覆保留本次 EMU 專用接點。保留其共用 builder；此分支只改最小 EMU 註冊、分派與該型測試例外。先後合併都應保留雙方接點，不覆蓋整檔。
+- 與 Claude 的共用車殼 [#1227](https://github.com/a91453/railway-game-ios/pull/1227) 在 #1041／該 PR 協調，對方已回覆保留本次 EMU 專用接點；#1227已合併main a1f84d56。保留其共用 builder；此分支只改最小 EMU 註冊、分派與該型測試例外。先後合併都應保留雙方接點，不覆蓋整檔。
 - GameCore、存檔、GoldenScenarios、SaveFixtures、ReplayFixtures、其他玩法均不動。既有非EMU模型以實際 payload bytes 比較，涵蓋700T／E200／N700S-G與其他所有原有模型。
 
 ## 建模前特徵表與來源
@@ -79,7 +81,16 @@
 4. 放大檢查發現原罩面疊片穿入車殼、露白碎片。改為直接裁切原殼三角的黑白分色；三角側窗改成封閉細分曲面貼合，移除可見穿插。
 5. 縮窄轉向架中心橫架，讓輪胎上方保有淨空；ET／EP車下設備各自配置，避免所有中間車只是改ID。
 
-真正同相機、公尺尺度比較：`previews/before-after.png`（main前版）、`first-pass-vs-final.png`（初稿）、`formation-before-after.png`（完整列車）、`style-comparison.png`（已接受700T／E200與本車）。camera中心／extent另存JSON；沒有相似度分數，也沒有說使用者已認可本版。
+第二版修正：
+
+- 車殼開始收鼻位置由模型X=5.6移至6.2，保留21.35m pitch；前端改成更圓厚的收尾，移除小平頂形成的鼻尖鈕扣感。這些是模型比例修正，不宣稱工程截面已知。
+- 黑罩下緣改依實際殼面高度與左右位置裁切成平順圓收；風擋縮窄並下移，避開攤在長斜面上的大玻璃感。
+- 側燈改為較寬斜列燈座與兩顆獨立圓形鏡片；上方兩頭燈更集中。尾車只亮兩顆下部紅標示燈，上頭燈關閉。
+- U形鼻罩接縫逐點投影在真正鼻部三角上，封閉薄帶背面貼入車殼；側窗保持封閉貼面。
+- 冷氣頂部大黑塊改成低對比灰色格柵，外形／位置保留。
+- `revision-verification.json` 以真正前後原生檔核對：所有6種中間車的近景3.39m以下三角（車身／門窗／輪組／車下設備）逐bytes不變，6種遠景中間車全幾何不變；同時量真模型X=10.60m截面，確認前端變厚。它是模型量測，不是透視像素工程尺寸。
+
+真正同相機、公尺尺度比較：`previews/revision-1-vs-2.png`（使用者回報怪的真正交付前版）、`previews/before-after.png`（main前版）、`first-pass-vs-final.png`（初稿）、`formation-before-after.png`（完整列車）、`style-comparison.png`（已接受700T／E200與本車）。camera中心／extent另存JSON；沒有相似度分數，也沒有說使用者已認可本版。
 
 ## 外觀自檢（與技術結果分開）
 
@@ -100,18 +111,18 @@
 
 重建命令見 [tools README](../../../tools/emu3000-refresh/README.md)。每次修改配方後重新匯出、四向查看、批次七向與全部檢查；技術報告列於私有包，不能只用測試通過宣稱好看。
 
-- **VERIFIED／Linux Swift6.4**：warnings-as-errors build；47個相關測試零失敗，其中1個成本量測按原條件skip（46個執行通過）；本車、既有高鐵、TrainSet、Model、ModelFile及RealTrains相關測試。新增測試走真正GameWorld→TrainMotion→Map3DTrains.frame，核對新模型實例、12節、原生尺度及遠景；另查實際窗列、封閉面／法線、ET／EP車下差異、鎖定與任意1–16節不改選擇。
-- **VERIFIED／獨立原生稽核**：逐頂點原生讀回；閉合有向邊、正體積、原生與GLB相同；缺面、反面、移動一節等變異必須被拒收。完整編組由已稽核合法單元組成，不偽稱單件原生讀回器可讀62k以上三角。
-- **VERIFIED／靜態取樣支持**：外露玻璃背襯射線、每節實際8輪胎連通體貼軌與上方淨空、車頂實體取樣接觸圖連回車身；浮空玻璃／升高輪胎變異拒收。此為有明示容差的取樣，不是所有表面碰撞證明。
+- **VERIFIED／Linux Swift6.4**：warnings-as-errors build；48個相關測試零失敗，其中1個成本量測按原條件skip（47個執行通過）；本車、既有高鐵、TrainSet、Model、ModelFile及RealTrains相關測試。新增測試走真正GameWorld→TrainMotion→Map3DTrains.frame，核對新模型實例、12節、原生尺度及遠景；另查實際窗列、封閉面／法線、ET／EP車下差異、鎖定與任意1–16節不改選擇。
+- **VERIFIED／獨立原生稽核**：逐頂點原生讀回；閉合有向邊、正體積、原生與GLB相同；缺面、反面、移動一節等變異必須被拒收。完整編組由已稽核合法單元組成，不偽稱單件原生讀回器可讀65k以上三角。
+- **VERIFIED／靜態取樣支持**：全部取樣玻璃面到實際背襯三角的最近距離、每節實際8輪胎連通體貼軌與上方淨空、車頂實體取樣接觸圖連回車身；浮空玻璃／升高輪胎變異拒收；切向側壁以實際最近距離檢查，避免長法線射線誤判。此為有明示容差的取樣，不是所有表面碰撞證明。
 - **VERIFIED／共存**：修改前所有非EMU模型實際位置／顏色／layer bytes保留不變，SHA列`coexistence-verification.json`。
 - **VERIFIED／交付工具**：獨立Blender GLB匯入；Pillow完整PNG解碼、透明與不裁邊；viewer載入、實際旋轉／縮放、原生／GLB／PNG／ZIP下載比SHA；ZIP全解壓與逐檔bytes一致。詳查最終producer對應私有各verification JSON與log，不把歷史嘗試通過搬成最後版本結果。
 - **UNVERIFIED**：iPhone／iPad實機Metal、幀率／GPU與記憶體預算、動畫、全表面動態碰撞、實際接觸網接觸高度、精確工程內構。iOS App編譯／Simulator依公開PR最新commit的實際CI狀態另列，不能由Linux推定。
 
-專用近景ED／tail各7,060、EM 4,792、ET 4,904、EM6 4,656、EP3／EP7各5,032、EP10 5,168三角；完整12節62,872，遠景28,640三角。500m改用較輕版本，900m後沿用現有盒形策略。這是有遠景的單一車型高細節例外，不提高#1227其他通用車款2k／4k預算。未用真機量到FPS，不能稱「效能已驗證」。
+專用近景ED／tail各7,414、EM 4,936、ET 5,048、EM6 4,800、EP3／EP7各5,176、EP10 5,312三角；完整12節65,020，遠景28,812三角。500m改用較輕版本，900m後沿用現有盒形策略。這是有遠景的單一車型高細節例外，不提高#1227其他通用車款2k／4k預算。未用真機量到FPS，不能稱「效能已驗證」。
 
 ## 交付與下一位接手
 
-完整包只在私有庫：`Railway/game-art-previews/docs/art/emu3000-refresh-2026-10-25/revision-1/`。該路徑含 models、views、previews、manifest、來源紀錄、SHA、原生支持／GLB／browser／ZIP報告、離線viewer與ZIP。公開庫僅配方、重建／驗證工具、必要測試、此文件及一張總覽。
+完整包只在私有庫：`Railway/game-art-previews/docs/art/emu3000-refresh-2026-10-25/revision-2/`。該路徑含 models、views、previews、manifest、來源紀錄、SHA、原生支持／GLB／browser／ZIP報告、離線viewer與ZIP。公開庫僅配方、重建／驗證工具、必要測試、此文件及一張總覽。
 
 整包 `source-record.json` 的 producer是**真正已提交且逐檔核過的程式commit**，不是私庫上傳commit。公開PR的最新CI與producer、私庫儲存commit分開記錄。若後續只寫交付連結，也不可把新文件commit冒稱重建producer。
 

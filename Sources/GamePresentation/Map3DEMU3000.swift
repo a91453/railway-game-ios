@@ -93,12 +93,12 @@ private extension StationKitBuilder {
     // These are proportion estimates, not engineering sections or a scaled HSR nose.
     static func emuStations(_ cab: Bool) -> [(Float,Float,Float,Float)] {
         if !cab { return [(-9.8,3.49,0.90,1.455),(9.8,3.49,0.90,1.455)] }
-        return [(-10.5,3.49,0.90,1.455),(5.6,3.49,0.90,1.455),
-                (6.3,3.46,0.90,1.43),(7.0,3.29,0.88,1.37),
-                (7.7,2.99,0.86,1.25),(8.4,2.77,0.84,1.17),
-                (9.1,2.43,0.84,1.04),(9.7,2.08,0.88,0.91),
-                (10.15,1.84,0.95,0.72),(10.50,1.63,1.06,0.44),
-                (10.675,1.41,1.27,0.12)]
+        return [(-10.5,3.49,0.90,1.455),(6.2,3.49,0.90,1.455),
+                (6.9,3.46,0.90,1.43),(7.55,3.23,0.88,1.37),
+                (8.15,2.94,0.86,1.29),(8.75,2.62,0.84,1.20),
+                (9.3,2.34,0.84,1.09),(9.8,2.15,0.86,0.98),
+                (10.15,2.04,0.90,0.84),(10.45,1.94,0.97,0.65),
+                (10.60,1.79,1.10,0.36),(10.65,1.71,1.21,0.266),(10.675,1.47,1.47,0)]
     }
     static func emuDimensions(_ x: Float,_ cab: Bool) -> (Float,Float,Float) {
         let s = emuStations(cab)
@@ -136,10 +136,10 @@ private extension StationKitBuilder {
         if n.dot(Map3DPoint(0,sinf(a),cosf(a)))<0 { n=n * -1 }
         return p+n*offset
     }
-    static func emuMaskField(_ x: Float,_ a: Float) -> Float {
-        let v=max(0,min(1,(x-5.94)/4.31)),width: Float=0.86-0.17*v
+    static func emuMaskField(_ x: Float,_ a: Float,_ p: Map3DPoint) -> Float {
+        let v=max(0,min(1,(x-6.55)/4.03)),width: Float=0.98-0.16*v
         let t=(a-Float.pi/2)/width,cap=sqrtf(max(0,1-t*t))
-        return min((width-abs(a-Float.pi/2))*3,min(x-(5.94+0.30*(1-cap)),10.25-0.92*(1-cap)-x))
+        return min((width-abs(a-Float.pi/2))*3,min(x-(6.55+0.20*(1-cap)),p.y-(1.70+0.27*p.z*p.z)))
     }
     mutating func emuShell(_ cab: Bool,_ sides: Int) {
         let stations=Self.emuStations(cab),inside=Map3DPoint(0,2.1,0)
@@ -147,7 +147,7 @@ private extension StationKitBuilder {
         // identical cut vertices; there is no floating black overlay or white poke-through.
         func painted(_ points:[Map3DPoint],_ params:[(Float,Float)]) -> [([Map3DPoint],UInt32)] {
             guard cab else {return [(points,Self.ew)]}
-            let values=params.map {Self.emuMaskField($0.0,$0.1)}
+            let values=zip(points,params).map {Self.emuMaskField($0.1.0,$0.1.1,$0.0)}
             func clip(_ positive:Bool)->[Map3DPoint] {
                 var result:[Map3DPoint]=[]
                 for i in points.indices {
@@ -219,7 +219,7 @@ private extension StationKitBuilder {
     /// A single planar five-corner face bridges the shoulder and exposes white chips.
     mutating func emuQuarterlight(_ side: Float,_ sides: Int,_ far: Bool) {
         let outline:[(Float,Float)]=[(5.75,2.69),(5.74,3.17),(6.45,3.13),(7.13,2.86),(6.97,2.76)]
-        let centre=outline.reduce((Float(0),Float(0))) {($0.0+$1.0/5,$0.1+$1.1/5)},n=far ? 2:6
+        let centre=outline.reduce((Float(0),Float(0))) {($0.0+$1.0/5,$0.1+$1.1/5)},n=far ? 2:5
         var vertices:[String:(Map3DPoint,Map3DPoint)]=[:],edges:[String:([String],Int,Map3DPoint)]=[:]
         func vertex(_ x:Float,_ y:Float)->String {
             let xx=(x*100000).rounded()/100000,yy=(y*100000).rounded()/100000,key="\(xx),\(yy)"
@@ -283,14 +283,14 @@ private extension StationKitBuilder {
             emuOpening((start+end)/2,3.28,end-start,0.055,side,cab,sides,Self.ea,Self.ea,0.010)
         }
     }
-    /// Grid bonded to the real piecewise-linear shell. Every cell is a closed prism.
+    /// Closed gridded patch bonded to the actual shell; walls only on the perimeter.
     mutating func emuPatch(_ cab: Bool,_ sides: Int,_ columns: Int,_ rows: Int,
                            _ range: (Float,Float,Float,Float),_ color: UInt32,_ offset: Float = 0.010) {
         let (u0,u1,v0,v1)=range
         func point(_ u: Float,_ v: Float,_ o: Float)->Map3DPoint {
             let t=(u-0.5)*2,cap=sqrtf(max(0,1-t*t))
-            let rear: Float=5.94+0.30*(1-cap),front: Float=10.25-0.92*(1-cap)
-            let x=rear+(front-rear)*v,a=Float.pi/2+t*(0.86-0.17*v)
+            let rear: Float=6.55+0.20*(1-cap),front: Float=10.58-0.72*(1-cap)
+            let x=rear+(front-rear)*v,a=Float.pi/2+t*(0.98-0.16*v)
             return Self.emuSurface(x,a,cab,sides,o)
         }
         func u(_ i: Int)->Float {u0+(u1-u0)*Float(i)/Float(columns)}
@@ -308,24 +308,86 @@ private extension StationKitBuilder {
         } }
     }
 
-    mutating func emuCab(_ sides: Int,_ far: Bool) {
-        emuPatch(true,sides,far ? 4:10,far ? 2:5,(0.10,0.90,0.22,0.66),Self.es,0.022)
-        emuPatch(true,sides,far ? 4:10,far ? 2:5,(0.116,0.884,0.235,0.645),Self.eg,0.034)
-        // Upper headlamp housing: supported by black hood, no brand or fleet number.
-        emuPatch(true,sides,4,2,(0.36,0.64,0.045,0.145),Self.es)
-        emuPatch(true,sides,2,2,(0.385,0.475,0.063,0.128),Map3DEMU3000.lampColor,0.025)
-        emuPatch(true,sides,2,2,(0.525,0.615,0.063,0.128),Map3DEMU3000.lampColor,0.025)
-        for u: Float in [0.04,0.86] {
-            emuPatch(true,sides,2,3,(u,u+0.10,0.65,0.88),Self.es)
-            emuPatch(true,sides,2,2,(u+0.018,u+0.082,0.677,0.76),Map3DEMU3000.lampColor,0.025)
-            emuPatch(true,sides,2,2,(u+0.023,u+0.077,0.79,0.845),Map3DPalette.shopAwnings[3],0.025)
+    mutating func emuLens(_ u: Float,_ v: Float,_ ru: Float,_ rv: Float,_ sides: Int,_ color: UInt32) {
+        func point(_ a:Float,_ offset:Float)->Map3DPoint {
+            let uu=u+cosf(a)*ru,vv=v+sinf(a)*rv,t=(uu-0.5)*2,cap=sqrtf(max(0,1-t*t))
+            let rear:Float=6.55+0.20*(1-cap),front:Float=10.58-0.72*(1-cap)
+            return Self.emuSurface(rear+(front-rear)*vv,Float.pi/2+t*(0.98-0.16*vv),true,sides,offset)
+        }
+        let angles=(0..<8).map {Float($0)*Float.pi/4}
+        emuSolid(angles.map {point($0,0.026)},angles.map {point($0,-0.025)},color)
+    }
+    /// Subtle U-shaped access-hatch seam projected onto the real nose triangles.
+    /// It is closed solid geometry with its back bonded into the hull, not a decal.
+    mutating func emuHatchSeam(_ sides:Int) {
+        let stations=Self.emuStations(true)
+        var triangles:[[Map3DPoint]]=[]
+        for i in 1..<stations.count {for j in 0..<sides {
+            let a=Float(j)*2*Float.pi/Float(sides),b=Float(j+1)*2*Float.pi/Float(sides)
+            let p=Self.emuPoint(stations[i-1].0,a,true,sides),q=Self.emuPoint(stations[i].0,a,true,sides)
+            let r=Self.emuPoint(stations[i].0,b,true,sides),s=Self.emuPoint(stations[i-1].0,b,true,sides)
+            triangles.append([p,q,r]);triangles.append([p,r,s])
+        }}
+        func project(_ y:Float,_ z:Float)->(Map3DPoint,Map3DPoint)? {
+            let origin=Map3DPoint(11,y,z),direction=Map3DPoint(-1,0,0)
+            var nearest:Float=100,hit:(Map3DPoint,Map3DPoint)?
+            for t in triangles {
+                let e=t[1]-t[0],f=t[2]-t[0],h=direction.cross(f),d=e.dot(h)
+                if abs(d)<0.000001 {continue}
+                let s=origin-t[0],u=s.dot(h)/d,q=s.cross(e),v=direction.dot(q)/d,dist=f.dot(q)/d
+                if u>=0 && v>=0 && u+v<=1 && dist>0 && dist<nearest {
+                    nearest=dist
+                    var n=e.cross(f).normalized ?? .zero;if n.x<0 {n=n * -1}
+                    let surface=origin+direction*dist
+                    hit=(surface+n*0.006,surface-n*0.012)
+                }
+            }
+            return hit
+        }
+        let outline:[(Float,Float)]=[(2.0,-0.84),(1.70,-0.92),(1.25,-0.86),(1.02,-0.65),
+                                    (0.94,-0.30),(0.93,0),(0.94,0.30),(1.02,0.65),
+                                    (1.25,0.86),(1.70,0.92),(2.0,0.84)]
+        var path:[(Float,Float)]=[]
+        for i in 1..<outline.count {for j in 0..<4 {
+            let t=Float(j)/4,a=outline[i-1],b=outline[i]
+            path.append((a.0+(b.0-a.0)*t,a.1+(b.1-a.1)*t))
+        }}
+        path.append(outline[outline.count-1])
+        var rings:[[Map3DPoint]]=[]
+        for i in path.indices {
+            let a=path[max(0,i-1)],b=path[min(path.count-1,i+1)],p=path[i]
+            let dy=b.0-a.0,dz=b.1-a.1,length=sqrtf(dy*dy+dz*dz),oy = -dz/length*0.006,oz=dy/length*0.006
+            guard let left=project(p.0+oy,p.1+oz),let right=project(p.0-oy,p.1-oz) else {return}
+            rings.append([left.0,right.0,right.1,left.1])
+        }
+        let color=Map3DColor.shaded(Self.ew,0.74)
+        for i in 1..<rings.count {
+            let a=rings[i-1],b=rings[i],inside=(a+b).reduce(.zero,+)*0.125
+            for j in 0..<4 {let k=(j+1)%4;face([a[j],a[k],b[k],b[j]],inside:inside,color:color)}
+        }
+        let first=rings[0],last=rings[rings.count-1]
+        face(first,inside:(first+rings[1]).reduce(.zero,+)*0.125,color:color)
+        face(last,inside:(last+rings[rings.count-2]).reduce(.zero,+)*0.125,color:color)
+    }
+
+    mutating func emuCab(_ sides: Int,_ far: Bool,_ tail: Bool) {
+        // More upright cab, compact trapezoid glazing, restrained dark gasket.
+        emuPatch(true,sides,far ? 4:10,far ? 2:5,(0.20,0.80,0.27,0.68),Map3DColor.shaded(Self.es,0.58),0.022)
+        emuPatch(true,sides,far ? 4:10,far ? 2:5,(0.212,0.788,0.285,0.665),Self.eg,0.034)
+        emuPatch(true,sides,4,2,(0.458,0.542,0.055,0.17),Self.es)
+        for u:Float in [0.486,0.514] {emuLens(u,0.115,0.010,0.033,sides,tail ? Self.eg:Map3DEMU3000.lampColor)}
+        // Broad slanted cheek housings with two round lenses, not razor strips.
+        for u:Float in [0.13,0.87] {
+            emuPatch(true,sides,3,4,(u-0.11,u+0.11,0.70,0.90),Self.es)
+            emuLens(u,0.755,0.060,0.043,sides,tail ? Self.eg:Map3DEMU3000.lampColor)
+            emuLens(u,0.845,0.027,0.029,sides,tail ? Map3DEMU3000.lampColor:Self.eg)
         }
         if !far {
-            let a=Self.emuSurface(7.84,1.40,true,sides,0.045),b=Self.emuSurface(7.16,1.20,true,sides,0.045)
+            emuHatchSeam(sides)
+            let a=Self.emuSurface(8.47,1.43,true,sides,0.045),b=Self.emuSurface(8.05,1.26,true,sides,0.045)
             beam(a,b,0.022,Self.ek)
-            beam(b,Self.emuSurface(6.72,1.22,true,sides,0.045),0.025,Self.ek)
-            // A short mounting spindle reaches through the housing into the hood.
-            civicTube(a-Map3DPoint(0,0.09,0),a,radius:0.045,color:Self.ek,sides:8)
+            beam(b,Self.emuSurface(7.61,1.26,true,sides,0.045),0.025,Self.ek)
+            civicTube(a-Map3DPoint(0,0.09,0),a,radius:0.040,color:Self.ek,sides:8)
         }
     }
     mutating func emuRunningGear(_ unit: EU,_ far: Bool) {
@@ -381,8 +443,11 @@ private extension StationKitBuilder {
             box(x,3.46,0,3.0,1.70,0.25,Self.es)
             box(x,3.71,0,2.62,1.34,0.04,Map3DPalette.concrete)
             if !far {
-                for dx: Float in [-0.75,0.75] { box(x+dx,3.752,0,0.91,1.10,0.018,Self.ek) }
-                for z: Float in [-0.85,0.85] { for dx: Float in [-0.8,0,0.8] { box(x+dx,3.54,z,0.47,0.025,0.08,Self.ek) } }
+                for dx: Float in [-0.75,0.75] {
+                    box(x+dx,3.752,0,0.91,1.10,0.012,Self.es)
+                    for z:Float in [-0.32,0,0.32] {box(x+dx,3.764,z,0.74,0.026,0.008,Map3DPalette.concrete)}
+                }
+                for z: Float in [-0.85,0.85] {for dx: Float in [-0.8,0,0.8] {box(x+dx,3.54,z,0.47,0.025,0.08,Self.es)}}
             }
         }
         if cab {
@@ -415,7 +480,7 @@ private extension StationKitBuilder {
         emuShell(cab,sides)
         emuRunningGear(unit,far)
         emuDoorsAndWindows(unit,cab,sides,far)
-        if cab { emuCab(sides,far) }
+        if cab { emuCab(sides,far,unit == .tail) }
         emuRoof(unit,far)
     }
 }
