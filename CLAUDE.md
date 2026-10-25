@@ -396,9 +396,11 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   (owner, 2026-10-24: a summary does not say how many came before). Each
   time a session sees that its conversation was summarized, its first act
   is a comment in #1041, 「<session> 壓縮第 N 次」, N being one more than
-  its own such comments there. The game-planning session hands over at 2,
-  before finishing what it holds; an implementation session takes no new
-  work after 1 and stops at 2 (`docs/HANDOFF.md` §1). The next
+  its own such comments there. The game-planning session hands over when
+  its third compaction nears (after the second, at about 300k tokens
+  used), writing the handoff before finishing what it holds; an
+  implementation session takes no new work after 1 and stops at 2
+  (`docs/HANDOFF.md` §1). The next
   game-planning session is opened by the owner on claude.ai, not with
   `create_session`: each session a session opens is one level deeper, and
   at the eighth it can no longer open sessions or schedule check-ins.
