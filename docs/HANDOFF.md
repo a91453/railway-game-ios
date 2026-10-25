@@ -359,7 +359,7 @@
 - **還沒派的**（照五方挑）：
   - I8：`BusRoute` id ≥ 1 的檢查（GameCore；`docs/archive/PR1189_1241_REVIEW_HANDOFF.md`）。
   - #1260 剩下的：讀舊存檔時 `install` 還在主執行緒讀道路。
-  - 公車：10i-3（真實公車資料）、10i-4（收購公車）、10i-6（2D／3D 地圖上的公車），見 `docs/decisions/400.md` 計畫表第 6–9 列；10i-5 是 #1263。
+  - 公車：10i-4（收購公車）、10i-6（2D／3D 地圖上的公車），見 `docs/decisions/400.md` 計畫表第 7–9 列；10i-5 是 #1263。10i-3（真實公車資料，`tools/real-buses/`、`RealBuses`）已做，10i-4 要用的欄位寫在 400.md 的「下一步」。
   - NEXT_PRIORITIES §22.2 第 22 名（路網流量分析）、第 27 名（轉乘規劃）。
   - I7（iCloud 文字）留給決策 397 的作者。
 - **不合的**：Codex 的 #1256（E500）、#1230（TEMU1000）都是 draft，作者沒說就不動。
