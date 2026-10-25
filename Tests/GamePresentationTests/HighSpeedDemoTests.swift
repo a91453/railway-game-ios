@@ -647,6 +647,9 @@ final class HighSpeedDemoTests: XCTestCase {
         let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
         launcher.population = Self.population
         launcher.places = Self.places
+        launcher.baseMap = try BaseMapTiles(
+            data: Data(contentsOf: Map3DRealTrainsTests.resources.appendingPathComponent("BaseMap/taiwan.pmtiles"), options: .alwaysMapped)
+        )
         let task = launcher.openHighSpeedDemo(railways: railways)
         // A second tap while it builds does nothing.
         XCTAssertNil(launcher.openHighSpeedDemo(railways: railways), "one build at a time")
@@ -661,6 +664,15 @@ final class HighSpeedDemoTests: XCTestCase {
         try XCTSkipIf(Self.population == nil, "The population file is not here.")
         let taipei = try XCTUnwrap(launcher.session?.world.stations.first { $0.name == "Taipei" })
         XCTAssertGreaterThan(launcher.session?.world.stationDemand(of: taipei.id)?.hinterland ?? 0, 1_000_000, "the people were handed to the build")
+        // The roads of all its land were read off the main actor, with the
+        // build: the game began with them (its log's first world), and none
+        // were left for the main thread as it opened (28 to 58 s on a
+        // Simulator, some 2,500 blocks, when they were).
+        let start = try XCTUnwrap(launcher.session?.commandLog.start)
+        let land = Set(try XCTUnwrap(start.landBlocks))
+        XCTAssertGreaterThan(land.count, 1_000)
+        let read = try XCTUnwrap(start.roads?.readBlocks)
+        XCTAssertEqual(read.intersection(land).count, land.count, "the game begins with the roads of all its land read")
     }
 
     /// A game the player starts while it builds is not taken over by it.
