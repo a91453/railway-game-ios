@@ -120,7 +120,6 @@ final class CityMapTests: XCTestCase {
     /// tooltip names what the school adds.
     func testTheTooltipNamesASchoolNearby() throws {
         var world = try world()
-        world.economy.earn(Money(1_000_000_000))
         try world.placeBuilding(.school, at: PlanPoint(x: 10_240, y: 10_240))
         let info = try XCTUnwrap(world.cityCellInfo(atX: 5 * 4_096 + 10, y: 5 * 4_096 + 10))
         XCTAssertTrue(info.lines(in: .english).contains("Near your school or hospital + $ 9.00"))
