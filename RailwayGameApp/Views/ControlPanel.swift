@@ -571,6 +571,9 @@ extension PlacedBuildingKind {
         case .amusementPark: .amusementPark
         case .park: .park
         case .temple: .temple
+        case .school: .school
+        case .hospital: .hospital
+        case .nightMarket: .nightMarket
         }
     }
 
@@ -588,6 +591,9 @@ extension PlacedBuildingKind {
         case .amusementPark: "BuildingAmusementPark"
         case .park: "BuildingPark"
         case .temple: "BuildingTemple"
+        case .school: "BuildingSchool"
+        case .hospital: "BuildingHospital"
+        case .nightMarket: "BuildingNightMarket"
         }
     }
 }

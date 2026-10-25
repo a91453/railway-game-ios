@@ -104,22 +104,23 @@ final class Map3DFollowViewsTests: XCTestCase {
     }
 
     /// Station A, 1 km east, station B; one train on the line A–B, as
-    /// `Map3DDriverHUDTests` (without the curve).
-    private func world() throws -> (GameWorld, TrainID, StationID, StationID) {
+    /// `Map3DDriverHUDTests` (without the curve); `between` units of track
+    /// between the platforms' edges.
+    private func world(between: Int64 = 64_000) throws -> (GameWorld, TrainID, StationID, StationID) {
         var world = try GameWorld(
             bounds: WorldBounds(width: 262_144, height: 262_144),
             economy: GameEconomy(balance: 1_000_000_000, costs: ConstructionCosts(track: 100, station: 1_000, train: 500))
         )
         let x: Int64 = 8_192, y: Int64 = 8_192
-        let points = [WorldCoordinate(x: x, y: y), WorldCoordinate(x: x + 4_096, y: y), WorldCoordinate(x: x + 68_096, y: y),
-                      WorldCoordinate(x: x + 72_192, y: y)]
+        let points = [WorldCoordinate(x: x, y: y), WorldCoordinate(x: x + 4_096, y: y), WorldCoordinate(x: x + 4_096 + between, y: y),
+                      WorldCoordinate(x: x + 8_192 + between, y: y)]
         let nodes = try points.map { try world.buildTrackNode(at: $0) }
         let first = try world.buildTrackEdge(from: nodes[0], to: nodes[1])
         _ = try world.buildTrackEdge(from: nodes[1], to: nodes[2])
         let last = try world.buildTrackEdge(from: nodes[2], to: nodes[3])
         let a = try world.buildStation(named: "A", at: PlanPoint(x: x + 2_048, y: y + 512)).id
         try world.addTrackPlatform(a, on: first, from: 0, to: 4_096)
-        let b = try world.buildStation(named: "B", at: PlanPoint(x: x + 70_144, y: y + 512)).id
+        let b = try world.buildStation(named: "B", at: PlanPoint(x: x + 6_144 + between, y: y + 512)).id
         try world.addTrackPlatform(b, on: last, from: 0, to: 4_096)
         try world.createLine(named: "Main", stops: [a, b])
         let line = LineID(rawValue: 1)
@@ -164,5 +165,26 @@ final class Map3DFollowViewsTests: XCTestCase {
         XCTAssertEqual(lookout.eye.x, middle.point.x, accuracy: 0.01)
         XCTAssertEqual(lookout.eye.z, middle.point.z - Map3DFollow.stationEyeAcross, accuracy: 0.01, "north, the track's left")
         XCTAssertEqual(lookout.eye.y, middle.point.y + Map3DFollow.stationEyeHeight, accuracy: 0.01)
+    }
+
+    /// Review I: stops closer than the linger (here an 80 m run, the
+    /// linger 100 m for a train of no length) still show the train
+    /// arriving: the next stop is watched from half the run on, before
+    /// the train stands there.
+    func testCloseStopsStillShowTheTrainArriving() throws {
+        var (world, train, a, b) = try world(between: 1_024)
+        // A second a tick, so ticks land within the run.
+        world.setSpeed(.x10)
+        var seenB: Bool?
+        for _ in 0..<1_500 {
+            try world.advance(ticks: 1)
+            guard let stop = world.map3DLookoutStop(of: train) else { continue }
+            if stop.station == b {
+                if case .travellingToStop? = world.train(id: train)?.execution { seenB = true } else { seenB = false }
+                break
+            }
+            XCTAssertEqual(stop.station, a)
+        }
+        XCTAssertEqual(seenB, true, "B watched while the train still runs to it")
     }
 }

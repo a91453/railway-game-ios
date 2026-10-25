@@ -15,7 +15,7 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 項目 | 現在 | 在哪裡 |
 | --- | --- | --- |
 | 階段 | **核心玩法**：作者 2026-10-16 覺得遊戲性太弱、太複雜，同意決策 254 的方向（入門關卡、簡單規則當預設、動作回報），實作中；同時做 3D 的生活感。最新的 TestFlight 是 0.5.0 (69.1)（2026-10-16，run 69）；之後作者說先不開新工作，等作者說開工（`docs/HANDOFF.md` 第 2 節）。之前：波次 1（2026-10-12 功能凍結、10-13 解除） | `docs/HANDOFF.md`、工作登記 #231 |
-| 存檔版本 | 73（公車接駁，決策 400）；72 是道路往車站長、車站的路（決策 400），71 是自有建築的公園與廟、外觀（決策 361），70 是汽機車分走旅客（決策 332）；每個版本一個存檔 fixture，共 77 個 | `SavedGame.currentVersion`、`SaveFixtures/` |
+| 存檔版本 | 74（自有建築的學校、醫院、夜市，決策 361 續）；73 是公車接駁（決策 400），72 是道路往車站長、車站的路（決策 400），71 是自有建築的公園與廟、外觀（決策 361），70 是汽機車分走旅客（決策 332）；每個版本一個存檔 fixture，共 78 個 | `SavedGame.currentVersion`、`SaveFixtures/` |
 | golden | schema 74（車站商業，#595），`GoldenScenarios/` 裡 77 個 JSON | `GoldenScenarios/` |
 | replay | 9 個指令紀錄（含問題回報轉成的 `problem-report-blank-map.json`，#468；長區段行車控制 `long-leg-traffic.json`，#480） | `ReplayFixtures/` |
 | 決策 | 見決策索引（§9）、`docs/ARCHITECTURE.md`（1–328）與 `docs/decisions/`（329 起，一個決策一個檔）。號碼以工作登記 #231 為準：登記就是預約，PR 只加自己的 `docs/decisions/<N>.md`，不改這一列與 §9（決策 329：每個 PR 都改同一處，每合一個其他的就衝突、重跑 CI）。218 沒有使用：越行寫進了決策 212，#556、#589；141、150、203 曾保留但沒有使用 | `docs/ARCHITECTURE.md`、`docs/decisions/`，索引在第 9 節 |
@@ -160,6 +160,7 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | `PR401_525_REVIEW_HANDOFF.md` | #401–#525 的審查交接：`main` 的 CI 紅燈、修的 bug、待作者決定的項目 |
 | `PR526_626_REVIEW_HANDOFF.md` | #526–#626 的審查交接：`main` 的 CI 紅燈、修的 bug、沒修的與理由、存檔 53–60 的遷移檢查 |
 | `PR1137_1188_REVIEW_HANDOFF.md` | #1137–#1188 的審查交接（審查 H）：修的 bug、沒修的與交給誰 |
+| `PR1189_1241_REVIEW_HANDOFF.md` | #1189–#1241 的審查交接（審查 I）：修的 bug、沒修的與交給誰 |
 | `UI_GAP_AND_PORT_PLAN.md` | 由 UX_REDESIGN_STUDY 與決策 106–122 取代 |
 | `MAPKIT_E2.md` | 由決策 50、97、151 取代 |
 

@@ -24,14 +24,41 @@ public struct LineAcquisition: Hashable, Sendable {
     public let busRoute: BusRouteID?
     /// The game day it was bought.
     public let day: Int64
-    /// What its riders cost (``LineAcquisition/value(ofDailyRiders:)``).
+    /// What its riders cost (``LineAcquisition/value(ofDailyRiders:tier:)``).
     public let value: Money
 
+    /// What kind of railway a line bought is, which sets what each of its
+    /// riders costs (decision 400, 10j-3).
+    public enum Tier: String, Hashable, Codable, Sendable {
+        /// A TRA branch line (decision 315); a purchase recorded without a
+        /// tier.
+        case branch
+        /// A light rail: $70 a rider.
+        case lightRail
+        /// A metro line: $100 a rider.
+        case metro
+
+        /// What a line of this kind costs for each rider a day its
+        /// stations carry in real life, on top of building it and its
+        /// trains (measured by `AcquisitionReportTests`). An urban
+        /// line's riders are many and their trips short, so each is worth
+        /// far less than a branch line's; at these values Taipei's, New
+        /// Taipei's and Taoyuan's real-place openings can each buy a line
+        /// with cash and loan (decision 400, 10j-3).
+        public var valuePerDailyRider: Money {
+            switch self {
+            case .branch: LineAcquisition.valuePerDailyRider
+            case .lightRail: Money(7_000)
+            case .metro: Money(10_000)
+            }
+        }
+    }
+
     /// The most riders a day a bought line is paid for: more than the
-    /// busiest TRA station's.
-    public static let maximumDailyRiders: Int64 = 200_000
-    /// What a bought line costs for each rider a day its stations carry in
-    /// real life, on top of building it and its trains: $10,000
+    /// busiest metro line's (decision 400).
+    public static let maximumDailyRiders: Int64 = 2_000_000
+    /// What a bought branch line costs for each rider a day its stations
+    /// carry in real life, on top of building it and its trains: $10,000
     /// (decision 315, measured by `AcquisitionReportTests`).
     public static let valuePerDailyRider = Money(1_000_000)
     /// The longest real line name kept.
@@ -41,9 +68,10 @@ public struct LineAcquisition: Hashable, Sendable {
     /// line's first train.
     public static let sameDayCutoff: Int64 = 4 * 3_600
 
-    /// What a line whose stations carry `riders` a day costs for them.
-    public static func value(ofDailyRiders riders: Int64) -> Money {
-        Money(riders * valuePerDailyRider.amount)
+    /// What a line of `tier` whose stations carry `riders` a day costs
+    /// for them.
+    public static func value(ofDailyRiders riders: Int64, tier: Tier = .branch) -> Money {
+        Money(riders * tier.valuePerDailyRider.amount)
     }
 
     /// The first day whose runs a line bought at `time` runs: the same day
@@ -116,8 +144,8 @@ extension GameWorld {
     // MARK: - Commands
 
     /// Records that line `id` is real line `realLine`, bought (decision
-    /// 315): pays ``LineAcquisition/value(ofDailyRiders:)`` for its
-    /// `dailyRiders`, on the books as an asset written down as track is,
+    /// 315): pays ``LineAcquisition/value(ofDailyRiders:tier:)`` for its
+    /// `dailyRiders` at `tier`'s value (decision 400), on the books as an asset written down as track is,
     /// and sets its runs to start on ``LineAcquisition/firstServiceDay(at:)``,
     /// so its trains, standing where its timetable has them at night, run
     /// from that day's first train.
@@ -129,7 +157,7 @@ extension GameWorld {
     ///   ``LineAcquisition/maximumDailyRiders``, or a line without runs or
     ///   one that has run one; ``GameError/insufficientFunds(required:available:)``.
     ///   The world is then unchanged.
-    public mutating func recordLineAcquisition(line id: LineID, realLine: String, dailyRiders: Int64) throws(GameError) {
+    public mutating func recordLineAcquisition(line id: LineID, realLine: String, dailyRiders: Int64, tier: LineAcquisition.Tier = .branch) throws(GameError) {
         let index = try lineIndex(of: id)
         guard !acquisitions.contains(where: { $0.realLine == realLine || $0.line == id }) else { throw .lineAlreadyAcquired }
         let line = lines[index]
@@ -138,7 +166,7 @@ extension GameWorld {
               !line.runs.isEmpty, line.runDays.allSatisfy({ $0 == nil }) else {
             throw .invalidAcquisition
         }
-        let value = LineAcquisition.value(ofDailyRiders: dailyRiders)
+        let value = LineAcquisition.value(ofDailyRiders: dailyRiders, tier: tier)
         try economy.spend(value)
         let lastDayDone = LineAcquisition.firstServiceDay(at: clock.now) - 1
         setRunsDone(ofLine: index, through: lastDayDone >= 0 ? lastDayDone : nil)

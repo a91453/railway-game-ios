@@ -44,6 +44,9 @@ extension PlacedBuildingKind {
         case .amusementPark: language.text("Amusement park", "遊樂園")
         case .park: language.text("Park", "公園")
         case .temple: language.text("Temple", "廟")
+        case .school: language.text("School", "學校")
+        case .hospital: language.text("Hospital", "醫院")
+        case .nightMarket: language.text("Night market", "夜市")
         }
     }
 
@@ -56,6 +59,15 @@ extension PlacedBuildingKind {
         case .temple:
             language.text("Draws visitors who ride your trains to it and leave offerings.",
                           "吸引香客搭你的車來參拜，香油錢是它的收入。")
+        case .school:
+            language.text("Families move in nearby, and land around it is worth more.",
+                          "附近的住家長得快，周圍的地價也變高。")
+        case .hospital:
+            language.text("People settle nearby, and land around it is worth more.",
+                          "附近的人口長得快，周圍的地價也變高。")
+        case .nightMarket:
+            language.text("Draws evening crowds who ride your trains to it and spend at its stalls.",
+                          "吸引人搭你的車來逛夜市，攤位的生意是它的收入。")
         default: nil
         }
     }
@@ -74,6 +86,12 @@ extension PlacedBuildingKind {
         case (.hotel, 2): language.text("Hot spring", "溫泉旅館")
         case (.departmentStore, 0): language.text("Mall", "購物中心")
         case (.departmentStore, 1): language.text("Halls", "展覽宴會館")
+        case (.school, 0): language.text("Primary school", "國小")
+        case (.school, 1): language.text("Kindergarten", "幼兒園")
+        case (.hospital, 0): language.text("Clinic", "社區醫院")
+        case (.hospital, 1): language.text("Care centre", "醫療照護中心")
+        case (.nightMarket, 0): language.text("Stall alley", "夜市街")
+        case (.nightMarket, 1): language.text("Market square", "市場小吃廣場")
         default: nil
         }
     }

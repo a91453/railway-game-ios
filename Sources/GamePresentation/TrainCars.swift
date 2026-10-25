@@ -47,16 +47,33 @@ public enum TrainCars {
     /// (world units, front to back), `gaps[i]` between car `i` and the
     /// next, the first one's nose where every train's is, half a
     /// ``drawnCarLength`` ahead of its head.
+    ///
+    /// No longer than the train it draws, though: a set laid at its real
+    /// lengths (25 m a high-speed car) on a train whose cars stand closer
+    /// (16 m, a world without real car lengths) is shrunk to the length
+    /// ``drawnCarLength`` cars would be drawn at, or when that is longer,
+    /// its body with half a car before its head and a car and a half past
+    /// its tail, so no more of it lies past its tail, off the track, than
+    /// of a train drawn 20 m a car (88.1: a 12-car 700T or N700S-G ran
+    /// some 120 m past its tail). Only when it is more than half a
+    /// ``drawnCarLength`` longer than that, though: a set a few metres
+    /// over is drawn at its own lengths, its cars at their models' own
+    /// scale (a 12-car EMU3000, 245.7 m, is not squeezed into 240 m).
+    /// A train whose cars stand their real lengths apart is drawn as it was.
     public static func cars(
         body: [TrainMotion.Point], heading: TrainMotion.Point, lengths: [Double], gaps: [Double]
     ) -> [[TrainMotion.Point]] {
+        var whole = 0.0
+        for (index, length) in lengths.enumerated() { whole += length + (index < gaps.count ? gaps[index] : 0) }
+        let bound = max(TrainMotion.Trail(body).length + 2 * drawnCarLength, drawnCarLength * Double(lengths.count))
+        let scale = whole > bound + drawnCarLength / 2 ? bound / whole : 1
         var fronts: [Double] = [], front = 0.0
         for (index, length) in lengths.enumerated() {
             fronts.append(front)
-            front += length + (index < gaps.count ? gaps[index] : 0)
+            front += (length + (index < gaps.count ? gaps[index] : 0)) * scale
         }
         guard !lengths.isEmpty, let trail = spine(body: body, heading: heading, needed: front) else { return [] }
-        return lengths.indices.map { trail.points(from: fronts[$0], to: fronts[$0] + lengths[$0]) }
+        return lengths.indices.map { trail.points(from: fronts[$0], to: fronts[$0] + lengths[$0] * scale) }
     }
 
     /// The track a train's cars are laid along, from its nose half a car
@@ -78,11 +95,15 @@ public enum TrainCars {
     }
 
     /// The way the body runs at its tail, from its head towards it, as a
-    /// unit vector; `nil` for a body of one point.
-    private static func backward(_ body: [TrainMotion.Point]) -> TrainMotion.Point? {
-        guard body.count > 1 else { return nil }
-        let a = body[body.count - 2], b = body[body.count - 1]
-        return unit(TrainMotion.Point(x: b.x - a.x, y: b.y - a.y))
+    /// unit vector: along its last ``drawnCarLength`` (all of it when
+    /// shorter), not its last segment, which can be a few world units
+    /// between rounded points and turned by degrees from the track (88.1:
+    /// a long set's last cars, laid straight on from it, swung off the
+    /// viaduct); `nil` for a body of one point.
+    static func backward(_ body: [TrainMotion.Point]) -> TrainMotion.Point? {
+        let trail = TrainMotion.Trail(body)
+        guard let tail = trail.points.last, let from = trail.point(at: trail.length - drawnCarLength) else { return nil }
+        return unit(TrainMotion.Point(x: tail.x - from.x, y: tail.y - from.y))
     }
 
     private static func unit(_ point: TrainMotion.Point) -> TrainMotion.Point? {
