@@ -1,5 +1,9 @@
 # E200／700T 原生素材，第十版：縮薄車頭綠色、延伸白鼻罩
 
+> 想讓其他 AI 製作同風格的新車，先讀 [完整製作手冊](../../docs/art/native-vehicle-modeling/README.md)、[可貼製作指令](../../docs/art/native-vehicle-modeling/PROMPT.md)、[獨立驗收表](../../docs/art/native-vehicle-modeling/REVIEW_CHECKLIST.md)。本工具的固定車型／編組／來源欄位不是通用新車生成器。
+>
+> 下文是 producer `04b051b0` 的素材製作紀錄；當時只作靜態註冊。後續 Claude 的 [#1217](https://github.com/a91453/railway-game-ios/pull/1217) 已合併遊戲營運映射，狀態見 [決策 408](../../docs/decisions/408.md) 與最新 HANDOFF。本次手冊文件化不改模型、接入或效能驗證。
+
 本輪真前版是已交付Codex producer `0ef6c1c8`，原生／GLB／配方／manifest／來源留history/0ef6c1c8，完整revision-9保持。新附IMG_4456.jpg實際再看，SHA與前輪附件相同；再看700t-2實車正面近照，確認前稿鼻尖中央綠色像厚圍兜。此次只調頭尾鼻部白／綠松／黑細線分色，白鼻罩向下延伸、綠色收薄，平順接回原車側主帶。原殼面、風擋／玻璃／雨刷／燈、輪架／門窗／設備、色票與完整編組不動；E200／中車／集電車／Codex比較車native及GLB逐bytes相同。
 
 ## 本輪特徵與外觀自檢

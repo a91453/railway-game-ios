@@ -1,10 +1,14 @@
 # E200／700T 原生素材，第十版：收薄車頭綠色
 
+> 跨 AI 的完整方法、製作指令、獨立驗收與這次實例，見 [原生車輛製作手冊](../native-vehicle-modeling/README.md)。
+>
+> 本頁記錄 producer `04b051b0` 的素材交付階段；原素材 PR 已合併，後續 Claude 的 [#1217](https://github.com/a91453/railway-game-ios/pull/1217) 已接入營運，見 [決策 408](../../decisions/408.md)。下文歷史「靜態素材」不代表最新遊戲仍未接入；本文件沒有新增裝置／效能驗證。
+
 再次實際查看使用者附的IMG_4456.jpg正面模型圖，並重看700T實車正面近照。前稿鼻尖綠色過厚，本輪讓白鼻罩向下延伸、收薄車頭綠色，較寬色塊留在兩側肩部，接回原車側主帶。只調頭尾鼻部原生分色，車殼曲面／bounds／鼻長、風擋／燈／雨刷、輪架／門窗／設備與編組保持；白車身、綠松與黑細線色票不變。
 
 ![第十版實際原生模型](overview.png)
 
-[公開draft #1201](https://github.com/a91453/railway-game-ios/pull/1201)／[私有draft #70](https://github.com/a91453/railway-reference-private/pull/70)互鏈。[判讀、來源與重建交接](../../../tools/train-shape-refresh/README.md)。最新producer與實際CI另記[issue #1200](https://github.com/a91453/railway-game-ios/issues/1200)。
+[公開素材 PR #1201](https://github.com/a91453/railway-game-ios/pull/1201)／[私有素材 PR #70](https://github.com/a91453/railway-reference-private/pull/70)互鏈，均已合併。[判讀、來源與重建交接](../../../tools/train-shape-refresh/README.md)。素材 producer 與交付當時 CI 記錄在 [issue #1200](https://github.com/a91453/railway-game-ios/issues/1200)；遊戲目前狀態另查後續接入。
 
 [第十版完整私有包](https://github.com/a91453/railway-reference-private/tree/codex/train-shape-refresh-2026-10-24/Railway/game-art-previews/docs/art/train-shape-refresh-2026-10-24/revision-10)有6合法M3DM、1自含單元完整12節組裝JSON、7GLB、49七向透明PNG、單元／編組、白模／剪影四向、同尺度E200／700T／既有Codex metro比較、真正前後、viewer、來源／SHA與ZIP。真前版為已交付0ef6c1c8，原生／GLB／來源／配方留history/0ef6c1c8，完整revision-9和更早包保持。
 
