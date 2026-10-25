@@ -26,10 +26,10 @@ final class SharedNetworkUITests: XCTestCase {
         let sheet = app.scrollViews.containing(.button, identifier: "sharedNetwork.newGame").firstMatch
         let cancel = app.buttons["sharedNetwork.cancel"]
         let bar = cancel.exists ? cancel.frame.maxY : nil
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(newGame, in: sheet, below: bar, clearOf: .button), "Start a New Game is not reachable")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(newGame, in: sheet, below: bar, at: sheet.frame.midX, clearOf: .button), "Start a New Game is not reachable")
         XCTAssertTrue(newGame.becomesHittable(within: 5), "Start a New Game is not reachable")
         let look = app.buttons["sharedNetwork.look"]
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(look, in: sheet, below: bar, clearOf: .button), "Just Look is not reachable")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(look, in: sheet, below: bar, at: sheet.frame.midX, clearOf: .button), "Just Look is not reachable")
         XCTAssertTrue(look.becomesHittable(within: 5), "Just Look is not reachable")
         look.tap()
         XCTAssertTrue(look.disappears(within: 10), "the sheet stayed")

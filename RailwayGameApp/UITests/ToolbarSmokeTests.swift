@@ -396,14 +396,16 @@ extension XCUIApplication {
     /// settings' volume sliders: a drag begun on one moved its slider, not
     /// the list, and every drag after began on it again (main fcf0697's
     /// full lane, run 40176501060: 24 drags at (437, 301) on the chimes
-    /// slider).
+    /// slider). `at`: the x the drags run down instead, where a list's
+    /// left edge is not its content (a sheet centred on a phone on its
+    /// side, whose edge is the safe area: run 40208393295).
     func dragUntilWhollyOnScreen(_ element: XCUIElement, in list: XCUIElement? = nil, below: CGFloat? = nil, drags: Int? = nil,
-                                 clearOf controls: XCUIElement.ElementType? = nil) -> Bool {
+                                 at column: CGFloat? = nil, clearOf controls: XCUIElement.ElementType? = nil) -> Bool {
         let area = list.map(\.frame) ?? frame
         let top = max(list == nil ? frame.minY + 140 : area.minY + 8, (below ?? -.infinity) + 8)
         let bottom = list == nil ? frame.maxY - 120 : area.maxY - 8
         // A form's rows are inset 16 pt from the list's sides.
-        let x = list == nil ? area.midX : area.minX + 8
+        let x = column ?? (list == nil ? area.midX : area.minX + 8)
         // A panel beside the map on a phone on its side is short, and a
         // line's list there runs to some 23 screens (main's e48285f): long
         // drags until the row exists, then short ones that cannot carry it
