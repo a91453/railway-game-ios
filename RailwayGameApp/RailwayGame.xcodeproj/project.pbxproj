@@ -189,6 +189,7 @@
 		E185710E92BEBBD011BAA363 /* TutorialJourneyUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B79ADC872C8814C1468A48EA /* TutorialJourneyUITests.swift */; };
 		E210B606678501C84923D234 /* thsr_ridership.json in Resources */ = {isa = PBXBuildFile; fileRef = 56F262A277C901B58885215F /* thsr_ridership.json */; };
 		E2EBB2C322FFE308B9EABCBE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 41251B12461A0FD34DFCB786 /* Assets.xcassets */; };
+		E6499A0C099D064E114AE300 /* metro_runs.json in Resources */ = {isa = PBXBuildFile; fileRef = 9DA4E2E7803343B7BED9242F /* metro_runs.json */; };
 		E6E0A7C92F1A3C01E0705817 /* NextStepChipUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71EB126E20DDE2A8668CD619 /* NextStepChipUITests.swift */; };
 		E85B627E457741AEE1EBFC59 /* horn-electric.wav in Resources */ = {isa = PBXBuildFile; fileRef = 35360EB7E5764FCB1FFB46EA /* horn-electric.wav */; };
 		E8D91661A60476AD32234249 /* tra_branch_runs.json in Resources */ = {isa = PBXBuildFile; fileRef = EE37EC86D4CCF3E12B118693 /* tra_branch_runs.json */; };
@@ -334,6 +335,7 @@
 		9A68301E79140AEFC540BBA0 /* TrainControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainControls.swift; sourceTree = "<group>"; };
 		9BDC97F7CE4B4CD1486F8245 /* TourismPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TourismPanel.swift; sourceTree = "<group>"; };
 		9D5672CF6C6C6FF4659709AE /* RailwayGameApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RailwayGameApp.swift; sourceTree = "<group>"; };
+		9DA4E2E7803343B7BED9242F /* metro_runs.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = metro_runs.json; sourceTree = "<group>"; };
 		9E428A92A98C07A45636F5E3 /* trtc_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = trtc_times.json; sourceTree = "<group>"; };
 		A07E2BC9805D886DEE596859 /* ControlPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlPanel.swift; sourceTree = "<group>"; };
 		A0888B79097535628EEF865F /* RailwayGameUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = RailwayGameUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -492,6 +494,7 @@
 				A0EC41B721D0D2D757CD6EF0 /* krtc_ridership.json */,
 				A1B80E3285C9871A9D98DECB /* krtc_times.json */,
 				F7E81C097849391C73D31AF5 /* krtc.json */,
+				9DA4E2E7803343B7BED9242F /* metro_runs.json */,
 				33A7DE737060DCAE06730A85 /* ntalrt_ridership.json */,
 				BE5F9CA2A582C25F505C6761 /* ntalrt_times.json */,
 				C604A41EF44E46BC47C90819 /* ntalrt.json */,
@@ -866,6 +869,7 @@
 				7E6BC92CBBB09DA09DE9F8EB /* krtc_ridership.json in Resources */,
 				789C9FAADEA0419549125729 /* krtc_times.json in Resources */,
 				7720BB19B20EEC81C11BF19E /* line-acquired.wav in Resources */,
+				E6499A0C099D064E114AE300 /* metro_runs.json in Resources */,
 				54DD975F68392FD1FBC6829C /* music-loop.caf in Resources */,
 				86EB45BA9705BF6B815B4D1B /* ntalrt.json in Resources */,
 				09D332A24DB65CBE7CF3B474 /* ntalrt_ridership.json in Resources */,

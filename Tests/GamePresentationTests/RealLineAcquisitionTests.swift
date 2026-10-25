@@ -11,8 +11,9 @@ final class RealLineAcquisitionTests: XCTestCase {
     /// bundled railways and `balance`.
     private func game(round network: String, balance: Money = Money(100_000_000_000), side: Int64 = 1 << 20, heights: Bool = false, transfers: Bool = false, rules: NewGameRules = .realistic) throws -> GameSession {
         let railways = try BundledRealData.railways()
-        let runs = try XCTUnwrap(railways.branchRuns[network])
-        let stations = try runs.stops.map { try BundledRealData.station($0, in: "tra_sched") }
+        let runs = try XCTUnwrap(railways.branchRuns[network] ?? railways.metroRuns[network], network)
+        let system = railways.branchRuns[network] == nil ? String(network.prefix { $0 != ":" }) : "tra_sched"
+        let stations = try runs.stops.map { try BundledRealData.station($0, in: system) }
         let latitude = stations.map(\.coordinate.latitude).reduce(0, +) / Double(stations.count)
         let longitude = stations.map(\.coordinate.longitude).reduce(0, +) / Double(stations.count)
         let anchor = try XCTUnwrap(GeoAnchor(latitude: Int64((latitude * 10_000_000).rounded()), longitude: Int64((longitude * 10_000_000).rounded())))
@@ -156,6 +157,44 @@ final class RealLineAcquisitionTests: XCTestCase {
                 run.days & (1 << StationDemand.weekday(ofDay: today - 1)) != 0 && (day ?? -1) < today - 1
             }
             XCTAssertEqual(missed.count, 0, "\(network): runs not sent out yesterday: \(missed.count) of \(runs.runs.count)")
+        }
+    }
+
+    /// Decision 400 (10j-2): Danhai's Blue Coast Line is on sale beside the
+    /// branch lines, bought as one command, its two tracks laid along the
+    /// real line, and a day of its real timetable run, every run sent out,
+    /// under simple and realistic rules (decision 258). Not on sale: the
+    /// Green Mountain Line, whose ends stand more trains overnight than the
+    /// game lays tracks; the Ankeng LRT, not yet (docs/HANDOFF.md); and
+    /// Kaohsiung's Circular Light Rail, which runs one way round its loop.
+    func testTheLightRailsAreBoughtAndRunTheirRealDay() throws {
+        for rules in [NewGameRules.simple, .realistic] {
+            let id = "ntdlrt:VB"
+            let session = try game(round: id, side: 1 << 21, heights: true, rules: rules)
+            for absent in ["ntdlrt:V", "ntalrt:K", "krtc:C"] {
+                XCTAssertFalse(session.buyableRealLines.contains { $0.id == absent }, absent)
+            }
+            let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == id }, "\(id) on sale")
+            let runs = try XCTUnwrap(session.railways?.metroRuns[id])
+            XCTAssertEqual(line.stops, runs.stops, id)
+            let offer = session.realLineOffer(for: line)
+            XCTAssertNil(offer.problem, "\(id): \(offer.problem ?? "")")
+            let acquisition = try XCTUnwrap(offer.acquisition, id)
+            XCTAssertEqual(acquisition.runs.count, runs.runs.count, id)
+            XCTAssertEqual(acquisition.trains.count, runs.overnight.values.reduce(0, +), id)
+            XCTAssertEqual(acquisition.trainType, .c, "\(id): the game's light metro")
+            XCTAssertTrue(session.acquireRealLine(offer), "\(id): \(session.message?.text ?? "")")
+            var world = session.world
+            let bought = try XCTUnwrap(world.acquisition(of: id))
+            // To three in the morning: a light rail's last runs of a day
+            // leave after midnight.
+            try world.advance(ticks: 2 * 24 * 60 + 3 * 60)
+            let ran = try XCTUnwrap(world.line(id: try XCTUnwrap(bought.line)))
+            let today = world.clock.now.seconds / GameTime.secondsPerDay
+            let missed = zip(ran.runs, ran.runDays).filter { run, day in
+                run.days & (1 << StationDemand.weekday(ofDay: today - 1)) != 0 && (day ?? -1) < today - 1
+            }
+            XCTAssertEqual(missed.count, 0, "\(id) (\(rules)): runs not sent out yesterday: \(missed.count) of \(ran.runs.count)")
         }
     }
 

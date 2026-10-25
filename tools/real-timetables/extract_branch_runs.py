@@ -171,8 +171,10 @@ def rescue(found, day, start):
             took = probe[-1][1] - probe[0][2]
             sets_off = leaves - TURNAROUND - took
             free = min(times)
-            if free <= sets_off and (best is None or free < best[0]):
-                best = (free, donor, sets_off)
+            # The train free soonest, the nearest of those free alike (the
+            # light rails' trains standing overnight short of a terminal).
+            if free <= sets_off and (best is None or (free, took) < best[0]):
+                best = ((free, took), donor, sets_off)
         if best is None:
             return None, stuck
         moved = stretch(found, best[1], origin, best[2])
@@ -231,10 +233,21 @@ def stretch(found, origin, destination, leaves):
     return moved
 
 
-def line_runs(data, days, stops):
+def line_runs(data, days, stops, start=None):
+    """The line's runs, where its trains stand at midnight and each
+    station's tracks; with `start`, its trains stand there at midnight, a
+    positioning run bringing one to each run no train stands ready for."""
     found, problem = runs(data, days, stops)
     if problem:
         return None, problem
+    if start is not None:
+        start = collections.Counter(start)
+        for day in range(7):
+            added, stuck = rescue(found, day, start)
+            if added is None:
+                return None, f"weekday {day}: no train for {stuck['train']}"
+            found += added
+        return balanced(found, start, stops, prompt=True)
     # Where the trains stand at midnight: what most weekdays need, if a
     # positioning run on the others brings a train where it is short (the
     # Shalun Line's Saturday starts at Shalun, its other days at
@@ -254,6 +267,15 @@ def line_runs(data, days, stops):
             for station, count in needs(found, day).items():
                 start[station] = max(start[station], count)
     found += rescued
+    return balanced(found, start, stops)
+
+
+def balanced(found, start, stops, prompt=False):
+    """`found` with positioning runs that take the trains back to `start`
+    after each day's last arrival, checked, and each station's tracks;
+    `prompt`, each after the last run that leaves where it stands, so the
+    trains the end stations have no track for overnight do not wait there
+    for the line's last train."""
     for day in range(7):
         idle, stuck = play(found, day, start)
         if stuck:
@@ -268,7 +290,10 @@ def line_runs(data, days, stops):
             deficit += [station] * max(0, count - len(idle[station]))
         surplus.sort()
         for (free, origin), destination in zip(surplus, deficit):
-            last = max([r["calls"][-1][1] for r in day_of(found, day)] + [free])
+            if prompt:
+                last = max([r["calls"][0][2] for r in day_of(found, day) if r["calls"][0][0] == origin] + [free])
+            else:
+                last = max([r["calls"][-1][1] for r in day_of(found, day)] + [free])
             moved = stretch(found, origin, destination, max(free, last + TURNAROUND))
             if moved is None:
                 return None, f"weekday {day}: no real train runs {origin} to {destination} to time a positioning run"

@@ -379,6 +379,32 @@ public struct RealLineRuns: Sendable, Equatable {
         return lines
     }
 
+    /// Decision 400 (10j-2): the lines of `metro_runs.json`
+    /// (`tools/real-timetables/extract_metro_runs.py`), by their purchase's
+    /// name (`ntdlrt:VB`); a line that shares its first stations with
+    /// another also from where they part, for when the other is bought, by
+    /// `ntdlrt:VB after ntdlrt:V`.
+    public static func metroLines(data: Data) throws -> [String: RealLineRuns] {
+        struct Metros: Decodable {
+            struct Line: Decodable {
+                let id: String
+                let after: String?
+            }
+
+            let lines: [Line]
+        }
+        struct Files: Decodable {
+            let lines: [File]
+        }
+        let names = try JSONDecoder().decode(Metros.self, from: data).lines.map { line in line.after.map { "\(line.id) after \($0)" } ?? line.id }
+        let files = try JSONDecoder().decode(Files.self, from: data).lines
+        var lines: [String: RealLineRuns] = [:]
+        for (name, file) in zip(names, files) {
+            lines[name] = try RealLineRuns(file: file)
+        }
+        return lines
+    }
+
     private struct File: Decodable {
         struct Run: Decodable {
             let train: String

@@ -360,6 +360,10 @@ public struct RealRailways: Sendable {
     /// (`tra_branch_runs.json`, decision 315), by their `tra.json` id
     /// (`PINGXI`); empty without the file.
     public let branchRuns: [String: RealLineRuns]
+    /// Decision 400 (10j-2): the real trips of the light rails a player
+    /// can buy (`metro_runs.json`), by the purchase's name (`ntdlrt:VB`,
+    /// ``RealLineRuns/metroLines(data:)``); empty without the file.
+    public let metroRuns: [String: RealLineRuns]
     /// Where the real TRA lines are on bridges and in tunnels
     /// (`rail_structures.json`, decision 279).
     public let structures: RealRailStructures?
@@ -388,6 +392,7 @@ public struct RealRailways: Sendable {
         transfers: RealStationTransfers? = nil,
         pingxiRuns: RealLineRuns? = nil,
         branchRuns: [String: RealLineRuns] = [:],
+        metroRuns: [String: RealLineRuns] = [:],
         structures: RealRailStructures? = nil,
         tracks: RealRailTracks? = nil,
         ridership: RealRidership? = nil,
@@ -445,6 +450,7 @@ public struct RealRailways: Sendable {
         self.transfers = transfers
         self.pingxiRuns = pingxiRuns
         self.branchRuns = branchRuns
+        self.metroRuns = metroRuns
         self.structures = structures
         self.tracks = tracks
         self.ridership = ridership
@@ -736,6 +742,9 @@ extension RealRailways {
         let branchRuns = read("tra_branch_runs", "json").flatMap { data in
             parse("tra_branch_runs.json") { try RealLineRuns.branchLines(data: data) }
         }
+        let metroRuns = read("metro_runs", "json").flatMap { data in
+            parse("metro_runs.json") { try RealLineRuns.metroLines(data: data) }
+        }
         let structures = read("rail_structures", "json").flatMap { data in
             parse("rail_structures.json") { try RealRailStructures(data: data) }
         }
@@ -772,6 +781,7 @@ extension RealRailways {
                 transfers: transfers,
                 pingxiRuns: pingxiRuns,
                 branchRuns: branchRuns ?? [:],
+                metroRuns: metroRuns ?? [:],
                 structures: structures,
                 tracks: tracks,
                 ridership: ridership,
