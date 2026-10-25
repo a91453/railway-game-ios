@@ -8,6 +8,9 @@ import GameCore
 // Decision 398: its hotels, department stores and amusement park from the
 // estate kit, its wharves and marinas from the coastal kit, the same way:
 // close up the kit's models, from farther a box round each tall one.
+// Decision 361's sequel: its schools and hospitals from the civic kit
+// (with the park kit's pitch and play things), its night markets from the
+// commercial kit's stalls and the civic kit's market, the same way.
 
 extension Map3DScene.Builder {
     /// Each park look's model (``PlacedBuildingKind/looks``): a community
@@ -49,7 +52,7 @@ extension Map3DScene.Builder {
             }
             target = .base
             return true
-        case .hotel, .departmentStore, .amusementPark, .wharf, .marina:
+        case .hotel, .departmentStore, .amusementPark, .wharf, .marina, .school, .hospital, .nightMarket:
             let layout = Self.placedKitLayouts[building.kind]![building.look]
             let facing = building.kind.standsOnShore ? seaward(of: building) : facing
             let right = facing.cross(.up)
@@ -170,6 +173,16 @@ extension Map3DScene.Builder {
             water - part.connectors.first { $0.name == "waterline" }!.position.z
         }
         let forecourt = Map3DPalette.forecourt
+        typealias Part = (model: Map3DModelPack.Model, x: Float, right: Float, lift: Float, angle: Float)
+        func civic(_ part: Map3DCivicKit.Part, _ x: Float, _ right: Float, _ angle: Float = 0) -> Part {
+            (Map3DCivicKit.model(for: part), x, right, 0, angle)
+        }
+        func play(_ part: Map3DParkKit.Part, _ x: Float, _ right: Float, _ angle: Float = 0) -> Part {
+            (Map3DParkKit.model(for: part), x, right, 0, angle)
+        }
+        func stall(_ part: Map3DCommercialKit.Part, _ x: Float, _ right: Float, _ angle: Float = 0) -> Part {
+            (Map3DCommercialKit.model(for: part), x, right, 0, angle)
+        }
         // A hotel (30 m) one of the kit's three largest: the tower for its
         // fourteen storeys, the resort round its pool, the hot-spring inn.
         let hotels = [Estate.towerHotel, .resortHotel, .hotSpringInn].map { PlacedKitLayout([estate($0)], pad: forecourt, recolours: true) }
@@ -211,6 +224,44 @@ extension Map3DScene.Builder {
             builder.box(-7.5, 0, 0, 15, 30, water, Map3DPalette.concrete)
             builder.box(7.5, -0.15, 0, 15, 30, water + 0.15, Map3DPalette.water)
         }
-        return [.hotel: hotels, .departmentStore: stores, .amusementPark: [park], .wharf: [wharf], .marina: [marina]]
+        // Decision 361's sequel. A school (46 m): the primary school and its
+        // gym facing the street, a pitch and play things behind; or a
+        // kindergarten with a playground, a court behind.
+        let schools = [
+            PlacedKitLayout([civic(.primarySchool, 12, -11), civic(.schoolGym, 10, 13, .pi / 2),
+                             play(.miniSoccerPitch, -13, -10, .pi / 2), play(.soccerGoal, -5, -10), play(.soccerGoal, -21, -10, .pi),
+                             play(.bleachers, -13, 6), play(.slide, -8, 14), play(.swingSet, -14, 18), play(.climbingFrame, -19, 12), play(.sandpit, -19, 19)],
+                            pad: forecourt, recolours: false),
+            PlacedKitLayout([civic(.kindergarten, 12, -12), play(.playhouse, 12, 8), play(.slide, 16, 14), play(.swingSet, 8, 16), play(.sandpit, 6, 6),
+                             play(.basketballCourt, -12, -8, .pi / 2), play(.gazebo, -14, 15)],
+                            pad: forecourt, recolours: false),
+        ]
+        // A hospital (30 m): the clinic and the day-care wing side by
+        // side, tables before them; or the care centre in front and the
+        // clinic behind.
+        let hospitals = [
+            PlacedKitLayout([civic(.clinic, 8, -9), civic(.dayCareCenter, 6, 7), civic(.umbrellaTable, -10, -6), civic(.umbrellaTable, -10, 6)],
+                            pad: forecourt, recolours: false),
+            PlacedKitLayout([civic(.dayCareCenter, 6, -6), civic(.clinic, -8, 8, .pi), civic(.umbrellaTable, -10, -10), play(.gazebo, 10, 11)],
+                            pad: forecourt, recolours: false),
+        ]
+        // A night market (30 m): the commercial kit's alley of stalls
+        // (Map3DCommercialKit.Example.nightMarketAlley, as it lays them);
+        // or the civic kit's market canopies and carts round tables under
+        // lanterns.
+        let markets = [
+            PlacedKitLayout([stall(.ramenYatai, -5, -8), stall(.nightMarketFryer, -5, 0), stall(.nightMarketFruit, -5, 8),
+                             stall(.nightMarketGame, 5, -6, .pi), stall(.mobileFoodCart, 5, 6, .pi), stall(.commercialRecycling, 0, 12),
+                             stall(.aFrameSign, -1, -12), stall(.totemLightbox, 1, -12)],
+                            pad: Map3DPalette.plaza, recolours: false),
+            PlacedKitLayout([civic(.marketCanopy, 8, -7), civic(.marketStall, 8, -9), civic(.marketStall, 8, -5), civic(.produceCart, 6, 1),
+                             civic(.snackCart, 10, 1), civic(.umbrellaTable, 7, 7), civic(.umbrellaTable, 11, 11), civic(.lanternString, 2, 7),
+                             civic(.marketCanopy, -8, 7, .pi), civic(.marketStall, -8, 9, .pi), civic(.marketStall, -8, 5, .pi),
+                             stall(.nightMarketFryer, -8, -6), civic(.umbrellaTable, -4, -11), civic(.umbrellaTable, -11, -11),
+                             civic(.lanternString, -2, -7)],
+                            pad: Map3DPalette.plaza, recolours: false),
+        ]
+        return [.hotel: hotels, .departmentStore: stores, .amusementPark: [park], .wharf: [wharf], .marina: [marina],
+                .school: schools, .hospital: hospitals, .nightMarket: markets]
     }()
 }

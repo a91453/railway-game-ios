@@ -71,6 +71,16 @@ public enum LandDemand {
     /// How many times its rate a growing station's front grows at.
     public static let stationFrontGrowth: Int64 = 3
 
+    // Schools and hospitals (decision 361's sequel): the island city
+    // reference's `LV_W.school = 9` and `hospital = 5` (g23.js), in tenths.
+
+    /// What a growing station's homes within ``LandValueRules/civicReach``
+    /// of one of the company's schools take more of its new residents, in
+    /// tenths of their share: 9, so 1.9 times; near a hospital 5, 1.5
+    /// times; near both 2.4 times. Several of a kind count once.
+    public static let schoolGrowthTenths: Int64 = 9
+    public static let hospitalGrowthTenths: Int64 = 5
+
     /// What a station's share of the land holds.
     public struct Share: Hashable, Sendable {
         public var residents: Int64 = 0
@@ -566,7 +576,8 @@ extension GameWorld {
             indices.append(index)
             weights.append(squared < front ? LandDemand.stationFrontGrowth : 1)
         }
-        let addedResidents = Self.apportion(residents, by: indices.indices.map { land.cells[indices[$0]].residents * weights[$0] })
+        let homeWeights = civicGrowthWeights(weights, of: indices)
+        let addedResidents = Self.apportion(residents, by: indices.indices.map { land.cells[indices[$0]].residents * homeWeights[$0] })
         let addedJobs = Self.apportion(jobs, by: indices.indices.map { land.cells[indices[$0]].jobs * weights[$0] })
         for (offset, index) in indices.enumerated() {
             let cell = land.cells[index]
@@ -743,7 +754,8 @@ extension GameWorld {
         }
         let residents = kinds[0]
         let jobs: [CityDemand.Kind?: Int64] = [.shops: kinds[1], .work: kinds[2], nil: other]
-        let addedResidents = Self.apportion(residents, by: indices.indices.map { land.cells[indices[$0]].residents * weights[$0] })
+        let homeWeights = civicGrowthWeights(weights, of: indices)
+        let addedResidents = Self.apportion(residents, by: indices.indices.map { land.cells[indices[$0]].residents * homeWeights[$0] })
         var addedJobs = [Int64](repeating: 0, count: indices.count)
         for kind in [CityDemand.Kind.shops, .work, nil] {
             let members = indices.indices.filter { CityDemand.Kind(of: land.cells[indices[$0]].use) == kind }
@@ -760,6 +772,22 @@ extension GameWorld {
             let newResidents = cell.residents >= limits.residents ? cell.residents : min(limits.residents, cell.residents + addedResidents[offset])
             let newJobs = cell.jobs >= limits.jobs ? cell.jobs : min(limits.jobs, cell.jobs + addedJobs[offset])
             land.cells[index] = cell.with(residents: newResidents, jobs: newJobs)
+        }
+    }
+
+    /// The weights the new residents of a growing station are shared by
+    /// among the cells `indices` of its catchment (decision 361's sequel):
+    /// `weights`, each times `10 +` ``LandDemand/schoolGrowthTenths`` for a
+    /// cell whose middle lies within ``LandValueRules/civicReach`` of one of
+    /// the company's schools and `+` ``LandDemand/hospitalGrowthTenths`` of
+    /// a hospital, the rest times 10; `weights` as they are when the company
+    /// has neither.
+    func civicGrowthWeights(_ weights: [Int64], of indices: [Int]) -> [Int64] {
+        let civics = landValueCivics()
+        guard !civics.schools.isEmpty || !civics.hospitals.isEmpty else { return weights }
+        return zip(indices, weights).map { index, weight in
+            let near = Self.isNearCivics(land.cells[index].middle, civics)
+            return weight * (10 + (near.school ? LandDemand.schoolGrowthTenths : 0) + (near.hospital ? LandDemand.hospitalGrowthTenths : 0))
         }
     }
 

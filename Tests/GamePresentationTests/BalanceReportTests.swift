@@ -532,6 +532,76 @@ final class BalanceReportTests: XCTestCase {
         print(lines.joined(separator: "\n"))
     }
 
+    /// Decision 361's sequel: a night market beside the first line's last
+    /// station, as the temple above, and a school or a hospital there:
+    /// what each costs, and how many more people live within 400 m of it
+    /// than on the same land with none.
+    func testANightMarketASchoolAndAHospitalOnTheFirstLine() throws {
+        let days = try requestedDays()
+        var lines = [
+            "### A night market, a school and a hospital beside the first line's last station (built on day 10)",
+            "",
+            "| Building | Cost | Customers a day (mean) | Profit a day (mean) | Payback days | Balance with | without |",
+            "| --- | --: | --: | --: | --: | --: | --: |",
+        ]
+        var base = try firstLine()
+        let station = try XCTUnwrap(base.stations.last)
+        base.setTourism([Attraction(id: AttractionID(rawValue: 1), name: "Far", englishName: "Far", point: PlanPoint(x: 0, y: 0), kind: .town, baseStars: 100)])
+        let kinds: [PlacedBuildingKind] = [.nightMarket, .school, .hospital]
+        var worlds = Array(repeating: base, count: kinds.count)
+        var ids = [PlacedBuildingID?](repeating: nil, count: kinds.count)
+        var customers = [Int64](repeating: 0, count: kinds.count), profit = customers, counted = customers
+        let site = PlanPoint(x: station.point.x + 3_000, y: station.point.y - 6_000)
+        try base.advance(ticks: 1)
+        for index in worlds.indices { try worlds[index].advance(ticks: 1) }
+        func nearby(_ world: GameWorld) -> Int64 {
+            let reach = LandValueRules.civicReach * LandValueRules.civicReach
+            return world.land.cells.reduce(0) { sum, cell in
+                let dx = cell.middle.x - site.x, dy = cell.middle.y - site.y
+                return dx * dx + dy * dy < reach ? sum + cell.residents : sum
+            }
+        }
+        var growth: [String] = []
+        for day in 1...days {
+            try base.advance(ticks: 1_440)
+            for index in worlds.indices { try worlds[index].advance(ticks: 1_440) }
+            if day == 10 {
+                base.economy.earn(Money(3_000_000_000))
+                for index in worlds.indices {
+                    worlds[index].economy.earn(Money(3_000_000_000))
+                    ids[index] = try worlds[index].placeBuilding(kinds[index], at: site).id
+                }
+                growth.append("| 10 | \(nearby(base)) | \(worlds.dropFirst().map { String(nearby($0)) }.joined(separator: " | ")) |")
+            }
+            for index in worlds.indices where day > 10 && kinds[index].isSubsidiary {
+                guard let id = ids[index], let building = worlds[index].placedBuilding(id: id) else { continue }
+                let result = worlds[index].subsidiaryDay(of: building, onDay: Int64(day) - 1)
+                customers[index] += result.customers
+                profit[index] += (result.sales - result.cost).amount
+                counted[index] += 1
+            }
+            if day > 10 && (day % 30 == 0 || day == days) {
+                growth.append("| \(day) | \(nearby(base)) | \(worlds.dropFirst().map { String(nearby($0)) }.joined(separator: " | ")) |")
+            }
+        }
+        for index in worlds.indices {
+            let building = try XCTUnwrap(ids[index].flatMap { worlds[index].placedBuilding(id: $0) })
+            let mean = max(1, counted[index])
+            let daily = profit[index] / mean
+            let payback = kinds[index].isSubsidiary ? (daily > 0 ? String(building.cost.amount / daily) : "never") : "—"
+            lines.append(
+                "| \(kinds[index]) | \(dollars(building.cost.amount)) | \(customers[index] / mean) | \(dollars(daily)) | \(payback) | "
+                    + "\(dollars(worlds[index].economy.balance.amount)) | \(dollars(base.economy.balance.amount)) |"
+            )
+        }
+        lines += [
+            "",
+            "| Day | Residents within 400 m: none | school | hospital |",
+            "| --: | --: | --: | --: |",
+        ] + growth
+        print(lines.joined(separator: "\n"))
+    }
+
     /// Decision 183: the first line with the city's requests, against the
     /// same line without them, sights off in both. Every midnight the
     /// company takes on the best paying offers of riders and residents it

@@ -28,7 +28,7 @@ final class ParksAndTemplesTests: XCTestCase {
     // MARK: - Looks
 
     func testEachKindHasItsLooks() throws {
-        XCTAssertEqual(PlacedBuildingKind.allCases.map(\.looks), [1, 1, 1, 1, 1, 2, 3, 1, 3, 2])
+        XCTAssertEqual(PlacedBuildingKind.allCases.map(\.looks), [1, 1, 1, 1, 1, 2, 3, 1, 3, 2, 2, 2, 2])
         var world = try world()
         XCTAssertThrowsError(try world.placeBuilding(.park, at: PlanPoint(x: 20_000, y: 10_000), look: 3)) {
             XCTAssertEqual($0 as? GameError, .invalidBuildingLook)
@@ -77,7 +77,7 @@ final class ParksAndTemplesTests: XCTestCase {
         let far = try world.placeBuilding(.temple, at: PlanPoint(x: 100_000, y: 10_000))
         XCTAssertEqual(world.subsidiaryCustomers(of: far, onDay: 0), 0, "no station within 800 m")
         let temple = try world.placeBuilding(.temple, at: PlanPoint(x: 31_000, y: 26_768), look: 1)
-        let sight = try XCTUnwrap(world.templeSight(of: temple.id))
+        let sight = try XCTUnwrap(world.companySight(of: temple.id))
         XCTAssertEqual(world.stars(of: sight), 200)
         XCTAssertNil(world.attraction(id: sight.id), "never an attraction of its own")
         XCTAssertEqual(world.tourism?.attractions.count, 1)
@@ -97,7 +97,7 @@ final class ParksAndTemplesTests: XCTestCase {
         var world = try world()
         let temple = try world.placeBuilding(.temple, at: PlanPoint(x: 31_000, y: 26_768))
         world.setTourism(nil)
-        XCTAssertNil(world.templeSight(of: temple.id))
+        XCTAssertNil(world.companySight(of: temple.id))
         XCTAssertEqual(world.subsidiaryCustomers(of: temple, onDay: 0), 0)
     }
 

@@ -261,6 +261,11 @@ enum MapGlyph: String {
     /// Decision 361: the company's park and temple.
     case park = "MapGlyphPark"
     case temple = "MapGlyphTemple"
+    /// Decision 361's sequel: the company's school, hospital and night
+    /// market.
+    case school = "MapGlyphSchool"
+    case hospital = "MapGlyphHospital"
+    case nightMarket = "MapGlyphNightMarket"
     case crowd = "MapGlyphCrowd"
     /// Decision 205: one person, the waiting passengers' count beside it;
     /// the crowding set's one-person step (``crowd`` two, ``full`` three).

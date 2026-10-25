@@ -383,9 +383,14 @@
 ///     build that reads only an earlier version would drop the routes and
 ///     cannot read a bus route's purchase, so it says the save is newer
 ///     than it instead.
+/// 74. Schools, hospitals and night markets (decision 361's sequel): a
+///     placed building can be a `"school"`, a `"hospital"` or a
+///     `"nightMarket"`, and a night market have its `"visitors"`. A build
+///     that reads only an earlier version cannot read the kinds, so it says
+///     the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 73
+    public static let currentVersion = 74
 
     public let world: GameWorld
 
@@ -574,6 +579,8 @@ extension SavedGame: Codable {
         // them leaves as it is).
         // Version 72 to 73: a world without `"busRoutes"` runs no buses,
         // and a purchase without `"kind"` is a railway's.
+        // Version 73 to 74: a world before version 74 has no school,
+        // hospital or night market of the company's.
         // Later versions add their steps here.
         var world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
         if version == 72 { world.seedBoughtTilesRoads() }

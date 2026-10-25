@@ -116,6 +116,17 @@ final class CityMapTests: XCTestCase {
         XCTAssertEqual(world.cityCellInfo(atX: 5 * 4_096, y: 5 * 4_096)?.lines(in: .english).first, "Homes")
     }
 
+    /// Decision 361's sequel: within 400 m of the company's school the
+    /// tooltip names what the school adds.
+    func testTheTooltipNamesASchoolNearby() throws {
+        var world = try world()
+        world.economy.earn(Money(1_000_000_000))
+        try world.placeBuilding(.school, at: PlanPoint(x: 10_240, y: 10_240))
+        let info = try XCTUnwrap(world.cityCellInfo(atX: 5 * 4_096 + 10, y: 5 * 4_096 + 10))
+        XCTAssertTrue(info.lines(in: .english).contains("Near your school or hospital + $ 9.00"))
+        XCTAssertTrue(info.lines(in: .traditionalChinese).contains("鄰近公司的學校或醫院 + $ 9.00"))
+    }
+
     /// A served station sets its catchment's premiums: the tooltip names
     /// it, and the panel's average follows.
     func testAServedStationsCatchment() throws {
