@@ -96,10 +96,17 @@ extension GameWorld {
                 world.foundTowns(seed: eventSeed)
             }
             // Decision 400: the roads, a square in each town's middle on a
-            // blank map, growing toward the stations once a month. A
-            // real-world map has none until its base map's roads are read
-            // into it (decision 400's next step).
-            if anchor == nil, land == nil { world.enableRoads(towns: Land.townCentres(seed: eventSeed, in: bounds)) }
+            // blank map, growing toward the stations once a month. Its
+            // sequel: a real-world map whose land is read in as it is
+            // needed (`land` empty, ``GameWorld/setLandOnDemand()`` next)
+            // has the base map's, read in with the land
+            // (``GameSession/readRoads(in:baseMap:)``), and each station
+            // draws the nearest toward it.
+            if anchor == nil, land == nil {
+                world.enableRoads(towns: Land.townCentres(seed: eventSeed, in: bounds))
+            } else if anchor != nil, land?.isEmpty == true {
+                world.enableRoads()
+            }
             // Decision 160: the middle tile, its towns the usual map's.
             if buysMap {
                 let middle = buyingMapTiles / 2

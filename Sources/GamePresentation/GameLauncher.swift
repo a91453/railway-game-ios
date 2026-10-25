@@ -58,6 +58,10 @@ public final class GameLauncher {
     /// How much of the ground real buildings cover (decision 147), from
     /// the app's coverage file; `nil` until it is read, or without it.
     public var coverage: CoverageGrid?
+    /// The base map (decision 400's sequel), whose roads real-world maps'
+    /// land is read in with (``GameSession/baseMap``); `nil` until it is
+    /// read, or without it.
+    public var baseMap: BaseMapTiles?
 
     /// Taiwan's place names, which new stations on real-world maps are
     /// named after (decision 159), handed to every game it starts
@@ -1105,6 +1109,7 @@ public final class GameLauncher {
         started.water = water
         started.heights = heights
         started.coverage = coverage
+        started.baseMap = baseMap
         started.placeNames = placeNames
         started.railways = railways
         started.collectedStamps = stationStamps.dates
@@ -1176,6 +1181,7 @@ public final class GameLauncher {
         water = data.water
         heights = data.heights
         coverage = data.coverage
+        baseMap = data.baseMap
         placeNames = data.placeNames
         railways = data.railways
         realWorldIssues = data.issues
@@ -1185,6 +1191,7 @@ public final class GameLauncher {
             session.water = water
             session.heights = heights
             session.coverage = coverage
+            session.baseMap = baseMap
             session.placeNames = placeNames
             session.railways = railways
             // Decision 88: land not read round a station built while the
@@ -1425,6 +1432,10 @@ public struct RealWorldData: Sendable {
     public let heights: HeightGrid?
     /// How much of the ground real buildings cover (decision 147).
     public let coverage: CoverageGrid?
+    /// The base map (decision 400's sequel), whose roads a real-world
+    /// map's land is read in with; the app maps its file (it is some
+    /// 50 MB) rather than reading it.
+    public var baseMap: BaseMapTiles?
     /// Taiwan's place names (decision 159).
     public let placeNames: PlaceNames?
     public let railways: RealRailways?

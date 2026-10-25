@@ -192,12 +192,15 @@ struct RailwayGameApp: App {
     /// without the places grid they all serve homes, and without the map
     /// files there are no real railways.
     private nonisolated static func bundledRealWorldData() -> RealWorldData {
-        let data = RealWorldData.load { name, ext in
+        var data = RealWorldData.load { name, ext in
             guard let url = Bundle.main.url(forResource: name, withExtension: ext) else {
                 throw RealRailways.ResourceError.missing("\(name).\(ext)")
             }
             return try Data(contentsOf: url)
         }
+        // Decision 400's sequel: the base map, whose roads real-world
+        // maps' land is read in with, mapped rather than read.
+        data.baseMap = BaseMapFiles.tiles.flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }.flatMap { try? BaseMapTiles(data: $0) }
         #if DEBUG
         for issue in data.issues {
             print("RealWorldData: could not read \(issue)")

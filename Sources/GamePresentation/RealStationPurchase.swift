@@ -213,7 +213,7 @@ extension GameSession {
             try world.setStationDemand(station.id, to: purchase.demand)
         }
         try world.addTrackPlatform(station.id, on: edge, from: 0, to: length)
-        Self.readLand(roundStationsOf: &world, population: population, places: places, water: water, coverage: coverage)
+        Self.readLand(roundStationsOf: &world, population: population, places: places, water: water, coverage: coverage, baseMap: baseMap)
         return world.station(id: station.id) ?? station
     }
 }

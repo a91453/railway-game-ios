@@ -305,7 +305,7 @@ extension GameSession {
         case .placeBuilding(let kind, let point, let look):
             // The site's land, read when it was picked, may have gone with an
             // undo since: read it again, as part of the edit (decision 95).
-            Self.readLand(within: Self.buildingLandReach, of: [point], in: &world, population: population, places: places, water: water, coverage: coverage)
+            Self.readLand(within: Self.buildingLandReach, of: [point], in: &world, population: population, places: places, water: water, coverage: coverage, baseMap: baseMap)
             outcome.number = world.placedBuildingQuote(kind, at: point)?.cleared.count ?? 0
             outcome.building = try world.placeBuilding(kind, at: point, look: look ?? 0)
         case .sellBuilding(let id): outcome.sale = try world.sellPlacedBuilding(id)

@@ -119,13 +119,33 @@ public struct RealWorldDataSet: Hashable, Sendable, Codable {
     public var water = false
     public var heights = false
     public var coverage = false
+    /// The base map, whose roads a real-world map's land is read in with
+    /// (decision 400's sequel); a log from before it has none.
+    public var baseMap = false
 
-    public init(population: Bool = false, places: Bool = false, water: Bool = false, heights: Bool = false, coverage: Bool = false) {
+    public init(
+        population: Bool = false, places: Bool = false, water: Bool = false, heights: Bool = false, coverage: Bool = false, baseMap: Bool = false
+    ) {
         self.population = population
         self.places = places
         self.water = water
         self.heights = heights
         self.coverage = coverage
+        self.baseMap = baseMap
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case population, places, water, heights, coverage, baseMap
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        population = try container.decode(Bool.self, forKey: .population)
+        places = try container.decode(Bool.self, forKey: .places)
+        water = try container.decode(Bool.self, forKey: .water)
+        heights = try container.decode(Bool.self, forKey: .heights)
+        coverage = try container.decode(Bool.self, forKey: .coverage)
+        baseMap = try container.decodeIfPresent(Bool.self, forKey: .baseMap) ?? false
     }
 }
 

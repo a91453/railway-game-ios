@@ -380,7 +380,7 @@ extension GameSession {
                 try? draft.buyMapTile(tile, passingMilestone: true)
             }
             if !tiles.isEmpty {
-                Self.readLand(roundStationsOf: &draft, population: population, places: places, water: self.water, coverage: coverage)
+                Self.readLand(roundStationsOf: &draft, population: population, places: places, water: self.water, coverage: coverage, baseMap: baseMap)
             }
         }
         try? draft.readGround(under: samples, from: heights)
@@ -625,7 +625,7 @@ extension GameSession {
             for tile in tiles {
                 try world.buyMapTile(tile, passingMilestone: true)
             }
-            Self.readLand(roundStationsOf: &world, population: population, places: places, water: water, coverage: coverage)
+            Self.readLand(roundStationsOf: &world, population: population, places: places, water: water, coverage: coverage, baseMap: baseMap)
         }
         let landed = world.economy.balance
         var nodes: [[TrackNodeID]] = []
@@ -697,7 +697,7 @@ extension GameSession {
             try world.addTrackPlatform(stations[platform.stop], on: on, from: offset, to: offset + platform.length)
             platformsOf[stations.count - 1 - platform.stop, default: []].append(TrackPlatform(station: stations[platform.stop], edge: on, start: offset, end: offset + platform.length))
         }
-        Self.readLand(roundStationsOf: &world, population: population, places: places, water: water, coverage: coverage)
+        Self.readLand(roundStationsOf: &world, population: population, places: places, water: water, coverage: coverage, baseMap: baseMap)
         let built = world.economy.balance
 
         // The line runs from its terminal to its junction: see

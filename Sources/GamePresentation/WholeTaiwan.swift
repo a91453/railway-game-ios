@@ -90,8 +90,12 @@ extension GameSession {
     /// Since decision 168 the land within ``WholeTaiwan/highSpeedLandReach``
     /// of the stations a high-speed line calls at, which are the people
     /// their intercity trips come from.
+    ///
+    /// Decision 400's sequel: and the roads of every block read, from
+    /// `baseMap` (``readRoads(in:baseMap:)``).
     nonisolated static func readLand(
-        roundStationsOf world: inout GameWorld, population: PopulationGrid?, places: PlaceGrid?, water: WaterGrid? = nil, coverage: CoverageGrid? = nil
+        roundStationsOf world: inout GameWorld, population: PopulationGrid?, places: PlaceGrid?, water: WaterGrid? = nil, coverage: CoverageGrid? = nil,
+        baseMap: BaseMapTiles? = nil
     ) {
         var wanted = blocks(within: WholeTaiwan.landReach, of: world.stations.map(\.location), in: world.bounds)
         let fast = world.highSpeedStations
@@ -106,6 +110,7 @@ extension GameSession {
             }
         }
         readLand(blocks: wanted, in: &world, population: population, places: places, water: water, coverage: coverage)
+        readRoads(in: &world, baseMap: baseMap)
     }
 
     /// Reads in the land within `reach` of each of `points` whose blocks
@@ -114,12 +119,13 @@ extension GameSession {
     /// (decision 95), so it buys out the city's buildings there.
     nonisolated static func readLand(
         within reach: Int64, of points: [PlanPoint], in world: inout GameWorld, population: PopulationGrid?, places: PlaceGrid?, water: WaterGrid? = nil,
-        coverage: CoverageGrid? = nil
+        coverage: CoverageGrid? = nil, baseMap: BaseMapTiles? = nil
     ) {
         readLand(
             blocks: blocks(within: reach, of: points, in: world.bounds), in: &world, population: population, places: places, water: water,
             coverage: coverage
         )
+        readRoads(in: &world, baseMap: baseMap)
     }
 
     /// The blocks of a world of `bounds` some part of which lies within

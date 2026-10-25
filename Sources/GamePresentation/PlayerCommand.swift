@@ -274,7 +274,7 @@ extension GameSession {
             }
             // Decision 88: the land round a new station is read in after the
             // edit; read it now, so the opening message counts who it reaches.
-            Self.readLand(roundStationsOf: &world, population: population, places: places, water: water, coverage: coverage)
+            Self.readLand(roundStationsOf: &world, population: population, places: places, water: water, coverage: coverage, baseMap: baseMap)
             outcome.station = station
         case .removePlatform(let platform):
             try world.removeTrackPlatform(platform.station, on: platform.edge, from: platform.start)
