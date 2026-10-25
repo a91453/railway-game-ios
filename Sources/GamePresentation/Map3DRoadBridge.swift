@@ -160,6 +160,7 @@ struct Map3DRoadBridges: Sendable {
     /// bridge over a cutting: a train and its wires), and under a viaduct
     /// (the girder, then Taiwan's 4.6 m clearance for a road).
     static let overTrack: Float = Map3DTrenches.bridgeDepth
+    /// (Decision 407: each viaduct's own girder, ``Map3DTrackCover/Piece/underViaduct``.)
     static let underViaduct: Float = Map3DScene.Builder.girderDepth + 4.6
     /// The longest ramp down from a bridge's end, metres: within
     /// ``Map3DBaseMap/bridgeReach``, so a chunk built apart ramps as the
@@ -375,11 +376,11 @@ extension Map3DScene.Builder {
                             if bed <= ground - Map3DRoadBridges.overTrack {
                                 // Decision 375: a cutting it spans at the ground.
                                 overCutting[deck] = true
-                            } else if piece.isViaduct, bed - Map3DRoadBridges.underViaduct - Self.lift(of: bridge.kind) >= ground {
+                            } else if piece.isViaduct, bed - piece.underViaduct - Self.lift(of: bridge.kind) >= ground {
                                 // Under a viaduct with room for it over the
                                 // ground, it passes under, its surface clear
                                 // of the girder, as at both tracks of a pair.
-                                bounds[deck].append(.init(point: at, height: bed - Map3DRoadBridges.underViaduct - Self.lift(of: bridge.kind), isFloor: false))
+                                bounds[deck].append(.init(point: at, height: bed - piece.underViaduct - Self.lift(of: bridge.kind), isFloor: false))
                             } else {
                                 bounds[deck].append(.init(point: at, height: bed + Map3DRoadBridges.overTrack, isFloor: true))
                                 cross(deck, at: at)

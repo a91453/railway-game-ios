@@ -31,6 +31,13 @@ public struct Map3DTrackCover: Sendable {
         /// Decision 391: on a viaduct or bridge, which a road may pass
         /// under.
         var isViaduct = false
+        /// Decision 407: how deep its girder is, metres, at least the
+        /// railway's (decision 391's clearance).
+        var girderDepth = Map3DScene.Builder.girderDepth
+
+        /// Decision 391: how far under its bed a road passing under keeps
+        /// its surface: the girder, then Taiwan's 4.6 m for a road.
+        var underViaduct: Float { girderDepth + 4.6 }
     }
 
     let pieces: [Piece]
@@ -67,8 +74,10 @@ public struct Map3DTrackCover: Sendable {
         var pieces: [Piece] = []
         let portals = Set(snapshot.nodes.filter(\.isTunnelPortal).map(\.id))
         var trenchLines: [(line: [Map3DPoint], runs: [ClosedRange<Int>], opens: (first: Bool, last: Bool))] = []
+        let fast = builder.highSpeedTrack()
         for alignment in snapshot.edges {
             let spans = alignment.edge.sectionSpans
+            let viaduct: Map3DViaduct = fast.contains(alignment.edge.id) ? .highSpeed : .railway
             for (number, span) in spans.enumerated() where span.end > span.start {
                 let line = builder.sample(alignment.geometry, from: span.start, to: span.end).map { builder.point($0) + Map3DScene.Builder.lifted }
                 guard line.count > 1 else { continue }
@@ -90,7 +99,8 @@ public struct Map3DTrackCover: Sendable {
                 for index in 1..<line.count {
                     pieces.append(Piece(a: line[index - 1], b: line[index], groundA: grounds[index - 1], groundB: grounds[index],
                                         opensBefore: index == 1, opensAfter: index == line.count - 1, isTunnel: span.kind == .tunnel,
-                                        isViaduct: span.kind == .viaduct || span.kind == .bridge))
+                                        isViaduct: span.kind == .viaduct || span.kind == .bridge,
+                                        girderDepth: max(viaduct.look(over: span.kind).girderDepth, Map3DScene.Builder.girderDepth)))
                 }
             }
         }
