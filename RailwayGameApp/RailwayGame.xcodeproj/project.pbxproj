@@ -140,6 +140,7 @@
 		A6BE3F0BE2C0F8D6B5BB4B23 /* ToolbarSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C62092ABB8C906B420B7E61B /* ToolbarSmokeTests.swift */; };
 		A76D3CC09845C96D375B9D4B /* rain-typhoon.caf in Resources */ = {isa = PBXBuildFile; fileRef = 284ACFB4CDE85B405F4FC6FA /* rain-typhoon.caf */; };
 		A904805EE220E391FA3C4618 /* taiwan_coverage.dat in Resources */ = {isa = PBXBuildFile; fileRef = CF26D5EFF8FE10DB6A8376C9 /* taiwan_coverage.dat */; };
+		A948AFEE87E21806376AA8C4 /* WhatsNewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B5995200C877BF409F730A8 /* WhatsNewView.swift */; };
 		AA89DE59BE4AB10592AFA96C /* PopulationLegendView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBAD6AED84A8DA58D17AC1C7 /* PopulationLegendView.swift */; };
 		AB37C6000B8F37326B3FBCD5 /* NewGameOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6176ABC92A7FB39ABFE9BFB1 /* NewGameOptionsView.swift */; };
 		AD539B90444E0B2C2F203078 /* MapRequestMarks.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8DD4857B9833F971AD18592 /* MapRequestMarks.swift */; };
@@ -267,6 +268,7 @@
 		37971520DEDE438F5E6272D6 /* music-loop.caf */ = {isa = PBXFileReference; path = "music-loop.caf"; sourceTree = "<group>"; };
 		3934A6F628AA98414B2B952D /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		3A47FE76CCB95D1AB460CE99 /* AppleMapBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMapBackground.swift; sourceTree = "<group>"; };
+		3B5995200C877BF409F730A8 /* WhatsNewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhatsNewView.swift; sourceTree = "<group>"; };
 		3BA3B0B2889A228FC08F83B8 /* TutorialUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialUITests.swift; sourceTree = "<group>"; };
 		3D5BF8179644D02716F92269 /* OneShotLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OneShotLocation.swift; sourceTree = "<group>"; };
 		3EDAFCBFB7EEDE187DEFCAB1 /* tmrt_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tmrt_times.json; sourceTree = "<group>"; };
@@ -617,6 +619,7 @@
 				A19B41254DC18939B0BA2CB0 /* TrainRosterView.swift */,
 				F488A7BFC7F63D86EDB96548 /* TutorialOverlay.swift */,
 				0E01CB29C26C0F92124DEE0C /* TutorialTargets.swift */,
+				3B5995200C877BF409F730A8 /* WhatsNewView.swift */,
 				1FC5AEB0936E154EABD2610F /* YearEndReport.swift */,
 				185F8FF9096D2AE9332F7219 /* Map3D */,
 			);
@@ -1022,6 +1025,7 @@
 				D576D7231B44DA908F4690A3 /* TrainRosterView.swift in Sources */,
 				543A1EE337FEC2FCA74B2603 /* TutorialOverlay.swift in Sources */,
 				231927FCE953BD76302D19BE /* TutorialTargets.swift in Sources */,
+				A948AFEE87E21806376AA8C4 /* WhatsNewView.swift in Sources */,
 				7044884A77678D3AA560B162 /* YearEndReport.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

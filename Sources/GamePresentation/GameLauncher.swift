@@ -170,6 +170,8 @@ public final class GameLauncher {
         refresh()
         if !preferences.hasLaunched {
             preferences.hasLaunched = true
+            // Decision 415: nothing is new on the first launch.
+            if isFirstLaunch { preferences.whatsNewSeen = WhatsNew.edition }
             savePreferences()
         }
     }
@@ -201,6 +203,19 @@ public final class GameLauncher {
     public func dismissFirstGameCard() {
         guard !preferences.firstGameCardDismissed else { return }
         preferences.firstGameCardDismissed = true
+        savePreferences()
+    }
+
+    /// Whether the start screen shows the "What's New" card (decision
+    /// 415): once, the first time an updated app opens.
+    public var showsWhatsNew: Bool {
+        WhatsNew.edition != nil && preferences.whatsNewSeen != WhatsNew.edition
+    }
+
+    /// Closes the "What's New" card until the next update's news.
+    public func dismissWhatsNew() {
+        guard showsWhatsNew else { return }
+        preferences.whatsNewSeen = WhatsNew.edition
         savePreferences()
     }
 

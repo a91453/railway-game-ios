@@ -58,6 +58,29 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         XCTAssertTrue(importButton.becomesHittable(within: 5), "Import from Files cannot be tapped")
     }
 
+    /// Decision 415: an updated app shows its news once on the start
+    /// screen, and Help opens them again. Full lane only.
+    func testAnUpdateShowsWhatsNewAndHelpOpensItAgain() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-ui-test-updated", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+
+        let done = app.buttons["whatsNew.done"].firstMatch
+        XCTAssertTrue(done.appears(within: 10), "An update shows no news. \(screenText(in: app))")
+        XCTAssertTrue(done.becomesHittable(within: 5), "The news cannot be closed")
+        done.tap()
+        XCTAssertTrue(done.disappears(within: 10), "The news did not close")
+
+        requiredButton(StartID.help, in: app).tap()
+        let row = app.buttons["help.whatsNew"].firstMatch
+        XCTAssertTrue(row.appears(within: 10), "Help has no What's New row. \(screenText(in: app))")
+        XCTAssertTrue(row.becomesHittable(within: 5), "The What's New row cannot be tapped")
+        row.tap()
+        XCTAssertTrue(app.navigationBars["What's New"].appears(within: 10), "Help did not open the news")
+    }
+
     /// City building P0-A (decision 92): on a blank map, choose the house,
     /// tap the ground, see it built, save, go back to the start and
     /// continue: the house is still there.
