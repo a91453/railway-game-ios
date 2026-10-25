@@ -141,6 +141,22 @@ final class SchoolsHospitalsNightMarketsTests: XCTestCase {
         XCTAssertEqual(try total(with: .hospital), plain)
     }
 
+    /// A home near a school with only a little room left: what it cannot
+    /// take beyond its plain share goes to the other home, so the station
+    /// grows as much as without the school. West 380 (room 20), east 100,
+    /// 290 new: by residents 230 and 60, of which the west takes 20; near
+    /// the school 255 and 35, the 25 over 230 passed to the east.
+    func testWhatAHomeNearASchoolCannotTakeGoesElsewhere() throws {
+        func grown(with kind: PlacedBuildingKind?) throws -> [Int64] {
+            var (world, station) = try growingWorld(with: kind, west: 380)
+            world.grow(around: station, residents: 290, jobs: 0)
+            return [try XCTUnwrap(world.land.cell(row: 10, column: 10)).residents, try XCTUnwrap(world.land.cell(row: 10, column: 20)).residents]
+        }
+        XCTAssertEqual(try grown(with: nil), [400, 160])
+        XCTAssertEqual(try grown(with: .school), [400, 160])
+        XCTAssertEqual(try grown(with: .hospital), [400, 160])
+    }
+
     /// The city's steered growth (decision 98's demand) weighs homes near
     /// a school as the plain growth does.
     func testTheSteeredGrowthGrowsNearASchoolToo() throws {
