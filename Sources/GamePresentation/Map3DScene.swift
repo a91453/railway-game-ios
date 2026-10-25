@@ -211,6 +211,7 @@ public struct Map3DScene: Sendable {
         var builder = Builder(originX: frame.originX, originY: frame.originY, region: frame.region, world: world)
         let snapshot = snapshot ?? world.railwaySnapshot()
         let cleared = builder.addTrack(snapshot)
+        builder.addViaducts()
         builder.addPlatforms(snapshot)
         builder.addSeededStreets(skyline ?? CitySkyline(world: world), clearOf: cleared)
         return SeededStreetPlan(edges: builder.streetEdges)
@@ -326,6 +327,8 @@ public struct Map3DScene: Sendable {
         } else {
             realTrains = nil
         }
+        // Decision 407: the viaducts, each pair of tracks on its piers.
+        builder.addViaducts()
         // Decision 238: the city twice, in full and simplified for afar.
         let city = skyline ?? CitySkyline(world: world)
         // Decision 370: Taipei 101 and Taipei Main Station, clear of the
@@ -620,6 +623,17 @@ extension Map3DScene {
         /// Decision 321: the platforms as laid, for the station kit.
         var laidPlatforms: [LaidPlatform] = []
         var piers: [Map3DPoint] = []
+        /// Decision 407: the viaducts laid and their piers, drawn together
+        /// (``addViaducts()``) so the tracks of a pair share a pier and a
+        /// truss; where the last viaduct laid ended, so the next piece of
+        /// it keeps its piers' spacing.
+        var viaducts = Map3DViaducts()
+        /// Decision 407: on a real-world map, the base map's water areas
+        /// by the 64 m cell, each area's rings cut to the cell; where the
+        /// railway crosses one, it is on a truss.
+        var waterCells: [ChunkKey: [[[Map3DBaseMap.Point]]]] = [:]
+        /// Decision 407: the player's track a high-speed line runs on.
+        var highSpeedEdges: Set<TrackEdgeID>?
         var streetEdges: [Map3DSeededStreets.Edge: Map3DBaseMap.RoadKind] = [:]
         var crossings: [Map3DLevelCrossing] = []
         /// Decision 322: every road's middle line and how far either side
@@ -802,7 +816,13 @@ extension Map3DScene {
         }
 
         func chunks() -> [Chunk] {
-            Set(meshes.keys).union(shadows.keys).union(nearMeshes.keys).union(farMeshes.keys).union(closeMeshes.keys).union(standInMeshes.keys).union(props.keys).union(signs.keys).sorted().compactMap { key in
+            // Decision 407: the viaducts not yet drawn, drawn first.
+            guard viaducts.isEmpty else {
+                var drawn = self
+                drawn.addViaducts()
+                return drawn.chunks()
+            }
+            return Set(meshes.keys).union(shadows.keys).union(nearMeshes.keys).union(farMeshes.keys).union(closeMeshes.keys).union(standInMeshes.keys).union(props.keys).union(signs.keys).sorted().compactMap { key in
                 var mesh = meshes[key] ?? Map3DMesh()
                 let baseIndexCount = mesh.indices.count
                 mesh.append(nearMeshes[key] ?? Map3DMesh())
@@ -944,7 +964,10 @@ extension Map3DScene {
         mutating func addTrack(_ snapshot: RailwaySnapshot) -> Set<ChunkKey> {
             var cleared = Set<ChunkKey>()
             let cell = Double(Land.cellLength)
+            let fast = highSpeedTrack()
             for alignment in snapshot.edges {
+                // Decision 407: a high-speed line's on its box girder.
+                let viaduct: Map3DViaduct = fast.contains(alignment.edge.id) ? .highSpeed : .railway
                 for span in alignment.edge.sectionSpans where span.end > span.start {
                     let line = sample(alignment.geometry, from: span.start, to: span.end)
                     guard line.count > 1 else { continue }
@@ -956,7 +979,7 @@ extension Map3DScene {
                     let points = line.map { point($0) + Self.lifted }
                     trackLines.append((points, span.kind))
                     for piece in Self.pieces(of: points) {
-                        addTrackPiece(piece, kind: span.kind)
+                        addTrackPiece(piece, kind: span.kind, viaduct: viaduct)
                     }
                 }
             }
@@ -1005,7 +1028,7 @@ extension Map3DScene {
             return pieces
         }
 
-        mutating func addTrackPiece(_ line: [Map3DPoint], kind: TrackSectionKind) {
+        mutating func addTrackPiece(_ line: [Map3DPoint], kind: TrackSectionKind, viaduct: Map3DViaduct = .railway) {
             let middle = line[line.count / 2]
             switch kind {
             case .tunnel:
@@ -1018,35 +1041,10 @@ extension Map3DScene {
                                    topPaint: Self.ballast, sidePaint: Self.concrete)
                 }
             case .viaduct, .bridge:
-                let deckColor = kind == .bridge ? Map3DPalette.bridge : Map3DPalette.concrete
+                // Decision 407: drawn with the rest (addViaducts()).
                 let grounds = line.map { ground(at: $0) }
-                addDeckShadow(line, grounds: grounds)
-                var standing: [Map3DPoint] = []
-                mesh(at: middle) { mesh in
-                    mesh.addRibbon(along: line, width: Self.deckWidth, lift: -Self.bedDrop, depth: Self.girderDepth, top: Map3DPalette.ballast, side: deckColor,
-                                   topPaint: Self.ballast, sidePaint: Self.concrete)
-                    // A pier every 32 m along the piece (rail-3d `PIER_M`).
-                    var travelled: Float = 0, nextPier: Float = Self.pierSpacing / 2
-                    for index in 1..<line.count {
-                        let a = line[index - 1], b = line[index], step = (b - a).length
-                        guard step > 0 else { continue }
-                        while nextPier <= travelled + step {
-                            let share = (nextPier - travelled) / step
-                            let top = a + (b - a) * share
-                            let foot = grounds[index - 1] + (grounds[index] - grounds[index - 1]) * share
-                            let height = top.y - Self.bedDrop - Self.girderDepth - foot
-                            if height > 0.5 {
-                                standing.append(Map3DPoint(top.x, foot, top.z))
-                                mesh.addBox(base: Map3DPoint(top.x, foot, top.z), forward: b - a, length: Self.pierAlong, width: Self.pierAcross,
-                                            height: height, top: deckColor, side: deckColor, frontPaint: Self.concrete, flankPaint: Self.concrete)
-                            }
-                            nextPier += Self.pierSpacing
-                        }
-                        travelled += step
-                    }
-                }
-                // Decision 263: where they stand, for the streets under it.
-                piers += standing
+                addDeckShadow(line, grounds: grounds, width: viaduct.look(over: kind).deckWidth)
+                viaducts.add(line, grounds: grounds, kind: kind, viaduct: viaduct)
             case .surface, .embankment, .cutting:
                 let lifts = line.map { $0.y - ground(at: $0) }
                 let depth = max(0.45, (lifts.reduce(0, +) / Float(lifts.count)) - Self.bedDrop)
@@ -1135,11 +1133,11 @@ extension Map3DScene {
 
         /// Decision 232: the deck's shadow on the ground under a viaduct
         /// or bridge, wider the higher it stands.
-        mutating func addDeckShadow(_ line: [Map3DPoint], grounds: [Float]) {
+        mutating func addDeckShadow(_ line: [Map3DPoint], grounds: [Float], width: Float = deckWidth) {
             let heights = zip(line, grounds).map { $0.y - $1 }
             let height = heights.reduce(0, +) / Float(max(heights.count, 1))
             guard height > 2 else { return }
-            let half = Self.deckWidth / 2, spread = min(5, 1.5 + height * 0.15)
+            let half = width / 2, spread = min(5, 1.5 + height * 0.15)
             let across = Map3DMesh.acrossDirections(line)
             var rows: [[Map3DPoint]] = []
             for (point, side) in zip(line, across) {

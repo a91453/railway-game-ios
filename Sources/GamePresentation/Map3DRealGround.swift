@@ -291,6 +291,10 @@ extension Map3DScene.Builder {
                 if takes && covered > cellArea / 2 {
                     taken.insert(Map3DScene.ChunkKey(column: column, row: row))
                 }
+                // Decision 407: where the railway crosses water on a truss.
+                if area.cover == .water && covered > 0 {
+                    waterCells[Map3DScene.ChunkKey(column: column, row: row), default: []].append(cellRings)
+                }
             }
         }
     }
@@ -722,3 +726,25 @@ extension Map3DScene.Builder {
     }
 }
 
+extension Map3DScene.Builder {
+    /// Decision 407: whether scene point `p` is over the base map's water
+    /// (its areas, not the narrow waterways' lines): inside an odd number
+    /// of one area's rings in its cell.
+    func isOverWater(_ p: Map3DPoint) -> Bool {
+        guard let areas = waterCells[Map3DScene.ChunkKey(column: gridCell(Double(p.x), origin: originX), row: gridCell(Double(p.z), origin: originY))]
+        else { return false }
+        let x = Double(p.x), z = Double(p.z)
+        return areas.contains { rings in
+            var inside = false
+            for ring in rings {
+                var j = ring.count - 1
+                for i in ring.indices {
+                    let a = ring[i], b = ring[j]
+                    if (a.z > z) != (b.z > z), x < (b.x - a.x) * (z - a.z) / (b.z - a.z) + a.x { inside.toggle() }
+                    j = i
+                }
+            }
+            return inside
+        }
+    }
+}

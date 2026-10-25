@@ -37,3 +37,20 @@ python3 tools/n700s-n700st/finish.py --pipeline "$PIPELINE" --root "$OUT" --prod
 技術狀態請看私庫驗證記錄。Linux 的讀回與 Canvas viewer 不等於 iOS Metal、動畫、車長或真機效能已驗證。合併本分支後素材仍是靜態候選，不會自動出現在遊戲中。
 
 修訂版把原先相接的開放面片依三角邊與面片扇區分開，再補入 0.012 來源單位厚的背面與側壁。修補後五個單元的最終 M3DM 回讀與 GLB 匯入均通過 watertight、繞向一致和正體積檢查；每件低於 15,000 面。車殼正面與前版的位移少於 0.001 來源單位，N700S 原塗裝不變。這是拓樸封閉，不等於已證實零自交或工程實車尺寸。
+
+## N700S-G：遊戲原創藏綠線條
+
+依 #1214 的最新決定，橘色版本保留名稱 **N700ST**，遊戲原創版本稱 **N700S-G**。N700S-G 使用已交付的原始 N700S 五種單元；只把原本 `#2B3356` 藍線三角面換成遊戲色票 `#1D4A44` 藏綠（見 `docs/art/n700-game-style-2026-10-16/README.md`）。車頭、窗、門、底盤、輪組、編組位置及所有其他顏色逐三角保持相同。原始 N700S 與橘色 N700ST 的模型檔都不修改。取消的 N700ST 綠色楔形提案未納入。
+
+本次是**塗裝修訂**，前後比較使用真正的原始 N700S 原生模型，固定相機和來源單位比例。外觀已符合：原 N700S 主輪廓與線條位置保持、藍線改藏綠、沒有新增楔形。仍不符合完整實車要求：細部轉向架、車鉤與完整集電設備。工程尺寸、真實十六節編組與真機 Metal 資料不足。十車體圖只是來源 CSV 的視覺排列。沒有主張使用者已接受最終顏色。
+
+從此分支的 producer commit 重建私庫新目錄 `n700s-g/`（需先有上面交接的原始 `n700s/`）：
+
+```sh
+PRODUCER=$(git rev-parse HEAD)
+python3 tools/n700s-n700st/repaint_n700s_g.py --pipeline "$PIPELINE" --root "$OUT" --producer-commit "$PRODUCER"
+python3 tools/n700s-n700st/finish.py --pipeline "$PIPELINE" --root "$OUT" --producer-commit "$PRODUCER" --variants n700s-g
+python3 tools/n700s-n700st/verify.py --pipeline "$PIPELINE" --root "$OUT"
+```
+
+每單元 8,108–13,140 三角；完整十車體預覽 95,624 三角，須按 `assembly.json` 使用單元，不能當成單一遊戲模型。這輪僅交付靜態素材、沒有接入遊戲；合併後不會自行出現在畫面上。Linux 原生讀回、GLB、圖片及離線 viewer 驗證，不代表真機 Metal、動畫或效能通過。

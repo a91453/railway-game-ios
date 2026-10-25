@@ -588,6 +588,16 @@ public final class GameSession {
     /// without the app's file.
     @ObservationIgnored public var coverage: CoverageGrid?
 
+    /// The app's base map (decision 400's sequel), whose roads a real-world
+    /// map's land is read in with (``readRoads(in:baseMap:)``); `nil`
+    /// without the app's file, and then such a map has no roads but those
+    /// it grows.
+    @ObservationIgnored public var baseMap: BaseMapTiles?
+
+    /// The freeway and expressway cells of the blocks ``highwayCells()``
+    /// has read, and those blocks: never saved, read again after a load.
+    @ObservationIgnored private var highways: (blocks: Set<LandBlock>, cells: Set<CellPosition>) = ([], [])
+
     /// Taiwan's real railways (stations and lines) for real-world maps.
     /// Handed to each session by the launcher; never saved. Once they are
     /// there, a station name still as first suggested is suggested again
@@ -2881,7 +2891,7 @@ public final class GameSession {
     /// built while the app had no population. Not an edit: nothing to undo.
     public func readLandRoundStations() {
         var read = world
-        Self.readLand(roundStationsOf: &read, population: population, places: places, water: water, coverage: coverage)
+        Self.readLand(roundStationsOf: &read, population: population, places: places, water: water, coverage: coverage, baseMap: baseMap)
         // Decision 193: the data's arrival is logged even when no land is
         // read, so a replay has it from then on.
         let data = realWorldData
@@ -2891,8 +2901,24 @@ public final class GameSession {
     /// The real-world data the session has now (decision 193).
     var realWorldData: RealWorldDataSet {
         RealWorldDataSet(
-            population: population != nil, places: places != nil, water: water != nil, heights: heights != nil, coverage: coverage != nil
+            population: population != nil, places: places != nil, water: water != nil, heights: heights != nil, coverage: coverage != nil,
+            baseMap: baseMap != nil
         )
+    }
+
+    /// Decision 400's sequel (the author's choice B): the cells of the
+    /// blocks whose base-map roads the world has read that a national
+    /// freeway or an expressway crosses, which are not among its roads
+    /// (``RealRoadCells``). For the intercity buses to come; read from
+    /// the base map as asked, kept only here and never saved.
+    public func highwayCells() -> Set<CellPosition> {
+        guard let baseMap, let read = world.roads?.readBlocks, let frame = RealWorldFrame(world: world) else { return [] }
+        let wanted = read.subtracting(highways.blocks)
+        if !wanted.isEmpty {
+            highways.cells.formUnion(RealRoadCells.read(blocks: wanted, tiles: baseMap, frame: frame, bounds: world.bounds).highways)
+            highways.blocks.formUnion(wanted)
+        }
+        return highways.cells.filter { read.contains(LandBlock(cellRow: $0.row, column: $0.column)) }
     }
 
     /// Reads in the land within `reach` of `point` (decision 95: under a
@@ -2900,7 +2926,7 @@ public final class GameSession {
     /// stations. Not an edit.
     func readLand(within reach: Int64, of point: PlanPoint) {
         var read = world
-        Self.readLand(within: reach, of: [point], in: &read, population: population, places: places, water: water, coverage: coverage)
+        Self.readLand(within: reach, of: [point], in: &read, population: population, places: places, water: water, coverage: coverage, baseMap: baseMap)
         keepLand(of: read, as: .readLand(reach: reach, at: point))
     }
 
@@ -2908,7 +2934,7 @@ public final class GameSession {
     /// write drops the tick being worked out (decision 143), and on a map
     /// whose land is all there, or already read here, nothing is.
     private func keepLand(of read: GameWorld, as action: CommandLog.Action, evenUnchanged: Bool = false) {
-        guard read.landBlocks != world.landBlocks else {
+        guard read.landBlocks != world.landBlocks || read.roads != world.roads else {
             if evenUnchanged { log(action) }
             return
         }
@@ -2930,7 +2956,7 @@ public final class GameSession {
         var edited = world
         let result = try command(&edited)
         // Decision 88: a new station's land comes with it.
-        Self.readLand(roundStationsOf: &edited, population: population, places: places, water: water, coverage: coverage)
+        Self.readLand(roundStationsOf: &edited, population: population, places: places, water: water, coverage: coverage, baseMap: baseMap)
         guard edited != world else {
             if whenUnchanged { log(action) }
             return result

@@ -377,6 +377,7 @@ extension Map3DScene.Builder {
         let path = WorldPath(stretch.map(\.point))
         guard path.points.count == stretch.count, path.length > 0 else { return nil }
         let carried = structures?.stretches(along: path, frame: frame, system: system) ?? []
+        let viaduct = Map3DViaduct(system: system)
         let rise = TrackRise(path: path, ground: { Double(ground(x: $0.x, y: $0.y)) * Self.metre }, water: { _ in false }, levels: [],
                              carried: carried)
         let spacing = Map3DRealTrains.spacing * Self.metre
@@ -410,8 +411,11 @@ extension Map3DScene.Builder {
                 || carried.contains { $0.kind == .tunnel && $0.range.contains(distance) && height < under }
             let rail = Map3DPoint(flat.x, max(height, drawn), flat.z) + Self.lifted
             let lift = max(height, drawn) - drawn
-            kinds.append(inTunnel ? .tunnel : lift > Map3DRealTrains.viaductHeight ? .viaduct
-                         : lift > Map3DRealTrains.embankmentHeight ? .embankment : .surface)
+            var kind: TrackSectionKind = inTunnel ? .tunnel : lift > Map3DRealTrains.viaductHeight ? .viaduct
+                : lift > Map3DRealTrains.embankmentHeight ? .embankment : .surface
+            // Decision 407: a railway's bridge over a river, its truss.
+            if viaduct == .railway, kind == .viaduct || kind == .embankment, isOverWater(rail) { kind = .bridge }
+            kinds.append(kind)
             points.append(rail)
             shown.append(!inTunnel && !player.isNear(rail, within: Map3DRealTrains.playerClearance))
         }
@@ -424,7 +428,7 @@ extension Map3DScene.Builder {
             guard kind != .tunnel else { return }
             var kept = stride(from: 0, to: run.count, by: 2).map { points[run[$0]] }
             if run.count % 2 == 0, let last = run.last { kept.append(points[last]) }
-            for piece in Self.pieces(of: kept) { addTrackPiece(piece, kind: kind) }
+            for piece in Self.pieces(of: kept) { addTrackPiece(piece, kind: kind, viaduct: viaduct) }
             let cell = Double(Land.cellLength)
             for index in run {
                 let at = path.point(at: distances[index])
@@ -653,6 +657,7 @@ extension Map3DScene.Builder {
                 bore = { a + (b - a) * Float($0 / end.along) }
             }
             let siteBought = bought[track.system]
+            let viaduct = Map3DViaduct(system: track.system)
             var points: [Map3DPoint?] = Array(repeating: nil, count: samples.count)
             var kinds: [TrackSectionKind] = Array(repeating: .tunnel, count: samples.count)
             var shown: [Bool] = Array(repeating: false, count: samples.count)
@@ -679,6 +684,8 @@ extension Map3DScene.Builder {
                     points[index] = rail
                     kinds[index] = inTunnel ? .tunnel : height > Map3DRealTrains.viaductHeight ? .viaduct
                         : height > Map3DRealTrains.embankmentHeight ? .embankment : .surface
+                    // Decision 407: a railway's bridge over a river, its truss.
+                    if viaduct == .railway, kinds[index] == .viaduct || kinds[index] == .embankment, isOverWater(rail) { kinds[index] = .bridge }
                     shown[index] = !inTunnel && !player.isNear(rail, within: Map3DRealTrains.overlap)
                         && !(siteBought?.isNear(rail, within: Map3DRealTrains.playerClearance) ?? false)
                 }
@@ -686,7 +693,7 @@ extension Map3DScene.Builder {
                     guard let a = points[index - 1], let b = points[index] else { continue }
                     laid.add(.init(a: a, b: b, shown: shown[index - 1] && shown[index], track: number), system: track.system)
                 }
-                layRealRun(range, points: points, kinds: kinds, shown: shown, cells: samples.map { ($0.x, $0.y) })
+                layRealRun(range, points: points, kinds: kinds, shown: shown, cells: samples.map { ($0.x, $0.y) }, viaduct: viaduct)
             }
         }
         return laid
@@ -696,7 +703,7 @@ extension Map3DScene.Builder {
     /// runs of one kind, every other sample, where a car shows; the city
     /// grid's cells it crosses kept clear of the seeded city.
     private mutating func layRealRun(_ range: ClosedRange<Int>, points: [Map3DPoint?], kinds: [TrackSectionKind], shown: [Bool],
-                                     cells: [(x: Double, y: Double)]) {
+                                     cells: [(x: Double, y: Double)], viaduct: Map3DViaduct) {
         var run: [Int] = []
         func lay() {
             defer { run = [] }
@@ -705,7 +712,7 @@ extension Map3DScene.Builder {
             guard kind != .tunnel else { return }
             var kept = stride(from: 0, to: run.count, by: 2).compactMap { points[run[$0]] }
             if run.count % 2 == 0, let last = run.last, let point = points[last] { kept.append(point) }
-            for piece in Self.pieces(of: kept) { addTrackPiece(piece, kind: kind) }
+            for piece in Self.pieces(of: kept) { addTrackPiece(piece, kind: kind, viaduct: viaduct) }
             let cell = Double(Land.cellLength)
             for index in run {
                 realTrackCells.insert(Map3DScene.ChunkKey(column: Int((cells[index].x / cell).rounded(.down)),
