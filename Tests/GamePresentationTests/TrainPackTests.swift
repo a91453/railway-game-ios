@@ -74,15 +74,6 @@ final class TrainPackTests: XCTestCase {
                        "set-n700sGFar-head")
     }
 
-    /// Decision 338 (second later): a test build's switch is on until a
-    /// tester turns it off; the App Store's build stays locked.
-    func testTheSwitchIsOnUntilTurnedOff() {
-        XCTAssertTrue(TrainPack.switchOn(stored: nil))
-        XCTAssertFalse(TrainPack.switchOn(stored: false))
-        XCTAssertTrue(TrainPack.isUnlocked(testBuild: true, switchOn: TrainPack.switchOn(stored: nil)))
-        XCTAssertFalse(TrainPack.isUnlocked(testBuild: false, switchOn: TrainPack.switchOn(stored: nil)))
-    }
-
     func testTheCityBusKeepsTheLock() {
         var pack = Map3DModelPack.standard
         pack.locked = TrainPack.sets

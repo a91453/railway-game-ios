@@ -20,15 +20,6 @@ public enum TrainPack {
     /// The settings switch that unlocks the pack in a test build.
     public static let testUnlockKey = "trainPack.testUnlocked"
 
-    /// Decision 338 (second later): the switch is on until a tester turns
-    /// it off, so a test build shows every train.
-    public static let testSwitchDefault = true
-
-    /// The switch's position: as stored, else ``testSwitchDefault``.
-    public static func switchOn(stored: Bool?) -> Bool {
-        stored ?? testSwitchDefault
-    }
-
     /// The sets to draw as before them: the pack's, unless it is unlocked.
     public static func locked(unlocked: Bool) -> Set<String> {
         unlocked ? [] : sets
