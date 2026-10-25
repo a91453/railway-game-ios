@@ -73,16 +73,17 @@ final class LineAcquisitionTests: XCTestCase {
     }
 
     /// Decision 400 (10j-3): a metro line's riders cost its tier's value
-    /// each, recorded as the value paid; a purchase without a tier is a
-    /// branch line's, $10,000 a rider.
+    /// each ($100, a light rail's $70), recorded as the value paid; a
+    /// purchase without a tier is a branch line's, $10,000 a rider.
     func testABoughtLinesRidersCostItsTiersValue() throws {
         XCTAssertEqual(LineAcquisition.value(ofDailyRiders: 3), Money(3_000_000))
         XCTAssertEqual(LineAcquisition.value(ofDailyRiders: 3, tier: .branch), Money(3_000_000))
-        XCTAssertEqual(LineAcquisition.value(ofDailyRiders: 3, tier: .lightRail), Money(3 * LineAcquisition.Tier.lightRail.valuePerDailyRider.amount))
+        XCTAssertEqual(LineAcquisition.value(ofDailyRiders: 3, tier: .lightRail), Money(21_000))
+        XCTAssertEqual(LineAcquisition.value(ofDailyRiders: 3, tier: .metro), Money(30_000))
         var world = try world(balance: Money(1_000_000_000_000_000))
         let before = world.economy.balance
         try world.recordLineAcquisition(line: main, realLine: "trtc:R_XBT", dailyRiders: LineAcquisition.maximumDailyRiders, tier: .metro)
-        let value = Money(LineAcquisition.maximumDailyRiders * LineAcquisition.Tier.metro.valuePerDailyRider.amount)
+        let value = Money(20_000_000_000)
         XCTAssertEqual(world.economy.balance, before - value)
         XCTAssertEqual(world.acquisitions.first?.value, value)
         XCTAssertEqual(world.accounts.assets.last?.cost, value)

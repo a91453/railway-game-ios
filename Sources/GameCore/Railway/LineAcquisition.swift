@@ -33,17 +33,23 @@ public struct LineAcquisition: Hashable, Sendable {
         /// A TRA branch line (decision 315); a purchase recorded without a
         /// tier.
         case branch
+        /// A light rail: $70 a rider.
         case lightRail
+        /// A metro line: $100 a rider.
         case metro
 
         /// What a line of this kind costs for each rider a day its
         /// stations carry in real life, on top of building it and its
-        /// trains (measured by `AcquisitionReportTests`).
+        /// trains (measured by `AcquisitionReportTests`). An urban
+        /// line's riders are many and their trips short, so each is worth
+        /// far less than a branch line's; at these values Taipei's, New
+        /// Taipei's and Taoyuan's real-place openings can each buy a line
+        /// with cash and loan (decision 400, 10j-3).
         public var valuePerDailyRider: Money {
             switch self {
             case .branch: LineAcquisition.valuePerDailyRider
-            case .lightRail: Money(100_000)
-            case .metro: Money(100_000)
+            case .lightRail: Money(7_000)
+            case .metro: Money(10_000)
             }
         }
     }
