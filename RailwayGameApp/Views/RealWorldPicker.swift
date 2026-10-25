@@ -52,9 +52,12 @@ struct RealWorldPicker: View {
     /// What the last "Use my location" says (``MyLocationStart``), shown
     /// over the map until the player moves on.
     @State private var locationMessage: String?
-    /// Where "Use my location" put the square, so the line goes once the
-    /// map is moved elsewhere.
-    @State private var locatedMiddle: GeoAnchor?
+    /// What the last "Use my location" came to, so a fix's line goes once
+    /// the map is moved elsewhere (``MyLocationStart/messageGoes(mapMiddleLatitude:longitude:)``).
+    @State private var locationResult: MyLocationStart?
+    /// How wide the map is, so a tap on the location button's corner is
+    /// not also taken as a tap on the map.
+    @State private var mapWidth: CGFloat = 0
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -134,7 +137,12 @@ struct RealWorldPicker: View {
             .mapStyle(.standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll))
             // Decision 312: a tap moves the square there, kept on the map.
             .onTapGesture { location in
-                guard let tapped = reader.convert(location, from: .local),
+                // TestFlight 86.1 (an iPad): the tap on the location button
+                // reached the map behind it too and moved the square to
+                // the top right.
+                guard !isLocating,
+                      !MyLocationStart.isOnButton(x: location.x, y: location.y, mapWidth: mapWidth),
+                      let tapped = reader.convert(location, from: .local),
                       let area = RealWorldStartArea(latitude: tapped.latitude, longitude: tapped.longitude)
                 else { return }
                 locationMessage = nil
@@ -142,6 +150,7 @@ struct RealWorldPicker: View {
                     position = Self.camera(on: Self.coordinate(of: area.middle), distance: cameraDistance)
                 }
             }
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { mapWidth = $0 }
             .onAppear {
                 if railwayLines.isEmpty {
                     railwayLines = (launcher.railways?.lines ?? []).map(RailwayLineDrawing.init)
@@ -153,15 +162,14 @@ struct RealWorldPicker: View {
                 cameraDistance = context.camera.distance
             }
             .onMapCameraChange(frequency: .onEnd) { context in
-                // Decision 335: the line is about where the location put
-                // the square; once the map is elsewhere it goes.
-                guard locationMessage != nil, !isLocating else { return }
+                // Decision 335: a fix's line is about where the location put
+                // the square; once the map is elsewhere it goes. Why there
+                // is none stays until closed (TestFlight 86.1).
+                guard locationMessage != nil, !isLocating, let locationResult else { return }
                 let centre = context.camera.centerCoordinate
-                if let locatedMiddle, let now = GeoAnchor(latitudeDegrees: centre.latitude, longitudeDegrees: centre.longitude),
-                   RecentStartPlaces.metres(from: locatedMiddle, to: now) < RecentStartPlaces.samePlaceMetres {
-                    return
+                if locationResult.messageGoes(mapMiddleLatitude: centre.latitude, longitude: centre.longitude) {
+                    locationMessage = nil
                 }
-                locationMessage = nil
             }
             .overlay {
                 Image(systemName: "plus")
@@ -171,6 +179,7 @@ struct RealWorldPicker: View {
                     .accessibilityHidden(true)
             }
             .accessibilityIdentifier("realWorld.map")
+            .overlay(alignment: .topLeading) { middleMark }
             // Decision 335: under the search field, at the map's corner as
             // the system's maps put it.
             .overlay(alignment: .topTrailing) {
@@ -186,6 +195,22 @@ struct RealWorldPicker: View {
             }
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: locationMessage)
         }
+    }
+
+    /// Under `-ui-testing`, in a Debug build, where the map's middle is,
+    /// to a hundredth of a degree, for the UI test that the location
+    /// button does not move it. Nothing otherwise.
+    @ViewBuilder
+    private var middleMark: some View {
+        #if DEBUG
+        if UITestTrace.isOn {
+            Text(verbatim: String(format: "%.2f,%.2f", middle.latitude, middle.longitude))
+                .font(.system(size: 1))
+                .foregroundStyle(.clear)
+                .allowsHitTesting(false)
+                .accessibilityIdentifier("realWorld.middle")
+        }
+        #endif
     }
 
     /// Decision 335: moves the square to where the device is.
@@ -204,6 +229,8 @@ struct RealWorldPicker: View {
             }
             .frame(width: 44, height: 44)
             .glassBackground(in: Circle(), interactive: true)
+            // The whole circle, not only its glyph, is the button's.
+            .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .disabled(isLocating)
@@ -243,20 +270,42 @@ struct RealWorldPicker: View {
     private func useMyLocation() {
         isLocating = true
         locationMessage = nil
-        locatedMiddle = nil
+        locationResult = nil
         let locator = locator ?? OneShotLocation()
         self.locator = locator
         Task {
-            let result = await locator.locate()
+            let result: MyLocationStart
+            if let answer = Self.uiTestLocation {
+                result = answer
+            } else {
+                result = await locator.locate()
+            }
             isLocating = false
             locationMessage = result.message(in: launcher.language)
-            locatedMiddle = result.area?.middle
+            locationResult = result
             if let area = result.area {
                 withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) {
                     position = Self.camera(on: Self.coordinate(of: area.middle))
                 }
             }
         }
+    }
+
+    /// Under `-ui-testing`, in a Debug build, `-ui-test-location denied` or
+    /// `failed` answers "Use my location" without asking the Simulator.
+    private static var uiTestLocation: MyLocationStart? {
+        #if DEBUG
+        guard UITestTrace.isOn else { return nil }
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "-ui-test-location"), arguments.indices.contains(index + 1) else { return nil }
+        return switch arguments[index + 1] {
+        case "denied": .denied
+        case "failed": .failed
+        default: nil
+        }
+        #else
+        return nil
+        #endif
     }
 
     private var places: some View {

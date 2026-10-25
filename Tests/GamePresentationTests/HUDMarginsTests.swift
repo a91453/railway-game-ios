@@ -82,4 +82,23 @@ final class HUDMarginsTests: XCTestCase {
         // Decision 226's column keeps its width.
         XCTAssertEqual(ToolColumn.width, 56)
     }
+
+    /// TestFlight 83.1 (iPhone 17 on its side, 874 by 402): the opened
+    /// legend reached up behind the status bar and the next step. It now
+    /// ends an inset under what runs down the top of the map, with the
+    /// zoom buttons under it and the corner's foot above the safe area.
+    func testTheLegendStaysUnderTheTopOfTheMap() {
+        // The status bar and the layer strip, each 44 under a gap of 10;
+        // the home indicator's 21 at the foot.
+        let top = 10 + 44 + 10 + 44.0, bottom = 21.0
+        let height = HUDMargins.legendMaximumHeight(mapHeight: 402, top: top, bottom: bottom, buttons: true)
+        XCTAssertEqual(height, 402 - 108 - 10 - (21 + 10 + 44 + 10))
+        // Stacked from the foot: the legend's top is an inset under the strip.
+        XCTAssertEqual(402 - bottom - HUDMargins.edge - 44 - HUDMargins.cornerStackGap - height, top + HUDMargins.edge)
+        // Without the zoom buttons under it (a phone's panel holds them),
+        // the legend has their room too.
+        XCTAssertEqual(HUDMargins.legendMaximumHeight(mapHeight: 402, top: top, bottom: bottom, buttons: false), height + 44 + HUDMargins.cornerStackGap)
+        // Never less than a title and its colour bar.
+        XCTAssertEqual(HUDMargins.legendMaximumHeight(mapHeight: 150, top: top, bottom: bottom, buttons: true), 64)
+    }
 }

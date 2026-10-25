@@ -19,6 +19,21 @@ public enum HUDMargins {
     /// Between the 3D button and the zoom buttons beside it (as before).
     public static let zoomGap: Double = 12
 
+    /// The tallest a layer's legend may be in the map's bottom-trailing
+    /// corner, in points, so that it stays under what runs down the top of
+    /// the map (the status bar, the layer strip with the next step, the
+    /// banner) on a map `mapHeight` tall: `top` is how far down that
+    /// reaches, `bottom` how far up the corner's foot stands (the safe area
+    /// and credits under it), and `buttons` whether the zoom buttons stand
+    /// under the legend in the same corner. Never less than `minimum`, a
+    /// title and its colour bar. TestFlight 83.1 (an iPhone on its side):
+    /// the opened legend reached up behind the status bar and the next
+    /// step.
+    public static func legendMaximumHeight(mapHeight: Double, top: Double, bottom: Double, buttons: Bool, minimum: Double = 64) -> Double {
+        let below = bottom + edge + (buttons ? 44 + cornerStackGap : 0)
+        return max(minimum, mapHeight - top - edge - below)
+    }
+
     /// The four lines the floating controls keep to on a screen `screen`
     /// big, with the safe area `safeArea` and, on a real-world map, the
     /// credits' band `creditsBand` points tall above the safe area's foot.

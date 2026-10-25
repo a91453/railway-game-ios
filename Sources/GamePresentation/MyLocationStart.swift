@@ -45,6 +45,31 @@ public enum MyLocationStart: Hashable, Sendable {
         return abs(latitude) > RealWorldStartArea.maximumLatitude
     }
 
+    /// Whether the picker's line for this result goes once the map comes to
+    /// rest with its middle at `latitude`°, `longitude`°: a fix's line is
+    /// about where the frame went, so it goes once the map is a place away
+    /// from there (``RecentStartPlaces/samePlaceMetres``). Why there is no
+    /// fix stays until the player closes it or taps the map (TestFlight
+    /// 86.1, an iPad: the map settling after the tap took the line away, so
+    /// the button seemed to do nothing).
+    public func messageGoes(mapMiddleLatitude latitude: Double, longitude: Double) -> Bool {
+        guard let middle = area?.middle else { return false }
+        guard let now = GeoAnchor(latitudeDegrees: latitude, longitudeDegrees: longitude) else { return true }
+        return RecentStartPlaces.metres(from: middle, to: now) >= RecentStartPlaces.samePlaceMetres
+    }
+
+    /// How far from the map's top and trailing edges the button reaches, in
+    /// points: 44 across inside a padding of 10.
+    public static let buttonCorner = 64.0
+
+    /// Whether a tap at `x`, `y` points on a map `mapWidth` wide is on the
+    /// button's corner, where it must not also move the frame (TestFlight
+    /// 86.1, an iPad: the tap that reached the map behind the button moved
+    /// the frame to the top right instead of finding the device).
+    public static func isOnButton(x: Double, y: Double, mapWidth: Double) -> Bool {
+        x >= mapWidth - buttonCorner && y <= buttonCorner
+    }
+
     /// The line the picker shows, or `nil` when the frame simply moved to a
     /// place of Taiwan. Each says how to go on picking without it.
     public func message(in language: DisplayLanguage) -> String? {

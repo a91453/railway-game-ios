@@ -65,6 +65,39 @@ final class RealWorldMapUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["map.base"].firstMatch.appears(within: 15), "Continuing keeps the real-world map")
     }
 
+    /// TestFlight 86.1 (iPad Air, Wi-Fi): "Use my location" did not find
+    /// the device and the square moved to the top right instead: the tap
+    /// on the button reached the map behind it too, and the line saying
+    /// why there was no fix went as that map settled. Tapped near the
+    /// circle's edge, away from its glyph, the button answers (here with a
+    /// failed fix, `-ui-test-location`, not the Simulator's location), the
+    /// map stays where it was, and the line stays. Full lane only (decision
+    /// 199): when the line goes is `MyLocationStartTests` on Linux.
+    func testUseMyLocationLeavesTheMapAndSaysWhyItFoundNothing() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-ui-test-location", "failed", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+
+        tappable(app.buttons.matching(identifier: "start.newGame"), name: "start.newGame").tap()
+        tappable(app.buttons.matching(identifier: "newGame.realWorld"), name: "newGame.realWorld").tap()
+        let myLocation = tappable(app.buttons.matching(identifier: "realWorld.myLocation"), name: "realWorld.myLocation")
+        myLocation.waitUntilSettled()
+        let middle = app.descendants(matching: .any)["realWorld.middle"].firstMatch
+        XCTAssertTrue(middle.appears(within: 10), "Missing the map's middle")
+        let before = middle.label
+
+        // Near the circle's top edge, where the glyph is not.
+        myLocation.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.12)).tap()
+        let message = app.descendants(matching: .any)["realWorld.locationMessage"].firstMatch
+        XCTAssertTrue(message.appears(within: 5), "Use my location must say why it found nothing")
+        // Long enough for a map moved by the tap to have come to rest.
+        XCTAssertFalse(message.disappears(within: 3), "The line must stay while the map settles")
+        XCTAssertEqual(middle.label, before, "The button must not move the map")
+    }
+
     /// Stage V4e: the real-world demo runs under traffic control, and the
     /// map's traffic key appears and reads out the movement authority its
     /// trains take. Full lane only (not in the pull request gate).
