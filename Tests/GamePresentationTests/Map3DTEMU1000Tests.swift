@@ -30,11 +30,26 @@ final class Map3DTEMU1000Tests: XCTestCase {
         XCTAssertEqual(pack.models[layout[0].model].triangleCount, Map3DTEMU1000.model(.leading).triangleCount + 24)
     }
 
+    func testRevisedCabHasBroadScreenAndRoundedLowNose() {
+        let head = Map3DTEMU1000.model(.leading)
+        let screen = head.vertices.filter { $0.color == Map3DTEMU1000.glass && $0.x > 9.8 && $0.z > 2.6 }
+        XCTAssertFalse(screen.isEmpty)
+        XCTAssertGreaterThan((screen.map(\.y).max() ?? 0) - (screen.map(\.y).min() ?? 0), 2.0,
+                             "front windscreen must span the broad shoulders")
+        XCTAssertGreaterThan((screen.map(\.z).max() ?? 0) - (screen.map(\.z).min() ?? 0), 0.75,
+                             "front windscreen must extend down the cab")
+        let front = head.vertices.filter { $0.x > 12.15 && $0.color == Map3DTEMU1000.shell }
+        let low = front.filter { $0.z < 0.95 }.map { abs($0.y) }.max() ?? 0
+        let shoulder = front.filter { $0.z > 1.3 && $0.z < 2.2 }.map { abs($0.y) }.max() ?? 0
+        XCTAssertGreaterThan(low, 0.7)
+        XCTAssertLessThan(low, shoulder * 0.87, "lower nose must round inward")
+    }
+
     func testMiddleHasNoCabGlassAtEnd() {
         let middle = Map3DTEMU1000.model(.middle)
         let head = Map3DTEMU1000.model(.leading)
         let glass = Map3DTEMU1000.glass
-        XCTAssertFalse(middle.vertices.contains { $0.color == glass && abs($0.x) > 10.5 && $0.z > 2.8 })
-        XCTAssertTrue(head.vertices.contains { $0.color == glass && $0.x > 10.5 && $0.z > 2.8 })
+        XCTAssertFalse(middle.vertices.contains { $0.color == glass && abs($0.x) > 9.8 && $0.z > 3.2 })
+        XCTAssertTrue(head.vertices.contains { $0.color == glass && $0.x > 9.8 && $0.z > 3.2 })
     }
 }
