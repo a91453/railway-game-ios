@@ -4,7 +4,7 @@
 > 這份記錄「誰在做什麼、做到哪、下一步交給誰」。規則細節以 `docs/ARCHITECTURE.md` 的決策為準，優先順序以 `docs/research/NEXT_PRIORITIES_2026-10-12.md` 為準，號碼以工作登記 #231 為準。
 
 > N700S／N700ST 靜態素材候選（#1202）：公開重建配方與外觀交接見 `docs/art/n700s-n700st/README.md`，完整模型與可下載 viewer 在私庫同名 draft PR。車殼修訂版已通過最終 GLB 的 watertight 檢查；尺寸、台車錨點及實車編組仍未校準。本輪沒有接入遊戲，合併後也不會自動顯示。後續確認工程尺寸與排列，再做 Metal 真機驗收及遊戲接入。
-> #1214 接續塗裝：N700S-G 是原始 N700S 藍線改遊戲藏綠的靜態變體；橘色 N700ST 保留。詳見 `docs/art/n700s-n700st/README.md`。此工作不更動 GameCore 或目前遊戲內列車，合併也不會自動顯示。
+> #1214 接續塗裝：N700S-G 是原始 N700S 藍線改遊戲藏綠的靜態變體；橘色 N700ST 保留。詳見 `docs/art/n700s-n700st/README.md`。此工作不更動 GameCore 或目前遊戲內列車，合併也不會自動顯示。（2026-10-25：決策 408 把 N700S-G 重建成遊戲的畫風，接進營運，見 §7.3。）
 > 作者 2026-10-16：「把所有沒交接在 main 的用 PR 在 main 做交接，防止之後新 session 不知道怎麼做。」交接只放在 session 之間的訊息或 PR 說明裡的，都要搬到這裡。
 
 ## 怎麼用這份
@@ -1421,6 +1421,40 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 
 **五節改色＋七節輕軌（Codex，#991，公開draft #992／私有draft #40，`codex/five-section-lrt-2026-10-22`）**：作者要求兩台都不要紅，最終五節暖白綠松／七節暖白霧藍。新增獨立七節配方`Map3DSevenSectionLRT.swift`，長—短—長—短—長—短—長，2/0/2/0/2/0/2雙門／側、六鉸接、單端集電弓。五節保留尺寸／門位／輪位／設備／編組，只改色並修trailing側窗沿錯誤對角造成的破口；其餘三角與前producer5a2fd38e逐位元比對。最新[外觀／技術及私有包](art/lrt-pair-2026-10-22/README.md)、[重建／共同軌面／組裝](../tools/lrt-pair/README.md)。12單元＋2編組＋2比較、112七向、白模／剪影／同相機五節改色與七節窗面修訂、viewer／ZIP在私有新目錄lrt-pair-2026-10-22，舊包不覆蓋。VERIFIED Linux Swift6.4 warnings-as-errors、28相關測試、原生組裝／GLB、12單元封閉邊／216主要玻璃承板與車殼支持、六種故障案例。七節45.5m是比例推估，隱藏四架八軸為補全假設；真機Metal／效能／動畫／工程尺寸UNVERIFIED。**兩台均為靜態素材，未綁營運車種，合併不會自動換路網列車**；整合須按各節長度／共同軌面，不能當一般七輛車。不改GameCore／Map3DTrainSets／營運／存檔／決策／golden／replay；最新CI以#992 head為準。未合併／auto-merge或TestFlight。
 
+**高鐵兩款與 E200 接進營運（決策 408，session_01EYjQttfohUR8HPL2aYisHw → session_01Bbe7HnLfcUGdoE2VRgZgoU，`claude/decision-408-hsr-trains`，#1217）**：高鐵單號是 N700S-G（前兩版自己重做外形使用者都說醜；第三版是作者的 mesh 減面＋遊戲色票，`Map3DN700SG.mesh(_:)`，`tools/hsr-trains-408/decimate.py` 從私庫 checkout 讀原檔產生 `Map3DN700SGMesh.swift`：頭 5,965、中間 5,000、集電弓車 4,992 個三角形，一列 61,914，只在 500 m 內；500–900 m 換第一版平塗重建 `n700sGFar`，一列 6,872）、雙號是 #1201 的 700T（照原樣，每節 25.2／25.5 m，500 m 內；500–900 m 換 #900 的舊 700T `highSpeedFar`）；莒光號的 E200 是 #1201 的新車頭。資料來源頁加「白色高速列車」。合併前作者要看過預覽（PR 上「先別合併」）。**還沒做**（之後一個 PR 一項）：
+- 玩家每列選高鐵的款式：要在存檔裡記（存檔版本加一），現在照列車號碼單雙分。
+- 實景時刻表的列車照自己的長度畫（現在照舊用 `Map3DRealTrains.carPitch` 拉伸）。
+- 實機看：700T 一列 74,528、N700S-G 74,202 個三角形在跟車、駕駛室視角的幀數；500 m 換成遠景模型時跳不跳；N700S-G 近看窗角與門邊的小白碎片（減面留下的）明不明顯，明顯就把 `decimate.py` 的頭車預算調高或中間車改成不加權。
+- N700S-G 的 B、E（門位、E 的鰭）沒有畫，中間車都是 C：要讓 set 有好幾種中間車。
+- E200 的遠景模型（現在 900 m 內都是 5,512 個三角形）；舊的 `Map3DTrainLocomotive.e200` 不再被 set 用到，可以一併清掉。
+- 作者的 N700ST（橘色，私庫 `Railway/n700s-n700st-2026-10-24/n700st/`）沒有接；要接時同 N700S-G：`decimate.py` 加一組 `UNITS`／`COLOURS`。
+- **使用者給的參考照片（2026-10-25，減面版實機檢查時對照用；在 session_01EYjQttfohUR8HPL2aYisHw 的對話裡）**：六張真的台灣高鐵 N700ST，有側面線圖、700T／N700ST 並排的海報、出廠與卸船的照片。照片有著作權（線圖是 CC BY-NC-ND，其他是新聞與官方宣傳照），**不放進任何一個 repo**，只照下面這些特徵檢查減面後的樣子：
+  - 鼻：長而低、上下扁的「鴨嘴」，鼻尖寬而圓。兩側從車身肩部往前有一道銳利的稜線，把鼻分成上面的圓背與兩側往下收的「翼」（N700S 的 dual-supreme-wing，700T 沒有這道稜線）。
+  - 駕駛室：一個獨立凸起的透明圓罩，在鼻的後段，四周是黑色的玻璃框。
+  - 頭燈：細長的「眼」，在兩翼的稜線上、鼻的中段，不是在鼻尖。
+  - 下半：鼻下與裙部是一整片淺灰（不是黑），從鼻尖一路接到轉向架。
+  - 車窗：小，四角圓，一排間距大；門在頭車駕駛室後面。
+  - 真車的塗裝是橘帶加一條深藍細線，在門附近往下斜切到裙部；遊戲的 N700S-G 照作者給的深綠兩條線（決策 408 不叫它 N700ST），要不要另做橘色的 N700ST 由接手的 session 依五方決定。
+
+**列車建模照 700T 升級（使用者 2026-10-25：「寫一份 700T 參考後更新現有 3D 製作模組……寫出更新腳本讓列車產生更好看」；新工作，交給新 session，本 session 已壓縮兩次）**：#1201 的 700T（`Map3DTrainShapeRefresh.refreshHighSpeed`）使用者說「好漂亮」，要把它的做法搬進現有的列車建模，讓用建模產生的列車一起變好看。新 session 先在 #1041 認領（新決策號、存檔／golden 不動）。
+- **要改的**：`Map3DTrainBuilder`（`Sources/GamePresentation/Map3DModels.swift`，決策 230；`Map3DTrainStyle.all` 的 commuter、express、highSpeed、metro、peopleMover，與 `Map3DTrainSet.multipleUnit` 每一款場景套件列車的中間車），與 `SceneKitCab`（`Map3DSceneKitCabs.swift`，那些列車的頭車）。
+- **700T 好看在哪**（逐項搬，每項一張前後對照）：
+  1. 斷面：超橢圓（`surface(x,a)`，側面指數 0.58、上下 0.65）一圈 40 段，車身圓潤；現在 `ring(at:t:)` 段數少、角硬。
+  2. 鼻：沿車長一張高、寬的表（`dimensions(x)`），再加肩部隆起（高斯 `swell`）與下方整流罩（`ease`），鼻的輪廓是量出來的曲線，不是 `drop`／`lift`／`tuck` 三個參數。
+  3. 塗裝：色帶照多邊形精確切開（`clip`、`hullParts`、`nosePaintParts`），邊緣銳利、順著鼻往下收（`bandHeight`），兩端蓋板同樣切開，不留 T 形接縫；現在是頂點色依高度上色，邊緣會暈開。
+  4. 窗：圓角（`refreshRoundedOutline`，十二點）、外框加內嵌玻璃兩層（框比玻璃大 0.07 m），貼著車身的曲面（`flank`）；現在是方塊。
+  5. 風擋：照鼻的曲面映射的圓角梯形，玻璃分小格跟著曲率、四周黑框，有車身在後面撐住，不是一片貼片。
+  6. 燈：燈罩加兩顆真的燈（`tunnelLamp`），貼在鼻面、沿面的切線擺；頭車白、尾車紅（`Map3DTrainSet.lit(_:front:)`）。
+  7. 顏色只用調色盤（`Map3DPalette`），霧面平塗、每個三角形自己的法線（`.flat`）。
+- **要守的**：
+  - 700T、E200、N700S-G 的 `refresh-*` 模型一個位元組都不變（決策 408 那次用的頂點 FNV checksum 測試，比對完不 commit）。
+  - Codex 的列車（列車包、蒸汽機車等）不碰。
+  - 三角形預算：建模的列車很多、多數沒有遠景，中間車建議 ≤ 2,000、頭車 ≤ 4,000（現在約 400–1,100；700T 是 5,600–9,100，只在 500 m 內畫）。超過時同決策 408 加 `nearOnly` 與遠景 `far`。
+  - 先讀 `.claude/skills/art-style/SKILL.md`。
+  - `Map3DTrainSetTests` 的三角形與尺寸範圍、`Map3DModelTests`、`Map3DSceneKit*Tests` 跟著改，並寫明為什麼。
+- **怎麼做比較穩**：把 700T 配方裡跟車型無關的部分（超橢圓斷面、多邊形切色帶、圓角窗、曲面風擋、燈）抽成共用的函式。`refreshHighSpeed` 改呼叫它們時，checksum 要不變；不變就改呼叫，會變就先複製一份。`Map3DTrainBuilder` 再用同一組函式，一次換一項、每項出前後對照圖（`tools/hsr-trains-408/` 的 export 與 `render.mjs` 可以照抄），給使用者看過再合併。
+- **參考**：私庫的 `Railway/train-shape-refresh-2026-10-24/`（#1200／#1201 的照片與七向圖），`docs/art/train-shape-refresh-2026-10-24/README.md`。
+
 **接手**：3D 生活感 session 做完第 2 節的四步之後，由遊戲規劃排序。
 
 | 項目 | 出處 |
@@ -1501,7 +1535,7 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 - 找得到的入口（決策 336，#982 與第 26 名的 PR）：路線面板的「可收購的真實路線」與沒有可買時的那一行、車站面板最上面的「收購○○線…」、資料面板「今天」下面的貸款與票價、地圖左下有字的「擴建地圖」膠囊（手機橫拿時會不會擠到圖層鈕或縮放鈕）、建造時「這塊地還不是你的」旁邊的「擴建地圖」（✕／✓ 小卡變寬後會不會出畫面）、狀態列的景點星、列車卡的「時刻表／車隊總覽」、軌道卡的長按提示。另外 §22.9 沒查證的：選單第一層「明信片／成就」那排在手機上會不會只剩圖示。
 - 3D 的範圍（作者 2026-10-21 問要不要放大到整張 16 km）：先維持前後左右各 6 km（`Map3DScene.reach`，最多 12 × 12 km；#899 之後移到哪建到哪）。3D 畫質設定（#902）合併後，請作者在台北遠景量降到 2× 之後的 GPU；還有餘裕才只在「高畫質」放大到整張地圖，其他兩個選項不變（遊戲規劃 2026-10-21 代為決定，PLAYER_FEEDBACK 78.1 #10）。
 
-**Codex E200／700T 第三版鼻部（#1200，`codex/train-shape-refresh-2026-10-24`）**：已依使用者指定參考PR#1203與私庫E201四向渲染；E201非已確認Codex來源只作參考，不搬來源mesh。鼻部／風擋／雙燈罩／圓角窗薄門、E200輪架／屋頂／踏階已修，暖白綠松保持。6合法M3DM＋自含單元組裝JSON＋7GLB／49七向／白模剪影／同尺度與真正d476304b前後／viewer／ZIP在私庫原目錄新增revision-2，舊包保留。約7萬三角編組不塞進15,000上限；JS重建與Swift三角payload逐bytes核對，單元仍由原生ModelFile讀回。[外觀、驗證與交接](art/train-shape-refresh-2026-10-24/README.md)。20相關測試與Swift6.4 warnings-as-errors、原生／封閉朝向／缺面反面浮空及組裝偏移拒收、玻璃支承／輪胎淨空抽檢、Blender／PNG／viewer／ZIP已驗；完整碰撞／設備接觸圖／真機Metal／效能／動畫未驗。**仍是靜態素材，合併不自動替換營運E200／高鐵**；無GameCore／存檔／golden／replay變更。互鏈draft#1201／私有#70、最新producer與CI見#1200；不合併／auto-merge／TestFlight。
+**Codex E200／700T 第三版鼻部（#1200，`codex/train-shape-refresh-2026-10-24`）**：已依使用者指定參考PR#1203與私庫E201四向渲染；E201非已確認Codex來源只作參考，不搬來源mesh。鼻部／風擋／雙燈罩／圓角窗薄門、E200輪架／屋頂／踏階已修，暖白綠松保持。6合法M3DM＋自含單元組裝JSON＋7GLB／49七向／白模剪影／同尺度與真正d476304b前後／viewer／ZIP在私庫原目錄新增revision-2，舊包保留。約7萬三角編組不塞進15,000上限；JS重建與Swift三角payload逐bytes核對，單元仍由原生ModelFile讀回。[外觀、驗證與交接](art/train-shape-refresh-2026-10-24/README.md)。20相關測試與Swift6.4 warnings-as-errors、原生／封閉朝向／缺面反面浮空及組裝偏移拒收、玻璃支承／輪胎淨空抽檢、Blender／PNG／viewer／ZIP已驗；完整碰撞／設備接觸圖／真機Metal／效能／動畫未驗。**仍是靜態素材，合併不自動替換營運E200／高鐵**（2026-10-25：決策 408 已把第十版的 E200 與 700T 接進營運，見 §7.3）；無GameCore／存檔／golden／replay變更。互鏈draft#1201／私有#70、最新producer與CI見#1200；不合併／auto-merge／TestFlight。
 
 #1200第三輪：使用者指出鴨嘴不足，只修頭尾x±9.5以外鼻殼，前緣前伸1.05m並保留寬扁截面；完整bounds長306.5m為造型推估。E200／middle／panto／比較車native和GLB逐bytes不變，頭尾各5768後段三角不變；真正7096130e前版、四向同尺度前後與完整包放revision-3，舊revision-2保留。測試先紅後綠（20測試）；仍靜態素材，不替換營運，不合併／auto-merge／TestFlight。
 

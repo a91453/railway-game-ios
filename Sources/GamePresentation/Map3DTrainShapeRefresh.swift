@@ -1,6 +1,8 @@
 import Foundation
 
-/// Independent photo-led static studies. Not assigned to operating train types.
+/// Independent photo-led static studies. Decision 408: the E200 draws the
+/// Chu-Kuang sets' locomotive and the 700T units the high-speed set
+/// (``Map3DTrainSet/highSpeed700T()``); their shapes are as made here.
 public enum Map3DTrainShapeRefresh {
     public static let highSpeedBodyColor=Map3DPalette.shopAwnings[3]
     public static let highSpeedAccentColor=Map3DColor.shaded(Map3DPalette.tankStand,0.42)
@@ -55,6 +57,12 @@ extension StationKitBuilder {
                 }
             }
         }
+    }
+    /// The 700T's bogies centred at `centres` (metres along the car), their
+    /// axles at `axles` from each centre; decision 408 draws the N700S-G's
+    /// on them too, its axles where the author's stood.
+    mutating func refreshHighSpeedRunning(_ centres: [Float],axles: [Float] = [-1.25,1.25]) {
+        refreshRunning(centres,axles:axles,radius:0.40,gauge:1.435)
     }
     private mutating func refreshPanto(_ x: Float, roof: Float, singleArm: Bool = false) {
         box(x,roof,0,1.8,1.15,0.12,Self.steel)
@@ -378,7 +386,7 @@ extension StationKitBuilder {
                 }
             }
         }
-        refreshRunning([-8.8,cab ? 3.4:8.8],axles:[-1.25,1.25],radius:0.40,gauge:1.435)
+        refreshHighSpeedRunning([-8.8,cab ? 3.4:8.8])
         box(cab ? -3.7:0,0.92,0,cab ? 17.4:23.8,2.55,0.12,Self.ink)
         func flank(_ h: Float)->Float {
             let s=(h-bottom)/(3.65-bottom)*2-1

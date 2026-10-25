@@ -27,4 +27,4 @@ Blender4.3.2獨立7GLB匯入／bounds／三角／頂點色／霧面；49七向�
 
 **UNVERIFIED**：完整設備接觸圖／全表面穿模閃爍、真機Metal／效能／動畫／動態轉彎懸吊、工程完整性、OS雙擊file://（Chromium離線setContent已驗）。射線取樣／Linux WebGL不代表完整碰撞或iOS／真機。最新head實際CI單獨記issue，不能用本機24測試代替。
 
-**本次仍為靜態素材註冊，未替換營運E200／高鐵；合併不會自動出現在遊戲中。** 完整編組JSON僅為工具重建契約，沒有遊戲scene loader；後續需營運映射／LOD／單節長度與動態真機驗證。GameCore／存檔／golden／replay和玩法不動，兩PR保持draft，不推main、不合併／auto-merge／TestFlight。
+**本次仍為靜態素材註冊，未替換營運E200／高鐵；合併不會自動出現在遊戲中。**（2026-10-25：決策 408 把第十版的 E200 與 700T 接進營運，單節長度與 500 m 外的遠景模型見 `docs/decisions/408.md`。） 完整編組JSON僅為工具重建契約，沒有遊戲scene loader；後續需營運映射／LOD／單節長度與動態真機驗證。GameCore／存檔／golden／replay和玩法不動，兩PR保持draft，不推main、不合併／auto-merge／TestFlight。
