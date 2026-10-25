@@ -22,7 +22,12 @@ final class Map3DTrainSetTests: XCTestCase {
                 let triangles = set.key == "greenTram" ? 2_500...3_200
                     : ["greenCommuter", "threeCarUrban", "fiveSectionLRT", "sevenSectionLRT"].contains(set.key) ? 2_000...6_000
                     // Decision 399: a steam locomotive, eight to ten thousand.
-                    : name == set.headName && ["SUMMER", "STEAM"].contains(set.key) ? 8_000...10_500 : 100...4_100
+                    : name == set.headName && ["SUMMER", "STEAM"].contains(set.key) ? 8_000...10_500
+                    // Decision 408: #1201's 700T, eight to nine thousand a
+                    // cab and five to six a middle car, so drawn near only;
+                    // its E200, five to six thousand.
+                    : set.key == "highSpeed" ? ([set.headName, set.tailName].contains(name) ? 8_000...9_500 : 5_000...6_000)
+                    : name == set.headName && set.key == "E200CK" ? 5_000...6_000 : 100...4_100
                 XCTAssertTrue(triangles.contains(model.triangleCount), "\(name): \(model.triangleCount) triangles")
                 // #900's 700T is 24 m, its Wenhu car 12.6 m, #988's urban
                 // EMU 15 m; drawn at the train's car length.
@@ -30,7 +35,10 @@ final class Map3DTrainSetTests: XCTestCase {
                 // Decision 399: the steam locomotives 14.8 and 15.4 m, their
                 // tenders 9 and 9.5 m, the four-car metro's cars 12.3 m and
                 // the seven-section car's 7.6 to 8.3 m, as they are.
-                let length: ClosedRange<Float> = set.key == "highSpeed" ? 23...25 : set.key == "wenhu" ? 12...13.5
+                // Decision 408: the 700T's cars 25.2 to 25.5 m, the N700S-G's
+                // 25 and 25.3 m, #900's light 700T (now the far set) 24 m.
+                let length: ClosedRange<Float> = set.key == "highSpeed" ? 25...25.6 : set.key == "n700sG" ? 24.9...25.4
+                    : set.key == "highSpeedFar" ? 23...25 : set.key == "wenhu" ? 12...13.5
                     : set.key == "threeCarUrban" ? 15...16 : set.key == "sevenSectionLRT" ? 14...16
                     : name == set.headName && ["SUMMER", "STEAM"].contains(set.key) ? 14.5...15.5
                     : name == set.tenderName ? 8.9...9.6 : set.key == "fourCarMetro" ? 12.3...12.8
@@ -40,7 +48,9 @@ final class Map3DTrainSetTests: XCTestCase {
                 XCTAssertEqual(model.minimum.z, 0, accuracy: 0.1, "\(name) stands on the rail")
                 // The low-floor tram is lower than a train.
                 let height: ClosedRange<Float> = ["greenTram", "fiveSectionLRT", "sevenSectionLRT"].contains(set.key) ? 3.2...4.6
-                    : set.key == "STEAM" ? 3.4...4.7 : 3.4...4.6
+                    : set.key == "STEAM" ? 3.4...4.7
+                    // Decision 408: #1201's E200 and the 700T's pantographs.
+                    : ["E200CK", "highSpeed"].contains(set.key) ? 3.4...4.9 : 3.4...4.6
                 XCTAssertTrue(height.contains(model.maximum.z), "\(name): \(model.maximum.z) m tall")
                 if lineColoured.contains(set.key) {
                     XCTAssertTrue(model.vertices.contains { $0.color >> 24 == 0 }, "\(name): the band is the line's colour")

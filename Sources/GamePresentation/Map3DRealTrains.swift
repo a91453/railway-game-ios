@@ -306,13 +306,16 @@ public struct Map3DRealTrains: Sendable {
                     models: Map3DModelPack?, eye: Map3DPoint?) {
         var drawn = 0
         for (index, line) in traffic.lines.enumerated() where !tracks[index].isEmpty {
-            let formation = formations[index], stripe = stripes[index]
-            let hasModels = models?.models(forType: formation.key) != nil
-            let reach = Map3DTrainSet.reach(of: formation.key)
+            let lineFormation = formations[index], stripe = stripes[index]
+            let hasModels = models?.models(forType: lineFormation.key) != nil
             let ring = line.ringKm ?? line.shape.lengthKm
             let isRing = line.ringKm != nil
             for place in traffic.places(of: line, at: second, on: day, dayBefore: dayBefore) {
                 guard drawn < RealTrainTraffic.mostDrawn else { return }
+                // Decision 408: half the high-speed trains the N700S-G, by
+                // their run on the day's timetable.
+                let formation = Formation(key: Map3DTrainSet.variant(of: lineFormation.key, number: Map3DTrainSet.number(ofRealTrain: place.key)),
+                                          cars: lineFormation.cars)
                 let way: Double = RealTrainRun.way(from: place.km, to: place.towardKm, ringKm: isRing ? ring : nil) >= 0 ? 1 : -1
                 let length = Double(formation.cars) * Self.carPitch
                 // Its middle where the timetable has it; held at the line's
@@ -343,8 +346,10 @@ public struct Map3DRealTrains: Sendable {
                         inner: Map3DMesh.footprint(centre: base + bed, forward: a - b, length: along, width: Map3DTrains.carWidth),
                         outer: Map3DMesh.footprint(centre: base + bed, forward: a - b, length: along + 1, width: Map3DTrains.carWidth + 1),
                         darkness: 0.38)
-                    if let models, hasModels, let eye, (base - eye).length < reach,
-                       let model = models.modelIndex(forType: formation.key, carIndex: car, count: formation.cars) {
+                    if let models, hasModels, let eye,
+                       let near = models.modelIndex(forType: formation.key, carIndex: car, count: formation.cars),
+                       // Decision 408: past its set's reach, its far set's car.
+                       let model = models.model(near, forType: formation.key, count: formation.cars, at: (base - eye).length) {
                         let turned = models.isTurned(forType: formation.key, carIndex: car, count: formation.cars)
                         frame.instances.append(Map3DTrains.instance(of: models.models[model], index: model, from: turned ? a : b, to: turned ? b : a,
                                                                     stripe: stripe))

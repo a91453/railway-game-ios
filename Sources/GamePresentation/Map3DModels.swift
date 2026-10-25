@@ -119,11 +119,7 @@ public struct Map3DModelPack: Sendable {
     /// style's `pantographCars`.
     public func modelIndex(forType code: String, carIndex: Int, count: Int) -> Int? {
         if let set = Map3DTrainSet.set(forKey: code, count: count, locked: locked) {
-            if count == 1, let single = index(of: set.singleName) { return single }
-            if carIndex == 0 { return index(of: set.headName) }
-            if carIndex == count - 1 { return index(of: set.tailName) ?? index(of: set.headName) }
-            if set.pantographCars.contains(carIndex), let panto = index(of: set.pantographName) { return panto }
-            return index(of: set.middleName)
+            return modelIndex(of: set, carIndex: carIndex, count: count)
         }
         guard let styleName = Self.styleByType[code] else { return nil }
         if carIndex == 0 || carIndex == count - 1 {
@@ -135,6 +131,42 @@ public struct Map3DModelPack: Sendable {
             return panto
         }
         return index(of: styleName + "-car")
+    }
+
+    /// Car `carIndex` of a `count`-car train of `set`: its unit in the
+    /// set's order (decision 408), else its head, tail, pantograph or
+    /// middle car.
+    func modelIndex(of set: Map3DTrainSet, carIndex: Int, count: Int) -> Int? {
+        if let order = set.order {
+            let units = order(count)
+            return units.indices.contains(carIndex) ? index(of: set.unitName(units[carIndex])) : nil
+        }
+        if count == 1, let single = index(of: set.singleName) { return single }
+        if carIndex == 0 { return index(of: set.headName) }
+        if carIndex == count - 1 { return index(of: set.tailName) ?? index(of: set.headName) }
+        if set.pantographCars.contains(carIndex), let panto = index(of: set.pantographName) { return panto }
+        return index(of: set.middleName)
+    }
+
+    /// Decision 408: the model drawn for `model` (a car of a `count`-car
+    /// train of type `code`) farther than ``Map3DTrainSet/reach(of:)``, the
+    /// same car of its set's ``Map3DTrainSet/far`` set; `nil` when there
+    /// is none (a box is drawn).
+    public func farModel(of model: Int, forType code: String, count: Int) -> Int? {
+        guard models.indices.contains(model), let set = Map3DTrainSet.set(forKey: code, count: count, locked: locked),
+              let far = set.far.flatMap({ Map3DTrainSet.byKey[$0] }) else { return nil }
+        let prefix = "set-\(set.key)-", name = models[model].name
+        guard name.hasPrefix(prefix) else { return nil }
+        return index(of: far.unitName(String(name.dropFirst(prefix.count))))
+    }
+
+    /// Decision 408: the model a car of `code` is drawn with `distance`
+    /// metres from the eye, its own model `near`: that within its set's
+    /// ``Map3DTrainSet/reach(of:)``, its far set's car beyond it, and none
+    /// (a box) past ``Map3DTrains/modelReach``.
+    public func model(_ near: Int, forType code: String, count: Int, at distance: Float) -> Int? {
+        guard distance < Map3DTrains.modelReach else { return nil }
+        return distance < Map3DTrainSet.reach(of: code) ? near : farModel(of: near, forType: code, count: count)
     }
 
     /// Decision 399: a car drawn at its own length, metres, and how far
@@ -161,8 +193,9 @@ public struct Map3DModelPack: Sendable {
             cars = [(head, 0), (tender, Map3DTrains.carGap)]
                 + (1..<max(count, 1)).map { ($0 == count - 1 ? tail : middle, Map3DTrains.carGap) }
         } else {
-            let units = set.fixedCars ?? count
-            cars = (0..<max(units, 1)).map { ($0 == 0 ? head : $0 == units - 1 ? tail : middle, 0) }
+            // Decision 408: and its pantograph cars, or its own order.
+            let units = max(set.fixedCars ?? count, 1)
+            cars = (0..<units).map { (modelIndex(of: set, carIndex: $0, count: units) ?? middle, 0) }
         }
         return cars.enumerated().map { index, car in
             LaidCar(model: car.model, length: models[car.model].length, gap: index < cars.count - 1 ? car.gap : 0)
@@ -174,7 +207,10 @@ public struct Map3DModelPack: Sendable {
     /// tail of its own or the train is one car.
     public func isTurned(forType code: String, carIndex: Int, count: Int) -> Bool {
         guard count > 1, carIndex == count - 1 else { return false }
-        if let set = Map3DTrainSet.set(forKey: code, count: count, locked: locked) { return index(of: set.tailName) == nil }
+        if let set = Map3DTrainSet.set(forKey: code, count: count, locked: locked) {
+            // Decision 408: a set with its own order has its back cars turned in it.
+            return set.order == nil && index(of: set.tailName) == nil
+        }
         return true
     }
 }
@@ -245,6 +281,14 @@ public struct Map3DTrainStyle: Sendable {
     public var screenTo: Float = 0.92
     public var screenDown: Float
     public var screenAcross: Float = 1.0
+    /// Decision 408: the doors' middles along the car, metres from its
+    /// middle, when they stand where its own drawings put them rather than
+    /// as ``doors`` and ``doorLayout`` space them.
+    public var doorsAt: [Float]? = nil
+    /// Decision 408: where along the nose (0 at the body, 1 at the tip)
+    /// the shoulder headlamps stand, and at what share of the height.
+    public var lampSpan: ClosedRange<Float> = 0.50...0.64
+    public var lampShare: Float = 0.50
 
     static let glass = Map3DColor.rgb(0x26313D)
     static let doorColour = Map3DColor.rgb(0x5D6670)
@@ -497,10 +541,12 @@ struct Map3DTrainBuilder {
     mutating func addNoseHeadlamps() {
         guard cab, style.dive > 0 else { return }
         let noseStart = style.length / 2 - style.nose
-        let x0 = noseStart + style.nose * 0.50, x1 = noseStart + style.nose * 0.64
-        addNoseStripe(from: x0, to: x1, shares: 0.46...0.54, dive: 0.08, proud: 0.022, colour: Map3DTrainStyle.lampHousing)
+        let x0 = noseStart + style.nose * style.lampSpan.lowerBound, x1 = noseStart + style.nose * style.lampSpan.upperBound
+        let share = style.lampShare
+        addNoseStripe(from: x0, to: x1, shares: share - 0.04...share + 0.04, dive: 0.08, proud: 0.022, colour: Map3DTrainStyle.lampHousing)
         let glowStart = mesh.vertices.count
-        addNoseStripe(from: x0 + 0.14, to: x1 - 0.10, shares: 0.475...0.525, dive: 0.08, proud: 0.028, colour: Map3DTrainStyle.headlamp)
+        addNoseStripe(from: x0 + 0.14, to: x1 - 0.10, shares: share - 0.025...share + 0.025, dive: 0.08, proud: 0.028,
+                      colour: Map3DTrainStyle.headlamp)
         mesh.makeGlowing(from: glowStart)
     }
 
@@ -525,7 +571,9 @@ struct Map3DTrainBuilder {
         let count = cab && style.nose > 4 ? max(1, style.doors - 1) : max(1, style.doors)
         let span = front - back
         let doorCentres: [Float]
-        if count == 1 {
+        if let at = style.doorsAt {
+            doorCentres = at
+        } else if count == 1 {
             doorCentres = [cab ? back + style.doorWidth : front - style.doorWidth]
         } else if style.doorLayout == .carEnds && count == 2 {
             doorCentres = [back + style.doorWidth * 1.1, front - style.doorWidth * 1.1]

@@ -1,6 +1,8 @@
 import Foundation
 
-/// Independent photo-led static studies. Not assigned to operating train types.
+/// Independent photo-led static studies. Decision 408: the E200 draws the
+/// Chu-Kuang sets' locomotive and the 700T units the high-speed set
+/// (``Map3DTrainSet/highSpeed700T()``); their shapes are as made here.
 public enum Map3DTrainShapeRefresh {
     public static let highSpeedBodyColor=Map3DPalette.shopAwnings[3]
     public static let highSpeedAccentColor=Map3DColor.shaded(Map3DPalette.tankStand,0.42)
