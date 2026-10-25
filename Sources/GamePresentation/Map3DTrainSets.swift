@@ -119,7 +119,7 @@ public struct Map3DTrainSet: Sendable {
             multipleUnit("metroC381", asset: "02_HSR_MRT_3x2-02", lineColoured: true),
             multipleUnit("wenhu", asset: "02_HSR_MRT_3x2-03", lineColoured: true),
             multipleUnit("puyuma", asset: "01_TRA_modern_3x2-02", livery: TrainLivery.puyuma),
-            multipleUnit("taroko", asset: "01_TRA_modern_3x2-03", livery: TrainLivery.taroko),
+            temu1000(),
             // The EMU800: grey, a blue band and its blue face (the reference's
             // garage `emu800`) on #900's curved front (the author, 2026-10-21).
             multipleUnit("emu800", asset: "01_TRA_modern_3x2-04", body: 0xBBC6C9, band: 0x214F90, face: 0x214F90),
@@ -331,6 +331,24 @@ public struct Map3DTrainSet: Sendable {
     /// Decision 408: #1201's 700T, each car its own length (25.2 m the
     /// cabs, 25.5 m the rest), the cab's lamps lit, white at the front and
     /// red at the back; ``far`` #900's.
+    /// Native TEMU1000 units in the operating Taroko set. The pantograph
+    /// locations follow the static eight-car reconstruction; no game rules
+    /// or train type metadata are changed.
+    static func temu1000() -> Map3DTrainSet {
+        Map3DTrainSet(key: "taroko", pantographCars: [2, 5], ownLengths: true, fixedCars: 8) {
+            func cab(_ unit: Map3DTEMU1000.Unit, at x: Float, colour: UInt32) -> Map3DModelPack.Model {
+                var builder = StationKitBuilder()
+                builder.add(Map3DTEMU1000.model(unit), at: .zero)
+                builder.cabLamps(atX: x, colour: colour, height: 1.65, across: 0.70, width: 0.18, tall: 0.12)
+                return .flat(named: "taroko-\(unit.rawValue)", from: builder.mesh)
+            }
+            return Cars(head: cab(.leading, at: 12.42, colour: Map3DTrainStyle.headlamp),
+                        middle: Map3DTEMU1000.model(.middle),
+                        tail: cab(.trailing, at: -12.42, colour: Map3DPalette.lantern),
+                        single: nil, pantograph: Map3DTEMU1000.model(.pantograph))
+        }
+    }
+
     static func highSpeed700T() -> Map3DTrainSet {
         Map3DTrainSet(key: "highSpeed", pantographCars: [3, 8], ownLengths: true, far: "highSpeedFar") {
             let model = Map3DTrainShapeRefresh.model

@@ -42,7 +42,7 @@ final class Map3DTrainSetTests: XCTestCase {
                 // and its far set's 25 and 25.3 m,
                 // #900's light 700T (now the far set) 24 m.
                 let length: ClosedRange<Float> = set.key == "highSpeed" ? 25...25.6 : ["n700sG", "n700sGFar"].contains(set.key) ? 24.9...25.4
-                    : set.key == "highSpeedFar" ? 23...25 : set.key == "wenhu" ? 12...13.5
+                    : set.key == "highSpeedFar" ? 23...25 : set.key == "taroko" ? 23...24.5 : set.key == "wenhu" ? 12...13.5
                     : set.key == "threeCarUrban" ? 15...16 : set.key == "sevenSectionLRT" ? 14...16
                     : name == set.headName && ["SUMMER", "STEAM"].contains(set.key) ? 14.5...15.5
                     : name == set.tenderName ? 8.9...9.6 : set.key == "fourCarMetro" ? 12.3...12.8
