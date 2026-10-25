@@ -257,19 +257,23 @@ extension Map3DScene.Builder {
             let truss = piece.kind == .bridge && piece.viaduct == .railway
             let concrete = piece.kind == .bridge && !truss ? Map3DPalette.bridge : Map3DPalette.concrete
             mesh(at: line[line.count / 2]) { mesh in
-                // The slab, the bed or slab track on it, and the girder.
+                // The slab (ballasted or bare) and the girder.
                 mesh.addRibbon(along: line, width: look.deckWidth, lift: -Self.bedDrop, depth: look.slabDepth,
                                top: look.ballasted ? Map3DPalette.ballast : concrete, side: concrete,
                                topPaint: look.ballasted ? Self.ballast : Self.concrete, sidePaint: Self.concrete)
-                if !look.ballasted {
-                    mesh.addRibbon(along: line, width: 2.6, lift: -0.2, depth: 0.15, top: Map3DPalette.ballast, side: Map3DPalette.ballast)
-                }
                 mesh.addRibbon(along: line, width: look.girderWidth, lift: -Self.bedDrop - look.slabDepth, depth: look.girderDepth - look.slabDepth,
                                top: concrete, side: concrete, sidePaint: Self.concrete)
                 if truss { Self.addTrussChords(&mesh, line: line, across: across, beside: beside) }
             }
-            // The parapets, or a truss's members, close up.
             let saved = target
+            // The slab track's concrete bed on the deck, near (decision 238).
+            if !look.ballasted {
+                target = .near
+                mesh(at: line[line.count / 2]) { mesh in
+                    mesh.addRibbon(along: line, width: 2.6, lift: -0.2, depth: 0.15, top: Map3DPalette.ballast, side: Map3DPalette.ballast)
+                }
+            }
+            // The parapets, or a truss's members, close up.
             target = .wires
             mesh(at: line[line.count / 2]) { mesh in
                 if truss {
