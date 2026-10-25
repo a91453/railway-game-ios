@@ -219,6 +219,27 @@ final class SettingsUITests: XCTestCase {
         XCTAssertTrue(app.buttons["train.timetable"].appears(within: 10), "The timetable shows with Advanced off")
     }
 
+    /// Decision 414: the idle mode from the game menu puts the controls
+    /// away; a tap anywhere brings them back.
+    func testTheIdleModePutsTheControlsAwayUntilATap() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-ui-testing-paused", "-demo-layout", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 10))
+
+        tapHittable("hud.menu", in: app)
+        tapHittable("menu.ambient", in: app)
+        let curtain = app.descendants(matching: .any)["ambient.curtain"].firstMatch
+        XCTAssertTrue(curtain.appears(within: 10), "The idle mode starts")
+        XCTAssertTrue(app.buttons["hud.menu"].disappears(within: 5), "The controls are put away")
+        // On the 2D map or over the 3D one, whichever the first shot is.
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        XCTAssertTrue(curtain.disappears(within: 10), "A tap ends it")
+        XCTAssertTrue(app.buttons["hud.menu"].becomesHittable(within: 10), "The controls are back")
+    }
+
     /// Taps the copy of the button `identifier` that can be touched: a
     /// native menu can hold an unplaced copy of an action
     /// (`WebsiteScreenshotTests.tapButton`).

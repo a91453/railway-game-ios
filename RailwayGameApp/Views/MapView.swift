@@ -718,6 +718,9 @@ struct MapView: View {
                     .padding(.leading, clear.leading)
                     .padding(.trailing, clear.trailing)
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { topColumnDepth = $0 }
+                    // Decision 414: put away in the idle mode, as the
+                    // screen's own controls are.
+                    .ambientHidden(screen.ambient != nil)
                 }
                 .overlay(alignment: .bottomTrailing) {
                     // Decision 382: the legend, the overview map and the
@@ -801,6 +804,7 @@ struct MapView: View {
                     .padding(.trailing, besideTrailing ? clear.trailing : screenEdges.trailing)
                     .padding(.bottom, besideTrailing ? clear.bottom : screenEdges.bottom)
                     .animation(.easeInOut(duration: 0.2), value: trailingInsetDepth)
+                    .ambientHidden(screen.ambient != nil)
                 }
                 .overlay(alignment: .bottomTrailing) {
                     // Decision 300: under a phone's panel, at the screen's
@@ -819,6 +823,7 @@ struct MapView: View {
                             .padding(.trailing, CGFloat(viewport.width) - rowEnd)
                             .padding(.bottom, below - reach)
                             .transition(.opacity)
+                            .ambientHidden(screen.ambient != nil)
                     }
                 }
                 .onChange(of: buttonsUnderPanel && rowInBand, initial: true) { _, inBand in
@@ -859,6 +864,7 @@ struct MapView: View {
                     // tools column (decision 226, 2026-10-15).
                     .padding(.bottom, leadingRowFoot.map { screenEdges.bottom + $0 - CGFloat(HUDMargins.edge) } ?? clear.bottom)
                     .padding(.leading, clear.leading)
+                    .ambientHidden(screen.ambient != nil)
                 }
                 // Decision 174, later: the sights while building, faint
                 // and under the flags below.
@@ -899,6 +905,7 @@ struct MapView: View {
                 // Decision 109: what needs the player, over its stations.
                 .overlay(alignment: .topLeading) {
                     MapAlertBubbles(session: session, camera: projection, viewport: viewport, insets: clear)
+                        .ambientHidden(screen.ambient != nil)
                 }
                 // Decision 174: the sights, with their stars.
                 .overlay(alignment: .topLeading) {
@@ -1085,7 +1092,12 @@ struct MapView: View {
                 // Decision 177: the station master's tap on advice that
                 // points at a place (the next town to extend to).
                 guard let request else { return }
-                camera = projection.centered(on: WorldCoordinate(x: request.location.x, y: request.location.y), clearOf: framing)
+                if let region = request.region {
+                    // Decision 414: the idle mode's station or line, whole.
+                    camera = projection.showing(region, clearOf: framing)
+                } else {
+                    camera = projection.centered(on: WorldCoordinate(x: request.location.x, y: request.location.y), clearOf: framing)
+                }
             }
             // Decision 188, later fix: where the places the tutorial's
             // step has the player tap stand, which its card keeps clear of.

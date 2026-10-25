@@ -37,6 +37,11 @@ struct Map3DPreviewScreen: View {
     /// tools out. `nil` from the settings, which have no 2D map below.
     var toMap2D: ((Map3DHandoff.Plan) -> Void)? = nil
     var build: ((Map3DHandoff.Plan) -> Void)? = nil
+    /// Decision 414: the game screen while the idle mode runs, whose
+    /// director picks the view the train is followed from; the controls
+    /// are put away and a tap ends the mode (`endAmbient`).
+    var ambientScreen: GameScreenState? = nil
+    var endAmbient: (() -> Void)? = nil
     @State private var built: Map3DBuiltScene?
     private var scene: Map3DScene? { built?.scene }
     @State private var sceneVersion = 0
@@ -64,11 +69,12 @@ struct Map3DPreviewScreen: View {
     var body: some View {
         let language = DisplayLanguage.app
         let driver = self.driver
+        let ambient = ambientScreen?.ambient
         ZStack {
             Map3DView(built: built, sceneVersion: sceneVersion, lighting: Map3DLighting(at: session.world.clock.now),
                       weather: Map3DWeather(MapWeather(world: session.world)), feed: feed, trainLabels: trainLabels,
                       start: handedOver, openedAt: openedAt, farOut: farOut, compass: compass, cameraLink: cameraLink, quality: quality.drawn,
-                      follow: session.followedTrain.map { Map3DFollow(train: $0.id, view: followView) },
+                      follow: session.followedTrain.map { Map3DFollow(train: $0.id, view: ambient?.view3D ?? followView) },
                       departure: departure, world: session.world,
                       onStats: { stats = $0 })
                 .ignoresSafeArea()
@@ -199,6 +205,11 @@ struct Map3DPreviewScreen: View {
             .padding(CGFloat(HUDMargins.edge))
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: session.followedTrain?.id)
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: driver?.prompt == nil)
+            .ambientHidden(ambient != nil)
+            // Decision 414: the idle mode's veil and caption, and its tap.
+            if ambient != nil, let ambientScreen, let endAmbient {
+                AmbientCurtain(screen: ambientScreen, language: language, end: endAmbient)
+            }
         }
         .task(id: Map3DSceneKey(world: session.world, hasHeights: session.heights != nil, hasRailways: session.railways != nil, focus: focus, palette: linePalette)) {
             let built = await Map3DSceneCache.shared.scene(for: session, focus: focus, palette: linePalette)

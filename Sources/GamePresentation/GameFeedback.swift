@@ -49,10 +49,15 @@ public struct CameraRequest: Hashable, Sendable {
     public let location: PlanPoint
     /// Counts up with each request, so the same place twice is two requests.
     public let serial: Int
+    /// Decision 414: the part of the map to show whole, zoomed to it (the
+    /// idle mode's station and line shots); `nil` keeps the zoom and only
+    /// centres on ``location``.
+    public let region: WorldRegion?
 
-    public init(location: PlanPoint, serial: Int) {
+    public init(location: PlanPoint, serial: Int, region: WorldRegion? = nil) {
         self.location = location
         self.serial = serial
+        self.region = region
     }
 }
 
@@ -85,6 +90,12 @@ extension GameSession {
     /// Asks the map to look at `location` (decision 177).
     public func lookAt(_ location: PlanPoint) {
         cameraRequest = CameraRequest(location: location, serial: (cameraRequest?.serial ?? 0) + 1)
+    }
+
+    /// Asks the map to show `region` whole (decision 414).
+    public func lookOver(_ region: WorldRegion) {
+        let middle = PlanPoint(x: Int64(((region.minX + region.maxX) / 2).rounded()), y: Int64(((region.minY + region.maxY) / 2).rounded()))
+        cameraRequest = CameraRequest(location: middle, serial: (cameraRequest?.serial ?? 0) + 1, region: region)
     }
 
     /// Marks something put up at `location` (decision 117): the map's
