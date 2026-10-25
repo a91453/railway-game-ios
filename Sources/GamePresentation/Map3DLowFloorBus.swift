@@ -13,11 +13,19 @@ public enum Map3DLowFloorBus {
         var b=StationKitBuilder();b.lowFloorBus()
         return .flat(named:modelName,from:b.mesh)
     }
+    /// Decision 400, 10i-6: the player's route buses, the same bus with
+    /// its stripes in the colour of the line at the route's station (the
+    /// instance's tint).
+    public static let routeModelName = "life-lowFloorBus-route"
+    public static func routeModel() -> Map3DModelPack.Model {
+        var b=StationKitBuilder();b.lowFloorBus(accent:Map3DColor.rgb(0xFFFFFF) & 0x00FF_FFFF)
+        return .flat(named:routeModelName,from:b.mesh)
+    }
 }
 
 extension StationKitBuilder {
-    mutating func lowFloorBus() {
-        let white=Map3DLowFloorBus.bodyColor,blue=Map3DLowFloorBus.accentColor
+    mutating func lowFloorBus(accent: UInt32 = Map3DLowFloorBus.accentColor) {
+        let white=Map3DLowFloorBus.bodyColor,blue=accent
         let trim=Map3DStreetModel.trim,glass=Self.glass,steel=Self.steel
         // The side profile includes real wheel cut-outs, closed all around
         // with the same ear-clipped shell used by the smaller shuttle.

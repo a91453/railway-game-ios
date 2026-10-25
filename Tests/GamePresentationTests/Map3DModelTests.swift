@@ -10,10 +10,10 @@ final class Map3DModelTests: XCTestCase {
     func testEveryStyleHasACabAndAMiddleCarOfTheRightSize() {
         // Decision 244: and the street furniture after the trains;
         // decision 259: then the people and vehicles; decision 318: then the
-        // sets'.
+        // sets'; decision 400, 10i-6: then the route bus, last.
         let pantoStyles = Map3DTrainStyle.all.filter { !$0.pantographCars.isEmpty }.count
         let sets = Map3DTrainSet.all.map { $0.models().count }.reduce(0, +)
-        XCTAssertEqual(pack.models.count, Map3DTrainStyle.all.count * 2 + pantoStyles + Map3DProp.allCases.count + Map3DStreetModel.allCases.count + sets + Map3DGreenTram.Section.allCases.count + 1 + Map3DGreenCommuter.Unit.allCases.count + 1 + Map3DThreeCarUrban.Unit.allCases.count + 1 + Map3DFiveSectionLRT.Unit.allCases.count + 1 + Map3DSevenSectionLRT.Unit.allCases.count + 1 + Map3DFourCarMetro.Unit.allCases.count + 1 + Map3DSevenCarBlue.Unit.allCases.count + 1 + Map3DDuplexSteam.Unit.allCases.count + 1 + Map3DSteamTender.Unit.allCases.count + 1 + Map3DTrainShapeRefresh.ids.count)
+        XCTAssertEqual(pack.models.count, Map3DTrainStyle.all.count * 2 + pantoStyles + Map3DProp.allCases.count + Map3DStreetModel.allCases.count + sets + Map3DGreenTram.Section.allCases.count + 1 + Map3DGreenCommuter.Unit.allCases.count + 1 + Map3DThreeCarUrban.Unit.allCases.count + 1 + Map3DFiveSectionLRT.Unit.allCases.count + 1 + Map3DSevenSectionLRT.Unit.allCases.count + 1 + Map3DFourCarMetro.Unit.allCases.count + 1 + Map3DSevenCarBlue.Unit.allCases.count + 1 + Map3DDuplexSteam.Unit.allCases.count + 1 + Map3DSteamTender.Unit.allCases.count + 1 + Map3DTrainShapeRefresh.ids.count + 1)
         for style in Map3DTrainStyle.all {
             var names = [style.name + "-cab", style.name + "-car"]
             if !style.pantographCars.isEmpty { names.append(style.name + "-panto") }
