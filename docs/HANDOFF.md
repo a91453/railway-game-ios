@@ -1574,6 +1574,6 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 
 **Codex 原生車輛製作流程文件化（使用者2026-10-25要求，接續#1200）**：使用者接受第十版後，要求詳細寫出讓不同AI可重複使用的流程。[完整手冊](art/native-vehicle-modeling/README.md)、[可貼製作指令](art/native-vehicle-modeling/PROMPT.md)、[獨立驗收表](art/native-vehicle-modeling/REVIEW_CHECKLIST.md)、[700T實例](art/native-vehicle-modeling/CASE_STUDY_700T.md)已整理；art-style與原素材／工具README加入口。涵蓋真參考判讀、資料缺口、比例／斷面／鼻肩曲面、貼合門窗、色帶面積與穩定切分、輪軌／編組、同相機真前後、匯出／producer／viewer／ZIP、外觀與技術／CI／真機分開記錄。700T數值僅個案，不能套成所有車的車體或預算。素材交付時靜態，後續#1217／決策408已由Claude接入；本輪只文件，不改模型／工具執行碼／遊戲映射，不動決策410的共用建模實作。新文件分支codex/native-vehicle-modeling-guide-2026-10-25從main6a6352b4開；文件鏈結／格式查核與文件PR的實際CI分別記錄，不重跑建模或新增真機驗證。
 
-TEMU1000 原生外形（Codex，issue #1228，draft #1230／私庫 #78）：使用者指出舊稿「很不像」。真正前版 `3a9a9ef9` 留私庫 history，本輪按五圖修寬鼻、正面大風擋、連續窗帶、TED 門位及繞鼻綠線；外觀缺口、重建、同尺度前後及驗證見 `docs/art/temu1000-2026-10-25/README.md`。`taroko` 3D 營運映射接新單元；GameCore、存檔、fixtures 不變。真機 Metal／效能／動畫未驗。
+TEMU1000 原生外形（Codex，issue #1228，draft #1230／私庫 #78）：五張起始圖與後續正／側裁圖均已目視；使用者續指出車鼻過平、中央頂燈消失及塗裝接縫。各真正前版留私庫 history，最新以 `1bd4e92e` 原生端車比對；本輪恢復有屋頂支承的中央雙燈，色帶依車殼三角片取樣且左右鏡射。外觀缺口、重建、同尺度前後及驗證見 `docs/art/temu1000-2026-10-25/README.md`。`taroko` 3D 營運映射接新單元；GameCore、存檔、fixtures 不變。真機 Metal／效能／動畫未驗。
 後續使用者指出「黑色跟圓弧要往下移」：Codex 在同分支下移端車風擋與鼻端斷面，讓正面腰線下垂且側線於鼻端漸降；真前版 `3f697206` 另留私庫 history，本版前後對照改用端車相機。外觀仍待作者評價；真機 Metal／效能／動畫仍未驗。
 再補的正面／側面裁圖顯示端面還是太平：Codex 在同分支縮短鼻端直面、加密並鼓起圓弧端面，玻璃與腰線跟著真曲面；真前版 `d793874b` 存私庫 history，另出車頭側／斜近景與同尺度對照。最新外觀與重建見上述 README；真機限制不變。

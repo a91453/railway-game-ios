@@ -72,4 +72,28 @@ final class Map3DTEMU1000Tests: XCTestCase {
         XCTAssertFalse(middle.vertices.contains { $0.color == glass && abs($0.x) > 10.8 && $0.z > 3.1 })
         XCTAssertTrue(head.vertices.contains { $0.color == glass && $0.x > 10.8 && $0.z > 3.1 })
     }
+
+    func testCabKeepsTwinUpperLampsAndSymmetricNosePaint() {
+        for unit in [Map3DTEMU1000.Unit.leading, .trailing] {
+            let model = Map3DTEMU1000.model(unit)
+            let lamps = model.vertices.filter {
+                $0.color == Map3DStreetModel.headlamp && $0.z > 3.15 && abs($0.y) < 0.35
+            }
+            XCTAssertGreaterThan(lamps.count, 50,"both upper lenses must be part of the native cab")
+            XCTAssertTrue(lamps.contains { $0.y < -0.08 })
+            XCTAssertTrue(lamps.contains { $0.y > 0.08 })
+            let nose: Float = unit == .leading ? 1 : -1
+            let paint = model.vertices.filter {
+                $0.color == Map3DTEMU1000.band && $0.x*nose > 12.2 && abs($0.y) < 1.30
+            }
+            XCTAssertGreaterThan(paint.count, 100,"the curved front paint must cover the nose")
+            let left = paint.filter { $0.y > 0.01 }
+            let right = paint.filter { $0.y < -0.01 }
+            XCTAssertTrue(left.allSatisfy { vertex in
+                right.contains { abs($0.x-vertex.x) < 0.003 &&
+                                 abs($0.y+vertex.y) < 0.003 &&
+                                 abs($0.z-vertex.z) < 0.003 }
+            },"paint on the native front must mirror across the centreline")
+        }
+    }
 }

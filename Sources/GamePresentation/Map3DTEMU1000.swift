@@ -132,23 +132,76 @@ extension StationKitBuilder {
                 box(x+0.39,0.90,side*1.475,0.012,0.008,2.18,ink)
             }
             box(-nose*1.10,1.96,side*1.453,
-                nose == 0 ? 19.7 : 17.5,0.012,0.065,green)
+                nose == 0 ? 19.7 : 17.8,0.012,0.065,green)
         }
         if nose != 0 {
             // Follow the curved nose with the same narrow, non-red waist
-            // stripe. The surface positions come from the actual end rings.
-            let stations: [(Float,Float,Float)] = [(7.65,1.45,1.96),(8.90,1.45,1.96),
-                                                    (9.85,1.421,1.79),(10.75,1.363,1.63),
-                                                    (11.55,1.363,1.51),(11.97,1.35,1.49),
-                                                    (12.32,1.28,1.46),(12.45,1.25,1.45),
-                                                    (12.53,1.22,1.445),
-                                                    (12.60,1.17,1.44)]
+            // stripe. Sample the actual shell rings instead of placing a
+            // separate planar ribbon beside the curved surface.
+            let noseRings = nose > 0 ? Array(rings.dropFirst()) : Array(rings.dropLast().reversed())
+            let stripeRings = [ring(nose*7.65)] + noseRings
+            let stripeHeights: [Float] = [1.96,1.96,1.94,1.91,1.87,1.82,
+                                          1.75,1.66,1.57,1.49,1.44]
+            func sideStripePoint(_ cross: [Map3DPoint],_ side: Float,_ height: Float) -> Map3DPoint {
+                let range = side > 0 ? 8..<15 : 0..<7
+                for i in range {
+                    let a = cross[i], b = cross[i+1]
+                    if (a.y-height)*(b.y-height) <= 0 && abs(a.y-b.y) > 0.00001 {
+                        let t = (height-a.y)/(b.y-a.y)
+                        let forward = min(1,max(0,(abs(cross[0].x)-7.65)/4.71))*0.030
+                        return Map3DPoint(a.x+t*(b.x-a.x)+nose*forward,height,
+                                          a.z+t*(b.z-a.z)+side*(0.010+forward*0.5))
+                    }
+                }
+                preconditionFailure("TEMU1000 side stripe missed the body at \(height)")
+            }
+            func sideSurface(_ x: Float,_ y: Float,_ side: Float,_ forward: Float) -> Map3DPoint {
+                var outer: Float = -Float.infinity
+                func consider(_ a: Map3DPoint,_ b: Map3DPoint,_ c: Map3DPoint) {
+                    // Project both painted flanks through the same positive
+                    // cross section; the shell's opposite diagonal must not
+                    // introduce a visible left/right paint drift.
+                    if a.z < 0 || b.z < 0 || c.z < 0 { return }
+                    let bx=b.x-a.x,by=b.y-a.y,cx=c.x-a.x,cy=c.y-a.y
+                    let det=bx*cy-by*cx
+                    if abs(det)<0.00001 { return }
+                    let px=x-a.x,py=y-a.y
+                    let u=(px*cy-py*cx)/det,v=(bx*py-by*px)/det
+                    if u >= -0.0001 && v >= -0.0001 && u+v <= 1.0001 {
+                        outer=max(outer,a.z*(1-u-v)+b.z*u+c.z*v)
+                    }
+                }
+                for k in 0..<(rings.count-1) {
+                    for i in section.indices {
+                        let j=(i+1)%section.count
+                        consider(rings[k][i],rings[k][j],rings[k+1][j])
+                        consider(rings[k][i],rings[k+1][j],rings[k+1][i])
+                    }
+                }
+                precondition(outer.isFinite,"TEMU1000 stripe missed the shell")
+                return Map3DPoint(x+nose*forward,y,side*(outer+0.010+forward*0.5))
+            }
             for side: Float in [-1,1] {
-                for i in 0..<(stations.count-1) {
-                    let a = stations[i], b = stations[i+1]
-                    let z0 = side*(a.1+0.014), z1 = side*(b.1+0.014)
-                    face([Map3DPoint(nose*a.0,a.2-0.035,z0),Map3DPoint(nose*a.0,a.2+0.035,z0),
-                          Map3DPoint(nose*b.0,b.2+0.035,z1),Map3DPoint(nose*b.0,b.2-0.035,z1)],inside:centre,color:green)
+                for i in 0..<(stripeRings.count-1) {
+                    let a = stripeRings[i], b = stripeRings[i+1]
+                    let boostA=min(1,max(0,(abs(a[0].x)-7.65)/4.71))*0.030
+                    let boostB=min(1,max(0,(abs(b[0].x)-7.65)/4.71))*0.030
+                    func sample(_ along: Float,_ across: Float) -> Map3DPoint {
+                        let y=(stripeHeights[i]+(stripeHeights[i+1]-stripeHeights[i])*along) + (across-0.5)*0.070
+                        let pa=sideStripePoint(a,side,stripeHeights[i]+(across-0.5)*0.070)
+                        let pb=sideStripePoint(b,side,stripeHeights[i+1]+(across-0.5)*0.070)
+                        let boost=boostA+(boostB-boostA)*along
+                        let x=pa.x+(pb.x-pa.x)*along-nose*boost
+                        return sideSurface(x,y,side,boost)
+                    }
+                    for step in 0..<6 {
+                        let t0=Float(step)/6,t1=Float(step+1)/6
+                        for row in 0..<2 {
+                            let v0=Float(row)/2,v1=Float(row+1)/2
+                            face([sample(t0,v0),sample(t0,v1),sample(t1,v1),sample(t1,v0)],
+                                 inside:centre,color:green)
+                        }
+                    }
                 }
             }
             // The white nose is a triangular fan about a forward centre.
@@ -169,17 +222,21 @@ extension StationKitBuilder {
                 }
                 preconditionFailure("front stripe left the TEMU1000 nose surface at \(y), \(z)")
             }
-            for i in 0..<16 {
-                let z0 = -1.17 + Float(i)*2.34/16, z1 = -1.17 + Float(i+1)*2.34/16
-                func arc(_ z: Float) -> Float { 0.98 + 0.46*(z/1.17)*(z/1.17) }
-                func upperZ(_ z: Float) -> Float { z*1.12/1.17 }
-                face([capSurface(arc(z0),z0),capSurface(arc(z0)+0.07,upperZ(z0)),
-                      capSurface(arc(z1)+0.07,upperZ(z1)),capSurface(arc(z1),z1)],inside:centre,color:green)
+            let lastRing = stripeRings[stripeRings.count-1]
+            let lowEnd = sideStripePoint(lastRing,1,1.405)
+            let highEnd = sideStripePoint(lastRing,1,1.475)
+            func frontStripePoint(_ t: Float,_ high: Bool) -> Map3DPoint {
+                if t <= -1 { return sideStripePoint(lastRing,-1,high ? 1.475 : 1.405) }
+                if t >= 1 { return high ? highEnd : lowEnd }
+                let lowY: Float = 0.98 + 0.425*t*t
+                let y = lowY + (high ? 0.07 : 0)
+                let z = t * abs(high ? highEnd.z : lowEnd.z)
+                return capSurface(y,z)
             }
-            for side: Float in [-1,1] {
-                let edge = side*1.184
-                face([Map3DPoint(nose*12.60,1.405,edge),Map3DPoint(nose*12.60,1.475,edge),
-                      capSurface(1.51,side*1.12),capSurface(1.44,side*1.17)],inside:centre,color:green)
+            for i in 0..<24 {
+                let t0 = -1 + Float(i)*2/24, t1 = -1 + Float(i+1)*2/24
+                face([frontStripePoint(t0,false),frontStripePoint(t0,true),
+                      frontStripePoint(t1,true),frontStripePoint(t1,false)],inside:centre,color:green)
             }
             // Cab side glass narrows into the lowered windshield rake.
             for side: Float in [-1,1] {
@@ -213,6 +270,32 @@ extension StationKitBuilder {
             }
             let pane = outline.map { y,z in screenPoint(2.74+(y-2.74)*0.91,z*0.94,offset:0.030) }
             face(pane,inside:centre,color:glass)
+            // The twin upper marker lamps share one roof-backed, closed pod.
+            // Its rear edge intersects the solid roof, while its lower front
+            // edge overlaps the screen rim rather than hovering above it.
+            let lampRear = [Map3DPoint(nose*10.70,3.12,-0.30),
+                            Map3DPoint(nose*10.70,3.23,-0.30),
+                            Map3DPoint(nose*10.70,3.27,-0.24),
+                            Map3DPoint(nose*10.70,3.27,0.24),
+                            Map3DPoint(nose*10.70,3.23,0.30),
+                            Map3DPoint(nose*10.70,3.12,0.30)]
+            let lampFront = [Map3DPoint(nose*11.34,3.10,-0.30),
+                             Map3DPoint(nose*11.34,3.36,-0.30),
+                             Map3DPoint(nose*11.34,3.41,-0.24),
+                             Map3DPoint(nose*11.34,3.41,0.24),
+                             Map3DPoint(nose*11.34,3.36,0.30),
+                             Map3DPoint(nose*11.34,3.10,0.30)]
+            face(lampRear,inside:centre,color:ink)
+            face(lampFront,inside:centre,color:ink)
+            for i in lampFront.indices {
+                let j = (i+1)%lampFront.count
+                face([lampRear[i],lampRear[j],lampFront[j],lampFront[i]],inside:centre,color:ink)
+            }
+            for side: Float in [-1,1] {
+                civicTube(Map3DPoint(nose*11.345,3.27,side*0.135),
+                          Map3DPoint(nose*11.37,3.27,side*0.135),
+                          radius:0.073,color:Map3DStreetModel.headlamp,sides:12)
+            }
             // Oval lamp pods have a shallow closed backing sunk into the
             // white nose. Their lenses sit above the wraparound stripe.
             for side: Float in [-1,1] {
