@@ -49,6 +49,7 @@
     - main 的 `ci.yml` run 的 Annotations 裡有 Swift 分片「near its 20-minute limit」或「about to reach its 20-minute limit」的警告（決策 404：job 用到 17 分〔決策 405；原本 15 分〕、或 18 分 30 秒還沒跑完就印）。
     - 同一個測試 7 天內沒有程式原因紅了 2 次（不穩的測試，照 diagnosing-bugs 查）。
     - pull request 的 macOS job 常常排隊超過 20 分。
+  - 2026-10-25 量的（決策 411「其他的線」）：rest 19m44s → 重排（決策 411）；PR 的 iOS gate UI 步 7.3–11.8 分（過 6 分線，交給 UI 測試的 session）；full lane 的 build job 的 UI 步離它的 75 分只差 10–13 分；慢的 runner 上三分之一的 Swift job 過 17 分，要靠共用 build（`docs/research/CI_SHARED_BUILD_2026-10-25.md`，等規劃決定、作者同意加 action）。
   - 五方（權重同上；選項：A 每 30 點、B 每 60 點、C 每週一次、D 看數字過線才開、E D 再加每週量一次）：
     | 選項 | 玩家 | 開發 | 美術 | 鐵道迷 | 音樂 | 加權 |
     | --- | --: | --: | --: | --: | --: | --: |
