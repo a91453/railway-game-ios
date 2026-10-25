@@ -321,6 +321,49 @@ WHY='Cannot fetch' expect_base "" "a commit that cannot be fetched: test everyth
 WHY='Could not list' expect_base "" "the API failing: test everything" FAKE_RUNS="$sha_b" FAKE_GH_FAIL=1
 WHY='GITHUB_REPOSITORY is not set' expect_base "" "no repository name: test everything" FAKE_RUNS="$sha_b" GITHUB_REPOSITORY=
 
+# Whether HEAD already passed every shard (head-full-run, which skips the
+# nightly run, decision 413). A fake `gh` lists FAKE_RUNS as the successful
+# runs of HEAD ("<id> <url>") and, for each id, the successful jobs
+# FAKE_JOBS_<id> names (separated by commas); FAKE_GH_FAIL makes it fail.
+mkdir -p "$work/bin-full"
+cat >"$work/bin-full/gh" <<'FAKE'
+#!/usr/bin/env bash
+[[ -z "${FAKE_GH_FAIL:-}" ]] || { echo "gh: HTTP 502" >&2; exit 1; }
+case "$2" in
+  "repos/owner/repo/actions/workflows/ci.yml/runs?head_sha=$FAKE_HEAD&status=success&per_page=20")
+    printf '%s\n' ${FAKE_RUNS:-} | paste -d ' ' - - | grep . || true ;;
+  repos/owner/repo/actions/runs/*/jobs?per_page=100)
+    id="${2#repos/owner/repo/actions/runs/}"; id="${id%%/*}"
+    var="FAKE_JOBS_$id"; tr ',' '\n' <<<"${!var:-}" ;;
+  *) echo "gh: unexpected query: $*" >&2; exit 1 ;;
+esac
+FAKE
+chmod +x "$work/bin-full/gh"
+# expect_full_run <expected URL, or "" for none> <description> [VAR=value...]
+expect_full_run() {
+  local want="$1" what="$2" got
+  shift 2
+  got="$(cd "$repo" && env PATH="$work/bin-full:$PATH" GITHUB_REPOSITORY=owner/repo FAKE_HEAD="$sha_head" "$@" "$script" head-full-run 2>"$work/err.txt")" || got="exit $?"
+  if [[ "$got" == "$want" ]] && { [[ -n "$want" ]] || grep -q -E "${WHY:-.}" "$work/err.txt"; }; then
+    echo "ok   pass  head-full-run: $what"
+  else
+    echo "FAIL head-full-run: $what: got '$got', expected '$want'"
+    sed 's/^/     | /' "$work/err.txt" | tail -5
+    failures=$((failures + 1))
+  fi
+}
+expect_full_run "https://x/1" "a successful run whose rest shard passed" \
+  FAKE_RUNS="1 https://x/1" FAKE_JOBS_1="Changes (does the Swift package need testing?),Swift 6.4 (Linux) / campaigns-1,Swift 6.4 (Linux) / rest,Swift CI (gate)"
+expect_full_run "https://x/2" "the first full run among several" \
+  FAKE_RUNS="1 https://x/1 2 https://x/2" FAKE_JOBS_1="Swift 6.4 (Linux) / selected-1,Swift CI (gate)" FAKE_JOBS_2="Swift 6.4 (Linux) / rest"
+WHY='No successful full' expect_full_run "" "a smaller tier's run is not full" \
+  FAKE_RUNS="1 https://x/1" FAKE_JOBS_1="Swift 6.4 (Linux) / selected-1,Swift 6.4 (Linux) / selected-2,Swift CI (gate)"
+WHY='No successful full' expect_full_run "" "a run that skipped the Swift jobs is not full" \
+  FAKE_RUNS="1 https://x/1" FAKE_JOBS_1="Changes (does the Swift package need testing?),Swift CI (gate)"
+WHY='No successful full' expect_full_run "" "no successful run of HEAD" FAKE_RUNS=""
+WHY='Could not list' expect_full_run "" "the API failing: test everything" FAKE_RUNS="1 https://x/1" FAKE_GH_FAIL=1
+WHY='GITHUB_REPOSITORY is not set' expect_full_run "" "no repository name: test everything" GITHUB_REPOSITORY=
+
 # A pull request's tier (pr_plan). A small tree of test files, shaped like
 # the real ones: a campaign whose static generator another campaign calls, a
 # helper every campaign uses, a golden loader and the classes that read
@@ -617,11 +660,18 @@ expect_decision() {
   fi
 }
 expect_decision true full full "a push to main of GameCore" EVENT=push LISTED=true -- Sources/GameCore/World/GameWorld.swift
-expect_decision true full full "a push to main of GamePresentation only is still full" EVENT=push LISTED=true -- "${pr414[@]}"
-expect_decision true full full "a push to main of one test file only is still full" EVENT=push LISTED=true -- "${pr401[@]}"
+# A push to main runs the tier of its files, as a pull request does (decision 413).
+expect_decision true presentation '{"shard":"selected-5","tests":"GamePresentationTests.*","part":"5/5"}' \
+  "a push to main of GamePresentation runs it in 5 parts" EVENT=push LISTED=true -- "${pr414[@]}"
+expect_decision true tests-only '{"include":[{"shard":"selected","tests":"FlexDispatchPropertyTests","part":"1/1"}]}' \
+  "a push to main of one test file runs its classes" EVENT=push LISTED=true -- "${pr401[@]}"
+expect_decision true presentation 'GamePresentationTests' "a push to main does not read labels" EVENT=push LISTED=true \
+  LABELS="full-ci" -- "${pr414[@]}"
 expect_decision false none none "a push to main of docs skips" EVENT=push LISTED=true -- docs/ROADMAP.md
 expect_decision true full full "a push to main whose files could not be listed" EVENT=push LISTED=false --
 expect_decision true full full "a manual run" EVENT=workflow_dispatch LISTED=false --
+expect_decision true full full "the nightly run" EVENT=schedule LISTED=false --
+expect_decision true full full "the nightly run, even with files listed" EVENT=schedule LISTED=true -- "${pr414[@]}"
 expect_decision true presentation '{"shard":"selected-5","tests":"GamePresentationTests.*","part":"5/5"}' \
   "a pull request of GamePresentation runs it in 5 parts" EVENT=pull_request LISTED=true -- "${pr414[@]}"
 expect_decision true tests-only '{"include":[{"shard":"selected","tests":"FlexDispatchPropertyTests","part":"1/1"}]}' \
