@@ -796,7 +796,9 @@ extension GameWorld {
             spare += added[offset] - max(room[offset], base[offset])
             added[offset] = max(room[offset], base[offset])
         }
-        for _ in 0..<2 where spare > 0 {
+        // Each round either places all of `spare` or fills at least one
+        // more cell to its room, so it ends within one round a cell.
+        while spare > 0 {
             let open = indices.indices.map { added[$0] < room[$0] ? plain[$0] : 0 }
             guard open.contains(where: { $0 > 0 }) else { break }
             let shares = Self.apportion(spare, by: open)

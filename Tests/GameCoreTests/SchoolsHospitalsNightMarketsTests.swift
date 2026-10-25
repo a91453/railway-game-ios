@@ -157,6 +157,27 @@ final class SchoolsHospitalsNightMarketsTests: XCTestCase {
         XCTAssertEqual(try grown(with: .hospital), [400, 160])
     }
 
+    /// Over every fullness of the western home and several sizes of
+    /// growth, a school or a hospital never leaves the map with fewer
+    /// residents than none, and the same growth gives the same homes.
+    func testASchoolOrAHospitalNeverLosesGrowth() throws {
+        func grown(with kind: PlacedBuildingKind?, west: Int64, residents: Int64) throws -> [Int64] {
+            var (world, station) = try growingWorld(with: kind, west: west)
+            world.grow(around: station, residents: residents, jobs: 0)
+            return [try XCTUnwrap(world.land.cell(row: 10, column: 10)).residents, try XCTUnwrap(world.land.cell(row: 10, column: 20)).residents]
+        }
+        for west in stride(from: Int64(20), through: LandDemand.grownResidents, by: 20) {
+            for residents: Int64 in [1, 7, 50, 290, 700] {
+                let none = try grown(with: nil, west: west, residents: residents).reduce(0, +)
+                for kind: PlacedBuildingKind in [.school, .hospital] {
+                    let homes = try grown(with: kind, west: west, residents: residents)
+                    XCTAssertGreaterThanOrEqual(homes.reduce(0, +), none, "\(kind) west \(west) residents \(residents)")
+                    XCTAssertEqual(try grown(with: kind, west: west, residents: residents), homes)
+                }
+            }
+        }
+    }
+
     /// The city's steered growth (decision 98's demand) weighs homes near
     /// a school as the plain growth does.
     func testTheSteeredGrowthGrowsNearASchoolToo() throws {
