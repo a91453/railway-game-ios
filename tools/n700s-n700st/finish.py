@@ -26,15 +26,25 @@ def main(pipeline,root,commit,variants):
             for view in VIEWS:render(t,c,view,scale=scale).save(folder/(view+'.png'))
             render(t,c,'right',scale=scale,silhouette=True).save(folder/'silhouette.png')
             white=c.copy();white[:,:,:3]=246;render(t,white,'isometric',scale=scale).save(folder/'white-isometric.png')
-        overview=Image.new('RGB',(1400,1150),'#ECEEF6');d=ImageDraw.Draw(overview)
-        d.text((35,20),f'{variant.upper()} • static native visual candidate',fill='#262C57')
+        overview=Image.new('RGB',(1600,1580),'#ECEEF6');d=ImageDraw.Draw(overview)
+        font=ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',32)
+        small=ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',22)
+        d.text((45,26),f'{variant.upper()}  /  static native visual candidate',fill='#262C57',font=font)
         def paste(name,view,x,y,w,h):
-            im=Image.open(dst/'previews'/name/(view+'.png'));im.thumbnail((w,h));overview.paste(im,(x+(w-im.width)//2,y+(h-im.height)//2),im)
-        paste(f'railway-{variant}-a','isometric',0,50,1400,440)
+            im=Image.open(dst/'previews'/name/(view+'.png')).convert('RGBA')
+            bbox=im.getbbox()
+            if bbox:im=im.crop(bbox)
+            im.thumbnail((w,h),Image.Resampling.LANCZOS)
+            overview.paste(im,(x+(w-im.width)//2,y+(h-im.height)//2),im)
+        paste(f'railway-{variant}-a','isometric',70,90,1460,530)
+        d.text((45,632),'A / driving end',fill='#262C57',font=small)
         for i,letter in enumerate('bcde'):
-            paste(f'railway-{variant}-{letter}','right',0,480+i*105,1400,100)
-        paste(f'railway-{variant}-source-ten-body-draft','right',0,920,1400,155)
-        d.text((35,1090),'Source order is a visual draft; rail plane and engineering dimensions unverified.',fill='#262C57')
+            y=680+i*150
+            d.text((45,y+42),letter.upper(),fill='#262C57',font=font)
+            paste(f'railway-{variant}-{letter}','right',145,y,1400,130)
+        d.text((45,1295),'Source 10-body visual draft',fill='#262C57',font=small)
+        paste(f'railway-{variant}-source-ten-body-draft','right',45,1330,1510,160)
+        d.text((45,1530),'Rail plane and engineering dimensions unverified.',fill='#262C57',font=small)
         overview.save(dst/f'Railway_{variant.upper()}_Overview.png')
         previous=root/'repair-before'/variant/'models'/f'railway-{variant}-a.m3dmodel'
         original=(root/'source-body'/'previews'/f'railway-n700s-a'/'isometric.png')
@@ -55,6 +65,10 @@ def main(pipeline,root,commit,variants):
             for im,pos in ((before_iso,(0,0)),(after_iso,(before_iso.width,0)),
                            (before_side,(0,before_iso.height)),(after_side,(before_iso.width,before_iso.height))):
                 comparison.paste(im,pos,im)
+            labels=ImageDraw.Draw(comparison)
+            label_font=ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',22)
+            labels.text((24,20),'ORIGINAL N700S  /  #2B3356',fill='#262C57',font=label_font)
+            labels.text((before_iso.width+24,20),'N700S-G  /  #1D4A44',fill='#1D4A44',font=label_font)
             comparison.save(dst/'Railway_N700S-G_Livery_Before_After.png')
         elif previous.exists():
             snapshot=dst/'revision-before'
