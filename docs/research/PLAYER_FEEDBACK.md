@@ -163,6 +163,21 @@ What to Test 是當時自動列出的 PR 清單（#592 之前的做法）。
 4. **城市預覽**：載入中按 × 每次都關得掉嗎？
 5. **教學卡片**：手機橫拿時，卡片有沒有擋到要點的按鈕？
 
+### 0.5.0 (88.1)，2026-10-25
+
+從 `main` `c4fc5b6`（#1240 的合併，What to Test 88.1 也在 #1240）建置，TestFlight run 88（`testflight.yml` run 40193688237，2026-10-25 12:34 UTC 作者按，成功）。87.1 之後合併的 #1189–#1240。作者照 87.1 的做法先按，export compliance 與加測試群組等 full lane 綠。
+
+**這個 commit 的檢查**：
+- `ci.yml` run 40192915948 綠（只改文件，Swift 跳過；前一個 App 改動 647d799 的 run 40190946365 綠）。
+- full lane（`ios-build.yml` run 40192919013）第 1 次：iPad、lessons 綠；smoke 紅 2 支（`RealWorldMapUITests.testTheHighSpeedDemoOpensOnTheMapAndRuns` 在 `ToolbarSmokeTests.swift:302` UI query 逾時、`SharedNetworkUITests.testAFriendsNetworkOffersBothChoicesAndJustLookOpensIt` 「開新的一局」點不到），second 紅 1 支（`MapInteractionTests.testTheStationTagsPencilRenamesAtOnce`，打字掉字，`MapInteractionTests.swift:288`）。三支這版都沒改到，前兩支在 fcf06977 的 run 40176501060 也紅過。14:03 UTC 重跑失敗的 job 一次（87.1 前例）。這幾支加上 SettingsUITests 城市預覽、HUDAlignment 站長泡泡交 session_01ATrwF1t4xfwDoTrLvMvRAY 修穩。
+
+以下是**作者看 88.1** 時提的：
+
+| # | 分類 | 意見摘要 | 狀態 |
+| --- | --- | --- | --- |
+| 1 | bug | （iPhone 實機錄影）3D 跟車高鐵 22（南港→左營，台中前、約 58 km、244 km/h），「後方」視角：作者說「n700st 車尾會亂飄」。畫面上是藏青＋綠線的 N700S-G（決策 408），車廂沒有跟著軌道：中間的高架是空的、車廂在右邊，車頭外殼和車身分開浮在空中，整節旋轉著靠近鏡頭 | 派給 session_01LARTBYik4n6iAeQXeQs8z4（只動 GamePresentation，先做會紅的回歸測試）。可疑的是 #1217、#1227、#1233、#1234 的車廂擺法與後半列反轉（`Map3DN700SG.reversed`） |
+| 2 | 設計 | 「Game Center 圖標換了，但遊戲內好像沒換」 | 照設計：決策 396 的 38 張成就圖只上傳 App Store Connect，App 不讀（`docs/game-center/README.md`）；遊戲內的成就清單用 SF Symbols（`AchievementsView.swift`）。遊戲規劃建議 89.1 把 38 張縮小放進 App、清單改讀它們（只動 App 與 GamePresentation，約多 1–2 MB），等作者說好再派 |
+
 ### 0.5.0 (87.1)，2026-10-24
 
 從 `main` `947c23ad`（#1186 的合併；What to Test 87.1 在 #1187）建置，TestFlight run 87（`testflight.yml` run 40100730344，2026-10-24 14:02 UTC 作者按，成功）。這是第一個帶 iCloud entitlement（與 Game Center）的匯出，匯出與上傳都過了，不用 revert d9b9cc6。作者：「你過了再給玩家」；遊戲規劃在 full lane 綠了之後告訴作者「可以給玩家」，發版凍結 14:57 UTC 解除。
