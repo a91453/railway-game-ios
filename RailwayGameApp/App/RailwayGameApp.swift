@@ -199,8 +199,9 @@ struct RailwayGameApp: App {
             return try Data(contentsOf: url)
         }
         // Decision 400's sequel: the base map, whose roads real-world
-        // maps' land is read in with, mapped rather than read.
-        data.baseMap = BaseMapFiles.tiles.flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }.flatMap { try? BaseMapTiles(data: $0) }
+        // maps' land is read in with, mapped rather than read (the file
+        // `BaseMapFiles.tiles` names, found here off the main actor).
+        data.baseMap = Bundle.main.url(forResource: "taiwan", withExtension: "pmtiles", subdirectory: "BaseMap").flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }.flatMap { try? BaseMapTiles(data: $0) }
         #if DEBUG
         for issue in data.issues {
             print("RealWorldData: could not read \(issue)")
