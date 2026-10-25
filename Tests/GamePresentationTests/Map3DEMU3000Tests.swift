@@ -68,7 +68,7 @@ final class Map3DEMU3000Tests: XCTestCase {
     func testActualMeshesHaveClosedOutwardSurfacesAndRejectVisibleDefects() throws {
         for far in [false,true] {for unit in Map3DEMU3000.Unit.allCases {
             let m=Map3DEMU3000.model(unit,far:far)
-            XCTAssertLessThan(m.triangleCount,far ? 3600:8800)
+            XCTAssertLessThan(m.triangleCount,far ? 4000:9200)
             try closed(m.vertices)
             for i in stride(from:0,to:m.vertices.count,by:3) {
                 let t=Array(m.vertices[i..<i+3]),n=try XCTUnwrap((t[1].position-t[0].position).cross(t[2].position-t[0].position).normalized)
@@ -142,6 +142,20 @@ final class Map3DEMU3000Tests: XCTestCase {
             XCTAssertGreaterThan(low,0.20);XCTAssertLessThan(low,0.35)
             XCTAssertGreaterThan(chin.filter {$0.z<low+0.02}.map(\.x).min() ?? 0,9.95,"tight rounded lower corner")
             XCTAssertGreaterThan(head.vertices.filter {$0.color==Map3DEMU3000.glassColor && $0.x>7.3 && $0.x<8.8 && abs($0.y)>1 && $0.z>2.3 && $0.z<3.2}.count,30,"triangular quarterlight follows the new cab position")
+        }
+    }
+    func testCheekHeadlightsStayRoundInTheActualFrontProjection() {
+        for far in [false,true] {
+            let head=Map3DEMU3000.model(.ed,far:far)
+            for side:Float in [-1,1] {
+                let lens=head.vertices.filter {$0.glows && $0.x>8 && $0.y*side>0.35}
+                XCTAssertGreaterThan(lens.count,12)
+                let width=(lens.map(\.y).max() ?? 0)-(lens.map(\.y).min() ?? 0)
+                let height=(lens.map(\.z).max() ?? 0)-(lens.map(\.z).min() ?? 0)
+                XCTAssertGreaterThan(width,0.10)
+                XCTAssertLessThan(height/width,1.35,"front lamps must not stretch into tall slits on the sloping nose")
+                XCTAssertGreaterThan(height/width,0.75)
+            }
         }
     }
     func testHeadlampsAreIndividualModulesAndTailHasOnlyTwoMarkers() {

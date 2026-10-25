@@ -95,10 +95,10 @@ private extension StationKitBuilder {
         if !cab { return [(-9.8,3.49,0.90,1.455),(9.8,3.49,0.90,1.455)] }
         return [(-10.5,3.49,0.90,1.455),(6.2,3.49,0.90,1.455),
                 (6.7,3.68,0.90,1.45),(7.3,3.63,0.90,1.40),
-                (7.9,3.40,0.90,1.33),(8.5,2.96,0.77,1.21),
-                (9.1,2.45,0.52,1.05),(9.65,1.99,0.30,0.90),
-                (10.05,1.66,0.24,0.72),(10.35,1.42,0.36,0.53),
-                (10.55,1.26,0.60,0.32),(10.65,1.18,0.84,0.18),(10.675,1.13,1.13,0)]
+                (7.9,3.40,0.90,1.33),(8.5,2.96,0.77,1.30),
+                (9.1,2.45,0.52,1.22),(9.65,1.99,0.30,1.13),
+                (10.05,1.66,0.24,0.99),(10.35,1.42,0.36,0.76),
+                (10.55,1.26,0.60,0.47),(10.65,1.18,0.84,0.27),(10.675,1.13,1.13,0)]
     }
     static func emuDimensions(_ x: Float,_ cab: Bool) -> (Float,Float,Float) {
         let s = emuStations(cab)
@@ -114,7 +114,12 @@ private extension StationKitBuilder {
             let (top,bottom,width)=emuDimensions(x,cab)
             let s: Float=abs(sinf(a))<0.000001 ? 0:sinf(a),c: Float=abs(cosf(a))<0.000001 ? 0:cosf(a)
             let y=(top+bottom)/2+(s<0 ? -1:1)*powf(abs(s),0.60)*(top-bottom)/2
-            let z=(c<0 ? -1:1)*powf(abs(c),0.58)*width
+            // Preserve every side-profile height; broaden only the upper lateral
+            // shoulder so the quarterlight reads as a narrow strip from the front.
+            let shoulder:Float=cab ? max(0,min(1,(x-6.2)/0.5))*max(0,min(1,(9.4-x)/1.2)):0
+            let crown=max(0,min(1,(max(0,s)-0.45)/0.5)),blend=crown*crown*(3-2*crown)
+            let exponent:Float=0.58+shoulder*(-0.28+0.48*blend)
+            let z=(c<0 ? -1:1)*powf(abs(c),exponent)*width
             return Map3DPoint(x,y,z)
         }
         let step=2*Float.pi/Float(sides),a0=floorf(angle/step)*step,t=(angle-a0)/step
@@ -136,28 +141,25 @@ private extension StationKitBuilder {
         if n.dot(Map3DPoint(0,sinf(a),cosf(a)))<0 { n=n * -1 }
         return p+n*offset
     }
-    static func emuMaskField(_ x: Float,_ a: Float,_ p: Map3DPoint) -> Float {
-        // A single projected U-shaped field controls the helmet's lower face.
-        // An angular band would pinch into a black spike as the section collapses.
-        let height=max(0,min(1,(p.y-1.20)/2.29))
-        let halfWidth:Float=1.36*sqrtf(max(0,1-(1-height)*(1-height)))
-        let rear:Float=6.25+0.60*(p.z/1.36)*(p.z/1.36)
-        return min(p.y-1.20,min(halfWidth-abs(p.z),x-rear))
-    }
     mutating func emuShell(_ cab: Bool,_ sides: Int) {
         let stations=Self.emuStations(cab),inside=Map3DPoint(0,2.1,0)
-        // Paint is clipped INTO each original shell triangle. Both colours share
-        // identical cut vertices; there is no floating black overlay or white poke-through.
+        // Convex lower-ellipse half planes yield a smooth projected U, even
+        // inside one large shell triangle. Both colours share every cut edge.
         func painted(_ points:[Map3DPoint],_ params:[(Float,Float)]) -> [([Map3DPoint],UInt32)] {
             guard cab else {return [(points,Self.ew)]}
-            let values=zip(points,params).map {Self.emuMaskField($0.1.0,$0.1.1,$0.0)}
-            func clip(_ positive:Bool)->[Map3DPoint] {
+            var planes:[(Map3DPoint)->Float]=[{p in p.x-6.25-0.60*(p.z/1.36)*(p.z/1.36)},
+                {1.31-$0.z},{1.31+$0.z}]
+            for i in 1..<(sides<=12 ? 8:16) {
+                let a = -Float.pi+Float(i)*Float.pi/Float(sides<=12 ? 8:16),c=cosf(a),sn=sinf(a)
+                planes.append({1-c*$0.z/1.31-sn*($0.y-3.68)/2.40})
+            }
+            func clip(_ points:[Map3DPoint],_ field:(Map3DPoint)->Float,_ positive:Bool)->[Map3DPoint] {
+                let values=points.map {p->Float in let f=field(p);return abs(f)<0.0000001 ? 0:f}
                 var result:[Map3DPoint]=[]
                 for i in points.indices {
                     let j=(i+1)%points.count,a=points[i],b=points[j],fa=values[i],fb=values[j]
                     if positive ? fa>=0:fa<=0 {result.append(a)}
                     if fa*fb<0 {
-                        // Canonical endpoint order makes neighbouring triangle cuts bit-identical.
                         let ordered=a.x != b.x ? a.x<b.x:a.y != b.y ? a.y<b.y:a.z<b.z
                         let p=ordered ? a:b,q=ordered ? b:a,f=ordered ? fa:fb,g=ordered ? fb:fa
                         result.append(p+(q-p)*(f/(f-g)))
@@ -165,7 +167,20 @@ private extension StationKitBuilder {
                 }
                 return result
             }
-            return [(clip(false),Self.ew),(clip(true),Self.ek)].filter {$0.0.count>=3}
+            var remaining=points,result:[([Map3DPoint],UInt32)]=[]
+            for plane in planes {
+                let outside=clip(remaining,plane,false)
+                if outside.count>=3 {result.append((outside,Self.ew))}
+                remaining=clip(remaining,plane,true)
+                if remaining.count<3 {return [(points,Self.ew)]}
+            }
+            if remaining.count>=3 {result.append((remaining,Self.ek))}
+            return result
+        }
+        var panels:[([Map3DPoint],[([Map3DPoint],UInt32)],Map3DPoint)]=[]
+        func edgeKey(_ a:Map3DPoint,_ b:Map3DPoint)->String {
+            func key(_ p:Map3DPoint)->String {"\(p.x),\(p.y),\(p.z)"}
+            return [key(a),key(b)].sorted().joined(separator:"|")
         }
         for i in 1..<stations.count {
             for j in 0..<sides {
@@ -174,8 +189,43 @@ private extension StationKitBuilder {
                 let r=Self.emuPoint(xb,b,cab,sides),s=Self.emuPoint(xa,b,cab,sides)
                 let x=(p.x+q.x)/2,d=Self.emuDimensions(x,cab),c=Map3DPoint(x,(d.0+d.1)/2,0)
                 for (points,params) in [([p,q,r],[(xa,a),(xb,a),(xb,b)]),([p,r,s],[(xa,a),(xb,b),(xa,b)])] {
-                    for (polygon,color) in painted(points,params) {face(polygon,inside:c,color:color)}
+                    panels.append((points,painted(points,params),c))
                 }
+            }
+        }
+        // Propagate boundary cuts to both neighbouring original triangles;
+        // a colour boundary may cross a large white face without entering it.
+        var splits:[String:[Map3DPoint]]=[:]
+        for (original,polygons,_) in panels {
+            for i in original.indices {
+                let a=original[i],b=original[(i+1)%original.count],d=b-a,l=d.dot(d)
+                if l<0.000000000001 {continue}
+                let key=edgeKey(a,b)
+                for point in polygons.flatMap({$0.0}) {
+                    let t=(point-a).dot(d)/l,delta=point-(a+d*t)
+                    if t>0.00001 && t<0.99999 && delta.dot(delta)<0.000000000001 {splits[key,default:[]].append(point)}
+                }
+            }
+        }
+        for (original,polygons,inside) in panels {
+            let shared=original.indices.flatMap {splits[edgeKey(original[$0],original[($0+1)%original.count])] ?? []}
+            let all=polygons.flatMap {$0.0}+shared
+            for (polygon,color) in polygons {
+                var loop:[Map3DPoint]=[]
+                for i in polygon.indices {
+                    let a=polygon[i],b=polygon[(i+1)%polygon.count],d=b-a,l=d.dot(d)
+                    if l<0.000000000001 {continue}
+                    var edge:[(Float,Map3DPoint)]=[(0,a)]
+                    for point in all {
+                        let t=(point-a).dot(d)/l,delta=point-(a+d*t)
+                        if t>0.00001 && t<0.99999 && delta.dot(delta)<0.000000000001 {edge.append((t,point))}
+                    }
+                    for (_,point) in edge.sorted(by:{$0.0<$1.0}) where loop.last != point {loop.append(point)}
+                }
+                guard loop.count>=3 else {continue}
+                if loop.count==3 {face(loop,inside:inside,color:color);continue}
+                let centre=loop.reduce(.zero,+)*(1/Float(loop.count))
+                for i in loop.indices {face([centre,loop[i],loop[(i+1)%loop.count]],inside:inside,color:color)}
             }
         }
         for x in [stations[0].0,stations[stations.count-1].0] {
@@ -373,39 +423,118 @@ private extension StationKitBuilder {
             emuOpening((start+end)/2,3.28,end-start,0.055,side,cab,sides,Self.ea,Self.ea,0.010)
         }
     }
-    /// Closed gridded patch bonded to the actual shell; walls only on the perimeter.
-    mutating func emuPatch(_ cab: Bool,_ sides: Int,_ columns: Int,_ rows: Int,
-                           _ range: (Float,Float,Float,Float),_ color: UInt32,_ offset: Float = 0.010) {
-        let (u0,u1,v0,v1)=range
-        func point(_ u: Float,_ v: Float,_ o: Float)->Map3DPoint {
-            let t=(u-0.5)*2,cap=sqrtf(max(0,1-t*t))
-            let rear: Float=6.25+0.20*(1-cap),front: Float=10.58-0.72*(1-cap)
-            let x=rear+(front-rear)*v,a=Float.pi/2+t*(0.98-0.16*v)
-            return Self.emuSurface(x,a,cab,sides,o)
-        }
-        func u(_ i: Int)->Float {u0+(u1-u0)*Float(i)/Float(columns)}
-        func v(_ j: Int)->Float {v0+(v1-v0)*Float(j)/Float(rows)}
-        func p(_ i: Int,_ j: Int,_ back: Bool)->Map3DPoint {point(u(i),v(j),back ? offset-0.05:offset)}
-        for i in 0..<columns { for j in 0..<rows {
-            let front=[p(i,j,false),p(i+1,j,false),p(i+1,j+1,false),p(i,j+1,false)]
-            let back=[p(i,j,true),p(i+1,j,true),p(i+1,j+1,true),p(i,j+1,true)]
-            let centre=(front+back).reduce(.zero,+)*0.125
-            face(front,inside:centre,color:color);face(back,inside:centre,color:color)
-            for edge in 0..<4 where edge==0 && j==0 || edge==1 && i==columns-1 || edge==2 && j==rows-1 || edge==3 && i==0 {
-                let k=(edge+1)%4
-                face([front[edge],back[edge],back[k],front[k]],inside:centre,color:color)
+    /// Ray-project frontal fittings onto the actual shell, in physical front-plane
+    /// coordinates. Angular UV circles stretch into slits on this steep nose.
+    static func emuFrontProjector(_ sides:Int)->(Float,Float,Float)->Map3DPoint {
+        let stations=emuStations(true)
+        var triangles:[[Map3DPoint]]=[]
+        for i in 1..<stations.count {for j in 0..<sides {
+            let a=Float(j)*2*Float.pi/Float(sides),b=Float(j+1)*2*Float.pi/Float(sides)
+            let p=emuPoint(stations[i-1].0,a,true,sides),q=emuPoint(stations[i].0,a,true,sides)
+            let r=emuPoint(stations[i].0,b,true,sides),s=emuPoint(stations[i-1].0,b,true,sides)
+            triangles.append([p,q,r]);triangles.append([p,r,s])
+        }}
+        return {height,lateral,offset in
+            let origin=Map3DPoint(11,height,lateral),direction=Map3DPoint(-1,0,0)
+            var nearest:Float=100,result:Map3DPoint?
+            for t in triangles {
+                let e=t[1]-t[0],f=t[2]-t[0],h=direction.cross(f),d=e.dot(h)
+                if abs(d)<0.000001 {continue}
+                let s=origin-t[0],u=s.dot(h)/d,q=s.cross(e),v=direction.dot(q)/d,dist=f.dot(q)/d
+                if u>=0 && v>=0 && u+v<=1 && dist>0 && dist<nearest {
+                    nearest=dist
+                    var normal=e.cross(f).normalized ?? .zero;if normal.x<0 {normal=normal * -1}
+                    result=origin+direction*dist+normal*offset
+                }
             }
-        } }
-    }
-
-    mutating func emuLens(_ u: Float,_ v: Float,_ ru: Float,_ rv: Float,_ sides: Int,_ color: UInt32) {
-        func point(_ a:Float,_ offset:Float)->Map3DPoint {
-            let uu=u+cosf(a)*ru,vv=v+sinf(a)*rv,t=(uu-0.5)*2,cap=sqrtf(max(0,1-t*t))
-            let rear:Float=6.25+0.20*(1-cap),front:Float=10.58-0.72*(1-cap)
-            return Self.emuSurface(rear+(front-rear)*vv,Float.pi/2+t*(0.98-0.16*vv),true,sides,offset)
+            precondition(result != nil,"frontal fitting outside real shell")
+            return result!
         }
-        let angles=(0..<8).map {Float($0)*Float.pi/4}
-        emuSolid(angles.map {point($0,0.026)},angles.map {point($0,-0.025)},color)
+    }
+    /// Clip each panel into real front-facing hull triangles, then extrude
+    /// along X. Even the far LOD cannot bridge through a convex shell facet.
+    mutating func emuFrontPatch(_ sides:Int,
+                                _ columns:Int,_ rows:Int,_ shape:(Float,Float)->(Float,Float),
+                                _ color:UInt32,_ offset:Float) {
+        var outline:[Map3DPoint]=[]
+        func uv(_ u:Float,_ v:Float)->Map3DPoint {let (h,l)=shape(u,v);return Map3DPoint(0,h,l)}
+        for i in 0..<columns {outline.append(uv(Float(i)/Float(columns),0))}
+        for j in 0..<rows {outline.append(uv(1,Float(j)/Float(rows)))}
+        for i in (1...columns).reversed() {outline.append(uv(Float(i)/Float(columns),1))}
+        for j in (1...rows).reversed() {outline.append(uv(0,Float(j)/Float(rows)))}
+        let area=outline.indices.reduce(Float(0)) {sum,i in let j=(i+1)%outline.count;return sum+outline[i].y*outline[j].z-outline[j].y*outline[i].z}
+        let orientation:Float=area>=0 ? 1:-1
+        func clip(_ points:[Map3DPoint],_ a:Map3DPoint,_ b:Map3DPoint)->[Map3DPoint] {
+            let edge=b-a,values=points.map {point->Float in
+                let f=orientation*edge.cross(point-a).x;return abs(f)<0.0000001 ? 0:f
+            }
+            var result:[Map3DPoint]=[]
+            for i in points.indices {
+                let j=(i+1)%points.count,p=points[i],q=points[j],f=values[i],g=values[j]
+                if f>=0 {result.append(p)}
+                if f*g<0 {
+                    let order=p.x != q.x ? p.x<q.x:p.y != q.y ? p.y<q.y:p.z<q.z
+                    let a=order ? p:q,b=order ? q:p,fa=order ? f:g,fb=order ? g:f
+                    result.append(a+(b-a)*(fa/(fa-fb)))
+                }
+            }
+            return result
+        }
+        let stations=Self.emuStations(true)
+        var vertices:[String:Map3DPoint]=[:],polygons:[[String]]=[],edges:[String:([String],Int)]=[:]
+        func vertex(_ p:Map3DPoint)->String {
+            let key="\(Int((p.y*100000).rounded())),\(Int((p.z*100000).rounded()))"
+            if vertices[key]==nil {vertices[key]=p};return key
+        }
+        for i in 1..<stations.count {for j in 0..<sides {
+            let a=Float(j)*2*Float.pi/Float(sides),b=Float(j+1)*2*Float.pi/Float(sides)
+            let p=Self.emuPoint(stations[i-1].0,a,true,sides),q=Self.emuPoint(stations[i].0,a,true,sides)
+            let r=Self.emuPoint(stations[i].0,b,true,sides),s=Self.emuPoint(stations[i-1].0,b,true,sides)
+            for triangle in [[p,q,r],[p,r,s]] {
+                var n=(triangle[1]-triangle[0]).cross(triangle[2]-triangle[0])
+                let centre=triangle.reduce(.zero,+)*(1/3),d=Self.emuDimensions(centre.x,true)
+                if n.dot(centre-Map3DPoint(centre.x,(d.0+d.1)/2,0))<0 {n=n * -1}
+                guard n.x>0.000001 && n.y>0 else {continue}
+                var polygon=triangle
+                for k in outline.indices {
+                    polygon=clip(polygon,outline[k],outline[(k+1)%outline.count]);if polygon.count<3 {break}
+                }
+                guard polygon.count>=3 else {continue}
+                var ids:[String]=[]
+                for point in polygon {let key=vertex(point);if ids.last != key {ids.append(key)}}
+                if ids.first==ids.last {ids.removeLast()}
+                guard ids.count>=3 else {continue}
+                polygons.append(ids)
+                for k in ids.indices {let edge=[ids[k],ids[(k+1)%ids.count]],key=edge.sorted().joined(separator:"|");edges[key]=(edge,(edges[key]?.1 ?? 0)+1)}
+            }
+        }}
+        for ids in polygons {
+            let p=ids.map {vertices[$0]!+Map3DPoint(offset,0,0)},q=ids.map {vertices[$0]!+Map3DPoint(offset-0.05,0,0)}
+            let inside=(p+q).reduce(.zero,+)*(1/Float(p.count+q.count))
+            let collinear=p.indices.contains {i in
+                let a=p[(i+p.count-1)%p.count],b=p[i],c=p[(i+1)%p.count],n=(b-a).cross(c-b)
+                return n.dot(n)<0.000000000001
+            }
+            if !collinear {face(p,inside:inside,color:color);face(q,inside:inside,color:color)}
+            else {
+                let a=p.reduce(.zero,+)*(1/Float(p.count)),b=q.reduce(.zero,+)*(1/Float(q.count))
+                for i in p.indices {let j=(i+1)%p.count;face([a,p[i],p[j]],inside:inside,color:color);face([b,q[i],q[j]],inside:inside,color:color)}
+            }
+        }
+        for key in edges.keys.sorted() {
+            guard let edge=edges[key],edge.1==1 else {continue}
+            let a=vertices[edge.0[0]]!,b=vertices[edge.0[1]]!,p=[a+Map3DPoint(offset,0,0),b+Map3DPoint(offset,0,0)],q=[a+Map3DPoint(offset-0.05,0,0),b+Map3DPoint(offset-0.05,0,0)]
+            let inside=vertices.keys.sorted().compactMap {vertices[$0]}.reduce(.zero,+)*(1/Float(vertices.count))+Map3DPoint(offset-0.025,0,0)
+            face([p[0],q[0],q[1],p[1]],inside:inside,color:color)
+        }
+    }
+    mutating func emuFrontLens(_ project:(Float,Float,Float)->Map3DPoint,
+                               _ height:Float,_ lateral:Float,_ radius:Float,_ color:UInt32) {
+        func point(_ i:Int,_ offset:Float)->Map3DPoint {
+            let a=Float(i)*Float.pi/4
+            return project(height+sinf(a)*radius,lateral+cosf(a)*radius,offset)
+        }
+        emuSolid((0..<8).map {point($0,0.026)},(0..<8).map {point($0,-0.025)},color)
     }
     /// Subtle U-shaped access-hatch seam projected onto the real nose triangles.
     /// It is closed solid geometry with its back bonded into the hull, not a decal.
@@ -461,22 +590,26 @@ private extension StationKitBuilder {
     }
 
     mutating func emuCab(_ sides: Int,_ far: Bool,_ tail: Bool) {
-        // More upright cab, compact trapezoid glazing, restrained dark gasket.
-        emuPatch(true,sides,far ? 4:10,far ? 2:5,(0.20,0.80,0.39,0.71),Map3DColor.shaded(Self.es,0.58),0.022)
-        emuPatch(true,sides,far ? 4:10,far ? 2:5,(0.212,0.788,0.405,0.695),Self.eg,0.034)
-        emuPatch(true,sides,4,2,(0.458,0.542,0.24,0.38),Self.es)
-        for u:Float in [0.486,0.514] {emuLens(u,0.31,0.010,0.045,sides,tail ? Self.eg:Map3DEMU3000.lampColor)}
-        // Broad slanted cheek housings with two round lenses, not razor strips.
-        for u:Float in [0.13,0.87] {
-            emuPatch(true,sides,3,4,(u-0.11,u+0.11,0.70,0.90),Self.es)
-            emuLens(u,0.755,0.060,0.043,sides,tail ? Self.eg:Map3DEMU3000.lampColor)
-            emuLens(u,0.845,0.027,0.029,sides,tail ? Map3DEMU3000.lampColor:Self.eg)
+        let project=Self.emuFrontProjector(sides)
+        func windscreen(_ u:Float,_ v:Float,_ inset:Float)->(Float,Float) {
+            let t=(u-0.5)*2,width=1.03*(1-v)+0.72*v-inset
+            return (3.18*(1-v)+2.28*v+0.08*(1-t*t)*(1-2*v)+inset*(2*v-1),t*width)
+        }
+        emuFrontPatch(sides,far ? 3:8,far ? 2:3,{windscreen($0,$1,0)},Map3DColor.shaded(Self.es,0.58),0.022)
+        emuFrontPatch(sides,far ? 3:8,far ? 2:3,{windscreen($0,$1,0.025)},Self.eg,0.034)
+        emuFrontPatch(sides,3,2,{(3.59-0.26*$1,($0-0.5)*0.44)},Self.es,0.010)
+        for lateral:Float in [-0.10,0.10] {emuFrontLens(project,3.46,lateral,0.065,tail ? Self.eg:Map3DEMU3000.lampColor)}
+        for side:Float in [-1,1] {
+            emuFrontPatch(sides,far ? 2:3,far ? 2:3,{u,v in
+                (2.43-0.46*v,side*(0.94-0.15*v+(u-0.5)*0.28))
+            },Self.es,0.010)
+            emuFrontLens(project,2.28,side*0.895,0.085,tail ? Self.eg:Map3DEMU3000.lampColor)
+            emuFrontLens(project,2.08,side*0.82,0.045,tail ? Map3DEMU3000.lampColor:Self.eg)
         }
         if !far {
             emuHatchSeam(sides)
-            let a=Self.emuSurface(9.05,1.43,true,sides,0.045),b=Self.emuSurface(8.65,1.26,true,sides,0.045)
-            beam(a,b,0.022,Self.ek)
-            beam(b,Self.emuSurface(8.25,1.26,true,sides,0.045),0.025,Self.ek)
+            let a=project(2.34,0.04,0.048),b=project(2.50,0.47,0.048),c=project(2.89,0.58,0.048)
+            beam(a,b,0.022,Self.ek);beam(b,c,0.025,Self.ek)
             civicTube(a-Map3DPoint(0,0.09,0),a,radius:0.040,color:Self.ek,sides:8)
         }
     }
