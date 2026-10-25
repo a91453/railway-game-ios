@@ -117,7 +117,9 @@ extension GameSession {
     /// The second track beside `segments`, on `side` of the way they run,
     /// ``DoubleTrack/spacing`` from them: one stretch for each segment, the
     /// first and last joining a node within ``DoubleTrack/joinReach`` of
-    /// their place; `nil` when a piece cannot be laid.
+    /// their place, across and in height (decision 401's sequel: a node of
+    /// a track on another level, under or over it, is not joined); `nil`
+    /// when a piece cannot be laid.
     func parallelChain(beside segments: [ChainSegment], side: PlatformTrackSide, in world: GameWorld) -> [PlayerCommand.TrackStretch]? {
         guard !segments.isEmpty else { return nil }
         var geometries: [TrackGeometry] = []
@@ -148,7 +150,7 @@ extension GameSession {
                 distance = Int64((Double(DoubleTrack.spacing) / half).rounded())
             }
             let beside = DoubleTrack.beside(position, way: way, side: side, distance: distance)
-            if index == 0 || index == count, let found = world.trackNode(near: beside.plan, within: DoubleTrack.joinReach) {
+            if index == 0 || index == count, let found = world.trackNode(at: beside, within: DoubleTrack.joinReach) {
                 places.append((.node(found.id), found.position))
             } else {
                 places.append((.point(beside.plan), beside))

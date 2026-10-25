@@ -221,6 +221,20 @@ extension GameWorld {
         return best?.node
     }
 
+    /// The node nearest `position` across within `radius` world units and
+    /// no more than `radius` above or below it: a node of track on another
+    /// level is not it (decision 401's sequel).
+    func trackNode(at position: WorldCoordinate, within radius: Int64) -> TrackNode? {
+        var best: (node: TrackNode, distance: Int64)?
+        for node in network.nodes where abs(node.position.z - position.z) <= radius {
+            let dx = node.position.x - position.x, dy = node.position.y - position.y
+            let squared = dx * dx + dy * dy
+            guard squared <= radius * radius, best == nil || squared < best!.distance else { continue }
+            best = (node, squared)
+        }
+        return best?.node
+    }
+
     /// The place on an edge of the track network nearest `point` in plan,
     /// if an edge passes within `radius` world units of it; the lowest
     /// numbered edge of equally near ones.

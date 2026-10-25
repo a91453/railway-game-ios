@@ -320,9 +320,13 @@ extension GameSession {
     /// Decision 400 A.8: `onGround`, all of it on the ground, as the game's
     /// stations are (decision 132), whatever the tool's height and
     /// structure and the real line's tunnels and viaducts.
+    ///
+    /// Decision 401's sequel: `system`, the real line's system, sets the
+    /// tightest curve (``traceMinimumRadius(ofSystem:)``; the line at the
+    /// start's where none is given).
     func tracePlan(
         from start: NetworkAnchor, to end: NetworkAnchor, along given: [WorldVector]? = nil, platforms: [(WorldVector, WorldVector)] = [],
-        onGround: Bool = false
+        onGround: Bool = false, system: String? = nil
     ) -> TracePlan? {
         let networkHeight = onGround ? 0 : self.networkHeight
         let networkStructure = onGround ? TrackStructure.automatic : self.networkStructure
@@ -463,11 +467,14 @@ extension GameSession {
         var built = 0
         var problem: String?
         var previous: TrackNodeID?
+        let tightest = Self.traceMinimumRadius(ofSystem: system ?? realRailwayTraces.flatMap { traces in
+            traces.snap(WorldVector(from.plan), within: reach).map { traces.lines[$0.place.line].system }
+        })
         for stretch in stretches {
-            if let radius = Self.tightestRadius(of: stretch), radius < Self.traceMinimumRadius {
+            if let radius = Self.tightestRadius(of: stretch), radius < tightest {
                 problem = language.text(
-                    "The real line turns too tightly here for the track (a curve of about \(Int((radius / RealRailwayTraces.metre).rounded())) m; the tool lays \(Int(Self.traceMinimumRadius / RealRailwayTraces.metre)) m or more).",
-                    "這裡真實鐵路彎得太急（半徑約 \(Int((radius / RealRailwayTraces.metre).rounded())) 公尺，描線最小 \(Int(Self.traceMinimumRadius / RealRailwayTraces.metre)) 公尺），鋪不過去。"
+                    "The real line turns too tightly here for the track (a curve of about \(Int((radius / RealRailwayTraces.metre).rounded())) m; the tool lays \(Int(tightest / RealRailwayTraces.metre)) m or more).",
+                    "這裡真實鐵路彎得太急（半徑約 \(Int((radius / RealRailwayTraces.metre).rounded())) 公尺，描線最小 \(Int(tightest / RealRailwayTraces.metre)) 公尺），鋪不過去。"
                 )
                 break
             }
@@ -490,14 +497,28 @@ extension GameSession {
 }
 
 extension GameSession {
-    /// The tightest curve a traced edge may have: 40 m, the Alishan Forest
-    /// Railway's tightest (the sharpest real line the app has). GameCore
-    /// has no curve radius (a stretch may turn up to 90° where it joins,
-    /// decision 103); this only stops a trace where a kink in the real
-    /// line's drawing, or a link between two lines, would bend the track
-    /// into a hairpin. Measured as the reference's `radiusAtPoint` does
-    /// (`Ci/`), at sixteenths along the edge.
+    /// The tightest curve a traced edge may have on the TRA, the High
+    /// Speed Rail and the Alishan Forest Railway: 40 m, the forest
+    /// railway's tightest. GameCore has no curve radius (a stretch may turn
+    /// up to 90° where it joins, decision 103); this only stops a trace
+    /// where a kink in the real line's drawing, or a link between two
+    /// lines, would bend the track into a hairpin. Measured as the
+    /// reference's `radiusAtPoint` does (`Ci/`), at sixteenths along the
+    /// edge.
     static let traceMinimumRadius = 40 * RealRailwayTraces.metre
+    /// The tightest on the metros and light rails (decision 401's sequel):
+    /// 20 m. Their real lines turn tighter than the forest railway's, the
+    /// Wenhu Line about 35 m round its corners and Kaohsiung's Circular
+    /// Line 26 m, and 40 m left gaps in them.
+    static let urbanTraceMinimumRadius = 20 * RealRailwayTraces.metre
+
+    /// The tightest curve a traced edge of `system`'s line may have.
+    static func traceMinimumRadius(ofSystem system: String?) -> Double {
+        switch system {
+        case nil, "tra_sched", "thsr_sched", "afr_sched": traceMinimumRadius
+        default: urbanTraceMinimumRadius
+        }
+    }
 
     /// The tightest radius along `stretch`'s curve in world units; `nil`
     /// for a straight edge.
