@@ -32,7 +32,12 @@
 //   a world without zones is worth what it was);
 // - W, decision 111: 600 for a cell whose middle lies within 160 m of a
 //   cell of water's (water included), else 0: the sea view and the river
-//   bank (a world without water is worth what it was).
+//   bank (a world without water is worth what it was);
+// - E, decision 361's sequel: 900 for a cell whose middle lies within
+//   400 m of the centre of one of the company's schools, and 500 of one of
+//   its hospitals, the two added, else 0: the island city reference's
+//   `LV_W.school = 9` and `hospital = 5` (g23.js) on the scale its
+//   `park = 6` has here (P's 600).
 //
 // The value reads the world and changes nothing: raising buildings
 // (decision 75) never reads it, and growth only to choose which zoned cell
@@ -59,10 +64,14 @@ public struct LandValue: Hashable, Sendable {
     public let companyPremium: Int64
     /// ``LandValueRules/waterPremium`` by the water, else 0 (decision 111).
     public let waterPremium: Int64
+    /// ``LandValueRules/schoolPremium`` near the company's schools and
+    /// ``LandValueRules/hospitalPremium`` near its hospitals, added, else 0
+    /// (decision 361's sequel).
+    public let civicPremium: Int64
 
     public init(
         value: Int64, base: Int64, servicePremium: Int64, accessPremium: Int64, station: StationID?, parkPremium: Int64 = 0, companyPremium: Int64 = 0,
-        waterPremium: Int64 = 0
+        waterPremium: Int64 = 0, civicPremium: Int64 = 0
     ) {
         self.value = value
         self.base = base
@@ -72,6 +81,7 @@ public struct LandValue: Hashable, Sendable {
         self.parkPremium = parkPremium
         self.companyPremium = companyPremium
         self.waterPremium = waterPremium
+        self.civicPremium = civicPremium
     }
 }
 
@@ -120,14 +130,19 @@ public enum LandValueRules {
     /// water's middle: 160 m, two and a half cells.
     public static let waterPremium: Int64 = 600
     public static let waterReach: Int64 = 10_240
+    /// Cents a m² near the company's schools and hospitals (decision 361's
+    /// sequel), and how near their centres: 400 m, as a park.
+    public static let schoolPremium: Int64 = 900
+    public static let hospitalPremium: Int64 = 500
+    public static let civicReach: Int64 = 25_600
     /// The least and the most a cell is worth, in cents a m².
     public static let minimum: Int64 = 500
     public static let maximum: Int64 = 50_000
 
-    /// `base + service + access + park + company + water` within
+    /// `base + service + access + park + company + water + civic` within
     /// ``minimum`` … ``maximum``.
-    static func value(base: Int64, service: Int64, access: Int64, park: Int64 = 0, company: Int64 = 0, water: Int64 = 0) -> Int64 {
-        min(maximum, max(minimum, base + service + access + park + company + water))
+    static func value(base: Int64, service: Int64, access: Int64, park: Int64 = 0, company: Int64 = 0, water: Int64 = 0, civic: Int64 = 0) -> Int64 {
+        min(maximum, max(minimum, base + service + access + park + company + water + civic))
     }
 }
 
@@ -140,7 +155,7 @@ extension GameWorld {
     /// town growth) S and A are 0: the value is its base.
     public func landValue(row: Int, column: Int) -> LandValue? {
         guard (0..<Land.rows(in: bounds)).contains(row), (0..<Land.columns(in: bounds)).contains(column) else { return nil }
-        return landValue(row: row, column: column, near: landValueStations(), parks: landValueParks(), companies: landValueCompanies())
+        return landValue(row: row, column: column, near: landValueStations(), parks: landValueParks(), companies: landValueCompanies(), civics: landValueCivics())
     }
 
     /// What every cell of the world is worth, by row and then column
@@ -158,12 +173,12 @@ extension GameWorld {
         let (firstColumn, lastColumn) = (max(0, columns.lowerBound), min(Land.columns(in: bounds) - 1, columns.upperBound))
         guard firstRow <= lastRow, firstColumn <= lastColumn else { return [] }
         let rows = firstRow...lastRow, columns = firstColumn...lastColumn
-        let stations = landValueStations(), parks = landValueParks(), companies = landValueCompanies()
+        let stations = landValueStations(), parks = landValueParks(), companies = landValueCompanies(), civics = landValueCivics()
         var values: [LandValue] = []
         values.reserveCapacity(rows.count * columns.count)
         for row in rows {
             for column in columns {
-                values.append(landValue(row: row, column: column, near: stations, parks: parks, companies: companies))
+                values.append(landValue(row: row, column: column, near: stations, parks: parks, companies: companies, civics: civics))
             }
         }
         return values
@@ -176,10 +191,10 @@ extension GameWorld {
     /// ``landValues()`` works out every cell of the world.
     public func landValues(at positions: [CellPosition]) -> [LandValue] {
         let rows = Land.rows(in: bounds), columns = Land.columns(in: bounds)
-        let stations = landValueStations(), parks = landValueParks(), companies = landValueCompanies()
+        let stations = landValueStations(), parks = landValueParks(), companies = landValueCompanies(), civics = landValueCivics()
         return positions.compactMap { position in
             guard (0..<rows).contains(position.row), (0..<columns).contains(position.column) else { return nil }
-            return landValue(row: position.row, column: position.column, near: stations, parks: parks, companies: companies)
+            return landValue(row: position.row, column: position.column, near: stations, parks: parks, companies: companies, civics: civics)
         }
     }
 
@@ -217,7 +232,7 @@ extension GameWorld {
 
     private func landValue(
         row: Int, column: Int, near stations: [(id: StationID, point: PlanPoint, service: Int64, reached: Int64)], parks: [Int: [PlanPoint]],
-        companies: [PlanPoint]
+        companies: [PlanPoint], civics: (schools: [PlanPoint], hospitals: [PlanPoint])
     ) -> LandValue {
         let base: Int64
         if let building = buildings.building(row: row, column: column) {
@@ -263,10 +278,41 @@ extension GameWorld {
         let company = nearCompany ? LandValueRules.companyPremium : 0
         // Decision 111: by the water.
         let water = terrain.isNearWater(row: row, column: column) ? LandValueRules.waterPremium : 0
+        // Decision 361's sequel: near the company's schools and hospitals.
+        let civic = Self.civicPremium(at: PlanPoint(x: x, y: y), civics)
         return LandValue(
-            value: LandValueRules.value(base: base, service: service, access: access, park: park, company: company, water: water),
+            value: LandValueRules.value(base: base, service: service, access: access, park: park, company: company, water: water, civic: civic),
             base: base, servicePremium: service, accessPremium: access, station: best?.id, parkPremium: park, companyPremium: company,
-            waterPremium: water
+            waterPremium: water, civicPremium: civic
         )
+    }
+
+    /// The centres of the company's schools and of its hospitals
+    /// (decision 361's sequel).
+    func landValueCivics() -> (schools: [PlanPoint], hospitals: [PlanPoint]) {
+        (placedBuildings.filter { $0.kind == .school }.map(\.centre), placedBuildings.filter { $0.kind == .hospital }.map(\.centre))
+    }
+
+    /// Whether `point` lies within ``LandValueRules/civicReach`` of the
+    /// centre of one of `civics`' schools, and of one of its hospitals
+    /// (decision 361's sequel).
+    static func isNearCivics(_ point: PlanPoint, _ civics: (schools: [PlanPoint], hospitals: [PlanPoint])) -> (school: Bool, hospital: Bool) {
+        let reach = LandValueRules.civicReach * LandValueRules.civicReach
+        func near(_ centres: [PlanPoint]) -> Bool {
+            centres.contains { centre in
+                let dx = point.x - centre.x, dy = point.y - centre.y
+                return dx * dx + dy * dy < reach
+            }
+        }
+        return (near(civics.schools), near(civics.hospitals))
+    }
+
+    /// What `point` is worth more near the company's schools and hospitals
+    /// `civics` (decision 361's sequel): ``LandValueRules/schoolPremium``
+    /// near a school and ``LandValueRules/hospitalPremium`` near a
+    /// hospital, added; several of a kind count once.
+    static func civicPremium(at point: PlanPoint, _ civics: (schools: [PlanPoint], hospitals: [PlanPoint])) -> Int64 {
+        let near = isNearCivics(point, civics)
+        return (near.school ? LandValueRules.schoolPremium : 0) + (near.hospital ? LandValueRules.hospitalPremium : 0)
     }
 }

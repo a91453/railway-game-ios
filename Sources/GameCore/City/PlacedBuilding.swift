@@ -11,7 +11,9 @@
 // P0-D (decision 130) it can be sold to the city, which takes it over
 // (BuildingSale.swift). Since decision 361 two kinds with an effect
 // of their own stand among them, a park and a temple, and a building can
-// have one of its kind's looks.
+// have one of its kind's looks; since its sequel three more, a school and
+// a hospital, which the city grows round, and a night market, a sight as a
+// temple is.
 
 /// Identifies a building the player placed. IDs are allocated by
 /// ``GameWorld`` from 1 and never handed out again.
@@ -29,7 +31,8 @@ public struct PlacedBuildingID: RawRepresentable, Hashable, Comparable, Codable,
 
 /// What the player can place: the three basic buildings, since decision
 /// 111 two that stand on the shore, since decision 173 three subsidiaries,
-/// and since decision 361 a park and a temple.
+/// since decision 361 a park and a temple, and since its sequel a school,
+/// a hospital and a night market.
 public enum PlacedBuildingKind: String, CaseIterable, Codable, Sendable {
     /// A small house: 16 m a side.
     case house
@@ -62,14 +65,29 @@ public enum PlacedBuildingKind: String, CaseIterable, Codable, Sendable {
     /// come to (Tourism.swift) and a subsidiary that takes their offerings
     /// (Subsidiary.swift); it holds no one.
     case temple
+    /// A school (decision 361's sequel): 48 m a side, three storeys. It
+    /// holds no one and lets nothing; the land within
+    /// ``LandValueRules/civicReach`` of it is worth
+    /// ``LandValueRules/schoolPremium`` more, and the city's homes there
+    /// grow faster (``LandDemand/schoolGrowthTenths``).
+    case school
+    /// A hospital (decision 361's sequel): 32 m a side, six storeys; as a
+    /// school, with ``LandValueRules/hospitalPremium`` and
+    /// ``LandDemand/hospitalGrowthTenths``.
+    case hospital
+    /// A night market (decision 361's sequel): 32 m a side, one storey of
+    /// stalls. A sight as a temple is (Tourism.swift), of
+    /// ``Tourism/nightMarketStars``, and a subsidiary whose customers eat
+    /// and play there; it holds no one.
+    case nightMarket
 
     /// The length of a side, in world units.
     public var side: Int64 {
         switch self {
         case .house: 1_024
         case .shop, .wharf, .park: 1_536
-        case .office, .marina, .hotel, .temple: 2_048
-        case .departmentStore: 3_072
+        case .office, .marina, .hotel, .temple, .hospital, .nightMarket: 2_048
+        case .departmentStore, .school: 3_072
         case .amusementPark: 7_168
         }
     }
@@ -78,8 +96,9 @@ public enum PlacedBuildingKind: String, CaseIterable, Codable, Sendable {
     public var use: LandUse {
         switch self {
         case .house: .residential
-        case .shop, .wharf, .departmentStore, .hotel: .commercial
+        case .shop, .wharf, .departmentStore, .hotel, .nightMarket: .commercial
         case .office: .office
+        case .school, .hospital: .civic
         case .marina, .amusementPark, .temple: .leisure
         case .park: .park
         }
@@ -90,10 +109,11 @@ public enum PlacedBuildingKind: String, CaseIterable, Codable, Sendable {
     public var floors: Int64 {
         switch self {
         case .house, .shop, .wharf, .marina, .temple: 2
-        case .office: 6
+        case .school: 3
+        case .office, .hospital: 6
         case .departmentStore: 8
         case .hotel: 14
-        case .amusementPark, .park: 1
+        case .amusementPark, .park, .nightMarket: 1
         }
     }
 
@@ -101,7 +121,7 @@ public enum PlacedBuildingKind: String, CaseIterable, Codable, Sendable {
     /// water, part on land. The others stand on land only.
     public var standsOnShore: Bool {
         switch self {
-        case .house, .shop, .office, .departmentStore, .hotel, .amusementPark, .park, .temple: false
+        case .house, .shop, .office, .departmentStore, .hotel, .amusementPark, .park, .temple, .school, .hospital, .nightMarket: false
         case .wharf, .marina: true
         }
     }
@@ -121,9 +141,13 @@ public enum PlacedBuildingKind: String, CaseIterable, Codable, Sendable {
     /// floor of its use that are homes, at 48 m² a resident, the rest jobs
     /// at 32 m², each rounded down. A house 9 residents and 2 jobs, a shop
     /// and a wharf 6 and 27, an office block 16 and 168, a marina 5 and 56.
-    /// A park and a temple (decision 361) hold no one.
+    /// A park and a temple (decision 361), a school, a hospital and a night
+    /// market (its sequel) hold no one.
     public var capacity: BuildingCapacity {
-        guard self != .park, self != .temple else { return BuildingCapacity(residents: 0, jobs: 0) }
+        switch self {
+        case .park, .temple, .school, .hospital, .nightMarket: return BuildingCapacity(residents: 0, jobs: 0)
+        default: break
+        }
         let homes = Building.homeEighths(of: use)
         return BuildingCapacity(
             residents: floorArea * homes / 8 / Building.areaPerResident,
@@ -137,14 +161,23 @@ extension PlacedBuildingKind {
     /// playground or a garden with a pond; a temple a temple square with a
     /// gate, or a large temple; decision 398: a hotel a tower, a resort or
     /// a hot-spring inn; a department store a mall or halls for shows and
-    /// banquets; the others one. A look is only how it is drawn, numbered
-    /// from 0.
+    /// banquets; decision 361's sequel: a school a primary school or a
+    /// kindergarten, a hospital a clinic or one with a day-care wing, a
+    /// night market an alley of stalls or a market square; the others one.
+    /// A look is only how it is drawn, numbered from 0.
     public var looks: Int {
         switch self {
         case .park, .hotel: 3
-        case .temple, .departmentStore: 2
+        case .temple, .departmentStore, .school, .hospital, .nightMarket: 2
         default: 1
         }
+    }
+
+    /// Whether it is a sight of the company's (decision 361 and its
+    /// sequel): a temple or a night market, whose customers are the
+    /// tourists it draws (``GameWorld/sightVisitors(of:onDay:)``).
+    public var isSight: Bool {
+        self == .temple || self == .nightMarket
     }
 }
 
@@ -170,8 +203,8 @@ public struct PlacedBuilding: Hashable, Sendable {
     /// Which of its kind's ``PlacedBuildingKind/looks`` it has (decision
     /// 361), 0 for the first: only how it is drawn.
     public let look: Int
-    /// A temple's tourists of the day that last ended (decision 361); 0
-    /// for the others.
+    /// A temple's or a night market's tourists of the day that last ended
+    /// (decision 361 and its sequel); 0 for the others.
     public internal(set) var visitors: Int64 = 0
 
     public init(id: PlacedBuildingID, kind: PlacedBuildingKind, centre: PlanPoint, look: Int = 0) {
@@ -399,7 +432,7 @@ extension GameWorld {
                 return "Placed building \(building.id.rawValue) has trading books out of range."
             }
             guard (0..<building.kind.looks).contains(building.look),
-                  building.kind == .temple ? (0...Self.maximumAccrued).contains(building.visitors) : building.visitors == 0
+                  building.kind.isSight ? (0...Self.maximumAccrued).contains(building.visitors) : building.visitors == 0
             else {
                 return "Placed building \(building.id.rawValue) has a look or visitors out of range."
             }
@@ -418,7 +451,8 @@ extension PlacedBuilding: Codable {
     /// `"landCost"`, each written only when not 0: a building placed before
     /// is empty and was paid nothing for. Since save version 71 (decision
     /// 361) `"look"` and a temple's `"visitors"`, each written only when
-    /// not 0: a building before has the first look.
+    /// not 0: a building before has the first look. Since save version 74
+    /// (its sequel) a night market's `"visitors"` too.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(PlacedBuildingID.self, forKey: .id)

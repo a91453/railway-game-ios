@@ -85,4 +85,33 @@ final class MyLocationStartTests: XCTestCase {
         XCTAssertFalse(fix.isKeptOnMap)
         XCTAssertEqual(fix.message(in: .english), MyLocationStart.failed.message(in: .english))
     }
+
+    /// TestFlight 86.1 (iPad Air, Wi-Fi): why there is no fix stays while
+    /// the map settles or moves; a fix's line goes once the map is a place
+    /// (1 km) away from where the frame went.
+    func testOnlyAFixsLineGoesWhenTheMapMoves() {
+        for result in [MyLocationStart.denied, .failed] {
+            XCTAssertFalse(result.messageGoes(mapMiddleLatitude: 25.05, longitude: 121.52))
+            XCTAssertFalse(result.messageGoes(mapMiddleLatitude: 30, longitude: 125))
+        }
+        let abroad = MyLocationStart.located(latitude: 35.681, longitude: 139.767)
+        XCTAssertNotNil(abroad.message(in: .english))
+        // At the frame's middle (35.68°, 139.77°) and 0.005° of latitude
+        // (about 556 m) away: the same place.
+        XCTAssertFalse(abroad.messageGoes(mapMiddleLatitude: 35.68, longitude: 139.77))
+        XCTAssertFalse(abroad.messageGoes(mapMiddleLatitude: 35.685, longitude: 139.77))
+        // 0.02° (about 2.2 km) away: elsewhere.
+        XCTAssertTrue(abroad.messageGoes(mapMiddleLatitude: 35.70, longitude: 139.77))
+    }
+
+    /// TestFlight 86.1: a tap on the button's corner is the button's, not
+    /// a tap that moves the frame there; beside it the map takes it.
+    func testATapOnTheButtonsCornerIsNotTheMaps() {
+        let width = 590.0
+        XCTAssertTrue(MyLocationStart.isOnButton(x: width - 32, y: 32, mapWidth: width))
+        XCTAssertTrue(MyLocationStart.isOnButton(x: width - 64, y: 64, mapWidth: width))
+        XCTAssertFalse(MyLocationStart.isOnButton(x: width - 65, y: 32, mapWidth: width))
+        XCTAssertFalse(MyLocationStart.isOnButton(x: width - 32, y: 65, mapWidth: width))
+        XCTAssertFalse(MyLocationStart.isOnButton(x: width / 2, y: 200, mapWidth: width))
+    }
 }

@@ -103,7 +103,13 @@ extension GameWorld {
                 landRight: .zero, buildingBookValue: .zero, occupants: occupants, capacity: capacity.residents + capacity.jobs, bookValue: .zero
             )
         }
-        let value = landTerms(of: building).value
+        // Decision 361's sequel: a building that holds no one (a park, a
+        // temple, a school, a hospital, a night market) sells its land at
+        // what the land is worth without it, so that building one and
+        // selling it at once does not pay for its own premium.
+        var without = self
+        if capacity.residents + capacity.jobs == 0 { without.placedBuildings.removeAll { $0.id == id } }
+        let value = without.landTerms(of: building).value
         let record = accounts.assets.first { $0.kind == .building && $0.owner == id.rawValue }
         let buildingBookValue = record.map { record in
             let written = AssetRecord.share(of: building.buildingCost, numerator: record.days, denominator: record.kind.assetClass.lifeDays)

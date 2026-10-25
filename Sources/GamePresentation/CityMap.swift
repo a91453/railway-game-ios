@@ -393,6 +393,10 @@ public struct CityCellInfo: Hashable, Sendable {
             let company = Money(value.companyPremium).centsText
             lines.append(language.text("Near your buildings + \(company)", "鄰近公司建物 + \(company)"))
         }
+        if value.civicPremium > 0 {
+            let civic = Money(value.civicPremium).centsText
+            lines.append(language.text("Near your school or hospital + \(civic)", "鄰近公司的學校或醫院 + \(civic)"))
+        }
         if value.waterPremium > 0 {
             let water = Money(value.waterPremium).centsText
             lines.append(language.text("By the water + \(water)", "臨水 + \(water)"))

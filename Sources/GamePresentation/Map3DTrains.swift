@@ -166,8 +166,9 @@ public enum Map3DTrains {
             // one sampled point of the track to the next.
             let steady = run.steadyHead(at: progress, over: Self.steadySpan)
             let (side, stripe) = colours(of: run.look, palette: palette)
-            // Decision 408: half the high-speed trains the N700S-G.
-            let trainType = Map3DTrainSet.variant(of: heights.type(of: run.train), number: run.train.rawValue)
+            // Decision 408: half the high-speed trains the N700S-G (decision
+            // 338, second later: none while the train pack is locked).
+            let trainType = Map3DTrainSet.variant(of: heights.type(of: run.train), number: run.train.rawValue, locked: models?.locked ?? [])
             let hasModels = run.look != .freight && models?.models(forType: trainType) != nil
             // Decision 399: or each car at its model's own length.
             let layout = hasModels ? models?.layout(forType: trainType, count: count) : nil

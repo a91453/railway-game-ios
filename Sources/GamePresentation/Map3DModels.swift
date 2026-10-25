@@ -139,6 +139,9 @@ public struct Map3DModelPack: Sendable {
     /// Car `carIndex` of a `count`-car train of `set`: its head, tail,
     /// pantograph or middle car.
     func modelIndex(of set: Map3DTrainSet, carIndex: Int, count: Int) -> Int? {
+        if set.key == "emu3000" || set.key == "emu3000Far" {
+            return index(of:Map3DEMU3000.gameName(Map3DEMU3000.unit(at:carIndex,count:count),far:set.key == "emu3000Far"))
+        }
         if count == 1, let single = index(of: set.singleName) { return single }
         if carIndex == 0 { return index(of: set.headName) }
         if carIndex == count - 1 { return index(of: set.tailName) ?? index(of: set.headName) }

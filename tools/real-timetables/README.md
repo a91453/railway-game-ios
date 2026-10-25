@@ -29,3 +29,19 @@ python3 -I tools/real-timetables/extract_yilan_schedule.py \
 - 示範的鐵路止於頭城與蘇澳新；開往更遠處而通過這兩站的列車，在該站照通過時刻算一次停靠，所以自強號跑完全程。
 - 通過站的時刻照網站的沿線內插（`passes`），示範用它算路線的停靠時刻。
 - 參考庫的檔案更新時重跑，並重跑 `TRADemoTests`、`TRADemoDayTests`。
+
+## 輕軌的班次（決策 400，10j-2）
+
+`extract_metro_runs.py` 讀 App 已打包的 `<系統>.json`（每條線的車站順序）與 `<系統>_times.json`（交通部 TDX 的各站時刻，參考網站 2026-07-16 抓的，政府資料開放授權條款第 1 版），排成玩家可以收購的輕軌的班次，寫成 `RailwayGameApp/Resources/RealRailways/metro_runs.json`；之後照 `extract_branch_runs.py` 的 `line_runs` 檢查、排過夜與回送（同一個工具，多了 `start` 與 `balanced`，台鐵支線的輸出一個位元組都沒變）。
+
+```sh
+python3 -I tools/real-timetables/extract_metro_runs.py \
+  RailwayGameApp/Resources/RealRailways \
+  RailwayGameApp/Resources/RealRailways/metro_runs.json
+```
+
+- 淡海藍海線（紅樹林—淡水漁人碼頭）：208 班真實的車、4 班回送、5 組車（過夜：紅樹林 3、漁人碼頭 2）。另有「綠山線已買下時」從濱海沙崙起的一份（4 組車）。
+- 淡海綠山線不收：紅樹林要 7 條、崁頂要 6 條軌道過夜，遊戲的終點站只鋪 5 條（自己的線加兩側各兩層待避線；真實的崁頂機廠停 13 組裡的 9 組）。
+- 安坑輕軌還沒收：工具排得出來（303 班、7 組車），但遊戲鋪的第二條正線在它的急彎上會與第一條太近；見 `docs/HANDOFF.md` 第 5 節。
+- 高雄環狀輕軌不收：單向繞圈回到籬仔內，遊戲的線是兩端折返。
+- 時刻表更新時重跑，並重跑 `RealLineAcquisitionTests`。
