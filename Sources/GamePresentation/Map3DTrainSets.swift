@@ -44,6 +44,11 @@ public struct Map3DTrainSet: Sendable {
         /// Decision 399: a steam locomotive's tender, a car of its own
         /// between it and the coaches.
         var tender: Model? = nil
+        /// Decision 408: a set whose back half faces its own way (the
+        /// N700S-G's A B C D E | E D C B A), its middle and pantograph cars
+        /// there turned round.
+        var middleBack: Model? = nil
+        var pantographBack: Model? = nil
         typealias Model = Map3DModelPack.Model
     }
 
@@ -54,6 +59,8 @@ public struct Map3DTrainSet: Sendable {
     var singleName: String { "set-\(key)-single" }
     var pantographName: String { "set-\(key)-panto" }
     var tenderName: String { "set-\(key)-tender" }
+    var middleBackName: String { "set-\(key)-carBack" }
+    var pantographBackName: String { "set-\(key)-pantoBack" }
     func unitName(_ unit: String) -> String { "set-\(key)-\(unit)" }
 
     /// The four model names and their models, in the pack's order.
@@ -71,6 +78,8 @@ public struct Map3DTrainSet: Sendable {
         if let single = cars.single { models.append(named(single, singleName)) }
         if let pantograph = cars.pantograph { models.append(named(pantograph, pantographName)) }
         if let tender = cars.tender { models.append(named(tender, tenderName)) }
+        if let middle = cars.middleBack { models.append(named(middle, middleBackName)) }
+        if let pantograph = cars.pantographBack { models.append(named(pantograph, pantographBackName)) }
         return models
     }
 
@@ -348,22 +357,24 @@ public struct Map3DTrainSet: Sendable {
     /// Decision 408 (third): the N700S-G, the author's own mesh with fewer
     /// triangles (``Map3DN700SG/mesh(_:)``): its cab A at the front and
     /// turned round at the back, its C car between and its D car under the
-    /// pantographs, each car its own length (25.3 m the cabs, 25.0 m the
+    /// pantographs, those of the back half turned round too (the author's
+    /// A B C D E | E D C B A), each car its own length (25.3 m the cabs, 25.0 m the
     /// rest), lit as the 700T; ``far`` its light rebuild.
     static func n700sG() -> Map3DTrainSet {
         Map3DTrainSet(key: "n700sG", pantographCars: [3, 8], ownLengths: true, far: "n700sGFar") {
             // Generated data the tests read back; a unit that fails to
             // decode draws as its light rebuild rather than nothing.
             func mesh(_ unit: Map3DN700SG.Unit) -> Map3DModelPack.Model { Map3DN700SG.mesh(unit) ?? Map3DN700SG.model(unit) }
-            let cab = mesh(.a)
-            return Cars(head: lit(cab, front: true), middle: mesh(.c), tail: lit(cab.turned, front: false), single: nil,
-                        pantograph: mesh(.d))
+            let cab = mesh(.a), middle = mesh(.c), pantograph = mesh(.d)
+            return Cars(head: lit(cab, front: true), middle: middle, tail: lit(cab.turned, front: false), single: nil,
+                        pantograph: pantograph, middleBack: middle.turned, pantographBack: pantograph.turned)
         }
     }
 
     /// Decision 408: the N700S-G from 500 m out, the author's shape rebuilt
     /// with the train builder (``Map3DN700SG``), a tenth of the triangles:
-    /// its cab, its C car between and its D car under the pantographs.
+    /// its cab, its C car between and its D car under the pantographs,
+    /// turned round in the back half as the near set's.
     static func n700sGFar() -> Map3DTrainSet {
         Map3DTrainSet(key: "n700sGFar", pantographCars: [3, 8], ownLengths: true) {
             // The cab turned round at the back, its lamps red.
@@ -374,7 +385,8 @@ public struct Map3DTrainSet: Sendable {
                 return vertex
             }, minimum: back.minimum, maximum: back.maximum)
             return Cars(head: Map3DN700SG.model(.a), middle: Map3DN700SG.model(.c), tail: tail, single: nil,
-                        pantograph: Map3DN700SG.model(.d))
+                        pantograph: Map3DN700SG.model(.d), middleBack: Map3DN700SG.reversed(.c),
+                        pantographBack: Map3DN700SG.reversed(.d))
         }
     }
 
