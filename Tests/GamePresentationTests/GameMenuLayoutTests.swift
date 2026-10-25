@@ -25,6 +25,15 @@ final class GameMenuLayoutTests: XCTestCase {
         XCTAssertEqual(GameMenuLayout(showsGoals: true, showsTourism: true).sections, GameMenuLayout(showsGoals: false, showsTourism: false).sections)
     }
 
+    /// Decision 414: the idle mode beside Settings, one row, so the first
+    /// level keeps its six rows.
+    func testTheIdleModeStandsBesideSettings() {
+        let layout = GameMenuLayout(showsGoals: false, showsTourism: false)
+        XCTAssertEqual(layout.settingsRow, [.ambient, .settings])
+        XCTAssertLessThanOrEqual(layout.settingsRow.count, GameMenuLayout.itemsInRow, "one row, side by side")
+        XCTAssertEqual(layout.sections.last, [.settings])
+    }
+
     /// Decision 383: Help and Report a Problem in the first level, one tap
     /// after the menu, in every game.
     func testHelpAndReportStandInTheFirstLevel() {

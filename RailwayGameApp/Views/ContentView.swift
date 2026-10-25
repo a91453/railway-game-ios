@@ -65,6 +65,27 @@ struct ContentView: View {
             // Inside the text size limit below: the tutorial's card shares the
             // screen with the controls it must not cover.
             .tutorialOverlay(session: session, panelTargets: screen.tutorialPanelTargets, mapSites: screen.tutorialMapSites)
+            // Decision 414: the idle mode over everything, its tap ending it.
+            .overlay {
+                if screen.ambient != nil {
+                    AmbientOverlay(session: session, screen: screen, shows3D: map3DQuality.shows3D) { point in
+                        screen.map3DHandoff = nil
+                        screen.map3DOpenedAt = mapCamera.map {
+                            Map3DHandoff.Plan(x: Double(point.x), y: Double(point.y), referenceSize: $0.referenceSize)
+                        }
+                        var cut = Transaction()
+                        cut.disablesAnimations = true
+                        withTransaction(cut) { screen.showsMap3D = true }
+                    }
+                }
+            }
+            // A panel or the tutorial that opens (a month's report) ends it.
+            .onChange(of: screen.panel) { _, panel in
+                if panel != nil { AmbientMode.end(session: session, screen: screen) }
+            }
+            .onChange(of: session.tutorial == nil) { _, none in
+                if !none { AmbientMode.end(session: session, screen: screen) }
+            }
             // The map and controls share one screen, so text stops growing at the
             // largest standard size instead of pushing the map off screen.
             .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
@@ -92,7 +113,7 @@ struct ContentView: View {
                                    build: { plan in
                     back(to: plan)
                     session.selectTool(.network)
-                })
+                }, ambientScreen: screen, endAmbient: { AmbientMode.end(session: session, screen: screen) })
             }
             // Decision 334: a station board's train is shown once.
             .onChange(of: screen.showsMap3D) { _, shown in
@@ -417,29 +438,6 @@ struct ContentView: View {
             // camera housing and the home indicator, as Apple's Maps does;
             // the controls stay inside the safe area.
             Color.clear
-                .background {
-                    map
-                        .environment(\.mapInsets, EdgeInsets(
-                            top: mapTop,
-                            // Past Undo and Redo too when they show.
-                            leading: toolsColumn ? max(dockSize.width, ControlPanel.showsEdits(session) ? editsWidth : 0)
-                                : showsRail ? BuildToolRail.width + margin : 0,
-                            bottom: dockBottom,
-                            trailing: sidePanel != nil ? sideWidth + margin : isOpen ? cardWidth + margin : 0
-                        ))
-                        // A panel beside the map runs down its whole side.
-                        .environment(\.mapTrailingInsetDepth, sidePanel != nil ? .infinity : isOpen ? cardDepth : 0)
-                        .environment(\.mapButtonsUnderPanel, buttonsUnderPanel)
-                        .environment(\.mapDetailsOpen, isOpen)
-                        .environment(\.mapSafeArea, proxy.safeAreaInsets)
-                        .environment(\.mapShowsLayerStrip, showsLayerStrip)
-                        // Decision 226 (2026-10-15, the owner): on a phone
-                        // the map's layers and expansion buttons stand on
-                        // the bottom row, beside the column's foot, not
-                        // above the station master.
-                        .environment(\.mapLeadingRowFoot, toolsColumn ? margin : nil)
-                        .ignoresSafeArea(.container)
-                }
                 .overlay(alignment: .topLeading) {
                     StatusPill(session: session, launcher: launcher)
                         .padding([.top, .leading, .trailing], margin)
@@ -653,6 +651,32 @@ struct ContentView: View {
                             .padding(.bottom, panelBottom)
                             .transition(.card(from: .trailing, fades: false, reduceMotion: reduceMotion))
                     }
+                }
+                // Decision 414: the controls put away while the idle mode
+                // runs, the map under them left as it is.
+                .ambientHidden(screen.ambient != nil)
+                .background {
+                    map
+                        .environment(\.mapInsets, EdgeInsets(
+                            top: mapTop,
+                            // Past Undo and Redo too when they show.
+                            leading: toolsColumn ? max(dockSize.width, ControlPanel.showsEdits(session) ? editsWidth : 0)
+                                : showsRail ? BuildToolRail.width + margin : 0,
+                            bottom: dockBottom,
+                            trailing: sidePanel != nil ? sideWidth + margin : isOpen ? cardWidth + margin : 0
+                        ))
+                        // A panel beside the map runs down its whole side.
+                        .environment(\.mapTrailingInsetDepth, sidePanel != nil ? .infinity : isOpen ? cardDepth : 0)
+                        .environment(\.mapButtonsUnderPanel, buttonsUnderPanel)
+                        .environment(\.mapDetailsOpen, isOpen)
+                        .environment(\.mapSafeArea, proxy.safeAreaInsets)
+                        .environment(\.mapShowsLayerStrip, showsLayerStrip)
+                        // Decision 226 (2026-10-15, the owner): on a phone
+                        // the map's layers and expansion buttons stand on
+                        // the bottom row, beside the column's foot, not
+                        // above the station master.
+                        .environment(\.mapLeadingRowFoot, toolsColumn ? margin : nil)
+                        .ignoresSafeArea(.container)
                 }
                 // Decision 253: the rest of the screen makes room as one
                 // change; with Reduce Motion at once, the cards and panels
@@ -1220,6 +1244,8 @@ final class GameScreenState {
     /// Decision 334: the train on a station's board the 3D map opened
     /// for, shown at its platform.
     var map3DDeparture: Map3DNextDeparture?
+    /// Decision 414: the idle mode (放空模式) while it runs.
+    var ambient: AmbientScreen?
     /// Whether the station panel, as it opens, puts up its rename alert
     /// at once: the station tag's pencil (TestFlight 60.1, renaming took
     /// three taps before a letter could be typed).

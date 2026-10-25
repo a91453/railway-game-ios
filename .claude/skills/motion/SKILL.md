@@ -25,6 +25,7 @@ App 的介面動畫照一套規則走（ARCHITECTURE 決策 253）：每一種�
 | `cameraFlight` | 1.2 | 兩端平滑 | 3D 鏡頭飛到要跟的列車、換跟車視角、停止跟車（決策 333）；遠的路中間升高；只移動，減少動態時直接切過去 | `Map3DMetalView.follow`，`Map3DFlight` |
 | `loadingIn` | 0.7 | 減速 | 實景地圖的載入畫面淡入（決策 307）；只淡入 | `RootView` 的 `.animation(_:value:)` |
 | `loadingOut` | 0.45 | 加速 | 同一個畫面在遊戲上淡出（決策 307） | 同上 |
+| `ambientCut` | 0.7 | 兩端平滑 | 放空模式換鏡頭時暗下、亮起（決策 414）；只淡入淡出，減少動態時 0.35 秒 | `AmbientOverlay.cut(to:veiled:)` |
 
 **加新的動畫時**：先找上表合用的一條。真的都不合，才在 `MotionRule` 加一條，並在 `InterfaceMotionTests` 加它的範圍，再補這張表與 `docs/UI_THEME.md`。
 

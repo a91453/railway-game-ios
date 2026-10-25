@@ -163,6 +163,7 @@
 		C5AE4EE9A27FB9506D2B3AB3 /* NightSkipUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F1B1CF5E7A5989229368AA /* NightSkipUITests.swift */; };
 		C61BAB200CEB800C0F50B796 /* TimetableEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBBC6A819CE29EEBC4FD844A /* TimetableEditor.swift */; };
 		C7A83471D6C3E093D4DA78C1 /* LineConfirmationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 937E1D33FAD3FAD9CF5A6E8C /* LineConfirmationCard.swift */; };
+		C91B7D7962C9EF890E327E3C /* AmbientModeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE545BF14678185EA76EACC5 /* AmbientModeView.swift */; };
 		CA2D393EB1EEDB99A27C093F /* HelpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEB483D5847D06BCBC26230C /* HelpView.swift */; };
 		CBC458048B6DB4EAB407BCB0 /* ZoomRowUnderPanelUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE945AAFE65EE7E25CA577DC /* ZoomRowUnderPanelUITests.swift */; };
 		CC783E4053798355ECF17075 /* StartSaveFlowSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2CB75E448956BC3D8E7FE02 /* StartSaveFlowSmokeTests.swift */; };
@@ -405,6 +406,7 @@
 		EC04F05461D58759373672F0 /* rain-steady.caf */ = {isa = PBXFileReference; path = "rain-steady.caf"; sourceTree = "<group>"; };
 		ED45B563EF8CA610F22296E6 /* Map3DMetalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Map3DMetalView.swift; sourceTree = "<group>"; };
 		EE37EC86D4CCF3E12B118693 /* tra_branch_runs.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra_branch_runs.json; sourceTree = "<group>"; };
+		EE545BF14678185EA76EACC5 /* AmbientModeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmbientModeView.swift; sourceTree = "<group>"; };
 		F04BA3646C6BDB8801CF770B /* station_transfers.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = station_transfers.json; sourceTree = "<group>"; };
 		F093629816AA56C52D91E5B8 /* MapLibre-iOS-LICENSE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "MapLibre-iOS-LICENSE.md"; sourceTree = "<group>"; };
 		F0F5EA47E14A5423014B49B8 /* NotoSans-OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "NotoSans-OFL.txt"; sourceTree = "<group>"; };
@@ -544,6 +546,7 @@
 			isa = PBXGroup;
 			children = (
 				6F88DCCA78BB699F97926C9A /* AchievementsView.swift */,
+				EE545BF14678185EA76EACC5 /* AmbientModeView.swift */,
 				3A47FE76CCB95D1AB460CE99 /* AppleMapBackground.swift */,
 				79941FA523AF01C8B9E74433 /* BuildToolRail.swift */,
 				A66F0D046BFE66DC6D9329D2 /* CityView3D.swift */,
@@ -942,6 +945,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				61F7C598833B74F821B44904 /* AchievementsView.swift in Sources */,
+				C91B7D7962C9EF890E327E3C /* AmbientModeView.swift in Sources */,
 				DDE073E597E0A494A18D4B85 /* AppleMapBackground.swift in Sources */,
 				3C6F0ECE58408BF72082F7C2 /* BuildToolRail.swift in Sources */,
 				31395CFF6BB9BC1ACA1A8A4B /* CityView3D.swift in Sources */,

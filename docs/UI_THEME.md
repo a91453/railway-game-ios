@@ -237,6 +237,12 @@ PR：#187（配色與 HUD）、#190／#192（地圖為主的玻璃版面）、#1
 - 下面三行：公司名（rounded、title2、heavy、`textPrimary`），地名（headline、`Theme.primary`），「正在準備地圖…」（subheadline、`textSecondary`）。
 - 淡入 0.7 s、淡出 0.45 s（`MotionRule.loadingIn`、`loadingOut`）；減少動態時列車不動。
 
+## 放空模式（決策 414）
+
+- 介面收起（`ambientHidden`：透明、不收觸碰、旁白不讀，位置不動）；地圖、列車、天氣照畫。
+- 換鏡頭：全螢幕黑色的幕，淡入 0.7 s、停 0.1 s、淡出 0.7 s（`MotionRule.ambientCut`）；減少動態時各 0.35 s。
+- 底部一行：`.regularMaterial` 膠囊，subheadline semibold 寫正在看什麼；剛打開 5 秒上面多一行 footnote「碰一下螢幕就回來。」（`secondary`）。
+
 ## 乘客感受的表情（決策 301）
 
 路線卡「乘客感受」三項旁邊的臉。24 格單色模板，同一個圓臉（中心 12, 13、半徑 9.5），五官挖空；眼睛照站長的表情（決策 122）。顏色只用既有的色票，預覽在 `docs/art/line-satisfaction-2026-10-20/faces.png`。

@@ -34,6 +34,10 @@ public enum WhatsNew {
             id: "2026-10-25",
             items: [
                 Line(
+                    english: "Idle Mode, beside Settings in the game menu: the camera follows your trains and looks over your stations and lines by itself. Tap to come back.",
+                    chinese: "遊戲選單「設定」旁的「放空模式」：鏡頭自己跟著列車、看車站和路線，碰一下就回來。"
+                ),
+                Line(
                     english: "Metro lines can be bought, as light rail could: the Xinbeitou and Xiaobitan branches too.",
                     chinese: "捷運路線可以收購了，和輕軌一樣；新北投、小碧潭支線也可以。"
                 ),
