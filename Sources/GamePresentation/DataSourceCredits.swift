@@ -724,8 +724,8 @@ public enum DataSourceCredits {
                         id: "highSpeedTrainModel",
                         title: language.text("White high-speed train", "白色高速列車"),
                         detail: language.text(
-                            "Half the high-speed trains on the 3D map, white with a dark green line: a model the game’s author made.",
-                            "3D 地圖上一半的高速列車，白色車身配深綠色線條：遊戲作者自己做的模型。"
+                            "The Train Pack’s high-speed train on the 3D map, white with a dark green line: a model the game’s author made.",
+                            "列車包裡 3D 地圖上的高速列車，白色車身配深綠色線條：遊戲作者自己做的模型。"
                         ),
                         notice: language.text(
                             "The game author’s own model, simplified and in the game’s colours, used with the author’s permission.",

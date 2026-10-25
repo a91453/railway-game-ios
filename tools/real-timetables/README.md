@@ -30,9 +30,9 @@ python3 -I tools/real-timetables/extract_yilan_schedule.py \
 - 通過站的時刻照網站的沿線內插（`passes`），示範用它算路線的停靠時刻。
 - 參考庫的檔案更新時重跑，並重跑 `TRADemoTests`、`TRADemoDayTests`。
 
-## 輕軌的班次（決策 400，10j-2）
+## 輕軌與捷運的班次（決策 400，10j-2、10j-3）
 
-`extract_metro_runs.py` 讀 App 已打包的 `<系統>.json`（每條線的車站順序）與 `<系統>_times.json`（交通部 TDX 的各站時刻，參考網站 2026-07-16 抓的，政府資料開放授權條款第 1 版），排成玩家可以收購的輕軌的班次，寫成 `RailwayGameApp/Resources/RealRailways/metro_runs.json`；之後照 `extract_branch_runs.py` 的 `line_runs` 檢查、排過夜與回送（同一個工具，多了 `start` 與 `balanced`，台鐵支線的輸出一個位元組都沒變）。
+`extract_metro_runs.py` 讀 App 已打包的 `<系統>.json`（每條線的車站順序）與 `<系統>_times.json`（交通部 TDX 的各站時刻，參考網站 2026-07-16 抓的，政府資料開放授權條款第 1 版），排成玩家可以收購的輕軌與捷運的班次，寫成 `RailwayGameApp/Resources/RealRailways/metro_runs.json`；之後照 `extract_branch_runs.py` 的 `line_runs` 檢查、排過夜與回送（同一個工具，多了 `start` 與 `balanced`，台鐵支線的輸出一個位元組都沒變）。
 
 ```sh
 python3 -I tools/real-timetables/extract_metro_runs.py \
@@ -44,4 +44,9 @@ python3 -I tools/real-timetables/extract_metro_runs.py \
 - 淡海綠山線不收：紅樹林要 7 條、崁頂要 6 條軌道過夜，遊戲的終點站只鋪 5 條（自己的線加兩側各兩層待避線；真實的崁頂機廠停 13 組裡的 9 組）。
 - 安坑輕軌還沒收：工具排得出來（303 班、7 組車），但遊戲鋪的第二條正線在它的急彎上會與第一條太近；見 `docs/HANDOFF.md` 第 5 節。
 - 高雄環狀輕軌不收：單向繞圈回到籬仔內，遊戲的線是兩端折返。
+- 捷運（10j-3，`METROS`）：一天後面已經沒有班要用的車，一進站折返好就回過夜的站（`balanced` 的 `prompt="spare"`），不等最後一班發出；捷運的晚上進站的車比發出的快。台鐵支線不走這條，輸出沒變。
+  - 新北投支線（北投—新北投）：298 班、1 班回送、3 組車（過夜：北投 2、新北投 1）。
+  - 小碧潭支線（七張—小碧潭）：243 班、沒有回送、3 組車（過夜：七張 1、小碧潭 2）。
+  - 不收（終點站同時要停的車比遊戲鋪的 5 條軌道多）：淡水信義線（25 條）、松山新店線（14）、中和新蘆線新莊端（迴龍 8）與蘆洲端（南勢角 6、古亭 4、蘆洲 8；共用的主線因此也不做）、板南線（13）、環狀線（12）、桃園機場線（8）、高雄紅線（小港、岡山車站各 8）、橘線（大寮 7）、台中綠線（北屯總站、高鐵臺中站各 6）。文湖線不試（35 m 的彎）。
+  - 三鶯線不收：工具排得出（398 班、8 班回送、12 組車），但白天一個遊戲小時要約 13 秒（debug），第二天下午停住；見 `docs/HANDOFF.md` 第 5 節。
 - 時刻表更新時重跑，並重跑 `RealLineAcquisitionTests`。

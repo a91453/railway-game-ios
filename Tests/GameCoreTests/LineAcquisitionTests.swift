@@ -72,6 +72,23 @@ final class LineAcquisitionTests: XCTestCase {
         XCTAssertEqual(world.line(id: main)?.runDays, [1])
     }
 
+    /// Decision 400 (10j-3): a metro line's riders cost its tier's value
+    /// each ($100, a light rail's $70), recorded as the value paid; a
+    /// purchase without a tier is a branch line's, $10,000 a rider.
+    func testABoughtLinesRidersCostItsTiersValue() throws {
+        XCTAssertEqual(LineAcquisition.value(ofDailyRiders: 3), Money(3_000_000))
+        XCTAssertEqual(LineAcquisition.value(ofDailyRiders: 3, tier: .branch), Money(3_000_000))
+        XCTAssertEqual(LineAcquisition.value(ofDailyRiders: 3, tier: .lightRail), Money(21_000))
+        XCTAssertEqual(LineAcquisition.value(ofDailyRiders: 3, tier: .metro), Money(30_000))
+        var world = try world(balance: Money(1_000_000_000_000_000))
+        let before = world.economy.balance
+        try world.recordLineAcquisition(line: main, realLine: "trtc:R_XBT", dailyRiders: LineAcquisition.maximumDailyRiders, tier: .metro)
+        let value = Money(20_000_000_000)
+        XCTAssertEqual(world.economy.balance, before - value)
+        XCTAssertEqual(world.acquisitions.first?.value, value)
+        XCTAssertEqual(world.accounts.assets.last?.cost, value)
+    }
+
     /// Bought before 04:00, the line runs today's timetable.
     func testABoughtLineBefore4RunsToday() throws {
         var world = try world(at: 200)
@@ -122,7 +139,7 @@ final class LineAcquisitionTests: XCTestCase {
         XCTAssertEqual(refusal { try $0.recordLineAcquisition(line: main, realLine: "", dailyRiders: 1) }, .invalidAcquisition)
         XCTAssertEqual(refusal { try $0.recordLineAcquisition(line: main, realLine: String(repeating: "x", count: 65), dailyRiders: 1) }, .invalidAcquisition)
         XCTAssertEqual(refusal { try $0.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: -1) }, .invalidAcquisition)
-        XCTAssertEqual(refusal { try $0.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 200_001) }, .invalidAcquisition)
+        XCTAssertEqual(refusal { try $0.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 2_000_001) }, .invalidAcquisition)
         XCTAssertEqual(refusal { try $0.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 100_000) },
                        .insufficientFunds(required: Money(100_000_000_000), available: world.economy.balance))
         XCTAssertEqual(refusal(after: { try $0.setLineRuns(main, to: []) }) {

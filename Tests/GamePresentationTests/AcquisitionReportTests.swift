@@ -12,7 +12,7 @@ import XCTest
 ///       --filter AcquisitionReportTests
 ///
 /// `ACQUIRE_REPORT` is the days to play (1 to 720); `ACQUIRE_ONLY` picks
-/// one line (`PINGXI`) or `player`.
+/// one line (`PINGXI`, `trtc:R_XBT`), `player` or `cities`.
 ///
 /// - **Each line**: a real-world game round the line under simple rules
 ///   (decision 258), over the app's heights, its land read round each
@@ -26,9 +26,13 @@ import XCTest
 ///   Taipei and Hsinchu (Neiwan Line's junction), under simple rules, left
 ///   to run: the cash and the operating profit a day (averaged over the
 ///   30 days before) on days 180 and 360, against each line's price.
+/// - **Each city's opening** (decision 400, 10j-3): a new game on a real
+///   place, as the launcher begins it, and every line it sells: what
+///   each costs, its land included, and whether the opening's cash and
+///   the most it can borrow buy it (A.5's $8 million).
 @MainActor
 final class AcquisitionReportTests: XCTestCase {
-    static let networks = ["PINGXI", "SHENAO", "JIJI", "NEIWAN"]
+    static let networks = ["PINGXI", "SHENAO", "JIJI", "NEIWAN", "ntdlrt:VB", "trtc:R_XBT", "trtc:G_XBT"]
     static let checkpoints: [Int64] = [1, 2, 7, 30, 180, 360, 720]
 
     private func requestedDays() throws -> Int64 {
@@ -107,6 +111,53 @@ final class AcquisitionReportTests: XCTestCase {
         print("### An ordinary player on a real map (\(days) days, simple rules)\n\n" + rows.joined(separator: "\n"))
     }
 
+    /// The places whose openings A.5 sets a target for, by where the
+    /// player points: Taipei, New Taipei (Banqiao and Tamsui), Taoyuan,
+    /// Taichung and Kaohsiung's main stations.
+    static let cities: [(name: String, latitude: Double, longitude: Double)] = [
+        ("Taipei", 25.047882, 121.517219), ("New Taipei, Banqiao", 25.013965, 121.464003), ("New Taipei, Tamsui", 25.167818, 121.445561),
+        ("Taoyuan", 24.988726, 121.313777), ("Taichung", 24.137066, 120.686867), ("Kaohsiung", 22.639532, 120.302559),
+    ]
+
+    func testWhatEachCityOpeningCanBuy() throws {
+        guard wanted("cities") else { throw XCTSkip("ACQUIRE_ONLY names another") }
+        _ = try requestedDays()
+        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let reach = GameWorld.startingBalance + CompanyAccounts.maximumLoan
+        var rows = [
+            "| Opening | Line | Tier | Riders a day (paid for) | Land | Building | Trains | Riders' value | Price | Within cash and loan (\(reach.moneyText)) |",
+            "| --- | --- | --- | --: | --: | --: | --: | --: | --: | --- |",
+        ]
+        for city in Self.cities {
+            let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: city.latitude, longitudeDegrees: city.longitude))
+            let world = GameLauncher.newWorld(at: anchor, options: NewGameOptions(), data: GameLauncher.NewWorldData(
+                population: data.population, places: data.places, water: data.water, coverage: data.coverage, heights: data.heights
+            ))
+            let session = GameSession(world: world, language: .english)
+            session.population = data.population
+            session.places = data.places
+            session.water = data.water
+            session.heights = data.heights
+            session.coverage = data.coverage
+            session.railways = data.railways
+            var listed = 0
+            for line in session.buyableRealLines {
+                let offer = session.realLineOffer(for: line)
+                listed += 1
+                guard let price = offer.price, let acquisition = offer.acquisition else {
+                    rows.append("| \(city.name) | \(line.id) | \(line.tier.rawValue) | not offered: \(offer.problem ?? "") | | | | | | |")
+                    continue
+                }
+                rows.append(
+                    "| \(city.name) | \(line.id) | \(line.tier.rawValue) | \(acquisition.dailyRiders) | \(price.land.moneyText) | \(price.building.moneyText) | "
+                        + "\(price.trains.moneyText) | \(price.riders.moneyText) | \(price.total.moneyText) | \(price.total <= reach ? "yes" : "no") |"
+                )
+            }
+            if listed == 0 { rows.append("| \(city.name) | none | | | | | | | | |") }
+        }
+        print("### What each city's opening can buy\n\n" + rows.joined(separator: "\n"))
+    }
+
     /// One line's game, bought or built, played `days`.
     private struct Played {
         let price: RealLineAcquisitionPrice
@@ -128,8 +179,10 @@ final class AcquisitionReportTests: XCTestCase {
 
     private func play(_ network: String, recording: Bool, days: Int64, data: RealWorldData) throws -> Played {
         let railways = try XCTUnwrap(data.railways)
-        let runs = try XCTUnwrap(railways.branchRuns[network])
-        let stations = try runs.stops.map { try BundledRealData.station($0, in: "tra_sched") }
+        let runs = try XCTUnwrap(railways.branchRuns[network] ?? railways.metroRuns[network])
+        let prefix = String(network.prefix { $0 != ":" })
+        let system = railways.branchRuns[network] != nil ? RealBranchLine.tra : prefix == "trtc" ? "mrt" : prefix
+        let stations = try runs.stops.map { try BundledRealData.station($0, in: system) }
         let latitude = stations.map(\.coordinate.latitude).reduce(0, +) / Double(stations.count)
         let longitude = stations.map(\.coordinate.longitude).reduce(0, +) / Double(stations.count)
         let anchor = try XCTUnwrap(GeoAnchor(latitude: Int64((latitude * 10_000_000).rounded()), longitude: Int64((longitude * 10_000_000).rounded())))
@@ -143,7 +196,7 @@ final class AcquisitionReportTests: XCTestCase {
         session.places = data.places
         session.water = data.water
         session.heights = data.heights
-        let line = try XCTUnwrap(session.buyableRealLines.first { $0.network == network })
+        let line = try XCTUnwrap(session.buyableRealLines.first { $0.network == network || $0.id == network }, network)
         let offer = session.realLineOffer(for: line)
         let acquisition = try XCTUnwrap(offer.acquisition, "\(network): \(offer.problem ?? "")")
         let before = world.economy.balance.amount

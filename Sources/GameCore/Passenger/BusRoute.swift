@@ -364,7 +364,7 @@ extension GameWorld {
     }
 
     /// Records that route `id` is real route `realRoute`, bought: pays
-    /// ``LineAcquisition/value(ofDailyRiders:)`` for its `dailyRiders`, as
+    /// ``LineAcquisition/value(ofDailyRiders:tier:)`` for its `dailyRiders`, as
     /// a real line's (decision 315), on the books as capital spending.
     ///
     /// - Throws, checked in this order: ``GameError/unknownBusRoute(_:)``;
