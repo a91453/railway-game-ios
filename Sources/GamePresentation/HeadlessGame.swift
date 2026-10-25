@@ -325,9 +325,14 @@ public final class RealWorldFiles {
     private var water: WaterGrid?
     private var heights: HeightGrid?
     private var coverage: CoverageGrid?
+    private var baseMap: BaseMapTiles?
+    /// The base map's file (decision 400's sequel): the app's, beside the
+    /// real-world folder.
+    public let baseMapFile: URL
 
-    public init(folder: URL) {
+    public init(folder: URL, baseMapFile: URL? = nil) {
         self.folder = folder
+        self.baseMapFile = baseMapFile ?? folder.deletingLastPathComponent().appendingPathComponent("BaseMap/taiwan.pmtiles")
     }
 
     /// The bytes of the bundled file `name`.
@@ -371,6 +376,10 @@ public final class RealWorldFiles {
         if set.coverage, session.coverage == nil {
             coverage = try coverage ?? CoverageGrid(data: data("taiwan_coverage.dat"))
             session.coverage = coverage
+        }
+        if set.baseMap, session.baseMap == nil {
+            baseMap = try baseMap ?? BaseMapTiles(data: Data(contentsOf: baseMapFile, options: .alwaysMapped))
+            session.baseMap = baseMap
         }
     }
 }
