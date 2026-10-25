@@ -22,7 +22,14 @@ final class BusFeederReportTests: XCTestCase {
         // A road straight out of the station, away from the other town,
         // 2 km long, laid as a base map's road would be, and three stops
         // on it 1.0, 1.4 and 1.8 km out, past the station's 800 m.
-        let away = (x: station.location.x - towns[1].x, y: station.location.y - towns[1].y)
+        // `BUS_DIRECTION`: `away` (the default), `toward` the other town,
+        // or `side`, square to the line.
+        let out = (x: station.location.x - towns[1].x, y: station.location.y - towns[1].y)
+        let away = switch ProcessInfo.processInfo.environment["BUS_DIRECTION"] {
+        case "toward": (x: -out.x, y: -out.y)
+        case "side": (x: -out.y, y: out.x)
+        default: out
+        }
         let length = FixedPoint.roundedSquareRoot(away.x * away.x + away.y * away.y)
         func point(metres: Int64) -> PlanPoint {
             let units = metres * WorldCoordinate.unitsPerMetre
@@ -66,6 +73,64 @@ final class BusFeederReportTests: XCTestCase {
             + "feeder \(route0.feederTrips) trips at \(route0.feederMinutes) min)\n" + rows.joined(separator: "\n"))
         print("\nOver \(days) days: fare trips \(totals.plain) → \(totals.fed) (+\(totals.plain > 0 ? (totals.fed - totals.plain) * 1_000 / totals.plain : 0)‰), "
             + "bus riders \(totals.riders), bus net \(dollars(totals.net))")
+    }
+
+    /// The real map: a station alone at a real station's place, the land
+    /// and the base map's roads within 3 km read, and a route of three
+    /// stops on the road cells nearest 1.0, 1.4 and 1.8 km out in each of
+    /// four directions. Prints the station's trips, what each route adds
+    /// and its minutes; the day's fares at one ride a trip against two
+    /// buses' cost.
+    @MainActor
+    func testAFeederOnTheRealMap() throws {
+        guard ProcessInfo.processInfo.environment["BUS_REPORT"] != nil else { throw XCTSkip("BUS_REPORT=<days> runs the report") }
+        let places = [("Taipei", 25.0478, 121.5170), ("Zhubei", 24.8393, 121.0094), ("Fengyuan", 24.2541, 120.7234), ("Pingtung", 22.6693, 120.4862)]
+        var rows = ["| Station | Direction | Station trips | With the bus | Added | Feeder minutes | Route m | Fares a day | Two buses a day |",
+                    "| --- | --- | --: | --: | --: | --: | --: | --: | --: |"]
+        for (name, latitude, longitude) in places {
+            let session = GameSession(world: GameWorld.newWholeTaiwanGame())
+            try CommandLogReplay.realWorld.install(
+                RealWorldDataSet(population: true, places: true, water: true, heights: true, coverage: true, baseMap: true), in: session
+            )
+            let frame = RealWorldFrame(anchor: WholeTaiwan.anchor, bounds: WholeTaiwan.bounds)
+            let position = frame.worldPosition(latitude: latitude, longitude: longitude)
+            let centre = PlanPoint(x: Int64(position.x.rounded()), y: Int64(position.y.rounded()))
+            session.readLand(within: 3_000 * WorldCoordinate.unitsPerMetre, of: centre)
+            var base = session.world
+            base.setEconomyMode(.management)
+            base.setLandDemand(true)
+            let station = try base.buildStation(named: name, at: centre).id
+            let roads = try XCTUnwrap(base.roads)
+            func nearestRoad(to point: PlanPoint) -> CellPosition? {
+                let row = Int(point.y / Land.cellLength), column = Int(point.x / Land.cellLength)
+                for reach in 0...8 {
+                    let ring = (-reach...reach).flatMap { dr in (-reach...reach).map { CellPosition(row: row + dr, column: column + $0) } }
+                        .filter { max(abs($0.row - row), abs($0.column - column)) == reach && roads.cells.contains($0) }
+                    if let cell = ring.min() { return cell }
+                }
+                return nil
+            }
+            let own = base.passengers.first { $0.station == station }?.demand?.dailyTrips ?? 0
+            // The station's own cell on a road, as a station road gives it.
+            if !roads.cells.contains(base.roadCell(of: centre)), (try? base.stationRoadQuote(at: station)) != nil {
+                _ = try base.buildStationRoad(at: station)
+            }
+            for (label, dx, dy) in [("east", Int64(1), Int64(0)), ("west", -1, 0), ("north", 0, -1), ("south", 0, 1)] {
+                var world = base
+                let stops = [1_800, 1_400, 1_000].compactMap { (metres: Int64) in
+                    nearestRoad(to: PlanPoint(x: centre.x + dx * metres * WorldCoordinate.unitsPerMetre, y: centre.y + dy * metres * WorldCoordinate.unitsPerMetre))
+                }
+                guard stops.count == 3, let route = try? world.createBusRoute(to: station, stops: stops, service: .every(minutes: 10), buses: 2) else {
+                    rows.append("| \(name) | \(label) | \(own) | — | no way along the roads | | | | |")
+                    continue
+                }
+                let fed = world.busRoute(id: route.id)!
+                let with = world.passengers.first { $0.station == station }?.demand?.dailyTrips ?? 0
+                rows.append("| \(name) | \(label) | \(own) | \(with) | \(own > 0 ? (with - own) * 1_000 / own : 0)‰ | \(fed.feederMinutes) | \(fed.metres) | "
+                    + "\(dollars(fed.feederTrips * BusRoute.fare.amount)) | \(dollars(2 * BusRoute.dailyCostPerBus.amount)) |")
+            }
+        }
+        print("### A feeder on the real map (2 buses, every 10 minutes)\n" + rows.joined(separator: "\n"))
     }
 
     private func dollars(_ cents: Int64) -> String {
