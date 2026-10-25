@@ -58,6 +58,9 @@ public struct Map3DTrainSet: Sendable {
 
     /// The four model names and their models, in the pack's order.
     func models() -> [Map3DModelPack.Model] {
+        if key == "emu3000" || key == "emu3000Far" {
+            return Map3DEMU3000.gameModels(far:key == "emu3000Far")
+        }
         let cars = build()
         func named(_ model: Map3DModelPack.Model, _ name: String) -> Map3DModelPack.Model {
             Map3DModelPack.Model(name: name, vertices: model.vertices, minimum: model.minimum, maximum: model.maximum)
@@ -102,9 +105,10 @@ public struct Map3DTrainSet: Sendable {
             hauled("pushPull", locomotive: .e1000,
                    coach: coach(body: 0xC9CECC, band: 0xED822A), lastIsLocomotive: true),
             // The multiple units, by their performance (decision 237); the
-            // EMU3000, the 700T and the metro as #900 has them (the author,
-            // 2026-10-21), the metro's band the line's colour.
-            multipleUnit("emu3000", asset: "01_TRA_modern_3x2-01", livery: TrainLivery.emu3000),
+            // EMU3000 uses its photo-led native units; the metro keeps
+            // the line-coloured band.
+            Map3DEMU3000.trainSet(),
+            Map3DEMU3000.trainSet(far:true),
             // Decision 408: the 700T as #1201's tenth revision, each car its
             // own length, the pantographs on cars 4 and 9; #900's, a sixth
             // of its triangles, from 500 m out.
@@ -179,7 +183,7 @@ public struct Map3DTrainSet: Sendable {
 
     /// Decision 408: and the 700T and the N700S-G, 5,600 to 9,100 a car
     /// (their ``far`` sets between).
-    static let nearOnly: Set = ["greenTram", "SUMMER", "STEAM", "highSpeed", "n700sG"]
+    static let nearOnly: Set = ["greenTram", "SUMMER", "STEAM", "highSpeed", "n700sG", "emu3000"]
 
     /// Decision 408: the set a train of `key` numbered `number` is drawn
     /// as: half the high-speed trains, the odd-numbered, the N700S-G, the

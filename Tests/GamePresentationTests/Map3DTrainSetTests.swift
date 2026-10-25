@@ -28,6 +28,9 @@ final class Map3DTrainSetTests: XCTestCase {
                     // its E200, five to six thousand; the N700S-G, the
                     // author's mesh with fewer triangles on the 700T's bogies,
                     // seven thousand a cab and six a middle car.
+                    // EMU3000 dedicated near detail (<500m), measured geometry budget;
+                    // far models keep the generic ceiling, tested separately at 500m.
+                    : set.key == "emu3000" ? ([set.headName,set.tailName].contains(name) ? 6_000...7_500:4_000...5_500)
                     : set.key == "highSpeed" ? ([set.headName, set.tailName].contains(name) ? 8_000...9_500 : 5_000...6_000)
                     : set.key == "n700sG" ? ([set.headName, set.tailName].contains(name) ? 6_700...7_300 : 5_700...6_300)
                     : name == set.headName && set.key == "E200CK" ? 5_000...6_000 : 100...4_100
@@ -54,7 +57,7 @@ final class Map3DTrainSetTests: XCTestCase {
                 let height: ClosedRange<Float> = ["greenTram", "fiveSectionLRT", "sevenSectionLRT"].contains(set.key) ? 3.2...4.6
                     : set.key == "STEAM" ? 3.4...4.7
                     // Decision 408: #1201's E200 and the 700T's pantographs.
-                    : ["E200CK", "highSpeed", "n700sG"].contains(set.key) ? 3.4...4.9 : 3.4...4.6
+                    : ["E200CK", "highSpeed", "n700sG", "emu3000", "emu3000Far"].contains(set.key) ? 3.4...4.9 : 3.4...4.6
                 XCTAssertTrue(height.contains(model.maximum.z), "\(name): \(model.maximum.z) m tall")
                 if lineColoured.contains(set.key) {
                     XCTAssertTrue(model.vertices.contains { $0.color >> 24 == 0 }, "\(name): the band is the line's colour")
@@ -214,9 +217,10 @@ final class Map3DTrainSetTests: XCTestCase {
         XCTAssertGreaterThan(tail.maximum.z, 4, "the pantograph on the last")
         XCTAssertFalse(try model("set-greenTram-car").vertices.contains(where: \.glows), "no lamps between")
         // Ten times a metro car's triangles, so drawn half as far.
+        XCTAssertEqual(Map3DTrainSet.reach(of: "EMU3000"),Map3DTrainSet.tramReach)
         XCTAssertEqual(Map3DTrainSet.reach(of: "C"), 500)
         XCTAssertEqual(Map3DTrainSet.reach(of: "greenTram"), 500)
-        for key in ["B", "", "EMU3000", "puyuma"] { XCTAssertEqual(Map3DTrainSet.reach(of: key), Map3DTrains.modelReach, key) }
+        for key in ["B", "", "puyuma"] { XCTAssertEqual(Map3DTrainSet.reach(of: key), Map3DTrains.modelReach, key) }
     }
 
     /// Decision 331, later: the green two-car EMU's cars are #961's two
