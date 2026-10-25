@@ -93,6 +93,11 @@ targets:
         # The app's tint: the AccentColor asset, Theme.primary (Views/Theme.swift).
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         GENERATE_INFOPLIST_FILE: "YES"
+        # Decision 409: the game's own save type (document type and exported
+        # type), which no INFOPLIST_KEY_ setting can write; merged with the
+        # generated Info.plist. Outside the source folders, so it is not
+        # copied into the app as a resource.
+        INFOPLIST_FILE: Info.plist
         INFOPLIST_KEY_CFBundleDisplayName: Along the Line
         # Decision 335: "Use my location" on the real-world picker asks for
         # one fix while the app is in use; the reason is localized in

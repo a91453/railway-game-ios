@@ -404,10 +404,15 @@ public struct SaveLibrary: Sendable {
     /// the date, in the temporary folder (the reference's "导出本地存档").
     /// Decision 175, later: the file carries the game's news log `news`,
     /// which an import reads back and a build before it skips.
-    public static func exportFile(for world: GameWorld, news: NewsLog? = nil, at date: Date) throws(SaveError) -> URL {
-        let data = try encode(world, news: news, at: date)
+    ///
+    /// Decision 409: the file is the game's own type,
+    /// ``SharedNetwork/fileExtension``, so a friend who gets it taps it
+    /// open in the game; it is JSON as before. It carries `company`, the
+    /// postcard's company name, when given.
+    public static func exportFile(for world: GameWorld, news: NewsLog? = nil, company: String? = nil, at date: Date) throws(SaveError) -> URL {
+        let data = try encode(world, news: news, company: company, at: date)
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("Exports", isDirectory: true)
-        let url = folder.appendingPathComponent("Along the Line \(stamp(date)).json")
+        let url = folder.appendingPathComponent("Along the Line \(stamp(date)).\(SharedNetwork.fileExtension)")
         do {
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
             try data.write(to: url, options: .atomic)
@@ -429,8 +434,8 @@ public struct SaveLibrary: Sendable {
     /// The file for `world` saved at `date`, with the news log `news` when
     /// given (an exported file; a save in the folder keeps its news log
     /// beside it).
-    public static func encode(_ world: GameWorld, news: NewsLog? = nil, at date: Date) throws(SaveError) -> Data {
-        let file = SaveFile(app: appName, savedAt: date, summary: SaveSummary(world: world), game: SavedGame(world: world), news: news)
+    public static func encode(_ world: GameWorld, news: NewsLog? = nil, company: String? = nil, at date: Date) throws(SaveError) -> Data {
+        let file = SaveFile(app: appName, savedAt: date, summary: SaveSummary(world: world), game: SavedGame(world: world), news: news, company: company)
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         do {
@@ -450,10 +455,15 @@ public struct SaveLibrary: Sendable {
     /// log an exported file carries (decision 175, later), or `nil`: none,
     /// or one that cannot be read, which never stops the game loading.
     public static func decodeWithNews(_ data: Data) throws(SaveError) -> (world: GameWorld, news: NewsLog?) {
+        let file = try decodeFile(data)
+        return (file.game.world, file.news)
+    }
+
+    /// The whole file `data`, as ``decodeWithNews(_:)`` reads it.
+    static func decodeFile(_ data: Data) throws(SaveError) -> SaveFile {
         _ = try header(of: data).get()
         do {
-            let file = try decoder.decode(SaveFile.self, from: data)
-            return (file.game.world, file.news)
+            return try decoder.decode(SaveFile.self, from: data)
         } catch {
             throw .damaged
         }
@@ -670,6 +680,9 @@ public enum SaveError: Error, Hashable, Sendable {
     case damaged
     /// The file could not be read, written, moved or deleted.
     case fileSystem
+    /// Decision 409: a file someone sent is larger than any save
+    /// (``SharedNetwork/maximumBytes``), so it is not read.
+    case tooLarge
 
     public func playerMessage(in language: DisplayLanguage) -> String {
         switch self {
@@ -684,6 +697,8 @@ public enum SaveError: Error, Hashable, Sendable {
             language.text("That save is damaged and cannot be loaded.", "這個存檔已損壞，無法讀取。")
         case .fileSystem:
             language.text("The save could not be read or written. Try again.", "無法讀寫存檔，請再試一次。")
+        case .tooLarge:
+            language.text("That file is too large to be an Along the Line save.", "這個檔案太大，不是《沿線》的存檔。")
         }
     }
 }
@@ -693,19 +708,24 @@ public enum SaveError: Error, Hashable, Sendable {
 /// Decision 175, later: `news`, the news log, only in an exported file, an
 /// optional key a build before it skips (`JSONDecoder` ignores keys a type
 /// does not name), so the save version stays.
-private struct SaveFile: Codable {
+///
+/// Decision 409: `company`, the company name on the postcard of a network
+/// shared with a friend, the same way: optional, only in an exported file.
+struct SaveFile: Codable {
     let app: String
     let savedAt: Date
     let summary: SaveSummary
     let game: SavedGame
     let news: NewsLog?
+    let company: String?
 
-    init(app: String, savedAt: Date, summary: SaveSummary, game: SavedGame, news: NewsLog?) {
+    init(app: String, savedAt: Date, summary: SaveSummary, game: SavedGame, news: NewsLog?, company: String? = nil) {
         self.app = app
         self.savedAt = savedAt
         self.summary = summary
         self.game = game
         self.news = news
+        self.company = company
     }
 
     init(from decoder: any Decoder) throws {
@@ -716,6 +736,8 @@ private struct SaveFile: Codable {
         game = try container.decode(SavedGame.self, forKey: .game)
         // The news log is a convenience: one that cannot be read is left out.
         news = try? container.decodeIfPresent(NewsLog.self, forKey: .news)
+        // So is the company name; ``SharedNetwork`` cleans and cuts it.
+        company = try? container.decodeIfPresent(String.self, forKey: .company)
     }
 }
 

@@ -1038,7 +1038,9 @@ public final class GameLauncher {
     private func loadAutosave(_ candidates: [SaveLibrary.Entry], fallingBack: Bool, at date: Date) {
         let playing = session
         if playing != nil { recordChallengeResult(at: date) }
-        let current = playing.map { ($0.worldToSave, $0.news) }
+        // Decision 409: a friend's network only looked at is not kept in
+        // turn; going back is then as from the start screen.
+        let current = isLookingAtSharedNetwork ? nil : playing.map { ($0.worldToSave, $0.news) }
         do throws(SaveError) {
             let library = library
             let loaded = try afterSaves { () throws(SaveError) -> (GameWorld, NewsLog, Bool, SaveLibrary.Entry?)? in
@@ -1105,13 +1107,143 @@ public final class GameLauncher {
         importSave(data)
     }
 
-    /// Loads the save file `data`.
+    /// Loads the save file `data`. Decision 409: one larger than any save
+    /// (``SharedNetwork/maximumBytes``) is refused unread.
     public func importSave(_ data: Data) {
         do throws(SaveError) {
+            guard data.count <= SharedNetwork.maximumBytes else { throw .tooLarge }
             let (world, news) = try SaveLibrary.decodeWithNews(data)
             begin(world, keepingAutosave: true, news: news)
         } catch {
             message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+        }
+    }
+
+    // MARK: - A network someone sent (decision 409)
+
+    /// What Save Game says while only looking at a friend's network.
+    static func lookingIsNotSaved(in language: DisplayLanguage) -> String {
+        language.text(
+            "A friend's network you are only looking at is not saved. Open the file again and start a new game from it to keep it.",
+            "只看的朋友路網不會存檔。要留下來，再開一次檔案，選「從這張路網開新的一局」。"
+        )
+    }
+
+    /// The network a friend sent, read and waiting for the player to choose
+    /// what to do with it (``play(_:as:)``), or `nil`.
+    public private(set) var receivedNetwork: SharedNetwork?
+    /// Whether a file someone sent is being read.
+    public private(set) var isReadingReceivedNetwork = false
+    /// Whether the game being played is a network someone sent, only
+    /// looked at (``SharedNetworkChoice/look``): nothing of it is saved,
+    /// and the autosave stays the player's own game.
+    public private(set) var isLookingAtSharedNetwork = false
+    /// The name on the postcard of the network looked at, while looking.
+    private var lookedAtCompany: String?
+
+    /// The company name a save shared from the game carries: the player's
+    /// own (`own`, from their postcard), or, while looking at a friend's
+    /// network, the friend's, never the player's.
+    public func companyNameToShare(own: String?) -> String? {
+        isLookingAtSharedNetwork ? lookedAtCompany : own
+    }
+
+    /// Reads the file someone sent at `url` (tapped in LINE, AirDrop or
+    /// Files) off the main actor, then offers it (``receivedNetwork``).
+    /// A file that cannot be read is reported where the player is, the
+    /// game or the start screen, and changes nothing else.
+    @discardableResult
+    public func receiveNetwork(at url: URL) -> Task<Void, Never> {
+        isReadingReceivedNetwork = true
+        return Task {
+            let read = await Task.detached(priority: .userInitiated) { () -> Result<SharedNetwork, SaveError> in
+                Result { () throws(SaveError) in try SharedNetwork(contentsOf: url) }
+            }.value
+            receiveNetwork(read)
+        }
+    }
+
+    /// Offers the network read from `data`, as ``receiveNetwork(at:)``
+    /// does once the file is read.
+    public func receiveNetwork(_ data: Data) {
+        receiveNetwork(Result { () throws(SaveError) in try SharedNetwork(data: data) })
+    }
+
+    private func receiveNetwork(_ read: Result<SharedNetwork, SaveError>) {
+        isReadingReceivedNetwork = false
+        switch read {
+        case .success(let network):
+            receivedNetwork = network
+        case .failure(let error):
+            receivedNetwork = nil
+            let failure = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+            if let session {
+                session.message = failure
+            } else {
+                message = failure
+            }
+        }
+    }
+
+    /// Puts the network someone sent away without opening it.
+    public func dismissReceivedNetwork() {
+        receivedNetwork = nil
+    }
+
+    /// Opens `network` as the player chose. The game being played, if any,
+    /// is autosaved first (unless it is itself a network only looked at).
+    /// A new game from it keeps the autosave as a save of the player's own,
+    /// as every new game does; its money is worked out off the main actor
+    /// first (``isReadingReceivedNetwork`` meanwhile). Looking writes
+    /// nothing at all. Neither unlocks achievements or records a
+    /// challenge: the network is a friend's work.
+    @discardableResult
+    public func play(_ network: SharedNetwork, as choice: SharedNetworkChoice) -> Task<Void, Never> {
+        receivedNetwork = nil
+        switch choice {
+        case .newGame:
+            isReadingReceivedNetwork = true
+            return Task {
+                let made = await Task.detached(priority: .userInitiated) { () -> Result<GameWorld, SaveError> in
+                    Result { () throws(SaveError) in try network.newGameWorld() }
+                }.value
+                isReadingReceivedNetwork = false
+                switch made {
+                case .success(let world):
+                    guard keepPlayersGame() else { return }
+                    begin(world, keepingAutosave: true, isDemo: true)
+                case .failure(let error):
+                    report(error)
+                }
+            }
+        case .look:
+            guard keepPlayersGame(),
+                  begin(network.world, keepingAutosave: false, news: network.news, isDemo: true) else { return Task {} }
+            isLookingAtSharedNetwork = true
+            lookedAtCompany = network.company
+            session?.message = StatusMessage(kind: .success, text: language.text(
+                "You are looking at a friend's network. Nothing here is saved.",
+                "你在看朋友的路網，這裡的一切都不會存檔。"
+            ))
+            return Task {}
+        }
+    }
+
+    /// Autosaves the game being played before another opens, unless it is
+    /// a network only looked at. Returns whether to go on.
+    private func keepPlayersGame() -> Bool {
+        guard session != nil, !isLookingAtSharedNetwork else { return true }
+        return autosaveCurrentGame(refreshing: false)
+    }
+
+    /// `error` where the player is: the game's status line, or the start
+    /// screen's.
+    private func report(_ error: SaveError) {
+        let failure = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+        if let session {
+            session.message = failure
+        } else {
+            message = failure
         }
     }
 
@@ -1134,6 +1266,9 @@ public final class GameLauncher {
         }
         stopLessonClock()
         session?.stopGameLoop()
+        // Decision 409: set again by ``play(_:as:)`` when only looking.
+        isLookingAtSharedNetwork = false
+        lookedAtCompany = nil
         let started = GameSession(world: world, language: language)
         started.population = population
         started.places = places
@@ -1244,6 +1379,11 @@ public final class GameLauncher {
     @discardableResult
     public func saveCurrentGame(at date: Date = Date(), named name: String? = nil) -> Task<Void, Never> {
         guard let session else { return Task {} }
+        // Decision 409: a friend's network only looked at is never saved.
+        guard !isLookingAtSharedNetwork else {
+            session.message = StatusMessage(kind: .failure, text: Self.lookingIsNotSaved(in: language))
+            return Task {}
+        }
         let language = language
         return write(session.worldToSave, news: session.news, as: .manual, at: date, named: name) { [weak self, weak session] result in
             switch result {
@@ -1273,6 +1413,9 @@ public final class GameLauncher {
     @discardableResult
     public func autosaveCurrentGame(at date: Date = Date(), refreshing: Bool = true) -> Bool {
         guard let session else { return false }
+        // Decision 409: looking at a friend's network writes nothing; the
+        // autosave is still the player's own game.
+        guard !isLookingAtSharedNetwork else { return true }
         recordChallengeResult(at: date)
         let (library, world, news) = (library, session.worldToSave, session.news)
         do throws(SaveError) {
@@ -1296,7 +1439,7 @@ public final class GameLauncher {
     /// false. `nil` without a game.
     @discardableResult
     public func autosaveInBackground(at date: Date = Date()) -> Task<Void, Never>? {
-        guard let session else { return nil }
+        guard let session, !isLookingAtSharedNetwork else { return nil }
         recordChallengeResult(at: date)
         let language = language
         return write(session.worldToSave, news: session.news, as: .autosave, at: date) { [weak session] result in
@@ -1313,7 +1456,7 @@ public final class GameLauncher {
     /// to. `nil` without a game.
     @discardableResult
     public func autosaveSlotInBackground(at date: Date = Date()) -> Task<Void, Never>? {
-        guard let session else { return nil }
+        guard let session, !isLookingAtSharedNetwork else { return nil }
         let world = session.worldToSave
         guard world != lastSlotWorld else { return nil }
         lastSlotWorld = world
@@ -1373,6 +1516,8 @@ public final class GameLauncher {
         let left = session != nil
         session?.stopGameLoop()
         session = nil
+        isLookingAtSharedNetwork = false
+        lookedAtCompany = nil
         gameIsOpen.value = false
         duckMusic?(1)
         runningSound?(nil)

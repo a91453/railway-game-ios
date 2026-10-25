@@ -526,7 +526,7 @@ private struct GameMenu: View, Equatable {
                     }
                 }
                 .accessibilityIdentifier("menu.saveGameAs")
-                ShareLink(item: ExportedSave(session: session), preview: SharePreview(Text("Along the Line save"))) {
+                ShareLink(item: ExportedSave(session: session, launcher: launcher), preview: SharePreview(Text("Along the Line save"))) {
                     Label("Export Save", systemImage: "square.and.arrow.up")
                 }
                 // Decision 192: back to the game of some minutes before,
@@ -1003,20 +1003,6 @@ private struct SpeedMenu: View, Equatable {
         }
         .accessibilityLabel("Speed: \(runningSpeed.accessibilityName(in: language))")
         .accessibilityHint("Chooses how fast game time runs.")
-    }
-}
-
-/// The game as a save file to share (Stage C4, the reference's "导出本地存档"),
-/// written when the player shares it, from the game as it is then: the menu
-/// that offers it does not build the world to save every tick.
-private struct ExportedSave: Transferable {
-    let session: GameSession
-
-    static var transferRepresentation: some TransferRepresentation {
-        FileRepresentation(exportedContentType: .json) { save in
-            let (world, news) = await (save.session.worldToSave, save.session.news)
-            return SentTransferredFile(try SaveLibrary.exportFile(for: world, news: news, at: Date()))
-        }
     }
 }
 

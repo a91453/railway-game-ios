@@ -240,11 +240,14 @@ private struct PostcardPicture {
 /// the game running underneath changes neither.
 struct PostcardSheet: View {
     let session: GameSession
+    let launcher: GameLauncher
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var screenScheme
     @Environment(\.regionStyle) private var region
+    /// Where the name the player last wrote is kept on the device.
+    nonisolated static let companyNameKey = "postcard.companyName"
     /// The name the player last wrote, kept on the device.
-    @AppStorage("postcard.companyName") private var companyName = ""
+    @AppStorage(PostcardSheet.companyNameKey) private var companyName = ""
     @State private var appearance: PostcardAppearance?
     /// The world when the sheet opened: the card and the picture are both
     /// drawn from it, not redrawn on every tick of the game.
@@ -253,8 +256,9 @@ struct PostcardSheet: View {
     @State private var map: PostcardMap?
     @State private var picture: PostcardPicture?
 
-    init(session: GameSession) {
+    init(session: GameSession, launcher: GameLauncher) {
         self.session = session
+        self.launcher = launcher
         _world = State(initialValue: session.world)
     }
 
@@ -312,6 +316,31 @@ struct PostcardSheet: View {
                         // and look shown, so what is shared is the card above.
                         .disabled(picture.key != key)
                         .accessibilityIdentifier("postcard.share")
+                        // Decision 409: the network itself, with this card
+                        // as its preview, for a friend to open in the game.
+                        ShareLink(
+                            item: ExportedSave(session: session, launcher: launcher),
+                            preview: SharePreview(Text(verbatim: picture.title), image: picture.image)
+                        ) {
+                            Label {
+                                Text(verbatim: language.text("Share Network", "分享路網"))
+                            } icon: {
+                                Image(systemName: "point.3.connected.trianglepath.dotted")
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(Theme.primary)
+                        .controlSize(.large)
+                        .disabled(picture.key != key)
+                        .accessibilityIdentifier("postcard.shareNetwork")
+                        Text(verbatim: language.text(
+                            "A friend who opens it can start a game from your network or just look round it.",
+                            "朋友打開後，可以用你的路網開新的一局，或只是看看。"
+                        ))
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     } else {
                         ProgressView()
                     }
