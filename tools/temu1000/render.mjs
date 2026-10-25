@@ -42,7 +42,8 @@ try {
  writeFileSync(resolve(root,'manifest.json'),JSON.stringify(manifest,null,2)+'\n');
  const all=manifest.models.find(m=>m.category==='formation'),html='<style>body{font:18px system-ui;color:#262c57;background:#eceef6;margin:24px}h1{font-size:28px}.row{display:flex;gap:12px}.row>div{background:white;border-radius:12px;padding:10px;flex:1;min-width:0;text-align:center}img{width:100%;object-fit:contain}</style>';
  async function sheet(name,body){await page.setContent('<meta charset="utf-8"><base href="'+address+'/">'+html+body);await page.evaluate(()=>Promise.all([...document.images].map(i=>i.decode())));await page.screenshot({path:resolve(root,'previews',name),fullPage:true});}
- await sheet('overview.png','<h1>TEMU1000 傾斜式電聯車｜原生組合預覽</h1><div class="row"><div><img src="previews/'+all.id+'-hero.png"></div></div><div class="row">'+['left','front','right','top'].map(v=>'<div><img src="'+all.views[v]+'"><p>'+v+'</p></div>').join('')+'</div>');
+ const cab=manifest.models.find(m=>m.id==='temu1000-leading');
+ await sheet('overview.png','<h1>TEMU1000｜修訂後端車與八節編組</h1><div class="row"><div><img src="previews/'+cab.id+'-hero.png"><p>TED 端車｜斜視</p></div><div><img src="'+cab.views.front+'"><p>正面</p></div></div><div class="row"><div><img src="'+cab.views.left+'"><p>側面</p></div><div><img src="'+cab.views.top+'"><p>俯視</p></div></div><div class="row"><div><img src="previews/'+all.id+'-hero.png"><p>八節完整編組</p></div></div>');
  await sheet('directions.png','<h1>同一組模型的七向透明圖</h1><div class="row">'+manifest.directions.map(v=>'<div><img src="'+all.views[v]+'"><p>'+v+'</p></div>').join('')+'</div>');
  await sheet('units.png','<h1>獨立單元｜前端・後端</h1><div class="row">'+manifest.models.filter(m=>m.category==='section').map(m=>'<div><img src="previews/'+m.id+'-hero.png"><p>'+m.id+' · '+m.triangles+' 三角形</p></div>').join('')+'</div>');
  const comparison=manifest.models.find(m=>m.category==='comparison');

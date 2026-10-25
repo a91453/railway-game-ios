@@ -6,9 +6,9 @@ public enum Map3DTEMU1000 {
     public static let pitch: Float = 23.9
     public enum Unit: String, CaseIterable, Sendable { case leading, middle, pantograph, trailing }
     public static let shell = Map3DPalette.tileWhite
-    public static let band = Map3DPalette.trimBlue
+    public static let band = Map3DPalette.gymGreen
     public static let glass = Map3DTrainStyle.glass
-    public static let ink = Map3DColor.shaded(Map3DPalette.trimBlue, 0.45)
+    public static let ink = Map3DColor.shaded(Map3DPalette.playerRim, 0.75)
 
     public static func model(_ unit: Unit) -> Map3DModelPack.Model {
         var builder = StationKitBuilder()
@@ -42,21 +42,23 @@ extension StationKitBuilder {
             (3.70,0.40),(3.63,0.90),(3.43,1.23),(3.07,1.42),
             (2.54,1.45),(1.51,1.45),(0.91,1.41),(0.83,1.23)
         ]
-        func ring(_ x: Float, width: Float = 1, top: Float = 3.70, bottom: Float = 0.83) -> [Map3DPoint] {
+        func ring(_ x: Float, width: Float = 1, top: Float = 3.70, bottom: Float = 0.83, bulge: Float = 0, noseRound: Float = 0) -> [Map3DPoint] {
             section.map { h, side in
                 let t = (h - 0.83) / 2.87
-                return Map3DPoint(x, bottom + t * (top-bottom), side * width)
+                let shoulder = max(0, 1 - (side / 1.45) * (side / 1.45))
+                let oval = 1 - noseRound * (1 - sinf(Float.pi * t))
+                return Map3DPoint(x + bulge * 4 * t * (1-t) * shoulder, bottom + t * (top-bottom), side * width * oval)
             }
         }
         var rings = [ring(-11.75),ring(11.75)]
         if nose > 0 {
             rings = [ring(-11.75),ring(8.9),ring(9.85,width:0.98,top:3.56),
                      ring(10.75,width:0.94,top:3.26,bottom:0.76),
-                     ring(11.65,width:0.83,top:2.76,bottom:0.61),
-                     ring(12.35,width:0.72,top:2.05,bottom:0.60)]
+                     ring(11.55,width:0.94,top:2.91,bottom:0.65),
+                     ring(12.20,width:0.91,top:2.66,bottom:0.63,bulge:0.22,noseRound:0.22)]
         } else if nose < 0 {
-            rings = [ring(-12.35,width:0.72,top:2.05,bottom:0.60),
-                     ring(-11.65,width:0.83,top:2.76,bottom:0.61),
+            rings = [ring(-12.20,width:0.91,top:2.66,bottom:0.63,bulge:-0.22,noseRound:0.22),
+                     ring(-11.55,width:0.94,top:2.91,bottom:0.65),
                      ring(-10.75,width:0.94,top:3.26,bottom:0.76),
                      ring(-9.85,width:0.98,top:3.56),ring(-8.9),ring(11.75)]
         }
@@ -65,7 +67,7 @@ extension StationKitBuilder {
                 let j = (i+1) % section.count
                 let c: UInt32
                 if (i == 2 || i == 12) { c = white }
-                else if i == 3 || i == 11 { c = ink }
+                else if i == 3 || i == 11 { c = white }
                 else if i >= 6 && i <= 9 { c = roof }
                 else { c = white }
                 face([rings[k][i],rings[k][j],rings[k+1][j]],inside:centre,color:c)
@@ -89,49 +91,90 @@ extension StationKitBuilder {
             for side: Float in [-1,1] { box(bogie,0.52,side*1.30,2.70,0.04,0.15,ink) }
         }
         for x: Float in [-4.9,-1.8,1.8,4.9] { box(x,0.57,0,2.10,2.08,0.36,metal) }
-        // Doors are shallow panels embedded in the straight flank; thin seams.
+        // The reference reads as one nearly unbroken dark window ribbon.
+        // Thin glazed panes sit on a solid body-backed band; doors cut it at
+        // the positions visible on the supplied TED/TEM/TEP side drawing.
         for side: Float in [-1,1] {
-            for x: Float in [-10.35,10.35] {
-                if nose != 0 && x*nose > 0 { continue }
-                box(x,1.58,side*1.451,0.88,0.012,1.92,white)
-                box(x,2.00,side*1.459,0.54,0.006,0.74,glass)
-                box(x,0.68,side*1.458,0.012,0.008,0.10,ink)
-            }
-            // A continuous dark band with narrow upright panes and visible piers.
-            for x: Float in stride(from:-8.8,through:8.8,by:1.75) {
+            let doors: [Float] = nose == 0 ? [-10.25,10.25]
+                : nose > 0 ? [-10.25,4.55] : [-4.55,10.25]
+            box(-nose*1.10,2.12,side*1.454,nose == 0 ? 20.95 : 18.75,0.012,0.68,ink)
+            for x: Float in stride(from:-9.20,through:9.20,by:1.62) {
                 if nose != 0 && x*nose > 7.4 { continue }
-                if abs(x) > 9.1 { continue }
-                box(x,2.46,side*1.451,1.49,0.010,0.87,ink)
-                box(x,2.47,side*1.459,1.36,0.007,0.77,glass)
+                if doors.contains(where: { abs(x-$0) < 0.95 }) { continue }
+                box(x,2.18,side*1.464,1.51,0.006,0.56,glass)
             }
-            box(0,1.43,side*1.452,18.5,0.015,0.095,green)
+            for x in doors {
+                // The narrow body-colour leaf has a shallow window and a
+                // hairline edge; it does not project as an external box.
+                box(x,0.89,side*1.467,0.87,0.012,2.22,white)
+                box(x,2.18,side*1.477,0.64,0.006,0.56,glass)
+                box(x+0.39,0.90,side*1.475,0.012,0.008,2.18,ink)
+            }
+            box(-nose*1.10,1.96,side*1.453,nose == 0 ? 19.7 : 17.5,0.012,0.065,green)
         }
         if nose != 0 {
+            // Follow the curved nose with the same narrow, non-red waist
+            // stripe. The surface positions come from the actual end rings.
+            let stations: [(Float,Float)] = [(7.65,1.45),(8.90,1.45),(9.85,1.421),
+                                             (10.75,1.363),(11.55,1.363),(12.20,1.277)]
+            for side: Float in [-1,1] {
+                for i in 0..<(stations.count-1) {
+                    let a = stations[i], b = stations[i+1]
+                    let z0 = side*(a.1+0.014), z1 = side*(b.1+0.014)
+                    face([Map3DPoint(nose*a.0,1.96,z0),Map3DPoint(nose*a.0,2.025,z0),
+                          Map3DPoint(nose*b.0,2.025,z1),Map3DPoint(nose*b.0,1.96,z1)],inside:centre,color:green)
+                }
+            }
+            // The end ring bulges in X at mid-height; the stripe follows it
+            // across the frontal nose instead of cutting a flat chord.
+            for i in 0..<16 {
+                func point(_ z: Float,_ y: Float) -> Map3DPoint {
+                    let t = (y-0.63)/(2.66-0.63)
+                    let oval = 1 - 0.22*(1-sinf(Float.pi*t))
+                    let side = z/(0.91*oval)
+                    let shoulder = max(0,1-(side/1.45)*(side/1.45))
+                    return Map3DPoint(nose*(12.20+0.22*4*t*(1-t)*shoulder+0.012),y,z)
+                }
+                let z0 = -1.27 + Float(i)*2.54/16, z1 = -1.27 + Float(i+1)*2.54/16
+                face([point(z0,1.96),point(z0,2.025),point(z1,2.025),point(z1,1.96)],inside:centre,color:green)
+            }
             // Cab side triangular glass sits over a solid shoulder on each side.
             for side: Float in [-1,1] {
                 let x = nose*9.02
-                box(x,2.43,side*1.408,1.35,0.022,0.61,ink)
-                box(x,2.44,side*1.423,1.21,0.008,0.51,glass)
+                box(x,2.43,side*1.460,1.35,0.014,0.61,ink)
+                box(x,2.44,side*1.473,1.21,0.007,0.51,glass)
             }
-            // Raked windshield, with a white brow and a dark backing.
-            let sx = nose*10.57
-            let panel = [Map3DPoint(sx-nose*0.54,3.50,-0.94),
-                         Map3DPoint(sx-nose*0.54,3.50,0.94),
-                         Map3DPoint(sx+nose*0.62,3.08,0.80),
-                         Map3DPoint(sx+nose*0.62,3.08,-0.80)]
+            // Broad windscreen across the cab shoulders, supported by the
+            // raked shell. The photo shows a large windshield and short,
+            // rounded white face below it.
+            let sx = nose*10.70
+            let panel = [Map3DPoint(sx-nose*0.68,3.55,-1.13),
+                         Map3DPoint(sx-nose*0.68,3.55,1.13),
+                         Map3DPoint(sx+nose*1.40,2.71,1.04),
+                         Map3DPoint(sx+nose*1.40,2.71,-1.04)]
             face(panel,inside:centre,color:ink)
-            let pane = panel.map { Map3DPoint($0.x+nose*0.012,$0.y+0.020,$0.z*0.92) }
+            let pane = panel.map { Map3DPoint($0.x+nose*0.018,$0.y+0.027,$0.z*0.96) }
             face(pane,inside:centre,color:glass)
+            // Oval lamp pods have a shallow closed backing sunk into the
+            // white nose. Their lenses sit above the wraparound stripe.
             for side: Float in [-1,1] {
-                box(nose*11.79,1.56,side*0.61,0.12,0.13,0.18,white)
+                func oval(_ x: Float, _ yr: Float, _ zr: Float) -> [Map3DPoint] {
+                    (0..<12).map { i in
+                        let a = 2 * Float.pi * Float(i) / 12
+                        return Map3DPoint(x, 2.34 + yr*sinf(a), side*0.77 + zr*cosf(a))
+                    }
+                }
+                let back = oval(nose*12.28,0.15,0.23)
+                let rim = oval(nose*12.36,0.15,0.23)
+                face(back,inside:centre,color:ink)
+                face(rim,inside:centre,color:ink)
+                for i in 0..<12 {
+                    let j = (i+1)%12
+                    face([back[i],back[j],rim[j],rim[i]],inside:centre,color:ink)
+                }
+                face(oval(nose*12.37,0.095,0.15),inside:centre,color:Map3DPalette.tileWhite)
             }
-            for side: Float in [-1,1] {
-                civicTube(Map3DPoint(nose*12.35,1.65,side*0.70),
-                          Map3DPoint(nose*12.39,1.65,side*0.70),radius:0.17,color:ink,sides:10)
-                civicTube(Map3DPoint(nose*12.39,1.65,side*0.70),
-                          Map3DPoint(nose*12.40,1.65,side*0.70),radius:0.10,color:Map3DPalette.tileWhite,sides:10)
-            }
-            box(nose*12.15,0.68,0,0.25,0.36,0.20,ink)
+            box(nose*12.10,0.68,0,0.20,0.34,0.17,ink)
         } else {
             // Both ends of a middle unit are gangways, never a driving face.
             for x: Float in [-11.78,11.78] {
