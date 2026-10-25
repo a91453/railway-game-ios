@@ -96,7 +96,7 @@ for curved in [false, true] {
     let suffix = curved ? "-curve" : ""
     let (old, oldNote) = train(before, "highSpeedFar", 12, curved: curved)
     let (t700, t700Note) = train(after, "HSR", 12, curved: curved)
-    let (mid, midNote) = train(after, "HSR", 12, curved: curved, far: true)
+    let (_, midNote) = train(after, "HSR", 12, curved: curved, far: true)
     let (n700, n700Note) = train(after, "n700sG", 12, curved: curved)
     try write("hsr-before\(suffix)", old, group: "hsr" + suffix)
     try write("hsr-700t\(suffix)", t700, group: "hsr" + suffix)
