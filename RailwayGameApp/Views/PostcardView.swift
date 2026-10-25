@@ -244,7 +244,7 @@ struct PostcardSheet: View {
     @Environment(\.colorScheme) private var screenScheme
     @Environment(\.regionStyle) private var region
     /// Where the name the player last wrote is kept on the device.
-    static let companyNameKey = "postcard.companyName"
+    nonisolated static let companyNameKey = "postcard.companyName"
     /// The name the player last wrote, kept on the device.
     @AppStorage(PostcardSheet.companyNameKey) private var companyName = ""
     @State private var appearance: PostcardAppearance?
