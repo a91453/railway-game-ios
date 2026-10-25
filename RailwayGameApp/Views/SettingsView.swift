@@ -58,8 +58,9 @@ struct SettingsView: View {
     @AppStorage(MapAmbienceSettings.frameRateKey) private var showsFrameRate = false
     /// Decision 216: the lines' colours, on the device.
     @AppStorage(LinePalette.key) private var linePalette: LinePalette = .standard
-    /// Decision 338: the train pack, unlocked in a test build.
-    @AppStorage(TrainPack.testUnlockKey) private var trainPackTestUnlocked = false
+    /// Decision 338: the train pack, unlocked in a test build; on until a
+    /// tester turns it off.
+    @AppStorage(TrainPack.testUnlockKey) private var trainPackTestUnlocked = TrainPack.testSwitchDefault
     /// Decision 351: the demo mode's hidden switch, in a test build, and
     /// the taps on the version row that show it.
     @AppStorage(DemoMode.switchKey) private var demoModeOn = false

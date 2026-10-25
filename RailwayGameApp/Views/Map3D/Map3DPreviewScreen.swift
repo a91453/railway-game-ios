@@ -718,7 +718,7 @@ private struct Map3DView: UIViewRepresentable {
         // Decision 338: the train pack's sets as before them until it is
         // unlocked.
         let unlocked = TrainPack.isUnlocked(testBuild: TestBuild.isTest,
-                                            switchOn: UserDefaults.standard.bool(forKey: TrainPack.testUnlockKey))
+                                            switchOn: TrainPack.switchOn(stored: UserDefaults.standard.object(forKey: TrainPack.testUnlockKey) as? Bool))
         let feed = feed, models = Map3DView.models.map { pack in
             var pack = pack
             pack.locked = TrainPack.locked(unlocked: unlocked)
