@@ -22,6 +22,8 @@ struct StationPanel: View {
     @State private var renaming: String?
     /// Whether the demolish confirmation is up.
     @State private var confirmingRemoval = false
+    /// The bus route whose closing is being confirmed (decision 400, 10i-5).
+    @State private var closingBusRoute: BusRouteID?
     /// The selected station's trips by hour and by station, worked out off
     /// the main actor (``RidershipKey``): drawn from the world on every
     /// tick, they held the main thread for seconds on a real-world map,
@@ -72,6 +74,7 @@ struct StationPanel: View {
                     catchmentPopulationSection(station)
                     landSection(station)
                     roadSection(station)
+                    busSection(station)
                     demandSection(station)
                     eventsSection(station)
                     ridershipSections(station)
@@ -547,6 +550,107 @@ struct StationPanel: View {
                     "Each month the nearest road grows a little closer to this station. A station road joins it to the nearest road now.",
                     "最近的路每個月會往這座車站長一點。站前路現在就把車站接上最近的路。"
                 ))
+            }
+        }
+    }
+
+    /// Decision 400 (10i-5): the company's bus routes feeding the station,
+    /// each with its last day's account, its headway and buses, and a way
+    /// to move its stops or close it; and a new route from here.
+    @ViewBuilder
+    private func busSection(_ station: Station) -> some View {
+        let language = session.language
+        let cards = session.world.busRouteCards(feeding: station.id, in: language)
+        if !cards.isEmpty || session.allowsBusTool {
+            Section {
+                ForEach(cards) { card in
+                    busRouteRow(card, language: language)
+                }
+                if session.allowsBusTool {
+                    Button {
+                        screen.panel = nil
+                        session.startBusRoute(from: station.id)
+                    } label: {
+                        Label {
+                            Text(verbatim: language.text("New Bus Route from Here", "從這裡開公車路線"))
+                        } icon: {
+                            Image(systemName: "bus")
+                        }
+                    }
+                    .accessibilityIdentifier("station.bus.new")
+                }
+            } header: {
+                Text(verbatim: language.text("Buses", "公車"))
+            } footer: {
+                Text(verbatim: language.text(
+                    "Buses bring riders from the stops to this station. Their fares and costs are counted with the company's properties.",
+                    "公車把站牌附近的人載來這座車站。票收和成本算在公司的物業裡。"
+                ))
+            }
+            .confirmationDialog(
+                Text(verbatim: language.text("Close this bus route?", "要讓這條公車路線停駛嗎？")),
+                isPresented: Binding(get: { closingBusRoute != nil }, set: { if !$0 { closingBusRoute = nil } }),
+                titleVisibility: .visible,
+                presenting: closingBusRoute
+            ) { id in
+                Button(role: .destructive) {
+                    session.removeBusRoute(id)
+                } label: {
+                    Text(verbatim: language.text("Close Route", "停駛"))
+                }
+                .accessibilityIdentifier("station.bus.close.confirm")
+            } message: { _ in
+                Text(verbatim: language.text(
+                    "Its stops come down and its buses go. Nothing is refunded.",
+                    "站牌會拆掉，公車也會開走。不退還費用。"
+                ))
+            }
+        }
+    }
+
+    private func busRouteRow(_ card: BusRouteCard, language: DisplayLanguage) -> some View {
+        let choices = BusRouteDraft.headwayChoices.contains(card.headway)
+            ? BusRouteDraft.headwayChoices : (BusRouteDraft.headwayChoices + [card.headway]).sorted()
+        return VStack(alignment: .leading, spacing: 6) {
+            Text(verbatim: card.title)
+                .font(.headline)
+            Text(verbatim: card.wayText)
+                .font(.footnote)
+                .foregroundStyle(Theme.textSecondary)
+            Text(verbatim: card.dayText)
+                .font(.footnote.monospacedDigit())
+                .foregroundStyle(card.net.map { $0 < .zero ? Theme.error : Theme.textPrimary } ?? Theme.textSecondary)
+            Picker(selection: Binding(get: { card.headway }, set: { session.setBusHeadway(card.id, to: $0) })) {
+                ForEach(choices, id: \.self) { minutes in
+                    Text(verbatim: language.text("\(minutes) min", "\(minutes) 分")).tag(minutes)
+                }
+            } label: {
+                Text(verbatim: language.text("A bus every", "班距"))
+            }
+            .accessibilityIdentifier("station.bus.headway")
+            Stepper(value: Binding(get: { card.buses }, set: { session.setBusCount(card.id, to: $0) }), in: 0...BusRoute.maximumBuses) {
+                Text(verbatim: card.serviceText)
+                    .font(.footnote)
+            }
+            .accessibilityIdentifier("station.bus.count")
+            HStack {
+                Button {
+                    screen.panel = nil
+                    session.editBusRoute(card.id)
+                } label: {
+                    Text(verbatim: language.text("Move Stops", "改站牌"))
+                }
+                .buttonStyle(.borderless)
+                .accessibilityIdentifier("station.bus.edit")
+                .disabled(!session.allowsBusTool)
+                Spacer()
+                Button(role: .destructive) {
+                    closingBusRoute = card.id
+                } label: {
+                    Text(verbatim: language.text("Close Route", "停駛"))
+                }
+                .buttonStyle(.borderless)
+                .accessibilityIdentifier("station.bus.close")
             }
         }
     }

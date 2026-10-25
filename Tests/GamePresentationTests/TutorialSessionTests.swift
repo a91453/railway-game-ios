@@ -639,7 +639,7 @@ final class TutorialSessionTests: XCTestCase {
             "line.draft.create", "panel.details", "panel.side", "map.build.confirm", "inspector.ridership", "line.loss",
             "line.loss.fix", "line.addTrain", "inspector.track.double", "line.staff.headway", "line.headway.change",
             "lines.advanced", "line.window", "line.pattern.add", "line.depots", "station.freight.build", "building.kind.hotel",
-            "hud.requests", "line.addSelectedStation",
+            "hud.requests", "line.addSelectedStation", "tool.bus",
         ])
         for tool in ConstructionTool.allCases {
             XCTAssertEqual(TutorialTarget(tool: tool)?.rawValue, "tool.\(tool)", "every tool has its button")

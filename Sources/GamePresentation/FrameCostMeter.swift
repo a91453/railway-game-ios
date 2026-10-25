@@ -152,6 +152,8 @@ public enum MapRedrawReason: String, CaseIterable, Hashable, Sendable {
     case flow
     case lineCodes
     case journey
+    /// The company's bus routes, or the bus tool's route (decision 400, 10i-5).
+    case buses
 
     /// Its short name in the readout.
     public func title(in language: DisplayLanguage) -> String {
@@ -168,6 +170,7 @@ public enum MapRedrawReason: String, CaseIterable, Hashable, Sendable {
         case .flow: language.text("passenger flow", "客流")
         case .lineCodes: language.text("line codes", "路線代號")
         case .journey: language.text("journeys", "旅程")
+        case .buses: language.text("buses", "公車")
         }
     }
 }

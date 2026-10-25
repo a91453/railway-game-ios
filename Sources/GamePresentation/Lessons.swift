@@ -957,6 +957,7 @@ extension GameSession {
         case .select, .network: true
         case .train: allows(.trainTool)
         case .building: allows(.buildingTool)
+        case .bus: allowsBusTool
         }
     }
 
