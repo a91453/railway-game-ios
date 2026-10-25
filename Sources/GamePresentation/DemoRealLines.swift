@@ -55,6 +55,20 @@ public struct DemoRealLines: Sendable {
     /// How far the track runs on past each end platform: room for the
     /// crossover there, beyond the platform.
     static let runOn = 150 * metre
+    /// Where a run stopped short (decision 401's sequel): the end of the
+    /// last station's platform it reached, along the line, and its node.
+    struct Joint: Sendable {
+        let along: Double
+        let node: TrackNodeID
+        /// The track it was traced on to beyond the station, as far as it
+        /// went: laid after all where the next run cannot go on.
+        let rest: [PlayerCommand.TrackStretch]
+        let double: Bool
+    }
+    /// The shortest piece of a double line laid as double track where the
+    /// whole of it cannot be (``GameSession/layDemoDouble(_:)``): 400 m,
+    /// room for a crossover at each end.
+    static let shortestDoublePiece = 400 * metre
     /// The widest view laid at once: 40 km across. Wider, the player is
     /// asked to zoom in.
     public static let widestView = 40_000 * metre
@@ -280,17 +294,37 @@ extension GameSession {
         for route in planned.routes {
             // Its real tunnels and viaducts.
             let carried = railways.structures?.stretches(along: route.path, frame: frame, system: route.system.id) ?? []
-            // A run from the first station on, then, where the track
-            // stops short, another from the first station it missed.
+            // A run from the first station on. Where the track stops short,
+            // it stops at the last station it reached and the next run goes
+            // on from there, at another level where it must, the same line
+            // calling at both; where it cannot, another run from the first
+            // station it missed.
             var index = 0
-            while index < route.stops.count - 1 {
-                let laid = await layDemoRun(Array(route.stops[index...]), of: route, carried: carried)
+            var calling: [StationID] = []
+            var joint: DemoRealLines.Joint?
+            while index < route.stops.count - (joint == nil ? 1 : 0) {
+                let laid = await layDemoRun(Array(route.stops[index...]), of: route, carried: carried, after: joint)
+                if let stopped = joint, laid.reached == 0 {
+                    // Not on from there: the track as far as it went, and a
+                    // run of its own from the station it missed.
+                    layDemoRest(of: stopped)
+                    joint = nil
+                    if calling.count >= 2, addDemoLine(route, calling: calling) { lines += 1 }
+                    calling = []
+                    continue
+                }
                 stations += laid.stations.count
-                if laid.stations.count >= 2, addDemoLine(route, calling: laid.stations) { lines += 1 }
-                index += laid.reached
+                calling += laid.stations
+                joint = laid.joint
+                if joint == nil {
+                    if calling.count >= 2, addDemoLine(route, calling: calling) { lines += 1 }
+                    calling = []
+                }
+                index += max(1, laid.reached)
                 demoRealLinesProgress = DemoRealLines.Progress(done: min(done + index, total), total: total)
                 await Task.yield()
             }
+            if calling.count >= 2, addDemoLine(route, calling: calling) { lines += 1 }
             done += route.stops.count
         }
         let outcome = DemoRealLines.Outcome(
@@ -326,17 +360,22 @@ extension GameSession {
 
     /// Lays `run`'s track along `route` from its first platform to its
     /// last as one traced command, as far as GameCore builds it, and a
-    /// platform at each station it reaches. Returns the stations with a
-    /// platform, in order, and how many stations of `run` the track
-    /// reached.
-    private func layDemoRun(_ run: [DemoRealLines.Stop], of route: DemoRealLines.Route, carried: [TrackRise.Carried]) async -> (stations: [StationID], reached: Int) {
-        guard let first = run.first, let last = run.last else { return ([], 0) }
+    /// platform at each station it reaches; or, `after` a station a run
+    /// stopped at, from that station's platform on. Returns the stations
+    /// with a platform, in order, how many stations of `run` the track
+    /// reached, and, where it stopped short of the last, the end of the last
+    /// station's platform it stopped at, for the next run to go on from.
+    private func layDemoRun(
+        _ run: [DemoRealLines.Stop], of route: DemoRealLines.Route, carried: [TrackRise.Carried], after joint: DemoRealLines.Joint?
+    ) async -> (stations: [StationID], reached: Int, joint: DemoRealLines.Joint?) {
+        guard let first = run.first, let last = run.last else { return ([], 0, nil) }
         let path = route.path
         // On past the end platforms, for the crossovers there.
-        let lower = max(0, first.platform.lowerBound - DemoRealLines.runOn)
+        let lower = joint?.along ?? max(0, first.platform.lowerBound - DemoRealLines.runOn)
         let upper = min(path.length, last.platform.upperBound + DemoRealLines.runOn)
+        guard upper > lower else { return ([], 0, nil) }
         let way = path.points(from: lower, to: upper)
-        let start = NetworkAnchor.point(path.point(at: lower).plan)
+        let start = joint.map { NetworkAnchor.node($0.node) } ?? NetworkAnchor.point(path.point(at: lower).plan)
         let end = NetworkAnchor.point(path.point(at: upper).plan)
         let spans = run.map { (path.point(at: $0.platform.lowerBound), path.point(at: $0.platform.upperBound)) }
         // As the real line is or, where it would cross another line laid,
@@ -350,33 +389,43 @@ extension GameSession {
         var best: (plan: TracePlan, reached: Int, height: Int64)?
         for height in heights {
             networkHeight = height
-            guard let plan = tracePlan(from: start, to: end, along: way, platforms: spans), plan.buildable > 0 else { continue }
+            guard let plan = tracePlan(from: start, to: end, along: way, platforms: spans, system: route.system.id),
+                  plan.buildable > 0 else { continue }
             // How many stations the track reaches: their platforms all built.
             let reached = plan.platformStretches.prefix { $0.map { $0 < plan.buildable } ?? false }.count
             if reached > best?.reached ?? -1 { best = (plan, reached, height) }
             if reached == run.count { break }
             await Task.yield()
         }
-        guard let best else { return ([], 1) }
-        networkHeight = best.height
+        guard let best, best.reached > 0 || joint == nil else { return ([], joint == nil ? 1 : 0, nil) }
         let plan = best.plan, reached = best.reached
-        let built = Array(plan.stretches.prefix(plan.buildable))
-
-        var command = PlayerCommand.buildTrackChain(built)
+        // Where the track stops short of the last station, as far as the
+        // last station it reached: the next run goes on from there.
+        var built = Array(plan.stretches.prefix(plan.buildable))
+        var stopsShort = false
+        if reached > 0, reached < run.count, let index = plan.platformStretches[reached - 1] {
+            built = Array(plan.stretches.prefix(index + 1))
+            stopsShort = true
+        }
         let double = route.system.id == Self.traSystem
             ? realDoubleTrack(along: built) ?? true
             : DemoRealLines.isDouble(system: route.system.id)
-        // A crossover at each end, so a train turns back onto the other
-        // track (decision 247's, which the tool lays only where it joins
-        // track).
-        if double, let parallel = parallelChain(beside: built.map(ChainSegment.init), side: networkDoubleSide, in: world),
-           let found = try? planDoubleChain(main: built, run: [], parallel: parallel, platforms: [], wantsCrossover: (true, true), in: world) {
-            command = found.command
-        }
+        networkHeight = best.height
         do throws(GameError) {
-            try performCommand(command)
+            // A second track on either side, a crossover at each end so a
+            // train turns back onto the other track (decision 247's, which
+            // the tool lays only where it joins track); where GameCore
+            // refuses it on both, double where it can be and single where
+            // it cannot.
+            if !double {
+                try performCommand(.buildTrackChain(built))
+            } else if let command = demoDouble(built) {
+                try performCommand(command)
+            } else {
+                try layDemoDouble(built)
+            }
         } catch {
-            return ([], max(1, reached))
+            return ([], joint == nil ? max(1, reached) : 0, nil)
         }
         await Task.yield()
 
@@ -391,7 +440,68 @@ extension GameSession {
                 stations.append(station)
             }
         }
-        return (stations, max(1, reached))
+        var next: DemoRealLines.Joint?
+        if stopsShort, let stretch = built.last, let node = world.trackNode(at: stretch.to, within: DoubleTrack.joinReach) {
+            next = DemoRealLines.Joint(
+                along: run[reached - 1].platform.upperBound, node: node.id,
+                rest: Array(plan.stretches[built.count..<plan.buildable]), double: double
+            )
+        }
+        return (stations, joint == nil ? max(1, reached) : reached, next)
+    }
+
+    /// The track a run stopped short at was traced on to beyond the station
+    /// it stopped at, laid on from that station where the next run cannot
+    /// go on from there.
+    private func layDemoRest(of joint: DemoRealLines.Joint) {
+        var rest = joint.rest
+        guard !rest.isEmpty, world.network.node(joint.node) != nil else { return }
+        rest[0] = rest[0].starting(at: joint.node)
+        if joint.double {
+            try? layDemoDouble(rest)
+        } else {
+            _ = try? performCommand(.buildTrackChain(rest))
+        }
+    }
+
+    /// `built` as double track where GameCore takes a second track beside
+    /// it and single where it does not (decision 401's sequel): the whole
+    /// of it tried first, then each half, down to pieces of
+    /// ``DemoRealLines/shortestDoublePiece``, one command each, a crossover
+    /// at each end of a double piece so trains pass the single one.
+    private func layDemoDouble(_ built: [PlayerCommand.TrackStretch]) throws(GameError) {
+        func length(_ range: Range<Int>) -> Double {
+            built[range].reduce(0) { $0 + (TrackGeometry(from: $1.from, to: $1.to, curve: $1.curve).map { Double($0.length) } ?? 0) }
+        }
+        var pieces = [built.indices]
+        while let range = pieces.first {
+            pieces.removeFirst()
+            var piece = Array(built[range])
+            // A piece after the first goes on from the node the one before
+            // ended at.
+            if range.lowerBound > 0, let node = world.trackNode(at: piece[0].from, within: DoubleTrack.joinReach) {
+                piece[0] = piece[0].starting(at: node.id)
+            }
+            if let double = demoDouble(piece), (try? performCommand(double)) != nil { continue }
+            if range.count >= 2, length(range) >= 2 * DemoRealLines.shortestDoublePiece {
+                let middle = range.lowerBound + range.count / 2
+                pieces.insert(contentsOf: [range.lowerBound..<middle, middle..<range.upperBound], at: 0)
+                continue
+            }
+            try performCommand(.buildTrackChain(piece))
+        }
+    }
+
+    /// `built` with a second track beside it, on either side, and a
+    /// crossover at each end; `nil` where GameCore refuses it on both.
+    private func demoDouble(_ built: [PlayerCommand.TrackStretch]) -> PlayerCommand? {
+        for side in [networkDoubleSide, networkDoubleSide == .left ? .right : .left] {
+            guard let parallel = parallelChain(beside: built.map(ChainSegment.init), side: side, in: world),
+                  let found = try? planDoubleChain(main: built, run: [], parallel: parallel, platforms: [], wantsCrossover: (true, true), in: world)
+            else { continue }
+            return found.command
+        }
+        return nil
     }
 
     /// The edge of the network from the node at `a` to the node at `b`
