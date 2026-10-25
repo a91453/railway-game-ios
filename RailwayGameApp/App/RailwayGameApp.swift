@@ -248,6 +248,17 @@ struct RailwayGameApp: App {
                         stars[Lesson.all[index].id] = count
                     }
                     preferences.lessonStars = stars
+                    // Not a first launch: the news would cover the lessons.
+                    preferences.whatsNewSeen = WhatsNew.edition
+                    try JSONEncoder().encode(preferences).write(
+                        to: directory.appendingPathComponent(GameLauncher.preferencesFileName), options: .atomic
+                    )
+                }
+                // Decision 415: an app updated from one before the "What's
+                // New" card, which shows the card once.
+                if DebugLaunch.isSet("-ui-test-updated") {
+                    var preferences = LauncherPreferences()
+                    preferences.hasLaunched = true
                     try JSONEncoder().encode(preferences).write(
                         to: directory.appendingPathComponent(GameLauncher.preferencesFileName), options: .atomic
                     )

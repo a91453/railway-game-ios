@@ -16,6 +16,9 @@ public enum ConstructionTool: CaseIterable, Hashable, Sendable {
     /// Places the chosen building where the player taps (city building
     /// P0-A, decision 92; see ``GameSession/placeBuilding(at:)``).
     case building
+    /// Draws the company's bus routes from a station along the roads
+    /// (decision 400, 10i-5; see ``GameSession/tapBusTool(at:reach:)``).
+    case bus
 
     /// The tools the app offers: every tool. Stage F1 left the grid's
     /// track, station and remove tools out of the app; Stage F3c removed
@@ -28,7 +31,7 @@ public enum ConstructionTool: CaseIterable, Hashable, Sendable {
     /// game runs can be undone only until the next tick.
     public var pausesGame: Bool {
         switch self {
-        case .network, .building: true
+        case .network, .building, .bus: true
         case .select, .train: false
         }
     }
@@ -40,6 +43,7 @@ public enum ConstructionTool: CaseIterable, Hashable, Sendable {
         case .network: language.text("Network", "路網")
         case .train: language.text("Train", "列車")
         case .building: language.text("Buildings", "建物")
+        case .bus: language.text("Buses", "公車")
         }
     }
 }

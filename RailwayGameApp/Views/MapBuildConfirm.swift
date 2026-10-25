@@ -305,7 +305,7 @@ private struct BuildConfirmation {
     var expandsMap = false
 
     enum Kind {
-        case track, platform, building, sale, mapTile, line, addStop
+        case track, platform, building, sale, mapTile, line, addStop, busRoute
     }
 
     /// `linesPanelOpen`: whether the lines panel is open, where a station
@@ -455,6 +455,21 @@ private struct BuildConfirmation {
             cancel = { session.clearBuildingSite() }
             confirm = { _ = session.confirmBuilding() }
             expandsMap = session.offersMapExpansion(for: preview.problem)
+        case .bus:
+            // Decision 400, 10i-5: the bus route drawn, beside its last stop.
+            guard let preview = session.busPreview, let last = session.busDraft.stops.last else { return nil }
+            start = nil
+            flaggedEnd = nil
+            anchor = last.middle
+            clearance = 18
+            cost = preview.price > .zero ? preview.price : nil
+            canConfirm = preview.canOpen
+            kind = .busRoute
+            caption = preview.problem
+            showsCatchment = false
+            cancel = { session.clearBusDraft() }
+            confirm = { _ = session.confirmBusRoute() }
+            undo = { session.removeLastBusStop() }
         case .select, .train:
             return nil
         }
@@ -471,6 +486,7 @@ private struct BuildConfirmation {
         case .mapTile: language.text("Buy tile", "購買地塊")
         case .line: language.text("Create this line", "建立這條路線")
         case .addStop: language.text("Add to the line", "加入路線")
+        case .busRoute: language.text("Open this bus route", "開這條公車路線")
         }
         guard let cost else { return what }
         return "\(what), \(cost.moneyText)"

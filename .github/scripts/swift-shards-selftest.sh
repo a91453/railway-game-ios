@@ -321,6 +321,49 @@ WHY='Cannot fetch' expect_base "" "a commit that cannot be fetched: test everyth
 WHY='Could not list' expect_base "" "the API failing: test everything" FAKE_RUNS="$sha_b" FAKE_GH_FAIL=1
 WHY='GITHUB_REPOSITORY is not set' expect_base "" "no repository name: test everything" FAKE_RUNS="$sha_b" GITHUB_REPOSITORY=
 
+# Whether HEAD already passed every shard (head-full-run, which skips the
+# nightly run, decision 413). A fake `gh` lists FAKE_RUNS as the successful
+# runs of HEAD ("<id> <url>") and, for each id, the successful jobs
+# FAKE_JOBS_<id> names (separated by commas); FAKE_GH_FAIL makes it fail.
+mkdir -p "$work/bin-full"
+cat >"$work/bin-full/gh" <<'FAKE'
+#!/usr/bin/env bash
+[[ -z "${FAKE_GH_FAIL:-}" ]] || { echo "gh: HTTP 502" >&2; exit 1; }
+case "$2" in
+  "repos/owner/repo/actions/workflows/ci.yml/runs?head_sha=$FAKE_HEAD&status=success&per_page=20")
+    printf '%s\n' ${FAKE_RUNS:-} | paste -d ' ' - - | grep . || true ;;
+  repos/owner/repo/actions/runs/*/jobs?per_page=100)
+    id="${2#repos/owner/repo/actions/runs/}"; id="${id%%/*}"
+    var="FAKE_JOBS_$id"; tr ',' '\n' <<<"${!var:-}" ;;
+  *) echo "gh: unexpected query: $*" >&2; exit 1 ;;
+esac
+FAKE
+chmod +x "$work/bin-full/gh"
+# expect_full_run <expected URL, or "" for none> <description> [VAR=value...]
+expect_full_run() {
+  local want="$1" what="$2" got
+  shift 2
+  got="$(cd "$repo" && env PATH="$work/bin-full:$PATH" GITHUB_REPOSITORY=owner/repo FAKE_HEAD="$sha_head" "$@" "$script" head-full-run 2>"$work/err.txt")" || got="exit $?"
+  if [[ "$got" == "$want" ]] && { [[ -n "$want" ]] || grep -q -E "${WHY:-.}" "$work/err.txt"; }; then
+    echo "ok   pass  head-full-run: $what"
+  else
+    echo "FAIL head-full-run: $what: got '$got', expected '$want'"
+    sed 's/^/     | /' "$work/err.txt" | tail -5
+    failures=$((failures + 1))
+  fi
+}
+expect_full_run "https://x/1" "a successful run whose rest shard passed" \
+  FAKE_RUNS="1 https://x/1" FAKE_JOBS_1="Changes (does the Swift package need testing?),Swift 6.4 (Linux) / campaigns-1,Swift 6.4 (Linux) / rest,Swift CI (gate)"
+expect_full_run "https://x/2" "the first full run among several" \
+  FAKE_RUNS="1 https://x/1 2 https://x/2" FAKE_JOBS_1="Swift 6.4 (Linux) / selected-1,Swift CI (gate)" FAKE_JOBS_2="Swift 6.4 (Linux) / rest"
+WHY='No successful full' expect_full_run "" "a smaller tier's run is not full" \
+  FAKE_RUNS="1 https://x/1" FAKE_JOBS_1="Swift 6.4 (Linux) / selected-1,Swift 6.4 (Linux) / selected-2,Swift CI (gate)"
+WHY='No successful full' expect_full_run "" "a run that skipped the Swift jobs is not full" \
+  FAKE_RUNS="1 https://x/1" FAKE_JOBS_1="Changes (does the Swift package need testing?),Swift CI (gate)"
+WHY='No successful full' expect_full_run "" "no successful run of HEAD" FAKE_RUNS=""
+WHY='Could not list' expect_full_run "" "the API failing: test everything" FAKE_RUNS="1 https://x/1" FAKE_GH_FAIL=1
+WHY='GITHUB_REPOSITORY is not set' expect_full_run "" "no repository name: test everything" GITHUB_REPOSITORY=
+
 # A pull request's tier (pr_plan). A small tree of test files, shaped like
 # the real ones: a campaign whose static generator another campaign calls, a
 # helper every campaign uses, a golden loader and the classes that read
@@ -617,11 +660,18 @@ expect_decision() {
   fi
 }
 expect_decision true full full "a push to main of GameCore" EVENT=push LISTED=true -- Sources/GameCore/World/GameWorld.swift
-expect_decision true full full "a push to main of GamePresentation only is still full" EVENT=push LISTED=true -- "${pr414[@]}"
-expect_decision true full full "a push to main of one test file only is still full" EVENT=push LISTED=true -- "${pr401[@]}"
+# A push to main runs the tier of its files, as a pull request does (decision 413).
+expect_decision true presentation '{"shard":"selected-5","tests":"GamePresentationTests.*","part":"5/5"}' \
+  "a push to main of GamePresentation runs it in 5 parts" EVENT=push LISTED=true -- "${pr414[@]}"
+expect_decision true tests-only '{"include":[{"shard":"selected","tests":"FlexDispatchPropertyTests","part":"1/1"}]}' \
+  "a push to main of one test file runs its classes" EVENT=push LISTED=true -- "${pr401[@]}"
+expect_decision true presentation 'GamePresentationTests' "a push to main does not read labels" EVENT=push LISTED=true \
+  LABELS="full-ci" -- "${pr414[@]}"
 expect_decision false none none "a push to main of docs skips" EVENT=push LISTED=true -- docs/ROADMAP.md
 expect_decision true full full "a push to main whose files could not be listed" EVENT=push LISTED=false --
 expect_decision true full full "a manual run" EVENT=workflow_dispatch LISTED=false --
+expect_decision true full full "the nightly run" EVENT=schedule LISTED=false --
+expect_decision true full full "the nightly run, even with files listed" EVENT=schedule LISTED=true -- "${pr414[@]}"
 expect_decision true presentation '{"shard":"selected-5","tests":"GamePresentationTests.*","part":"5/5"}' \
   "a pull request of GamePresentation runs it in 5 parts" EVENT=pull_request LISTED=true -- "${pr414[@]}"
 expect_decision true tests-only '{"include":[{"shard":"selected","tests":"FlexDispatchPropertyTests","part":"1/1"}]}' \
@@ -638,17 +688,22 @@ expect_decision true full full "a pull request whose files could not be listed" 
 # The gate: red when the detection or any Swift job of the tier did not
 # succeed (a failed or cancelled job makes the combined result so), green
 # when every job passed or none was needed and none ran.
-gate() { env -u CHANGES -u SWIFT_NEEDED -u TIER -u CURRENT "$@" "$script" gate; }
-expect pass "gate: every job of a full run passed" gate CHANGES=success SWIFT_NEEDED=true TIER=full CURRENT=success
-expect pass "gate: every job of a partial tier passed" gate CHANGES=success SWIFT_NEEDED=true TIER=presentation CURRENT=success
-expect pass "gate: nothing needed, nothing ran" gate CHANGES=success SWIFT_NEEDED=false TIER=none CURRENT=skipped
-WHY='did not succeed \(Swift 6.4: failure\)' expect fail "gate: a selected job failed" gate CHANGES=success SWIFT_NEEDED=true TIER=tests-only CURRENT=failure
-WHY='did not succeed \(Swift 6.4: cancelled\)' expect fail "gate: a selected job was cancelled" gate CHANGES=success SWIFT_NEEDED=true TIER=fixtures CURRENT=cancelled
-WHY='did not succeed \(Swift 6.4: skipped\)' expect fail "gate: needed jobs that did not run" gate CHANGES=success SWIFT_NEEDED=true TIER=full CURRENT=skipped
-WHY='not needed but did not skip' expect fail "gate: unneeded jobs that ran" gate CHANGES=success SWIFT_NEEDED=false TIER=none CURRENT=success
-WHY='change detection did not succeed' expect fail "gate: the detection failed" gate CHANGES=failure SWIFT_NEEDED= TIER= CURRENT=skipped
-WHY='change detection did not succeed' expect fail "gate: the detection was cancelled" gate CHANGES=cancelled SWIFT_NEEDED=false TIER=none CURRENT=skipped
-WHY='neither' expect fail "gate: no answer from the detection" gate CHANGES=success SWIFT_NEEDED= TIER= CURRENT=skipped
+gate() { env -u CHANGES -u SWIFT_NEEDED -u TIER -u BUILD -u CURRENT "$@" "$script" gate; }
+expect pass "gate: every job of a full run passed" gate CHANGES=success SWIFT_NEEDED=true TIER=full BUILD=success CURRENT=success
+expect pass "gate: every job of a partial tier passed" gate CHANGES=success SWIFT_NEEDED=true TIER=presentation BUILD=success CURRENT=success
+expect pass "gate: nothing needed, nothing ran" gate CHANGES=success SWIFT_NEEDED=false TIER=none BUILD=skipped CURRENT=skipped
+WHY='did not succeed \(Swift 6.4: failure\)' expect fail "gate: a selected job failed" gate CHANGES=success SWIFT_NEEDED=true TIER=tests-only BUILD=success CURRENT=failure
+WHY='did not succeed \(Swift 6.4: cancelled\)' expect fail "gate: a selected job was cancelled" gate CHANGES=success SWIFT_NEEDED=true TIER=fixtures BUILD=success CURRENT=cancelled
+WHY='did not succeed \(Swift 6.4: skipped\)' expect fail "gate: needed jobs that did not run" gate CHANGES=success SWIFT_NEEDED=true TIER=full BUILD=success CURRENT=skipped
+WHY='not needed but did not skip' expect fail "gate: unneeded jobs that ran" gate CHANGES=success SWIFT_NEEDED=false TIER=none BUILD=skipped CURRENT=success
+WHY='change detection did not succeed' expect fail "gate: the detection failed" gate CHANGES=failure SWIFT_NEEDED= TIER= BUILD=skipped CURRENT=skipped
+WHY='change detection did not succeed' expect fail "gate: the detection was cancelled" gate CHANGES=cancelled SWIFT_NEEDED=false TIER=none BUILD=skipped CURRENT=skipped
+WHY='neither' expect fail "gate: no answer from the detection" gate CHANGES=success SWIFT_NEEDED= TIER= BUILD=skipped CURRENT=skipped
+# Decision 411, shared build: the test jobs need the one build job.
+WHY='Swift build did not succeed \(failure\)' expect fail "gate: the build failed, so the tests were skipped" gate CHANGES=success SWIFT_NEEDED=true TIER=full BUILD=failure CURRENT=skipped
+WHY='Swift build did not succeed \(cancelled\)' expect fail "gate: the build was cancelled" gate CHANGES=success SWIFT_NEEDED=true TIER=presentation BUILD=cancelled CURRENT=skipped
+WHY='Swift build did not succeed \(no result\)' expect fail "gate: no build result" gate CHANGES=success SWIFT_NEEDED=true TIER=full BUILD= CURRENT=success
+WHY='build did not skip \(success\)' expect fail "gate: an unneeded build that ran" gate CHANGES=success SWIFT_NEEDED=false TIER=none BUILD=success CURRENT=skipped
 
 # A pull request's gate waits for its iOS App Build run (ios-gate). A fake
 # `gh` answers each look in turn with the next of FAKE_IOS's words: a run as
@@ -728,6 +783,25 @@ grep -q -x 'superseded=false' "$work/out.txt" || { echo "FAIL superseded: an API
 WHY='PR is not a pull request number' expect fail "superseded: no pull request number" superseded FAKE_HEAD="$newer" PR=
 WHY='cancelled because a newer push replaced this commit of pull request #7' expect fail "ios-gate: a cancelled iOS run of a replaced commit says so" ios_gate PR=7 FAKE_HEAD="$newer"
 WHY='did not pass \(cancelled\)' expect fail "ios-gate: a cancelled iOS run of the head stays a plain failure" ios_gate PR=7 FAKE_HEAD="$sha_ios"
+
+# Decision 411, shared build: pack and unpack keep .build's links, and a
+# shard does not run over a .build that is already there or a missing file.
+in_dir() { (cd "$1" && shift && "$@"); }
+mkdir -p "$work/packed/.build/out/Products/Debug" "$work/unpacked"
+echo built >"$work/packed/.build/out/Products/Debug/thing"
+ln -s out/Products/Debug "$work/packed/.build/debug"
+expect pass "pack: packs .build" in_dir "$work/packed" "$script" pack "$work/build.tar.gz"
+cp "$work/build.tar.gz" "$work/build-copy.tar.gz"
+expect pass "unpack: unpacks .build" in_dir "$work/unpacked" "$script" unpack "$work/build.tar.gz"
+if [[ -L "$work/unpacked/.build/debug" && "$(cat "$work/unpacked/.build/debug/thing")" == built ]]; then
+  echo "ok   pass  unpack: the link and the file it points to are back"
+else
+  echo "FAIL unpack: .build/debug is not the link it was packed as"
+  failures=$((failures + 1))
+fi
+WHY='already exists' expect fail "unpack: not over an existing .build" in_dir "$work/unpacked" "$script" unpack "$work/build-copy.tar.gz"
+WHY='No build to unpack' expect fail "unpack: a missing download" in_dir "$work/unpacked" "$script" unpack "$work/nothing.tar.gz"
+WHY='No .build to pack' expect fail "pack: nothing built" in_dir "$work/unpacked/.build" "$script" pack "$work/none.tar.gz"
 
 if [[ "$failures" -ne 0 ]]; then
   echo "::error::swift-shards.sh self-test: $failures failures."

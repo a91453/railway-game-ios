@@ -36,6 +36,11 @@ final class InterfaceMotionTests: XCTestCase {
         XCTAssertEqual(MotionRule.cameraFlight.seconds, 1.2)
         XCTAssertEqual(MotionRule.cameraFlight.curve, .standard)
         XCTAssertNil(MotionRule.cameraFlight.reduced, "with Reduce Motion the camera is there at once")
+        // Decision 414: the idle mode's veil, the site's 0.7 s each way;
+        // only a fade, so with Reduce Motion it fades in half the time.
+        XCTAssertEqual(MotionRule.ambientCut.seconds, 0.7)
+        XCTAssertFalse(MotionRule.ambientCut.moves)
+        XCTAssertEqual(MotionRule.ambientCut.reduced?.seconds, 0.35)
     }
 
     /// A small thing pops with a little overshoot; a card, a panel and a

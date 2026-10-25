@@ -11,8 +11,8 @@ name: CI
 # path filter live in .github/scripts/swift-shards.sh. The matrix below comes
 # from that script, so a shard defined there always has a job.
 #
-# A pull request runs the tier its changed files need (decision 185,
-# swift-shards.sh plan): everything for a change to GameCore, the package,
+# A pull request and a push to main run the tier their changed files need
+# (decision 185, swift-shards.sh plan; pushes since decision 413): everything for a change to GameCore, the package,
 # the CI scripts, a shared test file or several edited campaigns; only the
 # GamePresentation tests for a change there (or to the app's bundled data, or
 # a tools/ file they read); only the classes that read
@@ -20,8 +20,15 @@ name: CI
 # declares when no other file uses it. The label `full-ci` makes a pull
 # request run everything: add it, then re-run the pull request's run (Re-run
 # all jobs; the change detection reads the labels the pull request has
-# then). A push to main and a manual run always run every shard
+# then). A manual run and the nightly run (schedule, below) run every shard
 # (swift-shards.sh decide).
+#
+# Nightly full run (decision 413): a push to main runs only its tier, as its
+# pull request did, so every night the newest commit of main runs every
+# shard, unless a run of that commit already passed every shard (a manual
+# run, a push whose tier was full, or an earlier nightly run;
+# swift-shards.sh head-full-run). A TestFlight release needs such a green
+# full run of its commit: this nightly one, or one started by hand.
 #
 # On a pull request the gate also waits for the same commit's iOS App Build
 # run and is red when that run fails (decision 265), so the one check main's
@@ -38,9 +45,11 @@ name: CI
 # was replaced (see concurrency below) is then still tested by the next run,
 # and after a red run every later run tests again until one passes. The
 # branch rule of main (main-gate) requires the gate, "Swift CI (gate)": keep
-# that name. Manual runs always run everything, and so does a push whose base
-# cannot be found (no successful run, the API failing, a commit that is not
-# an ancestor).
+# that name. A push run is successful once its own tier passed, so the next
+# push is compared with it and tests only what came after; whatever the
+# tiers left out, the nightly run tests. Manual runs always run everything,
+# and so does a push whose base cannot be found (no successful run, the API
+# failing, a commit that is not an ancestor).
 
 on:
   push:
@@ -51,10 +60,13 @@ on:
     # full, add full-ci and re-run its run (decision 187).
     types: [opened, synchronize, reopened]
   workflow_dispatch:
+  # The nightly full run of main (decision 413), at 01:37 Taiwan time.
+  schedule:
+    - cron: '37 17 * * *'
 
 permissions:
   contents: read
-  # push-base reads the earlier runs of this workflow.
+  # push-base and head-full-run read the earlier runs of this workflow.
   actions: read
   # A pull request's labels (full-ci) are read when it runs, so a re-run
   # after the label is added sees it.
@@ -69,7 +81,7 @@ permissions:
 # no result of its own. The newest run still tests its changes (it is
 # compared with the last success), but when it turns red, start this
 # workflow by hand (workflow_dispatch) on the replaced commits to find which
-# one broke it. Manual runs keep a group per commit.
+# one broke it. Manual and nightly runs keep a group per commit.
 #
 # Rules for the people and sessions that merge (decision 187,
 # docs/research/CI_INCIDENT_2026-10-12.md):
@@ -84,7 +96,7 @@ permissions:
 #   request at once. Push a change when it is ready, not piece by piece.
 # - Merge in batches of 3 to 5 green pull requests, then wait for this
 #   workflow to turn green on main before the next batch. Keep at most 2
-#   pull requests that change GameCore running CI at once (a full tier is 21
+#   pull requests that change GameCore running CI at once (a full tier is 22
 #   jobs of the account's 40).
 concurrency:
   group: ${{ github.event_name == 'push' && 'ci-main' || format('ci-{0}', github.event_name == 'pull_request' && github.ref || github.sha) }}
@@ -124,6 +136,15 @@ jobs:
         run: |
           base=""
           listed=false
+          if [[ "$EVENT" == schedule ]]; then
+            # The nightly full run is not needed when this commit already
+            # passed every shard (decision 413).
+            if full="$(.github/scripts/swift-shards.sh head-full-run)" && [[ -n "$full" ]]; then
+              echo "Swift jobs: skipped, $full already ran every shard of this commit." | tee -a "$GITHUB_STEP_SUMMARY"
+              { echo "swift=false"; echo "tier=none"; echo "matrix=$(.github/scripts/swift-shards.sh matrix)"; } >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
           if [[ "$EVENT" == pull_request ]]; then
             # The first parent of the merge commit is the base, so this is
             # what the pull request changes.
@@ -138,7 +159,7 @@ jobs:
             fi
           fi
           # If the changed files cannot be read, test.
-          if [[ -z "$base" && "$EVENT" != workflow_dispatch ]]; then
+          if [[ -z "$base" && "$EVENT" != workflow_dispatch && "$EVENT" != schedule ]]; then
             echo "::warning::No earlier commit to compare with; running the Swift jobs."
           elif [[ -n "$base" ]]; then
             # No rename detection: it would read file contents, and a
@@ -174,14 +195,61 @@ jobs:
         if: steps.detect.outputs.swift == 'true'
         run: .github/scripts/swift-shards-selftest.sh
 
-  swift-current:
-    name: Swift 6.4 (Linux) / ${{ matrix.shard }}
+  # The one build of the tier (decision 411, shared build): every shard job
+  # downloads this job's .build and only runs its tests (swift test
+  # --skip-build). Until 2026-10-25 each of the 19 shards built the package
+  # itself, about 5 minutes each. Same container and workspace path as the
+  # shards, so the paths inside .build still hold there. A build killed by a
+  # signal is built once more here (decision 329, swift-shards.sh build); a
+  # compile error is not, and the shards are then skipped and the gate red.
+  swift-build:
+    name: Swift 6.4 (Linux) build
     needs: changes
     if: needs.changes.outputs.swift == 'true'
     runs-on: ubuntu-24.04
+    # About 5 minutes to build, up to 10 when it is built twice, and about
+    # a minute to pack and upload.
+    timeout-minutes: 20
+    container: swift:6.4-noble
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Swift version
+        run: swift --version
+
+      # swift build --build-tests -Xswiftc -warnings-as-errors, built once
+      # more when swift-build itself is killed by a signal (decision 329); a
+      # compile error is not built again.
+      - name: Build (warnings as errors)
+        run: .github/scripts/swift-shards.sh build
+
+      # tar keeps the links (.build/debug points into swift-build's own
+      # layout); gzip -1 packs the 1.2 GB in about 20 s to some 360 MB, and
+      # the artifact does not zip it again (compression-level 0).
+      - name: Pack the build
+        run: .github/scripts/swift-shards.sh pack "$RUNNER_TEMP/swift-build.tar.gz"
+
+      # overwrite: re-running every job of the run builds again under the
+      # same name.
+      - name: Upload the build
+        uses: actions/upload-artifact@v7
+        with:
+          name: swift-build
+          path: ${{ runner.temp }}/swift-build.tar.gz
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+          overwrite: true
+
+  swift-current:
+    name: Swift 6.4 (Linux) / ${{ matrix.shard }}
+    needs: [changes, swift-build]
+    if: needs.changes.outputs.swift == 'true'
+    runs-on: ubuntu-24.04
     # The slowest shard takes about 9 minutes of tests on a fast runner and
-    # up to about 16 on a slow one (see the table in swift-shards.sh); the
-    # limit leaves room for campaigns to grow before a shard is split further.
+    # up to about 12 on a slow one (see the table in swift-shards.sh), plus
+    # about a minute to start and download the build; the limit leaves room
+    # for campaigns to grow before a shard is split further.
     timeout-minutes: 20
     container: swift:6.4-noble
     strategy:
@@ -199,11 +267,16 @@ jobs:
       - name: Swift version
         run: swift --version
 
-      # swift build --build-tests -Xswiftc -warnings-as-errors, built once
-      # more when swift-build itself is killed by a signal (decision 329); a
-      # compile error is not built again.
-      - name: Build (warnings as errors)
-        run: .github/scripts/swift-shards.sh build
+      # The swift-build job's .build (decision 411, shared build), unpacked
+      # where it was built.
+      - name: Download the build
+        uses: actions/download-artifact@v8
+        with:
+          name: swift-build
+          path: ${{ runner.temp }}/swift-build
+
+      - name: Unpack the build
+        run: .github/scripts/swift-shards.sh unpack "$RUNNER_TEMP/swift-build/swift-build.tar.gz"
 
       # Runs this shard's tests and fails unless exactly those tests ran.
       # A partial tier's job is `selected` (SELECTED_TESTS, and its part of
@@ -226,7 +299,7 @@ jobs:
   # pull request's head is not superseded and keeps its red gate.
   superseded:
     name: Superseded by a newer push?
-    needs: [changes, swift-current]
+    needs: [changes, swift-build, swift-current]
     if: ${{ cancelled() && github.event_name == 'pull_request' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -248,7 +321,7 @@ jobs:
 
   gate:
     name: Swift CI (gate)
-    needs: [changes, swift-current, superseded]
+    needs: [changes, swift-build, swift-current, superseded]
     # A push run of main that was cancelled (by hand, or replaced while
     # waiting) has no verdict to give, so the gate is skipped there rather
     # than red on a commit where no test failed; the next push run tests its
@@ -277,6 +350,7 @@ jobs:
           CHANGES: ${{ needs.changes.result }}
           SWIFT_NEEDED: ${{ needs.changes.outputs.swift }}
           TIER: ${{ needs.changes.outputs.tier }}
+          BUILD: ${{ needs.swift-build.result }}
           CURRENT: ${{ needs.swift-current.result }}
         run: .github/scripts/swift-shards.sh gate
 
@@ -287,7 +361,7 @@ jobs:
       # and UI tests had finished (#746, 2026-10-16). A change the app cannot
       # see has no iOS run and passes at once. After a failed iOS run is
       # re-run and passes, re-run this gate too (Re-run failed jobs). Pushes
-      # to main and manual runs do not wait: their full lane is
+      # to main, manual and nightly runs do not wait: their full lane is
       # ios-full-lane.yml's.
       - name: Wait for this change's iOS App Build
         if: github.event_name == 'pull_request'

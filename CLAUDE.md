@@ -158,19 +158,21 @@ needs OSM data reads the same extract.
   replay to the same states; run by
   `Tests/GameCoreTests/ReplayFixtureTests.swift` (`ReplayFixtures/README.md`).
 - `.github/workflows/` — `ci.yml` (the Swift package on Linux with Swift 6.4
-  only: a push to `main` and a manual run build everything and run every
-  test with the campaigns not reduced, split into parallel shards by
-  `.github/scripts/swift-shards.sh`, which also proves each job ran exactly
-  its tests. A pull request builds everything but runs the tier its changed
-  files need (ARCHITECTURE decision 185, `swift-shards.sh plan`): every shard
+  only: a manual run and the nightly run (01:37 Taiwan time, skipped when
+  `main`'s newest commit already had a green full run; decision 413) build
+  everything and run every test with the campaigns not reduced, split into
+  parallel shards by `.github/scripts/swift-shards.sh`, which also proves
+  each job ran exactly its tests. A pull request and a push to `main` build
+  everything but run the tier their changed files need (ARCHITECTURE
+  decision 185, `swift-shards.sh plan`; pushes since decision 413): every shard
   for GameCore, the package, the CI scripts or a test file other test files
   use, or two edited campaigns (or one beside GamePresentation); all the
   GamePresentation tests (in five jobs) for GamePresentation, its tests, the
   app's bundled data or a `tools/` file they read; the classes that read the fixtures
   for `GoldenScenarios/`, `SaveFixtures/` or `ReplayFixtures/`; the classes a
   GameCore test file declares when no other file uses it; the union when
-  several apply. The label `full-ci` runs every shard (add it, then re-run
-  the pull request's run). On a pull request the gate also waits for the
+  several apply. The label `full-ci` runs every shard of a pull request (add
+  it, then re-run the pull request's run). On a pull request the gate also waits for the
   same commit's `ios-build.yml` run and is red when that run fails
   (decision 265), so a pull request set to merge automatically waits for
   its Xcode build and UI tests; after a failed iOS run is re-run and passes,
@@ -286,7 +288,8 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   說可以發你才能替我發」): after the user says, in the game-planning
   session itself, to release, that session may start `testflight.yml` with
   `workflow_dispatch` on `main`, once, for `main`'s HEAD, and only when that
-  commit's full `ci.yml` run and full lane are green (`docs/HANDOFF.md`
+  commit's full `ci.yml` run (the nightly one or one started by hand; a
+  push run tests only its tier) and full lane are green (`docs/HANDOFF.md`
   §1.2). When either is not green, it tells the user what is red and starts
   nothing until the user says to release again.
 - Whenever `RailwayGameApp/project.yml` or the app's file layout changes,
@@ -317,9 +320,10 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   everything locally. Run more locally only when the task needs it (to
   reproduce a CI failure, or to measure shard times). Report the local checks
   as VERIFIED and the rest as left to CI.
-  CI splits the suite across shards and runs each after
-  `swift build --build-tests -Xswiftc -warnings-as-errors` with
-  `swift test --skip-build` (plain `swift test` would rebuild everything);
+  CI builds once (`swift build --build-tests -Xswiftc -warnings-as-errors`
+  in the `swift-build` job, decision 411's shared build), and each shard
+  downloads that `.build` and runs with `swift test --skip-build` (plain
+  `swift test` would rebuild everything);
   `.github/scripts/swift-shards.sh run <shard>` runs one shard the same way. A
   new test class needs no CI change: the `rest` shard runs everything the
   campaign shards do not name. Move a long campaign to another shard in
@@ -418,8 +422,8 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   merge a PR, never enable auto-merge, never force-push `main`. The user
   decides what gets merged.
 - The account runs at most 40 jobs at once, 5 of them macOS; a full Swift
-  tier is 21 jobs (ARCHITECTURE decision 187; decision 228 added a shard,
-  decisions 404 and 405 one each,
+  tier is 22 jobs (ARCHITECTURE decision 187; decision 228 added a shard,
+  decisions 404 and 405 one each, decision 411's shared build the build job,
   `docs/research/CI_INCIDENT_2026-10-12.md`). So:
   - Never cancel a push run of `main` (`ci.yml`), by hand or from a session:
     its concurrency group already keeps a burst of merges to the run in
@@ -441,7 +445,8 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
     too (or skipped because the same change passed), since only `Swift CI
     (gate)` is required.
   - Before a TestFlight release (the user's decision), check that the commit's full
-    `ci.yml` run on `main` and its full lane are both green.
+    `ci.yml` run on `main` (nightly or by hand, decision 413) and its full
+    lane are both green.
 - Text the game shows players (both languages) says only what a control or
   feature does for them, in a sentence or two: never design reasons, how it
   is computed, internal units or IDs, or program and library names. Those go

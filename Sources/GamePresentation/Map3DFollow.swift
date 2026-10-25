@@ -379,7 +379,7 @@ extension GameWorld {
     /// Decision 403 (續): the stop the station view watches train `id`
     /// from: the one it stands at, or runs to; just after leaving one,
     /// that one, until it is ``Map3DFollow/stationLingerMetres(trainLength:)``
-    /// past it (`left`). `nil` for a train with no service.
+    /// past it, or half the way to the next (`left`). `nil` for a train with no service.
     public func map3DLookoutStop(of id: TrainID) -> (station: StationID, left: Bool)? {
         guard let train = train(id: id), let execution = train.execution, train.timetable.indices.contains(execution.stop)
         else { return nil }
@@ -392,7 +392,10 @@ extension GameWorld {
             if let previous, let run = train.times?.run, let curve = runCurve(of: run, for: train.performance) {
                 let elapsed = max(0, clock.now.seconds - run.start.seconds)
                 let done = elapsed >= run.seconds ? run.length : curve.distance(at: elapsed * 1000)
-                if done / WorldCoordinate.unitsPerMetre < Map3DFollow.stationLingerMetres(trainLength: train.length) {
+                // Review I: no farther than half the run, so a stop close
+                // ahead is watched before the train stands there.
+                let linger = min(Map3DFollow.stationLingerMetres(trainLength: train.length) * WorldCoordinate.unitsPerMetre, run.length / 2)
+                if done < linger {
                     return (train.timetable[previous].station, true)
                 }
             }

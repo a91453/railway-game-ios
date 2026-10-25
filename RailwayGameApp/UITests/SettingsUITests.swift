@@ -78,8 +78,9 @@ final class SettingsUITests: XCTestCase {
         // left edge, beside the row) reached it (PR #427's runs), so drag
         // the row into the middle of the screen and tap the centre of its
         // frame, as openSettingsFromTheGameMenu taps the menu's Settings.
+        // The drags pass the volume sliders and must not start on one.
         let preview = app.buttons["settings.cityView"]
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(preview), "The 3D city preview never came into view")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(preview, clearOf: .slider), "The 3D city preview never came into view")
         let frame = preview.frame
         app.coordinate(withNormalizedOffset: .zero)
             .withOffset(CGVector(dx: frame.midX - app.frame.minX, dy: frame.midY - app.frame.minY))
@@ -133,7 +134,7 @@ final class SettingsUITests: XCTestCase {
         // decision 381 lengthened the settings, and ran out after it (full
         // lane 40026341039). Drags on the list's own left edge, on a phone
         // on its side, moved nothing (run 40044305336).
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(attach, drags: 40), "The attach switch never came into view")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(attach, drags: 40, clearOf: .slider), "The attach switch never came into view")
         XCTAssertEqual(switchValue(attach), "0", "off until the player turns it on")
         XCTAssertTrue(flip(attach, from: "0"), "The attach switch did not turn on")
         let attached = app.staticTexts["settings.report.attached"]
@@ -216,6 +217,27 @@ final class SettingsUITests: XCTestCase {
         trainTool.tap()
         XCTAssertTrue(app.buttons["train.fleetOverview"].appears(within: 10))
         XCTAssertTrue(app.buttons["train.timetable"].appears(within: 10), "The timetable shows with Advanced off")
+    }
+
+    /// Decision 414: the idle mode from the game menu puts the controls
+    /// away; a tap anywhere brings them back.
+    func testTheIdleModePutsTheControlsAwayUntilATap() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-ui-testing-paused", "-demo-layout", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 10))
+
+        tapHittable("hud.menu", in: app)
+        tapHittable("menu.ambient", in: app)
+        let curtain = app.descendants(matching: .any)["ambient.curtain"].firstMatch
+        XCTAssertTrue(curtain.appears(within: 10), "The idle mode starts")
+        XCTAssertTrue(app.buttons["hud.menu"].disappears(within: 5), "The controls are put away")
+        // On the 2D map or over the 3D one, whichever the first shot is.
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        XCTAssertTrue(curtain.disappears(within: 10), "A tap ends it")
+        XCTAssertTrue(app.buttons["hud.menu"].becomesHittable(within: 10), "The controls are back")
     }
 
     /// Taps the copy of the button `identifier` that can be touched: a

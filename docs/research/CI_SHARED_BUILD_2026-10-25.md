@@ -52,3 +52,5 @@ key 用 `Package.resolved` 與來源檔的雜湊，restore-keys 退到 main 最�
 ## 下一步
 
 規劃決定要不要做 A；做的話要作者同意加 `actions/download-artifact`（與在 `ci.yml` 用 `upload-artifact`）。實作時先開一個只動 `ci.yml` 的 PR 加 `full-ci` 標籤，量一輪完整 run，再看要不要減片數。
+
+2026-10-25 規劃選了 A，作者授權兩個 action；實作與量到的數字在 `docs/decisions/411.md` 的「續篇：共用 build」。

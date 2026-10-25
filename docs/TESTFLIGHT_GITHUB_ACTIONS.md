@@ -170,6 +170,7 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
 **What to Test**（`testflight-changes.py` 列出內容，`testflight-processing.py` 寫入）
 
 - **先看手寫的說明**（作者 2026-10-14：「用簡單講就好，講我決定了什麼、沿用什麼」）：`.github/testflight-whats-new.md` 由遊戲規劃 session 在每次發版前寫好，內容是這版決定了什麼、沿用什麼、請測試者看什麼。只要它在上次發佈的 commit 之後改過，What to Test 就照它原文填入，不再列 PR。沒改過（上一版的舊說明）、被刪掉、是空的，或找不到上次發佈時，照下面列 PR 的方式。放在 `.github/` 底下，是因為 processing job 只 checkout `.github`；內容用 git 讀出來，不讀磁碟。
+- **玩家在 App 裡看到的「這版新增」卡**（決策 415）不讀這個檔案：它寫在 `Sources/GamePresentation/WhatsNew.swift`，跟著程式碼進 build，兩種語言、只說新功能。發版前兩個一起改。
 - 「上次發佈」是這個 workflow 在 `main` 上最近一次**成功**的執行（GitHub API，`actions: read`）。從它的 commit 到這次的 commit，列出 `main` 自己的 commit（`git log --first-parent`），每個合併的 PR 一行，最新的在前；標題用 GitHub 上 PR 現在的標題（`pull-requests: read`），拿不到時用合併 commit 的內容或分支名稱。
 - 例如：
 

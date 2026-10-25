@@ -341,7 +341,7 @@ struct MapView: View {
             let lights = DayNight.step(tint.lights)
             // Once for the map and its loupe, not once for each canvas.
             let waitingCounts = MapLayers.waitingPassengerCounts(in: session.world)
-            let networkOverlay = session.networkOverlay, buildingOverlay = session.buildingOverlay
+            let networkOverlay = session.networkOverlay, buildingOverlay = session.buildingOverlay, busOverlay = session.busMapOverlay
             let expansionOverlay = session.mapExpansionOverlay, routePreview = session.routePreview
             let lineCodes = LineBadge.codes(for: session.world.lines)
 
@@ -406,6 +406,7 @@ struct MapView: View {
                             // the next is worked out, nor once its panel closes.
                             journey: journeyTrace.flatMap { $0.station == tracedStationID && $0.line == tracedLineID ? $0 : nil },
                             journeyProgress: journeyProgress,
+                            buses: busOverlay,
                             drawsLabels: false,
                             part: part
                         )
@@ -524,7 +525,8 @@ struct MapView: View {
                                     lineCodes: LineBadge.codes(for: session.world.lines),
                                     linePalette: linePalette,
                                     journey: nil,
-                                    journeyProgress: 1
+                                    journeyProgress: 1,
+                                    buses: session.busMapOverlay
                                 )
                                 .equatable()
                                 // Where the finger is.
@@ -680,6 +682,9 @@ struct MapView: View {
                             // Decisions 92 and 94: the building tool builds
                             // or demolishes where the player taps.
                             session.tapBuildingTool(at: point, reach: reach)
+                        } else if session.tool == .bus, screen.panel != .lines {
+                            // Decision 400, 10i-5: the station, then the stops.
+                            session.tapBusTool(at: point, reach: reach)
                         } else {
                             session.tapMap(at: point, reach: reach)
                         }
@@ -718,6 +723,9 @@ struct MapView: View {
                     .padding(.leading, clear.leading)
                     .padding(.trailing, clear.trailing)
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { topColumnDepth = $0 }
+                    // Decision 414: put away in the idle mode, as the
+                    // screen's own controls are.
+                    .ambientHidden(screen.ambient != nil)
                 }
                 .overlay(alignment: .bottomTrailing) {
                     // Decision 382: the legend, the overview map and the
@@ -801,6 +809,7 @@ struct MapView: View {
                     .padding(.trailing, besideTrailing ? clear.trailing : screenEdges.trailing)
                     .padding(.bottom, besideTrailing ? clear.bottom : screenEdges.bottom)
                     .animation(.easeInOut(duration: 0.2), value: trailingInsetDepth)
+                    .ambientHidden(screen.ambient != nil)
                 }
                 .overlay(alignment: .bottomTrailing) {
                     // Decision 300: under a phone's panel, at the screen's
@@ -819,6 +828,7 @@ struct MapView: View {
                             .padding(.trailing, CGFloat(viewport.width) - rowEnd)
                             .padding(.bottom, below - reach)
                             .transition(.opacity)
+                            .ambientHidden(screen.ambient != nil)
                     }
                 }
                 .onChange(of: buttonsUnderPanel && rowInBand, initial: true) { _, inBand in
@@ -859,6 +869,7 @@ struct MapView: View {
                     // tools column (decision 226, 2026-10-15).
                     .padding(.bottom, leadingRowFoot.map { screenEdges.bottom + $0 - CGFloat(HUDMargins.edge) } ?? clear.bottom)
                     .padding(.leading, clear.leading)
+                    .ambientHidden(screen.ambient != nil)
                 }
                 // Decision 174, later: the sights while building, faint
                 // and under the flags below.
@@ -899,6 +910,7 @@ struct MapView: View {
                 // Decision 109: what needs the player, over its stations.
                 .overlay(alignment: .topLeading) {
                     MapAlertBubbles(session: session, camera: projection, viewport: viewport, insets: clear)
+                        .ambientHidden(screen.ambient != nil)
                 }
                 // Decision 174: the sights, with their stars.
                 .overlay(alignment: .topLeading) {
@@ -1085,7 +1097,12 @@ struct MapView: View {
                 // Decision 177: the station master's tap on advice that
                 // points at a place (the next town to extend to).
                 guard let request else { return }
-                camera = projection.centered(on: WorldCoordinate(x: request.location.x, y: request.location.y), clearOf: framing)
+                if let region = request.region {
+                    // Decision 414: the idle mode's station or line, whole.
+                    camera = projection.showing(region, clearOf: framing)
+                } else {
+                    camera = projection.centered(on: WorldCoordinate(x: request.location.x, y: request.location.y), clearOf: framing)
+                }
             }
             // Decision 188, later fix: where the places the tutorial's
             // step has the player tap stand, which its card keeps clear of.
@@ -2156,6 +2173,9 @@ private struct MapCanvas: View, Equatable {
     /// each arc is drawn yet.
     let journey: JourneyTrace?
     let journeyProgress: Double
+    /// Decision 400 (10i-5): the company's bus routes and the bus tool's
+    /// route (docs/MAP_LAYERS.md, 24.8).
+    var buses: BusMapOverlay?
     /// Whether the stations' names and waiting counts, the network tool's
     /// preview and the tracks' numbers are drawn here; the map draws them
     /// over the trains instead, in ``MapLabelCanvas``.
@@ -2185,6 +2205,7 @@ private struct MapCanvas: View, Equatable {
             if lhs.flowVersion != rhs.flowVersion { return .flow }
             if lhs.lineCodes != rhs.lineCodes { return .lineCodes }
             if lhs.journey != rhs.journey || lhs.journeyProgress != rhs.journeyProgress { return .journey }
+            if lhs.buses != rhs.buses { return .buses }
             return nil
         }
         if lhs.part == .railway, rhs.part == .railway, lhs.drawsLabels == rhs.drawsLabels {
@@ -2226,6 +2247,7 @@ private struct MapCanvas: View, Equatable {
         let selectedStationID = selectedStationID, network = network, building = building, expansion = expansion, traffic = traffic, camera = camera, edges = edges, layers = layers, waitingCounts = waitingCounts, lines = lines
         let labels = labels, latitude = world.geoAnchor?.latitudeDegrees ?? 0, flowStrokes = flowStrokes
         let routePreview = routePreview, journey = journey, journeyProgress = journeyProgress, drawsLabels = drawsLabels, part = part
+        let buses = buses
         return Canvas { context, size in
             // Decision 328: timed for the frame readout; decision 377, each
             // canvas on a line of its own (the loupe's with the railway).
@@ -2253,6 +2275,7 @@ private struct MapCanvas: View, Equatable {
                     lineCodes: lineCodes,
                     journey: journey,
                     journeyProgress: journeyProgress,
+                    buses: buses,
                     drawsLabels: drawsLabels,
                     part: part,
                     in: context

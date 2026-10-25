@@ -24,6 +24,8 @@ struct StartView: View {
     @State private var showsSettings = false
     @State private var showsHelp = false
     @State private var showsAchievements = false
+    /// Decision 415: the news of an update, once.
+    @State private var showsWhatsNew = false
     @Environment(GameAudio.self) private var audio
     /// Compact: a phone on its side.
     @Environment(\.verticalSizeClass) private var verticalSizeClass
@@ -102,8 +104,12 @@ struct StartView: View {
         .sheet(isPresented: $choosesDemo) {
             DemoPicker(launcher: launcher, loadingDetail: loadingDetail)
         }
+        .sheet(isPresented: $showsWhatsNew, onDismiss: launcher.dismissWhatsNew) {
+            WhatsNewView(language: launcher.language)
+        }
         .onAppear {
             launcher.refresh()
+            if launcher.showsWhatsNew { showsWhatsNew = true }
         }
     }
 
@@ -1085,7 +1091,9 @@ private struct ExportedListSave: Transferable {
     let entry: SaveLibrary.Entry
 
     static var transferRepresentation: some TransferRepresentation {
-        FileRepresentation(exportedContentType: .json) { save in
+        // Review I: the game's own type, as the game menu's export
+        // (decision 409).
+        FileRepresentation(exportedContentType: .alongTheLineSave) { save in
             SentTransferredFile(try save.library.exportFile(of: save.entry))
         }
     }

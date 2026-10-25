@@ -140,6 +140,7 @@
 		A6BE3F0BE2C0F8D6B5BB4B23 /* ToolbarSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C62092ABB8C906B420B7E61B /* ToolbarSmokeTests.swift */; };
 		A76D3CC09845C96D375B9D4B /* rain-typhoon.caf in Resources */ = {isa = PBXBuildFile; fileRef = 284ACFB4CDE85B405F4FC6FA /* rain-typhoon.caf */; };
 		A904805EE220E391FA3C4618 /* taiwan_coverage.dat in Resources */ = {isa = PBXBuildFile; fileRef = CF26D5EFF8FE10DB6A8376C9 /* taiwan_coverage.dat */; };
+		A948AFEE87E21806376AA8C4 /* WhatsNewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B5995200C877BF409F730A8 /* WhatsNewView.swift */; };
 		AA89DE59BE4AB10592AFA96C /* PopulationLegendView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBAD6AED84A8DA58D17AC1C7 /* PopulationLegendView.swift */; };
 		AB37C6000B8F37326B3FBCD5 /* NewGameOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6176ABC92A7FB39ABFE9BFB1 /* NewGameOptionsView.swift */; };
 		AD539B90444E0B2C2F203078 /* MapRequestMarks.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8DD4857B9833F971AD18592 /* MapRequestMarks.swift */; };
@@ -162,6 +163,7 @@
 		C5AE4EE9A27FB9506D2B3AB3 /* NightSkipUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F1B1CF5E7A5989229368AA /* NightSkipUITests.swift */; };
 		C61BAB200CEB800C0F50B796 /* TimetableEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBBC6A819CE29EEBC4FD844A /* TimetableEditor.swift */; };
 		C7A83471D6C3E093D4DA78C1 /* LineConfirmationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 937E1D33FAD3FAD9CF5A6E8C /* LineConfirmationCard.swift */; };
+		C91B7D7962C9EF890E327E3C /* AmbientModeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE545BF14678185EA76EACC5 /* AmbientModeView.swift */; };
 		CA2D393EB1EEDB99A27C093F /* HelpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEB483D5847D06BCBC26230C /* HelpView.swift */; };
 		CBC458048B6DB4EAB407BCB0 /* ZoomRowUnderPanelUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE945AAFE65EE7E25CA577DC /* ZoomRowUnderPanelUITests.swift */; };
 		CC783E4053798355ECF17075 /* StartSaveFlowSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2CB75E448956BC3D8E7FE02 /* StartSaveFlowSmokeTests.swift */; };
@@ -267,6 +269,7 @@
 		37971520DEDE438F5E6272D6 /* music-loop.caf */ = {isa = PBXFileReference; path = "music-loop.caf"; sourceTree = "<group>"; };
 		3934A6F628AA98414B2B952D /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		3A47FE76CCB95D1AB460CE99 /* AppleMapBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMapBackground.swift; sourceTree = "<group>"; };
+		3B5995200C877BF409F730A8 /* WhatsNewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhatsNewView.swift; sourceTree = "<group>"; };
 		3BA3B0B2889A228FC08F83B8 /* TutorialUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialUITests.swift; sourceTree = "<group>"; };
 		3D5BF8179644D02716F92269 /* OneShotLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OneShotLocation.swift; sourceTree = "<group>"; };
 		3EDAFCBFB7EEDE187DEFCAB1 /* tmrt_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tmrt_times.json; sourceTree = "<group>"; };
@@ -403,6 +406,7 @@
 		EC04F05461D58759373672F0 /* rain-steady.caf */ = {isa = PBXFileReference; path = "rain-steady.caf"; sourceTree = "<group>"; };
 		ED45B563EF8CA610F22296E6 /* Map3DMetalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Map3DMetalView.swift; sourceTree = "<group>"; };
 		EE37EC86D4CCF3E12B118693 /* tra_branch_runs.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra_branch_runs.json; sourceTree = "<group>"; };
+		EE545BF14678185EA76EACC5 /* AmbientModeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmbientModeView.swift; sourceTree = "<group>"; };
 		F04BA3646C6BDB8801CF770B /* station_transfers.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = station_transfers.json; sourceTree = "<group>"; };
 		F093629816AA56C52D91E5B8 /* MapLibre-iOS-LICENSE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "MapLibre-iOS-LICENSE.md"; sourceTree = "<group>"; };
 		F0F5EA47E14A5423014B49B8 /* NotoSans-OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "NotoSans-OFL.txt"; sourceTree = "<group>"; };
@@ -542,6 +546,7 @@
 			isa = PBXGroup;
 			children = (
 				6F88DCCA78BB699F97926C9A /* AchievementsView.swift */,
+				EE545BF14678185EA76EACC5 /* AmbientModeView.swift */,
 				3A47FE76CCB95D1AB460CE99 /* AppleMapBackground.swift */,
 				79941FA523AF01C8B9E74433 /* BuildToolRail.swift */,
 				A66F0D046BFE66DC6D9329D2 /* CityView3D.swift */,
@@ -617,6 +622,7 @@
 				A19B41254DC18939B0BA2CB0 /* TrainRosterView.swift */,
 				F488A7BFC7F63D86EDB96548 /* TutorialOverlay.swift */,
 				0E01CB29C26C0F92124DEE0C /* TutorialTargets.swift */,
+				3B5995200C877BF409F730A8 /* WhatsNewView.swift */,
 				1FC5AEB0936E154EABD2610F /* YearEndReport.swift */,
 				185F8FF9096D2AE9332F7219 /* Map3D */,
 			);
@@ -939,6 +945,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				61F7C598833B74F821B44904 /* AchievementsView.swift in Sources */,
+				C91B7D7962C9EF890E327E3C /* AmbientModeView.swift in Sources */,
 				DDE073E597E0A494A18D4B85 /* AppleMapBackground.swift in Sources */,
 				3C6F0ECE58408BF72082F7C2 /* BuildToolRail.swift in Sources */,
 				31395CFF6BB9BC1ACA1A8A4B /* CityView3D.swift in Sources */,
@@ -1022,6 +1029,7 @@
 				D576D7231B44DA908F4690A3 /* TrainRosterView.swift in Sources */,
 				543A1EE337FEC2FCA74B2603 /* TutorialOverlay.swift in Sources */,
 				231927FCE953BD76302D19BE /* TutorialTargets.swift in Sources */,
+				A948AFEE87E21806376AA8C4 /* WhatsNewView.swift in Sources */,
 				7044884A77678D3AA560B162 /* YearEndReport.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

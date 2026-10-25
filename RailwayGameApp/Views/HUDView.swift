@@ -578,6 +578,37 @@ private struct GameMenu: View, Equatable {
             }
             .controlGroupStyle(.compactMenu)
         case .settings:
+            // Decision 414: the idle mode beside Settings, so the first
+            // level keeps its six rows.
+            ControlGroup {
+                ForEach(layout.settingsRow, id: \.self) { item in
+                    self.settingsItem(item)
+                }
+            }
+            .controlGroupStyle(.compactMenu)
+        }
+    }
+
+    /// One of the last row's items side by side (decision 414).
+    @ViewBuilder
+    private func settingsItem(_ item: GameMenuLayout.SettingsItem) -> some View {
+        switch item {
+        case .ambient:
+            Button {
+                AmbientMode.start(session: session, screen: screen)
+            } label: {
+                Label {
+                    Text(verbatim: language.text("Idle Mode", "放空模式"))
+                } icon: {
+                    Image(systemName: "moon.zzz")
+                }
+            }
+            .accessibilityHint(Text(verbatim: language.text(
+                "Puts the controls away and lets the camera move between your trains, stations and lines. Tap the screen to come back.",
+                "收起按鈕，鏡頭自己在你的列車、車站和路線之間切換。碰一下螢幕就回來。"
+            )))
+            .accessibilityIdentifier("menu.ambient")
+        case .settings:
             Button {
                 screen.panel = .settings
             } label: {

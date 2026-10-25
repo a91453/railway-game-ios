@@ -55,15 +55,18 @@ public enum TrainCars {
     /// its body with half a car before its head and a car and a half past
     /// its tail, so no more of it lies past its tail, off the track, than
     /// of a train drawn 20 m a car (88.1: a 12-car 700T or N700S-G ran
-    /// some 120 m past its tail). A train whose cars stand their real
-    /// lengths apart is drawn as it was.
+    /// some 120 m past its tail). Only when it is more than half a
+    /// ``drawnCarLength`` longer than that, though: a set a few metres
+    /// over is drawn at its own lengths, its cars at their models' own
+    /// scale (a 12-car EMU3000, 245.7 m, is not squeezed into 240 m).
+    /// A train whose cars stand their real lengths apart is drawn as it was.
     public static func cars(
         body: [TrainMotion.Point], heading: TrainMotion.Point, lengths: [Double], gaps: [Double]
     ) -> [[TrainMotion.Point]] {
         var whole = 0.0
         for (index, length) in lengths.enumerated() { whole += length + (index < gaps.count ? gaps[index] : 0) }
-        let laid = TrainMotion.Trail(body).length + 2 * drawnCarLength
-        let scale = whole > 0 ? min(1, max(laid, drawnCarLength * Double(lengths.count)) / whole) : 1
+        let bound = max(TrainMotion.Trail(body).length + 2 * drawnCarLength, drawnCarLength * Double(lengths.count))
+        let scale = whole > bound + drawnCarLength / 2 ? bound / whole : 1
         var fronts: [Double] = [], front = 0.0
         for (index, length) in lengths.enumerated() {
             fronts.append(front)

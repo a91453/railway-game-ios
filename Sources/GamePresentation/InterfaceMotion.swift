@@ -100,8 +100,15 @@ extension MotionRule {
     /// the boot screen's `fadeMs`, leaving fast.
     public static let loadingOut = MotionRule(seconds: 0.45, curve: .accelerate, moves: false, fades: true)
 
+    /// Decision 414: the idle mode cutting from one shot to the next
+    /// through a dark veil, each way: 0.7 s, smooth at both ends, as the
+    /// owner's rail site's `#veil` (`transition: opacity .7s ease`,
+    /// `fadeSwitch`). It only fades, so with Reduce Motion it still fades,
+    /// in half the time.
+    public static let ambientCut = MotionRule(seconds: 0.7, curve: .standard, moves: false, fades: true)
+
     /// Every rule, for the tests.
-    public static let all: [MotionRule] = [.press, .change, .cardIn, .cardOut, .pop, .confirm, .refuse, .builtRing, .turnNorth, .cameraFlight, .loadingIn, .loadingOut]
+    public static let all: [MotionRule] = [.press, .change, .cardIn, .cardOut, .pop, .confirm, .refuse, .builtRing, .turnNorth, .cameraFlight, .loadingIn, .loadingOut, .ambientCut]
 }
 
 /// Decision 253: a refusal shakes sideways three times, each smaller,

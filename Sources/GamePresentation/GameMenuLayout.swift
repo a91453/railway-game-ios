@@ -19,7 +19,14 @@ public struct GameMenuLayout: Equatable, Sendable {
         /// Decision 383: the ``helpRow``, side by side in one row, where
         /// More stood.
         case help
+        /// Decision 414: the ``settingsRow``, side by side in one row.
         case settings
+    }
+
+    /// Decision 414: one of the last row's items side by side: the idle
+    /// mode, then Settings.
+    public enum SettingsItem: String, CaseIterable, Sendable {
+        case ambient, settings
     }
 
     /// One of the shortcuts side by side in the first level.
@@ -55,6 +62,10 @@ public struct GameMenuLayout: Equatable, Sendable {
     public let helpRow: [HelpItem]
     /// The rows under More; empty when the help row has no More.
     public let moreRows: [MoreRow]
+    /// Decision 414: the last row, in order. The idle mode stands beside
+    /// Settings rather than in a row of its own, so the first level keeps
+    /// its six rows.
+    public let settingsRow: [SettingsItem]
 
     /// `showsGoals`: a game with a challenge or the city's requests
     /// (decisions 86 and 183); `showsTourism`: one with sights (decision
@@ -72,6 +83,7 @@ public struct GameMenuLayout: Equatable, Sendable {
             [.settings],
         ]
         shortcuts = [.tutorial, .postcard, .achievements]
+        settingsRow = [.ambient, .settings]
         var more: [MoreRow] = []
         if showsGoals { more.append(.goals) }
         if showsTourism { more.append(.tourism) }

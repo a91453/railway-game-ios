@@ -284,8 +284,27 @@ final class MapInteractionTests: XCTestCase {
         // enough for several looks; the field still gets no tap.
         let focused = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hasKeyboardFocus == true"), object: field)
         XCTAssertEqual(XCTWaiter.wait(for: [focused], timeout: 20), .completed, "The rename field takes the keyboard by itself")
-        app.typeText(" Plaza")
-        XCTAssertEqual(field.value as? String, "Central Plaza")
+        // A letter at a time, each waited for in the field. Typed at once
+        // into an app drawing some 5 frames a second, the last letters
+        // were lost and the field held "Central Pl" (main c4fc5b6's full
+        // lane, run 40192919013, read 24 s after typing). A letter the
+        // field still lacks after 10 s, the field otherwise unchanged, is
+        // typed once more, as a player would.
+        func shows(_ text: String) -> Bool {
+            let value = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", text), object: field)
+            return XCTWaiter.wait(for: [value], timeout: 10) == .completed
+        }
+        var typed = "Central"
+        for letter in " Plaza" {
+            let before = typed
+            typed.append(letter)
+            app.typeText(String(letter))
+            if !shows(typed), field.value as? String == before {
+                app.typeText(String(letter))
+                XCTAssertTrue(shows(typed), "The field shows \"\(typed)\"; it has \(String(describing: field.value))")
+            }
+            XCTAssertEqual(field.value as? String, typed)
+        }
         alert.buttons["Rename"].tap()
         XCTAssertTrue(alert.disappears(within: 5))
         XCTAssertTrue(app.navigationBars["Central Plaza"].appears(within: 5),

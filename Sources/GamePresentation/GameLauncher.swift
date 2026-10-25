@@ -170,6 +170,8 @@ public final class GameLauncher {
         refresh()
         if !preferences.hasLaunched {
             preferences.hasLaunched = true
+            // Decision 415: nothing is new on the first launch.
+            if isFirstLaunch { preferences.whatsNewSeen = WhatsNew.edition }
             savePreferences()
         }
     }
@@ -201,6 +203,19 @@ public final class GameLauncher {
     public func dismissFirstGameCard() {
         guard !preferences.firstGameCardDismissed else { return }
         preferences.firstGameCardDismissed = true
+        savePreferences()
+    }
+
+    /// Whether the start screen shows the "What's New" card (decision
+    /// 415): once, the first time an updated app opens.
+    public var showsWhatsNew: Bool {
+        WhatsNew.edition != nil && preferences.whatsNewSeen != WhatsNew.edition
+    }
+
+    /// Closes the "What's New" card until the next update's news.
+    public func dismissWhatsNew() {
+        guard showsWhatsNew else { return }
+        preferences.whatsNewSeen = WhatsNew.edition
         savePreferences()
     }
 
@@ -708,13 +723,13 @@ public final class GameLauncher {
         guard !isOpeningADemo, realWorldLoading == nil else { return nil }
         isOpeningHighSpeedDemo = true
         realWorldLoading = RealWorldLoading(place: language.text("Taiwan High Speed Rail", "台灣高鐵"))
-        let (language, population, places, water, coverage, heights) = (language, population, places, water, coverage, heights)
+        let (language, population, places, water, coverage, heights, baseMap) = (language, population, places, water, coverage, heights, baseMap)
         return Task {
             let world = await Task.detached(priority: .userInitiated) {
-                try? HighSpeedDemo.make(
+                (try? HighSpeedDemo.make(
                     in: language, railways: railways, population: population, places: places, water: water, coverage: coverage, heights: heights,
                     eventSeed: .random(in: .min ... .max)
-                )
+                )).map { Self.readingRoads(of: $0, baseMap: baseMap) }
             }.value
             isOpeningHighSpeedDemo = false
             realWorldLoading = nil
@@ -729,6 +744,18 @@ public final class GameLauncher {
             guard session == nil else { return }
             begin(world, keepingAutosave: true, isDemo: true)
         }
+    }
+
+    /// A demo's `world` with the roads of all its land read from `baseMap`
+    /// (decision 400's sequel), as ``begin(_:keepingAutosave:news:isDemo:)``
+    /// would read them: here, off the main actor with the rest of the
+    /// build. The High Speed Rail's land round its twelve stations is some
+    /// 2,500 blocks, and reading their roads in ``begin`` held the main
+    /// thread 28 to 58 s on a Simulator as the game opened.
+    nonisolated static func readingRoads(of world: GameWorld, baseMap: BaseMapTiles?) -> GameWorld {
+        var world = world
+        GameSession.readRoads(in: &world, baseMap: baseMap)
+        return world
     }
 
     /// Whether ``openTRADemo(railways:)`` is building its game.
@@ -746,13 +773,13 @@ public final class GameLauncher {
         guard !isOpeningADemo, realWorldLoading == nil else { return nil }
         isOpeningTRADemo = true
         realWorldLoading = RealWorldLoading(place: language.text("Yilan Line", "宜蘭線"))
-        let (language, population, places, water, coverage, heights) = (language, population, places, water, coverage, heights)
+        let (language, population, places, water, coverage, heights, baseMap) = (language, population, places, water, coverage, heights, baseMap)
         return Task {
             let world = await Task.detached(priority: .userInitiated) {
-                try? TRADemo.make(
+                (try? TRADemo.make(
                     in: language, railways: railways, population: population, places: places, water: water, coverage: coverage, heights: heights,
                     eventSeed: .random(in: .min ... .max)
-                )
+                )).map { Self.readingRoads(of: $0, baseMap: baseMap) }
             }.value
             isOpeningTRADemo = false
             realWorldLoading = nil

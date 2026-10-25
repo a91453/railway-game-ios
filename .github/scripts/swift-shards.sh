@@ -5,6 +5,9 @@
 #   swift-shards.sh build            `swift build --build-tests -Xswiftc
 #                                    -warnings-as-errors`, once more when
 #                                    swift-build itself crashes (build_package)
+#   swift-shards.sh pack <file>      pack .build into <file> (tar, gzip -1)
+#   swift-shards.sh unpack <file>    unpack it where it was built (decision
+#                                    411, shared build)
 #   swift-shards.sh run <shard>      run one shard after `swift build --build-tests`
 #                                    (`selected`: the classes in SELECTED_TESTS)
 #   swift-shards.sh select <shard>   print the test IDs a shard selects (offline)
@@ -20,6 +23,8 @@
 #                                    runs (pr_plan below)
 #   swift-shards.sh decide           ci.yml's change detection: whether the
 #                                    Swift jobs run, the tier, the matrix
+#   swift-shards.sh head-full-run    print a successful full ci.yml run of
+#                                    HEAD (head_full_run below), or nothing
 #   swift-shards.sh gate             the "Swift CI (gate)" verdict
 #   swift-shards.sh ios-gate         a pull request's gate waits for its
 #                                    iOS App Build run (ios_gate below)
@@ -794,6 +799,27 @@ build_package() {
   done
 }
 
+# Decision 411, shared build: ci.yml's swift-build job builds once and packs
+# .build; each shard job unpacks it in the same container and workspace path
+# and runs swift test --skip-build, which reads the built products and does
+# not look at the sources' times (the checkout's are newer than the build's).
+# tar keeps .build's links (debug points into swift-build's own layout).
+pack_build() {
+  local file="$1"
+  [[ -d .build ]] || die "No .build to pack: build first."
+  tar -cf - .build | gzip -1 >"$file"
+  echo "Packed .build ($(du -sh .build | cut -f1)) into $file ($(du -h "$file" | cut -f1))."
+}
+
+unpack_build() {
+  local file="$1"
+  [[ -s "$file" ]] || die "No build to unpack at $file: did the swift-build job upload it?"
+  [[ ! -e .build ]] || die ".build already exists; the shard would not run the downloaded build."
+  gzip -dc "$file" | tar -xf -
+  rm -f "$file"
+  echo "Unpacked the build into .build ($(du -sh .build | cut -f1))."
+}
+
 # Decision 404: say so before a shard reaches its job limit, not after.
 # Every rebalance above came after a red main, when a shard had drifted
 # past ci.yml's 20 minutes (timeout-minutes) as classes were added or grew;
@@ -1074,8 +1100,9 @@ push_base() {
 }
 
 # ---------------------------------------------------------------------------
-# Pull request tiers (decision 185). A push to main and a manual run test
-# everything; a pull request runs what its changed files can affect:
+# Pull request tiers (decision 185), which a push to main uses too (decision
+# 413). A manual run and the nightly run test everything; a pull request and
+# a push run what their changed files can affect:
 #
 #   full          every shard. Anything GameCore is built from or tested
 #                 with: Sources/GameCore, Package.swift and Package.resolved,
@@ -1472,21 +1499,23 @@ pr_plan() {
 }
 
 # What ci.yml's change detection decides, from the event and what it found:
-#   EVENT    push, pull_request or workflow_dispatch
+#   EVENT    push, pull_request, workflow_dispatch or schedule
 #   LISTED   true when the changed files (on stdin) could be listed
 #   LABELS   the pull request's labels, separated by spaces or new lines
 # Prints swift=<true|false>, tier=<tier> and matrix=<JSON> for $GITHUB_OUTPUT
-# (and the tests and tier on stderr). A push to main and a manual run are
-# full whenever the Swift jobs run; only a pull request has a smaller tier,
-# and only when its files were listed and it is not labelled full-ci.
+# (and the tests and tier on stderr). A pull request and a push to main run
+# the tier of their listed files (decision 185 for pull requests, decision
+# 413 for pushes: a push is compared with the last successful push run, so
+# the files are everything since); a pull request labelled full-ci, a push
+# whose files could not be listed, a manual run and the nightly run are full.
 ci_decide() {
   local files swift=true tier=full matrix plan tests parts k sep
   files="$(cat)"
   matrix="$("$0" matrix)"
   if [[ "${LISTED:-false}" == true ]]; then
     swift="$(relevant_paths <<<"$files")"
-    if [[ "${EVENT:-}" == pull_request ]]; then
-      if [[ " $(tr '\n' ' ' <<<"${LABELS:-}") " == *" full-ci "* ]]; then
+    if [[ "${EVENT:-}" == pull_request || "${EVENT:-}" == push ]]; then
+      if [[ "${EVENT:-}" == pull_request && " $(tr '\n' ' ' <<<"${LABELS:-}") " == *" full-ci "* ]]; then
         echo "Label full-ci: every shard runs." >&2
         swift=true
       elif plan="$("$0" plan <<<"$files")"; then
@@ -1510,7 +1539,7 @@ ci_decide() {
           *) die "Unknown tier '$tier' from plan." ;;
         esac
       else
-        echo "::warning::Could not plan the pull request's tier; running every shard." >&2
+        echo "::warning::Could not plan the tier; running every shard." >&2
         tier=full
         swift=true
       fi
@@ -1522,22 +1551,59 @@ ci_decide() {
   echo "matrix=$matrix"
 }
 
+# Has HEAD already passed every shard? Prints the URL of a successful ci.yml
+# run of HEAD whose `rest` shard job (only the full tier has one) succeeded,
+# or nothing. The nightly run (decision 413) is skipped when there is one: a
+# manual run, a push run whose tier was full, or an earlier nightly run of
+# the same commit. Nothing (a warning on stderr) when the API fails, so the
+# nightly run then tests everything.
+# Needs `gh` with a token that can read Actions (GH_TOKEN) and GITHUB_REPOSITORY.
+head_full_run() {
+  local head runs id url jobs
+  head="$(git rev-parse HEAD)" || { echo "::warning::Cannot read HEAD." >&2; return 0; }
+  if [[ -z "${GITHUB_REPOSITORY:-}" ]]; then
+    echo "::warning::GITHUB_REPOSITORY is not set; cannot look up the runs of HEAD." >&2
+    return 0
+  fi
+  if ! runs="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$head&status=success&per_page=20" \
+    --jq '.workflow_runs[] | "\(.id) \(.html_url)"')"; then
+    echo "::warning::Could not list the successful ci.yml runs of $head." >&2
+    return 0
+  fi
+  while read -r id url; do
+    [[ "$id" =~ ^[0-9]+$ ]] || continue
+    if ! jobs="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$id/jobs?per_page=100" \
+      --jq '.jobs[] | select(.conclusion == "success") | .name')"; then
+      echo "::warning::Could not list the jobs of run $id." >&2
+      continue
+    fi
+    if grep -q -x -F "Swift 6.4 (Linux) / rest" <<<"$jobs"; then
+      echo "$url"
+      return 0
+    fi
+  done <<<"$runs"
+  echo "No successful full ci.yml run of $head." >&2
+}
+
 # The gate's verdict ("Swift CI (gate)", the check main's branch rule
 # requires), from the jobs' results:
 #   CHANGES       the change detection's result
 #   SWIFT_NEEDED  its swift output
 #   TIER          its tier output
-#   CURRENT       the Swift jobs' combined result (failure if any job failed,
+#   BUILD         the swift-build job's result (decision 411, shared build)
+#   CURRENT       the test jobs' combined result (failure if any job failed,
 #                 cancelled if any was cancelled, skipped if none ran)
-# Passes only when the detection succeeded and either every Swift job of the
-# tier succeeded or none was needed and none ran.
+# Passes only when the detection succeeded and either the build and every
+# test job of the tier succeeded or none was needed and none ran.
 ci_gate() {
-  echo "changes: ${CHANGES:-}; Swift needed: ${SWIFT_NEEDED:-}; tier: ${TIER:-}; Swift 6.4: ${CURRENT:-}"
+  echo "changes: ${CHANGES:-}; Swift needed: ${SWIFT_NEEDED:-}; tier: ${TIER:-}; build: ${BUILD:-}; Swift 6.4: ${CURRENT:-}"
   [[ "${CHANGES:-}" == success ]] || die "The change detection did not succeed (${CHANGES:-no result})."
   if [[ "${SWIFT_NEEDED:-}" == true ]]; then
+    [[ "${BUILD:-}" == success ]] || die "The Swift build did not succeed (${BUILD:-no result}); the test jobs need it."
     [[ "${CURRENT:-}" == success ]] || die "A Swift job of tier ${TIER:-?} did not succeed (Swift 6.4: ${CURRENT:-no result})."
-    echo "Every Swift 6.4 job of tier ${TIER:-?} passed."
+    echo "The build and every Swift 6.4 job of tier ${TIER:-?} passed."
   elif [[ "${SWIFT_NEEDED:-}" == false ]]; then
+    [[ "${BUILD:-}" == skipped ]] || die "The Swift jobs were not needed but the build did not skip (${BUILD:-no result})."
     [[ "${CURRENT:-}" == skipped ]] || die "The Swift jobs were not needed but did not skip (Swift 6.4: ${CURRENT:-no result})."
     echo "No file that can change the Swift package changed; the Swift jobs were skipped."
   else
@@ -1638,6 +1704,14 @@ case "${1:-}" in
   build)
     build_package
     ;;
+  pack)
+    [[ $# -eq 2 ]] || die "usage: $0 pack <file>"
+    pack_build "$2"
+    ;;
+  unpack)
+    [[ $# -eq 2 ]] || die "usage: $0 unpack <file>"
+    unpack_build "$2"
+    ;;
   run)
     [[ $# -eq 2 ]] || die "usage: $0 run <shard>"
     run_shard "$2"
@@ -1674,6 +1748,9 @@ case "${1:-}" in
   decide)
     ci_decide
     ;;
+  head-full-run)
+    head_full_run
+    ;;
   gate)
     ci_gate
     ;;
@@ -1684,6 +1761,6 @@ case "${1:-}" in
     superseded
     ;;
   *)
-    die "usage: $0 build | run <shard> | select <shard> | shards | classes | matrix | relevant | push-base | plan | decide | gate | ios-gate | superseded"
+    die "usage: $0 build | pack <file> | unpack <file> | run <shard> | select <shard> | shards | classes | matrix | relevant | push-base | plan | decide | head-full-run | gate | ios-gate | superseded"
     ;;
 esac
