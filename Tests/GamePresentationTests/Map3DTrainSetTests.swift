@@ -40,9 +40,10 @@ final class Map3DTrainSetTests: XCTestCase {
                 // the seven-section car's 7.6 to 8.3 m, as they are.
                 // Decision 408: the 700T's cars 25.2 to 25.5 m, the N700S-G's
                 // and its far set's 25 and 25.3 m,
-                // #900's light 700T (now the far set) 24 m.
+                // #900's light 700T (now the far set) 24 m, and its 700T
+                // kept for the train pack.
                 let length: ClosedRange<Float> = set.key == "highSpeed" ? 25...25.6 : ["n700sG", "n700sGFar"].contains(set.key) ? 24.9...25.4
-                    : set.key == "highSpeedFar" ? 23...25 : set.key == "wenhu" ? 12...13.5
+                    : ["highSpeedFar", "highSpeedClassic"].contains(set.key) ? 23...25 : set.key == "wenhu" ? 12...13.5
                     : set.key == "threeCarUrban" ? 15...16 : set.key == "sevenSectionLRT" ? 14...16
                     : name == set.headName && ["SUMMER", "STEAM"].contains(set.key) ? 14.5...15.5
                     : name == set.tenderName ? 8.9...9.6 : set.key == "fourCarMetro" ? 12.3...12.8

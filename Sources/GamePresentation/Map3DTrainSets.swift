@@ -155,6 +155,16 @@ public struct Map3DTrainSet: Sendable {
             ownLength("blueSeven", head: Map3DSevenCarBlue.model(.leading), middle: Map3DSevenCarBlue.model(.middleOne),
                       tail: Map3DSevenCarBlue.model(.trailing), cars: 7,
                       lamps: Lamps(x: 4.02, height: 1.005, across: 0.65, width: 0.32, tall: 0.17)),
+            // The author, 2026-10-25: the train pack holds Codex's
+            // rebuilds, and a locked pack draws the versions before them.
+            // Those are kept here under their own keys, as they were on
+            // `main` before #1201, #1229 and #1230 took their keys: the
+            // 700T and the EMU3000 and Taroko as #900 has them, the E200
+            // as its old locomotive. Nothing draws them yet.
+            multipleUnit("highSpeedClassic", asset: "02_HSR_MRT_3x2-01", livery: TrainLivery.highSpeed, pantographCars: [3, 8]),
+            multipleUnit("emu3000Classic", asset: "01_TRA_modern_3x2-01", livery: TrainLivery.emu3000),
+            multipleUnit("tarokoClassic", asset: "01_TRA_modern_3x2-03", livery: TrainLivery.taroko),
+            hauled("E200CKClassic", locomotive: .e200, coach: chuKuang),
         ]
     }()
 
