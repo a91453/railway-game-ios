@@ -52,6 +52,16 @@ final class SaveSyncTests: XCTestCase {
         )
     }
 
+    /// What `outcome` copied, deleted or kept twice, without where the saves
+    /// stand after it.
+    private func copies(_ outcome: SaveSync.Outcome) -> SaveSync.Outcome {
+        var copies = outcome
+        copies.marks = [:]
+        copies.downloading = 0
+        copies.needsUpdate = 0
+        return copies
+    }
+
     /// The files in iCloud but its mark.
     private func cloudFiles() -> [String] {
         ((try? FileManager.default.contentsOfDirectory(atPath: cloudDirectory.path)) ?? []).filter { $0 != SaveSync.markFileName }.sorted()
@@ -92,7 +102,7 @@ final class SaveSyncTests: XCTestCase {
 
         // Nothing changed: nothing to do.
         let idle = sync(phone)
-        XCTAssertEqual(idle, SaveSync.Outcome())
+        XCTAssertEqual(copies(idle), SaveSync.Outcome())
     }
 
     func testASaveChangedOnBothDevicesIsKeptTwice() throws {
@@ -119,7 +129,7 @@ final class SaveSyncTests: XCTestCase {
         XCTAssertTrue(phones.keptBoth.isEmpty)
         XCTAssertEqual(try cash(on: phone), [300, 400])
         XCTAssertEqual(try cash(on: pad), [300, 400])
-        XCTAssertEqual(sync(pad), SaveSync.Outcome(), "and the two are in step")
+        XCTAssertEqual(copies(sync(pad)), SaveSync.Outcome(), "and the two are in step")
     }
 
     func testTheFirstRoundOfTwoDevicesWithGamesKeepsBoth() throws {
@@ -144,7 +154,7 @@ final class SaveSyncTests: XCTestCase {
             at: phone.library.directory.appendingPathComponent("autosave.json"), to: pad.library.directory.appendingPathComponent("autosave.json")
         )
         sync(phone)
-        XCTAssertEqual(sync(pad), SaveSync.Outcome())
+        XCTAssertEqual(copies(sync(pad)), SaveSync.Outcome())
         XCTAssertEqual(pad.files(), ["autosave.json"])
     }
 
@@ -160,9 +170,9 @@ final class SaveSyncTests: XCTestCase {
         // player deletes a save on a device), and not copied back.
         try phone.library.delete(kept)
         XCTAssertEqual(sync(phone).deleted, ["save-2026-10-02 120000"])
-        XCTAssertEqual(sync(pad), SaveSync.Outcome())
+        XCTAssertEqual(copies(sync(pad)), SaveSync.Outcome())
         XCTAssertEqual(try cash(on: pad), [30, 40])
-        XCTAssertEqual(sync(pad), SaveSync.Outcome(), "nor later")
+        XCTAssertEqual(copies(sync(pad)), SaveSync.Outcome(), "nor later")
         XCTAssertFalse(cloudFiles().contains("save-2026-10-02 120000.json"))
 
         // Renamed on the pad, deleted on the phone: the pad's is kept.
@@ -227,7 +237,8 @@ final class SaveSyncTests: XCTestCase {
         )
         cloud.unavailable = ["save-2026-10-02 120001.json"]
         let waiting = sync(pad, with: cloud)
-        XCTAssertEqual(waiting, SaveSync.Outcome(), "neither taken for deleted, nor half copied")
+        XCTAssertEqual(copies(waiting), SaveSync.Outcome(), "neither taken for deleted, nor half copied")
+        XCTAssertEqual(waiting.marks, ["autosave": .downloading, "save-2026-10-02 120001": .downloading])
         XCTAssertEqual(try cash(on: pad), [5, 60])
         XCTAssertEqual(pad.files(), ["autosave.json", "autosave.news.json", "save-2026-10-02 120001.json"])
 
@@ -400,7 +411,7 @@ final class SaveSyncTests: XCTestCase {
         XCTAssertEqual(try cash(on: pad), [60])
         // The pad's own, numbered as the phone's are, never meet them.
         try pad.library.saveAutosaveSlot(world(cash: 70), at: date(3))
-        XCTAssertEqual(sync(pad), SaveSync.Outcome())
+        XCTAssertEqual(copies(sync(pad)), SaveSync.Outcome())
         XCTAssertEqual(try cash(on: phone), [50, 55, 60])
     }
 
@@ -433,7 +444,17 @@ final class SaveSyncTests: XCTestCase {
         let listed = try XCTUnwrap(pad.library.entries().first { $0.id == "save-later.json" })
         XCTAssertEqual(listed.problem, .newerVersion(SavedGame.currentVersion + 1))
         XCTAssertTrue(listed.problem?.playerMessage(in: .traditionalChinese).contains("請更新 App") == true)
-        XCTAssertEqual(sync(pad), SaveSync.Outcome(), "and waits, round after round")
+        let again = sync(pad)
+        XCTAssertEqual(copies(again), SaveSync.Outcome(), "and waits, round after round")
+        // Said as needing an update, not as waiting to go up: being online
+        // would not bring it.
+        XCTAssertEqual(again.marks["autosave"], .needsUpdate)
+        XCTAssertEqual(again.waiting, 0)
+        XCTAssertEqual(CloudSaves.after(again, at: date(150)), .waiting(uploads: 0, downloads: 0, needsUpdate: 1))
+        XCTAssertEqual(
+            CloudSaves.after(again, at: date(150)).footnote(in: .traditionalChinese),
+            "另一台裝置的 1 個存檔來自較新版本的遊戲，請更新 App 後再同步。"
+        )
 
         // The pad plays on: the later game is kept beside it, never lost.
         try pad.library.save(world(cash: 70), as: .autosave, at: date(200))
@@ -487,13 +508,98 @@ final class SaveSyncTests: XCTestCase {
 
     func testTheWords() {
         for language in [DisplayLanguage.english, .traditionalChinese] {
-            XCTAssertNil(CloudSaves.off.footnote(in: language), "nothing is asked of a player without iCloud")
-            XCTAssertNotNil(CloudSaves.on.footnote(in: language))
-            XCTAssertNotNil(CloudSaves.incomplete.footnote(in: language))
+            XCTAssertNil(CloudSaves.off.footnote(in: language), "nothing is said in a build without iCloud")
+            for status in [CloudSaves.iCloudOff, .syncing, .synced(at: date(0)), .waiting(uploads: 1, downloads: 0), .waiting(uploads: 0, downloads: 2), .waiting(uploads: 0, downloads: 0, needsUpdate: 1), .incomplete] {
+                XCTAssertFalse(status.footnote(in: language, now: date(60))?.isEmpty ?? true, "\(status)")
+                XCTAssertNotNil(status.systemImage)
+            }
+            for mark in [CloudSaveMark.onlyOnDevice, .inICloud, .waiting, .downloading, .needsUpdate] {
+                XCTAssertFalse(mark.text(in: language).isEmpty)
+            }
             XCTAssertFalse(CloudSaves.keptTwiceText(1, in: language).isEmpty)
             XCTAssertTrue(CloudSaves.keptTwiceText(3, in: language).contains("3"))
         }
         XCTAssertTrue(CloudSaves.keptTwiceText(1, in: .traditionalChinese).contains("另一台裝置的進度"))
+        XCTAssertEqual(
+            CloudSaves.synced(at: date(0)).footnote(in: .traditionalChinese, now: date(300)),
+            "存檔已放進你的 iCloud（5 分鐘前同步），換一台 iPhone 或 iPad 都能接著玩。"
+        )
+        XCTAssertTrue(CloudSaves.iCloudOff.footnote(in: .traditionalChinese)?.contains("設定 › 你的名字 › iCloud") ?? false, "says where to turn it on")
+        XCTAssertEqual(
+            CloudSaves.waiting(uploads: 2, downloads: 1).footnote(in: .traditionalChinese),
+            "2 個存檔等待上傳到 iCloud，連上網路後會自動上傳。另一台裝置的 1 個存檔正在下載。"
+        )
+    }
+
+    // MARK: - Where each save stands (decision 397, later)
+
+    func testAFileWhoseUploadCannotBeToldIsNotTakenAsUp() throws {
+        XCTAssertFalse(SaveSyncFolderFile.inICloud(isCurrent: true, isUploaded: nil).isUploaded, "never said synced when not known")
+        XCTAssertTrue(SaveSyncFolderFile.inICloud(isCurrent: true, isUploaded: true).isUploaded)
+        XCTAssertFalse(SaveSyncFolderFile.inICloud(isCurrent: false, isUploaded: true).isAvailable)
+        // A save in iCloud whose state cannot be read waits, not synced.
+        let phone = device("phone")
+        try phone.library.save(world(cash: 60), as: .autosave, at: date(0))
+        let cloud = UnknownUploadFolder(directory: cloudDirectory)
+        let round = sync(phone, with: cloud)
+        XCTAssertEqual(round.marks, ["autosave": .waiting])
+        XCTAssertEqual(CloudSaves.after(round, at: date(10)), .waiting(uploads: 1, downloads: 0))
+    }
+
+    func testEachSaveSaysWhereItStands() throws {
+        let phone = device("phone"), pad = device("pad")
+        let cloud = TestFolder(directory: cloudDirectory)
+        try phone.library.save(world(cash: 60), as: .autosave, at: date(0))
+        try phone.library.save(world(cash: 30), as: .manual, at: date(10), named: "Taipei loop")
+        let manual = "save-2026-10-02 120010"
+        // Written to iCloud's folder, but not yet up (offline): another
+        // device does not see them yet.
+        cloud.notUploaded = ["autosave.json", manual + ".json", manual + ".name"]
+        var round = sync(phone, with: cloud)
+        XCTAssertEqual(round.marks, ["autosave": .waiting, manual: .waiting])
+        XCTAssertEqual(CloudSaves.after(round, at: date(20)), .waiting(uploads: 2, downloads: 0))
+        // Up now.
+        cloud.notUploaded = []
+        round = sync(phone, with: cloud)
+        XCTAssertEqual(round.marks, ["autosave": .inICloud, manual: .inICloud])
+        XCTAssertEqual(CloudSaves.after(round, at: date(30)), .synced(at: date(30)))
+
+        // On the iPad, a save iCloud has not brought down yet: counted as
+        // on its way, not as gone.
+        cloud.unavailable = [manual + ".json"]
+        round = sync(pad, with: cloud)
+        XCTAssertEqual(round.marks, ["autosave": .inICloud])
+        XCTAssertEqual(round.downloading, 1)
+        XCTAssertEqual(CloudSaves.after(round, at: date(40)), .waiting(uploads: 0, downloads: 1))
+        // Brought down: the next round (Sync Now) takes it.
+        cloud.unavailable = []
+        round = sync(pad, with: cloud)
+        XCTAssertEqual(round.marks, ["autosave": .inICloud, manual: .inICloud])
+        XCTAssertEqual(CloudSaves.after(round, at: date(50)), .synced(at: date(50)))
+
+        // The phone changes its autosave while the iPad's newer one is on
+        // its way: the phone's waits.
+        try pad.library.save(world(cash: 70), as: .autosave, at: date(60))
+        sync(pad, with: cloud)
+        cloud.unavailable = ["autosave.json"]
+        round = sync(phone, with: cloud)
+        XCTAssertEqual(round.marks["autosave"], .downloading)
+        XCTAssertEqual(CloudSaves.after(round, at: date(70)), .waiting(uploads: 0, downloads: 1))
+        cloud.unavailable = []
+
+        // Deleted on the iPad: the phone keeps its own, on it alone.
+        try pad.library.delete(XCTUnwrap(pad.library.entries().first { $0.kind == .manual }))
+        sync(pad, with: cloud)
+        round = sync(phone, with: cloud)
+        XCTAssertEqual(round.marks[manual], .onlyOnDevice)
+
+        // A new save iCloud would not take: on this device only, and said.
+        try phone.library.save(world(cash: 90), as: .manual, at: date(80))
+        cloud.failsWrites = true
+        round = sync(phone, with: cloud)
+        XCTAssertEqual(round.marks["save-2026-10-02 120120"], .onlyOnDevice)
+        XCTAssertEqual(CloudSaves.after(round, at: date(90)), .incomplete)
+        XCTAssertEqual(CloudSaves.after(nil, at: date(90)), .iCloudOff)
     }
 
     // MARK: - The launcher
@@ -509,8 +615,12 @@ final class SaveSyncTests: XCTestCase {
         phone.startNewGame()
         let played = try XCTUnwrap(phone.session).worldToSave
         phone.returnToStart()
-        await phone.syncSaves()?.value
-        XCTAssertEqual(phone.cloudSaves, .on)
+        let round = phone.syncSaves(at: date(100))
+        XCTAssertEqual(phone.cloudSaves, .syncing, "said while it runs")
+        XCTAssertFalse(phone.cloudSaves.canSyncNow)
+        await round?.value
+        XCTAssertEqual(phone.cloudSaves, .synced(at: date(100)))
+        XCTAssertEqual(phone.autosave.flatMap(phone.cloudMark(of:)), .inICloud)
         XCTAssertTrue(cloudFiles().contains("autosave.json"))
 
         let pad = GameLauncher(library: SaveLibrary(directory: root.appendingPathComponent("pad")), language: .traditionalChinese)
@@ -521,13 +631,39 @@ final class SaveSyncTests: XCTestCase {
         pad.continueGame()
         XCTAssertEqual(try XCTUnwrap(pad.session).world, played)
 
-        // iCloud gone: the saves stay on the device, with nothing said.
+        // iCloud turned off: the saves stay on the device, and the line
+        // says where to turn it on; no message comes up.
         pad.returnToStart()
         pad.cloudSaveFolder = { nil }
         await pad.syncSaves()?.value
-        XCTAssertEqual(pad.cloudSaves, .off)
+        XCTAssertEqual(pad.cloudSaves, .iCloudOff)
+        XCTAssertTrue(pad.cloudMarks.isEmpty)
         XCTAssertNil(pad.message)
         XCTAssertNotNil(pad.autosave)
+        // Turned on again: Sync Now finds it at once.
+        pad.cloudSaveFolder = { DirectorySaveFolder(directory: cloud) }
+        await pad.syncNow(at: date(200))?.value
+        XCTAssertEqual(pad.cloudSaves, .synced(at: date(200)))
+    }
+
+    @MainActor
+    func testSyncNowRunsOneRoundAtATime() async throws {
+        let cloud = cloudDirectory
+        let phone = GameLauncher(library: SaveLibrary(directory: root.appendingPathComponent("phone")), language: .english)
+        XCTAssertNil(phone.syncNow(), "a build without iCloud has no Sync Now")
+        phone.cloudSaveFolder = { DirectorySaveFolder(directory: cloud) }
+        let first = phone.syncNow(at: date(0))
+        XCTAssertNotNil(first)
+        XCTAssertNil(phone.syncNow(at: date(1)), "not again while one runs")
+        await first?.value
+        // Two rounds asked for (going to the background, then back): the
+        // first's end does not say synced while the second runs.
+        // Whichever ends first, only the last says how things stand.
+        let a = phone.syncSaves(at: date(10)), b = phone.syncSaves(at: date(11))
+        await a?.value
+        XCTAssertNotEqual(phone.cloudSaves, .synced(at: date(10)))
+        await b?.value
+        XCTAssertEqual(phone.cloudSaves, .synced(at: date(11)))
     }
 
     @MainActor
@@ -558,6 +694,7 @@ private final class TestFolder: SaveSyncFolder, @unchecked Sendable {
     var failsWritesOf: Set<String> = []
     var failsListing = false
     var versions: [String: [Data]] = [:]
+    var notUploaded: Set<String> = []
     var owner: UInt64?
 
     struct Refused: Error {}
@@ -571,6 +708,9 @@ private final class TestFolder: SaveSyncFolder, @unchecked Sendable {
         var files = try base.files()
         for name in unavailable where files[name] != nil {
             files[name] = SaveSyncFolderFile(isAvailable: false)
+        }
+        for name in notUploaded where files[name] != nil {
+            files[name]?.isUploaded = false
         }
         return files
     }
@@ -596,4 +736,24 @@ private final class TestFolder: SaveSyncFolder, @unchecked Sendable {
     func discardOtherVersions(of name: String) {
         versions[name] = nil
     }
+}
+
+/// iCloud's folder on a device that cannot tell whether its files are up,
+/// as the app lists it.
+private struct UnknownUploadFolder: SaveSyncFolder {
+    let base: DirectorySaveFolder
+
+    init(directory: URL) {
+        base = DirectorySaveFolder(directory: directory)
+    }
+
+    func files() throws -> [String: SaveSyncFolderFile] {
+        try base.files().mapValues { _ in .inICloud(isCurrent: true, isUploaded: nil) }
+    }
+
+    func read(_ name: String) throws -> Data { try base.read(name) }
+    func write(_ data: Data, to name: String) throws { try base.write(data, to: name) }
+    func remove(_ name: String) throws { try base.remove(name) }
+    func otherVersions(of name: String) -> [Data] { [] }
+    func discardOtherVersions(of name: String) {}
 }

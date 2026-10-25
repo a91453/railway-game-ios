@@ -44,9 +44,22 @@ public struct SaveSyncFolderFile: Hashable, Sendable {
     /// `false` while the file is still on its way from iCloud: a save in
     /// it is left for a later round, never taken for gone.
     public var isAvailable: Bool
+    /// `false` while the file is in the folder on this device but not yet
+    /// in iCloud itself (offline, or still going up): another device does
+    /// not see it yet. Always `true` for a folder on the device.
+    public var isUploaded: Bool
 
-    public init(isAvailable: Bool = true) {
+    public init(isAvailable: Bool = true, isUploaded: Bool = true) {
         self.isAvailable = isAvailable
+        self.isUploaded = isUploaded
+    }
+
+    /// A file in iCloud's folder as the system describes it: whether the
+    /// latest version is on the device, and whether iCloud has it (`nil`
+    /// when that could not be read: taken as not yet, so the list never
+    /// says synced for a file that may not be up).
+    public static func inICloud(isCurrent: Bool, isUploaded: Bool?) -> SaveSyncFolderFile {
+        SaveSyncFolderFile(isAvailable: isCurrent, isUploaded: isUploaded ?? false)
     }
 }
 
@@ -185,8 +198,22 @@ public enum SaveSync {
         /// full, or not there): those saves are left as they were, on the
         /// device as before, for the next round.
         public var isIncomplete = false
+        /// Where each save on the device stands after the round, by stem
+        /// (the autosaves taken in turn, never copied, are not in it).
+        public var marks: [String: CloudSaveMark] = [:]
+        /// How many saves another device put in iCloud are still on their
+        /// way to this one.
+        public var downloading = 0
+        /// How many saves another device wrote with a later version of the
+        /// game, which this one cannot read until it is updated.
+        public var needsUpdate = 0
 
         public init() {}
+
+        /// How many saves on the device another device cannot see yet.
+        public var waiting: Int {
+            marks.values.filter { $0 == .waiting }.count
+        }
     }
 
     /// The file the state is kept in, in the saves' folder. Not `.json`, so
@@ -269,6 +296,10 @@ public enum SaveSync {
             }
         }
 
+        // The saves the two sides hold the same of after the round, and
+        // those another device wrote with a later build, left in iCloud.
+        var settled: Set<String> = []
+        var newer: Set<String> = []
         for stem in Set(localSaves.keys).union(cloudSaves.keys).union(state.synced.keys).sorted() {
             let base = state.synced[stem]
             // A save on its way from iCloud waits for the next round.
@@ -299,11 +330,13 @@ public enum SaveSync {
             do {
                 if l == c {
                     state.synced[stem] = l
+                    settled.insert(stem)
                 } else if c == base {
                     // Changed on the device only.
                     if let mine {
                         try mine.write(to: cloud, over: theirs)
                         outcome.uploaded.append(stem)
+                        settled.insert(stem)
                     } else {
                         try theirs?.remove(from: cloud)
                         outcome.deleted.append(stem)
@@ -312,9 +345,11 @@ public enum SaveSync {
                 } else if l == base {
                     // Changed in the other folder only.
                     if let theirs {
+                        if !theirs.canTakeInPlace(over: mine) { newer.insert(stem) }
                         guard mode == .full || mine == nil, mayDownload, theirs.canTakeInPlace(over: mine) else { continue }
                         try theirs.write(to: local, over: mine)
                         outcome.downloaded.append(stem)
+                        settled.insert(stem)
                     } else {
                         // Deleted in the other folder: kept here, as only
                         // the player deletes a save on this device. Not
@@ -333,24 +368,67 @@ public enum SaveSync {
                     outcome.keptBoth.append(name)
                     try mine.write(to: cloud, over: theirs)
                     outcome.uploaded.append(stem)
+                    settled.insert(stem)
                     state.synced[stem] = l
                 } else if let mine {
                     // Deleted in the other folder, changed on the device.
                     try mine.write(to: cloud, over: nil)
                     outcome.uploaded.append(stem)
+                    settled.insert(stem)
                     state.synced[stem] = l
                 } else if let theirs {
                     // Deleted on the device, changed in the other folder.
+                    if !theirs.canTakeInPlace(over: nil) { newer.insert(stem) }
                     guard mayDownload, theirs.canTakeInPlace(over: nil) else { continue }
                     try theirs.write(to: local, over: nil)
                     outcome.downloaded.append(stem)
+                    settled.insert(stem)
                     state.synced[stem] = c
                 }
             } catch {
                 outcome.isIncomplete = true
             }
         }
+        // A save kept twice is the same on both sides once it is in iCloud.
+        for name in outcome.keptBoth {
+            let stem = String(name.dropLast(".json".count))
+            if state.synced[stem] != nil { settled.insert(stem) }
+        }
+        fillMarks(&outcome, local: local, cloud: cloud, listed: cloudFiles, settled: settled, newer: newer)
         return outcome
+    }
+
+    /// Fills in `outcome`'s marks: where each save on the device stands,
+    /// from the two folders as the round left them. `listed` is the other
+    /// folder as the round found it, used when it cannot be listed again.
+    private static func fillMarks(
+        _ outcome: inout Outcome, local: any SaveSyncFolder, cloud: any SaveSyncFolder,
+        listed: [String: SaveSyncFolderFile], settled: Set<String>, newer: Set<String>
+    ) {
+        guard let localFiles = try? local.files().filter({ downloadingName($0.key) == nil }) else { return }
+        let cloudFiles = (try? standingIn(cloud.files())) ?? listed
+        let localSaves = saves(in: localFiles)
+        for (stem, names) in saves(in: cloudFiles) where localSaves[stem] == nil {
+            if names.contains(where: { cloudFiles[$0]?.isAvailable == false }) {
+                outcome.downloading += 1
+            } else if newer.contains(stem) {
+                outcome.needsUpdate += 1
+            }
+        }
+        for stem in localSaves.keys {
+            let members = [stem + ".json", stem + SaveLibrary.newsSuffix, stem + SaveLibrary.nameSuffix].compactMap { cloudFiles[$0] }
+            if newer.contains(stem) {
+                outcome.marks[stem] = .needsUpdate
+            } else if members.contains(where: { !$0.isAvailable }) {
+                outcome.marks[stem] = .downloading
+            } else if cloudFiles[stem + ".json"] == nil {
+                outcome.marks[stem] = .onlyOnDevice
+            } else if settled.contains(stem), members.allSatisfy(\.isUploaded) {
+                outcome.marks[stem] = .inICloud
+            } else {
+                outcome.marks[stem] = .waiting
+            }
+        }
     }
 
     /// Adds `group` to both sides as a save of the player's own under a
@@ -559,30 +637,145 @@ private struct SaveGroup {
     }
 }
 
+/// Where a save on the device stands with iCloud after the last round
+/// (decision 397, later), as its row in the list of saves shows it.
+public enum CloudSaveMark: Hashable, Sendable {
+    /// Not in iCloud: kept on this device alone (deleted on another
+    /// device, or not put in iCloud yet).
+    case onlyOnDevice
+    /// In iCloud as it is here: another device gets it.
+    case inICloud
+    /// Not yet the same in iCloud: going up, waiting to be online, or
+    /// another device's newer one waiting for the start screen.
+    case waiting
+    /// Another device's newer one is on its way to this one.
+    case downloading
+    /// Another device's newer one was saved by a later version of the
+    /// game: it comes once this one is updated.
+    case needsUpdate
+
+    /// The few words beside the save.
+    public func text(in language: DisplayLanguage) -> String {
+        switch self {
+        case .onlyOnDevice: language.text("On this device only", "只在這台")
+        case .inICloud: language.text("In iCloud", "已在 iCloud")
+        case .waiting: language.text("Waiting to sync", "等待同步")
+        case .downloading: language.text("Downloading", "下載中")
+        case .needsUpdate: language.text("Update the app to sync", "更新 App 後才能同步")
+        }
+    }
+
+    /// The SF Symbol beside the words.
+    public var systemImage: String {
+        switch self {
+        case .onlyOnDevice: "iphone"
+        case .inICloud: "checkmark.icloud"
+        case .waiting: "icloud.and.arrow.up"
+        case .downloading: "icloud.and.arrow.down"
+        case .needsUpdate: "arrow.down.app"
+        }
+    }
+}
+
 /// Whether the saves are kept in the player's iCloud too (decision 397), as
-/// the list of saves tells it.
+/// the start screen and the list of saves tell it (decision 397, later).
 public enum CloudSaves: Hashable, Sendable {
-    /// No iCloud: the saves are on the device alone, as they always were.
-    /// Nothing is said: the player is not asked to do anything.
+    /// A build that does not use iCloud (the tests, the UI tests): nothing
+    /// is said.
     case off
-    /// The last round kept them in step.
-    case on
+    /// iCloud is not on for the game on this device (signed out, iCloud
+    /// Drive off, or the game turned off in iCloud's settings): the saves
+    /// are on the device alone, and the player is told where to turn it on.
+    case iCloudOff
+    /// A round is running.
+    case syncing
+    /// The last round, at that moment, left every save the same in iCloud.
+    case synced(at: Date)
+    /// The last round left saves not yet the same: `uploads` on this
+    /// device another device cannot see yet (going up, or offline),
+    /// `downloads` on their way here, and `needsUpdate` another device
+    /// saved with a later version of the game.
+    case waiting(uploads: Int, downloads: Int, needsUpdate: Int = 0)
     /// The last round could not copy some of them (iCloud full, or not
     /// reached); they are on the device as before.
     case incomplete
 
-    /// The line under the list of saves, or `nil`.
-    public func footnote(in language: DisplayLanguage) -> String? {
+    /// What the last round, ended at `date`, says (`nil`: no iCloud).
+    public static func after(_ outcome: SaveSync.Outcome?, at date: Date) -> CloudSaves {
+        guard let outcome else { return .iCloudOff }
+        if outcome.isIncomplete { return .incomplete }
+        let downloads = outcome.downloading + outcome.marks.values.filter { $0 == .downloading }.count
+        let needsUpdate = outcome.needsUpdate + outcome.marks.values.filter { $0 == .needsUpdate }.count
+        if outcome.waiting > 0 || downloads > 0 || needsUpdate > 0 {
+            return .waiting(uploads: outcome.waiting, downloads: downloads, needsUpdate: needsUpdate)
+        }
+        return .synced(at: date)
+    }
+
+    /// Whether the line's Sync Now can be tapped: no round is running
+    /// (with iCloud off, a round looks again, as the player may have
+    /// turned it on).
+    public var canSyncNow: Bool {
+        switch self {
+        case .off, .syncing: false
+        case .iCloudOff, .synced, .waiting, .incomplete: true
+        }
+    }
+
+    /// The SF Symbol beside the line, or `nil` when nothing is said.
+    public var systemImage: String? {
+        switch self {
+        case .off: nil
+        case .iCloudOff: "icloud.slash"
+        case .syncing: "arrow.triangle.2.circlepath.icloud"
+        case .synced: "checkmark.icloud"
+        case .waiting: "icloud.and.arrow.up"
+        case .incomplete: "exclamationmark.icloud"
+        }
+    }
+
+    /// The line on the start screen and under the list of saves, or `nil`;
+    /// a time is said as `now` sees it.
+    public func footnote(in language: DisplayLanguage, now: Date = Date()) -> String? {
         switch self {
         case .off:
-            nil
-        case .on:
-            language.text(
-                "Your saves are kept in your iCloud too, so you can go on playing on your other iPhone or iPad.",
-                "存檔也會放進你的 iCloud，換一台 iPhone 或 iPad 都能接著玩。"
+            return nil
+        case .iCloudOff:
+            return language.text(
+                "iCloud is off, so your saves are on this device only. To play on another iPhone or iPad, turn on iCloud Drive and this game in Settings › your name › iCloud.",
+                "iCloud 沒有開，存檔只在這台裝置上。想在另一台 iPhone 或 iPad 接著玩，請到「設定 › 你的名字 › iCloud」打開 iCloud 雲碟和這個遊戲。"
             )
+        case .syncing:
+            return language.text("Syncing with iCloud…", "正在和 iCloud 同步…")
+        case .synced(let date):
+            let ago = SaveLibrary.agoText(from: date, to: now, in: language)
+            return language.text(
+                "Your saves are in your iCloud (synced \(ago)), so you can go on playing on your other iPhone or iPad.",
+                "存檔已放進你的 iCloud（\(ago)同步），換一台 iPhone 或 iPad 都能接著玩。"
+            )
+        case let .waiting(uploads, downloads, needsUpdate):
+            var parts: [String] = []
+            if uploads > 0 {
+                parts.append(language.text(
+                    uploads == 1 ? "1 save is waiting to go up to iCloud; it goes when you are online." : "\(uploads) saves are waiting to go up to iCloud; they go when you are online.",
+                    "\(uploads) 個存檔等待上傳到 iCloud，連上網路後會自動上傳。"
+                ))
+            }
+            if downloads > 0 {
+                parts.append(language.text(
+                    downloads == 1 ? "1 save from your other device is downloading." : "\(downloads) saves from your other device are downloading.",
+                    "另一台裝置的 \(downloads) 個存檔正在下載。"
+                ))
+            }
+            if needsUpdate > 0 {
+                parts.append(language.text(
+                    needsUpdate == 1 ? "1 save from your other device needs a newer version of the game: update the app to get it." : "\(needsUpdate) saves from your other device need a newer version of the game: update the app to get them.",
+                    "另一台裝置的 \(needsUpdate) 個存檔來自較新版本的遊戲，請更新 App 後再同步。"
+                ))
+            }
+            return parts.joined(separator: language.text(" ", ""))
         case .incomplete:
-            language.text(
+            return language.text(
                 "Some saves could not be put in your iCloud yet. They are all still on this device.",
                 "有些存檔還沒能放進你的 iCloud，不過都還在這台裝置上。"
             )

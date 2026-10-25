@@ -267,8 +267,24 @@ public final class GameLauncher {
     /// saves on the device alone, as before.
     @ObservationIgnored public var cloudSaveFolder: (@Sendable () -> (any SaveSyncFolder)?)?
 
-    /// Whether the saves are kept in iCloud too, after the last round.
+    /// Whether the saves are kept in iCloud too: a round running, or what
+    /// the last one left (decision 397, later).
     public private(set) var cloudSaves: CloudSaves = .off
+
+    /// Where each save on the device stands with iCloud after the last
+    /// round, by its file name (``SaveLibrary/Entry/id``); empty without
+    /// iCloud. Kept while a round runs.
+    public private(set) var cloudMarks: [String: CloudSaveMark] = [:]
+
+    /// The mark of `entry`'s save, or `nil` (no iCloud, or a save never
+    /// copied: the autosaves taken in turn).
+    public func cloudMark(of entry: SaveLibrary.Entry) -> CloudSaveMark? {
+        cloudMarks[entry.id]
+    }
+
+    /// The number of the last round asked for: only its end says how
+    /// things stand, as rounds may end out of turn.
+    @ObservationIgnored private var latestRound = 0
 
     /// The saves kept twice since the player last heard of them: changed
     /// here and on another device, the other's added as a save of the
@@ -291,15 +307,29 @@ public final class GameLauncher {
         let (library, language, gameIsOpen) = (library, language, gameIsOpen)
         let mode: SaveSync.Mode = session == nil ? .full : .keepingDevice
         let (done, report) = AsyncStream.makeStream(of: SaveSync.Outcome?.self)
+        latestRound += 1
+        let round = latestRound
+        if cloudSaves != .iCloudOff {
+            cloudSaves = .syncing
+        }
         saveQueue.async {
             report.yield(Self.syncRound(library: library, cloud: folder(), mode: mode, language: language, at: date, isGameOpen: gameIsOpen))
             report.finish()
         }
         return Task {
             for await outcome in done {
-                noteSync(outcome)
+                noteSync(outcome, at: date, round: round)
             }
         }
+    }
+
+    /// The list's Sync Now: a round at once, which asks iCloud for the
+    /// saves it has not brought to the device yet too. Nothing while one
+    /// runs, or without iCloud.
+    @discardableResult
+    public func syncNow(at date: Date = Date()) -> Task<Void, Never>? {
+        guard cloudSaveFolder != nil, cloudSaves != .syncing else { return nil }
+        return syncSaves(at: date)
     }
 
     /// One round between `library` and `cloud`, from and to the state kept
@@ -326,12 +356,13 @@ public final class GameLauncher {
         return outcome
     }
 
-    private func noteSync(_ outcome: SaveSync.Outcome?) {
-        guard let outcome else {
-            cloudSaves = .off
-            return
+    private func noteSync(_ outcome: SaveSync.Outcome?, at date: Date, round: Int) {
+        // A later round asked for says how things stand, ended or not.
+        if round == latestRound {
+            cloudSaves = CloudSaves.after(outcome, at: date)
+            cloudMarks = Dictionary(uniqueKeysWithValues: (outcome?.marks ?? [:]).map { ($0.key + ".json", $0.value) })
         }
-        cloudSaves = outcome.isIncomplete ? .incomplete : .on
+        guard let outcome else { return }
         keptTwiceToTell += outcome.keptBoth.count
         guard session == nil else { return }
         if !outcome.downloaded.isEmpty || !outcome.deleted.isEmpty || !outcome.keptBoth.isEmpty {
