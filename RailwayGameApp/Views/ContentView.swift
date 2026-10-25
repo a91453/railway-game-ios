@@ -331,6 +331,9 @@ struct ContentView: View {
                 .presentationDetents([.medium, .large])
         case .fleet:
             FleetOverviewSheet(session: session)
+        case .networkFlow:
+            NetworkFlowSheet(session: session)
+                .environment(screen)
         case .mapLayers:
             StoredMapLayerSheet(session: session) {
                 screen.panel = .dataSources
@@ -1212,6 +1215,9 @@ final class GameScreenState {
         /// The achievements (decision 181), from the game menu's first
         /// level (decision 226, later).
         case achievements
+        /// The network's flow report (decision 416), from the lines panel
+        /// and the section flow layer's legend.
+        case networkFlow
 
         var id: Self { self }
 
@@ -1220,7 +1226,7 @@ final class GameScreenState {
         var isBesideMap: Bool {
             switch self {
             case .lines, .station, .economy: true
-            case .timetable, .fleet, .mapLayers, .dataSources, .settings, .yearEnd, .goals, .tourism, .news, .monthEnd, .help, .postcard, .achievements: false
+            case .timetable, .fleet, .mapLayers, .dataSources, .settings, .yearEnd, .goals, .tourism, .news, .monthEnd, .help, .postcard, .achievements, .networkFlow: false
             }
         }
     }

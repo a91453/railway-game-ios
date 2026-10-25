@@ -290,6 +290,15 @@ public enum HelpGuide {
             keywords: "signal signalling block 號誌 閉塞 交通控制 等待"
         ),
         HelpEntry(
+            "networkFlow", .running,
+            question: ("Which sections are busiest, and where do riders go unserved?", "哪一段最擠？哪裡有人搭不到車？"),
+            answer: (
+                "Open Lines and tap Network Flow at its top left (or the button in the Passenger load map layer's key). Lines lists each line's riders yesterday, length, riders per kilometre and peak trains. Busiest lists the sections fullest against what their trains carry. Unmet lists those waiting half an hour or more, those who took a scooter, a car or found the fare too high, and stations with riders no line joins. Tap a row to see it on the map.",
+                "打開「路線」，按左上角的「路網分析」（或「載客量」圖層說明裡的按鈕）。「路線」列出每條線昨天的人次、長度、每公里人次與尖峰列車；「最擠區間」列出乘客最接近或超過運能的區間；「未滿足需求」列出等了半小時以上的人、改騎車開車或嫌票價貴的人，以及有乘客卻沒有路線連的車站。點一列就在地圖上看。"
+            ),
+            keywords: "flow analysis busiest crowded section capacity load factor unmet demand unserved ranking intensity 路網分析 客流 強度 最擠 滿載 運能 未滿足 需求 排行 等不到 流失 沒有路線"
+        ),
+        HelpEntry(
             "timeScale", .running,
             question: ("Why do trains look so fast? What does 600× mean?", "列車怎麼跑這麼快？600× 是什麼意思？"),
             answer: (

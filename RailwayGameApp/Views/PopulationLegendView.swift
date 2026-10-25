@@ -42,6 +42,9 @@ struct PopulationLegendView: View {
     var coverage: CoverageSummary? = nil
     /// Decision 311: while the building layer shows, its switches.
     var building: Building? = nil
+    /// Decision 416: opens the network's flow report from the section flow
+    /// layer; `nil` hides the button.
+    var onShowRanking: (() -> Void)? = nil
     /// The tallest it may be (``HUDMargins/legendMaximumHeight(mapHeight:top:bottom:buttons:minimum:)``):
     /// below its title, what does not fit scrolls (TestFlight 83.1).
     var maxHeight: CGFloat = .infinity
@@ -495,6 +498,18 @@ struct PopulationLegendView: View {
                 Text(verbatim: language.text("Tap a stretch of track for its riders", "點一段軌道看載客量"))
                     .font(.caption2)
                     .foregroundStyle(Theme.textSecondary)
+                if let onShowRanking {
+                    Button(action: onShowRanking) {
+                        Label {
+                            Text(verbatim: language.text("Busiest sections and unmet demand", "最擠區間與未滿足需求"))
+                        } icon: {
+                            Image(systemName: "list.number")
+                        }
+                        .font(.caption.weight(.semibold))
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityIdentifier("map.sectionFlowRanking")
+                }
             }
             .accessibilityIdentifier("map.sectionFlowLegend")
         case .terrain:
