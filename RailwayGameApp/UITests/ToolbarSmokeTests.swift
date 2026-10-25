@@ -392,12 +392,20 @@ extension XCUIApplication {
     /// (main 2ec70b2's full lane, run 38720199489).
     /// `drags`: how many drags before giving up, for a list longer than
     /// the default reaches.
-    func dragUntilWhollyOnScreen(_ element: XCUIElement, in list: XCUIElement? = nil, below: CGFloat? = nil, drags: Int? = nil) -> Bool {
+    /// `clearOf`: a kind of control a drag must not start on, as the
+    /// settings' volume sliders: a drag begun on one moved its slider, not
+    /// the list, and every drag after began on it again (main fcf0697's
+    /// full lane, run 40176501060: 24 drags at (437, 301) on the chimes
+    /// slider). `at`: the x the drags run down instead, where a list's
+    /// left edge is not its content (a sheet centred on a phone on its
+    /// side, whose edge is the safe area: run 40208393295).
+    func dragUntilWhollyOnScreen(_ element: XCUIElement, in list: XCUIElement? = nil, below: CGFloat? = nil, drags: Int? = nil,
+                                 at column: CGFloat? = nil, clearOf controls: XCUIElement.ElementType? = nil) -> Bool {
         let area = list.map(\.frame) ?? frame
         let top = max(list == nil ? frame.minY + 140 : area.minY + 8, (below ?? -.infinity) + 8)
         let bottom = list == nil ? frame.maxY - 120 : area.maxY - 8
         // A form's rows are inset 16 pt from the list's sides.
-        let x = list == nil ? area.midX : area.minX + 8
+        let x = column ?? (list == nil ? area.midX : area.minX + 8)
         // A panel beside the map on a phone on its side is short, and a
         // line's list there runs to some 23 screens (main's e48285f): long
         // drags until the row exists, then short ones that cannot carry it
@@ -413,12 +421,12 @@ extension XCUIApplication {
                 // Above the band: move the list down. Each drag is shorter
                 // than the band less a row, so a row cannot jump over it.
                 if place.minY < top {
-                    drag(in: area, at: x, from: 0.45, to: 0.65)
+                    drag(in: area, at: x, from: 0.45, to: 0.65, clearOf: controls)
                     continue
                 }
-                drag(in: area, at: x, from: 0.75, to: 0.5)
+                drag(in: area, at: x, from: 0.75, to: 0.5, clearOf: controls)
             } else {
-                drag(in: area, at: x, from: list == nil ? 0.75 : 0.9, to: list == nil ? 0.5 : 0.15)
+                drag(in: area, at: x, from: list == nil ? 0.75 : 0.9, to: list == nil ? 0.5 : 0.15, clearOf: controls)
             }
         }
         return false
@@ -426,7 +434,26 @@ extension XCUIApplication {
 
     /// Drags vertically down `area` at `x` between two heights given as
     /// fractions of it, and holds before lifting, so a list does not fling.
-    private func drag(in area: CGRect, at x: CGFloat, from: CGFloat, to: CGFloat) {
+    /// Both heights move together, a tenth of `area` at a time, until the
+    /// drag starts clear of every control of the kind `controls`, read
+    /// from one snapshot (a row the list drops between two reads would
+    /// fail the second).
+    private func drag(in area: CGRect, at x: CGFloat, from: CGFloat, to: CGFloat, clearOf controls: XCUIElement.ElementType? = nil) {
+        var (from, to) = (from, to)
+        if let controls, let tree = try? snapshot() {
+            func controlFrames(in element: any XCUIElementSnapshot) -> [CGRect] {
+                (element.elementType == controls ? [element.frame] : []) + element.children.flatMap(controlFrames(in:))
+            }
+            let frames = controlFrames(in: tree)
+            let shifts: [CGFloat] = [0, 0.1, -0.1, 0.2, -0.2]
+            let within: ClosedRange<CGFloat> = 0.05...0.95
+            let shift = shifts.first { shift in
+                let start = CGPoint(x: x, y: area.minY + area.height * (from + shift))
+                return within.contains(min(from, to) + shift) && within.contains(max(from, to) + shift)
+                    && !frames.contains { $0.insetBy(dx: -8, dy: -8).contains(start) }
+            } ?? 0
+            (from, to) = (from + shift, to + shift)
+        }
         let origin = coordinate(withNormalizedOffset: .zero)
         let x = x - frame.minX
         let start = origin.withOffset(CGVector(dx: x, dy: area.minY - frame.minY + area.height * from))

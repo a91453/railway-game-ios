@@ -1,7 +1,7 @@
 name: Full lane watch
 
 # Tells the work registry (#1041; #231 until it filled up) when main's full lane turns red, a job
-# turns red that had not in this red streak, or it turns green again
+# or a test turns red that had not in this red streak, or it turns green again
 # (decision 329). On 2026-10-20 and 10-21 the full lane was red ten times in
 # a row and nobody was told: its result shows only on the Actions page. The
 # rules of what is news live in tools/ci-watch/full_lane_watch.py, which
@@ -33,7 +33,8 @@ jobs:
       github.event.workflow_run.head_repository.full_name == github.repository &&
       (github.event.workflow_run.event == 'workflow_dispatch' || github.event.workflow_run.event == 'schedule')
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    # The failed jobs' logs of up to ten red runs, some 2.6 MB each.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
         with:

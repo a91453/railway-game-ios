@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Tells the work registry (#1041) when main's full lane turns red, fails in
-other jobs than last time, or turns green again (decision 329).
+other jobs or tests than last time, or turns green again (decision 329).
 
 The full lane is ios-build.yml run on main by ios-full-lane.yml or by hand
 (workflow_dispatch) or by its schedule, without `only_testing` (those runs
@@ -15,6 +15,13 @@ same failing jobs is one comment, not one a run:
 - red after a red run, with a job that has not failed earlier in this red
   streak (the runs back to the last green one, at most STREAK): "still red,
   and a job turned red";
+- red after a red run in the same jobs, with a test that has not failed
+  earlier in this red streak: "still red, and a test turned red". From
+  10-24 21:56 to 10-25 14:00 every red full lane failed in the same two
+  jobs, a different test each time, and the jobs alone said nothing new.
+  The tests are read from the failed jobs' logs (XCTest's
+  "error: -[Class test]" lines); a log that cannot be read leaves the jobs
+  to say what is new.
 - green after a red run: "green again".
 A cancelled run says nothing (a newer full lane or a release check replaced
 it). A run re-run (its attempt 2 or later) is compared with its own attempt
@@ -33,6 +40,7 @@ Environment: GITHUB_REPOSITORY (owner/name), GH_TOKEN (not needed for
 import argparse
 import json
 import os
+import re
 import sys
 import urllib.request
 
@@ -42,15 +50,45 @@ FULL_LANE_EVENTS = ("workflow_dispatch", "schedule")
 STREAK = 10
 
 
-def api(path, token=None, body=None):
+def request(path, token=None, body=None):
     request = urllib.request.Request(API + path, data=json.dumps(body).encode() if body is not None else None)
     request.add_header("Accept", "application/vnd.github+json")
     if token:
-        request.add_header("Authorization", f"Bearer {token}")
+        # Not sent on to where a job's log redirects: the storage there
+        # refuses a request with both its own signature and a token.
+        request.add_unredirected_header("Authorization", f"Bearer {token}")
     if body is not None:
         request.add_header("Content-Type", "application/json")
-    with urllib.request.urlopen(request, timeout=30) as response:
+    return urllib.request.urlopen(request, timeout=60)
+
+
+def api(path, token=None, body=None):
+    with request(path, token, body) as response:
         return json.load(response)
+
+
+TEST_FAILURE = re.compile(r"error: -\[(?:\w+\.)?(\w+) (\w+)\]")
+
+
+def failed_tests_in(log):
+    """The tests XCTest reports failed in a job's log, as "Class/test"."""
+    return sorted({f"{match[0]}/{match[1]}" for match in TEST_FAILURE.findall(log)})
+
+
+def failed_tests(jobs, read_log):
+    """The tests that failed in the failed `jobs`, or None when a failed
+    job's log could not be read."""
+    tests = set()
+    for job in jobs:
+        if job.get("conclusion") not in ("failure", "timed_out"):
+            continue
+        try:
+            log = read_log(job["id"])
+        except Exception as error:  # noqa: BLE001 - any failure leaves the jobs to say it
+            print(f"Could not read the log of job {job['id']}: {error}")
+            return None
+        tests.update(failed_tests_in(log))
+    return sorted(tests)
 
 
 def is_full_lane(run):
@@ -65,11 +103,12 @@ def failed_jobs(jobs):
     return sorted(job["name"] for job in jobs if job.get("conclusion") in ("failure", "timed_out"))
 
 
-def news(run, failed, previous, streak_failed):
+def news(run, failed, previous, streak_failed, tests=None, streak_tests=None):
     """The comment's headline for `run` after `previous` (None when there is
     no earlier full lane), or None when there is nothing new to say.
     `streak_failed` is every job that failed in the red runs before `run`
-    back to the last green one."""
+    back to the last green one, `streak_tests` every test (None when a log
+    could not be read), `tests` the tests that failed in `run`."""
     conclusion = run.get("conclusion")
     before = previous.get("conclusion") if previous else None
     if conclusion == "success":
@@ -80,6 +119,8 @@ def news(run, failed, previous, streak_failed):
         return "main 的 full lane 紅了"
     if set(failed) - set(streak_failed):
         return "main 的 full lane 還是紅的，又有 job 紅了"
+    if tests is not None and streak_tests is not None and set(tests) - set(streak_tests):
+        return "main 的 full lane 還是紅的，又有測試紅了"
     return None
 
 
@@ -88,17 +129,22 @@ def clean(text):
     return text.replace("@", "＠")
 
 
-def comment(run, failed, previous, streak_failed, headline):
+def comment(run, failed, previous, streak_failed, headline, tests=None, streak_tests=None):
     lines = [f"**{headline}**（自動留言，`full-lane-watch.yml`，決策 329）", ""]
     lines.append(f"- run：{run['html_url']}（`{run['head_sha'][:7]}`，{run.get('event')}，{run.get('created_at')}）")
     if failed:
         lines.append("- 紅的 job：" + "、".join(f"`{name}`" for name in failed))
+    if tests:
+        lines.append("- 紅的測試：" + "、".join(f"`{name}`" for name in tests))
     if previous:
         state = "紅" if previous.get("conclusion") == "failure" else "綠"
         lines.append(f"- 上一次 full lane：{previous['html_url']}（`{previous['head_sha'][:7]}`，{state}）")
         new = sorted(set(failed) - set(streak_failed))
         if streak_failed and new and run.get("conclusion") == "failure":
             lines.append("- 這一段紅燈裡之前沒紅過的：" + "、".join(f"`{name}`" for name in new))
+        new_tests = sorted(set(tests or []) - set(streak_tests or []))
+        if streak_tests and new_tests and run.get("conclusion") == "failure":
+            lines.append("- 這一段紅燈裡之前沒紅過的測試：" + "、".join(f"`{name}`" for name in new_tests))
     if run.get("conclusion") == "failure":
         lines += ["", "照 `docs/HANDOFF.md` §1.2「full lane 紅了」查：失敗的測試與行號、和上一次綠的比、交給可疑 PR 的 session。修好以前不發版。"]
     else:
@@ -170,17 +216,31 @@ def main(argv=None):
     attempt = run.get("run_attempt") or 1
     attempt_before = api(f"/repos/{repository}/actions/runs/{run['id']}/attempts/{attempt - 1}", token) if attempt > 1 else None
     previous = compared_with(attempt_before, earlier)
-    jobs = lambda r: failed_jobs(api(f"/repos/{repository}/actions/runs/{r['id']}/jobs?per_page=100&filter=latest", token)["jobs"])
-    failed = jobs(run)
-    streak_failed = []
+    def read_log(job_id):
+        with request(f"/repos/{repository}/actions/jobs/{job_id}/logs", token) as response:
+            return response.read().decode("utf-8", "replace")
+
+    all_jobs = lambda r: api(f"/repos/{repository}/actions/runs/{r['id']}/jobs?per_page=100&filter=latest", token)["jobs"]
+    run_jobs = all_jobs(run)
+    failed = failed_jobs(run_jobs)
+    tests = failed_tests(run_jobs, read_log) if run.get("conclusion") == "failure" else None
+    streak_failed, streak_tests = [], None
     if run.get("conclusion") == "failure":
-        streak_failed = {name for r in red_streak(earlier) for name in jobs(r)}
+        streak_jobs = [all_jobs(r) for r in red_streak(earlier)]
         if previous is attempt_before and attempt_before.get("conclusion") == "failure":
             # The jobs of the attempt before, not of the run's latest attempt.
-            before = api(f"/repos/{repository}/actions/runs/{run['id']}/attempts/{attempt - 1}/jobs?per_page=100", token)["jobs"]
-            streak_failed |= set(failed_jobs(before))
-        streak_failed = sorted(streak_failed)
-    headline = news(run, failed, previous, streak_failed)
+            streak_jobs.append(api(f"/repos/{repository}/actions/runs/{run['id']}/attempts/{attempt - 1}/jobs?per_page=100", token)["jobs"])
+        streak_failed = sorted({name for jobs in streak_jobs for name in failed_jobs(jobs)})
+        if tests is not None:
+            streak_tests = set()
+            for jobs in streak_jobs:
+                found = failed_tests(jobs, read_log)
+                if found is None:
+                    streak_tests = None
+                    break
+                streak_tests.update(found)
+            streak_tests = sorted(streak_tests) if streak_tests is not None else None
+    headline = news(run, failed, previous, streak_failed, tests, streak_tests)
     if headline is None:
         text = f"Run {run['id']} ({run.get('conclusion')}): nothing new since the last full lane ({previous['id'] if previous else 'none'}); no comment."
         print(text)
@@ -188,7 +248,7 @@ def main(argv=None):
             with open(summary, "a", encoding="utf-8") as out:
                 out.write(text + "\n")
         return 0
-    body = comment(run, failed, previous, streak_failed, headline) + "\n"
+    body = comment(run, failed, previous, streak_failed, headline, tests, streak_tests) + "\n"
     print(body)
     if summary:
         with open(summary, "a", encoding="utf-8") as out:
@@ -216,6 +276,25 @@ def selftest():
     assert news(green, [], run(0, "failure", "x"), a) == "main 的 full lane 綠了"
     assert news(green, [], run(0, "success", "x"), []) is None
     assert news(run(3, "cancelled", "x"), [], red, a) is None
+    # The same red jobs, a test in them red that was not before.
+    t, u = ["SettingsUITests/testA"], ["MapInteractionTests/testB"]
+    assert news(red, a, run(0, "failure", "x"), a, t + u, t) == "main 的 full lane 還是紅的，又有測試紅了"
+    assert news(red, a, run(0, "failure", "x"), a, t, t + u) is None, "the same or fewer red tests is no news"
+    assert news(red, a, run(0, "failure", "x"), a, t + u, None) is None, "an unread log leaves it to the jobs"
+    assert news(red, a, run(0, "failure", "x"), a, None, t) is None
+    assert news(red, a, green, [], t, None) == "main 的 full lane 紅了"
+    log = ("2026-10-25T12:49:32Z /Users/runner/RailwayGameApp/UITests/MapInteractionTests.swift:288: error: "
+           "-[RailwayGameUITests.MapInteractionTests testTheStationTagsPencilRenamesAtOnce] : XCTAssertEqual failed\n"
+           "Test Case '-[RailwayGameUITests.MapInteractionTests testTheStationTagsPencilRenamesAtOnce]' failed (75.153 seconds).\n"
+           "/x/SettingsUITests.swift:82: error: -[RailwayGameUITests.SettingsUITests testTheCityPreviewLoadsItsPageAndCloses] : x\n")
+    assert failed_tests_in(log) == ["MapInteractionTests/testTheStationTagsPencilRenamesAtOnce",
+                                    "SettingsUITests/testTheCityPreviewLoadsItsPageAndCloses"], failed_tests_in(log)
+    jobs = [{"id": 1, "conclusion": "failure"}, {"id": 2, "conclusion": "success"}]
+    assert failed_tests(jobs, lambda id: log) == failed_tests_in(log)
+    def unreadable(id):
+        raise OSError("gone")
+    assert failed_tests(jobs, unreadable) is None
+    assert failed_tests([{"id": 2, "conclusion": "success"}], unreadable) == []
 
     hand = run(4, "failure", "2026-10-20T15:00:00Z", title="UI tests by hand: RailwayGameUITests/MapInteractionTests")
     pr = run(5, "failure", "2026-10-20T15:00:00Z", event="pull_request")
@@ -242,6 +321,9 @@ def selftest():
                         {"name": "c", "conclusion": "success"}, {"name": "d", "conclusion": "skipped"}]) == ["a", "b"]
     text = comment(red, ["job @claude"], green, [], "main 的 full lane 紅了")
     assert "@" not in text and "HANDOFF.md` §1.2" in text and "https://example.invalid/1" in text, text
+    text = comment(red, a, run(0, "failure", "x"), a, "main 的 full lane 還是紅的，又有測試紅了", sorted(t + u), t)
+    assert "紅的測試：`MapInteractionTests/testB`、`SettingsUITests/testA`" in text, text
+    assert "之前沒紅過的測試：`MapInteractionTests/testB`" in text, text
     print("selftest：all cases passed")
     return 0
 
