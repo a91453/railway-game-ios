@@ -53,4 +53,4 @@ python3 tools/n700s-n700st/finish.py --pipeline "$PIPELINE" --root "$OUT" --prod
 python3 tools/n700s-n700st/verify.py --pipeline "$PIPELINE" --root "$OUT"
 ```
 
-每單元 8,108–13,140 三角；完整十車體預覽 95,624 三角，須按 `assembly.json` 使用單元，不能當成單一遊戲模型。這輪僅交付靜態素材、沒有接入遊戲；合併後不會自行出現在畫面上（2026-10-25：決策 408 把 N700S-G 照這份 mesh 重建成遊戲的畫風，接進營運，`docs/decisions/408.md`）。Linux 原生讀回、GLB、圖片及離線 viewer 驗證，不代表真機 Metal、動畫或效能通過。
+每單元 8,108–13,140 三角；完整十車體預覽 95,624 三角，須按 `assembly.json` 使用單元，不能當成單一遊戲模型。這輪僅交付靜態素材、沒有接入遊戲；合併後不會自行出現在畫面上（2026-10-25：決策 408 把 N700S-G 的 A、C、D 減面到每節 5,000–6,000 三角形、換成遊戲的色票，接進營運，`tools/hsr-trains-408/decimate.py`、`docs/decisions/408.md`）。Linux 原生讀回、GLB、圖片及離線 viewer 驗證，不代表真機 Metal、動畫或效能通過。

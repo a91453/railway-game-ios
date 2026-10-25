@@ -717,19 +717,19 @@ public enum DataSourceCredits {
                         ]
                     ),
                     // Decision 408: the second high-speed train
-                    // (Map3DN700SG), rebuilt from the author's own model in
-                    // the reference repository, which the author lets the
-                    // game and its public repository carry.
+                    // (Map3DN700SG), the author's own model in the reference
+                    // repository with fewer triangles, which the author lets
+                    // the game and its public repository carry.
                     DataSourceCredit(
                         id: "highSpeedTrainModel",
                         title: language.text("White high-speed train", "白色高速列車"),
                         detail: language.text(
-                            "Half the high-speed trains on the 3D map, white with a dark green line: drawn after a model the game’s author made.",
-                            "3D 地圖上一半的高速列車，白色車身配深綠色線條：照遊戲作者自己做的模型畫成。"
+                            "Half the high-speed trains on the 3D map, white with a dark green line: a model the game’s author made.",
+                            "3D 地圖上一半的高速列車，白色車身配深綠色線條：遊戲作者自己做的模型。"
                         ),
                         notice: language.text(
-                            "Shape and colours after the game author’s own model, used with the author’s permission.",
-                            "外形與配色取自遊戲作者自己做的模型，經作者同意使用。"
+                            "The game author’s own model, simplified and in the game’s colours, used with the author’s permission.",
+                            "遊戲作者自己做的模型，簡化並換成遊戲的配色，經作者同意使用。"
                         ),
                         links: []
                     ),

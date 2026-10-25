@@ -338,15 +338,19 @@ public struct Map3DTrainSet: Sendable {
         }
     }
 
-    /// Decision 408: the N700S-G, #1201's 700T recipe in the shape of the
-    /// author's N700S-G (``Map3DTrainShapeRefresh/n700sGIDs``), each car
-    /// its own length (27.6 m the cabs, 25.5 m the rest), lit as the 700T;
-    /// ``far`` its light rebuild.
+    /// Decision 408 (third): the N700S-G, the author's own mesh with fewer
+    /// triangles (``Map3DN700SG/mesh(_:)``): its cab A at the front and
+    /// turned round at the back, its C car between and its D car under the
+    /// pantographs, each car its own length (25.3 m the cabs, 25.0 m the
+    /// rest), lit as the 700T; ``far`` its light rebuild.
     static func n700sG() -> Map3DTrainSet {
         Map3DTrainSet(key: "n700sG", pantographCars: [3, 8], ownLengths: true, far: "n700sGFar") {
-            let model = Map3DTrainShapeRefresh.model
-            return Cars(head: lit(model("refresh-n700sg-cab"), front: true), middle: model("refresh-n700sg-middle"),
-                        tail: lit(model("refresh-n700sg-tail"), front: false), single: nil, pantograph: model("refresh-n700sg-panto"))
+            // Generated data the tests read back; a unit that fails to
+            // decode draws as its light rebuild rather than nothing.
+            func mesh(_ unit: Map3DN700SG.Unit) -> Map3DModelPack.Model { Map3DN700SG.mesh(unit) ?? Map3DN700SG.model(unit) }
+            let cab = mesh(.a)
+            return Cars(head: lit(cab, front: true), middle: mesh(.c), tail: lit(cab.turned, front: false), single: nil,
+                        pantograph: mesh(.d))
         }
     }
 

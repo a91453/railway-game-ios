@@ -8,47 +8,16 @@ public enum Map3DTrainShapeRefresh {
     public static let highSpeedAccentColor=Map3DColor.shaded(Map3DPalette.tankStand,0.42)
     public static let highSpeedGlassColor=Map3DColor.shaded(Map3DPalette.glazing,0.5)
     public static let ids = ["refresh-e200", "refresh-700t-cab", "refresh-700t-middle", "refresh-700t-panto", "refresh-700t-tail"]
-    /// Decision 408: the N700S-G made from the 700T's recipe, in the shape
-    /// of the author's N700S-G (``n700sGNose``): its longer nose, windscreen
-    /// and lamps where that nose has them, a white body with two dark green
-    /// lines under higher windows, a cover by the pantograph.
-    public static let n700sGIDs = ["refresh-n700sg-cab", "refresh-n700sg-middle", "refresh-n700sg-panto", "refresh-n700sg-tail"]
-    /// The N700S-G's line (`docs/art/n700-game-style-2026-10-16/`).
-    public static let n700sGLineColor = Map3DColor.rgb(0x1D4A44)
-    /// Decision 408: the N700S-G's nose, 9.24 m from where its section
-    /// starts to fall to its tip (the author's 7.575 units × 1.22), built
-    /// over the 700T's 6.7 m and stretched; so its cab is 27.6 m long.
-    static let n700sGNose: Float = 9.24
     public static func model(_ id: String) -> Map3DModelPack.Model {
         var b = StationKitBuilder()
-        let g = n700sGIDs.contains(id)
-        let cab = id == ids[1] || id == ids[4] || id == n700sGIDs[0] || id == n700sGIDs[3]
         if id == ids[0] { b.refreshElectric() }
-        else { b.refreshHighSpeed(cab: cab, panto: id == ids[3] || id == n700sGIDs[2], n700sG: g) }
-        var m = Map3DModelPack.Model.flat(named: id, from: b.mesh)
-        if g && cab { m = stretched(m, from: 5.8, by: n700sGNose / 6.7) }
-        if id == ids[4] || id == n700sGIDs[3] {
+        else { b.refreshHighSpeed(cab: id == ids[1] || id == ids[4], panto: id == ids[3]) }
+        let m = Map3DModelPack.Model.flat(named: id, from: b.mesh)
+        if id == ids[4] {
             var reverse = StationKitBuilder(); reverse.add(m, at: .zero, angle: .pi)
             return .flat(named: id, from: reverse.mesh)
         }
         return m
-    }
-    /// `model` with everything ahead of `x0` stretched along by `factor`,
-    /// each triangle's normal its own again.
-    static func stretched(_ model: Map3DModelPack.Model, from x0: Float, by factor: Float) -> Map3DModelPack.Model {
-        var vertices: [Map3DVertex] = []
-        vertices.reserveCapacity(model.vertices.count)
-        for start in stride(from: 0, to: model.vertices.count, by: 3) {
-            let corners = model.vertices[start..<start + 3]
-            let points = corners.map { Map3DPoint($0.x > x0 ? x0 + ($0.x - x0) * factor : $0.x, $0.y, $0.z) }
-            guard let normal = (points[1] - points[0]).cross(points[2] - points[0]).normalized else { continue }
-            for (corner, point) in zip(corners, points) {
-                vertices.append(Map3DVertex(point, normal: normal, color: corner.color, layer: corner.layer))
-            }
-        }
-        let front = model.maximum.x > x0 ? x0 + (model.maximum.x - x0) * factor : model.maximum.x
-        return Map3DModelPack.Model(name: model.name, vertices: vertices, minimum: model.minimum,
-                                    maximum: Map3DPoint(front, model.maximum.y, model.maximum.z))
     }
     /// Display formation: cab + ten middle cars + reverse cab. Metre offsets
     /// are display estimates. Pantographs on cars 4 and 9 (one-based).
@@ -194,11 +163,8 @@ extension StationKitBuilder {
         }
         beam(Map3DPoint(-4.8,4.17,0.43),Map3DPoint(4.8,4.17,0.43),0.04,Self.ink)
     }
-    /// Decision 408: `n700sG` draws the N700S-G's nose, lamps, windows and
-    /// lines on the same body (``Map3DTrainShapeRefresh/n700sGIDs``).
-    mutating func refreshHighSpeed(cab: Bool,panto: Bool,n700sG: Bool = false) {
+    mutating func refreshHighSpeed(cab: Bool,panto: Bool) {
         let hsrBody=Map3DTrainShapeRefresh.highSpeedBodyColor
-        let green=Map3DTrainShapeRefresh.n700sGLineColor
         let hsrGlass=Map3DTrainShapeRefresh.highSpeedGlassColor
         let segments=40, bottom: Float=0.78
         let xs: [Float] = cab ? [-12.5,-6,0,3.7,4.2,4.8,5.8,6.3,6.7,7.1,7.5,7.9,8.3,8.7,9.1,9.5,9.7,10,10.5,11,11.5,11.9,12.2,12.4,12.5] : [-12.5,12.5]
@@ -212,16 +178,6 @@ extension StationKitBuilder {
         func dimensions(_ x: Float)->(Float,Float) {
             if !cab || x<=5.8 { return (3.65,1.69) }
             let t=(x-5.8)/6.7
-            if n700sG {
-                // The author's N700S-G cab cut across every 0.4 units: its
-                // roof (4.02 units onto 3.65 m) held, then falling to a
-                // tip at mid height; its sides (1.40 units onto 1.69 m)
-                // straight to half way.
-                let h=interpolate(t,[(0,3.65),(0.05,3.60),(0.16,3.53),(0.26,3.45),(0.32,3.30),(0.37,3.10),(0.42,2.96),(0.475,2.77),
-                                     (0.53,2.60),(0.63,2.46),(0.74,2.32),(0.85,2.19),(0.90,2.08),(0.95,1.89),(0.985,1.72),(1,1.50)])
-                let w=interpolate(t,[(0,1.69),(0.42,1.69),(0.53,1.62),(0.69,1.51),(0.85,1.36),(0.90,1.24),(0.95,1.02),(0.985,0.45),(1,0.08)])
-                return (h,w)
-            }
             let h=interpolate(t,[(0,3.65),(0.16,3.65),(0.28,3.52),(0.40,3.16),(0.52,2.69),(0.65,2.12),(0.80,1.60),(0.92,1.34),(1,1.18)])
             let w=interpolate(t,[(0,1.69),(0.3,1.69),(0.5,1.66),(0.7,1.54),(0.85,1.32),(0.95,0.90),(0.985,0.48),(1,0.08)])
             // Restore the original nose length. The photo's coloured shoulder
@@ -256,12 +212,10 @@ extension StationKitBuilder {
         func bandHeight(_ x: Float)->Float {
             // Smooth centreline height; the flank term below wraps this boundary
             // around the sculpted shoulder instead of drawing a flat stripe.
-            // Decision 408: the N700S-G's lines under its windows (the
-            // author's 2.31 units), falling along the nose to its lamps.
-            let baseline: Float=n700sG ? 2.07:1.7852976
+            let baseline: Float=1.7852976
             func ease(_ t: Float)->Float { let u=max(0,min(1,t));return u*u*(3-2*u) }
             if !cab || x<=6.7 { return baseline }
-            return baseline+((n700sG ? 1.45:0.94)-baseline)*ease((x-6.7)/5.8)
+            return baseline+(0.94-baseline)*ease((x-6.7)/5.8)
         }
         func clip(_ polygon: [Map3DPoint],at x0: Float,_ x1: Float,upper: Bool,offset: Float = 0)->[Map3DPoint] {
             let h0=bandHeight(x0),h1=bandHeight(x1)
@@ -327,10 +281,6 @@ extension StationKitBuilder {
             guard cab else { return (polygon,[]) }
             return (skirtClip(polygon,x0,x1,upper:true),skirtClip(polygon,x0,x1,upper:false))
         }
-        // Decision 408: the paint's levels from the line's foot, bottom to
-        // top: the 700T's black line over its teal; the N700S-G's thin and
-        // thick green lines (the author's 0.09 and 0.21 units, 0.05 apart).
-        let levels: [Float]=n700sG ? [-0.133,-0.046,0,0.19]:[0,0.055]
         func nosePaintParts(_ triangle: [Map3DPoint],_ x0: Float,_ x1: Float)->[[Map3DPoint]] {
             typealias PaintVertex=(point: Map3DPoint,distance: Float)
             let h0=bandHeight(x0),h1=bandHeight(x1)
@@ -343,7 +293,7 @@ extension StationKitBuilder {
                 // the tiny cap width pinches the white inset into a small tab.
                 let flank=abs(p.z)/(localWidth+0.4*(1.69-localWidth)*roundTip)
                 let d=p.y-h-0.62*ease*powf(flank,4)
-                let snapped: Float=levels.first { abs(d-$0)<0.000001 } ?? d
+                let snapped: Float=abs(d)<0.000001 ? 0:abs(d-0.055)<0.000001 ? 0.055:d
                 return (p,snapped)
             }
             func cut(_ polygon: [PaintVertex],at level: Float,upper: Bool)->[PaintVertex] {
@@ -366,25 +316,8 @@ extension StationKitBuilder {
                 }
                 return result
             }
-            // Bottom to top, between each level and the next.
-            var rest=original,pieces: [[PaintVertex]]=[]
-            for level in levels { pieces.append(cut(rest,at:level,upper:false));rest=cut(rest,at:level,upper:true) }
-            return (pieces+[rest]).map { $0.map(\.point) }
-        }
-        // Decision 408: the N700S-G's body cut at its lines' levels, bottom
-        // to top, white and green in turn.
-        func lines(_ polygon: [Map3DPoint],_ x0: Float,_ x1: Float)->[[Map3DPoint]] {
-            var rest=polygon,pieces: [[Map3DPoint]]=[]
-            for level in levels { pieces.append(clip(rest,at:x0,x1,upper:false,offset:level));rest=clip(rest,at:x0,x1,upper:true,offset:level) }
-            return pieces+[rest]
-        }
-        // The N700S-G's piece between two levels: the lowest down to the
-        // skirt, then green, white, green, white.
-        func paintLines(_ pieces: [[Map3DPoint]],_ x0: Float,_ x1: Float,inside: Map3DPoint) {
-            let parts=hullParts(pieces[0],x0,x1)
-            face(parts.0,inside:inside,color:hsrBody)
-            face(parts.1,inside:inside,color:Map3DTrainShapeRefresh.highSpeedAccentColor)
-            for (index,piece) in pieces.enumerated().dropFirst() { face(piece,inside:inside,color:index%2==1 ? green:hsrBody) }
+            let upper=cut(original,at:0,upper:true)
+            return [cut(upper,at:0.055,upper:true),cut(upper,at:0.055,upper:false),cut(original,at:0,upper:false)].map { $0.map(\.point) }
         }
         for k in 0..<rings.count-1 {
             let h=(dimensions(xs[k]).0+dimensions(xs[k+1]).0)/2
@@ -395,14 +328,11 @@ extension StationKitBuilder {
                 let teal = shoulderBand ? (20...23).contains(i) || (36...39).contains(i) : [21,22,23,36,37,38].contains(i)
                 let color: UInt32 = (24...35).contains(i) ? Self.steel : teal ? refreshTeal:hsrBody
                 for triangle in [[rings[k][i],rings[k][j],rings[k+1][j]],[rings[k][i],rings[k+1][j],rings[k+1][i]]] {
-                    if n700sG && !(24...35).contains(i) {
-                        let pieces=cab && xs[k]>=3.7 ? nosePaintParts(triangle,xs[k],xs[k+1]):lines(triangle,xs[k],xs[k+1])
-                        paintLines(pieces,xs[k],xs[k+1],inside:inside)
-                    } else if cab && xs[k]>=3.7 && !(24...35).contains(i) {
+                    if cab && xs[k]>=3.7 && !(24...35).contains(i) {
                         let paint=nosePaintParts(triangle,xs[k],xs[k+1])
-                        face(paint[2],inside:inside,color:hsrBody)
+                        face(paint[0],inside:inside,color:hsrBody)
                         face(paint[1],inside:inside,color:Map3DTrainShapeRefresh.highSpeedAccentColor)
-                        let parts=hullParts(paint[0],xs[k],xs[k+1])
+                        let parts=hullParts(paint[2],xs[k],xs[k+1])
                         face(parts.0,inside:inside,color:refreshTeal)
                         face(parts.1,inside:inside,color:Map3DTrainShapeRefresh.highSpeedAccentColor)
                     } else if !(24...35).contains(i) {
@@ -428,18 +358,12 @@ extension StationKitBuilder {
         }
         for end in [0,rings.count-1] {
             let inside=Map3DPoint(0,2,0),cap=rings[end],x=xs[end]
-            if n700sG {
-                for panel in orientedTriangles(cap,inside:inside) {
-                    paintLines(cab && end==rings.count-1 ? nosePaintParts(panel,x,x+1):lines(panel,x-1,x+1),x-1,x+1,inside:inside)
-                }
-                continue
-            }
             if cab && end==rings.count-1 {
                 for panel in orientedTriangles(cap,inside:inside) {
                     let paint=nosePaintParts(panel,x,x+1)
-                    face(paint[2],inside:inside,color:hsrBody)
+                    face(paint[0],inside:inside,color:hsrBody)
                     face(paint[1],inside:inside,color:Map3DTrainShapeRefresh.highSpeedAccentColor)
-                    let parts=hullParts(paint[0],x-1,x+1)
+                    let parts=hullParts(paint[2],x-1,x+1)
                     face(parts.0,inside:inside,color:refreshTeal)
                     face(parts.1,inside:inside,color:Map3DTrainShapeRefresh.highSpeedAccentColor)
                 }
@@ -465,15 +389,11 @@ extension StationKitBuilder {
         for sign: Float in [-1,1] {
             box(cab ? -3.7:0,0.55,sign*1.42,cab ? 17.4:23.8,0.09,0.67,Self.steel)
             func side(_ x: Float,_ h: Float,_ offset: Float)->Map3DPoint { Map3DPoint(x,h,sign*(flank(h)+offset)) }
-            // Decision 408: the N700S-G's windows above its lines, wider
-            // apart (the author's 0.87 units).
-            let window: (start: Float,pitch: Float,count: Int,y: Float,width: Float,height: Float) = n700sG
-                ? (-9.6,1.06,cab ? 12:19,2.70,0.60,0.80):(-9.3,0.81,cab ? 12:18,2.345,0.56,0.75)
-            for i in 0..<window.count {
-                let x: Float = window.start+Float(i)*window.pitch
-                let gasket=refreshRoundedOutline(x: x,y:window.y,width:window.width,height:window.height,radius:0.12)
+            for i in 0..<(cab ? 12:18) {
+                let x: Float = -9.3+Float(i)*0.81
+                let gasket=refreshRoundedOutline(x: x,y:2.345,width:0.56,height:0.75,radius:0.12)
                 refreshPanel(gasket.map { side($0.0,$0.1,0.012) },thickness:0.028,color:Self.ink)
-                let pane=refreshRoundedOutline(x:x,y:window.y,width:window.width-0.07,height:window.height-0.07,radius:0.10)
+                let pane=refreshRoundedOutline(x:x,y:2.345,width:0.49,height:0.68,radius:0.10)
                 refreshPanel(pane.map { side($0.0,$0.1,0.024) },thickness:0.028,color:hsrGlass)
             }
             for x: Float in cab ? [-11,3.1]:[-11,11] {
@@ -490,12 +410,10 @@ extension StationKitBuilder {
             // Rounded trapezoidal cockpit mapped onto the real nose surface.
             // Each small prism is backed by that same shell; no billboard box.
             func screen(_ v: Float,_ u: Float)->Map3DPoint {
-                // Decision 408: the N700S-G's narrower screen farther back
-                // on its nose (the author's 4.9 to 6.5 units, ±0.72).
-                let a=Float.pi/2+(u-0.5)*(n700sG ? 0.74-0.12*v:1.02-0.16*v)
+                let a=Float.pi/2+(u-0.5)*(1.02-0.16*v)
                 let corner=max(0,(abs(2*u-1)-0.60)/0.40)
                 let cap=sqrtf(max(0,1-corner*corner))
-                let rear: Float=n700sG ? 7.68+0.30*(1-cap):8.15+0.36*(1-cap),front: Float=n700sG ? 9.02-0.22*(1-cap):9.78-0.27*(1-cap)
+                let rear: Float=8.15+0.36*(1-cap),front: Float=9.78-0.27*(1-cap)
                 return surface(rear+(front-rear)*v,a)+Map3DPoint(0,0.018,0)
             }
             for row in 0..<6 { for col in 0..<12 {
@@ -525,25 +443,7 @@ extension StationKitBuilder {
                 beam(base,elbow,0.014,rim);beam(elbow,tip,0.018,rim)
             }
             // Two low lens clusters, two actual warm-white lamps in each.
-            for side: Float in [-1,1] where n700sG {
-                // Decision 408: the N700S-G's lamps low on the nose's
-                // sides near its tip (the author's 8.75 to 9.21 units, 2.03
-                // high, 0.88 out), lying on the shell.
-                let lampX: Float=11.27,a: Float=side>0 ? 0.55:Float.pi-0.55
-                let point=surface(lampX,a)
-                let along=(surface(lampX,a+0.02)-surface(lampX,a-0.02)).normalized!
-                let across=(surface(lampX+0.15,a)-surface(lampX-0.15,a)).normalized!
-                var out=along.cross(across).normalized!
-                if out.dot(point-Map3DPoint(lampX,2,0))<0 { out=out*(-1) }
-                let centre=point+out*0.041
-                let housing=refreshRoundedOutline(x:0,y:0,width:0.42,height:0.20,radius:0.06)
-                refreshPanel(housing.map { centre+along*$0.0+across*$0.1 },thickness:0.045,color:Self.steel)
-                for offset: Float in [-0.10,0.10] {
-                    let lens=refreshRoundedOutline(x:offset,y:0,width:0.15,height:0.11,radius:0.04)
-                    refreshPanel(lens.map { centre+along*$0.0+across*$0.1+out*0.019 },thickness:0.025,color:Map3DPalette.tunnelLamp)
-                }
-            }
-            for side: Float in [-1,1] where !n700sG {
+            for side: Float in [-1,1] {
                 let a: Float = side>0 ? 1.34:Float.pi-1.34
                 let centre=surface(9.34,a)+Map3DPoint(0,0.041,0)
                 let along=Map3DPoint(0,0,side)
@@ -562,11 +462,6 @@ extension StationKitBuilder {
             box(end*12.58,0.66,0,0.32,0.35,0.3,Self.steel)
         }
         if panto { refreshPanto(6.8,roof:3.65,singleArm:true) }
-        if panto && n700sG {
-            // Decision 408: the low cover each side of the N700S-G's
-            // pantograph (the author's D car).
-            for sign: Float in [-1,1] { box(6.8,3.6,sign*0.95,4.2,0.10,0.40,hsrBody) }
-        }
     }
     /// Twelve-vertex rounded rectangle, shared only by this Codex recipe.
     private func refreshRoundedOutline(x: Float,y: Float,width: Float,height: Float,radius: Float)->[(Float,Float)] {

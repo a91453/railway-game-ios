@@ -4,7 +4,7 @@ import GameCore
 import XCTest
 
 /// Decision 408: the high-speed trains two sets, #1201's 700T and the
-/// N700S-G, each car its own length; #900's light 700T drawn past the
+/// N700S-G (the author's mesh), each car its own length; #900's light 700T drawn past the
 /// 700T's reach; #1201's E200 the Chu-Kuang's locomotive.
 final class Map3DHighSpeedSetsTests: XCTestCase {
     private let pack = Map3DModelPack.standard
@@ -39,32 +39,68 @@ final class Map3DHighSpeedSetsTests: XCTestCase {
         XCTAssertFalse(try model("set-highSpeed-car").vertices.contains(where: \.glows), "no lamps between")
     }
 
-    /// The N700S-G: #1201's 700T recipe reshaped to the author's nose,
-    /// twelve cars at their own lengths, the pantographs on the fourth and
-    /// ninth, lit white at the head and red at the tail.
-    func testTheN700SGIsThe700TReshaped() throws {
+    /// The N700S-G: the author's own mesh with fewer triangles, its cab
+    /// at both ends (turned round at the back), its D car under the
+    /// pantographs on the fourth and ninth, each car its own length, lit
+    /// white at the head and red at the tail.
+    func testTheN700SGIsTheAuthorsMesh() throws {
         let cars = try layout("n700sG", 12)
         XCTAssertEqual(cars.map(\.0), ["set-n700sG-head", "set-n700sG-car", "set-n700sG-car", "set-n700sG-panto"]
             + Array(repeating: "set-n700sG-car", count: 4) + ["set-n700sG-panto", "set-n700sG-car", "set-n700sG-car", "set-n700sG-tail"])
-        let cab = Map3DTrainShapeRefresh.model("refresh-n700sg-cab"), t700 = Map3DTrainShapeRefresh.model("refresh-700t-cab")
-        XCTAssertGreaterThan(cab.length, t700.length + 2, "the longer nose")
-        XCTAssertEqual(cars.first?.1 ?? 0, cab.length, accuracy: 1e-3, "the cab its own length")
         XCTAssertTrue(cars.allSatisfy { $0.2 == 0 })
-        for (name, refresh) in [("head", "refresh-n700sg-cab"), ("car", "refresh-n700sg-middle"), ("panto", "refresh-n700sg-panto"),
-                                ("tail", "refresh-n700sg-tail")] {
-            XCTAssertEqual(try model("set-n700sG-" + name).triangleCount, Map3DTrainShapeRefresh.model(refresh).triangleCount, name)
+        for (name, unit) in [("head", Map3DN700SG.Unit.a), ("car", .c), ("panto", .d), ("tail", .a)] {
+            let mesh = try XCTUnwrap(Map3DN700SG.mesh(unit), "\(unit) decodes")
+            let car = try model("set-n700sG-" + name)
+            XCTAssertEqual(car.triangleCount, mesh.triangleCount, name)
+            // As long as the light rebuild of the same unit, on the rail,
+            // as wide and tall as the 700T.
+            XCTAssertEqual(car.length, Map3DN700SG.length(unit), accuracy: 0.05, name)
+            XCTAssertEqual(car.minimum.z, 0, accuracy: 0.01, "\(name) stands on the rail")
+            XCTAssertEqual(car.maximum.y, 1.71, accuracy: 0.02, name)
         }
-        // The line's green, which the 700T does not have.
-        XCTAssertTrue(try model("set-n700sG-car").vertices.contains { $0.color & 0xFFFFFF == Map3DTrainShapeRefresh.n700sGLineColor & 0xFFFFFF })
-        XCTAssertFalse(try model("set-highSpeed-car").vertices.contains { $0.color & 0xFFFFFF == Map3DTrainShapeRefresh.n700sGLineColor & 0xFFFFFF })
-        let head = try model("set-n700sG-head").vertices.filter(\.glows), tail = try model("set-n700sG-tail").vertices.filter(\.glows)
-        XCTAssertFalse(head.isEmpty)
-        XCTAssertTrue(head.allSatisfy { $0.color == Map3DTrainStyle.headlamp && $0.x > 0 })
-        XCTAssertFalse(tail.isEmpty)
-        XCTAssertTrue(tail.allSatisfy { $0.color == Map3DPalette.lantern && $0.x < 0 })
+        XCTAssertEqual(cars.reduce(0) { $0 + $1.1 }, 300.6, accuracy: 0.5)
+        // The tail is the cab turned round.
+        let head = try model("set-n700sG-head"), tail = try model("set-n700sG-tail")
+        XCTAssertEqual(tail.minimum.x, -head.maximum.x, accuracy: 1e-3)
+        // Every colour the palette's: the line's green, which the 700T does
+        // not have, the 700T's white.
+        let palette = Set(Map3DN700SG.meshPalette + [Map3DTrainStyle.headlamp, Map3DPalette.lantern])
+        for name in ["head", "car", "panto", "tail"] {
+            XCTAssertTrue(try model("set-n700sG-" + name).vertices.allSatisfy { palette.contains($0.color) }, name)
+        }
+        XCTAssertTrue(try model("set-n700sG-car").vertices.contains { $0.color == Map3DN700SG.green })
+        XCTAssertTrue(try model("set-n700sG-car").vertices.contains { $0.color == Map3DTrainShapeRefresh.highSpeedBodyColor })
+        XCTAssertFalse(try model("set-highSpeed-car").vertices.contains { $0.color & 0xFFFFFF == Map3DN700SG.green & 0xFFFFFF })
+        // D's pantograph covers stand above the C car's roof.
+        XCTAssertGreaterThan(try model("set-n700sG-panto").maximum.z, try model("set-n700sG-car").maximum.z + 0.3)
+        let lamps = head.vertices.filter(\.glows), backLamps = tail.vertices.filter(\.glows)
+        XCTAssertFalse(lamps.isEmpty)
+        XCTAssertTrue(lamps.allSatisfy { $0.color == Map3DTrainStyle.headlamp && $0.x > 0 })
+        XCTAssertFalse(backLamps.isEmpty)
+        XCTAssertTrue(backLamps.allSatisfy { $0.color == Map3DPalette.lantern && $0.x < 0 })
         for count in 1...16 {
             for car in 0..<count { XCTAssertNotNil(pack.modelIndex(forType: "n700sG", carIndex: car, count: count), "\(count) cars, car \(car)") }
         }
+    }
+
+    /// The mesh's bytes: a broken one decodes to nothing, so the set falls
+    /// back to the light rebuild; B and E are not drawn near.
+    func testTheN700SGMeshDecoding() {
+        XCTAssertNil(Map3DN700SG.mesh(.b))
+        XCTAssertNil(Map3DN700SG.mesh(.e))
+        // One vertex, one triangle of it: no area, nothing to draw.
+        let flat: [UInt8] = [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]
+        XCTAssertNil(Map3DN700SG.decodedMesh(flat, named: "x"))
+        // Three vertices, one triangle, palette 2 (the glass).
+        var good: [UInt8] = [3, 0] + [0, 0, 0, 0, 0, 0] + [0xE8, 3, 0, 0, 0, 0] + [0, 0, 0xE8, 3, 0, 0] + [1, 0] + [0, 0, 1, 0, 2, 0, 2]
+        let model = Map3DN700SG.decodedMesh(good, named: "x")
+        XCTAssertEqual(model?.triangleCount, 1)
+        XCTAssertEqual(model?.vertices.first?.color, Map3DTrainStyle.glass)
+        XCTAssertEqual(model?.maximum.x ?? 0, 1, accuracy: 1e-6)
+        good[good.count - 1] = UInt8(Map3DN700SG.meshPalette.count)
+        XCTAssertNil(Map3DN700SG.decodedMesh(good, named: "x"), "a palette index past the end")
+        XCTAssertNil(Map3DN700SG.decodedMesh(Array(good.dropLast()), named: "x"), "cut short")
+        XCTAssertNil(Map3DN700SG.decodedMesh(good + [0], named: "x"), "bytes left over")
     }
 
     /// The N700S-G's far set: the light rebuild of the author's units, car

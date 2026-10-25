@@ -1388,19 +1388,13 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 
 **五節改色＋七節輕軌（Codex，#991，公開draft #992／私有draft #40，`codex/five-section-lrt-2026-10-22`）**：作者要求兩台都不要紅，最終五節暖白綠松／七節暖白霧藍。新增獨立七節配方`Map3DSevenSectionLRT.swift`，長—短—長—短—長—短—長，2/0/2/0/2/0/2雙門／側、六鉸接、單端集電弓。五節保留尺寸／門位／輪位／設備／編組，只改色並修trailing側窗沿錯誤對角造成的破口；其餘三角與前producer5a2fd38e逐位元比對。最新[外觀／技術及私有包](art/lrt-pair-2026-10-22/README.md)、[重建／共同軌面／組裝](../tools/lrt-pair/README.md)。12單元＋2編組＋2比較、112七向、白模／剪影／同相機五節改色與七節窗面修訂、viewer／ZIP在私有新目錄lrt-pair-2026-10-22，舊包不覆蓋。VERIFIED Linux Swift6.4 warnings-as-errors、28相關測試、原生組裝／GLB、12單元封閉邊／216主要玻璃承板與車殼支持、六種故障案例。七節45.5m是比例推估，隱藏四架八軸為補全假設；真機Metal／效能／動畫／工程尺寸UNVERIFIED。**兩台均為靜態素材，未綁營運車種，合併不會自動換路網列車**；整合須按各節長度／共同軌面，不能當一般七輛車。不改GameCore／Map3DTrainSets／營運／存檔／決策／golden／replay；最新CI以#992 head為準。未合併／auto-merge或TestFlight。
 
-**高鐵兩款與 E200 接進營運（決策 408，session_01EYjQttfohUR8HPL2aYisHw，`claude/decision-408-hsr-trains`）**：高鐵單號是 N700S-G（使用者說第一版平塗重建「好醜」，改成 #1201 的 700T 配方照作者的鼻形改長，`Map3DTrainShapeRefresh.n700sGIDs`：頭車 27.78 m、9,690 三角形，一列 79,744，只在 500 m 內；500–900 m 換第一版平塗重建 `Map3DN700SG` 當遠景 `n700sGFar`，一列 6,872）、雙號是 #1201 的 700T（照原樣，每節 25.2／25.5 m，500 m 內；500–900 m 換 #900 的舊 700T `highSpeedFar`）；莒光號的 E200 是 #1201 的新車頭。資料來源頁加「白色高速列車」。**還沒做**（之後一個 PR 一項）：
+**高鐵兩款與 E200 接進營運（決策 408，session_01EYjQttfohUR8HPL2aYisHw → session_01Bbe7HnLfcUGdoE2VRgZgoU，`claude/decision-408-hsr-trains`，#1217）**：高鐵單號是 N700S-G（前兩版自己重做外形使用者都說醜；第三版是作者的 mesh 減面＋遊戲色票，`Map3DN700SG.mesh(_:)`，`tools/hsr-trains-408/decimate.py` 從私庫 checkout 讀原檔產生 `Map3DN700SGMesh.swift`：頭 5,965、中間 5,000、集電弓車 4,992 個三角形，一列 61,914，只在 500 m 內；500–900 m 換第一版平塗重建 `n700sGFar`，一列 6,872）、雙號是 #1201 的 700T（照原樣，每節 25.2／25.5 m，500 m 內；500–900 m 換 #900 的舊 700T `highSpeedFar`）；莒光號的 E200 是 #1201 的新車頭。資料來源頁加「白色高速列車」。合併前作者要看過預覽（PR 上「先別合併」）。**還沒做**（之後一個 PR 一項）：
 - 玩家每列選高鐵的款式：要在存檔裡記（存檔版本加一），現在照列車號碼單雙分。
 - 實景時刻表的列車照自己的長度畫（現在照舊用 `Map3DRealTrains.carPitch` 拉伸）。
-- 實機看：700T 一列 74,528 個三角形在跟車、駕駛室視角的幀數；500 m 換成 #900 的模型時跳不跳（外形是較舊的 700T）。
+- 實機看：700T 一列 74,528、N700S-G 61,914 個三角形在跟車、駕駛室視角的幀數；500 m 換成遠景模型時跳不跳；N700S-G 近看窗角與門邊的小白碎片（減面留下的）明不明顯，明顯就把 `decimate.py` 的頭車預算調高或中間車改成不加權。
+- N700S-G 的 B、E（門位、E 的鰭）沒有畫，中間車都是 C：要讓 set 有好幾種中間車。
 - E200 的遠景模型（現在 900 m 內都是 5,512 個三角形）；舊的 `Map3DTrainLocomotive.e200` 不再被 set 用到，可以一併清掉。
-- 作者的 N700ST（橘色）沒有接；要接時同 N700S-G 的做法（700T 配方改鼻形與塗裝）。
-- **N700S-G 要重做（使用者 2026-10-25，#1217 未完成，先別合併）**：兩版都被說醜（第一版平塗重建「好醜」，第二版 700T 改鼻形「還是好醜」）。使用者選的下一版做法：**直接用作者的 mesh 減面＋遊戲配色**，不再只量尺寸自己重做外形。做法：
-  - 從私庫的 checkout 讀 `Railway/n700s-n700st-2026-10-24/n700s-g/models/railway-n700s-g-{a,b,c,d,e}.m3dmodel` 與 `assembly.json`（作者一列 95,624 個三角形），寫一個減面工具（放 `tools/hsr-trains-408/`，README 寫私庫路徑），每節減到約 5,000 個以下，頂點色換成調色盤（車身 #F6F6F4、深綠 #1D4A44、裙 #8F959B、頂 #C5C9CD、玻璃 #26313D、燈 `Map3DPalette.tunnelLamp`）、霧面平塗。尺寸照決策 408：沿車長與寬 ×1.22，高 z' = 0.62 + (z − 0.74) × 0.924。
-  - 公開庫只放減面後的模型（Swift 配方或減面後的頂點資料），**作者的原始 GLB、原生 M3DM 全檔、assembly 整列預覽都不 commit，draft 分支也不行**（規劃 session 的限制）。
-  - 換掉 `Map3DTrainSet.n700sG()` 的四款（現在是 `Map3DTrainShapeRefresh` 的 `refresh-n700sg-*`）；遠景 `n700sGFar`（`Map3DN700SG` 平塗重建）可以留著或換成再減一級的同一份 mesh。`refresh-n700sg-*` 與 `refreshHighSpeed(cab:panto:n700sG:)` 的 n700sG 分支到時可以刪（700T 的路徑不受影響）。
-  - 更新 `Map3DHighSpeedSetsTests`、`Map3DTrainSetTests` 的範圍、決策 408 的第 3、4 條與量到的表、預覽，給使用者看過再合併。
-- N700S-G 鼻下的深色整流罩是 700T 配方的，作者的 N700S-G 那裡是白／灰；要改時在 `refreshHighSpeed(cab:panto:n700sG:)` 的 `hullParts` 給 N700S-G 另一個顏色（700T 的 checksum 要不變）。
-- 實機看 N700S-G 一列 79,744 個三角形的幀數，與 500 m 換成平塗重建時跳不跳。
+- 作者的 N700ST（橘色，私庫 `Railway/n700s-n700st-2026-10-24/n700st/`）沒有接；要接時同 N700S-G：`decimate.py` 加一組 `UNITS`／`COLOURS`。
 
 **接手**：3D 生活感 session 做完第 2 節的四步之後，由遊戲規劃排序。
 

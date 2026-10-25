@@ -1,27 +1,30 @@
 import Foundation
 
-/// Decision 408: the N700S-G drawn from 500 m out (``Map3DTrainSet/n700sGFar()``;
-/// near, #1201's 700T recipe in its shape), the author's own N700S model in the game's
+/// Decision 408: the N700S-G, the author's own N700S model in the game's
 /// dark green line (#1214, `docs/art/n700s-n700st/README.md`; the author's
 /// mesh in the reference repository, `Railway/n700s-n700st-2026-10-24/
-/// n700s-g/`), rebuilt in the game's look with the train builder every
-/// other high-speed set uses (decision 230): matte, flat colours of the
-/// palette, some 1,150 triangles a cab and 450 a middle car where the
-/// author's are 8,000 to 13,000.
+/// n700s-g/`), in two forms:
 ///
-/// What is kept from the author's mesh, measured off it (×1.22 along and
-/// across, so its 20.5-unit middle car is 25 m and its 2.8 units 3.36 m;
-/// up, its skirt-to-roof 3.28 units onto the 3.03 m of the 700T's section):
-/// the long nose (7.7 units, 9.4 m) and how its crown, sides and chin run
-/// to the tip; the windscreen's place on it; the green line in two bands
-/// under the windows; each of the five units' doors where they stand; the
-/// pantograph cover on D and the fin on E. Its colours are already the
-/// palette's (the body, skirt, roof, glass and doors are
+/// - near (``mesh(_:)``, ``Map3DTrainSet/n700sG()``): the author's mesh
+///   itself with fewer triangles (`tools/hsr-trains-408/decimate.py`,
+///   ``encodedMeshes``), the palette's colours;
+/// - from 500 m out (``model(_:)``, ``Map3DTrainSet/n700sGFar()``): rebuilt
+///   in the game's look with the train builder every other high-speed set
+///   uses (decision 230): some 1,150 triangles a cab and 450 a middle car.
+///
+/// What the rebuild keeps from the author's mesh, measured off it (×1.22
+/// along and across, so its 20.5-unit middle car is 25 m and its 2.8 units
+/// 3.36 m; up, its skirt-to-roof 3.28 units onto the 3.03 m of the 700T's
+/// section): the long nose (7.7 units, 9.4 m) and how its crown, sides and
+/// chin run to the tip; the windscreen's place on it; the green line in two
+/// bands under the windows; each of the five units' doors where they
+/// stand; the pantograph cover on D and the fin on E. Its colours are
+/// already the palette's (the body, skirt, roof, glass and doors are
 /// ``Map3DTrainStyle``'s own, the line #1D4A44).
 ///
 /// The units: A the cab, B to E the middle cars as the author's assembly
-/// has them (A B C D E | E D C B A), each facing its own way; the far set
-/// uses A, C and D.
+/// has them (A B C D E | E D C B A), each facing its own way; the game
+/// draws A, C and D.
 public enum Map3DN700SG {
     public enum Unit: String, CaseIterable, Sendable {
         case a, b, c, d, e
@@ -53,6 +56,65 @@ public enum Map3DN700SG {
             break
         }
         return .flat(named: name, from: builder.mesh)
+    }
+
+    /// Decision 408 (third): unit `unit` near, the author's own mesh with
+    /// fewer triangles (``encodedMeshes``, `tools/hsr-trains-408/decimate.py`):
+    /// every colour boundary where the author drew it, about 5,000 to 6,000
+    /// triangles where the author's have 9,000 to 13,000, in the same units
+    /// and heights as ``model(_:)``; matte, a flat colour of the palette
+    /// to a triangle. `nil` for a unit the game does not draw near (B, E).
+    public static func mesh(_ unit: Unit) -> Map3DModelPack.Model? {
+        guard let text = encodedMeshes[unit], let data = Data(base64Encoded: text, options: .ignoreUnknownCharacters) else { return nil }
+        return decodedMesh([UInt8](data), named: "n700s-g-mesh-" + unit.rawValue)
+    }
+
+    /// The palette each of the mesh's triangles takes its colour from, by
+    /// index: the 700T's white, the line, glass, skirt, doors, roof, wheels,
+    /// underframe and the lamps (lit by ``Map3DTrainSet/lit(_:front:)``).
+    static let meshPalette: [UInt32] = [
+        Map3DTrainShapeRefresh.highSpeedBodyColor, green, Map3DTrainStyle.glass, grey, Map3DTrainStyle.doorColour,
+        Map3DTrainStyle.roofColour, Map3DTrainStyle.darkLine, Map3DTrainStyle.under, Map3DPalette.tunnelLamp,
+    ]
+
+    /// The model in `bytes`, little-endian: the vertex count (UInt16), each
+    /// vertex x, y, z in millimetres (Int16); the triangle count (UInt16),
+    /// each triangle's three vertex indices (UInt16) and palette index
+    /// (UInt8). A triangle with no area is left out.
+    static func decodedMesh(_ bytes: [UInt8], named name: String) -> Map3DModelPack.Model? {
+        var at = 0
+        func u16() -> Int? {
+            guard at + 2 <= bytes.count else { return nil }
+            defer { at += 2 }
+            return Int(UInt16(bytes[at]) | UInt16(bytes[at + 1]) << 8)
+        }
+        guard let vertexCount = u16() else { return nil }
+        var points: [Map3DPoint] = []
+        points.reserveCapacity(vertexCount)
+        for _ in 0..<vertexCount {
+            guard let x = u16(), let y = u16(), let z = u16() else { return nil }
+            func metres(_ n: Int) -> Float { Float(Int16(truncatingIfNeeded: n)) / 1000 }
+            points.append(Map3DPoint(metres(x), metres(y), metres(z)))
+        }
+        guard let triangleCount = u16() else { return nil }
+        var vertices: [Map3DVertex] = []
+        vertices.reserveCapacity(triangleCount * 3)
+        var low = Map3DPoint(.infinity, .infinity, .infinity), high = Map3DPoint(-.infinity, -.infinity, -.infinity)
+        for _ in 0..<triangleCount {
+            guard let a = u16(), let b = u16(), let c = u16(), at < bytes.count else { return nil }
+            let paint = Int(bytes[at])
+            at += 1
+            guard [a, b, c].allSatisfy(points.indices.contains), meshPalette.indices.contains(paint) else { return nil }
+            let corners = [points[a], points[b], points[c]]
+            guard let normal = (corners[1] - corners[0]).cross(corners[2] - corners[0]).normalized else { continue }
+            for p in corners {
+                vertices.append(Map3DVertex(p, normal: normal, color: meshPalette[paint], layer: Map3DVertex.plain))
+                low = Map3DPoint(min(low.x, p.x), min(low.y, p.y), min(low.z, p.z))
+                high = Map3DPoint(max(high.x, p.x), max(high.y, p.y), max(high.z, p.z))
+            }
+        }
+        guard at == bytes.count, !vertices.isEmpty else { return nil }
+        return Map3DModelPack.Model(name: name, vertices: vertices, minimum: low, maximum: high)
     }
 
     /// Unit `unit` turned round, for the train's back half.

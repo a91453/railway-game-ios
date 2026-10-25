@@ -96,7 +96,8 @@ for curved in [false, true] {
     let suffix = curved ? "-curve" : ""
     let (old, oldNote) = train(before, "highSpeedFar", 12, curved: curved)
     let (t700, t700Note) = train(after, "HSR", 12, curved: curved)
-    let (_, midNote) = train(after, "HSR", 12, curved: curved, far: true)
+    let (t700far, midNote) = train(after, "HSR", 12, curved: curved, far: true)
+    try write("hsr-700t-far\(suffix)", t700far, group: "hsr" + suffix)
     let (n700, n700Note) = train(after, "n700sG", 12, curved: curved)
     let (n700far, n700FarNote) = train(after, "n700sG", 12, curved: curved, far: true)
     try write("hsr-n700sg-far\(suffix)", n700far, group: "hsr" + suffix)
@@ -114,10 +115,11 @@ for curved in [false, true] {
                    "N700S-G: \(n700Note)", "N700S-G from 500 m (the light rebuild): \(n700FarNote)", "E200 Chu-Kuang before: \(eOldNote)", "E200 Chu-Kuang after: \(eNewNote)"]
     }
 }
-// The cabs close up: the N700S-G from the 700T's recipe, the 700T, the
-// light rebuild of the author's shape.
-for (name, model) in [("cab-n700sg", Map3DTrainShapeRefresh.model("refresh-n700sg-cab")), ("cab-700t", Map3DTrainShapeRefresh.model("refresh-700t-cab")),
-                      ("cab-n700sg-light", Map3DN700SG.model(.a)), ("panto-n700sg", Map3DTrainShapeRefresh.model("refresh-n700sg-panto"))] {
+// The cars close up: the N700S-G (the author's mesh, fewer triangles), the
+// 700T, the light rebuild of the author's shape.
+for (name, model) in [("cab-n700sg", Map3DN700SG.mesh(.a)!), ("cab-700t", Map3DTrainShapeRefresh.model("refresh-700t-cab")),
+                      ("cab-n700sg-light", Map3DN700SG.model(.a)), ("panto-n700sg", Map3DN700SG.mesh(.d)!),
+                      ("car-n700sg", Map3DN700SG.mesh(.c)!)] {
     report.append("\(name): \(model.triangleCount) triangles, \(String(format: "%.2f", model.length)) m")
     try write(name, shifted(model.vertices, 0), group: "cabs")
 }
