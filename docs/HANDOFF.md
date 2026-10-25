@@ -364,6 +364,7 @@
 - 前任派的 session_01WBDhnK83mWG9wSxuSHvAtC（#1232 已合）、session_01XiqjNzLz2SSc77KCXZVXxN（#1236 已合）做完了還沒封存：新任改標題「【完成】…」後封存。
 - 每日 Threads 排程 `trig_019Me4PBGfWMxcBwc5TAkXRx` 綁本任（暫停）：新任照 §1 表格建一個綁自己的，再刪掉這個。本任沒有其他還會觸發的 check-in。
 - 審查點數：下一輪從 #1242 起數（#1248）。
+- **01ATrwF1 找到的、還沒派**：高鐵示範第一次畫整條線的地圖時，CI 模擬器的主執行緒卡住 28–58 秒（`RealWorldMapUITests.testTheHighSpeedDemoOpensOnTheMapAndRuns` 改成等它）；玩家實機可能也會卡，值得照 diagnosing-bugs 另開一件查。SharedNetwork 那支紅的原因已經找到（橫放時按鈕在明信片下方；慢速拖曳從 Just Look 按鈕上起手，誤按開了遊戲），修在 af5cba3（`claude/steady-full-lane-ui-tests`）。
 
 **第十三次換手（2026-10-25 12:40 UTC，session_0138XhXTjToUd3fpKV7kebeH 壓縮 5 次，作者說「交接」→ 作者從 claude.ai 開的新規劃）**。新任開工：讀第 1 節、這一段；#1041 只讀「session_0138XhXTjToUd3fpKV7kebeH（遊戲企劃）壓縮第 5 次」那則之後的留言。和下面「第十二次換手」不同時以這段為準。前任超過 §1「第 3 次壓縮快到時換」才換，下一任照表在第 3 次壓縮前換。
 
