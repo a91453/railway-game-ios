@@ -1099,16 +1099,29 @@ final class MapInteractionTests: XCTestCase {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-demo-layout", "-ui-testing-paused", "-map-layer", "travel", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        // The report's legend: where people are while building (potential
+        // or coverage), whose open key, with its line and hours, is the
+        // tallest; the travel layer's fitted on main too.
+        app.launchArguments = ["-ui-testing", "-demo-layout", "-ui-testing-paused", "-show-building-layer", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 30), "The demo map opens")
+        let build = app.buttons["dock.build"]
+        XCTAssertTrue(build.appears(within: 10))
+        build.tap()
+        let network = app.buttons["tool.network"]
+        XCTAssertTrue(network.appears(within: 5))
+        network.waitUntilSettled()
+        if !network.isSelected { network.tap() }
         let legend = app.descendants(matching: .any)["map.populationLegend"].firstMatch
-        XCTAssertTrue(legend.appears(within: 15), "The travel layer's legend must show")
+        XCTAssertTrue(legend.appears(within: 30), "Where people are shows as building begins")
+        let line = app.descendants(matching: .any)["map.potentialLine"].firstMatch
         let fold = app.buttons["map.legend.fold"]
-        XCTAssertTrue(fold.becomesHittable(within: 5))
-        fold.tap()
-        let opacity = app.descendants(matching: .any)["map.popTravel.opacity"].firstMatch
-        XCTAssertTrue(opacity.appears(within: 5), "Opened, the legend shows its opacity")
+        if !line.exists {
+            XCTAssertTrue(fold.becomesHittable(within: 5))
+            fold.tap()
+        }
+        XCTAssertTrue(line.appears(within: 5), "Opened, the legend says what its colours mean")
         legend.waitUntilSettled()
         let menu = app.buttons["hud.menu"]
         XCTAssertTrue(menu.appears(within: 5))
