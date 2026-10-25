@@ -71,7 +71,7 @@ final class RealWorldMapUITests: XCTestCase {
     /// why there was no fix went as that map settled. Tapped near the
     /// circle's edge, away from its glyph, the button answers (here with a
     /// failed fix, `-ui-test-location`, not the Simulator's location), the
-    /// map stays where it was, and the line stays. Full lane only (decision
+    /// map stays where it was, and the line stays, press after press. Full lane only (decision
     /// 199): when the line goes is `MyLocationStartTests` on Linux.
     func testUseMyLocationLeavesTheMapAndSaysWhyItFoundNothing() {
         continueAfterFailure = false
@@ -96,6 +96,14 @@ final class RealWorldMapUITests: XCTestCase {
         // Long enough for a map moved by the tap to have come to rest.
         XCTAssertFalse(message.disappears(within: 3), "The line must stay while the map settles")
         XCTAssertEqual(middle.label, before, "The button must not move the map")
+
+        // The owner's video (86.1, an iPhone on its side): each press after
+        // the first moved the map further to the north-east. A second
+        // press leaves it where it was too, and answers again.
+        myLocation.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.12)).tap()
+        XCTAssertTrue(message.appears(within: 5), "A second press must answer too")
+        XCTAssertFalse(message.disappears(within: 3), "and its line must stay")
+        XCTAssertEqual(middle.label, before, "A second press must not move the map either")
     }
 
     /// Stage V4e: the real-world demo runs under traffic control, and the
