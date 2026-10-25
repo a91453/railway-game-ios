@@ -20,11 +20,16 @@ final class SharedNetworkUITests: XCTestCase {
         // c4fc5b6 found Start a New Game there and not hittable). A slow
         // drag begun on a choice pressed it (run 40201864136: the seventh
         // drag began on Just Look and opened the game), so the drags start
-        // clear of buttons.
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(newGame, clearOf: .button), "Start a New Game is not reachable")
+        // clear of buttons. They move the sheet's own scroll view: scrolled
+        // to its end it still holds Just Look lower than the band kept clear
+        // of a game's toolbars (run 40205230384: 16 drags, never inside).
+        let sheet = app.scrollViews.containing(.button, identifier: "sharedNetwork.newGame").firstMatch
+        let cancel = app.buttons["sharedNetwork.cancel"]
+        let bar = cancel.exists ? cancel.frame.maxY : nil
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(newGame, in: sheet, below: bar, clearOf: .button), "Start a New Game is not reachable")
         XCTAssertTrue(newGame.becomesHittable(within: 5), "Start a New Game is not reachable")
         let look = app.buttons["sharedNetwork.look"]
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(look, clearOf: .button), "Just Look is not reachable")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(look, in: sheet, below: bar, clearOf: .button), "Just Look is not reachable")
         XCTAssertTrue(look.becomesHittable(within: 5), "Just Look is not reachable")
         look.tap()
         XCTAssertTrue(look.disappears(within: 10), "the sheet stayed")
