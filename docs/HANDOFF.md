@@ -1394,6 +1394,11 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 - 實機看：700T 一列 74,528 個三角形在跟車、駕駛室視角的幀數；500 m 換成 #900 的模型時跳不跳（外形是較舊的 700T）。
 - E200 的遠景模型（現在 900 m 內都是 5,512 個三角形）；舊的 `Map3DTrainLocomotive.e200` 不再被 set 用到，可以一併清掉。
 - 作者的 N700ST（橘色）沒有接；要接時同 N700S-G 的做法（700T 配方改鼻形與塗裝）。
+- **N700S-G 要重做（使用者 2026-10-25，#1217 未完成，先別合併）**：兩版都被說醜（第一版平塗重建「好醜」，第二版 700T 改鼻形「還是好醜」）。使用者選的下一版做法：**直接用作者的 mesh 減面＋遊戲配色**，不再只量尺寸自己重做外形。做法：
+  - 從私庫的 checkout 讀 `Railway/n700s-n700st-2026-10-24/n700s-g/models/railway-n700s-g-{a,b,c,d,e}.m3dmodel` 與 `assembly.json`（作者一列 95,624 個三角形），寫一個減面工具（放 `tools/hsr-trains-408/`，README 寫私庫路徑），每節減到約 5,000 個以下，頂點色換成調色盤（車身 #F6F6F4、深綠 #1D4A44、裙 #8F959B、頂 #C5C9CD、玻璃 #26313D、燈 `Map3DPalette.tunnelLamp`）、霧面平塗。尺寸照決策 408：沿車長與寬 ×1.22，高 z' = 0.62 + (z − 0.74) × 0.924。
+  - 公開庫只放減面後的模型（Swift 配方或減面後的頂點資料），**作者的原始 GLB、原生 M3DM 全檔、assembly 整列預覽都不 commit，draft 分支也不行**（規劃 session 的限制）。
+  - 換掉 `Map3DTrainSet.n700sG()` 的四款（現在是 `Map3DTrainShapeRefresh` 的 `refresh-n700sg-*`）；遠景 `n700sGFar`（`Map3DN700SG` 平塗重建）可以留著或換成再減一級的同一份 mesh。`refresh-n700sg-*` 與 `refreshHighSpeed(cab:panto:n700sG:)` 的 n700sG 分支到時可以刪（700T 的路徑不受影響）。
+  - 更新 `Map3DHighSpeedSetsTests`、`Map3DTrainSetTests` 的範圍、決策 408 的第 3、4 條與量到的表、預覽，給使用者看過再合併。
 - N700S-G 鼻下的深色整流罩是 700T 配方的，作者的 N700S-G 那裡是白／灰；要改時在 `refreshHighSpeed(cab:panto:n700sG:)` 的 `hullParts` 給 N700S-G 另一個顏色（700T 的 checksum 要不變）。
 - 實機看 N700S-G 一列 79,744 個三角形的幀數，與 500 m 換成平塗重建時跳不跳。
 
