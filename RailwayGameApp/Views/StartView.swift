@@ -118,6 +118,8 @@ struct StartView: View {
                     // Stable across localizations for the UI tests.
                     .accessibilityIdentifier(entry.identifier)
             }
+            // Decision 397, later: whether the saves are in iCloud.
+            CloudSaveStatusLine(launcher: launcher, identifier: "start.syncNow")
         }
     }
 
@@ -698,6 +700,13 @@ struct SaveListView: View {
                         importButton
                     }
                 }
+                // Decision 397, later: whether the saves are in iCloud, and
+                // Sync Now.
+                if !isEmpty, launcher.cloudSaves.systemImage != nil {
+                    Section {
+                        CloudSaveStatusLine(launcher: launcher, identifier: "saves.syncNow")
+                    }
+                }
                 if !launcher.olderAutosaves.isEmpty {
                     Section {
                         ForEach(launcher.olderAutosaves) { entry in
@@ -771,11 +780,6 @@ struct SaveListView: View {
                                     }
                                 }
                             }
-                    }
-                } footer: {
-                    // Decision 397: said only when the saves are in iCloud.
-                    if !isEmpty, let note = launcher.cloudSaves.footnote(in: language) {
-                        Text(verbatim: note)
                     }
                 }
             }
@@ -1047,6 +1051,16 @@ struct SaveListView: View {
                         .foregroundStyle(Theme.textSecondary)
                         .monospacedDigit()
                 }
+                // Decision 397, later: whether another device gets it.
+                if let mark = launcher.cloudMark(of: entry) {
+                    Label {
+                        Text(verbatim: mark.text(in: launcher.language))
+                    } icon: {
+                        Image(systemName: mark.systemImage)
+                    }
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
+                }
             }
         }
         .padding(.vertical, 3)
@@ -1073,6 +1087,47 @@ private struct ExportedListSave: Transferable {
     static var transferRepresentation: some TransferRepresentation {
         FileRepresentation(exportedContentType: .json) { save in
             SentTransferredFile(try save.library.exportFile(of: save.entry))
+        }
+    }
+}
+
+/// Decision 397, later: whether the saves are in the player's iCloud
+/// (``CloudSaves``), with a button that syncs at once. Nothing in a build
+/// without iCloud.
+private struct CloudSaveStatusLine: View {
+    let launcher: GameLauncher
+    /// The Sync Now button's, stable across localizations.
+    let identifier: String
+
+    var body: some View {
+        let language = launcher.language
+        let status = launcher.cloudSaves
+        if let image = status.systemImage {
+            HStack(alignment: .center, spacing: 10) {
+                Image(systemName: image)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(status == .incomplete || status == .iCloudOff ? Theme.warning : Theme.primary)
+                    .accessibilityHidden(true)
+                // A time said as "5 min ago", kept current while it shows.
+                TimelineView(.everyMinute) { context in
+                    Text(verbatim: status.footnote(in: language, now: context.date) ?? "")
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                Button {
+                    launcher.syncNow()
+                } label: {
+                    Text(verbatim: language.text("Sync Now", "立即同步"))
+                        .font(.footnote.weight(.semibold))
+                        .frame(minHeight: 32)
+                }
+                .buttonStyle(.bordered)
+                .tint(Theme.primary)
+                .disabled(!status.canSyncNow)
+                .accessibilityIdentifier(identifier)
+            }
         }
     }
 }

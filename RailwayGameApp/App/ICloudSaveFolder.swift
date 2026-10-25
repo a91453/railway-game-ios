@@ -33,7 +33,7 @@ struct ICloudSaveFolder: SaveSyncFolder {
         let manager = FileManager.default
         guard manager.fileExists(atPath: directory.path) else { return [:] }
         let urls = try manager.contentsOfDirectory(
-            at: directory, includingPropertiesForKeys: [.ubiquitousItemDownloadingStatusKey], options: []
+            at: directory, includingPropertiesForKeys: [.ubiquitousItemDownloadingStatusKey, .ubiquitousItemIsUploadedKey], options: []
         )
         var files: [String: SaveSyncFolderFile] = [:]
         for url in urls {
@@ -47,14 +47,17 @@ struct ICloudSaveFolder: SaveSyncFolder {
                 files[name] = SaveSyncFolderFile(isAvailable: false)
                 continue
             }
-            let status = try? url.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey]).ubiquitousItemDownloadingStatus
+            let values = try? url.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey, .ubiquitousItemIsUploadedKey])
+            let status = values?.ubiquitousItemDownloadingStatus
             // Only the latest version is compared: an older one on the
             // device would read as changed here.
             let isCurrent = status == nil || status == .current
             if !isCurrent {
                 try? manager.startDownloadingUbiquitousItem(at: url)
             }
-            files[name] = SaveSyncFolderFile(isAvailable: isCurrent)
+            // Decision 397, later: written here but not yet up in iCloud
+            // (offline, or going up), so the list says it waits.
+            files[name] = SaveSyncFolderFile(isAvailable: isCurrent, isUploaded: values?.ubiquitousItemIsUploaded ?? true)
         }
         return files
     }
