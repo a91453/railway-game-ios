@@ -118,7 +118,7 @@ struct ReceivedNetworkSheet: View {
     }
 
     private func open(as choice: SharedNetworkChoice) {
-        launcher.open(network, as: choice)
+        launcher.play(network, as: choice)
         dismiss()
     }
 }

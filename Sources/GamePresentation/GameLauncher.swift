@@ -1097,7 +1097,7 @@ public final class GameLauncher {
     }
 
     /// The network a friend sent, read and waiting for the player to choose
-    /// what to do with it (``open(_:as:)``), or `nil`.
+    /// what to do with it (``play(_:as:)``), or `nil`.
     public private(set) var receivedNetwork: SharedNetwork?
     /// Whether a file someone sent is being read.
     public private(set) var isReadingReceivedNetwork = false
@@ -1154,7 +1154,7 @@ public final class GameLauncher {
     /// as every new game does; looking writes nothing at all. Neither
     /// unlocks achievements or records a challenge: the network is a
     /// friend's work.
-    public func open(_ network: SharedNetwork, as choice: SharedNetworkChoice) {
+    public func play(_ network: SharedNetwork, as choice: SharedNetworkChoice) {
         receivedNetwork = nil
         if session != nil, !isLookingAtSharedNetwork {
             guard autosaveCurrentGame(refreshing: false) else { return }
@@ -1207,7 +1207,7 @@ public final class GameLauncher {
         }
         stopLessonClock()
         session?.stopGameLoop()
-        // Decision 409: set again by ``open(_:as:)`` when only looking.
+        // Decision 409: set again by ``play(_:as:)`` when only looking.
         isLookingAtSharedNetwork = false
         let started = GameSession(world: world, language: language)
         started.population = population

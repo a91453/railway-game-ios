@@ -164,7 +164,7 @@ final class SharedNetworkTests: XCTestCase {
 
         launcher.receiveNetwork(try SaveLibrary.encode(DemoWorld.make(in: .english), at: date(10)))
         let network = try XCTUnwrap(launcher.receivedNetwork)
-        launcher.open(network, as: .newGame)
+        launcher.play(network, as: .newGame)
         XCTAssertNil(launcher.receivedNetwork)
         let session = try XCTUnwrap(launcher.session)
         XCTAssertEqual(session.world.economy.balance, GameWorld.startingBalance)
@@ -194,7 +194,7 @@ final class SharedNetworkTests: XCTestCase {
         let sent = DemoWorld.make(in: .english)
         launcher.receiveNetwork(try SaveLibrary.encode(sent, at: date(10)))
         // The player's game is autosaved as it was, then nothing more.
-        launcher.open(try XCTUnwrap(launcher.receivedNetwork), as: .look)
+        launcher.play(try XCTUnwrap(launcher.receivedNetwork), as: .look)
         await launcher.savesWritten()
         let before = try directoryContents()
         XCTAssertTrue(launcher.isLookingAtSharedNetwork)
@@ -233,9 +233,9 @@ final class SharedNetworkTests: XCTestCase {
         launcher.continueGame()
         let data = try SaveLibrary.encode(DemoWorld.make(in: .english), at: date(10))
         launcher.receiveNetwork(data)
-        launcher.open(try XCTUnwrap(launcher.receivedNetwork), as: .look)
+        launcher.play(try XCTUnwrap(launcher.receivedNetwork), as: .look)
         launcher.receiveNetwork(data)
-        launcher.open(try XCTUnwrap(launcher.receivedNetwork), as: .newGame)
+        launcher.play(try XCTUnwrap(launcher.receivedNetwork), as: .newGame)
         XCTAssertFalse(launcher.isLookingAtSharedNetwork)
         // The player's own autosave, not the network looked at, was kept.
         let kept = library.entries().filter { $0.kind == .manual }
