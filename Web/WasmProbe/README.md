@@ -44,7 +44,7 @@ PROBE_BROWSERS=chromium,firefox,webkit npm test
 
 Node 使用內建 `node:wasi`，瀏覽器使用獨立的 WASI shim，結果與原生 report 比對。不同 target 的 `intBits` / `intMax` 分別驗證後才排除於行為比較，不能忽略其他差異。
 
-產物在忽略的 `.artifacts/`：`probe.wasm`、`native.json`、`node.json`、各 browser 的成功及錯誤路徑 report、toolchain 記錄。CI 的 [Wasm Probe](../../.github/workflows/wasm-probe.yml) 在相關 PR / main push 執行三種 browser engines，保留 artifact 7 天；它不發布網站。
+產物在忽略的 `.artifacts/`：`probe.wasm`、`native.json`、`node.json`、各 browser 的成功及錯誤路徑 report、toolchain 記錄。CI 的 [Wasm Probe](../../.github/workflows/wasm-probe.yml) 在相關 PR 執行三種 browser engines（main 上手動跑，2026-10-25 起不在 main push 跑，見 docs/research/CI_PRUNE_2026-10-25.md），保留 artifact 7 天；它不發布網站。
 
 ## 手動檢視
 
