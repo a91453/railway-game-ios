@@ -209,6 +209,23 @@ struct LinesPanel: View {
                 session.setSelectedLineCode(code)
             }
             .toolbar {
+                // Decision 416: the network's flow report, at the top of
+                // the panel where the lines are.
+                if session.showsNetworkFlowReport {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            screen.panel = .networkFlow
+                        } label: {
+                            Label {
+                                Text(verbatim: NetworkFlowReport.title(in: session.language))
+                            } icon: {
+                                Image(systemName: "chart.bar.xaxis")
+                            }
+                            .labelStyle(.titleAndIcon)
+                        }
+                        .accessibilityIdentifier("lines.networkFlow")
+                    }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
                         screen.panel = nil
