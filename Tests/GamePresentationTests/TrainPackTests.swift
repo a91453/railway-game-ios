@@ -15,6 +15,19 @@ final class TrainPackTests: XCTestCase {
         for key in TrainPack.sets { XCTAssertNotNil(Map3DTrainSet.byKey[key], key) }
     }
 
+    /// The author, 2026-10-25: the versions before Codex's rebuilds stay,
+    /// each a whole train of its own models, for a locked pack to draw.
+    func testTheVersionsBeforeTheRebuildsAreKept() {
+        let pack = Map3DModelPack.standard
+        for key in ["highSpeedClassic", "emu3000Classic", "tarokoClassic", "E200CKClassic"] {
+            let set = Map3DTrainSet.byKey[key]
+            XCTAssertNotNil(set, key)
+            XCTAssertEqual(set?.models().isEmpty, false, key)
+            XCTAssertNotNil(pack.models(forType: key), key)
+        }
+        XCTAssertEqual(names(pack, "E200CKClassic", 3).first, "set-E200CKClassic-head")
+    }
+
     func testALockedPackDrawsTheTrainsAsBefore() {
         var pack = Map3DModelPack.standard
         pack.locked = TrainPack.locked(unlocked: false)
