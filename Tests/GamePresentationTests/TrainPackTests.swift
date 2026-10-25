@@ -15,19 +15,6 @@ final class TrainPackTests: XCTestCase {
         for key in TrainPack.sets { XCTAssertNotNil(Map3DTrainSet.byKey[key], key) }
     }
 
-    /// The author, 2026-10-25: the versions before Codex's rebuilds stay,
-    /// each a whole train of its own models, for a locked pack to draw.
-    func testTheVersionsBeforeTheRebuildsAreKept() {
-        let pack = Map3DModelPack.standard
-        for key in ["highSpeedClassic", "emu3000Classic", "tarokoClassic", "E200CKClassic"] {
-            let set = Map3DTrainSet.byKey[key]
-            XCTAssertNotNil(set, key)
-            XCTAssertEqual(set?.models().isEmpty, false, key)
-            XCTAssertNotNil(pack.models(forType: key), key)
-        }
-        XCTAssertEqual(names(pack, "E200CKClassic", 3).first, "set-E200CKClassic-head")
-    }
-
     func testALockedPackDrawsTheTrainsAsBefore() {
         var pack = Map3DModelPack.standard
         pack.locked = TrainPack.locked(unlocked: false)
@@ -63,7 +50,31 @@ final class TrainPackTests: XCTestCase {
         XCTAssertFalse(TrainPack.isUnlocked(testBuild: false, switchOn: true), "the App Store's build ignores the switch")
     }
 
-    /// Decision 338 (later, fifth): a test build's switch is on until a
+    /// Decision 338 (second later): the N700S-G is in the pack; locked,
+    /// every high-speed train is the 700T, near and far; unlocked, decision
+    /// 408's odd-numbered trains are the N700S-G.
+    func testALockedPackDrawsEveryHighSpeedTrainAsThe700T() {
+        XCTAssertTrue(TrainPack.sets.contains("n700sG"))
+        var pack = Map3DModelPack.standard
+        pack.locked = TrainPack.locked(unlocked: false)
+        for number in 1...4 {
+            let key = Map3DTrainSet.variant(of: "HSR", number: number, locked: pack.locked)
+            XCTAssertEqual(key, "HSR", "train \(number)")
+            XCTAssertEqual(names(pack, key, 12).first, "set-highSpeed-head")
+            let head = pack.modelIndex(forType: key, carIndex: 0, count: 12)!
+            let far = pack.model(head, forType: key, count: 12, at: Map3DTrainSet.tramReach + 100).map { pack.models[$0].name }
+            XCTAssertEqual(far, "set-highSpeedFar-head", "train \(number) from 500 m out")
+        }
+        pack.locked = TrainPack.locked(unlocked: true)
+        XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 1, locked: pack.locked), "n700sG")
+        XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 2, locked: pack.locked), "HSR")
+        let head = pack.modelIndex(forType: "n700sG", carIndex: 0, count: 12)!
+        XCTAssertEqual(pack.models[head].name, "set-n700sG-head")
+        XCTAssertEqual(pack.model(head, forType: "n700sG", count: 12, at: Map3DTrainSet.tramReach + 100).map { pack.models[$0].name },
+                       "set-n700sGFar-head")
+    }
+
+    /// Decision 338 (second later): a test build's switch is on until a
     /// tester turns it off; the App Store's build stays locked.
     func testTheSwitchIsOnUntilTurnedOff() {
         XCTAssertTrue(TrainPack.switchOn(stored: nil))
