@@ -123,6 +123,10 @@ public struct Tourism: Hashable, Sendable {
     /// hotel or train near it, in hundredths of a star: two stars, a
     /// neighbourhood temple's.
     public static let templeStars = 200
+    /// The rating of a night market the company built (decision 361's
+    /// sequel), the same way: two and a half stars, a district's night
+    /// market, below the famous ones the catalog holds as towns.
+    public static let nightMarketStars = 250
     /// The share of an attraction's tourists who stay the night in a hotel
     /// near it, in thousandths (shared among the hotels there).
     public static let hotelStayPermille: Int64 = 80
@@ -528,47 +532,51 @@ extension GameWorld {
         }
     }
 
-    // MARK: - Temples (decision 361)
+    // MARK: - The company's sights (decision 361 and its sequel)
 
-    /// The ID a temple's sight goes by: its building's, negative, so it is
-    /// never an attraction's.
-    static func templeSightID(of building: PlacedBuildingID) -> AttractionID {
+    /// The ID a temple's or a night market's sight goes by: its
+    /// building's, negative, so it is never an attraction's.
+    static func companySightID(of building: PlacedBuildingID) -> AttractionID {
         AttractionID(rawValue: -building.rawValue)
     }
 
-    /// The company's temples as sights (decision 361), by building: each a
-    /// town of ``Tourism/templeStars`` at its centre, with how many of the
-    /// company's temples within ``Tourism/reach`` of it (itself included)
-    /// share its tourists. None without tourism.
-    func templeSights() -> [(building: PlacedBuildingID, sight: Attraction, sharing: Int64)] {
+    /// The company's temples (decision 361) and night markets (its sequel)
+    /// as sights, by building: each a town of ``Tourism/templeStars`` or
+    /// ``Tourism/nightMarketStars`` at its centre, with how many of the
+    /// company's buildings of its kind within ``Tourism/reach`` of it
+    /// (itself included) share its tourists. None without tourism.
+    func companySights() -> [(building: PlacedBuildingID, sight: Attraction, sharing: Int64)] {
         guard tourism != nil else { return [] }
-        let temples = placedBuildings.filter { $0.kind == .temple }
+        let sights = placedBuildings.filter(\.kind.isSight)
         let reach = Tourism.reach * Tourism.reach
-        return temples.map { temple in
-            let sharing = temples.count { other in
-                let dx = other.centre.x - temple.centre.x, dy = other.centre.y - temple.centre.y
-                return dx * dx + dy * dy <= reach
+        return sights.map { building in
+            let sharing = sights.count { other in
+                let dx = other.centre.x - building.centre.x, dy = other.centre.y - building.centre.y
+                return other.kind == building.kind && dx * dx + dy * dy <= reach
             }
-            let sight = Attraction(id: Self.templeSightID(of: temple.id), name: "廟", englishName: "Temple", point: temple.centre,
-                                   kind: .town, baseStars: Tourism.templeStars)
-            return (temple.id, sight, Int64(max(1, sharing)))
+            let temple = building.kind == .temple
+            let sight = Attraction(id: Self.companySightID(of: building.id), name: temple ? "廟" : "夜市", englishName: temple ? "Temple" : "Night market",
+                                   point: building.centre, kind: .town, baseStars: temple ? Tourism.templeStars : Tourism.nightMarketStars)
+            return (building.id, sight, Int64(max(1, sharing)))
         }
     }
 
-    /// The company's temple `id` as a sight (decision 361), to rate it with
-    /// ``stars(of:)``, or `nil` for no temple or without tourism.
-    public func templeSight(of id: PlacedBuildingID) -> Attraction? {
-        templeSights().first { $0.building == id }?.sight
+    /// The company's temple or night market `id` as a sight (decision 361
+    /// and its sequel), to rate it with ``stars(of:)``, or `nil` for none
+    /// or without tourism.
+    public func companySight(of id: PlacedBuildingID) -> Attraction? {
+        companySights().first { $0.building == id }?.sight
     }
 
-    /// The tourists temple `building` draws on game day `day` (decision
-    /// 361): the day that has just closed as it counted them
-    /// (``PlacedBuilding/visitors``), any other day its share of those
-    /// expected if a station serves it. None without tourism.
-    public func templeVisitors(of building: PlacedBuilding, onDay day: Int64) -> Int64 {
-        guard building.kind == .temple, tourism != nil else { return 0 }
+    /// The tourists temple or night market `building` draws on game day
+    /// `day` (decision 361 and its sequel): the day that has just closed as
+    /// it counted them (``PlacedBuilding/visitors``), any other day its
+    /// share of those expected if a station serves it. None without
+    /// tourism.
+    public func sightVisitors(of building: PlacedBuilding, onDay day: Int64) -> Int64 {
+        guard building.kind.isSight, tourism != nil else { return 0 }
         if day == dayIndex(of: clock.now) - 1 { return building.visitors }
-        guard let entry = templeSights().first(where: { $0.building == building.id }), servingStation(at: building.centre) != nil else {
+        guard let entry = companySights().first(where: { $0.building == building.id }), servingStation(at: building.centre) != nil else {
             return 0
         }
         return touristsExpected(for: entry.sight, onDay: day) / entry.sharing
@@ -668,9 +676,10 @@ extension GameWorld {
         guard let tourism else { return (flows, arrivals, passes) }
         let candidates = touristCandidates()
         var visited: [(station: StationID, tourists: [(source: StationID, count: Int64, back: Bool)])] = []
-        // Decision 361: the company's temples, after the sights; the
-        // temples near one another share their tourists.
-        let rated = tourism.attractions.map { (sight: $0, sharing: Int64(1)) } + templeSights().map { ($0.sight, $0.sharing) }
+        // Decision 361: the company's temples (and since its sequel night
+        // markets), after the sights; those of a kind near one another
+        // share their tourists.
+        let rated = tourism.attractions.map { (sight: $0, sharing: Int64(1)) } + companySights().map { ($0.sight, $0.sharing) }
         for (attraction, sharing) in rated {
             let expected = touristsExpected(for: attraction, onDay: day) / sharing
             guard expected > 0, let station = servingStation(at: attraction.point) else { continue }
@@ -687,8 +696,8 @@ extension GameWorld {
                 tourists.append((source.station, share, back))
             }
             arrivals[attraction.id] = shares.reduce(0, +)
-            // A temple's pilgrims ride there and back; the day pass is
-            // sold to those of the sights.
+            // A temple's pilgrims and a night market's visitors ride there
+            // and back; the day pass is sold to those of the sights.
             guard attraction.id.rawValue > 0 else { continue }
             visited.append((station, tourists))
         }
@@ -753,9 +762,10 @@ extension GameWorld {
             tourism.attractions[index].thisYear += count
         }
         self.tourism = tourism
-        // Decision 361: each temple's tourists, its customers tonight.
-        for index in placedBuildings.indices where placedBuildings[index].kind == .temple {
-            placedBuildings[index].visitors = arrived[Self.templeSightID(of: placedBuildings[index].id)] ?? 0
+        // Decision 361: each temple's (and night market's) tourists, its
+        // customers tonight.
+        for index in placedBuildings.indices where placedBuildings[index].kind.isSight {
+            placedBuildings[index].visitors = arrived[Self.companySightID(of: placedBuildings[index].id)] ?? 0
         }
     }
 

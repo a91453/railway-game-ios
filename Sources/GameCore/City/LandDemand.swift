@@ -71,6 +71,16 @@ public enum LandDemand {
     /// How many times its rate a growing station's front grows at.
     public static let stationFrontGrowth: Int64 = 3
 
+    // Schools and hospitals (decision 361's sequel): the island city
+    // reference's `LV_W.school = 9` and `hospital = 5` (g23.js), in tenths.
+
+    /// What a growing station's homes within ``LandValueRules/civicReach``
+    /// of one of the company's schools take more of its new residents, in
+    /// tenths of their share: 9, so 1.9 times; near a hospital 5, 1.5
+    /// times; near both 2.4 times. Several of a kind count once.
+    public static let schoolGrowthTenths: Int64 = 9
+    public static let hospitalGrowthTenths: Int64 = 5
+
     /// What a station's share of the land holds.
     public struct Share: Hashable, Sendable {
         public var residents: Int64 = 0
@@ -566,7 +576,7 @@ extension GameWorld {
             indices.append(index)
             weights.append(squared < front ? LandDemand.stationFrontGrowth : 1)
         }
-        let addedResidents = Self.apportion(residents, by: indices.indices.map { land.cells[indices[$0]].residents * weights[$0] })
+        let addedResidents = homeGrowth(residents, of: indices, by: weights)
         let addedJobs = Self.apportion(jobs, by: indices.indices.map { land.cells[indices[$0]].jobs * weights[$0] })
         for (offset, index) in indices.enumerated() {
             let cell = land.cells[index]
@@ -743,7 +753,7 @@ extension GameWorld {
         }
         let residents = kinds[0]
         let jobs: [CityDemand.Kind?: Int64] = [.shops: kinds[1], .work: kinds[2], nil: other]
-        let addedResidents = Self.apportion(residents, by: indices.indices.map { land.cells[indices[$0]].residents * weights[$0] })
+        let addedResidents = homeGrowth(residents, of: indices, by: weights)
         var addedJobs = [Int64](repeating: 0, count: indices.count)
         for kind in [CityDemand.Kind.shops, .work, nil] {
             let members = indices.indices.filter { CityDemand.Kind(of: land.cells[indices[$0]].use) == kind }
@@ -760,6 +770,65 @@ extension GameWorld {
             let newResidents = cell.residents >= limits.residents ? cell.residents : min(limits.residents, cell.residents + addedResidents[offset])
             let newJobs = cell.jobs >= limits.jobs ? cell.jobs : min(limits.jobs, cell.jobs + addedJobs[offset])
             land.cells[index] = cell.with(residents: newResidents, jobs: newJobs)
+        }
+    }
+
+    /// The new `residents` of a growing station shared among the cells
+    /// `indices` of its catchment by their residents times `weights`
+    /// (decision 361's sequel): by ``civicGrowthWeights(_:of:)`` when the
+    /// company has a school or a hospital, and then what a cell near one
+    /// takes beyond both its room and its plain share goes to the cells
+    /// with room left, by the plain weights, so that the station never
+    /// loses to the cap more than it would without them. The plain share
+    /// when the company has neither.
+    func homeGrowth(_ residents: Int64, of indices: [Int], by weights: [Int64]) -> [Int64] {
+        let plain = indices.indices.map { land.cells[indices[$0]].residents * weights[$0] }
+        let civic = civicGrowthWeights(weights, of: indices)
+        guard civic != weights else { return Self.apportion(residents, by: plain) }
+        let base = Self.apportion(residents, by: plain)
+        var added = Self.apportion(residents, by: indices.indices.map { land.cells[indices[$0]].residents * civic[$0] })
+        let room = indices.map { index in
+            let cell = land.cells[index]
+            return allowsGrowth(row: cell.row, column: cell.column) ? max(0, growthLimits(of: cell).residents - cell.residents) : 0
+        }
+        var spare: Int64 = 0
+        for offset in indices.indices where added[offset] > max(room[offset], base[offset]) {
+            spare += added[offset] - max(room[offset], base[offset])
+            added[offset] = max(room[offset], base[offset])
+        }
+        // Each round either places all of `spare` or fills at least one
+        // more cell to its room, so it ends within one round a cell.
+        while spare > 0 {
+            let open = indices.indices.map { added[$0] < room[$0] ? plain[$0] : 0 }
+            guard open.contains(where: { $0 > 0 }) else { break }
+            let shares = Self.apportion(spare, by: open)
+            spare = 0
+            for (offset, extra) in shares.enumerated() where extra > 0 {
+                let taken = min(extra, room[offset] - added[offset])
+                added[offset] += taken
+                spare += extra - taken
+            }
+        }
+        return added
+    }
+
+    /// The weights the new residents of a growing station are shared by
+    /// among the cells `indices` of its catchment (decision 361's sequel):
+    /// `weights`, each times `10 +` ``LandDemand/schoolGrowthTenths`` for a
+    /// cell whose middle lies within ``LandValueRules/civicReach`` of one of
+    /// the company's schools and `+` ``LandDemand/hospitalGrowthTenths`` of
+    /// a hospital, the rest times 10; `weights` as they are when the company
+    /// has neither. Only a cell with room to grow takes the extra: a full
+    /// one near a school weighs what it would without it, so that the
+    /// share it could not take is not made larger and lost.
+    func civicGrowthWeights(_ weights: [Int64], of indices: [Int]) -> [Int64] {
+        let civics = landValueCivics()
+        guard !civics.schools.isEmpty || !civics.hospitals.isEmpty else { return weights }
+        return zip(indices, weights).map { index, weight in
+            let cell = land.cells[index]
+            guard allowsGrowth(row: cell.row, column: cell.column), cell.residents < growthLimits(of: cell).residents else { return weight * 10 }
+            let near = Self.isNearCivics(cell.middle, civics)
+            return weight * (10 + (near.school ? LandDemand.schoolGrowthTenths : 0) + (near.hospital ? LandDemand.hospitalGrowthTenths : 0))
         }
     }
 
