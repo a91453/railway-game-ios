@@ -18,14 +18,17 @@ extension UTType {
 /// that offers it does not build the world to save every tick.
 ///
 /// Decision 409: of the game's own type, so a friend who gets it taps it
-/// open in the game, with the name the player wrote on the postcard.
+/// open in the game, with the name the player wrote on the postcard (or,
+/// for a friend's network only looked at, the friend's).
 struct ExportedSave: Transferable {
     let session: GameSession
+    let launcher: GameLauncher
 
     static var transferRepresentation: some TransferRepresentation {
         FileRepresentation(exportedContentType: .alongTheLineSave) { save in
             let (world, news) = await (save.session.worldToSave, save.session.news)
-            let company = UserDefaults.standard.string(forKey: PostcardSheet.companyNameKey)
+            let own = UserDefaults.standard.string(forKey: PostcardSheet.companyNameKey)
+            let company = await save.launcher.companyNameToShare(own: own)
             return SentTransferredFile(try SaveLibrary.exportFile(for: world, news: news, company: company, at: Date()))
         }
     }

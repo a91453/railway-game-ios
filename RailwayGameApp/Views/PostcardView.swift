@@ -240,6 +240,7 @@ private struct PostcardPicture {
 /// the game running underneath changes neither.
 struct PostcardSheet: View {
     let session: GameSession
+    let launcher: GameLauncher
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var screenScheme
     @Environment(\.regionStyle) private var region
@@ -255,8 +256,9 @@ struct PostcardSheet: View {
     @State private var map: PostcardMap?
     @State private var picture: PostcardPicture?
 
-    init(session: GameSession) {
+    init(session: GameSession, launcher: GameLauncher) {
         self.session = session
+        self.launcher = launcher
         _world = State(initialValue: session.world)
     }
 
@@ -317,7 +319,7 @@ struct PostcardSheet: View {
                         // Decision 409: the network itself, with this card
                         // as its preview, for a friend to open in the game.
                         ShareLink(
-                            item: ExportedSave(session: session),
+                            item: ExportedSave(session: session, launcher: launcher),
                             preview: SharePreview(Text(verbatim: picture.title), image: picture.image)
                         ) {
                             Label {

@@ -526,7 +526,7 @@ private struct GameMenu: View, Equatable {
                     }
                 }
                 .accessibilityIdentifier("menu.saveGameAs")
-                ShareLink(item: ExportedSave(session: session), preview: SharePreview(Text("Along the Line save"))) {
+                ShareLink(item: ExportedSave(session: session, launcher: launcher), preview: SharePreview(Text("Along the Line save"))) {
                     Label("Export Save", systemImage: "square.and.arrow.up")
                 }
                 // Decision 192: back to the game of some minutes before,

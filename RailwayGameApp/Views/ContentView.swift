@@ -337,7 +337,7 @@ struct ContentView: View {
         case .help:
             HelpView(language: session.language, launcher: launcher)
         case .postcard:
-            PostcardSheet(session: session)
+            PostcardSheet(session: session, launcher: launcher)
         case .achievements:
             AchievementsSheet(session: session, records: launcher.achievements, stamps: launcher.stationStamps)
                 .presentationDetents([.medium, .large])

@@ -154,7 +154,7 @@ final class SharedNetworkTests: XCTestCase {
     // MARK: - The launcher
 
     @MainActor
-    func testOpeningANewGameKeepsThePlayersGameAsASave() throws {
+    func testOpeningANewGameKeepsThePlayersGameAsASave() async throws {
         let library = SaveLibrary(directory: directory)
         let own = try ownWorld()
         try library.save(own, as: .autosave, at: date(0))
@@ -164,8 +164,11 @@ final class SharedNetworkTests: XCTestCase {
 
         launcher.receiveNetwork(try SaveLibrary.encode(DemoWorld.make(in: .english), at: date(10)))
         let network = try XCTUnwrap(launcher.receivedNetwork)
-        launcher.play(network, as: .newGame)
+        let opening = launcher.play(network, as: .newGame)
         XCTAssertNil(launcher.receivedNetwork)
+        XCTAssertTrue(launcher.isReadingReceivedNetwork, "its money is worked out off the main actor")
+        await opening.value
+        XCTAssertFalse(launcher.isReadingReceivedNetwork)
         let session = try XCTUnwrap(launcher.session)
         XCTAssertEqual(session.world.economy.balance, GameWorld.startingBalance)
         XCTAssertEqual(session.world.stations, DemoWorld.make(in: .english).stations)
@@ -225,7 +228,61 @@ final class SharedNetworkTests: XCTestCase {
     }
 
     @MainActor
-    func testANewGameWhileLookingDoesNotSaveTheLookedAtNetwork() throws {
+    func testGoingBackToAnAutosaveWhileLookingDoesNotSaveTheLookedAtNetwork() async throws {
+        let library = SaveLibrary(directory: directory)
+        let older = try ownWorld()
+        var newer = older
+        try newer.advance(ticks: 60)
+        try library.saveAutosaveSlot(older, at: date(0))
+        try library.saveAutosaveSlot(newer, at: date(900))
+        let launcher = GameLauncher(library: library, language: .english)
+        launcher.continueGame()
+        XCTAssertEqual(launcher.session?.world, newer)
+
+        let sent = DemoWorld.make(in: .english)
+        launcher.receiveNetwork(try SaveLibrary.encode(sent, at: date(1_000)))
+        launcher.play(try XCTUnwrap(launcher.receivedNetwork), as: .look)
+        await launcher.savesWritten()
+        let back = try XCTUnwrap(library.entries().first { $0.kind == .autosave && (try? library.load($0)) == older })
+
+        // The game menu's "go back to an earlier autosave".
+        launcher.load(back, at: date(1_100))
+        await launcher.savesWritten()
+        XCTAssertEqual(launcher.session?.world, older)
+        XCTAssertFalse(launcher.isLookingAtSharedNetwork)
+        let saved = try library.entries().map { try library.load($0) }
+        XCTAssertFalse(saved.contains(sent), "the network looked at was saved as the player's")
+        XCTAssertTrue(saved.contains(newer), "the player's newest game was pushed out")
+    }
+
+    @MainActor
+    func testASaveSharedWhileLookingCarriesTheFriendsNameNotThePlayers() async throws {
+        let library = SaveLibrary(directory: directory)
+        try library.save(try ownWorld(), as: .autosave, at: date(0))
+        let launcher = GameLauncher(library: library, language: .english)
+        launcher.continueGame()
+        XCTAssertEqual(launcher.companyNameToShare(own: "My Railway"), "My Railway")
+
+        let world = DemoWorld.make(in: .english)
+        launcher.receiveNetwork(try SaveLibrary.encode(world, company: "Friend Lines", at: date(10)))
+        launcher.play(try XCTUnwrap(launcher.receivedNetwork), as: .look)
+        XCTAssertEqual(launcher.companyNameToShare(own: "My Railway"), "Friend Lines")
+        launcher.receiveNetwork(try SaveLibrary.encode(world, at: date(20)))
+        launcher.play(try XCTUnwrap(launcher.receivedNetwork), as: .look)
+        XCTAssertNil(launcher.companyNameToShare(own: "My Railway"), "a file that names none")
+
+        // A new game from it is the player's own company.
+        launcher.receiveNetwork(try SaveLibrary.encode(world, company: "Friend Lines", at: date(30)))
+        await launcher.play(try XCTUnwrap(launcher.receivedNetwork), as: .newGame).value
+        XCTAssertEqual(launcher.companyNameToShare(own: "My Railway"), "My Railway")
+        launcher.receiveNetwork(try SaveLibrary.encode(world, at: date(40)))
+        launcher.play(try XCTUnwrap(launcher.receivedNetwork), as: .look)
+        launcher.returnToStart()
+        XCTAssertEqual(launcher.companyNameToShare(own: "My Railway"), "My Railway")
+    }
+
+    @MainActor
+    func testANewGameWhileLookingDoesNotSaveTheLookedAtNetwork() async throws {
         let library = SaveLibrary(directory: directory)
         let own = try ownWorld()
         try library.save(own, as: .autosave, at: date(0))
@@ -235,7 +292,7 @@ final class SharedNetworkTests: XCTestCase {
         launcher.receiveNetwork(data)
         launcher.play(try XCTUnwrap(launcher.receivedNetwork), as: .look)
         launcher.receiveNetwork(data)
-        launcher.play(try XCTUnwrap(launcher.receivedNetwork), as: .newGame)
+        await launcher.play(try XCTUnwrap(launcher.receivedNetwork), as: .newGame).value
         XCTAssertFalse(launcher.isLookingAtSharedNetwork)
         // The player's own autosave, not the network looked at, was kept.
         let kept = library.entries().filter { $0.kind == .manual }

@@ -1007,7 +1007,9 @@ public final class GameLauncher {
     private func loadAutosave(_ candidates: [SaveLibrary.Entry], fallingBack: Bool, at date: Date) {
         let playing = session
         if playing != nil { recordChallengeResult(at: date) }
-        let current = playing.map { ($0.worldToSave, $0.news) }
+        // Decision 409: a friend's network only looked at is not kept in
+        // turn; going back is then as from the start screen.
+        let current = isLookingAtSharedNetwork ? nil : playing.map { ($0.worldToSave, $0.news) }
         do throws(SaveError) {
             let library = library
             let loaded = try afterSaves { () throws(SaveError) -> (GameWorld, NewsLog, Bool, SaveLibrary.Entry?)? in
@@ -1105,6 +1107,15 @@ public final class GameLauncher {
     /// looked at (``SharedNetworkChoice/look``): nothing of it is saved,
     /// and the autosave stays the player's own game.
     public private(set) var isLookingAtSharedNetwork = false
+    /// The name on the postcard of the network looked at, while looking.
+    private var lookedAtCompany: String?
+
+    /// The company name a save shared from the game carries: the player's
+    /// own (`own`, from their postcard), or, while looking at a friend's
+    /// network, the friend's, never the player's.
+    public func companyNameToShare(own: String?) -> String? {
+        isLookingAtSharedNetwork ? lookedAtCompany : own
+    }
 
     /// Reads the file someone sent at `url` (tapped in LINE, AirDrop or
     /// Files) off the main actor, then offers it (``receivedNetwork``).
@@ -1151,30 +1162,47 @@ public final class GameLauncher {
     /// Opens `network` as the player chose. The game being played, if any,
     /// is autosaved first (unless it is itself a network only looked at).
     /// A new game from it keeps the autosave as a save of the player's own,
-    /// as every new game does; looking writes nothing at all. Neither
-    /// unlocks achievements or records a challenge: the network is a
-    /// friend's work.
-    public func play(_ network: SharedNetwork, as choice: SharedNetworkChoice) {
+    /// as every new game does; its money is worked out off the main actor
+    /// first (``isReadingReceivedNetwork`` meanwhile). Looking writes
+    /// nothing at all. Neither unlocks achievements or records a
+    /// challenge: the network is a friend's work.
+    @discardableResult
+    public func play(_ network: SharedNetwork, as choice: SharedNetworkChoice) -> Task<Void, Never> {
         receivedNetwork = nil
-        if session != nil, !isLookingAtSharedNetwork {
-            guard autosaveCurrentGame(refreshing: false) else { return }
-        }
         switch choice {
         case .newGame:
-            do throws(SaveError) {
-                let world = try network.newGameWorld()
-                begin(world, keepingAutosave: true, isDemo: true)
-            } catch {
-                report(error)
+            isReadingReceivedNetwork = true
+            return Task {
+                let made = await Task.detached(priority: .userInitiated) { () -> Result<GameWorld, SaveError> in
+                    Result { () throws(SaveError) in try network.newGameWorld() }
+                }.value
+                isReadingReceivedNetwork = false
+                switch made {
+                case .success(let world):
+                    guard keepPlayersGame() else { return }
+                    begin(world, keepingAutosave: true, isDemo: true)
+                case .failure(let error):
+                    report(error)
+                }
             }
         case .look:
-            guard begin(network.world, keepingAutosave: false, news: network.news, isDemo: true) else { return }
+            guard keepPlayersGame(),
+                  begin(network.world, keepingAutosave: false, news: network.news, isDemo: true) else { return Task {} }
             isLookingAtSharedNetwork = true
+            lookedAtCompany = network.company
             session?.message = StatusMessage(kind: .success, text: language.text(
                 "You are looking at a friend's network. Nothing here is saved.",
                 "你在看朋友的路網，這裡的一切都不會存檔。"
             ))
+            return Task {}
         }
+    }
+
+    /// Autosaves the game being played before another opens, unless it is
+    /// a network only looked at. Returns whether to go on.
+    private func keepPlayersGame() -> Bool {
+        guard session != nil, !isLookingAtSharedNetwork else { return true }
+        return autosaveCurrentGame(refreshing: false)
     }
 
     /// `error` where the player is: the game's status line, or the start
@@ -1209,6 +1237,7 @@ public final class GameLauncher {
         session?.stopGameLoop()
         // Decision 409: set again by ``play(_:as:)`` when only looking.
         isLookingAtSharedNetwork = false
+        lookedAtCompany = nil
         let started = GameSession(world: world, language: language)
         started.population = population
         started.places = places
@@ -1457,6 +1486,7 @@ public final class GameLauncher {
         session?.stopGameLoop()
         session = nil
         isLookingAtSharedNetwork = false
+        lookedAtCompany = nil
         gameIsOpen.value = false
         duckMusic?(1)
         runningSound?(nil)
