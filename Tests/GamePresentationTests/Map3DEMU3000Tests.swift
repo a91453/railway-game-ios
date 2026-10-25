@@ -68,7 +68,7 @@ final class Map3DEMU3000Tests: XCTestCase {
     func testActualMeshesHaveClosedOutwardSurfacesAndRejectVisibleDefects() throws {
         for far in [false,true] {for unit in Map3DEMU3000.Unit.allCases {
             let m=Map3DEMU3000.model(unit,far:far)
-            XCTAssertLessThan(m.triangleCount,far ? 3600:8500)
+            XCTAssertLessThan(m.triangleCount,far ? 3600:8800)
             try closed(m.vertices)
             for i in stride(from:0,to:m.vertices.count,by:3) {
                 let t=Array(m.vertices[i..<i+3]),n=try XCTUnwrap((t[1].position-t[0].position).cross(t[2].position-t[0].position).normalized)
@@ -119,16 +119,29 @@ final class Map3DEMU3000Tests: XCTestCase {
         XCTAssertGreaterThan(chin.count,10,"substantial white chin, not a needle")
         XCTAssertLessThan(m.vertices.filter {$0.x>9.5}.map(\.z).max() ?? 10,2.5)
     }
-    func testLowerChinHasACompactRaisedSideProfile() {
+    func testCabSideProfileHasTheReferenceCrownAndContinuousDiagonalNose() {
         for far in [false,true] {
             let head=Map3DEMU3000.model(.ed,far:far)
-            let white=head.vertices.filter {$0.color==Map3DEMU3000.bodyColor && $0.x>8 && $0.z<1.1}
-            let low=white.map(\.z).min() ?? 0
-            XCTAssertGreaterThan(low,0.44,"low hanging jaw should be raised")
-            XCTAssertLessThan(low,0.54,"keep a substantial rounded chin")
-            let toe=white.filter {$0.z<0.50}
-            XCTAssertFalse(toe.isEmpty)
-            XCTAssertGreaterThan(toe.map(\.x).min() ?? 0,9.95,"lower corner rolls tightly below the tip")
+            func shellTop(_ x:Float)->Float {
+                var high:Float=0
+                for i in stride(from:0,to:head.vertices.count,by:3) {
+                    let t=Array(head.vertices[i..<i+3])
+                    guard t.allSatisfy({$0.color==Map3DEMU3000.bodyColor || $0.color==Map3DEMU3000.maskColor}) else {continue}
+                    for j in 0..<3 {
+                        let a=t[j],b=t[(j+1)%3]
+                        if (a.x-x)*(b.x-x)<0 {high=max(high,a.z+(b.z-a.z)*(x-a.x)/(b.x-a.x))}
+                    }
+                }
+                return high
+            }
+            XCTAssertGreaterThan(shellTop(7.0),3.60,"rounded raised cab crown")
+            XCTAssertGreaterThan(shellTop(8.0),3.20,"upper slope starts above the side window")
+            XCTAssertLessThan(shellTop(10.0),1.80,"diagonal nose continues down instead of flattening into a beak")
+            let chin=head.vertices.filter {$0.color==Map3DEMU3000.bodyColor && $0.x>8}
+            let low=chin.map(\.z).min() ?? 0
+            XCTAssertGreaterThan(low,0.20);XCTAssertLessThan(low,0.35)
+            XCTAssertGreaterThan(chin.filter {$0.z<low+0.02}.map(\.x).min() ?? 0,9.95,"tight rounded lower corner")
+            XCTAssertGreaterThan(head.vertices.filter {$0.color==Map3DEMU3000.glassColor && $0.x>7.3 && $0.x<8.8 && abs($0.y)>1 && $0.z>2.3 && $0.z<3.2}.count,30,"triangular quarterlight follows the new cab position")
         }
     }
     func testHeadlampsAreIndividualModulesAndTailHasOnlyTwoMarkers() {
@@ -156,7 +169,7 @@ final class Map3DEMU3000Tests: XCTestCase {
             for t in triangles {
                 let p=t.map(\.position),c=p.reduce(.zero,+)*(1/3)
                 guard t.allSatisfy({$0.color==Map3DEMU3000.glassColor}),abs(t[0].ny)>0.7,
-                      t[0].ny*c.y>0,doors.contains(where:{abs(c.x-$0)<0.25}) else {continue}
+                      t[0].ny*c.y>0,abs(c.y)>1.0,doors.contains(where:{abs(c.x-$0)<0.25}) else {continue}
                 let d=Map3DPoint(0,c.y>0 ? -1:1,0),o=c-d*0.4
                 var nearest:Float=10
                 for q in triangles {
@@ -177,7 +190,7 @@ final class Map3DEMU3000Tests: XCTestCase {
         }
         for far in [false,true] {for unit in Map3DEMU3000.Unit.allCases {
             let m=Map3DEMU3000.model(unit,far:far)
-            let doors:[Float]=unit == .ed ? [-8.5,3.9,5.15]:unit == .tail ? [8.5,-3.9,-5.15]:[-8,8]
+            let doors:[Float]=unit == .ed ? [-8.5,5.3,7.0]:unit == .tail ? [8.5,-5.3,-7.0]:[-8,8]
             let result=occlusions(m.vertices,doors)
             XCTAssertGreaterThan(result.samples,20,"both door sides have real visible glazing samples")
             XCTAssertEqual(result.hidden,0,"\(unit) far=\(far): door glass hidden by hull/leaf")

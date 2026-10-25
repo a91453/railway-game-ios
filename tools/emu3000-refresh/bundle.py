@@ -21,6 +21,12 @@ if previous.exists():
  for m in old['models']:
   if m['family'] in ['emu3000','far']:
    assert sha(previous/m['native'])==m['native_sha256'],('previous delivery modified',m['id'])
+interim=root/'history/f6a010f0'
+if interim.exists():
+ study=json.loads((interim/'manifest.json').read_text());assert study['producer_commit']=='f6a010f05beac8a41d5c40dca25ab9a054478b90'
+ for m in study['models']:
+  if m['family'] in ['emu3000','far']:assert sha(interim/m['native'])==m['native_sha256']
+ source_record['intermediate_study']={'producer_commit':study['producer_commit'],'native_snapshot':'history/f6a010f0','status':'actual small-chin interim study; not a complete delivery or owner-approved version'}
 (root/'source-record.json').write_text(json.dumps(source_record,ensure_ascii=False,indent=2)+'\n')
 # The sole public overview must be from these exact final native assets.
 public=repo/'docs/art/emu3000-refresh-2026-10-25/overview.png'

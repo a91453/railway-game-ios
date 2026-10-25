@@ -68,7 +68,7 @@ try {
    const views={};for(const v of ['left','front','isometric']){renderer.render(v,{width:850,height:700});views[v]=renderer.png();}out.push(views);
   }return out;
  });
- await sheet('chin-before-after','下巴局部｜同相機、公尺尺度；其餘造型保持',['left','front','isometric'].map(view=>'<h2>'+view+'</h2><div class="row">'+chinImages.map((data,i)=>'<div><img src="'+data[view]+'"><p>'+['真正e25474ff第三版','第四版：微抬底線、收緊下角'][i]+'</p></div>').join('')+'</div>').join(''));
+ await sheet('chin-before-after','ED車頭局部｜同相機、公尺尺度',['left','front','isometric'].map(view=>'<h2>'+view+'</h2><div class="row">'+chinImages.map((data,i)=>'<div><img src="'+data[view]+'"><p>'+['真正e25474ff第三版','第四版：依ED側圖重做艙頂、斜鼻與側窗'][i]+'</p></div>').join('')+'</div>').join(''));
  await stage();
  const doorImages=await page.evaluate(async()=>{
   const out=[];

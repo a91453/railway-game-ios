@@ -16,8 +16,8 @@ for rec in m['models']:
  id=rec['id']
  p,c=read(root/rec['native']);bad=0;total=0;worst=0;overlap=0
  normals=np.cross(p[:,1]-p[:,0],p[:,2]-p[:,0]);normals/=np.linalg.norm(normals,axis=1)[:,None];centres=p.mean(axis=1)
- doors=[8.5,-3.9,-5.15] if 'tail' in id else [-8.5,3.9,5.15] if '-ed' in id else [-8,8]
- for i in np.where((c==glass)&(abs(normals[:,1])>0.7)&(normals[:,1]*centres[:,1]>0)&(np.min(np.abs(centres[:,0,None]-doors),axis=1)<0.25))[0]:
+ doors=[8.5,-5.3,-7.0] if 'tail' in id else [-8.5,5.3,7.0] if '-ed' in id else [-8,8]
+ for i in np.where((c==glass)&(abs(normals[:,1])>0.7)&(normals[:,1]*centres[:,1]>0)&(abs(centres[:,1])>1.0)&(np.min(np.abs(centres[:,0,None]-doors),axis=1)<0.25))[0]:
   d=np.array([0.,np.sign(centres[i,1]),0.]);o=centres[i]+d*.4;t=hits(o,-d,p);near=t.min();total+=1
   if near<.397:bad+=1;worst=max(worst,.4-near)
   if ((abs(t-.4)<.001)&(c!=glass)).any():overlap+=1

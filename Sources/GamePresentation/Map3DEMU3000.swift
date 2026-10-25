@@ -44,8 +44,7 @@ public enum Map3DEMU3000 {
     public static func model(_ unit: Unit, far: Bool = false) -> Map3DModelPack.Model {
         var b = StationKitBuilder()
         b.emuCar(unit, far: far)
-        let source = Map3DModelPack.Model.flat(named: unit.id + (far ? "-far" : ""), from: b.mesh)
-        let raw = unit.isCab ? trimmedChin(source) : source
+        let raw = Map3DModelPack.Model.flat(named: unit.id + (far ? "-far" : ""), from: b.mesh)
         let m = Map3DModelPack.Model(name:raw.name,vertices:raw.vertices.map { v in
             guard v.color == lampColor else { return v }
             return Map3DVertex(v.position,normal:Map3DPoint(v.nx,v.ny,v.nz),
@@ -56,56 +55,6 @@ public enum Map3DEMU3000 {
         return Map3DModelPack.Model(name:m.name, vertices:m.vertices.map {
             Map3DVertex(Map3DPoint(-$0.x,-$0.y,$0.z), normal:Map3DPoint(-$0.nx,-$0.ny,$0.nz),color:$0.color,layer:$0.layer)
         }, minimum:Map3DPoint(-m.maximum.x,-m.maximum.y,m.minimum.z),maximum:Map3DPoint(-m.minimum.x,-m.minimum.y,m.maximum.z))
-    }
-    /// Only the low white nose and its fitted hatch seam move. The real previous
-    /// helmet, glazing, doors and running gear are preserved vertex-for-vertex.
-    private static func trimmedChin(_ model: Map3DModelPack.Model) -> Map3DModelPack.Model {
-        let seam=Map3DColor.shaded(bodyColor,0.74)
-        func ease(_ n:Float)->Float {let t=max(0,min(1,n));return t*t*(3-2*t)}
-        func position(_ v:Map3DVertex)->Map3DPoint {
-            guard (v.color==bodyColor || v.color==seam),v.x>7.9,v.z<1.1 else {return v.position}
-            let amount=ease((v.x-7.9)/1.4)*ease((1.1-v.z)/0.86)
-            let roll=max(0,min(1,(10.6-v.x)/0.6))
-            return v.position+Map3DPoint(0.25*amount*roll,0,0.24*amount)
-        }
-        var positions=model.vertices.map(position)
-        let shellTriangles=stride(from:0,to:model.vertices.count,by:3).filter {i in
-            model.vertices[i..<i+3].allSatisfy {($0.color==bodyColor || $0.color==maskColor) && $0.x>7.5}
-        }
-        func surfaceX(_ p:Map3DPoint,_ transformed:Bool)->Float? {
-            var front:Float?
-            for i in shellTriangles {
-                let a=transformed ? positions[i]:model.vertices[i].position
-                let b=transformed ? positions[i+1]:model.vertices[i+1].position
-                let c=transformed ? positions[i+2]:model.vertices[i+2].position
-                let e=b-a,f=c-a,w=p-a,det=e.y*f.z-e.z*f.y
-                if abs(det)<0.0000001 {continue}
-                let u=(w.y*f.z-w.z*f.y)/det,v=(e.y*w.z-e.z*w.y)/det
-                if u >= -0.000001 && v >= -0.000001 && u+v<=1.000001 {
-                    let x=a.x+u*e.x+v*f.x
-                    front=max(front ?? x,x)
-                }
-            }
-            return front
-        }
-        // Refit both sides of the existing thin seam to the final faceted hull.
-        // A nonlinear vertex warp alone can otherwise bury short seam segments.
-        let warped=positions
-        for i in positions.indices where model.vertices[i].color==seam {
-            let old=model.vertices[i].position,p=warped[i]
-            if let before=surfaceX(old,false),let after=surfaceX(p,true) {
-                positions[i]=Map3DPoint(after+(old.x-before),p.y,p.z)
-            }
-        }
-        var vertices=model.vertices
-        for i in stride(from:0,to:vertices.count,by:3) {
-            let old=Array(model.vertices[i..<i+3]),points=Array(positions[i..<i+3])
-            guard zip(old,points).contains(where:{$0.position != $1}) else {continue}
-            guard let n=(points[1]-points[0]).cross(points[2]-points[0]).normalized else {preconditionFailure("Degenerate chin")}
-            for j in 0..<3 {vertices[i+j]=Map3DVertex(points[j],normal:n,color:old[j].color,u:old[j].u,v:old[j].v,layer:old[j].layer)}
-        }
-        // Actual overall extrema remain the unchanged couplers, body and rail tread.
-        return Map3DModelPack.Model(name:model.name,vertices:vertices,minimum:model.minimum,maximum:model.maximum)
     }
     // Minimal runtime adapter. Shared generic builders stay independent of this recipe.
     static func trainSet(far: Bool = false) -> Map3DTrainSet {
@@ -145,11 +94,11 @@ private extension StationKitBuilder {
     static func emuStations(_ cab: Bool) -> [(Float,Float,Float,Float)] {
         if !cab { return [(-9.8,3.49,0.90,1.455),(9.8,3.49,0.90,1.455)] }
         return [(-10.5,3.49,0.90,1.455),(6.2,3.49,0.90,1.455),
-                (6.9,3.46,0.90,1.43),(7.55,3.23,0.88,1.37),
-                (8.15,2.94,0.72,1.29),(8.75,2.62,0.48,1.20),
-                (9.3,2.34,0.30,1.09),(9.8,2.15,0.24,0.98),
-                (10.15,2.04,0.25,0.84),(10.45,1.94,0.36,0.65),
-                (10.60,1.79,0.58,0.36),(10.65,1.65,0.78,0.266),(10.675,1.13,1.13,0)]
+                (6.7,3.68,0.90,1.45),(7.3,3.63,0.90,1.40),
+                (7.9,3.40,0.90,1.33),(8.5,2.96,0.77,1.21),
+                (9.1,2.45,0.52,1.05),(9.65,1.99,0.30,0.90),
+                (10.05,1.66,0.24,0.72),(10.35,1.42,0.36,0.53),
+                (10.55,1.26,0.60,0.32),(10.65,1.18,0.84,0.18),(10.675,1.13,1.13,0)]
     }
     static func emuDimensions(_ x: Float,_ cab: Bool) -> (Float,Float,Float) {
         let s = emuStations(cab)
@@ -192,7 +141,7 @@ private extension StationKitBuilder {
         // An angular band would pinch into a black spike as the section collapses.
         let height=max(0,min(1,(p.y-1.20)/2.29))
         let halfWidth:Float=1.36*sqrtf(max(0,1-(1-height)*(1-height)))
-        let rear:Float=6.55+0.60*(p.z/1.36)*(p.z/1.36)
+        let rear:Float=6.25+0.60*(p.z/1.36)*(p.z/1.36)
         return min(p.y-1.20,min(halfWidth-abs(p.z),x-rear))
     }
     mutating func emuShell(_ cab: Bool,_ sides: Int) {
@@ -287,14 +236,29 @@ private extension StationKitBuilder {
                 }
             }
         }
-        // All fitted doors are behind the first taper station. Solve the actual
-        // faceted straight section at a requested height, not the smooth ellipse.
-        let section=(-sides/4...sides/4).map {Self.emuPoint(0,Float($0)*2*Float.pi/Float(sides),cab,sides)}
+        // Solve the real polygonal section, including its longitudinal diagonal.
+        // This also fits the driver's door on the tapered cab, not a straight plane.
+        func crossSection(_ x:Float)->[Map3DPoint] {
+            let stations=Self.emuStations(cab)
+            var u:Float=0
+            for i in 1..<stations.count where x<=stations[i].0 {
+                u=max(0,min(1,(x-stations[i-1].0)/(stations[i].0-stations[i-1].0)));break
+            }
+            var angles:[Float]=[]
+            for j in -sides/4..<sides/4 {
+                angles.append(Float(j)*2*Float.pi/Float(sides))
+                if cab && x>6.2 && u>0.000001 && u<0.999999 {angles.append((Float(j)+u)*2*Float.pi/Float(sides))}
+            }
+            angles.append(Float.pi/2)
+            return angles.map {Self.emuPoint(x,$0,cab,sides)}
+        }
+        let section=crossSection(x)
         let levels=Array(Set(section.map {$0.y})).sorted()
         func projected(_ p:Map3DPoint)->Map3DPoint {
+            let local=crossSection(p.x)
             var z:Float=0
-            for i in 1..<section.count {
-                let a=section[i-1],b=section[i]
+            for i in 1..<local.count {
+                let a=local[i-1],b=local[i]
                 if p.y>=min(a.y,b.y)-0.000001 && p.y<=max(a.y,b.y)+0.000001 && abs(a.y-b.y)>0.000001 {
                     let t=max(0,min(1,(p.y-a.y)/(b.y-a.y)))
                     z=max(z,abs(a.z+(b.z-a.z)*t))
@@ -344,7 +308,7 @@ private extension StationKitBuilder {
     /// Tessellated CLOSED quarterlight bonded to the actual faceted side.
     /// A single planar five-corner face bridges the shoulder and exposes white chips.
     mutating func emuQuarterlight(_ side: Float,_ sides: Int,_ far: Bool) {
-        let outline:[(Float,Float)]=[(5.75,2.69),(5.74,3.17),(6.45,3.13),(7.13,2.86),(6.97,2.76)]
+        let outline:[(Float,Float)]=[(7.35,2.58),(7.34,3.07),(7.95,2.94),(8.68,2.43),(8.37,2.39)]
         let centre=outline.reduce((Float(0),Float(0))) {($0.0+$1.0/5,$0.1+$1.1/5)},n=far ? 2:5
         var vertices:[String:(Map3DPoint,Map3DPoint)]=[:],edges:[String:([String],Int,Map3DPoint)]=[:]
         func vertex(_ x:Float,_ y:Float)->String {
@@ -380,7 +344,7 @@ private extension StationKitBuilder {
         }
     }
     mutating func emuDoorsAndWindows(_ unit: EU,_ cab: Bool,_ sides: Int,_ far: Bool) {
-        let doors: [Float]=cab ? [-8.5,3.90]:[-8.0,8.0]
+        let doors: [Float]=cab ? [-8.5,5.30]:[-8.0,8.0]
         for side: Float in [-1,1] {
             for x in doors {
                 emuFittedOpening(x,2.16,0.90,2.02,side,cab,sides,Self.ew,Self.es,0.018,outlineOnly:true)
@@ -388,8 +352,8 @@ private extension StationKitBuilder {
                 if !far { emuOpening(x-0.29,1.80,0.035,0.22,side,cab,sides,Self.es,Self.es,0.009) }
             }
             if cab {
-                emuFittedOpening(5.15,2.17,0.59,2.03,side,cab,sides,Self.ew,Self.es,0.016,outlineOnly:true)
-                emuFittedOpening(5.15,2.76,0.31,0.58,side,cab,sides,Self.eg,Self.ek,0.019)
+                emuFittedOpening(7.0,2.17,0.59,2.03,side,cab,sides,Self.ew,Self.es,0.016,outlineOnly:true)
+                emuFittedOpening(7.0,2.76,0.31,0.58,side,cab,sides,Self.eg,Self.ek,0.019)
                 emuQuarterlight(side,sides,far)
             }
             let count=cab ? 10:unit == .ep3 || unit == .ep7 || unit == .em6 ? 12:13
@@ -415,7 +379,7 @@ private extension StationKitBuilder {
         let (u0,u1,v0,v1)=range
         func point(_ u: Float,_ v: Float,_ o: Float)->Map3DPoint {
             let t=(u-0.5)*2,cap=sqrtf(max(0,1-t*t))
-            let rear: Float=6.55+0.20*(1-cap),front: Float=10.58-0.72*(1-cap)
+            let rear: Float=6.25+0.20*(1-cap),front: Float=10.58-0.72*(1-cap)
             let x=rear+(front-rear)*v,a=Float.pi/2+t*(0.98-0.16*v)
             return Self.emuSurface(x,a,cab,sides,o)
         }
@@ -437,7 +401,7 @@ private extension StationKitBuilder {
     mutating func emuLens(_ u: Float,_ v: Float,_ ru: Float,_ rv: Float,_ sides: Int,_ color: UInt32) {
         func point(_ a:Float,_ offset:Float)->Map3DPoint {
             let uu=u+cosf(a)*ru,vv=v+sinf(a)*rv,t=(uu-0.5)*2,cap=sqrtf(max(0,1-t*t))
-            let rear:Float=6.55+0.20*(1-cap),front:Float=10.58-0.72*(1-cap)
+            let rear:Float=6.25+0.20*(1-cap),front:Float=10.58-0.72*(1-cap)
             return Self.emuSurface(rear+(front-rear)*vv,Float.pi/2+t*(0.98-0.16*vv),true,sides,offset)
         }
         let angles=(0..<8).map {Float($0)*Float.pi/4}
@@ -498,10 +462,10 @@ private extension StationKitBuilder {
 
     mutating func emuCab(_ sides: Int,_ far: Bool,_ tail: Bool) {
         // More upright cab, compact trapezoid glazing, restrained dark gasket.
-        emuPatch(true,sides,far ? 4:10,far ? 2:5,(0.20,0.80,0.27,0.68),Map3DColor.shaded(Self.es,0.58),0.022)
-        emuPatch(true,sides,far ? 4:10,far ? 2:5,(0.212,0.788,0.285,0.665),Self.eg,0.034)
-        emuPatch(true,sides,4,2,(0.458,0.542,0.055,0.17),Self.es)
-        for u:Float in [0.486,0.514] {emuLens(u,0.115,0.010,0.033,sides,tail ? Self.eg:Map3DEMU3000.lampColor)}
+        emuPatch(true,sides,far ? 4:10,far ? 2:5,(0.20,0.80,0.39,0.71),Map3DColor.shaded(Self.es,0.58),0.022)
+        emuPatch(true,sides,far ? 4:10,far ? 2:5,(0.212,0.788,0.405,0.695),Self.eg,0.034)
+        emuPatch(true,sides,4,2,(0.458,0.542,0.24,0.38),Self.es)
+        for u:Float in [0.486,0.514] {emuLens(u,0.31,0.010,0.045,sides,tail ? Self.eg:Map3DEMU3000.lampColor)}
         // Broad slanted cheek housings with two round lenses, not razor strips.
         for u:Float in [0.13,0.87] {
             emuPatch(true,sides,3,4,(u-0.11,u+0.11,0.70,0.90),Self.es)
@@ -510,9 +474,9 @@ private extension StationKitBuilder {
         }
         if !far {
             emuHatchSeam(sides)
-            let a=Self.emuSurface(8.47,1.43,true,sides,0.045),b=Self.emuSurface(8.05,1.26,true,sides,0.045)
+            let a=Self.emuSurface(9.05,1.43,true,sides,0.045),b=Self.emuSurface(8.65,1.26,true,sides,0.045)
             beam(a,b,0.022,Self.ek)
-            beam(b,Self.emuSurface(7.61,1.26,true,sides,0.045),0.025,Self.ek)
+            beam(b,Self.emuSurface(8.25,1.26,true,sides,0.045),0.025,Self.ek)
             civicTube(a-Map3DPoint(0,0.09,0),a,radius:0.040,color:Self.ek,sides:8)
         }
     }
