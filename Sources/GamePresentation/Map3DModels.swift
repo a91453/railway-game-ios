@@ -135,7 +135,8 @@ public struct Map3DModelPack: Sendable {
     }
 
     /// Car `carIndex` of a `count`-car train of `set`: its head, tail,
-    /// pantograph or middle car.
+    /// pantograph or middle car, turned round in the back half when the set
+    /// has such cars (``Map3DTrainSet/Cars/middleBack``).
     func modelIndex(of set: Map3DTrainSet, carIndex: Int, count: Int) -> Int? {
         if set.key == "emu3000" || set.key == "emu3000Far" {
             return index(of:Map3DEMU3000.gameName(Map3DEMU3000.unit(at:carIndex,count:count),far:set.key == "emu3000Far"))
@@ -143,8 +144,11 @@ public struct Map3DModelPack: Sendable {
         if count == 1, let single = index(of: set.singleName) { return single }
         if carIndex == 0 { return index(of: set.headName) }
         if carIndex == count - 1 { return index(of: set.tailName) ?? index(of: set.headName) }
-        if set.pantographCars.contains(carIndex), let panto = index(of: set.pantographName) { return panto }
-        return index(of: set.middleName)
+        let back = carIndex * 2 >= count
+        if set.pantographCars.contains(carIndex), let panto = index(of: set.pantographName) {
+            return back ? index(of: set.pantographBackName) ?? panto : panto
+        }
+        return back ? index(of: set.middleBackName) ?? index(of: set.middleName) : index(of: set.middleName)
     }
 
     /// Decision 408: the model drawn for `model` (a car of a `count`-car

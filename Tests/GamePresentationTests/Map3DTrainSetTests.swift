@@ -15,7 +15,7 @@ final class Map3DTrainSetTests: XCTestCase {
         let lineColoured: Set = ["metroC381", "wenhu"]
         for set in Map3DTrainSet.all {
             var names = [set.headName]
-            for name in [set.middleName, set.tailName, set.singleName, set.pantographName, set.tenderName] where pack.index(of: name) != nil { names.append(name) }
+            for name in [set.middleName, set.tailName, set.singleName, set.pantographName, set.tenderName, set.middleBackName, set.pantographBackName] where pack.index(of: name) != nil { names.append(name) }
             for name in names {
                 let model = pack.models[try XCTUnwrap(pack.index(of: name), name)]
                 // Decision 331: a tram car is two of its sections.

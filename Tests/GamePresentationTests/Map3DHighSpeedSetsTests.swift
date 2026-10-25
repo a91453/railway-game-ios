@@ -46,7 +46,8 @@ final class Map3DHighSpeedSetsTests: XCTestCase {
     func testTheN700SGIsTheAuthorsMesh() throws {
         let cars = try layout("n700sG", 12)
         XCTAssertEqual(cars.map(\.0), ["set-n700sG-head", "set-n700sG-car", "set-n700sG-car", "set-n700sG-panto"]
-            + Array(repeating: "set-n700sG-car", count: 4) + ["set-n700sG-panto", "set-n700sG-car", "set-n700sG-car", "set-n700sG-tail"])
+            + Array(repeating: "set-n700sG-car", count: 2) + Array(repeating: "set-n700sG-carBack", count: 2)
+            + ["set-n700sG-pantoBack", "set-n700sG-carBack", "set-n700sG-carBack", "set-n700sG-tail"])
         XCTAssertTrue(cars.allSatisfy { $0.2 == 0 })
         for (name, unit) in [("head", Map3DN700SG.Unit.a), ("car", .c), ("panto", .d), ("tail", .a)] {
             let mesh = try XCTUnwrap(Map3DN700SG.mesh(unit), "\(unit) decodes")
@@ -97,6 +98,29 @@ final class Map3DHighSpeedSetsTests: XCTestCase {
         }
     }
 
+    /// The N700S-G's back half faces its own way (A B C D E | E D C B A):
+    /// the ninth car's pantograph cover at the other end from the
+    /// fourth's, near and far, and its middle cars turned with it.
+    func testTheN700SGBackHalfIsMirrored() throws {
+        for key in ["n700sG", "n700sGFar"] {
+            let laid = try XCTUnwrap(pack.layout(forType: key, count: 12), key)
+            let roof = pack.models[laid[2].model].maximum.z
+            // Where along the car its cover stands: what rises above a
+            // middle car's roof.
+            func cover(_ car: Int) -> Float {
+                let high = pack.models[laid[car].model].vertices.filter { $0.z > roof + 0.1 }.map(\.x)
+                return high.reduce(0, +) / Float(max(high.count, 1))
+            }
+            XCTAssertLessThan(cover(3), -1, "\(key): the fourth car's cover at its back")
+            XCTAssertGreaterThan(cover(8), 1, "\(key): the ninth car's cover at its front")
+            for (front, back) in [(1, 10), (2, 9), (3, 8), (5, 6)] {
+                let a = pack.models[laid[front].model], b = pack.models[laid[back].model]
+                XCTAssertEqual(b.vertices.map { [-$0.x, -$0.y, $0.z] }, a.vertices.map { [$0.x, $0.y, $0.z] },
+                               "\(key): car \(back + 1) is car \(front + 1) turned")
+            }
+        }
+    }
+
     /// The mesh's bytes: a broken one decodes to nothing, so the set falls
     /// back to the light rebuild; B and E are not drawn near.
     func testTheN700SGMeshDecoding() {
@@ -121,7 +145,7 @@ final class Map3DHighSpeedSetsTests: XCTestCase {
     /// for car from 500 m to 900 m.
     func testTheN700SGFarSet() throws {
         XCTAssertEqual(Map3DTrainSet.reach(of: "n700sG"), Map3DTrainSet.tramReach)
-        for name in ["head", "car", "panto", "tail"] {
+        for name in ["head", "car", "panto", "tail", "carBack", "pantoBack"] {
             let near = try XCTUnwrap(pack.index(of: "set-n700sG-" + name))
             XCTAssertEqual(pack.model(near, forType: "n700sG", count: 12, at: 100), near, name)
             XCTAssertEqual(pack.model(near, forType: "n700sG", count: 12, at: 700), pack.index(of: "set-n700sGFar-" + name), name)
