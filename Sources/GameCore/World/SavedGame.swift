@@ -377,9 +377,15 @@
 ///     base-map roads were read. A build that reads only an earlier version
 ///     would drop them, and the roads grown and built would be lost, so it
 ///     says the save is newer than it instead.
+/// 73. Bus routes (decision 400, 10i-2): a world can have its
+///     `"busRoutes"` and `"nextBusRouteID"`, and a purchase in
+///     `"acquisitions"` its `"kind"`, `"bus"` with its `"busRoute"`. A
+///     build that reads only an earlier version would drop the routes and
+///     cannot read a bus route's purchase, so it says the save is newer
+///     than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 72
+    public static let currentVersion = 73
 
     public let world: GameWorld
 
@@ -566,6 +572,8 @@ extension SavedGame: Codable {
         // decision 400's sequel has no roads for its towns; they get them
         // now (``GameWorld/seedBoughtTilesRoads()``, which a save that has
         // them leaves as it is).
+        // Version 72 to 73: a world without `"busRoutes"` runs no buses,
+        // and a purchase without `"kind"` is a railway's.
         // Later versions add their steps here.
         var world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
         if version == 72 { world.seedBoughtTilesRoads() }

@@ -373,12 +373,28 @@ extension RoadGrid: Codable {
     /// the cells' runs by row and then column, each key left out when it
     /// has none. The world checks they lie in its bounds.
     public init(from decoder: any Decoder) throws {
+        let side = Int(WorldBounds.maximumSide / Land.cellLength), blocks = Int(WorldBounds.maximumSide / Land.blockLength)
+        try self.init(from: decoder, cellLimit: side * side, blockLimit: blocks * blocks)
+    }
+
+    /// As ``init(from:)``, refusing more than `cellLimit` cells or
+    /// `blockLimit` blocks in all before spreading the runs out (decision
+    /// 400's later point 2): the world's own.
+    init(from decoder: any Decoder, cellLimit: Int, blockLimit: Int) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         var cells: Set<CellPosition> = []
         var last: CellPosition?
         // No cell past the widest world's, so no sum below can overflow.
         let side = Int(WorldBounds.maximumSide / Land.cellLength)
-        for run in try container.decodeIfPresent([Run].self, forKey: .cells) ?? [] {
+        let runs = try container.decodeIfPresent([Run].self, forKey: .cells) ?? []
+        var total = 0
+        for run in runs where run.count > 0 {
+            guard run.count <= cellLimit - total else {
+                throw DecodingError.dataCorruptedError(forKey: .cells, in: container, debugDescription: "The roads are more cells than the world has.")
+            }
+            total += run.count
+        }
+        for run in runs {
             guard run.count >= 1, (0..<side).contains(run.row), (0..<side).contains(run.column), run.count <= side - run.column,
                   last.map({ ($0.row, $0.column) < (run.row, run.column) }) ?? true
             else {
@@ -394,7 +410,11 @@ extension RoadGrid: Codable {
         guard Set(towns).count == towns.count else {
             throw DecodingError.dataCorruptedError(forKey: .towns, in: container, debugDescription: "Each town's cell must be named once.")
         }
-        guard let blocks = LandBlockRun.blocks(of: try container.decodeIfPresent([LandBlockRun].self, forKey: .blocks) ?? []),
+        let blockRuns = try container.decodeIfPresent([LandBlockRun].self, forKey: .blocks) ?? []
+        guard LandBlockRun.count(of: blockRuns, atMost: blockLimit) else {
+            throw DecodingError.dataCorruptedError(forKey: .blocks, in: container, debugDescription: "The blocks whose roads were read are more blocks than the world has.")
+        }
+        guard let blocks = LandBlockRun.blocks(of: blockRuns),
               zip(blocks, blocks.dropFirst()).allSatisfy({ $0 < $1 })
         else {
             throw DecodingError.dataCorruptedError(forKey: .blocks, in: container, debugDescription: "The blocks whose roads were read must be in order, once each.")

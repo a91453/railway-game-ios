@@ -1670,6 +1670,10 @@ extension StepOutcome: Codable {
             try container.encode(id.rawValue, forKey: .station)
         case .rejected(.roadTooFar):
             try container.encode("roadTooFar", forKey: .result)
+        // Decision 400, 10i-2: no golden scenario runs buses, and the golden
+        // schema reads none of these back.
+        case .rejected(.unknownBusRoute), .rejected(.invalidBusRoute), .rejected(.busStopOffRoad), .rejected(.busStopsNotConnected):
+            try container.encode("busRouteRefused", forKey: .result)
         case .rejected(.freightNotEnabled):
             try container.encode("freightNotEnabled", forKey: .result)
         case .rejected(.freightFacilityExists(let id)):

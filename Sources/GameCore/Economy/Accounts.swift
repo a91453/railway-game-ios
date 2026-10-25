@@ -84,6 +84,11 @@ public enum LedgerItem: String, CaseIterable, Codable, Sendable {
     /// and given back, out.
     case dayPassSales
     case dayPassFares
+    /// The company's buses (decision 400, 10i-2; native): their riders'
+    /// fares, in, and their running, out. Beside the lines' accounts, as
+    /// the day passes are, so the lines still add up to the trains' fares.
+    case busFares
+    case busRunning
 }
 
 /// One line of a ledger row's breakdown.
@@ -158,6 +163,8 @@ public struct LedgerEntry: Hashable, Sendable {
         case dailyStationCommerce
         /// A day's passes: sales and the fares they covered (decision 324).
         case dailyDayPass
+        /// A day's buses: fares and running (decision 400, 10i-2).
+        case dailyBuses
     }
 
     public let kind: Kind
@@ -224,8 +231,8 @@ public struct DayAccount: Hashable, Sendable {
             case .routeEnergy, .trainEnergy: energyCost = energyCost + cost
             case .stationStaff, .trainStaff: staffCost = staffCost + cost
             case .loanInterest: interestCost = interestCost + cost
-            case .propertyRent, .tourismRevenue, .stationCommerceRevenue, .subsidiarySales, .subsidy, .dayPassSales: propertyRevenue = propertyRevenue + line.amount
-            case .propertyUpkeep, .tourismUpkeep, .stationCommerceUpkeep, .propertyTax, .propertyDemolition, .subsidiaryCost, .dayPassFares: propertyCost = propertyCost + cost
+            case .propertyRent, .tourismRevenue, .stationCommerceRevenue, .subsidiarySales, .subsidy, .dayPassSales, .busFares: propertyRevenue = propertyRevenue + line.amount
+            case .propertyUpkeep, .tourismUpkeep, .stationCommerceUpkeep, .propertyTax, .propertyDemolition, .subsidiaryCost, .dayPassFares, .busRunning: propertyCost = propertyCost + cost
             case .incomeTax: taxCost = taxCost + cost
             case .freightRevenue: freightRevenue = freightRevenue + line.amount
             }

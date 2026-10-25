@@ -585,6 +585,17 @@ extension GameError {
                 "The roads haven't grown this far yet: a station road reaches at most 512 m.",
                 "路還沒長到這裡：站前路最長 512 公尺。"
             )
+        case .unknownBusRoute:
+            language.text("That bus route no longer exists.", "這條公車路線已經不在了。")
+        case .invalidBusRoute:
+            language.text(
+                "A bus route needs 1 to 64 stops, a bus every 1 to 720 minutes and at most 99 buses.",
+                "公車路線要有 1 到 64 個站牌、每 1 到 720 分鐘一班，最多 99 輛車。"
+            )
+        case .busStopOffRoad:
+            language.text("Bus stops, and the station the route ends at, must be on a road.", "公車站牌和路線終點的車站都要在路上。")
+        case .busStopsNotConnected:
+            language.text("No road joins these stops: build a road between them first.", "這幾個站牌之間沒有路相連：先把路接起來。")
         case .depotInUse:
             language.text("A line keeps its trains at this depot: untick it on that line's depots first.", "有路線把列車停在這個機廠：先在那條路線的機廠清單取消勾選。")
         case .depotListedTwice:

@@ -264,9 +264,15 @@ extension GameWorld {
     /// has the people of its hinterland (``highSpeedHinterlands()``).
     /// Passengers already waiting stay.
     mutating func refreshLandDemand() {
+        // Decision 400, 10i-2: the land the buses bring in, 0 without land
+        // demand.
+        let fed = refreshBusFeeders()
         guard drawsDemandFromLand else { return }
         // Decision 94: the people in the player's buildings ride too.
-        let shares = LandDemand.shares(of: land, among: landStations, placed: placedBuildings)
+        var shares = LandDemand.shares(of: land, among: landStations, placed: placedBuildings)
+        for (station, share) in fed {
+            shares[station, default: LandDemand.Share()].add(share)
+        }
         let outside = outsideTrips(among: landStations)
         // Decision 298: the real network's transfers, as the outside's.
         let transfers = transferTrips(among: landStations)

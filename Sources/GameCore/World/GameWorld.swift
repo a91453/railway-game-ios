@@ -199,6 +199,14 @@ public struct GameWorld: Equatable, Sendable {
     /// ``setRoads(_:in:)``, ``buildStationRoad(at:)`` and their growth once
     /// a month only.
     public internal(set) var roads: RoadGrid?
+    /// The company's bus routes feeding its stations (decision 400,
+    /// 10i-2), by ascending number; none in a new world and in saves from
+    /// before them (save version 73). Set by
+    /// ``createBusRoute(to:stops:legMetres:service:buses:)`` and the other
+    /// bus commands only.
+    public internal(set) var busRoutes: [BusRoute] = []
+    /// The next bus route's number.
+    public internal(set) var nextBusRouteID = 1
     /// The city's demand for homes, shops and work (decision 139), or `nil`
     /// for a city that grows as before. Off in a new world and in saves
     /// from before it; the app's new games turn it on. Set by
@@ -1245,6 +1253,8 @@ public struct GameWorld: Equatable, Sendable {
         }
         demandEvents?.events.removeAll { $0.station == id }
         townGrowth?.places.removeAll { $0.station == id }
+        // Decision 400, 10i-2: the bus routes feeding it close.
+        busRoutes.removeAll { $0.station == id }
         stations.remove(at: stationIndex)
         removeStationFlows(of: id)
         disposeAsset(.station, owner: id.rawValue)
@@ -4785,7 +4795,7 @@ extension GameWorld: Codable {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, tidalDemand, modeShift, demandEvents, disruptions, townGrowth, accounts, geoAnchor
         case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, blockSections, curveSpeedLimits, realCarLengths, spacingAllowances, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, realTransfers, acquisitions, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
-        case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion, roads
+        case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion, roads, busRoutes, nextBusRouteID
     }
 
     /// Decodes a world, rejecting data that breaks cross-object invariants
@@ -4884,7 +4894,13 @@ extension GameWorld: Codable {
         geoAnchor = container.contains(.geoAnchor) ? try container.decode(GeoAnchor.self, forKey: .geoAnchor) : nil
         land = container.contains(.land) ? try container.decode(Land.self, forKey: .land) : Land()
         if container.contains(.landBlocks) {
-            guard let blocks = LandBlockRun.blocks(of: try container.decode([LandBlockRun].self, forKey: .landBlocks)) else {
+            // Decision 400's later point 2: no more blocks than the world
+            // has, refused before they are spread out.
+            let runs = try container.decode([LandBlockRun].self, forKey: .landBlocks)
+            guard LandBlockRun.count(of: runs, atMost: Land.blockRows(in: bounds) * Land.blockColumns(in: bounds)) else {
+                throw DecodingError.dataCorruptedError(forKey: .landBlocks, in: container, debugDescription: "The land blocks are more blocks than the world has.")
+            }
+            guard let blocks = LandBlockRun.blocks(of: runs) else {
                 throw DecodingError.dataCorruptedError(forKey: .landBlocks, in: container, debugDescription: "A run of land blocks is empty or too long.")
             }
             landBlocks = blocks
@@ -4938,7 +4954,15 @@ extension GameWorld: Codable {
         ground = container.contains(.ground) ? try container.decode(Ground.self, forKey: .ground) : Ground()
         freight = try container.decodeIfPresent(FreightState.self, forKey: .freight)
         mapExpansion = try container.decodeIfPresent(MapExpansion.self, forKey: .mapExpansion)
-        roads = try container.decodeIfPresent(RoadGrid.self, forKey: .roads)
+        // Decision 400's later point 2: no more road cells than the world
+        // has, refused before they are spread out.
+        if container.contains(.roads), try !container.decodeNil(forKey: .roads) {
+            roads = try RoadGrid(from: container.superDecoder(forKey: .roads),
+                                 cellLimit: Land.rows(in: bounds) * Land.columns(in: bounds),
+                                 blockLimit: Land.blockRows(in: bounds) * Land.blockColumns(in: bounds))
+        }
+        busRoutes = try container.decodeIfPresent([BusRoute].self, forKey: .busRoutes) ?? []
+        nextBusRouteID = try container.decodeIfPresent(Int.self, forKey: .nextBusRouteID) ?? 1
         if madeBeforeSpacing {
             guard network.spacingExemptions.isEmpty else {
                 throw DecodingError.dataCorrupted(DecodingError.Context(
@@ -5094,6 +5118,12 @@ extension GameWorld: Codable {
         }
         try container.encodeIfPresent(mapExpansion, forKey: .mapExpansion)
         try container.encodeIfPresent(roads, forKey: .roads)
+        if !busRoutes.isEmpty {
+            try container.encode(busRoutes, forKey: .busRoutes)
+        }
+        if nextBusRouteID != 1 {
+            try container.encode(nextBusRouteID, forKey: .nextBusRouteID)
+        }
         if cityFootprints {
             try container.encode(true, forKey: .cityFootprints)
         }
@@ -5369,6 +5399,7 @@ extension GameWorld: Codable {
         }
         return land.problem(in: bounds) ?? landBlocksProblem() ?? buildingProblem() ?? zones.problem(in: bounds) ?? terrainProblem()
             ?? ground.problem(in: bounds) ?? mapExpansionProblem() ?? roads?.problem(in: bounds)
+            ?? busRoutesProblem()
     }
 
     /// Why the trains' reservations break a Stage T rule (ARCHITECTURE

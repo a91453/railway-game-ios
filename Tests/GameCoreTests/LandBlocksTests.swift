@@ -205,4 +205,17 @@ final class LandBlocksTests: XCTestCase {
         XCTAssertNil(load([["row": 1, "column": 0, "count": 1], ["row": 0, "column": 0, "count": 1]]), "out of order")
         XCTAssertNil(load([["row": 0, "column": 0, "count": 2], ["row": 0, "column": 1, "count": 1]]), "a block twice")
     }
+
+    /// Decision 400's later point 2: more blocks than the world's 512 ×
+    /// 384 are refused before they are spread out.
+    func testMoreLandBlocksThanTheWorldHasAreRefusedUnread() throws {
+        var world = world()
+        try world.expandLand([LandBlock(row: 3, column: 4)], cells: [cell(48, 64)])
+        var object = try XCTUnwrap(try JSONSerialization.jsonObject(with: JSONEncoder().encode(world)) as? [String: Any])
+        object["landBlocks"] = (0..<385).map { ["row": $0, "column": 0, "count": 512] }
+        XCTAssertThrowsError(try JSONDecoder().decode(GameWorld.self, from: JSONSerialization.data(withJSONObject: object))) { error in
+            guard case DecodingError.dataCorrupted(let context) = error else { return XCTFail("\(error)") }
+            XCTAssertEqual(context.debugDescription, "The land blocks are more blocks than the world has.")
+        }
+    }
 }

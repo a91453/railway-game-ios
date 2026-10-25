@@ -357,6 +357,10 @@
 **第十次換手（2026-10-24 14:00 UTC，session_013dJ7tvDYJnhe7XjXCE5cNi 壓縮 2 次 → 作者從 claude.ai 開的新規劃）**。和下面不同時以這段為準。新任開工：讀第 1 節、這一段、第 3 節最上面幾列；#1041 只讀「session_013dJ7tvDYJnhe7XjXCE5cNi 壓縮第 2 次」那則之後的留言。
 
 - **第十一次換手之後**（session_01B2kaku5NRz2J2CMzc8z3cZ，10-24 23:20 UTC）：合了 #1206（missing-button 證明，main 1050bca5）、#1208（10n 鳴笛與 3D 照片，main 8ddc0193）。做中：session_013AAhuBSsBFF5MAzis3q8UC（決策 406：山岳隧道底拉直、股道不跳線）、session_01WBiArcxxo6UcPuchugpydK（10i：實景地圖讀底圖的路，400 續篇，不升存檔）。10i-2（公車接駁，存檔 73）等後者合併再派。main 的 full lane 要等下一次 nightly 驗 missing-button 那一步。
+- **10i-2 公車接駁**（session_0131GGjejMKbVP3fkorpsVNa，分支 `claude/bus-feeder-core`，**存檔 73**，決策 400 續篇「公車接駁」；10-25 壓縮 2 次，交接）：GameCore 的 `BusRoute` 與六個命令、接駁規則、`acquisitions` 的 `kind`、存檔解碼的格數上限都做完，本機 Swift 6.4 的 `-warnings-as-errors` build 與相關測試綠；PR 是完整 tier。剩下的（接手的 session 或規劃派）：
+  - CI 綠 → 轉 ready → #1041 寫「可合併」與 40 字 head sha → 告訴規劃；規劃開獨立審查。CI 紅就照 CLAUDE.md 修。
+  - 平衡是 CONCERNS：空白地圖接駁只多 0.04% 的票收旅次、公車一天虧約 $5,880；實景地圖一條路線讓車站旅次多 19–51%（目標 5–25%）。數字在 400.md「量到的」；票價、車的成本、回程乘客、自己畫的路線能不能走國道寫在 400.md「下一步」。
+  - 畫面（畫路線、站牌、車數與損益）還沒做，App 沒動。
 - **新任接手後的現況**（session_019yHzrc1rgGJgdXSSwRNqgM，10-24 22:50 UTC，本任已壓縮 2 次，換手；見上面第十一次換手）：
   - 合併了（10-24 15:07 起）：#1191、#1189（決策 404）、#1192、#1196、#1197、#1195、#1194（10m）、#1193（教學卡片留在原位）、#1199（H1，買下的地塊有路，存檔不升）、#1198（**決策 405**：完整 tier **21 個 job**，警告線 17 分）、#1204（H4–H6）、#1205（交接）；作者 22:23 自己合了 Codex 的 #1203（N700S/N700ST），main **e105e889**。`ci.yml` 在 main 綠。
   - 審查 H：H1–H6 都已合；H7、H8 照 `docs/archive/PR1137_1188_REVIEW_HANDOFF.md` 第四節延後。下一輪審查從 #1189 起數（程式 PR：#1192、#1193、#1194、#1195、#1199〔GameCore〕、#1204）。

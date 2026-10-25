@@ -307,7 +307,7 @@ extension GameSession {
             return try apply(plan, to: &world)
         case .acquireRealLine(let acquisition):
             _ = try build(acquisition, in: &world)
-            outcome.line = world.acquisition(of: acquisition.realLine).flatMap { world.line(id: $0.line) }
+            outcome.line = world.acquisition(of: acquisition.realLine)?.line.flatMap { world.line(id: $0) }
         case .buyRealStation(let purchase):
             outcome.station = try build(purchase, in: &world)
         case .removeTrack(let id):

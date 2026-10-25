@@ -345,4 +345,31 @@ final class RoadGridTests: XCTestCase {
         XCTAssertThrowsError(try load(["towns": [["row": 8, "column": 10], ["row": 8, "column": 10]]]), "a town twice")
         XCTAssertThrowsError(try load(["blocks": [["row": 0, "column": 2, "count": 1]]]), "a block outside the world")
     }
+
+    /// Decision 400's later point 2: a damaged file naming more road cells
+    /// or read blocks than the world has is refused before they are spread
+    /// out. The world has 32 × 16 = 512 cells and 2 blocks.
+    func testMoreRoadsThanTheWorldHasAreRefusedUnread() throws {
+        let world = try world()
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: JSONEncoder().encode(SavedGame(world: world))) as? [String: Any])
+        func refusal(_ roads: Any) -> String? {
+            var plain = object
+            var saved = object["world"] as? [String: Any] ?? [:]
+            saved["roads"] = roads
+            plain["world"] = saved
+            do {
+                _ = try JSONDecoder().decode(SavedGame.self, from: JSONSerialization.data(withJSONObject: plain))
+                return nil
+            } catch DecodingError.dataCorrupted(let context) {
+                return context.debugDescription
+            } catch {
+                return "\(error)"
+            }
+        }
+        XCTAssertNil(refusal(["cells": (0..<16).map { ["row": $0, "column": 0, "count": 32] }]), "every cell")
+        XCTAssertEqual(refusal(["cells": (0..<17).map { ["row": $0, "column": 0, "count": 32] }]), "The roads are more cells than the world has.")
+        // Runs of the widest world's rows, far past this world's cells.
+        XCTAssertEqual(refusal(["cells": (0..<4_096).map { ["row": $0, "column": 0, "count": 8_192] }]), "The roads are more cells than the world has.")
+        XCTAssertEqual(refusal(["blocks": [["row": 0, "column": 0, "count": 3]]]), "The blocks whose roads were read are more blocks than the world has.")
+    }
 }

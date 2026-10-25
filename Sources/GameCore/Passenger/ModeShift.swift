@@ -120,9 +120,13 @@ extension GameWorld {
     /// (``PassengerRoute/totalMinutes``), in thousandths: 0 without a mode
     /// shift and for stations under ``DistanceDemand/fullDistance`` apart,
     /// which decision 137 already leaves to walking and cycling.
-    func modeShiftShare(from origin: StationID, to destination: StationID, minutes: Int64) -> Int64 {
+    ///
+    /// Decision 400, 10i-2: `access` is the minutes to and from the trains,
+    /// ``ModeShift/accessMinutes`` on foot at both ends.
+    func modeShiftShare(from origin: StationID, to destination: StationID, minutes: Int64,
+                        access: Int64 = ModeShift.accessMinutes) -> Int64 {
         guard let modeShift, let metres = modeShiftMetres(from: origin, to: destination) else { return 0 }
-        return modeShift.share(railMinutes: minutes + ModeShift.accessMinutes, roadMinutes: ModeShift.roadMinutes(metres: metres))
+        return modeShift.share(railMinutes: minutes + access, roadMinutes: ModeShift.roadMinutes(metres: metres))
     }
 
     /// The straight line between the stations in whole metres, rounded,
@@ -135,9 +139,25 @@ extension GameWorld {
     }
 
     /// `trips` less those that take a scooter or a car instead.
+    ///
+    /// Decision 400, 10i-2: the part of them each bus route at `origin`
+    /// brings (its trips' share of the station's, truncated) comes by bus,
+    /// half the walk replaced by the bus's door-to-door minutes; the rest
+    /// walks at both ends.
     func modeShiftKept(_ trips: Int64, from origin: StationID, to destination: StationID, minutes: Int64) -> Int64 {
         guard modeShift != nil, trips > 0 else { return trips }
-        return trips - ModeShift.lost(trips, share: modeShiftShare(from: origin, to: destination, minutes: minutes))
+        let feeders = busFeeders(of: origin)
+        guard !feeders.isEmpty, let daily = passengers.first(where: { $0.station == origin })?.demand?.dailyTrips, daily > 0 else {
+            return trips - ModeShift.lost(trips, share: modeShiftShare(from: origin, to: destination, minutes: minutes))
+        }
+        var walking = trips, kept: Int64 = 0
+        for feeder in feeders {
+            let part = min(walking, trips * min(daily, feeder.trips) / daily)
+            walking -= part
+            let access = ModeShift.accessMinutes / 2 + feeder.minutes
+            kept += part - ModeShift.lost(part, share: modeShiftShare(from: origin, to: destination, minutes: minutes, access: access))
+        }
+        return kept + walking - ModeShift.lost(walking, share: modeShiftShare(from: origin, to: destination, minutes: minutes))
     }
 
     /// What kept riders from `origin` off the trains, a pair at a time by

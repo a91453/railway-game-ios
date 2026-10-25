@@ -230,6 +230,17 @@ struct LandBlockRun: Codable {
         return runs
     }
 
+    /// Whether `runs` hold at most `limit` blocks in all (runs of no
+    /// blocks or fewer count none), summed without spreading them out.
+    static func count(of runs: [LandBlockRun], atMost limit: Int) -> Bool {
+        var total = 0
+        for run in runs where run.count > 0 {
+            guard run.count <= limit - total else { return false }
+            total += run.count
+        }
+        return true
+    }
+
     /// The blocks of `runs`, or `nil` for a run of no blocks, of more than
     /// the widest world has in a row, or past the largest column.
     static func blocks(of runs: [LandBlockRun]) -> [LandBlock]? {
