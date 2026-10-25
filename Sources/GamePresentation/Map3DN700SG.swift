@@ -1,6 +1,7 @@
 import Foundation
 
-/// Decision 408: the N700S-G, the author's own N700S model in the game's
+/// Decision 408: the N700S-G drawn from 500 m out (``Map3DTrainSet/n700sGFar()``;
+/// near, #1201's 700T recipe in its shape), the author's own N700S model in the game's
 /// dark green line (#1214, `docs/art/n700s-n700st/README.md`; the author's
 /// mesh in the reference repository, `Railway/n700s-n700st-2026-10-24/
 /// n700s-g/`), rebuilt in the game's look with the train builder every
@@ -19,7 +20,8 @@ import Foundation
 /// ``Map3DTrainStyle``'s own, the line #1D4A44).
 ///
 /// The units: A the cab, B to E the middle cars as the author's assembly
-/// has them (A B C D E | E D C B A), each facing its own way.
+/// has them (A B C D E | E D C B A), each facing its own way; the far set
+/// uses A, C and D.
 public enum Map3DN700SG {
     public enum Unit: String, CaseIterable, Sendable {
         case a, b, c, d, e
@@ -58,19 +60,6 @@ public enum Map3DN700SG {
         let model = model(unit).turned
         return Map3DModelPack.Model(name: "n700s-g-" + unit.rawValue + "-reversed", vertices: model.vertices,
                                     minimum: model.minimum, maximum: model.maximum)
-    }
-
-    /// Each car of a `count`-car train, front to back: A, then the front
-    /// half's B, C, D, E and C again as far as it reaches, the back half the
-    /// front half turned round. Twelve cars put the pantographs on the
-    /// fourth and ninth, where the High Speed Rail's are.
-    public static func formation(cars count: Int) -> [(unit: Unit, reversed: Bool)] {
-        guard count > 1 else { return [(.a, false)] }
-        let front: [Unit] = [.a, .b, .c, .d, .e]
-        let half = (count + 1) / 2
-        let head = (0..<half).map { $0 < front.count ? front[$0] : .c }
-        let back = head.prefix(count - half).reversed().map { (unit: $0, reversed: true) }
-        return head.map { (unit: $0, reversed: false) } + back
     }
 
     /// The windscreen as a panel of its own laid on the nose (the author's

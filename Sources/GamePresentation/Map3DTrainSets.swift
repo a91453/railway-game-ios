@@ -28,10 +28,6 @@ public struct Map3DTrainSet: Sendable {
     /// Decision 399: a fixed formation of this many cars, whatever the
     /// train's count (the seven-section car).
     var fixedCars: Int? = nil
-    /// Decision 408: each car's unit (``Cars/units``, or `head`, `car`
-    /// and `tail`) in a train of so many cars, when its cars are not just a
-    /// head, middle cars and a tail.
-    var order: (@Sendable (Int) -> [String])? = nil
     /// Decision 408: the set drawn, car for car, farther than
     /// ``reach(of:)`` but within ``Map3DTrains/modelReach``: a lighter
     /// model of the same train.
@@ -48,9 +44,6 @@ public struct Map3DTrainSet: Sendable {
         /// Decision 399: a steam locomotive's tender, a car of its own
         /// between it and the coaches.
         var tender: Model? = nil
-        /// Decision 408: more units, by the name ``Map3DTrainSet/order``
-        /// gives them.
-        var units: [String: Model] = [:]
         typealias Model = Map3DModelPack.Model
     }
 
@@ -75,7 +68,6 @@ public struct Map3DTrainSet: Sendable {
         if let single = cars.single { models.append(named(single, singleName)) }
         if let pantograph = cars.pantograph { models.append(named(pantograph, pantographName)) }
         if let tender = cars.tender { models.append(named(tender, tenderName)) }
-        for unit in cars.units.keys.sorted() { models.append(named(cars.units[unit]!, unitName(unit))) }
         return models
     }
 
@@ -118,8 +110,11 @@ public struct Map3DTrainSet: Sendable {
             // of its triangles, from 500 m out.
             highSpeed700T(),
             multipleUnit("highSpeedFar", asset: "02_HSR_MRT_3x2-01", livery: TrainLivery.highSpeed, pantographCars: [3, 8]),
-            // Decision 408: the second high-speed set, the N700S-G.
+            // Decision 408: the second high-speed set, the N700S-G made
+            // from the 700T's recipe; the author's shape rebuilt light
+            // from 500 m out.
             n700sG(),
+            n700sGFar(),
             multipleUnit("metroC381", asset: "02_HSR_MRT_3x2-02", lineColoured: true),
             multipleUnit("wenhu", asset: "02_HSR_MRT_3x2-03", lineColoured: true),
             multipleUnit("puyuma", asset: "01_TRA_modern_3x2-02", livery: TrainLivery.puyuma),
@@ -182,9 +177,9 @@ public struct Map3DTrainSet: Sendable {
         named(key).map { nearOnly.contains($0.key) } == true ? tramReach : Map3DTrains.modelReach
     }
 
-    /// Decision 408: and the 700T, 5,600 to 9,100 a car (its ``far`` set
-    /// between).
-    static let nearOnly: Set = ["greenTram", "SUMMER", "STEAM", "highSpeed"]
+    /// Decision 408: and the 700T and the N700S-G, 5,600 to 9,100 a car
+    /// (their ``far`` sets between).
+    static let nearOnly: Set = ["greenTram", "SUMMER", "STEAM", "highSpeed", "n700sG"]
 
     /// Decision 408: the set a train of `key` numbered `number` is drawn
     /// as: half the high-speed trains, the odd-numbered, the N700S-G, the
@@ -343,18 +338,23 @@ public struct Map3DTrainSet: Sendable {
         }
     }
 
-    /// Decision 408: the N700S-G (``Map3DN700SG``), each car its own
-    /// length, its units in the author's order (``Map3DN700SG/formation(cars:)``).
+    /// Decision 408: the N700S-G, #1201's 700T recipe in the shape of the
+    /// author's N700S-G (``Map3DTrainShapeRefresh/n700sGIDs``), each car
+    /// its own length (27.6 m the cabs, 25.5 m the rest), lit as the 700T;
+    /// ``far`` its light rebuild.
     static func n700sG() -> Map3DTrainSet {
-        let name = n700sGUnit
-        return Map3DTrainSet(key: "n700sG", ownLengths: true, order: { count in
-            Map3DN700SG.formation(cars: count).map { name($0.unit, $0.reversed) }
-        }) {
-            var units: [String: Map3DModelPack.Model] = [:]
-            for unit in Map3DN700SG.Unit.allCases where unit != .a {
-                if unit != .c { units[name(unit, false)] = Map3DN700SG.model(unit) }
-                units[name(unit, true)] = Map3DN700SG.reversed(unit)
-            }
+        Map3DTrainSet(key: "n700sG", pantographCars: [3, 8], ownLengths: true, far: "n700sGFar") {
+            let model = Map3DTrainShapeRefresh.model
+            return Cars(head: lit(model("refresh-n700sg-cab"), front: true), middle: model("refresh-n700sg-middle"),
+                        tail: lit(model("refresh-n700sg-tail"), front: false), single: nil, pantograph: model("refresh-n700sg-panto"))
+        }
+    }
+
+    /// Decision 408: the N700S-G from 500 m out, the author's shape rebuilt
+    /// with the train builder (``Map3DN700SG``), a tenth of the triangles:
+    /// its cab, its C car between and its D car under the pantographs.
+    static func n700sGFar() -> Map3DTrainSet {
+        Map3DTrainSet(key: "n700sGFar", pantographCars: [3, 8], ownLengths: true) {
             // The cab turned round at the back, its lamps red.
             let back = Map3DN700SG.reversed(.a)
             let tail = Map3DModelPack.Model(name: back.name, vertices: back.vertices.map { vertex in
@@ -362,18 +362,8 @@ public struct Map3DTrainSet: Sendable {
                 if vertex.glows { vertex.color = Map3DPalette.lantern }
                 return vertex
             }, minimum: back.minimum, maximum: back.maximum)
-            return Cars(head: Map3DN700SG.model(.a), middle: Map3DN700SG.model(.c), tail: tail, single: nil, units: units)
-        }
-    }
-
-    /// Decision 408: an N700S-G unit's name in its set: A the head (turned
-    /// round, the tail), C the middle car, the rest by their letter.
-    @Sendable static func n700sGUnit(_ unit: Map3DN700SG.Unit, _ reversed: Bool) -> String {
-        switch (unit, reversed) {
-        case (.a, false): return "head"
-        case (.a, true): return "tail"
-        case (.c, false): return "car"
-        default: return unit.rawValue + (reversed ? "-reversed" : "")
+            return Cars(head: Map3DN700SG.model(.a), middle: Map3DN700SG.model(.c), tail: tail, single: nil,
+                        pantograph: Map3DN700SG.model(.d))
         }
     }
 

@@ -98,6 +98,8 @@ for curved in [false, true] {
     let (t700, t700Note) = train(after, "HSR", 12, curved: curved)
     let (_, midNote) = train(after, "HSR", 12, curved: curved, far: true)
     let (n700, n700Note) = train(after, "n700sG", 12, curved: curved)
+    let (n700far, n700FarNote) = train(after, "n700sG", 12, curved: curved, far: true)
+    try write("hsr-n700sg-far\(suffix)", n700far, group: "hsr" + suffix)
     try write("hsr-before\(suffix)", old, group: "hsr" + suffix)
     try write("hsr-700t\(suffix)", t700, group: "hsr" + suffix)
     try write("hsr-n700sg\(suffix)", n700, group: "hsr" + suffix)
@@ -109,13 +111,15 @@ for curved in [false, true] {
     try write("e200-after\(suffix)", e200new, group: "e200" + suffix)
     if !curved {
         report += ["high speed before (#900, 20 m a car): \(oldNote)", "700T: \(t700Note)", "700T from 500 m (#900 at the 700T's lengths): \(midNote)",
-                   "N700S-G: \(n700Note)", "E200 Chu-Kuang before: \(eOldNote)", "E200 Chu-Kuang after: \(eNewNote)"]
+                   "N700S-G: \(n700Note)", "N700S-G from 500 m (the light rebuild): \(n700FarNote)", "E200 Chu-Kuang before: \(eOldNote)", "E200 Chu-Kuang after: \(eNewNote)"]
     }
 }
-for unit in Map3DN700SG.Unit.allCases {
-    let model = Map3DN700SG.model(unit)
-    report.append("N700S-G \(unit.rawValue): \(model.triangleCount) triangles, \(String(format: "%.2f", model.length)) m")
-    try write("unit-\(unit.rawValue)", shifted(model.vertices, 0), group: "units")
+// The cabs close up: the N700S-G from the 700T's recipe, the 700T, the
+// light rebuild of the author's shape.
+for (name, model) in [("cab-n700sg", Map3DTrainShapeRefresh.model("refresh-n700sg-cab")), ("cab-700t", Map3DTrainShapeRefresh.model("refresh-700t-cab")),
+                      ("cab-n700sg-light", Map3DN700SG.model(.a)), ("panto-n700sg", Map3DTrainShapeRefresh.model("refresh-n700sg-panto"))] {
+    report.append("\(name): \(model.triangleCount) triangles, \(String(format: "%.2f", model.length)) m")
+    try write(name, shifted(model.vertices, 0), group: "cabs")
 }
 let total = { (pack: Map3DModelPack) in pack.models.map(\.triangleCount).reduce(0, +) }
 report.append("pack models \(after.models.count), triangles \(total(after))")

@@ -39,67 +39,57 @@ final class Map3DHighSpeedSetsTests: XCTestCase {
         XCTAssertFalse(try model("set-highSpeed-car").vertices.contains(where: \.glows), "no lamps between")
     }
 
-    /// The N700S-G: the author's five units, A B C D E and the back half
-    /// turned round, the pantograph covers (D) on the fourth and ninth cars.
-    func testTheN700SGFormation() throws {
+    /// The N700S-G: #1201's 700T recipe reshaped to the author's nose,
+    /// twelve cars at their own lengths, the pantographs on the fourth and
+    /// ninth, lit white at the head and red at the tail.
+    func testTheN700SGIsThe700TReshaped() throws {
         let cars = try layout("n700sG", 12)
-        XCTAssertEqual(cars.map(\.0), ["head", "b", "car", "d", "e", "car", "c-reversed", "e-reversed", "d-reversed", "c-reversed",
-                                       "b-reversed", "tail"].map { "set-n700sG-" + $0 })
-        XCTAssertEqual(cars.first?.1 ?? 0, 25.3, accuracy: 0.05, "the cab 25.3 m")
-        XCTAssertTrue(cars.dropFirst().dropLast().allSatisfy { abs($0.1 - 25) < 0.05 }, "the middle cars 25 m")
+        XCTAssertEqual(cars.map(\.0), ["set-n700sG-head", "set-n700sG-car", "set-n700sG-car", "set-n700sG-panto"]
+            + Array(repeating: "set-n700sG-car", count: 4) + ["set-n700sG-panto", "set-n700sG-car", "set-n700sG-car", "set-n700sG-tail"])
+        let cab = Map3DTrainShapeRefresh.model("refresh-n700sg-cab"), t700 = Map3DTrainShapeRefresh.model("refresh-700t-cab")
+        XCTAssertGreaterThan(cab.length, t700.length + 2, "the longer nose")
+        XCTAssertEqual(cars.first?.1 ?? 0, cab.length, accuracy: 1e-3, "the cab its own length")
         XCTAssertTrue(cars.allSatisfy { $0.2 == 0 })
-        XCTAssertEqual(Map3DN700SG.formation(cars: 12).enumerated().filter { $0.element.unit == .d }.map(\.offset), [3, 8])
-        XCTAssertEqual(Map3DN700SG.formation(cars: 1).map(\.unit), [.a])
-        XCTAssertEqual(Map3DN700SG.formation(cars: 2).map(\.unit), [.a, .a])
-        XCTAssertEqual(Map3DN700SG.formation(cars: 3).map(\.reversed), [false, false, true])
-        // No car is drawn turned: each unit already faces its own way.
-        for car in 0..<12 { XCTAssertFalse(pack.isTurned(forType: "n700sG", carIndex: car, count: 12)) }
-        // The cars of a train of any length are in the pack.
+        for (name, refresh) in [("head", "refresh-n700sg-cab"), ("car", "refresh-n700sg-middle"), ("panto", "refresh-n700sg-panto"),
+                                ("tail", "refresh-n700sg-tail")] {
+            XCTAssertEqual(try model("set-n700sG-" + name).triangleCount, Map3DTrainShapeRefresh.model(refresh).triangleCount, name)
+        }
+        // The line's green, which the 700T does not have.
+        XCTAssertTrue(try model("set-n700sG-car").vertices.contains { $0.color & 0xFFFFFF == Map3DTrainShapeRefresh.n700sGLineColor & 0xFFFFFF })
+        XCTAssertFalse(try model("set-highSpeed-car").vertices.contains { $0.color & 0xFFFFFF == Map3DTrainShapeRefresh.n700sGLineColor & 0xFFFFFF })
+        let head = try model("set-n700sG-head").vertices.filter(\.glows), tail = try model("set-n700sG-tail").vertices.filter(\.glows)
+        XCTAssertFalse(head.isEmpty)
+        XCTAssertTrue(head.allSatisfy { $0.color == Map3DTrainStyle.headlamp && $0.x > 0 })
+        XCTAssertFalse(tail.isEmpty)
+        XCTAssertTrue(tail.allSatisfy { $0.color == Map3DPalette.lantern && $0.x < 0 })
         for count in 1...16 {
             for car in 0..<count { XCTAssertNotNil(pack.modelIndex(forType: "n700sG", carIndex: car, count: count), "\(count) cars, car \(car)") }
         }
     }
 
-    /// The N700S-G's units: as few triangles as the other high-speed sets',
-    /// the palette's colours and the line's green, lamps white at the head
-    /// and red at the tail, the cover on D and the fin on E.
-    func testTheN700SGUnits() throws {
+    /// The N700S-G's far set: the light rebuild of the author's units, car
+    /// for car from 500 m to 900 m.
+    func testTheN700SGFarSet() throws {
+        XCTAssertEqual(Map3DTrainSet.reach(of: "n700sG"), Map3DTrainSet.tramReach)
+        for name in ["head", "car", "panto", "tail"] {
+            let near = try XCTUnwrap(pack.index(of: "set-n700sG-" + name))
+            XCTAssertEqual(pack.model(near, forType: "n700sG", count: 12, at: 100), near, name)
+            XCTAssertEqual(pack.model(near, forType: "n700sG", count: 12, at: 700), pack.index(of: "set-n700sGFar-" + name), name)
+            XCTAssertNil(pack.model(near, forType: "n700sG", count: 12, at: 1_000), name)
+        }
         let counts = Map3DN700SG.Unit.allCases.map { Map3DN700SG.model($0).triangleCount }
-        XCTAssertTrue((900...1_400).contains(counts[0]), "the cab \(counts[0]) triangles")
-        for count in counts.dropFirst() { XCTAssertTrue((350...550).contains(count), "a middle car \(count) triangles") }
-        // The author's colours, which are the palette's: body, skirt, roof,
-        // glass, doors and the green (the builder shading them as it does
-        // every set's).
-        let colours: Set<UInt32> = [Map3DColor.rgb(0xF6F6F4), Map3DN700SG.green, Map3DN700SG.grey, Map3DTrainStyle.roofColour,
-                                    Map3DTrainStyle.glass, Map3DTrainStyle.doorColour]
+        XCTAssertTrue((900...1_400).contains(counts[0]), "the far cab \(counts[0]) triangles")
+        for count in counts.dropFirst() { XCTAssertTrue((350...550).contains(count), "a far middle car \(count) triangles") }
         for unit in Map3DN700SG.Unit.allCases {
             let model = Map3DN700SG.model(unit)
             XCTAssertTrue(model.vertices.contains { $0.color == Map3DN700SG.green }, "\(unit): the green line")
-            XCTAssertTrue(model.vertices.allSatisfy { $0.color >> 24 == 0xFF }, "\(unit): its own colours, none the line's")
             XCTAssertEqual(model.minimum.z, 0, accuracy: 0.1, "\(unit) stands on the rail")
-            XCTAssertTrue((2.6...3.5).contains(model.maximum.y - model.minimum.y), "\(unit)")
             XCTAssertEqual(model.length, Map3DN700SG.length(unit), accuracy: 0.05, "\(unit)")
-            XCTAssertTrue(colours.isSubset(of: Set(model.vertices.map(\.color))), "\(unit): the author's colours")
-            XCTAssertEqual(model.vertices.contains(where: \.glows), unit == .a, "\(unit): lamps only on the cab")
         }
-        let head = try model("set-n700sG-head").vertices.filter(\.glows), tail = try model("set-n700sG-tail").vertices.filter(\.glows)
-        XCTAssertTrue(head.allSatisfy { $0.color == Map3DTrainStyle.headlamp && $0.x > 4 })
-        XCTAssertTrue(tail.allSatisfy { $0.color == Map3DPalette.lantern && $0.x < -4 })
-        // The cover over D's back half, the fin at E's back end, above the
-        // roof's cable shrouds (3.89 m); B and C have neither.
-        func above(_ unit: Map3DN700SG.Unit) -> [Map3DVertex] { Map3DN700SG.model(unit).vertices.filter { $0.z > 3.95 } }
-        XCTAssertTrue(above(.d).allSatisfy { (-9.6 ... -3.8).contains($0.x) })
-        XCTAssertGreaterThan(above(.d).map(\.z).max() ?? 0, 4.2)
-        XCTAssertFalse(above(.e).isEmpty)
-        XCTAssertTrue(above(.e).allSatisfy { $0.x < -10.5 })
-        for unit in [Map3DN700SG.Unit.b, .c] { XCTAssertLessThan(Map3DN700SG.model(unit).maximum.z, 4.0, "\(unit)") }
-        // The windscreen on the nose, a hand's breadth proud of it.
-        let screen = Map3DN700SG.model(.a).vertices.filter { $0.color == Map3DTrainStyle.glass && $0.x > Map3DN700SG.length(.a) / 2 - 9.36 }
-        XCTAssertFalse(screen.isEmpty)
-        // A reversed unit is the unit turned round.
+        let tail = try model("set-n700sGFar-tail").vertices.filter(\.glows)
+        XCTAssertTrue(tail.allSatisfy { $0.color == Map3DPalette.lantern && $0.x < 0 })
         let d = Map3DN700SG.model(.d), back = Map3DN700SG.reversed(.d)
         XCTAssertEqual(back.minimum.x, -d.maximum.x, accuracy: 1e-4)
-        XCTAssertEqual(back.triangleCount, d.triangleCount)
     }
 
     /// Half the high-speed trains, the odd-numbered, are the N700S-G; a
@@ -117,10 +107,9 @@ final class Map3DHighSpeedSetsTests: XCTestCase {
     }
 
     /// Within 500 m the 700T, on to 900 m #900's light 700T car for car,
-    /// beyond that a box; the N700S-G as far as other trains.
+    /// beyond that a box.
     func testThe700TFarSet() throws {
         XCTAssertEqual(Map3DTrainSet.reach(of: "HSR"), Map3DTrainSet.tramReach)
-        XCTAssertEqual(Map3DTrainSet.reach(of: "n700sG"), Map3DTrains.modelReach)
         for name in ["head", "car", "panto", "tail"] {
             let near = try XCTUnwrap(pack.index(of: "set-highSpeed-" + name))
             XCTAssertEqual(pack.model(near, forType: "HSR", count: 12, at: 100), near, name)
@@ -129,9 +118,6 @@ final class Map3DHighSpeedSetsTests: XCTestCase {
         }
         let far = try model("set-highSpeedFar-car"), near = try model("set-highSpeed-car")
         XCTAssertLessThan(far.triangleCount * 5, near.triangleCount, "a fifth of the triangles")
-        let n700 = try XCTUnwrap(pack.index(of: "set-n700sG-d"))
-        XCTAssertEqual(pack.model(n700, forType: "n700sG", count: 12, at: 700), n700)
-        XCTAssertNil(pack.farModel(of: n700, forType: "n700sG", count: 12), "no far set of its own")
         // A whole 700T is under ten times the light one's triangles.
         let cars = try XCTUnwrap(pack.layout(forType: "HSR", count: 12))
         let whole = cars.reduce(0) { $0 + pack.models[$1.model].triangleCount }

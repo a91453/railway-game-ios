@@ -133,14 +133,9 @@ public struct Map3DModelPack: Sendable {
         return index(of: styleName + "-car")
     }
 
-    /// Car `carIndex` of a `count`-car train of `set`: its unit in the
-    /// set's order (decision 408), else its head, tail, pantograph or
-    /// middle car.
+    /// Car `carIndex` of a `count`-car train of `set`: its head, tail,
+    /// pantograph or middle car.
     func modelIndex(of set: Map3DTrainSet, carIndex: Int, count: Int) -> Int? {
-        if let order = set.order {
-            let units = order(count)
-            return units.indices.contains(carIndex) ? index(of: set.unitName(units[carIndex])) : nil
-        }
         if count == 1, let single = index(of: set.singleName) { return single }
         if carIndex == 0 { return index(of: set.headName) }
         if carIndex == count - 1 { return index(of: set.tailName) ?? index(of: set.headName) }
@@ -193,7 +188,7 @@ public struct Map3DModelPack: Sendable {
             cars = [(head, 0), (tender, Map3DTrains.carGap)]
                 + (1..<max(count, 1)).map { ($0 == count - 1 ? tail : middle, Map3DTrains.carGap) }
         } else {
-            // Decision 408: and its pantograph cars, or its own order.
+            // Decision 408: and its pantograph cars.
             let units = max(set.fixedCars ?? count, 1)
             cars = (0..<units).map { (modelIndex(of: set, carIndex: $0, count: units) ?? middle, 0) }
         }
@@ -207,10 +202,7 @@ public struct Map3DModelPack: Sendable {
     /// tail of its own or the train is one car.
     public func isTurned(forType code: String, carIndex: Int, count: Int) -> Bool {
         guard count > 1, carIndex == count - 1 else { return false }
-        if let set = Map3DTrainSet.set(forKey: code, count: count, locked: locked) {
-            // Decision 408: a set with its own order has its back cars turned in it.
-            return set.order == nil && index(of: set.tailName) == nil
-        }
+        if let set = Map3DTrainSet.set(forKey: code, count: count, locked: locked) { return index(of: set.tailName) == nil }
         return true
     }
 }
