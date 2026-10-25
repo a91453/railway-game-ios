@@ -57,7 +57,7 @@ struct ICloudSaveFolder: SaveSyncFolder {
             }
             // Decision 397, later: written here but not yet up in iCloud
             // (offline, or going up), so the list says it waits.
-            files[name] = SaveSyncFolderFile(isAvailable: isCurrent, isUploaded: values?.ubiquitousItemIsUploaded ?? true)
+            files[name] = .inICloud(isCurrent: isCurrent, isUploaded: values?.ubiquitousItemIsUploaded)
         }
         return files
     }

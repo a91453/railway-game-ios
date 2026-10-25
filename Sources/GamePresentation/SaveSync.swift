@@ -53,6 +53,14 @@ public struct SaveSyncFolderFile: Hashable, Sendable {
         self.isAvailable = isAvailable
         self.isUploaded = isUploaded
     }
+
+    /// A file in iCloud's folder as the system describes it: whether the
+    /// latest version is on the device, and whether iCloud has it (`nil`
+    /// when that could not be read: taken as not yet, so the list never
+    /// says synced for a file that may not be up).
+    public static func inICloud(isCurrent: Bool, isUploaded: Bool?) -> SaveSyncFolderFile {
+        SaveSyncFolderFile(isAvailable: isCurrent, isUploaded: isUploaded ?? false)
+    }
 }
 
 /// A folder on the device, read and written as it is.
@@ -196,6 +204,9 @@ public enum SaveSync {
         /// How many saves another device put in iCloud are still on their
         /// way to this one.
         public var downloading = 0
+        /// How many saves another device wrote with a later version of the
+        /// game, which this one cannot read until it is updated.
+        public var needsUpdate = 0
 
         public init() {}
 
@@ -285,8 +296,10 @@ public enum SaveSync {
             }
         }
 
-        // The saves the two sides hold the same of after the round.
+        // The saves the two sides hold the same of after the round, and
+        // those another device wrote with a later build, left in iCloud.
         var settled: Set<String> = []
+        var newer: Set<String> = []
         for stem in Set(localSaves.keys).union(cloudSaves.keys).union(state.synced.keys).sorted() {
             let base = state.synced[stem]
             // A save on its way from iCloud waits for the next round.
@@ -332,6 +345,7 @@ public enum SaveSync {
                 } else if l == base {
                     // Changed in the other folder only.
                     if let theirs {
+                        if !theirs.canTakeInPlace(over: mine) { newer.insert(stem) }
                         guard mode == .full || mine == nil, mayDownload, theirs.canTakeInPlace(over: mine) else { continue }
                         try theirs.write(to: local, over: mine)
                         outcome.downloaded.append(stem)
@@ -364,6 +378,7 @@ public enum SaveSync {
                     state.synced[stem] = l
                 } else if let theirs {
                     // Deleted on the device, changed in the other folder.
+                    if !theirs.canTakeInPlace(over: nil) { newer.insert(stem) }
                     guard mayDownload, theirs.canTakeInPlace(over: nil) else { continue }
                     try theirs.write(to: local, over: nil)
                     outcome.downloaded.append(stem)
@@ -379,7 +394,7 @@ public enum SaveSync {
             let stem = String(name.dropLast(".json".count))
             if state.synced[stem] != nil { settled.insert(stem) }
         }
-        fillMarks(&outcome, local: local, cloud: cloud, listed: cloudFiles, settled: settled)
+        fillMarks(&outcome, local: local, cloud: cloud, listed: cloudFiles, settled: settled, newer: newer)
         return outcome
     }
 
@@ -388,7 +403,7 @@ public enum SaveSync {
     /// folder as the round found it, used when it cannot be listed again.
     private static func fillMarks(
         _ outcome: inout Outcome, local: any SaveSyncFolder, cloud: any SaveSyncFolder,
-        listed: [String: SaveSyncFolderFile], settled: Set<String>
+        listed: [String: SaveSyncFolderFile], settled: Set<String>, newer: Set<String>
     ) {
         guard let localFiles = try? local.files().filter({ downloadingName($0.key) == nil }) else { return }
         let cloudFiles = (try? standingIn(cloud.files())) ?? listed
@@ -396,11 +411,15 @@ public enum SaveSync {
         for (stem, names) in saves(in: cloudFiles) where localSaves[stem] == nil {
             if names.contains(where: { cloudFiles[$0]?.isAvailable == false }) {
                 outcome.downloading += 1
+            } else if newer.contains(stem) {
+                outcome.needsUpdate += 1
             }
         }
         for stem in localSaves.keys {
             let members = [stem + ".json", stem + SaveLibrary.newsSuffix, stem + SaveLibrary.nameSuffix].compactMap { cloudFiles[$0] }
-            if members.contains(where: { !$0.isAvailable }) {
+            if newer.contains(stem) {
+                outcome.marks[stem] = .needsUpdate
+            } else if members.contains(where: { !$0.isAvailable }) {
                 outcome.marks[stem] = .downloading
             } else if cloudFiles[stem + ".json"] == nil {
                 outcome.marks[stem] = .onlyOnDevice
@@ -631,6 +650,9 @@ public enum CloudSaveMark: Hashable, Sendable {
     case waiting
     /// Another device's newer one is on its way to this one.
     case downloading
+    /// Another device's newer one was saved by a later version of the
+    /// game: it comes once this one is updated.
+    case needsUpdate
 
     /// The few words beside the save.
     public func text(in language: DisplayLanguage) -> String {
@@ -639,6 +661,7 @@ public enum CloudSaveMark: Hashable, Sendable {
         case .inICloud: language.text("In iCloud", "已在 iCloud")
         case .waiting: language.text("Waiting to sync", "等待同步")
         case .downloading: language.text("Downloading", "下載中")
+        case .needsUpdate: language.text("Update the app to sync", "更新 App 後才能同步")
         }
     }
 
@@ -649,6 +672,7 @@ public enum CloudSaveMark: Hashable, Sendable {
         case .inICloud: "checkmark.icloud"
         case .waiting: "icloud.and.arrow.up"
         case .downloading: "icloud.and.arrow.down"
+        case .needsUpdate: "arrow.down.app"
         }
     }
 }
@@ -668,9 +692,10 @@ public enum CloudSaves: Hashable, Sendable {
     /// The last round, at that moment, left every save the same in iCloud.
     case synced(at: Date)
     /// The last round left saves not yet the same: `uploads` on this
-    /// device another device cannot see yet (going up, or offline), and
-    /// `downloads` on their way here.
-    case waiting(uploads: Int, downloads: Int)
+    /// device another device cannot see yet (going up, or offline),
+    /// `downloads` on their way here, and `needsUpdate` another device
+    /// saved with a later version of the game.
+    case waiting(uploads: Int, downloads: Int, needsUpdate: Int = 0)
     /// The last round could not copy some of them (iCloud full, or not
     /// reached); they are on the device as before.
     case incomplete
@@ -679,9 +704,10 @@ public enum CloudSaves: Hashable, Sendable {
     public static func after(_ outcome: SaveSync.Outcome?, at date: Date) -> CloudSaves {
         guard let outcome else { return .iCloudOff }
         if outcome.isIncomplete { return .incomplete }
-        if outcome.waiting > 0 || outcome.downloading > 0 || outcome.marks.values.contains(.downloading) {
-            let downloads = outcome.downloading + outcome.marks.values.filter { $0 == .downloading }.count
-            return .waiting(uploads: outcome.waiting, downloads: downloads)
+        let downloads = outcome.downloading + outcome.marks.values.filter { $0 == .downloading }.count
+        let needsUpdate = outcome.needsUpdate + outcome.marks.values.filter { $0 == .needsUpdate }.count
+        if outcome.waiting > 0 || downloads > 0 || needsUpdate > 0 {
+            return .waiting(uploads: outcome.waiting, downloads: downloads, needsUpdate: needsUpdate)
         }
         return .synced(at: date)
     }
@@ -727,7 +753,7 @@ public enum CloudSaves: Hashable, Sendable {
                 "Your saves are in your iCloud (synced \(ago)), so you can go on playing on your other iPhone or iPad.",
                 "存檔已放進你的 iCloud（\(ago)同步），換一台 iPhone 或 iPad 都能接著玩。"
             )
-        case let .waiting(uploads, downloads):
+        case let .waiting(uploads, downloads, needsUpdate):
             var parts: [String] = []
             if uploads > 0 {
                 parts.append(language.text(
@@ -739,6 +765,12 @@ public enum CloudSaves: Hashable, Sendable {
                 parts.append(language.text(
                     downloads == 1 ? "1 save from your other device is downloading." : "\(downloads) saves from your other device are downloading.",
                     "另一台裝置的 \(downloads) 個存檔正在下載。"
+                ))
+            }
+            if needsUpdate > 0 {
+                parts.append(language.text(
+                    needsUpdate == 1 ? "1 save from your other device needs a newer version of the game: update the app to get it." : "\(needsUpdate) saves from your other device need a newer version of the game: update the app to get them.",
+                    "另一台裝置的 \(needsUpdate) 個存檔來自較新版本的遊戲，請更新 App 後再同步。"
                 ))
             }
             return parts.joined(separator: language.text(" ", ""))

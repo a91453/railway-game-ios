@@ -282,8 +282,9 @@ public final class GameLauncher {
         cloudMarks[entry.id]
     }
 
-    /// The rounds asked for and not yet ended.
-    @ObservationIgnored private var roundsRunning = 0
+    /// The number of the last round asked for: only its end says how
+    /// things stand, as rounds may end out of turn.
+    @ObservationIgnored private var latestRound = 0
 
     /// The saves kept twice since the player last heard of them: changed
     /// here and on another device, the other's added as a save of the
@@ -306,7 +307,8 @@ public final class GameLauncher {
         let (library, language, gameIsOpen) = (library, language, gameIsOpen)
         let mode: SaveSync.Mode = session == nil ? .full : .keepingDevice
         let (done, report) = AsyncStream.makeStream(of: SaveSync.Outcome?.self)
-        roundsRunning += 1
+        latestRound += 1
+        let round = latestRound
         if cloudSaves != .iCloudOff {
             cloudSaves = .syncing
         }
@@ -316,8 +318,7 @@ public final class GameLauncher {
         }
         return Task {
             for await outcome in done {
-                roundsRunning -= 1
-                noteSync(outcome, at: date)
+                noteSync(outcome, at: date, round: round)
             }
         }
     }
@@ -355,16 +356,13 @@ public final class GameLauncher {
         return outcome
     }
 
-    private func noteSync(_ outcome: SaveSync.Outcome?, at date: Date) {
-        // A later round asked for already runs: it says how things stand.
-        if roundsRunning == 0 {
+    private func noteSync(_ outcome: SaveSync.Outcome?, at date: Date, round: Int) {
+        // A later round asked for says how things stand, ended or not.
+        if round == latestRound {
             cloudSaves = CloudSaves.after(outcome, at: date)
+            cloudMarks = Dictionary(uniqueKeysWithValues: (outcome?.marks ?? [:]).map { ($0.key + ".json", $0.value) })
         }
-        guard let outcome else {
-            cloudMarks = [:]
-            return
-        }
-        cloudMarks = Dictionary(uniqueKeysWithValues: outcome.marks.map { ($0.key + ".json", $0.value) })
+        guard let outcome else { return }
         keptTwiceToTell += outcome.keptBoth.count
         guard session == nil else { return }
         if !outcome.downloaded.isEmpty || !outcome.deleted.isEmpty || !outcome.keptBoth.isEmpty {
