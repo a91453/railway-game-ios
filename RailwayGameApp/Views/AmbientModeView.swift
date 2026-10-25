@@ -191,10 +191,13 @@ struct AmbientCurtain: View {
 
 extension View {
     /// Decision 414: put away while the idle mode runs: not drawn, not
-    /// touched, not read aloud; kept in place, so nothing moves round it.
+    /// touched, and not read aloud (SwiftUI leaves a view of no opacity
+    /// out of VoiceOver); kept in place, so nothing moves round it. No
+    /// `accessibilityHidden(hidden)`: with it, even when `false`, the UI
+    /// tests found neither the map nor its zoom buttons hittable (#1261's
+    /// first run), as if the controls had become one element over them.
     func ambientHidden(_ hidden: Bool) -> some View {
         opacity(hidden ? 0 : 1)
             .allowsHitTesting(!hidden)
-            .accessibilityHidden(hidden)
     }
 }
