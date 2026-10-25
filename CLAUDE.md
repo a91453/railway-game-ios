@@ -364,11 +364,12 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   a91453/railway-reference-private, `Railway/game-art-previews/docs/art/`
   (owner, 2026-10-21); the pull request keeps one overview image, the
   README and the images code or docs link to. There, only the newest
-  round of a model keeps its whole package (models, viewer, ZIP); a round
-  it replaces keeps only its PNG previews, README and source record (the
-  producer commit rebuilds the rest), and nothing commits a ZIP of files
-  already in the folder or a `history/` copy of an earlier round (owner,
-  2026-10-25: rounds 2–9 of `train-shape-refresh-2026-10-24` were 546 MB).
+  round of a model keeps its models and its viewer (which opens offline,
+  so no ZIP of the folder's own files); a round it replaces keeps only its
+  PNG previews, README and source record (the producer commit rebuilds
+  the rest), and nothing commits a `history/` copy of an earlier round
+  (owner, 2026-10-25: rounds 2–9 of `train-shape-refresh-2026-10-24` were
+  546 MB).
   This does not change what stays the owner's: deciding
   a TestFlight release (the game-planning session presses it only on the
   user's word, above), Apple account and App Store Connect steps, secrets,
