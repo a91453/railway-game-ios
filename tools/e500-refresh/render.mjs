@@ -27,8 +27,9 @@ try {
    for(const v of ['top','bottom','left','right','front','back','isometric']){
     renderer.render(v,{width:512,height:512,metresPerPixel:m.metres_per_pixel});result[v]=renderer.png();
    }
-   renderer.render('isometric',{width:1300,height:750});result.hero=renderer.png();
+   renderer.render('isometric',{width:1300,height:750,vector:[1,-2,0.65]});result.hero=renderer.png();
    renderer.render('front',{width:750,height:750});result['detail-front']=renderer.png();
+   renderer.render('left',{width:1600,height:480});result['detail-left']=renderer.png();
    if(m.id.includes('formation'))for(const v of ['left','right','top','bottom']){
     renderer.render(v,{width:1800,height:230,metresPerPixel:0.17});result['detail-'+v]=renderer.png();
    }
@@ -42,7 +43,7 @@ try {
  const css='<style>body{font:18px system-ui;color:#262c57;background:#eceef6;margin:24px}h1{font-size:28px}.row{display:flex;gap:12px}.row>div{background:white;border-radius:12px;padding:10px;flex:1;min-width:0;text-align:center}img{width:100%;object-fit:contain}p{margin:6px}</style>';
  async function sheet(name,title,body){await page.setContent('<meta charset="utf-8"><base href="'+address+'/">'+css+'<h1>'+title+'</h1>'+body);await page.evaluate(()=>Promise.all([...document.images].map(i=>i.decode())));await page.screenshot({path:resolve(root,'previews',name+'.png'),fullPage:true});}
  async function match(ids,label){
-  await stage();const ms=ids.map(id=>manifest.models.find(m=>m.id===id)||(id==='first-pass-ed'?{id,native:'history/first-pass/models/emu3000-ed.m3dmodel'}:id==='previous-ed'?{id,native:'history/4b6352d8/models/emu3000-ed.m3dmodel'}:null));
+  await stage();const ms=ids.map(id=>manifest.models.find(m=>m.id===id));
   const out=await page.evaluate(async ms=>{
    const buffers=await Promise.all(ms.map(async m=>(await fetch(m.native)).arrayBuffer())),bounds=buffers.map(b=>{renderer.load(b);return renderer.bounds;});
    const low=[0,1,2].map(i=>Math.min(...bounds.map(b=>b.low[i]))),high=[0,1,2].map(i=>Math.max(...bounds.map(b=>b.high[i]))),centre=low.map((n,i)=>(n+high[i])/2),extent=low.map((n,i)=>(high[i]-n)/2),out={};
@@ -54,10 +55,24 @@ try {
   await sheet(label,label+'｜同相機、同公尺尺度（原生幾何）',['left','front','top','isometric'].map(v=>'<h2>'+v+'</h2><div class="row">'+ms.map((m,i)=>'<div><img src="previews/'+label+'-'+i+'-'+v+'.png"><p>'+m.id+'</p></div>').join('')+'</div>').join(''));
  }
  await match(['before-e500','e500'],'before-after');
+ if(manifest.models.some(m=>m.id==='previous-e500')){await match(['previous-e500','e500'],'revision-1-vs-2');await match(['previous-e500-far','e500-far'],'revision-1-vs-2-far');}
  if(manifest.models.some(m=>m.id==='first-pass-e500'))await match(['first-pass-e500','e500'],'first-pass-vs-final');
  await match(['refresh-e200','emu3000-ed','e500'],'style-comparison');
  const near=manifest.models.filter(m=>m.id==='e500'||m.id==='e500-far');
- await sheet('overview','E500｜綠松車體・雙端斜風擋・Co-Co｜實際原生模型','<div class="row"><div><img src="previews/e500-hero.png"><p>單機；前弓升起、後弓收折</p></div><div><img src="previews/e500-detail-front.png"><p>正面風擋與圓燈</p></div></div>');
+ await stage();
+ const details=await page.evaluate(async()=>{
+  const out={};
+  for(const id of ['e500','e500-far']){
+   const bytes=await(await fetch('models/'+id+'.m3dmodel')).arrayBuffer();
+   for(const [label,centre,extent,view,width,height] of [
+    ['bogie',[6.1,0,0.80],[2.7,1.5,0.88],'left',1000,480],
+    ['cab',[9.6,0,1.96],[1.1,1.55,2.05],'front',700,800],
+    ['roof',[0,0,4.1],[7.4,1.5,1.0],'top',1500,380]
+   ]){renderer.load(bytes);renderer.centre=centre;renderer.extent=extent;renderer.render(view,{width,height});out[id+'-'+label]=renderer.png();}
+  }return out;
+ });
+ await sheet('equipment-details','E500 第二版｜轉向架、車頭與屋頂局部（非完整七向）',['bogie','cab','roof'].map(kind=>'<h2>'+kind+'</h2><div class="row">'+['e500','e500-far'].map(id=>'<div><img src="'+details[id+'-'+kind]+'"><p>'+id+'</p></div>').join('')+'</div>').join(''));
+ await sheet('overview','E500｜綠松車體・雙端斜風擋・Co-Co｜實際原生模型','<div class="row"><div><img src="previews/e500-hero.png"><p>第二版單機；依原廠圖保留一組單臂集電弓</p></div><div><img src="previews/e500-detail-front.png"><p>圓收風擋、膠囊燈座與端梁／連結器</p></div></div><div class="row"><div><img src="previews/e500-detail-left.png"><p>側面與完整兩組三軸轉向架</p></div></div>');
  await sheet('seven-directions','E500｜近遠景七向透明圖（同公尺尺度）',near.map(m=>'<h2>'+m.id+'</h2><div class="row">'+manifest.directions.map(v=>'<div><img src="'+m.views[v]+'"><p>'+v+'</p></div>').join('')+'</div>').join(''));
  if(errors.length)throw Error(errors.join('\n'));
  manifest.render_verification={backend:'Chromium WebGL2 exact native geometry',views:manifest.models.length*7,transparent:true};

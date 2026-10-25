@@ -1,6 +1,6 @@
 # 交接
 
-> Codex E500 原生重建（issue #1255）：[自有外觀／營運接點／重建交接](art/e500-refresh-2026-10-25/README.md)。僅 E500CK／MINGRI／STAR 專用近遠景；其他包／解鎖／回退與 GameCore 不動。完整素材私庫、公開一張總覽，互鏈 draft PR 與同head CI 見 issue；靜態幾何不等於真機動畫。
+> Codex E500 原生重建第二版（issue #1255）：[自有外觀／營運接點／重建交接](art/e500-refresh-2026-10-25/README.md)。使用者補五圖並同意修訂：輪架、分區屋頂、圓收車頭／門窗與單臂弓；真正8127c765前版保持，私庫revision-2全量重出。僅 E500CK／MINGRI／STAR 專用近遠景；其他包／解鎖／回退與 GameCore 不動。完整素材私庫、公開一張總覽，互鏈 draft PR 與同head CI 見 issue；靜態幾何不等於真機動畫。
 
 > 讀者：每一個新開的 session，以及接手某條線的 session。先讀 [OVERVIEW.md](OVERVIEW.md)，再讀這份。
 > 這份記錄「誰在做什麼、做到哪、下一步交給誰」。規則細節以 `docs/ARCHITECTURE.md` 的決策為準，優先順序以 `docs/research/NEXT_PRIORITIES_2026-10-12.md` 為準，號碼以工作登記 #231 為準。

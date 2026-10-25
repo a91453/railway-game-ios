@@ -45,6 +45,15 @@ glass=int(manifest['palette']['glass']);tire=int(manifest['palette']['tire']);re
 for m in manifest['models']:
  if m['category']!='section':continue
  p,c=read(root/m['native']);g=np.all(c==glass,axis=1);back=p[~g];dist=[];visibility=[]
+ # Exclude only genuine, narrow wiper connected solids from outward glass visibility.
+ # Their expected overlap must not allow the shell, mask, or broad frames to hide the glass.
+ visible_mask=np.ones(len(back),dtype=bool);wipers=0
+ for ids in components(back):
+  v=back[ids].reshape(-1,3);lo=v.min(axis=0);hi=v.max(axis=0);span=hi-lo
+  if min(abs(lo[0]),abs(hi[0]))>9.65 and 2.64<lo[2]<2.72 and 2.85<hi[2]<2.91 and 0.40<span[1]<0.50 and span[0]<0.20:
+   visible_mask[ids]=False;wipers+=1
+ visible_back=back[visible_mask]
+ assert wipers==(0 if m['id'].endswith('-far') else 4),(m['id'],'unexpected wiper exclusion',wipers)
  for t in p[g]:
   n=np.cross(t[1]-t[0],t[2]-t[0]);area=np.linalg.norm(n)/2
   if area<0.02:continue
@@ -52,7 +61,7 @@ for m in manifest['models']:
   dist.append(backing_distance(o,back))
   # Only outward-facing broad glass faces. Side windows and front windshield separate.
   if (abs(n[1])>0.95 and n[1]*o[1]>0) or (abs(n[0])>0.7 and n[0]*o[0]>0):
-   hit=nearest(o+n*0.001,n,back)
+   hit=nearest(o+n*0.001,n,visible_back)
    assert hit>0.10,(m['id'],'glass occluded',hit,o)
    visibility.append((o,n))
  assert dist and max(dist)<0.08,(m['id'],'unsupported glass',max(dist,default=None))
@@ -83,9 +92,10 @@ for m in manifest['models']:
  # Actual roof solids form a proximity/contact graph to the car shell.
  groups=components(p);bounds=[(p[g].min(axis=(0,1)),p[g].max(axis=(0,1))) for g in groups]
  roof=[i for i,(lo,hi) in enumerate(bounds) if lo[2]>=3.74]
- roots={i for i,(lo,hi) in enumerate(bounds) if lo[2]<3.74};graph=collections.defaultdict(set)
+ bogie=[i for i,(lo,hi) in enumerate(bounds) if hi[2]<1.10 and lo[0]*hi[0]>0 and min(abs(lo[0]),abs(hi[0]))>3.45 and max(abs(lo[0]),abs(hi[0]))<8.7]
+ equipment=set(roof+bogie);roots=set(range(len(groups)))-equipment;graph=collections.defaultdict(set)
  axes=np.vstack((np.eye(3),-np.eye(3)))
- for i in roof:
+ for i in sorted(equipment):
   lo,hi=bounds[i];pts=np.unique(p[groups[i]].reshape(-1,3),axis=0)
   # Corners and face centroids sample the real solid, not an AABB proxy.
   pts=np.concatenate((pts,p[groups[i]].mean(axis=1)))
@@ -99,7 +109,11 @@ for m in manifest['models']:
  reached=set(roots);stack=list(roots)
  while stack:
   for j in graph[stack.pop()]-reached:reached.add(j);stack.append(j)
- assert set(roof)<=reached,(m['id'],'roof solids have no support path',set(roof)-reached)
+ assert equipment<=reached,(m['id'],'equipment solids have no support path',equipment-reached)
+ # Move a genuine outboard bogie solid away from the assembly; actual triangle distance must reject it.
+ selected=next(i for i in bogie if bounds[i][0][1]>0.98 and bounds[i][1][0]-bounds[i][0][0]>4.0)
+ moved=p[groups[selected]]+np.array([0.,2.,0.]);other=np.delete(p,groups[selected],axis=0)
+ assert min(backing_distance(t.mean(axis=0),other) for t in moved)>0.065,'floating bogie frame mutation missed'
  # Real glowing lamp solids: frontal Y/Z diameter, after actual mapping.
  raw=(root/m['native']).read_bytes();count,size=struct.unpack_from('<II',raw,8);start=16+(size+3)//4*4
  lit=np.array([bool(struct.unpack_from('<I',raw,start+i*52)[0]&1) for i in range(count)])
@@ -114,6 +128,6 @@ for m in manifest['models']:
   except AssertionError:pass
   else:raise AssertionError('lamp stretch mutation missed')
  assert len(lamps)==2
- records.append({'id' :m['id'],'frontal_lamp_width_height_ratios':lamps,'glazing_face_samples':len(dist),'outward_visibility_samples':len(visibility),'maximum_backing_distance_m':max(dist),'actual_tires':len(wheel),'minimum_upper_tire_clearance_m':min(wheel),'roof_solids_with_support_path':len(roof),'defect_mutations':['floating glass','buried glass','raised tire']})
-(root/'support-verification.json').write_text(json.dumps({'status':'VERIFIED','models':records,'limits':'Sampled glass backing and visibility; 12 actual tire connected components with upper clearance rays. Roof support uses actual-solid sampled proximity paths (65mm, max40 samples per component in 6 directions); no exhaustive collision or animation.'},indent=2)+'\n')
+ records.append({'id' :m['id'],'frontal_lamp_width_height_ratios':lamps,'expected_narrow_wipers_excluded':wipers,'glazing_face_samples':len(dist),'outward_visibility_samples':len(visibility),'maximum_backing_distance_m':max(dist),'actual_tires':len(wheel),'minimum_upper_tire_clearance_m':min(wheel),'roof_solids_with_support_path':len(roof),'bogie_solids_with_support_path':len(bogie),'floating_bogie_frame_mutation_rejected':True,'defect_mutations':['floating glass','buried glass','raised tire']})
+(root/'support-verification.json').write_text(json.dumps({'status':'VERIFIED','models':records,'limits':'Sampled glass backing and visibility; 12 actual tire connected components with upper clearance rays. Roof and bogie support use actual-solid sampled proximity paths (65mm, max40 samples per component in 6 directions); no exhaustive collision or animation.'},indent=2)+'\n')
 print('VERIFIED glass support/visibility, twelve tire clearances and visible defect mutations')
