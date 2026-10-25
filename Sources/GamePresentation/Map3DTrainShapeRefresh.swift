@@ -58,6 +58,11 @@ extension StationKitBuilder {
             }
         }
     }
+    /// The 700T's bogies centred at `centres` (metres along the car); decision
+    /// 408 draws the N700S-G's on them too.
+    mutating func refreshHighSpeedRunning(_ centres: [Float]) {
+        refreshRunning(centres,axles:[-1.25,1.25],radius:0.40,gauge:1.435)
+    }
     private mutating func refreshPanto(_ x: Float, roof: Float, singleArm: Bool = false) {
         box(x,roof,0,1.8,1.15,0.12,Self.steel)
         for z: Float in [-0.43,0.43] {
@@ -380,7 +385,7 @@ extension StationKitBuilder {
                 }
             }
         }
-        refreshRunning([-8.8,cab ? 3.4:8.8],axles:[-1.25,1.25],radius:0.40,gauge:1.435)
+        refreshHighSpeedRunning([-8.8,cab ? 3.4:8.8])
         box(cab ? -3.7:0,0.92,0,cab ? 17.4:23.8,2.55,0.12,Self.ink)
         func flank(_ h: Float)->Float {
             let s=(h-bottom)/(3.65-bottom)*2-1

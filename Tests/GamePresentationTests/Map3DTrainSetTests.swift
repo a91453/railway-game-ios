@@ -26,10 +26,10 @@ final class Map3DTrainSetTests: XCTestCase {
                     // Decision 408: #1201's 700T, eight to nine thousand a
                     // cab and five to six a middle car, so drawn near only;
                     // its E200, five to six thousand; the N700S-G, the
-                    // author's mesh with fewer triangles, six thousand a cab
-                    // and five a middle car.
+                    // author's mesh with fewer triangles on the 700T's bogies,
+                    // seven thousand a cab and six a middle car.
                     : set.key == "highSpeed" ? ([set.headName, set.tailName].contains(name) ? 8_000...9_500 : 5_000...6_000)
-                    : set.key == "n700sG" ? ([set.headName, set.tailName].contains(name) ? 5_500...6_100 : 4_500...5_100)
+                    : set.key == "n700sG" ? ([set.headName, set.tailName].contains(name) ? 6_700...7_300 : 5_700...6_300)
                     : name == set.headName && set.key == "E200CK" ? 5_000...6_000 : 100...4_100
                 XCTAssertTrue(triangles.contains(model.triangleCount), "\(name): \(model.triangleCount) triangles")
                 // #900's 700T is 24 m, its Wenhu car 12.6 m, #988's urban

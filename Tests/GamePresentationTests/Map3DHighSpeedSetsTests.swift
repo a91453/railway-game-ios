@@ -62,15 +62,25 @@ final class Map3DHighSpeedSetsTests: XCTestCase {
         // The tail is the cab turned round.
         let head = try model("set-n700sG-head"), tail = try model("set-n700sG-tail")
         XCTAssertEqual(tail.minimum.x, -head.maximum.x, accuracy: 1e-3)
-        // Every colour the palette's: the line's green, which the 700T does
-        // not have, the 700T's white.
-        let palette = Set(Map3DN700SG.meshPalette + [Map3DTrainStyle.headlamp, Map3DPalette.lantern])
+        // Every colour the palette's or the 700T car's (its bogies, shaded
+        // face by face): the line's green, which the 700T does not have, the
+        // 700T's white.
+        let bogies = try model("set-highSpeed-car").vertices.map(\.color)
+        let palette = Set(Map3DN700SG.meshPalette + bogies + [Map3DTrainStyle.headlamp, Map3DPalette.lantern])
         for name in ["head", "car", "panto", "tail"] {
             XCTAssertTrue(try model("set-n700sG-" + name).vertices.allSatisfy { palette.contains($0.color) }, name)
         }
         XCTAssertTrue(try model("set-n700sG-car").vertices.contains { $0.color == Map3DN700SG.green })
         XCTAssertTrue(try model("set-n700sG-car").vertices.contains { $0.color == Map3DTrainShapeRefresh.highSpeedBodyColor })
         XCTAssertFalse(try model("set-highSpeed-car").vertices.contains { $0.color & 0xFFFFFF == Map3DN700SG.green & 0xFFFFFF })
+        // The 700T's bogies where the author's stood: its tyres, none of the
+        // author's wheels.
+        for name in ["head", "car", "panto"] {
+            let car = try model("set-n700sG-" + name)
+            XCTAssertTrue(car.vertices.contains { $0.color == Map3DStreetModel.tyre }, name)
+        }
+        XCTAssertEqual(Map3DN700SG.bogieCentres[.a], [-9.11, 4.56])
+        XCTAssertEqual(Map3DN700SG.bogieCentres[.c], [-9.0, 9.0])
         // D's pantograph covers stand above the C car's roof.
         XCTAssertGreaterThan(try model("set-n700sG-panto").maximum.z, try model("set-n700sG-car").maximum.z + 0.3)
         let lamps = head.vertices.filter(\.glows), backLamps = tail.vertices.filter(\.glows)

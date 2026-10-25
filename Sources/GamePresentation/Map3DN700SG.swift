@@ -60,13 +60,22 @@ public enum Map3DN700SG {
 
     /// Decision 408 (third): unit `unit` near, the author's own mesh with
     /// fewer triangles (``encodedMeshes``, `tools/hsr-trains-408/decimate.py`):
-    /// every colour boundary where the author drew it, about 5,000 to 6,000
+    /// every colour boundary where the author drew it, about 4,600 to 5,600
     /// triangles where the author's have 9,000 to 13,000, in the same units
     /// and heights as ``model(_:)``; matte, a flat colour of the palette
-    /// to a triangle. `nil` for a unit the game does not draw near (B, E).
+    /// to a triangle; on the 700T's bogies. `nil` for a unit the game does
+    /// not draw near (B, E).
     public static func mesh(_ unit: Unit) -> Map3DModelPack.Model? {
-        guard let text = encodedMeshes[unit], let data = Data(base64Encoded: text, options: .ignoreUnknownCharacters) else { return nil }
-        return decodedMesh([UInt8](data), named: "n700s-g-mesh-" + unit.rawValue)
+        let name = "n700s-g-mesh-" + unit.rawValue
+        guard let text = encodedMeshes[unit], let centres = bogieCentres[unit],
+              let data = Data(base64Encoded: text, options: .ignoreUnknownCharacters),
+              let body = decodedMesh([UInt8](data), named: name) else { return nil }
+        // The 700T's bogies where the author's stood (the owner liked the
+        // 700T's wheels better; the tool leaves the author's out).
+        var builder = StationKitBuilder()
+        builder.add(body, at: .zero)
+        builder.refreshHighSpeedRunning(centres)
+        return .flat(named: name, from: builder.mesh)
     }
 
     /// The palette each of the mesh's triangles takes its colour from, by
