@@ -2039,4 +2039,12 @@ extension Map3DN700SG {
         .c: [-9.0, 9.0],
         .d: [-9.0, 9.0],
     ]
+
+    /// Where the axles of each unit's bogies stood, metres from the
+    /// bogie's centre: the 700T's wheels fill the skirt's openings there.
+    static let bogieAxles: [Unit: [Float]] = [
+        .a: [-0.67, 0.67],
+        .c: [-0.67, 0.67],
+        .d: [-0.67, 0.67],
+    ]
 }

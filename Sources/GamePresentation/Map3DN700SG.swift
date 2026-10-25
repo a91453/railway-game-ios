@@ -67,14 +67,15 @@ public enum Map3DN700SG {
     /// not draw near (B, E).
     public static func mesh(_ unit: Unit) -> Map3DModelPack.Model? {
         let name = "n700s-g-mesh-" + unit.rawValue
-        guard let text = encodedMeshes[unit], let centres = bogieCentres[unit],
+        guard let text = encodedMeshes[unit], let centres = bogieCentres[unit], let axles = bogieAxles[unit],
               let data = Data(base64Encoded: text, options: .ignoreUnknownCharacters),
               let body = decodedMesh([UInt8](data), named: name) else { return nil }
-        // The 700T's bogies where the author's stood (the owner liked the
-        // 700T's wheels better; the tool leaves the author's out).
+        // The 700T's bogies where the author's stood, the axles too, so the
+        // wheels fill the skirt's openings (the owner liked the 700T's
+        // wheels better; the tool leaves the author's out).
         var builder = StationKitBuilder()
         builder.add(body, at: .zero)
-        builder.refreshHighSpeedRunning(centres)
+        builder.refreshHighSpeedRunning(centres, axles: axles)
         return .flat(named: name, from: builder.mesh)
     }
 

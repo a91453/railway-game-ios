@@ -81,6 +81,10 @@ final class Map3DHighSpeedSetsTests: XCTestCase {
         }
         XCTAssertEqual(Map3DN700SG.bogieCentres[.a], [-9.11, 4.56])
         XCTAssertEqual(Map3DN700SG.bogieCentres[.c], [-9.0, 9.0])
+        // Their axles where the author's stood, so the wheels fill the
+        // skirt's openings: closer than the 700T's own.
+        XCTAssertEqual(Map3DN700SG.bogieAxles[.a], [-0.67, 0.67])
+        XCTAssertEqual(Map3DN700SG.bogieAxles[.c], [-0.67, 0.67])
         // D's pantograph covers stand above the C car's roof.
         XCTAssertGreaterThan(try model("set-n700sG-panto").maximum.z, try model("set-n700sG-car").maximum.z + 0.3)
         let lamps = head.vertices.filter(\.glows), backLamps = tail.vertices.filter(\.glows)

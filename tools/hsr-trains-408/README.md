@@ -24,4 +24,4 @@ python3 -m venv <scratchpad>/venv && <scratchpad>/venv/bin/pip install numpy   #
 <scratchpad>/venv/bin/python -I tools/hsr-trains-408/decimate.py "$MODELS" Sources/GamePresentation/Map3DN700SGMesh.swift
 ```
 
-約 10 秒，結果逐位元固定（同樣的原檔跑兩次 SHA-256 相同）。每節的預算與誤差加不加權在檔頭的 `UNITS`；作者的顏色對到調色盤的哪一格在 `COLOURS`，順序要和 `Map3DN700SG.meshPalette` 一樣，原檔多一個沒對到的顏色就停下。作者的轉向架（輪、架、軸箱蓋）減面前先拿掉，只把它們的中心寫成 `bogieCentres`，遊戲在那裡畫 700T 的轉向架。產生的 Swift 檔開頭記著每節減前減後的三角形數與原檔 SHA-256 的前 16 碼。減面的做法、選這組預算的理由與沒有選的試驗在 `docs/decisions/408.md`。
+約 10 秒，結果逐位元固定（同樣的原檔跑兩次 SHA-256 相同）。每節的預算與誤差加不加權在檔頭的 `UNITS`；作者的顏色對到調色盤的哪一格在 `COLOURS`，順序要和 `Map3DN700SG.meshPalette` 一樣，原檔多一個沒對到的顏色就停下。作者的轉向架（輪、架、軸箱蓋）減面前先拿掉，只把它們的中心與輪軸位置寫成 `bogieCentres`、`bogieAxles`，遊戲在那裡畫 700T 的轉向架。產生的 Swift 檔開頭記著每節減前減後的三角形數與原檔 SHA-256 的前 16 碼。減面的做法、選這組預算的理由與沒有選的試驗在 `docs/decisions/408.md`。
