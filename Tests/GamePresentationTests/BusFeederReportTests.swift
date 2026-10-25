@@ -1,5 +1,5 @@
 import Foundation
-import GameCore
+@testable import GameCore
 @testable import GamePresentation
 import XCTest
 
@@ -46,8 +46,10 @@ final class BusFeederReportTests: XCTestCase {
         for day in 1...days {
             try without.playDay()
             try with.playDay()
-            let plainTrips = without.world.financeReport(.day).previous.fareTrips
-            let fedTrips = with.world.financeReport(.day).previous.fareTrips
+            let yesterday = { (world: GameWorld) in
+                world.accounts.days.first { $0.day == world.dayIndex(of: world.clock.now) - 1 }?.fareTrips ?? 0
+            }
+            let plainTrips = yesterday(without.world), fedTrips = yesterday(with.world)
             let bus = with.world.busRoute(id: route.id)?.days.last
             totals.plain += plainTrips
             totals.fed += fedTrips
