@@ -1090,6 +1090,41 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(opacity.disappears(within: 5), "Folded again")
     }
 
+    /// TestFlight 83.1 (iPhone 17 on its side): the opened legend reached
+    /// up behind the status bar and the row under it. Opened, it ends
+    /// below them, and what does not fit scrolls. Full lane only (decision
+    /// 199): its height is `HUDMarginsTests` on Linux.
+    func testTheOpenedLegendStaysUnderTheStatusBarOnAPhoneOnItsSide() throws {
+        try XCTSkipIf(UIDevice.current.userInterfaceIdiom != .phone, "a phone's short screen")
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-demo-layout", "-ui-testing-paused", "-map-layer", "travel", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        let legend = app.descendants(matching: .any)["map.populationLegend"].firstMatch
+        XCTAssertTrue(legend.appears(within: 15), "The travel layer's legend must show")
+        let fold = app.buttons["map.legend.fold"]
+        XCTAssertTrue(fold.becomesHittable(within: 5))
+        fold.tap()
+        let opacity = app.descendants(matching: .any)["map.popTravel.opacity"].firstMatch
+        XCTAssertTrue(opacity.appears(within: 5), "Opened, the legend shows its opacity")
+        legend.waitUntilSettled()
+        let menu = app.buttons["hud.menu"]
+        XCTAssertTrue(menu.appears(within: 5))
+        var above = [menu.frame]
+        for element in app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "map.quickLayer.")).allElementsBoundByIndex {
+            above.append(element.frame)
+        }
+        let chip = app.buttons["map.nextStep"]
+        if chip.exists { above.append(chip.frame) }
+        for frame in above where frame.maxX > legend.frame.minX {
+            XCTAssertGreaterThanOrEqual(legend.frame.minY, frame.maxY, "The legend \(legend.frame) must start under \(frame)")
+        }
+        XCTAssertTrue(fold.isHittable, "The legend's title must be reached")
+        fold.tap()
+    }
+
     func testTheStatusPillsButtonsAreTouchedBeyondTheirIcons() {
         continueAfterFailure = false
         let app = XCUIApplication()

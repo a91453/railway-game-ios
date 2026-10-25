@@ -171,6 +171,15 @@ struct RealWorldPicker: View {
                     .accessibilityHidden(true)
             }
             .accessibilityIdentifier("realWorld.map")
+            .overlay(alignment: .topLeading) {
+                #if DEBUG
+                if UITestTrace.isOn {
+                    Text(verbatim: String(format: "%.2f,%.2f", middle.latitude, middle.longitude))
+                        .font(.system(size: 1)).foregroundStyle(.clear).allowsHitTesting(false)
+                        .accessibilityIdentifier("realWorld.middle")
+                }
+                #endif
+            }
             // Decision 335: under the search field, at the map's corner as
             // the system's maps put it.
             .overlay(alignment: .topTrailing) {
@@ -247,7 +256,12 @@ struct RealWorldPicker: View {
         let locator = locator ?? OneShotLocation()
         self.locator = locator
         Task {
-            let result = await locator.locate()
+            var stub: MyLocationStart?
+            #if DEBUG
+            if UITestTrace.isOn, ProcessInfo.processInfo.arguments.contains("failed") { stub = .failed }
+            #endif
+            let result: MyLocationStart
+            if let stub { result = stub } else { result = await locator.locate() }
             isLocating = false
             locationMessage = result.message(in: launcher.language)
             locatedMiddle = result.area?.middle
