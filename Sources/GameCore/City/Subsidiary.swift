@@ -42,6 +42,7 @@ public enum SubsidiaryRules {
         case .hotel: 8_500
         case .amusementPark: 3_500
         case .temple: SubsidiaryRules.templeSpend
+        case .nightMarket: SubsidiaryRules.nightMarketSpend
         default: 0
         }
     }
@@ -50,6 +51,7 @@ public enum SubsidiaryRules {
         switch kind {
         case .departmentStore: 65
         case .temple: templeVariableCostPercent
+        case .nightMarket: nightMarketVariableCostPercent
         default: 55
         }
     }
@@ -61,6 +63,12 @@ public enum SubsidiaryRules {
     /// A temple's incense, lamps and festivals, in hundredths of what it
     /// takes (decision 361).
     public static let templeVariableCostPercent: Int64 = 40
+    /// What a night market's visitor spends, in cents (decision 361's
+    /// sequel): a few snacks, a drink and a stall game.
+    public static let nightMarketSpend: Int64 = 3_000
+    /// A night market's food and its stallholders' share, in hundredths of
+    /// what it takes (decision 361's sequel).
+    public static let nightMarketVariableCostPercent: Int64 = 60
     /// The staff, each day, in ten-thousandths of what the building cost,
     /// rounded up: 0.04 %.
     public static let staffBasisPoints: Int64 = 4
@@ -76,7 +84,7 @@ extension PlacedBuildingKind {
     /// Whether it trades (decision 173) rather than lets.
     public var isSubsidiary: Bool {
         switch self {
-        case .departmentStore, .hotel, .amusementPark, .temple: true
+        case .departmentStore, .hotel, .amusementPark, .temple, .nightMarket: true
         default: false
         }
     }
@@ -181,8 +189,9 @@ extension GameWorld {
     }
 
     private func customers(of building: PlacedBuilding, onDay day: Int64, served: Set<StationID>, passes: DayPassDay) -> Int64 {
-        // Decision 361: a temple's customers are its own tourists.
-        if building.kind == .temple { return templeVisitors(of: building, onDay: day) }
+        // Decision 361: a temple's customers are its own tourists, and
+        // since its sequel a night market's.
+        if building.kind.isSight { return sightVisitors(of: building, onDay: day) }
         let reach = SubsidiaryRules.reach
         func weight(of station: Station) -> Int64 {
             let dx = station.point.x - building.centre.x, dy = station.point.y - building.centre.y

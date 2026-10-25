@@ -42,8 +42,14 @@ struct PopulationLegendView: View {
     var coverage: CoverageSummary? = nil
     /// Decision 311: while the building layer shows, its switches.
     var building: Building? = nil
+    /// The tallest it may be (``HUDMargins/legendMaximumHeight(mapHeight:top:bottom:buttons:minimum:)``):
+    /// below its title, what does not fit scrolls (TestFlight 83.1).
+    var maxHeight: CGFloat = .infinity
     var onDismiss: (() -> Void)? = nil
     @State private var showsInfo = false
+    /// How tall the title row and what is below it are, for ``maxHeight``.
+    @State private var titleHeight: CGFloat = 0
+    @State private var contentHeight: CGFloat = 0
 
     /// Decision 311: the building layer's switches, between where people
     /// are and coverage and among the hours, and whether a new line has
@@ -120,15 +126,20 @@ struct PopulationLegendView: View {
                     .accessibilityLabel(Text(verbatim: language.text("Close population legend", "關閉人口圖例")))
                 }
             }
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { titleHeight = $0 }
 
-            // Decision 311: where people are or coverage, folded or open.
-            if let building {
-                buildingChoice(building)
-            }
-            if isFolded {
-                foldedBar
+            // TestFlight 83.1: on a phone on its side the opened legend
+            // reached up behind the status bar; what does not fit under
+            // the title scrolls.
+            let room = maxHeight - titleHeight - 6 - 2 * 8
+            if contentHeight > room {
+                ScrollView(.vertical) {
+                    measuredContent
+                }
+                .frame(height: max(0, room))
+                .scrollBounceBehavior(.basedOnSize)
             } else {
-                details
+                measuredContent
             }
         }
         .padding(.horizontal, 10)
@@ -143,6 +154,26 @@ struct PopulationLegendView: View {
         .accessibilityLabel(Text(verbatim: title))
         .accessibilityValue(Text(verbatim: "\(lowText), \(highText)"))
         .accessibilityIdentifier("map.populationLegend")
+    }
+
+    private var measuredContent: some View {
+        content
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
+    }
+
+    /// Below the title: decision 311's choice, where people are or
+    /// coverage, and the key folded or open.
+    private var content: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let building {
+                buildingChoice(building)
+            }
+            if isFolded {
+                foldedBar
+            } else {
+                details
+            }
+        }
     }
 
     /// The colour bar alone, for a folded legend: the layers whose key is

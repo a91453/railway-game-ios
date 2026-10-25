@@ -42,7 +42,7 @@ final class BuildingSessionTests: XCTestCase {
     /// code, never its name: the office's Chinese name changed, its code
     /// ("office") did not, so every saved office still reads as an office.
     func testTheCodesTheSavesStoreDidNotMove() throws {
-        let codes = ["house", "shop", "office", "wharf", "marina", "departmentStore", "hotel", "amusementPark", "park", "temple"]
+        let codes = ["house", "shop", "office", "wharf", "marina", "departmentStore", "hotel", "amusementPark", "park", "temple", "school", "hospital", "nightMarket"]
         XCTAssertEqual(PlacedBuildingKind.allCases.map(\.rawValue), codes)
         for kind in PlacedBuildingKind.allCases {
             let data = try JSONEncoder().encode([kind])
@@ -88,8 +88,8 @@ final class BuildingSessionTests: XCTestCase {
 
     func testTheBuildingToolReadsInChinese() throws {
         let session = GameSession(world: try makeWorld(width: 20_480, height: 20_480), language: .traditionalChinese)
-        XCTAssertEqual(PlacedBuildingKind.allCases.map { $0.title(in: .traditionalChinese) }, ["小住宅", "商店", "辦公大樓", "漁人碼頭", "遊艇港", "百貨公司", "飯店", "遊樂園", "公園", "廟"])
-        XCTAssertEqual(PlacedBuildingKind.allCases.map { $0.title(in: .english) }, ["House", "Shop", "Office block", "Wharf", "Marina", "Department store", "Hotel", "Amusement park", "Park", "Temple"])
+        XCTAssertEqual(PlacedBuildingKind.allCases.map { $0.title(in: .traditionalChinese) }, ["小住宅", "商店", "辦公大樓", "漁人碼頭", "遊艇港", "百貨公司", "飯店", "遊樂園", "公園", "廟", "學校", "醫院", "夜市"])
+        XCTAssertEqual(PlacedBuildingKind.allCases.map { $0.title(in: .english) }, ["House", "Shop", "Office block", "Wharf", "Marina", "Department store", "Hotel", "Amusement park", "Park", "Temple", "School", "Hospital", "Night market"])
         session.buildingKind = .shop
         session.placeBuilding(at: PlanPoint(x: 5_000, y: 5_000))
         XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "蓋好商店 #1。"))

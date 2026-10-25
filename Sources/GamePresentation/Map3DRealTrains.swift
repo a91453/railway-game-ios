@@ -314,7 +314,9 @@ public struct Map3DRealTrains: Sendable {
                 guard drawn < RealTrainTraffic.mostDrawn else { return }
                 // Decision 408: half the high-speed trains the N700S-G, by
                 // their run on the day's timetable.
-                let formation = Formation(key: Map3DTrainSet.variant(of: lineFormation.key, number: Map3DTrainSet.number(ofRealTrain: place.key)),
+                // Decision 338 (second later): none while the pack is locked.
+                let formation = Formation(key: Map3DTrainSet.variant(of: lineFormation.key, number: Map3DTrainSet.number(ofRealTrain: place.key),
+                                                                     locked: models?.locked ?? []),
                                           cars: lineFormation.cars)
                 let way: Double = RealTrainRun.way(from: place.km, to: place.towardKm, ringKm: isRing ? ring : nil) >= 0 ? 1 : -1
                 let length = Double(formation.cars) * Self.carPitch

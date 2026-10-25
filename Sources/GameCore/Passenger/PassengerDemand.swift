@@ -568,8 +568,8 @@ extension GameWorld {
         var day: Int64?
         /// The sights' ratings the plan was worked out with (decision 174).
         var stars: [Int] = []
-        /// The company's temples as sights (decision 361): one built or sold
-        /// changes the tourists' trips.
+        /// The company's temples and night markets as sights (decision 361
+        /// and its sequel): one built or sold changes the tourists' trips.
         var temples: [Attraction] = []
 
         static func == (_: Self, _: Self) -> Bool {
@@ -849,7 +849,7 @@ extension GameWorld {
     /// has trips; works the plan out first if no current one is kept.
     mutating func passengerRelease() -> PassengerRelease? {
         // With weekly demand a plan is for one day.
-        let temples = templeSights().map(\.sight)
+        let temples = companySights().map(\.sight)
         if passengerPlan.plan != nil, passengerPlan.day != demandDay || passengerPlan.stars != tourismStars || passengerPlan.temples != temples {
             passengerPlan = PassengerPlanCache()
         }

@@ -749,7 +749,13 @@ struct MapView: View {
                                     }
                                 ),
                                 coverage: mode == .coverage ? cityMap?.coverage : nil,
-                                building: buildingLayer.isOn ? buildingLegend : nil
+                                building: buildingLayer.isOn ? buildingLegend : nil,
+                                // TestFlight 83.1: under the status bar, the
+                                // layer strip and the banner, over the buttons.
+                                maxHeight: CGFloat(HUDMargins.legendMaximumHeight(
+                                    mapHeight: viewport.height, top: Double(max(clear.top, topColumnDepth)),
+                                    bottom: Double(besideTrailing ? clear.bottom : screenEdges.bottom), buttons: !buttonsUnderPanel
+                                ))
                             ) {
                                 stopPopTravelPlay()
                                 cellTooltip = nil

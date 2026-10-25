@@ -24,6 +24,11 @@ not only Claude Code. Read it first and follow it. In particular:
   itself from five angles, one line of reason each in the pull request:
   player, railway fan (how true it is to real railways and their data),
   developer, art and music (`CLAUDE.md`, Workflow).
+- Previews and generated art the game does not load go to
+  a91453/railway-reference-private, `Railway/game-art-previews/docs/art/`.
+  Only a model's newest round keeps its models and viewer, with no ZIP of
+  the folder's own files; a round it replaces keeps only its PNG previews,
+  README and source record, and no `history/` copy (`CLAUDE.md`, Workflow).
 - On a hard problem, first see whether the owner's reference repository has
   something to port, then look for open-source projects on GitHub, minding
   their licenses (`CLAUDE.md`, after the reference check). When neither has

@@ -490,6 +490,17 @@ set -euo pipefail
 # they were), and the largest such sum went from 778 to 684 s. With 18
 # campaign shards it cannot go much lower (all of them add up to 11,960 s,
 # 664 a shard), so about 16 minutes of job is the slow runners' worst.
+# 2026-10-25 (decision 411): rest's job took 19m44s on main 647d799 (run
+# 40190946365: 859 s of tests) as two new GamePresentation classes landed
+# there, DemoRealLinesTrackTests (160 s) and SharedNetworkTests (46 s).
+# On each class's slowest of ten full push runs of main (40154741372 to
+# 40190946365, decision 411 lists them) the shards add up to 13,106 s, 690
+# a shard; eight classes moved (DemoRealLinesTrack and Map3DModel out of
+# rest, the rest between campaign shards, so no pull request's tier
+# changes) and the largest sum went from 871 s (rest) to 700. A slow
+# runner's job is that plus a build of about 5 minutes, some 17.5 minutes;
+# one more shard would save only some 35 s. The build, 29% of the Swift
+# jobs' time, is the room left (docs/research/CI_SHARED_BUILD_2026-10-25.md).
 classes_of() {
   case "$1" in
     campaigns-1) echo "ScheduledTrafficPropertyTests RealRailwayTracingTests NetworkServicePropertyTests FlexDispatchPropertyTests" ;;
@@ -497,19 +508,19 @@ classes_of() {
     campaigns-3) echo "ServiceRepeatingPropertyTests TRADemoTests NewGameSavePropertyTests LineRoutePreferencePropertyTests Map3DStreetLifeTests" ;;
     campaigns-4) echo "Map3DSceneMemoryTests KernelDifferentialTests DeadlockPropertyTests LocalPassTests" ;;
     campaigns-5) echo "SaveMutationSecondHalfTests Map3DPlatformClearanceTests NetworkPostcardTests" ;;
-    campaigns-6) echo "ServiceRepeatingSecondHalfPropertyTests PassengerPropertyTests CityRequestsTests Map3DTests StationCommerceCardTests LineLossDiagnosisTests Map3DRealBuildingsTests" ;;
-    campaigns-7) echo "SaveMutationTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests Map3DRealGroundTests ReservationShortcutTests" ;;
+    campaigns-6) echo "ServiceRepeatingSecondHalfPropertyTests PassengerPropertyTests CityRequestsTests Map3DTests StationCommerceCardTests LineLossDiagnosisTests Map3DRealBuildingsTests Map3DModelTests" ;;
+    campaigns-7) echo "SaveMutationTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests Map3DRealGroundTests ReservationShortcutTests PolicyTests" ;;
     campaigns-8) echo "LineDispatchPropertyTests NewGameBalanceTests ScreenshotSceneTests TimetablePropertyTests" ;;
-    campaigns-9) echo "EconomySecondHalfPropertyTests VerticalRailwayPropertyTests RealLineAcquisitionTests NightSkipTests PolicyTests FreightSessionTests" ;;
+    campaigns-9) echo "EconomySecondHalfPropertyTests VerticalRailwayPropertyTests RealLineAcquisitionTests NightSkipTests FreightSessionTests" ;;
     campaigns-10) echo "GoldenScenarioTests ScheduledOvertakeTrackLastPropertyTests OnboardingTests WorldStateMachineTests" ;;
-    campaigns-11) echo "LinePatternPropertyTests ScheduledTrafficSecondHalfPropertyTests DemoRealLinesTests LoopLineBoardingTests LongLegReplayTests" ;;
-    campaigns-12) echo "TrafficControlPropertyTests LineConfirmationTests SparseCityLandTests Map3DStationKitTests LinePanelMemoTests ContinuousTrackPropertyTests" ;;
+    campaigns-11) echo "LinePatternPropertyTests ScheduledTrafficSecondHalfPropertyTests DemoRealLinesTests LoopLineBoardingTests LongLegReplayTests LineAccountsTests" ;;
+    campaigns-12) echo "TrafficControlPropertyTests LineConfirmationTests SparseCityLandTests Map3DStationKitTests LinePanelMemoTests ContinuousTrackPropertyTests LessonTests" ;;
     campaigns-13) echo "BoardingPropertyTests OccupiedRoutingPropertyTests Map3DCoarseChunkTests TurnbackPropertyTests LoadJourneyCacheTests Map3DStreamingTests LineLossFixesTests" ;;
-    campaigns-14) echo "ServiceLinePropertyTests CommandLogTests ScheduledTrafficTests LessonTests IdleTrainDeadlockTests" ;;
+    campaigns-14) echo "ServiceLinePropertyTests CommandLogTests ScheduledTrafficTests IdleTrainDeadlockTests NetworkSectionPropertyTests" ;;
     campaigns-15) echo "TrafficFollowingPropertyTests ScheduledOvertakeTrackPropertyTests Map3DStreetsTests MetroStructuresTests NewGameCampaignTests PingxiChallengeTests Map3DShadowTests RealWorldExpansionTests ShortTurnCardTests" ;;
-    campaigns-16) echo "HighSpeedDemoDayTests HighSpeedDemoBatchTests TRADemoDayTests LineAccountsTests Map3DSurfaceTests NewsSessionTests Map3DPropsTests Map3DNightAndGroundTests DemoAtTests SeededStreetPlanTests Map3DBuildingsTests Map3DNextDepartureTests TutorialSessionTests Map3DSignTests AutoServiceTests Map3DHandoffTests Map3DDetailTests" ;;
+    campaigns-16) echo "HighSpeedDemoDayTests HighSpeedDemoBatchTests ScheduledOvertakeTrackFinalPropertyTests Map3DSurfaceTests NewsSessionTests Map3DPropsTests Map3DNightAndGroundTests DemoAtTests SeededStreetPlanTests Map3DBuildingsTests Map3DNextDepartureTests TutorialSessionTests Map3DSignTests AutoServiceTests Map3DHandoffTests Map3DDetailTests" ;;
     campaigns-17) echo "PassengerPlanKeyTests EconomyPropertyTests TurnbackTests LessonGuideTests" ;;
-    campaigns-18) echo "HighSpeedDemoTests ScheduledOvertakeTrackFinalPropertyTests NetworkSectionPropertyTests" ;;
+    campaigns-18) echo "HighSpeedDemoTests TRADemoDayTests DemoRealLinesTrackTests" ;;
     *) return 1 ;;
   esac
 }
@@ -614,7 +625,7 @@ CLASS_WEIGHTS="BoardingPropertyTests:624 LineDispatchPropertyTests:602
   HighSpeedDemoTests:400 HighSpeedDemoDayTests:328 TRADemoTests:121
   HighSpeedDemoBatchTests:146 NewGameSavePropertyTests:92 TRADemoDayTests:93
   OnboardingTests:92 CommandLogTests:66 LessonGuideTests:62
-  RealLineAcquisitionTests:110 NetworkPostcardTests:64 Map3DSceneMemoryTests:310
+  RealLineAcquisitionTests:165 DemoRealLinesTrackTests:160 NetworkPostcardTests:64 Map3DSceneMemoryTests:310
   Map3DPlatformClearanceTests:113
   NightSkipTests:57 RealWorldDemoTests:51 LineLossFixesTests:49
   Map3DCoarseChunkTests:31 Map3DStreetLifeTests:29 RealRailwayTracingTests:29

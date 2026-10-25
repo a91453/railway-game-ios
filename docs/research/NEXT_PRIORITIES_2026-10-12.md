@@ -1183,6 +1183,7 @@
 | 10m | **新**：方案 E 第 2 個 PR：3D 跟車多「旁邊」「從車站看」兩個視角 | 同上 | 4 | 3 | 4 | 5 | 3 | 3.75 | 接在 10l 之後；`Map3DFollow.View` 加兩種，照決策 333、337 的鏡頭與 motion skill |
 | 10n | **新**：方案 E 第 3 個 PR：鳴笛（照車種的音色）與 3D 快照 | 同上 | 4 | 3 | 4 | 5 | 3 | 3.75 | 接在 10m 之後；鳴笛照決策 343 的合成器，快照照決策 215 的分享 |
 | 10o | **研究**：方案 F「練習開車模式」：握手把自己開，不影響世界（自動駕駛是預設，握手把才自己開） | 同上（錄影右邊的 +4〜−4 手把） | 4 | 1 | 3 | 5 | 2 | 2.95 | 只研究、不排；GameWorld 是唯一權威，練習開的車不能改世界，要另一份只在畫面上的模擬；派工單說手動油門、煞車不在 10l–10n 裡做 |
+| 10p | **新**：機廠在 3D 看得出來：每個機廠站（`Station.isDepot`）旁放一座三股道的檢修庫，遠景換成簡單的方塊；轉車台只放在彰化扇形車庫（景點 t071），不放在每個機廠。模型是私有參考庫 Railway Facilities Pack 01 用程式重做的 `depot-maintenance-shed-a`（408 面）與 `depot-turntable-a`（864 面），沒有用到原始模型的網格或貼圖。同一包原本的 10 件車站零件（號誌、雨棚、出入口、樓梯、站房）跟 `Map3DStationKit` 已有的重複，參考庫的重複稽核已經退回，不做 | 作者 2026-10-25「那你看Station Environment Pack 01有什麼能順便加入遊戲」「那記得先幫我加入排序那裡」；私有庫 `Railway/railway-asset-pipeline-2026-10-22/docs/RAILWAY_FACILITIES_PACK_01_*.md` | 4 | 4 | 4 | 5 | 1 | 3.70 | 只動 GamePresentation 與 3D 畫面，不改 GameCore、不升存檔；排在 89.1。檢修庫由 Codex 認領（branch `codex/depot-3d-facilities-2026-10-25`，#1041 第 6396125539 則，轉車台不放現代機廠）；彰化的轉車台等它合併後另派，避免兩邊改同一個 `Map3DStations.swift`。三個做法：每個機廠放檢修庫、轉車台只放彰化（7.45，選這個）；只放檢修庫（7.40）；照原本的 10 件車站零件（4.50）。合併前要實機看過；機廠玩法見 §9.1 |
 | 11 | **補**：觀光列車的後續：鳴日號 → 環島之星 → 仲夏寶島號，再加價、故事、季節 | 決策 286「下一步」、§16 第 5 項 | 3 | 2 | 4 | 5 | 2 | 3.05 | GameCore；一款一個 PR |
 | 12 | **bug**：簡單規則下，線的第一站 2 股以上時，後到的列車整天等不到月台（沒有警告，第 30 天起 0 人次）（在做（決策 344，`claude/first-stop-platforms`）） | HANDOFF §5 | 5 | 3 | 1 | 3 | 1 | 3.00 | GameCore 調度，golden／replay 可能會動；和宜蘭線的 bug 不同時做 |
 | 13 | **新**：車站卡的下一班分月台列，只列 15 分鐘內的 | sporenkijker | 3 | 4 | 2 | 4 | 1 | 2.95 | 只動 GamePresentation 與車站卡；真實列車沒有月台資料時照方向分 |
@@ -1225,6 +1226,9 @@
 - 6000× 的第 3 步（少換幾次世界）：等作者在實機量「其他」與「推進後」（HANDOFF §7.1）。
 - 地圖左半邊沒有地形陰影：等作者附上分界的經度或地名（HANDOFF §7.1）。
 - 高鐵的 OSM 偏移：要作者在台灣下載 `HSRAIL_*.zip`。
+- 遊戲內成就清單改用 Game Center 的 38 張成就圖（作者 2026-10-25：「game center圖標換了 但遊戲內好像沒換」）：規劃建議 89.1 做（只動 App 與 GamePresentation，約多 1–2 MB），等作者說好。
+
+**研究，公開測試後再看**（2026-10-25，作者轉來 isometric.nyc、tiny.london、tinygyn.com 與 GPT 的分析）：用遊戲自己的 3D 城市從固定斜角拍成遊戲畫風的 2D 圖，給載入畫面、明信片、分享圖、官網用；可參考 RayNCooper/iso-cities（程式 MIT，資料 ODbL）的畫法。不用那三張地圖：沒有授權、來源是 Google Photorealistic 3D Tiles（Map Tiles API 政策限制分析、快取、離線），tiny.london 的 Qwen-Image 是研究授權；像素風也和 art-style 的扁平藏青框不合。stonyp/mapforge（map3d 的 fork，MIT）只把 OSM 輪廓拉高匯出 GLB，遊戲已有的 Overture 輪廓（決策 386）、樓高（389）與程序化外牆都比它多，不用。GPT 建議的騎樓、陽台、鐵窗、磁磚、水塔、頂樓加蓋大多已在決策 370、389 與 `Map3DFrontage`、`Map3DResidentialKit`、`Map3DDetailKitParts`。
 
 ### 22.3 已完成（§19、§21 裡的）
 
