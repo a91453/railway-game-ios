@@ -1,5 +1,7 @@
 # 交接
 
+> Codex E500 原生重建第三版（issue #1255）：[自有外觀／營運接點／重建交接](art/e500-refresh-2026-10-25/README.md)。使用者圈選中央格柵排與正面過寬平台：僅修屋頂為連續六格外殼、收窄降低並貼合真車頂；68913f4f第二版完整保持，私庫revision-3全量重出。非屋頂與弓機構三角bytes保護。僅 E500CK／MINGRI／STAR 專用近遠景；其他包／解鎖／回退與 GameCore 不動。完整素材私庫、公開一張總覽，互鏈 draft PR 與同head CI 見 issue；靜態幾何不等於真機動畫。
+
 > 讀者：每一個新開的 session，以及接手某條線的 session。先讀 [OVERVIEW.md](OVERVIEW.md)，再讀這份。
 > 這份記錄「誰在做什麼、做到哪、下一步交給誰」。規則細節以 `docs/ARCHITECTURE.md` 的決策為準，優先順序以 `docs/research/NEXT_PRIORITIES_2026-10-12.md` 為準，號碼以工作登記 #231 為準。
 
@@ -8,6 +10,8 @@
 > 作者 2026-10-16：「把所有沒交接在 main 的用 PR 在 main 做交接，防止之後新 session 不知道怎麼做。」交接只放在 session 之間的訊息或 PR 說明裡的，都要搬到這裡。
 
 > EMU3000 專用原生重建與遊戲替換（Codex，issue #1226）：[外觀／單元／重建交接](art/emu3000-refresh-2026-10-25/README.md)。第二版依使用者「有點怪」回報再修：縮短圓厚車鼻、收窄下移風擋、斜列圓燈／尾車兩紅標示燈、灰色冷氣格柵；原3ab84550的revision-1保留，第二版同尺度對照與完整包為revision-2。白車身、炭黑罩面、細綠松肩線；8角色與12節、EP3/7/10、近／遠景及實際營運dispatch。公開PR合併後標準未鎖定的EMU3000會使用新配方，私有GLB只是同版靜態交付。與#1227已協調共用接點，後合併保留兩者；GameCore／存檔／fixtures不動，既有非EMU模型逐bytes保護。真機Metal／效能／動畫與完整碰撞仍未驗證，最新CI看互鏈draft PR／#1226，不把Linux通過當裝置驗收。
+
+> Codex E500製程文件化（#1255）：[跨AI案例與固定版本交接](art/native-vehicle-modeling/CASE_STUDY_E500.md)。使用者已接受producer85647d0a第三版外觀；記錄連續六格屋頂殼、正面過寬底座、真第二／三版、非屋頂保護、重建與分層驗證。模型公開draft #1256 ↔ 私庫#84在本次文件接手時尚未合併，固定來源不假設main已有配方；本輪不改已接受模型／素材。合併模型PR並重建App才更新E500CK／MINGRI／STAR；真機與動畫仍未驗。
 
 ## 怎麼用這份
 
@@ -1310,6 +1314,7 @@
 | ~~高鐵 demo 第一次開地圖時畫面卡住：CI 的 iPhone 模擬器上主執行緒 28–58 秒沒有回應（app trace 最長 57540 ms）~~ | #1257（session_01ATrwF1t4xfwDoTrLvMvRAY，2026-10-25） | **修了**（`claude/hsr-first-map-stall`，session_01NmGg4SVeqcXXqTpHPxnVP6）：不在畫地圖，在 `begin` 的 `readLandRoundStations`：示範建好時沒拿底圖，它的 2,489 個街區的道路（決策 400 的續，00ecb5f）留到 `begin` 在主執行緒讀，Linux debug 11.5 s。改成和建世界一起在背景讀（`GameLauncher.readingRoads`，高鐵與宜蘭線示範），主執行緒上剩 5 ms；開局在主執行緒上的其他工作合計約 0.25 s（`HSR_FIRST_MAP_REPORT=1` 跑 `HighSpeedFirstMapReportTests`）。回歸：`HighSpeedDemoTests.testTheLauncherBuildsAndOpensIt` 檢查遊戲開始時道路已讀。剩下：資料晚到時 `install` 在主執行緒對開著的遊戲 `readLandRoundStations`（只有道路還沒讀的舊存檔會多讀），沒改 |
 | 輕軌收購（決策 400 10j-2）剩下的：(1) 安坑輕軌：第二條正線在急彎上離第一條不到 4 m（`trackTooClose`）；`RealLineAcquisition.swift` 裡第二條的偏移改成 8 m 時鋪得下，但從 06:12 起列車停住（307 班 179 班沒發），還沒查是靠左（決策 202）選錯路還是待避線方向保護；查好後把 `ntalrt:K` 加回 `extract_metro_runs.py` 的 `LINES`、重跑、在測試加回。(2) 淡海綠山線：終點站要 6–7 條過夜軌道，要 GameCore 的停車場或回送機廠。(3) 轉乘站併站（450 m 內同名車站）程式在、沒有測試。(4) $800 萬的價格目標：10j-3 定了輕軌每位旅客 $70，淡水開局的藍海線 $796 萬 | session_011Aw4FB9UV6Nx5P2kPZUH2E（10j-2，壓縮兩次後停下） | 沒派；數字與原因在 [決策 400](decisions/400.md)「量到的」10j-2 |
 | 捷運收購（決策 400 10j-3）剩下的：(1) 三鶯線（`sanying:LB`）：工具排得出（398 班、8 班回送、12 組車，`extract_metro_runs.py` 的 `LINES` 裡註解掉），收購也鋪得下，但一般規則下白天一個遊戲小時要約 13 秒（debug；藍海線 0.6 秒），第二天約 16:00 停住超過 25 分鐘。gdb 看到卡在 `GameWorld.minutesUntilNextDispatch` → `hasReadyRun` → `readyRunTrain` → `runTrip` → `driveRun` → `linePath` → `TrainRoute.shortest`：每一分鐘、每一班到點的班、每一組停在首站的車都重找兩次全程的路（照原方向與折返），沒有記住；有車找不到路時到點的班越積越多。修法的方向：`readyRunTrain` 的 `runTrip` 照 `(train, placement, run.calls)` 記在 `DispatchMemo`，或世界沒變時不重算；修好後把三鶯線加回 `LINES`、`urbanLines` 與測試。(2) 其他捷運線的終點站要 6–25 條過夜軌道（數字在 `tools/real-timetables/README.md`），要 GameCore 的停車場或回送機廠，和淡海綠山線同一件；中和新蘆線的共用主線也在它之後。(3) 臺中、高雄的實景開局沒有一條線在 $800 萬以內（地圖框裡沒有可收購的線；臺北、新北、桃園有） | session_012tPPoF95rAooSb1w8yot6q（10j-3） | 沒派；數字與原因在 [決策 400](decisions/400.md)「量到的」10j-3 |
+| 路網分析（決策 416）剩下的：GameCore 只記每站開局以來的滿站走掉、等到停駛走掉與被滿車留下，沒有每天、也沒有分到站對，所以「流失」只列汽機車與票價；沒有路線連的站對沒有 GameCore 的需求數字，用分配規則估；沒有車站的聚落沒列進來；等不到車固定 30 分；沒有 UI 測試；路線面板標題列在手機橫放時擠不擠要實機看 | session_01695GDiVgssy47EmyircfE4（§22.2 第 22 名） | 沒派；做法在 [決策 416](decisions/416.md)「下一步」 |
 | 分享路網（決策 409）剩下的：車站設計的分享（等 10d）、只看時在遊戲裡直接改成開新局、檔案 App 裡顯示明信片縮圖（Quick Look 縮圖延伸）；LINE、AirDrop、檔案 App 點了用遊戲開與分享面板的預覽都是 UNVERIFIED，要 TestFlight 實機 | session_01RarzebNWdkEundHGJDzTBf（10k） | 沒派；做法在 [決策 409](decisions/409.md)「下一步」與「沒有驗證的」 |
 | 實景地圖的道路格子（決策 400，10i-1 剩下的）：GameCore 的 `RoadGrid` 與 `setRoads(_:in:)` 已在，空白地圖會長路、能鋪站前路；實景地圖還沒從底圖的 `transportation` 層算出道路格子，所以實景開局不開道路 | session_018gwb44aL5MFmY8312pE3hD（10i-1） | 沒派；做法在 [決策 400](decisions/400.md)「量到的」10i-1 的最後一點 |
 | 實景地圖 3D 的真實列車軌道（決策 339，`Map3DRealTrains.swift`）每條線只畫一條、高度沒照真實（捷運該在地下或高架）、在玩家軌道旁與接縫處斷開（作者指的是這層）；另外示範與收購鋪的軌道：真實雙線鋪成單線（縱貫線臺北–板橋、崎頂–竹南、新左營–高雄，海線竹南–談文，捷運環狀線，高捷紅線美麗島–左營）、文湖線與環狀輕軌因最小半徑 40 m 斷軌、一段停下就跳過到下一站的軌道。地圖底下畫的真實鐵路本身是對的 | 作者 2026-10-24「有些也沒照真實路線有些還是單線 而且有斷軌」「要不要改成真實複線或單線 還有高度也是」「不是示範鋪的是實景地圖裡面鋪的」；session_019YxcVGrDSUjGBqxpWQ5Mnc 量了示範那層、壓縮後依派工不修 | 實景地圖 3D 那層：單複線、高度、玩家軌道旁由[決策 402](decisions/402.md) 做了，山裡的隧道斷一截與列車跳軌由[決策 406](decisions/406.md) 修了（剩下的在 406「下一步」：洞門、照派軌走）。示範鋪軌那層（決策 401 (b) 表）由 [決策 401「續」](decisions/401.md) 修了（單複線、文湖線與環狀輕軌斷軌、跳站）；剩下的：板橋一帶高鐵台北–板橋與縱貫線臺北–萬華被同高度交叉擋下的缺口（main 原本就有），收購那層沒量，都寫在 401「續」的「沒修的」 |
@@ -1659,6 +1664,10 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 
 **Codex 原生車輛製作流程文件化（使用者2026-10-25要求，接續#1200）**：使用者接受第十版後，要求詳細寫出讓不同AI可重複使用的流程。[完整手冊](art/native-vehicle-modeling/README.md)、[可貼製作指令](art/native-vehicle-modeling/PROMPT.md)、[獨立驗收表](art/native-vehicle-modeling/REVIEW_CHECKLIST.md)、[700T實例](art/native-vehicle-modeling/CASE_STUDY_700T.md)已整理；art-style與原素材／工具README加入口。涵蓋真參考判讀、資料缺口、比例／斷面／鼻肩曲面、貼合門窗、色帶面積與穩定切分、輪軌／編組、同相機真前後、匯出／producer／viewer／ZIP、外觀與技術／CI／真機分開記錄。700T數值僅個案，不能套成所有車的車體或預算。素材交付時靜態，後續#1217／決策408已由Claude接入；本輪只文件，不改模型／工具執行碼／遊戲映射，不動決策410的共用建模實作。新文件分支codex/native-vehicle-modeling-guide-2026-10-25從main6a6352b4開；文件鏈結／格式查核與文件PR的實際CI分別記錄，不重跑建模或新增真機驗證。
 
+TEMU1000 原生外形（Codex，issue #1228，公開 draft #1230／私庫 draft #78）：五張起始圖及後續正／側圖均已目視；**現行真前版** `c39d546f` 原生端車留私庫 history，現行同相機／公尺尺度前後圖以它比較。輪盤半徑 0.39→0.33 m、側窗分格、殼頂改白、中央雙燈座縮窄、前鼻細分曲面；灰色只留實體空調箱。**接手先讀** `docs/art/temu1000-2026-10-25/PRODUCTION_HANDOFF.md`，再讀該目錄 README、私包 manifest/source-record/verification；PR checks 看最新 head。此為靜態造型，公開 PR 合併後 `taroko` 3D 營運畫面才會使用；GameCore、存檔、fixtures 不變。真機 Metal／效能／動畫未驗，外觀尚未經作者認可。
+後續使用者指出「黑色跟圓弧要往下移」：Codex 在同分支下移端車風擋與鼻端斷面，讓正面腰線下垂且側線於鼻端漸降；真前版 `3f697206` 另留私庫 history，本版前後對照改用端車相機。外觀仍待作者評價；真機 Metal／效能／動畫仍未驗。
+再補的正面／側面裁圖顯示端面還是太平：Codex 在同分支縮短鼻端直面、加密並鼓起圓弧端面，玻璃與腰線跟著真曲面；真前版 `d793874b` 存私庫 history，另出車頭側／斜近景與同尺度對照。最新外觀與重建見上述 README；真機限制不變。
+再依使用者明列的輪盤過大、側窗不見及正面灰面偏心：Codex 將輪盤縮至展示半徑 0.33 m 並維持軌面接觸、客窗換成分格可辨玻璃、限制灰屋頂材質在車頭上方且鏡射兩側殼面。真前版 `cea94afc` 留私庫 history，新側窗輪組近景、同尺度前後與各項外觀／驗證仍見上述 README；工程輪徑與真機 Metal 未驗。
 
 **Codex EMU3000第三版（#1226／draft #1229，私有draft #77）**：使用者要求車頭比例及車門破圖修正。真正23a59907／完整revision-2保留，新包revision-3；前裙／白下巴延伸圓收、黑罩改正面U形分色，車寬長／輪組／窗位／設備／編組保留。舊門可重現玻璃被殼面／門葉遮住；白殼作門葉、封閉薄門縫與玻璃按真正截面貼合，新增實際射線回歸先紅後綠及埋入玻璃變異。全量重出原生／GLB／七向／白模剪影／同尺度前後／門部放大／viewer／ZIP。驗證、實際producer、三角及最新同head CI見[自有交接](art/emu3000-refresh-2026-10-25/README.md)與issue交付，外觀自檢不代表作者認可，Linux不代表Metal/FPS。公開PR含營運替換接點，未合併不會出現；靜態幾何無動畫。保留#1227共用builder與#1233的emu3000Classic等舊版，列車包解鎖／回退分派由Claude後續處理，本輪不改其清單。GameCore／存檔／golden／save／replay／玩法不動；不推main／不合併／auto-merge／TestFlight。
 

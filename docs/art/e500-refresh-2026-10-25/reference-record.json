@@ -1,0 +1,24 @@
+[
+  {
+    "reference": "toshiba-e500.pdf",
+    "sha256": "4eb4267ba8093377fb3a0ce080fc524d978f193f831910ce3ab38a38c35f2dde",
+    "used_for": "visual observation and factual dimensions only; original not redistributed"
+  },
+  {
+    "reference": "e506-real.jpg",
+    "sha256": "3b9ca45f75586cb6b1408570eeab5bcb9910837aec97409bae632dccb24bfcbf",
+    "used_for": "visual observation and factual dimensions only; original not redistributed"
+  },
+  {
+    "reference": "Toshiba f02.pdf figures 4 and 5",
+    "used_for": "additional actual exploded-view and roof-layout observation in revision 2; same PDF SHA above; one collector and separate housings; no image pixels or mesh reused"
+  },
+  {
+    "reference": "five images supplied in this conversation before the user approved revision",
+    "used_for": "three model photographs and two colored equipment diagrams, each visually inspected; proportional observation only, no engineering dimensions inferred"
+  },
+  {
+    "reference": "third-revision user marked overview and marked K.Y.Chung/Nanyue Express E500 illustration",
+    "used_for": "roof grille continuity, height, spacing, narrow front projection; original private/reference image not redistributed or sent to external generation; proportions only"
+  }
+]
