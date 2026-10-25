@@ -2915,6 +2915,16 @@
         }
       }
     },
+    "Bus tool" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "公車工具"
+          }
+        }
+      }
+    },
     "Tap the map to choose a site. A city building in the way is bought out." : {
       "localizations" : {
         "zh-Hant" : {

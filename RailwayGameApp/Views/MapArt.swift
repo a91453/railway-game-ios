@@ -60,6 +60,7 @@ enum MapArt {
         lineCodes: [LineID: String] = [:],
         journey: JourneyTrace? = nil,
         journeyProgress: Double = 1,
+        buses: BusMapOverlay? = nil,
         drawsLabels: Bool = true,
         part: MapPart = .all,
         in context: GraphicsContext
@@ -67,7 +68,7 @@ enum MapArt {
         if part != .trafficAndStations {
             drawRailway(world, network: overlay, expansion: expansion, projection: projection, edges: edges, layers: layers, lines: lines,
                         routePreview: routePreview, flowStrokes: flowStrokes, lineCodes: lineCodes, journey: journey,
-                        journeyProgress: journeyProgress, in: context)
+                        journeyProgress: journeyProgress, buses: buses, in: context)
         }
         if part != .railway {
             drawTrafficAndStations(
@@ -106,6 +107,7 @@ enum MapArt {
         lineCodes: [LineID: String],
         journey: JourneyTrace?,
         journeyProgress: Double,
+        buses: BusMapOverlay?,
         in context: GraphicsContext
     ) {
         let bounds = WorldRegion(bounds: world.bounds)
@@ -145,6 +147,11 @@ enum MapArt {
             drawLines(lines, world: world, projection: projection, cached: edges, codes: lineCodes, in: context)
         } else {
             drawSectionFlow(flowStrokes, world: world, projection: projection, cached: edges, in: context)
+        }
+        // Decision 400 (10i-5): the bus routes along the roads, over the
+        // lines and under the transfers (docs/MAP_LAYERS.md, 24.8).
+        if let buses {
+            drawBusRoutes(buses, projection: projection, in: context)
         }
         drawTransfers(lines, projection: projection, in: context)
         // Decision 220: the held station's busiest trips (docs/MAP_LAYERS.md, 25.5).
@@ -1049,6 +1056,54 @@ enum MapArt {
     /// stations (MapBuilder's `js-Map-interchanges--inner` and `--outer`:
     /// an 8 px white line inside a 2 px black edge), over the lines and
     /// under the stations.
+    /// Decision 400 (10i-5): each bus route as a thin line in the colour of
+    /// the first line calling at its station, on a navy edge, faint when no
+    /// bus runs it; its stops as white dots edged in navy, so they read
+    /// without the colour. The bus tool's route over them, with the leg no
+    /// road joins dashed red.
+    private static func drawBusRoutes(_ buses: BusMapOverlay, projection: some MapProjection, in context: GraphicsContext) {
+        let width = max(1.5, lineWidth(projection) * 0.6), dot = max(3, width * 1.6)
+        func path(_ points: [PlanPoint]) -> Path {
+            var path = Path()
+            guard let first = points.first else { return path }
+            path.move(to: cgPoint(projection.screenPoint(of: first)))
+            for point in points.dropFirst() { path.addLine(to: cgPoint(projection.screenPoint(of: point))) }
+            return path
+        }
+        func stroke(_ way: Path, colour: Color, opacity: Double) {
+            guard way.boundingRect.insetBy(dx: -width - 2, dy: -width - 2).intersects(context.clipBoundingRect) else { return }
+            let style = StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round)
+            context.stroke(way, with: .color(Palette.ink.opacity(opacity)), style: StrokeStyle(lineWidth: width + 2, lineCap: .round, lineJoin: .round))
+            context.stroke(way, with: .color(colour.opacity(opacity)), style: style)
+        }
+        func stops(_ points: [PlanPoint], opacity: Double) {
+            for point in points {
+                let centre = cgPoint(projection.screenPoint(of: point))
+                let rect = CGRect(x: centre.x - dot / 2, y: centre.y - dot / 2, width: dot, height: dot)
+                guard rect.intersects(context.clipBoundingRect) else { continue }
+                let circle = Path(ellipseIn: rect)
+                context.fill(circle, with: .color(Palette.markerFill.opacity(opacity)))
+                context.stroke(circle, with: .color(Palette.ink.opacity(opacity)), lineWidth: 1.2)
+            }
+        }
+        for route in buses.routes {
+            let colour = route.line.map { Palette.lineColor($0, custom: route.color) } ?? Palette.ink
+            let opacity = route.runs ? 1 : 0.4
+            stroke(path(route.points), colour: colour, opacity: opacity)
+            stops(route.stops, opacity: opacity)
+        }
+        guard let draft = buses.draft else { return }
+        let opacity = draft.isBuildable ? 1 : 0.6
+        stroke(path(draft.points), colour: Palette.ink, opacity: opacity)
+        if draft.broken.count == 2 {
+            context.stroke(
+                path(draft.broken), with: .color(Palette.metroRed),
+                style: StrokeStyle(lineWidth: width, lineCap: .butt, dash: [max(3, width * 2), max(2, width * 1.5)])
+            )
+        }
+        stops([draft.station] + draft.stops, opacity: opacity)
+    }
+
     private static func drawTransfers(_ lines: LineMap, projection: some MapProjection, in context: GraphicsContext) {
         let inner = lineWidth(projection) * 1.2
         for group in lines.transfers {

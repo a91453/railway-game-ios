@@ -133,6 +133,31 @@ extension PlayerCommand {
         case upgradeStationCommerce(StationID)
         case demolishStationCommerce(StationID)
 
+        // MARK: Buses (decision 400, 10i-5)
+        /// A bus route to a station through its stops, the farthest first.
+        case createBusRoute(StationID, stops: [BusStop], service: BusService, buses: Int)
+        /// A route's stops, service and buses, all or none (the bus tool's
+        /// edit).
+        case reviseBusRoute(BusRouteID, stops: [BusStop], service: BusService, buses: Int)
+        case setBusCount(BusRouteID, buses: Int)
+        case setBusRuns(BusRouteID, BusService)
+        case removeBusRoute(BusRouteID)
+
+        /// A bus stop's land cell.
+        public struct BusStop: Hashable, Sendable, Codable {
+            public let row: Int
+            public let column: Int
+
+            public init(_ cell: CellPosition) {
+                row = cell.row
+                column = cell.column
+            }
+
+            var cell: CellPosition {
+                CellPosition(row: row, column: column)
+            }
+        }
+
         /// A step of a train's path: an edge and the way along it.
         public struct Step: Hashable, Sendable, Codable {
             public let edge: Int
@@ -274,6 +299,13 @@ extension GameSession {
         case .buildFreightYard(let id): try world.buildFreightFacility(at: id)
         case .removeFreightYard(let id): try world.removeFreightFacility(at: id)
         case .buildStationRoad(let id): try world.buildStationRoad(at: id)
+        case .createBusRoute(let station, let stops, let service, let buses):
+            try world.createBusRoute(to: station, stops: stops.map(\.cell), service: service, buses: buses)
+        case .reviseBusRoute(let id, let stops, let service, let buses):
+            try BusRouteEdits.revise(id, stops: stops.map(\.cell), service: service, buses: buses, on: &world)
+        case .setBusCount(let id, let buses): try world.setBusCount(id, to: buses)
+        case .setBusRuns(let id, let service): try world.setBusRuns(id, to: service)
+        case .removeBusRoute(let id): try world.removeBusRoute(id)
         case .setFreightProduct(let id, let kind): try world.setFreightProduct(at: id, to: kind)
         case .setStationDepot(let id, let isDepot): try world.setStationDepot(id, to: isDepot)
 

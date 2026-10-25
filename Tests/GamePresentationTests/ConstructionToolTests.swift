@@ -31,12 +31,12 @@ final class ConstructionToolTests: XCTestCase {
 
     /// Stage F3c: the grid's track, station and remove tools are gone;
     /// the app offers every tool there is, and since decision 92 the
-    /// building tool.
+    /// building tool; decision 400 (10i-5) the bus tool.
     func testTheToolsAreSelectNetworkTrainAndBuild() {
-        XCTAssertEqual(ConstructionTool.allCases, [.select, .network, .train, .building])
+        XCTAssertEqual(ConstructionTool.allCases, [.select, .network, .train, .building, .bus])
         XCTAssertEqual(ConstructionTool.networkTools, ConstructionTool.allCases)
-        XCTAssertEqual(ConstructionTool.allCases.map { $0.title(in: .english) }, ["Select", "Network", "Train", "Buildings"])
-        XCTAssertEqual(ConstructionTool.allCases.map { $0.title(in: .traditionalChinese) }, ["選取", "路網", "列車", "建物"])
+        XCTAssertEqual(ConstructionTool.allCases.map { $0.title(in: .english) }, ["Select", "Network", "Train", "Buildings", "Buses"])
+        XCTAssertEqual(ConstructionTool.allCases.map { $0.title(in: .traditionalChinese) }, ["選取", "路網", "列車", "建物", "公車"])
     }
 
     func testCompassHeadingsAreNamed() {

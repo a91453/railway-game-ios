@@ -132,6 +132,7 @@ public enum TutorialTarget: String, CaseIterable, Hashable, Sendable {
         case .network: self = .networkTool
         case .train: self = .trainTool
         case .building: self = .buildingTool
+        case .bus: return nil
         }
     }
 }

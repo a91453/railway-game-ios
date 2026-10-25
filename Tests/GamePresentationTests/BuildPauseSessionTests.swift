@@ -16,7 +16,7 @@ final class BuildPauseSessionTests: XCTestCase {
     }
 
     func testTheBuildingToolsPauseAndPausesGameSaysWhich() {
-        XCTAssertEqual(ConstructionTool.allCases.filter(\.pausesGame), [.network, .building])
+        XCTAssertEqual(ConstructionTool.allCases.filter(\.pausesGame), [.network, .building, .bus])
     }
 
     func testChoosingTheNetworkToolPausesAndLeavingItResumesAtTheSameSpeed() throws {

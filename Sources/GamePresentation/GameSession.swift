@@ -449,6 +449,16 @@ public final class GameSession {
     // The network tool (Stage C1): drafts only, read through GameCore when
     // used (see NetworkSession.swift).
 
+    /// The bus route the bus tool draws (decision 400, 10i-5;
+    /// BusRouteEditor.swift), and what GameCore would make of it.
+    public internal(set) var busDraft = BusRouteDraft()
+    public internal(set) var busPreview: BusRoutePreview?
+    /// The drawn route's way along the roads, from the station out.
+    public internal(set) var busDraftPath: [PlanPoint] = []
+    /// Each bus route's way on the map, kept for the stops and station it
+    /// was worked out for.
+    @ObservationIgnored var busPathMemo: [BusRouteID: (stops: [CellPosition], station: PlanPoint, points: [PlanPoint])] = [:]
+
     /// What a tap does with the network tool.
     public internal(set) var networkMode: NetworkToolMode = .build
     /// The ends picked for the next stretch of track: an existing node, or
@@ -1122,6 +1132,7 @@ public final class GameSession {
     public func selectTool(_ newTool: ConstructionTool) {
         guard newTool != tool else { return }
         tool = newTool
+        clearBusDraft()
         buildingSite = nil
         saleCandidate = nil
         endChoosingMapTile()
@@ -2644,7 +2655,7 @@ public final class GameSession {
     public func applyTool() {
         guard selectedPoint != nil else { return }
         switch tool {
-        case .select, .network, .building:
+        case .select, .network, .building, .bus:
             return
         case .train:
             // The selected station is where an unplaced train goes, or

@@ -307,7 +307,102 @@ private struct ToolOptions: View {
             TrainControls(session: session)
         case .building:
             BuildingControls(session: session)
+        case .bus:
+            BusControls(session: session)
         }
+    }
+}
+
+/// The bus tool (decision 400, 10i-5): a tap picks the station a route
+/// feeds, each next tap a stop on a road; the headway and buses, and what
+/// GameCore would make of the route (``BusRoutePreview``). The action
+/// button, or the map's ✓, opens it.
+private struct BusControls: View {
+    let session: GameSession
+
+    var body: some View {
+        let language = session.language
+        let draft = session.busDraft
+        VStack(alignment: .leading, spacing: 8) {
+            if let id = draft.route {
+                Text(verbatim: language.text("Changing \(BusRouteText.name(id, in: language))", "修改\(BusRouteText.name(id, in: language))"))
+                    .font(.footnote.weight(.semibold))
+            }
+            Label {
+                Text(verbatim: hint)
+            } icon: {
+                Image(systemName: "hand.tap")
+            }
+            .font(.footnote)
+            .foregroundStyle(Theme.textSecondary)
+            .accessibilityIdentifier("bus.hint")
+            if draft.station != nil {
+                Picker(selection: Binding(get: { session.busDraft.headway }, set: { session.setBusDraftHeadway($0) })) {
+                    ForEach(headways, id: \.self) { minutes in
+                        Text(verbatim: language.text("\(minutes) min", "\(minutes) 分")).tag(minutes)
+                    }
+                } label: {
+                    Text(verbatim: language.text("A bus every", "班距"))
+                }
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("bus.headway")
+                Stepper(value: Binding(get: { session.busDraft.buses }, set: { session.setBusDraftBuses($0) }), in: 1...BusRoute.maximumBuses) {
+                    Text(verbatim: language.text("Buses: \(draft.buses)", "公車：\(draft.buses) 輛"))
+                        .font(.subheadline)
+                        .monospacedDigit()
+                }
+                .accessibilityIdentifier("bus.count")
+            }
+            if let preview = session.busPreview {
+                ForEach(Array(preview.lines(for: draft, in: language).enumerated()), id: \.offset) { _, line in
+                    Text(verbatim: line)
+                        .font(.footnote)
+                        .monospacedDigit()
+                }
+                if let problem = preview.problem {
+                    Text(verbatim: problem)
+                        .font(.footnote)
+                        .foregroundStyle(Theme.error)
+                        .accessibilityIdentifier("bus.problem")
+                }
+            }
+            if draft.station != nil {
+                Button {
+                    session.removeLastBusStop()
+                } label: {
+                    Label {
+                        Text(verbatim: draft.stops.isEmpty
+                             ? language.text("Pick another station", "換一座車站")
+                             : language.text("Take back the last stop", "收回最後一個站牌"))
+                    } icon: {
+                        Image(systemName: "arrow.uturn.backward")
+                    }
+                    .font(.footnote)
+                }
+                .disabled(draft.stops.isEmpty && draft.route != nil)
+                .accessibilityIdentifier("bus.undoStop")
+            }
+        }
+    }
+
+    /// The headways offered, with the route's own when it is none of them.
+    private var headways: [Int64] {
+        let own = session.busDraft.headway
+        return BusRouteDraft.headwayChoices.contains(own) ? BusRouteDraft.headwayChoices : (BusRouteDraft.headwayChoices + [own]).sorted()
+    }
+
+    private var hint: String {
+        let language = session.language
+        guard let id = session.busDraft.station, let station = session.world.station(id: id) else {
+            return language.text(
+                "Tap the station the bus route feeds. People beyond walking distance ride it to your trains.",
+                "點公車路線要接的車站。走路到不了車站的人會搭它來坐你的車。"
+            )
+        }
+        return language.text(
+            "Tap roads for its stops, out from \(station.name). Tap a stop again to take it away.",
+            "從\(station.name)往外，點路面放站牌。再點一次站牌就拿掉。"
+        )
     }
 }
 
@@ -633,6 +728,7 @@ private struct ActionButton: View {
     }
 
     private var isReady: Bool {
+        if session.tool == .bus { return session.busPreview?.canOpen ?? false }
         if session.tool == .building {
             if session.buildingMode == .sell { return session.salePreview != nil }
             return session.buildingPreview.map { $0.problem == nil } ?? false
@@ -647,6 +743,10 @@ private struct ActionButton: View {
     }
 
     private func act() {
+        if session.tool == .bus {
+            session.confirmBusRoute()
+            return
+        }
         if session.tool == .building {
             if session.buildingMode == .sell {
                 session.confirmSale()
@@ -675,6 +775,7 @@ private struct ActionButton: View {
         case .building:
             if session.buildingMode == .sell { return session.language.text("Tap one of your buildings first.", "請先點選自己的建物。") }
             return String(localized: "Tap the map where it goes first.")
+        case .bus: return session.language.text("Tap a station, then roads for the stops.", "先點車站，再點路面放站牌。")
         case .select, .train: return String(localized: "Select a station on the map first.")
         }
     }
@@ -712,6 +813,12 @@ private struct ActionButton: View {
                 guard let cost = session.networkDepotPreview?.cost else { return session.language.text("Lay Depot Sidings", "鋪機廠停車線") }
                 return session.language.text("Lay Depot Sidings · \(cost.moneyText)", "鋪機廠停車線 · \(cost.moneyText)")
             }
+        case .bus:
+            // Decision 400, 10i-5: the route drawn, or the edited one's stops.
+            let language = session.language
+            let what = session.busDraft.route == nil ? language.text("Open Bus Route", "開公車路線") : language.text("Save Bus Route", "儲存公車路線")
+            guard let price = session.busPreview?.price, price > .zero else { return what }
+            return "\(what) · \(price.moneyText)"
         case .train:
             // Placing and sending both act on the selected train.
             guard let train = session.selectedTrain else { return nil }
@@ -854,6 +961,7 @@ extension ConstructionTool {
         case .network: "point.topleft.down.curvedto.point.bottomright.up"
         case .train: "train.side.front.car"
         case .building: "building.2"
+        case .bus: "bus.fill"
         }
     }
 
@@ -863,6 +971,7 @@ extension ConstructionTool {
         case .network: String(localized: "Track network tool")
         case .train: String(localized: "Train tool")
         case .building: String(localized: "Building tool")
+        case .bus: String(localized: "Bus tool")
         }
     }
 }
