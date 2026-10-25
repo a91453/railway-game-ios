@@ -19,7 +19,7 @@ record = {
     'recipe': 'Sources/GamePresentation/Map3DTEMU1000.swift',
     'recipe_sha256': sha(source / 'Sources/GamePresentation/Map3DTEMU1000.swift'),
     'rebuild': 'tools/temu1000/README.md',
-    'supplied_reference': 'five initial inline images and later front/side detail crops; visually inspected; not stored as local files',
+    'supplied_reference': 'five initial inline images, later front/side detail crops and a TED/TEM/TEP side screenshot; visually inspected; not stored as local files',
     'other_source': 'project Map3DPalette / Map3DTrainStyle.glass / project display scale',
     'private_reference_use': 'existing commuter cab used for style comparison; no mesh/image/texture copied',
 }

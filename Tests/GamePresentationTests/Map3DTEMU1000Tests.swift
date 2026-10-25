@@ -96,4 +96,47 @@ final class Map3DTEMU1000Tests: XCTestCase {
             },"paint on the native front must mirror across the centreline")
         }
     }
+
+    func testPassengerWindowsAreIndividualAndWheelsStaySmallOnRail() {
+        for unit in Map3DTEMU1000.Unit.allCases {
+            let model = Map3DTEMU1000.model(unit)
+            let paneColours = Set([0.70,0.80,0.86,0.92,1.0].map {
+                Map3DColor.shaded(Map3DTEMU1000.passengerGlass,$0)
+            })
+            let panes = model.vertices.filter { paneColours.contains($0.color) &&
+                                                 abs($0.y) > 1.43 && $0.z > 1.8 && $0.z < 2.6 }
+            let paneEdges = Set(panes.map { Int(($0.x*100).rounded()) })
+            XCTAssertGreaterThan(paneEdges.count, 16,
+                                 "the side must show separate passenger panes, not a solid black band")
+            XCTAssertTrue(panes.contains { $0.y > 1.43 })
+            XCTAssertTrue(panes.contains { $0.y < -1.43 })
+            for axle: Float in [-9.31,-7.25,7.25,9.31] {
+                let wheel = model.vertices.filter { $0.color == Map3DTEMU1000.ink &&
+                    abs($0.x-axle) < 0.35 && abs($0.y) > 1.12 && $0.z < 0.85 }
+                XCTAssertFalse(wheel.isEmpty)
+                XCTAssertEqual(wheel.map(\.z).min() ?? -1,0,accuracy:0.012,
+                               "each tyre bottom must remain on the rail plane")
+                XCTAssertLessThan(wheel.map(\.z).max() ?? 10,0.72,
+                                  "the wheel disc should not dominate the lower car")
+            }
+        }
+    }
+
+    func testRoofGreyStaysAboveCentredWhiteCabFace() {
+        for unit in [Map3DTEMU1000.Unit.leading, .trailing] {
+            let model = Map3DTEMU1000.model(unit)
+            let forward: Float = unit == .leading ? 1 : -1
+            let roof = model.vertices.filter { $0.color == Map3DPalette.roof && $0.x*forward > 9 }
+            XCTAssertFalse(roof.isEmpty)
+            XCTAssertGreaterThan(roof.map(\.z).min() ?? 0,2.85,
+                                 "grey roof paint must not descend around one side of the front window")
+            let left = roof.filter { $0.y > 0.01 }
+            let right = roof.filter { $0.y < -0.01 }
+            XCTAssertTrue(left.allSatisfy { vertex in
+                right.contains { abs($0.x-vertex.x) < 0.003 &&
+                                 abs($0.y+vertex.y) < 0.003 &&
+                                 abs($0.z-vertex.z) < 0.003 }
+            },"grey roof boundary must be mirrored across the cab centreline")
+        }
+    }
 }

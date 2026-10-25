@@ -48,7 +48,12 @@ try {
   const out={};for(const view of ['isometric','left']){renderer.render(view,{width:1200,height:720});out[view]=renderer.png();}return out;
  },cab.native);
  for(const [view,data] of Object.entries(details))writeFileSync(resolve(root,'previews/cab-detail-'+view+'.png'),Buffer.from(data.split(',')[1],'base64'));
- await sheet('overview.png','<h1>TEMU1000｜端車曲面與八節編組</h1><div class="row"><div><img src="previews/cab-detail-isometric.png"><p>TED 車頭｜近看</p></div><div><img src="'+cab.views.front+'"><p>正面</p></div></div><div class="row"><div><img src="previews/cab-detail-left.png"><p>側面鼻端｜近看</p></div><div><img src="'+cab.views.left+'"><p>端車全側面</p></div></div><div class="row"><div><img src="'+cab.views.top+'"><p>俯視</p></div><div><img src="previews/'+all.id+'-hero.png"><p>八節完整編組</p></div></div>');
+ const passengerDetail=await page.evaluate(async native=>{
+  renderer.load(await(await fetch(native)).arrayBuffer());renderer.centre=[0,0,1.85];renderer.extent=[10.0,1.55,2.0];
+  renderer.render('left',{width:1200,height:420});return renderer.png();
+ },cab.native);
+ writeFileSync(resolve(root,'previews/passenger-detail-left.png'),Buffer.from(passengerDetail.split(',')[1],'base64'));
+ await sheet('overview.png','<h1>TEMU1000｜車頭、分格側窗與輪組</h1><div class="row"><div><img src="previews/cab-detail-isometric.png"><p>TED 車頭｜近看</p></div><div><img src="'+cab.views.front+'"><p>正面</p></div></div><div class="row"><div><img src="previews/passenger-detail-left.png"><p>側窗與輪組｜近看</p></div></div><div class="row"><div><img src="previews/cab-detail-left.png"><p>鼻端側面｜近看</p></div><div><img src="'+cab.views.left+'"><p>端車全側面</p></div></div><div class="row"><div><img src="'+cab.views.top+'"><p>俯視</p></div><div><img src="previews/'+all.id+'-hero.png"><p>八節完整編組</p></div></div>');
  await sheet('directions.png','<h1>同一組模型的七向透明圖</h1><div class="row">'+manifest.directions.map(v=>'<div><img src="'+all.views[v]+'"><p>'+v+'</p></div>').join('')+'</div>');
  await sheet('units.png','<h1>獨立單元｜前端・後端</h1><div class="row">'+manifest.models.filter(m=>m.category==='section').map(m=>'<div><img src="previews/'+m.id+'-hero.png"><p>'+m.id+' · '+m.triangles+' 三角形</p></div>').join('')+'</div>');
  const comparison=manifest.models.find(m=>m.category==='comparison');

@@ -8,6 +8,7 @@ public enum Map3DTEMU1000 {
     public static let shell = Map3DPalette.tileWhite
     public static let band = Map3DPalette.gymGreen
     public static let glass = Map3DTrainStyle.glass
+    public static let passengerGlass = Map3DColor.rgb(0x405560)
     public static let ink = Map3DColor.shaded(Map3DPalette.playerRim, 0.75)
 
     public static func model(_ unit: Unit) -> Map3DModelPack.Model {
@@ -77,12 +78,21 @@ extension StationKitBuilder {
             for i in section.indices {
                 let j = (i+1) % section.count
                 let c: UInt32
+                let roofSection = min(rings[k][7].y,rings[k+1][7].y) > 2.90
                 if (i == 2 || i == 12) { c = white }
                 else if i == 3 || i == 11 { c = white }
-                else if i >= 6 && i <= 9 { c = roof }
+                else if i >= 6 && i <= 9 && roofSection { c = roof }
                 else { c = white }
-                face([rings[k][i],rings[k][j],rings[k+1][j]],inside:centre,color:c)
-                face([rings[k][i],rings[k+1][j],rings[k+1][i]],inside:centre,color:c)
+                if nose != 0 && i < 7 {
+                    // Opposite flanks use mirrored diagonals. Splitting the
+                    // non-planar cab quads the same way on both sides made the
+                    // pale front fascia appear offset in a head-on render.
+                    face([rings[k][i],rings[k][j],rings[k+1][i]],inside:centre,color:c)
+                    face([rings[k][j],rings[k+1][j],rings[k+1][i]],inside:centre,color:c)
+                } else {
+                    face([rings[k][i],rings[k][j],rings[k+1][j]],inside:centre,color:c)
+                    face([rings[k][i],rings[k+1][j],rings[k+1][i]],inside:centre,color:c)
+                }
             }
         }
         let capCentre = Map3DPoint(nose*12.70,1.25,0)
@@ -103,17 +113,17 @@ extension StationKitBuilder {
             box(bogie,0.49,0,3.35,2.20,0.22,ink)
             for axle: Float in [-1.03,1.03] {
                 for side: Float in [-1,1] {
-                    civicTube(Map3DPoint(bogie+axle,0.39,side*1.11),
-                              Map3DPoint(bogie+axle,0.39,side*1.28),radius:0.39,color:ink,sides:12)
-                    civicTube(Map3DPoint(bogie+axle,0.39,side*1.28),
-                              Map3DPoint(bogie+axle,0.39,side*1.30),radius:0.18,color:metal,sides:10)
+                    civicTube(Map3DPoint(bogie+axle,0.33,side*1.11),
+                              Map3DPoint(bogie+axle,0.33,side*1.28),radius:0.33,color:ink,sides:12)
+                    civicTube(Map3DPoint(bogie+axle,0.33,side*1.28),
+                              Map3DPoint(bogie+axle,0.33,side*1.30),radius:0.14,color:metal,sides:10)
                 }
             }
             for side: Float in [-1,1] { box(bogie,0.52,side*1.30,2.70,0.04,0.15,ink) }
         }
         for x: Float in [-4.9,-1.8,1.8,4.9] { box(x,0.57,0,2.10,2.08,0.36,metal) }
-        // The reference reads as one nearly unbroken dark window ribbon.
-        // Thin glazed panes sit on a solid body-backed band; doors cut it at
+        // The reference has discrete passenger windows in a dark surround.
+        // Contrasting thin glazed panes sit on a solid body-backed band; doors cut it at
         // the positions visible on the supplied TED/TEM/TEP side drawing.
         for side: Float in [-1,1] {
             let doors: [Float] = nose == 0 ? [-10.25,10.25]
@@ -122,13 +132,13 @@ extension StationKitBuilder {
             for x: Float in stride(from:-9.20,through:9.20,by:1.62) {
                 if nose != 0 && x*nose > 7.4 { continue }
                 if doors.contains(where: { abs(x-$0) < 0.95 }) { continue }
-                box(x,2.18,side*1.464,1.51,0.006,0.56,glass)
+                box(x,2.18,side*1.464,1.51,0.006,0.56,Map3DTEMU1000.passengerGlass)
             }
             for x in doors {
                 // The narrow body-colour leaf has a shallow window and a
                 // hairline edge; it does not project as an external box.
                 box(x,0.89,side*1.467,0.87,0.012,2.22,white)
-                box(x,2.18,side*1.477,0.64,0.006,0.56,glass)
+                box(x,2.18,side*1.477,0.64,0.006,0.56,Map3DTEMU1000.passengerGlass)
                 box(x+0.39,0.90,side*1.475,0.012,0.008,2.18,ink)
             }
             box(-nose*1.10,1.96,side*1.453,
