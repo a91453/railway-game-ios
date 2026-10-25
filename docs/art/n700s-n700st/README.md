@@ -23,15 +23,19 @@ N700S 保留原候選白／藏青色塊。N700ST 依作者新給的四張照片�
 
 ## 重建
 
-從公庫與私庫最新主分支 checkout，準備擁有者提供的 `inputs/` 五 GLB 與 CSV：
+從已包含前次靜態包的私庫主分支 checkout，公庫使用本 PR 的配方分支。私庫 `inputs/` 五 GLB、`source-body/` 與原 N700ST 模型要在同一個輸出目錄。首次換色前先保留真正前版模型及 A 的側／正／俯／斜視，再重建 N700ST：
 
 ```sh
 PIPELINE=/private-repo/Railway/railway-asset-pipeline-2026-10-22/n700s-native/tools
 OUT=/private-repo/Railway/n700s-n700st-2026-10-24
 PRODUCER=$(git rev-parse HEAD)
-python3 tools/n700s-n700st/build.py --pipeline "$PIPELINE" --source /private/inputs --out "$OUT" --producer-commit "$PRODUCER"
-python3 tools/n700s-n700st/rebuild_n700st.py --pipeline "$PIPELINE" --source /private/inputs --root "$OUT" --producer-commit "$PRODUCER"
-python3 "$PIPELINE/render_delivery.py" "$OUT/source-body"
+if [ ! -f "$OUT/livery-before/n700st/models/railway-n700st-a.m3dmodel" ]; then
+  mkdir -p "$OUT/livery-before/n700st/models" "$OUT/livery-before/n700st/previews/railway-n700st-a"
+  cp "$OUT/n700st/models"/railway-n700st-?.* "$OUT/livery-before/n700st/models/"
+  cp "$OUT/n700st/previews/railway-n700st-a"/{right,left,front,top,isometric}.png "$OUT/livery-before/n700st/previews/railway-n700st-a/"
+  cp "$OUT/n700st/source_record.json" "$OUT/livery-before/n700st/source_record.json"
+fi
+python3 tools/n700s-n700st/rebuild_n700st.py --pipeline "$PIPELINE" --source "$OUT/inputs" --root "$OUT" --producer-commit "$PRODUCER"
 python3 tools/n700s-n700st/finish.py --pipeline "$PIPELINE" --root "$OUT" --producer-commit "$PRODUCER" --variants n700st
 python3 tools/n700s-n700st/verify.py --pipeline "$PIPELINE" --root "$OUT"
 ```
