@@ -55,6 +55,9 @@ struct RealWorldPicker: View {
     /// What the last "Use my location" came to, so a fix's line goes once
     /// the map is moved elsewhere (``MyLocationStart/messageGoes(mapMiddleLatitude:longitude:)``).
     @State private var locationResult: MyLocationStart?
+    /// A test build's line under the button: when it was last pressed and
+    /// what that came to (``MyLocationTrace``); kept until the next press.
+    @State private var locationTrace: MyLocationTrace?
     /// How wide the map is, so a tap on the location button's corner is
     /// not also taken as a tap on the map.
     @State private var mapWidth: CGFloat = 0
@@ -183,8 +186,20 @@ struct RealWorldPicker: View {
             // Decision 335: under the search field, at the map's corner as
             // the system's maps put it.
             .overlay(alignment: .topTrailing) {
-                myLocationButton
-                    .padding(10)
+                VStack(alignment: .trailing, spacing: 6) {
+                    myLocationButton
+                    if TestBuild.isTest, let locationTrace {
+                        Text(verbatim: locationTrace.text(in: launcher.language))
+                            .font(.caption2.monospacedDigit())
+                            .foregroundStyle(Theme.textPrimary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .glassBackground(in: Capsule())
+                            .allowsHitTesting(false)
+                            .accessibilityIdentifier("realWorld.locationTrace")
+                    }
+                }
+                .padding(10)
             }
             .overlay(alignment: .bottom) {
                 if let locationMessage {
@@ -271,6 +286,10 @@ struct RealWorldPicker: View {
         isLocating = true
         locationMessage = nil
         locationResult = nil
+        if TestBuild.isTest {
+            let now = Calendar.current.dateComponents([.hour, .minute, .second], from: Date())
+            locationTrace = MyLocationTrace(hour: now.hour ?? 0, minute: now.minute ?? 0, second: now.second ?? 0)
+        }
         let locator = locator ?? OneShotLocation()
         self.locator = locator
         Task {
@@ -283,6 +302,10 @@ struct RealWorldPicker: View {
             isLocating = false
             locationMessage = result.message(in: launcher.language)
             locationResult = result
+            if TestBuild.isTest {
+                locationTrace?.outcome = Self.uiTestLocation == nil ? locator.lastOutcome ?? .locating
+                    : result == .denied ? .denied : .failed(code: 0, description: "UI test")
+            }
             if let area = result.area {
                 withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) {
                     position = Self.camera(on: Self.coordinate(of: area.middle))
