@@ -40,16 +40,29 @@ final class Map3DTEMU1000Tests: XCTestCase {
                              "front windscreen must extend down the cab")
         XCTAssertLessThan(screen.map(\.z).min() ?? 10, 2.4,
                           "the dark screen must reach the lowered nose")
+        if let top = screen.max(by: { $0.z < $1.z }),
+           let bottom = screen.min(by: { $0.z < $1.z }) {
+            let rake = (top.x-bottom.x)/(top.z-bottom.z)
+            let depth = screen.map { $0.x-rake*$0.z }
+            XCTAssertGreaterThan((depth.max() ?? 0)-(depth.min() ?? 0), 0.025,
+                                 "windscreen must bend across the cab, not form a flat billboard")
+        }
         let arc = head.vertices.filter { $0.color == Map3DTEMU1000.band && $0.x > 12.2 }
         let centreHeight = arc.filter { abs($0.y) < 0.2 }.map(\.z).min() ?? 10
         let sideHeight = arc.filter { abs($0.y) > 1.1 }.map(\.z).min() ?? 0
         XCTAssertLessThan(centreHeight + 0.3, sideHeight,
                           "front waist arc must dip below its side ends")
-        let front = head.vertices.filter { $0.x > 12.15 && $0.color == Map3DTEMU1000.shell }
+        let front = head.vertices.filter { $0.x > 12.35 && $0.color == Map3DTEMU1000.shell }
         let low = front.filter { $0.z < 0.95 }.map { abs($0.y) }.max() ?? 0
         let shoulder = front.filter { $0.z > 1.3 && $0.z < 2.2 }.map { abs($0.y) }.max() ?? 0
         XCTAssertGreaterThan(low, 0.7)
         XCTAssertLessThan(low, shoulder * 0.87, "lower nose must round inward")
+        let lowTip = front.filter { $0.z < 0.8 }.map(\.x).max() ?? 0
+        let curvedTip = front.filter { $0.z > 1.1 && $0.z < 1.5 }.map(\.x).max() ?? 0
+        XCTAssertGreaterThan(curvedTip-lowTip, 0.15,
+                             "side silhouette must end in a rounded nose, not a tall flat wall")
+        XCTAssertLessThan(front.filter { abs($0.y) < 0.5 }.map(\.z).max() ?? 10, 2.1,
+                          "the foremost cap must taper below the windshield")
     }
 
     func testMiddleHasNoCabGlassAtEnd() {

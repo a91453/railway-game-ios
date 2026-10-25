@@ -43,7 +43,12 @@ try {
  const all=manifest.models.find(m=>m.category==='formation'),html='<style>body{font:18px system-ui;color:#262c57;background:#eceef6;margin:24px}h1{font-size:28px}.row{display:flex;gap:12px}.row>div{background:white;border-radius:12px;padding:10px;flex:1;min-width:0;text-align:center}img{width:100%;object-fit:contain}</style>';
  async function sheet(name,body){await page.setContent('<meta charset="utf-8"><base href="'+address+'/">'+html+body);await page.evaluate(()=>Promise.all([...document.images].map(i=>i.decode())));await page.screenshot({path:resolve(root,'previews',name),fullPage:true});}
  const cab=manifest.models.find(m=>m.id==='temu1000-leading');
- await sheet('overview.png','<h1>TEMU1000｜修訂後端車與八節編組</h1><div class="row"><div><img src="previews/'+cab.id+'-hero.png"><p>TED 端車｜斜視</p></div><div><img src="'+cab.views.front+'"><p>正面</p></div></div><div class="row"><div><img src="'+cab.views.left+'"><p>側面</p></div><div><img src="'+cab.views.top+'"><p>俯視</p></div></div><div class="row"><div><img src="previews/'+all.id+'-hero.png"><p>八節完整編組</p></div></div>');
+ const details=await page.evaluate(async native=>{
+  renderer.load(await(await fetch(native)).arrayBuffer());renderer.centre=[10.25,0,2.0];renderer.extent=[3.15,1.55,1.95];
+  const out={};for(const view of ['isometric','left']){renderer.render(view,{width:1200,height:720});out[view]=renderer.png();}return out;
+ },cab.native);
+ for(const [view,data] of Object.entries(details))writeFileSync(resolve(root,'previews/cab-detail-'+view+'.png'),Buffer.from(data.split(',')[1],'base64'));
+ await sheet('overview.png','<h1>TEMU1000｜端車曲面與八節編組</h1><div class="row"><div><img src="previews/cab-detail-isometric.png"><p>TED 車頭｜近看</p></div><div><img src="'+cab.views.front+'"><p>正面</p></div></div><div class="row"><div><img src="previews/cab-detail-left.png"><p>側面鼻端｜近看</p></div><div><img src="'+cab.views.left+'"><p>端車全側面</p></div></div><div class="row"><div><img src="'+cab.views.top+'"><p>俯視</p></div><div><img src="previews/'+all.id+'-hero.png"><p>八節完整編組</p></div></div>');
  await sheet('directions.png','<h1>同一組模型的七向透明圖</h1><div class="row">'+manifest.directions.map(v=>'<div><img src="'+all.views[v]+'"><p>'+v+'</p></div>').join('')+'</div>');
  await sheet('units.png','<h1>獨立單元｜前端・後端</h1><div class="row">'+manifest.models.filter(m=>m.category==='section').map(m=>'<div><img src="previews/'+m.id+'-hero.png"><p>'+m.id+' · '+m.triangles+' 三角形</p></div>').join('')+'</div>');
  const comparison=manifest.models.find(m=>m.category==='comparison');

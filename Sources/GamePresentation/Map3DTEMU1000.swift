@@ -47,19 +47,30 @@ extension StationKitBuilder {
                 let t = (h - 0.83) / 2.87
                 let shoulder = max(0, 1 - (side / 1.45) * (side / 1.45))
                 let oval = 1 - noseRound * (1 - sinf(Float.pi * t))
-                return Map3DPoint(x + bulge * 4 * t * (1-t) * shoulder, bottom + t * (top-bottom), side * width * oval)
+                let forward = bulge * 4 * t * (1-t) * (0.55 + 0.45 * shoulder)
+                return Map3DPoint(x + forward, bottom + t * (top-bottom), side * width * oval)
             }
         }
         var rings = [ring(-11.75),ring(11.75)]
         if nose > 0 {
             rings = [ring(-11.75),ring(8.9),ring(9.85,width:0.98,top:3.56),
-                     ring(10.75,width:0.94,top:3.20,bottom:0.76),
-                     ring(11.55,width:0.94,top:2.75,bottom:0.65),
-                     ring(12.20,width:0.91,top:2.36,bottom:0.63,bulge:0.22,noseRound:0.22)]
+                     ring(10.25,width:0.97,top:3.46,bottom:0.82),
+                     ring(10.75,width:0.94,top:3.26,bottom:0.76),
+                     ring(11.15,width:0.94,top:3.10,bottom:0.71),
+                     ring(11.55,width:0.94,top:2.80,bottom:0.65),
+                     ring(11.90,width:0.93,top:2.55,bottom:0.64,bulge:0.12),
+                     ring(12.18,width:0.88,top:2.31,bottom:0.64,bulge:0.25),
+                     ring(12.27,width:0.87,top:2.10,bottom:0.66,bulge:0.32),
+                     ring(12.36,width:0.85,top:1.82,bottom:0.69,bulge:0.42,noseRound:0.25)]
         } else if nose < 0 {
-            rings = [ring(-12.20,width:0.91,top:2.36,bottom:0.63,bulge:-0.22,noseRound:0.22),
-                     ring(-11.55,width:0.94,top:2.75,bottom:0.65),
-                     ring(-10.75,width:0.94,top:3.20,bottom:0.76),
+            rings = [ring(-12.36,width:0.85,top:1.82,bottom:0.69,bulge:-0.42,noseRound:0.25),
+                     ring(-12.27,width:0.87,top:2.10,bottom:0.66,bulge:-0.32),
+                     ring(-12.18,width:0.88,top:2.31,bottom:0.64,bulge:-0.25),
+                     ring(-11.90,width:0.93,top:2.55,bottom:0.64,bulge:-0.12),
+                     ring(-11.55,width:0.94,top:2.80,bottom:0.65),
+                     ring(-11.15,width:0.94,top:3.10,bottom:0.71),
+                     ring(-10.75,width:0.94,top:3.26,bottom:0.76),
+                     ring(-10.25,width:0.97,top:3.46,bottom:0.82),
                      ring(-9.85,width:0.98,top:3.56),ring(-8.9),ring(11.75)]
         }
         for k in 0..<(rings.count-1) {
@@ -74,8 +85,18 @@ extension StationKitBuilder {
                 face([rings[k][i],rings[k+1][j],rings[k+1][i]],inside:centre,color:c)
             }
         }
-        face(rings[0],inside:centre,color:white)
-        face(rings[rings.count-1],inside:centre,color:white)
+        let capCentre = Map3DPoint(nose*12.70,1.25,0)
+        if nose == 0 {
+            face(rings[0],inside:centre,color:white)
+            face(rings[rings.count-1],inside:centre,color:white)
+        } else {
+            let rear = nose > 0 ? rings[0] : rings[rings.count-1]
+            let front = nose > 0 ? rings[rings.count-1] : rings[0]
+            face(rear,inside:centre,color:white)
+            for i in front.indices {
+                face([capCentre,front[i],front[(i+1)%front.count]],inside:centre,color:white)
+            }
+        }
         // Lower frame, two bogies and eight visible wheel discs; tyre bottoms z=0.
         box(0,0.75,0,22.7,2.20,0.19,ink)
         for bogie: Float in [-8.28,8.28] {
@@ -118,7 +139,10 @@ extension StationKitBuilder {
             // stripe. The surface positions come from the actual end rings.
             let stations: [(Float,Float,Float)] = [(7.65,1.45,1.96),(8.90,1.45,1.96),
                                                     (9.85,1.421,1.79),(10.75,1.363,1.63),
-                                                    (11.55,1.363,1.51),(12.20,1.277,1.44)]
+                                                    (11.55,1.363,1.51),(11.97,1.35,1.49),
+                                                    (12.32,1.28,1.46),(12.45,1.25,1.45),
+                                                    (12.53,1.22,1.445),
+                                                    (12.60,1.17,1.44)]
             for side: Float in [-1,1] {
                 for i in 0..<(stations.count-1) {
                     let a = stations[i], b = stations[i+1]
@@ -127,20 +151,35 @@ extension StationKitBuilder {
                           Map3DPoint(nose*b.0,b.2+0.035,z1),Map3DPoint(nose*b.0,b.2-0.035,z1)],inside:centre,color:green)
                 }
             }
-            // The end ring bulges in X at mid-height; the stripe follows it
-            // across the frontal nose instead of cutting a flat chord.
-            for i in 0..<16 {
-                func point(_ z: Float,_ y: Float) -> Map3DPoint {
-                    let t = (y-0.63)/(2.36-0.63)
-                    let oval = 1 - 0.22*(1-sinf(Float.pi*t))
-                    let side = z/(0.91*oval)
-                    let shoulder = max(0,1-(side/1.45)*(side/1.45))
-                    return Map3DPoint(nose*(12.20+0.22*4*t*(1-t)*shoulder+0.012),y,z)
+            // The white nose is a triangular fan about a forward centre.
+            // Interpolate on those same real facets for the crossing stripe.
+            let cap = nose > 0 ? rings[rings.count-1] : rings[0]
+            func capSurface(_ y: Float,_ z: Float) -> Map3DPoint {
+                for i in cap.indices {
+                    let b = cap[i],c = cap[(i+1)%cap.count]
+                    let by = b.y-capCentre.y,bz = b.z-capCentre.z
+                    let cy = c.y-capCentre.y,cz = c.z-capCentre.z
+                    let det = by*cz-bz*cy
+                    if abs(det)<0.00001 { continue }
+                    let py = y-capCentre.y,pz = z-capCentre.z
+                    let u = (py*cz-pz*cy)/det,v = (by*pz-bz*py)/det
+                    if u >= -0.0001 && v >= -0.0001 && u+v <= 1.0001 {
+                        return Map3DPoint(capCentre.x*(1-u-v)+b.x*u+c.x*v+nose*0.035,y,z)
+                    }
                 }
-                let z0 = -1.27 + Float(i)*2.54/16, z1 = -1.27 + Float(i+1)*2.54/16
-                func arc(_ z: Float) -> Float { 0.98 + 0.46*(z/1.27)*(z/1.27) }
-                face([point(z0,arc(z0)),point(z0,arc(z0)+0.07),
-                      point(z1,arc(z1)+0.07),point(z1,arc(z1))],inside:centre,color:green)
+                preconditionFailure("front stripe left the TEMU1000 nose surface at \(y), \(z)")
+            }
+            for i in 0..<16 {
+                let z0 = -1.17 + Float(i)*2.34/16, z1 = -1.17 + Float(i+1)*2.34/16
+                func arc(_ z: Float) -> Float { 0.98 + 0.46*(z/1.17)*(z/1.17) }
+                func upperZ(_ z: Float) -> Float { z*1.12/1.17 }
+                face([capSurface(arc(z0),z0),capSurface(arc(z0)+0.07,upperZ(z0)),
+                      capSurface(arc(z1)+0.07,upperZ(z1)),capSurface(arc(z1),z1)],inside:centre,color:green)
+            }
+            for side: Float in [-1,1] {
+                let edge = side*1.184
+                face([Map3DPoint(nose*12.60,1.405,edge),Map3DPoint(nose*12.60,1.475,edge),
+                      capSurface(1.51,side*1.12),capSurface(1.44,side*1.17)],inside:centre,color:green)
             }
             // Cab side glass narrows into the lowered windshield rake.
             for side: Float in [-1,1] {
@@ -152,16 +191,27 @@ extension StationKitBuilder {
                 let cabPane = cab.map { Map3DPoint($0.x,$0.y-0.025,$0.z+side*0.012) }
                 face(cabPane,inside:centre,color:glass)
             }
-            // Broad windscreen across the cab shoulders, supported by the
-            // raked shell. The photo shows a large windshield and short,
-            // rounded white face below it.
-            let sx = nose*10.70
-            let panel = [Map3DPoint(sx+nose*0.20,3.16,-1.13),
-                         Map3DPoint(sx+nose*0.20,3.16,1.13),
-                         Map3DPoint(sx+nose*1.66,2.30,1.04),
-                         Map3DPoint(sx+nose*1.66,2.30,-1.04)]
-            face(panel,inside:centre,color:ink)
-            let pane = panel.map { Map3DPoint($0.x+nose*0.018,$0.y+0.027,$0.z*0.96) }
+            // The cab screen follows the rake and bends across the width.
+            // Chamfered corners and a short closed rim keep the glazing part
+            // of the nose instead of a flat panel hovering over the shell.
+            func screenPoint(_ y: Float, _ z: Float, offset: Float = 0) -> Map3DPoint {
+                let t = (3.20-y)/0.93
+                let transverse = 0.24 * max(0,1-(z/1.15)*(z/1.15))
+                return Map3DPoint(nose*(10.94+1.25*t+transverse+offset),y,z)
+            }
+            let outline: [(Float,Float)] = [(3.16,-1.00),(3.19,-0.88),(3.19,0.88),
+                                            (3.16,1.00),(3.05,1.08),(2.48,1.08),
+                                            (2.34,0.98),(2.31,0),(2.34,-0.98),
+                                            (2.48,-1.08),(3.05,-1.08)]
+            let frame = outline.map { screenPoint($0.0,$0.1,offset:0.025) }
+            let backing = outline.map { screenPoint($0.0,$0.1,offset:-0.035) }
+            face(frame,inside:centre,color:ink)
+            face(backing,inside:centre,color:ink)
+            for i in outline.indices {
+                let j = (i+1)%outline.count
+                face([frame[i],frame[j],backing[j],backing[i]],inside:centre,color:ink)
+            }
+            let pane = outline.map { y,z in screenPoint(2.74+(y-2.74)*0.91,z*0.94,offset:0.030) }
             face(pane,inside:centre,color:glass)
             // Oval lamp pods have a shallow closed backing sunk into the
             // white nose. Their lenses sit above the wraparound stripe.
@@ -169,19 +219,19 @@ extension StationKitBuilder {
                 func oval(_ x: Float, _ yr: Float, _ zr: Float) -> [Map3DPoint] {
                     (0..<12).map { i in
                         let a = 2 * Float.pi * Float(i) / 12
-                        return Map3DPoint(x, 1.87 + yr*sinf(a)
+                        return Map3DPoint(x, 2.09 + yr*sinf(a)
                                                + side*0.04*cosf(a), side*0.79 + zr*cosf(a))
                     }
                 }
-                let back = oval(nose*12.28,0.11,0.21)
-                let rim = oval(nose*12.36,0.11,0.21)
+                let back = oval(nose*12.34,0.11,0.21)
+                let rim = oval(nose*12.42,0.11,0.21)
                 face(back,inside:centre,color:ink)
                 face(rim,inside:centre,color:ink)
                 for i in 0..<12 {
                     let j = (i+1)%12
                     face([back[i],back[j],rim[j],rim[i]],inside:centre,color:ink)
                 }
-                face(oval(nose*12.37,0.065,0.15),inside:centre,color:Map3DPalette.tileWhite)
+                face(oval(nose*12.43,0.065,0.15),inside:centre,color:Map3DPalette.tileWhite)
             }
             box(nose*12.10,0.48,0,0.20,0.34,0.17,ink)
         } else {
