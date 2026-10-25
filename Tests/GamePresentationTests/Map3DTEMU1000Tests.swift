@@ -63,6 +63,9 @@ final class Map3DTEMU1000Tests: XCTestCase {
                              "side silhouette must end in a rounded nose, not a tall flat wall")
         XCTAssertLessThan(front.filter { abs($0.y) < 0.5 }.map(\.z).max() ?? 10, 2.1,
                           "the foremost cap must taper below the windshield")
+        let curvedCap = front.filter { $0.x > 12.4 && $0.z < 1.8 && abs($0.y) < 1.2 }
+        XCTAssertGreaterThan(curvedCap.count,450,
+                             "the close-view nose must use small curved facets, not a single large centre fan")
     }
 
     func testMiddleHasNoCabGlassAtEnd() {
@@ -82,6 +85,8 @@ final class Map3DTEMU1000Tests: XCTestCase {
             XCTAssertGreaterThan(lamps.count, 50,"both upper lenses must be part of the native cab")
             XCTAssertTrue(lamps.contains { $0.y < -0.08 })
             XCTAssertTrue(lamps.contains { $0.y > 0.08 })
+            XCTAssertLessThan(lamps.map { abs($0.y) }.max() ?? 1,0.18,
+                              "the central lamp must stay narrow relative to the windscreen")
             let nose: Float = unit == .leading ? 1 : -1
             let paint = model.vertices.filter {
                 $0.color == Map3DTEMU1000.band && $0.x*nose > 12.2 && abs($0.y) < 1.30
@@ -122,21 +127,25 @@ final class Map3DTEMU1000Tests: XCTestCase {
         }
     }
 
-    func testRoofGreyStaysAboveCentredWhiteCabFace() {
+    func testWhiteCabRoofHasNoGreyNosePatch() {
         for unit in [Map3DTEMU1000.Unit.leading, .trailing] {
             let model = Map3DTEMU1000.model(unit)
             let forward: Float = unit == .leading ? 1 : -1
-            let roof = model.vertices.filter { $0.color == Map3DPalette.roof && $0.x*forward > 9 }
-            XCTAssertFalse(roof.isEmpty)
-            XCTAssertGreaterThan(roof.map(\.z).min() ?? 0,2.85,
-                                 "grey roof paint must not descend around one side of the front window")
-            let left = roof.filter { $0.y > 0.01 }
-            let right = roof.filter { $0.y < -0.01 }
+            let grey = model.vertices.filter { $0.color == Map3DPalette.roof }
+            XCTAssertFalse(grey.isEmpty,"HVAC covers should retain their grey material")
+            XCTAssertFalse(grey.contains { $0.x*forward > 9 },
+                           "the native cab shell must not have a grey nose or roof patch")
+            let whiteRoof = model.vertices.filter {
+                $0.color == Map3DTEMU1000.shell && $0.x*forward > 9 && $0.z > 3.0
+            }
+            XCTAssertGreaterThan(whiteRoof.count,40)
+            let left = whiteRoof.filter { $0.y > 0.01 }
+            let right = whiteRoof.filter { $0.y < -0.01 }
             XCTAssertTrue(left.allSatisfy { vertex in
                 right.contains { abs($0.x-vertex.x) < 0.003 &&
                                  abs($0.y+vertex.y) < 0.003 &&
                                  abs($0.z-vertex.z) < 0.003 }
-            },"grey roof boundary must be mirrored across the cab centreline")
+            },"white cab roof must mirror across the centreline")
         }
     }
 }

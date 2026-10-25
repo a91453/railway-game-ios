@@ -77,12 +77,10 @@ extension StationKitBuilder {
         for k in 0..<(rings.count-1) {
             for i in section.indices {
                 let j = (i+1) % section.count
-                let c: UInt32
-                let roofSection = min(rings[k][7].y,rings[k+1][7].y) > 2.90
-                if (i == 2 || i == 12) { c = white }
-                else if i == 3 || i == 11 { c = white }
-                else if i >= 6 && i <= 9 && roofSection { c = roof }
-                else { c = white }
+                // The supplied front and side references show a continuous
+                // white shell over the cab and passenger roof. Keep grey on
+                // supported HVAC housings, never as a patch on the nose.
+                let c = white
                 if nose != 0 && i < 7 {
                     // Opposite flanks use mirrored diagonals. Splitting the
                     // non-planar cab quads the same way on both sides made the
@@ -96,6 +94,17 @@ extension StationKitBuilder {
             }
         }
         let capCentre = Map3DPoint(nose*12.70,1.25,0)
+        let capSteps = 7
+        func noseCapRows(_ front: [Map3DPoint]) -> [[Map3DPoint]] {
+            (0..<capSteps).map { row in
+                let u = Float(row)/Float(capSteps)
+                let eased = 1-(1-u)*(1-u)
+                return front.map { p in
+                    Map3DPoint(p.x+(capCentre.x-p.x)*eased+nose*0.025*sinf(Float.pi*u),
+                               p.y+(capCentre.y-p.y)*u,p.z*(1-u))
+                }
+            }
+        }
         if nose == 0 {
             face(rings[0],inside:centre,color:white)
             face(rings[rings.count-1],inside:centre,color:white)
@@ -103,8 +112,26 @@ extension StationKitBuilder {
             let rear = nose > 0 ? rings[0] : rings[rings.count-1]
             let front = nose > 0 ? rings[rings.count-1] : rings[0]
             face(rear,inside:centre,color:white)
+            // Several shallow concentric rows carry the face into its short
+            // forward tip. A single centre fan made large flat triangles
+            // across the nose in both the front and oblique close views.
+            let capRows = noseCapRows(front)
+            for row in 0..<(capSteps-1) {
+                for i in front.indices {
+                    let j = (i+1)%front.count
+                    let a=capRows[row][i],b=capRows[row][j]
+                    let c=capRows[row+1][j],d=capRows[row+1][i]
+                    if i < 7 {
+                        face([a,b,d],inside:centre,color:white)
+                        face([b,c,d],inside:centre,color:white)
+                    } else {
+                        face([a,b,c],inside:centre,color:white)
+                        face([a,c,d],inside:centre,color:white)
+                    }
+                }
+            }
             for i in front.indices {
-                face([capCentre,front[i],front[(i+1)%front.count]],inside:centre,color:white)
+                face([capRows[capSteps-1][i],capRows[capSteps-1][(i+1)%front.count],capCentre],inside:centre,color:white)
             }
         }
         // Lower frame, two bogies and eight visible wheel discs; tyre bottoms z=0.
@@ -214,20 +241,38 @@ extension StationKitBuilder {
                     }
                 }
             }
-            // The white nose is a triangular fan about a forward centre.
-            // Interpolate on those same real facets for the crossing stripe.
+            // Interpolate on the exact curved cap facets for the crossing stripe.
             let cap = nose > 0 ? rings[rings.count-1] : rings[0]
-            func capSurface(_ y: Float,_ z: Float) -> Map3DPoint {
+            let capRows = noseCapRows(cap)
+            var capFacets: [[Map3DPoint]] = []
+            for row in 0..<(capSteps-1) {
                 for i in cap.indices {
-                    let b = cap[i],c = cap[(i+1)%cap.count]
-                    let by = b.y-capCentre.y,bz = b.z-capCentre.z
-                    let cy = c.y-capCentre.y,cz = c.z-capCentre.z
+                    let j = (i+1)%cap.count
+                    let a=capRows[row][i],b=capRows[row][j]
+                    let c=capRows[row+1][j],d=capRows[row+1][i]
+                    if i < 7 {
+                        capFacets.append([a,b,d])
+                        capFacets.append([b,c,d])
+                    } else {
+                        capFacets.append([a,b,c])
+                        capFacets.append([a,c,d])
+                    }
+                }
+            }
+            for i in cap.indices {
+                capFacets.append([capRows[capSteps-1][i],capRows[capSteps-1][(i+1)%cap.count],capCentre])
+            }
+            func capSurface(_ y: Float,_ z: Float) -> Map3DPoint {
+                for triangle in capFacets {
+                    let a = triangle[0],b = triangle[1],c = triangle[2]
+                    let by = b.y-a.y,bz = b.z-a.z
+                    let cy = c.y-a.y,cz = c.z-a.z
                     let det = by*cz-bz*cy
                     if abs(det)<0.00001 { continue }
-                    let py = y-capCentre.y,pz = z-capCentre.z
+                    let py = y-a.y,pz = z-a.z
                     let u = (py*cz-pz*cy)/det,v = (by*pz-bz*py)/det
                     if u >= -0.0001 && v >= -0.0001 && u+v <= 1.0001 {
-                        return Map3DPoint(capCentre.x*(1-u-v)+b.x*u+c.x*v+nose*0.035,y,z)
+                        return Map3DPoint(a.x*(1-u-v)+b.x*u+c.x*v+nose*0.035,y,z)
                     }
                 }
                 preconditionFailure("front stripe left the TEMU1000 nose surface at \(y), \(z)")
@@ -283,18 +328,18 @@ extension StationKitBuilder {
             // The twin upper marker lamps share one roof-backed, closed pod.
             // Its rear edge intersects the solid roof, while its lower front
             // edge overlaps the screen rim rather than hovering above it.
-            let lampRear = [Map3DPoint(nose*10.70,3.12,-0.30),
-                            Map3DPoint(nose*10.70,3.23,-0.30),
-                            Map3DPoint(nose*10.70,3.27,-0.24),
-                            Map3DPoint(nose*10.70,3.27,0.24),
-                            Map3DPoint(nose*10.70,3.23,0.30),
-                            Map3DPoint(nose*10.70,3.12,0.30)]
-            let lampFront = [Map3DPoint(nose*11.34,3.10,-0.30),
-                             Map3DPoint(nose*11.34,3.36,-0.30),
-                             Map3DPoint(nose*11.34,3.41,-0.24),
-                             Map3DPoint(nose*11.34,3.41,0.24),
-                             Map3DPoint(nose*11.34,3.36,0.30),
-                             Map3DPoint(nose*11.34,3.10,0.30)]
+            let lampRear = [Map3DPoint(nose*10.70,3.12,-0.21),
+                            Map3DPoint(nose*10.70,3.23,-0.21),
+                            Map3DPoint(nose*10.70,3.27,-0.15),
+                            Map3DPoint(nose*10.70,3.27,0.15),
+                            Map3DPoint(nose*10.70,3.23,0.21),
+                            Map3DPoint(nose*10.70,3.12,0.21)]
+            let lampFront = [Map3DPoint(nose*11.30,3.10,-0.21),
+                             Map3DPoint(nose*11.30,3.36,-0.21),
+                             Map3DPoint(nose*11.30,3.41,-0.15),
+                             Map3DPoint(nose*11.30,3.41,0.15),
+                             Map3DPoint(nose*11.30,3.36,0.21),
+                             Map3DPoint(nose*11.30,3.10,0.21)]
             face(lampRear,inside:centre,color:ink)
             face(lampFront,inside:centre,color:ink)
             for i in lampFront.indices {
@@ -302,9 +347,9 @@ extension StationKitBuilder {
                 face([lampRear[i],lampRear[j],lampFront[j],lampFront[i]],inside:centre,color:ink)
             }
             for side: Float in [-1,1] {
-                civicTube(Map3DPoint(nose*11.345,3.27,side*0.135),
-                          Map3DPoint(nose*11.37,3.27,side*0.135),
-                          radius:0.073,color:Map3DStreetModel.headlamp,sides:12)
+                civicTube(Map3DPoint(nose*11.305,3.27,side*0.105),
+                          Map3DPoint(nose*11.33,3.27,side*0.105),
+                          radius:0.055,color:Map3DStreetModel.headlamp,sides:12)
             }
             // Oval lamp pods have a shallow closed backing sunk into the
             // white nose. Their lenses sit above the wraparound stripe.
