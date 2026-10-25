@@ -331,7 +331,7 @@
 - 開著的 PR 與做中的 session（都還沒封存的就是做中）：
   | PR／session | 內容 | 狀態與下一步 |
   | --- | --- | --- |
-  | #1219（session_016rkfLSmFLTJKBXhegJeXfx） | iCloud 存檔看得到有沒有同步：狀態列、每份存檔標示、「立即同步」（決策 397 續 2） | 綠、留了「可合併」。碰存檔讀取路徑，獨立審查 session_01XE6HUHfUeirLMKYA221AuH 在跑，結果留在 PR。沒有阻擋的發現就照 §1.2 合、封存兩個 session，並告訴作者用 `docs/ICLOUD_SAVE_SETUP.md` 第 5 步在兩台裝置上試。作者說「改善這裡就好了」：只改顯示，**不改同步什麼時候跑**；PR 提的 NSMetadataQuery 改法是給作者選的後續，不先做 |
+  | #1219（session_016rkfLSmFLTJKBXhegJeXfx） | iCloud 存檔看得到有沒有同步：狀態列、每份存檔標示、「立即同步」（決策 397 續 2） | 獨立審查（#1219 留言 6392984109）沒有擋合併的問題。但這個 PR 就是要顯示有沒有同步，所以已請原 session 先修兩條「建議修」：(1) 讀不到上傳狀態時 `?? true` 會把還沒上傳的顯示成「已同步」，改成 `?? false`；(2) 另一台較新版本的存檔還沒搬進來時，不要說「等待上傳」，分成自己一種狀態。「可不修」記進 397 的「下一步」。修好、綠了、留「可合併」就照 §1.2 合、封存，再告訴作者用 `docs/ICLOUD_SAVE_SETUP.md` 第 5 步在兩台裝置上試。作者說「改善這裡就好了」：只改顯示，**不改同步什麼時候跑**；PR 提的 NSMetadataQuery 改法是給作者選的後續，不先做 |
   | #1220（10i-2 公車接駁，存檔 73） | 公車接駁進 GameCore | draft。獨立審查（session_01TYmxCHzCq3RuUbc9CoETBL，#1220 留言 6392952447）有 **1 條擋合併**：公車路線很長時（例如兩段各 200 km、一天一班），`feederMinutes` 超過 1440，`BusRoute.isValid` 卻要 ≤ 1440。結果指令照樣成功、存檔也寫得出去，但讀檔被拒，玩家等於掉存檔。修法：`refreshBusFeeders` 把分鐘夾到一天（或放寬 `isValid`），補一個最長路線存了再讀的測試。建議一起修：`nextBusRouteID` 要照其他計數器走 `allocateID`／`idsExhausted`，並檢查 ≥ 1。新任派一個 session 修這兩項，綠了再合。平衡 CONCERNS：實景地圖一條公車線讓車站旅次多 19–51%（目標 5–25%），空白地圖只多 0.04%、公車一天虧約 $5,880。綠且審查沒有阻擋就 ready、合併，再派公車平衡調整；**調好之前提醒作者先別發版**。10j-2 和它都改 LineAcquisition／acquisitions，等它合併才派；10d（存檔 74）也在它之後 |
   | #1217（session_01Bbe7HnLfcUGdoE2VRgZgoU，決策 408） | 高鐵 700T 與 N700S-G 各跑一半、E200 換新車頭 | PR 寫著「先別合併」：等作者看過 N700S-G 預覽說好。作者選的是「作者自己的模型減到每節約 5k 三角形＋遊戲配色」；**作者的原始 GLB 和私人庫的完整 N700S-G 網格不能進公開 repo，任何 branch 都不行**。重做步驟與照片檢查點在這個 PR 的 HANDOFF §7.3（合併後才在 main） |
   | #1218（session_01RarzebNWdkEundHGJDzTBf，決策 409） | 10k 分享路網：自己的檔案類型、明信片預覽、開新局或只看 | 碰檔案類型與匯入（存檔讀取），合併前開獨立審查 |
