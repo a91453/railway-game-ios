@@ -96,7 +96,7 @@ permissions:
 #   request at once. Push a change when it is ready, not piece by piece.
 # - Merge in batches of 3 to 5 green pull requests, then wait for this
 #   workflow to turn green on main before the next batch. Keep at most 2
-#   pull requests that change GameCore running CI at once (a full tier is 21
+#   pull requests that change GameCore running CI at once (a full tier is 22
 #   jobs of the account's 40).
 concurrency:
   group: ${{ github.event_name == 'push' && 'ci-main' || format('ci-{0}', github.event_name == 'pull_request' && github.ref || github.sha) }}
@@ -195,14 +195,61 @@ jobs:
         if: steps.detect.outputs.swift == 'true'
         run: .github/scripts/swift-shards-selftest.sh
 
-  swift-current:
-    name: Swift 6.4 (Linux) / ${{ matrix.shard }}
+  # The one build of the tier (decision 411, shared build): every shard job
+  # downloads this job's .build and only runs its tests (swift test
+  # --skip-build). Until 2026-10-25 each of the 19 shards built the package
+  # itself, about 5 minutes each. Same container and workspace path as the
+  # shards, so the paths inside .build still hold there. A build killed by a
+  # signal is built once more here (decision 329, swift-shards.sh build); a
+  # compile error is not, and the shards are then skipped and the gate red.
+  swift-build:
+    name: Swift 6.4 (Linux) build
     needs: changes
     if: needs.changes.outputs.swift == 'true'
     runs-on: ubuntu-24.04
+    # About 5 minutes to build, up to 10 when it is built twice, and about
+    # a minute to pack and upload.
+    timeout-minutes: 20
+    container: swift:6.4-noble
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Swift version
+        run: swift --version
+
+      # swift build --build-tests -Xswiftc -warnings-as-errors, built once
+      # more when swift-build itself is killed by a signal (decision 329); a
+      # compile error is not built again.
+      - name: Build (warnings as errors)
+        run: .github/scripts/swift-shards.sh build
+
+      # tar keeps the links (.build/debug points into swift-build's own
+      # layout); gzip -1 packs the 1.2 GB in about 20 s to some 360 MB, and
+      # the artifact does not zip it again (compression-level 0).
+      - name: Pack the build
+        run: .github/scripts/swift-shards.sh pack "$RUNNER_TEMP/swift-build.tar.gz"
+
+      # overwrite: re-running every job of the run builds again under the
+      # same name.
+      - name: Upload the build
+        uses: actions/upload-artifact@v7
+        with:
+          name: swift-build
+          path: ${{ runner.temp }}/swift-build.tar.gz
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+          overwrite: true
+
+  swift-current:
+    name: Swift 6.4 (Linux) / ${{ matrix.shard }}
+    needs: [changes, swift-build]
+    if: needs.changes.outputs.swift == 'true'
+    runs-on: ubuntu-24.04
     # The slowest shard takes about 9 minutes of tests on a fast runner and
-    # up to about 16 on a slow one (see the table in swift-shards.sh); the
-    # limit leaves room for campaigns to grow before a shard is split further.
+    # up to about 12 on a slow one (see the table in swift-shards.sh), plus
+    # about a minute to start and download the build; the limit leaves room
+    # for campaigns to grow before a shard is split further.
     timeout-minutes: 20
     container: swift:6.4-noble
     strategy:
@@ -220,11 +267,16 @@ jobs:
       - name: Swift version
         run: swift --version
 
-      # swift build --build-tests -Xswiftc -warnings-as-errors, built once
-      # more when swift-build itself is killed by a signal (decision 329); a
-      # compile error is not built again.
-      - name: Build (warnings as errors)
-        run: .github/scripts/swift-shards.sh build
+      # The swift-build job's .build (decision 411, shared build), unpacked
+      # where it was built.
+      - name: Download the build
+        uses: actions/download-artifact@v8
+        with:
+          name: swift-build
+          path: ${{ runner.temp }}/swift-build
+
+      - name: Unpack the build
+        run: .github/scripts/swift-shards.sh unpack "$RUNNER_TEMP/swift-build/swift-build.tar.gz"
 
       # Runs this shard's tests and fails unless exactly those tests ran.
       # A partial tier's job is `selected` (SELECTED_TESTS, and its part of
@@ -247,7 +299,7 @@ jobs:
   # pull request's head is not superseded and keeps its red gate.
   superseded:
     name: Superseded by a newer push?
-    needs: [changes, swift-current]
+    needs: [changes, swift-build, swift-current]
     if: ${{ cancelled() && github.event_name == 'pull_request' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -269,7 +321,7 @@ jobs:
 
   gate:
     name: Swift CI (gate)
-    needs: [changes, swift-current, superseded]
+    needs: [changes, swift-build, swift-current, superseded]
     # A push run of main that was cancelled (by hand, or replaced while
     # waiting) has no verdict to give, so the gate is skipped there rather
     # than red on a commit where no test failed; the next push run tests its
@@ -298,6 +350,7 @@ jobs:
           CHANGES: ${{ needs.changes.result }}
           SWIFT_NEEDED: ${{ needs.changes.outputs.swift }}
           TIER: ${{ needs.changes.outputs.tier }}
+          BUILD: ${{ needs.swift-build.result }}
           CURRENT: ${{ needs.swift-current.result }}
         run: .github/scripts/swift-shards.sh gate
 

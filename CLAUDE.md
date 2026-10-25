@@ -320,9 +320,10 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   everything locally. Run more locally only when the task needs it (to
   reproduce a CI failure, or to measure shard times). Report the local checks
   as VERIFIED and the rest as left to CI.
-  CI splits the suite across shards and runs each after
-  `swift build --build-tests -Xswiftc -warnings-as-errors` with
-  `swift test --skip-build` (plain `swift test` would rebuild everything);
+  CI builds once (`swift build --build-tests -Xswiftc -warnings-as-errors`
+  in the `swift-build` job, decision 411's shared build), and each shard
+  downloads that `.build` and runs with `swift test --skip-build` (plain
+  `swift test` would rebuild everything);
   `.github/scripts/swift-shards.sh run <shard>` runs one shard the same way. A
   new test class needs no CI change: the `rest` shard runs everything the
   campaign shards do not name. Move a long campaign to another shard in
@@ -421,8 +422,8 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   merge a PR, never enable auto-merge, never force-push `main`. The user
   decides what gets merged.
 - The account runs at most 40 jobs at once, 5 of them macOS; a full Swift
-  tier is 21 jobs (ARCHITECTURE decision 187; decision 228 added a shard,
-  decisions 404 and 405 one each,
+  tier is 22 jobs (ARCHITECTURE decision 187; decision 228 added a shard,
+  decisions 404 and 405 one each, decision 411's shared build the build job,
   `docs/research/CI_INCIDENT_2026-10-12.md`). So:
   - Never cancel a push run of `main` (`ci.yml`), by hand or from a session:
     its concurrency group already keeps a burst of merges to the run in

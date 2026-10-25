@@ -5,6 +5,9 @@
 #   swift-shards.sh build            `swift build --build-tests -Xswiftc
 #                                    -warnings-as-errors`, once more when
 #                                    swift-build itself crashes (build_package)
+#   swift-shards.sh pack <file>      pack .build into <file> (tar, gzip -1)
+#   swift-shards.sh unpack <file>    unpack it where it was built (decision
+#                                    411, shared build)
 #   swift-shards.sh run <shard>      run one shard after `swift build --build-tests`
 #                                    (`selected`: the classes in SELECTED_TESTS)
 #   swift-shards.sh select <shard>   print the test IDs a shard selects (offline)
@@ -796,6 +799,27 @@ build_package() {
   done
 }
 
+# Decision 411, shared build: ci.yml's swift-build job builds once and packs
+# .build; each shard job unpacks it in the same container and workspace path
+# and runs swift test --skip-build, which reads the built products and does
+# not look at the sources' times (the checkout's are newer than the build's).
+# tar keeps .build's links (debug points into swift-build's own layout).
+pack_build() {
+  local file="$1"
+  [[ -d .build ]] || die "No .build to pack: build first."
+  tar -cf - .build | gzip -1 >"$file"
+  echo "Packed .build ($(du -sh .build | cut -f1)) into $file ($(du -h "$file" | cut -f1))."
+}
+
+unpack_build() {
+  local file="$1"
+  [[ -s "$file" ]] || die "No build to unpack at $file: did the swift-build job upload it?"
+  [[ ! -e .build ]] || die ".build already exists; the shard would not run the downloaded build."
+  gzip -dc "$file" | tar -xf -
+  rm -f "$file"
+  echo "Unpacked the build into .build ($(du -sh .build | cut -f1))."
+}
+
 # Decision 404: say so before a shard reaches its job limit, not after.
 # Every rebalance above came after a red main, when a shard had drifted
 # past ci.yml's 20 minutes (timeout-minutes) as classes were added or grew;
@@ -1566,17 +1590,20 @@ head_full_run() {
 #   CHANGES       the change detection's result
 #   SWIFT_NEEDED  its swift output
 #   TIER          its tier output
-#   CURRENT       the Swift jobs' combined result (failure if any job failed,
+#   BUILD         the swift-build job's result (decision 411, shared build)
+#   CURRENT       the test jobs' combined result (failure if any job failed,
 #                 cancelled if any was cancelled, skipped if none ran)
-# Passes only when the detection succeeded and either every Swift job of the
-# tier succeeded or none was needed and none ran.
+# Passes only when the detection succeeded and either the build and every
+# test job of the tier succeeded or none was needed and none ran.
 ci_gate() {
-  echo "changes: ${CHANGES:-}; Swift needed: ${SWIFT_NEEDED:-}; tier: ${TIER:-}; Swift 6.4: ${CURRENT:-}"
+  echo "changes: ${CHANGES:-}; Swift needed: ${SWIFT_NEEDED:-}; tier: ${TIER:-}; build: ${BUILD:-}; Swift 6.4: ${CURRENT:-}"
   [[ "${CHANGES:-}" == success ]] || die "The change detection did not succeed (${CHANGES:-no result})."
   if [[ "${SWIFT_NEEDED:-}" == true ]]; then
+    [[ "${BUILD:-}" == success ]] || die "The Swift build did not succeed (${BUILD:-no result}); the test jobs need it."
     [[ "${CURRENT:-}" == success ]] || die "A Swift job of tier ${TIER:-?} did not succeed (Swift 6.4: ${CURRENT:-no result})."
-    echo "Every Swift 6.4 job of tier ${TIER:-?} passed."
+    echo "The build and every Swift 6.4 job of tier ${TIER:-?} passed."
   elif [[ "${SWIFT_NEEDED:-}" == false ]]; then
+    [[ "${BUILD:-}" == skipped ]] || die "The Swift jobs were not needed but the build did not skip (${BUILD:-no result})."
     [[ "${CURRENT:-}" == skipped ]] || die "The Swift jobs were not needed but did not skip (Swift 6.4: ${CURRENT:-no result})."
     echo "No file that can change the Swift package changed; the Swift jobs were skipped."
   else
@@ -1677,6 +1704,14 @@ case "${1:-}" in
   build)
     build_package
     ;;
+  pack)
+    [[ $# -eq 2 ]] || die "usage: $0 pack <file>"
+    pack_build "$2"
+    ;;
+  unpack)
+    [[ $# -eq 2 ]] || die "usage: $0 unpack <file>"
+    unpack_build "$2"
+    ;;
   run)
     [[ $# -eq 2 ]] || die "usage: $0 run <shard>"
     run_shard "$2"
@@ -1726,6 +1761,6 @@ case "${1:-}" in
     superseded
     ;;
   *)
-    die "usage: $0 build | run <shard> | select <shard> | shards | classes | matrix | relevant | push-base | plan | decide | head-full-run | gate | ios-gate | superseded"
+    die "usage: $0 build | pack <file> | unpack <file> | run <shard> | select <shard> | shards | classes | matrix | relevant | push-base | plan | decide | head-full-run | gate | ios-gate | superseded"
     ;;
 esac

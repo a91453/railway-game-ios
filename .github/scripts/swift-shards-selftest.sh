@@ -688,17 +688,22 @@ expect_decision true full full "a pull request whose files could not be listed" 
 # The gate: red when the detection or any Swift job of the tier did not
 # succeed (a failed or cancelled job makes the combined result so), green
 # when every job passed or none was needed and none ran.
-gate() { env -u CHANGES -u SWIFT_NEEDED -u TIER -u CURRENT "$@" "$script" gate; }
-expect pass "gate: every job of a full run passed" gate CHANGES=success SWIFT_NEEDED=true TIER=full CURRENT=success
-expect pass "gate: every job of a partial tier passed" gate CHANGES=success SWIFT_NEEDED=true TIER=presentation CURRENT=success
-expect pass "gate: nothing needed, nothing ran" gate CHANGES=success SWIFT_NEEDED=false TIER=none CURRENT=skipped
-WHY='did not succeed \(Swift 6.4: failure\)' expect fail "gate: a selected job failed" gate CHANGES=success SWIFT_NEEDED=true TIER=tests-only CURRENT=failure
-WHY='did not succeed \(Swift 6.4: cancelled\)' expect fail "gate: a selected job was cancelled" gate CHANGES=success SWIFT_NEEDED=true TIER=fixtures CURRENT=cancelled
-WHY='did not succeed \(Swift 6.4: skipped\)' expect fail "gate: needed jobs that did not run" gate CHANGES=success SWIFT_NEEDED=true TIER=full CURRENT=skipped
-WHY='not needed but did not skip' expect fail "gate: unneeded jobs that ran" gate CHANGES=success SWIFT_NEEDED=false TIER=none CURRENT=success
-WHY='change detection did not succeed' expect fail "gate: the detection failed" gate CHANGES=failure SWIFT_NEEDED= TIER= CURRENT=skipped
-WHY='change detection did not succeed' expect fail "gate: the detection was cancelled" gate CHANGES=cancelled SWIFT_NEEDED=false TIER=none CURRENT=skipped
-WHY='neither' expect fail "gate: no answer from the detection" gate CHANGES=success SWIFT_NEEDED= TIER= CURRENT=skipped
+gate() { env -u CHANGES -u SWIFT_NEEDED -u TIER -u BUILD -u CURRENT "$@" "$script" gate; }
+expect pass "gate: every job of a full run passed" gate CHANGES=success SWIFT_NEEDED=true TIER=full BUILD=success CURRENT=success
+expect pass "gate: every job of a partial tier passed" gate CHANGES=success SWIFT_NEEDED=true TIER=presentation BUILD=success CURRENT=success
+expect pass "gate: nothing needed, nothing ran" gate CHANGES=success SWIFT_NEEDED=false TIER=none BUILD=skipped CURRENT=skipped
+WHY='did not succeed \(Swift 6.4: failure\)' expect fail "gate: a selected job failed" gate CHANGES=success SWIFT_NEEDED=true TIER=tests-only BUILD=success CURRENT=failure
+WHY='did not succeed \(Swift 6.4: cancelled\)' expect fail "gate: a selected job was cancelled" gate CHANGES=success SWIFT_NEEDED=true TIER=fixtures BUILD=success CURRENT=cancelled
+WHY='did not succeed \(Swift 6.4: skipped\)' expect fail "gate: needed jobs that did not run" gate CHANGES=success SWIFT_NEEDED=true TIER=full BUILD=success CURRENT=skipped
+WHY='not needed but did not skip' expect fail "gate: unneeded jobs that ran" gate CHANGES=success SWIFT_NEEDED=false TIER=none BUILD=skipped CURRENT=success
+WHY='change detection did not succeed' expect fail "gate: the detection failed" gate CHANGES=failure SWIFT_NEEDED= TIER= BUILD=skipped CURRENT=skipped
+WHY='change detection did not succeed' expect fail "gate: the detection was cancelled" gate CHANGES=cancelled SWIFT_NEEDED=false TIER=none BUILD=skipped CURRENT=skipped
+WHY='neither' expect fail "gate: no answer from the detection" gate CHANGES=success SWIFT_NEEDED= TIER= BUILD=skipped CURRENT=skipped
+# Decision 411, shared build: the test jobs need the one build job.
+WHY='Swift build did not succeed \(failure\)' expect fail "gate: the build failed, so the tests were skipped" gate CHANGES=success SWIFT_NEEDED=true TIER=full BUILD=failure CURRENT=skipped
+WHY='Swift build did not succeed \(cancelled\)' expect fail "gate: the build was cancelled" gate CHANGES=success SWIFT_NEEDED=true TIER=presentation BUILD=cancelled CURRENT=skipped
+WHY='Swift build did not succeed \(no result\)' expect fail "gate: no build result" gate CHANGES=success SWIFT_NEEDED=true TIER=full BUILD= CURRENT=success
+WHY='build did not skip \(success\)' expect fail "gate: an unneeded build that ran" gate CHANGES=success SWIFT_NEEDED=false TIER=none BUILD=success CURRENT=skipped
 
 # A pull request's gate waits for its iOS App Build run (ios-gate). A fake
 # `gh` answers each look in turn with the next of FAKE_IOS's words: a run as
@@ -778,6 +783,25 @@ grep -q -x 'superseded=false' "$work/out.txt" || { echo "FAIL superseded: an API
 WHY='PR is not a pull request number' expect fail "superseded: no pull request number" superseded FAKE_HEAD="$newer" PR=
 WHY='cancelled because a newer push replaced this commit of pull request #7' expect fail "ios-gate: a cancelled iOS run of a replaced commit says so" ios_gate PR=7 FAKE_HEAD="$newer"
 WHY='did not pass \(cancelled\)' expect fail "ios-gate: a cancelled iOS run of the head stays a plain failure" ios_gate PR=7 FAKE_HEAD="$sha_ios"
+
+# Decision 411, shared build: pack and unpack keep .build's links, and a
+# shard does not run over a .build that is already there or a missing file.
+in_dir() { (cd "$1" && shift && "$@"); }
+mkdir -p "$work/packed/.build/out/Products/Debug" "$work/unpacked"
+echo built >"$work/packed/.build/out/Products/Debug/thing"
+ln -s out/Products/Debug "$work/packed/.build/debug"
+expect pass "pack: packs .build" in_dir "$work/packed" "$script" pack "$work/build.tar.gz"
+cp "$work/build.tar.gz" "$work/build-copy.tar.gz"
+expect pass "unpack: unpacks .build" in_dir "$work/unpacked" "$script" unpack "$work/build.tar.gz"
+if [[ -L "$work/unpacked/.build/debug" && "$(cat "$work/unpacked/.build/debug/thing")" == built ]]; then
+  echo "ok   pass  unpack: the link and the file it points to are back"
+else
+  echo "FAIL unpack: .build/debug is not the link it was packed as"
+  failures=$((failures + 1))
+fi
+WHY='already exists' expect fail "unpack: not over an existing .build" in_dir "$work/unpacked" "$script" unpack "$work/build-copy.tar.gz"
+WHY='No build to unpack' expect fail "unpack: a missing download" in_dir "$work/unpacked" "$script" unpack "$work/nothing.tar.gz"
+WHY='No .build to pack' expect fail "pack: nothing built" in_dir "$work/unpacked/.build" "$script" pack "$work/none.tar.gz"
 
 if [[ "$failures" -ne 0 ]]; then
   echo "::error::swift-shards.sh self-test: $failures failures."
