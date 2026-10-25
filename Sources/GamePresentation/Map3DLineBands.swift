@@ -68,6 +68,9 @@ public struct Map3DLineBands: Hashable, Sendable {
             let patterns: [Pattern]
             let isRing: Bool
             let color: LineColor?
+            /// Review I: a high-speed line's viaducts look its own
+            /// (decision 407).
+            let isHighSpeed: Bool
         }
 
         private struct Pattern: Hashable, Sendable {
@@ -79,7 +82,7 @@ public struct Map3DLineBands: Hashable, Sendable {
             lines = world.lines.map { line in
                 Line(id: line.id, stops: line.stops, routePreferences: line.routePreferences,
                      patterns: line.patterns.map { Pattern(calls: $0.calls, routePreferences: $0.routePreferences) },
-                     isRing: line.isRing, color: line.color)
+                     isRing: line.isRing, color: line.color, isHighSpeed: line.isHighSpeed)
             }
         }
     }
@@ -90,10 +93,10 @@ public struct Map3DLineBands: Hashable, Sendable {
     static let lift: Float = 0.04
     /// Its middle from the track's centre line, on the same side of every
     /// edge along its way: on the ballast's shoulder outside the rails, or
-    /// at the deck's edge.
+    /// at the deck's edge, inside the parapet (decision 407).
     static func offset(on kind: TrackSectionKind) -> Float {
         switch kind {
-        case .viaduct, .bridge: Map3DScene.Builder.deckWidth / 2 - 0.35
+        case .viaduct, .bridge: Map3DScene.Builder.deckWidth / 2 - Map3DViaduct.parapetWidth - width / 2
         case .surface, .embankment, .cutting, .tunnel: Map3DScene.Builder.bedTop / 2 - 0.3
         }
     }

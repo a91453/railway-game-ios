@@ -1085,7 +1085,9 @@ private struct ExportedListSave: Transferable {
     let entry: SaveLibrary.Entry
 
     static var transferRepresentation: some TransferRepresentation {
-        FileRepresentation(exportedContentType: .json) { save in
+        // Review I: the game's own type, as the game menu's export
+        // (decision 409).
+        FileRepresentation(exportedContentType: .alongTheLineSave) { save in
             SentTransferredFile(try save.library.exportFile(of: save.entry))
         }
     }

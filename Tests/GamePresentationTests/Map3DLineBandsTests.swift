@@ -80,6 +80,27 @@ final class Map3DLineBandsTests: XCTestCase {
         XCTAssertNotEqual(Map3DLineBands.Signature(world: world), before)
     }
 
+    /// Review I: a line turned high-speed is drawn on the high-speed
+    /// viaduct (decision 407), so the scene is built again then too.
+    func testTheSignatureChangesWhenALineTurnsHighSpeed() throws {
+        let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+        var world = try newGameLine(through: [towns[0], towns[1]])
+        let before = Map3DLineBands.Signature(world: world)
+        let line = try XCTUnwrap(world.lines.first)
+        XCTAssertFalse(line.isHighSpeed)
+        try world.setLinePerformance(line.id, to: .highSpeed)
+        XCTAssertTrue(try XCTUnwrap(world.lines.first).isHighSpeed)
+        XCTAssertNotEqual(Map3DLineBands.Signature(world: world), before)
+    }
+
+    /// Review I: on a viaduct the band lies on the deck inside the
+    /// parapet (decision 407), not under it.
+    func testTheBandOnAViaductClearsTheParapet() {
+        let outer = Map3DLineBands.offset(on: .viaduct) + Map3DLineBands.width / 2
+        XCTAssertLessThanOrEqual(outer, Map3DViaduct.railwayLook.deckWidth / 2 - Map3DViaduct.parapetWidth)
+        XCTAssertGreaterThan(Map3DLineBands.offset(on: .viaduct) - Map3DLineBands.width / 2, 1.067 / 2 + 0.1, "outside the rails")
+    }
+
     /// The bands are only in the near meshes, in the line's colour, beside
     /// the rails on the ballast's shoulder; the far view is unchanged.
     func testTheSceneDrawsTheBandsBesideTheTrackCloseUp() throws {

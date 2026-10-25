@@ -372,6 +372,11 @@ final class RealRailwaysTests: XCTestCase {
                     XCTAssertEqual(url.scheme, "https", link.url)
                 }
             }
+            // Review I: the white high-speed train is the train pack's
+            // (decision 338's second sequel), not half the trains every
+            // player sees.
+            let highSpeedTrain = try XCTUnwrap(credits.first { $0.id == "highSpeedTrainModel" })
+            XCTAssertTrue(highSpeedTrain.detail.contains(language.text("Train Pack", "列車包")), highSpeedTrain.detail)
             let openStreetMap = try XCTUnwrap(credits.first { $0.id == "openStreetMap" })
             XCTAssertTrue(openStreetMap.notice.contains("© OpenStreetMap"))
             XCTAssertTrue(openStreetMap.notice.contains("ODbL"))
