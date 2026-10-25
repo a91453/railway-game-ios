@@ -31,6 +31,24 @@ final class AchievementsTests: XCTestCase {
         }
     }
 
+    /// Decision 396: the list shows each one's Game Center badge, scaled
+    /// down into the app's asset catalog from `docs/game-center/achievements`.
+    func testEachHasItsBadgeInTheAssetCatalog() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let catalog = root.appendingPathComponent("RailwayGameApp/Resources/Assets.xcassets/Achievements")
+        let sets = try FileManager.default.contentsOfDirectory(atPath: catalog.path).filter { $0.hasSuffix(".imageset") }
+        XCTAssertEqual(Set(sets), Set(Achievement.all.map { "\($0.imageName).imageset" }))
+        for achievement in Achievement.all {
+            let original = root.appendingPathComponent("docs/game-center/achievements/\(GameCenterMapping.achievementID(of: achievement)).png")
+            XCTAssertTrue(FileManager.default.fileExists(atPath: original.path), achievement.id)
+            for scale in [2, 3] {
+                let badge = catalog.appendingPathComponent("\(achievement.imageName).imageset/achievement-\(achievement.id)@\(scale)x.png")
+                XCTAssertTrue(FileManager.default.fileExists(atPath: badge.path), badge.lastPathComponent)
+            }
+        }
+    }
+
     func testNothingIsMetByAnEmptyCompany() {
         let facts = AchievementFacts(world: .newGame())
         XCTAssertEqual(Achievement.all.filter { $0.isMet(by: facts) }.map(\.id), [])

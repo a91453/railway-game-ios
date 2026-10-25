@@ -119,10 +119,10 @@ struct AchievementsView: View {
     private func row(_ achievement: Achievement) -> some View {
         let date = records.unlocked[achievement.id]
         return HStack(alignment: .top, spacing: 12) {
-            Image(systemName: achievement.symbol)
-                .font(.title3)
-                .frame(width: 32)
-                .foregroundStyle(date == nil ? Theme.textSecondary : Theme.primary)
+            // Decision 396: the same badge as its Game Center achievement.
+            Image(decorative: achievement.imageName)
+                .resizable()
+                .frame(width: 32, height: 32)
                 .opacity(date == nil ? 0.5 : 1)
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
