@@ -4,3 +4,5 @@
 "NSLocationWhenInUseUsageDescription" = "Your location is used once to move a real-world map's start square near you. It is not sent anywhere.";
 /* Why a postcard's Save Image may add a picture to Photos. */
 "NSPhotoLibraryAddUsageDescription" = "Saves your postcard to Photos when you choose Save Image.";
+/* Decision 409: the name of the game's save type, shown in Files and when a save is shared. */
+"Along the Line Save" = "Along the Line Save";

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Decision 409: the game's own save type, so a save a friend sends opens in
+  the game from LINE, AirDrop or Files. The keys Xcode cannot generate from
+  INFOPLIST_KEY_ settings (arrays of dictionaries) are here; the rest of the
+  Info.plist is generated (project.yml, GENERATE_INFOPLIST_FILE) and merged
+  with this file. The type's name is localized in
+  Resources/*.lproj/InfoPlist.strings. Keep the identifier and the extension
+  in step with SharedNetwork.typeIdentifier and SharedNetwork.fileExtension.
+-->
+<plist version="1.0">
+<dict>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Along the Line Save</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>io.github.a91453.RailwayGame.save</string>
+			</array>
+		</dict>
+	</array>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>io.github.a91453.RailwayGame.save</string>
+			<key>UTTypeDescription</key>
+			<string>Along the Line Save</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.json</string>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>alongtheline</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
+	<!-- A file opened from another app is copied into the game, which reads
+	     it and deletes the copy; the game never edits it where it is. -->
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<false/>
+</dict>
+</plist>

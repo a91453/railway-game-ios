@@ -1006,20 +1006,6 @@ private struct SpeedMenu: View, Equatable {
     }
 }
 
-/// The game as a save file to share (Stage C4, the reference's "导出本地存档"),
-/// written when the player shares it, from the game as it is then: the menu
-/// that offers it does not build the world to save every tick.
-private struct ExportedSave: Transferable {
-    let session: GameSession
-
-    static var transferRepresentation: some TransferRepresentation {
-        FileRepresentation(exportedContentType: .json) { save in
-            let (world, news) = await (save.session.worldToSave, save.session.news)
-            return SentTransferredFile(try SaveLibrary.exportFile(for: world, news: news, at: Date()))
-        }
-    }
-}
-
 /// An autosave the game menu offers to go back to (decision 192), with
 /// its label as it was when asked: how long ago, the game date and funds.
 private struct GoBackChoice: Identifiable {

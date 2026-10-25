@@ -809,7 +809,7 @@ struct SaveListView: View {
                     }
                 }
             }
-            .fileImporter(isPresented: $importsSave, allowedContentTypes: [.json]) { result in
+            .fileImporter(isPresented: $importsSave, allowedContentTypes: [.alongTheLineSave, .json]) { result in
                 launcher.importSave {
                     let url = try result.get()
                     // A file from Files is outside the app's container.

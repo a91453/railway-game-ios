@@ -108,7 +108,7 @@ final class SaveLibraryTests: XCTestCase {
     func testAGameIsExportedAsAFileToShare() throws {
         let url = try SaveLibrary.exportFile(for: DemoWorld.make(in: .english), at: date(0))
         defer { try? FileManager.default.removeItem(at: url) }
-        XCTAssertEqual(url.lastPathComponent, "Along the Line 2026-10-02 120000.json")
+        XCTAssertEqual(url.lastPathComponent, "Along the Line 2026-10-02 120000.alongtheline")
         XCTAssertEqual(try SaveLibrary.decode(Data(contentsOf: url)), DemoWorld.make(in: .english))
     }
 
@@ -128,7 +128,7 @@ final class SaveLibraryTests: XCTestCase {
 
         let url = try library.exportFile(of: manual)
         defer { try? FileManager.default.removeItem(at: url) }
-        XCTAssertEqual(url.lastPathComponent, "Along the Line 2026-10-02 120100.json")
+        XCTAssertEqual(url.lastPathComponent, "Along the Line 2026-10-02 120100.alongtheline")
         XCTAssertEqual(try SaveLibrary.decode(Data(contentsOf: url)), demo)
         XCTAssertThrowsError(try library.exportFile(of: broken))
 

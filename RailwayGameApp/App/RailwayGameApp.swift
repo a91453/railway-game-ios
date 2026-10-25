@@ -175,6 +175,11 @@ struct RailwayGameApp: App {
         if let step = DebugLaunch.value(of: "-tutorial-step") {
             launcher.startTutorial(atStep: step)
         }
+        // Decision 409: the demo's network as if a friend had sent it, for
+        // the UI test of the sheet that offers it.
+        if DebugLaunch.isSet("-ui-test-shared-network"), let data = try? SaveLibrary.encode(DemoWorld.make(in: launcher.language), at: Date()) {
+            launcher.receiveNetwork(data)
+        }
         // Decision 165: the website screenshot test opens a scene set up
         // for it, paused at the moment it shows.
         if let name = DebugLaunch.value(of: "-screenshot-scene"), let scene = ScreenshotScene(rawValue: name) {
@@ -481,6 +486,8 @@ private struct RootView: View {
             (launcher.realWorldLoading == nil ? MotionRule.loadingOut : .loadingIn).running(reduceMotion: reduceMotion)?.animation,
             value: launcher.realWorldLoading == nil
         )
+        // Decision 409: a save a friend sent, tapped in another app.
+        .modifier(ReceivesSharedNetworks(launcher: launcher))
         .onChange(of: demoModeOn, initial: true) { _, on in
             launcher.isDemoMode = DemoMode.isOn(testBuild: TestBuild.isTest, switchOn: on)
         }
