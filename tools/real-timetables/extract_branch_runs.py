@@ -233,10 +233,11 @@ def stretch(found, origin, destination, leaves):
     return moved
 
 
-def line_runs(data, days, stops, start=None):
+def line_runs(data, days, stops, start=None, prompt=True):
     """The line's runs, where its trains stand at midnight and each
     station's tracks; with `start`, its trains stand there at midnight, a
-    positioning run bringing one to each run no train stands ready for."""
+    positioning run bringing one to each run no train stands ready for,
+    and the trains taken back to it as `balanced`'s `prompt` says."""
     found, problem = runs(data, days, stops)
     if problem:
         return None, problem
@@ -247,7 +248,7 @@ def line_runs(data, days, stops, start=None):
             if added is None:
                 return None, f"weekday {day}: no train for {stuck['train']}"
             found += added
-        return balanced(found, start, stops, prompt=True)
+        return balanced(found, start, stops, prompt=prompt)
     # Where the trains stand at midnight: what most weekdays need, if a
     # positioning run on the others brings a train where it is short (the
     # Shalun Line's Saturday starts at Shalun, its other days at
@@ -275,7 +276,9 @@ def balanced(found, start, stops, prompt=False):
     after each day's last arrival, checked, and each station's tracks;
     `prompt`, each after the last run that leaves where it stands, so the
     trains the end stations have no track for overnight do not wait there
-    for the line's last train."""
+    for the line's last train; `prompt="spare"`, each as soon as it is in
+    and turned round, as no run of the day takes it after that (a metro's
+    evening, its trains coming in faster than its last ones leave)."""
     for day in range(7):
         idle, stuck = play(found, day, start)
         if stuck:
@@ -290,7 +293,9 @@ def balanced(found, start, stops, prompt=False):
             deficit += [station] * max(0, count - len(idle[station]))
         surplus.sort()
         for (free, origin), destination in zip(surplus, deficit):
-            if prompt:
+            if prompt == "spare":
+                last = free - TURNAROUND
+            elif prompt:
                 last = max([r["calls"][0][2] for r in day_of(found, day) if r["calls"][0][0] == origin] + [free])
             else:
                 last = max([r["calls"][-1][1] for r in day_of(found, day)] + [free])

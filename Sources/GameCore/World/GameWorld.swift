@@ -191,7 +191,7 @@ public struct GameWorld: Equatable, Sendable {
     public internal(set) var realTransfers: Bool = false
     /// The real lines the company bought (decision 315), in the order it
     /// bought them. None in a new world and in saves from before it. Set by
-    /// ``recordLineAcquisition(line:realLine:dailyRiders:)`` only.
+    /// ``recordLineAcquisition(line:realLine:dailyRiders:tier:)`` only.
     public internal(set) var acquisitions: [LineAcquisition] = []
     /// The roads on the land's grid (decision 400), or `nil` for a world
     /// without them. Off in a new world and in saves from before it; the

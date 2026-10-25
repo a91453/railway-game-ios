@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Turn the light rails' real timetables the app bundles into the runs of
-the lines a player can buy (decision 400, 10j-2), as
+"""Turn the light rails' and metros' real timetables the app bundles into
+the runs of the lines a player can buy (decision 400, 10j-2 and 10j-3), as
 `extract_branch_runs.py` does for the TRA branch lines.
 
     python3 -I tools/real-timetables/extract_metro_runs.py \\
@@ -35,6 +35,15 @@ Green Mountain Line's track) is listed twice more, from the station where
 they part (`after`): what it lays when the other is already bought, its
 trips cut there as a branch line's are at its junction.
 
+The metros (`METROS`) are read the same way, their trains named 捷運.
+A metro's evening brings trains in faster than it sends them out, so a
+train no later run of the day needs leaves for where it stands overnight
+as soon as it is in and turned round (`balanced`'s `prompt="spare"`),
+not after the day's last train out. Only the Xinbeitou and Xiaobitan
+Branch Lines pass: every other metro line's ends stand more trains at
+once than the game lays tracks (the tool prints each one's count),
+and the Sanying Line's runs pass but are not listed (see `LINES`).
+
 Danhai's Green Mountain Line does not pass: its ends stand more trains
 overnight than the game lays tracks (Kanding's depot stables nine), and
 so neither does the Blue Coast Line after it. Not listed: the Ankeng LRT
@@ -65,7 +74,30 @@ LINES = [
     # game's second track on its tight curves is laid only 8 m off the
     # first, and its trains then stand from six in the morning on
     # (docs/HANDOFF.md).
+    # Decision 400, 10j-3: the metros. Each is tried; those whose ends
+    # stand more trains at once than the game lays tracks are left out
+    # and say so. Not the Wenhu Line (trtc:BR, its 35 m curves).
+    ("trtc", "R", None, None),
+    ("trtc", "R_XBT", None, None),
+    ("trtc", "G", None, None),
+    ("trtc", "G_XBT", None, None),
+    ("trtc", "O_XINZHUANG", None, None),
+    ("trtc", "O_LUZHOU", None, None),
+    ("trtc", "BL", None, None),
+    ("trtc", "Y", None, None),
+    ("tymc", "A", None, None),
+    ("krtc", "KR", None, None),
+    ("krtc", "KO", None, None),
+    ("tmrt", "TG", None, None),
+    # Not the Sanying Line (sanying:LB): its runs pass here, but its
+    # twelve trains slow the game's dispatch to some 13 s a game hour and
+    # stall it on the second afternoon (docs/HANDOFF.md).
 ]
+# The metros' systems: their trains a day has no more runs for leave for
+# where they stand overnight as soon as they are in (`balanced`'s
+# `prompt="spare"`), not after the last train out, as their evening
+# brings trains in faster than it sends them out.
+METROS = {"trtc", "tymc", "krtc", "tmrt"}
 
 
 def branch_tool():
@@ -76,7 +108,7 @@ def branch_tool():
     return module
 
 
-def trains(timetable, names):
+def trains(timetable, names, kind="輕軌"):
     """The trips of every weekday's set as the branch tool reads TRA's
     trains: each call's arrival and departure, and the weekdays it runs."""
     by_calls = collections.OrderedDict()
@@ -105,12 +137,12 @@ def trains(timetable, names):
             first = position == 0
             arrives = second if last or first else second - DWELL
             stops.append({"name": names[index], "arrSec": arrives, "depSec": second, "stop": True})
-        out.append({"train": str(number + 1), "typeName": "輕軌", "stops": stops})
+        out.append({"train": str(number + 1), "typeName": kind, "stops": stops})
         days[number] = running
     return out, days
 
 
-def parked(tool, found, days, stops, line):
+def parked(tool, found, days, stops, line, prompt=True):
     """`line` with the trains an end station has no track for overnight
     standing instead at the stations next to it, one at each, a
     positioning run bringing each to the end for its first run and taking
@@ -131,7 +163,7 @@ def parked(tool, found, days, stops, line):
                 return None, f"{end}: {start[end]} trains overnight and no station beside it free"
             start[end] -= 1
             start[free] += 1
-    line, problem = tool.line_runs({"trains": found}, days, stops, start=start)
+    line, problem = tool.line_runs({"trains": found}, days, stops, start=start, prompt=prompt)
     if problem:
         return None, problem
     worst = {s: n for s, n in line["tracks"].items() if n > (END_TRACKS if s in ends else 3)}
@@ -152,13 +184,14 @@ def main(folder, out):
         network = json.load(open(os.path.join(folder, f"{system}.json"), encoding="utf-8"))
         names = [s["name"] for s in next(l for l in network["lines"] if l["id"] == line_id)["stations"]]
         timetable = json.load(open(os.path.join(folder, f"{system}_times.json"), encoding="utf-8"))["lines"][line_id]
-        found, days = trains(timetable, names)
+        metro = system in METROS
+        found, days = trains(timetable, names, "捷運" if metro else "輕軌")
         stops = names[names.index(after_station):] if after_station else names
         game_id = f"{system}:{line_id}"
         label = game_id + (f" after {system}:{after}" if after else "")
         line, problem = tool.line_runs({"trains": found}, days, stops)
         if not problem:
-            line, problem = parked(tool, found, days, stops, line)
+            line, problem = parked(tool, found, days, stops, line, "spare" if metro else True)
         if problem:
             print(f"{label}: left out: {problem}")
             continue
