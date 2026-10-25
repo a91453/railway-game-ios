@@ -55,7 +55,7 @@ try {
   await sheet(label,label+'｜同相機、同公尺尺度（原生幾何）',['left','front','top','isometric'].map(v=>'<h2>'+v+'</h2><div class="row">'+ms.map((m,i)=>'<div><img src="previews/'+label+'-'+i+'-'+v+'.png"><p>'+m.id+'</p></div>').join('')+'</div>').join(''));
  }
  await match(['before-e500','e500'],'before-after');
- if(manifest.models.some(m=>m.id==='previous-e500')){await match(['previous-e500','e500'],'revision-1-vs-2');await match(['previous-e500-far','e500-far'],'revision-1-vs-2-far');}
+ if(manifest.models.some(m=>m.id==='previous-e500')){await match(['previous-e500','e500'],'revision-2-vs-3');await match(['previous-e500-far','e500-far'],'revision-2-vs-3-far');}
  if(manifest.models.some(m=>m.id==='first-pass-e500'))await match(['first-pass-e500','e500'],'first-pass-vs-final');
  await match(['refresh-e200','emu3000-ed','e500'],'style-comparison');
  const near=manifest.models.filter(m=>m.id==='e500'||m.id==='e500-far');
@@ -71,8 +71,8 @@ try {
    ]){renderer.load(bytes);renderer.centre=centre;renderer.extent=extent;renderer.render(view,{width,height});out[id+'-'+label]=renderer.png();}
   }return out;
  });
- await sheet('equipment-details','E500 第二版｜轉向架、車頭與屋頂局部（非完整七向）',['bogie','cab','roof'].map(kind=>'<h2>'+kind+'</h2><div class="row">'+['e500','e500-far'].map(id=>'<div><img src="'+details[id+'-'+kind]+'"><p>'+id+'</p></div>').join('')+'</div>').join(''));
- await sheet('overview','E500｜綠松車體・雙端斜風擋・Co-Co｜實際原生模型','<div class="row"><div><img src="previews/e500-hero.png"><p>第二版單機；依原廠圖保留一組單臂集電弓</p></div><div><img src="previews/e500-detail-front.png"><p>圓收風擋、膠囊燈座與端梁／連結器</p></div></div><div class="row"><div><img src="previews/e500-detail-left.png"><p>側面與完整兩組三軸轉向架</p></div></div>');
+ await sheet('equipment-details','E500 第三版｜轉向架／車頭保持、屋頂修正局部（非完整七向）',['bogie','cab','roof'].map(kind=>'<h2>'+kind+'</h2><div class="row">'+['e500','e500-far'].map(id=>'<div><img src="'+details[id+'-'+kind]+'"><p>'+id+'</p></div>').join('')+'</div>').join(''));
+ await sheet('overview','E500｜綠松車體・雙端斜風擋・Co-Co｜實際原生模型','<div class="row"><div><img src="previews/e500-hero.png"><p>第三版單機；依原廠圖保留一組單臂集電弓</p></div><div><img src="previews/e500-detail-front.png"><p>圓收風擋、膠囊燈座與端梁／連結器</p></div></div><div class="row"><div><img src="previews/e500-detail-left.png"><p>側面與完整兩組三軸轉向架</p></div></div>');
  await sheet('seven-directions','E500｜近遠景七向透明圖（同公尺尺度）',near.map(m=>'<h2>'+m.id+'</h2><div class="row">'+manifest.directions.map(v=>'<div><img src="'+m.views[v]+'"><p>'+v+'</p></div>').join('')+'</div>').join(''));
  if(errors.length)throw Error(errors.join('\n'));
  manifest.render_verification={backend:'Chromium WebGL2 exact native geometry',views:manifest.models.length*7,transparent:true};

@@ -175,42 +175,50 @@ extension StationKitBuilder {
         }}
         box(0,0.67,0,5.9,1.5,0.35,dark)
         for x:Float in [-2.7,2.7] {civicTube(Map3DPoint(x,0.75,-0.94),Map3DPoint(x,0.75,0.94),radius:0.17,color:steel,sides:far ? 8:12)}
-        // Toshiba Fig.4/5: one HV/pantograph module, central louver housings, a separate long end housing.
-        box(0,3.75,0,14.5,2.38,0.10,steel)
+        // Continuous six-bay central equipment enclosure, with a lower long housing at the other end.
+        // Base seats on the actual flat car roof instead of standing on an over-wide raised slab.
         for x:Float in [-8.4,8.4] {
             box(x,3.75,0,1.45,1.9,0.27,steel)
             if !far {for i in 0..<6 {box(x-0.50+Float(i)*0.2,3.83,0.957,0.035,0.02,0.14,dark)}}
         }
-        func module(_ x:Float,_ length:Float,_ top:Float,_ upperWidth:Float)->[Map3DPoint] {
-            [(Float(3.85),Float(-1.08)),(3.85,1.08),(top,upperWidth/2),(top,-upperWidth/2)].map { h,z in Map3DPoint(x,h,z) }
-        }
-        let housings:[(Float,Float,Float,Float)]=[(-5.35,3.10,4.20,1.75),(-2.40,2.10,4.27,1.70),(-0.15,2.10,4.27,1.70),(2.10,2.10,4.27,1.70)]
-        for (x,length,top,width) in housings {
-            let a=module(x-length/2,length,top,width),b=module(x+length/2,length,top,width),inside=Map3DPoint(x,4,0)
-            face(a,inside:inside,color:steel);face(b,inside:inside,color:steel)
-            for j in 0..<4 {let n=(j+1)%4;face([a[j],a[n],b[n],b[j]],inside:inside,color:steel)}
+        for (x,length,top,bays) in [(Float(-0.15),Float(6.60),Float(4.14),6),(Float(-5.35),Float(3.30),Float(3.98),3)] {
+            let levels:[Float]=[3.75,top-0.06,top],widths:[Float]=[0.98,0.98,0.93]
+            let rings=zip(levels,widths).map { h,w in
+                [Map3DPoint(x-length/2,h,-w),Map3DPoint(x+length/2,h,-w),Map3DPoint(x+length/2,h,w),Map3DPoint(x-length/2,h,w)]
+            }
+            let inside=Map3DPoint(x,3.88,0)
+            for k in 0..<rings.count-1 {for j in 0..<4 {
+                let n=(j+1)%4;face([rings[k][j],rings[k][n],rings[k+1][n],rings[k+1][j]],inside:inside,color:steel)
+            }}
+            face(rings[0],inside:inside,color:steel);face(rings.last!,inside:inside,color:steel)
+            let pitch=length/Float(bays),low:Float=3.79,high=top-0.08
             for side:Float in [-1,1] {
-                // Inset dark louver band follows the actual sloping housing side, with backing.
-                let low:Float=3.91,high=top-0.08
-                func lateral(_ h:Float)->Float {side*(1.08-(h-3.85)/(top-3.85)*(1.08-width/2)+0.009)}
-                let inset:Float=length>3 ? 0.22:0.12
-                let p=[Map3DPoint(x-length/2+inset,low,lateral(low)),Map3DPoint(x+length/2-inset,low,lateral(low)),Map3DPoint(x+length/2-inset,high,lateral(high)),Map3DPoint(x-length/2+inset,high,lateral(high))]
-                e500Panel(p,offset:Map3DPoint(0,0,side*0.012),color:dark)
-                if !far {
-                    let count=Int(length/0.16)
-                    for i in 1..<count {
-                        let X=x-length/2+inset+Float(i)*(length-2*inset)/Float(count)
-                        beam(Map3DPoint(X,low,lateral(low)+side*0.025),Map3DPoint(X,high,lateral(high)+side*0.025),0.025,steel)
+                // LOD keeps the same continuous shell; near view resolves the separate framed grille bays.
+                let panels=far ? 1:bays
+                for bay in 0..<panels {
+                    let span=length/Float(panels),centre=x-length/2+(Float(bay)+0.5)*span,inset:Float=0.07
+                    let p=[Map3DPoint(centre-span/2+inset,low,side*0.989),Map3DPoint(centre+span/2-inset,low,side*0.989),Map3DPoint(centre+span/2-inset,high,side*0.989),Map3DPoint(centre-span/2+inset,high,side*0.989)]
+                    e500Panel(p,offset:Map3DPoint(0,0,side*0.012),color:dark)
+                    if !far {
+                        let count=bays==6 ? 6:4
+                        for i in 1...count {
+                            let X=centre-span/2+inset+Float(i)*(span-2*inset)/Float(count+1)
+                            beam(Map3DPoint(X,low,side*1.013),Map3DPoint(X,high,side*1.013),0.025,steel)
+                        }
                     }
                 }
             }
             if !far {
-                box(x,top,0,0.56,width*0.68,0.025,steel)
-                box(x,top+0.025,0,0.41,width*0.54,0.018,dark)
+                for bay in 0..<bays {
+                    let X=x-length/2+(Float(bay)+0.5)*pitch
+                    box(X,top,0,pitch*0.66,1.22,0.025,steel)
+                }
+                if bays==6 {for X:Float in [-2.90,-0.70,1.50,2.60] {box(X,top+0.025,0,0.25,0.50,0.025,dark)}}
             }
         }
         // Asymmetric HV tray with supported insulators and single-arm collector.
-        box(5.15,3.85,0,3.65,2.16,0.055,steel)
+        box(5.15,3.75,0,3.65,1.76,0.10,steel)
+        box(5.15,3.85,0,3.65,1.92,0.055,steel)
         for x:Float in [3.72,4.48] {
             cylinder(x,3.905,0.53,radius:0.16,height:0.36,color:dark,sides:far ? 6:8)
             if !far {for h:Float in [3.97,4.06,4.15,4.24] {cylinder(x,h,0.53,radius:0.20,height:0.025,color:steel,sides:8)}}

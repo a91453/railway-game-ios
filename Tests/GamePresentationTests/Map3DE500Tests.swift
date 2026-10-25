@@ -72,6 +72,43 @@ final class Map3DE500Tests: XCTestCase {
             XCTAssertLessThan(frameSpan(broken,side:1,end:1),4,"removing the actual outboard frame must fail continuity")
         }
     }
+    private func roofSpan(_ vertices:[Map3DVertex],side:Float)->Float {
+        var intervals:[(Float,Float)]=[]
+        for q in section(vertices,at:4.0) {
+            let p=q.filter {$0.y*side>0.88 && $0.y*side<1.06 && $0.x > -3.50 && $0.x<3.20}
+            if p.count>=2 {intervals.append((p.map(\.x).min()!,p.map(\.x).max()!))}
+        }
+        intervals.sort {$0.0<$1.0};guard let first=intervals.first else {return 0}
+        var start=first.0,finish=first.1,best:Float=0
+        for (a,b) in intervals.dropFirst() {
+            if a<=finish+0.0001 {finish=max(finish,b)}
+            else {best=max(best,finish-start);start=a;finish=b}
+        }
+        return max(best,finish-start)
+    }
+    private func roofWidth(_ v:[Map3DVertex])->Float {
+        let p=v.filter {abs($0.x)<7.30 && $0.z>3.80}
+        return p.map(\.y).max()!-p.map(\.y).min()!
+    }
+    func testContinuousRoofAndNarrowTrayRejectActualMissingAndWideGeometry() {
+        for far in [false,true] {
+            let v=Map3DE500.model(far:far).vertices
+            for side:Float in [-1,1] {XCTAssertGreaterThan(roofSpan(v,side:side),6.4)}
+            XCTAssertLessThan(roofWidth(v),2.08)
+            XCTAssertLessThan(v.filter {$0.x > -3.50 && $0.x<3.20}.map(\.z).max()!,4.22)
+            var missing:[Map3DVertex]=[]
+            for i in stride(from:0,to:v.count,by:3) {
+                let t=v[i..<i+3]
+                if !(t.allSatisfy({$0.z>=3.60 && abs($0.x)<3.50}) && t.contains(where:{$0.x < -0.4}) && t.contains(where:{$0.x>0.4})) {missing.append(contentsOf:t)}
+            }
+            XCTAssertLessThan(roofSpan(missing,side:1),6.4,"deleting real enclosure bridge faces must fail continuity")
+            let wide=v.map { w in
+                if abs(w.x)<7.30 && w.z>3.80 {return Map3DVertex(Map3DPoint(w.x,w.y*1.2,w.z),normal:Map3DPoint(w.nx,w.ny,w.nz),color:w.color,layer:w.layer)}
+                return w
+            }
+            XCTAssertGreaterThan(roofWidth(wide),2.08,"widening actual roof vertices must fail the frontal-width criterion")
+        }
+    }
     func testNativeGeometryAtRailDatumAndMeasuredBudget() {
         for far in [false,true] {
             let m=Map3DE500.model(far:far)

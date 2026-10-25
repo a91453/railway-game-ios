@@ -9,7 +9,7 @@ var records:[[String:Any]]=[]
 var nativeUnits:[String:String]=[:]
 func encoded(_ model:Map3DModelPack.Model) throws -> Data {
     guard model.triangleCount<=Map3DModelFile.maximumTriangles else { fatalError("unit budget: \(model.name)") }
-    let metadata=try JSONSerialization.data(withJSONObject:["generator":"native-e500-refresh","producer_commit":producer,"coordinates":"metres +X front +Y left +Z up","recipe_version":2],options:[.sortedKeys])
+    let metadata=try JSONSerialization.data(withJSONObject:["generator":"native-e500-refresh","producer_commit":producer,"coordinates":"metres +X front +Y left +Z up","recipe_version":3],options:[.sortedKeys])
     var data=Data("M3DM".utf8)
     func word(_ bits:UInt32) { let n:UInt32=bits==0x80000000 ? 0:bits; for s:UInt32 in [0,8,16,24] { data.append(UInt8((n>>s)&255)) } }
     data.append(contentsOf:[1,0,0,0]);word(UInt32(model.triangleCount));word(UInt32(metadata.count));data.append(metadata)
@@ -53,9 +53,9 @@ if let previous=ProcessInfo.processInfo.environment["E500_PREVIOUS"] {
  for id in ["e500","e500-far"] {
   let file="models/previous-"+id+".m3dmodel",d=try Data(contentsOf:URL(fileURLWithPath:previous).appendingPathComponent("models/"+id+".m3dmodel"))
   try d.write(to:output.appendingPathComponent(file));let m=try Map3DModelFile(decoding:d,named:"previous-"+id).model
-  records.append(record(m,file,"comparison","previous-producer-8127c765"))
+  records.append(record(m,file,"comparison","previous-producer-68913f4f"))
  }
 }
-let manifest:[String:Any] = ["schema_version":1,"recipe_version":2,"generator":"native-e500-refresh","producer_commit":producer,"models":records,"model_count":records.count,"directions":["top","bottom","left","right","front","back","isometric"],"native_coordinates":"metres +X front +Y left +Z up; tread Z=0","gltf_coordinates":"metres +X front +Y up -Z left","assembly":["unit":"e500","translation_m":[0,0,0],"rotation_degrees":0,"note":"single locomotive; one evidenced single-arm pantograph raised; no coach assets in this delivery"],"palette":["body":Map3DE500.bodyColor,"glass":Map3DE500.glassColor,"mask":Map3DE500.maskColor,"tire":Map3DColor.rgb(0x2B2E34)],"static_geometry":true]
+let manifest:[String:Any] = ["schema_version":1,"recipe_version":3,"generator":"native-e500-refresh","producer_commit":producer,"models":records,"model_count":records.count,"directions":["top","bottom","left","right","front","back","isometric"],"native_coordinates":"metres +X front +Y left +Z up; tread Z=0","gltf_coordinates":"metres +X front +Y up -Z left","assembly":["unit":"e500","translation_m":[0,0,0],"rotation_degrees":0,"note":"single locomotive; one evidenced single-arm pantograph raised; no coach assets in this delivery"],"palette":["body":Map3DE500.bodyColor,"glass":Map3DE500.glassColor,"mask":Map3DE500.maskColor,"tire":Map3DColor.rgb(0x2B2E34)],"static_geometry":true]
 try JSONSerialization.data(withJSONObject:manifest,options:[.prettyPrinted,.sortedKeys]).write(to:output.appendingPathComponent("manifest.json"))
 print("Exported \(records.count) native models with exact Swift readback")

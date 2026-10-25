@@ -91,7 +91,7 @@ for m in manifest['models']:
  assert len(wheel)==12,(m['id'],'actual tire components',len(wheel))
  # Actual roof solids form a proximity/contact graph to the car shell.
  groups=components(p);bounds=[(p[g].min(axis=(0,1)),p[g].max(axis=(0,1))) for g in groups]
- roof=[i for i,(lo,hi) in enumerate(bounds) if lo[2]>=3.74]
+ roof=[i for i,(lo,hi) in enumerate(bounds) if lo[2]>=3.74 or (lo[2]>3.55 and hi[2]>3.9)]
  bogie=[i for i,(lo,hi) in enumerate(bounds) if hi[2]<1.10 and lo[0]*hi[0]>0 and min(abs(lo[0]),abs(hi[0]))>3.45 and max(abs(lo[0]),abs(hi[0]))<8.7]
  equipment=set(roof+bogie);roots=set(range(len(groups)))-equipment;graph=collections.defaultdict(set)
  axes=np.vstack((np.eye(3),-np.eye(3)))
