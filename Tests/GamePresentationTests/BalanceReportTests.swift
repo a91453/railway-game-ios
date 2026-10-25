@@ -534,8 +534,8 @@ final class BalanceReportTests: XCTestCase {
 
     /// Decision 361's sequel: a night market beside the first line's last
     /// station, as the temple above, and a school or a hospital there:
-    /// what each costs, and how many more people live within 400 m of it
-    /// than on the same land with none.
+    /// what each costs, and how many more people live within 400 m of it,
+    /// and on the whole map, than with none.
     func testANightMarketASchoolAndAHospitalOnTheFirstLine() throws {
         let days = try requestedDays()
         var lines = [
@@ -561,6 +561,13 @@ final class BalanceReportTests: XCTestCase {
                 return dx * dx + dy * dy < reach ? sum + cell.residents : sum
             }
         }
+        func everyone(_ world: GameWorld) -> Int64 {
+            world.land.cells.reduce(0) { $0 + $1.residents }
+        }
+        func row(_ day: Int) -> String {
+            "| \(day) | \(nearby(base)) / \(everyone(base)) | "
+                + worlds.dropFirst().map { "\(nearby($0)) / \(everyone($0))" }.joined(separator: " | ") + " |"
+        }
         var growth: [String] = []
         for day in 1...days {
             try base.advance(ticks: 1_440)
@@ -571,7 +578,7 @@ final class BalanceReportTests: XCTestCase {
                     worlds[index].economy.earn(Money(3_000_000_000))
                     ids[index] = try worlds[index].placeBuilding(kinds[index], at: site).id
                 }
-                growth.append("| 10 | \(nearby(base)) | \(worlds.dropFirst().map { String(nearby($0)) }.joined(separator: " | ")) |")
+                growth.append(row(10))
             }
             for index in worlds.indices where day > 10 && kinds[index].isSubsidiary {
                 guard let id = ids[index], let building = worlds[index].placedBuilding(id: id) else { continue }
@@ -581,7 +588,7 @@ final class BalanceReportTests: XCTestCase {
                 counted[index] += 1
             }
             if day > 10 && (day % 30 == 0 || day == days) {
-                growth.append("| \(day) | \(nearby(base)) | \(worlds.dropFirst().map { String(nearby($0)) }.joined(separator: " | ")) |")
+                growth.append(row(day))
             }
         }
         for index in worlds.indices {
@@ -596,7 +603,7 @@ final class BalanceReportTests: XCTestCase {
         }
         lines += [
             "",
-            "| Day | Residents within 400 m: none | school | hospital |",
+            "| Day | Residents within 400 m / on the map: none | school | hospital |",
             "| --: | --: | --: | --: |",
         ] + growth
         print(lines.joined(separator: "\n"))

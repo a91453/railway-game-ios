@@ -781,12 +781,16 @@ extension GameWorld {
     /// cell whose middle lies within ``LandValueRules/civicReach`` of one of
     /// the company's schools and `+` ``LandDemand/hospitalGrowthTenths`` of
     /// a hospital, the rest times 10; `weights` as they are when the company
-    /// has neither.
+    /// has neither. Only a cell with room to grow takes the extra: a full
+    /// one near a school weighs what it would without it, so that the
+    /// share it could not take is not made larger and lost.
     func civicGrowthWeights(_ weights: [Int64], of indices: [Int]) -> [Int64] {
         let civics = landValueCivics()
         guard !civics.schools.isEmpty || !civics.hospitals.isEmpty else { return weights }
         return zip(indices, weights).map { index, weight in
-            let near = Self.isNearCivics(land.cells[index].middle, civics)
+            let cell = land.cells[index]
+            guard allowsGrowth(row: cell.row, column: cell.column), cell.residents < growthLimits(of: cell).residents else { return weight * 10 }
+            let near = Self.isNearCivics(cell.middle, civics)
             return weight * (10 + (near.school ? LandDemand.schoolGrowthTenths : 0) + (near.hospital ? LandDemand.hospitalGrowthTenths : 0))
         }
     }

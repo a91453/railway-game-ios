@@ -58,8 +58,9 @@ final class SchoolsHospitalsNightMarketsTests: XCTestCase {
         try world.placeBuilding(.school, at: PlanPoint(x: 20_000, y: 10_000))
         XCTAssertEqual(world.landValue(row: 2, column: 5)?.civicPremium, 900)
         XCTAssertEqual(world.landValue(row: 2, column: 5)?.value, before + 900)
-        // 400 m is 25,600 units: six cells east of the school's (20,000 →
-        // 45,056, 25,056 off) is within, seven (49,152, 29,152) is not.
+        // 400 m is 25,600 units: the middle of column 10 (43,008, 23,008
+        // east of the school) is within, that of column 11 (47,104, 27,104)
+        // is not.
         XCTAssertEqual(world.landValue(row: 2, column: 10)?.civicPremium, 900)
         XCTAssertEqual(world.landValue(row: 2, column: 11)?.civicPremium, 0)
         try world.placeBuilding(.hospital, at: PlanPoint(x: 26_000, y: 10_000))
@@ -67,6 +68,16 @@ final class SchoolsHospitalsNightMarketsTests: XCTestCase {
         // A second school counts once.
         try world.placeBuilding(.school, at: PlanPoint(x: 20_000, y: 16_000))
         XCTAssertEqual(world.landValue(row: 2, column: 5)?.civicPremium, 1_400)
+    }
+
+    /// Exactly 400 m off is outside: the reach is less than 25,600 units.
+    func testTheReachEndsJustShortOfFourHundredMetres() throws {
+        var edge = try world()
+        try edge.placeBuilding(.school, at: PlanPoint(x: 43_008 - 25_600, y: 10_240))
+        XCTAssertEqual(edge.landValue(row: 2, column: 10)?.civicPremium, 0)
+        var inside = try world()
+        try inside.placeBuilding(.school, at: PlanPoint(x: 43_008 - 25_599, y: 10_240))
+        XCTAssertEqual(inside.landValue(row: 2, column: 10)?.civicPremium, 900)
     }
 
     func testAHouseBesideASchoolLetsForMore() throws {
@@ -80,13 +91,13 @@ final class SchoolsHospitalsNightMarketsTests: XCTestCase {
 
     /// Two homes of 100 residents the same way from a station, 320 m off
     /// (outside its front); a school within 400 m of the west one only.
-    private func growingWorld(with kind: PlacedBuildingKind?) throws -> (world: GameWorld, station: Station) {
+    private func growingWorld(with kind: PlacedBuildingKind?, west: Int64 = 100) throws -> (world: GameWorld, station: Station) {
         var world = try GameWorld(bounds: WorldBounds(width: 131_072, height: 65_536), economy: GameEconomy(balance: 1_000_000_000_000, costs: testCosts))
         world.setEconomyMode(.management)
         // Cells (10, 10) and (10, 20): middles (43,008, 43,008) and
         // (83,968, 43,008), 640 m apart.
         try world.setLand([
-            LandCell(row: 10, column: 10, use: .residential, residents: 100, jobs: 0),
+            LandCell(row: 10, column: 10, use: .residential, residents: west, jobs: 0),
             LandCell(row: 10, column: 20, use: .residential, residents: 100, jobs: 0),
         ])
         let station = try world.buildStation(named: "S", at: PlanPoint(x: 63_488, y: 43_008))
@@ -113,11 +124,65 @@ final class SchoolsHospitalsNightMarketsTests: XCTestCase {
         XCTAssertEqual(try grown(with: .nightMarket), [245, 245])
     }
 
+    /// A home near a school that is already full takes no larger share
+    /// than without the school, so the station grows as much: the west
+    /// home full at 400, 290 new residents shared 400 : 100 either way.
+    func testAFullHomeNearASchoolTakesNoLargerShare() throws {
+        func total(with kind: PlacedBuildingKind?) throws -> Int64 {
+            var (world, station) = try growingWorld(with: kind, west: LandDemand.grownResidents)
+            world.grow(around: station, residents: 290, jobs: 0)
+            return world.land.cells.reduce(0) { $0 + $1.residents }
+        }
+        let plain = try total(with: nil)
+        // 232 of the 290 go to the full home and are lost; the east home
+        // takes 58.
+        XCTAssertEqual(plain, 400 + 100 + 58)
+        XCTAssertEqual(try total(with: .school), plain)
+        XCTAssertEqual(try total(with: .hospital), plain)
+    }
+
+    /// The city's steered growth (decision 98's demand) weighs homes near
+    /// a school as the plain growth does.
+    func testTheSteeredGrowthGrowsNearASchoolToo() throws {
+        func grown(with kind: PlacedBuildingKind?) throws -> [Int64] {
+            var (world, station) = try growingWorld(with: kind)
+            world.setCityDemand(true)
+            let mix = try XCTUnwrap(world.cityDemand?.baseline)
+            let share = try XCTUnwrap(LandDemand.shares(of: world.land, among: world.stations)[station.id])
+            world.growSteered(around: station, share: share, rate: 1_000, levels: .none, mix: mix)
+            return [try XCTUnwrap(world.land.cell(row: 10, column: 10)).residents, try XCTUnwrap(world.land.cell(row: 10, column: 20)).residents]
+        }
+        let plain = try grown(with: nil), school = try grown(with: .school)
+        XCTAssertEqual(plain[0], plain[1])
+        XCTAssertGreaterThan(school[0], school[1])
+        XCTAssertEqual(school[0] + school[1], plain[0] + plain[1])
+        // 200 new homes at 100 % a day: 100 each, or near the school
+        // 1,900 to 1,000, 131 and 69.
+        XCTAssertEqual(plain, [200, 200])
+        XCTAssertEqual(school, [231, 169])
+    }
+
     func testTheWeightsAreUntouchedWithoutASchoolOrAHospital() throws {
         let (world, _) = try growingWorld(with: nil)
         XCTAssertEqual(world.civicGrowthWeights([3, 1], of: [0, 1]), [3, 1])
         let (school, _) = try growingWorld(with: .school)
         XCTAssertEqual(school.civicGrowthWeights([3, 1], of: [0, 1]), [57, 10])
+    }
+
+    // MARK: - Selling
+
+    /// Building one and selling it in the same minute never pays (the
+    /// review of decision 361's sequel): a building that holds no one
+    /// sells its land at what it is worth without it. Every kind that
+    /// stands inland.
+    func testBuildingAndSellingAtOnceNeverPays() throws {
+        for kind in PlacedBuildingKind.allCases where !kind.standsOnShore {
+            var world = try world()
+            let before = world.economy.balance
+            let building = try world.placeBuilding(kind, at: PlanPoint(x: 64_000, y: 10_000))
+            try world.sellPlacedBuilding(building.id)
+            XCTAssertLessThanOrEqual(world.economy.balance, before, "\(kind)")
+        }
     }
 
     // MARK: - Night markets
