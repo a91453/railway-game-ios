@@ -75,6 +75,7 @@ public struct Map3DModelPack: Sendable {
         models.append(Map3DFourCarMetro.formation())
         models += Map3DSevenCarBlue.Unit.allCases.map { Map3DSevenCarBlue.model($0) }
         models.append(Map3DSevenCarBlue.formation())
+        models += Map3DTrainShapeRefresh.ids.map { Map3DTrainShapeRefresh.model($0) }
         models += Map3DSteamTender.Unit.allCases.map { Map3DSteamTender.model($0) }
         models.append(Map3DSteamTender.formation())
         self.models = models
