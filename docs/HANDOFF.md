@@ -1455,6 +1455,7 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
   - 真車的塗裝是橘帶加一條深藍細線，在門附近往下斜切到裙部；遊戲的 N700S-G 照作者給的深綠兩條線（決策 408 不叫它 N700ST），要不要另做橘色的 N700ST 由接手的 session 依五方決定。
 
 **列車建模照 700T 升級（使用者 2026-10-25：「寫一份 700T 參考後更新現有 3D 製作模組……寫出更新腳本讓列車產生更好看」；新工作，交給新 session，本 session 已壓縮兩次）**：#1201 的 700T（`Map3DTrainShapeRefresh.refreshHighSpeed`）使用者說「好漂亮」，要把它的做法搬進現有的列車建模，讓用建模產生的列車一起變好看。新 session 先在 #1041 認領（新決策號、存檔／golden 不動）。
+- **2026-10-25 做了：決策 410**（session_0184ajQAx9BPLKw475Jw1G5U，`claude/train-modeling-410`）：新的共用車殼 `Map3DTrainShell`，樣式五款、場景套件的電聯車、客車與遠景高鐵都改用它；`SceneKitCab` 的車身與 `CabSurface` 刪掉；`Map3DTrainBuilder` 原封不動，只留給 N700S-G 的遠景。`refreshHighSpeed` 沒有改呼叫共用函式（照下面「會變就先複製一份」，700T 逐位元不變）。斷面一圈 32 段（遠景 16），不是 700T 的 40 段，也沒有搬 `swell`：預算內放不下。留下與刪掉的、量到的、下一步（實機幀數、太重就加 `nearOnly`＋`far`、紅臉特急的紅臉）在 `docs/decisions/410.md`；重畫前後圖用 `tools/train-modeling-410/`。下面幾條是派工時的說明，留著對照。
 - **要改的**：`Map3DTrainBuilder`（`Sources/GamePresentation/Map3DModels.swift`，決策 230；`Map3DTrainStyle.all` 的 commuter、express、highSpeed、metro、peopleMover，與 `Map3DTrainSet.multipleUnit` 每一款場景套件列車的中間車），與 `SceneKitCab`（`Map3DSceneKitCabs.swift`，那些列車的頭車）。
 - **700T 好看在哪**（逐項搬，每項一張前後對照）：
   1. 斷面：超橢圓（`surface(x,a)`，側面指數 0.58、上下 0.65）一圈 40 段，車身圓潤；現在 `ring(at:t:)` 段數少、角硬。

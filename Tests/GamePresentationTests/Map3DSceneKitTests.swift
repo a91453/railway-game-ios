@@ -111,7 +111,9 @@ final class Map3DSceneKitTests: XCTestCase {
         let asset=try XCTUnwrap(Map3DSceneKit.asset(id:"01_TRA_modern_3x2-01"))
         let model=Map3DSceneKit.model(for:asset)
         for lateral: Float in [-0.4,0,0.4] {
-            for height: Float in [2.05,2.35,2.65] {
+            // Decision 410: the windscreen lies on the nose's slope, higher
+            // up than #900's square front.
+            for height: Float in [2.8,3.0,3.2] {
                 let hit=nearestHit(from:Map3DPoint(model.maximum.x+1,lateral,height),direction:Map3DPoint(-1,0,0),vertices:model.vertices)
                 XCTAssertEqual(hit.color,Map3DTrainStyle.glass,"Windscreen sinks through the nose at \(lateral), \(height)")
             }

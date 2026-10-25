@@ -21,10 +21,15 @@ final class Map3DModelTests: XCTestCase {
                 guard let index = pack.index(of: name) else { return XCTFail(name) }
                 let model = pack.models[index]
                 XCTAssertEqual(model.vertices.count % 3, 0)
-                XCTAssertTrue((100...3_000).contains(model.triangleCount), "\(name): \(model.triangleCount) triangles")
+                // Decision 410: a cab within 4,000 triangles, a middle car 2,000.
+                XCTAssertTrue((100...(name.hasSuffix("-cab") ? 4_000 : 2_000)).contains(model.triangleCount), "\(name): \(model.triangleCount) triangles")
                 XCTAssertEqual(model.length, style.length, accuracy: 0.5, name)
                 XCTAssertEqual(model.minimum.z, 0, accuracy: 0.01, "\(name) stands on the rail")
-                XCTAssertEqual(model.maximum.z, style.roof + 0.28, accuracy: 0.05, "\(name): the roof and its boxes")
+                // The roof and its boxes (decision 410: a high-speed car's
+                // low cable shrouds; its pantograph stands higher, below).
+                if !name.hasSuffix("-panto") {
+                    XCTAssertTrue((style.roof...style.roof + 0.33).contains(model.maximum.z), "\(name): the roof and its boxes, \(model.maximum.z)")
+                }
                 // About a car's width, the proud panels and all.
                 XCTAssertEqual(model.maximum.y - model.minimum.y, style.halfWidth * 2, accuracy: 0.12, name)
                 XCTAssertTrue(model.vertices.allSatisfy { abs(Map3DPoint($0.nx, $0.ny, $0.nz).length - 1) < 1e-3 })
@@ -151,7 +156,9 @@ final class Map3DModelTests: XCTestCase {
             } else {
                 // Glass where the windscreen reaches up (a flat front), the
                 // roof's grey over the rest (the EMU3000's long nose).
-                XCTAssertTrue(noseTop.allSatisfy { $0.color == Map3DTrainStyle.roofColour || $0.color == Map3DTrainStyle.glass },
+                // (Decision 410: and the windscreen's dark frame.)
+                let frame = Map3DColor.shaded(Map3DTrainStyle.glass, 0.7)
+                XCTAssertTrue(noseTop.allSatisfy { [Map3DTrainStyle.roofColour, Map3DTrainStyle.glass, frame].contains($0.color) },
                               "\(style.name): the nose top is the roof's grey or the windscreen")
             }
         }

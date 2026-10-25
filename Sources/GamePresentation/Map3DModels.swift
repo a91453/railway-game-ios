@@ -41,10 +41,11 @@ public struct Map3DModelPack: Sendable {
     public init(styles: [Map3DTrainStyle]) {
         var models: [Model] = []
         for style in styles {
-            models.append(Map3DTrainBuilder(style: style, cab: true).model(named: style.name + "-cab"))
-            models.append(Map3DTrainBuilder(style: style, cab: false).model(named: style.name + "-car"))
+            // Decision 410: as the 700T and the N700S-G are built.
+            models.append(Map3DTrainShell(style: style, cab: true).model(named: style.name + "-cab"))
+            models.append(Map3DTrainShell(style: style, cab: false).model(named: style.name + "-car"))
             if !style.pantographCars.isEmpty {
-                models.append(Map3DTrainBuilder(style: style, cab: false, pantograph: true).model(named: style.name + "-panto"))
+                models.append(Map3DTrainShell(style: style, cab: false, pantograph: true).model(named: style.name + "-panto"))
             }
         }
         // Decision 244: and the street furniture.
@@ -281,6 +282,23 @@ public struct Map3DTrainStyle: Sendable {
     /// the shoulder headlamps stand, and at what share of the height.
     public var lampSpan: ClosedRange<Float> = 0.50...0.64
     public var lampShare: Float = 0.50
+    /// Decision 410: the section's superellipse, how square its sides and
+    /// its top are (1 an ellipse, smaller squarer; ``Map3DTrainShell``).
+    public var sideRound: Float = 0.25
+    public var topRound: Float = 0.42
+    /// Decision 410: the gauge its bogies' wheels stand on, metres, and
+    /// whether a side skirt hangs over its underframe.
+    public var gauge: Float = 1.067
+    public var skirtCover = false
+    /// Decision 410: its nose's measured shape, if not the one its length
+    /// gives (``NoseShape``).
+    var noseShapeOverride: NoseShape? = nil
+
+    /// Decision 410: its nose's shape: flat under 1.5 m, rounded under
+    /// 2.5 m, sloping under 6 m, longer a high-speed nose.
+    var noseShape: NoseShape {
+        noseShapeOverride ?? (nose < 1.5 ? .flat : nose < 2.5 ? .rounded : nose < 6 ? .sloped : .long)
+    }
 
     static let glass = Map3DColor.rgb(0x26313D)
     static let doorColour = Map3DColor.rgb(0x5D6670)
@@ -302,7 +320,7 @@ public struct Map3DTrainStyle: Sendable {
         // a thin dark line under the windows; one door a side at the end.
         Map3DTrainStyle(name: "express", halfWidth: 1.455, floor: 0.53, roof: 3.49, nose: 5.4, drop: 1.15, lift: 0.18, tuck: 0.3, cap: 0.46,
                         band: 0.40...0.44, line: 0.70...0.726, windows: 0.47...0.70, windowPitch: 1.35, windowWidth: 0.7, doors: 1,
-                        doorWidth: 1.0, screenFrom: 0.15, screenDown: 0.62),
+                        doorWidth: 1.0, screenFrom: 0.15, screenDown: 0.62, sideRound: 0.34, topRound: 0.5),
         // High speed (trains.js HSR_STOCK, THSR N700ST / 700T): a 9 m
         // Dual Supreme Wing duck-bill nose, raised cockpit canopy, tall
         // warm-grey skirt, orange and navy bands sweeping down the nose,
@@ -315,15 +333,16 @@ public struct Map3DTrainStyle: Sendable {
                         windows: 0.58...0.76, windowPitch: 1.0, windowWidth: 0.5, doors: 2,
                         doorWidth: 0.85, doorLayout: .carEnds, doorWindows: true,
                         roofKind: .cableShrouds, pantographCars: [3, 8],
-                        screenFrom: 0.12, screenTo: 0.42, screenDown: 0.68, screenAcross: 0.64),
+                        screenFrom: 0.12, screenTo: 0.42, screenDown: 0.68, screenAcross: 0.64,
+                        sideRound: 0.58, topRound: 0.65, gauge: 1.435, skirtCover: true),
         // A metro car: wider, a flat front, four doors a side.
         Map3DTrainStyle(name: "metro", halfWidth: 1.55, floor: 0.55, roof: 3.6, nose: 1.0, drop: 0.22, tuck: 0.04, cap: 0.2,
                         band: 0.34...0.41, line: nil, windows: 0.45...0.82, windowPitch: 1.9, windowWidth: 1.3, doors: 4,
-                        screenFrom: 0.0, screenDown: 0.45),
+                        screenFrom: 0.0, screenDown: 0.45, gauge: 1.435),
         // A people mover (the Wenhu Line's size): small and rounded.
         Map3DTrainStyle(name: "peopleMover", length: 13, halfWidth: 1.3, floor: 0.7, roof: 3.3, nose: 1.8, drop: 0.55, tuck: 0.1, cap: 0.35,
                         band: 0.28...0.35, line: nil, windows: 0.40...0.80, windowPitch: 2.0, windowWidth: 1.6, doors: 2,
-                        screenFrom: 0.0, screenDown: 0.40),
+                        screenFrom: 0.0, screenDown: 0.40, sideRound: 0.42, topRound: 0.55),
     ]
 }
 
