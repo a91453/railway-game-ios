@@ -620,7 +620,20 @@ struct Map3DTrainShell {
         car.addRunningGear()
         car.addRoof()
         car.addGangways()
-        return Map3DModelPack.Model.flat(named: name, from: car.builder.mesh)
+        // Without the triangles of no area a fan leaves where its points
+        // meet (a cap closing, a cut along a projected lamp's edge): the
+        // handbook's degenerate-face check (#1224, G), and of the slivers
+        // whose three points lie on one line, which rounding gives an area.
+        let mesh = car.builder.mesh
+        var kept = Map3DMesh()
+        for start in stride(from: 0, to: mesh.indices.count, by: 3) {
+            let corners = (0..<3).map { mesh.vertices[Int(mesh.indices[start + $0])] }
+            let a = corners[0].position, b = corners[1].position, c = corners[2].position
+            let area = (b - a).cross(c - a).length / 2
+            let longest = max((b - a).length, (c - b).length, (a - c).length)
+            if area >= 1e-7, area >= 1e-6 * longest * longest { kept.appendTriangle(corners) }
+        }
+        return Map3DModelPack.Model.flat(named: name, from: kept)
     }
 }
 

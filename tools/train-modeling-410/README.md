@@ -9,6 +9,7 @@ swiftc -swift-version 6 -I "$bin" tools/train-modeling-410/export.swift "$bin/li
 OUT/export OUT after          # 在 main 的 checkout（git worktree）用同樣的指令跑一次，最後一個參數是 before
 NODE_GLOBAL="$(npm root -g)/" node tools/train-modeling-410/render.mjs OUT
 python3 tools/train-modeling-410/overview.py OUT overview.png
+NODE_GLOBAL="$(npm root -g)/" node tools/train-modeling-410/review.mjs OUT   # 車輛建模手冊（#1224）§10 的自檢表，OUT/review/<組>.png；第二個參數只畫一組
 python3 tools/train-pack-lrt/sheet.py OUT set-emu800.png "之前=set-emu800-before-iso,set-emu800-before-front" "之後=set-emu800-after-iso,set-emu800-after-front"
 ```
 
