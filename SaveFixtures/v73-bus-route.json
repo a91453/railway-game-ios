@@ -23,10 +23,12 @@
         {
           "day" : 0,
           "energyCost" : 113400,
-          "fareRevenue" : 798000,
+          "fareRevenue" : 599000,
           "fareTrips" : 1198,
           "maintenanceCost" : 1032000,
-          "operatingCost" : 7404000,
+          "operatingCost" : 6504000,
+          "propertyCost" : 900000,
+          "propertyRevenue" : 199000,
           "staffCost" : 172000
         }
       ],
