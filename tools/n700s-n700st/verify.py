@@ -14,7 +14,7 @@ def main(root,pipeline):
         assert (np.sum(normal*(midpoint-center),axis=1)>0).all()
     sys.path.insert(0,str(pipeline));from native_probe import decode
     report={}
-    for variant in ('n700s','n700st'):
+    for variant in ('n700s','n700st','n700s-g'):
         folder=root/variant;assembly=json.loads((folder/'assembly.json').read_text());rows=[];stats=[]
         assert len(assembly['placements'])==10
         for f in sorted((folder/'models').glob(f'railway-{variant}-?.m3dmodel')):
@@ -24,6 +24,14 @@ def main(root,pipeline):
             top=t[:len(source_body)].copy();top[:,:,2]-=.74
             assert np.max(np.linalg.norm((top-source_body).reshape(-1,3),axis=1))<.001
             if variant=='n700s':assert np.array_equal(rgba[:len(source_body)],source_colors[:,0])
+            if variant=='n700s-g':
+                original,original_colors,_=decode((root/'n700s'/'models'/f'railway-n700s-{letter}.m3dmodel').read_bytes())
+                assert np.array_equal(t,original),f
+                blue=np.all(original_colors[:,0]==[43,51,86,255],axis=1)
+                assert blue.any(),f
+                expected=original_colors[:,0].copy();expected[blue]=[29,74,68,255]
+                assert np.array_equal(rgba,expected),f
+                assert meta['baseNativeSha256']==hashlib.sha256((root/'n700s'/'models'/f'railway-n700s-{letter}.m3dmodel').read_bytes()).hexdigest()
             # Wheel tread reaches local rail plane, and each of two bogies has four wheels.
             wheel=np.all(rgba[:,:3]==[43,49,57],axis=1);assert wheel.sum()==384,(f,wheel.sum())
             assert abs(t[:,:,2].min())<2e-5,(f,t[:,:,2].min())

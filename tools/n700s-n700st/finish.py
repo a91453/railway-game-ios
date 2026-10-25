@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""Render, package and hash the final native bytes for both paint variants."""
+"""Render, package and hash selected native paint variants."""
 import argparse,hashlib,json,shutil,sys,zipfile
 from pathlib import Path
 import numpy as np
 from PIL import Image,ImageDraw,ImageFont
 
-def main(pipeline,root,commit):
+def main(pipeline,root,commit,variants):
     sys.path.insert(0,str(pipeline));from native_probe import decode
     from render_native import render,VIEWS
     from n700s_native import basis
     import trimesh
     root=Path(root)
-    for variant in ('n700s','n700st'):
+    for variant in variants:
         dst=root/variant;ass=json.loads((dst/'assembly.json').read_text());rows=[];lookup={}
         for f in sorted((dst/'models').glob(f'railway-{variant}-?.m3dmodel')):
             t,c,_=decode(f.read_bytes());lookup[f.name]=(t,c);rows.append((f.stem,t,c,48))
@@ -38,7 +38,25 @@ def main(pipeline,root,commit):
         overview.save(dst/f'Railway_{variant.upper()}_Overview.png')
         previous=root/'repair-before'/variant/'models'/f'railway-{variant}-a.m3dmodel'
         original=(root/'source-body'/'previews'/f'railway-n700s-a'/'isometric.png')
-        if previous.exists():
+        if variant=='n700s-g':
+            previous=root/'n700s'/'models'/'railway-n700s-a.m3dmodel'
+            snapshot=dst/'revision-before'
+            snapshot.mkdir(parents=True,exist_ok=True)
+            for f in sorted((root/'n700s'/'models').glob('railway-n700s-?.m3dmodel')):
+                shutil.copy2(f,snapshot/f.name)
+            old_t,old_c,_=decode(previous.read_bytes())
+            original=snapshot/'railway-n700s-a-isometric.png'
+            render(old_t,old_c,'isometric',scale=48).save(original)
+            before_side=render(old_t,old_c,'right',scale=48)
+            after_side=Image.open(dst/'previews'/f'railway-{variant}-a'/'right.png').convert('RGBA')
+            after_iso=Image.open(dst/'previews'/f'railway-{variant}-a'/'isometric.png').convert('RGBA')
+            before_iso=Image.open(original).convert('RGBA')
+            comparison=Image.new('RGBA',(before_iso.width*2,before_iso.height*2),'white')
+            for im,pos in ((before_iso,(0,0)),(after_iso,(before_iso.width,0)),
+                           (before_side,(0,before_iso.height)),(after_side,(before_iso.width,before_iso.height))):
+                comparison.paste(im,pos,im)
+            comparison.save(dst/'Railway_N700S-G_Livery_Before_After.png')
+        elif previous.exists():
             snapshot=dst/'revision-before'
             shutil.copytree(root/'repair-before'/variant,snapshot,dirs_exist_ok=True)
             old_t,old_c,_=decode(previous.read_bytes())
@@ -81,4 +99,5 @@ def main(pipeline,root,commit):
 
 if __name__=='__main__':
     p=argparse.ArgumentParser();p.add_argument('--pipeline',type=Path,required=True);p.add_argument('--root',type=Path,required=True);p.add_argument('--producer-commit',required=True)
-    a=p.parse_args();main(a.pipeline,a.root,a.producer_commit)
+    p.add_argument('--variants',nargs='+',choices=('n700s','n700st','n700s-g'),default=('n700s','n700st'))
+    a=p.parse_args();main(a.pipeline,a.root,a.producer_commit,a.variants)
