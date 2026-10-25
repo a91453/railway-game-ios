@@ -1,3 +1,4 @@
+import CoreLocation
 import XCTest
 
 /// Stage E2: a real-world game starts from a place in the list and is
@@ -104,6 +105,63 @@ final class RealWorldMapUITests: XCTestCase {
         XCTAssertTrue(message.appears(within: 5), "A second press must answer too")
         XCTAssertFalse(message.disappears(within: 3), "and its line must stay")
         XCTAssertEqual(middle.label, before, "A second press must not move the map either")
+    }
+
+    /// The owner's video (86.1, an iPhone on its side, location already
+    /// allowed): the first press found the device, each press after it
+    /// moved the map further to the north-east. With location allowed and
+    /// the Simulator at Kaohsiung, every press brings the map back there,
+    /// also after the map was moved away. Full lane only (decision 199).
+    func testUseMyLocationReturnsToTheDeviceOnEveryPress() throws {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        XCUIDevice.shared.location = XCUILocation(location: CLLocation(latitude: 22.6273, longitude: 120.3014))
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+
+        tappable(app.buttons.matching(identifier: "start.newGame"), name: "start.newGame").tap()
+        tappable(app.buttons.matching(identifier: "newGame.realWorld"), name: "newGame.realWorld").tap()
+        let myLocation = tappable(app.buttons.matching(identifier: "realWorld.myLocation"), name: "realWorld.myLocation")
+        myLocation.waitUntilSettled()
+        let middle = app.descendants(matching: .any)["realWorld.middle"].firstMatch
+        XCTAssertTrue(middle.appears(within: 10), "Missing the map's middle")
+
+        func press() {
+            myLocation.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.12)).tap()
+            // The first ask may show the system's question.
+            let allow = XCUIApplication(bundleIdentifier: "com.apple.springboard").buttons["Allow While Using App"]
+            if allow.waitForExistence(timeout: 3) { allow.tap() }
+        }
+        func isAtTheDevice() -> Bool {
+            let parts = middle.label.split(separator: ",").compactMap { Double($0) }
+            return parts.count == 2 && abs(parts[0] - 22.63) < 0.02 && abs(parts[1] - 120.30) < 0.02
+        }
+        func reachesTheDevice(within timeout: TimeInterval) -> Bool {
+            let deadline = Date().addingTimeInterval(timeout)
+            while Date() < deadline {
+                if isAtTheDevice() { return true }
+                Thread.sleep(forTimeInterval: 0.25)
+            }
+            return isAtTheDevice()
+        }
+
+        press()
+        XCTAssertTrue(reachesTheDevice(within: 30), "The first press must find the device: \(middle.label)")
+        // A tap on the map's left moves the square away.
+        let map = app.descendants(matching: .any)["realWorld.map"].firstMatch
+        map.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.6)).tap()
+        let moved = Date().addingTimeInterval(5)
+        while isAtTheDevice(), Date() < moved { Thread.sleep(forTimeInterval: 0.25) }
+        XCTAssertFalse(isAtTheDevice(), "A tap on the map must move the square away: \(middle.label)")
+        press()
+        XCTAssertTrue(reachesTheDevice(within: 30), "The second press must bring the map back: \(middle.label)")
+        press()
+        XCTAssertTrue(reachesTheDevice(within: 30), "and the third: \(middle.label)")
+        // Settled there, it stays (no tap reached the map behind the button).
+        Thread.sleep(forTimeInterval: 2)
+        XCTAssertTrue(isAtTheDevice(), "The map must stay at the device: \(middle.label)")
     }
 
     /// Stage V4e: the real-world demo runs under traffic control, and the
