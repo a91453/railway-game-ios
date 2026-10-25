@@ -78,8 +78,9 @@ final class SettingsUITests: XCTestCase {
         // left edge, beside the row) reached it (PR #427's runs), so drag
         // the row into the middle of the screen and tap the centre of its
         // frame, as openSettingsFromTheGameMenu taps the menu's Settings.
+        // The drags pass the volume sliders and must not start on one.
         let preview = app.buttons["settings.cityView"]
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(preview), "The 3D city preview never came into view")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(preview, clearOf: .slider), "The 3D city preview never came into view")
         let frame = preview.frame
         app.coordinate(withNormalizedOffset: .zero)
             .withOffset(CGVector(dx: frame.midX - app.frame.minX, dy: frame.midY - app.frame.minY))
@@ -133,7 +134,7 @@ final class SettingsUITests: XCTestCase {
         // decision 381 lengthened the settings, and ran out after it (full
         // lane 40026341039). Drags on the list's own left edge, on a phone
         // on its side, moved nothing (run 40044305336).
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(attach, drags: 40), "The attach switch never came into view")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(attach, drags: 40, clearOf: .slider), "The attach switch never came into view")
         XCTAssertEqual(switchValue(attach), "0", "off until the player turns it on")
         XCTAssertTrue(flip(attach, from: "0"), "The attach switch did not turn on")
         let attached = app.staticTexts["settings.report.attached"]

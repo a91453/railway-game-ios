@@ -238,7 +238,7 @@
 - 只改 docs、`Tests/`、`tools/` 的 PR 不影響 App，不用重跑。
 - 要發版的 commit 必須自己有一輪綠的 full lane。
 
-**full lane 紅了**（決策 329 起，`full-lane-watch.yml` 會在 #231 自動留言：第一次紅、紅燈裡又有新的 job 紅、綠回來。看到就照下面做）：
+**full lane 紅了**（決策 329 起，`full-lane-watch.yml` 會在 #1041 自動留言：第一次紅、紅燈裡又有新的 job 或新的測試紅、綠回來；留言列出紅的測試。2026-10-25 以前只比 job，同兩個 job 裡換不同的測試紅就不留言。看到就照下面做）：
 1. 用 `actions_list` 的 list_workflow_jobs 找出失敗的 job。
 2. 用 `get_job_logs`（return_content 設 false）拿到 log 網址，用 curl 下載到 scratchpad。
 3. 用 `grep -aE "error: -\[|' failed \(|Executed [0-9]+ tests, with"` 找出失敗的測試與行號。
@@ -250,7 +250,7 @@
 **發版前**（作者 2026-10-23：「改成我說可以發你才能替我發」。發不發由作者決定；作者在遊戲規劃 session 裡說「發」之後，遊戲規劃照下面確認，都綠才用 `workflow_dispatch` 在 `main` 跑一次 `testflight.yml`，輸入照作者上一次發版的 run，作者另外指定的話照作者說的。不是綠的就告訴作者哪裡紅，等作者再說一次才發。作者也可以自己按。實作 session 一律不碰。第 84 版（2026-10-23）遊戲規劃去按時被 session 的權限檢查（自動模式，理由「正式發布」）擋下，由作者自己按；要遊戲規劃替作者按，作者須在那個 session 的權限設定允許啟動 `testflight.yml`，否則照舊告訴作者「可以發（commit X）」與輸入，請作者按）：
 - **先寫 What to Test**：`.github/testflight-whats-new.md` 寫好這一版給玩家看的說明（照 83.1 的格式：新增的、修好的、沿用的、請幫忙看），合進 main，這個合併的 commit 才是要發的 commit。沒寫就不說「可以發」：`testflight-changes.py` 只在這個檔案自上一版之後改過才用它，否則填 PR 標題，作者不要那個（84.1 漏寫，作者：「每次都改我這個 說了幾次」）。
 - 要發的 commit 就是 main HEAD，它的 `ci.yml` 和它自己的 full lane 都要綠。
-- 看 #231 最後一則 `full-lane-watch.yml` 的自動留言：最後一則是「紅了」或「又有 job 紅了」、之後還沒有「綠了」，就是 main 的 full lane 還紅著，先不發（決策 329）。
+- 看 #1041 最後一則 `full-lane-watch.yml` 的自動留言：最後一則是「紅了」、「又有 job 紅了」或「又有測試紅了」、之後還沒有「綠了」，就是 main 的 full lane 還紅著，先不發（決策 329）。
 - 確認的時候如果 main 又合了改 App 的 PR，要在新的 HEAD 重跑 full lane。這時可以取消舊 commit 用 workflow_dispatch 跑的 full lane，讓出 macOS runner（上限 5 個）。
 - 確認後通知遊戲規劃與作者「可以發（commit X）」，並請各 session 發版前別再合改 App 的 PR。
 - **健康報告**（作者 2026-10-24：「健康報告也開始做」；作者不看程式碼，「我也不知道你有沒有做錯」）：說「可以發」時一起給作者一張白話的紅綠燈表，不寫程式名詞。用 🟢 綠、🔴 紅、⚪ 還沒驗：

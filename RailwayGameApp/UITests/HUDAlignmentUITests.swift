@@ -201,9 +201,14 @@ final class HUDAlignmentUITests: XCTestCase {
             XCTAssertTrue(bubble.appears(within: 10), "\(way): the bubble shows")
             bubble.waitUntilStill()
             let screen = "\(way) station master"
+            // The bubble first: it speaks for 7 s from the tap, and a slow
+            // runner's reads of the avatar and its title took until 8 s
+            // after it, when the bubble had gone (main a2f0ef9's full
+            // lane, run 40160679685).
+            let frame = read("stationMaster.bubble", screen)
             _ = read("stationMaster", screen)
             _ = read("stationMaster.title", screen)
-            if let frame = read("stationMaster.bubble", screen) {
+            if let frame {
                 // It speaks on the bottom row, beside the avatar.
                 expect(frame.maxY, lines.bottom, "the bubble's foot", screen)
                 edgesNearTheLines(frame, "the bubble", on: lines, screen)

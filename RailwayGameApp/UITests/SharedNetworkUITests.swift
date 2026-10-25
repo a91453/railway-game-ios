@@ -14,8 +14,14 @@ final class SharedNetworkUITests: XCTestCase {
         app.launch()
         let newGame = app.buttons["sharedNetwork.newGame"]
         XCTAssertTrue(newGame.appears(within: 30), "no sheet for the network sent")
+        // On a phone on its side, as the tests before leave it, the
+        // postcard fills the sheet and the choices are below it: the
+        // player scrolls to them (the full lanes of main fcf0697 and
+        // c4fc5b6 found Start a New Game there and not hittable).
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(newGame), "Start a New Game is not reachable")
         XCTAssertTrue(newGame.becomesHittable(within: 5), "Start a New Game is not reachable")
         let look = app.buttons["sharedNetwork.look"]
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(look), "Just Look is not reachable")
         XCTAssertTrue(look.becomesHittable(within: 5), "Just Look is not reachable")
         look.tap()
         XCTAssertTrue(look.disappears(within: 10), "the sheet stayed")
