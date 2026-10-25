@@ -94,8 +94,9 @@ final class BusRouteTests: XCTestCase {
     // MARK: - The feeder
 
     /// The stop at (8, 26) reaches the five cells (400 m is 6.25 cells):
-    /// 1,000 residents, 400 trips, A's 400 its own. Their minutes: the walk
-    /// 2, 1, 0, 1, 2, half the headway 5 and the ride 4, 10.2 on average.
+    /// 1,000 residents, riding half as much as A's own (500 people), 200
+    /// trips, A's 400 its own. Their minutes: the walk 2, 1, 0, 1, 2, half
+    /// the headway 5 and the ride 4, 10.2 on average.
     func testAStopBringsInTheLandNoStationReaches() throws {
         var world = try world()
         XCTAssertEqual(trips(world, a), 400)
@@ -103,9 +104,9 @@ final class BusRouteTests: XCTestCase {
         let route = try world.createBusRoute(to: a, stops: [stop], service: .every(minutes: 10), buses: 2)
         XCTAssertEqual(route.id, BusRouteID(rawValue: 1))
         XCTAssertEqual(route.legMetres, [1_344])
-        XCTAssertEqual(world.busRoute(id: route.id)?.feederTrips, 400)
+        XCTAssertEqual(world.busRoute(id: route.id)?.feederTrips, 200)
         XCTAssertEqual(world.busRoute(id: route.id)?.feederMinutes, 10)
-        XCTAssertEqual(trips(world, a), 800)
+        XCTAssertEqual(trips(world, a), 600)
         XCTAssertEqual(trips(world, b), 400)
 
         // No bus: the land is out of reach again.
@@ -133,13 +134,13 @@ final class BusRouteTests: XCTestCase {
     /// 3,520 m: the road's 4,576 m take a scooter 9 + 4 = 13 minutes. A
     /// trip of 5 minutes on the train is 5 + 6 = 11 on foot, no slower;
     /// by bus, 5 + 3 + 10 = 18, 1384‰: the simple rule's half of 384 is
-    /// 192‰, and 96 of the bus's 500 switch.
+    /// 192‰, and 64 of the bus's 333 (200 of A's 600) switch.
     func testTheBusEndCountsInTheModeShift() throws {
         var world = try world()
         try world.setModeShift(.simple)
         XCTAssertEqual(world.modeShiftKept(1_000, from: a, to: b, minutes: 5), 1_000)
         try world.createBusRoute(to: a, stops: [stop], service: .every(minutes: 10), buses: 2)
-        XCTAssertEqual(world.modeShiftKept(1_000, from: a, to: b, minutes: 5), 904)
+        XCTAssertEqual(world.modeShiftKept(1_000, from: a, to: b, minutes: 5), 936)
         XCTAssertEqual(world.modeShiftKept(1_000, from: b, to: a, minutes: 5), 1_000, "B has no buses")
     }
 
@@ -158,8 +159,10 @@ final class BusRouteTests: XCTestCase {
         XCTAssertEqual(world.busRoute(id: route.id)?.legMetres, [128, 1_344])
     }
 
-    /// A day: A's riders setting out by train, half of them the bus's,
-    /// pay $5 each; two buses cost $3,000 each.
+    /// A day: the bus's share of A's riders setting out by train pay $5
+    /// each. The 1,344 m route takes 9 + 10 minutes there and back, so
+    /// two buses keep its 10 minutes: 144 departures, 387.072 km there and
+    /// back at $20, $7,741.44.
     func testADaysBusesAreBookedTogether() throws {
         var world = try world()
         let route = try world.createBusRoute(to: a, stops: [stop], service: .every(minutes: 10), buses: 2)
@@ -168,9 +171,43 @@ final class BusRouteTests: XCTestCase {
         let day = try XCTUnwrap(world.busRoute(id: route.id)?.days.last)
         XCTAssertGreaterThan(day.riders, 0)
         XCTAssertEqual(day.fares, Money(day.riders * 500))
-        XCTAssertEqual(day.cost, Money(2 * 300_000))
-        XCTAssertEqual(entry.breakdown, [LedgerLine(item: .busFares, amount: day.fares), LedgerLine(item: .busRunning, amount: Money(-600_000))])
+        XCTAssertEqual(day.cost, Money(774_144))
+        XCTAssertEqual(entry.breakdown, [LedgerLine(item: .busFares, amount: day.fares), LedgerLine(item: .busRunning, amount: Money(-774_144))])
         XCTAssertTrue(world.accounts.entries.allSatisfy(GameWorld.isWellFormed))
+    }
+
+    /// Those whose train journey ends at A take the bus home too: on the
+    /// line of two stations everyone who gets off at A arrives, so the
+    /// bus carries its share (200 of A's 600 trips) of those boarding and
+    /// those alighting there, give or take the thousandths carried over.
+    func testRidersTakeTheBusHomeFromTheTrain() throws {
+        var world = try world()
+        world.setLineAccounts(true)
+        let route = try world.createBusRoute(to: a, stops: [stop], service: .every(minutes: 10), buses: 2)
+        try world.advance(ticks: 1_440 + 1_380)
+        let day = world.dayIndex(of: world.clock.now)
+        let flow = try XCTUnwrap(world.lineAccounts?.flows.first { $0.station == a && $0.day == day })
+        XCTAssertGreaterThan(flow.alighted, 0)
+        let riders = try XCTUnwrap(world.busRoute(id: route.id)).ridersToday
+        XCTAssertEqual(Double(riders), Double((flow.boarded + flow.alighted) * 200) / 600, accuracy: 2)
+    }
+
+    /// A route's cost follows the kilometres its buses run: runs as many as
+    /// its buses keep, and nothing with no bus.
+    func testARouteCostsWhatItsBusesRun() throws {
+        var world = try world()
+        let route = try world.createBusRoute(to: a, stops: [stop], service: .runs([360, 420, 480]), buses: 1)
+        // Three runs of 2.688 km there and back at $20: $161.28.
+        XCTAssertEqual(world.busRoute(id: route.id)?.dailyDepartures, 3)
+        XCTAssertEqual(world.busRoute(id: route.id)?.dailyCost, Money(16_128))
+        // Every 60 minutes: 24 departures, $1,290.24.
+        try world.setBusRuns(route.id, to: .every(minutes: 60))
+        XCTAssertEqual(world.busRoute(id: route.id)?.dailyCost, Money(129_024))
+        // Every minute, but one bus keeps a bus every 19 minutes: 75.
+        try world.setBusRuns(route.id, to: .every(minutes: 1))
+        XCTAssertEqual(world.busRoute(id: route.id)?.dailyDepartures, 75)
+        try world.setBusCount(route.id, to: 0)
+        XCTAssertEqual(world.busRoute(id: route.id)?.dailyCost, .zero)
     }
 
     // MARK: - Refused
@@ -261,11 +298,20 @@ final class BusRouteTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 73)
         let loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(loaded, world)
+        // The routes as built; their day's figures are the save's, worked
+        // out under the rules of version 73's day (decision 400's balance
+        // has since halved the stops' land and costs a route by the
+        // kilometre), and are not worked out again on loading.
         XCTAssertEqual(loaded.busRoutes.map(\.id), [BusRouteID(rawValue: 1), BusRouteID(rawValue: 2)])
+        XCTAssertEqual(loaded.busRoutes.map(\.stops), world.busRoutes.map(\.stops))
+        XCTAssertEqual(loaded.busRoutes.map(\.legMetres), world.busRoutes.map(\.legMetres))
+        XCTAssertEqual(loaded.busRoutes.map(\.service), world.busRoutes.map(\.service))
+        XCTAssertEqual(loaded.busRoutes.map(\.buses), world.busRoutes.map(\.buses))
         // The second route's first stop is nearest (8, 28): the first keeps
-        // the four cells 24 to 27 (27 a tie, to the lower route), 320 trips.
+        // the four cells 24 to 27 (27 a tie, to the lower route), 320 trips
+        // in the save, 160 now.
         XCTAssertEqual(loaded.busRoutes.map(\.feederTrips), [320, 80])
+        XCTAssertEqual(world.busRoutes.map(\.feederTrips), [160, 40])
         XCTAssertEqual(loaded.acquisition(of: "bus:Taipei:307")?.kind, .bus)
         XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
             .replacingOccurrences(of: #""saveVersion" : 73,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
