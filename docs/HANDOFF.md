@@ -65,7 +65,7 @@
 
 | 角色 | 現在的 session | 做什麼 | 交接 |
 | --- | --- | --- | --- |
-| 遊戲規劃（兼派工） | session_01B2kaku5NRz2J2CMzc8z3cZ（2026-10-24 23:13 UTC 起，作者從 claude.ai 開；接手時的現況在 §2.0 最前面「第十一次換手」與 #1041 的「遊戲規劃接手」留言）；前任 session_019yHzrc1rgGJgdXSSwRNqgM（10-24 15:07–22:50，壓縮 2 次照 §1.1 換手，已封存）；再之前 session_013dJ7tvDYJnhe7XjXCE5cNi（10-24 08:17–14:00，壓縮 2 次照 §1.1 換手，已封存）；再之前 session_017HD7Krh51WqqzXjy6949Pq（10-24 06:32–08:00，壓縮 2 次照 §1.1 換手）；再之前 session_01AxcyajwHdF6j4ryDMghASM（10-24 05:00–06:30，「第八次換手」，已封存）；再之前 session_01XsVqbA1A5wGtJbuAa881oT（10-24 01:30–05:00，「第七次換手」）；再之前接暫代的 session_01PGibJmGNcvu2d7dJWWhWVb（10-24 00:35–01:30，已封存），再之前 session_01H5RHAwnA69n8EfAUSUrH52（10-23 00:10–10-24 00:35），再之前 session_014nUBHbE9mSK4qXHHgm8xCQ（10-22 22:30–10-23 00:10），再之前 session_01UsF4QYCGrzSeNSFq11i8Wu（18:15–22:30），再之前 session_01Ddr2wiXx1Xhn2m9qNBDnDh、session_01CHQg7B6JqzbScGSjyDwHos（2026-10-22 起，照 §1.1 換手，作者：「要不要全部所有換個session了 都一直在壓縮了」→「好，照表換」；換手時的現況在第 2 節最前面；前任 session_014rYHMtmqA5bEMkBBuKu6PV（10-21 至 10-22，作者：「那你需要先接手嗎太長了」）、session_01NiR5WLMFjMJBktQAMkfmkm（10-21）、session_01WW7o3decEv5LY59nYVqnDN（10-20 至 10-21，作者：「接手 角色表中遊戲規劃的工作」）、session_01V1xd3H9vNkuZoSA3czNfGm（10-16 至 10-18）、session_018D6gYU1yiZMtxSmNNU1K17） | 從玩家、鐵道迷、開發、美術、音樂五個角度決定優先順序與設計，開實作 session 並派工，綠了的 PR 照 §1.2 合併（2026-10-21 起），收作者轉來的玩家回報與 bug（§1.3），寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1、1.3 節 |
+| 遊戲規劃（兼派工） | 作者從 claude.ai 開的新 session（2026-10-25「第十三次換手」之後；接手時的現況在 §2.0 最前面「第十三次換手」與 #1041 的「遊戲規劃接手」留言）；前任 session_0138XhXTjToUd3fpKV7kebeH（10-25 05:05–12:40，壓縮 5 次，作者說「交接」）；再之前 session_01B2kaku5NRz2J2CMzc8z3cZ（10-24 23:13–10-25 05:05，壓縮 2 次照 §1.1 換手）；再之前 session_019yHzrc1rgGJgdXSSwRNqgM（10-24 15:07–22:50，壓縮 2 次照 §1.1 換手，已封存）；再之前 session_013dJ7tvDYJnhe7XjXCE5cNi（10-24 08:17–14:00，壓縮 2 次照 §1.1 換手，已封存）；再之前 session_017HD7Krh51WqqzXjy6949Pq（10-24 06:32–08:00，壓縮 2 次照 §1.1 換手）；再之前 session_01AxcyajwHdF6j4ryDMghASM（10-24 05:00–06:30，「第八次換手」，已封存）；再之前 session_01XsVqbA1A5wGtJbuAa881oT（10-24 01:30–05:00，「第七次換手」）；再之前接暫代的 session_01PGibJmGNcvu2d7dJWWhWVb（10-24 00:35–01:30，已封存），再之前 session_01H5RHAwnA69n8EfAUSUrH52（10-23 00:10–10-24 00:35），再之前 session_014nUBHbE9mSK4qXHHgm8xCQ（10-22 22:30–10-23 00:10），再之前 session_01UsF4QYCGrzSeNSFq11i8Wu（18:15–22:30），再之前 session_01Ddr2wiXx1Xhn2m9qNBDnDh、session_01CHQg7B6JqzbScGSjyDwHos（2026-10-22 起，照 §1.1 換手，作者：「要不要全部所有換個session了 都一直在壓縮了」→「好，照表換」；換手時的現況在第 2 節最前面；前任 session_014rYHMtmqA5bEMkBBuKu6PV（10-21 至 10-22，作者：「那你需要先接手嗎太長了」）、session_01NiR5WLMFjMJBktQAMkfmkm（10-21）、session_01WW7o3decEv5LY59nYVqnDN（10-20 至 10-21，作者：「接手 角色表中遊戲規劃的工作」）、session_01V1xd3H9vNkuZoSA3czNfGm（10-16 至 10-18）、session_018D6gYU1yiZMtxSmNNU1K17） | 從玩家、鐵道迷、開發、美術、音樂五個角度決定優先順序與設計，開實作 session 並派工，綠了的 PR 照 §1.2 合併（2026-10-21 起），收作者轉來的玩家回報與 bug（§1.3），寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1、1.3 節 |
 | 每日 Threads 開發日誌 | 排程「每日 Threads 開發日誌」（台灣時間每天 21:43，2026-10-18 起暫停）觸發遊戲規劃，由它開寫作 session。現在是 `trig_01ER4MLsumedKaDcP7aeTCNW`（綁 session_01B2kaku5NRz2J2CMzc8z3cZ，暫停；2026-10-24 第十一次換手時重建，綁 019yHz 的 `trig_01LDPJ9BmYzGZxmebUxATZZ2` 已刪）。舊的 `trig_01M2rwYPRRjTwQTC5g6QaW9v`（綁 013dJ7）與 `trig_01ABYQAarHbVxBbEShiVWDr3`（綁 01Axcy）都停用了，刪除時被自動模式的權限檢查擋下（兩任都一樣），留著不會觸發；作者要清可以在排程列表刪。2026-10-22 換手時由前任建了綁到 session_01CHQg7B6JqzbScGSjyDwHos 的新排程 `trig_01FZhfBNQCdDW8iDpowANLZS`（暫停中；之後每次換手都重建，現任的 id 寫在 #1041 接手的留言），前任的 `trig_01NfzFV9BcdiyBJpAwnaTuK9`（再之前是 `trig_01SkNFNW6qN6cMUGkGCXZM1v`）已刪。排程的綁定改不了，以後換手時由現任遊戲規劃用同一份 prompt 建一個綁到自己的新排程，再刪掉舊的；作者沒說要開就維持暫停 | 寫當天的串文草稿，用 SendUserFile 交給作者；不 commit、不發布 | 派工單照 2026-10-14、10-15、10-16 的寫作 session |
 
 不再常駐（2026-10-20 停用）：合併協調 session_01QoA24EvFCFbmbcM1EwaZT7（前任 session_016sNs4eeZwga9hz1CCHkpmX）、派工 session_01MJ7sdeid5DAFjSVbTkmdi3（前任 session_01AaAj4wvJMxJQuLWAoYu6S8）。兩個都從 2026-10-17 起沒有動作。
@@ -336,6 +336,24 @@
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
+
+**第十三次換手（2026-10-25 12:40 UTC，session_0138XhXTjToUd3fpKV7kebeH 壓縮 5 次，作者說「交接」→ 作者從 claude.ai 開的新規劃）**。新任開工：讀第 1 節、這一段；#1041 只讀「session_0138XhXTjToUd3fpKV7kebeH（遊戲企劃）壓縮第 5 次」那則之後的留言。和下面「第十二次換手」不同時以這段為準。前任超過 §1「第 3 次壓縮快到時換」才換，下一任照表在第 3 次壓縮前換。
+
+- **88.1（0.5.0）發版中，main 凍結**（10-25 12:25 UTC 起）。發版 commit 是 main 的 **c4fc5b6**（#1240 What to Test 的合併）：`ci.yml` run 40192915948 綠；它自己的 full lane（`ios-build.yml` run 40192919013，作者 12:23 手動開）還在跑，預計 13:30–13:50 UTC 結束，smoke 那個 job 最慢。
+  - 作者問「我可以跟昨天一樣先按嗎」，前任答可以：作者自己對 main（c4fc5b6）按 `testflight.yml`，但 export compliance 和加到測試群組要等前任或新任回報 full lane 綠。作者按了沒，交接時還不知道；新任先問作者或看 `testflight.yml` 的 run。
+  - full lane 紅在和這版無關的測試：那個 job 重跑一次（87.1 的先例），第二次還紅就當真的。最近 main 的 full lane 紅過、每次不同的四個 UI 測試（看起來是 flaky）：`RealWorldMapUITests.testTheHighSpeedDemoOpensOnTheMapAndRuns`（ToolbarSmokeTests.swift:302 逾時）、`SharedNetworkUITests.testAFriendsNetworkOffersBothChoicesAndJustLookOpensIt`、`SettingsUITests.testTheCityPreviewLoadsItsPageAndCloses`（fcf06977，run 40176501060），`HUDAlignmentUITests.testTheStationMastersBubbleKeepsTheLines`（a2f0ef91，run 40160679685）。full-lane-watch 沒在 #1041 留過言，值得查；89.1 前可以派一個 session 把這四個穩下來。
+  - 發完：在 `docs/research/PLAYER_FEEDBACK.md` 記「0.5.0 (88.1)」的 run 與 commit，#1041 留「發版凍結解除」。
+  - 前任排的 check-in `trig_01TtNgLAmrJsC91EjAMPxQMa`（13:20 UTC，綁前任）會叫醒前任看 full lane；新任不用管它，以自己看到的為準。
+- **這份換手的 PR 等 88.1 按下去（或 88.1 確定不發）才合併**：先合會讓 main HEAD 離開 c4fc5b6，發版 commit 就得再跑一次 full lane。
+- **解凍後一批合**（照 §1.2，GameCore 的完整 tier 最多同時 2 個）：
+  - #1237（規則：預覽改版只留 PNG）。
+  - #1232（自有建築第二批，**存檔 74**，head cb8a9991）：住戶掉的原因 01WBDhnK 查清了（規則沒改），完整 tier 綠就合，進 89.1。
+  - #1239（10j-3 捷運收購，head 0915f4bf，draft）：解凍後轉 ready，審過再合。
+  - #1229、#1230（Codex 的 EMU3000、TEMU1000）：下一版，免費車，不進列車包。
+- **89.1 的其他線**：Codex 的檢修庫（`codex/depot-3d-facilities-2026-10-25`）要實機看；它合併後再派彰化的轉車台（NEXT_PRIORITIES 10p）。示範模式是否自動解鎖列車包、10j-4 都排在後面。三翼的公車接駁（#1220、#1225）還沒有 UI，所以沒進 What to Test。
+- **列車包**（決策 338 續二）：作者選「己＋買之前看得到」；測試版的開關預設關。N700S-G 在包裡：解鎖後單號高鐵畫成 N700S-G，沒解鎖全是 700T。
+- **session**：01XiqjNz、012tPP、01WBDhnK 做完或壓縮過，不再派新工；01F2tq、01B5oz 已封存。私庫 #83 已合併（95a20451），預覽的規則在 #1237。
+- 每日 Threads 排程：新任照 §1 表格建一個綁自己的，舊的刪掉（作者沒說要開就維持暫停）。
 
 **第十二次換手（2026-10-25 05:05 UTC，session_01B2kaku5NRz2J2CMzc8z3cZ 壓縮 2 次、`used_tokens` 約 25 萬，照 §1「第 3 次壓縮快到時換」→ 作者從 claude.ai 開的新規劃）**。新任開工：讀第 1 節、這一段、第 3 節最上面幾列；#1041 只讀「session_01B2kaku5NRz2J2CMzc8z3cZ 壓縮第 2 次」那則之後的留言。和下面「03:30 的現況」不同時以這段為準。
 
