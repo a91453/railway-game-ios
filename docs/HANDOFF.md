@@ -68,7 +68,7 @@
 
 | 角色 | 現在的 session | 做什麼 | 交接 |
 | --- | --- | --- | --- |
-| 遊戲規劃（兼派工） | session_0164nEyu2aMPVTpvQww43kj1（2026-10-25 12:56 UTC 起，作者從 claude.ai 開，「第十三次換手」之後；接手時的現況在 §2.0 最前面「第十三次換手」與 #1041 的「遊戲規劃接手」留言）；前任 session_0138XhXTjToUd3fpKV7kebeH（10-25 05:05–12:40，壓縮 5 次，作者說「交接」）；再之前 session_01B2kaku5NRz2J2CMzc8z3cZ（10-24 23:13–10-25 05:05，壓縮 2 次照 §1.1 換手）；再之前 session_019yHzrc1rgGJgdXSSwRNqgM（10-24 15:07–22:50，壓縮 2 次照 §1.1 換手，已封存）；再之前 session_013dJ7tvDYJnhe7XjXCE5cNi（10-24 08:17–14:00，壓縮 2 次照 §1.1 換手，已封存）；再之前 session_017HD7Krh51WqqzXjy6949Pq（10-24 06:32–08:00，壓縮 2 次照 §1.1 換手）；再之前 session_01AxcyajwHdF6j4ryDMghASM（10-24 05:00–06:30，「第八次換手」，已封存）；再之前 session_01XsVqbA1A5wGtJbuAa881oT（10-24 01:30–05:00，「第七次換手」）；再之前接暫代的 session_01PGibJmGNcvu2d7dJWWhWVb（10-24 00:35–01:30，已封存），再之前 session_01H5RHAwnA69n8EfAUSUrH52（10-23 00:10–10-24 00:35），再之前 session_014nUBHbE9mSK4qXHHgm8xCQ（10-22 22:30–10-23 00:10），再之前 session_01UsF4QYCGrzSeNSFq11i8Wu（18:15–22:30），再之前 session_01Ddr2wiXx1Xhn2m9qNBDnDh、session_01CHQg7B6JqzbScGSjyDwHos（2026-10-22 起，照 §1.1 換手，作者：「要不要全部所有換個session了 都一直在壓縮了」→「好，照表換」；換手時的現況在第 2 節最前面；前任 session_014rYHMtmqA5bEMkBBuKu6PV（10-21 至 10-22，作者：「那你需要先接手嗎太長了」）、session_01NiR5WLMFjMJBktQAMkfmkm（10-21）、session_01WW7o3decEv5LY59nYVqnDN（10-20 至 10-21，作者：「接手 角色表中遊戲規劃的工作」）、session_01V1xd3H9vNkuZoSA3czNfGm（10-16 至 10-18）、session_018D6gYU1yiZMtxSmNNU1K17） | 從玩家、鐵道迷、開發、美術、音樂五個角度決定優先順序與設計，開實作 session 並派工，綠了的 PR 照 §1.2 合併（2026-10-21 起），收作者轉來的玩家回報與 bug（§1.3），寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1、1.3 節 |
+| 遊戲規劃（兼派工） | 第十四次換手後作者從 claude.ai 開的新規劃（接手時的現況在 §2.0 最前面「第十四次換手」；新任接手後把自己的 session id 寫在 #1041 的「遊戲規劃接手」留言）；前任 session_0164nEyu2aMPVTpvQww43kj1（10-25 12:56–15:30，壓縮 2 次照 §1.1 換手）；再之前 session_0138XhXTjToUd3fpKV7kebeH（10-25 05:05–12:40，壓縮 5 次，作者說「交接」）；再之前 session_01B2kaku5NRz2J2CMzc8z3cZ（10-24 23:13–10-25 05:05，壓縮 2 次照 §1.1 換手）；再之前 session_019yHzrc1rgGJgdXSSwRNqgM（10-24 15:07–22:50，壓縮 2 次照 §1.1 換手，已封存）；再之前 session_013dJ7tvDYJnhe7XjXCE5cNi（10-24 08:17–14:00，壓縮 2 次照 §1.1 換手，已封存）；再之前 session_017HD7Krh51WqqzXjy6949Pq（10-24 06:32–08:00，壓縮 2 次照 §1.1 換手）；再之前 session_01AxcyajwHdF6j4ryDMghASM（10-24 05:00–06:30，「第八次換手」，已封存）；再之前 session_01XsVqbA1A5wGtJbuAa881oT（10-24 01:30–05:00，「第七次換手」）；再之前接暫代的 session_01PGibJmGNcvu2d7dJWWhWVb（10-24 00:35–01:30，已封存），再之前 session_01H5RHAwnA69n8EfAUSUrH52（10-23 00:10–10-24 00:35），再之前 session_014nUBHbE9mSK4qXHHgm8xCQ（10-22 22:30–10-23 00:10），再之前 session_01UsF4QYCGrzSeNSFq11i8Wu（18:15–22:30），再之前 session_01Ddr2wiXx1Xhn2m9qNBDnDh、session_01CHQg7B6JqzbScGSjyDwHos（2026-10-22 起，照 §1.1 換手，作者：「要不要全部所有換個session了 都一直在壓縮了」→「好，照表換」；換手時的現況在第 2 節最前面；前任 session_014rYHMtmqA5bEMkBBuKu6PV（10-21 至 10-22，作者：「那你需要先接手嗎太長了」）、session_01NiR5WLMFjMJBktQAMkfmkm（10-21）、session_01WW7o3decEv5LY59nYVqnDN（10-20 至 10-21，作者：「接手 角色表中遊戲規劃的工作」）、session_01V1xd3H9vNkuZoSA3czNfGm（10-16 至 10-18）、session_018D6gYU1yiZMtxSmNNU1K17） | 從玩家、鐵道迷、開發、美術、音樂五個角度決定優先順序與設計，開實作 session 並派工，綠了的 PR 照 §1.2 合併（2026-10-21 起），收作者轉來的玩家回報與 bug（§1.3），寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1、1.3 節 |
 | 每日 Threads 開發日誌 | 排程「每日 Threads 開發日誌」（台灣時間每天 21:43，2026-10-18 起暫停）觸發遊戲規劃，由它開寫作 session。現在是 `trig_019Me4PBGfWMxcBwc5TAkXRx`（綁 session_0164nEyu2aMPVTpvQww43kj1，暫停；2026-10-25 第十三次換手時重建，綁 01B2ka、0138Xh 的已刪）。舊的 `trig_01M2rwYPRRjTwQTC5g6QaW9v`（綁 013dJ7）與 `trig_01ABYQAarHbVxBbEShiVWDr3`（綁 01Axcy）都停用了，刪除時被自動模式的權限檢查擋下（兩任都一樣），留著不會觸發；作者要清可以在排程列表刪。2026-10-22 換手時由前任建了綁到 session_01CHQg7B6JqzbScGSjyDwHos 的新排程 `trig_01FZhfBNQCdDW8iDpowANLZS`（暫停中；之後每次換手都重建，現任的 id 寫在 #1041 接手的留言），前任的 `trig_01NfzFV9BcdiyBJpAwnaTuK9`（再之前是 `trig_01SkNFNW6qN6cMUGkGCXZM1v`）已刪。排程的綁定改不了，以後換手時由現任遊戲規劃用同一份 prompt 建一個綁到自己的新排程，再刪掉舊的；作者沒說要開就維持暫停 | 寫當天的串文草稿，用 SendUserFile 交給作者；不 commit、不發布 | 派工單照 2026-10-14、10-15、10-16 的寫作 session |
 
 不再常駐（2026-10-20 停用）：合併協調 session_01QoA24EvFCFbmbcM1EwaZT7（前任 session_016sNs4eeZwga9hz1CCHkpmX）、派工 session_01MJ7sdeid5DAFjSVbTkmdi3（前任 session_01AaAj4wvJMxJQuLWAoYu6S8）。兩個都從 2026-10-17 起沒有動作。
@@ -340,19 +340,30 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
-**2026-10-25 14:15 UTC 的現況（session_0164nEyu2aMPVTpvQww43kj1）**。和下面「第十三次換手」不同時以這段為準。
-- 88.1 上傳成功（run #88，c4fc5b6）。full lane（run 40192919013）第 1 次紅 3 支舊的不穩測試，14:03 重跑失敗的 job；綠了才告訴作者可以做 export compliance、加測試群組。88.1 已上傳，重跑測的是 c4fc5b6，main 往前走不影響，所以**凍結已解除**：#1241（交接）、#1237（預覽只留 PNG）已合。
-- 做中的 session：
+**第十四次換手（2026-10-25 15:30 UTC，session_0164nEyu2aMPVTpvQww43kj1 壓縮 2 次、用了約 29 萬 token，照 §1「第 3 次壓縮快到時換」→ 作者從 claude.ai 開的新規劃）**。新任開工：讀第 1 節、這一段；#1041 只讀「session_0164nEyu2aMPVTpvQww43kj1（遊戲規劃）壓縮第 2 次」那則之後的留言。和下面「第十三次換手」不同時以這段為準。
+
+- **88.1 的 full lane 還是紅**（run 40192919013，c4fc5b6）。第 1 次紅 3 支舊的不穩測試；14:03 重跑（只能一次）後，smoke job 121190221952 在 70 支裡只紅 1 支：`SharedNetworkUITests.testAFriendsNetworkOffersBothChoicesAndJustLookOpensIt`（兩次都紅）。second、lessons、iPad 都綠。15:25 已告訴作者：只剩「打開朋友分享的路網」這一個畫面沒證明，給不給測試者（export compliance、測試群組）由作者決定。01ATrwF1 已收到這支要優先修。
+- **做中的 session**：
   | session | 做什麼 | 下一步 |
   | --- | --- | --- |
-  | session_01LARTBYik4n6iAeQXeQs8z4 | 作者實機回報：3D 跟車高鐵「後方」視角 N700S-G 車廂沒跟軌道、車頭外殼分開（PLAYER_FEEDBACK 88.1 #1） | 只動 GamePresentation，先做紅的回歸測試；綠了說「可合併」 |
-  | session_01E4WpZZcxv2EC9rroJFg6ka | 獨立審查 #1232（存檔 74）與 #1239（10j-3），兩個 PR 的 CI 都已綠 | 審查沒有擋合併的問題就照 §1.2 合（一次一個 GameCore；#1239 先轉 ready） |
-  | session_01ATrwF1t4xfwDoTrLvMvRAY | full lane 不穩的 5 支 UI 測試修穩，順便查 `full-lane-watch.yml` 為什麼沒在 #1041 留言 | 用 `only_testing` 每支綠 2 次再開 PR |
-  | session_01Mqs95FA7nGrbhR8dXfefX9 | 審查 I：#1189 起已合的程式 PR（不含 #1232、#1239，由 01E4Wp 獨立審查） | 交接文件 `docs/archive/PR1189_…_REVIEW_HANDOFF.md`＋修正 PR，綠了合 |
-  | session_01Pz4Th4Hr8SAr6iP9gm4sqC | CI 優化：重排 Swift 分片（`swift-shards.sh` 的 `classes_of`），順便量 §1 的其他線 | PR 的全分片 run 證明最長分片離 17 分有餘裕再合 |
-- 審查點數：#1189–#1241 已合的程式 PR 約 28 點，#1232、#1239 合了就過 30。作者 14:10 問「要先 pr review、ci 優化嗎」，審查 I 不等那兩個合就先開（兩個由獨立審查看）。
-- CI 優化過線（§1「多久做一次 CI 優化」）：main 的 run 40190946365（647d799）`rest` 分片 job 19 分 44 秒、campaigns-9 18 分 31 秒，跨過決策 404 的 17 分線，離 20 分上限只差 16 秒；整個 run 23.5 分（30 分線內）。
-- 等作者：遊戲內成就清單改用 Game Center 的 38 張圖（PLAYER_FEEDBACK 88.1 #2，NEXT_PRIORITIES §22.2「等作者」）。
+  | session_01ATrwF1t4xfwDoTrLvMvRAY | 把 full lane 不穩的 UI 測試修穩（branch `claude/steady-full-lane-ui-tests`），順便查 `full-lane-watch.yml` 為什麼沒在 #1041 留言；壓縮過 1 次 | 每支用 `only_testing` 綠 2 次再開 PR；PR 合了就封存，不再派新工 |
+  | session_01Pz4Th4Hr8SAr6iP9gm4sqC | #1246：iOS PR 閘門從 7 支減到 4 支（決策 412），draft | 綠了轉 ready、留「可合併」；合了就封存 |
+  | session_01P66bY6nFU891b1C3sYwkRU | 找可以刪的 CI（作者 15:0x 問「有些 ci 沒必要了可以刪除嗎」）：研究文件 `docs/research/CI_PRUNE_2026-10-25.md` | 只寫研究；要改「什麼時候測、測多少」的，交回規劃用五方決定 |
+  | session_0142CcDjX1nJjUuRGNLypRMA | #1249：遊戲內成就清單改用 Game Center 的 38 張圖（決策 396 續二，五方選 B：沒解鎖的用 0.5 透明度） | 綠了照 §1.2 合 |
+- **五方已決定**（#1041 15:00 UTC 留言）：共用 build 選 A（build 一次、各分片下載，3.20 分）；成就圖示選 B（3.70 分）。
+- **共用 build A 還沒派**：等 #1246 合併、01Pz4 封存後，照 #1246 寫進 HANDOFF §1 的做法開新 session；動到 `ci.yml`、`swift-shards.sh`，開工前和 01P66 協調。依據：`docs/research/CI_SHARED_BUILD_2026-10-25.md`（決策 411）。
+- **等 main 綠後合併的一批**（照 §1.2；main 的 `ci.yml` 在 7fb4715b 綠，79847dc（#1242）15:25 還在跑）：
+  - #1247：審查 I 的修正，head e519313，CI 綠。
+  - #1248：審查 I 的交接；下一輪審查從 #1242 起數點數。
+  - #1239：10j-3 捷運收購，head 0915f4bf，GameCore，draft。轉 ready，CI 重跑綠了再合；一次只合一個 GameCore PR。
+  - #1246：綠了再合。
+  - #1229、#1242（Codex 的 EMU3000）已經由別人合併。#1230（TEMU1000）還開著。
+- **還沒派的小修**：N700S-G 後半列沒鏡像（審查 I 找到，見 #1248），只動 GamePresentation。#1245 已修車尾亂飄，實機還沒確認（UNVERIFIED）。
+- **已封存的 session**：01E4Wp、01LARTBY、01Mqs95。
+- PLAYER_FEEDBACK 88.1 已記 full lane 第 2 次、#1245、成就圖 B（這個換手 PR）。
+- 前任派的 session_01WBDhnK83mWG9wSxuSHvAtC（#1232 已合）、session_01XiqjNzLz2SSc77KCXZVXxN（#1236 已合）做完了還沒封存：新任改標題「【完成】…」後封存。
+- 每日 Threads 排程 `trig_019Me4PBGfWMxcBwc5TAkXRx` 綁本任（暫停）：新任照 §1 表格建一個綁自己的，再刪掉這個。本任沒有其他還會觸發的 check-in。
+- 審查點數：下一輪從 #1242 起數（#1248）。
 
 **第十三次換手（2026-10-25 12:40 UTC，session_0138XhXTjToUd3fpKV7kebeH 壓縮 5 次，作者說「交接」→ 作者從 claude.ai 開的新規劃）**。新任開工：讀第 1 節、這一段；#1041 只讀「session_0138XhXTjToUd3fpKV7kebeH（遊戲企劃）壓縮第 5 次」那則之後的留言。和下面「第十二次換手」不同時以這段為準。前任超過 §1「第 3 次壓縮快到時換」才換，下一任照表在第 3 次壓縮前換。
 
