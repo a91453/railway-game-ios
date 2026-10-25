@@ -282,6 +282,44 @@ final class BusRouteTests: XCTestCase {
         XCTAssertEqual(off.nextBusRouteID, 1)
     }
 
+    func testTheLongestRouteIsSavedAndLoaded() throws {
+        // Two 200 km legs and one run a day: half a day's wait and over 1,300
+        // minutes' ride from the far stop, more than a day door to door,
+        // counted as a day so the save it writes loads.
+        var world = try world()
+        let route = try world.createBusRoute(to: a, stops: [stop, CellPosition(row: 8, column: 28)],
+                                             legMetres: [BusRoute.maximumLegMetres, BusRoute.maximumLegMetres], service: .runs([360]), buses: 1)
+        XCTAssertGreaterThan(try XCTUnwrap(world.busRoute(id: route.id)).feederTrips, 0)
+        XCTAssertEqual(world.busRoute(id: route.id)?.feederMinutes, GameTime.minutesPerDay)
+        let loaded = try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))).world
+        XCTAssertEqual(loaded, world)
+    }
+
+    func testTheRouteNumbersRunOutWithoutACrash() throws {
+        var world = try world()
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: JSONEncoder().encode(SavedGame(world: world))) as? [String: Any])
+        func load(_ next: Int) throws -> GameWorld {
+            var plain = object, saved = try XCTUnwrap(object["world"] as? [String: Any])
+            saved["nextBusRouteID"] = next
+            plain["world"] = saved
+            return try JSONDecoder().decode(SavedGame.self, from: JSONSerialization.data(withJSONObject: plain)).world
+        }
+        XCTAssertThrowsError(try load(0), "a counter below 1")
+        XCTAssertThrowsError(try load(-5), "a counter below 1")
+        world = try load(Int.max)
+        let before = world
+        XCTAssertThrowsGameError(try world.createBusRoute(to: a, stops: [stop], service: .every(minutes: 10), buses: 2), .idsExhausted)
+        XCTAssertEqual(world, before)
+    }
+
+    func testABadServiceIsRefusedBeforeTheRoadsAreSearched() throws {
+        var world = try world()
+        let off = CellPosition(row: 2, column: 2)
+        XCTAssertThrowsGameError(try world.createBusRoute(to: a, stops: [off], service: .every(minutes: 0), buses: 1), .invalidBusRoute)
+        XCTAssertThrowsGameError(try world.createBusRoute(to: a, stops: [off], service: .every(minutes: 10), buses: 100), .invalidBusRoute)
+        XCTAssertThrowsGameError(try world.createBusRoute(to: a, stops: [off], service: .every(minutes: 10), buses: 1), .busStopOffRoad)
+    }
+
     func testDamagedBusRoutesAreRefused() throws {
         var world = try world()
         try world.createBusRoute(to: a, stops: [stop], service: .every(minutes: 10), buses: 2)

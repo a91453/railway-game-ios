@@ -540,7 +540,7 @@ struct Map3DSceneKey: Hashable {
         week = world.clock.now.seconds / (7 * GameTime.secondsPerDay)
         lines = palette == nil ? nil : Map3DLineBands.Signature(world: world)
         self.palette = palette
-        bought = world.acquisitions.count
+        bought = world.acquisitions.count { $0.kind == .railway }
         roads = world.roads?.cells.count ?? 0
     }
 }

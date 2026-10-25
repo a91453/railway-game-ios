@@ -253,7 +253,8 @@ extension GameWorld {
     /// the station's own cell on one.
     ///
     /// - Throws, checked in this order: ``GameError/roadsNotEnabled``;
-    ///   ``GameError/unknownStation(_:)``; ``GameError/invalidBusRoute``
+    ///   ``GameError/unknownStation(_:)``; ``GameError/idsExhausted`` once
+    ///   the numbers run out; ``GameError/invalidBusRoute``
     ///   for no stops or too many, legs not one a stop or too long, a
     ///   headway or runs out of range, or too many buses;
     ///   ``GameError/busStopOffRoad`` for a stop, or a drawn route's
@@ -265,14 +266,15 @@ extension GameWorld {
                                         service: BusService, buses: Int) throws(GameError) -> BusRoute {
         guard roads != nil else { throw .roadsNotEnabled }
         guard stations.contains(where: { $0.id == station }) else { throw .unknownStation(station) }
-        let id = BusRouteID(rawValue: nextBusRouteID)
+        guard service.isValid, (0...BusRoute.maximumBuses).contains(buses) else { throw .invalidBusRoute }
+        let (id, next) = try Self.allocateID(from: nextBusRouteID)
         let legs = try busLegs(to: station, stops: stops, given: legMetres)
-        let route = BusRoute(id: id, station: station, stops: stops, legMetres: legs, service: service, buses: buses)
+        let route = BusRoute(id: BusRouteID(rawValue: id), station: station, stops: stops, legMetres: legs, service: service, buses: buses)
         guard route.isValid else { throw .invalidBusRoute }
         let price = Money(BusRoute.stopPrice.amount * Int64(stops.count) + BusRoute.busPrice.amount * Int64(buses))
         try spendOnBuses(price)
         busRoutes.append(route)
-        nextBusRouteID += 1
+        nextBusRouteID = next
         busRoutesChanged()
         return busRoutes[busRoutes.count - 1]
     }
@@ -449,7 +451,8 @@ extension GameWorld {
     /// among, and outside every such station's ``Land/catchmentRadius``,
     /// goes whole to its nearest stop (then the lower route, then the
     /// earlier stop). Its minutes are the walk, half the headway rounded
-    /// up and the ride; a route's, its people's average, rounded half up.
+    /// up and the ride, a day at most; a route's, its people's average,
+    /// rounded half up.
     /// Returns each station's added share. Without land demand every
     /// route's figures are 0. Called by ``refreshLandDemand()``.
     mutating func refreshBusFeeders() -> [StationID: LandDemand.Share] {
@@ -483,8 +486,10 @@ extension GameWorld {
                 let people = cell.residents + cell.jobs
                 guard people > 0 else { continue }
                 let route = busRoutes[position]
-                let minutes = BusRoute.walkMinutes(units: FixedPoint.roundedSquareRoot(squared)) + (route.headway! + 1) / 2
-                    + route.rideMinutes(fromStop: stop)
+                // More than a day door to door counts as a day, so the
+                // save keeps it (decision 400).
+                let minutes = min(GameTime.minutesPerDay, BusRoute.walkMinutes(units: FixedPoint.roundedSquareRoot(squared))
+                    + (route.headway! + 1) / 2 + route.rideMinutes(fromStop: stop))
                 shares[position].add(cell.residents, cell.jobs, of: cell.use)
                 weighted[position] += people * minutes
             }
@@ -548,6 +553,7 @@ extension GameWorld {
     // MARK: - Validation
 
     func busRoutesProblem() -> String? {
+        guard nextBusRouteID >= 1 else { return "The next bus route's number is 1 or more." }
         guard !busRoutes.isEmpty else { return nil }
         guard roads != nil else { return "Bus routes run only on a world's roads." }
         let ids = Set(stations.map(\.id))
