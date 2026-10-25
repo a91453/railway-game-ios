@@ -318,7 +318,7 @@ public struct Map3DScene: Sendable {
             // player bought.
             let bought = world.acquisitions.compactMap { acquisition -> (system: String, shape: [RealRailways.Coordinate])? in
                 let parts = acquisition.realLine.split(separator: ":", maxSplits: 1).map(String.init)
-                guard parts.count == 2, let line = operations.system(id: parts[0])?.lines.first(where: { $0.id == parts[1] }) else { return nil }
+                guard acquisition.kind == .railway, parts.count == 2, let line = operations.system(id: parts[0])?.lines.first(where: { $0.id == parts[1] }) else { return nil }
                 return (parts[0], line.shape)
             }
             realTrains = Map3DRealTrains(traffic: traffic, structures: railways.structures, railTracks: railways.tracks, bought: bought,

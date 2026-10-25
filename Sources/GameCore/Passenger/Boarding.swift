@@ -345,6 +345,8 @@ extension GameWorld {
         // Decision 223: the train's trip takes its line's share.
         creditTrip(of: train.id, fare: tripFare, boarded: boarded)
         countBoarding(boarded, on: boardingLine, at: passengers[record].station)
+        // Decision 400, 10i-2: those setting out, the buses' share of them.
+        countBusRiders(paying.values.reduce(0, +), at: passengers[record].station)
         passengers[record].board(taken)
         if let slot = riders.firstIndex(where: { $0.train == train.id }) {
             riders[slot] = boarding

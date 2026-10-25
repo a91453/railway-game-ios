@@ -331,4 +331,14 @@ public enum GameError: Error, Hashable, Sendable {
     /// No road lies within ``RoadGrid/stationRoadMetres`` of the station
     /// (decision 400): the roads have not grown there yet.
     case roadTooFar
+    /// No bus route has this number (decision 400, 10i-2).
+    case unknownBusRoute(BusRouteID)
+    /// A bus route with no stops or too many, legs not one a stop or too
+    /// long, a headway or runs out of range, or too many buses.
+    case invalidBusRoute
+    /// A bus stop, or the station a drawn route ends at, is on no road.
+    case busStopOffRoad
+    /// No road joins this leg's ends (0 for the first stop to the
+    /// next; the last stop's leg ends at the station).
+    case busStopsNotConnected(leg: Int)
 }

@@ -54,7 +54,7 @@ final class RealLineAcquisitionTests: XCTestCase {
         XCTAssertEqual(heard.last, .lineAcquired)
         XCTAssertEqual(session.world.economy.balance, before.economy.balance - price.total)
         let bought = try XCTUnwrap(session.world.acquisition(of: "tra:PINGXI"))
-        let line = try XCTUnwrap(session.world.line(id: bought.line))
+        let line = try XCTUnwrap(session.world.line(id: try XCTUnwrap(bought.line)))
         XCTAssertEqual(line.stops.count, 7)
         XCTAssertEqual(line.trains.count, 3)
         XCTAssertFalse(session.buyableRealLines.contains(pingxi), "bought once")
@@ -74,7 +74,7 @@ final class RealLineAcquisitionTests: XCTestCase {
         // Two days of the real timetable: each day every run goes.
         var world = session.world
         try world.advance(ticks: 2 * 24 * 60)
-        let runDays = try XCTUnwrap(world.line(id: bought.line)?.runDays)
+        let runDays = try XCTUnwrap(world.line(id: try XCTUnwrap(bought.line))?.runDays)
         let today = world.clock.now.seconds / GameTime.secondsPerDay
         let missed = zip(line.runs, runDays).filter { run, day in
             run.days & (1 << StationDemand.weekday(ofDay: today - 1)) != 0 && (day ?? -1) < today - 1
@@ -150,7 +150,7 @@ final class RealLineAcquisitionTests: XCTestCase {
             var world = session.world
             let bought = try XCTUnwrap(world.acquisition(of: line.id))
             try world.advance(ticks: 2 * 24 * 60)
-            let runs = try XCTUnwrap(world.line(id: bought.line))
+            let runs = try XCTUnwrap(world.line(id: try XCTUnwrap(bought.line)))
             let today = world.clock.now.seconds / GameTime.secondsPerDay
             let missed = zip(runs.runs, runs.runDays).filter { run, day in
                 run.days & (1 << StationDemand.weekday(ofDay: today - 1)) != 0 && (day ?? -1) < today - 1
@@ -312,7 +312,7 @@ final class RealLineAcquisitionTests: XCTestCase {
         let session = try game(round: "PINGXI", transfers: true)
         let offer = session.realLineOffer(for: try line("PINGXI", in: session))
         XCTAssertTrue(session.acquireRealLine(offer), session.message?.text ?? "")
-        let stops = try XCTUnwrap(session.world.line(id: try XCTUnwrap(session.world.acquisition(of: "tra:PINGXI")).line)?.stops)
+        let stops = try XCTUnwrap(session.world.line(id: try XCTUnwrap(session.world.acquisition(of: "tra:PINGXI")).line!)?.stops)
         let shifen = try XCTUnwrap(stops.first { session.world.station(id: $0)?.name == "十分" })
         let text = try XCTUnwrap(session.transferText(of: shifen))
         XCTAssertTrue(text.hasPrefix("沿線的常客：每天約 "), text)

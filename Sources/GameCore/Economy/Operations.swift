@@ -426,6 +426,7 @@ extension GameWorld {
         settleProperty(day: day, time: time)
         settleTourism(day: day, time: time)
         settleDayPasses(day: day, time: time)
+        settleBuses(day: day, time: time)
         settleStationCommerce(day: day, time: time)
         // Decision 183: the city's requests are judged, and as a month
         // begins its subsidies paid and its new requests drawn, before the
@@ -615,9 +616,10 @@ extension GameWorld {
         case .dailyDepot: [.depotUpkeep]
         case .dailyStationCommerce: [.stationCommerceRevenue, .stationCommerceUpkeep]
         case .dailyDayPass: [.dayPassSales, .dayPassFares]
+        case .dailyBuses: [.busFares, .busRunning]
         }
         guard entry.breakdown.map(\.item) == items,
-              entry.breakdown.allSatisfy({ $0.item == .fareRevenue || $0.item == .propertyRent || $0.item == .freightRevenue || $0.item == .subsidiarySales || $0.item == .tourismRevenue || $0.item == .stationCommerceRevenue || $0.item == .subsidy || $0.item == .dayPassSales ? $0.amount >= .zero : $0.amount <= .zero }),
+              entry.breakdown.allSatisfy({ $0.item == .fareRevenue || $0.item == .propertyRent || $0.item == .freightRevenue || $0.item == .subsidiarySales || $0.item == .tourismRevenue || $0.item == .stationCommerceRevenue || $0.item == .subsidy || $0.item == .dayPassSales || $0.item == .busFares ? $0.amount >= .zero : $0.amount <= .zero }),
               entry.breakdown.reduce(Int64(0), { $0 + $1.amount.amount }) == entry.amount.amount
         else { return false }
         guard let crowding = entry.crowding else { return entry.kind != .hourlyNet }

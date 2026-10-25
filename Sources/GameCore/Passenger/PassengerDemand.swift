@@ -627,6 +627,9 @@ extension GameWorld {
         let realisticOperation: Bool
         /// Decision 217: the legs' planned seconds under curve limits.
         let curveSpeedLimits: Bool
+        /// Decision 400, 10i-2: each bus route's station, trips and
+        /// door-to-door minutes, which the mode shift reads.
+        let busFeeders: [Int64]
     }
 
     /// Each sight's rating now, with its hotels and sightseeing trains
@@ -656,7 +659,8 @@ extension GameWorld {
             day: demandDay, weeklyDemand: weeklyDemand, tidalDemand: tidalDemand, modeShift: modeShift, demandEvents: demandEvents, disruptions: disruptions,
             distanceDemand: distanceDemand, outsideConnections: outsideConnections, tourism: tourism,
             tourismStars: tourismStars, realisticOperation: realisticOperation,
-            curveSpeedLimits: curveSpeedLimits
+            curveSpeedLimits: curveSpeedLimits,
+            busFeeders: busRoutes.flatMap { [Int64($0.station.rawValue), $0.feederTrips, $0.feederMinutes] }
         )
     }
 

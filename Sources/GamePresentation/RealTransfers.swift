@@ -141,7 +141,7 @@ extension GameSession {
     /// runs from its terminal, see ``GameSession/routePreferences(_:stops:)``).
     func isOnBoughtLinePastItsJunction(_ id: StationID) -> Bool {
         world.acquisitions.contains { bought in
-            world.line(id: bought.line)?.stops.dropLast().contains(id) ?? false
+            bought.line.flatMap { world.line(id: $0) }?.stops.dropLast().contains(id) ?? false
         }
     }
 }

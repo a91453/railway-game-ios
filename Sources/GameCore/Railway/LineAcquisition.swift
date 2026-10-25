@@ -5,14 +5,23 @@
 // its riders as numbers, as it gives a station's transfer points
 // (decision 298).
 
-/// A real line the company bought (decision 315).
+/// A real line the company bought (decision 315), or a real bus route
+/// (decision 400, 10i-2).
 public struct LineAcquisition: Hashable, Sendable {
-    /// The real line's name in the app's data (`"tra:PINGXI"`): bought
-    /// once only.
+    /// What was bought.
+    public enum Kind: String, Hashable, Codable, Sendable {
+        case railway, bus
+    }
+
+    public let kind: Kind
+    /// The real line's or route's name in the app's data
+    /// (`"tra:PINGXI"`): bought once only.
     public let realLine: String
-    /// The line its trains run as. Kept when the line is removed later, so
-    /// the real line is still the company's.
-    public let line: LineID
+    /// The line its trains run as, a railway's. Kept when the line is
+    /// removed later, so the real line is still the company's.
+    public let line: LineID?
+    /// The bus route it runs as, a bus route's; kept likewise.
+    public let busRoute: BusRouteID?
     /// The game day it was bought.
     public let day: Int64
     /// What its riders cost (``LineAcquisition/value(ofDailyRiders:)``).
@@ -44,20 +53,45 @@ public struct LineAcquisition: Hashable, Sendable {
         return time.seconds - day * GameTime.secondsPerDay < sameDayCutoff ? day : day + 1
     }
 
+    /// Railway `realLine`, bought as `line`.
+    public init(realLine: String, line: LineID, day: Int64, value: Money) {
+        kind = .railway
+        self.realLine = realLine
+        self.line = line
+        busRoute = nil
+        self.day = day
+        self.value = value
+    }
+
+    /// Bus route `realLine`, bought as `busRoute`.
+    public init(realLine: String, busRoute: BusRouteID, day: Int64, value: Money) {
+        kind = .bus
+        self.realLine = realLine
+        line = nil
+        self.busRoute = busRoute
+        self.day = day
+        self.value = value
+    }
+
     var isValid: Bool {
         !realLine.isEmpty && realLine.count <= Self.maximumNameLength && day >= 0 && value >= .zero
+            && (kind == .railway) == (line != nil) && (kind == .bus) == (busRoute != nil)
     }
 }
 
 extension LineAcquisition: Codable {
     private enum CodingKeys: String, CodingKey {
-        case realLine, line, day, value
+        case kind, realLine, line, busRoute, day, value
     }
 
+    /// A railway's without `"kind"` (saves before version 73), a bus
+    /// route's with `"kind": "bus"` and its `"busRoute"`.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        kind = try container.decodeIfPresent(Kind.self, forKey: .kind) ?? .railway
         realLine = try container.decode(String.self, forKey: .realLine)
-        line = try container.decode(LineID.self, forKey: .line)
+        line = kind == .railway ? try container.decode(LineID.self, forKey: .line) : nil
+        busRoute = kind == .bus ? try container.decode(BusRouteID.self, forKey: .busRoute) : nil
         day = try container.decode(Int64.self, forKey: .day)
         value = try container.decode(Money.self, forKey: .value)
         guard isValid else {
@@ -67,8 +101,12 @@ extension LineAcquisition: Codable {
 
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        if kind != .railway {
+            try container.encode(kind, forKey: .kind)
+        }
         try container.encode(realLine, forKey: .realLine)
-        try container.encode(line, forKey: .line)
+        try container.encodeIfPresent(line, forKey: .line)
+        try container.encodeIfPresent(busRoute, forKey: .busRoute)
         try container.encode(day, forKey: .day)
         try container.encode(value, forKey: .value)
     }
@@ -118,10 +156,12 @@ extension GameWorld {
     // MARK: - Validation
 
     func acquisitionsProblem() -> String? {
-        guard acquisitions.allSatisfy({ $0.isValid && $0.line.rawValue < lineIDsHandedOut }),
+        guard acquisitions.allSatisfy({ $0.isValid && ($0.line?.rawValue ?? 0) < lineIDsHandedOut
+                  && ($0.busRoute?.rawValue ?? 0) < nextBusRouteID }),
               Set(acquisitions.map(\.realLine)).count == acquisitions.count,
-              Set(acquisitions.map(\.line)).count == acquisitions.count else {
-            return "Each line bought is well formed, a line ID handed out, and bought once."
+              Set(acquisitions.compactMap(\.line)).count == acquisitions.filter({ $0.kind == .railway }).count,
+              Set(acquisitions.compactMap(\.busRoute)).count == acquisitions.filter({ $0.kind == .bus }).count else {
+            return "Each line or bus route bought is well formed, a number handed out, and bought once."
         }
         return nil
     }
