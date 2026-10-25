@@ -1099,25 +1099,22 @@ final class MapInteractionTests: XCTestCase {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
-        // The report's screen: a free game, whose next step (the
-        // challenge chip, 5/6) is in the row under the status bar, with
-        // where people are (potential or coverage) shown by its switch
-        // while looking at the map (decision 350). Its open key, with its
-        // line and hours, is the tallest; the demo has no next step.
-        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        // The report's legend: where people are while building (potential
+        // or coverage), whose open key, with its line and hours, is the
+        // tallest; the travel layer's fitted on main too.
+        app.launchArguments = ["-ui-testing", "-demo-layout", "-ui-testing-paused", "-show-building-layer", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         defer { app.terminate() }
-        let newGame = app.buttons["start.newGame"]
-        XCTAssertTrue(newGame.appears(within: 15), "Missing the New Game button")
-        newGame.tap()
-        app.chooseBlankMap()
-        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 30), "The new game opens")
-        XCTAssertTrue(app.buttons["map.nextStep"].appears(within: 15), "The next step is on the map")
-        let shortcut = app.buttons["map.coverageShortcut"]
-        XCTAssertTrue(shortcut.becomesHittable(within: 10), "The switch is covered")
-        if !shortcut.isSelected { shortcut.tap() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 30), "The demo map opens")
+        let build = app.buttons["dock.build"]
+        XCTAssertTrue(build.appears(within: 10))
+        build.tap()
+        let network = app.buttons["tool.network"]
+        XCTAssertTrue(network.appears(within: 5))
+        network.waitUntilSettled()
+        if !network.isSelected { network.tap() }
         let legend = app.descendants(matching: .any)["map.populationLegend"].firstMatch
-        XCTAssertTrue(legend.appears(within: 30), "The switch shows where people are")
+        XCTAssertTrue(legend.appears(within: 30), "Where people are shows as building begins")
         let line = app.descendants(matching: .any)["map.potentialLine"].firstMatch
         let fold = app.buttons["map.legend.fold"]
         if !line.exists {
