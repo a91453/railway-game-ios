@@ -5,7 +5,8 @@ import SwiftUI
 /// answers, in the game's language only; the search also finds the other
 /// language's words (``HelpGuide``). Opened from the start screen, the game menu and the
 /// settings. Since decision 381 its first row opens the data sources and
-/// licences, whose start screen capsule went.
+/// licences, whose start screen capsule went; since decision 415 the next
+/// opens the latest update's news.
 struct HelpView: View {
     let language: DisplayLanguage
     /// The launcher the data sources read their files' problems from;
@@ -13,6 +14,7 @@ struct HelpView: View {
     var launcher: GameLauncher? = nil
     @Environment(\.dismiss) private var dismiss
     @State private var showsDataSources = false
+    @State private var showsWhatsNew = false
     @State private var query = ""
     @State private var expanded: Set<String> = []
 
@@ -20,6 +22,8 @@ struct HelpView: View {
         NavigationStack {
             let found = HelpGuide.entries(matching: query)
             let showsDataSourcesRow = launcher != nil && DataSourcesEntry.shows(matching: query)
+            // Decision 415: the latest update's news, again.
+            let showsWhatsNewRow = WhatsNew.shows(matching: query)
             List {
                 if showsDataSourcesRow {
                     Section {
@@ -42,7 +46,28 @@ struct HelpView: View {
                         .accessibilityIdentifier(DataSourcesEntry.helpIdentifier)
                     }
                 }
-                if found.isEmpty && !showsDataSourcesRow {
+                if showsWhatsNewRow {
+                    Section {
+                        Button {
+                            showsWhatsNew = true
+                        } label: {
+                            Label {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(verbatim: WhatsNew.title(in: language))
+                                        .font(.headline)
+                                        .foregroundStyle(Theme.textPrimary)
+                                    Text(verbatim: WhatsNew.helpDetail(in: language))
+                                        .font(.footnote)
+                                        .foregroundStyle(Theme.textSecondary)
+                                }
+                            } icon: {
+                                Image(systemName: "sparkles")
+                            }
+                        }
+                        .accessibilityIdentifier(WhatsNew.helpIdentifier)
+                    }
+                }
+                if found.isEmpty && !showsDataSourcesRow && !showsWhatsNewRow {
                     Text(verbatim: language.text("Nothing matches. Try another word.", "找不到相符的內容，換個關鍵字試試。"))
                         .foregroundStyle(Theme.textSecondary)
                         .accessibilityIdentifier("help.empty")
@@ -67,6 +92,9 @@ struct HelpView: View {
                 }
             }
             .listStyle(.insetGrouped)
+            .sheet(isPresented: $showsWhatsNew) {
+                WhatsNewView(language: language)
+            }
             .sheet(isPresented: $showsDataSources) {
                 if let launcher {
                     DataSourcesView(launcher: launcher)
