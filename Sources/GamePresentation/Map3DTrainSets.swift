@@ -109,7 +109,8 @@ public struct Map3DTrainSet: Sendable {
             // own length, the pantographs on cars 4 and 9; #900's, a sixth
             // of its triangles, from 500 m out.
             highSpeed700T(),
-            multipleUnit("highSpeedFar", asset: "02_HSR_MRT_3x2-01", livery: TrainLivery.highSpeed, pantographCars: [3, 8]),
+            // Decision 410: in decision 408's light detail.
+            multipleUnit("highSpeedFar", asset: "02_HSR_MRT_3x2-01", livery: TrainLivery.highSpeed, pantographCars: [3, 8], detail: .far),
             // Decision 408: the second high-speed set, the N700S-G made
             // from the 700T's recipe; the author's shape rebuilt light
             // from 500 m out.
@@ -389,7 +390,7 @@ public struct Map3DTrainSet: Sendable {
 
     static func multipleUnit(_ key: String, asset id: String, livery: TrainLivery? = nil, body: Int? = nil, band: Int? = nil,
                              thinBand: Bool = false, face: Int? = nil, single: Bool = false, pantographCars: Set<Int> = [],
-                             lineColoured: Bool = false) -> Map3DTrainSet {
+                             lineColoured: Bool = false, detail: Map3DTrainShell.Detail = .near) -> Map3DTrainSet {
         Map3DTrainSet(key: key, pantographCars: pantographCars) {
             guard let asset = Map3DSceneKit.asset(id: id) else { preconditionFailure("No scene-kit subject \(id).") }
             var recipe = SceneKitBuilder.trainRecipe(asset)
@@ -398,13 +399,14 @@ public struct Map3DTrainSet: Sendable {
             // A thin band under the windows, not a wide one.
             if thinBand { recipe.style.band = 0.36...0.40 }
             func cab(tail: Bool) -> Map3DModelPack.Model {
-                let model = baked(SceneKitCab(style: recipe.style, asset: asset, tail: tail, tint: recipe.tint, lineColoured: lineColoured).model(),
-                                  tint: recipe.tint, keepsShares: lineColoured)
-                guard let face else { return model }
-                return model.painting(recipe.style.body, within: recipe.style.nose, as: Map3DColor.rgb(UInt32(face)))
+                // Decision 410: the face's colour over the nose, cut where
+                // the nose starts.
+                baked(SceneKitCab(style: recipe.style, asset: asset, tail: tail, tint: recipe.tint, lineColoured: lineColoured,
+                                  detail: detail, noseColour: face.map { Map3DColor.rgb(UInt32($0)) }).model(),
+                      tint: recipe.tint, keepsShares: lineColoured)
             }
             func car(pantograph: Bool) -> Map3DModelPack.Model {
-                baked(Map3DTrainBuilder(style: recipe.style, cab: false, pantograph: pantograph).model(named: key),
+                baked(Map3DTrainShell(style: recipe.style, cab: false, pantograph: pantograph, detail: detail).model(named: key),
                       tint: recipe.tint, keepsShares: lineColoured)
             }
             let head = cab(tail: false), tail = cab(tail: true), middle = car(pantograph: false)
@@ -580,16 +582,6 @@ extension StationKitBuilder {
 }
 
 extension Map3DModelPack.Model {
-    /// This model with its `colour` within `depth` of its front painted
-    /// `paint` (a cab car's face in its own colour).
-    func painting(_ colour: UInt32, within depth: Float, as paint: UInt32) -> Map3DModelPack.Model {
-        let from = maximum.x - depth
-        let vertices = self.vertices.map { v in
-            v.x > from && v.color == colour ? Map3DVertex(Map3DPoint(v.x, v.y, v.z), normal: Map3DPoint(v.nx, v.ny, v.nz), color: paint, layer: v.layer) : v
-        }
-        return Map3DModelPack.Model(name: name, vertices: vertices, minimum: minimum, maximum: maximum)
-    }
-
     /// Decision 338, later: this model's part from `back` to `front` along
     /// its length, each cut drawn on, as it is there, `reach` farther out
     /// (`reach.back` behind `back`, `reach.front` before `front`) and
