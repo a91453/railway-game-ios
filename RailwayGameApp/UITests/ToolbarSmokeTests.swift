@@ -679,7 +679,10 @@ final class ShellLayoutUITests: XCTestCase {
         XCTAssertTrue(speed.appears(within: 10))
         speed.tap()
         let fast = app.buttons["6000 times real time, fast forward"]
-        XCTAssertTrue(fast.appears(within: 10))
+        // The menu's rows exist before the menu has opened: tapped then,
+        // the row had no hit point ({inf, inf}; main 96c39095's nightly
+        // full lane, run 40232525406).
+        XCTAssertTrue(fast.becomesHittable(within: 10))
         fast.tap()
         XCTAssertTrue(fast.disappears(within: 10))
         menu.waitUntilSettled()
