@@ -168,6 +168,9 @@ extension GameWorld {
         // station they ride to, either: their trip is abandoned there.
         let isOpen = station(id: entry.station)?.operationMode.allowsService ?? false
         var alighted: Int64 = 0
+        // Decision 400's balance: those whose journey ends here, the
+        // buses' share of whom ride home.
+        var arrived: Int64 = 0
         // Decision 222: those who wait here for their next train.
         var changing: Int64 = 0
         if let slot = riders.firstIndex(where: { $0.train == train.id }) {
@@ -183,6 +186,7 @@ extension GameWorld {
                                                     after: group.journey!.leg.line, memo: &memo)
                     } else {
                         passengers[passengerIndex(of: group.origin)].arrived += group.count
+                        arrived += group.count
                     }
                     alighted += group.count
                 } else if group.destination == entry.station || isLast || stop == directionEnd(of: train, from: stop) || !ahead.contains(group.destination) {
@@ -199,6 +203,7 @@ extension GameWorld {
             }
         }
         countAlighting(alighted, at: entry.station)
+        countBusRiders(arrived, at: entry.station)
         countTransfer(changing, at: entry.station)
         let boarded = isLast || !isOpen ? 0 : boardPassengers(train, at: stop)
         return max(alighted, boarded)

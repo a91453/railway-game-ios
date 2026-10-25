@@ -91,7 +91,7 @@ final class BusFeederReportTests: XCTestCase {
     func testAFeederOnTheRealMap() throws {
         guard ProcessInfo.processInfo.environment["BUS_REPORT"] != nil else { throw XCTSkip("BUS_REPORT=<days> runs the report") }
         let places = [("Taipei", 25.0478, 121.5170), ("Zhubei", 24.8393, 121.0094), ("Fengyuan", 24.2541, 120.7234), ("Pingtung", 22.6693, 120.4862)]
-        var rows = ["| Station | Direction | Station trips | With the bus | Added | Feeder minutes | Route m | Fares a day | Two buses a day |",
+        var rows = ["| Station | Direction | Station trips | With the bus | Added | Feeder minutes | Route m | Fares a day | Buses a day |",
                     "| --- | --- | --: | --: | --: | --: | --: | --: | --: |"]
         for (name, latitude, longitude) in places {
             let session = GameSession(world: GameWorld.newWholeTaiwanGame())
@@ -133,7 +133,7 @@ final class BusFeederReportTests: XCTestCase {
                 let fed = world.busRoute(id: route.id)!
                 let with = world.passengers.first { $0.station == station }?.demand?.dailyTrips ?? 0
                 rows.append("| \(name) | \(label) | \(own) | \(with) | \(own > 0 ? (with - own) * 1_000 / own : 0)‰ | \(fed.feederMinutes) | \(fed.metres) | "
-                    + "\(dollars(fed.feederTrips * BusRoute.fare.amount)) | \(dollars(2 * BusRoute.dailyCostPerBus.amount)) |")
+                    + "\(dollars(fed.feederTrips * BusRoute.fare.amount)) | \(dollars(fed.dailyCost.amount)) |")
             }
         }
         print("### A feeder on the real map (2 buses, every 10 minutes)\n" + rows.joined(separator: "\n"))
