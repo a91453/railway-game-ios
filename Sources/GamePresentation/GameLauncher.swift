@@ -1362,13 +1362,25 @@ public final class GameLauncher {
         isLoadingRealWorldData = true
         let load = Task {
             let data = await Task.detached(priority: .userInitiated, operation: read).value
-            self.install(data)
+            // Decision 400's sequel (#1260's rest): the roads the game being
+            // played will read with the data, read here too, off the main
+            // actor: an old save's land, read before its game had roads, is
+            // some seconds of them.
+            let world = self.session?.world
+            let roads = await Task.detached(priority: .userInitiated) {
+                world.flatMap {
+                    GameSession.roadsReadAhead(
+                        of: $0, population: data.population, places: data.places, water: data.water, coverage: data.coverage, baseMap: data.baseMap
+                    )
+                }
+            }.value
+            self.install(data, roads: roads)
         }
         realWorldLoad = load
         return load
     }
 
-    private func install(_ data: RealWorldData) {
+    private func install(_ data: RealWorldData, roads: RoadsReadAhead?) {
         population = data.population
         places = data.places
         water = data.water
@@ -1388,8 +1400,9 @@ public final class GameLauncher {
             session.placeNames = placeNames
             session.railways = railways
             // Decision 88: land not read round a station built while the
-            // app had no population, as when a game begins (``begin``).
-            session.readLandRoundStations()
+            // app had no population, as when a game begins (``begin``);
+            // its roads read already.
+            session.readLandRoundStations(roads: roads)
         }
         isLoadingRealWorldData = false
     }

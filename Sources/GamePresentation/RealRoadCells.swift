@@ -80,6 +80,7 @@ enum RealRoadCells {
     static func read(blocks: Set<LandBlock>, tiles: BaseMapTiles, frame: RealWorldFrame, bounds: WorldBounds) -> Cells {
         var cells = Cells()
         guard !blocks.isEmpty else { return cells }
+        if Thread.isMainThread { readsOnTheMainThread.add() }
         let projection = Projection(frame: frame)
         let length = Double(Land.blockLength) / Double(WorldCoordinate.unitsPerMetre)
         var wanted = Set<TilePosition>()
@@ -99,6 +100,19 @@ enum RealRoadCells {
             add(layer, column: tile.column, row: tile.row, projection: projection, blocks: blocks, bounds: bounds, to: &cells)
         }
         return cells
+    }
+
+    /// How many reads of some blocks ran on the main thread, for the
+    /// tests that keep the slow ones off it.
+    static let readsOnTheMainThread = ReadCount()
+
+    final class ReadCount: @unchecked Sendable {
+        private let lock = NSLock()
+        private var count = 0
+
+        var value: Int { lock.withLock { count } }
+
+        func add() { lock.withLock { count += 1 } }
     }
 
     struct TilePosition: Hashable, Comparable, Sendable {
@@ -147,17 +161,60 @@ extension GameSession {
     /// Decision 400's sequel: gives `world`'s roads the base map's in every
     /// block whose land is read but whose roads are not, from `baseMap`;
     /// nothing on a map without roads or a frame, or without the base map.
-    nonisolated static func readRoads(in world: inout GameWorld, baseMap: BaseMapTiles?) {
+    ///
+    /// The blocks `ahead` read already (``roadsReadAhead(of:population:places:water:coverage:baseMap:)``)
+    /// are taken from it rather than read again: a block's road cells are
+    /// the base map's in that block alone, so the world gets the same
+    /// roads either way.
+    nonisolated static func readRoads(in world: inout GameWorld, baseMap: BaseMapTiles?, ahead: RoadsReadAhead? = nil) {
         guard let baseMap, let roads = world.roads, let land = world.landBlocks, let frame = RealWorldFrame(world: world) else { return }
         let wanted = Set(land).subtracting(roads.readBlocks)
         guard !wanted.isEmpty else { return }
-        let cells = RealRoadCells.read(blocks: wanted, tiles: baseMap, frame: frame, bounds: world.bounds)
+        var cells: Set<CellPosition>
+        if let ahead, ahead.frame == frame, ahead.bounds == world.bounds {
+            cells = ahead.roads.filter { wanted.contains(LandBlock(cellRow: $0.row, column: $0.column)) }
+            cells.formUnion(RealRoadCells.read(blocks: wanted.subtracting(ahead.blocks), tiles: baseMap, frame: frame, bounds: world.bounds).roads)
+        } else {
+            cells = RealRoadCells.read(blocks: wanted, tiles: baseMap, frame: frame, bounds: world.bounds).roads
+        }
         do throws(GameError) {
-            try world.setRoads(cells.roads.sorted(), in: wanted.sorted())
+            try world.setRoads(cells.sorted(), in: wanted.sorted())
         } catch {
             // The blocks are the world's own, read already, and the cells
             // lie in them, so failing here is a programming error.
             preconditionFailure("Could not read in the roads: \(error)")
         }
+    }
+}
+
+/// Decision 400's sequel (#1260's rest): the road cells of some blocks of
+/// a real-world map, read off the main actor before the world is handed
+/// them on it (``GameSession/readRoads(in:baseMap:ahead:)``).
+struct RoadsReadAhead: Sendable {
+    let frame: RealWorldFrame
+    let bounds: WorldBounds
+    let blocks: Set<LandBlock>
+    let roads: Set<CellPosition>
+}
+
+extension GameSession {
+    /// The roads ``readLandRoundStations()`` would read from `baseMap`
+    /// for `world` with this data: those of the land it has read and the
+    /// land it would read. Slow (some 2,500 blocks round the High Speed
+    /// Rail's stations take seconds), so read off the main actor; `nil`
+    /// when it would read none.
+    nonisolated static func roadsReadAhead(
+        of world: GameWorld, population: PopulationGrid?, places: PlaceGrid?, water: WaterGrid?, coverage: CoverageGrid?, baseMap: BaseMapTiles?
+    ) -> RoadsReadAhead? {
+        guard let baseMap, world.roads != nil, let frame = RealWorldFrame(world: world) else { return nil }
+        var read = world
+        readLand(roundStationsOf: &read, population: population, places: places, water: water, coverage: coverage)
+        guard let land = read.landBlocks, let roads = read.roads else { return nil }
+        let wanted = Set(land).subtracting(roads.readBlocks)
+        guard !wanted.isEmpty else { return nil }
+        return RoadsReadAhead(
+            frame: frame, bounds: world.bounds, blocks: wanted,
+            roads: RealRoadCells.read(blocks: wanted, tiles: baseMap, frame: frame, bounds: world.bounds).roads
+        )
     }
 }

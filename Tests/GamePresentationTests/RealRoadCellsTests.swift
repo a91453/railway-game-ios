@@ -149,6 +149,47 @@ final class RealRoadCellsTests: XCTestCase {
         )))
     }
 
+    /// An old save, its land read before the game had roads, continued
+    /// while the app reads its data: when the data arrives, the roads of
+    /// all that land are read off the main actor, with the data
+    /// (``GameLauncher/loadRealWorldData(reading:)``), and handed to the
+    /// game on it as ``GameSession/readLandRoundStations()`` would read
+    /// them there, logged the same.
+    func testAnOldSavesRoadsAreReadOffTheMainThreadWhenTheDataArrives() async throws {
+        let tiles = try Self.tiles.get()
+        let (reading, taipei) = try taipeiGame()
+        reading.baseMap = nil
+        reading.readLand(within: WholeTaiwan.landReach, of: taipei)
+        let land = Set(try XCTUnwrap(reading.world.landBlocks))
+        XCTAssertGreaterThan(land.count, 10)
+        // What the main thread would read: the same roads.
+        var expected = reading.world
+        GameSession.readRoads(in: &expected, baseMap: tiles)
+
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+        launcher.importSave(try SaveLibrary.encode(reading.world, at: Date()))
+        let session = try XCTUnwrap(launcher.session)
+        XCTAssertEqual(session.world.roads, RoadGrid(), "an old save: its land read, its roads not")
+
+        var arriving = RealWorldData(
+            population: reading.population, places: reading.places, water: reading.water, heights: reading.heights, coverage: reading.coverage,
+            railways: nil, issues: []
+        )
+        arriving.baseMap = tiles
+        let data = arriving
+        let before = RealRoadCells.readsOnTheMainThread.value
+        await launcher.loadRealWorldData { data }.value
+        XCTAssertTrue(launcher.session === session, "the same game goes on")
+        XCTAssertEqual(session.world.roads?.readBlocks, land, "the roads of all its land read")
+        XCTAssertEqual(session.world.roads, expected.roads, "the roads the main thread would have read")
+        XCTAssertEqual(RealRoadCells.readsOnTheMainThread.value, before, "none read on the main thread")
+        XCTAssertEqual(session.commandLog.entries.last?.action, .readLandRoundStations(RealWorldDataSet(
+            population: true, places: true, water: true, heights: true, coverage: true, baseMap: true
+        )))
+    }
+
     /// A station on the real map: its panel's road section (decision 400
     /// B.3) is there, and the replay of the log reads the same roads.
     func testARealMapsStationHasRoadsAndItsLogReplays() throws {
