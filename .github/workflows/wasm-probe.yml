@@ -10,25 +10,19 @@ on:
       - 'Tests/GameCoreTests/NetworkSupport.swift'
       - 'Package.swift'
       - '.github/workflows/wasm-probe.yml'
-  push:
-    branches: [main]
-    paths:
-      - 'Web/WasmProbe/**'
-      - 'Sources/GameCore/**'
-      - 'GoldenScenarios/**'
-      - 'Tests/GameCoreTests/GoldenScenario.swift'
-      - 'Tests/GameCoreTests/NetworkSupport.swift'
-      - 'Package.swift'
-      - '.github/workflows/wasm-probe.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# A newer push to a pull request cancels its older run. Runs on main (and by
-# hand) have a group per commit and are never cancelled, so every commit of
-# main gets a result: until 2026-10-12 a merge cancelled the probe of the one
-# before it (three times that day). Decision 187.
+# Pull requests and runs by hand only. Until 2026-10-25 every push to main
+# ran it too (45 runs, 314 Linux minutes a week); in 30 days it never failed
+# on main, while the one real catch (a literal that overflows a 32-bit Int,
+# 2026-10-10) came on a pull request before the merge
+# (docs/research/CI_PRUNE_2026-10-25.md). A run by hand checks main.
+#
+# A newer push to a pull request cancels its older run. Runs by hand have a
+# group per commit and are never cancelled. Decision 187.
 concurrency:
   group: wasm-probe-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}

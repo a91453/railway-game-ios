@@ -469,6 +469,13 @@ jobs:
       # joins it only if it is steady, only a Simulator can answer it, and
       # it fits; otherwise it runs in the full lane, which runs after each
       # merge and must be green before a TestFlight release.
+      # Decision 412: with 7 tests this step took 7.3 to 11.8 minutes
+      # (median 9.0) over 10 pull request runs on 2026-10-25, about 2.5
+      # minutes of it XCTest starting and writing the result. The house
+      # saved and continued (75 s median), the real-world start (114 s)
+      # and the tutorial's Next and Back (45 s) went to the full lane:
+      # their logic has Linux tests (NewGameSavePropertyTests,
+      # RealWorldMapTests, TutorialSessionTests).
       # Each test may run 8 minutes at most (the slowest, the line route
       # test, took 188 s; a slow runner up to 1.8 times as long). A launch
       # that hangs then fails its one test instead of the whole step: on
@@ -506,21 +513,12 @@ jobs:
             lane="gate (pull request): the short list"
             only=(
               -only-testing:RailwayGameUITests/ToolbarSmokeTests/testEnglishToolbar
-              # A blank new game (sights and the city's requests on) and a
-              # real-world one: their game menus are the longest, and the
-              # demo map's flow never showed that Back to Start fell out of
-              # reach on a phone on its side. The house's saving and
-              # continuing also proves what was built is kept, which the
-              # demo map's flow did not (decision 199 left that flow, the
-              # layers sheet and the follow camera to the full lane).
-              -only-testing:RailwayGameUITests/StartSaveFlowSmokeTests/testAHouseBuiltOnABlankMapIsKeptBySavingAndContinuing
-              -only-testing:RailwayGameUITests/RealWorldMapUITests/testARealWorldGameStartsFromAPlaceAndIsSavedAsOne
               # TestFlight 54.1: Back to Start with the clock running and
               # the largest text short of the accessibility sizes (an open
               # menu was rebuilt every tick and its last row was out of
-              # reach).
+              # reach), on a blank new game.
               -only-testing:RailwayGameUITests/StartSaveFlowSmokeTests/testBackToStartWorksWithLargeTextWhileTheClockRuns
-              -only-testing:RailwayGameUITests/TutorialUITests/testEnglishTutorialNavigation
+              # The tutorial's card lets touches through to the track tool.
               -only-testing:RailwayGameUITests/TutorialUITests/testBuildingTrackEnablesNextAndSkipEnds
               # The line step's lines panel on a phone (2026-10-12: the card
               # covered Pick on Map on a device and the step could not be done).
