@@ -95,10 +95,10 @@ private extension StationKitBuilder {
         if !cab { return [(-9.8,3.49,0.90,1.455),(9.8,3.49,0.90,1.455)] }
         return [(-10.5,3.49,0.90,1.455),(6.2,3.49,0.90,1.455),
                 (6.9,3.46,0.90,1.43),(7.55,3.23,0.88,1.37),
-                (8.15,2.94,0.86,1.29),(8.75,2.62,0.84,1.20),
-                (9.3,2.34,0.84,1.09),(9.8,2.15,0.86,0.98),
-                (10.15,2.04,0.90,0.84),(10.45,1.94,0.97,0.65),
-                (10.60,1.79,1.10,0.36),(10.65,1.71,1.21,0.266),(10.675,1.47,1.47,0)]
+                (8.15,2.94,0.72,1.29),(8.75,2.62,0.48,1.20),
+                (9.3,2.34,0.30,1.09),(9.8,2.15,0.24,0.98),
+                (10.15,2.04,0.25,0.84),(10.45,1.94,0.36,0.65),
+                (10.60,1.79,0.58,0.36),(10.65,1.65,0.78,0.266),(10.675,1.13,1.13,0)]
     }
     static func emuDimensions(_ x: Float,_ cab: Bool) -> (Float,Float,Float) {
         let s = emuStations(cab)
@@ -137,9 +137,12 @@ private extension StationKitBuilder {
         return p+n*offset
     }
     static func emuMaskField(_ x: Float,_ a: Float,_ p: Map3DPoint) -> Float {
-        let v=max(0,min(1,(x-6.55)/4.03)),width: Float=0.98-0.16*v
-        let t=(a-Float.pi/2)/width,cap=sqrtf(max(0,1-t*t))
-        return min((width-abs(a-Float.pi/2))*3,min(x-(6.55+0.20*(1-cap)),p.y-(1.70+0.27*p.z*p.z)))
+        // A single projected U-shaped field controls the helmet's lower face.
+        // An angular band would pinch into a black spike as the section collapses.
+        let height=max(0,min(1,(p.y-1.20)/2.29))
+        let halfWidth:Float=1.36*sqrtf(max(0,1-(1-height)*(1-height)))
+        let rear:Float=6.55+0.60*(p.z/1.36)*(p.z/1.36)
+        return min(p.y-1.20,min(halfWidth-abs(p.z),x-rear))
     }
     mutating func emuShell(_ cab: Bool,_ sides: Int) {
         let stations=Self.emuStations(cab),inside=Map3DPoint(0,2.1,0)
@@ -215,6 +218,78 @@ private extension StationKitBuilder {
             face([p[i],q[i],q[j],p[j]],inside:inside,color:frame)
         }
     }
+    /// Door leaves use the white hull itself; only the fitted gasket is added.
+    /// Logical faces are split at real section planes BEFORE projection. This
+    /// prevents a large fan bridging the convex shoulder and hiding the glass.
+    mutating func emuFittedOpening(_ x: Float,_ y: Float,_ width: Float,_ height: Float,
+                                   _ side: Float,_ cab: Bool,_ sides: Int,
+                                   _ fill: UInt32,_ frame: UInt32,_ rim: Float,
+                                   outlineOnly: Bool = false) {
+        let radius=min(0.10,min(width,height)*0.16),front:Float=0.018,back:Float = -0.025
+        func outline(_ inset:Float,_ depth:Float)->[Map3DPoint] {
+            let w=width/2-inset,h=height/2-inset,r=max(0.001,min(radius-inset,min(w,h)*0.95))
+            return [(Float(-1),Float(-1)),(1,-1),(1,1),(-1,1)].flatMap { sx,sy in
+                let start=atan2f(sy,sx)-Float.pi/4,corners=sides<=12 ? 2:3
+                return (0..<corners).map {k in
+                    let a=start+Float(k)*Float.pi/(2*Float(corners-1))
+                    return Map3DPoint(x+sx*(w-r)+cosf(a)*r,y+sy*(h-r)+sinf(a)*r,side*depth)
+                }
+            }
+        }
+        // All fitted doors are behind the first taper station. Solve the actual
+        // faceted straight section at a requested height, not the smooth ellipse.
+        let section=(-sides/4...sides/4).map {Self.emuPoint(0,Float($0)*2*Float.pi/Float(sides),cab,sides)}
+        let levels=Array(Set(section.map {$0.y})).sorted()
+        func projected(_ p:Map3DPoint)->Map3DPoint {
+            var z:Float=0
+            for i in 1..<section.count {
+                let a=section[i-1],b=section[i]
+                if p.y>=min(a.y,b.y)-0.000001 && p.y<=max(a.y,b.y)+0.000001 && abs(a.y-b.y)>0.000001 {
+                    let t=max(0,min(1,(p.y-a.y)/(b.y-a.y)))
+                    z=max(z,abs(a.z+(b.z-a.z)*t))
+                }
+            }
+            return Map3DPoint(p.x,p.y,side*z+p.z)
+        }
+        func clip(_ points:[Map3DPoint],_ level:Float,_ above:Bool)->[Map3DPoint] {
+            var out:[Map3DPoint]=[]
+            for i in points.indices {
+                let a=points[i],b=points[(i+1)%points.count]
+                if above ? a.y>=level:a.y<=level {out.append(a)}
+                if (a.y-level)*(b.y-level)<0 {
+                    let p=a.y<b.y ? a:b,q=a.y<b.y ? b:a
+                    let v=p+(q-p)*((level-p.y)/(q.y-p.y))
+                    out.append(Map3DPoint(v.x,level,v.z))
+                }
+            }
+            var clean:[Map3DPoint]=[]
+            for p in out where clean.last != p {clean.append(p)}
+            if clean.count>1 && clean.first==clean.last {clean.removeLast()}
+            return clean
+        }
+        func triangulated(_ points:[Map3DPoint],_ inside:Map3DPoint)->[[Map3DPoint]] {
+            let n=(points[1]-points[0]).cross(points[2]-points[0]),c=points.reduce(.zero,+)*(1/Float(points.count))
+            let loop=n.dot(c-inside)>=0 ? points:Array(points.reversed())
+            var out:[[Map3DPoint]]=[]
+            for j in 1..<levels.count {
+                let slice=clip(clip(loop,levels[j-1],true),levels[j],false)
+                if slice.count>=3 {out.append(slice.map(projected))}
+            }
+            return out
+        }
+        let p=outline(0,front),q=outline(0,back),r=outline(rim,front),s=outline(rim,back)
+        let inside=Map3DPoint(x,y,side*(front+back)/2)
+        if !outlineOnly {
+            for polygon in triangulated(r,inside) {mesh.addFacet(polygon,color:fill)}
+            for polygon in triangulated(q,inside) {mesh.addFacet(polygon,color:frame)}
+        }
+        for i in p.indices {
+            let j=(i+1)%p.count,local=([p[i],p[j],q[i],q[j],r[i],r[j],s[i],s[j]]).reduce(.zero,+)*0.125
+            var faces=[[p[i],r[i],r[j],p[j]],[p[i],q[i],q[j],p[j]]]
+            if outlineOnly {faces += [[q[i],s[i],s[j],q[j]],[r[i],s[i],s[j],r[j]]]}
+            for face in faces {for polygon in triangulated(face,outlineOnly ? local:inside) {mesh.addFacet(polygon,color:frame)}}
+        }
+    }
     /// Tessellated CLOSED quarterlight bonded to the actual faceted side.
     /// A single planar five-corner face bridges the shoulder and exposes white chips.
     mutating func emuQuarterlight(_ side: Float,_ sides: Int,_ far: Bool) {
@@ -257,13 +332,13 @@ private extension StationKitBuilder {
         let doors: [Float]=cab ? [-8.5,3.90]:[-8.0,8.0]
         for side: Float in [-1,1] {
             for x in doors {
-                emuOpening(x,2.16,0.90,2.02,side,cab,sides,Self.ew,Self.es,0.018)
-                emuOpening(x,2.72,0.45,0.69,side,cab,sides,Self.eg,Self.ek,0.024)
+                emuFittedOpening(x,2.16,0.90,2.02,side,cab,sides,Self.ew,Self.es,0.018,outlineOnly:true)
+                emuFittedOpening(x,2.72,0.45,0.69,side,cab,sides,Self.eg,Self.ek,0.024)
                 if !far { emuOpening(x-0.29,1.80,0.035,0.22,side,cab,sides,Self.es,Self.es,0.009) }
             }
             if cab {
-                emuOpening(5.15,2.17,0.59,2.03,side,cab,sides,Self.ew,Self.es,0.016)
-                emuOpening(5.15,2.76,0.31,0.58,side,cab,sides,Self.eg,Self.ek,0.019)
+                emuFittedOpening(5.15,2.17,0.59,2.03,side,cab,sides,Self.ew,Self.es,0.016,outlineOnly:true)
+                emuFittedOpening(5.15,2.76,0.31,0.58,side,cab,sides,Self.eg,Self.ek,0.019)
                 emuQuarterlight(side,sides,far)
             }
             let count=cab ? 10:unit == .ep3 || unit == .ep7 || unit == .em6 ? 12:13
@@ -344,9 +419,9 @@ private extension StationKitBuilder {
             }
             return hit
         }
-        let outline:[(Float,Float)]=[(2.0,-0.84),(1.70,-0.92),(1.25,-0.86),(1.02,-0.65),
-                                    (0.94,-0.30),(0.93,0),(0.94,0.30),(1.02,0.65),
-                                    (1.25,0.86),(1.70,0.92),(2.0,0.84)]
+        let outline:[(Float,Float)]=[(2.0,-0.84),(1.70,-0.92),(1.10,-0.86),(0.48,-0.65),
+                                    (0.35,-0.30),(0.34,0),(0.35,0.30),(0.48,0.65),
+                                    (1.10,0.86),(1.70,0.92),(2.0,0.84)]
         var path:[(Float,Float)]=[]
         for i in 1..<outline.count {for j in 0..<4 {
             let t=Float(j)/4,a=outline[i-1],b=outline[i]

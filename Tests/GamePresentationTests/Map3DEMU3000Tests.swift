@@ -68,7 +68,7 @@ final class Map3DEMU3000Tests: XCTestCase {
     func testActualMeshesHaveClosedOutwardSurfacesAndRejectVisibleDefects() throws {
         for far in [false,true] {for unit in Map3DEMU3000.Unit.allCases {
             let m=Map3DEMU3000.model(unit,far:far)
-            XCTAssertLessThan(m.triangleCount,far ? 3300:7500)
+            XCTAssertLessThan(m.triangleCount,far ? 3600:8500)
             try closed(m.vertices)
             for i in stride(from:0,to:m.vertices.count,by:3) {
                 let t=Array(m.vertices[i..<i+3]),n=try XCTUnwrap((t[1].position-t[0].position).cross(t[2].position-t[0].position).normalized)
@@ -112,6 +112,8 @@ final class Map3DEMU3000Tests: XCTestCase {
         let m=Map3DEMU3000.model(.ed)
         let black=m.vertices.filter {$0.color==Map3DEMU3000.maskColor && $0.x>5 && $0.z>1.5}
         XCTAssertGreaterThan(black.count,200)
+        let lowerMask=black.filter {$0.z>1.40 && $0.z<1.85}
+        XCTAssertGreaterThan((lowerMask.map(\.y).max() ?? 0)-(lowerMask.map(\.y).min() ?? 0),0.9,"rounded U-shaped lower mask, no narrow central spike")
         XCTAssertLessThan(black.map(\.z).min() ?? 10,1.9,"rounded lower edge of black mask")
         let chin=m.vertices.filter {$0.color==Map3DEMU3000.bodyColor && $0.x>10 && $0.z<1.7 && $0.z>0.9}
         XCTAssertGreaterThan(chin.count,10,"substantial white chin, not a needle")
@@ -134,6 +136,47 @@ final class Map3DEMU3000Tests: XCTestCase {
             let tail=Map3DEMU3000.model(.tail,far:far)
             XCTAssertEqual(modules(tail),2,"only lower red markers; upper headlamps off")
         }
+    }
+    func testDoorGlassRemainsVisibleAboveItsRealCurvedBodyBacking() {
+        func occlusions(_ vertices:[Map3DVertex],_ doors:[Float])->(samples:Int,hidden:Int) {
+            let triangles=stride(from:0,to:vertices.count,by:3).map {Array(vertices[$0..<$0+3])}
+            var samples=0,hidden=0
+            for t in triangles {
+                let p=t.map(\.position),c=p.reduce(.zero,+)*(1/3)
+                guard t.allSatisfy({$0.color==Map3DEMU3000.glassColor}),abs(t[0].ny)>0.7,
+                      t[0].ny*c.y>0,doors.contains(where:{abs(c.x-$0)<0.25}) else {continue}
+                let d=Map3DPoint(0,c.y>0 ? -1:1,0),o=c-d*0.4
+                var nearest:Float=10
+                for q in triangles {
+                    let a=q[0].position,b=q[1].position,e=q[2].position
+                    guard c.x>=min(a.x,min(b.x,e.x))-0.000001,
+                          c.x<=max(a.x,max(b.x,e.x))+0.000001,
+                          c.z>=min(a.z,min(b.z,e.z))-0.000001,
+                          c.z<=max(a.z,max(b.z,e.z))+0.000001 else {continue}
+                    let ab=b-a,ac=e-a,h=d.cross(ac),det=ab.dot(h)
+                    if abs(det)<0.0000001 {continue}
+                    let s=o-a,u=s.dot(h)/det,k=s.cross(ab),v=d.dot(k)/det,t=ac.dot(k)/det
+                    if u >= -0.000001 && v >= -0.000001 && u+v<=1.000001 && t>=0 {nearest=min(nearest,t)}
+                }
+                samples+=1
+                if nearest<0.397 {hidden+=1}
+            }
+            return (samples,hidden)
+        }
+        for far in [false,true] {for unit in Map3DEMU3000.Unit.allCases {
+            let m=Map3DEMU3000.model(unit,far:far)
+            let doors:[Float]=unit == .ed ? [-8.5,3.9,5.15]:unit == .tail ? [8.5,-3.9,-5.15]:[-8,8]
+            let result=occlusions(m.vertices,doors)
+            XCTAssertGreaterThan(result.samples,20,"both door sides have real visible glazing samples")
+            XCTAssertEqual(result.hidden,0,"\(unit) far=\(far): door glass hidden by hull/leaf")
+        }}
+        // Mutate actual glazing inward; a closed manifold alone would pass this defect.
+        let good=Map3DEMU3000.model(.em).vertices
+        let bad=good.map {v in
+            guard v.color==Map3DEMU3000.glassColor,abs(v.x-8)<0.3,v.y>0 else {return v}
+            return Map3DVertex(v.position+Map3DPoint(0,-0.10,0),normal:Map3DPoint(v.nx,v.ny,v.nz),color:v.color,layer:v.layer)
+        }
+        XCTAssertGreaterThan(occlusions(bad,[-8,8]).hidden,0,"buried-door mutation must fail")
     }
     private enum Defect: Error {case openOrInverted}
     private func closed(_ vertices:[Map3DVertex]) throws {
