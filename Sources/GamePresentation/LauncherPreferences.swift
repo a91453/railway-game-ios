@@ -20,6 +20,10 @@ public struct LauncherPreferences: Codable, Equatable, Sendable {
     /// How each lesson was played on this device, by its id (decision 266,
     /// later: the problem report's anonymous timings); `nil` before.
     public var lessonPlays: [String: LessonPlay]?
+    /// Decision 415: the id of the newest "What's New" entry the player
+    /// has seen (``WhatsNew/edition``); `nil` in preferences written
+    /// before the card, whose players see the card once.
+    public var whatsNewSeen: String?
 
     public init() {}
 
