@@ -1,4 +1,4 @@
-// Compare two actual exported native formations with identical camera bounds.
+// Compare two actual exported native cab units with identical camera bounds.
 // The prior export is an input supplied at runtime and never enters the ZIP.
 import {createServer} from 'node:http';
 import {copyFileSync,readFileSync,writeFileSync,unlinkSync} from 'node:fs';
@@ -7,7 +7,7 @@ import {createRequire} from 'node:module';
 const {chromium}=createRequire(import.meta.url)('playwright');
 const current=resolve(process.argv[2]),prior=resolve(process.argv[3]);
 if(!prior)throw Error('Usage: node feedback-compare.mjs CURRENT_EXPORT PRIOR_EXPORT');
-const model='models/temu1000-formation.m3dmodel';
+const model='models/temu1000-leading.m3dmodel';
 const before='_feedback-before.m3dmodel',after='_feedback-after.m3dmodel',html='_feedback.html';
 copyFileSync(resolve(prior,model),resolve(current,before));
 copyFileSync(resolve(current,model),resolve(current,after));
