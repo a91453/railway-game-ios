@@ -1,6 +1,10 @@
 # Game Center 的成就圖（決策 396）
 
-38 張 1024×1024 的 PNG（Apple 要的 512×512 pt @2x），一個成就一張，檔名就是 Game Center 的成就 ID（`achievement.<遊戲內 ID>.png`）。作者在 App Store Connect 建成就時上傳（`docs/GAME_CENTER_SETUP.md` 第 4 步）；App 不讀這些檔。
+38 張 1024×1024 的 PNG（Apple 要的 512×512 pt @2x），一個成就一張，檔名就是 Game Center 的成就 ID（`achievement.<遊戲內 ID>.png`）。作者在 App Store Connect 建成就時上傳（`docs/GAME_CENTER_SETUP.md` 第 4 步）。
+
+遊戲內的成就清單也用同一張圖（決策 396 續二）：這 38 張縮成 64 和 96 px（32 點的 @2x、@3x）、裁成圓形，放在 `RailwayGameApp/Resources/Assets.xcassets/Achievements/Achievement-<遊戲內 ID>.imageset`，共約 145 KB。App 不讀這個資料夾的 1024 px 原檔。改了這裡的圖，要重新縮一次（做法在決策 396 續二）；`AchievementsTests.testEachHasItsBadgeInTheAssetCatalog` 檢查每個成就兩邊都有圖。
+
+![遊戲內清單的實際大小：淺色、深色，各是解鎖與沒解鎖（半透明）](in-app-badges.png)
 
 ![總覽](overview.png)
 

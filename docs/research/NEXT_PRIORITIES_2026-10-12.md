@@ -1226,7 +1226,7 @@
 - 6000× 的第 3 步（少換幾次世界）：等作者在實機量「其他」與「推進後」（HANDOFF §7.1）。
 - 地圖左半邊沒有地形陰影：等作者附上分界的經度或地名（HANDOFF §7.1）。
 - 高鐵的 OSM 偏移：要作者在台灣下載 `HSRAIL_*.zip`。
-- 遊戲內成就清單改用 Game Center 的 38 張成就圖（作者 2026-10-25：「game center圖標換了 但遊戲內好像沒換」）：規劃建議 89.1 做（只動 App 與 GamePresentation，約多 1–2 MB），等作者說好。
+- 遊戲內成就清單改用 Game Center 的 38 張成就圖（作者 2026-10-25：「game center圖標換了 但遊戲內好像沒換」）：作者說「五方評分決定」，選了用同樣的 38 張圖（決策 396 續二，`claude/achievement-badges-396`），圖縮成約 145 KB。
 
 **研究，公開測試後再看**（2026-10-25，作者轉來 isometric.nyc、tiny.london、tinygyn.com 與 GPT 的分析）：用遊戲自己的 3D 城市從固定斜角拍成遊戲畫風的 2D 圖，給載入畫面、明信片、分享圖、官網用；可參考 RayNCooper/iso-cities（程式 MIT，資料 ODbL）的畫法。不用那三張地圖：沒有授權、來源是 Google Photorealistic 3D Tiles（Map Tiles API 政策限制分析、快取、離線），tiny.london 的 Qwen-Image 是研究授權；像素風也和 art-style 的扁平藏青框不合。stonyp/mapforge（map3d 的 fork，MIT）只把 OSM 輪廓拉高匯出 GLB，遊戲已有的 Overture 輪廓（決策 386）、樓高（389）與程序化外牆都比它多，不用。GPT 建議的騎樓、陽台、鐵窗、磁磚、水塔、頂樓加蓋大多已在決策 370、389 與 `Map3DFrontage`、`Map3DResidentialKit`、`Map3DDetailKitParts`。
 
