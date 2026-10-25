@@ -21,9 +21,19 @@ def main(root,pipeline):
             t,c,meta=decode(f.read_bytes());rgba=c[:,0];bounds=np.array([t.min((0,1)),t.max((0,1))]);assert len(t)<15000
             letter=f.stem[-1]
             source_body,source_colors,_=decode((root/'source-body'/'models'/f'railway-n700s-{letter}.m3dmodel').read_bytes())
-            top=t[:len(source_body)].copy();top[:,:,2]-=.74
-            assert np.max(np.linalg.norm((top-source_body).reshape(-1,3),axis=1))<.001
-            if variant=='n700s':assert np.array_equal(rgba[:len(source_body)],source_colors[:,0])
+            if variant=='n700s':
+                top=t[:len(source_body)].copy();top[:,:,2]-=.74
+                assert np.max(np.linalg.norm((top-source_body).reshape(-1,3),axis=1))<.001
+                assert np.array_equal(rgba[:len(source_body)],source_colors[:,0])
+            else:
+                old_file=root/'livery-before'/variant/'models'/f.name
+                old_t,_,_=decode(old_file.read_bytes())
+                old_bounds=np.array([old_t.min((0,1)),old_t.max((0,1))])
+                assert np.allclose(bounds,old_bounds,atol=.001),f
+                assert not np.any(np.all(rgba[:,:3]==[231,142,42],axis=1)),f
+                forest=np.all(rgba[:,:3]==[29,74,68],axis=1)
+                assert forest.sum()>100,f
+                if letter=='a':assert not np.any(forest&(t[:,:,0].mean(1)>5.5)),f
             # Wheel tread reaches local rail plane, and each of two bogies has four wheels.
             wheel=np.all(rgba[:,:3]==[43,49,57],axis=1);assert wheel.sum()==384,(f,wheel.sum())
             assert abs(t[:,:,2].min())<2e-5,(f,t[:,:,2].min())

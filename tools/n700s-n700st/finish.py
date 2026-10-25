@@ -5,13 +5,13 @@ from pathlib import Path
 import numpy as np
 from PIL import Image,ImageDraw,ImageFont
 
-def main(pipeline,root,commit):
+def main(pipeline,root,commit,variants=('n700s','n700st')):
     sys.path.insert(0,str(pipeline));from native_probe import decode
     from render_native import render,VIEWS
     from n700s_native import basis
     import trimesh
     root=Path(root)
-    for variant in ('n700s','n700st'):
+    for variant in variants:
         dst=root/variant;ass=json.loads((dst/'assembly.json').read_text());rows=[];lookup={}
         for f in sorted((dst/'models').glob(f'railway-{variant}-?.m3dmodel')):
             t,c,_=decode(f.read_bytes());lookup[f.name]=(t,c);rows.append((f.stem,t,c,48))
@@ -36,19 +36,30 @@ def main(pipeline,root,commit):
         paste(f'railway-{variant}-source-ten-body-draft','right',0,920,1400,155)
         d.text((35,1090),'Source order is a visual draft; rail plane and engineering dimensions unverified.',fill='#262C57')
         overview.save(dst/f'Railway_{variant.upper()}_Overview.png')
-        previous=root/'repair-before'/variant/'models'/f'railway-{variant}-a.m3dmodel'
+        before_root=root/('livery-before' if variant=='n700st' else 'repair-before')/variant
+        previous=before_root/'models'/f'railway-{variant}-a.m3dmodel'
         original=(root/'source-body'/'previews'/f'railway-n700s-a'/'isometric.png')
         if previous.exists():
             snapshot=dst/'revision-before'
-            shutil.copytree(root/'repair-before'/variant,snapshot,dirs_exist_ok=True)
+            if snapshot.exists():shutil.rmtree(snapshot)
+            shutil.copytree(before_root,snapshot)
             old_t,old_c,_=decode(previous.read_bytes())
-            original=root/'repair-before'/variant/'previews'/f'railway-{variant}-a'/'isometric.png'
+            original=before_root/'previews'/f'railway-{variant}-a'/'isometric.png'
             original.parent.mkdir(parents=True,exist_ok=True)
             render(old_t,old_c,'isometric',scale=48).save(original)
         if original.exists():
             before=Image.open(original).convert('RGBA');after=Image.open(dst/'previews'/f'railway-{variant}-a'/'isometric.png').convert('RGBA')
             comparison=Image.new('RGBA',(before.width*2,before.height),'white');comparison.paste(before,(0,0),before);comparison.paste(after,(before.width,0),after)
             comparison.save(dst/f'Railway_{variant.upper()}_Before_After.png')
+            if variant=='n700st' and previous.exists():
+                old_t,old_c,_=decode(previous.read_bytes())
+                before_side=render(old_t,old_c,'right',scale=48).convert('RGBA')
+                after_side=Image.open(dst/'previews'/f'railway-{variant}-a'/'right.png').convert('RGBA')
+                sheet=Image.new('RGBA',(before.width*2,before.height*2),'white')
+                for im,point in [(before,(0,0)),(after,(before.width,0)),
+                                 (before_side,(0,before.height)),(after_side,(before.width,before.height))]:
+                    sheet.paste(im,point,im)
+                sheet.save(dst/'Railway_N700ST_Livery_Before_After.png')
         # Existing self-contained viewer is parameterized only by vehicle name.
         script=(pipeline/'make_viewer.py').read_text().replace('railway-n700s','railway-'+variant).replace('N700S',variant.upper())
         script=script.replace('Bogies/wheels and engineering scale unresolved.','Wheel gear is a provisional visual placement; engineering scale unresolved.')
@@ -81,4 +92,5 @@ def main(pipeline,root,commit):
 
 if __name__=='__main__':
     p=argparse.ArgumentParser();p.add_argument('--pipeline',type=Path,required=True);p.add_argument('--root',type=Path,required=True);p.add_argument('--producer-commit',required=True)
-    a=p.parse_args();main(a.pipeline,a.root,a.producer_commit)
+    p.add_argument('--variants',nargs='+',choices=('n700s','n700st'),default=['n700s','n700st'])
+    a=p.parse_args();main(a.pipeline,a.root,a.producer_commit,a.variants)

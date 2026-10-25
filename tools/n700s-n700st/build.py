@@ -107,7 +107,9 @@ def close_surface(triangles, colors, thickness=.012):
                           faces=np.arange(len(closed)*3).reshape(-1,3),process=False)
     check.merge_vertices(digits_vertex=5)
     if not check.is_watertight or not check.is_winding_consistent:
-        raise ValueError('Closed native readback failed manifold checks')
+        edge_counts=np.bincount(check.edges_unique_inverse)
+        open_edges=check.edges_unique[edge_counts!=2]
+        raise ValueError(f'Closed native readback failed manifold checks: watertight={check.is_watertight}, winding={check.is_winding_consistent}, source={len(faces)}, boundary={len(boundary)}, open={len(open_edges)}, counts={edge_counts[edge_counts!=2][:3].tolist()}, first={check.vertices[open_edges[:3]].tolist()}')
     return closed,all_colors,{'splitFanVertices':split_vertices,'boundaryEdges':len(boundary),
                               'shellTriangles':len(closed),'shellThicknessSourceUnits':thickness}
 
