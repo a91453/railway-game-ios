@@ -195,6 +195,99 @@ final class Map3DRealTracksTests: XCTestCase {
         XCTAssertTrue(lanes[1].shown)
     }
 
+    /// A builder round Taipei Main Station, 2 km either way, and its frame.
+    private func taipei() throws -> (builder: Map3DScene.Builder, frame: RealWorldFrame, lon: Int, lat: Int) {
+        let latitude = 25.0478, longitude = 121.5170
+        let world = GameWorld.newGame(anchor: try XCTUnwrap(GeoAnchor(latitudeDegrees: latitude, longitudeDegrees: longitude)))
+        let frame = try XCTUnwrap(RealWorldFrame(world: world))
+        let metre = Double(WorldCoordinate.unitsPerMetre)
+        let origin = frame.worldPosition(latitude: latitude, longitude: longitude)
+        let builder = Map3DScene.Builder(originX: origin.x, originY: origin.y,
+                                         region: WorldRegion(minX: origin.x - 2_000 * metre, minY: origin.y - 2_000 * metre,
+                                                             maxX: origin.x + 2_000 * metre, maxY: origin.y + 2_000 * metre),
+                                         world: world)
+        return (builder, frame, Int(longitude * 1e6) - 2_000, Int(latitude * 1e6))
+    }
+
+    /// Decision 406: a tunnel the site draws at the ground (a mountain's:
+    /// its flat map has no hills) is bored straight from mouth to mouth,
+    /// out of sight only under the game's own ground. On the flat basin
+    /// of Taipei no ground covers it, so its track is laid and a train
+    /// shows on it, where it once left a gap; a subway's, 20 m under, is
+    /// not.
+    func testATunnelTheGroundDoesNotCoverIsLaid() throws {
+        var (builder, frame, lon, lat) = try taipei()
+        let json = #"{"systems":["tra_sched"],"ways":[{"system":0,"kind":"t","points":[\#(lon),\#(lat),0,4000,0,0]},"#
+            + #"{"system":0,"kind":"t","points":[\#(lon),\#(lat - 900),-200,4000,0,0]}]}"#
+        let laid = builder.realTracks(try RealRailTracks(data: Data(json.utf8)), systems: ["tra_sched"], frame: frame,
+                                      clearOf: Map3DRealTrains.PlayerTrack([]))
+        let segments = try XCTUnwrap(laid.segments["tra_sched"]).values.flatMap { $0 }
+        XCTAssertFalse(segments.filter { $0.track == 0 }.isEmpty)
+        XCTAssertTrue(segments.filter { $0.track == 0 }.allSatisfy(\.shown), "a mountain's tunnel under no hill")
+        XCTAssertTrue(segments.filter { $0.track == 1 }.allSatisfy { !$0.shown }, "a subway's")
+        XCTAssertFalse(builder.meshes.isEmpty)
+    }
+
+    /// Decision 406: where the real tunnels the site draws at the ground
+    /// lie under the game's hills (the heights file's), they stay out of
+    /// sight: of the Taiwan Railway's ten longest, most of each.
+    func testAMountainsTunnelStaysUnderTheHill() throws {
+        let tracks = try XCTUnwrap(Self.tracks)
+        func length(_ track: RealRailTracks.Track) -> Double {
+            zip(track.points, track.points.dropFirst()).reduce(0) { sum, pair in
+                let dy = (pair.1.latitude - pair.0.latitude) * 111_000
+                let dx = (pair.1.longitude - pair.0.longitude) * 111_000 * cos(pair.0.latitude * .pi / 180)
+                return sum + (dx * dx + dy * dy).squareRoot()
+            }
+        }
+        let tunnels = tracks.tracks.filter { $0.system == "tra_sched" && $0.kind == .tunnel && $0.heights.allSatisfy { $0 > -3 } }
+            .sorted { length($0) > length($1) }.prefix(10)
+        XCTAssertEqual(tunnels.count, 10)
+        let heights = try XCTUnwrap(TRADemoTests.heights)
+        // A game's world, its ground read only where its track is (none).
+        var world = GameWorld.newGame(anchor: WholeTaiwan.anchor, bounds: WholeTaiwan.bounds, land: [])
+        try world.mapGround()
+        let frame = try XCTUnwrap(RealWorldFrame(world: world))
+        for tunnel in tunnels {
+            let middle = tunnel.points[tunnel.points.count / 2]
+            let at = frame.worldPosition(latitude: middle.latitude, longitude: middle.longitude)
+            let reach = 6_000 * Double(WorldCoordinate.unitsPerMetre)
+            var builder = Map3DScene.Builder(originX: at.x, originY: at.y,
+                                             region: WorldRegion(minX: at.x - reach, minY: at.y - reach, maxX: at.x + reach, maxY: at.y + reach),
+                                             world: world, heights: heights)
+            let laid = builder.realTracks(RealRailTracks(tracks: [tunnel]), systems: ["tra_sched"], frame: frame,
+                                          clearOf: Map3DRealTrains.PlayerTrack([]))
+            let segments = try XCTUnwrap(laid.segments["tra_sched"]).values.flatMap { $0 }
+            let hidden = Double(segments.filter { !$0.shown }.count) / Double(segments.count)
+            XCTAssertGreaterThan(hidden, 0.6, "\(Int(length(tunnel))) m at \(middle)")
+        }
+    }
+
+    /// Decision 406: a train stays on its own track where another line's
+    /// of its system comes nearer the line's shape, rather than stepping
+    /// 14 m across to it: here the shape runs 5 m from the line's single
+    /// track, then 9 m, where the other line's, 14 m beside, is 5 m off.
+    func testATrainKeepsToItsTrack() throws {
+        var (builder, frame, lon, lat) = try taipei()
+        // 14 m is 126 millionths of a degree of latitude.
+        let json = #"{"systems":["tra_sched"],"ways":[{"system":0,"kind":"s","points":[\#(lon),\#(lat),0,4000,0,0]},"#
+            + #"{"system":0,"kind":"s","points":[\#(lon),\#(lat + 126),0,4000,0,0]}]}"#
+        let laid = builder.realTracks(try RealRailTracks(data: Data(json.utf8)), systems: ["tra_sched"], frame: frame,
+                                      clearOf: Map3DRealTrains.PlayerTrack([]))
+        let shape = [(lon + 100, lat + 45), (lon + 1_600, lat + 45), (lon + 2_400, lat + 81), (lon + 3_900, lat + 81)].map { point in
+            WorldVector(frame.worldPosition(latitude: Double(point.1) / 1e6, longitude: Double(point.0) / 1e6))
+        }
+        var km = [0.0]
+        for (a, b) in zip(shape, shape.dropFirst()) { km.append(km.last! + (b - a).length / Double(WorldCoordinate.unitsPerMetre) / 1_000) }
+        let stretch = Map3DRealTrains.Stretch(points: Array(zip(shape, km)).map { (point: $0.0, km: $0.1) }, core: 0...km.last!)
+        let track = try XCTUnwrap(laid.track(along: stretch, system: "tra_sched", builder: builder))
+        let own = builder.point(x: shape[0].x, y: frame.worldPosition(latitude: Double(lat) / 1e6, longitude: Double(lon) / 1e6).y, height: 0).z
+        for lane in 0..<2 {
+            XCTAssertTrue(track.shown[lane].allSatisfy { $0 })
+            XCTAssertTrue(track.lanes[lane].allSatisfy { abs($0.z - own) < 1 }, "on its own track, lane \(lane)")
+        }
+    }
+
     /// How far the TRA demo's double track (decision 240) lies from the
     /// real Yilan Line's tracks: the real tracks within 30 m of it, by
     /// how far from it, and how many of those are left out

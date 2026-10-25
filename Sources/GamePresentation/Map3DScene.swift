@@ -530,8 +530,12 @@ extension Map3DScene {
         let rows: Int
         let columns: Int
         let heights: [Float]
+        let grid: HeightGrid
+        let frame: RealWorldFrame
 
         init(_ grid: HeightGrid, frame: RealWorldFrame, region: WorldRegion) {
+            self.grid = grid
+            self.frame = frame
             let cell = Double(Land.cellLength)
             firstRow = Int((region.minY / cell).rounded(.down)) - 1
             firstColumn = Int((region.minX / cell).rounded(.down)) - 1
@@ -553,6 +557,19 @@ extension Map3DScene {
                 }
             }
             self.heights = heights
+        }
+
+        /// Decision 406: the height at the 64 m grid's corner (`row`,
+        /// `column`), in metres, as a region round it reads it, wherever
+        /// it is.
+        func corner(row: Int, column: Int) -> Float {
+            if (0..<rows).contains(row - firstRow), (0..<columns).contains(column - firstColumn) {
+                return heights[(row - firstRow) * columns + column - firstColumn]
+            }
+            let cell = Double(Land.cellLength)
+            let at = frame.coordinate(worldX: Double(column) * cell, worldY: Double(row) * cell)
+            var reader = HeightGrid.Reader(grid)
+            return Float(reader.height(latitude: at.latitude, longitude: at.longitude).rounded())
         }
 
         /// The height at world point (`x`, `y`), in metres.
@@ -731,6 +748,25 @@ extension Map3DScene {
                                  y: min(max(Int64(y.rounded()), 0), bounds.height - 1))
             if let height = world.groundHeight(at: plan) { return Float(Double(height) / Self.metre) }
             return fileGround?.height(x: Double(plan.x), y: Double(plan.y)) ?? 0
+        }
+
+        /// Decision 406: the drawn ground (``drawnGround(x:z:)``) at scene
+        /// point (`x`, `z`) as a region round it draws it, past this
+        /// region's edge too, where ``ground(x:y:)`` holds the edge's.
+        func steadyGround(x: Float, z: Float) -> Float {
+            let cell = Double(Land.cellLength)
+            let worldX = originX + Double(x) * Self.metre, worldY = originY + Double(z) * Self.metre
+            let column = Int((worldX / cell).rounded(.down)), row = Int((worldY / cell).rounded(.down))
+            let fx = Float(worldX / cell - Double(column)), fy = Float(worldY / cell - Double(row))
+            let bounds = world.bounds
+            func corner(_ row: Int, _ column: Int) -> Float {
+                let plan = PlanPoint(x: min(max(Int64((Double(column) * cell).rounded()), 0), bounds.width - 1),
+                                     y: min(max(Int64((Double(row) * cell).rounded()), 0), bounds.height - 1))
+                if let height = world.groundHeight(at: plan) { return Float(Double(height) / Self.metre) }
+                return fileGround?.corner(row: Int((Double(plan.y) / cell).rounded(.down)), column: Int((Double(plan.x) / cell).rounded(.down))) ?? 0
+            }
+            let a = corner(row, column), b = corner(row + 1, column), c = corner(row + 1, column + 1), d = corner(row, column + 1)
+            return fy >= fx ? a + fx * (c - b) + fy * (b - a) : a + fx * (d - a) + fy * (c - d)
         }
 
         func ground(at scene: Map3DPoint) -> Float {
