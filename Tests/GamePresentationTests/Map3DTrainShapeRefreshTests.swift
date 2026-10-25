@@ -33,7 +33,7 @@ final class Map3DTrainShapeRefreshTests: XCTestCase {
         let band=cab.vertices.filter { $0.color==teal && $0.x>5.7 && $0.x<9.2 }
         XCTAssertGreaterThan(band.map(\.z).max()!,1.9,"Coloured shoulder remains a narrow lower stripe")
         let front=cab.vertices.filter { $0.color==teal && $0.x>11.8 }
-        XCTAssertGreaterThan(front.map(\.z).max()!,1.25,"Band fails to wrap over the low front lip")
+        XCTAssertGreaterThan(front.map(\.y).max()!-front.map(\.y).min()!,1.5,"Thin coloured rim fails to wrap both sides of the front lip")
         XCTAssertLessThan(cab.maximum.x,12.6,"Unrequested long paddle returned")
         XCTAssertGreaterThan(cab.vertices.filter { abs($0.x-9.1)<0.002 && $0.color==teal }.map { abs($0.y) }.max()!,1.6)
     }
@@ -44,10 +44,13 @@ final class Map3DTrainShapeRefreshTests: XCTestCase {
         XCTAssertGreaterThan(width,3.20,"Lower shoulder still collapses with the upper nose")
         let central=section.filter { $0.color==Map3DTrainShapeRefresh.highSpeedBodyColor }
         let centralWidth=central.map(\.y).max()!-central.map(\.y).min()!
-        XCTAssertLessThan(centralWidth/width,0.85,"Central nose covers the broad coloured shoulder")
+        XCTAssertGreaterThan((width-centralWidth)/2,0.10,"White inset erases the coloured shoulder rim")
         let front=m.vertices.filter { abs($0.x-11.9)<0.0001 && $0.color==Map3DTrainShapeRefresh.highSpeedBodyColor }
         XCTAssertFalse(front.isEmpty)
-        XCTAssertLessThan(front.map(\.y).max()!-front.map(\.y).min()!,1.2,"Central inset fails to taper inside the front lip")
+        let lip=m.vertices.filter { abs($0.x-11.9)<0.0001 }
+        let lipWidth=lip.map(\.y).max()!-lip.map(\.y).min()!
+        let insetWidth=front.map(\.y).max()!-front.map(\.y).min()!
+        XCTAssertGreaterThan((lipWidth-insetWidth)/2,0.10,"White inset erases the front coloured rim")
         // Check the body join on both sides from actual coloured vertices.
         let band=m.vertices.filter { $0.color==Map3DPalette.shopAwnings[0] }
         let h0=band.filter { abs($0.x)<0.0001 }.map(\.z).max()!
@@ -72,6 +75,12 @@ final class Map3DTrainShapeRefreshTests: XCTestCase {
         XCTAssertLessThan(width,2.25,"Front mask still spreads too far across the white nose")
         let fairing=cab.vertices.filter { $0.x>7 }
         XCTAssertLessThan(fairing.map(\.z).min()!,0.45,"Lower front fairing leaves the running gear exposed")
+    }
+    func testWhiteNoseReachesLowFrontRimInsteadOfLeavingBroadTealBib() {
+        let m=Map3DTrainShapeRefresh.model("refresh-700t-cab")
+        let white=m.vertices.filter { $0.color==Map3DTrainShapeRefresh.highSpeedBodyColor && $0.x>11.8 && abs($0.y)<0.25 }
+        XCTAssertFalse(white.isEmpty)
+        XCTAssertLessThan(white.map(\.z).min()!,1.10,"White nose ends too high and leaves a broad teal bib")
     }
     func testPassengerGlassHasRoundedCornersInsteadOfRectangle() {
         let m=Map3DTrainShapeRefresh.model("refresh-700t-middle")

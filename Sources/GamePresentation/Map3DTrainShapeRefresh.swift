@@ -213,7 +213,7 @@ extension StationKitBuilder {
             let baseline: Float=1.7852976
             func ease(_ t: Float)->Float { let u=max(0,min(1,t));return u*u*(3-2*u) }
             if !cab || x<=6.7 { return baseline }
-            return baseline+(1.23-baseline)*ease((x-6.7)/5.8)
+            return baseline+(0.94-baseline)*ease((x-6.7)/5.8)
         }
         func clip(_ polygon: [Map3DPoint],at x0: Float,_ x1: Float,upper: Bool,offset: Float = 0)->[Map3DPoint] {
             let h0=bandHeight(x0),h1=bandHeight(x1)
@@ -279,6 +279,44 @@ extension StationKitBuilder {
             guard cab else { return (polygon,[]) }
             return (skirtClip(polygon,x0,x1,upper:true),skirtClip(polygon,x0,x1,upper:false))
         }
+        func nosePaintParts(_ triangle: [Map3DPoint],_ x0: Float,_ x1: Float)->[[Map3DPoint]] {
+            typealias PaintVertex=(point: Map3DPoint,distance: Float)
+            let h0=bandHeight(x0),h1=bandHeight(x1)
+            let original: [PaintVertex]=triangle.map { p in
+                let h=p.x==x0 ? h0:p.x==x1 ? h1:h0+(h1-h0)*(p.x-x0)/(x1-x0)
+                let t=max(0,min(1,(p.x-3.7)/7.2)),ease=t*t*(3-2*t)
+                let localWidth=dimensions(p.x).1
+                let tip=max(0,min(1,(p.x-11)/1.4)),roundTip=tip*tip*(3-2*tip)
+                // Blend toward the body-scale width at the end. Normalizing by
+                // the tiny cap width pinches the white inset into a small tab.
+                let flank=abs(p.z)/(localWidth+0.4*(1.69-localWidth)*roundTip)
+                let d=p.y-h-0.62*ease*powf(flank,4)
+                let snapped: Float=abs(d)<0.000001 ? 0:abs(d-0.055)<0.000001 ? 0.055:d
+                return (p,snapped)
+            }
+            func cut(_ polygon: [PaintVertex],at level: Float,upper: Bool)->[PaintVertex] {
+                var result: [PaintVertex]=[]
+                for i in polygon.indices {
+                    let a=polygon[i],b=polygon[(i+1)%polygon.count]
+                    let ia=upper ? a.distance>=level:a.distance<=level
+                    let ib=upper ? b.distance>=level:b.distance<=level
+                    if ia { result.append(a) }
+                    if ia != ib && a.distance != level && b.distance != level {
+                        let p=a.point,q=b.point
+                        let before=p.x<q.x || (p.x==q.x && (p.z<q.z || (p.z==q.z && p.y<q.y)))
+                        let lo=before ? a:b,hi=before ? b:a
+                        let t=(level-lo.distance)/(hi.distance-lo.distance)
+                        // Carry the exact isovalue into the next cut. Computing
+                        // the nonlinear field again creates extra colour-edge
+                        // vertices and T-junctions on very small front faces.
+                        result.append((lo.point+(hi.point-lo.point)*t,level))
+                    }
+                }
+                return result
+            }
+            let upper=cut(original,at:0,upper:true)
+            return [cut(upper,at:0.055,upper:true),cut(upper,at:0.055,upper:false),cut(original,at:0,upper:false)].map { $0.map(\.point) }
+        }
         for k in 0..<rings.count-1 {
             let h=(dimensions(xs[k]).0+dimensions(xs[k+1]).0)/2
             let inside=Map3DPoint((xs[k]+xs[k+1])/2,(bottom+h)/2,0)
@@ -288,7 +326,14 @@ extension StationKitBuilder {
                 let teal = shoulderBand ? (20...23).contains(i) || (36...39).contains(i) : [21,22,23,36,37,38].contains(i)
                 let color: UInt32 = (24...35).contains(i) ? Self.steel : teal ? refreshTeal:hsrBody
                 for triangle in [[rings[k][i],rings[k][j],rings[k+1][j]],[rings[k][i],rings[k+1][j],rings[k+1][i]]] {
-                    if !(24...35).contains(i) {
+                    if cab && xs[k]>=3.7 && !(24...35).contains(i) {
+                        let paint=nosePaintParts(triangle,xs[k],xs[k+1])
+                        face(paint[0],inside:inside,color:hsrBody)
+                        face(paint[1],inside:inside,color:Map3DTrainShapeRefresh.highSpeedAccentColor)
+                        let parts=hullParts(paint[2],xs[k],xs[k+1])
+                        face(parts.0,inside:inside,color:refreshTeal)
+                        face(parts.1,inside:inside,color:Map3DTrainShapeRefresh.highSpeedAccentColor)
+                    } else if !(24...35).contains(i) {
                         // Split the final sculpted shell along its shared paint boundary.
                         // No overlapping colour decal or separate lip box.
                         let upper=clip(triangle,at:xs[k],xs[k+1],upper:true)
@@ -313,7 +358,10 @@ extension StationKitBuilder {
             let inside=Map3DPoint(0,2,0),cap=rings[end],x=xs[end]
             if cab && end==rings.count-1 {
                 for panel in orientedTriangles(cap,inside:inside) {
-                    let parts=hullParts(panel,x-1,x+1)
+                    let paint=nosePaintParts(panel,x,x+1)
+                    face(paint[0],inside:inside,color:hsrBody)
+                    face(paint[1],inside:inside,color:Map3DTrainShapeRefresh.highSpeedAccentColor)
+                    let parts=hullParts(paint[2],x-1,x+1)
                     face(parts.0,inside:inside,color:refreshTeal)
                     face(parts.1,inside:inside,color:Map3DTrainShapeRefresh.highSpeedAccentColor)
                 }
