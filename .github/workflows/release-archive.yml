@@ -28,6 +28,15 @@ name: Release Archive (unsigned)
 # 15 of the 42 pull requests that ran it in the week before changed only
 # those. Data is copied into the app as it is, the same in Debug and Release,
 # and ios-build.yml builds and launches the app with it.
+#
+# Decision 247 (2026-10-16) put the String Catalog back: this job checks that
+# the archived app carries both languages. Since 2026-10-25
+# (docs/research/CI_PRUNE_2026-10-25.md) a pull request runs it for the
+# app's entry point and its entitlements, not for every file in App/: 22 of
+# the 38 pull requests that ran it in the week before were started by App/,
+# mostly by files that build the same in Debug and Release (the audio, the
+# iCloud folder, the Debug-only UI test worlds, which are all inside #if
+# DEBUG). The entry point is where the Debug-only launch arguments are.
 
 on:
   workflow_dispatch:
@@ -43,7 +52,8 @@ on:
       - RailwayGameApp/Resources/Localizable.xcstrings
       - RailwayGameApp/Resources/PrivacyInfo.xcprivacy
       - .github/scripts/check-app-localizations.sh
-      - RailwayGameApp/App/**
+      - RailwayGameApp/App/RailwayGameApp.swift
+      - RailwayGameApp/App/RailwayGame.entitlements
       - .github/workflows/release-archive.yml
 
 permissions:
