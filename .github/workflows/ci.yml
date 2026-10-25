@@ -11,8 +11,8 @@ name: CI
 # path filter live in .github/scripts/swift-shards.sh. The matrix below comes
 # from that script, so a shard defined there always has a job.
 #
-# A pull request runs the tier its changed files need (decision 185,
-# swift-shards.sh plan): everything for a change to GameCore, the package,
+# A pull request and a push to main run the tier their changed files need
+# (decision 185, swift-shards.sh plan; pushes since decision 413): everything for a change to GameCore, the package,
 # the CI scripts, a shared test file or several edited campaigns; only the
 # GamePresentation tests for a change there (or to the app's bundled data, or
 # a tools/ file they read); only the classes that read
@@ -20,8 +20,15 @@ name: CI
 # declares when no other file uses it. The label `full-ci` makes a pull
 # request run everything: add it, then re-run the pull request's run (Re-run
 # all jobs; the change detection reads the labels the pull request has
-# then). A push to main and a manual run always run every shard
+# then). A manual run and the nightly run (schedule, below) run every shard
 # (swift-shards.sh decide).
+#
+# Nightly full run (decision 413): a push to main runs only its tier, as its
+# pull request did, so every night the newest commit of main runs every
+# shard, unless a run of that commit already passed every shard (a manual
+# run, a push whose tier was full, or an earlier nightly run;
+# swift-shards.sh head-full-run). A TestFlight release needs such a green
+# full run of its commit: this nightly one, or one started by hand.
 #
 # On a pull request the gate also waits for the same commit's iOS App Build
 # run and is red when that run fails (decision 265), so the one check main's
@@ -38,9 +45,11 @@ name: CI
 # was replaced (see concurrency below) is then still tested by the next run,
 # and after a red run every later run tests again until one passes. The
 # branch rule of main (main-gate) requires the gate, "Swift CI (gate)": keep
-# that name. Manual runs always run everything, and so does a push whose base
-# cannot be found (no successful run, the API failing, a commit that is not
-# an ancestor).
+# that name. A push run is successful once its own tier passed, so the next
+# push is compared with it and tests only what came after; whatever the
+# tiers left out, the nightly run tests. Manual runs always run everything,
+# and so does a push whose base cannot be found (no successful run, the API
+# failing, a commit that is not an ancestor).
 
 on:
   push:
@@ -51,10 +60,13 @@ on:
     # full, add full-ci and re-run its run (decision 187).
     types: [opened, synchronize, reopened]
   workflow_dispatch:
+  # The nightly full run of main (decision 413), at 01:37 Taiwan time.
+  schedule:
+    - cron: '37 17 * * *'
 
 permissions:
   contents: read
-  # push-base reads the earlier runs of this workflow.
+  # push-base and head-full-run read the earlier runs of this workflow.
   actions: read
   # A pull request's labels (full-ci) are read when it runs, so a re-run
   # after the label is added sees it.
@@ -69,7 +81,7 @@ permissions:
 # no result of its own. The newest run still tests its changes (it is
 # compared with the last success), but when it turns red, start this
 # workflow by hand (workflow_dispatch) on the replaced commits to find which
-# one broke it. Manual runs keep a group per commit.
+# one broke it. Manual and nightly runs keep a group per commit.
 #
 # Rules for the people and sessions that merge (decision 187,
 # docs/research/CI_INCIDENT_2026-10-12.md):
@@ -124,6 +136,15 @@ jobs:
         run: |
           base=""
           listed=false
+          if [[ "$EVENT" == schedule ]]; then
+            # The nightly full run is not needed when this commit already
+            # passed every shard (decision 413).
+            if full="$(.github/scripts/swift-shards.sh head-full-run)" && [[ -n "$full" ]]; then
+              echo "Swift jobs: skipped, $full already ran every shard of this commit." | tee -a "$GITHUB_STEP_SUMMARY"
+              { echo "swift=false"; echo "tier=none"; echo "matrix=$(.github/scripts/swift-shards.sh matrix)"; } >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
           if [[ "$EVENT" == pull_request ]]; then
             # The first parent of the merge commit is the base, so this is
             # what the pull request changes.
@@ -138,7 +159,7 @@ jobs:
             fi
           fi
           # If the changed files cannot be read, test.
-          if [[ -z "$base" && "$EVENT" != workflow_dispatch ]]; then
+          if [[ -z "$base" && "$EVENT" != workflow_dispatch && "$EVENT" != schedule ]]; then
             echo "::warning::No earlier commit to compare with; running the Swift jobs."
           elif [[ -n "$base" ]]; then
             # No rename detection: it would read file contents, and a
@@ -287,7 +308,7 @@ jobs:
       # and UI tests had finished (#746, 2026-10-16). A change the app cannot
       # see has no iOS run and passes at once. After a failed iOS run is
       # re-run and passes, re-run this gate too (Re-run failed jobs). Pushes
-      # to main and manual runs do not wait: their full lane is
+      # to main, manual and nightly runs do not wait: their full lane is
       # ios-full-lane.yml's.
       - name: Wait for this change's iOS App Build
         if: github.event_name == 'pull_request'
