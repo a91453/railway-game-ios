@@ -1577,3 +1577,6 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 
 
 **Codex EMU3000第三版（#1226／draft #1229，私有draft #77）**：使用者要求車頭比例及車門破圖修正。真正23a59907／完整revision-2保留，新包revision-3；前裙／白下巴延伸圓收、黑罩改正面U形分色，車寬長／輪組／窗位／設備／編組保留。舊門可重現玻璃被殼面／門葉遮住；白殼作門葉、封閉薄門縫與玻璃按真正截面貼合，新增實際射線回歸先紅後綠及埋入玻璃變異。全量重出原生／GLB／七向／白模剪影／同尺度前後／門部放大／viewer／ZIP。驗證、實際producer、三角及最新同head CI見[自有交接](art/emu3000-refresh-2026-10-25/README.md)與issue交付，外觀自檢不代表作者認可，Linux不代表Metal/FPS。公開PR含營運替換接點，未合併不會出現；靜態幾何無動畫。保留#1227共用builder與#1233的emu3000Classic等舊版，列車包解鎖／回退分派由Claude後續處理，本輪不改其清單。GameCore／存檔／golden／save／replay／玩法不動；不推main／不合併／auto-merge／TestFlight。
+
+
+**Codex EMU3000第四版（同#1226／draft #1229／私有#77）**：使用者只說側面下巴偏長並補ED側圖。本輪僅微抬／收緊低白鼻與鼻罩縫，保持上部黑罩／風擋／燈／車門／車身／輪組／設備／編組。12件近遠中間車原生payload全同；端車只在x>7.9、z<1.1m位置變更，所有顏色／layer／三角數／總bounds保持，法線依實際最終三角重算。真e25474ff／完整revision-3不動，新包revision-4，同尺度真前後與全部最終素材重出；外觀／技術／最新同head CI及重建見自有交接。仍無作者認可或工程復刻宣稱；不推main／合併／auto-merge／TestFlight，不動GameCore／存檔／fixtures。

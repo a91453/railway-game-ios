@@ -1,4 +1,4 @@
-# EMU3000 第三版原生重建與遊戲替換
+# EMU3000 第四版原生重建與遊戲替換
 
 先讀 [車輛製作手冊](../../docs/art/native-vehicle-modeling/README.md) 與 [本次外觀／重建交接](../../docs/art/emu3000-refresh-2026-10-25/README.md)。本工具只處理這次 EMU3000，不能把其門窗／編組／估計尺寸當通用列車規格。
 
@@ -17,7 +17,7 @@ PRODUCER_COMMIT=$(git rev-parse HEAD) EMU_BASELINE=/tmp/emu-baseline EMU_FINGERP
 node tools/emu3000-refresh/verify.mjs OUT
 python3 tools/emu3000-refresh/door-audit.py OUT
 python3 tools/emu3000-refresh/support-audit.py OUT
-python3 tools/emu3000-refresh/revision-audit.py ACTUAL_REVISION_2 OUT
+python3 tools/emu3000-refresh/revision-audit.py ACTUAL_REVISION_3 OUT
 python3 tools/emu3000-refresh/coexistence.py /tmp/emu-baseline /tmp/emu-current-pack OUT
 node tools/emu3000-refresh/review.mjs OUT
 # 親自打開 ED／EP3／完整編組配色、白模、剪影的側／正／上／斜四向；不合格就修幾何。
@@ -41,7 +41,7 @@ python3 tools/emu3000-refresh/bundle.py OUT ACTUAL_PRODUCER_COMMIT
 
 `support-audit.py` 用實際匯出三角：所有大於取樣面積的玻璃面（含邊及背面）到非玻璃背襯三角的精確最近距離，120mm門檻；辨識真正8個輪胎連通體、輪底z=0、上方淨空；實際屋頂實體透過65mm接觸容差的取樣圖連回車身。第二版由最近點量測取代玻璃切向法線射線，因為邊壁長射線不能表示正面浮空；仍對移開真實玻璃1m的變異重新量距並拒收。此法不證明所有表面互不穿插、動態懸吊或真實接觸高度，完整碰撞與真機仍UNVERIFIED。
 
-真正已交付前版producer23a59907的原生單元／組裝／manifest／配方放 `OUT/history/23a59907/`，完整revision-2在私庫保持不變；`render.mjs`加 `revision-2-vs-3.png` 同相機／公尺尺度對照及 `door-before-after.png` 放大對照。門部局部由同份實際原生模型取景，嵌入有留白的不透明比較頁；完整七向圖仍不裁邊。`bundle.py`逐件比原前版manifest內native SHA，禁止把新模型當舊模型。`revision-audit.py`以52-byte原生三角多重集合差集，證明16單元只有門及端車鼻部改變，另量白鼻最低高度與靜態前裙間隙。這些是虛擬模型量測，不是真車工程尺寸。
+真正已交付前版producere25474ff的原生單元／組裝／manifest／配方放 `OUT/history/e25474ff/`，完整revision-3在私庫保持不變；`render.mjs`加 `revision-3-vs-4.png` 同相機／公尺尺度對照及 `door-before-after.png` 已修車門保持對照。門部局部由同份實際原生模型取景，嵌入有留白的不透明比較頁；完整七向圖仍不裁邊。`bundle.py`逐件比原前版manifest內native SHA，禁止把新模型當舊模型。`revision-audit.py`以實際52-byte原生三角逐index比對，證明12件近遠中間車全部payload不變；端車只有x>7.9m、z<1.1m低白鼻／接縫位置調整，顏色／layers／三角數／順序／總bounds保持，所有其他位置不動。另量真正模型白鼻下緣與下角水平收緊距離。這些是虛擬模型量測，不是真車工程尺寸。
 
 `door-audit.py`對全部16件近／遠單元向外門玻璃正面三角射線量測遮擋及同深度異色面。Swift回歸在真23a59907近景八單元全部先紅，修後綠；向內移動實際玻璃100mm仍必須拒收。舊門跨凸車側、白葉遮玻璃，閉合／支持測試本身抓不到；本輪以車殼作白葉，門縫封閉薄環、玻璃按實際殼面分段投影，避免再次用大扇形跨曲面。當前三角上限近景8500／遠景3600，只作用本車，完整數量讀manifest；不擴大410通用預算。
 

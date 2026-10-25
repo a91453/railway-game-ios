@@ -9,7 +9,7 @@ var records:[[String:Any]]=[]
 var nativeUnits:[String:String]=[:]
 func encoded(_ model:Map3DModelPack.Model) throws -> Data {
     guard model.triangleCount<=Map3DModelFile.maximumTriangles else { fatalError("unit budget: \(model.name)") }
-    let metadata=try JSONSerialization.data(withJSONObject:["generator":"native-emu3000-refresh","producer_commit":producer,"coordinates":"metres +X front +Y left +Z up","recipe_version":3],options:[.sortedKeys])
+    let metadata=try JSONSerialization.data(withJSONObject:["generator":"native-emu3000-refresh","producer_commit":producer,"coordinates":"metres +X front +Y left +Z up","recipe_version":4],options:[.sortedKeys])
     var data=Data("M3DM".utf8)
     func word(_ bits:UInt32) { let n:UInt32=bits==0x80000000 ? 0:bits; for s:UInt32 in [0,8,16,24] { data.append(UInt8((n>>s)&255)) } }
     data.append(contentsOf:[1,0,0,0]);word(UInt32(model.triangleCount));word(UInt32(metadata.count));data.append(metadata)
@@ -68,7 +68,7 @@ if let baseline=ProcessInfo.processInfo.environment["EMU_BASELINE"] {
     try d.write(to:output.appendingPathComponent(file))
     records.append(["id":"before-formation","name":"before-formation","native":file,"category":"comparison","family":"before","native_kind":"assembly","triangles":0,"minimum":[-122.0,-1.7,0.0],"maximum":[122.0,1.7,4.0]])
 }
-let manifest:[String:Any]=["schema_version":1,"recipe_version":3,"generator":"native-emu3000-refresh","producer_commit":producer,
+let manifest:[String:Any]=["schema_version":1,"recipe_version":4,"generator":"native-emu3000-refresh","producer_commit":producer,
     "model_count":records.count,"models":records,"directions":["top","bottom","left","right","front","back","isometric"],
     "native_coordinates":"metres +X front +Y left +Z up; tread z=0","gltf_coordinates":"metres +X front +Y up -Z left",
     "assembly":["sequence":Map3DEMU3000.sequence.map(\.rawValue),"positions_x_m":Map3DEMU3000.placements.map(\.x),"rotation":"tail baked 180 degrees; placements no rotation","unit_pitch_m":Map3DEMU3000.sequence.map(\.pitch),"length_m":245.7,"body_gap_m":0.7,"note":"Middle body 19.6m, pitch20.3m. ED body21m pitch21.35m. Coupler ends touch; roof equipment is proportion-estimated."],

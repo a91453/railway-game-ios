@@ -44,7 +44,8 @@ public enum Map3DEMU3000 {
     public static func model(_ unit: Unit, far: Bool = false) -> Map3DModelPack.Model {
         var b = StationKitBuilder()
         b.emuCar(unit, far: far)
-        let raw = Map3DModelPack.Model.flat(named: unit.id + (far ? "-far" : ""), from: b.mesh)
+        let source = Map3DModelPack.Model.flat(named: unit.id + (far ? "-far" : ""), from: b.mesh)
+        let raw = unit.isCab ? trimmedChin(source) : source
         let m = Map3DModelPack.Model(name:raw.name,vertices:raw.vertices.map { v in
             guard v.color == lampColor else { return v }
             return Map3DVertex(v.position,normal:Map3DPoint(v.nx,v.ny,v.nz),
@@ -55,6 +56,56 @@ public enum Map3DEMU3000 {
         return Map3DModelPack.Model(name:m.name, vertices:m.vertices.map {
             Map3DVertex(Map3DPoint(-$0.x,-$0.y,$0.z), normal:Map3DPoint(-$0.nx,-$0.ny,$0.nz),color:$0.color,layer:$0.layer)
         }, minimum:Map3DPoint(-m.maximum.x,-m.maximum.y,m.minimum.z),maximum:Map3DPoint(-m.minimum.x,-m.minimum.y,m.maximum.z))
+    }
+    /// Only the low white nose and its fitted hatch seam move. The real previous
+    /// helmet, glazing, doors and running gear are preserved vertex-for-vertex.
+    private static func trimmedChin(_ model: Map3DModelPack.Model) -> Map3DModelPack.Model {
+        let seam=Map3DColor.shaded(bodyColor,0.74)
+        func ease(_ n:Float)->Float {let t=max(0,min(1,n));return t*t*(3-2*t)}
+        func position(_ v:Map3DVertex)->Map3DPoint {
+            guard (v.color==bodyColor || v.color==seam),v.x>7.9,v.z<1.1 else {return v.position}
+            let amount=ease((v.x-7.9)/1.4)*ease((1.1-v.z)/0.86)
+            let roll=max(0,min(1,(10.6-v.x)/0.6))
+            return v.position+Map3DPoint(0.25*amount*roll,0,0.24*amount)
+        }
+        var positions=model.vertices.map(position)
+        let shellTriangles=stride(from:0,to:model.vertices.count,by:3).filter {i in
+            model.vertices[i..<i+3].allSatisfy {($0.color==bodyColor || $0.color==maskColor) && $0.x>7.5}
+        }
+        func surfaceX(_ p:Map3DPoint,_ transformed:Bool)->Float? {
+            var front:Float?
+            for i in shellTriangles {
+                let a=transformed ? positions[i]:model.vertices[i].position
+                let b=transformed ? positions[i+1]:model.vertices[i+1].position
+                let c=transformed ? positions[i+2]:model.vertices[i+2].position
+                let e=b-a,f=c-a,w=p-a,det=e.y*f.z-e.z*f.y
+                if abs(det)<0.0000001 {continue}
+                let u=(w.y*f.z-w.z*f.y)/det,v=(e.y*w.z-e.z*w.y)/det
+                if u >= -0.000001 && v >= -0.000001 && u+v<=1.000001 {
+                    let x=a.x+u*e.x+v*f.x
+                    front=max(front ?? x,x)
+                }
+            }
+            return front
+        }
+        // Refit both sides of the existing thin seam to the final faceted hull.
+        // A nonlinear vertex warp alone can otherwise bury short seam segments.
+        let warped=positions
+        for i in positions.indices where model.vertices[i].color==seam {
+            let old=model.vertices[i].position,p=warped[i]
+            if let before=surfaceX(old,false),let after=surfaceX(p,true) {
+                positions[i]=Map3DPoint(after+(old.x-before),p.y,p.z)
+            }
+        }
+        var vertices=model.vertices
+        for i in stride(from:0,to:vertices.count,by:3) {
+            let old=Array(model.vertices[i..<i+3]),points=Array(positions[i..<i+3])
+            guard zip(old,points).contains(where:{$0.position != $1}) else {continue}
+            guard let n=(points[1]-points[0]).cross(points[2]-points[0]).normalized else {preconditionFailure("Degenerate chin")}
+            for j in 0..<3 {vertices[i+j]=Map3DVertex(points[j],normal:n,color:old[j].color,u:old[j].u,v:old[j].v,layer:old[j].layer)}
+        }
+        // Actual overall extrema remain the unchanged couplers, body and rail tread.
+        return Map3DModelPack.Model(name:model.name,vertices:vertices,minimum:model.minimum,maximum:model.maximum)
     }
     // Minimal runtime adapter. Shared generic builders stay independent of this recipe.
     static func trainSet(far: Bool = false) -> Map3DTrainSet {

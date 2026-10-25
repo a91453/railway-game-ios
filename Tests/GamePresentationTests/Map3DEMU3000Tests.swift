@@ -119,6 +119,18 @@ final class Map3DEMU3000Tests: XCTestCase {
         XCTAssertGreaterThan(chin.count,10,"substantial white chin, not a needle")
         XCTAssertLessThan(m.vertices.filter {$0.x>9.5}.map(\.z).max() ?? 10,2.5)
     }
+    func testLowerChinHasACompactRaisedSideProfile() {
+        for far in [false,true] {
+            let head=Map3DEMU3000.model(.ed,far:far)
+            let white=head.vertices.filter {$0.color==Map3DEMU3000.bodyColor && $0.x>8 && $0.z<1.1}
+            let low=white.map(\.z).min() ?? 0
+            XCTAssertGreaterThan(low,0.44,"low hanging jaw should be raised")
+            XCTAssertLessThan(low,0.54,"keep a substantial rounded chin")
+            let toe=white.filter {$0.z<0.50}
+            XCTAssertFalse(toe.isEmpty)
+            XCTAssertGreaterThan(toe.map(\.x).min() ?? 0,9.95,"lower corner rolls tightly below the tip")
+        }
+    }
     func testHeadlampsAreIndividualModulesAndTailHasOnlyTwoMarkers() {
         func modules(_ model:Map3DModelPack.Model)->Int {
             func key(_ v:Map3DVertex)->String {[v.x,v.y,v.z].map {String(Int(($0*100000).rounded()))}.joined(separator:",")}
