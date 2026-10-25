@@ -50,6 +50,12 @@
     - 同一個測試 7 天內沒有程式原因紅了 2 次（不穩的測試，照 diagnosing-bugs 查）。
     - pull request 的 macOS job 常常排隊超過 20 分。
   - 2026-10-25 量的（決策 411「其他的線」）：rest 19m44s → 重排（決策 411）；PR 的 iOS gate UI 步 7.3–11.8 分（過 6 分線；決策 412 把閘門從 7 支減到 4 支，估計中位數 5.1 分）；full lane 的 build job 的 UI 步離它的 75 分只差 10–13 分；慢的 runner 上三分之一的 Swift job 過 17 分，要靠共用 build（`docs/research/CI_SHARED_BUILD_2026-10-25.md`，等規劃決定、作者同意加 action）。
+  - **共用 build（A 案）待接手**（2026-10-25 15:00 UTC）：作者說「五方評分決定」，規劃 session_0164nEyu2aMPVTpvQww43kj1 選 A，並授權在 `ci.yml` 用 `actions/upload-artifact` 與 `actions/download-artifact`。五方加權：A 3.20、維持決策 411 2.40、`actions/cache` 2.15、上限調成 25 分 2.15。session_01Pz4Th4Hr8SAr6iP9gm4sqC 已壓縮 1 次，照 §1 不接，交回規劃另派。做法（規劃定的）：
+    1. 先驗證：`.build` 在另一台 runner 解開後，`swift test list --skip-build` 與一個類別能不能跑。不行就停，寫進決策 411 的下一步，維持現狀。
+    2. 寫成決策 411 的續篇，不開新號，五方表與這則授權寫進去。
+    3. gate 改讀 build job；決策 329 的「被 signal 殺掉再 build 一次」移到 build job；部分 tier（`selected-N`）也改成下載。
+    4. PR 加 `full-ci` 跑一輪完整 run，比較前後的最長分片、牆鐘、runner 分鐘。
+    - 研究與估計見 `docs/research/CI_SHARED_BUILD_2026-10-25.md`。
   - 五方（權重同上；選項：A 每 30 點、B 每 60 點、C 每週一次、D 看數字過線才開、E D 再加每週量一次）：
     | 選項 | 玩家 | 開發 | 美術 | 鐵道迷 | 音樂 | 加權 |
     | --- | --: | --: | --: | --: | --: | --: |
