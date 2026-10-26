@@ -1,3 +1,5 @@
+> Codex PP #1291 CI修正：新增PP註冊移到既有route bus之前，保留route bus最後的索引約定；原失敗Map3DBusesTests已在舊head重現。同步最新main，模型幾何不變；既有61c6969c素材producer仍有效，最新程式CI看本PR新head。E1000車頭外觀另在#1296修訂，不能沿用2be9daca已符合自評。
+
 # 交接
 
 > Codex E1000雙端PP（#1294）：[來源／外觀／營運／重建](art/e1000-pp-2026-10-26/README.md)。獨立E1000近遠配方，以未合併PP #1291固定61c6969c為stacked base，私庫#87固定1f81f7c。只換pushPull機車，PP客車/E500/EMU與其他服務payload保護；兩端E1000、後機180°、後端貫通道相接。官方規格16.5/17.211m、寬2.885/車高3.904m；輪徑與軸距推估。完整包私有、公開一張總覽。兩PR皆合併並重建才改App，靜態展示不代表推拉控制/真機/動畫。CI看本輪同head，不合併/auto-merge/TestFlight。
@@ -34,7 +36,7 @@
 - 新功能的實作 session 同時最多 3–4 個，照 NEXT_PRIORITIES §22 的順序一件一件開；開著的 PR 也不要多，免得一直解衝突。
   - 作者 2026-10-25：「你先派好了 好像3～4個session沒關係 沒有撞到相同的部分」：3–4 個可以同時派，條件是它們不改同一批檔案；改同一塊的（例如都動 LineAcquisition）照順序一個合了再派下一個。
 - PR 審查比新功能優先。上一輪是 #786–#872（§7.1）。
-- **多久審查一次**（2026-10-22，作者：「多少pr要做一次pr review 因為有時候只是加入文件跟codex加模型而已你五方比較」）：**數程式的 PR，滿 30 點開一輪審查**。GameCore 的 PR 算 2 點；GamePresentation、App、CI 腳本、資料工具（`tools/` 會產生打包資料的）、`Web/` 的程式算 1 點；只改文件、只加模型或素材（Codex 的模型包、`Map3D*Kit` 的配方）、只改測試的算 0 點。上一輪是審查 I（#1189–#1241，不含另外獨立審查的 #1232、#1239；25 個程式 PR、28 點，8 個 P3，修了 6 個（#1247），兩個交出去，[`archive/PR1189_1241_REVIEW_HANDOFF.md`](archive/PR1189_1241_REVIEW_HANDOFF.md)）；下一輪從 #1242 起數，#1232、#1239 合併後也算進下一輪。
+- **多久審查一次**（2026-10-22，作者：「多少pr要做一次pr review 因為有時候只是加入文件跟codex加模型而已你五方比較」）：**數程式的 PR，滿 30 點開一輪審查**。GameCore 的 PR 算 2 點；GamePresentation、App、CI 腳本、資料工具（`tools/` 會產生打包資料的）、`Web/` 的程式算 1 點；只改文件、只加模型或素材（Codex 的模型包、`Map3D*Kit` 的配方）、只改測試的算 0 點。上一輪是審查 J（#1229–#1287，含審查 I 沒看的 #1229、#1230、#1232、#1239；35 個程式 PR、38 點，分三段：J1 一個 P2 已修（#1290）、J2 一個 P3 交出去，[`archive/PR1242_1287_REVIEW_HANDOFF.md`](archive/PR1242_1287_REVIEW_HANDOFF.md)）；下一輪從 #1288 起數（#1287 之後下一個合併的程式 PR）。
   - 量的（2026-10-22，main 最近 60 個合併，約 10 小時）：文件 13、只有素材／測試 6、程式 41（其中 GameCore 5）。#962–#1017 共 51 個 PR、37 個程式、41 點：已經超過，下一個空位先開審查 D。
   - 為什麼 30 點：一個審查 session 看 30 個程式 PR（每個 diff 約 5–10 千 token）大約 15–30 萬，在第一次壓縮（約 32 萬）之前看完；上一輪 #873–#944 一次 72 個，A6–A11 到現在還開著。
   - 五方（權重照 NEXT_PRIORITIES §19；選項：A 每 30 個 PR、B 每 50 個 PR、C 每 30 點、D 每天一次、E 每 60 點）：
@@ -78,8 +80,8 @@
 
 | 角色 | 現在的 session | 做什麼 | 交接 |
 | --- | --- | --- | --- |
-| 遊戲規劃（兼派工） | 第十六次換手後作者從 claude.ai 開的新規劃（接手時的現況在 §2.0 最前面「第十六次換手」；新任接手後把自己的 session id 寫在 #1041 的「遊戲規劃接手」留言）；前任 session_01TS89hbaHPJiFJycqrKiK5z（10-25 21:40–10-26 04:00，壓縮 2 次照 §1.1 換手）；再之前 session_01KvN8GrLosqRswrXMQgVQir（10-25 15:35–19:55，壓縮 2 次照 §1.1 換手）；再之前 session_0164nEyu2aMPVTpvQww43kj1（10-25 12:56–15:30，壓縮 2 次照 §1.1 換手）；再之前 session_0138XhXTjToUd3fpKV7kebeH（10-25 05:05–12:40，壓縮 5 次，作者說「交接」）；再之前 session_01B2kaku5NRz2J2CMzc8z3cZ（10-24 23:13–10-25 05:05，壓縮 2 次照 §1.1 換手）；再之前 session_019yHzrc1rgGJgdXSSwRNqgM（10-24 15:07–22:50，壓縮 2 次照 §1.1 換手，已封存）；再之前 session_013dJ7tvDYJnhe7XjXCE5cNi（10-24 08:17–14:00，壓縮 2 次照 §1.1 換手，已封存）；再之前 session_017HD7Krh51WqqzXjy6949Pq（10-24 06:32–08:00，壓縮 2 次照 §1.1 換手）；再之前 session_01AxcyajwHdF6j4ryDMghASM（10-24 05:00–06:30，「第八次換手」，已封存）；再之前 session_01XsVqbA1A5wGtJbuAa881oT（10-24 01:30–05:00，「第七次換手」）；再之前接暫代的 session_01PGibJmGNcvu2d7dJWWhWVb（10-24 00:35–01:30，已封存），再之前 session_01H5RHAwnA69n8EfAUSUrH52（10-23 00:10–10-24 00:35），再之前 session_014nUBHbE9mSK4qXHHgm8xCQ（10-22 22:30–10-23 00:10），再之前 session_01UsF4QYCGrzSeNSFq11i8Wu（18:15–22:30），再之前 session_01Ddr2wiXx1Xhn2m9qNBDnDh、session_01CHQg7B6JqzbScGSjyDwHos（2026-10-22 起，照 §1.1 換手，作者：「要不要全部所有換個session了 都一直在壓縮了」→「好，照表換」；換手時的現況在第 2 節最前面；前任 session_014rYHMtmqA5bEMkBBuKu6PV（10-21 至 10-22，作者：「那你需要先接手嗎太長了」）、session_01NiR5WLMFjMJBktQAMkfmkm（10-21）、session_01WW7o3decEv5LY59nYVqnDN（10-20 至 10-21，作者：「接手 角色表中遊戲規劃的工作」）、session_01V1xd3H9vNkuZoSA3czNfGm（10-16 至 10-18）、session_018D6gYU1yiZMtxSmNNU1K17） | 從玩家、鐵道迷、開發、美術、音樂五個角度決定優先順序與設計，開實作 session 並派工，綠了的 PR 照 §1.2 合併（2026-10-21 起），收作者轉來的玩家回報與 bug（§1.3），寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1、1.3 節 |
-| 每日 Threads 開發日誌 | 排程「每日 Threads 開發日誌」（台灣時間每天 21:43，2026-10-18 起暫停）觸發遊戲規劃，由它開寫作 session。現在是 `trig_01UGGwsMqKc741AThnJkMQ72`（綁 session_01TS89hbaHPJiFJycqrKiK5z，暫停；第十五次換手後重建，綁 01KvN8 的 `trig_01HSSMpemZaSC9PBohhHFWGM` 已刪）。舊的 `trig_01M2rwYPRRjTwQTC5g6QaW9v`（綁 013dJ7）與 `trig_01ABYQAarHbVxBbEShiVWDr3`（綁 01Axcy）都停用了，刪除時被自動模式的權限檢查擋下（兩任都一樣），留著不會觸發；作者要清可以在排程列表刪。2026-10-22 換手時由前任建了綁到 session_01CHQg7B6JqzbScGSjyDwHos 的新排程 `trig_01FZhfBNQCdDW8iDpowANLZS`（暫停中；之後每次換手都重建，現任的 id 寫在 #1041 接手的留言），前任的 `trig_01NfzFV9BcdiyBJpAwnaTuK9`（再之前是 `trig_01SkNFNW6qN6cMUGkGCXZM1v`）已刪。排程的綁定改不了，以後換手時由現任遊戲規劃用同一份 prompt 建一個綁到自己的新排程，再刪掉舊的；作者沒說要開就維持暫停 | 寫當天的串文草稿，用 SendUserFile 交給作者；不 commit、不發布 | 派工單照 2026-10-14、10-15、10-16 的寫作 session |
+| 遊戲規劃（兼派工） | 第十七次換手後作者從 claude.ai 開的新規劃（接手時的現況在 §2.0 最前面「第十七次換手」；新任接手後把自己的 session id 寫在 #1041 的「遊戲規劃接手」留言）；前任 session_01TH2DNkW2meh3EZJ1vxBczC（10-26 03:45–10:30，壓縮 3 次，第 3 次後換手）；再之前 session_01TS89hbaHPJiFJycqrKiK5z（10-25 21:40–10-26 04:00，壓縮 2 次照 §1.1 換手）；再之前 session_01KvN8GrLosqRswrXMQgVQir（10-25 15:35–19:55，壓縮 2 次照 §1.1 換手）；再之前 session_0164nEyu2aMPVTpvQww43kj1（10-25 12:56–15:30，壓縮 2 次照 §1.1 換手）；再之前 session_0138XhXTjToUd3fpKV7kebeH（10-25 05:05–12:40，壓縮 5 次，作者說「交接」）；再之前 session_01B2kaku5NRz2J2CMzc8z3cZ（10-24 23:13–10-25 05:05，壓縮 2 次照 §1.1 換手）；再之前 session_019yHzrc1rgGJgdXSSwRNqgM（10-24 15:07–22:50，壓縮 2 次照 §1.1 換手，已封存）；再之前 session_013dJ7tvDYJnhe7XjXCE5cNi（10-24 08:17–14:00，壓縮 2 次照 §1.1 換手，已封存）；再之前 session_017HD7Krh51WqqzXjy6949Pq（10-24 06:32–08:00，壓縮 2 次照 §1.1 換手）；再之前 session_01AxcyajwHdF6j4ryDMghASM（10-24 05:00–06:30，「第八次換手」，已封存）；再之前 session_01XsVqbA1A5wGtJbuAa881oT（10-24 01:30–05:00，「第七次換手」）；再之前接暫代的 session_01PGibJmGNcvu2d7dJWWhWVb（10-24 00:35–01:30，已封存），再之前 session_01H5RHAwnA69n8EfAUSUrH52（10-23 00:10–10-24 00:35），再之前 session_014nUBHbE9mSK4qXHHgm8xCQ（10-22 22:30–10-23 00:10），再之前 session_01UsF4QYCGrzSeNSFq11i8Wu（18:15–22:30），再之前 session_01Ddr2wiXx1Xhn2m9qNBDnDh、session_01CHQg7B6JqzbScGSjyDwHos（2026-10-22 起，照 §1.1 換手，作者：「要不要全部所有換個session了 都一直在壓縮了」→「好，照表換」；換手時的現況在第 2 節最前面；前任 session_014rYHMtmqA5bEMkBBuKu6PV（10-21 至 10-22，作者：「那你需要先接手嗎太長了」）、session_01NiR5WLMFjMJBktQAMkfmkm（10-21）、session_01WW7o3decEv5LY59nYVqnDN（10-20 至 10-21，作者：「接手 角色表中遊戲規劃的工作」）、session_01V1xd3H9vNkuZoSA3czNfGm（10-16 至 10-18）、session_018D6gYU1yiZMtxSmNNU1K17） | 從玩家、鐵道迷、開發、美術、音樂五個角度決定優先順序與設計，開實作 session 並派工，綠了的 PR 照 §1.2 合併（2026-10-21 起），收作者轉來的玩家回報與 bug（§1.3），寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1、1.3 節 |
+| 每日 Threads 開發日誌 | 排程「每日 Threads 開發日誌」（台灣時間每天 21:43，2026-10-18 起暫停）觸發遊戲規劃，由它開寫作 session。現在是 `trig_01E7R3dQWAdVTBb8fmpYK7cy`（綁 session_01TH2DNkW2meh3EZJ1vxBczC，暫停；第十六次換手後重建，綁 01TS89hb 的 `trig_01UGGwsMqKc741AThnJkMQ72` 已刪）。舊的 `trig_01M2rwYPRRjTwQTC5g6QaW9v`（綁 013dJ7）與 `trig_01ABYQAarHbVxBbEShiVWDr3`（綁 01Axcy）都停用了，刪除時被自動模式的權限檢查擋下（兩任都一樣），留著不會觸發；作者要清可以在排程列表刪。2026-10-22 換手時由前任建了綁到 session_01CHQg7B6JqzbScGSjyDwHos 的新排程 `trig_01FZhfBNQCdDW8iDpowANLZS`（暫停中；之後每次換手都重建，現任的 id 寫在 #1041 接手的留言），前任的 `trig_01NfzFV9BcdiyBJpAwnaTuK9`（再之前是 `trig_01SkNFNW6qN6cMUGkGCXZM1v`）已刪。排程的綁定改不了，以後換手時由現任遊戲規劃用同一份 prompt 建一個綁到自己的新排程，再刪掉舊的；作者沒說要開就維持暫停 | 寫當天的串文草稿，用 SendUserFile 交給作者；不 commit、不發布 | 派工單照 2026-10-14、10-15、10-16 的寫作 session |
 
 不再常駐（2026-10-20 停用）：合併協調 session_01QoA24EvFCFbmbcM1EwaZT7（前任 session_016sNs4eeZwga9hz1CCHkpmX）、派工 session_01MJ7sdeid5DAFjSVbTkmdi3（前任 session_01AaAj4wvJMxJQuLWAoYu6S8）。兩個都從 2026-10-17 起沒有動作。
 
@@ -351,6 +353,42 @@
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
+
+**第十七次換手（2026-10-26 約 10:30 UTC，session_01TH2DNkW2meh3EZJ1vxBczC 壓縮 3 次，第 3 次後照 §1 換 → 作者從 claude.ai 開的新規劃）**。新任開工：讀第 1 節、這一段、下面「第十六次換手」裡作者的新分工；#1041 只讀「遊戲規劃 session_01TH2DNkW2meh3EZJ1vxBczC 壓縮第 3 次」那則之後的留言。和下面不同時以這段為準。
+
+- **分工照第十六次換手**：不開 Claude Code 實作 session（作者明說才開）。規劃寫派工單（scratchpad 的 .md，用 SendUserFile 交），作者貼給 Claude Pro（$20，5 小時額度）或 Antigravity；規劃只審查，小的自己改好推上去，綠了照 §1.2 合。已確認：Claude Pro 能用作者的帳號推 branch、開 PR，但只能推到它被指定的 branch（`claude/new-session-xxxx`），不是派工單寫的 `claudepro/...`，沒關係。作者 10:10 UTC 說 5 小時額度只用了 34%：一張派工單大約用 15–20%。
+- **派工單的寫法**（這一任的經驗）：
+  - 一張只做一小步，寫明先讀哪幾個檔（含約略行號）、要做的、不要做的、決策檔怎麼寫（號碼沿用就寫「不新增」）、驗收、流程。
+  - 數字自己先查過再寫進去：A 那張寫「最多等 10 秒」，結果和要修的 `menuRow`（每次查詢 2–4 秒）同一個問題，規劃自己補推 ee4416a 改成 12 次／40 秒。
+  - 寫明 `swift test --filter` 的輸出要看第一個 `Executed`：最後一行是 GameSim 的 0 個測試。
+- **TestFlight 89**（c005788）：full lane 重跑綠，已告訴作者可以給測試者。What to Test 在 #1041。
+- **本任合併的**（都照 §1.2）：
+  - #1273（決策 419）、#1277、#1278（決策 421 V1、V2）、#1280（決策 422）。
+  - 第一批派工：#1283（決策 424 C1，公車沿真的道路走）、#1284（決策 423 第一步，`JourneyPlan`）、#1285（決策 424 C2，站牌編號與路名、箭頭、真站牌、摘要），合完 main 是 ab02fb9。
+- **第二批，換手時還在跑 CI**：作者的 Max 週額度剩 5%（10-27 22:00 台灣時間重置），本任停用了巡查 `trig_01XRMqqn2htUi4JciiftWBnC`。#1286、#1287 由作者在兩個都綠後自己合（main ab02fb9 的 `ci.yml` 已綠）。新任先看這兩個合了沒，沒有就照 §1.2 合。
+  - #1286：選單 UI 測試改穩（派工單 A），只改 `StartSaveFlowSmokeTests.swift`，head ee4416a。作者說他沒傳 A，可能是把 A 當 D 貼了；做得對，照合。
+  - #1287：車站面板的「怎麼搭」（決策 423 第二步，派工單 D），head 12880dc。已審：本機 build 用 `-warnings-as-errors` 乾淨、`JourneyPlanTests` 15 支過、`doc_numbers` 過。`StationPanel.swift` 的 SwiftUI 只有 iOS CI 編得到，外觀 UNVERIFIED。
+- **已交給作者、還沒貼的**：派工單 E「公車工具第一次點車站不卡：道路與真站牌在背景先讀（決策 424 續修）」，branch `claudepro/bus-reads-off-main-424`。等 #1286、#1287 合了再貼。原因：
+  - `BusRoads.network` 第一次建圖在主執行緒，Linux debug 0.13–0.18 s；
+  - `RealBusLibrary` 第一次讀一個縣市的 JSON（1.7–2.4 MB）也在主執行緒。
+  - 作者如果要這張的全文，請他從對話裡的檔案貼；新任不必重寫。
+- **派工單 R（審查 J）已交作者**：給 Claude Pro（Opus），#1242 起已合併的程式 PR 分三段審。
+  - 每段一個 PR，交接檔是 `docs/archive/PR1242_<最後一號>_REVIEW_HANDOFF.md`。
+  - P1、P2 的小修它可以順手推；動 GameCore、存檔、golden 的只寫不修。
+  - 最後一段會改 §1 的「上一輪」。
+  - 新任審過它的 PR 再合；它找到的問題照等級派工。
+- **作者的 Pro 週額度**（10-26 10:20 UTC）還有 90%：Max 重置前的工作都給 Pro（E、R）。它開的 PR 先放著，等新規劃審。
+- **接著可以派的**（照 §22.2 與五方，都不動 GameCore）：
+  - 決策 423 第三步：地圖上標出選中方案的那幾段線（423.md「下一步」）。
+  - §22.2 第 13 名：車站卡的下一班分月台列，只列 15 分鐘內的。
+  - 第 18 名：票價旁的需求提示、借錢前的試算。
+  - 第 22 名：客流強度、未滿足需求排行。
+  - 3D 的 `Map3DBuses` 建道路網是否也在主執行緒：E 會在決策裡寫一句，有的話再派一張。
+- **號碼**：下一個決策號 425；存檔版本 74；golden schema 74，都不動。
+- **審查點數**：從 #1242 起數。前任交接時約 25 點，本任合的 #1273、#1277、#1278、#1280、#1283、#1284、#1285 各 1 點，加上 #1287 共約 33 點，已滿 30。這一輪由派工單 R 做（見上）。
+- **排程**：
+  - 巡查 `trig_01XRMqqn2htUi4JciiftWBnC` 綁本任，新任不用管，以自己看到的為準。
+  - 每日 Threads `trig_01E7R3dQWAdVTBb8fmpYK7cy` 綁本任（暫停）：新任照 §1 表格建一個綁自己的，再刪掉這個。
 
 **第十六次換手（2026-10-26 約 04:00 UTC，session_01TS89hbaHPJiFJycqrKiK5z 壓縮 2 次，照 §1「第 3 次壓縮快到時換」→ 作者從 claude.ai 開的新規劃）**。新任開工：讀第 1 節、這一段；#1041 只讀「遊戲規劃 session_01TS89hbaHPJiFJycqrKiK5z 壓縮第 2 次」那則之後的留言。和下面「第十五次換手」不同時以這段為準。
 
@@ -1451,6 +1489,12 @@ PR #1079–#1136 那一輪（2026-10-23，審查 G，session_012mpfbnZwWC7RpNFhh
 PR #1137–#1188 那一輪（2026-10-24，審查 H，session_01G5KnXReBk4W8w69FWWX4LW）：[PR1137_1188_REVIEW_HANDOFF.md](archive/PR1137_1188_REVIEW_HANDOFF.md)。29 個程式 PR、32 點；GameCore 的 #1166、#1175 沒有問題。修了（#1195）：第 2 課先蓋一小段再畫到城鎮時「按 ✓ 蓋好軌道」被跳過（P2，#1137）、重開 App 在第 2 課軌道步驟接續時軌道兩步直接跳過（P3）。沒修、要派的在它第四節：**H1（P2，#1178，要動 GameCore）**分區購買的空白地圖上後來買的地塊永遠沒有路、站前路鋪不了（交規劃，決策 400 線）；**H4（P2，#1159）**橋端旁平行的側車道被坡道抬起（交 3D 城市線）；P3：H5 隧道出口沒有電桿（#1155）、H6 平行高架下的路口標線消失（#1159）、H7 iCloud 衝突版本可能重複留成「來自另一台裝置」（#1160，兩台實機驗證時一起）、H8 底圖工具的 `layer=inf`（#1171）。
 
 PR #1189–#1241 那一輪（2026-10-25，審查 I，session_01Mqs95FA7nGrbhR8dXfefX9）：[PR1189_1241_REVIEW_HANDOFF.md](archive/PR1189_1241_REVIEW_HANDOFF.md)。25 個程式 PR、28 點；GameCore 的 #1199、#1220、#1225 沒有問題。8 個發現都是 P3。修了（#1247）：致謝說一半的高鐵是白色的（列車包才有）、存檔列表匯出還是 JSON、路線改高鐵後高架要等一週才換、高架色帶埋進護欄、站距近時車站視角看不到進站、iPad 轉向後教學卡片不重排。沒修、要派的在它第四節：I7 線上時也說「連上網路後會自動上傳」（#1219，決策 397 作者，兩台實機時一起）；I8 公車路線讀檔不檢查編號 ≥ 1（#1220，決策 400 線）；N700S-G 後半列沒有鏡像（01LARTBY 處理中）。
+
+PR #1229–#1287 那一輪（2026-10-26，審查 J，三段：session_01KA4P39dCU3gKAqH2vLPej8 第 1、2 段，session_01UvQcP14umjdnDYpqc14Ngx 第 3 段）：[PR1242_1287_REVIEW_HANDOFF.md](archive/PR1242_1287_REVIEW_HANDOFF.md)。35 個程式 PR、38 點；GameCore 的 #1232、#1239、#1268 沒有問題。
+- 第 1 段（#1229–#1253，11 個、13 點）：J1（P2，#1232 × #1249：成就把夜市、廟算成三種事業之一）一個，已修並附回歸測試（#1290）。
+- 第 2 段（#1254–#1268，12 個、13 點）：沒有發現。
+- 第 3 段（#1270–#1287，12 個、12 點）：J2（P3，#1277）一個，沒修；另一個疑點（#1278 跑分在鐵路資料讀好前開跑是 0 條線，只在測試版）。
+- 沒修、要派的：J2 幀時間計量 `FrameTimeMeter.frame(at:)` 每一幀複製一次 11.6 KB 的區間計數（`FrameTimeRecord.swift:504`，改成直接改 `tally!`，決策 421 線，下一個碰這個檔的 PR 順手帶上）。公車道路與真站牌在主執行緒讀是派工單 E（#1295）的，不在這一輪。
 
 **大世界的效能**（決策 328，`claude/perf-2d-sim-speed`，2026-10-21；玩家回報 78.1、79.1：三十幾站後 2D 約 5 FPS、加速跑不到設定）。已修：夜間快轉試跑移出主執行緒、乘客排隊二分搜尋、上車排序、實景支線可購清單記住。還沒做、還沒人接：
 - **2D 5 FPS 的主因**：Linux 量不到 SwiftUI 繪圖。要在實機打開「設定 → 地圖 → 幀數」，點開看哪一層（地面、軌道、列車、站名、天氣、推進後）每秒花最多。候選：`session.world` 每個 tick 都讓讀它的 view 重算；軌道畫布在交通覆蓋變了就整張重畫；站名畫布在候車數變了就重畫；夜色的 `.blendMode(.multiply)` 與站名的 `.colorMultiply`。量到哪層再對症改（拆出不常變的圖層、`drawingGroup`、降低重畫頻率）。

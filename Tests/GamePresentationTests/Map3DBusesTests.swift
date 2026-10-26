@@ -160,6 +160,32 @@ final class Map3DBusesTests: XCTestCase {
         XCTAssertGreaterThan(Double(onRoads.count) / Double(route.out.points.count), 0.8, "\(onRoads.count) of \(route.out.points.count)")
     }
 
+    /// Decision 424: given the base map's bus roads, the way is the roads'
+    /// own, put on each stop from its cell's middle, not the cells'.
+    func testOnARealMapGivenItsBusRoadsTheWayFollowsThem() throws {
+        let tiles = try Self.tiles.get()
+        let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: 25.0478, longitudeDegrees: 121.5170))
+        var world = GameWorld.newGame(anchor: anchor)
+        let middle = PlanPoint(x: world.bounds.width / 2, y: world.bounds.height / 2)
+        let station = try world.buildStation(named: "A", at: middle)
+        let home = CellPosition(containing: middle)
+        let cells = (0...20).map { CellPosition(row: home.row, column: home.column + $0) }
+        world.enableRoads()
+        try world.setRoads(cells, in: Array(Set(cells.map { LandBlock(cellRow: $0.row, column: $0.column) })))
+        _ = try world.createBusRoute(to: station.id, stops: [cells[20], cells[10]], legMetres: [640, 640], service: .every(minutes: 10), buses: 2)
+        let scene = Map3DScene(world: world, baseMap: tiles)
+        let roads = BusRoads(tiles: tiles, frame: try XCTUnwrap(RealWorldFrame(world: world)))
+        let buses = Map3DBuses(world: world, scene: scene, palette: .standard, roads: roads)
+        XCTAssertFalse(buses.isLaid(from: Map3DBuses.Signature(world: world, palette: .standard), in: scene), "laid on the roads, not the cells")
+        XCTAssertTrue(buses.isLaid(from: Map3DBuses.Signature(world: world, palette: .standard, roads: roads), in: scene))
+        let route = try XCTUnwrap(buses.routes.first)
+        let index = Map3DBuses.RoadIndex(lanes: scene.streetLife.lanes, near: route.out.points)
+        let onRoads = route.out.points.filter { point in index.nearest(to: point, within: 12).map { $0.distance < $0.half + 1 } ?? false }
+        XCTAssertGreaterThan(Double(onRoads.count) / Double(route.out.points.count), 0.9, "\(onRoads.count) of \(route.out.points.count)")
+        // The saved route has a way along the roads.
+        XCTAssertNotNil(roads.way(ofSaved: [cells[20], cells[10]], station: station.location))
+    }
+
     // MARK: - The street's traffic
 
     func testTheStreetsVehiclesGiveWayToTheBuses() throws {

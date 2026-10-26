@@ -62,6 +62,10 @@ public final class GameLauncher {
     /// land is read in with (``GameSession/baseMap``); `nil` until it is
     /// read, or without it.
     public var baseMap: BaseMapTiles?
+    /// Taiwan's real bus stops (decision 424, C2), whose files are read as
+    /// the bus tool asks for a place's stops (``GameSession/realBuses``);
+    /// `nil` until the data is read, or without it.
+    public var realBuses: RealBusLibrary?
 
     /// Taiwan's place names, which new stations on real-world maps are
     /// named after (decision 159), handed to every game it starts
@@ -1400,6 +1404,7 @@ public final class GameLauncher {
         started.heights = heights
         started.coverage = coverage
         started.baseMap = baseMap
+        started.realBuses = realBuses
         started.placeNames = placeNames
         started.railways = railways
         started.collectedStamps = stationStamps.dates
@@ -1486,6 +1491,7 @@ public final class GameLauncher {
         heights = data.heights
         coverage = data.coverage
         baseMap = data.baseMap
+        realBuses = data.realBuses
         placeNames = data.placeNames
         railways = data.railways
         realWorldIssues = data.issues
@@ -1496,6 +1502,7 @@ public final class GameLauncher {
             session.heights = heights
             session.coverage = coverage
             session.baseMap = baseMap
+            session.realBuses = realBuses
             session.placeNames = placeNames
             session.railways = railways
             // Decision 88: land not read round a station built while the
@@ -1751,6 +1758,9 @@ public struct RealWorldData: Sendable {
     /// map's land is read in with; the app maps its file (it is some
     /// 50 MB) rather than reading it.
     public var baseMap: BaseMapTiles?
+    /// Taiwan's real bus stops (decision 424, C2); their files are read
+    /// when the bus tool asks.
+    public let realBuses: RealBusLibrary?
     /// Taiwan's place names (decision 159).
     public let placeNames: PlaceNames?
     public let railways: RealRailways?
@@ -1760,7 +1770,7 @@ public struct RealWorldData: Sendable {
 
     public init(
         population: PopulationGrid?, places: PlaceGrid?, water: WaterGrid? = nil, heights: HeightGrid? = nil, coverage: CoverageGrid? = nil,
-        placeNames: PlaceNames? = nil, railways: RealRailways?, issues: [RealDataLoadIssue]
+        placeNames: PlaceNames? = nil, realBuses: RealBusLibrary? = nil, railways: RealRailways?, issues: [RealDataLoadIssue]
     ) {
         self.population = population
         self.places = places
@@ -1768,6 +1778,7 @@ public struct RealWorldData: Sendable {
         self.heights = heights
         self.coverage = coverage
         self.placeNames = placeNames
+        self.realBuses = realBuses
         self.railways = railways
         self.issues = issues
     }
@@ -1775,7 +1786,9 @@ public struct RealWorldData: Sendable {
     /// Reads `taiwan_population.json`, `taiwan_places.json`,
     /// `taiwan_water.json`, `taiwan_heights.dat`, `taiwan_coverage.dat`
     /// (decision 147), `taiwan_place_names.json` (decision 159),
-    /// `taiwan_no_build.json` (decision 385 (續)) and the
+    /// `taiwan_no_build.json` (decision 385 (續)), the real bus stops' index
+    /// `real_buses_index.json` (decision 424, C2; its city files are read
+    /// later, when the bus tool asks) and the
     /// railways' files
     /// (``RealRailways/load(file:)``) through `file` (a name and extension
     /// to its contents). About 5.3 MB of JSON is decoded, and 12 MB of heights
@@ -1800,9 +1813,10 @@ public struct RealWorldData: Sendable {
         let coverage = grid("taiwan_coverage", ext: "dat", CoverageGrid.init(data:))
         let placeNames = grid("taiwan_place_names", PlaceNames.init(data:))
         let railways = RealRailways.load(file: file)
+        let realBuses = grid("real_buses_index") { try RealBusLibrary(index: $0, file: file) }
         return RealWorldData(
             population: population, places: places, water: water, heights: heights, coverage: coverage, placeNames: placeNames,
-            railways: railways.railways,
+            realBuses: realBuses, railways: railways.railways,
             issues: issues + railways.issues
         )
     }
