@@ -234,6 +234,44 @@ final class Map3DMotionBudgetTests: XCTestCase {
         XCTAssertEqual(lightUntilUp(), 240)
     }
 
+    // MARK: The look in Settings
+
+    func testTheLookPicksTheTier() {
+        for device in Map3DDeviceTier.allCases {
+            XCTAssertEqual(Map3DQuality.automatic.tier(device: device), device)
+            XCTAssertEqual(Map3DQuality.saving.tier(device: device), .lower)
+            XCTAssertEqual(Map3DQuality.off.tier(device: device), .lower)
+            XCTAssertEqual(Map3DQuality.high.tier(device: device), .higher)
+        }
+        for quality in Map3DQuality.allCases { XCTAssertNil(quality.tier(device: nil), "\(quality)") }
+    }
+
+    func testHighQualityStepsDownOnlyForMemoryAndHeat() {
+        var governor = Map3DLoadGovernor(lowest: .nearerFarModels)
+        governor.stepsDownForLoad = false
+        for _ in 0..<30 { XCTAssertFalse(governor.record(Self.heavy)) }
+        XCTAssertEqual(governor.step, .full)
+        // The system warns of memory: two steps at once, and the next step
+        // up later than at first.
+        governor.relieve()
+        XCTAssertEqual(governor.step, .fewestOnStreets)
+        XCTAssertEqual(governor.raiseWindows, 2 * Map3DLoadGovernor.firstRaiseWindows)
+        governor.relieve()
+        XCTAssertEqual(governor.step, .nearerFarModels, "no further than its lowest")
+        // Light again: back up, a step at a time.
+        for _ in 0..<(4 * Map3DLoadGovernor.firstRaiseWindows) { governor.record(Self.light) }
+        XCTAssertEqual(governor.step, .fewestOnStreets)
+        // Too hot: no higher than the fewest on the streets.
+        var hot = Map3DLoadGovernor()
+        hot.highest = Map3DLoadGovernor.highest(heat: .critical)
+        XCTAssertEqual(hot.step, .fewestOnStreets)
+        for _ in 0..<1_000 { hot.record(Self.light) }
+        XCTAssertEqual(hot.step, .fewestOnStreets)
+        hot.highest = Map3DLoadGovernor.highest(heat: .serious)
+        for _ in 0..<1_000 { hot.record(Self.light) }
+        XCTAssertEqual(hot.step, .full)
+    }
+
     // MARK: Measured
 
     /// The triangles of the trains near the eye, as a frame draws them,
@@ -273,5 +311,36 @@ final class Map3DMotionBudgetTests: XCTestCase {
             }
         }
         print(rows.joined(separator: "\n"))
+    }
+
+    /// TestFlight 87.1 (an iPhone 17 closing often, no crash report: the
+    /// system closing it for memory, as decision 368's): what the 3D map
+    /// keeps, against what decision 417's budget changes. The models (on
+    /// the GPU once), a frame's moving things (the street life's three
+    /// buffers, the trains' boxes of 20 lines) and the whole Taipei scene
+    /// (its meshes, on the GPU once more). Only on request:
+    /// `MOTION_BUDGET_REPORT=1`.
+    func testWhatTheMapKeepsInMemory() throws {
+        guard ProcessInfo.processInfo.environment["MOTION_BUDGET_REPORT"] != nil else { throw XCTSkip("Set MOTION_BUDGET_REPORT=1.") }
+        func megabytes(_ bytes: Int) -> String { String(format: "%.1f MB", Double(bytes) / 1_000_000) }
+        let vertex = MemoryLayout<Map3DVertex>.stride
+        let models = Map3DModelPack.standard.models.reduce(0) { $0 + $1.vertices.count * vertex }
+        // `Map3DMetalView.instanceStride`, three buffers of the higher tier's most.
+        let most = Map3DDeviceTier.higher.streetLimits
+        let life = 3 * (most.people + most.vehicles + most.buses) * 80
+        let scene = try Map3DFrameCostReportTests.taipeiScene()
+        var meshes = 0
+        for chunk in scene.chunks {
+            for mesh in [chunk.mesh, chunk.far, chunk.close, chunk.standIn, chunk.shadows] {
+                meshes += mesh.vertices.count * vertex + mesh.indices.count * MemoryLayout<UInt32>.stride
+            }
+        }
+        print("""
+            | What | Memory |
+            | --- | --: |
+            | The models (\(Map3DModelPack.standard.models.count)) | \(megabytes(models)) |
+            | Street life's three buffers, the higher tier's most | \(megabytes(life)) |
+            | The Taipei scene's meshes (\(scene.chunks.count) chunks) | \(megabytes(meshes)) |
+            """)
     }
 }

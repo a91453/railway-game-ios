@@ -101,8 +101,10 @@ final class Map3DMetalView: MTKView {
     private var lifeBuffer = 0
     private let lifeInFlight = DispatchSemaphore(value: 3)
     /// Decision 417: how much that moves this device draws at most, by its
-    /// GPU (decision 259's street detail with it).
-    private(set) var tier: Map3DDeviceTier?
+    /// GPU, and as the 3D look in Settings has it (decision 259's street
+    /// detail with it).
+    private var deviceTier: Map3DDeviceTier?
+    private var tier: Map3DDeviceTier? { quality.tier(device: deviceTier) }
     /// Decision 417: the steps down while the device cannot keep up (fewer
     /// on the streets, the trains' far models nearer, fewer pixels) and
     /// back up once it does, and whether the map draws fewer pixels: for
@@ -343,7 +345,10 @@ final class Map3DMetalView: MTKView {
         // Decision 342: reversed depth, 0 the farthest.
         clearDepth = 0
         preferredFramesPerSecond = 60
-        tier = Map3DDeviceTier.forGPUFamily(Self.appleFamily(of: device))
+        deviceTier = Map3DDeviceTier.forGPUFamily(Self.appleFamily(of: device))
+        // Decision 417: memory running short steps down on any look.
+        NotificationCenter.default.addObserver(self, selector: #selector(memoryRunsShort), name: UIApplication.didReceiveMemoryWarningNotification,
+                                               object: nil)
         noSunMap = makeSunMap(device: device, side: 1)
         applyQuality()
     }
@@ -458,12 +463,20 @@ final class Map3DMetalView: MTKView {
 
     /// The frames a second and the pixels a point that ``quality``, Low
     /// Power Mode, the phone's heat and the GPU's budget ask for.
+    /// Decision 417: two steps down when the system warns of memory.
+    @objc private func memoryRunsShort() {
+        load.relieve()
+        applyQuality()
+    }
+
     private func applyQuality() {
         let process = ProcessInfo.processInfo
         let heat = Map3DQuality.Heat(rawValue: process.thermalState.rawValue) ?? .critical
         let plan = quality.plan(lowPower: process.isLowPowerModeEnabled, heat: heat)
         if preferredFramesPerSecond != plan.framesPerSecond { preferredFramesPerSecond = plan.framesPerSecond }
         load.lowest = plan.lowersWhenOver ? .fewerPixels : .nearerFarModels
+        load.stepsDownForLoad = plan.lowersWhenOver
+        load.highest = Map3DLoadGovernor.highest(heat: heat)
         sunPlan = Map3DSunShadow.plan(quality, lowPower: process.isLowPowerModeEnabled, heat: heat, overBudget: load.step.fewerPixels)
         let fewer = plan.fewerPixels || load.step.fewerPixels
         if fewer != drawsFewerPixels {

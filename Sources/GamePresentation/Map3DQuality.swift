@@ -47,6 +47,19 @@ public enum Map3DQuality: String, CaseIterable, Sendable {
     /// the GPU's time and memory on frames instead.
     public var samplesPerPixel: Int { drawn == .saving ? 1 : 4 }
 
+    /// Decision 417: how much that moves the map draws at most on a device
+    /// of `device`'s tier: its own on Automatic, the lowest on Battery
+    /// Saver (and Off, drawn as it), the highest on High Quality; nothing
+    /// before the A12 whatever the look.
+    public func tier(device: Map3DDeviceTier?) -> Map3DDeviceTier? {
+        guard device != nil else { return nil }
+        switch self {
+        case .automatic: return device
+        case .saving, .off: return .lower
+        case .high: return .higher
+        }
+    }
+
     /// How hot the phone is: `ProcessInfo.ThermalState`'s four steps.
     public enum Heat: Int, Comparable, Sendable {
         case nominal, fair, serious, critical

@@ -178,6 +178,10 @@ public enum Map3DLoadStep: Int, CaseIterable, Comparable, Sendable {
 /// 1.5 s); a step up after ``raiseWindows`` light ones in a row, at first
 /// 10 s, twice as long each time a step up had to be taken back within
 /// ``relapseWindows`` (up to 2 minutes), so it does not go up and down.
+/// On High Quality it does not step down for the load
+/// (``stepsDownForLoad``), but for memory running short (``relieve()``)
+/// and the phone running hot (``highest``) on any look: the system closing
+/// the app for its memory is, for the player, a crash.
 public struct Map3DLoadGovernor: Equatable, Sendable {
     /// A half second's measurement.
     public struct Sample: Equatable, Sendable {
@@ -221,6 +225,14 @@ public struct Map3DLoadGovernor: Equatable, Sendable {
     public var lowest: Map3DLoadStep = .fewerPixels {
         didSet { if step > lowest { step = lowest } }
     }
+    /// The highest it may step up to: ``Map3DLoadStep/fewestOnStreets``
+    /// while the phone is too hot (``Map3DQuality/Heat/critical``).
+    public var highest: Map3DLoadStep = .full {
+        didSet { if step < highest { step = min(highest, lowest) } }
+    }
+    /// Whether it steps down when the frames or the GPU cannot keep up
+    /// (not on High Quality, ``Map3DQuality/Plan/lowersWhenOver``).
+    public var stepsDownForLoad = true
     public private(set) var raiseWindows = Self.firstRaiseWindows
     private var heavy = 0
     private var light = 0
@@ -237,7 +249,7 @@ public struct Map3DLoadGovernor: Equatable, Sendable {
         if let since = sinceRaise { sinceRaise = since + 1 < Self.relapseWindows ? since + 1 : nil }
         heavy = sample.isHeavy ? heavy + 1 : 0
         light = sample.isLight ? light + 1 : 0
-        if heavy >= Self.heavyWindows, step < lowest {
+        if stepsDownForLoad, heavy >= Self.heavyWindows, step < lowest {
             // Fewer on the streets helps only while they are drawn.
             step = sample.drawingStreets ? step.lowered : max(step.lowered, min(.nearerFarModels, lowest))
             if sinceRaise != nil { raiseWindows = min(raiseWindows * 2, Self.mostRaiseWindows) }
@@ -246,7 +258,7 @@ public struct Map3DLoadGovernor: Equatable, Sendable {
             light = 0
             return true
         }
-        if light >= raiseWindows, step > .full {
+        if light >= raiseWindows, step > highest {
             step = step.raised
             sinceRaise = 0
             heavy = 0
@@ -254,6 +266,23 @@ public struct Map3DLoadGovernor: Equatable, Sendable {
             return true
         }
         return false
+    }
+
+    /// Memory runs short (the system's warning): two steps down at once
+    /// (as far as ``lowest``), and the next step up twice as long in
+    /// coming.
+    public mutating func relieve() {
+        step = min(step.lowered.lowered, lowest)
+        raiseWindows = min(raiseWindows * 2, Self.mostRaiseWindows)
+        sinceRaise = nil
+        heavy = 0
+        light = 0
+    }
+
+    /// The heat's highest step: ``Map3DLoadStep/fewestOnStreets`` at
+    /// ``Map3DQuality/Heat/critical``, else ``Map3DLoadStep/full``.
+    public static func highest(heat: Map3DQuality.Heat) -> Map3DLoadStep {
+        heat >= .critical ? .fewestOnStreets : .full
     }
 }
 
