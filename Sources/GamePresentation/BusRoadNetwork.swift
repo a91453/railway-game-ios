@@ -358,9 +358,10 @@ public final class BusRoads: @unchecked Sendable {
     private static let keptRegions = 8
 
     private let tiles: BaseMapTiles
-    private let projection: RealRoadCells.Projection
+    let projection: RealRoadCells.Projection
     private let lock = NSLock()
     private var read: [Tile: [BusRoadNetwork.Road]] = [:]
+    private var named: [Tile: [NamedRoad]] = [:]
     private var built: [Region: BusRoadNetwork] = [:]
 
     init(tiles: BaseMapTiles, frame: RealWorldFrame) {
@@ -398,6 +399,24 @@ public final class BusRoads: @unchecked Sendable {
         }
         if read.count >= Self.keptTiles { read.removeAll() }
         read[tile] = roads
+        return roads
+    }
+
+    /// The named roads of a tile (decision 424, C2), read from the
+    /// `transportation_name` layer and kept like the roads. A tile that
+    /// fails to read has none.
+    func namedRoads(column: Int, row: Int) -> [NamedRoad] {
+        lock.lock()
+        defer { lock.unlock() }
+        let tile = Tile(column: column, row: row)
+        if let known = named[tile] { return known }
+        var roads: [NamedRoad] = []
+        if let bytes = try? tiles.archive.tile(zoom: BaseMapTiles.zoom, x: column, y: row),
+           let decoded = try? VectorTile(bytes, layers: ["transportation_name"]), let layer = decoded.layers["transportation_name"] {
+            roads = BusRoadNames.roads(in: layer, column: column, row: row, projection: projection)
+        }
+        if named.count >= Self.keptTiles { named.removeAll() }
+        named[tile] = roads
         return roads
     }
 }

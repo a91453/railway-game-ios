@@ -67,7 +67,8 @@ final class BusRouteEditorTests: XCTestCase {
         XCTAssertEqual(preview.departures, 144)
         XCTAssertEqual(preview.dailyCost, Money(774_144))
         XCTAssertGreaterThan(preview.riders, 0, "the 200s beyond A's 800 m")
-        XCTAssertEqual(preview.lines(for: session.busDraft, in: .english).first, "1.3 km · 1 stop")
+        XCTAssertEqual(preview.lines(for: session.busDraft, in: .english).first, "1 stop · 1.3 km · about 4 min")
+        XCTAssertEqual(preview.lines(for: session.busDraft, in: .traditionalChinese).first, "1 個站牌 · 1.3 公里 · 約 4 分")
         XCTAssertEqual(preview.lines(for: session.busDraft, in: .traditionalChinese).last, "營運成本每天 \(Money(774_144).moneyText)")
         // Tapping the stop again takes it away; the last stop, then the
         // station, come off one at a time.

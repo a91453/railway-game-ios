@@ -1061,8 +1061,17 @@ enum MapArt {
     /// bus runs it; its stops as white dots edged in navy, so they read
     /// without the colour. The bus tool's route over them, with the leg no
     /// road joins dashed red.
+    ///
+    /// Decision 424, C2: while the bus tool is open the stops are numbered
+    /// pins with their names beside them (left out where they would cover
+    /// another), a round arrow every so often points the way to the station,
+    /// and the real bus stops nearby are faint dots to tap, with their names
+    /// where there is room.
     private static func drawBusRoutes(_ buses: BusMapOverlay, projection: some MapProjection, in context: GraphicsContext) {
         let width = max(1.5, lineWidth(projection) * 0.6), dot = max(3, width * 1.6)
+        let view = context.clipBoundingRect
+        let unit = Double(WorldCoordinate.unitsPerMetre)
+        let pointsPerMetre = projection.pointsPerUnit * unit
         func path(_ points: [PlanPoint]) -> Path {
             var path = Path()
             guard let first = points.first else { return path }
@@ -1086,22 +1095,98 @@ enum MapArt {
                 context.stroke(circle, with: .color(Palette.ink.opacity(opacity)), lineWidth: 1.2)
             }
         }
+        // A round arrow on the line, pointing the way the bus runs.
+        func arrow(_ arrow: BusArrow, colour: Color, opacity: Double) {
+            let radius = 6.0
+            let centre = cgPoint(projection.screenPoint(of: arrow.point))
+            guard view.insetBy(dx: -radius, dy: -radius).contains(centre) else { return }
+            let ahead = cgPoint(projection.screenPoint(worldX: Double(arrow.point.x) + arrow.dx * unit * 10, worldY: Double(arrow.point.y) + arrow.dy * unit * 10))
+            let length = hypot(ahead.x - centre.x, ahead.y - centre.y)
+            guard length > 0.001 else { return }
+            let (vx, vy) = ((ahead.x - centre.x) / length, (ahead.y - centre.y) / length)
+            let disc = Path(ellipseIn: CGRect(x: centre.x - radius, y: centre.y - radius, width: radius * 2, height: radius * 2))
+            context.fill(disc, with: .color(colour.opacity(opacity)))
+            context.stroke(disc, with: .color(Palette.ink.opacity(opacity)), lineWidth: 1.4)
+            var head = Path()
+            head.move(to: CGPoint(x: centre.x + vx * 3.8, y: centre.y + vy * 3.8))
+            head.addLine(to: CGPoint(x: centre.x - vx * 2.4 - vy * 3, y: centre.y - vy * 2.4 + vx * 3))
+            head.addLine(to: CGPoint(x: centre.x - vx * 2.4 + vy * 3, y: centre.y - vy * 2.4 - vx * 3))
+            head.closeSubpath()
+            context.fill(head, with: .color(Palette.markerFill.opacity(opacity)))
+        }
+        let spacing = BusArrows.spacing(pointsPerMetre: pointsPerMetre)
+        // Screen rectangles already written on, so that a name or a faint
+        // stop does not cover another.
+        var placed: [CGRect] = []
+        // A numbered pin, and its name on a plate beside it.
+        var names: [(centre: CGPoint, name: String, opacity: Double)] = []
+        func pin(_ point: PlanPoint, label: BusStopLabel, opacity: Double) {
+            let radius = 9.0
+            let centre = cgPoint(projection.screenPoint(of: point))
+            let rect = CGRect(x: centre.x - radius, y: centre.y - radius, width: radius * 2, height: radius * 2)
+            guard rect.intersects(view) else { return }
+            let circle = Path(ellipseIn: rect)
+            context.fill(circle, with: .color(Palette.markerFill.opacity(opacity)))
+            context.stroke(circle, with: .color(Palette.ink.opacity(opacity)), lineWidth: 2)
+            let number = context.resolve(Text(verbatim: "\(label.number)").font(.caption2.weight(.heavy).monospacedDigit()).foregroundStyle(Palette.ink.opacity(opacity)))
+            context.draw(number, at: centre, anchor: .center)
+            placed.append(rect)
+            if let name = label.name { names.append((centre, name, opacity)) }
+        }
+        func plate(_ name: String, besides centre: CGPoint, gap: Double, opacity: Double, font: Font) {
+            let text = context.resolve(Text(verbatim: name).font(font).foregroundStyle(Palette.ink.opacity(opacity)))
+            let size = text.measure(in: CGSize(width: 160, height: 40))
+            let rect = CGRect(x: centre.x + gap, y: centre.y - size.height / 2 - 1, width: size.width + 8, height: size.height + 2)
+            guard rect.intersects(view), !placed.contains(where: { $0.intersects(rect) }) else { return }
+            placed.append(rect)
+            let back = Path(roundedRect: rect, cornerRadius: rect.height / 2)
+            context.fill(back, with: .color(Palette.markerFill.opacity(0.92 * opacity)))
+            context.stroke(back, with: .color(Palette.ink.opacity(opacity)), lineWidth: 1)
+            context.draw(text, at: CGPoint(x: rect.midX, y: rect.midY), anchor: .center)
+        }
+        // The real stops near the route's station: faint dots, under the rest.
+        var faint: [(centre: CGPoint, name: String)] = []
+        if let real = buses.realStops, pointsPerMetre >= 0.15 {
+            for stop in real.stops(in: projection.visibleRegion).prefix(600) {
+                let centre = cgPoint(projection.screenPoint(of: stop.point))
+                guard view.insetBy(dx: -4, dy: -4).contains(centre) else { continue }
+                let circle = Path(ellipseIn: CGRect(x: centre.x - 3, y: centre.y - 3, width: 6, height: 6))
+                context.fill(circle, with: .color(Palette.markerFill.opacity(0.75)))
+                context.stroke(circle, with: .color(Palette.ink.opacity(0.4)), lineWidth: 1)
+                faint.append((centre, stop.name))
+            }
+        }
         for route in buses.routes {
             let colour = route.line.map { Palette.lineColor($0, custom: route.color) } ?? Palette.ink
             let opacity = route.runs ? 1 : 0.4
             stroke(path(route.points), colour: colour, opacity: opacity)
-            stops(route.stops, opacity: opacity)
+            if buses.showsLabels {
+                for item in route.arrows(every: spacing) { arrow(item, colour: colour, opacity: opacity) }
+            } else {
+                stops(route.stops, opacity: opacity)
+            }
         }
-        guard let draft = buses.draft else { return }
-        let opacity = draft.isBuildable ? 1 : 0.6
-        stroke(path(draft.points), colour: Palette.ink, opacity: opacity)
-        if draft.broken.count == 2 {
-            context.stroke(
-                path(draft.broken), with: .color(Palette.metroRed),
-                style: StrokeStyle(lineWidth: width, lineCap: .butt, dash: [max(3, width * 2), max(2, width * 1.5)])
-            )
+        if let draft = buses.draft {
+            let opacity = draft.isBuildable ? 1 : 0.6
+            stroke(path(draft.points), colour: Palette.ink, opacity: opacity)
+            if draft.broken.count == 2 {
+                context.stroke(
+                    path(draft.broken), with: .color(Palette.metroRed),
+                    style: StrokeStyle(lineWidth: width, lineCap: .butt, dash: [max(3, width * 2), max(2, width * 1.5)])
+                )
+            }
+            for item in draft.arrows(every: spacing) { arrow(item, colour: Palette.ink, opacity: opacity) }
+            stops([draft.station], opacity: opacity)
+            for (point, label) in zip(draft.stops, draft.labels) { pin(point, label: label, opacity: opacity) }
         }
-        stops([draft.station] + draft.stops, opacity: opacity)
+        if buses.showsLabels {
+            for route in buses.routes {
+                let opacity = route.runs ? 1 : 0.4
+                for (point, label) in zip(route.stops, route.labels) { pin(point, label: label, opacity: opacity) }
+            }
+        }
+        for item in names { plate(item.name, besides: item.centre, gap: 12, opacity: item.opacity, font: .caption2.weight(.semibold)) }
+        for stop in faint { plate(stop.name, besides: stop.centre, gap: 5, opacity: 0.7, font: .caption2) }
     }
 
     private static func drawTransfers(_ lines: LineMap, projection: some MapProjection, in context: GraphicsContext) {
