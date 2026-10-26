@@ -358,7 +358,7 @@ final class RealRailwaysTests: XCTestCase {
             let credits = sections.flatMap(\.credits)
             XCTAssertEqual(credits.map(\.id), [
                 "realRailways", "tra", "thsr", "afr", "taipeiMetro", "newTaipeiMetro", "taoyuanMetro", "taichungMetro", "kaohsiungMetro", "operators",
-                "tdx", "traOpenData", "nlsc", "openStreetMap",
+                "tdx", "realBuses", "traOpenData", "nlsc", "openStreetMap",
                 "worldPop", "ridership", "travelSurvey", "overtureBuildings",
                 "appleMaps", "taiwanBaseMap", "openFreeMap", "mapLibre", "copernicusDEM", "wikidata", "worldUrbanizationProspects",
                 "map3DGround", "temples", "buildingStoreys", "noBuildLand", "freewayBridges", "highSpeedTrainModel", "meshy",
@@ -386,7 +386,7 @@ final class RealRailwaysTests: XCTestCase {
             XCTAssertTrue(openStreetMap.links.contains { $0.url == "https://opendatacommons.org/licenses/odbl/1-0/" })
             // Every source under the Open Government Data License links it
             // and gives the provider and the year its annex asks for.
-            for id in ["tdx", "traOpenData", "nlsc"] {
+            for id in ["tdx", "realBuses", "traOpenData", "nlsc"] {
                 let credit = try XCTUnwrap(credits.first { $0.id == id })
                 XCTAssertTrue(credit.links.contains { $0.url == "https://data.gov.tw/license" }, id)
                 XCTAssertTrue(credit.notice.contains("2026"), id)

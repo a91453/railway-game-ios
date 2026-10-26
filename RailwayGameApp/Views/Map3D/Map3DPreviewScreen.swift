@@ -226,6 +226,8 @@ struct Map3DPreviewScreen: View {
             // Decision 339: the real trains glide with the game clock.
             feed.updateRealClock(world: session.world, shown: showsRealTrains,
                                  glides: !session.world.clock.isPaused && !reduceMotion)
+            // Decision 400, 10i-6: and the player's buses with it.
+            feed.updateBuses(world: session.world, palette: linePalette, glides: !session.world.clock.isPaused && !reduceMotion)
         }
         .onChange(of: showsRealTrains) { _, shown in
             feed.updateRealClock(world: session.world, shown: shown, glides: !session.world.clock.isPaused && !reduceMotion)
@@ -574,6 +576,15 @@ final class Map3DTrainFeed {
     /// they are hidden, and whether they glide between ticks.
     private var realClock: RealTrainClock?
     private var realGlides = true
+    /// Decision 400, 10i-6: the player's bus routes, the clock their buses
+    /// are drawn at and the routes laid in the scene, laid again when the
+    /// routes or the scene change.
+    private var busWorld: GameWorld?
+    private var busPalette: LinePalette = .standard
+    private var busSignature: Map3DBuses.Signature?
+    private var busClock: RealTrainClock?
+    private var busGlides = true
+    private var buses: Map3DBuses?
 
     func update(world: GameWorld, palette: LinePalette) {
         motion = TrainMotion(world: world, previous: motion, time: Date().timeIntervalSinceReferenceDate)
@@ -590,6 +601,25 @@ final class Map3DTrainFeed {
         realGlides = glides
     }
 
+    /// Decision 400, 10i-6: the game clock the player's buses are drawn at.
+    func updateBuses(world: GameWorld, palette: LinePalette, glides: Bool) {
+        busClock = RealTrainClock(world: world, previous: busClock, time: Date().timeIntervalSinceReferenceDate)
+        busGlides = glides
+        busWorld = world
+        busPalette = palette
+        busSignature = Map3DBuses.Signature(world: world, palette: palette)
+    }
+
+    /// Decision 400, 10i-6: the player's buses round the camera's target.
+    private func busFrame(in scene: Map3DScene, camera: Map3DCamera, detail: Map3DStreetDetail, now: Double) -> Map3DBuses.Frame {
+        guard let world = busWorld, let signature = busSignature, let clock = busClock else { return .init() }
+        if buses?.isLaid(from: signature, in: scene) != true {
+            buses = Map3DBuses(world: world, scene: scene, palette: busPalette)
+        }
+        return buses?.frame(second: clock.second(at: now, glides: busGlides), target: camera.target, distance: camera.distance,
+                            detail: detail) ?? .init()
+    }
+
     /// Decision 314: the labels of the trains whose fronts are at `heads`.
     func labels(heads: [Map3DTrains.Head], camera: Map3DCamera) -> [Map3DTrainLabels.Label] {
         labels.labels(heads: heads, camera: camera)
@@ -602,9 +632,11 @@ final class Map3DTrainFeed {
     func streetLife(in scene: Map3DScene, camera: Map3DCamera, lights: Float, budget: Map3DMotionBudget) -> Map3DStreetLife.Frame {
         let detail = budget.tier.map { budget.step >= .fewestOnStreets ? $0.streetDetail.lowered : $0.streetDetail } ?? .off
         // A day's seconds, so the clock stays precise as a Float.
-        let time = Date().timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 86_400)
+        let now = Date().timeIntervalSinceReferenceDate
+        let time = now.truncatingRemainder(dividingBy: 86_400)
         return scene.streetLife.frame(target: camera.target, distance: camera.distance, time: time,
-                                      still: UIAccessibility.isReduceMotionEnabled, lights: lights, detail: detail, activity: activity)
+                                      still: UIAccessibility.isReduceMotionEnabled, lights: lights, detail: detail, activity: activity,
+                                      buses: busFrame(in: scene, camera: camera, detail: detail, now: now))
     }
 
     /// The trains seen from `eye`, `ringed` with its ring (decision 334),
