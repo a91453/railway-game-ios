@@ -223,7 +223,9 @@ final class Map3DTrainSetTests: XCTestCase {
         XCTAssertEqual(Map3DTrainSet.reach(of: "EMU3000"),Map3DTrainSet.tramReach)
         XCTAssertEqual(Map3DTrainSet.reach(of: "C"), 500)
         XCTAssertEqual(Map3DTrainSet.reach(of: "greenTram"), 500)
-        for key in ["B", "", "puyuma"] { XCTAssertEqual(Map3DTrainSet.reach(of: key), Map3DTrains.modelReach, key) }
+        for key in ["B", "", "dieselExpress", "puyumaFar"] { XCTAssertEqual(Map3DTrainSet.reach(of: key), Map3DTrains.modelReach, key) }
+        // Decision 426: the Puyuma, ten thousand triangles a set, like the Taroko.
+        XCTAssertEqual(Map3DTrainSet.reach(of: "puyuma"), Map3DTrainSet.tramReach)
     }
 
     /// Decision 331, later: the green two-car EMU's cars are #961's two
