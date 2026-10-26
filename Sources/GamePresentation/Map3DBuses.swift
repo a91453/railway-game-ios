@@ -457,8 +457,9 @@ public struct Map3DBuses: Sendable {
     /// ``Map3DStreetLife/vehiclesFrom``, shrinking away at the edge of
     /// their reach), the nearest ``Map3DStreetLife/mostBuses`` of them
     /// (the bus model's budget, which the street's own buses then share)
-    /// and at most `detail`'s vehicles.
-    public func frame(second: Double, target: Map3DPoint, distance: Float, detail: Map3DStreetDetail) -> Frame {
+    /// and at most `detail`'s vehicles. Decision 417: at most `most` of
+    /// them when given (the device's tier's buses, ``Map3DStreetLimits``).
+    public func frame(second: Double, target: Map3DPoint, distance: Float, detail: Map3DStreetDetail, most: Int? = nil) -> Frame {
         var frame = Frame()
         guard detail != .off, distance <= Map3DStreetLife.vehiclesFrom, let model = Self.model else { return frame }
         let reach = Map3DStreetLife.vehiclesReach(distance)
@@ -475,7 +476,7 @@ public struct Map3DBuses: Sendable {
             }
         }
         // The nearest first; of two as near, the one found first.
-        let kept = seen.indices.sorted { (seen[$0].away, $0) < (seen[$1].away, $1) }.prefix(min(Map3DStreetLife.mostBuses, detail.vehicles))
+        let kept = seen.indices.sorted { (seen[$0].away, $0) < (seen[$1].away, $1) }.prefix(min(most ?? Map3DStreetLife.mostBuses, detail.vehicles))
         for index in kept {
             frame.instances.append(seen[index].instance)
             frame.clear.append(seen[index].clear)
