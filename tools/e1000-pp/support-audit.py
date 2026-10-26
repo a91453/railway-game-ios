@@ -1,5 +1,5 @@
 """Independent PP native triangle rays/distances. No recipe station tables imported.
-Tests all eight final PP near/far units; E500/comparison geometry is excluded.
+Tests both E1000 LODs; PP/E500/comparison geometry is preserved separately.
 Contact graph samples actual triangles, not merely overlapping bounding boxes.
 """
 import sys,json,struct,collections
@@ -58,7 +58,10 @@ for m in manifest['models']:
   if length<0.02:continue
   n/=length;o=t.mean(axis=0)
   # Test the outer broad surface of every pane, excluding its intentional edge walls/back.
-  outward=(abs(n[1])>.95 and n[1]*o[1]>0) or (abs(n[0])>.50 and n[0]*o[0]>0)
+  # Curved side quarterlights have oblique thin perimeter walls. A wall
+  # perpendicular to its lateral extrusion is not a visible glazing front.
+  side_pane=abs(o[1])>1.30
+  outward=(side_pane and abs(n[1])>.80 and n[1]*o[1]>0) or (not side_pane and abs(n[0])>.50 and n[0]*o[0]>0)
   if not outward:continue
   d=backing_distance(o,back);assert d<.080,(m['id'],'unsupported actual glass',d,o)
   hit=nearest(o+n*.001,n,visible_back);assert hit>.10,(m['id'],'actual glass hidden by shell/frame',hit,o)

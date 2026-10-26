@@ -15,8 +15,8 @@ public enum Map3DE1000 {
 
 extension StationKitBuilder {
     private func pp1000Nose(_ h: Float) -> Float {
-        let hs: [Float] = [1.15,1.55,1.75,2.00,2.65,3.12,3.40,3.65,3.82,3.904]
-        let xs: [Float] = [8.25,8.25,8.20,8.03,7.35,6.74,6.34,5.94,5.61,5.40]
+        let hs: [Float] = [1.15,1.55,1.75,2.00,2.15,2.25,2.65,3.12,3.40,3.65,3.82,3.904]
+        let xs: [Float] = [8.05,8.25,8.25,8.18,8.10,7.99,7.57,7.02,6.58,6.12,5.74,5.40]
         for i in 0..<hs.count-1 where h <= hs[i+1] {
             return xs[i]+(xs[i+1]-xs[i])*(h-hs[i])/(hs[i+1]-hs[i])
         }
@@ -27,34 +27,115 @@ extension StationKitBuilder {
         face(p,inside:c,color:color);face(q,inside:c,color:color)
         for i in p.indices {let j=(i+1)%p.count;face([p[i],p[j],q[j],q[i]],inside:c,color:color)}
     }
+    /// Bond each fitting to the actual faceted hull. Clip projected outlines
+    /// at every triangle boundary; close only the outer perimeter of the patch.
+    /// This adapts the project's accepted projection method, not its train shape.
+    private mutating func pp1000Patch(_ shell:[[Map3DPoint]],_ outline:[Map3DPoint],
+                                     axis:Int,sign:Float,offset:Float,color:UInt32) {
+        func u(_ p:Map3DPoint)->Float {axis==0 ? p.z:p.x}
+        let direction=axis==0 ? Map3DPoint(sign,0,0):Map3DPoint(0,0,sign)
+        let area=outline.indices.reduce(Float(0)){sum,i in let j=(i+1)%outline.count;return sum+u(outline[i])*outline[j].y-u(outline[j])*outline[i].y}
+        let orientation:Float=area>=0 ? 1:-1
+        func clip(_ points:[Map3DPoint],_ a:Map3DPoint,_ b:Map3DPoint)->[Map3DPoint] {
+            let du=u(b)-u(a),dv=b.y-a.y
+            let values=points.map {p->Float in let f=orientation*(du*(p.y-a.y)-dv*(u(p)-u(a)));return abs(f)<0.0000001 ? 0:f}
+            var result:[Map3DPoint]=[]
+            for i in points.indices {
+                let j=(i+1)%points.count,p=points[i],q=points[j],f=values[i],g=values[j]
+                if f>=0 {result.append(p)}
+                if f*g<0 {
+                    let order=p.x != q.x ? p.x<q.x:p.y != q.y ? p.y<q.y:p.z<q.z
+                    let a=order ? p:q,b=order ? q:p,fa=order ? f:g,fb=order ? g:f
+                    result.append(a+(b-a)*(fa/(fa-fb)))
+                }
+            }
+            return result
+        }
+        var vertices:[String:Map3DPoint]=[:],polygons:[[String]]=[],edges:[String:([String],Int)]=[:]
+        func vertex(_ p:Map3DPoint)->String {
+            let key="\(Int((p.x*100000).rounded())),\(Int((p.y*100000).rounded())),\(Int((p.z*100000).rounded()))"
+            if vertices[key]==nil {vertices[key]=p};return key
+        }
+        for triangle in shell {
+                let n=(triangle[1]-triangle[0]).cross(triangle[2]-triangle[0])
+                let centre=triangle.reduce(.zero,+)*(1/3)
+                let component=axis==0 ? n.x:n.z
+                guard component*sign>0.000001 && centre.x>5.3 else {continue}
+                var polygon=triangle
+                for k in outline.indices {
+                    polygon=clip(polygon,outline[k],outline[(k+1)%outline.count]);if polygon.count<3 {break}
+                }
+                guard polygon.count>=3 else {continue}
+                var ids:[String]=[]
+                for point in polygon {let key=vertex(point);if ids.last != key {ids.append(key)}}
+                if ids.first==ids.last {ids.removeLast()}
+                guard ids.count>=3 else {continue}
+                polygons.append(ids)
+                for k in ids.indices {let edge=[ids[k],ids[(k+1)%ids.count]],key=edge.sorted().joined(separator:"|");edges[key]=(edge,(edges[key]?.1 ?? 0)+1)}
+        }
+        for ids in polygons {
+            let p=ids.map {vertices[$0]!+direction*offset},q=ids.map {vertices[$0]!+direction*(offset-0.04)}
+            let collinear=p.indices.contains {i in
+                let a=p[(i+p.count-1)%p.count],b=p[i],c=p[(i+1)%p.count],n=(b-a).cross(c-b)
+                return n.dot(n)<0.000000000001
+            }
+            if !collinear {mesh.addFacet(p,color:color);mesh.addFacet(Array(q.reversed()),color:color)}
+            else {
+                let a=p.reduce(.zero,+)*(1/Float(p.count)),b=q.reduce(.zero,+)*(1/Float(q.count))
+                for i in p.indices {let j=(i+1)%p.count;mesh.addFacet([a,p[i],p[j]],color:color);mesh.addFacet([b,q[j],q[i]],color:color)}
+            }
+        }
+        for key in edges.keys.sorted() {
+            guard let edge=edges[key],edge.1==1 else {continue}
+            let a=vertices[edge.0[0]]!,b=vertices[edge.0[1]]!,p=[a+direction*offset,b+direction*offset],q=[a+direction*(offset-0.04),b+direction*(offset-0.04)]
+            mesh.addFacet([p[0],q[0],q[1],p[1]],color:color)
+        }
+    }
     fileprivate mutating func e1000PowerCar(far: Bool) {
         let white=Map3DPalette.shopAwnings[3],teal=Map3DE500.bodyColor
         let dark=Self.ink,steel=Self.steel,glass=Map3DE1000.glassColor,tire=Map3DStreetModel.tyre
-        let hs: [Float]=[1.15,1.55,1.62,1.67,1.75,2.00,2.25,2.65,3.12,3.40,3.65,3.82,3.904]
-        let ws: [Float]=[1.30,1.4425,1.4425,1.4425,1.4425,1.4425,1.4425,1.4425,1.4425,1.4425,1.32,1.03,0.65]
-        func ring(_ h: Float,_ w: Float)->[Map3DPoint] {
+        // Height rings independently constrain the side slope, frontal arch and
+        // transverse nose curvature. Rear body and equipment retain their profile.
+        let hs: [Float]=[1.15,1.55,1.62,1.67,1.75,2.00,2.15,2.25,2.65,3.12,3.40,3.65,3.82,3.904]
+        let ws: [Float]=[1.30,1.4425,1.4425,1.4425,1.4425,1.4425,1.4425,1.4425,1.4425,1.4425,1.40,1.18,0.78,0.06]
+        let cabWidths: [Float]=[1.19,1.40,1.425,1.435,1.4425,1.4425,1.44,1.43,1.40,1.35,1.23,0.99,0.65,0.06]
+        let segments=far ? 6:10
+        func ring(_ k:Int)->[Map3DPoint] {
+            let h=hs[k],w=ws[k],cw=cabWidths[k],front=pp1000Nose(h)
+            let depth:Float=h>3.65 ? 0.25:0.63
             var p:[Map3DPoint]=[]
-            for end:Float in [-1,1] {for side:Float in [-1,1] {
-                let f=end>0 ? pp1000Nose(h):Float(8.25),dx:Float=end>0 ? 0.43:0.08,r:Float=end>0 ? 0.22:0.08,n=far ? 2:4
-                for j in 0...n {
-                    let t=Float(end*side<0 ? n-j:j)*Float.pi/(2*Float(n))
-                    p.append(Map3DPoint(end*(f-dx+dx*sinf(t)),h,side*(w-r+r*cosf(t))))
-                }
-            }}
-            return p.sorted{atan2f($0.z,$0.x)<atan2f($1.z,$1.x)}
+            // Elliptical plan contour across almost the full nose width; the
+            // previous narrow corner rounding left a large flat bus-like face.
+            for j in 0...segments {
+                let t = -Float.pi/2+Float(j)*Float.pi/Float(segments)
+                let lateral=sinf(t),height:Float
+                if h>=1.55 && h<=1.75 {height=h-0.13*(1-lateral*lateral)}
+                else if h==2.00 {height=h-0.04*lateral*lateral}
+                else if h==2.15 {height=h+0.07-0.16*lateral*lateral}
+                else {height=h}
+                p.append(Map3DPoint(front-depth+depth*cosf(t),height,cw*lateral))
+            }
+            p.append(Map3DPoint(4.90,h,w))
+            p.append(Map3DPoint(-8.17,h,w))
+            p.append(Map3DPoint(-8.25,h,w-0.08))
+            p.append(Map3DPoint(-8.25,h,-w+0.08))
+            p.append(Map3DPoint(-8.17,h,-w))
+            p.append(Map3DPoint(4.90,h,-w))
+            return p
         }
         for k in 0..<hs.count-1 {
-            let lo=ring(hs[k],ws[k]),hi=ring(hs[k+1],ws[k+1])
+            let lo=ring(k),hi=ring(k+1)
             for i in lo.indices {
-                let j=(i+1)%lo.count,c=(lo[i]+lo[j])*0.5
-                let nose=c.x>pp1000Nose((hs[k]+hs[k+1])/2)-0.45
-                let color:UInt32 = k==2 ? dark : (hs[k]>=1.75 && hs[k+1]<=3.12 && (!nose || hs[k+1]<=2.25)) ? teal:white
+                let j=(i+1)%lo.count
+                let front=i<segments
+                let color:UInt32 = k==2 ? dark : (hs[k]>=1.75 && hs[k+1]<=3.12 && (!front || hs[k+1]<=2.15)) ? teal:white
                 face([lo[i],lo[j],hi[j],hi[i]],inside:Map3DPoint(0,2.4,0),color:color)
             }
             if k==0 {face(lo,inside:Map3DPoint(0,2.4,0),color:dark)}
             if k==hs.count-2 {face(hi,inside:Map3DPoint(0,2.4,0),color:white)}
         }
-        box(0,1.05,0,16.25,2.50,0.10,dark)
+        let shell=stride(from:0,to:mesh.indices.count,by:3).map {i in mesh.indices[i..<i+3].map {mesh.vertices[Int($0)].position}}
+        box(-0.34,1.05,0,15.57,2.50,0.10,dark)
         // Round each screen in frontal physical coordinates, then clip at the
         // actual nose's height bends before mapping onto its surface.
         func rounded(_ raw:[(Float,Float)])->[(Float,Float)] {
@@ -66,27 +147,16 @@ extension StationKitBuilder {
             }
             return out
         }
-        func clipped(_ input:[(Float,Float)],_ h:Float,_ above:Bool)->[(Float,Float)] {
-            var out:[(Float,Float)]=[]
-            for i in input.indices {let a=input[i],b=input[(i+1)%input.count],ia=above ? a.1>=h:a.1<=h,ib=above ? b.1>=h:b.1<=h
-                if ia {out.append(a)}
-                if ia != ib {let t=(h-a.1)/(b.1-a.1);out.append((a.0+(b.0-a.0)*t,h))}
-            }
-            return out
-        }
         for side:Float in [-1,1] {
-            for (proud,color,trim) in [(Float(0.012),dark,Float(0.045)),(Float(0.027),glass,Float(0))] {
-                let outline=rounded([(0.10-trim,2.65-trim),(1.12+trim,2.65-trim),(1.105+trim,3.40+trim),(0.10-trim,3.40+trim)])
-                let cuts:[Float]=[2.65-trim,2.65,3.12,3.40,3.40+trim]
-                for i in 0..<cuts.count-1 where cuts[i+1]-cuts[i]>0.00001 {
-                    let piece=clipped(clipped(outline,cuts[i],true),cuts[i+1],false)
-                    if piece.count>=3 {pp1000Panel(piece.map{Map3DPoint(pp1000Nose($0.1)+proud,$0.1,side*$0.0)},offset:Map3DPoint(0.009,0,0),color:color)}
-                }
+            for (proud,color,trim) in [(Float(0.012),dark,Float(0.04)),(Float(0.030),glass,Float(0))] {
+                // Broader, lower trapezoids follow the actual receding cab face.
+                let outline=rounded([(0.105-trim,2.76-trim),(1.185+trim,2.79-trim),(1.025+trim,3.34+trim),(0.15-trim,3.36+trim)])
+                pp1000Patch(shell,outline.map{Map3DPoint(0,$0.1,side*$0.0)},axis:0,sign:1,offset:proud,color:color)
             }
-            let p:[Map3DPoint]=[Map3DPoint(5.65,2.18,side*1.444),Map3DPoint(7.30,2.18,side*1.444),Map3DPoint(6.00,3.30,side*1.444),Map3DPoint(5.65,3.30,side*1.444)]
-            pp1000Panel(p,offset:Map3DPoint(0,0,side*0.012),color:dark)
-            let pane:[Map3DPoint]=[Map3DPoint(5.71,2.25,side*1.457),Map3DPoint(7.16,2.25,side*1.457),Map3DPoint(6.04,3.23,side*1.457),Map3DPoint(5.71,3.23,side*1.457)]
-            pp1000Panel(pane,offset:Map3DPoint(0,0,side*0.012),color:glass)
+            let frame=rounded([(5.68,2.55),(6.88,2.55),(6.20,3.22),(5.68,3.22)])
+            let pane=rounded([(5.74,2.61),(6.74,2.61),(6.17,3.16),(5.74,3.16)])
+            pp1000Patch(shell,frame.map{Map3DPoint($0.0,$0.1,0)},axis:2,sign:side,offset:0.012,color:dark)
+            pp1000Patch(shell,pane.map{Map3DPoint($0.0,$0.1,0)},axis:2,sign:side,offset:0.030,color:glass)
             box(5.17,1.24,side*1.444,0.61,0.012,2.08,dark)
             box(5.17,1.27,side*1.457,0.55,0.012,2.02,white)
             box(5.17,2.59,side*1.470,0.29,0.010,0.64,glass)
@@ -102,27 +172,44 @@ extension StationKitBuilder {
                 for x:Float in [-6.7,-5.8,-4.9] {box(x,1.83,side*1.444,0.7,0.015,0.40,white)}
             }
         }
-        // Frontal light pairs and a central upper lamp; no red material or brand.
-        for z:Float in [-0.79,0.79] {
-            box(8.12,1.72,z,0.12,0.56,0.28,dark)
-            for dz:Float in [-0.13,0.13] {
+        // Paired circular lamps in curved oval bezels, projected in physical
+        // frontal coordinates rather than attached to a rectangular block.
+        for lateral:Float in [-0.91,0.91] {
+            let rim=(0..<16).map{j -> Map3DPoint in let t=Float(j)*Float.pi/8;return Map3DPoint(0,1.91+sinf(t)*0.13,lateral+cosf(t)*0.28)}
+            pp1000Patch(shell,rim,axis:0,sign:1,offset:0.018,color:dark)
+            for delta:Float in [-0.125,0.125] {
                 let start=mesh.vertices.count
-                civicTube(Map3DPoint(8.18,1.86,z+dz),Map3DPoint(8.23,1.86,z+dz),radius:0.085,color:white,sides:far ? 8:12)
+                let lens=(0..<(far ? 8:12)).map{j -> Map3DPoint in let t=Float(j)*2*Float.pi/Float(far ? 8:12);return Map3DPoint(0,1.91+sinf(t)*0.078,lateral+delta+cosf(t)*0.078)}
+                pp1000Patch(shell,lens,axis:0,sign:1,offset:0.036,color:white)
                 mesh.makeGlowing(from:start)
             }
         }
-        for (width,height,proud,color) in [(Float(0.49),Float(0.19),Float(0.012),dark),(Float(0.37),Float(0.12),Float(0.027),white)] {
-            let p=(0..<16).map{j -> Map3DPoint in let t=Float(j)*Float.pi/8,h:Float=3.56+sinf(t)*height/2;return Map3DPoint(pp1000Nose(h)+proud,h,cosf(t)*width/2)}
-            pp1000Panel(p,offset:Map3DPoint(0.01,0,0),color:color)
+        for (width,height,proud,color) in [(Float(0.49),Float(0.19),Float(0.012),dark),(Float(0.37),Float(0.12),Float(0.030),white)] {
+            let p=(0..<16).map{j -> Map3DPoint in let t=Float(j)*Float.pi/8;return Map3DPoint(0,3.54+sinf(t)*height/2,cosf(t)*width/2)}
+            pp1000Patch(shell,p,axis:0,sign:1,offset:proud,color:color)
         }
         // Couplers and rear gangway: the rear is a real passenger passage, unlike E500.
         for end:Float in [-1,1] {
-            box(end*8.12,0.98,0,0.32,2.20,0.17,dark)
+            if end<0 {box(end*8.12,0.98,0,0.32,2.20,0.17,dark)}
+            else {box(7.98,0.98,0,0.65,0.42,0.17,dark)}
             box(end*8.36,0.78,0,0.36,0.34,0.24,dark)
             box(end*(Map3DE1000.couplingHalfLength-0.05),0.78,0,0.10,0.44,0.24,steel)
         }
-        pp1000Panel([Map3DPoint(8.21,1.15,-1.30),Map3DPoint(8.21,1.15,1.30),Map3DPoint(8.21,0.50,1.17),Map3DPoint(8.21,0.50,-1.17)],offset:Map3DPoint(0.06,0,0),color:white)
-        box(8.21,0.35,0,0.15,2.25,0.22,steel)
+        // Lower skirt is a tapered continuation of the oval nose, with a
+        // shallow central coupler slot, not a flat rectangular bumper below it.
+        var skirtLow:[Map3DPoint]=[],skirtHigh:[Map3DPoint]=[]
+        for j in 0...segments {
+            let t = -Float.pi/2+Float(j)*Float.pi/Float(segments)
+            skirtLow.append(Map3DPoint(7.36+0.36*cosf(t),0.36+0.10*abs(sinf(t)),0.94*sinf(t)))
+            skirtHigh.append(Map3DPoint(7.42+0.63*cosf(t),1.15,1.19*sinf(t)))
+        }
+        for j in 0..<segments {
+            let a=skirtLow[j],b=skirtLow[j+1],c=skirtHigh[j+1],d=skirtHigh[j]
+            pp1000Panel([a,b,c],offset:Map3DPoint(-0.08,0,0),color:white)
+            pp1000Panel([a,c,d],offset:Map3DPoint(-0.08,0,0),color:white)
+        }
+        // Short supporting ribs behind the skirt remain visually subordinate.
+        box(7.36,0.65,0,0.30,0.44,0.30,dark)
         box(-8.27,1.23,0,0.04,1.05,2.05,dark)
         box(-8.30,1.28,0,0.025,0.80,1.93,white)
         box(-8.32,2.52,0,0.02,0.46,0.50,glass)
@@ -153,6 +240,11 @@ extension StationKitBuilder {
         }
         box(-0.1,0.62,0,5.5,1.75,0.38,steel)
         // Roof resistor housings, narrow installation feet and one single-arm collector.
+        // Keep the existing equipment, bridge its original feet onto the round crown.
+        for (x,l) in [(Float(-1.9),Float(2.2)),(Float(1.1),Float(2.1))] {
+            for z:Float in [-0.45,0.45] {box(x,3.80,z,l,0.15,0.104,dark)}
+        }
+        for z:Float in [-0.40,0.40] {for x:Float in [-5.65,-4.75] {box(x,3.82,z,0.18,0.18,0.084,steel)}}
         for (x,l) in [(Float(-1.9),Float(2.2)),(Float(1.1),Float(2.1))] {
             for z:Float in [-0.45,0.45] {box(x,3.904,z,l,0.15,0.06,dark)}
             box(x,3.964,0,l,1.65,0.27,steel)

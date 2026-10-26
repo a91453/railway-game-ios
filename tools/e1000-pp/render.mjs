@@ -50,7 +50,7 @@ try{
   await sheet(label,label+'｜共同相機與公尺尺度（實際原生幾何）',['left','front','top','isometric'].map(v=>'<h2>'+v+'</h2><div class="row">'+ms.map((m,i)=>'<div><img src="previews/'+label+'-'+i+'-'+v+'.png"><p>'+m.id+'</p></div>').join('')+'</div>').join(''));
  }
  await match(['e500','emu3000-ed','e1000'],'style-comparison');
- await match(['before-e1000','e1000'],'before-after');await match(['before-e1000','e1000-far'],'before-after-far');
+ await match(['before-e1000','e1000'],'before-after');await match(['before-e1000-far','e1000-far'],'before-after-far');
  const near=manifest.models.filter(m=>m.category==='section'&&!m.id.endsWith('-far'));
  await sheet('overview','E1000｜單端流線動力車・雙端PP編組',near.map(m=>'<div class="row"><div><img src="previews/'+m.id+'-hero.png"><p>'+m.id+'</p></div><div><img src="previews/'+m.id+'-detail-right.png"><p>另一側門窗／設備</p></div></div>').join('')+'<h2>雙端 E1000＋12 客車：完整展示編組，尚未接入營運</h2><div class="row"><div><img src="previews/e1000-pp-formation-hero.png"><img src="previews/e1000-pp-formation-detail-left.png"></div></div>');
  await sheet('seven-directions','E1000與PP｜各單元七向透明圖',manifest.models.filter(m=>m.category==='section'||m.category==='formation').map(m=>'<h2>'+m.id+'</h2><div class="row">'+manifest.directions.map(v=>'<div><img src="'+m.views[v]+'"><p>'+v+'</p></div>').join('')+'</div>').join(''));

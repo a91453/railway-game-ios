@@ -4,7 +4,7 @@ source_dir="$(cd "$(dirname "$0")" && pwd)"
 baseline="${1:?usage: capture-baseline.sh BASELINE_WORKTREE OUTPUT}"
 output="${2:?usage: capture-baseline.sh BASELINE_WORKTREE OUTPUT}"
 cd "$baseline"
-test "$(git rev-parse HEAD)" = 61c6969c92bf1689f7dc1fcd6242c1dc74112e3a
+test "$(git rev-parse HEAD)" = 2be9dacaf2e1fa92b9fae6e3593cfa122aeeb189
 swift --version | head -1 | grep -q 'Swift version 6.4' || { echo 'Swift 6.4 required' >&2; exit 1; }
 swift build --target GamePresentation -Xswiftc -warnings-as-errors -j 4
 bin="$(swift build --show-bin-path)"

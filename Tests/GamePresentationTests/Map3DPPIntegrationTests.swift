@@ -42,7 +42,7 @@ final class Map3DPPIntegrationTests: XCTestCase {
         for key in ["pushPull", "pushPullFar"] {
             let set = try XCTUnwrap(Map3DTrainSet.named(key))
             let original = Map3DE1000.model(far: key.hasSuffix("Far"))
-            XCTAssertLessThanOrEqual(original.triangleCount, key.hasSuffix("Far") ? 4_100 : 6_000)
+            XCTAssertLessThanOrEqual(original.triangleCount, key.hasSuffix("Far") ? 4_100 : 6_800)
             XCTAssertEqual(payload(try model(set.headName)), payload(original))
             XCTAssertNil(pack.index(of: set.tailName), "the existing last power car is the head turned around")
             for count in [1, 2, 3, 12] {

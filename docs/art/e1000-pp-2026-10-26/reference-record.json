@@ -129,5 +129,43 @@
     ],
     "reviewed": true,
     "no_engineering_dimension_claim": true
+  },
+  "revision_2_user_references": {
+    "reviewed": true,
+    "images": [
+      {
+        "index": 1,
+        "kind": "HO model, frontal, lit paired lamps"
+      },
+      {
+        "index": 2,
+        "kind": "unpainted HO model, front three-quarter"
+      },
+      {
+        "index": 3,
+        "kind": "actual platform train, front three-quarter"
+      },
+      {
+        "index": 4,
+        "kind": "actual locomotive, front three-quarter"
+      },
+      {
+        "index": 5,
+        "kind": "HO model side photograph"
+      },
+      {
+        "index": 6,
+        "kind": "promotional consist drawing"
+      }
+    ],
+    "observations": [
+      "arched crown and curved transverse nose",
+      "low rounded trapezoid twin windshields, narrow centre pillar",
+      "smaller quarterlights behind front glass",
+      "paired circular lamps within oval housings",
+      "tapering skirt and later request for slightly lower/inward lower edge"
+    ],
+    "engineering_dimensions": false,
+    "privacy": "Original attachment pixels not redistributed or sent to image services"
   }
 }

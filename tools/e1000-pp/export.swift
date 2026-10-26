@@ -17,7 +17,7 @@ func words(_ vertices:[Map3DVertex],translation:Float=0,reversed:Bool=false)->Da
 }
 func encoded(_ model:Map3DModelPack.Model,sourceProducer:String?=nil)throws->Data {
  guard model.triangleCount<=Map3DModelFile.maximumTriangles else {fatalError("unit budget: \(model.name)")}
- let metadata=try JSONSerialization.data(withJSONObject:["generator":"native-pp-coaches","producer_commit":sourceProducer ?? producer,"coordinates":"metres +X front +Y left +Z up","recipe_version":1],options:[.sortedKeys])
+ let metadata=try JSONSerialization.data(withJSONObject:["generator":"native-pp-coaches","producer_commit":sourceProducer ?? producer,"coordinates":"metres +X front +Y left +Z up","recipe_version":2],options:[.sortedKeys])
  var data=Data("M3DM".utf8)
  func word(_ n:UInt32){for s:UInt32 in [0,8,16,24]{data.append(UInt8((n>>s)&255))}}
  data.append(contentsOf:[1,0,0,0]);word(UInt32(model.triangleCount));word(UInt32(metadata.count));data.append(metadata)
@@ -52,7 +52,7 @@ for var row in protectedManifest["models"] as! [[String:Any]] where (row["native
  try d.write(to:output.appendingPathComponent(file));nativeUnits[id]=d.base64EncodedString();actualModels[id]=model
  row["category"]="comparison";row["family"]="protected-accepted";records.append(row)
 }
-// Official accident report table1.5-1 documents this 12-coach order; role only, no identities.
+// Illustrative broad roles from table1.5-1; PPT2000 is not modeled. No identities.
 let sequence:[Map3DPPPassenger.Role]=[.ppc1400,.ppt1000,.pph1300,.ppt1000,.ppt1000,.ppt1000,.ppc1400,.pph1300,.ppt1000,.ppt1000,.ppt1000,.ppm2500]
 var assemblyRows:[[String:Any]]=[]
 for far in [false,true] {
@@ -73,10 +73,12 @@ for far in [false,true] {
  records.append(["id":id,"name":id,"native":file,"native_kind":"assembly","category":"formation","family":far ? "far":"e1000","triangles":count,"minimum":lo,"maximum":hi])
  assemblyRows.append(["id":id,"placements":placements,"shared_origin":"front E1000 centre, metres X forward Y left Z up rail=0","source":"TTSB177 report table1.5-1; 12 coach roles, broad roles only; PPT2000 subtype not modeled, all displayed PPT units are explicitly PPT1000","locomotive_body_length_m":Float(16.5),"locomotive_coupler_half_length_m":Map3DE1000.couplingHalfLength,"coach_coupler_half_length_m":Map3DPPPassenger.couplingHalfLength,"rotation":"front0, rear180 degrees"])
 }
-if let before=ProcessInfo.processInfo.environment["E1000_BASELINE"] {
- let d=try Data(contentsOf:URL(fileURLWithPath:before)),id="before-e1000",file="models/before-e1000.m3dmodel",m=try Map3DModelFile(decoding:d,named:id).model
+for (variable,suffix) in [("E1000_BASELINE",""),("E1000_BASELINE_FAR","-far")] {
+ if let before=ProcessInfo.processInfo.environment[variable] {
+ let d=try Data(contentsOf:URL(fileURLWithPath:before)),id="before-e1000"+suffix,file="models/before-e1000"+suffix+".m3dmodel",m=try Map3DModelFile(decoding:d,named:id).model
  try d.write(to:output.appendingPathComponent(file));records.append(record(m,file,"comparison","true-parent-baseline"))
 }
-let manifest:[String:Any]=["schema_version":1,"recipe_version":1,"generator":"native-e1000-pp","producer_commit":producer,"models":records,"model_count":records.count,"directions":["top","bottom","left","right","front","back","isometric"],"native_coordinates":"metres +X front +Y left +Z up, rail Z=0","gltf_coordinates":"metres +X front +Y up -Z left","assembly":assemblyRows,"palette":["body":Map3DColor.rgb(0xF2F0EA),"accent":Map3DE500.bodyColor,"mask":Map3DE500.maskColor,"glass":Map3DE1000.glassColor,"tire":Map3DColor.rgb(0x2B2E34)],"runtime":"pushPull power cars only, existing coaches/other services unchanged; static geometry not push-pull-control validation","static_geometry":true]
+}
+let manifest:[String:Any]=["schema_version":1,"recipe_version":2,"generator":"native-e1000-pp","producer_commit":producer,"models":records,"model_count":records.count,"directions":["top","bottom","left","right","front","back","isometric"],"native_coordinates":"metres +X front +Y left +Z up, rail Z=0","gltf_coordinates":"metres +X front +Y up -Z left","assembly":assemblyRows,"palette":["body":Map3DColor.rgb(0xF2F0EA),"accent":Map3DE500.bodyColor,"mask":Map3DE500.maskColor,"glass":Map3DE1000.glassColor,"tire":Map3DColor.rgb(0x2B2E34)],"runtime":"pushPull power cars only, existing coaches/other services unchanged; static geometry not push-pull-control validation","static_geometry":true]
 try JSONSerialization.data(withJSONObject:manifest,options:[.prettyPrinted,.sortedKeys,.withoutEscapingSlashes]).write(to:output.appendingPathComponent("manifest.json"))
 print("Exported \(records.count) native units/assemblies with exact readback")
