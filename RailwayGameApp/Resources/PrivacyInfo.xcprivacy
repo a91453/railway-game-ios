@@ -3,7 +3,10 @@
 <!--
   The app's privacy manifest. It tracks no one and collects no data; the
   only required-reason API it uses is UserDefaults (@AppStorage settings,
-  read and written by the app itself: CA92.1). See
+  read and written by the app itself: CA92.1). The freezes and exits the
+  system records (decision 418) stay in the app's own files and leave the
+  device only in a problem report the player sends, so no data type is
+  collected. See
   docs/XCODE_CLOUD_ONBOARDING.md before adding an entry.
 -->
 <plist version="1.0">

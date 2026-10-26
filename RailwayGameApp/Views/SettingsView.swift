@@ -589,18 +589,22 @@ struct ProblemReportRows: View {
     /// The file written for it, and what the player is told it holds;
     /// `nil` while it is being written.
     @State private var commandLog: (file: URL?, text: String)?
+    /// Decision 418: the freezes and exits the device recorded, as the
+    /// note's last part; `nil` when there are none, or until read.
+    @State private var diagnostics: String?
 
     /// What the rows do, under them.
     static func footer(in language: DisplayLanguage) -> String {
         language.text(
-            "Report a Problem writes a note with the version, your device, how long each lesson took and, from a game, what is in it, for Mail, Messages or any app you choose. From a game you may also attach its save and what you did since, so the problem can be played again; you see what it holds before you send it. Nothing is sent until you send it. Testing in TestFlight? You can also take a screenshot and share it with the developer from there.",
-            "「回報問題」會寫好一則附上版本、裝置、每一關花了多久（在遊戲中開啟時還有遊戲的狀態）的訊息，由你選擇用郵件、訊息或其他 App 傳送。在遊戲中也可以選擇附上這局的存檔和之後做過的事，讓問題可以重現；傳送前會列出裡面有什麼。你按下傳送前不會送出任何東西。用 TestFlight 測試時，也可以截圖後直接分享給開發者。"
+            "Report a Problem writes a note with the version, your device, how long each lesson took and, from a game, what is in it, for Mail, Messages or any app you choose. If the game lately froze or closed unexpectedly, the note also says when and where; that is kept only on this device. From a game you may also attach its save and what you did since, so the problem can be played again; you see what it holds before you send it. Nothing is sent until you send it. Testing in TestFlight? You can also take a screenshot and share it with the developer from there.",
+            "「回報問題」會寫好一則附上版本、裝置、每一關花了多久（在遊戲中開啟時還有遊戲的狀態）的訊息，由你選擇用郵件、訊息或其他 App 傳送。最近遊戲卡住或意外關閉過的話，訊息也會寫上時間與卡在哪裡；這些只記在這台裝置上。在遊戲中也可以選擇附上這局的存檔和之後做過的事，讓問題可以重現；傳送前會列出裡面有什麼。你按下傳送前不會送出任何東西。用 TestFlight 測試時，也可以截圖後直接分享給開發者。"
         )
     }
 
     var body: some View {
         let language = DisplayLanguage.app
         let report = ProblemReport.current(game: game, lessons: lessons)
+        let note = [report.text(in: language), diagnostics].compactMap { $0 }.joined(separator: "\n\n")
         if let session {
             Toggle(isOn: $attachesCommandLog) {
                 Label {
@@ -627,17 +631,22 @@ struct ProblemReportRows: View {
         }
         Group {
             if attachesCommandLog, let file = commandLog?.file {
-                ShareLink(item: file, subject: Text(verbatim: report.subject(in: language)), message: Text(verbatim: report.text(in: language))) {
+                ShareLink(item: file, subject: Text(verbatim: report.subject(in: language)), message: Text(verbatim: note)) {
                     reportLabel(language)
                 }
             } else {
-                ShareLink(item: report.text(in: language), subject: Text(verbatim: report.subject(in: language))) {
+                ShareLink(item: note, subject: Text(verbatim: report.subject(in: language))) {
                     reportLabel(language)
                 }
                 .disabled(attachesCommandLog)
             }
         }
         .accessibilityIdentifier("settings.report")
+        .task {
+            diagnostics = await Task.detached(priority: .utility) {
+                DeviceDiagnosticsRecorder.shared.current().reportText(in: language)
+            }.value
+        }
     }
 
     private func reportLabel(_ language: DisplayLanguage) -> some View {

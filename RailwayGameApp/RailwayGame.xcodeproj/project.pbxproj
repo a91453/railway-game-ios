@@ -112,6 +112,7 @@
 		79E93C89D5CBC16C6999156A /* real_buses_LienchiangCounty.json in Resources */ = {isa = PBXBuildFile; fileRef = B2B258E67922BFC5C37DA76C /* real_buses_LienchiangCounty.json */; };
 		7A4A6D92573E439869E49F7A /* PerformanceMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF79937B71C73C05EB0285FF /* PerformanceMenu.swift */; };
 		7B2C7C245265CD7529B9371B /* RollingStockCatalogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 771361B568387359268A6B83 /* RollingStockCatalogView.swift */; };
+		7B33A9D56D70E34C9244D283 /* DeviceDiagnosticsRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9A5BD1F73E69B878537F5E6 /* DeviceDiagnosticsRecorder.swift */; };
 		7CFC437C2E691CD94BA7812D /* MapStationTagView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFA812528CA2F00BD6143418 /* MapStationTagView.swift */; };
 		7E6BC92CBBB09DA09DE9F8EB /* krtc_ridership.json in Resources */ = {isa = PBXBuildFile; fileRef = A0EC41B721D0D2D757CD6EF0 /* krtc_ridership.json */; };
 		806D73969CCF23668A25B510 /* ntdlrt.json in Resources */ = {isa = PBXBuildFile; fileRef = E2038D64EB91D02F90FE6716 /* ntdlrt.json */; };
@@ -447,6 +448,7 @@
 		E654E2EC7E901F3CBD452FFE /* LineDraftSummaryRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LineDraftSummaryRow.swift; sourceTree = "<group>"; };
 		E6EEB9DC1C736BE4F98AD2BC /* GameAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameAudio.swift; sourceTree = "<group>"; };
 		E95E148A603B48CD12C8A714 /* TodaySettlementsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodaySettlementsSection.swift; sourceTree = "<group>"; };
+		E9A5BD1F73E69B878537F5E6 /* DeviceDiagnosticsRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDiagnosticsRecorder.swift; sourceTree = "<group>"; };
 		EA92CA4D96486CF019CFB053 /* GoalsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalsPanel.swift; sourceTree = "<group>"; };
 		EC04F05461D58759373672F0 /* rain-steady.caf */ = {isa = PBXFileReference; path = "rain-steady.caf"; sourceTree = "<group>"; };
 		ED45B563EF8CA610F22296E6 /* Map3DMetalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Map3DMetalView.swift; sourceTree = "<group>"; };
@@ -529,6 +531,7 @@
 		323CCFDFD5FC7E9426C5F161 /* App */ = {
 			isa = PBXGroup;
 			children = (
+				E9A5BD1F73E69B878537F5E6 /* DeviceDiagnosticsRecorder.swift */,
 				CF11EF43ACFDD9FA340D2081 /* FeatureUITestWorld.swift */,
 				E6EEB9DC1C736BE4F98AD2BC /* GameAudio.swift */,
 				81D9DBA602A1D4B5ECC848F8 /* GameCenterLink.swift */,
@@ -1056,6 +1059,7 @@
 				CDA0BE241DE1D06BA9047372 /* ControlPanel.swift in Sources */,
 				225C04C52DFBA47A1A6F22A4 /* DataSourcesView.swift in Sources */,
 				C318C4DBF7381ACEFA41A082 /* DemoRealLinesButton.swift in Sources */,
+				7B33A9D56D70E34C9244D283 /* DeviceDiagnosticsRecorder.swift in Sources */,
 				647CBFF4717FB3B4384775E6 /* EconomyPanel.swift in Sources */,
 				0E4EC2F54A6F330F9C0427F6 /* FeatureUITestWorld.swift in Sources */,
 				823389D4FCA1A54E1DDAB274 /* FeedbackViews.swift in Sources */,
