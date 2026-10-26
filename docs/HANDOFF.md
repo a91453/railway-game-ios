@@ -1510,6 +1510,8 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 
 ### 7.3 3D 的後續
 
+**網格自動簡化與太魯閣、EMU800 的遠景車（決策 420，session_014ZfTTK2BTKfrpKBYMPKmpP，`claude/mesh-lod-qem`）**：簡化器 `Map3DMeshSimplifier` 只在測試與比較裡，沒有接進畫面；太魯閣、EMU800 500–900 m 換程式版遠景車。量到的、建議與沒做的（自動簡化接進畫面要先加誤差上限、修單面板被收掉；裝置快取；照 #1271 的設備級選等級；其他車的遠景版）在 [決策 420](decisions/420.md) 的「下一步」。
+
 **Codex 蒸汽機車＋煤水車（2026-10-23，issue #1103）**：作者回報前導輪區過空後，新增汽缸外罩／煙箱承座／導輪架共408三角，其餘原模型13,672三角逐頂點不變；真正前版與同相機局部對照在私庫history/front-before及previews/steam-front-side-by-side.png。本輪10張參考的獨立兩單元原生靜態素材，霧綠／石墨／金砂、無紅色。配方`Map3DSteamTender.swift`，入口僅靜態註冊；完整編組14,080三角。公開只配方／工具／必要測試／文件／一張總覽，完整native／GLB／35七向／白模／剪影／同尺度／真前後／viewer／來源與ZIP在私庫`Railway/game-art-previews/docs/art/steam-tender-2026-10-23/`。重建與外觀／技術結論見[本批交接](art/steam-tender-2026-10-23/README.md)與`tools/steam-tender/README.md`，兩庫互鏈draft PR與最新head CI見issue #1103。 作者續報#1106紅字：selected-1在20分鐘job上限取消（無測試失敗），已同步main的#1120五份測試／新權重；模型與素材producer仍為1da739ca，原生／GLB逐bytes核對保持。最新CI狀態與timeout證據見#1103／#1106；不重複改CI分份規則。Linux Swift6.4 warnings-as-errors與20相關測試、實際幾何／支承／故障拒收、GLB／PNG／viewer／ZIP已驗證；真機Metal／效能／動畫及工程尺寸／真實車型仍未驗證。不改GameCore／存檔／golden／replay。**合併只增加靜態素材，不會讓營運列車自動換成這台**；車型映射、煤水車跟隨與連桿動畫是另案，不擅稱CT273。
 
 **第二台霧藍雙走行組蒸汽機車＋煤水車（Codex，#1118，`codex/duplex-steam-2026-10-23`）**：新11圖逐張檢視，靠前駕駛室／前短煙箱後長鍋爐／兩組三個近等大輻條輪／前欄杆平臺／獨立煤水車，獨立`Map3DDuplexSteam.swift`，不依賴未合併第一台。修初版汽缸偏小、前階輪區重疊及前梁／踏階支持；真前版、同相機公尺對照保留。24.830×3.300×4.680m／11128三角為比例推估，型號／工程規格／隱藏鉸接未知。[外觀／技術／私有交付](art/duplex-steam-2026-10-23/README.md)、[重建組裝](../tools/duplex-steam/README.md)。VERIFIED Swift6.4 warnings-as-errors、20測試、封閉／法線／支持射線／輪組淨空／492實體接觸圖、六故障拒收、5native／5GLB／35七向、Blender／PNG／viewer／ZIP。真機Metal／效能／動畫UNVERIFIED；僅靜態註冊，合併不自動出現在營運列車。雙draft PR與最新head CI見#1118；無GameCore／存檔／golden／replay變更，不合併／auto-merge／TestFlight。

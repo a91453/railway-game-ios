@@ -136,9 +136,13 @@ public struct Map3DTrainSet: Sendable {
             multipleUnit("wenhu", asset: "02_HSR_MRT_3x2-03", lineColoured: true),
             multipleUnit("puyuma", asset: "01_TRA_modern_3x2-02", livery: TrainLivery.puyuma),
             temu1000(),
+            // Decision 420: and its light version from 500 m out.
+            temu1000(far: true),
             // The EMU800: grey, a blue band and its blue face (the reference's
             // garage `emu800`) on #900's curved front (the author, 2026-10-21).
-            multipleUnit("emu800", asset: "01_TRA_modern_3x2-04", body: 0xBBC6C9, band: 0x214F90, face: 0x214F90),
+            multipleUnit("emu800", asset: "01_TRA_modern_3x2-04", body: 0xBBC6C9, band: 0x214F90, face: 0x214F90, far: "emu800Far"),
+            // Decision 420: in decision 408's light detail from 500 m out.
+            multipleUnit("emu800Far", asset: "01_TRA_modern_3x2-04", body: 0xBBC6C9, band: 0x214F90, face: 0x214F90, detail: .far),
             // The DR1000 railcar and the DR3100 diesel express: silver, a thin
             // orange band, yellow-orange faces (the reference's `dr1000`,
             // `dr3100`) on #900's curved fronts.
@@ -196,7 +200,9 @@ public struct Map3DTrainSet: Sendable {
 
     /// Decision 408: and the 700T and the N700S-G, 5,600 to 9,100 a car
     /// (their ``far`` sets between).
-    static let nearOnly: Set = ["E500CK", "MINGRI", "STAR", "greenTram", "SUMMER", "STEAM", "highSpeed", "n700sG", "emu3000"]
+    /// Decision 420: and the Taroko and the EMU800 (their far sets).
+    static let nearOnly: Set = ["E500CK", "MINGRI", "STAR", "greenTram", "SUMMER", "STEAM", "highSpeed", "n700sG", "emu3000",
+                                "taroko", "emu800"]
 
     /// Decision 408: the set a train of `key` numbered `number` is drawn
     /// as: half the high-speed trains, the odd-numbered, the N700S-G, the
@@ -358,18 +364,21 @@ public struct Map3DTrainSet: Sendable {
     /// Native TEMU1000 units in the operating Taroko set. The pantograph
     /// locations follow the static eight-car reconstruction; no game rules
     /// or train type metadata are changed.
-    static func temu1000() -> Map3DTrainSet {
-        Map3DTrainSet(key: "taroko", pantographCars: [2, 5], ownLengths: true, fixedCars: 8) {
+    /// Decision 420: `far`, the light units (``Map3DTEMU1000/model(_:far:)``)
+    /// drawn car for car from 500 m out.
+    static func temu1000(far: Bool = false) -> Map3DTrainSet {
+        Map3DTrainSet(key: far ? "tarokoFar" : "taroko", pantographCars: [2, 5], ownLengths: true, fixedCars: 8,
+                      far: far ? nil : "tarokoFar") {
             func cab(_ unit: Map3DTEMU1000.Unit, at x: Float, colour: UInt32) -> Map3DModelPack.Model {
                 var builder = StationKitBuilder()
-                builder.add(Map3DTEMU1000.model(unit), at: .zero)
+                builder.add(Map3DTEMU1000.model(unit, far: far), at: .zero)
                 builder.cabLamps(atX: x, colour: colour, height: 1.65, across: 0.70, width: 0.18, tall: 0.12)
-                return .flat(named: "taroko-\(unit.rawValue)", from: builder.mesh)
+                return .flat(named: "taroko-\(unit.rawValue)" + (far ? "-far" : ""), from: builder.mesh)
             }
             return Cars(head: cab(.leading, at: 12.42, colour: Map3DTrainStyle.headlamp),
-                        middle: Map3DTEMU1000.model(.middle),
+                        middle: Map3DTEMU1000.model(.middle, far: far),
                         tail: cab(.trailing, at: -12.42, colour: Map3DPalette.lantern),
-                        single: nil, pantograph: Map3DTEMU1000.model(.pantograph))
+                        single: nil, pantograph: Map3DTEMU1000.model(.pantograph, far: far))
         }
     }
 
@@ -435,8 +444,8 @@ public struct Map3DTrainSet: Sendable {
 
     static func multipleUnit(_ key: String, asset id: String, livery: TrainLivery? = nil, body: Int? = nil, band: Int? = nil,
                              thinBand: Bool = false, face: Int? = nil, single: Bool = false, pantographCars: Set<Int> = [],
-                             lineColoured: Bool = false, detail: Map3DTrainShell.Detail = .near) -> Map3DTrainSet {
-        Map3DTrainSet(key: key, pantographCars: pantographCars) {
+                             lineColoured: Bool = false, detail: Map3DTrainShell.Detail = .near, far: String? = nil) -> Map3DTrainSet {
+        Map3DTrainSet(key: key, pantographCars: pantographCars, far: far) {
             guard let asset = Map3DSceneKit.asset(id: id) else { preconditionFailure("No scene-kit subject \(id).") }
             var recipe = SceneKitBuilder.trainRecipe(asset)
             if let colour = livery?.body ?? body { recipe.style.body = Map3DColor.rgb(UInt32(colour)) }

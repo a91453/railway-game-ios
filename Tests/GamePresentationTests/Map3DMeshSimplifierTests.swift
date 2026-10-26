@@ -154,27 +154,4 @@ final class Map3DMeshSimplifierTests: XCTestCase {
         }
         XCTAssertEqual(Map3DMeshSimplifier.simplify(corners, targets: [3, 1, 0]), [corners, corners, corners])
     }
-
-    func testALighterLevelFartherAway() {
-        XCTAssertEqual(Map3DModelLOD.level(at: 40), 0)
-        XCTAssertEqual(Map3DModelLOD.level(at: 200), 1)
-        XCTAssertEqual(Map3DModelLOD.level(at: 400), 2)
-        XCTAssertEqual(Map3DModelLOD.level(at: 800), 3)
-        XCTAssertNil(Map3DModelLOD.level(at: Map3DTrains.modelReach))
-        // Low quality: lighter nearer, still no box before the reach.
-        XCTAssertEqual(Map3DModelLOD.level(at: 100, reach: 0.5), 1)
-        XCTAssertEqual(Map3DModelLOD.level(at: 800, reach: 0.5), 3)
-        // Room to spare: the whole model farther.
-        XCTAssertEqual(Map3DModelLOD.level(at: 250, reach: 2), 0)
-        XCTAssertEqual(Map3DModelLOD.level(at: 1200, reach: 2), 3)
-        // Never a heavier level farther away.
-        for reach: Float in [0.5, 1, 1.5, 2] {
-            var last = 0
-            for distance in stride(from: Float(0), to: 2000, by: 10) {
-                let level = Map3DModelLOD.level(at: distance, reach: reach) ?? Map3DModelLOD.shares.count
-                XCTAssertGreaterThanOrEqual(level, last)
-                last = level
-            }
-        }
-    }
 }

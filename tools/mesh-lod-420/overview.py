@@ -1,5 +1,5 @@
 """Decision 420's overview: a row a subject, a column a level (whole, the
-game's 50 %, 25 % and 10 %, the hand-made far model where there is one,
+game's 50 %, 25 % and 10 %, the far model made in code where there is one,
 the box), each three-quarter from the front with its triangle count.
 
     python3 tools/mesh-lod-420/overview.py OUT overview.png [front|side]
@@ -12,10 +12,10 @@ view = sys.argv[3] if len(sys.argv) > 3 else "front"
 font = ImageFont.truetype('/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc', 22)
 small = ImageFont.truetype('/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc', 18)
 models = {m["id"]: m for m in json.load(open(f"{root}/manifest.json"))["models"]}
-rows = [("通勤電聯車（程序）", "style-commuter"), ("城際特急（長鼻）", "set-emu3000"), ("紅臉特急", "set-puyuma"),
-        ("白底紅帶特急", "set-taroko"), ("區間車", "set-emu800"), ("捷運", "set-metroC381"),
-        ("電力機車", "set-E500CK"), ("高鐵（700T）", "set-highSpeed"), ("高鐵（N700S-G）", "set-n700sG"), ("路線公車", "bus-route")]
-cols = [("完整", "100"), ("50 %", "50"), ("25 %", "25"), ("10 %", "10"), ("手做遠景", "hand"), ("盒子", "box")]
+rows = [("太魯閣（決策 420 遠景）", "set-taroko"), ("區間車 EMU800（決策 420 遠景）", "set-emu800"),
+        ("城際 EMU3000（決策 410）", "set-emu3000"), ("電力機車 E500", "set-E500CK"), ("高鐵 700T（決策 408）", "set-highSpeed"),
+        ("路線公車", "bus-route")]
+cols = [("完整", "100"), ("50 %", "50"), ("25 %", "25"), ("10 %", "10"), ("程式版遠景", "hand"), ("盒子", "box")]
 W, H, pad, top = (300, 190, 10, 44) if view == "front" else (420, 90, 10, 44)
 sheet = Image.new('RGB', (200 + len(cols) * (W + pad), top + len(rows) * (H + 30)), (236, 238, 246))
 d = ImageDraw.Draw(sheet)

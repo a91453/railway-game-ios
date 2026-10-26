@@ -3,8 +3,8 @@ import GameCore
 @testable import GamePresentation
 
 // Decision 420: each subject's front car (or the bus) whole, at each
-// share the game's own simplifier leaves, its hand-made far model where
-// decision 408 or 410 made one, and the box drawn past them. Written as
+// share the game's own simplifier leaves, its far model made in code
+// (decisions 408, 410 and 420's), and the box drawn past them. Written as
 // M3DM files with a manifest for render.mjs (tools/train-modeling-410's
 // format), and the triangle counts printed.
 let output = URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true)
@@ -54,15 +54,11 @@ func head(_ key: String) -> Map3DModelPack.Model {
 
 let shares = [0.5, 0.25, 0.1]
 var subjects: [(String, Map3DModelPack.Model, Map3DModelPack.Model?)] = [
-    ("style-commuter", named("commuter-cab"), nil),
+    ("set-taroko", head("taroko"), head("tarokoFar")),
+    ("set-emu800", head("emu800"), head("emu800Far")),
     ("set-emu3000", head("emu3000"), head("emu3000Far")),
-    ("set-puyuma", head("puyuma"), nil),
-    ("set-taroko", head("taroko"), nil),
-    ("set-emu800", head("emu800"), nil),
-    ("set-metroC381", head("metroC381"), nil),
     ("set-E500CK", head("E500CK"), head("E500CKFar")),
     ("set-highSpeed", head("highSpeed"), head("highSpeedFar")),
-    ("set-n700sG", head("n700sG"), head("n700sGFar")),
 ]
 subjects.append(("bus-route", Map3DLowFloorBus.routeModel(), nil))
 var report: [String] = []
@@ -80,3 +76,13 @@ for (group, model, far) in subjects {
 try JSONSerialization.data(withJSONObject: ["models": records], options: [.prettyPrinted, .sortedKeys])
     .write(to: output.appendingPathComponent("manifest.json"))
 print(report.joined(separator: "\n"))
+
+// How long each set takes to build, near and far (the far set made in
+// code), against the simplifier's time above.
+for key in ["taroko", "tarokoFar", "emu800", "emu800Far", "emu3000", "emu3000Far", "E500CK", "E500CKFar", "highSpeed", "highSpeedFar"] {
+    let started = Date()
+    let cars = Map3DTrainSet.byKey[key]!.build()
+    let took = Date().timeIntervalSince(started)
+    let count = [cars.head, cars.middle, cars.tail, cars.pantograph].compactMap { $0?.triangleCount }
+    print(String(format: "build %@: %.3f s, head/car/tail/panto %@", key, took, count.map(String.init).joined(separator: "/")))
+}
