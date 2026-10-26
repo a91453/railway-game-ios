@@ -159,7 +159,7 @@ final class SharedNetworkTests: XCTestCase {
         let own = try ownWorld()
         try library.save(own, as: .autosave, at: date(0))
         let launcher = GameLauncher(library: library, language: .english)
-        launcher.continueGame()
+        await launcher.continueGame()?.value
         XCTAssertEqual(launcher.session?.world, own)
 
         launcher.receiveNetwork(try SaveLibrary.encode(DemoWorld.make(in: .english), at: date(10)))
@@ -192,7 +192,7 @@ final class SharedNetworkTests: XCTestCase {
         let own = try ownWorld()
         try library.save(own, as: .autosave, at: date(0))
         let launcher = GameLauncher(library: library, language: .english)
-        launcher.continueGame()
+        await launcher.continueGame()?.value
 
         let sent = DemoWorld.make(in: .english)
         launcher.receiveNetwork(try SaveLibrary.encode(sent, at: date(10)))
@@ -222,7 +222,7 @@ final class SharedNetworkTests: XCTestCase {
         XCTAssertEqual(try library.load(XCTUnwrap(library.entries().first { $0.kind == .autosave })), own)
 
         // Continue goes on with the player's own game.
-        launcher.continueGame()
+        await launcher.continueGame()?.value
         XCTAssertEqual(launcher.session?.world, own)
         XCTAssertTrue(launcher.autosaveCurrentGame())
     }
@@ -236,7 +236,7 @@ final class SharedNetworkTests: XCTestCase {
         try library.saveAutosaveSlot(older, at: date(0))
         try library.saveAutosaveSlot(newer, at: date(900))
         let launcher = GameLauncher(library: library, language: .english)
-        launcher.continueGame()
+        await launcher.continueGame()?.value
         XCTAssertEqual(launcher.session?.world, newer)
 
         let sent = DemoWorld.make(in: .english)
@@ -246,7 +246,7 @@ final class SharedNetworkTests: XCTestCase {
         let back = try XCTUnwrap(library.entries().first { $0.kind == .autosave && (try? library.load($0)) == older })
 
         // The game menu's "go back to an earlier autosave".
-        launcher.load(back, at: date(1_100))
+        await launcher.load(back, at: date(1_100))?.value
         await launcher.savesWritten()
         XCTAssertEqual(launcher.session?.world, older)
         XCTAssertFalse(launcher.isLookingAtSharedNetwork)
@@ -260,7 +260,7 @@ final class SharedNetworkTests: XCTestCase {
         let library = SaveLibrary(directory: directory)
         try library.save(try ownWorld(), as: .autosave, at: date(0))
         let launcher = GameLauncher(library: library, language: .english)
-        launcher.continueGame()
+        await launcher.continueGame()?.value
         XCTAssertEqual(launcher.companyNameToShare(own: "My Railway"), "My Railway")
 
         let world = DemoWorld.make(in: .english)
@@ -287,7 +287,7 @@ final class SharedNetworkTests: XCTestCase {
         let own = try ownWorld()
         try library.save(own, as: .autosave, at: date(0))
         let launcher = GameLauncher(library: library, language: .english)
-        launcher.continueGame()
+        await launcher.continueGame()?.value
         let data = try SaveLibrary.encode(DemoWorld.make(in: .english), at: date(10))
         launcher.receiveNetwork(data)
         launcher.play(try XCTUnwrap(launcher.receivedNetwork), as: .look)
@@ -314,7 +314,7 @@ final class SharedNetworkTests: XCTestCase {
         XCTAssertNil(launcher.session)
 
         // In a game, read off the main actor from a file.
-        launcher.continueGame()
+        await launcher.continueGame()?.value
         let url = directory.appendingPathComponent("bad.\(SharedNetwork.fileExtension)")
         try Data("not a save".utf8).write(to: url)
         await launcher.receiveNetwork(at: url).value

@@ -228,7 +228,7 @@ final class WeeklyChallengeTests: XCTestCase {
     /// A new best says so as good news, not as a failure (#699 turned it
     /// red, kept on screen as long as an error).
     @MainActor
-    func testANewBestIsGoodNews() throws {
+    func testANewBestIsGoodNews() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("NewBest-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         var world = try GameWorld(
@@ -242,7 +242,7 @@ final class WeeklyChallengeTests: XCTestCase {
         completion.fareTrips = 3
         world.accounts.days = [completion]
         let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
-        launcher.importSave(try SaveLibrary.encode(world, at: monday))
+        try await launcher.importSave(SaveLibrary.encode(world, at: monday))?.value
         let session = try XCTUnwrap(launcher.session)
         session.message = nil
         launcher.recordChallengeResult(at: monday)

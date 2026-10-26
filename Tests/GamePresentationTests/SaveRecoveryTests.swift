@@ -55,7 +55,7 @@ final class SaveRecoveryTests: XCTestCase {
 
             let launcher = GameLauncher(library: library, language: language)
             XCTAssertEqual(launcher.autosave?.id, "autosave.json", "its header reads")
-            launcher.continueGame()
+            await launcher.continueGame()?.value
             XCTAssertEqual(launcher.session?.world, try world(after: 1), "the newest that loads")
             let clock = SaveLibrary.clockText(date(0))
             XCTAssertEqual(launcher.session?.message, StatusMessage(kind: .failure, text: language.text(
@@ -90,7 +90,7 @@ final class SaveRecoveryTests: XCTestCase {
             try damageWorld(in: name)
         }
         let launcher = GameLauncher(library: library, language: .english)
-        launcher.continueGame()
+        await launcher.continueGame()?.value
         XCTAssertEqual(launcher.session?.world, try world(after: 1), "the one autosave that loads")
         // Before the game is autosaved again.
         let names = library.autosaves().map(\.id)
@@ -102,7 +102,7 @@ final class SaveRecoveryTests: XCTestCase {
     }
 
     @MainActor
-    func testContinueReportsWhenNoAutosaveLoads() throws {
+    func testContinueReportsWhenNoAutosaveLoads() async throws {
         let library = SaveLibrary(directory: directory)
         try library.saveAutosaveSlot(world(after: 1), at: date(0))
         try library.save(world(after: 2), as: .autosave, at: date(60))
@@ -110,7 +110,7 @@ final class SaveRecoveryTests: XCTestCase {
         try damageWorld(in: "autosave-1.json")
         for language in DisplayLanguage.allCases {
             let launcher = GameLauncher(library: library, language: language)
-            launcher.continueGame()
+            await launcher.continueGame()?.value
             XCTAssertNil(launcher.session)
             XCTAssertEqual(launcher.message, StatusMessage(kind: .failure, text: language.text(
                 "None of the autosaves can be loaded.", "所有自動存檔都讀不了。"
@@ -120,11 +120,11 @@ final class SaveRecoveryTests: XCTestCase {
     }
 
     @MainActor
-    func testContinueWithTheNewestLoadableSaysNothing() throws {
+    func testContinueWithTheNewestLoadableSaysNothing() async throws {
         let library = SaveLibrary(directory: directory)
         try library.save(world(after: 2), as: .autosave, at: date(60))
         let launcher = GameLauncher(library: library, language: .english)
-        launcher.continueGame()
+        await launcher.continueGame()?.value
         XCTAssertEqual(launcher.session?.world, try world(after: 2))
         XCTAssertNil(launcher.session?.message)
     }
@@ -139,7 +139,7 @@ final class SaveRecoveryTests: XCTestCase {
     }
 
     @MainActor
-    func testAnExportedSaveBringsItsNewsBack() throws {
+    func testAnExportedSaveBringsItsNewsBack() async throws {
         let world = try world(after: 30)
         let log = news()
         let url = try SaveLibrary.exportFile(for: world, news: log, at: date(0))
@@ -150,7 +150,7 @@ final class SaveRecoveryTests: XCTestCase {
         XCTAssertEqual(read.news, log)
 
         let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
-        launcher.importSave(reading: { data })
+        await launcher.importSave(reading: { data })?.value
         XCTAssertEqual(launcher.session?.world, world)
         XCTAssertEqual(launcher.session?.news.items, log.items)
     }

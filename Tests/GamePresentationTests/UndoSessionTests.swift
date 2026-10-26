@@ -318,11 +318,11 @@ final class UndoSessionTests: XCTestCase {
         launcher.returnToStart()
         XCTAssertNil(launcher.session)
 
-        launcher.continueGame()
+        await launcher.continueGame()?.value
         XCTAssertEqual(launcher.session?.undoCount, 0, "the autosave continued")
         launcher.returnToStart()
         let save = try XCTUnwrap(launcher.otherSaves.first)
-        launcher.load(save)
+        await launcher.load(save)?.value
         let loaded = try XCTUnwrap(launcher.session)
         XCTAssertEqual(loaded.undoCount, 0, "a loaded save")
         XCTAssertFalse(loaded.canUndo)

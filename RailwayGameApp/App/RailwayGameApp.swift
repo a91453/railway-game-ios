@@ -136,7 +136,11 @@ struct RailwayGameApp: App {
             launcher.newGameOptions.seed = seed
         }
         if DebugLaunch.isSet("-ui-testing"), let name = DebugLaunch.value(of: "-ui-test-world") {
+            // Read at once (decision 419): the game is set up below,
+            // before the first frame.
+            launcher.readsSavesAtOnce = true
             launcher.continueGame()
+            launcher.readsSavesAtOnce = false
             guard let session = launcher.session else { fatalError("Could not load UI test world") }
             if name == "separate-tracks" || name == "missing-platform" {
                 for station in session.world.stations {
@@ -488,8 +492,12 @@ private struct RootView: View {
                     .onAppear { Map3DSceneCache.shared.clear() }
             }
         }
+        // Decision 419: no taps while a save is read, before its loading
+        // screen comes up.
+        .allowsHitTesting(!launcher.isLoadingSave)
         // Decision 307: the loading screen of a real-world map, over the
-        // start screen while the map is built, fading away over the game.
+        // start screen while the map is built, fading away over the game;
+        // since decision 419 also of a save slow to read.
         .overlay {
             if let loading = launcher.realWorldLoading {
                 RealWorldLoadingView(loading: loading, language: launcher.language)

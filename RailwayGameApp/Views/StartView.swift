@@ -829,12 +829,15 @@ struct SaveListView: View {
                     }
                     return try Data(contentsOf: url)
                 }
-                // A save that was read opens at once; one that was not
-                // says why at the top of the list.
-                if launcher.session != nil {
-                    dismiss()
-                }
             }
+            // Decision 419: a save is read off the main thread. One that
+            // was read opens and closes this list; one that was not says
+            // why at the top of it. One slow to read closes it as the
+            // loading screen comes up, so the screen is not drawn under it.
+            .onChange(of: launcher.session != nil || launcher.realWorldLoading != nil) { _, isOpening in
+                if isOpening { dismiss() }
+            }
+            .allowsHitTesting(!launcher.isLoadingSave)
             .navigationTitle(SaveListText.title(in: language))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -920,9 +923,6 @@ struct SaveListView: View {
         HStack(spacing: 8) {
             Button {
                 launcher.load(entry)
-                if launcher.session != nil {
-                    dismiss()
-                }
             } label: {
                 row(entry)
                     .frame(maxWidth: .infinity, alignment: .leading)

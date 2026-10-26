@@ -1038,13 +1038,14 @@ public final class GameLauncher {
     /// is damaged, or GameCore refuses it), the next autosave that can is
     /// loaded instead, newest first, and the player is told from when. The
     /// damaged one is kept, for a problem report.
-    public func continueGame(at date: Date = Date()) {
+    @discardableResult
+    public func continueGame(at date: Date = Date()) -> Task<Void, Never>? {
         let candidates = entries.filter { $0.kind == .autosave && $0.problem == nil }
         guard !candidates.isEmpty else {
             message = StatusMessage(kind: .failure, text: language.text("There is no game to continue.", "沒有可以繼續的遊戲。"))
-            return
+            return nil
         }
-        loadAutosave(candidates, fallingBack: true, at: date)
+        return loadAutosave(candidates, fallingBack: true, at: date)
     }
 
     /// Loads `entry`. The autosave is kept first, unless `entry` is an
@@ -1055,104 +1056,188 @@ public final class GameLauncher {
     /// next autosave taken in turn; on the start screen, the latest
     /// autosave is kept that way. The game gone back to is then the latest
     /// autosave, so Continue goes on with it.
-    public func load(_ entry: SaveLibrary.Entry, at date: Date = Date()) {
+    @discardableResult
+    public func load(_ entry: SaveLibrary.Entry, at date: Date = Date()) -> Task<Void, Never>? {
         if entry.kind == .autosave {
-            loadAutosave([entry], fallingBack: false, at: date)
-            return
+            return loadAutosave([entry], fallingBack: false, at: date)
         }
-        do throws(SaveError) {
-            let library = library
-            let (world, news) = try afterSaves { () throws(SaveError) in (try library.load(entry), library.news(for: entry)) }
-            begin(world, keepingAutosave: entry.kind != .autosave, news: news)
-        } catch {
-            message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+        let library = library
+        return open(reading: { () throws(SaveError) in (try library.load(entry), library.news(for: entry)) }, world: \.0) { read, roads in
+            switch read {
+            case .success(let (world, news)):
+                self.begin(world, keepingAutosave: true, news: news, roads: roads)
+            case .failure(let error):
+                self.message = StatusMessage(kind: .failure, text: error.playerMessage(in: self.language))
+            }
         }
     }
 
     /// Loads the first of `candidates` that can be read; with
     /// `fallingBack`, one whose game is damaged is passed over for the
     /// next (decision 192, later).
-    private func loadAutosave(_ candidates: [SaveLibrary.Entry], fallingBack: Bool, at date: Date) {
+    private func loadAutosave(_ candidates: [SaveLibrary.Entry], fallingBack: Bool, at date: Date) -> Task<Void, Never>? {
+        guard !isLoadingSave else { return nil }
         let playing = session
         if playing != nil { recordChallengeResult(at: date) }
         // Decision 409: a friend's network only looked at is not kept in
         // turn; going back is then as from the start screen.
         let current = isLookingAtSharedNetwork ? nil : playing.map { ($0.worldToSave, $0.news) }
-        do throws(SaveError) {
-            let library = library
-            let loaded = try afterSaves { () throws(SaveError) -> (GameWorld, NewsLog, Bool, SaveLibrary.Entry?)? in
-                // Read first: keeping a game in turn may delete the oldest.
-                var read: (SaveLibrary.Entry, GameWorld)?
-                for candidate in candidates {
-                    do throws(SaveError) {
-                        read = (candidate, try library.load(candidate))
-                        break
-                    } catch .damaged where fallingBack {
-                        continue
-                    }
+        let library = library
+        return open(reading: { () throws(SaveError) -> (GameWorld, NewsLog, Bool, SaveLibrary.Entry?)? in
+            // Read first: keeping a game in turn may delete the oldest.
+            var read: (SaveLibrary.Entry, GameWorld)?
+            for candidate in candidates {
+                do throws(SaveError) {
+                    read = (candidate, try library.load(candidate))
+                    break
+                } catch .damaged where fallingBack {
+                    continue
                 }
-                guard let (entry, world) = read else { return nil }
-                let news = library.news(for: entry)
-                let fellBackTo = entry == candidates.first ? nil : entry
-                if let (now, log) = current {
-                    try library.saveAutosaveSlot(now, news: log, at: date)
-                    return (world, news, true, fellBackTo)
-                }
-                guard library.newestAutosave()?.id != entry.id else {
-                    return (world, news, false, fellBackTo)
-                }
-                // A damaged latest passed over is moved, not deleted; the
-                // one gone back to stays until it is the latest.
-                try library.keepLatestAutosaveInSlot(sparing: entry.id)
+            }
+            guard let (entry, world) = read else { return nil }
+            let news = library.news(for: entry)
+            let fellBackTo = entry == candidates.first ? nil : entry
+            if let (now, log) = current {
+                try library.saveAutosaveSlot(now, news: log, at: date)
                 return (world, news, true, fellBackTo)
             }
-            guard let (world, news, wentBack, fellBackTo) = loaded else {
-                message = StatusMessage(kind: .failure, text: language.text("None of the autosaves can be loaded.", "所有自動存檔都讀不了。"))
-                return
+            guard library.newestAutosave()?.id != entry.id else {
+                return (world, news, false, fellBackTo)
             }
-            begin(world, keepingAutosave: false, news: news)
-            if let fellBackTo, let session {
-                let clock = fellBackTo.savedAt.map { SaveLibrary.clockText($0) } ?? "–"
-                session.message = StatusMessage(kind: .failure, text: language.text(
-                    "The newest save could not be loaded. Continued from the save of \(clock).",
-                    "最新的存檔讀不了，已從 \(clock) 的存檔繼續。"
-                ))
-            }
-            if wentBack {
-                autosaveInBackground(at: date)
-            }
-        } catch {
-            let failure = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
-            if let playing {
-                playing.message = failure
-            } else {
-                message = failure
+            // A damaged latest passed over is moved, not deleted; the
+            // one gone back to stays until it is the latest.
+            try library.keepLatestAutosaveInSlot(sparing: entry.id)
+            return (world, news, true, fellBackTo)
+        }, world: { $0?.0 }) { loaded, roads in
+            let language = self.language
+            switch loaded {
+            case .success(nil):
+                self.message = StatusMessage(kind: .failure, text: language.text("None of the autosaves can be loaded.", "所有自動存檔都讀不了。"))
+            case .success(let (world, news, wentBack, fellBackTo)?):
+                self.begin(world, keepingAutosave: false, news: news, roads: roads)
+                if let fellBackTo, let session = self.session {
+                    let clock = fellBackTo.savedAt.map { SaveLibrary.clockText($0) } ?? "–"
+                    session.message = StatusMessage(kind: .failure, text: language.text(
+                        "The newest save could not be loaded. Continued from the save of \(clock).",
+                        "最新的存檔讀不了，已從 \(clock) 的存檔繼續。"
+                    ))
+                }
+                if wentBack {
+                    self.autosaveInBackground(at: date)
+                }
+            case .failure(let error):
+                let failure = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+                if let playing, self.session === playing {
+                    playing.message = failure
+                } else {
+                    self.message = failure
+                }
             }
         }
     }
 
     /// Loads a save file the player picked, read by `read` (the
     /// reference's "导入存档并加载"); a file that cannot be read is reported.
-    public func importSave(reading read: () throws -> Data) {
+    @discardableResult
+    public func importSave(reading read: () throws -> Data) -> Task<Void, Never>? {
         let data: Data
         do {
             data = try read()
         } catch {
             message = StatusMessage(kind: .failure, text: SaveError.fileSystem.playerMessage(in: language))
-            return
+            return nil
         }
-        importSave(data)
+        return importSave(data)
     }
 
     /// Loads the save file `data`. Decision 409: one larger than any save
     /// (``SharedNetwork/maximumBytes``) is refused unread.
-    public func importSave(_ data: Data) {
-        do throws(SaveError) {
+    @discardableResult
+    public func importSave(_ data: Data) -> Task<Void, Never>? {
+        open(reading: { () throws(SaveError) in
             guard data.count <= SharedNetwork.maximumBytes else { throw .tooLarge }
-            let (world, news) = try SaveLibrary.decodeWithNews(data)
-            begin(world, keepingAutosave: true, news: news)
-        } catch {
-            message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+            return try SaveLibrary.decodeWithNews(data)
+        }, world: \.world) { read, roads in
+            switch read {
+            case .success(let (world, news)):
+                self.begin(world, keepingAutosave: true, news: news, roads: roads)
+            case .failure(let error):
+                self.message = StatusMessage(kind: .failure, text: error.playerMessage(in: self.language))
+            }
+        }
+    }
+
+    // MARK: - Reading a save (decision 419)
+
+    /// Whether a save is being read (``open(reading:world:then:)``): the
+    /// start screen and the game take no taps meanwhile, and a second load
+    /// is not started.
+    public private(set) var isLoadingSave = false
+    /// How long a save may take to read before the loading screen
+    /// (``realWorldLoading``) comes up over it: most are read sooner, and
+    /// show nothing.
+    nonisolated static let loadingScreenDelay: Duration = .milliseconds(300)
+    /// Counts the reads of a save, so a late loading screen is not put up
+    /// over the next one.
+    @ObservationIgnored private var savesOpened = 0
+    /// Counts the games begun, so a save read while another game began
+    /// is not opened over it.
+    @ObservationIgnored private var gamesBegun = 0
+    /// Whether ``realWorldLoading`` is the screen of a save being read.
+    @ObservationIgnored private var showsSaveLoading = false
+    /// Reads saves on the main actor, as before decision 419, for the
+    /// app's UI-test launch alone: it sets up the game it continued before
+    /// the first frame.
+    @ObservationIgnored public var readsSavesAtOnce = false
+
+    /// Decision 419: reads a save with `read`, off the main actor, after
+    /// the saves queued before it are written; then, off it too, the roads
+    /// the game will read with the data the app has (an old save's land,
+    /// read before its game had roads, is seconds of them,
+    /// ``GameSession/roadsReadAhead(of:population:places:water:coverage:baseMap:)``).
+    /// `finish` then has it on the main actor, with those roads, unless
+    /// another game began meanwhile. Returns the task, or `nil` while
+    /// another save is read.
+    private func open<Read: Sendable>(
+        reading read: @escaping @Sendable () throws(SaveError) -> Read,
+        world: @escaping @Sendable (Read) -> GameWorld?,
+        then finish: @escaping @MainActor (Result<Read, SaveError>, RoadsReadAhead?) -> Void
+    ) -> Task<Void, Never>? {
+        guard !isLoadingSave else { return nil }
+        if readsSavesAtOnce {
+            finish(Result { () throws(SaveError) in try afterSaves(read) }, nil)
+            return nil
+        }
+        isLoadingSave = true
+        savesOpened += 1
+        let (opened, begun) = (savesOpened, gamesBegun)
+        Task { [weak self] in
+            try? await Task.sleep(for: Self.loadingScreenDelay)
+            guard let self, self.isLoadingSave, self.savesOpened == opened, self.realWorldLoading == nil else { return }
+            self.realWorldLoading = RealWorldLoading(place: nil)
+            self.showsSaveLoading = true
+        }
+        let saveQueue = saveQueue
+        return Task {
+            let result = await withCheckedContinuation { (done: CheckedContinuation<Result<Read, SaveError>, Never>) in
+                saveQueue.async { done.resume(returning: Result { () throws(SaveError) in try read() }) }
+            }
+            // The data as it is once the save is read: it may have arrived
+            // meanwhile.
+            let world = (try? result.get()).flatMap(world)
+            let (population, places, water, coverage, baseMap) = (population, places, water, coverage, baseMap)
+            let roads = await Task.detached(priority: .userInitiated) {
+                world.flatMap {
+                    GameSession.roadsReadAhead(of: $0, population: population, places: places, water: water, coverage: coverage, baseMap: baseMap)
+                }
+            }.value
+            isLoadingSave = false
+            if showsSaveLoading {
+                realWorldLoading = nil
+                showsSaveLoading = false
+            }
+            guard gamesBegun == begun else { return }
+            finish(result, roads)
         }
     }
 
@@ -1289,7 +1374,9 @@ public final class GameLauncher {
     /// Decision 351: nor does any new game (one without `news`) begun in
     /// the demo mode.
     @discardableResult
-    private func begin(_ world: GameWorld, keepingAutosave: Bool, news: NewsLog? = nil, isDemo: Bool = false) -> Bool {
+    private func begin(
+        _ world: GameWorld, keepingAutosave: Bool, news: NewsLog? = nil, isDemo: Bool = false, roads: RoadsReadAhead? = nil
+    ) -> Bool {
         let isDemo = isDemo || (news == nil && isDemoMode)
         if keepingAutosave {
             do throws(SaveError) {
@@ -1317,8 +1404,9 @@ public final class GameLauncher {
         started.railways = railways
         started.collectedStamps = stationStamps.dates
         // Decision 88: land not read round a station built while the app
-        // had no population.
-        started.readLandRoundStations()
+        // had no population; for a save, its roads read already (decision
+        // 419).
+        started.readLandRoundStations(roads: roads)
         started.playSound = playSound
         started.duckMusic = duckMusic
         duckMusic?(1)
@@ -1346,6 +1434,7 @@ public final class GameLauncher {
             self.checkAchievements(of: started)
         }
         session = started
+        gamesBegun += 1
         gameIsOpen.value = true
         startLessonClock()
         lastSlotWorld = started.worldToSave

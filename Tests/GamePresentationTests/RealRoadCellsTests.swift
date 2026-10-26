@@ -169,7 +169,7 @@ final class RealRoadCellsTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
-        launcher.importSave(try SaveLibrary.encode(reading.world, at: Date()))
+        try await launcher.importSave(SaveLibrary.encode(reading.world, at: Date()))?.value
         let session = try XCTUnwrap(launcher.session)
         XCTAssertEqual(session.world.roads, RoadGrid(), "an old save: its land read, its roads not")
 
@@ -182,6 +182,46 @@ final class RealRoadCellsTests: XCTestCase {
         let before = RealRoadCells.readsOnTheMainThread.value
         await launcher.loadRealWorldData { data }.value
         XCTAssertTrue(launcher.session === session, "the same game goes on")
+        XCTAssertEqual(session.world.roads?.readBlocks, land, "the roads of all its land read")
+        XCTAssertEqual(session.world.roads, expected.roads, "the roads the main thread would have read")
+        XCTAssertEqual(RealRoadCells.readsOnTheMainThread.value, before, "none read on the main thread")
+        XCTAssertEqual(session.commandLog.entries.last?.action, .readLandRoundStations(RealWorldDataSet(
+            population: true, places: true, water: true, heights: true, coverage: true, baseMap: true
+        )))
+    }
+
+    /// Decision 419: an old save, its land read before its game had roads,
+    /// loaded once the app has its data: the save is decoded and the roads
+    /// of its land read off the main actor, and only the game handed them
+    /// on it, the same roads, logged the same.
+    func testAnOldSavesRoadsAreReadOffTheMainThreadWhenItIsLoaded() async throws {
+        let tiles = try Self.tiles.get()
+        let (reading, taipei) = try taipeiGame()
+        reading.baseMap = nil
+        reading.readLand(within: WholeTaiwan.landReach, of: taipei)
+        let land = Set(try XCTUnwrap(reading.world.landBlocks))
+        var expected = reading.world
+        GameSession.readRoads(in: &expected, baseMap: tiles)
+
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+        var arriving = RealWorldData(
+            population: reading.population, places: reading.places, water: reading.water, heights: reading.heights, coverage: reading.coverage,
+            railways: nil, issues: []
+        )
+        arriving.baseMap = tiles
+        let data = arriving
+        await launcher.loadRealWorldData { data }.value
+
+        let save = try SaveLibrary.encode(reading.world, at: Date())
+        let before = RealRoadCells.readsOnTheMainThread.value
+        await launcher.importSave(save)?.value
+        let started = Date()
+        while launcher.session == nil, Date().timeIntervalSince(started) < 60 {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        let session = try XCTUnwrap(launcher.session)
         XCTAssertEqual(session.world.roads?.readBlocks, land, "the roads of all its land read")
         XCTAssertEqual(session.world.roads, expected.roads, "the roads the main thread would have read")
         XCTAssertEqual(RealRoadCells.readsOnTheMainThread.value, before, "none read on the main thread")
