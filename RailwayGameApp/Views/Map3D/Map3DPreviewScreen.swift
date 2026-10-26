@@ -227,7 +227,7 @@ struct Map3DPreviewScreen: View {
             feed.updateRealClock(world: session.world, shown: showsRealTrains,
                                  glides: !session.world.clock.isPaused && !reduceMotion)
             // Decision 400, 10i-6: and the player's buses with it.
-            feed.updateBuses(world: session.world, palette: linePalette, glides: !session.world.clock.isPaused && !reduceMotion)
+            feed.updateBuses(world: session.world, palette: linePalette, roads: session.busRoads, glides: !session.world.clock.isPaused && !reduceMotion)
         }
         .onChange(of: showsRealTrains) { _, shown in
             feed.updateRealClock(world: session.world, shown: shown, glides: !session.world.clock.isPaused && !reduceMotion)
@@ -587,6 +587,7 @@ final class Map3DTrainFeed {
     /// routes or the scene change.
     private var busWorld: GameWorld?
     private var busPalette: LinePalette = .standard
+    private var busRoads: BusRoads?
     private var busSignature: Map3DBuses.Signature?
     private var busClock: RealTrainClock?
     private var busGlides = true
@@ -608,19 +609,20 @@ final class Map3DTrainFeed {
     }
 
     /// Decision 400, 10i-6: the game clock the player's buses are drawn at.
-    func updateBuses(world: GameWorld, palette: LinePalette, glides: Bool) {
+    func updateBuses(world: GameWorld, palette: LinePalette, roads: BusRoads?, glides: Bool) {
         busClock = RealTrainClock(world: world, previous: busClock, time: Date().timeIntervalSinceReferenceDate)
         busGlides = glides
         busWorld = world
         busPalette = palette
-        busSignature = Map3DBuses.Signature(world: world, palette: palette)
+        busRoads = roads
+        busSignature = Map3DBuses.Signature(world: world, palette: palette, roads: roads)
     }
 
     /// Decision 400, 10i-6: the player's buses round the camera's target.
     private func busFrame(in scene: Map3DScene, camera: Map3DCamera, detail: Map3DStreetDetail, most: Int?, now: Double) -> Map3DBuses.Frame {
         guard let world = busWorld, let signature = busSignature, let clock = busClock else { return .init() }
         if buses?.isLaid(from: signature, in: scene) != true {
-            buses = Map3DBuses(world: world, scene: scene, palette: busPalette)
+            buses = Map3DBuses(world: world, scene: scene, palette: busPalette, roads: busRoads)
         }
         return buses?.frame(second: clock.second(at: now, glides: busGlides), target: camera.target, distance: camera.distance,
                             detail: detail, most: most) ?? .init()

@@ -457,7 +457,9 @@ public final class GameSession {
     public internal(set) var busDraftPath: [PlanPoint] = []
     /// Each bus route's way on the map, kept for the stops and station it
     /// was worked out for.
-    @ObservationIgnored var busPathMemo: [BusRouteID: (stops: [CellPosition], station: PlanPoint, points: [PlanPoint])] = [:]
+    @ObservationIgnored var busPathMemo: [BusRouteID: BusPathMemo] = [:]
+    /// The base map's bus roads for this world's frame (``busRoads``).
+    @ObservationIgnored var busRoadsMemo: (frame: RealWorldFrame, roads: BusRoads)?
 
     /// What a tap does with the network tool.
     public internal(set) var networkMode: NetworkToolMode = .build
@@ -602,7 +604,9 @@ public final class GameSession {
     /// map's land is read in with (``readRoads(in:baseMap:)``); `nil`
     /// without the app's file, and then such a map has no roads but those
     /// it grows.
-    @ObservationIgnored public var baseMap: BaseMapTiles?
+    @ObservationIgnored public var baseMap: BaseMapTiles? {
+        didSet { busRoadsMemo = nil }
+    }
 
     /// The freeway and expressway cells of the blocks ``highwayCells()``
     /// has read, and those blocks: never saved, read again after a load.

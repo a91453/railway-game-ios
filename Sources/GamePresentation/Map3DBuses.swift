@@ -6,6 +6,11 @@ import GameCore
 // and where its buses are at a moment comes from the game's clock alone
 // (``BusMotion``), so nothing is kept and GameCore never knows of them.
 //
+// Decision 424: on a real-world map with a base map the way follows the
+// base map's own roads (``BusRoadNetwork``), the bus stopping at the stops
+// as they lie on them; a saved route none of whose way the roads join falls
+// back to the following.
+//
 // The way follows the road cells GameCore finds the route's length on
 // (``BusRoadPath``). On a map with no base map the streets run along the
 // cells' edges (decision 263), so the way goes round each road cell's
@@ -27,9 +32,11 @@ public struct Map3DBuses: Sendable {
 
         let routes: [Route]
         let roads: Int
+        /// Whether the way follows the base map's roads (decision 424).
+        let onRoads: Bool
         let palette: LinePalette
 
-        public init(world: GameWorld, palette: LinePalette) {
+        public init(world: GameWorld, palette: LinePalette, roads onRoads: BusRoads? = nil) {
             routes = world.busRoutes.compactMap { route in
                 world.station(id: route.station).map { station in
                     Route(route: BusRoute.Shape(route), station: station.location,
@@ -37,6 +44,7 @@ public struct Map3DBuses: Sendable {
                 }
             }
             roads = world.roads?.cells.count ?? 0
+            self.onRoads = onRoads != nil
             self.palette = palette
         }
     }
@@ -74,8 +82,8 @@ public struct Map3DBuses: Sendable {
     }
 
     /// The routes of `world` that have buses, laid in `scene`.
-    public init(world: GameWorld, scene: Map3DScene, palette: LinePalette) {
-        signature = Signature(world: world, palette: palette)
+    public init(world: GameWorld, scene: Map3DScene, palette: LinePalette, roads onRoads: BusRoads? = nil) {
+        signature = Signature(world: world, palette: palette, roads: onRoads)
         self.scene = SceneKey(scene)
         guard let roads = world.roads else {
             routes = []
@@ -84,7 +92,12 @@ public struct Map3DBuses: Sendable {
         var laid: [(BusMotion, [PlanPoint], [Int], PlanPoint, UInt32)] = []
         for route in world.busRoutes {
             guard let motion = BusMotion(route), let station = world.station(id: route.station) else { continue }
-            let way = Self.way(stops: route.stops, station: station.location, roads: roads.cells, alongEdges: world.geoAnchor == nil)
+            let way: (points: [PlanPoint], stops: [Int])
+            if world.geoAnchor != nil, let saved = onRoads?.way(ofSaved: route.stops, station: station.location) {
+                way = (saved.points, saved.marks)
+            } else {
+                way = Self.way(stops: route.stops, station: station.location, roads: roads.cells, alongEdges: world.geoAnchor == nil)
+            }
             let colour = world.lines(callingAt: route.station).first?.color
             let tint = colour.map { Map3DColor.rgb(UInt32(palette.color(for: $0.rgb))) } ?? Map3DLowFloorBus.accentColor
             laid.append((motion, way.points, way.stops, station.location, tint))
