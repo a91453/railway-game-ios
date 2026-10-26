@@ -167,8 +167,8 @@ Session：session_01UvQcP14umjdnDYpqc14Ngx，branch `claude/new-session-hsegen`�
 | --- | --- |
 | 程式 PR | 12 個、12 點（沒有 GameCore） |
 | 新發現 | **1 個**，P3（J2） |
-| 已修 | 0 個（P3 不在順手修的範圍）；之後 J2 與疑點都已修，見 本 PR |
-| 沒修，交出去 | **1 個**：J2（已修，見 本 PR） |
+| 已修 | 0 個（P3 不在順手修的範圍）；之後 J2 與疑點都已修，見 #1298 |
+| 沒修，交出去 | **1 個**：J2（已修，見 #1298） |
 
 另有一個疑點（推不出玩家碰得到的路徑，不算發現），寫在第四節最後。
 
@@ -195,7 +195,7 @@ Session：session_01UvQcP14umjdnDYpqc14Ngx，branch `claude/new-session-hsegen`�
 
 ### 四、沒修、交出去的
 
-#### J2（#1277）幀時間計量每一幀複製一次 11.6 KB 的區間計數，P3，沒修（已修，見 本 PR）
+#### J2（#1277）幀時間計量每一幀複製一次 11.6 KB 的區間計數，P3，沒修（已修，見 #1298）
 
 - 檔案:行：`Sources/GamePresentation/FrameTimeRecord.swift:504`（`guard var current = tally`）、`:524`（`current.intervals.add(milliseconds)`）、`:510–511`（`defer { tally = current … }`）。
 - 怎麼推得到：
@@ -207,7 +207,7 @@ Session：session_01UvQcP14umjdnDYpqc14Ngx，branch `claude/new-session-hsegen`�
 - 等級：**P3**。不會丟存檔、當掉或算錯錢，玩家也看不到。
 - 建議怎麼修：照 `drew()`、`gpu()` 的寫法直接改 `tally!`（`tally!.intervals.add(milliseconds)`、`tally!.last = time` 等），或複製之後先 `tally = nil` 再改、最後寫回，讓陣列只有一個持有者。只動 GamePresentation 這一個函式；`FrameTimeRecordTests` 的結果不該變。交給下一個碰 `FrameTimeRecord.swift` 的 PR 順手帶上（決策 421 線）。
 
-**疑點（不算發現；遊戲規劃查證會發生，已修，見 本 PR，派工單 J3，決策 421 的「續修」）**：#1278 的跑分在 `railways` 還沒讀好時，`layDemoRealLines` 回 nil，跑出來是 0 條線，紀錄的情境卻寫真實的線數。只在測試版、而且要在真實鐵路資料讀完之前就開跑分才會發生，推不出正常的操作會走到這裡，所以只記為疑點。
+**疑點（不算發現；遊戲規劃查證會發生，已修，見 #1298，派工單 J3，決策 421 的「續修」）**：#1278 的跑分在 `railways` 還沒讀好時，`layDemoRealLines` 回 nil，跑出來是 0 條線，紀錄的情境卻寫真實的線數。只在測試版、而且要在真實鐵路資料讀完之前就開跑分才會發生，推不出正常的操作會走到這裡，所以只記為疑點。
 
 ### 五、執行過的檢查
 
