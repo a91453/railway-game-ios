@@ -92,10 +92,11 @@ extension GameSession {
     /// their intercity trips come from.
     ///
     /// Decision 400's sequel: and the roads of every block read, from
-    /// `baseMap` (``readRoads(in:baseMap:)``).
+    /// `baseMap` (``readRoads(in:baseMap:ahead:)``), those of `roads` read
+    /// already taken from it.
     nonisolated static func readLand(
         roundStationsOf world: inout GameWorld, population: PopulationGrid?, places: PlaceGrid?, water: WaterGrid? = nil, coverage: CoverageGrid? = nil,
-        baseMap: BaseMapTiles? = nil
+        baseMap: BaseMapTiles? = nil, roads: RoadsReadAhead? = nil
     ) {
         var wanted = blocks(within: WholeTaiwan.landReach, of: world.stations.map(\.location), in: world.bounds)
         let fast = world.highSpeedStations
@@ -110,7 +111,7 @@ extension GameSession {
             }
         }
         readLand(blocks: wanted, in: &world, population: population, places: places, water: water, coverage: coverage)
-        readRoads(in: &world, baseMap: baseMap)
+        readRoads(in: &world, baseMap: baseMap, ahead: roads)
     }
 
     /// Reads in the land within `reach` of each of `points` whose blocks

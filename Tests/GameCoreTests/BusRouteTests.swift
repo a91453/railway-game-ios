@@ -382,6 +382,9 @@ final class BusRouteTests: XCTestCase {
         XCTAssertNoThrow(try load { _, _ in })
         XCTAssertThrowsError(try load { _, bus in bus["station"] = 9 }, "a station the world has not")
         XCTAssertThrowsError(try load { world, _ in world["nextBusRouteID"] = 1 }, "a number not handed out")
+        // Review I's I8: numbers are handed out from 1.
+        XCTAssertThrowsError(try load { _, bus in bus["id"] = 0 }, "a route numbered 0")
+        XCTAssertThrowsError(try load { _, bus in bus["id"] = -1 }, "a route numbered below 0")
         XCTAssertThrowsError(try load { _, bus in bus["legMetres"] = [1, 2] }, "a leg a stop")
         XCTAssertThrowsError(try load { _, bus in bus["stops"] = [["row": 16, "column": 0]]; bus["legMetres"] = [0] }, "a stop outside the world")
         XCTAssertThrowsError(try load { _, bus in bus["stops"] = Array(repeating: ["row": 0, "column": 0], count: 65) }, "too many stops")

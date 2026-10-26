@@ -361,9 +361,8 @@
   兩個都有自己 20:11、20:14 UTC 的 check-in，可合併時會 send_message 給本任；本任收不到了，新任接手後對兩個 session 各發一則「規劃換人，之後回報給 <新任 id>」。
 - **本任的 check-in `trig_012fcTzJ5mEazBmAY5BpHw1H`**（20:30 UTC，綁本任）：新任不用管它，以自己看到的為準；它叫醒本任時本任只會看到已換手。
 - **還沒派的**（照五方挑）：
-  - I8：`BusRoute` id ≥ 1 的檢查（GameCore；`docs/archive/PR1189_1241_REVIEW_HANDOFF.md`）。
-  - #1260 剩下的：讀舊存檔時 `install` 還在主執行緒讀道路。
-  - 公車：10i-3（真實公車資料）、10i-4（收購公車）、10i-6（2D／3D 地圖上的公車），見 `docs/decisions/400.md` 計畫表第 6–9 列；10i-5 是 #1263。
+  - ~~I8~~、~~#1260 剩下的（資料晚到時 `install` 在主執行緒讀道路）~~：session_01YTRwthhkJVsLn8wkaagJ8p 做了（`claude/i8-and-load-roads-off-main`，決策 400「續篇：讀檔的兩件小修」）。還剩：`begin` 讀一個路沒讀的舊存檔時仍在主執行緒讀路（讀檔要先變 async），見該續篇「還沒做的」。
+  - 公車：10i-4（收購公車）、10i-6（2D／3D 地圖上的公車），見 `docs/decisions/400.md` 計畫表第 7–9 列；10i-5 是 #1263。10i-3（真實公車資料，`tools/real-buses/`、`RealBuses`）已做，10i-4 要用的欄位寫在 400.md 的「下一步」。
   - NEXT_PRIORITIES §22.2 第 22 名（路網流量分析）、第 27 名（轉乘規劃）。
   - I7（iCloud 文字）留給決策 397 的作者。
 - **不合的**：Codex 的 #1256（E500）、#1230（TEMU1000）都是 draft，作者沒說就不動。
@@ -1311,7 +1310,7 @@
 
 | 事項 | 來源 | 狀態 |
 | --- | --- | --- |
-| ~~高鐵 demo 第一次開地圖時畫面卡住：CI 的 iPhone 模擬器上主執行緒 28–58 秒沒有回應（app trace 最長 57540 ms）~~ | #1257（session_01ATrwF1t4xfwDoTrLvMvRAY，2026-10-25） | **修了**（`claude/hsr-first-map-stall`，session_01NmGg4SVeqcXXqTpHPxnVP6）：不在畫地圖，在 `begin` 的 `readLandRoundStations`：示範建好時沒拿底圖，它的 2,489 個街區的道路（決策 400 的續，00ecb5f）留到 `begin` 在主執行緒讀，Linux debug 11.5 s。改成和建世界一起在背景讀（`GameLauncher.readingRoads`，高鐵與宜蘭線示範），主執行緒上剩 5 ms；開局在主執行緒上的其他工作合計約 0.25 s（`HSR_FIRST_MAP_REPORT=1` 跑 `HighSpeedFirstMapReportTests`）。回歸：`HighSpeedDemoTests.testTheLauncherBuildsAndOpensIt` 檢查遊戲開始時道路已讀。剩下：資料晚到時 `install` 在主執行緒對開著的遊戲 `readLandRoundStations`（只有道路還沒讀的舊存檔會多讀），沒改 |
+| ~~高鐵 demo 第一次開地圖時畫面卡住：CI 的 iPhone 模擬器上主執行緒 28–58 秒沒有回應（app trace 最長 57540 ms）~~ | #1257（session_01ATrwF1t4xfwDoTrLvMvRAY，2026-10-25） | **修了**（`claude/hsr-first-map-stall`，session_01NmGg4SVeqcXXqTpHPxnVP6）：不在畫地圖，在 `begin` 的 `readLandRoundStations`：示範建好時沒拿底圖，它的 2,489 個街區的道路（決策 400 的續，00ecb5f）留到 `begin` 在主執行緒讀，Linux debug 11.5 s。改成和建世界一起在背景讀（`GameLauncher.readingRoads`，高鐵與宜蘭線示範），主執行緒上剩 5 ms；開局在主執行緒上的其他工作合計約 0.25 s（`HSR_FIRST_MAP_REPORT=1` 跑 `HighSpeedFirstMapReportTests`）。回歸：`HighSpeedDemoTests.testTheLauncherBuildsAndOpensIt` 檢查遊戲開始時道路已讀。剩下：資料晚到時 `install` 在主執行緒對開著的遊戲 `readLandRoundStations`（只有道路還沒讀的舊存檔會多讀）→ 改到背景讀（session_01YTRwthhkJVsLn8wkaagJ8p，決策 400「續篇：讀檔的兩件小修」）；`begin` 讀檔仍在主執行緒，見該續篇 |
 | 輕軌收購（決策 400 10j-2）剩下的：(1) 安坑輕軌：第二條正線在急彎上離第一條不到 4 m（`trackTooClose`）；`RealLineAcquisition.swift` 裡第二條的偏移改成 8 m 時鋪得下，但從 06:12 起列車停住（307 班 179 班沒發），還沒查是靠左（決策 202）選錯路還是待避線方向保護；查好後把 `ntalrt:K` 加回 `extract_metro_runs.py` 的 `LINES`、重跑、在測試加回。(2) 淡海綠山線：終點站要 6–7 條過夜軌道，要 GameCore 的停車場或回送機廠。(3) 轉乘站併站（450 m 內同名車站）程式在、沒有測試。(4) $800 萬的價格目標：10j-3 定了輕軌每位旅客 $70，淡水開局的藍海線 $796 萬 | session_011Aw4FB9UV6Nx5P2kPZUH2E（10j-2，壓縮兩次後停下） | 沒派；數字與原因在 [決策 400](decisions/400.md)「量到的」10j-2 |
 | 捷運收購（決策 400 10j-3）剩下的：(1) 三鶯線（`sanying:LB`）：工具排得出（398 班、8 班回送、12 組車，`extract_metro_runs.py` 的 `LINES` 裡註解掉），收購也鋪得下，但一般規則下白天一個遊戲小時要約 13 秒（debug；藍海線 0.6 秒），第二天約 16:00 停住超過 25 分鐘。gdb 看到卡在 `GameWorld.minutesUntilNextDispatch` → `hasReadyRun` → `readyRunTrain` → `runTrip` → `driveRun` → `linePath` → `TrainRoute.shortest`：每一分鐘、每一班到點的班、每一組停在首站的車都重找兩次全程的路（照原方向與折返），沒有記住；有車找不到路時到點的班越積越多。修法的方向：`readyRunTrain` 的 `runTrip` 照 `(train, placement, run.calls)` 記在 `DispatchMemo`，或世界沒變時不重算；修好後把三鶯線加回 `LINES`、`urbanLines` 與測試。(2) 其他捷運線的終點站要 6–25 條過夜軌道（數字在 `tools/real-timetables/README.md`），要 GameCore 的停車場或回送機廠，和淡海綠山線同一件；中和新蘆線的共用主線也在它之後。(3) 臺中、高雄的實景開局沒有一條線在 $800 萬以內（地圖框裡沒有可收購的線；臺北、新北、桃園有） | session_012tPPoF95rAooSb1w8yot6q（10j-3） | 沒派；數字與原因在 [決策 400](decisions/400.md)「量到的」10j-3 |
 | 路網分析（決策 416）剩下的：GameCore 只記每站開局以來的滿站走掉、等到停駛走掉與被滿車留下，沒有每天、也沒有分到站對，所以「流失」只列汽機車與票價；沒有路線連的站對沒有 GameCore 的需求數字，用分配規則估；沒有車站的聚落沒列進來；等不到車固定 30 分；沒有 UI 測試；路線面板標題列在手機橫放時擠不擠要實機看 | session_01695GDiVgssy47EmyircfE4（§22.2 第 22 名） | 沒派；做法在 [決策 416](decisions/416.md)「下一步」 |
