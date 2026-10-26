@@ -127,8 +127,12 @@ public struct AchievementFacts: Hashable, Sendable {
             bestStars = attractions.map { world.stars(of: $0) }.max() ?? 0
         }
         let businesses = world.placedBuildings.filter(\.kind.isSubsidiary)
-        subsidiaries = businesses.count
-        subsidiaryKinds = Set(businesses.map(\.kind)).count
+        // Review J: the two marks name a department store, a hotel and an
+        // amusement park, so a temple or a night market (decision 361 and
+        // its sequel) counts towards neither.
+        let named = businesses.filter { [.departmentStore, .hotel, .amusementPark].contains($0.kind) }
+        subsidiaries = named.count
+        subsidiaryKinds = Set(named.map(\.kind)).count
         bestSubsidiaryProfit = businesses.map(\.books.totalProfit).max() ?? .zero
         hasRollingStockEconomics = world.rollingStockEconomics
         trainTypes = Set(world.trains.map(\.type)).count
