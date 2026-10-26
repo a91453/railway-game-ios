@@ -109,7 +109,7 @@ final class FlatGroundTests: XCTestCase {
 
     /// Track across the mountainside is laid level on flat ground, with no
     /// tunnel, and stays so after the game is saved and continued.
-    func testTrackOverTheHillsIsLevelAndStaysSoAfterASave() throws {
+    func testTrackOverTheHillsIsLevelAndStaysSoAfterASave() async throws {
         let anchor = try XCTUnwrap(Self.mountainside)
         let launcher = launcher()
         launcher.newGameOptions.ground = .flat
@@ -137,7 +137,7 @@ final class FlatGroundTests: XCTestCase {
         XCTAssertEqual(session.world.network.edges.count, 1)
 
         launcher.returnToStart()
-        launcher.continueGame()
+        await launcher.continueGame()?.value
         let continued = try XCTUnwrap(launcher.session)
         XCTAssertFalse(continued.world.ground.isMapped, "flat in its save")
         XCTAssertEqual(continued.world.network.edges.count, 1)

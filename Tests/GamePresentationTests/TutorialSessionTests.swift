@@ -481,10 +481,11 @@ final class TutorialSessionTests: XCTestCase {
     /// the next game at that step, its chapter read from the world as it
     /// is, so what was built before is not asked for again. Finishing it
     /// forgets it.
+    @MainActor
     func testTheTutorialIsTakenUpAgainInALaterLaunch() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("TutorialSessionTests-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
-        try await MainActor.run {
+        do {
             var launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
             launcher.startTutorial()
             var session = try XCTUnwrap(launcher.session)
@@ -496,7 +497,7 @@ final class TutorialSessionTests: XCTestCase {
 
             launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
             XCTAssertEqual(launcher.preferences.tutorialStepToResume, "station.second.site")
-            launcher.continueGame()
+            await launcher.continueGame()?.value
             session = try XCTUnwrap(launcher.session)
             XCTAssertNil(session.tutorial)
             XCTAssertEqual(session.skippedTutorial?.step.id, "station.second.site")
@@ -530,7 +531,7 @@ final class TutorialSessionTests: XCTestCase {
 
             launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
             XCTAssertEqual(launcher.preferences.tutorialStepToResume, "line.open", "on screen when left")
-            launcher.continueGame()
+            await launcher.continueGame()?.value
             session = try XCTUnwrap(launcher.session)
             session.resumeTutorial()
             // Lesson 1's guide ends at the first fares (decision 266).
@@ -542,7 +543,7 @@ final class TutorialSessionTests: XCTestCase {
             XCTAssertTrue(launcher.preferences.tutorialCompleted)
 
             launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
-            launcher.continueGame()
+            await launcher.continueGame()?.value
             XCTAssertNil(launcher.session?.skippedTutorial)
         }
     }

@@ -110,12 +110,13 @@ final class RealWorldMapTests: XCTestCase {
         XCTAssertNil(GameWorld.newGame().geoAnchor)
     }
 
+    @MainActor
     func testTheLauncherStartsARealWorldGameAndKeepsItsAnchor() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("RealWorldMapTests-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let library = SaveLibrary(directory: directory)
         let paris = try XCTUnwrap(RealWorldPlace.all.first { $0.id == "paris" }).anchor
-        try await MainActor.run {
+        do {
             let launcher = GameLauncher(library: library, language: .english)
             launcher.startNewGame(at: paris)
             let seed = try XCTUnwrap(launcher.session?.world.demandEvents?.seed)
@@ -130,7 +131,7 @@ final class RealWorldMapTests: XCTestCase {
             XCTAssertEqual(autosave.summary?.realWorld, true)
             XCTAssertEqual(autosave.summary?.text(in: .english), "Real-world map · Day 1 · 00:00 · $ 3,000,000 · 0 stations · 0 lines · 0 trains")
             XCTAssertEqual(autosave.summary?.text(in: .traditionalChinese), "實景地圖 · 第 1 日 · 00:00 · $ 3,000,000 · 0 座車站 · 0 條路線 · 0 列列車")
-            launcher.continueGame()
+            await launcher.continueGame()?.value
             XCTAssertEqual(launcher.session?.world.geoAnchor, paris)
 
             launcher.startNewGame()

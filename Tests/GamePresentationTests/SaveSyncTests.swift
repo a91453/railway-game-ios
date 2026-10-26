@@ -480,7 +480,7 @@ final class SaveSyncTests: XCTestCase {
         pad.cloudSaveFolder = { DirectorySaveFolder(directory: cloud) }
         await pad.syncSaves()?.value
         XCTAssertNil(pad.autosave, "not taken as the autosave")
-        pad.continueGame()
+        await pad.continueGame()?.value
         XCTAssertNil(pad.session)
         XCTAssertNotNil(pad.message)
     }
@@ -628,7 +628,7 @@ final class SaveSyncTests: XCTestCase {
         XCTAssertNil(pad.autosave)
         await pad.syncSaves()?.value
         XCTAssertNotNil(pad.autosave, "the list is read again")
-        pad.continueGame()
+        await pad.continueGame()?.value
         XCTAssertEqual(try XCTUnwrap(pad.session).world, played)
 
         // iCloud turned off: the saves stay on the device, and the line

@@ -119,7 +119,7 @@ final class BackgroundSaveTests: XCTestCase {
         XCTAssertEqual(launcher.otherSaves.count, 1, "the player's save, written before the list is read")
 
         launcher.returnToStart()
-        launcher.continueGame()
+        await launcher.continueGame()?.value
         XCTAssertEqual(launcher.session?.world, saved)
     }
 

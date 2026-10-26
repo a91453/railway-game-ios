@@ -26,13 +26,14 @@ final class GameLauncherTests: XCTestCase {
         return world
     }
 
+    @MainActor
     func testANewGameIsAutosavedAndContinued() async throws {
         let library = SaveLibrary(directory: directory)
-        try await MainActor.run {
+        do {
             let launcher = GameLauncher(library: library, language: .english)
             XCTAssertNil(launcher.session, "the start screen")
             XCTAssertNil(launcher.autosave)
-            launcher.continueGame()
+            await launcher.continueGame()?.value
             XCTAssertEqual(launcher.message, StatusMessage(kind: .failure, text: "There is no game to continue."))
 
             launcher.startNewGame()
@@ -47,7 +48,7 @@ final class GameLauncherTests: XCTestCase {
             XCTAssertNotNil(launcher.autosave)
             XCTAssertEqual(launcher.otherSaves, [])
 
-            launcher.continueGame()
+            await launcher.continueGame()?.value
             XCTAssertEqual(launcher.session?.world.clock.speed, .double, "the game as it was left")
             XCTAssertEqual(launcher.otherSaves, [], "continuing keeps no extra copy")
         }
@@ -55,9 +56,10 @@ final class GameLauncherTests: XCTestCase {
 
     /// Starting another game keeps the autosave as a save of the player's
     /// own, so the last game is never written over.
+    @MainActor
     func testAnotherGameKeepsTheAutosave() async throws {
         let library = SaveLibrary(directory: directory)
-        try await MainActor.run {
+        do {
             let launcher = GameLauncher(library: library, language: .english)
             launcher.startNewGame()
             let seed = try XCTUnwrap(launcher.session?.world.demandEvents?.seed)
@@ -69,7 +71,7 @@ final class GameLauncherTests: XCTestCase {
             XCTAssertEqual(try library.load(launcher.otherSaves[0]), Self.playersNewGame(seed))
 
             launcher.returnToStart()
-            launcher.load(launcher.otherSaves[0])
+            await launcher.load(launcher.otherSaves[0])?.value
             XCTAssertEqual(launcher.session?.world, Self.playersNewGame(seed))
             XCTAssertEqual(launcher.otherSaves.count, 2, "the demo's autosave kept too")
         }
@@ -86,14 +88,14 @@ final class GameLauncherTests: XCTestCase {
             XCTAssertEqual(launcher.otherSaves.map(\.id), ["save-2026-10-02 120000.json"])
             launcher.returnToStart()
 
-            launcher.importSave(Data("not a save".utf8))
+            await launcher.importSave(Data("not a save".utf8))?.value
             XCTAssertNil(launcher.session)
             XCTAssertEqual(launcher.message, StatusMessage(kind: .failure, text: "這個檔案不是《沿線》的存檔。"))
-            launcher.importSave(reading: { throw CocoaError(.fileReadNoPermission) })
+            await launcher.importSave(reading: { throw CocoaError(.fileReadNoPermission) })?.value
             XCTAssertEqual(launcher.message, StatusMessage(kind: .failure, text: "無法讀寫存檔，請再試一次。"))
 
             let exported = try SaveLibrary.encode(DemoWorld.make(in: .english), at: Date())
-            launcher.importSave(reading: { exported })
+            await launcher.importSave(reading: { exported })?.value
             XCTAssertEqual(launcher.session?.world, DemoWorld.make(in: .english))
             XCTAssertNil(launcher.message)
 
@@ -104,17 +106,59 @@ final class GameLauncherTests: XCTestCase {
         }
     }
 
+    /// Decision 419: a save is read off the main actor. Meanwhile the
+    /// launcher says so and starts no second read; the game opens once it
+    /// is read, and no loading screen is left up.
+    @MainActor
+    func testASaveIsReadOffTheMainActorOneAtATime() async throws {
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+        let save = try SaveLibrary.encode(DemoWorld.make(in: .english), at: Date())
+        let reading = try XCTUnwrap(launcher.importSave(save))
+        XCTAssertTrue(launcher.isLoadingSave)
+        XCTAssertNil(launcher.session, "not open until it is read")
+        XCTAssertNil(launcher.importSave(save), "one read at a time")
+        XCTAssertNil(launcher.continueGame(), "nor Continue meanwhile")
+        await reading.value
+        XCTAssertFalse(launcher.isLoadingSave)
+        XCTAssertNil(launcher.realWorldLoading)
+        XCTAssertEqual(launcher.session?.world, DemoWorld.make(in: .english))
+    }
+
+    /// Decision 419: a game begun while a save is read stays; the save
+    /// read meanwhile is not opened over it.
+    @MainActor
+    func testAGameBegunWhileASaveIsReadStays() async throws {
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+        let reading = launcher.importSave(try SaveLibrary.encode(DemoWorld.make(in: .english), at: Date()))
+        launcher.startNewGame()
+        let started = try XCTUnwrap(launcher.session)
+        await reading?.value
+        XCTAssertTrue(launcher.session === started)
+    }
+
+    /// The app's UI-test launch reads its save at once, to set the game
+    /// up before the first frame.
+    @MainActor
+    func testASaveReadAtOnceOpensAtOnce() throws {
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+        launcher.readsSavesAtOnce = true
+        XCTAssertNil(launcher.importSave(try SaveLibrary.encode(DemoWorld.make(in: .english), at: Date())))
+        XCTAssertEqual(launcher.session?.world, DemoWorld.make(in: .english))
+        XCTAssertFalse(launcher.isLoadingSave)
+    }
+
+    @MainActor
     func testAnUnloadableSaveIsReported() async throws {
         let library = SaveLibrary(directory: directory)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let newer = String(decoding: try SaveLibrary.encode(.newGame(), at: Date()), as: UTF8.self)
             .replacingOccurrences(of: #""saveVersion":\#(SavedGame.currentVersion)"#, with: #""saveVersion":\#(SavedGame.currentVersion + 1)"#)
         try Data(newer.utf8).write(to: directory.appendingPathComponent("autosave.json"))
-        await MainActor.run {
+        do {
             let launcher = GameLauncher(library: library, language: .english)
             XCTAssertNil(launcher.autosave, "it cannot be continued")
             XCTAssertEqual(launcher.otherSaves.map(\.problem), [.newerVersion(SavedGame.currentVersion + 1)])
-            launcher.load(launcher.otherSaves[0])
+            await launcher.load(launcher.otherSaves[0])?.value
             XCTAssertNil(launcher.session)
             XCTAssertEqual(launcher.message?.text, SaveError.newerVersion(SavedGame.currentVersion + 1).playerMessage(in: .english))
         }

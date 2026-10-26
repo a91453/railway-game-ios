@@ -168,10 +168,12 @@ final class RealWorldDataLoadTests: XCTestCase {
         try library.save(world, as: .autosave, at: Date(timeIntervalSince1970: 0))
         let launcher = GameLauncher(library: library, language: .english)
         let population = try PopulationGrid(data: Self.file("taiwan_population", "json"))
-        let load = launcher.loadRealWorldData { RealWorldData(population: population, places: nil, railways: nil, issues: []) }
-        launcher.continueGame()
+        await launcher.continueGame()?.value
         let session = try XCTUnwrap(launcher.session)
         XCTAssertTrue(session.world.land.isEmpty, "nothing to read it from yet")
+        // Decision 419: asked once the game is open, since a save is now
+        // read off the main actor and the data could arrive before it.
+        let load = launcher.loadRealWorldData { RealWorldData(population: population, places: nil, railways: nil, issues: []) }
 
         await load.value
         XCTAssertTrue(launcher.session === session)

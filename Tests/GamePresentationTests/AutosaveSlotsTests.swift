@@ -149,7 +149,7 @@ final class AutosaveSlotsTests: XCTestCase {
         XCTAssertEqual(launcher.autosave?.id, "autosave-2.json", "newer than the latest left")
         XCTAssertEqual(launcher.olderAutosaves.map(\.id), ["autosave.json", "autosave-1.json"])
         XCTAssertEqual(launcher.otherSaves, [])
-        launcher.continueGame()
+        await launcher.continueGame()?.value
         XCTAssertEqual(launcher.session?.world, try world(after: 3))
         await launcher.savesWritten()
         XCTAssertEqual(library.autosaves().count, 3, "continuing keeps no extra copy")
@@ -170,7 +170,7 @@ final class AutosaveSlotsTests: XCTestCase {
 
         let choices = await launcher.autosavesToGoBackTo()
         XCTAssertEqual(choices.map(\.id), ["autosave-1.json"])
-        launcher.load(choices[0], at: date(600))
+        await launcher.load(choices[0], at: date(600))?.value
         await launcher.savesWritten()
         XCTAssertFalse(launcher.session === session)
         XCTAssertEqual(launcher.session?.world, before, "gone back")
@@ -180,7 +180,7 @@ final class AutosaveSlotsTests: XCTestCase {
         XCTAssertEqual(try library.load(autosaves[1]), mistake, "the game left is kept: going back can be undone")
 
         // And undone.
-        launcher.load(autosaves[1], at: date(700))
+        await launcher.load(autosaves[1], at: date(700))?.value
         XCTAssertEqual(launcher.session?.world, mistake)
     }
 
@@ -190,7 +190,7 @@ final class AutosaveSlotsTests: XCTestCase {
         try library.saveAutosaveSlot(world(after: 1), at: date(0))
         try library.save(world(after: 2), as: .autosave, at: date(60))
         let launcher = GameLauncher(library: library, language: .english)
-        launcher.load(try XCTUnwrap(launcher.olderAutosaves.first), at: date(120))
+        try await launcher.load(XCTUnwrap(launcher.olderAutosaves.first), at: date(120))?.value
         await launcher.savesWritten()
         XCTAssertEqual(launcher.session?.world, try world(after: 1))
         let autosaves = library.autosaves()
@@ -221,13 +221,13 @@ final class AutosaveSlotsTests: XCTestCase {
 
     /// A folder written before decision 192: `autosave.json` alone.
     @MainActor
-    func testAnAutosaveOfAnEarlierBuildIsContinued() throws {
+    func testAnAutosaveOfAnEarlierBuildIsContinued() async throws {
         let library = SaveLibrary(directory: directory)
         try library.save(world(after: 5), as: .autosave, at: date(0))
         let launcher = GameLauncher(library: library, language: .english)
         XCTAssertEqual(launcher.autosave?.id, "autosave.json")
         XCTAssertEqual(launcher.olderAutosaves, [])
-        launcher.continueGame()
+        await launcher.continueGame()?.value
         XCTAssertEqual(launcher.session?.world, try world(after: 5))
     }
 }
