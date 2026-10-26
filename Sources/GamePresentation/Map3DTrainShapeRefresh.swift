@@ -8,14 +8,22 @@ public enum Map3DTrainShapeRefresh {
     public static let highSpeedAccentColor=Map3DColor.shaded(Map3DPalette.tankStand,0.42)
     public static let highSpeedGlassColor=Map3DColor.shaded(Map3DPalette.glazing,0.5)
     public static let ids = ["refresh-e200", "refresh-700t-cab", "refresh-700t-middle", "refresh-700t-panto", "refresh-700t-tail"]
-    public static func model(_ id: String) -> Map3DModelPack.Model {
+    public static func model(_ id: String) -> Map3DModelPack.Model { model(id, far: false) }
+    /// `far`: decision 422's light 700T car drawn from 500 m out, made by
+    /// this recipe as ``Map3DE500/model(far:)`` is by its own: the same
+    /// shell, paint and length on half the sections and fewer nose rings,
+    /// each window one flat pane, a door its window,
+    /// plain bogies and pantograph, the windscreen in a few flat cells, and
+    /// none of the small fittings. The E200 has none.
+    public static func model(_ id: String, far: Bool) -> Map3DModelPack.Model {
+        let far = far && id != ids[0], name = far ? id + "-far" : id
         var b = StationKitBuilder()
         if id == ids[0] { b.refreshElectric() }
-        else { b.refreshHighSpeed(cab: id == ids[1] || id == ids[4], panto: id == ids[3]) }
-        let m = Map3DModelPack.Model.flat(named: id, from: b.mesh)
+        else { b.refreshHighSpeed(cab: id == ids[1] || id == ids[4], panto: id == ids[3], far: far) }
+        let m = Map3DModelPack.Model.flat(named: name, from: b.mesh)
         if id == ids[4] {
             var reverse = StationKitBuilder(); reverse.add(m, at: .zero, angle: .pi)
-            return .flat(named: id, from: reverse.mesh)
+            return .flat(named: name, from: reverse.mesh)
         }
         return m
     }
@@ -169,11 +177,14 @@ extension StationKitBuilder {
         }
         beam(Map3DPoint(-4.8,4.17,0.43),Map3DPoint(4.8,4.17,0.43),0.04,Self.ink)
     }
-    mutating func refreshHighSpeed(cab: Bool,panto: Bool) {
+    mutating func refreshHighSpeed(cab: Bool,panto: Bool,far: Bool = false) {
         let hsrBody=Map3DTrainShapeRefresh.highSpeedBodyColor
         let hsrGlass=Map3DTrainShapeRefresh.highSpeedGlassColor
-        let segments=40, bottom: Float=0.78
-        let xs: [Float] = cab ? [-12.5,-6,0,3.7,4.2,4.8,5.8,6.3,6.7,7.1,7.5,7.9,8.3,8.7,9.1,9.5,9.7,10,10.5,11,11.5,11.9,12.2,12.4,12.5] : [-12.5,12.5]
+        // Decision 422: the far car on half the sections (the underside
+        // the same arc) and eleven of the nose's 24 spans.
+        let segments=far ? 20:40, bottom: Float=0.78, under=far ? 12...17:24...35
+        let xs: [Float] = !cab ? [-12.5,12.5] : far ? [-12.5,3.7,5.8,6.7,7.5,8.3,9.1,9.7,10.5,11.5,12.2,12.5]
+            : [-12.5,-6,0,3.7,4.2,4.8,5.8,6.3,6.7,7.1,7.5,7.9,8.3,8.7,9.1,9.5,9.7,10,10.5,11,11.5,11.9,12.2,12.4,12.5]
         func interpolate(_ t: Float,_ points: [(Float,Float)])->Float {
             for i in 1..<points.count where t<=points[i].0 {
                 let a=points[i-1],b=points[i]
@@ -332,16 +343,16 @@ extension StationKitBuilder {
                 let j=(i+1)%segments
                 let shoulderBand = cab && xs[k]>=3.7
                 let teal = shoulderBand ? (20...23).contains(i) || (36...39).contains(i) : [21,22,23,36,37,38].contains(i)
-                let color: UInt32 = (24...35).contains(i) ? Self.steel : teal ? refreshTeal:hsrBody
+                let color: UInt32 = under.contains(i) ? Self.steel : teal ? refreshTeal:hsrBody
                 for triangle in [[rings[k][i],rings[k][j],rings[k+1][j]],[rings[k][i],rings[k+1][j],rings[k+1][i]]] {
-                    if cab && xs[k]>=3.7 && !(24...35).contains(i) {
+                    if cab && xs[k]>=3.7 && !under.contains(i) {
                         let paint=nosePaintParts(triangle,xs[k],xs[k+1])
                         face(paint[0],inside:inside,color:hsrBody)
                         face(paint[1],inside:inside,color:Map3DTrainShapeRefresh.highSpeedAccentColor)
                         let parts=hullParts(paint[2],xs[k],xs[k+1])
                         face(parts.0,inside:inside,color:refreshTeal)
                         face(parts.1,inside:inside,color:Map3DTrainShapeRefresh.highSpeedAccentColor)
-                    } else if !(24...35).contains(i) {
+                    } else if !under.contains(i) {
                         // Split the final sculpted shell along its shared paint boundary.
                         // No overlapping colour decal or separate lip box.
                         let upper=clip(triangle,at:xs[k],xs[k+1],upper:true)
@@ -386,11 +397,15 @@ extension StationKitBuilder {
                 }
             }
         }
-        refreshHighSpeedRunning([-8.8,cab ? 3.4:8.8])
+        if far { refreshHighSpeedFarRunning([-8.8,cab ? 3.4:8.8]) } else { refreshHighSpeedRunning([-8.8,cab ? 3.4:8.8]) }
         box(cab ? -3.7:0,0.92,0,cab ? 17.4:23.8,2.55,0.12,Self.ink)
         func flank(_ h: Float)->Float {
             let s=(h-bottom)/(3.65-bottom)*2-1
             return 1.69*powf(max(0,1-powf(abs(s),2/0.65)),0.58/2)
+        }
+        if far {
+            refreshHighSpeedFarFittings(cab:cab,panto:panto,flank:flank,surface:surface)
+            return
         }
         for sign: Float in [-1,1] {
             box(cab ? -3.7:0,0.55,sign*1.42,cab ? 17.4:23.8,0.09,0.67,Self.steel)
@@ -468,6 +483,77 @@ extension StationKitBuilder {
             box(end*12.58,0.66,0,0.32,0.35,0.3,Self.steel)
         }
         if panto { refreshPanto(6.8,roof:3.65,singleArm:true) }
+    }
+    /// Decision 422: the far car's bogies, a frame and a side beam each
+    /// side over a six-sided wheelset at each axle; the N700S-G's far
+    /// cars stand on them too, its axles where the author's stood.
+    mutating func refreshHighSpeedFarRunning(_ centres: [Float],axles: [Float] = [-1.25,1.25]) {
+        let gauge: Float=1.435,radius: Float=0.40,span=axles.last!-axles.first!
+        for x in centres {
+            box(x,0.49,0,span+0.8,gauge+0.22,0.25,Self.ink)
+            for side: Float in [-1,1] { box(x,0.48,side*(gauge/2+0.22),span+0.74,0.16,0.23,Self.steel) }
+            for dx in axles {
+                civicTube(Map3DPoint(x+dx,radius,-(gauge/2+0.15)),Map3DPoint(x+dx,radius,gauge/2+0.15),radius:radius,color:Map3DStreetModel.tyre,sides:6)
+            }
+        }
+    }
+    /// Decision 422: the far car's skirt, glass, doors, windscreen, lamps,
+    /// gangway and pantograph, each a flat face where the near car's are
+    /// framed panels: a side window one pane the size of its gasket, a
+    /// door its window, the windscreen three rows of six
+    /// cells and its upper glazing four, a lamp cluster one lens.
+    private mutating func refreshHighSpeedFarFittings(cab: Bool,panto: Bool,flank: (Float)->Float,surface: (Float,Float)->Map3DPoint) {
+        let hsrGlass=Map3DTrainShapeRefresh.highSpeedGlassColor,centre=Map3DPoint(0,2,0)
+        for sign: Float in [-1,1] {
+            box(cab ? -3.7:0,0.55,sign*1.42,cab ? 17.4:23.8,0.09,0.67,Self.steel)
+            func side(_ x: Float,_ h: Float)->Map3DPoint { Map3DPoint(x,h,sign*(flank(h)+0.024)) }
+            for i in 0..<(cab ? 12:18) {
+                let x: Float = -9.3+Float(i)*0.81
+                face([side(x-0.28,1.97),side(x+0.28,1.97),side(x+0.28,2.72),side(x-0.28,2.72)],inside:centre,color:hsrGlass)
+            }
+            for x: Float in cab ? [-11,3.1]:[-11,11] {
+                face([side(x-0.17,2.065),side(x+0.17,2.065),side(x+0.17,2.675),side(x-0.17,2.675)],inside:centre,color:hsrGlass)
+            }
+        }
+        if cab {
+            func screen(_ v: Float,_ u: Float)->Map3DPoint {
+                let a=Float.pi/2+(u-0.5)*(1.02-0.16*v)
+                let corner=max(0,(abs(2*u-1)-0.60)/0.40)
+                let cap=sqrtf(max(0,1-corner*corner))
+                let rear: Float=8.15+0.36*(1-cap),front: Float=9.78-0.27*(1-cap)
+                return surface(rear+(front-rear)*v,a)+Map3DPoint(0,0.018,0)
+            }
+            for row in 0..<3 { for col in 0..<6 {
+                let v=Float(row)/3,u=Float(col)/6
+                face([screen(v,u),screen(v,u+1/6),screen(v+1/3,u+1/6),screen(v+1/3,u)],inside:centre,color:hsrGlass)
+            } }
+            let pane=Map3DColor.shaded(Map3DPalette.glazing,0.68)
+            func glass(_ v: Float,_ u: Float)->Map3DPoint { screen(0.17+v*0.34,0.13+u*0.74)+Map3DPoint(0,0.012,0) }
+            for c in 0..<4 {
+                let u=Float(c)/4
+                face([glass(0,u),glass(0,u+1/4),glass(1,u+1/4),glass(1,u)],inside:centre,color:pane)
+            }
+            for side: Float in [-1,1] {
+                let a: Float = side>0 ? 1.34:Float.pi-1.34
+                let middle=surface(9.34,a)+Map3DPoint(0,0.041,0)
+                let along=Map3DPoint(0,0,side*0.26),across=(surface(9.49,a)-surface(9.19,a)).normalized!*0.075
+                face([middle-along-across,middle+along-across,middle+along+across,middle-along+across],inside:centre,color:Map3DPalette.tunnelLamp)
+            }
+        }
+        for end: Float in cab ? [-1]:[-1,1] {
+            // The gangway's end and the coupler, so the car is as long as the near one.
+            box(end*12.58,1.05,0,0.18,2.15,2.07,Self.ink)
+            box(end*12.58,0.66,0,0.32,0.35,0.3,Self.steel)
+        }
+        if panto {
+            // One arm over the base, its head across: the single-arm
+            // pantograph as it reads from afar.
+            let x: Float=6.8,roof: Float=3.65
+            box(x,roof,0,1.8,1.15,0.12,Self.steel)
+            beam(Map3DPoint(x-0.45,roof+0.28,0),Map3DPoint(x+0.65,roof+0.58,0),0.07,Self.ink)
+            beam(Map3DPoint(x+0.65,roof+0.58,0),Map3DPoint(x,roof+0.90,0),0.06,Self.ink)
+            box(x,roof+0.88,0,0.16,1.5,0.07,Self.steel)
+        }
     }
     /// Twelve-vertex rounded rectangle, shared only by this Codex recipe.
     private func refreshRoundedOutline(x: Float,y: Float,width: Float,height: Float,radius: Float)->[(Float,Float)] {
