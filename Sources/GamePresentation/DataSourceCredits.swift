@@ -329,6 +329,26 @@ public enum DataSourceCredits {
                             openGovernmentLicense(in: language),
                         ]
                     ),
+                    // Decision 400 (10i-3): the real bus routes
+                    // (`tools/real-buses/`), TDX's through the owner's
+                    // reference and, for Taipei City and Pingtung County,
+                    // straight from TDX.
+                    DataSourceCredit(
+                        id: "realBuses",
+                        title: language.text("Bus routes", "公車路線"),
+                        detail: language.text(
+                            "Taiwan’s real city and county bus routes: their stops in order, the roads they take and how often they run. Where a route has no timetable, its headway is an estimate and says so.",
+                            "台灣真實的市區與縣市公車路線：依序的站牌、走的路線與班距。沒有班表的路線，班距是估計的，會寫出來。"
+                        ),
+                        notice: language.text(
+                            "Ministry of Transportation and Communications, Transport Data eXchange (TDX), 2026: city and county bus routes, stops of routes, route shapes and schedules. ",
+                            "交通部運輸資料流通服務平臺（TDX）2026 年市區與縣市公車路線、路線站序、路線線型與班表"
+                        ) + openGovernmentAttribution(in: language),
+                        links: [
+                            DataSourceCredit.Link(title: "TDX", url: tdxURL),
+                            openGovernmentLicense(in: language),
+                        ]
+                    ),
                     DataSourceCredit(
                         id: "traOpenData",
                         title: language.text("TRA open data", "台鐵開放資料"),
