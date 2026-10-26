@@ -346,12 +346,11 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         // train tool.
         let menuRows = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "Train [0-9]+"))
         XCTAssertTrue(menuRows.firstMatch.appears(within: 10), "The train menu did not open")
-        // The menu grows open: read its rows once they stop moving.
-        menuRows.firstMatch.waitUntilStill()
+        // The menu grows open: read its rows once two reads agree.
         func visibleRows() -> [String] {
             menuRows.allElementsBoundByIndex.filter(touchable).map { "\($0.label) \($0.frame)" }
         }
-        let opened = visibleRows()
+        let opened = settledRows(visibleRows, menu: "train.picker")
         XCTAssertGreaterThan(opened.count, 1, "The train menu shows its rows")
         // Thirty ticks: the menu must not move, close or change.
         Thread.sleep(forTimeInterval: 3)
@@ -435,12 +434,11 @@ final class StartSaveFlowSmokeTests: XCTestCase {
 
         menu.tap()
         XCTAssertTrue(menuRows.firstMatch.appears(within: 10), "The menu \(identifier) did not open")
-        // The menu grows open: read its rows once they stop moving.
-        menuRows.firstMatch.waitUntilStill()
+        // The menu grows open: read its rows once two reads agree.
         func visibleRows() -> [String] {
             menuRows.allElementsBoundByIndex.filter(touchable).map { "\($0.label) \($0.frame)" }
         }
-        let opened = visibleRows()
+        let opened = settledRows(visibleRows, menu: identifier)
         XCTAssertGreaterThan(opened.count, 1, "The menu \(identifier) shows its rows")
         // Thirty ticks: the menu must not move, close or change.
         Thread.sleep(forTimeInterval: 3)
@@ -543,13 +541,23 @@ final class StartSaveFlowSmokeTests: XCTestCase {
     /// Activation point invalid", the pull request gate's run 38471573204
     /// and #532's). `touchMenuRow` touches the frame's centre for the same
     /// reason, and checks that the menu closes.
+    ///
+    /// With the demo map's clock running, the Simulator takes 2 to 4 s to
+    /// find an element once, so ten seconds held only two or three reads,
+    /// too few to see one frame twice in a row (main c005788's full lane,
+    /// run 40279577850, `testBackToStartWorksWhileTheClockRuns`: "Menu row
+    /// never came to rest on the screen: menu.saveGame", line 569; it
+    /// passed on a re-run). So it reads up to 12 times within 40 s,
+    /// whichever comes first, and still wants two reads of one frame.
     private func menuRow(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
         let query = app.buttons.matching(identifier: identifier)
         XCTAssertTrue(query.firstMatch.appears(within: 10), "Missing menu row: \(identifier)")
         let bounds = app.frame
         var last: CGRect?
-        let deadline = Date().addingTimeInterval(10)
+        let deadline = Date().addingTimeInterval(40)
+        var reads = 0
         repeat {
+            reads += 1
             let row = query.allElementsBoundByIndex.first { copy in
                 let frame = copy.frame
                 return !frame.isEmpty && bounds.contains(CGPoint(x: frame.midX, y: frame.midY))
@@ -565,7 +573,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
                 last = nil
             }
             Thread.sleep(forTimeInterval: 0.25)
-        } while Date() < deadline
+        } while reads < 12 && Date() < deadline
         XCTFail("Menu row never came to rest on the screen: \(identifier)")
         return query.firstMatch
     }
@@ -635,6 +643,27 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         // The tools slide in once Build is pressed: tap one once it stays put.
         if identifier.hasPrefix("tool.") { button.waitUntilSettled() }
         return requiredButton(app.buttons.matching(identifier: identifier), name: identifier)
+    }
+
+    /// The rows of the menu `menu` (as `read` lists them), once two reads
+    /// half a second apart agree and list a row. A native menu grows open
+    /// from its lower edge: when the Simulator is slow its first row is
+    /// still while the rows above it lie under the opening animation, so
+    /// one row standing still does not say the menu is open (run
+    /// 40257225657, attempt 2, `testThePerformanceMenuStaysStillAndChoosesWhileTheClockRuns`:
+    /// 2 rows read as it opened, 7 three seconds later, every frame the
+    /// same). Fails if the reads do not agree within 10 s.
+    private func settledRows(_ read: () -> [String], menu identifier: String) -> [String] {
+        var last = read()
+        let deadline = Date().addingTimeInterval(10)
+        repeat {
+            Thread.sleep(forTimeInterval: 0.5)
+            let now = read()
+            if now == last && !now.isEmpty { return now }
+            last = now
+        } while Date() < deadline
+        XCTFail("The menu \(identifier) did not settle")
+        return last
     }
 
     /// Whether `element` can be touched. Only a copy with a frame on the
