@@ -8,11 +8,14 @@ import Foundation
 /// - near (``mesh(_:)``, ``Map3DTrainSet/n700sG()``): the author's mesh
 ///   itself with fewer triangles (`tools/hsr-trains-408/decimate.py`,
 ///   ``encodedMeshes``), the palette's colours;
-/// - from 500 m out (``model(_:)``, ``Map3DTrainSet/n700sGFar()``): rebuilt
-///   in the game's look with the train builder every other high-speed set
-///   uses (decision 230): some 1,150 triangles a cab and 450 a middle car.
+/// - from 500 m out (``farMesh(_:)``, ``Map3DTrainSet/n700sGFar()``,
+///   decision 422): the near mesh with fewer triangles still, on light
+///   bogies.
 ///
-/// What the rebuild keeps from the author's mesh, measured off it (×1.22
+/// Decision 408's first rebuild (``model(_:)``), in the game's look with
+/// the train builder every other high-speed set uses (decision 230), some
+/// 1,150 triangles a cab and 450 a middle car, is drawn only for a unit
+/// whose mesh fails to decode. What the rebuild keeps from the author's mesh, measured off it (×1.22
 /// along and across, so its 20.5-unit middle car is 25 m and its 2.8 units
 /// 3.36 m; up, its skirt-to-roof 3.28 units onto the 3.03 m of the 700T's
 /// section): the long nose (7.7 units, 9.4 m) and how its crown, sides and
@@ -76,6 +79,24 @@ public enum Map3DN700SG {
         var builder = StationKitBuilder()
         builder.add(body, at: .zero)
         builder.refreshHighSpeedRunning(centres, axles: axles)
+        return .flat(named: name, from: builder.mesh)
+    }
+
+    /// Decision 422: unit `unit` from 500 m out, ``mesh(_:)``'s body drawn
+    /// again on fewer sections (``encodedFarMeshes``, made once by
+    /// `tools/hsr-far-422/n700sg_far.swift`, which measures the near mesh
+    /// section by section and paints each cell the near colour most of it
+    /// has, the windows, doors and green lines as panes and ribbons laid on
+    /// it) on the 700T's far bogies where its near ones stand.
+    /// `nil` for a unit the game does not draw (B, E).
+    public static func farMesh(_ unit: Unit) -> Map3DModelPack.Model? {
+        let name = "n700s-g-far-" + unit.rawValue
+        guard let text = encodedFarMeshes[unit], let centres = bogieCentres[unit], let axles = bogieAxles[unit],
+              let data = Data(base64Encoded: text, options: .ignoreUnknownCharacters),
+              let body = decodedMesh([UInt8](data), named: name) else { return nil }
+        var builder = StationKitBuilder()
+        builder.add(body, at: .zero)
+        builder.refreshHighSpeedFarRunning(centres, axles: axles)
         return .flat(named: name, from: builder.mesh)
     }
 

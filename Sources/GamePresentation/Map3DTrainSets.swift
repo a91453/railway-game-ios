@@ -122,14 +122,13 @@ public struct Map3DTrainSet: Sendable {
             Map3DEMU3000.trainSet(),
             Map3DEMU3000.trainSet(far:true),
             // Decision 408: the 700T as #1201's tenth revision, each car its
-            // own length, the pantographs on cars 4 and 9; #900's, a sixth
-            // of its triangles, from 500 m out.
+            // own length, the pantographs on cars 4 and 9; decision 422:
+            // from 500 m out its light cars, made by the same recipe.
             highSpeed700T(),
-            // Decision 410: in decision 408's light detail.
-            multipleUnit("highSpeedFar", asset: "02_HSR_MRT_3x2-01", livery: TrainLivery.highSpeed, pantographCars: [3, 8], detail: .far),
-            // Decision 408: the second high-speed set, the N700S-G made
-            // from the 700T's recipe; the author's shape rebuilt light
-            // from 500 m out.
+            highSpeed700T(far: true),
+            // Decision 408: the second high-speed set, the author's
+            // N700S-G; decision 422: from 500 m out its mesh with fewer
+            // triangles still.
             n700sG(),
             n700sGFar(),
             multipleUnit("metroC381", asset: "02_HSR_MRT_3x2-02", lineColoured: true),
@@ -360,7 +359,7 @@ public struct Map3DTrainSet: Sendable {
 
     /// Decision 408: #1201's 700T, each car its own length (25.2 m the
     /// cabs, 25.5 m the rest), the cab's lamps lit, white at the front and
-    /// red at the back; ``far`` #900's.
+    /// red at the back; ``far`` its light cars (decision 422).
     /// Native TEMU1000 units in the operating Taroko set. The pantograph
     /// locations follow the static eight-car reconstruction; no game rules
     /// or train type metadata are changed.
@@ -382,9 +381,11 @@ public struct Map3DTrainSet: Sendable {
         }
     }
 
-    static func highSpeed700T() -> Map3DTrainSet {
-        Map3DTrainSet(key: "highSpeed", pantographCars: [3, 8], ownLengths: true, far: "highSpeedFar") {
-            let model = Map3DTrainShapeRefresh.model
+    /// Decision 422: `far`, the light cars of the same recipe
+    /// (``Map3DTrainShapeRefresh/model(_:far:)``), lit the same.
+    static func highSpeed700T(far: Bool = false) -> Map3DTrainSet {
+        Map3DTrainSet(key: far ? "highSpeedFar" : "highSpeed", pantographCars: [3, 8], ownLengths: true, far: far ? nil : "highSpeedFar") {
+            func model(_ id: String) -> Map3DModelPack.Model { Map3DTrainShapeRefresh.model(id, far: far) }
             return Cars(head: lit(model("refresh-700t-cab"), front: true), middle: model("refresh-700t-middle"),
                         tail: lit(model("refresh-700t-tail"), front: false), single: nil, pantograph: model("refresh-700t-panto"))
         }
@@ -407,22 +408,17 @@ public struct Map3DTrainSet: Sendable {
         }
     }
 
-    /// Decision 408: the N700S-G from 500 m out, the author's shape rebuilt
-    /// with the train builder (``Map3DN700SG``), a tenth of the triangles:
-    /// its cab, its C car between and its D car under the pantographs,
-    /// turned round in the back half as the near set's.
+    /// Decision 408: the N700S-G from 500 m out; decision 422: its near
+    /// mesh with fewer triangles still (``Map3DN700SG/farMesh(_:)``), the
+    /// cars laid and lit as the near set's.
     static func n700sGFar() -> Map3DTrainSet {
         Map3DTrainSet(key: "n700sGFar", pantographCars: [3, 8], ownLengths: true) {
-            // The cab turned round at the back, its lamps red.
-            let back = Map3DN700SG.reversed(.a)
-            let tail = Map3DModelPack.Model(name: back.name, vertices: back.vertices.map { vertex in
-                var vertex = vertex
-                if vertex.glows { vertex.color = Map3DPalette.lantern }
-                return vertex
-            }, minimum: back.minimum, maximum: back.maximum)
-            return Cars(head: Map3DN700SG.model(.a), middle: Map3DN700SG.model(.c), tail: tail, single: nil,
-                        pantograph: Map3DN700SG.model(.d), middleBack: Map3DN700SG.reversed(.c),
-                        pantographBack: Map3DN700SG.reversed(.d))
+            // A unit that fails to decode draws as decision 408's light
+            // rebuild rather than nothing.
+            func mesh(_ unit: Map3DN700SG.Unit) -> Map3DModelPack.Model { Map3DN700SG.farMesh(unit) ?? Map3DN700SG.model(unit) }
+            let cab = mesh(.a), middle = mesh(.c), pantograph = mesh(.d)
+            return Cars(head: lit(cab, front: true), middle: middle, tail: lit(cab.turned, front: false), single: nil,
+                        pantograph: pantograph, middleBack: middle.turned, pantographBack: pantograph.turned)
         }
     }
 

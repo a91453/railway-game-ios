@@ -141,8 +141,8 @@ final class Map3DHighSpeedSetsTests: XCTestCase {
         XCTAssertNil(Map3DN700SG.decodedMesh(good + [0], named: "x"), "bytes left over")
     }
 
-    /// The N700S-G's far set: the light rebuild of the author's units, car
-    /// for car from 500 m to 900 m.
+    /// The N700S-G's far set car for car from 500 m to 900 m (its far mesh,
+    /// decision 422), and the light rebuild drawn if a mesh fails to decode.
     func testTheN700SGFarSet() throws {
         XCTAssertEqual(Map3DTrainSet.reach(of: "n700sG"), Map3DTrainSet.tramReach)
         for name in ["head", "car", "panto", "tail", "carBack", "pantoBack"] {
@@ -180,7 +180,7 @@ final class Map3DHighSpeedSetsTests: XCTestCase {
         XCTAssertNotNil(pack.models(forType: "n700sG"))
     }
 
-    /// Within 500 m the 700T, on to 900 m #900's light 700T car for car,
+    /// Within 500 m the 700T, on to 900 m its light cars (decision 422) car for car,
     /// beyond that a box.
     func testThe700TFarSet() throws {
         XCTAssertEqual(Map3DTrainSet.reach(of: "HSR"), Map3DTrainSet.tramReach)
@@ -192,11 +192,11 @@ final class Map3DHighSpeedSetsTests: XCTestCase {
         }
         let far = try model("set-highSpeedFar-car"), near = try model("set-highSpeed-car")
         XCTAssertLessThan(far.triangleCount * 5, near.triangleCount, "a fifth of the triangles")
-        // A whole 700T is under ten times the light one's triangles.
+        // A whole 700T is over eight times the light one's triangles (decision 422).
         let cars = try XCTUnwrap(pack.layout(forType: "HSR", count: 12))
         let whole = cars.reduce(0) { $0 + pack.models[$1.model].triangleCount }
         let light = try cars.reduce(0) { $0 + pack.models[try XCTUnwrap(pack.farModel(of: $1.model, forType: "HSR", count: 12))].triangleCount }
-        XCTAssertLessThan(whole, 10 * light)
+        XCTAssertGreaterThan(whole, 8 * light)
     }
 
     /// #1201's E200 heads the Chu-Kuang, its lamps lit at the front.
