@@ -36,6 +36,8 @@ final class Map3DMetalView: MTKView {
         var people: Int
         var vehicles: Int
         var streetDetail: Map3DStreetDetail
+        /// Decision 417: how far the map has stepped down under load.
+        var load: Map3DLoadStep
         /// The pixels a point drawn (``Map3DDrawScale``).
         var drawScale: Double
         /// Decision 394: whether the cab is deep in a tunnel, drawing only
@@ -82,31 +84,31 @@ final class Map3DMetalView: MTKView {
     /// This frame's light: the hour's, under the weather as far as it has
     /// turned.
     private var shown = Map3DLighting(minute: 12 * 60)
-    /// The trains for this frame, seen from the eye given.
-    var trains: (@MainActor (Map3DPoint) -> Map3DTrains.Frame)?
+    /// The trains for this frame, seen from the eye given; decision 417:
+    /// their far models nearer at the step given.
+    var trains: (@MainActor (Map3DPoint, Map3DLoadStep) -> Map3DTrains.Frame)?
     /// Decision 314: this frame's trains' fronts, as the camera sees them,
     /// for their labels.
     var trainHeads: (@MainActor ([Map3DTrains.Head], Map3DCamera) -> Void)?
     /// Decision 259: the people and vehicles for this frame, seen with the
-    /// camera given, with the city's lights on so far, at the detail given.
-    var streetLife: (@MainActor (Map3DCamera, Float, Map3DStreetDetail) -> Map3DStreetLife.Frame)?
+    /// camera given, with the city's lights on so far; decision 417: within
+    /// the budget given (the trains' triangles this frame among it).
+    var streetLife: (@MainActor (Map3DCamera, Float, Map3DMotionBudget) -> Map3DStreetLife.Frame)?
     /// Decision 259: three buffers of their instances, a frame's each in
     /// turn, so none is made each frame; a frame waits for the GPU to be
     /// done with the one it fills.
     private var lifeBuffers: [MTLBuffer] = []
     private var lifeBuffer = 0
     private let lifeInFlight = DispatchSemaphore(value: 3)
-    /// Decision 259: how much street life this device draws: by its GPU to
-    /// begin with, one step less each time it cannot hold its frame rate.
+    /// Decision 259: how much street life this device draws, by its GPU.
     private(set) var streetDetail = Map3DStreetDetail.off
-    private var slowWindows = 0
-    /// 2026-10-21: whether the GPU kept over its budget (``Map3DDrawScale``),
-    /// until the map closes, and whether the map draws fewer pixels: for
+    /// Decision 417: the steps down while the device cannot keep up (fewer
+    /// on the streets, the trains' far models nearer, fewer pixels) and
+    /// back up once it does, and whether the map draws fewer pixels: for
     /// that, or as the 3D look in Settings, Low Power Mode or the phone's
     /// heat say (``Map3DQuality``).
-    private var gpuOverBudget = false
+    private var load = Map3DLoadGovernor()
     private var drawsFewerPixels = false
-    private var overBudgetWindows = 0
     /// Decision 238's later note: the 3D look chosen in Settings.
     var quality = Map3DQuality.automatic {
         didSet { if quality != oldValue { applyQuality() } }
@@ -460,8 +462,9 @@ final class Map3DMetalView: MTKView {
         let heat = Map3DQuality.Heat(rawValue: process.thermalState.rawValue) ?? .critical
         let plan = quality.plan(lowPower: process.isLowPowerModeEnabled, heat: heat)
         if preferredFramesPerSecond != plan.framesPerSecond { preferredFramesPerSecond = plan.framesPerSecond }
-        sunPlan = Map3DSunShadow.plan(quality, lowPower: process.isLowPowerModeEnabled, heat: heat, overBudget: gpuOverBudget)
-        let fewer = plan.fewerPixels || (plan.lowersWhenOver && gpuOverBudget)
+        load.lowest = plan.lowersWhenOver ? .fewerPixels : .nearerFarModels
+        sunPlan = Map3DSunShadow.plan(quality, lowPower: process.isLowPowerModeEnabled, heat: heat, overBudget: load.step.fewerPixels)
+        let fewer = plan.fewerPixels || load.step.fewerPixels
         if fewer != drawsFewerPixels {
             drawsFewerPixels = fewer
             setNeedsLayout()
@@ -803,7 +806,7 @@ final class Map3DMetalView: MTKView {
         clearColor = MTLClearColor(red: Double(sky.x), green: Double(sky.y), blue: Double(sky.z), alpha: 1)
         // Decision 333: the trains first, so the camera following one
         // looks at where it is this frame.
-        let frame = trains?(camera.eye)
+        let frame = trains?(camera.eye, load.step)
         moveCamera(heads: frame?.heads ?? [], at: start)
         onCamera?(camera, start)
         // Decision 394: deep in a tunnel, the cab sees nothing on the
@@ -852,7 +855,9 @@ final class Map3DMetalView: MTKView {
             if let buffer = makeBuffer(sorted.flatMap(\.floats)) { cars = (sorted, buffer) }
         }
         // Decision 259: the people and vehicles near the target.
-        let life = below ? nil : streetLife?(camera, shown.lights, streetDetail)
+        // Decision 417: in what the trains leave of the budget.
+        let budget = Map3DMotionBudget(detail: streetDetail, step: load.step, trainTriangles: frame?.triangles(in: models?.pack) ?? 0)
+        let life = below ? nil : streetLife?(camera, shown.lights, budget)
         var lifeDraw: (sorted: [Map3DInstance], buffer: MTLBuffer)?
         if let instances = life?.instances, !instances.isEmpty, models != nil {
             let waiting = CACurrentMediaTime()
@@ -1164,21 +1169,15 @@ final class Map3DMetalView: MTKView {
             triangles: lastCounts.triangles,
             people: lastLife.people,
             vehicles: lastLife.vehicles,
-            streetDetail: streetDetail,
+            streetDetail: load.step >= .fewestOnStreets ? streetDetail.lowered : streetDetail,
+            load: load.step,
             drawScale: Double(contentScaleFactor),
             underground: underground.isUnderground
         )
-        // Decision 259: a device that cannot hold its frame rate while
-        // drawing street life draws less of it.
-        let drawingLife = lastLife.people + lastLife.vehicles > 0
-        slowWindows = drawingLife && stats.framesPerSecond < Double(preferredFramesPerSecond) * 0.75 ? slowWindows + 1 : 0
-        if Map3DStreetDetail.shouldLower(framesPerSecond: stats.framesPerSecond, aim: Double(preferredFramesPerSecond), windows: slowWindows) {
-            streetDetail = streetDetail.lowered
-            slowWindows = 0
-        }
-        overBudgetWindows = Map3DDrawScale.isOver(gpuMilliseconds: stats.gpuMilliseconds, aim: Double(preferredFramesPerSecond))
-            ? overBudgetWindows + 1 : 0
-        if Map3DDrawScale.shouldLower(windows: overBudgetWindows) { gpuOverBudget = true }
+        // Decision 417: a step down while the device cannot keep up, a
+        // step up once it has for a while.
+        load.record(Map3DLoadGovernor.Sample(framesPerSecond: stats.framesPerSecond, aim: Double(preferredFramesPerSecond),
+                                             gpuMilliseconds: stats.gpuMilliseconds, drawingStreets: lastLife.people + lastLife.vehicles > 0))
         // Low Power Mode and the heat change while the map is open.
         applyQuality()
         frames = 0

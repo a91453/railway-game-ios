@@ -149,10 +149,12 @@ public enum Map3DTrains {
     /// space: within ``modelReach`` of `eye` (``Map3DTrainSet/reach(of:)``), a car of a type `models` has
     /// is an instance of its model (the head car's model at both ends, the
     /// last one turned round; the middle cars' between); the rest, and a
-    /// freight train, boxes.
+    /// freight train, boxes. Decision 417: the far models and the boxes
+    /// nearer at `step`.
     public static func frame(
         _ motion: TrainMotion, progress: Double, heights: Heights, in scene: Map3DScene,
-        models: Map3DModelPack?, eye: Map3DPoint?, palette: LinePalette = .standard, ringed: TrainID? = nil
+        models: Map3DModelPack?, eye: Map3DPoint?, palette: LinePalette = .standard, ringed: TrainID? = nil,
+        step: Map3DLoadStep = .full
     ) -> Frame {
         var frame = Frame()
         let gap = Double(carGap) * Double(WorldCoordinate.unitsPerMetre)
@@ -229,7 +231,8 @@ public enum Map3DTrains {
                 if let models, hasModels, let eye,
                    let near = layout?[index].model ?? models.modelIndex(forType: trainType, carIndex: index, count: cars.count),
                    // Decision 408: past its set's reach, its far set's car.
-                   let model = models.model(near, forType: trainType, count: count, at: (base - eye).length) {
+                   // Decision 417: nearer on a device stepped down.
+                   let model = models.model(near, forType: trainType, count: count, at: (base - eye).length, step: step) {
                     // The last car is the head car's model turned round, or
                     // the set's own tail.
                     let turned = layout == nil && models.isTurned(forType: trainType, carIndex: index, count: cars.count)
