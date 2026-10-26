@@ -190,6 +190,32 @@ final class Map3DBusesTests: XCTestCase {
         XCTAssertEqual(frame.instances.first?.model, model)
     }
 
+    func testAtMostTheBusModelsBudgetIsDrawnTheNearestFirst() throws {
+        let (start, route) = try world(buses: 1)
+        // Cash enough for many routes' buses.
+        var json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(start)) as? [String: Any])
+        var economy = try XCTUnwrap(json["economy"] as? [String: Any])
+        economy["balance"] = Int64(1_000_000_000_000)
+        json["economy"] = economy
+        var world = try JSONDecoder().decode(GameWorld.self, from: JSONSerialization.data(withJSONObject: json))
+        for _ in 0..<15 {
+            _ = try world.createBusRoute(to: route.station, stops: route.stops, service: .every(minutes: 1), buses: 10)
+        }
+        let scene = Map3DScene(world: world)
+        let buses = Map3DBuses(world: world, scene: scene, palette: .standard)
+        let station = try XCTUnwrap(world.station(id: route.station))
+        let target = scene.point(worldX: Double(station.location.x), worldY: Double(station.location.y), height: 0)
+        let frame = busFrame(buses, second: 8 * 3_600 + 180, target: target, distance: 900)
+        XCTAssertEqual(frame.instances.count, Map3DStreetLife.mostBuses)
+        let aways = frame.instances.map { Map3DPoint($0.transform[12] - target.x, 0, $0.transform[14] - target.z).length }
+        XCTAssertEqual(aways, aways.sorted())
+        XCTAssertEqual(busFrame(buses, second: 8 * 3_600 + 180, target: target, distance: 900, detail: .reduced).instances.count,
+                       Map3DStreetLife.mostBuses)
+        // The street's own buses share the budget: none is left for them.
+        let street = Map3DStreetLife().frame(target: .zero, distance: 300, time: 0, detail: .full, activity: .init(), buses: frame)
+        XCTAssertEqual(street.buses, Map3DStreetLife.mostBuses)
+    }
+
     func testTheRouteBusIsTheLowFloorBusWithItsStripesTinted() {
         let route = Map3DLowFloorBus.routeModel(), plain = Map3DLowFloorBus.model()
         XCTAssertEqual(route.vertices.count, plain.vertices.count)

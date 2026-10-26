@@ -455,27 +455,30 @@ public struct Map3DBuses: Sendable {
     /// The buses at `second` of the game's day round `target` seen from
     /// `distance` away, as the street's vehicles are drawn (within
     /// ``Map3DStreetLife/vehiclesFrom``, shrinking away at the edge of
-    /// their reach), at most `detail`'s vehicles, the nearest routes first.
+    /// their reach), the nearest ``Map3DStreetLife/mostBuses`` of them
+    /// (the bus model's budget, which the street's own buses then share)
+    /// and at most `detail`'s vehicles.
     public func frame(second: Double, target: Map3DPoint, distance: Float, detail: Map3DStreetDetail) -> Frame {
         var frame = Frame()
         guard detail != .off, distance <= Map3DStreetLife.vehiclesFrom, let model = Self.model else { return frame }
         let reach = Map3DStreetLife.vehiclesReach(distance)
-        let near = routes.indices.compactMap { index -> (Int, Float)? in
-            let away = routes[index].out.boxDistance(to: target)
-            return away < reach ? (index, away) : nil
-        }.sorted { $0.1 < $1.1 }
-        for (index, _) in near {
-            let route = routes[index]
-            for bus in route.motion.buses(at: second) where frame.instances.count < detail.vehicles {
+        var seen: [(away: Float, instance: Map3DInstance, clear: (point: Map3DPoint, along: Map3DPoint))] = []
+        for route in routes where route.out.boxDistance(to: target) < reach {
+            for bus in route.motion.buses(at: second) {
                 let along = Float(bus.distance(along: route.stops)) / route.length
                 let path = bus.outbound ? route.out : route.back
                 let place = path.at((bus.outbound ? along : 1 - along) * path.length)
                 let away = Map3DPoint(place.point.x - target.x, 0, place.point.z - target.z).length
                 let size = Map3DStreetLife.fade(away, reach: reach) * Float(bus.scale)
                 guard size > 0 else { continue }
-                frame.instances.append(.prop(model, at: place.point, forward: place.along, scale: size, tint: route.tint))
-                frame.clear.append((place.point, place.along))
+                seen.append((away, .prop(model, at: place.point, forward: place.along, scale: size, tint: route.tint), (place.point, place.along)))
             }
+        }
+        // The nearest first; of two as near, the one found first.
+        let kept = seen.indices.sorted { (seen[$0].away, $0) < (seen[$1].away, $1) }.prefix(min(Map3DStreetLife.mostBuses, detail.vehicles))
+        for index in kept {
+            frame.instances.append(seen[index].instance)
+            frame.clear.append(seen[index].clear)
         }
         return frame
     }
