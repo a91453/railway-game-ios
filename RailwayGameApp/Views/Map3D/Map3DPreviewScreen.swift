@@ -234,8 +234,14 @@ struct Map3DPreviewScreen: View {
         }
         // Decision 360: following a train here runs at 10× at most, and
         // closing gives the 2D map its speed back.
-        .onAppear { session.setMap3DOpen(true) }
-        .onDisappear { session.setMap3DOpen(false) }
+        .onAppear {
+            session.setMap3DOpen(true)
+            FrameTimeRecorder.shared.show3D(true)
+        }
+        .onDisappear {
+            session.setMap3DOpen(false)
+            FrameTimeRecorder.shared.show3D(false)
+        }
         .sheet(item: $photo.snapshot) { snapshot in
             Map3DSnapshotSheet(snapshot: snapshot, language: language)
         }

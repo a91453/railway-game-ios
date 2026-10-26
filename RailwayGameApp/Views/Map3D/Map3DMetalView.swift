@@ -1112,14 +1112,31 @@ final class Map3DMetalView: MTKView {
             let inFlight = lifeInFlight
             commands.addCompletedHandler { @Sendable _ in inFlight.signal() }
         }
+        // Decision 421: each frame's GPU time and when it reached the screen
+        // (0 when it never did), for the frame time record.
+        let frameTimes = FrameTimeRecorder.meter
         commands.addCompletedHandler { @Sendable buffer in
             let seconds = buffer.gpuEndTime - buffer.gpuStartTime
-            if seconds > 0 { gpuTimes.withLock { $0.append(seconds) } }
+            if seconds > 0 {
+                gpuTimes.withLock { $0.append(seconds) }
+                frameTimes.gpu(milliseconds: seconds * 1_000)
+            }
         }
+        #if targetEnvironment(simulator)
+        // The Simulator's drawables say nothing of reaching the screen: the
+        // time the frame was handed over stands in (its figures are only a
+        // reference for the CPU side).
+        frameTimes.frame(at: CACurrentMediaTime())
+        #else
+        drawable.addPresentedHandler { @Sendable presented in frameTimes.frame(at: presented.presentedTime) }
+        #endif
         commands.present(drawable)
         commands.commit()
         lastLife = (life?.people ?? 0, life?.vehicles ?? 0)
-        record(cpu: CACurrentMediaTime() - start - waited, wait: waited, drawCalls: drawCalls, triangles: triangles)
+        let cpu = CACurrentMediaTime() - start - waited
+        record(cpu: cpu, wait: waited, drawCalls: drawCalls, triangles: triangles)
+        FrameTimeRecorder.shared.drew3D(following: following != nil, cpuMilliseconds: cpu * 1_000, triangles: triangles,
+                                        drawCalls: drawCalls, chunks: visible.count)
     }
 
     /// Decision 403 (續二): the next frame drawn, as a picture the size of
