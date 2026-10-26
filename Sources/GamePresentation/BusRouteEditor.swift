@@ -387,6 +387,16 @@ struct BusPathMemo {
     let pins: [PlanPoint]
 }
 
+/// The reads started off the main actor for the station the bus tool was
+/// last given (``GameSession/readBusesAhead(for:)``).
+struct BusReadAhead {
+    let station: PlanPoint
+    /// Which read it is, so that one a later read or a new map replaced
+    /// finds out when it is done.
+    let serial: Int
+    let task: Task<Void, Never>
+}
+
 extension GameSession {
     /// The base map's bus roads (decision 424) of a real-world map with a
     /// base map and roads; `nil` on any other, whose buses go along the road
@@ -626,6 +636,37 @@ extension GameSession {
         return stops
     }
 
+    /// Starts reading, off the main actor, what the bus tool will ask for
+    /// first round station `id`: the base map's roads (``BusRoads/readAhead(round:)``)
+    /// and the real bus stops (``RealBusLibrary/stops(around:frame:within:)``,
+    /// handed to ``realBusStopsMemo`` when done). Changes no result: a tap
+    /// before it is done reads what it needs itself, waiting for the read
+    /// in progress, and gets the same. Does nothing when the tool is not the
+    /// bus tool, on a map without base map roads, or when the station is
+    /// the one it was last started for.
+    func readBusesAhead(for id: StationID) {
+        guard tool == .bus, let roads = busRoads, let frame = RealWorldFrame(world: world),
+              let station = world.station(id: id)?.location, busReadAhead?.station != station else { return }
+        busReadAhead?.task.cancel()
+        busReadsStarted += 1
+        let serial = busReadsStarted
+        let library = realBuses
+        let task = Task.detached(priority: .userInitiated) { [weak self] in
+            roads.readAhead(round: station)
+            let stops = Task.isCancelled ? nil : library?.stops(around: station, frame: frame)
+            await self?.finishBusReadAhead(serial: serial, station: station, stops: stops)
+        }
+        busReadAhead = BusReadAhead(station: station, serial: serial, task: task)
+    }
+
+    /// Keeps the real stops a read ahead found round `station`, unless the
+    /// map or the real stops were replaced, or another station's read
+    /// started, since it started.
+    private func finishBusReadAhead(serial: Int, station: PlanPoint, stops: RealBusStops?) {
+        guard busReadAhead?.serial == serial, let stops, realBusStopsMemo[station] == nil else { return }
+        realBusStopsMemo[station] = stops
+    }
+
     /// What a stop at `pin` of a route to `station` is called on the map: a
     /// real stop's name within 25 m, else the road's name; `nil` where
     /// neither is near. Worked out from the map's data each time it is
@@ -700,6 +741,7 @@ extension GameSession {
     public func editBusRoute(_ id: BusRouteID) {
         guard let route = world.busRoute(id: id) else { return }
         selectTool(.bus)
+        readBusesAhead(for: route.station)
         var draft = BusRouteDraft()
         draft.station = route.station
         draft.stops = route.stops.reversed()
@@ -754,6 +796,7 @@ extension GameSession {
 
     /// Works the bus tool's preview out again for the drawn route.
     func refreshBusPreview() {
+        busDraft.station.map(readBusesAhead(for:))
         busDraft.legMetres = nil
         busDraftPath = []
         var broken: Int?
