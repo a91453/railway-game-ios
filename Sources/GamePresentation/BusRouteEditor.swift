@@ -186,13 +186,23 @@ public struct BusRoutePreview: Hashable, Sendable {
         )
     }
 
-    /// The figures the bus tool shows, a line each: length and stops, the
-    /// buses, the riders, the running cost.
+    /// The minutes a bus takes to run `metres` at its speed
+    /// (``BusRoute/metresPerHour``), rounded, as GameCore counts a ride.
+    static func rideMinutes(metres: Int64) -> Int64 {
+        (metres * 60 + BusRoute.metresPerHour / 2) / BusRoute.metresPerHour
+    }
+
+    /// The figures the bus tool shows, a line each: the stops, length and
+    /// minutes of the whole route (decision 424, C2), the buses, the
+    /// riders, the running cost.
     public func lines(for draft: BusRouteDraft, in language: DisplayLanguage) -> [String] {
         guard metres > 0 else { return [] }
+        // The legs the way drawn gave GameCore, else the route's metres
+        // (the same total).
+        let wholeRoute = Self.rideMinutes(metres: draft.legMetres.map { $0.reduce(0, +) } ?? metres)
         var lines = [language.text(
-            "\(BusRouteText.distance(metres, in: language)) · \(BusRouteText.stops(draft.stops.count))",
-            "\(BusRouteText.distance(metres, in: language)) · \(draft.stops.count) 個站牌"
+            "\(BusRouteText.stops(draft.stops.count)) · \(BusRouteText.distance(metres, in: language)) · about \(wholeRoute) min",
+            "\(draft.stops.count) 個站牌 · \(BusRouteText.distance(metres, in: language)) · 約 \(wholeRoute) 分"
         )]
         if let headway {
             var service = language.text("A bus every \(headway) min · \(BusRouteText.buses(draft.buses))", "每 \(headway) 分一班 · \(draft.buses) 輛車")
@@ -357,6 +367,14 @@ public enum BusRoadPath {
     }
 }
 
+/// What a name on the map was worked out for: the stop's place, the station
+/// of its route (the real stops round it) and the language.
+struct BusStopNameKey: Hashable {
+    let pin: PlanPoint
+    let station: PlanPoint
+    let language: DisplayLanguage
+}
+
 /// A saved route's way on the map, kept for the stops and station it was
 /// worked out for.
 struct BusPathMemo {
@@ -396,6 +414,14 @@ public struct BusMapOverlay: Hashable, Sendable {
         public let stops: [PlanPoint]
         /// Whether it runs: a route of no bus is drawn faint.
         public let runs: Bool
+        /// The number and name of each stop, as ``stops``.
+        public let labels: [BusStopLabel]
+
+        /// The round arrows on its way, pointing at the station, `spacing`
+        /// metres apart (``BusArrows/spacing(pointsPerMetre:)``).
+        public func arrows(every spacing: Double) -> [BusArrow] {
+            BusArrows.arrows(along: points, every: spacing)
+        }
     }
 
     /// The route the bus tool draws, over the others.
@@ -407,10 +433,24 @@ public struct BusMapOverlay: Hashable, Sendable {
         /// Two ends no road joins, drawn as a broken line.
         public let broken: [PlanPoint]
         public let isBuildable: Bool
+        /// The number and name of each stop, as ``stops``.
+        public let labels: [BusStopLabel]
+
+        /// The round arrows on its way, pointing at the station (the line
+        /// is listed from the station out, so they point back along it).
+        public func arrows(every spacing: Double) -> [BusArrow] {
+            BusArrows.arrows(along: points.reversed(), every: spacing)
+        }
     }
 
     public var routes: [Route] = []
     public var draft: Draft?
+    /// Whether the stops are drawn as numbered pins with their names: while
+    /// the bus tool is open.
+    public var showsLabels = false
+    /// The real bus stops round the drawn route's station, to be drawn faint
+    /// and tapped; `nil` outside the bus tool and before a station.
+    public var realStops: RealBusStops?
 
     public init(routes: [Route] = [], draft: Draft? = nil) {
         self.routes = routes
@@ -547,9 +587,15 @@ extension GameSession {
             var placed = (cell: cell, point: cell.middle)
             if let onRoads {
                 // The nearest bus road, at a cell GameCore knows as a road.
-                guard let pin = onRoads.place(near: point, within: BusRoadNetwork.snapReach, accepting: {
-                    roads.cells.contains(CellPosition(containing: $0))
-                }) else {
+                // Decision 424, C2: a real bus stop within 25 m of the tap
+                // is where the stop goes, when a bus road reaches it; else
+                // the tap is put on the road as before.
+                func onARoad(near point: PlanPoint) -> PlanPoint? {
+                    onRoads.place(near: point, within: BusRoadNetwork.snapReach, accepting: { roads.cells.contains(CellPosition(containing: $0)) })
+                }
+                let real = busDraft.station.flatMap { world.station(id: $0) }
+                    .flatMap { realBusStops(around: $0.location) }?.nearest(to: point)
+                guard let pin = real.flatMap({ onARoad(near: $0.point) }) ?? onARoad(near: point) else {
                     message = StatusMessage(kind: .failure, text: language.text("Bus stops go on roads.", "公車站牌要放在路上。"))
                     return
                 }
@@ -567,6 +613,30 @@ extension GameSession {
             busDraft.append(placed.cell, at: placed.point)
         }
         refreshBusPreview()
+    }
+
+    /// The real bus stops round `station`, read when first asked (decision
+    /// 424, C2); `nil` on a map with no base map roads, or without the
+    /// app's real bus files.
+    func realBusStops(around station: PlanPoint) -> RealBusStops? {
+        guard busRoads != nil, let realBuses, let frame = RealWorldFrame(world: world) else { return nil }
+        if let known = realBusStopsMemo[station] { return known }
+        let stops = realBuses.stops(around: station, frame: frame)
+        realBusStopsMemo[station] = stops
+        return stops
+    }
+
+    /// What a stop at `pin` of a route to `station` is called on the map: a
+    /// real stop's name within 25 m, else the road's name; `nil` where
+    /// neither is near. Worked out from the map's data each time it is
+    /// asked for (kept only while the data is), never saved.
+    func busStopName(at pin: PlanPoint, near station: PlanPoint) -> String? {
+        guard let roads = busRoads else { return nil }
+        let key = BusStopNameKey(pin: pin, station: station, language: language)
+        if let known = busStopNameMemo[key] { return known }
+        let name = realBusStops(around: station)?.nearest(to: pin)?.name ?? roads.roadName(near: pin, in: language)
+        busStopNameMemo.updateValue(name, forKey: key)
+        return name
     }
 
     /// Takes back the last stop, then the station.
@@ -727,15 +797,27 @@ extension GameSession {
                 busPathMemo[route.id] = memo
             }
             let line = world.lines(callingAt: route.station).first
+            // GameCore lists the farthest stop first; the numbers count
+            // from the station. Names are only worked out for the tool.
+            let labels = zip(BusStopLabel.numbers(count: memo.pins.count, farthestFirst: true), memo.pins).map { number, pin in
+                BusStopLabel(number: number, name: tool == .bus ? busStopName(at: pin, near: station.location) : nil)
+            }
             overlay.routes.append(BusMapOverlay.Route(
-                id: route.id, line: line?.id, color: line?.color, points: memo.points, stops: memo.pins, runs: route.buses > 0
+                id: route.id, line: line?.id, color: line?.color, points: memo.points, stops: memo.pins, runs: route.buses > 0,
+                labels: labels
             ))
         }
+        overlay.showsLabels = tool == .bus
         if tool == .bus, let id = busDraft.station, let station = world.station(id: id) {
+            let pins = busDraft.pins
             overlay.draft = BusMapOverlay.Draft(
-                points: busDraftPath, stops: busDraft.pins, station: station.location,
-                broken: busPreview?.brokenLeg ?? [], isBuildable: busPreview?.canOpen ?? false
+                points: busDraftPath, stops: pins, station: station.location,
+                broken: busPreview?.brokenLeg ?? [], isBuildable: busPreview?.canOpen ?? false,
+                labels: zip(BusStopLabel.numbers(count: pins.count, farthestFirst: false), pins).map { number, pin in
+                    BusStopLabel(number: number, name: busStopName(at: pin, near: station.location))
+                }
             )
+            overlay.realStops = realBusStops(around: station.location)
         }
         return overlay
     }

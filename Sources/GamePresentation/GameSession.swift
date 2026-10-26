@@ -460,6 +460,17 @@ public final class GameSession {
     @ObservationIgnored var busPathMemo: [BusRouteID: BusPathMemo] = [:]
     /// The base map's bus roads for this world's frame (``busRoads``).
     @ObservationIgnored var busRoadsMemo: (frame: RealWorldFrame, roads: BusRoads)?
+    /// Taiwan's real bus stops (decision 424, C2), whose files a real-world
+    /// map reads as the bus tool needs them; handed to each session by the
+    /// launcher, never saved.
+    @ObservationIgnored public var realBuses: RealBusLibrary? {
+        didSet { realBusStopsMemo = [:]; busStopNameMemo = [:] }
+    }
+    /// The real stops round each station the bus tool has asked about, for
+    /// this world's frame.
+    @ObservationIgnored var realBusStopsMemo: [PlanPoint: RealBusStops] = [:]
+    /// The names the bus stops on the map carry (``busStopName(at:near:)``).
+    @ObservationIgnored var busStopNameMemo: [BusStopNameKey: String?] = [:]
 
     /// What a tap does with the network tool.
     public internal(set) var networkMode: NetworkToolMode = .build
@@ -605,7 +616,11 @@ public final class GameSession {
     /// without the app's file, and then such a map has no roads but those
     /// it grows.
     @ObservationIgnored public var baseMap: BaseMapTiles? {
-        didSet { busRoadsMemo = nil }
+        didSet {
+            busRoadsMemo = nil
+            realBusStopsMemo = [:]
+            busStopNameMemo = [:]
+        }
     }
 
     /// The freeway and expressway cells of the blocks ``highwayCells()``
