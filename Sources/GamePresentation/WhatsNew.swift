@@ -31,6 +31,53 @@ public enum WhatsNew {
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
         Entry(
+            id: "2026-10-26",
+            items: [
+                Line(
+                    english: "Draw your own bus routes from a station: tap the stops along the streets, and the buses run in 2D and 3D.",
+                    chinese: "可以從車站自己畫公車路線：沿著街點站牌，公車在 2D 和 3D 都會跑。"
+                ),
+                Line(
+                    english: "On real-world maps the buses follow the real streets, and a stop tapped beside a real bus stop takes its place and name.",
+                    chinese: "實景地圖的公車沿真的街道走；點在真的公車站旁，站牌會吸過去、用它的站名。"
+                ),
+                Line(
+                    english: "Bus stops are numbered, arrows point the way to the station, and one line sums up the stops, distance and minutes.",
+                    chinese: "站牌有編號，箭頭指向車站，上方一行寫站數、公里和分鐘。"
+                ),
+                Line(
+                    english: "How to Get There, in a station's panel: pick where to go and see the lines, changes, minutes and fare.",
+                    chinese: "車站面板的「怎麼搭」：選要去哪，就看到搭哪條線、轉幾次、幾分鐘、多少錢。"
+                ),
+                Line(
+                    english: "The line panel and the ridership layer show each line's riders, the most crowded sections and the trips no line serves.",
+                    chinese: "路線面板與載客量圖層：看每條線的客流、最擠的區間和沒接到的旅客。"
+                ),
+                Line(
+                    english: "In 3D, the Taroko Express, the E500 and the push-pull Tze-Chiang coaches have a new look.",
+                    chinese: "3D 的太魯閣號、E500 與推拉式自強號客車外型重做。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "Continuing or loading a game no longer freezes the screen.",
+                    chinese: "按「繼續」或讀存檔時，畫面不再凍住。"
+                ),
+                Line(
+                    english: "The bus tool and the 3D map no longer stop for a moment the first time they read the streets.",
+                    chinese: "公車工具和 3D 地圖第一次讀街道時，不再停一下。"
+                ),
+                Line(
+                    english: "When the phone is busy in 3D, the street traffic thins out first; every train and bus stays.",
+                    chinese: "3D 負荷重時先少畫街上的車，列車和公車一輛都不少。"
+                ),
+                Line(
+                    english: "In Business and Group count only department stores, hotels and amusement parks.",
+                    chinese: "成就「多角經營」「企業集團」只算百貨公司、飯店、遊樂園。"
+                ),
+            ]
+        ),
+        Entry(
             id: "2026-10-25",
             items: [
                 Line(
