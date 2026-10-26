@@ -142,7 +142,7 @@ final class BusRouteEditorTests: XCTestCase {
         XCTAssertEqual(route.service, .every(minutes: 10))
         XCTAssertEqual(session.world.economy.balance, balance - price)
         XCTAssertEqual(session.message?.text, "A bus now runs to A, for \(price.moneyText).")
-        guard case .command(.edit(.createBusRoute(a, let stops, .every(minutes: 10), 2)))? = session.commandLog.entries.last?.action else {
+        guard case .command(.edit(.createBusRoute(a, let stops, nil, .every(minutes: 10), 2)))? = session.commandLog.entries.last?.action else {
             return XCTFail("\(String(describing: session.commandLog.entries.last?.action))")
         }
         XCTAssertEqual(stops.map(\.cell), [stop, near])
@@ -181,7 +181,7 @@ final class BusRouteEditorTests: XCTestCase {
         XCTAssertEqual(route.stops, [far, stop])
         XCTAssertEqual(route.buses, 3)
         XCTAssertEqual(session.world.busRoutes.count, 1)
-        guard case .command(.edit(.reviseBusRoute(id, _, _, 3)))? = session.commandLog.entries.last?.action else {
+        guard case .command(.edit(.reviseBusRoute(id, _, _, _, 3)))? = session.commandLog.entries.last?.action else {
             return XCTFail("\(String(describing: session.commandLog.entries.last?.action))")
         }
     }
@@ -273,10 +273,68 @@ final class BusRouteEditorTests: XCTestCase {
             .setBusCount(BusRouteID(rawValue: 1), buses: 4),
             .setBusRuns(BusRouteID(rawValue: 1), .every(minutes: 30)),
             .removeBusRoute(BusRouteID(rawValue: 1)),
+            // Decision 424: the metres of the way the app drew.
+            .createBusRoute(StationID(rawValue: 3), stops: [.init(stop)], legMetres: [1_290], service: .every(minutes: 15), buses: 2),
+            .reviseBusRoute(BusRouteID(rawValue: 1), stops: [.init(stop)], legMetres: [820], service: .every(minutes: 15), buses: 1),
         ]
         for edit in edits {
             let data = try JSONEncoder().encode(edit)
             XCTAssertEqual(try JSONDecoder().decode(PlayerCommand.Edit.self, from: data), edit)
         }
+        // A command logged before decision 424 has no metres and reads back
+        // as one with none.
+        let old = try JSONEncoder().encode(PlayerCommand.Edit.createBusRoute(StationID(rawValue: 3), stops: [.init(stop)], service: .every(minutes: 15), buses: 2))
+        XCTAssertFalse(String(decoding: old, as: UTF8.self).contains("legMetres"))
+        XCTAssertEqual(try JSONDecoder().decode(PlayerCommand.Edit.self, from: old),
+                       .createBusRoute(StationID(rawValue: 3), stops: [.init(stop)], legMetres: nil, service: .every(minutes: 15), buses: 2))
+    }
+
+    // MARK: - Decision 424
+
+    func testTheMetresTheAppDrewAreTheLegsGameCoreTakesAndTheDraftKeepsTheirOwn() throws {
+        let (session, a) = try session()
+        let real = session.world
+        var draft = BusRouteDraft()
+        draft.station = a
+        draft.append(stop, at: stop.middle)
+        draft.legMetres = [1_500]
+        let preview = try XCTUnwrap(BusRoutePreview.make(draft, in: real, language: .english))
+        XCTAssertEqual(preview.metres, 1_500, "GameCore's own 1,344 m along the cells is not worked out")
+        var world = real
+        let route = try BusRouteEdits.run(draft, on: &world)
+        XCTAssertEqual(world.busRoute(id: route)?.legMetres, [1_500])
+        // Only the stops changing takes new legs: a route edited for its
+        // headway keeps the legs it had.
+        var edit = draft
+        edit.route = route
+        edit.legMetres = [900]
+        edit.service = .every(minutes: 20)
+        try BusRouteEdits.revise(route, stops: edit.coreStops, legMetres: edit.legMetres, service: edit.service, buses: edit.buses, on: &world)
+        XCTAssertEqual(world.busRoute(id: route)?.legMetres, [1_500])
+        XCTAssertEqual(world.busRoute(id: route)?.service, .every(minutes: 20))
+        edit.stops = [CellPosition(row: 8, column: 20)]
+        edit.stopPoints = [CellPosition(row: 8, column: 20).middle]
+        try BusRouteEdits.revise(route, stops: edit.coreStops, legMetres: [900], service: edit.service, buses: edit.buses, on: &world)
+        XCTAssertEqual(world.busRoute(id: route)?.legMetres, [900])
+    }
+
+    func testALegNoBusRoadJoinsIsSaidAndCannotOpen() throws {
+        let (session, a) = try session()
+        let near = CellPosition(row: 8, column: 20)
+        var draft = BusRouteDraft()
+        draft.station = a
+        draft.append(near, at: near.middle)
+        draft.append(stop, at: stop.middle)
+        // GameCore's leg 0 is the farthest stop to the next one.
+        let between = try XCTUnwrap(BusRoutePreview.make(draft, in: session.world, language: .english, brokenLeg: 0))
+        XCTAssertEqual(between.problem, "No road a bus can take joins these two stops.")
+        XCTAssertEqual(try XCTUnwrap(BusRoutePreview.make(draft, in: session.world, language: .traditionalChinese, brokenLeg: 0)).problem,
+                       "這兩個站牌之間沒有公車能走的路。")
+        XCTAssertEqual(between.brokenLeg, [stop.middle, near.middle])
+        XCTAssertFalse(between.canOpen)
+        let last = try XCTUnwrap(BusRoutePreview.make(draft, in: session.world, language: .english, brokenLeg: 1))
+        XCTAssertEqual(last.problem, "No road a bus can take joins this stop to the station.")
+        XCTAssertEqual(last.brokenLeg, [near.middle, try XCTUnwrap(session.world.station(id: a)).location])
+        XCTAssertEqual(between.lines(for: draft, in: .english), [], "no figures for a way that does not run")
     }
 }
