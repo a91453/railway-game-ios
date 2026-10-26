@@ -23,14 +23,20 @@ public struct ProblemReport: Hashable, Sendable {
     /// minutes and where they were left (``GameLauncher/lessonReport(in:)``),
     /// or `nil`.
     public let lessons: String?
+    /// Decision 417: the 3D map's look and the rung it climbed to on this
+    /// device (``Map3DLoadGovernor/report(_:)``), or `nil`.
+    public let map3D: String?
 
-    public init(version: String, build: String, system: String, device: String, game: String? = nil, lessons: String? = nil) {
+    public init(
+        version: String, build: String, system: String, device: String, game: String? = nil, lessons: String? = nil, map3D: String? = nil
+    ) {
         self.version = version
         self.build = build
         self.system = system
         self.device = device
         self.game = game
         self.lessons = lessons
+        self.map3D = map3D
     }
 
     /// "0.4.0 (12)": the version and, in brackets, the build.
@@ -64,6 +70,9 @@ public struct ProblemReport: Hashable, Sendable {
         }
         if let lessons {
             lines.append(language.text("Lessons: \(lessons)", "入門：\(lessons)"))
+        }
+        if let map3D {
+            lines.append(language.text("3D map: \(map3D)", "3D 地圖：\(map3D)"))
         }
         return lines.joined(separator: "\n")
     }

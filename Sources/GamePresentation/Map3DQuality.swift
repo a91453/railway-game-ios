@@ -47,6 +47,47 @@ public enum Map3DQuality: String, CaseIterable, Sendable {
     /// the GPU's time and memory on frames instead.
     public var samplesPerPixel: Int { drawn == .saving ? 1 : 4 }
 
+    /// The choice's name in Settings.
+    public func name(in language: DisplayLanguage) -> String {
+        switch self {
+        case .automatic: return language.text("Automatic", "自動")
+        case .saving: return language.text("Battery Saver", "省電")
+        case .high: return language.text("High Quality", "高畫質")
+        case .off: return language.text("Off", "關")
+        }
+    }
+
+    /// Decision 417: one short line under the choice in Settings, saying
+    /// only what the player gets (no separate switches for frames,
+    /// shadows or detail).
+    public func explanation(in language: DisplayLanguage) -> String {
+        switch self {
+        case .automatic:
+            return language.text("Adjusts to what this device can do: more while it runs smoothly, a little less when it struggles.",
+                                 "依手機的能力調整，順的時候畫得多、卡的時候少一點。")
+        case .saving:
+            return language.text("30 frames a second, fewer shadows, cars and people: cooler and easier on the battery.",
+                                 "每秒 30 格、陰影與街景較少，比較不燙、比較省電。")
+        case .high:
+            return language.text("The richest picture; the phone may run hot and use more battery.", "畫面最豐富，手機可能發燙、耗電。")
+        case .off:
+            return language.text("Puts the 3D buttons away so the flat map runs smoothly on older devices.", "收起 3D 鈕，舊機型玩 2D 地圖更順。")
+        }
+    }
+
+    /// Decision 417: how much that moves the map draws at most on a device
+    /// of `device`'s tier: its own on Automatic, the lowest on Battery
+    /// Saver (and Off, drawn as it), the highest on High Quality; nothing
+    /// before the A12 whatever the look.
+    public func tier(device: Map3DDeviceTier?) -> Map3DDeviceTier? {
+        guard device != nil else { return nil }
+        switch self {
+        case .automatic: return device
+        case .saving, .off: return .lower
+        case .high: return .higher
+        }
+    }
+
     /// How hot the phone is: `ProcessInfo.ThermalState`'s four steps.
     public enum Heat: Int, Comparable, Sendable {
         case nominal, fair, serious, critical

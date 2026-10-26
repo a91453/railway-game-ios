@@ -1363,12 +1363,15 @@ struct MapView: View {
             }
             edges = next
         }
+        // Decision 421: the flat map's beat, for the frame time record.
+        .onAppear { FrameTimeRecorder.shared.show2D(session) }
         .onDisappear {
             // A game left while a pinch rested near the 3D line builds
             // nothing for it afterwards.
             buildAhead?.cancel()
             buildAhead = nil
             session.mapStoppedGliding()
+            FrameTimeRecorder.shared.show2D(nil)
         }
     }
 

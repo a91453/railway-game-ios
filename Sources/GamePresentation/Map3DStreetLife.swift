@@ -211,12 +211,6 @@ public enum Map3DStreetDetail: Int, CaseIterable, Comparable, Sendable {
         family >= 8 ? .full : family >= 5 ? .reduced : .off
     }
 
-    /// Whether `framesPerSecond`, measured `windows` half seconds in a row
-    /// below what the device aims for, says to draw less.
-    public static func shouldLower(framesPerSecond: Double, aim: Double, windows: Int) -> Bool {
-        windows >= 3 && framesPerSecond < aim * 0.75
-    }
-
     public static func < (a: Map3DStreetDetail, b: Map3DStreetDetail) -> Bool { a.rawValue < b.rawValue }
 }
 
@@ -468,11 +462,14 @@ public struct Map3DStreetLife: Sendable {
     /// shops have up to half their people.
     /// Decision 400, 10i-6: the player's route `buses` come first, counted
     /// with the vehicles and the buses, and the road's own vehicles give
-    /// way where one stands.
+    /// way where one stands. Decision 417: at most `limits` (what the
+    /// budget leaves, ``Map3DMotionBudget/limits(routeBuses:)``) when given,
+    /// else `detail`'s with ``mostBuses``.
     public func frame(target: Map3DPoint, distance: Float, time: Double, still: Bool = false, lights: Float = 0, detail: Map3DStreetDetail,
-                      activity: Activity, buses: Map3DBuses.Frame = .init()) -> Frame {
+                      activity: Activity, buses: Map3DBuses.Frame = .init(), limits: Map3DStreetLimits? = nil) -> Frame {
         var frame = Frame()
         guard detail != .off, Self.models.count == Map3DStreetModel.allCases.count else { return frame }
+        let most = limits ?? Map3DStreetLimits(detail)
         frame.instances = buses.instances
         frame.vehicles = buses.instances.count
         frame.buses = buses.instances.count
@@ -483,9 +480,9 @@ public struct Map3DStreetLife: Sendable {
                 let away = spots[index].path.boxDistance(to: target)
                 return away < reach ? (index, away) : nil
             }.sorted { $0.1 < $1.1 }
-            for (index, _) in near where frame.people < detail.people {
+            for (index, _) in near where frame.people < most.people {
                 addPeople(of: spots[index], to: &frame, target: target, reach: reach, time: clock, still: still, lights: lights,
-                          budget: detail.people, activity: activity)
+                          budget: most.people, activity: activity)
             }
         }
         if distance <= Self.vehiclesFrom {
@@ -494,8 +491,9 @@ public struct Map3DStreetLife: Sendable {
                 let away = lanes[index].path.boxDistance(to: target)
                 return away < reach ? (index, away) : nil
             }.sorted { $0.1 < $1.1 }
-            for (index, _) in near where frame.vehicles < detail.vehicles {
-                addVehicles(of: lanes[index], to: &frame, target: target, reach: reach, time: clock, budget: detail.vehicles, clearOf: buses.clear)
+            for (index, _) in near where frame.vehicles < most.vehicles {
+                addVehicles(of: lanes[index], to: &frame, target: target, reach: reach, time: clock, budget: most.vehicles,
+                            mostBuses: most.buses, clearOf: buses.clear)
             }
         }
         return frame
@@ -556,7 +554,7 @@ public struct Map3DStreetLife: Sendable {
     }
 
     private func addVehicles(of lane: Lane, to frame: inout Frame, target: Map3DPoint, reach: Float, time: Double, budget: Int,
-                             clearOf buses: [(point: Map3DPoint, along: Map3DPoint)] = []) {
+                             mostBuses: Int = Self.mostBuses, clearOf buses: [(point: Map3DPoint, along: Map3DPoint)] = []) {
         // Decision 400, 10i-6: only the player's buses near this road.
         let buses = buses.filter { lane.path.boxDistance(to: $0.point) < Self.busClearance.along + lane.half }
         let length = lane.path.length
@@ -577,7 +575,7 @@ public struct Map3DStreetLife: Sendable {
                 let along = direction > 0 ? Float(travelled) : length - Float(travelled)
                 let kind = r(2)
                 let model: Map3DStreetModel
-                if lane.buses, spacing >= Self.busSpacing, frame.buses < Self.mostBuses, r(5) < Self.busShare,
+                if lane.buses, spacing >= Self.busSpacing, frame.buses < mostBuses, r(5) < Self.busShare,
                    count == 1 || draw((index + count - 1) % count, 5) >= Self.busShare {
                     let variant = r(6)
                     model = variant < 0.30 ? .shuttleBus : variant < 0.65 ? .lowFloorBus : variant < 0.85 ? .coachBus : variant < 0.95 ? .midiBus : .bus

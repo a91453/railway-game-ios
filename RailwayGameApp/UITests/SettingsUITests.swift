@@ -233,7 +233,14 @@ final class SettingsUITests: XCTestCase {
         tapHittable("menu.ambient", in: app)
         let curtain = app.descendants(matching: .any)["ambient.curtain"].firstMatch
         XCTAssertTrue(curtain.appears(within: 10), "The idle mode starts")
-        XCTAssertTrue(app.buttons["hud.menu"].disappears(within: 5), "The controls are put away")
+        // Put away, not taken out: `ambientHidden` keeps the controls in
+        // place with no opacity and no touches, and the UI tests still find
+        // them (the full lane of d9c3c68d), so ask that they cannot be
+        // touched rather than that they are gone.
+        let menu = app.buttons["hud.menu"]
+        let deadline = Date().addingTimeInterval(5)
+        while menu.exists, menu.isHittable, Date() < deadline { Thread.sleep(forTimeInterval: 0.1) }
+        XCTAssertFalse(menu.exists && menu.isHittable, "The controls are put away")
         // On the 2D map or over the 3D one, whichever the first shot is.
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         XCTAssertTrue(curtain.disappears(within: 10), "A tap ends it")

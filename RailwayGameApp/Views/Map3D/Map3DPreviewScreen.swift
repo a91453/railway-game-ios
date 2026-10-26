@@ -234,8 +234,14 @@ struct Map3DPreviewScreen: View {
         }
         // Decision 360: following a train here runs at 10× at most, and
         // closing gives the 2D map its speed back.
-        .onAppear { session.setMap3DOpen(true) }
-        .onDisappear { session.setMap3DOpen(false) }
+        .onAppear {
+            session.setMap3DOpen(true)
+            FrameTimeRecorder.shared.show3D(true)
+        }
+        .onDisappear {
+            session.setMap3DOpen(false)
+            FrameTimeRecorder.shared.show3D(false)
+        }
         .sheet(item: $photo.snapshot) { snapshot in
             Map3DSnapshotSheet(snapshot: snapshot, language: language)
         }
@@ -322,6 +328,8 @@ struct Map3DPreviewScreen: View {
                     Text(verbatim: String(format: "wait %.1f ms · %.0f×", stats.waitMilliseconds, stats.drawScale))
                     Text(verbatim: "\(stats.drawCalls) draws · \(stats.triangles.formatted()) triangles")
                     Text(verbatim: "\(stats.people) people · \(stats.vehicles) vehicles · \(stats.streetDetail)")
+                    // Decision 417: the rung climbed to and its budget.
+                    if let level = stats.level { Text(verbatim: level.summary) }
                     // Decision 394: the cab deep in a tunnel draws only
                     // what is under the ground.
                     if stats.underground { Text(verbatim: "underground") }
@@ -609,13 +617,13 @@ final class Map3DTrainFeed {
     }
 
     /// Decision 400, 10i-6: the player's buses round the camera's target.
-    private func busFrame(in scene: Map3DScene, camera: Map3DCamera, detail: Map3DStreetDetail, now: Double) -> Map3DBuses.Frame {
+    private func busFrame(in scene: Map3DScene, camera: Map3DCamera, detail: Map3DStreetDetail, most: Int?, now: Double) -> Map3DBuses.Frame {
         guard let world = busWorld, let signature = busSignature, let clock = busClock else { return .init() }
         if buses?.isLaid(from: signature, in: scene) != true {
             buses = Map3DBuses(world: world, scene: scene, palette: busPalette)
         }
         return buses?.frame(second: clock.second(at: now, glides: busGlides), target: camera.target, distance: camera.distance,
-                            detail: detail) ?? .init()
+                            detail: detail, most: most) ?? .init()
     }
 
     /// Decision 314: the labels of the trains whose fronts are at `heads`.
@@ -625,25 +633,30 @@ final class Map3DTrainFeed {
 
     /// Decision 259: the people and vehicles of `scene` now, round the
     /// camera's target; standing still with Reduce Motion on.
-    func streetLife(in scene: Map3DScene, camera: Map3DCamera, lights: Float, detail: Map3DStreetDetail) -> Map3DStreetLife.Frame {
+    /// Decision 417: the player's buses first (at most the tier's), then
+    /// what `budget` leaves the streets.
+    func streetLife(in scene: Map3DScene, camera: Map3DCamera, lights: Float, budget: Map3DMotionBudget) -> Map3DStreetLife.Frame {
+        let detail = budget.tier?.streetDetail ?? .off
         // A day's seconds, so the clock stays precise as a Float.
         let now = Date().timeIntervalSinceReferenceDate
         let time = now.truncatingRemainder(dividingBy: 86_400)
+        let buses = busFrame(in: scene, camera: camera, detail: detail, most: budget.tier?.streetLimits.buses, now: now)
         return scene.streetLife.frame(target: camera.target, distance: camera.distance, time: time,
                                       still: UIAccessibility.isReduceMotionEnabled, lights: lights, detail: detail, activity: activity,
-                                      buses: busFrame(in: scene, camera: camera, detail: detail, now: now))
+                                      buses: buses, limits: budget.limits(routeBuses: buses.instances.count))
     }
 
-    /// The trains seen from `eye`, `ringed` with its ring (decision 334).
-    func frame(in scene: Map3DScene, models: Map3DModelPack?, eye: Map3DPoint, ringed: TrainID?) -> Map3DTrains.Frame {
+    /// The trains seen from `eye`, `ringed` with its ring (decision 334),
+    /// their far models and boxes from `reach` (decision 417).
+    func frame(in scene: Map3DScene, models: Map3DModelPack?, eye: Map3DPoint, ringed: TrainID?, reach: Map3DModelReach) -> Map3DTrains.Frame {
         let now = Date().timeIntervalSinceReferenceDate
         let progress = motion.isMoving ? motion.progress(at: now) : 1
         var frame = Map3DTrains.frame(motion, progress: progress, heights: heights, in: scene, models: models, eye: eye, palette: palette,
-                                      ringed: ringed)
+                                      ringed: ringed, reach: reach)
         // Decision 339: and the real timetables' trains, on their own track.
         if let real = scene.realTrains, let clock = realClock {
             real.add(to: &frame, second: clock.second(at: now, glides: realGlides), day: clock.today, dayBefore: clock.dayBefore,
-                     models: models, eye: eye)
+                     models: models, eye: eye, reach: reach)
         }
         return frame
     }
@@ -767,10 +780,10 @@ private struct Map3DView: UIViewRepresentable {
             pack.locked = TrainPack.locked(unlocked: unlocked)
             return pack
         }
-        view.trains = { [weak view] eye in feed.frame(in: scene, models: models, eye: eye, ringed: view?.ringed) }
+        view.trains = { [weak view] eye, reach in feed.frame(in: scene, models: models, eye: eye, ringed: view?.ringed, reach: reach) }
         let labels = trainLabels
         view.trainHeads = { heads, camera in labels.show(feed.labels(heads: heads, camera: camera)) }
-        view.streetLife = { camera, lights, detail in feed.streetLife(in: scene, camera: camera, lights: lights, detail: detail) }
+        view.streetLife = { camera, lights, budget in feed.streetLife(in: scene, camera: camera, lights: lights, budget: budget) }
         if first, let start {
             // Decision 269: where the 2D map was, as close, straight down.
             view.camera = Map3DHandoff.camera(from: start, in: scene, viewport: view.camera.viewport)

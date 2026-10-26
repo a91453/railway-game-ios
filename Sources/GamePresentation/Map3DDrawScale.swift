@@ -20,12 +20,10 @@ public enum Map3DDrawScale {
         isLowered ? min(display, lowered) : display
     }
 
-    /// Whether `gpuMilliseconds`, measured `windows` half seconds in a row
-    /// over the budget of a frame at `aim` frames a second, says to draw
-    /// fewer pixels.
+    /// Whether `gpuMilliseconds`, measured over a frame at `aim` frames a
+    /// second, is over the budget (decision 417: a half second's load,
+    /// ``Map3DLoadGovernor/Sample/isHeavy``).
     public static func isOver(gpuMilliseconds: Double, aim: Double) -> Bool {
         aim > 0 && gpuMilliseconds > 1_000 / aim * budget
     }
-
-    public static func shouldLower(windows: Int) -> Bool { windows >= 3 }
 }

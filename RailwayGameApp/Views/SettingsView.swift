@@ -406,12 +406,12 @@ struct SettingsView: View {
             .accessibilityIdentifier("settings.pinchOpens3D")
             .disabled(!map3DQuality.shows3D)
             // Decision 238's later note: three looks, no sliders; decision
-            // 365: and Off, the flat map only.
+            // 365: and Off, the flat map only; decision 417: a short line
+            // on what each gives, under the section.
             Picker(selection: $map3DQuality) {
-                Text(verbatim: language.text("Automatic", "自動")).tag(Map3DQuality.automatic)
-                Text(verbatim: language.text("Battery Saver", "省電")).tag(Map3DQuality.saving)
-                Text(verbatim: language.text("High Quality", "高畫質")).tag(Map3DQuality.high)
-                Text(verbatim: language.text("Off", "關")).tag(Map3DQuality.off)
+                ForEach([Map3DQuality.automatic, .saving, .high, .off], id: \.self) { choice in
+                    Text(verbatim: choice.name(in: language)).tag(choice)
+                }
             } label: {
                 Label {
                     Text(verbatim: language.text("3D Quality", "3D 畫質"))
@@ -421,10 +421,12 @@ struct SettingsView: View {
             }
             .accessibilityIdentifier("settings.map3DQuality")
         } footer: {
-            Text(verbatim: language.text(
-                "See your own railway, trains and town in 3D. Pinch closer and the map tilts. The number in the corner shows how smoothly it runs on this device. Pinch closer for 3D: pinching on past the flat map's closest view and letting go opens the 3D map; off, only the 3D button does. 3D quality: Automatic stays sharp and turns softer when the phone works hard, runs hot or is in Low Power Mode; Battery Saver makes the 3D map softer and uses less battery and heat; High Quality stays sharp and uses more battery; Off puts the 3D buttons away so the flat map runs smoothly on older devices. The flat map is not affected.",
-                "用 3D 看你自己的鐵路、列車與城鎮。兩指拉近，地圖就會傾斜。角落的數字是這台裝置跑起來的流暢度。拉近自動變 3D：平面地圖拉到最近還繼續拉、放手就打開 3D 地圖；關掉時只有 3D 鈕會打開。3D 畫質：自動平常清楚，手機吃力、發燙或開低耗電模式時改得柔和；省電讓 3D 畫面較柔和，比較不耗電、不發燙；高畫質一直清楚，比較耗電；關掉時收起 3D 鈕，舊機型玩 2D 地圖更順。2D 地圖不受影響。"
-            ))
+            Text(verbatim: ([language.text(
+                "See your own railway, trains and town in 3D. Pinch closer and the map tilts. The number in the corner shows how smoothly it runs on this device. Pinch closer for 3D: pinching on past the flat map's closest view and letting go opens the 3D map; off, only the 3D button does. The flat map is not affected.",
+                "用 3D 看你自己的鐵路、列車與城鎮。兩指拉近，地圖就會傾斜。角落的數字是這台裝置跑起來的流暢度。拉近自動變 3D：平面地圖拉到最近還繼續拉、放手就打開 3D 地圖；關掉時只有 3D 鈕會打開。2D 地圖不受影響。"
+            )] + [Map3DQuality.automatic, .saving, .high, .off].map {
+                language.text("\($0.name(in: language)): ", "\($0.name(in: language))：") + $0.explanation(in: language)
+            }).joined(separator: "\n"))
         }
     }
 
@@ -589,18 +591,25 @@ struct ProblemReportRows: View {
     /// The file written for it, and what the player is told it holds;
     /// `nil` while it is being written.
     @State private var commandLog: (file: URL?, text: String)?
+    /// Decision 418: the freezes and exits the device recorded, as the
+    /// note's last part; `nil` when there are none, or until read.
+    @State private var diagnostics: String?
+    /// Decision 421: the screen's pace lately, after them; `nil` when none
+    /// was kept, or until read.
+    @State private var frameTimes: String?
 
     /// What the rows do, under them.
     static func footer(in language: DisplayLanguage) -> String {
         language.text(
-            "Report a Problem writes a note with the version, your device, how long each lesson took and, from a game, what is in it, for Mail, Messages or any app you choose. From a game you may also attach its save and what you did since, so the problem can be played again; you see what it holds before you send it. Nothing is sent until you send it. Testing in TestFlight? You can also take a screenshot and share it with the developer from there.",
-            "「回報問題」會寫好一則附上版本、裝置、每一關花了多久（在遊戲中開啟時還有遊戲的狀態）的訊息，由你選擇用郵件、訊息或其他 App 傳送。在遊戲中也可以選擇附上這局的存檔和之後做過的事，讓問題可以重現；傳送前會列出裡面有什麼。你按下傳送前不會送出任何東西。用 TestFlight 測試時，也可以截圖後直接分享給開發者。"
+            "Report a Problem writes a note with the version, your device, how long each lesson took and, from a game, what is in it, for Mail, Messages or any app you choose. If the game lately froze or closed unexpectedly, the note also says when and where, and how smoothly the map moved lately; that is kept only on this device. From a game you may also attach its save and what you did since, so the problem can be played again; you see what it holds before you send it. Nothing is sent until you send it. Testing in TestFlight? You can also take a screenshot and share it with the developer from there.",
+            "「回報問題」會寫好一則附上版本、裝置、每一關花了多久（在遊戲中開啟時還有遊戲的狀態）的訊息，由你選擇用郵件、訊息或其他 App 傳送。最近遊戲卡住或意外關閉過的話，訊息也會寫上時間與卡在哪裡，並附上最近地圖畫面是否順暢；這些只記在這台裝置上。在遊戲中也可以選擇附上這局的存檔和之後做過的事，讓問題可以重現；傳送前會列出裡面有什麼。你按下傳送前不會送出任何東西。用 TestFlight 測試時，也可以截圖後直接分享給開發者。"
         )
     }
 
     var body: some View {
         let language = DisplayLanguage.app
         let report = ProblemReport.current(game: game, lessons: lessons)
+        let note = [report.text(in: language), diagnostics, frameTimes].compactMap { $0 }.joined(separator: "\n\n")
         if let session {
             Toggle(isOn: $attachesCommandLog) {
                 Label {
@@ -627,17 +636,23 @@ struct ProblemReportRows: View {
         }
         Group {
             if attachesCommandLog, let file = commandLog?.file {
-                ShareLink(item: file, subject: Text(verbatim: report.subject(in: language)), message: Text(verbatim: report.text(in: language))) {
+                ShareLink(item: file, subject: Text(verbatim: report.subject(in: language)), message: Text(verbatim: note)) {
                     reportLabel(language)
                 }
             } else {
-                ShareLink(item: report.text(in: language), subject: Text(verbatim: report.subject(in: language))) {
+                ShareLink(item: note, subject: Text(verbatim: report.subject(in: language))) {
                     reportLabel(language)
                 }
                 .disabled(attachesCommandLog)
             }
         }
         .accessibilityIdentifier("settings.report")
+        .task {
+            diagnostics = await Task.detached(priority: .utility) {
+                DeviceDiagnosticsRecorder.shared.current().reportText(in: language)
+            }.value
+            frameTimes = await FrameTimeRecorder.shared.reportText(in: language)
+        }
     }
 
     private func reportLabel(_ language: DisplayLanguage) -> some View {
@@ -686,7 +701,7 @@ extension ProblemReport {
         let device = UIDevice.current
         return ProblemReport(
             version: version, build: build, system: "\(device.systemName) \(device.systemVersion)", device: modelIdentifier, game: game,
-            lessons: lessons
+            lessons: lessons, map3D: Map3DLoadGovernor.report(UserDefaults.standard.string(forKey: Map3DMetalView.rungKey))
         )
     }
 

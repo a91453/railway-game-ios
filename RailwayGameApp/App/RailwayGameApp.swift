@@ -63,6 +63,9 @@ struct RailwayGameApp: App {
         #else
         let plays = true
         #endif
+        // Decision 418: what the system records of freezes and exits, kept
+        // on the device for a problem report.
+        DeviceDiagnosticsRecorder.shared.start()
         let audio = GameAudio(plays: plays)
         let launcher = RailwayGameApp.makeLauncher()
         launcher.playSound = { audio.play($0) }

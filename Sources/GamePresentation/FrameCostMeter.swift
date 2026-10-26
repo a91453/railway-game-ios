@@ -281,8 +281,57 @@ public final class FrameCostMeter: @unchecked Sendable {
     /// Decision 379: likewise, the view update's time.
     private var viewUpdateSinceFrame = 0.0
     private var longestGapViewUpdate = 0.0
+    /// Decision 421: each part's time since the frame began, for the frame
+    /// time record's longest stall; kept while ``keepsFrameParts``, in
+    /// ``FrameCostPart``'s order, made once.
+    private var keeping = false
+    private var frameParts = Array(repeating: 0.0, count: FrameCostPart.allCases.count)
+    private static let partIndex = Dictionary(uniqueKeysWithValues: FrameCostPart.allCases.enumerated().map { ($1, $0) })
 
     public init() {}
+
+    /// Decision 421: whether each frame's parts are timed for the frame
+    /// time record (``FrameTimeMeter``), the readout on or not.
+    public var keepsFrameParts: Bool {
+        get { lock.withLock { keeping } }
+        set {
+            lock.withLock {
+                keeping = newValue
+                for index in frameParts.indices { frameParts[index] = 0 }
+            }
+        }
+    }
+
+    /// Whether anything is timed: the readout or the record.
+    var isTiming: Bool { lock.withLock { on || keeping } }
+
+    /// Decision 421: a frame begins; its parts are counted afresh.
+    func startFrame() {
+        lock.withLock {
+            guard keeping else { return }
+            for index in frameParts.indices { frameParts[index] = 0 }
+        }
+    }
+
+    /// Decision 421: of a frame `milliseconds` long, the `top` longest
+    /// parts timed on the main thread since it began, those holding no
+    /// other part, and what of it no such part was timed in.
+    func frameParts(over milliseconds: Double, top: Int) -> [FrameTimeStall.Part] {
+        lock.withLock {
+            guard keeping else { return [] }
+            var timed = 0.0
+            var parts: [FrameTimeStall.Part] = []
+            for part in FrameCostPart.allCases where part.isTimedApart || part == .viewUpdate {
+                guard let index = Self.partIndex[part], frameParts[index] > 0 else { continue }
+                if part.isTimedApart { timed += frameParts[index] }
+                parts.append(FrameTimeStall.Part(part: part.rawValue, milliseconds: FrameTimeStats.tenth(frameParts[index])))
+            }
+            parts.sort { $0.milliseconds > $1.milliseconds }
+            let shown = Array(parts.prefix(top))
+            let untimed = FrameTimeStats.tenth(max(0, milliseconds - timed))
+            return shown + [FrameTimeStall.Part(part: FrameTimeStall.Part.untimed, milliseconds: untimed)]
+        }
+    }
 
     /// Whether the parts are timed; turning it on or off starts afresh.
     public var isOn: Bool {
@@ -307,6 +356,7 @@ public final class FrameCostMeter: @unchecked Sendable {
     /// Counts `milliseconds` of `part`, while on.
     public func record(_ part: FrameCostPart, milliseconds: Double) {
         lock.withLock {
+            if keeping, let index = Self.partIndex[part] { frameParts[index] += milliseconds }
             guard on else { return }
             var tally = tallies[part] ?? Tally()
             tally.count += 1
@@ -329,7 +379,7 @@ public final class FrameCostMeter: @unchecked Sendable {
 
     /// Does `work`, timed as `part` while on.
     public func measure<T>(_ part: FrameCostPart, _ work: () throws -> T) rethrows -> T {
-        guard isOn else { return try work() }
+        guard isTiming else { return try work() }
         let start = ContinuousClock.now
         let result = try work()
         record(part, since: start)
