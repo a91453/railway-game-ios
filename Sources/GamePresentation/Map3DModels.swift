@@ -84,6 +84,11 @@ public struct Map3DModelPack: Sendable {
         // Decision 400, 10i-6: the player's route buses, last, so no model
         // before them moves.
         models.append(Map3DLowFloorBus.routeModel())
+        // Independent PP roles, near and far. The E500-hauled display
+        // assembly is exported separately; it exceeds the per-file limit.
+        for far in [false, true] {
+            models += Map3DPPPassenger.roles.map { Map3DPPPassenger.model($0, far: far) }
+        }
         self.models = models
     }
 

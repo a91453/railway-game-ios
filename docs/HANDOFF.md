@@ -1,5 +1,7 @@
 # 交接
 
+> Codex PP客車（#1282）：[來源／外觀／營運與重建交接](art/pp-coaches-2026-10-26/README.md)。四種PP近遠獨立配方及已接受E500第三版＋12客車完整靜態展示。只有原`pushPull`接點中間客車改PPT1000，E1000兩端、可變節數、列車包／classic／解鎖與回退保持；PPH/PPC/PPM未逐車接營運，E500＋PP未接E500營運。E500CK/MINGRI/STAR客車與既有模型實際payload保護。公開唯一總覽，完整素材／viewer／ZIP在互鏈私有draft；最新同提交CI看PR，不以Linux靜態驗證當真機／動畫／推拉控制。GameCore、存檔與fixtures不動，不合併／auto-merge／TestFlight。
+
 > Codex E500 原生重建第三版（issue #1255）：[自有外觀／營運接點／重建交接](art/e500-refresh-2026-10-25/README.md)。使用者圈選中央格柵排與正面過寬平台：僅修屋頂為連續六格外殼、收窄降低並貼合真車頂；68913f4f第二版完整保持，私庫revision-3全量重出。非屋頂與弓機構三角bytes保護。僅 E500CK／MINGRI／STAR 專用近遠景；其他包／解鎖／回退與 GameCore 不動。完整素材私庫、公開一張總覽，互鏈 draft PR 與同head CI 見 issue；靜態幾何不等於真機動畫。
 
 > 讀者：每一個新開的 session，以及接手某條線的 session。先讀 [OVERVIEW.md](OVERVIEW.md)，再讀這份。
