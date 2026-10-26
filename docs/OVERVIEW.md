@@ -161,6 +161,7 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | `PR526_626_REVIEW_HANDOFF.md` | #526–#626 的審查交接：`main` 的 CI 紅燈、修的 bug、沒修的與理由、存檔 53–60 的遷移檢查 |
 | `PR1137_1188_REVIEW_HANDOFF.md` | #1137–#1188 的審查交接（審查 H）：修的 bug、沒修的與交給誰 |
 | `PR1189_1241_REVIEW_HANDOFF.md` | #1189–#1241 的審查交接（審查 I）：修的 bug、沒修的與交給誰 |
+| `PR1242_1287_REVIEW_HANDOFF.md` | #1229–#1287 的審查交接（審查 J，三段）：修的 bug、沒修的與交給誰 |
 | `UI_GAP_AND_PORT_PLAN.md` | 由 UX_REDESIGN_STUDY 與決策 106–122 取代 |
 | `MAPKIT_E2.md` | 由決策 50、97、151 取代 |
 

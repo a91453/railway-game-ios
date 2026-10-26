@@ -154,3 +154,78 @@ GameCore 的 #1268 由本 session 自己讀。
 - 開發：唯一的 GameCore PR #1268 驗證完整；派工單 E 的四個檔沒有動。
 - 美術：無（模型由各自的 PR 照 art-style 檢查）。
 - 音樂：無（放空模式讓音樂照放，沒有改音樂）。
+
+## 第 3 段（#1270–#1287）
+
+Session：session_01UvQcP14umjdnDYpqc14Ngx，branch `claude/new-session-hsegen`（系統指定的開發 branch，從 main **bfcfec9**（#1293 合併後）開）。
+
+派工單 E（session_01MdqoSy58YkbJUqAMxXXoCk，#1295）正在改 `BusRoadNetwork.swift`、`BusStopLabels.swift`、`BusRouteEditor.swift`、`GameSession.swift`，這一段沒有動它們。#1283、#1285 碰到這幾個檔的部分照樣讀了，沒有發現要交給 E 的新問題。公車道路與真站牌在主執行緒讀（3D 的 `Map3DBuses` 也一樣），是 E 正在修、HANDOFF 已經寫的那一件，不重報。
+
+### 一、結論
+
+| 項目 | 數量 |
+| --- | --- |
+| 程式 PR | 12 個、12 點（沒有 GameCore） |
+| 新發現 | **1 個**，P3（J2） |
+| 已修 | 0 個（P3 不在順手修的範圍） |
+| 沒修，交出去 | **1 個**：J2 |
+
+另有一個疑點（推不出玩家碰得到的路徑，不算發現），寫在第四節最後。
+
+### 二、逐 PR
+
+| PR | 看了什麼 | 結論 |
+| --- | --- | --- |
+| #1270 | 決策 400 的 10i-6 3D 公車：`BusMotion`（往返、每站停靠不超過單程的 30 %，移動時間一定 > 0；`legMetres` 至少一段，GameCore 要求與站數相同，倒著走的 `leg` 不會 < 0）、`Map3DBuses`（`Route.stops` 比站多一個，與里程標對齊；簽名含形狀、`legMetres`、班次、車數、車站、顏色、調色盤、道路數與 `onRoads`）、`Map3DStreetLife` 的讓路、`Map3DLowFloorBus.routeModel`（加在 `Map3DModels` 最後，不動前面的索引）、`Map3DPreviewScreen` 的 `updateBuses`／`busFrame`；`RealTrainClock` 給 0–86,400 秒 | 無問題。`Map3DBuses` 在繪圖執行緒建，是 E 已寫進 HANDOFF 的同一件 |
+| #1271 | 決策 417 動態預算與負載調節：`Map3DMotionBudget` 依 GPU 家族分三級（5 以下、8、9 以上；三角形 25 萬／60 萬／100 萬）、`limits(routeBuses:)`；`Map3DLoadGovernor`（連 3 個重的時窗降一級，升回要 20 → 240 個半秒、30 內再犯就加倍；「自動」從最高的下一級起、低一級從 0 起；照畫質、系統、級數記在 `map3DLoadRung`；記憶體警告就降、`critical` 熱度時最高只到 0）；`Map3DModels.model(_:forType:count:at:reach:)` 沒有遠景組時不會比以前畫得遠；`lifeCapacity`（最高一級的行人＋車＋公車 = 2,645）有 `.prefix` 擋 | 無問題。3D 一直連續畫，量到的低幀數是真的；只有「自動」用記住的級數，手動選的畫質不會被蓋掉；設定的文字兩種語言都有 |
+| #1272 | 決策 418 裝置診斷：`DeviceDiagnostics`（MetricKit JSON 寬鬆解碼；最多 12 件、3 天、48 個 frame、256 KB；相同的去重；丟掉核心的 frame）、`DeviceDiagnosticsRecorder`（NSLock，存在 Application Support/Diagnostics）；問題回報在 `Task.detached` 讀檔 | 無問題 |
+| #1273 | 決策 419 不在主執行緒讀存檔：`GameLauncher.open(reading:world:then:)` 在 `saveQueue` 上排在已排的存檔後面讀，道路在 `Task.detached` 讀；`isLoadingSave` 擋住重複點；300 ms 後才出讀取畫面；`gamesBegun` 擋舊的回呼；UI 測試啟動用 `readsSavesAtOnce` | 無問題。`SaveListView` 只從 StartView 開（那時 `session` 是 nil），`onChange(session != nil \|\| realWorldLoading != nil)` 關掉清單是對的；HUD 裡的讀檔照舊 |
+| #1275 | 決策 420 太魯閣號、EMU800 遠景組：車鼻站的篩選；色帶高度 1+6、1+10 一致；環的預設上 3.70、下 0.83 與舊的字面值相同；`nearOnly` 加上兩組；`Map3DMeshSimplifier` 只在測試與報告用 | 無問題 |
+| #1277 | 決策 421 幀時間紀錄：`FrameTimeRecord`、`FrameTimeMeter`、`FrameTimeRecorder`（2D 用 CADisplayLink 的拍子，3D 用 presented handler；每秒看一次，存在 `frame-times.json`）、`FrameCostMeter.frameParts`；建 `Map3DMetalView` 的只有一處 | **J2（P3）**：每一幀複製一次 11.6 KB 的計數，見第四節 |
+| #1278 | 決策 421 的幀時間跑分：`FrameTimeBench`、`FrameTimeBenchRunner`、`layFrameTimeBench`、`layDemoRealLines(routes:)`、`GameLauncher.openFrameTimeBench`；只在測試版（`TestBuild.isTest` 加示範的開關）開得到 | 無問題。一個疑點見第四節最後 |
+| #1280 | 決策 422 700T 遠景組：`refreshHighSpeed(far:)`（20 段，車底 12...17）、`refreshHighSpeedFarRunning`、`FarFittings`；N700S-G 的 `farMesh` 沒有時退回 `model(unit)` | 無問題。`teal` 的索引檢查只在車底那支用到，那裡的顏色是鋼色；色帶用裁切畫，不會少一條 |
+| #1283 | 決策 424 公車走道路（E 的檔，只讀）：`BusRoadNetwork`／`BusWay` 1 m 內合併節點、`splitAtJunctions`、Dijkstra（`searchLimit` 40 萬）、圓角保留里程標；`PlayerCommandEdit` 加可選的 `legMetres`（舊紀錄解成 nil）；`Map3DBuses` 只在 `firstBroken` 是 nil 時用 `way(ofSaved:)` 的點與里程標；GameCore 的 `maximumLegMetres` 20 萬 | 無新問題。在主執行緒算是 E 的那一件 |
+| #1284 | 決策 423 怎麼去：`JourneyPlan` 用 GameCore 的 `passengerRoutes(limit: 3)` 與 `tripFare(from:to:highSpeed:)`，只在經營模式顯示票價 | 無問題。與 `Boarding.chargeFares` 一致：第一次上車時收一次，起站到終點，有一段是高鐵就算高鐵（`ridesHighSpeed` 與它用同一個 `ServiceLine.isHighSpeed`） |
+| #1285 | 決策 424 站牌與編號（E 的檔，只讀）：`BusStopLabels` 的編號（存檔的路線用 `farthestFirst`）、`RealBusStops` 10 m 內合併、`RealBusLibrary`、`BusArrows`（間隔 max(200 m, 120 pt)）；MapArt 的站牌、站名牌、箭頭、淡點，覆蓋層站牌與站名的 zip 順序一致；`GameLauncher`／`RealWorldData.realBuses` 讀 `real_buses_index` | 無新問題 |
+| #1287 | 決策 423 車站面板的「怎麼去」：`JourneyPlanRows`、`StationPanel`；輸入是 `RidershipInputs`（含站名）加 `LineLook`，在 `Task.detached` 算；換選的車站時目的地重設 | 無問題 |
+
+### 三、修了的
+
+無。唯一的發現是 P3，不在順手修的範圍（只修 P1、P2）。
+
+### 四、沒修、交出去的
+
+#### J2（#1277）幀時間計量每一幀複製一次 11.6 KB 的區間計數，P3，沒修
+
+- 檔案:行：`Sources/GamePresentation/FrameTimeRecord.swift:504`（`guard var current = tally`）、`:524`（`current.intervals.add(milliseconds)`）、`:510–511`（`defer { tally = current … }`）。
+- 怎麼推得到：
+  1. 玩家在 2D 地圖上，每一幀 CADisplayLink 呼叫 `FrameTimeRecorder` 的拍子（`RailwayGameApp/App/FrameTimeRecorder.swift:156`），它叫 `meter.frame(at: link.timestamp)`；3D 地圖每一幀從 presented handler 叫同一個函式（`RailwayGameApp/Views/Map3D/Map3DMetalView.swift:1131`）。
+  2. `frame(at:)` 在鎖裡把 `tally` 複製到 `var current`。這時 `current.intervals` 的計數陣列（2,901 個 `UInt32`，約 11.6 KB）有兩個持有者（`tally` 與 `current`）。
+  3. `current.intervals.add(...)` 寫陣列，copy-on-write 配一塊新的 11.6 KB 並整塊複製；`defer` 再把 `current` 寫回 `tally`，舊的那塊釋放。
+  4. 所以每一幀（60 或 120 次／秒）都多配置、複製、釋放一次 11.6 KB，與類別說明「Nothing is made for a frame but a stall longer than any before it」（`:409–410`）不符。同一個類別的 `drew`、`gpu` 用 `tally!.…` 直接改，沒有這個問題。
+  5. 量的：同樣寫法的獨立程式（`swiftc -O`，Linux）每次 0.16 µs，直接改 0.034 µs。一幀多約 0.13 µs，玩家看不到，但它是量幀時間的工具本身多出來的配置。
+- 等級：**P3**。不會丟存檔、當掉或算錯錢，玩家也看不到。
+- 建議怎麼修：照 `drew()`、`gpu()` 的寫法直接改 `tally!`（`tally!.intervals.add(milliseconds)`、`tally!.last = time` 等），或複製之後先 `tally = nil` 再改、最後寫回，讓陣列只有一個持有者。只動 GamePresentation 這一個函式；`FrameTimeRecordTests` 的結果不該變。交給下一個碰 `FrameTimeRecord.swift` 的 PR 順手帶上（決策 421 線）。
+
+**疑點（不算發現）**：#1278 的跑分在 `railways` 還沒讀好時，`layDemoRealLines` 回 nil，跑出來是 0 條線，紀錄的情境卻寫真實的線數。只在測試版、而且要在真實鐵路資料讀完之前就開跑分才會發生，推不出正常的操作會走到這裡，所以只記為疑點。
+
+### 五、執行過的檢查
+
+| 檢查 | 結果 |
+| --- | --- |
+| `swift build --build-tests -Xswiftc -warnings-as-errors`（這個 branch，bfcfec9，Linux，官方 Swift 6.4.0 `/opt/swift`） | **VERIFIED**，乾淨，0 個 warning |
+| 與這一段有關的測試類別（`swift test --skip-build --filter`，第一個 Executed 行） | **VERIFIED**，都是 0 失敗：`BusMotionTests` 8、`Map3DBusesTests` 12（1 個略過，要 `BUS_3D_REPORT` 的報告）、`Map3DMotionBudgetTests` 27（2 個略過，要 `MOTION_BUDGET_REPORT` 的報告）、`DeviceDiagnosticsTests` 5、`GameLauncherTests` 9、`BackgroundSaveTests` 5、`SaveRecoveryTests` 7、`RealWorldDataLoadTests` 7、`Map3DFarSets420Tests` 3、`Map3DMeshSimplifierTests` 7、`Map3DFarSets422Tests` 3、`Map3DTrainSetTests` 12、`Map3DHighSpeedSetsTests` 8、`Map3DStreetLifeTests` 12、`FrameTimeRecordTests` 12、`FrameTimeBenchTests` 5、`BusRoadNetworkTests` 12、`BusStopLabelsTests` 16、`BusRouteEditorTests` 13、`JourneyPlanTests` 15（#1284、#1287 都是這一個類別） |
+| `python3 -I tools/golden-checks/doc_numbers.py --check` | **VERIFIED**，差異 0 項 |
+| J2 的量測（同樣寫法的獨立 `swiftc -O` 程式，Linux） | **VERIFIED**，0.16 µs 對 0.034 µs |
+| 其他 | 只讀程式、追了呼叫路徑 |
+| 完整測試、iOS 建置、UI 測試、實機畫面 | 交給 CI（`ci.yml` 的 tier、`ios-build.yml`）與實機，**UNVERIFIED LOCALLY** |
+
+這一段沒有改程式，所以沒有回歸測試。
+
+### 六、五方
+
+- 玩家：十二個 PR 沒有會丟存檔、當掉、卡住或算錯錢的問題；讀存檔不再卡住畫面，「怎麼去」的票價與實際收的一致。
+- 鐵道迷：「怎麼去」的票價照 GameCore 收費的規則（第一次上車收一次、有高鐵段就算高鐵）；太魯閣號、EMU800、700T 的遠景組沒有改色帶與外型。
+- 開發：這一段沒有 GameCore PR；J2 只是一個函式的寫法，交給決策 421 線；派工單 E 的四個檔沒有動。
+- 美術：無（遠景組由各自的 PR 照 art-style 檢查）。
+- 音樂：無。
