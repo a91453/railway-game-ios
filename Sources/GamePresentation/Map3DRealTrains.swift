@@ -301,9 +301,10 @@ public struct Map3DRealTrains: Sendable {
 
     /// The real trains at second `second` of the game day `day` seen from
     /// `eye`, added to `frame`: the models of `models` within reach, the
-    /// rest boxes; at most ``RealTrainTraffic/mostDrawn`` trains.
+    /// rest boxes; at most ``RealTrainTraffic/mostDrawn`` trains. Decision
+    /// 417: the far models and boxes from `reach` of their distances.
     public func add(to frame: inout Map3DTrains.Frame, second: Double, day: RealServiceDay, dayBefore: RealServiceDay,
-                    models: Map3DModelPack?, eye: Map3DPoint?) {
+                    models: Map3DModelPack?, eye: Map3DPoint?, reach: Map3DModelReach = .standard) {
         var drawn = 0
         for (index, line) in traffic.lines.enumerated() where !tracks[index].isEmpty {
             let lineFormation = formations[index], stripe = stripes[index]
@@ -351,7 +352,7 @@ public struct Map3DRealTrains: Sendable {
                     if let models, hasModels, let eye,
                        let near = models.modelIndex(forType: formation.key, carIndex: car, count: formation.cars),
                        // Decision 408: past its set's reach, its far set's car.
-                       let model = models.model(near, forType: formation.key, count: formation.cars, at: (base - eye).length) {
+                       let model = models.model(near, forType: formation.key, count: formation.cars, at: (base - eye).length, reach: reach) {
                         let turned = models.isTurned(forType: formation.key, carIndex: car, count: formation.cars)
                         frame.instances.append(Map3DTrains.instance(of: models.models[model], index: model, from: turned ? a : b, to: turned ? b : a,
                                                                     stripe: stripe))

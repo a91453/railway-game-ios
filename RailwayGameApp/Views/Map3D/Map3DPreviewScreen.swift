@@ -597,23 +597,27 @@ final class Map3DTrainFeed {
 
     /// Decision 259: the people and vehicles of `scene` now, round the
     /// camera's target; standing still with Reduce Motion on.
-    func streetLife(in scene: Map3DScene, camera: Map3DCamera, lights: Float, detail: Map3DStreetDetail) -> Map3DStreetLife.Frame {
+    /// Decision 417: within `budget` (until the route buses' wiring, by
+    /// its tier and step's street detail).
+    func streetLife(in scene: Map3DScene, camera: Map3DCamera, lights: Float, budget: Map3DMotionBudget) -> Map3DStreetLife.Frame {
+        let detail = budget.tier.map { budget.step >= .fewestOnStreets ? $0.streetDetail.lowered : $0.streetDetail } ?? .off
         // A day's seconds, so the clock stays precise as a Float.
         let time = Date().timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 86_400)
         return scene.streetLife.frame(target: camera.target, distance: camera.distance, time: time,
                                       still: UIAccessibility.isReduceMotionEnabled, lights: lights, detail: detail, activity: activity)
     }
 
-    /// The trains seen from `eye`, `ringed` with its ring (decision 334).
-    func frame(in scene: Map3DScene, models: Map3DModelPack?, eye: Map3DPoint, ringed: TrainID?) -> Map3DTrains.Frame {
+    /// The trains seen from `eye`, `ringed` with its ring (decision 334),
+    /// their far models and boxes from `reach` (decision 417).
+    func frame(in scene: Map3DScene, models: Map3DModelPack?, eye: Map3DPoint, ringed: TrainID?, reach: Map3DModelReach) -> Map3DTrains.Frame {
         let now = Date().timeIntervalSinceReferenceDate
         let progress = motion.isMoving ? motion.progress(at: now) : 1
         var frame = Map3DTrains.frame(motion, progress: progress, heights: heights, in: scene, models: models, eye: eye, palette: palette,
-                                      ringed: ringed)
+                                      ringed: ringed, reach: reach)
         // Decision 339: and the real timetables' trains, on their own track.
         if let real = scene.realTrains, let clock = realClock {
             real.add(to: &frame, second: clock.second(at: now, glides: realGlides), day: clock.today, dayBefore: clock.dayBefore,
-                     models: models, eye: eye)
+                     models: models, eye: eye, reach: reach)
         }
         return frame
     }
@@ -737,10 +741,10 @@ private struct Map3DView: UIViewRepresentable {
             pack.locked = TrainPack.locked(unlocked: unlocked)
             return pack
         }
-        view.trains = { [weak view] eye in feed.frame(in: scene, models: models, eye: eye, ringed: view?.ringed) }
+        view.trains = { [weak view] eye, reach in feed.frame(in: scene, models: models, eye: eye, ringed: view?.ringed, reach: reach) }
         let labels = trainLabels
         view.trainHeads = { heads, camera in labels.show(feed.labels(heads: heads, camera: camera)) }
-        view.streetLife = { camera, lights, detail in feed.streetLife(in: scene, camera: camera, lights: lights, detail: detail) }
+        view.streetLife = { camera, lights, budget in feed.streetLife(in: scene, camera: camera, lights: lights, budget: budget) }
         if first, let start {
             // Decision 269: where the 2D map was, as close, straight down.
             view.camera = Map3DHandoff.camera(from: start, in: scene, viewport: view.camera.viewport)
