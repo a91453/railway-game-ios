@@ -67,6 +67,9 @@ public struct Map3DModelPack: Sendable {
         models.append(Map3DGreenCommuter.formation())
         models += Map3DTEMU1000.Unit.allCases.map { Map3DTEMU1000.model($0) }
         models.append(Map3DTEMU1000.formation())
+        // Static TEMU2000 study; operating Puyuma mapping is a separate step.
+        models += Map3DTEMU2000.Unit.allCases.map { Map3DTEMU2000.model($0) }
+        models.append(Map3DTEMU2000.formation())
         models += Map3DThreeCarUrban.Unit.allCases.map { Map3DThreeCarUrban.model($0) }
         models.append(Map3DThreeCarUrban.formation())
         // Independent static five-section articulated LRT; no operating type binding.
