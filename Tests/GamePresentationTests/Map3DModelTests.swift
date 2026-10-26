@@ -20,7 +20,7 @@ final class Map3DModelTests: XCTestCase {
         let shortSets = Map3DGreenTram.Section.allCases.count + 1 + Map3DGreenCommuter.Unit.allCases.count + 1 + temu1000Models + temu2000Models
         let longSets = Map3DThreeCarUrban.Unit.allCases.count + 1 + Map3DFiveSectionLRT.Unit.allCases.count + 1 + Map3DSevenSectionLRT.Unit.allCases.count + 1
         let rest = Map3DFourCarMetro.Unit.allCases.count + 1 + Map3DSevenCarBlue.Unit.allCases.count + 1 + Map3DDuplexSteam.Unit.allCases.count + 1 + Map3DSteamTender.Unit.allCases.count + 1 + Map3DTrainShapeRefresh.ids.count + 1
-        let ppDisplayModels = Map3DPPPassenger.roles.count * 2
+        let ppDisplayModels = Map3DPPPassenger.roles.count * 2 + 2 // E1000 near/far
         XCTAssertEqual(pack.models.count, baseModels + shortSets + longSets + rest + ppDisplayModels)
         for style in Map3DTrainStyle.all {
             var names = [style.name + "-cab", style.name + "-car"]
