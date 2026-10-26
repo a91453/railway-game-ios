@@ -95,16 +95,16 @@ final class FrameTimeBenchTests: XCTestCase {
     /// The game: Taipei with its real lines, by the demo mode's steps, to
     /// the count asked, and the same every time.
     func testTheGameHasTheLinesAskedTheSameEveryTime() async throws {
+        // Through the launcher, as the test builds' entry opens it.
         func laid(_ count: Int) async throws -> GameWorld {
-            let heights = try HeightGrid(
-                data: Data(contentsOf: BundledRealData.directory.deletingLastPathComponent().appendingPathComponent("RealWorld/taiwan_heights.dat"))
-            )
-            let session = GameSession(world: FrameTimeBench.world(groundFrom: heights), language: .traditionalChinese)
-            session.heights = heights
-            session.railways = try BundledRealData.railways()
-            session.news.isDemo = true
-            let lines = await session.layFrameTimeBench(lines: count)
-            XCTAssertEqual(lines, count)
+            let directory = FileManager.default.temporaryDirectory.appendingPathComponent("FrameTimeBenchTests-\(UUID().uuidString)", isDirectory: true)
+            defer { try? FileManager.default.removeItem(at: directory) }
+            let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .traditionalChinese)
+            await launcher.loadRealWorldData { Map3DOpenEveryStartTests.data }.value
+            let opened = await launcher.openFrameTimeBench(lines: count)
+            let session = try XCTUnwrap(opened)
+            XCTAssertTrue(session.news.isDemo)
+            XCTAssertEqual(session.world.lines.count, count)
             return session.world
         }
         // One line, twice: laying more takes minutes in a debug build; the
@@ -117,5 +117,8 @@ final class FrameTimeBenchTests: XCTestCase {
         XCTAssertEqual(again.lines.map(\.stops), one.lines.map(\.stops))
         XCTAssertEqual(again.stations.count, one.stations.count)
         XCTAssertNotNil(FrameTimeBench.followed(in: one))
+        // Decision 313, later: its 3D map opens where the 2D map looks, as
+        // every start's (Map3DOpenEveryStartTests).
+        Map3DOpenEveryStartTests.assertOpensWhereThe2DMapLooks(one, "openFrameTimeBench")
     }
 }

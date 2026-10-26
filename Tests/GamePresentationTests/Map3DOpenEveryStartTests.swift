@@ -23,13 +23,14 @@ final class Map3DOpenEveryStartTests: XCTestCase {
         case realWorldDemo
         case highSpeedDemo
         case traDemo
+        case frameTimeBench
         case tutorial
         case lesson(Lesson)
 
         static var all: [Start] {
             [.newGame, .realWorldGameInTaiwan, .realWorldGameAbroad, .wholeTaiwan]
                 + (Challenge.sandbox + Challenge.history).map(Start.challenge)
-                + [.weeklyChallenge, .demo, .realWorldDemo, .highSpeedDemo, .traDemo, .tutorial]
+                + [.weeklyChallenge, .demo, .realWorldDemo, .highSpeedDemo, .traDemo, .frameTimeBench, .tutorial]
                 + Lesson.all.map(Start.lesson)
         }
 
@@ -45,6 +46,7 @@ final class Map3DOpenEveryStartTests: XCTestCase {
             case .realWorldDemo: "openRealWorldDemo"
             case .highSpeedDemo: "openHighSpeedDemo"
             case .traDemo: "openTRADemo"
+            case .frameTimeBench: "openFrameTimeBench"
             case .tutorial: "startTutorial"
             case .lesson: "startLesson"
             }
@@ -108,6 +110,7 @@ final class Map3DOpenEveryStartTests: XCTestCase {
         case .realWorldDemo: launcher.openRealWorldDemo(railways: railways)
         case .highSpeedDemo: await launcher.openHighSpeedDemo(railways: railways)?.value
         case .traDemo: await launcher.openTRADemo(railways: railways)?.value
+        case .frameTimeBench: _ = await launcher.openFrameTimeBench(lines: 1)
         case .tutorial: launcher.startTutorial()
         case .lesson(let lesson): launcher.startLesson(lesson)
         }
@@ -115,11 +118,11 @@ final class Map3DOpenEveryStartTests: XCTestCase {
     }
 
     /// The demos built in their own classes, which open them through the
-    /// launcher already (some 130 and 35 seconds) and check them with
+    /// launcher already (some 130, 35 and 20 seconds) and check them with
     /// ``assertOpensWhereThe2DMapLooks(_:_:file:line:)``.
     static func isCheckedElsewhere(_ start: Start) -> Bool {
         switch start {
-        case .highSpeedDemo, .traDemo: true // HighSpeedDemoTests, TRADemoTests
+        case .highSpeedDemo, .traDemo, .frameTimeBench: true // HighSpeedDemoTests, TRADemoTests, FrameTimeBenchTests
         default: false
         }
     }
