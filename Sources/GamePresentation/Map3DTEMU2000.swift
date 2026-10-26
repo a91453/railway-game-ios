@@ -89,11 +89,11 @@ extension StationKitBuilder {
             (9.28,0.95,2.84,0.40,0.15),
             (9.72,0.91,2.49,0.35,0.15),
             (10.11,0.84,2.11,0.38,0.13),
-            (10.28,0.80,1.96,0.42,0.11),
+            (10.28,0.785,1.96,0.42,0.11),
             (10.47,0.70,1.79,0.47,0.09),
-            (10.60,0.64,1.68,0.52,0.07),
+            (10.60,0.625,1.68,0.52,0.07),
             (10.75,0.52,1.55,0.59,0.05),
-            (10.8725,0.34,1.39,0.69,0.02)
+            (10.8725,0.36,1.39,0.69,0.02)
         ]
         var rings: [[Map3DPoint]]
         if cab > 0 {
@@ -274,27 +274,27 @@ extension StationKitBuilder {
                   [1.04,1.14,1.18,1.16,1.09],8,navy,0.124,0.06)
             panel([8.89,9.08,9.29,9.50,9.67],
                   [0.94,1.04,1.09,1.06,0.99],8,glass,0.145,0.04)
-            // More closely spaced stations ease the colour edge around both
-            // white cheeks. The shoulder begins nearly flat under the lamps,
-            // then rounds into the narrow lower nose without a sharp notch.
+            // Close stations form a shallow S-curve around each white cheek.
+            // The colour stays broad below the lamps, leaving two restrained
+            // side cheeks instead of white lobes that push into the centre.
             panel([9.40,9.72,9.99,10.13,10.23,10.31,10.39,
                    10.47,10.55,10.63,10.71,10.80,10.8725],
                   [1.16,1.16,1.13,1.05,0.98,0.88,0.78,
-                   0.67,0.57,0.49,0.43,0.39,0.38],8,teal,0.110)
+                   0.73,0.68,0.62,0.56,0.52,0.48],8,teal,0.110)
             // Carry the tapered centre field down the short blunt end cap.
             // A slight bow replaces the perfectly straight cheek-side edge;
             // the white lower lip remains exposed.
             face([
-                Map3DPoint(cab*10.925,1.51,-0.40),
-                Map3DPoint(cab*10.925,1.51,0.40),
-                Map3DPoint(cab*10.925,1.36,0.42),
-                Map3DPoint(cab*10.925,1.12,0.42),
-                Map3DPoint(cab*10.925,0.87,0.39),
-                Map3DPoint(cab*10.925,0.80,0.34),
-                Map3DPoint(cab*10.925,0.80,-0.34),
-                Map3DPoint(cab*10.925,0.87,-0.39),
-                Map3DPoint(cab*10.925,1.12,-0.42),
-                Map3DPoint(cab*10.925,1.36,-0.42)
+                Map3DPoint(cab*10.925,1.51,-0.48),
+                Map3DPoint(cab*10.925,1.51,0.48),
+                Map3DPoint(cab*10.925,1.36,0.50),
+                Map3DPoint(cab*10.925,1.12,0.50),
+                Map3DPoint(cab*10.925,0.87,0.48),
+                Map3DPoint(cab*10.925,0.80,0.45),
+                Map3DPoint(cab*10.925,0.80,-0.45),
+                Map3DPoint(cab*10.925,0.87,-0.48),
+                Map3DPoint(cab*10.925,1.12,-0.50),
+                Map3DPoint(cab*10.925,1.36,-0.50)
             ],inside:inside,color:teal)
             // Lens faces are laid on the swept cab skin, so their position
             // follows the forehead instead of floating above the roof.
