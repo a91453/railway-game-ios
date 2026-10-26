@@ -288,14 +288,16 @@ public struct Map3DTrainSet: Sendable {
 
     // MARK: Building
 
-    /// PP passenger-car substitution only. The existing E1000 power car
-    /// remains at both ends; the standard PPT is the one operating middle
-    /// role. Special PP roles are separate display assets, not invented
-    /// positions in the game's variable-length formations.
+    /// The push-pull Tze-Chiang as it runs since TRA's timetable of
+    /// 2026-07-01 (decision 425): the PP coaches with an E500 at each end,
+    /// the E1000 power cars having left service (``Map3DE1000`` stays in the
+    /// pack as a display asset). The standard PPT is the one operating
+    /// middle role; special PP roles are separate display assets, not
+    /// invented positions in the game's variable-length formations.
     static func ppHauled(far: Bool = false) -> Map3DTrainSet {
         Map3DTrainSet(key: far ? "pushPullFar" : "pushPull", ownLengths: true,
                       far: far ? nil : "pushPullFar") {
-            Cars(head: Map3DTrainLocomotive.e1000.model,
+            Cars(head: Map3DE500.model(far: far),
                  middle: Map3DPPPassenger.model(.ppt1000, far: far), tail: nil, single: nil)
         }
     }

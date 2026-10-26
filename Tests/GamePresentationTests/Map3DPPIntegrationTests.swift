@@ -2,8 +2,8 @@ import GameCore
 import XCTest
 @testable import GamePresentation
 
-/// PP coaches have one existing operating contact, the E1000 push-pull
-/// set. The independently exported E500 display does not change that set.
+/// PP coaches have one operating contact, the push-pull set, drawn since
+/// decision 425 with an E500 at each end.
 final class Map3DPPIntegrationTests: XCTestCase {
     private let pack = Map3DModelPack.standard
 
@@ -38,13 +38,13 @@ final class Map3DPPIntegrationTests: XCTestCase {
         }
     }
 
-    func testTheOriginalE1000RemainsAtBothEndsForEveryCarCount() throws {
-        let original = Map3DTrainLocomotive.e1000.model
-        XCTAssertLessThanOrEqual(original.triangleCount, 4_100, "reuse the original power car in the far set too")
+    /// Decision 425: an E500 at each end since the E1000 left service.
+    func testAnE500IsAtBothEndsForEveryCarCount() throws {
         for key in ["pushPull", "pushPullFar"] {
             let set = try XCTUnwrap(Map3DTrainSet.named(key))
+            let original = Map3DE500.model(far: key.hasSuffix("Far"))
             XCTAssertEqual(payload(try model(set.headName)), payload(original))
-            XCTAssertNil(pack.index(of: set.tailName), "the existing last power car is the head turned around")
+            XCTAssertNil(pack.index(of: set.tailName), "the last power car is the head turned around")
             for count in [1, 2, 3, 12] {
                 let layout = try XCTUnwrap(pack.layout(forType: key, count: count))
                 XCTAssertEqual(layout.count, count)
