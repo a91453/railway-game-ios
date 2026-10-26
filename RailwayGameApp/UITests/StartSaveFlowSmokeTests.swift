@@ -652,16 +652,21 @@ final class StartSaveFlowSmokeTests: XCTestCase {
     /// one row standing still does not say the menu is open (run
     /// 40257225657, attempt 2, `testThePerformanceMenuStaysStillAndChoosesWhileTheClockRuns`:
     /// 2 rows read as it opened, 7 three seconds later, every frame the
-    /// same). Fails if the reads do not agree within 10 s.
+    /// same). Each read asks every row for its frame, which takes seconds
+    /// with the clock running (see `menuRow`), so like `menuRow` it reads up
+    /// to 12 times within 40 s, whichever comes first, and fails if no two
+    /// reads in a row agree.
     private func settledRows(_ read: () -> [String], menu identifier: String) -> [String] {
         var last = read()
-        let deadline = Date().addingTimeInterval(10)
+        let deadline = Date().addingTimeInterval(40)
+        var reads = 1
         repeat {
             Thread.sleep(forTimeInterval: 0.5)
             let now = read()
+            reads += 1
             if now == last && !now.isEmpty { return now }
             last = now
-        } while Date() < deadline
+        } while reads < 12 && Date() < deadline
         XCTFail("The menu \(identifier) did not settle")
         return last
     }
