@@ -11,10 +11,16 @@ public enum Map3DTEMU1000 {
     public static let passengerGlass = Map3DColor.rgb(0x405560)
     public static let ink = Map3DColor.shaded(Map3DPalette.playerRim, 0.75)
 
-    public static func model(_ unit: Unit) -> Map3DModelPack.Model {
+    public static func model(_ unit: Unit) -> Map3DModelPack.Model { model(unit, far: false) }
+
+    /// `far`: decision 420's light version drawn from 500 m out, as
+    /// ``Map3DE500/model(far:)`` is: fewer nose rings and cap rows, a
+    /// coarser stripe, eight-sided wheels, one pane of glass along each
+    /// side, and none of the small fittings.
+    public static func model(_ unit: Unit, far: Bool) -> Map3DModelPack.Model {
         var builder = StationKitBuilder()
-        builder.temu1000(unit)
-        return .flat(named: "temu1000-\(unit.rawValue)", from: builder.mesh)
+        builder.temu1000(unit, far: far)
+        return .flat(named: "temu1000-\(unit.rawValue)" + (far ? "-far" : ""), from: builder.mesh)
     }
 
     public static let order: [Unit] = [.trailing, .middle, .pantograph, .middle,
@@ -29,7 +35,7 @@ public enum Map3DTEMU1000 {
 }
 
 extension StationKitBuilder {
-    mutating func temu1000(_ unit: Map3DTEMU1000.Unit) {
+    mutating func temu1000(_ unit: Map3DTEMU1000.Unit, far: Bool = false) {
         let white = Map3DTEMU1000.shell, green = Map3DTEMU1000.band
         let glass = Map3DTEMU1000.glass, ink = Map3DTEMU1000.ink
         let roof = Map3DPalette.roof, metal = Self.steel
@@ -52,27 +58,22 @@ extension StationKitBuilder {
                 return Map3DPoint(x + forward, bottom + t * (top-bottom), side * width * oval)
             }
         }
+        // The nose's rings front to back from the body, each with the
+        // waist stripe's height there; decision 420's far version keeps six
+        // of the ten (its rake, its shoulders and the bulge at the tip).
+        let noseStations: [(x: Float, width: Float, top: Float, bottom: Float, bulge: Float, round: Float, stripe: Float, far: Bool)] = [
+            (8.9, 1, 3.70, 0.83, 0, 0, 1.96, true), (9.85, 0.98, 3.56, 0.83, 0, 0, 1.94, false),
+            (10.25, 0.97, 3.46, 0.82, 0, 0, 1.91, true), (10.75, 0.94, 3.26, 0.76, 0, 0, 1.87, false),
+            (11.15, 0.94, 3.10, 0.71, 0, 0, 1.82, true), (11.55, 0.94, 2.80, 0.65, 0, 0, 1.75, false),
+            (11.90, 0.93, 2.55, 0.64, 0.12, 0, 1.66, true), (12.18, 0.88, 2.31, 0.64, 0.25, 0, 1.57, true),
+            (12.27, 0.87, 2.10, 0.66, 0.32, 0, 1.49, false), (12.36, 0.85, 1.82, 0.69, 0.42, 0.25, 1.44, true),
+        ].filter { !far || $0.far }
+        let noseRingsForward = noseStations.map { ring(nose*$0.x, width:$0.width, top:$0.top, bottom:$0.bottom, bulge:nose*$0.bulge, noseRound:$0.round) }
         var rings = [ring(-11.75),ring(11.75)]
         if nose > 0 {
-            rings = [ring(-11.75),ring(8.9),ring(9.85,width:0.98,top:3.56),
-                     ring(10.25,width:0.97,top:3.46,bottom:0.82),
-                     ring(10.75,width:0.94,top:3.26,bottom:0.76),
-                     ring(11.15,width:0.94,top:3.10,bottom:0.71),
-                     ring(11.55,width:0.94,top:2.80,bottom:0.65),
-                     ring(11.90,width:0.93,top:2.55,bottom:0.64,bulge:0.12),
-                     ring(12.18,width:0.88,top:2.31,bottom:0.64,bulge:0.25),
-                     ring(12.27,width:0.87,top:2.10,bottom:0.66,bulge:0.32),
-                     ring(12.36,width:0.85,top:1.82,bottom:0.69,bulge:0.42,noseRound:0.25)]
+            rings = [ring(-11.75)] + noseRingsForward
         } else if nose < 0 {
-            rings = [ring(-12.36,width:0.85,top:1.82,bottom:0.69,bulge:-0.42,noseRound:0.25),
-                     ring(-12.27,width:0.87,top:2.10,bottom:0.66,bulge:-0.32),
-                     ring(-12.18,width:0.88,top:2.31,bottom:0.64,bulge:-0.25),
-                     ring(-11.90,width:0.93,top:2.55,bottom:0.64,bulge:-0.12),
-                     ring(-11.55,width:0.94,top:2.80,bottom:0.65),
-                     ring(-11.15,width:0.94,top:3.10,bottom:0.71),
-                     ring(-10.75,width:0.94,top:3.26,bottom:0.76),
-                     ring(-10.25,width:0.97,top:3.46,bottom:0.82),
-                     ring(-9.85,width:0.98,top:3.56),ring(-8.9),ring(11.75)]
+            rings = noseRingsForward.reversed() + [ring(11.75)]
         }
         for k in 0..<(rings.count-1) {
             for i in section.indices {
@@ -94,7 +95,7 @@ extension StationKitBuilder {
             }
         }
         let capCentre = Map3DPoint(nose*12.70,1.25,0)
-        let capSteps = 7
+        let capSteps = far ? 3 : 7
         func noseCapRows(_ front: [Map3DPoint]) -> [[Map3DPoint]] {
             (0..<capSteps).map { row in
                 let u = Float(row)/Float(capSteps)
@@ -141,12 +142,14 @@ extension StationKitBuilder {
             for axle: Float in [-1.03,1.03] {
                 for side: Float in [-1,1] {
                     civicTube(Map3DPoint(bogie+axle,0.33,side*1.11),
-                              Map3DPoint(bogie+axle,0.33,side*1.28),radius:0.33,color:ink,sides:12)
-                    civicTube(Map3DPoint(bogie+axle,0.33,side*1.28),
-                              Map3DPoint(bogie+axle,0.33,side*1.30),radius:0.14,color:metal,sides:10)
+                              Map3DPoint(bogie+axle,0.33,side*1.28),radius:0.33,color:ink,sides:far ? 8 : 12)
+                    if !far {
+                        civicTube(Map3DPoint(bogie+axle,0.33,side*1.28),
+                                  Map3DPoint(bogie+axle,0.33,side*1.30),radius:0.14,color:metal,sides:10)
+                    }
                 }
             }
-            for side: Float in [-1,1] { box(bogie,0.52,side*1.30,2.70,0.04,0.15,ink) }
+            if !far { for side: Float in [-1,1] { box(bogie,0.52,side*1.30,2.70,0.04,0.15,ink) } }
         }
         for x: Float in [-4.9,-1.8,1.8,4.9] { box(x,0.57,0,2.10,2.08,0.36,metal) }
         // The reference has discrete passenger windows in a dark surround.
@@ -156,7 +159,11 @@ extension StationKitBuilder {
             let doors: [Float] = nose == 0 ? [-10.25,10.25]
                 : nose > 0 ? [-10.25,4.55] : [-4.55,10.25]
             box(-nose*1.10,2.12,side*1.454,nose == 0 ? 20.95 : 18.75,0.012,0.68,ink)
-            for x: Float in stride(from:-9.20,through:9.20,by:1.62) {
+            if far {
+                // One pane along the side, the doors over it.
+                box(-nose*1.10,2.18,side*1.464,nose == 0 ? 20.0 : 17.6,0.006,0.56,Map3DTEMU1000.passengerGlass)
+            }
+            for x: Float in stride(from:-9.20,through:9.20,by:1.62) where !far {
                 if nose != 0 && x*nose > 7.4 { continue }
                 if doors.contains(where: { abs(x-$0) < 0.95 }) { continue }
                 box(x,2.18,side*1.464,1.51,0.006,0.56,Map3DTEMU1000.passengerGlass)
@@ -165,6 +172,7 @@ extension StationKitBuilder {
                 // The narrow body-colour leaf has a shallow window and a
                 // hairline edge; it does not project as an external box.
                 box(x,0.89,side*1.467,0.87,0.012,2.22,white)
+                if far { continue }
                 box(x,2.18,side*1.477,0.64,0.006,0.56,Map3DTEMU1000.passengerGlass)
                 box(x+0.39,0.90,side*1.475,0.012,0.008,2.18,ink)
             }
@@ -177,8 +185,7 @@ extension StationKitBuilder {
             // separate planar ribbon beside the curved surface.
             let noseRings = nose > 0 ? Array(rings.dropFirst()) : Array(rings.dropLast().reversed())
             let stripeRings = [ring(nose*7.65)] + noseRings
-            let stripeHeights: [Float] = [1.96,1.96,1.94,1.91,1.87,1.82,
-                                          1.75,1.66,1.57,1.49,1.44]
+            let stripeHeights: [Float] = [1.96] + noseStations.map(\.stripe)
             func sideStripePoint(_ cross: [Map3DPoint],_ side: Float,_ height: Float) -> Map3DPoint {
                 let range = side > 0 ? 8..<15 : 0..<7
                 for i in range {
@@ -231,10 +238,11 @@ extension StationKitBuilder {
                         let x=pa.x+(pb.x-pa.x)*along-nose*boost
                         return sideSurface(x,y,side,boost)
                     }
-                    for step in 0..<6 {
-                        let t0=Float(step)/6,t1=Float(step+1)/6
-                        for row in 0..<2 {
-                            let v0=Float(row)/2,v1=Float(row+1)/2
+                    let steps = far ? 2 : 6, rows = far ? 1 : 2
+                    for step in 0..<steps {
+                        let t0=Float(step)/Float(steps),t1=Float(step+1)/Float(steps)
+                        for row in 0..<rows {
+                            let v0=Float(row)/Float(rows),v1=Float(row+1)/Float(rows)
                             face([sample(t0,v0),sample(t0,v1),sample(t1,v1),sample(t1,v0)],
                                  inside:centre,color:green)
                         }
@@ -288,8 +296,9 @@ extension StationKitBuilder {
                 let z = t * abs(high ? highEnd.z : lowEnd.z)
                 return capSurface(y,z)
             }
-            for i in 0..<24 {
-                let t0 = -1 + Float(i)*2/24, t1 = -1 + Float(i+1)*2/24
+            let pieces = far ? 8 : 24
+            for i in 0..<pieces {
+                let t0 = -1 + Float(i)*2/Float(pieces), t1 = -1 + Float(i+1)*2/Float(pieces)
                 face([frontStripePoint(t0,false),frontStripePoint(t0,true),
                       frontStripePoint(t1,true),frontStripePoint(t1,false)],inside:centre,color:green)
             }
@@ -349,14 +358,15 @@ extension StationKitBuilder {
             for side: Float in [-1,1] {
                 civicTube(Map3DPoint(nose*11.305,3.27,side*0.105),
                           Map3DPoint(nose*11.33,3.27,side*0.105),
-                          radius:0.055,color:Map3DStreetModel.headlamp,sides:12)
+                          radius:0.055,color:Map3DStreetModel.headlamp,sides:far ? 6 : 12)
             }
             // Oval lamp pods have a shallow closed backing sunk into the
             // white nose. Their lenses sit above the wraparound stripe.
             for side: Float in [-1,1] {
+                let around = far ? 6 : 12
                 func oval(_ x: Float, _ yr: Float, _ zr: Float) -> [Map3DPoint] {
-                    (0..<12).map { i in
-                        let a = 2 * Float.pi * Float(i) / 12
+                    (0..<around).map { i in
+                        let a = 2 * Float.pi * Float(i) / Float(around)
                         return Map3DPoint(x, 2.09 + yr*sinf(a)
                                                + side*0.04*cosf(a), side*0.79 + zr*cosf(a))
                     }
@@ -365,8 +375,8 @@ extension StationKitBuilder {
                 let rim = oval(nose*12.42,0.11,0.21)
                 face(back,inside:centre,color:ink)
                 face(rim,inside:centre,color:ink)
-                for i in 0..<12 {
-                    let j = (i+1)%12
+                for i in 0..<around {
+                    let j = (i+1)%around
                     face([back[i],back[j],rim[j],rim[i]],inside:centre,color:ink)
                 }
                 face(oval(nose*12.43,0.065,0.15),inside:centre,color:Map3DPalette.tileWhite)
@@ -382,13 +392,13 @@ extension StationKitBuilder {
         // HVAC housings are visible in all types; only TEP has a pantograph.
         for x: Float in [-5.6,4.3] {
             box(x,3.78,0,3.05,1.62,0.18,metal)
-            box(x,3.89,0,2.30,1.30,0.09,roof)
+            if !far { box(x,3.89,0,2.30,1.30,0.09,roof) }
         }
         if unit == .pantograph {
             box(7.05,3.78,0,3.0,1.70,0.15,ink)
             for side: Float in [-1,1] {
-                civicTube(Map3DPoint(6.10,3.85,side*0.58),Map3DPoint(7.05,4.46,side*0.40),radius:0.04,color:metal,sides:6)
-                civicTube(Map3DPoint(7.05,4.46,side*0.40),Map3DPoint(8.00,3.85,side*0.58),radius:0.04,color:metal,sides:6)
+                civicTube(Map3DPoint(6.10,3.85,side*0.58),Map3DPoint(7.05,4.46,side*0.40),radius:0.04,color:metal,sides:far ? 4 : 6)
+                civicTube(Map3DPoint(7.05,4.46,side*0.40),Map3DPoint(8.00,3.85,side*0.58),radius:0.04,color:metal,sides:far ? 4 : 6)
             }
             box(7.05,4.49,0,1.90,1.02,0.07,ink)
         }
