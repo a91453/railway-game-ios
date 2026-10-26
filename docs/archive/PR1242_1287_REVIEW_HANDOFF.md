@@ -90,3 +90,67 @@ Session：session_01KA4P39dCU3gKAqH2vLPej8，branch `claude/segment-1-dev-494qsx
 - 開發：兩個 GameCore PR 沒有問題；修正只動 GamePresentation 一個檔，不動存檔、重播與 golden。
 - 美術：無（模型由各自的 PR 照 art-style 檢查）。
 - 音樂：無。
+
+## 第 2 段（#1254–#1268）
+
+Session：session_01KA4P39dCU3gKAqH2vLPej8，branch `claude/segment-1-dev-494qsx`（#1290 合併後，從 main **ddcd8b9** 重開，同一個名字）。
+
+派工單 E（session_01MdqoSy58YkbJUqAMxXXoCk）正在改 `BusRoadNetwork.swift`、`BusStopLabels.swift`、`BusRouteEditor.swift`、`GameSession.swift`，這一段沒有動它們。#1260、#1263、#1268 碰到這幾個檔的部分照樣讀了，沒有發現要交給 E 的新問題。公車道路與真站牌在主執行緒讀，是 E 正在修的那一件，不重報。
+
+### 一、結論
+
+| 項目 | 數量 |
+| --- | --- |
+| 程式 PR | 12 個、13 點（GameCore #1268 2 點） |
+| 新發現 | **0 個** |
+| 已修 | 0 個 |
+| 沒修，交出去 | 0 個 |
+
+GameCore 的 #1268 由本 session 自己讀。
+
+### 二、逐 PR
+
+| PR | 看了什麼 | 結論 |
+| --- | --- | --- |
+| #1254 | `TrainCars.cars`：實長只超過上限（`max(車身 + 兩節, 20 m × 節數)`）半節以內時照自己的長度畫，超過才縮到上限；12 節 EMU3000 245.7 m 不再擠進 240 m | 無問題。上限在 20 m × 節數這一邊時是常數，同一列車不會在兩種畫法之間跳 |
+| #1256 | E500 原生模型（`Map3DE500`）：近景與遠景兩種；`e500Hauled` 換掉 E500CK、MINGRI、STAR 三列的車頭，客車、尾燈、`ownLengths` 照舊；三組加進 `nearOnly`，500 m 外換遠景組、900 m 外不畫；`reach(of:)` 與 `pack.model(_:forType:count:at:)` 的對應有測試 | 無問題。遠景組的客車與近景同一個模型，只換車頭（三角形預算由測試管） |
+| #1257 | `full_lane_watch.py`：從失敗 job 的 log 讀 XCTest 的 `error: -[類別 測試]`，同樣幾個 job 紅、多一個測試紅也留言；任何一份 log 讀不到就退回只看 job；授權標頭不跟著轉址送出；timeout 5 → 10 分。六個 UI 測試的穩定性修正（逐字打、拖曳避開滑桿與按鈕、示範地圖讀取時容忍 UI 查詢逾時） | 無問題。`ios-build.yml` 沒有用 retry，log 裡的 `error:` 行就是真的失敗；測試名稱只有 `\w`，不會帶出 at 號；UI 測試的閘門清單沒有動 |
+| #1258 | 決策 411 共用建置：`swift-build` job 建一次、`pack`（tar 保留 `.build/debug` 連結，gzip -1）、artifact 不再壓、留 1 天；分片 `unpack` 後 `swift test --skip-build`；gate 多看 `BUILD`（需要時要 success，不需要時要 skipped）；`superseded` 與 gate 的 `needs` 加上建置；selftest 新增 8 項 | 無問題。建置失敗時分片因 `needs` 被略過，gate 因 `BUILD` 紅；`unpack` 不蓋掉已有的 `.build`。只重跑失敗的 job 時，隔天以後 artifact 已過期，要整輪重跑，決策 411 寫明了 |
+| #1259 | N700S-G 後半列反向：`modelIndex` 的 `carIndex * 2 >= count` 用 `carBack`、`pantoBack`，沒有這兩個模型的車組退回原來的；近景、遠景都加；`Map3DTrainSetTests` 的名稱清單加上兩個新名字 | 無問題 |
+| #1260 | 高鐵、宜蘭線示範在 `Task.detached` 裡建好世界後，連同全部土地的道路一起讀（`GameLauncher.readingRoads`，叫用 `GameSession.readRoads` 的靜態函式），`begin` 不再在主執行緒讀約 2,500 塊；`baseMap` 是 `nil` 時照舊在 `begin` 讀 | 無問題。道路寫在世界裡，存檔的第一個世界就有（測試看 `commandLog.start`） |
+| #1261 | 決策 414 放空模式：`AmbientDirector`（種子 SplitMix、`[列車, 列車, 車站, 列車, 路線]` 輪流、最近 5 個不重複、權重都 > 0、列車 60–120 s、其他 20–30 s、3D 每隔一班列車換一個視角）；`Cast` 只取有位置的列車、非機廠的車站、兩站以上的路線；`region(of:)`；`CameraRequest.region`；App 端開始時暫停的遊戲照跑、結束時暫停回去，開面板或教學就結束，不在教學裡開；`ambientHidden` 收起按鈕；`MotionRule.ambientCut` 只淡入淡出 | 無問題。每秒在主執行緒建一次 `Cast`，每站一次 `waitingPassengers(at:)`，量很小 |
+| #1262 | 決策 415「這版新增」卡：`whatsNewSeen` 是可選欄位，舊的偏好設定讀得回來；新安裝（沒有偏好檔）不顯示；更新後顯示一次，關掉（`onDismiss`，滑掉也算）才記住；說明頁的列與搜尋；其他寫偏好檔的 UI 測試路徑都寫了 `whatsNewSeen`，不會被卡片擋住（只有 `-ui-test-updated` 故意不寫） | 無問題。玩家看的文字兩種語言都有，只寫功能，沒有程式名稱 |
+| #1263 | 10i-5 自己畫公車路線：`ConstructionTool.bus`（會暫停）、`PlayerCommand.Edit` 新增 5 種（Codable，舊紀錄照讀）、`BusRouteEdits.revise` 在複本上做完才寫回（全有或全無）、預覽在 `pricingCopy` 上跑 GameCore 自己的指令、教學與課程裡不開、`BusRoadPath` 與 GameCore 的搜尋同一套順序；App 的工具列、確認鈕、車站面板的路線卡、地圖畫法 | 無問題。現在的 `createBusRoute`／`reviseBusRoute` 也記下 `legMetres`（決策 424），重播用同一個長度。`BusRouteEditor.swift`、`GameSession.swift` 的部分只讀；預覽每點一次在主執行緒找路，是 E 的那一件 |
+| #1265 | 10i-3 真實公車資料：`RealBuses` 索引（schema、scale > 0、bounds 的順序）與各縣市檔（差分座標、至少兩點、站牌名與距離數量相同、站牌不倒退且不超過線長、班距 1 分到 `BusService.longestHeadway`）；`build_real_buses.py` 的估計班距（市 30 分、縣 60 分）、簡化、站牌投影、TDX 的三種找站方式；致謝加 TDX 與政府資料開放授權 | 無問題。臺北市 989 條裡 448 條是估計班距，README 寫了原因（TDX 的 `Schedule` 只有 451 組路線加方向）。這些檔在哪裡讀是 `BusStopLabels.swift`，E 的範圍 |
+| #1266 | 決策 416 路網分析：路線（人次、單程長度，非環狀線取去程的腿，與 GameCore `Operations` 同一個算法；每公里人次，0.05 km 以下不算；尖峰列車）、最擠區間（沒有列車的區間 `ratio` 是 ∞，排最前面）、未滿足需求（等半小時以上、流失、沒有路線連的兩站，網路模式用聯集與步行轉乘）；`Task.detached` 算，不在主執行緒；說明頁的條目 | 無問題。兩站之間的估計人次是兩個 Int64 相乘，每站每天要到三十億人次才會溢位 |
+| #1268 | **GameCore**：`busRoutesProblem` 要求路線編號在 `1..<nextBusRouteID`（審查 I 的 I8），前面已先擋掉 `nextBusRouteID < 1`，範圍不會倒過來；測試加 0 與 -1。GamePresentation：舊存檔的資料到了以後，車站周圍的道路在主執行緒外先讀（`RoadsReadAhead`），`frame`、`bounds` 一樣才用，只取現在還要的區塊，其他的照舊讀 | 無問題。讀的期間玩家多蓋了車站，多出來的區塊在主執行緒補讀，結果一樣；換了一局但地圖大小相同時，同一塊的道路本來就相同 |
+
+### 三、修了的
+
+無。
+
+### 四、沒修、交出去的
+
+無。
+
+### 五、執行過的檢查
+
+| 檢查 | 結果 |
+| --- | --- |
+| `swift build --build-tests -Xswiftc -warnings-as-errors`（這個 branch，ddcd8b9，Linux，官方 Swift 6.4.0 `/opt/swift`） | **VERIFIED**，乾淨，0 個 warning |
+| 與這一段有關的測試類別：`TrainCarsTests` 10、`Map3DE500Tests` 5、`Map3DHighSpeedSetsTests` 8、`AmbientDirectorTests` 10、`WhatsNewTests` 6、`BusRouteEditorTests` 13、`RealBusesTests` 6、`NetworkFlowReportTests` 15、`RealRoadCellsTests` 8、GameCore `BusRouteTests` 17 | **VERIFIED**，`swift test --skip-build --filter`，都是 0 失敗 |
+| `python3 -I tools/ci-watch/full_lane_watch.py --selftest`（#1257） | **VERIFIED**，all cases passed |
+| `.github/scripts/swift-shards-selftest.sh`（#1258 的 pack、unpack、gate） | **VERIFIED**，通過 |
+| `python3 -I tools/golden-checks/doc_numbers.py --check` | **VERIFIED**，差異 0 項 |
+| 其他 | 只讀程式、追了呼叫路徑 |
+| 完整測試、iOS 建置、UI 測試、實機畫面 | 交給 CI（`ci.yml` 的 tier、`ios-build.yml`）與實機，**UNVERIFIED LOCALLY** |
+
+這一段沒有改程式，所以沒有回歸測試。
+
+### 六、五方
+
+- 玩家：十二個 PR 沒有會丟存檔、當掉或卡住的問題；放空模式、這版新增、路網分析的文字兩種語言都只寫功能。
+- 鐵道迷：真實公車的估計班距在遊戲裡標明，來源（TDX、參考庫）的致謝齊全；E500、N700S-G、EMU3000 的長度與方向照真車。
+- 開發：唯一的 GameCore PR #1268 驗證完整；派工單 E 的四個檔沒有動。
+- 美術：無（模型由各自的 PR 照 art-style 檢查）。
+- 音樂：無（放空模式讓音樂照放，沒有改音樂）。
