@@ -43,7 +43,7 @@ python3 tools/pp-coaches/bundle.py OUT PRODUCER_COMMIT
 
 最後核 ZIP member 仍等於 live bytes；瀏覽器檢查會更新 `verification.json`，因此若在打包後重跑，必須重包。ZIP hash 記在包外 `package-verification.json`，不遞迴放進自己。
 
-原生公尺 +X前／+Y左／+Z上，輪底 Z=0；GLB=(x,z,-y)。每個原生單元仍遵守 M3DM 15,000 三角上限；完整編組使用包含合法單元的 `M3DAssembly` JSON，只供靜態展示／轉 GLB，不冒充遊戲可載入的超限單一檔。Swift 的完整三角 payload 與 JS 組裝逐 bytes 比較；單元順序、0°朝向、實際平移與共同軌面在 manifest `assembly`。E500 與第一客車只有連結器相接，不加入虛構旅客貫通道。
+原生公尺 +X前／+Y左／+Z上，輪底 Z=0；GLB=(x,z,-y)。每個原生單元仍遵守 M3DM 15,000 三角上限；完整編組使用包含合法單元的 `M3DAssembly` JSON，只供靜態展示／轉 GLB，不冒充遊戲可載入的超限單一檔。Swift 的完整三角 payload 與 JS 組裝逐 bytes 比較；單元順序、前機0°／尾機180°朝向、實際平移與共同軌面在 manifest `assembly`。E500 與第一客車只有連結器相接，不加入虛構旅客貫通道。
 
 `verify.mjs` 驗輸出幾何與刪面／反面／錯位反例；`support-audit.py` 驗玻璃支承與向外可見性、輪底、輪組淨空及可見故障反例。抽樣支承／射線不是全碰撞或動畫證明。`capture`／`coexistence` 核對保護模型的實際 payload，而非只有 bounds。Blender 獨立讀 GLB；Pillow 完整解碼透明 PNG／留白；Chromium 實際載入、七向、旋轉、縮放、原生／GLB／PNG／ZIP下載比 SHA，另驗內嵌離線 viewer。
 

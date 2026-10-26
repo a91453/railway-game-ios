@@ -33,8 +33,11 @@ function endFace(model,direction,kind){
 }
 function assemblyContacts(scene){
  const contacts=[];let previous;
+ assert.equal(scene.placements.length,14,'2 E500 plus 12 coaches');
+ assert(scene.placements[0].unit.startsWith('e500')&&scene.placements.at(-1).unit.startsWith('e500'),'both ends require E500');
+ assert.equal(scene.placements.at(-1).rotation_degrees,180,'rear locomotive faces outward');
  for(const place of scene.placements){
-  assert.equal(place.rotation_degrees??0,0,'unsupported display rotation');assert.equal(place.scale_x??1,1,'display must use unscaled native units');
+  assert([0,180].includes(place.rotation_degrees??0),'unsupported display rotation');assert.equal(place.scale_x??1,1,'display must use unscaled native units');
   const native=Buffer.from(scene.units[place.unit],'base64'),rec=manifest.models.find(m=>m.id===place.unit);assert(rec,'missing unit record');
   assert(native.equals(readFileSync(resolve(root,rec.native))),'embedded unit is stale '+place.unit);
   const model=readNative(native),front=endFace(model,1,'coupler'),rear=endFace(model,-1,'coupler');
@@ -46,7 +49,7 @@ function assemblyContacts(scene){
    assert(Math.abs(height-oldHeight)<.025,'coupler vertical mismatch');
    assert(Math.min(front.high[1],previous.rear.high[1])>Math.max(front.low[1],previous.rear.low[1]),'coupler lateral separation');
    const row={previous:previous.place.unit,next:place.unit,coupler_tip_gap_m:gap,coupler_centre_height_difference_m:Math.abs(height-oldHeight)};
-   if(previous.place.unit.startsWith('pp-')){
+   if(previous.place.unit.startsWith('pp-')&&place.unit.startsWith('pp-')){
     const a=endFace(previous.model,-1,'gangway'),b=endFace(model,1,'gangway'),g=(a.tip+previous.shift[0])-(b.tip+shift[0]);
     assert(g>=-.001&&g<.08,'gangway overlap or excessive gap '+g);row.gangway_tip_gap_m=g;
     assert(Math.abs((a.low[1]+a.high[1]-b.low[1]-b.high[1])/2)<.005,'gangway lateral mismatch');
@@ -68,6 +71,7 @@ for(const m of manifest.models){
   assert(decoded.subarray(20).equals(readFileSync(resolve(root,m.id+'-expected.bin'))),'Swift/JS complete assembly differs');
   const contacts=assemblyContacts(scene),bad=structuredClone(scene);bad.placements[2].translation[0]+=1;
   assert.throws(()=>assemblyContacts(bad),/mismatch|gap|overlap/,'actual placement shift was not rejected');
+  const missingTail=structuredClone(scene);missingTail.placements.pop();assert.throws(()=>assemblyContacts(missingTail),undefined,'missing rear E500 rejected');
   const faulty=Buffer.from(JSON.stringify(bad)),rebuilt=Buffer.from(assemblyNative(faulty.buffer.slice(faulty.byteOffset,faulty.byteOffset+faulty.byteLength)));
   assert(!rebuilt.subarray(20).equals(decoded.subarray(20)),'assembly payload shift missed');
   assemblies.push({id:m.id,contacts,shifted_car_mutation_rejected:true});results.push({id:m.id,status:'exact-composition-of-audited-units'});

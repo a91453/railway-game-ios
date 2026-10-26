@@ -9,10 +9,10 @@ let acceptedE500="85647d0a5e5eaaebdcdee1d5bc512fd931ee6c3a"
 var records:[[String:Any]]=[]
 var nativeUnits:[String:String]=[:]
 var actualModels:[String:Map3DModelPack.Model]=[:]
-func words(_ vertices:[Map3DVertex],translation:Float=0)->Data {
+func words(_ vertices:[Map3DVertex],translation:Float=0,reversed:Bool=false)->Data {
  var raw=Data()
  func word(_ bits:UInt32){let n:UInt32=bits==0x80000000 ? 0:bits;for s:UInt32 in [0,8,16,24]{raw.append(UInt8((n>>s)&255))}}
- for i in stride(from:0,to:vertices.count,by:3){word(vertices[i..<i+3].contains(where:{$0.glows}) ? 1:0);for v in vertices[i..<i+3]{word((v.x+translation).bitPattern);word(v.y.bitPattern);word(v.z.bitPattern);word(v.color)}}
+ for i in stride(from:0,to:vertices.count,by:3){word(vertices[i..<i+3].contains(where:{$0.glows}) ? 1:0);for v in vertices[i..<i+3]{word(((reversed ? -v.x:v.x)+translation).bitPattern);word((reversed ? -v.y:v.y).bitPattern);word(v.z.bitPattern);word(v.color)}}
  return raw
 }
 func encoded(_ model:Map3DModelPack.Model,sourceProducer:String?=nil)throws->Data {
@@ -57,18 +57,20 @@ for far in [false,true] {
  for role in sequence {
   placements.append(["unit":"pp-"+role.rawValue+suffix,"translation":[x,Float(0),Float(0)],"rotation_degrees":0]);x-=Map3DPPPassenger.couplingHalfLength*2
  }
+ placements.append(["unit":"e500"+suffix,"translation":[x+Map3DPPPassenger.couplingHalfLength-10.385,Float(0),Float(0)],"rotation_degrees":180])
  let used=Set(placements.map {$0["unit"] as! String}),units=nativeUnits.filter {used.contains($0.key)}
- let scene:[String:Any]=["format":"M3DAssembly","version":1,"producer_commit":producer,"units":units,"placements":placements,"purpose":"static illustrative E500-hauled PP display; not certified operation or push-pull control"]
+ let scene:[String:Any]=["format":"M3DAssembly","version":1,"producer_commit":producer,"units":units,"placements":placements,"purpose":"static illustrative double-ended E500 PP display; not certified operation or push-pull control"]
  let file="models/\(id).m3dscene.json";try JSONSerialization.data(withJSONObject:scene,options:[.sortedKeys]).write(to:output.appendingPathComponent(file))
  var payload=Data(),lo=[Float.infinity,Float.infinity,Float.infinity],hi=[-Float.infinity,-Float.infinity,-Float.infinity],count=0
  for p in placements {
   let m=actualModels[p["unit"] as! String]!,translation=(p["translation"] as! [Float])[0]
-  payload.append(words(m.vertices,translation:translation));count+=m.triangleCount
-  for v in m.vertices {for (axis,n) in [v.x+translation,v.y,v.z].enumerated(){lo[axis]=min(lo[axis],n);hi[axis]=max(hi[axis],n)}}
+  let reversed=(p["rotation_degrees"] as! Int)==180
+  payload.append(words(m.vertices,translation:translation,reversed:reversed));count+=m.triangleCount
+  for v in m.vertices {for (axis,n) in [(reversed ? -v.x:v.x)+translation,reversed ? -v.y:v.y,v.z].enumerated(){lo[axis]=min(lo[axis],n);hi[axis]=max(hi[axis],n)}}
  }
  try payload.write(to:output.appendingPathComponent(id+"-expected.bin"))
  records.append(["id":id,"name":id,"native":file,"native_kind":"assembly","category":"formation","family":far ? "far":"pp","triangles":count,"minimum":lo,"maximum":hi])
- assemblyRows.append(["id":id,"placements":placements,"shared_origin":"E500 centre; +X forward; rail Z=0","coach_coupler_half_length_m":Map3DPPPassenger.couplingHalfLength,"coach_body_half_length_m":Map3DPPPassenger.bodyHalfLength,"coach_gangway_half_length_m":Map3DPPPassenger.gangwayHalfLength,"rotation":"all 0 degrees; independent unit +X points toward locomotive","note":"E500 rear coupler tip X=-10.385m; coach tips touch. E500 has no passenger gangway; first coach gangway ends at its own coach end. Four independent roles: PPM2500 multi-function car, PPH1300 accessible car, nine PPT1000 standard coaches, PPC1400 conductor-room coach. Illustrative ordering; not a certified E500 operating consist."])
+ assemblyRows.append(["id":id,"placements":placements,"shared_origin":"E500 centre; +X forward; rail Z=0","coach_coupler_half_length_m":Map3DPPPassenger.couplingHalfLength,"coach_body_half_length_m":Map3DPPPassenger.bodyHalfLength,"coach_gangway_half_length_m":Map3DPPPassenger.gangwayHalfLength,"rotation":"front locomotive 0 degrees; rear locomotive 180 degrees; coaches 0 degrees","note":"E500 at both ends; rear instance rotated 180 degrees, original accepted unit unmodified. Coupler tips touch. E500 has no passenger gangway; both outer coach gangways end at their own ends. Four independent roles: PPM2500 multi-function car, PPH1300 accessible car, nine PPT1000 standard coaches, PPC1400 conductor-room coach. Illustrative ordering; not a certified E500 operating consist."])
 }
 if let previous=ProcessInfo.processInfo.environment["PP_PREVIOUS"] {
  let base=URL(fileURLWithPath:previous),old=try JSONSerialization.jsonObject(with:Data(contentsOf:base.appendingPathComponent("manifest.json"))) as! [String:Any]

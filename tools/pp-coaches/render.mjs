@@ -55,9 +55,9 @@ try{
   const id='pp-'+role+suffix;if(manifest.models.some(m=>m.id==='previous-'+id))await match(['previous-'+id,id],'first-pass-vs-final-'+role+suffix);
  }
  const near=manifest.models.filter(m=>m.category==='section'&&!m.id.endsWith('-far'));
- await sheet('overview','PP 客車｜四種角色・圓弧車頂・E500 牽引靜態展示',near.map(m=>'<div class="row"><div><img src="previews/'+m.id+'-hero.png"><p>'+m.id+'</p></div><div><img src="previews/'+m.id+'-detail-right.png"><p>另一側門窗／設備</p></div></div>').join('')+'<h2>E500＋12 客車：完整展示編組，尚未接入營運</h2><div class="row"><div><img src="previews/pp-e500-formation-hero.png"><img src="previews/pp-e500-formation-detail-left.png"></div></div>');
+ await sheet('overview','PP 客車｜四種角色・圓弧車頂・E500 牽引靜態展示',near.map(m=>'<div class="row"><div><img src="previews/'+m.id+'-hero.png"><p>'+m.id+'</p></div><div><img src="previews/'+m.id+'-detail-right.png"><p>另一側門窗／設備</p></div></div>').join('')+'<h2>雙端 E500＋12 客車：完整展示編組，尚未接入營運</h2><div class="row"><div><img src="previews/pp-e500-formation-hero.png"><img src="previews/pp-e500-formation-detail-left.png"></div></div>');
  await sheet('seven-directions','PP 客車｜近遠景各單元七向透明圖',manifest.models.filter(m=>m.category==='section'||m.category==='formation').map(m=>'<h2>'+m.id+'</h2><div class="row">'+manifest.directions.map(v=>'<div><img src="'+m.views[v]+'"><p>'+v+'</p></div>').join('')+'</div>').join(''));
- await sheet('formation','E500＋PP 客車｜完整展示編組（非營運／推拉控制驗證）',['','-far'].map(s=>'<h2>'+('pp-e500-formation'+s)+'</h2>'+['hero','detail-left','detail-right','detail-top'].map(v=>'<div class="row"><div><img src="previews/pp-e500-formation'+s+'-'+v+'.png"></div></div>').join('')).join(''));
+ await sheet('formation','雙端 E500＋PP 客車｜完整展示編組（非營運／推拉控制驗證）',['','-far'].map(s=>'<h2>'+('pp-e500-formation'+s)+'</h2>'+['hero','detail-left','detail-right','detail-top'].map(v=>'<div class="row"><div><img src="previews/pp-e500-formation'+s+'-'+v+'.png"></div></div>').join('')).join(''));
  if(errors.length)throw Error(errors.join('\n'));
  manifest.render_verification={backend:'Chromium WebGL2 exact native geometry',views:manifest.models.length*7,transparent:true};writeFileSync(resolve(root,'manifest.json'),JSON.stringify(manifest,null,2)+'\n');
 }finally{if(browser)await browser.close();server.close();unlinkSync(resolve(root,'_render.html'));}

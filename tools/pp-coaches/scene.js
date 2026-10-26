@@ -10,9 +10,10 @@ export function assemblyNative(buffer) {
  const out=new ArrayBuffer(20+count*52),d=new DataView(out);new Uint8Array(out).set([77,51,68,77,1,0,0,0]);d.setUint32(8,count,true);d.setUint32(12,2,true);new Uint8Array(out).set([123,125,0,0],16);
  let dest=20;
  for(const p of scene.placements){
+  const turn=p.rotation_degrees??0;if(turn!==0&&turn!==180)throw Error("Unsupported rotation");const sign=turn===180?-1:1;
   const b=units.get(p.unit),s=new DataView(b.buffer),n=s.getUint32(8,true),start=16+Math.ceil(s.getUint32(12,true)/4)*4;
   new Uint8Array(out,dest,n*52).set(b.subarray(start));
-  for(let i=0;i<n;i++)for(let j=0;j<3;j++)for(let axis=0;axis<3;axis++){const at=dest+i*52+4+j*16+axis*4;d.setFloat32(at,Math.fround((axis===0?Math.fround(d.getFloat32(at,true)*Math.fround(p.scale_x??1)):d.getFloat32(at,true))+Math.fround(p.translation[axis])),true);}
+  for(let i=0;i<n;i++)for(let j=0;j<3;j++)for(let axis=0;axis<3;axis++){const at=dest+i*52+4+j*16+axis*4;d.setFloat32(at,Math.fround((axis===0?Math.fround(d.getFloat32(at,true)*Math.fround((p.scale_x??1)*sign)):Math.fround(d.getFloat32(at,true)*(axis===1?sign:1)))+Math.fround(p.translation[axis])),true);}
   dest+=n*52;
  }
  return out;
