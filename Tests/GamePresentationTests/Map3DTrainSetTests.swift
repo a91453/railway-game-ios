@@ -31,6 +31,7 @@ final class Map3DTrainSetTests: XCTestCase {
                     // EMU3000 dedicated near detail (<500m), measured geometry budget;
                     // far models keep the generic ceiling, tested separately at 500m.
                     : name == set.headName && ["E500CK", "MINGRI", "STAR"].contains(set.key) ? 4_000...10_000
+                    : name == set.headName && set.key == "pushPull" ? 4_500...6_000
                     : name == set.middleName && set.key == "pushPull" ? 6_000...8_500
                     : set.key == "emu3000" ? ([set.headName,set.tailName].contains(name) ? 6_000...9_200:4_000...6_100)
                     : set.key == "highSpeed" ? ([set.headName, set.tailName].contains(name) ? 8_000...9_500 : 5_000...6_000)
@@ -56,7 +57,7 @@ final class Map3DTrainSetTests: XCTestCase {
                 XCTAssertTrue((2.6...3.5).contains(model.maximum.y - model.minimum.y), "\(name): \(model.maximum.y - model.minimum.y) m wide")
                 XCTAssertEqual(model.minimum.z, 0, accuracy: 0.1, "\(name) stands on the rail")
                 // The low-floor tram is lower than a train.
-                let height: ClosedRange<Float> = name == set.headName && ["E500CK", "MINGRI", "STAR", "E500CKFar", "MINGRIFar", "STARFar"].contains(set.key) ? 5.2...5.5
+                let height: ClosedRange<Float> = name == set.headName && ["E500CK", "MINGRI", "STAR", "E500CKFar", "MINGRIFar", "STARFar", "pushPull", "pushPullFar"].contains(set.key) ? 5.2...5.5
                     : ["greenTram", "fiveSectionLRT", "sevenSectionLRT"].contains(set.key) ? 3.2...4.6
                     : set.key == "STEAM" ? 3.4...4.7
                     // Decision 408: #1201's E200 and the 700T's pantographs (decision 422: far too).

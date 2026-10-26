@@ -89,6 +89,7 @@ public struct Map3DModelPack: Sendable {
         for far in [false, true] {
             models += Map3DPPPassenger.roles.map { Map3DPPPassenger.model($0, far: far) }
         }
+        models += [Map3DE1000.model(), Map3DE1000.model(far: true)]
         self.models = models
     }
 

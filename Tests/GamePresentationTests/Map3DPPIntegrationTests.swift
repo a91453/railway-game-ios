@@ -38,11 +38,11 @@ final class Map3DPPIntegrationTests: XCTestCase {
         }
     }
 
-    func testTheOriginalE1000RemainsAtBothEndsForEveryCarCount() throws {
-        let original = Map3DTrainLocomotive.e1000.model
-        XCTAssertLessThanOrEqual(original.triangleCount, 4_100, "reuse the original power car in the far set too")
+    func testTheDedicatedE1000RemainsAtBothEndsForEveryCarCount() throws {
         for key in ["pushPull", "pushPullFar"] {
             let set = try XCTUnwrap(Map3DTrainSet.named(key))
+            let original = Map3DE1000.model(far: key.hasSuffix("Far"))
+            XCTAssertLessThanOrEqual(original.triangleCount, key.hasSuffix("Far") ? 4_100 : 6_000)
             XCTAssertEqual(payload(try model(set.headName)), payload(original))
             XCTAssertNil(pack.index(of: set.tailName), "the existing last power car is the head turned around")
             for count in [1, 2, 3, 12] {
