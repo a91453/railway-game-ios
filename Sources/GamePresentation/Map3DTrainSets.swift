@@ -114,8 +114,8 @@ public struct Map3DTrainSet: Sendable {
             // and its tender, the Blue Train's old blue coaches behind.
             steam("STEAM", formation: .duplex, coach: coach(TrainLivery.blueTrain, band: 0.38...0.43)),
             // The push-pull Tze-Chiang: an E1000 power car at each end.
-            hauled("pushPull", locomotive: .e1000,
-                   coach: coach(body: 0xC9CECC, band: 0xED822A), lastIsLocomotive: true),
+            ppHauled(),
+            ppHauled(far: true),
             // The multiple units, by their performance (decision 237); the
             // EMU3000 uses its photo-led native units; the metro keeps
             // the line-coloured band.
@@ -200,7 +200,7 @@ public struct Map3DTrainSet: Sendable {
     /// Decision 408: and the 700T and the N700S-G, 5,600 to 9,100 a car
     /// (their ``far`` sets between).
     /// Decision 420: and the Taroko and the EMU800 (their far sets).
-    static let nearOnly: Set = ["E500CK", "MINGRI", "STAR", "greenTram", "SUMMER", "STEAM", "highSpeed", "n700sG", "emu3000",
+    static let nearOnly: Set = ["E500CK", "MINGRI", "STAR", "pushPull", "greenTram", "SUMMER", "STEAM", "highSpeed", "n700sG", "emu3000",
                                 "taroko", "emu800"]
 
     /// Decision 408: the set a train of `key` numbered `number` is drawn
@@ -287,6 +287,18 @@ public struct Map3DTrainSet: Sendable {
     }
 
     // MARK: Building
+
+    /// PP passenger-car substitution only. The existing E1000 power car
+    /// remains at both ends; the standard PPT is the one operating middle
+    /// role. Special PP roles are separate display assets, not invented
+    /// positions in the game's variable-length formations.
+    static func ppHauled(far: Bool = false) -> Map3DTrainSet {
+        Map3DTrainSet(key: far ? "pushPullFar" : "pushPull", ownLengths: true,
+                      far: far ? nil : "pushPullFar") {
+            Cars(head: Map3DTrainLocomotive.e1000.model,
+                 middle: Map3DPPPassenger.model(.ppt1000, far: far), tail: nil, single: nil)
+        }
+    }
 
     /// E500-only substitution. Retains the original coaches and all pack/lock/fallback lookup rules.
     static func e500Hauled(_ key: String, far: Bool = false, coach: Coach) -> Map3DTrainSet {

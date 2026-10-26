@@ -1,0 +1,218 @@
+{
+  "official_dimensions": {
+    "source": "https://www.ttsb.gov.tw/media/7054/0528臺鐵第177次車竹南站重大鐵道事故調查報告.pdf",
+    "table": "1.5-2, printed p9, PDF p23 (1-based)",
+    "length_mm": 20300,
+    "width_mm": 2885,
+    "height_mm": 4043,
+    "source_label_軸距_mm": 14300,
+    "gauge_mm": 1067,
+    "bogie": "TR-55 air spring",
+    "limits": "Accident PPT car generic PP table; PPM-specific dimensions and definition of length endpoints not established. 14300 is source named 軸距, do not call bogie internal wheelbase."
+  },
+  "unknown_engineering": [
+    "wheel diameter",
+    "bogie internal axle spacing",
+    "precise door/window stations and dimensions",
+    "PPM2500-specific drawing",
+    "E500 conversion hidden electrical equipment layout",
+    "coupler engineering height and gangway dimensions"
+  ],
+  "roles": {
+    "35PPT1000": "standard passenger coach with toilets; first generation Korean body",
+    "35PPH1300": "accessible coach with accessible toilet; asymmetric sides",
+    "35PPC1400": "crew/conductor compartment coach; no toilet in secondary compiled data",
+    "40PPM2500": "multifunction/bicycle+wheelchair coach rebuilt from PPD2500 dining/parcel vehicle; second generation Taiwanese body"
+  },
+  "primary_role_source": "https://www.rb.gov.tw/public/files/artsinfo/1622511915-m0.pdf",
+  "rebuilder_source": "https://www.csmc.com.tw/dist/uploads/report/2019.pdf",
+  "user_image_review": [
+    {
+      "id": 1,
+      "type": "HO model photo",
+      "role": "40PPM2500 sparse-window side",
+      "features": "2 broad + 1 narrow +1 smaller opening, long blank wall, two end doors; underfloor large grouped equipment"
+    },
+    {
+      "id": 2,
+      "type": "HO model photo",
+      "role": "40PPM2500 opposite side",
+      "features": "2 small +5 broad openings; end doors; differing underfloor equipment"
+    },
+    {
+      "id": 3,
+      "type": "HO model photo",
+      "role": "35PPH1300",
+      "features": "2 small +4 broad +2 small =8 side windows; long blank at accessible-toilet end"
+    },
+    {
+      "id": 4,
+      "type": "HO model photo",
+      "role": "35PPT1000",
+      "features": "1 opaque small toilet +blank interval+1 small+5 broad+2 small=9 windows; two end doors"
+    },
+    {
+      "id": 5,
+      "type": "HO model photo",
+      "role": "E1000 locomotive",
+      "features": "streamlined E1000, not E500; observation only, do not rebuild accepted E500"
+    },
+    {
+      "id": 6,
+      "type": "duplicate HO model photo",
+      "role": "same as4"
+    },
+    {
+      "id": 7,
+      "type": "duplicate HO model photo",
+      "role": "same as5"
+    },
+    {
+      "id": 8,
+      "type": "HO product lineup photo",
+      "role": "E1000+4 coaches+E1000 display",
+      "features": "product sample, not proof of full real consist count"
+    },
+    {
+      "id": 9,
+      "type": "HO promotional drawing",
+      "role": "E1000 PP consist",
+      "features": "not engineering drawing; no E500 source"
+    },
+    {
+      "id": 10,
+      "type": "HO CAD promotional drawing",
+      "role": "40PPM2500 sparse side",
+      "features": "no engineering dimensions"
+    },
+    {
+      "id": 11,
+      "type": "HO CAD promotional drawing",
+      "role": "35PPH1300 8-window side"
+    },
+    {
+      "id": 12,
+      "type": "HO CAD promotional drawing",
+      "role": "35PPC1400 blank-interval side",
+      "features": "1small+blank+1small+5broad+2small=9"
+    },
+    {
+      "id": 13,
+      "type": "HO CAD promotional drawing",
+      "role": "35PPC1400 opposite side",
+      "features": "2small+5broad+small+blank+small=9"
+    },
+    {
+      "id": 14,
+      "type": "HO CAD detail",
+      "role": "coach end door/fitting",
+      "features": "round lamp/door hinge/recessed step; no dimensions"
+    },
+    {
+      "id": 15,
+      "type": "HO CAD promotional drawing",
+      "role": "35PPT1000 toilet-window side"
+    },
+    {
+      "id": 16,
+      "type": "HO CAD promotional drawing",
+      "role": "35PPT1000 opposite side"
+    }
+  ],
+  "shared_shape_observations": "Long 20m class straight passenger side, rolled/rounded roof shoulder, ribbed central roof sheet; one low trapezoidal HVAC at each end, large grille integrated in each casing. Rounded lower side/body underside, two 2-axle bogies; central gangway door in rectangular bellows on rounded-top end, low central coupler and hanging hoses. Door plates/glazing follow true shell; do not infer hidden wiring or mirror equipment.",
+  "high_value_photo_notes": {
+    "pph-large-00.jpg": "actual 1332 accessible coach 9-window side, opaque isolated toilet window near end. Roof/door/underframe visible; end door open (no step geometry claim from hidden area).",
+    "pph-large-01.jpg": "actual1307 accessible 8-window side; long blank at toilet end; 2small+4broad+2small.",
+    "pph-large-02.jpg": "actual1304 accessible9window side; 2small+4broad+2small+opaque small separated near end.",
+    "ppc-large-01.jpg": "actual1405 crew-side9 windows with broad blank between 1st and2nd small; 5 broad central.",
+    "ppc-large-02.jpg": "actual1466 opposite side9 windows; 2small+5broad+1small+blank+1small.",
+    "ppt-large-00.jpg": "actual1047 toilet9-window side; opaque small at toilet end; 5 broad central.",
+    "ppt-large-03.jpg": "actual1001 standard9-window side; one toilet partly behind open door.",
+    "ppd-page-new-0.jpg": "2022/01/03 formerPPD2522 photo on outdated PPD page: opposite7-window side; 1tiny+1narrow+5broad; broad windows nearest2small are lower-topped/lower-height, remaining3broad higher. Page vehicle designation is stale (PPD vs PPM); shape/door evidence only.",
+    "ppd-page-new-1.jpg": "2021/12/27 formerPPD2531 on outdated PPD page: sparse4-window side, wide blank half; later converted side door and two shallow roof HVAC. Page designation stale, evidence caveat applies."
+  },
+  "private_reference": {
+    "path": "Railway/taiwan-rail-reference-clean/source/rail-3d/assets/garage-blender-v1/ppcoach.json",
+    "preview": "same-dir ppcoach.webp",
+    "preview_reviewed": true,
+    "native_mesh_reused": false,
+    "style": "Q-proportions-photo-informed",
+    "engineeringDimensionsM": null,
+    "sizeM": [
+      9.788000106811523,
+      2.9809999465942383,
+      3.634999990463257
+    ],
+    "triangle_count": 38562,
+    "reference_url": "https://blair-train.blogspot.com/2011/04/40ppd2500.html",
+    "observed": "boxy shortened coach with only4windows and twin small flat roof grills; source points to dining/parcel PPD, not a standard PPT. Not engineering/modeling template."
+  },
+  "review_scope": "User attachments visually reviewed in conversation; public actual-car photos and private preview viewed locally. Source images are study only, not redistributed.",
+  "selected_actual_photos": [
+    {
+      "local": "ppt-large-00.jpg",
+      "page": "https://blair-train.blogspot.com/2020/08/35ppt1000.html",
+      "image_url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEj4Sq25HkFYWPbnn0vSxNMtPJDR_5HAHwfDLzAOMbV5RXoaEc4W7MkZt17FBznIDSoa3Ouer4_vFJ2rbEXhDeRIlnXFXuVdGClK-RiVK1utQo2z8i_-FtEQb0eIiMZkIa7bz_lPmxn2NOA/s1600/DSC09337.JPG",
+      "sha256": "d504069ee0b4c86deec31f5db54ae63bbd8837adb00cb6ca6ec8d8707a96240a",
+      "redistribution": "study only; copyright retained; do not publish source image"
+    },
+    {
+      "local": "ppt-large-03.jpg",
+      "page": "https://blair-train.blogspot.com/2020/08/35ppt1000.html",
+      "image_url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgt8POuUvgVimPs89CafsU_R1lPH3rBUxDwcDVed3XaXiduCpZch3KgCvQQprTkqo5YrURXEKsqp7krb9Tw_qF5FS-6y2yHZUu9QY4QMEkGElEJ6cyFXAJZFzN9Mccf6-qg_Xzqhr9Y_Kta/s1600/35PPT1001+DSC08705-1.JPG",
+      "sha256": "b921a74a8b125c0c4aa5c571742f18c42f85d237d94d6475684b5c7a0dfbbf05",
+      "redistribution": "study only; copyright retained; do not publish source image"
+    },
+    {
+      "local": "pph-large-00.jpg",
+      "page": "https://blair-train.blogspot.com/2013/07/35pph1300.html",
+      "image_url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiyHyYYBBQCp2e5IrwX7TwroEs0vDD8s3PDhk37KXYre0GEajFisvBA_HD-hqmjQXeloD2HduwEfn6-x44YPXkOH4fIRicri8JW2XfcAlchUk7-TMwwEUhT9rhOrFzyg7I7tV3nkM-ODjPu/s1600/35PPH1332+DSC07164.JPG",
+      "sha256": "88110c25e2d79a3f577dca7353e2f4723c5c1a48b55245a3c53b2dc1b9714afa",
+      "redistribution": "study only; copyright retained; do not publish source image"
+    },
+    {
+      "local": "pph-large-01.jpg",
+      "page": "https://blair-train.blogspot.com/2013/07/35pph1300.html",
+      "image_url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgzTmLHK6scrZaZXrSWtdlve6vrpbzf3eWHBKbljd9RVkiEW7G-JG9iqdMFhn9ch7uSOAqhqEPbljW-ieJR5_YOp5SF94S1XIzqySIFfdbScRD-zxIicSGuynSoHCOXxPtD1IJntkVpQXM/s1600/DSC03129.JPG",
+      "sha256": "6e0866fe03a71df899849c4d598db633e448da4fceb387bc844205ff99e8536c",
+      "redistribution": "study only; copyright retained; do not publish source image"
+    },
+    {
+      "local": "pph-large-02.jpg",
+      "page": "https://blair-train.blogspot.com/2013/07/35pph1300.html",
+      "image_url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhQsIo8eDVBS8c6Mo5ceObIc-ASihJ-iTH6F8ZqayaJXVD5575TTSiV_rbaP0zcvKOpYpPUGY6XGhm6hJSNponK6MtnFm1sNe1KVfB__CFeexWTbgQo8ogIPfGAtIBRaLylfYqO9ODKprM/s1600/DSC05892.JPG",
+      "sha256": "c2b8c45ffd0f40ef7dfeb3abc4600136e0290c375bc6efc2257567155b175191",
+      "redistribution": "study only; copyright retained; do not publish source image"
+    },
+    {
+      "local": "ppc-large-01.jpg",
+      "page": "https://blair-train.blogspot.com/2011/09/35ppc1400.html",
+      "image_url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgBckCfMJQdnpYmzo4UyyK1RitB5UO-6GSTUcFBviY8QYZPPcDne1ytnVFsLeyQo2YkMMmvptlNZjRGGrZ0F3M0wMWPpCsLH7IiQT6tMah2cNsjXVM6Xenjd8fb4sHhlaPm4eEhUyB1u6A/s1600/DSC04385.JPG",
+      "sha256": "33410aa79576325847e1a072da7dc8748b7c19116745d9dde89a12ea537d0e0d",
+      "redistribution": "study only; copyright retained; do not publish source image"
+    },
+    {
+      "local": "ppc-large-02.jpg",
+      "page": "https://blair-train.blogspot.com/2011/09/35ppc1400.html",
+      "image_url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh2YW-xR4pF6ebAojKieqnsILIVOnAdI6uLtdUhhhN3Eadfv8lgRgpGnoI_eUSaB4ieNL6k9Vnksqoe0kTY77dEwFxaLgVDJ9oovocez9jbPMYEKxJA_mrK1eCFsgw5TowGn62DD7-Fpp8/s1600/DSC04827.JPG",
+      "sha256": "107e178c3422f3ee80fd310cc6707e42f90a79ab8cbea9a1ccec11cb62614ca0",
+      "redistribution": "study only; copyright retained; do not publish source image"
+    },
+    {
+      "local": "ppd-page-new-0.jpg",
+      "page": "https://blair-train.blogspot.com/2011/04/40ppd2500.html",
+      "image_url": "https://blogger.googleusercontent.com/img/a/AVvXsEi00tZsFlBO-4L1RdwKwkRRoWPASE9sqNp5uT6nJaK9hNdzbi5Y25TYjw_c3gcXcnTesvoGxpTRLWwL3mtcpU_KyR01-aIq2byhhfDD5edriD6faAbVdVNKu_SvyeB1JLwrHZSAH-mJY2aPXP_xLTJXc9wGqzPhHKUXbLCtwDG1OLhfgPkeCXWTP0Pg=s1600",
+      "sha256": "ab1985e8fff4f2226d8ad47c7108118ebb238ccbde91cc0f9c7cd2eaadc24e9f",
+      "redistribution": "study only; do not publish source image",
+      "reviewed": true
+    },
+    {
+      "local": "ppd-page-new-1.jpg",
+      "page": "https://blair-train.blogspot.com/2011/04/40ppd2500.html",
+      "image_url": "https://blogger.googleusercontent.com/img/a/AVvXsEh9HZN5MVrLR_0IYuC4Z5grhjMIs9lbia59uN5OaDJQJGZWYDiMEClLY4vPgxP8zc9ojjednETlB9BDAaIr1tzUknOXVXOmXT0vBeY9fRiBw74VIo-Sq2cyNCPVZxDV5DOy7vcGz9riUn4kwbBwz3ZiBQ9dGevJeecZRQ1ufghm30vbEidIPElSVcLn=s1600",
+      "sha256": "b87c7d5c2ab774750187016840d666a6e3dca0d5db912c3ea821c17a4a21175f",
+      "redistribution": "study only; do not publish source image",
+      "reviewed": true
+    }
+  ]
+}
