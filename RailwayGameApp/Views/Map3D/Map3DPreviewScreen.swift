@@ -584,14 +584,15 @@ final class Map3DTrainFeed {
     private var realGlides = true
     /// Decision 400, 10i-6: the player's bus routes, the clock their buses
     /// are drawn at and the routes laid in the scene, laid again when the
-    /// routes or the scene change.
+    /// routes or the scene change (off the main actor, decision 424's
+    /// second sequel).
     private var busWorld: GameWorld?
     private var busPalette: LinePalette = .standard
     private var busRoads: BusRoads?
     private var busSignature: Map3DBuses.Signature?
     private var busClock: RealTrainClock?
     private var busGlides = true
-    private var buses: Map3DBuses?
+    private let buses = Map3DBuses.Layer()
 
     func update(world: GameWorld, palette: LinePalette) {
         motion = TrainMotion(world: world, previous: motion, time: Date().timeIntervalSinceReferenceDate)
@@ -618,14 +619,14 @@ final class Map3DTrainFeed {
         busSignature = Map3DBuses.Signature(world: world, palette: palette, roads: roads)
     }
 
-    /// Decision 400, 10i-6: the player's buses round the camera's target.
+    /// Decision 400, 10i-6: the player's buses round the camera's target;
+    /// none, or the ones laid before, while they are laid off the main
+    /// actor (decision 424's second sequel).
     private func busFrame(in scene: Map3DScene, camera: Map3DCamera, detail: Map3DStreetDetail, most: Int?, now: Double) -> Map3DBuses.Frame {
-        guard let world = busWorld, let signature = busSignature, let clock = busClock else { return .init() }
-        if buses?.isLaid(from: signature, in: scene) != true {
-            buses = Map3DBuses(world: world, scene: scene, palette: busPalette, roads: busRoads)
-        }
-        return buses?.frame(second: clock.second(at: now, glides: busGlides), target: camera.target, distance: camera.distance,
-                            detail: detail, most: most) ?? .init()
+        guard let world = busWorld, let signature = busSignature, let clock = busClock,
+              let laid = buses.buses(signature, world: world, in: scene, palette: busPalette, roads: busRoads) else { return .init() }
+        return laid.frame(second: clock.second(at: now, glides: busGlides), target: camera.target, distance: camera.distance,
+                          detail: detail, most: most)
     }
 
     /// Decision 314: the labels of the trains whose fronts are at `heads`.
