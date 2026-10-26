@@ -1419,7 +1419,7 @@
 - 資料：OpenStreetMap（ODbL）與台北市、內政部等的政府開放資料（政府資料開放授權條款第 1 版）。用到就寫進 `DataSourceCredits`。
 - 包裡的說明另外提醒：真實地名、招牌上市售品牌的權利要另外查。它的招牌圖集只用通用店名。
 
-**怎麼取得**：還沒有解開放進參考庫，只是 release 的附件（SHA-256 `e5d856221ee3ac247ac86f1bf5a203cb2f8b92a0b884c306db5c30e84dedf17a`）。下載：`gh api -H 'Accept: application/octet-stream' repos/a91453/railway-reference-private/releases/assets/678780011 > TW3D_Clean_All_in_One.zip`。先讀包裡的 `PACKAGE_INDEX.md`、`README_CLEANUP.md`、`MISSING_COMPONENTS.md`、`THIRD_PARTY_ATTRIBUTION.md`。
+**怎麼取得**：解開放在參考庫的 `Railway/tw3d-reference-clean/source/`（a91453/railway-reference-private#89；每個檔都和包裡的 `SHA256SUMS.txt` 相符）。原本的 zip 在 release `Tai`（SHA-256 `e5d856221ee3ac247ac86f1bf5a203cb2f8b92a0b884c306db5c30e84dedf17a`）。先讀 `Railway/tw3d-reference-clean/00_READ_ME_FIRST.md`，再讀包裡的 `MISSING_COMPONENTS.md`、`THIRD_PARTY_ATTRIBUTION.md`。
 
 **排序**：
 - 權重照 §19：玩家 30%、開發 25%、美術 15%、鐵道迷 15%、音樂 15%；每方 1–5 分。
@@ -1439,7 +1439,7 @@
 | 10 | 行道樹照樹種（樟樹、榕樹、台灣欒樹、大王椰子、小葉欖仁、楓香）與台北樹籍的實測高度 | `trees.js`、`street-details.js`、`data/tpe-trees.bin.gz` | 2 | 2 | 5 | 1 | 1 | 2.15 | 樹籍只有台北；外型照 art-style 自己畫 |
 
 **派工**：
-- 開工的第一件先把 zip 解開放進參考庫（例如 `Railway/tw3d-reference-clean/`，加 `00_READ_ME_FIRST.md`），並把它加進 CLAUDE.md 的參考來源清單，之後的 session 才找得到。
+- 參考庫已經有了（`Railway/tw3d-reference-clean/`，railway-reference-private#89），也加進了 CLAUDE.md 的參考來源清單（本 PR）。
 - 第 1 項排進 3D 線：22.11 的地標之後、第 15 名其餘各項之前。第 2 項給聲音那條線，隨時可派。其他接在第 15 名後面，照分數。
 
 **不拿**：
