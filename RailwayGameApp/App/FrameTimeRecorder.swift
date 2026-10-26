@@ -73,12 +73,30 @@ final class FrameTimeRecorder: NSObject {
         look(at: now)
     }
 
-    /// A problem report's part: the stretch going on, then those kept.
+    /// A problem report's part: the stretch going on, then those kept,
+    /// then the fixed test's runs on this device (V2).
     func reportText(in language: DisplayLanguage) async -> String? {
         let going = Self.meter.current(at: CACurrentMediaTime())
-        return await Task.detached(priority: .utility) {
-            FrameTimeRecorder.store.current().reportText(in: language, going: going)
+        let device = FrameTimeBenchRunner.device
+        let parts = await Task.detached(priority: .utility) {
+            [FrameTimeRecorder.store.current().reportText(in: language, going: going),
+             FrameTimeBenchRunner.store.current().reportText(on: device, in: language)]
         }.value
+        let text = parts.compactMap { $0 }.joined(separator: "\n\n")
+        return text.isEmpty ? nil : text
+    }
+
+    /// Decision 421 (V2): a stretch begun now, for a test run; the one
+    /// before is kept as any other.
+    func restart() {
+        let now = CACurrentMediaTime()
+        Self.store.add(Self.meter.end(at: now))
+        look(at: now, anew: true)
+    }
+
+    /// Decision 421 (V2): the stretch so far, at the end of a test run.
+    func snapshot() -> FrameTimeSegment? {
+        Self.meter.current(at: CACurrentMediaTime())
     }
 
     private func setActive(_ isActive: Bool) {

@@ -45,6 +45,11 @@ public struct DemoRealLines: Sendable {
 
     let routes: [Route]
 
+    /// Decision 421: only the first `count` routes.
+    func first(_ count: Int) -> DemoRealLines {
+        DemoRealLines(routes: Array(routes.prefix(max(0, count))))
+    }
+
     static let metre = RealRailwayTraces.metre
     /// How far a station may stand from its line's centre line.
     static let stationReach = 150 * metre
@@ -241,9 +246,10 @@ extension GameSession {
     /// own commands, one Undo for all of it. ``demoRealLinesProgress`` says
     /// how far it has got. `nil` when nothing is laid (not a demo, not a
     /// real-world map, a view too wide, or no real station in view); the
-    /// message says why.
+    /// message says why. Decision 421: at most `most` of the real lines,
+    /// the first by their key (the fixed frame time test's).
     @discardableResult
-    public func layDemoRealLines(in view: WorldRegion) async -> DemoRealLines.Outcome? {
+    public func layDemoRealLines(in view: WorldRegion, routes most: Int = .max) async -> DemoRealLines.Outcome? {
         guard canLayDemoRealLines, demoRealLinesProgress == nil, let railways, let frame = RealWorldFrame(world: world) else { return nil }
         guard view.maxX - view.minX <= DemoRealLines.widestView, view.maxY - view.minY <= DemoRealLines.widestView else {
             message = StatusMessage(kind: .failure, text: language.text(
@@ -257,7 +263,7 @@ extension GameSession {
         defer { demoRealLinesProgress = nil }
         let planned = await Task.detached(priority: .userInitiated) {
             DemoRealLines.plan(railways: railways, frame: frame, bounds: bounds, view: view, carLength: carLength)
-        }.value
+        }.value.first(most)
         let total = planned.routes.reduce(0) { $0 + $1.stops.count }
         guard total > 0 else {
             message = StatusMessage(kind: .failure, text: language.text(

@@ -49,6 +49,27 @@ struct ContentView: View {
     /// Compact height: a phone, held on its side.
     @Environment(\.verticalSizeClass) private var verticalSizeClass
 
+    /// Decision 421 (V2): what the fixed test of the screen's pace asks of
+    /// the game screen: the 2D map's camera, and the 3D map opened over it
+    /// and closed.
+    private func hookFrameTimeBench() {
+        let runner = FrameTimeBenchRunner.shared
+        let camera = $mapCamera
+        let screen = screen
+        var cut = Transaction()
+        cut.disablesAnimations = true
+        runner.camera2D = { camera.wrappedValue }
+        runner.move2D = { camera.wrappedValue = $0 }
+        runner.open3D = {
+            screen.map3DHandoff = nil
+            screen.map3DOpenedAt = camera.wrappedValue.map {
+                Map3DHandoff.Plan(x: $0.centerX, y: $0.centerY, referenceSize: $0.referenceSize)
+            }
+            withTransaction(cut) { screen.showsMap3D = true }
+        }
+        runner.close3D = { withTransaction(cut) { screen.showsMap3D = false } }
+    }
+
     /// Decision 269: the 3D map closes at once onto the 2D map at `plan`.
     private func back(to plan: Map3DHandoff.Plan) {
         screen.map2DReturn = plan
@@ -79,6 +100,11 @@ struct ContentView: View {
                     }
                 }
             }
+            // Decision 421 (V2): the fixed test of the screen's pace.
+            .overlay(alignment: .top) {
+                FrameTimeBenchOverlay(runner: FrameTimeBenchRunner.shared, language: session.language)
+            }
+            .onAppear(perform: hookFrameTimeBench)
             // A panel or the tutorial that opens (a month's report) ends it.
             .onChange(of: screen.panel) { _, panel in
                 if panel != nil { AmbientMode.end(session: session, screen: screen) }

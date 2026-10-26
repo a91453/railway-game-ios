@@ -677,6 +677,16 @@ public final class GameLauncher {
         return hour * 3_600 + minute * 60
     }
 
+    /// Decision 421 (V2): opens the fixed test of the screen's pace,
+    /// Taipei with `lines` of its real lines (``FrameTimeBench``), as a
+    /// demo; returns its session once they are laid, `nil` when it could
+    /// not start.
+    public func openFrameTimeBench(lines: Int) async -> GameSession? {
+        guard begin(FrameTimeBench.world(groundFrom: heights), keepingAutosave: true, isDemo: true), let session else { return nil }
+        _ = await session.layFrameTimeBench(lines: lines)
+        return session
+    }
+
     /// Opens a website screenshot scene (decision 165), paused at the
     /// moment it shows; only the Debug app's `-screenshot-scene` launch
     /// argument asks for one. The scene runs on to its moment off the main
