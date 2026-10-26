@@ -21,11 +21,16 @@ final class RealWorldDataLoadTests: XCTestCase {
     }
 
     /// The app's files from the repository, where the app bundles them
-    /// flat: `Resources/RealWorld/` and `Resources/RealRailways/`.
+    /// flat: `Resources/RealWorld/`, `Resources/RealBuses/` and
+    /// `Resources/RealRailways/`.
     nonisolated static func file(_ name: String, _ ext: String) throws -> Data {
         let realWorld = BundledRealData.directory.deletingLastPathComponent().appendingPathComponent("RealWorld/\(name).\(ext)")
         if FileManager.default.fileExists(atPath: realWorld.path) {
             return try Data(contentsOf: realWorld)
+        }
+        let realBuses = BundledRealData.directory.deletingLastPathComponent().appendingPathComponent("RealBuses/\(name).\(ext)")
+        if FileManager.default.fileExists(atPath: realBuses.path) {
+            return try Data(contentsOf: realBuses)
         }
         return try BundledRealData.file(name, ext)
     }
@@ -41,6 +46,7 @@ final class RealWorldDataLoadTests: XCTestCase {
         XCTAssertNotNil(data.heights)
         XCTAssertNotNil(data.coverage)
         XCTAssertNotNil(data.placeNames)
+        XCTAssertNotNil(data.realBuses, "the real bus stops' index reads")
         XCTAssertNotNil(data.railways?.stationData?.overtakeTracks)
     }
 

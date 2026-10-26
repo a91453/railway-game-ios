@@ -255,6 +255,26 @@ extension AchievementsTests {
         XCTAssertEqual(try XCTUnwrap(Achievement.named("businessProfit")).progressText(of: facts), "$ 400,000 / $ 1,000,000")
     }
 
+    /// Review J: "In Business" and "Group" name a department store, a
+    /// hotel and an amusement park; a temple and a night market are
+    /// businesses too (decision 361 and its sequel) but count towards
+    /// neither, so a temple, a night market and a hotel are not a group.
+    func testATempleOrANightMarketIsNotOneOfTheNamedBusinesses() throws {
+        var world = try GameWorld(bounds: WorldBounds(width: 131_072, height: 65_536), economy: GameEconomy(balance: 1_000_000_000_000))
+        world.setEconomyMode(.management)
+        try world.placeBuilding(.temple, at: PlanPoint(x: 20_000, y: 20_000))
+        try world.placeBuilding(.nightMarket, at: PlanPoint(x: 40_000, y: 20_000))
+        var facts = AchievementFacts(world: world)
+        XCTAssertFalse(try XCTUnwrap(Achievement.named("firstSubsidiary")).isMet(by: facts))
+        try world.placeBuilding(.hotel, at: PlanPoint(x: 60_000, y: 20_000))
+        facts = AchievementFacts(world: world)
+        XCTAssertTrue(try XCTUnwrap(Achievement.named("firstSubsidiary")).isMet(by: facts))
+        XCTAssertFalse(try XCTUnwrap(Achievement.named("allBusinesses")).isMet(by: facts))
+        try world.placeBuilding(.departmentStore, at: PlanPoint(x: 80_000, y: 20_000))
+        try world.placeBuilding(.amusementPark, at: PlanPoint(x: 100_000, y: 40_000))
+        XCTAssertTrue(try XCTUnwrap(Achievement.named("allBusinesses")).isMet(by: AchievementFacts(world: world)))
+    }
+
     func testAWorldWithAttractionsIsRead() throws {
         var world = GameWorld.newGame(eventSeed: 1)
         world.setTourism(nil)

@@ -39,6 +39,17 @@ struct StationPanel: View {
     /// what was typed in it.
     @State private var choosingStation = false
     @State private var stationSearch = ListSearch()
+    /// Decision 423, second step: whether the "How to Get There" section is
+    /// open, the station picked in it and the options worked out for it.
+    /// All of it is what the panel shows, never saved; the destination goes
+    /// when another station is selected.
+    @State private var journeyExpanded = false
+    @State private var journeyDestination: StationID?
+    @State private var journey: JourneyPlan?
+    /// The option whose rides are listed (``JourneyPlan/Option/id``).
+    @State private var openJourneyOption: String?
+    @State private var choosingDestination = false
+    @State private var destinationSearch = ListSearch()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -54,6 +65,7 @@ struct StationPanel: View {
                     // Decision 222: the station's shops.
                     StationCommerceSection(session: session, station: station.id)
                     departureBoardSection(station)
+                    journeySection(station)
                     Section {
                         Button {
                             renaming = station.name
@@ -127,6 +139,14 @@ struct StationPanel: View {
         .onChange(of: screen.renamesStationOnOpen) { _, _ in renameIfAsked() }
         .task(id: RidershipKey(world: session.world, station: session.selectedStationID)) {
             await workOutRidership()
+        }
+        .task(id: journeyInputs) {
+            await workOutJourney()
+        }
+        .onChange(of: session.selectedStationID) { _, _ in
+            journeyDestination = nil
+            journey = nil
+            openJourneyOption = nil
         }
     }
 
@@ -215,6 +235,207 @@ struct StationPanel: View {
             }
             .accessibilityIdentifier("station.board")
         }
+    }
+
+    // MARK: - How to get there
+
+    /// What decides the journey options: nothing while the section is shut
+    /// or no destination is picked, so a station panel nobody asks anything
+    /// of works out nothing.
+    private var journeyInputs: JourneyPlan.Inputs? {
+        guard journeyExpanded, let from = session.selectedStationID, let to = journeyDestination else { return nil }
+        return JourneyPlan.Inputs(world: session.world, from: from, to: to)
+    }
+
+    /// Works out the options for the picked destination off the main actor
+    /// (GameCore builds the timetable graph for every query), kept until
+    /// ``journeyInputs`` changes.
+    private func workOutJourney() async {
+        guard journeyExpanded, let from = session.selectedStationID, let to = journeyDestination else { return }
+        let world = session.world
+        let plan = await Task.detached(priority: .userInitiated) {
+            JourneyPlan(world: world, from: from, to: to)
+        }.value
+        guard !Task.isCancelled else { return }
+        journey = plan
+    }
+
+    /// Decision 423, second step: how to ride from this station to another
+    /// (``JourneyPlan``, the routes and fares the passengers get): pick the
+    /// station, read up to three ways with their lines, minutes and fare, and
+    /// open one for its rides. Shut until asked.
+    private func journeySection(_ station: Station) -> some View {
+        let language = session.language
+        let destination = journeyDestination.flatMap { session.world.station(id: $0) }
+        return Section {
+            DisclosureGroup(isExpanded: $journeyExpanded) {
+                Button {
+                    destinationSearch = ListSearch()
+                    choosingDestination = true
+                } label: {
+                    HStack {
+                        Text(verbatim: language.text("Destination", "目的地"))
+                            .foregroundStyle(Theme.textPrimary)
+                        Spacer(minLength: 8)
+                        Text(verbatim: destination?.name ?? language.text("Choose a station", "選擇車站"))
+                            .foregroundStyle(Theme.textSecondary)
+                            .lineLimit(1)
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Theme.textSecondary)
+                            .accessibilityHidden(true)
+                    }
+                }
+                .accessibilityIdentifier("journey.destination")
+                .sheet(isPresented: $choosingDestination) {
+                    destinationChooser(from: station)
+                }
+                if let destination {
+                    journeyResults(from: station, to: destination, language: language)
+                }
+            } label: {
+                Label {
+                    Text(verbatim: language.text("How to Get There", "怎麼搭"))
+                } icon: {
+                    Image(systemName: "arrow.triangle.turn.up.right.diamond")
+                }
+            }
+            .accessibilityIdentifier("journey.section")
+        }
+    }
+
+    /// The options, or the sentence for why there are none, or that they are
+    /// being looked for.
+    @ViewBuilder
+    private func journeyResults(from station: Station, to destination: Station, language: DisplayLanguage) -> some View {
+        if let plan = journey, plan.origin == station.id, plan.destination == destination.id {
+            if let message = plan.message(in: language) {
+                Text(verbatim: message)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                    .accessibilityIdentifier("journey.message")
+            }
+            ForEach(Array(plan.options.enumerated()), id: \.element.id) { index, option in
+                journeyOptionRow(option, index: index, language: language)
+            }
+        } else {
+            Text(verbatim: JourneyPlan.findingText(in: language))
+                .font(.footnote)
+                .foregroundStyle(Theme.textSecondary)
+                .accessibilityIdentifier("journey.finding")
+        }
+    }
+
+    /// One way to make the journey in three lines, and its rides when
+    /// tapped; a ride that starts with a walk says so first.
+    private func journeyOptionRow(_ option: JourneyPlan.Option, index: Int, language: DisplayLanguage) -> some View {
+        let rows = option.rows(in: language)
+        let isOpen = openJourneyOption == option.id
+        return VStack(alignment: .leading, spacing: 4) {
+            Button {
+                withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) {
+                    openJourneyOption = isOpen ? nil : option.id
+                }
+            } label: {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: rows.headline)
+                        .font(.subheadline.monospacedDigit().weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text(verbatim: rows.lines)
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textPrimary)
+                    Text(verbatim: rows.breakdown)
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(Text(verbatim: rows.spoken))
+            .accessibilityValue(Text(verbatim: isOpen ? language.text("Expanded", "已展開") : language.text("Collapsed", "已收合")))
+            .accessibilityHint(Text(verbatim: language.text("Shows or hides each ride.", "顯示或隱藏每一段。")))
+            .accessibilityAddTraits(.isButton)
+            .accessibilityIdentifier("journey.option.\(index)")
+            if isOpen {
+                ForEach(rows.legs) { leg in
+                    VStack(alignment: .leading, spacing: 2) {
+                        if let walk = leg.walkText {
+                            Label {
+                                Text(verbatim: walk)
+                            } icon: {
+                                Image(systemName: "figure.walk")
+                            }
+                            .font(.caption)
+                            .foregroundStyle(Theme.textSecondary)
+                        }
+                        Text(verbatim: leg.text)
+                            .font(.footnote)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("journey.option.\(index).leg")
+                }
+            }
+        }
+    }
+
+    /// Every other station by name, past ``ListSearchField/minimumRows`` with
+    /// a search field; picking one closes the list. Drawn from the names
+    /// alone (``TickStable``), so the game's ticks leave it as it is.
+    private func destinationChooser(from station: Station) -> some View {
+        let language = session.language
+        let all = JourneyPlan.destinations(among: session.stationMenuChoices, from: station.id)
+        let current = journeyDestination
+        return NavigationStack {
+            TickStable(StableKey(all, destinationSearch, current)) {
+                let shown = JourneyPlan.destinations(among: all, from: station.id, matching: destinationSearch)
+                List {
+                    if all.count >= ListSearchField.minimumRows {
+                        ListSearchField(search: $destinationSearch, prompt: language.text("Search stations", "搜尋車站"),
+                                        identifier: "journey.destination.search", language: language)
+                    }
+                    if shown.isEmpty {
+                        ListSearchEmpty(text: language.text("No station matches.", "沒有符合的車站。"))
+                    }
+                    ForEach(shown) { choice in
+                        Button {
+                            if choice.id != journeyDestination {
+                                journey = nil
+                                openJourneyOption = nil
+                            }
+                            journeyDestination = choice.id
+                            choosingDestination = false
+                        } label: {
+                            HStack {
+                                Text(verbatim: choice.title)
+                                    .foregroundStyle(Theme.textPrimary)
+                                Spacer(minLength: 8)
+                                if choice.id == current {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(Theme.primary)
+                                        .accessibilityHidden(true)
+                                }
+                            }
+                        }
+                        .accessibilityAddTraits(choice.id == current ? .isSelected : [])
+                        .accessibilityIdentifier("journey.destination.\(choice.id.rawValue)")
+                    }
+                }
+            }
+            .navigationTitle(Text(verbatim: language.text("Choose a Destination", "選擇目的地")))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        choosingDestination = false
+                    } label: {
+                        Text(verbatim: language.text("Cancel", "取消"))
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
     }
 
     /// Decision 334: the 3D map over the platform train `train` stops at
