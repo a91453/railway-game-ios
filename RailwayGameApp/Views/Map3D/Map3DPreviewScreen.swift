@@ -714,6 +714,8 @@ private struct Map3DView: UIViewRepresentable {
         }
         context.coordinator.view = view
         cameraLink.view = view
+        // Decision 421 (V2): the fixed test circles its camera.
+        FrameTimeBenchRunner.shared.view3D = view
         // Decision 358: the chunks ahead of the camera, built as it moves.
         context.coordinator.streamer.view = view
         view.onCamera = { [weak coordinator = context.coordinator] camera, time in coordinator?.streamer.step(camera, at: time) }

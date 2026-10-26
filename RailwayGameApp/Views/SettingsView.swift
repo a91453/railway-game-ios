@@ -551,6 +551,19 @@ struct SettingsView: View {
                 }
                 .accessibilityIdentifier("settings.demoMode")
             }
+            if TestBuild.isTest, demoModeReveal.isRevealed || demoModeOn {
+                // Decision 421 (V2): the fixed test of the screen's pace.
+                NavigationLink {
+                    FrameTimeBenchList(launcher: launcher, closeSettings: { dismiss() })
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("Screen Pace Test", "畫面節奏測試"))
+                    } icon: {
+                        Image(systemName: "gauge.with.dots.needle.33percent")
+                    }
+                }
+                .accessibilityIdentifier("settings.frameTimeBench")
+            }
             ProblemReportRows(game: game, session: session, lessons: lessons)
             Button {
                 showsWebsite = true
