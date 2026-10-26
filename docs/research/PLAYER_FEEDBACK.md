@@ -163,6 +163,22 @@ What to Test 是當時自動列出的 PR 清單（#592 之前的做法）。
 4. **城市預覽**：載入中按 × 每次都關得掉嗎？
 5. **教學卡片**：手機橫拿時，卡片有沒有擋到要點的按鈕？
 
+### 0.5.0 (90.1)，2026-10-26
+
+從 `main` `c801920`（#1301 的合併，What to Test 90.1 與「這版新增」卡也在 #1301）建置，TestFlight run 90（`testflight.yml` run 40337135028，2026-10-26 14:10 UTC 作者按，成功）。89.1（`c005788`）因為公車的錯沒有給測試者，所以 90.1 的 What to Test 寫的是 88.1 之後的全部。
+
+**這個 commit 的檢查**：
+- 完整 `ci.yml`（workflow_dispatch，run 40337184128）綠。
+- full lane（`ios-build.yml` run 40337189127）：iPad、second、lessons 綠；smoke 紅 1 支，`ShellLayoutUITests.testTheStatusBarKeepsItsWidthAsTheDaysGoBy`（`ToolbarSmokeTests.swift`，最快速度下過一天，狀態列寬度不變）。這支在 9717ab9 的 full lane（run 40300085655）也紅過，5b60795 的（run 40323767099）綠。這版沒改到狀態列。16:03 UTC 在同一個 commit 只跑這一支（`only_testing`，run 40353134540），綠。它靠 Simulator 在 50 秒內過完一天，算時間相關的不穩，交下一張 UI 測試派工單修穩。
+- 遊戲規劃 16:20 UTC 告訴作者可以給測試者。
+
+以下是**作者看 90.1** 時提的：
+
+| # | 分類 | 意見摘要 | 狀態 |
+| --- | --- | --- | --- |
+| 1 | bug | （iPad 3D 截圖）「為什麼 E500 是舊版」：推拉式自強號的車頭是舊的方塊 E1000 動力車 | #1296（決策 425：兩端 E500，新 E1000 當展示）疊在 #1291 的 branch 上，#1291 先合進 `main`，#1296 後合，合進的是那個 branch，沒有進 `main`。補救在 #1302（把那個 branch 合進 `main`），下一版實機確認 |
+| 2 | 缺 | 「紅色普悠瑪 TEMU 為什麼也是舊版」 | #1292 只把 TEMU2000 註冊成靜態模型，營運的 `puyuma` 車組沒有改接（它的製作紀錄寫明了）。派工單 F（接上 TEMU2000 與遠景版，照太魯閣號的決策 420）已交作者 |
+
 ### 0.5.0 (88.1)，2026-10-25
 
 從 `main` `c4fc5b6`（#1240 的合併，What to Test 88.1 也在 #1240）建置，TestFlight run 88（`testflight.yml` run 40193688237，2026-10-25 12:34 UTC 作者按，成功）。87.1 之後合併的 #1189–#1240。作者照 87.1 的做法先按，export compliance 與加測試群組等 full lane 綠。
