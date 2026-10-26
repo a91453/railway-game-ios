@@ -27,7 +27,9 @@ final class FrameTimeBenchRunner {
         case measuring(since: CFTimeInterval)
         /// Done: the run kept, or `nil` when too few frames were timed.
         case done(FrameTimeBenchRun?)
-        case failed
+        /// The test game did not start; whether the real railways were
+        /// still being read then.
+        case failed(railwaysLoading: Bool)
     }
 
     struct Running: Equatable {
@@ -68,7 +70,7 @@ final class FrameTimeBenchRunner {
 
     private func carryOut(_ scenario: FrameTimeBench.Scenario, launcher: GameLauncher) async {
         guard let session = await launcher.openFrameTimeBench(lines: scenario.lines), !Task.isCancelled else {
-            if !Task.isCancelled { running?.phase = .failed }
+            if !Task.isCancelled { running?.phase = .failed(railwaysLoading: launcher.railways == nil) }
             return
         }
         session.setSpeed(.normal)

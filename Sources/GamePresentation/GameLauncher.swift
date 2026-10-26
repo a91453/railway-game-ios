@@ -684,10 +684,17 @@ public final class GameLauncher {
     /// Decision 421 (V2): opens the fixed test of the screen's pace,
     /// Taipei with `lines` of its real lines (``FrameTimeBench``), as a
     /// demo; returns its session once they are laid, `nil` when it could
-    /// not start.
+    /// not start. Its lines are the real railways', so it does not start
+    /// before they are read (just after a cold start), nor keeps a game
+    /// with fewer lines than asked: it would time another scenario.
     public func openFrameTimeBench(lines: Int) async -> GameSession? {
-        guard begin(FrameTimeBench.world(groundFrom: heights), keepingAutosave: true, isDemo: true), let session else { return nil }
-        _ = await session.layFrameTimeBench(lines: lines)
+        guard railways != nil, begin(FrameTimeBench.world(groundFrom: heights), keepingAutosave: true, isDemo: true), let session else {
+            return nil
+        }
+        guard await session.layFrameTimeBench(lines: lines) == lines else {
+            if self.session === session { returnToStart() }
+            return nil
+        }
         return session
     }
 
