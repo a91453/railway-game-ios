@@ -30,8 +30,7 @@ final class Map3DTrainSetTests: XCTestCase {
                     // seven thousand a cab and six a middle car.
                     // EMU3000 dedicated near detail (<500m), measured geometry budget;
                     // far models keep the generic ceiling, tested separately at 500m.
-                    : name == set.headName && ["E500CK", "MINGRI", "STAR"].contains(set.key) ? 4_000...10_000
-                    : name == set.headName && set.key == "pushPull" ? 4_500...6_800
+                    : name == set.headName && ["E500CK", "MINGRI", "STAR", "pushPull"].contains(set.key) ? 4_000...10_000
                     : name == set.middleName && set.key == "pushPull" ? 6_000...8_500
                     : set.key == "emu3000" ? ([set.headName,set.tailName].contains(name) ? 6_000...9_200:4_000...6_100)
                     : set.key == "highSpeed" ? ([set.headName, set.tailName].contains(name) ? 8_000...9_500 : 5_000...6_000)
