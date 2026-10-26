@@ -68,8 +68,8 @@ final class Map3DBusesTests: XCTestCase {
 
     /// The scene's point over `second`'s first bus, and the frame.
     private func busFrame(_ buses: Map3DBuses, second: Double, target: Map3DPoint, distance: Float = 300,
-                          detail: Map3DStreetDetail = .full) -> Map3DBuses.Frame {
-        buses.frame(second: second, target: target, distance: distance, detail: detail)
+                          detail: Map3DStreetDetail = .full, most: Int? = nil) -> Map3DBuses.Frame {
+        buses.frame(second: second, target: target, distance: distance, detail: detail, most: most)
     }
 
     func testABusDrivesTheRouteInItsLinesColourOnTheRoad() throws {
@@ -214,6 +214,20 @@ final class Map3DBusesTests: XCTestCase {
         // The street's own buses share the budget: none is left for them.
         let street = Map3DStreetLife().frame(target: .zero, distance: 300, time: 0, detail: .full, activity: .init(), buses: frame)
         XCTAssertEqual(street.buses, Map3DStreetLife.mostBuses)
+        // Decision 417: the lower tier's 10, the nearest; then the budget's
+        // limits, the route buses among them, never cut.
+        let lower = busFrame(buses, second: 8 * 3_600 + 180, target: target, distance: 900, most: Map3DDeviceTier.lower.streetLimits.buses)
+        XCTAssertEqual(lower.instances.count, 10)
+        XCTAssertEqual(lower.instances.map(\.transform), Array(frame.instances.prefix(10)).map(\.transform))
+        let limits = Map3DMotionBudget(tier: .lower, step: .full, trainTriangles: 0).limits(routeBuses: lower.instances.count)
+        XCTAssertEqual(limits.buses, 10)
+        let kept = Map3DStreetLife().frame(target: .zero, distance: 300, time: 0, detail: .reduced, activity: .init(), buses: lower,
+                                           limits: limits)
+        XCTAssertEqual(kept.buses, 10)
+        XCTAssertEqual(kept.vehicles, 10)
+        let squeezed = Map3DStreetLimits(people: 0, vehicles: 3, buses: 3)
+        XCTAssertEqual(Map3DStreetLife().frame(target: .zero, distance: 300, time: 0, detail: .reduced, activity: .init(), buses: lower,
+                                               limits: squeezed).buses, 10, "the player's buses are never cut")
     }
 
     func testTheRouteBusIsTheLowFloorBusWithItsStripesTinted() {

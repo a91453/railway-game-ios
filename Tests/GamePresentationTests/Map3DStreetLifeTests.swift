@@ -64,7 +64,7 @@ final class Map3DStreetLifeTests: XCTestCase {
         XCTAssertLessThanOrEqual(Map3DStreetLife.townLevel(10_000_000), 1)
     }
 
-    func testOlderDevicesDrawLessAndASlowOneStepsDown() {
+    func testOlderDevicesDrawLess() {
         XCTAssertEqual(Map3DStreetDetail.forGPUFamily(9), .full, "A16 and on")
         XCTAssertEqual(Map3DStreetDetail.forGPUFamily(8), .full, "A15")
         XCTAssertEqual(Map3DStreetDetail.forGPUFamily(6), .reduced, "A13")
@@ -73,9 +73,7 @@ final class Map3DStreetLifeTests: XCTestCase {
         XCTAssertLessThan(Map3DStreetDetail.reduced.vehicles, Map3DStreetDetail.full.vehicles)
         XCTAssertEqual(Map3DStreetDetail.full.lowered, .reduced)
         XCTAssertEqual(Map3DStreetDetail.off.lowered, .off)
-        XCTAssertTrue(Map3DStreetDetail.shouldLower(framesPerSecond: 40, aim: 60, windows: 3))
-        XCTAssertFalse(Map3DStreetDetail.shouldLower(framesPerSecond: 40, aim: 60, windows: 2), "not for one slow moment")
-        XCTAssertFalse(Map3DStreetDetail.shouldLower(framesPerSecond: 55, aim: 60, windows: 10))
+        // Decision 417: stepping down is the load governor's (Map3DMotionBudgetTests).
     }
 
     // MARK: - Two towns and a line

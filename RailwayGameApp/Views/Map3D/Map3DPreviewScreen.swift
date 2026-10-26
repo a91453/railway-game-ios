@@ -611,13 +611,13 @@ final class Map3DTrainFeed {
     }
 
     /// Decision 400, 10i-6: the player's buses round the camera's target.
-    private func busFrame(in scene: Map3DScene, camera: Map3DCamera, detail: Map3DStreetDetail, now: Double) -> Map3DBuses.Frame {
+    private func busFrame(in scene: Map3DScene, camera: Map3DCamera, detail: Map3DStreetDetail, most: Int?, now: Double) -> Map3DBuses.Frame {
         guard let world = busWorld, let signature = busSignature, let clock = busClock else { return .init() }
         if buses?.isLaid(from: signature, in: scene) != true {
             buses = Map3DBuses(world: world, scene: scene, palette: busPalette)
         }
         return buses?.frame(second: clock.second(at: now, glides: busGlides), target: camera.target, distance: camera.distance,
-                            detail: detail) ?? .init()
+                            detail: detail, most: most) ?? .init()
     }
 
     /// Decision 314: the labels of the trains whose fronts are at `heads`.
@@ -627,16 +627,17 @@ final class Map3DTrainFeed {
 
     /// Decision 259: the people and vehicles of `scene` now, round the
     /// camera's target; standing still with Reduce Motion on.
-    /// Decision 417: within `budget` (until the route buses' wiring, by
-    /// its tier and step's street detail).
+    /// Decision 417: the player's buses first (at most the tier's), then
+    /// what `budget` leaves the streets.
     func streetLife(in scene: Map3DScene, camera: Map3DCamera, lights: Float, budget: Map3DMotionBudget) -> Map3DStreetLife.Frame {
-        let detail = budget.tier.map { budget.step >= .fewestOnStreets ? $0.streetDetail.lowered : $0.streetDetail } ?? .off
+        let detail = budget.tier?.streetDetail ?? .off
         // A day's seconds, so the clock stays precise as a Float.
         let now = Date().timeIntervalSinceReferenceDate
         let time = now.truncatingRemainder(dividingBy: 86_400)
+        let buses = busFrame(in: scene, camera: camera, detail: detail, most: budget.tier?.streetLimits.buses, now: now)
         return scene.streetLife.frame(target: camera.target, distance: camera.distance, time: time,
                                       still: UIAccessibility.isReduceMotionEnabled, lights: lights, detail: detail, activity: activity,
-                                      buses: busFrame(in: scene, camera: camera, detail: detail, now: now))
+                                      buses: buses, limits: budget.limits(routeBuses: buses.instances.count))
     }
 
     /// The trains seen from `eye`, `ringed` with its ring (decision 334),

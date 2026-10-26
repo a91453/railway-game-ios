@@ -502,11 +502,11 @@ final class Map3DMetalView: MTKView {
         let heat = Map3DQuality.Heat(rawValue: process.thermalState.rawValue) ?? .critical
         let plan = quality.plan(lowPower: process.isLowPowerModeEnabled, heat: heat)
         if preferredFramesPerSecond != plan.framesPerSecond { preferredFramesPerSecond = plan.framesPerSecond }
-        load.lowest = Map3DLoadGovernor.lowest(lowersWhenOver: plan.lowersWhenOver)
+        load.deepest = Map3DLoadGovernor.deepest(lowersWhenOver: plan.lowersWhenOver)
         load.stepsDownForLoad = plan.lowersWhenOver
         load.highest = Map3DLoadGovernor.highest(heat: heat)
-        sunPlan = Map3DSunShadow.plan(quality, lowPower: process.isLowPowerModeEnabled, heat: heat, overBudget: load.level.step.fewerPixels)
-        let fewer = plan.fewerPixels || load.level.step.fewerPixels
+        sunPlan = Map3DSunShadow.plan(quality, lowPower: process.isLowPowerModeEnabled, heat: heat, overBudget: load.level.drawing.fewerPixels)
+        let fewer = plan.fewerPixels || load.level.drawing.fewerPixels
         if fewer != drawsFewerPixels {
             drawsFewerPixels = fewer
             setNeedsLayout()
@@ -903,7 +903,7 @@ final class Map3DMetalView: MTKView {
         }
         // Decision 259: the people and vehicles near the target.
         // Decision 417: in what the trains leave of the budget.
-        let budget = Map3DMotionBudget(tier: level?.tier, step: level?.step ?? .full, trainTriangles: frame?.triangles(in: models?.pack) ?? 0)
+        let budget = Map3DMotionBudget(tier: level?.tier, step: level?.streets ?? .full, trainTriangles: frame?.triangles(in: models?.pack) ?? 0)
         let life = below ? nil : streetLife?(camera, shown.lights, budget)
         var lifeDraw: (sorted: [Map3DInstance], buffer: MTLBuffer)?
         if let instances = life?.instances, !instances.isEmpty, models != nil {
@@ -1216,15 +1216,17 @@ final class Map3DMetalView: MTKView {
             triangles: lastCounts.triangles,
             people: lastLife.people,
             vehicles: lastLife.vehicles,
-            streetDetail: level.map { $0.step >= .fewestOnStreets ? $0.tier.streetDetail.lowered : $0.tier.streetDetail } ?? .off,
+            streetDetail: level.map { $0.streets >= .fewestOnStreets ? $0.tier.streetDetail.lowered : $0.tier.streetDetail } ?? .off,
             level: level,
             drawScale: Double(contentScaleFactor),
             underground: underground.isUnderground
         )
         // Decision 417: a step down while the device cannot keep up, a
         // step up once it has for a while.
+        // Decision 417: the CPU's and the GPU's times say what to step down.
         if load.record(Map3DLoadGovernor.Sample(framesPerSecond: stats.framesPerSecond, aim: Double(preferredFramesPerSecond),
-                                                gpuMilliseconds: stats.gpuMilliseconds, drawingStreets: lastLife.people + lastLife.vehicles > 0)) {
+                                                cpuMilliseconds: stats.cpuMilliseconds, gpuMilliseconds: stats.gpuMilliseconds,
+                                                drawingStreets: lastLife.people + lastLife.vehicles > 0)) {
             rememberRung()
         }
         // Low Power Mode and the heat change while the map is open.
