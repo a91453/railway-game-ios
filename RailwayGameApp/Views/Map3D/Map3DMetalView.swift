@@ -1122,7 +1122,14 @@ final class Map3DMetalView: MTKView {
                 frameTimes.gpu(milliseconds: seconds * 1_000)
             }
         }
+        #if targetEnvironment(simulator)
+        // The Simulator's drawables say nothing of reaching the screen: the
+        // time the frame was handed over stands in (its figures are only a
+        // reference for the CPU side).
+        frameTimes.frame(at: CACurrentMediaTime())
+        #else
         drawable.addPresentedHandler { @Sendable presented in frameTimes.frame(at: presented.presentedTime) }
+        #endif
         commands.present(drawable)
         commands.commit()
         lastLife = (life?.people ?? 0, life?.vehicles ?? 0)
