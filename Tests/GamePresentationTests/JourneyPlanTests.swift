@@ -172,3 +172,106 @@ final class JourneyPlanTests: XCTestCase {
         XCTAssertEqual(plan.absence, .unknownStation)
     }
 }
+
+// MARK: - The station panel's rows (decision 423, second step)
+
+extension JourneyPlanTests {
+    func testADirectRowIsThreeLinesInBothLanguages() throws {
+        var net = try network()
+        try addLine("Coast Line", stops: [net.alpha, net.beta], to: &net.world)
+        let option = try XCTUnwrap(JourneyPlan(world: net.world, from: net.alpha, to: net.beta).options.first)
+        let english = option.rows(in: .english)
+        XCTAssertEqual(english.headline, "\(option.totalMinutes) min · Direct · $ 5.00")
+        XCTAssertEqual(english.lines, "Coast Line")
+        XCTAssertEqual(english.breakdown, "\(option.rideMinutes) min riding · \(option.waitMinutes) min waiting")
+        XCTAssertEqual(english.legs.map(\.text), ["Coast Line: Alpha → Beta"])
+        XCTAssertEqual(english.legs.map(\.walkText), [nil])
+        XCTAssertEqual(english.spoken, "\(english.headline), Coast Line, \(english.breakdown)")
+        let chinese = option.rows(in: .traditionalChinese)
+        XCTAssertEqual(chinese.headline, "\(option.totalMinutes) 分鐘 · 直達 · $ 5.00")
+        XCTAssertEqual(chinese.breakdown, "乘車 \(option.rideMinutes) 分 · 等車 \(option.waitMinutes) 分")
+    }
+
+    func testFreePlayRowHasNoFare() throws {
+        var net = try network()
+        try addLine("Coast Line", stops: [net.alpha, net.beta], to: &net.world)
+        net.world.setEconomyMode(.free)
+        let option = try XCTUnwrap(JourneyPlan(world: net.world, from: net.alpha, to: net.beta).options.first)
+        XCTAssertEqual(option.rows(in: .english).headline, "\(option.totalMinutes) min · Direct")
+    }
+
+    func testARowWithAChangeAndAWalkSaysWhereToWalk() throws {
+        var net = try network()
+        // Beta and Gamma are 100,000 units apart; the lines meet at neither,
+        // so the passenger walks only if GameCore lets them. Build the case
+        // where a transfer group joins two stations on foot.
+        try addLine("First", stops: [net.alpha, net.beta], to: &net.world)
+        try addLine("Second", stops: [net.gamma, net.delta], to: &net.world)
+        _ = try net.world.linkTransfer(net.beta, net.gamma)
+        let plan = JourneyPlan(world: net.world, from: net.alpha, to: net.delta)
+        let option = try XCTUnwrap(plan.options.first)
+        XCTAssertEqual(option.transfers, 1)
+        let english = option.rows(in: .english)
+        XCTAssertEqual(english.lines, "First → Second")
+        XCTAssertEqual(english.legs.map(\.walkText), [nil, "Walk to Gamma"])
+        XCTAssertEqual(option.rows(in: .traditionalChinese).legs.map(\.walkText), [nil, "步行到 Gamma站"])
+        XCTAssertTrue(english.headline.contains("1 transfer"))
+        XCTAssertTrue(english.breakdown.contains("walking"))
+    }
+
+    func testAChineseStationNameThatEndsInStationGetsNoSecondOne() {
+        XCTAssertEqual(JourneyPlan.Option.walkText(to: "台北車站", in: .traditionalChinese), "步行到 台北車站")
+        XCTAssertEqual(JourneyPlan.Option.walkText(to: "台北", in: .traditionalChinese), "步行到 台北站")
+        XCTAssertEqual(JourneyPlan.Option.walkText(to: "Taipei", in: .english), "Walk to Taipei")
+    }
+
+    func testNoRouteHasASentenceAndNoRows() throws {
+        var net = try network()
+        try addLine("Coast Line", stops: [net.alpha, net.beta], to: &net.world)
+        let plan = JourneyPlan(world: net.world, from: net.alpha, to: net.delta)
+        XCTAssertTrue(plan.options.isEmpty)
+        XCTAssertEqual(plan.message(in: .english), JourneyPlan.Absence.noRoute.text(in: .english))
+        XCTAssertEqual(JourneyPlan.findingText(in: .english), "Finding routes…")
+        XCTAssertEqual(JourneyPlan.findingText(in: .traditionalChinese), "正在找路線…")
+    }
+
+    private func choices(_ world: GameWorld) -> [MenuChoice<StationID>] {
+        world.stations.map { MenuChoice(id: $0.id, title: $0.name) }
+    }
+
+    func testDestinationsAreTheOtherStationsByNameAndCanBeSearched() throws {
+        let net = try network()
+        let all = choices(net.world)
+        XCTAssertEqual(JourneyPlan.destinations(among: all, from: net.gamma).map(\.title), ["Alpha", "Beta", "Delta"])
+        XCTAssertEqual(JourneyPlan.destinations(among: all, from: nil).map(\.title), ["Alpha", "Beta", "Delta", "Gamma"])
+        XCTAssertEqual(JourneyPlan.destinations(among: all, from: net.gamma, matching: ListSearch("et")).map(\.title), ["Beta"])
+        XCTAssertTrue(JourneyPlan.destinations(among: all, from: net.gamma, matching: ListSearch("zzz")).isEmpty)
+    }
+
+    func testNumbersInStationNamesSortByValue() throws {
+        var world = try makeWorld(width: 600_000, height: 100_000, balance: 100_000_000)
+        for (index, name) in ["Stop 10", "Stop 2", "Stop 1"].enumerated() {
+            _ = try world.buildStation(named: name, at: PlanPoint(x: Int64(20_000 + index * 100_000), y: 51_000))
+        }
+        XCTAssertEqual(JourneyPlan.destinations(among: choices(world), from: nil).map(\.title), ["Stop 1", "Stop 2", "Stop 10"])
+    }
+
+    func testThePlanIsWorkedOutAgainOnlyWhenWhatItReadsChanges() throws {
+        var net = try network()
+        let line = try addLine("Coast Line", stops: [net.alpha, net.beta], to: &net.world)
+        let before = JourneyPlan.Inputs(world: net.world, from: net.alpha, to: net.beta)
+        XCTAssertEqual(before, JourneyPlan.Inputs(world: net.world, from: net.alpha, to: net.beta))
+        XCTAssertNotEqual(before, JourneyPlan.Inputs(world: net.world, from: net.alpha, to: net.gamma))
+        XCTAssertNotEqual(before, JourneyPlan.Inputs(world: net.world, from: net.beta, to: net.alpha))
+        // Fewer trains, a new fare and a new line each change the options.
+        var fewer = net.world
+        try fewer.setLineTrainsInService(line, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        XCTAssertNotEqual(before, JourneyPlan.Inputs(world: fewer, from: net.alpha, to: net.beta))
+        var dearer = net.world
+        try dearer.setFareRules(.flat(Money(800)))
+        XCTAssertNotEqual(before, JourneyPlan.Inputs(world: dearer, from: net.alpha, to: net.beta))
+        var more = net.world
+        try addLine("Second", stops: [net.beta, net.gamma], to: &more)
+        XCTAssertNotEqual(before, JourneyPlan.Inputs(world: more, from: net.alpha, to: net.beta))
+    }
+}
