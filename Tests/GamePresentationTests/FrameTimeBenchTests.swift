@@ -121,4 +121,24 @@ final class FrameTimeBenchTests: XCTestCase {
         // every start's (Map3DOpenEveryStartTests).
         Map3DOpenEveryStartTests.assertOpensWhereThe2DMapLooks(one, "openFrameTimeBench")
     }
+
+    /// Review J (J3): started before the real railways are read (just
+    /// after a cold start), it laid no line and timed an empty map as the
+    /// scenario's; now it does not start, and no test game is left open.
+    func testWithoutTheRailwaysItDoesNotStart() async {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("FrameTimeBenchTests-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .traditionalChinese)
+        XCTAssertNil(launcher.railways)
+        let opened = await launcher.openFrameTimeBench(lines: 1)
+        XCTAssertNil(opened, "\(opened?.world.lines.count ?? -1) lines")
+        XCTAssertNil(launcher.session)
+        // The card says why, and that trying again soon will do.
+        XCTAssertEqual(FrameTimeBench.notStarted(railwaysLoading: true, in: .traditionalChinese), "測試遊戲沒辦法開始。鐵路資料還在讀，請過幾秒再試。")
+        XCTAssertEqual(
+            FrameTimeBench.notStarted(railwaysLoading: true, in: .english),
+            "The test game could not start. The railway data is still loading; try again in a few seconds."
+        )
+        XCTAssertEqual(FrameTimeBench.notStarted(railwaysLoading: false, in: .english), "The test game could not start.")
+    }
 }

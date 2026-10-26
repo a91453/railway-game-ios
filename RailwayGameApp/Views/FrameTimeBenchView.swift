@@ -147,8 +147,8 @@ struct FrameTimeBenchOverlay: View {
             )
         case .done(nil):
             return language.text("Done, but too few frames were timed.", "完成，但計到的畫面太少。")
-        case .failed:
-            return language.text("The test game could not start.", "測試遊戲沒辦法開始。")
+        case .failed(let railwaysLoading):
+            return FrameTimeBench.notStarted(railwaysLoading: railwaysLoading, in: language)
         }
     }
 }

@@ -33,6 +33,17 @@ public enum FrameTimeBench {
     /// Runs of each scenario on a device that are summed up.
     public static let runs = 3
     public static let lineCounts = [1, 5, 10, 20]
+
+    /// What the run's card says when the test game did not start: when
+    /// the real railways were still being read, that trying again soon
+    /// will do.
+    public static func notStarted(railwaysLoading: Bool, in language: DisplayLanguage) -> String {
+        let failed = language.text("The test game could not start.", "測試遊戲沒辦法開始。")
+        guard railwaysLoading else { return failed }
+        return failed + language.text(
+            " The railway data is still loading; try again in a few seconds.", "鐵路資料還在讀，請過幾秒再試。"
+        )
+    }
     /// How far round Taipei Main Station the real lines are laid from.
     static let reach = 6_000.0
     /// Where the 2D runs' zoom is and how far they pan, in metres.

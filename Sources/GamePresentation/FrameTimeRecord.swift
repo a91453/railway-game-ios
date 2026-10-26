@@ -501,32 +501,32 @@ public final class FrameTimeMeter: @unchecked Sendable {
     @discardableResult
     public func frame(at time: Double) -> Bool {
         lock.withLock {
-            guard var current = tally else { return false }
+            // Changed where it is, as `drew` and `gpu` do: a copy would
+            // copy the interval counts each frame (review J, J2).
+            guard tally != nil else { return false }
             guard time > 0 else {
-                current.notPresented += 1
-                tally = current
+                tally!.notPresented += 1
                 return false
             }
             defer {
-                tally = current
-                if current.context.screen == .map2D { costs?.startFrame() }
+                if tally!.context.screen == .map2D { costs?.startFrame() }
             }
-            guard let last = current.last else {
-                current.last = time
-                current.lastTime = time
+            guard let last = tally!.last else {
+                tally!.last = time
+                tally!.lastTime = time
                 return false
             }
             guard time > last else { return false }
             // To a microsecond: the clocks' sums are not exact.
             let milliseconds = ((time - last) * 1_000_000).rounded() / 1_000
-            current.last = time
-            current.lastTime = time
-            current.intervals.add(milliseconds)
-            guard current.stalls.add(milliseconds) else { return false }
-            if milliseconds > current.longest?.milliseconds ?? 0 {
-                let parts = current.context.screen == .map2D ? (costs?.frameParts(over: milliseconds, top: Self.shownParts) ?? []) : []
-                current.longest = FrameTimeStall(
-                    milliseconds: FrameTimeStats.tenth(milliseconds), at: FrameTimeStats.tenth(time - current.start), parts: parts
+            tally!.last = time
+            tally!.lastTime = time
+            tally!.intervals.add(milliseconds)
+            guard tally!.stalls.add(milliseconds) else { return false }
+            if milliseconds > tally!.longest?.milliseconds ?? 0 {
+                let parts = tally!.context.screen == .map2D ? (costs?.frameParts(over: milliseconds, top: Self.shownParts) ?? []) : []
+                tally!.longest = FrameTimeStall(
+                    milliseconds: FrameTimeStats.tenth(milliseconds), at: FrameTimeStats.tenth(time - tally!.start), parts: parts
                 )
             }
             return true
