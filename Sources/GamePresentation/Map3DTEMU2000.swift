@@ -259,49 +259,54 @@ extension StationKitBuilder {
                     }
                 }
             }
-            // Broad windshield and a distinct inset pane. The central teal
-            // face narrows to the rounded lower lip; white cheeks remain.
+            // The coloured face surrounds all three upper lamps and the
+            // windshield before narrowing between the white cheeks. The
+            // earlier version started colour below the glass, leaving an
+            // incorrect white forehead in the supplied front views.
+            panel([7.84,8.12,8.40,8.72,9.04,9.33],
+                  [1.10,1.17,1.20,1.20,1.15,1.10],8,teal,0.095)
+            // Broad windshield and a distinct inset pane.
             panel([8.24,8.51,8.80,9.11,9.33],
-                  [1.10,1.20,1.22,1.18,1.07],8,navy,0.035,0.08)
+                  [1.10,1.20,1.22,1.18,1.07],8,navy,0.115,0.08)
             panel([8.33,8.56,8.83,9.10,9.27],
-                  [0.98,1.09,1.12,1.08,0.97],8,glass,0.050,0.06)
-            panel([9.33,9.60,9.88,10.15,10.42,10.68,10.8725],
-                  [1.06,0.98,0.83,0.66,0.49,0.34,0.25],8,teal,0.028)
+                  [0.98,1.09,1.12,1.08,0.97],8,glass,0.135,0.06)
+            panel([9.19,9.60,9.88,10.15,10.42,10.68,10.8725],
+                  [1.18,1.11,0.94,0.75,0.54,0.42,0.38],8,teal,0.103)
             // Carry the tapered centre field down the short blunt end cap.
             // The white cheeks and a slim white lower lip remain visible.
             face([
-                Map3DPoint(cab*10.925,1.51,-0.27),
-                Map3DPoint(cab*10.925,1.51,0.27),
-                Map3DPoint(cab*10.925,0.80,0.13),
-                Map3DPoint(cab*10.925,0.80,-0.13)
+                Map3DPoint(cab*10.925,1.51,-0.40),
+                Map3DPoint(cab*10.925,1.51,0.40),
+                Map3DPoint(cab*10.925,0.80,0.36),
+                Map3DPoint(cab*10.925,0.80,-0.36)
             ],inside:inside,color:teal)
             for side: Float in [-1,1] {
                 let s = side
                 // Swept lamp recesses follow the sloping central panel.
                 face([
-                    roofPoint(9.55,s*0.38,0.065),roofPoint(9.48,s*0.81,0.065),
-                    roofPoint(9.62,s*1.11,0.065),roofPoint(9.79,s*1.12,0.065),
-                    roofPoint(9.97,s*0.89,0.065),roofPoint(9.91,s*0.46,0.065)
+                    roofPoint(9.55,s*0.38,0.150),roofPoint(9.48,s*0.81,0.150),
+                    roofPoint(9.62,s*1.11,0.150),roofPoint(9.79,s*1.12,0.150),
+                    roofPoint(9.97,s*0.89,0.150),roofPoint(9.91,s*0.46,0.150)
                 ],inside:inside,color:navy)
                 face([
-                    roofPoint(9.67,s*0.57,0.079),roofPoint(9.65,s*0.68,0.079),
-                    roofPoint(9.73,s*0.70,0.079),roofPoint(9.76,s*0.60,0.079)
+                    roofPoint(9.67,s*0.57,0.167),roofPoint(9.65,s*0.68,0.167),
+                    roofPoint(9.73,s*0.70,0.167),roofPoint(9.76,s*0.60,0.167)
                 ],inside:inside,color:white)
                 face([
-                    roofPoint(9.69,s*0.86,0.079),roofPoint(9.68,s*0.95,0.079),
-                    roofPoint(9.76,s*0.97,0.079),roofPoint(9.78,s*0.88,0.079)
+                    roofPoint(9.69,s*0.86,0.167),roofPoint(9.68,s*0.95,0.167),
+                    roofPoint(9.76,s*0.97,0.167),roofPoint(9.78,s*0.88,0.167)
                 ],inside:inside,color:white)
-                civicTube(Map3DPoint(cab*8.04,3.54,s*0.64),
-                          Map3DPoint(cab*8.07,3.54,s*0.64),
+                civicTube(Map3DPoint(cab*8.04,3.62,s*0.64),
+                          Map3DPoint(cab*8.07,3.62,s*0.64),
                           radius:0.12,color:navy,sides:12)
-                civicTube(Map3DPoint(cab*8.08,3.54,s*0.64),
-                          Map3DPoint(cab*8.10,3.54,s*0.64),
+                civicTube(Map3DPoint(cab*8.08,3.62,s*0.64),
+                          Map3DPoint(cab*8.10,3.62,s*0.64),
                           radius:0.065,color:white,sides:12)
             }
-            box(cab*8.09,3.53,0,0.10,0.30,0.17,navy)
+            box(cab*8.09,3.58,0,0.10,0.30,0.17,navy)
             for side: Float in [-1,1] {
-                civicTube(roofPoint(9.30,side*0.04,0.075),
-                          roofPoint(8.97,side*0.66,0.075),
+                civicTube(roofPoint(9.30,side*0.04,0.180),
+                          roofPoint(8.97,side*0.66,0.180),
                           radius:0.018,color:navy,sides:6)
             }
         }
