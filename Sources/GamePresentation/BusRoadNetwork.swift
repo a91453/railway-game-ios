@@ -353,8 +353,12 @@ public final class BusRoads: @unchecked Sendable {
     /// How far round a leg the roads are read, in metres: a way can go
     /// round a block or a river bend but not across the island.
     static let margin = 1_000.0
-    /// The most tiles and regions kept.
-    private static let keptTiles = 48
+    /// How far round a station the tiles are read ahead, in metres: as far
+    /// as the real bus stops (``RealBusLibrary/reach``).
+    static let aheadReach = RealBusLibrary.reach
+    /// The most tiles and regions kept: the tiles of ``aheadReach`` round a
+    /// station (49 at most) with the margin of a tap at its edge.
+    private static let keptTiles = 64
     private static let keptRegions = 8
 
     private let tiles: BaseMapTiles
@@ -387,6 +391,35 @@ public final class BusRoads: @unchecked Sendable {
         let network = BusRoadNetwork(roads: lines)
         built[region] = network
         return network
+    }
+
+    /// Reads ahead what the bus tool asks first round `station` (decision
+    /// 424's sequel), for a thread that is not the one drawing: the tiles
+    /// within `reach` metres of it, and the network of the box round the
+    /// station itself, which a tap beside it and the last leg of every
+    /// route ask for. Changes no result, only what is already read when
+    /// ``network(from:to:)`` is asked: it takes the lock a tile at a time, so
+    /// a tap meanwhile waits for one tile, not for them all.
+    func readAhead(round station: PlanPoint, reach: Double = BusRoads.aheadReach) {
+        let here = BusRoadNetwork.Point(station)
+        _ = network(from: here, to: here)
+        let columns = projection.column(here.x - reach)...projection.column(here.x + reach)
+        let rows = projection.row(here.y - reach)...projection.row(here.y + reach)
+        for row in rows {
+            for column in columns {
+                if Task.isCancelled { return }
+                lock.lock()
+                _ = roads(of: Tile(column: column, row: row))
+                lock.unlock()
+            }
+        }
+    }
+
+    /// The tiles and regions kept (for the tests).
+    var kept: (tiles: Int, regions: Int) {
+        lock.lock()
+        defer { lock.unlock() }
+        return (read.count, built.count)
     }
 
     /// A tile's roads (the lock is held). A tile that fails to read has none.

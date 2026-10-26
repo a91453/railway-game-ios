@@ -362,10 +362,8 @@
 - **第二批，換手時還在跑 CI**：作者的 Max 週額度剩 5%（10-27 22:00 台灣時間重置），本任停用了巡查 `trig_01XRMqqn2htUi4JciiftWBnC`。#1286、#1287 由作者在兩個都綠後自己合（main ab02fb9 的 `ci.yml` 已綠）。新任先看這兩個合了沒，沒有就照 §1.2 合。
   - #1286：選單 UI 測試改穩（派工單 A），只改 `StartSaveFlowSmokeTests.swift`，head ee4416a。作者說他沒傳 A，可能是把 A 當 D 貼了；做得對，照合。
   - #1287：車站面板的「怎麼搭」（決策 423 第二步，派工單 D），head 12880dc。已審：本機 build 用 `-warnings-as-errors` 乾淨、`JourneyPlanTests` 15 支過、`doc_numbers` 過。`StationPanel.swift` 的 SwiftUI 只有 iOS CI 編得到，外觀 UNVERIFIED。
-- **已交給作者、還沒貼的**：派工單 E「公車工具第一次點車站不卡：道路與真站牌在背景先讀（決策 424 續修）」，branch `claudepro/bus-reads-off-main-424`。等 #1286、#1287 合了再貼。原因：
-  - `BusRoads.network` 第一次建圖在主執行緒，Linux debug 0.13–0.18 s；
-  - `RealBusLibrary` 第一次讀一個縣市的 JSON（1.7–2.4 MB）也在主執行緒。
-  - 作者如果要這張的全文，請他從對話裡的檔案貼；新任不必重寫。
+- **派工單 E 做完了，PR 等審**（決策 424 續修，branch `claude/new-session-kfvuy0`，PR 號碼在 #1041 的登記）：公車工具選了車站就在背景讀真站牌與道路圖塊（`GameSession.readBusesAhead(for:)`、`BusRoads.readAhead(round:)`），主執行緒只拿結果。量到真站牌是大頭（release 約 0.8 s），道路網的建圖只省了一部分，數字與沒選的做法在 `docs/decisions/424.md`「續修」。手機上順不順是 UNVERIFIED，作者在 TestFlight 看。
+  - 還沒做：3D 的 `Map3DBuses` 在畫格路徑上對每條已存路線建同一個道路網，有同樣的問題（決策 424「續修」第 5 點）。要再派一張，做法同決策 419。
 - **派工單 R（審查 J）已交作者**：給 Claude Pro（Opus），#1242 起已合併的程式 PR 分三段審。
   - 每段一個 PR，交接檔是 `docs/archive/PR1242_<最後一號>_REVIEW_HANDOFF.md`。
   - P1、P2 的小修它可以順手推；動 GameCore、存檔、golden 的只寫不修。
@@ -377,7 +375,7 @@
   - §22.2 第 13 名：車站卡的下一班分月台列，只列 15 分鐘內的。
   - 第 18 名：票價旁的需求提示、借錢前的試算。
   - 第 22 名：客流強度、未滿足需求排行。
-  - 3D 的 `Map3DBuses` 建道路網是否也在主執行緒：E 會在決策裡寫一句，有的話再派一張。
+  - 3D 的 `Map3DBuses` 建道路網搬到背景：E 量過，有同樣的問題（見上），派一張。
 - **號碼**：下一個決策號 425；存檔版本 74；golden schema 74，都不動。
 - **審查點數**：從 #1242 起數。前任交接時約 25 點，本任合的 #1273、#1277、#1278、#1280、#1283、#1284、#1285 各 1 點，加上 #1287 共約 33 點，已滿 30。這一輪由派工單 R 做（見上）。
 - **排程**：

@@ -464,8 +464,13 @@ public final class GameSession {
     /// map reads as the bus tool needs them; handed to each session by the
     /// launcher, never saved.
     @ObservationIgnored public var realBuses: RealBusLibrary? {
-        didSet { realBusStopsMemo = [:]; busStopNameMemo = [:] }
+        didSet { realBusStopsMemo = [:]; busStopNameMemo = [:]; busReadAhead = nil }
     }
+    /// What the bus tool reads off the main actor for the station it was
+    /// last given (``readBusesAhead(for:)``, decision 424's sequel), and how
+    /// many such reads were started.
+    @ObservationIgnored var busReadAhead: BusReadAhead?
+    @ObservationIgnored var busReadsStarted = 0
     /// The real stops round each station the bus tool has asked about, for
     /// this world's frame.
     @ObservationIgnored var realBusStopsMemo: [PlanPoint: RealBusStops] = [:]
@@ -620,6 +625,7 @@ public final class GameSession {
             busRoadsMemo = nil
             realBusStopsMemo = [:]
             busStopNameMemo = [:]
+            busReadAhead = nil
         }
     }
 
