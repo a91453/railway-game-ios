@@ -98,12 +98,15 @@
 - 美術 6：燈頭的模型不變，只換亮哪一顆；晚上發光的燈照決策 355。
 - 音樂 5：無（行人號誌的提示音 10-23 §4.6 已列「之後」）。
 - 加權：(7×30 + 6×15 + 7×25 + 6×15 + 5×15) / 100 = **6.40**，和 10-23 的第 1 名（6.30）、第 2 名（6.20）同一級。
+- 換成 [NEXT_PRIORITIES](NEXT_PRIORITIES_2026-10-12.md) §19 的尺（每方 1–5 分）：3、4、4、2、2，加權 **3.10**，就是 §22.12 第 1 項。
+
+**同一天的補充**：作者給的台灣 3D 參考包 TW3D（參考庫 release `Tai`，NEXT_PRIORITIES §22.12）有現成的台灣式號誌：橫式燈頭、倒數、小綠人、有聲號誌、台北市府的號誌清單。第 4 件開工時先用它，再看 slop-newyork。
 
 ## 5. 授權
 
 - 程式碼 MIT（`LICENSE`：Copyright (c) 2026 Mr.doob），和 10-23 §2 相同。真要搬時，搬過去的檔頭留版權聲明與 MIT 授權全文（或指向 repo 裡的一份 `THIRD_PARTY_NOTICES`），PR 的對照表寫 `原檔:行號 → 本作的檔案／函式`。
 - 資料（NYC Open Data、OpenStreetMap 的 ODbL）是曼哈頓的，不用。
-- 參考庫（a91453/railway-reference-private）這次沒有重讀；第 4 件開工時，照 CLAUDE.md 先查 `Railway/street_scene_reference_clean/`、`Railway/town-scene-reference-clean/`、`Railway/commuter_journey_reference_clean/` 有沒有號誌的時制或燈號的畫法，有就先用參考庫的。
+- 參考庫（a91453/railway-reference-private）的舊資料夾這次沒有重讀，新的 TW3D 包見上面 §4 的補充；第 4 件開工時，照 CLAUDE.md 先查 `Railway/street_scene_reference_clean/`、`Railway/town-scene-reference-clean/`、`Railway/commuter_journey_reference_clean/` 有沒有號誌的時制或燈號的畫法，有就先用參考庫的。
 
 ## 來源
 
