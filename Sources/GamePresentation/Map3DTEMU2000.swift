@@ -193,7 +193,10 @@ extension StationKitBuilder {
         // Roof housings are physically separate, low and supported; the body
         // roof itself stays white. TEP alone carries the raised pantograph.
         for x: Float in [-5.9,5.9] {
-            box(x,roofHeight-0.005,0,3.15,1.70,0.30,silver)
+            // The cab-end HVAC shroud reads as a white hump behind the face,
+            // not a dark rectangular header above its three embedded lamps.
+            box(x,roofHeight-0.005,0,3.15,1.70,0.30,
+                cab != 0 && x*cab > 0 ? white : silver)
             box(x,roofHeight+0.292,0,2.34,1.21,0.025,white)
         }
         for x: Float in [-1.92,1.92] {
@@ -259,19 +262,18 @@ extension StationKitBuilder {
                     }
                 }
             }
-            // The coloured face surrounds all three upper lamps and the
-            // windshield before narrowing between the white cheeks. The
-            // earlier version started colour below the glass, leaving an
-            // incorrect white forehead in the supplied front views.
-            panel([7.84,8.12,8.40,8.72,9.04,9.33],
-                  [1.10,1.17,1.20,1.20,1.15,1.10],8,teal,0.095)
-            // Broad windshield and a distinct inset pane.
-            panel([8.24,8.51,8.80,9.11,9.33],
-                  [1.10,1.20,1.22,1.18,1.07],8,navy,0.115,0.08)
-            panel([8.33,8.56,8.83,9.10,9.27],
-                  [0.98,1.09,1.12,1.08,0.97],8,glass,0.135,0.06)
-            panel([9.19,9.60,9.88,10.15,10.42,10.68,10.8725],
-                  [1.18,1.11,0.94,0.75,0.54,0.42,0.38],8,teal,0.103)
+            // A full-height coloured forehead holds the three upper lamps.
+            // The glass begins lower on the slope, leaving a visible band
+            // like the supplied near-front photo and frontal illustration.
+            panel([7.77,8.06,8.34,8.62,8.92,9.23,9.54],
+                  [1.05,1.12,1.17,1.19,1.18,1.15,1.13],8,teal,0.101)
+            // Broad windshield with its own dark rubber surround.
+            panel([8.82,9.03,9.26,9.50,9.74],
+                  [1.04,1.14,1.18,1.16,1.09],8,navy,0.124,0.06)
+            panel([8.89,9.08,9.29,9.50,9.67],
+                  [0.94,1.04,1.09,1.06,0.99],8,glass,0.145,0.04)
+            panel([9.40,9.72,9.99,10.23,10.46,10.68,10.8725],
+                  [1.16,1.16,1.13,1.11,0.78,0.46,0.38],8,teal,0.110)
             // Carry the tapered centre field down the short blunt end cap.
             // The white cheeks and a slim white lower lip remain visible.
             face([
@@ -280,30 +282,35 @@ extension StationKitBuilder {
                 Map3DPoint(cab*10.925,0.80,0.36),
                 Map3DPoint(cab*10.925,0.80,-0.36)
             ],inside:inside,color:teal)
+            // Lens faces are laid on the swept cab skin, so their position
+            // follows the forehead instead of floating above the roof.
+            func lens(_ station: Float,_ lateral: Float,_ along: Float,
+                      _ across: Float,_ lift: Float,_ color: UInt32) {
+                var rim: [Map3DPoint] = []
+                for i in 0..<8 {
+                    let angle = Float(i)*Float.pi/4
+                    rim.append(roofPoint(station+along*cosf(angle),
+                                         lateral+across*sinf(angle),lift))
+                }
+                face(rim,inside:inside,color:color)
+            }
             for side: Float in [-1,1] {
                 let s = side
-                // Swept lamp recesses follow the sloping central panel.
+                // The lower paired lamps sit in compact horizontal pods.
                 face([
-                    roofPoint(9.55,s*0.38,0.150),roofPoint(9.48,s*0.81,0.150),
-                    roofPoint(9.62,s*1.11,0.150),roofPoint(9.79,s*1.12,0.150),
-                    roofPoint(9.97,s*0.89,0.150),roofPoint(9.91,s*0.46,0.150)
+                    roofPoint(9.93,s*0.39,0.160),roofPoint(9.87,s*0.79,0.160),
+                    roofPoint(9.99,s*1.02,0.160),roofPoint(10.16,s*1.02,0.160),
+                    roofPoint(10.30,s*0.89,0.160),roofPoint(10.25,s*0.47,0.160)
                 ],inside:inside,color:navy)
-                face([
-                    roofPoint(9.67,s*0.57,0.167),roofPoint(9.65,s*0.68,0.167),
-                    roofPoint(9.73,s*0.70,0.167),roofPoint(9.76,s*0.60,0.167)
-                ],inside:inside,color:white)
-                face([
-                    roofPoint(9.69,s*0.86,0.167),roofPoint(9.68,s*0.95,0.167),
-                    roofPoint(9.76,s*0.97,0.167),roofPoint(9.78,s*0.88,0.167)
-                ],inside:inside,color:white)
-                civicTube(Map3DPoint(cab*8.04,3.62,s*0.64),
-                          Map3DPoint(cab*8.07,3.62,s*0.64),
-                          radius:0.12,color:navy,sides:12)
-                civicTube(Map3DPoint(cab*8.08,3.62,s*0.64),
-                          Map3DPoint(cab*8.10,3.62,s*0.64),
-                          radius:0.065,color:white,sides:12)
+                lens(10.09,s*0.62,0.065,0.09,0.180,silver)
+                lens(10.12,s*0.94,0.065,0.09,0.180,silver)
+                lens(8.37,s*0.68,0.330,0.145,0.151,navy)
+                lens(8.37,s*0.68,0.245,0.100,0.169,silver)
             }
-            box(cab*8.09,3.58,0,0.10,0.30,0.17,navy)
+            face([
+                roofPoint(8.30,-0.19,0.155),roofPoint(8.30,0.19,0.155),
+                roofPoint(8.60,0.19,0.155),roofPoint(8.60,-0.19,0.155)
+            ],inside:inside,color:navy)
             for side: Float in [-1,1] {
                 civicTube(roofPoint(9.30,side*0.04,0.180),
                           roofPoint(8.97,side*0.66,0.180),
