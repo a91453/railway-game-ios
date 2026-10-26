@@ -85,8 +85,8 @@ final class Map3DMetalView: MTKView {
     /// turned.
     private var shown = Map3DLighting(minute: 12 * 60)
     /// The trains for this frame, seen from the eye given; decision 417:
-    /// their far models nearer at the step given.
-    var trains: (@MainActor (Map3DPoint, Map3DLoadStep) -> Map3DTrains.Frame)?
+    /// their far models and boxes from the reach given.
+    var trains: (@MainActor (Map3DPoint, Map3DModelReach) -> Map3DTrains.Frame)?
     /// Decision 314: this frame's trains' fronts, as the camera sees them,
     /// for their labels.
     var trainHeads: (@MainActor ([Map3DTrains.Head], Map3DCamera) -> Void)?
@@ -100,8 +100,9 @@ final class Map3DMetalView: MTKView {
     private var lifeBuffers: [MTLBuffer] = []
     private var lifeBuffer = 0
     private let lifeInFlight = DispatchSemaphore(value: 3)
-    /// Decision 259: how much street life this device draws, by its GPU.
-    private(set) var streetDetail = Map3DStreetDetail.off
+    /// Decision 417: how much that moves this device draws at most, by its
+    /// GPU (decision 259's street detail with it).
+    private(set) var tier: Map3DDeviceTier?
     /// Decision 417: the steps down while the device cannot keep up (fewer
     /// on the streets, the trains' far models nearer, fewer pixels) and
     /// back up once it does, and whether the map draws fewer pixels: for
@@ -342,7 +343,7 @@ final class Map3DMetalView: MTKView {
         // Decision 342: reversed depth, 0 the farthest.
         clearDepth = 0
         preferredFramesPerSecond = 60
-        streetDetail = Map3DStreetDetail.forGPUFamily(Self.appleFamily(of: device))
+        tier = Map3DDeviceTier.forGPUFamily(Self.appleFamily(of: device))
         noSunMap = makeSunMap(device: device, side: 1)
         applyQuality()
     }
@@ -769,7 +770,12 @@ final class Map3DMetalView: MTKView {
     /// Decision 259: the most figures and vehicles a frame draws (the
     /// fullest detail's), and the next of the three buffers for them,
     /// once the GPU is done with it.
-    private static let lifeCapacity = Map3DStreetDetail.full.people + Map3DStreetDetail.full.vehicles
+    /// Decision 417: the most a higher tier draws, the player's buses (at
+    /// most its buses) besides its vehicles.
+    private static let lifeCapacity = {
+        let most = Map3DDeviceTier.higher.streetLimits
+        return most.people + most.vehicles + most.buses
+    }()
 
     private func nextLifeBuffer() -> MTLBuffer? {
         if lifeBuffers.isEmpty, let device {
@@ -806,7 +812,7 @@ final class Map3DMetalView: MTKView {
         clearColor = MTLClearColor(red: Double(sky.x), green: Double(sky.y), blue: Double(sky.z), alpha: 1)
         // Decision 333: the trains first, so the camera following one
         // looks at where it is this frame.
-        let frame = trains?(camera.eye, load.step)
+        let frame = trains?(camera.eye, load.step.reach(on: tier))
         moveCamera(heads: frame?.heads ?? [], at: start)
         onCamera?(camera, start)
         // Decision 394: deep in a tunnel, the cab sees nothing on the
@@ -856,7 +862,7 @@ final class Map3DMetalView: MTKView {
         }
         // Decision 259: the people and vehicles near the target.
         // Decision 417: in what the trains leave of the budget.
-        let budget = Map3DMotionBudget(detail: streetDetail, step: load.step, trainTriangles: frame?.triangles(in: models?.pack) ?? 0)
+        let budget = Map3DMotionBudget(tier: tier, step: load.step, trainTriangles: frame?.triangles(in: models?.pack) ?? 0)
         let life = below ? nil : streetLife?(camera, shown.lights, budget)
         var lifeDraw: (sorted: [Map3DInstance], buffer: MTLBuffer)?
         if let instances = life?.instances, !instances.isEmpty, models != nil {
@@ -1169,7 +1175,7 @@ final class Map3DMetalView: MTKView {
             triangles: lastCounts.triangles,
             people: lastLife.people,
             vehicles: lastLife.vehicles,
-            streetDetail: load.step >= .fewestOnStreets ? streetDetail.lowered : streetDetail,
+            streetDetail: tier.map { load.step >= .fewestOnStreets ? $0.streetDetail.lowered : $0.streetDetail } ?? .off,
             load: load.step,
             drawScale: Double(contentScaleFactor),
             underground: underground.isUnderground

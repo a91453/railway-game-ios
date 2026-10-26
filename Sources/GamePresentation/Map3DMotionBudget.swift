@@ -27,31 +27,76 @@ public struct Map3DStreetLimits: Equatable, Sendable {
     }
 }
 
+/// Decision 417: how much a device draws of what moves at most, by its
+/// GPU: the A12–A14 (and the M1) less, the A15–A16 (and the M2) what
+/// decision 259 drew in full, the A17 Pro and the M3 on more, and its far
+/// train models farther. Under load it steps down from there
+/// (``Map3DLoadStep``), never up past it.
+public enum Map3DDeviceTier: Int, CaseIterable, Comparable, Sendable {
+    case lower, standard, higher
+
+    /// The tier of a GPU of Apple family `family` (Metal's
+    /// `MTLGPUFamily.apple1`… as a number): `nil` before the A12 (family
+    /// 5), whose 3D map draws nothing that moves on the streets.
+    public static func forGPUFamily(_ family: Int) -> Map3DDeviceTier? {
+        family >= 9 ? .higher : family >= 8 ? .standard : family >= 5 ? .lower : nil
+    }
+
+    /// Decision 259's street detail of the tier (the rain's too).
+    public var streetDetail: Map3DStreetDetail { self == .lower ? .reduced : .full }
+
+    /// The triangles of everything that moves: on the A15–A16 what the
+    /// streets draw in full and 400,000 for the trains and buses besides;
+    /// on the A12–A14 under half of it; on the A17 Pro and the M3 on, more
+    /// of both.
+    public var triangles: Int {
+        switch self {
+        case .lower: 250_000
+        case .standard: 600_000
+        case .higher: 1_000_000
+        }
+    }
+
+    /// The most of the streets' people, vehicles and buses: on the
+    /// A12–A14 a third of the buses, each the triangles of 15 cars.
+    public var streetLimits: Map3DStreetLimits {
+        switch self {
+        case .lower: Map3DStreetLimits(people: Map3DStreetDetail.reduced.people, vehicles: Map3DStreetDetail.reduced.vehicles, buses: 10)
+        case .standard: Map3DStreetLimits(streetDetail)
+        case .higher: Map3DStreetLimits(people: 2_000, vehicles: 600, buses: 45)
+        }
+    }
+
+    /// How much farther than decision 408's a car turns to its far set's
+    /// model, and to a box.
+    public var farModelReach: Float { self == .higher ? 1.5 : 1 }
+    public var boxReach: Float { self == .higher ? 1.25 : 1 }
+
+    /// The share of the streets' people and vehicles a step draws at most
+    /// (``Map3DLoadStep/streetShare``): on the A12–A14 none from
+    /// ``Map3DLoadStep/fewestOnStreets`` on, leaving the GPU to the
+    /// player's trains and buses.
+    public func streetShare(at step: Map3DLoadStep) -> Float {
+        self == .lower && step >= .fewestOnStreets ? 0 : step.streetShare
+    }
+
+    public static func < (a: Map3DDeviceTier, b: Map3DDeviceTier) -> Bool { a.rawValue < b.rawValue }
+}
+
 /// Decision 417: the triangles a frame's moving things may take, and how
 /// many of the streets' it leaves room for.
 public struct Map3DMotionBudget: Equatable, Sendable {
-    /// What the device draws of the streets to begin with (its GPU's).
-    public var detail: Map3DStreetDetail
+    /// The device's tier; `nil` for one that draws nothing on the streets.
+    public var tier: Map3DDeviceTier?
     /// How far it has stepped down under load.
     public var step: Map3DLoadStep
     /// The trains' triangles this frame: their models' and their boxes'.
     public var trainTriangles: Int
 
-    public init(detail: Map3DStreetDetail, step: Map3DLoadStep = .full, trainTriangles: Int = 0) {
-        self.detail = detail
+    public init(tier: Map3DDeviceTier?, step: Map3DLoadStep = .full, trainTriangles: Int = 0) {
+        self.tier = tier
         self.step = step
         self.trainTriangles = trainTriangles
-    }
-
-    /// The triangles of everything that moves, by the device's detail: on
-    /// the A15 and later what the streets draw in full and 400,000 for the
-    /// trains and buses besides; on the A12–A14 under half of it.
-    public static func triangles(for detail: Map3DStreetDetail) -> Int {
-        switch detail {
-        case .off: 0
-        case .reduced: 250_000
-        case .full: 600_000
-        }
     }
 
     /// A figure's triangles (``Map3DStreetModel/walking``, `standing`).
@@ -68,20 +113,21 @@ public struct Map3DMotionBudget: Equatable, Sendable {
 
     /// The streets' limits with `routeBuses` of the player's buses to draw
     /// (decision 400, 10i-6): the trains and those buses first; the
-    /// streets' vehicles (their buses, which share
-    /// ``Map3DStreetLife/mostBuses`` with the player's, among them) from
-    /// what is left, then their people; at least ``leastShare`` of each,
-    /// and at most ``Map3DLoadStep/streetShare``.
+    /// streets' vehicles (their buses, which share the tier's buses with
+    /// the player's, among them) from what is left, then their people; at
+    /// least ``leastShare`` of each, and at most
+    /// ``Map3DDeviceTier/streetShare(at:)``.
     public func limits(routeBuses: Int = 0) -> Map3DStreetLimits {
-        guard detail != .off else { return Map3DStreetLimits(.off) }
-        let full = Map3DStreetLimits(detail)
+        guard let tier else { return Map3DStreetLimits(people: 0, vehicles: routeBuses, buses: routeBuses) }
+        let full = tier.streetLimits
         let streetBuses = max(full.buses - routeBuses, 0)
-        let left = Float(Self.triangles(for: detail) - trainTriangles - routeBuses * Self.busTriangles)
+        let left = Float(tier.triangles - trainTriangles - routeBuses * Self.busTriangles)
         let vehicles = Float(full.vehicles * Self.vehicleTriangles + streetBuses * Self.busTriangles)
         let people = Float(full.people * Self.personTriangles)
         func share(_ room: Float, of cost: Float) -> Float { cost > 0 ? min(max(room / cost, Self.leastShare), 1) : 1 }
-        let vehicleShare = min(share(left - people, of: vehicles), step.streetShare)
-        let peopleShare = min(share(left - Self.leastShare * vehicles, of: people), step.streetShare)
+        let most = tier.streetShare(at: step)
+        let vehicleShare = min(share(left - people, of: vehicles), most)
+        let peopleShare = min(share(left - Self.leastShare * vehicles, of: people), most)
         func part(_ count: Int, _ share: Float) -> Int { Int((Float(count) * share).rounded()) }
         return Map3DStreetLimits(people: part(full.people, peopleShare), vehicles: routeBuses + part(full.vehicles, vehicleShare),
                                  buses: routeBuses + part(streetBuses, vehicleShare))
@@ -104,10 +150,18 @@ public enum Map3DLoadStep: Int, CaseIterable, Comparable, Sendable {
     }
 
     /// How much nearer than in full a train car turns to its far set's
-    /// model (``Map3DModelPack/model(_:forType:count:at:step:)``), and to
+    /// model (``Map3DModelPack/model(_:forType:count:at:reach:)``), and to
     /// a box.
     public var farModelReach: Float { self >= .nearerFarModels ? 0.5 : 1 }
     public var boxReach: Float { self >= .nearerFarModels ? 0.8 : 1 }
+
+    /// The reaches on a device of `tier` (``Map3DDeviceTier/farModelReach``):
+    /// a higher tier's farther ones, but stepped down never farther than
+    /// another's in full.
+    public func reach(on tier: Map3DDeviceTier?) -> Map3DModelReach {
+        let far = tier?.farModelReach ?? 1, box = tier?.boxReach ?? 1
+        return self >= .nearerFarModels ? Map3DModelReach(farModel: farModelReach, box: boxReach) : Map3DModelReach(farModel: far, box: box)
+    }
 
     /// Whether the map draws fewer pixels (``Map3DDrawScale``).
     public var fewerPixels: Bool { self == .fewerPixels }
@@ -201,6 +255,20 @@ public struct Map3DLoadGovernor: Equatable, Sendable {
         }
         return false
     }
+}
+
+/// Decision 417: how far, against decision 408's, a train car keeps its
+/// own model before its far set's, and any model before a box.
+public struct Map3DModelReach: Equatable, Sendable {
+    public var farModel: Float
+    public var box: Float
+
+    public init(farModel: Float = 1, box: Float = 1) {
+        self.farModel = farModel
+        self.box = box
+    }
+
+    public static let standard = Map3DModelReach()
 }
 
 extension Map3DTrains.Frame {

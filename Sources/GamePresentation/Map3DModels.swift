@@ -168,16 +168,16 @@ public struct Map3DModelPack: Sendable {
     /// Decision 408: the model a car of `code` is drawn with `distance`
     /// metres from the eye, its own model `near`: that within its set's
     /// ``Map3DTrainSet/reach(of:)``, its far set's car beyond it, and none
-    /// (a box) past ``Map3DTrains/modelReach``. Decision 417: on a
-    /// device stepped down to `step`, its far set's car from
-    /// ``Map3DLoadStep/farModelReach`` of that and a box from
-    /// ``Map3DLoadStep/boxReach``; a car with no far set keeps its own
-    /// model as far as before.
-    public func model(_ near: Int, forType code: String, count: Int, at distance: Float, step: Map3DLoadStep = .full) -> Int? {
-        guard distance < Map3DTrains.modelReach * step.boxReach else { return nil }
+    /// (a box) past ``Map3DTrains/modelReach``. Decision 417: those
+    /// distances times `reach` (``Map3DLoadStep/reach(on:)``: farther on
+    /// a stronger device, nearer under load); a car with no far set keeps
+    /// its own model as far as before, never farther.
+    public func model(_ near: Int, forType code: String, count: Int, at distance: Float, reach scale: Map3DModelReach = .standard) -> Int? {
         let reach = Map3DTrainSet.reach(of: code)
-        if distance < reach * step.farModelReach { return near }
-        if let far = farModel(of: near, forType: code, count: count) { return far }
+        let far = farModel(of: near, forType: code, count: count)
+        guard distance < Map3DTrains.modelReach * (far == nil ? min(scale.box, 1) : scale.box) else { return nil }
+        if distance < reach * (far == nil ? min(scale.farModel, 1) : scale.farModel) { return near }
+        if let far { return far }
         return distance < reach ? near : nil
     }
 
