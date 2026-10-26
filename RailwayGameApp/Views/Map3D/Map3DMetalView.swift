@@ -36,8 +36,10 @@ final class Map3DMetalView: MTKView {
         var people: Int
         var vehicles: Int
         var streetDetail: Map3DStreetDetail
-        /// Decision 417: how far the map has stepped down under load.
-        var load: Map3DLoadStep
+        /// Decision 417: the rung the map has climbed to or stepped down
+        /// to under load, its triangles for what moves among it (`nil`
+        /// without a tier).
+        var level: Map3DLoadLevel?
         /// The pixels a point drawn (``Map3DDrawScale``).
         var drawScale: Double
         /// Decision 394: whether the cab is deep in a tunnel, drawing only
@@ -104,17 +106,22 @@ final class Map3DMetalView: MTKView {
     /// GPU, and as the 3D look in Settings has it (decision 259's street
     /// detail with it).
     private var deviceTier: Map3DDeviceTier?
-    private var tier: Map3DDeviceTier? { quality.tier(device: deviceTier) }
-    /// Decision 417: the steps down while the device cannot keep up (fewer
-    /// on the streets, the trains' far models nearer, fewer pixels) and
-    /// back up once it does, and whether the map draws fewer pixels: for
-    /// that, or as the 3D look in Settings, Low Power Mode or the phone's
-    /// heat say (``Map3DQuality``).
+    /// Decision 417: the rung climbed to while the device keeps up and
+    /// stepped down to while it cannot (fewer on the streets, the trains'
+    /// far models nearer, fewer pixels), capped at the tier of the 3D look
+    /// in Settings; and whether the map draws fewer pixels: for that, or
+    /// as the 3D look, Low Power Mode or the phone's heat say
+    /// (``Map3DQuality``).
     private var load = Map3DLoadGovernor()
+    private var level: Map3DLoadLevel? { quality.tier(device: deviceTier) == nil ? nil : load.level }
     private var drawsFewerPixels = false
     /// Decision 238's later note: the 3D look chosen in Settings.
     var quality = Map3DQuality.automatic {
-        didSet { if quality != oldValue { applyQuality() } }
+        didSet {
+            guard quality != oldValue else { return }
+            startClimbing()
+            applyQuality()
+        }
     }
     /// Decision 352: with Reduce Motion the screens hold one picture;
     /// decision 356: and the water's ripples stand still.
@@ -350,7 +357,27 @@ final class Map3DMetalView: MTKView {
         NotificationCenter.default.addObserver(self, selector: #selector(memoryRunsShort), name: UIApplication.didReceiveMemoryWarningNotification,
                                                object: nil)
         noSunMap = makeSunMap(device: device, side: 1)
+        startClimbing()
         applyQuality()
+    }
+
+    /// Decision 417: the device keeps the rung it climbed to, for the 3D
+    /// look and the system it climbed on (not in the save).
+    nonisolated static let rungKey = "map3DLoadRung"
+
+    /// Decision 417: starts on the rung the 3D look and this device start
+    /// on (``Map3DLoadGovernor/start(for:device:remembered:)``).
+    private func startClimbing() {
+        let system = UIDevice.current.systemVersion
+        let remembered = Map3DLoadGovernor.remembered(UserDefaults.standard.string(forKey: Self.rungKey), quality: quality, system: system)
+        let top = quality.tier(device: deviceTier).map(Map3DLoadLevel.top(of:)) ?? 0
+        load = Map3DLoadGovernor(top: top, start: Map3DLoadGovernor.start(for: quality, device: deviceTier, remembered: remembered))
+        rememberRung()
+    }
+
+    private func rememberRung() {
+        UserDefaults.standard.set(Map3DLoadGovernor.remembering(load.rung, quality: quality, system: UIDevice.current.systemVersion),
+                                  forKey: Self.rungKey)
     }
 
     /// Decision 357: a depth texture `side` texels square for the sun's
@@ -466,6 +493,7 @@ final class Map3DMetalView: MTKView {
     /// Decision 417: two steps down when the system warns of memory.
     @objc private func memoryRunsShort() {
         load.relieve()
+        rememberRung()
         applyQuality()
     }
 
@@ -474,11 +502,11 @@ final class Map3DMetalView: MTKView {
         let heat = Map3DQuality.Heat(rawValue: process.thermalState.rawValue) ?? .critical
         let plan = quality.plan(lowPower: process.isLowPowerModeEnabled, heat: heat)
         if preferredFramesPerSecond != plan.framesPerSecond { preferredFramesPerSecond = plan.framesPerSecond }
-        load.lowest = plan.lowersWhenOver ? .fewerPixels : .nearerFarModels
+        load.lowest = Map3DLoadGovernor.lowest(lowersWhenOver: plan.lowersWhenOver)
         load.stepsDownForLoad = plan.lowersWhenOver
         load.highest = Map3DLoadGovernor.highest(heat: heat)
-        sunPlan = Map3DSunShadow.plan(quality, lowPower: process.isLowPowerModeEnabled, heat: heat, overBudget: load.step.fewerPixels)
-        let fewer = plan.fewerPixels || load.step.fewerPixels
+        sunPlan = Map3DSunShadow.plan(quality, lowPower: process.isLowPowerModeEnabled, heat: heat, overBudget: load.level.step.fewerPixels)
+        let fewer = plan.fewerPixels || load.level.step.fewerPixels
         if fewer != drawsFewerPixels {
             drawsFewerPixels = fewer
             setNeedsLayout()
@@ -825,7 +853,7 @@ final class Map3DMetalView: MTKView {
         clearColor = MTLClearColor(red: Double(sky.x), green: Double(sky.y), blue: Double(sky.z), alpha: 1)
         // Decision 333: the trains first, so the camera following one
         // looks at where it is this frame.
-        let frame = trains?(camera.eye, load.step.reach(on: tier))
+        let frame = trains?(camera.eye, level?.reach ?? .standard)
         moveCamera(heads: frame?.heads ?? [], at: start)
         onCamera?(camera, start)
         // Decision 394: deep in a tunnel, the cab sees nothing on the
@@ -875,7 +903,7 @@ final class Map3DMetalView: MTKView {
         }
         // Decision 259: the people and vehicles near the target.
         // Decision 417: in what the trains leave of the budget.
-        let budget = Map3DMotionBudget(tier: tier, step: load.step, trainTriangles: frame?.triangles(in: models?.pack) ?? 0)
+        let budget = Map3DMotionBudget(tier: level?.tier, step: level?.step ?? .full, trainTriangles: frame?.triangles(in: models?.pack) ?? 0)
         let life = below ? nil : streetLife?(camera, shown.lights, budget)
         var lifeDraw: (sorted: [Map3DInstance], buffer: MTLBuffer)?
         if let instances = life?.instances, !instances.isEmpty, models != nil {
@@ -1188,15 +1216,17 @@ final class Map3DMetalView: MTKView {
             triangles: lastCounts.triangles,
             people: lastLife.people,
             vehicles: lastLife.vehicles,
-            streetDetail: tier.map { load.step >= .fewestOnStreets ? $0.streetDetail.lowered : $0.streetDetail } ?? .off,
-            load: load.step,
+            streetDetail: level.map { $0.step >= .fewestOnStreets ? $0.tier.streetDetail.lowered : $0.tier.streetDetail } ?? .off,
+            level: level,
             drawScale: Double(contentScaleFactor),
             underground: underground.isUnderground
         )
         // Decision 417: a step down while the device cannot keep up, a
         // step up once it has for a while.
-        load.record(Map3DLoadGovernor.Sample(framesPerSecond: stats.framesPerSecond, aim: Double(preferredFramesPerSecond),
-                                             gpuMilliseconds: stats.gpuMilliseconds, drawingStreets: lastLife.people + lastLife.vehicles > 0))
+        if load.record(Map3DLoadGovernor.Sample(framesPerSecond: stats.framesPerSecond, aim: Double(preferredFramesPerSecond),
+                                                gpuMilliseconds: stats.gpuMilliseconds, drawingStreets: lastLife.people + lastLife.vehicles > 0)) {
+            rememberRung()
+        }
         // Low Power Mode and the heat change while the map is open.
         applyQuality()
         frames = 0

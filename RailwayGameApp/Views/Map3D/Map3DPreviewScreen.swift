@@ -320,6 +320,8 @@ struct Map3DPreviewScreen: View {
                     Text(verbatim: String(format: "wait %.1f ms · %.0f×", stats.waitMilliseconds, stats.drawScale))
                     Text(verbatim: "\(stats.drawCalls) draws · \(stats.triangles.formatted()) triangles")
                     Text(verbatim: "\(stats.people) people · \(stats.vehicles) vehicles · \(stats.streetDetail)")
+                    // Decision 417: the rung climbed to and its budget.
+                    if let level = stats.level { Text(verbatim: level.summary) }
                     // Decision 394: the cab deep in a tunnel draws only
                     // what is under the ground.
                     if stats.underground { Text(verbatim: "underground") }

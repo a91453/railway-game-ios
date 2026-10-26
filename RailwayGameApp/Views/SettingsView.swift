@@ -406,13 +406,12 @@ struct SettingsView: View {
             .accessibilityIdentifier("settings.pinchOpens3D")
             .disabled(!map3DQuality.shows3D)
             // Decision 238's later note: three looks, no sliders; decision
-            // 365: and Off, the flat map only; decision 417: each with how
-            // much that moves it draws.
+            // 365: and Off, the flat map only; decision 417: a short line
+            // on what each gives, under the section.
             Picker(selection: $map3DQuality) {
-                Text(verbatim: language.text("Automatic", "自動")).tag(Map3DQuality.automatic)
-                Text(verbatim: language.text("Battery Saver", "省電")).tag(Map3DQuality.saving)
-                Text(verbatim: language.text("High Quality", "高畫質")).tag(Map3DQuality.high)
-                Text(verbatim: language.text("Off", "關")).tag(Map3DQuality.off)
+                ForEach([Map3DQuality.automatic, .saving, .high, .off], id: \.self) { choice in
+                    Text(verbatim: choice.name(in: language)).tag(choice)
+                }
             } label: {
                 Label {
                     Text(verbatim: language.text("3D Quality", "3D 畫質"))
@@ -422,10 +421,12 @@ struct SettingsView: View {
             }
             .accessibilityIdentifier("settings.map3DQuality")
         } footer: {
-            Text(verbatim: language.text(
-                "See your own railway, trains and town in 3D. Pinch closer and the map tilts. The number in the corner shows how smoothly it runs on this device. Pinch closer for 3D: pinching on past the flat map's closest view and letting go opens the 3D map; off, only the 3D button does. 3D quality: Automatic starts with as much as this device runs smoothly and, when the phone works hard, runs hot or is in Low Power Mode, shows fewer cars and people, then a softer picture, bringing them back once it runs smoothly again; Battery Saver shows fewer cars and people and a softer picture, and uses less battery and heat; High Quality shows the most cars, people and detail, and the phone may run hot and use more battery; Off puts the 3D buttons away so the flat map runs smoothly on older devices. The flat map is not affected.",
-                "用 3D 看你自己的鐵路、列車與城鎮。兩指拉近，地圖就會傾斜。角落的數字是這台裝置跑起來的流暢度。拉近自動變 3D：平面地圖拉到最近還繼續拉、放手就打開 3D 地圖；關掉時只有 3D 鈕會打開。3D 畫質：自動照這台裝置跑得順的量開始，手機吃力、發燙或開低耗電模式時先少一些車和人，再讓畫面柔和，順了再加回來；省電的車和人較少、畫面較柔和，比較不耗電、不發燙；高畫質的車、人與細節最多，手機可能發燙、比較耗電；關掉時收起 3D 鈕，舊機型玩 2D 地圖更順。2D 地圖不受影響。"
-            ))
+            Text(verbatim: ([language.text(
+                "See your own railway, trains and town in 3D. Pinch closer and the map tilts. The number in the corner shows how smoothly it runs on this device. Pinch closer for 3D: pinching on past the flat map's closest view and letting go opens the 3D map; off, only the 3D button does. The flat map is not affected.",
+                "用 3D 看你自己的鐵路、列車與城鎮。兩指拉近，地圖就會傾斜。角落的數字是這台裝置跑起來的流暢度。拉近自動變 3D：平面地圖拉到最近還繼續拉、放手就打開 3D 地圖；關掉時只有 3D 鈕會打開。2D 地圖不受影響。"
+            )] + [Map3DQuality.automatic, .saving, .high, .off].map {
+                language.text("\($0.name(in: language)): ", "\($0.name(in: language))：") + $0.explanation(in: language)
+            }).joined(separator: "\n"))
         }
     }
 
@@ -687,7 +688,7 @@ extension ProblemReport {
         let device = UIDevice.current
         return ProblemReport(
             version: version, build: build, system: "\(device.systemName) \(device.systemVersion)", device: modelIdentifier, game: game,
-            lessons: lessons
+            lessons: lessons, map3D: Map3DLoadGovernor.report(UserDefaults.standard.string(forKey: Map3DMetalView.rungKey))
         )
     }
 

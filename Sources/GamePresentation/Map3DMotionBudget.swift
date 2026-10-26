@@ -172,16 +172,45 @@ public enum Map3DLoadStep: Int, CaseIterable, Comparable, Sendable {
     public static func < (a: Map3DLoadStep, b: Map3DLoadStep) -> Bool { a.rawValue < b.rawValue }
 }
 
-/// Decision 417: steps a device down while it cannot keep up and back up
-/// once it has kept up for a while, measured every half second. A step
-/// down after ``heavyWindows`` heavy half seconds in a row (decision 259's
-/// 1.5 s); a step up after ``raiseWindows`` light ones in a row, at first
-/// 10 s, twice as long each time a step up had to be taken back within
-/// ``relapseWindows`` (up to 2 minutes), so it does not go up and down.
-/// On High Quality it does not step down for the load
-/// (``stepsDownForLoad``), but for memory running short (``relieve()``)
-/// and the phone running hot (``highest``) on any look: the system closing
-/// the app for its memory is, for the player, a crash.
+/// Decision 417: one rung of the ladder a device climbs and steps down:
+/// a tier and a step in it. From the bottom: the lower tier's steps,
+/// fewest pixels first, to its full; then the standard tier's full; then
+/// the higher tier's. A device climbs no higher than its own tier's full
+/// (``Map3DLoadGovernor/top``).
+public struct Map3DLoadLevel: Equatable, Sendable {
+    public let tier: Map3DDeviceTier
+    public let step: Map3DLoadStep
+
+    /// The rungs, from the bottom.
+    public static let all: [Map3DLoadLevel] = Map3DLoadStep.allCases.reversed().map { Map3DLoadLevel(tier: .lower, step: $0) }
+        + [Map3DLoadLevel(tier: .standard, step: .full), Map3DLoadLevel(tier: .higher, step: .full)]
+
+    /// The rung of `tier` in full.
+    public static func top(of tier: Map3DDeviceTier) -> Int {
+        all.firstIndex(of: Map3DLoadLevel(tier: tier, step: .full)) ?? 0
+    }
+
+    /// The train models' reach on it (``Map3DLoadStep/reach(on:)``).
+    public var reach: Map3DModelReach { step.reach(on: tier) }
+
+    /// "standard full · 600000 triangles", for the debug numbers and a
+    /// problem report.
+    public var summary: String { "\(tier) \(step) · \(tier.triangles) triangles" }
+}
+
+/// Decision 417: climbs a device up the ladder (``Map3DLoadLevel``) while
+/// it keeps up and steps it down while it cannot, measured every half
+/// second. A step down after ``heavyWindows`` heavy half seconds in a row
+/// (decision 259's 1.5 s); a step up after ``raiseWindows`` light ones in a
+/// row, at first 10 s, twice as long each time a step up had to be taken
+/// back within ``relapseWindows`` (up to 2 minutes), so it does not go up
+/// and down. On Automatic it starts below its own tier
+/// (``start(for:device:remembered:)``), so the oldest device of a tier
+/// stays where it keeps up and the newest climbs to the top. On High
+/// Quality it does not step down for the load (``stepsDownForLoad``),
+/// but for memory running short (``relieve()``) and the phone running hot
+/// (``highest``) on any look: the system closing the app for its memory
+/// is, for the player, a crash.
 public struct Map3DLoadGovernor: Equatable, Sendable {
     /// A half second's measurement.
     public struct Sample: Equatable, Sendable {
@@ -219,19 +248,23 @@ public struct Map3DLoadGovernor: Equatable, Sendable {
     public static let mostRaiseWindows = 240
     public static let relapseWindows = 30
 
-    public private(set) var step: Map3DLoadStep = .full
-    /// The lowest it may step down to: ``Map3DLoadStep/nearerFarModels``
-    /// on a look that never draws fewer pixels for the GPU (``Map3DQuality/Plan/lowersWhenOver``).
-    public var lowest: Map3DLoadStep = .fewerPixels {
-        didSet { if step > lowest { step = lowest } }
+    /// The rung it is on (``Map3DLoadLevel/all``).
+    public private(set) var rung: Int
+    /// The highest rung it climbs to: its tier's full.
+    public private(set) var top: Int
+    /// The lowest it may step down to: the rung above the fewest pixels
+    /// on a look that never draws fewer for the GPU (``Map3DQuality/Plan/lowersWhenOver``).
+    public var lowest = 0 {
+        didSet { rung = min(max(rung, lowest), allowedTop) }
     }
-    /// The highest it may step up to: ``Map3DLoadStep/fewestOnStreets``
-    /// while the phone is too hot (``Map3DQuality/Heat/critical``).
-    public var highest: Map3DLoadStep = .full {
-        didSet { if step < highest { step = min(highest, lowest) } }
+    /// The highest it may climb to whatever its tier: the lower tier's
+    /// fewest on the streets while the phone is too hot
+    /// (``Map3DQuality/Heat/critical``, ``highest(heat:)``).
+    public var highest = Map3DLoadLevel.all.count - 1 {
+        didSet { rung = min(max(rung, lowest), allowedTop) }
     }
     /// Whether it steps down when the frames or the GPU cannot keep up
-    /// (not on High Quality, ``Map3DQuality/Plan/lowersWhenOver``).
+    /// (not on High Quality).
     public var stepsDownForLoad = true
     public private(set) var raiseWindows = Self.firstRaiseWindows
     private var heavy = 0
@@ -239,27 +272,74 @@ public struct Map3DLoadGovernor: Equatable, Sendable {
     /// Half seconds since the last step up, while within ``relapseWindows``.
     private var sinceRaise: Int?
 
-    public init(lowest: Map3DLoadStep = .fewerPixels) {
-        self.lowest = lowest
+    /// On `top`'s rung (``Map3DLoadLevel/top(of:)``), starting at `start`.
+    public init(top: Int = Map3DLoadLevel.all.count - 1, start: Int? = nil) {
+        self.top = top
+        rung = min(max(start ?? top, 0), top)
     }
 
-    /// Takes a half second's measurement; whether the step changed.
+    public var level: Map3DLoadLevel { Map3DLoadLevel.all[rung] }
+    private var allowedTop: Int { max(min(top, highest), lowest) }
+
+    /// The rung a device of `device`'s tier starts on with `quality`: on
+    /// Automatic one below its own tier's full (the lower tier's fewest on
+    /// the streets, the player's trains and buses drawn in full), or where
+    /// it got to last time (`remembered`, ``remembered(_:quality:system:)``);
+    /// on Battery Saver and High Quality its tier's full.
+    public static func start(for quality: Map3DQuality, device: Map3DDeviceTier?, remembered: Int? = nil) -> Int {
+        guard let tier = quality.tier(device: device) else { return 0 }
+        let top = Map3DLoadLevel.top(of: tier)
+        guard quality == .automatic else { return top }
+        if let remembered { return min(max(remembered, 0), top) }
+        return tier == .lower ? Map3DLoadLevel.all.firstIndex(of: Map3DLoadLevel(tier: .lower, step: .fewestOnStreets)) ?? 0 : top - 1
+    }
+
+    /// The rung kept on the device in `stored` (``remembering(_:quality:system:)``),
+    /// when it was kept with `quality` on `system`; `nil` after a change of
+    /// look or of the system, so it climbs again.
+    public static func remembered(_ stored: String?, quality: Map3DQuality, system: String) -> Int? {
+        guard let parts = stored?.split(separator: "|", omittingEmptySubsequences: false), parts.count == 3,
+              parts[0] == quality.rawValue, parts[1] == system, let rung = Int(parts[2]),
+              Map3DLoadLevel.all.indices.contains(rung) else { return nil }
+        return rung
+    }
+
+    /// `rung`, to keep on the device with `quality` on `system`.
+    public static func remembering(_ rung: Int, quality: Map3DQuality, system: String) -> String {
+        "\(quality.rawValue)|\(system)|\(rung)"
+    }
+
+    /// What is kept on the device (``remembering(_:quality:system:)``) for
+    /// a problem report: the look and the rung it got to ("automatic,
+    /// standard full · 600000 triangles"), or `nil` for nothing kept.
+    public static func report(_ stored: String?) -> String? {
+        guard let parts = stored?.split(separator: "|", omittingEmptySubsequences: false), parts.count == 3,
+              let rung = Int(parts[2]), Map3DLoadLevel.all.indices.contains(rung) else { return nil }
+        return "\(parts[0]), \(Map3DLoadLevel.all[rung].summary)"
+    }
+
+    /// Takes a half second's measurement; whether the rung changed.
     @discardableResult
     public mutating func record(_ sample: Sample) -> Bool {
         if let since = sinceRaise { sinceRaise = since + 1 < Self.relapseWindows ? since + 1 : nil }
         heavy = sample.isHeavy ? heavy + 1 : 0
         light = sample.isLight ? light + 1 : 0
-        if stepsDownForLoad, heavy >= Self.heavyWindows, step < lowest {
-            // Fewer on the streets helps only while they are drawn.
-            step = sample.drawingStreets ? step.lowered : max(step.lowered, min(.nearerFarModels, lowest))
+        if stepsDownForLoad, heavy >= Self.heavyWindows, rung > lowest {
+            let was = level
+            rung -= 1
+            // Fewer on the streets helps only while they are drawn: past
+            // the rungs that change nothing else.
+            while !sample.drawingStreets, rung > lowest, level.reach == was.reach, level.step.fewerPixels == was.step.fewerPixels {
+                rung -= 1
+            }
             if sinceRaise != nil { raiseWindows = min(raiseWindows * 2, Self.mostRaiseWindows) }
             sinceRaise = nil
             heavy = 0
             light = 0
             return true
         }
-        if light >= raiseWindows, step > highest {
-            step = step.raised
+        if light >= raiseWindows, rung < allowedTop {
+            rung += 1
             sinceRaise = 0
             heavy = 0
             light = 0
@@ -268,22 +348,27 @@ public struct Map3DLoadGovernor: Equatable, Sendable {
         return false
     }
 
-    /// Memory runs short (the system's warning): two steps down at once
+    /// Memory runs short (the system's warning): two rungs down at once
     /// (as far as ``lowest``), and the next step up twice as long in
     /// coming.
     public mutating func relieve() {
-        step = min(step.lowered.lowered, lowest)
+        rung = max(rung - 2, lowest)
         raiseWindows = min(raiseWindows * 2, Self.mostRaiseWindows)
         sinceRaise = nil
         heavy = 0
         light = 0
     }
 
-    /// The heat's highest step: ``Map3DLoadStep/fewestOnStreets`` at
-    /// ``Map3DQuality/Heat/critical``, else ``Map3DLoadStep/full``.
-    public static func highest(heat: Map3DQuality.Heat) -> Map3DLoadStep {
-        heat >= .critical ? .fewestOnStreets : .full
+    /// The heat's highest rung: the lower tier's fewest on the streets at
+    /// ``Map3DQuality/Heat/critical``, else the top of the ladder.
+    public static func highest(heat: Map3DQuality.Heat) -> Int {
+        heat >= .critical ? Map3DLoadLevel.all.firstIndex(of: Map3DLoadLevel(tier: .lower, step: .fewestOnStreets)) ?? 0
+            : Map3DLoadLevel.all.count - 1
     }
+
+    /// The lowest rung on a look that draws fewer pixels for the GPU
+    /// (`lowersWhenOver`) or not.
+    public static func lowest(lowersWhenOver: Bool) -> Int { lowersWhenOver ? 0 : 1 }
 }
 
 /// Decision 417: how far, against decision 408's, a train car keeps its

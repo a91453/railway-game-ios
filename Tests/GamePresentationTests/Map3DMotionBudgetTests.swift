@@ -160,49 +160,115 @@ final class Map3DMotionBudgetTests: XCTestCase {
         XCTAssertTrue(Map3DLoadGovernor.Sample(framesPerSecond: 30, aim: 30, gpuMilliseconds: 12, drawingStreets: true).isLight)
     }
 
+    /// The rungs, as `rung: tier step`.
+    static func level(_ rung: Int) -> String {
+        let level = Map3DLoadLevel.all[rung]
+        return "\(level.tier) \(level.step)"
+    }
+
+    func testTheLadderGoesThroughTheLowerTiersStepsToEachTiersFull() {
+        XCTAssertEqual(Map3DLoadLevel.all.indices.map(Self.level), [
+            "lower fewerPixels", "lower nearerFarModels", "lower fewestOnStreets", "lower fewerOnStreets", "lower full",
+            "standard full", "higher full",
+        ])
+        XCTAssertEqual(Map3DDeviceTier.allCases.map(Map3DLoadLevel.top(of:)), [4, 5, 6])
+        XCTAssertEqual(Map3DLoadLevel.all[6].reach, Map3DModelReach(farModel: 1.5, box: 1.25))
+        XCTAssertEqual(Map3DLoadLevel.all[1].reach, Map3DModelReach(farModel: 0.5, box: 0.8))
+        XCTAssertEqual(Map3DLoadLevel.all[5].summary, "standard full · 600000 triangles")
+    }
+
     func testItStepsDownInOrderAfterThreeHeavyHalfSeconds() {
         var governor = Map3DLoadGovernor()
-        var steps: [Map3DLoadStep] = []
-        for _ in 0..<20 {
-            if governor.record(Self.heavy) { steps.append(governor.step) }
+        var rungs: [String] = []
+        for _ in 0..<30 {
+            if governor.record(Self.heavy) { rungs.append(Self.level(governor.rung)) }
         }
-        XCTAssertEqual(steps, [.fewerOnStreets, .fewestOnStreets, .nearerFarModels, .fewerPixels])
+        XCTAssertEqual(rungs, [
+            "standard full", "lower full", "lower fewerOnStreets", "lower fewestOnStreets", "lower nearerFarModels", "lower fewerPixels",
+        ])
         // Two heavy half seconds and a middling one: no step.
         var other = Map3DLoadGovernor()
         for sample in [Self.heavy, Self.heavy, Self.middling, Self.heavy, Self.heavy] { XCTAssertFalse(other.record(sample)) }
-        XCTAssertEqual(other.step, .full)
+        XCTAssertEqual(other.rung, 6)
     }
 
     func testWithNothingOnTheStreetsItGoesStraightToTheTrains() {
-        var governor = Map3DLoadGovernor()
+        var governor = Map3DLoadGovernor(top: 5)
         var away = Self.heavy
         away.drawingStreets = false
         for _ in 0..<3 { governor.record(away) }
-        XCTAssertEqual(governor.step, .nearerFarModels)
+        XCTAssertEqual(Self.level(governor.rung), "lower nearerFarModels")
+        // From the higher tier, its own farther models are the first to go.
+        var higher = Map3DLoadGovernor(top: 6)
+        for _ in 0..<3 { higher.record(away) }
+        XCTAssertEqual(Self.level(higher.rung), "standard full")
     }
 
     func testALookThatKeepsItsPixelsStopsAtTheTrains() {
-        var governor = Map3DLoadGovernor(lowest: .nearerFarModels)
-        for _ in 0..<30 { governor.record(Self.heavy) }
-        XCTAssertEqual(governor.step, .nearerFarModels)
+        var governor = Map3DLoadGovernor()
+        governor.lowest = Map3DLoadGovernor.lowest(lowersWhenOver: false)
+        for _ in 0..<60 { governor.record(Self.heavy) }
+        XCTAssertEqual(Self.level(governor.rung), "lower nearerFarModels")
         var lowered = Map3DLoadGovernor()
-        for _ in 0..<30 { lowered.record(Self.heavy) }
-        lowered.lowest = .nearerFarModels
-        XCTAssertEqual(lowered.step, .nearerFarModels)
+        for _ in 0..<60 { lowered.record(Self.heavy) }
+        XCTAssertEqual(lowered.rung, 0)
+        lowered.lowest = Map3DLoadGovernor.lowest(lowersWhenOver: false)
+        XCTAssertEqual(lowered.rung, 1)
+    }
+
+    func testOnAutomaticItStartsLowAndClimbsToItsOwnTier() {
+        for (device, start, climbed) in [(Map3DDeviceTier.lower, "lower fewestOnStreets", 2), (.standard, "lower full", 1), (.higher, "standard full", 1)] {
+            var governor = Map3DLoadGovernor(top: Map3DLoadLevel.top(of: device), start: Map3DLoadGovernor.start(for: .automatic, device: device))
+            XCTAssertEqual(Self.level(governor.rung), start, "\(device)")
+            var steps = 0
+            for _ in 0..<1_000 where governor.record(Self.light) { steps += 1 }
+            XCTAssertEqual(steps, climbed, "\(device)")
+            XCTAssertEqual(governor.rung, Map3DLoadLevel.top(of: device), "no higher than its own tier")
+        }
+    }
+
+    func testBatterySaverAndHighQualityStartAtTheirTop() {
+        for device in Map3DDeviceTier.allCases {
+            XCTAssertEqual(Map3DLoadGovernor.start(for: .saving, device: device), 4)
+            XCTAssertEqual(Map3DLoadGovernor.start(for: .off, device: device), 4)
+            XCTAssertEqual(Map3DLoadGovernor.start(for: .high, device: device), 6)
+        }
+        XCTAssertEqual(Map3DLoadGovernor.start(for: .automatic, device: nil), 0)
+    }
+
+    func testTheDeviceRemembersWhereItGotToForTheLookAndTheSystem() {
+        let kept = Map3DLoadGovernor.remembering(5, quality: .automatic, system: "26.1")
+        XCTAssertEqual(Map3DLoadGovernor.remembered(kept, quality: .automatic, system: "26.1"), 5)
+        XCTAssertEqual(Map3DLoadGovernor.start(for: .automatic, device: .standard, remembered: 5), 5)
+        XCTAssertEqual(Map3DLoadGovernor.start(for: .automatic, device: .lower, remembered: 5), 4, "no higher than its tier")
+        // Another look or another system: climbs again.
+        XCTAssertNil(Map3DLoadGovernor.remembered(kept, quality: .high, system: "26.1"))
+        XCTAssertNil(Map3DLoadGovernor.remembered(kept, quality: .automatic, system: "26.2"))
+        XCTAssertNil(Map3DLoadGovernor.remembered(nil, quality: .automatic, system: "26.1"))
+        XCTAssertNil(Map3DLoadGovernor.remembered("automatic|26.1|9", quality: .automatic, system: "26.1"))
+        XCTAssertNil(Map3DLoadGovernor.remembered("rubbish", quality: .automatic, system: "26.1"))
+        // Only Automatic starts where it got to.
+        XCTAssertEqual(Map3DLoadGovernor.start(for: .high, device: .standard, remembered: 2), 6)
+        // And a problem report says so.
+        XCTAssertEqual(Map3DLoadGovernor.report(kept), "automatic, standard full · 600000 triangles")
+        XCTAssertNil(Map3DLoadGovernor.report(nil))
+        let report = ProblemReport(version: "1", build: "2", system: "iOS", device: "iPhone18,1", map3D: Map3DLoadGovernor.report(kept))
+        XCTAssertTrue(report.text(in: .english).hasSuffix("3D map: automatic, standard full · 600000 triangles"))
+        XCTAssertTrue(report.text(in: .traditionalChinese).hasSuffix("3D 地圖：automatic, standard full · 600000 triangles"))
     }
 
     func testItStepsBackUpAfterTenLightSecondsAndNotBetween() {
         var governor = Map3DLoadGovernor()
         for _ in 0..<3 { governor.record(Self.heavy) }
-        XCTAssertEqual(governor.step, .fewerOnStreets)
+        XCTAssertEqual(governor.rung, 5)
         for _ in 0..<19 { XCTAssertFalse(governor.record(Self.light)) }
         // A middling half second starts the count again.
         governor.record(Self.middling)
         for _ in 0..<19 { governor.record(Self.light) }
-        XCTAssertEqual(governor.step, .fewerOnStreets)
+        XCTAssertEqual(governor.rung, 5)
         XCTAssertTrue(governor.record(Self.light))
-        XCTAssertEqual(governor.step, .full)
-        // Already at the device's own: no further.
+        XCTAssertEqual(governor.rung, 6)
+        // Already at the top: no further.
         for _ in 0..<100 { XCTAssertFalse(governor.record(Self.light)) }
     }
 
@@ -211,7 +277,7 @@ final class Map3DMotionBudgetTests: XCTestCase {
         func down() { for _ in 0..<3 { governor.record(Self.heavy) } }
         func lightUntilUp() -> Int {
             var windows = 0
-            while governor.step > .full, windows < 1_000 {
+            while governor.rung < governor.top, windows < 1_000 {
                 governor.record(Self.light)
                 windows += 1
             }
@@ -246,30 +312,48 @@ final class Map3DMotionBudgetTests: XCTestCase {
         for quality in Map3DQuality.allCases { XCTAssertNil(quality.tier(device: nil), "\(quality)") }
     }
 
+    func testEachLookSaysInALineWhatItGives() {
+        XCTAssertEqual(Map3DQuality.saving.explanation(in: .traditionalChinese), "每秒 30 格、陰影與街景較少，比較不燙、比較省電。")
+        XCTAssertEqual(Map3DQuality.automatic.explanation(in: .traditionalChinese), "依手機的能力調整，順的時候畫得多、卡的時候少一點。")
+        XCTAssertEqual(Map3DQuality.high.explanation(in: .traditionalChinese), "畫面最豐富，手機可能發燙、耗電。")
+        for quality in Map3DQuality.allCases {
+            for language in [DisplayLanguage.english, .traditionalChinese] {
+                let line = quality.explanation(in: language)
+                XCTAssertLessThanOrEqual(line.count, 110, "\(quality) \(language)")
+                for word in ["triangle", "LOD", "antialias", "tier", "GPU", "三角形", "反鋸齒", "預算"] {
+                    XCTAssertFalse(line.localizedCaseInsensitiveContains(word), "\(quality) \(language): \(word)")
+                }
+            }
+        }
+        XCTAssertEqual(Map3DQuality.allCases.map { $0.name(in: .traditionalChinese) }, ["自動", "省電", "高畫質", "關"])
+    }
+
     func testHighQualityStepsDownOnlyForMemoryAndHeat() {
-        var governor = Map3DLoadGovernor(lowest: .nearerFarModels)
+        var governor = Map3DLoadGovernor(start: Map3DLoadGovernor.start(for: .high, device: .standard))
+        governor.lowest = Map3DLoadGovernor.lowest(lowersWhenOver: false)
         governor.stepsDownForLoad = false
         for _ in 0..<30 { XCTAssertFalse(governor.record(Self.heavy)) }
-        XCTAssertEqual(governor.step, .full)
-        // The system warns of memory: two steps at once, and the next step
+        XCTAssertEqual(governor.rung, 6)
+        // The system warns of memory: two rungs at once, and the next step
         // up later than at first.
         governor.relieve()
-        XCTAssertEqual(governor.step, .fewestOnStreets)
+        XCTAssertEqual(Self.level(governor.rung), "lower full")
         XCTAssertEqual(governor.raiseWindows, 2 * Map3DLoadGovernor.firstRaiseWindows)
         governor.relieve()
-        XCTAssertEqual(governor.step, .nearerFarModels, "no further than its lowest")
+        governor.relieve()
+        XCTAssertEqual(Self.level(governor.rung), "lower nearerFarModels", "no further than its lowest")
         // Light again: back up, a step at a time.
-        for _ in 0..<(4 * Map3DLoadGovernor.firstRaiseWindows) { governor.record(Self.light) }
-        XCTAssertEqual(governor.step, .fewestOnStreets)
-        // Too hot: no higher than the fewest on the streets.
+        for _ in 0..<(8 * Map3DLoadGovernor.firstRaiseWindows) { governor.record(Self.light) }
+        XCTAssertEqual(Self.level(governor.rung), "lower fewestOnStreets")
+        // Too hot: no higher than the lower tier's fewest on the streets.
         var hot = Map3DLoadGovernor()
         hot.highest = Map3DLoadGovernor.highest(heat: .critical)
-        XCTAssertEqual(hot.step, .fewestOnStreets)
+        XCTAssertEqual(Self.level(hot.rung), "lower fewestOnStreets")
         for _ in 0..<1_000 { hot.record(Self.light) }
-        XCTAssertEqual(hot.step, .fewestOnStreets)
+        XCTAssertEqual(hot.rung, 2)
         hot.highest = Map3DLoadGovernor.highest(heat: .serious)
         for _ in 0..<1_000 { hot.record(Self.light) }
-        XCTAssertEqual(hot.step, .full)
+        XCTAssertEqual(hot.rung, 6)
     }
 
     // MARK: Measured
