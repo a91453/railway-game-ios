@@ -466,10 +466,16 @@ public struct Map3DStreetLife: Sendable {
     /// everyone stands where they would be at the clock's start. With the
     /// city's `lights` on (``Map3DLighting/lights``, 0–1), the streets and
     /// shops have up to half their people.
+    /// Decision 400, 10i-6: the player's route `buses` come first, counted
+    /// with the vehicles and the buses, and the road's own vehicles give
+    /// way where one stands.
     public func frame(target: Map3DPoint, distance: Float, time: Double, still: Bool = false, lights: Float = 0, detail: Map3DStreetDetail,
-                      activity: Activity) -> Frame {
+                      activity: Activity, buses: Map3DBuses.Frame = .init()) -> Frame {
         var frame = Frame()
         guard detail != .off, Self.models.count == Map3DStreetModel.allCases.count else { return frame }
+        frame.instances = buses.instances
+        frame.vehicles = buses.instances.count
+        frame.buses = buses.instances.count
         let clock = still ? 0 : time
         if distance <= Self.peopleFrom {
             let reach = Self.peopleReach(distance)
@@ -489,7 +495,7 @@ public struct Map3DStreetLife: Sendable {
                 return away < reach ? (index, away) : nil
             }.sorted { $0.1 < $1.1 }
             for (index, _) in near where frame.vehicles < detail.vehicles {
-                addVehicles(of: lanes[index], to: &frame, target: target, reach: reach, time: clock, budget: detail.vehicles)
+                addVehicles(of: lanes[index], to: &frame, target: target, reach: reach, time: clock, budget: detail.vehicles, clearOf: buses.clear)
             }
         }
         return frame
@@ -549,7 +555,10 @@ public struct Map3DStreetLife: Sendable {
         }
     }
 
-    private func addVehicles(of lane: Lane, to frame: inout Frame, target: Map3DPoint, reach: Float, time: Double, budget: Int) {
+    private func addVehicles(of lane: Lane, to frame: inout Frame, target: Map3DPoint, reach: Float, time: Double, budget: Int,
+                             clearOf buses: [(point: Map3DPoint, along: Map3DPoint)] = []) {
+        // Decision 400, 10i-6: only the player's buses near this road.
+        let buses = buses.filter { lane.path.boxDistance(to: $0.point) < Self.busClearance.along + lane.half }
         let length = lane.path.length
         // At least 9 m from one to the next: a car and its gap.
         let count = min(Int((length / 100 * lane.perHundred).rounded()), Int(length / 9))
@@ -584,7 +593,7 @@ public struct Map3DStreetLife: Sendable {
                 // Coming out of and going into the road's ends.
                 // Use the chosen bus body length, rather than the car fade distance.
                 let ends = min(max(min(along, length - along) / (model == .shuttleBus ? Map3DShuttleBus.length : model == .lowFloorBus ? Map3DLowFloorBus.length : model == .coachBus ? Map3DCoachBus.length : model == .midiBus ? Map3DMidiBus.length : model == .bus ? 12 : 4), 0), 1)
-                let size = Self.fade(away, reach: reach) * ends
+                let size = Self.fade(away, reach: reach) * ends * Self.giveWay(at: foot, to: buses)
                 guard size > 0, let index = Self.models[model] else { continue }
                 let paints = model.isBus ? Self.busPaints : model.isScooter ? Self.scooterPaints : Self.carPaints
                 let tint = paints[min(Int(r(3) * Float(paints.count)), paints.count - 1)]
@@ -593,6 +602,27 @@ public struct Map3DStreetLife: Sendable {
                 if model.isBus { frame.buses += 1 }
             }
         }
+    }
+}
+
+extension Map3DStreetLife {
+    /// Decision 400, 10i-6: how near a player's bus a road's vehicle is
+    /// not drawn, along the bus and across it (a 12 m bus and a car's
+    /// half), metres; it shrinks away over ``busClearance`` `fade` more.
+    static let busClearance: (along: Float, across: Float, fade: Float) = (8.5, 2.2, 5)
+
+    /// How much of a road's vehicle at `foot` is drawn beside the player's
+    /// `buses`: none over one, shrinking as one comes near along its way.
+    static func giveWay(at foot: Map3DPoint, to buses: [(point: Map3DPoint, along: Map3DPoint)]) -> Float {
+        var size: Float = 1
+        for bus in buses {
+            let offset = Map3DPoint(foot.x - bus.point.x, 0, foot.z - bus.point.z)
+            let across = abs(offset.x * -bus.along.z + offset.z * bus.along.x)
+            guard across < busClearance.across else { continue }
+            let along = abs(offset.x * bus.along.x + offset.z * bus.along.z)
+            size = min(size, min(max((along - busClearance.along) / busClearance.fade, 0), 1))
+        }
+        return size
     }
 }
 
