@@ -19,7 +19,7 @@ record = {
     'recipe': 'Sources/GamePresentation/Map3DTEMU2000.swift',
     'recipe_sha256': sha(source / 'Sources/GamePresentation/Map3DTEMU2000.swift'),
     'rebuild': 'tools/temu2000/README.md',
-    'supplied_reference': 'Original four inline images: TED/TEP/TEM side and front drawing; station three-quarter photograph; curve-front photograph; long-train three-quarter photograph. Later user feedback repeated the side/front drawing and near-front photo, then supplied a three-image comparison of V11 rendered front, cropped near-front photograph and cropped drawing front. Each was visually inspected in conversation. No local original file or image SHA was available; reference pixels were not bundled.',
+    'supplied_reference': 'Original four inline images: TED/TEP/TEM side and front drawing; station three-quarter photograph; curve-front photograph; long-train three-quarter photograph. Later user feedback repeated the side/front drawing and near-front photo, then supplied a three-image comparison of V11 rendered front, cropped near-front photograph and cropped drawing front. The user later marked both white cheek contours on the V12 front render; it too was visually inspected in conversation. Each source was used for proportional visual judgement only. No local original file or image SHA was available; reference pixels were not bundled.',
     'other_source': 'project Map3DPalette and official car envelope/formation values recorded in public docs; proportional estimates labelled',
     'comparison_use': 'TEMU1000 native leading unit used only for fixed-metre style, matte material and detail-density comparison; no body or nose geometry copied',
 }
