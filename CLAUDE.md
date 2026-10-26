@@ -99,7 +99,14 @@ bus routes, schedule-driven train and bus motion; start with its
 `00_READ_ME_FIRST.md`, `THIRD_PARTY_NOTICES.md` and
 `DATA_USE_NOTICES.json`; its Ookla files are CC BY-NC-SA and not used;
 which of its data beat the game's own is in
-`docs/research/GEO_SCENE_REFERENCE_2026-10-20.md`), and `city_map_reference_clean/` and
+`docs/research/GEO_SCENE_REFERENCE_2026-10-20.md`), `Railway/tw3d-reference-clean/` (added
+2026-10-26; the Taiwan 3D city pack of release `Tai`: slop-newyork (MIT)
+turned into a real-scale Taipei with Taiwan-style signals, road paint,
+scooters, landmarks and Taipei open data; a website snapshot, not a repo,
+its shaders TSL; start with its `00_READ_ME_FIRST.md`,
+`source/MISSING_COMPONENTS.md` and `source/THIRD_PARTY_ATTRIBUTION.md`;
+what to take from it is in `docs/research/NEXT_PRIORITIES_2026-10-12.md`
+§22.12), and `city_map_reference_clean/` and
 `power_grid_reference_clean/` at the repository root (start with their
 `REFERENCE_COMPARISON.md` and `SANITIZATION_REPORT.md`).
 
