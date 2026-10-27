@@ -688,11 +688,13 @@ final class ShellLayoutUITests: XCTestCase {
         // 40413958561; the new row lay where the old one had). So the
         // row's place is read from fresh snapshots until it holds, that
         // place is touched, and the speed's label shows it was chosen.
+        // One snapshot took up to 4 s on a by-hand runner (run
+        // 40429077102) and three are needed, so the row gets 30 s to hold.
         XCTAssertTrue(fast.appears(within: 10))
         let screen = app.frame
         var row = CGRect.null
         var held = 0
-        let settle = Date().addingTimeInterval(10)
+        let settle = Date().addingTimeInterval(30)
         while held < 2, Date() < settle {
             Thread.sleep(forTimeInterval: 0.25)
             let now = (try? fast.snapshot())?.frame ?? .null
