@@ -183,7 +183,7 @@ private struct Taipei610Builder {
         }
         // Each end owns half of the flexible gangway; no stretched train mesh.
         for s:Float in cab ? [-1]:[-1,1] {
-            if !far { k.box(s*(half+0.10),0.65,0,0.30,0.18,0.12,StationKitBuilder.steel) }
+            if !far { k.box(s*(half+0.10),0.65,0,0.28,0.18,0.12,StationKitBuilder.steel) }
             k.box(s*(half+0.12),1.10,0,0.24,1.75,2.12,rubber)
             if !light {for i in 0..<5 {k.box(s*(half+0.025+Float(i)*0.045),1.10,0,0.018,1.82,2.12,E.roof)}}
         }

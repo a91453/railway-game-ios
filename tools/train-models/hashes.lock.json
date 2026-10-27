@@ -2,7 +2,7 @@
   "comment" : "FNV-1a of every vertex field of every model in Map3DModelPack.standard (tools/train-models/export.swift). A changed value is a deliberate model change the PR must justify.",
   "models" : {
     "taipei610-a" : {
-      "hash" : "a4bf9f8d36533a26",
+      "hash" : "ae34603dd2f3beba",
       "triangles" : 3394
     },
     "taipei610-a-far" : {
@@ -14,7 +14,7 @@
       "triangles" : 1494
     },
     "taipei610-b" : {
-      "hash" : "ca885dc814040926",
+      "hash" : "53956d7b264620ba",
       "triangles" : 3394
     },
     "taipei610-b-far" : {
@@ -26,7 +26,7 @@
       "triangles" : 1494
     },
     "taipei610-c" : {
-      "hash" : "f848afca89edfedd",
+      "hash" : "7b0647e3c97e96c9",
       "triangles" : 2640
     },
     "taipei610-c-far" : {
@@ -38,7 +38,7 @@
       "triangles" : 1180
     },
     "taipei610-d" : {
-      "hash" : "39466a04fd7912dd",
+      "hash" : "bc04021e3d09aac9",
       "triangles" : 2640
     },
     "taipei610-d-far" : {
