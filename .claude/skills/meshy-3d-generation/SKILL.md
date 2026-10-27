@@ -68,3 +68,7 @@ unchanged. In this repository:
 - Quote the cost and get the owner's yes before every paid create, as Delivery says.
 - Show the preview before packing; `tools/meshy/README.md` has the rest (the way the cab faces,
   the city view, licensing).
+- Do not squeeze the polygon count at generation time (smart topology with a 300–600 face target gave wedge wheels,
+  spikes and smeared detail, and 8 models had to be redone). Generate in standard mode (`meshy-7.1`, 30 credits,
+  texture 2K, no PBR) and reduce later; `remesh` (5 credits) keeps the texture. The lessons, prices, size budgets and
+  prompt notes are in `Railway/meshy-batch-2026-10/LESSONS_AND_HANDOFF.md` in `a91453/railway-reference-private`.
