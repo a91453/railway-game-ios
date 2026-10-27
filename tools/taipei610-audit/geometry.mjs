@@ -25,6 +25,8 @@ function audit(vs){
 }
 
 const results=[];
+for(const role of ['a','c','d','b']){const near=manifest.models.find(m=>m.id==='taipei610-'+role),far=manifest.models.find(m=>m.id==='taipei610-'+role+'-far');assert(far.triangles<near.triangles*.5,'far budget');}
+
 for(const m of manifest.models){
  const bytes=readFileSync(resolve(root,m.native)),model=readNative(bytes);
  assert(glbFromNative(model).equals(readFileSync(resolve(root,m.glb))),'GLB mismatch');
@@ -36,10 +38,12 @@ for(const m of manifest.models){
   assert(combined.subarray(20).equals(expected.subarray(p)),'Swift/JS assembly mismatch');
   const scene=JSON.parse(bytes);assert.deepEqual(scene.placements.map(p=>p.unit.split('-')[1]),['a','c','d','b']);
   for(const p of scene.placements)assert(Buffer.from(scene.units[p.unit],'base64').equals(readFileSync(resolve(root,manifest.models.find(m=>m.id===p.unit).native))),'stale unit');
+  const gaps=[];
+  for(let i=1;i<scene.placements.length;i++){const a=scene.placements[i-1],b=scene.placements[i],ma=manifest.models.find(m=>m.id===a.unit),mb=manifest.models.find(m=>m.id===b.unit);const gap=ma.minimum[0]+a.translation[0]-mb.maximum[0]-b.translation[0];assert(gap>=-.0001&&gap<=.031,'gangway gap/overlap');gaps.push(gap);}
   const shifted=structuredClone(scene);shifted.placements[2].translation[0]+=1;
   const data=Buffer.from(JSON.stringify(shifted));
   assert(!Buffer.from(assemblyNative(data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength))).equals(combined),'shift mutation');
-  results.push({id:m.id,exact_assembly:true,shift_mutation_rejected:true});continue;
+  results.push({id:m.id,exact_assembly:true,gangway_gaps_m:gaps,shift_mutation_rejected:true});continue;
  }
  assert(m.triangles<=15000);const result=audit(model.vertices);
  assert.throws(()=>audit(model.vertices.slice(3)),undefined,'deleted-face mutation');
