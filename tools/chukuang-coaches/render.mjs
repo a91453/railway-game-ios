@@ -52,10 +52,10 @@ try{
  await match(['e500','emu3000-ed','chukuang-standard'],'style-comparison');
  if(manifest.models.some(m=>m.id==='before-chukuang-standard')){await match(['before-chukuang-standard','chukuang-standard'],'before-after');await match(['before-chukuang-standard','chukuang-standard-far'],'before-after-far');}
  for(const role of ['standard','conductor-study'])for(const suffix of ['','-far']){
-  const id='chukuang-'+role+suffix;if(manifest.models.some(m=>m.id==='previous-'+id))await match(['previous-'+id,id],'first-pass-vs-final-'+role+suffix);
+  const id='chukuang-'+role+suffix;if(manifest.models.some(m=>m.id==='previous-'+id))await match(['previous-'+id,id],'orange-vs-navy-'+role+suffix);
  }
  const near=manifest.models.filter(m=>m.category==='section'&&!m.id.endsWith('-far'));
- await sheet('overview','莒光自動門客車｜標準窗列／車掌區研究・經典分區・靜態展示',near.map(m=>'<div class="row"><div><img src="previews/'+m.id+'-hero.png"><p>'+m.id+'</p></div><div><img src="previews/'+m.id+'-detail-right.png"><p>另一側門窗／設備</p></div></div>').join('')+'<h2>E500＋4 客車：完整展示編組，尚未接入營運</h2><div class="row"><div><img src="previews/chukuang-display-formation-hero.png"><img src="previews/chukuang-display-formation-detail-left.png"></div></div>');
+ await sheet('overview','莒光自動門客車｜遊戲藏青・標準窗列／車掌區研究・靜態展示',near.map(m=>'<div class="row"><div><img src="previews/'+m.id+'-hero.png"><p>'+m.id+'</p></div><div><img src="previews/'+m.id+'-detail-right.png"><p>另一側門窗／設備</p></div></div>').join('')+'<h2>E500＋4 客車：完整展示編組，尚未接入營運</h2><div class="row"><div><img src="previews/chukuang-display-formation-hero.png"><img src="previews/chukuang-display-formation-detail-left.png"></div></div>');
  await sheet('seven-directions','莒光自動門客車｜近遠景各單元七向透明圖',manifest.models.filter(m=>m.category==='section'||m.category==='formation').map(m=>'<h2>'+m.id+'</h2><div class="row">'+manifest.directions.map(v=>'<div><img src="'+m.views[v]+'"><p>'+v+'</p></div>').join('')+'</div>').join(''));
  await sheet('formation','E500＋莒光自動門客車｜完整展示編組（非營運／推拉控制驗證）',['','-far'].map(s=>'<h2>'+('chukuang-display-formation'+s)+'</h2>'+['hero','detail-left','detail-right','detail-top'].map(v=>'<div class="row"><div><img src="previews/chukuang-display-formation'+s+'-'+v+'.png"></div></div>').join('')).join(''));
  if(errors.length)throw Error(errors.join('\n'));

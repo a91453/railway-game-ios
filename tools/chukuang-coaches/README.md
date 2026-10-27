@@ -10,11 +10,12 @@ export NODE_PATH=/opt/codex/cua_node/lib/node_modules
 swift build --build-tests -Xswiftc -warnings-as-errors -j 4
 swift test --skip-build --filter 'Map3DChuKuangPassengerTests|Map3DModelFileTests|Map3DModelTests'
 tools/chukuang-coaches/capture.sh BASE_WORKTREE BASE_CAPTURE
-# BASE_WORKTREE固定1b40e4f4；FIRST_PASS是本次真第一輪，不能用新輸出自比。
-CHU_BASELINE=BASE_CAPTURE/before-chukuang-standard.m3dmodel CHU_PREVIOUS=FIRST_PASS CHU_ACCEPTED_EMU3000=ACCEPTED_EMU3000_REVISION_5 CHU_ACCEPTED_E500=ACCEPTED_E500_REVISION_3 PRODUCER_COMMIT=PRODUCER tools/chukuang-coaches/export.sh OUT
+# BASE_WORKTREE固定1b40e4f4；PREVIOUS_ORANGE是已交付橘色前版，不能用新輸出自比。
+CHU_BASELINE=BASE_CAPTURE/before-chukuang-standard.m3dmodel CHU_PREVIOUS=PREVIOUS_ORANGE CHU_ACCEPTED_EMU3000=ACCEPTED_EMU3000_REVISION_5 CHU_ACCEPTED_E500=ACCEPTED_E500_REVISION_3 PRODUCER_COMMIT=PRODUCER tools/chukuang-coaches/export.sh OUT
 node tools/chukuang-coaches/review.mjs OUT
 # 親自查看四個近遠角色review；主要偏差要修並全量重出。
 node tools/chukuang-coaches/verify.mjs OUT
+python3 tools/chukuang-coaches/paint-audit.py OUT PREVIOUS_ORANGE
 python3 tools/chukuang-coaches/support-audit.py OUT
 node tools/chukuang-coaches/render.mjs OUT
 blender -b --python tools/chukuang-coaches/glb-audit.py -- OUT

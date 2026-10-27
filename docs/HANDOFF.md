@@ -1771,3 +1771,5 @@ TEMU1000 原生外形（Codex，issue #1228，公開 draft #1230／私庫 draft 
 獨立 `Map3DChuKuangPassenger` 標準10400系研究與中央小窗特殊配置研究，近遠原生、七向、GLB、E500＋四客車展示、真第一輪與base通用客車同尺度比較、viewer／ZIP在互鏈公開／私有draft，索引見 [自有交接](art/chukuang-coaches-2026-10-26/README.md)。私庫確有juguang壓縮原mesh，已實際解壓四向查看及追查其10400來源；原左右鏡像／寬門／遠景整窗帶與照片有差異，故不只換色，也不套PP殼。標準左右窗不同；特殊角色不冒稱已確認11400。232份既有實際payload保持，E500第三版與EMU3000第五版比較素材直接讀已接受私包。
 
 **尚未接入營運**：未找到已確認至子系列的專用編組配置，合併後沒有列車自動改用本批；E200CK/E500CK/R100CK/R200CK/SUMMER/PP/MINGRI/STAR現有接點保持。Linux指定Swift6.4／warnings-as-errors、原生／匯出／下載驗證與最新同head CI分開看issue及私包證據；人工Simulator外觀、真機Metal／效能／輪門動畫與動態碰撞未驗，外觀未經使用者接受。不動GameCore／存檔／golden／replay，不合併／auto-merge／TestFlight。下次修訂先保留本批真最終包，再改配方並全量重出。
+
+2026-10-27莒光第二版：使用者指定橘改遊戲藏青#262C57；只改兩角色近遠的橘色及原底面陰色，米色／腰線／幾何／其他色保持，paint-audit逐三角位置／法線／拓樸核對。真5952e905橘色前版完整保持，私庫新revision-2；全量素材與同尺度橘／藏青前後見自有交接及#1305。另將本批兩項Swift Testing改同斷言XCTest，修正第一版shard ID不相容的紅CI。營運仍未接入，GameCore／存檔／fixtures不動，真機／動畫未驗。

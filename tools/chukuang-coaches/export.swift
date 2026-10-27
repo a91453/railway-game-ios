@@ -82,7 +82,7 @@ if let previous=ProcessInfo.processInfo.environment["CHU_PREVIOUS"] {
  let base=URL(fileURLWithPath:previous),old=try JSONSerialization.jsonObject(with:Data(contentsOf:base.appendingPathComponent("manifest.json"))) as! [String:Any]
  for var r in old["models"] as! [[String:Any]] where (r["category"] as? String)=="section" {
   let original=r["id"] as! String,id="previous-"+original,file="models/\(id).m3dmodel",d=try Data(contentsOf:base.appendingPathComponent(r["native"] as! String))
-  try d.write(to:output.appendingPathComponent(file));r["id"]=id;r["name"]=id;r["native"]=file;r["category"]="comparison";r["family"]="genuine-first-pass";records.append(r)
+  try d.write(to:output.appendingPathComponent(file));r["id"]=id;r["name"]=id;r["native"]=file;r["category"]="comparison";r["family"]="genuine-delivered-orange-revision";r["source_producer_commit"]=old["producer_commit"];records.append(r)
  }
 }
 if let baseline=ProcessInfo.processInfo.environment["CHU_BASELINE"] {

@@ -7,7 +7,7 @@ public enum Map3DChuKuangPassenger {
     public static let bodyHalfLength: Float = 9.65
     public static let couplingHalfLength: Float = 10.0
     public static let gangwayHalfLength: Float = 9.98
-    public static let bodyColor = Map3DColor.rgb(UInt32(TrainLivery.chuKuangCoach))
+    public static let bodyColor = Map3DColor.rgb(0x262C57)
     public static let glassColor = Map3DE500.glassColor
     public static func model(_ role: Role, far: Bool = false) -> Map3DModelPack.Model {
         var b = StationKitBuilder(); b.chuBody(role, far: far)
@@ -63,7 +63,7 @@ extension StationKitBuilder {
     }
 
     fileprivate mutating func chuBody(_ role: Map3DChuKuangPassenger.Role, far: Bool) {
-        let orange = Map3DChuKuangPassenger.bodyColor, cream = Map3DColor.rgb(0xECE2BC)
+        let navy = Map3DChuKuangPassenger.bodyColor, cream = Map3DColor.rgb(0xECE2BC)
         let dark = Self.ink, steel = Self.steel, tire = Map3DStreetModel.tyre
         let half = Map3DChuKuangPassenger.bodyHalfLength
         // Closed shell rings: the classic end sweep is IN the body surface.
@@ -92,14 +92,14 @@ extension StationKitBuilder {
             if i==2 || i==n-2 {color=cream} // 60mm waist line, both real side faces
             else if i>=5 && i<5+steps {color=steel}
             else if i==4 || i==n-4 {color=cream}
-            else {color=orange}
+            else {color=navy}
             face([rings[k][i],rings[k][j],rings[k+1][j],rings[k+1][i]],inside:inside,color:color)
         }}
         for end:Float in [-1,1] {
             let x=end*half
             let levels:[Float]=[1.12,1.86,1.92,boundary(x),3.16]
             for i in 0..<levels.count-1 {
-                face([Map3DPoint(x,levels[i],-1.44),Map3DPoint(x,levels[i],1.44),Map3DPoint(x,levels[i+1],1.44),Map3DPoint(x,levels[i+1],-1.44)],inside:inside,color:i==1 ? cream:orange)
+                face([Map3DPoint(x,levels[i],-1.44),Map3DPoint(x,levels[i],1.44),Map3DPoint(x,levels[i+1],1.44),Map3DPoint(x,levels[i+1],-1.44)],inside:inside,color:i==1 ? cream:navy)
             }
             let roof=rings[end<0 ? 0:rings.count-1]
             face(Array(roof[5...5+steps]),inside:inside,color:steel)
@@ -134,7 +134,7 @@ extension StationKitBuilder {
             for end:Float in [-1,1] {
                 let x=end*8.92
                 box(x,1.18,side*1.446,0.76,0.012,1.96,dark)
-                box(x,1.20,side*1.457,0.70,0.010,1.92,orange)
+                box(x,1.20,side*1.457,0.70,0.010,1.92,navy)
                 chuSideWindow(x,2.56,side:side,width:0.36,height:0.94,far:far)
                 box(x,1.86,side*1.468,0.70,0.012,0.06,cream)
                 box(x,1.02,side*1.49,0.72,0.20,0.07,steel)
@@ -145,7 +145,7 @@ extension StationKitBuilder {
         }
         for end:Float in [-1,1] {
             box(end*9.68,1.15,0,0.06,0.96,2.08,dark)
-            box(end*9.72,1.20,0,0.025,0.83,1.96,orange)
+            box(end*9.72,1.20,0,0.025,0.83,1.96,navy)
             box(end*9.74,2.48,0,0.016,0.46,0.55,Map3DChuKuangPassenger.glassColor)
             let folds=far ? 2:5
             for i in 0..<folds {let x=end*(9.66+(Float(i)+0.5)*0.32/Float(folds))
