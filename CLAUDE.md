@@ -107,10 +107,14 @@ its shaders TSL; start with its `00_READ_ME_FIRST.md`,
 `source/MISSING_COMPONENTS.md` and `source/THIRD_PARTY_ATTRIBUTION.md`;
 what to take from it is in `docs/research/NEXT_PRIORITIES_2026-10-12.md`
 §22.12), `Railway/tdx-snapshot-2026-10/` (added 2026-10-27; TDX downloads
-of rail line shapes, station exits and facilities, and 285 days of Taiwan
-Railway delay reports (2026-01-15 to 10-26, with a probe of which historical
-bus and metro paths exist); start with its `00_READ_ME_FIRST.md` and
-`DATA_USE_NOTICES.json`), `Railway/meshy-batch-2026-10/` (added
+of rail line shapes, station exits and facilities, 341 days of Taiwan
+Railway delay reports (2025-11-20 to 2026-10-26), two days of the Kaohsiung
+metro station board, and a probe of which historical bus and metro paths
+exist; start with its `00_READ_ME_FIRST.md` and `DATA_USE_NOTICES.json`),
+`Railway/tdx-bus-history-2026-10/` (added 2026-10-27; samples of Taipei and
+Kaohsiung city bus positions and stop events, a weekday and a rest day each,
+cut at `$top` because the historical API cannot filter by route; start with
+its `00_READ_ME_FIRST.md`), `Railway/meshy-batch-2026-10/` (added
 2026-10-27; Meshy text-to-3D street and railway props, not yet in the
 game; start with its `00_READ_ME_FIRST.md`), and `city_map_reference_clean/`
 and `power_grid_reference_clean/` at the repository root (start with their
