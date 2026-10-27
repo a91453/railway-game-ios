@@ -71,7 +71,7 @@ private struct E900Builder {
         panel(inner.map {.init($0.x,$0.y,s*1.454)},.init(0,0,s*0.009),color)
     }
     static func nose(_ u:Float,_ h:Float)->Map3DPoint {
-        let width:Float = h>3.25 ? 1.445-(h-3.25)*0.60:1.445
+        let width:Float = h>3.25 ? 1.445-(h-3.25)*0.60:h<1.6 ? 1.12+0.325*max(0,(h-0.60)):1.445
         let slope=max(0,h-1.35)
         return .init(10.55-0.20*u*u-0.24*slope-0.10*slope*slope,h,u*width)
     }
@@ -113,13 +113,25 @@ private struct E900Builder {
             for i in 0..<n {for j in 0..<7 {
                 let p=grid[i][j],q=grid[i+1][j],r=grid[i+1][j+1],s=grid[i][j+1]
                 let u=abs((Float(i)+0.5)*2/Float(n)-1)
-                let color:UInt32 = j>0&&j<6&&u<0.86 ? E.navy:j==2 ? E.teal:body
+                let maskWidth:Float = j==1 ? 0.68:j==2 ? 0.74:j==5 ? 0.82:0.86
+                let color:UInt32 = j>0&&j<6&&u<maskWidth ? E.navy:j==2 || j==3&&u>0.78 ? E.teal:body
                 for t in [[p,q,r],[p,r,s]] {face(t,c,color);tris.append(t)}
             }}
             let ring=grid.map {$0.first!}+grid.last!.dropFirst()+grid.dropLast().reversed().map {$0.last!}+grid.first!.dropFirst().dropLast().reversed()
-            let back=ring.map {Map3DPoint(end,$0.y,$0.z)}
+            let rows=Array(repeating:0,count:n+1)+Array(1...7)+Array(repeating:7,count:n)+Array((1...6).reversed())
+            let sideHeights:[Float]=[1.0,1.30,1.53,1.80,2.25,3.10,3.45,3.65]
+            let back=ring.indices.map { i -> Map3DPoint in
+                let p=ring[i],h=sideHeights[rows[i]]
+                let w:Float=h<=3.28 ? 1.445:h<=3.48 ? 1.35:h<=3.62 ? 1.10:0.75
+                let z:Float=rows[i]==0 ? p.z:rows[i]==7 ? p.z*0.75/1.205:(p.z<0 ? -w:w)
+                return .init(end,h,z)
+            }
             face(back,c,body)
-            for i in ring.indices {let j=(i+1)%ring.count;face([ring[i],ring[j],back[j],back[i]],c,body)}
+            for i in ring.indices {
+                let j=(i+1)%ring.count
+                let band=(rows[i]==2&&rows[j]==3)||(rows[i]==3&&rows[j]==2)
+                face([ring[i],ring[j],back[j],back[i]],c,band ? E.teal:body)
+            }
             func yz(_ p:[Map3DPoint])->[Map3DPoint] {p.map {.init(0,$0.y,$0.x)}}
             let wind:[Map3DPoint]=[.init(-0.82,2.12,0),.init(0.82,2.12,0),.init(1.05,2.38,0),.init(1.12,3.10,0),.init(0.97,3.24,0),.init(-0.97,3.24,0),.init(-1.12,3.10,0),.init(-1.05,2.38,0)]
             patch(tris,yz(wind),E.glass,0.020)

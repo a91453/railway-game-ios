@@ -31,3 +31,5 @@ python3 tools/emu900-native/bundle.py OUT PRODUCER
 ```
 
 本工具未引入新依賴；使用環境既有工具。Native/GLB/PNG/viewer互相核對，沒有另一份替代mesh。獨立GLB importer為Blender，PNG為Pillow。玻璃最多160真三角樣點／模型，正面與側面朝外表面分開，排除背面／薄邊、只允許實際橡膠雨刷命中；輪胎為8個真正連通橡膠體，查Z=0、860mm輪徑及向上殼面淨空。不是完整支承圖或動態碰撞認證。
+
+`support-audit.py OUT`另驗實際玻璃距離、輪胎連通件與屋頂支承路徑（每實體最多40真頂點／面心，六方向，65mm取樣接觸容差）；抬升真空調外殼700mm反例拒收。GLB由Blender獨立匯入，全corner顏色與palette覆蓋容差2/255，反映Blender BYTE_COLOR色空間量化；native轉GLB來源bytes另作精確核對。不是全動態碰撞／升弓工作範圍認證。

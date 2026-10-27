@@ -28,7 +28,7 @@ for m in manifest['models']:
    distance=float(near.min());occlusion.append(distance)
    point=o+d*(distance+.0001)
    rubber=hit(tri[col==0xFF342E2B],o+d*.0001,d)
-   if len(rubber) and abs(float(rubber.min())-distance)<1e-5 and 2.20<point[2]<2.65 and abs(point[1])<.85:expected_wiper+=1
+   if len(rubber) and abs(float(rubber.min())-distance)<1e-5 and 2.10<point[2]<2.30 and abs(point[1])<.85:expected_wiper+=1
   if len(behind) and behind.min()<.10:backed+=1
  rows.append({'id':m['id'],'glass_samples':len(idx),'clear_outward_rays':visible,'backed_within_100mm':backed,'expected_actual_rubber_wiper_hits':expected_wiper,'occlusion_distances_m':occlusion})
  # All sample origins are on actual final glass, not recipe constants.

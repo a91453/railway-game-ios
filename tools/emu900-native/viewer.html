@@ -17,7 +17,7 @@ function filter(){const query=$('search').value.trim().replaceAll('臺','台').t
 function showError(e){$('status').textContent=e.message;}
 for(const [key,label] of Object.entries(labels)){const b=document.createElement('button');b.textContent=label;b.dataset.view=key;b.onclick=()=>{custom=false;view=key;draw();};$('views').append(b);}
 for(const sys of [...new Set(manifest.models.map(m=>m.system).filter(Boolean))].sort()){const o=document.createElement('option');o.value=sys;o.textContent=sys;$('system').append(o);}
-$('count').textContent='四種 EMU900近／遠景、E500 完整展示編組與風格比較';
+$('count').textContent='六種 EMU900設備角色近／遠景、十輛完整展示與已接受車輛風格比較';
 for(const id of ['search','category','system'])$(id).addEventListener(id==='search'?'input':'change',filter);
 $('zoom').oninput=draw;$('background').onchange=()=>$('stage').style.background=$('background').value;$('png').onclick=()=>download(renderer.png(),currentAsset.id+'-'+view+'.png');
 let dragging;
