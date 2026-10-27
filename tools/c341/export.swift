@@ -63,7 +63,7 @@ let manifest: [String: Any] = ["schema_version": 1, "generator": "Map3DC341", "r
     "native_coordinates": "metres; +x front, +y left, +z up", "gltf_coordinates": "metres; +x front, +y up, -z left",
     "directions": ["top", "bottom", "left", "right", "front", "back", "isometric"], "models": records,
     "native_palette": ["body": Map3DC341.body & 0x00ffffff, "accent": Map3DC341.accent & 0x00ffffff,
-        "glass": Map3DC341.glass & 0x00ffffff, "mask": Map3DC341.mask & 0x00ffffff],
+        "glass": Map3DC341.glass & 0x00ffffff, "mask": Map3DC341.mask & 0x00ffffff, "lamp": Map3DC341.lamp & 0x00ffffff],
     "assembly": ["placements": placements, "pitch_m": 23.5, "shell_gap_m": 0.4, "rail_z_m": 0, "rear_rotation_baked_deg": 180, "static": true]]
 try JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]).write(to: output.appendingPathComponent("manifest.json"), options: .atomic)
 print("Exported DM, T, M, reverse DM, six-car formation and style comparison through native readback.")

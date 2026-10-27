@@ -63,6 +63,15 @@ for m in manifest['models']:
  # HVAC contact at centre of actual housing base: supporting roof intersects immediately.
  for x in [-5.6,5.6]:
   p=np.array([x,0,3.6601]);h=hits(p,np.array([0,0,-1]),t);assert len(h) and h.min()<0.02
- rows.append({'id':m['id'],'broad_glass_faces_backed':n,'HVAC_roof_contact_samples':2,'front_glass_faces_visible':visible})
+ lamp_faces=0
+ if m['id'] in ['c341-dm','c341-rear']:
+  lamp_col=palette['lamp'];lamp=t[col==lamp_col];backing=t[col!=lamp_col]
+  for tri in lamp:
+   p=tri.mean(axis=0);n=np.cross(tri[1]-tri[0],tri[2]-tri[0]);n/=np.linalg.norm(n)
+   if abs(p[0])>11.3 and n[0]*np.sign(p[0])>.8:
+    h=hits(p,np.array([-np.sign(p[0]),0,0]),backing)
+    assert len(h) and h.min()<.035,'unsupported lamp';lamp_faces+=1
+  assert lamp_faces>=8
+ rows.append({'lamp_faces_backed':lamp_faces,'id':m['id'],'broad_glass_faces_backed':n,'HVAC_roof_contact_samples':2,'front_glass_faces_visible':visible})
 (root/'support-verification.json').write_text(json.dumps({'status':'VERIFIED','checks':['broad outward glass faces raycast to non-glass backing within 65 mm','250 mm floating glass fault rejected','HVAC centre roof contact','front glass not buried by actual body/door triangles','140 mm buried glass fault rejected'],'limits':['ray samples do not exhaust all components or intersections','roof side edges intentionally overhang centre supports'],'models':rows},indent=2)+'\n')
 print('VERIFIED sampled glazing backing, floating-glass rejection and roof contact')

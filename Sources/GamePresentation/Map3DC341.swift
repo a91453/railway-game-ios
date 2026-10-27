@@ -6,6 +6,7 @@ public enum Map3DC341 {
     public enum Unit: String, CaseIterable, Sendable { case dm, t, m, rear }
     public static let body = Map3DPalette.shopAwnings[3]
     public static let accent = Map3DPalette.containers[1]
+    public static let lamp = Map3DPalette.tunnelLamp
     public static let mask = Map3DPalette.playerRim
     public static let glass = Map3DColor.shaded(Map3DPalette.glazing, 0.62)
     public static let pitch: Float = 23.5
@@ -45,7 +46,9 @@ private struct C341Builder {
     }
     mutating func frontPanel(_ z: Float,_ y: Float,_ width: Float,_ height: Float,_ depth: Float,_ color: UInt32,_ offset: Float = 0) {
         func points(_ d: Float) -> [Map3DPoint] {
-            [(y,z-width/2),(y,z+width/2),(y+height,z+width/2),(y+height,z-width/2)].map { h,w in Map3DPoint(half-max(0,h-1.35)*0.055+d,h,w) }
+            let r: Float = color == Map3DC341.glass ? 0.055 : 0
+            let outline: [(Float,Float)] = r>0 ? [(y,z-width/2+r),(y,z+width/2-r),(y+r,z+width/2),(y+height-r,z+width/2),(y+height,z+width/2-r),(y+height,z-width/2+r),(y+height-r,z-width/2),(y+r,z-width/2)] : [(y,z-width/2),(y,z+width/2),(y+height,z+width/2),(y+height,z-width/2)]
+            return outline.map { h,w in Map3DPoint(half-max(0,h-1.35)*0.055+d,h,w) }
         }
         solid(points(offset),points(offset+depth),color)
     }
@@ -130,7 +133,13 @@ private struct C341Builder {
             for s: Float in [-1,1] {
                 frontPanel(s*0.94,2.04,0.80,1.04,0.008,glass,0.026)
                 frontPanel(s*0.94,3.17,0.78,0.17,0.008,StationKitBuilder.steel,0.026)
-                frontPanel(s*0.94,3.20,0.69,0.07,0.004,Map3DPalette.tunnelLamp,0.035)
+                frontPanel(s*0.94,3.20,0.69,0.07,0.004,s<0 ? Map3DPalette.tunnelLamp : blue,0.035)
+                let marker = (0..<12).map { i -> (Float,Float) in
+                    let a=Float(i)*2*Float.pi/12
+                    return (3.40+0.045*sinf(a),s*1.20+0.045*cosf(a))
+                }
+                let markerRings=[Float(0.012),Float(0.025)].map { d in marker.map { h,w in Map3DPoint(half-(h-1.35)*0.055+d,h,w) } }
+                solid(markerRings[0],markerRings[1],Map3DPalette.tunnelLamp)
                 frontPanel(s*0.95,1.46,0.70,0.28,0.022,ink,0.066)
                 for dz: Float in [-0.18,0.18] {
                     let z=s*0.95+dz
