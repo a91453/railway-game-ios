@@ -18,7 +18,7 @@ Issue #1359，使用者指定名稱「台北捷運610」。白車頭正常塗裝
 
 接手私庫 `garage-blender-v1/y100.json` 明列Q-proportions、9.208m長／2.881m寬、51418三角；已查看其預覽，與官方17.45m端車及2.65m寬不符，不能冒稱本型正確原生殼；無可沿用車殼幾何。舊模型只留私庫作來源比較，不輸出假前版。E1000私庫#88的merge落在PP分支，接手main不是其祖先，不能宣稱main已有該包；本次不動原分支與內容。完整landing-audit在私包。
 
-## 本版驗收與限制
+## 第一版驗收與限制（歷史；支承廣義自評已由第二版撤回）
 
 外觀已實看各角色／完整四輛、近遠light七向，並查看四向配色／白模／剪影、門窗／輪組／集電與屋頂detail crop、已接受E500v3／EMU3000v5同公尺尺度比較。初版車門上白框過多、風擋上深色冠面不足已改；後續玻璃背襯的曲面端蓋方向錯誤被有向邊驗證抓到並修正。沒有同車型獨立原生前版；`before-operation-wenhu`從接手base真payload取得，明標接入前顯示，絕非610前版。
 
@@ -52,3 +52,5 @@ Viewer支援角色與方向、拖曳旋轉、縮放及PNG／GLB／原生下載�
 #1357（merge4d5c7994）已在第一版使用：共用匯出、遊戲模型光、日夜七向、預算與hash鎖。第二版再直接使用它的viewer.mjs建立「真第一版／第二版」同視角離線比較頁，保留可旋轉下載的原viewer。#1357沒有實作AO、統一夜間亮燈或金屬反光，本輪不擴到那些效果，也不改其他車。
 
 本版外觀未經使用者接受；尚未接入營運。人工Simulator／真機Metal效能／動畫未驗。第二版固定producer、SHA與最新整合head於同PR更新，第一版連結保留作歷史。
+
+第二版三角數：A/B近3650／遠1722／light1638，C/D保持2824／1372／1252；完整四車12948／6188／5780。固定producer `2a0c713fd923cf4b48a8b3dd1d3b1cbb6c254629`；[新版總覽／七向／GLB／原生／viewer與ZIP](https://github.com/a91453/railway-reference-private/tree/codex/taipei610-native-2026-10-27/Railway/game-art-previews/docs/art/taipei610-2026-10-27/revision-2)，[真正同相機前後detail crop](https://github.com/a91453/railway-reference-private/blob/codex/taipei610-native-2026-10-27/Railway/game-art-previews/docs/art/taipei610-2026-10-27/revision-2/true-before-after-drawbar.png)。
