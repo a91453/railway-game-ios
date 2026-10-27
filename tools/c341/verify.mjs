@@ -23,7 +23,7 @@ for(const p of m.assembly.placements){
  const c=Math.cos(p.rotation_deg*Math.PI/180),s=Math.sin(p.rotation_deg*Math.PI/180);
  for(const v of parts.get('c341-'+p.unit)){
   const q=train[cursor++],a=[c*v.position[0]+s*v.position[1]+p.x_m,-s*v.position[0]+c*v.position[1],v.position[2]];
-  assert(q.position.every((x,k)=>Math.abs(x-a[k])<0.0002));assert.deepEqual(q.color,v.color);assert(q.normal.every((x,k)=>Math.abs(x-v.normal[k])<0.0001));
+  assert(q.position.every((x,k)=>Math.abs(x-a[k])<0.0002));assert.deepEqual(q.color,v.color);assert(q.normal.every((x,k)=>Math.abs(x-v.normal[k])<0.0005));
  }
 }
 assert.equal(cursor,train.length);

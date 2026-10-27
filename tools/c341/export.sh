@@ -27,9 +27,15 @@ swiftc -swift-version 6 -warnings-as-errors "${includes[@]}" tools/c341/export.s
 "$work/c341-export" "$output"
 node tools/c341/package.mjs "$output"
 python3 - "$output" <<'PY'
-import hashlib,sys
+import hashlib,sys,json
 from pathlib import Path
 p=Path(sys.argv[1])/'existing-payload.bin'
 (p.parent/'existing-payload.sha256').write_text(hashlib.sha256(p.read_bytes()).hexdigest()+'\n')
+b=p.read_bytes();rows=json.loads((p.parent/'existing-segments.json').read_text())
+for r in rows:r['sha256']=hashlib.sha256(b[r['offset']:r['offset']+r['length']]).hexdigest()
+(p.parent/'existing-segments.json').write_text(json.dumps(rows,indent=2)+'\n')
+# The initial checkout predates the EMU800 merge. Compare all its actual bytes too.
+legacy=b''.join(b[r['offset']:r['offset']+r['length']] for r in rows if not r['name'].startswith('emu800-'))
+(p.parent/'existing-pre-emu800.sha256').write_text(hashlib.sha256(legacy).hexdigest()+'\n')
 p.unlink()
 PY

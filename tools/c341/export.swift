@@ -68,7 +68,9 @@ let manifest: [String: Any] = ["schema_version": 1, "generator": "Map3DC341", "r
 try JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]).write(to: output.appendingPathComponent("manifest.json"), options: .atomic)
 print("Exported DM, T, M, reverse DM, six-car formation and style comparison through native readback.")
 var existing = Data()
+var existingSegments: [[String:Any]] = []
 for m in Map3DModelPack.standard.models where !m.name.hasPrefix("c341-") {
+    let begin=existing.count
     existing.append(contentsOf: m.name.utf8);existing.append(0)
     for v in m.vertices {
         for word in [v.x.bitPattern,v.y.bitPattern,v.z.bitPattern,v.nx.bitPattern,v.ny.bitPattern,v.nz.bitPattern,v.color,v.layer.bitPattern] {
@@ -76,5 +78,7 @@ for m in Map3DModelPack.standard.models where !m.name.hasPrefix("c341-") {
             withUnsafeBytes(of:&little) { existing.append(contentsOf:$0) }
         }
     }
+    existingSegments.append(["name":m.name,"offset":begin,"length":existing.count-begin,"vertices":m.vertices.count])
 }
+try JSONSerialization.data(withJSONObject:existingSegments,options:[.sortedKeys]).write(to:output.appendingPathComponent("existing-segments.json"))
 try existing.write(to:output.appendingPathComponent("existing-payload.bin"))

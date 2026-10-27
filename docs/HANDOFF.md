@@ -1821,6 +1821,10 @@ TEMU1000 原生外形（Codex，初版 issue #1228／公開 #1230／私庫 #78 �
 
 2026-10-27莒光第二版：使用者指定橘改遊戲藏青#262C57；只改兩角色近遠的橘色及原底面陰色，米色／腰線／幾何／其他色保持，paint-audit逐三角位置／法線／拓樸核對。真5952e905橘色前版完整保持，私庫新revision-2；全量素材與同尺度橘／藏青前後見自有交接及#1305。另將本批兩項Swift Testing改同斷言XCTest，修正第一版shard ID不相容的紅CI。營運仍未接入，GameCore／存檔／fixtures不動，真機／動畫未驗。
 
+### 2026-10-27 Codex EMU800（#1316）
+
+[來源／外觀／靜態範圍／驗證交接](art/emu800-native-2026-10-27/README.md)。獨立藍面黃弧EMU800配方，ED/EMA/EP/EMB近遠正反16單元與八輛M3DAssembly。原先Q比例及通用弧形不當作正確殼；完整私有素材與雙庫draft見issue。原有EMU800 key也涵蓋EMU900性能及一般TRA通勤代表，因此**尚未接入營運**，合併沒有列車自動換用；不替換其他通勤車。241既有完整payload保持，已接受E500v3與EMU3000v5私包直接取作風格比較，PP/E1000／莒光藏青／EMU3000石板藍灰不改。Swift6.4及原生／GLB／PNG／viewer／ZIP的最終證據與同head CI見issue；人工Simulator／真機Metal效能／動畫／完整碰撞未驗。不動GameCore／存檔／fixtures／玩法，不推main、不合併／auto-merge／TestFlight。
+
 ### 2026-10-27 Codex EMU3000 石板藍灰（#1309）
 
 使用者要求評估莒光藏青（建議保持，本輪不改）及EMU3000黑色外觀改遊戲風格。新分支codex/emu3000-slate-2026-10-27；原66a515e8第五版幾何／其他色保持，只改罩面、窗框與外觀飾件為既有石板藍灰#6E7487，輪胎／雨刷／底盤／弓機構拆出hardwareColor保持舊炭黑。16單元逐三角paint-audit及真正第五版同尺度前後、全量素材／viewer／ZIP見[交接](art/emu3000-slate-2026-10-27/README.md)。已接受第五版原包及E500／PP／E1000／莒光藏青保持；新色未稱已接受，也不保證換色可免侵權風險。
