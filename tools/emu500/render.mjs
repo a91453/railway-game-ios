@@ -60,7 +60,9 @@ try {
  const newUnit=manifest.models.find(m=>m.id==='emu500-emc');
  const matched=await page.evaluate(async paths=>{
   const a=await(await fetch(paths[0])).arrayBuffer(),b=await(await fetch(paths[1])).arrayBuffer();
-  renderer.load(a);const centre=[...renderer.centre],extent=[...renderer.extent],out=[];
+  renderer.load(a);const low=[...renderer.bounds.low],high=[...renderer.bounds.high];renderer.load(b);
+  for(let i=0;i<3;i++){low[i]=Math.min(low[i],renderer.bounds.low[i]);high[i]=Math.max(high[i],renderer.bounds.high[i]);}
+  const centre=low.map((x,i)=>(x+high[i])/2),extent=low.map((x,i)=>(high[i]-x)/2),out=[];
   for(const data of [a,b]){renderer.load(data);renderer.centre=centre;renderer.extent=extent;renderer.render('isometric',{width:900,height:600});out.push(renderer.png());}
   return out;
  },[newUnit.native,comparison.native]);

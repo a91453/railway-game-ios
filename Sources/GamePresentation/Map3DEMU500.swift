@@ -142,7 +142,8 @@ extension StationKitBuilder {
             box(10.08,0.70,0,0.17,0.40,0.30,dark)
             // Simplified hazard chevrons on a physical lower apron.
             for z: Float in [-1.00,-0.50,0.50,1.00] {
-                beam(Map3DPoint(9.96,0.40,z-0.18),Map3DPoint(9.96,1.08,z+0.18),0.17,yellow)
+                let direction: Float = z < 0 ? -1 : 1
+                beam(Map3DPoint(9.96,0.40,z-direction*0.18),Map3DPoint(9.96,1.08,z+direction*0.18),0.17,yellow)
             }
         }
     }

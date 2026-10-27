@@ -46,7 +46,9 @@ try {
  await page.mouse.move(box.x+box.width/2,box.y+box.height/2);
  await page.mouse.down();await page.mouse.move(box.x+box.width/2+90,box.y+box.height/2+30,{steps:5});await page.mouse.up();
  assert.notEqual(await page.evaluate(()=>renderer.png()),before,'pointer rotation changes view');
+ const beforeZoom=await page.evaluate(()=>renderer.png());
  await page.locator('#zoom').fill('1.5');assert.equal(await page.inputValue('#zoom'),'1.5');
+ assert.notEqual(await page.evaluate(()=>renderer.png()),beforeZoom,'zoom changes actual rendered image');
  for(const [button,path,digest] of [['#glb',formation.glb,formation.glb_sha256],['#native',formation.native,formation.native_sha256]]){
   const wait=page.waitForEvent('download');await page.click(button);const download=await wait;
   assert.equal(sha(readFileSync(await download.path())),digest,button+' download differs from manifest');

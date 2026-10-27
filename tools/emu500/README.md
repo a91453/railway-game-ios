@@ -32,3 +32,16 @@ true prior models, overriding the default archive retention guideline this task.
 
 Model registry only. EMU500 has no dedicated operating type binding on this base;
 merging this PR does not make it appear as an operating train.
+
+Additional final checks:
+
+```sh
+python3 tools/emu500/support-audit.py OUT
+node tools/emu500/standalone.mjs OUT
+node tools/emu500/offline-check.mjs OUT
+```
+
+The offline viewer embeds native/GLB/PNG payloads and opens directly from a local
+file. ZIP remains a separate download in the HTTP viewer and private package.
+Ray support audit tests actual broad glass faces plus an artificial floating fault;
+it is sampled support evidence, not exhaustive intersection certification.
