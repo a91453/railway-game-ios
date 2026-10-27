@@ -14,7 +14,10 @@ public enum Map3DEMU3000 {
     public static let sequence: [Unit] = [.ed,.em,.ep3,.em,.et,.em6,.ep7,.em,.em,.ep10,.em,.tail]
     public static let bodyColor = Map3DPalette.shopAwnings[3]
     public static let accentColor = Map3DPalette.shopAwnings[0]
-    public static let maskColor = Map3DColor.shaded(Map3DPalette.tankStand, 0.42)
+    /// Game-style slate trim. Accepted revision-5 geometry is unchanged.
+    public static let maskColor = Map3DPalette.tunnelLining
+    /// Functional rubber/mechanisms retain their original charcoal material.
+    public static let hardwareColor = Map3DColor.shaded(Map3DPalette.tankStand, 0.42)
     public static let glassColor = Map3DColor.shaded(Map3DPalette.glazing, 0.53)
     public static let steelColor = Map3DPalette.tankStand
     public static let lampColor = Map3DPalette.tunnelLamp
@@ -85,6 +88,7 @@ private extension StationKitBuilder {
     typealias EU = Map3DEMU3000.Unit
     static var ew: UInt32 { Map3DEMU3000.bodyColor }
     static var ek: UInt32 { Map3DEMU3000.maskColor }
+    static var eh: UInt32 { Map3DEMU3000.hardwareColor }
     static var eg: UInt32 { Map3DEMU3000.glassColor }
     static var es: UInt32 { Map3DEMU3000.steelColor }
     static var ea: UInt32 { Map3DEMU3000.accentColor }
@@ -609,26 +613,26 @@ private extension StationKitBuilder {
         if !far {
             emuHatchSeam(sides)
             let a=project(2.34,0.04,0.048),b=project(2.50,0.47,0.048),c=project(2.89,0.58,0.048)
-            beam(a,b,0.022,Self.ek);beam(b,c,0.025,Self.ek)
-            civicTube(a-Map3DPoint(0,0.09,0),a,radius:0.040,color:Self.ek,sides:8)
+            beam(a,b,0.022,Self.eh);beam(b,c,0.025,Self.eh)
+            civicTube(a-Map3DPoint(0,0.09,0),a,radius:0.040,color:Self.eh,sides:8)
         }
     }
     mutating func emuRunningGear(_ unit: EU,_ far: Bool) {
         let cab=unit.isCab
         let centres: [Float]=cab ? [-6.55,6.15]:[-6.75,6.75]
-        box(cab ? -1.4:0,0.84,0,cab ? 16.9:18.9,2.42,0.20,Self.ek)
+        box(cab ? -1.4:0,0.84,0,cab ? 16.9:18.9,2.42,0.20,Self.eh)
         for x in centres {
-            box(x,0.60,0,2.90,0.82,0.29,Self.ek)
+            box(x,0.60,0,2.90,0.82,0.29,Self.eh)
             box(x,0.88,0,1.55,1.10,0.15,Self.es)
             for dx: Float in [-1.02,1.02] {
                 let xx=x+dx
                 civicTube(Map3DPoint(xx,0.41,-0.79),Map3DPoint(xx,0.41,0.79),radius:far ? 0.10:0.07,color:Self.es,sides:far ? 6:8)
                 for side: Float in [-1,1] {
-                    civicTube(Map3DPoint(xx,0.41,side*0.4935),Map3DPoint(xx,0.41,side*0.6535),radius:0.41,color:Self.ek,sides:far ? 8:12)
+                    civicTube(Map3DPoint(xx,0.41,side*0.4935),Map3DPoint(xx,0.41,side*0.6535),radius:0.41,color:Self.eh,sides:far ? 8:12)
                     if !far {
                         civicTube(Map3DPoint(xx,0.41,side*0.65),Map3DPoint(xx,0.41,side*0.675),radius:0.26,color:Self.es,sides:12)
                         box(xx,0.41,side*0.78,0.35,0.24,0.20,Self.es)
-                        box(xx,0.66,side*0.73,0.20,0.20,0.19,Self.ek)
+                        box(xx,0.66,side*0.73,0.20,0.20,0.19,Self.eh)
                     }
                 }
             }
@@ -640,24 +644,24 @@ private extension StationKitBuilder {
         else {equipment=[(-3.5,2.4),(-0.7,2.4),(2.5,2.1)]}
         for (x,length) in equipment {
             box(x,0.44,0,length,2.08,0.46,Self.es)
-            if !far {for z: Float in [-1.047,1.047] {box(x,0.60,z,length*0.70,0.018,0.16,Self.ek)}}
+            if !far {for z: Float in [-1.047,1.047] {box(x,0.60,z,length*0.70,0.018,0.16,Self.eh)}}
         }
         // Distinct trailer/collector underfloor equipment, observed arrangement
         // interpreted at miniature detail density; hidden equipment is not confirmed.
         if unit == .et || unit.hasPantograph {
             let x: Float=unit == .et ? -1.1:-1.3
             for z: Float in [-0.62,0.62] {
-                civicTube(Map3DPoint(x-0.55,0.56,z),Map3DPoint(x+0.55,0.56,z),radius:0.19,color:Self.ek,sides:far ? 6:12)
+                civicTube(Map3DPoint(x-0.55,0.56,z),Map3DPoint(x+0.55,0.56,z),radius:0.19,color:Self.eh,sides:far ? 6:12)
             }
             for dx: Float in [-0.35,0.35] {box(x+dx,0.71,0,0.15,1.62,0.16,Self.es)}
         }
         for end: Float in [-1,1] where !cab || end<0 {
             let x=end*(cab ? 10.56:9.86)
-            box(x,1.20,0,0.12,1.60,1.86,Self.ek)
+            box(x,1.20,0,0.12,1.60,1.86,Self.eh)
             // Bellows reach half the coupler gap; assembled units share this plane.
             box(end*(cab ? 10.6175:10.0),1.30,0,cab ? 0.115:0.30,1.48,1.70,Self.es)
-            if !far { for d: Float in [-0.038,0.038] { box(x+d,1.23,0,0.018,1.66,1.80,Self.ek) } }
-            box(end*(cab ? 10.625:10.0),0.69,0,cab ? 0.10:0.30,0.29,0.24,Self.ek)
+            if !far { for d: Float in [-0.038,0.038] { box(x+d,1.23,0,0.018,1.66,1.80,Self.eh) } }
+            box(end*(cab ? 10.625:10.0),0.69,0,cab ? 0.10:0.30,0.29,0.24,Self.eh)
         }
     }
     mutating func emuRoof(_ unit: EU,_ far: Bool) {
@@ -683,14 +687,14 @@ private extension StationKitBuilder {
         for dx: Float in [-0.60,0.60] { for z: Float in [-0.52,0.52] {
             cylinder(x+dx,3.58,z,radius:0.09,height:0.22,color:Self.ew,sides:far ? 6:8)
         } }
-        box(x,3.78,0,1.34,1.18,0.08,Self.ek)
+        box(x,3.78,0,1.34,1.18,0.08,Self.eh)
         let base=Map3DPoint(x-direction*0.40,3.86,0),elbow=Map3DPoint(x+direction*0.62,4.30,0),top=Map3DPoint(x-direction*0.15,4.76,0)
         // Raised contact height is an explicitly estimated display pose.
         for z: Float in [-0.27,0.27] {
             beam(base+Map3DPoint(0,0,z),elbow+Map3DPoint(0,0,z),far ? 0.075:0.065,Self.es)
             beam(elbow+Map3DPoint(0,0,z),top+Map3DPoint(0,0,z*1.6),far ? 0.065:0.052,Self.es)
         }
-        beam(top+Map3DPoint(0,0,-0.67),top+Map3DPoint(0,0,0.67),0.055,Self.ek)
+        beam(top+Map3DPoint(0,0,-0.67),top+Map3DPoint(0,0,0.67),0.055,Self.eh)
         if !far {
             for z: Float in [-0.50,0.50] { beam(top+Map3DPoint(-0.16,0,z),top+Map3DPoint(0.16,0,z),0.034,Self.es) }
             box(x-direction*1.14,3.46,0.33,0.44,0.48,0.47,Self.es)

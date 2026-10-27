@@ -120,9 +120,12 @@ public struct Map3DTrainSet: Sendable {
             // Decision 399: the steam train as #1118's duplex locomotive
             // and its tender, the Blue Train's old blue coaches behind.
             steam("STEAM", formation: .duplex, coach: coach(TrainLivery.blueTrain, band: 0.38...0.43)),
-            // The push-pull Tze-Chiang: an E1000 power car at each end.
+            // The push-pull Tze-Chiang: an E500 at each end (decision 425);
+            // decision 427: and, in the train pack, an E1000 at each end.
             ppHauled(),
             ppHauled(far: true),
+            ppHauled(.e1000),
+            ppHauled(.e1000, far: true),
             // The multiple units, by their performance (decision 237); the
             // EMU3000 uses its photo-led native units; the metro keeps
             // the line-coloured band.
@@ -211,17 +214,25 @@ public struct Map3DTrainSet: Sendable {
     /// (their ``far`` sets between).
     /// Decision 420: and the Taroko and the EMU800 (their far sets).
     /// Decision 426: and the Puyuma (its far set).
-    static let nearOnly: Set = ["E500CK", "MINGRI", "STAR", "pushPull", "greenTram", "SUMMER", "STEAM", "highSpeed", "n700sG", "emu3000",
+    /// Decision 427: and the push-pull Tze-Chiang's E1000 look.
+    static let nearOnly: Set = ["E500CK", "MINGRI", "STAR", "pushPull", "pushPullE1000", "greenTram", "SUMMER", "STEAM", "highSpeed", "n700sG", "emu3000",
                                 "taroko", "emu800", "puyuma"]
 
     /// Decision 408: the set a train of `key` numbered `number` is drawn
     /// as: half the high-speed trains, the odd-numbered, the N700S-G, the
     /// rest the 700T. Decision 338 (second later): while the N700S-G is in
     /// `locked` (the train pack's), every one of them the 700T, its far
-    /// set ``highSpeedFar``.
+    /// set ``highSpeedFar``. Decision 427: every push-pull Tze-Chiang, odd
+    /// or even, the E1000 look unless `locked` has `pushPullE1000`.
     public static func variant(of key: String, number: Int, locked: Set<String> = []) -> String {
-        guard named(key)?.key == "highSpeed", number % 2 != 0, !locked.contains("n700sG") else { return key }
-        return "n700sG"
+        switch named(key)?.key {
+        case "highSpeed" where number % 2 != 0 && !locked.contains("n700sG"):
+            return "n700sG"
+        case "pushPull" where !locked.contains("pushPullE1000"):
+            return "pushPullE1000"
+        default:
+            return key
+        }
     }
 
     /// Decision 408: the number at the end of a real train's key
@@ -301,15 +312,28 @@ public struct Map3DTrainSet: Sendable {
 
     /// The push-pull Tze-Chiang as it runs since TRA's timetable of
     /// 2026-07-01 (decision 425): the PP coaches with an E500 at each end,
-    /// the E1000 power cars having left service (``Map3DE1000`` stays in the
-    /// pack as a display asset). The standard PPT is the one operating
+    /// the E1000 power cars having left service (decision 427: they are the
+    /// train pack's classic look, `power` `.e1000`). The standard PPT is the one operating
     /// middle role; special PP roles are separate display assets, not
     /// invented positions in the game's variable-length formations.
-    static func ppHauled(far: Bool = false) -> Map3DTrainSet {
-        Map3DTrainSet(key: far ? "pushPullFar" : "pushPull", ownLengths: true,
-                      far: far ? nil : "pushPullFar") {
-            Cars(head: Map3DE500.model(far: far),
+    static func ppHauled(_ power: PushPullPower = .e500, far: Bool = false) -> Map3DTrainSet {
+        let key = power.key
+        return Map3DTrainSet(key: far ? key + "Far" : key, ownLengths: true,
+                             far: far ? nil : key + "Far") {
+            Cars(head: power.model(far: far),
                  middle: Map3DPPPassenger.model(.ppt1000, far: far), tail: nil, single: nil)
+        }
+    }
+
+    /// Decision 427: the power car at each end of a push-pull Tze-Chiang
+    /// set, and the set's key.
+    enum PushPullPower {
+        case e500, e1000
+
+        var key: String { self == .e500 ? "pushPull" : "pushPullE1000" }
+
+        func model(far: Bool) -> Map3DModelPack.Model {
+            self == .e500 ? Map3DE500.model(far: far) : Map3DE1000.model(far: far)
         }
     }
 

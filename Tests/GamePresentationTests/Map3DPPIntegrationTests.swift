@@ -94,7 +94,7 @@ final class Map3DPPIntegrationTests: XCTestCase {
     }
 
     func testTrainPackAndFallbackRulesRemainIndependentOfThePPDisplayAssets() throws {
-        XCTAssertEqual(TrainPack.sets, ["threeCarUrban", "fiveSectionLRT", "sevenSectionLRT", "fourCarMetro", "blueSeven", "n700sG"])
+        XCTAssertEqual(TrainPack.sets, ["threeCarUrban", "fiveSectionLRT", "sevenSectionLRT", "fourCarMetro", "blueSeven", "n700sG", "pushPullE1000"])
         var locked = pack
         locked.locked = TrainPack.locked(unlocked: false)
         for count in [3, 12] {
@@ -106,5 +106,42 @@ final class Map3DPPIntegrationTests: XCTestCase {
         XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 1, locked: locked.locked), "HSR")
         XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 1), "n700sG")
         XCTAssertNil(pack.models(forType: "pp-e500-display"))
+    }
+
+    /// Decision 427: the train pack's E1000 look has an E1000 at each end of
+    /// the same PP coaches, near and far; the far set has fewer triangles.
+    func testTheE1000LookIsE1000AtBothEndsOfTheSamePPCoaches() throws {
+        for far in [false, true] {
+            let key = far ? "pushPullE1000Far" : "pushPullE1000"
+            let set = try XCTUnwrap(Map3DTrainSet.named(key))
+            XCTAssertTrue(set.ownLengths)
+            XCTAssertEqual(set.far, far ? nil : "pushPullE1000Far")
+            XCTAssertEqual(payload(try model(set.headName)), payload(Map3DE1000.model(far: far)))
+            XCTAssertEqual(payload(try model(set.middleName)), payload(Map3DPPPassenger.model(.ppt1000, far: far)))
+            XCTAssertNil(pack.index(of: set.tailName), "the last power car is the head turned around")
+            for count in [1, 2, 3, 12] {
+                for car in 0..<count {
+                    let atEnd = car == 0 || car == count - 1
+                    let expected = try XCTUnwrap(pack.index(of: atEnd ? set.headName : set.middleName))
+                    XCTAssertEqual(pack.modelIndex(forType: key, carIndex: car, count: count), expected)
+                    XCTAssertEqual(pack.isTurned(forType: key, carIndex: car, count: count), count > 1 && car == count - 1)
+                }
+            }
+        }
+        let near = try model("set-pushPullE1000-head"), far = try model("set-pushPullE1000Far-head")
+        XCTAssertLessThan(far.triangleCount, near.triangleCount)
+        XCTAssertLessThan(try model("set-pushPullE1000Far-car").triangleCount, try model("set-pushPullE1000-car").triangleCount)
+        XCTAssertTrue(Map3DTrainSet.nearOnly.contains("pushPullE1000"))
+    }
+
+    /// Decision 427: near 500 m the E1000 look's own model, from there its far set.
+    func testTheE1000LookSwitchesToItsFarSetAtTheSameDistance() throws {
+        for unit in ["head", "car"] {
+            let near = try XCTUnwrap(pack.index(of: "set-pushPullE1000-" + unit))
+            let far = try XCTUnwrap(pack.index(of: "set-pushPullE1000Far-" + unit))
+            XCTAssertEqual(pack.model(near, forType: "pushPullE1000", count: 12, at: 499), near)
+            XCTAssertEqual(pack.model(near, forType: "pushPullE1000", count: 12, at: 500), far)
+            XCTAssertNil(pack.model(near, forType: "pushPullE1000", count: 12, at: 900))
+        }
     }
 }

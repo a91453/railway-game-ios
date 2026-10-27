@@ -356,6 +356,53 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第十八次換手（2026-10-27 約 02:10 UTC，session_01CWaJGHR4DnSwosLCzJ2Tts 壓縮 3 次，照 §1 換 → 作者從 claude.ai 開的新規劃）**。新任開工：讀第 1 節、這一段；#1041 只讀「遊戲規劃 session_01CWaJGHR4DnSwosLCzJ2Tts 壓縮第 3 次」那則之後的留言。分工照第十七、十六次換手（不開實作 session，寫派工單給作者貼到 Claude Pro 或 Antigravity，規劃只審、小修自己推、綠了照 §1.2 合）。和下面不同時以這段為準。
+
+- **本任合併的**（都照 §1.2，每個在 #1041 有一則）：
+  - #1286、#1287（派工單 A、D）；審查 J 三段：#1290（J1）、#1293、#1297、#1298（J2 與疑點已修）；#1295（派工單 E，決策 424 續修）；#1300（決策 424 續修二，3D 公車在背景排）。
+  - TestFlight 90：#1301（What's New）、#1303（PLAYER_FEEDBACK 記 0.5.0 (90.1)）。
+  - Codex 的模型：#1291（PP 客車）、#1292（TEMU2000）、#1296＋#1302（E1000，決策 425：推拉式自強號改兩端 E500，E1000 留著）、#1306（莒光客車）、#1307（TEMU1000 車頭）。
+  - #1304（TW3D 參考包列進 CLAUDE.md）。
+  - #1308（派工單 F，決策 426：3D 普悠瑪接上 TEMU2000，`centreCars` 掛鉤）。
+  - #1313（PLAYER_FEEDBACK 90.1 回饋，NEXT_PRIORITIES §22.13）。
+  - #1314（派工單 G，決策 427：列車包的 E1000 經典外觀開關，預設 E500，每一列都換）。
+  - #1315（派工單 H：狀態列 6000× 測試改穩。原因：iOS 26 的 Menu 會重建選項列，測試拿著已經不存在的元素（kAXErrorInvalidUIElement）；改成讀到連兩次一樣的畫面再用座標點）。
+  - #1317（§22.14，另一款鐵道 App 致謝頁的五方評分）。
+- **main**：`ci.yml` 在 fba9303（#1306）push run 綠；86bbb7e（#1317）的 push run 換手時在跑（#1315 的被它取代，是正常的）。
+  - full lane 在 1b40e4f 紅兩次（run 40396358204、40413958561）。兩次都紅了 #1315 修的那支；第二次還多紅一支 iPad 的 `TutorialJourneyUITests/testTheWholeTutorialOnAnIPad`，原因還沒查。
+  - d7f1b47（#1314）的 full lane run 40434847565 換手時在跑。新任看結果：綠了就是 #1315 的真證明；還紅就照 §1.2 比對。
+- **還開著的 PR**：
+  - #1311（Codex，EMU3000 黑色改石板藍灰，ready）：HANDOFF.md 的衝突本任用合併 commit 566861d 解了，兩段都留。換手時 CI 在跑；只改模型配色，作者說合才合。
+  - #1312（Codex，EMU500 研究，draft）：作者沒說就不動。
+  - Codex 另外登記了 EMU800 原生模型（`codex/emu800-native-2026-10-27`），PR 還沒開；作者直接派的，照舊作者說合才合。
+- **派工單 I 做中**（舊存檔可以打開道路與公車）：session_01JMHz9ak2m1w5LYWDgoQWqS，branch `claude/new-session-8vlwcp`，登記了決策 428，PR 還沒開。內容：
+  - 加一個像 `.buildStationRoad` 的玩家指令，打開道路。
+  - 空白地圖用世界原本的城鎮當種子；實景地圖讀底圖的路（`readRoads`，要 `landBlocks`）。
+  - 公車工具在沒道路時顯示說明與「打開道路與公車」，按了要確認一次。
+  - 說明頁加「道路與公車」一段。
+  - 新決策「舊存檔可以打開道路與公車」，400.md 補一句。
+  - 不升存檔版本，不在讀檔時自動打開。
+  派工單原文在本任的 scratchpad，新任拿不到，作者手上有。它會動 GameCore（`RoadGrid.swift`），所以 CI 是完整 tier。PR 來了照派工單的驗收審：用 `SaveFixtures` 的副本讀進來、執行新指令、`allowsBusTool` 變 true，fixture 本身不能改。
+- **排好但還沒派的**：
+  - §22.13：
+    - 1 是派工單 I；
+    - 2「不接車站的市區公車」（2.60）和 3「玩家自己鋪路」（2.45）要一起設計，排在 §22.12 第 1 項之後。
+  - §22.14：
+    - 1 行駛聲用真錄音（3.15）：只用 CC0／CC BY，作者下載到私庫，因為雲端 session 連 Freesound 是 403；排在垃圾車那項之後。
+    - 2 慶祝粒子（3.10）：本任問過作者「要不要現在寫成派工單」，還沒答。Vortex 是 MIT，加依賴要作者同意，不然就移植程式碼、保留授權聲明；減少動態效果打開時不放粒子。
+    - 3 駕駛視角的窗上雨滴（2.70）。
+    - 4 3D 環境音（2.40）。
+- **還沒查的不穩 UI 測試**：
+  - 和 #1315 同一種寫法（點 6000× 的選項列）、還沒改的有 `LessonUITests.swift:619`、`RealWorldMapUITests.swift:797`、`TutorialJourneyUITests.swift:213`。紅了就照 #1315 的改法，可以一張派工單一起改。
+  - `StartSaveFlowSmokeTests.testBackToStartWorksWithLargeTextWhileTheClockRuns` 紅過一次，原因還不知道。
+- **決策 425 還剩一項**：查官方或私庫的編組資料，確認推拉式自強號兩端是否都是 E500。莒光的 `E500CK` 另案。
+- **TestFlight 91**：作者還沒說要發。要發時照 CLAUDE.md：那個 commit 的完整 `ci.yml`（每晚的或手動的）和 full lane 都綠才按。What's New 由規劃寫。
+- **號碼**：決策 426、427 已用，428 由派工單 I 登記；下一個可用的是 429，取之前再查一次 #1041。存檔版本 74，golden schema 74，都不動。
+- **審查點數**：從 #1288 起數，大約 7 點，還沒到 30：
+  - #1290、#1295、#1298、#1300、#1302、#1308、#1314 各 1 點；
+  - 模型、文件、只改測試的 PR 算 0 點。
+- **排程**：本任沒有還會觸發的排程，`list_triggers` 是空的。每日 Threads 排程：新任照 §1 表格建一個綁自己的。
+
 **第十七次換手（2026-10-26 約 10:30 UTC，session_01TH2DNkW2meh3EZJ1vxBczC 壓縮 3 次，第 3 次後照 §1 換 → 作者從 claude.ai 開的新規劃）**。新任開工：讀第 1 節、這一段、下面「第十六次換手」裡作者的新分工；#1041 只讀「遊戲規劃 session_01TH2DNkW2meh3EZJ1vxBczC 壓縮第 3 次」那則之後的留言。和下面不同時以這段為準。
 
 - **分工照第十六次換手**：不開 Claude Code 實作 session（作者明說才開）。規劃寫派工單（scratchpad 的 .md，用 SendUserFile 交），作者貼給 Claude Pro（$20，5 小時額度）或 Antigravity；規劃只審查，小的自己改好推上去，綠了照 §1.2 合。已確認：Claude Pro 能用作者的帳號推 branch、開 PR，但只能推到它被指定的 branch（`claude/new-session-xxxx`），不是派工單寫的 `claudepro/...`，沒關係。作者 10:10 UTC 說 5 小時額度只用了 34%：一張派工單大約用 15–20%。
@@ -372,7 +419,7 @@
   - #1287：車站面板的「怎麼搭」（決策 423 第二步，派工單 D），head 12880dc。已審：本機 build 用 `-warnings-as-errors` 乾淨、`JourneyPlanTests` 15 支過、`doc_numbers` 過。`StationPanel.swift` 的 SwiftUI 只有 iOS CI 編得到，外觀 UNVERIFIED。
 - **派工單 E 做完了，PR 等審**（決策 424 續修，branch `claude/new-session-kfvuy0`，PR 號碼在 #1041 的登記）：公車工具選了車站就在背景讀真站牌與道路圖塊（`GameSession.readBusesAhead(for:)`、`BusRoads.readAhead(round:)`），主執行緒只拿結果。量到真站牌是大頭（release 約 0.8 s），道路網的建圖只省了一部分，數字與沒選的做法在 `docs/decisions/424.md`「續修」。手機上順不順是 UNVERIFIED，作者在 TestFlight 看。
   - 已做（決策 424 續修二，PR #1300）：3D 的 `Map3DBuses` 改在背景排（`Map3DBuses.Layer`），畫格不再建道路網。
-- **派工單 R（審查 J）已交作者**：給 Claude Pro（Opus），#1242 起已合併的程式 PR 分三段審。
+- **派工單 R（審查 J）已交作者**：給 Claude Pro，#1242 起已合併的程式 PR 分三段審。
   - 每段一個 PR，交接檔是 `docs/archive/PR1242_<最後一號>_REVIEW_HANDOFF.md`。
   - P1、P2 的小修它可以順手推；動 GameCore、存檔、golden 的只寫不修。
   - 最後一段會改 §1 的「上一輪」。
@@ -1663,7 +1710,7 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 | 3D 的真實列車（決策 339）的後續：真實車站的月台與站房（真實列車現在停在沒有月台的地方）；車站卡「下一班」的真實列車版（§22.2 第 5 名後半，要替真實列車另開不是 `TrainID` 的頭）；真實軌道上的架空線；照實際車長；列車包（決策 338）合併後確認鎖住的 set 畫成方塊 | 決策 339 的「沒有選的做法」與「下一步」 |
 | 3D 駕駛室（決策 380，85.1 實機影片）：架空線放進 coarse 的 chunk、鏡頭的方向用軌道配的拋物線，兩個都在 Linux 修好。還沒做：跟車時列車附近的 chunk 多半是 coarse（城市簡化，影片三角形 100 萬 → 29 萬），決策 368 的視窗來不來得及補成完整的沒量；2D 的列車方向沒改 | 決策 380 的「下一步」 |
 | 3D 場景的記憶體（決策 368，83.1 跟車閃退）：真實地圖只在鏡頭 2 km 內蓋完整城市，板橋 1.8 GB → 763 MB。剩下最大的是遠看的簡化城市（板橋 1,050 萬頂點，約 450 MB）；App 上傳 GPU 後還留著 CPU 那份陣列，放掉可再省一半。之後加城市細節前先跑 `Map3DSceneMemoryTests.testThe3DMapRoundBanqiaoFitsAPhone` | 決策 368 的「下一步」 |
-| slop-newyork（MIT）的 3D 做法能搬哪些（研究 session_01JxqePZhgA9tQuajjP9gsPm，2026-10-23，只有文件）：建議排序 (1) 城市方塊改實例，先做 `.far`（板橋 763 MB → 約 320 MB，估）；(2) 太陽陰影貼圖用 `.far` 當替身；(3) 小零件放進固定大小的池、依像素大小剔除；假室內與合成聲音列「之後」。等 §22.2 10e 與畫風 (e)（決策 370）都合併後由遊戲規劃派 | [SLOP_NEWYORK_3D_2026-10-23.md](research/SLOP_NEWYORK_3D_2026-10-23.md) §5、§6 |
+| slop-newyork（MIT）的 3D 做法能搬哪些（研究 session_01JxqePZhgA9tQuajjP9gsPm，2026-10-23，只有文件）：建議排序 (1) 城市方塊改實例，先做 `.far`（板橋 763 MB → 約 320 MB，估）；(2) 太陽陰影貼圖用 `.far` 當替身；(3) 小零件放進固定大小的池、依像素大小剔除；假室內與合成聲音列「之後」。等 §22.2 10e 與畫風 (e)（決策 370）都合併後由遊戲規劃派 | [SLOP_NEWYORK_3D_2026-10-23.md](research/SLOP_NEWYORK_3D_2026-10-23.md) §5、§6；排行照 [NEXT_PRIORITIES](research/NEXT_PRIORITIES_2026-10-12.md) §22.15 |
 | slop-newyork 補充（session_01UvQcP14umjdnDYpqc14Ngx，2026-10-26，只有文件）：10-23 的三件都還沒做，前提已合併，可由遊戲規劃照原順序派；另加第 4 件「紅綠燈照時鐘變燈」（決策 355 的號誌現在固定一亮綠一亮紅；GamePresentation 純函式、不留狀態，合決策 259；秒數照台灣有來源的時制，含全紅），車子停紅燈是第二步另派。IDM 跟車、行人排隊、新的行人與車輛物理不搬。第 4 件改 `Map3DRoadMarkings.addStreetStops`，和第 1 件的 session 協調 | [SLOP_NEWYORK_UPDATE_2026-10-26.md](research/SLOP_NEWYORK_UPDATE_2026-10-26.md) §3.1、§4 |
 | 台灣 3D 參考包 TW3D（參考庫 release `Tai`，session_01UvQcP14umjdnDYpqc14Ngx，2026-10-26，只有文件）：slop-newyork 改的台北真實比例城市。五方排出 10 項；第 1 項「紅綠燈照時鐘變燈、台灣式燈頭」3.10，從 §22.2 第 15 名拆出來先做；第 2 項傍晚垃圾車〈給愛麗絲〉2.95。解開放在參考庫 `Railway/tw3d-reference-clean/`（railway-reference-private#89） | [NEXT_PRIORITIES_2026-10-12.md](research/NEXT_PRIORITIES_2026-10-12.md) §22.12 |
 | 兩批生成素材：generated-2026-10-13（43 張）、micro3d（24 張），沒接進 App，也沒有「採用或放棄」的紀錄 | `docs/art/generated-2026-10-13/`、`docs/art/generated-2026-10-14-micro3d/` |
@@ -1777,3 +1824,9 @@ TEMU1000 原生外形（Codex，初版 issue #1228／公開 #1230／私庫 #78 �
 ### 2026-10-27 Codex EMU800（#1316）
 
 [來源／外觀／靜態範圍／驗證交接](art/emu800-native-2026-10-27/README.md)。獨立藍面黃弧EMU800配方，ED/EMA/EP/EMB近遠正反16單元與八輛M3DAssembly。原先Q比例及通用弧形不當作正確殼；完整私有素材與雙庫draft見issue。原有EMU800 key也涵蓋EMU900性能及一般TRA通勤代表，因此**尚未接入營運**，合併沒有列車自動換用；不替換其他通勤車。241既有完整payload保持，已接受E500v3與EMU3000v5私包直接取作風格比較，PP/E1000／莒光藏青／EMU3000石板藍灰不改。Swift6.4及原生／GLB／PNG／viewer／ZIP的最終證據與同head CI見issue；人工Simulator／真機Metal效能／動畫／完整碰撞未驗。不動GameCore／存檔／fixtures／玩法，不推main、不合併／auto-merge／TestFlight。
+
+### 2026-10-27 Codex EMU3000 石板藍灰（#1309）
+
+使用者要求評估莒光藏青（建議保持，本輪不改）及EMU3000黑色外觀改遊戲風格。新分支codex/emu3000-slate-2026-10-27；原66a515e8第五版幾何／其他色保持，只改罩面、窗框與外觀飾件為既有石板藍灰#6E7487，輪胎／雨刷／底盤／弓機構拆出hardwareColor保持舊炭黑。16單元逐三角paint-audit及真正第五版同尺度前後、全量素材／viewer／ZIP見[交接](art/emu3000-slate-2026-10-27/README.md)。已接受第五版原包及E500／PP／E1000／莒光藏青保持；新色未稱已接受，也不保證換色可免侵權風險。
+
+營運接點／列車包／fallback保持；本PR合併更新後，原專用EMU3000近遠畫面會使用新色。GameCore／存檔／fixtures不動；真機／效能／人工Simulator外觀／動畫未驗。兩庫新互鏈draft與最新同head CI看#1309，不推main、不合併／auto-merge／TestFlight。
