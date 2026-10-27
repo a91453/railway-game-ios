@@ -283,22 +283,30 @@ final class Map3DRoadMarkingTests: XCTestCase {
                                                                    bounds: everywhere, bridgeLevel: 1)), .none)
         XCTAssertTrue((1.1...1.8).contains(Map3DRoadMarkings.walkwayBand))
         let lane = road(.minor, [(0, 0), (0, 200)])
-        let markings = Map3DRoadMarkings([road(.primary, [(-200, 0), (0, 0), (200, 0)]), lane])
-        let walkway = markings.marks.filter { if case .walkway = $0.kind { return true } else { return false } }
-        XCTAssertEqual(walkway.filter { $0.kind == .walkway(line: false) }.count, 1)
-        XCTAssertEqual(walkway.filter { $0.kind == .walkway(line: true) }.count, 2)
-        let side = Map3DRoadMarkings.walkwaySide(lane, origin: Point(x: 0, z: 0))
-        for mark in walkway {
+        func walkway(_ lane: Map3DBaseMap.Road) -> [Map3DRoadMarkings.Mark] {
+            Map3DRoadMarkings([road(.primary, [(-200, 0), (0, 0), (200, 0)]), lane]).marks.filter {
+                if case .walkway = $0.kind { return true } else { return false }
+            }
+        }
+        let marks = walkway(lane), bands = marks.filter { $0.kind == .walkway(line: false) }
+        // A band and its two lines, in pieces no longer than a kerb's.
+        XCTAssertEqual(marks.filter { $0.kind == .walkway(line: true) }.count, 2 * bands.count)
+        XCTAssertEqual(bands.map(\.length).reduce(0, +), 200 - 4.5 - 1, accuracy: 1e-9)
+        XCTAssertTrue(marks.allSatisfy { $0.length <= Map3DRoadMarkings.kerbPiece + 1e-9 })
+        let side = marks[0].centre.x > 0 ? 1.0 : -1.0
+        for mark in marks {
             // Along the lane, on its one side, inside its 5 m.
             XCTAssertEqual(abs(mark.along.z), 1, accuracy: 1e-9)
-            XCTAssertEqual((mark.centre.x > 0 ? 1.0 : -1.0), side * (mark.along.z > 0 ? -1 : 1))
+            XCTAssertEqual(mark.centre.x > 0 ? 1.0 : -1.0, side)
             XCTAssertLessThanOrEqual(abs(mark.centre.x) + mark.width / 2, 2.5 + 1e-9)
             // Not across the primary road: from its kerb and a metre on.
             XCTAssertGreaterThanOrEqual(mark.centre.z - mark.length / 2, 4.5 + 1 - 1e-9)
         }
-        // The same lane from another tile keeps its side; a service road
-        // has none.
-        XCTAssertEqual(Map3DRoadMarkings.walkwaySide(lane, origin: Point(x: 0, z: 0)), side)
+        // The lane drawn the other way, or another tile's copy of it
+        // starting elsewhere: the band on the same side.
+        XCTAssertTrue(walkway(road(.minor, [(0, 200), (0, 0)])).allSatisfy { ($0.centre.x > 0 ? 1.0 : -1.0) == side })
+        XCTAssertTrue(walkway(road(.minor, [(0, 0), (0, 90), (0, 200)])).allSatisfy { ($0.centre.x > 0 ? 1.0 : -1.0) == side })
+        // A service road has none.
         XCTAssertTrue(Map3DRoadMarkings([road(.service, [(0, 0), (0, 200)])]).marks.isEmpty)
     }
 

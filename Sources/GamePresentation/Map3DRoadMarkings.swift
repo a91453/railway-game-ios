@@ -254,7 +254,7 @@ struct Map3DRoadMarkings {
             addKerbs(road, number: number, lengths: lengths(number))
         }
         for (number, road) in roads.enumerated() where Self.walkway(road) == .painted && road.points.count >= 2 {
-            addWalkway(road, number: number, lengths: lengths(number), origin: origin)
+            addWalkway(road, number: number, lengths: lengths(number))
         }
     }
 
@@ -267,19 +267,19 @@ struct Map3DRoadMarkings {
     static let walkwayLine = 0.1
     static let walkwayInset = 0.05
 
-    /// Which side of `road` its painted walkway is on, from where the road
-    /// starts in the world (the same from every tile): 1 its right, −1
-    /// its left.
-    static func walkwaySide(_ road: Map3DBaseMap.Road, origin: Map3DBaseMap.Point) -> Double {
-        let start = road.points[0]
-        let x = Int32(truncatingIfNeeded: Int(((start.x + origin.x) * 2).rounded())), z = Int32(truncatingIfNeeded: Int(((start.z + origin.z) * 2).rounded()))
-        return map3DRandom(x, z, salt: 447) < 0.5 ? 1 : -1
+    /// Which side of a stretch of lane going `way` its painted walkway is
+    /// on: 1 its right, −1 its left. From the way alone, so the lane's
+    /// copies in every tile, and the lane drawn either way, agree: the
+    /// side to the right of a heading a little north of east (a lane
+    /// along a street grid never turns the band over between blocks).
+    static func walkwaySide(_ way: Map3DBaseMap.Point) -> Double {
+        way.x * 0.94 - way.z * 0.34 >= 0 ? 1 : -1
     }
 
     /// Decision 447 (continued): `road`'s painted walkway, segment by
     /// segment, left out across the mouths of the roads meeting it.
-    private mutating func addWalkway(_ road: Map3DBaseMap.Road, number: Int, lengths sums: [Double], origin: Map3DBaseMap.Point) {
-        let cut = kerbCuts[number] ?? [], side = Self.walkwaySide(road, origin: origin)
+    private mutating func addWalkway(_ road: Map3DBaseMap.Road, number: Int, lengths sums: [Double]) {
+        let cut = kerbCuts[number] ?? []
         let half = Double(road.kind.width(ramp: false)) / 2
         let outer = half - Self.walkwayInset - Self.walkwayLine / 2, inner = outer - Self.walkwayLine - Self.walkwayBand
         let band = (outer + inner) / 2
@@ -290,8 +290,12 @@ struct Map3DRoadMarkings {
             for range in cut {
                 for edge in [range.lowerBound, range.upperBound] where edge > start && edge < start + length { stops.append(edge - start) }
             }
+            // As the kerb lines: no piece longer than a tile's own.
+            var piece = 0.0
+            while piece + Self.kerbPiece < length { piece += Self.kerbPiece; stops.append(piece) }
             stops.sort()
-            let way = Map3DBaseMap.Point(x: (b.x - a.x) / length, z: (b.z - a.z) / length), right = Map3DBaseMap.Point(x: -way.z * side, z: way.x * side)
+            let way = Map3DBaseMap.Point(x: (b.x - a.x) / length, z: (b.z - a.z) / length), side = Self.walkwaySide(way)
+            let right = Map3DBaseMap.Point(x: -way.z * side, z: way.x * side)
             for (from, to) in zip(stops, stops.dropFirst()) where to - from > 0.5 {
                 let centre = Map3DBaseMap.Point(x: a.x + way.x * (from + to) / 2, z: a.z + way.z * (from + to) / 2)
                 guard !cut.contains(where: { $0.contains(start + (from + to) / 2) }), Self.inside(centre, road.bounds) else { continue }
