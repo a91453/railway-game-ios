@@ -42,6 +42,7 @@
 		230CF50ABD22FC093F7C16FD /* NightSkipChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12998D87B1570EBD259935E7 /* NightSkipChip.swift */; };
 		231927FCE953BD76302D19BE /* TutorialTargets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E01CB29C26C0F92124DEE0C /* TutorialTargets.swift */; };
 		24BDC33BAEB05C1B78B39AE5 /* MapLibre in Frameworks */ = {isa = PBXBuildFile; productRef = FD2BB5E656E35262DF9997FA /* MapLibre */; };
+		2517C778FB306F8732C9F41B /* garbage-truck.caf in Resources */ = {isa = PBXBuildFile; fileRef = DF53C2E1CD8814F61A774072 /* garbage-truck.caf */; };
 		266AA81B04211B92B8550B73 /* real_buses_Taipei.json in Resources */ = {isa = PBXBuildFile; fileRef = 86EFBF7E9AB1A12807716F74 /* real_buses_Taipei.json */; };
 		2733FFE60203B4AA0059ECFD /* RailwayGameApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D5672CF6C6C6FF4659709AE /* RailwayGameApp.swift */; };
 		2829D526B58B594CFF039231 /* StationPairDrawer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10C54A651E2F6DD601FA3F15 /* StationPairDrawer.swift */; };
@@ -70,6 +71,7 @@
 		47D1900E3FE4045E389BE121 /* Map3DSigns.png in Resources */ = {isa = PBXBuildFile; fileRef = 782C96DBD713D96F9EADF2EE /* Map3DSigns.png */; };
 		47D7D11A0F4705BFD3BE7E6A /* Map3DSurfaces.png in Resources */ = {isa = PBXBuildFile; fileRef = 70170091E76358BF8886BB8E /* Map3DSurfaces.png */; };
 		481A5F7BE0BA94DF2592045D /* tmrt_ridership.json in Resources */ = {isa = PBXBuildFile; fileRef = 05F7A5F3105B96C3E70DF1AA /* tmrt_ridership.json */; };
+		4850EFE156B582D7BA6FD80E /* recycling-truck.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = 9BA4B300768652735C9F8702 /* recycling-truck.m3dmodel */; };
 		4936E4C3E4EF4FA3E29C6989 /* MapArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = A92B62C199B3DE4F7602175F /* MapArt.swift */; };
 		4AC759850C82A45A974174C0 /* RealWorldLoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 148B6BCCE51E5F5D112B8C8D /* RealWorldLoadingView.swift */; };
 		4BD9A2C2F541EB4CE36CA67B /* sanying.json in Resources */ = {isa = PBXBuildFile; fileRef = 92FBF87A0B909AF9C100FC70 /* sanying.json */; };
@@ -180,6 +182,7 @@
 		B8B325969899BBA81E72BD3B /* MonthlyReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFC0DA778E9B720DF0A4177A /* MonthlyReport.swift */; };
 		BB5F13C5775274242DF7E68C /* PostcardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEAD664FAAE1ADFB437DDCA2 /* PostcardView.swift */; };
 		BD4D73964A95133885864DC2 /* tmrt_times.json in Resources */ = {isa = PBXBuildFile; fileRef = 3EDAFCBFB7EEDE187DEFCAB1 /* tmrt_times.json */; };
+		BDB3AC8DDFE7405D16CEC00F /* garbage-truck.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = 3D0BB76CFCE33B148C01AADC /* garbage-truck.m3dmodel */; };
 		BEF6C6FD0A62EBDEDD8E4244 /* MapConstructionHUD.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BB64062D209FDE3EC54BAE7 /* MapConstructionHUD.swift */; };
 		C067788F4EEC569365740088 /* ICloudSaveFolder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F535381372C4F02DE0EF39B /* ICloudSaveFolder.swift */; };
 		C1EFF57A2944814982E3D1E7 /* TickStable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66DEEFE5F63CD7DD3B715B3B /* TickStable.swift */; };
@@ -307,6 +310,7 @@
 		3A47FE76CCB95D1AB460CE99 /* AppleMapBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMapBackground.swift; sourceTree = "<group>"; };
 		3B5995200C877BF409F730A8 /* WhatsNewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhatsNewView.swift; sourceTree = "<group>"; };
 		3BA3B0B2889A228FC08F83B8 /* TutorialUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialUITests.swift; sourceTree = "<group>"; };
+		3D0BB76CFCE33B148C01AADC /* garbage-truck.m3dmodel */ = {isa = PBXFileReference; path = "garbage-truck.m3dmodel"; sourceTree = "<group>"; };
 		3D5BF8179644D02716F92269 /* OneShotLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OneShotLocation.swift; sourceTree = "<group>"; };
 		3EDAFCBFB7EEDE187DEFCAB1 /* tmrt_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tmrt_times.json; sourceTree = "<group>"; };
 		3FC137C507F9A22C91174E71 /* NetworkOverview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkOverview.swift; sourceTree = "<group>"; };
@@ -385,6 +389,7 @@
 		937E1D33FAD3FAD9CF5A6E8C /* LineConfirmationCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LineConfirmationCard.swift; sourceTree = "<group>"; };
 		95B22F52AC2B7370C697A499 /* tra_track_sections.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra_track_sections.json; sourceTree = "<group>"; };
 		9A68301E79140AEFC540BBA0 /* TrainControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainControls.swift; sourceTree = "<group>"; };
+		9BA4B300768652735C9F8702 /* recycling-truck.m3dmodel */ = {isa = PBXFileReference; path = "recycling-truck.m3dmodel"; sourceTree = "<group>"; };
 		9BDC97F7CE4B4CD1486F8245 /* TourismPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TourismPanel.swift; sourceTree = "<group>"; };
 		9BE814C300C924D2C6F37C10 /* real_buses_HualienCounty.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = real_buses_HualienCounty.json; sourceTree = "<group>"; };
 		9D5672CF6C6C6FF4659709AE /* RailwayGameApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RailwayGameApp.swift; sourceTree = "<group>"; };
@@ -451,6 +456,7 @@
 		DA79BA929F6262FB0DD353E2 /* BaseMap */ = {isa = PBXFileReference; lastKnownFileType = folder; name = BaseMap; path = Resources/BaseMap; sourceTree = SOURCE_ROOT; };
 		DBFC7FA3ED09CBDFFAD8866F /* run-highspeed.caf */ = {isa = PBXFileReference; path = "run-highspeed.caf"; sourceTree = "<group>"; };
 		DE2E4A53A2F134FC8BD9D4F7 /* NewsLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewsLogView.swift; sourceTree = "<group>"; };
+		DF53C2E1CD8814F61A774072 /* garbage-truck.caf */ = {isa = PBXFileReference; path = "garbage-truck.caf"; sourceTree = "<group>"; };
 		DF79937B71C73C05EB0285FF /* PerformanceMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceMenu.swift; sourceTree = "<group>"; };
 		E2038D64EB91D02F90FE6716 /* ntdlrt.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ntdlrt.json; sourceTree = "<group>"; };
 		E4631B47557CC9944903820E /* refused.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = refused.wav; sourceTree = "<group>"; };
@@ -755,6 +761,8 @@
 			isa = PBXGroup;
 			children = (
 				1CAB3E0CCFE9D4ED77A05057 /* city-bus.m3dmodel */,
+				3D0BB76CFCE33B148C01AADC /* garbage-truck.m3dmodel */,
+				9BA4B300768652735C9F8702 /* recycling-truck.m3dmodel */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -782,6 +790,7 @@
 				634F11070F2F2510BBBA5D96 /* chime-tourist-motif.wav */,
 				52449D8DCD618CC726CACDDE /* chime-tourist.wav */,
 				825875E22D08C0197C0EC180 /* coins.wav */,
+				DF53C2E1CD8814F61A774072 /* garbage-truck.caf */,
 				F9D622682F53E544329A323C /* goal-met.wav */,
 				536AA1661B8D1E023E8B015C /* horn-diesel.wav */,
 				35360EB7E5764FCB1FFB46EA /* horn-electric.wav */,
@@ -963,6 +972,8 @@
 				CDB469C7BE7C6097272449BE /* chime-tourist.wav in Resources */,
 				B7D75586702143678A6E56E2 /* city-bus.m3dmodel in Resources */,
 				CE4A55FA3D5A13F0CFC0FFAA /* coins.wav in Resources */,
+				2517C778FB306F8732C9F41B /* garbage-truck.caf in Resources */,
+				BDB3AC8DDFE7405D16CEC00F /* garbage-truck.m3dmodel in Resources */,
 				8A77E1AFF3E0508D9C8C15CA /* goal-met.wav in Resources */,
 				85C1FCAF943A8E51ED75EC46 /* horn-diesel.wav in Resources */,
 				E85B627E457741AEE1EBFC59 /* horn-electric.wav in Resources */,
@@ -1010,6 +1021,7 @@
 				E4E4E36FEBEF998F117D2409 /* real_buses_YilanCounty.json in Resources */,
 				32C1BFF8BFF1C89EF38AAD5C /* real_buses_YunlinCounty.json in Resources */,
 				027E54A5C85E5929C11956A3 /* real_buses_index.json in Resources */,
+				4850EFE156B582D7BA6FD80E /* recycling-truck.m3dmodel in Resources */,
 				585C09A427696BD99073713D /* refused.wav in Resources */,
 				90D833E8F70651BA68429E5D /* run-electric.caf in Resources */,
 				74BD5B61914AE9365DF955E5 /* run-highspeed.caf in Resources */,

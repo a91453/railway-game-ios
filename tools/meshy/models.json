@@ -57,6 +57,26 @@
       "front": "-x",
       "length_m": 12,
       "out": null
+    },
+    {
+      "id": "garbage-truck",
+      "use": "The evening garbage truck (垃圾車) of the native 3D map's streets (decision 437); made in the owner's batch Railway/meshy-batch-2026-10 (its glb-lod remesh)",
+      "prompt": "Taiwan municipal garbage collection truck (垃圾車), long and low: a small cab at the front, behind it a rear-loading compactor body no taller than 1.3 times the cab, with a wide loading opening at the very back, six wheels, about 6.5 m long, 2.3 m wide and only 2.8 m tall. Solid simple body, a small amber beacon on the cab roof. Single object only, clean simple stylised shapes, no text, no logos, no base, no ground, no people.",
+      "texture_prompt": "The whole truck body is one uniform bright yellow: the cab AND the entire rear compactor box are the same solid bright yellow, flat colour with no gradient. Only the wheels and bumper are black, the cab windows light blue, a small orange beacon on the cab roof. Nothing on the box is grey. No text, no logos, no wear or dirt.",
+      "target_polycount": null,
+      "front": "-x",
+      "length_m": 6.5,
+      "out": null
+    },
+    {
+      "id": "recycling-truck",
+      "use": "The recycling truck (資源回收車) that follows the garbage truck (decision 437); made in the owner's batch Railway/meshy-batch-2026-10 (its glb)",
+      "prompt": "Taiwan recycling collection truck, long and low: a small cab at the front and one long, completely empty, flat open cargo bed behind it with low straight side rails and a plain flat floor, six wheels, about 6.5 m long, 2.3 m wide and only 2.6 m tall. Nothing sits on the bed, no boxes, no bins, no extra parts. Single object only, low poly game asset, flat colors, clean simple shapes, no text, no logos, no base, no ground, no people.",
+      "texture_prompt": "Flat colours only, no text, no logos, no wear or dirt. Light green cab and body, grey flat cargo bed and rails, black wheels, light blue cab windows.",
+      "target_polycount": null,
+      "front": "-x",
+      "length_m": 6.5,
+      "out": null
     }
   ]
 }
