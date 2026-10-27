@@ -12,7 +12,7 @@ export function assemblyNative(buffer) {
  for(const p of scene.placements){
   const b=units.get(p.unit),s=new DataView(b.buffer),n=s.getUint32(8,true),start=16+Math.ceil(s.getUint32(12,true)/4)*4;
   new Uint8Array(out,dest,n*52).set(b.subarray(start));
-  for(let i=0;i<n;i++)for(let j=0;j<3;j++)for(let axis=0;axis<3;axis++){const at=dest+i*52+4+j*16+axis*4;d.setFloat32(at,Math.fround(d.getFloat32(at,true)+Math.fround(p.translation[axis])),true);}
+  for(let i=0;i<n;i++)for(let j=0;j<3;j++)for(let axis=0;axis<3;axis++){const at=dest+i*52+4+j*16+axis*4;const value=Math.fround(d.getFloat32(at,true)+Math.fround(p.translation[axis]));d.setFloat32(at,axis===1 && value===0 ? -0 : value,true);}
   dest+=n*52;
  }
  return out;

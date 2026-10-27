@@ -38,11 +38,17 @@ for m in json.loads((root/'manifest.json').read_text())['models']:
  t=read(root/m['native']);volume=audit(t)
  # Native rail datum: all 8 tyre rings have 0 m low points.
  if m['category']=='section':
-  for bx in [-7.8,7.8]:
-   for ax in [-1.05,1.05]:
-    for side in [-1,1]:
-     v=t.reshape(-1,3);q=v[(abs(v[:,0]-bx-ax)<0.431)&(abs(v[:,1]-side*0.75)<0.11)&(v[:,2]<0.9)]
-     assert len(q)>0 and abs(q[:,2].min())<1e-5,'tyre off rail'
+  def rail_contact(vertices):
+   for bx in [-7.8,7.8]:
+    for ax in [-1.05,1.05]:
+     for side in [-1,1]:
+      q=vertices[(abs(vertices[:,0]-bx-ax)<0.431)&(abs(vertices[:,1]-side*0.75)<0.11)&(vertices[:,2]<0.9)]
+      assert len(q)>0 and abs(q[:,2].min())<1e-5,'tyre off rail'
+  rail_contact(t.reshape(-1,3))
+  lifted=t.reshape(-1,3).copy();lifted[:,2]+=0.10
+  try:rail_contact(lifted)
+  except AssertionError:pass
+  else:raise AssertionError('100 mm lifted wheel fault was not rejected')
   # Underfloor has clearance, roof HVAC base and side windows physically meet shell layers.
   assert t[:,:,2].min()>-1e-5
  for damaged in [t[1:],np.concatenate([t[:1,::-1],t[1:]])]:
@@ -50,5 +56,5 @@ for m in json.loads((root/'manifest.json').read_text())['models']:
   except AssertionError:pass
   else:raise AssertionError('mesh fault was not detected')
  rows.append({'id':m['id'],'signed_volume_m3':volume,'triangle_count':len(t)})
-(root/'geometry-verification.json').write_text(json.dumps({'status':'VERIFIED','checks':['nondegenerate finite native triangles','balanced directed edges (closed composite parts)','positive signed volume','eight tyre rail contacts per unit','missing-face and reversed-face failure cases rejected'],'limits':['composite solids overlap at mounts; no Boolean union','full intersections and hidden equipment support not exhaustively checked'],'models':rows},indent=2)+'\n')
+(root/'geometry-verification.json').write_text(json.dumps({'status':'VERIFIED','checks':['nondegenerate finite native triangles','balanced directed edges (closed composite parts)','positive signed volume','eight tyre rail contacts per unit','missing-face and reversed-face failure cases rejected','100 mm lifted wheel fault rejected'],'limits':['composite solids overlap at mounts; no Boolean union','full intersections and hidden equipment support not exhaustively checked'],'models':rows},indent=2)+'\n')
 print('VERIFIED native closure, winding, volumes, tyre contacts and mesh fault rejection')

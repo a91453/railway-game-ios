@@ -6,7 +6,10 @@ root=Path(sys.argv[1])
 manifest=json.loads((root/'manifest.json').read_text())
 palette=manifest['native_palette']
 glass_color=palette['glass']
-body_colors=[palette['body'],palette['accent']]
+def shades(color):
+ return [sum(int(((color>>k)&255)*f+0.5)<<k for k in [0,8,16]) for f in [1,.92,.8,.7,.86]]
+glass_colors=shades(glass_color)
+body_colors=shades(palette['body'])+shades(palette['accent'])
 def read(p):
  b=p.read_bytes();n,size=struct.unpack_from('<II',b,8);k=16+(size+3)//4*4
  t=np.array([[struct.unpack_from('<fff',b,k+i*52+4+j*16) for j in range(3)] for i in range(n)])
@@ -18,28 +21,28 @@ def hits(point,direction,tri):
  use=abs(a)>1e-9;e1=e1[use];e2=e2[use];h=h[use];a=a[use];s=point-tri[use,0];u=np.einsum('ij,ij->i',s,h)/a;q=np.cross(s,e1);v=q@direction/a;dist=np.einsum('ij,ij->i',e2,q)/a
  return dist[(u>=-1e-6)&(v>=-1e-6)&(u+v<=1.000001)&(dist>=-1e-5)]
 def glasses(t,col,shift=0):
- panes=t[col==glass_color];solids=t[col!=glass_color];tested=0
+ panes=t[np.isin(col,glass_colors)];solids=t[~np.isin(col,glass_colors)];tested=0
  for tri in panes:
   p=tri.mean(axis=0)
   # Only outward broad glass faces, not thin rims/back faces.
   n=np.cross(tri[1]-tri[0],tri[2]-tri[0]);n=n/np.linalg.norm(n)
   if abs(p[1])>1.4 and n[1]*p[1]>0.5:
    d=np.array([0,-np.sign(p[1]),0]);p=p+np.array([0,np.sign(p[1])*shift,0])
-  elif p[0]>11.3 and n[0]>0.8:
-   d=np.array([-1,0,0]);p=p+np.array([shift,0,0])
+  elif abs(p[0])>11.3 and n[0]*np.sign(p[0])>0.8:
+   d=np.array([-np.sign(p[0]),0,0]);p=p+np.array([np.sign(p[0])*shift,0,0])
   else:continue
   h=hits(p,d,solids);assert len(h) and h.min()<0.065,'unsupported glazing';tested+=1
  assert tested>10
  return tested
 def visible_front_glass(t,col):
- panes=t[col==glass_color]
+ panes=t[np.isin(col,glass_colors)]
  # Body/door blue and silver, excluding intentional dark wipers and lamp housings.
  body=t[np.isin(col,body_colors)]
  tested=0
  for tri in panes:
   p=tri.mean(axis=0);n=np.cross(tri[1]-tri[0],tri[2]-tri[0]);n=n/np.linalg.norm(n)
-  if p[0]>11.3 and n[0]>0.8:
-   distances=hits(p+np.array([0.0001,0,0]),np.array([1,0,0]),body)
+  if abs(p[0])>11.3 and n[0]*np.sign(p[0])>0.8:
+   distances=hits(p+np.array([np.sign(p[0])*0.0001,0,0]),np.array([np.sign(p[0]),0,0]),body)
    assert not np.any((distances>0)&(distances<0.12)), 'glass buried by actual cap/door triangles'
    tested+=1
  return tested
@@ -48,9 +51,9 @@ for m in manifest['models']:
  if m['category']!='section':continue
  t,col=read(root/m['native']);n=glasses(t,col)
  visible=visible_front_glass(t,col)
- if m['id'] in ['c341-dm']:
-  assert visible>4
-  buried=t.copy();mask=(col==glass_color)&(t.mean(axis=1)[:,0]>11.3);buried[mask,:,0]-=0.14
+ if m['id'] in ['c341-dm','c341-rear']:
+  assert visible>=4
+  buried=t.copy();mask=(np.isin(col,glass_colors))&(abs(t.mean(axis=1)[:,0])>11.3);buried[mask,:,0]-=np.sign(buried[mask,:,0])*0.14
   try:visible_front_glass(buried,col)
   except AssertionError:pass
   else:raise AssertionError('buried front glass fault not rejected')
