@@ -154,6 +154,8 @@ final class Map3DModelTests: XCTestCase {
     /// white); only a diving high-speed nose sweeps its body colour over
     /// the top to the tip.
     func testTheNoseTopIsTheRoofsColourButOnAHighSpeedNose() throws {
+        // The recipes' colours, before decision 439's shade.
+        let pack = Map3DModelPack.unbaked
         for style in Map3DTrainStyle.all where style.nose > 0 {
             let model = pack.models[try XCTUnwrap(pack.index(of: style.name + "-cab"))]
             let top = style.floor + 0.9 * (style.roof - style.floor)

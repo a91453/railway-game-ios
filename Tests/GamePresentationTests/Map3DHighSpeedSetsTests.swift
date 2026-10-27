@@ -7,7 +7,7 @@ import XCTest
 /// N700S-G (the author's mesh), each car its own length; #900's light 700T drawn past the
 /// 700T's reach; #1201's E200 the Chu-Kuang's locomotive.
 final class Map3DHighSpeedSetsTests: XCTestCase {
-    private let pack = Map3DModelPack.standard
+    private let pack = Map3DModelPack.unbaked  // the recipes before decision 439's shade
 
     private func model(_ name: String) throws -> Map3DModelPack.Model {
         pack.models[try XCTUnwrap(pack.index(of: name), name)]

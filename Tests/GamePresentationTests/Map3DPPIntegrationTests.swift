@@ -5,7 +5,7 @@ import XCTest
 /// PP coaches have one operating contact, the push-pull set, drawn since
 /// decision 425 with an E500 at each end.
 final class Map3DPPIntegrationTests: XCTestCase {
-    private let pack = Map3DModelPack.standard
+    private let pack = Map3DModelPack.unbaked  // the recipes before decision 439's shade
 
     private func model(_ name: String) throws -> Map3DModelPack.Model {
         pack.models[try XCTUnwrap(pack.index(of: name), name)]

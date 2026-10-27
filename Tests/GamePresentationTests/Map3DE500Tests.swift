@@ -20,7 +20,7 @@ final class Map3DE500Tests: XCTestCase {
         }
     }
     func testPackActuallySelectsNearFarAndExistingBoxFallback() throws {
-        let pack=Map3DModelPack.standard
+        let pack=Map3DModelPack.unbaked
         for key in ["E500CK", "MINGRI", "STAR"] {
             let near=try XCTUnwrap(pack.index(of:"set-"+key+"-head"))
             let far=try XCTUnwrap(pack.index(of:"set-"+key+"Far-head"))
