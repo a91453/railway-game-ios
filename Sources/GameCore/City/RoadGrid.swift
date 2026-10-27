@@ -160,6 +160,20 @@ extension GameWorld {
         roads = grid
     }
 
+    /// Turns the roads on in a game that started without them (decision
+    /// 428: a save from before decision 400, or a map whose new games had
+    /// none), as ``enableRoads(towns:)`` does, and gives the tiles a blank
+    /// map's company bought their towns' roads too
+    /// (``seedBoughtTilesRoads()``). Free, as in a new game. Once on, they
+    /// stay on.
+    ///
+    /// - Throws: ``GameError/roadsEnabled`` when the world has roads.
+    public mutating func turnOnRoads(towns: [PlanPoint]) throws(GameError) {
+        guard roads == nil else { throw .roadsEnabled }
+        enableRoads(towns: towns)
+        seedBoughtTilesRoads()
+    }
+
     /// Adds `towns` to `grid`'s, each with the 3 × 3 square of cells round
     /// its middle that are off the water and steep slopes; a town outside
     /// the world, or in the cell of one `grid` has, is left out.

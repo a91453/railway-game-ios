@@ -544,10 +544,11 @@ extension GameWorld {
 }
 
 extension GameSession {
-    /// Whether the bus tool is open: in a game with roads, outside the
-    /// tutorial and the lessons.
+    /// Whether the bus tool draws routes: in a game with roads, outside
+    /// the tutorial and the lessons. Without roads it offers to turn them
+    /// on (``roadsOffer``, decision 428).
     public var allowsBusTool: Bool {
-        world.roads != nil && tutorial == nil && lesson == nil
+        world.roads != nil && offersBusTool
     }
 
     /// A tap with the bus tool at `point`, reaching `reach`: the first picks

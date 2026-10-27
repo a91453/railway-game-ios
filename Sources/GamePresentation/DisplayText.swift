@@ -576,6 +576,8 @@ extension GameError {
             language.text("This line can't be bought as it is.", "這條線現在不能收購。")
         case .roadsNotEnabled:
             language.text("This game has no roads to build on.", "這局遊戲沒有道路。")
+        case .roadsEnabled:
+            language.text("This game has roads already.", "這局遊戲已經有道路了。")
         case .invalidRoads:
             language.text("The roads could not be read for this part of the map.", "這一帶的道路讀不進來。")
         case .stationOnRoad:
