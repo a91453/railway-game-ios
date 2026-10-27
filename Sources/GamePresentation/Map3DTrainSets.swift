@@ -177,6 +177,11 @@ public struct Map3DTrainSet: Sendable {
             emu800(far: true),
             emu500(),
             emu500(far: true),
+            // Decision 433: the Taipei Metro's high-capacity train as #1323's
+            // C341 (the odd-numbered), each car its own length, and from
+            // 500 m out its light cars; the even-numbered stay the C381.
+            metroC341(),
+            metroC341(far: true),
             // The DR1000 railcar and the DR3100 diesel express: silver, a thin
             // orange band, yellow-orange faces (the reference's `dr1000`,
             // `dr3100`) on #900's curved fronts.
@@ -241,8 +246,9 @@ public struct Map3DTrainSet: Sendable {
     /// (their far sets).
     /// Decision 432: and the EMU800 and EMU500 (their far sets), 11,500 and
     /// 4,500 triangles a cab car.
+    /// Decision 433: and the C341 (its far set), 3,900 a cab car.
     static let nearOnly: Set = ["E200CK", "R100CK", "R200CK", "E500CK", "MINGRI", "STAR", "pushPull", "pushPullE1000", "greenTram", "SUMMER", "STEAM", "highSpeed", "n700sG", "emu3000",
-                                "taroko", "emu800", "emu500", "puyuma"]
+                                "taroko", "emu800", "emu500", "puyuma", "metroC341"]
 
     /// Decision 408: the set a train of `key` numbered `number` is drawn
     /// as: half the high-speed trains, the odd-numbered, the N700S-G, the
@@ -253,8 +259,14 @@ public struct Map3DTrainSet: Sendable {
     /// Decision 432: and half the Taiwan Railway local trains, the
     /// odd-numbered, the EMU500; not locked, the train pack's has no part
     /// in it.
+    /// Decision 433: and half the Taipei Metro's, the odd-numbered, the C341
+    /// (the player's metro too, but not the linear-motor metro the unlocked
+    /// train pack draws as its own); the other cities' are not Taipei's
+    /// (``Map3DRealTrains/variantKey(system:key:number:locked:)``).
     public static func variant(of key: String, number: Int, locked: Set<String> = []) -> String {
         switch named(key)?.key {
+        case "metroC381" where number % 2 != 0 && (key != "L" || locked.contains("fourCarMetro")):
+            return "metroC341"
         case "highSpeed" where number % 2 != 0 && !locked.contains("n700sG"):
             return "n700sG"
         case "emu800" where number % 2 != 0:
@@ -523,6 +535,23 @@ public struct Map3DTrainSet: Sendable {
             return Cars(head: lit(part(.emc), front: true), middle: part(.em).turned, tail: lit(part(.emc).turned, front: false), single: nil,
                         pantograph: part(.ep), centre: part(.et), middleBack: part(.em),
                         pantographBack: part(.ep).turned, centreBack: part(.et).turned)
+        }
+    }
+
+    /// Decision 433: #1323's C341 units in the Taipei Metro's high-capacity
+    /// train: a DM at the front and a rear DM (turned round, its tail lamps
+    /// red) at the back, T and M between them over and over, the back half
+    /// the front's mirror image (``Map3DTrainSet/cycle``); six cars are the
+    /// static formation's DM T M M T DM. Each car its own length, no
+    /// pantograph (the third rail), the lamp lenses lit (white at the front,
+    /// red at the back), the colours the units' own, not the line's. `far`:
+    /// ``Map3DC341/model(_:far:)``'s light units.
+    static func metroC341(far: Bool = false) -> Map3DTrainSet {
+        Map3DTrainSet(key: far ? "metroC341Far" : "metroC341", cycle: [.middle, .centre], ownLengths: true,
+                      far: far ? nil : "metroC341Far") {
+            func part(_ unit: Map3DC341.Unit) -> Map3DModelPack.Model { Map3DC341.model(unit, far: far) }
+            return Cars(head: lit(part(.dm), front: true), middle: part(.t), tail: lit(part(.rear), front: false), single: nil,
+                        centre: part(.m))
         }
     }
 
