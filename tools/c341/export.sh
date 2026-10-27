@@ -26,3 +26,10 @@ fi
 swiftc -swift-version 6 -warnings-as-errors "${includes[@]}" tools/c341/export.swift "${objects[@]}" -o "$work/c341-export"
 "$work/c341-export" "$output"
 node tools/c341/package.mjs "$output"
+python3 - "$output" <<'PY'
+import hashlib,sys
+from pathlib import Path
+p=Path(sys.argv[1])/'existing-payload.bin'
+(p.parent/'existing-payload.sha256').write_text(hashlib.sha256(p.read_bytes()).hexdigest()+'\n')
+p.unlink()
+PY
