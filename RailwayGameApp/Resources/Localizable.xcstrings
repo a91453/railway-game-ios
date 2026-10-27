@@ -2785,12 +2785,12 @@
         }
       }
     },
-    "Land use: homes, shops or offices, darker for taller buildings. Land value: dollars a square metre, higher near good train service; tap a cell for its parts. Catchment coverage: the land within 800 m of a station, and the people no station reaches." : {
+    "Land use: homes, shops or offices, darker for taller buildings. Land value: $ a square metre, higher near good train service; tap a cell for its parts. Catchment coverage: the land within 800 m of a station, and the people no station reaches." : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "土地用途：住宅、商業或辦公，建物越高顏色越深。地價：每平方公尺美元，車站服務越好越高；點一格可看分項。腹地涵蓋：車站 800 公尺內的範圍，以及沒有車站涵蓋的住戶。"
+            "value" : "土地用途：住宅、商業或辦公，建物越高顏色越深。地價：每平方公尺多少 $，車站服務越好越高；點一格可看分項。腹地涵蓋：車站 800 公尺內的範圍，以及沒有車站涵蓋的住戶。"
           }
         }
       }

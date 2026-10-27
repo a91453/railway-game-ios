@@ -598,6 +598,12 @@ extension GameError {
             language.text("Bus stops, and the station the route ends at, must be on a road.", "公車站牌和路線終點的車站都要在路上。")
         case .busStopsNotConnected:
             language.text("No road joins these stops: put them on roads that meet.", "這幾個站牌之間沒有路相連：站牌要放在連在一起的路上。")
+        case .roadTooSteep:
+            language.text("A road can't be built on this steep slope.", "這裡坡太陡，不能鋪路。")
+        case .notOwnRoad:
+            language.text("This is the city's road: only roads you built can be taken up.", "這是城市的路，只能拆自己鋪的路。")
+        case .roadInUse:
+            language.text("A bus route runs along this road: change the route first.", "有公車路線走這段路，請先改路線。")
         case .depotInUse:
             language.text("A line keeps its trains at this depot: untick it on that line's depots first.", "有路線把列車停在這個機廠：先在那條路線的機廠清單取消勾選。")
         case .depotListedTwice:

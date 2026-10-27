@@ -90,7 +90,7 @@ struct MapLayerSheet: View {
                 } header: {
                     Text("City")
                 } footer: {
-                    Text("Land use: homes, shops or offices, darker for taller buildings. Land value: dollars a square metre, higher near good train service; tap a cell for its parts. Catchment coverage: the land within 800 m of a station, and the people no station reaches.")
+                    Text("Land use: homes, shops or offices, darker for taller buildings. Land value: $ a square metre, higher near good train service; tap a cell for its parts. Catchment coverage: the land within 800 m of a station, and the people no station reaches.")
                 }
 
                 // Decision 124, H3: the ground's height and the steep

@@ -660,7 +660,7 @@ extension GameWorld {
             distanceDemand: distanceDemand, outsideConnections: outsideConnections, tourism: tourism,
             tourismStars: tourismStars, realisticOperation: realisticOperation,
             curveSpeedLimits: curveSpeedLimits,
-            busFeeders: busRoutes.flatMap { [Int64($0.station.rawValue), $0.feederTrips, $0.feederMinutes] }
+            busFeeders: busRoutes.flatMap { [Int64($0.feeds?.rawValue ?? 0), $0.feederTrips, $0.feederMinutes] }
         )
     }
 

@@ -1240,6 +1240,11 @@ extension StepOutcome: Codable {
             self = try .rejected(.stationOnRoad(container.decodeStation(forKey: .station)))
         case "roadTooFar":
             self = .rejected(.roadTooFar)
+        // Decision 438: names only, the schema unchanged.
+        case "roadTooSteep":
+            self = try .rejected(.roadTooSteep(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column)))
+        case "notOwnRoad":
+            self = try .rejected(.notOwnRoad(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column)))
         case "trainServiceActive":
             self = try .rejected(.trainServiceActive(container.decodeTrain(forKey: .train)))
         case "trainServiceNotActive":
@@ -1674,9 +1679,18 @@ extension StepOutcome: Codable {
             try container.encode(id.rawValue, forKey: .station)
         case .rejected(.roadTooFar):
             try container.encode("roadTooFar", forKey: .result)
+        // Decision 438: names only, the schema unchanged.
+        case .rejected(.roadTooSteep(let row, let column)):
+            try container.encode("roadTooSteep", forKey: .result)
+            try container.encode(row, forKey: .row)
+            try container.encode(column, forKey: .column)
+        case .rejected(.notOwnRoad(let row, let column)):
+            try container.encode("notOwnRoad", forKey: .result)
+            try container.encode(row, forKey: .row)
+            try container.encode(column, forKey: .column)
         // Decision 400, 10i-2: no golden scenario runs buses, and the golden
         // schema reads none of these back.
-        case .rejected(.unknownBusRoute), .rejected(.invalidBusRoute), .rejected(.busStopOffRoad), .rejected(.busStopsNotConnected):
+        case .rejected(.unknownBusRoute), .rejected(.invalidBusRoute), .rejected(.busStopOffRoad), .rejected(.busStopsNotConnected), .rejected(.roadInUse):
             try container.encode("busRouteRefused", forKey: .result)
         case .rejected(.freightNotEnabled):
             try container.encode("freightNotEnabled", forKey: .result)

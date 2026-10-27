@@ -38,12 +38,14 @@ public struct Map3DBuses: Sendable {
 
         public init(world: GameWorld, palette: LinePalette, roads onRoads: BusRoads? = nil) {
             routes = world.busRoutes.compactMap { route in
-                world.station(id: route.station).map { station in
+                // Decision 438: a city route is drawn once the 3D map has
+                // its way (the next pull request).
+                route.station.flatMap { world.station(id: $0) }.map { station in
                     Route(route: BusRoute.Shape(route), station: station.location,
-                          colour: world.lines(callingAt: route.station).first?.color?.rgb)
+                          colour: world.lines(callingAt: station.id).first?.color?.rgb)
                 }
             }
-            roads = world.roads?.cells.count ?? 0
+            roads = world.roads?.allCells.count ?? 0
             self.onRoads = onRoads != nil
             self.palette = palette
         }
@@ -91,14 +93,14 @@ public struct Map3DBuses: Sendable {
         }
         var laid: [(BusMotion, [PlanPoint], [Int], PlanPoint, UInt32)] = []
         for route in world.busRoutes {
-            guard let motion = BusMotion(route), let station = world.station(id: route.station) else { continue }
+            guard let motion = BusMotion(route), let station = route.station.flatMap({ world.station(id: $0) }) else { continue }
             let way: (points: [PlanPoint], stops: [Int])
             if world.geoAnchor != nil, let saved = onRoads?.way(ofSaved: route.stops, station: station.location) {
                 way = (saved.points, saved.marks)
             } else {
-                way = Self.way(stops: route.stops, station: station.location, roads: roads.cells, alongEdges: world.geoAnchor == nil)
+                way = Self.way(stops: route.stops, station: station.location, roads: roads.allCells, alongEdges: world.geoAnchor == nil)
             }
-            let colour = world.lines(callingAt: route.station).first?.color
+            let colour = world.lines(callingAt: station.id).first?.color
             let tint = colour.map { Map3DColor.rgb(UInt32(palette.color(for: $0.rgb))) } ?? Map3DLowFloorBus.accentColor
             laid.append((motion, way.points, way.stops, station.location, tint))
         }

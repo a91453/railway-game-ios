@@ -336,6 +336,9 @@ public struct Map3DScene: Sendable {
         // takes.
         let landmarks = RealWorldFrame(world: world).map { builder.addTaipeiLandmarks(frame: $0) } ?? [:]
         let landmarkCells = landmarks.values.reduce(into: Set<ChunkKey>()) { $0.formUnion($1) }
+        // Decision 441: the Changhua Roundhouse's turntable; no street
+        // furniture or city lot on it, but the real buildings round it stay.
+        let turntable = RealWorldFrame(world: world).map { builder.addRoundhouseTurntable(frame: $0) } ?? []
         // Decision 321: the stations' canopies and buildings from the
         // station kit, a plaza where a building stands; Taipei's the
         // landmark, where it stands (decision 370).
@@ -356,7 +359,7 @@ public struct Map3DScene: Sendable {
         builder.addPlatformProps()
         // Decision 244: no street furniture where the track runs (nor
         // where a station's building or a landmark stands).
-        builder.removeProps(on: stations.union(landmarkCells))
+        builder.removeProps(on: stations.union(landmarkCells).union(turntable))
         // Decision 229 續: the street lights' pools, seen at night.
         builder.addLampPools()
         // Decision 239: on a real-world map, the real buildings round
@@ -392,12 +395,14 @@ public struct Map3DScene: Sendable {
         }
         let beforeFootprints = standing
         if let footprints { standing.formUnion(builder.addFootprints(footprints, clearOf: stations.union(landmarkCells), takenBy: beforeFootprints)) }
-        builder.addCity(city, clearOf: stations.union(builder.realTrackCells), takenBy: taken.whole.union(standing), besideRoads: taken.byRoads)
+        builder.addCity(city, clearOf: stations.union(builder.realTrackCells), takenBy: taken.whole.union(standing).union(turntable),
+                        besideRoads: taken.byRoads)
         builder.target = .far
         if let frame { builder.addRealBuildings(cityTiles, frame: frame, clearOf: stations.union(landmarkCells)) }
         if let footprints { builder.addFootprints(footprints, clearOf: stations.union(landmarkCells), takenBy: beforeFootprints) }
         if footprintTiles == nil, let noBuild, let frame { builder.addAirportBuildings(noBuild, frame: frame, clearOf: stations.union(landmarkCells)) }
-        builder.addCity(city, clearOf: stations.union(builder.realTrackCells), takenBy: taken.whole.union(standing), besideRoads: taken.byRoads)
+        builder.addCity(city, clearOf: stations.union(builder.realTrackCells), takenBy: taken.whole.union(standing).union(turntable),
+                        besideRoads: taken.byRoads)
         builder.target = .base
         builder.addPlacedBuildings()
         chunks = builder.chunks()

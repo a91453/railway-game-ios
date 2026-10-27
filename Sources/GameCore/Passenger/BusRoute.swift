@@ -25,6 +25,18 @@
 // station's stops within 600 m, the walk 1.25 times the straight line at
 // 75 m a minute (`great_circle_x1.25_at_75m_per_min`), kept here. Neither
 // runs buses of a company's own (gap): the rest is the project's own.
+//
+// Decision 438: a city route has no station of its own: it runs from its
+// first stop to its last and carries the trips between its stops' land
+// (``BusRoute/localShare`` of a station's share, to the stops with the most
+// people, the short ones walking and the slow ones taking a scooter, as the
+// trains' do), and when one of its stops is within ``BusRoute/stopReach``
+// of a station it feeds that station as a feeder does. A bus holds
+// ``BusRoute/capacity``; the riders past that stay off. The island city's
+// buses earn a fixed sum while its metro's grows with the town (g11.js),
+// and A-Train's buses hold far fewer than its trains: the capacity keeps
+// the buses below the trains here. The trips between stops are the
+// project's own (gap): no reference runs town buses on demand.
 
 /// A bus route's number, handed out in order and never used again.
 public struct BusRouteID: RawRepresentable, Hashable, Comparable, Codable, Sendable {
@@ -83,16 +95,30 @@ public struct BusDay: Hashable, Codable, Sendable {
     public let cost: Money
 }
 
-/// A bus route feeding a train station (decision 400, 10i-2).
+/// Where a city route meets a station (decision 438): the station, and the
+/// stop nearest it.
+public struct BusTransfer: Hashable, Codable, Sendable {
+    public let station: StationID
+    public let stop: Int
+
+    public init(station: StationID, stop: Int) {
+        self.station = station
+        self.stop = stop
+    }
+}
+
+/// A bus route feeding a train station (decision 400, 10i-2), or a city
+/// route between stops (decision 438).
 public struct BusRoute: Hashable, Sendable {
     public let id: BusRouteID
-    /// The train station it feeds, its last stop.
-    public let station: StationID
+    /// The train station it feeds, its last stop; `nil` for a city route
+    /// (decision 438), which runs from its first stop to its last.
+    public let station: StationID?
     /// Its stops, in order, each on a road cell; the station follows the
-    /// last.
+    /// last. A city route has two at least.
     public internal(set) var stops: [CellPosition]
     /// The road's metres from each stop to the next, the last to the
-    /// station.
+    /// station; a city route's, one fewer than its stops.
     public internal(set) var legMetres: [Int64]
     public internal(set) var service: BusService
     public internal(set) var buses: Int
@@ -101,6 +127,15 @@ public struct BusRoute: Hashable, Sendable {
     /// demand (``GameWorld/refreshLandDemand()``), 0 while it does not run.
     public internal(set) var feederTrips: Int64 = 0
     public internal(set) var feederMinutes: Int64 = 0
+    /// A city route's trips a day between its own stops, and their
+    /// door-to-door minutes, the trips' average (decision 438): worked out
+    /// with the land's demand, 0 while it does not run.
+    public internal(set) var localTrips: Int64 = 0
+    public internal(set) var localMinutes: Int64 = 0
+    /// The station a city route feeds, worked out with the land's demand
+    /// (decision 438): the nearest within ``stopReach`` of a stop, or
+    /// `nil`.
+    public internal(set) var transfer: BusTransfer?
     /// Riders today, and the thousandths of one carried over.
     public internal(set) var ridersToday: Int64 = 0
     var riderThousandths: Int64 = 0
@@ -126,6 +161,13 @@ public struct BusRoute: Hashable, Sendable {
     /// a station reaches on foot: a half, the rest taking a scooter or
     /// staying near home.
     public static let riderShare: (numerator: Int64, denominator: Int64) = (1, 2)
+    /// The riders a bus holds one way (decision 438): 70, a full Taipei
+    /// city bus.
+    public static let capacity: Int64 = 70
+    /// The part of the land a city route's stop reaches that rides it to
+    /// its other stops, as much as the land a station reaches on foot
+    /// rides the trains (decision 438): a quarter, half a feeder's.
+    public static let localShare: (numerator: Int64, denominator: Int64) = (1, 4)
     /// The most stops and buses a route has.
     public static let maximumStops = 64
     public static let maximumBuses = 99
@@ -172,9 +214,26 @@ public struct BusRoute: Hashable, Sendable {
         Money((dailyDepartures * 2 * metres * Self.costPerKilometre.amount + 500) / 1_000)
     }
 
+    /// The station its land rides the trains from: its own, or the one a
+    /// city route meets.
+    public var feeds: StationID? {
+        station ?? transfer?.station
+    }
+
+    /// The most riders its buses carry a day, there and back.
+    public var dailyCapacity: Int64 {
+        dailyDepartures * 2 * Self.capacity
+    }
+
     /// Minutes on board from stop `index` to the station, rounded half up.
     func rideMinutes(fromStop index: Int) -> Int64 {
-        let metres = legMetres[index...].reduce(0, +)
+        rideMinutes(from: index, to: legMetres.count)
+    }
+
+    /// Minutes on board between stops `a` and `b` (the station after the
+    /// last), rounded half up.
+    func rideMinutes(from a: Int, to b: Int) -> Int64 {
+        let metres = legMetres[min(a, b)..<max(a, b)].reduce(0, +)
         return (metres * 60 + Self.metresPerHour / 2) / Self.metresPerHour
     }
 
@@ -186,7 +245,9 @@ public struct BusRoute: Hashable, Sendable {
     }
 
     var isValid: Bool {
-        (1...Self.maximumStops).contains(stops.count) && legMetres.count == stops.count
+        ((station == nil ? 2 : 1)...Self.maximumStops).contains(stops.count) && legMetres.count == stops.count - (station == nil ? 1 : 0)
+            && (station == nil || transfer == nil) && transfer.map({ stops.indices.contains($0.stop) }) ?? true
+            && (0...StationDemand.maximumDailyTrips).contains(localTrips) && (0...GameTime.minutesPerDay).contains(localMinutes)
             && legMetres.allSatisfy { (0...Self.maximumLegMetres).contains($0) } && service.isValid
             && (0...Self.maximumBuses).contains(buses) && (0...StationDemand.maximumDailyTrips).contains(feederTrips)
             && feederMinutes >= 0 && feederMinutes <= GameTime.minutesPerDay && ridersToday >= 0 && (0..<1_000).contains(riderThousandths)
@@ -224,7 +285,8 @@ extension BusService: Codable {
 
 extension BusRoute: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, station, stops, legMetres, service, buses, feederTrips, feederMinutes, ridersToday, riderThousandths, days
+        case id, station, stops, legMetres, service, buses, feederTrips, feederMinutes, localTrips, localMinutes, transfer, ridersToday,
+             riderThousandths, days
     }
 
     private struct Stop: Codable {
@@ -237,7 +299,8 @@ extension BusRoute: Codable {
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(BusRouteID.self, forKey: .id)
-        station = try container.decode(StationID.self, forKey: .station)
+        // Decision 438: no station, a city route.
+        station = try container.decodeIfPresent(StationID.self, forKey: .station)
         let stops = try container.decode([Stop].self, forKey: .stops)
         guard stops.count <= Self.maximumStops else {
             throw DecodingError.dataCorruptedError(forKey: .stops, in: container, debugDescription: "A bus route has at most \(Self.maximumStops) stops.")
@@ -248,24 +311,30 @@ extension BusRoute: Codable {
         buses = try container.decode(Int.self, forKey: .buses)
         feederTrips = try container.decodeIfPresent(Int64.self, forKey: .feederTrips) ?? 0
         feederMinutes = try container.decodeIfPresent(Int64.self, forKey: .feederMinutes) ?? 0
+        localTrips = try container.decodeIfPresent(Int64.self, forKey: .localTrips) ?? 0
+        localMinutes = try container.decodeIfPresent(Int64.self, forKey: .localMinutes) ?? 0
+        transfer = try container.decodeIfPresent(BusTransfer.self, forKey: .transfer)
         ridersToday = try container.decodeIfPresent(Int64.self, forKey: .ridersToday) ?? 0
         riderThousandths = try container.decodeIfPresent(Int64.self, forKey: .riderThousandths) ?? 0
         days = try container.decodeIfPresent([BusDay].self, forKey: .days) ?? []
         guard isValid else {
-            throw DecodingError.dataCorruptedError(forKey: .stops, in: container, debugDescription: "A bus route has 1 to \(Self.maximumStops) stops, a leg for each, a service and 0 to \(Self.maximumBuses) buses.")
+            throw DecodingError.dataCorruptedError(forKey: .stops, in: container, debugDescription: "A bus route has 1 to \(Self.maximumStops) stops (a city route 2), a leg for each (a city route's but the last), a service and 0 to \(Self.maximumBuses) buses.")
         }
     }
 
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
-        try container.encode(station, forKey: .station)
+        try container.encodeIfPresent(station, forKey: .station)
         try container.encode(stops.map { Stop(row: $0.row, column: $0.column) }, forKey: .stops)
         try container.encode(legMetres, forKey: .legMetres)
         try container.encode(service, forKey: .service)
         try container.encode(buses, forKey: .buses)
         if feederTrips != 0 { try container.encode(feederTrips, forKey: .feederTrips) }
         if feederMinutes != 0 { try container.encode(feederMinutes, forKey: .feederMinutes) }
+        if localTrips != 0 { try container.encode(localTrips, forKey: .localTrips) }
+        if localMinutes != 0 { try container.encode(localMinutes, forKey: .localMinutes) }
+        try container.encodeIfPresent(transfer, forKey: .transfer)
         if ridersToday != 0 { try container.encode(ridersToday, forKey: .ridersToday) }
         if riderThousandths != 0 { try container.encode(riderThousandths, forKey: .riderThousandths) }
         if !days.isEmpty { try container.encode(days, forKey: .days) }
@@ -280,7 +349,8 @@ extension GameWorld {
     /// ``BusRoute/stopPrice`` a stop and ``BusRoute/busPrice`` a bus. With
     /// `legMetres` (a real route's, one a stop, the last to the station)
     /// it runs those lengths; without, the shortest way along the roads,
-    /// the station's own cell on one.
+    /// the station's own cell on one. With no `station` it is a city route
+    /// (decision 438), two stops at least, a leg each but the last.
     ///
     /// - Throws, checked in this order: ``GameError/roadsNotEnabled``;
     ///   ``GameError/unknownStation(_:)``; ``GameError/idsExhausted`` once
@@ -292,10 +362,10 @@ extension GameWorld {
     ///   ``GameError/insufficientFunds(required:available:)``. The world is
     ///   then unchanged.
     @discardableResult
-    public mutating func createBusRoute(to station: StationID, stops: [CellPosition], legMetres: [Int64]? = nil,
+    public mutating func createBusRoute(to station: StationID?, stops: [CellPosition], legMetres: [Int64]? = nil,
                                         service: BusService, buses: Int) throws(GameError) -> BusRoute {
         guard roads != nil else { throw .roadsNotEnabled }
-        guard stations.contains(where: { $0.id == station }) else { throw .unknownStation(station) }
+        if let station, !stations.contains(where: { $0.id == station }) { throw .unknownStation(station) }
         guard service.isValid, (0...BusRoute.maximumBuses).contains(buses) else { throw .invalidBusRoute }
         let (id, next) = try Self.allocateID(from: nextBusRouteID)
         let legs = try busLegs(to: station, stops: stops, given: legMetres)
@@ -321,6 +391,8 @@ extension GameWorld {
         route.legMetres = try busLegs(to: route.station, stops: stops, given: legMetres)
         let added = max(0, stops.count - route.stops.count)
         route.stops = stops
+        // The old stops' transfer: worked out afresh by busRoutesChanged().
+        route.transfer = nil
         guard route.isValid else { throw .invalidBusRoute }
         try spendOnBuses(Money(BusRoute.stopPrice.amount * Int64(added)))
         busRoutes[index] = route
@@ -398,7 +470,7 @@ extension GameWorld {
     /// ``RoadGrid/diagonalMetres`` corner to corner), or `nil` when no road
     /// joins them within ``BusRoute/searchLimit`` cells.
     public func busRoadMetres(from start: CellPosition, to end: CellPosition) -> Int64? {
-        guard let roads, roads.cells.contains(start), roads.cells.contains(end) else { return nil }
+        guard let roads, roads.contains(start), roads.contains(end) else { return nil }
         guard start != end else { return 0 }
         // Dijkstra's search, the nearest first and then by row and column,
         // so the same roads give the same answer.
@@ -414,7 +486,7 @@ extension GameWorld {
             for dr in -1...1 {
                 for dc in -1...1 where dr != 0 || dc != 0 {
                     let next = CellPosition(row: cell.row + dr, column: cell.column + dc)
-                    guard roads.cells.contains(next) else { continue }
+                    guard roads.contains(next) else { continue }
                     let way = metres + (dr != 0 && dc != 0 ? RoadGrid.diagonalMetres : RoadGrid.straightMetres)
                     if best[next].map({ way < $0 }) ?? true {
                         best[next] = way
@@ -433,23 +505,27 @@ extension GameWorld {
         return index
     }
 
-    /// The legs of a route to `station` through `stops`: `given`, or the
-    /// roads' shortest ways.
-    private func busLegs(to station: StationID, stops: [CellPosition], given: [Int64]?) throws(GameError) -> [Int64] {
+    /// The legs of a route to `station` (none for a city route) through
+    /// `stops`: `given`, or the roads' shortest ways.
+    private func busLegs(to station: StationID?, stops: [CellPosition], given: [Int64]?) throws(GameError) -> [Int64] {
         guard let roads else { throw .roadsNotEnabled }
-        guard (1...BusRoute.maximumStops).contains(stops.count) else { throw .invalidBusRoute }
+        let legCount = stops.count - (station == nil ? 1 : 0)
+        guard ((station == nil ? 2 : 1)...BusRoute.maximumStops).contains(stops.count) else { throw .invalidBusRoute }
         if let given {
-            guard given.count == stops.count, given.allSatisfy({ (0...BusRoute.maximumLegMetres).contains($0) }) else { throw .invalidBusRoute }
+            guard given.count == legCount, given.allSatisfy({ (0...BusRoute.maximumLegMetres).contains($0) }) else { throw .invalidBusRoute }
         }
-        guard stops.allSatisfy(roads.cells.contains) else { throw .busStopOffRoad }
+        guard stops.allSatisfy(roads.contains) else { throw .busStopOffRoad }
         if let given { return given }
-        guard let location = stations.first(where: { $0.id == station })?.location, roads.cells.contains(roadCell(of: location)) else {
-            throw .busStopOffRoad
+        var ends = stops
+        if let station {
+            guard let location = stations.first(where: { $0.id == station })?.location, roads.contains(roadCell(of: location)) else {
+                throw .busStopOffRoad
+            }
+            ends.append(roadCell(of: location))
         }
-        let end = roadCell(of: location)
         var legs: [Int64] = []
-        for (leg, start) in stops.enumerated() {
-            guard let metres = busRoadMetres(from: start, to: leg + 1 < stops.count ? stops[leg + 1] : end) else {
+        for leg in 0..<legCount {
+            guard let metres = busRoadMetres(from: ends[leg], to: ends[leg + 1]) else {
                 throw .busStopsNotConnected(leg: leg)
             }
             legs.append(metres)
@@ -477,32 +553,37 @@ extension GameWorld {
     /// Each running route's share of the land, worked out afresh into its
     /// ``BusRoute/feederTrips`` and ``BusRoute/feederMinutes``: every cell
     /// whose middle lies within ``BusRoute/stopReach`` of a stop of a
-    /// route that runs (one bus at least) to a station the land is shared
-    /// among, and outside every such station's ``Land/catchmentRadius``,
-    /// goes whole to its nearest stop (then the lower route, then the
-    /// earlier stop). Its minutes are the walk, half the headway rounded
-    /// up and the ride, a day at most; a route's, its people's average,
-    /// rounded half up. A route's share is its people times
-    /// ``BusRoute/riderShare``.
+    /// route that runs (one bus at least), a feeder to a station the land
+    /// is shared among or a city route (decision 438), and outside every
+    /// such station's ``Land/catchmentRadius``, goes whole to its nearest
+    /// stop (then the lower route, then the earlier stop). Its minutes are
+    /// the walk, half the headway rounded up and the ride, a day at most;
+    /// a route's, its people's average, rounded half up. A route's share
+    /// is its people times ``BusRoute/riderShare``.
+    ///
+    /// Decision 438: a city route feeds the station it meets
+    /// (``BusRoute/transfer``, worked out here first), its ride to the
+    /// stop nearest the station and the walk on from there; and carries
+    /// the trips between its stops (``refreshCityBusTrips(_:)``).
     /// Returns each station's added share. Without land demand every
     /// route's figures are 0. Called by ``refreshLandDemand()``.
     mutating func refreshBusFeeders() -> [StationID: LandDemand.Share] {
         guard !busRoutes.isEmpty else { return [:] }
+        let fed = landStations
+        refreshBusTransfers(among: fed)
         var added: [StationID: LandDemand.Share] = [:]
         var figures = [(trips: Int64, minutes: Int64)](repeating: (0, 0), count: busRoutes.count)
+        var stopLand = [[CityBusStopLand]](repeating: [], count: busRoutes.count)
         if drawsDemandFromLand {
-            let fed = landStations
             var walkable = Set<Int>()
             for station in fed {
                 land.forEachCell(within: Land.catchmentRadius, of: station.location) { index, _ in walkable.insert(index) }
             }
             let ids = Set(fed.map(\.id))
             var nearest: [Int: (squared: Int64, route: Int, stop: Int)] = [:]
-            for (position, route) in busRoutes.enumerated() where route.buses > 0 && ids.contains(route.station) {
+            for (position, route) in busRoutes.enumerated() where route.buses > 0 && route.station.map(ids.contains) ?? true {
                 for (stop, cell) in route.stops.enumerated() {
-                    let middle = PlanPoint(x: Int64(cell.column) * Land.cellLength + Land.cellLength / 2,
-                                           y: Int64(cell.row) * Land.cellLength + Land.cellLength / 2)
-                    land.forEachCell(within: BusRoute.stopReach, of: middle) { index, squared in
+                    land.forEachCell(within: BusRoute.stopReach, of: Self.middle(of: cell)) { index, squared in
                         guard !walkable.contains(index) else { return }
                         let candidate = (squared, position, stop)
                         if nearest[index].map({ candidate < $0 }) ?? true { nearest[index] = candidate }
@@ -511,40 +592,156 @@ extension GameWorld {
             }
             var shares = [LandDemand.Share](repeating: LandDemand.Share(), count: busRoutes.count)
             var weighted = [Int64](repeating: 0, count: busRoutes.count)
+            for position in busRoutes.indices where busRoutes[position].station == nil {
+                stopLand[position] = Array(repeating: CityBusStopLand(), count: busRoutes[position].stops.count)
+            }
             for index in nearest.keys.sorted() {
                 let (squared, position, stop) = nearest[index]!
                 let cell = land.cells[index]
                 let people = cell.residents + cell.jobs
                 guard people > 0 else { continue }
                 let route = busRoutes[position]
+                let walk = BusRoute.walkMinutes(units: FixedPoint.roundedSquareRoot(squared))
+                if route.station == nil {
+                    stopLand[position][stop].share.add(cell.residents, cell.jobs, of: cell.use)
+                    stopLand[position][stop].walked += people * walk
+                }
+                let ride: Int64
+                if route.station != nil {
+                    ride = route.rideMinutes(fromStop: stop)
+                } else if let transfer = route.transfer, let met = station(id: transfer.station) {
+                    let at = route.stops[transfer.stop]
+                    ride = route.rideMinutes(from: stop, to: transfer.stop)
+                        + BusRoute.walkMinutes(units: FixedPoint.roundedSquareRoot(Self.squaredDistance(Self.middle(of: at), met.location)))
+                } else {
+                    continue
+                }
                 // More than a day door to door counts as a day, so the
                 // save keeps it (decision 400).
-                let minutes = min(GameTime.minutesPerDay, BusRoute.walkMinutes(units: FixedPoint.roundedSquareRoot(squared))
-                    + (route.headway! + 1) / 2 + route.rideMinutes(fromStop: stop))
+                let minutes = min(GameTime.minutesPerDay, walk + (route.headway! + 1) / 2 + ride)
                 shares[position].add(cell.residents, cell.jobs, of: cell.use)
                 weighted[position] += people * minutes
             }
             for position in busRoutes.indices {
                 let people = shares[position].people
                 shares[position].scale(BusRoute.riderShare)
-                guard people > 0, let trips = shares[position].demand?.dailyTrips else { continue }
+                guard people > 0, let trips = shares[position].demand?.dailyTrips, let feeds = busRoutes[position].feeds else { continue }
                 figures[position] = (trips, (weighted[position] * 2 + people) / (2 * people))
-                var share = added[busRoutes[position].station] ?? LandDemand.Share()
+                var share = added[feeds] ?? LandDemand.Share()
                 share.add(shares[position])
-                added[busRoutes[position].station] = share
+                added[feeds] = share
             }
         }
         for position in busRoutes.indices {
             busRoutes[position].feederTrips = figures[position].trips
             busRoutes[position].feederMinutes = figures[position].minutes
         }
+        refreshCityBusTrips(stopLand)
         return added
+    }
+
+    /// The middle of road cell `cell`.
+    static func middle(of cell: CellPosition) -> PlanPoint {
+        PlanPoint(x: Int64(cell.column) * Land.cellLength + Land.cellLength / 2, y: Int64(cell.row) * Land.cellLength + Land.cellLength / 2)
+    }
+
+    /// The square of the straight line from `a` to `b`, in world units.
+    static func squaredDistance(_ a: PlanPoint, _ b: PlanPoint) -> Int64 {
+        let x = a.x - b.x, y = a.y - b.y
+        return x * x + y * y
+    }
+
+    /// Each city route's station (decision 438): of `stations` (those the
+    /// land is shared among), the nearest a stop's middle within
+    /// ``BusRoute/stopReach``, then the lower station ID, then the earlier
+    /// stop; `nil` when none is. A feeder has none.
+    mutating func refreshBusTransfers(among stations: [Station]) {
+        let reach = BusRoute.stopReach * BusRoute.stopReach
+        for position in busRoutes.indices {
+            var best: (squared: Int64, station: Int, stop: Int)?
+            if busRoutes[position].station == nil {
+                for (stop, cell) in busRoutes[position].stops.enumerated() {
+                    let middle = Self.middle(of: cell)
+                    for station in stations {
+                        let squared = Self.squaredDistance(middle, station.location)
+                        guard squared <= reach else { continue }
+                        let candidate = (squared, station.id.rawValue, stop)
+                        if best.map({ candidate < $0 }) ?? true { best = candidate }
+                    }
+                }
+            }
+            busRoutes[position].transfer = best.map { BusTransfer(station: StationID(rawValue: $0.station), stop: $0.stop) }
+        }
+    }
+
+    /// The trips between each city route's stops (decision 438), worked
+    /// out afresh into its ``BusRoute/localTrips`` and
+    /// ``BusRoute/localMinutes`` from `stopLand`, each stop's land (a
+    /// route's none when it does not run or the land sets no demand):
+    ///
+    /// 1. A stop's trips are its land's people times
+    ///    ``BusRoute/localShare``, as a station's (``LandDemand/tripsPerHundred``).
+    /// 2. They go to the route's other stops by their people, each its
+    ///    whole part and the rest one at a time to the largest remainders
+    ///    (then the earlier stop); none when no other stop has people.
+    /// 3. Each part keeps ``DistanceDemand/share(squaredDistance:)`` of
+    ///    itself for the stops' straight line, truncated: the short ones
+    ///    walk.
+    /// 4. With a mode shift (decision 332), a part 2 km and more long loses
+    ///    those that take a scooter or a car instead: the bus's minutes
+    ///    are both stops' walks (their people's average, rounded half up),
+    ///    half the headway rounded up and the ride, against the road's for
+    ///    the straight line.
+    ///
+    /// A route's minutes are its trips' average, rounded half up.
+    mutating func refreshCityBusTrips(_ stopLand: [[CityBusStopLand]]) {
+        for position in busRoutes.indices {
+            busRoutes[position].localTrips = 0
+            busRoutes[position].localMinutes = 0
+            let reached = stopLand[position]
+            guard !reached.isEmpty else { continue }
+            let route = busRoutes[position]
+            guard let headway = route.headway else { continue }
+            let people = reached.map(\.share.people)
+            let walks = reached.map { $0.share.people > 0 ? ($0.walked * 2 + $0.share.people) / (2 * $0.share.people) : 0 }
+            var total: Int64 = 0, weighted: Int64 = 0
+            for from in reached.indices {
+                var share = reached[from].share
+                share.scale(BusRoute.localShare)
+                guard let trips = share.demand?.dailyTrips else { continue }
+                let others = people.indices.filter { $0 != from && people[$0] > 0 }
+                let sum = others.reduce(0) { $0 + people[$1] }
+                guard sum > 0 else { continue }
+                var parts = others.map { (stop: $0, whole: trips * people[$0] / sum, rest: trips * people[$0] % sum) }
+                var left = trips - parts.reduce(0) { $0 + $1.whole }
+                for index in parts.indices.sorted(by: { (parts[$0].rest, parts[$1].stop) > (parts[$1].rest, parts[$0].stop) }) where left > 0 {
+                    parts[index].whole += 1
+                    left -= 1
+                }
+                for part in parts where part.whole > 0 {
+                    let squared = Self.squaredDistance(Self.middle(of: route.stops[from]), Self.middle(of: route.stops[part.stop]))
+                    var kept = part.whole * DistanceDemand.share(squaredDistance: squared) / 1_000
+                    let minutes = min(GameTime.minutesPerDay, walks[from] + walks[part.stop] + (headway + 1) / 2
+                        + route.rideMinutes(from: from, to: part.stop))
+                    if let modeShift, squared >= DistanceDemand.fullDistance * DistanceDemand.fullDistance {
+                        let units = FixedPoint.roundedSquareRoot(squared)
+                        let metres = (units + WorldCoordinate.unitsPerMetre / 2) / WorldCoordinate.unitsPerMetre
+                        kept -= ModeShift.lost(kept, share: modeShift.share(railMinutes: minutes, roadMinutes: ModeShift.roadMinutes(metres: metres)))
+                    }
+                    total += kept
+                    weighted += kept * minutes
+                }
+            }
+            guard total > 0 else { continue }
+            busRoutes[position].localTrips = min(StationDemand.maximumDailyTrips, total)
+            busRoutes[position].localMinutes = (weighted * 2 + total) / (2 * total)
+        }
     }
 
     /// The feeders of `origin`'s trips: each running route's trips and
     /// door-to-door minutes, by route.
     func busFeeders(of origin: StationID) -> [(trips: Int64, minutes: Int64)] {
-        busRoutes.compactMap { $0.station == origin && $0.feederTrips > 0 ? ($0.feederTrips, $0.feederMinutes) : nil }
+        busRoutes.compactMap { $0.feeds == origin && $0.feederTrips > 0 ? ($0.feederTrips, $0.feederMinutes) : nil }
     }
 
     /// `boarded` riders set out from `station` by train, or arrived there
@@ -553,7 +750,7 @@ extension GameWorld {
     mutating func countBusRiders(_ boarded: Int64, at station: StationID) {
         guard boarded > 0, accounts.mode == .management, !busRoutes.isEmpty,
               let trips = passengers.first(where: { $0.station == station })?.demand?.dailyTrips, trips > 0 else { return }
-        for index in busRoutes.indices where busRoutes[index].station == station && busRoutes[index].feederTrips > 0 {
+        for index in busRoutes.indices where busRoutes[index].feeds == station && busRoutes[index].feederTrips > 0 {
             let thousandths = busRoutes[index].riderThousandths + boarded * min(trips, busRoutes[index].feederTrips) * 1_000 / trips
             busRoutes[index].ridersToday = min(Self.maximumHourly, busRoutes[index].ridersToday + thousandths / 1_000)
             busRoutes[index].riderThousandths = thousandths % 1_000
@@ -563,16 +760,21 @@ extension GameWorld {
     /// The day's buses, a row for them all: each route's riders'
     /// ``BusRoute/fare`` in, its ``BusRoute/dailyCost`` out, kept
     /// on the route for ``BusRoute/keptDays`` days.
+    ///
+    /// Decision 438: a city route's riders are the day's
+    /// ``BusRoute/localTrips`` too; a route's riders are at most
+    /// ``BusRoute/dailyCapacity``, the rest staying off.
     mutating func settleBuses(day: Int64, time: GameTime) {
         guard accounts.mode == .management, !busRoutes.isEmpty else { return }
         var fares = Money.zero, cost = Money.zero
         for index in busRoutes.indices {
             let route = busRoutes[index]
-            let routeFares = Money(route.ridersToday * BusRoute.fare.amount)
+            let riders = min(route.dailyCapacity, route.ridersToday + route.localTrips)
+            let routeFares = Money(riders * BusRoute.fare.amount)
             let routeCost = route.dailyCost
             fares = fares + routeFares
             cost = cost + routeCost
-            busRoutes[index].days.append(BusDay(day: day, riders: route.ridersToday, fares: routeFares, cost: routeCost))
+            busRoutes[index].days.append(BusDay(day: day, riders: riders, fares: routeFares, cost: routeCost))
             if busRoutes[index].days.count > BusRoute.keptDays { busRoutes[index].days.removeFirst() }
             busRoutes[index].ridersToday = 0
         }
@@ -590,11 +792,11 @@ extension GameWorld {
         guard !busRoutes.isEmpty else { return nil }
         guard roads != nil else { return "Bus routes run only on a world's roads." }
         let ids = Set(stations.map(\.id))
-        guard busRoutes.allSatisfy({ $0.isValid && (1..<nextBusRouteID).contains($0.id.rawValue) && ids.contains($0.station)
+        guard busRoutes.allSatisfy({ $0.isValid && (1..<nextBusRouteID).contains($0.id.rawValue) && ($0.station ?? $0.transfer?.station).map(ids.contains) ?? true
                   && $0.stops.allSatisfy { (0..<Land.rows(in: bounds)).contains($0.row) && (0..<Land.columns(in: bounds)).contains($0.column) } }),
               zip(busRoutes, busRoutes.dropFirst()).allSatisfy({ $0.id < $1.id })
         else {
-            return "Each bus route is well formed, a number handed out, in order, to a station the world has, its stops in the world."
+            return "Each bus route is well formed, a number handed out, in order, to a station the world has (a city route's transfer too), its stops in the world."
         }
         return nil
     }
@@ -630,6 +832,13 @@ extension LandDemand.Share {
         civicJobs += other.civicJobs
         leisureJobs += other.leisureJobs
     }
+}
+
+/// The land a city route's stop reaches (decision 438): its people, and
+/// their walks to the stop, people times minutes.
+struct CityBusStopLand {
+    var share = LandDemand.Share()
+    var walked: Int64 = 0
 }
 
 /// A binary heap of road cells, the fewest metres first, then by row and

@@ -88,8 +88,8 @@
 
 | 角色 | 現在的 session | 做什麼 | 交接 |
 | --- | --- | --- | --- |
-| 遊戲規劃（兼派工） | session_01YGNNuovwuBJPdZWXamkhEp（10-27 05:45 起；壓縮 3 次後寫了第二十次換手，作者 13:5x UTC 說「你可以先全面接管了」，續任到第 4 次壓縮前；之後作者從 claude.ai 開新規劃，現況在 §2.0 最前面）；再之前 session_01YGNNuoQekRm2qcVxoPT8ME（10-27 02:16–05:40，壓縮 2 次照 §1.1 換手）；再之前 session_01CWaJGHR4DnSwosLCzJ2Tts（10-26 10:30–10-27 02:10，壓縮 3 次）；再之前 session_01TH2DNkW2meh3EZJ1vxBczC（10-26 03:45–10:30，壓縮 3 次，第 3 次後換手）；再之前 session_01TS89hbaHPJiFJycqrKiK5z（10-25 21:40–10-26 04:00，壓縮 2 次照 §1.1 換手）；再之前 session_01KvN8GrLosqRswrXMQgVQir（10-25 15:35–19:55，壓縮 2 次照 §1.1 換手）；再之前 session_0164nEyu2aMPVTpvQww43kj1（10-25 12:56–15:30，壓縮 2 次照 §1.1 換手）；再之前 session_0138XhXTjToUd3fpKV7kebeH（10-25 05:05–12:40，壓縮 5 次，作者說「交接」）；再之前 session_01B2kaku5NRz2J2CMzc8z3cZ（10-24 23:13–10-25 05:05，壓縮 2 次照 §1.1 換手）；再之前 session_019yHzrc1rgGJgdXSSwRNqgM（10-24 15:07–22:50，壓縮 2 次照 §1.1 換手，已封存）；再之前 session_013dJ7tvDYJnhe7XjXCE5cNi（10-24 08:17–14:00，壓縮 2 次照 §1.1 換手，已封存）；再之前 session_017HD7Krh51WqqzXjy6949Pq（10-24 06:32–08:00，壓縮 2 次照 §1.1 換手）；再之前 session_01AxcyajwHdF6j4ryDMghASM（10-24 05:00–06:30，「第八次換手」，已封存）；再之前 session_01XsVqbA1A5wGtJbuAa881oT（10-24 01:30–05:00，「第七次換手」）；再之前接暫代的 session_01PGibJmGNcvu2d7dJWWhWVb（10-24 00:35–01:30，已封存），再之前 session_01H5RHAwnA69n8EfAUSUrH52（10-23 00:10–10-24 00:35），再之前 session_014nUBHbE9mSK4qXHHgm8xCQ（10-22 22:30–10-23 00:10），再之前 session_01UsF4QYCGrzSeNSFq11i8Wu（18:15–22:30），再之前 session_01Ddr2wiXx1Xhn2m9qNBDnDh、session_01CHQg7B6JqzbScGSjyDwHos（2026-10-22 起，照 §1.1 換手，作者：「要不要全部所有換個session了 都一直在壓縮了」→「好，照表換」；換手時的現況在第 2 節最前面；前任 session_014rYHMtmqA5bEMkBBuKu6PV（10-21 至 10-22，作者：「那你需要先接手嗎太長了」）、session_01NiR5WLMFjMJBktQAMkfmkm（10-21）、session_01WW7o3decEv5LY59nYVqnDN（10-20 至 10-21，作者：「接手 角色表中遊戲規劃的工作」）、session_01V1xd3H9vNkuZoSA3czNfGm（10-16 至 10-18）、session_018D6gYU1yiZMtxSmNNU1K17） | 從玩家、鐵道迷、開發、美術、音樂五個角度決定優先順序與設計，開實作 session 並派工，綠了的 PR 照 §1.2 合併（2026-10-21 起），收作者轉來的玩家回報與 bug（§1.3），寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1、1.3 節 |
-| Threads 開發日誌（看進度） | 排程「Threads 開發日誌（看進度）」（台灣時間每晚 21:43 檢查，2026-10-27 規劃五方決定恢復，作者：「我不知道 你自己決定」「排程要看每日進度我也不確定有固定時間發文」）。它只檢查，不一定寫：#1041 最後一則「Threads 草稿交付：涵蓋到 main <sha>」之後，合進 main、玩家看得到的 PR 滿 3 個，或發了新的 TestFlight，才由規劃開寫作 session（Sonnet）；不夠就什麼都不做。現在是 `trig_019CQWcaMbiqRpfDwdNvV2qR`（綁 session_01YGNNunheBBBwyekk4Pq7b4）；綁前任的 `trig_01E6yr1upy3P5jnJK7ubzgfQ` 已刪。排程的綁定改不了：換手時現任用同一份 prompt（`get_trigger` 讀得到）建一個綁自己的，再刪掉舊的。更早留下、停用但刪不掉的 `trig_01M2rwYPRRjTwQTC5g6QaW9v`、`trig_01ABYQAarHbVxBbEShiVWDr3` 不會觸發，作者要清可以在排程列表刪 | 寫這段期間的串文草稿，用 SendUserFile 交給作者；草稿不寫日期與時間點；交完在 #1041 留「Threads 草稿交付：涵蓋到 main <sha>」，再封存自己；不 commit、不發布 | `docs/research/THREADS_WRITING.md`（寫法、規則、發到哪一版；新的寫作 session 先讀它）；最早的派工單照 2026-10-14、10-15、10-16 的寫作 session |
+| 遊戲規劃（兼派工） | session_01YGNNunBu1rxrPwN6bsA7g2（10-27 16:45 起，第 2 層，由前任用 `create_session` 開；現況在 §2.0 最前面）；再之前 session_01YGNNunheBBBwyekk4Pq7b4（10-27 14:3x–16:45，第 1 層，壓縮 3 次後換手）；再之前 session_01YGNNuovwuBJPdZWXamkhEp（10-27 05:45 起；壓縮 3 次後寫了第二十次換手，作者 13:5x UTC 說「你可以先全面接管了」，續任到第 4 次壓縮前；之後作者從 claude.ai 開新規劃，現況在 §2.0 最前面）；再之前 session_01YGNNuoQekRm2qcVxoPT8ME（10-27 02:16–05:40，壓縮 2 次照 §1.1 換手）；再之前 session_01CWaJGHR4DnSwosLCzJ2Tts（10-26 10:30–10-27 02:10，壓縮 3 次）；再之前 session_01TH2DNkW2meh3EZJ1vxBczC（10-26 03:45–10:30，壓縮 3 次，第 3 次後換手）；再之前 session_01TS89hbaHPJiFJycqrKiK5z（10-25 21:40–10-26 04:00，壓縮 2 次照 §1.1 換手）；再之前 session_01KvN8GrLosqRswrXMQgVQir（10-25 15:35–19:55，壓縮 2 次照 §1.1 換手）；再之前 session_0164nEyu2aMPVTpvQww43kj1（10-25 12:56–15:30，壓縮 2 次照 §1.1 換手）；再之前 session_0138XhXTjToUd3fpKV7kebeH（10-25 05:05–12:40，壓縮 5 次，作者說「交接」）；再之前 session_01B2kaku5NRz2J2CMzc8z3cZ（10-24 23:13–10-25 05:05，壓縮 2 次照 §1.1 換手）；再之前 session_019yHzrc1rgGJgdXSSwRNqgM（10-24 15:07–22:50，壓縮 2 次照 §1.1 換手，已封存）；再之前 session_013dJ7tvDYJnhe7XjXCE5cNi（10-24 08:17–14:00，壓縮 2 次照 §1.1 換手，已封存）；再之前 session_017HD7Krh51WqqzXjy6949Pq（10-24 06:32–08:00，壓縮 2 次照 §1.1 換手）；再之前 session_01AxcyajwHdF6j4ryDMghASM（10-24 05:00–06:30，「第八次換手」，已封存）；再之前 session_01XsVqbA1A5wGtJbuAa881oT（10-24 01:30–05:00，「第七次換手」）；再之前接暫代的 session_01PGibJmGNcvu2d7dJWWhWVb（10-24 00:35–01:30，已封存），再之前 session_01H5RHAwnA69n8EfAUSUrH52（10-23 00:10–10-24 00:35），再之前 session_014nUBHbE9mSK4qXHHgm8xCQ（10-22 22:30–10-23 00:10），再之前 session_01UsF4QYCGrzSeNSFq11i8Wu（18:15–22:30），再之前 session_01Ddr2wiXx1Xhn2m9qNBDnDh、session_01CHQg7B6JqzbScGSjyDwHos（2026-10-22 起，照 §1.1 換手，作者：「要不要全部所有換個session了 都一直在壓縮了」→「好，照表換」；換手時的現況在第 2 節最前面；前任 session_014rYHMtmqA5bEMkBBuKu6PV（10-21 至 10-22，作者：「那你需要先接手嗎太長了」）、session_01NiR5WLMFjMJBktQAMkfmkm（10-21）、session_01WW7o3decEv5LY59nYVqnDN（10-20 至 10-21，作者：「接手 角色表中遊戲規劃的工作」）、session_01V1xd3H9vNkuZoSA3czNfGm（10-16 至 10-18）、session_018D6gYU1yiZMtxSmNNU1K17） | 從玩家、鐵道迷、開發、美術、音樂五個角度決定優先順序與設計，開實作 session 並派工，綠了的 PR 照 §1.2 合併（2026-10-21 起），收作者轉來的玩家回報與 bug（§1.3），寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1、1.3 節 |
+| Threads 開發日誌（看進度） | 排程「Threads 開發日誌（看進度）」（台灣時間每晚 21:43 檢查，2026-10-27 規劃五方決定恢復，作者：「我不知道 你自己決定」「排程要看每日進度我也不確定有固定時間發文」）。它只檢查，不一定寫：#1041 最後一則「Threads 草稿交付：涵蓋到 main <sha>」之後，合進 main、玩家看得到的 PR 滿 3 個，或發了新的 TestFlight，才由規劃開寫作 session（Sonnet）；不夠就什麼都不做。現在是 `trig_01KEzqJPTdvXeUFCNUy8go3Z`（綁 session_01YGNNunBu1rxrPwN6bsA7g2，前任換手時代建）；綁前任的 `trig_019CQWcaMbiqRpfDwdNvV2qR` 已刪。排程的綁定改不了：換手時現任用同一份 prompt（`get_trigger` 讀得到）建一個綁自己的，再刪掉舊的。更早留下、停用但刪不掉的 `trig_01M2rwYPRRjTwQTC5g6QaW9v`、`trig_01ABYQAarHbVxBbEShiVWDr3` 不會觸發，作者要清可以在排程列表刪 | 寫這段期間的串文草稿，用 SendUserFile 交給作者；草稿不寫日期與時間點；交完在 #1041 留「Threads 草稿交付：涵蓋到 main <sha>」，再封存自己；不 commit、不發布 | `docs/research/THREADS_WRITING.md`（寫法、規則、發到哪一版；新的寫作 session 先讀它）；最早的派工單照 2026-10-14、10-15、10-16 的寫作 session |
 
 不再常駐（2026-10-20 停用）：合併協調 session_01QoA24EvFCFbmbcM1EwaZT7（前任 session_016sNs4eeZwga9hz1CCHkpmX）、派工 session_01MJ7sdeid5DAFjSVbTkmdi3（前任 session_01AaAj4wvJMxJQuLWAoYu6S8）。兩個都從 2026-10-17 起沒有動作。
 
@@ -374,6 +374,40 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第二十二次換手（2026-10-27 約 16:50 UTC，session_01YGNNunheBBBwyekk4Pq7b4 壓縮第 3 次 → 本任用 `create_session` 開的新規劃 session_01YGNNunBu1rxrPwN6bsA7g2，第 2 層）**。新任開工：讀第 1 節、這一段、下面「第二十一次換手之後」那段；#1041 從「遊戲規劃（session_01YGNNunheBBBwyekk4Pq7b4）壓縮第 3 次」（16:4x UTC）往後讀。和下面不同時以這段為準。
+
+- **新規則（作者 2026-10-27「不顯示網站名稱」）**：作者給過一個整理交通開放資料的第三方網站。它的名稱與網址**哪裡都不寫**：repository、私庫、檔名、branch、PR、commit、#1041。要提就寫「一個整理交通開放資料的第三方網站」。舊的遠端 branch `claude/taiwanlive168-tdx-map` 有這個名字，session 沒有刪 branch 的權限，**請作者刪**；已關閉的 #1363 標題與內容已改掉。
+- **這一任合的**（照 §1.2，記在 #1041）：#1355（Y，決策 437 垃圾車，main `b46fb0c4`）、#1360（AF，示範與挑戰關掉的功能總表 → NEXT_PRIORITIES §22.18，`a8955802`）、#1358（X，決策 436 月台小物，`dca2bb25`）、#1364（AG，TDX 即時資料類別對照 `docs/research/TDX_LIVE_DATA_MAP_2026-10-27.md`，`0f2a1cbc`）、#1367（AJ，新台幣研究 `docs/research/NT_DOLLAR_SWITCH_2026-10-27.md`，`d5310656`）。Y、AF、X、AG、AJ、AC 都已封存。
+- **在跑的 session**（新任接手後用 `send_message` 告訴它們改向新任回報；共同規則：不動 #1342、私庫 #103，壓縮 1 次不接新工作、2 次停）：
+  - **AB**：session_01YGNNumUf3EJH6FgPtuEpvW（Opus），**#1365**（決策 438、**存檔 75**，市區公車 GameCore），**ready**，head `98b673cf`，全 tier 綠。動存檔，**合併前要獨立審查**（下一項）。AB 已壓縮 1 次，只處理審查要的修改。
+    - 平衡：AB 判 CONCERNS，規劃選 (a)：#2、#5 量市區路線時不算轉乘；加 #10「有轉乘的市區路線 ≤ 同走廊決策 400 接駁」。#10 小超（淨額 +0.8%、每人公里 +6%），判輕微 CONCERNS，接受，不改值。**PR 3 的觸發條件**：任一走廊的市區路線淨額超過接駁 10% 以上。都寫在決策 438。
+  - **AB 審查**：session_01YGNNumdHxUmcMjMuG3ToUU（Opus），本任交接時開，只給 PR 號與 CLAUDE.md，結果留在 #1365 並 `send_message` 給新任。審過、沒有要改的就照 §1.2 合。
+  - **AE**：session_01YGNNupMuLMyw9biXB952o2（Opus），**#1361**（決策 440），**ready**，head `dfd69a5c`，CI 綠。土地全給的台灣實景（舊存檔 `landBlocks == nil`、實景示範兩個、平溪線挑戰新局）也開道路與公車；只改 GamePresentation（`CountryLookup` 台灣 → `.available`，新局 `enableRoads`）。平溪線挑戰照開公車（五方在決策 440）。實機：主執行緒讀道路在 Linux debug 0.43 秒，裝置上 UNVERIFIED。
+    - 碰到舊存檔，**獨立審查** session_01YGNNumNo4tKxtLBUCTgJnt（Opus，16:33 UTC 開）會在 #1361 留結果並回報。審過就合。
+    - **順序**：AB（#1365）先合，AE 再 merge main（兩邊都改 `RoadsTurnOn.swift` 一帶，衝突就由 AE 解）。AE 已壓縮 1 次。
+  - **AD**：session_01YGNNuoLcfAoBA6h9zn3q2t（Opus），決策 439，§22.16 列車的遮蔽陰影烘焙、夜燈、車窗與車身質感，一項一個 PR。**每個 PR 都要同時更新 `.claude/skills/rolling-stock/SKILL.md`**（§4「統一的夜間亮燈還沒做」那句、§6，加一行車頭方向幕；作者問「1357 還要吸收總結列車製作方式更新嗎」，規劃答由 AD 每個 PR 順手改，作者「好 照這樣做」）。合併前看 skill 有沒有跟著改。
+  - **AH**：session_01YGNNumzJG7K5DTHJpvMp7L（Opus），**#1366**（draft，決策 441），NEXT_PRIORITIES 10p：每個機廠旁的三股道檢修庫、彰化扇形車庫的轉車台。只改 GamePresentation，沒動 AD 的著色器檔。決策 441 已寫「實機要去哪裡看」。AH 已壓縮 1 次。
+  - **AI**：session_01YGNNum4o6fTLwq4cU6JWQf（Sonnet），`claude/ui-text-no-usd`，地價說明 4 處的「美元」／"dollars" 改成只寫「$」（`PopTravel.swift:89`、`PopulationLegendView.swift:287`、`:432`、`Localizable.xcstrings`）。還沒開 PR。綠了就合。
+- **新台幣**（作者 2026-10-27：「那要出幣值轉換嗎 設定頁面有新台幣」「我是說要出嗎」「那要先說明是美金嗎」「可是這樣未來更多玩家轉換不就更困難 現在只有50位玩家而已」）：
+  - 規劃決定：要換成新台幣，**送 App Store 審查之前做完**（公開 TestFlight 10/31，App Store 約兩週後）。換之前介面只寫「$」，不說是哪國的錢（就是 AI）。設定頁沒有幣別選項（查過 main），也不加：只有一種錢。
+  - AJ 的研究（#1367）建議 **B 案：NT$3＝$1**，所有錢的數字乘 3，舊存檔讀入時乘 3（`Money.init(from:)` 用 `@TaskLocal` 的倍數；`pricingBalance`（1<<60）不乘）。高鐵改用真實票價表（台北—左營 NT$1,490），要重新平衡。AJ 指出存檔換算是自動的，玩家多寡不影響換算成本；真正的成本是對外的截圖與評論。
+  - 分四個 PR（細節在研究文件）：PR-0 GamePresentation 的金額格式整理；PR-1 GameCore（Opus，全 tier，重錄 9 個 replay，附腳本證明新值＝舊值 × 3，決策 442 起、存檔 76）；PR-2 高鐵票價與平衡；PR-3 介面「NT$」與繁中大數字。
+  - AJ 留給規劃的兩題，本任的答案（五方：玩家不想在公開測試第一天看到錢突然變三倍；鐵道迷要真實票價；開發要等 AB 的存檔 75 落定；美術、音樂無）：
+    1. 10/31 先帶「$」出去；AB、AE 合併後派 PR-0 與 PR-1；PR-1 在 10/29–30 修 bug 的時段之後、送 App Store 之前（約 11/14）合。
+    2. 繁中大數字換成「萬／億」，放在 PR-3，送 App Store 之前。
+  - PR-1 進行時，暫停合併會新增金額常數的 PR。號碼派工時再在 #1041 預約（決策取當時最大＋1，存檔 76）。
+- **TDX**：AG 用 `tdx-check.yml` 查了基本與進階 API（不扣點），對照表在 `docs/research/TDX_LIVE_DATA_MAP_2026-10-27.md`；資料在私庫 #108（draft，`Railway/tdx-live-2026-10/`，8.5 MB，**作者合**）。找到的缺口（公車班表、票價、首末班）已交給 AB 的決策 438 下一步；捷運班距 TRTC／KRTC／TYMC／TMRT／NTMC；YouBike 6,799 站；停車場台北 673、高雄 757。
+- **Y 的網站致謝**：垃圾車資料（`DataSourceCredits.taipeiGarbageTrucks`）與 Meshy 那行的 `credits.html` 在私庫 #106（draft，**作者合**）。
+- **編號**：決策 436、437 用掉；438（AB）、439（AD）、440（AE）、441（AH）預約中；**下一個空的是 442**。存檔 75 給 AB，**76** 留給新台幣。golden schema 沒動。
+- **還要看的**：main 下一次 full lane（4d5c7994 之後那輪，run 40530426324）三個 job 的時間（估 build ≈60／75、second ≈45／55、lessons ≈42／55）與 `ShellLayoutUITests.testTheStatusBarKeepsItsWidthAsTheDaysGoBy`。又紅就派人查，不是 runner 慢。
+- **排程**：本任的 `send_later` 巡邏在交接時刪掉，新任自己排（約 45 分鐘一次）。Threads 排程已由本任改綁新任（第 1 節那列）。
+- **等作者**：
+  - 刪遠端 branch `claude/taiwanlive168-tdx-map`；合私庫 #106、#108。
+  - TestFlight 92 什麼時候發、公開連結的時間。
+  - Meshy 約 49 點在 11/4 前用掉；TDX 11/1 重置。
+  - 實機：E500 推拉、普悠瑪、AE 之後舊存檔的公車與道路、平溪線開局的延遲、AH 之後的機廠。
+  - 玩家 1 的公車路線預覽截圖、91 的 fps 回報。
+
 **第二十一次換手之後（規劃 session_01YGNNunheBBBwyekk4Pq7b4，2026-10-27 15:10 UTC 更新）**。這一任由前任用 `create_session` 開（第 1 層），14:3x UTC 接手；前任 session_01YGNNuovwuBJPdZWXamkhEp 已封存。下一任接手時讀第 1 節、這一段、下面第二十一次那段；#1041 從「遊戲規劃（session_01YGNNunheBBBwyekk4Pq7b4）壓縮第 1 次」（14:56 UTC）往後讀。和下面不同時以這段為準。
 
 - **合併了**（都照 §1.2，記在 #1041）：#1353（Z，市區公車與鋪路設計，main `62d07104`）、#1350（列車展示點擊層，`16a1fa8e`）、#1354（AA，台鐵誤點分析，`ee9ee88d`）、#1351（full lane 重新分配，`ecba996a`）。Z、AA 已封存。
@@ -647,7 +681,7 @@
   - #1232（自有建築第二批，**存檔 74**，head cb8a9991）：住戶掉的原因 01WBDhnK 查清了（規則沒改），完整 tier 綠就合，進 89.1。
   - #1239（10j-3 捷運收購，head 0915f4bf，draft）：解凍後轉 ready，審過再合。
   - #1229、#1230（Codex 的 EMU3000、TEMU1000）：下一版，免費車，不進列車包。
-- **89.1 的其他線**：Codex 的檢修庫（`codex/depot-3d-facilities-2026-10-25`）要實機看；它合併後再派彰化的轉車台（NEXT_PRIORITIES 10p）。示範模式是否自動解鎖列車包、10j-4 都排在後面。三翼的公車接駁（#1220、#1225）還沒有 UI，所以沒進 What to Test。
+- **89.1 的其他線**：檢修庫與彰化的轉車台（NEXT_PRIORITIES 10p）改由派工 AH 一起做（#1366，決策 441）；Codex 原本的認領（`codex/depot-3d-facilities-2026-10-25`，沒有 commit）已釋出。合併後要實機看。示範模式是否自動解鎖列車包、10j-4 都排在後面。三翼的公車接駁（#1220、#1225）還沒有 UI，所以沒進 What to Test。
 - **列車包**（決策 338 續二）：作者選「己＋買之前看得到」；測試版的開關預設關。N700S-G 在包裡：解鎖後單號高鐵畫成 N700S-G，沒解鎖全是 700T。
 - **session**：01XiqjNz、012tPP、01WBDhnK 做完或壓縮過，不再派新工；01F2tq、01B5oz 已封存。私庫 #83 已合併（95a20451），預覽的規則在 #1237。
 - 每日 Threads 排程：新任照 §1 表格建一個綁自己的，舊的刪掉（作者沒說要開就維持暫停）。
