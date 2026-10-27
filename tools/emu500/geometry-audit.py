@@ -16,6 +16,21 @@ def audit(t):
  assert all(n==edges[(b,a)] for (a,b),n in edges.items()),'open or reversed edge'
  volume=np.einsum('ij,ij->i',t[:,0],np.cross(t[:,1],t[:,2])).sum()/6
  assert volume>0,'inward volume'
+ # Each vertex-connected shell must have outward positive volume as well.
+ parent=list(range(len(t))); owner={}
+ def find(i):
+  while parent[i]!=i:
+   parent[i]=parent[parent[i]];i=parent[i]
+  return i
+ for i,tri in enumerate(t):
+  for v in tri:
+   k=tuple(np.round(v,5))
+   if k in owner:parent[find(i)]=find(owner[k])
+   else:owner[k]=i
+ volumes=collections.defaultdict(float)
+ values=np.einsum('ij,ij->i',t[:,0],np.cross(t[:,1],t[:,2]))/6
+ for i,v in enumerate(values):volumes[find(i)]+=v
+ assert all(v>1e-9 for v in volumes.values()),'inward component'
  return float(volume)
 rows=[]
 for m in json.loads((root/'manifest.json').read_text())['models']:
