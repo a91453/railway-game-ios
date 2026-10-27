@@ -1866,3 +1866,10 @@ TEMU1000 原生外形（Codex，初版 issue #1228／公開 #1230／私庫 #78 �
 使用者要求評估莒光藏青（建議保持，本輪不改）及EMU3000黑色外觀改遊戲風格。新分支codex/emu3000-slate-2026-10-27；原66a515e8第五版幾何／其他色保持，只改罩面、窗框與外觀飾件為既有石板藍灰#6E7487，輪胎／雨刷／底盤／弓機構拆出hardwareColor保持舊炭黑。16單元逐三角paint-audit及真正第五版同尺度前後、全量素材／viewer／ZIP見[交接](art/emu3000-slate-2026-10-27/README.md)。已接受第五版原包及E500／PP／E1000／莒光藏青保持；新色未稱已接受，也不保證換色可免侵權風險。
 
 營運接點／列車包／fallback保持；本PR合併更新後，原專用EMU3000近遠畫面會使用新色。GameCore／存檔／fixtures不動；真機／效能／人工Simulator外觀／動畫未驗。兩庫新互鏈draft與最新同head CI看#1309，不推main、不合併／auto-merge／TestFlight。
+
+### 2026-10-27 Codex EMU900（#1338）
+
+[來源／外觀／角色與重建交接](art/emu900-native-2026-10-27/README.md)。獨立EMU900六設備角色近遠正反24單元，十輛5M5T、3/6/8單弓，合法M3DAssembly展示。既有Q比例與展示簡模已實際四向查看，不套殼；真候選與接入前EMU800顯示比較分別標示。柔灰／綠松腰帶／藏青罩面，已修下鼻方正、肩帶過窄與返回面斷帶；工程站位及左右隱藏設備仍有推估，外觀自檢不稱使用者接受。只靜態註冊，沒有EMU900獨占接點，合併後無營運編組自動改用；現有一般通勤EMU800/EMU500與解鎖／列車包／fallback保持。310份舊完整payload（307註冊＋3直接比較）及私庫已接受E500v3／EMU3000v5與已交付PP/E1000／莒光藏青／石板藍灰／EMU800不動。固定producer、素材下載驗證與最新同head CI見互鏈draft／issue。Linux Swift6.4及取樣幾何不代表人工Simulator、真機Metal/FPS/記憶體、動畫或完整動態碰撞。GameCore／存檔／fixtures／玩法不動；不推main、不合併／auto-merge／TestFlight。
+
+
+EMU900第二版（#1338／draft#1339↔私庫#102）：使用者要求修圓車頭、下裙／連結器、輪架與遊戲配色。真8ebfd9fd第一版完整包保持；新revision-2，罩面沿實際殼曲線、圓裙凹槽與折面排障器，車身用既有D3D4DA、玻璃shade0.62，綠松／藏青保持；輪胎與屋頂設備原三角保護。另補#1041前版漏做的light介面，頭2188／中868–1092三角，36單元與近59448／遠33800／light12056十輛展示及18全payload pins。最新main b7710cb7 C341整合保持；只靜態註冊，無營運自動換用。全量重出／真前後／驗證與固定producer、下載SHA、最新同head CI見自有README及issue，外觀自檢不等於使用者接受，人工Simulator／真機Metal效能與動畫仍未驗。不改GameCore／存檔／fixtures／玩法，不合併／auto-merge／TestFlight。
