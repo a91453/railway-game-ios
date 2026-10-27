@@ -139,7 +139,7 @@ final class Map3DC341IntegrationTests: XCTestCase {
         for key in ["C", "APM", "wenhu", "greenTram", "taroko", "puyuma", "dieselExpress", "metroC341", ""] {
             XCTAssertEqual(Map3DTrainSet.variant(of: key, number: 1), key, key)
         }
-        XCTAssertEqual(Map3DTrainSet.variant(of: "emu800", number: 1), "emu500", "decision 432 is as it was")
+        XCTAssertEqual(Map3DTrainSet.variant(of: "emu800", number: 7), "emu500", "decision 432, decision 435's shares")
         XCTAssertEqual(Map3DTrainSet.variant(of: "highSpeed", number: 1), "n700sG", "decision 408 is as it was")
     }
 
@@ -156,7 +156,7 @@ final class Map3DC341IntegrationTests: XCTestCase {
             // The other lines' sets are as they were.
             XCTAssertEqual(Map3DRealTrains.variantKey(system: "trtc", key: "wenhu", number: number), "wenhu")
             XCTAssertEqual(Map3DRealTrains.variantKey(system: "krtc", key: "greenTram", number: number), "greenTram")
-            XCTAssertEqual(Map3DRealTrains.variantKey(system: "tra", key: "emu800", number: number), number % 2 != 0 ? "emu500" : "emu800")
+            XCTAssertEqual(Map3DRealTrains.variantKey(system: "tra", key: "emu800", number: number), Map3DTrainSet.localTrain(number: number))
             XCTAssertEqual(Map3DRealTrains.variantKey(system: "thsr", key: "highSpeed", number: number), number % 2 != 0 ? "n700sG" : "highSpeed")
         }
         // The formations themselves are as they were: the same key, the same cars.

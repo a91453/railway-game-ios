@@ -28,8 +28,10 @@ public struct Map3DTrainSet: Sendable {
     /// are not used, and the back half is the front half's mirror image, its
     /// cars the back versions (``Cars/middleBack``, ``Cars/pantographBack``,
     /// ``Cars/centreBack``), the middle one of an odd count the front's.
+    /// Decision 435: and ``Slot/fourth``, a fourth car in the cycle (the
+    /// EMU900's), its back half's ``Cars/fourthBack``.
     var cycle: [Slot] = []
-    enum Slot: Sendable { case middle, pantograph, centre }
+    enum Slot: Sendable { case middle, pantograph, centre, fourth }
     /// Decision 399: the cars drawn at their models' own lengths
     /// (``Map3DModelPack/layout(forType:count:)``), not stretched to the
     /// 20 m every other train's are, each touching the next (their models
@@ -64,6 +66,12 @@ public struct Map3DTrainSet: Sendable {
         var pantographBack: Model? = nil
         /// Decision 432: the back half's ``centre`` car.
         var centreBack: Model? = nil
+        /// Decision 435: the cycle's fourth car (``Slot/fourth``), and the
+        /// back half's in its place, which need not be the same car turned
+        /// round (the EMU900's crew EM in the front half, its accessible EP
+        /// in the back).
+        var fourth: Model? = nil
+        var fourthBack: Model? = nil
         typealias Model = Map3DModelPack.Model
     }
 
@@ -78,6 +86,8 @@ public struct Map3DTrainSet: Sendable {
     var tenderName: String { "set-\(key)-tender" }
     var middleBackName: String { "set-\(key)-carBack" }
     var pantographBackName: String { "set-\(key)-pantoBack" }
+    var fourthName: String { "set-\(key)-fourth" }
+    var fourthBackName: String { "set-\(key)-fourthBack" }
     func unitName(_ unit: String) -> String { "set-\(key)-\(unit)" }
 
     /// The four model names and their models, in the pack's order.
@@ -99,6 +109,8 @@ public struct Map3DTrainSet: Sendable {
         if let middle = cars.middleBack { models.append(named(middle, middleBackName)) }
         if let pantograph = cars.pantographBack { models.append(named(pantograph, pantographBackName)) }
         if let centre = cars.centreBack { models.append(named(centre, centreBackName)) }
+        if let fourth = cars.fourth { models.append(named(fourth, fourthName)) }
+        if let fourth = cars.fourthBack { models.append(named(fourth, fourthBackName)) }
         return models
     }
 
@@ -177,6 +189,11 @@ public struct Map3DTrainSet: Sendable {
             emu800(far: true),
             emu500(),
             emu500(far: true),
+            // Decision 435: and #1339's EMU900 (by ``variant(of:number:locked:)``
+            // as many as its share of the three fleets' cars), from 500 m out
+            // its light cars.
+            emu900(),
+            emu900(far: true),
             // Decision 433: the Taipei Metro's high-capacity train as #1323's
             // C341 (the odd-numbered), each car its own length, and from
             // 500 m out its light cars; the even-numbered stay the C381.
@@ -247,8 +264,9 @@ public struct Map3DTrainSet: Sendable {
     /// Decision 432: and the EMU800 and EMU500 (their far sets), 11,500 and
     /// 4,500 triangles a cab car.
     /// Decision 433: and the C341 (its far set), 3,900 a cab car.
+    /// Decision 435: and the EMU900 (its far set), 9,300 a cab car.
     static let nearOnly: Set = ["E200CK", "R100CK", "R200CK", "E500CK", "MINGRI", "STAR", "pushPull", "pushPullE1000", "greenTram", "SUMMER", "STEAM", "highSpeed", "n700sG", "emu3000",
-                                "taroko", "emu800", "emu500", "puyuma", "metroC341"]
+                                "taroko", "emu800", "emu500", "puyuma", "metroC341", "emu900"]
 
     /// Decision 408: the set a train of `key` numbered `number` is drawn
     /// as: half the high-speed trains, the odd-numbered, the N700S-G, the
@@ -258,7 +276,8 @@ public struct Map3DTrainSet: Sendable {
     /// or even, the E1000 look unless `locked` has `pushPullE1000`.
     /// Decision 432: and half the Taiwan Railway local trains, the
     /// odd-numbered, the EMU500; not locked, the train pack's has no part
-    /// in it.
+    /// in it. Decision 435: the local trains split three ways instead, by
+    /// ``localTrain(number:)``.
     /// Decision 433: and half the Taipei Metro's, the odd-numbered, the C341
     /// (the player's metro too, but not the linear-motor metro the unlocked
     /// train pack draws as its own); the other cities' are not Taipei's
@@ -269,13 +288,24 @@ public struct Map3DTrainSet: Sendable {
             return "metroC341"
         case "highSpeed" where number % 2 != 0 && !locked.contains("n700sG"):
             return "n700sG"
-        case "emu800" where number % 2 != 0:
-            return "emu500"
+        case "emu800":
+            return localTrain(number: number)
         case "pushPull" where !locked.contains("pushPullE1000"):
             return "pushPullE1000"
         default:
             return key
         }
+    }
+
+    /// Decision 435: the set a Taiwan Railway local train numbered `number`
+    /// is drawn as, as many of each as its share of the three fleets' cars
+    /// (EMU900 520, EMU500 344, EMU800 296: 9, 6 and 5 in 20): of seven
+    /// times the number's remainder by 20, 0 to 8 the EMU900, 9 to 14 the
+    /// EMU500, 15 to 19 the EMU800. Times seven, so that trains numbered one
+    /// after another are not the same kind in a run.
+    static func localTrain(number: Int) -> String {
+        let share = ((number % 20 + 20) % 20) * 7 % 20
+        return share < 9 ? "emu900" : share < 15 ? "emu500" : "emu800"
     }
 
     /// Decision 408: the number at the end of a real train's key
@@ -535,6 +565,27 @@ public struct Map3DTrainSet: Sendable {
             return Cars(head: lit(part(.emc), front: true), middle: part(.em).turned, tail: lit(part(.emc).turned, front: false), single: nil,
                         pantograph: part(.ep), centre: part(.et), middleBack: part(.em),
                         pantographBack: part(.ep).turned, centreBack: part(.et).turned)
+        }
+    }
+
+    /// Decision 435: #1339's EMU900 units: an ED at each end (turned round
+    /// at the back), the EM with the toilet, the EP with the compressor, the
+    /// EM with the SIV and the crew EM between them over and over
+    /// (``Map3DTrainSet/cycle``), the back half the front's mirror image
+    /// but for the crew EM, whose place there the accessible EP takes; ten
+    /// cars are the static formation (``Map3DEMU900/sequence``). Each car its
+    /// own length, the pantographs on the EPs, the cabs' lamp lenses lit
+    /// (white at the front, red at the back). `far`: the `light` units.
+    static func emu900(far: Bool = false) -> Map3DTrainSet {
+        Map3DTrainSet(key: far ? "emu900Far" : "emu900", cycle: [.middle, .pantograph, .centre, .fourth], ownLengths: true,
+                      far: far ? nil : "emu900Far") {
+            func part(_ role: Map3DEMU900.Role, reversed: Bool = false) -> Map3DModelPack.Model {
+                Map3DEMU900.model(role, reversed: reversed, light: far)
+            }
+            return Cars(head: lit(part(.ed), front: true), middle: part(.emToilet), tail: lit(part(.ed, reversed: true), front: false),
+                        single: nil, pantograph: part(.epCompressor), centre: part(.emSIV), middleBack: part(.emToilet, reversed: true),
+                        pantographBack: part(.epCompressor, reversed: true), centreBack: part(.emSIV, reversed: true),
+                        fourth: part(.emCrew), fourthBack: part(.epAccessible, reversed: true))
         }
     }
 

@@ -129,6 +129,15 @@ public struct Map3DRealTrains: Sendable {
         key == "metroC381" && system != "trtc" ? key : Map3DTrainSet.variant(of: key, number: number, locked: locked)
     }
 
+    /// Decision 435: the formation a train of a line of `system` whose
+    /// trains are `line`, numbered `number`, is drawn as: its set
+    /// ``variantKey(system:key:number:locked:)``, as many cars as the line's,
+    /// but the EMU900 ten, as it always runs.
+    static func formation(of line: Formation, system: String, number: Int, locked: Set<String> = []) -> Formation {
+        let key = variantKey(system: system, key: line.key, number: number, locked: locked)
+        return Formation(key: key, cars: key == "emu900" ? Map3DEMU900.sequence.count : line.cars)
+    }
+
     /// Each line's trains (decision 339): as many cars as `Railway/`
     /// rail-3d's formations give its trains (`integration/formations.js`
     /// `baseFormation`), each the game's set for that stock, or the nearest
@@ -325,9 +334,10 @@ public struct Map3DRealTrains: Sendable {
                 // their run on the day's timetable.
                 // Decision 338 (second later): none while the pack is locked.
                 // Decision 433: and half the Taipei Metro's the C341.
-                let formation = Formation(key: Self.variantKey(system: line.system, key: lineFormation.key,
-                                                               number: Map3DTrainSet.number(ofRealTrain: place.key), locked: models?.locked ?? []),
-                                          cars: lineFormation.cars)
+                // Decision 435: and the Taiwan Railway's local trains three
+                // ways.
+                let formation = Self.formation(of: lineFormation, system: line.system,
+                                               number: Map3DTrainSet.number(ofRealTrain: place.key), locked: models?.locked ?? [])
                 let way: Double = RealTrainRun.way(from: place.km, to: place.towardKm, ringKm: isRing ? ring : nil) >= 0 ? 1 : -1
                 let length = Double(formation.cars) * Self.carPitch
                 // Its middle where the timetable has it; held at the line's

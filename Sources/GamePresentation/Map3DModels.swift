@@ -184,6 +184,7 @@ public struct Map3DModelPack: Sendable {
             case .middle: return pick(set.middleName, set.middleBackName)
             case .pantograph: return pick(set.pantographName, set.pantographBackName)
             case .centre: return pick(set.centreName, set.centreBackName)
+            case .fourth: return pick(set.fourthName, set.fourthBackName)
             }
         }
         if set.centreCars.contains(carIndex), let centre = index(of: set.centreName) { return centre }
