@@ -128,7 +128,8 @@ final class Map3DEMU800IntegrationTests: XCTestCase {
         // Not locked behind the train pack, and no other train is touched.
         XCTAssertEqual(Map3DTrainSet.variant(of: "emu800", number: 1, locked: TrainPack.sets), "emu500")
         XCTAssertFalse(TrainPack.sets.contains("emu500"))
-        for key in ["taroko", "puyuma", "dieselExpress", "metroC381", "pushPull", "emu500", ""] {
+        // (Decision 433: the odd-numbered metro is the C341 now, `Map3DC341IntegrationTests`.)
+        for key in ["taroko", "puyuma", "dieselExpress", "pushPull", "emu500", ""] {
             XCTAssertEqual(Map3DTrainSet.variant(of: key, number: 1), key == "pushPull" ? "pushPullE1000" : key, key)
         }
         XCTAssertEqual(Map3DTrainSet.variant(of: "emu500", number: 2), "emu500")

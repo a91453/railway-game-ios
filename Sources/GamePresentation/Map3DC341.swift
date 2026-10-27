@@ -11,18 +11,24 @@ public enum Map3DC341 {
     public static let mask = Map3DPalette.playerRim
     public static let glass = Map3DColor.shaded(Map3DPalette.glazing, 0.62)
     public static let pitch: Float = 23.5
-    public static func model(_ unit: Unit) -> Map3DModelPack.Model {
+    /// Decision 433: `far`, the same car without the small parts nobody
+    /// sees from 500 m out (door and window insets as flat panes, bogie
+    /// axles and hubs, roof slats, the cab's wipers and marker lights'
+    /// extra sides): the same box, paint and lamp lenses. The near car is
+    /// as it was.
+    public static func model(_ unit: Unit, far: Bool = false) -> Map3DModelPack.Model {
+        let suffix = far ? "-far" : ""
         if unit == .rear {
-            let head=model(.dm)
+            let head=model(.dm, far: far)
             var v=head.vertices
             for i in v.indices where v[i].x>11.3 && v[i].z<1.9 && v[i].color == lamp { v[i].color=tailLamp }
             let tail=Map3DModelPack.Model(name:head.name,vertices:v,minimum:head.minimum,maximum:head.maximum)
             var b = StationKitBuilder(); b.add(tail, at: .zero, angle: .pi)
-            return .flat(named: "c341-rear", from: b.mesh)
+            return .flat(named: "c341-rear" + suffix, from: b.mesh)
         }
-        var b = C341Builder(cab: unit == .dm, trailer: unit == .t)
+        var b = C341Builder(cab: unit == .dm, trailer: unit == .t, far: far)
         b.build()
-        return .flat(named: "c341-" + unit.rawValue, from: b.kit.mesh)
+        return .flat(named: "c341-" + unit.rawValue + suffix, from: b.kit.mesh)
     }
     public static let arrangement: [Unit] = [.dm, .t, .m, .m, .t, .rear]
     public static func formation() -> Map3DModelPack.Model {
@@ -35,6 +41,8 @@ public enum Map3DC341 {
 private struct C341Builder {
     let cab: Bool
     let trailer: Bool
+    /// Decision 433: the light car.
+    let far: Bool
     var kit = StationKitBuilder()
     let half: Float = 11.55
     let profile: [(Float,Float)] = [(0.99,-1.43),(1.13,-1.59),(3.16,-1.59),(3.36,-1.53),(3.53,-1.32),(3.62,-0.90),(3.66,0),(3.62,0.90),(3.53,1.32),(3.36,1.53),(3.16,1.59),(1.13,1.59),(0.99,1.43)]
@@ -59,7 +67,7 @@ private struct C341Builder {
     }
     mutating func sidePanel(_ x: Float,_ y: Float,_ width: Float,_ height: Float,_ color: UInt32,_ proud: Float = 0.008) {
         for sign: Float in [-1,1] {
-            if color == Map3DC341.glass || color == Map3DC341.mask && height < 1.2 {
+            if !far && (color == Map3DC341.glass || color == Map3DC341.mask && height < 1.2) {
                 let r: Float = min(0.055,min(width,height)*0.15)
                 let points: [(Float,Float)] = [(-width/2+r,0),(width/2-r,0),(width/2,r),(width/2,height-r),(width/2-r,height),(-width/2+r,height),(-width/2,height-r),(-width/2,r)]
                 solid(points.map { Map3DPoint(x+$0.0,y+$0.1,sign*1.59) },points.map { Map3DPoint(x+$0.0,y+$0.1,sign*(1.59+proud)) },color)
@@ -85,8 +93,10 @@ private struct C341Builder {
             sidePanel(d,1.05,1.48,2.10,StationKitBuilder.steel,0.012)
             for leaf: Float in [-1,1] {
                 sidePanel(d+leaf*0.365,1.07,0.714,2.06,white,0.020)
-                sidePanel(d+leaf*0.365,1.44,0.714,0.32,blue,0.027)
-                sidePanel(d+leaf*0.365,2.18,0.34,0.73,ink,0.029)
+                if !far {
+                    sidePanel(d+leaf*0.365,1.44,0.714,0.32,blue,0.027)
+                    sidePanel(d+leaf*0.365,2.18,0.34,0.73,ink,0.029)
+                }
                 sidePanel(d+leaf*0.365,2.205,0.29,0.68,glass,0.036)
             }
         }
@@ -107,10 +117,10 @@ private struct C341Builder {
             kit.box(bx,0.57,0,3.3,2.05,0.25,StationKitBuilder.steel)
             kit.box(bx,0.82,0,1.5,1.6,0.07,ink)
             for dx: Float in [-1.05,1.05] {
-                kit.beam(Map3DPoint(bx+dx,0.42,-0.82),Map3DPoint(bx+dx,0.42,0.82),0.14,StationKitBuilder.steel)
+                if !far { kit.beam(Map3DPoint(bx+dx,0.42,-0.82),Map3DPoint(bx+dx,0.42,0.82),0.14,StationKitBuilder.steel) }
                 for sign: Float in [-1,1] {
-                    kit.civicTube(Map3DPoint(bx+dx,0.42,sign*0.66),Map3DPoint(bx+dx,0.42,sign*0.84),radius:0.42,color:Map3DStreetModel.tyre,sides:12)
-                    kit.civicTube(Map3DPoint(bx+dx,0.42,sign*0.84),Map3DPoint(bx+dx,0.42,sign*0.86),radius:0.20,color:StationKitBuilder.steel,sides:8)
+                    kit.civicTube(Map3DPoint(bx+dx,0.42,sign*0.66),Map3DPoint(bx+dx,0.42,sign*0.84),radius:0.42,color:Map3DStreetModel.tyre,sides:far ? 8 : 12)
+                    if !far { kit.civicTube(Map3DPoint(bx+dx,0.42,sign*0.84),Map3DPoint(bx+dx,0.42,sign*0.86),radius:0.20,color:StationKitBuilder.steel,sides:8) }
                 }
             }
         }
@@ -118,14 +128,15 @@ private struct C341Builder {
         for x: Float in trailer ? [-3.8,0,3.8] : [-4.4,-1.4,1.8,4.5] { kit.box(x,0.52,0,2.2,1.8,0.36,StationKitBuilder.steel) }
         for x: Float in [-5.6,5.6] {
             kit.box(x,3.66,0,4.1,1.65,0.04,StationKitBuilder.steel)
-            for dx: Float in [-1.4,-0.7,0,0.7,1.4] { kit.box(x+dx,3.70,0,0.045,1.5,0.012,ink) }
+            if !far { for dx: Float in [-1.4,-0.7,0,0.7,1.4] { kit.box(x+dx,3.70,0,0.045,1.5,0.012,ink) } }
         }
         for sign: Float in [-1,1] where !cab || sign<0 {
             kit.box(sign*11.64,1.18,0,0.18,1.70,1.85,ink)
             kit.box(sign*11.72,1.22,0,0.035,1.60,1.77,StationKitBuilder.steel)
-            kit.box(sign*11.70,0.65,0,0.30,0.32,0.20,ink)
+            if !far { kit.box(sign*11.70,0.65,0,0.30,0.32,0.20,ink) }
         }
         if cab {
+            let lampSides = far ? 6 : 12
             // Rounded, crowned front mask follows the roof shoulder instead of a rectangle.
             let outline: [(Float,Float)] = [(-1.44,1.98),(1.44,1.98),(1.44,3.30),(1.34,3.43),(0.90,3.53),(0,3.57),(-0.90,3.53),(-1.34,3.43),(-1.44,3.30)]
             let maskRings = [Float(0),Float(0.012)].map { d in outline.map { z,h in Map3DPoint(half-max(0,h-1.35)*0.055+d,h,z) } }
@@ -139,8 +150,8 @@ private struct C341Builder {
                 frontPanel(s*0.94,2.04,0.80,1.04,0.008,glass,0.026)
                 frontPanel(s*0.94,3.17,0.78,0.17,0.008,StationKitBuilder.steel,0.026)
                 frontPanel(s*0.94,3.20,0.69,0.07,0.004,s<0 ? Map3DPalette.tunnelLamp : blue,0.035)
-                let marker = (0..<12).map { i -> (Float,Float) in
-                    let a=Float(i)*2*Float.pi/12
+                let marker = (0..<lampSides).map { i -> (Float,Float) in
+                    let a=Float(i)*2*Float.pi/Float(lampSides)
                     return (3.40+0.045*sinf(a),s*1.20+0.045*cosf(a))
                 }
                 let markerRings=[Float(0.012),Float(0.025)].map { d in marker.map { h,w in Map3DPoint(half-(h-1.35)*0.055+d,h,w) } }
@@ -148,14 +159,14 @@ private struct C341Builder {
                 frontPanel(s*0.95,1.46,0.70,0.28,0.022,ink,0.066)
                 for dz: Float in [-0.18,0.18] {
                     let z=s*0.95+dz
-                    let points = (0..<12).map { i -> (Float,Float) in
-                        let a=Float(i)*2*Float.pi/12
+                    let points = (0..<lampSides).map { i -> (Float,Float) in
+                        let a=Float(i)*2*Float.pi/Float(lampSides)
                         return (1.60+0.105*sinf(a),z+0.105*cosf(a))
                     }
                     let rings = [Float(0.088),Float(0.101)].map { d in points.map { h,w in Map3DPoint(half-max(0,h-1.35)*0.055+d,h,w) } }
                     solid(rings[0],rings[1],dz*s<0 ? Map3DPalette.tunnelLamp : StationKitBuilder.steel)
                 }
-                kit.beam(Map3DPoint(11.53,2.02,s*0.95),Map3DPoint(11.49,2.49,s*0.79),0.026,ink)
+                if !far { kit.beam(Map3DPoint(11.53,2.02,s*0.95),Map3DPoint(11.49,2.49,s*0.79),0.026,ink) }
             }
             frontPanel(0,0.60,2.78,0.42,0.03,ink)
             kit.box(11.65,0.64,0,0.24,0.36,0.20,ink)

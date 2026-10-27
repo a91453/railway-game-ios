@@ -58,7 +58,8 @@ final class Map3DTrainSetTests: XCTestCase {
                 // and its far set's 25 and 25.3 m,
                 // Decision 422: the 700T's far set as long as its near one.
                 let length: ClosedRange<Float> = ["highSpeed", "highSpeedFar"].contains(set.key) ? 25...25.6 : ["n700sG", "n700sGFar"].contains(set.key) ? 24.9...25.4
-                    : ["taroko", "tarokoFar"].contains(set.key) ? 23...24.5 : set.key == "wenhu" ? 12...13.5
+                    // Decision 433: and #1323's C341 units, 23.6 and 23.7 m with their couplers.
+                    : ["taroko", "tarokoFar", "metroC341", "metroC341Far"].contains(set.key) ? 23...24.5 : set.key == "wenhu" ? 12...13.5
                     : set.key == "threeCarUrban" ? 15...16 : set.key == "sevenSectionLRT" ? 14...16
                     : name == set.headName && ["SUMMER", "SUMMERFar", "STEAM"].contains(set.key) ? 14.5...15.5
                     : name == set.tenderName ? 8.9...9.6 : set.key == "fourCarMetro" ? 12.3...12.8
