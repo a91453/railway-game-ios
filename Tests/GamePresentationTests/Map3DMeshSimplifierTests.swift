@@ -120,7 +120,7 @@ final class Map3DMeshSimplifierTests: XCTestCase {
     }
 
     func testAModelKeepsItsNameBoxAndColours() {
-        let pack = Map3DModelPack.standard
+        let pack = Map3DModelPack.unbaked
         for name in ["commuter-cab", "express-car"] {
             let model = pack.models[pack.index(of: name)!]
             let half = model.simplified(to: 0.5)

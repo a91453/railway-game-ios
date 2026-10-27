@@ -5,7 +5,7 @@ import XCTest
 /// Decision 430: the Chu-Kuang sets (E200CK, E500CK, R100CK, R200CK and the
 /// Midsummer Formosa) run #1306's automatic-door coach, near and far.
 final class Map3DChuKuangIntegrationTests: XCTestCase {
-    private let pack = Map3DModelPack.standard
+    private let pack = Map3DModelPack.unbaked  // the recipes before decision 439's shade
     private let keys = ["E200CK", "E500CK", "R100CK", "R200CK", "SUMMER"]
 
     private func model(_ name: String) throws -> Map3DModelPack.Model {

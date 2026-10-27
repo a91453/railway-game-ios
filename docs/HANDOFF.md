@@ -386,6 +386,7 @@
     - 碰到舊存檔，**獨立審查** session_01YGNNumNo4tKxtLBUCTgJnt（Opus，16:33 UTC 開）會在 #1361 留結果並回報。審過就合。
     - **順序**：AB（#1365）先合，AE 再 merge main（兩邊都改 `RoadsTurnOn.swift` 一帶，衝突就由 AE 解）。AE 已壓縮 1 次。
   - **AD**：session_01YGNNuoLcfAoBA6h9zn3q2t（Opus），決策 439，§22.16 列車的遮蔽陰影烘焙、夜燈、車窗與車身質感，一項一個 PR。**每個 PR 都要同時更新 `.claude/skills/rolling-stock/SKILL.md`**（§4「統一的夜間亮燈還沒做」那句、§6，加一行車頭方向幕；作者問「1357 還要吸收總結列車製作方式更新嗎」，規劃答由 AD 每個 PR 順手改，作者「好 照這樣做」）。合併前看 skill 有沒有跟著改。
+    - 2026-10-27：第 2 項（遮蔽陰影烘焙）是 #1373（決策 439）。AD 壓縮過一次，做完就停；第 1 項（夜燈）、第 3 項（車窗與車身質感）未開始，從哪裡接寫在 `docs/decisions/439.md` 的「下一步」。
   - **AH**：session_01YGNNumzJG7K5DTHJpvMp7L（Opus），**#1366**（draft，決策 441），NEXT_PRIORITIES 10p：每個機廠旁的三股道檢修庫、彰化扇形車庫的轉車台。只改 GamePresentation，沒動 AD 的著色器檔。決策 441 已寫「實機要去哪裡看」。AH 已壓縮 1 次。
   - **AI**：session_01YGNNum4o6fTLwq4cU6JWQf（Sonnet），`claude/ui-text-no-usd`，地價說明 4 處的「美元」／"dollars" 改成只寫「$」（`PopTravel.swift:89`、`PopulationLegendView.swift:287`、`:432`、`Localizable.xcstrings`）。還沒開 PR。綠了就合。
 - **新台幣**（作者 2026-10-27：「那要出幣值轉換嗎 設定頁面有新台幣」「我是說要出嗎」「那要先說明是美金嗎」「可是這樣未來更多玩家轉換不就更困難 現在只有50位玩家而已」）：
@@ -1582,6 +1583,7 @@
 
 | 事項 | 來源 | 狀態 |
 | --- | --- | --- |
+| 每天 06:00 第一次算乘客計畫（`passengerRelease` → `makeNetworkPassengerPlan`）的 tick 很慢，約為車站數的三次方：Linux debug 高雄示範 54 站 0.75 s、74 站 2.6 s，其他 tick 約 1 ms；作者回報那局的存檔（78 站，高雄）在 Linux debug 第 2 天、第 3 天 06:00 各約 238 s、236 s，白天 6000× 每個 tick 也要 2–5 s，取樣全在 `PassengerRouteGraph.shortest`，關掉真實轉乘仍超過 600 s，所以倍數不是轉乘、原因未明；計畫的路線記憶（`PassengerRouteMemo`）跟著 `PassengerRouteGraph` 每天換掉。按速度把它拖成時鐘停住的部分已修（決策 143「後來（2026-10-27）」），車站很多的地圖 06:00 仍會停頓（作者那局實機估一分鐘以上）| 玩家回報 91.1「車多 時間軸會卡住不前進」，派工單 AL（session_01YGNNunTGjhacnQNuZoH1FS） | 派工單 AQ（session_01YGNNun1Kn1yX2orJ1cGjgj）；作者的存檔在私庫 branch `bug-reports/clock-stuck-2026-10-27`。要逐位元相同地加快路線搜尋，或讓圖沒變的部分跨天沿用路線 |
 | ~~高鐵 demo 第一次開地圖時畫面卡住：CI 的 iPhone 模擬器上主執行緒 28–58 秒沒有回應（app trace 最長 57540 ms）~~ | #1257（session_01ATrwF1t4xfwDoTrLvMvRAY，2026-10-25） | **修了**（`claude/hsr-first-map-stall`，session_01NmGg4SVeqcXXqTpHPxnVP6）：不在畫地圖，在 `begin` 的 `readLandRoundStations`：示範建好時沒拿底圖，它的 2,489 個街區的道路（決策 400 的續，00ecb5f）留到 `begin` 在主執行緒讀，Linux debug 11.5 s。改成和建世界一起在背景讀（`GameLauncher.readingRoads`，高鐵與宜蘭線示範），主執行緒上剩 5 ms；開局在主執行緒上的其他工作合計約 0.25 s（`HSR_FIRST_MAP_REPORT=1` 跑 `HighSpeedFirstMapReportTests`）。回歸：`HighSpeedDemoTests.testTheLauncherBuildsAndOpensIt` 檢查遊戲開始時道路已讀。剩下：資料晚到時 `install` 在主執行緒對開著的遊戲 `readLandRoundStations`（只有道路還沒讀的舊存檔會多讀）→ 改到背景讀（session_01YTRwthhkJVsLn8wkaagJ8p，決策 400「續篇：讀檔的兩件小修」）；`begin` 讀檔也搬到背景（決策 419） |
 | 輕軌收購（決策 400 10j-2）剩下的：(1) 安坑輕軌：第二條正線在急彎上離第一條不到 4 m（`trackTooClose`）；`RealLineAcquisition.swift` 裡第二條的偏移改成 8 m 時鋪得下，但從 06:12 起列車停住（307 班 179 班沒發），還沒查是靠左（決策 202）選錯路還是待避線方向保護；查好後把 `ntalrt:K` 加回 `extract_metro_runs.py` 的 `LINES`、重跑、在測試加回。(2) 淡海綠山線：終點站要 6–7 條過夜軌道，要 GameCore 的停車場或回送機廠。(3) 轉乘站併站（450 m 內同名車站）程式在、沒有測試。(4) $800 萬的價格目標：10j-3 定了輕軌每位旅客 $70，淡水開局的藍海線 $796 萬 | session_011Aw4FB9UV6Nx5P2kPZUH2E（10j-2，壓縮兩次後停下） | 沒派；數字與原因在 [決策 400](decisions/400.md)「量到的」10j-2 |
 | 捷運收購（決策 400 10j-3）剩下的：(1) 三鶯線（`sanying:LB`）：工具排得出（398 班、8 班回送、12 組車，`extract_metro_runs.py` 的 `LINES` 裡註解掉），收購也鋪得下，但一般規則下白天一個遊戲小時要約 13 秒（debug；藍海線 0.6 秒），第二天約 16:00 停住超過 25 分鐘。gdb 看到卡在 `GameWorld.minutesUntilNextDispatch` → `hasReadyRun` → `readyRunTrain` → `runTrip` → `driveRun` → `linePath` → `TrainRoute.shortest`：每一分鐘、每一班到點的班、每一組停在首站的車都重找兩次全程的路（照原方向與折返），沒有記住；有車找不到路時到點的班越積越多。修法的方向：`readyRunTrain` 的 `runTrip` 照 `(train, placement, run.calls)` 記在 `DispatchMemo`，或世界沒變時不重算；修好後把三鶯線加回 `LINES`、`urbanLines` 與測試。(2) 其他捷運線的終點站要 6–25 條過夜軌道（數字在 `tools/real-timetables/README.md`），要 GameCore 的停車場或回送機廠，和淡海綠山線同一件；中和新蘆線的共用主線也在它之後。(3) 臺中、高雄的實景開局沒有一條線在 $800 萬以內（地圖框裡沒有可收購的線；臺北、新北、桃園有） | session_012tPPoF95rAooSb1w8yot6q（10j-3） | 沒派；數字與原因在 [決策 400](decisions/400.md)「量到的」10j-3 |
@@ -1903,6 +1905,7 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 ### 7.5 只等實機確認的
 
 這些不擋任何工作，在 TestFlight 的「請測試者看」裡輪流問：
+- 時間軸卡住（玩家回報 91.1，決策 143「後來（2026-10-27）」）：高雄實景、很多列車，第 2 天 06:00 前後換速度，時鐘應在幾秒內走過 06:00，速度選單按下就顯示新速度。還卡就在那一局用「問題回報」送出存檔與卡頓紀錄（決策 418）。
 - 高鐵的遠景車（決策 422）：高鐵示範或實景地圖開一列 700T、一列 N700S-G（單號），跟車後把鏡頭往後拉，過 500 m（弱裝置或負荷重時 250 m）換遠景時：顏色與車頭會不會跳（以前 700T 會從綠松帶變橘帶，現在應該看不出來）；N700S-G 在 250–500 m 的風擋是不是太大太黑、車門邊有沒有白點。明顯就照決策 422「下一步」調 `tools/hsr-far-422/n700sg_far.swift`。
 - 會動的東西的預算（決策 417）：各機型在 `Map3DPreviewScreen` 除錯數字列（或問題回報的「3D 地圖」那行）爬到哪一格、幾條線開始少街景；跟車時會不會忽多忽少；iPhone 17 是不是還頻繁當機。數字回來調 `Map3DDeviceTier.triangles`。
 - PLAYER_FEEDBACK 標「待實機確認」的：54.1 的兩位玩家、56.1 的大多數則、59.1 之後美術線的三件事（選取列車的黃框、建物徽章會不會疊、建造面板好不好捲）。

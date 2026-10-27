@@ -227,6 +227,60 @@ final class GameLoopTests: XCTestCase {
         XCTAssertEqual(session.world, expected)
     }
 
+    /// Player feedback 91.1 (「車多 時間軸會卡住不前進」): a speed chosen
+    /// while a loop tick is worked out waits for it, and the tick is taken.
+    /// Before, the speed was written at once and dropped the tick; on a
+    /// large map the tick that works out the day's passengers at 06:00
+    /// takes seconds, and each tap of the speed, made because the clock
+    /// stood still, dropped it again, so the clock never moved.
+    @MainActor
+    func testASpeedChosenWhileALoopTickIsWorkedOutWaitsForTheTick() async throws {
+        let session = GameSession(world: try makeWorld(speed: .normal))
+        var expected = session.world
+        try expected.advance(ticks: 1)
+        expected.setSpeed(.fast)
+
+        let tick = try XCTUnwrap(session.beginLoopTick())
+        async let outcome = tick.work()
+        session.setSpeed(.double)
+        session.setSpeed(.fast)
+        XCTAssertEqual(session.shownClock.speed, .fast, "the speed control shows it at once")
+        XCTAssertEqual(session.world.clock.speed, .normal, "the world waits for the tick")
+        let taken = session.finish(tick, with: await outcome)
+
+        XCTAssertTrue(taken)
+        XCTAssertEqual(session.world, expected, "the tick at the speed it began at, then the speed chosen")
+        XCTAssertNil(session.heldSpeed)
+        XCTAssertEqual(session.commandLog.entries.suffix(2).map(\.action), [.advance(ticks: 1), .setSpeed(.fast)], "logged as it took effect")
+    }
+
+    /// A speed held for a tick, and a pause after it: the pause stops time
+    /// at once, the tick is dropped, and the game resumes at the speed
+    /// chosen. A tick dropped by an edit puts the held speed in place too.
+    @MainActor
+    func testAHeldSpeedOutlastsAPauseOrAnEditThatDropsTheTick() async throws {
+        let session = GameSession(world: try makeWorld(speed: .normal))
+
+        var tick = try XCTUnwrap(session.beginLoopTick())
+        var outcome = await tick.work()
+        session.setSpeed(.double)
+        session.togglePause()
+        XCTAssertFalse(session.finish(tick, with: outcome))
+        XCTAssertEqual(session.world.clock.now, .zero)
+        XCTAssertTrue(session.world.clock.isPaused)
+        XCTAssertEqual(session.world.clock.runningSpeed, .double)
+        XCTAssertNil(session.heldSpeed)
+
+        session.togglePause()
+        tick = try XCTUnwrap(session.beginLoopTick())
+        outcome = await tick.work()
+        session.setSpeed(.fast)
+        try session.performEdit { world throws(GameError) in try world.buildStation(named: "Hill", at: PlanPoint(x: 1_024, y: 1_024)) }
+        XCTAssertFalse(session.finish(tick, with: outcome))
+        XCTAssertEqual(session.world.clock.speed, .fast)
+        XCTAssertEqual(session.world.stations.count, 1)
+    }
+
     @MainActor
     func testALoopTickThatCannotAdvanceChangesNothingAndIsReported() async throws {
         let world = try GameWorld(

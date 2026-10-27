@@ -5,7 +5,7 @@ import XCTest
 /// EMU800 units, near and far, and half of them (the odd-numbered) are
 /// #1312's EMU500, near and far.
 final class Map3DEMU800IntegrationTests: XCTestCase {
-    private let pack = Map3DModelPack.standard
+    private let pack = Map3DModelPack.unbaked  // the recipes before decision 439's shade
 
     private func cars(_ key: String, _ count: Int) throws -> [Map3DModelPack.Model] {
         try XCTUnwrap(pack.layout(forType: key, count: count), key).map { pack.models[$0.model] }

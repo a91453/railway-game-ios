@@ -39,11 +39,13 @@ public enum DemoMode {
         public var isRevealed: Bool { taps >= DemoMode.tapsToReveal }
 
         /// Counts a tap at `date`, starting again after a pause longer than
-        /// ``DemoMode/tapGap``. Returns whether this tap showed the switch.
+        /// `gap` (``DemoMode/tapGap`` unless a UI test, whose taps take over
+        /// a second each on a busy Simulator, gives a longer one). Returns
+        /// whether this tap showed the switch.
         @discardableResult
-        public mutating func tap(at date: Date = Date()) -> Bool {
+        public mutating func tap(at date: Date = Date(), gap: TimeInterval = DemoMode.tapGap) -> Bool {
             guard !isRevealed else { return false }
-            if let last, date.timeIntervalSince(last) > DemoMode.tapGap { taps = 0 }
+            if let last, date.timeIntervalSince(last) > gap { taps = 0 }
             last = date
             taps += 1
             return isRevealed

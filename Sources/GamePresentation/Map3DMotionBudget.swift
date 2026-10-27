@@ -92,11 +92,23 @@ public struct Map3DMotionBudget: Equatable, Sendable {
     public var step: Map3DLoadStep
     /// The trains' triangles this frame: their models' and their boxes'.
     public var trainTriangles: Int
+    /// Decision 445: the pedestrian signals' this frame (their faces and
+    /// countdowns, close up), taken before the streets'.
+    public var signalTriangles: Int
 
-    public init(tier: Map3DDeviceTier?, step: Map3DLoadStep = .full, trainTriangles: Int = 0) {
+    public init(tier: Map3DDeviceTier?, step: Map3DLoadStep = .full, trainTriangles: Int = 0, signalTriangles: Int = 0) {
         self.tier = tier
         self.step = step
         self.trainTriangles = trainTriangles
+        self.signalTriangles = signalTriangles
+    }
+
+    /// Decision 445: whether the pedestrian signals are drawn: as long as
+    /// the streets' people are (not on a device that draws nothing on the
+    /// streets, nor on a lower one stepped down to its fewest,
+    /// ``Map3DDeviceTier/streetShare(at:)``).
+    public var drawsPedestrianSignals: Bool {
+        (tier?.streetShare(at: step) ?? 0) > 0
     }
 
     /// A figure's triangles (``Map3DStreetModel/walking``, `standing`).
@@ -122,7 +134,7 @@ public struct Map3DMotionBudget: Equatable, Sendable {
         guard let tier else { return Map3DStreetLimits(people: 0, vehicles: routeBuses, buses: routeBuses) }
         let full = tier.streetLimits
         let streetBuses = max(full.buses - routeBuses, 0)
-        let left = Float(tier.triangles - trainTriangles - routeBuses * Self.busTriangles)
+        let left = Float(tier.triangles - trainTriangles - signalTriangles - routeBuses * Self.busTriangles)
         let vehicles = Float(full.vehicles * Self.vehicleTriangles + streetBuses * Self.busTriangles)
         let people = Float(full.people * Self.personTriangles)
         func share(_ room: Float, of cost: Float) -> Float { cost > 0 ? min(max(room / cost, Self.leastShare), 1) : 1 }

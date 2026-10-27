@@ -36,7 +36,7 @@ final class Map3DTEMU2000Tests: XCTestCase {
     }
 
     func testStaticModelsAreStillRegistered() {
-        let pack = Map3DModelPack.standard
+        let pack = Map3DModelPack.unbaked
         for unit in Map3DTEMU2000.Unit.allCases {
             XCTAssertNotNil(pack.index(of: "temu2000-\(unit.rawValue)"))
         }
@@ -45,7 +45,7 @@ final class Map3DTEMU2000Tests: XCTestCase {
 
     // MARK: The operating Puyuma (decision 426)
 
-    private let pack = Map3DModelPack.standard
+    private let pack = Map3DModelPack.unbaked  // the recipes before decision 439's shade
 
     private func models(_ key: String) throws -> [Map3DModelPack.Model] {
         try XCTUnwrap(pack.layout(forType: key, count: 8)).map { pack.models[$0.model] }
