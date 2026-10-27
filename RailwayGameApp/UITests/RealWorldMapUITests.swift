@@ -793,8 +793,7 @@ final class FastForwardFrameUITests: XCTestCase {
         app.openDemo("demo.highSpeed")
 
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 600), "The demo is built and opens")
-        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Speed:'")).firstMatch)
-        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH '6000 times real time'")).firstMatch)
+        app.chooseSpeed("6000 times real time, fast forward")
         if app.buttons["Resume"].exists { tap(app.buttons["Resume"]) }
         let readout = app.buttons["map.frameRate"]
         XCTAssertTrue(readout.appears(within: 30), "No frame readout")

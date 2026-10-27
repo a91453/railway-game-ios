@@ -522,7 +522,11 @@ final class StartSaveFlowSmokeTests: XCTestCase {
     }
 
     private func openGameMenu(in app: XCUIApplication) {
-        requiredButton("hud.menu", in: app).tap()
+        // A touch can go by without the menu opening (run 40450049689: the
+        // touch was sent, the app went idle, and `menu.saveGame` was in none
+        // of ten reads over ten seconds): the button is touched again then.
+        let opened = requiredButton("hud.menu", in: app).openMenu(showing: app.buttons.matching(identifier: "menu.saveGame").firstMatch)
+        XCTAssertTrue(opened, "The game menu did not open: no menu.saveGame row after 3 touches of hud.menu")
         _ = menuRow("menu.saveGame", in: app)
         // Let the menu finish opening: tapMenuAction touches an action's
         // frame as it reads it. The screenshot taken here used to pause so.

@@ -264,8 +264,8 @@ struct Map3DPreviewScreen: View {
 
     /// `image` with `credit` in small type in its lower right corner, on a
     /// dark band so it reads on any sky or ground; as it is when there is
-    /// none.
-    private static func credited(_ image: UIImage, _ credit: String) -> UIImage {
+    /// none. Decision 434: the train showcase's photos too.
+    static func credited(_ image: UIImage, _ credit: String) -> UIImage {
         guard !credit.isEmpty else { return image }
         let format = UIGraphicsImageRendererFormat()
         format.scale = image.scale
@@ -1406,8 +1406,9 @@ struct Map3DSnapshot: Identifiable {
 
 /// Decision 403 (續二): the photo just taken of the 3D map, and the share
 /// button, which hands it to the system's share sheet as the postcard's
-/// does (decision 215): to the photos, LINE, or anywhere else.
-private struct Map3DSnapshotSheet: View {
+/// does (decision 215): to the photos, LINE, or anywhere else. Decision
+/// 434: the train showcase's photos too.
+struct Map3DSnapshotSheet: View {
     let snapshot: Map3DSnapshot
     let language: DisplayLanguage
     @Environment(\.dismiss) private var dismiss
