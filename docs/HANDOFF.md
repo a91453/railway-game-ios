@@ -1,3 +1,5 @@
+> Codex C341（issue [#1322](https://github.com/a91453/railway-game-ios/issues/1322)，公開draft [#1323](https://github.com/a91453/railway-game-ios/pull/1323)）：[來源／外觀／重建與整合範圍](art/c341-2026-10-27/README.md)。四附件與Blair C341外觀原圖已看；獨立DM/T/M/反向DM，六輛21,036三角用合法原生組裝，不寫超限M3DM。完整素材／真第一至第三版／viewer／ZIP在私庫同名分支新目錄。僅四單元靜態註冊，沒有C341專用營運映射，合併不會自動換遊戲車輛。已保留新合併EMU800註冊及route bus末項；GameCore／存檔／fixtures不動。工程尺寸／單元方向與隱藏設備仍資料不足，真機Metal／效能／動畫與完整碰撞未驗；最新CI、衝突及私有互鏈見issue，不合併／auto-merge／TestFlight。
+
 > Codex E1000 #1296第二版：使用者否定2be9daca車頭，已撤回舊自評；重修圓頂／橫向圓鼻／低雙風擋／小側窗／曲面燈座與內收下裙。真前版為2be9daca／私庫58e929e7，非更早簡模；同相機比較、局部裙板差異與設備payload證據見自有文件。PP #1291修正69a6eb7f已合入此分支，兩PR維持draft，最新CI另查，不視為使用者接受／真機／推拉動畫驗收。
 
 > Codex EMU500 #1310：[來源／色票／單元／重建交接](art/emu500-2026-10-27/README.md)。使用者第七版回饋「稍微好一點」並要求遊戲色；第八版用現有暖白／綠松／藏青／暖黃，收細貫通框與門窗層、柔化下裙／連結器外框，輪組／車頂實際三角位置與編組保持。真前版完整保留，最終全量匯出；只用 EMU3000 作同尺度色票／霧面比較。原生四車14,880三角，其他車型／route bus末項約定不改。仍僅靜態素材，合併不會自動出現在營運列車；Metal／效能／動畫及全碰撞未驗。最新producer／SHA／CI見互鏈draft #1312 ↔ 私庫#92及issue。GameCore／存檔／fixtures不動，不合併／auto-merge／TestFlight。
