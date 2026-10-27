@@ -13,6 +13,8 @@ final class Map3DTrainSetTests: XCTestCase {
     /// takes the line's but the metro's band), lit at the right end.
     func testEverySetsCarsAreInThePack() throws {
         let lineColoured: Set = ["metroC381", "wenhu"]
+        // Decision 430: the Chu-Kuang sets, near and far.
+        let chuKuang: Set = ["E200CK", "E500CK", "R100CK", "R200CK", "SUMMER", "E200CKFar", "E500CKFar", "R100CKFar", "R200CKFar", "SUMMERFar"]
         for set in Map3DTrainSet.all {
             var names = [set.headName]
             for name in [set.middleName, set.tailName, set.singleName, set.pantographName, set.tenderName, set.middleBackName, set.pantographBackName] where pack.index(of: name) != nil { names.append(name) }
@@ -20,9 +22,15 @@ final class Map3DTrainSetTests: XCTestCase {
                 let model = pack.models[try XCTUnwrap(pack.index(of: name), name)]
                 // Decision 331: a tram car is two of its sections.
                 let triangles = set.key == "greenTram" ? 2_500...3_200
+                    // Decision 430: #1306's standard coach as measured, 6,476
+                    // triangles near and 4,008 far; the last coach 24 more,
+                    // for its two lamps.
+                    : [set.middleName, set.tailName].contains(name) && chuKuang.contains(set.key)
+                        ? (set.key.hasSuffix("Far") ? (name == set.tailName ? 4_032...4_032 : 4_008...4_008)
+                                                    : (name == set.tailName ? 6_500...6_500 : 6_476...6_476))
                     : ["greenCommuter", "threeCarUrban", "fiveSectionLRT", "sevenSectionLRT"].contains(set.key) ? 2_000...6_000
                     // Decision 399: a steam locomotive, eight to ten thousand.
-                    : name == set.headName && ["SUMMER", "STEAM"].contains(set.key) ? 8_000...10_500
+                    : name == set.headName && ["SUMMER", "SUMMERFar", "STEAM"].contains(set.key) ? 8_000...10_500
                     // Decision 408: #1201's 700T, eight to nine thousand a
                     // cab and five to six a middle car, so drawn near only;
                     // its E200, five to six thousand; the N700S-G, the
@@ -35,7 +43,7 @@ final class Map3DTrainSetTests: XCTestCase {
                     : set.key == "emu3000" ? ([set.headName,set.tailName].contains(name) ? 6_000...9_200:4_000...6_100)
                     : set.key == "highSpeed" ? ([set.headName, set.tailName].contains(name) ? 8_000...9_500 : 5_000...6_000)
                     : set.key == "n700sG" ? ([set.headName, set.tailName].contains(name) ? 6_700...7_300 : 5_700...6_300)
-                    : name == set.headName && set.key == "E200CK" ? 5_000...6_000 : 100...4_100
+                    : name == set.headName && ["E200CK", "E200CKFar"].contains(set.key) ? 5_000...6_000 : 100...4_100
                 XCTAssertTrue(triangles.contains(model.triangleCount), "\(name): \(model.triangleCount) triangles")
                 // #900's 700T is 24 m, its Wenhu car 12.6 m, #988's urban
                 // EMU 15 m; drawn at the train's car length.
@@ -49,7 +57,7 @@ final class Map3DTrainSetTests: XCTestCase {
                 let length: ClosedRange<Float> = ["highSpeed", "highSpeedFar"].contains(set.key) ? 25...25.6 : ["n700sG", "n700sGFar"].contains(set.key) ? 24.9...25.4
                     : ["taroko", "tarokoFar"].contains(set.key) ? 23...24.5 : set.key == "wenhu" ? 12...13.5
                     : set.key == "threeCarUrban" ? 15...16 : set.key == "sevenSectionLRT" ? 14...16
-                    : name == set.headName && ["SUMMER", "STEAM"].contains(set.key) ? 14.5...15.5
+                    : name == set.headName && ["SUMMER", "SUMMERFar", "STEAM"].contains(set.key) ? 14.5...15.5
                     : name == set.tenderName ? 8.9...9.6 : set.key == "fourCarMetro" ? 12.3...12.8
                     : set.key == "blueSeven" ? 7.5...8.4 : 17...22.5
                 XCTAssertTrue(length.contains(model.length), "\(name): \(model.length) m long")
@@ -60,7 +68,7 @@ final class Map3DTrainSetTests: XCTestCase {
                     : ["greenTram", "fiveSectionLRT", "sevenSectionLRT"].contains(set.key) ? 3.2...4.6
                     : set.key == "STEAM" ? 3.4...4.7
                     // Decision 408: #1201's E200 and the 700T's pantographs (decision 422: far too).
-                    : ["E200CK", "highSpeed", "highSpeedFar", "n700sG", "n700sGFar", "emu3000", "emu3000Far"].contains(set.key) ? 3.4...4.9 : 3.4...4.6
+                    : ["E200CK", "E200CKFar", "highSpeed", "highSpeedFar", "n700sG", "n700sGFar", "emu3000", "emu3000Far"].contains(set.key) ? 3.4...4.9 : 3.4...4.6
                 XCTAssertTrue(height.contains(model.maximum.z), "\(name): \(model.maximum.z) m tall")
                 if lineColoured.contains(set.key) {
                     XCTAssertTrue(model.vertices.contains { $0.color >> 24 == 0 }, "\(name): the band is the line's colour")
@@ -102,13 +110,14 @@ final class Map3DTrainSetTests: XCTestCase {
     /// and the coaches 0.6 m apart, the last one lit; the linear-motor
     /// metro's cars 12.3 m apart; four light metro cars the seven-section
     /// car, seven units whatever its count. The rest stay 20 m a car.
+    /// Decision 430: the Midsummer Formosa's coaches are #1306's, 20 m each.
     func testTheSetsDrawnAtTheirOwnLengths() throws {
         func layout(_ key: String, _ count: Int) throws -> [(String, Float, Float)] {
             try XCTUnwrap(pack.layout(forType: key, count: count), key).map { (pack.models[$0.model].name, $0.length, $0.gap) }
         }
         let summer = try layout("SUMMER", 4)
         XCTAssertEqual(summer.map(\.0), ["set-SUMMER-head", "set-SUMMER-tender", "set-SUMMER-car", "set-SUMMER-car", "set-SUMMER-tail"])
-        for (car, (length, gap)) in zip(summer, zip([14.77, 9, 19.4, 19.4, 19.59] as [Float], [0, 0.6, 0.6, 0.6, 0] as [Float])) {
+        for (car, (length, gap)) in zip(summer, zip([14.77, 9, 20, 20, 20] as [Float], [0, 0.6, 0.6, 0.6, 0] as [Float])) {
             XCTAssertEqual(car.1, length, accuracy: 0.01, car.0)
             XCTAssertEqual(car.2, gap, accuracy: 1e-6, car.0)
         }

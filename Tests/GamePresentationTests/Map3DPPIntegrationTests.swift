@@ -77,8 +77,10 @@ final class Map3DPPIntegrationTests: XCTestCase {
     func testExistingE500ServicesKeepTheirOriginalCoachesAndLocomotive() throws {
         // This reconstructs their existing, separately sourced coach recipes;
         // neither these coaches nor any E500 part is substituted with PP.
+        // Decision 430: the E500CK's coaches are the Chu-Kuang coach's now
+        // (Map3DChuKuangIntegrationTests); the Ming-Ri's and the Formosa
+        // Star's are as they were.
         let existing: [(String, Map3DTrainSet.Coach)] = [
-            ("E500CK", Map3DTrainSet.coach(TrainLivery.e200ChuKuang)),
             ("MINGRI", Map3DTrainSet.coach(TrainLivery.mingRi, band: 0.38...0.43)),
             ("STAR", Map3DTrainSet.coach(TrainLivery.formosaStar, band: 0.38...0.43)),
         ]
