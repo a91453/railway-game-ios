@@ -34,6 +34,9 @@ public struct Map3DModelPack: Sendable {
     public let models: [Model]
     /// Decision 338: the sets drawn as they were before them (``TrainPack``).
     public var locked: Set<String> = []
+    /// Decision 436: the destination signs of the cab cars that carry one,
+    /// by model index (``Map3DHeadSign/add(to:signs:eye:)``).
+    public private(set) var headSigns: [Int: Map3DHeadSign] = [:]
 
     /// Every style's cab car and middle car, made once.
     public static let standard = Map3DModelPack(styles: Map3DTrainStyle.all)
@@ -110,10 +113,12 @@ public struct Map3DModelPack: Sendable {
         // before them moves.
         models.append(Map3DLowFloorBus.routeModel())
         self.models = models
+        headSigns = Map3DHeadSign.anchors(in: models)
     }
 
     init(models: [Model]) {
         self.models = models
+        headSigns = Map3DHeadSign.anchors(in: models)
     }
 
     /// The model called `name`'s index.

@@ -227,6 +227,7 @@ extension Map3DScene.Builder {
                 : .surface(platforms: open.count, longest: longest.length)
             let world = (x: originX + Double(middle.point.x) * Self.metre, y: originY + Double(middle.point.z) * Self.metre)
             let station = Map3DStationKit.recipe(for: id, at: world, layout: layout, frame: frame)
+            stationSystems[id] = station.system
             if drawnElsewhere.contains(station.profile) {
                 continue
             } else if Map3DStationKit.hasHouse(station.profile) {

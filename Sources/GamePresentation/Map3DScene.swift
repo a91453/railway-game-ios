@@ -352,6 +352,8 @@ public struct Map3DScene: Sendable {
         // on a real-world map, none along the real lines without one.
         if let railways, let frame = RealWorldFrame(world: world) { builder.addRealLines(railways, frame: frame) }
         builder.addOverheadLine()
+        // Decision 436: the platforms' small things, close up.
+        builder.addPlatformProps()
         // Decision 244: no street furniture where the track runs (nor
         // where a station's building or a landmark stands).
         builder.removeProps(on: stations.union(landmarkCells))
@@ -622,6 +624,9 @@ extension Map3DScene {
         var platformLines: [[Map3DPoint]] = []
         /// Decision 321: the platforms as laid, for the station kit.
         var laidPlatforms: [LaidPlatform] = []
+        /// Decision 436: each station's station kit system
+        /// (``Map3DStationKit/Station/system``), as ``addStations`` found it.
+        var stationSystems: [StationID: String] = [:]
         var piers: [Map3DPoint] = []
         /// Decision 407: the viaducts laid and their piers, drawn together
         /// (``addViaducts()``) so the tracks of a pair share a pier and a
