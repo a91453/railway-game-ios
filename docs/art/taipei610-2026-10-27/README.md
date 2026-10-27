@@ -54,3 +54,15 @@ Viewer支援角色與方向、拖曳旋轉、縮放及PNG／GLB／原生下載�
 本版外觀未經使用者接受；尚未接入營運。人工Simulator／真機Metal效能／動畫未驗。第二版固定producer、SHA與最新整合head於同PR更新，第一版連結保留作歷史。
 
 第二版三角數：A/B近3650／遠1722／light1638，C/D保持2824／1372／1252；完整四車12948／6188／5780。固定producer `2a0c713fd923cf4b48a8b3dd1d3b1cbb6c254629`；[新版總覽／七向／GLB／原生／viewer與ZIP](https://github.com/a91453/railway-reference-private/tree/codex/taipei610-native-2026-10-27/Railway/game-art-previews/docs/art/taipei610-2026-10-27/revision-2)，[真正同相機前後detail crop](https://github.com/a91453/railway-reference-private/blob/codex/taipei610-native-2026-10-27/Railway/game-art-previews/docs/art/taipei610-2026-10-27/revision-2/true-before-after-drawbar.png)。
+
+
+610 CI 計數修正（2026-10-27）：整合3310bba6的selected-2唯一失敗為
+`Map3DModelTests.testEveryStyleHasACabAndAMiddleCarOfTheRightSize`，實際385而舊算式373；
+漏列本型4角色×near/far/light，共12模型。`Swift CI (gate)`因同一分組失敗連帶變紅。
+已在Linux Swift6.4以原測試重現385≠373，再僅補本型計數；warnings-as-errors build與
+`SELECTED_TESTS='Map3DModelTests Map3DTaipei610Tests' .github/scripts/swift-shards.sh run selected`
+實跑10項、0失敗（VERIFIED）。未修改模型、匯出工具或任何素材；producer2a0c713f與
+ZIP SHA0306c34a995443ea2e0c02928fb2ee6c67eafb18cf3276e72d5955f3cea549f3保持。
+新整合head CI以PR最新checks為準，不將本機通過寫成CI通過。私庫#109已於18:01:15Z合進main
+49506c7a4abe7e4fa918591a830e12157bec0d54；這是實際落地狀態，並非使用者接受造型。
+公開#1362仍是draft，未接營運；人工Simulator與真機限制維持。
