@@ -11,7 +11,7 @@ public enum Map3DC371 {
             var b=StationKitBuilder();b.add(first,at:.zero,angle:.pi)
             return .flat(named:"c371-rear",from:b.mesh)
         }
-        var b=MetroStudyGeometry(cab:unit == .dm,trailer:unit == .t,curved:false,length:23.5,body:Map3DPalette.shopAwnings[3],blue:Map3DPalette.containers[1])
+        var b=MetroStudyGeometry(cab:unit == .dm,trailer:unit == .t,curved:false,length:23.5,body:Map3DPalette.counters[2],blue:Map3DPalette.containers[1])
         b.build()
         return .flat(named:"c371-"+unit.rawValue,from:b.kit.mesh)
     }

@@ -9,7 +9,7 @@ struct MetroStudyGeometry {
     let length: Float
     let body: UInt32
     let blue: UInt32
-    let ink = Map3DPalette.playerRim
+    var ink: UInt32 { curved ? Map3DPalette.playerRim : Map3DColor.shaded(Map3DPalette.tankStand,0.42) }
     let glass = Map3DColor.shaded(Map3DPalette.glazing, 0.62)
     let steel = StationKitBuilder.steel
     var half: Float { length / 2 - 0.18 }
@@ -87,23 +87,46 @@ struct MetroStudyGeometry {
         if curved {
             panel(0,1.43,length-0.10,0.30,blue,0.046)
             panel(0,1.17,length-0.10,0.065,blue,0.046)
-        } else { panel(0,1.43,length-0.10,0.27,blue,0.047) }
+        } else { panel(0,1.43,length-0.10,0.30,blue,0.047) }
         panel(0,3.16,length-0.35,0.035,steel,0.018)
         for bx:Float in [-8.25,8.25] {
             kit.box(bx,0.57,0,3.35,2.0,0.24,steel)
             kit.box(bx,0.75,0,1.35,1.60,0.11,ink)
             for dx:Float in [-1.15,1.15] { for side:Float in [-1,1] {
                 kit.civicTube(Map3DPoint(bx+dx,0.425,side*0.69),Map3DPoint(bx+dx,0.425,side*0.86),radius:0.425,color:Map3DStreetModel.tyre,sides:12)
+                if !curved {
+                    kit.civicTube(Map3DPoint(bx+dx,0.425,side*0.86),Map3DPoint(bx+dx,0.425,side*0.89),radius:0.19,color:steel,sides:10)
+                }
             } }
+            if !curved {
+                for side:Float in [-1,1] { kit.box(bx,0.53,side*0.94,3.00,0.075,0.18,steel) }
+            }
         }
         for x:Float in trailer ? [-4.0,0,4.0] : [-4.6,-1.6,1.6,4.6] { kit.box(x,0.60,0,2.2,1.75,0.34,steel) }
-        for x:Float in [-5.75,5.75] {
-            kit.box(x,3.595,0,4.1,1.7,0.105,steel)
-            for delta:Float in [-1.42,-0.72,0,0.72,1.42] { kit.box(x+delta,3.701,0,0.045,1.45,0.012,ink) }
-        }
-        for i in -12...12 {
-            let x=Float(i)*0.82
-            if abs(x+5.75)>2.3 && abs(x-5.75)>2.3 { kit.box(x,3.584,0,0.025,2.28,0.012,steel) }
+        if curved {
+            for x:Float in [-5.75,5.75] {
+                kit.box(x,3.595,0,4.1,1.7,0.105,steel)
+                for delta:Float in [-1.42,-0.72,0,0.72,1.42] { kit.box(x+delta,3.701,0,0.045,1.45,0.012,ink) }
+            }
+            for i in -12...12 {
+                let x=Float(i)*0.82
+                if abs(x+5.75)>2.3 && abs(x-5.75)>2.3 { kit.box(x,3.584,0,0.025,2.28,0.012,steel) }
+            }
+        } else {
+            // C371 photos show continuous corrugation on the low roof,
+            // with a few flush service grilles, not two exposed HVAC blocks.
+            let roof=Map3DPalette.shedWalls[2]
+            for i in -9...9 {
+                let z=Float(i)*0.093
+                kit.box(-0.15,3.579,z,length-1.25,0.018,0.012,roof)
+            }
+            for x:Float in [-8.65,8.65] {
+                for side:Float in [-1,1] {
+                    kit.box(x,3.579,side*0.87,0.43,0.24,0.025,steel)
+                    for step:Float in [-0.12,0.12] { kit.box(x+step,3.601,side*0.87,0.025,0.21,0.008,ink) }
+                }
+            }
+            for x:Float in [-10.9,10.7] { kit.box(x,3.579,0,0.045,2.52,0.018,steel) }
         }
         for x:Float in [-half+0.04,half-0.04] where x < 0 || !cab { kit.box(x,1.03,0,0.13,1.5,2.30,ink) }
         for end:Float in [-1,1] { kit.box(end*(length/2-0.015),0.66,0,0.15,0.28,0.18,ink) }
@@ -135,24 +158,38 @@ struct MetroStudyGeometry {
                     let r:Float = sign < 0 ? -0.48 : 1.32
                     frontPatch(roundRect(l,r,2.07,3.13,0.075),glass,lift:0.025)
                 }
-                frontPatch(roundRect(-0.42,0.42,1.91,3.30,0.06),steel,lift:0.026)
-                frontPatch(roundRect(-0.35,0.35,2.04,3.14,0.045),ink,lift:0.042)
+                frontPatch(roundRect(-0.385,0.385,1.90,3.31,0.045),Map3DColor.shaded(steel,0.55),lift:0.024)
+                frontPatch(roundRect(-0.355,0.355,1.94,3.27,0.035),ink,lift:0.041)
+                // The dark upper sign bay, unlettered to avoid route identity,
+                // and the small red centre marker sit within the front mask.
+                frontPatch(roundRect(0.66,1.31,3.18,3.40,0.025),Map3DColor.shaded(ink,0.82),lift:0.022)
+                frontPatch(roundRect(-0.075,0.075,3.28,3.42,0.018),Map3DColor.rgb(0xD9473F),lift:0.024)
                 frontPatch([(1.38,-1.50),(1.38,1.50),(1.73,1.50),(1.73,-1.50)],blue,lift:0.045)
-                frontPatch([(0.72,-1.43),(0.72,1.43),(0.93,1.43),(0.93,-1.43)],ink,lift:0.045)
+                frontPatch([(0.80,-1.43),(0.80,1.43),(0.91,1.43),(0.91,-1.43)],steel,lift:0.045)
+                // The gangway continues below the black glazing into the
+                // silver apron; the blue band stays continuous across it.
+                frontPatch([(0.94,-0.38),(0.94,0.38),(1.38,0.38),(1.38,-0.38)],Map3DColor.shaded(body,0.86),lift:0.061)
+                frontPatch([(0.95,-0.34),(0.95,0.34),(1.37,0.34),(1.37,-0.34)],body,lift:0.073)
+                frontPatch([(0.96,-0.010),(0.96,0.010),(1.36,0.010),(1.36,-0.010)],steel,lift:0.083)
+                for side:Float in [-1,1] {
+                    frontPatch([(3.00,side*0.57),(3.00,side*1.21),(3.045,side*1.21),(3.045,side*0.57)],Map3DPalette.shopAwnings[0],lift:0.053)
+                }
+                kit.box(half+0.13,0.62,0,0.21,0.62,0.23,ink)
+                kit.box(half+0.28,0.64,0,0.17,0.31,0.10,steel)
             }
             // Distinct headlamp pods; two visible lenses per side and supported wipers.
             for sign:Float in [-1,1] {
                 let x=half+(curved ? 0.225 : 0.085)
                 let z=sign*1.05
-                kit.box(x,1.37,z,0.05,0.69,0.31,ink)
+                kit.box(x,1.37,z,0.05,curved ? 0.69 : 0.63,curved ? 0.31 : 0.25,ink)
                 for shift:Float in [-0.17,0.17] {
                     let zz=z+shift
-                    kit.civicTube(Map3DPoint(x+0.035,1.53,zz),Map3DPoint(x+0.057,1.53,zz),radius:0.105,color:shift*sign<0 ? Map3DPalette.tunnelLamp : steel,sides:12)
+                    kit.civicTube(Map3DPoint(x+0.035,1.53,zz),Map3DPoint(x+0.057,1.53,zz),radius:curved ? 0.105 : 0.087,color:shift*sign<0 ? Map3DPalette.tunnelLamp : steel,sides:12)
                 }
                 kit.civicTube(Map3DPoint(x,3.34,sign*1.23),Map3DPoint(x+0.02,3.34,sign*1.23),radius:0.045,color:Map3DPalette.tunnelLamp,sides:8)
                 kit.beam(Map3DPoint(x+0.04,2.01,sign*1.06),Map3DPoint(x+0.03,2.46,sign*0.61),0.018,ink)
             }
-            kit.box(half+0.10,3.31,0,0.035,0.35,0.11,ink)
+            if curved { kit.box(half+0.10,3.31,0,0.035,0.35,0.11,ink) }
         }
     }
 }
