@@ -35,7 +35,18 @@ try {
  await page.waitForFunction(()=>window.currentAsset);
  assert.equal(await page.locator('.tile').count(),manifest.models.length);
  assert.equal(await page.evaluate(()=>currentAsset.category),'formation');
- for(const asset of manifest.models){await page.evaluate(id=>loadAsset(id),asset.id);assert((await page.evaluate(()=>renderer.count))>0);}
+ for(const asset of manifest.models){
+  await page.evaluate(id=>loadAsset(id),asset.id);assert((await page.evaluate(()=>renderer.count))>0);
+  for(const d of manifest.directions)await page.click(`[data-view="${d}"]`);
+  for(const [button,digest] of [['#glb',asset.glb_sha256],['#native',asset.native_sha256]]){
+   const wait=page.waitForEvent('download');await page.click(button);const dl=await wait;assert.equal(sha(readFileSync(await dl.path())),digest);
+  }
+  for(const p of Object.values(asset.views)){
+   const bytes=await page.evaluate(async p=>[...new Uint8Array(await(await fetch(p)).arrayBuffer())],p);
+   assert.equal(sha(Buffer.from(bytes)),sha(readFileSync(resolve(root,p))));
+  }
+ }
+
  const formation=manifest.models.find(asset=>asset.category==='formation');
  await page.evaluate(id=>loadAsset(id),formation.id);
  const captures=[];
