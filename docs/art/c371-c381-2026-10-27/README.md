@@ -12,6 +12,8 @@
 | [台灣車輛 C381 規格](https://www.trsc.com.tw/train/tran-58acf37b4bd8a) | 原廠網頁已開啟讀全文；同六輛排列；DM1 連結面間 23.710m，T/M2 23.5m；其餘主要尺寸與上項同。原廠圖片連結取得，但原圖下載超時，**未查看原圖**。 |
 | [C371 實車照片](https://commons.wikimedia.org/wiki/File:C371_on_Tamsui_Line_20090221.jpg) | Wikimedia Commons，作者 Kirk，960px 原圖已下載並目視：前上斜視，有直立前罩、雙窗、藍腰帶、車頂格柵。頁面標 CC BY-SA 3.0；沒有納入素材包。角度與遮擋無法定量背側與底盤。 |
 | [C381 實車照片](https://commons.wikimedia.org/wiki/File:C381_approaching_Platform_2,_Jiantan_Station_20130908.jpg) | Wikimedia Commons，作者 Rsa，960px 原圖已下載並目視：前側視，前罩更圓、中央逃生門玻璃、藍線繞鼻與較厚的前裙。頁面標 CC BY-SA 3.0；沒有納入素材包。右側／車底被遮擋。 |
+| [C371 月台前斜照片](https://commons.wikimedia.org/wiki/File:C371_approaching_Platform_2,_CKS_Meml_Hall_20110225.jpg) | Wikimedia Commons，作者 Howard61313，Public domain；640px 原圖已打開。黑罩、左右前窗、前帶與圓燈可見；人群及透視遮住底盤／另一側，不作尺寸證據。 |
+| [C381 車頭照片](https://commons.wikimedia.org/wiki/File:Taipei-MRT_C381_20130908.jpg) | Wikimedia Commons，作者 Rsa，CC BY-SA 3.0；640px 原圖已打開。支持包到側邊的圓黑罩、三片前窗、下方藍色 V、雙燈座與鼻下裙；不支持完整另一側／屋頂尺寸。原圖不納入交付。 |
 | [C371](https://en.wikipedia.org/wiki/Taipei_Metro_C371)、[C381](https://en.wikipedia.org/wiki/Taipei_Metro_C381) | 英文條目文字已讀，僅用於版本脈絡及尋找原廠連結；二手資料不蓋過原廠規格。C371 三輛支線及不同批次需另建，不以六輛模型冒充。 |
 
 存取日皆為 2026-10-27。來源原圖只供視覺判讀，沒有放到公開或私有交付。
@@ -43,3 +45,15 @@ node tools/c371-c381/standalone.mjs OUT
 ```
 
 輸出目錄的 manifest 記錄每件三角與 bounds；私包保存原生、GLB、七向 PNG、viewer、SHA 及 ZIP。原生座標 +X 前、+Y 左、+Z 上，軌面 Z=0；GLB 只做規定的軸轉換。兩款完整編組若超過 M3DM 15,000 三角上限，工具支援合法 M3DAssembly；本批實際兩組均低於上限，故輸出單件 M3DM。合併前需以 PR 最新 head 的 CI 為準，Linux 建置不能代表 iOS 真機。
+
+## 2026-10-27 外觀修訂回應
+
+使用者指出第一交付「兩個都超級醜」。重新實際開啟上列較正面的實車照片後，撤回第一版外觀可接受的判斷。對同相機實際原生預覽逐項比對：
+
+| 項目 | 第一交付 | 本次修訂 | 結論 |
+|---|---|---|---|
+| C371 正面 | 平板黑框、兩方窗、方燈 | 圓角黑罩、分離駕駛窗／中央逃生門、雙圓燈與雨刷 | 較接近實車正面分區；燈座及顯示細節仍簡化 |
+| C381 正面 | 幾乎與 C371 同輪廓 | 包覆式圓黑罩、中央玻璃、藍色 V 下緣、獨立燈座與下裙 | 主要可辨差異成立；弧鼻截面與燈腔仍比實車平 |
+| 左右側／屋頂 | C381 側藍帶過薄、屋頂兩片平板 | C381 主藍帶及下細線、車頂肋條與空調格柵 | 節奏改善；不表示已查明設備精確站位 |
+
+對照只用已開啟的實車圖與使用者附件，沒有把圖片、logo 或車號當貼圖。真正上次交付的完整私包與 producer 保留於 `history/true-v4/`，本次另有同相機前後圖。外觀仍未經使用者接受；Simulator／真機 Metal 狀態與 Linux 渲染分開記。
