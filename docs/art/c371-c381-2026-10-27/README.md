@@ -10,8 +10,8 @@
 | 使用者附件 `2-tpm_c381_large.png` | 原檔 1435×750，已打開。同作者及圖面授權的插畫，展示 DM、T、M 右側側視與小正視。可見更圓的前罩、中央逃生門玻璃與低位細藍線。不能證明六輛編組、實際尺寸、另一側或隱藏設備；未複製圖素。 |
 | [台灣車輛 C371 規格](https://www.trsc.com.tw/train/tran-58ace453a7ad8) | 原廠網頁已開啟讀全文；確認新蘆線版本六輛 DM1+T+M2+M2+T+DM1、連結面間各 23.5m、3.18m 寬、3.585m 車頂高、16.5m 台車中心距、2.3m 軸距、0.85m 新輪徑、1435mm 軌距、單側四個雙開門。無精確車頭曲面或設備站位。原廠圖片連結取得，但原圖下載超時，**未查看原圖**。 |
 | [台灣車輛 C381 規格](https://www.trsc.com.tw/train/tran-58acf37b4bd8a) | 原廠網頁已開啟讀全文；同六輛排列；DM1 連結面間 23.710m，T/M2 23.5m；其餘主要尺寸與上項同。原廠圖片連結取得，但原圖下載超時，**未查看原圖**。 |
-| [C371 實車照片](https://commons.wikimedia.org/wiki/File:C371_on_Tamsui_Line_20090221.jpg) | Wikimedia Commons 960px 原圖已下載並目視：前上斜視，有直立前罩、雙窗、藍腰帶、車頂格柵。頁面標 CC BY-SA 3.0；沒有納入素材包。角度與遮擋無法定量背側與底盤。 |
-| [C381 實車照片](https://commons.wikimedia.org/wiki/File:C381_approaching_Platform_2,_Jiantan_Station_20130908.jpg) | Wikimedia Commons 960px 原圖已下載並目視：前側視，前罩更圓、中央逃生門玻璃、藍線繞鼻與較厚的前裙。頁面標 CC BY-SA 3.0；沒有納入素材包。右側／車底被遮擋。 |
+| [C371 實車照片](https://commons.wikimedia.org/wiki/File:C371_on_Tamsui_Line_20090221.jpg) | Wikimedia Commons，作者 Kirk，960px 原圖已下載並目視：前上斜視，有直立前罩、雙窗、藍腰帶、車頂格柵。頁面標 CC BY-SA 3.0；沒有納入素材包。角度與遮擋無法定量背側與底盤。 |
+| [C381 實車照片](https://commons.wikimedia.org/wiki/File:C381_approaching_Platform_2,_Jiantan_Station_20130908.jpg) | Wikimedia Commons，作者 Rsa，960px 原圖已下載並目視：前側視，前罩更圓、中央逃生門玻璃、藍線繞鼻與較厚的前裙。頁面標 CC BY-SA 3.0；沒有納入素材包。右側／車底被遮擋。 |
 | [C371](https://en.wikipedia.org/wiki/Taipei_Metro_C371)、[C381](https://en.wikipedia.org/wiki/Taipei_Metro_C381) | 英文條目文字已讀，僅用於版本脈絡及尋找原廠連結；二手資料不蓋過原廠規格。C371 三輛支線及不同批次需另建，不以六輛模型冒充。 |
 
 存取日皆為 2026-10-27。來源原圖只供視覺判讀，沒有放到公開或私有交付。
