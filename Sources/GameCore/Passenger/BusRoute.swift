@@ -391,6 +391,8 @@ extension GameWorld {
         route.legMetres = try busLegs(to: route.station, stops: stops, given: legMetres)
         let added = max(0, stops.count - route.stops.count)
         route.stops = stops
+        // The old stops' transfer: worked out afresh by busRoutesChanged().
+        route.transfer = nil
         guard route.isValid else { throw .invalidBusRoute }
         try spendOnBuses(Money(BusRoute.stopPrice.amount * Int64(added)))
         busRoutes[index] = route

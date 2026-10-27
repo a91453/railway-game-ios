@@ -156,6 +156,20 @@ final class CityBusTripsTests: XCTestCase {
         XCTAssertEqual(world.busRoute(id: route.id)?.feederTrips, 0)
     }
 
+    /// Three stops changing at B on the third, cut to the first two: the
+    /// old transfer's stop is gone, so the route is checked without it and
+    /// then finds none (the second stop is 1,920 m from B).
+    func testCuttingTheTransferStopKeepsTheRoute() throws {
+        var world = try world([homes(20, 400)])
+        let route = try world.createBusRoute(to: nil, stops: [at(20), at(30), at(64)], service: .every(minutes: 10), buses: 4)
+        XCTAssertEqual(world.busRoute(id: route.id)?.transfer, BusTransfer(station: b, stop: 2))
+        try world.setBusRouteStops(route.id, stops: [at(20), at(30)])
+        let cut = try XCTUnwrap(world.busRoute(id: route.id))
+        XCTAssertEqual(cut.stops, [at(20), at(30)])
+        XCTAssertNil(cut.transfer)
+        XCTAssertEqual(cut.feederTrips, 0)
+    }
+
     // MARK: - Refused
 
     func testACityRouteHasTwoStopsAtLeast() throws {
