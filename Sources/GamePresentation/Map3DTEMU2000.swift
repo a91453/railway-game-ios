@@ -16,10 +16,17 @@ public enum Map3DTEMU2000 {
     public static let glass = Map3DColor.rgb(0x405560)
     public static let silver = Map3DColor.rgb(0xAAB7BF)
 
-    public static func model(_ unit: Unit) -> Map3DModelPack.Model {
+    public static func model(_ unit: Unit) -> Map3DModelPack.Model { model(unit, far: false) }
+
+    /// `far`: decision 426's light version drawn from 500 m out, as
+    /// ``Map3DTEMU1000/model(_:far:)`` is: fewer nose rings and front
+    /// panel rows, no wheel hubs, one pane of glass between the doors on
+    /// each side, and none of the small fittings. The shape, the colours
+    /// and the length are the near unit's, the tyres still on the rail.
+    public static func model(_ unit: Unit, far: Bool) -> Map3DModelPack.Model {
         var builder = StationKitBuilder()
-        builder.temu2000(unit)
-        return .flat(named: "temu2000-\(unit.rawValue)", from: builder.mesh)
+        builder.temu2000(unit, far: far)
+        return .flat(named: "temu2000-\(unit.rawValue)" + (far ? "-far" : ""), from: builder.mesh)
     }
 
     /// Symmetric official TED–TEMA–TEP–TEMB–TEMB–TEP–TEMA–TED order.
@@ -46,7 +53,7 @@ public enum Map3DTEMU2000 {
 }
 
 extension StationKitBuilder {
-    mutating func temu2000(_ unit: Map3DTEMU2000.Unit) {
+    mutating func temu2000(_ unit: Map3DTEMU2000.Unit, far: Bool = false) {
         let white = Map3DTEMU2000.white
         let teal = Map3DTEMU2000.teal
         let navy = Map3DTEMU2000.navy
@@ -80,21 +87,24 @@ extension StationKitBuilder {
         // descends through several shallow stations, while the lower cheeks
         // stay wide until the short blunt lip. These dimensions after the
         // official envelope are proportional estimates from the supplied views.
-        let noseStations: [(x: Float,w: Float,h: Float,b: Float,c: Float)] = [
-            (6.84,1.00,roofHeight,0.96,0.00),
-            (7.34,1.00,3.59,0.95,0.03),
-            (7.84,0.99,3.50,0.87,0.08),
-            (8.35,0.98,3.35,0.72,0.11),
-            (8.82,0.97,3.12,0.54,0.13),
-            (9.28,0.95,2.84,0.40,0.15),
-            (9.72,0.91,2.49,0.35,0.15),
-            (10.11,0.84,2.11,0.38,0.13),
-            (10.28,0.785,1.96,0.42,0.11),
-            (10.47,0.70,1.79,0.47,0.09),
-            (10.60,0.625,1.68,0.52,0.07),
-            (10.75,0.52,1.55,0.59,0.05),
-            (10.8725,0.36,1.39,0.69,0.02)
+        // Decision 426: the far version keeps seven of the thirteen (the
+        // roof's descent, the shoulder, the lip and the tip).
+        let allNoseStations: [(x: Float,w: Float,h: Float,b: Float,c: Float,far: Bool)] = [
+            (6.84,1.00,roofHeight,0.96,0.00,true),
+            (7.34,1.00,3.59,0.95,0.03,false),
+            (7.84,0.99,3.50,0.87,0.08,true),
+            (8.35,0.98,3.35,0.72,0.11,false),
+            (8.82,0.97,3.12,0.54,0.13,true),
+            (9.28,0.95,2.84,0.40,0.15,false),
+            (9.72,0.91,2.49,0.35,0.15,true),
+            (10.11,0.84,2.11,0.38,0.13,false),
+            (10.28,0.785,1.96,0.42,0.11,true),
+            (10.47,0.70,1.79,0.47,0.09,false),
+            (10.60,0.625,1.68,0.52,0.07,true),
+            (10.75,0.52,1.55,0.59,0.05,false),
+            (10.8725,0.36,1.39,0.69,0.02,true)
         ]
+        let noseStations = allNoseStations.filter { !far || $0.far }
         var rings: [[Map3DPoint]]
         if cab > 0 {
             rings = [ring(-halfBody)] + noseStations.map {
@@ -132,14 +142,18 @@ extension StationKitBuilder {
                 civicTube(Map3DPoint(bogie+axle,0.43,0.69),
                           Map3DPoint(bogie+axle,0.43,0.79),
                           radius:0.43,color:navy,sides:8)
-                for side: Float in [-1,1] {
-                    civicTube(Map3DPoint(bogie+axle,0.43,side*0.80),
-                              Map3DPoint(bogie+axle,0.43,side*0.82),
-                              radius:0.20,color:silver,sides:8)
+                if !far {
+                    for side: Float in [-1,1] {
+                        civicTube(Map3DPoint(bogie+axle,0.43,side*0.80),
+                                  Map3DPoint(bogie+axle,0.43,side*0.82),
+                                  radius:0.20,color:silver,sides:8)
+                    }
                 }
             }
-            for side: Float in [-1,1] {
-                box(bogie,0.58,side*0.95,2.64,0.11,0.26,navy)
+            if !far {
+                for side: Float in [-1,1] {
+                    box(bogie,0.58,side*0.95,2.64,0.11,0.26,navy)
+                }
             }
         }
         for x: Float in [-4.6,-1.5,1.5,4.6] {
@@ -159,15 +173,31 @@ extension StationKitBuilder {
                    0.79,2.01,3.23,4.45,5.67,6.89,8.11]
                 : [-7.80,-6.54,-5.28,-4.02,-2.76,-1.50,-0.24,
                    1.02,2.28,3.54,4.80]
-            for x in windowXs where !doors.contains(where: { abs(x-$0)<0.72 }) {
-                box(x,2.08,side*1.455,0.87,0.016,0.55,navy)
-                box(x,2.13,side*1.467,0.77,0.008,0.45,glass)
-            }
-            for x in doors {
-                box(x,0.99,side*1.455,0.86,0.010,2.08,white)
-                box(x,2.12,side*1.465,0.54,0.008,0.65,navy)
-                box(x,2.16,side*1.472,0.46,0.004,0.56,glass)
-                box(x+0.38,1.00,side*1.467,0.012,0.010,2.02,silver)
+            if far {
+                // One pane along the side between the doors, the doors
+                // over it: the near panes' first and last edges.
+                let first = (windowXs.min() ?? 0) - 0.435, last = (windowXs.max() ?? 0) + 0.435
+                var from = first
+                for door in doors.sorted() + [Float.infinity] {
+                    let to = min(last, door - 0.50)
+                    if to - from > 0.8 {
+                        box((from+to)/2,2.08,side*1.455,to-from,0.016,0.55,navy)
+                        box((from+to)/2,2.13,side*1.467,to-from-0.10,0.008,0.45,glass)
+                    }
+                    from = max(from, door + 0.50)
+                }
+                for x in doors { box(x,0.99,side*1.455,0.86,0.010,2.08,white) }
+            } else {
+                for x in windowXs where !doors.contains(where: { abs(x-$0)<0.72 }) {
+                    box(x,2.08,side*1.455,0.87,0.016,0.55,navy)
+                    box(x,2.13,side*1.467,0.77,0.008,0.45,glass)
+                }
+                for x in doors {
+                    box(x,0.99,side*1.455,0.86,0.010,2.08,white)
+                    box(x,2.12,side*1.465,0.54,0.008,0.65,navy)
+                    box(x,2.16,side*1.472,0.46,0.004,0.56,glass)
+                    box(x+0.38,1.00,side*1.467,0.012,0.010,2.02,silver)
+                }
             }
             // Clean game-palette waist stripe, visibly below individual panes.
             let stripeCenter = cab == 0 ? Float(0) : -cab*1.78
@@ -199,7 +229,7 @@ extension StationKitBuilder {
             // not a dark rectangular header above its three embedded lamps.
             box(x,roofHeight-0.005,0,3.15,1.70,0.30,
                 cab != 0 && x*cab > 0 ? white : silver)
-            box(x,roofHeight+0.292,0,2.34,1.21,0.025,white)
+            if !far { box(x,roofHeight+0.292,0,2.34,1.21,0.025,white) }
         }
         for x: Float in [-1.92,1.92] {
             box(x,roofHeight-0.005,0,1.00,1.02,0.14,silver)
@@ -210,14 +240,14 @@ extension StationKitBuilder {
             for side: Float in [-1,1] {
                 civicTube(Map3DPoint(x-0.48,roofHeight+0.24,side*0.34),
                           Map3DPoint(x+0.20,roofHeight+0.54,side*0.34),
-                          radius:0.035,color:navy,sides:8)
+                          radius:0.035,color:navy,sides:far ? 4 : 8)
                 civicTube(Map3DPoint(x+0.20,roofHeight+0.54,side*0.34),
                           Map3DPoint(x+0.72,roofHeight+0.70,side*0.34),
-                          radius:0.035,color:navy,sides:8)
+                          radius:0.035,color:navy,sides:far ? 4 : 8)
             }
             civicTube(Map3DPoint(x+0.43,roofHeight+0.685,-0.76),
                       Map3DPoint(x+0.43,roofHeight+0.685,0.76),
-                      radius:0.048,color:navy,sides:8)
+                      radius:0.048,color:navy,sides:far ? 4 : 8)
         }
 
         if cab != 0 {
@@ -229,7 +259,7 @@ extension StationKitBuilder {
                 let lower = max(0,upper-1)
                 let a = noseStations[lower], b = noseStations[upper]
                 let blend = abs(b.x-a.x) < 0.0001 ? Float(0) : (station-a.x)/(b.x-a.x)
-                func at(_ q: (x: Float,w: Float,h: Float,b: Float,c: Float)) -> Map3DPoint {
+                func at(_ q: (x: Float,w: Float,h: Float,b: Float,c: Float,far: Bool)) -> Map3DPoint {
                     let cross = ring(cab*q.x,width:q.w,top:q.h,bottom:q.b,crown:q.c)
                     let z = abs(lateral)
                     for i in 8..<12 {
@@ -246,8 +276,13 @@ extension StationKitBuilder {
                 return Map3DPoint(p.x+(q.x-p.x)*blend+cab*lift,
                                   p.y+(q.y-p.y)*blend+lift,lateral)
             }
-            func panel(_ stations: [Float],_ halfWidths: [Float],_ columns: Int,
+            func panel(_ allStations: [Float],_ allHalfWidths: [Float],_ allColumns: Int,
                        _ color: UInt32,_ lift: Float,_ lowerCurve: Float = 0) {
+                // Decision 426: the far version has every other row and
+                // half the columns, the first and last row kept.
+                let kept = allStations.indices.filter { !far || $0 % 2 == 0 || $0 == allStations.count-1 }
+                let stations = kept.map { allStations[$0] }, halfWidths = kept.map { allHalfWidths[$0] }
+                let columns = far ? allColumns/2 : allColumns
                 for row in 0..<(stations.count-1) {
                     for col in 0..<columns {
                         let v0 = Float(col)/Float(columns)*2-1
@@ -301,8 +336,9 @@ extension StationKitBuilder {
             func lens(_ station: Float,_ lateral: Float,_ along: Float,
                       _ across: Float,_ lift: Float,_ color: UInt32) {
                 var rim: [Map3DPoint] = []
-                for i in 0..<8 {
-                    let angle = Float(i)*Float.pi/4
+                let around = far ? 6 : 8
+                for i in 0..<around {
+                    let angle = Float(i)*2*Float.pi/Float(around)
                     rim.append(roofPoint(station+along*cosf(angle),
                                          lateral+across*sinf(angle),lift))
                 }
@@ -328,7 +364,7 @@ extension StationKitBuilder {
             for side: Float in [-1,1] {
                 civicTube(roofPoint(9.30,side*0.04,0.180),
                           roofPoint(8.97,side*0.66,0.180),
-                          radius:0.018,color:navy,sides:6)
+                          radius:0.018,color:navy,sides:far ? 4 : 6)
             }
         }
     }
