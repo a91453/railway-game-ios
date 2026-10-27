@@ -190,7 +190,9 @@ extension Map3DScene.Builder {
         defer { target = saved }
         target = .close
         let calling = callingFormations()
-        for platform in laidPlatforms {
+        // Decision 441: none at a depot, where no one boards.
+        let depots = Set(world.stations.filter(\.isDepot).map(\.id))
+        for platform in laidPlatforms where !depots.contains(platform.station) {
             guard let path = Map3DStreetLife.Path(platform.line) else { continue }
             let trains = calling[platform.station]
             let kind = Map3DPlatformProps.kind(system: stationSystems[platform.station], calling: trains?.formations.count ?? 0,
