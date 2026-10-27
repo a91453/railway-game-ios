@@ -22,6 +22,14 @@ public struct Map3DTrainSet: Sendable {
     /// Decision 426: the middle cars drawn as ``Cars/centre`` and not the
     /// middle car (the TEMU2000's two TEMB cars between its TEMA cars).
     var centreCars: Set<Int> = []
+    /// Decision 432: which car the cars between the two cab cars are, one
+    /// after another from the front and over again (the EMU800's EMA, EP,
+    /// EMB): for a set of this kind ``pantographCars`` and ``centreCars``
+    /// are not used, and the back half is the front half's mirror image, its
+    /// cars the back versions (``Cars/middleBack``, ``Cars/pantographBack``,
+    /// ``Cars/centreBack``), the middle one of an odd count the front's.
+    var cycle: [Slot] = []
+    enum Slot: Sendable { case middle, pantograph, centre }
     /// Decision 399: the cars drawn at their models' own lengths
     /// (``Map3DModelPack/layout(forType:count:)``), not stretched to the
     /// 20 m every other train's are, each touching the next (their models
@@ -54,6 +62,8 @@ public struct Map3DTrainSet: Sendable {
         /// there turned round.
         var middleBack: Model? = nil
         var pantographBack: Model? = nil
+        /// Decision 432: the back half's ``centre`` car.
+        var centreBack: Model? = nil
         typealias Model = Map3DModelPack.Model
     }
 
@@ -64,6 +74,7 @@ public struct Map3DTrainSet: Sendable {
     var singleName: String { "set-\(key)-single" }
     var pantographName: String { "set-\(key)-panto" }
     var centreName: String { "set-\(key)-centre" }
+    var centreBackName: String { "set-\(key)-centreBack" }
     var tenderName: String { "set-\(key)-tender" }
     var middleBackName: String { "set-\(key)-carBack" }
     var pantographBackName: String { "set-\(key)-pantoBack" }
@@ -87,6 +98,7 @@ public struct Map3DTrainSet: Sendable {
         if let tender = cars.tender { models.append(named(tender, tenderName)) }
         if let middle = cars.middleBack { models.append(named(middle, middleBackName)) }
         if let pantograph = cars.pantographBack { models.append(named(pantograph, pantographBackName)) }
+        if let centre = cars.centreBack { models.append(named(centre, centreBackName)) }
         return models
     }
 

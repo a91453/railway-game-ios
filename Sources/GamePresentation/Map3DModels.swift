@@ -168,6 +168,17 @@ public struct Map3DModelPack: Sendable {
         if carIndex == 0 { return index(of: set.headName) }
         if carIndex == count - 1 { return index(of: set.tailName) ?? index(of: set.headName) }
         let back = carIndex * 2 >= count
+        if !set.cycle.isEmpty {
+            // Decision 432: the cars between the cabs cycle, the back half
+            // the front half's mirror image.
+            func pick(_ name: String, _ backName: String) -> Int? { back ? index(of: backName) ?? index(of: name) : index(of: name) }
+            let nearer = min(carIndex, count - 1 - carIndex) - 1
+            switch set.cycle[nearer % set.cycle.count] {
+            case .middle: return pick(set.middleName, set.middleBackName)
+            case .pantograph: return pick(set.pantographName, set.pantographBackName)
+            case .centre: return pick(set.centreName, set.centreBackName)
+            }
+        }
         if set.centreCars.contains(carIndex), let centre = index(of: set.centreName) { return centre }
         if set.pantographCars.contains(carIndex), let panto = index(of: set.pantographName) {
             return back ? index(of: set.pantographBackName) ?? panto : panto
