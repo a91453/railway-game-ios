@@ -20,23 +20,48 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
     }
 
     private static let wall = Map3DColor.rgb(0xF5F1E9)
+    private static let canopyGrass = Map3DColor.rgb(0xCFE0C8)
 
-    /// The two as OSM has their heights: 101 508 m to its spire, the
-    /// station's roof 30 m; each within the ground it clears, lit by
-    /// unit normals, drawn with the line patterns; 101 lit by its sections,
-    /// its ledges and its spire's tip after dark; from afar, fewer
-    /// triangles.
+    /// OSM specifications (ODbL):
+    /// - Taipei 101: relation 11551064, spire way 615183623 (height = 508 m).
+    /// - Taipei Main Station: way 23641610 (height = 30 m).
+    /// - Kaohsiung Main Station: relation 14940189, outer canopy way 1298938821
+    ///   (664.78 m east-west × 333.87 m north-south; canopy crest 23 m),
+    ///   and historic Old Kaohsiung Station way 257770396 (25.30 m × 30.36 m,
+    ///   building:levels = 3, Imperial Crown tower top 16.86 m).
+    private static let kaohsiungCanopyLength: Float = 664.78
+    private static let kaohsiungCanopyWidth: Float = 333.87
+    private static let kaohsiungCanopyHeight: Float = 23.0
+    private static let kaohsiungOldStationWidth: Float = 25.30
+    private static let kaohsiungOldStationDepth: Float = 30.36
+
+    /// The landmarks as OSM has their plans and heights: 101 508 m to its
+    /// spire, Taipei Main Station's roof 30 m, Kaohsiung Main Station's
+    /// canopy 23 m (way 1298938821) with the Imperial Crown old station
+    /// (way 257770396); each within the ground it clears, lit by finite
+    /// unit outward normals, drawn with the line patterns; from afar,
+    /// fewer triangles.
     func testTheModels() {
         let layers: Set<Float> = [Map3DVertex.plain, Map3DVertex.curtainGlass, Map3DVertex.roofTiles, Map3DVertex.floorLines,
                                   Map3DVertex.towerGlass, Map3DVertex.floodlit, Map3DVertex.glowing]
         for landmark in Map3DTaipeiLandmark.allCases {
             let full = landmark.model(full: true), far = landmark.model(full: false)
             XCTAssertLessThan(far.indices.count, full.indices.count * 2 / 3, "\(landmark)")
+            XCTAssertGreaterThanOrEqual(landmark.clearing.x, landmark.body.x, "\(landmark)")
+            XCTAssertGreaterThanOrEqual(landmark.clearing.y, landmark.body.y, "\(landmark)")
+            let expectedTop: Float = switch landmark {
+            case .taipei101: 508
+            case .taipeiMainStation: 30
+            case .kaohsiungMainStation: Self.kaohsiungCanopyHeight
+            }
             for model in [full, far] {
                 let top = model.vertices.map(\.z).max() ?? 0
-                XCTAssertEqual(top, landmark == .taipei101 ? 508 : 30, accuracy: 0.01, "\(landmark)")
+                XCTAssertEqual(top, expectedTop, accuracy: 0.01, "\(landmark)")
                 XCTAssertEqual(model.vertices.map(\.z).min(), 0)
                 for vertex in model.vertices {
+                    XCTAssertTrue(vertex.x.isFinite && vertex.y.isFinite && vertex.z.isFinite)
+                    XCTAssertTrue(vertex.nx.isFinite && vertex.ny.isFinite && vertex.nz.isFinite)
+                    XCTAssertTrue(vertex.u.isFinite && vertex.v.isFinite)
                     XCTAssertLessThanOrEqual(abs(vertex.x), landmark.clearing.x)
                     XCTAssertLessThanOrEqual(abs(vertex.y), landmark.clearing.y)
                     XCTAssertEqual(Map3DPoint(vertex.nx, vertex.ny, vertex.nz).length, 1, accuracy: 0.001)
@@ -45,9 +70,67 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
                 XCTAssertTrue(model.indices.allSatisfy { Int($0) < model.vertices.count })
             }
             let used = Set(full.vertices.map(\.layer))
-            XCTAssertTrue(used.isSuperset(of: landmark == .taipei101 ? [Map3DVertex.curtainGlass, Map3DVertex.towerGlass, Map3DVertex.floodlit, Map3DVertex.glowing]
-                                                                   : [Map3DVertex.curtainGlass, Map3DVertex.roofTiles]), "\(landmark)")
+            let expectedLayers: Set<Float> = switch landmark {
+            case .taipei101: [Map3DVertex.curtainGlass, Map3DVertex.towerGlass, Map3DVertex.floodlit, Map3DVertex.glowing]
+            case .taipeiMainStation: [Map3DVertex.curtainGlass, Map3DVertex.roofTiles]
+            case .kaohsiungMainStation: [Map3DVertex.curtainGlass, Map3DVertex.roofTiles, Map3DVertex.floorLines]
+            }
+            XCTAssertTrue(used.isSuperset(of: expectedLayers), "\(landmark)")
         }
+        // Pin Taipei 101 and Taipei Main Station triangle counts so adding
+        // new landmarks never alters them; check Kaohsiung's budget.
+        XCTAssertEqual(Map3DTaipeiLandmark.taipei101.model(full: true).indices.count / 3, 4_732)
+        XCTAssertEqual(Map3DTaipeiLandmark.taipei101.model(full: false).indices.count / 3, 2_580)
+        XCTAssertEqual(Map3DTaipeiLandmark.taipeiMainStation.model(full: true).indices.count / 3, 5_458)
+        XCTAssertEqual(Map3DTaipeiLandmark.taipeiMainStation.model(full: false).indices.count / 3, 2_070)
+        let kaohsiungFull = Map3DTaipeiLandmark.kaohsiungMainStation.model(full: true)
+        let kaohsiungFar = Map3DTaipeiLandmark.kaohsiungMainStation.model(full: false)
+        XCTAssertLessThanOrEqual(kaohsiungFull.indices.count / 3, 6_000)
+        XCTAssertLessThanOrEqual(kaohsiungFar.indices.count / 3, 2_500)
+        XCTAssertLessThan(kaohsiungFar.indices.count, kaohsiungFull.indices.count)
+    }
+
+    /// Decision 431: Kaohsiung Main Station's canopy (OSM relation 14940189,
+    /// way 1298938821) and Imperial Crown old station (OSM way 257770396)
+    /// match OpenStreetMap's dimensions within 2 m, with outward normals,
+    /// and stand clear of surface track while allowing underground track.
+    func testKaohsiungMainStation() throws {
+        let station = Map3DTaipeiLandmark.kaohsiungMainStation
+        for model in [station.model(full: true), station.model(full: false)] {
+            let xs = model.vertices.map(\.x), ys = model.vertices.map(\.y), zs = model.vertices.map(\.z)
+            let length = (xs.max() ?? 0) - (xs.min() ?? 0)
+            let width = (ys.max() ?? 0) - (ys.min() ?? 0)
+            let height = (zs.max() ?? 0) - (zs.min() ?? 0)
+            XCTAssertEqual(length, Self.kaohsiungCanopyLength, accuracy: 2.0)
+            XCTAssertEqual(width, Self.kaohsiungCanopyWidth, accuracy: 2.0)
+            XCTAssertEqual(height, Self.kaohsiungCanopyHeight, accuracy: 2.0)
+            // Old station (OSM way 257770396) on the south plaza.
+            let oldStation = model.vertices.filter { $0.y < -109 && abs($0.x) < 20 }
+            let oldXs = oldStation.map(\.x), oldYs = oldStation.map(\.y)
+            XCTAssertEqual((oldXs.max() ?? 0) - (oldXs.min() ?? 0), Self.kaohsiungOldStationWidth, accuracy: 2.0)
+            XCTAssertEqual((oldYs.max() ?? 0) - (oldYs.min() ?? 0), Self.kaohsiungOldStationDepth, accuracy: 2.0)
+            // Canopy grass faces upward; canopy soffit faces downward.
+            let grass = model.vertices.filter { $0.color == Self.canopyGrass }
+            XCTAssertFalse(grass.isEmpty)
+            XCTAssertTrue(grass.allSatisfy { $0.nz > 0 })
+        }
+        let kaohsiungAnchor = GeoAnchor(latitudeDegrees: station.latitude, longitudeDegrees: station.longitude)!
+        let world = GameWorld.newGame(anchor: kaohsiungAnchor)
+        let frame = try XCTUnwrap(RealWorldFrame(world: world))
+        var builder = builder(world)
+        let built = builder.addTaipeiLandmarks(frame: frame)
+        XCTAssertEqual(Set(built.keys), [station])
+        XCTAssertEqual(triangles(builder.nearMeshes), station.model(full: true).indices.count / 3)
+        XCTAssertEqual(triangles(builder.farMeshes), station.model(full: false).indices.count / 3)
+        XCTAssertTrue(builder.keptColours.contains(Self.canopyGrass))
+        let middle = builder.point(x: frame.middleX, y: frame.middleY, height: 0)
+        let line = stride(from: Float(-300), through: 300, by: 2).map { middle + Map3DPoint($0, 0, 20) }
+        var blocked = self.builder(world)
+        blocked.trackLines = [(line, .surface)]
+        XCTAssertTrue(blocked.addTaipeiLandmarks(frame: frame).isEmpty)
+        var tunnel = self.builder(world)
+        tunnel.trackLines = [(line, .tunnel)]
+        XCTAssertEqual(Set(tunnel.addTaipeiLandmarks(frame: frame).keys), [station])
     }
 
     /// Stood where it is, the station is in full close by and simpler from

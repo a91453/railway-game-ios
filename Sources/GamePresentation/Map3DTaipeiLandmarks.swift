@@ -12,30 +12,62 @@ import GameCore
 // (`PALETTES[1.0]`), in the reference repository's
 // `Railway/game-art-previews/docs/art/map3d-mapbox-look-2026-10-23/scripts/`.
 
-/// Decision 370: the two landmarks, each built in its own metres (x right,
+/// Decision 370, 431: the landmarks, each built in its own metres (x right,
 /// y back, z up, its middle at the origin), then stood where it is.
 enum Map3DTaipeiLandmark: CaseIterable, Sendable {
-    case taipei101, taipeiMainStation
+    case taipei101, taipeiMainStation, kaohsiungMainStation
 
     /// Where the landmark's middle stands (`placement.json`), and how far
     /// it is turned about the up axis, degrees east of north as the
     /// preview's group is.
-    var latitude: Double { self == .taipei101 ? 25.033946307135494 : 25.0477174 }
-    var longitude: Double { self == .taipei101 ? 121.56455513294843 : 121.51711425 }
-    var rotation: Float { self == .taipei101 ? 89 : 169.5 }
+    var latitude: Double {
+        switch self {
+        case .taipei101: 25.033946307135494
+        case .taipeiMainStation: 25.0477174
+        case .kaohsiungMainStation: 22.6394462
+        }
+    }
+    var longitude: Double {
+        switch self {
+        case .taipei101: 121.56455513294843
+        case .taipeiMainStation: 121.51711425
+        case .kaohsiungMainStation: 120.3025654
+        }
+    }
+    var rotation: Float {
+        switch self {
+        case .taipei101: 89
+        case .taipeiMainStation: 169.5
+        case .kaohsiungMainStation: 0
+        }
+    }
     /// Half the length and width of the ground it clears of the city
     /// (`compose_play.py`), and of its body, which the player's track must
     /// keep clear of (the podium and canopy; the station's eaves and
     /// porches).
-    var clearing: (x: Float, y: Float) { self == .taipei101 ? (82, 82) : (92, 80) }
-    var body: (x: Float, y: Float) { self == .taipei101 ? (65.4, 69.2) : (78.4, 66.8) }
+    var clearing: (x: Float, y: Float) {
+        switch self {
+        case .taipei101: (82, 82)
+        case .taipeiMainStation: (92, 80)
+        case .kaohsiungMainStation: (336, 170)
+        }
+    }
+    var body: (x: Float, y: Float) {
+        switch self {
+        case .taipei101: (65.4, 69.2)
+        case .taipeiMainStation: (78.4, 66.8)
+        case .kaohsiungMainStation: (162, 142)
+        }
+    }
 
-    /// The README's colours (`PALETTES[1.0]`).
+    /// The README's colours (`PALETTES[1.0]`), and Decision 431's pale
+    /// canopy greens and Imperial Crown slate roof in the same look.
     static let palette: [String: UInt32] = [
         "podiumRoof": 0xEDEEF0, "glass": 0xC0DDEE, "glassTop": 0xCCE4F2, "frame": 0xF9F9F7, "podiumGlass": 0xDCEDFC,
         "coin": 0xD7E3EF, "spire": 0xDDE0E5, "ornament": 0xECE2C6, "wall": 0xF5F1E9, "trim": 0xFBF9F4, "roof": 0xE2C4B6,
         "ridge": 0xF3EFE8, "wellWall": 0xF0EBE2, "skylight": 0xD8E2EA, "plinth": 0xE4E2DE, "groundGlass": 0xC9D8E2,
         "soffit": 0xE9E4DB, "stripGlass": 0xD3DEE6, "flatRoof": 0xE6E4E0, "plant": 0xDCDCDA,
+        "canopyGrass": 0xCFE0C8, "canopyLawn": 0xDCE8D6, "crownRoof": 0xC6CFD6,
     ].mapValues(Map3DColor.rgb)
 
     /// The model, in full close by, or without its small parts from afar.
@@ -44,6 +76,7 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         switch self {
         case .taipei101: mesh.taipei101()
         case .taipeiMainStation: mesh.station()
+        case .kaohsiungMainStation: mesh.kaohsiungMainStation()
         }
         return mesh
     }
@@ -572,6 +605,342 @@ struct LandmarkMesh {
             box(-28.4, -0.35, sz + 0.6 + sh - 0.2, 28.4, 0.35, sz + 0.6 + sh + 0.3, colour("trim"), Self.plain)
             for (x, y) in [(Float(-36), Float(-18)), (-30, 18), (33, -17), (36, 17)] {
                 box(x - 3, y - 2, ztop - 2.2, x + 3, y + 2, ztop - 0.4, colour("plant"), Self.plain)
+            }
+        }
+    }
+
+    // MARK: Kaohsiung Main Station
+
+    /// An ellipse's outline centred at `(cx, cy)` with radii `rx` and `ry`,
+    /// turned `angle` degrees counter-clockwise.
+    static func ovalRing(_ cx: Float, _ cy: Float, _ rx: Float, _ ry: Float, angle: Float = 0, segments: Int = 12) -> [P2] {
+        let a = angle * .pi / 180, ca = cos(a), sa = sin(a)
+        return (0..<segments).map { s in
+            let t = 2 * Float.pi * Float(s) / Float(segments)
+            let lx = rx * cos(t), ly = ry * sin(t)
+            return (cx + lx * ca - ly * sa, cy + lx * sa + ly * ca)
+        }
+    }
+
+    /// The undulating height of Kaohsiung Main Station's green canopy
+    /// (OSM relation 14940189, way 1298938821), peaking at 23 m over the
+    /// central plaza and sloping to 19.1-20.8 m along the arms.
+    static func canopyHeight(_ x: Float, _ y: Float) -> Float {
+        let dx = (x - 12) / 140, dy = (y + 2) / 135, r2 = dx * dx + dy * dy
+        let dome: Float = 3.4 / (1 + 0.85 * r2 + 0.36 * r2 * r2)
+        let wave: Float = 0.25 * cos(x / 55) * cos(y / 48)
+        return min(22.6, max(19.1, 19.25 + dome + wave))
+    }
+
+    /// A curved canopy arm or green bikeway wing along `spine`
+    /// (`(x, y, halfWidth)`), arched in cross-section with a planted top,
+    /// white soffit and white edge fascia.
+    mutating func canopyArm(_ spine: [(x: Float, y: Float, halfWidth: Float)], along: Int, across: Int) {
+        let m = spine.count - 1
+        let normals: [P2] = (0...m).map { k in
+            let prev = spine[max(0, k - 1)], next = spine[min(m, k + 1)]
+            let tx = next.x - prev.x, ty = next.y - prev.y
+            let length = (tx * tx + ty * ty).squareRoot()
+            return (-ty / length, tx / length)
+        }
+        var stations: [(top: [P3], bot: [P3])] = []
+        for i in 0...along {
+            let u = Float(i) / Float(along) * Float(m)
+            let k = min(m - 1, Int(u)), f = u - Float(k)
+            let x = spine[k].x + (spine[k + 1].x - spine[k].x) * f
+            let y = spine[k].y + (spine[k + 1].y - spine[k].y) * f
+            let hw = spine[k].halfWidth + (spine[k + 1].halfWidth - spine[k].halfWidth) * f
+            let rawNx = normals[k].x * (1 - f) + normals[k + 1].x * f
+            let rawNy = normals[k].y * (1 - f) + normals[k + 1].y * f
+            let nl = (rawNx * rawNx + rawNy * rawNy).squareRoot()
+            let nx = rawNx / nl, ny = rawNy / nl
+            var rowTop: [P3] = [], rowBot: [P3] = []
+            for j in 0...across {
+                let s = Float(j) / Float(across) * 2 - 1
+                let px = x + nx * hw * s, py = y + ny * hw * s
+                let baseZ = Self.canopyHeight(px, py), arch = 0.85 * (1 - s * s)
+                let zt = min(22.5, baseZ + arch * 0.35), zb = zt - (1.05 + 0.65 * (1 - s * s))
+                rowTop.append((px, py, zt))
+                rowBot.append((px, py, zb))
+            }
+            stations.append((rowTop, rowBot))
+        }
+        let grass = colour("canopyGrass"), lawn = colour("canopyLawn"), soffit = colour("soffit"), frame = colour("frame")
+        for i in 0..<along {
+            let (rt0, rb0) = stations[i], (rt1, rb1) = stations[i + 1]
+            for j in 0..<across {
+                let topColour = (across >= 4 && (j == 1 || j == 2)) ? lawn : grass
+                quad(rt0[j], rt1[j], rt1[j + 1], rt0[j + 1], topColour, Self.plain)
+                quad(rb0[j], rb0[j + 1], rb1[j + 1], rb1[j], soffit, Self.plain)
+            }
+            quad(rb0[0], rb1[0], rt1[0], rt0[0], frame, Self.plain)
+            quad(rb1[across], rb0[across], rt0[across], rt1[across], frame, Self.plain)
+        }
+        let (rtEnd, rbEnd) = stations[along]
+        for j in 0..<across {
+            quad(rbEnd[j], rbEnd[j + 1], rtEnd[j + 1], rtEnd[j], frame, Self.plain)
+        }
+    }
+
+    /// A white branching tree-column under the canopy, flaring into a
+    /// funnel capital where it meets the soffit.
+    mutating func treeColumn(_ cx: Float, _ cy: Float, top zTop: Float) {
+        let frame = colour("frame"), segs = full ? 6 : 4
+        let r0 = Self.ovalRing(cx, cy, 0.75, 0.75, segments: segs), zFork = zTop - 4.8
+        wallBand(r0, 0, r0, zFork, frame, Self.plain)
+        if full {
+            let rMid = Self.ovalRing(cx, cy, 1.7, 1.7, segments: segs)
+            let rCap = Self.ovalRing(cx, cy, 3.4, 3.4, segments: segs)
+            wallBand(r0, zFork, rMid, zTop - 2.0, frame, Self.plain)
+            wallBand(rMid, zTop - 2.0, rCap, zTop, frame, Self.plain)
+        } else {
+            let rCap = Self.ovalRing(cx, cy, 2.8, 2.8, segments: segs)
+            wallBand(r0, zFork, rCap, zTop, frame, Self.plain)
+        }
+    }
+
+    /// An elliptical skylight well (OSM relation 14940189 inner ways) or
+    /// raised rooftop glass pavilion (`building:part` ways).
+    mutating func skylightWell(_ cx: Float, _ cy: Float, _ rx: Float, _ ry: Float, angle: Float, base zBase: Float, pavilion: Bool) {
+        let segs = full ? 12 : 8
+        let rIn = Self.ovalRing(cx, cy, rx * 0.84, ry * 0.84, angle: angle, segments: segs)
+        let rOut = Self.ovalRing(cx, cy, rx, ry, angle: angle, segments: segs)
+        let frame = colour("frame"), sky = colour("skylight"), glass = colour("glass")
+        if pavilion {
+            let zb = min(20.8, zBase), zTop = zb + 1.8
+            wallBand(rOut, zb - 0.3, rOut, zb + 0.4, frame, Self.plain)
+            wallBand(rIn, zb + 0.4, rIn, zTop - 0.35, glass, Self.curtain)
+            wallBand(rOut, zTop - 0.35, rOut, zTop, frame, Self.plain)
+            cap(rOut, zTop, sky, Self.curtain)
+        } else {
+            let zRim = min(22.6, zBase + 0.35)
+            wallBand(rOut, zRim - 1.2, rOut, zRim, frame, Self.plain)
+            band(rOut, [Float](repeating: zRim, count: segs), rIn, [Float](repeating: zRim, count: segs), frame, Self.plain)
+            let revIn = Array(rIn.reversed())
+            wallBand(revIn, zRim - 0.4, revIn, zRim, frame, Self.plain)
+            cap(rIn, zRim - 0.4, sky, Self.curtain)
+        }
+    }
+
+    /// Decision 431: Kaohsiung Main Station — the curved green cloud canopy
+    /// and station halls (OSM relation 14940189, outer way 1298938821,
+    /// inner skylight ways and building:part pavilions) and the preserved
+    /// Imperial Crown old station (OSM way 257770396).
+    mutating func kaohsiungMainStation() {
+        let polarRadii: [(angle: Float, radius: Float)] = [
+            (-90, 104), (-75, 108), (-60, 96), (-45, 68), (-30, 46), (-15, 48),
+            (0, 72), (15, 88), (30, 82), (45, 78), (60, 92), (75, 98),
+            (90, 92), (105, 96), (120, 86), (135, 68), (150, 66), (165, 84),
+            (180, 76), (195, 48), (210, 42), (225, 58), (240, 88), (255, 106),
+        ]
+        let subdiv = full ? 2 : 1, nCtrl = polarRadii.count
+        var outerPts: [P2] = [], innerPts: [P2] = []
+        for k in 0..<nCtrl {
+            let r0 = polarRadii[(k + nCtrl - 1) % nCtrl].radius, r1 = polarRadii[k].radius
+            let r2 = polarRadii[(k + 1) % nCtrl].radius, r3 = polarRadii[(k + 2) % nCtrl].radius
+            let a1 = polarRadii[k].angle
+            for s in 0..<subdiv {
+                let t = Float(s) / Float(subdiv), t2 = t * t, t3 = t2 * t
+                let r = 0.5 * ((2 * r1) + (-r0 + r2) * t + (2 * r0 - 5 * r1 + 4 * r2 - r3) * t2 + (-r0 + 3 * r1 - 3 * r2 + r3) * t3)
+                let ang = (a1 + 15 * t) * .pi / 180, ca = cos(ang), sa = sin(ang)
+                outerPts.append((2.0 + r * ca, 2.0 + r * sa))
+                innerPts.append((2.0 + 16.5 * ca, 2.0 + 21.5 * sa))
+            }
+        }
+        let steps = full ? 6 : 3
+        var rings: [(points: [P2], top: [Float], bot: [Float])] = []
+        for s in 0...steps {
+            let t = Float(s) / Float(steps)
+            let archT = sin(t * .pi), dipInner = 2.4 * powf(t, 2.2)
+            var pts: [P2] = [], zTop: [Float] = [], zBot: [Float] = []
+            for k in outerPts.indices {
+                let x = outerPts[k].x * (1 - t) + innerPts[k].x * t
+                let y = outerPts[k].y * (1 - t) + innerPts[k].y * t
+                let zt = min(22.9, Self.canopyHeight(x, y) + 1.05 * archT - dipInner)
+                let zb = zt - (1.10 + 0.70 * archT)
+                pts.append((x, y))
+                zTop.append(zt)
+                zBot.append(zb)
+            }
+            if s == steps / 2, let maxIdx = zTop.indices.max(by: { zTop[$0] < zTop[$1] }) {
+                zTop[maxIdx] = 23.0
+            }
+            rings.append((pts, zTop, zBot))
+        }
+        let grass = colour("canopyGrass"), lawn = colour("canopyLawn"), soffit = colour("soffit"), frame = colour("frame")
+        for s in 0..<steps {
+            let topColour = (s == 2 || s == 3) ? lawn : grass
+            band(rings[s].points, rings[s].top, rings[s + 1].points, rings[s + 1].top, topColour, Self.plain)
+            band(rings[s + 1].points, rings[s + 1].bot, rings[s].points, rings[s].bot, soffit, Self.plain)
+        }
+        band(rings[0].points, rings[0].bot, rings[0].points, rings[0].top, frame, Self.plain)
+        let revIn = Array(rings[steps].points.reversed())
+        let revTop = Array(rings[steps].top.reversed()), revBot = Array(rings[steps].bot.reversed())
+        band(revIn, revBot, revIn, revTop, frame, Self.plain)
+
+        // Seven radial canopy arms and green corridor wings (OSM way 1298938821: 664.78 m × 333.87 m).
+        canopyArm([(72, 21, 23), (110, 19.5, 22), (150, 16, 20), (200, 11, 14), (260, 5, 8.2), (332.39, -1.3, 3.3)],
+                  along: full ? 9 : 4, across: full ? 4 : 2)
+        canopyArm([(-72, 26, 20), (-110, 34, 22), (-155, 38.5, 20.5), (-200, 42, 13.5), (-265, 46, 7.8), (-332.39, 49.3, 2.8)],
+                  along: full ? 9 : 4, across: full ? 4 : 2)
+        canopyArm([(28, 90, 14), (34, 116, 9.5), (38, 138, 11.5), (41, 156, 14.5), (39.5, 166.93, 6.0)],
+                  along: full ? 5 : 3, across: full ? 4 : 2)
+        canopyArm([(-32, 84, 10), (-48, 101, 7.5), (-60, 112, 9.5), (-64.5, 116.5, 4.5)],
+                  along: full ? 4 : 2, across: 2)
+        canopyArm([(-28, -96, 11), (-42, -124, 9), (-53, -148, 13.5), (-55, -159.5, 6.0)],
+                  along: full ? 4 : 2, across: full ? 4 : 2)
+        canopyArm([(26, -94, 11), (35, -124, 8.5), (41, -150, 12.5), (43, -166.93, 5.5)],
+                  along: full ? 4 : 2, across: full ? 4 : 2)
+        canopyArm([(38, -78, 8.5), (55, -92, 6.5), (68, -99, 8.0), (74.5, -101.5, 4.0)],
+                  along: full ? 3 : 2, across: 2)
+
+        // Skylight wells (OSM inner ways 1298938824, 1298938825, 1298938827, 1298938831, 1298938832).
+        for (cx, cy, rx, ry, ang) in [(Float(7.4), Float(70.0), Float(15.0), Float(11.5), Float(0)),
+                                      (58.0, 22.5, 13.5, 11.5, -10), (84.0, 21.5, 10.5, 9.0, 10),
+                                      (-0.5, -54.4, 7.6, 9.5, 15), (-39.8, 29.0, 6.5, 7.0, -20),
+                                      (-89.3, 28.8, 8.8, 6.1, -10)] {
+            skylightWell(cx, cy, rx, ry, angle: ang, base: Self.canopyHeight(cx, cy) + 0.4, pavilion: false)
+        }
+        // Rooftop glass pavilions (OSM building:part ways 1298938822, 1298938826, 1298938828, 1298938823, 1298938829).
+        for (cx, cy, rx, ry, ang) in [(Float(-146.1), Float(37.8), Float(12.8), Float(11.3), Float(0)),
+                                      (128.4, 18.0, 12.6, 11.6, 0), (-18.4, -74.2, 4.3, 4.3, 0),
+                                      (-107.9, 42.1, 4.2, 4.2, 0), (10.5, -37.9, 4.1, 4.1, 0)] where full || rx > 8 {
+            skylightWell(cx, cy, rx, ry, angle: ang, base: Self.canopyHeight(cx, cy) + 0.3, pavilion: true)
+        }
+
+        // Curved glass station concourse halls under the central canopy.
+        let plinth = colour("plinth"), wall = colour("wall"), groundGlass = colour("groundGlass")
+        let hallSegs = full ? 12 : 8
+        for (cx, cy, rx, ry, ang) in [(Float(-21), Float(12), Float(11.5), Float(28), Float(12)),
+                                      (25, 10, 12, 29, -12), (2, 46, 20, 9.5, 0)] {
+            let rPlinth = Self.ovalRing(cx, cy, rx + 0.8, ry + 0.8, angle: ang, segments: hallSegs)
+            let rHall = Self.ovalRing(cx, cy, rx, ry, angle: ang, segments: hallSegs)
+            wallBand(rPlinth, 0, rPlinth, 0.8, plinth, Self.plain)
+            cap(rPlinth, 0.8, plinth, Self.plain)
+            wallBand(rHall, 0.8, rHall, 5.2, groundGlass, Self.curtain)
+            wallBand(rHall, 5.2, rHall, 6.4, wall, Self.floors)
+            wallBand(rHall, 6.4, rHall, 11.2, groundGlass, Self.curtain)
+            wallBand(rHall, 11.2, rHall, 12.6, wall, Self.floors)
+            cap(rHall, 12.6, colour("flatRoof"), Self.plain)
+        }
+
+        // Supporting white tree-columns across the plaza, lobes and wings.
+        let columns: [P2] = [
+            (40.6, -162.1), (-54.0, -152.0), (-42.5, -137.8), (33.4, -139.2),
+            (26.2, -116.3), (-26.7, -107.7), (-3.8, -100.6), (68.0, -99.0),
+            (19.1, -93.4), (-18.2, -54.8), (11.9, -70.5), (89.2, 4.0),
+            (165.0, 12.0), (240.9, 5.0), (312.0, 0.0), (-115.6, 28.0),
+            (-168.6, 38.0), (-245.0, 45.0), (-312.0, 48.5), (-1.1, 51.2),
+            (-8.2, 74.1), (37.6, 88.4), (34.0, 118.0), (42.0, 148.0),
+            (-52.0, 106.0), (52.0, 42.6), (-46.9, 36.9), (112.1, 18.0),
+        ]
+        for (idx, col) in columns.enumerated() where full || idx.isMultiple(of: 2) {
+            treeColumn(col.x, col.y, top: Self.canopyHeight(col.x, col.y) - 1.1)
+        }
+
+        oldKaohsiungStation()
+    }
+
+    /// The preserved 1941 Imperial Crown station building on the south
+    /// plaza (OSM way 257770396: 25.30 m × 30.36 m, building:levels = 3).
+    mutating func oldKaohsiungStation() {
+        let cx: Float = -5.11, cy: Float = -121.60, hx: Float = 12.25, hy: Float = 10.88
+        let plinth = colour("plinth"), wall = colour("wall"), trim = colour("trim"), soffit = colour("soffit")
+        let glass = colour("groundGlass"), strip = colour("stripGlass")
+        let roof = colour("roof"), crown = colour("crownRoof"), ridge = colour("ridge"), flatRoof = colour("flatRoof")
+
+        let rBody: [P2] = [(cx - hx, cy - hy), (cx + hx, cy - hy), (cx + hx, cy + hy), (cx - hx, cy + hy)]
+        for (z0, z1, col, lay) in [(Float(0), Float(0.8), plinth, Self.plain), (0.8, 2.2, wall, Self.floors),
+                                   (2.2, 4.4, glass, Self.curtain), (4.4, 5.2, wall, Self.floors),
+                                   (5.2, 5.8, trim, Self.plain), (5.8, 6.8, wall, Self.floors),
+                                   (6.8, 9.2, strip, Self.curtain), (9.2, 11.4, wall, Self.floors),
+                                   (11.4, 12.0, trim, Self.plain)] {
+            wallBand(rBody, z0, rBody, z1, col, lay)
+        }
+        cap(rBody, 12.0, flatRoof, Self.plain)
+        if full {
+            for s in 0..<6 {
+                let x = (cx - hx + 1.8) + (2 * hx - 3.6) * Float(s) / 5
+                for ySide in [cy - hy - 0.25, cy + hy + 0.25] {
+                    box(x - 0.35, ySide - 0.22, 0.8, x + 0.35, ySide + 0.22, 11.4, wall, Self.plain)
+                }
+            }
+        }
+
+        // South entrance portico (extending south to y = -140.68).
+        let px0: Float = -15.05, px1: Float = 2.85, py0: Float = -140.28, py1: Float = cy - hy
+        let pRing: [P2] = [(px0, py0), (px1, py0), (px1, py1), (px0, py1)]
+        for (z0, z1, col, lay) in [(Float(0), Float(0.8), plinth, Self.plain), (0.8, 2.0, wall, Self.floors),
+                                   (2.0, 4.6, glass, Self.curtain), (4.6, 8.2, wall, Self.floors),
+                                   (8.2, 8.8, trim, Self.plain)] {
+            wallBand(pRing, z0, pRing, z1, col, lay)
+        }
+        cap(pRing, 8.8, flatRoof, Self.plain)
+        let pOut: [P2] = [(px0 - 0.4, py0 - 0.4), (px1 + 0.4, py0 - 0.4), (px1 + 0.4, py1), (px0 - 0.4, py1)]
+        let pIn: [P2] = [(px0 + 1.8, py0 + 1.8), (px1 - 1.8, py0 + 1.8), (px1 - 1.8, py1), (px0 + 1.8, py1)]
+        band(pOut, [Float](repeating: 8.8, count: 4), pIn, [Float](repeating: 10.3, count: 4), roof, Self.tiles)
+        cap(pIn, 10.3, flatRoof, Self.plain)
+        if full {
+            for s in 0..<4 {
+                let x = (px0 + 2.2) + (px1 - px0 - 4.4) * Float(s) / 3
+                box(x - 0.32, py0 - 0.32, 0.8, x + 0.32, py0 + 0.15, 8.2, trim, Self.plain)
+            }
+        }
+
+        // Lower tiled hip skirt round the two-storey hall (12.0-13.4 m).
+        let rEave: [P2] = [(cx - hx - 0.4, cy - hy - 0.4), (cx + hx + 0.4, cy - hy - 0.4),
+                           (cx + hx + 0.4, cy + hy + 0.4), (cx - hx - 0.4, cy + hy + 0.4)]
+        let rDeck: [P2] = [(cx - hx + 2.2, cy - hy + 2.2), (cx + hx - 2.2, cy - hy + 2.2),
+                           (cx + hx - 2.2, cy + hy - 2.2), (cx - hx + 2.2, cy + hy - 2.2)]
+        band(rEave, [Float](repeating: 12.0, count: 4), rDeck, [Float](repeating: 13.4, count: 4), roof, Self.tiles)
+        cap(rDeck, 13.4, flatRoof, Self.plain)
+
+        // Central Imperial Crown tower (12.0-16.86 m).
+        let tcx: Float = -1.6, tcy: Float = -125.9, th: Float = 5.1
+        let tRing: [P2] = [(tcx - th, tcy - th), (tcx + th, tcy - th), (tcx + th, tcy + th), (tcx - th, tcy + th)]
+        for (z0, z1, col, lay) in [(Float(12.0), Float(12.3), wall, Self.floors),
+                                   (12.3, 13.1, strip, Self.curtain), (13.1, 13.5, wall, Self.floors)] {
+            wallBand(tRing, z0, tRing, z1, col, lay)
+        }
+        box(tcx - th - 0.35, tcy - th - 0.35, 13.5, tcx + th + 0.35, tcy + th + 0.35, 13.85, soffit, Self.plain)
+
+        let cSteps = full ? 5 : 3, perSide = full ? 5 : 3
+        let (unitPts, unitNear) = Self.rectRing(1, 1, perSide: perSide)
+        let eHalf: Float = 5.8, rHalf: Float = 1.35
+        var cRings: [(points: [P2], heights: [Float])] = []
+        for s in 0...cSteps {
+            let t = Float(s) / Float(cSteps)
+            let sh = eHalf - (eHalf - rHalf) * t
+            let sweep = 0.85 * (1 - t) * (1 - t) * (1 - t)
+            let zs = unitNear.map { n -> Float in
+                let corner = 1 - min(n, 0.35) / 0.35
+                return 13.85 + 2.55 * powf(t, 1.55) + sweep * corner * corner
+            }
+            cRings.append((unitPts.map { (tcx + $0.x * sh, tcy + $0.y * sh) }, zs))
+        }
+        for s in 0..<cSteps {
+            band(cRings[s].points, cRings[s].heights, cRings[s + 1].points, cRings[s + 1].heights, crown, Self.tiles)
+        }
+        let e0 = cRings[0]
+        band(e0.points, e0.heights.map { $0 - 0.35 }, e0.points, e0.heights, trim, Self.plain)
+        let topPts = cRings[cSteps].points, zTopCrown = cRings[cSteps].heights[0]
+        cap(topPts, zTopCrown, ridge, Self.plain)
+        box(tcx - 1.45, tcy - 1.45, zTopCrown, tcx + 1.45, tcy + 1.45, 16.86, ridge, Self.plain, top: ridge)
+
+        if full {
+            for k in [0, perSide, perSide * 2, perSide * 3] {
+                for s in 0..<cSteps {
+                    let a = cRings[s].points[k], b = cRings[s + 1].points[k]
+                    let za = cRings[s].heights[k], zb = cRings[s + 1].heights[k]
+                    let d = Self.distance(a, b)
+                    let nx = -(b.y - a.y) / d * 0.24, ny = (b.x - a.x) / d * 0.24
+                    quad((a.x - nx, a.y - ny, za + 0.18), (a.x + nx, a.y + ny, za + 0.18),
+                         (b.x + nx, b.y + ny, zb + 0.18), (b.x - nx, b.y - ny, zb + 0.18), ridge, Self.plain)
+                }
+            }
+            for ySign in [Float(-1), 1] {
+                let gy = tcy + ySign * (th + 0.55)
+                box(tcx - 2.1, gy - 0.35, 13.4, tcx + 2.1, gy + 0.35, 14.55, trim, Self.plain, top: ridge)
             }
         }
     }
