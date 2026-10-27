@@ -43,10 +43,10 @@ final class Map3DEMU800IntegrationTests: XCTestCase {
             let laid = try cars(key, 8)
             XCTAssertEqual(laid.count, 8, key)
             for (index, (role, reversed)) in eightHundred(8).enumerated() {
-                XCTAssertTrue(sameShape(laid[index], Map3DEMU800.model(role, reversed: reversed, far: far)), "\(key) car \(index + 1) \(role)")
+                XCTAssertTrue(sameShape(laid[index], Map3DEMU800.model(role, reversed: reversed, light: far)), "\(key) car \(index + 1) \(role)")
             }
             // Not the scene kit's `01_TRA_modern_3x2-04`.
-            XCTAssertEqual(laid[0].triangleCount, Map3DEMU800.model(.ed, far: far).triangleCount, key)
+            XCTAssertEqual(laid[0].triangleCount, Map3DEMU800.model(.ed, light: far).triangleCount, key)
         }
         XCTAssertEqual(Map3DTrainSet.byKey["emu800"]?.far, "emu800Far")
         let names = try XCTUnwrap(pack.layout(forType: "emu800", count: 8)).map { pack.models[$0.model].name }
@@ -60,8 +60,9 @@ final class Map3DEMU800IntegrationTests: XCTestCase {
         XCTAssertTrue(layout.allSatisfy { $0.gap == 0 })
         let expected = eightHundred(8).map { Map3DEMU800.model($0.role, reversed: $0.reversed).length }
         for (car, length) in zip(layout, expected) { XCTAssertEqual(car.length, length, accuracy: 0.001) }
-        XCTAssertEqual(layout[0].length, 21.25, accuracy: 0.01)
-        XCTAssertEqual(layout[1].length, 19.6, accuracy: 0.01)
+        // The cab cars reach on to their couplers.
+        XCTAssertEqual(layout[0].length, 21.51, accuracy: 0.01)
+        XCTAssertEqual(layout[1].length, 20.3, accuracy: 0.01)
     }
 
     /// Whatever the train's length, from two cars up: a cab car at each
@@ -72,7 +73,7 @@ final class Map3DEMU800IntegrationTests: XCTestCase {
                 let laid = try cars(far ? "emu800Far" : "emu800", count)
                 XCTAssertEqual(laid.count, count)
                 for (index, (role, reversed)) in eightHundred(count).enumerated() {
-                    XCTAssertTrue(sameShape(laid[index], Map3DEMU800.model(role, reversed: reversed, far: far)),
+                    XCTAssertTrue(sameShape(laid[index], Map3DEMU800.model(role, reversed: reversed, light: far)),
                                   "\(count) cars, car \(index + 1): \(role) \(reversed ? "reversed" : "")")
                 }
             }
@@ -245,20 +246,61 @@ final class Map3DEMU800IntegrationTests: XCTestCase {
             for unit in ["head", "car", "tail", "panto", "centre", "carBack", "pantoBack", "centreBack"] {
                 let near = pack.models[try XCTUnwrap(pack.index(of: "set-\(code)-\(unit)"))]
                 let far = pack.models[try XCTUnwrap(pack.index(of: "set-\(code)Far-\(unit)"))]
-                XCTAssertEqual(far.minimum.x, near.minimum.x, accuracy: 0.02, "\(code) \(unit)")
-                XCTAssertEqual(far.maximum.x, near.maximum.x, accuracy: 0.02, "\(code) \(unit)")
+                // The EMU800's light cars leave out the gangway frames, 9 cm at the ends.
+                XCTAssertEqual(far.minimum.x, near.minimum.x, accuracy: 0.1, "\(code) \(unit)")
+                XCTAssertEqual(far.maximum.x, near.maximum.x, accuracy: 0.1, "\(code) \(unit)")
                 XCTAssertEqual(far.maximum.z, near.maximum.z, accuracy: 0.05, "\(code) \(unit)")
                 XCTAssertEqual(far.minimum.z, 0, accuracy: 0.05, "\(code) \(unit)")
                 XCTAssertLessThan(far.triangleCount * 2, near.triangleCount * 1, "\(code) \(unit): \(far.triangleCount) of \(near.triangleCount)")
-                XCTAssertTrue(Set(far.vertices.map(\.color)).isSubset(of: Set(near.vertices.map(\.color)).union([Map3DTrainStyle.headlamp, Map3DPalette.lantern])),
-                              "\(code) \(unit)")
+                // The livery is there (a box's underside is a shade of its colour).
+                let colours = Set(far.vertices.map(\.color))
+                for livery in code == "emu800" ? [Map3DEMU800.navy, Map3DEMU800.yellow, Map3DEMU800.bodyColor] : [Map3DEMU500.accent, Map3DEMU500.silver] {
+                    XCTAssertTrue(colours.contains(livery), "\(code) \(unit)")
+                }
             }
+        }
+    }
+
+    /// Every vertex field, FNV-1a, to pin a model as it was on main.
+    private func hash(_ model: Map3DModelPack.Model) -> String {
+        var h: UInt64 = 0xcbf29ce484222325
+        for v in model.vertices {
+            for word in [v.x.bitPattern, v.y.bitPattern, v.z.bitPattern, v.nx.bitPattern, v.ny.bitPattern, v.nz.bitPattern,
+                         v.color, v.u.bitPattern, v.v.bitPattern, v.layer.bitPattern] {
+                for shift in stride(from: 0, to: 32, by: 8) { h = (h ^ UInt64((word >> UInt32(shift)) & 0xFF)) &* 0x100000001b3 }
+            }
+        }
+        return String(h, radix: 16)
+    }
+
+    /// The EMU800 as #1320 made it, near and its existing `far`: only the
+    /// `light` version is added to the file. (Hashes and triangle counts
+    /// of main's models.)
+    func testTheEMU800NearAndFarCarsAreAsTheyWere() {
+        let near: [Map3DEMU800.Role: (Int, String)] = [.ed: (11_506, "4963906d22906b97"), .ema: (5_200, "72af84ac4ade481e"),
+                                                       .ep: (5_372, "dbe7c2914b0c1326"), .emb: (5_212, "15c759e0812d1166")]
+        let far: [Map3DEMU800.Role: (Int, String)] = [.ed: (6_046, "ff7c370fbbfd852b"), .ema: (2_916, "eff481f4a1e1d6e"),
+                                                      .ep: (3_088, "7cfb04aea34d81dc"), .emb: (2_928, "ff6706ba6e09e056")]
+        for role in Map3DEMU800.Role.allCases {
+            let n = Map3DEMU800.model(role), f = Map3DEMU800.model(role, far: true)
+            XCTAssertEqual(n.triangleCount, near[role]?.0, "\(role)")
+            XCTAssertEqual(hash(n), near[role]?.1, "\(role)")
+            XCTAssertEqual(f.triangleCount, far[role]?.0, "\(role) far")
+            XCTAssertEqual(hash(f), far[role]?.1, "\(role) far")
+            XCTAssertEqual(hash(Map3DEMU800.model(role, light: false)), near[role]?.1, "\(role)")
         }
     }
 
     /// The EMU500's near cars are #1312's as they were: only a far version
     /// is added to the file.
     func testTheEMU500NearCarsAreAsTheyWere() {
+        let expected: [Map3DEMU500.Unit: (Int, String)] = [.emc: (4_548, "c622d4729f9bf28e"), .ep: (2_944, "9f7fc99095debe4a"),
+                                                           .et: (2_840, "bbc20c3603682bd5"), .em: (4_548, "c622d4729f9bf28e")]
+        for unit in Map3DEMU500.Unit.allCases {
+            XCTAssertEqual(Map3DEMU500.model(unit).triangleCount, expected[unit]?.0, "\(unit)")
+            XCTAssertEqual(hash(Map3DEMU500.model(unit)), expected[unit]?.1, "\(unit)")
+        }
+        XCTAssertEqual(hash(Map3DEMU500.formation()), "6c52052f859d9cd1")
         XCTAssertEqual(Map3DEMU500.model(.emc).vertices, Map3DEMU500.model(.emc, far: false).vertices)
         XCTAssertEqual(Map3DEMU500.formation().triangleCount, Map3DEMU500.order.reduce(0) { $0 + Map3DEMU500.model($1).triangleCount })
         XCTAssertNotNil(pack.index(of: "emu500-formation"))
@@ -273,15 +315,25 @@ final class Map3DEMU800IntegrationTests: XCTestCase {
         let oldNearCar = Map3DTrainSet.multipleUnit("emu800", asset: "01_TRA_modern_3x2-04", body: 0xBBC6C9, band: 0x214F90, face: 0x214F90)
             .build().middle?.triangleCount ?? 0
         XCTAssertGreaterThan(oldNearCar, 0)
+        // The old head was 2,467 triangles and the old middle car 1,592: a far car is no heavier.
+        let oldHead = Map3DTrainSet.multipleUnit("emu800", asset: "01_TRA_modern_3x2-04", body: 0xBBC6C9, band: 0x214F90, face: 0x214F90)
+            .build().head.triangleCount
+        XCTAssertEqual(oldHead, 2_467)
+        XCTAssertEqual(oldNearCar, 1_592)
         for key in ["emu800Far", "emu500Far"] {
-            for unit in ["head", "car", "panto", "centre", "tail"] {
-                guard let index = pack.index(of: "set-\(key)-\(unit)") else { continue }
-                XCTAssertLessThanOrEqual(pack.models[index].triangleCount, oldNearCar, "\(key) \(unit)")
+            for unit in ["head", "car", "panto", "centre", "tail", "carBack", "pantoBack", "centreBack"] {
+                let model = pack.models[try XCTUnwrap(pack.index(of: "set-\(key)-\(unit)"), "\(key) \(unit)")]
+                // The EMU500's EM car has a cab too, so it is compared with the old cab car.
+                let cab = unit == "head" || unit == "tail" || key == "emu500Far" && unit.hasPrefix("car")
+                XCTAssertLessThanOrEqual(model.triangleCount, cab ? oldHead : oldNearCar, "\(key) \(unit)")
             }
         }
-        XCTAssertLessThan(try total("emu800Far"), try total("emu800"))
-        XCTAssertLessThan(try total("emu500Far"), try total("emu500"))
-        XCTAssertLessThanOrEqual(try total("emu800") + try total("emu500"), 8 * Map3DModelFile.maximumTriangles)
+        let eight = (try total("emu800"), try total("emu800Far"), try total("emu500"), try total("emu500Far"))
+        XCTAssertLessThan(eight.1, eight.0)
+        XCTAssertLessThan(eight.3, eight.2)
+        // A whole far train is no heavier than the old near one (14,486).
+        XCTAssertLessThanOrEqual(eight.1, 2 * oldHead + 6 * oldNearCar)
+        XCTAssertLessThanOrEqual(eight.3, 2 * oldHead + 6 * oldNearCar)
     }
 
     /// Only on request: the numbers decision 432 gives. `MAP3D_FRAME_REPORT=1`.
@@ -297,7 +349,7 @@ final class Map3DEMU800IntegrationTests: XCTestCase {
             let laid = try cars(key, 8)
             print("\(key): cars \(laid.map(\.triangleCount)) total \(laid.reduce(0) { $0 + $1.triangleCount }) x\(Double(laid.reduce(0) { $0 + $1.triangleCount }) / Double(oldTotal))")
         }
-        for role in Map3DEMU800.Role.allCases { print("EMU800 \(role): near \(Map3DEMU800.model(role).triangleCount) far \(Map3DEMU800.model(role, far: true).triangleCount)") }
+        for role in Map3DEMU800.Role.allCases { print("EMU800 \(role): near \(Map3DEMU800.model(role).triangleCount) far \(Map3DEMU800.model(role, far: true).triangleCount) light \(Map3DEMU800.model(role, light: true).triangleCount)") }
         for unit in Map3DEMU500.Unit.allCases { print("EMU500 \(unit): near \(Map3DEMU500.model(unit).triangleCount) far \(Map3DEMU500.model(unit, far: true).triangleCount)") }
     }
 }

@@ -2,7 +2,7 @@ import Foundation
 
 /// Independent EMU800 blue-face / yellow-smile miniature. Native metres, tread Z=0.
 /// Body and wheel dimensions: Nippon Sharyo. Equipment stations are visual estimates.
-/// Static registration only: the existing emu800 operating key also represents EMU900.
+/// Decision 432: the operating `emu800` key (which also represents the EMU900) draws these units.
 public enum Map3DEMU800 {
     public enum Role: String, CaseIterable, Sendable { case ed, ema, ep, emb }
     public struct Placement: Sendable {
@@ -24,12 +24,15 @@ public enum Map3DEMU800 {
             end -= pitches[i]; return p
         }
     }()
-    public static func id(_ role: Role, reversed: Bool = false, far: Bool = false) -> String {
-        "emu800-"+role.rawValue+(reversed ? "-reverse":"")+(far ? "-far":"")
+    /// Decision 432: `light`, a lighter version still than `far`, for the
+    /// operating set drawn from 500 m out: the same box, paint and lit
+    /// lamps, without the small parts nobody sees from there.
+    public static func id(_ role: Role, reversed: Bool = false, far: Bool = false, light: Bool = false) -> String {
+        "emu800-"+role.rawValue+(reversed ? "-reverse":"")+(far ? "-far":"")+(light ? "-light":"")
     }
-    public static func model(_ role: Role, reversed: Bool = false, far: Bool = false) -> Map3DModelPack.Model {
-        var b = StationKitBuilder(); b.e8Car(role,far:far)
-        let m = Map3DModelPack.Model.flat(named:id(role,reversed:reversed,far:far),from:b.mesh)
+    public static func model(_ role: Role, reversed: Bool = false, far: Bool = false, light: Bool = false) -> Map3DModelPack.Model {
+        var b = StationKitBuilder(); b.e8Car(role,far:far,light:light)
+        let m = Map3DModelPack.Model.flat(named:id(role,reversed:reversed,far:far,light:light),from:b.mesh)
         guard reversed else { return m }
         return .init(name:m.name,vertices:m.vertices.map {
             Map3DVertex(Map3DPoint(-$0.x,-$0.y,$0.z),normal:Map3DPoint(-$0.nx,-$0.ny,$0.nz),color:$0.color,layer:$0.layer)
@@ -67,10 +70,13 @@ private extension StationKitBuilder {
         }
         return out
     }
-    mutating func e8Side(_ x:Float,_ h:Float,_ w:Float,_ height:Float,_ side:Float,_ far:Bool,_ color:UInt32, rim:Bool = true) {
-        if rim {e8Side(x,h,w+0.055,height+0.055,side,far,E8.rubber,rim:false)}
-        let depth:Float = rim ? 1.464:1.450
-        e8Panel(Self.e8Round(x,h,w,height,min(0.13,height/4),far ? 1:3).map {Map3DPoint($0.x,$0.y,side*depth)},Map3DPoint(0,0,side*0.010),color)
+    mutating func e8Side(_ x:Float,_ h:Float,_ w:Float,_ height:Float,_ side:Float,_ far:Bool,_ color:UInt32, rim:Bool = true, light:Bool = false) {
+        if rim && !light {e8Side(x,h,w+0.055,height+0.055,side,far,E8.rubber,rim:false)}
+        let depth:Float = light ? 1.452:rim ? 1.464:1.450
+        // Decision 432: `light`, a plain pane on the wall, no rubber rim.
+        let outline = light ? [Map3DPoint(x-w/2,h-height/2,0),Map3DPoint(x+w/2,h-height/2,0),Map3DPoint(x+w/2,h+height/2,0),Map3DPoint(x-w/2,h+height/2,0)]
+            : Self.e8Round(x,h,w,height,min(0.13,height/4),far ? 1:3)
+        e8Panel(outline.map {Map3DPoint($0.x,$0.y,side*depth)},Map3DPoint(0,0,side*0.010),color)
     }
     // Forward face: a broad curved disk, independently controlled in height and width.
     // Coordinates are builder x/front,y/up,z/right; no EMU700/900 shell is used.
@@ -105,7 +111,8 @@ private extension StationKitBuilder {
             e8Panel(p.map {$0+Map3DPoint(depth-0.025,0,0)},Map3DPoint(0.025,0,0),color)
         }
     }
-    mutating func e8Car(_ role:E8.Role,far:Bool) {
+    mutating func e8Car(_ role:E8.Role,far farDetail:Bool,light:Bool) {
+        let far=farDetail||light
         let cab=role == .ed, rear:Float=cab ? -10.625:-9.8,front:Float=cab ? 7.65:9.8
         let body=E8.bodyColor,steel=Self.steel,dark=E8.rubber,glass=E8.glass
         let levels:[Float]=[0.95,1.42,1.49,1.56,3.27,3.32,3.40,3.55,3.65]
@@ -125,7 +132,7 @@ private extension StationKitBuilder {
         if !cab {e8Face(b,inside:inside,color:body)}
         var frontTris:[[Map3DPoint]]=[]
         if cab {
-            let n=far ? 12:24
+            let n=light ? 6:far ? 12:24
             // Paint boundaries are rows of the actual shell, not overlapping coloured boards.
             var grid:[[Map3DPoint]]=[]
             for k in 0...n {
@@ -158,11 +165,11 @@ private extension StationKitBuilder {
             let wind:[Map3DPoint]=[.init(-1.13,2.98,0),.init(-1.02,2.27,0),.init(-0.87,2.20,0),.init(0.87,2.20,0),.init(1.02,2.27,0),.init(1.13,2.98,0)]
             e8FrontPatch(frontTris,yz(wind),dark,0.018)
             e8FrontPatch(frontTris,yz(wind.map {Map3DPoint($0.x*0.94,2.60+($0.y-2.60)*0.88,0)}),glass,0.031)
-            e8FrontPatch(frontTris,yz(Self.e8Round(0,3.31,0.58,0.23,0.075,far ? 2:3)),dark,0.020)
+            if !light {e8FrontPatch(frontTris,yz(Self.e8Round(0,3.31,0.58,0.23,0.075,far ? 2:3)),dark,0.020)}
             for s:Float in [-1,1] {
                 e8FrontPatch(frontTris,yz(Self.e8Round(s*0.86,3.31,0.40,0.30,0.12,far ? 2:4)),dark,0.022)
                 e8FrontPatch(frontTris,yz(Self.e8Round(s*0.86,3.31,0.27,0.22,0.10,far ? 2:4)),Map3DPalette.tunnelLamp,0.034)
-                for z:Float in [0.34,0.79] {
+                for z:Float in (light ? []:[0.34,0.79]) {
                     let c=s*z,h:Float=z>0.5 ? 1.99:1.91
                     let circle=(0..<(far ? 10:16)).map {i -> Map3DPoint in let t=Float(i)*2*Float.pi/Float(far ? 10:16);return Map3DPoint(0,h+0.175*sinf(t),c+0.175*cosf(t))}
                     e8FrontPatch(frontTris,circle,dark,0.019)
@@ -174,7 +181,7 @@ private extension StationKitBuilder {
                 let w:[Map3DPoint]=[.init(0,2.25,side*0.10),.init(0,2.27,side*0.12),.init(0,2.62,side*0.80),.init(0,2.60,side*0.82)]
                 e8FrontPatch(frontTris,w,dark,0.046)
             }}
-            e8FrontPatch(frontTris,yz(Self.e8Round(0,1.01,0.016,0.90,0.006,1)),steel,0.012)
+            if !light {e8FrontPatch(frontTris,yz(Self.e8Round(0,1.01,0.016,0.90,0.006,1)),steel,0.012)}
         }
         // Exactly three double passenger doors per side, six main window bays on motor cars.
         let doors:[Float]=cab ? [-6.30,-0.30,5.70]:[-5.90,0.10,6.10]
@@ -183,29 +190,29 @@ private extension StationKitBuilder {
                 // Thin jambs and seam, the body itself supplies the door leaves.
                 for dx:Float in [-0.69,0,0.69] {box(x+dx,1.02,side*1.453,0.018,0.014,2.12,steel)}
                 box(x,3.12,side*1.453,1.39,0.014,0.022,steel)
-                for dx:Float in [-0.34,0.34] {e8Side(x+dx,2.56,0.47,0.95,side,far,glass)}
+                for dx:Float in [-0.34,0.34] {e8Side(x+dx,2.56,0.47,0.95,side,far,glass,light:light)}
             }
             let wins:[Float]=cab ? [-8.45,-4.25,-2.25,1.75,3.75]:[-8.30,-3.88,-1.88,2.12,4.12,8.40]
             for (i,x) in wins.enumerated() {
                 let toilet=(role == .ep && i==0 && side<0)||(cab && i==0 && side>0)
-                e8Side(x,2.48,toilet ? 0.52:1.51,toilet ? 0.52:0.89,side,far,toilet ? Map3DPalette.tunnelLining:glass)
+                e8Side(x,2.48,toilet ? 0.52:1.51,toilet ? 0.52:0.89,side,far,toilet ? Map3DPalette.tunnelLining:glass,light:light)
                 if !far && !toilet && (i%2==0) {box(x,2.65,side*1.480,1.40,0.012,0.025,steel)}
             }
             if cab {
-                e8Side(7.13,2.60,0.30,0.82,side,far,glass)
-                for dx:Float in [-0.30,0.30] {box(7.13+dx,1.10,side*1.45,0.018,0.014,2.05,steel)}
+                e8Side(7.13,2.60,0.30,0.82,side,far,glass,light:light)
+                if !light {for dx:Float in [-0.30,0.30] {box(7.13+dx,1.10,side*1.45,0.018,0.014,2.05,steel)}}
                 // Cab side glass stays in the parallel portion; angled front edge follows the front profile.
                 e8Panel([Map3DPoint(7.52,2.20,side*1.451),Map3DPoint(7.52,3.08,side*1.451),Map3DPoint(8.53,2.92,side*1.451),Map3DPoint(9.28,2.20,side*1.451)],Map3DPoint(0,0,side*0.012),glass)
             }
-            for x in [doors[0]+1.2,doors[1]+1.2] {box(x,3.12,side*1.45,0.48,0.018,0.13,dark)}
+            if !light {for x in [doors[0]+1.2,doors[1]+1.2] {box(x,3.12,side*1.45,0.48,0.018,0.13,dark)}}
         }
         // End gangways and couplers. Cab-front coupler remains under its normal closed cover.
         let pitch:Float=cab ? 21.6:20.3
         for end:Float in (cab ? [-1]:[-1,1]) {
             let edge=end*(cab ? 10.625:9.8)
             box(edge,1.10,0,0.08,1.12,2.02,dark)
-            for z:Float in [-0.59,0.59] {box(edge+end*0.12,1.12,z,0.28,0.10,2.00,dark)}
-            box(edge+end*0.12,3.12,0,0.28,1.28,0.10,dark)
+            if !light {for z:Float in [-0.59,0.59] {box(edge+end*0.12,1.12,z,0.28,0.10,2.00,dark)}
+            box(edge+end*0.12,3.12,0,0.28,1.28,0.10,dark)}
             box(end*(pitch/2-0.14),0.75,0,0.28,0.34,0.24,steel)
         }
         // ND-741 wheelbase is 2.30 m; bogie centres are proportion estimates.
@@ -214,9 +221,9 @@ private extension StationKitBuilder {
             for side:Float in [-1,1] {
                 box(centre,0.56,side*0.95,3.25,0.16,0.22,steel)
                 for dx:Float in [-1.15,1.15] {
-                    civicTube(Map3DPoint(centre+dx,0.43,side*0.49),Map3DPoint(centre+dx,0.43,side*0.66),radius:0.43,color:dark,sides:far ? 12:20)
-                    civicTube(Map3DPoint(centre+dx,0.43,side*0.67),Map3DPoint(centre+dx,0.43,side*1.04),radius:0.085,color:steel,sides:8)
-                    box(centre+dx,0.36,side*0.97,0.35,0.23,0.30,steel)
+                    civicTube(Map3DPoint(centre+dx,0.43,side*0.49),Map3DPoint(centre+dx,0.43,side*0.66),radius:0.43,color:dark,sides:light ? 8:far ? 12:20)
+                    if !light {civicTube(Map3DPoint(centre+dx,0.43,side*0.67),Map3DPoint(centre+dx,0.43,side*1.04),radius:0.085,color:steel,sides:8)
+                    box(centre+dx,0.36,side*0.97,0.35,0.23,0.30,steel)}
                     if !far {box(centre+dx,0.72,side*0.97,0.48,0.22,0.09,dark)}
                 }
             }
@@ -227,7 +234,7 @@ private extension StationKitBuilder {
             box(x,0.42,side*0.63,role == .ep && i==1 ? 2.5:1.6,0.84,0.47,steel)
             if !far {for d:Float in [-0.4,0,0.4] {box(x+d,0.47,side*1.06,0.035,0.012,0.32,dark)}}
         }
-        if role == .ed {for x:Float in [-3.6,-2.7] {civicTube(Map3DPoint(x,0.63,-0.65),Map3DPoint(x,0.63,0.45),radius:0.29,color:steel,sides:far ? 8:12)}}
+        if role == .ed && !light {for x:Float in [-3.6,-2.7] {civicTube(Map3DPoint(x,0.63,-0.65),Map3DPoint(x,0.63,0.45),radius:0.29,color:steel,sides:far ? 8:12)}}
         if role == .emb {box(9.83,2.70,0.9,0.025,0.14,0.18,Map3DPalette.tunnelLining)}
         // AC housings and supports. EP keeps its own HV bay and a single-arm pantograph.
         let ac:[Float]=role == .ep ? [-4.2,6.0]:cab ? [-6.6,5.0]:[-5.0,5.0]
@@ -243,7 +250,7 @@ private extension StationKitBuilder {
         }
         if role == .ep {
             box(-8.1,3.65,0,2.35,1.24,0.08,steel)
-            for x:Float in [-8.8,-7.4] {for z:Float in [-0.43,0.43] {cylinder(x,3.73,z,radius:0.11,height:0.27,color:Map3DPalette.tileWhite,sides:8)}}
+            if !light {for x:Float in [-8.8,-7.4] {for z:Float in [-0.43,0.43] {cylinder(x,3.73,z,radius:0.11,height:0.27,color:Map3DPalette.tileWhite,sides:8)}}}
             box(-8.1,4.00,0,1.65,0.95,0.10,dark)
             beam(Map3DPoint(-8.5,4.10,0),Map3DPoint(-7.0,4.75,0),0.075,dark)
             beam(Map3DPoint(-7.0,4.75,0),Map3DPoint(-8.10,5.18,0),0.065,steel)

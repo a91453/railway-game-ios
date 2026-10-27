@@ -41,6 +41,9 @@ final class Map3DTrainSetTests: XCTestCase {
                     : name == set.headName && ["E500CK", "MINGRI", "STAR", "pushPull", "pushPullE1000"].contains(set.key) ? 4_000...10_000
                     : name == set.middleName && ["pushPull", "pushPullE1000"].contains(set.key) ? 6_000...8_500
                     : set.key == "emu3000" ? ([set.headName,set.tailName].contains(name) ? 6_000...9_200:4_000...6_100)
+                    // Decision 432: #1320's EMU800 near units, 11,500 a cab and 5,200 to 5,400 the others; #1312's EMU500, 4,500 a cab (and the EM) and 2,800 to 2,950 the others.
+                    : set.key == "emu800" ? ([set.headName, set.tailName].contains(name) ? 11_000...12_000 : 5_000...5_500)
+                    : set.key == "emu500" ? (name == set.middleName || name == set.middleBackName || [set.headName, set.tailName].contains(name) ? 4_400...4_700 : 2_800...2_950)
                     : set.key == "highSpeed" ? ([set.headName, set.tailName].contains(name) ? 8_000...9_500 : 5_000...6_000)
                     : set.key == "n700sG" ? ([set.headName, set.tailName].contains(name) ? 6_700...7_300 : 5_700...6_300)
                     : name == set.headName && ["E200CK", "E200CKFar"].contains(set.key) ? 5_000...6_000 : 100...4_100
@@ -68,7 +71,9 @@ final class Map3DTrainSetTests: XCTestCase {
                     : ["greenTram", "fiveSectionLRT", "sevenSectionLRT"].contains(set.key) ? 3.2...4.6
                     : set.key == "STEAM" ? 3.4...4.7
                     // Decision 408: #1201's E200 and the 700T's pantographs (decision 422: far too).
-                    : ["E200CK", "E200CKFar", "highSpeed", "highSpeedFar", "n700sG", "n700sGFar", "emu3000", "emu3000Far"].contains(set.key) ? 3.4...4.9 : 3.4...4.6
+                    : ["E200CK", "E200CKFar", "highSpeed", "highSpeedFar", "n700sG", "n700sGFar", "emu3000", "emu3000Far"].contains(set.key) ? 3.4...4.9
+                    // Decision 432: and the EMU800's and EMU500's pantographs, 5.2 and 5.0 m.
+                    : ["emu800", "emu800Far", "emu500", "emu500Far"].contains(set.key) ? 3.4...5.3 : 3.4...4.6
                 XCTAssertTrue(height.contains(model.maximum.z), "\(name): \(model.maximum.z) m tall")
                 if lineColoured.contains(set.key) {
                     XCTAssertTrue(model.vertices.contains { $0.color >> 24 == 0 }, "\(name): the band is the line's colour")
@@ -135,7 +140,7 @@ final class Map3DTrainSetTests: XCTestCase {
         let steam = try layout("STEAM", 3)
         XCTAssertEqual(steam[0].1 + steam[0].2 + steam[1].1, Map3DDuplexSteam.formation().length, accuracy: 0.01,
                        "the locomotive and tender as #1118 couples them")
-        for key in ["R100CK", "", "C", "A", "emu800"] { XCTAssertNil(pack.layout(forType: key, count: 3), key) }
+        for key in ["R100CK", "", "C", "A"] { XCTAssertNil(pack.layout(forType: key, count: 3), key) }
         // Only half as far as other cars: the steam locomotives are eight
         // to ten thousand triangles.
         XCTAssertEqual(Map3DTrainSet.reach(of: "SUMMER"), Map3DTrainSet.tramReach)
