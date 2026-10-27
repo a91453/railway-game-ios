@@ -326,7 +326,9 @@ public enum GameError: Error, Hashable, Sendable {
     /// The roads are turned on once, and are on already (decision 428).
     case roadsEnabled
     /// The base map's roads name a block outside the world or a cell
-    /// outside the blocks read (decision 400).
+    /// outside the blocks read (decision 400), or a road the player lays
+    /// is no line of cells side by side, too long or off the world
+    /// (decision 438).
     case invalidRoads
     /// The station's cell has a road already (decision 400): the station.
     case stationOnRoad(StationID)
@@ -335,12 +337,23 @@ public enum GameError: Error, Hashable, Sendable {
     case roadTooFar
     /// No bus route has this number (decision 400, 10i-2).
     case unknownBusRoute(BusRouteID)
-    /// A bus route with no stops or too many, legs not one a stop or too
-    /// long, a headway or runs out of range, or too many buses.
+    /// A bus route with no stops or too many (a city route fewer than
+    /// two, decision 438), legs not one a stop (a city route's, one a stop
+    /// but the last) or too long, a headway or runs out of range, or too
+    /// many buses.
     case invalidBusRoute
     /// A bus stop, or the station a drawn route ends at, is on no road.
     case busStopOffRoad
     /// No road joins this leg's ends (0 for the first stop to the
     /// next; the last stop's leg ends at the station).
     case busStopsNotConnected(leg: Int)
+    /// A road the player lays crosses a steep slope (decision 438): the
+    /// first such cell.
+    case roadTooSteep(row: Int, column: Int)
+    /// The cell has no road the player built, so it cannot be taken up
+    /// (decision 438): the city's roads stay.
+    case notOwnRoad(row: Int, column: Int)
+    /// A bus route runs along the road (decision 438): change the route
+    /// first.
+    case roadInUse(BusRouteID)
 }
