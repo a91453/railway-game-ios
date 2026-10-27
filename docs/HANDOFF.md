@@ -410,7 +410,7 @@
   - #1312（Codex，EMU500 研究，draft）：作者沒說就不動。
   - Codex 另外登記了 EMU800 原生模型（`codex/emu800-native-2026-10-27`），PR 還沒開；作者直接派的，照舊作者說合才合。
 - **派工單 M（TDX 資料下載，session_01JMHz9cdHzysPWNWgnQK685，2026-10-27）**：資料在私庫 `Railway/tdx-snapshot-2026-10/`（台鐵、高鐵、台北捷運的線形、出入口、站內設施；還沒接進遊戲）。**台鐵歷史誤點（唯一扣點、11/1 重置）還沒抓**：`tdx-check.yml` 只放行 `/api/basic/`、`/api/advanced/`，歷史資料在 `/api/historical/`；作者 2026-10-27 同意放行，#1325 已把 `tdx-check.yml` 的 regex 加 `historical`，合併後才能抓（私庫 README「Waiting」有五方比較，建議放行後先抓近 90 天）。其餘七家捷運／輕軌、站間時間、車種還沒抓，清單在 `tools/not_fetched_yet.json`，不扣點，隨時能抓。建議下一步：用歷史誤點校正誤點分布，用線形校正路網。
-- **派工單 N（Meshy 小物，session_01JMHz9YNsEBucukq6a1ujJ1，2026-10-27）**：17 個文字轉 3D 的低面數 GLB 在私庫 `Railway/meshy-batch-2026-10/`（鐵道號誌與平交道警報、機車三款、垃圾車與資源回收車、夜市攤車與帆布與燈泡串、天公爐、紅燈籠、紅綠郵筒、站牌柱、兩款腳踏車；每個約 270–1,370 面），**還沒接進遊戲**。下一步：挑過、照 art-style 第 7 節改色改比例，再用 `tools/glb-to-m3dmodel/` 轉成 `.m3dmodel`；缺點與要改的地方（比例偏高的垃圾車、資源回收車車斗上的多餘方塊、四燈的號誌）寫在該資料夾的 `00_READ_ME_FIRST.md`。Meshy 點數 11/4 重置：開工 1,149、用掉 300、剩 849，作者想再生就在重置前。
+- **派工單 N（Meshy 小物，session_01JMHz9YNsEBucukq6a1ujJ1，2026-10-27）**：17 個文字轉 3D 的低面數 GLB 在私庫 `Railway/meshy-batch-2026-10/`（鐵道號誌與平交道警報、機車三款、垃圾車與資源回收車、夜市攤車與帆布與燈泡串、天公爐、紅燈籠、紅綠郵筒、站牌柱、兩款腳踏車；每個約 270–1,430 面），**還沒接進遊戲**。下一步：挑過、照 art-style 第 7 節改色改比例，再用 `tools/glb-to-m3dmodel/` 轉成 `.m3dmodel`；缺點與要改的地方（四燈的號誌、只有六顆的燈泡串、機車的尖面、夜市攤車自帶頂棚）寫在該資料夾的 `00_READ_ME_FIRST.md`；8 個重做過一次（對照圖 `previews/00_redo_compare.png`）。Meshy 點數 11/4 重置：開工 1,149、用掉 375、剩 774，作者想再生就在重置前。
 - **派工單 I 做中**（舊存檔可以打開道路與公車）：session_01JMHz9ak2m1w5LYWDgoQWqS，branch `claude/new-session-8vlwcp`，登記了決策 428，PR 還沒開。內容：
   - 加一個像 `.buildStationRoad` 的玩家指令，打開道路。
   - 空白地圖用世界原本的城鎮當種子；實景地圖讀底圖的路（`readRoads`，要 `landBlocks`）。
