@@ -51,6 +51,15 @@ public enum Map3DStreetModel: String, CaseIterable, Sendable {
     case garbageTruck
     /// The recycling truck that follows it, a flatbed with low rails.
     case recyclingTruck
+    /// Decision 446: the 125 cc step-through and its rider, close up
+    /// (``Map3DScooter``); farther, ``scooter``.
+    case stepScooter
+    /// The step-through carrying two; farther, ``scooterPair``.
+    case stepScooterPair
+    /// The battery-swap e-scooter and its rider.
+    case electricScooter
+    /// The step-through with a delivery box, and its rider.
+    case deliveryScooter
 
     /// The model's name in ``Map3DModelPack``.
     public var modelName: String { "life-" + rawValue }
@@ -82,6 +91,16 @@ public enum Map3DStreetModel: String, CaseIterable, Sendable {
         case .lowFloorBus: return Map3DLowFloorBus.model()
         case .coachBus: return Map3DCoachBus.model()
         case .midiBus: return Map3DMidiBus.model()
+        case .stepScooter, .stepScooterPair, .electricScooter, .deliveryScooter:
+            // Decision 446: Taipei's scooters, a top case on the lone
+            // step-through, the rider in front and, on the pair, the one
+            // behind.
+            let kind: Map3DScooter.Kind = self == .electricScooter ? .electric : self == .deliveryScooter ? .delivery : .step
+            Map3DScooter.addBody(&mesh, kind: kind, paint: tinted, topCase: self == .stepScooter)
+            Self.addRider(to: &mesh, at: -0.2, shirt: Self.riderShirt, helmet: Self.helmets[1], reach: true)
+            if self == .stepScooterPair {
+                Self.addRider(to: &mesh, at: -0.62, shirt: Self.pillionShirt, helmet: Self.helmets[0], reach: false)
+            }
         case .walking, .standing:
             // A block figure 1.68 m tall: legs, a body and sleeves in the
             // instance's colour, a head and its hair.
@@ -471,8 +490,9 @@ public struct Map3DStreetLife: Sendable {
     /// (``Map3DCoachBus``).
     static let busSpacing: Float = 17
 
-    /// The scooters' paint.
-    public static let scooterPaints: [UInt32] = [0xF2F3F1, 0xC3C8CF, 0x3A4150, 0xD9473F, 0x3B7DD8, 0x8FD3C4, 0xF2C230].map(Map3DColor.rgb)
+    /// The scooters' paint; decision 446: as many of each as on Taipei's
+    /// streets (``Map3DScooter/paints``).
+    public static let scooterPaints: [UInt32] = Map3DScooter.paints
 
     /// A frame's figures and vehicles, and how many of each.
     public struct Frame: Sendable {
@@ -522,7 +542,7 @@ public struct Map3DStreetLife: Sendable {
             }.sorted { $0.1 < $1.1 }
             for (index, _) in near where frame.vehicles < most.vehicles {
                 addVehicles(of: lanes[index], to: &frame, target: target, reach: reach, time: clock, budget: most.vehicles,
-                            mostBuses: most.buses, clearOf: buses.clear)
+                            mostBuses: most.buses, clearOf: buses.clear, eye: distance)
             }
         }
         return frame
@@ -583,7 +603,7 @@ public struct Map3DStreetLife: Sendable {
     }
 
     private func addVehicles(of lane: Lane, to frame: inout Frame, target: Map3DPoint, reach: Float, time: Double, budget: Int,
-                             mostBuses: Int = Self.mostBuses, clearOf buses: [(point: Map3DPoint, along: Map3DPoint)] = []) {
+                             mostBuses: Int = Self.mostBuses, clearOf buses: [(point: Map3DPoint, along: Map3DPoint)] = [], eye: Float = 0) {
         // Decision 400, 10i-6: only the player's buses near this road.
         let buses = buses.filter { lane.path.boxDistance(to: $0.point) < Self.busClearance.along + lane.half }
         let length = lane.path.length
@@ -595,6 +615,11 @@ public struct Map3DStreetLife: Sendable {
         // scooter nearer the kerb where there is room.
         let carSide: Float = lane.twoWay ? max(lane.half * 0.5, 1.2) : 0
         let scooterSide = carSide + max(min(1.1, lane.half - carSide - 0.5), 0)
+        // Decision 446: a second scooter riding beside and behind a lone
+        // one, nearer the middle, where the places are far enough apart
+        // that it never reaches the vehicle behind.
+        let besideSide = scooterSide - Self.beside.across
+        let besides = spacing >= Self.beside.spacing && (!lane.twoWay || besideSide >= 0.45)
         for direction: Float in lane.twoWay ? [1, -1] : [1] {
             for index in 0..<count where frame.vehicles < budget {
                 let draw = { (index: Int, salt: Int32) in map3DRandom(lane.seed.0 &+ Int32(index), lane.seed.1 &+ Int32(direction), salt: salt) }
@@ -603,7 +628,7 @@ public struct Map3DStreetLife: Sendable {
                 let travelled = (Double(start) + Double(lane.speed) * time).truncatingRemainder(dividingBy: Double(length))
                 let along = direction > 0 ? Float(travelled) : length - Float(travelled)
                 let kind = r(2)
-                let model: Map3DStreetModel
+                var model: Map3DStreetModel
                 if lane.buses, spacing >= Self.busSpacing, frame.buses < mostBuses, r(5) < Self.busShare,
                    count == 1 || draw((index + count - 1) % count, 5) >= Self.busShare {
                     let variant = r(6)
@@ -616,20 +641,58 @@ public struct Map3DStreetLife: Sendable {
                 let place = lane.path.at(along)
                 let side = model.isScooter ? scooterSide : carSide
                 let foot = place.point + place.right * (side * direction)
-                let away = Map3DPoint(foot.x - target.x, 0, foot.z - target.z).length
                 // Coming out of and going into the road's ends.
                 // Use the chosen bus body length, rather than the car fade distance.
                 let ends = min(max(min(along, length - along) / (model == .shuttleBus ? Map3DShuttleBus.length : model == .lowFloorBus ? Map3DLowFloorBus.length : model == .coachBus ? Map3DCoachBus.length : model == .midiBus ? Map3DMidiBus.length : model == .bus ? 12 : 4), 0), 1)
-                let size = Self.fade(away, reach: reach) * ends * Self.giveWay(at: foot, to: buses)
-                guard size > 0, let index = Self.models[model] else { continue }
                 let paints = model.isBus ? Self.busPaints : model.isScooter ? Self.scooterPaints : Self.carPaints
                 let tint = paints[min(Int(r(3) * Float(paints.count)), paints.count - 1)]
-                frame.instances.append(.prop(index, at: foot, forward: place.along * direction, scale: size, tint: tint))
-                frame.vehicles += 1
-                if model.isBus { frame.buses += 1 }
+                let lone = model == .scooter
+                if model.isScooter { model = Self.scooter(model, pick: r(7)) }
+                add(model, at: foot, forward: place.along * direction, tint: tint, ends: ends, to: &frame, target: target, reach: reach, eye: eye,
+                    clearOf: buses)
+                // Decision 446: the one beside it.
+                guard lone, besides, r(8) < Self.beside.share, frame.vehicles < budget else { continue }
+                let behind = along - Self.beside.behind * direction
+                guard behind > 0, behind < length else { continue }
+                let next = lane.path.at(behind)
+                let paint = Self.scooterPaints[min(Int(r(9) * Float(Self.scooterPaints.count)), Self.scooterPaints.count - 1)]
+                add(Self.scooter(.scooter, pick: r(10)), at: next.point + next.right * (besideSide * direction), forward: next.along * direction,
+                    tint: paint, ends: min(max(min(behind, length - behind) / 4, 0), 1), to: &frame, target: target, reach: reach, eye: eye,
+                    clearOf: buses)
             }
         }
     }
+
+    /// One vehicle of `model` at `foot`: shrinking away at the edge of
+    /// `reach` and the road's `ends`, and beside the player's buses;
+    /// decision 446: a scooter in full within ``Map3DScooter/detailReach``
+    /// of the eye (`eye` the camera's distance), its block one farther.
+    private func add(_ model: Map3DStreetModel, at foot: Map3DPoint, forward: Map3DPoint, tint: UInt32, ends: Float, to frame: inout Frame,
+                     target: Map3DPoint, reach: Float, eye: Float, clearOf buses: [(point: Map3DPoint, along: Map3DPoint)]) {
+        let away = Map3DPoint(foot.x - target.x, 0, foot.z - target.z).length
+        let size = Self.fade(away, reach: reach) * ends * Self.giveWay(at: foot, to: buses)
+        let drawn = (eye * eye + away * away).squareRoot() < Map3DScooter.detailReach ? model : model.far
+        guard size > 0, let index = Self.models[drawn] else { return }
+        frame.instances.append(.prop(index, at: foot, forward: forward, scale: size, tint: tint))
+        frame.vehicles += 1
+        if model.isBus { frame.buses += 1 }
+    }
+
+    /// Decision 446: which of the three a scooter is, by `pick`: of the
+    /// lone ones three in five the step-through, a quarter the e-scooter,
+    /// the rest delivering (one scooter in eight on Taipei's streets
+    /// carries a box: slop-taipei's `traffic.js`, 14%); two up, the
+    /// step-through.
+    static func scooter(_ model: Map3DStreetModel, pick: Float) -> Map3DStreetModel {
+        guard model == .scooter else { return model == .scooterPair ? .stepScooterPair : model }
+        return pick < 0.6 ? .stepScooter : pick < 0.85 ? .electricScooter : .deliveryScooter
+    }
+
+    /// Decision 446: the scooter riding beside a lone one: this far nearer
+    /// the middle and behind it, metres; on this share of them; only where
+    /// the places are at least `spacing` apart (the one behind starts at
+    /// least 0.6 of it back: room for a car's half, this one's and a gap).
+    static let beside: (across: Float, behind: Float, share: Float, spacing: Float) = (0.7, 2.3, 0.45, 10)
 }
 
 extension Map3DStreetLife {
@@ -654,7 +717,22 @@ extension Map3DStreetLife {
 }
 
 extension Map3DStreetModel {
-    var isScooter: Bool { self == .scooter || self == .scooterPair }
+    var isScooter: Bool {
+        switch self {
+        case .scooter, .scooterPair, .stepScooter, .stepScooterPair, .electricScooter, .deliveryScooter: true
+        default: false
+        }
+    }
+
+    /// Decision 446: what is drawn of it far from the eye: a close-up
+    /// scooter's block (decision 259's), any other itself.
+    var far: Map3DStreetModel {
+        switch self {
+        case .stepScooterPair: .scooterPair
+        case .stepScooter, .electricScooter, .deliveryScooter: .scooter
+        default: self
+        }
+    }
 }
 
 // MARK: - Laying them out with the scene

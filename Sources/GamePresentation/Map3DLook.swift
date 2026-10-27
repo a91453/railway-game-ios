@@ -33,7 +33,8 @@ public enum Map3DLook {
             0xCFCBC2, 0x8E9CA8, 0x9DB07E, // viaduct concrete, bridge, embankment
             0x3B7DD8, 0x285491, 0x2C5DA1, 0x326BB8, 0x3774C8, // rooftop water tanks
         ].map(Map3DColor.rgb)
-        return Set(palette + played)
+        // Decision 446: the scooters parked in the arcades, vehicles too.
+        return Set(palette + played).union(Map3DScooter.parked)
     }()
 
     /// Colours the look gives a colour of its own rather than a pale one.

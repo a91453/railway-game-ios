@@ -365,6 +365,14 @@
       "hash" : "ed823eef367fbf12",
       "triangles" : 2884
     },
+    "life-deliveryScooter" : {
+      "hash" : "f9183d4b8f7a13b0",
+      "triangles" : 376
+    },
+    "life-electricScooter" : {
+      "hash" : "2c8fb614d72029a7",
+      "triangles" : 382
+    },
     "life-garbageTruck" : {
       "hash" : "70a63df64e2b81c4",
       "triangles" : 140
@@ -400,6 +408,14 @@
     "life-standing" : {
       "hash" : "71fc08cddbec14dd",
       "triangles" : 70
+    },
+    "life-stepScooter" : {
+      "hash" : "7ef6cf389f11a00c",
+      "triangles" : 380
+    },
+    "life-stepScooterPair" : {
+      "hash" : "7d69fe6540c39348",
+      "triangles" : 406
     },
     "life-van" : {
       "hash" : "4ce5aebc8b8efc90",

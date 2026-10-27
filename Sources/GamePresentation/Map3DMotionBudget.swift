@@ -113,9 +113,10 @@ public struct Map3DMotionBudget: Equatable, Sendable {
 
     /// A figure's triangles (``Map3DStreetModel/walking``, `standing`).
     public static let personTriangles = 70
-    /// A street vehicle's, on average: half scooters (160 and 210), the
-    /// rest cars and vans (110).
-    public static let vehicleTriangles = 150
+    /// A street vehicle's, on average, close up: decision 446's: seven in
+    /// ten scooters, drawn in full (about 380) within 350 m of the eye,
+    /// the rest cars and vans (110).
+    public static let vehicleTriangles = 300
     /// A bus's, on average: the low-floor bus's 2,212 to the coach's 2,884
     /// (the shuttle's 1,434 among them): as many as 15 cars.
     public static let busTriangles = 2_300
