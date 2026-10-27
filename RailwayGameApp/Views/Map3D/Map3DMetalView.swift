@@ -133,6 +133,9 @@ final class Map3DMetalView: MTKView {
     /// green).
     private var signalModels: Map3DSignalTiming.Models?
     var signalClock: Map3DSignalTiming.Clock?
+    /// Decision 445: the pedestrian signals' faces and countdowns in
+    /// `models`, drawn close up as `signalClock` shows.
+    private var walkModels: Map3DPedestrianSignal.Models?
     var onStats: (@MainActor (Stats) -> Void)?
     /// Decision 358: the camera each frame, once it has moved, and when.
     var onCamera: (@MainActor (Map3DCamera, CFTimeInterval) -> Void)?
@@ -151,6 +154,9 @@ final class Map3DMetalView: MTKView {
         /// frame.
         let close: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
         var closeUp = false
+        /// Decision 445: whether it is near enough for the pedestrian
+        /// signals, as close up but whether or not it has a closest detail.
+        var walksClose = false
         /// The boxes standing in for some of `close`'s models: drawn in
         /// full, but not close up.
         let standIn: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
@@ -482,7 +488,9 @@ final class Map3DMetalView: MTKView {
             let leftOut = Map3DProp.modelsLeftOut(quality, in: models.pack)
             for chunk in seen where chunk.detailed {
                 guard let props = chunk.props else { continue }
-                for run in props.shapes where run.model < models.buffers.count && !leftOut.contains(run.model) {
+                // Decision 445: the pedestrian signals, small and close up,
+                // cast none.
+                for run in props.shapes where run.model < models.buffers.count && !leftOut.contains(run.model) && walkModels?.places(run.model) != true {
                     encoder.setVertexBuffer(models.buffers[run.model], offset: 0, index: 0)
                     encoder.setVertexBuffer(props.instances, offset: run.first * Self.instanceStride, index: 2)
                     encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: models.pack.models[run.model].vertices.count,
@@ -750,6 +758,7 @@ final class Map3DMetalView: MTKView {
         guard buffers.count == pack.models.count else { return }
         models = (pack, buffers)
         signalModels = Map3DSignalTiming.Models(pack: pack)
+        walkModels = Map3DPedestrianSignal.Models(pack: pack)
     }
 
     /// Draws `scene` from now on; decision 358: but for the chunks at
@@ -879,6 +888,8 @@ final class Map3DMetalView: MTKView {
             chunks[index].closeUp = chunks[index].close != nil
                 && camera.drawsClose(minimum: chunks[index].minimum, maximum: chunks[index].maximum, detailed: chunks[index].detailed,
                                      coarse: chunks[index].coarse, wasClose: chunks[index].closeUp)
+            chunks[index].walksClose = camera.drawsClose(minimum: chunks[index].minimum, maximum: chunks[index].maximum,
+                                                         detailed: chunks[index].detailed, coarse: false, wasClose: chunks[index].walksClose)
             if Map3DCamera.sees(minimum: chunks[index].minimum, maximum: chunks[index].maximum, through: matrix) {
                 visible.append(chunks[index])
             }
@@ -903,7 +914,15 @@ final class Map3DMetalView: MTKView {
         }
         // Decision 259: the people and vehicles near the target.
         // Decision 417: in what the trains leave of the budget.
-        let budget = Map3DMotionBudget(tier: level?.tier, step: level?.streets ?? .full, trainTriangles: frame?.triangles(in: models?.pack) ?? 0)
+        var budget = Map3DMotionBudget(tier: level?.tier, step: level?.streets ?? .full, trainTriangles: frame?.triangles(in: models?.pack) ?? 0)
+        // Decision 445: and the pedestrian signals close up, while the
+        // streets' people are drawn.
+        let drawsWalks = !below && budget.drawsPedestrianSignals
+        if drawsWalks, let walkModels, let pack = models?.pack {
+            budget.signalTriangles = visible.reduce(0) { sum, chunk in
+                chunk.detailed && chunk.walksClose ? sum + (chunk.props.map { walkModels.triangles($0.runs, in: pack) } ?? 0) : sum
+            }
+        }
         let life = below ? nil : streetLife?(camera, shown.lights, budget)
         var lifeDraw: (sorted: [Map3DInstance], buffer: MTLBuffer)?
         if let instances = life?.instances, !instances.isEmpty, models != nil {
@@ -1041,14 +1060,27 @@ final class Map3DMetalView: MTKView {
         // bus stops and vending machines out. Decision 429: the signals
         // one a light group, each drawn lit as the game clock shows
         // (Saving and Reduce Motion too: the light changes colour, nothing
-        // moves).
+        // moves). Decision 445: the pedestrian signals close up, their
+        // figure walking and flashing with the screen's clock (still with
+        // Reduce Motion or paused).
         if let models, !below {
             encoder.setRenderPipelineState(instancedPipeline)
             let leftOut = Map3DProp.modelsLeftOut(quality, in: models.pack)
             for chunk in visible where chunk.detailed {
                 guard let props = chunk.props else { continue }
                 for run in props.runs where run.model < models.buffers.count && !leftOut.contains(run.model) {
-                    let drawn = signalModels?.model(run.model, group: run.group, clock: signalClock) ?? run.model
+                    let drawn: Int
+                    if let walkModels, walkModels.places(run.model) {
+                        // Decision 445: a pedestrian signal only close up,
+                        // its face and countdown as the clock shows (a
+                        // blank digit not at all).
+                        guard drawsWalks, chunk.walksClose,
+                              let shown = walkModels.model(run.model, group: run.group, clock: signalClock, time: start, reduceMotion: reduceMotion)
+                        else { continue }
+                        drawn = shown
+                    } else {
+                        drawn = signalModels?.model(run.model, group: run.group, clock: signalClock) ?? run.model
+                    }
                     encoder.setVertexBuffer(models.buffers[drawn], offset: 0, index: 0)
                     encoder.setVertexBuffer(props.instances, offset: run.first * Self.instanceStride, index: 2)
                     encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: models.pack.models[drawn].vertices.count,
