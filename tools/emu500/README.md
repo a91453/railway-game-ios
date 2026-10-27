@@ -50,3 +50,6 @@ Revision 6 refines the cab grid, planar gangway portal, glazing visibility, apro
 `support-audit.py` rejects both floating panes and panes buried in actual body triangles.
 Keep the real rejected revision 3 and intermediate revisions 4/5 with their producer IDs.
 Run `Map3DBusesTests` as well as EMU500/ModelFile tests: route bus must stay last in the model registry.
+
+Revision 7 adds only the recessed structural bulkhead and coupler support.
+Actual triangle payload difference and unchanged EP/ET bytes are recorded in the private package.

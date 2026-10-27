@@ -269,6 +269,10 @@ extension StationKitBuilder {
                     }
                 }
             }
+            // Recessed structural bulkhead backs the opening and anchors the coupler.
+            // It meets the underframe, keeping the recess deep without seeing through the car.
+            box(9.74,0.29,0,0.12,1.20,0.76,dark)
+            box(9.83,0.85,0,0.28,0.20,0.16,steel)
             box(9.88,0.17,0,0.14,1.20,0.15,rubber)
             box(9.94,0.69,0,0.16,0.50,0.32,steel)
             box(10.08,0.72,0,0.17,0.34,0.23,rubber)
