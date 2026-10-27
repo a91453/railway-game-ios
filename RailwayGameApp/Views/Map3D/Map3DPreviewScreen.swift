@@ -744,6 +744,8 @@ private struct Map3DView: UIViewRepresentable {
         view.onStats = onStats
         view.quality = quality
         view.reduceMotion = context.environment.accessibilityReduceMotion
+        // Decision 429: the junctions' signals change with the game clock.
+        view.signalClock = Map3DSignalTiming.Clock(world.clock)
         context.coordinator.farOut = farOut
         defer {
             // Decision 333: once the first scene has its camera, so the

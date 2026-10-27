@@ -49,7 +49,9 @@ final class Map3DPropsTests: XCTestCase {
         let counts = Dictionary(grouping: props, by: \.model).mapValues(\.count)
         // Decision 391: none on the elevated roads round the station, so
         // fewer bus stops (75, 102 with the roads on the ground).
-        for prop in Map3DProp.allCases {
+        // Decision 429: the amber signal is only drawn, as the clock shows.
+        XCTAssertNil(counts[try XCTUnwrap(pack.index(of: Map3DProp.signalAmber.modelName))])
+        for prop in Map3DProp.allCases where prop != .signalAmber {
             XCTAssertGreaterThan(counts[try XCTUnwrap(pack.index(of: prop.modelName))] ?? 0, prop == .busStop ? 60 : 100, "\(prop)")
         }
         // Every one stands in the chunk it is drawn with, the same every time.

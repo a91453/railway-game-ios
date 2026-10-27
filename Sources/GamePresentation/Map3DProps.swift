@@ -25,8 +25,11 @@ public enum Map3DProp: String, CaseIterable, Sendable {
     /// head of three lights facing the traffic, red nearest the road's
     /// middle. One lit green and one lit red, so the crossing roads show
     /// the two; the lit light glows at night.
+    /// Decision 429: and one lit amber; the renderer draws the one the
+    /// game clock shows (``Map3DSignalTiming``).
     case signalGo
     case signalStop
+    case signalAmber
     /// Decision 355: a bus stop (公車站): the station kit's shelter, bench
     /// and glass made 4.4 m along the kerb and 1.9 m deep, and the stop's
     /// sign on its pole.
@@ -86,6 +89,8 @@ public enum Map3DProp: String, CaseIterable, Sendable {
             mesh.addCylinder(base: Map3DPoint(0, 7.3, 0.42), radius: 0.3, height: 0.85, sides: 8, top: steel, side: Map3DColor.rgb(0x8E949B))
         case .signalGo, .signalStop:
             Self.addSignal(&mesh, lit: self == .signalGo ? 2 : 0)
+        case .signalAmber:
+            Self.addSignal(&mesh, lit: 1)
         case .busStop:
             var kit = StationKitBuilder()
             Self.addBusStop(&kit)

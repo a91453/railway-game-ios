@@ -40,11 +40,14 @@ struct Map3DRoadMarkings {
     }
 
     /// A signal at an approach's kerb: its foot, the way the traffic it
-    /// faces goes, and whether it shows green (the main road) or red.
+    /// faces goes, and (decision 429) whether that is the junction's main
+    /// road or its crossing road, and the junction's offset in the
+    /// signals' cycle (``Map3DSignalTiming``).
     struct Signal {
         let foot: Map3DBaseMap.Point
         let along: Map3DBaseMap.Point
-        let go: Bool
+        let road: Map3DSignalTiming.Road
+        let group: Int
     }
 
     /// How deep a zebra crossing is along the road, how far its bars stand
@@ -98,7 +101,10 @@ struct Map3DRoadMarkings {
 
     init() {}
 
-    init(_ roads: [Map3DBaseMap.Road]) {
+    /// The marks of `roads`, their points in metres from `origin` (metres
+    /// east and south of the world's origin: where the scene is, so a
+    /// junction's signals keep their offset whatever scene draws them).
+    init(_ roads: [Map3DBaseMap.Road], origin: Map3DBaseMap.Point = Map3DBaseMap.Point(x: 0, z: 0)) {
         // Every point of a marked road, by its half metre (as
         // Builder.junctions(of:) keys them).
         var at: [Int64: (point: Map3DBaseMap.Point, entries: [(road: Int, index: Int)])] = [:]
@@ -138,14 +144,15 @@ struct Map3DRoadMarkings {
             }
             guard arms.count >= 3 else { continue }
             junctions.append(point)
-            add(arms)
+            add(arms, group: Map3DSignalTiming.group(at: Map3DBaseMap.Point(x: point.x + origin.x, z: point.z + origin.z)))
         }
     }
 
-    private mutating func add(_ arms: [Arm]) {
+    private mutating func add(_ arms: [Arm], group: Int) {
         let outs = arms.map { $0.place(min(6, $0.length))?.out ?? Map3DBaseMap.Point(x: 1, z: 0) }
-        // The main road: the widest arm (the first of the widest); its way
-        // and the opposite show green.
+        // The main road: the widest arm (the first of the widest), its way
+        // and the opposite (decision 355 showed them green; decision 429
+        // turns them with the crossing road).
         let main = arms.indices.max { arms[$0].half < arms[$1].half || (arms[$0].half == arms[$1].half && $0 > $1) } ?? 0
         for (number, arm) in arms.enumerated() {
             // Clear of the crossing roads and their pavements, more where
@@ -193,7 +200,8 @@ struct Map3DRoadMarkings {
             }
             // The signal at the kerb by the stop line, on the pavement.
             let kerb = half + max(0.5, min(1, Double(Map3DScene.Builder.sidewalk(of: arm.kind)) * 0.3))
-            signals.append(Signal(foot: moved(line.point, right(way), kerb), along: way, go: abs(Self.dot(outs[number], outs[main])) >= 0.7))
+            signals.append(Signal(foot: moved(line.point, right(way), kerb), along: way,
+                                  road: abs(Self.dot(outs[number], outs[main])) >= 0.7 ? .main : .cross, group: group))
         }
     }
 
@@ -333,10 +341,15 @@ extension Map3DScene.Builder {
     /// Decision 355: the signals of `markings`, and along `roads` a bus
     /// stop now and then with a vending machine beside some; each clears
     /// the trees and lights where it stands.
+    /// Decision 429: a signal stands as it shows when the clock does not
+    /// turn it (``Map3DSignalTiming/steady(_:)``: the main road's green,
+    /// the crossing road's red), with its junction's group, and the
+    /// renderer draws the light the clock shows
+    /// (``Map3DSignalTiming/Models``).
     mutating func addStreetStops(_ roads: [Map3DBaseMap.Road], markings: Map3DRoadMarkings) {
         for signal in markings.signals {
-            guard let model = Self.propModels[signal.go ? .signalGo : .signalStop] else { continue }
-            place(model, at: signal.foot, forward: signal.along, clearing: 1.5, tint: Map3DColor.rgb(0xFFFFFF))
+            guard let model = Self.propModels[signal.road == .main ? .signalGo : .signalStop] else { continue }
+            place(model, at: signal.foot, forward: signal.along, clearing: 1.5, tint: Map3DColor.rgb(0xFFFFFF), group: signal.group)
         }
         let east = originX / Double(WorldCoordinate.unitsPerMetre), south = originY / Double(WorldCoordinate.unitsPerMetre)
         func nearJunction(_ p: Map3DBaseMap.Point) -> Bool {
@@ -406,7 +419,7 @@ extension Map3DScene.Builder {
     /// along level `forward`, no tree, light or pole within `clearing`
     /// metres of it.
     private mutating func place(_ model: Int, at: Map3DBaseMap.Point, forward: Map3DBaseMap.Point, clearing: Float, tint: UInt32,
-                                onDeck: Bool = false) {
+                                onDeck: Bool = false, group: Int = 0) {
         // Decision 391: none on a bridge or its ramp.
         guard roadRise(at: at, along: nil, onDeck: onDeck).rise < Self.propRise else { return }
         let x = Float(at.x), z = Float(at.z)
@@ -418,6 +431,8 @@ extension Map3DScene.Builder {
             let dx = instance.transform[12] - x, dz = instance.transform[14] - z
             return dx * dx + dz * dz >= clearing * clearing
         }
-        props[key, default: []].append(.prop(model, at: foot, forward: Map3DPoint(Float(forward.x), 0, Float(forward.z)), scale: 1, tint: tint))
+        var instance = Map3DInstance.prop(model, at: foot, forward: Map3DPoint(Float(forward.x), 0, Float(forward.z)), scale: 1, tint: tint)
+        instance.group = group
+        props[key, default: []].append(instance)
     }
 }

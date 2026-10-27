@@ -2,6 +2,8 @@
 
 > Codex E1000 #1296第二版：使用者否定2be9daca車頭，已撤回舊自評；重修圓頂／橫向圓鼻／低雙風擋／小側窗／曲面燈座與內收下裙。真前版為2be9daca／私庫58e929e7，非更早簡模；同相機比較、局部裙板差異與設備payload證據見自有文件。PP #1291修正69a6eb7f已合入此分支，兩PR維持draft，最新CI另查，不視為使用者接受／真機／推拉動畫驗收。
 
+> Codex EMU500 #1310：[來源／色票／單元／重建交接](art/emu500-2026-10-27/README.md)。使用者第七版回饋「稍微好一點」並要求遊戲色；第八版用現有暖白／綠松／藏青／暖黃，收細貫通框與門窗層、柔化下裙／連結器外框，輪組／車頂實際三角位置與編組保持。真前版完整保留，最終全量匯出；只用 EMU3000 作同尺度色票／霧面比較。原生四車14,880三角，其他車型／route bus末項約定不改。仍僅靜態素材，合併不會自動出現在營運列車；Metal／效能／動畫及全碰撞未驗。最新producer／SHA／CI見互鏈draft #1312 ↔ 私庫#92及issue。GameCore／存檔／fixtures不動，不合併／auto-merge／TestFlight。
+
 > Codex PP #1291 CI修正：新增PP註冊移到既有route bus之前，保留route bus最後的索引約定；原失敗Map3DBusesTests已在舊head重現。同步最新main，模型幾何不變；既有61c6969c素材producer仍有效，最新程式CI看本PR新head。E1000車頭外觀另在#1296修訂，不能沿用2be9daca已符合自評。
 
 # 交接
@@ -1714,7 +1716,7 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 | 3D 場景的記憶體（決策 368，83.1 跟車閃退）：真實地圖只在鏡頭 2 km 內蓋完整城市，板橋 1.8 GB → 763 MB。剩下最大的是遠看的簡化城市（板橋 1,050 萬頂點，約 450 MB）；App 上傳 GPU 後還留著 CPU 那份陣列，放掉可再省一半。之後加城市細節前先跑 `Map3DSceneMemoryTests.testThe3DMapRoundBanqiaoFitsAPhone` | 決策 368 的「下一步」 |
 | slop-newyork（MIT）的 3D 做法能搬哪些（研究 session_01JxqePZhgA9tQuajjP9gsPm，2026-10-23，只有文件）：建議排序 (1) 城市方塊改實例，先做 `.far`（板橋 763 MB → 約 320 MB，估）；(2) 太陽陰影貼圖用 `.far` 當替身；(3) 小零件放進固定大小的池、依像素大小剔除；假室內與合成聲音列「之後」。等 §22.2 10e 與畫風 (e)（決策 370）都合併後由遊戲規劃派 | [SLOP_NEWYORK_3D_2026-10-23.md](research/SLOP_NEWYORK_3D_2026-10-23.md) §5、§6；排行照 [NEXT_PRIORITIES](research/NEXT_PRIORITIES_2026-10-12.md) §22.15 |
 | slop-newyork 補充（session_01UvQcP14umjdnDYpqc14Ngx，2026-10-26，只有文件）：10-23 的三件都還沒做，前提已合併，可由遊戲規劃照原順序派；另加第 4 件「紅綠燈照時鐘變燈」（決策 355 的號誌現在固定一亮綠一亮紅；GamePresentation 純函式、不留狀態，合決策 259；秒數照台灣有來源的時制，含全紅），車子停紅燈是第二步另派。IDM 跟車、行人排隊、新的行人與車輛物理不搬。第 4 件改 `Map3DRoadMarkings.addStreetStops`，和第 1 件的 session 協調 | [SLOP_NEWYORK_UPDATE_2026-10-26.md](research/SLOP_NEWYORK_UPDATE_2026-10-26.md) §3.1、§4 |
-| 台灣 3D 參考包 TW3D（參考庫 release `Tai`，session_01UvQcP14umjdnDYpqc14Ngx，2026-10-26，只有文件）：slop-newyork 改的台北真實比例城市。五方排出 10 項；第 1 項「紅綠燈照時鐘變燈、台灣式燈頭」3.10，從 §22.2 第 15 名拆出來先做；第 2 項傍晚垃圾車〈給愛麗絲〉2.95。解開放在參考庫 `Railway/tw3d-reference-clean/`（railway-reference-private#89） | [NEXT_PRIORITIES_2026-10-12.md](research/NEXT_PRIORITIES_2026-10-12.md) §22.12 |
+| 台灣 3D 參考包 TW3D（參考庫 release `Tai`，session_01UvQcP14umjdnDYpqc14Ngx，2026-10-26，只有文件）：slop-newyork 改的台北真實比例城市。五方排出 10 項；第 1 項「紅綠燈照時鐘變燈、台灣式燈頭」3.10，從 §22.2 第 15 名拆出來先做；第 2 項傍晚垃圾車〈給愛麗絲〉2.95。解開放在參考庫 `Railway/tw3d-reference-clean/`（railway-reference-private#89）。**第 1 項的第一步做完**（派工單 K，決策 429：燈照遊戲時鐘綠黃紅輪流、路口分 4 組錯開、60× 以上不換）；倒數、小綠人、有聲號誌、台北號誌清單、車停紅燈還沒做，見決策 429 的「下一步」 | [NEXT_PRIORITIES_2026-10-12.md](research/NEXT_PRIORITIES_2026-10-12.md) §22.12、決策 429 |
 | 兩批生成素材：generated-2026-10-13（43 張）、micro3d（24 張），沒接進 App，也沒有「採用或放棄」的紀錄 | `docs/art/generated-2026-10-13/`、`docs/art/generated-2026-10-14-micro3d/` |
 
 **會動的東西共用預算（決策 417，session_01LPDBFT4sZKR1HK3w7FuKB5，#1271）**：做完了三角形預算、設備三級、從低往上爬並記在裝置上、CPU／GPU 分開降、街景與路線公車的上限、設定每個選項一句。**還沒做**的在 `docs/decisions/417.md` 的「下一步」：用 TestFlight 實機數字校準三級的上限；沒有遠景模型的列車（太魯閣、普悠瑪、EMU800、C381）與公車的遠景版；新的精細 E500／太魯閣照決策 417「新的精細車」的三條規則（一定帶遠景版、一節超過 20,000 三角形才做中間版、量記憶體）；higher 看得更遠；ProMotion 120；強的設備跟車 60×；記憶體警告時放掉遠處的場景塊。

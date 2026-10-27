@@ -96,6 +96,8 @@ public struct Map3DModelPack: Sendable {
                 for reversed in [false, true] { models.append(Map3DEMU800.model(role, reversed: reversed, far: far)) }
             }
         }
+        models += Map3DEMU500.Unit.allCases.map { Map3DEMU500.model($0) }
+        models.append(Map3DEMU500.formation())
         models += Map3DC341.Unit.allCases.map { Map3DC341.model($0) }
         // Decision 400, 10i-6: the player's route buses, last, so no model
         // before them moves.
@@ -710,6 +712,10 @@ public struct Map3DInstance: Sendable {
     /// Column by column.
     public let transform: [Float]
     public let stripe: (Float, Float, Float)
+    /// Decision 429: a signal's junction's offset (``Map3DSignalTiming``),
+    /// for the renderer to draw its light; 0 for any other. Not read by
+    /// the shader.
+    public var group = 0
 
     /// The 20 floats the shader reads.
     public var floats: [Float] {
