@@ -50,6 +50,17 @@ struct Map3DRoadMarkings {
         let group: Int
     }
 
+    /// Decision 445: a pedestrian signal at a crossing's end: its foot,
+    /// the way it looks (across the road, to the other end), the road
+    /// whose traffic its pedestrians walk alongside (the other one than
+    /// the road they cross) and its junction's group.
+    struct Walk {
+        let foot: Map3DBaseMap.Point
+        let facing: Map3DBaseMap.Point
+        let road: Map3DSignalTiming.Road
+        let group: Int
+    }
+
     /// How deep a zebra crossing is along the road, how far its bars stand
     /// back from the crossing road's kerb, and the stop line's gap before
     /// it and its own depth.
@@ -64,6 +75,10 @@ struct Map3DRoadMarkings {
 
     var marks: [Mark] = []
     var signals: [Signal] = []
+    var walks: [Walk] = []
+    /// Decision 445: how far past the crossing's outer edge the pedestrian
+    /// signals stand, along the road.
+    static let walkGap = 0.4
     /// The junctions marked.
     var junctions: [Map3DBaseMap.Point] = []
     /// Per road (by index), the stretches of its length (metres from its
@@ -200,8 +215,19 @@ struct Map3DRoadMarkings {
             }
             // The signal at the kerb by the stop line, on the pavement.
             let kerb = half + max(0.5, min(1, Double(Map3DScene.Builder.sidewalk(of: arm.kind)) * 0.3))
-            signals.append(Signal(foot: moved(line.point, right(way), kerb), along: way,
-                                  road: abs(Self.dot(outs[number], outs[main])) >= 0.7 ? .main : .cross, group: group))
+            let road: Map3DSignalTiming.Road = abs(Self.dot(outs[number], outs[main])) >= 0.7 ? .main : .cross
+            signals.append(Signal(foot: moved(line.point, right(way), kerb), along: way, road: road, group: group))
+            // Decision 445: a pedestrian signal at each end of the
+            // crossing, on the pavement just past its outer edge, looking
+            // across at the other end; who crosses this road walks with
+            // the other road's traffic.
+            if let end = arm.place(crosswalk + Self.crosswalkDepth / 2 + Self.walkGap) {
+                let across = right(toward(end.out))
+                for side in [1.0, -1.0] {
+                    walks.append(Walk(foot: moved(end.point, across, side * kerb), facing: Map3DBaseMap.Point(x: -across.x * side, z: -across.z * side),
+                                      road: road == .main ? .cross : .main, group: group))
+                }
+            }
         }
     }
 
@@ -351,6 +377,18 @@ extension Map3DScene.Builder {
             guard let model = Self.propModels[signal.road == .main ? .signalGo : .signalStop] else { continue }
             place(model, at: signal.foot, forward: signal.along, clearing: 1.5, tint: Map3DColor.rgb(0xFFFFFF), group: signal.group)
         }
+        // Decision 445: each pedestrian signal its face and its countdown's
+        // two digits, in one place, looking across the road (the model
+        // looks toward its left).
+        if let walking = Self.walkModels {
+            let placed = walking.placed
+            for walk in markings.walks {
+                let forward = Map3DBaseMap.Point(x: -walk.facing.z, z: walk.facing.x), group = Map3DPedestrianSignal.group(walk.group, road: walk.road)
+                place(placed.head, at: walk.foot, forward: forward, clearing: 1, tint: Map3DColor.rgb(0xFFFFFF), group: group)
+                place(placed.tens, at: walk.foot, forward: forward, clearing: 0, tint: Map3DColor.rgb(0xFFFFFF), group: group)
+                place(placed.ones, at: walk.foot, forward: forward, clearing: 0, tint: Map3DColor.rgb(0xFFFFFF), group: group)
+            }
+        }
         let east = originX / Double(WorldCoordinate.unitsPerMetre), south = originY / Double(WorldCoordinate.unitsPerMetre)
         func nearJunction(_ p: Map3DBaseMap.Point) -> Bool {
             markings.junctions.contains { Map3DRoadMarkings.distance($0, p) < Self.stopClearOfJunctions }
@@ -395,6 +433,9 @@ extension Map3DScene.Builder {
             }
         }
     }
+
+    /// Decision 445: the pedestrian signals' models in ``Map3DModelPack/standard``.
+    static let walkModels = Map3DPedestrianSignal.Models(pack: .standard)
 
     /// How far apart the bus stops are along a road (vending machines
     /// alone along a smaller one), in metres; `nil` for none. Taiwan's city

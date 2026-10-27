@@ -206,7 +206,10 @@ final class Map3DRoadMarkingTests: XCTestCase {
         XCTAssertEqual(count(.signalAmber), 0)
         let signals = instances.filter { [Builder.propModels[.signalGo], Builder.propModels[.signalStop]].contains($0.model) }
         XCTAssertEqual(Set(signals.map(\.group)), [Map3DSignalTiming.group(at: Point(x: 0, z: 0))])
-        XCTAssertTrue(instances.filter { !signals.map(\.transform).contains($0.transform) }.allSatisfy { $0.group == 0 })
+        // Everything else in group 0, but the pedestrian signals (decision
+        // 445), whose groups also say which road they walk beside.
+        let walks = try XCTUnwrap(Builder.walkModels)
+        XCTAssertTrue(instances.filter { !signals.map(\.transform).contains($0.transform) && !walks.places($0.model) }.allSatisfy { $0.group == 0 })
         // 4 km of primary road, a stop every 420 m, none at the junction.
         XCTAssertGreaterThanOrEqual(count(.busStop), 8)
         XCTAssertGreaterThan(count(.vending), 0)
@@ -334,6 +337,24 @@ final class Map3DRoadMarkingReportTests: XCTestCase {
                 after += runs.runs.filter { signalModels.contains($0.model) }.count
             }
             print("\(distance) m: signal draw calls \(before) → \(after)")
+        }
+        // Decision 445: the pedestrian signals, three instances each, drawn
+        // only close up: their instances, and a frame's draw calls and
+        // most triangles (the budget's).
+        let walks = try XCTUnwrap(Map3DScene.Builder.walkModels)
+        let heads = scene.chunks.reduce(0) { $0 + $1.props.filter { $0.model == walks.placed.head }.count }
+        print("pedestrian signals: \(heads), a face and two digits each")
+        for distance in [800, 280, 120] as [Float] {
+            let camera = Map3DCamera(target: .zero, distance: distance, viewport: (402, 874))
+            var close = 0, draws = 0, triangles = 0
+            for chunk in scene.chunks where Map3DCamera.sees(minimum: chunk.minimum, maximum: chunk.maximum, through: camera.viewProjection)
+                && camera.drawsClose(minimum: chunk.minimum, maximum: chunk.maximum, detailed: true, coarse: false) {
+                close += 1
+                let runs = Map3DPropRuns(chunk.props).runs
+                draws += runs.filter { walks.places($0.model) }.count
+                triangles += walks.triangles(runs, in: pack)
+            }
+            print("\(distance) m: \(close) chunks close up, pedestrian signal draw calls at most \(draws), triangles at most \(triangles)")
         }
     }
 }
