@@ -215,6 +215,9 @@ final class Map3DMetalView: MTKView {
     private var noSunMap: MTLTexture?
     /// Decision 357: how the sun's shadows are drawn now (``Map3DSunShadow/plan(_:lowPower:heat:overBudget:)``).
     private var sunPlan: Map3DSunShadow.Plan?
+    /// Decision 450: whether the trains' glass and stainless mirror, 0 or 1
+    /// (``Map3DReflection/trainStrength(_:lowPower:heat:)``).
+    private var trainMaterials: Float = 0
     private var chunks: [Chunk] = []
     private let gpuTimes = OSAllocatedUnfairLock(initialState: [Double]())
     private var cpuTimes: [Double] = []
@@ -521,6 +524,7 @@ final class Map3DMetalView: MTKView {
         load.stepsDownForLoad = plan.lowersWhenOver
         load.highest = Map3DLoadGovernor.highest(heat: heat)
         sunPlan = Map3DSunShadow.plan(quality, lowPower: process.isLowPowerModeEnabled, heat: heat, overBudget: load.level.drawing.fewerPixels)
+        trainMaterials = Map3DReflection.trainStrength(quality, lowPower: process.isLowPowerModeEnabled, heat: heat)
         let fewer = plan.fewerPixels || load.level.drawing.fewerPixels
         if fewer != drawsFewerPixels {
             drawsFewerPixels = fewer
@@ -1223,7 +1227,8 @@ final class Map3DMetalView: MTKView {
     /// strength (decision 232) and how far the city's lights are on, then
     /// the night windows' rules (decision 229 續), then decision 356's
     /// reflections (``Map3DReflection/rows``: off on the saving quality,
-    /// the ripples still with Reduce Motion), then decision 357's sun
+    /// the ripples still with Reduce Motion; decision 450's trains' glass
+    /// and stainless, ``trainMaterials``), then decision 357's sun
     /// shadow map (``Map3DSunShadow/rows(_:lighting:)``; with it, decision
     /// 232's shadows fainter). The lights are
     /// `Map3DLighting`'s (`sunLight`, `skyLight`, `groundLight`, `lights`,
@@ -1244,7 +1249,8 @@ final class Map3DMetalView: MTKView {
             + [camera.distance * 1.6 * fog.near, far * 0.9 * fog.far, Map3DGrade.hazeDensity, Map3DGrade.hazeHeight]
             + [Map3DSunShadow.blobStrength(shown, drawn: sun != nil), shown.lights, 0, 0]
             + Map3DLighting.nightWindowRows
-            + Map3DReflection.rows(sky: Map3DSky(shown), sunLight: shown.sunLight, quality: quality, seconds: seconds, reduceMotion: reduceMotion)
+            + Map3DReflection.rows(sky: Map3DSky(shown), sunLight: shown.sunLight, quality: quality, seconds: seconds, reduceMotion: reduceMotion,
+                                     trains: trainMaterials)
             + Map3DSunShadow.rows(sun, lighting: shown)
     }
 

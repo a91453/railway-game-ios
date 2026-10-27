@@ -1,116 +1,68 @@
 {
   "comment" : "FNV-1a of every vertex field of every model in Map3DModelPack.standard (tools/train-models/export.swift). A changed value is a deliberate model change the PR must justify.",
   "models" : {
-    "taipei610-a" : {
-      "hash" : "b356cb701d52359d",
-      "triangles" : 3650
-    },
-    "taipei610-a-far" : {
-      "hash" : "d8a37ad9f8305330",
-      "triangles" : 1722
-    },
-    "taipei610-a-light" : {
-      "hash" : "e03a7f214e4bdaef",
-      "triangles" : 1638
-    },
-    "taipei610-b" : {
-      "hash" : "bc648be2b897b49d",
-      "triangles" : 3650
-    },
-    "taipei610-b-far" : {
-      "hash" : "345786d94604d630",
-      "triangles" : 1722
-    },
-    "taipei610-b-light" : {
-      "hash" : "2dd95724823368ef",
-      "triangles" : 1638
-    },
-    "taipei610-c" : {
-      "hash" : "4cd61b58808fe48d",
-      "triangles" : 2824
-    },
-    "taipei610-c-far" : {
-      "hash" : "abd2036e4fb2bd1d",
-      "triangles" : 1372
-    },
-    "taipei610-c-light" : {
-      "hash" : "2c2018bd088bea69",
-      "triangles" : 1252
-    },
-    "taipei610-d" : {
-      "hash" : "32f2fdfb0323aa0d",
-      "triangles" : 2824
-    },
-    "taipei610-d-far" : {
-      "hash" : "abd2036e4fb2bd1d",
-      "triangles" : 1372
-    },
-    "taipei610-d-light" : {
-      "hash" : "2c2018bd088bea69",
-      "triangles" : 1252
-    },
     "blue-seven-formation" : {
-      "hash" : "3a33e210c529475",
+      "hash" : "875bb3a96fcc5147",
       "triangles" : 13968
     },
     "blue-seven-leading" : {
-      "hash" : "bf5c46270b498173",
+      "hash" : "ff7d8ae207c12e6d",
       "triangles" : 1988
     },
     "blue-seven-middleFive" : {
-      "hash" : "254ba1bac3559cd8",
+      "hash" : "928a8d6893b17a7",
       "triangles" : 2024
     },
     "blue-seven-middleFour" : {
-      "hash" : "254ba1bac3559cd8",
+      "hash" : "928a8d6893b17a7",
       "triangles" : 2024
     },
     "blue-seven-middleOne" : {
-      "hash" : "254ba1bac3559cd8",
+      "hash" : "928a8d6893b17a7",
       "triangles" : 2024
     },
     "blue-seven-middleThree" : {
-      "hash" : "254ba1bac3559cd8",
+      "hash" : "928a8d6893b17a7",
       "triangles" : 2024
     },
     "blue-seven-middleTwo" : {
-      "hash" : "254ba1bac3559cd8",
+      "hash" : "928a8d6893b17a7",
       "triangles" : 2024
     },
     "blue-seven-trailing" : {
-      "hash" : "8073c204599c6b06",
+      "hash" : "e7fff28042a1a68a",
       "triangles" : 1860
     },
     "c341-dm" : {
-      "hash" : "14cd6a4d85dbe3fa",
+      "hash" : "ebcfd91a45abd2f4",
       "triangles" : 3894
     },
     "c341-m" : {
-      "hash" : "38bd2c0e92571fba",
+      "hash" : "182291c08a83e1b2",
       "triangles" : 3318
     },
     "c341-rear" : {
-      "hash" : "622da83bc6b4f249",
+      "hash" : "c8fa21e4fb3d636a",
       "triangles" : 3894
     },
     "c341-t" : {
-      "hash" : "834a6a687b06911c",
+      "hash" : "f29076fc0b214434",
       "triangles" : 3306
     },
     "commuter-cab" : {
-      "hash" : "a8fa7bc19b57a2df",
+      "hash" : "764a21ae3a9fcb6f",
       "triangles" : 2234
     },
     "commuter-car" : {
-      "hash" : "e02432ae298bfe2e",
+      "hash" : "1b8863c4d7228b0a",
       "triangles" : 1592
     },
     "duplex-formation" : {
-      "hash" : "2126be6cd985d45f",
+      "hash" : "3b7bd697d5c21cab",
       "triangles" : 11128
     },
     "duplex-locomotive" : {
-      "hash" : "1bf3c6b688f6bc43",
+      "hash" : "dfe72a242ec479e1",
       "triangles" : 8080
     },
     "duplex-tender" : {
@@ -118,287 +70,287 @@
       "triangles" : 3048
     },
     "e1000" : {
-      "hash" : "e4bc4a9bd1ccc274",
+      "hash" : "d539e4059a242a12",
       "triangles" : 6388
     },
     "e1000-far" : {
-      "hash" : "c725d875f457cf09",
+      "hash" : "b30e9df373e5873c",
       "triangles" : 3460
     },
     "emu500-em" : {
-      "hash" : "9461fbb8223dd49a",
+      "hash" : "9bb8866ee7767486",
       "triangles" : 4548
     },
     "emu500-emc" : {
-      "hash" : "9461fbb8223dd49a",
+      "hash" : "9bb8866ee7767486",
       "triangles" : 4548
     },
     "emu500-ep" : {
-      "hash" : "c58081a20204fc6e",
+      "hash" : "5dff1424228dc188",
       "triangles" : 2944
     },
     "emu500-et" : {
-      "hash" : "ef0ebfd2452e0c6e",
+      "hash" : "676bd1d1f09b0eca",
       "triangles" : 2840
     },
     "emu500-formation" : {
-      "hash" : "fc4f135e312f140f",
+      "hash" : "104bb84ce98bbc52",
       "triangles" : 14880
     },
     "emu800-ed" : {
-      "hash" : "4c778533991fd080",
+      "hash" : "b6e6bc6ec1c45f7a",
       "triangles" : 11506
     },
     "emu800-ed-far" : {
-      "hash" : "b5be657ece1566f9",
+      "hash" : "9641512b5d816ef8",
       "triangles" : 6046
     },
     "emu800-ed-reverse" : {
-      "hash" : "ac344cc98f29d6bb",
+      "hash" : "1811ad085afe3ab7",
       "triangles" : 11506
     },
     "emu800-ed-reverse-far" : {
-      "hash" : "30c361c9532ac8b",
+      "hash" : "68536fc04dcafe35",
       "triangles" : 6046
     },
     "emu800-ema" : {
-      "hash" : "febc233fecb92dbc",
+      "hash" : "be721b9d0bde9924",
       "triangles" : 5200
     },
     "emu800-ema-far" : {
-      "hash" : "a66dac8cd82a75b3",
+      "hash" : "9d587e375c6aa002",
       "triangles" : 2916
     },
     "emu800-ema-reverse" : {
-      "hash" : "8af30e4d1d1e18c0",
+      "hash" : "75ef96a24eb754d0",
       "triangles" : 5200
     },
     "emu800-ema-reverse-far" : {
-      "hash" : "e90e3c082714b01b",
+      "hash" : "8346c2bee7bf5e46",
       "triangles" : 2916
     },
     "emu800-emb" : {
-      "hash" : "2275354d8174d488",
+      "hash" : "a218c36114d2bd50",
       "triangles" : 5212
     },
     "emu800-emb-far" : {
-      "hash" : "eb389c515a2cc873",
+      "hash" : "9cb7e6d8d1cd3bca",
       "triangles" : 2928
     },
     "emu800-emb-reverse" : {
-      "hash" : "cb7fcdcca6fea88f",
+      "hash" : "fd16a2a7b8097577",
       "triangles" : 5212
     },
     "emu800-emb-reverse-far" : {
-      "hash" : "76b99ac641f4051e",
+      "hash" : "3baaa3faef80baf3",
       "triangles" : 2928
     },
     "emu800-ep" : {
-      "hash" : "39db216c738a356f",
+      "hash" : "e00f372d8537cf86",
       "triangles" : 5372
     },
     "emu800-ep-far" : {
-      "hash" : "13f68878c7b9538a",
+      "hash" : "d225f461009bfa22",
       "triangles" : 3088
     },
     "emu800-ep-reverse" : {
-      "hash" : "254cdcde631bba5c",
+      "hash" : "cadaabe8afcce394",
       "triangles" : 5372
     },
     "emu800-ep-reverse-far" : {
-      "hash" : "90596b1e8d4cab86",
+      "hash" : "378b2beb6fe85823",
       "triangles" : 3088
     },
     "emu900-ed" : {
-      "hash" : "14ce1ec950f4f689",
+      "hash" : "ca6d032ec2383109",
       "triangles" : 9256
     },
     "emu900-ed-far" : {
-      "hash" : "aa29b1a1dae62796",
+      "hash" : "e9b077dc3c97bf9c",
       "triangles" : 5380
     },
     "emu900-ed-light" : {
-      "hash" : "2b243c424b8a7a1",
+      "hash" : "10d33aeaf290189",
       "triangles" : 2188
     },
     "emu900-ed-reverse" : {
-      "hash" : "e3b2723179c15374",
+      "hash" : "af966efd9cdf3080",
       "triangles" : 9256
     },
     "emu900-ed-reverse-far" : {
-      "hash" : "4cb8a784b82a7fbe",
+      "hash" : "366fcfc7ca637ab2",
       "triangles" : 5380
     },
     "emu900-ed-reverse-light" : {
-      "hash" : "54132531808dd212",
+      "hash" : "ed1c6a79e17e814f",
       "triangles" : 2188
     },
     "emu900-emCrew" : {
-      "hash" : "48ca959288cb5702",
+      "hash" : "380889da40cb9269",
       "triangles" : 4992
     },
     "emu900-emCrew-far" : {
-      "hash" : "9acb4d3f888263b8",
+      "hash" : "ff4e65bb5d262c54",
       "triangles" : 2780
     },
     "emu900-emCrew-light" : {
-      "hash" : "4674256cf06a7eb5",
+      "hash" : "db45fe0d2a99a76d",
       "triangles" : 868
     },
     "emu900-emCrew-reverse" : {
-      "hash" : "990e3fa26de9dc24",
+      "hash" : "16061720965feda7",
       "triangles" : 4992
     },
     "emu900-emCrew-reverse-far" : {
-      "hash" : "2cfd698a1db5e8bc",
+      "hash" : "7984e8fd53e9a840",
       "triangles" : 2780
     },
     "emu900-emCrew-reverse-light" : {
-      "hash" : "6291617e5a8a2b69",
+      "hash" : "e3dc55a14b79a55f",
       "triangles" : 868
     },
     "emu900-emSIV" : {
-      "hash" : "86681556778d7e09",
+      "hash" : "7fca745045198c2",
       "triangles" : 5040
     },
     "emu900-emSIV-far" : {
-      "hash" : "6268240f2417cace",
+      "hash" : "d8c654f831e7e48a",
       "triangles" : 2792
     },
     "emu900-emSIV-light" : {
-      "hash" : "ecc91b9d9e6724ac",
+      "hash" : "ecca3b412dcc13b0",
       "triangles" : 880
     },
     "emu900-emSIV-reverse" : {
-      "hash" : "74fb5cf408486326",
+      "hash" : "156a7258722e2c8d",
       "triangles" : 5040
     },
     "emu900-emSIV-reverse-far" : {
-      "hash" : "51db46bfc1cf28dc",
+      "hash" : "8d15d8214fd21fd0",
       "triangles" : 2792
     },
     "emu900-emSIV-reverse-light" : {
-      "hash" : "957b0052bd2ddcea",
+      "hash" : "b9c0da13fa1a5b4c",
       "triangles" : 880
     },
     "emu900-emToilet" : {
-      "hash" : "e6240976c3d4db2f",
+      "hash" : "f51d5c507b071b11",
       "triangles" : 5080
     },
     "emu900-emToilet-far" : {
-      "hash" : "df66a54733fb1b08",
+      "hash" : "2103e8d279e5e5e5",
       "triangles" : 2836
     },
     "emu900-emToilet-light" : {
-      "hash" : "246170010899a47d",
+      "hash" : "d70977c72168725e",
       "triangles" : 908
     },
     "emu900-emToilet-reverse" : {
-      "hash" : "2d28d32fea881197",
+      "hash" : "c3ae53bbd372008d",
       "triangles" : 5080
     },
     "emu900-emToilet-reverse-far" : {
-      "hash" : "23ce484a42c471dd",
+      "hash" : "a0edae3569371323",
       "triangles" : 2836
     },
     "emu900-emToilet-reverse-light" : {
-      "hash" : "746770006fb9fdda",
+      "hash" : "7217266bce3a937e",
       "triangles" : 908
     },
     "emu900-epAccessible" : {
-      "hash" : "bdf1267ade6ac17c",
+      "hash" : "c3acbe2edb117f45",
       "triangles" : 5176
     },
     "emu900-epAccessible-far" : {
-      "hash" : "ac716eb73654ab9a",
+      "hash" : "d74a201b9b29f4e6",
       "triangles" : 2964
     },
     "emu900-epAccessible-light" : {
-      "hash" : "565c5ea8b5035fcf",
+      "hash" : "f6e5fd1eb2ce80c2",
       "triangles" : 1052
     },
     "emu900-epAccessible-reverse" : {
-      "hash" : "89d0fafa3cfd6472",
+      "hash" : "7db0b08b367d6e46",
       "triangles" : 5176
     },
     "emu900-epAccessible-reverse-far" : {
-      "hash" : "f2f2f31efbf8608e",
+      "hash" : "a1481de8e2794a14",
       "triangles" : 2964
     },
     "emu900-epAccessible-reverse-light" : {
-      "hash" : "8fc310cdb884d6ef",
+      "hash" : "33705f522a2a9e8a",
       "triangles" : 1052
     },
     "emu900-epCompressor" : {
-      "hash" : "72dc5031f243201b",
+      "hash" : "3fe812a2c89a95f",
       "triangles" : 5264
     },
     "emu900-epCompressor-far" : {
-      "hash" : "490b9851e4c05467",
+      "hash" : "edffccbe68d026d9",
       "triangles" : 3020
     },
     "emu900-epCompressor-light" : {
-      "hash" : "c7e2ceb8ec1ca1f2",
+      "hash" : "8e32b4fbc1d8621d",
       "triangles" : 1092
     },
     "emu900-epCompressor-reverse" : {
-      "hash" : "b2bcca2bfb1e1710",
+      "hash" : "29af99bb8c3c105b",
       "triangles" : 5264
     },
     "emu900-epCompressor-reverse-far" : {
-      "hash" : "9821a56fba728964",
+      "hash" : "279de693b92d567d",
       "triangles" : 3020
     },
     "emu900-epCompressor-reverse-light" : {
-      "hash" : "58e20585bfb73064",
+      "hash" : "4c92f1b5dce09d4f",
       "triangles" : 1092
     },
     "express-cab" : {
-      "hash" : "3cdb98427e15c1cb",
+      "hash" : "ecca9782c618b2c1",
       "triangles" : 3080
     },
     "express-car" : {
-      "hash" : "8b68d095ad3f864b",
+      "hash" : "a94e6efe587c369b",
       "triangles" : 1748
     },
     "green-commuter-formation" : {
-      "hash" : "86926b665b7504f",
+      "hash" : "4ffb733cbceee255",
       "triangles" : 4908
     },
     "green-commuter-leading" : {
-      "hash" : "3009f5d87af510b0",
+      "hash" : "b890fb5db1ea8f8e",
       "triangles" : 2454
     },
     "green-commuter-trailing" : {
-      "hash" : "7fd4dc1b2c589e45",
+      "hash" : "a918d27a9f0d70c4",
       "triangles" : 2454
     },
     "green-tram-formation" : {
-      "hash" : "aa8985e463f75992",
+      "hash" : "c3cfcf3f265f6a3f",
       "triangles" : 4312
     },
     "green-tram-head" : {
-      "hash" : "8e357ca4c4497170",
+      "hash" : "9064cf2009f4f078",
       "triangles" : 1352
     },
     "green-tram-middle" : {
-      "hash" : "618bf03ff35bcd91",
+      "hash" : "a76b198fcb963c0c",
       "triangles" : 1524
     },
     "green-tram-tail" : {
-      "hash" : "1bddc705a652b7af",
+      "hash" : "ffc0f66d5f901ab8",
       "triangles" : 1436
     },
     "highSpeed-cab" : {
-      "hash" : "815f2e2793ed03bb",
+      "hash" : "23dab40529aea9d7",
       "triangles" : 3044
     },
     "highSpeed-car" : {
-      "hash" : "73f73696a7ce41fa",
+      "hash" : "ef4fcc77e194b8d6",
       "triangles" : 1835
     },
     "highSpeed-panto" : {
-      "hash" : "98ccfffb11b574ab",
+      "hash" : "7622291740d112b7",
       "triangles" : 1883
     },
     "life-bus" : {
@@ -474,127 +426,127 @@
       "triangles" : 70
     },
     "lrt-five-formation" : {
-      "hash" : "49f6e77889185646",
+      "hash" : "1bb0d21a0830f995",
       "triangles" : 4500
     },
     "lrt-five-leading" : {
-      "hash" : "31b191ba89c7eb98",
+      "hash" : "b0a60432dfdc3137",
       "triangles" : 1320
     },
     "lrt-five-middle" : {
-      "hash" : "48cacd247d419373",
+      "hash" : "e0fe7b19d476f89e",
       "triangles" : 1156
     },
     "lrt-five-suspendedFront" : {
-      "hash" : "839cf3830aac4ae4",
+      "hash" : "c1c8562b5b3166f",
       "triangles" : 288
     },
     "lrt-five-suspendedRear" : {
-      "hash" : "839cf3830aac4ae4",
+      "hash" : "c1c8562b5b3166f",
       "triangles" : 288
     },
     "lrt-five-trailing" : {
-      "hash" : "7113db329d3bf0f5",
+      "hash" : "4e88cf9b41b53297",
       "triangles" : 1448
     },
     "lrt-seven-formation" : {
-      "hash" : "57eaa01f0a18799e",
+      "hash" : "4a95a6dfffb38c5f",
       "triangles" : 6424
     },
     "lrt-seven-leading" : {
-      "hash" : "5d9aac956bea96bc",
+      "hash" : "618181e855211be9",
       "triangles" : 1408
     },
     "lrt-seven-middleFront" : {
-      "hash" : "e838fbe837970f78",
+      "hash" : "84ed98b88e26f925",
       "triangles" : 1224
     },
     "lrt-seven-middleRear" : {
-      "hash" : "e838fbe837970f78",
+      "hash" : "84ed98b88e26f925",
       "triangles" : 1224
     },
     "lrt-seven-suspendedCentre" : {
-      "hash" : "6e0b6cd070761826",
+      "hash" : "14beff5227bec804",
       "triangles" : 344
     },
     "lrt-seven-suspendedFront" : {
-      "hash" : "6e0b6cd070761826",
+      "hash" : "14beff5227bec804",
       "triangles" : 344
     },
     "lrt-seven-suspendedRear" : {
-      "hash" : "6e0b6cd070761826",
+      "hash" : "14beff5227bec804",
       "triangles" : 344
     },
     "lrt-seven-trailing" : {
-      "hash" : "e3be3020362d8db7",
+      "hash" : "f7e10385372159b5",
       "triangles" : 1536
     },
     "metro-cab" : {
-      "hash" : "acae8bbefc3a74f2",
+      "hash" : "e5e7693ac1a8a66",
       "triangles" : 2252
     },
     "metro-car" : {
-      "hash" : "4b0285c44b887095",
+      "hash" : "2078f83b698b85c9",
       "triangles" : 1696
     },
     "metro-four-formation" : {
-      "hash" : "1ee42cf5cb05aaad",
+      "hash" : "14ffa994ff513c6c",
       "triangles" : 7912
     },
     "metro-four-leading" : {
-      "hash" : "68845902e88715d6",
+      "hash" : "c90d26811d9389ce",
       "triangles" : 1996
     },
     "metro-four-middleFront" : {
-      "hash" : "c1cace7162ff45df",
+      "hash" : "97ef6228ad03afba",
       "triangles" : 1960
     },
     "metro-four-middleRear" : {
-      "hash" : "c1cace7162ff45df",
+      "hash" : "97ef6228ad03afba",
       "triangles" : 1960
     },
     "metro-four-trailing" : {
-      "hash" : "1ce7f40bdcafe83e",
+      "hash" : "bc1086e3d7ef60cd",
       "triangles" : 1996
     },
     "peopleMover-cab" : {
-      "hash" : "e1023c95ed8f3e1c",
+      "hash" : "9d55877d14f37204",
       "triangles" : 2042
     },
     "peopleMover-car" : {
-      "hash" : "68cda990684bf87a",
+      "hash" : "3ef69abe2ac29dc6",
       "triangles" : 1344
     },
     "pp-ppc1400" : {
-      "hash" : "84ca557e6e8e2436",
+      "hash" : "d35e84fef5d0b078",
       "triangles" : 8184
     },
     "pp-ppc1400-far" : {
-      "hash" : "e5aa1b8a7e0d4756",
+      "hash" : "984837a713bbe519",
       "triangles" : 3944
     },
     "pp-pph1300" : {
-      "hash" : "5c61ca2290b6f4bb",
+      "hash" : "1eed3d429572fc6",
       "triangles" : 8032
     },
     "pp-pph1300-far" : {
-      "hash" : "86a33542fb001559",
+      "hash" : "1cc631bfd3e70717",
       "triangles" : 3856
     },
     "pp-ppm2500" : {
-      "hash" : "4d8b71e6116a245a",
+      "hash" : "7e76592c05af62d9",
       "triangles" : 7024
     },
     "pp-ppm2500-far" : {
-      "hash" : "9b6e8a271595ff27",
+      "hash" : "4f2bcfbdaf3e58f6",
       "triangles" : 3328
     },
     "pp-ppt1000" : {
-      "hash" : "7336fd6a50996740",
+      "hash" : "1a9e1a1fcc4a9bb",
       "triangles" : 8172
     },
     "pp-ppt1000-far" : {
-      "hash" : "98730da44057a9f0",
+      "hash" : "e81b2a1322718647",
       "triangles" : 3944
     },
     "prop-busStop" : {
@@ -630,767 +582,767 @@
       "triangles" : 38
     },
     "refresh-700t-cab" : {
-      "hash" : "f38968ac5cc26e39",
+      "hash" : "ca149548090fe73e",
       "triangles" : 9126
     },
     "refresh-700t-middle" : {
-      "hash" : "d4c00ca905e45f68",
+      "hash" : "9a14d703adaed98c",
       "triangles" : 5602
     },
     "refresh-700t-panto" : {
-      "hash" : "51a69654c4df249c",
+      "hash" : "4f0454390ca49488",
       "triangles" : 5730
     },
     "refresh-700t-tail" : {
-      "hash" : "6a56d55209f0b1a5",
+      "hash" : "145986f7ec560228",
       "triangles" : 9126
     },
     "refresh-e200" : {
-      "hash" : "330f6cd189834fd7",
+      "hash" : "480933673ebeadc8",
       "triangles" : 5512
     },
     "set-BLUE-car" : {
-      "hash" : "87cad5f717c0891d",
+      "hash" : "cdaf3d84d3d86c31",
       "triangles" : 1528
     },
     "set-BLUE-head" : {
-      "hash" : "7e9e9b0c8fcc4963",
+      "hash" : "fcdf072a6ab43b7f",
       "triangles" : 1320
     },
     "set-BLUE-tail" : {
-      "hash" : "4851b60b3c1cddab",
+      "hash" : "107d9a6f26344641",
       "triangles" : 1588
     },
     "set-blueSeven-car" : {
-      "hash" : "254ba1bac3559cd8",
+      "hash" : "928a8d6893b17a7",
       "triangles" : 2024
     },
     "set-blueSeven-head" : {
-      "hash" : "6a9cd9941802c8b3",
+      "hash" : "ba11764cbc89642d",
       "triangles" : 2012
     },
     "set-blueSeven-tail" : {
-      "hash" : "93cef58302cc0ea",
+      "hash" : "eff873b05c8fa2ce",
       "triangles" : 1884
     },
     "set-dieselExpress-car" : {
-      "hash" : "58359d892df62a7e",
+      "hash" : "56ef91ff8b47b996",
       "triangles" : 1748
     },
     "set-dieselExpress-head" : {
-      "hash" : "a6d55eb428b10a22",
+      "hash" : "26797ba2d3f7a674",
       "triangles" : 3172
     },
     "set-dieselExpress-tail" : {
-      "hash" : "a7680b9c225c6068",
+      "hash" : "d73d62e8e799a6e3",
       "triangles" : 3172
     },
     "set-dieselRailcar-car" : {
-      "hash" : "525a6e03b46d47e7",
+      "hash" : "ab2217b5432b405a",
       "triangles" : 1528
     },
     "set-dieselRailcar-head" : {
-      "hash" : "dbf3aac7956b74c3",
+      "hash" : "117a8b9021422efa",
       "triangles" : 2148
     },
     "set-dieselRailcar-single" : {
-      "hash" : "4ad06c4ace67b7db",
+      "hash" : "12d5b367f11dd954",
       "triangles" : 2992
     },
     "set-dieselRailcar-tail" : {
-      "hash" : "37529eaa7e69ba03",
+      "hash" : "a369c582aad21676",
       "triangles" : 2148
     },
     "set-E200CK-car" : {
-      "hash" : "b7de74571855cf4d",
+      "hash" : "9f2aebebb2477e4b",
       "triangles" : 6476
     },
     "set-E200CK-head" : {
-      "hash" : "23eea7e15c91454d",
+      "hash" : "377a45f488134b0a",
       "triangles" : 5512
     },
     "set-E200CK-tail" : {
-      "hash" : "1eff48ee16aba0ce",
+      "hash" : "cbfb81d88cd489ba",
       "triangles" : 6500
     },
     "set-E200CKFar-car" : {
-      "hash" : "5eb7267159179ae0",
+      "hash" : "4897f0f5bae9636a",
       "triangles" : 4008
     },
     "set-E200CKFar-head" : {
-      "hash" : "f0b419e0cf34aad2",
+      "hash" : "d6afc25da4fd5f8b",
       "triangles" : 5512
     },
     "set-E200CKFar-tail" : {
-      "hash" : "f2fba7e93f72af4d",
+      "hash" : "f5702d258b70620d",
       "triangles" : 4032
     },
     "set-E500CK-car" : {
-      "hash" : "b7de74571855cf4d",
+      "hash" : "9f2aebebb2477e4b",
       "triangles" : 6476
     },
     "set-E500CK-head" : {
-      "hash" : "8903712889ae6e7a",
+      "hash" : "676aea7b3258a5b4",
       "triangles" : 9964
     },
     "set-E500CK-tail" : {
-      "hash" : "1eff48ee16aba0ce",
+      "hash" : "cbfb81d88cd489ba",
       "triangles" : 6500
     },
     "set-E500CKFar-car" : {
-      "hash" : "5eb7267159179ae0",
+      "hash" : "4897f0f5bae9636a",
       "triangles" : 4008
     },
     "set-E500CKFar-head" : {
-      "hash" : "934d61aac9ad93d1",
+      "hash" : "1b1516cb2427b164",
       "triangles" : 3992
     },
     "set-E500CKFar-tail" : {
-      "hash" : "f2fba7e93f72af4d",
+      "hash" : "f5702d258b70620d",
       "triangles" : 4032
     },
     "set-emu500-car" : {
-      "hash" : "3271607cdac1aa64",
+      "hash" : "e2c222183f5c2da2",
       "triangles" : 4548
     },
     "set-emu500-carBack" : {
-      "hash" : "9461fbb8223dd49a",
+      "hash" : "9bb8866ee7767486",
       "triangles" : 4548
     },
     "set-emu500-centre" : {
-      "hash" : "ef0ebfd2452e0c6e",
+      "hash" : "676bd1d1f09b0eca",
       "triangles" : 2840
     },
     "set-emu500-centreBack" : {
-      "hash" : "bbad82221650a1a7",
+      "hash" : "dac62896af920482",
       "triangles" : 2840
     },
     "set-emu500-head" : {
-      "hash" : "3ff4e7f42c5fd394",
+      "hash" : "cb41304235547196",
       "triangles" : 4548
     },
     "set-emu500-panto" : {
-      "hash" : "c58081a20204fc6e",
+      "hash" : "5dff1424228dc188",
       "triangles" : 2944
     },
     "set-emu500-pantoBack" : {
-      "hash" : "28d71fcce25535df",
+      "hash" : "4c07608837b61116",
       "triangles" : 2944
     },
     "set-emu500-tail" : {
-      "hash" : "526ef670013751bf",
+      "hash" : "1f43cc9bb854de6",
       "triangles" : 4548
     },
     "set-emu500Far-car" : {
-      "hash" : "cbb633a0df46336c",
+      "hash" : "ad30df9a77def1cc",
       "triangles" : 1740
     },
     "set-emu500Far-carBack" : {
-      "hash" : "84125d863650a04b",
+      "hash" : "495d5553bdba1d89",
       "triangles" : 1740
     },
     "set-emu500Far-centre" : {
-      "hash" : "659be5734a0a82c8",
+      "hash" : "982c3314304bfa43",
       "triangles" : 1072
     },
     "set-emu500Far-centreBack" : {
-      "hash" : "3639ab902af98a15",
+      "hash" : "fe183ee0b69121ea",
       "triangles" : 1072
     },
     "set-emu500Far-head" : {
-      "hash" : "6e6debf03689b0f7",
+      "hash" : "b0fa141575ae4fbe",
       "triangles" : 1740
     },
     "set-emu500Far-panto" : {
-      "hash" : "fbb9ac370c3f15c1",
+      "hash" : "115cebc6ca6f710b",
       "triangles" : 1144
     },
     "set-emu500Far-pantoBack" : {
-      "hash" : "a58778c53659e136",
+      "hash" : "63ec6e6bf00a706f",
       "triangles" : 1144
     },
     "set-emu500Far-tail" : {
-      "hash" : "a590e7e8bfcbdbc",
+      "hash" : "ba85a1dfc4278120",
       "triangles" : 1740
     },
     "set-emu800-car" : {
-      "hash" : "febc233fecb92dbc",
+      "hash" : "be721b9d0bde9924",
       "triangles" : 5200
     },
     "set-emu800-carBack" : {
-      "hash" : "8af30e4d1d1e18c0",
+      "hash" : "75ef96a24eb754d0",
       "triangles" : 5200
     },
     "set-emu800-centre" : {
-      "hash" : "2275354d8174d488",
+      "hash" : "a218c36114d2bd50",
       "triangles" : 5212
     },
     "set-emu800-centreBack" : {
-      "hash" : "cb7fcdcca6fea88f",
+      "hash" : "fd16a2a7b8097577",
       "triangles" : 5212
     },
     "set-emu800-head" : {
-      "hash" : "38bf31dcde1744f5",
+      "hash" : "1040ee3f9e058bb7",
       "triangles" : 11506
     },
     "set-emu800-panto" : {
-      "hash" : "39db216c738a356f",
+      "hash" : "e00f372d8537cf86",
       "triangles" : 5372
     },
     "set-emu800-pantoBack" : {
-      "hash" : "254cdcde631bba5c",
+      "hash" : "cadaabe8afcce394",
       "triangles" : 5372
     },
     "set-emu800-tail" : {
-      "hash" : "f6bffad60ad64f50",
+      "hash" : "dc77357b2ec3767c",
       "triangles" : 11506
     },
     "set-emu800Far-car" : {
-      "hash" : "80af62c20540aac6",
+      "hash" : "593536d955331bd7",
       "triangles" : 1100
     },
     "set-emu800Far-carBack" : {
-      "hash" : "878f55daefbf1fa7",
+      "hash" : "89949d567340363b",
       "triangles" : 1100
     },
     "set-emu800Far-centre" : {
-      "hash" : "96e2208c3144550e",
+      "hash" : "c498204b9f927603",
       "triangles" : 1112
     },
     "set-emu800Far-centreBack" : {
-      "hash" : "a0479351a91a6e6",
+      "hash" : "18225c8a99b8eb02",
       "triangles" : 1112
     },
     "set-emu800Far-head" : {
-      "hash" : "d0b7bf859c581d1f",
+      "hash" : "6b2fd5d0f9595de0",
       "triangles" : 2418
     },
     "set-emu800Far-panto" : {
-      "hash" : "484928fb340ace26",
+      "hash" : "67f5a50371bdbba1",
       "triangles" : 1160
     },
     "set-emu800Far-pantoBack" : {
-      "hash" : "1f3cbe8a4cb16f58",
+      "hash" : "dc48215bd5cdce59",
       "triangles" : 1160
     },
     "set-emu800Far-tail" : {
-      "hash" : "83984dc428cb8565",
+      "hash" : "4c56442375126f5f",
       "triangles" : 2418
     },
     "set-emu900-car" : {
-      "hash" : "e6240976c3d4db2f",
+      "hash" : "f51d5c507b071b11",
       "triangles" : 5080
     },
     "set-emu900-carBack" : {
-      "hash" : "2d28d32fea881197",
+      "hash" : "c3ae53bbd372008d",
       "triangles" : 5080
     },
     "set-emu900-centre" : {
-      "hash" : "86681556778d7e09",
+      "hash" : "7fca745045198c2",
       "triangles" : 5040
     },
     "set-emu900-centreBack" : {
-      "hash" : "74fb5cf408486326",
+      "hash" : "156a7258722e2c8d",
       "triangles" : 5040
     },
     "set-emu900-fourth" : {
-      "hash" : "48ca959288cb5702",
+      "hash" : "380889da40cb9269",
       "triangles" : 4992
     },
     "set-emu900-fourthBack" : {
-      "hash" : "89d0fafa3cfd6472",
+      "hash" : "7db0b08b367d6e46",
       "triangles" : 5176
     },
     "set-emu900-head" : {
-      "hash" : "8328f5b2d0ce580f",
+      "hash" : "c3e4e3e8b3115eb",
       "triangles" : 9256
     },
     "set-emu900-panto" : {
-      "hash" : "72dc5031f243201b",
+      "hash" : "3fe812a2c89a95f",
       "triangles" : 5264
     },
     "set-emu900-pantoBack" : {
-      "hash" : "b2bcca2bfb1e1710",
+      "hash" : "29af99bb8c3c105b",
       "triangles" : 5264
     },
     "set-emu900-tail" : {
-      "hash" : "fb80b0f99374b699",
+      "hash" : "523bae9c3339645",
       "triangles" : 9256
     },
     "set-emu900Far-car" : {
-      "hash" : "6fccc727c8f804b2",
+      "hash" : "e416bef93d8c3e19",
       "triangles" : 908
     },
     "set-emu900Far-carBack" : {
-      "hash" : "cc1a914586d4a553",
+      "hash" : "4c7c6518c2a65447",
       "triangles" : 908
     },
     "set-emu900Far-centre" : {
-      "hash" : "8869034fde07716b",
+      "hash" : "b1fc92a2310adc57",
       "triangles" : 880
     },
     "set-emu900Far-centreBack" : {
-      "hash" : "1d70a0a57132e968",
+      "hash" : "be649387f11dc73c",
       "triangles" : 880
     },
     "set-emu900Far-fourth" : {
-      "hash" : "639dc3ff150b8d1c",
+      "hash" : "8eab604ee8133260",
       "triangles" : 868
     },
     "set-emu900Far-fourthBack" : {
-      "hash" : "e32341e25eb5c765",
+      "hash" : "acc1fe23d802fc16",
       "triangles" : 1052
     },
     "set-emu900Far-head" : {
-      "hash" : "bc2c4655f02516f5",
+      "hash" : "7eba561d8fc9cfe1",
       "triangles" : 2188
     },
     "set-emu900Far-panto" : {
-      "hash" : "2acd64f39ce5eba5",
+      "hash" : "75b79c27505cd643",
       "triangles" : 1092
     },
     "set-emu900Far-pantoBack" : {
-      "hash" : "d1e22dc5fe164235",
+      "hash" : "e1a88856bb5e649a",
       "triangles" : 1092
     },
     "set-emu900Far-tail" : {
-      "hash" : "8d5b42ca5b05fa22",
+      "hash" : "92828688ead1bf8a",
       "triangles" : 2188
     },
     "set-emu3000-car" : {
-      "hash" : "82511d5de84993b8",
+      "hash" : "a11a65f68fd83180",
       "triangles" : 5592
     },
     "set-emu3000-em6" : {
-      "hash" : "72d418e71bbb9c8c",
+      "hash" : "a0925ea90550d424",
       "triangles" : 5456
     },
     "set-emu3000-ep7" : {
-      "hash" : "5b0c9042354229c5",
+      "hash" : "e772f6b09e38a521",
       "triangles" : 5832
     },
     "set-emu3000-ep10" : {
-      "hash" : "4d3ec1596a84e622",
+      "hash" : "f1ef266dc8369346",
       "triangles" : 5968
     },
     "set-emu3000-et" : {
-      "hash" : "93fc9390f1b0cfc",
+      "hash" : "18a66070e97c408c",
       "triangles" : 5704
     },
     "set-emu3000-head" : {
-      "hash" : "6697e106d29176fb",
+      "hash" : "17b35b7ac52d428b",
       "triangles" : 8962
     },
     "set-emu3000-panto" : {
-      "hash" : "c02ad002319621d5",
+      "hash" : "434011a058dfb0a5",
       "triangles" : 5832
     },
     "set-emu3000-tail" : {
-      "hash" : "5e6b871f1d1a7e94",
+      "hash" : "182a57cc6b02028b",
       "triangles" : 8962
     },
     "set-emu3000Far-car" : {
-      "hash" : "1fa98ea31ef1f099",
+      "hash" : "309559e60aefc529",
       "triangles" : 2560
     },
     "set-emu3000Far-em6" : {
-      "hash" : "d629302c59e7a63e",
+      "hash" : "75fc73c42f1c2572",
       "triangles" : 2472
     },
     "set-emu3000Far-ep7" : {
-      "hash" : "19c432f1cf05884c",
+      "hash" : "d822ebfa063f4964",
       "triangles" : 2688
     },
     "set-emu3000Far-ep10" : {
-      "hash" : "e756a722c2bcc439",
+      "hash" : "625333991309e9e1",
       "triangles" : 2776
     },
     "set-emu3000Far-et" : {
-      "hash" : "d7fbf863b6aeda3e",
+      "hash" : "f19e1d848782a42e",
       "triangles" : 2624
     },
     "set-emu3000Far-head" : {
-      "hash" : "1d32af8640a7313a",
+      "hash" : "7e73041c828c4ea6",
       "triangles" : 3834
     },
     "set-emu3000Far-panto" : {
-      "hash" : "93b473da834fa440",
+      "hash" : "7a098677d8cec03c",
       "triangles" : 2688
     },
     "set-emu3000Far-tail" : {
-      "hash" : "bc6c060258b3819a",
+      "hash" : "508ea3176c7fb0d6",
       "triangles" : 3834
     },
     "set-fiveSectionLRT-head" : {
-      "hash" : "42d2620b671fd59",
+      "hash" : "e595bd5ded8628c7",
       "triangles" : 2628
     },
     "set-fiveSectionLRT-tail" : {
-      "hash" : "c3714c6b3e77ce1a",
+      "hash" : "19c4c2a1731b4e9c",
       "triangles" : 2756
     },
     "set-fourCarMetro-car" : {
-      "hash" : "c1cace7162ff45df",
+      "hash" : "97ef6228ad03afba",
       "triangles" : 1960
     },
     "set-fourCarMetro-head" : {
-      "hash" : "297179091686ca49",
+      "hash" : "1892403983fac639",
       "triangles" : 2020
     },
     "set-fourCarMetro-tail" : {
-      "hash" : "93789883899080da",
+      "hash" : "59a2a07bdebdfce9",
       "triangles" : 2020
     },
     "set-greenCommuter-car" : {
-      "hash" : "3fad7472fbdac30",
+      "hash" : "1c740535ff7f66d6",
       "triangles" : 2478
     },
     "set-greenCommuter-head" : {
-      "hash" : "3cdd89d6850d82d4",
+      "hash" : "12e08a56c09ba62",
       "triangles" : 2478
     },
     "set-greenCommuter-tail" : {
-      "hash" : "bf7995a3f215bb43",
+      "hash" : "44e315e28b151686",
       "triangles" : 2478
     },
     "set-greenTram-car" : {
-      "hash" : "30097d35716e8cdf",
+      "hash" : "d2d7475ccd28a953",
       "triangles" : 3048
     },
     "set-greenTram-head" : {
-      "hash" : "98d11b64fa3f0320",
+      "hash" : "ffa92d7919d620fe",
       "triangles" : 2900
     },
     "set-greenTram-single" : {
-      "hash" : "2cb235b937e8f3a6",
+      "hash" : "152a4fbd1d8ae7cd",
       "triangles" : 2836
     },
     "set-greenTram-tail" : {
-      "hash" : "6cec5a3b4183bc45",
+      "hash" : "1e81919d0b93708c",
       "triangles" : 2984
     },
     "set-highSpeed-car" : {
-      "hash" : "d4c00ca905e45f68",
+      "hash" : "9a14d703adaed98c",
       "triangles" : 5602
     },
     "set-highSpeed-head" : {
-      "hash" : "f3fd608fec4e82f4",
+      "hash" : "f55b4293fbec6733",
       "triangles" : 9126
     },
     "set-highSpeed-panto" : {
-      "hash" : "51a69654c4df249c",
+      "hash" : "4f0454390ca49488",
       "triangles" : 5730
     },
     "set-highSpeed-tail" : {
-      "hash" : "f92a3ff89a686dd8",
+      "hash" : "2b91737a14244f5d",
       "triangles" : 9126
     },
     "set-highSpeedFar-car" : {
-      "hash" : "23d8e75e637b6eb8",
+      "hash" : "51683b38d5b0aa78",
       "triangles" : 514
     },
     "set-highSpeedFar-head" : {
-      "hash" : "2224f59bc7622d0c",
+      "hash" : "51ac8fb5e494c6b",
       "triangles" : 1208
     },
     "set-highSpeedFar-panto" : {
-      "hash" : "3f195b999acd03ce",
+      "hash" : "e00056b507eb524e",
       "triangles" : 562
     },
     "set-highSpeedFar-tail" : {
-      "hash" : "58bc16d88f44a8fc",
+      "hash" : "8894ff500ef16f78",
       "triangles" : 1208
     },
     "set-metroC341-car" : {
-      "hash" : "834a6a687b06911c",
+      "hash" : "f29076fc0b214434",
       "triangles" : 3306
     },
     "set-metroC341-centre" : {
-      "hash" : "38bd2c0e92571fba",
+      "hash" : "182291c08a83e1b2",
       "triangles" : 3318
     },
     "set-metroC341-head" : {
-      "hash" : "32f1704b0226bd37",
+      "hash" : "52c7b6305026e5c9",
       "triangles" : 3894
     },
     "set-metroC341-tail" : {
-      "hash" : "e59a99fc2a8054ea",
+      "hash" : "29c0cbcfc18c3289",
       "triangles" : 3894
     },
     "set-metroC341Far-car" : {
-      "hash" : "6cf9b60635746ed0",
+      "hash" : "ebad9ebab399c75a",
       "triangles" : 1354
     },
     "set-metroC341Far-centre" : {
-      "hash" : "e9710b3787056129",
+      "hash" : "456b0b25e269657",
       "triangles" : 1366
     },
     "set-metroC341Far-head" : {
-      "hash" : "4ac37ddc77ff6048",
+      "hash" : "a5cf1f1e1c84df8a",
       "triangles" : 1754
     },
     "set-metroC341Far-tail" : {
-      "hash" : "3aa05a114cbbf007",
+      "hash" : "a133b1c442a3f764",
       "triangles" : 1754
     },
     "set-metroC381-car" : {
-      "hash" : "cf08a3edf30a8afd",
+      "hash" : "8bfd991216c09089",
       "triangles" : 1800
     },
     "set-metroC381-head" : {
-      "hash" : "dcbea30fb90a4d17",
+      "hash" : "45b08447292d38d3",
       "triangles" : 2360
     },
     "set-metroC381-tail" : {
-      "hash" : "4858577c9e614a",
+      "hash" : "4063ce5a56a4466b",
       "triangles" : 2360
     },
     "set-MINGRI-car" : {
-      "hash" : "250e424e4f6a7496",
+      "hash" : "2333fa0b56c3e132",
       "triangles" : 1528
     },
     "set-MINGRI-head" : {
-      "hash" : "8903712889ae6e7a",
+      "hash" : "676aea7b3258a5b4",
       "triangles" : 9964
     },
     "set-MINGRI-tail" : {
-      "hash" : "b658b1092e5ee748",
+      "hash" : "32f41fb4c6497d8e",
       "triangles" : 1588
     },
     "set-MINGRIFar-car" : {
-      "hash" : "50d2150cc950ea5d",
+      "hash" : "a117e6b8a427e1c1",
       "triangles" : 1528
     },
     "set-MINGRIFar-head" : {
-      "hash" : "934d61aac9ad93d1",
+      "hash" : "1b1516cb2427b164",
       "triangles" : 3992
     },
     "set-MINGRIFar-tail" : {
-      "hash" : "a508272adee7248f",
+      "hash" : "6e87828ee4f584b7",
       "triangles" : 1588
     },
     "set-n700sG-car" : {
-      "hash" : "9670b27e96ed3f7e",
+      "hash" : "fe277683a96a6eb9",
       "triangles" : 6024
     },
     "set-n700sG-carBack" : {
-      "hash" : "60d8575c26b2f36b",
+      "hash" : "63360d14533da296",
       "triangles" : 6024
     },
     "set-n700sG-head" : {
-      "hash" : "7e70e421be06e9fd",
+      "hash" : "15afe4c153d95872",
       "triangles" : 6989
     },
     "set-n700sG-panto" : {
-      "hash" : "b4983332c83ed9e9",
+      "hash" : "ef764ac1461f8482",
       "triangles" : 6016
     },
     "set-n700sG-pantoBack" : {
-      "hash" : "3a23cbf430565981",
+      "hash" : "40c72ea8e129f33b",
       "triangles" : 6016
     },
     "set-n700sG-tail" : {
-      "hash" : "d026eb5dd0e585ae",
+      "hash" : "b9f19ed1b936b59f",
       "triangles" : 6989
     },
     "set-n700sGFar-car" : {
-      "hash" : "cd479ebadd2b56d5",
+      "hash" : "d1c0cc51f0191625",
       "triangles" : 408
     },
     "set-n700sGFar-carBack" : {
-      "hash" : "13628e4976a200bc",
+      "hash" : "fe7ae1fc9467b114",
       "triangles" : 408
     },
     "set-n700sGFar-head" : {
-      "hash" : "381e12763259a021",
+      "hash" : "5f6830e2a7165e2e",
       "triangles" : 977
     },
     "set-n700sGFar-panto" : {
-      "hash" : "7a3ffbfd0f322b25",
+      "hash" : "c9c9589da3c4c14d",
       "triangles" : 1488
     },
     "set-n700sGFar-pantoBack" : {
-      "hash" : "93a726519312c3f",
+      "hash" : "b0ddcbf7bfe2a967",
       "triangles" : 1488
     },
     "set-n700sGFar-tail" : {
-      "hash" : "954cc1d969c9364c",
+      "hash" : "d4f8f6d0eafecfd6",
       "triangles" : 977
     },
     "set-pushPull-car" : {
-      "hash" : "7336fd6a50996740",
+      "hash" : "1a9e1a1fcc4a9bb",
       "triangles" : 8172
     },
     "set-pushPull-head" : {
-      "hash" : "8903712889ae6e7a",
+      "hash" : "676aea7b3258a5b4",
       "triangles" : 9964
     },
     "set-pushPullE1000-car" : {
-      "hash" : "7336fd6a50996740",
+      "hash" : "1a9e1a1fcc4a9bb",
       "triangles" : 8172
     },
     "set-pushPullE1000-head" : {
-      "hash" : "e4bc4a9bd1ccc274",
+      "hash" : "d539e4059a242a12",
       "triangles" : 6388
     },
     "set-pushPullE1000Far-car" : {
-      "hash" : "98730da44057a9f0",
+      "hash" : "e81b2a1322718647",
       "triangles" : 3944
     },
     "set-pushPullE1000Far-head" : {
-      "hash" : "c725d875f457cf09",
+      "hash" : "b30e9df373e5873c",
       "triangles" : 3460
     },
     "set-pushPullFar-car" : {
-      "hash" : "98730da44057a9f0",
+      "hash" : "e81b2a1322718647",
       "triangles" : 3944
     },
     "set-pushPullFar-head" : {
-      "hash" : "934d61aac9ad93d1",
+      "hash" : "1b1516cb2427b164",
       "triangles" : 3992
     },
     "set-puyuma-car" : {
-      "hash" : "85bc55713d9dd09e",
+      "hash" : "818f0102d995d964",
       "triangles" : 1624
     },
     "set-puyuma-centre" : {
-      "hash" : "3e9ae9e6dce16085",
+      "hash" : "349d340d24a08b7b",
       "triangles" : 1636
     },
     "set-puyuma-head" : {
-      "hash" : "53ca02ea727e71fb",
+      "hash" : "3864196d2d3a33dd",
       "triangles" : 2418
     },
     "set-puyuma-panto" : {
-      "hash" : "cddda2fd849dc06e",
+      "hash" : "f829076941cc01f4",
       "triangles" : 1776
     },
     "set-puyuma-pantoBack" : {
-      "hash" : "d02fa452525efe2",
+      "hash" : "bbe8d856188692e0",
       "triangles" : 1776
     },
     "set-puyuma-tail" : {
-      "hash" : "e054466bc9bec46c",
+      "hash" : "6264ff695c2e6ee3",
       "triangles" : 2370
     },
     "set-puyumaFar-car" : {
-      "hash" : "d2648af7fb648304",
+      "hash" : "21d773ce5b0d3925",
       "triangles" : 560
     },
     "set-puyumaFar-centre" : {
-      "hash" : "4c30c2f858ce1d21",
+      "hash" : "8cede3fd244803d8",
       "triangles" : 572
     },
     "set-puyumaFar-head" : {
-      "hash" : "e98ce00396bd24e6",
+      "hash" : "9028307b144e9346",
       "triangles" : 962
     },
     "set-puyumaFar-panto" : {
-      "hash" : "39cc831654424576",
+      "hash" : "102ced1701ae4a78",
       "triangles" : 632
     },
     "set-puyumaFar-pantoBack" : {
-      "hash" : "f3a8c697c783dfa1",
+      "hash" : "68cce74c846ce2c8",
       "triangles" : 632
     },
     "set-puyumaFar-tail" : {
-      "hash" : "6db6315748a4de1f",
+      "hash" : "b498bf547eb52459",
       "triangles" : 1010
     },
     "set-R100CK-car" : {
-      "hash" : "b7de74571855cf4d",
+      "hash" : "9f2aebebb2477e4b",
       "triangles" : 6476
     },
     "set-R100CK-head" : {
-      "hash" : "ce198206b9a4bf5",
+      "hash" : "e7559f2e148b2905",
       "triangles" : 1284
     },
     "set-R100CK-tail" : {
-      "hash" : "1eff48ee16aba0ce",
+      "hash" : "cbfb81d88cd489ba",
       "triangles" : 6500
     },
     "set-R100CKFar-car" : {
-      "hash" : "5eb7267159179ae0",
+      "hash" : "4897f0f5bae9636a",
       "triangles" : 4008
     },
     "set-R100CKFar-head" : {
-      "hash" : "a9498577680cb47",
+      "hash" : "bb228310a8473bee",
       "triangles" : 1284
     },
     "set-R100CKFar-tail" : {
-      "hash" : "f2fba7e93f72af4d",
+      "hash" : "f5702d258b70620d",
       "triangles" : 4032
     },
     "set-R200CK-car" : {
-      "hash" : "b7de74571855cf4d",
+      "hash" : "9f2aebebb2477e4b",
       "triangles" : 6476
     },
     "set-R200CK-head" : {
-      "hash" : "f33da8b09137328f",
+      "hash" : "7d456e0573c9239c",
       "triangles" : 1174
     },
     "set-R200CK-tail" : {
-      "hash" : "1eff48ee16aba0ce",
+      "hash" : "cbfb81d88cd489ba",
       "triangles" : 6500
     },
     "set-R200CKFar-car" : {
-      "hash" : "5eb7267159179ae0",
+      "hash" : "4897f0f5bae9636a",
       "triangles" : 4008
     },
     "set-R200CKFar-head" : {
-      "hash" : "f9aab257c9ed344e",
+      "hash" : "46e89e5a59057926",
       "triangles" : 1174
     },
     "set-R200CKFar-tail" : {
-      "hash" : "f2fba7e93f72af4d",
+      "hash" : "f5702d258b70620d",
       "triangles" : 4032
     },
     "set-sevenSectionLRT-car" : {
-      "hash" : "e0e2f3f2abe99d11",
+      "hash" : "872b28fa7a354715",
       "triangles" : 2720
     },
     "set-sevenSectionLRT-head" : {
-      "hash" : "f867856853f90b37",
+      "hash" : "230fa11c06c5eff4",
       "triangles" : 2444
     },
     "set-sevenSectionLRT-tail" : {
-      "hash" : "25b314e9ad9772f7",
+      "hash" : "9dfe07ba8e822eb5",
       "triangles" : 2572
     },
     "set-STAR-car" : {
-      "hash" : "27525c5acba84bc0",
+      "hash" : "4765858efd5ede2c",
       "triangles" : 1528
     },
     "set-STAR-head" : {
-      "hash" : "8903712889ae6e7a",
+      "hash" : "676aea7b3258a5b4",
       "triangles" : 9964
     },
     "set-STAR-tail" : {
-      "hash" : "9aab9f902d38571f",
+      "hash" : "93e319ae01c212c5",
       "triangles" : 1588
     },
     "set-STARFar-car" : {
-      "hash" : "817cc20a6ce81e84",
+      "hash" : "a126a281ab1d60",
       "triangles" : 1528
     },
     "set-STARFar-head" : {
-      "hash" : "934d61aac9ad93d1",
+      "hash" : "1b1516cb2427b164",
       "triangles" : 3992
     },
     "set-STARFar-tail" : {
-      "hash" : "e89b5e73c410b4df",
+      "hash" : "bd51b7ac6f383bc7",
       "triangles" : 1588
     },
     "set-STEAM-car" : {
-      "hash" : "87cad5f717c0891d",
+      "hash" : "cdaf3d84d3d86c31",
       "triangles" : 1528
     },
     "set-STEAM-head" : {
-      "hash" : "71fbd9f8cf40def7",
+      "hash" : "633b1fb7946c52bd",
       "triangles" : 8092
     },
     "set-STEAM-tail" : {
-      "hash" : "4851b60b3c1cddab",
+      "hash" : "107d9a6f26344641",
       "triangles" : 1588
     },
     "set-STEAM-tender" : {
@@ -1398,15 +1350,15 @@
       "triangles" : 3048
     },
     "set-SUMMER-car" : {
-      "hash" : "b7de74571855cf4d",
+      "hash" : "9f2aebebb2477e4b",
       "triangles" : 6476
     },
     "set-SUMMER-head" : {
-      "hash" : "3b1fb0f896ec14c7",
+      "hash" : "98295abcd5586b17",
       "triangles" : 10092
     },
     "set-SUMMER-tail" : {
-      "hash" : "1eff48ee16aba0ce",
+      "hash" : "cbfb81d88cd489ba",
       "triangles" : 6500
     },
     "set-SUMMER-tender" : {
@@ -1414,15 +1366,15 @@
       "triangles" : 4000
     },
     "set-SUMMERFar-car" : {
-      "hash" : "5eb7267159179ae0",
+      "hash" : "4897f0f5bae9636a",
       "triangles" : 4008
     },
     "set-SUMMERFar-head" : {
-      "hash" : "27af74e1731d8fc2",
+      "hash" : "8c21c725e7a4a2cb",
       "triangles" : 10092
     },
     "set-SUMMERFar-tail" : {
-      "hash" : "f2fba7e93f72af4d",
+      "hash" : "f5702d258b70620d",
       "triangles" : 4032
     },
     "set-SUMMERFar-tender" : {
@@ -1430,132 +1382,292 @@
       "triangles" : 4000
     },
     "set-taroko-car" : {
-      "hash" : "695265955bab8cb6",
+      "hash" : "3a30e36fba09fb86",
       "triangles" : 1408
     },
     "set-taroko-head" : {
-      "hash" : "dddca2d44112e702",
+      "hash" : "e852302b20fddf1e",
       "triangles" : 2766
     },
     "set-taroko-panto" : {
-      "hash" : "a16f1d72f026f74f",
+      "hash" : "13d1b9024de112de",
       "triangles" : 1512
     },
     "set-taroko-tail" : {
-      "hash" : "3f75bd6477d2a00e",
+      "hash" : "ea135268d174a208",
       "triangles" : 2762
     },
     "set-tarokoFar-car" : {
-      "hash" : "ab9ae00da093c6c5",
+      "hash" : "8a8161f57f836691",
       "triangles" : 560
     },
     "set-tarokoFar-head" : {
-      "hash" : "e79320d157234ef6",
+      "hash" : "13b7dd8a0ddba206",
       "triangles" : 1058
     },
     "set-tarokoFar-panto" : {
-      "hash" : "ee18b3a53236d1c",
+      "hash" : "3d5443d8046cc918",
       "triangles" : 632
     },
     "set-tarokoFar-tail" : {
-      "hash" : "e1cabf372bfecab5",
+      "hash" : "7a6a32b0cc944618",
       "triangles" : 1058
     },
     "set-threeCarUrban-car" : {
-      "hash" : "f6367b0ca55c7635",
+      "hash" : "1e2fec8cc1b62099",
       "triangles" : 2356
     },
     "set-threeCarUrban-head" : {
-      "hash" : "996d75487ce04af6",
+      "hash" : "6ee225f307c53bad",
       "triangles" : 2620
     },
     "set-threeCarUrban-tail" : {
-      "hash" : "2bbc040a04ce4c4a",
+      "hash" : "7460ac09616e7e56",
       "triangles" : 2620
     },
     "set-wenhu-car" : {
-      "hash" : "91a8fa5027a94647",
+      "hash" : "f605f437982e767b",
       "triangles" : 1312
     },
     "set-wenhu-head" : {
-      "hash" : "d93849cc6e681b52",
+      "hash" : "7614eb4d75cf034c",
       "triangles" : 1933
     },
     "set-wenhu-tail" : {
-      "hash" : "1102196d0491a48e",
+      "hash" : "ca878481b97db47b",
       "triangles" : 1933
     },
     "steam-formation" : {
-      "hash" : "33fb350790232ab2",
+      "hash" : "f2764f2bdb3286e2",
       "triangles" : 14080
     },
     "steam-locomotive" : {
-      "hash" : "ea56c4c55ce08173",
+      "hash" : "9be1173d70a69743",
       "triangles" : 10080
     },
     "steam-tender" : {
       "hash" : "d02788918b1635c2",
       "triangles" : 4000
     },
+    "taipei610-a" : {
+      "hash" : "6ee17842b70750b3",
+      "triangles" : 3650
+    },
+    "taipei610-a-far" : {
+      "hash" : "fb20203b061ce401",
+      "triangles" : 1722
+    },
+    "taipei610-a-light" : {
+      "hash" : "3633ab5830f105ad",
+      "triangles" : 1638
+    },
+    "taipei610-b" : {
+      "hash" : "10c59a8c99ddc4b1",
+      "triangles" : 3650
+    },
+    "taipei610-b-far" : {
+      "hash" : "181365b7d56bd9f0",
+      "triangles" : 1722
+    },
+    "taipei610-b-light" : {
+      "hash" : "780cb3822f288c",
+      "triangles" : 1638
+    },
+    "taipei610-c" : {
+      "hash" : "cb952158c7e58774",
+      "triangles" : 2824
+    },
+    "taipei610-c-far" : {
+      "hash" : "4fb673c8b46186b",
+      "triangles" : 1372
+    },
+    "taipei610-c-light" : {
+      "hash" : "eecbf60bce777858",
+      "triangles" : 1252
+    },
+    "taipei610-d" : {
+      "hash" : "f1b8be3995fc0b21",
+      "triangles" : 2824
+    },
+    "taipei610-d-far" : {
+      "hash" : "4fb673c8b46186b",
+      "triangles" : 1372
+    },
+    "taipei610-d-light" : {
+      "hash" : "eecbf60bce777858",
+      "triangles" : 1252
+    },
     "temu1000-formation" : {
-      "hash" : "159658f2857f8df1",
+      "hash" : "6035abce8d5e82de",
       "triangles" : 14136
     },
     "temu1000-leading" : {
-      "hash" : "b5a4a44bdd54b469",
+      "hash" : "2e837862af7d6338",
       "triangles" : 2742
     },
     "temu1000-middle" : {
-      "hash" : "695265955bab8cb6",
+      "hash" : "3a30e36fba09fb86",
       "triangles" : 1408
     },
     "temu1000-pantograph" : {
-      "hash" : "a16f1d72f026f74f",
+      "hash" : "13d1b9024de112de",
       "triangles" : 1512
     },
     "temu1000-trailing" : {
-      "hash" : "eff63de3cbaeaa2e",
+      "hash" : "9fbb3d4357bec940",
       "triangles" : 2738
     },
     "temu2000-formation" : {
-      "hash" : "aae59c3ad9485cdf",
+      "hash" : "b94816423a4a90ab",
       "triangles" : 14812
     },
     "temu2000-leading" : {
-      "hash" : "f2148235e66cbc77",
+      "hash" : "bf52039b3a25bfd1",
       "triangles" : 2394
     },
     "temu2000-tema" : {
-      "hash" : "85bc55713d9dd09e",
+      "hash" : "818f0102d995d964",
       "triangles" : 1624
     },
     "temu2000-temb" : {
-      "hash" : "3e9ae9e6dce16085",
+      "hash" : "349d340d24a08b7b",
       "triangles" : 1636
     },
     "temu2000-tep" : {
-      "hash" : "d02fa452525efe2",
+      "hash" : "bbe8d856188692e0",
       "triangles" : 1776
     },
     "temu2000-trailing" : {
-      "hash" : "67265d615abaf256",
+      "hash" : "aaf063333528a259",
       "triangles" : 2346
     },
     "urban-three-formation" : {
-      "hash" : "69abee698cf75c16",
+      "hash" : "4bd45bdc4d152ed3",
       "triangles" : 7548
     },
     "urban-three-leading" : {
-      "hash" : "372c786b94bb8b5f",
+      "hash" : "65dfd8c23d879369",
       "triangles" : 2596
     },
     "urban-three-middle" : {
-      "hash" : "f6367b0ca55c7635",
+      "hash" : "1e2fec8cc1b62099",
       "triangles" : 2356
     },
     "urban-three-trailing" : {
-      "hash" : "53160f0cfbebbc4e",
+      "hash" : "857c7ad9d9a73ada",
       "triangles" : 2596
+    },
+    "walk-0" : {
+      "hash" : "54a36e75baeefa6a",
+      "triangles" : 64
+    },
+    "walk-1" : {
+      "hash" : "89734d8932804e0a",
+      "triangles" : 64
+    },
+    "walk-2" : {
+      "hash" : "19054cd9397cbaf0",
+      "triangles" : 64
+    },
+    "walk-3" : {
+      "hash" : "e91c8eb867ad1c7a",
+      "triangles" : 64
+    },
+    "walk-4" : {
+      "hash" : "e749e912732505f",
+      "triangles" : 64
+    },
+    "walk-5" : {
+      "hash" : "e4dc4320a83c8120",
+      "triangles" : 64
+    },
+    "walk-6" : {
+      "hash" : "3bfd95129507d3ad",
+      "triangles" : 64
+    },
+    "walk-dark" : {
+      "hash" : "2529a6637a506f32",
+      "triangles" : 64
+    },
+    "walk-ones-0" : {
+      "hash" : "cc53f8d695e36f61",
+      "triangles" : 12
+    },
+    "walk-ones-1" : {
+      "hash" : "e3706fb74df39d63",
+      "triangles" : 4
+    },
+    "walk-ones-2" : {
+      "hash" : "d03683166acebca7",
+      "triangles" : 10
+    },
+    "walk-ones-3" : {
+      "hash" : "263077bce08f2298",
+      "triangles" : 10
+    },
+    "walk-ones-4" : {
+      "hash" : "fbfae04712ae81d1",
+      "triangles" : 8
+    },
+    "walk-ones-5" : {
+      "hash" : "db02625355a8992b",
+      "triangles" : 10
+    },
+    "walk-ones-6" : {
+      "hash" : "5bfb96b5aeb45004",
+      "triangles" : 12
+    },
+    "walk-ones-7" : {
+      "hash" : "2135aa935d2e1ea7",
+      "triangles" : 6
+    },
+    "walk-ones-8" : {
+      "hash" : "77da9266a50c6e2a",
+      "triangles" : 14
+    },
+    "walk-ones-9" : {
+      "hash" : "3a3f47dc35ca9595",
+      "triangles" : 12
+    },
+    "walk-stop" : {
+      "hash" : "3fc037b821f54c02",
+      "triangles" : 64
+    },
+    "walk-tens-1" : {
+      "hash" : "7941209e1513aca3",
+      "triangles" : 4
+    },
+    "walk-tens-2" : {
+      "hash" : "f372d5f0d78a68f9",
+      "triangles" : 10
+    },
+    "walk-tens-3" : {
+      "hash" : "90f5012fdaa47990",
+      "triangles" : 10
+    },
+    "walk-tens-4" : {
+      "hash" : "eadcd6c73e175130",
+      "triangles" : 8
+    },
+    "walk-tens-5" : {
+      "hash" : "ddcf5f7e03821861",
+      "triangles" : 10
+    },
+    "walk-tens-6" : {
+      "hash" : "1246853299dc80a3",
+      "triangles" : 12
+    },
+    "walk-tens-7" : {
+      "hash" : "662a6da749c34c9f",
+      "triangles" : 6
+    },
+    "walk-tens-8" : {
+      "hash" : "d33d947784787f82",
+      "triangles" : 14
+    },
+    "walk-tens-9" : {
+      "hash" : "231af40fe41239d4",
+      "triangles" : 12
     }
   }
 }

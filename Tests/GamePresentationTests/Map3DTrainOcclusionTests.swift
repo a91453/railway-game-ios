@@ -16,10 +16,11 @@ final class Map3DTrainOcclusionTests: XCTestCase {
         XCTAssertEqual(pack.models.map(\.name), recipes.models.map(\.name))
         for (shaded, recipe) in zip(pack.models, recipes.models) {
             XCTAssertEqual(shaded.vertices.count, recipe.vertices.count, recipe.name)
-            XCTAssertEqual(shaded.vertices.map { [$0.x, $0.y, $0.z, $0.nx, $0.ny, $0.nz, $0.u, $0.v] },
+            // Decision 450: glass and stainless keep their shade in `u` too.
+            XCTAssertEqual(shaded.vertices.map { [$0.x, $0.y, $0.z, $0.nx, $0.ny, $0.nz, $0.isTrainMaterial ? 0 : $0.u, $0.v] },
                            recipe.vertices.map { [$0.x, $0.y, $0.z, $0.nx, $0.ny, $0.nz, $0.u, $0.v] }, recipe.name)
             if Map3DTrainOcclusion.isTrain(recipe.name) {
-                XCTAssertEqual(shaded.vertices, Map3DTrainOcclusion.baked(recipe).vertices, recipe.name)
+                XCTAssertEqual(shaded.vertices, Map3DTrainOcclusion.baked(Map3DTrainMaterial.marked(recipe)).vertices, recipe.name)
             } else {
                 XCTAssertEqual(shaded.vertices, recipe.vertices, "\(recipe.name): props, people and road vehicles are not shaded")
             }
