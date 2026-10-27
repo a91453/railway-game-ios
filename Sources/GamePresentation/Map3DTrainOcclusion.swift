@@ -26,17 +26,17 @@ import Foundation
 /// across, the coarse shade it needs from there.
 public enum Map3DTrainOcclusion {
     /// A near model's cube, in metres.
-    static let nearCell: Float = 0.2
+    static let nearCell: Float = 0.25
     /// A far model's.
-    static let farCell: Float = 0.4
+    static let farCell: Float = 0.5
     /// The boxes' half sides, in metres: the small one for a bogie's frame
     /// or an air conditioner's side, the large one for the floor's
     /// underside and the gangway.
     static let scales: [Float] = [0.4, 0.8]
     /// The most a corner is darkened (its colour times 1 − this).
     static let strength: Float = 0.42
-    /// How fast walls' worth turn into shade: 1 − e^(−k · walls).
-    static let falloff: Float = 0.9
+    /// How fast walls' worth turn into shade: k·w / (1 + k·w).
+    static let falloff: Float = 1.3
     /// A face with an edge longer than this, in metres, takes one shade.
     static let longEdge: Float = 2.5
     /// The gap to the next car (``Map3DTrains/carGap``).
@@ -64,16 +64,31 @@ public enum Map3DTrainOcclusion {
         return !name.split(separator: "-").contains { ends.contains(String($0)) }
     }
 
-    /// Every model of `models` with its shade baked in (``baked(_:)``).
+    /// Every model of `models` with its shade baked in (``baked(_:)``):
+    /// the models alike worked out once, the rest side by side on the
+    /// device's cores (the same shade, whichever order they finish in).
     static func baked(_ models: [Map3DModelPack.Model]) -> [Map3DModelPack.Model] {
-        var known: [Key: [Float]] = [:]
-        return models.map { model in
-            guard isTrain(model.name), !model.vertices.isEmpty else { return model }
+        var first: [Key: Int] = [:], unique: [Int] = []
+        var slot = [Int](repeating: -1, count: models.count)
+        for (index, model) in models.enumerated() where isTrain(model.name) && !model.vertices.isEmpty {
             let key = Key(model)
-            let shade = known[key] ?? shades(of: model)
-            known[key] = shade
-            return applying(shade, to: model)
+            if let known = first[key] {
+                slot[index] = known
+            } else {
+                first[key] = unique.count
+                slot[index] = unique.count
+                unique.append(index)
+            }
         }
+        let results = UnsafeMutableBufferPointer<[Float]>.allocate(capacity: unique.count)
+        results.initialize(repeating: [])
+        defer { results.deallocate() }
+        nonisolated(unsafe) let shared = results
+        let order = unique
+        DispatchQueue.concurrentPerform(iterations: order.count) { u in
+            shared[u] = shades(of: models[order[u]])
+        }
+        return models.indices.map { slot[$0] < 0 ? models[$0] : applying(results[slot[$0]], to: models[$0]) }
     }
 
     /// Model `model` with its shade baked in, or as it was when it is not
@@ -101,10 +116,9 @@ public enum Map3DTrainOcclusion {
 
         init(_ model: Map3DModelPack.Model) {
             var hash: UInt64 = 0xcbf2_9ce4_8422_2325
+            func mix(_ value: Float) { hash = (hash ^ UInt64(value.bitPattern)) &* 0x100_0000_01b3 }
             for v in model.vertices {
-                for word in [v.x.bitPattern, v.y.bitPattern, v.z.bitPattern, v.nx.bitPattern, v.ny.bitPattern, v.nz.bitPattern] {
-                    hash = (hash ^ UInt64(word)) &* 0x100_0000_01b3
-                }
+                mix(v.x); mix(v.y); mix(v.z); mix(v.nx); mix(v.ny); mix(v.nz)
             }
             digest = hash
             count = model.vertices.count
@@ -245,7 +259,8 @@ public enum Map3DTrainOcclusion {
                                 + s[a1 + b0 + i0] + s[a0 + b1 + i0] + s[a0 + b0 + i1] - s[a0 + b0 + i0]
                             let side = 2 * half / cell
                             // A wall across the box is side² cubes of 2.
-                            total += 1 - exp(-falloff * Float(sum) / (2 * side * side))
+                            let walls = falloff * Float(sum) / (2 * side * side)
+                            total += walls / (1 + walls)
                         }
                         shade[index] = total / Float(scales.count)
                     }
