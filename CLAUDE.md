@@ -109,8 +109,10 @@ what to take from it is in `docs/research/NEXT_PRIORITIES_2026-10-12.md`
 §22.12), `Railway/tdx-snapshot-2026-10/` (added 2026-10-27; TDX downloads
 of rail line shapes, station exits and facilities, not yet the Taiwan Railway
 delay history; start with its `00_READ_ME_FIRST.md` and
-`DATA_USE_NOTICES.json`), and `city_map_reference_clean/` and
-`power_grid_reference_clean/` at the repository root (start with their
+`DATA_USE_NOTICES.json`), `Railway/meshy-batch-2026-10/` (added
+2026-10-27; Meshy text-to-3D street and railway props, not yet in the
+game; start with its `00_READ_ME_FIRST.md`), and `city_map_reference_clean/`
+and `power_grid_reference_clean/` at the repository root (start with their
 `REFERENCE_COMPARISON.md` and `SANITIZATION_REPORT.md`).
 
 When a problem is hard (an algorithm, a data source, a performance or
