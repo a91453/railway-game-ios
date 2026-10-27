@@ -1,6 +1,6 @@
 # EMU900 專用原生製作紀錄
 
-Issue #1338；工作登記 #1041。公開 base `e89929efbf7f6d19f9d3f453beb5e378d9fb2331`，分支 `codex/emu900-native-2026-10-27`，獨立 worktree。完整素材、逐項驗證與固定producer見互鏈私有draft（建立後補入口）。公開只含配方、工具、必要測試、文件與一張總覽。
+Issue #1338；工作登記 #1041。公開 base `e89929efbf7f6d19f9d3f453beb5e378d9fb2331`，分支 `codex/emu900-native-2026-10-27`，獨立 worktree。完整素材與逐項驗證：[私有draft #102](https://github.com/a91453/railway-reference-private/pull/102)，對應[公開draft #1339](https://github.com/a91453/railway-game-ios/pull/1339)。固定素材producer `8ebfd9fd64aa660fbeb44e771c6b27027c0f71a9`；後續文件整合head不冒稱另一個素材來源。公開只含配方、工具、必要測試、文件與一張總覽。
 
 ## 來源與版本判讀
 
@@ -65,3 +65,5 @@ EMU800公開#1320已合main（merge9bde7f7），私有#94也已合main（merge5c
 - 人工Simulator／真機Metal／效能／動畫：UNVERIFIED。
 
 營運結論：只靜態註冊，合併後沒有營運編組自動換用EMU900。現有EMU800/EMU500單雙號、列車包、解鎖、近遠與fallback保持。GameCore／save／golden／replay與玩法不動；不合併、auto-merge或TestFlight。
+
+最終素材：24近遠正反單元與十輛組裝；29GLB獨立匯入、203完整七向透明及753PNG完整解碼／不裁邊、兩種viewer29模型實際下載與互動、877成員ZIP完整解壓逐bytes通過。最終SHA、遠端下載與同整合head CI記錄放私包上層及issue，不修改固定producer來源包。
