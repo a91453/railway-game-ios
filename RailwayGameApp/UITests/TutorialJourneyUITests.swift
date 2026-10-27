@@ -210,11 +210,7 @@ private final class TutorialJourney {
         // minute. If not, the speed menu goes faster, as the hint says.
         // The last step does not move on by itself: Finish, once done.
         if !waitForFares(timeout: 60) {
-            speed.tap()
-            let fastest = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "6000 times real time")).firstMatch
-            if fastest.appears(within: 5) {
-                fastest.tap()
-            }
+            app.chooseSpeed("6000 times real time, fast forward")
             XCTAssertTrue(waitForFares(timeout: 120), failure("no fares came"))
         }
         tapNext(finishing: true)
