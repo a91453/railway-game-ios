@@ -5,8 +5,9 @@ The same synth as the first promo video's soundtrack, so the game sounds as
 the video does: a pad, a plucked arpeggio and rail joints over I - vi - IV - V
 in C, a station chime, a whoosh, a rail joint, and the sounds of something
 put up and of money coming in (decision 117), and of something refused
-and a warning (decision 184), a ticket issued (decision 373), and the
-followed train's horn (decision 403). Everything is made here from
+and a warning (decision 184), a ticket issued (decision 373), the
+followed train's horn (decision 403) and the evening garbage truck's tune
+(decision 437, Für Elise, public domain). Everything is made here from
 sine waves and seeded noise: no samples or third-party audio. The output is
 the same on every run.
 
@@ -415,6 +416,63 @@ def music(cycles):
     return mix[cycle : cycle * (1 + cycles)]
 
 
+# Decision 437: the evening garbage truck's tune, the opening of
+# Beethoven's 〈給愛麗絲〉 (Für Elise, WoO 59, public domain) as Taiwan's
+# trucks play it, note for note as the owner's Taiwan 3D city
+# (`tw3d-reference-clean/source/js/garbage-truck.js`) has it: MIDI notes
+# and lengths in eighths, `None` a rest. Its eighth is the reference's
+# 0.19 s, 9,120 frames, so the 50 eighths are 456,000 frames: whole IMA4
+# packets, and the loop plays on without a gap.
+GARBAGE_EIGHTH = int(0.19 * SR)
+GARBAGE_PHRASE = [
+    (76, 1), (75, 1), (76, 1), (75, 1), (76, 1), (71, 1), (74, 1), (72, 1), (69, 2), (None, 1),
+    (60, 1), (64, 1), (69, 1), (71, 2), (None, 1),
+    (64, 1), (68, 1), (71, 1), (72, 2), (None, 1),
+    (64, 1), (76, 1), (75, 1), (76, 1), (75, 1), (76, 1), (71, 1), (74, 1), (72, 1), (69, 2), (None, 1),
+    (60, 1), (64, 1), (69, 1), (71, 2), (None, 1),
+    (64, 1), (72, 1), (71, 1), (69, 3), (None, 3),
+]
+# The loudspeaker on the truck's roof: nothing below 400 Hz or much above
+# 3.2 kHz (the reference's low-pass), a little louder round 1.6 kHz.
+GARBAGE_BAND = (400, 3_200)
+
+
+def garbage_truck():
+    """Decision 437: one turn of the garbage truck's tune as its roof
+    loudspeaker plays it. Each note a band-limited square wave (a chip's
+    voice) struck at 12 ms, falling to half by its end and let go over
+    25 ms; the whole driven a little into soft clipping (an amplifier
+    pushed hard) and filtered round the circle to the loudspeaker's band,
+    so its end runs into its start."""
+    n = GARBAGE_EIGHTH * sum(length for _, length in GARBAGE_PHRASE)
+    assert n % 64 == 0
+    out = np.zeros(n)
+    at = 0
+    for m, length in GARBAGE_PHRASE:
+        frames = GARBAGE_EIGHTH * length
+        if m is not None:
+            t = np.arange(frames) / SR
+            f = note_hz(m)
+            phase = 2 * np.pi * f * t
+            tone = np.zeros(frames)
+            harmonic = 1
+            while harmonic * f < 6_000:
+                tone += np.sin(harmonic * phase) / harmonic
+                harmonic += 2
+            attack = np.clip(t / 0.012, 0, 1)
+            decay = 0.5 + 0.5 * np.exp(-t / (frames / SR * 0.6))
+            release = np.clip((frames / SR - t) / 0.025, 0, 1)
+            out[at : at + frames] += tone * attack * decay * release
+        at += frames
+    out = np.tanh(2.2 * out / np.abs(out).max()) / np.tanh(2.2)
+    spectrum = np.fft.rfft(out)
+    freqs = np.fft.rfftfreq(n, 1 / SR)
+    low, high = GARBAGE_BAND
+    gain = (freqs / low) ** 4 / (1 + (freqs / low) ** 4) / (1 + (freqs / high) ** 4)
+    gain *= 1 + 0.6 * np.exp(-((np.log2(np.maximum(freqs, 1) / 1_600)) ** 2) / 0.5)
+    return np.fft.irfft(spectrum * gain, n)
+
+
 def normalized(x, peak):
     return x / np.abs(x).max() * peak
 
@@ -605,6 +663,7 @@ SYNTH_SOURCES = {
     "thunder.caf": "thunder(), decision 346",
     "ticket-issued.wav": "ticket(), decision 373",
     **{f"horn-{kind}.wav": f"horn(\"{kind}\"), decision 403" for kind in HORNS},
+    "garbage-truck.caf": "garbage_truck(), decision 437",
 }
 
 
@@ -632,6 +691,7 @@ def manifest(out_dir):
             entry["kind"] = (
                 "running" if file.startswith("run-")
                 else "weather" if file.startswith(("rain-", "thunder"))
+                else "street" if file.startswith("garbage-truck")
                 else "music" if file.endswith(".caf")
                 else "sound"
             )
@@ -669,6 +729,8 @@ def main(out_dir):
     write_caf(os.path.join(out_dir, "rain-steady.caf"), normalized(weather("rain"), 0.5))
     write_caf(os.path.join(out_dir, "rain-typhoon.caf"), normalized(weather("typhoon"), 0.5))
     write_caf(os.path.join(out_dir, "thunder.caf"), normalized(thunder(), 0.7))
+    # Decision 437: the evening garbage truck's tune.
+    write_caf(os.path.join(out_dir, "garbage-truck.caf"), normalized(garbage_truck(), 0.5))
 
     # Decision 219: the station chimes from their scores. The local one is
     # decision 79's station chime, a bell on C6 and, 0.25 s later, a softer

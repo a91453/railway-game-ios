@@ -75,6 +75,7 @@ public enum DataSourceCredits {
     static let cityViewNoticesURL = "https://www.alongthelinegame.com/city/NOTICES.txt"
     static let polyHavenURL = "https://polyhaven.com"
     static let meshyURL = "https://www.meshy.ai"
+    static let taipeiGarbageTrucksURL = "https://data.gov.tw/dataset/136515"
     static let busPhotoURL = "https://commons.wikimedia.org/wiki/File:Capital_Bus_735-FW_right_side_and_TWTC_ITB_(46106172592).jpg"
     static let earcutURL = "https://github.com/mapbox/earcut"
     static let puffURL = "https://github.com/madler/zlib/tree/develop/contrib/puff"
@@ -761,8 +762,8 @@ public enum DataSourceCredits {
                         id: "meshy",
                         title: "Meshy",
                         detail: language.text(
-                            "The city buses on the 3D map’s streets: a model generated with Meshy’s AI from a description and a photograph.",
-                            "3D 地圖街上的公車：用 Meshy 的 AI 依描述與照片生成的模型。"
+                            "The city buses on the 3D map’s streets: a model generated with Meshy’s AI from a description and a photograph. The evening garbage truck and recycling truck: models generated from a description, in the game’s colours.",
+                            "3D 地圖街上的公車：用 Meshy 的 AI 依描述與照片生成的模型。傍晚的垃圾車與資源回收車：依描述生成的模型，換成遊戲的配色。"
                         ),
                         notice: language.text(
                             "Generated with Meshy (meshy.ai). The reference photograph: Capital Bus 735-FW, by 玄史生, under CC0 1.0, on Wikimedia Commons.",
@@ -771,6 +772,24 @@ public enum DataSourceCredits {
                         links: [
                             DataSourceCredit.Link(title: "Meshy", url: meshyURL),
                             DataSourceCredit.Link(title: language.text("Reference photograph", "參考照片"), url: busPhotoURL),
+                        ]
+                    ),
+                    // Decision 437: the garbage truck's hours, stops and
+                    // pace, measured from Taipei's open data.
+                    DataSourceCredit(
+                        id: "taipeiGarbageTrucks",
+                        title: language.text("Taipei garbage truck stops and routes", "臺北市垃圾車點位路線資訊"),
+                        detail: language.text(
+                            "When the evening garbage truck comes round on the 3D map’s streets, how often it stops and how fast it drives.",
+                            "3D 地圖街上傍晚的垃圾車幾點出來、多久停一站、開多快。"
+                        ),
+                        notice: language.text(
+                            "Department of Environmental Protection, Taipei City Government, 2026: Taipei garbage truck stops and routes. ",
+                            "臺北市政府環境保護局 2026 年「臺北市垃圾車點位路線資訊」"
+                        ) + openGovernmentAttribution(in: language),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("Dataset", "資料集"), url: taipeiGarbageTrucksURL),
+                            openGovernmentLicense(in: language),
                         ]
                     ),
                 ]

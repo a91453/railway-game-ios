@@ -93,8 +93,10 @@ final class Map3DPreviewDump: XCTestCase {
         // (decision 238): its ground and track, then its city simplified.
         let detailFar = ProcessInfo.processInfo.environment["MAP3D_DETAIL"] == "far"
         // An instance's model moved into place (the app draws them as
-        // instances), with the city bus from its file, as the app reads it.
-        let pack = Map3DCityBus.pack(file: root.appendingPathComponent("Models/city-bus.m3dmodel"))
+        // instances), with the city bus and the evening trucks (decision
+        // 437) from their files, as the app reads them.
+        let pack = Map3DGarbageTruck.pack(Map3DCityBus.pack(file: root.appendingPathComponent("Models/city-bus.m3dmodel")),
+                                          files: Map3DGarbageTruck.fileNames.mapValues { root.appendingPathComponent("Models/\($0).m3dmodel") })
         func expand(_ prop: Map3DInstance) {
             let model = pack.models[prop.model], t = prop.transform
             let first = UInt32(floats.count / 12)
@@ -151,9 +153,23 @@ final class Map3DPreviewDump: XCTestCase {
                     activity.front[station] = Map3DStreetLife.frontCrowd(trips: 8_000)
                 }
             }
+            // Decision 437: MAP3D_GARBAGE=t, the evening garbage truck at
+            // 19:30 of the first day a street near the target is worked,
+            // t seconds into the streets' clock.
+            var buses = Map3DBuses.Frame()
+            if let at = ProcessInfo.processInfo.environment["MAP3D_GARBAGE"].flatMap(Double.init) {
+                for day in Int64(0)..<60 {
+                    let trucks = Map3DGarbageTruck.frame(lanes: scene.streetLife.lanes, target: Map3DPoint(life[0], 0, life[1]), distance: life[2],
+                                                         day: day, second: 19.5 * 3_600, time: at)
+                    guard !trucks.trucks.isEmpty else { continue }
+                    for truck in trucks.trucks { print("MAP3D_GARBAGE day \(day) \(truck.model) at x \(truck.point.x) y \(truck.point.y) z \(truck.point.z)") }
+                    buses = buses.adding(trucks)
+                    break
+                }
+            }
             let frame = scene.streetLife.frame(target: Map3DPoint(life[0], 0, life[1]), distance: life[2], time: 36_000,
                                                detail: ProcessInfo.processInfo.environment["MAP3D_LIFE_DETAIL"] == "reduced" ? .reduced : .full,
-                                               activity: activity)
+                                               activity: activity, buses: buses)
             print("MAP3D_LIFE people \(frame.people) vehicles \(frame.vehicles) buses \(frame.buses) models \(Set(frame.instances.map(\.model)).count)")
             frame.instances.forEach(expand)
         }
