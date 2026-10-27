@@ -1866,3 +1866,7 @@ TEMU1000 原生外形（Codex，初版 issue #1228／公開 #1230／私庫 #78 �
 使用者要求評估莒光藏青（建議保持，本輪不改）及EMU3000黑色外觀改遊戲風格。新分支codex/emu3000-slate-2026-10-27；原66a515e8第五版幾何／其他色保持，只改罩面、窗框與外觀飾件為既有石板藍灰#6E7487，輪胎／雨刷／底盤／弓機構拆出hardwareColor保持舊炭黑。16單元逐三角paint-audit及真正第五版同尺度前後、全量素材／viewer／ZIP見[交接](art/emu3000-slate-2026-10-27/README.md)。已接受第五版原包及E500／PP／E1000／莒光藏青保持；新色未稱已接受，也不保證換色可免侵權風險。
 
 營運接點／列車包／fallback保持；本PR合併更新後，原專用EMU3000近遠畫面會使用新色。GameCore／存檔／fixtures不動；真機／效能／人工Simulator外觀／動畫未驗。兩庫新互鏈draft與最新同head CI看#1309，不推main、不合併／auto-merge／TestFlight。
+
+### 2026-10-27 Codex C371／C381 原生靜態素材
+
+本次製作各自 DM/T/M/反向端車與原廠六輛 DM1–T–M2＋M2–T–DM1。台灣車輛官網規格及兩張已開啟的 Commons 實車照片、兩張使用者插畫來源與缺口詳見 [製作紀錄](art/c371-c381-2026-10-27/README.md)。真第一版與最終版原生、GLB、預覽及同相機比較保留於互鏈私庫 draft。只在 Map3DModels 註冊單元；`metroC381` 是含其他路線及 C371/C381 性能的共用營運接點，沒有更動，合併後不會自動出現在營運列車。外觀仍待改善 C381 圓鼻、兩款車頂與設備精度；真機 Metal／動畫／效能／完整碰撞未驗。技術、ZIP、producer 和最新 CI 以本次 issue 及私包紀錄為準。不動 GameCore、存檔、Golden／Replay／Save fixtures、玩法，不合併、不啟動 TestFlight。
