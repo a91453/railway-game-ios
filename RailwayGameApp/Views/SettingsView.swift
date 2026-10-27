@@ -60,6 +60,8 @@ struct SettingsView: View {
     @AppStorage(LinePalette.key) private var linePalette: LinePalette = .standard
     /// Decision 338: the train pack, unlocked in a test build.
     @AppStorage(TrainPack.testUnlockKey) private var trainPackTestUnlocked = false
+    /// Decision 427: the pack's E1000 look for the push-pull Tze-Chiang.
+    @AppStorage(TrainPack.pushPullE1000Key) private var trainPackPushPullE1000 = false
     /// Decision 351: the demo mode's hidden switch, in a test build, and
     /// the taps on the version row that show it.
     @AppStorage(DemoMode.switchKey) private var demoModeOn = false
@@ -480,6 +482,12 @@ struct SettingsView: View {
                 }
             }
             .accessibilityIdentifier("settings.trainPack")
+            if trainPackTestUnlocked {
+                Toggle(isOn: $trainPackPushPullE1000) {
+                    Text(verbatim: language.text("E1000 look for push-pull Tze-Chiang", "推拉式自強號用 E1000 外觀"))
+                }
+                .accessibilityIdentifier("settings.trainPack.pushPullE1000")
+            }
         } header: {
             Text(verbatim: language.text("Testing", "測試"))
         } footer: {
