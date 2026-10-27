@@ -38,6 +38,8 @@ final class TrainShowcaseUITests: XCTestCase {
         XCTAssertTrue(hide.disappears(within: 10), "Hide Buttons left the buttons")
         XCTAssertTrue(app.descendants(matching: .any)["trainShowcase.controls"].firstMatch.disappears(within: 10), "The controls stayed")
         XCTAssertFalse(app.buttons["trainShowcase.close"].exists)
+        let reveal = app.descendants(matching: .any)["trainShowcase.reveal"].firstMatch
+        XCTAssertTrue(reveal.appears(within: 10), "Nothing to tap to bring the buttons back")
 
         // A tap on the picture brings them back.
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()

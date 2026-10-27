@@ -36,8 +36,7 @@ struct TrainShowcaseScreen: View {
             if ready {
                 TrainShowcaseStage(rows: Map3DShowcase.layout(keys: selection.keys, cars: selection.cars, far: far),
                                    cameraView: cameraView, viewRequests: viewRequests, light: light, turntable: turntable,
-                                   quality: quality.drawn, cameraLink: cameraLink,
-                                   tapped: { if controlsHidden { controlsHidden = false } })
+                                   quality: quality.drawn, cameraLink: cameraLink)
                     .ignoresSafeArea()
                     .accessibilityIdentifier("trainShowcase.view")
             } else {
@@ -45,7 +44,21 @@ struct TrainShowcaseScreen: View {
                 ProgressView()
                     .controlSize(.large)
             }
-            if !controlsHidden {
+            if controlsHidden {
+                // As the idle mode's curtain (decision 414): a tap anywhere
+                // brings the buttons back, and VoiceOver can press it. A
+                // tap recognizer on the Metal view never heard the full
+                // lane's tap (run 40502803331).
+                Color.clear
+                    .contentShape(Rectangle())
+                    .ignoresSafeArea()
+                    .onTapGesture { controlsHidden = false }
+                    .accessibilityElement()
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityLabel(Text(verbatim: language.text("Show Buttons", "顯示按鈕")))
+                    .accessibilityAction { controlsHidden = false }
+                    .accessibilityIdentifier("trainShowcase.reveal")
+            } else {
                 VStack(spacing: 8) {
                     topBar(language)
                         .transition(.card(from: .top, reduceMotion: reduceMotion))
@@ -206,8 +219,6 @@ struct TrainShowcaseStage: UIViewRepresentable {
     let turntable: Bool
     let quality: Map3DQuality
     let cameraLink: Map3DCameraLink
-    /// A tap on the picture.
-    let tapped: () -> Void
 
     /// Where the ground goes among the Metal view's chunks.
     private static let groundKey = Map3DStreaming.Key(column: 0, row: 0)
@@ -232,8 +243,7 @@ struct TrainShowcaseStage: UIViewRepresentable {
         let move = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.move(_:)))
         move.minimumNumberOfTouches = 2
         let pinch = UIPinchGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pinch(_:)))
-        let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.tap(_:)))
-        for recognizer in [orbit, move, pinch, tap] as [UIGestureRecognizer] {
+        for recognizer in [orbit, move, pinch] as [UIGestureRecognizer] {
             recognizer.delegate = context.coordinator
             view.addGestureRecognizer(recognizer)
         }
@@ -243,7 +253,6 @@ struct TrainShowcaseStage: UIViewRepresentable {
     func updateUIView(_ uiView: UIView, context: Context) {
         guard let view = uiView as? Map3DMetalView else { return }
         let coordinator = context.coordinator
-        coordinator.tapped = tapped
         view.lighting = light.lighting
         view.quality = quality
         view.reduceMotion = context.environment.accessibilityReduceMotion
@@ -280,7 +289,6 @@ struct TrainShowcaseStage: UIViewRepresentable {
         weak var view: Map3DMetalView?
         var shownRows: [Map3DShowcase.Row]?
         var shownRequests = 0
-        var tapped: (() -> Void)?
         /// The turntable, a frame at a time.
         private var turning: CADisplayLink?
         private var lastTurn: CFTimeInterval?
@@ -323,10 +331,6 @@ struct TrainShowcaseStage: UIViewRepresentable {
             guard let view else { return }
             view.camera = Map3DShowcase.zoomed(view.camera, by: Float(recognizer.scale))
             recognizer.scale = 1
-        }
-
-        @objc func tap(_ recognizer: UITapGestureRecognizer) {
-            tapped?()
         }
 
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
