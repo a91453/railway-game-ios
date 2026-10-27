@@ -108,11 +108,11 @@ private struct Taipei610Builder {
                 face([bc,backingBack[i],backingBack[j]],bc+Map3DPoint(1,0,0),ink)
                 face([backingFront[i],backingFront[j],backingBack[j],backingBack[i]],.init(fc.x,2.47,0),ink)
             }
-            // The inner backing is mounted to the real glazing/frame boundary.
-            // Four short inward frame ties keep the backing from floating inside
-            // the nose; the original exterior shell and glass stay untouched.
+            // Internal ties mount the backing to the structural rear bulkhead.
+            // Keep them wholly behind the glass, without exterior frame studs;
+            // the original exterior shell and glazing remain untouched.
             for i in [0,segments/4,segments/2,segments*3/4] {
-                k.beam(backingBack[i],window[i]+Map3DPoint(0.005,0,0),0.040,ink)
+                k.beam(backingBack[i],.init(end-0.010,backingBack[i].y,backingBack[i].z),0.040,ink)
             }
             let c=Map3DPoint(Self.noseX(2.47,0,half),2.47,0)
             for i in window.indices {face([c,window[i],window[(i+1)%window.count]],.init(0,2,0),glass)}
