@@ -101,10 +101,13 @@ extension GameWorld {
             // needed (`land` empty, ``GameWorld/setLandOnDemand()`` next)
             // has the base map's, read in with the land
             // (``GameSession/readRoads(in:baseMap:)``), and each station
-            // draws the nearest toward it.
+            // draws the nearest toward it. Decision 440: so does a map of
+            // Taiwan whose people come all at once (the real-world demo,
+            // the Pingxi challenge), its roads read round its stations; a
+            // map elsewhere has no base map to read them from.
             if anchor == nil, land == nil {
                 world.enableRoads(towns: Land.townCentres(seed: eventSeed, in: bounds))
-            } else if anchor != nil, land?.isEmpty == true {
+            } else if let anchor, let land, land.isEmpty || RoadsOffer.baseMapHasRoads(at: anchor) {
                 world.enableRoads()
             }
             // Decision 160: the middle tile, its towns the usual map's.

@@ -10,8 +10,8 @@ public enum RoadsOffer: Hashable, Sendable {
     /// The roads can be turned on: a blank map's grow from its towns, a
     /// real-world map's are read from the base map with its land.
     case available
-    /// A real-world map whose land came all at once (or not at all): its
-    /// roads cannot be read, so none would come.
+    /// A real-world map outside Taiwan whose land came all at once (or not
+    /// at all): the base map is Taiwan's alone, so no roads would come.
     case unreadable
 
     /// What the bus tool says about it.
@@ -23,8 +23,17 @@ public enum RoadsOffer: Hashable, Sendable {
                 "這個存檔還沒有道路。打開後，城鎮的路會慢慢長向車站，就能開公車。"
             )
         case .unreadable:
-            language.text("This map has no roads to read, so buses can't run here.", "這張地圖讀不到道路，不能開公車。")
+            language.text("Maps outside Taiwan have no road data yet, so buses can't run here.", "台灣以外的地圖還沒有道路資料，不能開公車。")
         }
+    }
+
+    /// Whether the app's base map, Taiwan's alone, has the roads of a map
+    /// round `anchor` (decision 440): Taiwan's country, Kinmen and Matsu
+    /// too, and within the box round them (the lookup takes a point far
+    /// out at sea for Taiwan).
+    static func baseMapHasRoads(at anchor: GeoAnchor) -> Bool {
+        (218_000_000...265_000_000).contains(anchor.latitude) && (1_180_000_000...1_222_000_000).contains(anchor.longitude)
+            && CountryLookup.country(at: anchor) == HolidayCalendar.home
     }
 
     /// The button that turns them on, and the title of its confirmation.
@@ -73,9 +82,13 @@ extension GameSession {
 
     /// What the bus tool offers in a game without roads, or `nil` when the
     /// game has them or is the tutorial or a lesson (decision 428).
+    /// Decision 440: a real-world map of Taiwan whose land came all at once
+    /// reads the base map's roads round its stations
+    /// (``readRoads(in:baseMap:ahead:)``); only one elsewhere has none.
     public var roadsOffer: RoadsOffer? {
         guard world.roads == nil, offersBusTool else { return nil }
-        return world.geoAnchor != nil && world.landBlocks == nil ? .unreadable : .available
+        guard let anchor = world.geoAnchor, world.landBlocks == nil else { return .available }
+        return RoadsOffer.baseMapHasRoads(at: anchor) ? .available : .unreadable
     }
 
     /// Turns the roads on (decision 428): a blank map's from the towns it

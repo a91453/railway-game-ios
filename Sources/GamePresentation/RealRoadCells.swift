@@ -161,14 +161,17 @@ extension GameSession {
     /// Decision 400's sequel: gives `world`'s roads the base map's in every
     /// block whose land is read but whose roads are not, from `baseMap`;
     /// nothing on a map without roads or a frame, or without the base map.
+    /// Decision 440: on a map whose land came all at once, every block
+    /// round its stations (``blocksRoundStations(of:)``), the blocks a map
+    /// reading its land as it is needed would read there.
     ///
     /// The blocks `ahead` read already (``roadsReadAhead(of:population:places:water:coverage:baseMap:)``)
     /// are taken from it rather than read again: a block's road cells are
     /// the base map's in that block alone, so the world gets the same
     /// roads either way.
     nonisolated static func readRoads(in world: inout GameWorld, baseMap: BaseMapTiles?, ahead: RoadsReadAhead? = nil) {
-        guard let baseMap, let roads = world.roads, let land = world.landBlocks, let frame = RealWorldFrame(world: world) else { return }
-        let wanted = Set(land).subtracting(roads.readBlocks)
+        guard let baseMap, let roads = world.roads, let frame = RealWorldFrame(world: world) else { return }
+        let wanted = roadBlocks(of: world).subtracting(roads.readBlocks)
         guard !wanted.isEmpty else { return }
         var cells: Set<CellPosition>
         if let ahead, ahead.frame == frame, ahead.bounds == world.bounds {
@@ -184,6 +187,15 @@ extension GameSession {
             // lie in them, so failing here is a programming error.
             preconditionFailure("Could not read in the roads: \(error)")
         }
+    }
+}
+
+extension GameSession {
+    /// The blocks whose roads a real-world map has: those of its land read
+    /// in, or (decision 440) round its stations when its land came all at
+    /// once.
+    nonisolated static func roadBlocks(of world: GameWorld) -> Set<LandBlock> {
+        world.landBlocks.map(Set.init) ?? blocksRoundStations(of: world)
     }
 }
 
@@ -209,8 +221,8 @@ extension GameSession {
         guard let baseMap, world.roads != nil, let frame = RealWorldFrame(world: world) else { return nil }
         var read = world
         readLand(roundStationsOf: &read, population: population, places: places, water: water, coverage: coverage)
-        guard let land = read.landBlocks, let roads = read.roads else { return nil }
-        let wanted = Set(land).subtracting(roads.readBlocks)
+        guard let roads = read.roads else { return nil }
+        let wanted = roadBlocks(of: read).subtracting(roads.readBlocks)
         guard !wanted.isEmpty else { return nil }
         return RoadsReadAhead(
             frame: frame, bounds: world.bounds, blocks: wanted,
