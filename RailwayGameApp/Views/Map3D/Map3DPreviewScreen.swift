@@ -661,6 +661,8 @@ final class Map3DTrainFeed {
             real.add(to: &frame, second: clock.second(at: now, glides: realGlides), day: clock.today, dayBefore: clock.dayBefore,
                      models: models, eye: eye, reach: reach)
         }
+        // Decision 436: the cab cars' lit destination signs, close up.
+        Map3DHeadSign.add(to: &frame, signs: models?.headSigns ?? [:], eye: eye)
         return frame
     }
 }
