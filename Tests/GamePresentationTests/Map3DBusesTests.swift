@@ -262,7 +262,7 @@ final class Map3DBusesTests: XCTestCase {
         XCTAssertEqual(route.vertices.map(\.x), plain.vertices.map(\.x))
         XCTAssertFalse(route.vertices.contains { $0.color == Map3DLowFloorBus.accentColor })
         XCTAssertTrue(route.vertices.contains { $0.color >> 24 == 0 }, "the stripes take the tint")
-        XCTAssertEqual(Map3DModelPack.standard.models.last?.name, Map3DLowFloorBus.routeModelName, "last, so no model before it moves")
+        XCTAssertEqual(Map3DModelPack.standard.models.last(where: { !$0.name.hasPrefix(Map3DTrainLights.prefix) })?.name, Map3DLowFloorBus.routeModelName, "last, so no model before it moves")
     }
 
     // MARK: - How long it takes

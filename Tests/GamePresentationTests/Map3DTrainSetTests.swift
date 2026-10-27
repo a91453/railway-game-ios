@@ -7,6 +7,9 @@ import XCTest
 /// from the scene kit's train recipes, one per car.
 final class Map3DTrainSetTests: XCTestCase {
     private let pack = Map3DModelPack.standard
+    /// The recipes, their lamps lit as drawn (decision 449 lights a
+    /// running car's in the pack only at its train's ends).
+    private let recipes = Map3DModelPack.unbaked
 
     /// Every set's cars are in the pack: a car's length and width, on the
     /// rail, up to a lowered pantograph's height, in their own colours (none
@@ -86,16 +89,16 @@ final class Map3DTrainSetTests: XCTestCase {
                 }
                 XCTAssertTrue(model.vertices.allSatisfy { abs(Map3DPoint($0.nx, $0.ny, $0.nz).length - 1) < 1e-3 }, name)
             }
-            let middle = (pack.models[try XCTUnwrap(pack.index(of: set.headName))].minimum.x
-                + pack.models[try XCTUnwrap(pack.index(of: set.headName))].maximum.x) / 2
-            let head = pack.models[try XCTUnwrap(pack.index(of: set.headName))]
+            let middle = (recipes.models[try XCTUnwrap(pack.index(of: set.headName))].minimum.x
+                + recipes.models[try XCTUnwrap(pack.index(of: set.headName))].maximum.x) / 2
+            let head = recipes.models[try XCTUnwrap(pack.index(of: set.headName))]
             XCTAssertTrue(head.vertices.contains { $0.glows && $0.x > middle + 4 }, "\(set.key): the head's lamps at the front")
             XCTAssertFalse(head.vertices.contains { $0.glows && $0.x < middle - 4 }, "\(set.key): none at its back")
-            if let tail = pack.index(of: set.tailName).map({ pack.models[$0] }) {
+            if let tail = pack.index(of: set.tailName).map({ recipes.models[$0] }) {
                 XCTAssertTrue(tail.vertices.contains { $0.glows && $0.x < -4 }, "\(set.key): the tail's lamps at the back")
                 XCTAssertFalse(tail.vertices.contains { $0.glows && $0.x > 4 }, "\(set.key): none at its front")
             }
-            if let single = pack.index(of: set.singleName).map({ pack.models[$0] }) {
+            if let single = pack.index(of: set.singleName).map({ recipes.models[$0] }) {
                 XCTAssertTrue(single.vertices.contains { $0.glows && $0.x > 4 } && single.vertices.contains { $0.glows && $0.x < -4 },
                               "\(set.key): a railcar alone has a cab at each end")
             }
@@ -151,7 +154,7 @@ final class Map3DTrainSetTests: XCTestCase {
         XCTAssertEqual(Map3DTrainSet.reach(of: "STEAM"), Map3DTrainSet.tramReach)
         XCTAssertEqual(Map3DTrainSet.reach(of: "L"), Map3DTrains.modelReach)
         // The locomotive's headlamp lit at its smokebox's lens.
-        let head = pack.models[try XCTUnwrap(pack.index(of: "set-SUMMER-head"))]
+        let head = recipes.models[try XCTUnwrap(pack.index(of: "set-SUMMER-head"))]
         let lamp = head.vertices.filter(\.glows)
         XCTAssertFalse(lamp.isEmpty)
         XCTAssertTrue(lamp.allSatisfy { abs($0.x - 5.67) < 0.02 && abs($0.z - 2.83) < 0.14 && abs($0.y) < 0.14 })
@@ -266,7 +269,7 @@ final class Map3DTrainSetTests: XCTestCase {
     /// units as they are, the cabs only at the train's two ends, so no car
     /// is turned; drawn as far as the other trains.
     func testThreeCommuterCarsAreTheUrbanEMU() throws {
-        func model(_ name: String) throws -> Map3DModelPack.Model { pack.models[try XCTUnwrap(pack.index(of: name), name)] }
+        func model(_ name: String) throws -> Map3DModelPack.Model { recipes.models[try XCTUnwrap(pack.index(of: name), name)] }
         let head = try model("set-threeCarUrban-head"), middle = try model("set-threeCarUrban-car")
         let tail = try model("set-threeCarUrban-tail")
         // The units as they are, and two lamps (twelve triangles each) at
@@ -297,7 +300,7 @@ final class Map3DTrainSetTests: XCTestCase {
                 return pack.models[index].name + (pack.isTurned(forType: key, carIndex: car, count: count) ? " turned" : "")
             }
         }
-        func model(_ name: String) throws -> Map3DModelPack.Model { pack.models[try XCTUnwrap(pack.index(of: name), name)] }
+        func model(_ name: String) throws -> Map3DModelPack.Model { recipes.models[try XCTUnwrap(pack.index(of: name), name)] }
         XCTAssertEqual(names("C", 2), ["set-fiveSectionLRT-head", "set-fiveSectionLRT-tail"])
         XCTAssertEqual(names("C", 3), ["set-sevenSectionLRT-head", "set-sevenSectionLRT-car", "set-sevenSectionLRT-tail"])
         XCTAssertEqual(names("C", 1), ["set-greenTram-single"])

@@ -7,11 +7,16 @@ import GameCore
 // FNV-1a hash of every vertex field, the near/far pairs of every train
 // set) and the game's light at the two hours the renderer uses.
 //
-//   export OUT [--tag NAME] [--ids a,b,c] [--all] [--lock FILE]
+//   export OUT [--tag NAME] [--ids a,b,c] [--all] [--lock FILE] [--night-lights]
 //
 // Without `--ids` the models are the pack's trains (`set-*` and `style-*`).
 // `--lock FILE` writes the hash of EVERY model in the pack to FILE (the
 // baseline `check.mjs` compares against) and nothing else.
+// `--night-lights` (decision 449) writes each running car as the game draws
+// it at night: its windows' model lit in the saloon's colour, and a head
+// car's (`-head`, `-cab`, `-single`) headlamps lit at its front, a tail
+// car's (`-tail`) tail lamps at its back. The manifest's triangles and hash
+// stay the pack model's.
 let arguments = Array(CommandLine.arguments.dropFirst())
 func option(_ name: String) -> String? {
     guard let at = arguments.firstIndex(of: name), at + 1 < arguments.count else { return nil }
@@ -19,6 +24,7 @@ func option(_ name: String) -> String? {
 }
 guard let outputPath = arguments.first, !outputPath.hasPrefix("--") else { fatalError("usage: export OUT [--tag NAME] [--ids a,b] [--lock FILE]") }
 let tag = option("--tag") ?? "after"
+let nightLights = arguments.contains("--night-lights")
 let pack = Map3DModelPack.standard
 
 /// Every vertex field, FNV-1a: the function the pinning tests use
@@ -77,6 +83,23 @@ func nativeFile(_ model: Map3DModelPack.Model) throws -> Data {
     return data
 }
 
+/// Decision 449: `model` (the pack's `index`) with its lights as a train's
+/// first or last car shows them at night.
+func lit(_ model: Map3DModelPack.Model, index: Int) -> Map3DModelPack.Model {
+    guard let car = pack.lights[index] else { return model }
+    var vertices = model.vertices
+    if let windows = car.windows {
+        vertices += pack.models[windows].vertices.map { pane in
+            var pane = pane
+            pane.color = Map3DTrainLights.saloon
+            return pane
+        }
+    }
+    let role = model.name.split(separator: "-").last.map(String.init) ?? ""
+    if role == "tail" { vertices += car.back.tail } else if ["head", "cab", "single"].contains(role) { vertices += car.front.head }
+    return Map3DModelPack.Model(name: model.name, vertices: vertices, minimum: model.minimum, maximum: model.maximum)
+}
+
 // Which models, and which are far versions of which near ones.
 var wanted: [String]
 if let ids = option("--ids") {
@@ -111,7 +134,7 @@ var records: [[String: Any]] = []
 let farNames = Set(farOf.values)
 for id in wanted {
     let model = pack.models[pack.index(of: id)!]
-    try nativeFile(model).write(to: modelsDir.appendingPathComponent(id + ".m3dmodel"))
+    try nativeFile(nightLights ? lit(model, index: pack.index(of: id)!) : model).write(to: modelsDir.appendingPathComponent(id + ".m3dmodel"))
     var record: [String: Any] = ["id": id, "native": "models/\(id).m3dmodel", "triangles": model.triangleCount, "hash": hash(model),
                                  "role": farNames.contains(id) ? "far" : "near", "category":"section", "glowTriangles": stride(from: 0, to: model.vertices.count, by: 3).filter { model.vertices[$0..<$0 + 3].contains { $0.glows } }.count,
                                  "glassTriangles": stride(from: 0, to: model.vertices.count, by: 3).filter { [Map3DVertex.trainGlass, Map3DVertex.trainGlassLit].contains(model.vertices[$0].layer) }.count,

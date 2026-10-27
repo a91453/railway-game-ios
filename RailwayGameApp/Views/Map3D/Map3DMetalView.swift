@@ -866,7 +866,9 @@ final class Map3DMetalView: MTKView {
         clearColor = MTLClearColor(red: Double(sky.x), green: Double(sky.y), blue: Double(sky.z), alpha: 1)
         // Decision 333: the trains first, so the camera following one
         // looks at where it is this frame.
-        let frame = trains?(camera.eye, level?.reach ?? .standard)
+        var frame = trains?(camera.eye, level?.reach ?? .standard)
+        // Decision 449: their lamps and windows as the city's lights come on.
+        if let pack = models?.pack, frame != nil { Map3DTrainLights.add(to: &frame!, pack: pack, lights: shown.lights) }
         moveCamera(heads: frame?.heads ?? [], at: start)
         onCamera?(camera, start)
         // Decision 394: deep in a tunnel, the cab sees nothing on the

@@ -31,6 +31,8 @@ final class Map3DEMU3000Tests: XCTestCase {
     }
     func testRealTwelveCarRolesReachTheRuntimeAndFarLOD() throws {
         let cars=try XCTUnwrap(pack.layout(forType:"EMU3000",count:12))
+        // The recipes' lamps as drawn (decision 449 lights them at a train's ends).
+        let recipes=Map3DModelPack.unbaked
         let names=["head","car","panto","car","et","em6","ep7","car","car","ep10","car","tail"]
         XCTAssertEqual(cars.map {pack.models[$0.model].name},names.map {"set-emu3000-"+$0})
         XCTAssertEqual(cars.reduce(Float(0)) {$0+$1.length+$1.gap},245.7,accuracy:0.001)
@@ -45,10 +47,10 @@ final class Map3DEMU3000Tests: XCTestCase {
             XCTAssertLessThan(far.triangleCount,m.triangleCount*2/3)
             XCTAssertEqual(far.length,m.length,accuracy:0.00001)
             XCTAssertEqual(m.maximum.z>4.3,[2,6,9].contains(i),"actual raised collectors only on cars3/7/10")
-            if i>0 && i<11 {XCTAssertFalse(m.vertices.contains(where:\.glows),"no cab lamps on intermediate units")}
+            if i>0 && i<11 {XCTAssertFalse(recipes.models[car.model].vertices.contains(where:\.glows),"no cab lamps on intermediate units")}
             XCTAssertNil(pack.model(car.model,forType:"EMU3000",count:12,at:900))
         }
-        let head=pack.models[cars[0].model],tail=pack.models[cars[11].model]
+        let head=recipes.models[cars[0].model],tail=recipes.models[cars[11].model]
         XCTAssertFalse(head.vertices.filter(\.glows).isEmpty)
         XCTAssertTrue(head.vertices.filter(\.glows).allSatisfy {$0.x>0})
         XCTAssertTrue(tail.vertices.filter(\.glows).allSatisfy {$0.x<0})
