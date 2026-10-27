@@ -1962,3 +1962,7 @@ TEMU1000 原生外形（Codex，初版 issue #1228／公開 #1230／私庫 #78 �
 
 
 EMU900第二版（#1338／draft#1339↔私庫#102）：使用者要求修圓車頭、下裙／連結器、輪架與遊戲配色。真8ebfd9fd第一版完整包保持；新revision-2，罩面沿實際殼曲線、圓裙凹槽與折面排障器，車身用既有D3D4DA、玻璃shade0.62，綠松／藏青保持；輪胎與屋頂設備原三角保護。另補#1041前版漏做的light介面，頭2188／中868–1092三角，36單元與近59448／遠33800／light12056十輛展示及18全payload pins。最新main b7710cb7 C341整合保持；只靜態註冊，無營運自動換用。全量重出／真前後／驗證與固定producer、下載SHA、最新同head CI見自有README及issue，外觀自檢不等於使用者接受，人工Simulator／真機Metal效能與動畫仍未驗。不改GameCore／存檔／fixtures／玩法，不合併／auto-merge／TestFlight。
+
+### 2026-10-27 Codex 台北捷運610（#1359）
+
+[專用來源／角色／重建與驗收](art/taipei610-2026-10-27/README.md)。使用者命名台北捷運610，環狀線第一階段正常白黃塗裝，獨立A-C-D-B四動車，三級12單元與合法assembly；沒有同車型獨立原生前版，私庫Q比例y100不套殼，接入前顯示只取真wenhu並明標。原371註冊＋3直接比較完整payload保持；已接受E500v3／EMU3000v5及EMU900第二版、其他既有包不動。私庫E1000#88合在PP分支而非main祖先，不能只因merged宣稱main已有素材。沒有610獨占營運接點（BR/Y共用wenhu），本批尚未接入營運，合併不會有營運車自動換用；解鎖／列車包／fallback保持。外觀自檢與使用者接受分開，未經使用者接受；Linux幾何／WebGL／Swift6.4與ZIP證據及互鏈draft見#1359。人工Simulator／真機Metal效能／動畫與完整動態碰撞未驗。只追加自有配方與必要通用匯出適配，不改GameCore／存檔／fixtures；不合併、不推main／auto-merge／TestFlight。

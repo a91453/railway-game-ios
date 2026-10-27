@@ -1,3 +1,4 @@
+import {assemblyNative} from '../emu900-native/scene.js';
 // WebGL preview of M3DM models lit as the game lights a model (decision 370's
 // soft light, `map3dLit(..., soft: true)` in Map3DShaders.metal), with the
 // light the game's `Map3DLighting` gives at the hour (manifest.json
@@ -50,7 +51,8 @@ export class NativeRenderer {
     for (const [index, size, offset] of [[0, 3, 0], [1, 3, 12], [2, 4, 24], [3, 1, 40]]) { gl.enableVertexAttribArray(index); gl.vertexAttribPointer(index, size, gl.FLOAT, false, 44, offset); }
     this.uniforms = Object.fromEntries(['centre', 'right', 'up', 'direction', 'radius', 'aspect', 'depth', 'sunModel', 'sunLight', 'skyLight', 'lampGlow', 'lineColour', 'lights', 'features'].map(n => [n, gl.getUniformLocation(p, n)]));
   }
-  load(buffer) {
+  load(buffer, material = 'color') {
+    buffer = assemblyNative(buffer);
     const d = new DataView(buffer), magic = String.fromCharCode(...new Uint8Array(buffer, 0, 4));
     if (magic !== 'M3DM' || d.getUint16(4, true) !== 1 || d.getUint16(6, true) !== 0) throw Error('not a native model');
     const count = d.getUint32(8, true), length = d.getUint32(12, true), start = 16 + Math.ceil(length / 4) * 4;
@@ -63,7 +65,9 @@ export class NativeRenderer {
       for (let j = 0; j < 3; j++) {
         const k = (i * 3 + j) * 11, color = d.getUint32(at + 4 + j * 16 + 12, true);
         data.set(points[j], k); data.set(normal, k + 3);
-        data.set([color & 255, (color >>> 8) & 255, (color >>> 16) & 255].map(x => x / 255), k + 6); data[k + 9] = (color >>> 24) / 255; data[k + 10] = flags & 1;
+        data.set([color & 255, (color >>> 8) & 255, (color >>> 16) & 255].map(x => x / 255), k + 6); data[k + 9] = (color >>> 24) / 255; data[k + 10] = material === 'color' ? flags & 1 : 0;
+        if(material === 'clay') data.set([0.827,0.831,0.855,1],k+6);
+        if(material === 'silhouette') data.set([0.149,0.173,0.341,1],k+6);
         for (let c = 0; c < 3; c++) { low[c] = Math.min(low[c], points[j][c]); high[c] = Math.max(high[c], points[j][c]); }
       }
     }

@@ -48,3 +48,5 @@ python3 -I tools/train-models/overview.py OUT overview.png --time both set-emu80
 | 沒有取代 | GLB 打包（`package.mjs`、`glb-audit.py`、Blender 檢查）、`bundle.py`／ZIP、`geometry-audit`、`glass-mutations`、`front-audit`、`door-audit`（逐車的專用驗收）、`glb-to-m3dmodel`（GLB → 原生）、`trains/`（網頁版 `Web/CityView`）、`train-colors/` 的新舊逐頂點比對 |
 
 交給作者看的完整包（GLB、ZIP、viewer）照 CLAUDE.md 放私庫 `Railway/game-art-previews/docs/art/`；這個工具只做公開庫該有的：預算、雜湊、七向圖與離線預覽。
+
+610 四輛展示：匯出12個 `taipei610-{a,c,d,b}{,-far,-light}` ID，另加 `--assembly taipei610`，輸出既有合法M3DAssembly及僅供逐bytes驗證的expected buffer。renderer支援同一assembly契約。新原生匯出逐頂點讀回；Swift6.4 integrated backend和一般SwiftPM backend皆可連結。610專用原生拓樸／變異驗收放 `tools/taipei610-audit/`；GLB沿用EMU900工具，不複製其他車配方。
