@@ -1820,3 +1820,9 @@ TEMU1000 原生外形（Codex，初版 issue #1228／公開 #1230／私庫 #78 �
 **尚未接入營運**：未找到已確認至子系列的專用編組配置，合併後沒有列車自動改用本批；E200CK/E500CK/R100CK/R200CK/SUMMER/PP/MINGRI/STAR現有接點保持。Linux指定Swift6.4／warnings-as-errors、原生／匯出／下載驗證與最新同head CI分開看issue及私包證據；人工Simulator外觀、真機Metal／效能／輪門動畫與動態碰撞未驗，外觀未經使用者接受。不動GameCore／存檔／golden／replay，不合併／auto-merge／TestFlight。下次修訂先保留本批真最終包，再改配方並全量重出。
 
 2026-10-27莒光第二版：使用者指定橘改遊戲藏青#262C57；只改兩角色近遠的橘色及原底面陰色，米色／腰線／幾何／其他色保持，paint-audit逐三角位置／法線／拓樸核對。真5952e905橘色前版完整保持，私庫新revision-2；全量素材與同尺度橘／藏青前後見自有交接及#1305。另將本批兩項Swift Testing改同斷言XCTest，修正第一版shard ID不相容的紅CI。營運仍未接入，GameCore／存檔／fixtures不動，真機／動畫未驗。
+
+### 2026-10-27 Codex EMU3000 石板藍灰（#1309）
+
+使用者要求評估莒光藏青（建議保持，本輪不改）及EMU3000黑色外觀改遊戲風格。新分支codex/emu3000-slate-2026-10-27；原66a515e8第五版幾何／其他色保持，只改罩面、窗框與外觀飾件為既有石板藍灰#6E7487，輪胎／雨刷／底盤／弓機構拆出hardwareColor保持舊炭黑。16單元逐三角paint-audit及真正第五版同尺度前後、全量素材／viewer／ZIP見[交接](art/emu3000-slate-2026-10-27/README.md)。已接受第五版原包及E500／PP／E1000／莒光藏青保持；新色未稱已接受，也不保證換色可免侵權風險。
+
+營運接點／列車包／fallback保持；本PR合併更新後，原專用EMU3000近遠畫面會使用新色。GameCore／存檔／fixtures不動；真機／效能／人工Simulator外觀／動畫未驗。兩庫新互鏈draft與最新同head CI看#1309，不推main、不合併／auto-merge／TestFlight。
