@@ -1773,3 +1773,7 @@ TEMU1000 原生外形（Codex，初版 issue #1228／公開 #1230／私庫 #78 �
 **尚未接入營運**：未找到已確認至子系列的專用編組配置，合併後沒有列車自動改用本批；E200CK/E500CK/R100CK/R200CK/SUMMER/PP/MINGRI/STAR現有接點保持。Linux指定Swift6.4／warnings-as-errors、原生／匯出／下載驗證與最新同head CI分開看issue及私包證據；人工Simulator外觀、真機Metal／效能／輪門動畫與動態碰撞未驗，外觀未經使用者接受。不動GameCore／存檔／golden／replay，不合併／auto-merge／TestFlight。下次修訂先保留本批真最終包，再改配方並全量重出。
 
 2026-10-27莒光第二版：使用者指定橘改遊戲藏青#262C57；只改兩角色近遠的橘色及原底面陰色，米色／腰線／幾何／其他色保持，paint-audit逐三角位置／法線／拓樸核對。真5952e905橘色前版完整保持，私庫新revision-2；全量素材與同尺度橘／藏青前後見自有交接及#1305。另將本批兩項Swift Testing改同斷言XCTest，修正第一版shard ID不相容的紅CI。營運仍未接入，GameCore／存檔／fixtures不動，真機／動畫未驗。
+
+### 2026-10-27 Codex EMU800（#1316）
+
+[來源／外觀／靜態範圍／驗證交接](art/emu800-native-2026-10-27/README.md)。獨立藍面黃弧EMU800配方，ED/EMA/EP/EMB近遠正反16單元與八輛M3DAssembly。原先Q比例及通用弧形不當作正確殼；完整私有素材與雙庫draft見issue。原有EMU800 key也涵蓋EMU900性能及一般TRA通勤代表，因此**尚未接入營運**，合併沒有列車自動換用；不替換其他通勤車。241既有完整payload保持，已接受E500v3與EMU3000v5私包直接取作風格比較，PP/E1000／莒光藏青／EMU3000石板藍灰不改。Swift6.4及原生／GLB／PNG／viewer／ZIP的最終證據與同head CI見issue；人工Simulator／真機Metal效能／動畫／完整碰撞未驗。不動GameCore／存檔／fixtures／玩法，不推main、不合併／auto-merge／TestFlight。
