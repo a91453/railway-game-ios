@@ -183,6 +183,63 @@ public enum Map3DReflection {
         reduceMotion ? 0 : Float(seconds.truncatingRemainder(dividingBy: 3_600))
     }
 
+    // MARK: The trains' glass and stainless (decision 450)
+
+    /// How much of a mirror a train's window glass is (its window Fresnel
+    /// times this): the reference garage's glass (metalness 0.26,
+    /// roughness 0.19, clearcoat 0.42) is a near mirror, a little under
+    /// the city's office glass (1), for a car's glass is tinted.
+    public static let trainGlassShare: Float = 0.9
+
+    /// A stainless body's mirror: the reference garage's metal (metalness
+    /// 0.64, roughness 0.38): `steelBase + steelEdge (1 − c)⁵` of it, the
+    /// sky it mirrors blurred and tinted by the steel's own colour (times
+    /// ``steelTint``).
+    public static let steelBase: Float = 0.22
+    public static let steelEdge: Float = 0.4
+    public static let steelTint: Float = 1.2
+
+    /// The sun on stainless: a broad sheen, not a glint (its roughness),
+    /// two lobes of (power, strength), in its own colour.
+    public static let steelSheenLobes: [(power: Float, strength: Float)] = [(40, 0.25), (6, 0.05)]
+
+    /// How much of the sky a lit train's glass mirrors at night: a lit
+    /// room shows itself, as the city's windows (1 − 0.85 × lights).
+    public static let litGlassMirror: Float = 0.85
+
+    public static func trainGlassFresnel(_ cosine: Float) -> Float {
+        trainGlassShare * windowFresnel(cosine)
+    }
+
+    public static func steelFresnel(_ cosine: Float) -> Float {
+        steelBase + steelEdge * powf(1 - clamped(cosine), 5)
+    }
+
+    public static func steelSheen(reflected: Map3DPoint, sun: Map3DPoint) -> Float {
+        let s = max(reflected.dot(sun), 0)
+        return steelSheenLobes.reduce(0) { $0 + powf(s, $1.power) * $1.strength }
+    }
+
+    /// The share of its mirror a train's face keeps, `shade` the shade
+    /// decision 439 baked into it (its `u`): a face shut in (under the
+    /// floor, at a gangway) sees little sky.
+    public static func trainOpen(shade: Float) -> Float {
+        1 - clamped(shade)
+    }
+
+    /// How much the trains' glass and stainless mirror, 0 or 1 (0 and the
+    /// shader leaves the work out): as decision 357's sun shadows, none on
+    /// ``Map3DQuality/saving``, nor on ``Map3DQuality/automatic`` in Low
+    /// Power Mode or once the phone runs hot (`serious`), nor on
+    /// ``Map3DQuality/high`` once it is about to slow itself down.
+    public static func trainStrength(_ quality: Map3DQuality, lowPower: Bool = false, heat: Map3DQuality.Heat = .nominal) -> Float {
+        switch quality {
+        case .saving, .off: 0
+        case .automatic: lowPower || heat >= .serious ? 0 : 1
+        case .high: heat >= .critical ? 0 : 1
+        }
+    }
+
     // MARK: To the shader
 
     /// How much the glass and water mirror: none on ``Map3DQuality/saving``,
@@ -192,15 +249,18 @@ public enum Map3DReflection {
     }
 
     /// The three rows after the night windows in `Map3DUniforms`
-    /// (``rowCount`` floats): the strength, the ripples' seconds and how
+    /// (``rowCount`` floats): the strength, the ripples' seconds, how
     /// much of the sun shows (``Map3DSky/sunShown``: none at night, under
-    /// rain or below the horizon); the zenith (the horizon is the fog's
+    /// rain or below the horizon) and the trains' strength (decision 450,
+    /// `trains`, or ``trainStrength(_:lowPower:heat:)`` of `quality`
+    /// alone); the zenith (the horizon is the fog's
     /// colour, as the sky's); the glint's colour, the sun's light as a share
     /// of its brightest channel (warm at dawn and dusk).
-    public static func rows(sky: Map3DSky, sunLight: SIMD3<Float>, quality: Map3DQuality, seconds: Double, reduceMotion: Bool) -> [Float] {
+    public static func rows(sky: Map3DSky, sunLight: SIMD3<Float>, quality: Map3DQuality, seconds: Double, reduceMotion: Bool,
+                            trains: Float? = nil) -> [Float] {
         let peak = max(sunLight.x, max(sunLight.y, sunLight.z))
         let hue = peak > 0 ? sunLight / peak : SIMD3<Float>(repeating: 1)
-        return [strength(quality), rippleSeconds(seconds, reduceMotion: reduceMotion), sky.sunShown, 0,
+        return [strength(quality), rippleSeconds(seconds, reduceMotion: reduceMotion), sky.sunShown, trains ?? trainStrength(quality),
                 sky.zenith.x, sky.zenith.y, sky.zenith.z, 0,
                 hue.x, hue.y, hue.z, 0]
     }

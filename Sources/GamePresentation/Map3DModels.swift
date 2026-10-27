@@ -34,11 +34,21 @@ public struct Map3DModelPack: Sendable {
     public let models: [Model]
     /// Decision 338: the sets drawn as they were before them (``TrainPack``).
     public var locked: Set<String> = []
+    /// Decision 436: the destination signs of the cab cars that carry one,
+    /// by model index (``Map3DHeadSign/add(to:signs:eye:)``).
+    public private(set) var headSigns: [Int: Map3DHeadSign] = [:]
 
     /// Every style's cab car and middle car, made once.
     public static let standard = Map3DModelPack(styles: Map3DTrainStyle.all)
+    /// The same pack before the shade is baked (decision 439): the recipes as
+    /// they are made, for the tests that check which recipe goes where.
+    static let unbaked = Map3DModelPack(styles: Map3DTrainStyle.all, baked: false)
 
     public init(styles: [Map3DTrainStyle]) {
+        self.init(styles: styles, baked: true)
+    }
+
+    init(styles: [Map3DTrainStyle], baked: Bool) {
         var models: [Model] = []
         for style in styles {
             // Decision 410: as the 700T and the N700S-G are built.
@@ -51,6 +61,8 @@ public struct Map3DModelPack: Sendable {
         // Decision 244: and the street furniture.
         // Decision 370: in the model look, as the city round them.
         models += Map3DProp.allCases.map { Map3DLook.restyle($0.model()) }
+        // Decision 445: and the pedestrian signals' faces and countdowns.
+        models += Map3DPedestrianSignal.models()
         // Decision 259: and the people, scooters and cars.
         models += Map3DStreetModel.allCases.map { $0.model() }
         // Decision 318: and the sets that had none.
@@ -108,14 +120,24 @@ public struct Map3DModelPack: Sendable {
         }
         models += Map3DC371.Unit.allCases.map { Map3DC371.model($0) }
         models += Map3DC381.Unit.allCases.map { Map3DC381.model($0) }
+        // Static 610 study; no shared metro operating mapping is changed.
+        for role in Map3DTaipei610.Role.allCases {
+            models.append(Map3DTaipei610.model(role))
+            models.append(Map3DTaipei610.model(role, far: true))
+            models.append(Map3DTaipei610.model(role, light: true))
+        }
         // Decision 400, 10i-6: the player's route buses, last, so no model
         // before them moves.
         models.append(Map3DLowFloorBus.routeModel())
-        self.models = models
+        // Decision 450: their glass and stainless marked, then decision
+        // 439's soft shade baked into their colour.
+        self.models = baked ? Map3DTrainOcclusion.baked(Map3DTrainMaterial.marked(models)) : models
+        headSigns = Map3DHeadSign.anchors(in: models)
     }
 
     init(models: [Model]) {
         self.models = models
+        headSigns = Map3DHeadSign.anchors(in: models)
     }
 
     /// The model called `name`'s index.

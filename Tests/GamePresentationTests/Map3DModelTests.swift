@@ -8,22 +8,25 @@ final class Map3DModelTests: XCTestCase {
     private let pack = Map3DModelPack.standard
 
     func testEveryStyleHasACabAndAMiddleCarOfTheRightSize() {
-        // Decision 244: and the street furniture after the trains;
+        // Decision 244: and the street furniture after the trains (decision
+        // 445: the pedestrian signals' after it);
         // decision 259: then the people and vehicles; decision 318: then the
         // sets'; decision 400, 10i-6: then the route bus; finally the
         // independent PP passenger-car display roles, near and far; then the
-        // EMU800 study's roles, the EMU500 study's units and formation, the C341 study's units, and the separate C371/C381 units.
+        // EMU800 study's roles, the EMU500 study's units and formation,
+        // the C341, C371 and C381 study units, and the 610 roles at three LODs.
         let pantoStyles = Map3DTrainStyle.all.filter { !$0.pantographCars.isEmpty }.count
         let sets = Map3DTrainSet.all.map { $0.models().count }.reduce(0, +)
         let temu1000Models = Map3DTEMU1000.Unit.allCases.count + 1
-        let baseModels = Map3DTrainStyle.all.count * 2 + pantoStyles + Map3DProp.allCases.count + Map3DStreetModel.allCases.count + sets
+        let baseModels = Map3DTrainStyle.all.count * 2 + pantoStyles + Map3DProp.allCases.count + Map3DPedestrianSignal.modelCount + Map3DStreetModel.allCases.count + sets
         let temu2000Models = Map3DTEMU2000.Unit.allCases.count + 1
         let shortSets = Map3DGreenTram.Section.allCases.count + 1 + Map3DGreenCommuter.Unit.allCases.count + 1 + temu1000Models + temu2000Models
         let longSets = Map3DThreeCarUrban.Unit.allCases.count + 1 + Map3DFiveSectionLRT.Unit.allCases.count + 1 + Map3DSevenSectionLRT.Unit.allCases.count + 1
         let rest = Map3DFourCarMetro.Unit.allCases.count + 1 + Map3DSevenCarBlue.Unit.allCases.count + 1 + Map3DDuplexSteam.Unit.allCases.count + 1 + Map3DSteamTender.Unit.allCases.count + 1 + Map3DTrainShapeRefresh.ids.count + 1
         let ppDisplayModels = Map3DPPPassenger.roles.count * 2 + 2 // E1000 near/far
         let emu500Models = Map3DEMU500.Unit.allCases.count + 1
-        XCTAssertEqual(pack.models.count, baseModels + shortSets + longSets + rest + ppDisplayModels + Map3DEMU800.Role.allCases.count * 4 + emu500Models + Map3DC341.Unit.allCases.count + Map3DEMU900.Role.allCases.count * 6 + Map3DC371.Unit.allCases.count + Map3DC381.Unit.allCases.count)
+        let taipei610Models = Map3DTaipei610.Role.allCases.count * 3 // near, far, light
+        XCTAssertEqual(pack.models.count, baseModels + shortSets + longSets + rest + ppDisplayModels + Map3DEMU800.Role.allCases.count * 4 + emu500Models + Map3DC341.Unit.allCases.count + Map3DEMU900.Role.allCases.count * 6 + taipei610Models + Map3DC371.Unit.allCases.count + Map3DC381.Unit.allCases.count)
         for style in Map3DTrainStyle.all {
             var names = [style.name + "-cab", style.name + "-car"]
             if !style.pantographCars.isEmpty { names.append(style.name + "-panto") }
@@ -154,6 +157,8 @@ final class Map3DModelTests: XCTestCase {
     /// white); only a diving high-speed nose sweeps its body colour over
     /// the top to the tip.
     func testTheNoseTopIsTheRoofsColourButOnAHighSpeedNose() throws {
+        // The recipes' colours, before decision 439's shade.
+        let pack = Map3DModelPack.unbaked
         for style in Map3DTrainStyle.all where style.nose > 0 {
             let model = pack.models[try XCTUnwrap(pack.index(of: style.name + "-cab"))]
             let top = style.floor + 0.9 * (style.roof - style.floor)

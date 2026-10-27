@@ -59,8 +59,20 @@ func nativeFile(_ model: Map3DModelPack.Model) throws -> Data {
     data.append(contentsOf: repeatElement(UInt8(0), count: (4 - meta.count % 4) % 4))
     for start in stride(from: 0, to: model.vertices.count, by: 3) {
         let t = model.vertices[start..<start + 3]
-        u32(t.contains { $0.glows } ? 1 : 0)
+        // Bit 0 lit at night; decision 450: bit 1 glass, bit 2 stainless
+        // (Map3DTrainMaterial), for renderer.js's `--features 1`.
+        let layer = t.first!.layer
+        let glass: UInt32 = layer == Map3DVertex.trainGlass || layer == Map3DVertex.trainGlassLit ? 2 : 0
+        let steel: UInt32 = layer == Map3DVertex.trainSteel ? 4 : 0
+        u32((t.contains { $0.glows } ? 1 : 0) | glass | steel)
         for v in t { u32(v.x.bitPattern); u32(v.y.bitPattern); u32(v.z.bitPattern); u32(v.color) }
+    }
+    if model.triangleCount > Map3DModelFile.maximumTriangles { return data }
+    let decoded = try Map3DModelFile(decoding:data,named:model.name)
+    guard decoded.model.vertices.count == model.vertices.count else { fatalError("native readback count") }
+    for (a,b) in zip(decoded.model.vertices,model.vertices) {
+        guard a.position == b.position, a.color == b.color, a.layer == b.layer,
+            abs(a.nx-b.nx)<0.00001,abs(a.ny-b.ny)<0.00001,abs(a.nz-b.nz)<0.00001 else { fatalError("native readback payload") }
     }
     return data
 }
@@ -101,10 +113,33 @@ for id in wanted {
     let model = pack.models[pack.index(of: id)!]
     try nativeFile(model).write(to: modelsDir.appendingPathComponent(id + ".m3dmodel"))
     var record: [String: Any] = ["id": id, "native": "models/\(id).m3dmodel", "triangles": model.triangleCount, "hash": hash(model),
-                                 "role": farNames.contains(id) ? "far" : "near", "glowTriangles": stride(from: 0, to: model.vertices.count, by: 3).filter { model.vertices[$0..<$0 + 3].contains { $0.glows } }.count]
+                                 "role": farNames.contains(id) ? "far" : "near", "category":"section", "glowTriangles": stride(from: 0, to: model.vertices.count, by: 3).filter { model.vertices[$0..<$0 + 3].contains { $0.glows } }.count,
+                                 "glassTriangles": stride(from: 0, to: model.vertices.count, by: 3).filter { [Map3DVertex.trainGlass, Map3DVertex.trainGlassLit].contains(model.vertices[$0].layer) }.count,
+                                 "steelTriangles": stride(from: 0, to: model.vertices.count, by: 3).filter { model.vertices[$0].layer == Map3DVertex.trainSteel }.count]
     record.merge(box(model)) { a, _ in a }
     if let far = farOf[id] { record["far"] = far }
     records.append(record)
+}
+
+// Static assemblies use the existing legal-unit contract; never enlarge M3DM.
+if option("--assembly") == "taipei610" {
+    for level in 0..<3 {
+        let far = level == 1, light = level == 2
+        let model = Map3DTaipei610.formation(far:far,light:light)
+        var units: [String:String] = [:]
+        var placements: [[String:Any]] = []
+        for (i,role) in Map3DTaipei610.sequence.enumerated() {
+            let unit = Map3DTaipei610.model(role,far:far,light:light)
+            units[unit.name] = try nativeFile(unit).base64EncodedString()
+            placements.append(["unit":unit.name,"translation":[Map3DTaipei610.centres[i],Float(0),Float(0)],"rotation_degrees":0])
+        }
+        let scene: [String:Any] = ["format":"M3DAssembly","version":1,"units":units,"placements":placements]
+        let file = "models/" + model.name + ".m3dscene.json"
+        try json(scene).write(to:output.appendingPathComponent(file))
+        try nativeFile(model).write(to:output.appendingPathComponent(model.name+"-expected.bin"))
+        var record: [String:Any] = ["id":model.name,"native":file,"native_kind":"assembly","triangles":model.triangleCount,"category":"formation"]
+        record.merge(box(model)) { a,_ in a }; records.append(record)
+    }
 }
 
 // The game's light, as the shaders get it (Map3DMetalView.uniformValues):
@@ -113,10 +148,14 @@ func light(_ minute: Double) -> [String: Any] {
     let l = Map3DLighting(minute: minute)
     func v(_ s: SIMD3<Float>) -> [Float] { [s.x, s.y, s.z] }
     return ["minute": minute, "sunDirection": [l.sunDirection.x, l.sunDirection.y, l.sunDirection.z], "sunLight": v(l.sunLight),
-            "skyLight": v(l.skyLight), "groundLight": v(l.groundLight), "lights": l.lights, "lampGlow": v(l.lampGlow(SIMD3<Float>(1, 1, 1))), "fogColour": v(l.fogColour)]
+            "skyLight": v(l.skyLight), "groundLight": v(l.groundLight), "lights": l.lights, "lampGlow": v(l.lampGlow(SIMD3<Float>(1, 1, 1))), "fogColour": v(l.fogColour),
+            // Decision 450: what the glass mirrors (Map3DReflection.rows).
+            "zenith": v(Map3DSky(l).zenith), "sunShown": Map3DSky(l).sunShown,
+            "glint": Array(Map3DReflection.rows(sky: Map3DSky(l), sunLight: l.sunLight, quality: .high, seconds: 0, reduceMotion: true)[8..<11])]
 }
 let manifest: [String: Any] = ["schema_version": 1, "tag": tag, "model_count": records.count, "models": records, "sets": sets,
                                "lighting": ["day": light(14 * 60), "night": light(23 * 60)],
+                               "palette": option("--assembly") == "taipei610" ? ["glass":Map3DTaipei610.glass,"hardware":Map3DTaipei610.rubber] : [:],
                                "native_coordinates": "metres; +x front, +y left, +z up; alpha 0 = the line's colour"]
 try json(manifest).write(to: output.appendingPathComponent("manifest.json"))
 print("wrote \(records.count) models to \(outputPath)")

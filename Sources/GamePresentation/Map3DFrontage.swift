@@ -448,9 +448,9 @@ extension Map3DScene.Builder {
         let upperPaint = (flats ? Map3DPaint.bays(Self.pick(Map3DSurface.flats, r(10)), bay: 3.2, floors: Int(floors) - 1)
             : Map3DPaint.bays(balconies ? .homeBalcony : .homeWindows, bay: 6, floors: Int(floors) - 1)).on(facing)
         if arcade {
-            // The ground floor set back 3.4 m, dark; the
-            // floors above over the arcade.
-            mesh.addBox(base: middle - front * 1.7, forward: front, length: depth - 3.4, width: width - 0.1,
+            // The ground floor set back (decision 447:
+            // 3.64 m), dark; the floors above over the arcade.
+            mesh.addBox(base: middle - front * (Self.arcadeDepth / 2), forward: front, length: depth - Self.arcadeDepth, width: width - 0.1,
                         height: groundFloor, top: Map3DPalette.arcade, side: Map3DPalette.arcade,
                         frontPaint: groundPaint, flankPaint: Self.plaster, capped: false)
         } else {

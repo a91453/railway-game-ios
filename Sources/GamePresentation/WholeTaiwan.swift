@@ -98,6 +98,16 @@ extension GameSession {
         roundStationsOf world: inout GameWorld, population: PopulationGrid?, places: PlaceGrid?, water: WaterGrid? = nil, coverage: CoverageGrid? = nil,
         baseMap: BaseMapTiles? = nil, roads: RoadsReadAhead? = nil
     ) {
+        readLand(blocks: blocksRoundStations(of: world), in: &world, population: population, places: places, water: water, coverage: coverage)
+        readRoads(in: &world, baseMap: baseMap, ahead: roads)
+    }
+
+    /// The blocks ``readLand(roundStationsOf:population:places:water:coverage:baseMap:roads:)``
+    /// reads the land of: those within ``WholeTaiwan/landReach`` of a
+    /// station, ``WholeTaiwan/highSpeedLandReach`` of a high-speed one,
+    /// and every tile the company owns. Decision 440: on a real-world map
+    /// whose land came all at once, the blocks whose roads are read.
+    nonisolated static func blocksRoundStations(of world: GameWorld) -> Set<LandBlock> {
         var wanted = blocks(within: WholeTaiwan.landReach, of: world.stations.map(\.location), in: world.bounds)
         let fast = world.highSpeedStations
         if !fast.isEmpty {
@@ -110,8 +120,7 @@ extension GameSession {
                 wanted.formUnion(tile.landBlocks(in: world.bounds))
             }
         }
-        readLand(blocks: wanted, in: &world, population: population, places: places, water: water, coverage: coverage)
-        readRoads(in: &world, baseMap: baseMap, ahead: roads)
+        return wanted
     }
 
     /// Reads in the land within `reach` of each of `points` whose blocks

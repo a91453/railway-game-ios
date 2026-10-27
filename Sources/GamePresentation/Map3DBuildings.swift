@@ -534,6 +534,8 @@ extension Map3DScene.Builder {
                 mesh.addBox(base: front - facing * 0.2 + across * (side * (width / 2 - 0.25)), forward: facing, length: 0.4, width: 0.4,
                             height: groundFloor, top: Map3DColor.shaded(wall, 0.92), side: Map3DColor.shaded(wall, 0.88))
             }
+            // Decision 446: a row of scooters parked along its edge.
+            Map3DScooter.addParkedRow(&mesh, front: front, facing: facing, width: width, r: r)
         }
         guard shop else { return }
         // The shop front: the arcade's back wall, or the house's face.
@@ -554,8 +556,9 @@ extension Map3DScene.Builder {
     }
 
     /// How far an arcade's ground floor stands back from the house's face
-    /// (``addRowHouses``).
-    static let arcadeDepth: Float = 3.4
+    /// (``addRowHouses``). Decision 447 (continued): Taipei's 3.64 m from
+    /// the road's line (臺北市建築管理自治條例第 7 條), where 267 had 3.4 m.
+    static let arcadeDepth: Float = 3.64
 
     /// A sloping sheet `width` wide from a wall at `from` (its top edge's
     /// middle), `depth` out along `facing` and `drop` lower there: an

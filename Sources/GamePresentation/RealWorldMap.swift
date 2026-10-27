@@ -170,21 +170,37 @@ public struct RealWorldPlace: Identifiable, Hashable, Sendable {
     /// Taipei Main Station.
     public static let standard = taiwan[1]
 
-    /// `Railway/site_archive_clean/data/tra.json`: the first station of each
-    /// name along the Taiwan Railway lines, north to south and round the
-    /// east (OpenStreetMap's points, seven decimals).
+    /// Every county and city of Taiwan has at least one place (decision
+    /// 442), north to south, round the east, then the islands. `tra-`: the
+    /// first station of each name along the Taiwan Railway lines in
+    /// `Railway/taiwan-rail-reference-clean/source/data/tra.json`
+    /// (OpenStreetMap's points, seven decimals). `moi-`: a county seat with
+    /// no suitable station, or an island with no railway, at the Ministry
+    /// of the Interior's settlement point
+    /// (`Railway/geo-scene-reference-clean/.../place_names_moi.pmtiles`).
     static let taiwan: [RealWorldPlace] = [
         RealWorldPlace("tra-keelung", "TW", .asia, "Keelung", "基隆", population: 9_146, latitude: 251_330_324, longitude: 1_217_392_299),
         RealWorldPlace("tra-taipei", "TW", .asia, "Taipei", "臺北", population: 9_146, latitude: 250_479_308, longitude: 1_215_170_046),
+        RealWorldPlace("tra-banqiao", "TW", .asia, "Banqiao, New Taipei", "新北板橋", population: 9_146, latitude: 250_138_099, longitude: 1_214_641_275),
         RealWorldPlace("tra-taoyuan", "TW", .asia, "Taoyuan", "桃園", population: 9_146, latitude: 249_887_260, longitude: 1_213_137_769),
         RealWorldPlace("tra-hsinchu", "TW", .asia, "Hsinchu", "新竹", population: 696, latitude: 248_014_026, longitude: 1_209_716_780),
+        RealWorldPlace("tra-zhubei", "TW", .asia, "Zhubei, Hsinchu County", "新竹縣竹北", population: 600, latitude: 248_391_734, longitude: 1_210_092_345),
+        RealWorldPlace("tra-miaoli", "TW", .asia, "Miaoli", "苗栗", population: 530, latitude: 245_692_318, longitude: 1_208_222_649),
         RealWorldPlace("tra-taichung", "TW", .asia, "Taichung", "臺中", population: 2_271, latitude: 241_370_662, longitude: 1_206_868_667),
+        RealWorldPlace("tra-changhua", "TW", .asia, "Changhua", "彰化", population: 1_220, latitude: 240_816_730, longitude: 1_205_382_050),
+        RealWorldPlace("moi-nantou", "TW", .asia, "Nantou", "南投", population: 470, latitude: 239_121_060, longitude: 1_206_793_000),
+        RealWorldPlace("tra-douliu", "TW", .asia, "Douliu, Yunlin", "雲林斗六", population: 650, latitude: 237_118_077, longitude: 1_205_411_553),
         RealWorldPlace("tra-chiayi", "TW", .asia, "Chiayi", "嘉義", population: 438, latitude: 234_799_042, longitude: 1_204_415_839),
+        RealWorldPlace("moi-taibao", "TW", .asia, "Taibao, Chiayi County", "嘉義縣太保", population: 470, latitude: 234_608_060, longitude: 1_203_205_920),
         RealWorldPlace("tra-tainan", "TW", .asia, "Tainan", "臺南", population: 984, latitude: 229_972_146, longitude: 1_202_130_434),
         RealWorldPlace("tra-kaohsiung", "TW", .asia, "Kaohsiung", "高雄", population: 2_196, latitude: 226_395_321, longitude: 1_203_025_585),
+        RealWorldPlace("tra-pingtung", "TW", .asia, "Pingtung", "屏東", population: 780, latitude: 226_688_534, longitude: 1_204_861_261),
         RealWorldPlace("tra-yilan", "TW", .asia, "Yilan", "宜蘭", population: 80, latitude: 247_545_601, longitude: 1_217_583_109),
         RealWorldPlace("tra-hualien", "TW", .asia, "Hualien", "花蓮", population: 144, latitude: 239_926_399, longitude: 1_216_009_524),
         RealWorldPlace("tra-taitung", "TW", .asia, "Taitung", "臺東", population: 65, latitude: 227_934_597, longitude: 1_211_224_316),
+        RealWorldPlace("moi-magong", "TW", .asia, "Magong, Penghu", "澎湖馬公", population: 110, latitude: 235_645_000, longitude: 1_195_648_000),
+        RealWorldPlace("moi-jincheng", "TW", .asia, "Jincheng, Kinmen", "金門金城", population: 140, latitude: 244_391_010, longitude: 1_183_202_000),
+        RealWorldPlace("moi-nangan", "TW", .asia, "Nangan, Lienchiang (Matsu)", "連江南竿", population: 14, latitude: 261_539_000, longitude: 1_199_500_000),
     ]
 
     /// `Ci/`'s `CITIES` (`Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`),

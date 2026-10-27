@@ -284,7 +284,7 @@ struct PopulationLegendView: View {
                 .foregroundStyle(Theme.textSecondary)
         }
         if mode == .landValue {
-            Text(verbatim: language.text("Dollars a square metre; tap a cell for its parts", "單位：每平方公尺美元；點一格看分項"))
+            Text(verbatim: language.text("$ a square metre; tap a cell for its parts", "單位：每平方公尺 $；點一格看分項"))
                 .font(.caption2)
                 .foregroundStyle(Theme.textSecondary)
         }
@@ -429,7 +429,7 @@ struct PopulationLegendView: View {
                 }
             }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text(verbatim: language.text("Land value, dollars a square metre", "地價，每平方公尺美元")))
+            .accessibilityLabel(Text(verbatim: language.text("Land value, $ a square metre", "地價，每平方公尺多少 $")))
             .accessibilityIdentifier("map.landValueLegend")
         case .coverage:
             VStack(alignment: .leading, spacing: 3) {

@@ -154,18 +154,18 @@ final class RealWorldMapTests: XCTestCase {
 
     // MARK: - Places
 
-    /// The references' places: the eleven Taiwan Railway stations of
-    /// `Railway/`, the 53 cities of `Ci/` and the 127 main stations of
+    /// The references' places: the 22 Taiwan places of
+    /// `Railway/` (decision 442), the 53 cities of `Ci/` and the 127 main stations of
     /// decision 262.
     func testThePlacesAreTheReferences() {
         let places = RealWorldPlace.all
-        XCTAssertEqual(places.count, 191)
-        XCTAssertEqual(Set(places.map(\.id)).count, 191)
-        XCTAssertEqual(Set(places.map(\.anchor)).count, 191)
-        XCTAssertEqual(Set(places.map { $0.name(in: .english) }).count, 191)
-        XCTAssertEqual(Set(places.map { $0.name(in: .traditionalChinese) }).count, 191)
-        XCTAssertEqual(places.filter { $0.id.hasPrefix("tra-") }.count, 11)
-        XCTAssertEqual(places.filter { $0.country == "TW" }.map(\.id), places.filter { $0.id.hasPrefix("tra-") }.map(\.id))
+        XCTAssertEqual(places.count, 202)
+        XCTAssertEqual(Set(places.map(\.id)).count, 202)
+        XCTAssertEqual(Set(places.map(\.anchor)).count, 202)
+        XCTAssertEqual(Set(places.map { $0.name(in: .english) }).count, 202)
+        XCTAssertEqual(Set(places.map { $0.name(in: .traditionalChinese) }).count, 202)
+        XCTAssertEqual(places.filter { $0.country == "TW" }.count, 22)
+        XCTAssertTrue(places.filter { $0.country == "TW" }.allSatisfy { $0.id.hasPrefix("tra-") || $0.id.hasPrefix("moi-") })
         XCTAssertEqual(RealWorldPlace.standard.id, "tra-taipei")
         XCTAssertEqual(RealWorldPlace.standard.name(in: .english), "Taipei")
         XCTAssertEqual(RealWorldPlace.standard.name(in: .traditionalChinese), "臺北")
@@ -222,7 +222,7 @@ final class RealWorldMapTests: XCTestCase {
             }
         }
         // Taiwan north to south and round the east, as `Railway/` lists them.
-        XCTAssertEqual(groups[0].places.map(\.id), RealWorldPlace.all.filter { $0.id.hasPrefix("tra-") }.map(\.id))
+        XCTAssertEqual(groups[0].places.map(\.id), RealWorldPlace.all.filter { $0.country == "TW" }.map(\.id))
         // The others largest first; places of one city in the list's order.
         for group in groups.dropFirst() {
             XCTAssertEqual(group.places.map(\.population), group.places.map(\.population).sorted(by: >), group.id)

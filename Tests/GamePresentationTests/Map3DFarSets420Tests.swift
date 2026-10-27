@@ -5,7 +5,7 @@ import XCTest
 /// car from 500 m out as decision 408's far sets are (decision 432: the EMU800
 /// and the EMU500 have theirs in `Map3DEMU800IntegrationTests`).
 final class Map3DFarSets420Tests: XCTestCase {
-    private let pack = Map3DModelPack.standard
+    private let pack = Map3DModelPack.unbaked  // the recipes before decision 439's shade
 
     private func model(_ name: String) throws -> Map3DModelPack.Model {
         pack.models[try XCTUnwrap(pack.index(of: name), name)]

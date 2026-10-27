@@ -92,10 +92,14 @@ public enum Map3DSignalTiming {
         /// paused, the speed it resumes at (so pausing at 600× keeps the
         /// steady look).
         public let changes: Bool
+        /// Decision 445: whether the clock is paused (the little green man
+        /// stands still).
+        public let paused: Bool
 
         public init(_ clock: GameClock) {
             second = clock.now.seconds
             changes = Map3DSignalTiming.changes(at: clock.runningSpeed)
+            paused = clock.isPaused
         }
 
         /// What `road`'s signals at a junction of `group` show.

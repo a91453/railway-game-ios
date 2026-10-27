@@ -85,8 +85,8 @@ public enum PopTravelMode: String, CaseIterable, Hashable, Sendable {
             )
         case .landValue:
             language.text(
-                "What each cell is worth, in dollars a square metre, from its use, density and the nearest good service.",
-                "每格的地價（每平方公尺美元），依用途、密度與附近車站的服務推算。"
+                "What each cell is worth, in $ a square metre, from its use, density and the nearest good service.",
+                "每格的地價（每平方公尺多少 $），依用途、密度與附近車站的服務推算。"
             )
         case .coverage:
             language.text(
