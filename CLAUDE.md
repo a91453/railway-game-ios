@@ -107,8 +107,8 @@ its shaders TSL; start with its `00_READ_ME_FIRST.md`,
 `source/MISSING_COMPONENTS.md` and `source/THIRD_PARTY_ATTRIBUTION.md`;
 what to take from it is in `docs/research/NEXT_PRIORITIES_2026-10-12.md`
 §22.12), `Railway/tdx-snapshot-2026-10/` (added 2026-10-27; TDX downloads
-of rail line shapes, station exits and facilities, not yet the Taiwan Railway
-delay history; start with its `00_READ_ME_FIRST.md` and
+of rail line shapes, station exits and facilities, and 90 days of Taiwan
+Railway delay reports (2026-07-29 to 10-26); start with its `00_READ_ME_FIRST.md` and
 `DATA_USE_NOTICES.json`), and `city_map_reference_clean/` and
 `power_grid_reference_clean/` at the repository root (start with their
 `REFERENCE_COMPARISON.md` and `SANITIZATION_REPORT.md`).
