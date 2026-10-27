@@ -31,6 +31,40 @@ public enum WhatsNew {
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
         Entry(
+            id: "2026-10-27",
+            items: [
+                Line(
+                    english: "In 3D, the TRA local trains are the new EMU800, EMU500 and EMU900, running mixed.",
+                    chinese: "3D 的台鐵區間車換成新的 EMU800、EMU500 和 EMU900，三款混著跑。"
+                ),
+                Line(
+                    english: "In 3D, half the Taipei Metro trains are the new C341.",
+                    chinese: "3D 的台北捷運有一半換成新的 C341。"
+                ),
+                Line(
+                    english: "Kaohsiung Station stands on the 3D map: the new station, its great canopy and the old station building.",
+                    chinese: "3D 地圖多了高雄車站：新站房、大天棚和帝冠式舊站房。"
+                ),
+                Line(
+                    english: "In 3D, the Puyuma, the Chu-Kuang coaches and the push-pull Tze-Chiang have a new look; the push-pull sets have an E500 at each end.",
+                    chinese: "3D 的普悠瑪號、莒光號客車和推拉式自強號換新外型，推拉式兩端都是 E500。"
+                ),
+                Line(
+                    english: "With the train pack, the push-pull Tze-Chiang can take the classic E1000 look.",
+                    chinese: "列車包裡，推拉式自強號可以換成 E1000 經典外觀。"
+                ),
+                Line(
+                    english: "Old games can turn on roads and buses: choose the bus tool and tap Turn On Roads and Buses.",
+                    chinese: "舊存檔也能開公車：選公車工具，按「打開道路與公車」。"
+                ),
+                Line(
+                    english: "The traffic lights at 3D crossings change with the clock.",
+                    chinese: "3D 路口的紅綠燈會照時間換燈。"
+                ),
+            ],
+            fixes: []
+        ),
+        Entry(
             id: "2026-10-26",
             items: [
                 Line(
