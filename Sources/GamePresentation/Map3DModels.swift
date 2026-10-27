@@ -61,6 +61,8 @@ public struct Map3DModelPack: Sendable {
         // Decision 244: and the street furniture.
         // Decision 370: in the model look, as the city round them.
         models += Map3DProp.allCases.map { Map3DLook.restyle($0.model()) }
+        // Decision 445: and the pedestrian signals' faces and countdowns.
+        models += Map3DPedestrianSignal.models()
         // Decision 259: and the people, scooters and cars.
         models += Map3DStreetModel.allCases.map { $0.model() }
         // Decision 318: and the sets that had none.
@@ -116,11 +118,18 @@ public struct Map3DModelPack: Sendable {
                 if !far { for reversed in [false, true] { models.append(Map3DEMU900.model(role, reversed: reversed, light: true)) } }
             }
         }
+        // Static 610 study; no shared metro operating mapping is changed.
+        for role in Map3DTaipei610.Role.allCases {
+            models.append(Map3DTaipei610.model(role))
+            models.append(Map3DTaipei610.model(role, far: true))
+            models.append(Map3DTaipei610.model(role, light: true))
+        }
         // Decision 400, 10i-6: the player's route buses, last, so no model
         // before them moves.
         models.append(Map3DLowFloorBus.routeModel())
-        // Decision 439: the trains' soft shade, baked into their colour.
-        self.models = baked ? Map3DTrainOcclusion.baked(models) : models
+        // Decision 450: their glass and stainless marked, then decision
+        // 439's soft shade baked into their colour.
+        self.models = baked ? Map3DTrainOcclusion.baked(Map3DTrainMaterial.marked(models)) : models
         headSigns = Map3DHeadSign.anchors(in: models)
     }
 

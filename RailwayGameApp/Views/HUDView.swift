@@ -822,7 +822,7 @@ private struct ForecastView: View {
 
 /// Pause or play, and a menu of the speeds from real time up (Stage W2a),
 /// labelled with the speed the game runs at. Everything is read from the
-/// world's clock. Also on the 3D map (``Map3DPreviewScreen``), which covers
+/// world's clock (``GameSession/shownClock``). Also on the 3D map (``Map3DPreviewScreen``), which covers
 /// the status pill.
 struct SpeedControl: View {
     let session: GameSession
@@ -831,7 +831,8 @@ struct SpeedControl: View {
     var tutorialTarget: TutorialTarget? = .speedControl
 
     var body: some View {
-        let clock = session.world.clock
+        // The speed just chosen, though a tick being worked out holds it.
+        let clock = session.shownClock
         let language = session.language
         HStack(spacing: 4) {
             Button {

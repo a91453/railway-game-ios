@@ -92,11 +92,14 @@ final class CommandLogTests: XCTestCase {
     func testADroppedTickIsNotLogged() throws {
         let session = GameSession(world: try makeWorld(width: 16_384, height: 8_192, balance: 1_000_000, speed: .normal))
         let dropped = try XCTUnwrap(session.beginLoopTick())
-        session.setSpeed(.fast)
+        // A speed chosen meanwhile waits for the tick (player feedback
+        // 91.1); a pause and a resume do not.
+        session.togglePause()
+        session.togglePause()
         XCTAssertFalse(session.finish(dropped, with: .success(try GameSession.advanced(dropped.world, by: 1, listening: false))))
         let taken = try XCTUnwrap(session.beginLoopTick())
         XCTAssertTrue(session.finish(taken, with: .success(try GameSession.advanced(taken.world, by: 1, listening: false))))
-        XCTAssertEqual(session.commandLog.entries.map(\.action), [.setSpeed(.fast), .advance(ticks: 1)])
+        XCTAssertEqual(session.commandLog.entries.map(\.action), [.pause, .resume, .advance(ticks: 1)])
     }
 
     /// The log keeps at most its limit: reaching it, the world after the

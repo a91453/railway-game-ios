@@ -19,14 +19,22 @@ final class TrainShowcaseUITests: XCTestCase {
 
         // The version row, at the foot of the list, tapped five times in a
         // row shows the demo mode's rows (decision 351); the switch itself
-        // is left as it is.
+        // is left as it is. The taps count only when each follows the last
+        // within DemoMode.tapGap (1.5 s), and on a loaded runner a tap can
+        // take longer than that, so a batch is tried again (the count
+        // starts over after the pause) until a row shows. The rows sit
+        // below the version row, and a List holds no row that is off the
+        // screen, so "shown" is read from the switch and the showcase row
+        // alike, then the list is dragged to the showcase row.
         let version = app.descendants(matching: .any)["settings.version"].firstMatch
         XCTAssertTrue(app.dragUntilWhollyOnScreen(version, clearOf: .slider), "Missing the version row")
         let showcase = app.buttons["settings.trainShowcase"]
-        for _ in 0..<2 where !showcase.exists {
+        let demoSwitch = app.switches["settings.demoMode"]
+        for _ in 0..<4 where !showcase.exists && !demoSwitch.exists {
             for _ in 0..<5 { version.tap() }
-            _ = showcase.appears(within: 3)
+            _ = showcase.appears(within: 3) || demoSwitch.appears(within: 1)
         }
+        XCTAssertTrue(demoSwitch.exists || showcase.exists, "The version row's taps did not show the demo mode's rows")
         XCTAssertTrue(app.dragUntilWhollyOnScreen(showcase, clearOf: .slider), "Missing the train showcase row")
         showcase.tap()
 

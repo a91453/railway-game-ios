@@ -56,9 +56,21 @@ public struct Map3DVertex: Hashable, Sendable {
     public static let towerGlass: Float = -10
     /// No texture, and lit warm after dark as a floodlit ledge is.
     public static let floodlit: Float = -12
+    /// Decision 450: a train's window glass, which mirrors the sky and
+    /// glints in the sun (``Map3DTrainMaterial``); its `u` the shade
+    /// decision 439 baked into it (a shut-in pane mirrors less).
+    public static let trainGlass: Float = -13
+    /// Decision 450: a stainless train's body, its sheen and a soft mirror
+    /// of the sky tinted by its own colour; `u` as ``trainGlass``.
+    public static let trainSteel: Float = -14
+    /// Decision 450: a train's window glass that is also lit from within at
+    /// night (``glowing`` and ``trainGlass`` at once).
+    public static let trainGlassLit: Float = -15
 
     /// Whether the vertex is lit from within at night.
-    public var glows: Bool { layer < -1.5 && layer > -2.5 }
+    public var glows: Bool { (layer < -1.5 && layer > -2.5) || (layer < -14.5 && layer > -15.5) }
+    /// Decision 450: whether the vertex is a train's glass or stainless body.
+    public var isTrainMaterial: Bool { layer < -12.5 && layer > -15.5 }
     /// Decision 356: whether the vertex is water.
     public var isWater: Bool { layer < -2.5 && layer > -3.5 }
 
@@ -141,8 +153,9 @@ public enum Map3DSurface: Int, CaseIterable, Sendable {
     /// 洗石子: washed grit, a dividing groove every 0.9 m.
     case terrazzo
     /// Decision 355: the road's paint, on asphalt that takes the road's
-    /// colour. A zebra crossing (斑馬線): one bar 0.45 m wide and its
-    /// gap across `u`, the bars running along the traffic (`v`).
+    /// colour. A zebra crossing (斑馬線): one bar and its gap, as wide
+    /// as each other, across `u`, the bars running along the traffic
+    /// (`v`); decision 447 lays a repeat on 0.8 m (355: 0.9 m).
     case crosswalk
     /// Decision 355: two lane arrows on 1.7 × 5 m, the far end (the way
     /// the traffic goes) at `v` 0: through in `u` 0–0.5, through and left

@@ -10,7 +10,7 @@ road's; black keeps the paint's own white).
 
 Shapes after this repository's 3D city view (MIT, decision 152):
 `Web/CityView/tools/pipeline/markings.mjs` (zebra bars 0.45 m at a 0.9 m
-pitch) and `Web/CityView/src/world/props.js` `decalTexture` (arrows on a
+pitch; decision 447 lays a repeat on 0.8 m, bars 0.4 m and 0.4 m apart) and `Web/CityView/src/world/props.js` `decalTexture` (arrows on a
 1.7 x 5 m cell, the far end up). Needs Pillow and NumPy.
 """
 import sys
@@ -38,7 +38,8 @@ def worn(mask, seed):
 
 
 def crosswalk():
-    # u across the road, one repeat a bar and its gap (0.9 m); v along it.
+    # u across the road, one repeat a bar and its gap (0.8 m, decision 447);
+    # v along it.
     u = (np.arange(SIDE) + 0.5) / SIDE
     bar = (u >= 0.25) & (u < 0.75)
     return worn(np.tile(bar, (SIDE, 1)), 355)
