@@ -55,7 +55,8 @@ final class RealWorldExpansionTests: XCTestCase {
     /// centred on it, the tiles are whole, and the island lies inside the
     /// world.
     func testTheLayoutCentresTheFirstTileOnThePickAndHoldsTheIsland() throws {
-        var picks = RealWorldPlace.taiwan.map(\.anchor)
+        // Kinmen and Matsu lie beyond the box and open one 16 km map.
+        var picks = RealWorldPlace.taiwan.map(\.anchor).filter { RealWorldExpansion(around: $0) != nil }
         // The box's corners and edges exactly, and a grid over it.
         for latitude in [WholeTaiwan.south, WholeTaiwan.north] {
             for longitude in [WholeTaiwan.west, WholeTaiwan.east] {
@@ -360,5 +361,52 @@ final class RealWorldExpansionTests: XCTestCase {
         XCTAssertGreaterThan(world.lastDayTrips(), 0, "the first tile's people ride")
         let saved = try JSONEncoder().encode(SavedGame(world: world))
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: saved).world, world)
+    }
+
+    // MARK: - Every county
+
+    /// Each of Taiwan's 22 counties and cities has a place to start in
+    /// (decision 442), the list runs north to south then round the east and
+    /// out to the islands, and Taipei stays the default.
+    func testEveryCountyHasAPlace() throws {
+        let counties: [(county: String, place: String)] = [
+            ("基隆市", "tra-keelung"), ("臺北市", "tra-taipei"), ("新北市", "tra-banqiao"), ("桃園市", "tra-taoyuan"),
+            ("新竹市", "tra-hsinchu"), ("新竹縣", "tra-zhubei"), ("苗栗縣", "tra-miaoli"), ("臺中市", "tra-taichung"),
+            ("彰化縣", "tra-changhua"), ("南投縣", "moi-nantou"), ("雲林縣", "tra-douliu"), ("嘉義市", "tra-chiayi"),
+            ("嘉義縣", "moi-taibao"), ("臺南市", "tra-tainan"), ("高雄市", "tra-kaohsiung"), ("屏東縣", "tra-pingtung"),
+            ("宜蘭縣", "tra-yilan"), ("花蓮縣", "tra-hualien"), ("臺東縣", "tra-taitung"),
+            ("澎湖縣", "moi-magong"), ("金門縣", "moi-jincheng"), ("連江縣", "moi-nangan"),
+        ]
+        XCTAssertEqual(counties.count, 22)
+        XCTAssertEqual(RealWorldPlace.taiwan.map(\.id), counties.map(\.place), "one each, in the list's order")
+        XCTAssertEqual(RealWorldPlace.standard.id, "tra-taipei")
+        for (county, id) in counties {
+            XCTAssertEqual(try place(id).country, "TW", county)
+        }
+        // The island and Penghu lay out a map; Kinmen and Matsu, beyond the
+        // box of Taiwan, open one 16 km map.
+        for id in ["moi-magong", "tra-pingtung", "moi-nantou", "moi-taibao", "tra-douliu", "tra-changhua", "tra-miaoli", "tra-zhubei", "tra-banqiao"] {
+            XCTAssertNotNil(RealWorldExpansion(around: try place(id).anchor), id)
+        }
+        for id in ["moi-jincheng", "moi-nangan"] {
+            XCTAssertNil(RealWorldExpansion(around: try place(id).anchor), id)
+        }
+    }
+
+    /// Penghu, Kinmen and Matsu start with their land read in, and the
+    /// borders put all three in Taiwan.
+    func testTheIslandsStart() throws {
+        let files = RealWorldFiles(folder: CommandLogReplay.root.appendingPathComponent("RailwayGameApp/Resources/RealWorld"))
+        let (population, places) = try files.peopleAndPlaces()
+        let data = GameLauncher.NewWorldData(population: population, places: places, water: nil, coverage: nil, heights: nil)
+        for id in ["moi-magong", "moi-jincheng", "moi-nangan"] {
+            let anchor = try place(id).anchor
+            XCTAssertEqual(CountryLookup.country(at: anchor), "TW", id)
+            let land = try XCTUnwrap(GameLauncher.land(at: anchor, data: data), id)
+            XCTAssertFalse(land.isEmpty, id)
+        }
+        for place in RealWorldPlace.taiwan {
+            XCTAssertEqual(CountryLookup.country(at: place.anchor), "TW", place.id)
+        }
     }
 }
