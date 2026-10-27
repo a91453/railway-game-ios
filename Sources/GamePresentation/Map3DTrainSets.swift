@@ -19,6 +19,9 @@ public struct Map3DTrainSet: Sendable {
     public let key: String
     /// The middle cars with a pantograph (``Map3DTrainStyle/pantographCars``).
     var pantographCars: Set<Int> = []
+    /// Decision 426: the middle cars drawn as ``Cars/centre`` and not the
+    /// middle car (the TEMU2000's two TEMB cars between its TEMA cars).
+    var centreCars: Set<Int> = []
     /// Decision 399: the cars drawn at their models' own lengths
     /// (``Map3DModelPack/layout(forType:count:)``), not stretched to the
     /// 20 m every other train's are, each touching the next (their models
@@ -41,6 +44,8 @@ public struct Map3DTrainSet: Sendable {
         var tail: Map3DModelPack.Model?
         var single: Map3DModelPack.Model?
         var pantograph: Model? = nil
+        /// Decision 426: the middle car of the cars in ``centreCars``.
+        var centre: Model? = nil
         /// Decision 399: a steam locomotive's tender, a car of its own
         /// between it and the coaches.
         var tender: Model? = nil
@@ -58,6 +63,7 @@ public struct Map3DTrainSet: Sendable {
     var tailName: String { "set-\(key)-tail" }
     var singleName: String { "set-\(key)-single" }
     var pantographName: String { "set-\(key)-panto" }
+    var centreName: String { "set-\(key)-centre" }
     var tenderName: String { "set-\(key)-tender" }
     var middleBackName: String { "set-\(key)-carBack" }
     var pantographBackName: String { "set-\(key)-pantoBack" }
@@ -77,6 +83,7 @@ public struct Map3DTrainSet: Sendable {
         if let tail = cars.tail { models.append(named(tail, tailName)) }
         if let single = cars.single { models.append(named(single, singleName)) }
         if let pantograph = cars.pantograph { models.append(named(pantograph, pantographName)) }
+        if let centre = cars.centre { models.append(named(centre, centreName)) }
         if let tender = cars.tender { models.append(named(tender, tenderName)) }
         if let middle = cars.middleBack { models.append(named(middle, middleBackName)) }
         if let pantograph = cars.pantographBack { models.append(named(pantograph, pantographBackName)) }
@@ -133,7 +140,10 @@ public struct Map3DTrainSet: Sendable {
             n700sGFar(),
             multipleUnit("metroC381", asset: "02_HSR_MRT_3x2-02", lineColoured: true),
             multipleUnit("wenhu", asset: "02_HSR_MRT_3x2-03", lineColoured: true),
-            multipleUnit("puyuma", asset: "01_TRA_modern_3x2-02", livery: TrainLivery.puyuma),
+            // Decision 426: the Puyuma as #1292's TEMU2000, and its light
+            // version from 500 m out.
+            temu2000(),
+            temu2000(far: true),
             temu1000(),
             // Decision 420: and its light version from 500 m out.
             temu1000(far: true),
@@ -200,8 +210,9 @@ public struct Map3DTrainSet: Sendable {
     /// Decision 408: and the 700T and the N700S-G, 5,600 to 9,100 a car
     /// (their ``far`` sets between).
     /// Decision 420: and the Taroko and the EMU800 (their far sets).
+    /// Decision 426: and the Puyuma (its far set).
     static let nearOnly: Set = ["E500CK", "MINGRI", "STAR", "pushPull", "greenTram", "SUMMER", "STEAM", "highSpeed", "n700sG", "emu3000",
-                                "taroko", "emu800"]
+                                "taroko", "emu800", "puyuma"]
 
     /// Decision 408: the set a train of `key` numbered `number` is drawn
     /// as: half the high-speed trains, the odd-numbered, the N700S-G, the
@@ -392,6 +403,30 @@ public struct Map3DTrainSet: Sendable {
                         middle: Map3DTEMU1000.model(.middle, far: far),
                         tail: cab(.trailing, at: -12.42, colour: Map3DPalette.lantern),
                         single: nil, pantograph: Map3DTEMU1000.model(.pantograph, far: far))
+        }
+    }
+
+    /// Decision 426: #1292's TEMU2000 units in the operating Puyuma set,
+    /// in the static formation's order (TED, TEMA, TEP, TEMB, TEMB, TEP,
+    /// TEMA, TED): the pantographs on cars 3 and 6 (the second TEP turned
+    /// round, ``Map3DTEMU2000/rotations``), each cab's lamps lit at its real
+    /// end, white at the front and red at the back. `far`, the light units
+    /// (``Map3DTEMU2000/model(_:far:)``) drawn car for car from 500 m out.
+    static func temu2000(far: Bool = false) -> Map3DTrainSet {
+        Map3DTrainSet(key: far ? "puyumaFar" : "puyuma", pantographCars: [2, 5], centreCars: [3, 4], ownLengths: true, fixedCars: 8,
+                      far: far ? nil : "puyumaFar") {
+            func part(_ unit: Map3DTEMU2000.Unit) -> Map3DModelPack.Model { Map3DTEMU2000.model(unit, far: far) }
+            func cab(_ unit: Map3DTEMU2000.Unit, front: Bool) -> Map3DModelPack.Model {
+                let model = Map3DTEMU2000.model(unit, far: far)
+                var builder = StationKitBuilder()
+                builder.add(model, at: .zero)
+                builder.cabLamps(atX: front ? model.maximum.x + 0.02 : model.minimum.x - 0.02,
+                                 colour: front ? Map3DTrainStyle.headlamp : Map3DPalette.lantern,
+                                 height: 1.10, across: 0.30, width: 0.20, tall: 0.14)
+                return .flat(named: "puyuma-\(unit.rawValue)" + (far ? "-far" : ""), from: builder.mesh)
+            }
+            return Cars(head: cab(.leading, front: true), middle: part(.tema), tail: cab(.trailing, front: false), single: nil,
+                        pantograph: part(.tep).turned, centre: part(.temb), pantographBack: part(.tep))
         }
     }
 

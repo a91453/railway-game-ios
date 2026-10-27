@@ -1,26 +1,26 @@
 # TEMU1000 製作交接與可重用經驗
 
-此頁是目前版本的接手入口。逐輪的造型判讀保留在 [README](README.md)；其中「本輪前後對照」是當時的紀錄，**現行** `previews/before-after.png` 比較的是公開 producer `c39d546f` 與最新原生端車。任一新修訂都要先保存真正前版，再重做同相機、同公尺尺度的比較。
+此頁是目前版本的接手入口。逐輪的造型判讀保留在 [README](README.md)；其中歷史章節的「本輪前後對照」是當時的紀錄，**現行** `previews/before-after.png` 比較的是已合併公開 producer `7efa16f6` 與 2026-10-26 車頭小修版原生端車。任一新修訂都要先保存真正前版，再重做同相機、同公尺尺度的比較。
 
 ## 目前交付與狀態
 
-- 公開 [issue #1228](https://github.com/a91453/railway-game-ios/issues/1228)／[draft PR #1230](https://github.com/a91453/railway-game-ios/pull/1230)：`Sources/GamePresentation/Map3DTEMU1000.swift` 是唯一車形配方；`Map3DModelPack` 註冊四種車廂，`Map3DTrainSets.temu1000()` 將單元用於 `taroko` 的營運 3D 顯示。公開 PR 合併前遊戲不會使用此新造型。
-- 私有 [draft PR #78](https://github.com/a91453/railway-reference-private/pull/78)：`Railway/game-art-previews/docs/art/temu1000-2026-10-25/` 有最終 M3DM、GLB、每件七向 PNG、四單元／八節預覽、白模、剪影、同尺度風格比較、真正前後圖、viewer、manifest、來源紀錄、SHA 與完整 ZIP。原始參考圖沒有本機檔案或 SHA，沒有放進公開庫。
-- 模型是**靜態**遊戲素材，沒有動畫。GameCore、存檔、golden、replay 和玩法沒有為此修改。兩張 PR 仍是 draft；作者尚未認可造型。最新 CI 應以 PR 當下的 head 與 checks 為準，不沿用本頁的快照。
+- 初版公開 [PR #1230](https://github.com/a91453/railway-game-ios/pull/1230) 與私有 [PR #78](https://github.com/a91453/railway-reference-private/pull/78) 已合併；本輪接續 [issue #1299](https://github.com/a91453/railway-game-ios/issues/1299)。`Sources/GamePresentation/Map3DTEMU1000.swift` 是唯一車形配方；`Map3DTrainSets.temu1000()` 已在 `main` 把四單元用於 `taroko` 營運 3D 顯示。本輪新造型要待公開修訂 PR 合併才會取代已合併版。
+- 私有 `Railway/game-art-previews/docs/art/temu1000-2026-10-25/` 有本輪 M3DM、GLB、每件七向 PNG、四單元／八節預覽、白模、剪影、同尺度風格比較、真正前後圖、viewer、manifest、來源紀錄、SHA 與完整 ZIP。`history/7efa16f6/` 保存真前版。原始參考圖沒有本機檔案或 SHA，沒有放進公開庫。
+- 模型是**靜態**遊戲素材，沒有動畫。GameCore、存檔、golden、replay 和玩法沒有為此修改。新 PR 的最新 CI 應以 PR head 與 checks 為準，不沿用本頁的快照；使用者尚未確認這輪外觀。
 
 ## 最終外觀判讀
 
 | 項目 | 已見於最終原生渲染 | 仍需留意 |
 |---|---|---|
-| 車首 | 收圓而向前鼓出的七段細分鼻端、下移的深色風擋、連續霧白殼頂與置中的白色下臉、縮窄但有支承的中央雙燈與環鼻細腰線 | 近景鼻罩仍有細分段明暗，裙板與燈座仍是低多邊形簡化；灰色只用於屋頂實體設備 |
+| 車首 | 收圓而向前鼓出的七段細分鼻端、較前版上移且依車殼三角面裁切的深色風擋、霧白殼頂、屋頂支承雙燈、斜深色側燈與雙雨刷 | 正面下鼻仍比新照片更方、綠弧中心偏低、側斜風擋延伸較長；這些主曲面差距沒有靠局部燈窗修飾掩蓋 |
 | 側身 | 深色窗帶內有獨立霧藍灰客窗、細柱與門窗；輪盤較舊版小 | 另一側真實門窗位置、窗內構造與車底設備資料不足 |
 | 編組 | TED 端車兩節、TEM 中車四節、TEP 集電設備車兩節；中車沒有駕駛窗或頭燈 | 單元功能順序及隱藏設備是展示假設，並非工程確認 |
 
-檢視入口：私包 `previews/overview.png`、`passenger-detail-left.png`、`after-front.png`、`cab-detail-left.png`、`before-after.png`、`units.png`、`directions.png`；每件完整七向在 `views/`。前一輪縮小輪盤半徑 0.39→0.33 m 並分格側窗；本輪將殼頂改白、中央燈座收窄至 0.42 m、鼻端大扇面改為七段淺曲面。輪徑及燈座尺寸是遊戲比例推估，不是實車尺寸。
+檢視入口：私包 `previews/overview.png`、`passenger-detail-left.png`、`after-front.png`、`cab-detail-left.png`、`before-after.png`、`units.png`、`directions.png`；每件完整七向在 `views/`。先前縮小輪盤半徑 0.39→0.33 m 並分格側窗，殼頂改白、中央燈座收窄至 0.42 m、鼻端大扇面改七段淺曲面；本輪修風擋貼面、雙燈可見性、側燈與雨刷。輪徑及燈座尺寸是遊戲比例推估，不是實車尺寸。
 
 ## 如何重建與核對
 
-1. 先讀本頁、[製作紀錄](README.md)、`tools/temu1000/README.md`、私包 `README.md`、`manifest.json` 和 `source-record.json`。原生座標是公尺、+X 車首、+Y 左、+Z 上，軌面 Z=0。四角色次序及所有中心平移在 manifest；目前節距 23.9 m 是比例推估。私包的 `geometry-scope.json` 對照本輪真前版與終版，核對輪組及 TEP 高位集電弓頂點保持不變；兩版輪盤都已是縮小後比例。
+1. 先讀本頁、[製作紀錄](README.md)、`tools/temu1000/README.md`、私包 `README.md`、`manifest.json` 和 `source-record.json`。原生座標是公尺、+X 車首、+Y 左、+Z 上，軌面 Z=0。四角色次序及所有中心平移在 manifest；目前節距 23.9 m 是比例推估。私包的 `history/7efa16f6/` 是本輪真前版，`geometry-scope.json` 核對輪組與非端車原生幾何保持不變；兩版輪盤都已是縮小後比例。
 2. 只改獨立配方 `Map3DTEMU1000.swift`，再用 Swift 6.4、warnings-as-errors 執行 `tools/temu1000/export.sh OUT`。執行 `node tools/temu1000/render.mjs OUT`、`node tools/temu1000/clay.mjs OUT`；任何模型修改後都要重新匯出最終視圖，不要沿用舊 PNG。
 3. 目視原生模型的正、側、俯、斜及白模／剪影。先判整體長寬、頭尾曲面，再判輪組、門窗、設備；若改了造型，將前版原生模型保留於私庫，以 `node tools/temu1000/feedback-compare.mjs OUT PRIOR` 重做同相機同公尺尺度的前後圖。用「已符合／仍不符合／資料不足」記錄結果，不以測試通過代替外觀驗收。
 4. 執行 `node tools/temu1000/verify.mjs OUT`、`python3 tools/temu1000/verify-png.py OUT`、`node tools/temu1000/browser-check.mjs OUT`，並以 Blender 執行 `tools/temu1000/glb-audit.py`。原生讀回、三角數、法線、八節平移組裝、輪底、PNG 完整解碼／透明／不裁邊、viewer 旋轉／縮放／下載都須核對。相關 Swift 測試是 `Map3DTEMU1000Tests`、`Map3DModelTests`、`Map3DTrainSetTests`；最後一次模型修訂後本機共 27 項通過，CI 結果仍看新 head。

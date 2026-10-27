@@ -32,14 +32,16 @@ final class Map3DTEMU1000Tests: XCTestCase {
 
     func testRevisedCabHasBroadScreenAndRoundedLowNose() {
         let head = Map3DTEMU1000.model(.leading)
-        let screen = head.vertices.filter { $0.color == Map3DTEMU1000.glass && $0.x > 10.8 && $0.z > 2.2 }
+        let screen = head.vertices.filter { $0.color == Map3DTEMU1000.glass && $0.x > 10.2 && $0.z > 2.2 }
         XCTAssertFalse(screen.isEmpty)
         XCTAssertGreaterThan((screen.map(\.y).max() ?? 0) - (screen.map(\.y).min() ?? 0), 2.0,
                              "front windscreen must span the broad shoulders")
-        XCTAssertGreaterThan((screen.map(\.z).max() ?? 0) - (screen.map(\.z).min() ?? 0), 0.75,
+        XCTAssertGreaterThan((screen.map(\.z).max() ?? 0) - (screen.map(\.z).min() ?? 0), 1.05,
                              "front windscreen must extend down the cab")
-        XCTAssertLessThan(screen.map(\.z).min() ?? 10, 2.4,
-                          "the dark screen must reach the lowered nose")
+        XCTAssertGreaterThan(screen.map(\.z).max() ?? 0, 3.3,
+                             "front windscreen must reach close to the roof")
+        XCTAssertLessThan(screen.map(\.z).min() ?? 10, 2.43,
+                          "the dark screen must reach the cab's lower corners")
         if let top = screen.max(by: { $0.z < $1.z }),
            let bottom = screen.min(by: { $0.z < $1.z }) {
             let rake = (top.x-bottom.x)/(top.z-bottom.z)
@@ -73,21 +75,72 @@ final class Map3DTEMU1000Tests: XCTestCase {
         let head = Map3DTEMU1000.model(.leading)
         let glass = Map3DTEMU1000.glass
         XCTAssertFalse(middle.vertices.contains { $0.color == glass && abs($0.x) > 10.8 && $0.z > 3.1 })
-        XCTAssertTrue(head.vertices.contains { $0.color == glass && $0.x > 10.8 && $0.z > 3.1 })
+        XCTAssertTrue(head.vertices.contains { $0.color == glass && $0.x > 10.2 && $0.z > 3.1 })
     }
 
-    func testCabKeepsTwinUpperLampsAndSymmetricNosePaint() {
+    func testFrontGlazingStaysAboveActualCabFacets() {
+        for unit in [Map3DTEMU1000.Unit.leading, .trailing] {
+            let nose: Float = unit == .leading ? 1 : -1
+            let vertices = Map3DTEMU1000.model(unit).vertices
+            let triangles = stride(from: 0, to: vertices.count, by: 3).map {
+                Array(vertices[$0..<($0+3)])
+            }
+            let shell = triangles.filter { tri in
+                tri.allSatisfy { $0.color == Map3DTEMU1000.shell && $0.x*nose > 8.8 }
+            }
+            let glass = triangles.filter { tri in
+                tri.allSatisfy { $0.color == Map3DTEMU1000.glass } &&
+                tri.map(\.x).reduce(0,+)*nose/3 > 8.8 &&
+                tri.map(\.z).reduce(0,+)/3 > 2.35 &&
+                tri.allSatisfy { abs($0.y) < 1.2 }
+            }
+            XCTAssertGreaterThan(glass.count, 30)
+            for tri in glass {
+                let y=tri.map(\.y).reduce(0,+)/3
+                let z=tri.map(\.z).reduce(0,+)/3
+                let front=tri.map(\.x).reduce(0,+)*nose/3
+                var outer = -Float.infinity
+                for face in shell {
+                    let a=face[0],b=face[1],c=face[2]
+                    let by=b.y-a.y,bz=b.z-a.z,cy=c.y-a.y,cz=c.z-a.z
+                    let det=by*cz-bz*cy
+                    if abs(det)<0.00001 { continue }
+                    let py=y-a.y,pz=z-a.z
+                    let u=(py*cz-pz*cy)/det,v=(by*pz-bz*py)/det
+                    if u >= -0.0001 && v >= -0.0001 && u+v <= 1.0001 {
+                        outer=max(outer,(a.x*(1-u-v)+b.x*u+c.x*v)*nose)
+                    }
+                }
+                XCTAssertTrue(outer.isFinite)
+                if outer.isFinite {
+                    XCTAssertGreaterThan(front-outer,0.005,
+                                         "the windscreen must not disappear behind a cab facet")
+                    XCTAssertLessThan(front-outer,0.035,
+                                      "the windscreen must not float above its shell support")
+                }
+            }
+        }
+    }
+
+    func testCabLampsHaveVisibleCentralAndShoulderLensesAndSymmetricNosePaint() {
         for unit in [Map3DTEMU1000.Unit.leading, .trailing] {
             let model = Map3DTEMU1000.model(unit)
             let lamps = model.vertices.filter {
                 $0.color == Map3DStreetModel.headlamp && $0.z > 3.15 && abs($0.y) < 0.35
             }
-            XCTAssertGreaterThan(lamps.count, 50,"both upper lenses must be part of the native cab")
-            XCTAssertTrue(lamps.contains { $0.y < -0.08 })
-            XCTAssertTrue(lamps.contains { $0.y > 0.08 })
-            XCTAssertLessThan(lamps.map { abs($0.y) }.max() ?? 1,0.18,
-                              "the central lamp must stay narrow relative to the windscreen")
+            XCTAssertGreaterThan(lamps.count, 75,"both upper lenses must be part of the native cab")
+            XCTAssertTrue(lamps.contains { $0.y < -0.09 })
+            XCTAssertTrue(lamps.contains { $0.y > 0.09 })
+            XCTAssertLessThan(lamps.map { abs($0.y) }.max() ?? 1,0.13,
+                              "the twin lamp housing must stay narrow relative to the windscreen")
             let nose: Float = unit == .leading ? 1 : -1
+            let shoulders = model.vertices.filter {
+                $0.color == Map3DTEMU1000.passengerGlass && $0.x*nose > 11.4 &&
+                $0.z > 2.0 && $0.z < 2.4 && abs($0.y) > 0.5
+            }
+            XCTAssertGreaterThan(shoulders.count, 60,"both shoulder pods need smoked lenses")
+            XCTAssertTrue(shoulders.contains { $0.y < -0.75 })
+            XCTAssertTrue(shoulders.contains { $0.y > 0.75 })
             let paint = model.vertices.filter {
                 $0.color == Map3DTEMU1000.band && $0.x*nose > 12.2 && abs($0.y) < 1.30
             }

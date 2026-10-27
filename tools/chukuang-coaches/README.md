@@ -29,4 +29,4 @@ python3 tools/chukuang-coaches/bundle.py OUT PRODUCER
 
 最終ZIP之後的browser-check會改verification，必須再打包核逐檔bytes。來源／producer／公開overview一致才封包。ZIP SHA記包外package-verification.json，沒有遞迴內含自身。
 
-capture對base及本分支各跑，coexistence.py BASE CURRENT OUT核所有既有模型payload不變。其含E500／EMU3000／PP／E1000，直接與已接受包比對另看私包protection-record。GLB／七向／viewer／ZIP全來自同一最終M3DM。四節組裝每節平移-20m，第一客車在-20.385m，E500原樣；客車間風擋約40mm間隙，coupler接觸。這只是展示，不是認證當班編組或推拉控制。
+capture對base及本分支各跑，coexistence.py BASE CURRENT OUT BASE_COMMIT核所有既有模型payload不變。其含E500／EMU3000／PP／E1000，直接與已接受包比對另看私包protection-record。GLB／七向／viewer／ZIP全來自同一最終M3DM。四節組裝每節平移-20m，第一客車在-20.385m，E500原樣；客車間風擋約40mm間隙，coupler接觸。這只是展示，不是認證當班編組或推拉控制。

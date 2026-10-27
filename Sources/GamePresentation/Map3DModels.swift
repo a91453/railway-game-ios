@@ -159,6 +159,7 @@ public struct Map3DModelPack: Sendable {
         if carIndex == 0 { return index(of: set.headName) }
         if carIndex == count - 1 { return index(of: set.tailName) ?? index(of: set.headName) }
         let back = carIndex * 2 >= count
+        if set.centreCars.contains(carIndex), let centre = index(of: set.centreName) { return centre }
         if set.pantographCars.contains(carIndex), let panto = index(of: set.pantographName) {
             return back ? index(of: set.pantographBackName) ?? panto : panto
         }
