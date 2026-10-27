@@ -25,5 +25,89 @@
     "credits": 24,
     "raw_sha256": "43b59d1958bb2beb5ae07db491018fadd2545355f787664db7d9b4986a70126d",
     "raw_bytes": 2208860
+  },
+  "garbage-truck": {
+    "tasks": [
+      {
+        "id": "01a17beb-5350-722d-abd2-27e3ec9dde01",
+        "type": "text-to-3d-preview",
+        "prompt": "Taiwan municipal garbage collection truck (垃圾車), long and low: a small cab at the front, behind it a rear-loading compactor body no taller than 1.3 times the cab, with a wide loading opening at the very back, six wheels, about 6.5 m long, 2.3 m wide and only 2.8 m tall. Solid simple body, a small amber beacon on the cab roof. Single object only, clean simple stylised shapes, no text, no logos, no base, no ground, no people.",
+        "texture_prompt": null,
+        "ai_model": "meshy-7.1",
+        "model_type": "standard",
+        "credits": 20,
+        "finished": "2026-10-27T05:53:44Z"
+      },
+      {
+        "id": "01a17beb-ff90-7431-ae91-318004fda0cb",
+        "type": "text-to-3d-refine",
+        "prompt": "Taiwan municipal garbage collection truck (垃圾車), long and low: a small cab at the front, behind it a rear-loading compactor body no taller than 1.3 times the cab, with a wide loading opening at the very back, six wheels, about 6.5 m long, 2.3 m wide and only 2.8 m tall. Solid simple body, a small amber beacon on the cab roof. Single object only, clean simple stylised shapes, no text, no logos, no base, no ground, no people.",
+        "texture_prompt": "No text, no logos, no wear or dirt. Bright yellow body, dark grey rear loading opening, black wheels, orange beacon, light blue cab windows, yellow cab.",
+        "ai_model": null,
+        "model_type": "standard",
+        "credits": 10,
+        "finished": "2026-10-27T05:55:37Z"
+      },
+      {
+        "id": "01a17bf5-c4e8-7386-958d-32d4e6caf694",
+        "type": "remesh",
+        "prompt": null,
+        "texture_prompt": null,
+        "ai_model": null,
+        "model_type": null,
+        "credits": 5,
+        "finished": "2026-10-27T06:07:07Z"
+      },
+      {
+        "id": "01a17c14-a026-7582-98f4-eb27697b38b2",
+        "type": "retexture",
+        "prompt": null,
+        "texture_prompt": "The whole truck body is one uniform bright yellow: the cab AND the entire rear compactor box are the same solid bright yellow, flat colour with no gradient. Only the wheels and bumper are black, the cab windows light blue, a small orange beacon on the cab roof. Nothing on the box is grey. No text, no logos, no wear or dirt.",
+        "ai_model": null,
+        "model_type": null,
+        "credits": 10,
+        "finished": "2026-10-27T06:38:41Z"
+      },
+      {
+        "id": "01a17c27-4348-73cf-a85e-f6e2776e3079",
+        "type": "remesh",
+        "prompt": null,
+        "texture_prompt": null,
+        "ai_model": null,
+        "model_type": null,
+        "credits": 5,
+        "finished": "2026-10-27T06:59:38Z"
+      }
+    ],
+    "credits": 50,
+    "raw_sha256": "3164549a375bf35e42396c222c5186c0a00bbe66ad656c0c38f27a7358569588",
+    "raw_bytes": 9780316
+  },
+  "recycling-truck": {
+    "tasks": [
+      {
+        "id": "01a17be2-c7ed-7732-8bca-1032e8d2a880",
+        "type": "text-to-3d-preview",
+        "prompt": "Taiwan recycling collection truck, long and low: a small cab at the front and one long, completely empty, flat open cargo bed behind it with low straight side rails and a plain flat floor, six wheels, about 6.5 m long, 2.3 m wide and only 2.6 m tall. Nothing sits on the bed, no boxes, no bins, no extra parts. Single object only, low poly game asset, flat colors, clean simple shapes, no text, no logos, no base, no ground, no people.",
+        "texture_prompt": null,
+        "ai_model": "meshy-t2",
+        "model_type": "smart-topology",
+        "credits": 5,
+        "finished": "2026-10-27T05:43:52Z"
+      },
+      {
+        "id": "01a17be3-0cf2-7711-800a-cffe80381b40",
+        "type": "text-to-3d-refine",
+        "prompt": "Taiwan recycling collection truck, long and low: a small cab at the front and one long, completely empty, flat open cargo bed behind it with low straight side rails and a plain flat floor, six wheels, about 6.5 m long, 2.3 m wide and only 2.6 m tall. Nothing sits on the bed, no boxes, no bins, no extra parts. Single object only, low poly game asset, flat colors, clean simple shapes, no text, no logos, no base, no ground, no people.",
+        "texture_prompt": "Flat colours only, no text, no logos, no wear or dirt. Light green cab and body, grey flat cargo bed and rails, black wheels, light blue cab windows.",
+        "ai_model": null,
+        "model_type": "smart-topology",
+        "credits": 10,
+        "finished": "2026-10-27T05:45:25Z"
+      }
+    ],
+    "credits": 15,
+    "raw_sha256": "4441a1213c6b7d6def6eadc754ba48899364f29b9e28afd0d3c3a23d8861769a",
+    "raw_bytes": 2045828
   }
 }

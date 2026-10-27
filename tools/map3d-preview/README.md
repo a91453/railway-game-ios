@@ -40,6 +40,7 @@ rm Tests/GamePresentationTests/Map3DPreviewDump.swift
 | `MAP3D_MINUTE` | 一天裡的第幾分鐘（`0`–`1439`），照那時的光線畫；預設 `840`（14:00） |
 | `MAP3D_HEIGHTS` | `1`：世界還沒讀的地面用 App 的高度檔（`taiwan_heights.dat`），和 App 一樣 |
 | `MAP3D_LIFE` | `x:z:距離`：決策 259 的行人與車輛，鏡頭在這個距離看這一點時畫的那些（時鐘的第 36,000 秒），每個實例展開成網格 |
+| `MAP3D_GARBAGE` | 秒數：和 `MAP3D_LIFE` 一起用，加上決策 437 傍晚的垃圾車（與跟著的資源回收車）：第一個附近有街道收運的那天的 19:30，街道時鐘的這一秒；印出車的位置 |
 | `MAP3D_LIFE_DETAIL` | `reduced`：和 `MAP3D_LIFE` 一起用，畫舊機型的份量（決策 259） |
 | `MAP3D_BUSY` | `1`：和 `MAP3D_LIFE` 一起用，每個車站都當作候車 400 人、一天 8,000 人次 |
 | `MAP3D_WEATHER` | `rain`、`thunderstorm`、`typhoon`：那種天氣的光線與霧（決策 277），和第 36,000 秒的雨絲（決策 320）。雨絲照手機畫：圖當成 533 × 300 點、每點 3 像素；預設是晴天 |

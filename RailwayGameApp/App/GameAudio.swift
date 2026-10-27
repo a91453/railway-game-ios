@@ -47,6 +47,11 @@ final class GameAudio {
     @ObservationIgnored private var thunderPlayers: [AVAudioPlayer] = []
     /// Waits for each clap of thunder while a storm is heard.
     @ObservationIgnored private var thunderTask: Task<Void, Never>?
+    /// Decision 437: the evening garbage truck's tune as the 3D map last
+    /// asked for it (``Map3DGarbageTruck/Sound``), `nil` for none near.
+    @ObservationIgnored private var garbageTruck: Map3DGarbageTruck.Sound?
+    /// Its loop, made when first heard.
+    @ObservationIgnored private var garbageTruckPlayer: AVAudioPlayer?
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var music: AVAudioPlayer?
@@ -111,6 +116,7 @@ final class GameAudio {
         defaults.set(on, forKey: Key.sounds)
         updateRunning()
         updateWeather()
+        updateGarbageTruck()
     }
 
     /// Sets one of the three volumes (decision 219, stage 2); the music
@@ -124,6 +130,7 @@ final class GameAudio {
         if category == .effects {
             updateRunning()
             updateWeather()
+            updateGarbageTruck()
         }
     }
 
@@ -143,6 +150,15 @@ final class GameAudio {
         guard sound != weather else { return }
         weather = sound
         updateWeather()
+    }
+
+    /// Plays the evening garbage truck's tune as heard from the 3D map's
+    /// camera (decision 437), or fades it out with `nil`: one loop, its
+    /// volume and side following the truck.
+    func setGarbageTruck(_ sound: Map3DGarbageTruck.Sound?) {
+        guard sound != garbageTruck else { return }
+        garbageTruck = sound
+        updateGarbageTruck()
     }
 
     /// Takes the music down by `gain` (``MusicDuck``), or brings it back
@@ -175,6 +191,7 @@ final class GameAudio {
         updateMusic()
         updateRunning()
         updateWeather()
+        updateGarbageTruck()
     }
 
     /// Plays the sound for `cue`, unless sounds are off, the app is not
@@ -292,6 +309,43 @@ final class GameAudio {
             thunderTask = nil
         }
     }
+
+    /// Starts, moves or fades out the garbage truck's tune (decision 437)
+    /// as ``updateRunning()`` does a running loop, over half a second;
+    /// paused once faded out, so it starts again from where it stopped.
+    private func updateGarbageTruck() {
+        let level = garbageTruck.map { volumes.volume(Self.garbageTruckVolume * Float($0.volume), for: .effects) } ?? 0
+        if plays, soundsOn, isActive, level > 0, let garbageTruck {
+            let file = Map3DGarbageTruck.Sound.resource
+            if garbageTruckPlayer == nil {
+                garbageTruckPlayer = Self.player(named: file.name, extension: file.extension, volume: 0)
+                garbageTruckPlayer?.numberOfLoops = -1
+            }
+            guard let player = garbageTruckPlayer else { return }
+            player.pan = Float(garbageTruck.pan)
+            if !player.isPlaying {
+                player.volume = 0
+                player.play()
+            }
+            player.setVolume(level, fadeDuration: 0.5)
+        } else if let player = garbageTruckPlayer, player.isPlaying {
+            player.setVolume(0, fadeDuration: 0.5)
+            Task { @MainActor [weak self, weak player] in
+                try? await Task.sleep(for: .milliseconds(600))
+                guard let self, let player, !self.garbageTruckHeard else { return }
+                player.pause()
+            }
+        }
+    }
+
+    /// Whether the garbage truck's tune is asked for and can be heard.
+    private var garbageTruckHeard: Bool {
+        plays && soundsOn && isActive && garbageTruck != nil
+    }
+
+    /// The tune's own volume at its loudest, before the player's (decision
+    /// 437): a street's loudspeaker, under a watched train's chime.
+    private static let garbageTruckVolume: Float = 0.3
 
     /// Plays one clap of thunder on a free player.
     private func playThunder(_ clap: WeatherSound.Thunder) {
