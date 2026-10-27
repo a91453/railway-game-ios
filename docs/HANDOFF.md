@@ -215,6 +215,15 @@
   - 例：Game Center（§22.2 約第 40 名）與 iCloud 存檔是作者明說才提前的，前任沒有說它們跳過了約 30 件；Codex 列車接進營運（第 16 名）曾被派在還沒派的 10e「斷路接起來」之前，後來補派 391 第二個 PR。
   - **只重排還沒開始的事**（作者：「可是叫他停不就白做了等他先做完一個段落吧」）：已經在做的 session 不叫停，讓它做到能停的地方（commit、push、開 PR）再換順序；做完的東西開 PR 留著，不要丟。
 - **換手**（2026-10-16，作者：「你太長了接手」）：遊戲規劃的對話太長時，開新 session 接手。新 session 的派工單要寫清楚現在進行到哪、等誰；每日開發日誌的排程改到新 session；在 #231 留言；第 1 節表格的 session 改成新的。
+  - **2026-10-27 改了**（作者：「遊戲規劃也可以自己開 到鄰近第7.8次的時候需要我自己開再說」「遊戲規劃的模型永遠都選opus 5.5高」）：
+    - 規劃可以自己用 `create_session` 開下一任，`model: "claude-opus-5-5"`。
+    - 開之前用 `get_session`（不帶 id）看自己的 `lineage.depth`（上限 8）。下一任會到第 7 層時，改請作者在 claude.ai 開。
+    - `create_session` 沒有設 effort 的參數：作者從 app 開的 session 是 `effort_level: "high"`，session 開的看不到這一欄。所以「高」只有作者開的才確定。
+    - 下面 2026-10-24 那條只在快到第 7 層時適用。
+  - **實作 session 照難易度選模型**（2026-10-27，作者：「根據派工單難易度 給session決定opus 或是sonnet」）：`create_session` 的 `model` 一定要寫，不寫就沿用規劃的 Opus。
+    - `claude-sonnet-5-5`：只寫文件、研究整理、抓資料、照現成寫法的小 UI 改動、單純的測試或 workflow 調整。
+    - `claude-opus-5-5`：動 GameCore、決定性或存檔，新決策要寫程式的，3D、美術、聲音，難查的 bug 和 CI 紅。拿不準就選 Opus。
+    - 派工單和 #1041 的登記寫上用了哪個模型。Claude Pro 的模型由作者在 Pro 選，派工單裡寫建議的模型。
   - **下一任由作者從 claude.ai 直接開，不要由 session 用 `create_session` 開**（2026-10-24）：session 開的 session 會多一層，到第 8 層就不能再 `create_session`、`send_later`、建排程（session_01PGibJmGNcvu2d7dJWWhWVb 就是第 8 層，只剩合併、留言、`send_message`），規劃就不能派工。換手時前任把交接寫進 §2.0、開文件 PR，再請作者在 claude.ai 開一個新 session，貼上一句「你是遊戲規劃兼派工，照 docs/HANDOFF.md §1 與 §2.0 最上面一段接手」。實作 session 照舊由規劃開（規劃那時是第 1 層，實作是第 2 層）。
 
 ### 1.2 合併與發版的檢查
@@ -364,7 +373,7 @@
 
 **第二十一次換手（2026-10-27 約 14:25 UTC，session_01YGNNuovwuBJPdZWXamkhEp 續任後壓縮第 4 次 → 作者從 claude.ai 開的新規劃）**。新任開工：讀第 1 節、這一段、下面第二十次那段（含「續任」）；#1041 只讀「遊戲規劃（session_01YGNNuovwuBJPdZWXamkhEp）壓縮第 4 次」（14:11 UTC）那則之後的留言。和下面不同時以這段為準。
 
-- **分工改了**：作者 14:1x UTC 說「又要開什麼新session 就開」「要派session就派」，所以規劃自己用 create_session 開實作 session，不必等作者說。派工單的寫法照下面 X、Y、Z、AA。Claude Pro 只在這個帳號額度不夠時才派（作者：「Pro等不夠的時候再用」）。Pro 派過的 M2、N、T、V、M3 都有在 #1041 登記、留壓縮和「可合併」，也都寫了 HANDOFF。
+- **分工改了**：作者 14:1x UTC 說「又要開什麼新session 就開」「要派session就派」，所以規劃自己用 create_session 開實作 session，不必等作者說。派工單的寫法照下面 X、Y、Z、AA。模型照 §1.1 依難易度選 Sonnet 或 Opus；X、Y、Z、AA 開的時候還沒有這條，都是 Opus。下一任規劃也可以由規劃自己開（§1.1；本 session 是第 0 層）。Claude Pro 只在這個帳號額度不夠時才派（作者：「Pro等不夠的時候再用」）。Pro 派過的 M2、N、T、V、M3 都有在 #1041 登記、留壓縮和「可合併」，也都寫了 HANDOFF。
 - **不能動**：Codex #1342（C371／C381）和私庫 PR #103（同一件的私庫那半）。作者：「除了pr1342 跟隱私資料夾103不能動」。
 - **開著的 PR**（都是本任開的；綠了照 §1.2 合併）：
   - **#1350**（`claude/showcase-tap-back`，head `0e2689aa`）列車展示：隱藏按鈕後點畫面，按鈕回來（決策 434 修正）。和 idle mode 的幕一樣，隱藏時蓋一層透明的點擊層（`trainShowcase.reveal`）；隱藏時不能轉鏡頭。換手時 PR 的 CI 和手動 `only_testing=TrainShowcaseUITests` run 40516816314 都還在跑。綠了：把 run 號寫進 PR 說明，轉 ready，合併；紅了就查。

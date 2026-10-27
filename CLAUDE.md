@@ -428,10 +428,14 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   its third compaction nears (after the second, at about 300k tokens
   used), writing the handoff before finishing what it holds; an
   implementation session takes no new work after 1 and stops at 2
-  (`docs/HANDOFF.md` §1). The next
-  game-planning session is opened by the owner on claude.ai, not with
-  `create_session`: each session a session opens is one level deeper, and
-  at the eighth it can no longer open sessions or schedule check-ins.
+  (`docs/HANDOFF.md` §1). The game-planning session may open the next
+  one itself with `create_session`, model `claude-opus-5-5` (owner,
+  2026-10-27: 「遊戲規劃也可以自己開」「遊戲規劃的模型永遠都選opus 5.5高」),
+  but each session a session opens is one level deeper (`get_session`'s
+  `lineage.depth`, limit 8), and at the eighth it can no longer open
+  sessions or schedule check-ins: once the next one would be at level 7,
+  the owner opens it on claude.ai instead. Implementation sessions get the
+  model their task needs (`docs/HANDOFF.md` §1.1).
 - Sessions comment on GitHub as the owner's account, so never write
   `@claude` in an issue, comment or review unless you mean to start
   `claude.yml`: every mention is a run billed to the API key.
