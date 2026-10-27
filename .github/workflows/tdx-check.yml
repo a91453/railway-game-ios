@@ -19,7 +19,7 @@ on:
   workflow_dispatch:
     inputs:
       path:
-        description: "A TDX API path under /api/basic/ or /api/advanced/, with its query"
+        description: "A TDX API path under /api/basic/, /api/advanced/ or /api/historical/, with its query"
         required: false
         default: "/api/basic/v3/Rail/TRA/Station?$top=1&$format=JSON"
 
