@@ -135,9 +135,22 @@ permissions:
 # of 95), so build has the least room. The next class to add goes where that leaves
 # ten minutes; when none can take it, split a class by test method
 # (Class/testMethod works in these lists) or ask for a fourth job.
+#
+# 2026-10-27: the build job's UI step ran out its 75 minutes (1bfc97d,
+# 40502803331: 72 tests in 73.4 minutes, then the step timed out 14 s
+# later; job 94 of 95), after 52.4-70.0 in the four full lanes before it
+# (d7f1b47 to a3adcbe: 40434847565, 40452033526, 40471687179,
+# 40495033681), when second's UI step took 26.9-34.2 of 55 and lessons'
+# 31.4-37.7 of 55. Their classes in the build jobs of 40452033526 to
+# 40502803331, in minutes:
+# HUDAlignmentUITests 4.6-5.4 and LineDraftSummaryUITests 3.9-5.2 moved to
+# second (at most 34.2 + 10.6 = 44.8 of 55), LineRoutePreferenceUITests
+# 3.9-4.6 to lessons (at most 37.7 + 4.6 = 42.3 of 55): the build job's
+# slowest UI step would have been about 60.6 of 75. All three keep ten
+# minutes or more.
 env:
-  FULL_LANE_SECOND_JOB: "MapInteractionTests SettingsUITests"
-  FULL_LANE_LESSONS_JOB: "LessonUITests Feature284To286UITests"
+  FULL_LANE_SECOND_JOB: "MapInteractionTests SettingsUITests HUDAlignmentUITests LineDraftSummaryUITests"
+  FULL_LANE_LESSONS_JOB: "LessonUITests Feature284To286UITests LineRoutePreferenceUITests"
 
 # A newer push to a pull request cancels its older run. Every other run (the
 # full lane: started after a merge, nightly or by hand) has its own group

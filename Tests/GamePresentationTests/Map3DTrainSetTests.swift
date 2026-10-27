@@ -43,6 +43,8 @@ final class Map3DTrainSetTests: XCTestCase {
                     : set.key == "emu3000" ? ([set.headName,set.tailName].contains(name) ? 6_000...9_200:4_000...6_100)
                     // Decision 432: #1320's EMU800 near units, 11,500 a cab and 5,200 to 5,400 the others; #1312's EMU500, 4,500 a cab (and the EM) and 2,800 to 2,950 the others.
                     : set.key == "emu800" ? ([set.headName, set.tailName].contains(name) ? 11_000...12_000 : 5_000...5_500)
+                    // Decision 435: #1339's EMU900 near units, 9,256 a cab and 4,990 to 5,270 the others.
+                    : set.key == "emu900" ? ([set.headName, set.tailName].contains(name) ? 9_000...9_500 : 4_900...5_300)
                     : set.key == "emu500" ? (name == set.middleName || name == set.middleBackName || [set.headName, set.tailName].contains(name) ? 4_400...4_700 : 2_800...2_950)
                     : set.key == "highSpeed" ? ([set.headName, set.tailName].contains(name) ? 8_000...9_500 : 5_000...6_000)
                     : set.key == "n700sG" ? ([set.headName, set.tailName].contains(name) ? 6_700...7_300 : 5_700...6_300)
@@ -73,8 +75,9 @@ final class Map3DTrainSetTests: XCTestCase {
                     : set.key == "STEAM" ? 3.4...4.7
                     // Decision 408: #1201's E200 and the 700T's pantographs (decision 422: far too).
                     : ["E200CK", "E200CKFar", "highSpeed", "highSpeedFar", "n700sG", "n700sGFar", "emu3000", "emu3000Far"].contains(set.key) ? 3.4...4.9
-                    // Decision 432: and the EMU800's and EMU500's pantographs, 5.2 and 5.0 m.
-                    : ["emu800", "emu800Far", "emu500", "emu500Far"].contains(set.key) ? 3.4...5.3 : 3.4...4.6
+                    // Decision 432: and the EMU800's and EMU500's pantographs, 5.2 and 5.0 m;
+                    // decision 435: and the EMU900's, 5.18 m.
+                    : ["emu800", "emu800Far", "emu500", "emu500Far", "emu900", "emu900Far"].contains(set.key) ? 3.4...5.3 : 3.4...4.6
                 XCTAssertTrue(height.contains(model.maximum.z), "\(name): \(model.maximum.z) m tall")
                 if lineColoured.contains(set.key) {
                     XCTAssertTrue(model.vertices.contains { $0.color >> 24 == 0 }, "\(name): the band is the line's colour")

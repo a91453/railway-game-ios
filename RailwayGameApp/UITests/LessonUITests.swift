@@ -614,9 +614,7 @@ final class LessonUITests: XCTestCase {
         tap(create)
         app.openNewLineFromItsCard()
         if app.navigationBars["Lines"].exists { tap(app.navigationBars["Lines"].buttons["Done"]) }
-        let speed = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Speed:'")).firstMatch
-        tap(speed)
-        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH '6000 times real time'")).firstMatch)
+        app.chooseSpeed("6000 times real time, fast forward")
         if app.buttons["Resume"].exists { tap(app.buttons["Resume"]) }
 
         XCTAssertTrue(element("lessonResult.title").appears(within: 180), "Lesson 1 must meet its real goals")

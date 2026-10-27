@@ -107,10 +107,14 @@ its shaders TSL; start with its `00_READ_ME_FIRST.md`,
 `source/MISSING_COMPONENTS.md` and `source/THIRD_PARTY_ATTRIBUTION.md`;
 what to take from it is in `docs/research/NEXT_PRIORITIES_2026-10-12.md`
 §22.12), `Railway/tdx-snapshot-2026-10/` (added 2026-10-27; TDX downloads
-of rail line shapes, station exits and facilities, and 285 days of Taiwan
-Railway delay reports (2026-01-15 to 10-26, with a probe of which historical
-bus and metro paths exist); start with its `00_READ_ME_FIRST.md` and
-`DATA_USE_NOTICES.json`), `Railway/meshy-batch-2026-10/` (added
+of rail line shapes, station exits and facilities, 341 days of Taiwan
+Railway delay reports (2025-11-20 to 2026-10-26), two days of the Kaohsiung
+metro station board, and a probe of which historical bus and metro paths
+exist; start with its `00_READ_ME_FIRST.md` and `DATA_USE_NOTICES.json`),
+`Railway/tdx-bus-history-2026-10/` (added 2026-10-27; samples of Taipei and
+Kaohsiung city bus positions and stop events, a weekday and a rest day each,
+cut at `$top` because the historical API cannot filter by route; start with
+its `00_READ_ME_FIRST.md`), `Railway/meshy-batch-2026-10/` (added
 2026-10-27; Meshy text-to-3D street and railway props, not yet in the
 game; start with its `00_READ_ME_FIRST.md`), and `city_map_reference_clean/`
 and `power_grid_reference_clean/` at the repository root (start with their
@@ -424,10 +428,14 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   its third compaction nears (after the second, at about 300k tokens
   used), writing the handoff before finishing what it holds; an
   implementation session takes no new work after 1 and stops at 2
-  (`docs/HANDOFF.md` §1). The next
-  game-planning session is opened by the owner on claude.ai, not with
-  `create_session`: each session a session opens is one level deeper, and
-  at the eighth it can no longer open sessions or schedule check-ins.
+  (`docs/HANDOFF.md` §1). The game-planning session may open the next
+  one itself with `create_session`, model `claude-opus-5-5` (owner,
+  2026-10-27: 「遊戲規劃也可以自己開」「遊戲規劃的模型永遠都選opus 5.5高」),
+  but each session a session opens is one level deeper (`get_session`'s
+  `lineage.depth`, limit 8), and at the eighth it can no longer open
+  sessions or schedule check-ins: once the next one would be at level 7,
+  the owner opens it on claude.ai instead. Implementation sessions get the
+  model their task needs (`docs/HANDOFF.md` §1.1).
 - Sessions comment on GitHub as the owner's account, so never write
   `@claude` in an issue, comment or review unless you mean to start
   `claude.yml`: every mention is a run billed to the API key.

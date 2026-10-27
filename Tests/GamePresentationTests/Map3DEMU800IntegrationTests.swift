@@ -117,16 +117,19 @@ final class Map3DEMU800IntegrationTests: XCTestCase {
         }
     }
 
-    // MARK: Half of them EMU500
+    // MARK: The local trains three ways (decision 435)
 
-    func testTheOddNumberedLocalTrainsAreEMU500() {
-        for number in [1, 3, 7, 1_107, 2_461, -3] { XCTAssertEqual(Map3DTrainSet.variant(of: "emu800", number: number), "emu500", "\(number)") }
-        for number in [0, 2, 8, 1_108, -2] { XCTAssertEqual(Map3DTrainSet.variant(of: "emu800", number: number), "emu800", "\(number)") }
+    /// Decision 435 replaced the odd and even numbers with the three
+    /// fleets' shares (``Map3DTrainSet/localTrain(number:)``); the EMU500 is
+    /// still one of them, the EMU800 another.
+    func testSomeLocalTrainsAreEMU500AndSomeEMU800() {
+        for number in [2, 7, 1_107, -1] { XCTAssertEqual(Map3DTrainSet.variant(of: "emu800", number: number), "emu500", "\(number)") }
+        for number in [5, 8, 1_108, -3] { XCTAssertEqual(Map3DTrainSet.variant(of: "emu800", number: number), "emu800", "\(number)") }
         // The real trains' number is the one at the end of their key.
         XCTAssertEqual(Map3DTrainSet.variant(of: "emu800", number: Map3DTrainSet.number(ofRealTrain: "tra-1107")), "emu500")
         XCTAssertEqual(Map3DTrainSet.variant(of: "emu800", number: Map3DTrainSet.number(ofRealTrain: "tra-1108")), "emu800")
         // Not locked behind the train pack, and no other train is touched.
-        XCTAssertEqual(Map3DTrainSet.variant(of: "emu800", number: 1, locked: TrainPack.sets), "emu500")
+        XCTAssertEqual(Map3DTrainSet.variant(of: "emu800", number: 7, locked: TrainPack.sets), "emu500")
         XCTAssertFalse(TrainPack.sets.contains("emu500"))
         // (Decision 433: the odd-numbered metro is the C341 now, `Map3DC341IntegrationTests`.)
         for key in ["taroko", "puyuma", "dieselExpress", "pushPull", "emu500", ""] {

@@ -1,0 +1,2 @@
+group,trips,on_time_pct,mean_min,p50,p90,p99,max
+全部,261820,92.92,1.78,0,4,21,621

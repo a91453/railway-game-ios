@@ -54,6 +54,8 @@ struct Map3DPreviewScreen: View {
     /// Decision 403 (續二): the photo of the 3D map just taken, to share.
     @State private var photo = Map3DPhotoState()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Decision 437: plays the evening garbage truck's tune.
+    @Environment(GameAudio.self) private var audio: GameAudio?
     /// Decision 403: an iPhone on its side, where the driving strip sits in
     /// the top row so the middle of the screen stays clear.
     @Environment(\.verticalSizeClass) private var verticalSizeClass
@@ -237,10 +239,14 @@ struct Map3DPreviewScreen: View {
         .onAppear {
             session.setMap3DOpen(true)
             FrameTimeRecorder.shared.show3D(true)
+            let audio = audio
+            feed.garbageTruckSound = { [weak audio] sound in audio?.setGarbageTruck(sound) }
         }
         .onDisappear {
             session.setMap3DOpen(false)
             FrameTimeRecorder.shared.show3D(false)
+            feed.garbageTruckSound = nil
+            audio?.setGarbageTruck(nil)
         }
         .sheet(item: $photo.snapshot) { snapshot in
             Map3DSnapshotSheet(snapshot: snapshot, language: language)
@@ -264,8 +270,8 @@ struct Map3DPreviewScreen: View {
 
     /// `image` with `credit` in small type in its lower right corner, on a
     /// dark band so it reads on any sky or ground; as it is when there is
-    /// none.
-    private static func credited(_ image: UIImage, _ credit: String) -> UIImage {
+    /// none. Decision 434: the train showcase's photos too.
+    static func credited(_ image: UIImage, _ credit: String) -> UIImage {
         guard !credit.isEmpty else { return image }
         let format = UIGraphicsImageRendererFormat()
         format.scale = image.scale
@@ -593,6 +599,10 @@ final class Map3DTrainFeed {
     private var busClock: RealTrainClock?
     private var busGlides = true
     private let buses = Map3DBuses.Layer()
+    /// Decision 437: told the evening garbage truck's tune as heard from
+    /// the camera each frame (``GameAudio/setGarbageTruck(_:)``, which
+    /// acts only on a change), `nil` when there is none near.
+    var garbageTruckSound: ((Map3DGarbageTruck.Sound?) -> Void)?
 
     func update(world: GameWorld, palette: LinePalette) {
         motion = TrainMotion(world: world, previous: motion, time: Date().timeIntervalSinceReferenceDate)
@@ -643,7 +653,11 @@ final class Map3DTrainFeed {
         // A day's seconds, so the clock stays precise as a Float.
         let now = Date().timeIntervalSinceReferenceDate
         let time = now.truncatingRemainder(dividingBy: 86_400)
-        let buses = busFrame(in: scene, camera: camera, detail: detail, most: budget.tier?.streetLimits.buses, now: now)
+        // Decision 437: the evening garbage truck, among the buses.
+        let trucks = Map3DGarbageTruck.frame(in: scene.streetLife, camera: camera, clock: busClock, glides: busGlides, now: now,
+                                             still: UIAccessibility.isReduceMotionEnabled, budget: budget)
+        garbageTruckSound?(Map3DGarbageTruck.sound(of: trucks, camera: camera))
+        let buses = busFrame(in: scene, camera: camera, detail: detail, most: budget.tier?.streetLimits.buses, now: now).adding(trucks)
         return scene.streetLife.frame(target: camera.target, distance: camera.distance, time: time,
                                       still: UIAccessibility.isReduceMotionEnabled, lights: lights, detail: detail, activity: activity,
                                       buses: buses, limits: budget.limits(routeBuses: buses.instances.count))
@@ -703,9 +717,11 @@ private struct Map3DView: UIViewRepresentable {
     }
 
     /// Decision 230: the train models, made in code once.
-    // The city bus from its file (Map3DCityBus), or the box-built one.
-    static let models: Map3DModelPack? = Map3DCityBus.pack(
-        file: Bundle.main.url(forResource: Map3DCityBus.fileName, withExtension: Map3DCityBus.fileExtension))
+    // The city bus and the evening trucks (decision 437) from their
+    // files, or the box-built ones.
+    static let models: Map3DModelPack? = Map3DGarbageTruck.pack(
+        Map3DCityBus.pack(file: Bundle.main.url(forResource: Map3DCityBus.fileName, withExtension: Map3DCityBus.fileExtension)),
+        files: Map3DGarbageTruck.fileNames.compactMapValues { Bundle.main.url(forResource: $0, withExtension: Map3DGarbageTruck.fileExtension) })
 
     func makeUIView(context: Context) -> UIView {
         guard let view = Map3DMetalView.make(samples: quality.samplesPerPixel) else {
@@ -1406,8 +1422,9 @@ struct Map3DSnapshot: Identifiable {
 
 /// Decision 403 (續二): the photo just taken of the 3D map, and the share
 /// button, which hands it to the system's share sheet as the postcard's
-/// does (decision 215): to the photos, LINE, or anywhere else.
-private struct Map3DSnapshotSheet: View {
+/// does (decision 215): to the photos, LINE, or anywhere else. Decision
+/// 434: the train showcase's photos too.
+struct Map3DSnapshotSheet: View {
     let snapshot: Map3DSnapshot
     let language: DisplayLanguage
     @Environment(\.dismiss) private var dismiss

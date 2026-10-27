@@ -45,6 +45,12 @@ public enum Map3DStreetModel: String, CaseIterable, Sendable {
     case coachBus
     /// Rounded cab-over midibus, in warm white and teal.
     case midiBus
+    /// The evening garbage truck (decision 437): drawn from the Meshy
+    /// model the app bundles (``Map3DGarbageTruck``); this box-built one
+    /// stands in where that file cannot be read.
+    case garbageTruck
+    /// The recycling truck that follows it, a flatbed with low rails.
+    case recyclingTruck
 
     /// The model's name in ``Map3DModelPack``.
     public var modelName: String { "life-" + rawValue }
@@ -142,6 +148,26 @@ public enum Map3DStreetModel: String, CaseIterable, Sendable {
             box(5.98, 0.85, 0, 0.06, 2.3, 1.95, Self.glass)
             box(-1.6, 3.2, 0, 3.4, 1.7, 0.22, Self.steel)
             Map3DCityBus.addLamps(to: &mesh)
+        case .garbageTruck, .recyclingTruck:
+            // A 6.5 × 2.3 m truck: the cab at the front, behind it the
+            // yellow compactor or the green flatbed and its low rails.
+            let truck = Map3DGarbageTruck.size
+            let front = truck.length / 2, back = -truck.length / 2
+            for x in [back + 1.3, front - 1.2] {
+                for z: Float in [-1, 1] { box(x, 0, z * 0.95, 0.9, 0.32, 0.9, Self.tyre) }
+            }
+            box(0, 0.4, 0, truck.length, truck.width - 0.1, 0.25, Self.trim)
+            box(front - 0.9, 0.65, 0, 1.8, truck.width, 1.7, Map3DGarbageTruck.yellow)
+            box(front - 0.02, 1.35, 0, 0.06, truck.width - 0.3, 0.8, Self.glass)
+            if self == .garbageTruck {
+                box(back + 2.25, 0.65, 0, 4.5, truck.width, truck.height.garbage - 0.65, Map3DGarbageTruck.yellow)
+                box(back + 0.25, 0.75, 0, 0.5, truck.width - 0.2, 1.4, Self.steel)
+            } else {
+                box(back + 2.25, 0.65, 0, 4.5, truck.width, 0.2, Map3DGarbageTruck.green)
+                for z: Float in [-1, 1] { box(back + 2.25, 0.85, z * (truck.width / 2 - 0.05), 4.5, 0.1, 0.5, Map3DGarbageTruck.green) }
+                box(back + 0.05, 0.85, 0, 0.1, truck.width, 0.5, Map3DGarbageTruck.green)
+            }
+            Map3DGarbageTruck.addLamps(to: &mesh, of: self)
         }
         return Map3DModelPack.Model.flat(named: modelName, from: mesh)
     }
@@ -293,6 +319,9 @@ public struct Map3DStreetLife: Sendable {
         let seed: (Int32, Int32)
         /// Whether city buses run on it (a main road's).
         public var buses = false
+        /// Whether the evening garbage truck collects along it (a town
+        /// street's, decision 437).
+        public var collects = false
     }
 
     /// Where people gather or walk.
@@ -709,10 +738,12 @@ extension Map3DScene.Builder {
             let level = Map3DStreetLife.townLevel(residentsAndJobs(near: middle))
             let half = kind.width(ramp: road.isRamp) / 2
             if let traffic = Self.traffic(kind) {
-                streetLife.lanes.append(Map3DStreetLife.Lane(
+                var lane = Map3DStreetLife.Lane(
                     path: path, half: half, twoWay: !road.isRamp && kind != .motorway, speed: traffic.speed,
                     perHundred: traffic.perHundred * (0.25 + 0.75 * level), scooters: kind != .motorway && kind != .trunk || level > 0.5,
-                    seed: lifeSeed(path.points[0], salt: 256), buses: !road.isRamp && Self.busRoutes.contains(kind)))
+                    seed: lifeSeed(path.points[0], salt: 256), buses: !road.isRamp && Self.busRoutes.contains(kind))
+                lane.collects = !road.isRamp && Self.collectionRounds.contains(kind)
+                streetLife.lanes.append(lane)
             }
             let sidewalk = Self.sidewalk(of: kind)
             guard sidewalk > 0, !road.isRamp else { continue }
@@ -738,6 +769,10 @@ extension Map3DScene.Builder {
     /// The roads city buses run on: the main ones, through towns, not
     /// the motorways or the side streets.
     static let busRoutes: Set<Map3DBaseMap.RoadKind> = [.trunk, .primary, .secondary]
+
+    /// The streets the evening garbage truck works (decision 437): the
+    /// towns' own, not the main roads or the service ways.
+    static let collectionRounds: Set<Map3DBaseMap.RoadKind> = [.secondary, .tertiary, .minor]
 
     /// How fast a road's vehicles go (`traffic.js`: its limit, 0.8 of it
     /// on a main road and 0.6 on a minor one, kept to 4.5–15 m/s; Taiwan's

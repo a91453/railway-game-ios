@@ -366,10 +366,74 @@ extension XCUIElement {
         }
         XCTFail("\(self) did not stop moving")
     }
+
+    /// Touches the button that opens a Menu until `item`, one of the
+    /// menu's rows, exists; whether it does. A touch can go by without the
+    /// menu opening, when the screen is being laid out again as it lands
+    /// (full lane run 40450049689, `testBackToStartWorksWithLargeTextWhileTheClockRuns`:
+    /// the touch was sent, the app went idle, and `menu.saveGame` was in
+    /// none of ten reads over ten seconds, each answered in about a second;
+    /// the run's re-run passed). So a menu that has not opened within
+    /// `timeout` seconds is touched again, up to `attempts` times; a menu
+    /// that opened late and is closed by the second touch is opened by the
+    /// third.
+    func openMenu(showing item: XCUIElement, timeout: TimeInterval = 10, attempts: Int = 3) -> Bool {
+        for _ in 0..<attempts {
+            tap()
+            if item.appears(within: timeout) { return true }
+        }
+        return false
+    }
 }
 
 @MainActor
 extension XCUIApplication {
+    /// Chooses the speed `name` (a row's label, as `GameSpeed.accessibilityName`
+    /// spells it: "6000 times real time, fast forward") in the status bar's
+    /// speed menu, and fails with what it saw when it cannot.
+    ///
+    /// The open menu's rows are made anew while a busy runner is still
+    /// asking about them: the row a query found was gone by the time its
+    /// hit point was asked ({inf, inf}, kAXErrorInvalidUIElement), which a
+    /// tap retried for four minutes (main 96c39095, run 40232525406) and
+    /// isHittable failed outright (main 9717ab9, c801920 and 1b40e4f, runs
+    /// 40300085655, 40337189127 and 40413958561; the new row lay where the
+    /// old one had). So the row's place is read from fresh snapshots until
+    /// it holds, that place is touched, and the speed button's label shows
+    /// the row was chosen. One snapshot took up to 4 s on a by-hand runner
+    /// (run 40429077102) and three are needed, so the row gets 30 s to
+    /// hold.
+    func chooseSpeed(_ name: String, file: StaticString = #filePath, line: UInt = #line) {
+        let speed = buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Speed:")).firstMatch
+        let row = buttons[name].firstMatch
+        XCTAssertTrue(speed.appears(within: 10), "Missing the speed button", file: file, line: line)
+        XCTAssertTrue(speed.becomesHittable(within: 10), "The speed button is covered: \(speed)", file: file, line: line)
+        speed.waitUntilSettled()
+        guard speed.openMenu(showing: row) else {
+            return XCTFail("The speed menu never showed \(name): \(speed.label)", file: file, line: line)
+        }
+        let screen = frame
+        var place = CGRect.null
+        var held = 0
+        let settle = Date().addingTimeInterval(30)
+        while held < 2, Date() < settle {
+            Thread.sleep(forTimeInterval: 0.25)
+            let now = (try? row.snapshot())?.frame ?? .null
+            let shown = now.width > 0 && now.height > 0 && screen.contains(CGPoint(x: now.midX, y: now.midY))
+            held = shown && now == place ? held + 1 : 0
+            place = now
+        }
+        guard held == 2 else {
+            return XCTFail("The \(name) row never held still: \(place)", file: file, line: line)
+        }
+        coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: place.midX - screen.minX, dy: place.midY - screen.minY)).tap()
+        let chosen = NSPredicate(format: "label == %@", "Speed: \(name)")
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: chosen, object: speed)], timeout: 10), .completed,
+                       "The touch did not choose \(name): \(speed.label)", file: file, line: line)
+        XCTAssertTrue(row.disappears(within: 10), "The speed menu stayed open after \(name) was chosen", file: file, line: line)
+    }
+
     /// Drags a list until `element` lies wholly on screen; whether it does
     /// within 16 drags. A sheet's list (`list` `nil`): clear of the
     /// navigation bar at the top and the home indicator and a status
@@ -675,40 +739,8 @@ final class ShellLayoutUITests: XCTestCase {
         XCTAssertTrue(time.appears(within: 10))
         // The fastest speed: a day in about 15 seconds where the device
         // keeps up.
-        let speed = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Speed")).firstMatch
-        XCTAssertTrue(speed.appears(within: 10))
-        speed.tap()
-        let fast = app.buttons["6000 times real time, fast forward"]
-        // The open menu's rows are made anew while a busy runner is still
-        // asking about them: the row a query found was gone by the time
-        // its hit point was asked ({inf, inf}, kAXErrorInvalidUIElement),
-        // which a tap retried for four minutes (main 96c39095, run
-        // 40232525406) and isHittable failed outright (main 9717ab9,
-        // c801920 and 1b40e4f, runs 40300085655, 40337189127 and
-        // 40413958561; the new row lay where the old one had). So the
-        // row's place is read from fresh snapshots until it holds, that
-        // place is touched, and the speed's label shows it was chosen.
-        // One snapshot took up to 4 s on a by-hand runner (run
-        // 40429077102) and three are needed, so the row gets 30 s to hold.
-        XCTAssertTrue(fast.appears(within: 10))
-        let screen = app.frame
-        var row = CGRect.null
-        var held = 0
-        let settle = Date().addingTimeInterval(30)
-        while held < 2, Date() < settle {
-            Thread.sleep(forTimeInterval: 0.25)
-            let now = (try? fast.snapshot())?.frame ?? .null
-            let shown = now.width > 0 && now.height > 0 && screen.contains(CGPoint(x: now.midX, y: now.midY))
-            held = shown && now == row ? held + 1 : 0
-            row = now
-        }
-        XCTAssertEqual(held, 2, "The 6000× row never held still: \(row)")
-        app.coordinate(withNormalizedOffset: .zero)
-            .withOffset(CGVector(dx: row.midX - screen.minX, dy: row.midY - screen.minY)).tap()
-        let chosen = NSPredicate(format: "label == %@", "Speed: 6000 times real time, fast forward")
-        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: chosen, object: speed)], timeout: 10), .completed,
-                       "The touch did not choose 6000×: \(speed.label)")
-        XCTAssertTrue(fast.disappears(within: 10))
+        // The row is chosen where it holds still; see `chooseSpeed`.
+        app.chooseSpeed("6000 times real time, fast forward")
         menu.waitUntilSettled()
         let start = (menu: menu.frame, time: time.frame, label: time.label)
         func same(_ a: CGRect, _ b: CGRect) -> Bool {
