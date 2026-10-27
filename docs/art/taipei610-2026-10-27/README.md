@@ -42,3 +42,13 @@ Viewer支援角色與方向、拖曳旋轉、縮放及PNG／GLB／原生下載�
 [公開draft #1362](https://github.com/a91453/railway-game-ios/pull/1362) ↔ [私有draft #109](https://github.com/a91453/railway-reference-private/pull/109)。[完整交付／來源索引](https://github.com/a91453/railway-reference-private/tree/codex/taipei610-native-2026-10-27/Railway/game-art-previews/docs/art/taipei610-2026-10-27)。[固定producer ba9ef3e4](https://github.com/a91453/railway-game-ios/commit/ba9ef3e443114b182171671ea34affdbf57d01ed)；本文件／總覽整合head看PR最新commit，不混稱producer。
 
 [最終ZIP遠端下載證據](https://github.com/a91453/railway-reference-private/blob/codex/taipei610-native-2026-10-27/Railway/game-art-previews/docs/art/taipei610-2026-10-27/remote-download-verification.json)：SHA256 `14e58d03adc54e2c2020ebcfb4a3d8b33161121adbf45cb353e6d0222c5e455b`，24,762,996 bytes，559成員；推送後從私庫GitHub API重新下載，核SHA、CRC、完整解壓與每個檔案bytes一致。包外另記最終viewer ZIP下載，避免自指雜湊。
+
+## 第二版：使用者回報浮空／#1357
+
+撤回第一版對「所有零件已有支承」的廣義自評：65mm近接取樣不能證明接觸。對真第一版ba9ef3e4的完整原生三角建立1mm容差的接觸圖後，A/B近遠light都找到三個無車體接觸路徑的實體：內風擋背襯、端部拉桿與連結器。新增四條背襯內框固定件與拉桿吊座，每個端車僅增加60三角；原車殼／玻璃／燈／門窗／輪組／屋頂／顏色的全部原三角逐bytes保留，C/D原生與GLB全bytes相同。真第一版完整包與SHA不動，新增私有revision-2與真正同相機前後。
+
+新增獨立contact-graph.py對每個實際連通體逐三角邊／面求交與1mm共面接觸，所有元件必須沿接觸圖到車身，AABB只篩候選，不當支承證據。真前版紅；本版十二單元綠；移動真連結器／刪除真吊座也會被拒絕。只證靜態幾何連接，不宣稱工程受力或完整動態碰撞。
+
+#1357（merge4d5c7994）已在第一版使用：共用匯出、遊戲模型光、日夜七向、預算與hash鎖。第二版再直接使用它的viewer.mjs建立「真第一版／第二版」同視角離線比較頁，保留可旋轉下載的原viewer。#1357沒有實作AO、統一夜間亮燈或金屬反光，本輪不擴到那些效果，也不改其他車。
+
+本版外觀未經使用者接受；尚未接入營運。人工Simulator／真機Metal效能／動畫未驗。第二版固定producer、SHA與最新整合head於同PR更新，第一版連結保留作歷史。

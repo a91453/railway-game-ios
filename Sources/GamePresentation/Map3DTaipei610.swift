@@ -108,6 +108,12 @@ private struct Taipei610Builder {
                 face([bc,backingBack[i],backingBack[j]],bc+Map3DPoint(1,0,0),ink)
                 face([backingFront[i],backingFront[j],backingBack[j],backingBack[i]],.init(fc.x,2.47,0),ink)
             }
+            // The inner backing is mounted to the real glazing/frame boundary.
+            // Four short inward frame ties keep the backing from floating inside
+            // the nose; the original exterior shell and glass stay untouched.
+            for i in [0,segments/4,segments/2,segments*3/4] {
+                k.beam(backingBack[i],window[i]+Map3DPoint(0.005,0,0),0.040,ink)
+            }
             let c=Map3DPoint(Self.noseX(2.47,0,half),2.47,0)
             for i in window.indices {face([c,window[i],window[(i+1)%window.count]],.init(0,2,0),glass)}
             // Paired organic lamp bezels; no red tail lenses or brand text.
@@ -128,6 +134,9 @@ private struct Taipei610Builder {
                 k.box(pivot.x-0.010,1.76,0.04,0.050,0.080,0.080,rubber)
                 k.beam(pivot,.init(Self.noseX(2.32,0.53,half)+0.030,2.32,0.53),0.035,rubber)
             }
+            // Actual drawbar hanger contacts both the drawbar and floor.
+            // Previously these were only within a 65mm proximity allowance.
+            k.box(half-0.45,0.77,0,0.24,0.22,0.12,StationKitBuilder.steel)
             k.beam(.init(half-0.60,0.70,0),.init(half+0.25,0.70,0),0.17,StationKitBuilder.steel)
             k.box(half+0.29,0.56,0,0.20,0.40,0.26,StationKitBuilder.steel)
         }

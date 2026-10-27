@@ -12,3 +12,5 @@ Linux WebGL與幾何抽樣不是人工Simulator、Metal、動態碰撞或動畫�
 固定交付重建：匯出後依序prepare（第四參數BASE_CAPTURE可由EMU900 capture.sh在接手commit產生，讀真set-wenhu-head）、geometry、support.py、glass-mutations.py、common render日夜七向／--material clay及silhouette、details、png.py、Blender既有glb-audit、standalone、bundle.py OUT PRODUCER、browser.mjs、再次bundle。根據source-files.json取得原附件與官方報告；未取得的檔案不造SHA。對照私包直接用已接受固定包，不重造。
 
 `browser.mjs`實際HTTP與自含HTML載入後切斷網路，逐角色／七向點選、縮放、拖曳和下載bytes；file://受環境管理政策阻擋，未驗。公開只留overview，私庫完整來源／候選／最終包不覆寫。固定producer與整合head若不同，需全量重建比native／GLB bytes。
+
+第二版追加 `python contact-graph.py OUT`：全實體至車體的1mm接觸路徑，並有真連結器移位與刪吊座反例。先對真revision-1跑紅，再對新版本跑綠；不修改舊包。前後頁直接 `node tools/train-models/viewer.mjs OUT/compare-1357.html TRUE_PRIOR_COPY OUT`，真前版的tag僅改在scratch副本，不改原始素材。
