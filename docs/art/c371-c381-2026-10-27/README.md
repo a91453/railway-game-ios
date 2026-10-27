@@ -96,3 +96,5 @@ Swift 6.4 warnings-as-errors build-tests 通過；30 項選定測試（1 項 BUS
 接手 head 已整合 pack 材質與遮蔽，但八件 C371/C381 FNV 鎖仍是整合前值。以接手時原配方再建同一 pack，確認六件未修單元的新舊 hash 完全相同；只有 C371 DM/rear 隨本輪修形改變。校正這八項鎖，其他所有項保持逐值與格式。資料見私包 lock-reconciliation.json；C381 10 件專用原生／GLB 仍與 true-v7 完全相同。
 
 最新 producer bytes、viewer 下載、ZIP 與遠端回讀驗證依私包 source-record／verification 及兩 PR 記錄。最新 head CI 另查；未觸發、跳過與 pending 不能當通過。本輪未作 Simulator 畫面或真機驗收。
+
+本輪 producer：`5e1e76aad0b056c519d39e14b5a21f6304cc4ae5`，提交後重建 22 件原生／GLB 完整 bytes 一致。當前 ZIP `be655c5541042d89f72aef55711d0c6a874ff46464106988d05d2dda2453dee3`，361 個 member，CRC／完整解壓逐 bytes 已核對，viewer 真下載 ZIP 一致；遠端回讀另見 PR／issue。
