@@ -135,9 +135,14 @@ final class Map3DRoadMarkingTests: XCTestCase {
 
     func testOnlyRealJunctionsArePainted() {
         // One road in two ways meeting end to end: no junction (only the
-        // kerb lines, decision 447).
+        // kerb lines and a lane's walkway, decision 447).
         func junctionPaint(_ markings: Map3DRoadMarkings) -> [Map3DRoadMarkings.Mark] {
-            markings.marks.filter { if case .kerb = $0.kind { return false } else { return true } }
+            markings.marks.filter {
+                switch $0.kind {
+                case .kerb, .walkway: false
+                default: true
+                }
+            }
         }
         XCTAssertTrue(junctionPaint(Map3DRoadMarkings([road(.primary, [(-200, 0), (0, 0)]), road(.primary, [(0, 0), (200, 0)])])).isEmpty)
         // A lane (no centre line) joining a main road: none either.
@@ -263,6 +268,52 @@ final class Map3DRoadMarkingTests: XCTestCase {
         let split = kerbs(Map3DRoadMarkings([Map3DBaseMap.Road(kind: .secondary, isRamp: false, points: points, bounds: west),
                                              Map3DBaseMap.Road(kind: .secondary, isRamp: false, points: points, bounds: east)]))
         XCTAssertEqual(split.reduce(0) { $0 + $1.length }, 2 * 400, accuracy: 1e-6)
+    }
+
+    /// Decision 447 (continued): the pedestrians' space by the road's
+    /// class, and a lane's painted walkway on one side, the same from
+    /// every tile, stopping at the mouths of the roads it meets.
+    func testALaneHasAPaintedWalkwayOnOneSide() {
+        XCTAssertEqual(Map3DRoadMarkings.walkway(road(.primary, [(0, 0), (1, 0)])), .pavement)
+        XCTAssertEqual(Map3DRoadMarkings.walkway(road(.tertiary, [(0, 0), (1, 0)])), .pavement)
+        XCTAssertEqual(Map3DRoadMarkings.walkway(road(.minor, [(0, 0), (1, 0)])), .painted)
+        XCTAssertEqual(Map3DRoadMarkings.walkway(road(.service, [(0, 0), (1, 0)])), .shared)
+        XCTAssertEqual(Map3DRoadMarkings.walkway(road(.motorway, [(0, 0), (1, 0)])), .none)
+        XCTAssertEqual(Map3DRoadMarkings.walkway(Map3DBaseMap.Road(kind: .minor, isRamp: false, points: [Point(x: 0, z: 0), Point(x: 1, z: 0)],
+                                                                   bounds: everywhere, bridgeLevel: 1)), .none)
+        XCTAssertTrue((1.1...1.8).contains(Map3DRoadMarkings.walkwayBand))
+        let lane = road(.minor, [(0, 0), (0, 200)])
+        func walkway(_ lane: Map3DBaseMap.Road) -> [Map3DRoadMarkings.Mark] {
+            Map3DRoadMarkings([road(.primary, [(-200, 0), (0, 0), (200, 0)]), lane]).marks.filter {
+                if case .walkway = $0.kind { return true } else { return false }
+            }
+        }
+        let marks = walkway(lane), bands = marks.filter { $0.kind == .walkway(line: false) }
+        // A band and its two lines, in pieces no longer than a kerb's.
+        XCTAssertEqual(marks.filter { $0.kind == .walkway(line: true) }.count, 2 * bands.count)
+        XCTAssertEqual(bands.map(\.length).reduce(0, +), 200 - 4.5 - 1, accuracy: 1e-9)
+        XCTAssertTrue(marks.allSatisfy { $0.length <= Map3DRoadMarkings.kerbPiece + 1e-9 })
+        let side = marks[0].centre.x > 0 ? 1.0 : -1.0
+        for mark in marks {
+            // Along the lane, on its one side, inside its 5 m.
+            XCTAssertEqual(abs(mark.along.z), 1, accuracy: 1e-9)
+            XCTAssertEqual(mark.centre.x > 0 ? 1.0 : -1.0, side)
+            XCTAssertLessThanOrEqual(abs(mark.centre.x) + mark.width / 2, 2.5 + 1e-9)
+            // Not across the primary road: from its kerb and a metre on.
+            XCTAssertGreaterThanOrEqual(mark.centre.z - mark.length / 2, 4.5 + 1 - 1e-9)
+        }
+        // The lane drawn the other way, or another tile's copy of it
+        // starting elsewhere: the band on the same side.
+        XCTAssertTrue(walkway(road(.minor, [(0, 200), (0, 0)])).allSatisfy { ($0.centre.x > 0 ? 1.0 : -1.0) == side })
+        XCTAssertTrue(walkway(road(.minor, [(0, 0), (0, 90), (0, 200)])).allSatisfy { ($0.centre.x > 0 ? 1.0 : -1.0) == side })
+        // A service road has none.
+        XCTAssertTrue(Map3DRoadMarkings([road(.service, [(0, 0), (0, 200)])]).marks.isEmpty)
+    }
+
+    /// Decision 447 (continued): Taipei's arcade, 3.64 m from the road's
+    /// line (臺北市建築管理自治條例第 7 條).
+    func testTheArcadeIsTaipeisDepth() {
+        XCTAssertEqual(Builder.arcadeDepth, 3.64)
     }
 
     func testTheCentreLineStopsAtTheCrossing() {

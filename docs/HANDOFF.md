@@ -376,7 +376,7 @@
 
 **第二十二次換手（2026-10-27 約 16:50 UTC，session_01YGNNunheBBBwyekk4Pq7b4 壓縮第 3 次 → 本任用 `create_session` 開的新規劃 session_01YGNNunBu1rxrPwN6bsA7g2，第 2 層）**。新任開工：讀第 1 節、這一段、下面「第二十一次換手之後」那段；#1041 從「遊戲規劃（session_01YGNNunheBBBwyekk4Pq7b4）壓縮第 3 次」（16:4x UTC）往後讀。和下面不同時以這段為準。
 
-- **新規則（作者 2026-10-27「不顯示網站名稱」）**：作者給過一個整理交通開放資料的第三方網站。它的名稱與網址**哪裡都不寫**：repository、私庫、檔名、branch、PR、commit、#1041。要提就寫「一個整理交通開放資料的第三方網站」。舊的遠端 branch `claude/taiwanlive168-tdx-map` 有這個名字，session 沒有刪 branch 的權限，**請作者刪**；已關閉的 #1363 標題與內容已改掉。
+- **新規則（作者 2026-10-27「不顯示網站名稱」）**：作者給過一個整理交通開放資料的第三方網站。它的名稱與網址**哪裡都不寫**：repository、私庫、檔名、branch、PR、commit、#1041。要提就寫「一個整理交通開放資料的第三方網站」。有一個舊的遠端 branch（`claude/` 開頭、名字含那個網站、結尾 `-tdx-map`）帶著這個名字，session 沒有刪 branch 的權限，**請作者刪**；已關閉的 #1363 標題與內容已改掉。
 - **這一任合的**（照 §1.2，記在 #1041）：#1355（Y，決策 437 垃圾車，main `b46fb0c4`）、#1360（AF，示範與挑戰關掉的功能總表 → NEXT_PRIORITIES §22.18，`a8955802`）、#1358（X，決策 436 月台小物，`dca2bb25`）、#1364（AG，TDX 即時資料類別對照 `docs/research/TDX_LIVE_DATA_MAP_2026-10-27.md`，`0f2a1cbc`）、#1367（AJ，新台幣研究 `docs/research/NT_DOLLAR_SWITCH_2026-10-27.md`，`d5310656`）。Y、AF、X、AG、AJ、AC 都已封存。
 - **在跑的 session**（新任接手後用 `send_message` 告訴它們改向新任回報；共同規則：不動 #1342、私庫 #103，壓縮 1 次不接新工作、2 次停）：
   - **AB**：session_01YGNNumUf3EJH6FgPtuEpvW（Opus），**#1365**（決策 438、**存檔 75**，市區公車 GameCore），**ready**，head `98b673cf`，全 tier 綠。動存檔，**合併前要獨立審查**（下一項）。AB 已壓縮 1 次，只處理審查要的修改。
@@ -403,11 +403,127 @@
 - **還要看的**：main 下一次 full lane（4d5c7994 之後那輪，run 40530426324）三個 job 的時間（估 build ≈60／75、second ≈45／55、lessons ≈42／55）與 `ShellLayoutUITests.testTheStatusBarKeepsItsWidthAsTheDaysGoBy`。又紅就派人查，不是 runner 慢。
 - **排程**：本任的 `send_later` 巡邏在交接時刪掉，新任自己排（約 45 分鐘一次）。Threads 排程已由本任改綁新任（第 1 節那列）。
 - **等作者**：
-  - 刪遠端 branch `claude/taiwanlive168-tdx-map`；合私庫 #106、#108。
+  - 刪上面那個結尾 `-tdx-map` 的遠端 branch；合私庫 #106、#108（作者 10-27 已合）。
   - TestFlight 92 什麼時候發、公開連結的時間。
   - Meshy 約 49 點在 11/4 前用掉；TDX 11/1 重置。
   - 實機：E500 推拉、普悠瑪、AE 之後舊存檔的公車與道路、平溪線開局的延遲、AH 之後的機廠。
   - 玩家 1 的公車路線預覽截圖、91 的 fps 回報。
+
+**第二十二次換手之後（現任規劃 session_01YGNNunBu1rxrPwN6bsA7g2，第 2 層，2026-10-27 22:05 UTC 更新）**
+
+這一段是本任還在任時的中途交接，寫在 main，免得 session 中斷就沒了。本任 19:59 UTC 壓縮第 1 次，第 3 次壓縮前換手。
+
+下一任接手時：
+- 先讀第 1 節、這一段、上面第二十二次那段。
+- #1041 從「session_01YGNNunBu1rxrPwN6bsA7g2 壓縮第 1 次」（19:59 UTC）往後讀。
+- 這一段和上面的內容不同時，以這一段為準。
+
+**這一任合的**（都照 §1.2 合，記在 #1041）：
+
+| PR | 內容 | main |
+| --- | --- | --- |
+| #1366 | AH，決策 441，機廠 | `34caf726` |
+| #1369 | AI，介面不寫「美元」 | `f6767d56` |
+| #1370 | Threads 交稿前去浮水印 | `27dcbba2` |
+| #1365 | AB，決策 438，存檔 75，市區公車 | `00b172ec` |
+| #1371 | AK，決策 442，實景台灣 22 縣市 | `573c5747` |
+| #1361 | AE，決策 440 | `08e63ad3` |
+| #1374 | NEXT_PRIORITIES §22.19 slop-taipei | `d66ea8cd` |
+| #1373 | AD，決策 439，列車遮蔽烘焙 | `c059ea90` |
+| #1375 | AN 研究，`docs/research/TAIWAN_STREETSCAPE_2026-10-28.md` | `e0e946cb` |
+| #1372 | AM，TrainShowcase UI 測試 | `7a7736c2` |
+| #1377 | AN，決策 445，行人號誌 | `353300d9` |
+| #1376 | AL，改速度不丟 tick，決策 143「後來」 | `b7e11c0f` |
+| #1378 | AP，決策 446，機車 | `909a8e20` |
+| #1379 | AO 的第一個 PR，決策 447，路口標線 | `3545505b` |
+
+- #1362（Codex 台北捷運 610）是作者在 21:23 UTC 合的，main `7c160fad`。
+- 現在這一批是 #1378、#1379、#1362。下一批要等 main 的 `ci.yml` 在 `7c160fad` 轉綠。
+- 已封存的 session：AB、AE、AH、AI、AK、AD、AM、AN、AL、AP。
+
+**在跑的 session**
+
+共同規則：
+- 不動 #1342 與私庫 #103。
+- 壓縮 1 次就不接新工作，壓縮 2 次就停。
+- 回報給規劃。
+
+| 派工單 | session | 內容 | 狀態 |
+| --- | --- | --- | --- |
+| AO | session_01YGNNuqTDawMxRbHYybnoKT | 決策 447 的第二個 PR #1380：巷子的標線型人行道、騎樓 3.64 m | 已壓縮 1 次，做完就停 |
+| AQ | session_01YGNNun1Kn1yX2orJ1cGjgj | 06:00 乘客路線搜尋加速，結果必須逐位元相同；GameCore 全 tier | 見下 |
+| AR | session_01YGNNumNuGqtdahN2CHsi39 | 決策 449，夜裡列車的頭燈、尾燈、客室窗、方向幕；決策 439 下一步第 1 項 | |
+| AS | session_01YGNNupiBioisz2ArD4VFyW | 決策 450，車窗反光與不鏽鋼光澤，#1381；決策 439 下一步第 3 項 | 已壓縮 1 次 |
+| AT | session_01YGNNunYENfe8qj8oEjVozn | 決策 451，紅綠燈保留原色與淡色減弱 | 見下 |
+
+AQ 的進度：
+- 作者那局存檔是 78 站高雄，在私庫 branch `bug-reports/clock-stuck-2026-10-27`。06:00 的 tick 在 release 從 32.5 s 降到 9.8 s，在 debug 從 238 s 降到 62 s。
+- 第二步還在做。
+- 只有要改規則時才用決策 448。
+
+AS 動到的地方：
+- 新增列車材質 layer：−13 玻璃、−14 不鏽鋼、−15 會發光的玻璃。
+- `Map3DVertex.glows` 現在認 −2 與 −15。這件事已轉告 AR。
+- `Map3DModelFile` 讀 M3DM 旗標的玻璃位元與不鏽鋼位元，610 也跟著標上。
+- AR 與 AS 都改 `tools/train-models/hashes.lock.json`。後合的那個 PR 要先合 main 再重產。
+
+AT 的來由：
+- 作者 2026-10-28 說：「變白淡色……分不出紅綠燈顏色、建築感覺變得有點死」。
+- 原因：`Map3DModels.swift:63` 把紅綠燈也經過了 `Map3DLook.restyle`。亮的紅燈 #FF4433 變成 #F1DDDB，不亮的變成 #DCCFCE。
+- 作者說「你五方決定，還是有更好的融合版本」，所以 AT 要做三個強度與融合版的預覽，照五方選一個。
+
+**編號**
+- 決策 446、447 已用掉。
+- 預約中：443、444（新台幣 PR-0、PR-1，存檔 76）；448（AQ，只在要改規則時用）；449（AR）；450（AS）；451（AT）。
+- 下一個空的決策號是 **452**。
+- 存檔 75 已被 AB 用掉，76 留給新台幣。golden schema 沒動。
+
+**作者說過的話，這一任記下的**（都在 #1041）：
+- TestFlight 92：「晚點發」，等作者說了才準備。
+- 公開 TestFlight 連結：維持 10/31 0:00（台灣時間）。
+- Meshy：剩下的點數「暫時不需要」，不派 Meshy 的工作。
+- Threads：
+  - 91.1 那篇已在 10-27 21:00（台灣時間）發出。
+  - 排程的基準是 main `1bfc97d`，#1041 已補上「Threads 草稿交付」那則。
+  - 交稿前要用 watermarks-remover 去浮水印（`docs/research/THREADS_WRITING.md` §2，#1370）。
+- 存檔換算對寫實與簡單兩種規則的影響：新台幣 PR-1 要在兩種規則的存檔上都證明「新值＝舊值 × 3」，也要兩種規則都看平衡。
+- slop-taipei 的兩個公開專案（作者「照這個順序派」）：
+  - 順序寫在 NEXT_PRIORITIES §22.19：AN → AO → AP → 基隆河的橋。
+  - 基隆河的橋還沒派。
+  - 不做的與不拿的也寫在 §22.19。
+- TDX 點數（作者 10-28 看到用了 324.58 點，其中台鐵延誤歷史 88 次、約 4.4 GB、223.8 點；作者說「好」）：
+  - 歷史資料已經在私庫的 `Railway/tdx-snapshot-2026-10/`，**不要整段重抓**。
+  - 只補 10/27 以後的新日子，一天約 0.65 點。
+  - 公車與捷運照舊用 `$top` 抽樣。
+- 6000×：作者問「bug 太多，要不要改成 4000～5000」。規劃判斷維持 6000×，五方在 #1041。理由：
+  - 跟不上時遊戲會自己變慢，不會堆 tick（`GameSession.startGameLoop`）。
+  - 問題出在每個 tick 的成本。改 GameCore 的速度值會移動 6 個 fixture、32 個測試檔。
+  - AQ 合併後，請作者用那局存檔重新看一次。還跟不上，就派「跟不上時狀態列顯示實際倍速」，只改 GamePresentation。
+- 淡色沒有減輕繪圖：只在建場景時換頂點顏色。這件事寫進決策 451。
+
+**排了、還沒派**
+- 基隆河的橋（§22.19 第 4 項）。
+- 決策 445 的下一步：音響號誌、行人先行、紅燈倒數、依路寬算閃爍時間。
+- 決策 446 的下一步：人行道上的停車、改成模型包的實例。AO 若沒順手做，就另派。
+- 新台幣 PR-0、PR-1（決策 443、444，存檔 76）：10/29–30 修 bug 的時段過後、送 App Store（約 11/14）之前派。
+
+**等作者**
+- 刪三個遠端 branch：
+  - `claude/old-taiwan-roads-pending`（`46cb9a8e`，已在 main 的歷史裡）；
+  - `claude/old-taiwan-roads`（#1361 已合）；
+  - 上面那個結尾 `-tdx-map` 的。
+- 私庫 #106、#108、#110 作者已合。
+- TestFlight 92 的時間。
+- 實機要看的：
+  - AE 的道路與平溪線開局；
+  - AH 的機廠；
+  - 離島；
+  - AD 之後 3D 開啟多 0.34 s；
+  - AN 的行人號誌與幀數；
+  - #1376 之後那局存檔的時鐘；
+  - E500、普悠瑪。
+
+**排程**：巡邏用 `send_later` 一條接一條，約 45 分鐘一次。換手時，新任排自己的巡邏，再刪掉本任的。
 
 **第二十一次換手之後（規劃 session_01YGNNunheBBBwyekk4Pq7b4，2026-10-27 15:10 UTC 更新）**。這一任由前任用 `create_session` 開（第 1 層），14:3x UTC 接手；前任 session_01YGNNuovwuBJPdZWXamkhEp 已封存。下一任接手時讀第 1 節、這一段、下面第二十一次那段；#1041 從「遊戲規劃（session_01YGNNunheBBBwyekk4Pq7b4）壓縮第 1 次」（14:56 UTC）往後讀。和下面不同時以這段為準。
 
