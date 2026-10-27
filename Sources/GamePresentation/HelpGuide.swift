@@ -209,6 +209,15 @@ public enum HelpGuide {
             keywords: "freight yard material cargo 貨運 貨運場 材料"
         ),
         HelpEntry(
+            "roadsAndBuses", .city,
+            question: ("Where do roads come from, and how do I run buses?", "道路從哪裡來？怎麼開公車？"),
+            answer: (
+                "Roads belong to the city: on a blank map they grow from each town toward your stations a little each month, and on a real map they are the real streets. Until a road reaches a station, its station panel can build a short station road to the nearest one. Buses run from a station along the roads: choose the Buses tool, tap the station, then tap roads for the stops. A game saved without roads can turn them on from the Buses tool.",
+                "道路是城市自己長的：空白地圖上，路每個月從城鎮往車站長一點；實景地圖上就是真實的街道。車站還沒接上路時，可以在車站面板鋪站前路，接到最近的路。公車從車站沿路開：選「公車」工具，點車站，再點路面放站牌。沒有道路的舊存檔，可以在「公車」工具裡打開道路。"
+            ),
+            keywords: "road street bus stop station road grow old save 道路 街道 公車 站牌 站前路 長 舊存檔"
+        ),
+        HelpEntry(
             "buyMap", .building,
             question: ("How do I buy more of the map?", "怎麼買地圖？"),
             answer: (

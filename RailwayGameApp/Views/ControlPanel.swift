@@ -308,7 +308,58 @@ private struct ToolOptions: View {
         case .building:
             BuildingControls(session: session)
         case .bus:
-            BusControls(session: session)
+            // Decision 428: a game without roads offers to turn them on.
+            if let offer = session.roadsOffer {
+                RoadsOfferControls(session: session, offer: offer)
+            } else {
+                BusControls(session: session)
+            }
+        }
+    }
+}
+
+/// The bus tool in a game without roads (decision 428): what turning them
+/// on does, and a button that does it after a confirmation; or why this
+/// map has none.
+private struct RoadsOfferControls: View {
+    let session: GameSession
+    let offer: RoadsOffer
+    @State private var confirming = false
+
+    var body: some View {
+        let language = session.language
+        VStack(alignment: .leading, spacing: 8) {
+            Label {
+                Text(verbatim: offer.text(in: language))
+            } icon: {
+                Image(systemName: "road.lanes")
+            }
+            .font(.footnote)
+            .foregroundStyle(Theme.textSecondary)
+            .accessibilityIdentifier("bus.roadsOffer")
+            if offer == .available {
+                Button {
+                    confirming = true
+                } label: {
+                    Text(verbatim: RoadsOffer.buttonTitle(in: language))
+                        .font(.subheadline.weight(.semibold))
+                }
+                .accessibilityIdentifier("bus.turnOnRoads")
+                .confirmationDialog(
+                    Text(verbatim: RoadsOffer.buttonTitle(in: language)), isPresented: $confirming, titleVisibility: .visible
+                ) {
+                    Button {
+                        session.turnOnRoads()
+                    } label: {
+                        Text(verbatim: RoadsOffer.buttonTitle(in: language))
+                    }
+                    Button(role: .cancel) {} label: {
+                        Text(verbatim: language.text("Cancel", "取消"))
+                    }
+                } message: {
+                    Text(verbatim: RoadsOffer.confirmation(in: language))
+                }
+            }
         }
     }
 }
@@ -814,6 +865,8 @@ private struct ActionButton: View {
                 return session.language.text("Lay Depot Sidings · \(cost.moneyText)", "鋪機廠停車線 · \(cost.moneyText)")
             }
         case .bus:
+            // Decision 428: none until the game has roads.
+            guard session.world.roads != nil else { return nil }
             // Decision 400, 10i-5: the route drawn, or the edited one's stops.
             let language = session.language
             let what = session.busDraft.route == nil ? language.text("Open Bus Route", "開公車路線") : language.text("Save Bus Route", "儲存公車路線")
