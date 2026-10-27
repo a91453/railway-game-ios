@@ -1,15 +1,87 @@
 ---
 name: rolling-stock
-description: 3D 城市畫面裡的列車：怎麼依照片做一款新車、怎麼檢查、怎麼給作者看。做或改 Web/CityView/src/world/trains.js 的車輛外型、塗裝、編組時先讀。Use before adding or changing a train in the 3D city view (Web/CityView/src/world/trains.js) — car shape, livery, formation, or when judging whether a train looks right.
+description: 3D 地圖裡的列車：配方放哪、近景與遠景、塗裝帶、發光頂點、預算、雜湊、用 tools/train-models 檢查與拍圖、怎麼給作者看。做或改列車（Map3DTrainShell、Map3DTrainSets、各車配方、Map3DModelPack）的外型、塗裝、編組、遠景版時先讀。Use before adding or changing a train in the native 3D map (Map3DModelPack, Map3DTrainSet, a car recipe in Sources/GamePresentation) — car shape, livery, formation, far version, budget — or when judging whether a train looks right. The web CityView's trains.js is in the appendix.
 ---
 
-# 3D 城市的列車
+# 3D 地圖的列車（原生 Metal）
 
-城市畫面（ARCHITECTURE 決策 152、161）裡的列車全部由 `Web/CityView/src/world/trains.js`
-畫出來。這份寫下做一款新車要知道的約定、要跑的檢查，以及 2026-10-11 做台灣高鐵 N700ST
-時踩過的坑。
+遊戲的 3D 是自己寫的 Metal（`RailwayGameApp/Views/Map3D/Map3DMetalView.swift`、`Map3DShaders.metal`）。列車不是貼圖模型，是 `Sources/GamePresentation` 裡的 Swift 配方，輸出三角形：**一個三角形一個顏色**（頂點色）、塗裝帶用 alpha、發光用旗標。沒有貼圖、沒有 UV、沒有 Blender 那一步。網頁版 `Web/CityView/src/world/trains.js` 的做法在最後的附錄，只在改網頁版時讀。
 
-## 1. 出貨的車有三條路
+## 1. 先讀什麼
+
+| 要做什麼 | 讀 |
+| --- | --- |
+| 從參考圖做一款新車的整個流程（比例、輪廓、曲面、門窗、配色、自檢、交接） | `docs/art/native-vehicle-modeling/README.md`（車輛建模手冊，#1224）、`PROMPT.md`、`REVIEW_CHECKLIST.md`；三個實例 `CASE_STUDY_700T.md`、`CASE_STUDY_EMU3000.md`、`CASE_STUDY_E500.md` |
+| 畫風 | `.claude/skills/art-style/SKILL.md`（霧面平塗、薄邊、一個三角形一個顏色） |
+| 量與拍 | `tools/train-models/README.md`（本 skill 第 6 節） |
+| 預算與遠景的規則 | 決策 408（遠景一節換一節）、417（共用預算、精細車規則）、420（簡化器、遠景版）、422、432（遠景版的測試） |
+| 要接的人手 | `docs/HANDOFF.md`、#1041 工作登記（別人正在動的車與檔案） |
+
+CLAUDE.md 的參考庫檢查照舊：新的車先看 `a91453/railway-reference-private`（尺寸、照片、顏色），參考模型只量不出貨。
+
+## 2. 配方放哪
+
+- **模型包**：`Map3DModelPack.standard`（`Map3DModels.swift`）。每個模型有名字、`vertices`（三個一組，各帶這個三角形自己的平面法線）、`minimum`／`maximum`。座標：**+x 車頭、+y 左、+z 上、軌面 z = 0、公尺、車廂中心 x = 0**。
+- **程式放樣的車**：`Map3DTrainShell`（`Map3DTrainStyle` 的 cab／car／panto）。每款專用車有自己的配方檔：`Map3DEMU800`、`Map3DEMU900`、`Map3DEMU500`、`Map3DEMU3000`、`Map3DTEMU1000`／`2000`、`Map3DC341`、`Map3DE500`、`Map3DN700SG`、`Map3DTrainShapeRefresh`（700T、E200）…
+- **編組**：`Map3DTrainSet`（`Map3DTrainSets.swift`）。一個 set 有 key、近景的 head／middle／tail／panto／centre／single、`far`（遠景 set 的 key）、`ownLengths`、`cycle`（中間車的循環）。模型名字照 `set-<key>-<單元>`，遠景 `set-<key>Far-<單元>`。`Map3DTrainSet.byKey` 是全部。
+- **接進營運**：`Map3DModelPack.modelIndex(forType:carIndex:count:)`、`layout(forType:count:)`；`Map3DTrains` 擺實例。只加模型、沒接 set，合併後不會在遊戲裡出現。
+
+## 3. 近景與遠景
+
+- 近景：500 m 內（`Map3DTrainSet.reach(of:)`），一節一個實例。
+- 遠景：500–900 m，**同一款車一節換一節**（`Map3DModelPack.model(_:forType:count:at:)`、`farModel(of:forType:count:)`），900 m 外是方塊。弱的裝置、卡的時候換得早（決策 417 的 `nearerFarModels`）。
+- **新的精細車一定帶遠景版**（417 規則 1）：同樣的造型、塗裝、編組、燈，少細節。做法照 420：頭十圈留六圈、鼻蓋列數減、腰帶分段減、車輪 8 邊、每側一片長玻璃，拿掉輪轂、側樑、冷氣頂蓋與小窗。遠景版與近景同一個框（長度、車頂、貼地），顏色是近景顏色的子集，塗裝帶與燈還在。
+- 一節超過 20,000 個三角形的車再加一層中間版，只給 lower 級（417 規則 2）。自動簡化器（`Map3DMeshSimplifier`，420）只給沒有配方的網格，而且只用 50 %；有配方的車用配方做遠景版。
+- 每加一款精細車，跑 `Map3DMotionBudgetTests.testWhatTheMapKeepsInMemory` 量模型包的記憶體，寫進 PR（417 規則 3）。
+
+## 4. 塗裝、發光、影子
+
+- **塗裝帶**：頂點 alpha 小於 1 的地方，遊戲用**線的顏色**（`SceneKitBuilder.baked` 在預覽裡烘進去）。所以一款車的線色帶、命名編組的主色畫成 alpha 0；固定的塗裝（白、窗、門、裙）畫實色。
+- **發光頂點**：一個三角形帶旗標就是「夜裡從裡面亮」（`Map3DVertex.glows`、M3DM 的 flags bit 0）：頭燈、尾燈、客室窗、方向幕。白天不發光；夜裡著色器加 `1.3 × lights`。每款車自己決定哪些三角形亮；統一的夜間亮燈是路線圖第 1 項，還沒做。
+- **光**：遊戲用決策 370 的模型光（`map3dLit(…, soft: true)`），不是棚拍光。看圖用 `tools/train-models/render.mjs`，它照這個式子。列車不經過 `Map3DLook` 的淡色轉換，顏色照配方。
+- **影子**：每節車下的軟影由 `Map3DTrains` 畫（決策 232，`frame.shadows`），太陽陰影由場景畫；配方不畫影子。
+- 玻璃要深、霧面平塗；一個三角形一個顏色；窗板與門板站出車身約 2 cm，貼著當地車身曲面；車頭曲面不要放方盒。這些細節的做法在建模手冊第 5–8 節。
+
+## 5. 預算與雜湊（規則，數字在 `tools/train-models/budgets.json`）
+
+- 近景一節 ≤ 20,000 個三角形；十二節一列 ≤ 240,000；遠景一列 ≤ 120,000，一節少於近景的一半（420、432）。
+- 一節的實例數不變：整列用實例畫，重點是單節的三角形數與頂點資料（遠景版三角形約 0.1–0.4 MB 一列，420 量過）。
+- **雜湊**：每個頂點所有欄位的 FNV-1a（`Map3DEMU800IntegrationTests.hash`）。改了別款車、或改了共用的函式，不該動的模型雜湊就會變：`hashes.lock.json` 抓這個。刻意改的，在 PR 逐項說明並更新鎖；Swift 測試也釘（`Map3DFarSets420Tests.testTheNearTarokoIsUnchanged` 的做法）。
+- 面數是 CPU／GPU 的帳，不是美術的帳：實機幀數 UNVERIFIED，等 TestFlight 的除錯數字（417）。
+
+## 6. 新工具 `tools/train-models/`
+
+```sh
+tools/train-models/run.sh OUT --tag after                 # 匯出：.m3dmodel、manifest（三角形、框、雜湊、near/far 對）
+node tools/train-models/check.mjs OUT [--new-set key]     # 預算與雜湊，紅就是 exit 1
+node tools/train-models/render.mjs OUT --time both        # 七向圖，日與夜，遊戲的模型光
+node tools/train-models/viewer.mjs OUT/index.html OUT     # 離線預覽頁；兩個資料夾就並排
+```
+
+**一款新車的順序**：①照建模手冊做配方；②`run.sh --ids <新模型>`；③`render.mjs` 看七向（先看黑色剪影、白模，再看上色）；④`check.mjs --new-set <key>`（預算、遠景版、雜湊）；⑤把新模型加進鎖（`run.sh OUT --lock tools/train-models/hashes.lock.json`），**只應該多出新模型的行**，別的行變了就是動到別款；⑥跑 `swift build --build-tests -Xswiftc -warnings-as-errors` 與該車的測試；⑦給作者看。不要再開新的 `tools/<車>/` 資料夾；舊資料夾沒有的專用驗收（GLB 打包、逐車的門窗／正面稽核）才放進車自己的目錄，並在 `tools/train-models/README.md` 的對照表加一行。
+
+**改前／改後**（改了既有車的外觀，例如夜間亮燈、遮蔽烘焙、玻璃反光）：在 main 的 worktree 匯出到 `before`（`--tag before`）、在分支匯出到 `after`，各自 `render.mjs`，`viewer.mjs 頁 before after`。路線圖第 1–3 項的 PR 用同一個工具，`renderer.js` 的 `features` 旗標就是為它們留的。
+
+## 7. 怎麼給作者看
+
+作者看真機（TestFlight），所以：
+
+- PR 放**一張總覽圖**（`overview.py`），不超過約 2 MB；完整七向、GLB、viewer、ZIP 放私庫 `Railway/game-art-previews/docs/art/<資料夾>/`（CLAUDE.md；只有最新一輪留模型與 viewer）。
+- 寫清楚：Linux 的 WebGL 預覽不是 Metal；靜態素材合併後**不會**自動出現在遊戲（要接 set 才會）；真機的 Metal、效能、動畫 UNVERIFIED。
+- 作者說「好醜」「怪」的時候，先量（同相機的前後對照、局部放大），再改；每一輪都留前一版（見建模手冊第 11 節），不要覆蓋。
+- 決策、五方評分、先拍後選的規則照 CLAUDE.md「Workflow」。
+
+## 8. 這份是怎麼來的
+
+2026-10-11 原本寫給網頁版（Meshy 生成、Blender 烘焙、`trains.js`）。之後遊戲改成原生 Metal，列車變成 Swift 配方，每款車各開一個 `tools/` 資料夾，工具重複；2026-10-27 作者同意統一（派工單 AC）：共用工具 `tools/train-models/`，這份改寫成原生做法，網頁版降成附錄（原文保留，只把標題降一級）。
+
+---
+
+# 附錄：網頁版 `Web/CityView/src/world/trains.js` 的做法
+
+以下是 2026-10-11 的原文，只在改網頁版（`Web/CityView`）時用；遊戲的 3D 不用貼圖、UV、AO 與 Blender，上面的做法才是現在的。
+
+### 1. 出貨的車有三條路
 
 | | 什麼時候用 | 工具 |
 | --- | --- | --- |
@@ -33,7 +105,7 @@ description: 3D 城市畫面裡的列車：怎麼依照片做一款新車、怎�
 照片顯示真車根本沒有——車身是素白加窗下一條細線，命名編組的顏色只是車端上方一小塊。
 顏色可信不等於塗裝佈局可信。
 
-### 生成的模型什麼時候有用
+#### 生成的模型什麼時候有用
 
 早先這一節寫著「預設用程式畫」並舉兩次 Meshy 失敗為證（照片版比例錯、文字版 391,054 個三角形
 且橘帶幾乎消失，共 45 點）。**那個結論下得太早。** 同一天作者先把一張車頭照**去背**再生成，
@@ -45,7 +117,7 @@ description: 3D 城市畫面裡的列車：怎麼依照片做一款新車、怎�
 所以：**要生成之前，先把參考圖去背、只留主體。** 選**白模**就好——顏色我們另有更可靠的來源，
 而貼圖正是這類模型最不準的部分。格式選 **GLB**（`measure.cjs` 和 `preview.cjs --reference` 都直接讀）。
 
-### 從生成的模型只拿「正規化」的東西
+#### 從生成的模型只拿「正規化」的東西
 
 量 2026-10-11 那個 Meshy 模型（710,186 個三角形）：把長度縮到真車的 27.35 m 之後，
 **車身寬 4.01 m**（真車 3.36，胖 19%），**車頭只佔車長 18%**（真車的 N700S 是 39%）。
@@ -56,7 +128,7 @@ description: 3D 城市畫面裡的列車：怎麼依照片做一款新車、怎�
 **生成的網格不進 repo。** 它和參考庫的模型一樣是量尺。從別人的宣傳照生出來的網格更是如此：
 量形狀、寫自己的程式可以，檔案本身不要提交。
 
-## 2. 把密模型降成遊戲資產（`bake_model.py`）
+### 2. 把密模型降成遊戲資產（`bake_model.py`）
 
 一個生成的模型是給人看一次的：280,838 個三角形、9 MB 的 base colour JPEG。
 城市畫面要同時跑十二節、好幾列，在手機上。形狀和塗裝要留，面數和貼圖大小不要。
@@ -85,7 +157,7 @@ High to low，三步：
 **出處要記下來**（`public/models/trains/SOURCES.json`）：降下來的模型裡已經沒有原檔的任何東西，
 Meshy 的條款要求輸出可被辨識為 AI 生成，所以那件事要寫在別的地方。
 
-## 3. 兩條路合起來用（2026-10-11 之後的做法）
+### 3. 兩條路合起來用（2026-10-11 之後的做法）
 
 「程式畫」和「Blender 建」不是二選一，是**各做一半**：
 
@@ -110,7 +182,7 @@ Meshy 的條款要求輸出可被辨識為 AI 生成，所以那件事要寫在�
 `0.492 * TEX_W / (length - 0.6)`，差 0.8% 加 0.2 m 的原點位移，結果是**窗玻璃畫在窗板旁邊**，
 整排窗看起來灰白一片。兩邊改成都走 `uOf` 就對了。
 
-### 一定會踩的那個翻轉
+#### 一定會踩的那個翻轉
 
 Blender 的 `v` 從圖的下緣算，glTF 從上緣算（匯出時會自動寫 `1 - v`），而 `CanvasTexture`
 在 three.js 裡又是翻過來上傳的。兩次翻轉抵成一次，所以 **Blender 裡要存 `1 - v`**
@@ -118,7 +190,7 @@ Blender 的 `v` 從圖的下緣算，glTF 從上緣算（匯出時會自動寫 `
 其實是座標差了半張圖。另外 `aoMap` 是自己用 `TextureLoader` 載的 PNG，UV 來自 glTF，
 所以要 `flipY = false`。
 
-### Blender 那一步
+#### Blender 那一步
 
 ```sh
 pip install bpy                                   # Blender 當 Python 模組，CPU 就夠
@@ -133,7 +205,7 @@ python3 -I tools/trains/build_train.py n700st-cab n700st-car
 選取「沖」成全選，於是整台車被重新投影，塗裝落到隨機的地方。UV0 一律自己寫，
 UV1 才用投影；而且 `unwrap()` 寫完要跑 `audit()`，確認每個面都落在自己那一條裡。
 
-### 能站出來的面，和不能的
+#### 能站出來的面，和不能的
 
 窗板、門板是**站出來**的（`proud` 約 2 cm），不是凹進去的。凹進去沒有用——車身是封閉的殼，
 一個整個在殼裡面的盒子根本看不見。站出來才有邊，烘焙才有接觸陰影可以鋪。
@@ -145,7 +217,7 @@ UV1 才用投影；而且 `unwrap()` 寫完要跑 `audit()`，確認每個面都
 **車頭上不要放盒子。** 車側接近平面，一塊板貼得上去；鴨嘴是雙曲面，六個盒子排下去會變成
 一道階梯。車頭的駕駛窗、頭燈維持用畫的——但駕駛窗要畫在車頭自己的圖表裡（下一節）。
 
-### 車頭頂自己的一張圖表（`NOSE`）
+#### 車頭頂自己的一張圖表（`NOSE`）
 
 「按高度上色」畫不出擋風玻璃：同一高度的一圈都會上色，結果是一條橫跨車頭的黑色護目鏡。
 所以車頭頂那一條（中線左右各 `NOSE.rings` 圈）另外攤成一張**由上往下看**的圖表，
@@ -158,7 +230,7 @@ UV1 才用投影；而且 `unwrap()` 寫完要跑 `audit()`，確認每個面都
 
 沒有 `cab.screen` 的車（EMU3000 整個車頭是一塊深色面罩）不用這張圖表，按高度上色就夠。
 
-## 4. 約定（照著做，不要自己發明）
+### 4. 約定（照著做，不要自己發明）
 
 - **座標**：`+Z` 是行進方向（車頭朝 +Z），`+Y` 上，軌面 `y = 0`。`dummy.lookAt` 已經假設 +Z 朝前。
 - **尺寸**：車身寬 2.9 m；車頂 3.75 m；地板 1.0 m（方塊車）或裙擺下緣 0.62 m（放樣的殼）。
@@ -175,7 +247,7 @@ UV1 才用投影；而且 `unwrap()` 寫完要跑 `audit()`，確認每個面都
 - **面數預算**：一節車 3,500 個三角形（`preview.cjs` 的 `budgetFor`）。依據是作者自己的近景
   網格約 7,200、EMU3000 的 GLB 約 16,000；取他最輕的一半。
 
-### 放樣的殼（有車頭的車）
+#### 放樣的殼（有車頭的車）
 
 `shellRing(z, t)` 回傳一圈點，`t` 是沿車頭的參數（0 在車身交界、1 在鼻尖）。每個點帶著
 **自己在那一圈裡的相對高度**，那就是貼圖的 `v`。所以貼圖上畫一條**直的**橫帶，到了車頭會
@@ -184,7 +256,7 @@ UV1 才用投影；而且 `unwrap()` 寫完要跑 `audit()`，確認每個面都
 斷面是超橢圓，稜線以下比以上飽滿（真車車身是圓角矩形，不是橢圓），稜線處微微外鼓成翼線。
 最後 12% 收口（`cap`），否則鼻尖會是一個平切面，**只有正面角度看得出來**。
 
-## 5. 先去參考庫拿數字
+### 5. 先去參考庫拿數字
 
 作者的參考庫（`a91453/railway-reference-private`，CLAUDE.md 授權直接取用）裡有做好的車隊資料。
 開工前先接上：`add_repo` 之後 `git clone --depth 1 … /home/user/railway-reference-private`。
@@ -217,7 +289,7 @@ node .claude/skills/rolling-stock/measure.cjs <reference.glb> \
 模型常常不是以公尺為單位（EMU3000 那個是 1/6.5）。寬度或高度小得不像車時用 `--metres`
 給真實全長來換算，不要直接採用。
 
-## 6. 流程
+### 6. 流程
 
 0. **先去參考庫量**（第 5 節）。沒有可用的形狀參考時，把一張乾淨的照片去背再生成一個白模來量（第 1 節）。
 1. **照片是最高依據**，和模型衝突時以照片為準。驗照片：一張雜亂的照片會讓後面全白做。要求：主體佔畫面大部分、背景和車身分得開、
@@ -237,7 +309,7 @@ node .claude/skills/rolling-stock/measure.cjs <reference.glb> \
    所以只能重跑 vite 那一步，輸出到暫存再把 `assets/`、`models/`、`index.html`、`boot.js` 複製回去，
    `tiles/` 和 `textures/` 不要動。官網要作者部署了，App 裡才看得到。
 
-### 塗裝的四個坑（N700ST 四個都踩到了）
+#### 塗裝的四個坑（N700ST 四個都踩到了）
 
 1. **車窗形狀**：先假設是方窗就錯了。新幹線是**小而直立的膠囊形、綠色玻璃**。
 2. **門與色帶的先後**：門有深色框，而且**色帶是橫過門面的**。順序必須是
@@ -246,7 +318,7 @@ node .claude/skills/rolling-stock/measure.cjs <reference.glb> \
 4. **頭車的色帶不是水平的**：N700ST 的橘帶往車頭俯衝，上面壓一條深藍帶；中間車才是水平的。
    做之前先確認這款車的頭車和中間車塗裝是不是一樣。
 
-## 7. 檢查與預覽
+### 7. 檢查與預覽
 
 ```sh
 # 先裝一次 Web/CityView 的套件
@@ -290,7 +362,7 @@ NODE_PATH="$(npm root -g)" node .claude/skills/rolling-stock/preview.cjs \
 **正面那格要看**——鼻尖的平切面只有從正面看得出來，N700ST 就是這樣抓到的。
 剪影那格是因為玩家在城市畫面裡只會掃一眼，剩下剪影還認得出來才算數。
 
-## 8. 現在做不到的事
+### 8. 現在做不到的事
 
 - **車身的貼圖沒有橫向座標**。`v` 只帶斷面高度，所以同一高度的一圈都會上到色。
   **車頭頂已經有解**（第 3 節的 `NOSE` 第二張圖表），車身其他地方還沒有：想畫一塊
@@ -304,13 +376,13 @@ NODE_PATH="$(npm root -g)" node .claude/skills/rolling-stock/preview.cjs \
 - **城市畫面沒有環境反射**（`environment.js` 的 `installSkyLight` 把環境貼圖反射關掉了，
   天光改由 light probe 提供）。亮面感只能靠色調映射和天光，不要指望反射。
 
-## 9. 驗證怎麼寫
+### 9. 驗證怎麼寫
 
 Linux 上能做的：`npm test`、`vite build`、這份 skill 的檢查與算圖。這些可以寫 **VERIFIED**。
 App 裡的實際畫面要 macOS CI 與 TestFlight，寫 **UNVERIFIED**（CLAUDE.md）。
 算圖用的是城市畫面相同的 ACES 色調映射與近似天光，但**不是** App 本身，不要寫成 App 驗過了。
 
-## 10. 外部工具
+### 10. 外部工具
 
 - **Meshy**（`.claude/skills/meshy-3d-generation/`、`tools/meshy/README.md`）：生白模當量尺用，
   見第 1 節。要先去背，選白模、GLB。生出來的網格不進 repo。
@@ -323,7 +395,7 @@ App 裡的實際畫面要 macOS CI 與 TestFlight，寫 **UNVERIFIED**（CLAUDE.
   Sketchfab 的 CC-BY 標示和說明互相衝突。**沒有授權可用的現成模型**（2026-10-11 查）。
 - 畫 App 裡的 2D 圖（圖示、角色）是另一回事，看 `.claude/skills/art-style/SKILL.md`。
 
-## 11. 這份是怎麼來的
+### 11. 這份是怎麼來的
 
 每一條規則都對應一次做錯。改這份時請保留這個性質：寫「為什麼」，而不只是「要怎樣」。
 

@@ -1,0 +1,1489 @@
+{
+  "comment" : "FNV-1a of every vertex field of every model in Map3DModelPack.standard (tools/train-models/export.swift). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "blue-seven-formation" : {
+      "hash" : "dd08763ae2fd46ea",
+      "triangles" : 13968
+    },
+    "blue-seven-leading" : {
+      "hash" : "10936e8b0ec2985b",
+      "triangles" : 1988
+    },
+    "blue-seven-middleFive" : {
+      "hash" : "fcfe2a51c77b3960",
+      "triangles" : 2024
+    },
+    "blue-seven-middleFour" : {
+      "hash" : "fcfe2a51c77b3960",
+      "triangles" : 2024
+    },
+    "blue-seven-middleOne" : {
+      "hash" : "fcfe2a51c77b3960",
+      "triangles" : 2024
+    },
+    "blue-seven-middleThree" : {
+      "hash" : "fcfe2a51c77b3960",
+      "triangles" : 2024
+    },
+    "blue-seven-middleTwo" : {
+      "hash" : "fcfe2a51c77b3960",
+      "triangles" : 2024
+    },
+    "blue-seven-trailing" : {
+      "hash" : "9cb9d00c5cd06217",
+      "triangles" : 1860
+    },
+    "c341-dm" : {
+      "hash" : "1d3126772903596f",
+      "triangles" : 3894
+    },
+    "c341-m" : {
+      "hash" : "efeebcf7d2605071",
+      "triangles" : 3318
+    },
+    "c341-rear" : {
+      "hash" : "5c62cacb91cb8ea2",
+      "triangles" : 3894
+    },
+    "c341-t" : {
+      "hash" : "3c5d71adac8d5bed",
+      "triangles" : 3306
+    },
+    "commuter-cab" : {
+      "hash" : "29d47609b90c8149",
+      "triangles" : 2234
+    },
+    "commuter-car" : {
+      "hash" : "f024f1c254f36fd3",
+      "triangles" : 1592
+    },
+    "duplex-formation" : {
+      "hash" : "fcaca50a94b54107",
+      "triangles" : 11128
+    },
+    "duplex-locomotive" : {
+      "hash" : "1cea737b1437f84e",
+      "triangles" : 8080
+    },
+    "duplex-tender" : {
+      "hash" : "3f3c9943404f058f",
+      "triangles" : 3048
+    },
+    "e1000" : {
+      "hash" : "d38aab41f944648e",
+      "triangles" : 6388
+    },
+    "e1000-far" : {
+      "hash" : "dbb11905c618d242",
+      "triangles" : 3460
+    },
+    "emu500-em" : {
+      "hash" : "c622d4729f9bf28e",
+      "triangles" : 4548
+    },
+    "emu500-emc" : {
+      "hash" : "c622d4729f9bf28e",
+      "triangles" : 4548
+    },
+    "emu500-ep" : {
+      "hash" : "9f7fc99095debe4a",
+      "triangles" : 2944
+    },
+    "emu500-et" : {
+      "hash" : "bbc20c3603682bd5",
+      "triangles" : 2840
+    },
+    "emu500-formation" : {
+      "hash" : "6c52052f859d9cd1",
+      "triangles" : 14880
+    },
+    "emu800-ed" : {
+      "hash" : "4963906d22906b97",
+      "triangles" : 11506
+    },
+    "emu800-ed-far" : {
+      "hash" : "ff7c370fbbfd852b",
+      "triangles" : 6046
+    },
+    "emu800-ed-reverse" : {
+      "hash" : "f100e91d095f8497",
+      "triangles" : 11506
+    },
+    "emu800-ed-reverse-far" : {
+      "hash" : "81ef46b26182702b",
+      "triangles" : 6046
+    },
+    "emu800-ema" : {
+      "hash" : "72af84ac4ade481e",
+      "triangles" : 5200
+    },
+    "emu800-ema-far" : {
+      "hash" : "eff481f4a1e1d6e",
+      "triangles" : 2916
+    },
+    "emu800-ema-reverse" : {
+      "hash" : "2f3bef8fd455f41e",
+      "triangles" : 5200
+    },
+    "emu800-ema-reverse-far" : {
+      "hash" : "20fb3c560011fa6e",
+      "triangles" : 2916
+    },
+    "emu800-emb" : {
+      "hash" : "15c759e0812d1166",
+      "triangles" : 5212
+    },
+    "emu800-emb-far" : {
+      "hash" : "ff6706ba6e09e056",
+      "triangles" : 2928
+    },
+    "emu800-emb-reverse" : {
+      "hash" : "62b90243b3cc5266",
+      "triangles" : 5212
+    },
+    "emu800-emb-reverse-far" : {
+      "hash" : "5f65d018c41da556",
+      "triangles" : 2928
+    },
+    "emu800-ep" : {
+      "hash" : "dbe7c2914b0c1326",
+      "triangles" : 5372
+    },
+    "emu800-ep-far" : {
+      "hash" : "7cfb04aea34d81dc",
+      "triangles" : 3088
+    },
+    "emu800-ep-reverse" : {
+      "hash" : "b7fe22100e9cfe26",
+      "triangles" : 5372
+    },
+    "emu800-ep-reverse-far" : {
+      "hash" : "912efe9acf5da6dc",
+      "triangles" : 3088
+    },
+    "emu900-ed" : {
+      "hash" : "1c1b03af655d024a",
+      "triangles" : 9256
+    },
+    "emu900-ed-far" : {
+      "hash" : "71d014c5bc910713",
+      "triangles" : 5380
+    },
+    "emu900-ed-light" : {
+      "hash" : "490003b967e88746",
+      "triangles" : 2188
+    },
+    "emu900-ed-reverse" : {
+      "hash" : "2124c9a04a13ca4a",
+      "triangles" : 9256
+    },
+    "emu900-ed-reverse-far" : {
+      "hash" : "64614355546cb213",
+      "triangles" : 5380
+    },
+    "emu900-ed-reverse-light" : {
+      "hash" : "8dc2a8b26ade0046",
+      "triangles" : 2188
+    },
+    "emu900-emCrew" : {
+      "hash" : "fa95f9430ea49585",
+      "triangles" : 4992
+    },
+    "emu900-emCrew-far" : {
+      "hash" : "d4d3787ab0f5235f",
+      "triangles" : 2780
+    },
+    "emu900-emCrew-light" : {
+      "hash" : "ee2e4bec215ae3a1",
+      "triangles" : 868
+    },
+    "emu900-emCrew-reverse" : {
+      "hash" : "443f04919dd94f85",
+      "triangles" : 4992
+    },
+    "emu900-emCrew-reverse-far" : {
+      "hash" : "180b6cc968aeb25f",
+      "triangles" : 2780
+    },
+    "emu900-emCrew-reverse-light" : {
+      "hash" : "66e0c89e6219f6a1",
+      "triangles" : 868
+    },
+    "emu900-emSIV" : {
+      "hash" : "e14b040e50d14de5",
+      "triangles" : 5040
+    },
+    "emu900-emSIV-far" : {
+      "hash" : "3ddecc12918c2c53",
+      "triangles" : 2792
+    },
+    "emu900-emSIV-light" : {
+      "hash" : "2d62dc15b0994ded",
+      "triangles" : 880
+    },
+    "emu900-emSIV-reverse" : {
+      "hash" : "692a5d1b57a4dce5",
+      "triangles" : 5040
+    },
+    "emu900-emSIV-reverse-far" : {
+      "hash" : "9fb265d1895cca53",
+      "triangles" : 2792
+    },
+    "emu900-emSIV-reverse-light" : {
+      "hash" : "54f5b0c11768eeed",
+      "triangles" : 880
+    },
+    "emu900-emToilet" : {
+      "hash" : "77beb47b4062c431",
+      "triangles" : 5080
+    },
+    "emu900-emToilet-far" : {
+      "hash" : "4333c46cdd021e1d",
+      "triangles" : 2836
+    },
+    "emu900-emToilet-light" : {
+      "hash" : "864067e5141ee7",
+      "triangles" : 908
+    },
+    "emu900-emToilet-reverse" : {
+      "hash" : "9d9dcbb94a414031",
+      "triangles" : 5080
+    },
+    "emu900-emToilet-reverse-far" : {
+      "hash" : "3fcd455416ae451d",
+      "triangles" : 2836
+    },
+    "emu900-emToilet-reverse-light" : {
+      "hash" : "6145db68b3678e7",
+      "triangles" : 908
+    },
+    "emu900-epAccessible" : {
+      "hash" : "2f57b4c48c8c920e",
+      "triangles" : 5176
+    },
+    "emu900-epAccessible-far" : {
+      "hash" : "2c4e2af7530f97d6",
+      "triangles" : 2964
+    },
+    "emu900-epAccessible-light" : {
+      "hash" : "29ad776ec37250eb",
+      "triangles" : 1052
+    },
+    "emu900-epAccessible-reverse" : {
+      "hash" : "e7e5ab097ddb030e",
+      "triangles" : 5176
+    },
+    "emu900-epAccessible-reverse-far" : {
+      "hash" : "b37b2e4f6d85afd6",
+      "triangles" : 2964
+    },
+    "emu900-epAccessible-reverse-light" : {
+      "hash" : "f9294f1ace9650eb",
+      "triangles" : 1052
+    },
+    "emu900-epCompressor" : {
+      "hash" : "bf2256208d78dbc6",
+      "triangles" : 5264
+    },
+    "emu900-epCompressor-far" : {
+      "hash" : "38f605c04537b046",
+      "triangles" : 3020
+    },
+    "emu900-epCompressor-light" : {
+      "hash" : "576cbb355e826acd",
+      "triangles" : 1092
+    },
+    "emu900-epCompressor-reverse" : {
+      "hash" : "d49ea2b3a5b8c2c6",
+      "triangles" : 5264
+    },
+    "emu900-epCompressor-reverse-far" : {
+      "hash" : "aa35bd88752d0b46",
+      "triangles" : 3020
+    },
+    "emu900-epCompressor-reverse-light" : {
+      "hash" : "eba24d8951a25dcd",
+      "triangles" : 1092
+    },
+    "express-cab" : {
+      "hash" : "75384245df579f7a",
+      "triangles" : 3080
+    },
+    "express-car" : {
+      "hash" : "fc3c8438464b4bf1",
+      "triangles" : 1748
+    },
+    "green-commuter-formation" : {
+      "hash" : "fa86a56a0527cb03",
+      "triangles" : 4908
+    },
+    "green-commuter-leading" : {
+      "hash" : "255185f83eb943fc",
+      "triangles" : 2454
+    },
+    "green-commuter-trailing" : {
+      "hash" : "6f3ad8542b2e304a",
+      "triangles" : 2454
+    },
+    "green-tram-formation" : {
+      "hash" : "95ac0654ab999cd",
+      "triangles" : 4312
+    },
+    "green-tram-head" : {
+      "hash" : "bf9fbed1df52ab1b",
+      "triangles" : 1352
+    },
+    "green-tram-middle" : {
+      "hash" : "d5ce25e4fe31c4f1",
+      "triangles" : 1524
+    },
+    "green-tram-tail" : {
+      "hash" : "ef77ddc46b7dd282",
+      "triangles" : 1436
+    },
+    "highSpeed-cab" : {
+      "hash" : "c030a0ccde349dd1",
+      "triangles" : 3044
+    },
+    "highSpeed-car" : {
+      "hash" : "1488204c94e51a59",
+      "triangles" : 1835
+    },
+    "highSpeed-panto" : {
+      "hash" : "9fc203affb3e26bf",
+      "triangles" : 1883
+    },
+    "life-bus" : {
+      "hash" : "3a6e83a36058bb8d",
+      "triangles" : 130
+    },
+    "life-car" : {
+      "hash" : "c85604c786fe7ca4",
+      "triangles" : 110
+    },
+    "life-coachBus" : {
+      "hash" : "ed823eef367fbf12",
+      "triangles" : 2884
+    },
+    "life-lowFloorBus" : {
+      "hash" : "282e0ae07ead859e",
+      "triangles" : 2212
+    },
+    "life-lowFloorBus-route" : {
+      "hash" : "f3f0241c0f721836",
+      "triangles" : 2212
+    },
+    "life-midiBus" : {
+      "hash" : "e3032f06a360b9bf",
+      "triangles" : 2627
+    },
+    "life-scooter" : {
+      "hash" : "20e5f75767239673",
+      "triangles" : 160
+    },
+    "life-scooterPair" : {
+      "hash" : "368fc9ed6ae12384",
+      "triangles" : 210
+    },
+    "life-shuttleBus" : {
+      "hash" : "cac326b6a5813477",
+      "triangles" : 1434
+    },
+    "life-standing" : {
+      "hash" : "71fc08cddbec14dd",
+      "triangles" : 70
+    },
+    "life-van" : {
+      "hash" : "4ce5aebc8b8efc90",
+      "triangles" : 110
+    },
+    "life-walking" : {
+      "hash" : "f644b2057fec536d",
+      "triangles" : 70
+    },
+    "lrt-five-formation" : {
+      "hash" : "f89cb2cdc85bf4ed",
+      "triangles" : 4500
+    },
+    "lrt-five-leading" : {
+      "hash" : "4e5d6c78298cc0bc",
+      "triangles" : 1320
+    },
+    "lrt-five-middle" : {
+      "hash" : "746af895fbf9ef1",
+      "triangles" : 1156
+    },
+    "lrt-five-suspendedFront" : {
+      "hash" : "344c4db78f2e5595",
+      "triangles" : 288
+    },
+    "lrt-five-suspendedRear" : {
+      "hash" : "344c4db78f2e5595",
+      "triangles" : 288
+    },
+    "lrt-five-trailing" : {
+      "hash" : "6182c40ce43b6bb1",
+      "triangles" : 1448
+    },
+    "lrt-seven-formation" : {
+      "hash" : "be81473584a98d35",
+      "triangles" : 6424
+    },
+    "lrt-seven-leading" : {
+      "hash" : "f65fb009ad028eab",
+      "triangles" : 1408
+    },
+    "lrt-seven-middleFront" : {
+      "hash" : "912c579bd2cfdb72",
+      "triangles" : 1224
+    },
+    "lrt-seven-middleRear" : {
+      "hash" : "912c579bd2cfdb72",
+      "triangles" : 1224
+    },
+    "lrt-seven-suspendedCentre" : {
+      "hash" : "cd5b275fc9d654fd",
+      "triangles" : 344
+    },
+    "lrt-seven-suspendedFront" : {
+      "hash" : "cd5b275fc9d654fd",
+      "triangles" : 344
+    },
+    "lrt-seven-suspendedRear" : {
+      "hash" : "cd5b275fc9d654fd",
+      "triangles" : 344
+    },
+    "lrt-seven-trailing" : {
+      "hash" : "1a87cacc174fa12",
+      "triangles" : 1536
+    },
+    "metro-cab" : {
+      "hash" : "d9f439bd817ef751",
+      "triangles" : 2252
+    },
+    "metro-car" : {
+      "hash" : "6ee0ab1018ab4924",
+      "triangles" : 1696
+    },
+    "metro-four-formation" : {
+      "hash" : "fca9895a2fe8a530",
+      "triangles" : 7912
+    },
+    "metro-four-leading" : {
+      "hash" : "460808ad83debb24",
+      "triangles" : 1996
+    },
+    "metro-four-middleFront" : {
+      "hash" : "3f32956938e4bace",
+      "triangles" : 1960
+    },
+    "metro-four-middleRear" : {
+      "hash" : "3f32956938e4bace",
+      "triangles" : 1960
+    },
+    "metro-four-trailing" : {
+      "hash" : "9935c3bfec62f2f3",
+      "triangles" : 1996
+    },
+    "peopleMover-cab" : {
+      "hash" : "b185e96f1b5aa6c9",
+      "triangles" : 2042
+    },
+    "peopleMover-car" : {
+      "hash" : "d6dbac636a1ca1ee",
+      "triangles" : 1344
+    },
+    "pp-ppc1400" : {
+      "hash" : "e05315f0a8bac8ec",
+      "triangles" : 8184
+    },
+    "pp-ppc1400-far" : {
+      "hash" : "cdc5fb606c2654c",
+      "triangles" : 3944
+    },
+    "pp-pph1300" : {
+      "hash" : "ce637b16bfe56ee5",
+      "triangles" : 8032
+    },
+    "pp-pph1300-far" : {
+      "hash" : "d68c47aff838041a",
+      "triangles" : 3856
+    },
+    "pp-ppm2500" : {
+      "hash" : "9c1a589edef0340a",
+      "triangles" : 7024
+    },
+    "pp-ppm2500-far" : {
+      "hash" : "6a9c31b4e02620fa",
+      "triangles" : 3328
+    },
+    "pp-ppt1000" : {
+      "hash" : "e7bed1d0aa131cd0",
+      "triangles" : 8172
+    },
+    "pp-ppt1000-far" : {
+      "hash" : "d27aa3faac6983b4",
+      "triangles" : 3944
+    },
+    "prop-busStop" : {
+      "hash" : "50023776638d18c",
+      "triangles" : 288
+    },
+    "prop-lamp" : {
+      "hash" : "333474283dd11b6e",
+      "triangles" : 36
+    },
+    "prop-pole" : {
+      "hash" : "9ec7dbd8ca449800",
+      "triangles" : 88
+    },
+    "prop-signalAmber" : {
+      "hash" : "99db8dfa18e7baab",
+      "triangles" : 76
+    },
+    "prop-signalGo" : {
+      "hash" : "971614e8bce73bbb",
+      "triangles" : 76
+    },
+    "prop-signalStop" : {
+      "hash" : "b6cf28be93afa9af",
+      "triangles" : 76
+    },
+    "prop-tree" : {
+      "hash" : "5ac349ccb3ef07b7",
+      "triangles" : 76
+    },
+    "prop-vending" : {
+      "hash" : "86d9dc0d994d5203",
+      "triangles" : 38
+    },
+    "refresh-700t-cab" : {
+      "hash" : "e50fc4e82c87ce31",
+      "triangles" : 9126
+    },
+    "refresh-700t-middle" : {
+      "hash" : "5c25af3734b3b2c9",
+      "triangles" : 5602
+    },
+    "refresh-700t-panto" : {
+      "hash" : "435084ca067d029b",
+      "triangles" : 5730
+    },
+    "refresh-700t-tail" : {
+      "hash" : "409900e38e5c2528",
+      "triangles" : 9126
+    },
+    "refresh-e200" : {
+      "hash" : "d97cec1158ddcb0e",
+      "triangles" : 5512
+    },
+    "set-BLUE-car" : {
+      "hash" : "1ef18359c168b9f5",
+      "triangles" : 1528
+    },
+    "set-BLUE-head" : {
+      "hash" : "84d4a14820279a14",
+      "triangles" : 1320
+    },
+    "set-BLUE-tail" : {
+      "hash" : "267f145e46bbcd85",
+      "triangles" : 1588
+    },
+    "set-blueSeven-car" : {
+      "hash" : "fcfe2a51c77b3960",
+      "triangles" : 2024
+    },
+    "set-blueSeven-head" : {
+      "hash" : "ffcbb1ea5021f2bb",
+      "triangles" : 2012
+    },
+    "set-blueSeven-tail" : {
+      "hash" : "9a1ff1a2d139a8fb",
+      "triangles" : 1884
+    },
+    "set-dieselExpress-car" : {
+      "hash" : "752c2972277a66d4",
+      "triangles" : 1748
+    },
+    "set-dieselExpress-head" : {
+      "hash" : "4d29e07c521b19e4",
+      "triangles" : 3172
+    },
+    "set-dieselExpress-tail" : {
+      "hash" : "4d160ddec0786ae8",
+      "triangles" : 3172
+    },
+    "set-dieselRailcar-car" : {
+      "hash" : "7a76700efb19d0fd",
+      "triangles" : 1528
+    },
+    "set-dieselRailcar-head" : {
+      "hash" : "33663c2baea25793",
+      "triangles" : 2148
+    },
+    "set-dieselRailcar-single" : {
+      "hash" : "51dcb3feb00aabda",
+      "triangles" : 2992
+    },
+    "set-dieselRailcar-tail" : {
+      "hash" : "9a7b092a5a6c361b",
+      "triangles" : 2148
+    },
+    "set-E200CK-car" : {
+      "hash" : "e682cb857c8bd079",
+      "triangles" : 6476
+    },
+    "set-E200CK-head" : {
+      "hash" : "8627afbfece96e5e",
+      "triangles" : 5512
+    },
+    "set-E200CK-tail" : {
+      "hash" : "1a9fa5475f289341",
+      "triangles" : 6500
+    },
+    "set-E200CKFar-car" : {
+      "hash" : "aa05043206abc079",
+      "triangles" : 4008
+    },
+    "set-E200CKFar-head" : {
+      "hash" : "8627afbfece96e5e",
+      "triangles" : 5512
+    },
+    "set-E200CKFar-tail" : {
+      "hash" : "4855ea07ca788341",
+      "triangles" : 4032
+    },
+    "set-E500CK-car" : {
+      "hash" : "e682cb857c8bd079",
+      "triangles" : 6476
+    },
+    "set-E500CK-head" : {
+      "hash" : "9847c0f5eb19364",
+      "triangles" : 9964
+    },
+    "set-E500CK-tail" : {
+      "hash" : "1a9fa5475f289341",
+      "triangles" : 6500
+    },
+    "set-E500CKFar-car" : {
+      "hash" : "aa05043206abc079",
+      "triangles" : 4008
+    },
+    "set-E500CKFar-head" : {
+      "hash" : "8dbdf8cee771ebe4",
+      "triangles" : 3992
+    },
+    "set-E500CKFar-tail" : {
+      "hash" : "4855ea07ca788341",
+      "triangles" : 4032
+    },
+    "set-emu500-car" : {
+      "hash" : "2720ef568e66698e",
+      "triangles" : 4548
+    },
+    "set-emu500-carBack" : {
+      "hash" : "c622d4729f9bf28e",
+      "triangles" : 4548
+    },
+    "set-emu500-centre" : {
+      "hash" : "bbc20c3603682bd5",
+      "triangles" : 2840
+    },
+    "set-emu500-centreBack" : {
+      "hash" : "d7af3bb56d0a76d5",
+      "triangles" : 2840
+    },
+    "set-emu500-head" : {
+      "hash" : "b1ce9377b71ff62e",
+      "triangles" : 4548
+    },
+    "set-emu500-panto" : {
+      "hash" : "9f7fc99095debe4a",
+      "triangles" : 2944
+    },
+    "set-emu500-pantoBack" : {
+      "hash" : "161d035fd7298b4a",
+      "triangles" : 2944
+    },
+    "set-emu500-tail" : {
+      "hash" : "2839804bf8b663da",
+      "triangles" : 4548
+    },
+    "set-emu500Far-car" : {
+      "hash" : "e82f5d5bc6d887f6",
+      "triangles" : 1740
+    },
+    "set-emu500Far-carBack" : {
+      "hash" : "845d09fd1d3564f6",
+      "triangles" : 1740
+    },
+    "set-emu500Far-centre" : {
+      "hash" : "f20acfc2517f764d",
+      "triangles" : 1072
+    },
+    "set-emu500Far-centreBack" : {
+      "hash" : "d568b83f23c8c54d",
+      "triangles" : 1072
+    },
+    "set-emu500Far-head" : {
+      "hash" : "14dd5828c4300be",
+      "triangles" : 1740
+    },
+    "set-emu500Far-panto" : {
+      "hash" : "dc1f55bb3ac42961",
+      "triangles" : 1144
+    },
+    "set-emu500Far-pantoBack" : {
+      "hash" : "3d4ef6a95a867961",
+      "triangles" : 1144
+    },
+    "set-emu500Far-tail" : {
+      "hash" : "b6151d7980d54aa2",
+      "triangles" : 1740
+    },
+    "set-emu800-car" : {
+      "hash" : "72af84ac4ade481e",
+      "triangles" : 5200
+    },
+    "set-emu800-carBack" : {
+      "hash" : "2f3bef8fd455f41e",
+      "triangles" : 5200
+    },
+    "set-emu800-centre" : {
+      "hash" : "15c759e0812d1166",
+      "triangles" : 5212
+    },
+    "set-emu800-centreBack" : {
+      "hash" : "62b90243b3cc5266",
+      "triangles" : 5212
+    },
+    "set-emu800-head" : {
+      "hash" : "b98adf545493fcd3",
+      "triangles" : 11506
+    },
+    "set-emu800-panto" : {
+      "hash" : "dbe7c2914b0c1326",
+      "triangles" : 5372
+    },
+    "set-emu800-pantoBack" : {
+      "hash" : "b7fe22100e9cfe26",
+      "triangles" : 5372
+    },
+    "set-emu800-tail" : {
+      "hash" : "645b932cbb054347",
+      "triangles" : 11506
+    },
+    "set-emu800Far-car" : {
+      "hash" : "f26c30be9d816a26",
+      "triangles" : 1100
+    },
+    "set-emu800Far-carBack" : {
+      "hash" : "6db7462a7c555526",
+      "triangles" : 1100
+    },
+    "set-emu800Far-centre" : {
+      "hash" : "d525c3b09f42d7ae",
+      "triangles" : 1112
+    },
+    "set-emu800Far-centreBack" : {
+      "hash" : "8618309b34eb20ae",
+      "triangles" : 1112
+    },
+    "set-emu800Far-head" : {
+      "hash" : "7f3421f0d34420d2",
+      "triangles" : 2418
+    },
+    "set-emu800Far-panto" : {
+      "hash" : "d114b3b367b5cc25",
+      "triangles" : 1160
+    },
+    "set-emu800Far-pantoBack" : {
+      "hash" : "7a3ff68101d2cd25",
+      "triangles" : 1160
+    },
+    "set-emu800Far-tail" : {
+      "hash" : "c9b5d261d8159b6",
+      "triangles" : 2418
+    },
+    "set-emu900-car" : {
+      "hash" : "77beb47b4062c431",
+      "triangles" : 5080
+    },
+    "set-emu900-carBack" : {
+      "hash" : "9d9dcbb94a414031",
+      "triangles" : 5080
+    },
+    "set-emu900-centre" : {
+      "hash" : "e14b040e50d14de5",
+      "triangles" : 5040
+    },
+    "set-emu900-centreBack" : {
+      "hash" : "692a5d1b57a4dce5",
+      "triangles" : 5040
+    },
+    "set-emu900-fourth" : {
+      "hash" : "fa95f9430ea49585",
+      "triangles" : 4992
+    },
+    "set-emu900-fourthBack" : {
+      "hash" : "e7e5ab097ddb030e",
+      "triangles" : 5176
+    },
+    "set-emu900-head" : {
+      "hash" : "12515d1398df5dee",
+      "triangles" : 9256
+    },
+    "set-emu900-panto" : {
+      "hash" : "bf2256208d78dbc6",
+      "triangles" : 5264
+    },
+    "set-emu900-pantoBack" : {
+      "hash" : "d49ea2b3a5b8c2c6",
+      "triangles" : 5264
+    },
+    "set-emu900-tail" : {
+      "hash" : "c44204dddfe35762",
+      "triangles" : 9256
+    },
+    "set-emu900Far-car" : {
+      "hash" : "864067e5141ee7",
+      "triangles" : 908
+    },
+    "set-emu900Far-carBack" : {
+      "hash" : "6145db68b3678e7",
+      "triangles" : 908
+    },
+    "set-emu900Far-centre" : {
+      "hash" : "2d62dc15b0994ded",
+      "triangles" : 880
+    },
+    "set-emu900Far-centreBack" : {
+      "hash" : "54f5b0c11768eeed",
+      "triangles" : 880
+    },
+    "set-emu900Far-fourth" : {
+      "hash" : "ee2e4bec215ae3a1",
+      "triangles" : 868
+    },
+    "set-emu900Far-fourthBack" : {
+      "hash" : "f9294f1ace9650eb",
+      "triangles" : 1052
+    },
+    "set-emu900Far-head" : {
+      "hash" : "44c7c6f647c7b372",
+      "triangles" : 2188
+    },
+    "set-emu900Far-panto" : {
+      "hash" : "576cbb355e826acd",
+      "triangles" : 1092
+    },
+    "set-emu900Far-pantoBack" : {
+      "hash" : "eba24d8951a25dcd",
+      "triangles" : 1092
+    },
+    "set-emu900Far-tail" : {
+      "hash" : "713f93db9063494a",
+      "triangles" : 2188
+    },
+    "set-emu3000-car" : {
+      "hash" : "5317f5888e4395e5",
+      "triangles" : 5592
+    },
+    "set-emu3000-em6" : {
+      "hash" : "496faa7c09d96f00",
+      "triangles" : 5456
+    },
+    "set-emu3000-ep7" : {
+      "hash" : "2b760eea7ae99c3b",
+      "triangles" : 5832
+    },
+    "set-emu3000-ep10" : {
+      "hash" : "7d0569ffe248e80a",
+      "triangles" : 5968
+    },
+    "set-emu3000-et" : {
+      "hash" : "bc9973e1bbc7370b",
+      "triangles" : 5704
+    },
+    "set-emu3000-head" : {
+      "hash" : "4a714429f666ee17",
+      "triangles" : 8962
+    },
+    "set-emu3000-panto" : {
+      "hash" : "58239dc6033250bb",
+      "triangles" : 5832
+    },
+    "set-emu3000-tail" : {
+      "hash" : "10f24389b9dd9043",
+      "triangles" : 8962
+    },
+    "set-emu3000Far-car" : {
+      "hash" : "c186e51614da018f",
+      "triangles" : 2560
+    },
+    "set-emu3000Far-em6" : {
+      "hash" : "99723afce144b982",
+      "triangles" : 2472
+    },
+    "set-emu3000Far-ep7" : {
+      "hash" : "7907972c63e43a1c",
+      "triangles" : 2688
+    },
+    "set-emu3000Far-ep10" : {
+      "hash" : "35fc298d3b7fcfed",
+      "triangles" : 2776
+    },
+    "set-emu3000Far-et" : {
+      "hash" : "b68c7dc9bd3ec631",
+      "triangles" : 2624
+    },
+    "set-emu3000Far-head" : {
+      "hash" : "bdae0794a16e561d",
+      "triangles" : 3834
+    },
+    "set-emu3000Far-panto" : {
+      "hash" : "431ae2f8191b5d0",
+      "triangles" : 2688
+    },
+    "set-emu3000Far-tail" : {
+      "hash" : "fee2357d0748db99",
+      "triangles" : 3834
+    },
+    "set-fiveSectionLRT-head" : {
+      "hash" : "55a0e599cae1c755",
+      "triangles" : 2628
+    },
+    "set-fiveSectionLRT-tail" : {
+      "hash" : "3bb5dde9dc8e0894",
+      "triangles" : 2756
+    },
+    "set-fourCarMetro-car" : {
+      "hash" : "3f32956938e4bace",
+      "triangles" : 1960
+    },
+    "set-fourCarMetro-head" : {
+      "hash" : "dee0fbb68e64b15c",
+      "triangles" : 2020
+    },
+    "set-fourCarMetro-tail" : {
+      "hash" : "bbbaa84f16a69dd7",
+      "triangles" : 2020
+    },
+    "set-greenCommuter-car" : {
+      "hash" : "95cf4ac082bea1d0",
+      "triangles" : 2478
+    },
+    "set-greenCommuter-head" : {
+      "hash" : "95cf4ac082bea1d0",
+      "triangles" : 2478
+    },
+    "set-greenCommuter-tail" : {
+      "hash" : "3abd8871c00fe692",
+      "triangles" : 2478
+    },
+    "set-greenTram-car" : {
+      "hash" : "bf95fe433625728d",
+      "triangles" : 3048
+    },
+    "set-greenTram-head" : {
+      "hash" : "bd4a338cb9f56cd8",
+      "triangles" : 2900
+    },
+    "set-greenTram-single" : {
+      "hash" : "495eb67ece43c729",
+      "triangles" : 2836
+    },
+    "set-greenTram-tail" : {
+      "hash" : "3b2cdc687f6bd4b4",
+      "triangles" : 2984
+    },
+    "set-highSpeed-car" : {
+      "hash" : "5c25af3734b3b2c9",
+      "triangles" : 5602
+    },
+    "set-highSpeed-head" : {
+      "hash" : "624ca232fa5a9b85",
+      "triangles" : 9126
+    },
+    "set-highSpeed-panto" : {
+      "hash" : "435084ca067d029b",
+      "triangles" : 5730
+    },
+    "set-highSpeed-tail" : {
+      "hash" : "7bdb6359147e7764",
+      "triangles" : 9126
+    },
+    "set-highSpeedFar-car" : {
+      "hash" : "6272a0b841ac286f",
+      "triangles" : 514
+    },
+    "set-highSpeedFar-head" : {
+      "hash" : "98bc18987b26071e",
+      "triangles" : 1208
+    },
+    "set-highSpeedFar-panto" : {
+      "hash" : "2c814f79ee169dfc",
+      "triangles" : 562
+    },
+    "set-highSpeedFar-tail" : {
+      "hash" : "89f8e0e68e791ce0",
+      "triangles" : 1208
+    },
+    "set-metroC341-car" : {
+      "hash" : "3c5d71adac8d5bed",
+      "triangles" : 3306
+    },
+    "set-metroC341-centre" : {
+      "hash" : "efeebcf7d2605071",
+      "triangles" : 3318
+    },
+    "set-metroC341-head" : {
+      "hash" : "69b476f37f91e547",
+      "triangles" : 3894
+    },
+    "set-metroC341-tail" : {
+      "hash" : "51cdf271ae4f62ae",
+      "triangles" : 3894
+    },
+    "set-metroC341Far-car" : {
+      "hash" : "ba12a6c23ea1d3d1",
+      "triangles" : 1354
+    },
+    "set-metroC341Far-centre" : {
+      "hash" : "eac26a59ccbfbc75",
+      "triangles" : 1366
+    },
+    "set-metroC341Far-head" : {
+      "hash" : "d22ec04a6b9f1f0a",
+      "triangles" : 1754
+    },
+    "set-metroC341Far-tail" : {
+      "hash" : "6d290c553d1d988e",
+      "triangles" : 1754
+    },
+    "set-metroC381-car" : {
+      "hash" : "d713d98523ccaf7c",
+      "triangles" : 1800
+    },
+    "set-metroC381-head" : {
+      "hash" : "ad35759ee1edb547",
+      "triangles" : 2360
+    },
+    "set-metroC381-tail" : {
+      "hash" : "a5591b68bb3f6837",
+      "triangles" : 2360
+    },
+    "set-MINGRI-car" : {
+      "hash" : "19a87a349f7ae095",
+      "triangles" : 1528
+    },
+    "set-MINGRI-head" : {
+      "hash" : "9847c0f5eb19364",
+      "triangles" : 9964
+    },
+    "set-MINGRI-tail" : {
+      "hash" : "9206cbf2686803a5",
+      "triangles" : 1588
+    },
+    "set-MINGRIFar-car" : {
+      "hash" : "19a87a349f7ae095",
+      "triangles" : 1528
+    },
+    "set-MINGRIFar-head" : {
+      "hash" : "8dbdf8cee771ebe4",
+      "triangles" : 3992
+    },
+    "set-MINGRIFar-tail" : {
+      "hash" : "9206cbf2686803a5",
+      "triangles" : 1588
+    },
+    "set-n700sG-car" : {
+      "hash" : "2b763f05a0833cc4",
+      "triangles" : 6024
+    },
+    "set-n700sG-carBack" : {
+      "hash" : "93934d8a3fdc8c4",
+      "triangles" : 6024
+    },
+    "set-n700sG-head" : {
+      "hash" : "fae5ac52a48550ac",
+      "triangles" : 6989
+    },
+    "set-n700sG-panto" : {
+      "hash" : "4af2b5ae14ab3d12",
+      "triangles" : 6016
+    },
+    "set-n700sG-pantoBack" : {
+      "hash" : "42f10b6cfd4b512",
+      "triangles" : 6016
+    },
+    "set-n700sG-tail" : {
+      "hash" : "8605add5494386ce",
+      "triangles" : 6989
+    },
+    "set-n700sGFar-car" : {
+      "hash" : "5f255016eba2cf31",
+      "triangles" : 408
+    },
+    "set-n700sGFar-carBack" : {
+      "hash" : "2d959bb45b6d9931",
+      "triangles" : 408
+    },
+    "set-n700sGFar-head" : {
+      "hash" : "a21fb1e42fe5802d",
+      "triangles" : 977
+    },
+    "set-n700sGFar-panto" : {
+      "hash" : "7ec988d987a9f4e7",
+      "triangles" : 1488
+    },
+    "set-n700sGFar-pantoBack" : {
+      "hash" : "80e240aaaec27ae7",
+      "triangles" : 1488
+    },
+    "set-n700sGFar-tail" : {
+      "hash" : "b78151ea81f196a7",
+      "triangles" : 977
+    },
+    "set-pushPull-car" : {
+      "hash" : "e7bed1d0aa131cd0",
+      "triangles" : 8172
+    },
+    "set-pushPull-head" : {
+      "hash" : "9847c0f5eb19364",
+      "triangles" : 9964
+    },
+    "set-pushPullE1000-car" : {
+      "hash" : "e7bed1d0aa131cd0",
+      "triangles" : 8172
+    },
+    "set-pushPullE1000-head" : {
+      "hash" : "d38aab41f944648e",
+      "triangles" : 6388
+    },
+    "set-pushPullE1000Far-car" : {
+      "hash" : "d27aa3faac6983b4",
+      "triangles" : 3944
+    },
+    "set-pushPullE1000Far-head" : {
+      "hash" : "dbb11905c618d242",
+      "triangles" : 3460
+    },
+    "set-pushPullFar-car" : {
+      "hash" : "d27aa3faac6983b4",
+      "triangles" : 3944
+    },
+    "set-pushPullFar-head" : {
+      "hash" : "8dbdf8cee771ebe4",
+      "triangles" : 3992
+    },
+    "set-puyuma-car" : {
+      "hash" : "c1994a0f23a2502d",
+      "triangles" : 1624
+    },
+    "set-puyuma-centre" : {
+      "hash" : "5b84fcca436728d",
+      "triangles" : 1636
+    },
+    "set-puyuma-head" : {
+      "hash" : "cf5391d25b333165",
+      "triangles" : 2418
+    },
+    "set-puyuma-panto" : {
+      "hash" : "bb92c800afc2a288",
+      "triangles" : 1776
+    },
+    "set-puyuma-pantoBack" : {
+      "hash" : "559668a806360888",
+      "triangles" : 1776
+    },
+    "set-puyuma-tail" : {
+      "hash" : "d530e8f65800f2db",
+      "triangles" : 2370
+    },
+    "set-puyumaFar-car" : {
+      "hash" : "884c0628f4b5a3e1",
+      "triangles" : 560
+    },
+    "set-puyumaFar-centre" : {
+      "hash" : "d21790732a8d661",
+      "triangles" : 572
+    },
+    "set-puyumaFar-head" : {
+      "hash" : "830246b1df81adb",
+      "triangles" : 962
+    },
+    "set-puyumaFar-panto" : {
+      "hash" : "163a024d839ac5db",
+      "triangles" : 632
+    },
+    "set-puyumaFar-pantoBack" : {
+      "hash" : "9c08c5aa982ecbdb",
+      "triangles" : 632
+    },
+    "set-puyumaFar-tail" : {
+      "hash" : "58967f5225f40ef",
+      "triangles" : 1010
+    },
+    "set-R100CK-car" : {
+      "hash" : "e682cb857c8bd079",
+      "triangles" : 6476
+    },
+    "set-R100CK-head" : {
+      "hash" : "e39e7101afd08de4",
+      "triangles" : 1284
+    },
+    "set-R100CK-tail" : {
+      "hash" : "1a9fa5475f289341",
+      "triangles" : 6500
+    },
+    "set-R100CKFar-car" : {
+      "hash" : "aa05043206abc079",
+      "triangles" : 4008
+    },
+    "set-R100CKFar-head" : {
+      "hash" : "e39e7101afd08de4",
+      "triangles" : 1284
+    },
+    "set-R100CKFar-tail" : {
+      "hash" : "4855ea07ca788341",
+      "triangles" : 4032
+    },
+    "set-R200CK-car" : {
+      "hash" : "e682cb857c8bd079",
+      "triangles" : 6476
+    },
+    "set-R200CK-head" : {
+      "hash" : "d9d90477d06f35a4",
+      "triangles" : 1174
+    },
+    "set-R200CK-tail" : {
+      "hash" : "1a9fa5475f289341",
+      "triangles" : 6500
+    },
+    "set-R200CKFar-car" : {
+      "hash" : "aa05043206abc079",
+      "triangles" : 4008
+    },
+    "set-R200CKFar-head" : {
+      "hash" : "d9d90477d06f35a4",
+      "triangles" : 1174
+    },
+    "set-R200CKFar-tail" : {
+      "hash" : "4855ea07ca788341",
+      "triangles" : 4032
+    },
+    "set-sevenSectionLRT-car" : {
+      "hash" : "d02942af2edc20df",
+      "triangles" : 2720
+    },
+    "set-sevenSectionLRT-head" : {
+      "hash" : "1565fe038b6294a",
+      "triangles" : 2444
+    },
+    "set-sevenSectionLRT-tail" : {
+      "hash" : "d63f966f29166a56",
+      "triangles" : 2572
+    },
+    "set-STAR-car" : {
+      "hash" : "ad7930168200a9e5",
+      "triangles" : 1528
+    },
+    "set-STAR-head" : {
+      "hash" : "9847c0f5eb19364",
+      "triangles" : 9964
+    },
+    "set-STAR-tail" : {
+      "hash" : "17bd7d1f746dd0b5",
+      "triangles" : 1588
+    },
+    "set-STARFar-car" : {
+      "hash" : "ad7930168200a9e5",
+      "triangles" : 1528
+    },
+    "set-STARFar-head" : {
+      "hash" : "8dbdf8cee771ebe4",
+      "triangles" : 3992
+    },
+    "set-STARFar-tail" : {
+      "hash" : "17bd7d1f746dd0b5",
+      "triangles" : 1588
+    },
+    "set-STEAM-car" : {
+      "hash" : "1ef18359c168b9f5",
+      "triangles" : 1528
+    },
+    "set-STEAM-head" : {
+      "hash" : "b043cf673bc3f74a",
+      "triangles" : 8092
+    },
+    "set-STEAM-tail" : {
+      "hash" : "267f145e46bbcd85",
+      "triangles" : 1588
+    },
+    "set-STEAM-tender" : {
+      "hash" : "3f3c9943404f058f",
+      "triangles" : 3048
+    },
+    "set-SUMMER-car" : {
+      "hash" : "e682cb857c8bd079",
+      "triangles" : 6476
+    },
+    "set-SUMMER-head" : {
+      "hash" : "bfdb194e7eb7d9ea",
+      "triangles" : 10092
+    },
+    "set-SUMMER-tail" : {
+      "hash" : "1a9fa5475f289341",
+      "triangles" : 6500
+    },
+    "set-SUMMER-tender" : {
+      "hash" : "dab705df760e2507",
+      "triangles" : 4000
+    },
+    "set-SUMMERFar-car" : {
+      "hash" : "aa05043206abc079",
+      "triangles" : 4008
+    },
+    "set-SUMMERFar-head" : {
+      "hash" : "bfdb194e7eb7d9ea",
+      "triangles" : 10092
+    },
+    "set-SUMMERFar-tail" : {
+      "hash" : "4855ea07ca788341",
+      "triangles" : 4032
+    },
+    "set-SUMMERFar-tender" : {
+      "hash" : "dab705df760e2507",
+      "triangles" : 4000
+    },
+    "set-taroko-car" : {
+      "hash" : "f0939c6989129f5d",
+      "triangles" : 1408
+    },
+    "set-taroko-head" : {
+      "hash" : "4c686baa5d914ab1",
+      "triangles" : 2766
+    },
+    "set-taroko-panto" : {
+      "hash" : "6636b2e8befe3f57",
+      "triangles" : 1512
+    },
+    "set-taroko-tail" : {
+      "hash" : "954eeac3f0a23e06",
+      "triangles" : 2762
+    },
+    "set-tarokoFar-car" : {
+      "hash" : "52b8be3e3c1b62ad",
+      "triangles" : 560
+    },
+    "set-tarokoFar-head" : {
+      "hash" : "c3cdf78de1932cc",
+      "triangles" : 1058
+    },
+    "set-tarokoFar-panto" : {
+      "hash" : "4123e6f79b87072",
+      "triangles" : 632
+    },
+    "set-tarokoFar-tail" : {
+      "hash" : "6d63cedf8e378b33",
+      "triangles" : 1058
+    },
+    "set-threeCarUrban-car" : {
+      "hash" : "6ee62271542c7e26",
+      "triangles" : 2356
+    },
+    "set-threeCarUrban-head" : {
+      "hash" : "465c585f0d91fa43",
+      "triangles" : 2620
+    },
+    "set-threeCarUrban-tail" : {
+      "hash" : "3cfa533b83a687f1",
+      "triangles" : 2620
+    },
+    "set-wenhu-car" : {
+      "hash" : "652ce63832cb726c",
+      "triangles" : 1312
+    },
+    "set-wenhu-head" : {
+      "hash" : "993708990397ddde",
+      "triangles" : 1933
+    },
+    "set-wenhu-tail" : {
+      "hash" : "4d83c3d15498ae6e",
+      "triangles" : 1933
+    },
+    "steam-formation" : {
+      "hash" : "1fb57c07612fe3ea",
+      "triangles" : 14080
+    },
+    "steam-locomotive" : {
+      "hash" : "2fa4792ede42ebe6",
+      "triangles" : 10080
+    },
+    "steam-tender" : {
+      "hash" : "dab705df760e2507",
+      "triangles" : 4000
+    },
+    "temu1000-formation" : {
+      "hash" : "d3c9aeca9078de68",
+      "triangles" : 14136
+    },
+    "temu1000-leading" : {
+      "hash" : "a9309aa30125282d",
+      "triangles" : 2742
+    },
+    "temu1000-middle" : {
+      "hash" : "f0939c6989129f5d",
+      "triangles" : 1408
+    },
+    "temu1000-pantograph" : {
+      "hash" : "6636b2e8befe3f57",
+      "triangles" : 1512
+    },
+    "temu1000-trailing" : {
+      "hash" : "7234a99f7b3d8f66",
+      "triangles" : 2738
+    },
+    "temu2000-formation" : {
+      "hash" : "61e3f0cffed7a2d1",
+      "triangles" : 14812
+    },
+    "temu2000-leading" : {
+      "hash" : "ac69882c3e468559",
+      "triangles" : 2394
+    },
+    "temu2000-tema" : {
+      "hash" : "c1994a0f23a2502d",
+      "triangles" : 1624
+    },
+    "temu2000-temb" : {
+      "hash" : "5b84fcca436728d",
+      "triangles" : 1636
+    },
+    "temu2000-tep" : {
+      "hash" : "559668a806360888",
+      "triangles" : 1776
+    },
+    "temu2000-trailing" : {
+      "hash" : "9f5ae4bb279efc6b",
+      "triangles" : 2346
+    },
+    "urban-three-formation" : {
+      "hash" : "912feca6c131c0f3",
+      "triangles" : 7548
+    },
+    "urban-three-leading" : {
+      "hash" : "ef507016af210c53",
+      "triangles" : 2596
+    },
+    "urban-three-middle" : {
+      "hash" : "6ee62271542c7e26",
+      "triangles" : 2356
+    },
+    "urban-three-trailing" : {
+      "hash" : "dd5862016b494b5d",
+      "triangles" : 2596
+    }
+  }
+}
