@@ -47,3 +47,14 @@ let manifest: [String: Any] = ["schema_version": 1, "generator": "Map3DC341", "r
     "assembly": ["placements": placements, "pitch_m": 23.5, "shell_gap_m": 0.4, "rail_z_m": 0, "rear_rotation_baked_deg": 180, "static": true]]
 try JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]).write(to: output.appendingPathComponent("manifest.json"), options: .atomic)
 print("Exported DM, T, M, reverse DM, six-car formation and style comparison through native readback.")
+var existing = Data()
+for m in Map3DModelPack.standard.models where !m.name.hasPrefix("c341-") {
+    existing.append(contentsOf: m.name.utf8);existing.append(0)
+    for v in m.vertices {
+        for word in [v.x.bitPattern,v.y.bitPattern,v.z.bitPattern,v.nx.bitPattern,v.ny.bitPattern,v.nz.bitPattern,v.color,v.layer.bitPattern] {
+            var little=word.littleEndian
+            withUnsafeBytes(of:&little) { existing.append(contentsOf:$0) }
+        }
+    }
+}
+try existing.write(to:output.appendingPathComponent("existing-payload.bin"))
