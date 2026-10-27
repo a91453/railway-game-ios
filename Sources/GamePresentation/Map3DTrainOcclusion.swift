@@ -44,9 +44,10 @@ public enum Map3DTrainOcclusion {
 
     /// Whether model `name` is a train's: not the street's furniture,
     /// people and road vehicles (``Map3DProp``, ``Map3DStreetModel``,
-    /// ``Map3DLowFloorBus``).
+    /// ``Map3DLowFloorBus``), nor a car's lit windows (decision 449,
+    /// ``Map3DTrainLights``).
     public static func isTrain(_ name: String) -> Bool {
-        !name.hasPrefix("prop-") && !name.hasPrefix("life-")
+        !name.hasPrefix("prop-") && !name.hasPrefix("life-") && !name.hasPrefix(Map3DTrainLights.prefix)
     }
 
     /// Whether model `name` is a far model (decisions 408, 417, 420).
