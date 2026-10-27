@@ -29,10 +29,10 @@ try{
    renderer.render('front',{width:700,height:750});result['detail-front']=renderer.png();
    renderer.render('back',{width:700,height:750});result['detail-back']=renderer.png();
    if(m.category==='section'&&!m.id.includes('-reverse')){
-    const zones={doors:{centre:[0,0,2.0],extent:[2.1,1.6,1.8],view:'right'},wheels:{centre:[m.id.startsWith('emu800-ed')?6.1:6.9,0,.65],extent:[2.1,1.5,1.0],view:'isometric'}};
+    const zones={doors:{centre:[0,0,2.0],extent:[2.1,1.6,1.8],view:'right'},wheels:{centre:[m.id.startsWith('emu800-ed')?6.1:6.9,0,.65],extent:[2.1,1.5,1.0],view:'right'}};
     if(m.id.startsWith('emu800-ed'))zones.nose={centre:[9.2,0,2.0],extent:[2.0,1.7,2.0],view:'isometric'};
     if(m.id.startsWith('emu800-ep'))zones.pantograph={centre:[-7.8,0,4.4],extent:[2.0,1.5,1.2],view:'isometric'};
-    for(const [name,z]of Object.entries(zones)){renderer.centre=z.centre;renderer.extent=z.extent;renderer.render(z.view,{width:1000,height:750});result['close-'+name]=renderer.png();}
+    for(const [name,z]of Object.entries(zones)){renderer.centre=z.centre;renderer.extent=z.extent;renderer.render(z.view,{width:1000,height:750});const frame=document.createElement('canvas');frame.width=1040;frame.height=820;const ctx=frame.getContext('2d');ctx.fillStyle='#eceef6';ctx.fillRect(0,0,1040,820);ctx.fillStyle='#262c57';ctx.font='20px sans-serif';ctx.fillText(m.id+' / '+name+' / native detail crop',20,28);ctx.drawImage(renderer.canvas,20,48);result['close-'+name]=frame.toDataURL('image/png');}
    }
    return result;
   },m);

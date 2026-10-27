@@ -32,6 +32,6 @@ Issue #1316。本批為獨立原生第一版，不是 EMU700／900 或 EMU3000 �
 
 近ED11506／EMA5200／EP5372／EMB5212；遠6046／2916／3088／2928；完整54580／29956三角。單件合法M3DM，完整編組不冒充單件；本批靜態預算不擴大任何共用或營運上限。
 
-VERIFIED Linux Swift6.4 warnings-as-errors；原生讀回、法線／有向封閉／正體積、刪面反面反例、Swift/JS實際組裝payload與連結器接面；241既有模型全位置／法線／顏色／layer bytes保持。玻璃每角色LOD最多160真表面取樣射線／100mm背襯、實際雨刷例外、埋玻璃反例與輪底存在檢查；不稱完整支承或動態碰撞。獨立Blender4.3.2匯入21GLB、147七向透明與515PNG完整解碼／不裁邊。viewer／ZIP最後證據見私包與issue。
+VERIFIED Linux Swift6.4 warnings-as-errors；原生讀回、法線／有向封閉／正體積、刪面反面反例、Swift/JS實際組裝payload與連結器接面；241既有模型全位置／法線／顏色／layer bytes保持。玻璃每角色LOD最多160真表面取樣射線／100mm背襯、實際雨刷例外、埋玻璃反例與8輪胎真連通體貼軌／輪徑與向上殼面淨空檢查；不稱完整支承或動態碰撞。獨立Blender4.3.2匯入21GLB、147七向透明與535PNG完整解碼／不裁邊。viewer／ZIP最後證據見私包與issue。
 
 UNVERIFIED 人工Simulator外觀、Safari/file雙擊、真機Metal/FPS/GPU與記憶體、輪門弓動畫、懸吊與完整動態碰撞。CI看最新同head，不以Linux替代iOS。重建：[工具](../../../tools/emu800-native/README.md)。不合併／auto-merge／TestFlight。
