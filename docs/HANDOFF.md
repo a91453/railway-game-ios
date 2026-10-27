@@ -1,5 +1,7 @@
 > Codex E1000 #1296第二版：使用者否定2be9daca車頭，已撤回舊自評；重修圓頂／橫向圓鼻／低雙風擋／小側窗／曲面燈座與內收下裙。真前版為2be9daca／私庫58e929e7，非更早簡模；同相機比較、局部裙板差異與設備payload證據見自有文件。PP #1291修正69a6eb7f已合入此分支，兩PR維持draft，最新CI另查，不視為使用者接受／真機／推拉動畫驗收。
 
+> Codex EMU500 靜態原生素材（#1310）：[六圖判讀／單元／重建與驗證](art/emu500-2026-10-27/README.md)。新 EMC–EP–ET–EM 四單元及四車編組，無專用營運映射，僅素材註冊，合併不會自動出現在遊戲。完整模型／七向圖／viewer／真前版／ZIP 在互鏈私有 draft。真機 Metal／效能／動畫及完整碰撞未驗；本機檔案 viewer 啟動遭瀏覽器管理政策阻擋，相同自包含內容以 loopback 驗證。GameCore／存檔／fixtures 不動，不合併／auto-merge／TestFlight。
+
 > Codex PP #1291 CI修正：新增PP註冊移到既有route bus之前，保留route bus最後的索引約定；原失敗Map3DBusesTests已在舊head重現。同步最新main，模型幾何不變；既有61c6969c素材producer仍有效，最新程式CI看本PR新head。E1000車頭外觀另在#1296修訂，不能沿用2be9daca已符合自評。
 
 # 交接

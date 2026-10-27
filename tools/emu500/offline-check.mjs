@@ -31,7 +31,8 @@ try {
  page.on('pageerror',error=>errors.push(error.message));
  page.on('response',response=>{if(response.status()>=400)failed.push(response.url());});
  page.on('request',request=>{if(!request.url().startsWith(base)&&!request.url().startsWith('data:')&&!request.url().startsWith('file:'))external.push(request.url());});
- await page.goto('file://'+resolve(root,'viewer-standalone.html'));
+ // file navigation is blocked by this managed Chromium policy. Test the same self-contained bytes over loopback.
+ await page.goto(base+'/viewer-standalone.html');
  await page.waitForFunction(()=>window.currentAsset);
  assert.equal(await page.locator('.tile').count(),manifest.models.length);
  assert.equal(await page.evaluate(()=>currentAsset.category),'formation');
@@ -64,5 +65,5 @@ try {
  await page.setViewportSize({width:390,height:844});
  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'mobile horizontal overflow');
  assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);assert.deepEqual(external,[]);
- console.log(`VERIFIED viewer: ${manifest.models.length} models, seven views, orbit, zoom, PNG/native/GLB${existsSync(zip)?'/ZIP':''} downloads, mobile layout, no external requests.`);
+ console.log(`VERIFIED self-contained viewer over loopback (local file launch UNVERIFIED): ${manifest.models.length} models, seven views, orbit, zoom, PNG/native/GLB${existsSync(zip)?'/ZIP':''} downloads, mobile layout, no external requests.`);
 } finally {if(browser)await browser.close();server.close();}
