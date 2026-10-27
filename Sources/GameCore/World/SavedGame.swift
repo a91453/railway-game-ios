@@ -388,9 +388,15 @@
 ///     `"nightMarket"`, and a night market have its `"visitors"`. A build
 ///     that reads only an earlier version cannot read the kinds, so it says
 ///     the save is newer than it instead.
+/// 75. City buses and the player's roads (decision 438): a bus route can
+///     have no `"station"` (a city route), its `"localTrips"`,
+///     `"localMinutes"` and `"transfer"`, and the roads their `"built"`
+///     cells. A build that reads only an earlier version cannot read a
+///     route with no station and would drop the player's roads, so it
+///     says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 74
+    public static let currentVersion = 75
 
     public let world: GameWorld
 
@@ -581,6 +587,9 @@ extension SavedGame: Codable {
         // and a purchase without `"kind"` is a railway's.
         // Version 73 to 74: a world before version 74 has no school,
         // hospital or night market of the company's.
+        // Version 74 to 75: every route of a world before version 75 feeds
+        // its station, carrying no trips of its own, and roads without
+        // `"built"` are all the city's: nothing to turn.
         // Later versions add their steps here.
         var world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
         if version == 72 { world.seedBoughtTilesRoads() }

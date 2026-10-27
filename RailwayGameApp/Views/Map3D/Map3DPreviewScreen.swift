@@ -562,7 +562,7 @@ struct Map3DSceneKey: Hashable {
         lines = palette == nil ? nil : Map3DLineBands.Signature(world: world)
         self.palette = palette
         bought = world.acquisitions.count { $0.kind == .railway }
-        roads = world.roads?.cells.count ?? 0
+        roads = world.roads?.allCells.count ?? 0
     }
 }
 

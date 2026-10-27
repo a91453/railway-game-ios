@@ -77,13 +77,13 @@ final class Map3DBusesTests: XCTestCase {
         let scene = Map3DScene(world: world)
         let buses = Map3DBuses(world: world, scene: scene, palette: .standard)
         XCTAssertEqual(buses.count, 1)
-        let station = try XCTUnwrap(world.station(id: route.station))
+        let station = try XCTUnwrap(world.station(id: XCTUnwrap(route.station)))
         let target = scene.point(worldX: Double(station.location.x), worldY: Double(station.location.y), height: 0)
         // 08:03, a bus on its way.
         let frame = busFrame(buses, second: 8 * 3_600 + 180, target: target, distance: 900)
         XCTAssertFalse(frame.instances.isEmpty)
         let model = try XCTUnwrap(Map3DModelPack.standard.index(of: Map3DLowFloorBus.routeModelName))
-        let colour = try XCTUnwrap(world.lines(callingAt: route.station).first?.color)
+        let colour = try XCTUnwrap(world.lines(callingAt: XCTUnwrap(route.station)).first?.color)
         let tint = Map3DColor.rgb(UInt32(colour.rgb))
         for bus in frame.instances {
             XCTAssertEqual(bus.model, model)
@@ -116,7 +116,7 @@ final class Map3DBusesTests: XCTestCase {
         let (running, _) = try self.world(buses: 2)
         let busy = Map3DScene(world: running)
         let buses = Map3DBuses(world: running, scene: busy, palette: .standard)
-        let station = try XCTUnwrap(world.station(id: route.station))
+        let station = try XCTUnwrap(world.station(id: XCTUnwrap(route.station)))
         let target = busy.point(worldX: Double(station.location.x), worldY: Double(station.location.y), height: 0)
         XCTAssertTrue(busFrame(buses, second: 8 * 3_600 + 180, target: target, distance: Map3DStreetLife.vehiclesFrom + 1).instances.isEmpty)
         XCTAssertTrue(busFrame(buses, second: 8 * 3_600 + 180, target: target, distance: 900, detail: .off).instances.isEmpty)
@@ -229,7 +229,7 @@ final class Map3DBusesTests: XCTestCase {
         }
         let scene = Map3DScene(world: world)
         let buses = Map3DBuses(world: world, scene: scene, palette: .standard)
-        let station = try XCTUnwrap(world.station(id: route.station))
+        let station = try XCTUnwrap(world.station(id: XCTUnwrap(route.station)))
         let target = scene.point(worldX: Double(station.location.x), worldY: Double(station.location.y), height: 0)
         let frame = busFrame(buses, second: 8 * 3_600 + 180, target: target, distance: 900)
         XCTAssertEqual(frame.instances.count, Map3DStreetLife.mostBuses)
