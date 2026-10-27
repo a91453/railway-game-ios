@@ -217,10 +217,10 @@ private struct E900Builder {
                 k.box(bx,0.53,s*0.93,3.08,0.16,0.24,metal)
                 if !far {
                     // Main bolster, secondary air spring and primary suspension.
-                    k.cylinder(bx,0.65,s*0.69,radius:0.22,height:0.16,color:dark,sides:12)
+                    k.cylinder(bx,0.65,s*0.69,radius:0.22,height:0.16,color:dark,sides:8)
                     for dx:Float in [-0.64,0.64] {
-                        k.cylinder(bx+dx,0.65,s*0.93,radius:0.12,height:0.18,color:metal,sides:10)
-                        for h:Float in [0.67,0.72,0.77] {k.cylinder(bx+dx,h,s*0.93,radius:0.13,height:0.018,color:dark,sides:10)}
+                        k.cylinder(bx+dx,0.65,s*0.93,radius:0.12,height:0.18,color:metal,sides:6)
+                        for h:Float in [0.72] {k.cylinder(bx+dx,h,s*0.93,radius:0.13,height:0.018,color:dark,sides:6)}
                     }
                     for dx:Float in [-1,1] {k.beam(.init(bx+dx*1.0,0.54,s*0.93),.init(bx+dx*0.35,0.69,s*0.93),0.11,metal)}
                 }

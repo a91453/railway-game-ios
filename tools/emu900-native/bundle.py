@@ -18,7 +18,7 @@ assert (root/'previews/overview.png').read_bytes()==Path('docs/art/emu900-native
 for model in m['models']:
  for kind in ['native','glb']:assert sha((root/model[kind]).read_bytes())==model[kind+'_sha256']
  for direction,metric in model['view_metrics'].items():assert sha((root/model['views'][direction]).read_bytes())==metric['sha256']
-(root/'source.json').write_text(json.dumps({'producer_commit':producer,'base_commit':'e89929efbf7f6d19f9d3f453beb5e378d9fb2331','accepted_emu3000_producer':'66a515e8f84ddb5001bae2dd0ce5d79f49063113','accepted_e500_producer':'85647d0a5e5eaaebdcdee1d5bc512fd931ee6c3a','files':records,'limits':'E500 comparison uses its own accepted source producer. Before comparison is the actual prior commuter display (EMU800), not a previous independent EMU900. Source records describe code inputs, not engineering measurement accuracy.'},indent=2)+'\n')
+(root/'source.json').write_text(json.dumps({'producer_commit':producer,'base_commit':'b7710cb7500573e8e35c1437aa0ecfa23825e6a8','previous_emu900_producer':'8ebfd9fd64aa660fbeb44e771c6b27027c0f71a9','accepted_emu3000_producer':'66a515e8f84ddb5001bae2dd0ce5d79f49063113','accepted_e500_producer':'85647d0a5e5eaaebdcdee1d5bc512fd931ee6c3a','files':records,'limits':'E500 comparison uses its own accepted source producer. Before comparison is the actual prior commuter display (EMU800), not a previous independent EMU900. Source records describe code inputs, not engineering measurement accuracy.'},indent=2)+'\n')
 excluded={'asset-package.zip','package-verification.json','SHA256SUMS'}
 files=sorted(p for p in root.rglob('*') if p.is_file() and p.name not in excluded)
 (root/'SHA256SUMS').write_text(''.join(sha(p.read_bytes())+'  '+str(p.relative_to(root))+'\n' for p in files))
