@@ -1,3 +1,5 @@
+> Codex C341（issue [#1322](https://github.com/a91453/railway-game-ios/issues/1322)，公開draft [#1323](https://github.com/a91453/railway-game-ios/pull/1323)）：[來源／外觀／重建與整合範圍](art/c341-2026-10-27/README.md)。四附件與Blair C341外觀原圖已看；獨立DM/T/M/反向DM，六輛21,036三角用合法原生組裝，不寫超限M3DM。完整素材／真第一至第三版／viewer／ZIP在私庫同名分支新目錄。僅四單元靜態註冊，沒有C341專用營運映射，合併不會自動換遊戲車輛。已保留新合併EMU800註冊及route bus末項；GameCore／存檔／fixtures不動。工程尺寸／單元方向與隱藏設備仍資料不足，真機Metal／效能／動畫與完整碰撞未驗；最新CI、衝突及私有互鏈見issue，不合併／auto-merge／TestFlight。
+
 > Codex E1000 #1296第二版：使用者否定2be9daca車頭，已撤回舊自評；重修圓頂／橫向圓鼻／低雙風擋／小側窗／曲面燈座與內收下裙。真前版為2be9daca／私庫58e929e7，非更早簡模；同相機比較、局部裙板差異與設備payload證據見自有文件。PP #1291修正69a6eb7f已合入此分支，兩PR維持draft，最新CI另查，不視為使用者接受／真機／推拉動畫驗收。
 
 > Codex PP #1291 CI修正：新增PP註冊移到既有route bus之前，保留route bus最後的索引約定；原失敗Map3DBusesTests已在舊head重現。同步最新main，模型幾何不變；既有61c6969c素材producer仍有效，最新程式CI看本PR新head。E1000車頭外觀另在#1296修訂，不能沿用2be9daca已符合自評。
