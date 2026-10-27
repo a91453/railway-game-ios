@@ -25,7 +25,7 @@ Issue #1359，使用者指定名稱「台北捷運610」。白車頭正常塗裝
 已符合（外觀自檢）：三雙門與兩門間雙主窗、無人駕駛觀景端、黃色U邊／腰帶與深色窗帶、雙空調、四車A-C-D-B、尾車一次反向、集電靴及支承、輪底貼軌，近遠保持主辨識。
 仍有簡化：頭燈採分面橢圓燈座，車頭與下裙分面感、轉向架／軟管與集電器細節低於實車；內裝／機械運動未製作。資料不足：完整左右隱藏設備與工程站位、天線配置、軸距與轉向架中心工程圖、端殼和連結面長的精確定義。C/D補全箱體屬推估，不冒稱查證左右設備對稱。
 
-技術：Linux Swift6.4 warnings-as-errors；2項專用XCTest通過。記憶體報告首次依契約skipped，之後設MOTION_BUDGET_REPORT=1實跑通過：383模型159.5MB、街景三緩衝0.6MB、台北384chunks場景143.9MB（CPU幾何帳，非Metal／FPS）。374份既有payload（371註冊＋3直接比較）的完整位置／法線／顏色／layer保持；FNV亦含UV。原生讀回、有向封閉、正體積、退化面、刪面／反面、Swift與JS編組逐bytes、移車、玻璃真連通體埋入／浮起、輪胎與設備靜態接觸均另有私有證據。取樣不冒稱完整動態碰撞。
+技術：Linux Swift6.4 warnings-as-errors；2項專用XCTest通過。記憶體報告首次依契約skipped，之後設MOTION_BUDGET_REPORT=1實跑通過：385模型159.7MB、街景三緩衝0.6MB、台北384chunks場景143.9MB（CPU幾何帳，非Metal／FPS）。最新376份既有payload（373註冊＋3直接比較；初始374份查核亦保留）的完整位置／法線／顏色／layer保持；FNV亦含UV。原生讀回、有向封閉、正體積、退化面、刪面／反面、Swift與JS編組逐bytes、移車、玻璃真連通體埋入／浮起、輪胎與設備靜態接觸均另有私有證據。取樣不冒稱完整動態碰撞。
 
 近/遠/light：A/B 3590/1662/1578，C/D 2824/1372/1252；四輛12828/6068/5660三角。每個遠景小於近景一半。M3DAssembly嵌入最終角色，不加共用預算；靜態註冊12單元，不改任何營運接點。
 
@@ -36,3 +36,9 @@ Viewer支援角色與方向、拖曳旋轉、縮放及PNG／GLB／原生下載�
 最終支承修正：輪頂新增每輪9個真輪冠樣點，以首命中朝向拒絕樣點埋入不透明框架；真候選6會在(-6.72,0.71,0.675)m失敗。收窄框架、外移軸箱／支架，補真軸承承托與次懸吊、空壓機／連結器支承；雨刷按實際鼻面貼合並加支點。外觀射線只排除實際薄橡膠雨刷／支點三角（鼻端、z1.75–2.40m、橫向<0.60m），不以寬鬆玻璃例外遮掩遮擋。屋頂／車下／集電設備皆取實際三角接觸距離，容差65mm、每實體最多40點；仍不等於全表面或動態碰撞。
 
 完整模型含端部連結器的實際bounds長約68.69m，與官方四捨五入全列68.4m不同；模型端部伸出量／連結面定義為比例推估，不宣稱精確工程復刻。逐角色與全列bounds以最終manifest為準。
+
+## 最終交付入口
+
+[公開draft #1362](https://github.com/a91453/railway-game-ios/pull/1362) ↔ [私有draft #109](https://github.com/a91453/railway-reference-private/pull/109)。[完整交付／來源索引](https://github.com/a91453/railway-reference-private/tree/codex/taipei610-native-2026-10-27/Railway/game-art-previews/docs/art/taipei610-2026-10-27)。[固定producer ba9ef3e4](https://github.com/a91453/railway-game-ios/commit/ba9ef3e443114b182171671ea34affdbf57d01ed)；本文件／總覽整合head看PR最新commit，不混稱producer。
+
+[最終ZIP遠端下載證據](https://github.com/a91453/railway-reference-private/blob/codex/taipei610-native-2026-10-27/Railway/game-art-previews/docs/art/taipei610-2026-10-27/remote-download-verification.json)：SHA256 `14e58d03adc54e2c2020ebcfb4a3d8b33161121adbf45cb353e6d0222c5e455b`，24,762,996 bytes，559成員；推送後從私庫GitHub API重新下載，核SHA、CRC、完整解壓與每個檔案bytes一致。包外另記最終viewer ZIP下載，避免自指雜湊。
