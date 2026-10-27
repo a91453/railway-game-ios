@@ -377,7 +377,7 @@
   - #1311（Codex，EMU3000 黑色改石板藍灰，ready）：HANDOFF.md 的衝突本任用合併 commit 566861d 解了，兩段都留。換手時 CI 在跑；只改模型配色，作者說合才合。
   - #1312（Codex，EMU500 研究，draft）：作者沒說就不動。
   - Codex 另外登記了 EMU800 原生模型（`codex/emu800-native-2026-10-27`），PR 還沒開；作者直接派的，照舊作者說合才合。
-- **派工單 I 做中**（舊存檔可以打開道路與公車）：session_01JMHz9ak2m1w5LYWDgoQWqS，branch `claude/new-session-8vlwcp`，登記了決策 428，PR 還沒開。內容：
+- **派工單 M（TDX 資料下載，session_01JMHz9cdHzysPWNWgnQK685，2026-10-27）**：資料在私庫 `Railway/tdx-snapshot-2026-10/`（台鐵、高鐵、台北捷運的線形、出入口、站內設施；還沒接進遊戲）。**台鐵歷史誤點（唯一扣點、11/1 重置）還沒抓**：`tdx-check.yml` 只放行 `/api/basic/`、`/api/advanced/`，歷史資料在 `/api/historical/`；要放行就是 regex 加一個字，作者或規劃決定（私庫 README「Waiting」有五方比較，建議放行後先抓近 90 天）。其餘七家捷運／輕軌、站間時間、車種還沒抓，清單在 `tools/not_fetched_yet.json`，不扣點，隨時能抓。建議下一步：用歷史誤點校正誤點分布，用線形校正路網。session_01JMHz9ak2m1w5LYWDgoQWqS，branch `claude/new-session-8vlwcp`，登記了決策 428，PR 還沒開。內容：
   - 加一個像 `.buildStationRoad` 的玩家指令，打開道路。
   - 空白地圖用世界原本的城鎮當種子；實景地圖讀底圖的路（`readRoads`，要 `landBlocks`）。
   - 公車工具在沒道路時顯示說明與「打開道路與公車」，按了要確認一次。
