@@ -381,7 +381,8 @@
   - **Y**：session_01YGNNumE4CxFH7Ph9aNZWQh，決策 437，傍晚的垃圾車，draft #1355（私庫那半是 railway-reference-private#105）。
   - **AB**：session_01YGNNumUf3EJH6FgPtuEpvW（Opus），決策 438、**存檔 75**，市區公車的 GameCore（#1353 設計的 PR 1）。綠了**先開獨立審查 session**（只給 PR 號和 CLAUDE.md），審過才合。
   - **AC**：session_01YGNNupqwZ1Fm3WTAm4Hfz5（Sonnet），`claude/train-model-kit-ac`，共用的做車工具與 rolling-stock skill 改寫（NEXT_PRIORITIES §22.16 第 4 項）。決策原則上不動。
-- **編號**：下一個空的決策號 **439**，存檔 **76**（75 給 AB），golden schema 沒動。
+  - **AD**：session_01YGNNuoLcfAoBA6h9zn3q2t（Opus），§22.16 第 2 → 1 → 3 項（列車遮蔽陰影烘焙、夜燈、車窗與車身質感），一項一個 PR，拍圖用 AC 的工具。決策預計 439。作者：「沒差能做就先做」。
+- **編號**：決策 439 預計給 AD，下一個空的是 **440**；存檔 **76**（75 給 AB）；golden schema 沒動。
 - **審查分工**（作者問「檢視pr 要你跟session都開嗎」，規劃決定，五方在 #1041）：
   - 規劃只做 §1.2 的合併檢查，不逐行審。
   - 審查點數滿 30 時，另開審查 session（#1288 起到 15:00 UTC 約 20 點）。
@@ -389,7 +390,6 @@
 - **Threads**：改成看進度才寫（第 1 節那列），恢復了。`docs/research/THREADS_WRITING.md` 已跟著改。
 - **巡邏**：用 `send_later` 一條接一條，約 45 分鐘一次；每次觸發後先排下一次，再刪用過的。換手時新任排自己的，舊的刪掉。
 - **排了、還沒派**：
-  - NEXT_PRIORITIES §22.16 第 1–3 項（列車夜燈、遮蔽陰影烘焙、車窗與車身質感）：10/31 公開測試送出後派，Opus，一項一個 PR，都用 AC 的工具拍改前改後。
   - §22.17 是 AA 建議的兩張：本週準點率 3.20；停站抖動加設備事故 2.90，要升存檔。都排在 10/31 之後，PR 2 要等 AB 合併、存檔 75 落定。
 - **等作者**：
   - 91.1 實機確認：E500 推拉、普悠瑪、舊存檔的公車與道路。
