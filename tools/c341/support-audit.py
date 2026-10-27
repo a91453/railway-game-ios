@@ -65,7 +65,7 @@ for m in manifest['models']:
   p=np.array([x,0,3.6601]);h=hits(p,np.array([0,0,-1]),t);assert len(h) and h.min()<0.02
  lamp_faces=0
  if m['id'] in ['c341-dm','c341-rear']:
-  lamp_col=palette['lamp'];lamp=t[col==lamp_col];backing=t[col!=lamp_col]
+  lamp_colors=[palette['lamp'],palette['tail_lamp']];lamp=t[np.isin(col,lamp_colors)];backing=t[~np.isin(col,lamp_colors)]
   for tri in lamp:
    p=tri.mean(axis=0);n=np.cross(tri[1]-tri[0],tri[2]-tri[0]);n/=np.linalg.norm(n)
    if abs(p[0])>11.3 and n[0]*np.sign(p[0])>.8:

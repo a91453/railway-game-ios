@@ -25,7 +25,7 @@ final class Map3DC341Tests: XCTestCase {
             XCTAssertEqual(p.x,-q.x,accuracy:0.00001)
             XCTAssertEqual(p.y,-q.y,accuracy:0.00001)
             XCTAssertEqual(p.z,q.z,accuracy:0.00001)
-            XCTAssertEqual(p.color,q.color)
+            XCTAssertEqual(q.color,p.x>11.3 && p.z<1.9 && p.color == Map3DC341.lamp ? Map3DC341.tailLamp : p.color)
         }
     }
 }

@@ -6,13 +6,18 @@ public enum Map3DC341 {
     public enum Unit: String, CaseIterable, Sendable { case dm, t, m, rear }
     public static let body = Map3DPalette.shopAwnings[3]
     public static let accent = Map3DPalette.containers[1]
+    public static let tailLamp = Map3DPalette.shopAwnings[1]
     public static let lamp = Map3DPalette.tunnelLamp
     public static let mask = Map3DPalette.playerRim
     public static let glass = Map3DColor.shaded(Map3DPalette.glazing, 0.62)
     public static let pitch: Float = 23.5
     public static func model(_ unit: Unit) -> Map3DModelPack.Model {
         if unit == .rear {
-            var b = StationKitBuilder(); b.add(model(.dm), at: .zero, angle: .pi)
+            let head=model(.dm)
+            var v=head.vertices
+            for i in v.indices where v[i].x>11.3 && v[i].z<1.9 && v[i].color == lamp { v[i].color=tailLamp }
+            let tail=Map3DModelPack.Model(name:head.name,vertices:v,minimum:head.minimum,maximum:head.maximum)
+            var b = StationKitBuilder(); b.add(tail, at: .zero, angle: .pi)
             return .flat(named: "c341-rear", from: b.mesh)
         }
         var b = C341Builder(cab: unit == .dm, trailer: unit == .t)
