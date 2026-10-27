@@ -66,6 +66,8 @@ struct SettingsView: View {
     /// the taps on the version row that show it.
     @AppStorage(DemoMode.switchKey) private var demoModeOn = false
     @State private var demoModeReveal = DemoMode.Reveal()
+    /// Decision 434: whether the demo mode's train showcase is open.
+    @State private var showsTrainShowcase = false
 
     var body: some View {
         NavigationStack {
@@ -95,6 +97,9 @@ struct SettingsView: View {
                 if let session {
                     Map3DPreviewScreen(session: session, close: { showsMap3D = false })
                 }
+            }
+            .fullScreenCover(isPresented: $showsTrainShowcase) {
+                TrainShowcaseScreen(close: { showsTrainShowcase = false })
             }
             .sheet(isPresented: $showsHelp) {
                 HelpView(language: .app, launcher: launcher)
@@ -571,6 +576,17 @@ struct SettingsView: View {
                     }
                 }
                 .accessibilityIdentifier("settings.frameTimeBench")
+                // Decision 434: the trains on open ground, to photograph.
+                Button {
+                    showsTrainShowcase = true
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("Train Showcase", "列車展示"))
+                    } icon: {
+                        Image(systemName: "tram.fill")
+                    }
+                }
+                .accessibilityIdentifier("settings.trainShowcase")
             }
             ProblemReportRows(game: game, session: session, lessons: lessons)
             Button {
