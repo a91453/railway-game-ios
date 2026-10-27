@@ -1,0 +1,14 @@
+key,value
+files,87
+rows,24390062
+events_late_share_pct,34.92
+event_max_delay,621
+distinct_train_numbers,1615
+distinct_station_ids,152
+first_report_taiwan,2025-11-20T00:00:01+08:00
+last_report_taiwan,2026-10-26T23:59:58+08:00
+taiwan_days,341
+trips,261820
+trips_matched_to_2026_10_timetable,234693
+matched_trips_last_report_within_last_two_reporting_stops,233212
+timetable_train_numbers,1069
