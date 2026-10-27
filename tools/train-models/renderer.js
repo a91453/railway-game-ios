@@ -1,3 +1,4 @@
+import {assemblyNative} from '../emu900-native/scene.js';
 // WebGL preview of M3DM models lit as the game lights a model (decision 370's
 // soft light, `map3dLit(..., soft: true)` in Map3DShaders.metal), with the
 // light the game's `Map3DLighting` gives at the hour (manifest.json
@@ -30,7 +31,7 @@ export class NativeRenderer {
     void main(){ vec3 p = position - centre; gl_Position = vec4(dot(p, right) / (radius * aspect), dot(p, up) / radius, -dot(p, direction) / depth, 1.0); n = normal; c = color; g = glow; }`;
     const fragment = `#version 300 es
     precision highp float; in vec3 n; in vec4 c; in float g; out vec4 outColor;
-    uniform vec3 sunModel, sunLight, skyLight, lampGlow, lineColour; uniform float lights; uniform int features;
+    uniform vec3 sunModel, sunLight, skyLight, lampGlow, lineColour; uniform float lights; uniform int features; uniform bool silhouette;
     void main(){
       vec3 base = c.a < 0.5 ? lineColour : c.rgb;
       vec3 nn = normalize(n);
@@ -39,7 +40,7 @@ export class NativeRenderer {
       vec3 light = vec3(sky + 0.02 * max(nn.z, 0.0) + 0.15 * sun) * mix(vec3(0.94, 0.96, 1.0), vec3(1.0, 0.99, 0.97), sun);
       light *= (skyLight + sunLight * 0.5) / vec3(0.925, 0.871, 0.806);
       vec3 glow = g * base * lampGlow;
-      outColor = vec4(min(base * light + glow, 1.0), 1.0);
+      outColor = vec4(silhouette ? base : min(base * light + glow, 1.0), 1.0);
     }`;
     const shader = (type, source) => { const s = gl.createShader(type); gl.shaderSource(s, source); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw Error(gl.getShaderInfoLog(s)); return s; };
     const p = gl.createProgram(), vs = shader(gl.VERTEX_SHADER, vertex), fs = shader(gl.FRAGMENT_SHADER, fragment);
@@ -48,9 +49,11 @@ export class NativeRenderer {
     this.program = p; this.buffer = gl.createBuffer(); this.vao = gl.createVertexArray();
     gl.bindVertexArray(this.vao); gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
     for (const [index, size, offset] of [[0, 3, 0], [1, 3, 12], [2, 4, 24], [3, 1, 40]]) { gl.enableVertexAttribArray(index); gl.vertexAttribPointer(index, size, gl.FLOAT, false, 44, offset); }
-    this.uniforms = Object.fromEntries(['centre', 'right', 'up', 'direction', 'radius', 'aspect', 'depth', 'sunModel', 'sunLight', 'skyLight', 'lampGlow', 'lineColour', 'lights', 'features'].map(n => [n, gl.getUniformLocation(p, n)]));
+    this.uniforms = Object.fromEntries(['centre', 'right', 'up', 'direction', 'radius', 'aspect', 'depth', 'sunModel', 'sunLight', 'skyLight', 'lampGlow', 'lineColour', 'lights', 'features', 'silhouette'].map(n => [n, gl.getUniformLocation(p, n)]));
   }
-  load(buffer) {
+  load(buffer, material = 'color') {
+    this.silhouette = material === 'silhouette';
+    buffer = assemblyNative(buffer);
     const d = new DataView(buffer), magic = String.fromCharCode(...new Uint8Array(buffer, 0, 4));
     if (magic !== 'M3DM' || d.getUint16(4, true) !== 1 || d.getUint16(6, true) !== 0) throw Error('not a native model');
     const count = d.getUint32(8, true), length = d.getUint32(12, true), start = 16 + Math.ceil(length / 4) * 4;
@@ -63,7 +66,9 @@ export class NativeRenderer {
       for (let j = 0; j < 3; j++) {
         const k = (i * 3 + j) * 11, color = d.getUint32(at + 4 + j * 16 + 12, true);
         data.set(points[j], k); data.set(normal, k + 3);
-        data.set([color & 255, (color >>> 8) & 255, (color >>> 16) & 255].map(x => x / 255), k + 6); data[k + 9] = (color >>> 24) / 255; data[k + 10] = flags & 1;
+        data.set([color & 255, (color >>> 8) & 255, (color >>> 16) & 255].map(x => x / 255), k + 6); data[k + 9] = (color >>> 24) / 255; data[k + 10] = material === 'color' ? flags & 1 : 0;
+        if(material === 'clay') data.set([0.827,0.831,0.855,1],k+6);
+        if(material === 'silhouette') data.set([0.149,0.173,0.341,1],k+6);
         for (let c = 0; c < 3; c++) { low[c] = Math.min(low[c], points[j][c]); high[c] = Math.max(high[c], points[j][c]); }
       }
     }
@@ -89,7 +94,7 @@ export class NativeRenderer {
     const [sx, sy, sz] = light.sunDirection;  // world (east, up, south) -> model (front, left, up)
     gl.uniform3fv(u.sunModel, unit([sx, -sz, sy]));
     gl.uniform3fv(u.sunLight, light.sunLight); gl.uniform3fv(u.skyLight, light.skyLight); gl.uniform3fv(u.lampGlow, light.lampGlow);
-    gl.uniform3fv(u.lineColour, lineColour); gl.uniform1f(u.lights, light.lights); gl.uniform1i(u.features, features);
+    gl.uniform3fv(u.lineColour, lineColour); gl.uniform1f(u.lights, light.lights); gl.uniform1i(u.features, features); gl.uniform1i(u.silhouette,this.silhouette ? 1 : 0);
     gl.drawArrays(gl.TRIANGLES, 0, this.count); gl.finish();
     if (gl.getError() !== gl.NO_ERROR) throw Error('WebGL draw failed');
   }

@@ -7,11 +7,24 @@
 set -eu
 repo="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$repo"
-swift build >&2
+swift --version | head -1 | grep -q "Swift version 6.4" || exit 1
+swift build --target GamePresentation -Xswiftc -warnings-as-errors -j 4 >&2
 bin="$(swift build --show-bin-path)"
 out="$1"; shift
 mkdir -p "$out"
-if [ ! -x "$out/.export" ] || [ tools/train-models/export.swift -nt "$out/.export" ]; then
-  swiftc -swift-version 6 -I "$bin" tools/train-models/export.swift "$bin/libGamePresentation.a" "$bin/libGameCore.a" -o "$out/.export"
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+if [ -d "$bin/GamePresentation.build" ]; then
+  swiftc -swift-version 6 -warnings-as-errors -I "$bin/Modules" tools/train-models/export.swift "$bin"/GamePresentation.build/*.swift.o "$bin"/GameCore.build/*.swift.o -o "$work/export"
+else
+  set -- "$out" "$@"
+  # Swift 6.4's integrated build backend uses Objects-normal modules.
+  modules="$(find .build/out/Intermediates.noindex -path '*/GamePresentation-t.build/Objects-normal/*/Modules/GamePresentation.swiftmodule' | head -1)"
+  objects="${modules%/Modules/GamePresentation.swiftmodule}"
+  coremodules="$(find .build/out/Intermediates.noindex -path '*/GameCore-t.build/Objects-normal/*/Modules/GameCore.swiftmodule' | head -1)"
+  coreobjects="${coremodules%/Modules/GameCore.swiftmodule}"
+  swiftc -swift-version 6 -warnings-as-errors -I "$objects/Modules" -I "$coreobjects/Modules" tools/train-models/export.swift "$objects"/*.o "$objects"/Modules/*.o "$coreobjects"/*.o "$coreobjects"/Modules/*.o -o "$work/export"
+  "$work/export" "$@"
+  exit
 fi
-"$out/.export" "$out" "$@"
+"$work/export" "$out" "$@"

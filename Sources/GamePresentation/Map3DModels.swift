@@ -118,6 +118,12 @@ public struct Map3DModelPack: Sendable {
                 if !far { for reversed in [false, true] { models.append(Map3DEMU900.model(role, reversed: reversed, light: true)) } }
             }
         }
+        // Static 610 study; no shared metro operating mapping is changed.
+        for role in Map3DTaipei610.Role.allCases {
+            models.append(Map3DTaipei610.model(role))
+            models.append(Map3DTaipei610.model(role, far: true))
+            models.append(Map3DTaipei610.model(role, light: true))
+        }
         // Decision 400, 10i-6: the player's route buses, last, so no model
         // before them moves.
         models.append(Map3DLowFloorBus.routeModel())
