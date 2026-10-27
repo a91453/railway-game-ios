@@ -356,6 +356,53 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第十八次換手（2026-10-27 約 02:10 UTC，session_01CWaJGHR4DnSwosLCzJ2Tts 壓縮 3 次，照 §1 換 → 作者從 claude.ai 開的新規劃）**。新任開工：讀第 1 節、這一段；#1041 只讀「遊戲規劃 session_01CWaJGHR4DnSwosLCzJ2Tts 壓縮第 3 次」那則之後的留言。分工照第十七、十六次換手（不開實作 session，寫派工單給作者貼到 Claude Pro 或 Antigravity，規劃只審、小修自己推、綠了照 §1.2 合）。和下面不同時以這段為準。
+
+- **本任合併的**（都照 §1.2，每個在 #1041 有一則）：
+  - #1286、#1287（派工單 A、D）；審查 J 三段：#1290（J1）、#1293、#1297、#1298（J2 與疑點已修）；#1295（派工單 E，決策 424 續修）；#1300（決策 424 續修二，3D 公車在背景排）。
+  - TestFlight 90：#1301（What's New）、#1303（PLAYER_FEEDBACK 記 0.5.0 (90.1)）。
+  - Codex 的模型：#1291（PP 客車）、#1292（TEMU2000）、#1296＋#1302（E1000，決策 425：推拉式自強號改兩端 E500，E1000 留著）、#1306（莒光客車）、#1307（TEMU1000 車頭）。
+  - #1304（TW3D 參考包列進 CLAUDE.md）。
+  - #1308（派工單 F，決策 426：3D 普悠瑪接上 TEMU2000，`centreCars` 掛鉤）。
+  - #1313（PLAYER_FEEDBACK 90.1 回饋，NEXT_PRIORITIES §22.13）。
+  - #1314（派工單 G，決策 427：列車包的 E1000 經典外觀開關，預設 E500，每一列都換）。
+  - #1315（派工單 H：狀態列 6000× 測試改穩。原因：iOS 26 的 Menu 會重建選項列，測試拿著已經不存在的元素（kAXErrorInvalidUIElement）；改成讀到連兩次一樣的畫面再用座標點）。
+  - #1317（§22.14，另一款鐵道 App 致謝頁的五方評分）。
+- **main**：`ci.yml` 在 fba9303（#1306）push run 綠；86bbb7e（#1317）的 push run 換手時在跑（#1315 的被它取代，是正常的）。
+  - full lane 在 1b40e4f 紅兩次（run 40396358204、40413958561）。兩次都紅了 #1315 修的那支；第二次還多紅一支 iPad 的 `TutorialJourneyUITests/testTheWholeTutorialOnAnIPad`，原因還沒查。
+  - d7f1b47（#1314）的 full lane run 40434847565 換手時在跑。新任看結果：綠了就是 #1315 的真證明；還紅就照 §1.2 比對。
+- **還開著的 PR**：
+  - #1311（Codex，EMU3000 黑色改石板藍灰，ready）：HANDOFF.md 的衝突本任用合併 commit 566861d 解了，兩段都留。換手時 CI 在跑；只改模型配色，作者說合才合。
+  - #1312（Codex，EMU500 研究，draft）：作者沒說就不動。
+  - Codex 另外登記了 EMU800 原生模型（`codex/emu800-native-2026-10-27`），PR 還沒開；作者直接派的，照舊作者說合才合。
+- **派工單 I 做中**（舊存檔可以打開道路與公車）：session_01JMHz9ak2m1w5LYWDgoQWqS，branch `claude/new-session-8vlwcp`，登記了決策 428，PR 還沒開。內容：
+  - 加一個像 `.buildStationRoad` 的玩家指令，打開道路。
+  - 空白地圖用世界原本的城鎮當種子；實景地圖讀底圖的路（`readRoads`，要 `landBlocks`）。
+  - 公車工具在沒道路時顯示說明與「打開道路與公車」，按了要確認一次。
+  - 說明頁加「道路與公車」一段。
+  - 新決策「舊存檔可以打開道路與公車」，400.md 補一句。
+  - 不升存檔版本，不在讀檔時自動打開。
+  派工單原文在本任的 scratchpad，新任拿不到，作者手上有。它會動 GameCore（`RoadGrid.swift`），所以 CI 是完整 tier。PR 來了照派工單的驗收審：用 `SaveFixtures` 的副本讀進來、執行新指令、`allowsBusTool` 變 true，fixture 本身不能改。
+- **排好但還沒派的**：
+  - §22.13：
+    - 1 是派工單 I；
+    - 2「不接車站的市區公車」（2.60）和 3「玩家自己鋪路」（2.45）要一起設計，排在 §22.12 第 1 項之後。
+  - §22.14：
+    - 1 行駛聲用真錄音（3.15）：只用 CC0／CC BY，作者下載到私庫，因為雲端 session 連 Freesound 是 403；排在垃圾車那項之後。
+    - 2 慶祝粒子（3.10）：本任問過作者「要不要現在寫成派工單」，還沒答。Vortex 是 MIT，加依賴要作者同意，不然就移植程式碼、保留授權聲明；減少動態效果打開時不放粒子。
+    - 3 駕駛視角的窗上雨滴（2.70）。
+    - 4 3D 環境音（2.40）。
+- **還沒查的不穩 UI 測試**：
+  - 和 #1315 同一種寫法（點 6000× 的選項列）、還沒改的有 `LessonUITests.swift:619`、`RealWorldMapUITests.swift:797`、`TutorialJourneyUITests.swift:213`。紅了就照 #1315 的改法，可以一張派工單一起改。
+  - `StartSaveFlowSmokeTests.testBackToStartWorksWithLargeTextWhileTheClockRuns` 紅過一次，原因還不知道。
+- **決策 425 還剩一項**：查官方或私庫的編組資料，確認推拉式自強號兩端是否都是 E500。莒光的 `E500CK` 另案。
+- **TestFlight 91**：作者還沒說要發。要發時照 CLAUDE.md：那個 commit 的完整 `ci.yml`（每晚的或手動的）和 full lane 都綠才按。What's New 由規劃寫。
+- **號碼**：決策 426、427 已用，428 由派工單 I 登記；下一個可用的是 429，取之前再查一次 #1041。存檔版本 74，golden schema 74，都不動。
+- **審查點數**：從 #1288 起數，大約 7 點，還沒到 30：
+  - #1290、#1295、#1298、#1300、#1302、#1308、#1314 各 1 點；
+  - 模型、文件、只改測試的 PR 算 0 點。
+- **排程**：本任沒有還會觸發的排程，`list_triggers` 是空的。每日 Threads 排程：新任照 §1 表格建一個綁自己的。
+
 **第十七次換手（2026-10-26 約 10:30 UTC，session_01TH2DNkW2meh3EZJ1vxBczC 壓縮 3 次，第 3 次後照 §1 換 → 作者從 claude.ai 開的新規劃）**。新任開工：讀第 1 節、這一段、下面「第十六次換手」裡作者的新分工；#1041 只讀「遊戲規劃 session_01TH2DNkW2meh3EZJ1vxBczC 壓縮第 3 次」那則之後的留言。和下面不同時以這段為準。
 
 - **分工照第十六次換手**：不開 Claude Code 實作 session（作者明說才開）。規劃寫派工單（scratchpad 的 .md，用 SendUserFile 交），作者貼給 Claude Pro（$20，5 小時額度）或 Antigravity；規劃只審查，小的自己改好推上去，綠了照 §1.2 合。已確認：Claude Pro 能用作者的帳號推 branch、開 PR，但只能推到它被指定的 branch（`claude/new-session-xxxx`），不是派工單寫的 `claudepro/...`，沒關係。作者 10:10 UTC 說 5 小時額度只用了 34%：一張派工單大約用 15–20%。
@@ -372,7 +419,7 @@
   - #1287：車站面板的「怎麼搭」（決策 423 第二步，派工單 D），head 12880dc。已審：本機 build 用 `-warnings-as-errors` 乾淨、`JourneyPlanTests` 15 支過、`doc_numbers` 過。`StationPanel.swift` 的 SwiftUI 只有 iOS CI 編得到，外觀 UNVERIFIED。
 - **派工單 E 做完了，PR 等審**（決策 424 續修，branch `claude/new-session-kfvuy0`，PR 號碼在 #1041 的登記）：公車工具選了車站就在背景讀真站牌與道路圖塊（`GameSession.readBusesAhead(for:)`、`BusRoads.readAhead(round:)`），主執行緒只拿結果。量到真站牌是大頭（release 約 0.8 s），道路網的建圖只省了一部分，數字與沒選的做法在 `docs/decisions/424.md`「續修」。手機上順不順是 UNVERIFIED，作者在 TestFlight 看。
   - 已做（決策 424 續修二，PR #1300）：3D 的 `Map3DBuses` 改在背景排（`Map3DBuses.Layer`），畫格不再建道路網。
-- **派工單 R（審查 J）已交作者**：給 Claude Pro（Opus），#1242 起已合併的程式 PR 分三段審。
+- **派工單 R（審查 J）已交作者**：給 Claude Pro，#1242 起已合併的程式 PR 分三段審。
   - 每段一個 PR，交接檔是 `docs/archive/PR1242_<最後一號>_REVIEW_HANDOFF.md`。
   - P1、P2 的小修它可以順手推；動 GameCore、存檔、golden 的只寫不修。
   - 最後一段會改 §1 的「上一輪」。
