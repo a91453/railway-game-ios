@@ -54,9 +54,10 @@ final class Map3DRoadMarkingTests: XCTestCase {
             XCTAssertGreaterThan(Map3DRoadMarkings.dot(crosswalk.centre, stop.along) - Map3DRoadMarkings.dot(stop.centre, stop.along),
                                  Map3DRoadMarkings.crosswalkDepth / 2 + Map3DRoadMarkings.stopGap - 1e-9, "the stop line before the crossing")
         }
-        // The main road shows green both ways, the other red.
+        // The main road's signals both ways, the other road's apart
+        // (decision 429: in turn; before, green and red).
         for signal in markings.signals {
-            XCTAssertEqual(signal.go, abs(signal.along.x) > 0.9)
+            XCTAssertEqual(signal.road, abs(signal.along.x) > 0.9 ? .main : .cross)
             // At the kerb on the right of the way in, off the road.
             let right = Point(x: -signal.along.z, z: signal.along.x)
             let half = abs(signal.along.x) > 0.9 ? 4.5 : 4.0
@@ -66,6 +67,57 @@ final class Map3DRoadMarkingTests: XCTestCase {
         let arrows = markings.marks.filter { if case .arrow = $0.kind { return true } else { return false } }
         XCTAssertEqual(arrows.count, 4)
         XCTAssertTrue(arrows.allSatisfy { $0.kind == .arrow(left: false) })
+    }
+
+    /// Decision 429: which of a junction's signals face its main road, as
+    /// the green ones did (the widest road and those nearly in line with
+    /// it), and one group of the clock's for all its signals.
+    func testEachJunctionsSignalsFaceItsMainRoadOrTheOther() {
+        // A slanting secondary road (30° off the trunk) and a tertiary one
+        // crossing them both: the trunk and what is in line with it main.
+        let slant = (x: cos(Double.pi / 6) * 200, z: sin(Double.pi / 6) * 200)
+        let roads = [road(.trunk, [(-200, 0), (0, 0), (200, 0)]), road(.secondary, [(0, 0), (slant.x, slant.z)]),
+                     road(.tertiary, [(0, -200), (0, 0), (0, 200)])]
+        let markings = Map3DRoadMarkings(roads)
+        XCTAssertEqual(markings.signals.count, 5)
+        for signal in markings.signals {
+            // As decision 355's green: in line with the widest arm (|cos| ≥ 0.7).
+            XCTAssertEqual(signal.road == .main, abs(signal.along.x) >= 0.7, "\(signal.along)")
+        }
+        XCTAssertEqual(markings.signals.filter { $0.road == .main }.count, 3)
+        // A grid of crossroads: each junction's signals in one group, the
+        // same as the junction's own, and the junctions not all alike.
+        var grid: [Map3DBaseMap.Road] = []
+        for line in 0..<5 {
+            let at = Double(line) * 300
+            grid.append(road(.primary, [(-300, at), (1_500, at)]))
+            grid.append(road(.secondary, [(at, -300), (at, 1_500)]))
+        }
+        // Each road cut at the junctions, as the base map's tiles end.
+        grid = grid.flatMap { road -> [Map3DBaseMap.Road] in
+            let a = road.points[0], b = road.points[1], alongX = a.z == b.z
+            return (0..<6).map { piece in
+                let from = Double(piece) * 300 - 300, to = from + 300
+                return self.road(road.kind, alongX ? [(from, a.z), (to, a.z)] : [(a.x, from), (a.x, to)])
+            }
+        }
+        let crossings = Map3DRoadMarkings(grid)
+        XCTAssertEqual(crossings.junctions.count, 25)
+        var groups: [Int] = []
+        for junction in crossings.junctions {
+            let near = crossings.signals.filter { Map3DRoadMarkings.distance($0.foot, junction) < 40 }
+            XCTAssertEqual(near.count, 4)
+            XCTAssertEqual(Set(near.map(\.group)), [Map3DSignalTiming.group(at: junction)])
+            groups.append(Map3DSignalTiming.group(at: junction))
+        }
+        XCTAssertGreaterThan(Set(groups).count, 1, "neighbours not all alike")
+        // Where the scene's origin is does not move a junction's group.
+        let moved = Map3DRoadMarkings(grid, origin: Point(x: 0, z: 0))
+        XCTAssertEqual(moved.signals.map(\.group), crossings.signals.map(\.group))
+        let east = Map3DRoadMarkings(grid.map { road in
+            Map3DBaseMap.Road(kind: road.kind, isRamp: false, points: road.points.map { Point(x: $0.x - 1_000, z: $0.z + 500) }, bounds: everywhere)
+        }, origin: Point(x: 1_000, z: -500))
+        XCTAssertEqual(east.signals.map(\.group), crossings.signals.map(\.group))
     }
 
     func testAWideRoadHasTwoLanesOfArrows() {
@@ -149,6 +201,12 @@ final class Map3DRoadMarkingTests: XCTestCase {
         func count(_ prop: Map3DProp) -> Int { instances.filter { $0.model == Builder.propModels[prop] }.count }
         XCTAssertEqual(count(.signalGo) + count(.signalStop), 4)
         XCTAssertEqual(count(.signalGo), 2)
+        // Decision 429: placed as they stand when the clock does not change
+        // them (the main road green), each with its junction's group.
+        XCTAssertEqual(count(.signalAmber), 0)
+        let signals = instances.filter { [Builder.propModels[.signalGo], Builder.propModels[.signalStop]].contains($0.model) }
+        XCTAssertEqual(Set(signals.map(\.group)), [Map3DSignalTiming.group(at: Point(x: 0, z: 0))])
+        XCTAssertTrue(instances.filter { !signals.map(\.transform).contains($0.transform) }.allSatisfy { $0.group == 0 })
         // 4 km of primary road, a stop every 420 m, none at the junction.
         XCTAssertGreaterThanOrEqual(count(.busStop), 8)
         XCTAssertGreaterThan(count(.vending), 0)
@@ -181,7 +239,7 @@ final class Map3DRoadMarkingTests: XCTestCase {
     func testTheNewModelsAreSmall() throws {
         let pack = Map3DModelPack.standard
         var sizes: [String: Int] = [:]
-        for prop in [Map3DProp.signalGo, .signalStop, .busStop, .vending] {
+        for prop in [Map3DProp.signalGo, .signalStop, .signalAmber, .busStop, .vending] {
             let model = try XCTUnwrap(pack.models.first { $0.name == prop.modelName })
             sizes[prop.rawValue] = model.triangleCount
             XCTAssertLessThanOrEqual(model.triangleCount, 300, prop.rawValue)
@@ -253,6 +311,29 @@ final class Map3DRoadMarkingReportTests: XCTestCase {
                 }
             }
             print("\(distance) m: \(detailed) chunks in full, +\(draws) draw calls, +\(drawn) furniture triangles (Saving \(saving)), \(vertices) crossing and arrow vertices")
+        }
+        // Decision 429: the signals' draw calls, one a model (decision 355)
+        // and one a model and junction group (Map3DPropRuns).
+        let signalModels = Set([Map3DProp.signalGo, .signalStop].compactMap { pack.index(of: $0.modelName) })
+        var byModel = 0, byGroup = 0, most = 0
+        for chunk in scene.chunks {
+            let runs = Map3DPropRuns(chunk.props)
+            byModel += runs.shapes.filter { signalModels.contains($0.model) }.count
+            let here = runs.runs.filter { signalModels.contains($0.model) }.count
+            byGroup += here
+            most = max(most, here)
+        }
+        print("signal draw calls if every chunk were detailed: \(byModel) by model, \(byGroup) by model and group, most in one chunk \(most)")
+        for distance in [800, 280] as [Float] {
+            let camera = Map3DCamera(target: .zero, distance: distance, viewport: (402, 874))
+            var before = 0, after = 0
+            for chunk in scene.chunks where Map3DCamera.sees(minimum: chunk.minimum, maximum: chunk.maximum, through: camera.viewProjection)
+                && camera.wantsDetail(minimum: chunk.minimum, maximum: chunk.maximum, wasDetailed: false) {
+                let runs = Map3DPropRuns(chunk.props)
+                before += runs.shapes.filter { signalModels.contains($0.model) }.count
+                after += runs.runs.filter { signalModels.contains($0.model) }.count
+            }
+            print("\(distance) m: signal draw calls \(before) → \(after)")
         }
     }
 }

@@ -128,6 +128,11 @@ final class Map3DMetalView: MTKView {
     var reduceMotion = false
     /// Decision 230: the train models, and a buffer of each one's vertices.
     private var models: (pack: Map3DModelPack, buffers: [MTLBuffer])?
+    /// Decision 429: the signals' three models in `models`, and the game
+    /// clock their lights follow (`nil`: as they stand, the main road
+    /// green).
+    private var signalModels: Map3DSignalTiming.Models?
+    var signalClock: Map3DSignalTiming.Clock?
     var onStats: (@MainActor (Stats) -> Void)?
     /// Decision 358: the camera each frame, once it has moved, and when.
     var onCamera: (@MainActor (Map3DCamera, CFTimeInterval) -> Void)?
@@ -153,7 +158,9 @@ final class Map3DMetalView: MTKView {
         let shadows: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
         /// Decision 244: its street furniture's instances, sorted by model,
         /// and where each model's run of them starts.
-        let props: (instances: MTLBuffer, runs: [(model: Int, first: Int, count: Int)])?
+        /// Decision 429: a run a model and signal group for the frame, one
+        /// a model for the sun's shadow map (``Map3DPropRuns``).
+        let props: (instances: MTLBuffer, runs: [Map3DPropRuns.Run], shapes: [Map3DPropRuns.Run])?
         /// Decision 352: its signs' instances.
         let signs: (instances: MTLBuffer, count: Int)?
         let minimum: Map3DPoint
@@ -475,7 +482,7 @@ final class Map3DMetalView: MTKView {
             let leftOut = Map3DProp.modelsLeftOut(quality, in: models.pack)
             for chunk in seen where chunk.detailed {
                 guard let props = chunk.props else { continue }
-                for run in props.runs where run.model < models.buffers.count && !leftOut.contains(run.model) {
+                for run in props.shapes where run.model < models.buffers.count && !leftOut.contains(run.model) {
                     encoder.setVertexBuffer(models.buffers[run.model], offset: 0, index: 0)
                     encoder.setVertexBuffer(props.instances, offset: run.first * Self.instanceStride, index: 2)
                     encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: models.pack.models[run.model].vertices.count,
@@ -742,6 +749,7 @@ final class Map3DMetalView: MTKView {
         let buffers = pack.models.compactMap { makeBuffer($0.vertices) }
         guard buffers.count == pack.models.count else { return }
         models = (pack, buffers)
+        signalModels = Map3DSignalTiming.Models(pack: pack)
     }
 
     /// Draws `scene` from now on; decision 358: but for the chunks at
@@ -789,18 +797,10 @@ final class Map3DMetalView: MTKView {
         if let standInVertices = makeBuffer(chunk.standIn.vertices), let standInIndices = makeBuffer(chunk.standIn.indices) {
             standIn = (standInVertices, standInIndices, chunk.standIn.indices.count)
         }
-        var props: (instances: MTLBuffer, runs: [(model: Int, first: Int, count: Int)])?
-        let sorted = chunk.props.sorted { $0.model < $1.model }
-        if let instances = makeBuffer(sorted.flatMap(\.floats)) {
-            var runs: [(model: Int, first: Int, count: Int)] = []
-            for (index, instance) in sorted.enumerated() {
-                if let last = runs.last, last.model == instance.model {
-                    runs[runs.count - 1].count += 1
-                } else {
-                    runs.append((instance.model, index, 1))
-                }
-            }
-            props = (instances, runs)
+        var props: (instances: MTLBuffer, runs: [Map3DPropRuns.Run], shapes: [Map3DPropRuns.Run])?
+        let sorted = Map3DPropRuns(chunk.props)
+        if let instances = makeBuffer(sorted.instances.flatMap(\.floats)) {
+            props = (instances, sorted.runs, sorted.shapes)
         }
         let signs = makeBuffer(chunk.signs.flatMap(\.floats)).map { (instances: $0, count: chunk.signs.count) }
         return Chunk(vertices: vertices, indices: indices, indexCount: chunk.mesh.indices.count, baseIndexCount: chunk.baseIndexCount,
@@ -1038,19 +1038,23 @@ final class Map3DMetalView: MTKView {
         }
         // Decision 244: the street furniture of the chunks drawn in full,
         // one draw call a model and chunk. Decision 355: Saving leaves the
-        // bus stops and vending machines out.
+        // bus stops and vending machines out. Decision 429: the signals
+        // one a light group, each drawn lit as the game clock shows
+        // (Saving and Reduce Motion too: the light changes colour, nothing
+        // moves).
         if let models, !below {
             encoder.setRenderPipelineState(instancedPipeline)
             let leftOut = Map3DProp.modelsLeftOut(quality, in: models.pack)
             for chunk in visible where chunk.detailed {
                 guard let props = chunk.props else { continue }
                 for run in props.runs where run.model < models.buffers.count && !leftOut.contains(run.model) {
-                    encoder.setVertexBuffer(models.buffers[run.model], offset: 0, index: 0)
+                    let drawn = signalModels?.model(run.model, group: run.group, clock: signalClock) ?? run.model
+                    encoder.setVertexBuffer(models.buffers[drawn], offset: 0, index: 0)
                     encoder.setVertexBuffer(props.instances, offset: run.first * Self.instanceStride, index: 2)
-                    encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: models.pack.models[run.model].vertices.count,
+                    encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: models.pack.models[drawn].vertices.count,
                                            instanceCount: run.count)
                     drawCalls += 1
-                    triangles += models.pack.models[run.model].triangleCount * run.count
+                    triangles += models.pack.models[drawn].triangleCount * run.count
                 }
             }
         }
