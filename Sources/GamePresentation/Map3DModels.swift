@@ -37,8 +37,15 @@ public struct Map3DModelPack: Sendable {
 
     /// Every style's cab car and middle car, made once.
     public static let standard = Map3DModelPack(styles: Map3DTrainStyle.all)
+    /// The same pack before the shade is baked (decision 439): the recipes as
+    /// they are made, for the tests that check which recipe goes where.
+    static let unbaked = Map3DModelPack(styles: Map3DTrainStyle.all, baked: false)
 
     public init(styles: [Map3DTrainStyle]) {
+        self.init(styles: styles, baked: true)
+    }
+
+    init(styles: [Map3DTrainStyle], baked: Bool) {
         var models: [Model] = []
         for style in styles {
             // Decision 410: as the 700T and the N700S-G are built.
@@ -110,7 +117,7 @@ public struct Map3DModelPack: Sendable {
         // before them moves.
         models.append(Map3DLowFloorBus.routeModel())
         // Decision 439: the trains' soft shade, baked into their colour.
-        self.models = Map3DTrainOcclusion.baked(models)
+        self.models = baked ? Map3DTrainOcclusion.baked(models) : models
     }
 
     init(models: [Model]) {

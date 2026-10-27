@@ -30,7 +30,7 @@ final class Map3DEMU500Tests: XCTestCase {
         }
     }
     func testRegistrationPreservesExistingVehiclePayload() {
-        let pack = Map3DModelPack.standard
+        let pack = Map3DModelPack.unbaked
         for unit in Map3DEMU500.Unit.allCases {
             XCTAssertNotNil(pack.index(of: "emu500-"+unit.rawValue))
         }

@@ -5,7 +5,7 @@ import XCTest
 /// train's own near cars (the 700T's recipe, the N700S-G's mesh), and the
 /// near cars stay as they were.
 final class Map3DFarSets422Tests: XCTestCase {
-    private let pack = Map3DModelPack.standard
+    private let pack = Map3DModelPack.unbaked  // the recipes before decision 439's shade
 
     private func model(_ name: String) throws -> Map3DModelPack.Model {
         pack.models[try XCTUnwrap(pack.index(of: name), name)]
