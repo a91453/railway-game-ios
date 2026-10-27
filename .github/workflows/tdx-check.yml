@@ -53,8 +53,8 @@ jobs:
 
           # Only TDX's own data paths: the token goes to no other host.
           path = os.environ["TDX_PATH"].strip()
-          if not re.fullmatch(r"/api/(basic|advanced)/[A-Za-z0-9/_.\-]+(\?[^#\x00-\x1f\x7f]*)?", path):
-              sys.exit("The path must start with /api/basic/ or /api/advanced/ and hold only a path and a query")
+          if not re.fullmatch(r"/api/(basic|advanced|historical)/[A-Za-z0-9/_.\-]+(\?[^#\x00-\x1f\x7f]*)?", path):
+              sys.exit("The path must start with /api/basic/, /api/advanced/ or /api/historical/ and hold only a path and a query")
           path, _, query = path.partition("?")
           if ".." in path.split("/"):
               sys.exit("The path must not climb out of /api/")
