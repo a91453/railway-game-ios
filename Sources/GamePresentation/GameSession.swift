@@ -1276,6 +1276,7 @@ public final class GameSession {
     private func updateMap3DSpeedCap() {
         let capped = isMap3DOpen && followedTrainID != nil
         guard capped != isSpeedCappedIn3D else { return }
+        applyHeldSpeed()
         isSpeedCappedIn3D = capped
         if capped {
             let running = world.clock.runningSpeed
@@ -1295,6 +1296,7 @@ public final class GameSession {
     /// Runs the game at `speed`, or, paused, resumes it at `speed` later,
     /// keeping the pause and what paused it.
     private func setRunningSpeed(_ speed: GameSpeed) {
+        applyHeldSpeed()
         guard speed != world.clock.runningSpeed else { return }
         dropNightSkip()
         let paused = world.clock.isPaused
@@ -1307,6 +1309,14 @@ public final class GameSession {
         isPausedForBuilding = false
         isPausedForEvent = false
         dropNightSkip()
+        // A speed chosen while a loop tick is worked out waits for it
+        // (``heldSpeed``): a write would drop the tick, and a slow one,
+        // tapped again and again, would never be taken.
+        if loopTickRevision == worldRevision, speed != .paused, !world.clock.isPaused {
+            heldSpeed = speed == world.clock.speed ? nil : speed
+            return
+        }
+        applyHeldSpeed()
         // Decision 143: any write drops the tick being worked out, so the
         // speed the game already runs at is not written again.
         var clock = world.clock
@@ -1321,6 +1331,37 @@ public final class GameSession {
         guard !world.clock.isPaused else { return }
         logging(.pause) { $0.pause() }
         isPausedForEvent = true
+    }
+
+    /// The speed the player chose while a loop tick was worked out, put
+    /// in place as soon as the tick is (``changeSpeed(_:)``), or `nil`.
+    public private(set) var heldSpeed: GameSpeed?
+
+    /// ``worldRevision`` when the loop tick being worked out began, or
+    /// `nil` when none is.
+    @ObservationIgnored private var loopTickRevision: Int?
+
+    /// The world's clock as the speed control shows it: at the speed the
+    /// player chose, though a tick being worked out still holds it.
+    public var shownClock: GameClock {
+        guard let heldSpeed else { return world.clock }
+        var clock = world.clock
+        clock.setSpeed(heldSpeed)
+        return clock
+    }
+
+    /// Puts ``heldSpeed`` in place, after the tick that held it: logged
+    /// after that tick, as it took effect. A pause since stays.
+    private func applyHeldSpeed() {
+        guard let speed = heldSpeed else { return }
+        heldSpeed = nil
+        let paused = world.clock.isPaused
+        var clock = world.clock
+        clock.setSpeed(speed)
+        if paused { clock.pause() }
+        guard clock != world.clock else { return }
+        logging(.setSpeed(speed)) { $0.setSpeed(speed) }
+        if paused { logging(.pause) { $0.pause() } }
     }
 
     /// ``nightSkip`` as last looked at, after each tick and each command
@@ -1366,6 +1407,11 @@ public final class GameSession {
     /// held it then goes on when continued, as the player left it running.
     public var worldToSave: GameWorld {
         var saved = world
+        if let heldSpeed {
+            let paused = saved.clock.isPaused
+            saved.setSpeed(heldSpeed)
+            if paused { saved.pause() }
+        }
         // Decision 360: the speed the 3D map lowered is saved as it was.
         if let before = speedBefore3D {
             let paused = saved.clock.isPaused
@@ -1391,6 +1437,7 @@ public final class GameSession {
         isPausedForBuilding = false
         isPausedForEvent = false
         dropNightSkip()
+        applyHeldSpeed()
         if world.clock.isPaused {
             logging(.resume) { $0.resume() }
         } else {
@@ -1677,6 +1724,9 @@ public final class GameSession {
             world = step.world
             isLogging = false
             log(.advance(ticks: step.ticks), at: timeBefore)
+            // The speed chosen while the tick was worked out, after it and
+            // before the revision is kept with what the tick read.
+            applyHeldSpeed()
             // Decision 195: the ticks that ran, and the followed train's way.
             ticksRun += Int64(step.ticks)
             if let traffic = step.traffic { trafficMemo = (worldRevision, traffic) }
@@ -1793,6 +1843,7 @@ public final class GameSession {
     /// `nil` while paused.
     func beginLoopTick() -> LoopTick? {
         guard !world.clock.isPaused else { return nil }
+        loopTickRevision = worldRevision
         return LoopTick(
             world: world, revision: worldRevision, listening: playSound != nil, train: selectedTrainID, language: language,
             previousTraffic: trafficMemo?.reading,
@@ -1873,6 +1924,10 @@ public final class GameSession {
     /// it on the world they saw. Returns whether the tick was taken.
     @discardableResult
     func finish(_ tick: LoopTick, with outcome: Result<TickStep, GameError>) -> Bool {
+        defer {
+            loopTickRevision = nil
+            applyHeldSpeed()
+        }
         guard tick.revision == worldRevision else { return false }
         FrameCostMeter.shared.measure(.afterStep) { finish(outcome, fromLoop: true) }
         return true
@@ -1935,6 +1990,8 @@ public final class GameSession {
     public func stopGameLoop() {
         gameLoop?.cancel()
         gameLoop = nil
+        loopTickRevision = nil
+        applyHeldSpeed()
         tickAccumulator.reset()
         // The time away is not time the game failed to run.
         speedMeter.reset()
