@@ -109,7 +109,8 @@ public struct Map3DModelPack: Sendable {
         // Decision 400, 10i-6: the player's route buses, last, so no model
         // before them moves.
         models.append(Map3DLowFloorBus.routeModel())
-        self.models = models
+        // Decision 439: the trains' soft shade, baked into their colour.
+        self.models = Map3DTrainOcclusion.baked(models)
     }
 
     init(models: [Model]) {
