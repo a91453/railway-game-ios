@@ -39,12 +39,12 @@ final class Map3DEMU800Tests: XCTestCase {
             }
         }
     }
-    func testStaticRegistrationKeepsExistingOperatingMappingAndLastBus() {
+    func testStaticRegistrationKeepsTheOperatingMappingAndLastBus() {
         let pack=Map3DModelPack.standard
         XCTAssertNotNil(pack.models.first {$0.name=="emu800-ed"})
         XCTAssertEqual(pack.models.last?.name,Map3DLowFloorBus.routeModel().name)
-        // Real-world commuter representative and EMU800/900 performance still use their old recipe.
-        XCTAssertEqual(Map3DTrainSet.byKey["emu800"]?.ownLengths,false)
+        // Decision 432: the operating key now runs these units (Map3DEMU800IntegrationTests).
+        XCTAssertEqual(Map3DTrainSet.byKey["emu800"]?.ownLengths,true)
         XCTAssertEqual(Map3DTrainSet.byKey["emu800"]?.far,"emu800Far")
         XCTAssertFalse(TrainPack.sets.contains("emu800"))
     }

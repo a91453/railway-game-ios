@@ -1,8 +1,9 @@
 import XCTest
 @testable import GamePresentation
 
-/// Decision 420: the Taroko and the EMU800 have light versions made in
-/// code, drawn car for car from 500 m out as decision 408's far sets are.
+/// Decision 420: the Taroko has a light version made in code, drawn car for
+/// car from 500 m out as decision 408's far sets are (decision 432: the EMU800
+/// and the EMU500 have theirs in `Map3DEMU800IntegrationTests`).
 final class Map3DFarSets420Tests: XCTestCase {
     private let pack = Map3DModelPack.standard
 
@@ -11,7 +12,7 @@ final class Map3DFarSets420Tests: XCTestCase {
     }
 
     func testNearWithin500MetresThenFarThenABox() throws {
-        for (code, count) in [("taroko", 8), ("emu800", 8)] {
+        for (code, count) in [("taroko", 8)] {
             XCTAssertEqual(Map3DTrainSet.reach(of: code), Map3DTrainSet.tramReach, code)
             for unit in ["head", "car", "tail", "panto"] {
                 guard let near = pack.index(of: "set-\(code)-\(unit)") else { continue }
@@ -23,7 +24,7 @@ final class Map3DFarSets420Tests: XCTestCase {
     }
 
     func testTheFarCarsAreTheSameCarsLighter() throws {
-        for code in ["taroko", "emu800"] {
+        for code in ["taroko"] {
             for unit in ["head", "car", "tail", "panto"] {
                 guard pack.index(of: "set-\(code)-\(unit)") != nil else { continue }
                 let near = try model("set-\(code)-\(unit)"), far = try model("set-\(code)Far-\(unit)")

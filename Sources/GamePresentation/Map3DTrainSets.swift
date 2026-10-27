@@ -22,6 +22,14 @@ public struct Map3DTrainSet: Sendable {
     /// Decision 426: the middle cars drawn as ``Cars/centre`` and not the
     /// middle car (the TEMU2000's two TEMB cars between its TEMA cars).
     var centreCars: Set<Int> = []
+    /// Decision 432: which car the cars between the two cab cars are, one
+    /// after another from the front and over again (the EMU800's EMA, EP,
+    /// EMB): for a set of this kind ``pantographCars`` and ``centreCars``
+    /// are not used, and the back half is the front half's mirror image, its
+    /// cars the back versions (``Cars/middleBack``, ``Cars/pantographBack``,
+    /// ``Cars/centreBack``), the middle one of an odd count the front's.
+    var cycle: [Slot] = []
+    enum Slot: Sendable { case middle, pantograph, centre }
     /// Decision 399: the cars drawn at their models' own lengths
     /// (``Map3DModelPack/layout(forType:count:)``), not stretched to the
     /// 20 m every other train's are, each touching the next (their models
@@ -54,6 +62,8 @@ public struct Map3DTrainSet: Sendable {
         /// there turned round.
         var middleBack: Model? = nil
         var pantographBack: Model? = nil
+        /// Decision 432: the back half's ``centre`` car.
+        var centreBack: Model? = nil
         typealias Model = Map3DModelPack.Model
     }
 
@@ -64,6 +74,7 @@ public struct Map3DTrainSet: Sendable {
     var singleName: String { "set-\(key)-single" }
     var pantographName: String { "set-\(key)-panto" }
     var centreName: String { "set-\(key)-centre" }
+    var centreBackName: String { "set-\(key)-centreBack" }
     var tenderName: String { "set-\(key)-tender" }
     var middleBackName: String { "set-\(key)-carBack" }
     var pantographBackName: String { "set-\(key)-pantoBack" }
@@ -87,6 +98,7 @@ public struct Map3DTrainSet: Sendable {
         if let tender = cars.tender { models.append(named(tender, tenderName)) }
         if let middle = cars.middleBack { models.append(named(middle, middleBackName)) }
         if let pantograph = cars.pantographBack { models.append(named(pantograph, pantographBackName)) }
+        if let centre = cars.centreBack { models.append(named(centre, centreBackName)) }
         return models
     }
 
@@ -157,11 +169,14 @@ public struct Map3DTrainSet: Sendable {
             temu1000(),
             // Decision 420: and its light version from 500 m out.
             temu1000(far: true),
-            // The EMU800: grey, a blue band and its blue face (the reference's
-            // garage `emu800`) on #900's curved front (the author, 2026-10-21).
-            multipleUnit("emu800", asset: "01_TRA_modern_3x2-04", body: 0xBBC6C9, band: 0x214F90, face: 0x214F90, far: "emu800Far"),
-            // Decision 420: in decision 408's light detail from 500 m out.
-            multipleUnit("emu800Far", asset: "01_TRA_modern_3x2-04", body: 0xBBC6C9, band: 0x214F90, face: 0x214F90, detail: .far),
+            // Decision 432: the Taiwan Railway local train as #1320's EMU800
+            // (the even-numbered) and #1312's EMU500 (the odd-numbered,
+            // ``variant(of:number:locked:)``), each from 500 m out in a
+            // lighter version of its own.
+            emu800(),
+            emu800(far: true),
+            emu500(),
+            emu500(far: true),
             // The DR1000 railcar and the DR3100 diesel express: silver, a thin
             // orange band, yellow-orange faces (the reference's `dr1000`,
             // `dr3100`) on #900's curved fronts.
@@ -224,8 +239,10 @@ public struct Map3DTrainSet: Sendable {
     /// Decision 427: and the push-pull Tze-Chiang's E1000 look.
     /// Decision 430: and the Chu-Kuang sets, a coach 6,500 triangles near
     /// (their far sets).
+    /// Decision 432: and the EMU800 and EMU500 (their far sets), 11,500 and
+    /// 4,500 triangles a cab car.
     static let nearOnly: Set = ["E200CK", "R100CK", "R200CK", "E500CK", "MINGRI", "STAR", "pushPull", "pushPullE1000", "greenTram", "SUMMER", "STEAM", "highSpeed", "n700sG", "emu3000",
-                                "taroko", "emu800", "puyuma"]
+                                "taroko", "emu800", "emu500", "puyuma"]
 
     /// Decision 408: the set a train of `key` numbered `number` is drawn
     /// as: half the high-speed trains, the odd-numbered, the N700S-G, the
@@ -233,10 +250,15 @@ public struct Map3DTrainSet: Sendable {
     /// `locked` (the train pack's), every one of them the 700T, its far
     /// set ``highSpeedFar``. Decision 427: every push-pull Tze-Chiang, odd
     /// or even, the E1000 look unless `locked` has `pushPullE1000`.
+    /// Decision 432: and half the Taiwan Railway local trains, the
+    /// odd-numbered, the EMU500; not locked, the train pack's has no part
+    /// in it.
     public static func variant(of key: String, number: Int, locked: Set<String> = []) -> String {
         switch named(key)?.key {
         case "highSpeed" where number % 2 != 0 && !locked.contains("n700sG"):
             return "n700sG"
+        case "emu800" where number % 2 != 0:
+            return "emu500"
         case "pushPull" where !locked.contains("pushPullE1000"):
             return "pushPullE1000"
         default:
@@ -464,6 +486,43 @@ public struct Map3DTrainSet: Sendable {
             }
             return Cars(head: cab(.leading, front: true), middle: part(.tema), tail: cab(.trailing, front: false), single: nil,
                         pantograph: part(.tep).turned, centre: part(.temb), pantographBack: part(.tep))
+        }
+    }
+
+    /// Decision 432: #1320's EMU800 units in the operating local train: an
+    /// ED at each end (turned round at the back), EMA, EP and EMB between
+    /// them over and over, the back half the front's mirror image
+    /// (``Map3DTrainSet/cycle``); eight cars are the static formation's
+    /// ED EMA EP EMB | EMB EP EMA ED. Each car its own length, the pantographs
+    /// on the EPs, the cabs' two lamp lenses lit (white at the front, red at
+    /// the back). `far`: ``Map3DEMU800/model(_:reversed:far:light:)``'s `light`
+    /// units.
+    static func emu800(far: Bool = false) -> Map3DTrainSet {
+        Map3DTrainSet(key: far ? "emu800Far" : "emu800", cycle: [.middle, .pantograph, .centre], ownLengths: true,
+                      far: far ? nil : "emu800Far") {
+            func part(_ role: Map3DEMU800.Role, reversed: Bool = false) -> Map3DModelPack.Model {
+                Map3DEMU800.model(role, reversed: reversed, light: far)
+            }
+            return Cars(head: lit(part(.ed), front: true), middle: part(.ema), tail: lit(part(.ed, reversed: true), front: false), single: nil,
+                        pantograph: part(.ep), centre: part(.emb), middleBack: part(.ema, reversed: true),
+                        pantographBack: part(.ep, reversed: true), centreBack: part(.emb, reversed: true))
+        }
+    }
+
+    /// Decision 432: #1312's EMU500 units: an EMC at each end (turned round
+    /// at the back), then EP, ET and EM over and over, the EM turned round
+    /// in the front half, the back half the front's mirror image; eight cars
+    /// are two four-car units coupled cab to cab (EMC EP ET EM | EM ET EP EMC).
+    /// Each car its own length, the pantographs on the EPs, the cabs' lamp
+    /// lenses lit at the two ends only. `far`: ``Map3DEMU500/model(_:far:)``'s
+    /// light units.
+    static func emu500(far: Bool = false) -> Map3DTrainSet {
+        Map3DTrainSet(key: far ? "emu500Far" : "emu500", cycle: [.pantograph, .centre, .middle], ownLengths: true,
+                      far: far ? nil : "emu500Far") {
+            func part(_ unit: Map3DEMU500.Unit) -> Map3DModelPack.Model { Map3DEMU500.model(unit, far: far) }
+            return Cars(head: lit(part(.emc), front: true), middle: part(.em).turned, tail: lit(part(.emc).turned, front: false), single: nil,
+                        pantograph: part(.ep), centre: part(.et), middleBack: part(.em),
+                        pantographBack: part(.ep).turned, centreBack: part(.et).turned)
         }
     }
 
