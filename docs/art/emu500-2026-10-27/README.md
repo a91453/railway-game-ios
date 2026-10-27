@@ -75,3 +75,5 @@
 **VERIFIED — Linux**：Swift 6.4 warnings-as-errors 建置及 10 項相關 XCTest；Swift 原生逐頂點讀回、有限數值／單位法線、封閉有向邊／正體積、八輪貼軌、編組逐頂點及色彩、TEMU1000 共存 payload；缺面／反面故障拒收；玻璃背板及空調中心支承射線抽樣、浮空玻璃反例；Blender 4.3.2 獨立匯入六 GLB；42 張七向圖完整解碼、透明與留白；Chromium WebGL2 真載入／旋轉／縮放／下載。最終 SHA、producer、ZIP 全解壓逐檔比對在私包紀錄。
 
 **UNVERIFIED**：真機 Metal、效能、動畫、全設備支承及全域穿模／碰撞窮舉、另一側工程校準。自包含 viewer 已提供，但受此環境 Chromium 管理政策限制，`file://` 啟動被 `ERR_BLOCKED_BY_ADMINISTRATOR` 阻擋；相同 HTML 改由本機 HTTP 載入，測內嵌模型及互動下載、無外部請求。不能將此說成已驗證直接雙擊開檔。
+
+公開 draft [#1312](https://github.com/a91453/railway-game-ios/pull/1312) ↔ 私有 draft [#92](https://github.com/a91453/railway-reference-private/pull/92)。[私有完整交付索引](https://github.com/a91453/railway-reference-private/tree/codex/emu500-native-2026-10-27/Railway/game-art-previews/docs/art/emu500-2026-10-27) 包含全部下載與真前版。最終 producer 是 `b5f72029`（完整 SHA 及每件 producer 檔案 SHA 在 source-record.json）；之後提交僅補文件互鏈，不改模型／工具／預覽。最新 head 的 CI 與衝突狀態見 PR 及 issue #1310 的實查留言，未完成的 CI 不記成 VERIFIED。
