@@ -1867,6 +1867,13 @@ TEMU1000 原生外形（Codex，初版 issue #1228／公開 #1230／私庫 #78 �
 
 營運接點／列車包／fallback保持；本PR合併更新後，原專用EMU3000近遠畫面會使用新色。GameCore／存檔／fixtures不動；真機／效能／人工Simulator外觀／動畫未驗。兩庫新互鏈draft與最新同head CI看#1309，不推main、不合併／auto-merge／TestFlight。
 
+### 2026-10-27 Codex EMU900（#1338）
+
+[來源／外觀／角色與重建交接](art/emu900-native-2026-10-27/README.md)。獨立EMU900六設備角色近遠正反24單元，十輛5M5T、3/6/8單弓，合法M3DAssembly展示。既有Q比例與展示簡模已實際四向查看，不套殼；真候選與接入前EMU800顯示比較分別標示。柔灰／綠松腰帶／藏青罩面，已修下鼻方正、肩帶過窄與返回面斷帶；工程站位及左右隱藏設備仍有推估，外觀自檢不稱使用者接受。只靜態註冊，沒有EMU900獨占接點，合併後無營運編組自動改用；現有一般通勤EMU800/EMU500與解鎖／列車包／fallback保持。310份舊完整payload（307註冊＋3直接比較）及私庫已接受E500v3／EMU3000v5與已交付PP/E1000／莒光藏青／石板藍灰／EMU800不動。固定producer、素材下載驗證與最新同head CI見互鏈draft／issue。Linux Swift6.4及取樣幾何不代表人工Simulator、真機Metal/FPS/記憶體、動畫或完整動態碰撞。GameCore／存檔／fixtures／玩法不動；不推main、不合併／auto-merge／TestFlight。
+
+
+EMU900第二版（#1338／draft#1339↔私庫#102）：使用者要求修圓車頭、下裙／連結器、輪架與遊戲配色。真8ebfd9fd第一版完整包保持；新revision-2，罩面沿實際殼曲線、圓裙凹槽與折面排障器，車身用既有D3D4DA、玻璃shade0.62，綠松／藏青保持；輪胎與屋頂設備原三角保護。另補#1041前版漏做的light介面，頭2188／中868–1092三角，36單元與近59448／遠33800／light12056十輛展示及18全payload pins。最新main b7710cb7 C341整合保持；只靜態註冊，無營運自動換用。全量重出／真前後／驗證與固定producer、下載SHA、最新同head CI見自有README及issue，外觀自檢不等於使用者接受，人工Simulator／真機Metal效能與動畫仍未驗。不改GameCore／存檔／fixtures／玩法，不合併／auto-merge／TestFlight。
+
 ### 2026-10-27 Codex C371／C381 原生靜態素材
 
 本次製作各自 DM/T/M/反向端車與原廠六輛 DM1–T–M2＋M2–T–DM1。台灣車輛官網規格及兩張已開啟的 Commons 實車照片、兩張使用者插畫來源與缺口詳見 [製作紀錄](art/c371-c381-2026-10-27/README.md)。真第一版與最終版原生、GLB、預覽及同相機比較保留於互鏈私庫 draft。只在 Map3DModels 註冊單元；`metroC381` 是含其他路線及 C371/C381 性能的共用營運接點，沒有更動，合併後不會自動出現在營運列車。外觀仍待改善 C381 圓鼻、兩款車頂與設備精度；真機 Metal／動畫／效能／完整碰撞未驗。技術、ZIP、producer 和最新 CI 以本次 issue 及私包紀錄為準。不動 GameCore、存檔、Golden／Replay／Save fixtures、玩法，不合併、不啟動 TestFlight。
