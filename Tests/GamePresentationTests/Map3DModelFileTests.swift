@@ -143,8 +143,15 @@ final class Map3DModelFileTests: XCTestCase {
         XCTAssertEqual(refusal(Self.file(Self.sample, provenance: "")), .noProvenance, "a generated model keeps its record")
         XCTAssertEqual(refusal(Self.file(Self.sample, provenance: "   ")), .noProvenance)
         var flagged = Self.sample
-        flagged[0].flags = 2
-        XCTAssertEqual(refusal(Self.file(flagged)), .unknownFlags(2))
+        flagged[0].flags = 8
+        XCTAssertEqual(refusal(Self.file(flagged)), .unknownFlags(8))
+        flagged[0].flags = 6
+        XCTAssertEqual(refusal(Self.file(flagged)), .unknownFlags(6), "glass and stainless at once")
+        // Decision 450: a train's glass, lit glass and stainless read back.
+        for (bits, layer) in [(UInt32(2), Map3DVertex.trainGlass), (3, Map3DVertex.trainGlassLit), (4, Map3DVertex.trainSteel)] {
+            flagged[0].flags = bits
+            XCTAssertEqual(try Map3DModelFile(decoding: Self.file(flagged), named: "bus").model.vertices.first?.layer, layer)
+        }
         var broken = Self.sample
         broken[1].corners[2] = (.nan, 0, 0)
         XCTAssertEqual(refusal(Self.file(broken)), .notFinite)

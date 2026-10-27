@@ -1,3 +1,4 @@
+import {assemblyNative} from '../emu900-native/scene.js';
 // WebGL preview of M3DM models lit as the game lights a model (decision 370's
 // soft light, `map3dLit(..., soft: true)` in Map3DShaders.metal), with the
 // light the game's `Map3DLighting` gives at the hour (manifest.json
@@ -34,7 +35,7 @@ export class NativeRenderer {
     void main(){ vec3 p = position - centre; gl_Position = vec4(dot(p, right) / (radius * aspect), dot(p, up) / radius, -dot(p, direction) / depth, 1.0); n = normal; c = color; g = glow; k = material; }`;
     const fragment = `#version 300 es
     precision highp float; in vec3 n; in vec4 c; in float g; in float k; out vec4 outColor;
-    uniform vec3 sunModel, sunLight, skyLight, lampGlow, lineColour, toEye, horizon, zenith, glint; uniform float lights, sunShown; uniform int features;
+    uniform vec3 sunModel, sunLight, skyLight, lampGlow, lineColour, toEye, horizon, zenith, glint; uniform float lights, sunShown; uniform int features; uniform bool silhouette;
     vec3 seen(vec3 w){ return w.z >= 0.0 ? mix(horizon, zenith, sqrt(w.z)) : horizon * (1.0 - 0.45 * smoothstep(0.0, 0.4, -w.z)); }
     void main(){
       vec3 base = c.a < 0.5 ? lineColour : c.rgb;
@@ -57,7 +58,7 @@ export class NativeRenderer {
           glow += glint * ((pow(s, 1400.0) * 3.0 + pow(s, 90.0) * 0.35 + pow(s, 7.0) * 0.1) * sunny * lit);
         }
       }
-      outColor = vec4(min(mix(base * light, mirrored.rgb, mirrored.a) + glow, 1.0), 1.0);
+      outColor = vec4(silhouette ? base : min(mix(base * light, mirrored.rgb, mirrored.a) + glow, 1.0), 1.0);
     }`;
     const shader = (type, source) => { const s = gl.createShader(type); gl.shaderSource(s, source); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw Error(gl.getShaderInfoLog(s)); return s; };
     const p = gl.createProgram(), vs = shader(gl.VERTEX_SHADER, vertex), fs = shader(gl.FRAGMENT_SHADER, fragment);
@@ -66,10 +67,12 @@ export class NativeRenderer {
     this.program = p; this.buffer = gl.createBuffer(); this.vao = gl.createVertexArray();
     gl.bindVertexArray(this.vao); gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
     for (const [index, size, offset] of [[0, 3, 0], [1, 3, 12], [2, 4, 24], [3, 1, 40], [4, 1, 44]]) { gl.enableVertexAttribArray(index); gl.vertexAttribPointer(index, size, gl.FLOAT, false, 48, offset); }
-    this.uniforms = Object.fromEntries(['centre', 'right', 'up', 'direction', 'radius', 'aspect', 'depth', 'sunModel', 'sunLight', 'skyLight', 'lampGlow', 'lineColour', 'lights', 'features',
+    this.uniforms = Object.fromEntries(['centre', 'right', 'up', 'direction', 'radius', 'aspect', 'depth', 'sunModel', 'sunLight', 'skyLight', 'lampGlow', 'lineColour', 'lights', 'features', 'silhouette',
       'toEye', 'horizon', 'zenith', 'glint', 'sunShown'].map(n => [n, gl.getUniformLocation(p, n)]));
   }
-  load(buffer) {
+  load(buffer, material = 'color') {
+    this.silhouette = material === 'silhouette';
+    buffer = assemblyNative(buffer);
     const d = new DataView(buffer), magic = String.fromCharCode(...new Uint8Array(buffer, 0, 4));
     if (magic !== 'M3DM' || d.getUint16(4, true) !== 1 || d.getUint16(6, true) !== 0) throw Error('not a native model');
     const count = d.getUint32(8, true), length = d.getUint32(12, true), start = 16 + Math.ceil(length / 4) * 4;
@@ -82,7 +85,10 @@ export class NativeRenderer {
       for (let j = 0; j < 3; j++) {
         const k = (i * 3 + j) * 12, color = d.getUint32(at + 4 + j * 16 + 12, true);
         data.set(points[j], k); data.set(normal, k + 3);
-        data.set([color & 255, (color >>> 8) & 255, (color >>> 16) & 255].map(x => x / 255), k + 6); data[k + 9] = (color >>> 24) / 255; data[k + 10] = flags & 1; data[k + 11] = (flags & 2) ? 1 : (flags & 4) ? 2 : 0;
+        data.set([color & 255, (color >>> 8) & 255, (color >>> 16) & 255].map(x => x / 255), k + 6); data[k + 9] = (color >>> 24) / 255; data[k + 10] = material === 'color' ? flags & 1 : 0;
+        data[k + 11] = material !== 'color' ? 0 : (flags & 2) ? 1 : (flags & 4) ? 2 : 0;
+        if(material === 'clay') data.set([0.827,0.831,0.855,1],k+6);
+        if(material === 'silhouette') data.set([0.149,0.173,0.341,1],k+6);
         for (let c = 0; c < 3; c++) { low[c] = Math.min(low[c], points[j][c]); high[c] = Math.max(high[c], points[j][c]); }
       }
     }
@@ -108,7 +114,7 @@ export class NativeRenderer {
     const [sx, sy, sz] = light.sunDirection;  // world (east, up, south) -> model (front, left, up)
     gl.uniform3fv(u.sunModel, unit([sx, -sz, sy]));
     gl.uniform3fv(u.sunLight, light.sunLight); gl.uniform3fv(u.skyLight, light.skyLight); gl.uniform3fv(u.lampGlow, light.lampGlow);
-    gl.uniform3fv(u.lineColour, lineColour); gl.uniform1f(u.lights, light.lights); gl.uniform1i(u.features, features);
+    gl.uniform3fv(u.lineColour, lineColour); gl.uniform1f(u.lights, light.lights); gl.uniform1i(u.features, features); gl.uniform1i(u.silhouette,this.silhouette ? 1 : 0);
     // Decision 450: the eye's way and the sky the glass mirrors, in the model's space (+z up).
     gl.uniform3fv(u.toEye, direction); gl.uniform3fv(u.horizon, light.fogColour || [0.8, 0.85, 0.9]); gl.uniform3fv(u.zenith, light.zenith || [0.4, 0.6, 0.9]);
     gl.uniform3fv(u.glint, light.glint || [1, 1, 1]); gl.uniform1f(u.sunShown, light.sunShown ?? 1);

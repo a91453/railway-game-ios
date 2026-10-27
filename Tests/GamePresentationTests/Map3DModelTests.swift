@@ -13,7 +13,8 @@ final class Map3DModelTests: XCTestCase {
         // decision 259: then the people and vehicles; decision 318: then the
         // sets'; decision 400, 10i-6: then the route bus; finally the
         // independent PP passenger-car display roles, near and far; then the
-        // EMU800 study's roles, the EMU500 study's units and formation, and the C341 study's units.
+        // EMU800 study's roles, the EMU500 study's units and formation, the
+        // C341 study's units, and the 610 study's four roles at three LODs.
         let pantoStyles = Map3DTrainStyle.all.filter { !$0.pantographCars.isEmpty }.count
         let sets = Map3DTrainSet.all.map { $0.models().count }.reduce(0, +)
         let temu1000Models = Map3DTEMU1000.Unit.allCases.count + 1
@@ -24,7 +25,8 @@ final class Map3DModelTests: XCTestCase {
         let rest = Map3DFourCarMetro.Unit.allCases.count + 1 + Map3DSevenCarBlue.Unit.allCases.count + 1 + Map3DDuplexSteam.Unit.allCases.count + 1 + Map3DSteamTender.Unit.allCases.count + 1 + Map3DTrainShapeRefresh.ids.count + 1
         let ppDisplayModels = Map3DPPPassenger.roles.count * 2 + 2 // E1000 near/far
         let emu500Models = Map3DEMU500.Unit.allCases.count + 1
-        XCTAssertEqual(pack.models.count, baseModels + shortSets + longSets + rest + ppDisplayModels + Map3DEMU800.Role.allCases.count * 4 + emu500Models + Map3DC341.Unit.allCases.count + Map3DEMU900.Role.allCases.count * 6)
+        let taipei610Models = Map3DTaipei610.Role.allCases.count * 3 // near, far, light
+        XCTAssertEqual(pack.models.count, baseModels + shortSets + longSets + rest + ppDisplayModels + Map3DEMU800.Role.allCases.count * 4 + emu500Models + Map3DC341.Unit.allCases.count + Map3DEMU900.Role.allCases.count * 6 + taipei610Models)
         for style in Map3DTrainStyle.all {
             var names = [style.name + "-cab", style.name + "-car"]
             if !style.pantographCars.isEmpty { names.append(style.name + "-panto") }

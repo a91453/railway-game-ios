@@ -12,7 +12,9 @@ import Foundation
 /// - the provenance: UTF-8 JSON, the GLB's own `asset` and `extras` as
 ///   generated (Meshy's terms §2.4: a generated model keeps what says it is
 ///   generated), padded with zeros to a multiple of four bytes;
-/// - each triangle: its flags (UInt32; bit 0, lit from within at night),
+/// - each triangle: its flags (UInt32; bit 0, lit from within at night;
+///   decision 450: bit 1, a train's window glass, bit 2, its stainless
+///   body, as `tools/train-models` writes them),
 ///   then three corners of x, y, z (Float32, metres, the model's space:
 ///   +x the front, +y the left, +z up, the ground at z 0) and colour
 ///   (UInt32, red in the low byte; alpha 0 where the instance's colour
@@ -42,6 +44,8 @@ public struct Map3DModelFile: Sendable {
     static let headerSize = 16
     static let triangleSize = 4 + 3 * 16
     static let glows: UInt32 = 1
+    static let glass: UInt32 = 2
+    static let steel: UInt32 = 4
 
     public let model: Map3DModelPack.Model
     /// The generator's own record of the model, kept as it came.
@@ -72,7 +76,7 @@ public struct Map3DModelFile: Sendable {
         var offset = Self.headerSize + padded
         for _ in 0..<triangles {
             let flags = Self.uint32(bytes, offset)
-            guard flags & ~Self.glows == 0 else { throw .unknownFlags(flags) }
+            guard flags & ~(Self.glows | Self.glass | Self.steel) == 0, flags & Self.glass == 0 || flags & Self.steel == 0 else { throw .unknownFlags(flags) }
             var points: [Map3DPoint] = [], colours: [UInt32] = []
             for corner in 0..<3 {
                 let at = offset + 4 + corner * 16
@@ -83,7 +87,9 @@ public struct Map3DModelFile: Sendable {
             }
             offset += Self.triangleSize
             guard let normal = (points[1] - points[0]).cross(points[2] - points[0]).normalized else { continue }
-            let layer = flags & Self.glows == 0 ? Map3DVertex.plain : Map3DVertex.glowing
+            let lit = flags & Self.glows != 0
+            let layer = flags & Self.glass != 0 ? (lit ? Map3DVertex.trainGlassLit : Map3DVertex.trainGlass)
+                : flags & Self.steel != 0 ? Map3DVertex.trainSteel : lit ? Map3DVertex.glowing : Map3DVertex.plain
             for (point, colour) in zip(points, colours) {
                 vertices.append(Map3DVertex(point, normal: normal, color: colour, layer: layer))
                 low = Map3DPoint(min(low.x, point.x), min(low.y, point.y), min(low.z, point.z))

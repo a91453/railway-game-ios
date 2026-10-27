@@ -1449,6 +1449,54 @@
       "hash" : "d02788918b1635c2",
       "triangles" : 4000
     },
+    "taipei610-a" : {
+      "hash" : "6ee17842b70750b3",
+      "triangles" : 3650
+    },
+    "taipei610-a-far" : {
+      "hash" : "fb20203b061ce401",
+      "triangles" : 1722
+    },
+    "taipei610-a-light" : {
+      "hash" : "3633ab5830f105ad",
+      "triangles" : 1638
+    },
+    "taipei610-b" : {
+      "hash" : "10c59a8c99ddc4b1",
+      "triangles" : 3650
+    },
+    "taipei610-b-far" : {
+      "hash" : "181365b7d56bd9f0",
+      "triangles" : 1722
+    },
+    "taipei610-b-light" : {
+      "hash" : "780cb3822f288c",
+      "triangles" : 1638
+    },
+    "taipei610-c" : {
+      "hash" : "cb952158c7e58774",
+      "triangles" : 2824
+    },
+    "taipei610-c-far" : {
+      "hash" : "4fb673c8b46186b",
+      "triangles" : 1372
+    },
+    "taipei610-c-light" : {
+      "hash" : "eecbf60bce777858",
+      "triangles" : 1252
+    },
+    "taipei610-d" : {
+      "hash" : "f1b8be3995fc0b21",
+      "triangles" : 2824
+    },
+    "taipei610-d-far" : {
+      "hash" : "4fb673c8b46186b",
+      "triangles" : 1372
+    },
+    "taipei610-d-light" : {
+      "hash" : "eecbf60bce777858",
+      "triangles" : 1252
+    },
     "temu1000-formation" : {
       "hash" : "6035abce8d5e82de",
       "triangles" : 14136
