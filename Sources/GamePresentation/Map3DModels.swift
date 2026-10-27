@@ -121,14 +121,21 @@ public struct Map3DModelPack: Sendable {
                 if !far { for reversed in [false, true] { models.append(Map3DEMU900.model(role, reversed: reversed, light: true)) } }
             }
         }
+        // Static 610 study; no shared metro operating mapping is changed.
+        for role in Map3DTaipei610.Role.allCases {
+            models.append(Map3DTaipei610.model(role))
+            models.append(Map3DTaipei610.model(role, far: true))
+            models.append(Map3DTaipei610.model(role, light: true))
+        }
         // Decision 400, 10i-6: the player's route buses, last, so no model
         // before them moves.
         models.append(Map3DLowFloorBus.routeModel())
-        // Decision 439: the trains' soft shade, baked into their colour.
+        // Decision 450: their glass and stainless marked, then decision
+        // 439's soft shade baked into their colour.
         if baked {
             // Decision 449: the running cars' lamps lit each frame at the
             // train's ends, and their windows' models, last.
-            let lit = Map3DTrainLights.split(Map3DTrainOcclusion.baked(models), recipes: models)
+            let lit = Map3DTrainLights.split(Map3DTrainOcclusion.baked(Map3DTrainMaterial.marked(models)), recipes: models)
             self.models = lit.models
             lights = lit.cars
         } else {

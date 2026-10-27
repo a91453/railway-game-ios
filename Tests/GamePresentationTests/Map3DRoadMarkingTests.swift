@@ -36,11 +36,11 @@ final class Map3DRoadMarkingTests: XCTestCase {
         for crosswalk in crosswalks {
             let distance = Map3DRoadMarkings.distance(crosswalk.centre, Point(x: 0, z: 0))
             let alongX = abs(crosswalk.along.x) > 0.9
-            // Across its own road, kerb to kerb, clear of the crossing
-            // road and its pavements (secondary 8 m + 3 m each side,
-            // primary 9 m + 3 m).
+            // Across its own road, kerb to kerb, 3 m back from the
+            // crossing road's kerb (decision 447, the rules' 第 185 條;
+            // secondary 8 m, primary 9 m).
             XCTAssertEqual(crosswalk.width, alongX ? 9 : 8)
-            let crossing = alongX ? 4.0 + 3 : 4.5 + 3
+            let crossing = alongX ? 4.0 : 4.5
             XCTAssertEqual(distance - crosswalk.length / 2, crossing + Map3DRoadMarkings.kerbGap, accuracy: 1e-9)
             // Read by the traffic going in.
             XCTAssertLessThan(Map3DRoadMarkings.dot(crosswalk.along, crosswalk.centre), 0)
@@ -134,20 +134,186 @@ final class Map3DRoadMarkingTests: XCTestCase {
     }
 
     func testOnlyRealJunctionsArePainted() {
-        // One road in two ways meeting end to end: no junction.
-        XCTAssertTrue(Map3DRoadMarkings([road(.primary, [(-200, 0), (0, 0)]), road(.primary, [(0, 0), (200, 0)])]).marks.isEmpty)
+        // One road in two ways meeting end to end: no junction (only the
+        // kerb lines and a lane's walkway, decision 447).
+        func junctionPaint(_ markings: Map3DRoadMarkings) -> [Map3DRoadMarkings.Mark] {
+            markings.marks.filter {
+                switch $0.kind {
+                case .kerb, .walkway: false
+                default: true
+                }
+            }
+        }
+        XCTAssertTrue(junctionPaint(Map3DRoadMarkings([road(.primary, [(-200, 0), (0, 0)]), road(.primary, [(0, 0), (200, 0)])])).isEmpty)
         // A lane (no centre line) joining a main road: none either.
-        XCTAssertTrue(Map3DRoadMarkings([road(.primary, [(-200, 0), (0, 0), (200, 0)]), road(.minor, [(0, 0), (0, 200)])]).marks.isEmpty)
+        XCTAssertTrue(junctionPaint(Map3DRoadMarkings([road(.primary, [(-200, 0), (0, 0), (200, 0)]), road(.minor, [(0, 0), (0, 200)])])).isEmpty)
         // A T junction of two main roads: three arms.
         let tee = Map3DRoadMarkings([road(.primary, [(-200, 0), (0, 0), (200, 0)]), road(.tertiary, [(0, 0), (0, 200)])])
         XCTAssertEqual(tee.marks.filter { $0.kind == .crosswalk }.count, 3)
         XCTAssertEqual(tee.signals.count, 3)
         // The same road twice (two tiles of the base map): the same paint.
         let twice = Map3DRoadMarkings(crossroads + crossroads)
-        XCTAssertEqual(twice.marks.count, Map3DRoadMarkings(crossroads).marks.count)
+        XCTAssertEqual(junctionPaint(twice).count, junctionPaint(Map3DRoadMarkings(crossroads)).count)
         // An arm too short for its crossing and stop line gets none.
         let short = Map3DRoadMarkings([road(.primary, [(-200, 0), (0, 0), (200, 0)]), road(.secondary, [(0, 0), (0, 14)])])
         XCTAssertEqual(short.marks.filter { $0.kind == .crosswalk }.count, 2)
+    }
+
+    // MARK: Decision 447
+
+    private func boxLines(_ markings: Map3DRoadMarkings, turn: Bool) -> [Map3DRoadMarkings.Mark] {
+        markings.marks.filter { $0.kind == .scooterBox(turn: turn) }
+    }
+
+    /// Decision 447: the zebra's bars and the scooter box, by the rules'
+    /// 第 185、174-2 條.
+    func testTheCrossingAndTheScooterBoxFollowTheRules() {
+        XCTAssertEqual(Map3DRoadMarkings.crosswalkPitch / 2, 0.4, "bars 40 cm")
+        XCTAssertTrue((0.4...0.8).contains(Map3DRoadMarkings.crosswalkPitch / 2), "40–80 cm apart")
+        XCTAssertTrue((3.0...5.0).contains(Map3DRoadMarkings.kerbGap))
+        XCTAssertTrue((2.5...6.0).contains(Map3DRoadMarkings.scooterBoxDepth))
+        let markings = Map3DRoadMarkings(crossroads)
+        // Both roads 8 m or wider: a box on every arm, its front line and
+        // two sides.
+        let boxes = boxLines(markings, turn: false)
+        XCTAssertEqual(boxes.count, 12)
+        let crosswalks = markings.marks.filter { $0.kind == .crosswalk }, stops = markings.marks.filter { $0.kind == .stopLine }
+        for stop in stops {
+            let way = stop.along, crosswalk = crosswalks.first { Map3DRoadMarkings.dot($0.along, way) > 0.99 }!
+            let mine = boxes.filter { Map3DRoadMarkings.dot($0.along, way) > 0.99 }
+            XCTAssertEqual(mine.count, 3)
+            // Between the crossing and the cars' stop line: the front line
+            // 2 m behind the crossing, the box 3 m deep.
+            let crossingBack = Map3DRoadMarkings.dot(crosswalk.centre, way) - crosswalk.length / 2
+            let front = mine.first { $0.length == Map3DRoadMarkings.scooterBoxFront }!
+            XCTAssertEqual(crossingBack - (Map3DRoadMarkings.dot(front.centre, way) + front.length / 2), Map3DRoadMarkings.stopGap, accuracy: 1e-9)
+            XCTAssertEqual(Map3DRoadMarkings.dot(front.centre, way) + front.length / 2 - (Map3DRoadMarkings.dot(stop.centre, way) + stop.length / 2),
+                           Map3DRoadMarkings.scooterBoxDepth, accuracy: 1e-9)
+            // Over the incoming half, on the right of the way in.
+            let right = Point(x: -way.z, z: way.x)
+            for line in mine { XCTAssertGreaterThan(Map3DRoadMarkings.dot(right, line.centre), 0) }
+        }
+        // A tertiary road (7 m) has none: its stop line right behind the
+        // crossing as before.
+        let tee = Map3DRoadMarkings([road(.primary, [(-200, 0), (0, 0), (200, 0)]), road(.tertiary, [(0, 0), (0, 200)])])
+        XCTAssertEqual(boxLines(tee, turn: false).count, 6, "the primary road's two arms only")
+    }
+
+    /// Decision 447: the two-stage turn box (第 191 條), in the corner:
+    /// between the crossing road's kerb and the crossing, 0.5 m clear of
+    /// it, by the kerb of the incoming half.
+    func testTheTurnBoxWaitsInTheCornerBeforeTheCrossing() {
+        let markings = Map3DRoadMarkings(crossroads)
+        let lines = boxLines(markings, turn: true)
+        XCTAssertEqual(lines.count, 16, "four lines on each of four arms")
+        for line in lines {
+            let way = line.along, right = Point(x: -way.z, z: way.x)
+            let crosswalk = markings.marks.first { $0.kind == .crosswalk && Map3DRoadMarkings.dot($0.along, way) > 0.99 }!
+            let near = Map3DRoadMarkings.dot(crosswalk.centre, way) + crosswalk.length / 2
+            // Junction side of the crossing, clear of it by 0.5 m, outside
+            // the crossing road (its half 4 or 4.5 m).
+            let along = -Map3DRoadMarkings.dot(line.centre, way)
+            XCTAssertLessThanOrEqual(along + line.length / 2, -near - Map3DRoadMarkings.turnBoxGap + 1e-9)
+            XCTAssertGreaterThan(along - line.length / 2, 4.5 - 1e-9)
+            XCTAssertGreaterThan(Map3DRoadMarkings.dot(right, line.centre), 0)
+        }
+    }
+
+    /// Decision 447: the kerb lines (第 168、169 條): red along the trunk
+    /// and primary roads, yellow along the others but red within 10 m of
+    /// a junction; none across a side road's mouth or the junction's
+    /// paint, none on a lane.
+    func testKerbLinesAreRedOnMainRoadsAndNearJunctions() {
+        func kerbs(_ markings: Map3DRoadMarkings) -> [Map3DRoadMarkings.Mark] {
+            markings.marks.filter { if case .kerb = $0.kind { return true } else { return false } }
+        }
+        // (The lane meets the primary road at one of its points, as the
+        // base map's roads meet.)
+        let tee = Map3DRoadMarkings([road(.primary, [(-200, 0), (0, 0), (100, 0), (200, 0)]), road(.secondary, [(0, 0), (0, 200)]),
+                                     road(.minor, [(100, 0), (100, -100)])])
+        let lines = kerbs(tee)
+        XCTAssertFalse(lines.isEmpty)
+        for line in lines {
+            XCTAssertEqual(line.width, Map3DRoadMarkings.kerbWidth)
+            let alongX = abs(line.along.x) > 0.9
+            if alongX {
+                // The primary road: red, 0.15 m in from either edge.
+                XCTAssertEqual(line.kind, .kerb(red: true))
+                XCTAssertEqual(abs(line.centre.z), 4.5 - Map3DRoadMarkings.kerbInset, accuracy: 1e-9)
+                // Not across the secondary road's mouth (its north side)
+                // nor the lane's (its south side).
+                let from = line.centre.x - line.length / 2, to = line.centre.x + line.length / 2
+                if line.centre.z > 0 { XCTAssertTrue(to <= -4 || from >= 4, "\(from)…\(to)") }
+                if line.centre.z < 0 { XCTAssertTrue(to <= 97.5 || from >= 102.5, "\(from)…\(to)") }
+            } else {
+                // The secondary road: none before its junction's paint
+                // ends, red for 10 m on, yellow on from there.
+                let from = line.centre.z - line.length / 2, to = line.centre.z + line.length / 2
+                let crosswalk = tee.marks.first { $0.kind == .crosswalk && abs($0.along.z) > 0.9 }!
+                let paintEnds = crosswalk.centre.z + crosswalk.length / 2
+                XCTAssertGreaterThanOrEqual(from, paintEnds - 1e-9)
+                XCTAssertEqual(line.kind, .kerb(red: to <= paintEnds + Map3DRoadMarkings.redNearJunction + 1e-9), "\(from)…\(to)")
+            }
+        }
+        XCTAssertTrue(lines.contains { $0.kind == .kerb(red: false) })
+        // A lane alone, or a road on a bridge: none.
+        XCTAssertTrue(kerbs(Map3DRoadMarkings([road(.minor, [(-200, 0), (200, 0)])])).isEmpty)
+        let bridge = Map3DBaseMap.Road(kind: .primary, isRamp: false, points: [Point(x: -200, z: 0), Point(x: 200, z: 0)], bounds: everywhere,
+                                       bridgeLevel: 1)
+        XCTAssertTrue(kerbs(Map3DRoadMarkings([bridge])).isEmpty)
+        // A road from two tiles: each tile's lines inside its own bounds.
+        let west = Map3DBaseMap.Bounds(minX: -10_000, minZ: -10_000, maxX: 0, maxZ: 10_000)
+        let east = Map3DBaseMap.Bounds(minX: 0, minZ: -10_000, maxX: 10_000, maxZ: 10_000)
+        let points = [Point(x: -200, z: 0), Point(x: 200, z: 0)]
+        let split = kerbs(Map3DRoadMarkings([Map3DBaseMap.Road(kind: .secondary, isRamp: false, points: points, bounds: west),
+                                             Map3DBaseMap.Road(kind: .secondary, isRamp: false, points: points, bounds: east)]))
+        XCTAssertEqual(split.reduce(0) { $0 + $1.length }, 2 * 400, accuracy: 1e-6)
+    }
+
+    /// Decision 447 (continued): the pedestrians' space by the road's
+    /// class, and a lane's painted walkway on one side, the same from
+    /// every tile, stopping at the mouths of the roads it meets.
+    func testALaneHasAPaintedWalkwayOnOneSide() {
+        XCTAssertEqual(Map3DRoadMarkings.walkway(road(.primary, [(0, 0), (1, 0)])), .pavement)
+        XCTAssertEqual(Map3DRoadMarkings.walkway(road(.tertiary, [(0, 0), (1, 0)])), .pavement)
+        XCTAssertEqual(Map3DRoadMarkings.walkway(road(.minor, [(0, 0), (1, 0)])), .painted)
+        XCTAssertEqual(Map3DRoadMarkings.walkway(road(.service, [(0, 0), (1, 0)])), .shared)
+        XCTAssertEqual(Map3DRoadMarkings.walkway(road(.motorway, [(0, 0), (1, 0)])), .none)
+        XCTAssertEqual(Map3DRoadMarkings.walkway(Map3DBaseMap.Road(kind: .minor, isRamp: false, points: [Point(x: 0, z: 0), Point(x: 1, z: 0)],
+                                                                   bounds: everywhere, bridgeLevel: 1)), .none)
+        XCTAssertTrue((1.1...1.8).contains(Map3DRoadMarkings.walkwayBand))
+        let lane = road(.minor, [(0, 0), (0, 200)])
+        func walkway(_ lane: Map3DBaseMap.Road) -> [Map3DRoadMarkings.Mark] {
+            Map3DRoadMarkings([road(.primary, [(-200, 0), (0, 0), (200, 0)]), lane]).marks.filter {
+                if case .walkway = $0.kind { return true } else { return false }
+            }
+        }
+        let marks = walkway(lane), bands = marks.filter { $0.kind == .walkway(line: false) }
+        // A band and its two lines, in pieces no longer than a kerb's.
+        XCTAssertEqual(marks.filter { $0.kind == .walkway(line: true) }.count, 2 * bands.count)
+        XCTAssertEqual(bands.map(\.length).reduce(0, +), 200 - 4.5 - 1, accuracy: 1e-9)
+        XCTAssertTrue(marks.allSatisfy { $0.length <= Map3DRoadMarkings.kerbPiece + 1e-9 })
+        let side = marks[0].centre.x > 0 ? 1.0 : -1.0
+        for mark in marks {
+            // Along the lane, on its one side, inside its 5 m.
+            XCTAssertEqual(abs(mark.along.z), 1, accuracy: 1e-9)
+            XCTAssertEqual(mark.centre.x > 0 ? 1.0 : -1.0, side)
+            XCTAssertLessThanOrEqual(abs(mark.centre.x) + mark.width / 2, 2.5 + 1e-9)
+            // Not across the primary road: from its kerb and a metre on.
+            XCTAssertGreaterThanOrEqual(mark.centre.z - mark.length / 2, 4.5 + 1 - 1e-9)
+        }
+        // The lane drawn the other way, or another tile's copy of it
+        // starting elsewhere: the band on the same side.
+        XCTAssertTrue(walkway(road(.minor, [(0, 200), (0, 0)])).allSatisfy { ($0.centre.x > 0 ? 1.0 : -1.0) == side })
+        XCTAssertTrue(walkway(road(.minor, [(0, 0), (0, 90), (0, 200)])).allSatisfy { ($0.centre.x > 0 ? 1.0 : -1.0) == side })
+        // A service road has none.
+        XCTAssertTrue(Map3DRoadMarkings([road(.service, [(0, 0), (0, 200)])]).marks.isEmpty)
+    }
+
+    /// Decision 447 (continued): Taipei's arcade, 3.64 m from the road's
+    /// line (臺北市建築管理自治條例第 7 條).
+    func testTheArcadeIsTaipeisDepth() {
+        XCTAssertEqual(Builder.arcadeDepth, 3.64)
     }
 
     func testTheCentreLineStopsAtTheCrossing() {
@@ -186,7 +352,7 @@ final class Map3DRoadMarkingTests: XCTestCase {
         XCTAssertLessThan(Builder.centreLineLift, Map3DShadow.lift)
         // The bars start and end at a gap's middle, whole bars between.
         XCTAssertEqual(crosswalk.map(\.u).min(), 0)
-        XCTAssertEqual(crosswalk.map(\.u).max(), 10, "9 m of primary road: ten bars")
+        XCTAssertEqual(crosswalk.map(\.u).max(), 11, "9 m of primary road: eleven bars 0.4 m wide, 0.4 m apart (decision 447)")
         // Arrows show one of the layer's two halves.
         XCTAssertTrue(arrows.allSatisfy { $0.u >= -1e-4 && $0.u <= 0.5 + 1e-4 })
         // None in the base mesh: near detail only.
@@ -355,6 +521,21 @@ final class Map3DRoadMarkingReportTests: XCTestCase {
                 triangles += walks.triangles(runs, in: pack)
             }
             print("\(distance) m: \(close) chunks close up, pedestrian signal draw calls at most \(draws), triangles at most \(triangles)")
+        }
+        // Decision 447: the near meshes' triangles (where the crossings,
+        // boxes and kerb lines are; no draw call of their own), the whole
+        // scene and a frame's chunks in full.
+        let near = scene.chunks.reduce(0) { $0 + $1.mesh.triangleCount - $1.baseIndexCount / 3 }
+        print("near triangles, all chunks: \(near)")
+        for distance in [800, 280, 120] as [Float] {
+            let camera = Map3DCamera(target: .zero, distance: distance, viewport: (402, 874))
+            var detailed = 0, triangles = 0
+            for chunk in scene.chunks where Map3DCamera.sees(minimum: chunk.minimum, maximum: chunk.maximum, through: camera.viewProjection)
+                && camera.wantsDetail(minimum: chunk.minimum, maximum: chunk.maximum, wasDetailed: false) {
+                detailed += 1
+                triangles += chunk.mesh.triangleCount - chunk.baseIndexCount / 3
+            }
+            print("\(distance) m: \(detailed) chunks in full, near triangles \(triangles)")
         }
     }
 }

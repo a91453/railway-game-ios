@@ -15,6 +15,20 @@ import GameCore
 // (arrows 1.7 × 5 m). The city view reads OSM's crossings, signals and lane
 // tags; the base map here has none, so everything is placed by the roads'
 // classes alone. Taiwan keeps right.
+//
+// Decision 447: Taiwan's rules for the paint (道路交通標誌標線號誌設置規則,
+// "the rules" below). The zebra's bars 0.4 m with 0.4 m between (第 185
+// 條: 40 cm, 40–80 cm apart), standing 3 m back from the crossing road's
+// kerb (3–5 m); a scooter box (機車停等區, 第 174-2 條) between the stop
+// line and the crossing on the wider roads; a two-stage turn box (機車待
+// 轉區, 第 191 條) in the corner before the crossing; and the kerb lines
+// (第 168、169 條): red (no stopping) along the trunk and primary roads
+// and within 10 m of a junction, yellow (no parking) along the others.
+// After TW3D's `road-paint.js` (the owner's reference, slop-newyork's
+// Taiwan edition, MIT, Copyright (c) 2026 Mr.doob: red kerbs along the
+// main roads and yellow along the others, the scooter box over the
+// incoming kerb-side lanes) and shwang1979/slop-taipei's `js/road-paint.js`
+// (MIT, the same notice: the box's back line and its side line).
 
 /// What the paint and the signals of a set of roads are: worked out from
 /// the roads alone, the same every time.
@@ -24,6 +38,39 @@ struct Map3DRoadMarkings {
         case stopLine
         /// Lane arrows: through, or through and left.
         case arrow(left: Bool)
+        /// Decision 447: a line of a scooter box (機車停等區) before the
+        /// stop line, or of a two-stage turn box (機車待轉區) in the
+        /// junction's corner.
+        case scooterBox(turn: Bool)
+        /// Decision 447: a kerb line, red (no stopping) or yellow (no
+        /// parking).
+        case kerb(red: Bool)
+        /// Decision 447 (continued): a painted walkway (標線型人行道) on a
+        /// lane: its green band, or one of the white lines either side.
+        case walkway(line: Bool)
+    }
+
+    /// Decision 447 (continued): where a road's pedestrians walk, by its
+    /// class (TAIWAN_STREETSCAPE §2; hebe13579/slop-taipei's
+    /// `pedestrianLayout`): a raised pavement along the main roads (an
+    /// arcade where a row of shops meets it, decision 385), a painted
+    /// walkway along a lane, the whole way shared on a service road;
+    /// none on a bridge, a ramp or a motorway.
+    enum Walkway: Equatable {
+        case pavement
+        case painted
+        case shared
+        case none
+    }
+
+    static func walkway(_ road: Map3DBaseMap.Road) -> Walkway {
+        guard !road.isRamp, road.bridgeLevel == 0 else { return .none }
+        switch road.kind {
+        case .trunk, .primary, .secondary, .tertiary: return .pavement
+        case .minor: return .painted
+        case .service: return .shared
+        case .motorway: return .none
+        }
     }
 
     /// One painted rectangle on a road: its middle, the way the traffic
@@ -64,10 +111,34 @@ struct Map3DRoadMarkings {
     /// How deep a zebra crossing is along the road, how far its bars stand
     /// back from the crossing road's kerb, and the stop line's gap before
     /// it and its own depth.
+    /// Decision 447: 3 m back from the crossing road's kerb (the rules,
+    /// 第 185 條: 3–5 m), where 355 had 0.6 m past its pavement.
     static let crosswalkDepth = 3.6
-    static let kerbGap = 0.6
+    static let kerbGap = 3.0
     static let stopGap = 2.0
     static let stopDepth = 0.4
+    /// Decision 447: the zebra's bars, a bar and a gap each this wide
+    /// (第 185 條: bars 40 cm, 40–80 cm apart).
+    static let crosswalkPitch = 0.8
+    /// Decision 447: the scooter box (第 174-2 條: 2.5–6 m deep, its cross
+    /// lines 20 cm, its sides 10 or 15 cm) on an arm at least this wide
+    /// each way (a secondary road's 8 m and up).
+    static let scooterBoxDepth = 3.0
+    static let scooterBoxFront = 0.2
+    static let scooterBoxSide = 0.15
+    static let scooterBoxHalf = 4.0
+    /// Decision 447: the turn box (第 191 條: lines 15 cm, at least 50 cm
+    /// before the crossing), this deep along the arm and at most this wide.
+    static let turnBoxDepth = 2.0
+    static let turnBoxWidth = 3.0
+    static let turnBoxGap = 0.5
+    /// Decision 447: the kerb lines (第 168、169 條: 10 cm), this far in
+    /// from the carriageway's edge (to the line's middle); red this far
+    /// on from where they stop at a junction (道路交通安全規則第 111 條:
+    /// no stopping within 10 m of a junction).
+    static let kerbWidth = 0.1
+    static let kerbInset = 0.15
+    static let redNearJunction = 10.0
     /// A lane arrow's size, and its gap behind the stop line.
     static let arrowLength = 5.0
     static let arrowWidth = 1.7
@@ -84,6 +155,9 @@ struct Map3DRoadMarkings {
     /// Per road (by index), the stretches of its length (metres from its
     /// first point) where its centre line is left out.
     var cuts: [Int: [ClosedRange<Double>]] = [:]
+    /// Decision 447: per road, where its kerb lines are left out across
+    /// a crossing road's mouth (and, by ``cuts``, the paint before it).
+    var kerbCuts: [Int: [ClosedRange<Double>]] = [:]
 
     /// One way out of a junction along a road.
     struct Arm {
@@ -122,15 +196,7 @@ struct Map3DRoadMarkings {
     init(_ roads: [Map3DBaseMap.Road], origin: Map3DBaseMap.Point = Map3DBaseMap.Point(x: 0, z: 0)) {
         // Every point of a marked road, by its half metre (as
         // Builder.junctions(of:) keys them).
-        var at: [Int64: (point: Map3DBaseMap.Point, entries: [(road: Int, index: Int)])] = [:]
-        for (number, road) in roads.enumerated() where Map3DScene.Builder.hasCentreLine(road) && road.points.count >= 2 {
-            var seen = Set<Int64>()
-            for (index, point) in road.points.enumerated() {
-                let key = Self.key(point)
-                guard seen.insert(key).inserted else { continue }
-                at[key, default: (point, [])].entries.append((number, index))
-            }
-        }
+        let at = Self.points(of: roads) { Map3DScene.Builder.hasCentreLine($0) }
         // The roads' lengths up to each point.
         var along: [Int: [Double]] = [:]
         func lengths(_ road: Int) -> [Double] {
@@ -140,9 +206,7 @@ struct Map3DRoadMarkings {
             along[road] = sums
             return sums
         }
-        for key in at.keys.sorted() {
-            guard let (point, entries) = at[key].map({ ($0.point, $0.entries) }), entries.count >= 2,
-                  entries.contains(where: { Self.inside(point, roads[$0.road].bounds) }) else { continue }
+        func arms(_ entries: [(road: Int, index: Int)]) -> [Arm] {
             var arms: [Arm] = []
             for (road, index) in entries {
                 let points = roads[road].points, sums = lengths(road)
@@ -157,11 +221,151 @@ struct Map3DRoadMarkings {
                     arms.append(arm)
                 }
             }
+            return arms
+        }
+        for key in at.keys.sorted() {
+            guard let (point, entries) = at[key].map({ ($0.point, $0.entries) }), entries.count >= 2,
+                  entries.contains(where: { Self.inside(point, roads[$0.road].bounds) }) else { continue }
+            let arms = arms(entries)
             guard arms.count >= 3 else { continue }
             junctions.append(point)
             add(arms, group: Map3DSignalTiming.group(at: Map3DBaseMap.Point(x: point.x + origin.x, z: point.z + origin.z)))
         }
+        // Decision 447: where any road on the ground (a lane too) meets a
+        // kerbed one, its kerb lines stop across the mouth.
+        let ground = Self.points(of: roads) { $0.bridgeLevel == 0 }
+        for key in ground.keys.sorted() {
+            guard let (point, entries) = ground[key].map({ ($0.point, $0.entries) }), entries.count >= 2,
+                  entries.contains(where: { Self.inside(point, roads[$0.road].bounds) }) else { continue }
+            let arms = arms(entries)
+            guard arms.count >= 3 else { continue }
+            let outs = arms.map { $0.place(min(6, $0.length))?.out ?? Map3DBaseMap.Point(x: 1, z: 0) }
+            for (number, arm) in arms.enumerated() where Self.kerbed(roads[arm.road]) || Self.walkway(roads[arm.road]) == .painted {
+                var mouth = 0.0
+                for (other, crossing) in arms.enumerated() where other != number && Self.dot(outs[number], outs[other]) >= -0.9 {
+                    let sine = max(0.5, abs(outs[number].x * outs[other].z - outs[number].z * outs[other].x))
+                    mouth = max(mouth, (crossing.half + 1) / sine)
+                }
+                let cut = min(arm.length, mouth)
+                kerbCuts[arm.road, default: []].append(arm.forward ? arm.at...(arm.at + cut) : (arm.at - cut)...arm.at)
+            }
+        }
+        for (number, road) in roads.enumerated() where Self.kerbed(road) {
+            addKerbs(road, number: number, lengths: lengths(number))
+        }
+        for (number, road) in roads.enumerated() where Self.walkway(road) == .painted && road.points.count >= 2 {
+            addWalkway(road, number: number, lengths: lengths(number))
+        }
     }
+
+    /// Decision 447 (continued): the painted walkway's green band and its
+    /// white lines (hebe13579/slop-taipei `js/taipei-painted.js`: the band
+    /// on one side of the lane, a white line either side, stopping at the
+    /// junctions), metres. The band as wide as the narrowest pavement of a
+    /// road 12 m wide or less (市區道路及附屬工程設計標準第 16 條: 1.2 m).
+    static let walkwayBand = 1.2
+    static let walkwayLine = 0.1
+    static let walkwayInset = 0.05
+
+    /// Which side of a stretch of lane going `way` its painted walkway is
+    /// on: 1 its right, −1 its left. From the way alone, so the lane's
+    /// copies in every tile, and the lane drawn either way, agree: the
+    /// side to the right of a heading a little north of east (a lane
+    /// along a street grid never turns the band over between blocks).
+    static func walkwaySide(_ way: Map3DBaseMap.Point) -> Double {
+        way.x * 0.94 - way.z * 0.34 >= 0 ? 1 : -1
+    }
+
+    /// Decision 447 (continued): `road`'s painted walkway, segment by
+    /// segment, left out across the mouths of the roads meeting it.
+    private mutating func addWalkway(_ road: Map3DBaseMap.Road, number: Int, lengths sums: [Double]) {
+        let cut = kerbCuts[number] ?? []
+        let half = Double(road.kind.width(ramp: false)) / 2
+        let outer = half - Self.walkwayInset - Self.walkwayLine / 2, inner = outer - Self.walkwayLine - Self.walkwayBand
+        let band = (outer + inner) / 2
+        for (index, (a, b)) in zip(road.points, road.points.dropFirst()).enumerated() {
+            let length = Self.distance(a, b), start = sums[index]
+            guard length > 0.01 else { continue }
+            var stops = [0.0, length]
+            for range in cut {
+                for edge in [range.lowerBound, range.upperBound] where edge > start && edge < start + length { stops.append(edge - start) }
+            }
+            // As the kerb lines: no piece longer than a tile's own.
+            var piece = 0.0
+            while piece + Self.kerbPiece < length { piece += Self.kerbPiece; stops.append(piece) }
+            stops.sort()
+            let way = Map3DBaseMap.Point(x: (b.x - a.x) / length, z: (b.z - a.z) / length), side = Self.walkwaySide(way)
+            let right = Map3DBaseMap.Point(x: -way.z * side, z: way.x * side)
+            for (from, to) in zip(stops, stops.dropFirst()) where to - from > 0.5 {
+                let centre = Map3DBaseMap.Point(x: a.x + way.x * (from + to) / 2, z: a.z + way.z * (from + to) / 2)
+                guard !cut.contains(where: { $0.contains(start + (from + to) / 2) }), Self.inside(centre, road.bounds) else { continue }
+                func at(_ by: Double) -> Map3DBaseMap.Point { Map3DBaseMap.Point(x: centre.x + right.x * by, z: centre.z + right.z * by) }
+                marks.append(Mark(kind: .walkway(line: false), centre: at(band), along: way, length: to - from, width: Self.walkwayBand))
+                for edge in [outer, inner] {
+                    marks.append(Mark(kind: .walkway(line: true), centre: at(edge), along: way, length: to - from, width: Self.walkwayLine))
+                }
+            }
+        }
+    }
+
+    /// Every point of the roads `including` takes, by its half metre (as
+    /// Builder.junctions(of:) keys them), with the roads through it.
+    private static func points(of roads: [Map3DBaseMap.Road], including: (Map3DBaseMap.Road) -> Bool)
+        -> [Int64: (point: Map3DBaseMap.Point, entries: [(road: Int, index: Int)])] {
+        var at: [Int64: (point: Map3DBaseMap.Point, entries: [(road: Int, index: Int)])] = [:]
+        for (number, road) in roads.enumerated() where including(road) && road.points.count >= 2 {
+            var seen = Set<Int64>()
+            for (index, point) in road.points.enumerated() {
+                let key = Self.key(point)
+                guard seen.insert(key).inserted else { continue }
+                at[key, default: (point, [])].entries.append((number, index))
+            }
+        }
+        return at
+    }
+
+    /// Decision 447: whether a road has kerb lines: the two-way roads
+    /// with a centre line, on the ground.
+    static func kerbed(_ road: Map3DBaseMap.Road) -> Bool {
+        Map3DScene.Builder.hasCentreLine(road) && road.bridgeLevel == 0
+    }
+
+    /// Decision 447: `road`'s kerb lines both sides, in pieces no longer
+    /// than a segment or ``kerbPiece``, left out where ``kerbCuts`` (and
+    /// the centre line's ``cuts``, the paint at a marked junction) are,
+    /// red along a trunk or primary road and for ``redNearJunction``
+    /// either side of where they are left out.
+    private mutating func addKerbs(_ road: Map3DBaseMap.Road, number: Int, lengths sums: [Double]) {
+        let cut = (kerbCuts[number] ?? []) + (cuts[number] ?? [])
+        let red = cut.map { ($0.lowerBound - Self.redNearJunction)...($0.upperBound + Self.redNearJunction) }
+        let allRed = road.kind == .trunk || road.kind == .primary
+        let offset = Double(road.kind.width(ramp: false)) / 2 - Self.kerbInset
+        for (index, (a, b)) in zip(road.points, road.points.dropFirst()).enumerated() {
+            let length = Self.distance(a, b), start = sums[index]
+            guard length > 0.01 else { continue }
+            var stops = [0.0, length]
+            for range in cut + red {
+                for edge in [range.lowerBound, range.upperBound] where edge > start && edge < start + length { stops.append(edge - start) }
+            }
+            var piece = 0.0
+            while piece + Self.kerbPiece < length { piece += Self.kerbPiece; stops.append(piece) }
+            stops.sort()
+            let way = Map3DBaseMap.Point(x: (b.x - a.x) / length, z: (b.z - a.z) / length), right = Map3DBaseMap.Point(x: -way.z, z: way.x)
+            for (from, to) in zip(stops, stops.dropFirst()) where to - from > 0.05 {
+                let middle = start + (from + to) / 2
+                let centre = Map3DBaseMap.Point(x: a.x + way.x * (from + to) / 2, z: a.z + way.z * (from + to) / 2)
+                guard !cut.contains(where: { $0.contains(middle) }), Self.inside(centre, road.bounds) else { continue }
+                let isRed = allRed || red.contains { $0.contains(middle) }
+                for side in [1.0, -1.0] {
+                    marks.append(Mark(kind: .kerb(red: isRed), centre: Map3DBaseMap.Point(x: centre.x + right.x * side * offset, z: centre.z + right.z * side * offset),
+                                      along: way, length: to - from, width: Self.kerbWidth))
+                }
+            }
+        }
+    }
+
+    /// Decision 447: the longest piece of a kerb line, metres.
+    static let kerbPiece = 64.0
 
     private mutating func add(_ arms: [Arm], group: Int) {
         let outs = arms.map { $0.place(min(6, $0.length))?.out ?? Map3DBaseMap.Point(x: 1, z: 0) }
@@ -172,16 +376,21 @@ struct Map3DRoadMarkings {
         for (number, arm) in arms.enumerated() {
             // Clear of the crossing roads and their pavements, more where
             // they cross at a slant.
+            // Decision 447: from the crossing roads' kerbs (355 went on
+            // past their pavements).
             var clear = 0.0
             for (other, crossing) in arms.enumerated() where other != number {
                 let sine = max(0.5, abs(outs[number].x * outs[other].z - outs[number].z * outs[other].x))
-                let reach = crossing.half + Double(Map3DScene.Builder.sidewalk(of: crossing.kind))
                 // An arm straight on (the same road beyond) is not crossed.
                 if Self.dot(outs[number], outs[other]) < -0.9 { continue }
-                clear = max(clear, reach / sine)
+                clear = max(clear, crossing.half / sine)
             }
             let crosswalk = clear + Self.kerbGap + Self.crosswalkDepth / 2
-            let stop = crosswalk + Self.crosswalkDepth / 2 + Self.stopGap + Self.stopDepth / 2
+            // Decision 447: on a wide arm the scooters wait in their box
+            // ahead of the cars' stop line.
+            let boxed = arm.half >= Self.scooterBoxHalf
+            let front = crosswalk + Self.crosswalkDepth / 2 + Self.stopGap
+            let stop = front + (boxed ? Self.scooterBoxDepth : 0) + Self.stopDepth / 2
             let arrow = stop + Self.stopDepth / 2 + Self.arrowGap + Self.arrowLength / 2
             let length = arm.length
             // The centre line stops where the crossing starts.
@@ -203,6 +412,35 @@ struct Map3DRoadMarkings {
             let way = toward(line.out)
             marks.append(Mark(kind: .stopLine, centre: moved(line.point, right(way), half / 2), along: way, length: Self.stopDepth,
                               width: half - 0.3, onDeck: arm.onDeck))
+            // Decision 447: the scooter box, over the incoming half from
+            // the centre line to the kerb line: its front line, its two
+            // sides back to the stop line.
+            let inner = 0.3, outer = half - Self.kerbInset - Self.kerbWidth / 2 - 0.1
+            if boxed, let ahead = arm.place(front + Self.scooterBoxFront / 2), let middle = arm.place(front + Self.scooterBoxDepth / 2) {
+                let way = toward(ahead.out)
+                marks.append(Mark(kind: .scooterBox(turn: false), centre: moved(ahead.point, right(way), (inner + outer) / 2), along: way,
+                                  length: Self.scooterBoxFront, width: outer - inner, onDeck: arm.onDeck))
+                for edge in [inner + Self.scooterBoxSide / 2, outer - Self.scooterBoxSide / 2] {
+                    marks.append(Mark(kind: .scooterBox(turn: false), centre: moved(middle.point, right(toward(middle.out)), edge),
+                                      along: toward(middle.out), length: Self.scooterBoxDepth, width: Self.scooterBoxSide, onDeck: arm.onDeck))
+                }
+            }
+            // Decision 447: the turn box, in the corner between the
+            // crossing road's kerb and this crossing, by the kerb of the
+            // incoming half: where a scooter turning left from the road
+            // on its right waits for this road's green.
+            if boxed, outs.indices.contains(where: { $0 != number && abs(Self.dot(outs[$0], outs[number])) < 0.7 }),
+               let box = arm.place(crosswalk - Self.crosswalkDepth / 2 - Self.turnBoxGap - Self.turnBoxDepth / 2) {
+                let way = toward(box.out), width = min(Self.turnBoxWidth, outer - inner), edge = Self.scooterBoxSide
+                let middle = outer - width / 2
+                for (ahead, across, length, wide) in [(Self.turnBoxDepth / 2 - edge / 2, middle, edge, width),
+                                                      (-Self.turnBoxDepth / 2 + edge / 2, middle, edge, width),
+                                                      (0, outer - edge / 2, Self.turnBoxDepth, edge),
+                                                      (0, outer - width + edge / 2, Self.turnBoxDepth, edge)] {
+                    marks.append(Mark(kind: .scooterBox(turn: true), centre: moved(moved(box.point, right(way), across), way, ahead), along: way,
+                                      length: length, width: wide, onDeck: arm.onDeck))
+                }
+            }
             if length >= arrow + Self.arrowLength / 2 + 3, let place = arm.place(arrow) {
                 let way = toward(place.out)
                 // Two lanes each way on a road this wide, the inner one
@@ -291,10 +529,16 @@ extension Map3DScene.Builder {
             switch mark.kind {
             case .crosswalk:
                 // As many bars as fit across, a half gap at each kerb.
+                // Decision 447: a bar and its gap 0.8 m (355: 0.9 m); the
+                // layer's bar is half of it.
                 addMark(mark, colour: Map3DPalette.road(.primary), layer: Float(Map3DSurface.crosswalk.rawValue),
-                        u: (0, max(1, (mark.width / 0.9).rounded())), v: (0, 1))
-            case .stopLine:
+                        u: (0, max(1, (mark.width / Map3DRoadMarkings.crosswalkPitch).rounded())), v: (0, 1))
+            case .stopLine, .scooterBox:
                 addMark(mark, colour: Self.paint, layer: Map3DVertex.plain, u: (0, 1), v: (0, 1))
+            case .kerb(let red):
+                addMark(mark, colour: red ? Self.kerbRed : Map3DPalette.centreLine, layer: Map3DVertex.plain, u: (0, 1), v: (0, 1))
+            case .walkway(let line):
+                addMark(mark, colour: line ? Self.paint : Self.walkwayGreen, layer: Map3DVertex.plain, u: (0, 1), v: (0, 1))
             case .arrow(let left):
                 addMark(mark, colour: Map3DPalette.road(.primary), layer: Float(Map3DSurface.laneArrows.rawValue),
                         u: left ? (0.5, 1) : (0, 0.5), v: (0, 1))
@@ -304,6 +548,12 @@ extension Map3DScene.Builder {
 
     /// The road paint's white, a little warm.
     static let paint = Map3DColor.rgb(0xEEEEE8)
+    /// Decision 447: the red kerb line, the level crossing barrier's red;
+    /// the yellow one is the centre line's.
+    static let kerbRed = Self.barrierRed
+    /// Decision 447 (continued): the painted walkway's green, the trees'
+    /// darker green (``Map3DProp/greens``, before their matte look).
+    static let walkwayGreen = Map3DColor.rgb(0x4E9E3E)
 
     /// One mark laid on the drawn ground at the centre line's height, cut
     /// at the ground's grid lines and diagonals (as ``addArea`` cuts) so

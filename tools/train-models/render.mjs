@@ -13,12 +13,14 @@ const flag = (name, fallback) => { const at = argv.indexOf(name); return at >= 0
 const root = resolve(argv[0]);
 const times = flag('--time', 'day') === 'both' ? ['day', 'night'] : [flag('--time', 'day')];
 const views = flag('--views', 'top,bottom,left,right,front,back,isometric').split(',');
+const material = flag('--material','color');
 const features = Number(flag('--features', 0));
 const hex = flag('--line', '#2F6DB5'), line = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255);
 const {chromium} = createRequire(process.env.NODE_GLOBAL || '/opt/node22/lib/node_modules/')('playwright');
 const manifest = JSON.parse(readFileSync(resolve(root, 'manifest.json')));
 const only = flag('--ids', '') ? new Set(flag('--ids').split(',')) : null;
-copyFileSync(new URL('./renderer.js', import.meta.url).pathname, resolve(root, 'renderer.js'));
+writeFileSync(resolve(root,'renderer.js'),readFileSync(new URL('./renderer.js',import.meta.url),'utf8').replace("../emu900-native/scene.js","./scene.js"));
+copyFileSync(new URL('../emu900-native/scene.js',import.meta.url).pathname,resolve(root,'scene.js'));
 writeFileSync(resolve(root, '_r.html'), `<canvas id="c"></canvas><script type="module">import{NativeRenderer}from"./renderer.js";window.make=l=>{window.r=new NativeRenderer(document.getElementById("c"),l);};window.ready=true;</script>`);
 const server = createServer((q, s) => { try { const p = resolve(root, '.' + decodeURIComponent(new URL(q.url, 'http://x').pathname)); s.setHeader('Content-Type', ({'.html': 'text/html', '.js': 'text/javascript'})[extname(p)] || 'application/octet-stream'); s.end(readFileSync(p)); } catch { s.writeHead(404); s.end(); } });
 await new Promise(r => server.listen(0, '127.0.0.1', r));
@@ -29,14 +31,14 @@ await page.goto(base + '/_r.html'); await page.waitForFunction(() => window.read
 await page.evaluate(l => window.make(l), manifest.lighting);
 let count = 0;
 for (const time of times) {
-  mkdirSync(resolve(root, 'png', time), {recursive: true});
+  mkdirSync(resolve(root, 'png', material==='color'?time:time+'-'+material), {recursive: true});
   for (const m of manifest.models.filter(m => !only || only.has(m.id))) {
-    const shots = await page.evaluate(async ({native, views, time, line, features}) => {
-      r.load(await (await fetch(native)).arrayBuffer()); const out = {};
+    const shots = await page.evaluate(async ({native, views, time, line, features, material}) => {
+      r.load(await (await fetch(native)).arrayBuffer(),material); const out = {};
       for (const v of views) { r.render(v, {width: v === 'front' || v === 'back' ? 600 : 1200, height: v === 'top' || v === 'bottom' ? 300 : 420, time, lineColour: line, features}); out[v] = r.png(); }
       return out;
-    }, {native: m.native, views, time, line, features});
-    for (const [v, data] of Object.entries(shots)) writeFileSync(resolve(root, 'png', time, `${m.id}-${v}.png`), Buffer.from(data.split(',')[1], 'base64'));
+    }, {native: m.native, views, time, line, features, material});
+    for (const [v, data] of Object.entries(shots)) writeFileSync(resolve(root, 'png', material==='color'?time:time+'-'+material, `${m.id}-${v}.png`), Buffer.from(data.split(',')[1], 'base64'));
     count++;
   }
 }

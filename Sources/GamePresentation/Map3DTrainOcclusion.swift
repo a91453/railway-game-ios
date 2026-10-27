@@ -44,10 +44,11 @@ public enum Map3DTrainOcclusion {
 
     /// Whether model `name` is a train's: not the street's furniture,
     /// people and road vehicles (``Map3DProp``, ``Map3DStreetModel``,
-    /// ``Map3DLowFloorBus``), nor a car's lit windows (decision 449,
-    /// ``Map3DTrainLights``).
+    /// ``Map3DLowFloorBus``), nor (decision 450) the pedestrian signals'
+    /// heads and countdowns (``Map3DPedestrianSignal``, decision 445), nor
+    /// a car's lit windows (decision 449, ``Map3DTrainLights``).
     public static func isTrain(_ name: String) -> Bool {
-        !name.hasPrefix("prop-") && !name.hasPrefix("life-") && !name.hasPrefix(Map3DTrainLights.prefix)
+        !name.hasPrefix("prop-") && !name.hasPrefix("life-") && !name.hasPrefix("walk-") && !name.hasPrefix(Map3DTrainLights.prefix)
     }
 
     /// Whether model `name` is a far model (decisions 408, 417, 420).
@@ -101,8 +102,13 @@ public enum Map3DTrainOcclusion {
 
     static func applying(_ shade: [Float], to model: Map3DModelPack.Model) -> Map3DModelPack.Model {
         var vertices = model.vertices
-        for index in vertices.indices where !vertices[index].glows && shade[index] > 0 {
-            vertices[index].color = Map3DColor.shaded(vertices[index].color, 1 - strength * shade[index])
+        for index in vertices.indices {
+            // Decision 450: and on glass and stainless, kept in `u` too, so
+            // a shut-in face mirrors less of the sky.
+            if vertices[index].isTrainMaterial { vertices[index].u = shade[index] }
+            if !vertices[index].glows && shade[index] > 0 {
+                vertices[index].color = Map3DColor.shaded(vertices[index].color, 1 - strength * shade[index])
+            }
         }
         return Map3DModelPack.Model(name: model.name, vertices: vertices, minimum: model.minimum, maximum: model.maximum)
     }

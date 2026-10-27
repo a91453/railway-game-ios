@@ -100,12 +100,14 @@ public enum Map3DTrainLights {
         return (out + windows, cars)
     }
 
-    /// `model` with no triangle lit of itself.
+    /// `model` with no triangle lit of itself (decision 450's lit glass
+    /// glass still, ``Map3DVertex/trainGlass``).
     public static func unlit(_ model: Map3DModelPack.Model) -> Map3DModelPack.Model {
         guard model.vertices.contains(where: \.glows) else { return model }
         let vertices = model.vertices.map { vertex -> Map3DVertex in
             var vertex = vertex
-            if vertex.glows { vertex.layer = Map3DVertex.plain }
+            // Decision 450's lit glass stays glass, its reflection kept.
+            if vertex.glows { vertex.layer = vertex.layer == Map3DVertex.trainGlassLit ? Map3DVertex.trainGlass : Map3DVertex.plain }
             return vertex
         }
         return Map3DModelPack.Model(name: model.name, vertices: vertices, minimum: model.minimum, maximum: model.maximum)

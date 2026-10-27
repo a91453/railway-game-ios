@@ -37,14 +37,20 @@ CLAUDE.md 的參考庫檢查照舊：新的車先看 `a91453/railway-reference-p
 ## 4. 塗裝、發光、影子
 
 - **塗裝帶**：頂點 alpha 小於 1 的地方，遊戲用**線的顏色**（`SceneKitBuilder.baked` 在預覽裡烘進去）。所以一款車的線色帶、命名編組的主色畫成 alpha 0；固定的塗裝（白、窗、門、裙）畫實色。
-- **發光頂點**：一個三角形帶旗標就是「夜裡從裡面亮」（`Map3DVertex.glows`、M3DM 的 flags bit 0）。白天不發光；夜裡著色器加 `1.3 × lights`。
+- **發光頂點**：一個三角形帶旗標就是「夜裡從裡面亮」（`Map3DVertex.glows`、M3DM 的 flags bit 0）。白天不發光；夜裡著色器加 `1.3 × lights`。 在 pack 裡，玻璃色的發光三角形會變成 `trainGlassLit`（-15，見「車窗反光」），`glows` 照樣是 true，找燈請用 `.glows`，不要比 `layer == glowing`。
 - **夜間亮燈**（決策 449，`Map3DTrainLights`）：每一列車都一樣，配方只要畫燈的鏡片和窗玻璃，不必自己決定哪裡亮。
   - 做 pack 時，跑的車（`set-*`，與 `Map3DTrainStyle` 的 `-cab`／`-car`／`-panto`）自己的發光三角形改成不亮。它的燈從配方找：發光的三角形，或鏡片色（`Map3DTrainStyle.headlamp`、`Map3DPalette.lantern`、`tunnelLamp` 與它們的暗色），在車長兩端各 30 % 內；紅的是尾燈，其餘是頭燈。一端只有一種，另一種用同一組鏡片換色；兩種都沒有，就在車端面高 1.25 m、左右 0.82 m 補兩盞小燈。
   - 每一格畫面：列車的第一節在前進那端亮頭燈，最後一節在另一端亮紅尾燈，不管駕駛室在哪、列車往哪開（推拉式與機車牽引的後面那台動力車是轉過來的那台）。
   - 客室窗：每款跑的車另有一個窗模型（`light-` 加車名），是側面玻璃三角形的複製（玻璃色見 `Map3DTrainLights.isGlass`：`Map3DTrainStyle.glass`、`Map3DPalette.glazing` 和 TEMU 的客室玻璃），離有燈的那端 2.8 m 內的駕駛室窗不亮。新車的窗要用這幾種玻璃色才會亮；用別的顏色就加進 `glassShades`。
   - 方向幕由 `Map3DHeadSigns`（決策 436）畫，本來就發光。
   - `tools/train-models/run.sh OUT --night-lights` 匯出夜裡的樣子，拍圖時就看得到。
-- **遮蔽陰影**（決策 439）：配方不畫。`Map3DModelPack` 做 pack 時用 `Map3DTrainOcclusion.baked` 把每個列車模型（名字不是 `prop-`、`life-` 開頭的）被自己遮住多少烘進頂點顏色：車底、轉向架、車頂設備旁、中間車兩端的車間（名字裡沒有 `cab`／`head`／`tail`／`leading`／`trailing`／`rear`／`single`／`formation`／`locomotive`／`ed`／`dm`／`e1000`／`e200`／`steam`／`duplex` 的車，當作前後都有車）。發光三角形與塗裝帶（alpha 小於 1 的那一份）不變暗；一條邊長過 2.5 m 的面取三個角最亮的那個，車側不會變成漸層。遠景版（名字有 `Far-` 或結尾 `-far`）用粗格子。所以：配方的雜湊（各車測試釘的）不變，pack 裡的雜湊（`hashes.lock.json`）會變；新車照常把 pack 的雜湊加進鎖。新車要被當成中間車或頭尾車，就照上面的字取名。
+- **遮蔽陰影**（決策 439）：配方不畫。`Map3DModelPack` 做 pack 時用 `Map3DTrainOcclusion.baked` 把每個列車模型（名字不是 `prop-`、`life-`、`walk-` 開頭的）被自己遮住多少烘進頂點顏色：車底、轉向架、車頂設備旁、中間車兩端的車間（名字裡沒有 `cab`／`head`／`tail`／`leading`／`trailing`／`rear`／`single`／`formation`／`locomotive`／`ed`／`dm`／`e1000`／`e200`／`steam`／`duplex` 的車，當作前後都有車）。發光三角形與塗裝帶（alpha 小於 1 的那一份）不變暗；一條邊長過 2.5 m 的面取三個角最亮的那個，車側不會變成漸層。遠景版（名字有 `Far-` 或結尾 `-far`）用粗格子。所以：配方的雜湊（各車測試釘的）不變，pack 裡的雜湊（`hashes.lock.json`）會變；新車照常把 pack 的雜湊加進鎖。新車要被當成中間車或頭尾車，就照上面的字取名。
+- **車窗反光與不鏽鋼光澤**（決策 450）：配方不畫，照常用實色。`Map3DModelPack` 做 pack 時（在遮蔽烘焙之前），`Map3DTrainMaterial.marked` 依顏色標材質：
+  - **玻璃**：顏色是 `Map3DPalette.glazing`、`Map3DTrainStyle.glass`（#26313D）、`Map3DTEMU2000.glass`（#405560）任一個的深淺（0.35 倍以上、亮度 ≥ 0.11），面不朝下，就標成 `trainGlass`（-13）；本來發光的標成 `trainGlassLit`（-15）。著色器照車窗的 Fresnel 映出天空，有太陽亮點。
+  - **不鏽鋼**：只有 `stainlessSets` 裡的車（EMU500、EMU800、EMU900、C341、C381、DR1000、DR3100）。淺色（亮度 ≥ 0.55）、中性（三色差 ≤ 16）、面不朝下的三角形標成 `trainSteel`（-14）：映一點被自己顏色染過的天空，有寬的光澤。
+  - 遮蔽烘焙同時把遮蔽值存進這些頂點的 `u`，被遮住的面映得少。
+  - 新車的玻璃請用上面三種玻璃色（可以調深淺），才會反光；別的顏色的窗不反光。新的不鏽鋼車要把 key 加進 `Map3DTrainMaterial.stainlessSets`。塗了漆的車（白色 EMU3000、普悠瑪）不算不鏽鋼。
+  - 省電畫質、自動畫質的低耗電模式或手機發熱時關掉（`Map3DReflection.trainStrength`，uniform `mirror.w`）。
 - **方向幕**：由 `Map3DHeadSigns` 在近距離每幀另外畫（決策 436），配方不畫。
 - **光**：遊戲用決策 370 的模型光（`map3dLit(…, soft: true)`），不是棚拍光。看圖用 `tools/train-models/render.mjs`，它照這個式子。列車不經過 `Map3DLook` 的淡色轉換，顏色照配方。
 - **影子**：每節車下的軟影由 `Map3DTrains` 畫（決策 232，`frame.shadows`），太陽陰影由場景畫；配方不畫影子。
@@ -69,6 +75,8 @@ node tools/train-models/viewer.mjs OUT/index.html OUT     # 離線預覽頁；�
 **一款新車的順序**：①照建模手冊做配方；②`run.sh --ids <新模型>`；③`render.mjs` 看七向（先看黑色剪影、白模，再看上色）；④`check.mjs --new-set <key>`（預算、遠景版、雜湊）；⑤把新模型加進鎖（`run.sh OUT --lock tools/train-models/hashes.lock.json`），**只應該多出新模型的行**，別的行變了就是動到別款；⑥跑 `swift build --build-tests -Xswiftc -warnings-as-errors` 與該車的測試；⑦給作者看。不要再開新的 `tools/<車>/` 資料夾；舊資料夾沒有的專用驗收（GLB 打包、逐車的門窗／正面稽核）才放進車自己的目錄，並在 `tools/train-models/README.md` 的對照表加一行。
 
 **改前／改後**（改了既有車的外觀，例如夜間亮燈、遮蔽烘焙、玻璃反光）：在 main 的 worktree 匯出到 `before`（`--tag before`）、在分支匯出到 `after`，各自 `render.mjs`，`viewer.mjs 頁 before after`。路線圖第 1–3 項的 PR 用同一個工具，`renderer.js` 的 `features` 旗標就是為它們留的。
+
+**材質（決策 450）**：`render.mjs OUT --features 1` 會畫車窗反光與不鏽鋼光澤（`export.swift` 把玻璃寫在 M3DM flags bit 1、不鏽鋼寫在 bit 2，manifest 的 `lighting` 帶天頂色、陽光色、太陽露出多少；每款的 `glassTriangles`、`steelTriangles` 也在 manifest）。不加旗標（`--features 0`）就是沒有材質的樣子。因為材質不改顏色，同一次匯出各拍一次就是改前／改後，不用另開 main 的 worktree。預覽沒有 `u` 的遮蔽，被遮住的面映得和開闊的一樣多，所以比遊戲稍亮。
 
 ## 7. 怎麼給作者看
 

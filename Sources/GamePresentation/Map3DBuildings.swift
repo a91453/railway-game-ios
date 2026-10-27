@@ -556,8 +556,9 @@ extension Map3DScene.Builder {
     }
 
     /// How far an arcade's ground floor stands back from the house's face
-    /// (``addRowHouses``).
-    static let arcadeDepth: Float = 3.4
+    /// (``addRowHouses``). Decision 447 (continued): Taipei's 3.64 m from
+    /// the road's line (臺北市建築管理自治條例第 7 條), where 267 had 3.4 m.
+    static let arcadeDepth: Float = 3.64
 
     /// A sloping sheet `width` wide from a wall at `from` (its top edge's
     /// middle), `depth` out along `facing` and `drop` lower there: an

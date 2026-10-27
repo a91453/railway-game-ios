@@ -86,9 +86,15 @@ vertex Map3DVertexOut map3dInstancedVertex(Map3DVertexIn in [[stage_in]], consta
     out.color = mix(car.stripe.rgb, in.color.rgb, in.color.a);
     out.normal = (car.transform * float4(in.normal, 0.0)).xyz;
     out.world = world.xyz;
-    out.surfaceAt = float2(0.0);
     // Decision 229 續: a street light's head glows (Map3DVertex.glowing).
-    out.layer = (in.texture.z < -1.5 && in.texture.z > -2.5) ? in.texture.z : -1.0;
+    // Decision 450: a train's glass, stainless body or lit glass
+    // (Map3DVertex.trainGlass, trainSteel, trainGlassLit), its u the shade
+    // decision 439 baked into it.
+    float layer = in.texture.z;
+    bool glowing = layer < -1.5 && layer > -2.5;
+    bool material = layer < -12.5 && layer > -15.5;
+    out.surfaceAt = material ? float2(in.texture.x, 0.0) : float2(0.0);
+    out.layer = (glowing || material) ? layer : -1.0;
     out.plane = 0.0;
     return out;
 }
@@ -233,6 +239,14 @@ static float2 map3dRipple(float2 p, float t, float footprint) {
     return slope * 0.045;
 }
 
+// Decision 450 (Map3DReflection): a train's glass's share of the window
+// Fresnel; a stainless body's mirror at head on, more toward the edge, and
+// how much its own colour tints what it mirrors; its sheen's two lobes
+// (power, strength); how much less a lit pane mirrors at night.
+constant float4 trainMaterial = {0.9, 0.22, 0.4, 1.2};
+constant float4 steelSheen = {40.0, 0.25, 6.0, 0.05};
+constant float trainLitGlass = 0.85;
+
 // Decision 370: a thin line at every whole `step` of `t`, about a pixel
 // wide however far away (the model look's window grid).
 static float map3dGridLine(float t, float step) {
@@ -254,7 +268,7 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
     // Decision 229 續: light of its own at night, added after the fog.
     float3 glow = float3(0.0);
     float lights = uniforms.shade.y;
-    if (in.layer < -1.5 && in.layer > -2.5) {
+    if ((in.layer < -1.5 && in.layer > -2.5) || (in.layer < -14.5 && in.layer > -15.5)) {
         glow = base * 1.3 * lights;
     }
     float sky = dot(uniforms.ambientSky.rgb, float3(0.2126, 0.7152, 0.0722));
@@ -280,6 +294,30 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
         mirrored = float4(map3dSeen(float3(r.x, abs(r.y), r.z), uniforms), fresnel * uniforms.mirror.x);
         float s = max(dot(r, uniforms.sunDirection.xyz), 0.0);
         glow += uniforms.glint.rgb * ((pow(s, 600.0) * 2.0 + pow(s, 60.0) * 0.2) * uniforms.mirror.z * uniforms.mirror.x * sunSeen);
+    }
+    // Decision 450: a train's glass mirrors the sky by the window's
+    // Fresnel and glints in the sun; its stainless body mirrors a little
+    // of the sky tinted by its own colour and takes a broad sheen. Both as
+    // much as the face is open (u, the shade baked into it); a lit pane
+    // at night shows its room, not the sky.
+    float trains = uniforms.mirror.w;
+    if (trains > 0.0 && in.layer < -12.5 && in.layer > -15.5) {
+        float unshut = 1.0 - clamp(in.surfaceAt.x, 0.0, 1.0);
+        float3 r = reflect(-toEye, normal);
+        float c = max(dot(toEye, normal), 0.0);
+        float3 seen = map3dSeen(r, uniforms);
+        float s = max(dot(r, uniforms.sunDirection.xyz), 0.0);
+        float sunny = step(0.0, dot(normal, uniforms.sunDirection.xyz)) * uniforms.mirror.z * sunSeen * unshut * trains;
+        if (in.layer < -13.5 && in.layer > -14.5) {
+            float share = trainMaterial.y + trainMaterial.z * pow(1.0 - c, 5.0);
+            mirrored = float4(seen * base * trainMaterial.w, share * unshut * trains);
+            glow += uniforms.glint.rgb * base * ((pow(s, steelSheen.x) * steelSheen.y + pow(s, steelSheen.z) * steelSheen.w) * sunny);
+        } else {
+            float lit = in.layer < -14.5 ? 1.0 - trainLitGlass * lights : 1.0;
+            float share = trainMaterial.x * (0.1 + 0.9 * pow(1.0 - c, 4.0)) * lit;
+            mirrored = float4(seen, share * unshut * trains);
+            glow += uniforms.glint.rgb * ((pow(s, 1400.0) * 3.0 + pow(s, 90.0) * 0.35 + pow(s, 7.0) * 0.1) * sunny * lit);
+        }
     }
     // Decision 370 (step 2): the landmarks' line patterns along u, v in
     // metres (Map3DVertex.curtainGlass, roofTiles, floorLines),
