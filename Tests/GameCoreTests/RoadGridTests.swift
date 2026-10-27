@@ -41,6 +41,7 @@ final class RoadGridTests: XCTestCase {
         var world = try makeWorld()
         XCTAssertNil(world.roads)
         let station = try world.buildStation(named: "A", at: PlanPoint(x: 1_000, y: 1_000))
+        // cells not side by side
         XCTAssertThrowsGameError(try world.stationRoadQuote(at: station.id), .roadsNotEnabled)
         XCTAssertThrowsGameError(try world.buildStationRoad(at: station.id), .roadsNotEnabled)
         XCTAssertThrowsGameError(try world.setRoads([], in: []), .roadsNotEnabled)
@@ -103,7 +104,10 @@ final class RoadGridTests: XCTestCase {
         XCTAssertEqual(try world.buildStationRoad(at: station.id), quote)
         XCTAssertEqual(world.economy.balance, balance - Money(1_280_000))
         XCTAssertEqual(world.accounts.capitalDays.last?.capitalSpending, Money(1_281_000), "with the station's $10")
-        XCTAssertTrue(world.roads?.cells.isSuperset(of: quote.cells) == true)
+        // Decision 438: a station road built from now on is the player's
+        // own, and can be taken up again.
+        XCTAssertEqual(world.roads?.built, Set(quote.cells))
+        XCTAssertEqual(world.roads?.cells, cells(7...9, 9...11))
         XCTAssertThrowsGameError(try world.stationRoadQuote(at: station.id), .stationOnRoad(station.id))
     }
 
@@ -143,6 +147,115 @@ final class RoadGridTests: XCTestCase {
         try world.setWater([CellPosition(row: 8, column: 13)])
         let station = try world.buildStation(named: "East", at: middle(8, 15))
         XCTAssertThrowsGameError(try world.stationRoadQuote(at: station.id), .onWater(row: 8, column: 13))
+    }
+
+    // MARK: - The player's roads (decision 438)
+
+    func testThePlayerBuildsARoadAlongTheCells() throws {
+        var world = try world()
+        let balance = world.economy.balance
+        // From the town's (8, 11) east two cells and up a corner: 64 + 64
+        // + 90 m new, $10,900; the town's own cell is free.
+        let path = [CellPosition(row: 8, column: 11), CellPosition(row: 8, column: 12), CellPosition(row: 8, column: 13), CellPosition(row: 7, column: 14)]
+        let quote = try world.roadQuote(along: path)
+        XCTAssertEqual(quote.cells, Array(path.dropFirst()))
+        XCTAssertEqual(quote.metres, 218)
+        XCTAssertEqual(quote.price, Money(1_090_000))
+        XCTAssertEqual(try world.buildRoad(along: path), quote)
+        XCTAssertEqual(world.economy.balance, balance - Money(1_090_000))
+        XCTAssertEqual(world.accounts.capitalDays.last?.capitalSpending, Money(1_090_000))
+        XCTAssertEqual(world.roads?.built, Set(path.dropFirst()))
+        XCTAssertEqual(world.roads?.cells, cells(7...9, 9...11), "the city's roads as they were")
+        XCTAssertEqual(world.roads?.contains(CellPosition(row: 7, column: 14)), true)
+        XCTAssertEqual(world.roads?.hasRoad(row: 7, column: 14), true)
+        XCTAssertEqual(world.roads?.allCells, cells(7...9, 9...11).union(path))
+        // The buses go along them: three cells east and a corner.
+        XCTAssertEqual(world.busRoadMetres(from: CellPosition(row: 8, column: 10), to: CellPosition(row: 7, column: 14)), 3 * 64 + 90)
+        // Along roads it has, a road costs nothing.
+        let again = try world.buildRoad(along: path.reversed())
+        XCTAssertEqual(again.cells, [])
+        XCTAssertEqual(again.price, .zero)
+        XCTAssertEqual(world.economy.balance, balance - Money(1_090_000))
+        // A first cell of its own is a cell's side.
+        XCTAssertEqual(try world.roadQuote(along: [CellPosition(row: 2, column: 2)]).metres, 64)
+    }
+
+    func testABadRoadIsRefusedAndChangesNothing() throws {
+        var plain = try makeWorld()
+        XCTAssertThrowsGameError(try plain.buildRoad(along: [CellPosition(row: 0, column: 0)]), .roadsNotEnabled)
+        XCTAssertThrowsGameError(try plain.removeRoads([CellPosition(row: 0, column: 0)]), .roadsNotEnabled)
+        var world = try world()
+        try world.setWater([CellPosition(row: 8, column: 13)])
+        try world.setSteep([CellPosition(row: 3, column: 13)])
+        world.enableRoads(towns: [middle(8, 10)])
+        let before = world
+        XCTAssertThrowsGameError(try world.buildRoad(along: []), .invalidRoads)
+        XCTAssertThrowsGameError(try world.buildRoad(along: [CellPosition(row: 8, column: 12), CellPosition(row: 8, column: 14)]), .invalidRoads)
+        // a cell twice in a row
+        XCTAssertThrowsGameError(try world.buildRoad(along: [CellPosition(row: 8, column: 12), CellPosition(row: 8, column: 12)]), .invalidRoads)
+        // off the world
+        XCTAssertThrowsGameError(try world.buildRoad(along: [CellPosition(row: 8, column: 31), CellPosition(row: 8, column: 32)]), .invalidRoads)
+        // more than 256 cells
+        XCTAssertThrowsGameError(try world.buildRoad(along: (0..<257).map { CellPosition(row: $0 % 2, column: 0) }), .invalidRoads)
+        // a stop's cell
+        XCTAssertThrowsGameError(try world.buildRoad(along: [CellPosition(row: 8, column: 12), CellPosition(row: 8, column: 13)]),
+                                 .onWater(row: 8, column: 13))
+        XCTAssertThrowsGameError(try world.buildRoad(along: [CellPosition(row: 3, column: 12), CellPosition(row: 3, column: 13)]),
+                                 .roadTooSteep(row: 3, column: 13))
+        XCTAssertEqual(world, before)
+        var poor = try self.world(balance: Money(100_000))
+        let poorBefore = poor
+        XCTAssertThrowsGameError(try poor.buildRoad(along: [CellPosition(row: 2, column: 2), CellPosition(row: 2, column: 3)]),
+                                 .insufficientFunds(required: Money(640_000), available: Money(100_000)))
+        XCTAssertEqual(poor, poorBefore)
+    }
+
+    func testOnlyThePlayersOwnRoadsAreTakenUp() throws {
+        var world = try world()
+        try world.buildRoad(along: [CellPosition(row: 8, column: 12), CellPosition(row: 8, column: 13)])
+        let balance = world.economy.balance
+        let before = world
+        XCTAssertThrowsGameError(try world.removeRoads([CellPosition(row: 8, column: 13), CellPosition(row: 8, column: 10)]),
+                                 .notOwnRoad(row: 8, column: 10))
+        XCTAssertThrowsGameError(try world.removeRoads([CellPosition(row: 2, column: 2)]), .notOwnRoad(row: 2, column: 2))
+        XCTAssertEqual(world, before)
+        try world.removeRoads([CellPosition(row: 8, column: 13)])
+        XCTAssertEqual(world.roads?.built, [CellPosition(row: 8, column: 12)])
+        XCTAssertEqual(world.economy.balance, balance, "nothing paid back")
+        // A cell the base map reads too stays the city's.
+        try world.setRoads([CellPosition(row: 8, column: 12)], in: [LandBlock(row: 0, column: 0)])
+        try world.removeRoads([CellPosition(row: 8, column: 12)])
+        XCTAssertEqual(world.roads?.built, [])
+        XCTAssertEqual(world.roads?.contains(CellPosition(row: 8, column: 12)), true)
+    }
+
+    func testARoadABusRunsOnStays() throws {
+        var world = try world()
+        try world.buildRoad(along: [CellPosition(row: 8, column: 12), CellPosition(row: 8, column: 13), CellPosition(row: 8, column: 14),
+                                    CellPosition(row: 7, column: 15)])
+        let route = try world.createBusRoute(to: nil, stops: [CellPosition(row: 8, column: 10), CellPosition(row: 8, column: 14)],
+                                             service: .every(minutes: 30), buses: 1)
+        let before = world
+        XCTAssertThrowsGameError(try world.removeRoads([CellPosition(row: 8, column: 13)]), .roadInUse(route.id))
+        XCTAssertThrowsGameError(try world.removeRoads([CellPosition(row: 8, column: 14)]), .roadInUse(route.id))
+        XCTAssertEqual(world, before)
+        try world.removeRoads([CellPosition(row: 7, column: 15)])
+        XCTAssertEqual(world.roads?.built.count, 3)
+    }
+
+    func testTheCityGrowsFromThePlayersRoads() throws {
+        var world = try world()
+        try world.buildStation(named: "Far", at: middle(8, 20))
+        try world.buildRoad(along: (12...16).map { CellPosition(row: 8, column: $0) })
+        // The road nearest the station is the player's (8, 16): the city
+        // grows on from it.
+        try run(&world, toDay: 30)
+        XCTAssertEqual(world.roads?.cells, cells(7...9, 9...11).union([CellPosition(row: 8, column: 17)]))
+        // Once the player's road reaches the station, the city leaves it.
+        try world.buildRoad(along: (17...20).map { CellPosition(row: 8, column: $0) })
+        let reached = world.roads
+        try run(&world, toDay: 60)
+        XCTAssertEqual(world.roads, reached)
     }
 
     // MARK: - Growth
@@ -324,7 +437,12 @@ final class RoadGridTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 72)
         let loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(loaded, world)
+        // Decision 438: a station road built now is the player's own; one
+        // version 72 built is the city's, as it was.
+        var expected = world
+        expected.roads?.cells.formUnion(world.roads?.built ?? [])
+        expected.roads?.built = []
+        XCTAssertEqual(loaded, expected)
         // The town's square, the station road and the month's cell toward
         // North, (6, 10), and the base map's cell.
         XCTAssertEqual(loaded.roads?.cells, cells(7...9, 9...11).union((12...15).map { CellPosition(row: 8, column: $0) })
@@ -362,6 +480,11 @@ final class RoadGridTests: XCTestCase {
         XCTAssertThrowsError(try load(["towns": [["row": 16, "column": 0]]]), "a town outside the world")
         XCTAssertThrowsError(try load(["towns": [["row": 8, "column": 10], ["row": 8, "column": 10]]]), "a town twice")
         XCTAssertThrowsError(try load(["blocks": [["row": 0, "column": 2, "count": 1]]]), "a block outside the world")
+        // Decision 438: the player's roads as the city's.
+        XCTAssertNoThrow(try load(["built": [["row": 0, "column": 0, "count": 32]]]))
+        XCTAssertThrowsError(try load(["built": [["row": 16, "column": 0, "count": 1]]]), "a player's road outside the world")
+        XCTAssertThrowsError(try load(["built": [["row": 0, "column": 0, "count": 3], ["row": 0, "column": 2, "count": 1]]]), "overlapping")
+        XCTAssertThrowsError(try load(["built": [["row": 0, "column": 0, "count": 0]]]), "an empty run")
     }
 
     /// Decision 400's later point 2: a damaged file naming more road cells

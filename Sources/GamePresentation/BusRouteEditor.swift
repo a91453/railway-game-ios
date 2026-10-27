@@ -565,7 +565,7 @@ extension GameSession {
                 ))
                 return
             }
-            guard roads.cells.contains(CellPosition(containing: station.location)) else {
+            guard roads.contains(CellPosition(containing: station.location)) else {
                 message = StatusMessage(kind: .failure, text: language.text(
                     "No road reaches \(station.name) yet: build its station road in the station's panel first.",
                     "\(station.name) 還沒有路接到：先在車站面板鋪站前路。"
@@ -591,7 +591,7 @@ extension GameSession {
         if let index = taken {
             busDraft.remove(at: index)
         } else if busDraft.stops.isEmpty, busDraft.route == nil, let station = world.station(near: point, within: reach / 2),
-                  station.id != busDraft.station, roads.cells.contains(CellPosition(containing: station.location)) {
+                  station.id != busDraft.station, roads.contains(CellPosition(containing: station.location)) {
             // Another station, before any stop: the route starts there.
             busDraft.station = station.id
         } else {
@@ -602,7 +602,7 @@ extension GameSession {
                 // is where the stop goes, when a bus road reaches it; else
                 // the tap is put on the road as before.
                 func onARoad(near point: PlanPoint) -> PlanPoint? {
-                    onRoads.place(near: point, within: BusRoadNetwork.snapReach, accepting: { roads.cells.contains(CellPosition(containing: $0)) })
+                    onRoads.place(near: point, within: BusRoadNetwork.snapReach, accepting: { roads.contains(CellPosition(containing: $0)) })
                 }
                 let real = busDraft.station.flatMap { world.station(id: $0) }
                     .flatMap { realBusStops(around: $0.location) }?.nearest(to: point)
@@ -611,7 +611,7 @@ extension GameSession {
                     return
                 }
                 placed = (CellPosition(containing: pin), pin)
-            } else if !roads.cells.contains(cell) {
+            } else if !roads.contains(cell) {
                 message = StatusMessage(kind: .failure, text: language.text("Bus stops go on roads.", "公車站牌要放在路上。"))
                 return
             }
@@ -740,14 +740,16 @@ extension GameSession {
 
     /// Opens the bus tool on route `id`, to move its stops.
     public func editBusRoute(_ id: BusRouteID) {
-        guard let route = world.busRoute(id: id) else { return }
+        // Decision 438: a city route is drawn in the tool once it can
+        // start from a road (the next pull request).
+        guard let route = world.busRoute(id: id), let fed = route.station else { return }
         selectTool(.bus)
-        readBusesAhead(for: route.station)
+        readBusesAhead(for: fed)
         var draft = BusRouteDraft()
-        draft.station = route.station
+        draft.station = fed
         draft.stops = route.stops.reversed()
         draft.stopPoints = draft.stops.map(\.middle)
-        if let roads = busRoads, let station = world.station(id: route.station), let saved = roads.way(ofSaved: route.stops, station: station.location) {
+        if let roads = busRoads, let station = world.station(id: fed), let saved = roads.way(ofSaved: route.stops, station: station.location) {
             // Decision 424: each saved stop from its cell's middle onto the
             // nearest bus road.
             draft.stopPoints = saved.pins.reversed()
@@ -811,7 +813,7 @@ extension GameSession {
                 broken = way.firstBroken
                 busDraftPath = way.points.reversed()
             } else if let roads = world.roads {
-                busDraftPath = BusRoadPath.points(stops: busDraft.coreStops, station: station.location, roads: roads.cells).reversed()
+                busDraftPath = BusRoadPath.points(stops: busDraft.coreStops, station: station.location, roads: roads.allCells).reversed()
             }
         }
         busPreview = BusRoutePreview.make(busDraft, in: world, language: language, brokenLeg: broken)
@@ -824,7 +826,8 @@ extension GameSession {
         var overlay = BusMapOverlay()
         let onRoads = busRoads
         for route in world.busRoutes where route.id != busDraft.route || tool != .bus {
-            guard let station = world.station(id: route.station) else { continue }
+            // Decision 438: a city route's overlay comes with the tool's.
+            guard let station = route.station.flatMap({ world.station(id: $0) }) else { continue }
             let memo: BusPathMemo
             if let known = busPathMemo[route.id], known.stops == route.stops, known.station == station.location, known.onRoads == (onRoads != nil) {
                 memo = known
@@ -834,13 +837,13 @@ extension GameSession {
                 } else {
                     memo = BusPathMemo(
                         stops: route.stops, station: station.location, onRoads: onRoads != nil,
-                        points: BusRoadPath.points(stops: route.stops, station: station.location, roads: roads.cells),
+                        points: BusRoadPath.points(stops: route.stops, station: station.location, roads: roads.allCells),
                         pins: route.stops.map(\.middle)
                     )
                 }
                 busPathMemo[route.id] = memo
             }
-            let line = world.lines(callingAt: route.station).first
+            let line = world.lines(callingAt: station.id).first
             // GameCore lists the farthest stop first; the numbers count
             // from the station. Names are only worked out for the tool.
             let labels = zip(BusStopLabel.numbers(count: memo.pins.count, farthestFirst: true), memo.pins).map { number, pin in

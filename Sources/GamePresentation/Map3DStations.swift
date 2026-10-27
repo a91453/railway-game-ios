@@ -227,7 +227,12 @@ extension Map3DScene.Builder {
                 : .surface(platforms: open.count, longest: longest.length)
             let world = (x: originX + Double(middle.point.x) * Self.metre, y: originY + Double(middle.point.z) * Self.metre)
             let station = Map3DStationKit.recipe(for: id, at: world, layout: layout, frame: frame)
-            if drawnElsewhere.contains(station.profile) {
+            stationSystems[id] = station.system
+            if self.world.station(id: id)?.isDepot == true {
+                // Decision 441: a depot's maintenance shed, not a station's
+                // building; none by sidings under ground.
+                if !open.isEmpty { cells.formUnion(addDepotShed(platforms: open, path: longest, middle: middle)) }
+            } else if drawnElsewhere.contains(station.profile) {
                 continue
             } else if Map3DStationKit.hasHouse(station.profile) {
                 cells.formUnion(addHouse(station, platforms: open, middle: middle))
@@ -290,66 +295,7 @@ extension Map3DScene.Builder {
         kit.house(station)
         guard let bounds = kit.mesh.bounds else { return [] }
         let depth = bounds.max.x - bounds.min.x, wide = bounds.max.z - bounds.min.z
-        let forward: Map3DPoint, back: Map3DPoint
-        if platforms.isEmpty {
-            forward = middle.right
-            back = middle.point - forward * (depth / 2)
-        } else {
-            // How far each side the platforms and their track reach from
-            // the middle, and how much other track lies where the
-            // building would stand.
-            func reach(_ side: Float, of across: (LaidPlatform) -> [Float]) -> Float {
-                platforms.map { platform -> Float in
-                    guard let path = Map3DStreetLife.Path(platform.line) else { return 0 }
-                    let at = path.at(path.length / 2)
-                    return across(platform).map { (at.point + at.right * $0 - middle.point).dot(middle.right) * side }.max() ?? 0
-                }.max() ?? 0
-            }
-            func reach(_ side: Float) -> Float {
-                reach(side) { [$0.offset - $0.width / 2, $0.offset + $0.width / 2, -2.5, 2.5] }
-            }
-            // Whether a platform, not its track, is outermost that way: the
-            // building then opens onto it, as most stations' do.
-            func opensOnto(_ side: Float) -> Bool {
-                reach(side) { [$0.offset - $0.width / 2, $0.offset + $0.width / 2] } >= reach(side) { _ in [-2.5, 2.5] }
-            }
-            // How far the track points within `from` to `to` metres of
-            // `anchor` that way lie, beside the building's length.
-            func farthest(_ side: Float, from: Float, to: Float, at anchor: Map3DPoint) -> [Float] {
-                trackLines.flatMap { line in
-                    line.points.compactMap { p -> Float? in
-                        let d = p - anchor, across = d.dot(middle.right) * side, along = abs(d.dot(middle.along))
-                        return across > from && across < to && along < wide / 2 + 4 ? across : nil
-                    }
-                }
-            }
-            // Past the platforms, and past any track just beyond them
-            // (a through track with no platform of its own).
-            func clear(_ side: Float, at anchor: Map3DPoint) -> Float {
-                var edge = reach(side)
-                for _ in 0..<6 {
-                    guard let next = farthest(side, from: edge - 0.1, to: edge + 5, at: anchor).max() else { break }
-                    edge = next + 2.5
-                }
-                return edge + 1
-            }
-            // Each side, at the middle or slid along the platform (where
-            // another line crosses at the middle): the least other track
-            // where it would stand, then opening onto a platform, then
-            // the least slid, then the left.
-            let half = platforms.compactMap { Map3DStreetLife.Path($0.line)?.length }.max().map { $0 / 2 } ?? 0
-            let slides = [Float(0), 1, -1, 2, -2].map { $0 * (wide / 2 + 4) }.filter { abs($0) <= max(half, 1) }
-            let choices = slides.flatMap { slide in
-                [Float(-1), 1].map { side in
-                    let anchor = middle.point + middle.along * slide, edge = clear(side, at: anchor)
-                    return (side: side, slide: slide, edge: edge, blocked: farthest(side, from: edge, to: edge + depth, at: anchor).count,
-                            shut: opensOnto(side) ? 0 : 1)
-                }
-            }
-            let best = choices.min { ($0.blocked, $0.shut, abs($0.slide), $0.side) < ($1.blocked, $1.shut, abs($1.slide), $1.side) }!
-            forward = middle.right * best.side
-            back = middle.point + middle.along * best.slide + forward * best.edge
-        }
+        let (forward, back) = besidePlatforms(depth: depth, wide: wide, platforms: platforms, middle: middle)
         // The building's back on `back`, its middle across it there.
         let shift = Map3DPoint(-bounds.min.x, 0, -(bounds.min.z + bounds.max.z) / 2)
         var moved = Map3DMesh()
@@ -379,6 +325,73 @@ extension Map3DScene.Builder {
         // Decision 331: a big station's commercial kit, later.
         if Self.isBig(station) { bigStations.append((centre, forward, depth)) }
         return cells
+    }
+
+    /// Where a building `depth` deep (across the line) and `wide` long
+    /// (along it) stands beside `platforms`: the way it faces out from
+    /// them (`forward`) and the middle of its back (`back`), on the side
+    /// with less other track, a metre past the farthest platform or the
+    /// track just beyond it; over the middle when there are none.
+    func besidePlatforms(depth: Float, wide: Float, platforms: [LaidPlatform],
+                         middle: (point: Map3DPoint, along: Map3DPoint, right: Map3DPoint)) -> (forward: Map3DPoint, back: Map3DPoint) {
+        if platforms.isEmpty {
+            let forward = middle.right
+            return (forward, middle.point - forward * (depth / 2))
+        }
+        // How far each side the platforms and their track reach from
+        // the middle, and how much other track lies where the
+        // building would stand.
+        func reach(_ side: Float, of across: (LaidPlatform) -> [Float]) -> Float {
+            platforms.map { platform -> Float in
+                guard let path = Map3DStreetLife.Path(platform.line) else { return 0 }
+                let at = path.at(path.length / 2)
+                return across(platform).map { (at.point + at.right * $0 - middle.point).dot(middle.right) * side }.max() ?? 0
+            }.max() ?? 0
+        }
+        func reach(_ side: Float) -> Float {
+            reach(side) { [$0.offset - $0.width / 2, $0.offset + $0.width / 2, -2.5, 2.5] }
+        }
+        // Whether a platform, not its track, is outermost that way: the
+        // building then opens onto it, as most stations' do.
+        func opensOnto(_ side: Float) -> Bool {
+            reach(side) { [$0.offset - $0.width / 2, $0.offset + $0.width / 2] } >= reach(side) { _ in [-2.5, 2.5] }
+        }
+        // How far the track points within `from` to `to` metres of
+        // `anchor` that way lie, beside the building's length.
+        func farthest(_ side: Float, from: Float, to: Float, at anchor: Map3DPoint) -> [Float] {
+            trackLines.flatMap { line in
+                line.points.compactMap { p -> Float? in
+                    let d = p - anchor, across = d.dot(middle.right) * side, along = abs(d.dot(middle.along))
+                    return across > from && across < to && along < wide / 2 + 4 ? across : nil
+                }
+            }
+        }
+        // Past the platforms, and past any track just beyond them
+        // (a through track with no platform of its own).
+        func clear(_ side: Float, at anchor: Map3DPoint) -> Float {
+            var edge = reach(side)
+            for _ in 0..<6 {
+                guard let next = farthest(side, from: edge - 0.1, to: edge + 5, at: anchor).max() else { break }
+                edge = next + 2.5
+            }
+            return edge + 1
+        }
+        // Each side, at the middle or slid along the platform (where
+        // another line crosses at the middle): the least other track
+        // where it would stand, then opening onto a platform, then
+        // the least slid, then the left.
+        let half = platforms.compactMap { Map3DStreetLife.Path($0.line)?.length }.max().map { $0 / 2 } ?? 0
+        let slides = [Float(0), 1, -1, 2, -2].map { $0 * (wide / 2 + 4) }.filter { abs($0) <= max(half, 1) }
+        let choices = slides.flatMap { slide in
+            [Float(-1), 1].map { side in
+                let anchor = middle.point + middle.along * slide, edge = clear(side, at: anchor)
+                return (side: side, slide: slide, edge: edge, blocked: farthest(side, from: edge, to: edge + depth, at: anchor).count,
+                        shut: opensOnto(side) ? 0 : 1)
+            }
+        }
+        let best = choices.min { ($0.blocked, $0.shut, abs($0.slide), $0.side) < ($1.blocked, $1.shut, abs($1.slide), $1.side) }!
+        let forward = middle.right * best.side
+        return (forward, middle.point + middle.along * best.slide + forward * best.edge)
     }
 
     /// An underground station's exits at street level, a viaduct's stair

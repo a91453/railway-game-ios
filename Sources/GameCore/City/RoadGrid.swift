@@ -8,6 +8,12 @@
 // (``GameWorld/buildStationRoad(at:)``). Off in a new world and in saves from
 // before it (save version 72); the player's new games turn it on.
 //
+// Decision 438: the player lays roads of their own too, a line of cells at
+// a time (``GameWorld/buildRoad(along:)``), and may take them up again
+// (``GameWorld/removeRoads(_:)``). They are kept apart from the city's
+// (``RoadGrid/built``), so only they can be taken up; the buses, the
+// station roads and the growth go by both.
+//
 // The references have no roads that grow by themselves (gap): the island
 // city's are laid by the player a cell at a time. OpenTTD's towns grow
 // their roads out from the middle (GPL-2.0, ideas only, no code); this rule
@@ -15,8 +21,12 @@
 
 /// The world's roads: which 64 m cells of ``Land``'s grid have one.
 public struct RoadGrid: Hashable, Sendable {
-    /// The cells with a road.
+    /// The cells with a road of the city's: grown, read from the base map,
+    /// or a station road built before decision 438.
     public internal(set) var cells: Set<CellPosition>
+    /// The cells with a road the player built (decision 438), which they
+    /// may take up again; a cell may be in ``cells`` too.
+    public internal(set) var built: Set<CellPosition>
     /// The middle cells of the towns whose roads grow toward their nearest
     /// station, in order (a blank map's); none on a real-world map, where
     /// each station draws the nearest road toward it instead.
@@ -42,16 +52,29 @@ public struct RoadGrid: Hashable, Sendable {
     /// (64 × 1.414, to the metre below).
     public static let straightMetres: Int64 = 64
     public static let diagonalMetres: Int64 = 90
+    /// The most cells the player lays in one go (decision 438): 16 km.
+    public static let longestBuiltRoad = 256
 
-    public init(cells: Set<CellPosition> = [], towns: [CellPosition] = [], readBlocks: Set<LandBlock> = []) {
+    public init(cells: Set<CellPosition> = [], built: Set<CellPosition> = [], towns: [CellPosition] = [], readBlocks: Set<LandBlock> = []) {
         self.cells = cells
+        self.built = built
         self.towns = towns
         self.readBlocks = readBlocks
     }
 
-    /// Whether cell `row`, `column` has a road.
+    /// Whether `cell` has a road, the city's or the player's.
+    public func contains(_ cell: CellPosition) -> Bool {
+        cells.contains(cell) || built.contains(cell)
+    }
+
+    /// Whether cell `row`, `column` has a road, the city's or the player's.
     public func hasRoad(row: Int, column: Int) -> Bool {
-        cells.contains(CellPosition(row: row, column: column))
+        contains(CellPosition(row: row, column: column))
+    }
+
+    /// Every cell with a road, the city's and the player's.
+    public var allCells: Set<CellPosition> {
+        built.isEmpty ? cells : cells.union(built)
     }
 
     /// How long a road is from cell `a`'s middle to cell `b`'s, going
@@ -85,13 +108,13 @@ public struct RoadGrid: Hashable, Sendable {
     /// least square distance, then the lower row and column; `nil` when
     /// there is none.
     func nearestRoad(to target: CellPosition, within reach: Int) -> CellPosition? {
-        guard !cells.isEmpty else { return nil }
+        guard !cells.isEmpty || !built.isEmpty else { return nil }
         var best: (squared: Int, cell: CellPosition)?
         var ring = 0
         // A cell of ring k is at least k cells away, so once k² passes the
         // best found no farther ring holds a nearer one.
         while ring <= reach, best.map({ ring * ring <= $0.squared }) ?? true {
-            for cell in Self.ring(ring, round: target) where cells.contains(cell) {
+            for cell in Self.ring(ring, round: target) where contains(cell) {
                 let squared = Self.squared(cell, target)
                 if best.map({ (squared, cell) < ($0.squared, $0.cell) }) ?? true {
                     best = (squared, cell)
@@ -124,13 +147,21 @@ public struct RoadGrid: Hashable, Sendable {
     func problem(in bounds: WorldBounds) -> String? {
         let rows = Land.rows(in: bounds), columns = Land.columns(in: bounds)
         func inWorld(_ cell: CellPosition) -> Bool { (0..<rows).contains(cell.row) && (0..<columns).contains(cell.column) }
-        guard cells.allSatisfy(inWorld), towns.allSatisfy(inWorld) else { return "A road or a town's middle is outside the world." }
+        guard cells.allSatisfy(inWorld), built.allSatisfy(inWorld), towns.allSatisfy(inWorld) else { return "A road or a town's middle is outside the world." }
         let blockRows = Land.blockRows(in: bounds), blockColumns = Land.blockColumns(in: bounds)
         guard readBlocks.allSatisfy({ (0..<blockRows).contains($0.row) && (0..<blockColumns).contains($0.column) }) else {
             return "A block whose roads were read is outside the world."
         }
         return nil
     }
+}
+
+/// What a road the player lays costs (``GameWorld/roadQuote(along:)``).
+public struct RoadQuote: Hashable, Sendable {
+    /// The cells it lays, in order: those of the way with no road yet.
+    public let cells: [CellPosition]
+    public let metres: Int64
+    public let price: Money
 }
 
 /// What a station road costs (``GameWorld/stationRoadQuote(at:)``).
@@ -240,7 +271,8 @@ extension GameWorld {
 
     /// Builds a road from station `id` to the nearest road and pays for it
     /// (``stationRoadQuote(at:)``), booked as capital spending for a managed
-    /// company (it is no asset record, as a freight yard is not).
+    /// company (it is no asset record, as a freight yard is not). Since
+    /// decision 438 it is the player's own (``RoadGrid/built``).
     ///
     /// - Throws: whatever ``stationRoadQuote(at:)`` throws, or
     ///   ``GameError/insufficientFunds(required:available:)``.
@@ -252,12 +284,91 @@ extension GameWorld {
         if accounts.mode == .management {
             accounts.bookCapital(day: dayIndex(of: clock.now)) { $0.capitalSpending = $0.capitalSpending + quote.price }
         }
-        grid.cells.formUnion(quote.cells)
+        grid.built.formUnion(quote.cells)
         roads = grid
         return quote
     }
 
+    /// Lays a road along `cells` and pays for it (``roadQuote(along:)``),
+    /// booked as capital spending for a managed company, as a station
+    /// road is (decision 438).
+    ///
+    /// - Throws: whatever ``roadQuote(along:)`` throws, or
+    ///   ``GameError/insufficientFunds(required:available:)``. The world is
+    ///   then unchanged.
+    @discardableResult
+    public mutating func buildRoad(along cells: [CellPosition]) throws(GameError) -> RoadQuote {
+        let quote = try roadQuote(along: cells)
+        guard var grid = roads else { throw .roadsNotEnabled }
+        guard !quote.cells.isEmpty else { return quote }
+        try economy.spend(quote.price)
+        if accounts.mode == .management {
+            accounts.bookCapital(day: dayIndex(of: clock.now)) { $0.capitalSpending = $0.capitalSpending + quote.price }
+        }
+        grid.built.formUnion(quote.cells)
+        roads = grid
+        return quote
+    }
+
+    /// Takes up the player's roads in `cells` (decision 438). Nothing is
+    /// paid back, as for buses and stops. A cell the city's roads have
+    /// too keeps the city's.
+    ///
+    /// - Throws, checked in this order: ``GameError/roadsNotEnabled``;
+    ///   ``GameError/notOwnRoad(row:column:)`` for the first cell that is
+    ///   not the player's road; ``GameError/roadInUse(_:)`` for the first
+    ///   route (by number) whose way between two of its stops, or to its
+    ///   station, the roads left would make longer or break. The world is
+    ///   then unchanged.
+    public mutating func removeRoads(_ cells: [CellPosition]) throws(GameError) {
+        guard var grid = roads else { throw .roadsNotEnabled }
+        if let other = cells.first(where: { !grid.built.contains($0) }) { throw .notOwnRoad(row: other.row, column: other.column) }
+        grid.built.subtract(cells)
+        var after = self
+        after.roads = grid
+        for route in busRoutes {
+            let ends = route.stops + (route.station.flatMap { id in station(id: id).map { [roadCell(of: $0.location)] } } ?? [])
+            for (start, end) in zip(ends, ends.dropFirst()) {
+                let way = busRoadMetres(from: start, to: end)
+                guard after.busRoadMetres(from: start, to: end) == way else { throw .roadInUse(route.id) }
+            }
+        }
+        roads = grid
+    }
+
     // MARK: - Queries
+
+    /// A road along `cells` (decision 438): a line of cells, each beside
+    /// the last (corner to corner too), at most
+    /// ``RoadGrid/longestBuiltRoad``. The cells with no road yet are laid,
+    /// each for the way into it from the cell before (a cell's side, or
+    /// corner to corner; the first cell a side), at
+    /// ``RoadGrid/pricePerMetre``; those with a road cost nothing.
+    ///
+    /// - Throws, checked in this order: ``GameError/roadsNotEnabled``;
+    ///   ``GameError/invalidRoads`` for no cells, too many, two in a row
+    ///   not side by side or a cell outside the world;
+    ///   ``GameError/onWater(row:column:)`` or
+    ///   ``GameError/roadTooSteep(row:column:)`` for the first new cell on
+    ///   water or a steep slope.
+    public func roadQuote(along cells: [CellPosition]) throws(GameError) -> RoadQuote {
+        guard let grid = roads else { throw .roadsNotEnabled }
+        let rows = Land.rows(in: bounds), columns = Land.columns(in: bounds)
+        guard (1...RoadGrid.longestBuiltRoad).contains(cells.count),
+              zip(cells, cells.dropFirst()).allSatisfy({ $0 != $1 && abs($0.row - $1.row) <= 1 && abs($0.column - $1.column) <= 1 }),
+              cells.allSatisfy({ (0..<rows).contains($0.row) && (0..<columns).contains($0.column) })
+        else { throw .invalidRoads }
+        var laid: [CellPosition] = [], seen = Set<CellPosition>(), metres: Int64 = 0
+        for (index, cell) in cells.enumerated() where !grid.contains(cell) && seen.insert(cell).inserted {
+            if !terrain.isEmpty {
+                if terrain.isWater(row: cell.row, column: cell.column) { throw .onWater(row: cell.row, column: cell.column) }
+                if terrain.isSteep(row: cell.row, column: cell.column) { throw .roadTooSteep(row: cell.row, column: cell.column) }
+            }
+            laid.append(cell)
+            metres += index == 0 ? RoadGrid.straightMetres : RoadGrid.metres(from: cells[index - 1], to: cell)
+        }
+        return RoadQuote(cells: laid, metres: metres, price: Money(metres * RoadGrid.pricePerMetre.amount))
+    }
 
     /// The road from station `id` to the nearest road cell (the least
     /// metres, then the lower row and column): corner to corner, then
@@ -272,13 +383,13 @@ extension GameWorld {
         guard let grid = roads else { throw .roadsNotEnabled }
         guard let station = station(id: id) else { throw .unknownStation(id) }
         let start = roadCell(of: station.point)
-        guard !grid.cells.contains(start) else { throw .stationOnRoad(id) }
+        guard !grid.contains(start) else { throw .stationOnRoad(id) }
         let reach = Int(RoadGrid.stationRoadMetres / RoadGrid.straightMetres)
         var best: (metres: Int64, cell: CellPosition)?
         for row in (start.row - reach)...(start.row + reach) {
             for column in (start.column - reach)...(start.column + reach) {
                 let cell = CellPosition(row: row, column: column)
-                guard grid.cells.contains(cell) else { continue }
+                guard grid.contains(cell) else { continue }
                 let metres = RoadGrid.metres(from: start, to: cell)
                 guard metres <= RoadGrid.stationRoadMetres else { continue }
                 if best.map({ (metres, cell) < ($0.metres, $0.cell) }) ?? true {
@@ -341,7 +452,7 @@ extension GameWorld {
             let drawn = Set(towns)
             targets = towns + stations.map { roadCell(of: $0.point) }.filter { !drawn.contains($0) }
         }
-        for target in targets where !grid.cells.contains(target) {
+        for target in targets where !grid.contains(target) {
             guard let from = grid.nearestRoad(to: target, within: RoadGrid.growthReach) else { continue }
             let here = RoadGrid.squared(from, target)
             var next: (rank: Int, squared: Int, cell: CellPosition)?
@@ -349,7 +460,7 @@ extension GameWorld {
                 for dc in -1...1 where dr != 0 || dc != 0 {
                     let cell = CellPosition(row: from.row + dr, column: from.column + dc)
                     let squared = RoadGrid.squared(cell, target)
-                    guard squared < here, !grid.cells.contains(cell),
+                    guard squared < here, !grid.contains(cell),
                           canHaveRoad(row: cell.row, column: cell.column, rows: rows, columns: columns) else { continue }
                     let peopled = land.cell(row: cell.row, column: cell.column).map { $0.residents + $0.jobs > 0 } ?? false
                     let rank = peopled ? 0 : 1
@@ -368,7 +479,7 @@ extension GameWorld {
 
 extension RoadGrid: Codable {
     private enum CodingKeys: String, CodingKey {
-        case cells, towns, blocks
+        case cells, built, towns, blocks
     }
 
     /// Runs of cells along a row: `{"row", "column", "count"}`.
@@ -383,9 +494,10 @@ extension RoadGrid: Codable {
         var column: Int
     }
 
-    /// `{"cells": [runs], "towns": [{"row", "column"}], "blocks": [runs]}`,
-    /// the cells' runs by row and then column, each key left out when it
-    /// has none. The world checks they lie in its bounds.
+    /// `{"cells": [runs], "built": [runs], "towns": [{"row", "column"}],
+    /// "blocks": [runs]}`, the cells' runs by row and then column, each key
+    /// left out when it has none (`"built"`, the player's roads, since
+    /// decision 438). The world checks they lie in its bounds.
     public init(from decoder: any Decoder) throws {
         let side = Int(WorldBounds.maximumSide / Land.cellLength), blocks = Int(WorldBounds.maximumSide / Land.blockLength)
         try self.init(from: decoder, cellLimit: side * side, blockLimit: blocks * blocks)
@@ -396,30 +508,8 @@ extension RoadGrid: Codable {
     /// 400's later point 2): the world's own.
     init(from decoder: any Decoder, cellLimit: Int, blockLimit: Int) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        var cells: Set<CellPosition> = []
-        var last: CellPosition?
-        // No cell past the widest world's, so no sum below can overflow.
-        let side = Int(WorldBounds.maximumSide / Land.cellLength)
-        let runs = try container.decodeIfPresent([Run].self, forKey: .cells) ?? []
-        var total = 0
-        for run in runs where run.count > 0 {
-            guard run.count <= cellLimit - total else {
-                throw DecodingError.dataCorruptedError(forKey: .cells, in: container, debugDescription: "The roads are more cells than the world has.")
-            }
-            total += run.count
-        }
-        for run in runs {
-            guard run.count >= 1, (0..<side).contains(run.row), (0..<side).contains(run.column), run.count <= side - run.column,
-                  last.map({ ($0.row, $0.column) < (run.row, run.column) }) ?? true
-            else {
-                throw DecodingError.dataCorruptedError(forKey: .cells, in: container, debugDescription: "Roads must be runs of cells, in order, apart.")
-            }
-            for offset in 0..<run.count {
-                cells.insert(CellPosition(row: run.row, column: run.column + offset))
-            }
-            last = CellPosition(row: run.row, column: run.column + run.count)
-        }
-        self.cells = cells
+        cells = try Self.decodeRuns(in: container, forKey: .cells, cellLimit: cellLimit)
+        built = try Self.decodeRuns(in: container, forKey: .built, cellLimit: cellLimit)
         towns = (try container.decodeIfPresent([Town].self, forKey: .towns) ?? []).map { CellPosition(row: $0.row, column: $0.column) }
         guard Set(towns).count == towns.count else {
             throw DecodingError.dataCorruptedError(forKey: .towns, in: container, debugDescription: "Each town's cell must be named once.")
@@ -436,8 +526,38 @@ extension RoadGrid: Codable {
         readBlocks = Set(blocks)
     }
 
-    public func encode(to encoder: any Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
+    /// The cells of the runs under `key`, refusing more than `cellLimit`
+    /// before spreading them out.
+    private static func decodeRuns(in container: KeyedDecodingContainer<CodingKeys>, forKey key: CodingKeys,
+                                   cellLimit: Int) throws -> Set<CellPosition> {
+        var cells: Set<CellPosition> = []
+        var last: CellPosition?
+        // No cell past the widest world's, so no sum below can overflow.
+        let side = Int(WorldBounds.maximumSide / Land.cellLength)
+        let runs = try container.decodeIfPresent([Run].self, forKey: key) ?? []
+        var total = 0
+        for run in runs where run.count > 0 {
+            guard run.count <= cellLimit - total else {
+                throw DecodingError.dataCorruptedError(forKey: key, in: container, debugDescription: "The roads are more cells than the world has.")
+            }
+            total += run.count
+        }
+        for run in runs {
+            guard run.count >= 1, (0..<side).contains(run.row), (0..<side).contains(run.column), run.count <= side - run.column,
+                  last.map({ ($0.row, $0.column) < (run.row, run.column) }) ?? true
+            else {
+                throw DecodingError.dataCorruptedError(forKey: key, in: container, debugDescription: "Roads must be runs of cells, in order, apart.")
+            }
+            for offset in 0..<run.count {
+                cells.insert(CellPosition(row: run.row, column: run.column + offset))
+            }
+            last = CellPosition(row: run.row, column: run.column + run.count)
+        }
+        return cells
+    }
+
+    /// The runs of `cells` along the rows, by row and then column.
+    private static func runs(of cells: Set<CellPosition>) -> [Run] {
         var runs: [Run] = []
         for cell in cells.sorted() {
             if let last = runs.last, last.row == cell.row, last.column + last.count == cell.column {
@@ -446,8 +566,16 @@ extension RoadGrid: Codable {
                 runs.append(Run(row: cell.row, column: cell.column, count: 1))
             }
         }
-        if !runs.isEmpty {
-            try container.encode(runs, forKey: .cells)
+        return runs
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        if !cells.isEmpty {
+            try container.encode(Self.runs(of: cells), forKey: .cells)
+        }
+        if !built.isEmpty {
+            try container.encode(Self.runs(of: built), forKey: .built)
         }
         if !towns.isEmpty {
             try container.encode(towns.map { Town(row: $0.row, column: $0.column) }, forKey: .towns)

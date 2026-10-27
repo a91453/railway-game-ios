@@ -24,6 +24,12 @@
 - 不動排程：「Threads 開發日誌（看進度）」由規劃管。
 - 不跑 testflight.yml，不寫 `@claude`（會啟動 `claude.yml`）。
 - 想知道開發進度，用 send_message 問規劃 session。它的 session ID 在 #1041。
+- **交稿前去除浮水印**（作者 2026-10-27：「記得每晚用threads發文的時候使用 https://github.com/guillaumemeyer/watermarks-remover 去除浮水印」）。這個工具是 MIT 授權，只用 Python 標準庫，規劃在 commit `5c180932a00c793261177f79aee21db8929f3fe2` 試過。
+  1. clone 到暫存資料夾，鎖在這個 commit：`git clone https://github.com/guillaumemeyer/watermarks-remover <暫存>/wmr && git -C <暫存>/wmr checkout 5c180932a00c793261177f79aee21db8929f3fe2`。
+  2. 每個草稿檔先去掉看不見的 Unicode 字元：`python3 -I <暫存>/wmr/skills/clean-user-facing-text/scripts/clean_text.py 草稿.md -o 草稿.clean.md --stats --no-normalize-spaces`。
+  3. 交給作者的圖片或影片（例如 3D 預覽、截圖）去掉 C2PA、EXIF、XMP：`python3 -I <暫存>/wmr/service/scripts/clean_file.py 圖.png -o 圖.clean.png`。
+  4. 交的是清過的檔案。在交稿訊息寫一行每個檔各去掉了什麼（`--stats` 的 `removed_count`），沒有就寫「沒有」。
+  5. 工具的改寫步驟（Layer B）不做：主文照第 4、6 節作者教的語氣，作者自己會改定。
 
 ## 3. 內容從哪裡查（都看 origin/main，先 git fetch）
 

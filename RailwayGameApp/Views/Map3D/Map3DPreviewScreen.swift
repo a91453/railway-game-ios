@@ -568,7 +568,7 @@ struct Map3DSceneKey: Hashable {
         lines = palette == nil ? nil : Map3DLineBands.Signature(world: world)
         self.palette = palette
         bought = world.acquisitions.count { $0.kind == .railway }
-        roads = world.roads?.cells.count ?? 0
+        roads = world.roads?.allCells.count ?? 0
     }
 }
 
@@ -675,6 +675,8 @@ final class Map3DTrainFeed {
             real.add(to: &frame, second: clock.second(at: now, glides: realGlides), day: clock.today, dayBefore: clock.dayBefore,
                      models: models, eye: eye, reach: reach)
         }
+        // Decision 436: the cab cars' lit destination signs, close up.
+        Map3DHeadSign.add(to: &frame, signs: models?.headSigns ?? [:], eye: eye)
         return frame
     }
 }

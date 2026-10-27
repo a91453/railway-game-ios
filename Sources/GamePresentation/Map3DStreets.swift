@@ -347,7 +347,7 @@ extension Map3DScene.Builder {
             built[cell] = lot.density
         }
         var roadCells = Set<Map3DScene.ChunkKey>()
-        for cell in world.roads?.cells ?? [] where !cleared.contains(Map3DScene.ChunkKey(column: cell.column, row: cell.row))
+        for cell in world.roads?.allCells ?? [] where !cleared.contains(Map3DScene.ChunkKey(column: cell.column, row: cell.row))
             && contains(x: (Double(cell.column) + 0.5) * Double(Land.cellLength), y: (Double(cell.row) + 0.5) * Double(Land.cellLength)) {
             roadCells.insert(Map3DScene.ChunkKey(column: cell.column, row: cell.row))
         }
