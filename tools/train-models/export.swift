@@ -59,7 +59,12 @@ func nativeFile(_ model: Map3DModelPack.Model) throws -> Data {
     data.append(contentsOf: repeatElement(UInt8(0), count: (4 - meta.count % 4) % 4))
     for start in stride(from: 0, to: model.vertices.count, by: 3) {
         let t = model.vertices[start..<start + 3]
-        u32(t.contains { $0.glows } ? 1 : 0)
+        // Bit 0 lit at night; decision 450: bit 1 glass, bit 2 stainless
+        // (Map3DTrainMaterial), for renderer.js's `--features 1`.
+        let layer = t.first!.layer
+        let glass: UInt32 = layer == Map3DVertex.trainGlass || layer == Map3DVertex.trainGlassLit ? 2 : 0
+        let steel: UInt32 = layer == Map3DVertex.trainSteel ? 4 : 0
+        u32((t.contains { $0.glows } ? 1 : 0) | glass | steel)
         for v in t { u32(v.x.bitPattern); u32(v.y.bitPattern); u32(v.z.bitPattern); u32(v.color) }
     }
     return data
@@ -101,7 +106,9 @@ for id in wanted {
     let model = pack.models[pack.index(of: id)!]
     try nativeFile(model).write(to: modelsDir.appendingPathComponent(id + ".m3dmodel"))
     var record: [String: Any] = ["id": id, "native": "models/\(id).m3dmodel", "triangles": model.triangleCount, "hash": hash(model),
-                                 "role": farNames.contains(id) ? "far" : "near", "glowTriangles": stride(from: 0, to: model.vertices.count, by: 3).filter { model.vertices[$0..<$0 + 3].contains { $0.glows } }.count]
+                                 "role": farNames.contains(id) ? "far" : "near", "glowTriangles": stride(from: 0, to: model.vertices.count, by: 3).filter { model.vertices[$0..<$0 + 3].contains { $0.glows } }.count,
+                                 "glassTriangles": stride(from: 0, to: model.vertices.count, by: 3).filter { [Map3DVertex.trainGlass, Map3DVertex.trainGlassLit].contains(model.vertices[$0].layer) }.count,
+                                 "steelTriangles": stride(from: 0, to: model.vertices.count, by: 3).filter { model.vertices[$0].layer == Map3DVertex.trainSteel }.count]
     record.merge(box(model)) { a, _ in a }
     if let far = farOf[id] { record["far"] = far }
     records.append(record)
@@ -113,7 +120,10 @@ func light(_ minute: Double) -> [String: Any] {
     let l = Map3DLighting(minute: minute)
     func v(_ s: SIMD3<Float>) -> [Float] { [s.x, s.y, s.z] }
     return ["minute": minute, "sunDirection": [l.sunDirection.x, l.sunDirection.y, l.sunDirection.z], "sunLight": v(l.sunLight),
-            "skyLight": v(l.skyLight), "groundLight": v(l.groundLight), "lights": l.lights, "lampGlow": v(l.lampGlow(SIMD3<Float>(1, 1, 1))), "fogColour": v(l.fogColour)]
+            "skyLight": v(l.skyLight), "groundLight": v(l.groundLight), "lights": l.lights, "lampGlow": v(l.lampGlow(SIMD3<Float>(1, 1, 1))), "fogColour": v(l.fogColour),
+            // Decision 450: what the glass mirrors (Map3DReflection.rows).
+            "zenith": v(Map3DSky(l).zenith), "sunShown": Map3DSky(l).sunShown,
+            "glint": Array(Map3DReflection.rows(sky: Map3DSky(l), sunLight: l.sunLight, quality: .high, seconds: 0, reduceMotion: true)[8..<11])]
 }
 let manifest: [String: Any] = ["schema_version": 1, "tag": tag, "model_count": records.count, "models": records, "sets": sets,
                                "lighting": ["day": light(14 * 60), "night": light(23 * 60)],

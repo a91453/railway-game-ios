@@ -56,9 +56,21 @@ public struct Map3DVertex: Hashable, Sendable {
     public static let towerGlass: Float = -10
     /// No texture, and lit warm after dark as a floodlit ledge is.
     public static let floodlit: Float = -12
+    /// Decision 450: a train's window glass, which mirrors the sky and
+    /// glints in the sun (``Map3DTrainMaterial``); its `u` the shade
+    /// decision 439 baked into it (a shut-in pane mirrors less).
+    public static let trainGlass: Float = -13
+    /// Decision 450: a stainless train's body, its sheen and a soft mirror
+    /// of the sky tinted by its own colour; `u` as ``trainGlass``.
+    public static let trainSteel: Float = -14
+    /// Decision 450: a train's window glass that is also lit from within at
+    /// night (``glowing`` and ``trainGlass`` at once).
+    public static let trainGlassLit: Float = -15
 
     /// Whether the vertex is lit from within at night.
-    public var glows: Bool { layer < -1.5 && layer > -2.5 }
+    public var glows: Bool { (layer < -1.5 && layer > -2.5) || (layer < -14.5 && layer > -15.5) }
+    /// Decision 450: whether the vertex is a train's glass or stainless body.
+    public var isTrainMaterial: Bool { layer < -12.5 && layer > -15.5 }
     /// Decision 356: whether the vertex is water.
     public var isWater: Bool { layer < -2.5 && layer > -3.5 }
 
