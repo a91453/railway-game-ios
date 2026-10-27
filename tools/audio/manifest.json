@@ -102,6 +102,18 @@
       "endLevel": 0.0
     },
     {
+      "file": "garbage-truck.caf",
+      "kind": "street",
+      "synth": "make_game_audio.py garbage_truck(), decision 437",
+      "sha256": "02b8d4f519b5636f81226f8ae893d91becacea73606a6acbb1d31e838b869eec",
+      "frames": 456000,
+      "seconds": 9.5,
+      "peakDbfs": -5.85,
+      "rmsDbfs": -11.41,
+      "largestStep": 0.15356,
+      "loopSeam": 0.00403
+    },
+    {
       "file": "goal-met.wav",
       "score": "tools/audio/scores/goal-met.score.json",
       "scoreSha256": "243768f321dde792d5e5d2fe4e88cac02286987c70d395784a489afa7eedc9be",

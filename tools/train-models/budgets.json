@@ -1,0 +1,34 @@
+{
+  "comment": "Triangle budgets for a train's cars. Sources: decision 417 (a car over 20,000 triangles needs a middle version; a 12-car train must leave room in the lower tier's 250,000), decision 420 and 432 (a far car has under half the near car's triangles and fits the same box), decision 408 (the far car is drawn car for car from 500 m).",
+  "nearCarMax": 20000,
+  "referenceCars": 12,
+  "nearTrainMax": 240000,
+  "farCarShareOfNearBelow": 0.5,
+  "farTrainMax": 120000,
+  "farBox": {
+    "xMetres": 0.1,
+    "topMetres": 0.05,
+    "groundMetres": 0.1
+  },
+  "fineCarFromTriangles": 8000,
+  "grandfathered": {
+    "comment": "Sets on main when this tool was made that break a rule below. They stay as they are; a new model may not join the list. id -> reason.",
+    "noFar": {
+      "STEAM": "1 car(s) of 8000+ triangles and no far version (decision 417)"
+    },
+    "farBox": {
+      "metroC341": "the far car is not in the near car's box",
+      "n700sG": "the far car is not in the near car's box"
+    },
+    "farShare": {
+      "E200CK": "far 5512 of near 5512, not under 50% (decision 420)",
+      "E500CK": "far 4008 of near 6476, not under 50% (decision 420)",
+      "MINGRI": "far 1528 of near 1528, not under 50% (decision 420)",
+      "R100CK": "far 1284 of near 1284, not under 50% (decision 420)",
+      "R200CK": "far 1174 of near 1174, not under 50% (decision 420)",
+      "STAR": "far 1528 of near 1528, not under 50% (decision 420)",
+      "SUMMER": "far 10092 of near 10092, not under 50% (decision 420)",
+      "pushPullE1000": "far 3460 of near 6388, not under 50% (decision 420)"
+    }
+  }
+}
