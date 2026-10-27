@@ -35,7 +35,7 @@ struct MetroStudyGeometry {
         kit.box(half-setback+proud,height-tall/2,side,0.022,width,tall,color)
     }
     /// Closed curved fascia panel in builder metres (vertical, lateral), with solid support.
-    mutating func frontPatch(_ yz: [(Float,Float)], _ color: UInt32, lift: Float = 0) {
+    mutating func frontPatch(_ yz: [(Float,Float)], _ color: UInt32, lift: Float = 0, thickness: Float = 0.034) {
         func face(_ offset: Float) -> [Map3DPoint] {
             yz.map { h,z in
                 let crown: Float = curved ? 0.22 : 0.025
@@ -44,7 +44,7 @@ struct MetroStudyGeometry {
                 return Map3DPoint(x,h,z)
             }
         }
-        prism(face(-0.034),face(0),color)
+        prism(face(-thickness),face(0),color)
     }
     func roundRect(_ left: Float,_ right: Float,_ low: Float,_ high: Float,_ r: Float) -> [(Float,Float)] {
         let steps=curved ? 5 : 4
@@ -66,20 +66,24 @@ struct MetroStudyGeometry {
         kit.box(0,0.92,0,length-0.25,2.45,0.12,steel)
         // Four double leaf doors, each with a separate pair of glass panes.
         let doors: [Float] = [-7.8,-2.6,2.6,7.8]
+        let doorEdge = curved ? ink : Map3DColor.shaded(body,0.70)
         for d in doors {
-            panel(d,1.12,1.48,2.03,ink,0.019)
+            panel(d,1.12,1.48,2.03,doorEdge,0.019)
             for leaf:Float in [-1,1] {
                 panel(d+leaf*0.365,1.14,0.70,1.99,body,0.030)
                 panel(d+leaf*0.365,2.25,0.36,0.67,glass,0.041)
             }
         }
         for x:Float in [-10.05,-6.18,-4.25,-0.96,0.96,4.25,6.18] {
-            panel(x,2.19,1.48,0.86,ink)
-            panel(x,2.23,1.40,0.78,glass,0.027)
+            panel(x,curved ? 2.19 : 2.17,curved ? 1.48 : 1.42,curved ? 0.86 : 0.92,curved ? ink : steel)
+            panel(x,curved ? 2.23 : 2.20,curved ? 1.40 : 1.36,curved ? 0.78 : 0.84,glass,0.027)
         }
-        if !cab { panel(10.05,2.19,1.48,0.86,ink);panel(10.05,2.23,1.40,0.78,glass,0.027) }
+        if !cab {
+            panel(10.05,curved ? 2.19 : 2.17,curved ? 1.48 : 1.42,curved ? 0.86 : 0.92,curved ? ink : steel)
+            panel(10.05,curved ? 2.23 : 2.20,curved ? 1.40 : 1.36,curved ? 0.78 : 0.84,glass,0.027)
+        }
         else {
-            panel(9.58,1.18,0.60,1.96,ink)
+            panel(9.58,1.18,0.60,1.96,curved ? ink : doorEdge)
             panel(9.58,2.24,0.40,0.73,glass,0.030)
             panel(10.44,2.18,0.66,0.92,glass,0.031)
         }
@@ -152,11 +156,14 @@ struct MetroStudyGeometry {
                 frontPatch([(0.68,-1.40),(0.68,1.40),(0.99,1.40),(0.99,-1.40)],body,lift:0.044)
                 frontPatch([(0.99,-1.43),(0.99,1.43),(1.055,1.43),(1.055,-1.43)],ink,lift:0.062)
             } else {
-                frontPatch(roundRect(-1.47,1.47,1.79,3.42,0.12),ink)
+                // A shallow rounded silver end cap gives the fascia real
+                // shoulders and a curved chin instead of a square slab.
+                frontPatch(roundRect(-1.53,1.53,0.99,3.55,0.25),body,lift:-0.027,thickness:0.055)
+                frontPatch(roundRect(-1.43,1.43,1.79,3.42,0.28),ink)
                 for sign:Float in [-1,1] {
                     let l:Float = sign < 0 ? -1.32 : 0.48
                     let r:Float = sign < 0 ? -0.48 : 1.32
-                    frontPatch(roundRect(l,r,2.07,3.13,0.075),glass,lift:0.025)
+                    frontPatch(roundRect(l,r,2.07,3.13,0.135),glass,lift:0.025)
                 }
                 frontPatch(roundRect(-0.385,0.385,1.90,3.31,0.045),Map3DColor.shaded(steel,0.55),lift:0.024)
                 frontPatch(roundRect(-0.355,0.355,1.94,3.27,0.035),ink,lift:0.041)

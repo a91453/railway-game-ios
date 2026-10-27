@@ -24,4 +24,16 @@ final class Map3DC371C381Tests: XCTestCase {
             XCTAssertLessThanOrEqual(formation.triangleCount, Map3DModelFile.maximumTriangles)
         }
     }
+
+    func testC371FrontMaskRoundsIntoTheRoofShoulders() {
+        let mask = Map3DColor.shaded(Map3DPalette.tankStand, 0.42)
+        let front = Map3DC371.model(.dm).vertices.filter { $0.x > 11.60 && $0.color == mask }
+        let upper = front.filter { $0.z > 3.39 && $0.z < 3.44 }
+        let middle = front.filter { $0.z > 3.10 && $0.z < 3.20 }
+        XCTAssertFalse(upper.isEmpty)
+        XCTAssertFalse(middle.isEmpty)
+        let upperHalfWidth = upper.map { abs($0.y) }.max() ?? 0
+        let middleHalfWidth = middle.map { abs($0.y) }.max() ?? 0
+        XCTAssertLessThan(upperHalfWidth, middleHalfWidth - 0.15)
+    }
 }

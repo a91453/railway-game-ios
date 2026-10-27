@@ -45,6 +45,7 @@ python3 -I tools/train-models/overview.py OUT overview.png --time both set-emu80
 | `mesh-lod-420`（`export.swift`／`render.mjs`） | 近景與遠景的三角形比較 → `check.mjs` 的遠景規則；簡化器本身（`Map3DMeshSimplifier`）仍用 420 的匯出 |
 | 各車資料夾（`c341`、`e1000-pp`、`e500-refresh`、`emu3000-refresh`、`emu3000-slate`、`emu500`、`emu800-native`、`emu900-native`、`seven-car-blue`、`temu1000`、`temu2000`、`train-colors`、`train-shape-refresh`）的 `export.swift`、`render.mjs`、`verify*.mjs`、各自的三角形預算與雜湊釘在測試裡的檢查 | 寫原生、七向圖、預算、雜湊 → 本工具的 `run.sh`、`render.mjs`、`check.mjs` |
 | 同上各資料夾的 `viewer.html`、`standalone.mjs` | 離線預覽 → `viewer.mjs` |
+| `c371-c381` 的單元匯出、日夜七向與雜湊 | 改用本工具；該資料夾保留六車原生編組、GLB、拓撲及車輪故障驗收、白模／剪影、真前後、完整 ZIP 與下載驗收。 |
 | 沒有取代 | GLB 打包（`package.mjs`、`glb-audit.py`、Blender 檢查）、`bundle.py`／ZIP、`geometry-audit`、`glass-mutations`、`front-audit`、`door-audit`（逐車的專用驗收）、`glb-to-m3dmodel`（GLB → 原生）、`trains/`（網頁版 `Web/CityView`）、`train-colors/` 的新舊逐頂點比對 |
 
 交給作者看的完整包（GLB、ZIP、viewer）照 CLAUDE.md 放私庫 `Railway/game-art-previews/docs/art/`；這個工具只做公開庫該有的：預算、雜湊、七向圖與離線預覽。
