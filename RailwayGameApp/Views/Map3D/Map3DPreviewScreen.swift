@@ -780,9 +780,10 @@ private struct Map3DView: UIViewRepresentable {
         // unlocked.
         let unlocked = TrainPack.isUnlocked(testBuild: TestBuild.isTest,
                                             switchOn: UserDefaults.standard.bool(forKey: TrainPack.testUnlockKey))
+        let pushPullE1000 = UserDefaults.standard.bool(forKey: TrainPack.pushPullE1000Key)
         let feed = feed, models = Map3DView.models.map { pack in
             var pack = pack
-            pack.locked = TrainPack.locked(unlocked: unlocked)
+            pack.locked = TrainPack.locked(unlocked: unlocked, pushPullE1000: pushPullE1000)
             return pack
         }
         view.trains = { [weak view] eye, reach in feed.frame(in: scene, models: models, eye: eye, ringed: view?.ringed, reach: reach) }

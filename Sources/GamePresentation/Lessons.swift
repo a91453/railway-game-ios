@@ -957,7 +957,8 @@ extension GameSession {
         case .select, .network: true
         case .train: allows(.trainTool)
         case .building: allows(.buildingTool)
-        case .bus: allowsBusTool
+        // Decision 428: also in a game without roads, to turn them on.
+        case .bus: offersBusTool
         }
     }
 

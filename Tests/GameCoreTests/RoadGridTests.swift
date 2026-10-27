@@ -286,6 +286,24 @@ final class RoadGridTests: XCTestCase {
         XCTAssertEqual(again, loaded)
     }
 
+    /// Decision 428: a game without roads turns them on as a new game's,
+    /// with the bought tiles' towns too (the same roads as
+    /// ``boughtWorld()``, which had them on from the start), once.
+    func testAGameWithoutRoadsTurnsThemOnOnce() throws {
+        let (world, _) = try boughtWorld()
+        var old = world
+        old.roads = nil
+        try old.turnOnRoads(towns: Land.townCentres(seed: 7, in: world.bounds))
+        XCTAssertEqual(old.roads, world.roads)
+        let on = old
+        XCTAssertThrowsGameError(try old.turnOnRoads(towns: []), .roadsEnabled)
+        XCTAssertEqual(old, on)
+
+        var plain = try makeWorld()
+        try plain.turnOnRoads(towns: [])
+        XCTAssertEqual(plain.roads, RoadGrid(), "a real-world map's: none until read")
+    }
+
     // MARK: - Saves
 
     func testVersionSeventyTwoKeepsTheRoads() throws {

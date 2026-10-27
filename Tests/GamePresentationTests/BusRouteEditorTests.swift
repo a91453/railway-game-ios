@@ -255,7 +255,9 @@ final class BusRouteEditorTests: XCTestCase {
     func testTheToolIsOnlyWhereThereAreRoadsAndOutOfLessons() throws {
         let plain = GameSession(world: GameWorld(bounds: try WorldBounds(width: 64 * cell, height: 16 * cell), economy: GameEconomy(balance: 0, costs: testCosts)))
         XCTAssertFalse(plain.allowsBusTool, "no roads")
-        XCTAssertFalse(plain.allows(ConstructionTool.bus))
+        // Decision 428: the tool is there, to turn the roads on.
+        XCTAssertTrue(plain.allows(ConstructionTool.bus))
+        XCTAssertEqual(plain.roadsOffer, .available)
         let (session, _) = try session()
         XCTAssertTrue(session.allows(ConstructionTool.bus))
         XCTAssertTrue(ConstructionTool.bus.pausesGame)

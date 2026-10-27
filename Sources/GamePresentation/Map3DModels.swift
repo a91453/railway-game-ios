@@ -90,6 +90,12 @@ public struct Map3DModelPack: Sendable {
             models += Map3DPPPassenger.roles.map { Map3DPPPassenger.model($0, far: far) }
         }
         models += [Map3DE1000.model(), Map3DE1000.model(far: true)]
+        // Static EMU800 roles; shared commuter operating mapping is intentionally unchanged.
+        for far in [false, true] {
+            for role in Map3DEMU800.Role.allCases {
+                for reversed in [false, true] { models.append(Map3DEMU800.model(role, reversed: reversed, far: far)) }
+            }
+        }
         models += Map3DEMU500.Unit.allCases.map { Map3DEMU500.model($0) }
         models.append(Map3DEMU500.formation())
         // Decision 400, 10i-6: the player's route buses, last, so no model

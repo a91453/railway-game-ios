@@ -12,7 +12,7 @@ final class Map3DModelTests: XCTestCase {
         // decision 259: then the people and vehicles; decision 318: then the
         // sets'; decision 400, 10i-6: then the route bus; finally the
         // independent PP passenger-car display roles, near and far; then the
-        // EMU500 study's units and formation.
+        // EMU800 study's roles and the EMU500 study's units and formation.
         let pantoStyles = Map3DTrainStyle.all.filter { !$0.pantographCars.isEmpty }.count
         let sets = Map3DTrainSet.all.map { $0.models().count }.reduce(0, +)
         let temu1000Models = Map3DTEMU1000.Unit.allCases.count + 1
@@ -23,7 +23,7 @@ final class Map3DModelTests: XCTestCase {
         let rest = Map3DFourCarMetro.Unit.allCases.count + 1 + Map3DSevenCarBlue.Unit.allCases.count + 1 + Map3DDuplexSteam.Unit.allCases.count + 1 + Map3DSteamTender.Unit.allCases.count + 1 + Map3DTrainShapeRefresh.ids.count + 1
         let ppDisplayModels = Map3DPPPassenger.roles.count * 2 + 2 // E1000 near/far
         let emu500Models = Map3DEMU500.Unit.allCases.count + 1
-        XCTAssertEqual(pack.models.count, baseModels + shortSets + longSets + rest + ppDisplayModels + emu500Models)
+        XCTAssertEqual(pack.models.count, baseModels + shortSets + longSets + rest + ppDisplayModels + Map3DEMU800.Role.allCases.count * 4 + emu500Models)
         for style in Map3DTrainStyle.all {
             var names = [style.name + "-cab", style.name + "-car"]
             if !style.pantographCars.isEmpty { names.append(style.name + "-panto") }

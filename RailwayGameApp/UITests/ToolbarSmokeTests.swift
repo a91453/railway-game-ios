@@ -679,11 +679,35 @@ final class ShellLayoutUITests: XCTestCase {
         XCTAssertTrue(speed.appears(within: 10))
         speed.tap()
         let fast = app.buttons["6000 times real time, fast forward"]
-        // The menu's rows exist before the menu has opened: tapped then,
-        // the row had no hit point ({inf, inf}; main 96c39095's nightly
-        // full lane, run 40232525406).
-        XCTAssertTrue(fast.becomesHittable(within: 10))
-        fast.tap()
+        // The open menu's rows are made anew while a busy runner is still
+        // asking about them: the row a query found was gone by the time
+        // its hit point was asked ({inf, inf}, kAXErrorInvalidUIElement),
+        // which a tap retried for four minutes (main 96c39095, run
+        // 40232525406) and isHittable failed outright (main 9717ab9,
+        // c801920 and 1b40e4f, runs 40300085655, 40337189127 and
+        // 40413958561; the new row lay where the old one had). So the
+        // row's place is read from fresh snapshots until it holds, that
+        // place is touched, and the speed's label shows it was chosen.
+        // One snapshot took up to 4 s on a by-hand runner (run
+        // 40429077102) and three are needed, so the row gets 30 s to hold.
+        XCTAssertTrue(fast.appears(within: 10))
+        let screen = app.frame
+        var row = CGRect.null
+        var held = 0
+        let settle = Date().addingTimeInterval(30)
+        while held < 2, Date() < settle {
+            Thread.sleep(forTimeInterval: 0.25)
+            let now = (try? fast.snapshot())?.frame ?? .null
+            let shown = now.width > 0 && now.height > 0 && screen.contains(CGPoint(x: now.midX, y: now.midY))
+            held = shown && now == row ? held + 1 : 0
+            row = now
+        }
+        XCTAssertEqual(held, 2, "The 6000× row never held still: \(row)")
+        app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: row.midX - screen.minX, dy: row.midY - screen.minY)).tap()
+        let chosen = NSPredicate(format: "label == %@", "Speed: 6000 times real time, fast forward")
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: chosen, object: speed)], timeout: 10), .completed,
+                       "The touch did not choose 6000×: \(speed.label)")
         XCTAssertTrue(fast.disappears(within: 10))
         menu.waitUntilSettled()
         let start = (menu: menu.frame, time: time.frame, label: time.label)

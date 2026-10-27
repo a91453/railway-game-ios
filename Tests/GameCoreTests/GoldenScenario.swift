@@ -1232,6 +1232,8 @@ extension StepOutcome: Codable {
             self = .rejected(.invalidAcquisition)
         case "roadsNotEnabled":
             self = .rejected(.roadsNotEnabled)
+        case "roadsEnabled":
+            self = .rejected(.roadsEnabled)
         case "invalidRoads":
             self = .rejected(.invalidRoads)
         case "stationOnRoad":
@@ -1663,6 +1665,8 @@ extension StepOutcome: Codable {
             try container.encode("invalidAcquisition", forKey: .result)
         case .rejected(.roadsNotEnabled):
             try container.encode("roadsNotEnabled", forKey: .result)
+        case .rejected(.roadsEnabled):
+            try container.encode("roadsEnabled", forKey: .result)
         case .rejected(.invalidRoads):
             try container.encode("invalidRoads", forKey: .result)
         case .rejected(.stationOnRoad(let id)):

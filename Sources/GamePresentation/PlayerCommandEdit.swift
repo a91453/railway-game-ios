@@ -81,6 +81,10 @@ extension PlayerCommand {
         case removeFreightYard(StationID)
         /// A road from the station to the nearest road (decision 400).
         case buildStationRoad(StationID)
+        /// The roads turned on in a game without them, round `towns` (a
+        /// blank map's, ``GameWorld/startingTowns()``; none on a real-world
+        /// map, whose roads are read with its land) (decision 428).
+        case turnOnRoads(towns: [PlanPoint])
         case setFreightProduct(StationID, CargoKind)
         /// A depot, or an ordinary station again (decision 209).
         case setStationDepot(StationID, Bool)
@@ -303,6 +307,7 @@ extension GameSession {
         case .buildFreightYard(let id): try world.buildFreightFacility(at: id)
         case .removeFreightYard(let id): try world.removeFreightFacility(at: id)
         case .buildStationRoad(let id): try world.buildStationRoad(at: id)
+        case .turnOnRoads(let towns): try world.turnOnRoads(towns: towns)
         case .createBusRoute(let station, let stops, let legMetres, let service, let buses):
             try world.createBusRoute(to: station, stops: stops.map(\.cell), legMetres: legMetres, service: service, buses: buses)
         case .reviseBusRoute(let id, let stops, let legMetres, let service, let buses):

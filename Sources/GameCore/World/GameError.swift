@@ -323,6 +323,8 @@ public enum GameError: Error, Hashable, Sendable {
     case invalidAcquisition
     /// A road command in a world without roads (decision 400).
     case roadsNotEnabled
+    /// The roads are turned on once, and are on already (decision 428).
+    case roadsEnabled
     /// The base map's roads name a block outside the world or a cell
     /// outside the blocks read (decision 400).
     case invalidRoads
