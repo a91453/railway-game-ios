@@ -1765,3 +1765,9 @@ TEMU1000 原生外形（Codex，初版 issue #1228／公開 #1230／私庫 #78 �
 ### 2026-10-26 Codex TEMU2000 native static asset (#1281)
 
 `codex/temu2000-native-2026-10-26` adds a new Swift recipe, static model registration, rebuild tools/tests and one overview. It uses five distinct units in the sourced eight-car TED–TEMA–TEP–TEMB–TEMB–TEP–TEMA–TED order; car 6's TEP is reversed so its pantograph points toward car 8. The final V11 M3DM assembly is 14,740 triangles. Four user images were individually viewed in the conversation; no local originals/SHA exist. V1–V10 genuine models, final M3DM/GLB/49 seven-direction PNGs, clay/silhouette, matched metre-scale comparisons, viewer and ZIP are in the linked private draft PR. See [production record](art/temu2000-2026-10-26/README.md). This is static model registration only: operating `puyuma`, GameCore, saves and fixtures are unchanged. Linux Swift 6.4 warnings-as-errors and 10 relevant tests plus native/GLB/PNG/viewer checks passed locally; ZIP and CI status belong to the latest PR head. Simulator, device Metal, performance, animation and gameplay integration remain unverified. Neither draft PR authorizes merge, auto-merge or TestFlight. 營運的 `puyuma` 已接上（決策 426，PR #1308）。
+
+### 2026-10-27 Codex EMU3000 石板藍灰（#1309）
+
+使用者要求評估莒光藏青（建議保持，本輪不改）及EMU3000黑色外觀改遊戲風格。新分支codex/emu3000-slate-2026-10-27；原66a515e8第五版幾何／其他色保持，只改罩面、窗框與外觀飾件為既有石板藍灰#6E7487，輪胎／雨刷／底盤／弓機構拆出hardwareColor保持舊炭黑。16單元逐三角paint-audit及真正第五版同尺度前後、全量素材／viewer／ZIP見[交接](art/emu3000-slate-2026-10-27/README.md)。已接受第五版原包及E500／PP／E1000／莒光藏青保持；新色未稱已接受，也不保證換色可免侵權風險。
+
+營運接點／列車包／fallback保持；本PR合併更新後，原專用EMU3000近遠畫面會使用新色。GameCore／存檔／fixtures不動；真機／效能／人工Simulator外觀／動畫未驗。兩庫新互鏈draft與最新同head CI看#1309，不推main、不合併／auto-merge／TestFlight。
