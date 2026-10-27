@@ -57,11 +57,12 @@ try{
  }
  await match(['e500','emu3000-ed','emu900-ed'],'style-comparison');
  await match(['before-emu900','emu900-ed'],'before-after');
+ if(manifest.models.some(m=>m.id==='prior-emu900-ed')) {await match(['prior-emu900-ed','emu900-ed'],'revision-before-after');await match(['prior-emu900-ed-far','emu900-ed-far'],'revision-before-after-far');}
  await match(['before-emu900','emu900-ed-far'],'before-after-far');
- const near=manifest.models.filter(m=>m.category==='section'&&!m.id.includes('-reverse')&&!m.id.endsWith('-far'));
+ const near=manifest.models.filter(m=>m.category==='section'&&!m.id.includes('-reverse')&&!m.id.endsWith('-far')&&!m.id.endsWith('-light'));
  await sheet('overview','EMU900｜綠松腰帶・六設備角色・十輛靜態展示',near.map(m=>'<h2>'+m.id+'</h2><div class="row"><div><img src="previews/'+m.id+'-hero.png"></div><div><img src="previews/'+m.id+'-detail-right.png"></div></div>').join('')+'<h2>完整十輛展示（尚未接入營運）</h2><img src="previews/emu900-formation-hero.png">');
  await sheet('seven-directions','EMU900｜各必要角色與編組七向透明PNG',manifest.models.filter(m=>m.category==='section'||m.category==='formation').map(m=>'<h2>'+m.id+'</h2><div class="row">'+manifest.directions.map(v=>'<div><img src="'+m.views[v]+'"><p>'+v+'</p></div>').join('')+'</div>').join(''));
- await sheet('formation','EMU900｜ED–EM–EP–EM–EM–EP–EM–EP–EM–ED，3/6/8車弓',['','-far'].map(s=>'<h2>'+s+'</h2>'+['hero','detail-left','detail-right','detail-top'].map(v=>'<img src="previews/emu900-formation'+s+'-'+v+'.png">').join('')).join(''));
+ await sheet('formation','EMU900｜ED–EM–EP–EM–EM–EP–EM–EP–EM–ED，3/6/8車弓',['','-far','-light'].map(s=>'<h2>'+s+'</h2>'+['hero','detail-left','detail-right','detail-top'].map(v=>'<img src="previews/emu900-formation'+s+'-'+v+'.png">').join('')).join(''));
  if(errors.length)throw Error(errors.join('\n'));
  manifest.render_verification={backend:'Chromium WebGL2 exact native geometry',views:manifest.models.length*7,transparent:true};writeFileSync(resolve(root,'manifest.json'),JSON.stringify(manifest,null,2)+'\n');
 }finally{if(browser)await browser.close();server.close();unlinkSync(resolve(root,'_render.html'));}

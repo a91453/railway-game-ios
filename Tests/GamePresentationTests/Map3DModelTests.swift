@@ -23,7 +23,7 @@ final class Map3DModelTests: XCTestCase {
         let rest = Map3DFourCarMetro.Unit.allCases.count + 1 + Map3DSevenCarBlue.Unit.allCases.count + 1 + Map3DDuplexSteam.Unit.allCases.count + 1 + Map3DSteamTender.Unit.allCases.count + 1 + Map3DTrainShapeRefresh.ids.count + 1
         let ppDisplayModels = Map3DPPPassenger.roles.count * 2 + 2 // E1000 near/far
         let emu500Models = Map3DEMU500.Unit.allCases.count + 1
-        XCTAssertEqual(pack.models.count, baseModels + shortSets + longSets + rest + ppDisplayModels + Map3DEMU800.Role.allCases.count * 4 + emu500Models + Map3DC341.Unit.allCases.count + Map3DEMU900.Role.allCases.count * 4)
+        XCTAssertEqual(pack.models.count, baseModels + shortSets + longSets + rest + ppDisplayModels + Map3DEMU800.Role.allCases.count * 4 + emu500Models + Map3DC341.Unit.allCases.count + Map3DEMU900.Role.allCases.count * 6)
         for style in Map3DTrainStyle.all {
             var names = [style.name + "-cab", style.name + "-car"]
             if !style.pantographCars.isEmpty { names.append(style.name + "-panto") }

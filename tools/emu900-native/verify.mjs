@@ -53,7 +53,7 @@ for(const m of manifest.models){
   assert(!rebuilt.subarray(20).equals(decoded.subarray(20)),'assembly payload shift missed');
   assemblies.push({id:m.id,contacts,shifted_car_mutation_rejected:true});results.push({id:m.id,status:'exact-composition-of-audited-units'});
  }else if(m.category==='section'){
-  assert(m.triangles<=15000,'native unit format limit');if(m.id.endsWith('-far'))assert(m.triangles<=7000,'independent static EMU900 far cap');
+  assert(m.triangles<=15000,'native unit format limit');if(m.id.endsWith('-light'))assert(m.triangles<=(m.id.startsWith('emu900-ed')?2467:1592),'operating light budget');if(m.id.endsWith('-far'))assert(m.triangles<=7000,'independent static EMU900 far cap');
   results.push({id:m.id,...audit(model.vertices)});
   assert.throws(()=>audit(model.vertices.slice(3)),undefined,'deleted face not rejected');
   assert.throws(()=>audit([model.vertices[1],model.vertices[0],model.vertices[2],...model.vertices.slice(3)]),undefined,'reversed face not rejected');

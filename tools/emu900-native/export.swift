@@ -17,7 +17,7 @@ func words(_ vertices:[Map3DVertex],translation:Float=0,reversed:Bool=false)->Da
 }
 func encoded(_ model:Map3DModelPack.Model,sourceProducer:String?=nil)throws->Data {
  guard model.triangleCount<=Map3DModelFile.maximumTriangles else {fatalError("unit budget: \(model.name)")}
- let metadata=try JSONSerialization.data(withJSONObject:["generator":"native-emu900","producer_commit":sourceProducer ?? producer,"coordinates":"metres +X front +Y left +Z up","recipe_version":1],options:[.sortedKeys])
+ let metadata=try JSONSerialization.data(withJSONObject:["generator":"native-emu900","producer_commit":sourceProducer ?? producer,"coordinates":"metres +X front +Y left +Z up","recipe_version":2],options:[.sortedKeys])
  var data=Data("M3DM".utf8)
  func word(_ n:UInt32){for s:UInt32 in [0,8,16,24]{data.append(UInt8((n>>s)&255))}}
  data.append(contentsOf:[1,0,0,0]);word(UInt32(model.triangleCount));word(UInt32(metadata.count));data.append(metadata)
@@ -43,9 +43,9 @@ func record(_ model:Map3DModelPack.Model,_ file:String,_ category:String,_ famil
  var r=record(m,file,category,family);if let sourceProducer {r["source_producer_commit"]=sourceProducer};records.append(r)
 }
 
-for far in [false,true] {
+for (far,light) in [(false,false),(true,false),(false,true)] {
  for role in Map3DEMU900.Role.allCases {for reversed in [false,true] {
-  try unit(Map3DEMU900.model(role,reversed:reversed,far:far),category:"section",family:far ? "far":"emu900")
+  try unit(Map3DEMU900.model(role,reversed:reversed,far:far,light:light),category:"section",family:light ? "light":far ? "far":"emu900")
  }}
 }
 for (file,source) in [("e500.m3dmodel",acceptedE500),("emu3000-ed.m3dmodel","66a515e8f84ddb5001bae2dd0ce5d79f49063113")] {
@@ -60,21 +60,30 @@ let baseline=try Data(contentsOf:URL(fileURLWithPath:base).appendingPathComponen
 let bm=try Map3DModelFile(decoding:baseline,named:"before-emu900").model
 try unit(bm,category:"comparison",family:"true-existing-generic-display")
 try baseline.write(to:output.appendingPathComponent("models/before-emu900.m3dmodel"))
+// True previously delivered EMU900 revision, read from its fixed package.
+if let prior=ProcessInfo.processInfo.environment["E9_PRIOR"] {
+ for (name,id) in [("emu900-ed","prior-emu900-ed"),("emu900-ed-far","prior-emu900-ed-far")] {
+  let d=try Data(contentsOf:URL(fileURLWithPath:prior).appendingPathComponent("models/"+name+".m3dmodel"))
+  let m=try Map3DModelFile(decoding:d,named:id).model
+  try unit(m,category:"comparison",family:"true-delivered-EMU900-revision1",sourceProducer:"8ebfd9fd64aa660fbeb44e771c6b27027c0f71a9")
+  try d.write(to:output.appendingPathComponent("models/"+id+".m3dmodel"))
+ }
+}
 var assemblies:[[String:Any]]=[]
-for far in [false,true] {
- let suffix=far ? "-far":"",id="emu900-formation"+suffix
+for (far,light) in [(false,false),(true,false),(false,true)] {
+ let suffix=light ? "-light":far ? "-far":"",id="emu900-formation"+suffix
  let placements:[[String:Any]]=Map3DEMU900.placements.map {
-  ["unit":Map3DEMU900.id($0.role,reversed:$0.reversed,far:far),"translation":[$0.x,Float(0),Float(0)],"rotation_degrees":0]
+  ["unit":Map3DEMU900.id($0.role,reversed:$0.reversed,far:far,light:light),"translation":[$0.x,Float(0),Float(0)],"rotation_degrees":0]
  }
  let used=Set(placements.map {$0["unit"] as! String})
  let scene:[String:Any]=["format":"M3DAssembly","version":1,"producer_commit":producer,"units":nativeUnits.filter {used.contains($0.key)},"placements":placements]
  let file="models/"+id+".m3dscene.json"
  try JSONSerialization.data(withJSONObject:scene,options:[.sortedKeys]).write(to:output.appendingPathComponent(file))
- let m=Map3DEMU900.formation(far:far)
+ let m=Map3DEMU900.formation(far:far,light:light)
  try words(m.vertices).write(to:output.appendingPathComponent(id+"-expected.bin"))
- var r=record(m,file,"formation",far ? "far":"emu900");r["native_kind"]="assembly";records.append(r)
+ var r=record(m,file,"formation",light ? "light":far ? "far":"emu900");r["native_kind"]="assembly";records.append(r)
  assemblies.append(["id":id,"placements":placements,"sequence":Map3DEMU900.sequence.map(\.rawValue),"rotation":"reverse models already rotated; no double rotation","pitch_m":Map3DEMU900.sequence.map {$0 == .ed ? 21.58:20.3}])
 }
-let manifest:[String:Any]=["schema_version":1,"recipe_version":1,"generator":"native-emu900","producer_commit":producer,"models":records,"model_count":records.count,"directions":["top","bottom","left","right","front","back","isometric"],"native_coordinates":"metres +X front +Y left +Z up; tread Z=0","gltf_coordinates":"metres +X front +Y up -Z left","assembly":assemblies,"palette":["body":Map3DEMU900.bodyColor,"navy":Map3DEMU900.navy,"teal":Map3DEMU900.teal,"glass":Map3DEMU900.glass,"hardware":Map3DEMU900.rubber],"runtime":"Static registration only. Existing emu800 key includes general TRA commuters and EMU900 performance; unchanged.","static_geometry":true]
+let manifest:[String:Any]=["schema_version":1,"recipe_version":2,"generator":"native-emu900","producer_commit":producer,"models":records,"model_count":records.count,"directions":["top","bottom","left","right","front","back","isometric"],"native_coordinates":"metres +X front +Y left +Z up; tread Z=0","gltf_coordinates":"metres +X front +Y up -Z left","assembly":assemblies,"palette":["body":Map3DEMU900.bodyColor,"navy":Map3DEMU900.navy,"teal":Map3DEMU900.teal,"glass":Map3DEMU900.glass,"hardware":Map3DEMU900.rubber,"roof":Map3DEMU900.roofColor],"runtime":"Static registration only. Existing emu800 key includes general TRA commuters and EMU900 performance; unchanged.","static_geometry":true]
 try JSONSerialization.data(withJSONObject:manifest,options:[.prettyPrinted,.sortedKeys,.withoutEscapingSlashes]).write(to:output.appendingPathComponent("manifest.json"))
 print("Exported",records.count,"models, exact readback and composition payloads")

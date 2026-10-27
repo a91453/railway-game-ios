@@ -50,7 +50,7 @@ for m in manifest['models']:
  groups={}
  for i in ids:groups.setdefault(find(int(i)),[]).append(int(i))
  tires=[tri[g].reshape(-1,3) for g in groups.values() if tri[g][:,:,2].min()<1e-5]
- assert len(tires)==8,(m['id'],'ten actual wheel tread components',len(tires))
+ assert len(tires)==8,(m['id'],'eight actual wheel tread components',len(tires))
  wheelrows=[]
  for tire in tires:
   lo=tire.min(0);hi=tire.max(0);assert abs(lo[2])<1e-5 and abs(hi[2]-.86)<1e-5
@@ -58,7 +58,7 @@ for m in manifest['models']:
   above=hit(tri[col==manifest['palette']['body']],top,np.array([0.,0.,1.]))
   assert len(above) and .04<above.min()<.15,(m['id'],'wheel/body clearance')
   wheelrows.append({'minimum':lo.tolist(),'maximum':hi.tolist(),'body_clearance_m':float(above.min())})
- rows[-1]['actual_ten_wheel_components']=wheelrows
+ rows[-1]['actual_eight_wheel_components']=wheelrows
  # Raising any actual wheel 200 mm violates its measured tread datum.
  assert abs((tires[0]+[0,0,.2])[:,2].min())>.01
  # A real geometry mutation: bury every glass triangle 200 mm inward along its own face normal.

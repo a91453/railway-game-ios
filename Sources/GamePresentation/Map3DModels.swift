@@ -103,6 +103,7 @@ public struct Map3DModelPack: Sendable {
         for far in [false, true] {
             for role in Map3DEMU900.Role.allCases {
                 for reversed in [false, true] { models.append(Map3DEMU900.model(role, reversed: reversed, far: far)) }
+                if !far { for reversed in [false, true] { models.append(Map3DEMU900.model(role, reversed: reversed, light: true)) } }
             }
         }
         // Decision 400, 10i-6: the player's route buses, last, so no model
