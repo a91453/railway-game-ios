@@ -35,7 +35,7 @@ var records: [[String: Any]] = []
 }
 for unit in Map3DEMU500.Unit.allCases { try export(Map3DEMU500.model(unit), category: "section") }
 try export(Map3DEMU500.formation(), category: "formation")
-try export(Map3DTEMU1000.model(.leading), category: "comparison")
+try export(Map3DEMU3000.model(.ed), category: "comparison")
 let placements = Map3DEMU500.order.enumerated().map { i, unit in
     ["index": i, "unit": unit.rawValue, "x_m": Map3DEMU500.centres[i],
      "rotation_deg": Map3DEMU500.rotations[i] * 180 / Float.pi] as [String : Any]
@@ -43,6 +43,10 @@ let placements = Map3DEMU500.order.enumerated().map { i, unit in
 let manifest: [String: Any] = ["schema_version": 1, "generator": "Map3DEMU500", "recipe_version": 1, "model_count": records.count,
     "native_coordinates": "metres; +x front, +y left, +z up", "gltf_coordinates": "metres; +x front, +y up, -z left",
     "directions": ["top", "bottom", "left", "right", "front", "back", "isometric"], "models": records,
+    "native_palette": ["body": Map3DEMU500.silver & 0x00ffffff, "accent": Map3DEMU500.accent & 0x00ffffff,
+        "glass": Map3DEMU500.glass & 0x00ffffff, "frame": Map3DEMU500.frameColor & 0x00ffffff,
+        "mask": Map3DEMU500.maskColor & 0x00ffffff, "rubber": Map3DEMU500.rubberColor & 0x00ffffff,
+        "roof": Map3DEMU500.roofColor & 0x00ffffff, "lamp": Map3DEMU500.lampColor & 0x00ffffff],
     "assembly": ["placements": placements, "coupled_length_m": 81.32, "static": true]]
 try JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]).write(to: output.appendingPathComponent("manifest.json"), options: .atomic)
-print("Exported four distinct units, four-car formation and TEMU1000 style comparison through native readback.")
+print("Exported four distinct units, four-car formation and EMU3000 style comparison through native readback.")

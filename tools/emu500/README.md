@@ -20,7 +20,7 @@ Open and compare actual native previews before continuing. On geometry changes k
 actual preceding model and recipe first, export to a new OUT, then run
 `node tools/emu500/feedback-compare.mjs OUT PRIOR_OUT` with matching metre cameras.
 Render/clay/browser/GLB tools adapt TEMU2000's export infrastructure only; its
-body, doors, wheels and formation are not used by this recipe. TEMU1000 is
+body, doors, wheels and formation are not used by this recipe. EMU3000 is
 exported solely for style comparison. Requires Node/Playwright/Chromium,
 Python/Pillow/NumPy and Blender; no external generation service.
 
@@ -53,3 +53,8 @@ Run `Map3DBusesTests` as well as EMU500/ModelFile tests: route bus must stay las
 
 Revision 7 adds only the recessed structural bulkhead and coupler support.
 Actual triangle payload difference and unchanged EP/ET bytes are recorded in the private package.
+
+Revision 8 adopts the game palette and thins frames/door layers and bevels the apron/coupler.
+Run `python3 tools/emu500/revision-audit.py OUT TRUE_REVISION_7` for native colour inventory,
+protected triangle positions and unlit swatch contrast. Manifest native_palette comes from
+the Swift export and drives glass/body ray classification after recolouring.

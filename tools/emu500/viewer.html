@@ -12,7 +12,7 @@
 <script type="module">
 import {NativeRenderer} from './renderer.js';
 const $=id=>document.getElementById(id),labels={top:'上視',bottom:'下視',left:'左視',right:'右視',front:'前視',back:'後視',isometric:'立體'};
-const unitNames={'emu500-emc':'EMC 駕駛馬達車','emu500-ep':'EP 電源拖車','emu500-et':'ET 拖車','emu500-em':'EM 駕駛馬達車','emu500-formation':'EMU500 四節編組','temu1000-leading':'TEMU1000 風格對照'};
+const unitNames={'emu500-emc':'EMC 駕駛馬達車','emu500-ep':'EP 電源拖車','emu500-et':'ET 拖車','emu500-em':'EM 駕駛馬達車','emu500-formation':'EMU500 四節編組','emu3000-ed':'EMU3000 霧面／遊戲色票對照'};
 let manifest,currentAsset,requestNumber=0,angle=-0.6,elevation=0.65,view='isometric',custom=false,dragging;
 const renderer=new NativeRenderer($('canvas'));window.renderer=renderer;
 function draw(){if(!currentAsset)return;renderer.render(view,{width:900,height:620,zoom:Number($('zoom').value),vector:custom?[Math.cos(angle)*Math.cos(elevation),Math.sin(angle)*Math.cos(elevation),Math.sin(elevation)]:undefined});document.querySelectorAll('#view-buttons button').forEach(b=>b.setAttribute('aria-pressed',String(!custom&&b.dataset.view===view)));}

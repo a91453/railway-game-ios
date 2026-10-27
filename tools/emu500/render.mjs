@@ -67,6 +67,6 @@ try {
   return out;
  },[newUnit.native,comparison.native]);
  for(const [i,data] of matched.entries())writeFileSync(resolve(root,'previews',i?'scale-existing.png':'scale-new.png'),Buffer.from(data.split(',')[1],'base64'));
- await sheet('style-comparison.png','<h1>EMU500／TEMU1000 風格｜同公尺尺度、同鏡頭</h1><div class="row"><div><img src="previews/scale-new.png"><p>EMU500 前端單元 · '+(newUnit.maximum[0]-newUnit.minimum[0]).toFixed(2)+' m</p></div><div><img src="previews/scale-existing.png"><p>TEMU1000 前端單元 · '+(comparison.maximum[0]-comparison.minimum[0]).toFixed(2)+' m</p></div></div><p>以前端單元的相機中心與範圍固定兩者，模型沒有個別放大。此圖只比較霧面材質、配色和細節密度，不作幾何來源。</p>');
+ await sheet('style-comparison.png','<h1>EMU500／EMU3000 風格｜同公尺尺度、同鏡頭</h1><div class="row"><div><img src="previews/scale-new.png"><p>EMU500 前端單元 · '+(newUnit.maximum[0]-newUnit.minimum[0]).toFixed(2)+' m</p></div><div><img src="previews/scale-existing.png"><p>EMU3000 前端單元 · '+(comparison.maximum[0]-comparison.minimum[0]).toFixed(2)+' m</p></div></div><p>以前端單元的相機中心與範圍固定兩者，模型沒有個別放大。此圖只比較霧面材質、配色和細節密度，不作幾何來源。</p>');
  console.log('Rendered '+manifest.render_verification.views+' seven-direction PNGs and a real-metre fixed-camera style comparison.');
 } finally {if(browser)await browser.close();server.close();unlinkSync(resolve(root,'_render.html'));}

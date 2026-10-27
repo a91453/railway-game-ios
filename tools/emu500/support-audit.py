@@ -3,6 +3,10 @@ import json,struct,sys
 from pathlib import Path
 import numpy as np
 root=Path(sys.argv[1])
+manifest=json.loads((root/'manifest.json').read_text())
+palette=manifest['native_palette']
+glass_color=palette['glass']
+body_colors=[palette['body'],palette['accent']]
 def read(p):
  b=p.read_bytes();n,size=struct.unpack_from('<II',b,8);k=16+(size+3)//4*4
  t=np.array([[struct.unpack_from('<fff',b,k+i*52+4+j*16) for j in range(3)] for i in range(n)])
@@ -14,7 +18,7 @@ def hits(point,direction,tri):
  use=abs(a)>1e-9;e1=e1[use];e2=e2[use];h=h[use];a=a[use];s=point-tri[use,0];u=np.einsum('ij,ij->i',s,h)/a;q=np.cross(s,e1);v=q@direction/a;dist=np.einsum('ij,ij->i',e2,q)/a
  return dist[(u>=-1e-6)&(v>=-1e-6)&(u+v<=1.000001)&(dist>=-1e-5)]
 def glasses(t,col,shift=0):
- panes=t[col==0x403c26];solids=t[col!=0x403c26];tested=0
+ panes=t[col==glass_color];solids=t[col!=glass_color];tested=0
  for tri in panes:
   p=tri.mean(axis=0)
   # Only outward broad glass faces, not thin rims/back faces.
@@ -28,9 +32,9 @@ def glasses(t,col,shift=0):
  assert tested>10
  return tested
 def visible_front_glass(t,col):
- panes=t[col==0x403c26]
+ panes=t[col==glass_color]
  # Body/door blue and silver, excluding intentional dark wipers and lamp housings.
- body=t[np.isin(col,[0x914f1d,0xd2d0c8])]
+ body=t[np.isin(col,body_colors)]
  tested=0
  for tri in panes:
   p=tri.mean(axis=0);n=np.cross(tri[1]-tri[0],tri[2]-tri[0]);n=n/np.linalg.norm(n)
@@ -40,13 +44,13 @@ def visible_front_glass(t,col):
    tested+=1
  return tested
 rows=[]
-for m in json.loads((root/'manifest.json').read_text())['models']:
+for m in manifest['models']:
  if m['category']!='section':continue
  t,col=read(root/m['native']);n=glasses(t,col)
  visible=visible_front_glass(t,col)
  if m['id'] in ['emu500-emc','emu500-em']:
   assert visible>4
-  buried=t.copy();mask=(col==0x403c26)&(t.mean(axis=1)[:,0]>9.7);buried[mask,:,0]-=0.14
+  buried=t.copy();mask=(col==glass_color)&(t.mean(axis=1)[:,0]>9.7);buried[mask,:,0]-=0.14
   try:visible_front_glass(buried,col)
   except AssertionError:pass
   else:raise AssertionError('buried front glass fault not rejected')
