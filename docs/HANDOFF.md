@@ -362,6 +362,31 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第二十一次換手（2026-10-27 約 14:25 UTC，session_01YGNNuovwuBJPdZWXamkhEp 續任後壓縮第 4 次 → 作者從 claude.ai 開的新規劃）**。新任開工：讀第 1 節、這一段、下面第二十次那段（含「續任」）；#1041 只讀「遊戲規劃（session_01YGNNuovwuBJPdZWXamkhEp）壓縮第 4 次」（14:11 UTC）那則之後的留言。和下面不同時以這段為準。
+
+- **分工改了**：作者 14:1x UTC 說「又要開什麼新session 就開」「要派session就派」，所以規劃自己用 create_session 開實作 session，不必等作者說。派工單的寫法照下面 X、Y、Z、AA。Claude Pro 只在這個帳號額度不夠時才派（作者：「Pro等不夠的時候再用」）。Pro 派過的 M2、N、T、V、M3 都有在 #1041 登記、留壓縮和「可合併」，也都寫了 HANDOFF。
+- **不能動**：Codex #1342（C371／C381）和私庫 PR #103（同一件的私庫那半）。作者：「除了pr1342 跟隱私資料夾103不能動」。
+- **開著的 PR**（都是本任開的；綠了照 §1.2 合併）：
+  - **#1350**（`claude/showcase-tap-back`，head `0e2689aa`）列車展示：隱藏按鈕後點畫面，按鈕回來（決策 434 修正）。和 idle mode 的幕一樣，隱藏時蓋一層透明的點擊層（`trainShowcase.reveal`）；隱藏時不能轉鏡頭。換手時 PR 的 CI 和手動 `only_testing=TrainShowcaseUITests` run 40516816314 都還在跑。綠了：把 run 號寫進 PR 說明，轉 ready，合併；紅了就查。
+  - **#1351**（`claude/full-lane-rebalance-1027`，head `b6a8b88f`）full lane 重新分配。build job 的 UI 步驟撞到 75 分鐘上限：五輪裡 build 52.4–75.2 分、second 26.9–34.2、lessons 31.4–37.7。所以把 `HUDAlignmentUITests`、`LineDraftSummaryUITests` 移到 second，`LineRoutePreferenceUITests` 移到 lessons。用同五輪估的最壞值：build 約 60.6／75、second 44.8／55、lessons 42.3／55。只改 workflow，綠了就合；合併後 main 的下一次 full lane 驗證三個 job 的時間。
+  - `ShellLayoutUITests.testTheStatusBarKeepsItsWidthAsTheDaysGoBy` 在 91 的 full lane 判斷是 runner 慢。下一次 full lane 它若又紅，就不是 runner 的問題，要查。
+- **在跑的 session**（本任 14:09–14:12 UTC 用 create_session 開的，都在 #1041 登記了。共同規則是：不動 #1342／私庫 #103，壓縮 1 次不接新的、2 次停。完成或卡住時用 send_message 回報給 session_01YGNNuovwuBJPdZWXamkhEp。**新任接手後，用 send_message 告訴這四個 session 改向新任回報**）：
+  - **X**：session_01YGNNupvEG51nsSxuFBEV7j，`claude/platform-props-436`，**決策 436**。3D 月台近景小物：停車位置標、月台邊燈、回收桶、台鐵車頭方向幕（NEXT_PRIORITIES §22.15 第 1 項），在 GamePresentation／Map3D。
+  - **Y**：session_01YGNNumE4CxFH7Ph9aNZWQh，`claude/garbage-truck-437`，**決策 437**。傍晚的垃圾車與資源回收車：〈給愛麗絲〉用決策 343 的合成器做，車用 Meshy 垃圾車模型（§22.12 第 2 項）；會加模型並重產 `.xcodeproj`。
+  - **Z**：session_01YGNNup4WomZDkri2osruHG，`claude/city-bus-roads-design-z`。獨立市區公車與玩家鋪路的設計研究（§22.13 第 2、3 項），只寫文件。
+  - **AA**：session_01YGNNuodq14g1Y2MbNjvt3U，`claude/tra-delay-analysis-aa`。用私庫 341 天的台鐵誤點算真實分布，對照遊戲的誤點，只寫文件和 `tools/tra-delay-analysis/`（不放原始資料）。
+- **編號**：決策 436、437 已預約，下一個 **438**。存檔 74、golden schema 都沒動。
+- **巡邏排程**：本任的 `trig_014rH8DLdKX6xgyXaEAvJ9pz` 綁本 session。新任建自己的巡邏（約 45 分鐘一次），在 #1041 留「遊戲規劃接手」後，本任刪掉自己的排程。
+- **點數**：Meshy 剩 99（留 50，可用約 49），11/4 重置；TDX 11/1 重置。M3 之後，TDX 扣點的事都做完了；「不扣點清單」（M3 第 4 步，`tools/not_fetched_yet.json`，約 52 個 run，要放新資料夾）還沒抓，適合在額度不夠時派給 Pro。
+- **下一步候選**（空出位置時）：
+  - 91 的 fps：等作者在裝置上的回報。
+  - Meshy 剩下的點數：11/4 前用掉。
+  - TDX 不扣點清單。
+  - 車輛包的 3D 預覽：10/31 後，用 `Map3DShowcase`。
+  - §22.12 第 3–5 項：地標、機車、夜市攤車，用 Meshy 的模型。
+  - §22.14 第 3 項：車窗雨滴。
+  - X、Y、Z、AA 的 PR 照 §1.2 審、合。
+
 **第二十次換手（2026-10-27 約 13:20 UTC，session_01YGNNuovwuBJPdZWXamkhEp 壓縮 3 次、用了約 29 萬 token，照 §1「第 3 次壓縮快到時換」→ 作者從 claude.ai 開的新規劃）**。新任開工：讀第 1 節、這一段；#1041 只讀「遊戲規劃（session_01YGNNuovwuBJPdZWXamkhEp）壓縮第 3 次」那則之後的留言。分工照第十九次換手：寫派工單 .md（SendUserFile）給作者貼到 Claude Pro、Antigravity 或 Codex；作者說「直接開新session」時才用 create_session 開（本任的 U、W 是這樣開的，兩個 session 已封存）。和下面不同時以這段為準。
 
 - **這一任合的**：#1336（派工單 S，決策 432）、#1340（派工單 T，決策 433）、#1339（Codex，EMU900 模型）、#1343（派工單 V：速度選單共用的 `chooseSpeed`，StartSaveFlow 的原因寫在 #1343）、#1344（派工單 U，決策 434：演示模式的「列車展示」，`Map3DShowcase`／`TrainShowcaseScreen`）、#1345（What's New 與 `.github/testflight-whats-new.md`，本任合）、#1346（派工單 W，決策 435：EMU900 接進 3D，區間車照 `Map3DTrainSet.localTrain(number:)` 9:6:5 分 EMU900／EMU500／EMU800，真車十輛；決策 432 的單雙號規則被取代）、#1347，和文件 #1335、#1337。
