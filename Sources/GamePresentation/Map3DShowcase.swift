@@ -85,6 +85,8 @@ public enum Map3DShowcase {
         // Taiwan Railway: the multiple units by when they first ran, then
         // the locomotive-hauled trains, then the sightseeing trains.
         Entry("emu3000", "EMU3000 Tze-Chiang", "EMU3000 新自強號", .taiwanRailway, cars: 12),
+        // Decision 435: and the EMU900, ten cars as it runs.
+        Entry("emu900", "EMU900 local", "EMU900 區間車", .taiwanRailway, cars: 10),
         Entry("emu800", "EMU800 local", "EMU800 區間車", .taiwanRailway, cars: 8),
         Entry("puyuma", "TEMU2000 Puyuma", "TEMU2000 普悠瑪號", .taiwanRailway, cars: 8, fixed: true),
         Entry("taroko", "TEMU1000 Taroko", "TEMU1000 太魯閣號", .taiwanRailway, cars: 8, fixed: true),
