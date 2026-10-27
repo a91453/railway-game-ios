@@ -53,7 +53,7 @@ try{
   },ms);
   for(const [v,url] of Object.entries(out.images))writeFileSync(resolve(root,'previews',label+'-'+v+'.png'),Buffer.from(url.split(',')[1],'base64'));
   writeFileSync(resolve(root,label+'-camera.json'),JSON.stringify({ids,centre:out.centre,extent:out.extent,width:1000,height:500},null,2)+'\n');
-  await sheet(label,label+'｜共同相機與公尺尺度（實際原生幾何）',['left','front','top','isometric'].map(v=>'<h2>'+v+'</h2><div class="row">'+ms.map((m,i)=>'<div><img src="previews/'+label+'-'+i+'-'+v+'.png"><p>'+m.id+'</p></div>').join('')+'</div>').join(''));
+  await sheet(label,(label.startsWith('before-after')?'接入前一般通勤 EMU800 ／本次 EMU900（無同車型獨立原生前版）':label)+'｜共同相機與公尺尺度（實際原生幾何）',['left','front','top','isometric'].map(v=>'<h2>'+v+'</h2><div class="row">'+ms.map((m,i)=>'<div><img src="previews/'+label+'-'+i+'-'+v+'.png"><p>'+m.id+'</p></div>').join('')+'</div>').join(''));
  }
  await match(['e500','emu3000-ed','emu900-ed'],'style-comparison');
  await match(['before-emu900','emu900-ed'],'before-after');
