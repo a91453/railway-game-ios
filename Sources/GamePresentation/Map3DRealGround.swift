@@ -204,7 +204,10 @@ extension Map3DScene.Builder {
         }
         // Decision 355: the paint at the junctions, the centre lines
         // stopping at their crossings.
-        let markings = Map3DRoadMarkings(roads)
+        // Decision 429: the junctions where they are in the world, for
+        // their signals' offsets.
+        let markings = Map3DRoadMarkings(roads, origin: Map3DBaseMap.Point(x: originX / Double(WorldCoordinate.unitsPerMetre),
+                                                                           z: originY / Double(WorldCoordinate.unitsPerMetre)))
         var lines = Set<Map3DScene.ChunkKey>()
         for (number, road) in roads.enumerated() where Self.hasCentreLine(road) {
             for piece in markings.centreLines(of: road, number: number) {
