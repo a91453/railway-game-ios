@@ -38,6 +38,8 @@ CLAUDE.md 的參考庫檢查照舊：新的車先看 `a91453/railway-reference-p
 
 - **塗裝帶**：頂點 alpha 小於 1 的地方，遊戲用**線的顏色**（`SceneKitBuilder.baked` 在預覽裡烘進去）。所以一款車的線色帶、命名編組的主色畫成 alpha 0；固定的塗裝（白、窗、門、裙）畫實色。
 - **發光頂點**：一個三角形帶旗標就是「夜裡從裡面亮」（`Map3DVertex.glows`、M3DM 的 flags bit 0）：頭燈、尾燈、客室窗、方向幕。白天不發光；夜裡著色器加 `1.3 × lights`。每款車自己決定哪些三角形亮；統一的夜間亮燈是路線圖第 1 項，還沒做。
+- **遮蔽陰影**（決策 439）：配方不畫。`Map3DModelPack` 做 pack 時用 `Map3DTrainOcclusion.baked` 把每個列車模型（名字不是 `prop-`、`life-` 開頭的）被自己遮住多少烘進頂點顏色：車底、轉向架、車頂設備旁、中間車兩端的車間（名字裡沒有 `cab`／`head`／`tail`／`leading`／`trailing`／`rear`／`single`／`formation`／`locomotive`／`ed`／`dm`／`e1000`／`e200`／`steam`／`duplex` 的車，當作前後都有車）。發光三角形與塗裝帶（alpha 小於 1 的那一份）不變暗；一條邊長過 2.5 m 的面取三個角最亮的那個，車側不會變成漸層。遠景版（名字有 `Far-` 或結尾 `-far`）用粗格子。所以：配方的雜湊（各車測試釘的）不變，pack 裡的雜湊（`hashes.lock.json`）會變；新車照常把 pack 的雜湊加進鎖。新車要被當成中間車或頭尾車，就照上面的字取名。
+- **方向幕**：由 `Map3DHeadSigns` 在近距離每幀另外畫（決策 436），配方不畫。
 - **光**：遊戲用決策 370 的模型光（`map3dLit(…, soft: true)`），不是棚拍光。看圖用 `tools/train-models/render.mjs`，它照這個式子。列車不經過 `Map3DLook` 的淡色轉換，顏色照配方。
 - **影子**：每節車下的軟影由 `Map3DTrains` 畫（決策 232，`frame.shadows`），太陽陰影由場景畫；配方不畫影子。
 - 玻璃要深、霧面平塗；一個三角形一個顏色；窗板與門板站出車身約 2 cm，貼著當地車身曲面；車頭曲面不要放方盒。這些細節的做法在建模手冊第 5–8 節。
