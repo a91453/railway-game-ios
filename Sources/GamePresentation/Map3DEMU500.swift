@@ -76,10 +76,10 @@ extension StationKitBuilder {
         face(a,inside:centre,color:color); face(b,inside:centre,color:color)
         for i in a.indices { let j=(i+1)%a.count; face([a[i],a[j],b[j],b[i]],inside:centre,color:color) }
     }
-    mutating func e500Panel(x: Float, y: Float, z: Float, w: Float, h: Float, depth: Float, front: Bool, color: UInt32) {
-        let r=min(0.13,min(w,h)*0.22)
+    mutating func e500Panel(x: Float, y: Float, z: Float, w: Float, h: Float, depth: Float, front: Bool, color: UInt32, radius: Float? = nil) {
+        let r=radius ?? min(0.13,min(w,h)*0.22)
         let octagon:[(Float,Float)]=[(-w/2+r,0),(w/2-r,0),(w/2,r),(w/2,h-r),(w/2-r,h),(-w/2+r,h),(-w/2,h-r),(-w/2,r)]
-        let p=color == Map3DEMU500.glass && w>0.6 ? Self.e500Round(w,h,r) : octagon
+        let p=color == Map3DEMU500.glass && (w>0.6 || front) ? Self.e500Round(w,h,r) : octagon
         func layer(_ d: Float)->[Map3DPoint] { p.map { u,v in front ? Map3DPoint(x+d,y+v,z+u) : Map3DPoint(x+u,y+v,z+d) } }
         e500Prism(layer(-depth/2),layer(depth/2),color)
     }
@@ -97,8 +97,10 @@ extension StationKitBuilder {
                 for col in 0..<(grid[0].count-1) {
                     let a=grid[row][col],b=grid[row][col+1],c=grid[row+1][col+1],d=grid[row+1][col]
                     for tri in [[a,b,c],[a,c,d]] {
-                        face(tri,inside:inside,color:blue)
-                        face(tri.map { Map3DPoint(9.52,$0.y,$0.z) },inside:inside,color:blue)
+                        let local=tri.reduce(Map3DPoint.zero) { $0+$1*(1/3) }
+                        face(tri,inside:local-Map3DPoint(0.1,0,0),color:blue)
+                        let back=tri.map { Map3DPoint(9.52,$0.y,$0.z) }
+                        face(back,inside:Map3DPoint(9.62,local.y,local.z),color:blue)
                     }
                 }
             }
@@ -172,7 +174,7 @@ extension StationKitBuilder {
             for side: Float in [-1,1] {
                 for dx: Float in [-0.58,0.15] { box(x+dx,3.75,side*0.794,0.64,0.012,0.10,Map3DColor.rgb(0x83949D)) }
             }
-            box(x,3.965,0,1.86,1.05,0.006,Map3DColor.rgb(0xAAB7BF))
+            box(x,3.964,0,1.86,1.05,0.006,Map3DColor.rgb(0xAAB7BF))
         }
         if unit == .ep {
             box(-5.3,3.65,0,1.9,1.6,0.10,dark)
@@ -191,15 +193,15 @@ extension StationKitBuilder {
         if cab {
             let steel=Map3DColor.rgb(0x89969B), rubber=Map3DColor.rgb(0x303C46)
             // Thin grey portal, deep blue door and a discrete gasket reveal.
-            e500Panel(x:10.008,y:1.13,z:0,w:0.97,h:2.17,depth:0.050,front:true,color:rubber)
-            e500Panel(x:10.029,y:1.17,z:0,w:0.77,h:2.07,depth:0.020,front:true,color:blue)
+            e500Panel(x:10.008,y:1.13,z:0,w:0.97,h:2.17,depth:0.050,front:true,color:rubber,radius:0.025)
+            e500Panel(x:10.029,y:1.17,z:0,w:0.77,h:2.07,depth:0.020,front:true,color:blue,radius:0.025)
             for side: Float in [-1,1] {
                 box(10.045,1.12,side*0.515,0.064,0.10,2.24,steel)
             }
             box(10.045,3.25,0,0.064,1.12,0.12,steel)
             box(10.045,1.10,0,0.064,1.10,0.10,steel)
-            e500Panel(x:10.044,y:2.04,z:0,w:0.43,h:0.92,depth:0.012,front:true,color:glass)
-            e500Panel(x:10.044,y:1.57,z:0,w:0.68,h:0.37,depth:0.012,front:true,color:white)
+            e500Panel(x:10.044,y:2.04,z:0,w:0.43,h:0.92,depth:0.012,front:true,color:glass,radius:0.15)
+            e500Panel(x:10.044,y:1.57,z:0,w:0.68,h:0.37,depth:0.012,front:true,color:white,radius:0.025)
             // Two broad independent driving panes. Rounded corners are geometric.
             for side: Float in [-1,1] {
                 let z=side*0.98
@@ -227,7 +229,7 @@ extension StationKitBuilder {
                     let lensRadius=radius*0.63
                     let lens=(0..<12).map { i in
                         let a=Float(i)*2*Float.pi/12,y=1.55+lensRadius*sinf(a),z=lateral+lensRadius*cosf(a)
-                        return Map3DPoint(Self.e500CabX(y,z)+0.054,y,z)
+                        return Map3DPoint(Self.e500CabX(y,z)+0.052,y,z)
                     }
                     e500Prism(lens,lens.map { $0+Map3DPoint(0.010,0,0) },radius>0.13 ? rubber : white)
                 }
@@ -236,7 +238,7 @@ extension StationKitBuilder {
             for z: Float in [-0.16,0.16] {
                 let p=(0..<12).map { i in
                     let a=Float(i)*2*Float.pi/12,y=3.495+0.088*sinf(a),zz=z+0.088*cosf(a)
-                    return Map3DPoint(Self.e500CabX(y,zz)+0.063,y,zz)
+                    return Map3DPoint(Self.e500CabX(y,zz)+0.061,y,zz)
                 }
                 e500Prism(p,p.map { $0+Map3DPoint(0.012,0,0) },yellow)
             }
@@ -244,8 +246,8 @@ extension StationKitBuilder {
             for side: Float in [-1,1] {
                 box(9.88,0.22,side*0.96,0.14,0.73,0.89,rubber)
                 // Painted polygons clipped to the side apron; no protruding bars.
-                for offset: Float in [0,0.39] {
-                    let polygon:[(Float,Float)]=[(0.22,0.61+offset),(0.22,0.82+offset),(1.11,0.43+offset),(1.11,0.22+offset)]
+                for offset: Float in [-0.4,0,0.4] {
+                    let polygon:[(Float,Float)]=[(0.22,0.42+offset),(0.22,0.62+offset),(1.11,1.27+offset),(1.11,1.07+offset)]
                     // Clip the stripe in lateral/height space against apron edges.
                     var poly=polygon
                     for (bound,keepGreater) in [(Float(0.595),true),(Float(1.325),false)] {

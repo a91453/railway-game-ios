@@ -45,3 +45,8 @@ The offline viewer embeds native/GLB/PNG payloads and opens directly from a loca
 file. ZIP remains a separate download in the HTTP viewer and private package.
 Ray support audit tests actual broad glass faces plus an artificial floating fault;
 it is sampled support evidence, not exhaustive intersection certification.
+
+Revision 6 refines the cab grid, planar gangway portal, glazing visibility, apron and running gear.
+`support-audit.py` rejects both floating panes and panes buried in actual body triangles.
+Keep the real rejected revision 3 and intermediate revisions 4/5 with their producer IDs.
+Run `Map3DBusesTests` as well as EMU500/ModelFile tests: route bus must stay last in the model registry.

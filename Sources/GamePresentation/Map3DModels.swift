@@ -90,11 +90,11 @@ public struct Map3DModelPack: Sendable {
             models += Map3DPPPassenger.roles.map { Map3DPPPassenger.model($0, far: far) }
         }
         models += [Map3DE1000.model(), Map3DE1000.model(far: true)]
+        models += Map3DEMU500.Unit.allCases.map { Map3DEMU500.model($0) }
+        models.append(Map3DEMU500.formation())
         // Decision 400, 10i-6: the player's route buses, last, so no model
         // before them moves.
         models.append(Map3DLowFloorBus.routeModel())
-        models += Map3DEMU500.Unit.allCases.map { Map3DEMU500.model($0) }
-        models.append(Map3DEMU500.formation())
         self.models = models
     }
 
