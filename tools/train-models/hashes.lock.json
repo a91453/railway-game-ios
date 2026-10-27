@@ -3,51 +3,51 @@
   "models" : {
     "taipei610-a" : {
       "hash" : "7cef74f2a0c31a39",
-      "triangles" : 3394
+      "triangles" : 3590
     },
     "taipei610-a-far" : {
       "hash" : "50882cebd6d92da4",
-      "triangles" : 1566
+      "triangles" : 1662
     },
     "taipei610-a-light" : {
       "hash" : "f513b698341d5f93",
-      "triangles" : 1494
+      "triangles" : 1578
     },
     "taipei610-b" : {
       "hash" : "eb0f072096f8e639",
-      "triangles" : 3394
+      "triangles" : 3590
     },
     "taipei610-b-far" : {
       "hash" : "3e61405a62a7d4a4",
-      "triangles" : 1566
+      "triangles" : 1662
     },
     "taipei610-b-light" : {
       "hash" : "bb804237d52e1893",
-      "triangles" : 1494
+      "triangles" : 1578
     },
     "taipei610-c" : {
       "hash" : "4cd61b58808fe48d",
-      "triangles" : 2640
+      "triangles" : 2824
     },
     "taipei610-c-far" : {
       "hash" : "abd2036e4fb2bd1d",
-      "triangles" : 1300
+      "triangles" : 1372
     },
     "taipei610-c-light" : {
       "hash" : "2c2018bd088bea69",
-      "triangles" : 1180
+      "triangles" : 1252
     },
     "taipei610-d" : {
       "hash" : "32f2fdfb0323aa0d",
-      "triangles" : 2640
+      "triangles" : 2824
     },
     "taipei610-d-far" : {
       "hash" : "abd2036e4fb2bd1d",
-      "triangles" : 1300
+      "triangles" : 1372
     },
     "taipei610-d-light" : {
       "hash" : "2c2018bd088bea69",
-      "triangles" : 1180
+      "triangles" : 1252
     },
     "blue-seven-formation" : {
       "hash" : "dd08763ae2fd46ea",
