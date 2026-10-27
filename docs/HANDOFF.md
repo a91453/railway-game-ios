@@ -1,3 +1,5 @@
+> Codex C371 跨帳戶續作（公開 draft #1342 ↔ 私有 draft #103，工作 #1341）：[本帳戶實車查證](art/c371-c381-2026-10-27/REFERENCE_RECHECK.md)與[接手入口](art/c371-c381-2026-10-27/CROSS_ACCOUNT_HANDOFF.md)。本輪只修 C371 拱形眉線／前窗／弧面薄燈腔，C381 不改且外觀未驗收；true-v7 保存接手時真正完整私包及原 ZIP，更早 true-v1 至 true-v6 保留。只有靜態註冊，不改營運映射；不合併／auto-merge／TestFlight。最新 producer、驗證與 CI 分開記在兩個 PR。
+
 > 共用做車工具與新 skill（派工單 AC）：`tools/train-models/`（匯出、預算與雜湊檢查、七向圖用模型光、離線預覽，[README](../tools/train-models/README.md)）、`.claude/skills/rolling-stock/SKILL.md` 已改成原生做法，新車只用這個工具。列車畫面四項的第 1–3 項（夜間亮燈、遮蔽烘焙、車窗反光）等 10/31 公開測試之後由規劃派，用同一個工具拍改前／改後（`renderer.js` 的 `features` 旗標是接口）。
 
 > Codex C341（issue [#1322](https://github.com/a91453/railway-game-ios/issues/1322)，公開draft [#1323](https://github.com/a91453/railway-game-ios/pull/1323)）：[來源／外觀／重建與整合範圍](art/c341-2026-10-27/README.md)。四附件與Blair C341外觀原圖已看；獨立DM/T/M/反向DM，六輛21,036三角用合法原生組裝，不寫超限M3DM。完整素材／真第一至第三版／viewer／ZIP在私庫同名分支新目錄。僅四單元靜態註冊，沒有C341專用營運映射，合併不會自動換遊戲車輛。已保留新合併EMU800註冊及route bus末項；GameCore／存檔／fixtures不動。工程尺寸／單元方向與隱藏設備仍資料不足，真機Metal／效能／動畫與完整碰撞未驗；最新CI、衝突及私有互鏈見issue，不合併／auto-merge／TestFlight。
