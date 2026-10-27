@@ -92,16 +92,22 @@ public struct Map3DTrainSet: Sendable {
 
     /// Every set.
     public static let all: [Map3DTrainSet] = {
-        let chuKuang = coach(TrainLivery.e200ChuKuang)
+        let chuKuang = chuKuangCoach
         return [
             // The locomotive-hauled sets (decision 252): the coaches behind
             // their locomotive, the last coach's end lit red.
+            // Decision 430: the Chu-Kuang sets run #1306's automatic-door
+            // coach, and from 500 m out its light one (the locomotive, which
+            // has no light model but the E500's, is the same).
             // Decision 408: the E200 as #1201's, its front lamps lit.
             hauled("E200CK", head: { lit(Map3DTrainShapeRefresh.model("refresh-e200"), front: true) }, coach: chuKuang),
+            hauled("E200CK", head: { lit(Map3DTrainShapeRefresh.model("refresh-e200"), front: true) }, coach: chuKuang, far: true),
             e500Hauled("E500CK", coach: chuKuang),
             e500Hauled("E500CK", far: true, coach: chuKuang),
             hauled("R100CK", locomotive: .r100, coach: chuKuang),
+            hauled("R100CK", locomotive: .r100, coach: chuKuang, far: true),
             hauled("R200CK", locomotive: .r200, coach: chuKuang),
+            hauled("R200CK", locomotive: .r200, coach: chuKuang, far: true),
             // Decision 286: the Blue Train's R135 and its old blue coaches.
             hauled("BLUE", locomotive: .r135,
                    coach: coach(TrainLivery.blueTrain, band: 0.38...0.43)),
@@ -117,6 +123,7 @@ public struct Map3DTrainSet: Sendable {
             // Chu-Kuang coaches; decision 399: behind #1103's steam
             // locomotive and its tender, in place of the black hood unit.
             steam("SUMMER", formation: .steamTender, coach: chuKuang),
+            steam("SUMMER", formation: .steamTender, coach: chuKuang, far: true),
             // Decision 399: the steam train as #1118's duplex locomotive
             // and its tender, the Blue Train's old blue coaches behind.
             steam("STEAM", formation: .duplex, coach: coach(TrainLivery.blueTrain, band: 0.38...0.43)),
@@ -215,7 +222,9 @@ public struct Map3DTrainSet: Sendable {
     /// Decision 420: and the Taroko and the EMU800 (their far sets).
     /// Decision 426: and the Puyuma (its far set).
     /// Decision 427: and the push-pull Tze-Chiang's E1000 look.
-    static let nearOnly: Set = ["E500CK", "MINGRI", "STAR", "pushPull", "pushPullE1000", "greenTram", "SUMMER", "STEAM", "highSpeed", "n700sG", "emu3000",
+    /// Decision 430: and the Chu-Kuang sets, a coach 6,500 triangles near
+    /// (their far sets).
+    static let nearOnly: Set = ["E200CK", "R100CK", "R200CK", "E500CK", "MINGRI", "STAR", "pushPull", "pushPullE1000", "greenTram", "SUMMER", "STEAM", "highSpeed", "n700sG", "emu3000",
                                 "taroko", "emu800", "puyuma"]
 
     /// Decision 408: the set a train of `key` numbered `number` is drawn
@@ -339,34 +348,38 @@ public struct Map3DTrainSet: Sendable {
 
     /// E500-only substitution. Retains the original coaches and all pack/lock/fallback lookup rules.
     static func e500Hauled(_ key: String, far: Bool = false, coach: Coach) -> Map3DTrainSet {
-        let legacy = hauled(key, head: { Map3DE500.model(far: far) }, coach: coach)
+        let legacy = hauled(key, head: { Map3DE500.model(far: far) }, coach: coach, far: far)
         return Map3DTrainSet(key: far ? key+"Far" : key, ownLengths: true, far: far ? nil : key+"Far", build: legacy.build)
     }
 
-    static func hauled(_ key: String, locomotive: Map3DTrainLocomotive, coach: Coach, lastIsLocomotive: Bool = false) -> Map3DTrainSet {
-        hauled(key, head: { locomotive.model }, coach: coach, lastIsLocomotive: lastIsLocomotive)
+    static func hauled(_ key: String, locomotive: Map3DTrainLocomotive, coach: Coach, lastIsLocomotive: Bool = false,
+                       far: Bool = false) -> Map3DTrainSet {
+        hauled(key, head: { locomotive.model }, coach: coach, lastIsLocomotive: lastIsLocomotive, far: far)
     }
 
+    /// Decision 430: `far`, the set from 500 m out (``Coach/chuKuang``: the
+    /// same locomotive, the light coaches); a set of any other coach has none.
     static func hauled(_ key: String, head locomotive: @escaping @Sendable () -> Map3DModelPack.Model, coach: Coach,
-                       lastIsLocomotive: Bool = false) -> Map3DTrainSet {
-        Map3DTrainSet(key: key) {
+                       lastIsLocomotive: Bool = false, far: Bool = false) -> Map3DTrainSet {
+        Map3DTrainSet(key: far ? key + "Far" : key, far: coach.chuKuang && !far ? key + "Far" : nil) {
             let head = locomotive()
-            let middle = baked(SceneKitCab.coach(style: coach.style, named: key), tint: coach.tint)
-            return Cars(head: head, middle: middle, tail: lastIsLocomotive ? nil : tailCoach(coach, named: key), single: nil)
+            let middle = coach.middle(named: key, far: far)
+            return Cars(head: head, middle: middle, tail: lastIsLocomotive ? nil : coach.tail(named: key, far: far), single: nil)
         }
     }
 
     /// Decision 399: a steam locomotive and its tender (`formation`'s
     /// two units, at their own lengths), the locomotive's headlamp lit,
     /// and `coach`es behind, the last one's end lit red.
-    static func steam(_ key: String, formation: SteamFormation, coach: Coach) -> Map3DTrainSet {
-        Map3DTrainSet(key: key, ownLengths: true) {
+    /// Decision 430: `far`, as ``hauled(_:head:coach:lastIsLocomotive:far:)``.
+    static func steam(_ key: String, formation: SteamFormation, coach: Coach, far: Bool = false) -> Map3DTrainSet {
+        Map3DTrainSet(key: far ? key + "Far" : key, ownLengths: true, far: coach.chuKuang && !far ? key + "Far" : nil) {
             var builder = StationKitBuilder()
             builder.add(formation.locomotive, at: .zero)
             let lamp = formation.lamp
             builder.lamp(atX: lamp.x, height: lamp.height, across: 0, width: lamp.size, tall: lamp.size, colour: Map3DTrainStyle.headlamp)
-            return Cars(head: .flat(named: key, from: builder.mesh), middle: baked(SceneKitCab.coach(style: coach.style, named: key), tint: coach.tint),
-                        tail: tailCoach(coach, named: key), single: nil, tender: formation.tender)
+            return Cars(head: .flat(named: key, from: builder.mesh), middle: coach.middle(named: key, far: far),
+                        tail: coach.tail(named: key, far: far), single: nil, tender: formation.tender)
         }
     }
 
@@ -642,7 +655,29 @@ public struct Map3DTrainSet: Sendable {
     struct Coach {
         var style: Map3DTrainStyle
         var tint: UInt32
+        /// Decision 430: #1306's automatic-door coach
+        /// (``Map3DChuKuangPassenger``) in place of the scene kit's, its
+        /// navy and cream baked into the model, so `style` and `tint`
+        /// paint nothing, and its light model from 500 m out.
+        var chuKuang = false
+
+        func middle(named name: String, far: Bool) -> Map3DModelPack.Model {
+            chuKuang ? Map3DChuKuangPassenger.model(.standard, far: far)
+                : Map3DTrainSet.baked(SceneKitCab.coach(style: style, named: name), tint: tint)
+        }
+
+        func tail(named name: String, far: Bool) -> Map3DModelPack.Model {
+            chuKuang ? Map3DTrainSet.chuKuangTail(far: far) : Map3DTrainSet.tailCoach(self, named: name)
+        }
     }
+
+    /// The Chu-Kuang sets' coach: the standard coach (decision 430), its
+    /// livery in the model.
+    static let chuKuangCoach: Coach = {
+        var chuKuang = coach(TrainLivery.e200ChuKuang)
+        chuKuang.chuKuang = true
+        return chuKuang
+    }()
 
     static func coach(_ livery: TrainLivery, band: ClosedRange<Float> = 0.5...0.86) -> Coach {
         coach(body: livery.body ?? 0xC9CECC, band: livery.stripe ?? 0xE9EBE5, shares: band)
@@ -671,6 +706,25 @@ public struct Map3DTrainSet: Sendable {
             builder.mesh.makeGlowing(from: glowStart)
         }
         return .flat(named: name, from: builder.mesh)
+    }
+
+    /// Decision 430: the last Chu-Kuang coach, the standard coach and two
+    /// red lamps lit on its back end wall, one each side of the gangway: their
+    /// backs on the wall, 0.1 m proud of it, 0.9 to 1.1 m from the middle
+    /// and 1.45 m up, where the wall is bare navy. The lamps are not part of
+    /// the coach's recipe (#1306), so are added to its vertices.
+    static func chuKuangTail(far: Bool) -> Map3DModelPack.Model {
+        let coach = Map3DChuKuangPassenger.model(.standard, far: far)
+        var builder = StationKitBuilder()
+        let wall = -Map3DChuKuangPassenger.bodyHalfLength
+        for z: Float in [-1, 1] {
+            let start = builder.mesh.vertices.count
+            builder.box(wall - 0.05, 1.45, z, 0.10, 0.20, 0.20, Map3DPalette.lantern)
+            builder.mesh.makeGlowing(from: start)
+        }
+        let lamps = Map3DModelPack.Model.flat(named: coach.name, from: builder.mesh)
+        return Map3DModelPack.Model(name: coach.name, vertices: coach.vertices + lamps.vertices,
+                                    minimum: coach.minimum, maximum: coach.maximum)
     }
 
     /// `model` with the line's share of its colours painted `tint`.
