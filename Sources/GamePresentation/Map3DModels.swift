@@ -37,6 +37,9 @@ public struct Map3DModelPack: Sendable {
     /// Decision 436: the destination signs of the cab cars that carry one,
     /// by model index (``Map3DHeadSign/add(to:signs:eye:)``).
     public private(set) var headSigns: [Int: Map3DHeadSign] = [:]
+    /// Decision 449: each running car's lamps and windows' model, by model
+    /// index (``Map3DTrainLights/add(to:pack:lights:)``).
+    public private(set) var lights: [Int: Map3DTrainLights.Car] = [:]
 
     /// Every style's cab car and middle car, made once.
     public static let standard = Map3DModelPack(styles: Map3DTrainStyle.all)
@@ -130,7 +133,15 @@ public struct Map3DModelPack: Sendable {
         models.append(Map3DLowFloorBus.routeModel())
         // Decision 450: their glass and stainless marked, then decision
         // 439's soft shade baked into their colour.
-        self.models = baked ? Map3DTrainOcclusion.baked(Map3DTrainMaterial.marked(models)) : models
+        if baked {
+            // Decision 449: the running cars' lamps lit each frame at the
+            // train's ends, and their windows' models, last.
+            let lit = Map3DTrainLights.split(Map3DTrainOcclusion.baked(Map3DTrainMaterial.marked(models)), recipes: models)
+            self.models = lit.models
+            lights = lit.cars
+        } else {
+            self.models = models
+        }
         headSigns = Map3DHeadSign.anchors(in: models)
     }
 

@@ -87,6 +87,20 @@ public enum Map3DTrains {
         /// Decision 342: each car's middle on its rails, for the buildings
         /// seen through in front of it (``Map3DSeeThrough``).
         public var cars: [Map3DPoint] = []
+        /// Decision 449: each train's first car and last car among
+        /// ``instances``, the ends whose lamps are lit at night.
+        public var ends: [Map3DTrainLights.End] = []
+
+        public init() {}
+
+        /// Train car `index` of `count`, drawn as the instance just added,
+        /// turned round or not: its headlamps' end when it is the first
+        /// car, its tail lamps' when the last.
+        mutating func addEnds(ofCar index: Int, count: Int, turned: Bool) {
+            let instance = instances.count - 1
+            if index == 0 { ends.append(Map3DTrainLights.End(instance: instance, atFront: !turned, isTail: false)) }
+            if index == count - 1 { ends.append(Map3DTrainLights.End(instance: instance, atFront: turned, isTail: true)) }
+        }
     }
 
     /// Decision 314: a train and the point just over its front car's roof.
@@ -235,9 +249,12 @@ public enum Map3DTrains {
                    let model = models.model(near, forType: trainType, count: count, at: (base - eye).length, reach: reach) {
                     // The last car is the head car's model turned round, or
                     // the set's own tail.
-                    let turned = layout == nil && models.isTurned(forType: trainType, carIndex: index, count: cars.count)
+                    // Decision 449: a set at its own lengths too (the
+                    // push-pull set's back power car, its cab to the back).
+                    let turned = models.isTurned(forType: trainType, carIndex: index, count: cars.count)
                     frame.instances.append(instance(of: models.models[model], index: model, from: turned ? a : b, to: turned ? b : a,
                                                     stripe: stripe ?? band))
+                    frame.addEnds(ofCar: index, count: cars.count, turned: turned)
                     continue
                 }
                 frame.boxes.addBox(base: base + Map3DPoint(0, 0.3, 0), forward: a - b, length: length, width: carWidth,

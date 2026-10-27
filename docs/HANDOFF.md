@@ -387,6 +387,7 @@
     - **順序**：AB（#1365）先合，AE 再 merge main（兩邊都改 `RoadsTurnOn.swift` 一帶，衝突就由 AE 解）。AE 已壓縮 1 次。
   - **AD**：session_01YGNNuoLcfAoBA6h9zn3q2t（Opus），決策 439，§22.16 列車的遮蔽陰影烘焙、夜燈、車窗與車身質感，一項一個 PR。**每個 PR 都要同時更新 `.claude/skills/rolling-stock/SKILL.md`**（§4「統一的夜間亮燈還沒做」那句、§6，加一行車頭方向幕；作者問「1357 還要吸收總結列車製作方式更新嗎」，規劃答由 AD 每個 PR 順手改，作者「好 照這樣做」）。合併前看 skill 有沒有跟著改。
     - 2026-10-27：第 2 項（遮蔽陰影烘焙）是 #1373（決策 439）。AD 壓縮過一次，做完就停；第 1 項（夜燈）、第 3 項（車窗與車身質感）未開始，從哪裡接寫在 `docs/decisions/439.md` 的「下一步」。
+    - 2026-10-27：第 1 項（夜燈）由 AR（session_01YGNNumNuGqtdahN2CHsi39，決策 449，`claude/train-night-lights-ar`）做；沒做完的（遠景盒子車的燈與窗、更多方向幕、頭燈照地、隧道裡亮燈）寫在 `docs/decisions/449.md` 的「下一步」。
   - **AH**：session_01YGNNumzJG7K5DTHJpvMp7L（Opus），**#1366**（draft，決策 441），NEXT_PRIORITIES 10p：每個機廠旁的三股道檢修庫、彰化扇形車庫的轉車台。只改 GamePresentation，沒動 AD 的著色器檔。決策 441 已寫「實機要去哪裡看」。AH 已壓縮 1 次。
   - **AI**：session_01YGNNum4o6fTLwq4cU6JWQf（Sonnet），`claude/ui-text-no-usd`，地價說明 4 處的「美元」／"dollars" 改成只寫「$」（`PopTravel.swift:89`、`PopulationLegendView.swift:287`、`:432`、`Localizable.xcstrings`）。還沒開 PR。綠了就合。
 - **新台幣**（作者 2026-10-27：「那要出幣值轉換嗎 設定頁面有新台幣」「我是說要出嗎」「那要先說明是美金嗎」「可是這樣未來更多玩家轉換不就更困難 現在只有50位玩家而已」）：

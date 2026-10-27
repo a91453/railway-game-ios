@@ -240,7 +240,10 @@ public enum Map3DShowcase {
     static func cars(of key: String, count: Int, pack: Map3DModelPack) -> [(model: Int, length: Float, gap: Float, turned: Bool)] {
         guard let set = Map3DTrainSet.byKey[key] else { return [] }
         if set.ownLengths, let laid = pack.layout(forType: key, count: count) {
-            return laid.map { ($0.model, $0.length, $0.gap, false) }
+            // Decision 449: the push-pull set's back power car turned round.
+            return laid.enumerated().map { index, car in
+                (car.model, car.length, car.gap, pack.isTurned(forType: key, carIndex: index, count: laid.count))
+            }
         }
         // The set itself, not what a train of its key would be drawn as
         // (the green tram's two cars are the five-section LRT's).
@@ -258,9 +261,11 @@ public enum Map3DShowcase {
         var frame = Map3DTrains.Frame()
         for row in rows {
             let stripe = Map3DColor.rgb(entry(row.key)?.stripe ?? 0x2F6DB5)
-            for car in row.cars where pack.models.indices.contains(car.model) {
+            for (index, car) in row.cars.enumerated() where pack.models.indices.contains(car.model) {
                 frame.instances.append(Map3DTrains.instance(of: pack.models[car.model], index: car.model, from: car.back, to: car.front,
                                                             stripe: stripe))
+                // Decision 449: the row's front is toward +x.
+                frame.addEnds(ofCar: index, count: row.cars.count, turned: car.front.x < car.back.x)
                 let length = (car.front - car.back).length
                 let centre = (car.front + car.back) * 0.5 + Map3DPoint(0, 0.05 - Map3DScene.Builder.bedDrop, 0)
                 frame.shadows.addShadow(

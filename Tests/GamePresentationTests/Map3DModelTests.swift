@@ -26,7 +26,8 @@ final class Map3DModelTests: XCTestCase {
         let ppDisplayModels = Map3DPPPassenger.roles.count * 2 + 2 // E1000 near/far
         let emu500Models = Map3DEMU500.Unit.allCases.count + 1
         let taipei610Models = Map3DTaipei610.Role.allCases.count * 3 // near, far, light
-        XCTAssertEqual(pack.models.count, baseModels + shortSets + longSets + rest + ppDisplayModels + Map3DEMU800.Role.allCases.count * 4 + emu500Models + Map3DC341.Unit.allCases.count + Map3DEMU900.Role.allCases.count * 6 + taipei610Models)
+        // Decision 449: and after them, the running cars' windows.
+        XCTAssertEqual(pack.models.filter { !$0.name.hasPrefix(Map3DTrainLights.prefix) }.count, baseModels + shortSets + longSets + rest + ppDisplayModels + Map3DEMU800.Role.allCases.count * 4 + emu500Models + Map3DC341.Unit.allCases.count + Map3DEMU900.Role.allCases.count * 6 + taipei610Models)
         for style in Map3DTrainStyle.all {
             var names = [style.name + "-cab", style.name + "-car"]
             if !style.pantographCars.isEmpty { names.append(style.name + "-panto") }
@@ -79,7 +80,9 @@ final class Map3DModelTests: XCTestCase {
         // shoulder ridge, and the windscreen stops at the cockpit canopy.
         XCTAssertTrue(cab.vertices.contains { $0.x > 4 && $0.color >> 24 == 0 })
         XCTAssertTrue(cab.vertices.contains { $0.x > 4 && $0.color == Map3DTrainStyle.navyLine })
-        let lamps = cab.vertices.filter { $0.x > 4 && $0.glows }
+        // (The recipe's: decision 449 lights them at a train's front.)
+        let recipe = Map3DModelPack.unbaked.models[try XCTUnwrap(pack.index(of: "highSpeed-cab"))]
+        let lamps = recipe.vertices.filter { $0.x > 4 && $0.glows }
         XCTAssertFalse(lamps.isEmpty)
         XCTAssertLessThan(try XCTUnwrap(lamps.map(\.z).max()), 2.3, "headlamps sit low on the shoulder ridge")
         XCTAssertFalse(cab.vertices.contains { $0.x > 6.5 && $0.color == Map3DTrainStyle.glass })

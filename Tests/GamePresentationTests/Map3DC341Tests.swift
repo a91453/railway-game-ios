@@ -12,7 +12,7 @@ final class Map3DC341Tests: XCTestCase {
             XCTAssertNotNil(pack.index(of:m.name))
         }
         XCTAssertEqual(Map3DC341.arrangement.count,6)
-        XCTAssertEqual(pack.models.last?.name,Map3DLowFloorBus.routeModel().name)
+        XCTAssertEqual(pack.models.last(where: { !$0.name.hasPrefix(Map3DTrainLights.prefix) })?.name,Map3DLowFloorBus.routeModel().name)
     }
     func testMiddleHasNoFrontGlazingAndRearFacesOutward() {
         for u in [Map3DC341.Unit.t,.m] {

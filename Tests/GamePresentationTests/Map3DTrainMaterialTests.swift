@@ -48,13 +48,16 @@ final class Map3DTrainMaterialTests: XCTestCase {
         let materials: Set<Float> = [Map3DVertex.trainGlass, Map3DVertex.trainSteel, Map3DVertex.trainGlassLit]
         for (marked, recipe) in zip(pack.models, recipes.models) {
             let train = Map3DTrainOcclusion.isTrain(recipe.name), stainless = Map3DTrainMaterial.isStainless(recipe.name)
+            // Decision 449: a running car's lamps are lit only at its train's ends.
+            let running = Map3DTrainLights.isRunning(recipe.name)
             for start in stride(from: 0, to: recipe.vertices.count, by: 3) {
                 let after = marked.vertices[start..<start + 3], before = recipe.vertices[start]
                 XCTAssertEqual(Set(after.map(\.layer)).count, 1, recipe.name)
-                XCTAssertEqual(after.first!.glows, before.glows, "\(recipe.name): a lamp stays a lamp")
+                let lamp = before.glows && !running
+                XCTAssertEqual(after.first!.glows, lamp, "\(recipe.name): a lamp stays a lamp")
                 let layer = after.first!.layer
                 guard materials.contains(layer) else {
-                    XCTAssertEqual(layer, before.layer, recipe.name)
+                    XCTAssertEqual(layer, before.glows && running ? Map3DVertex.plain : before.layer, recipe.name)
                     XCTAssertFalse(after.contains { $0.isTrainMaterial }, recipe.name)
                     continue
                 }
@@ -67,7 +70,7 @@ final class Map3DTrainMaterialTests: XCTestCase {
                     XCTAssertTrue(Map3DTrainMaterial.isSteelColour(before.color), recipe.name)
                 } else {
                     XCTAssertTrue(Map3DTrainMaterial.isGlassColour(before.color), recipe.name)
-                    XCTAssertEqual(layer == Map3DVertex.trainGlassLit, before.glows, recipe.name)
+                    XCTAssertEqual(layer == Map3DVertex.trainGlassLit, lamp, recipe.name)
                 }
             }
         }
