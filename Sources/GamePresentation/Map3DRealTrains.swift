@@ -121,6 +121,14 @@ public struct Map3DRealTrains: Sendable {
     static let carPitch = 0.020
     static let carLength = carPitch - Double(Map3DTrains.carGap) / 1_000
 
+    /// Decision 433: the key a train of `system`'s `key` set is drawn as,
+    /// ``Map3DTrainSet/variant(of:number:locked:)``, but the C341 only on
+    /// Taipei Metro's lines: Kaohsiung's, Taoyuan's and Taichung's metro
+    /// trains are not C341s, and stay the C381's set.
+    static func variantKey(system: String, key: String, number: Int, locked: Set<String> = []) -> String {
+        key == "metroC381" && system != "trtc" ? key : Map3DTrainSet.variant(of: key, number: number, locked: locked)
+    }
+
     /// Each line's trains (decision 339): as many cars as `Railway/`
     /// rail-3d's formations give its trains (`integration/formations.js`
     /// `baseFormation`), each the game's set for that stock, or the nearest
@@ -316,8 +324,9 @@ public struct Map3DRealTrains: Sendable {
                 // Decision 408: half the high-speed trains the N700S-G, by
                 // their run on the day's timetable.
                 // Decision 338 (second later): none while the pack is locked.
-                let formation = Formation(key: Map3DTrainSet.variant(of: lineFormation.key, number: Map3DTrainSet.number(ofRealTrain: place.key),
-                                                                     locked: models?.locked ?? []),
+                // Decision 433: and half the Taipei Metro's the C341.
+                let formation = Formation(key: Self.variantKey(system: line.system, key: lineFormation.key,
+                                                               number: Map3DTrainSet.number(ofRealTrain: place.key), locked: models?.locked ?? []),
                                           cars: lineFormation.cars)
                 let way: Double = RealTrainRun.way(from: place.km, to: place.towardKm, ringKm: isRing ? ring : nil) >= 0 ? 1 : -1
                 let length = Double(formation.cars) * Self.carPitch
