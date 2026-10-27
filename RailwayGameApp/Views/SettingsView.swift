@@ -544,7 +544,14 @@ struct SettingsView: View {
             .contentShape(Rectangle())
             .onTapGesture {
                 guard TestBuild.isTest else { return }
-                demoModeReveal.tap()
+                // A UI test's taps take over a second each on a busy
+                // Simulator, longer than the gap the player's hand keeps.
+                #if DEBUG
+                let uiTesting = ProcessInfo.processInfo.arguments.contains("-ui-testing")
+                #else
+                let uiTesting = false
+                #endif
+                demoModeReveal.tap(gap: uiTesting ? 10 : DemoMode.tapGap)
             }
             if TestBuild.isTest, demoModeReveal.isRevealed || demoModeOn {
                 Toggle(isOn: $demoModeOn) {

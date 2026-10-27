@@ -40,6 +40,15 @@ final class DemoModeTests: XCTestCase {
         XCTAssertTrue(reveal.isRevealed)
     }
 
+    func testALongerGapKeepsSlowTapsInARow() {
+        let start = Date(timeIntervalSince1970: 0)
+        var reveal = DemoMode.Reveal()
+        for tap in 0..<4 {
+            XCTAssertFalse(reveal.tap(at: start + Double(tap) * 2, gap: 5))
+        }
+        XCTAssertTrue(reveal.tap(at: start + 8, gap: 5), "two seconds apart still count with a gap of five")
+    }
+
     func testEveryLessonIsOpen() {
         let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
         XCTAssertEqual(Lesson.all.map(launcher.isOpen), [true] + Array(repeating: false, count: Lesson.all.count - 1))
