@@ -10,7 +10,7 @@ await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;
 try{
  browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  const page=await browser.newPage(),base='http://127.0.0.1:'+server.address().port;await page.goto(base+'/_clay.html');await page.waitForFunction(()=>window.ready);
- const models=JSON.parse(readFileSync(resolve(root,'manifest.json'))).models.filter(m=>m.category==='formation'||m.id==='c371-dm'||m.id==='c381-dm');
+ const models=JSON.parse(readFileSync(resolve(root,'manifest.json'))).models.filter(m=>m.category!=='comparison');
  for(const model of models){
  const views=await page.evaluate(async path=>{
   const original=renderer.prepare(await(await fetch(path)).arrayBuffer()),result={};
@@ -22,7 +22,7 @@ try{
   }
   return result;
  },model.native);
- for(const [name,data] of Object.entries(views))writeFileSync(resolve(root,'previews',(model.category==='formation'?model.id+'-':'cab-'+model.id+'-')+name+'.png'),Buffer.from(data.split(',')[1],'base64'));
+ for(const [name,data] of Object.entries(views))writeFileSync(resolve(root,'previews',model.id+'-'+name+'.png'),Buffer.from(data.split(',')[1],'base64'));
  }
- console.log('Rendered cab and formation clay / silhouette views from the exact native triangles.');
+ console.log('Rendered each unit and formation clay / silhouette views from the exact native triangles.');
 }finally{if(browser)await browser.close();server.close();await import('node:fs').then(fs=>fs.unlinkSync(resolve(root,'_clay.html')));}
