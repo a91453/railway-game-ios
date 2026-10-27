@@ -598,35 +598,35 @@
       "triangles" : 3944
     },
     "prop-busStop" : {
-      "hash" : "50023776638d18c",
+      "hash" : "f6164ac602566f20",
       "triangles" : 288
     },
     "prop-lamp" : {
-      "hash" : "333474283dd11b6e",
+      "hash" : "a74add8f36ae0b92",
       "triangles" : 36
     },
     "prop-pole" : {
-      "hash" : "9ec7dbd8ca449800",
+      "hash" : "fcf999d1b19ce458",
       "triangles" : 88
     },
     "prop-signalAmber" : {
-      "hash" : "99db8dfa18e7baab",
+      "hash" : "c8787c39d5e9746f",
       "triangles" : 76
     },
     "prop-signalGo" : {
-      "hash" : "971614e8bce73bbb",
+      "hash" : "6afe355f070b4c6b",
       "triangles" : 76
     },
     "prop-signalStop" : {
-      "hash" : "b6cf28be93afa9af",
+      "hash" : "f1a45321d2d9463",
       "triangles" : 76
     },
     "prop-tree" : {
-      "hash" : "5ac349ccb3ef07b7",
+      "hash" : "1d955bff82c6ceb3",
       "triangles" : 76
     },
     "prop-vending" : {
-      "hash" : "86d9dc0d994d5203",
+      "hash" : "759374631344a91f",
       "triangles" : 38
     },
     "refresh-700t-cab" : {

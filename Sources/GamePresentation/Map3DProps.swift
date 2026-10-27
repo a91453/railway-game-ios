@@ -110,13 +110,15 @@ public enum Map3DProp: String, CaseIterable, Sendable {
         (Map3DColor.rgb(0xFF4433), Map3DColor.rgb(0x4A2422)), (Map3DColor.rgb(0xFFC23A), Map3DColor.rgb(0x4A3F22)),
         (Map3DColor.rgb(0x35E89A), Map3DColor.rgb(0x1F4A3A)),
     ]
+    /// The housing and visor round the lights.
+    static let signalHousing = Map3DColor.rgb(0x2B2F36)
 
     /// A signal (`Web/CityView/src/world/props.js` `signalGeometry`, MIT:
     /// mast 6.3 m, arm 3.4 m, head 1.3 m at 5.6 m), its light `lit` (an
     /// index of ``signalLights``) glowing. The road is toward −z, the
     /// traffic it faces comes from −x.
     static func addSignal(_ mesh: inout Map3DMesh, lit: Int) {
-        let steel = Map3DColor.rgb(0x8A9099), dark = Map3DColor.rgb(0x2B2F36), across = Map3DPoint(0, 0, -1)
+        let steel = Map3DColor.rgb(0x8A9099), dark = signalHousing, across = Map3DPoint(0, 0, -1)
         mesh.addCylinder(base: .zero, radius: 0.12, height: 6.3, sides: 6, top: steel, side: steel)
         mesh.addBox(base: Map3DPoint(0, 6.0, -1.7), forward: across, length: 3.4, width: 0.1, height: 0.1, top: steel, side: steel)
         mesh.addBox(base: Map3DPoint(0, 5.37, -3.05), forward: across, length: 1.3, width: 0.22, height: 0.46, top: dark, side: dark)

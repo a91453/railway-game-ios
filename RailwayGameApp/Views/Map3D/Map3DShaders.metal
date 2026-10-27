@@ -318,13 +318,15 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
         float4 texel = surfaces.sample(repeating, in.surfaceAt, packed % 64u);
         // Decision 370: the model look. The face is its own colour, the
         // surface's brightness and decision 242's material only a faint
-        // detail on it (0.35 of their contrast), an office's glass pale
+        // detail on it (0.35 of their contrast; decision 451: 0.60 on a
+        // wall, so the buildings are not flat), an office's glass pale
         // blue, thin lines between its bays and floors, and its foot a
         // little darker (ambient occlusion, the 10 m nearest its foot).
         float2 pane = glassMirror[min(packed % 64u, 23u)];
         float3 tinted = base;
         if (pane.x > 0.6 && pane.y < 0.5) { tinted = mix(tinted, float3(0.80, 0.87, 0.93), 0.6); }
-        tinted *= mix(1.0, clamp(dot(texel.rgb, float3(0.2126, 0.7152, 0.0722)) * 2.0, 0.6, 1.2), 0.35);
+        float contrast = abs(normal.y) < 0.7 ? 0.60 : 0.35;
+        tinted *= mix(1.0, clamp(dot(texel.rgb, float3(0.2126, 0.7152, 0.0722)) * 2.0, 0.6, 1.2), contrast);
         uint material = packed / 64u;
         if (material > 0u) {
             uint layer = material - 1u;
@@ -337,7 +339,7 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
             // the pattern has faded out.
             if (near > 0.0) {
                 float detail = surfaces.sample(repeating, at / metres, layer).r * 2.0;
-                tinted *= mix(1.0, detail, near * 0.35);
+                tinted *= mix(1.0, detail, near * contrast);
             }
         }
         if (abs(normal.y) < 0.7) {

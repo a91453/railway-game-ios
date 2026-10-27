@@ -13,6 +13,10 @@ import GameCore
 /// Ported from the preview's `compose_play.py` (`REMAP`, `KEEP`, `pale()`,
 /// `mid=62 navy=6 ground=ECEEF6 icon`) in the reference repository's
 /// `Railway/game-art-previews/docs/art/map3d-mapbox-look-2026-10-23/`.
+///
+/// Decision 451: softer (``city``, ``close``), and the colours that tell
+/// the player something kept (``functional``). Made once as a scene is
+/// built: no vertex, texture or draw is added, so the frame costs the same.
 public enum Map3DLook {
     /// The colours left as they are: the palette's (e) colours, and what
     /// the player built and runs.
@@ -34,8 +38,18 @@ public enum Map3DLook {
             0x3B7DD8, 0x285491, 0x2C5DA1, 0x326BB8, 0x3774C8, // rooftop water tanks
         ].map(Map3DColor.rgb)
         // Decision 446: the scooters parked in the arcades, vehicles too.
-        return Set(palette + played).union(Map3DScooter.parked)
+        return Set(palette + played).union(Map3DScooter.parked).union(functional)
     }()
+
+    /// Decision 451: the colours that tell the player something, which a
+    /// pale version would hide: the traffic signals' housings and lights,
+    /// lit and unlit (the cars' and the walkers', decisions 355, 429 and
+    /// 445); the level crossings' red and black (decision 263), and the
+    /// red kerb line, which is the same red (decision 447).
+    static let functional: Set<UInt32> = Set(Map3DProp.signalLights.flatMap { [$0.lit, $0.unlit] } + [
+        Map3DProp.signalHousing, Map3DPedestrianSignal.housing,
+        Map3DScene.Builder.barrierRed, Map3DScene.Builder.barrierBlack,
+    ])
 
     /// Colours the look gives a colour of its own rather than a pale one.
     static let remapped: [UInt32: UInt32] = [
@@ -46,17 +60,39 @@ public enum Map3DLook {
         0xC65A4E: 0xC98A78,
     ].reduce(into: [:]) { $0[Map3DColor.rgb($1.key)] = Map3DColor.rgb($1.value) }
 
+    /// Decision 451: how pale a colour is drawn: in HLS, its lightness
+    /// `floor` + `share` × its own and its saturation `saturation` × its
+    /// own, its hue kept.
+    struct Strength: Equatable, Sendable {
+        var floor: Double
+        var share: Double
+        var saturation: Double
+
+        /// Decision 370's (e): 0.80 + 0.17 × and × 0.45.
+        static let e = Strength(floor: 0.80, share: 0.17, saturation: 0.45)
+    }
+
+    /// Decision 451: the city's buildings and everything else the look
+    /// makes pale, softer than (e) so the buildings keep most of their
+    /// hue and their lightness spread (the owner: 「建築感覺變得有點死」).
+    static let city = Strength(floor: 0.45, share: 0.52, saturation: 0.80)
+    /// Decision 451: the closest detail (decision 267's shopfronts,
+    /// awnings, washing), nearly its own colour.
+    static let close = Strength(floor: 0.25, share: 0.73, saturation: 0.95)
+
     /// `color` (``Map3DVertex/color``, its alpha kept) as the look draws it.
-    public static func colour(_ color: UInt32) -> UInt32 {
+    public static func colour(_ color: UInt32) -> UInt32 { colour(color, strength: city) }
+
+    static func colour(_ color: UInt32, strength: Strength) -> UInt32 {
         let opaque = color | 0xFF00_0000
         if kept.contains(opaque) { return color }
         if let mapped = remapped[opaque] { return (mapped & 0x00FF_FFFF) | (color & 0xFF00_0000) }
-        return pale(color)
+        return pale(color, strength: strength)
     }
 
-    /// The colour much lighter and calmer, its hue kept (`pale()`): in
-    /// HLS, lightness 0.80 + 0.17 × its own and saturation 0.45 × its own.
-    static func pale(_ color: UInt32) -> UInt32 {
+    /// The colour lighter and calmer, its hue kept (`pale()`), as
+    /// `strength` says.
+    static func pale(_ color: UInt32, strength: Strength = city) -> UInt32 {
         let r = Double(color & 0xFF) / 255, g = Double((color >> 8) & 0xFF) / 255, b = Double((color >> 16) & 0xFF) / 255
         let high = max(r, g, b), low = min(r, g, b), l = (high + low) / 2
         var h = 0.0, s = 0.0
@@ -68,7 +104,7 @@ public enum Map3DLook {
             h = (h / 6).truncatingRemainder(dividingBy: 1)
             if h < 0 { h += 1 }
         }
-        let lightness = 0.80 + 0.17 * l, saturation = min(s, 1) * 0.45
+        let lightness = strength.floor + strength.share * l, saturation = min(s, 1) * strength.saturation
         func channel(_ m1: Double, _ m2: Double, _ hue: Double) -> Double {
             var hue = hue.truncatingRemainder(dividingBy: 1)
             if hue < 0 { hue += 1 }
@@ -93,14 +129,14 @@ public enum Map3DLook {
     /// Every vertex of `mesh` in the look: its colour, and a plain road's
     /// layer ``Map3DVertex/road`` so the shader lights it after dark; the
     /// colours `keeping` as they are.
-    static func restyle(_ mesh: inout Map3DMesh, keeping: Set<UInt32> = []) {
+    static func restyle(_ mesh: inout Map3DMesh, keeping: Set<UInt32> = [], strength: Strength = city) {
         var last: (from: UInt32, to: UInt32)?
         mesh.restyleVertices { vertex in
             let from = vertex.color
             if let last, last.from == from {
                 vertex.color = last.to
             } else {
-                vertex.color = keeping.contains(from) ? from : colour(from)
+                vertex.color = keeping.contains(from) ? from : colour(from, strength: strength)
                 last = (from, vertex.color)
             }
             if vertex.layer == Map3DVertex.plain, roads.contains(from | 0xFF00_0000) { vertex.layer = Map3DVertex.road }
