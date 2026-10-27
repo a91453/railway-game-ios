@@ -312,43 +312,124 @@ extension StationKitBuilder {
                 let cabPane = cab.map { Map3DPoint($0.x,$0.y-0.025,$0.z+side*0.012) }
                 face(cabPane,inside:centre,color:glass)
             }
-            // The cab screen follows the rake and bends across the width.
-            // Chamfered corners and a short closed rim keep the glazing part
-            // of the nose instead of a flat panel hovering over the shell.
-            func screenPoint(_ y: Float, _ z: Float, offset: Float = 0) -> Map3DPoint {
-                let t = (3.20-y)/0.93
-                let transverse = 0.24 * max(0,1-(z/1.15)*(z/1.15))
-                return Map3DPoint(nose*(10.94+1.25*t+transverse+offset),y,z)
+            // Project the screen and lamps onto the actual shell facets.
+            // Their former flat X planes made them hover over the cab rake.
+            func cabSurface(_ y: Float, _ z: Float) -> Float {
+                var forward = -Float.infinity
+                func consider(_ a: Map3DPoint, _ b: Map3DPoint, _ c: Map3DPoint) {
+                    let by=b.y-a.y,bz=b.z-a.z,cy=c.y-a.y,cz=c.z-a.z
+                    let det=by*cz-bz*cy
+                    if abs(det)<0.00001 { return }
+                    let py=y-a.y,pz=z-a.z
+                    let u=(py*cz-pz*cy)/det,v=(by*pz-bz*py)/det
+                    if u >= -0.0001 && v >= -0.0001 && u+v <= 1.0001 {
+                        forward=max(forward,nose*(a.x*(1-u-v)+b.x*u+c.x*v))
+                    }
+                }
+                for k in 0..<(rings.count-1) {
+                    for i in section.indices {
+                        let j=(i+1)%section.count
+                        if i < 7 {
+                            consider(rings[k][i],rings[k][j],rings[k+1][i])
+                            consider(rings[k][j],rings[k+1][j],rings[k+1][i])
+                        } else {
+                            consider(rings[k][i],rings[k][j],rings[k+1][j])
+                            consider(rings[k][i],rings[k+1][j],rings[k+1][i])
+                        }
+                    }
+                }
+                precondition(forward.isFinite,"TEMU1000 cab fitting missed the shell at \(y), \(z)")
+                return forward
             }
-            let outline: [(Float,Float)] = [(3.16,-1.00),(3.19,-0.88),(3.19,0.88),
-                                            (3.16,1.00),(3.05,1.08),(2.48,1.08),
-                                            (2.34,0.98),(2.31,0),(2.34,-0.98),
-                                            (2.48,-1.08),(3.05,-1.08)]
-            let frame = outline.map { screenPoint($0.0,$0.1,offset:0.025) }
-            let backing = outline.map { screenPoint($0.0,$0.1,offset:-0.035) }
-            face(frame,inside:centre,color:ink)
-            face(backing,inside:centre,color:ink)
-            for i in outline.indices {
-                let j = (i+1)%outline.count
-                face([frame[i],frame[j],backing[j],backing[i]],inside:centre,color:ink)
+            func cabPoint(_ y: Float, _ z: Float, offset: Float = 0) -> Map3DPoint {
+                Map3DPoint(nose*(cabSurface(y,z)+offset),y,z)
             }
-            let pane = outline.map { y,z in screenPoint(2.74+(y-2.74)*0.91,z*0.94,offset:0.030) }
-            face(pane,inside:centre,color:glass)
-            // The twin upper marker lamps share one roof-backed, closed pod.
-            // Its rear edge intersects the solid roof, while its lower front
-            // edge overlaps the screen rim rather than hovering above it.
-            let lampRear = [Map3DPoint(nose*10.70,3.12,-0.21),
-                            Map3DPoint(nose*10.70,3.23,-0.21),
-                            Map3DPoint(nose*10.70,3.27,-0.15),
-                            Map3DPoint(nose*10.70,3.27,0.15),
-                            Map3DPoint(nose*10.70,3.23,0.21),
-                            Map3DPoint(nose*10.70,3.12,0.21)]
-            let lampFront = [Map3DPoint(nose*11.30,3.10,-0.21),
-                             Map3DPoint(nose*11.30,3.36,-0.21),
-                             Map3DPoint(nose*11.30,3.41,-0.15),
-                             Map3DPoint(nose*11.30,3.41,0.15),
-                             Map3DPoint(nose*11.30,3.36,0.21),
-                             Map3DPoint(nose*11.30,3.10,0.21)]
+            // The reference screen is taller and reaches much closer to the
+            // roof. Rounded bands keep its corners narrow without a thick rim.
+            let screenBands: [(height:Float,halfWidth:Float)] = [
+                (2.40,0.88),(2.44,1.00),(2.55,1.11),
+                (3.29,1.11),(3.44,1.00),(3.52,0.86)
+            ]
+            let screenOutline = screenBands.map { ($0.height,-$0.halfWidth) }
+                              + screenBands.reversed().map { ($0.height,$0.halfWidth) }
+            func clipScreen(_ triangle: [Map3DPoint]) -> [Map3DPoint] {
+                var polygon=triangle
+                for edge in screenOutline.indices {
+                    let a=screenOutline[edge],b=screenOutline[(edge+1)%screenOutline.count]
+                    func signed(_ p: Map3DPoint) -> Float {
+                        (b.0-a.0)*(p.z-a.1)-(b.1-a.1)*(p.y-a.0)
+                    }
+                    var next: [Map3DPoint]=[]
+                    if polygon.isEmpty { return [] }
+                    for i in polygon.indices {
+                        let p=polygon[i],q=polygon[(i+1)%polygon.count]
+                        let dp=signed(p),dq=signed(q)
+                        if dp >= -0.00001 { next.append(p) }
+                        if (dp < -0.00001 && dq > 0.00001) ||
+                           (dp > 0.00001 && dq < -0.00001) {
+                            let t=dp/(dp-dq)
+                            next.append(p+(q-p)*t)
+                        }
+                    }
+                    polygon=next
+                }
+                // Clipping across a shared shell edge can emit the same
+                // vertex twice. Remove it before native facet triangulation.
+                var clean: [Map3DPoint]=[]
+                for p in polygon {
+                    if let q=clean.last,
+                       abs(p.x-q.x)+abs(p.y-q.y)+abs(p.z-q.z)<0.0001 { continue }
+                    clean.append(p)
+                }
+                if clean.count>1 {
+                    let p=clean[0],q=clean[clean.count-1]
+                    if abs(p.x-q.x)+abs(p.y-q.y)+abs(p.z-q.z)<0.0001 { clean.removeLast() }
+                }
+                return clean.count>=3 ? clean : []
+            }
+            // Clip each actual shell triangle to the rounded screen outline.
+            // This keeps glazing flush on the nose rake, without white gaps
+            // from a second grid spanning across the original cab facets.
+            for k in 0..<(rings.count-1) where nose*rings[k][0].x > 8.8 && nose*rings[k+1][0].x > 8.8 {
+                for i in section.indices {
+                    let j=(i+1)%section.count
+                    let a=rings[k][i],b=rings[k][j],c=rings[k+1][j],d=rings[k+1][i]
+                    let triangles = i < 7 ? [[a,b,d],[b,c,d]] : [[a,b,c],[a,c,d]]
+                    for triangle in triangles {
+                        let cut=clipScreen(triangle)
+                        if !cut.isEmpty {
+                            face(cut.map { Map3DPoint($0.x+nose*0.014,$0.y,$0.z) },
+                                 inside:centre,color:glass)
+                        }
+                    }
+                }
+            }
+            if !far {
+                // The supplied cab photos show two slim blades rising from
+                // the lower glass toward the outer corners.
+                for side: Float in [-1,1] {
+                    let pivot=cabPoint(2.46,side*0.25,offset:0.081)
+                    let joint=cabPoint(2.73,side*0.75,offset:0.081)
+                    let tip=cabPoint(2.86,side*0.99,offset:0.081)
+                    civicTube(pivot,joint,radius:0.012,color:ink,sides:6)
+                    civicTube(joint,tip,radius:0.010,color:ink,sides:6)
+                }
+            }
+            // Real front views resolve two lamps inside one central housing;
+            // the glare in the drawing blends them together. Its rear half
+            // is buried in the roof and the lower front touches the screen.
+            let lampRear = [Map3DPoint(nose*9.96,3.43,-0.17),
+                            Map3DPoint(nose*9.96,3.56,-0.17),
+                            Map3DPoint(nose*9.96,3.62,-0.11),
+                            Map3DPoint(nose*9.96,3.62,0.11),
+                            Map3DPoint(nose*9.96,3.56,0.17),
+                            Map3DPoint(nose*9.96,3.43,0.17)]
+            let lampFront = [Map3DPoint(nose*10.77,3.45,-0.17),
+                             Map3DPoint(nose*10.77,3.56,-0.17),
+                             Map3DPoint(nose*10.77,3.63,-0.11),
+                             Map3DPoint(nose*10.77,3.63,0.11),
+                             Map3DPoint(nose*10.77,3.56,0.17),
+                             Map3DPoint(nose*10.77,3.45,0.17)]
             face(lampRear,inside:centre,color:ink)
             face(lampFront,inside:centre,color:ink)
             for i in lampFront.indices {
@@ -356,30 +437,50 @@ extension StationKitBuilder {
                 face([lampRear[i],lampRear[j],lampFront[j],lampFront[i]],inside:centre,color:ink)
             }
             for side: Float in [-1,1] {
-                civicTube(Map3DPoint(nose*11.305,3.27,side*0.105),
-                          Map3DPoint(nose*11.33,3.27,side*0.105),
-                          radius:0.055,color:Map3DStreetModel.headlamp,sides:far ? 6 : 12)
+                let first=mesh.vertices.count
+                civicTube(Map3DPoint(nose*10.775,3.53,side*0.075),
+                          Map3DPoint(nose*10.80,3.53,side*0.075),
+                          radius:0.050,color:Map3DStreetModel.headlamp,sides:far ? 8 : 12)
+                mesh.makeGlowing(from:first)
             }
-            // Oval lamp pods have a shallow closed backing sunk into the
-            // white nose. Their lenses sit above the wraparound stripe.
+            // The photos show tilted smoked housings with shallow horizontal
+            // louvers; the frontal drawing's pale spots are lamp glare.
             for side: Float in [-1,1] {
-                let around = far ? 6 : 12
-                func oval(_ x: Float, _ yr: Float, _ zr: Float) -> [Map3DPoint] {
+                let around = far ? 8 : 16
+                func oval(_ yr: Float, _ zr: Float, _ offset: Float) -> [Map3DPoint] {
                     (0..<around).map { i in
-                        let a = 2 * Float.pi * Float(i) / Float(around)
-                        return Map3DPoint(x, 2.09 + yr*sinf(a)
-                                               + side*0.04*cosf(a), side*0.79 + zr*cosf(a))
+                        let a=2*Float.pi*Float(i)/Float(around)
+                        let y=2.18+yr*sinf(a)+side*0.10*cosf(a)
+                        let z=side*0.80+zr*cosf(a)
+                        return cabPoint(y,z,offset:offset)
                     }
                 }
-                let back = oval(nose*12.34,0.11,0.21)
-                let rim = oval(nose*12.42,0.11,0.21)
-                face(back,inside:centre,color:ink)
-                face(rim,inside:centre,color:ink)
+                let back = oval(0.15,0.27,-0.014)
+                let rim = oval(0.15,0.27,0.060)
+                let middle=cabPoint(2.18,side*0.80,offset:0.060)
+                for i in 0..<around {
+                    face([middle,rim[i],rim[(i+1)%around]],inside:centre,color:ink)
+                }
                 for i in 0..<around {
                     let j = (i+1)%around
                     face([back[i],back[j],rim[j],rim[i]],inside:centre,color:ink)
                 }
-                face(oval(nose*12.43,0.065,0.15),inside:centre,color:Map3DPalette.tileWhite)
+                let lens=oval(0.115,0.225,0.068)
+                let lensMiddle=cabPoint(2.18,side*0.80,offset:0.068)
+                for i in 0..<around {
+                    face([lensMiddle,lens[i],lens[(i+1)%around]],
+                         inside:centre,color:Map3DTEMU1000.passengerGlass)
+                }
+                for height: Float in [-0.055,0,0.055] {
+                    func slat(_ across: Float, _ high: Float) -> Map3DPoint {
+                        let z=side*0.80+across
+                        return cabPoint(2.18+height+side*0.10*across/0.225+high,
+                                        z,offset:0.081)
+                    }
+                    face([slat(-0.14,-0.009),slat(0.14,-0.009),
+                          slat(0.14,0.009),slat(-0.14,0.009)],
+                         inside:centre,color:metal)
+                }
             }
             box(nose*12.10,0.48,0,0.20,0.34,0.17,ink)
         } else {

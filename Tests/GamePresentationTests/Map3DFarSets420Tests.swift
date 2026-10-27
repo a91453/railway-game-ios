@@ -44,28 +44,23 @@ final class Map3DFarSets420Tests: XCTestCase {
         }
     }
 
-    /// The near Taroko is as it was on main: the far switch only adds.
-    func testTheNearTarokoIsUnchanged() {
-        XCTAssertEqual(Map3DTEMU1000.Unit.allCases.map { Map3DTEMU1000.model($0).triangleCount }, Self.mainTriangles)
-        XCTAssertEqual(digest(Map3DTEMU1000.Unit.allCases), Self.mainDigest)
-    }
-
-    /// Measured on main before decision 420.
-    private static let mainTriangles = [2583, 1408, 1512, 2583]
-    private static let mainDigest: UInt64 = 930026698743816318
-
-    /// FNV-1a over every vertex's bits, the same on every run.
-    private func digest(_ units: [Map3DTEMU1000.Unit]) -> UInt64 {
-        var hash: UInt64 = 0xcbf2_9ce4_8422_2325
-        func mix(_ word: UInt32) {
-            for shift in stride(from: 0, to: 32, by: 8) { hash = (hash ^ UInt64((word >> UInt32(shift)) & 0xFF)) &* 0x100_0000_01b3 }
+    /// The operating near set still uses the authored near cars after a
+    /// deliberate art revision. Its cab cars add the set's running lamps.
+    func testTheNearTarokoUsesTheAuthoredCars() throws {
+        let units: [(String, Map3DTEMU1000.Unit, Bool)] = [
+            ("head", .leading, true), ("car", .middle, false),
+            ("tail", .trailing, true), ("panto", .pantograph, false)
+        ]
+        for (name, unit, hasRunningLamps) in units {
+            let authored = Map3DTEMU1000.model(unit)
+            let staticCar = try model(authored.name)
+            let operatingCar = try model("set-taroko-\(name)")
+            XCTAssertEqual(staticCar.vertices, authored.vertices, name)
+            XCTAssertEqual(operatingCar.minimum.x, authored.minimum.x, name)
+            XCTAssertEqual(operatingCar.maximum.x, authored.maximum.x, name)
+            XCTAssertGreaterThanOrEqual(operatingCar.vertices.count, authored.vertices.count, name)
+            XCTAssertEqual(Array(operatingCar.vertices.prefix(authored.vertices.count)), authored.vertices, name)
+            XCTAssertEqual(operatingCar.vertices.count > authored.vertices.count, hasRunningLamps, name)
         }
-        for unit in units {
-            for v in Map3DTEMU1000.model(unit).vertices {
-                for f in [v.x, v.y, v.z, v.nx, v.ny, v.nz] { mix(f.bitPattern) }
-                mix(v.color)
-            }
-        }
-        return hash
     }
 }
