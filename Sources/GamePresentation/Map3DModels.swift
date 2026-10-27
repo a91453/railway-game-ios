@@ -96,6 +96,8 @@ public struct Map3DModelPack: Sendable {
                 for reversed in [false, true] { models.append(Map3DEMU800.model(role, reversed: reversed, far: far)) }
             }
         }
+        models += Map3DEMU500.Unit.allCases.map { Map3DEMU500.model($0) }
+        models.append(Map3DEMU500.formation())
         // Decision 400, 10i-6: the player's route buses, last, so no model
         // before them moves.
         models.append(Map3DLowFloorBus.routeModel())
