@@ -5,7 +5,8 @@ import XCTest
 
 /// Decision 428: a game saved without roads turns them on from the bus
 /// tool, and then runs buses; the tutorial and the lessons cannot, and a
-/// real-world map whose land came all at once has no roads to read.
+/// real-world map outside Taiwan whose land came all at once has no roads to
+/// read (decision 440: one in Taiwan reads them round its stations).
 @MainActor
 final class RoadsTurnOnTests: XCTestCase {
     /// `SaveFixtures/`, at the repository root.
@@ -144,23 +145,119 @@ final class RoadsTurnOnTests: XCTestCase {
         XCTAssertEqual(replay.session.world, session.world)
     }
 
-    /// A real-world map whose land came all at once, or none (version 4's
-    /// demo): no roads to read, so the tool says so and offers nothing.
-    func testARealMapWithItsLandAllThereHasNoRoadsToRead() throws {
+    /// Decision 440: a real-world map of Taiwan whose land came all at
+    /// once (version 4's demo, at Taipei Station) reads the base map's
+    /// roads round its stations, the blocks a map reading its land as it
+    /// is needed would read there, and leaves its land as it was.
+    func testAnEarlyTaiwanMapReadsTheBaseMapsRoadsRoundItsStations() throws {
         let world = try fixture("v4-real-world-demo-90-minutes.json")
         XCTAssertNotNil(world.geoAnchor)
         XCTAssertNil(world.landBlocks)
         let session = GameSession(world: world)
+        try CommandLogReplay.realWorld.install(
+            RealWorldDataSet(population: true, places: true, water: true, heights: true, coverage: true, baseMap: true), in: session
+        )
+        // The data arrives as the app hands it over (logged, decision 193).
+        session.readLandRoundStations()
+        XCTAssertNil(session.world.roads)
+        XCTAssertTrue(session.allows(ConstructionTool.bus))
+        XCTAssertEqual(session.roadsOffer, .available)
+
+        session.turnOnRoads()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        let roads = try XCTUnwrap(session.world.roads)
+        XCTAssertEqual(roads.towns, [], "a real map's roads are the base map's")
+        XCTAssertEqual(roads.readBlocks, GameSession.blocksRoundStations(of: session.world))
+        XCTAssertFalse(roads.readBlocks.isEmpty)
+        let frame = try XCTUnwrap(RealWorldFrame(world: session.world))
+        let baseMap = try XCTUnwrap(session.baseMap)
+        XCTAssertEqual(
+            roads.cells, RealRoadCells.read(blocks: roads.readBlocks, tiles: baseMap, frame: frame, bounds: session.world.bounds).roads,
+            "the same cells as a map reading its land would get in those blocks"
+        )
+        XCTAssertGreaterThan(roads.cells.count, 50, "Taipei's streets")
+        XCTAssertNil(session.world.landBlocks, "its land is left as it was")
+        XCTAssertEqual(session.world.land, world.land)
+        XCTAssertTrue(session.allowsBusTool)
+        XCTAssertNil(session.roadsOffer)
+
+        // The same edit replays to the same world, and saves and reads back.
+        let report = try JSONDecoder().decode(
+            CommandLogReport.self, from: session.commandLogReport(version: "0.9", build: "90", data: [:]).encoded()
+        )
+        let replay = try CommandLogReplay(report)
+        XCTAssertNil(replay.stopped?.reason)
+        XCTAssertEqual(replay.session.world, session.world)
+        let saved = try JSONEncoder().encode(SavedGame(world: session.world))
+        XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: saved).world, session.world)
+
+        // A station on one of its roads runs a bus to the road beside it.
+        let beside = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+        let placed = roads.cells.sorted { ($0.row, $0.column) < ($1.row, $1.column) }.lazy.compactMap { cell -> (StationID, CellPosition)? in
+            guard let stop = beside.map({ CellPosition(row: cell.row + $0.0, column: cell.column + $0.1) }).first(where: roads.cells.contains),
+                  let station = try? session.performEdit({ world throws(GameError) in try world.buildStation(named: "Bus", at: cell.middle) })
+            else { return nil }
+            return (station.id, stop)
+        }.first
+        let (station, stop) = try XCTUnwrap(placed, "a station on a road")
+        let outcome = session.perform(.createBusRoute(station, stops: [.init(stop)], service: .every(minutes: 15), buses: 1)) { _, _, _ in "" }
+        XCTAssertNotNil(outcome, session.message?.text ?? "")
+        XCTAssertEqual(session.world.busRoutes.count, 1)
+    }
+
+    /// Decision 440: on such a map a station built later gets the roads
+    /// round it with its edit, as a map reading its land does.
+    func testAStationBuiltLaterOnAnEarlyTaiwanMapGetsItsRoads() throws {
+        // A real-world game of the usual size with its people given at
+        // once, as the real-world demo still starts (Ruifang).
+        let frame = RealWorldFrame(anchor: RealWorldDemo.anchor, bounds: GameWorld.newGameBounds)
+        let middle = PlanPoint(x: GameWorld.newGameBounds.width / 2, y: GameWorld.newGameBounds.height / 2)
+        var world = GameWorld.newGame(anchor: frame.anchor, land: [LandCell(row: cell(of: middle).row, column: cell(of: middle).column, use: .residential, residents: 100, jobs: 0)])
+        XCTAssertNil(world.landBlocks)
+        XCTAssertNil(world.roads)
+        _ = try world.buildStation(named: "Middle", at: middle)
+        let session = GameSession(world: world)
+        try CommandLogReplay.realWorld.install(
+            RealWorldDataSet(population: true, places: true, water: true, heights: true, coverage: true, baseMap: true), in: session
+        )
+        // The data arrives as the app hands it over (logged, decision 193).
+        session.readLandRoundStations()
+        XCTAssertNil(session.world.roads)
+        XCTAssertEqual(session.roadsOffer, .available)
+        session.turnOnRoads()
+        let before = try XCTUnwrap(session.world.roads)
+        XCTAssertEqual(before.readBlocks, GameSession.blocksRoundStations(of: session.world))
+        let corner = PlanPoint(x: Land.blockLength / 2, y: Land.blockLength / 2)
+        _ = try session.performEdit { world throws(GameError) in try world.buildStation(named: "Corner", at: corner) }
+        let after = try XCTUnwrap(session.world.roads)
+        XCTAssertEqual(after.readBlocks, GameSession.blocksRoundStations(of: session.world))
+        XCTAssertTrue(after.readBlocks.isStrictSuperset(of: before.readBlocks), "the corner's blocks read with its station")
+        XCTAssertNil(session.world.landBlocks)
+    }
+
+    /// A real-world map outside Taiwan whose land came all at once: the
+    /// base map is Taiwan's alone, so the tool says why and offers nothing.
+    func testAMapOutsideTaiwanHasNoRoadsToRead() throws {
+        var world = try fixture("v4-real-world-demo-90-minutes.json")
+        world.setGeoAnchor(GeoAnchor(latitude: 356_812_000, longitude: 1_397_671_000)) // Tokyo Station
+        XCTAssertNil(world.landBlocks)
+        let session = GameSession(world: world, language: .english)
+        try CommandLogReplay.realWorld.install(
+            RealWorldDataSet(population: true, places: true, water: true, heights: true, coverage: true, baseMap: true), in: session
+        )
         XCTAssertTrue(session.allows(ConstructionTool.bus))
         XCTAssertEqual(session.roadsOffer, .unreadable)
+        let before = session.world
         session.turnOnRoads()
-        XCTAssertEqual(session.world, world)
+        XCTAssertEqual(session.world, before)
         XCTAssertEqual(session.message?.text, RoadsOffer.unreadable.text(in: .english))
+        XCTAssertEqual(RoadsOffer.unreadable.text(in: .english), "Maps outside Taiwan have no road data yet, so buses can't run here.")
+        XCTAssertEqual(RoadsOffer.unreadable.text(in: .traditionalChinese), "台灣以外的地圖還沒有道路資料，不能開公車。")
     }
 
     /// Every committed save without roads: a blank map's turn on round
-    /// the towns it began with; a real-world map's land of version 4 came
-    /// with it, so it has none to read.
+    /// the towns it began with; a real-world map's (version 4's, in
+    /// Taiwan) read the base map's round its stations.
     func testEverySaveWithoutRoadsTurnsThemOnOrSaysWhyNot() throws {
         let names = try FileManager.default.contentsOfDirectory(atPath: Self.fixtures.path).filter { $0.hasSuffix(".json") }.sorted()
         var turnedOn = 0
@@ -168,14 +265,14 @@ final class RoadsTurnOnTests: XCTestCase {
             let world = try fixture(name)
             guard world.roads == nil else { continue }
             let session = GameSession(world: world)
-            if world.geoAnchor != nil {
-                XCTAssertEqual(session.roadsOffer, .unreadable, name)
-                continue
-            }
             XCTAssertEqual(session.roadsOffer, .available, name)
             session.turnOnRoads()
             let roads = try XCTUnwrap(session.world.roads, name)
-            XCTAssertEqual(Array(roads.towns.prefix(world.startingTowns().count)), world.startingTowns().map(cell(of:)), name)
+            if world.geoAnchor != nil {
+                XCTAssertEqual(roads.towns, [], name)
+            } else {
+                XCTAssertEqual(Array(roads.towns.prefix(world.startingTowns().count)), world.startingTowns().map(cell(of:)), name)
+            }
             turnedOn += 1
         }
         XCTAssertGreaterThan(turnedOn, 70)
