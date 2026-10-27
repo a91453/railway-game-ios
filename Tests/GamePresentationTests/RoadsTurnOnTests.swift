@@ -317,6 +317,30 @@ final class RoadsTurnOnTests: XCTestCase {
         XCTAssertGreaterThan(roads.cells.count, 1_000)
     }
 
+    /// Decision 440: Kinmen and Matsu lie outside the whole of Taiwan's
+    /// box, so their games are given their people at once; they start with
+    /// roads too, read round a station from the base map.
+    func testANewKinmenOrMatsuGameStartsWithItsRoads() throws {
+        let middle = PlanPoint(x: GameWorld.newGameBounds.width / 2, y: GameWorld.newGameBounds.height / 2)
+        // Jincheng on Kinmen, Nangan on Matsu.
+        for (latitude, longitude) in [(244_329_000 as Int64, 1_183_171_000 as Int64), (261_597_000, 1_199_516_000)] {
+            let anchor = try XCTUnwrap(GeoAnchor(latitude: latitude, longitude: longitude))
+            var world = GameWorld.newGame(anchor: anchor, land: [LandCell(row: cell(of: middle).row, column: cell(of: middle).column, use: .residential, residents: 100, jobs: 0)])
+            XCTAssertNil(world.landBlocks)
+            XCTAssertEqual(world.roads, RoadGrid(), "\(latitude)")
+            _ = try world.buildStation(named: "Middle", at: middle)
+            let session = GameSession(world: world)
+            try CommandLogReplay.realWorld.install(
+                RealWorldDataSet(population: true, places: true, water: true, heights: true, coverage: true, baseMap: true), in: session
+            )
+            session.readLandRoundStations()
+            let roads = try XCTUnwrap(session.world.roads)
+            XCTAssertEqual(roads.readBlocks, GameSession.blocksRoundStations(of: session.world), "\(latitude)")
+            XCTAssertGreaterThan(roads.cells.count, 300, "the island's streets round the station, \(latitude)")
+            XCTAssertNil(session.roadsOffer)
+        }
+    }
+
     /// A new real-world game outside Taiwan with its people given: no roads,
     /// and the tool says why.
     func testANewGameOutsideTaiwanHasNoRoads() throws {
