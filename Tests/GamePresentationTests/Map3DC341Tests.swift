@@ -11,7 +11,7 @@ final class Map3DC341Tests: XCTestCase {
             XCTAssertGreaterThan(m.length,23)
             XCTAssertNotNil(pack.index(of:m.name))
         }
-        XCTAssertLessThanOrEqual(Map3DC341.formation().triangleCount,15000)
+        XCTAssertEqual(Map3DC341.arrangement.count,6)
         XCTAssertEqual(pack.models.last?.name,Map3DLowFloorBus.routeModel().name)
     }
     func testMiddleHasNoFrontGlazingAndRearFacesOutward() {

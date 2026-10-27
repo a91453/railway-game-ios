@@ -13,7 +13,7 @@ try{
  const models=JSON.parse(readFileSync(resolve(root,'manifest.json'))).models.filter(m=>m.category==='formation'||m.id==='c341-dm');
  for(const model of models){
  const views=await page.evaluate(async path=>{
-  const original=await(await fetch(path)).arrayBuffer(),result={};
+  const original=renderer.prepare(await(await fetch(path)).arrayBuffer()),result={};
   for(const [kind,color] of [['clay',0xffeaeaea],['silhouette',0xff111111]]){
    const copy=original.slice(0),d=new DataView(copy),count=d.getUint32(8,true),size=d.getUint32(12,true),start=16+Math.ceil(size/4)*4;
    for(let i=0;i<count;i++)for(let j=0;j<3;j++)d.setUint32(start+i*52+4+j*16+12,color,true);

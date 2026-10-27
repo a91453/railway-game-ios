@@ -25,4 +25,4 @@ else
 fi
 swiftc -swift-version 6 -warnings-as-errors "${includes[@]}" tools/c341/export.swift "${objects[@]}" -o "$work/c341-export"
 "$work/c341-export" "$output"
-node tools/station-kit/package.mjs "$output"
+node tools/c341/package.mjs "$output"

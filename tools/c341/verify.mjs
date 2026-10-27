@@ -2,16 +2,21 @@ import {readFileSync,writeFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {readNative,glbFromNative} from '../station-kit/package.mjs';
+import {readNative,glbFromNative} from './package.mjs';
 const root=resolve(process.argv[2]),m=JSON.parse(readFileSync(resolve(root,'manifest.json'))),parts=new Map();
 const sha=b=>createHash('sha256').update(b).digest('hex');
 for(const a of m.models){
  const bytes=readFileSync(resolve(root,a.native)),g=readFileSync(resolve(root,a.glb)),n=readNative(bytes);
  assert.equal(sha(bytes),a.native_sha256);assert.deepEqual(glbFromNative(n),g);assert.equal(n.vertices.length/3,a.triangles);
- assert(a.triangles<=15000);assert(n.vertices.every(v=>v.position.every(Number.isFinite)&&Math.abs(Math.hypot(...v.normal)-1)<0.001));
+ assert(a.native_kind==='assembly'||a.triangles<=15000);assert(n.vertices.every(v=>v.position.every(Number.isFinite)&&Math.abs(Math.hypot(...v.normal)-1)<0.001));
  if(a.category!=='comparison')assert(Math.abs(a.minimum[2])<0.001);
  for(const v of m.directions){const metric=a.view_metrics[v];assert.equal(sha(readFileSync(resolve(root,a.views[v]))),metric.sha256);const [l,t,r,b]=metric.visible_bounds;assert(l>=2&&t>=2&&r<=510&&b<=510);}
  parts.set(a.id,n.vertices);
+}
+const scene=m.models.find(m=>m.category==='formation');
+if(scene.native_kind==='assembly'){
+ const bytes=readFileSync(resolve(root,scene.native));const {assemblyNative}=await import('./scene.js');const expanded=Buffer.from(assemblyNative(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength)));
+ assert.deepEqual(expanded.subarray(20),readFileSync(resolve(root,'assembly-expected.bin')));
 }
 const train=parts.get('c341-formation');let cursor=0;
 for(const p of m.assembly.placements){

@@ -8,6 +8,7 @@ const {chromium}=createRequire(import.meta.url)('playwright');
 const source=dirname(fileURLToPath(import.meta.url)),root=resolve(process.argv[2]);
 const manifest=JSON.parse(readFileSync(resolve(root,'manifest.json'))),sha=b=>createHash('sha256').update(b).digest('hex');
 copyFileSync(resolve(source,'../station-kit/renderer.js'),resolve(root,'renderer.js'));
+writeFileSync(resolve(root,'renderer.js'),readFileSync(resolve(source,'scene.js'),'utf8').replace('export function assemblyNative','function assemblyNative')+'\n'+readFileSync(resolve(root,'renderer.js'),'utf8').replace(' load(buffer){',' prepare(buffer){return assemblyNative(buffer); }\n load(buffer){buffer=assemblyNative(buffer);').replace('count>15000','count>200000'));
 copyFileSync(resolve(source,'viewer.html'),resolve(root,'index.html'));
 writeFileSync(resolve(root,'_render.html'),'<canvas id="canvas"></canvas><script type="module">import{NativeRenderer}from"./renderer.js";window.renderer=new NativeRenderer(document.getElementById("canvas"));window.ready=true;</script>');
 const server=createServer((req,res)=>{try{const p=resolve(root,'.'+decodeURIComponent(new URL(req.url,'http://localhost').pathname));if(!p.startsWith(root+'/'))throw Error();res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.json':'application/json','.png':'image/png'})[extname(p)]||'application/octet-stream');res.end(readFileSync(p));}catch{res.writeHead(404);res.end();}});

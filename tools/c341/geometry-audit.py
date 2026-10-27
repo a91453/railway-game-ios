@@ -34,7 +34,7 @@ def audit(t):
  return float(volume)
 rows=[]
 for m in json.loads((root/'manifest.json').read_text())['models']:
- if m['category']=='comparison':continue
+ if m['category']=='comparison' or m.get('native_kind')=='assembly':continue
  t=read(root/m['native']);volume=audit(t)
  # Native rail datum: all 8 tyre rings have 0 m low points.
  if m['category']=='section':

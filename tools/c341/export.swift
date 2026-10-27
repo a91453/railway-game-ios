@@ -6,7 +6,26 @@ let output = URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true)
 let models = output.appendingPathComponent("models", isDirectory: true)
 try FileManager.default.createDirectory(at: models, withIntermediateDirectories: true)
 var records: [[String: Any]] = []
+var units: [String:String] = [:]
 @MainActor func export(_ model: Map3DModelPack.Model, category: String) throws {
+    if category == "formation", model.triangleCount > Map3DModelFile.maximumTriangles {
+        let placements = Map3DC341.arrangement.enumerated().map { i,u in
+            ["unit":"c341-"+u.rawValue,"translation":[(2.5-Float(i))*Map3DC341.pitch,Float(0),Float(0)]] as [String:Any]
+        }
+        let scene: [String:Any] = ["format":"M3DAssembly","version":1,"units":units,"placements":placements]
+        let file="models/"+model.name+".m3dscene.json"
+        try JSONSerialization.data(withJSONObject:scene,options:[.sortedKeys]).write(to:output.appendingPathComponent(file))
+        records.append(["id":model.name,"name":model.name,"category":category,"native":file,"native_kind":"assembly","triangles":model.triangleCount,"minimum":[model.minimum.x,model.minimum.y,model.minimum.z],"maximum":[model.maximum.x,model.maximum.y,model.maximum.z]])
+        var expected=Data()
+        for i in stride(from:0,to:model.vertices.count,by:3) {
+            let tri=model.vertices[i..<i+3]
+            for word in [UInt32(tri.contains { $0.glows } ? 1:0)]+tri.flatMap({[$0.x.bitPattern,$0.y.bitPattern,$0.z.bitPattern,$0.color]}) {
+                var le=word.littleEndian;withUnsafeBytes(of:&le){expected.append(contentsOf:$0)}
+            }
+        }
+        try expected.write(to:output.appendingPathComponent("assembly-expected.bin"))
+        return
+    }
     guard model.triangleCount > 0, model.triangleCount <= Map3DModelFile.maximumTriangles else { fatalError("triangle budget") }
     let provenance: [String: Any] = [
         "asset": ["generator": "Map3DC341", "version": "1.0"],
@@ -30,6 +49,7 @@ var records: [[String: Any]] = []
               abs(a.nx - b.nx) < 0.00001, abs(a.ny - b.ny) < 0.00001, abs(a.nz - b.nz) < 0.00001 else { fatalError("readback mismatch") }
     }
     try data.write(to: models.appendingPathComponent(model.name + ".m3dmodel"), options: .atomic)
+    units[model.name]=data.base64EncodedString()
     records.append(["id": model.name, "name": model.name, "category": category, "native": "models/\(model.name).m3dmodel", "triangles": model.triangleCount,
                     "minimum": [model.minimum.x, model.minimum.y, model.minimum.z], "maximum": [model.maximum.x, model.maximum.y, model.maximum.z]])
 }
