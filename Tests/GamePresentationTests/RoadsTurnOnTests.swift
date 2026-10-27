@@ -209,13 +209,14 @@ final class RoadsTurnOnTests: XCTestCase {
     /// round it with its edit, as a map reading its land does.
     func testAStationBuiltLaterOnAnEarlyTaiwanMapGetsItsRoads() throws {
         // A real-world game of the usual size with its people given at
-        // once, as the real-world demo still starts (Ruifang).
+        // once (Ruifang, as the real-world demo), saved before it had roads.
         let frame = RealWorldFrame(anchor: RealWorldDemo.anchor, bounds: GameWorld.newGameBounds)
         let middle = PlanPoint(x: GameWorld.newGameBounds.width / 2, y: GameWorld.newGameBounds.height / 2)
         var world = GameWorld.newGame(anchor: frame.anchor, land: [LandCell(row: cell(of: middle).row, column: cell(of: middle).column, use: .residential, residents: 100, jobs: 0)])
         XCTAssertNil(world.landBlocks)
-        XCTAssertNil(world.roads)
         _ = try world.buildStation(named: "Middle", at: middle)
+        world = try savedBeforeRoads(world)
+        XCTAssertNil(world.roads)
         let session = GameSession(world: world)
         try CommandLogReplay.realWorld.install(
             RealWorldDataSet(population: true, places: true, water: true, heights: true, coverage: true, baseMap: true), in: session
@@ -253,6 +254,91 @@ final class RoadsTurnOnTests: XCTestCase {
         XCTAssertEqual(session.message?.text, RoadsOffer.unreadable.text(in: .english))
         XCTAssertEqual(RoadsOffer.unreadable.text(in: .english), "Maps outside Taiwan have no road data yet, so buses can't run here.")
         XCTAssertEqual(RoadsOffer.unreadable.text(in: .traditionalChinese), "台灣以外的地圖還沒有道路資料，不能開公車。")
+    }
+
+    /// The real railways the Pingxi challenge and the real-world demo are
+    /// built on.
+    private static func railways() throws -> RealRailways {
+        let root = fixtures.deletingLastPathComponent()
+        func file(_ name: String) throws -> Data {
+            try Data(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/RealRailways/\(name)"))
+        }
+        return try RealRailways(lines: file("track_lines.geojson"), stations: file("track_stations.geojson"), names: file("station_names.json"))
+    }
+
+    /// The Pingxi challenge as the launcher builds it: its people given at
+    /// once (a few cells stand for the app's population here).
+    private func pingxi() throws -> GameWorld {
+        let middle = PlanPoint(x: GameWorld.newGameBounds.width / 2, y: GameWorld.newGameBounds.height / 2)
+        return PingxiChallenge.make(
+            in: .english, railways: try Self.railways(),
+            land: [LandCell(row: cell(of: middle).row, column: cell(of: middle).column, use: .residential, residents: 100, jobs: 0)]
+        )
+    }
+
+    /// Decision 440: a new Pingxi challenge (and the real-world demo it is
+    /// built on) starts with roads, read round its stations as the game
+    /// begins; its land stays as it came.
+    func testANewPingxiChallengeStartsWithItsRoads() throws {
+        let world = try pingxi()
+        XCTAssertNil(world.landBlocks)
+        let roads = try XCTUnwrap(world.roads)
+        XCTAssertEqual(roads, RoadGrid(), "none read yet, none to grow from")
+        let session = GameSession(world: world)
+        try CommandLogReplay.realWorld.install(
+            RealWorldDataSet(population: true, places: true, water: true, heights: true, coverage: true, baseMap: true), in: session
+        )
+        session.readLandRoundStations()
+        let read = try XCTUnwrap(session.world.roads)
+        XCTAssertEqual(read.readBlocks, GameSession.blocksRoundStations(of: session.world))
+        XCTAssertGreaterThan(read.cells.count, 1_000, "the valley's and Ruifang's streets")
+        XCTAssertNil(session.world.landBlocks)
+        XCTAssertEqual(session.world.land, world.land)
+        XCTAssertTrue(session.allowsBusTool)
+        XCTAssertNil(session.roadsOffer)
+        XCTAssertNotNil(session.world.scenario, "still the challenge")
+    }
+
+    /// Decision 440: a Pingxi challenge saved before (the author's of
+    /// 2026-10-12) turns them on from the bus tool, as any old save.
+    func testAnOldPingxiSaveTurnsItsRoadsOn() throws {
+        let world = try savedBeforeRoads(try pingxi())
+        XCTAssertNil(world.roads)
+        let session = GameSession(world: world)
+        try CommandLogReplay.realWorld.install(
+            RealWorldDataSet(population: true, places: true, water: true, heights: true, coverage: true, baseMap: true), in: session
+        )
+        session.readLandRoundStations()
+        XCTAssertEqual(session.roadsOffer, .available)
+        session.turnOnRoads()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        let roads = try XCTUnwrap(session.world.roads)
+        XCTAssertEqual(roads.readBlocks, GameSession.blocksRoundStations(of: session.world))
+        XCTAssertGreaterThan(roads.cells.count, 1_000)
+    }
+
+    /// A new real-world game outside Taiwan with its people given: no roads,
+    /// and the tool says why.
+    func testANewGameOutsideTaiwanHasNoRoads() throws {
+        let tokyo = try XCTUnwrap(GeoAnchor(latitude: 356_812_000, longitude: 1_397_671_000))
+        let world = GameWorld.newGame(anchor: tokyo, land: [LandCell(row: 128, column: 128, use: .residential, residents: 100, jobs: 0)])
+        XCTAssertNil(world.roads)
+        XCTAssertEqual(GameSession(world: world).roadsOffer, .unreadable)
+    }
+
+    /// Which places the base map has roads for: Taiwan, Penghu, Kinmen
+    /// and Matsu; not the coast across the strait, nor far away, nor the
+    /// open sea the country lookup takes for Taiwan.
+    func testTheBaseMapsRoadsAreTaiwans() throws {
+        func anchor(_ latitude: Double, _ longitude: Double) throws -> GeoAnchor {
+            try XCTUnwrap(GeoAnchor(latitude: Int64((latitude * 10_000_000).rounded()), longitude: Int64((longitude * 10_000_000).rounded())))
+        }
+        for (latitude, longitude) in [(25.0478, 121.5170), (25.0805, 121.7756), (22.6273, 120.3014), (23.5711, 119.5793), (24.4329, 118.3171), (26.1597, 119.9516)] {
+            XCTAssertTrue(RoadsOffer.baseMapHasRoads(at: try anchor(latitude, longitude)), "\(latitude), \(longitude)")
+        }
+        for (latitude, longitude) in [(24.4798, 118.0894), (35.6812, 139.7671), (51.5074, -0.1278), (0.0, -150.0)] {
+            XCTAssertFalse(RoadsOffer.baseMapHasRoads(at: try anchor(latitude, longitude)), "\(latitude), \(longitude)")
+        }
     }
 
     /// Every committed save without roads: a blank map's turn on round

@@ -27,6 +27,15 @@ public enum RoadsOffer: Hashable, Sendable {
         }
     }
 
+    /// Whether the app's base map, Taiwan's alone, has the roads of a map
+    /// round `anchor` (decision 440): Taiwan's country, Kinmen and Matsu
+    /// too, and within the box round them (the lookup takes a point far
+    /// out at sea for Taiwan).
+    static func baseMapHasRoads(at anchor: GeoAnchor) -> Bool {
+        (218_000_000...265_000_000).contains(anchor.latitude) && (1_180_000_000...1_222_000_000).contains(anchor.longitude)
+            && CountryLookup.country(at: anchor) == HolidayCalendar.home
+    }
+
     /// The button that turns them on, and the title of its confirmation.
     public static func buttonTitle(in language: DisplayLanguage) -> String {
         language.text("Turn On Roads and Buses", "打開道路與公車")
@@ -79,7 +88,7 @@ extension GameSession {
     public var roadsOffer: RoadsOffer? {
         guard world.roads == nil, offersBusTool else { return nil }
         guard let anchor = world.geoAnchor, world.landBlocks == nil else { return .available }
-        return CountryLookup.country(at: anchor) == "TW" ? .available : .unreadable
+        return RoadsOffer.baseMapHasRoads(at: anchor) ? .available : .unreadable
     }
 
     /// Turns the roads on (decision 428): a blank map's from the towns it
