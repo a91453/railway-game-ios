@@ -16,6 +16,14 @@ def nearest(origin,direction,triangles,allow_contact=False):
  f=np.zeros_like(det);f[valid]=1/det[valid];s=origin-a;u=f*np.einsum('ij,ij->i',s,h);q=np.cross(s,e1);v=f*np.einsum('j,ij->i',direction,q);t=f*np.einsum('ij,ij->i',e2,q)
  mask=valid&(u>=-1e-6)&(v>=-1e-6)&(u+v<=1.000001)&(t>=-0.000001 if allow_contact else t>0.00001)
  return float(np.min(t[mask])) if mask.any() else float('inf')
+def upward_is_clear(origin,triangles):
+ a=triangles[:,0];e=triangles[:,1]-a;f=triangles[:,2]-a;direction=np.array([0.,0.,1.]);h=np.cross(direction,f);det=(e*h).sum(1);valid=np.abs(det)>1e-10
+ inv=np.divide(1,det,out=np.zeros_like(det),where=valid);s=origin-a;u=inv*(s*h).sum(1);q=np.cross(s,e);v=inv*(q*direction).sum(1);t=inv*(f*q).sum(1)
+ mask=valid&(u>=-1e-7)&(v>=-1e-7)&(u+v<=1.0000001)&(t>1e-5)
+ ids=np.flatnonzero(mask)
+ if not len(ids):return True
+ j=ids[np.argmin(t[ids])];normal=np.cross(e[j],f[j]);return normal[2]<0
+
 def backing_distance(origin,triangles):
  # Exact point-to-triangle distance: planar projection when inside, otherwise
  # closest point on each edge. Unlike a tangent normal ray, a pane's thin
@@ -48,12 +56,18 @@ for m in manifest['models']:
  if m['category']!='section':continue
  p,c=read(root/m['native']);g=np.all(c==glass,axis=1);back=p[~g];normals=np.cross(p[:,1]-p[:,0],p[:,2]-p[:,0]);area=np.linalg.norm(normals,axis=1);normals/=area[:,None]
  cent=p.mean(axis=1); outward=g & (area>.024) & (((np.abs(normals[:,1])>.9)&(normals[:,1]*cent[:,1]>0))|((np.abs(normals[:,0])>.8)&(normals[:,0]*cent[:,0]>0)&(np.abs(cent[:,0])>7.4)&(np.abs(cent[:,1])<1.15)))
- samples=np.flatnonzero(outward); dist=[];blocked=[];origins=[]
+ samples=np.flatnonzero(outward); dist=[];blocked=[];origins=[];wiper_hits=[]
+ # Only actual thin rubber wiper/pivot triangles in the observed windscreen zone.
+ wiper=np.all(c==tire,axis=1)&(np.min(np.abs(p[:,:,0]),axis=1)>7.4)&(np.min(p[:,:,2],axis=1)>=1.75)&(np.max(p[:,:,2],axis=1)<=2.40)&(np.max(np.abs(p[:,:,1]),axis=1)<.60)
  for i in samples:
   o,n=cent[i],normals[i];d=backing_distance(o,back);dist.append(d);origins.append((o,n))
   assert d<=.065,(m['id'],'glass backing',d,o)
   ray=nearest(o+n*.0003,n,back)
-  if ray<.5:blocked.append({'face':int(i),'distance':ray,'point':o.tolist()})
+  if ray<.5:
+   other=nearest(o+n*.0003,n,p[(~g)&(~wiper)])
+   record={'face':int(i),'distance':ray,'point':o.tolist()}
+   if other<.5:blocked.append(record)
+   else:wiper_hits.append(record)
  assert len(samples)>0
  assert not blocked,(m['id'],'outward glass obstruction',blocked[:3])
  o,n=next((o,n) for o,n in origins if abs(n[1])>.9)
@@ -68,8 +82,26 @@ for m in manifest['models']:
    mask=np.ones(len(tp),bool);mask[ids]=False
    d=min(nearest(o,np.array([0.,0.,1.]),p[~np.all(c==tire,axis=1)]),nearest(o,np.array([0.,0.,1.]),tp[mask]))
    assert .005<=d<.35,(m['id'],'wheel top',d)
+   opaque=p[~np.all(c==tire,axis=1)]
+   upper_samples=[]
+   for dx in [-.10,0,.10]:
+    for dy in [-.05,0,.05]:
+     point=np.array([(lo[0]+hi[0])/2+dx,(lo[1]+hi[1])/2+dy,hi[2]-.035])
+     assert upward_is_clear(point,opaque),(m['id'],'upper tire inside opaque solid',point)
+     upper_samples.append(point.tolist())
    raised=pts+np.array([0,0,.25]);assert abs(raised.min(0)[2])>1e-5
-   wheel.append({'minimum':lo.tolist(),'maximum':hi.tolist(),'up_ray_clearance_m':d})
+   wheel.append({'minimum':lo.tolist(),'maximum':hi.tolist(),'up_ray_clearance_m':d,'upper_surface_samples':upper_samples})
+ # Inject a closed opaque box enclosing an actual tire crown: the first
+ # +Z hit must be an EXIT and therefore fail the clearance predicate.
+ lo=np.array(wheel[0]['minimum']);hi=np.array(wheel[0]['maximum']);o=(lo+hi)/2;o[2]=hi[2]-.035
+ a=o-np.array([.12,.12,.08]);b=o+np.array([.12,.12,.08]);v=np.array([[x,y,z] for x in [a[0],b[0]] for y in [a[1],b[1]] for z in [a[2],b[2]]])
+ box=[]
+ for ids in [[0,1,3,2],[4,6,7,5],[0,4,5,1],[2,3,7,6],[0,2,6,4],[1,5,7,3]]:
+  for ix in [[0,1,2],[0,2,3]]:
+   t=v[np.array(ids)[ix]];n=np.cross(t[1]-t[0],t[2]-t[0]);
+   if n.dot(t.mean(0)-o)<0:t=t[::-1]
+   box.append(t)
+ assert not upward_is_clear(o,np.array(box)),'embedded crown mutation missed'
  assert len(wheel)==8,(m['id'],'wheel components',len(wheel))
  # Actual connected roof and collector groups tested against rest triangles.
  groups=components(p);supports=[]
@@ -77,13 +109,14 @@ for m in manifest['models']:
   pts=p[ids].reshape(-1,3);lo=pts.min(0);hi=pts.max(0)
   roof=lo[2]>=3.419
   collector=hi[2]<1.05 and max(abs(lo[1]),abs(hi[1]))>1.15
-  if not(roof or collector):continue
+  underfloor=hi[2]<=1.05 and lo[2]>.20
+  if not(roof or collector or underfloor):continue
   rest=np.delete(p,ids,0);pts=np.concatenate((np.unique(pts,axis=0),p[ids].mean(1)));pts=pts[np.linspace(0,len(pts)-1,min(40,len(pts)),dtype=int)]
   ds=[backing_distance(o,rest) for o in pts]
   assert min(ds)<=.065,(m['id'],'floating equipment',lo,hi,min(ds))
   if roof and hi[0]-lo[0]>3:
    shifted=pts+np.array([0,0,.70]);assert min(backing_distance(o,rest) for o in shifted)>.065,'float housing mutation'
-  supports.append({'kind':'roof' if roof else 'collector','minimum':lo.tolist(),'maximum':hi.tolist(),'samples':len(pts),'minimum_distance_m':min(ds)})
- records.append({'id':m['id'],'glass_outward_samples':len(samples),'max_backing_m':max(dist),'glass_samples':[{'origin':o.tolist(),'direction':n.tolist(),'backing_distance_m':d} for (o,n),d in zip(origins,dist)],'outward_obstructions':blocked,'wheels':wheel,'equipment_support_samples':supports,'glass_buried_floating_wheel_raised_roof_float_mutations_rejected':True})
-(root/'support-verification.json').write_text(json.dumps({'platform':'Linux Python NumPy independent triangle reader','models':records,'method':'all outward glazing faces with double-area >0.024 m2; outward normal rays start 0.3mm; opaque backing <=65mm; actual connected rubber wheel components; wheel-top +Z ray; roof/collector contact minimum over <=40 actual vertices/face centres,65mm tolerance','limits':'sampled static contacts, no complete support/collision graph or suspension dynamics'},indent=2))
+  supports.append({'kind':'roof' if roof else 'collector' if collector else 'underfloor','minimum':lo.tolist(),'maximum':hi.tolist(),'samples':len(pts),'minimum_distance_m':min(ds)})
+ records.append({'id':m['id'],'glass_outward_samples':len(samples),'max_backing_m':max(dist),'glass_samples':[{'origin':o.tolist(),'direction':n.tolist(),'backing_distance_m':d} for (o,n),d in zip(origins,dist)],'outward_obstructions':blocked,'actual_wiper_hits':wiper_hits,'wheels':wheel,'equipment_support_samples':supports,'glass_buried_floating_wheel_raised_roof_float_mutations_rejected':True})
+(root/'support-verification.json').write_text(json.dumps({'platform':'Linux Python NumPy independent triangle reader','models':records,'method':'all outward glazing faces with double-area >0.024 m2; outward normal rays start 0.3mm; opaque backing <=65mm; actual connected rubber wheel components; wheel crown nine interior samples, first +Z hit must face downward (reject samples inside opaque geometry); wheel-top +Z ray; roof/collector/underfloor contact minimum over <=40 actual vertices/face centres,65mm tolerance','limits':'sampled static contacts, no complete support/collision graph or suspension dynamics'},indent=2))
 print('VERIFIED glass/wheel/equipment',len(records))

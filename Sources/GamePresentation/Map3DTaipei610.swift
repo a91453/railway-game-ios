@@ -123,7 +123,11 @@ private struct Taipei610Builder {
                 k.box(half+0.01,1.04,s*0.87,0.16,0.39,0.25,E.roof)
                 if !far {for i in 0..<4 {k.box(half+0.10,1.07+Float(i)*0.048,s*0.87,0.06,0.36,0.02,StationKitBuilder.steel)}}
             }
-            if !light { k.beam(.init(half-0.34,1.80,0.04),.init(half-0.56,2.32,0.53),0.035,rubber) }
+            if !light {
+                let pivot=Map3DPoint(Self.noseX(1.80,0.04,half)+0.030,1.80,0.04)
+                k.box(pivot.x-0.010,1.76,0.04,0.050,0.080,0.080,rubber)
+                k.beam(pivot,.init(Self.noseX(2.32,0.53,half)+0.030,2.32,0.53),0.035,rubber)
+            }
             k.beam(.init(half-0.60,0.70,0),.init(half+0.25,0.70,0),0.17,StationKitBuilder.steel)
             k.box(half+0.29,0.56,0,0.20,0.40,0.26,StationKitBuilder.steel)
         }
@@ -156,21 +160,24 @@ private struct Taipei610Builder {
         // Published role split: compressors on A/B, inverter on every car.
         k.box(-1.6,0.40,0,2.8,1.9,0.47,StationKitBuilder.steel)
         k.box(1.6,0.47,0.12,1.7,1.65,0.40,E.roof)
-        if cab {k.cylinder(3.0,0.42,-0.50,radius:0.25,height:0.35,color:StationKitBuilder.steel,sides:far ? 8:12)}
-        else if !far {k.box(role == .c ? -3.45:3.45,0.44,-0.30,1.0,1.05,0.40,E.roof)}
+        if cab {k.cylinder(3.0,0.42,-0.50,radius:0.25,height:0.35,color:StationKitBuilder.steel,sides:far ? 8:12); k.box(3.0,0.77,-0.50,0.35,0.30,0.10,StationKitBuilder.steel)}
+        else if !far {k.box(role == .c ? -3.45:3.45,0.44,-0.30,1.0,1.05,0.43,E.roof)}
         let bogie:Float = cab ? 5.72:5.60
         for bx in [-bogie,bogie] {
-            k.box(bx,0.58,0,2.55,1.74,0.23,StationKitBuilder.steel)
-            k.box(bx,0.81,0,0.85,1.45,0.13,rubber)
+            k.box(bx,0.58,0,2.55,1.20,0.23,StationKitBuilder.steel)
+            k.beam(.init(bx,0.77,-1.00),.init(bx,0.77,1.00),0.12,StationKitBuilder.steel)
+            if far { k.box(bx,0.81,0,0.85,1.45,0.13,rubber) }
+            else { for s:Float in [-1,1] { k.cylinder(bx,0.81,s*0.45,radius:0.18,height:0.13,color:rubber,sides:8) } }
             for dx:Float in [-0.90,0.90] {
                 let x=bx+dx
+                k.box(x,0.40,0,0.30,1.20,0.20,StationKitBuilder.steel)
                 for s:Float in [-1,1] {
                     let n=far ? 8:20
                     let a=(0..<n).map { i -> Map3DPoint in let t=Float(i)*2*Float.pi/Float(n);return .init(x+0.355*cosf(t),0.355+0.355*sinf(t),s*0.67) }
                     solid(a,a.map{$0 + Map3DPoint(0,0,s*0.18)},rubber)
-                    if !far {k.box(x,0.39,s*0.95,0.36,0.25,0.26,E.roof); k.beam(.init(x,0.55,s*0.85),.init(bx,0.77,s*0.85),0.10,StationKitBuilder.steel)}
+                    if !far {k.box(x,0.39,s*1.00,0.36,0.25,0.26,E.roof); k.beam(.init(x,0.55,s*1.00),.init(bx,0.77,s*1.00),0.10,StationKitBuilder.steel)}
                 }
-                k.beam(.init(x,0.355,-0.75),.init(x,0.355,0.75),0.12,StationKitBuilder.steel)
+                k.beam(.init(x,0.355,-1.00),.init(x,0.355,1.00),0.12,StationKitBuilder.steel)
             }
             // Mersen collector: insulated mounting, arm, carbon shoe. Position
             // and dimensions estimated; no roof collection gear.
@@ -183,7 +190,10 @@ private struct Taipei610Builder {
         }
         // Each end owns half of the flexible gangway; no stretched train mesh.
         for s:Float in cab ? [-1]:[-1,1] {
-            if !far { k.box(s*(half+0.10),0.65,0,0.28,0.18,0.12,StationKitBuilder.steel) }
+            if !far {
+                k.box(s*(half+0.10),0.65,0,0.28,0.18,0.12,StationKitBuilder.steel)
+                k.box(s*(half-0.08),0.77,0,0.28,0.18,0.10,StationKitBuilder.steel)
+            }
             k.box(s*(half+0.12),1.10,0,0.24,1.75,2.12,rubber)
             if !light {for i in 0..<5 {k.box(s*(half+0.025+Float(i)*0.045),1.10,0,0.018,1.82,2.12,E.roof)}}
         }

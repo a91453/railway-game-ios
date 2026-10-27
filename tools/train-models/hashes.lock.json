@@ -2,51 +2,51 @@
   "comment" : "FNV-1a of every vertex field of every model in Map3DModelPack.standard (tools/train-models/export.swift). A changed value is a deliberate model change the PR must justify.",
   "models" : {
     "taipei610-a" : {
-      "hash" : "ae34603dd2f3beba",
+      "hash" : "7cef74f2a0c31a39",
       "triangles" : 3394
     },
     "taipei610-a-far" : {
-      "hash" : "9ce449d07d54a5cb",
+      "hash" : "50882cebd6d92da4",
       "triangles" : 1566
     },
     "taipei610-a-light" : {
-      "hash" : "7432f68fcfd448bf",
+      "hash" : "f513b698341d5f93",
       "triangles" : 1494
     },
     "taipei610-b" : {
-      "hash" : "53956d7b264620ba",
+      "hash" : "eb0f072096f8e639",
       "triangles" : 3394
     },
     "taipei610-b-far" : {
-      "hash" : "eb222f43616c09cb",
+      "hash" : "3e61405a62a7d4a4",
       "triangles" : 1566
     },
     "taipei610-b-light" : {
-      "hash" : "8cdc35b4e1129fbf",
+      "hash" : "bb804237d52e1893",
       "triangles" : 1494
     },
     "taipei610-c" : {
-      "hash" : "7b0647e3c97e96c9",
+      "hash" : "4cd61b58808fe48d",
       "triangles" : 2640
     },
     "taipei610-c-far" : {
-      "hash" : "1a658078407bd161",
+      "hash" : "abd2036e4fb2bd1d",
       "triangles" : 1300
     },
     "taipei610-c-light" : {
-      "hash" : "e984c6efb50dc16d",
+      "hash" : "2c2018bd088bea69",
       "triangles" : 1180
     },
     "taipei610-d" : {
-      "hash" : "bc04021e3d09aac9",
+      "hash" : "32f2fdfb0323aa0d",
       "triangles" : 2640
     },
     "taipei610-d-far" : {
-      "hash" : "1a658078407bd161",
+      "hash" : "abd2036e4fb2bd1d",
       "triangles" : 1300
     },
     "taipei610-d-light" : {
-      "hash" : "e984c6efb50dc16d",
+      "hash" : "2c2018bd088bea69",
       "triangles" : 1180
     },
     "blue-seven-formation" : {
