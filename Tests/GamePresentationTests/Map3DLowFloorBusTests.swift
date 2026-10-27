@@ -74,7 +74,9 @@ final class Map3DLowFloorBusTests: XCTestCase {
             XCTAssertEqual(a.buses,a.instances.filter { allBusIDs.contains($0.model) }.count)
             life.lanes=[.init(path:path,half:6,twoWay:true,speed:11,perHundred:5,scooters:true,seed:roadSeed)]
             let b=life.frame(target:Map3DPoint(1000,0,0),distance:1200,time:60,detail:.full,activity:.init())
-            XCTAssertEqual(a.vehicles,b.vehicles);XCTAssertEqual(b.buses,0)
+            // A bus takes a vehicle's place, never adds one; decision 446:
+            // the scooter that would have ridden beside it goes too.
+            XCTAssertTrue((0...a.buses).contains(b.vehicles-a.vehicles),"\(a.vehicles) \(b.vehicles)");XCTAssertEqual(b.buses,0)
         }
         XCTAssertTrue(counts.allSatisfy { $0>0 },"Every bus type must be reachable: \(counts)")
         XCTAssertEqual(Double(counts.reduce(0,+))/Double(total),Double(Map3DStreetLife.busShare),accuracy:0.02)

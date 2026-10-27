@@ -534,6 +534,8 @@ extension Map3DScene.Builder {
                 mesh.addBox(base: front - facing * 0.2 + across * (side * (width / 2 - 0.25)), forward: facing, length: 0.4, width: 0.4,
                             height: groundFloor, top: Map3DColor.shaded(wall, 0.92), side: Map3DColor.shaded(wall, 0.88))
             }
+            // Decision 446: a row of scooters parked along its edge.
+            Map3DScooter.addParkedRow(&mesh, front: front, facing: facing, width: width, r: r)
         }
         guard shop else { return }
         // The shop front: the arcade's back wall, or the house's face.
