@@ -99,6 +99,12 @@ public struct Map3DModelPack: Sendable {
         models += Map3DEMU500.Unit.allCases.map { Map3DEMU500.model($0) }
         models.append(Map3DEMU500.formation())
         models += Map3DC341.Unit.allCases.map { Map3DC341.model($0) }
+        // Independent EMU900 static roles; operating commuter contracts stay unchanged.
+        for far in [false, true] {
+            for role in Map3DEMU900.Role.allCases {
+                for reversed in [false, true] { models.append(Map3DEMU900.model(role, reversed: reversed, far: far)) }
+            }
+        }
         // Decision 400, 10i-6: the player's route buses, last, so no model
         // before them moves.
         models.append(Map3DLowFloorBus.routeModel())
