@@ -27,18 +27,28 @@ extension StationKitBuilder {
     static func e500CabRim(_ y: Float, _ z: Float) -> Map3DPoint {
         Map3DPoint(9.99 - 0.18 * powf(abs(z)/1.4265,4) - 0.035 * max(0,(y-3.0)/0.65),y,z)
     }
-    /// Exact barycentric interpolation of the actual fan-triangulated cab cap.
+    static func e500CabGrid() -> [[Map3DPoint]] {
+        let levels:[(Float,Float)]=[(1.12,1.34),(1.18,1.4265),(3.22,1.4265),(3.40,1.39),(3.55,1.27),(3.63,1.04),(3.65,0.65)]
+        let across:[Float]=[-1,-0.9,-0.7,-0.4,0,0.4,0.7,0.9,1]
+        return levels.map { y,w in across.map { Self.e500CabRim(y,$0*w) } }
+    }
+    /// Exact barycentric interpolation of the actual longitudinal cab cap grid.
     static func e500CabX(_ y: Float, _ z: Float) -> Float {
-        let centre=Map3DPoint(9.99,2.20,0)
-        for i in e500Section.indices {
-            let a=e500Section[i], b=e500Section[(i+1)%e500Section.count]
-            let ay=a.0-centre.y, az=a.1, by=b.0-centre.y, bz=b.1
-            let det=ay*bz-az*by
-            if abs(det)<0.00001 { continue }
-            let u=((y-centre.y)*bz-z*by)/det
-            let v=(ay*z-az*(y-centre.y))/det
-            if u >= -0.0001 && v >= -0.0001 && u+v <= 1.0001 {
-                return centre.x*(1-u-v)+e500CabRim(a.0,a.1).x*u+e500CabRim(b.0,b.1).x*v
+        let grid=e500CabGrid()
+        for row in 0..<(grid.count-1) {
+            for col in 0..<(grid[0].count-1) {
+                let a=grid[row][col],b=grid[row][col+1],c=grid[row+1][col+1],d=grid[row+1][col]
+                for tri in [[a,b,c],[a,c,d]] {
+                    let p=tri[0],q=tri[1],r=tri[2]
+                    let ay=q.y-p.y,az=q.z-p.z,by=r.y-p.y,bz=r.z-p.z
+                    let det=ay*bz-az*by
+                    if abs(det)<0.000001 { continue }
+                    let u=((y-p.y)*bz-(z-p.z)*by)/det
+                    let v=(ay*(z-p.z)-az*(y-p.y))/det
+                    if u >= -0.0001 && v >= -0.0001 && u+v <= 1.0001 {
+                        return p.x*(1-u-v)+q.x*u+r.x*v
+                    }
+                }
             }
         }
         return 9.95
@@ -56,8 +66,8 @@ extension StationKitBuilder {
         func layer(_ d: Float)->[Map3DPoint] { p.map { u,v in
             Map3DPoint(Self.e500CabX(y+v,z+u)+d,y+v,z+u)
         } }
-        // Each pane follows the actual cap; thin closed sections never bridge through it.
-        // The cap is shallow convex, with each rounded perimeter supported by the shell.
+        // Rounded perimeter vertices are placed relative to the actual shallow cap.
+        // Visibility and backing are independently checked on the resulting triangles.
         e500Prism(layer(offset),layer(offset+depth),color)
     }
     /// A convex closed prism with outward winding on every face.
@@ -82,13 +92,23 @@ extension StationKitBuilder {
         func ring(_ x: Float)->[Map3DPoint] { profile.map { Map3DPoint(x,$0.0,$0.1) } }
         e500Prism(ring(-9.94),ring(cab ? 9.52 : 9.94),silver)
         if cab {
-            let rear=ring(9.52),front=profile.map { Self.e500CabRim($0.0,$0.1) }
-            let inside=Map3DPoint(9.7,2.20,0),centre=Map3DPoint(9.99,2.20,0)
-            face(rear,inside:inside,color:blue)
-            for i in front.indices {
-                let j=(i+1)%front.count
-                face([rear[i],rear[j],front[j],front[i]],inside:inside,color:blue)
-                face([centre,front[i],front[j]],inside:inside,color:blue)
+            let grid=Self.e500CabGrid(),inside=Map3DPoint(9.7,2.20,0)
+            for row in 0..<(grid.count-1) {
+                for col in 0..<(grid[0].count-1) {
+                    let a=grid[row][col],b=grid[row][col+1],c=grid[row+1][col+1],d=grid[row+1][col]
+                    for tri in [[a,b,c],[a,c,d]] {
+                        face(tri,inside:inside,color:blue)
+                        face(tri.map { Map3DPoint(9.52,$0.y,$0.z) },inside:inside,color:blue)
+                    }
+                }
+            }
+            var border=grid[0]
+            border += grid.dropFirst().map { $0.last! }
+            border += grid.last!.dropLast().reversed()
+            border += grid.dropFirst().dropLast().reversed().map { $0[0] }
+            for i in border.indices {
+                let a=border[i],b=border[(i+1)%border.count]
+                face([Map3DPoint(9.52,a.y,a.z),Map3DPoint(9.52,b.y,b.z),b,a],inside:inside,color:blue)
             }
         }
         box(0,0.96,0,19.6,2.53,0.16,dark)
@@ -171,15 +191,15 @@ extension StationKitBuilder {
         if cab {
             let steel=Map3DColor.rgb(0x89969B), rubber=Map3DColor.rgb(0x303C46)
             // Thin grey portal, deep blue door and a discrete gasket reveal.
-            e500CabPanel(1.13,0,0.97,2.17,0.001,0.025,rubber)
-            e500CabPanel(1.17,0,0.77,2.07,0.025,0.014,blue)
+            e500Panel(x:10.008,y:1.13,z:0,w:0.97,h:2.17,depth:0.050,front:true,color:rubber)
+            e500Panel(x:10.029,y:1.17,z:0,w:0.77,h:2.07,depth:0.020,front:true,color:blue)
             for side: Float in [-1,1] {
-                e500CabPanel(1.12,side*0.515,0.10,2.24,0.003,0.070,steel)
+                box(10.045,1.12,side*0.515,0.064,0.10,2.24,steel)
             }
-            e500CabPanel(3.25,0,1.12,0.12,0.004,0.070,steel)
-            e500CabPanel(1.10,0,1.10,0.10,0.004,0.070,steel)
-            e500CabPanel(2.04,0,0.43,0.92,0.040,0.014,glass)
-            e500CabPanel(1.57,0,0.68,0.37,0.040,0.012,white)
+            box(10.045,3.25,0,0.064,1.12,0.12,steel)
+            box(10.045,1.10,0,0.064,1.10,0.10,steel)
+            e500Panel(x:10.044,y:2.04,z:0,w:0.43,h:0.92,depth:0.012,front:true,color:glass)
+            e500Panel(x:10.044,y:1.57,z:0,w:0.68,h:0.37,depth:0.012,front:true,color:white)
             // Two broad independent driving panes. Rounded corners are geometric.
             for side: Float in [-1,1] {
                 let z=side*0.98
