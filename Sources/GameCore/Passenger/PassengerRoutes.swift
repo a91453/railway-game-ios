@@ -1024,7 +1024,7 @@ public enum PassengerTransferRules {
 
     /// Stations strictly closer than this walk to each other: 450 m, the
     /// `Railway/` site's transfer rule
-    /// (`Railway/site_archive_clean/data/station_transfers.json`,
+    /// (`Railway/taiwan-rail-reference-clean/source/data/station_transfers.json`,
     /// `criteria.maxDistanceM`, `haversine_meters < maxDistanceM`), here on
     /// the world's plane. (The `Ci/` reference links stations beyond a
     /// passage only through a transfer group the player sets up; game

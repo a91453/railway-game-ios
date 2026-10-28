@@ -79,3 +79,5 @@ rm Tests/GamePresentationTests/Map3DLandmarkStudio.swift
 ```
 
 鏡頭的名字是 `r<列>c<欄>-<方向>`；Blender 的四個檔名是 `chiangKaiShekMemorialHall`、`nationalTheater`、`nationalConcertHall`、`sunYatSenMemorialHall`。
+
+`STUDIO_MARKS=<地標>,...` 換成別的地標當列（決策 457「後來」用 `taipeiMainStation`、`taipei101`、`kaohsiungMainStation`，Blender 檔名同這些名字）；這時欄距與鏡頭距離照模型的寬與高放大。101 這種高的模型，旁邊的欄會闖進畫面，一欄跑一次（`STUDIO_COLUMNS` 只給一個）比較乾淨。

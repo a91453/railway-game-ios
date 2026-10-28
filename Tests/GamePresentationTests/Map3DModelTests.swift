@@ -19,7 +19,7 @@ final class Map3DModelTests: XCTestCase {
         let pantoStyles = Map3DTrainStyle.all.filter { !$0.pantographCars.isEmpty }.count
         let sets = Map3DTrainSet.all.map { $0.models().count }.reduce(0, +)
         let temu1000Models = Map3DTEMU1000.Unit.allCases.count + 1
-        let baseModels = Map3DTrainStyle.all.count * 2 + pantoStyles + Map3DProp.allCases.count + Map3DPedestrianSignal.modelCount + Map3DStreetModel.allCases.count + sets
+        let baseModels = Map3DTrainStyle.all.count * 2 + pantoStyles + Map3DProp.allCases.count + Map3DSceneryProp.allCases.count + Map3DPedestrianSignal.modelCount + Map3DStreetModel.allCases.count + sets
         let temu2000Models = Map3DTEMU2000.Unit.allCases.count + 1
         let shortSets = Map3DGreenTram.Section.allCases.count + 1 + Map3DGreenCommuter.Unit.allCases.count + 1 + temu1000Models
         let longSets = Map3DThreeCarUrban.Unit.allCases.count + 1 + Map3DFiveSectionLRT.Unit.allCases.count + 1 + Map3DSevenSectionLRT.Unit.allCases.count + 1

@@ -81,6 +81,8 @@
 
 1. 等 BF 合併後，把 3 件（加 Nature Kit 的針葉樹 2–3 種、灌木 2 種）接進 `Map3DModelPack`：先照 art-style §7 改造（例如針葉樹改成自家樹幹、層數與比例重組，灌木合併成不同大小的叢），再轉檔；`.m3dmodel` 進 App 的第一張 PR 照 `tools/glb-to-m3dmodel/README.md` 加 glTF-Validator。
 2. 放置：針葉樹照地形高度放在山區、灌木放站前廣場與沿線、儲槽放工業用地。
+（1、2 已由派工單 BN 做完：決策 458，`tools/kenney-props/`；glTF-Validator 只在本機跑過，進 repo／CI 是加依賴，由作者決定。）
+
 3. 下一輪可試 Nature Kit 的石頭、崖壁與農作物；KayKit 只在 Kenney 缺的小件時才看（本輪沒用到）。
 
 ## 7. 驗證

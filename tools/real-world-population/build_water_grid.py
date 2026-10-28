@@ -33,7 +33,7 @@ The extract (an OpenStreetMap `.pbf` file, osmtoday.com's
 osmium`), and the cells are filled with numpy, in about a minute.
 
 Given the Ministry of the Interior's coastline (`taiwan_land.json`, the
-reference's `Railway/site_archive_clean/data/`, its counties' boundaries
+reference's `Railway/taiwan-rail-reference-clean/source/data/`, its counties' boundaries
 dissolved and simplified to about 150 m), it also says how many water cells
 it puts on land and land cells in the sea, the check decision 105 made.
 

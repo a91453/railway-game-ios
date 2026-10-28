@@ -13,6 +13,7 @@ python3 -I tools/real-timetables/extract_pingxi_runs.py \
 - 星期幾開：取時刻表第一週（2026-10-02 到 10-08，沒有假日）每天實際開的車；後面的日期可能是假日時刻（10-09 是國慶補假，開週末的車）。
 - 真實的車組每天不會回到原處（有些從主線開來、開回主線）。所以每天加一班回送：十分 04:15 開往瑞芳，時刻照 4735 次那一段，讓前一天最後一班（4744 次，到十分）趕上第一班（4704 次，瑞芳 05:07）。
 - 程式檢查每天開始與結束時車組都在相同的站（三組：十分、菁桐、瑞芳各一），寫在檔案的 `overnight`。
+- 輸入維持舊的 `Railway/site_archive_clean/data/tra_schedule_dense.json`：新版 `taiwan-rail-reference-clean/source/data/` 的同名檔是 2026-10-16 的新時刻表，與打包資料不同（2026-10-05 不在其中，平溪線也少一班），所以不能換。
 - 參考庫的檔案更新時重跑，並重跑 `RealWorldDemoGroundTests`。
 
 ## 宜蘭線的平日（決策 240）

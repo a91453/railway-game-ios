@@ -939,7 +939,7 @@ enum MapArt {
 
     /// Decision 201: the leg the line panel shows, as the site outlines a
     /// followed train's route (`followLayers` in
-    /// `Railway/site_archive_clean/data/track_style_layers.json`: a pale
+    /// `Railway/taiwan-rail-reference-clean/source/data/track_style_layers.json`: a pale
     /// casing under the line's colour, 8.5 and 4.4 px), here wider than
     /// the line's own colour so it stands out over it, with arrows the way
     /// the trains go.

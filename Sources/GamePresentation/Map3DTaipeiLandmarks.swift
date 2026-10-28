@@ -127,7 +127,7 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
     /// canopy greens and Imperial Crown slate roof in the same look.
     static let palette: [String: UInt32] = [
         "podiumRoof": 0xEDEEF0, "glass": 0xC0DDEE, "glassTop": 0xCCE4F2, "frame": 0xF9F9F7, "podiumGlass": 0xDCEDFC,
-        "coin": 0xD7E3EF, "spire": 0xDDE0E5, "ornament": 0xECE2C6, "wall": 0xF5F1E9, "trim": 0xFBF9F4, "roof": 0xE2C4B6,
+        "coin": 0xD7E3EF, "spire": 0xDDE0E5, "ornament": 0xE9D6A6, "wall": 0xF5F1E9, "trim": 0xFBF9F4, "roof": 0xE2C4B6,
         "ridge": 0xF3EFE8, "wellWall": 0xF0EBE2, "skylight": 0xD8E2EA, "plinth": 0xE4E2DE, "groundGlass": 0xC9D8E2,
         "soffit": 0xE9E4DB, "stripGlass": 0xD3DEE6, "flatRoof": 0xE6E4E0, "plant": 0xDCDCDA,
         "canopyGrass": 0xCFE0C8, "canopyLawn": 0xDCE8D6, "crownRoof": 0xC6CFD6,
@@ -140,6 +140,9 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         // Each hall's parts keep their order of light to dark: roof, wall,
         // columns, brackets (the memorial hall: wall, roof, doorway).
         "hallColumn": 0xD08A7E, "hallGlass": 0xC0CBCC, "podium": 0xE0D8CA,
+        // Decision 457 (later): Taipei Main Station's tiles a deeper
+        // orange-brown, between the reference models' and the pale look.
+        "stationRoof": 0xDDB19C,
     ].mapValues(Map3DColor.rgb)
 
     /// The model, in full close by, or without its small parts from afar.
@@ -357,8 +360,10 @@ struct LandmarkMesh {
         box(-62.6, -58.4, 0, 1.8, 2.6, 1.2, white, Self.plain)
         box(-62.6, -58.4, 1.2, 1.8, 2.6, 23.6, podium, Self.curtain)
         box(-62.6, -58.4, 23.6, 1.8, 2.6, 25, white, Self.plain, top: colour("podiumRoof"))
-        box(-42, -66, 0, -18, -58.4, 9, white, Self.plain, top: white)
-        box(-38, -66.5, 0, -22, -65.8, 7.5, glass, Self.curtain)
+        // Decision 457 (later): the canopy as OSM's roof part (way
+        // 1339487734).
+        box(-36.8, -69.1, 0, -24.4, -58.4, 9, white, Self.plain, top: white)
+        box(-35.6, -69.6, 0, -25.6, -69.0, 7.5, glass, Self.curtain)
         let start = vertices.count
         // The base tower, 25-98 m, tapering a little; white corner strips,
         // and on each face the white frame with stacked bars under the
@@ -366,8 +371,10 @@ struct LandmarkMesh {
         // twice (5.4 m).
         notchedBand(26.6, 5.4, 25, 26.0, 5.2, 98, glass: glass, white: white, glassLayer: Map3DVertex.towerGlass)
         if full {
-            var bars: [(Float, Float, Float, Float, Float)] = [(-9.5, -8.0, 25, 78, 0.5), (8.0, 9.5, 25, 78, 0.5)]
-            bars += stride(from: Float(30), to: 78, by: 4).map { (-8.0, 8.0, $0, $0 + 0.9, 0.35) }
+            // The frame as wide as the coin and OSM's parts on the faces'
+            // middles (ways 1339487718-1339487721: 14.4 m).
+            var bars: [(Float, Float, Float, Float, Float)] = [(-7.2, -5.8, 25, 78, 0.5), (5.8, 7.2, 25, 78, 0.5)]
+            bars += stride(from: Float(30), to: 78, by: 4).map { (-5.8, 5.8, $0, $0 + 0.9, 0.35) }
             faceBoxes(26.3, bars, white)
             coins(glass: glass, face: 26.15, z: 88)
         }
@@ -394,14 +401,10 @@ struct LandmarkMesh {
                 fin(from: foot[k], z0 + 1.4, to: head[k], z0 + 34.4, width: 0.5, depth: 0.5, white)
             }
             guard full else { continue }
-            for q in 0..<4 {
-                let angle = Float(q) * .pi / 2 + .pi / 4
-                let r = 27.2 * Float(2).squareRoot() - 2.4
-                let cx = r * cos(angle), cy = r * sin(angle), ux = cos(angle), uy = sin(angle)
-                let a: P3 = (cx - uy * 1.5, cy + ux * 1.5, z0 + 35.2)
-                let b: P3 = (cx + uy * 1.5, cy - ux * 1.5, z0 + 35.2)
-                tri(a, b, (cx + ux * 2.6, cy + uy * 2.6, z0 + 37.0), white, Self.plain)
-                tri(b, a, (cx, cy, z0 + 36.8), white, Self.plain)
+            // A ruyi on each corner under the lip, 8 m tall (the tower's
+            // ruyi stand at least 8 m), facing out.
+            for k in head.indices where k % 5 == 2 {
+                ruyi(at: head[k], z: z0 + 26.6, height: 8, colour("ornament"))
             }
         }
         // The crown over the eighth module: a white platform a little wider
@@ -411,7 +414,10 @@ struct LandmarkMesh {
         // narrower, flaring out to a white lip; the white stepped base of
         // the spire to the roof at 448 m; the spire to 508 m (OSM way
         // 615183623).
-        let deck = Self.notched(28.0, 5.6)
+        // OSM's parts (ways 615183621, 1339487717, 615183622, 615184269):
+        // the deck 49 m across, the top floors 21.5 m at their foot and 30 m
+        // at their lip, the crown 21.5 then 14.3 m.
+        let deck = Self.notched(24.5, 4.9)
         wallBand(deck, 386, deck, 388.4, white, Map3DVertex.floodlit)
         cap(deck, 388.4, white, Self.plain)
         if full {
@@ -431,20 +437,20 @@ struct LandmarkMesh {
                 box(x - 3.6, y - 3.6, 394.4, x + 3.6, y + 3.6, 395.2, white, Self.plain)
             }
         }
-        wallBand(Self.notched(17.0, 3.0), 388.4, Self.notched(17.0, 3.0), 391.0, white, Self.plain)
-        cap(Self.notched(17.0, 3.0), 391.0, white, Self.plain)
-        notchedBand(13.4, 2.6, 391.0, 17.6, 3.4, 430.6, glass: colour("glassTop"), white: white, glassLayer: Map3DVertex.towerGlass)
-        wallBand(Self.notched(13.6, 2.6), 391.0, Self.notched(13.8, 2.65), 392.2, white, Self.plain)
-        wallBand(Self.notched(17.6, 3.4), 430.6, Self.notched(18.6, 3.6), 431.2, white, Map3DVertex.floodlit)
-        wallBand(Self.notched(18.6, 3.6), 431.2, Self.notched(18.9, 3.7), 433.0, white, Map3DVertex.floodlit)
-        cap(Self.notched(18.9, 3.7), 433.0, white, Self.plain)
+        wallBand(Self.notched(12.4, 2.5), 388.4, Self.notched(12.4, 2.5), 391.0, white, Self.plain)
+        cap(Self.notched(12.4, 2.5), 391.0, white, Self.plain)
+        notchedBand(10.75, 2.15, 391.0, 15.0, 3.0, 430.6, glass: colour("glassTop"), white: white, glassLayer: Map3DVertex.towerGlass)
+        wallBand(Self.notched(10.95, 2.2), 391.0, Self.notched(11.15, 2.25), 392.2, white, Self.plain)
+        wallBand(Self.notched(15.0, 3.0), 430.6, Self.notched(15.6, 3.1), 431.2, white, Map3DVertex.floodlit)
+        wallBand(Self.notched(15.6, 3.1), 431.2, Self.notched(15.8, 3.2), 433.0, white, Map3DVertex.floodlit)
+        cap(Self.notched(15.8, 3.2), 433.0, white, Self.plain)
         if full {
-            let foot = Self.notched(13.4, 2.6), head = Self.notched(17.6, 3.4)
+            let foot = Self.notched(10.75, 2.15), head = Self.notched(15.0, 3.0)
             for k in foot.indices where k % 5 == 2 {
                 fin(from: foot[k], 392.2, to: head[k], 430.6, width: 0.4, depth: 0.4, white)
             }
         }
-        for (z0, z1, h, c) in [(Float(433), Float(438), Float(12.0), Float(3.0)), (438, 443, 9.0, 2.4), (443, 448, 6.2, 1.8)] {
+        for (z0, z1, h, c) in [(Float(433), Float(439), Float(10.75), Float(2.7)), (439, 443.5, 8.4, 2.1), (443.5, 448, 7.15, 1.8)] {
             // The crown floodlit at night.
             wallBand(Self.chamfered(h, c), z0, Self.chamfered(h, c), z1, white, Map3DVertex.floodlit)
             cap(Self.chamfered(h, c), z1, white, Self.plain)
@@ -462,6 +468,26 @@ struct LandmarkMesh {
             }
         }
         shift(from: start, by: Self.towerAt)
+    }
+
+    /// A ruyi (如意) `height` tall standing out from the corner point `p`
+    /// (facing away from the middle) from `z` up: a stem under a three-
+    /// lobed head, its face and its edge.
+    mutating func ruyi(at p: P2, z: Float, height h: Float, _ color: UInt32) {
+        let r = (p.x * p.x + p.y * p.y).squareRoot(), ux = p.x / r, uy = p.y / r
+        let depth: Float = 0.6, out: Float = 0.3
+        // Across and up, in eighths of its height: the stem, then the head.
+        let outline: [P2] = [(0, 0), (0.06, 0.08), (0.07, 0.45), (0.2, 0.52), (0.24, 0.72), (0.12, 0.84), (0, 1),
+                             (-0.12, 0.84), (-0.24, 0.72), (-0.2, 0.52), (-0.07, 0.45), (-0.06, 0.08)]
+        func at(_ q: P2, _ d: Float) -> P3 {
+            (p.x + ux * (out + d) - uy * q.x * h, p.y + uy * (out + d) + ux * q.x * h, z + q.y * h)
+        }
+        let middle: P2 = (0, 0.6)
+        for k in outline.indices {
+            let a = outline[k], b = outline[(k + 1) % outline.count]
+            tri(at(middle, depth), at(b, depth), at(a, depth), color, Self.plain)
+            quad(at(a, 0), at(a, depth), at(b, depth), at(b, 0), color, Self.plain)
+        }
     }
 
     /// Moves the vertices from `start` on by `by` across the ground.
@@ -586,13 +612,13 @@ struct LandmarkMesh {
             let back0: P3 = (-10.0, y0, 11.6), back1: P3 = (10.0, y0, 11.6)
             let foot0: P3 = (-14.4, y0, 8.8), foot1: P3 = (14.4, y0, 8.8)
             if sign < 0 {
-                quad(front0, front1, back1, back0, colour("roof"), Self.tiles, [(0, 0), (28.8, 0), (24.4, 11.4), (4.4, 11.4)])
-                tri(foot0, front0, back0, colour("roof"), Self.tiles)
-                tri(front1, foot1, back1, colour("roof"), Self.tiles)
+                quad(front0, front1, back1, back0, colour("stationRoof"), Self.tiles, [(0, 0), (28.8, 0), (24.4, 11.4), (4.4, 11.4)])
+                tri(foot0, front0, back0, colour("stationRoof"), Self.tiles)
+                tri(front1, foot1, back1, colour("stationRoof"), Self.tiles)
             } else {
-                quad(front1, front0, back0, back1, colour("roof"), Self.tiles, [(0, 0), (28.8, 0), (24.4, 11.4), (4.4, 11.4)])
-                tri(front0, foot0, back0, colour("roof"), Self.tiles)
-                tri(foot1, front1, back1, colour("roof"), Self.tiles)
+                quad(front1, front0, back0, back1, colour("stationRoof"), Self.tiles, [(0, 0), (28.8, 0), (24.4, 11.4), (4.4, 11.4)])
+                tri(front0, foot0, back0, colour("stationRoof"), Self.tiles)
+                tri(foot1, front1, back1, colour("stationRoof"), Self.tiles)
             }
             if full {
                 for x in [Float(-12.5), -4.2, 4.2, 12.5] {
@@ -601,74 +627,35 @@ struct LandmarkMesh {
                 }
             }
         }
-        // The lower eave: a tiled skirt round the building over the
-        // arcade, its corners turned up.
-        let (ringIn, nearIn) = Self.rectRing(hx, hy)
-        let ringOut = ringIn.map { (x: $0.x * (hx + 4.2) / hx, y: $0.y * (hy + 4.2) / hy) }
-        let up = nearIn.map { n -> Float in let t = 1 - min(n, 0.25) / 0.25; return 1.4 * t * t }
-        band(ringOut, up.map { 8.6 + $0 }, ringIn, up.map { _ in 11.4 }, colour("roof"), Self.tiles)
-        band(ringOut, up.map { 8.1 + $0 }, ringOut, up.map { 8.6 + $0 }, colour("trim"), Self.plain)
-        band(ringIn, up.map { _ in 8.1 }, ringOut, up.map { 8.1 + $0 }, colour("soffit"), Self.plain)
-        // The upper walls: cream pilasters every 3.6 m, pale glass strips;
-        // to 18 m, so that the roof's top stands 30 m high (OSM way
+        // Decision 457 (later): the roofs are the Chinese roof part. The
+        // lower eave, a tiled skirt over the arcade, its corners turned up.
+        let colours = ChineseRoofColours(tile: colour("stationRoof"), ridge: colour("ridge"), underside: colour("soffit"), gable: nil,
+                                         wall: colour("wall"))
+        skirtRoof(hx, hy, eaves: 8.6, wall: 11.4, over: 4.2, sweep: 1.4, lip: 0.5, tile: colours.tile, edge: colours.ridge,
+                  underside: colours.underside)
+        // The upper walls: cream pilasters every 3.6 m, a belt, and between
+        // the pilasters tall windows all the way round (the Blender model's
+        // upright windows); to 18 m, the cornice to 20.2 m, so that the
+        // roof's ridge stands 28.8 m high and its ornaments 30 m (OSM way
         // 23641610: 30 m, its roof from the lower eave 18 m high).
         let ux = hx - 1.2, uy = hy - 1.2
         cap([(-ux, -uy), (ux, -uy), (ux, uy), (-ux, uy)], 11.4, colour("wall"), Self.plain)
-        // Plaster between the pilasters, and above the belt a band of
-        // square windows all the way round, which the pilasters divide.
         pilasters(ux, uy, 11.4, 18.0, step: 3.6, depth: 0.7, width: 1.3, colour("wall"), panel: colour("wall"), panelLayer: Self.floors)
         let windows: [P2] = [(-ux - 0.08, -uy - 0.08), (ux + 0.08, -uy - 0.08), (ux + 0.08, uy + 0.08), (-ux - 0.08, uy + 0.08)]
-        wallBand(windows, 15.4, windows, 17.5, colour("stripGlass"), Self.curtain)
+        wallBand(windows, 12.6, windows, 17.4, colour("stripGlass"), Self.curtain)
         let belt: [P2] = [(-ux - 0.3, -uy - 0.3), (ux + 0.3, -uy - 0.3), (ux + 0.3, uy + 0.3), (-ux - 0.3, uy + 0.3)]
-        wallBand(belt, 14.4, belt, 15.0, colour("wall"), Self.plain)
+        wallBand(belt, 11.9, belt, 12.4, colour("wall"), Self.plain)
         // The cornice: a white band and a bracket course.
         box(-ux - 0.9, -uy - 0.9, 18.0, ux + 0.9, uy + 0.9, 19.4, colour("trim"), Self.plain)
         box(-ux - 2.2, -uy - 2.2, 19.4, ux + 2.2, uy + 2.2, 20.2, colour("soffit"), Self.plain)
-        // The great roof: from eaves 5 m out, concave, the corners swept
-        // up, to the ridge round the flat middle.
-        let ex = hx + 5.6, ey = hy + 5.6, rx: Float = 46.5, ry: Float = 29.5
-        let steps = full ? 12 : 6
-        let (unit, near) = Self.rectRing(1, 1, perSide: 16)
-        var rings: [(points: [P2], heights: [Float])] = []
-        for s in 0...steps {
-            let t = Float(s) / Float(steps)
-            let sx = ex - (ex - rx) * t, sy = ey - (ey - ry) * t
-            let sweep = 2.6 * (1 - t) * (1 - t) * (1 - t)
-            let heights = near.map { n -> Float in
-                let corner = 1 - min(n, 0.3) / 0.3
-                return 20.2 + 7.6 * powf(t, 1.7) + sweep * corner * corner
-            }
-            rings.append((unit.map { (x: $0.x * sx, y: $0.y * sy) }, heights))
-        }
-        for s in 0..<steps { band(rings[s].points, rings[s].heights, rings[s + 1].points, rings[s + 1].heights, colour("roof"), Self.tiles) }
-        // The eave's edge, white, and its underside.
-        let eave = rings[0]
-        band(eave.points, eave.heights.map { $0 - 0.9 }, eave.points, eave.heights, colour("trim"), Self.plain)
-        band(eave.points.map { (x: $0.x * (ux + 2.2) / ex, y: $0.y * (uy + 2.2) / ey) }, eave.heights.map { _ in 20.2 },
-             eave.points, eave.heights.map { $0 - 0.9 }, colour("soffit"), Self.plain)
-        // Four hip ridges and the ridge round the middle, with end
-        // ornaments.
-        if full {
-            for k in [0, 16, 32, 48] {
-                for s in 0..<steps {
-                    let a = rings[s].points[k], b = rings[s + 1].points[k]
-                    let za = rings[s].heights[k], zb = rings[s + 1].heights[k]
-                    let d = Self.distance(a, b)
-                    let nx = -(b.y - a.y) / d * 0.55, ny = (b.x - a.x) / d * 0.55
-                    quad((a.x - nx, a.y - ny, za + 0.6), (a.x + nx, a.y + ny, za + 0.6),
-                         (b.x + nx, b.y + ny, zb + 0.6), (b.x - nx, b.y - ny, zb + 0.6), colour("ridge"), Self.plain)
-                }
-                let a = rings[0].points[k], z = rings[0].heights[k]
-                box(a.x - 0.8, a.y - 0.8, z, a.x + 0.8, a.y + 0.8, z + 1.6, colour("ridge"), Self.plain)
-            }
-        }
-        let top = rings[steps].points, ztop = rings[steps].heights[0]
-        let ridge = top.map { (x: $0.x * (rx + 1.2) / rx, y: $0.y * (ry + 1.2) / ry) }
-        band(ridge, top.map { _ in ztop - 0.3 }, ridge, top.map { _ in ztop + 1.0 }, colour("ridge"), Self.plain)
-        band(ridge, top.map { _ in ztop + 1.0 }, top, top.map { _ in ztop + 1.0 }, colour("ridge"), Self.plain)
+        // The great roof (盝頂): from eaves 5.9 m out, concave, the corners
+        // swept up, to the ridge round the flat middle.
+        let rx: Float = 46.5, ry: Float = 29.5
+        chineseRoof(ux + 0.9, uy + 0.9, eaves: 20.7, over: 5.0, rise: 8.1, sweep: 2.6, kind: .flat(x: rx, y: ry), colours: colours)
+        let ztop: Float = 27.8
         // The flat middle a little below the ridge, with a skylight and
         // plant.
-        let well = Array(top.reversed())
+        let well = LandmarkMesh.rectRing(rx, ry, perSide: full ? 10 : 6).points.reversed().map { $0 }
         band(well, well.map { _ in ztop - 2.2 }, well, well.map { _ in ztop + 1.0 }, colour("wellWall"), Self.plain)
         cap([(-rx, -ry), (rx, -ry), (rx, ry), (-rx, ry)], ztop - 2.2, colour("flatRoof"), Self.plain)
         // The hall's skylight: a long glass gable over the middle.
@@ -922,7 +909,44 @@ struct LandmarkMesh {
             treeColumn(col.x, col.y, top: Self.canopyHeight(col.x, col.y) - 1.1)
         }
 
+        // Decision 457 (later): the joint-development towers on OSM's plans
+        // (way 1298938833 the offices, 1298938834 the hotel; OSM has no
+        // height): 10 and 11 floors by the news, 3.5 m a floor (estimated).
+        jointTower(Self.kaohsiungOffices, height: 35)
+        jointTower(Self.kaohsiungHotel, height: 38.5)
+
         oldKaohsiungStation()
+    }
+
+    /// The offices' and the hotel's plans (OSM ways 1298938833 and
+    /// 1298938834), counter-clockwise.
+    static let kaohsiungOffices: [P2] = Array([
+        (-29.8, -19.5), (-33.1, -62.4), (-33.7, -71.2), (-34.8, -84.6), (-35.9, -99.1), (-36.2, -102.1), (-37.3, -104.8), (-39.3, -107.1),
+        (-41.8, -108.7), (-44.7, -109.4), (-47.7, -109.2), (-77.9, -106.9), (-80.9, -106.6), (-83.7, -105.5), (-86.0, -103.5),
+        (-87.5, -101.0), (-88.3, -98.1), (-88.1, -95.1), (-81.9, -15.5), (-81.7, -12.5), (-80.5, -9.7), (-78.6, -7.5), (-76.0, -5.9),
+        (-73.1, -5.2), (-70.1, -5.4), (-39.9, -7.7), (-36.9, -8.0), (-34.1, -9.1), (-31.9, -11.1), (-30.3, -13.6), (-29.6, -16.5)
+    ].reversed())
+    static let kaohsiungHotel: [P2] = Array([
+        (42.3, -16.0), (57.8, -17.1), (61.0, -18.2), (64.1, -20.2), (67.5, -23.5), (69.5, -26.2), (71.7, -29.6), (72.5, -33.0),
+        (72.7, -38.9), (71.1, -57.6), (69.8, -61.6), (68.0, -64.9), (65.9, -67.8), (63.0, -70.3), (59.9, -72.0), (56.4, -73.0),
+        (51.3, -73.5), (37.8, -72.9), (33.3, -71.8), (31.5, -71.3), (27.6, -69.2), (24.3, -66.3), (21.9, -63.4), (20.1, -59.9),
+        (19.1, -54.7), (18.8, -50.3), (18.5, -44.9), (19.6, -35.5), (21.4, -29.0), (24.1, -24.0), (28.6, -19.9), (31.8, -18.0),
+        (35.8, -17.0), (39.3, -16.4)
+    ].reversed())
+
+    /// A plain glass tower `height` high on `plan`, in the pale look: glass
+    /// with white floor bands every third floor close by, a white parapet
+    /// and a flat roof; every second corner from afar.
+    mutating func jointTower(_ plan: [P2], height h: Float) {
+        let ring = full ? plan : plan.indices.filter { $0.isMultiple(of: 2) }.map { plan[$0] }
+        wallBand(ring, 0, ring, h - 1.2, colour("glass"), Self.curtain)
+        if full {
+            for z in stride(from: Float(10.5), to: h - 1.5, by: 10.5) {
+                wallBand(ring, z, ring, z + 0.5, colour("frame"), Self.plain)
+            }
+        }
+        wallBand(ring, h - 1.2, ring, h, colour("frame"), Self.plain)
+        cap(ring, h, colour("flatRoof"), Self.plain)
     }
 
     /// The preserved 1941 Imperial Crown station building on the south

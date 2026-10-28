@@ -454,8 +454,9 @@ final class Map3DRoadMarkingTests: XCTestCase {
         let vending = try XCTUnwrap(pack.models.first { $0.name == Map3DProp.vending.modelName })
         XCTAssertTrue(vending.vertices.contains { $0.color >> 24 == 0 })
         XCTAssertGreaterThan(vending.maximum.y, 0.4, "its front toward the road")
-        // The power-saving look leaves the small things out.
-        XCTAssertEqual(Map3DProp.modelsLeftOut(.saving).count, 2)
+        // The power-saving look leaves the small things out, and since
+        // decision 458 the bush clumps.
+        XCTAssertEqual(Map3DProp.modelsLeftOut(.saving).count, 2 + Map3DSceneryProp.bushClumps.count)
         XCTAssertTrue(Map3DProp.modelsLeftOut(.automatic).isEmpty)
         XCTAssertTrue(Map3DProp.modelsLeftOut(.high).isEmpty)
     }
