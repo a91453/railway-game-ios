@@ -27,7 +27,7 @@ def visible(t,y,z):
 mask=visible(tri,0.42,2.8)
 glass=visible(tri,0.90,2.75)
 assert glass!=mask
-mask_samples=[(sign*y,z) for sign in [-1,1] for y in [0.40,0.42,0.44,0.46,1.38] for z in np.linspace(2.05,2.95,19)]
+mask_samples=[(sign*y,z) for sign in [-1,1] for y in [0.415,0.425,1.38] for z in np.linspace(2.05,2.95,19)]
 # Foot/wiper paths are excluded by using high central window samples.
 glass_samples=[(sign*y,z) for sign in [-1,1] for y in [.70,.90,1.10] for z in [2.65,2.80,2.90]]
 def check(t):

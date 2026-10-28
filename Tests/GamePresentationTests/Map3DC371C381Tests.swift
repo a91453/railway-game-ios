@@ -21,7 +21,11 @@ final class Map3DC371C381Tests: XCTestCase {
             (Map3DC381.formation(), Map3DC381.arrangement.map(Map3DC381.model))
         ] {
             XCTAssertEqual(formation.vertices.count, sections.reduce(0) { $0 + $1.vertices.count })
-            XCTAssertLessThanOrEqual(formation.triangleCount, Map3DModelFile.maximumTriangles)
+            // The six-car display can use M3DAssembly; the format limit
+            // belongs to each independently loadable unit.
+            for section in sections {
+                XCTAssertLessThanOrEqual(section.triangleCount, Map3DModelFile.maximumTriangles)
+            }
         }
     }
 

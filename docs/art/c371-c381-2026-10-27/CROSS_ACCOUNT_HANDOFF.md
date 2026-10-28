@@ -1,27 +1,29 @@
-# C371／C381 跨帳戶續作交接
+# C371／C381 續作交接（第五輪，2026-10-28）
 
-2026-10-27 本帳戶已依原交接順序先讀本文件，再讀私有 PR #103，親自開啟 TRSC 完整原廠照片、Kirk 淡水線原圖及 Howard61313 中正紀念堂原圖，另查網路圖片與本輪五張內嵌實車照。逐張來源、SHA、觀察與限制見 [本帳戶複查](REFERENCE_RECHECK.md)及私包 source-record.json。
+公開 draft [#1342](https://github.com/a91453/railway-game-ios/pull/1342) ↔ 私有 draft [#103](https://github.com/a91453/railway-reference-private/pull/103)，同分支 `codex/c371-c381-native-2026-10-27`；工作 #1341、登記 #1041。producer 與最新 head CI 見兩 PR；不能沿用舊 head 的綠燈。
 
-## 本輪入口
+## 真前版與本輪
 
-- 公開 `a91453/railway-game-ios` draft [#1342](https://github.com/a91453/railway-game-ios/pull/1342)，私有 `a91453/railway-reference-private` draft [#103](https://github.com/a91453/railway-reference-private/pull/103)。同名分支 `codex/c371-c381-native-2026-10-27`；工作 [#1341](https://github.com/a91453/railway-game-ios/issues/1341)、登記 [#1041](https://github.com/a91453/railway-game-ios/issues/1041)。producer 及最新 head CI 見兩 PR，不沿用舊 head 綠燈。
-- 私包根目錄：`Railway/game-art-previews/docs/art/c371-c381-2026-10-27/`。本輪接手時完整交付（私庫 8c51ce58）已保存於 **history/true-v7/**，含模型、圖、viewer、來源、驗證及原 ZIP，ZIP SHA-256 `8b5f81f78713034c468badbdec0659d7068cfdc96d37c7be1fda32a5b5dff140`。true-v1 至 true-v6 均保留。此為使用者明確要求完整真前版保存，優先於一般素材清理規則。
-- `comparison/c371-before-after.png` 使用真正 true-v7 與本輪模型、固定相機／公尺尺度／光線。`review/` 的 A 方案與露底試稿為試驗證據，不能稱為真正交付前版。
+真正接手的第四輪私包（私庫1a94ea1d）完整保存在 `Railway/game-art-previews/docs/art/c371-c381-2026-10-27/history/true-v8/`，含原生、GLB、預覽、viewer、來源／驗證與原ZIP。ZIP SHA-256：`be655c5541042d89f72aef55711d0c6a874ff46464106988d05d2dda2453dee3`。更早true-v1～v7保留。使用者要求完整保存真前版，優先於一般素材清理規則。
 
-## 修改與外觀界線
+本輪重新查看已下載的TRSC完整實車原圖（同一原檔SHA，見REFERENCE_RECHECK），修三處：連續弧形銀色端面／黑罩與多段橫向弧面；略斜前窗及細中央門框；薄下裙橫樑、分離支座、中央連結器及四根台車軸桿。第一稿整片厚橫樑從正面像厚板，已拒收；其PNG在review，不能稱真前版。比較圖使用true-v8及最終模型、同公尺尺度／相機／光線。
 
-本輪只改 `Map3DMetroStudyGeometry.swift` 中 C371 駕駛端：拱形眉線、最後 0.32 m 端殼過渡、淺橫向弧面、前窗下緣降低、薄圓角燈腔；雨刷／燈片貼合最終面。先前非平面扇形三角讓銀底穿過黑罩，已改用共面分片並用真正試稿驗證射線檢查會拒收。C371 六車 14,876 三角，未超 15,000。降低小顯示面與中央門框細節分段，將預算用於輪廓；沒有借 C341 幾何。
+C371 DM/rear各3,526三角，六車15,828三角。每個原生單元仍不超過15,000；完整六車使用既有工具M3DAssembly展示契約，沒有輸出超限M3DM或修改遊戲讀檔上限。Swift整列預期payload存為verification/*.bin，展開單元平移後逐bytes相同，移位100mm反例會被拒收。GLB和viewer從同一組裝來；這不是App整列接入驗收。
 
-**C381 本輪不改，10 件原生／GLB 與 true-v7 bytes 相同，外觀未驗收。** C371 中間 T/M 車及 EMU3000 風格比較模型同樣 bytes 不變。C371 主殼新增站位會重切跨車身長面；不能宣稱所有車頭以外的主殼三角 bytes 不變。配件保護與實際差異見 protected-payload-verification.json。
+C381本輪不改，10件專用原生／GLB與true-v8 bytes相同，外觀未驗收。C371 T/M及EMU3000比較模型同樣bytes不變。頭車新增軸桿，原有輪胎、輪轂與車頂三角不改；本輪主車殼站位不改，重新分片的是端罩／前面板；車頭末段0.42m以外只新增四根軸桿，既有三角逐bytes保持。檢查見protected-payload-verification.json。
 
-本輪自檢改善眉線方框、前窗下方留白及厚燈座；精確半徑、另一側設備與隱藏底盤仍是比例推估。**C371 仍待使用者外觀驗收，C381 未驗收；兩者皆不可寫成已接受。** 此為靜態素材註冊，沒有營運映射；合併重建 App 不會自動替換營運列車。真機 Metal、效能、動畫、全碰撞與本輪 Simulator 實際畫面仍 UNVERIFIED。
+## 驗收界線
 
-## 重建與檢查
+已自檢改善眉線／肩部、窗框及厚橫樑；輪徑和貼軌位置保持，輪組投影仍會在正交前視看到。精確弧度、支座尺寸與隱藏設備仍為比例推估，不冒稱工程還原。C371仍待使用者外觀驗收；C381外觀未驗收。原生前、左右、俯、斜、白模、剪影均需親自查看。僅靜態單元註冊，不改營運映射；合併重建App不會自動換營運列車。真機Metal／效能／動畫／完整碰撞、本輪Simulator畫面及直接file://啟動仍UNVERIFIED。
 
-Swift 6.4 warnings-as-errors 建置相關測試。使用已合併 #1357 的 `tools/train-models/` 匯出八單元、FNV 鎖與日夜七向；接手時鎖未同步後來的 pack 材質／遮蔽處理；用原配方與新配方在同 pipeline 重建，確認只有 C371 DM/rear 改變，再校正本批八個鎖項。原生 C381 幾何與交付 bytes 不變，詳見私包 lock-reconciliation.json。完整六車／GLB 仍用 `tools/c371-c381/export.sh OUT`，接續 `render.mjs`、`clay.mjs`、`revision-compare.mjs OLD NEW`。每次修改都重看前、左右、俯、斜、白模與剪影。
+## 重建
 
-跑 `geometry-audit.py`、`front-visibility.py`、`protected-payload.py OLD NEW`、Blender `glb-audit.py`、`verify-png.py`。source-record 綁真 producer commit 後重建 22 件模型逐 bytes；再更新 viewer、跑互動／下載／手機寬度驗收，`bundle.py` 完整 CRC／解壓逐檔比對。history 不收入當前 ZIP，仍完整保存在私庫。推送後從遠端下載 ZIP 與代表檔重新核 SHA。
+1. 先查工作登記、雙庫遠端head與適用規則；本輪已整合main cdb5bba0的衝突，保留其夜間燈光、淡色與乘客效能修改，只對註冊／計數做必要衝突整合。沒有新增GameCore／存檔／Golden／Save／Replay／玩法變更。主庫不放完整素材或照片。
+2. Swift6.4 warnings-as-errors：build-tests與相關測試。`tools/c371-c381/export.sh OUT`，接續render.mjs、clay.mjs、revision-compare.mjs OLD NEW。
+3. `geometry-audit.py`、`front-visibility.py`（目前正面黑罩114點／玻璃18點及埋入玻璃反例）、`protected-payload.py OLD NEW`、Blender glb-audit.py、verify-png.py。package.mjs額外核assembly預期payload與移位反例。
+4. 已合併#1357的共用train-models工具匯出八單元、FNV與日夜七向；本輪只應改C371頭尾鎖值。pack的材質旗標與遮蔽顏色不同於裸配方，應核座標，不能宣稱整份payload一致。
+5. 用真producer提交重建22件原生／GLB bytes，綁source-record，更新viewer後驗互動／手機寬度／下載，bundle.py做CRC／完整解壓逐bytes。history另存，不收入當前ZIP。私庫推送後重新下載ZIP、真前ZIP及代表檔核對；遠端驗證記錄置ZIP外。
 
-先讀雙庫適用 AGENTS／CLAUDE／HANDOFF、rolling-stock、art-style 與建模手冊，查工作登記與遠端最新 head，保護他人增量。私庫無根 AGENTS／CLAUDE／docs/HANDOFF；公開庫規則與本輪使用者授權適用本工作。不改 GameCore、存檔、Golden／Save／Replay fixtures、玩法或營運映射。
+上一輪44b3d270的Linux build、五分片、gate與Xcode Simulator build已通過；UI/iPad skipped。本輪新head另查，不把舊結果當新結果。
 
-兩 PR 保持 draft；不推 main、不合併、不開 auto-merge、不啟動 TestFlight。
+兩PR保持draft；不推main、不合併PR、不開auto-merge、不啟動TestFlight。

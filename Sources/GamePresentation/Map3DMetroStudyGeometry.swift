@@ -53,27 +53,61 @@ struct MetroStudyGeometry {
         if curved {
             prism(face(-thickness),face(0),color)
         } else {
-            // Two planar halves share the same shallow transverse bow.
-            // A fan across a nonlinear surface made the silver backing poke
-            // through the mask, despite each solid being closed.
-            for side: Float in [-1,1] {
-                var clipped: [(Float,Float)] = []
-                for i in yz.indices {
-                    let a=yz[i], b=yz[(i+1)%yz.count]
-                    let insideA=a.1*side >= 0, insideB=b.1*side >= 0
-                    if insideA { clipped.append(a) }
-                    if insideA != insideB {
-                        let t = -a.1/(b.1-a.1)
-                        if t > 0 && t < 1 { clipped.append((a.0+t*(b.0-a.0),0)) }
+            // Clip into shared lateral planes before triangulating the caps.
+            // Only the outer perimeter gets side walls: no duplicate walls at
+            // internal slice boundaries, and every layer uses the same bow.
+            let knots: [Float] = [-1.62,-1.20,-0.60,0.60,1.20,1.62]
+            func clip(_ polygon: [(Float,Float)], at z: Float, greater: Bool) -> [(Float,Float)] {
+                var result: [(Float,Float)] = []
+                for i in polygon.indices {
+                    let a=polygon[i], b=polygon[(i+1)%polygon.count]
+                    let ia=greater ? a.1 >= z : a.1 <= z
+                    let ib=greater ? b.1 >= z : b.1 <= z
+                    if ia { result.append(a) }
+                    if ia != ib {
+                        let t=(z-a.1)/(b.1-a.1)
+                        if t > 0 && t < 1 { result.append((a.0+t*(b.0-a.0),z)) }
                     }
                 }
-                guard clipped.count >= 3 else { continue }
-                func layer(_ offset: Float) -> [Map3DPoint] {
-                    clipped.map { h,z in Map3DPoint(half+0.048+0.09*(1-abs(z)/1.62)+lift+offset,h,z) }
+                return result
+            }
+            func point(_ p: (Float,Float), _ offset: Float) -> Map3DPoint {
+                Map3DPoint(c371FaceX(p.1)+lift+offset,p.0,p.1)
+            }
+            let inside=Map3DPoint(half-0.10,2.15,0)
+            for i in 0..<(knots.count-1) {
+                let polygon=clip(clip(yz,at:knots[i],greater:true),at:knots[i+1],greater:false)
+                if polygon.count < 3 { continue }
+                kit.face(polygon.map { point($0,0) },inside:inside,color:color)
+                // A distinct interior point keeps both caps outward even
+                // when the backing layer is inside the original shell.
+                let centre=polygon.map { point($0,-thickness/2) }.reduce(.zero,+)*(1/Float(polygon.count))
+                kit.face(polygon.map { point($0,-thickness) },inside:centre,color:color)
+            }
+            for i in yz.indices {
+                let a=yz[i], b=yz[(i+1)%yz.count]
+                var ts: [Float] = [0,1]
+                if a.1 != b.1 {
+                    ts += knots.map { ($0-a.1)/(b.1-a.1) }.filter { $0 > 0 && $0 < 1 }
                 }
-                prism(layer(-thickness),layer(0),color)
+                ts.sort()
+                for j in 0..<(ts.count-1) {
+                    func at(_ t: Float) -> (Float,Float) { (a.0+t*(b.0-a.0),a.1+t*(b.1-a.1)) }
+                    let u=at(ts[j]), v=at(ts[j+1])
+                    let centre=yz.map { point($0,-thickness/2) }.reduce(.zero,+)*(1/Float(yz.count))
+                    kit.face([point(u,0),point(v,0),point(v,-thickness),point(u,-thickness)],inside:centre,color:color)
+                }
             }
         }
+    }
+    func c371FaceX(_ lateral: Float) -> Float {
+        let z=abs(lateral)
+        let a: Float = z < 0.60 ? 0 : (z < 1.20 ? 0.60 : 1.20)
+        let b: Float = z < 0.60 ? 0.60 : (z < 1.20 ? 1.20 : 1.62)
+        func bow(_ x: Float) -> Float { 0.12*(1-(x/1.62)*(x/1.62)) }
+        // A single flat middle plane from -0.60 to +0.60.
+        let depth = z < 0.60 ? bow(0.60) : bow(a)+(bow(b)-bow(a))*(z-a)/(b-a)
+        return half+0.048+depth
     }
     func roundRect(_ left: Float,_ right: Float,_ low: Float,_ high: Float,_ r: Float, steps count: Int? = nil) -> [(Float,Float)] {
         let steps=count ?? (curved ? 5 : 4)
@@ -135,6 +169,13 @@ struct MetroStudyGeometry {
                 for side:Float in [-1,1] { kit.box(bx,0.53,side*0.94,3.00,0.075,0.18,steel) }
             }
         }
+        if cab && !curved {
+            // Standard two-axle bogies: real axle shafts connect the existing
+            // wheels. Tyre rings, hubs and rail contacts are unchanged.
+            for bx: Float in [-8.25,8.25] { for dx: Float in [-1.15,1.15] {
+                kit.civicTube(Map3DPoint(bx+dx,0.425,-0.70),Map3DPoint(bx+dx,0.425,0.70),radius:0.075,color:steel,sides:8)
+            } }
+        }
         for x:Float in trailer ? [-4.0,0,4.0] : [-4.6,-1.6,1.6,4.6] { kit.box(x,0.60,0,2.2,1.75,0.34,steel) }
         if curved {
             for x:Float in [-5.75,5.75] {
@@ -187,27 +228,35 @@ struct MetroStudyGeometry {
             } else {
                 // A shallow rounded silver end cap gives the fascia real
                 // shoulders and a curved chin instead of a square slab.
-                frontPatch([(1.00,-1.35),(1.08,-1.50),(3.03,-1.53),(3.27,-1.46),
-                            (3.43,-1.25),(3.53,-0.87),(3.55,0),(3.53,0.87),
-                            (3.43,1.25),(3.27,1.46),(3.03,1.53),(1.08,1.50),(1.00,1.35)],
-                           body,lift:-0.027,thickness:0.15)
-                frontPatch([(1.82,-1.23),(1.86,-1.36),(1.99,-1.43),(3.18,-1.43),
-                            (3.29,-1.34),(3.36,-1.12),(3.40,-0.70),(3.42,0),
-                            (3.40,0.70),(3.36,1.12),(3.29,1.34),(3.18,1.43),
-                            (1.99,1.43),(1.86,1.36),(1.82,1.23)],ink)
+                let brow = (-8...8).map { i -> (Float,Float) in
+                    let a=Float(i)*Float.pi/16
+                    return (3.18+0.405*cosf(a),1.55*sinf(a))
+                }
+                let endProfile: [(Float,Float)] = [(1.02,-1.43),(1.08,-1.53)] + brow + [(1.08,1.53),(1.02,1.43)]
+                frontPatch(endProfile,body,lift:-0.027,thickness:0.15)
+                let maskBrow = (-8...8).map { i -> (Float,Float) in
+                    let a=Float(i)*Float.pi/16
+                    return (3.14+0.30*cosf(a),1.43*sinf(a))
+                }
+                frontPatch([(1.82,-1.23),(1.86,-1.36),(1.99,-1.43)] + maskBrow +
+                           [(1.99,1.43),(1.86,1.36),(1.82,1.23)],ink)
                 for sign:Float in [-1,1] {
                     let l:Float = sign < 0 ? -1.32 : 0.48
                     let r:Float = sign < 0 ? -0.48 : 1.32
-                    frontPatch(roundRect(l,r,1.96,3.10,0.135),glass,lift:0.025)
+                    let pane=roundRect(l,r,1.96,3.10,0.10).map { h,z in
+                        // Inboard upper edge follows the slightly raked real pane.
+                        (h,z-sign*0.045*max(0,min(1,(h-1.96)/1.14)))
+                    }
+                    frontPatch(pane,glass,lift:0.025)
                 }
-                frontPatch(roundRect(-0.385,0.385,1.90,3.31,0.045,steps:2),Map3DColor.shaded(steel,0.55),lift:0.024)
-                frontPatch(roundRect(-0.355,0.355,1.94,3.27,0.035,steps:2),ink,lift:0.041)
+                frontPatch(roundRect(-0.405,0.405,1.81,3.28,0.065,steps:3),Map3DColor.shaded(steel,0.55),lift:0.024)
+                frontPatch(roundRect(-0.391,0.391,1.825,3.265,0.055,steps:3),ink,lift:0.041)
                 // The dark upper sign bay, unlettered to avoid route identity,
                 // and the small red centre marker sit within the front mask.
                 frontPatch([(3.17,0.66),(3.17,1.31),(3.32,1.31),(3.32,0.66)],Map3DColor.shaded(ink,0.82),lift:0.022)
                 frontPatch([(3.29,-0.075),(3.29,0.075),(3.40,0.075),(3.40,-0.075)],Map3DColor.rgb(0xD9473F),lift:0.024)
                 frontPatch([(1.38,-1.50),(1.38,1.50),(1.73,1.50),(1.73,-1.50)],blue,lift:0.045)
-                frontPatch([(0.80,-1.43),(0.80,1.43),(0.91,1.43),(0.91,-1.43)],steel,lift:0.045)
+                frontPatch([(0.96,-1.43),(0.96,1.43),(1.015,1.43),(1.015,-1.43)],steel,lift:0.045)
                 // The gangway continues below the black glazing into the
                 // silver apron; the blue band stays continuous across it.
                 frontPatch([(0.94,-0.38),(0.94,0.38),(1.38,0.38),(1.38,-0.38)],Map3DColor.shaded(body,0.86),lift:0.061)
@@ -215,8 +264,16 @@ struct MetroStudyGeometry {
                 for side:Float in [-1,1] {
                     frontPatch([(3.00,side*0.57),(3.00,side*1.21),(3.045,side*1.21),(3.045,side*0.57)],Map3DPalette.shopAwnings[0],lift:0.053)
                 }
-                kit.box(half+0.13,0.62,0,0.21,0.62,0.23,ink)
-                kit.box(half+0.28,0.64,0,0.17,0.31,0.10,steel)
+                // Shallow anti-climber and supported underframe beam, leaving
+                // the real wheel datum and both bogies untouched.
+                frontPatch([(0.82,-1.42),(0.82,1.42),(0.91,1.42),(0.91,-1.42)],ink,lift:0.080,thickness:0.035)
+                kit.box(half-0.28,0.68,0,0.22,2.25,0.095,steel)
+                for sign: Float in [-1,1] {
+                    kit.box(half-0.16,0.48,sign*0.96,0.20,0.34,0.23,steel)
+                    kit.civicTube(Map3DPoint(half-0.06,0.64,sign*1.15),Map3DPoint(half+0.025,0.64,sign*1.15),radius:0.105,color:steel,sides:10)
+                }
+                kit.box(half+0.02,0.48,0,0.22,0.44,0.22,ink)
+                kit.box(half+0.20,0.56,0,0.16,0.29,0.13,steel)
             }
             // Distinct headlamp pods; two visible lenses per side and supported wipers.
             for sign:Float in [-1,1] {
@@ -229,17 +286,17 @@ struct MetroStudyGeometry {
                 }
                 for shift:Float in [-0.17,0.17] {
                     let zz=z+shift
-                    let lensX = curved ? x+0.035 : half+0.048+0.09*(1-abs(zz)/1.62)+0.052
+                    let lensX = curved ? x+0.035 : c371FaceX(zz)+0.052
                     kit.civicTube(Map3DPoint(lensX,1.53,zz),Map3DPoint(curved ? x+0.057 : lensX+0.022,1.53,zz),radius:curved ? 0.105 : 0.087,color:shift*sign<0 ? Map3DPalette.tunnelLamp : steel,sides:12)
                 }
                 if curved {
                     kit.civicTube(Map3DPoint(x,3.34,sign*1.23),Map3DPoint(x+0.02,3.34,sign*1.23),radius:0.045,color:Map3DPalette.tunnelLamp,sides:8)
                     kit.beam(Map3DPoint(x+0.04,2.01,sign*1.06),Map3DPoint(x+0.03,2.46,sign*0.61),0.018,ink)
                 } else {
-                    let markerX=half+0.048+0.09*(1-1.23/1.62)
+                    let markerX=c371FaceX(1.23)
                     kit.civicTube(Map3DPoint(markerX,3.34,sign*1.23),Map3DPoint(markerX+0.02,3.34,sign*1.23),radius:0.045,color:Map3DPalette.tunnelLamp,sides:8)
-                    let footX=half+0.048+0.09*(1-1.06/1.62)+0.029
-                    let tipX=half+0.048+0.09*(1-0.61/1.62)+0.029
+                    let footX=c371FaceX(1.06)+0.029
+                    let tipX=c371FaceX(0.61)+0.029
                     kit.beam(Map3DPoint(footX,1.99,sign*1.06),Map3DPoint(tipX,2.46,sign*0.61),0.018,ink)
                 }
             }

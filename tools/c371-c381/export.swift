@@ -13,7 +13,18 @@ var units:[String:String]=[:]
         let scene:[String:Any]=["format":"M3DAssembly","version":1,"units":units,"placements":placements]
         let name="models/"+id+".m3dscene.json"
         try JSONSerialization.data(withJSONObject:scene,options:[.sortedKeys]).write(to:output.appendingPathComponent(name))
-        records.append(["id":id,"name":id,"category":category,"native":name,"native_kind":"assembly","triangles":model.triangleCount,"minimum":[model.minimum.x,model.minimum.y,model.minimum.z],"maximum":[model.maximum.x,model.maximum.y,model.maximum.z]])
+        // Raw expected triangle payload, never an over-limit M3DM file.
+        let expectedDirectory=output.appendingPathComponent("verification",isDirectory:true)
+        try FileManager.default.createDirectory(at:expectedDirectory,withIntermediateDirectories:true)
+        var expected=Data()
+        func word(_ n:UInt32){for shift:UInt32 in [0,8,16,24]{expected.append(UInt8((n>>shift)&255))}}
+        for start in stride(from:0,to:model.vertices.count,by:3) {
+            let tri=model.vertices[start..<start+3];word(tri.contains{$0.glows} ? 1:0)
+            for v in tri {word(v.x.bitPattern);word(v.y.bitPattern);word(v.z.bitPattern);word(v.color)}
+        }
+        let expectedPath="verification/"+id+".expected-triangles.bin"
+        try expected.write(to:output.appendingPathComponent(expectedPath))
+        records.append(["id":id,"name":id,"category":category,"native":name,"native_kind":"assembly","assembly_expected":expectedPath,"triangles":model.triangleCount,"minimum":[model.minimum.x,model.minimum.y,model.minimum.z],"maximum":[model.maximum.x,model.maximum.y,model.maximum.z]])
         return
     }
     guard model.triangleCount>0 && model.triangleCount<=Map3DModelFile.maximumTriangles else {fatalError("triangle budget")}

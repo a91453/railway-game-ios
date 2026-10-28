@@ -13,5 +13,5 @@ with zipfile.ZipFile(root/'asset-package.zip') as z:
  assert z.testzip() is None
  assert set(z.namelist())=={p.relative_to(root).as_posix() for p in files}
  for p in files:assert z.read(p.relative_to(root).as_posix())==p.read_bytes()
-report={'status':'VERIFIED','zip_sha256':digest(root/'asset-package.zip'),'members':len(files),'checks':['CRC for every member','exact member set','full decompression and every member byte compared with current files'],'history':'Complete actual previous delivery kept separately in history/true-v7; true-v1 through true-v6 preserved.'}
+report={'status':'VERIFIED','zip_sha256':digest(root/'asset-package.zip'),'members':len(files),'checks':['CRC for every member','exact member set','full decompression and every member byte compared with current files'],'history':'Complete actual previous delivery kept separately in history/true-v8; true-v1 through true-v7 preserved.'}
 (root/'package-verification.json').write_text(json.dumps(report,indent=2)+'\n');print(json.dumps(report))

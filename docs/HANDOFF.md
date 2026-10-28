@@ -1,4 +1,4 @@
-> Codex C371 跨帳戶續作（公開 draft #1342 ↔ 私有 draft #103，工作 #1341）：[本帳戶實車查證](art/c371-c381-2026-10-27/REFERENCE_RECHECK.md)與[接手入口](art/c371-c381-2026-10-27/CROSS_ACCOUNT_HANDOFF.md)。本輪只修 C371 拱形眉線／前窗／弧面薄燈腔，C381 不改且外觀未驗收；true-v7 保存接手時真正完整私包及原 ZIP，更早 true-v1 至 true-v6 保留。只有靜態註冊，不改營運映射；不合併／auto-merge／TestFlight。最新 producer、驗證與 CI 分開記在兩個 PR。
+> Codex C371 第五輪續作（公開draft #1342 ↔ 私有draft #103，工作#1341）：[實車查證](art/c371-c381-2026-10-27/REFERENCE_RECHECK.md)、[接手入口](art/c371-c381-2026-10-27/CROSS_ACCOUNT_HANDOFF.md)。本輪修連續弧形端面／肩部、斜前窗薄框、下裙／分離支座／連結器；補四軸桿，原輪胎／輪轂／車頂三角保持。C371六車15,828三角，以合法單元M3DAssembly交付，Swift整列payload逐bytes與移位故障驗證。C381原生／GLB不改且外觀未驗收；C371亦待使用者接受。真第四輪全包及ZIP保存在history/true-v8，更早歷史保留。僅靜態註冊，無營運映射；不合併PR／auto-merge／TestFlight。
 
 > 共用做車工具與新 skill（派工單 AC）：`tools/train-models/`（匯出、預算與雜湊檢查、七向圖用模型光、離線預覽，[README](../tools/train-models/README.md)）、`.claude/skills/rolling-stock/SKILL.md` 已改成原生做法，新車只用這個工具。列車畫面四項的第 1–3 項（夜間亮燈、遮蔽烘焙、車窗反光）等 10/31 公開測試之後由規劃派，用同一個工具拍改前／改後（`renderer.js` 的 `features` 旗標是接口）。
 
