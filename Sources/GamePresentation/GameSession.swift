@@ -77,6 +77,13 @@ public final class GameSession {
     /// Decision 330: the station master's advice the game loop's tick
     /// worked out, for the world at ``worldRevision`` `revision`.
     @ObservationIgnored var workedAdvice: (revision: Int, advice: WorkedAdvice)?
+    /// Decision 459: the station master's advice for a game hour and
+    /// ``commandRevision`` (``stationMasterAdvice``), which the news
+    /// and the station master's corner both read.
+    @ObservationIgnored var hourAdvice: HourAdvice?
+    /// How many times ``stationMasterAdvice`` was worked out on the main
+    /// actor (for the tests).
+    @ObservationIgnored var stationMasterAdviceWorkedOut = 0
 
     /// ``GameWorld/worstLosingLine()``, worked out again only after a
     /// command or once a day has settled (decision 194, later): the station
@@ -1972,9 +1979,12 @@ public final class GameSession {
                     guard !Task.isCancelled else { return }
                     self.finish(tick, with: outcome)
                     // Decision 330: the world the tick replaced is let go
-                    // here, timed for the map's frame readout.
+                    // here, timed for the map's frame readout. Decision
+                    // 459: off the main actor, where the tick holds the
+                    // last of it (92.1's game: up to tens of ms a tick).
                     let releasing = ContinuousClock.now
-                    _ = consume tick
+                    let replaced = consume tick
+                    Task.detached(priority: .utility) { _ = consume replaced }
                     FrameCostMeter.shared.record(.release, since: releasing)
                     if case .failure = outcome { break }
                 }
