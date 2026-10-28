@@ -324,7 +324,7 @@ flowchart LR
     F --> G{仍有可見問題}
     G -->|有| E
     G -->|無| H[匯出與獨立驗證]
-    H --> I[來源／SHA／ZIP／交接]
+    H --> I[來源／SHA／限量交付／交接]
 ~~~
 
 渲染一定來自實際原生頂點。概念圖、另一套手工簡化 mesh、用 PNG 拼出來的車頭，不能代替模型預覽。
@@ -388,7 +388,7 @@ flowchart LR
 - GLB：用另一個 importer 讀取，核對三角、bounds、軸向、頂點色與霧面材質。
 - PNG：完整解碼、透明、非空、留白、不裁邊，不只驗檔頭。
 - viewer：真載入、旋轉、縮放、切方向、下載檔案並比對 hash；檢查缺件／外部請求。
-- ZIP：完整解壓、CRC、檔案集合與每檔 bytes，比對最終 live 輸出。
+- 交付：逐檔 SHA 比對最終輸出，選圖上限與 asset_guard；本專案不新增 ZIP。
 
 ### 12.2 加會失敗的反例
 
@@ -409,37 +409,34 @@ flowchart LR
 
 抽樣射線不是全表面碰撞證明；有向邊平衡與正體積也不能證明沒有所有自交／重疊。Linux WebGL、Blender 匯入、Xcode 編譯、Simulator 截圖都不是 Metal 真機效能驗收。
 
-## 13. 匯出、來源與封包保持同版
+## 13. 匯出、來源與交付保持同版
 
-建議每次修訂輸出到新資料夾：
+列車優先用 [tools/train-models](../../../tools/train-models/README.md)，不要複製一套舊車工具。
+本機可輸出完整日夜／白模／剪影／故障驗收圖；提交時另選交付圖，不能把全部本機圖直接推上去。
 
-    recipe / tools / focused tests
-    models/        獨立單元原生、GLB、組裝描述
-    views/         上下左右前後立體透明 PNG
-    previews/      配色／白模／剪影、單元與編組、真前後、風格比較
-    history/       真前版與其 manifest／來源／配方
-    manifest.json  模型列表、實際 bounds、三角數、軸向、變換、SHA
-    reference-review.json / source-record.json
-    verification / visual-review
-    index.html / offline viewer
-    SHA256SUMS / 完整 ZIP
+大型素材放 `a91453/railway-assets-private`：
 
-配方獨立檔案，入口只做必要註冊，重建工具放自己的目錄；不要把一整台車塞進中央入口。
+    game-art-previews/docs/art/<模型>/revision-N/
+      models/                 最終單元、GLB、M3DAssembly及比對payload
+      png/                    本輪選定預覽，整個輪次最多21張
+      manifest.json / index.html
+      README.md / SOURCE.md / source-record.json
+      status.json / SHA256SUMS.txt
 
-程式碼與原生／預覽要有真實 producer commit。做法是先穩定生成流程、完成必要驗證並提交會影響輸出的來源，再用該 commit 重建／核對來源 bytes 與 metadata；如果有任何輸出來源變更，就重新驗證，不把未提交工作區冒充該 commit 的結果。
+規則以兩庫最新 AGENTS.md／CLAUDE.md 為準：每張 PNG≤2MiB、單檔≤50MiB、PR新增≤200MiB；最多3個候選，選定後刪其他候選重檔。只最新一輪留模型與viewer，被取代輪次在同一PR刪重檔，留PNG／README／來源。**不新增 ZIP、history/、old/、backup/。** 真前版用實際交付 commit／producer 記錄與 git 歷史恢復，本機比較用公開checkout之外的暫存目錄；不要刪除或改寫歷史來省空間。
 
-封包常見的最後一個陷阱：
+配方獨立；展示資產放 `Map3DModelPack.studies`，營運模型才依實際映射放 `standard`。單元原生格式上限與整列場景預算分開，不能把超限編組當合法單一M3DM。
 
-1. manifest 寫入 producer。
-2. viewer 若內嵌 manifest／模型，重新產生。
-3. 跑實際 viewer 下載檢查。
-4. 打 ZIP 並完整解壓逐檔比對。
-5. 再測最終 ZIP 按鈕。
-6. 確認下載測試沒有改到 ZIP 裡的 verification／log；若改了，要重包並再次比對。
+先提交影響輸出的來源，再從該真實 producer 重建並核對 bytes；來源有變就重新驗證。交付流程：
 
-不必追求把 ZIP 自己的 hash 塞進自己，造成遞迴依賴。可把最終 ZIP hash 放在 ZIP 外的驗證紀錄／PR。
+1. 完成原生／GLB、完整本機預覽、專用驗收及人眼檢查。
+2. 填來源／授權、重建命令與 `status-template.json` 四種狀態，不推斷使用者接受。
+3. 用 `deliver.py` 明選≤21張圖，產生獨立輪次與自含互動viewer、SHA清單。
+4. 實測最後viewer與下載 bytes／SHA；若交付檔有變，重建SHA清單並重驗。
+5. 在素材庫 staged tree 與最終commit執行asset_guard，確認整張PR符合限制。
+6. 推公開／素材draft PR互鏈，查實際head CI，更新#1041及HANDOFF。
 
-本案公開庫只放配方、工具、必要測試、文件和一張總覽；完整模型、七向圖、viewer、比較、來源與 ZIP 放私庫。其他專案依其政策配置，但私有來源、個資、真實商標不得意外公開；不得把私有素材送外部生成服務。
+公開庫只放配方、工具、必要測試／文件與一張小總覽。參考來源仍可讀 railway-reference-private；交付素材改用 railway-assets-private。私有來源、個資、商標不意外公開，不送外部生成服務。
 
 ## 14. 手機遊戲接入是下一道驗收
 
@@ -478,7 +475,7 @@ flowchart LR
 - 我是否親自看過最終原生四向配色、白模、剪影，而不是只看輸出成功？
 - 修訂前後是否真同尺度？被要求保留的部分能否提出幾何／bytes 證據？
 - 目前是外觀自檢通過、使用者已接受，還是仍有明確未解決問題？
-- 模型、PNG、viewer、ZIP、來源紀錄是否真同一版？
+- 模型、PNG、viewer、來源紀錄是否真同一版？
 - 接手者拿到檔案和文件，能否不讀這段對話就重建並知道哪些未驗？
 
 完整的可貼指令在 [PROMPT.md](PROMPT.md)，逐項審查在 [REVIEW_CHECKLIST.md](REVIEW_CHECKLIST.md)。當工具、格式或專案規則改變時，先更新適配層，再沿同一個觀察與修正流程工作。
@@ -503,58 +500,14 @@ flowchart LR
 | [wheel-audit.py](../../../tools/train-shape-refresh/wheel-audit.py)、[support-audit.py](../../../tools/train-shape-refresh/support-audit.py) | 輪胎連通件／貼軌／淨空與玻璃支承抽樣 |
 | [glb-audit.py](../../../tools/train-shape-refresh/glb-audit.py)、[verify-png.py](../../../tools/train-shape-refresh/verify-png.py) | Blender 獨立 GLB 匯入、PNG 完整解碼／透明／邊界 |
 | [standalone.mjs](../../../tools/train-shape-refresh/standalone.mjs)、[browser-check.mjs](../../../tools/train-shape-refresh/browser-check.mjs) | 離線 viewer、真載入／互動／下載與手機寬度 |
-| [bundle.py](../../../tools/train-shape-refresh/bundle.py) | producer bytes 核對、來源／SHA、ZIP 解壓逐檔核對 |
+| [共用交付](../../../tools/train-models/README.md) | producer、來源／SHA、限量PNG、無ZIP的自含viewer；舊bundle只供歷史重建 |
 
 凸面可用「法線 n 與面中心 c 到局部內點 i 的向量點積」決定頂點順序：n·(c−i) 應朝外。內點必須在對應凸形組件內，不能把同一個內點套到任意凹面或整台複雜車。最終仍要用輸出的有向邊、法線、體積與白模驗證。
 
-### 17.2 既有 700T 工具鏈的執行順序
+### 17.2 新車共用流程與歷史重建
 
-以下是**已具備這批來源紀錄與合法工具環境時**的操作順序，不是任意新車的一鍵指令。先依工具 README 確認 Chromium／Playwright、Python 套件、Blender 與 Swift 路徑；輸出放公開庫外。本機路徑請換成自己的目錄。
+上表的 train-shape-refresh 是700T歷史實例，不是新車要複製的工具清單。歷史bundle／ZIP僅供恢復舊版本，不可當新輪次交付規則。
 
-新車需另寫 export／manifest／單元表／相機與來源欄位；不能直接沿用這支工具的固定 ID、十二節排列、參考 SHA 或歷史回歸門檻。尤其 bundle.py 會讀本批的 reference-review.json 與 reference-study，這些內容必須是實際已查看、可核對的資料。
+新車依 [共用工具 README](../../../tools/train-models/README.md) 執行：匯出單元 → 通用編組描述 → GLB → 幾何稽核 → 日夜／白模／剪影 → 專用可見性／支承／輪軌檢查 → 獨立GLB importer → 限量交付 → 真viewer下載檢查 → asset_guard。
 
-在已完成並提交會影響輸出的最終來源版本、repository 根目錄執行：
-
-~~~sh
-export PATH="<你的 Swift 6.4 安裝目錄>/usr/bin:$PATH"
-model_out="/工作目錄/公開庫外/本輪新輸出"
-model_prior="/工作目錄/真正前版輸出"
-model_producer="$(git rev-parse HEAD)"
-
-swift build --build-tests -Xswiftc -warnings-as-errors -j 4
-swift test --skip-build --filter 'Map3DTrainShapeRefreshTests|Map3DModelFileTests|Map3DModelTests'
-tools/train-shape-refresh/export.sh "$model_out"
-node tools/train-shape-refresh/review.mjs "$model_out"
-~~~
-
-**此時實際開圖，看側正俯斜配色／白模／剪影。** 有主要問題就回去修、提交新來源並重做，不直接往下批次出圖。
-
-~~~sh
-node tools/train-shape-refresh/verify.mjs "$model_out"
-python3 tools/train-shape-refresh/wheel-audit.py "$model_out"
-
-# 只有第十版這種「保持原殼、只改鼻部分色」且有正確前版時才跑：
-python3 tools/train-shape-refresh/livery-audit.py "$model_out" "$model_prior"
-
-node tools/train-shape-refresh/render.mjs "$model_out"
-node tools/train-shape-refresh/feedback-compare.mjs "$model_out" "$model_prior" nose
-node tools/train-shape-refresh/feedback-compare.mjs "$model_out" "$model_prior" cab
-node tools/train-shape-refresh/feedback-compare.mjs "$model_out" "$model_prior" formation
-blender --background --python tools/train-shape-refresh/glb-audit.py -- "$model_out"
-python3 tools/train-shape-refresh/verify-png.py "$model_out"
-~~~
-
-再實際查看完整圖、單元／編組、真前後與風格比較。更新外觀紀錄、真前版保存、來源與必要證據；這些檔案不能在最後 ZIP 後悄悄修改。
-
-~~~sh
-python3 tools/train-shape-refresh/bundle.py "$model_out" "$model_producer"
-node tools/train-shape-refresh/standalone.mjs "$model_out"
-node tools/train-shape-refresh/browser-check.mjs "$model_out" --standalone
-node tools/train-shape-refresh/browser-check.mjs "$model_out"
-python3 tools/train-shape-refresh/bundle.py "$model_out" "$model_producer"
-node tools/train-shape-refresh/browser-check.mjs "$model_out"
-~~~
-
-第一輪 bundle 使 viewer 能驗真 ZIP；第二輪把內嵌 producer 的 viewer 與下載驗證紀錄納入最終包。最後還要逐一確認 ZIP member 仍等於 live bytes，因為 browser-check 可能重寫 verification；若不同就重包，不能只靠命令 exit 0。
-
-前後兩次 bundle 的 ZIP hash 不必一樣，因封包時間與內容可能已更新；要核對的是**最終交付 ZIP**的內容與實際 hash。原生／GLB／PNG 的資料、producer 與實際來源則必須一致。
+來源及比例、白模／剪影的人眼判斷仍先於技術封裝；共用幾何通過不代表該車所有門窗、設備及工程資料都正確。要製作三鶯線可從 [SANYING_PROMPT.md](SANYING_PROMPT.md) 開始；先確認目前PR是否合併，再從最新main開分支。

@@ -1,0 +1,6 @@
+{
+  "asset": {"status": "UNVERIFIED", "evidence": ""},
+  "appearance": {"status": "UNVERIFIED", "evidence": "", "accepted_producer": null},
+  "integration": {"status": "UNVERIFIED", "evidence": ""},
+  "device": {"status": "UNVERIFIED", "evidence": ""}
+}
