@@ -751,8 +751,8 @@ extension GameWorld {
         // Decision 174: the tourists' pairs, added to the ordinary ones.
         let tourists = tourism == nil ? TouristFlows() : touristFlows(onDay: dayIndex(of: clock.now)) { from, to in
             let pair = PassengerRouteMemo.Pair(origin: from, destination: to)
-            let found = memo.choices[pair] ?? passengerRouteChoices(from: from, to: to, searches: &searches)
-            memo.choices[pair] = found
+            let found = memo[pair] ?? passengerRouteChoices(from: from, to: to, searches: &searches)
+            memo[pair] = found
             return !found.isEmpty
         }.flows
         let drawingStations = Set(drawing.map(\.station))
@@ -777,8 +777,8 @@ extension GameWorld {
             }
             let reached = candidates.compactMap { other -> (StationPassengers, [PassengerRouteChoice], [PassengerJourney])? in
                 let pair = PassengerRouteMemo.Pair(origin: record.station, destination: other.station)
-                let found = memo.choices[pair] ?? passengerRouteChoices(from: record.station, to: other.station, searches: &searches)
-                memo.choices[pair] = found
+                let found = memo[pair] ?? passengerRouteChoices(from: record.station, to: other.station, searches: &searches)
+                memo[pair] = found
                 var options: [PassengerRouteChoice] = []
                 var journeys: [PassengerJourney] = []
                 for choice in found {

@@ -217,11 +217,14 @@ struct PassengerRouteGraph: Equatable {
         lookup = Lookup(paths: included, stopsAt: calls, walks: walks, closed: closed)
     }
 
-    init(world: GameWorld) {
+    /// The graph of `world` at its clock's time, or at `time` (decision
+    /// 470: the graph a call of ``GameWorld/advance(ticks:)`` will plan on
+    /// when the service levels change during it).
+    init(world: GameWorld, at time: GameTime? = nil) {
         var included: [ServicePath] = []
         var calls: [StationID: [PassengerRouteNode]] = [:]
         for line in world.lines where !line.isFreight {
-            guard let level = world.serviceLevel(of: line.id, at: world.clock.now) else { continue }
+            guard let level = world.serviceLevel(of: line.id, at: time ?? world.clock.now) else { continue }
             // What `lineHeadway` and `lineJourney` give for each service,
             // driving each service once: a service's plan depends on its
             // own and the earlier services' round trips and capacities.
@@ -952,36 +955,194 @@ extension GameWorld {
     }
 }
 
-/// The route choices already worked out on one derived graph. Not game
-/// state: never saved, and two worlds compare equal whatever it holds. The
-/// choices are a pure function of the graph, so keeping them while the
-/// graph is unchanged gives exactly what working them out again would.
+/// The route choices already worked out, by the connected part of the
+/// derived graph their origin is in. Not game state: never saved, and two
+/// worlds compare equal whatever it holds.
+///
+/// A search from a station reads only the part of the graph it can reach:
+/// its paths (in the graph's order, which breaks exact ties), the walks
+/// between its stations and which of them are closed; not the paths'
+/// daily capacities, and not the other parts. So the choices from an
+/// origin are a pure function of its part (a ``Component``), and keeping
+/// them while that part is unchanged gives exactly what working them out
+/// again would, however the rest of the graph changed (decision 470: a
+/// line built far away, or a train bought, worked every route out again,
+/// 5–14 s in 92.1's game of 81 stations). The parts of the last
+/// ``generations`` graphs are kept, so a plan at night, when no line runs,
+/// does not drop the day's (派工單 BK).
 struct PassengerRouteMemo: Equatable, Sendable {
     struct Pair: Hashable, Sendable {
         let origin: StationID
         let destination: StationID
     }
 
-    var graph: PassengerRouteGraph?
-    var choices: [Pair: [PassengerRouteChoice]] = [:]
-    /// The graph before ``graph`` and its choices (派工單 BK: a plan worked
-    /// out at night, when no line runs, has a graph of its own, and the
-    /// day's choices were dropped for it every night, so every 06:00 worked
-    /// out each route again: 14 s in 92.1's game of 81 stations).
-    private var previous: (graph: PassengerRouteGraph, choices: [Pair: [PassengerRouteChoice]])?
+    /// What a search reads of a ``PassengerRouteGraph/ServicePath``.
+    struct Path: Hashable, Sendable {
+        let line: LineID
+        let pattern: Int?
+        let direction: LineDirection
+        let stations: [StationID]
+        let runSeconds: [Int64]
+        let headway: Int64
+        let isRing: Bool
+        let dwellSeconds: Int64
+
+        init(_ path: PassengerRouteGraph.ServicePath) {
+            line = path.line
+            pattern = path.pattern
+            direction = path.direction
+            stations = path.stations
+            runSeconds = path.runSeconds
+            headway = path.headway
+            isRing = path.isRing
+            dwellSeconds = path.dwellSeconds
+        }
+    }
+
+    /// A connected part of a graph, its stations joined by its paths and
+    /// walks: everything a search from one of them reads.
+    struct Component: Hashable, Sendable {
+        let paths: [Path]
+        let walks: [StationID: [PassengerWalk]]
+        let closed: Set<StationID>
+    }
+
+    /// How many graphs back a part last used is kept.
+    static let generations = 4
+
+    private(set) var graph: PassengerRouteGraph?
+    /// The parts of ``graph``, and the choices from origins in each.
+    private var parts: [Component] = []
+    private var choicesByPart: [[Pair: [PassengerRouteChoice]]] = []
+    /// Each served station's part, by index in ``parts``.
+    private var partOf: [StationID: Int] = [:]
+    /// The choices from origins the graph does not serve: none, at once.
+    private var unserved: [Pair: [PassengerRouteChoice]] = [:]
+    /// The parts of earlier graphs, with the number of the last graph that
+    /// had each.
+    private var kept: [Component: (choices: [Pair: [PassengerRouteChoice]], generation: Int)] = [:]
+    private var generation = 0
 
     static func == (_: Self, _: Self) -> Bool {
         true
     }
 
-    /// Keeps the choices worked out on `graph`, if they are the current or
-    /// the previous graph's, and the current ones as the previous.
+    /// The choices worked out between `pair`'s stations on the graph last
+    /// used, if any.
+    subscript(pair: Pair) -> [PassengerRouteChoice]? {
+        get {
+            if let part = partOf[pair.origin] { return choicesByPart[part][pair] }
+            return unserved[pair]
+        }
+        set {
+            if let part = partOf[pair.origin] {
+                choicesByPart[part][pair] = newValue
+            } else {
+                unserved[pair] = newValue
+            }
+        }
+    }
+
+    /// Whether choices from `origin` are held for its part of the graph
+    /// last used: then its part was worked out before.
+    func hasChoices(from origin: StationID) -> Bool {
+        guard let part = partOf[origin] else { return false }
+        return choicesByPart[part].keys.contains { $0.origin == origin }
+    }
+
+    /// How many pairs' choices are held, for the current graph and kept.
+    var count: Int {
+        choicesByPart.reduce(unserved.count) { $0 + $1.count } + kept.values.reduce(0) { $0 + $1.choices.count }
+    }
+
+    /// Goes on to `graph`: keeps the choices of each of its parts that the
+    /// current graph or one of the ``generations`` before had.
     mutating func use(_ graph: PassengerRouteGraph) {
         guard self.graph != graph else { return }
-        let kept = previous?.graph == graph ? previous?.choices : nil
-        previous = self.graph.map { ($0, choices) }
+        stow()
+        generation += 1
         self.graph = graph
-        choices = kept ?? [:]
+        unserved = [:]
+        partOf = [:]
+        let found = Self.components(of: graph)
+        parts = found.parts
+        partOf = found.partOf
+        choicesByPart = parts.map { kept.removeValue(forKey: $0)?.choices ?? [:] }
+        kept = kept.filter { generation - $0.value.generation < Self.generations }
+    }
+
+    /// Takes in the choices `other` worked out: the same parts have the
+    /// same choices, so it adds only the pairs this one has not.
+    mutating func absorb(_ other: Self) {
+        var other = other
+        other.stow()
+        for (part, entry) in other.kept {
+            if let index = parts.firstIndex(of: part) {
+                choicesByPart[index].merge(entry.choices) { mine, _ in mine }
+            } else if kept[part] != nil {
+                kept[part]!.choices.merge(entry.choices) { mine, _ in mine }
+                kept[part]!.generation = max(kept[part]!.generation, generation)
+            } else {
+                kept[part] = (entry.choices, generation)
+            }
+        }
+    }
+
+    /// Moves the current graph's parts into ``kept``.
+    private mutating func stow() {
+        for (part, choices) in zip(parts, choicesByPart) {
+            kept[part] = (choices, generation)
+        }
+        parts = []
+        choicesByPart = []
+    }
+
+    /// The connected parts of `graph`, in the order of their first paths,
+    /// and each served station's.
+    static func components(of graph: PassengerRouteGraph) -> (parts: [Component], partOf: [StationID: Int]) {
+        var parent: [StationID: StationID] = [:]
+        func root(_ station: StationID) -> StationID {
+            var current = station
+            while let next = parent[current], next != current { current = next }
+            var step = station
+            while let next = parent[step], next != current {
+                parent[step] = current
+                step = next
+            }
+            return current
+        }
+        func join(_ a: StationID, _ b: StationID) {
+            let (left, right) = (root(a), root(b))
+            if left != right { parent[max(left, right)] = min(left, right) }
+        }
+        for path in graph.paths {
+            for station in path.stations where parent[station] == nil { parent[station] = station }
+            for (a, b) in zip(path.stations, path.stations.dropFirst()) { join(a, b) }
+        }
+        for (from, walks) in graph.walks {
+            for walk in walks where parent[from] != nil && parent[walk.to] != nil { join(from, walk.to) }
+        }
+        var index: [StationID: Int] = [:]
+        var paths: [[Path]] = []
+        for path in graph.paths {
+            let top = root(path.stations[0])
+            if index[top] == nil {
+                index[top] = paths.count
+                paths.append([])
+            }
+            paths[index[top]!].append(Path(path))
+        }
+        var walks = Array(repeating: [StationID: [PassengerWalk]](), count: paths.count)
+        var closed = Array(repeating: Set<StationID>(), count: paths.count)
+        var partOf: [StationID: Int] = [:]
+        for station in parent.keys {
+            let part = index[root(station)]!
+            partOf[station] = part
+            if let list = graph.walks[station] { walks[part][station] = list }
+            if graph.closed.contains(station) { closed[part].insert(station) }
+        }
+        let parts = paths.indices.map { Component(paths: paths[$0], walks: walks[$0], closed: closed[$0]) }
+        return (parts, partOf)
     }
 }
 
