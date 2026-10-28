@@ -269,7 +269,7 @@ struct MetroStudyGeometry {
                 frontPatch([(0.82,-1.42),(0.82,1.42),(0.91,1.42),(0.91,-1.42)],ink,lift:0.080,thickness:0.035)
                 kit.box(half-0.28,0.68,0,0.22,2.25,0.095,steel)
                 for sign: Float in [-1,1] {
-                    kit.box(half-0.16,0.48,sign*0.96,0.20,0.34,0.23,steel)
+                    kit.box(half-0.16,0.48,sign*0.96,0.20,0.34,0.46,steel)
                     kit.civicTube(Map3DPoint(half-0.06,0.64,sign*1.15),Map3DPoint(half+0.025,0.64,sign*1.15),radius:0.105,color:steel,sides:10)
                 }
                 kit.box(half+0.02,0.48,0,0.22,0.44,0.22,ink)

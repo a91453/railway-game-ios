@@ -13,9 +13,8 @@ colors=np.array([struct.unpack_from('<I',b,start+i*52+16)[0] for i in range(n)])
 # Anchor colours from unobstructed points; all other samples must agree.
 # A defect at an anchor alone cannot silently pass the region checks.
 front=tri[:,:,0].min(axis=1)>11.5
-mask=None
-# glass is the largest repeated colour in the two windshield interiors, found
-# by an unobstructed central sample (and checked against both windows below).
+# The glass anchor is an unobstructed windshield point, checked against
+# the other samples in both windows below.
 def visible(t,y,z):
  a=t[:,0,1:];u=t[:,1,1:]-a;v=t[:,2,1:]-a;q=np.array([y,z])-a
  det=u[:,0]*v[:,1]-u[:,1]*v[:,0];ok=abs(det)>1e-10

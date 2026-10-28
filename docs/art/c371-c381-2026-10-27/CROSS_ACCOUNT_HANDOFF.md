@@ -20,7 +20,7 @@ C381本輪不改，10件專用原生／GLB與true-v8 bytes相同，外觀未驗�
 
 1. 先查工作登記、雙庫遠端head與適用規則；本輪已整合main cdb5bba0的衝突，保留其夜間燈光、淡色與乘客效能修改，只對註冊／計數做必要衝突整合。沒有新增GameCore／存檔／Golden／Save／Replay／玩法變更。主庫不放完整素材或照片。
 2. Swift6.4 warnings-as-errors：build-tests與相關測試。`tools/c371-c381/export.sh OUT`，接續render.mjs、clay.mjs、revision-compare.mjs OLD NEW。
-3. `geometry-audit.py`、`front-visibility.py`（目前正面黑罩114點／玻璃18點及埋入玻璃反例）、`protected-payload.py OLD NEW`、Blender glb-audit.py、verify-png.py。package.mjs額外核assembly預期payload與移位反例。
+3. `geometry-audit.py`、`front-visibility.py`（目前正面黑罩114點／玻璃18點及埋入玻璃反例）、`protected-payload.py OLD NEW`、Blender glb-audit.py、verify-png.py；underframe-contact.py核真支座與底板／橫樑的局部接觸及降低真頂點反例。package.mjs額外核assembly預期payload與移位反例。
 4. 已合併#1357的共用train-models工具匯出八單元、FNV與日夜七向；本輪只應改C371頭尾鎖值。pack的材質旗標與遮蔽顏色不同於裸配方，應核座標，不能宣稱整份payload一致。
 5. 用真producer提交重建22件原生／GLB bytes，綁source-record，更新viewer後驗互動／手機寬度／下載，bundle.py做CRC／完整解壓逐bytes。history另存，不收入當前ZIP。私庫推送後重新下載ZIP、真前ZIP及代表檔核對；遠端驗證記錄置ZIP外。
 

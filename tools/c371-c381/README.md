@@ -6,3 +6,5 @@ M3DAssembly 由每個獨立單元的最終原生 bytes 組成。 `scene.js` 只�
 本輪修形加用 `front-visibility.py OUT`：從實際原生三角向 +X 射線，檢查黑罩／玻璃區域及埋入玻璃反例；僅抽樣正交正面，不代表全碰撞。`protected-payload.py OLD NEW` 比較 C381 全部模型及 C371 中間車逐 bytes，並檢查 C371 頭車差異範圍。`bundle.py OUT` 建立不含 history 的當前 ZIP，CRC、解壓及每件 bytes 比對；真前版另存 history/true-v7。
 
 第五輪六車超過單一M3DM上限，沿既有M3DAssembly匯出；`export.swift`寫出Swift整列預期triangle payload至verification/*.bin（不是超限M3DM）。`package.mjs`逐bytes對照單元平移組裝結果，並拒收移位100mm的單元。`assembly-verification.json`記錄結果。M3DM上限保持15,000；GLB與viewer從同一組裝生成。
+
+`underframe-contact.py OUT` 從實際原生連通三角辨識兩個實心箱形支座，核它們與底板／橫樑實際重疊；將真支座頂點降低50mm的反例須拒收。只核這幾件局部接觸，不是完整碰撞或結構工程驗收。
