@@ -153,6 +153,37 @@ final class Map3DBoxInstanceTests: XCTestCase {
         XCTAssertEqual(box.frontV, 10)
     }
 
+    /// Decision 455: the app's shader (`Map3DShaders.metal`) reads the
+    /// instances in this layout and makes their corners from the same
+    /// template as ``Map3DBoxInstance/vertex(face:corner:)``.
+    func testTheShaderReadsTheSameBoxes() throws {
+        let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("RailwayGameApp/Views/Map3D/Map3DShaders.metal")
+        let shaders = try String(contentsOf: url, encoding: .utf8)
+        XCTAssertTrue(shaders.contains("""
+            struct Map3DBoxInstance {
+                float x, y, z;
+                float alongX, alongZ;
+                float length, width, height;
+                float topWidth, topHeight;
+                float frontU, frontV, flankU, flankV;
+                uint colors[5];
+                short layers[5];
+                short capped;
+            };
+            """))
+        let start = try XCTUnwrap(shaders.range(of: "constant float4 boxCorners[20] = {"))
+        let end = try XCTUnwrap(shaders.range(of: "};", range: start.upperBound..<shaders.endIndex))
+        let numbers = shaders[start.upperBound..<end.lowerBound].split(whereSeparator: { !"-0123456789.".contains($0) }).compactMap { Float($0) }
+        XCTAssertEqual(numbers.count, 80)
+        for (index, corner) in Map3DBoxInstance.faceCorners.enumerated() {
+            XCTAssertEqual(Array(numbers[index * 4..<index * 4 + 4]), [corner.end, corner.side, corner.up, corner.u], "corner \(index)")
+            // The sides' v is whether at the top; the top's texture is laid
+            // in the scene's metres.
+            XCTAssertEqual(corner.v, index < 4 ? 0 : corner.up, "corner \(index)")
+        }
+    }
+
     /// Decision 455: a scene round Taichung Station built with the city's
     /// boxes as instances draws the same simplified city, the same tops
     /// for decision 342's cones and the same bounds as one built with them

@@ -16,6 +16,8 @@ trap 'rm -rf "$work"' EXIT
 for part in vertices indices svertices sindices json; do ln -s "$(realpath "$1.$part")" "$work/demo.$part"; done
 # Decision 352: the signs, when the dump has them.
 if [ -f "$1.signs" ]; then ln -s "$(realpath "$1.signs")" "$work/demo.signs"; else : > "$work/demo.signs"; fi
+# Decision 455: the simplified city's boxes, when the dump has them.
+if [ -f "$1.boxes" ]; then ln -s "$(realpath "$1.boxes")" "$work/demo.boxes"; else : > "$work/demo.boxes"; fi
 cp "$here/index.html" "$work/"
 cp "$repo/RailwayGameApp/Resources/Map3D/Map3DSurfaces.png" "$repo/RailwayGameApp/Resources/Map3D/Map3DSigns.png" "$work/"
 out=$(realpath -m "$2")

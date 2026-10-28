@@ -130,7 +130,31 @@ window.render = async function(view, textured, shadows) {
     const sh=(t,s)=>{const o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))throw gl.getShaderInfoLog(o);return o;};
     const p=gl.createProgram(); gl.attachShader(p,sh(gl.VERTEX_SHADER,vs)); gl.attachShader(p,sh(gl.FRAGMENT_SHADER,fs)); gl.linkProgram(p);
     if(!gl.getProgramParameter(p,gl.LINK_STATUS)) throw gl.getProgramInfoLog(p); window.prog=p;
-    const v=new Float32Array(await (await fetch('/demo.vertices')).arrayBuffer()); const ix=new Uint32Array(await (await fetch('/demo.indices')).arrayBuffer());
+    let v=new Float32Array(await (await fetch('/demo.vertices')).arrayBuffer()); let ix=new Uint32Array(await (await fetch('/demo.indices')).arrayBuffer());
+    // Decision 455: the simplified city's boxes (Map3DBoxInstance, 88 bytes each), made into vertices as map3dBoxVertex makes them.
+    const bb=await (await fetch('/demo.boxes')).arrayBuffer(), nb=bb.byteLength/88;
+    if (nb) {
+      const f=new Float32Array(bb), u=new Uint32Array(bb), s=new Int16Array(bb);
+      const C=[[1,-1,1,0],[-1,-1,1,0],[-1,1,1,0],[1,1,1,0],[1,1,0,0],[1,-1,0,1],[1,-1,1,1],[1,1,1,0],[-1,1,0,0],[1,1,0,1],[1,1,1,1],[-1,1,1,0],
+               [-1,-1,0,0],[-1,1,0,1],[-1,1,1,1],[-1,-1,1,0],[1,-1,0,0],[-1,-1,0,1],[-1,-1,1,1],[1,-1,1,0]];
+      const nv=new Float32Array(v.length+nb*240), ni=new Uint32Array(ix.length+nb*30); nv.set(v); ni.set(ix);
+      let o=v.length, k=ix.length, first=v.length/12;
+      for (let b=0;b<nb;b++) {
+        const F=b*22, S=b*44, [x,y,z,ax,az,len,wid,hei,tw,th,fu,fv,lu,lv]=f.subarray(F,F+14), capped=s[S+43];
+        const normals=[[0,1,0],[ax,0,az],[-az,0,ax],[-ax,0,-az],[az,0,-ax]];
+        for (let face=0;face<5;face++) {
+          const c=u[F+14+face], n=normals[face];
+          for (let corner=0;corner<4;corner++) {
+            const [e,side,up,cu]=C[face*4+corner];
+            const p=face==0&&capped==0 ? [x,y,z] : [x+ax*e*len*0.5-az*side*wid*0.5, y+up*hei, z+az*e*len*0.5+ax*side*wid*0.5];
+            const t=face==0 ? (tw>0 ? [p[0]/tw,p[2]/th] : [0,0]) : (face==1||face==3 ? [cu*fu,up*fv] : [cu*lu,up*lv]);
+            nv.set([p[0],p[1],p[2],n[0],n[1],n[2],(c&255)/255,((c>>>8)&255)/255,((c>>>16)&255)/255,t[0],t[1],s[S+38+face]],o); o+=12;
+          }
+          const q=first+b*20+face*4; ni.set([q,q+1,q+2,q,q+2,q+3],k); k+=6;
+        }
+      }
+      v=nv; ix=ni;
+    }
     window.count=ix.length; window.meta=await (await fetch('/demo.json')).json();
     const vao=gl.createVertexArray(); gl.bindVertexArray(vao);
     const vb=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,vb); gl.bufferData(gl.ARRAY_BUFFER,v,gl.STATIC_DRAW);

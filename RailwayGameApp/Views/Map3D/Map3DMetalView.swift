@@ -151,6 +151,9 @@ final class Map3DMetalView: MTKView {
         /// roads, and its city simplified for afar, if it has a city.
         let baseIndexCount: Int
         let far: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
+        /// Decision 455: the simplified city's boxes, an instance each of
+        /// the one box (``Map3DBoxInstance``), and the triangles they make.
+        let farBoxes: (instances: MTLBuffer, count: Int, triangles: Int)?
         /// Whether it was drawn in full last frame (decision 238's margin).
         var detailed = false
         /// Decision 267: its closest detail, and whether it was drawn last
@@ -191,6 +194,12 @@ final class Map3DMetalView: MTKView {
     /// Decision 342: the city in front of the trains, seen through
     /// (``Map3DSeeThrough``).
     private let seeThroughPipeline: MTLRenderPipelineState
+    /// Decision 455: the simplified city's boxes, each vertex made of its
+    /// box's instance and its number in the one box's
+    /// (``Map3DBoxInstance/indices``), solid and seen through.
+    private let boxPipeline: MTLRenderPipelineState
+    private let boxSeeThroughPipeline: MTLRenderPipelineState
+    private let boxIndices: MTLBuffer
     /// Decision 232: the ground shadows, blended over what is drawn,
     /// tested against the depth but not writing it.
     private let shadowPipeline: MTLRenderPipelineState
@@ -207,7 +216,8 @@ final class Map3DMetalView: MTKView {
     /// Decision 357: the sun's shadow map's pipelines (the chunks, the
     /// street furniture) and depth test; none where they do not load (the
     /// map is drawn with decision 232's shadows alone).
-    private var sunDrawing: (chunks: MTLRenderPipelineState, instanced: MTLRenderPipelineState, depth: MTLDepthStencilState)?
+    private var sunDrawing: (chunks: MTLRenderPipelineState, instanced: MTLRenderPipelineState, boxes: MTLRenderPipelineState,
+                             depth: MTLDepthStencilState)?
     /// Decision 357: the map, the region it was drawn for and when, and
     /// whether the scene changed since. A texel of nothing in its place
     /// while there is none, so the shaders always have one.
@@ -243,6 +253,7 @@ final class Map3DMetalView: MTKView {
               let shadowVertex = library.makeFunction(name: "map3dShadowVertex"),
               let shadowFragment = library.makeFunction(name: "map3dShadowFragment"),
               let seeThroughFragment = library.makeFunction(name: "map3dSeeThroughFragment"),
+              let boxVertex = library.makeFunction(name: "map3dBoxVertex"),
               let skyVertex = library.makeFunction(name: "map3dSkyVertex"),
               let skyFragment = library.makeFunction(name: "map3dSkyFragment")
         else { return nil }
@@ -284,7 +295,18 @@ final class Map3DMetalView: MTKView {
         descriptor.fragmentFunction = seeThroughFragment
         descriptor.isAlphaToCoverageEnabled = true
         guard let seeThroughPipeline = try? device.makeRenderPipelineState(descriptor: descriptor) else { return nil }
+        // Decision 455: the same two for the simplified city's boxes,
+        // which read no vertices but their instances.
+        descriptor.vertexFunction = boxVertex
+        descriptor.vertexDescriptor = nil
+        guard let boxSeeThroughPipeline = try? device.makeRenderPipelineState(descriptor: descriptor) else { return nil }
         descriptor.isAlphaToCoverageEnabled = false
+        descriptor.fragmentFunction = fragmentFunction
+        guard let boxPipeline = try? device.makeRenderPipelineState(descriptor: descriptor),
+              let boxIndices = Map3DBoxInstance.indices.withUnsafeBytes({ bytes in
+                  bytes.baseAddress.flatMap { device.makeBuffer(bytes: $0, length: bytes.count, options: .storageModeShared) }
+              })
+        else { return nil }
         // Decision 347: the sky, one triangle at the far plane, where the
         // depth is still the cleared 0 (nothing drawn there).
         descriptor.vertexFunction = skyVertex
@@ -315,7 +337,8 @@ final class Map3DMetalView: MTKView {
               let shadowDepthState = device.makeDepthStencilState(descriptor: shadowDepthDescriptor)
         else { return nil }
         let view = Map3DMetalView(device: device, queue: queue, pipeline: pipeline, instancedPipeline: instancedPipeline,
-                                  seeThroughPipeline: seeThroughPipeline, shadowPipeline: shadowPipeline, shadowDepthState: shadowDepthState,
+                                  seeThroughPipeline: seeThroughPipeline, boxPipeline: boxPipeline, boxSeeThroughPipeline: boxSeeThroughPipeline,
+                                  boxIndices: boxIndices, shadowPipeline: shadowPipeline, shadowDepthState: shadowDepthState,
                                   depthState: depthState, skyPipeline: skyPipeline, skyDepthState: skyDepthState, surfaces: surfaces,
                                   samples: samples)
         // Decision 352: the signs, four corners an instance, solid, tested
@@ -332,7 +355,8 @@ final class Map3DMetalView: MTKView {
         }
         // Decision 357: the city's depth from the sun, no colour.
         if let sunVertex = library.makeFunction(name: "map3dSunDepthVertex"),
-           let sunInstanced = library.makeFunction(name: "map3dSunDepthInstancedVertex") {
+           let sunInstanced = library.makeFunction(name: "map3dSunDepthInstancedVertex"),
+           let sunBoxes = library.makeFunction(name: "map3dSunDepthBoxVertex") {
             let sun = MTLRenderPipelineDescriptor()
             sun.vertexFunction = sunVertex
             sun.vertexDescriptor = vertexDescriptor
@@ -343,7 +367,10 @@ final class Map3DMetalView: MTKView {
             if let chunks = try? device.makeRenderPipelineState(descriptor: sun),
                let depth = device.makeDepthStencilState(descriptor: sunDepth) {
                 sun.vertexFunction = sunInstanced
-                if let instanced = try? device.makeRenderPipelineState(descriptor: sun) { view.sunDrawing = (chunks, instanced, depth) }
+                let instanced = try? device.makeRenderPipelineState(descriptor: sun)
+                sun.vertexFunction = sunBoxes
+                sun.vertexDescriptor = nil
+                if let instanced, let boxes = try? device.makeRenderPipelineState(descriptor: sun) { view.sunDrawing = (chunks, instanced, boxes, depth) }
             }
         }
         return view
@@ -351,13 +378,17 @@ final class Map3DMetalView: MTKView {
 
     private init(
         device: MTLDevice, queue: MTLCommandQueue, pipeline: MTLRenderPipelineState, instancedPipeline: MTLRenderPipelineState,
-        seeThroughPipeline: MTLRenderPipelineState, shadowPipeline: MTLRenderPipelineState, shadowDepthState: MTLDepthStencilState, depthState: MTLDepthStencilState,
+        seeThroughPipeline: MTLRenderPipelineState, boxPipeline: MTLRenderPipelineState, boxSeeThroughPipeline: MTLRenderPipelineState, boxIndices: MTLBuffer,
+        shadowPipeline: MTLRenderPipelineState, shadowDepthState: MTLDepthStencilState, depthState: MTLDepthStencilState,
         skyPipeline: MTLRenderPipelineState, skyDepthState: MTLDepthStencilState, surfaces: MTLTexture, samples: Int
     ) {
         self.queue = queue
         self.pipeline = pipeline
         self.instancedPipeline = instancedPipeline
         self.seeThroughPipeline = seeThroughPipeline
+        self.boxPipeline = boxPipeline
+        self.boxSeeThroughPipeline = boxSeeThroughPipeline
+        self.boxIndices = boxIndices
         self.shadowPipeline = shadowPipeline
         self.shadowDepthState = shadowDepthState
         self.depthState = depthState
@@ -488,6 +519,16 @@ final class Map3DMetalView: MTKView {
                 drawCalls += 1
                 triangles += far.indexCount / 3
             }
+        }
+        // Decision 455: the simplified city's boxes, a draw a chunk.
+        encoder.setRenderPipelineState(sunDrawing.boxes)
+        for chunk in seen where !chunk.detailed {
+            guard let boxes = chunk.farBoxes else { continue }
+            encoder.setVertexBuffer(boxes.instances, offset: 0, index: 2)
+            encoder.drawIndexedPrimitives(type: .triangle, indexCount: Map3DBoxInstance.indices.count, indexType: .uint16, indexBuffer: boxIndices,
+                                          indexBufferOffset: 0, instanceCount: boxes.count)
+            drawCalls += 1
+            triangles += boxes.triangles
         }
         if let models {
             encoder.setRenderPipelineState(sunDrawing.instanced)
@@ -801,12 +842,14 @@ final class Map3DMetalView: MTKView {
         if let shadowVertices = makeBuffer(chunk.shadows.vertices), let shadowIndices = makeBuffer(chunk.shadows.indices) {
             shadows = (shadowVertices, shadowIndices, chunk.shadows.indices.count)
         }
-        // Decision 455: the simplified city's boxes made into vertices here,
-        // as the shader will make them of its instances.
         var far: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
-        let farMesh = chunk.farWithBoxes
-        if let farVertices = makeBuffer(farMesh.vertices), let farIndices = makeBuffer(farMesh.indices) {
-            far = (farVertices, farIndices, farMesh.indices.count)
+        if let farVertices = makeBuffer(chunk.far.vertices), let farIndices = makeBuffer(chunk.far.indices) {
+            far = (farVertices, farIndices, chunk.far.indices.count)
+        }
+        // Decision 455: its boxes as they are, 88 bytes each, for the
+        // shader to make into vertices.
+        let farBoxes = makeBuffer(chunk.farBoxes).map {
+            (instances: $0, count: chunk.farBoxes.count, triangles: chunk.farBoxes.reduce(0) { $0 + $1.triangleCount })
         }
         var close: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
         if let closeVertices = makeBuffer(chunk.close.vertices), let closeIndices = makeBuffer(chunk.close.indices) {
@@ -823,7 +866,7 @@ final class Map3DMetalView: MTKView {
         }
         let signs = makeBuffer(chunk.signs.flatMap(\.floats)).map { (instances: $0, count: chunk.signs.count) }
         return Chunk(vertices: vertices, indices: indices, indexCount: chunk.mesh.indices.count, baseIndexCount: chunk.baseIndexCount,
-                     far: far, close: close, standIn: standIn, shadows: shadows, props: props, signs: signs, minimum: chunk.minimum, maximum: chunk.maximum,
+                     far: far, farBoxes: farBoxes, close: close, standIn: standIn, shadows: shadows, props: props, signs: signs, minimum: chunk.minimum, maximum: chunk.maximum,
                      column: chunk.column, row: chunk.row, cityTops: chunk.cityTops, coarse: chunk.coarse)
     }
 
@@ -985,6 +1028,7 @@ final class Map3DMetalView: MTKView {
                 encoder.setFragmentBytes(base, length: bytes.count, index: 2)
             }
         }
+        var farBoxes: [(instances: MTLBuffer, count: Int, triangles: Int, seen: Bool)] = []
         for chunk in visible {
             // Decision 238: the city in full near the camera; afar, the
             // ground and track, then the city simplified.
@@ -1036,7 +1080,23 @@ final class Map3DMetalView: MTKView {
                 drawCalls += 1
                 triangles += far.indexCount / 3
             }
+            if !detailed, let boxes = chunk.farBoxes { farBoxes.append((boxes.instances, boxes.count, boxes.triangles, seen)) }
             if seen { encoder.setRenderPipelineState(pipeline) }
+        }
+        // Decision 455: the simplified city's boxes, a draw a chunk, the
+        // solid ones first and then those seen through.
+        if !farBoxes.isEmpty {
+            var seeing: Bool?
+            for (instances, count, boxTriangles, seen) in farBoxes.sorted(by: { !$0.seen && $1.seen }) {
+                if seeing != seen { encoder.setRenderPipelineState(seen ? boxSeeThroughPipeline : boxPipeline) }
+                seeing = seen
+                encoder.setVertexBuffer(instances, offset: 0, index: 2)
+                encoder.drawIndexedPrimitives(type: .triangle, indexCount: Map3DBoxInstance.indices.count, indexType: .uint16,
+                                              indexBuffer: boxIndices, indexBufferOffset: 0, instanceCount: count)
+                drawCalls += 1
+                triangles += boxTriangles
+            }
+            encoder.setRenderPipelineState(pipeline)
         }
         if let boxes = trainBoxes {
             encoder.setVertexBuffer(boxes.vertices, offset: 0, index: 0)
