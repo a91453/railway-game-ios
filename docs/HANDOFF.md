@@ -1,4 +1,4 @@
-> Codex C381 照片修訂（公開draft #1342 ↔ 私有draft #103，工作#1341）：[本輪原圖查證](art/c371-c381-2026-10-27/C381_REFERENCE_RECHECK.md)、[接手入口](art/c371-c381-2026-10-27/CROSS_ACCOUNT_HANDOFF.md)。使用者接受C371第五輪外觀，其原生／GLB bytes鎖定。本輪C381改拱形曲面／寬中央窗／細門框、收尖V帶、燈罩連續分色及分離前裙；原屋頂／輪組位置保持。C381 DM/rear各6,252、六車19,744，合法M3DAssembly；C381仍待使用者外觀驗收。真正前包及ZIP完整存history/true-v9，更早歷史保留。只靜態註冊，不改營運映射／GameCore／存檔；不合併PR／auto-merge／TestFlight。最新producer／驗證／CI見兩PR。
+> Codex C371／C381雙車續修（公開draft #1342／工作#1341）：[現版／main格式核對](art/c371-c381-2026-10-27/README.md)、[接手／重建](art/c371-c381-2026-10-27/CROSS_ACCOUNT_HANDOFF.md)。兩型外觀均待驗收，先前推定C371已接受撤回。修肩部曲面／圓角燈腔／鼻下設備；T/M裸模型與原屋頂／輪組位置保護。已整合main8be22423的studies，standard529模型／3,127,704頂點不增加。新railway-assets-private各車獨立revision-1，各19PNG／最新模型與viewer，不新增history或ZIP；完整真前包仍在舊reference-private #103固定63b44693／素材e791fdb7。原#103只作前版交接，新素材draft互鏈見#1342。無營運映射／GameCore／存檔／fixtures變更；不合併／auto-merge／TestFlight。
 
 > 共用做車工具與新 skill（派工單 AC）：`tools/train-models/`（匯出、預算與雜湊檢查、七向圖用模型光、離線預覽，[README](../tools/train-models/README.md)）、`.claude/skills/rolling-stock/SKILL.md` 已改成原生做法，新車只用這個工具。列車畫面四項的第 1–3 項（夜間亮燈、遮蔽烘焙、車窗反光）等 10/31 公開測試之後由規劃派，用同一個工具拍改前／改後（`renderer.js` 的 `features` 旗標是接口）。
 

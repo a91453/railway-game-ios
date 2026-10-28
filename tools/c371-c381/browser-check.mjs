@@ -68,12 +68,13 @@ try {
  let wait=page.waitForEvent('download');await page.click('#png');let download=await wait;
  assert.equal(readFileSync(await download.path()).readUInt32BE(16),900);
  const zip=resolve(root,'asset-package.zip');
- if(existsSync(zip)){
+ const zipOffered=existsSync(zip)&&(await page.locator('#zip').count())>0;
+ if(zipOffered){
   wait=page.waitForEvent('download');await page.click('#zip');download=await wait;
   assert.equal(sha(readFileSync(await download.path())),sha(readFileSync(zip)),'ZIP download differs from file');
  }
  await page.setViewportSize({width:390,height:844});
  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'mobile horizontal overflow');
  assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);assert.deepEqual(external,[]);
- console.log(`VERIFIED viewer: ${manifest.models.length} models, seven views, orbit, zoom, PNG/native/GLB${existsSync(zip)?'/ZIP':''} downloads, mobile layout, no external requests.`);
+ console.log(`VERIFIED viewer: ${manifest.models.length} models, seven views, orbit, zoom, PNG/native/GLB${zipOffered?'/ZIP':''} downloads, mobile layout, no external requests.`);
 } finally {if(browser)await browser.close();server.close();}

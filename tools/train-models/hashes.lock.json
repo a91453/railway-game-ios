@@ -50,35 +50,35 @@
       "triangles" : 3306
     },
     "c371-dm" : {
-      "hash" : "86758564feb3c4f1",
-      "triangles" : 3526
+      "hash" : "8684b2dab2d138fb",
+      "triangles" : 5358
     },
     "c371-m" : {
-      "hash" : "ca0bef057fe40b01",
+      "hash" : "bb303a08196b0e1d",
       "triangles" : 2200
     },
     "c371-rear" : {
-      "hash" : "7abf577b51cda209",
-      "triangles" : 3526
+      "hash" : "eff3ec41e739769d",
+      "triangles" : 5358
     },
     "c371-t" : {
-      "hash" : "a106340b1f276d47",
+      "hash" : "c942930fbfcb2cfa",
       "triangles" : 2188
     },
     "c381-dm" : {
-      "hash" : "530e9511a7d3d256",
-      "triangles" : 6252
+      "hash" : "12b18419def7b65e",
+      "triangles" : 6976
     },
     "c381-m" : {
-      "hash" : "a5b4388e5b466b48",
+      "hash" : "58b0a6614072927b",
       "triangles" : 1816
     },
     "c381-rear" : {
-      "hash" : "5fa0404e8b655690",
-      "triangles" : 6252
+      "hash" : "6bc3c4d5e377d8dc",
+      "triangles" : 6976
     },
     "c381-t" : {
-      "hash" : "2720a9350981375",
+      "hash" : "992d064eb8e9db91",
       "triangles" : 1804
     },
     "commuter-cab" : {

@@ -1,3 +1,7 @@
+> 本輪新增完整原圖查證：2026-10-28重新開啟[Commons來源頁](https://commons.wikimedia.org/wiki/File:C371_on_Tamsui_Line_20090221.jpg)，下載並用本機影像工具打開[1828×1224原檔](https://upload.wikimedia.org/wikipedia/commons/4/49/C371_on_Tamsui_Line_20090221.jpg)。Kirk，CC BY-SA3.0，SHA-256 `912818605e2060597b80cfd9fcdfe046acb14a0b6153602ec0a012faf0f328f0`。完整原圖確認兩個鼻下圓形件確實存在，不能因舊預覽粗重就刪除；現版改為縮小／壓暗且有細支座。工程尺寸仍推估，沒有重發照片或搬圖素。
+
+> 2026-10-28雙車續修：本輪重新打開TRSC C371完整原圖（SHA不變）對照現版正面／斜視，修肩部、燈腔及鼻下設備。C371與C381均待外觀驗收，撤回先前推定接受；當前交付格式／新素材庫／重建見[README](README.md)，下文輪次與歷史保存路徑是當時紀錄，不能當新main格式。
+
 # C371 本帳戶照片複查（2026-10-27）
 
 本輪先讀公開 #1342 的 CROSS_ACCOUNT_HANDOFF，再讀私有 #103；從既有分支續作。公開 #1357 已合併，既有共用工具可用。不合併、不開 auto-merge、不啟動 TestFlight。C381 不改，外觀未驗收。

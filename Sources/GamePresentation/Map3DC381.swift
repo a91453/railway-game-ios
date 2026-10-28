@@ -33,15 +33,15 @@ extension MetroStudyGeometry {
             }
             return values[values.count-1]
         }
-        let lateral=sample(abs(z),[0,0.55,1.10,1.55],[0.18,0.17,0.10,-0.05])
+        let lateral=sample(abs(z),[0,0.40,0.80,1.20,1.55],[0.18,0.175,0.15,0.065,-0.05])
         let vertical=sample(h,[0.60,0.95,1.40,2.10,2.75,3.20,3.60],[0.02,0.05,0.10,0.12,0.10,0.06,0])
         return half-0.14+lateral+vertical
     }
     /// Closed layered patches, split at every surface-plane boundary before
     /// triangulation, so the black mask and glass cannot cross their backing.
     mutating func c381Patch(_ polygon: [(Float,Float)],_ color: UInt32,lift: Float = 0,thickness: Float = 0.035) {
-        let hs: [Float] = [0.60,0.95,1.40,2.10,2.75,3.20,3.60]
-        let zs: [Float] = [-1.55,-1.10,-0.55,0,0.55,1.10,1.55]
+        let hs: [Float] = [0.50,0.60,0.95,1.40,2.10,2.75,3.20,3.60]
+        let zs: [Float] = [-1.55,-1.20,-0.80,-0.40,0,0.40,0.80,1.20,1.55]
         func clip(_ p: [(Float,Float)],_ axis: Int,_ limit: Float,_ greater: Bool) -> [(Float,Float)] {
             func value(_ q: (Float,Float)) -> Float { axis == 0 ? q.0 : q.1 }
             var out: [(Float,Float)] = []
@@ -108,13 +108,13 @@ extension MetroStudyGeometry {
         } }
     }
     mutating func buildC381Cab() {
-        let outerBrow=(-10...10).map { i -> (Float,Float) in
-            let a=Float(i)*Float.pi/20
+        let outerBrow=(-16...16).map { i -> (Float,Float) in
+            let a=Float(i)*Float.pi/32
             return (3.17+0.415*cosf(a),1.55*sinf(a))
         }
         c381Patch([(0.98,-1.43),(1.08,-1.54)]+outerBrow+[(1.08,1.54),(0.98,1.43)],body,lift:-0.015,thickness:0.18)
-        let maskBrow=(-10...10).map { i -> (Float,Float) in
-            let a=Float(i)*Float.pi/20
+        let maskBrow=(-16...16).map { i -> (Float,Float) in
+            let a=Float(i)*Float.pi/32
             return (3.18+0.385*cosf(a),1.46*sinf(a))
         }
         c381Patch([(1.94,-1.23),(1.98,-1.39),(2.11,-1.46)]+maskBrow+[(2.11,1.46),(1.98,1.39),(1.94,1.23)],ink)
@@ -161,8 +161,8 @@ extension MetroStudyGeometry {
         }
         for sign: Float in [-1,1] {
             let z=sign*1.00
-            c381Patch(roundRect(z-0.375,z+0.375,1.27,1.75,0.13),ink,lift:0.064,thickness:0.10)
-            let recess=roundRect(z-0.358,z+0.358,1.287,1.733,0.115)
+            c381Patch(roundRect(z-0.355,z+0.355,1.30,1.71,0.115),ink,lift:0.064,thickness:0.10)
+            let recess=roundRect(z-0.341,z+0.341,1.314,1.696,0.101)
             // The clear real lamp cover shows the blue/white livery behind it.
             // Split its opaque toy-style backing on the very same boundaries.
             for i in 0..<(spans.count-1) {
@@ -190,12 +190,12 @@ extension MetroStudyGeometry {
         // Split FRP apron leaves a real coupler opening; brackets meet floor.
         for sign: Float in [-1,1] {
             let l: Float = sign<0 ? -1.48 : 0.38, r: Float = sign<0 ? -0.38 : 1.48
-            c381Patch(roundRect(l,r,0.62,0.99,0.055),body,lift:0.040,thickness:0.18)
-            kit.box(half-0.16,0.70,sign*0.96,0.22,0.24,0.25,steel)
+            c381Patch(roundRect(l,r,0.55,0.97,0.075),body,lift:0.040,thickness:0.18)
+            kit.box(half-0.16,0.70,sign*0.96,0.22,0.20,0.25,ink)
         }
-        c381Patch([(0.88,-1.43),(0.88,1.43),(1.06,1.43),(1.06,-1.43)],ink,lift:0.066,thickness:0.17)
-        for h: Float in [0.905,0.960,1.015] { c381Patch([(h,-1.43),(h,1.43),(h+0.014,1.43),(h+0.014,-1.43)],Map3DColor.shaded(steel,0.60),lift:0.081,thickness:0.025) }
-        kit.box(half-0.02,0.70,0,0.24,0.46,0.25,ink)
-        kit.box(half+0.22,0.69,0,0.12,0.28,0.11,steel)
+        c381Patch([(0.905,-1.43),(0.905,1.43),(1.04,1.43),(1.04,-1.43)],ink,lift:0.066,thickness:0.17)
+        for h: Float in [0.920,0.960,1.000] { c381Patch([(h,-1.43),(h,1.43),(h+0.014,1.43),(h+0.014,-1.43)],Map3DColor.shaded(steel,0.48),lift:0.081,thickness:0.025) }
+        kit.box(half-0.10,0.70,0,0.30,0.32,0.30,ink)
+        kit.box(half+0.21,0.64,0,0.13,0.22,0.14,steel)
     }
 }

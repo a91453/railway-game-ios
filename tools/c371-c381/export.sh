@@ -23,5 +23,5 @@ else
   done
 fi
 swiftc -swift-version 6 -warnings-as-errors "${includes[@]}" tools/c371-c381/export.swift "${objects[@]}" -o "$work/export"
-"$work/export" "$output" "${2:-}"
+"$work/export" "$output"
 node tools/c371-c381/package.mjs "$output"

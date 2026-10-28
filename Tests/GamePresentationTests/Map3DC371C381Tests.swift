@@ -14,6 +14,16 @@ final class Map3DC371C381Tests: XCTestCase {
         XCTAssertEqual(Map3DModelPack.standard.models.last(where: { !$0.name.hasPrefix(Map3DTrainLights.prefix) })?.name, Map3DLowFloorBus.routeModel().name)
     }
 
+    func testStainlessStudiesCarryGlassAndSteelMaterials() throws {
+        let studies=Map3DModelPack.studies
+        for name in ["c371-dm","c371-t","c371-m","c381-dm","c381-t","c381-m"] {
+            let index=try XCTUnwrap(studies.index(of:name))
+            let layers=Set(studies.models[index].vertices.map(\.layer))
+            XCTAssertTrue(layers.contains(Map3DVertex.trainGlass),name)
+            XCTAssertTrue(layers.contains(Map3DVertex.trainSteel),name)
+        }
+    }
+
     func testDistinctFrontGeometryAndSixFinalUnits() {
         let a = Map3DC371.model(.dm), b = Map3DC381.model(.dm)
         XCTAssertNotEqual(a.vertices.map(\.position), b.vertices.map(\.position))

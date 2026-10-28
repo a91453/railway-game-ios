@@ -1,4 +1,4 @@
-"""C381 revision guards and front-ray checks on actual delivered native meshes.
+"""C371/C381 protected geometry and C381 front-ray checks on actual delivered native meshes.
 Photo-derived proportions are review constraints, not engineering dimensions.
 """
 import collections, hashlib, json, struct, sys
@@ -12,15 +12,12 @@ def read(p):
  return t,c
 locked=[]
 for p in (old/'models').iterdir():
- if p.name.startswith(('c371-','emu3000-')):
+ if p.stem in ['c371-t','c371-m','c381-t','c381-m','emu3000-ed']:
   assert p.read_bytes()==(root/'models'/p.name).read_bytes(),p.name
   locked.append(p.name)
-for p in (old/'verification').glob('c371*'):
- assert p.read_bytes()==(root/'verification'/p.name).read_bytes(),p.name
- locked.append('verification/'+p.name)
 def geometry(t):return collections.Counter(tuple(np.round(x,5).flat) for x in t)
 changes=[]
-for name in ['c381-dm','c381-t','c381-m']:
+for name in ['c371-dm','c371-t','c371-m','c381-dm','c381-t','c381-m']:
  a,_=read(old/'models'/f'{name}.m3dmodel');b,_=read(root/'models'/f'{name}.m3dmodel')
  ca,cb=geometry(a),geometry(b)
  # Every original roof fitting and running-gear triangle survives unchanged.

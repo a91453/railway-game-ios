@@ -26,8 +26,8 @@ for indices in components.values():
 def one(predicate):
  items=[x for x in boxes if predicate(x[1],x[2])];assert len(items)==1,len(items);return items[0]
 floor=one(lambda lo,hi:hi[0]-lo[0]>23 and abs(lo[2]-.92)<1e-4 and abs(hi[2]-1.04)<1e-4)
-beam=one(lambda lo,hi:11.17<lo[0]<11.19 and 11.39<hi[0]<11.41 and abs(lo[2]-.68)<1e-4 and abs(hi[2]-.775)<1e-4)
-supports=[x for x in boxes if 11.30<x[1][0]<11.32 and 11.50<x[2][0]<11.52 and abs(x[1][2]-.48)<1e-4 and abs((x[1][1]+x[2][1])/2)>.9]
+beam=one(lambda lo,hi:11.18<lo[0]<11.20 and 11.44<hi[0]<11.46 and abs(lo[2]-.84)<1e-4 and abs(hi[2]-.96)<1e-4)
+supports=[x for x in boxes if 11.29<x[1][0]<11.31 and 11.51<x[2][0]<11.53 and abs(x[1][2]-.74)<1e-4 and abs((x[1][1]+x[2][1])/2)>.9]
 assert len(supports)==2,len(supports)
 def contact(a,b):return bool((np.minimum(a[2],b[2])-np.maximum(a[1],b[1])>1e-5).all())
 for support in supports:

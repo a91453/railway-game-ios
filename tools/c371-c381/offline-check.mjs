@@ -65,5 +65,5 @@ try {
  await page.setViewportSize({width:390,height:844});
  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'mobile horizontal overflow');
  assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);assert.deepEqual(external,[]);
- console.log(`VERIFIED self-contained viewer over loopback (local file launch UNVERIFIED): ${manifest.models.length} models, seven views, orbit, zoom, PNG/native/GLB (ZIP is tested separately in the HTTP viewer) downloads, mobile layout, no external requests.`);
+ console.log(`VERIFIED self-contained viewer over loopback (local file launch UNVERIFIED): ${manifest.models.length} models, seven views, orbit, zoom, PNG/native/GLB (no ZIP in the current asset format) downloads, mobile layout, no external requests.`);
 } finally {if(browser)await browser.close();server.close();}
