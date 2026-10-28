@@ -169,3 +169,31 @@ final class Map3DModelFileTests: XCTestCase {
         }
     }
 }
+
+/// The train-model tool's `--night-lights` exporter reads every lit car back
+/// through ``Map3DModelFile`` and stops when a normal is off by 5e-3 or more;
+/// a lamp is a small triangle, so its normal, recomputed from the file's
+/// corners, drifts more than a car panel's. It once drifted by 1e-3 and the
+/// tool died on its own check (the crash report then took minutes to print).
+final class TrainNightLightsReadBackTests: XCTestCase {
+    // The file keeps no normals (the reader recomputes them from the corners), so a lamp's are only a direction.
+    func testEveryLampNormalSurvivesTheNativeFileWithinTheExportersLimit() {
+        let pack = Map3DModelPack.standard
+        var checked = 0
+        for car in pack.lights.values {
+            for lamps in [car.front.head, car.front.tail, car.back.head, car.back.tail] {
+                for start in stride(from: 0, to: lamps.count - 2, by: 3) {
+                    let t = Array(lamps[start..<start + 3])
+                    guard let normal = (t[1].position - t[0].position).cross(t[2].position - t[0].position).normalized else { continue }
+                    for v in t {
+                        XCTAssertEqual(v.nx, normal.x, accuracy: 0.005)
+                        XCTAssertEqual(v.ny, normal.y, accuracy: 0.005)
+                        XCTAssertEqual(v.nz, normal.z, accuracy: 0.005)
+                    }
+                    checked += 1
+                }
+            }
+        }
+        XCTAssertGreaterThan(checked, 0)
+    }
+}
