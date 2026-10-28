@@ -75,12 +75,12 @@ struct TrainControls: View {
                     } message: { selling in
                         Text(verbatim: selling.position == nil
                             ? session.language.text(
-                                "Brings 70 % of what is left of its cost on the books.",
-                                "可取回帳面價值的 70 %。"
+                                "Brings \(session.world.trainSaleQuote(selling.id).moneyText).",
+                                "可取回 \(session.world.trainSaleQuote(selling.id).moneyText)。"
                             )
                             : session.language.text(
-                                "Takes it off the track and brings 70 % of what is left of its cost on the books.",
-                                "會先把它移出軌道，可取回帳面價值的 70 %。"
+                                "Takes it off the track and brings \(session.world.trainSaleQuote(selling.id).moneyText).",
+                                "會先把它移出軌道，可取回 \(session.world.trainSaleQuote(selling.id).moneyText)。"
                             ))
                     }
                 }

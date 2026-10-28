@@ -2655,12 +2655,12 @@
         }
       }
     },
-    "Population: where people live, from WorldPop estimates on real-world maps and from your towns on blank maps. Travel demand: the trips starting in each area each hour. Demand change: how they rise or fall from the hour before." : {
+    "Population: where people live. Travel demand: the trips starting in each area each hour. Demand change: how they rise or fall from the hour before. Real-world maps' population: WorldPop." : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "人口：居住人口的分布，實景地圖用 WorldPop 的推估，空白地圖用你的城鎮。交通需求：每小時從各地出發的旅次量。需求變化：與前一小時相比的增減。"
+            "value" : "人口：人住在哪裡。交通需求：每小時從各地出發的旅次量。需求變化：與前一小時相比的增減。實景地圖的人口：WorldPop。"
           }
         }
       }
@@ -2695,12 +2695,12 @@
         }
       }
     },
-    "Station catchment area shows the 800-metre walking reference area (~10 minutes walk). Fares and full trains: the fare each station takes, and a stamp where a full train ends its trip." : {
+    "Station catchment area: the land within about 10 minutes' walk (800 m) of each station. Fares and full trains: the fare each station takes, and a stamp where a full train ends its trip." : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "顯示以車站為中心、步行約 10 分鐘的 800 公尺步行服務範圍。車資與章：每站收到的車資，以及滿載的列車在終點站蓋的章。"
+            "value" : "車站服務範圍：車站周圍步行約 10 分鐘（800 公尺）內的地方。車資與章：每站收到的車資，以及滿載的列車在終點站蓋的章。"
           }
         }
       }

@@ -16,6 +16,7 @@ struct TrainLoadBar: View {
     /// Decision 274: the train's cars, for its seat map under the bar;
     /// `nil` draws none (a freight train never has one).
     var cars: Int? = nil
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -38,7 +39,8 @@ struct TrainLoadBar: View {
                 }
             }
             .frame(height: 5)
-            .animation(.linear(duration: 0.2), value: load.barFraction)
+            // A progress bar fills steadily (motion skill §2); at once with Reduce Motion.
+            .animation(reduceMotion ? nil : .linear(duration: 0.2), value: load.barFraction)
 
             Text(verbatim: load.detailText(in: language))
                 .font(.caption2.monospacedDigit())

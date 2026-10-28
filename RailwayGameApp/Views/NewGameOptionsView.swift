@@ -144,7 +144,7 @@ struct NewGameOptionsView: View {
                         seedText = String(UInt32.random(in: .min ... .max))
                     }
                     if !seedText.isEmpty {
-                        Button(language.text("Random each game", "每局隨機"), role: .destructive) {
+                        Button(language.text("Random each game", "每局隨機")) {
                             seedText = ""
                         }
                     }

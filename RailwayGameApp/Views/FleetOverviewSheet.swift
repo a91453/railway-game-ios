@@ -144,12 +144,12 @@ struct FleetOverviewSheet: View {
         } message: { train in
             Text(verbatim: train.position == nil
                 ? session.language.text(
-                    "Brings 70 % of what is left of its cost on the books.",
-                    "可取回帳面價值的 70 %。"
+                    "Brings \(session.world.trainSaleQuote(train.id).moneyText).",
+                    "可取回 \(session.world.trainSaleQuote(train.id).moneyText)。"
                 )
                 : session.language.text(
-                    "Takes it off the track and brings 70 % of what is left of its cost on the books.",
-                    "會先把它移出軌道，可取回帳面價值的 70 %。"
+                    "Takes it off the track and brings \(session.world.trainSaleQuote(train.id).moneyText).",
+                    "會先把它移出軌道，可取回 \(session.world.trainSaleQuote(train.id).moneyText)。"
                 ))
         }
         .fullScreenCover(isPresented: $showsRoster) {

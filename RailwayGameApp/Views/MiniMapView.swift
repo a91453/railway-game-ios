@@ -16,6 +16,7 @@ struct MiniMapView: View {
     /// Moves the map to the world point given.
     let onJump: (MiniMap.WorldPoint) -> Void
     @AppStorage("map.minimap.open") private var isOpen = true
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// The small map's longer side, in points.
     static let longestSide = 120.0
@@ -28,7 +29,7 @@ struct MiniMapView: View {
                 foldedButton
             }
         }
-        .animation(.easeInOut(duration: 0.2), value: isOpen)
+        .animation(MotionRule.pop.layout(reduceMotion: reduceMotion), value: isOpen)
     }
 
     private func content(_ map: MiniMap) -> some View {
@@ -76,8 +77,7 @@ struct MiniMapView: View {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .strokeBorder(Theme.panelBorder, lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.15), radius: 6, y: 2)
-        .transition(.scale(scale: 0.6, anchor: .bottomTrailing).combined(with: .opacity))
+        .transition(.pop(from: 0.6, anchor: .bottomTrailing, reduceMotion: reduceMotion))
     }
 
     private var foldedButton: some View {
