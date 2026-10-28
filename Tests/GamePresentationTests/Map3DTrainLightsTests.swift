@@ -91,4 +91,31 @@ final class Map3DTrainLightsTests: XCTestCase {
             XCTAssertNotNil(pack.index(of: name).flatMap { pack.lights[$0]?.windows }, name)
         }
     }
+
+    /// Replacing the bus or the trucks (what the app does with its model
+    /// files) leaves the trains' lamps and windows in the pack.
+    func testReplacingAModelKeepsTheTrainLights() throws {
+        XCTAssertFalse(pack.lights.isEmpty)
+        let bus = try XCTUnwrap(pack.index(of: Map3DStreetModel.bus.modelName))
+        let replaced = pack.replacing(pack.models[bus])
+        XCTAssertEqual(replaced.lights.keys.sorted(), pack.lights.keys.sorted())
+        XCTAssertEqual(replaced.locked, pack.locked)
+
+        let withBus = Map3DCityBus.pack(file: Map3DCityBusTests.bundled)
+        XCTAssertEqual(withBus.lights.keys.sorted(), pack.lights.keys.sorted())
+        let models = Map3DCityBusTests.root.appendingPathComponent("RailwayGameApp/Resources/Models")
+        var files: [Map3DStreetModel: URL] = [:]
+        for (model, name) in Map3DGarbageTruck.fileNames {
+            files[model] = models.appendingPathComponent(name + "." + Map3DGarbageTruck.fileExtension)
+        }
+        let both = Map3DGarbageTruck.pack(withBus, files: files)
+        XCTAssertEqual(both.lights.keys.sorted(), pack.lights.keys.sorted())
+
+        // The night lamps are still added to a train drawn from that pack.
+        let rows = Map3DShowcase.layout(keys: [Map3DShowcase.catalog[0].key])
+        let before = Map3DShowcase.frame(rows, pack: both)
+        var after = before
+        Map3DTrainLights.add(to: &after, pack: both, lights: 1)
+        XCTAssertGreaterThan(after.boxes.vertices.count, before.boxes.vertices.count)
+    }
 }
