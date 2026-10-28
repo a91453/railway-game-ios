@@ -23,6 +23,19 @@ final class EditStallReportTests: XCTestCase {
         let data = try Data(contentsOf: URL(fileURLWithPath: path))
         let saved = try (try? JSONDecoder().decode(SharedFile.self, from: data).game) ?? JSONDecoder().decode(SavedGame.self, from: data)
         let session = GameSession(world: saved.world)
+        // The real-world data the app's session has (`GameLauncher`'s
+        // `begin`), as the player's game on the real map has it.
+        let real = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        session.population = real.population
+        session.places = real.places
+        session.water = real.water
+        session.heights = real.heights
+        session.coverage = real.coverage
+        session.baseMap = try BaseMapTiles(
+            data: Data(contentsOf: Map3DRealTrainsTests.resources.appendingPathComponent("BaseMap/taiwan.pmtiles"), options: .alwaysMapped)
+        )
+        session.railways = real.railways
+        session.readLandRoundStations()
         session.setSpeed(.normal)
         print("stations \(session.world.stations.count), lines \(session.world.lines.count), trains \(session.world.trains.count)")
         let clock = ContinuousClock()
