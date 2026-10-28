@@ -85,6 +85,7 @@
 		543A1EE337FEC2FCA74B2603 /* TutorialOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = F488A7BFC7F63D86EDB96548 /* TutorialOverlay.swift */; };
 		54DD975F68392FD1FBC6829C /* music-loop.caf in Resources */ = {isa = PBXBuildFile; fileRef = 37971520DEDE438F5E6272D6 /* music-loop.caf */; };
 		558B24BC31C83D9B20B08BD9 /* MapRealStationPins.swift in Sources */ = {isa = PBXBuildFile; fileRef = E64C9567E9D8D53339DCF26F /* MapRealStationPins.swift */; };
+		56401A53DAC1CA098177160A /* BaseMapProjectionUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F48CC81ACC3C48AD1B45BE /* BaseMapProjectionUITests.swift */; };
 		5650A33F4398B9F43624CE35 /* OSMMapBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = F655E31850005DBAC32D5142 /* OSMMapBackground.swift */; };
 		5816A50B5D199B14095EB3AA /* SettingsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E833A49B8766511EF574847 /* SettingsUITests.swift */; };
 		585C09A427696BD99073713D /* refused.wav in Resources */ = {isa = PBXBuildFile; fileRef = E4631B47557CC9944903820E /* refused.wav */; };
@@ -311,6 +312,7 @@
 		35B383D349E8080CFE435A11 /* TrainDiagramView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainDiagramView.swift; sourceTree = "<group>"; };
 		360D54F266227011F79894B4 /* tymc_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tymc_times.json; sourceTree = "<group>"; };
 		362FE08DC4352F1A844AF86D /* MapLockMarks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapLockMarks.swift; sourceTree = "<group>"; };
+		36F48CC81ACC3C48AD1B45BE /* BaseMapProjectionUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaseMapProjectionUITests.swift; sourceTree = "<group>"; };
 		37971520DEDE438F5E6272D6 /* music-loop.caf */ = {isa = PBXFileReference; path = "music-loop.caf"; sourceTree = "<group>"; };
 		3934A6F628AA98414B2B952D /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		3A47FE76CCB95D1AB460CE99 /* AppleMapBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMapBackground.swift; sourceTree = "<group>"; };
@@ -835,6 +837,7 @@
 		C0B361249E4B7CC041A973C6 /* UITests */ = {
 			isa = PBXGroup;
 			children = (
+				36F48CC81ACC3C48AD1B45BE /* BaseMapProjectionUITests.swift */,
 				41B126494052744FF5AE9A8B /* CoverageShortcutUITests.swift */,
 				00A3435B9D12725EEF9D3FA3 /* Feature284To286UITests.swift */,
 				7A45FAC99BF6E52A26A750C5 /* HUDAlignmentUITests.swift */,
@@ -1201,6 +1204,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				56401A53DAC1CA098177160A /* BaseMapProjectionUITests.swift in Sources */,
 				866964714A9713149D8697CD /* CoverageShortcutUITests.swift in Sources */,
 				E0AAF4F80FFB96017A1C7714 /* Feature284To286UITests.swift in Sources */,
 				298500257AB33E58BA58A158 /* HUDAlignmentUITests.swift in Sources */,

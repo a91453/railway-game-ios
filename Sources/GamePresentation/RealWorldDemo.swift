@@ -21,6 +21,34 @@ extension RealWorldFrame {
         return worldPosition(east: east, south: south)
     }
 
+    /// Web Mercator map points (MapKit's `MKMapPoint`: 2^28 a side, x east
+    /// and y south) a world metre spans: a metre at the anchor's latitude
+    /// on the sphere of Web Mercator, as every conversion between the world
+    /// and the Earth here takes it. The app's base maps take it from here,
+    /// not from MapKit's `MKMapPointsPerMeterAtLatitude` (decision 463).
+    public var mapPointsPerMetre: Double {
+        Self.mapPointsPerMetre(atLatitude: anchor.latitudeDegrees)
+    }
+
+    /// Web Mercator map points a metre spans at `latitude`° on the sphere
+    /// of Web Mercator (the Earth's equatorial radius).
+    public static func mapPointsPerMetre(atLatitude latitude: Double) -> Double {
+        worldPoints / (2 * Double.pi * earthRadius * cos(latitude * .pi / 180))
+    }
+
+    /// The Web Mercator map point (as MapKit's `MKMapPoint`) under the
+    /// world point (`x`, `y`): where a base map has to show it so that it
+    /// lies on the place ``coordinate(worldX:worldY:)`` names, anywhere in
+    /// a world as large as the whole island (decision 463).
+    public func mapPoint(worldX x: Double, worldY y: Double) -> (x: Double, y: Double) {
+        let metres = metresFromAnchor(worldX: x, worldY: y)
+        let pointsPerMetre = mapPointsPerMetre
+        return (
+            Self.mercatorX(anchor.longitudeDegrees) + metres.east * pointsPerMetre,
+            Self.mercatorY(anchor.latitudeDegrees) + metres.south * pointsPerMetre
+        )
+    }
+
     /// MapKit's world: 2^28 map points a side, the Earth's equatorial
     /// radius in metres (WGS-84).
     static let worldPoints = 268_435_456.0

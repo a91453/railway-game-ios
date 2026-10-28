@@ -261,4 +261,46 @@ final class RealWorldMapTests: XCTestCase {
             XCTAssertEqual(frame.anchor, place.anchor, place.id)
         }
     }
+
+    // MARK: - The base map under a world as large as the island (decision 463)
+
+    /// Web Mercator (EPSG:3857) as MapKit's map points: 2^28 a side from
+    /// 180° west and 85.05° north, written out here from its definition
+    /// rather than taken from the frame.
+    private func webMercator(_ latitude: Double, _ longitude: Double) -> (x: Double, y: Double) {
+        let side = 268_435_456.0
+        let phi = latitude * .pi / 180
+        return ((longitude + 180) / 360 * side, (1 - log(tan(.pi / 4 + phi / 2)) / .pi) / 2 * side)
+    }
+
+    /// The map point a base map is given for a world point is the place's
+    /// own Web Mercator point, within a centimetre, from Keelung to the
+    /// island's far corners, in the whole-island world laid round each
+    /// city (player report 90.1: in Taipei, 164 km north of its world's
+    /// anchor, the layer lay about a kilometre off the map).
+    func testTheBaseMapPointOfAPlaceIsItsWebMercatorPointAllOverTheIsland() throws {
+        for id in ["tra-keelung", "tra-taipei", "tra-hualien", "tra-kaohsiung", "tra-pingtung", "tra-taitung"] {
+            let place = try XCTUnwrap(RealWorldPlace.all.first { $0.id == id }, id)
+            let frame = try XCTUnwrap(RealWorldExpansion(around: place.anchor), id).frame
+            for latitude in stride(from: WholeTaiwan.south, through: WholeTaiwan.north, by: 0.35) {
+                for longitude in stride(from: WholeTaiwan.west, through: WholeTaiwan.east, by: 0.35) {
+                    let world = frame.worldPosition(latitude: latitude, longitude: longitude)
+                    let point = frame.mapPoint(worldX: world.x, worldY: world.y)
+                    let truth = webMercator(latitude, longitude)
+                    let perMetre = RealWorldFrame.mapPointsPerMetre(atLatitude: latitude)
+                    let off = ((point.x - truth.x) * (point.x - truth.x) + (point.y - truth.y) * (point.y - truth.y)).squareRoot() / perMetre
+                    XCTAssertLessThan(off, 0.01, "\(id) at \(latitude), \(longitude)")
+                }
+            }
+        }
+    }
+
+    /// The base map's scale is Web Mercator's sphere: 2^28 map points round
+    /// the equator's 40,075,017 m, and a metre spans 1/cos φ as many at φ.
+    func testTheBaseMapsScaleIsWebMercatorsSphere() {
+        XCTAssertEqual(RealWorldFrame.mapPointsPerMetre(atLatitude: 0), 268_435_456 / 40_075_016.685_578_5, accuracy: 1e-9)
+        XCTAssertEqual(
+            RealWorldFrame.mapPointsPerMetre(atLatitude: 25) * cos(25 * Double.pi / 180), RealWorldFrame.mapPointsPerMetre(atLatitude: 0), accuracy: 1e-9
+        )
+    }
 }
