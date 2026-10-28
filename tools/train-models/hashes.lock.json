@@ -1,5 +1,5 @@
 {
-  "comment" : "FNV-1a of every vertex field of every model in Map3DModelPack.standard (tools/train-models/export.swift). A changed value is a deliberate model change the PR must justify.",
+  "comment" : "FNV-1a of every vertex field of every model in Map3DModelPack.standard and Map3DModelPack.studies (tools/train-models/export.swift). A changed value is a deliberate model change the PR must justify.",
   "models" : {
     "blue-seven-formation" : {
       "hash" : "875bb3a96fcc5147",
