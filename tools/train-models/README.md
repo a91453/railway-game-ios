@@ -1,54 +1,101 @@
-# 共用做車工具（`tools/train-models/`）
+# 共用列車製作、驗收與交付工具
 
-一個車型 id（`Map3DModelPack.standard` 或只給工具的 `Map3DModelPack.studies` 裡的名字，如 `set-emu800-head`）進去，出來的是：原生 `.m3dmodel`、七向圖（用遊戲的模型光）、三角形預算結果、雜湊對照、一頁離線預覽。以後新車只用這個工具；`.claude/skills/rolling-stock/SKILL.md` 說怎麼做車，這裡說怎麼量與怎麼拍。
+新車使用本工具，專用的門窗／支承／輪軌驗收才另開目錄。既有配方與工具不重寫，模型／雜湊不因工具更新而改變。先讀 [rolling-stock](../../.claude/skills/rolling-stock/SKILL.md)、[原生手冊](../../docs/art/native-vehicle-modeling/README.md) 與兩庫 AGENTS.md。
 
-![日／夜各一張的頭車](../../docs/art/train-model-kit-2026-10-27/overview.png)
+需要 Swift 6.4、Node 22以上、既有 Playwright／Chromium、Python／Pillow；獨立 GLB 匯入仍用既有 Blender。輸出放公開 checkout 外。
 
-## 用法（Linux 與 macOS 都行；Swift 6.4、Node 22、playwright、Chromium、Pillow）
+## 匯出、預算與圖片
 
 ```sh
-# 1. 匯出（debug 版，@testable import；第一次會 build 約 3 分鐘）
-tools/train-models/run.sh OUT --tag after                      # 全部列車（set-*、style-*）及它們的遠景版
-tools/train-models/run.sh OUT --tag after --ids set-emu800-head,set-taroko-head
-tools/train-models/run.sh OUT --tag after --night-lights --ids set-emu800-head   # 夜裡的樣子（決策 449）：客室窗亮、頭車前燈、尾車尾燈
-# 2. 檢查：預算＋雜湊（失敗時 exit 1）
+tools/train-models/run.sh OUT --tag after --ids model-a,model-b
 node tools/train-models/check.mjs OUT
-node tools/train-models/check.mjs OUT --new-set emu900         # 新車：精細車一定要有遠景版
-node tools/train-models/check.mjs OUT --allow set-emu900-head  # 刻意改了這個模型：PR 要逐項說明
-# 3. 七向圖（top bottom left right front back isometric；--time day|night|both）
-node tools/train-models/render.mjs OUT --time both [--ids a,b] [--line '#2F6DB5']
-# 4. 離線預覽頁與總覽圖
-node tools/train-models/viewer.mjs OUT/index.html OUT              # 給兩個資料夾（before after）就左右並排
-python3 -I tools/train-models/overview.py OUT overview.png --time both set-emu800-head set-taroko-head
+node tools/train-models/render.mjs OUT --time both
+node tools/train-models/render.mjs OUT --time day --material clay
+node tools/train-models/render.mjs OUT --time day --material silhouette
+node tools/train-models/viewer.mjs OUT/comparison.html BEFORE OUT
+python3 tools/train-models/overview.py OUT overview.png --time both model-a model-b
 ```
 
-`OUT/png/<光>/<id>-<視角>.png`；七向都是同一個模型自己的框、透明底。`index.html` 把圖與數字嵌進去，離線可開。
+七向為 top／bottom／left／right／front／back／isometric。`png/<time>[-<material>]/<id>-<view>.png`。`render.mjs` 用決策370的遊戲模型光；`--features 1` 可看玻璃／不鏽鋼預覽。WebGL不等於Metal；沒有全場景太陽影、霧或完整材質遮蔽。`viewer.mjs` 是靜態圖比較頁；需要旋轉／縮放／下載改用下方 `inspect.mjs`。
 
-## 它量什麼
+`run.sh OUT --night-lights --ids set-emu800-head` 匯出既有營運車的夜燈，manifest的 `night_lights` 記是否啟用。`triangles`／`hash` 仍是pack原模型，`package.mjs` 另記含燈的 `exported_triangles`／`exported_bounds`，不把其混作配方雜湊。
 
-- **光**：`render.mjs` 的光照是 `map3dLit(…, soft: true)`（決策 370 的模型光：`0.85 − 0.05·lights + 0.02·朝上 + 0.15·太陽`，冷到暖的色，乘 `(天空光 + 0.5·太陽光) / (0.925, 0.871, 0.806)`）。天空光、太陽光、太陽方向與 `lights` 由 `export.swift` 從 `Map3DLighting(minute:)` 寫進 manifest 的 `lighting`：`day` 是 14:00，`night` 是 23:00（路燈亮、發光三角形加 `1.3·lights`）。假設列車朝東；沒有霧、太陽陰影、`map3dFinish`。`--features 1` 畫決策 450 的車窗反光與不鏽鋼光澤（天空從霧色到天頂色、太陽亮點；沒有 `u` 的遮蔽），不加就沒有。WebGL 是預覽，不代表 iPhone 的 Metal。alpha 0 的頂點（塗裝帶）用 `--line` 的顏色。
-- **預算**（`budgets.json`，每一條寫了決策）：近景一節 ≤ 20,000（決策 417，超過要另做中間版）；十二節一列近景 ≤ 240,000（417 的 lower 級 250,000 要留空間）、遠景一列 ≤ 120,000；遠景一節要少於近景的一半（決策 420、432 的測試）且在近景的框裡（長度 0.1 m、頂 0.05 m、貼地 0.1 m）；精細車（一節 ≥ 8,000）用 `--new-set` 時一定要有遠景版（417 規則 1）。第一天 main 上已經違反的 set 記在 `grandfathered`（`check.mjs --grandfather-write` 只在這一天用過一次）：新車不准加進去。
-- **雜湊**：`hashes.lock.json` 是 `Map3DModelPack.standard` 與 `Map3DModelPack.studies`（遊戲不畫的靜態展示模型，K1-1 起從 `standard` 搬出）全部模型（決策 449 起含 `light-*` 窗模型）的三角形數與 FNV-1a（每個頂點所有欄位，同 `Map3DEMU800IntegrationTests.hash`，所以雜湊可以直接貼進釘模型的測試）。模型變了就紅；新模型要把它加進鎖（`run.sh OUT --lock tools/train-models/hashes.lock.json`），刻意改的用 `--allow` 並在 PR 說明。
+`standard` 與 `studies` 都可用ID讀取。遊戲不畫的靜態模型放 `studies`；不要增加standard的常駐頂點。新增營運車時另驗set／映射及常駐預算，並跑啟用的 `Map3DMotionBudgetTests.testWhatTheMapKeepsInMemory`。
 
-## 之後的「改前／改後」（路線圖第 1–3 項，這次沒做）
+預算仍以 `budgets.json` 及當下loader為準：近景一節20,000三角、十二節240,000、遠景120,000，遠景單節少於近景一半且同框。精細新set以 `check.mjs OUT --new-set key` 驗遠景。**M3DM v1的單檔15,000是另一個上限**，本工具的GLB／通用assembly交付會拒收超限獨立單元；不能用場景預算放寬格式。高於單檔上限時先設計合法分件／格式契約，不擴大loader常數。
 
-- 兩次匯出到兩個資料夾（`--tag before`、`--tag after`），各自 `render.mjs`，`viewer.mjs 頁 before after` 並排。
-- `renderer.js` 的 `render(view, {time, features})`：`time` 已有日／夜（夜裡發光三角形加亮）；`features` 是整數旗標，已傳給片段著色器（`uniform int features`），第 1 項（夜間亮窗、方向幕）、第 2 項（遮蔽烘進頂點色，在頂點色裡，不用旗標）、第 3 項（車窗反光、不鏽鋼光澤）在這裡加分支，同一個工具拍兩邊。第 3 項已做（決策 450）：旗標 bit 0，`render.mjs OUT --features 1`；M3DM 的 flags bit 1 是玻璃、bit 2 是不鏽鋼（遊戲的 `Map3DModelFile` 只讀公車檔，不讀這些匯出檔）。
-- 數字進 manifest：`glowTriangles` 已經記每款幾個發光三角形，第 1 項的 PR 前後可比；決策 450 加了 `glassTriangles`、`steelTriangles`。
+雜湊鎖包含standard與studies。`--lock`會重寫整份鎖，先輸出到暫存檔再只加入本車項；舊項變動須查明，不能整份覆蓋以消除紅字。刻意改的模型以 `--allow id` 說明，禁止把新車加入grandfathered。
 
-## 取代了哪些舊資料夾的哪些功能
+## 通用編組：不再為每台新車加 Swift 分支
 
-舊資料夾不搬、不刪，它們的輸出與固定雜湊逐位元不變；新車不再開新資料夾。
+先將這台車的所有獨立單元匯出，再給JSON：
 
-| 舊資料夾 | 被取代的功能 |
-| --- | --- |
-| `train-modeling-410`、`train-pack-lrt`、`codex-trains-399`、`hsr-trains-408`（`export.swift`／`render.mjs`） | 把 pack 裡的列車寫成 `.m3dmodel`、同一相機拍圖、列出三角形數 → `run.sh`＋`render.mjs`＋`manifest.json` |
-| `mesh-lod-420`（`export.swift`／`render.mjs`） | 近景與遠景的三角形比較 → `check.mjs` 的遠景規則；簡化器本身（`Map3DMeshSimplifier`）仍用 420 的匯出 |
-| 各車資料夾（`c341`、`e1000-pp`、`e500-refresh`、`emu3000-refresh`、`emu3000-slate`、`emu500`、`emu800-native`、`emu900-native`、`seven-car-blue`、`temu1000`、`temu2000`、`train-colors`、`train-shape-refresh`）的 `export.swift`、`render.mjs`、`verify*.mjs`、各自的三角形預算與雜湊釘在測試裡的檢查 | 寫原生、七向圖、預算、雜湊 → 本工具的 `run.sh`、`render.mjs`、`check.mjs` |
-| 同上各資料夾的 `viewer.html`、`standalone.mjs` | 離線預覽 → `viewer.mjs` |
-| `c371-c381` 的單元匯出、日夜七向與雜湊 | 改用本工具；該資料夾保留六車原生編組、GLB、拓撲及車輪故障驗收、白模／剪影、真前後、完整 ZIP 與下載驗收。 |
-| 沒有取代 | GLB 打包（`package.mjs`、`glb-audit.py`、Blender 檢查）、`bundle.py`／ZIP、`geometry-audit`、`glass-mutations`、`front-audit`、`door-audit`（逐車的專用驗收）、`glb-to-m3dmodel`（GLB → 原生）、`trains/`（網頁版 `Web/CityView`）、`train-colors/` 的新舊逐頂點比對 |
+```json
+{"assemblies":[{"id":"example-formation","placements":[
+  {"unit":"model-a","translation":[12,0,0],"rotation_degrees":0},
+  {"unit":"model-b","translation":[-12,0,0],"rotation_degrees":180}
+]}]}
+```
 
-交給作者看的完整包（GLB、ZIP、viewer）照 CLAUDE.md 放私庫 `Railway/game-art-previews/docs/art/`；這個工具只做公開庫該有的：預算、雜湊、七向圖與離線預覽。
+以上僅說明格式，12m不是三鶯線車長。位移為原生公尺，+X前／+Y左／+Z上，軌面Z0；只允許0／180度，不縮放。尾車若已有反向幾何，不可再旋轉一次。
 
-610 四輛展示：匯出12個 `taipei610-{a,c,d,b}{,-far,-light}` ID，另加 `--assembly taipei610`，輸出既有合法M3DAssembly及僅供逐bytes驗證的expected buffer。renderer支援同一assembly契約。新原生匯出逐頂點讀回；Swift6.4 integrated backend和一般SwiftPM backend皆可連結。610專用原生拓樸／變異驗收放 `tools/taipei610-audit/`；GLB沿用EMU900工具，不複製其他車配方。
+```sh
+tools/train-models/run.sh OUT --ids model-a,model-b --assembly-spec SPEC.json
+# 或匯出後單獨執行：
+node tools/train-models/assemble.mjs OUT SPEC.json
+node tools/train-models/package.mjs OUT
+node tools/train-models/audit.mjs OUT
+node tools/train-models/inspect.mjs OUT OUT/index.html
+node tools/train-models/browser-check.mjs OUT
+```
+
+輸出既有M3DAssembly v1，僅嵌入所引用合法單元；整列不是一個可載入的超限M3DM。`assembly_payload`的bin只供JS展開比對，**不是獨立Swift證據**；另有Swift直接編組時，需獨立比對。舊 `--assembly taipei610` 保留以重建歷史；新車只用 `--assembly-spec`，不新增車名特例。舊工具輸出不搬不刪。
+
+`package.mjs`沿用station-kit GLB writer，原生與GLB軸向只轉一次（GLB +X前／+Y上／-Z左），保留頂點色與glow。GLB是霧面交換格式，材質標記及遮蔽不等同遊戲Metal。`audit.mjs`查有限數、bounds、退化面、有向邊平衡、連通殼正體積、GLB writer逐bytes重建，並對每模型做缺面／反面及編組100mm錯位反例。邊量化1e-5m，不是工程精度或全部自交證明。
+
+**仍須專用驗收**：真玻璃埋入／浮空、雨刷排除、設備實體接觸、逐輪貼軌／淨空、近遠景可見性；依新車的實際來源設門檻，不抄C371尺寸。獨立GLB importer、PNG完整解碼與實際看圖也不可省略。
+
+## 限量交付
+
+完整本機驗收圖可以多於21張；提交到資產庫的整個模型輪次最多21張PNG，不是每單元21張。先填一份交付spec（路徑皆相對RUN）：
+
+```json
+{
+  "repo":"/absolute/public-checkout",
+  "producer":"40-character-public-producer-commit",
+  "rebuild":"tools/train-models/run.sh /absolute/output --ids model-a,model-b --assembly-spec path/to/spec.json",
+  "sources":"source-record.json",
+  "status":"status.json",
+  "license_files":[],
+  "pngs":["png/day/model-a-front.png","png/night/model-a-isometric.png"]
+}
+```
+
+來源JSON至少有 `origin`、`date`、`license`、`public_use`，另記逐張照片網址／作者／授權及哪些只供觀察。納入第三方素材時，`license_files`明選其授權文字。來源與授權是否合法仍須人工確認。修訂再加 `previous_producer` 記真正前版commit。
+
+```sh
+cp tools/train-models/status-template.json OUT/status.json
+# 填完來源、四種狀態與交付spec後：
+python3 tools/train-models/deliver.py OUT DELIVERY.json /assets/game-art-previews/docs/art/model/revision-1
+```
+
+`deliver.py`確認producer存在、目前tracked Sources/tools與其一致，拒收非RGBA、空白、不透明或裁邊PNG，最多21張且各≤2MiB；只複製模型、明選PNG與授權，不複製整包。自含index.html有七向、日夜、拖曳旋轉、縮放、native／GLB及當前畫面PNG下載。README、來源、status與SHA清單同輪產生。目的輪次已存在時拒絕覆蓋；重新交付到另一個新目錄，確認後依正常PR操作替換。
+
+此工具**不代替**獨立producer重建bytes驗證、實際viewer下載驗收或整張PR的asset_guard，也不自動清除上一輪。用 `browser-check.mjs DELIVERED --report-dir SCRATCH` 實測最後viewer，把報告放交付輪次之外以免使SHA清單過期；再在素材庫同PR刪被取代輪次的重檔、保留PNG／README／來源。不能提交ZIP或history／old／backup副本。
+
+資產庫規則：`a91453/railway-assets-private`，每檔≤50MiB、PR新增≤200MiB、最多3候選且僅選中候選留重檔。使用前再讀它的AGENTS.md；stage後用 `python3 tools/asset_guard.py --base origin/main --head "$(git write-tree)"`，commit後再跑預設HEAD檢查。不要為清理舊違規擴張本輪範圍。
+
+## 完成狀態與新對話
+
+`status-template.json`四欄預設UNVERIFIED；VERIFIED必須附證據：
+
+| 欄位 | 證據 |
+|---|---|
+| asset | 最終producer的原生／GLB／圖／viewer及技術驗證 |
+| appearance | 使用者明確接受的版本，accepted_producer必須等於交付producer；作者的外觀自檢另記 |
+| integration | set／營運映射與實際遊戲行為；只有studies註冊仍未接入 |
+| device | 實際Simulator／裝置、時間及測項；不得拿Linux WebGL替代 |
+
+使用者要合併不等於四欄全部通過。公開只放一張約≤2MB總覽及配方／工具／文件；兩庫開互鏈draft PR、更新#1041及HANDOFF，不merge／auto-merge／TestFlight。
+
+[新車通用prompt](../../docs/art/VEHICLE_ASSET_HANDOFF_PROMPT.md)；[三鶯線prompt](../../docs/art/native-vehicle-modeling/SANYING_PROMPT.md)。單元測試：`node --test tools/train-models/test.mjs`、`python3 -m unittest discover -s tools/train-models -p 'test_*.py'`；實際匯出／browser／Blender驗證另跑，不把fixture測試當實車驗收。

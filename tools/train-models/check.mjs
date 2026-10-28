@@ -63,6 +63,9 @@ let hashed = 0;
 if (existsSync(lockPath)) {
   const lock = JSON.parse(readFileSync(lockPath)).models;
   for (const m of manifest.models) {
+    // A formation is a scene assembled from already locked units, not a
+    // ModelPack entry. It has no pack FNV and must not be added to the lock.
+    if (m.native_kind === 'assembly') continue;
     const locked = lock[m.id];
     if (!locked) { notes.push(`new model ${m.id} (${m.triangles} triangles, hash ${m.hash}): add it to the lock`); continue; }
     hashed++;

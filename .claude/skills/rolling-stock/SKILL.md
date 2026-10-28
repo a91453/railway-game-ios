@@ -82,10 +82,16 @@ node tools/train-models/viewer.mjs OUT/index.html OUT     # 離線預覽頁；�
 
 作者看真機（TestFlight），所以：
 
-- PR 放**一張總覽圖**（`overview.py`），不超過約 2 MB；完整七向、GLB、viewer、ZIP 放私庫 `Railway/game-art-previews/docs/art/<資料夾>/`（CLAUDE.md；只有最新一輪留模型與 viewer）。
+- PR 放**一張總覽圖**（`overview.py`），不超過約 2 MB；完整七向、GLB、viewer 放 `a91453/railway-assets-private: game-art-previews/docs/art/<模型>/<revision-N>/`。每輪最多 21 張 PNG、每張 ≤2 MiB、單檔 ≤50 MiB、PR 新增 ≤200 MiB；不放 ZIP 或 `history/`／`old/`／`backup/`。以該庫最新 AGENTS.md 及 asset_guard 為準。
 - 寫清楚：Linux 的 WebGL 預覽不是 Metal；靜態素材合併後**不會**自動出現在遊戲（要接 set 才會）；真機的 Metal、效能、動畫 UNVERIFIED。
-- 作者說「好醜」「怪」的時候，先量（同相機的前後對照、局部放大），再改；每一輪都留前一版（見建模手冊第 11 節），不要覆蓋。
+- 作者說「好醜」「怪」的時候，先量（同相機的前後對照、局部放大），再改；每輪先記真正前版 producer commit，留 PNG、README、來源；被取代輪次的重檔在同一 PR 移除，完整模型由 git 歷史／producer 重建，不複製歷史包（見建模手冊第 11、13 節）。
 - 決策、五方評分、先拍後選的規則照 CLAUDE.md「Workflow」。
+
+### 7.1 共用交付與完成狀態（2026-10-28）
+
+新車使用 [共用工具](../../../tools/train-models/README.md) 的 `assemble.mjs`（資料描述編組）、`package.mjs`（原生轉 GLB）、`audit.mjs`（幾何與故障反例）、`inspect.mjs`（旋轉／縮放／下載）及 `deliver.py`（限量選圖與來源交付）。不再複製整套舊車工具；門窗可見性、設備支承、輪軌淨空仍需依新車設計專用驗收，不能沿用 C371 的尺寸門檻。
+
+`status-template.json` 分開記素材技術、明確版本的外觀接受、營運接入、裝置驗證；未驗預設 UNVERIFIED。技術通過或使用者同意合併，不等於外觀／真機接受。新任務可用 [三鶯線指令](../../../docs/art/native-vehicle-modeling/SANYING_PROMPT.md)，先查照片與正式規格，不預填車型與編組。
 
 ## 8. 這份是怎麼來的
 
