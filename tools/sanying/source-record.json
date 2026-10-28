@@ -28,5 +28,6 @@
     "path": "railway-reference-private/Railway/taiwan-rail-reference-clean/source/rail-3d/assets/garage-blender-v1/sanying.json",
     "finding": "Illustrative Q-proportions model, 9.208 m long, engineeringDimensionsM null; inspected metadata only and did not reuse geometry or dimensions."
   },
-  "revision_2_feedback": "User rejected revision-1 appearance and requested a Circular Line-inspired two-car Sanying redesign on 2026-10-28."
+  "revision_2_feedback": "User rejected revision-1 appearance and requested a Circular Line-inspired two-car Sanying redesign on 2026-10-28.",
+  "revision_3_feedback": "User asked whether revision-2 looked like five supplied real-train photographs. Visual inspection found an incorrect dark upper body, an oval windscreen and a pale lower cab. Revision-3 corrects those cues; the references remain observation-only."
 }

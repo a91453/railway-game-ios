@@ -5,7 +5,7 @@ import Foundation
 /// livery, two-car assembly and published dimensions are Sanying-specific.
 public enum Map3DSanying {
     public enum Unit: String, CaseIterable, Sendable { case a, b }
-    public static let body = Map3DPalette.concreteWalls[2]
+    public static let body = Map3DColor.rgb(0xE3E6E7)
     public static let roof = Map3DPalette.concreteWalls[0]
     public static let blue = Map3DColor.rgb(0x13A9CF)
     public static let mask = Map3DColor.rgb(0x343D45)
@@ -61,8 +61,8 @@ private struct SanyingBuilder {
     func frontRing(_ width:Float,_ height:Float,_ centre:Float,_ inset:Float=0)->[Map3DPoint] {
         (0..<segments).map { i in
             let t=Float(i)*2*Float.pi/Float(segments),c=cosf(t),s=sinf(t)
-            let h=centre+height*(s>=0 ? 1:-1)*powf(abs(s),0.48)
-            let w=width*(c>=0 ? 1:-1)*powf(abs(c),0.48)*(1+0.06*(h-centre))
+            let h=centre+height*(s>=0 ? 1:-1)*powf(abs(s),0.38)
+            let w=width*(c>=0 ? 1:-1)*powf(abs(c),0.38)*(1+0.06*(h-centre))
             return .init(Self.noseX(h,w,half)+inset,h,w)
         }
     }
@@ -83,7 +83,7 @@ private struct SanyingBuilder {
         let back=profile.map{Map3DPoint(-half,$0.0,$0.1)},straight=profile.map{Map3DPoint(end,$0.0,$0.1)}
         for i in profile.indices {
             let j=(i+1)%profile.count,mid=(profile[i].0+profile[j].0)/2
-            let color:UInt32 = mid>1.22 && mid<1.77 ? E.blue : mid>1.77 && mid<3.13 ? ink:white
+            let color:UInt32 = (mid>1.22 && mid<1.77) || (mid>3.13 && mid<3.32) ? E.blue : white
             face([back[i],back[j],straight[j],straight[i]],.init(0,2,0),color)
         }
         k.face(back,inside:.init(0,2,0),color:white)
@@ -102,19 +102,19 @@ private struct SanyingBuilder {
             }
             // Fill transition back to main body; a short tapered roof/shoulder.
             let rim=frontRing(1.08,0.91,2.45)
-            for i in outer.indices {let j=(i+1)%outer.count;face([outer[i],outer[j],rim[j],rim[i]],.init(0,2,0),(rim[i].y+rim[j].y)/2>3.18 ? ink:white)}
-            let border=frontRing(0.98,0.83,2.45)
-            for i in rim.indices {let j=(i+1)%rim.count;face([rim[i],rim[j],border[j],border[i]],.init(0,2,0),(rim[i].y+rim[j].y)/2>3.18 ? ink:E.blue)}
-            let window=frontRing(0.92,0.76,2.47)
+            for i in outer.indices {let j=(i+1)%outer.count;face([outer[i],outer[j],rim[j],rim[i]],.init(0,2,0),(rim[i].y+rim[j].y)/2>3.18 ? ink:E.blue)}
+            let border=frontRing(1.04,0.78,2.49)
+            for i in rim.indices {let j=(i+1)%rim.count;face([rim[i],rim[j],border[j],border[i]],.init(0,2,0),ink)}
+            let window=frontRing(0.98,0.67,2.52)
             join(border,window,ink)
             let backingFront=window.map { $0 - Map3DPoint(0.035,0,0) }
             let backingBack=window.map { $0 - Map3DPoint(0.065,0,0) }
-            let fc=Map3DPoint(Self.noseX(2.47,0,half)-0.035,2.47,0),bc=fc-Map3DPoint(0.030,0,0)
+            let fc=Map3DPoint(Self.noseX(2.52,0,half)-0.035,2.52,0),bc=fc-Map3DPoint(0.030,0,0)
             for i in window.indices {
                 let j=(i+1)%window.count
                 face([fc,backingFront[i],backingFront[j]],fc-Map3DPoint(1,0,0),ink)
                 face([bc,backingBack[i],backingBack[j]],bc+Map3DPoint(1,0,0),ink)
-                face([backingFront[i],backingFront[j],backingBack[j],backingBack[i]],.init(fc.x,2.47,0),ink)
+                face([backingFront[i],backingFront[j],backingBack[j],backingBack[i]],.init(fc.x,2.52,0),ink)
             }
             // Internal ties mount the backing to the structural rear bulkhead.
             // Keep them wholly behind the glass, without exterior frame studs;
@@ -122,8 +122,22 @@ private struct SanyingBuilder {
             for i in [0,segments/4,segments/2,segments*3/4] {
                 k.beam(backingBack[i],.init(end-0.010,backingBack[i].y,backingBack[i].z),0.040,ink)
             }
-            let c=Map3DPoint(Self.noseX(2.47,0,half),2.47,0)
+            let c=Map3DPoint(Self.noseX(2.52,0,half),2.52,0)
             for i in window.indices {face([c,window[i],window[(i+1)%window.count]],.init(0,2,0),glass)}
+            // The real train carries a pale wing-shaped fascia across the
+            // lower windshield, rising toward each blue cab shoulder.
+            for i in 0..<8 {
+                let z0:Float = -1.12+Float(i)*0.28, z1=z0+0.28
+                func upper(_ z:Float)->Float { 2.01+0.15*powf(abs(z)/1.12,1.5) }
+                let a=upper(z0),b=upper(z1)
+                let front:[Map3DPoint] = [
+                    .init(Self.noseX(a,z0,half)+0.055,a,z0),
+                    .init(Self.noseX(b,z1,half)+0.055,b,z1),
+                    .init(Self.noseX(b-0.09,z1,half)+0.055,b-0.09,z1),
+                    .init(Self.noseX(a-0.09,z0,half)+0.055,a-0.09,z0)
+                ]
+                solid(front,front.map{$0-Map3DPoint(0.025,0,0)},E.roof)
+            }
             // Paired organic lamp bezels; no red tail lenses or brand text.
             for s:Float in [-1,1] {
                 let y:Float=1.65,w=s*1.02,x=Self.noseX(y,w,half)
@@ -132,7 +146,7 @@ private struct SanyingBuilder {
                 solid(a,a.map{$0 + Map3DPoint(0.025,0,0)},rubber)
                 for off:Float in [-0.075,0.075] { k.box(x+0.04,y-0.040,w+off,0.025,0.08,0.08,Map3DPalette.tunnelLamp) }
             }
-            k.box(half-0.20,0.98,0,0.35,2.45,0.32,white)
+            k.box(half-0.20,0.98,0,0.35,2.45,0.32,ink)
             for s:Float in [-1,1] {
                 k.box(half+0.01,1.04,s*0.87,0.16,0.39,0.25,E.roof)
                 if !far {for i in 0..<4 {k.box(half+0.10,1.07+Float(i)*0.048,s*0.87,0.06,0.36,0.02,StationKitBuilder.steel)}}
@@ -152,9 +166,10 @@ private struct SanyingBuilder {
         let doors:[Float] = cab ? [-5.90,-0.65,4.60] : [-5.30,0,5.30]
         for s:Float in [-1,1] {
             for d in doors {
-                pane(d,2.08,1.52,2.05,s,ink)
+                pane(d,2.08,1.52,2.05,s,white)
                 pane(d,1.22,1.50,0.34,s,white,0.019)
                 for leaf:Float in [-1,1] {
+                    pane(d+leaf*0.35,2.50,0.49,1.02,s,ink,0.017)
                     pane(d+leaf*0.35,2.50,0.44,0.97,s,glass,0.026)
                 }
                 k.box(d,1.07,s*1.354,0.025,0.018,2.02,rubber)
@@ -162,7 +177,11 @@ private struct SanyingBuilder {
             }
             for i in 0..<2 {
                 let start=doors[i]+0.85,end=doors[i+1]-0.85,gap:Float=0.12,w=(end-start-gap)/2
-                for j in 0..<2 {pane(start+w/2+Float(j)*(w+gap),2.50,w,1.02,s,glass)}
+                for j in 0..<2 {
+                    let x=start+w/2+Float(j)*(w+gap)
+                    pane(x,2.50,w+0.07,1.09,s,ink)
+                    pane(x,2.50,w,1.02,s,glass,0.026)
+                }
             }
             if cab {
                 // Unmanned observation-end side window, no crew door.
