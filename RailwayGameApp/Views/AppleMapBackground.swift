@@ -75,6 +75,9 @@ struct AppleMapBackground: UIViewRepresentable {
     /// Taiwan's railways, `nil` if the app's copy cannot be read.
     let railways: RealRailways?
     let trackStyle: RealRailways.TrackStyle
+    /// Decision 468: the stretches of real line the player's track covers,
+    /// left out.
+    var yield = RealRailwayYield.none
     let language: DisplayLanguage
     /// The screen's safe area (decision 120): the map reaches the screen's
     /// edges, and the logo and legal link keep inside this.
@@ -150,7 +153,8 @@ struct AppleMapBackground: UIViewRepresentable {
             railways,
             near: realWorld.anchor,
             look: FollowingMapView.RailwayLook(
-                anchor: realWorld.anchor, reach: FollowingMapView.railwayReach(of: camera.mapRegion), style: trackStyle, theme: theme
+                anchor: realWorld.anchor, reach: FollowingMapView.railwayReach(of: camera.mapRegion), style: trackStyle, theme: theme,
+                yield: yield
             ),
             credit: DataSourceCredits.mapCorner(baseMap: false, railways: true, in: language)
         )
@@ -190,6 +194,9 @@ final class FollowingMapView: MKMapView, MKMapViewDelegate {
         let reach: Double
         let style: RealRailways.TrackStyle
         let theme: RealRailways.MapTheme
+        /// Decision 468: what of the real lines makes way for the player's
+        /// track.
+        var yield = RealRailwayYield.none
     }
 
     /// How far from the anchor real railways are drawn on a map reaching
@@ -437,15 +444,16 @@ final class FollowingMapView: MKMapView, MKMapViewDelegate {
         var overlays: [any MKOverlay] = []
         let casing = UIColor(look.theme.casing)
         for sortKey in Set(lines.map(\.sortKey)).sorted() {
-            let rank = lines.filter { $0.sortKey == sortKey }
-            let polylines = rank.map { line in
-                let coordinates = line.points.map { CLLocationCoordinate2D($0) }
+            // Decision 468: a line in the pieces the player's track leaves.
+            let rank = lines.filter { $0.sortKey == sortKey }.flatMap { line in look.yield.drawnPieces(of: line).map { (line, $0) } }
+            let polylines = rank.map { _, points in
+                let coordinates = points.map { CLLocationCoordinate2D($0) }
                 return MKPolyline(coordinates: coordinates, count: coordinates.count)
             }
             overlays.append(stroke(MKMultiPolyline(polylines), casing, RealRailways.Widths.casing))
             var colors: [RealRailways.RGB] = []
             var byColor: [RealRailways.RGB: [MKPolyline]] = [:]
-            for (line, polyline) in zip(rank, polylines) {
+            for ((line, _), polyline) in zip(rank, polylines) {
                 let color = line.palette.color(look.style, on: look.theme)
                 if byColor[color] == nil { colors.append(color) }
                 byColor[color, default: []].append(polyline)

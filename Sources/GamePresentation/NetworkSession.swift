@@ -1059,6 +1059,11 @@ public struct NetworkOverlay: Hashable, Sendable {
     /// The rest of a traced stretch after it stops (decision 213), drawn
     /// as a stretch that cannot be built.
     public var unbuilt: [WorldCoordinate] = []
+    /// Decision 468: the track already laid that a traced stretch joins
+    /// (``NetworkPreview/existing``), and the new track's pieces between
+    /// it (``NetworkPreview/newPieces``).
+    public var existing: [[WorldCoordinate]] = []
+    public var newPieces: [[WorldCoordinate]] = []
     /// The real lines the tool can trace, and the stretch of them it
     /// would trace now (decision 213), drawn under the track.
     public var traceable: [[WorldCoordinate]] = []
@@ -1105,6 +1110,8 @@ extension GameSession {
                 overlay.crossovers = draft.preview.crossovers
                 overlay.previewIsBuildable = draft.preview.problem == nil
                 overlay.unbuilt = draft.preview.unbuilt
+                overlay.existing = draft.preview.existing
+                overlay.newPieces = draft.preview.newPieces
                 overlay.cleared = draft.preview.cleared.map(PlanRect.init)
             }
         case .platform:
