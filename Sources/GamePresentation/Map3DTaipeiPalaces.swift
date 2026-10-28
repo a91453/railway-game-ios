@@ -104,48 +104,56 @@ extension LandmarkMesh {
     // MARK: Liberty Square
 
     /// Chiang Kai-shek Memorial Hall (OSM way 1052759757, its lowest
-    /// terrace and the stairway in front): three white terraces, the white
-    /// hall, an octagonal double roof of blue tile, a finial to 70 m (the
+    /// terrace and the stairway in front): three white terraces to the
+    /// hall's floor at 14.5 m and the white hall to 38.5 m (OSM's parts,
+    /// ways 1052759756 and 1052759759), the great arched door, an
+    /// octagonal double roof of blue tile, a short gold finial to 70 m (the
     /// memorial hall's own figure); the stairway down the front (-y)
     /// toward Liberty Square's gate.
     mutating func chiangKaiShekMemorialHall() {
         let stone = colour("stone"), hall = colour("hallWhite"), blue = colour("blueTile"), ridge = colour("blueRidge")
         let cy: Float = 11.9
         // Terraces: OSM's 124.4 m by 123.6 m, then two inset.
-        for (half, z0, z1) in [(Float(61.9), Float(0), Float(4)), (47, 4, 9.5), (36, 9.5, 15.5)] {
+        for (half, z0, z1) in [(Float(61.9), Float(0), Float(4)), (47, 4, 9.5), (36, 9.5, 14.5)] {
             box(-min(half, 62.2), cy - half, z0, min(half, 62.2), cy + half, z1, stone, Self.plain, top: colour("plinth"))
         }
         // The stairway (OSM: 40 m wide, 23.7 m out from the terrace), up to
         // the hall's floor.
-        stairs(width: 40, from: -73.7, to: cy - 36, height: 15.5, stone)
-        // The hall: white walls, a dark doorway, a blue band.
+        stairs(width: 40, from: -73.7, to: cy - 36, height: 14.5, stone)
+        // The hall: white walls, the arched doorway, a blue band.
         let h: Float = 25
-        box(-h, cy - h, 15.5, h, cy + h, 40, hall, Self.plain)
-        box(-5.5, cy - h - 0.15, 15.5, 5.5, cy - h, 33, colour("opening"), Self.plain)
+        box(-h, cy - h, 14.5, h, cy + h, 38.5, hall, Self.plain)
+        let door = colour("doorway"), face = cy - h - 0.15
+        box(-7, face, 14.5, 7, cy - h, 28, door, Self.plain)
+        let arch = full ? 6 : 2
+        for k in 0..<arch {
+            let a0 = Float.pi * Float(k) / Float(arch), a1 = Float.pi * Float(k + 1) / Float(arch)
+            tri((0, face, 28), (7 * cos(a0), face, 28 + 7 * sin(a0)), (7 * cos(a1), face, 28 + 7 * sin(a1)), door, Self.plain)
+        }
         if full {
-            box(-h - 0.4, cy - h - 0.4, 37, h + 0.4, cy + h + 0.4, 40, colour("blueRidge"), Self.plain)
+            box(-h - 0.4, cy - h - 0.4, 35.5, h + 0.4, cy + h + 0.4, 38.5, colour("blueRidge"), Self.plain)
         }
         // The octagonal roofs: a lower eave out over the hall's walls, a
         // white drum, the upper roof to its peak, the finial.
         let sides = 8
         let phase = Float.pi / 8
         let lowOut = Self.polygon(sides, 38, 0, cy, phase: phase), lowIn = Self.polygon(sides, 27.5, 0, cy, phase: phase)
-        wallBand(lowOut, 39.4, lowOut, 40, ridge, Self.plain)
-        band(lowOut, [Float](repeating: 40, count: sides), lowIn, [Float](repeating: 45, count: sides), blue, Self.tiles)
-        cap(lowOut.reversed(), 39.4, colour("blueRidge"), Self.plain)
+        wallBand(lowOut, 37.9, lowOut, 38.5, ridge, Self.plain)
+        band(lowOut, [Float](repeating: 38.5, count: sides), lowIn, [Float](repeating: 43.5, count: sides), blue, Self.tiles)
+        cap(lowOut.reversed(), 37.9, colour("blueRidge"), Self.plain)
         let drum = Self.polygon(sides, 25.5, 0, cy, phase: phase)
-        wallBand(drum, 45, drum, 49.5, hall, Self.plain)
-        cap(lowIn, 45, blue, Self.plain)
+        wallBand(drum, 43.5, drum, 48.5, hall, Self.plain)
+        cap(lowIn, 43.5, blue, Self.plain)
         let upOut = Self.polygon(sides, 31, 0, cy, phase: phase)
-        wallBand(upOut, 49, upOut, 49.5, ridge, Self.plain)
-        cap(upOut.reversed(), 49, ridge, Self.plain)
-        pyramidRoof(upOut, 0, cy, from: 49.5, to: 63.5, steps: full ? 5 : 3, blue)
-        // The finial: a gold-white spire to 70 m.
-        let foot = Self.polygon(full ? 8 : 4, 1.8, 0, cy, phase: phase), tip = Self.polygon(full ? 8 : 4, 0.25, 0, cy, phase: phase)
-        wallBand(foot, 63.4, tip, 70, colour("finial"), Self.plain)
+        wallBand(upOut, 48, upOut, 48.5, ridge, Self.plain)
+        cap(upOut.reversed(), 48, ridge, Self.plain)
+        pyramidRoof(upOut, 0, cy, from: 48.5, to: 66, steps: full ? 5 : 3, blue)
+        // The finial: a short gold spire to 70 m.
+        let foot = Self.polygon(full ? 8 : 4, 1.6, 0, cy, phase: phase), tip = Self.polygon(full ? 8 : 4, 0.25, 0, cy, phase: phase)
+        wallBand(foot, 65.9, tip, 70, colour("finial"), Self.plain)
         cap(tip, 70, colour("finial"), Self.plain)
         if full {
-            for (r, z) in [(Float(31), Float(49.5)), (38, 40)] {
+            for (r, z) in [(Float(31), Float(48.5)), (38, 38.5)] {
                 for p in Self.polygon(8, r, 0, cy, phase: phase) {
                     box(p.x - 0.6, p.y - 0.6, z, p.x + 0.6, p.y + 0.6, z + 1.4, ridge, Self.plain)
                 }
@@ -190,24 +198,27 @@ extension LandmarkMesh {
     }
 
     /// The National Theater (OSM way 1052759776) and Concert Hall (way
-    /// 1052759775): 37 m high with a 12 m roof, on a two-step white podium,
-    /// red columns round the hall under a double eave of gold tile; the
-    /// theater's top roof hipped (廡殿), the hall's a hip-and-gable (歇山);
-    /// broad steps up the front (-y), toward the square.
+    /// 1052759775): on a two-step white podium 6 m high, a deep gallery of
+    /// red columns round red walls, painted brackets under a double eave of
+    /// gold tile to OSM's 37 m (the gallery and podium as the Blender
+    /// models'), the theater's top roof hipped (廡殿), the hall's a
+    /// hip-and-gable (歇山); broad steps up the front (-y), toward the
+    /// square.
     mutating func performingArtsHall(_ hx: Float, _ hy: Float, kind: RoofKind) {
         let stone = colour("stone"), red = colour("vermilion"), gold = colour("goldTile"), goldRidge = colour("goldRidge")
-        box(-hx, -hy, 0, hx, hy, 2.5, stone, Self.plain, top: colour("plinth"))
-        box(-hx + 4, -hy + 4, 2.5, hx - 4, hy - 4, 5, stone, Self.plain, top: colour("plinth"))
-        stairs(width: 34, from: -hy - 6, to: -hy + 4, height: 5, stone)
-        // The hall behind its columns, 15 m to the lower eave.
-        let wx = hx - 13, wy = hy - 13
-        box(-wx, -wy, 5, wx, wy, 20, colour("hallWall"), Self.floors)
-        colonnade(hx - 9, hy - 9, 5, 20, step: 6, size: 1.5, red)
-        let deck: [P2] = [(-(hx - 8), -(hy - 8)), (hx - 8, -(hy - 8)), (hx - 8, hy - 8), (-(hx - 8), hy - 8)]
-        wallBand(deck, 19.2, deck, 20, colour("beam"), Self.plain)
-        // The double eave, a red clerestory between, the top to 37 m.
-        chineseRoof(hx - 8, hy - 8, eaves: 19.5, over: 4.5, rise: 12, sweep: 2.2, kind: kind, tiers: 2, tierRise: 5.5, tierInset: 7,
-                    colours: ChineseRoofColours(tile: gold, ridge: goldRidge, underside: colour("beam"), gable: red, wall: red))
+        box(-hx, -hy, 0, hx, hy, 3, stone, Self.plain, top: colour("plinth"))
+        box(-hx + 4, -hy + 4, 3, hx - 4, hy - 4, 6, stone, Self.plain, top: colour("plinth"))
+        stairs(width: 34, from: -hy - 6, to: -hy + 4, height: 6, stone)
+        // The hall behind a gallery 4 m deep, 14 m to the lower eave.
+        let wx = hx - 15, wy = hy - 15
+        box(-wx, -wy, 6, wx, wy, 20, colour("hallRed"), Self.floors)
+        colonnade(hx - 11, hy - 11, 6, 20, step: 6, size: 1.6, red)
+        let deck: [P2] = [(-(hx - 10), -(hy - 10)), (hx - 10, -(hy - 10)), (hx - 10, hy - 10), (-(hx - 10), hy - 10)]
+        wallBand(deck, 19, deck, 20, colour("bracket"), Self.plain)
+        // The double eave 9 m out past the columns, a red clerestory
+        // between, the upper eave over the columns.
+        chineseRoof(hx - 8.5, hy - 8.5, eaves: 20, over: 6.5, rise: 11, sweep: 2.4, kind: kind, tiers: 2, tierRise: 6, tierInset: 9,
+                    colours: ChineseRoofColours(tile: gold, ridge: goldRidge, underside: colour("bracket"), gable: red, wall: red))
         // The plan with its steps, as OSM's, round the origin.
         shift(from: 0, by: (0, 3))
     }
@@ -336,9 +347,9 @@ extension LandmarkMesh {
         box(-wx, -wy, 2, wx, wy, 19, colour("cream"), Self.floors)
         colonnade(hx - 7, hy - 7, 2, 19, step: 6.5, size: 1.6, colour("column"))
         let deck: [P2] = [(-(hx - 6), -(hy - 6)), (hx - 6, -(hy - 6)), (hx - 6, hy - 6), (-(hx - 6), hy - 6)]
-        wallBand(deck, 18.6, deck, 19.5, colour("beam"), Self.plain)
+        wallBand(deck, 18.6, deck, 19.5, colour("bracket"), Self.plain)
         palaceRoof(hx - 6, hy - 6, eaves: 20, over: 6, rise: 10, sweep: 4.5, arch: 4.5, tile: gold, ridge: goldRidge,
-                   underside: colour("beam"))
+                   underside: colour("bracket"))
     }
 
     /// The Grand Hotel's main building (OSM way 25202548, 14 storeys; the
@@ -407,10 +418,10 @@ extension LandmarkMesh {
         box(-(wx - 1.2), -(wy - 1.2), base, wx - 1.2, wy - 1.2, base + body, colour("hallWall"), Self.plain)
         colonnade(wx, wy, base, base + body, step: 2.6, size: 0.6, red)
         let deck: [P2] = [(-wx, -wy), (wx, -wy), (wx, wy), (-wx, wy)]
-        wallBand(deck, base + body - 0.6, deck, base + body, colour("beam"), Self.plain)
+        wallBand(deck, base + body - 0.6, deck, base + body, colour("bracket"), Self.plain)
         let eave = base + body, step: Float = 2.6
         chineseRoof(wx, wy, eaves: eave, over: 1.8, rise: top - eave - (double ? step : 0), sweep: 1.0, kind: .hipGable,
                     tiers: double ? 2 : 1, tierRise: step, tierInset: 1.4,
-                    colours: ChineseRoofColours(tile: gold, ridge: green, underside: colour("beam"), gable: red, wall: red))
+                    colours: ChineseRoofColours(tile: gold, ridge: green, underside: colour("bracket"), gable: red, wall: red))
     }
 }

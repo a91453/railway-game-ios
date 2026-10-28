@@ -1,0 +1,95 @@
+import Foundation
+import XCTest
+@testable import GamePresentation
+
+/// Not a test: decision 457's comparison sheets. STUDIO_EXPORT=<dir>
+/// writes each landmark's near model, in model axes, 12 floats a vertex
+/// (as Map3DPreviewDump's), to <dir>/<case>.raw. STUDIO_DUMP=<prefix>
+/// with STUDIO_COLUMNS=<dir|LIVE>,... lays the four landmarks the Blender
+/// models also have in rows, one column a version, and writes a dump for
+/// tools/map3d-preview/render.sh with seven views of each.
+final class Map3DLandmarkStudio: XCTestCase {
+    static let marks: [Map3DTaipeiLandmark] = [.chiangKaiShekMemorialHall, .nationalTheater, .nationalConcertHall, .sunYatSenMemorialHall]
+
+    static func raw(_ mark: Map3DTaipeiLandmark) -> [Float] {
+        let mesh = mark.model(full: true)
+        var floats: [Float] = []
+        for i in mesh.indices {
+            let v = mesh.vertices[Int(i)], c = v.color
+            floats += [v.x, v.y, v.z, v.nx, v.ny, v.nz, Float(c & 0xFF) / 255, Float((c >> 8) & 0xFF) / 255, Float((c >> 16) & 0xFF) / 255, v.u, v.v, v.layer]
+        }
+        return floats
+    }
+
+    func testStudio() throws {
+        let env = ProcessInfo.processInfo.environment
+        if let dir = env["STUDIO_EXPORT"] {
+            for mark in Map3DTaipeiLandmark.allCases {
+                try Self.raw(mark).withUnsafeBytes { try Data($0).write(to: URL(fileURLWithPath: "\(dir)/\(mark).raw")) }
+            }
+            return
+        }
+        guard let out = env["STUDIO_DUMP"], let columns = env["STUDIO_COLUMNS"]?.split(separator: ",").map(String.init) else { return }
+        let spacing: Float = 400
+        var floats: [Float] = [], indices: [UInt32] = []
+        let w = spacing * Float(max(columns.count, Self.marks.count)) + 400
+        let g = UInt32(0)
+        for (x, z) in [(-400, -400), (w, -400), (w, w), (-400, w)] as [(Float, Float)] {
+            floats += [x, -0.02, z, 0, 1, 0, 0.78, 0.79, 0.76, 0, 0, -1]
+        }
+        indices += [g, g + 3, g + 2, g, g + 2, g + 1]
+        var tops: [String: Float] = [:]
+        for (row, mark) in Self.marks.enumerated() {
+            for (column, source) in columns.enumerated() {
+                let model: [Float] = source == "LIVE" ? Self.raw(mark)
+                    : try Data(contentsOf: URL(fileURLWithPath: "\(source)/\(mark).raw")).withUnsafeBytes { Array($0.bindMemory(to: Float.self)) }
+                let ox = Float(column) * spacing, oz = Float(row) * spacing
+                let base = UInt32(floats.count / 12)
+                var top: Float = 0
+                for k in stride(from: 0, to: model.count, by: 12) {
+                    let m = Array(model[k..<k + 12])
+                    top = max(top, m[2])
+                    floats += [ox + m[0], m[2], oz - m[1], m[3], m[5], -m[4], m[6], m[7], m[8], m[9], m[10], m[11]]
+                }
+                indices += (0..<UInt32(model.count / 12)).map { $0 + base }
+                tops["\(row):\(column)"] = top
+            }
+        }
+        let lighting = Map3DLighting(minute: 14 * 60)
+        func padded(_ light: SIMD3<Float>) -> [Float] { [light.x, light.y, light.z, 0] }
+        func uniforms(_ camera: Map3DCamera) -> [Float] {
+            let fog = lighting.fogColour, scale = lighting.fogScale
+            let eye = camera.eye, far = camera.depthRange.far
+            return camera.viewProjection.columns
+                + [lighting.sunDirection.x, lighting.sunDirection.y, lighting.sunDirection.z, 0]
+                + padded(lighting.sunLight) + padded(lighting.skyLight) + padded(lighting.groundLight)
+                + [fog.x, fog.y, fog.z, 0] + [eye.x, eye.y, eye.z, 1] + [camera.distance * 1.6 * scale.near * 4, far * 0.9 * scale.far * 4, 0, 0]
+                + [Map3DSunShadow.blobStrength(lighting, drawn: false), lighting.lights, 0, 0] + Map3DLighting.nightWindowRows
+                + Map3DReflection.rows(sky: Map3DSky(lighting), sunLight: lighting.sunLight, quality: .automatic, seconds: 0, reduceMotion: false)
+                + Map3DSunShadow.rows(nil, lighting: lighting)
+        }
+        // Seven views: the front, the front's two quarters, the sides, the
+        // back, and the front from high up.
+        let looks: [(String, Float, Float)] = [("front", 0, 74), ("frontright", -45, 70), ("right", -90, 74), ("back", 180, 74),
+                                                ("left", 90, 74), ("frontleft", 45, 70), ("high", 30, 40)]
+        var views: [String: [Float]] = [:]
+        for (row, _) in Self.marks.enumerated() {
+            for column in columns.indices {
+                let top = tops["\(row):\(column)"]!
+                for (name, heading, pitch) in looks {
+                    var camera = Map3DCamera(target: Map3DPoint(Float(column) * spacing, top * 0.4, Float(row) * spacing),
+                                             distance: 175, heading: heading * .pi / 180, viewport: (1600, 900))
+                    camera.pitch = pitch * .pi / 180
+                    views["r\(row)c\(column)-\(name)"] = uniforms(camera)
+                }
+            }
+        }
+        try floats.withUnsafeBytes { try Data($0).write(to: URL(fileURLWithPath: out + ".vertices")) }
+        try indices.withUnsafeBytes { try Data($0).write(to: URL(fileURLWithPath: out + ".indices")) }
+        for part in ["svertices", "sindices", "signs"] { try Data().write(to: URL(fileURLWithPath: out + "." + part)) }
+        try JSONSerialization.data(withJSONObject: ["views": views, "sky": [lighting.background.x, lighting.background.y, lighting.background.z],
+                                                    "signClock": Map3DSign.clock(seconds: 0, hour: lighting.hour, quality: .automatic, reduceMotion: false),
+                                                    "rain": [] as [[Float]], "rainColour": [0, 0, 0, 0], "triangles": indices.count / 3])
+            .write(to: URL(fileURLWithPath: out + ".json"))
+    }
+}

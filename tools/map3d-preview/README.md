@@ -62,3 +62,20 @@ node tools/map3d-preview/diff.cjs before-close-shadows.png after-close-shadows.p
 - `diff.cjs`：在 `render.cjs` 用的同一個無頭 Chromium 裡用 canvas 解 PNG，跑 pixelmatch（門檻 0.1），寫出差異圖（紅色是變了的像素，其他淡掉）並印出變了幾個像素。
 - `pixelmatch.mjs`：pixelmatch 7.2.0 的 `index.js`，一字未改（sha256 `52c6026c…5788`）；授權 ISC，版權行與原文在 `pixelmatch.LICENSE`（複製或改寫時一起保留）。作者 2026-10-21 同意加這個依賴（「pixelmatch 可以加」），只在 `tools/` 與本機用，不進 App 的 bundle，不加 npm 套件。
 - 前後圖要同一個鏡頭、同一個時刻；只改一個東西時，在同一個分支上開關那個東西各輸出一次（例如決策 314 的路線色帶：`Map3DScene` 不給 `lineBands` 與給的），比兩個 worktree 省一次建置。
+
+## 地標的比對圖（決策 457）
+
+`Map3DLandmarkStudio.swift.txt` 把中正紀念堂、兩廳院、國父紀念館排成四列、每一版一欄，畫在灰色地面上，每棟七個方向（正面、右前、右、背面、左、左前、高處）。一欄是一個資料夾裡的 `<地標>.raw`（`STUDIO_EXPORT` 從某個 commit 匯出的模型，或 `blender_mesh_to_raw.py` 轉的參考庫 `blender-buildings-v1` 網格），或 `LIVE`（現在這份程式）。
+
+```sh
+cp tools/map3d-preview/Map3DLandmarkStudio.swift.txt Tests/GamePresentationTests/Map3DLandmarkStudio.swift
+swift build --build-tests
+# 舊版：在那個 commit 的 worktree 裡同樣複製、建置，再
+STUDIO_EXPORT=/tmp/old swift test --skip-build --filter Map3DLandmarkStudio
+python3 -I tools/map3d-preview/blender_mesh_to_raw.py <參考庫>/Railway/taiwan-rail-reference-clean/source/rail-3d/assets/blender-buildings-v1/national-theater /tmp/blender/nationalTheater.raw
+STUDIO_DUMP=/tmp/sheet STUDIO_COLUMNS=/tmp/old,/tmp/blender,LIVE swift test --skip-build --filter Map3DLandmarkStudio
+tools/map3d-preview/render.sh /tmp/sheet /tmp/png/s r0c0-front,r0c1-front,...
+rm Tests/GamePresentationTests/Map3DLandmarkStudio.swift
+```
+
+鏡頭的名字是 `r<列>c<欄>-<方向>`；Blender 的四個檔名是 `chiangKaiShekMemorialHall`、`nationalTheater`、`nationalConcertHall`、`sunYatSenMemorialHall`。

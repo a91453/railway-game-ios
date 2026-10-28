@@ -134,9 +134,9 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         // Decision 457: marble and blue tile, gold tile and red columns,
         // brick and slate, gate stone, in the same pale look.
         "stone": 0xF1EFEA, "hallWhite": 0xF8F7F3, "blueTile": 0x9DB4D6, "blueRidge": 0x86A0C6, "opening": 0xADAAA6,
-        "finial": 0xEDE3C4, "vermilion": 0xDC968A, "goldTile": 0xEACB80, "goldRidge": 0xD9B76C, "hallWall": 0xF0E8DD,
-        "beam": 0xD6BEAE, "brick": 0xDDA996, "brickTrim": 0xF6F3EC, "slate": 0xAEB5BD, "cream": 0xF2EAD8,
-        "column": 0xCBC9C5, "gateStone": 0xD9D2C6, "greenRidge": 0x98C4AE,
+        "finial": 0xE6C47A, "vermilion": 0xDC968A, "goldTile": 0xEACB80, "goldRidge": 0xD9B76C, "hallWall": 0xF0E8DD,
+        "brick": 0xDDA996, "brickTrim": 0xF6F3EC, "slate": 0xAEB5BD, "cream": 0xF2EAD8,
+        "column": 0xCBC9C5, "gateStone": 0xD9D2C6, "greenRidge": 0x98C4AE, "hallRed": 0xD08A7E, "bracket": 0x9CC2BC, "doorway": 0x8E979C,
     ].mapValues(Map3DColor.rgb)
 
     /// The model, in full close by, or without its small parts from afar.
