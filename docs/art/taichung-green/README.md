@@ -1,69 +1,54 @@
-# 台中捷運綠線：原生靜態展示第二版
+# 台中捷運綠線 studies：第三版外觀修訂
 
-本輪從公開 main `04f81f7a8ebffa94719785ce545f5e52e6aa7101` 獨立重建，配方為 Codex 製作。只追加 `Map3DModelPack.studies`，不增加 `standard` 常駐模型；既有 `tmrt → metroGeneric、2車` 營運接點完全保護。開工時三鶯 #1422 未合併（收尾已合main 9b9ad5c5，本分支已保留其追加）；工具 #1416/#1357、C371/C381 #1342 已合併，沒有搬三鶯分支或換色套其殼。
+使用者重新提供四張實車照片要求確認。重新打開第二版原生正／側／斜圖後，確認車頭與黑罩過方、綠帶過灰且不連續、下裙方塊及連結器區實心感都是明顯偏差；撤回前版將它們僅列為細節簡化的寬鬆自評。第三版已實際改原生配方，技術通過仍不代表使用者接受。
 
-來源逐項網址、作者、日期、權利、下載 SHA、類別與缺口見 [source-record.json](source-record.json)。原圖只在暫存目視，不公開或打包。使用者附的 K.Y.Chung 插畫有 CC BY-NC-ND 標記，只觀察，不描圖、不重發；其他四張聊天照片沒有本機原檔／SHA。川崎產品頁的工廠圖是實車；2011 合約的藍帶圖是效果圖，不能當現行綠色實車依據。市府捷運工程局綠線頁的「車輛」連往中捷規格，另開啟該局頁面的實景合成背景，但不拿它量尺寸。
+[本批總覽](overview.png) · [來源及授權紀錄](source-record.json) · [驗證證據](verification.json) · [專用重建／驗收](../../../tools/taichung-green/README.md) · [素材draft #21](https://github.com/a91453/railway-assets-private/pull/21)
 
-| 項目 | 已查證／模型處理 |
-|---|---|
-| 正式稱呼 | 中捷官網「電聯車」、川崎「緑線MRT電車 台湾 台中捷運」；採台中捷運中運量電聯車名稱，未冒填數字系列 |
-| 製造 | 川崎合約主責36輛；Blair報導川崎／台灣車輛共同承造，分配號碼未獲原廠一次資料獨立確認 |
-| 尺寸 | 官方每車22.17×2.98×3.78m，兩車44.34m；模型含門窗／連結器保持此外框 |
-| 編組 | DM1、DM2，1號端朝外、2號端車間相對；各自單元本地+X為1號端，DM2組裝旋轉180° |
-| 門窗 | 官方每車每側五組1500×1875mm雙門；四大客窗和端部窗帶按實車照片；兩側都有門 |
-| 走行 | 1435mm鋼輪鋼軌、750VDC第三軌；每車兩轉向架／四軸／八輪，無集電弓 |
-| 車頂 | 官方每車前後兩組空調；低矮銀灰罩、分格格柵；站位／尺寸是照片推估 |
-| 端部 | FRP白U形圓肩、收底深罩、獨立玻璃、兩側上下圓燈、綠側帶轉肩、分離下裙及露出自動連結器 |
-| 差異／缺口 | DM1/DM2底箱群分別簡化；隱藏設備身份、兩側精確不對稱、輪徑／軸距及鼻面尺寸均待工程資料，不能稱完整工程還原 |
+實際製作者：**Codex**。本輪從最新main `12e4590a` 開獨立 `codex/taichung-green-shape-2026-10-28`；前公開#1430已由規劃合併。本型只在studies，`tmrt → metroGeneric`兩車營運映射、GameCore、存檔、fixtures、購車、班表、動畫均未改。
 
-四個最終合法M3DM單元：DM1/DM2各近3120、遠1512三角。近／遠完整兩車為6240／3024三角，使用M3DAssembly容器，從最終單元嵌入重建；不是把整列預覽bin冒稱可載入獨立檔。近單元≤15000格式／20000單元預算、遠少於近一半；全列另驗近240000／遠120000規則。固定平移+11.085／−11.085m、旋轉0／180°，軌面Z0，原生+X前／+Y左／+Z上，GLB軸向只轉一次。
+## 本輪改動與照片對照
 
-## 重建及證據
+四張重新提供的聊天照片已逐張目視，無可下載原檔／作者／SHA，不重發圖素。並重新使用先前實際下載的中捷官方實車、川崎工廠實車與Blair南屯站原圖作旁置比較；逐圖URL／作者／日期／授權及SHA見source-record。川崎2011藍帶效果圖與K.Y.Chung插畫另列，只觀察，不冒充實車或工程圖。
 
-[操作／專用驗收](../../../tools/taichung-green/README.md)；[編組資料](../../../tools/taichung-green/assembly.json)。真正producer、重建bytes與兩庫draft鏈結見下方交付紀錄及素材README。本對話已推第一版 ebf978be 為真正前版，第二版只延伸車間風琴，並新增縮回100mm的實際故障反例。
+| 方向 | 照片顯示／本輪修正 | 仍不足或資料缺口 |
+|---|---|---|
+| 正面 | 深罩與風擋上緣有弧度、下部圓收；改密輪廓並修裁切後完整面積法線，白U下緣形成上拱深色唇；燈改有邊緣的雙圓鏡片 | FRP肩部／燈座仍低面數，不聲稱精準復刻 |
+| 側面 | 上下綠帶連續繞肩；改用遊戲既有綠色底色#7CC058，避開街道家具淡化；加接回腰帶的曲線肩帶 | 尚未量得真實塗裝曲線；沒有靠改色宣稱幾何全同 |
+| 前斜 | 下裙為左右弧形頰板，中央開口露出連結器；實作凹孔、變暗車底、補吊座／轉向架枕座 | 隱藏管線／底箱／精確支承仍簡化，未冒稱工程資料 |
+| 俯視 | 官方示意及聊天俯斜照支持每車前後各一空調、兩車共四組，沒有集電弓 | 沒有完整正俯實車原圖；精確設備長寬及站位資料不足 |
 
-- Swift 6.4，warnings-as-errors build-tests；本型與ModelPackSize測試。以最終交付紀錄的實跑結果為準。
-- 共用GLB／拓樸／缺面／反面／100mm編組錯位反例；本車玻璃射線、八輪逐一Z0和向上淨空射線、空調中央底面與真屋頂接觸；埋玻璃100mm、抬輪40mm、抬設備60mm反例。這些是幾何抽樣，不是全碰撞或工程支承認證。
-- Blender 4.3.2獨立匯入六件GLB，查三角、軸向bounds及頂點色；Swift另讀交付單元直接組裝，與JS展開payload逐頂點比位置及全部色值。
-- 完整PNG解碼／七向及白模剪影目視／互動viewer真下載SHA、producer獨立重建bytes、原有模型保護及CI依下方交付紀錄。
+車體、門窗與設備位置仍以本型獨立配方為主，沒有套三鶯／C371車頭或底架。C371僅在同一公尺場景／相機作風格比較。既有霧面頂點色、無照片貼圖、無商標；不以反光補錯形。
 
-## 外觀與狀態
+## 實車資料與模型契約
 
-自檢：先看四向白模／剪影後修鼻端接合，再做薄門窗、弧面深罩、圓燈、綠色轉肩及設備。已逐件查看最終多視角，近遠保持同框。使用遊戲霧面頂點色，不帶真logo、貼圖或照片；C371只作同尺度風格比較。
+中捷官網每車22.17×2.98×3.78m、兩車44.34m，DM1／DM2，鋼輪鋼軌1435mm、第三軌750VDC、每車每側五組1500×1875mm雙門、每車兩組空調、FRP車頭／不鏽鋼車身。川崎原始合約確認36輛／18組、無人駕駛與第三軌。台灣車輛分工號碼僅有次級報導，沒有冒稱完成原廠一次查證；沒有替本型編造數字系列。輪徑、軸距、底箱、設備及鼻面細部均屬照片比例推估。
 
-尚不足：黑罩仍有低面數折線，綠色使用既有淡化遊戲色票，與照片鮮綠有差異；隱藏設備與左右底箱不對稱仍是簡化推估。不可將自檢視為使用者接受。
+原生+X前／+Y左／+Z上，公尺、軌面Z0。四單元DM1／DM2近景各**3828**、遠景各**1848**三角；兩車**7656／3696**，由最終單元重建M3DAssembly，平移±11.085m、旋轉0／180°。單檔15000、單元20000、編組近240000／遠120000與遠少於近一半分開驗；未擴大loader限制。GLB只轉一次軸向。
 
-素材技術與證據見交付紀錄；**使用者外觀接受 UNVERIFIED、營運接入 UNVERIFIED（本輪未接）、Simulator／真機Metal／效能／記憶體／動畫 UNVERIFIED**。Linux WebGL不等於Metal。沒有更動GameCore、存檔、fixtures、購車、班表或動畫；draft不授權合併、auto-merge或TestFlight。
+## 真版本與重建
 
-原創配方／輸出遵循公開庫 [LICENSE.md](../../../LICENSE.md)（Copyright 2026 a91453，All rights reserved）；外部來源只觀察，保留其權利，不把效果圖／照片再授權為本模型。
+- 最終producer：[0b6d26dfac46e702550fc5e9d1afc7a7bc9af339](https://github.com/a91453/railway-game-ios/commit/0b6d26dfac46e702550fc5e9d1afc7a7bc9af339)。獨立checkout重建14份native／GLB／assembly／bin，全部逐bytes相同。
+- 真正第二版producer `e525a29aa141f46162662e361037f4901d8ec77a`，素材提交 `61084334187422a4383e05e058fa4afc8d1073f8`。同相機／canvas／同bounds比較見私包`png/true-before-after.png`，不是事後重造前版或各自縮放。
+- [完整第三版／viewer／20PNG／SHA／重建README](https://github.com/a91453/railway-assets-private/tree/codex/taichung-green-assets-2026-10-28/game-art-previews/docs/art/taichung-green/revision-3)。第二版重檔在同素材PR移除，保留PNG／README／來源／授權；用真commit恢復，不建ZIP或history/old/backup。
+- 公開只有一張小總覽，本輪私庫20PNG，每張≤2MiB，單檔≤50MiB、PR新增≤200MiB，交付前依最新素材AGENTS跑asset_guard。
 
-## 本批交付紀錄
+```sh
+git checkout 0b6d26dfac46e702550fc5e9d1afc7a7bc9af339
+tools/train-models/run.sh /tmp/tg --ids taichung-green-dm1,taichung-green-dm2,taichung-green-dm1-far,taichung-green-dm2-far --assembly-spec tools/taichung-green/assembly.json
+node tools/train-models/package.mjs /tmp/tg
+node tools/train-models/audit.mjs /tmp/tg
+python3 tools/taichung-green/audit.py /tmp/tg
+# 其他Blender／Swift編組／PNG／viewer命令見 tools/taichung-green/README.md
+```
 
-- 公開 draft [#1430](https://github.com/a91453/railway-game-ios/pull/1430) ↔ 素材 draft [#21](https://github.com/a91453/railway-assets-private/pull/21)。
-- 固定producer：[e525a29aa141f46162662e361037f4901d8ec77a](https://github.com/a91453/railway-game-ios/commit/e525a29aa141f46162662e361037f4901d8ec77a)。以該commit獨立checkout重建，14份native／GLB／assembly／bin全部逐bytes相同。
-- [完整素材／20張預覽／viewer／SHA／重建README](https://github.com/a91453/railway-assets-private/tree/codex/taichung-green-assets-2026-10-28/game-art-previews/docs/art/taichung-green/revision-2)，最終PR約8.4MiB（含前版PNG），staged及committed asset_guard通過。公開只一張[總覽](overview.png)，合計21PNG。
-- [技術證據](verification.json)：共用六模型audit、本車近遠射線與實際反例、Blender六GLB、Swift直接組裝27792頂點（最大位置差1.67µm、全部色相同）、168PNG完整解碼、最終交付viewer六模型日夜七向／旋轉／縮放／手機寬度／真下載bytes檢查均本機VERIFIED。file:// transport仍UNVERIFIED。
-- 另以獨立main checkout匯出**680個既有原生檔**與本分支逐bytes核對，全相同；680個全頂點欄位FNV也相同，hash鎖只追加本型四行項目。
-- 外觀已實看最終六件七向配色／白模／剪影，另同一公尺空間／相機並排C371作風格比較；不是照片相似度或使用者接受。
-- 相容性擴查抓到studies總數原97漏新增4件，已補本型Role×2計數；模型及producer保持。
+## 驗證與限制
 
-素材技術 **VERIFIED（限上述證據）**；使用者外觀接受、營運接入及裝置驗證皆 **UNVERIFIED**。不將綠燈解讀為使用者接受。
+本機Swift6.4 warnings-as-errors與最終12項本型／ModelPackSize／ModelTests通過；另13項含啟用記憶體報告通過，standard仍583模型／133.3MB。684份其他模型與最新main獨立匯出逐bytes相同、全部欄位FNV不變；hash鎖只改本型四項。最新main既有28項其他車款鎖值與實際欄位不符，仍記為全包鎖問題，沒有改別款值消紅。
 
-第二版真正前版為公開producer `ebf978be13e1be6eec1218389f596ff92137d6cb`／私庫`d90867d7`。本PR已刪revision-1重檔，只保留PNG／README／來源／授權。最終producer `e525a29a`，私包提交`61084334`。每單元只有36個位置頂點在風琴區改動；近景另有163個色值頂點因自動遮蔽重烘而變，遠景色值保持，不能說是全部其他payload不變。詳見revision-delta.json。
+六件拓樸／正體積／退化面／缺面反面／編組錯位反例；近遠獨立玻璃射線、八輪貼軌與淨空、屋頂中央支承、風琴接面、中央開口、凹孔及兩枕座／吊座內部材料探點。埋玻璃、抬輪、抬設備、縮風琴、封開口與逐件刪支承反例均拒收。真第二版四單元被新凹孔probe拒收。虛擬射線門檻是顯示模型約束，不是工程尺寸或全碰撞證明。
 
-最終Swift6.4 warnings-as-errors與12項相關測試通過；另啟用記憶體報告的13項測試通過，standard仍583模型／133.3MB（單份模型資料，非真機實測）。最終viewer真下載原生／GLB逐bytes及SHA驗收見verification.json。完整CI／iOS以公開PR最新head checks為準，不拿舊head綠燈代替。
+Blender4.3.2獨立匯入六GLB，Swift直接編組34056頂點、色值相同／最大位置差1.68µm；168PNG完整RGBA透明解碼，最終六件七向配色／白模／剪影與實車旁置目視；最終viewer真下載native／GLB／PNG SHA、旋轉／縮放／手機寬度及六張下載PNG完整解碼。file://管理政策阻擋，該transport仍UNVERIFIED；loopback HTTP與自含資料驗收通過。
 
-收尾因main前進發生三處衝突，已保留兩車款studies／計數和雙方HANDOFF。最新前置狀態：三鶯#1422已合，原工具#1416/#1357已合；本型沒有取用三鶯幾何。素材producer仍釘e525a29a，非把merge後工作區冒充舊producer。
+四種狀態分開：**本型素材技術VERIFIED（限證據範圍）／使用者第三版外觀接受UNVERIFIED／營運接入UNVERIFIED／Simulator及真機Metal、效能、記憶體、動畫UNVERIFIED**。Linux通過不等於裝置驗證；本輪未接營運、不合併、不auto-merge、不TestFlight。最新head實際CI看本輪公開draft checks，不能以舊#1430綠燈代替。
 
-依新合併手冊10.1，另在暫存把最終原生圖與原始來源照片並排實看（未重發第三方照片）：
-
-| 方向／來源 | 照片／模型與仍有差異 |
-|---|---|
-| 正面／中捷official-front | 都是上寬下收深罩、寬白U及雙圓燈；模型罩下緣仍偏折線，白框下部與裙部偏幾何化；主要車型可辨，自檢不等於接受 |
-| 側面／Blair南屯photo | 都有每側五組雙門、四大客窗和端部深窗帶、上下綠帶；模型綠色較淡、窗線與底箱較簡化，透視照片不能用作工程站位 |
-| 斜視／川崎實車photo | 車頭下壓／肩帶、四空調兩車一致；模型肩帶轉折較直，設備格柵密度更低，沒有搬實車logo |
-| 俯視 | 沒有來源完整正俯實車照片，資料不足；官方俯側示意只支援兩空調站區，不能冒充實車照片。聊天俯斜照片僅輔助、沒有可下載原檔SHA |
-
-前置素材PR亦已實查：三鶯素材railway-assets-private#19於2026-10-28T12:23:54Z合併，head73fda55c；公開#1422於本輪收尾已合。不沿用其幾何。
-
-合併main b4fff5ed後，嚴格build與含三鶯的13項相關測試通過；重匯本批14成品仍逐bytes等於producer。最終全包鎖重算另發現**28項最新main既有車款鎖值與實際欄位不符**（名單見verification.json，主要EMU3000／莒光相關set）；本PR相對main舊鎖零變更，只有台中四項新增且正確。原680實際FNV仍等於開工main、前述680原生bytes保護證據保持。**不能宣稱全包鎖核對通過**；未為消紅而改別款鎖。已回報#1041留共用工具／原車作者查核。這不改本批四單元及六交付模型的專用驗證結論。
+配方／成品遵循 [LICENSE.md](../../../LICENSE.md)：Copyright2026 a91453，All rights reserved。第三方照片／插畫只觀察、不重發圖素，保留各自權利。

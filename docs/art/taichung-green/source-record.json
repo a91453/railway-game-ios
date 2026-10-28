@@ -132,6 +132,8 @@
     "path": "Railway/taiwan-rail-reference-clean/source/rail-3d/assets/garage-blender-v1/taichung.json",
     "finding": "Q-proportions-photo-informed, illustrative single car, 10.708m model, engineeringDimensionsM null; not used as dimensions or geometry; mesh not reused"
   },
-  "latest_producer": "e525a29aa141f46162662e361037f4901d8ec77a",
-  "true_previous_producer": "ebf978be13e1be6eec1218389f596ff92137d6cb"
+  "latest_producer": "0b6d26dfac46e702550fc5e9d1afc7a7bc9af339",
+  "true_previous_producer": "e525a29aa141f46162662e361037f4901d8ec77a",
+  "producer_commit": "0b6d26dfac46e702550fc5e9d1afc7a7bc9af339",
+  "recheck": "User supplied the same four real-train photos again. All four re-inspected in chat; no downloadable originals/SHA for these attachments. Revised cab mask, green wrap, lower skirt/coupler; withdrew lenient revision2 self-assessment. Primary downloaded originals still listed below."
 }

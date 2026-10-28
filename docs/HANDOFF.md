@@ -2304,3 +2304,7 @@ EMU900第二版（#1338／draft#1339↔私庫#102）：使用者要求修圓車�
 三鶯線兩節車靜態模型的重建入口與來源在 [SANYING_MODEL.md](art/native-vehicle-modeling/SANYING_MODEL.md)。使用者否定第一版外觀，又指出第二版與實車照片不夠像；第三版修白色側板／門柱、獨立深色窗、藍色車頭與銀色橫飾帶。使用者於 2026-10-28 回覆「可以」，僅第三版 producer `495468fe0bef6bf9e56b4543e1db5642bf0328c1` 記外觀接受。前版由 git producer 恢復；營運映射、真機仍未驗，公開／私有 draft PR 見本輪 #1041 登記。
 
 台中收尾合main b4fff5ed後13項相關測試綠、本批14成品與producer逐bytes相同。全包重算另抓到最新main鎖檔28項既有EMU3000／莒光等set值不符；[名單／證據](art/taichung-green/verification.json)，本PR不改任何舊鎖、台中四項正確，680原實際模型仍不變。共用鎖全包驗收不能稱綠，留共用工具／原車作者處理；本型專用素材驗收保持。最新CI看公開#1430 head checks。
+
+### 台中綠線第三版（Codex，使用者重貼四張實車照重新核對）
+
+前#1430已合，因此從最新main12e4590a開codex/taichung-green-shape-2026-10-28。撤回前版將車頭／綠帶／裙部偏差只列為細節簡化的寬鬆自評；已重修圓罩／風擋、連續遊戲綠帶、弧形下裙／凹孔及實體枕座／吊座。producer0b6d26df，真前版e525a29a／素材61084334；私draft#21新revision-3，同PR刪第二輪重檔、留PNG／README／來源。近3828／遠1848各單元，兩車7656／3696。684其他原生逐bytes與main相同，本型14成品獨立producer重建一致；新開口／凹孔／刪支承probe與真前版反例均已跑。本型[交接／來源／重建與證據](art/taichung-green/README.md)為入口；公開新draft及最新head CI看#1041。只studies、tmrt映射不變，外觀接受／營運接入／Simulator及真機仍UNVERIFIED；不合併／auto-merge／TestFlight。最新main繼承的28舊鎖差異不擅改，仍明列全包驗收限制。
