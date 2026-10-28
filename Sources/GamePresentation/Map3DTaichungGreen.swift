@@ -67,15 +67,20 @@ private struct TaichungGreenRecipe {
     }
     // Separable piecewise-linear surface: every grid cell is planar. Panels
     // use these exact planes, with real backs and perimeter walls.
-    mutating func patch(_ polygon: [(Float,Float)],color: UInt32,lift: Float,thickness: Float) {
+    mutating func patch(_ polygon: [(Float,Float)],color: UInt32,lift: Float,thickness: Float, centerFan: Bool = false) {
         func p(_ v: (Float,Float),_ offset: Float) -> Map3DPoint { Map3DPoint(front(v.0,v.1)+offset,v.0,v.1) }
         for i in 0..<(heights.count-1) { for j in 0..<(widths.count-1) {
             var q=clip(clip(polygon,axis:0,at:heights[i],greater:true),axis:0,at:heights[i+1],greater:false)
             q=clip(clip(q,axis:1,at:widths[j],greater:true),axis:1,at:widths[j+1],greater:false)
             if q.count<3 { continue }
             let c=q.map { p($0,lift-thickness/2) }.reduce(.zero,+)*(1/Float(q.count))
-            face(q.map { p($0,lift) },inside:c,color:color)
-            face(q.map { p($0,lift-thickness) },inside:c,color:color)
+            for offset in [lift,lift-thickness] {
+                let points=q.map { p($0,offset) }
+                if centerFan {
+                    let centre=points.reduce(.zero,+)*(1/Float(points.count))
+                    for k in points.indices { face([centre,points[k],points[(k+1)%points.count]],inside:c,color:color) }
+                } else { face(points,inside:c,color:color) }
+            }
         } }
         for i in polygon.indices {
             let a=polygon[i],b=polygon[(i+1)%polygon.count];var ts: [Float] = [0,1]
@@ -123,6 +128,36 @@ private struct TaichungGreenRecipe {
                (1.22,0.72),(1.28,0),(1.22,-0.72),(1.13,-1.15),(1.11,-1.40)],
               color:dark,lift:0.012,thickness:0.012)
         for side: Float in [-1,1] {
+            // The white U is bounded by dark outer cheeks, not by two isolated
+            // lamp decals on an all-white face. Photo-fitted paint boundaries;
+            // the underlying cab, glass and body section remain unchanged.
+            let cheekHeights: [Float] = far ? [1.25,1.40,1.92,2.70,3.12,3.30]
+                : [1.25,1.37,1.61,1.92,2.30,2.70,3.06,3.12,3.30]
+            func cheekInner(_ h: Float) -> Float {
+                interpolate(h,[1.25,1.37,1.61,1.92,2.30,2.70,3.06,3.30],
+                            [1.40,0.96,0.99,1.07,1.16,1.23,1.25,1.20])
+            }
+            func cheekOuter(_ h: Float) -> Float {
+                interpolate(h,[1.12,3.12,3.36],[1.418,1.448,1.388])
+            }
+            for i in 0..<(cheekHeights.count-1) {
+                let a=cheekHeights[i],b=cheekHeights[i+1]
+                patch([(a,side*cheekInner(a)),(b,side*cheekInner(b)),
+                       (b,side*cheekOuter(b)),(a,side*cheekOuter(a))],
+                      color:dark,lift:0.010,thickness:0.010,centerFan:true)
+            }
+            // Clean solid boundary approximates the photographed soft green
+            // transition. No gradient, reflective material or photo texture.
+            let greenHeights: [Float] = far ? [2.55,3.12,3.30] : [2.55,2.80,3.06,3.12,3.30]
+            func greenInner(_ h: Float) -> Float {
+                interpolate(h,[2.55,2.80,3.06,3.30],[cheekOuter(2.55),1.38,1.25,1.20])
+            }
+            for i in 0..<(greenHeights.count-1) {
+                let a=greenHeights[i],b=greenHeights[i+1]
+                patch([(a,side*greenInner(a)),(b,side*greenInner(b)),
+                       (b,side*cheekOuter(b)),(a,side*cheekOuter(a))],
+                      color:green,lift:0.022,thickness:0.012,centerFan:true)
+            }
             patch([(1.31,side*1.17),(1.35,side*1.33),(1.42,side*1.35),
                    (1.92,side*1.29),(2.00,side*1.21),(1.99,side*1.08),
                    (1.91,side*1.03),(1.44,side*0.90),(1.35,side*0.98)],
@@ -146,18 +181,19 @@ private struct TaichungGreenRecipe {
             kit.box(-0.60,3.12,side*1.448,20.2,0.018,0.20,green)
             // Green returns diagonally over the FRP shoulders; true local
             // section width at each height, instead of a vertical stripe box.
-            let levels: [Float] = far ? [1.25,1.85,2.6,3.30] : [1.25,1.55,1.85,2.2,2.6,3.0,3.12,3.30]
+            let levels: [Float] = far ? [1.25,1.40,1.85,2.55,3.30] : [1.25,1.40,1.55,1.85,2.2,2.55,2.6,3.0,3.12,3.30]
             func shoulder(_ h: Float,_ back: Bool,_ offset: Float) -> Map3DPoint {
                 let w=interpolate(h,[1.12,3.12,3.36],[1.418,1.448,1.388])
                 let band=interpolate(h,[1.25,1.55,1.85,2.2,2.6,3.0,3.30],
                                      [0.78,0.68,0.55,0.48,0.45,0.60,0.85])
-                let x=front(h,w)-(back ? band : 0.03)
+                let x=front(h,w)+(back ? -band : 0.022)
                 return Map3DPoint(x,h,side*(w+offset))
             }
             for i in 0..<(levels.count-1) {
                 let a=levels[i],b=levels[i+1]
                 prism([shoulder(a,true,0),shoulder(b,true,0),shoulder(b,false,0),shoulder(a,false,0)],
-                      [shoulder(a,true,0.018),shoulder(b,true,0.018),shoulder(b,false,0.018),shoulder(a,false,0.018)],green)
+                      [shoulder(a,true,0.018),shoulder(b,true,0.018),shoulder(b,false,0.018),shoulder(a,false,0.018)],
+                      a<1.40 || a>=2.55 ? green : dark)
             }
             kit.box(-0.8,2.1,side*1.453,19.8,0.018,1.02,dark)
             // Five double-leaf doorways, each side; no fictional cab door.
