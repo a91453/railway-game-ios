@@ -1394,8 +1394,9 @@ private struct RouteHintCard: ViewModifier {
 
     @ViewBuilder private func timedBody(content: Content) -> some View {
         content
-            .onChange(of: seen ? nil : RouteHintWatch(world: session.world), initial: true) { _, watch in
-                if watch != nil { session.watchRouteHint() }
+            // Decision 465: looked for off the main actor.
+            .task(id: seen ? nil : RouteHintWatch(world: session.world)) {
+                if !seen { await session.watchRouteHintOffTheMainActor() }
             }
             .alert(
                 Text(verbatim: RouteHint.title(in: session.language)),
