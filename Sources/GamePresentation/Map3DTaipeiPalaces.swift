@@ -8,96 +8,9 @@ import Foundation
 // concave slopes, corners turned up, a double eave's skirt, the hip-and-gable)
 // follows the owner's `Taipei_Central_3D_Clean/js/landmarks.js` (slop-taipei,
 // MIT, Copyright (c) 2026 Mr.doob), rebuilt here with the game's own parts
-// and colours.
+// and colours; the roof itself is `Map3DChineseRoof.swift`.
 
 extension LandmarkMesh {
-    /// How a palace roof ends: a hip at each end (廡殿), or a hip that turns
-    /// into a gable near the top (歇山).
-    enum RoofKind { case hipped, hipGable }
-
-    /// A Chinese roof over walls of half sides `hx`, `hy` whose eaves stand
-    /// `over` beyond them at `z0`, rising `rise` to the ridge's top: the
-    /// slopes concave, the corners swept up `sweep`, the middles of the front
-    /// and back eaves `arch` higher (the Sun Yat-sen Memorial Hall's); with a
-    /// fascia, an underside back to the walls, the hip ridges and a ridge
-    /// with end ornaments.
-    mutating func palaceRoof(_ hx: Float, _ hy: Float, eaves z0: Float, over: Float, rise: Float, sweep: Float,
-                             kind: RoofKind = .hipped, arch: Float = 0, tile: UInt32, ridge: UInt32, gable: UInt32? = nil,
-                             underside: UInt32) {
-        let ex = hx + over, ey = hy + over
-        // A gate's small roof in fewer pieces than a hall's.
-        let large = ex > 20
-        let steps = full ? (large ? 8 : 5) : (large ? 4 : 3), perSide = full ? (large ? 10 : 6) : (large ? 6 : 4)
-        let (unit, near) = Self.rectRing(1, 1, perSide: perSide)
-        // The ridge's half length: a hip's slopes meet it at 0.8 of the
-        // eave's half width in; a hip-and-gable's hips stop 0.45 of the way.
-        let ridgeHalf = kind == .hipped ? max(1, ex - ey * 0.8) : ex - ey * 0.45
-        let top = z0 + rise - 0.6
-        var rings: [(points: [P2], heights: [Float])] = []
-        for s in 0...steps {
-            let t = Float(s) / Float(steps)
-            let sy = ey * (1 - t)
-            let sx = kind == .hipped ? ex - (ex - ridgeHalf) * t : max(ridgeHalf, ex - (ey - sy))
-            let lift = sweep * (1 - t) * (1 - t) * (1 - t)
-            let heights = zip(unit, near).map { p, n -> Float in
-                let corner = 1 - min(n, 0.3) / 0.3
-                // The front and back eaves' middles, raised in a smooth bow.
-                let bow = abs(p.y) > 0.99 && abs(p.x) < 0.999 ? arch * (1 - t) * (1 - t) * (0.5 + 0.5 * cos(.pi * p.x)) : 0
-                return z0 + (top - z0) * powf(t, 1.6) + lift * corner * corner + bow
-            }
-            rings.append((unit.map { (x: $0.x * sx, y: $0.y * sy) }, heights))
-        }
-        for s in 0..<steps { band(rings[s].points, rings[s].heights, rings[s + 1].points, rings[s + 1].heights, tile, Self.tiles) }
-        // The eave's edge and its underside back to the walls.
-        let eave = rings[0]
-        band(eave.points, eave.heights.map { $0 - 0.5 }, eave.points, eave.heights, ridge, Self.plain)
-        band(unit.map { (x: $0.x * hx, y: $0.y * hy) }, eave.heights.map { _ in z0 - 0.5 }, eave.points,
-             eave.heights.map { $0 - 0.5 }, underside, Self.plain)
-        // A hip-and-gable's gables, a little proud of the roof.
-        if kind == .hipGable, let gable {
-            let gy = ey * 0.45, gz = rings[0].heights[perSide / 2] + (top - z0) * powf(0.45, 1.6)
-            for sign in [Float(-1), 1] {
-                let x = sign * (ridgeHalf + 0.05)
-                let a: P3 = (x, -sign * (ey - gy), gz), b: P3 = (x, sign * (ey - gy), gz), c: P3 = (x, 0, top - 0.2)
-                tri(a, b, c, gable, Self.plain)
-            }
-        }
-        // The ridge, its top the roof's, an ornament at each end; the hip
-        // ridges close by.
-        box(-ridgeHalf - 0.4, -0.45, top - 0.3, ridgeHalf + 0.4, 0.45, top + 0.6, ridge, Self.plain)
-        for sign in [Float(-1), 1] {
-            let x = sign * (ridgeHalf + 0.4)
-            box(min(x, x - sign * 1.2), -0.35, top + 0.6 - 0.01, max(x, x - sign * 1.2), 0.35, z0 + rise, ridge, Self.plain)
-        }
-        if full {
-            for k in [0, perSide, 2 * perSide, 3 * perSide] {
-                for s in 0..<(kind == .hipped ? steps : steps * 45 / 100) {
-                    let a = rings[s].points[k], b = rings[s + 1].points[k]
-                    let za = rings[s].heights[k], zb = rings[s + 1].heights[k]
-                    let d = Self.distance(a, b)
-                    guard d > 0.01 else { continue }
-                    let nx = -(b.y - a.y) / d * 0.35, ny = (b.x - a.x) / d * 0.35
-                    quad((a.x - nx, a.y - ny, za + 0.35), (a.x + nx, a.y + ny, za + 0.35),
-                         (b.x + nx, b.y + ny, zb + 0.35), (b.x - nx, b.y - ny, zb + 0.35), ridge, Self.plain)
-                }
-            }
-        }
-    }
-
-    /// A double eave's lower roof (重簷): from walls of half sides `hx`,
-    /// `hy` at `z1` out `over` and down to its eaves at `z0`, corners swept
-    /// up `sweep`; its edge and underside.
-    mutating func skirtRoof(_ hx: Float, _ hy: Float, eaves z0: Float, wall z1: Float, over: Float, sweep: Float,
-                            tile: UInt32, edge: UInt32, underside: UInt32) {
-        let perSide = full ? (hx + over > 20 ? 10 : 6) : 4
-        let (ringIn, nearIn) = Self.rectRing(hx, hy, perSide: perSide)
-        let ringOut = ringIn.map { (x: $0.x * (hx + over) / hx, y: $0.y * (hy + over) / hy) }
-        let up = nearIn.map { n -> Float in let t = 1 - min(n, 0.3) / 0.3; return sweep * t * t }
-        band(ringOut, up.map { z0 + $0 }, ringIn, up.map { _ in z1 }, tile, Self.tiles)
-        band(ringOut, up.map { z0 - 0.45 + $0 }, ringOut, up.map { z0 + $0 }, edge, Self.plain)
-        band(ringIn, up.map { _ in z0 - 0.45 }, ringOut, up.map { z0 - 0.45 + $0 }, underside, Self.plain)
-    }
-
     /// Square columns `size` thick every `step` round a rectangle of half
     /// sides `hx`, `hy`, from `z0` to `z1`; close by only.
     mutating func colonnade(_ hx: Float, _ hy: Float, _ z0: Float, _ z1: Float, step: Float, size: Float, _ color: UInt32) {
@@ -292,11 +205,9 @@ extension LandmarkMesh {
         colonnade(hx - 9, hy - 9, 5, 20, step: 6, size: 1.5, red)
         let deck: [P2] = [(-(hx - 8), -(hy - 8)), (hx - 8, -(hy - 8)), (hx - 8, hy - 8), (-(hx - 8), hy - 8)]
         wallBand(deck, 19.2, deck, 20, colour("beam"), Self.plain)
-        skirtRoof(hx - 8, hy - 8, eaves: 19.5, wall: 23.5, over: 4.5, sweep: 1.6, tile: gold, edge: goldRidge, underside: colour("beam"))
-        // Above the skirt, a red clerestory, then the top roof to 37 m.
-        box(-(wx - 2), -(wy - 2), 20, wx - 2, wy - 2, 25, red, Self.plain)
-        palaceRoof(wx - 2, wy - 2, eaves: 25, over: 4, rise: 12, sweep: 2.2, kind: kind, tile: gold, ridge: goldRidge,
-                   gable: red, underside: colour("beam"))
+        // The double eave, a red clerestory between, the top to 37 m.
+        chineseRoof(hx - 8, hy - 8, eaves: 19.5, over: 4.5, rise: 12, sweep: 2.2, kind: kind, tiers: 2, tierRise: 5.5, tierInset: 7,
+                    colours: ChineseRoofColours(tile: gold, ridge: goldRidge, underside: colour("beam"), gable: red, wall: red))
         // The plan with its steps, as OSM's, round the origin.
         shift(from: 0, by: (0, 3))
     }
@@ -454,10 +365,8 @@ extension LandmarkMesh {
         }
         // The double roof.
         let start = vertices.count
-        skirtRoof(hx - 3, hy - 5, eaves: 59.5, wall: 64, over: 4.5, sweep: 2.2, tile: gold, edge: goldRidge, underside: red)
-        box(-hx + 6, -hy + 8, 60, hx - 6, hy - 8, 67, red, Self.plain)
-        palaceRoof(hx - 6, hy - 8, eaves: 67, over: 5.5, rise: 20, sweep: 3.2, kind: .hipGable, tile: gold, ridge: goldRidge,
-                   gable: red, underside: red)
+        chineseRoof(hx - 3, hy - 5, eaves: 59.5, over: 5, rise: 20, sweep: 3.2, kind: .hipGable, tiers: 2, tierRise: 7.5, tierInset: 3,
+                    colours: ChineseRoofColours(tile: gold, ridge: goldRidge, underside: red, gable: red, wall: red))
         shift(from: start, by: (0, cy))
         // The porte-cochère on the front, its own small gold roof.
         box(-20, -37.1, 0, 20, cy - hy, 9, colour("cream"), Self.floors)
@@ -499,14 +408,9 @@ extension LandmarkMesh {
         colonnade(wx, wy, base, base + body, step: 2.6, size: 0.6, red)
         let deck: [P2] = [(-wx, -wy), (wx, -wy), (wx, wy), (-wx, wy)]
         wallBand(deck, base + body - 0.6, deck, base + body, colour("beam"), Self.plain)
-        var eave = base + body
-        if double {
-            skirtRoof(wx, wy, eaves: eave, wall: eave + 1.8, over: 1.8, sweep: 0.8, tile: gold, edge: green, underside: colour("beam"))
-            box(-(wx - 1.4), -(wy - 1.4), eave, wx - 1.4, wy - 1.4, eave + 2.6, red, Self.plain)
-            eave += 2.6
-        }
-        let inset: Float = double ? 1.4 : 0
-        palaceRoof(wx - inset, wy - inset, eaves: eave, over: 1.8, rise: top - eave, sweep: 1.0, kind: .hipGable,
-                   tile: gold, ridge: green, gable: red, underside: colour("beam"))
+        let eave = base + body, step: Float = 2.6
+        chineseRoof(wx, wy, eaves: eave, over: 1.8, rise: top - eave - (double ? step : 0), sweep: 1.0, kind: .hipGable,
+                    tiers: double ? 2 : 1, tierRise: step, tierInset: 1.4,
+                    colours: ChineseRoofColours(tile: gold, ridge: green, underside: colour("beam"), gable: red, wall: red))
     }
 }

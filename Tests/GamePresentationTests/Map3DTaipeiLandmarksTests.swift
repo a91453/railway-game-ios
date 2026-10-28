@@ -107,6 +107,30 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
         XCTAssertLessThan(kaohsiungFar.indices.count, kaohsiungFull.indices.count)
     }
 
+    /// Decision 457: the Chinese roof is a part of its own: any plan, any
+    /// number of eaves, only the caller's colours, its top where asked.
+    func testTheChineseRoofPart() {
+        let colours = ChineseRoofColours(tile: 1, ridge: 2, underside: 3, gable: nil, wall: 4)
+        for kind in [LandmarkMesh.RoofKind.hipped, .hipGable] {
+            for tiers in 1...3 {
+                for full in [true, false] {
+                    var mesh = LandmarkMesh(full: full)
+                    mesh.chineseRoof(9, 6, eaves: 4, over: 1.5, rise: 3.5, sweep: 0.8, kind: kind, tiers: tiers, tierRise: 2,
+                                     tierInset: 1.2, colours: colours)
+                    let zs = mesh.vertices.map(\.z)
+                    XCTAssertEqual(zs.max() ?? 0, 4 + Float(tiers - 1) * 2 + 3.5, accuracy: 0.001, "\(kind) \(tiers)")
+                    XCTAssertGreaterThanOrEqual(zs.min() ?? 0, 4 - 0.5 - 0.001)
+                    XCTAssertTrue(mesh.vertices.allSatisfy { abs($0.x) <= 9 + 1.5 + 0.4 && abs($0.y) <= 6 + 1.5 + 0.4 })
+                    XCTAssertTrue(Set(mesh.vertices.map(\.color)).isSubset(of: [1, 2, 3, 4]))
+                    XCTAssertEqual(mesh.vertices.contains { $0.color == 4 }, tiers > 1)
+                    for v in mesh.vertices {
+                        XCTAssertEqual(Map3DPoint(v.nx, v.ny, v.nz).length, 1, accuracy: 0.001)
+                    }
+                }
+            }
+        }
+    }
+
     /// Decision 457: central Taipei's landmarks stand on OpenStreetMap's
     /// plans (the minimum box of each way, ODbL), within 2 m at the
     /// ground; each within the landmark budget.
