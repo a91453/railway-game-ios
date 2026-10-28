@@ -74,4 +74,39 @@ final class CommandLogTickReportTests: XCTestCase {
         slowest.sort { $0.0 > $1.0 }
         print("ticks \(ticks), GameCore \(core), session \(total), slowest GameCore: " + slowest.prefix(12).map { "\($0.1) \($0.0)" }.joined(separator: "; "))
     }
+
+    /// What the screen works out on the main actor once a game hour or a
+    /// day at 6000× (派工單 BK, part 2), for the world of a save
+    /// (`COMMAND_LOG_SAVE`, a `.alongtheline` file or a `SavedGame`):
+    /// the station master's hourly look (its advice, the story, the rank)
+    /// and letting go of a world copy many ticks old.
+    func testWhatTheScreenWorksOutOnTheHour() throws {
+        let environment = ProcessInfo.processInfo.environment
+        guard let path = environment["COMMAND_LOG_SAVE"] else {
+            throw XCTSkip("set COMMAND_LOG_SAVE=<save> to time what the screen works out on the hour")
+        }
+        struct SharedFile: Decodable { let game: SavedGame }
+        let data = try Data(contentsOf: URL(fileURLWithPath: path))
+        let saved = try (try? JSONDecoder().decode(SharedFile.self, from: data).game) ?? JSONDecoder().decode(SavedGame.self, from: data)
+        let session = GameSession(world: saved.world)
+        session.setSpeed(.fast)
+        let clock = ContinuousClock()
+        func ms(_ duration: Duration) -> String {
+            String(format: "%.1f ms", Double(duration.components.seconds) * 1_000 + Double(duration.components.attoseconds) / 1e15)
+        }
+        for round in 0..<3 {
+            session.advance(ticks: 6)
+            let world = session.world
+            let advice = clock.measure { _ = StationMasterAdvice(world: world, worstLosingLine: { session.worstLosingLine }) }
+            let rank = clock.measure { _ = CompanyRank(world: world) }
+            var teller = StoryTeller()
+            let story = clock.measure { _ = teller.look(at: world) }
+            print("round \(round) at \(world.clock.now.seconds): StationMasterAdvice \(ms(advice)), CompanyRank \(ms(rank)), StoryTeller.look \(ms(story))")
+        }
+        // A copy kept while the game ran on a game day, then let go.
+        var stale: GameWorld? = session.world
+        session.advance(ticks: 144)
+        let release = clock.measure { stale = nil }
+        print("letting go of a world a day old: \(ms(release)), \(stale == nil)")
+    }
 }
