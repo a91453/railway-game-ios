@@ -17,6 +17,8 @@ struct TimetableEditor: View {
     let session: GameSession
     @Environment(\.dismiss) private var dismiss
     @Environment(GameScreenState.self) private var screen
+    /// Whether Clear Timetable is asking first (UI review 2026-10-28, A).
+    @State private var confirmsClearing = false
 
     /// The least height of a stop's stepper or switch, in points.
     private static let controlHeight: CGFloat = 44
@@ -192,11 +194,16 @@ struct TimetableEditor: View {
             }
             if !train.timetable.isEmpty {
                 Button(role: .destructive) {
-                    session.clearSelectedTrainTimetable()
+                    confirmsClearing = true
                 } label: {
                     Label("Clear Timetable", systemImage: "trash")
                 }
                 .disabled(isLocked)
+                .removalConfirmation(
+                    .clearTimetable(train: train.name), isPresented: $confirmsClearing, language: session.language
+                ) {
+                    session.clearSelectedTrainTimetable()
+                }
             }
         } header: {
             Text("Timetable")
