@@ -14,9 +14,10 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // K1-1 (2026-10-28): 618 models and 4,200,744 vertices before the
         // 89 studies (1,073,040 vertices) moved out. Decision 458 added the
         // six scenery stand-ins (954 vertices; the app swaps in their
-        // files' 2,760).
-        XCTAssertEqual(pack.models.count, 535)
-        XCTAssertEqual(vertices, 3_128_658)
+        // files' 2,760). Decision 461 added the C371, C381 and 610 sets,
+        // near and far (48 models, 203,424 vertices).
+        XCTAssertEqual(pack.models.count, 583)
+        XCTAssertEqual(vertices, 3_332_082)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 

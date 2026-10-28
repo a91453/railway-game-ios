@@ -5,7 +5,9 @@ import XCTest
 /// the player's A, B, L and D metros and the real trains of Taipei's
 /// lines) runs #1323's C341 units, near and far, on half its trains (the
 /// odd-numbered); the other half and every other city's metro stay the
-/// C381.
+/// C381. Decision 461: the player's metros three ways by
+/// ``Map3DTrainSet/taipeiMetro(number:)``, the real Bannan line's all
+/// C341s, the other cities' the generic car.
 final class Map3DC341IntegrationTests: XCTestCase {
     private let pack = Map3DModelPack.standard
 
@@ -126,36 +128,41 @@ final class Map3DC341IntegrationTests: XCTestCase {
     // MARK: Which trains
 
     func testTheOddNumberedTaipeiMetrosAreC341() {
-        for number in [1, 3, 7, 1_107, 2_461, -3] {
-            for key in ["metroC381", "A", "B", "D"] { XCTAssertEqual(Map3DTrainSet.variant(of: key, number: number), "metroC341", "\(key) \(number)") }
+        // Decision 461: three ways, by seven times the number's remainder by 20.
+        for number in [0, 1, 3, 1_107, 2_461, -3, 8, 1_108, -2, 2, 7] {
+            for key in ["metroC381", "A", "B", "D"] {
+                XCTAssertEqual(Map3DTrainSet.variant(of: key, number: number), Map3DTrainSet.taipeiMetro(number: number), "\(key) \(number)")
+            }
         }
-        for number in [0, 2, 8, 1_108, -2] {
-            for key in ["metroC381", "A", "B", "D"] { XCTAssertEqual(Map3DTrainSet.variant(of: key, number: number), key, "\(key) \(number)") }
-        }
-        // The linear-motor metro: the C341 while the train pack is locked (it is drawn as the C381), its own look once it is unlocked.
-        XCTAssertEqual(Map3DTrainSet.variant(of: "L", number: 1, locked: TrainPack.sets), "metroC341")
-        XCTAssertEqual(Map3DTrainSet.variant(of: "L", number: 2, locked: TrainPack.sets), "L")
+        XCTAssertEqual(Map3DTrainSet.taipeiMetro(number: 2), "metroC341")
+        XCTAssertEqual(Map3DTrainSet.taipeiMetro(number: 1), "metroC371")
+        XCTAssertEqual(Map3DTrainSet.taipeiMetro(number: 7), "metroC381")
+        // The linear-motor metro: three ways while the train pack is locked (it is drawn as the C381), its own look once it is unlocked.
+        XCTAssertEqual(Map3DTrainSet.variant(of: "L", number: 2, locked: TrainPack.sets), "metroC341")
+        XCTAssertEqual(Map3DTrainSet.variant(of: "L", number: 7, locked: TrainPack.sets), "metroC381")
         XCTAssertEqual(Map3DTrainSet.variant(of: "L", number: 1, locked: []), "L")
         XCTAssertEqual(Map3DTrainSet.variant(of: "L", number: 1, locked: ["pushPullE1000"]), "L")
         // Not locked behind the train pack, and no other train is touched: the light metro, the people mover, the Wenhu car.
         XCTAssertFalse(TrainPack.sets.contains("metroC341"))
-        XCTAssertEqual(Map3DTrainSet.variant(of: "A", number: 1, locked: TrainPack.sets), "metroC341")
-        for key in ["C", "APM", "wenhu", "greenTram", "taroko", "puyuma", "dieselExpress", "metroC341", ""] {
+        XCTAssertEqual(Map3DTrainSet.variant(of: "A", number: 2, locked: TrainPack.sets), "metroC341")
+        for key in ["C", "APM", "wenhu", "greenTram", "taroko", "puyuma", "dieselExpress", "metroC341", "metroC371", "metroGeneric", "circular610", ""] {
             XCTAssertEqual(Map3DTrainSet.variant(of: key, number: 1), key, key)
         }
         XCTAssertEqual(Map3DTrainSet.variant(of: "emu800", number: 7), "emu500", "decision 432, decision 435's shares")
         XCTAssertEqual(Map3DTrainSet.variant(of: "highSpeed", number: 1), "n700sG", "decision 408 is as it was")
     }
 
-    /// The real trains: Taipei's lines (but the Wenhu and Circular lines,
-    /// which are not the C381's set) by their run's number; Kaohsiung's,
-    /// Taoyuan's and Taichung's metro trains are the C381's whatever it is.
+    /// The real trains: decision 461, Taipei's lines are each line's own
+    /// fleet (``Map3DRealTrains/formation(system:line:)``), not split by
+    /// number; Kaohsiung's, Taoyuan's and Taichung's metro trains are the
+    /// generic car whatever it is.
     func testOnlyTaipeisRealMetroTrainsAreC341() {
         for number in [1, 2, 3, 4, 1_107, 1_108] {
-            let key = Map3DRealTrains.variantKey(system: "trtc", key: "metroC381", number: number)
-            XCTAssertEqual(key, number % 2 != 0 ? "metroC341" : "metroC381", "trtc \(number)")
+            for key in ["metroC341", "metroC371", "metroC381", "circular610"] {
+                XCTAssertEqual(Map3DRealTrains.variantKey(system: "trtc", key: key, number: number), key, "trtc \(key) \(number)")
+            }
             for system in ["krtc", "tymc", "tmrt"] {
-                XCTAssertEqual(Map3DRealTrains.variantKey(system: system, key: "metroC381", number: number), "metroC381", "\(system) \(number)")
+                XCTAssertEqual(Map3DRealTrains.variantKey(system: system, key: "metroGeneric", number: number), "metroGeneric", "\(system) \(number)")
             }
             // The other lines' sets are as they were.
             XCTAssertEqual(Map3DRealTrains.variantKey(system: "trtc", key: "wenhu", number: number), "wenhu")
@@ -177,8 +184,9 @@ final class Map3DC341IntegrationTests: XCTestCase {
             XCTAssertEqual(pack.model(near, forType: "metroC341", count: 6, at: 700), pack.index(of: "set-metroC341Far-\(unit)"), unit)
             XCTAssertNil(pack.model(near, forType: "metroC341", count: 6, at: 1_000), unit)
         }
-        // The C381 of the even-numbered is as far as it was.
-        XCTAssertEqual(Map3DTrainSet.reach(of: "metroC381"), Map3DTrains.modelReach)
+        // Decision 461: the C381 has its far set too; the other cities' generic car is as far as it was.
+        XCTAssertEqual(Map3DTrainSet.reach(of: "metroC381"), Map3DTrainSet.tramReach)
+        XCTAssertEqual(Map3DTrainSet.reach(of: "metroGeneric"), Map3DTrains.modelReach)
     }
 
     /// The far cars are the near cars lighter: the same box, the same

@@ -45,9 +45,18 @@ final class Map3DRealTrainsTests: XCTestCase {
         XCTAssertEqual(try formation("thsr", "THSR"), .init(key: "highSpeed", cars: 12))
         XCTAssertEqual(try formation("tra", "縱貫線北段"), .init(key: "emu800", cars: 8))
         XCTAssertEqual(try formation("tra", "PINGXI"), .init(key: "dieselRailcar", cars: 3))
-        XCTAssertEqual(try formation("trtc", "BL"), .init(key: "metroC381", cars: 6))
+        // Decision 461: each Taipei Metro line its own fleet; the other
+        // cities' metros the generic car.
+        XCTAssertEqual(try formation("trtc", "BL"), .init(key: "metroC341", cars: 6))
+        XCTAssertEqual(try formation("trtc", "R"), .init(key: "metroC381", cars: 6))
+        XCTAssertEqual(try formation("trtc", "G"), .init(key: "metroC381", cars: 6, alternate: "metroC371"))
+        XCTAssertEqual(try formation("trtc", "O_XINZHUANG"), .init(key: "metroC371", cars: 6))
+        XCTAssertEqual(try formation("trtc", "O_LUZHOU"), .init(key: "metroC371", cars: 6))
+        XCTAssertEqual(try formation("trtc", "R_XBT"), .init(key: "metroC371", cars: 3))
+        XCTAssertEqual(try formation("trtc", "G_XBT"), .init(key: "metroC371", cars: 3))
+        XCTAssertEqual(try formation("trtc", "Y"), .init(key: "circular610", cars: 4))
         XCTAssertEqual(try formation("trtc", "BR"), .init(key: "wenhu", cars: 4))
-        XCTAssertEqual(try formation("krtc", "KR"), .init(key: "metroC381", cars: 3))
+        XCTAssertEqual(try formation("krtc", "KR"), .init(key: "metroGeneric", cars: 3))
         // Decision 331: the light rail as the green tram.
         for (system, id) in [("ntdlrt", "V"), ("ntalrt", "K"), ("krtc", "C")] {
             XCTAssertEqual(try formation(system, id).key, "greenTram", id)

@@ -525,6 +525,38 @@
       "hash" : "58342cfd02572dd1",
       "triangles" : 24
     },
+    "light-set-circular610-car" : {
+      "hash" : "f2807f1da90a3561",
+      "triangles" : 240
+    },
+    "light-set-circular610-carBack" : {
+      "hash" : "f2807f1da90a3561",
+      "triangles" : 240
+    },
+    "light-set-circular610-head" : {
+      "hash" : "f270c8e9fb208905",
+      "triangles" : 240
+    },
+    "light-set-circular610-tail" : {
+      "hash" : "ca1eeb5f1e872205",
+      "triangles" : 240
+    },
+    "light-set-circular610Far-car" : {
+      "hash" : "5f27874e7d23c21d",
+      "triangles" : 80
+    },
+    "light-set-circular610Far-carBack" : {
+      "hash" : "5f27874e7d23c21d",
+      "triangles" : 80
+    },
+    "light-set-circular610Far-head" : {
+      "hash" : "fb5fe6fe9216e1cd",
+      "triangles" : 80
+    },
+    "light-set-circular610Far-tail" : {
+      "hash" : "721dccd6aba18cd",
+      "triangles" : 80
+    },
     "light-set-dieselExpress-car" : {
       "hash" : "8d567bde9d813edd",
       "triangles" : 600
@@ -969,15 +1001,79 @@
       "hash" : "6317ce16c8bd8a03",
       "triangles" : 120
     },
+    "light-set-metroC371-car" : {
+      "hash" : "8dfd34da4c9c2915",
+      "triangles" : 128
+    },
+    "light-set-metroC371-centre" : {
+      "hash" : "8dfd34da4c9c2915",
+      "triangles" : 128
+    },
+    "light-set-metroC371-head" : {
+      "hash" : "95a446447a1cc40d",
+      "triangles" : 120
+    },
+    "light-set-metroC371-tail" : {
+      "hash" : "a366d60dcbb22fe5",
+      "triangles" : 120
+    },
+    "light-set-metroC371Far-car" : {
+      "hash" : "9132ed215f350c3d",
+      "triangles" : 96
+    },
+    "light-set-metroC371Far-centre" : {
+      "hash" : "9132ed215f350c3d",
+      "triangles" : 96
+    },
+    "light-set-metroC371Far-head" : {
+      "hash" : "26f755599359b975",
+      "triangles" : 88
+    },
+    "light-set-metroC371Far-tail" : {
+      "hash" : "34268173332f614d",
+      "triangles" : 88
+    },
     "light-set-metroC381-car" : {
+      "hash" : "f4d5f88904c44c55",
+      "triangles" : 128
+    },
+    "light-set-metroC381-centre" : {
+      "hash" : "f4d5f88904c44c55",
+      "triangles" : 128
+    },
+    "light-set-metroC381-head" : {
+      "hash" : "30a3744c79393edd",
+      "triangles" : 120
+    },
+    "light-set-metroC381-tail" : {
+      "hash" : "da5325e278a9673d",
+      "triangles" : 120
+    },
+    "light-set-metroC381Far-car" : {
+      "hash" : "6f81c1e21ddb91bd",
+      "triangles" : 96
+    },
+    "light-set-metroC381Far-centre" : {
+      "hash" : "6f81c1e21ddb91bd",
+      "triangles" : 96
+    },
+    "light-set-metroC381Far-head" : {
+      "hash" : "b32e2ab7a0187c25",
+      "triangles" : 88
+    },
+    "light-set-metroC381Far-tail" : {
+      "hash" : "756f60865640dc85",
+      "triangles" : 88
+    },
+    "light-set-metroGeneric-car" : {
       "hash" : "4ff1375237403a59",
       "triangles" : 656
     },
-    "light-set-metroC381-head" : {
+    "light-set-metroGeneric-head" : {
       "hash" : "d8c1637defac3b03",
       "triangles" : 612
     },
-    "light-set-metroC381-tail" : {
+    "light-set-metroGeneric-tail" : {
       "hash" : "c09cd3515a0d2e03",
       "triangles" : 612
     },
@@ -1485,6 +1581,38 @@
       "hash" : "d175b1a2f1fbdbc6",
       "triangles" : 1884
     },
+    "set-circular610-car" : {
+      "hash" : "cb952158c7e58774",
+      "triangles" : 2824
+    },
+    "set-circular610-carBack" : {
+      "hash" : "f1b8be3995fc0b21",
+      "triangles" : 2824
+    },
+    "set-circular610-head" : {
+      "hash" : "9909b6fbd73f67b2",
+      "triangles" : 3650
+    },
+    "set-circular610-tail" : {
+      "hash" : "f68b112990e95e72",
+      "triangles" : 3650
+    },
+    "set-circular610Far-car" : {
+      "hash" : "6d35ebc105ac069",
+      "triangles" : 1252
+    },
+    "set-circular610Far-carBack" : {
+      "hash" : "6d35ebc105ac069",
+      "triangles" : 1252
+    },
+    "set-circular610Far-head" : {
+      "hash" : "4de5ed63701f6614",
+      "triangles" : 1638
+    },
+    "set-circular610Far-tail" : {
+      "hash" : "13a8ec0637da0639",
+      "triangles" : 1638
+    },
     "set-dieselExpress-car" : {
       "hash" : "56ef91ff8b47b996",
       "triangles" : 1748
@@ -1945,15 +2073,79 @@
       "hash" : "e0b3f6f12b00cc14",
       "triangles" : 1754
     },
+    "set-metroC371-car" : {
+      "hash" : "c942930fbfcb2cfa",
+      "triangles" : 2188
+    },
+    "set-metroC371-centre" : {
+      "hash" : "bb303a08196b0e1d",
+      "triangles" : 2200
+    },
+    "set-metroC371-head" : {
+      "hash" : "8e6694674877c6c5",
+      "triangles" : 5358
+    },
+    "set-metroC371-tail" : {
+      "hash" : "d9f36c9045bf661a",
+      "triangles" : 5358
+    },
+    "set-metroC371Far-car" : {
+      "hash" : "301d48999eee4a79",
+      "triangles" : 872
+    },
+    "set-metroC371Far-centre" : {
+      "hash" : "9da82a8160aa6a37",
+      "triangles" : 884
+    },
+    "set-metroC371Far-head" : {
+      "hash" : "4f257e4dda63d6f2",
+      "triangles" : 2038
+    },
+    "set-metroC371Far-tail" : {
+      "hash" : "157d51c557806721",
+      "triangles" : 2038
+    },
     "set-metroC381-car" : {
+      "hash" : "992d064eb8e9db91",
+      "triangles" : 1804
+    },
+    "set-metroC381-centre" : {
+      "hash" : "58b0a6614072927b",
+      "triangles" : 1816
+    },
+    "set-metroC381-head" : {
+      "hash" : "a42b02438ecbe1d6",
+      "triangles" : 6976
+    },
+    "set-metroC381-tail" : {
+      "hash" : "fcaadd945d4788ff",
+      "triangles" : 6976
+    },
+    "set-metroC381Far-car" : {
+      "hash" : "8ab9d1510c5f30fa",
+      "triangles" : 872
+    },
+    "set-metroC381Far-centre" : {
+      "hash" : "40ef7d6e37493a54",
+      "triangles" : 884
+    },
+    "set-metroC381Far-head" : {
+      "hash" : "3b215d03cb9bc5d9",
+      "triangles" : 2904
+    },
+    "set-metroC381Far-tail" : {
+      "hash" : "d0e03b99cd85fa8c",
+      "triangles" : 2904
+    },
+    "set-metroGeneric-car" : {
       "hash" : "8bfd991216c09089",
       "triangles" : 1800
     },
-    "set-metroC381-head" : {
+    "set-metroGeneric-head" : {
       "hash" : "cf648866f9bbd95f",
       "triangles" : 2360
     },
-    "set-metroC381-tail" : {
+    "set-metroGeneric-tail" : {
       "hash" : "af0fbf54fb5d82e3",
       "triangles" : 2360
     },

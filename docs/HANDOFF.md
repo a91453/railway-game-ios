@@ -1,3 +1,5 @@
+> 台北捷運 C371／C381／610 接進營運（派工單 BS，決策 461，`claude/taipei-metro-c371-c381-610`）：各線照實際配車，高雄、桃園、台中改叫 `metroGeneric` 但畫面不變；[對照圖](art/taipei-metro-461-2026-10-28/README.md)。留下的：實機幀數與 500 m 換遠景；#1342 若後合，保留 `Map3DC371`／`Map3DC381` 的 `far` 分支並重跑 `tools/train-models/run.sh OUT --lock`（見 [決策 461](decisions/461.md) 的下一步）。
+
 > Codex C371／C381雙車續修（公開draft #1342／工作#1341）：[現版／main格式核對](art/c371-c381-2026-10-27/README.md)、[接手／重建](art/c371-c381-2026-10-27/CROSS_ACCOUNT_HANDOFF.md)。兩型外觀均待驗收，先前推定C371已接受撤回。修肩部曲面／圓角燈腔／鼻下設備；T/M裸模型與原屋頂／輪組位置保護。已整合main8be22423的studies，standard529模型／3,127,704頂點不增加。新railway-assets-private各車獨立revision-1，各19PNG／最新模型與viewer，不新增history或ZIP；完整真前包仍在舊reference-private #103固定63b44693／素材e791fdb7。原#103只作前版交接，新素材draft互鏈見#1342。無營運映射／GameCore／存檔／fixtures變更；不合併／auto-merge／TestFlight。
 
 > 共用做車工具與新 skill（派工單 AC）：`tools/train-models/`（匯出、預算與雜湊檢查、七向圖用模型光、離線預覽，[README](../tools/train-models/README.md)）、`.claude/skills/rolling-stock/SKILL.md` 已改成原生做法，新車只用這個工具。列車畫面四項的第 1–3 項（夜間亮燈、遮蔽烘焙、車窗反光）等 10/31 公開測試之後由規劃派，用同一個工具拍改前／改後（`renderer.js` 的 `features` 旗標是接口）。

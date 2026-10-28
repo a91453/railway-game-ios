@@ -175,8 +175,9 @@ final class Map3DEMU900IntegrationTests: XCTestCase {
         // The other lines are as they were.
         let railcar = Map3DRealTrains.Formation(key: "dieselRailcar", cars: 3)
         XCTAssertEqual(Map3DRealTrains.formation(of: railcar, system: "tra", number: 1_106), railcar)
+        // Decision 461: a Taipei Metro line is its own fleet, whatever the number.
         let metro = Map3DRealTrains.Formation(key: "metroC381", cars: 6)
-        XCTAssertEqual(Map3DRealTrains.formation(of: metro, system: "trtc", number: 1), .init(key: "metroC341", cars: 6))
+        XCTAssertEqual(Map3DRealTrains.formation(of: metro, system: "trtc", number: 1), metro)
     }
 
     // MARK: Near, far and a box

@@ -9,6 +9,12 @@ struct MetroStudyGeometry {
     let length: Float
     let body: UInt32
     let blue: UInt32
+    /// Decision 461: the light car drawn from 500 m out (decision 408): the
+    /// same shell, paint, glass and lamp lenses, without the parts nobody
+    /// sees there (door leaves, window frames, wheel hubs and axles, the
+    /// roof's ribs and grilles, the wipers) and with coarser fascia patches.
+    /// The near car (`far` false) is as it was.
+    var far = false
     var ink: UInt32 { curved ? Map3DColor.shaded(Map3DPalette.tankStand,0.38) : Map3DColor.shaded(Map3DPalette.tankStand,0.42) }
     let glass = Map3DColor.shaded(Map3DPalette.glazing, 0.62)
     let steel = StationKitBuilder.steel
@@ -65,7 +71,7 @@ struct MetroStudyGeometry {
             // Clip into shared lateral planes before triangulating the caps.
             // Only the outer perimeter gets side walls: no duplicate walls at
             // internal slice boundaries, and every layer uses the same bow.
-            let knots: [Float] = [-1.62,-1.44,-1.20,-0.90,-0.60,-0.36,0.36,0.60,0.90,1.20,1.44,1.62]
+            let knots: [Float] = far ? [-1.62,-1.20,-0.60,0.60,1.20,1.62] : [-1.62,-1.44,-1.20,-0.90,-0.60,-0.36,0.36,0.60,0.90,1.20,1.44,1.62]
             func clip(_ polygon: [(Float,Float)], at z: Float, greater: Bool) -> [(Float,Float)] {
                 var result: [(Float,Float)] = []
                 for i in polygon.indices {
@@ -120,7 +126,7 @@ struct MetroStudyGeometry {
         return half+0.035
     }
     func roundRect(_ left: Float,_ right: Float,_ low: Float,_ high: Float,_ r: Float, steps count: Int? = nil) -> [(Float,Float)] {
-        let steps=count ?? (curved ? 5 : 4)
+        let steps=far ? min(count ?? 2,2) : (count ?? (curved ? 5 : 4))
         let corners: [(Float,Float,Float)] = [(low+r,right-r,-Float.pi/2),(high-r,right-r,0),(high-r,left+r,Float.pi/2),(low+r,left+r,Float.pi)]
         return corners.flatMap { cy,cz,start in (0..<steps).map { i in
             let a=start+Float(i)*Float.pi/(2*Float(steps))
@@ -142,17 +148,22 @@ struct MetroStudyGeometry {
         let doorEdge = Map3DColor.shaded(body,curved ? 0.76 : 0.70)
         for d in doors {
             panel(d,1.12,1.48,2.03,doorEdge,0.019)
+            if far {
+                panel(d,2.25,1.09,0.67,glass,0.041)
+                continue
+            }
             for leaf:Float in [-1,1] {
                 panel(d+leaf*0.365,1.14,0.70,1.99,body,0.030)
                 panel(d+leaf*0.365,2.25,0.36,0.67,glass,0.041)
             }
         }
         for x:Float in [-10.05,-6.18,-4.25,-0.96,0.96,4.25,6.18] {
+            if far { panel(x,curved ? 2.23 : 2.20,curved ? 1.40 : 1.36,curved ? 0.78 : 0.84,glass,0.027);continue }
             panel(x,curved ? 2.19 : 2.17,curved ? 1.48 : 1.42,curved ? 0.86 : 0.92,curved ? Map3DColor.shaded(body,0.72) : steel)
             panel(x,curved ? 2.23 : 2.20,curved ? 1.40 : 1.36,curved ? 0.78 : 0.84,glass,0.027)
         }
         if !cab {
-            panel(10.05,curved ? 2.19 : 2.17,curved ? 1.48 : 1.42,curved ? 0.86 : 0.92,curved ? Map3DColor.shaded(body,0.72) : steel)
+            if !far { panel(10.05,curved ? 2.19 : 2.17,curved ? 1.48 : 1.42,curved ? 0.86 : 0.92,curved ? Map3DColor.shaded(body,0.72) : steel) }
             panel(10.05,curved ? 2.23 : 2.20,curved ? 1.40 : 1.36,curved ? 0.78 : 0.84,glass,0.027)
         }
         else {
@@ -164,13 +175,13 @@ struct MetroStudyGeometry {
         if curved {
             c381SideBands()
         } else { panel(0,1.43,length-0.10,0.30,blue,0.047) }
-        panel(0,3.16,length-0.35,0.035,steel,0.018)
+        if !far { panel(0,3.16,length-0.35,0.035,steel,0.018) }
         for bx:Float in [-8.25,8.25] {
             kit.box(bx,0.57,0,3.35,2.0,0.24,steel)
             kit.box(bx,0.75,0,1.35,1.60,0.11,ink)
             for dx:Float in [-1.15,1.15] { for side:Float in [-1,1] {
-                kit.civicTube(Map3DPoint(bx+dx,0.425,side*0.69),Map3DPoint(bx+dx,0.425,side*0.86),radius:0.425,color:Map3DStreetModel.tyre,sides:12)
-                if !curved {
+                kit.civicTube(Map3DPoint(bx+dx,0.425,side*0.69),Map3DPoint(bx+dx,0.425,side*0.86),radius:0.425,color:Map3DStreetModel.tyre,sides:far ? 8 : 12)
+                if !curved && !far {
                     kit.civicTube(Map3DPoint(bx+dx,0.425,side*0.86),Map3DPoint(bx+dx,0.425,side*0.89),radius:0.19,color:steel,sides:10)
                 }
             } }
@@ -178,7 +189,7 @@ struct MetroStudyGeometry {
                 for side:Float in [-1,1] { kit.box(bx,0.53,side*0.94,3.00,0.075,0.18,steel) }
             }
         }
-        if cab && !curved {
+        if cab && !curved && !far {
             // Standard two-axle bogies: real axle shafts connect the existing
             // wheels. Tyre rings, hubs and rail contacts are unchanged.
             for bx: Float in [-8.25,8.25] { for dx: Float in [-1.15,1.15] {
@@ -189,9 +200,10 @@ struct MetroStudyGeometry {
         if curved {
             for x:Float in [-5.75,5.75] {
                 kit.box(x,3.595,0,4.1,1.7,0.105,steel)
+                if far { continue }
                 for delta:Float in [-1.42,-0.72,0,0.72,1.42] { kit.box(x+delta,3.701,0,0.045,1.45,0.012,ink) }
             }
-            for i in -12...12 {
+            for i in -12...12 where !far {
                 let x=Float(i)*0.82
                 if abs(x+5.75)>2.3 && abs(x-5.75)>2.3 { kit.box(x,3.584,0,0.025,2.28,0.012,steel) }
             }
@@ -199,17 +211,17 @@ struct MetroStudyGeometry {
             // C371 photos show continuous corrugation on the low roof,
             // with a few flush service grilles, not two exposed HVAC blocks.
             let roof=Map3DPalette.shedWalls[2]
-            for i in -9...9 {
+            for i in -9...9 where !far {
                 let z=Float(i)*0.093
                 kit.box(-0.15,3.579,z,length-1.25,0.018,0.012,roof)
             }
-            for x:Float in [-8.65,8.65] {
+            for x:Float in [-8.65,8.65] where !far {
                 for side:Float in [-1,1] {
                     kit.box(x,3.579,side*0.87,0.43,0.24,0.025,steel)
                     for step:Float in [-0.12,0.12] { kit.box(x+step,3.601,side*0.87,0.025,0.21,0.008,ink) }
                 }
             }
-            for x:Float in [-10.9,10.7] { kit.box(x,3.579,0,0.045,2.52,0.018,steel) }
+            for x:Float in [-10.9,10.7] where !far { kit.box(x,3.579,0,0.045,2.52,0.018,steel) }
         }
         for x:Float in [-half+0.04,half-0.04] where x < 0 || !cab { kit.box(x,1.03,0,0.13,1.5,2.30,ink) }
         for end:Float in [-1,1] { kit.box(end*(length/2-0.015),0.66,0,0.15,0.28,0.18,ink) }
@@ -221,14 +233,15 @@ struct MetroStudyGeometry {
             } else {
                 // A shallow rounded silver end cap gives the fascia real
                 // shoulders and a curved chin instead of a square slab.
-                let brow = (-16...16).map { i -> (Float,Float) in
-                    let a=Float(i)*Float.pi/32
+                let browSteps = far ? 4 : 16
+                let brow = (-browSteps...browSteps).map { i -> (Float,Float) in
+                    let a=Float(i)*Float.pi/Float(2*browSteps)
                     return (3.18+0.405*cosf(a),1.55*sinf(a))
                 }
                 let endProfile: [(Float,Float)] = [(1.02,-1.43),(1.08,-1.53)] + brow + [(1.08,1.53),(1.02,1.43)]
                 frontPatch(endProfile,body,lift:-0.027,thickness:0.15)
-                let maskBrow = (-16...16).map { i -> (Float,Float) in
-                    let a=Float(i)*Float.pi/32
+                let maskBrow = (-browSteps...browSteps).map { i -> (Float,Float) in
+                    let a=Float(i)*Float.pi/Float(2*browSteps)
                     return (3.14+0.30*cosf(a),1.43*sinf(a))
                 }
                 frontPatch([(1.82,-1.23),(1.86,-1.36),(1.99,-1.43)] + maskBrow +
@@ -260,7 +273,7 @@ struct MetroStudyGeometry {
                 // A low, backed rib panel; brackets remain behind the fascia
                 // and touch both the floor and the shallow cross-member.
                 frontPatch([(0.87,-1.42),(0.87,1.42),(1.02,1.42),(1.02,-1.42)],ink,lift:0.068,thickness:0.10)
-                for h: Float in [0.89,0.935,0.98] {
+                for h: Float in [0.89,0.935,0.98] where !far {
                     frontPatch([(h,-1.42),(h,1.42),(h+0.012,1.42),(h+0.012,-1.42)],Map3DColor.shaded(steel,0.48),lift:0.077,thickness:0.018)
                 }
                 kit.box(half-0.25,0.84,0,0.26,2.12,0.12,ink)
@@ -269,6 +282,7 @@ struct MetroStudyGeometry {
                 // small and dark, with a bracket joining the shallow beam.
                 for sign: Float in [-1,1] {
                     kit.box(half-0.125,0.73,sign*1.11,0.17,0.28,0.16,ink)
+                    if far { continue }
                     kit.civicTube(Map3DPoint(half-0.06,0.68,sign*1.15),Map3DPoint(half+0.025,0.68,sign*1.15),radius:0.085,color:Map3DColor.shaded(steel,0.45),sides:12)
                     kit.civicTube(Map3DPoint(half+0.01,0.68,sign*1.15),Map3DPoint(half+0.03,0.68,sign*1.15),radius:0.044,color:ink,sides:12)
                 }
@@ -283,16 +297,18 @@ struct MetroStudyGeometry {
                 frontPatch(roundRect(z-0.335,z+0.335,1.385,1.655,0.110,steps:6),Map3DColor.shaded(body,0.72),lift:0.049,thickness:0.030)
                 frontPatch(roundRect(z-0.320,z+0.320,1.400,1.640,0.103,steps:6),ink,lift:0.059,thickness:0.025)
                 func circle(_ h: Float,_ z: Float,_ radius: Float) -> [(Float,Float)] {
-                    (0..<20).map { i in let a=Float(i)*Float.pi/10;return (h+radius*sinf(a),z+radius*cosf(a)) }
+                    if far { return (0..<8).map { i in let a=Float(i)*Float.pi/4;return (h+radius*sinf(a),z+radius*cosf(a)) } }
+                    return (0..<20).map { i in let a=Float(i)*Float.pi/10;return (h+radius*sinf(a),z+radius*cosf(a)) }
                 }
                 for shift: Float in [-0.145,0.145] {
                     let zz=z+shift
                     frontPatch(circle(1.52,zz,0.091),steel,lift:0.069,thickness:0.025)
                     frontPatch(circle(1.52,zz,0.077),shift*sign<0 ? Map3DPalette.tunnelLamp : Map3DColor.rgb(0xD9473F),lift:0.079,thickness:0.020)
-                    if shift*sign>0 { frontPatch(circle(1.52,zz,0.056),ink,lift:0.089,thickness:0.020) }
+                    if shift*sign>0 && !far { frontPatch(circle(1.52,zz,0.056),ink,lift:0.089,thickness:0.020) }
                 }
                 let markerX=c371FaceX(1.23)
-                kit.civicTube(Map3DPoint(markerX,3.34,sign*1.23),Map3DPoint(markerX+0.02,3.34,sign*1.23),radius:0.045,color:Map3DPalette.tunnelLamp,sides:12)
+                kit.civicTube(Map3DPoint(markerX,3.34,sign*1.23),Map3DPoint(markerX+0.02,3.34,sign*1.23),radius:0.045,color:Map3DPalette.tunnelLamp,sides:far ? 6 : 12)
+                if far { continue }
                 let footX=c371FaceX(1.06)+0.029,tipX=c371FaceX(0.61)+0.029
                 kit.beam(Map3DPoint(footX,1.99,sign*1.06),Map3DPoint(tipX,2.46,sign*0.61),0.018,ink)
             }

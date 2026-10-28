@@ -26,7 +26,8 @@ final class TrainPackTests: XCTestCase {
         XCTAssertEqual(names(pack, "C", 4), ["set-greenTram-head", "set-greenTram-car", "set-greenTram-car", "set-greenTram-tail"])
         XCTAssertNil(pack.layout(forType: "C", count: 4))
         XCTAssertEqual(names(pack, "L", 2), ["set-metroC381-head", "set-metroC381-tail"])
-        XCTAssertNil(pack.layout(forType: "L", count: 2))
+        // Decision 461: the C381 is #1323's units now, each at its own length.
+        XCTAssertEqual(pack.layout(forType: "L", count: 2)?.count, 2)
         // The steam trains are outside it.
         XCTAssertNotNil(pack.layout(forType: "SUMMER", count: 3))
         // The sets outside the pack stay as they are.
