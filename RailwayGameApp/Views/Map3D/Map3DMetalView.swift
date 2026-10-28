@@ -404,7 +404,7 @@ final class Map3DMetalView: MTKView {
         // Decision 342: reversed depth, 0 the farthest.
         clearDepth = 0
         preferredFramesPerSecond = 60
-        deviceTier = Map3DDeviceTier.forGPUFamily(Self.appleFamily(of: device))
+        deviceTier = Map3DDeviceTier.forGPU(family: Self.appleFamily(of: device), name: device.name)
         // Decision 417: memory running short steps down on any look.
         NotificationCenter.default.addObserver(self, selector: #selector(memoryRunsShort), name: UIApplication.didReceiveMemoryWarningNotification,
                                                object: nil)
@@ -701,7 +701,8 @@ final class Map3DMetalView: MTKView {
         super.layoutSubviews()
         // 2026-10-21 (decision 238's later note): fewer pixels once the GPU
         // keeps over its budget.
-        let scale = CGFloat(Map3DDrawScale.scale(display: Double(traitCollection.displayScale), lowered: drawsFewerPixels))
+        let scale = CGFloat(Map3DDrawScale.scale(display: Double(traitCollection.displayScale), lowered: drawsFewerPixels,
+                                                 points: Double(bounds.width * bounds.height)))
         if scale > 0, contentScaleFactor != scale { contentScaleFactor = scale }
         camera.viewport = (Float(max(bounds.width, 1)), Float(max(bounds.height, 1)))
     }

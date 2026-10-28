@@ -127,4 +127,31 @@ final class DeviceLoadTests: XCTestCase {
         XCTAssertTrue(context.text(in: .english).hasSuffix(" · device memory tight"))
         XCTAssertTrue(context.text(in: .traditionalChinese).hasSuffix(" · 裝置 memory tight"))
     }
+
+    /// An M-series GPU draws a tier above its family's.
+    func testAnMSeriesChipDrawsATierHigher() {
+        XCTAssertEqual(Map3DDeviceTier.forGPU(family: 7, name: "Apple A14 GPU"), .lower)
+        XCTAssertEqual(Map3DDeviceTier.forGPU(family: 7, name: "Apple M1 GPU"), .standard)
+        XCTAssertEqual(Map3DDeviceTier.forGPU(family: 8, name: "Apple A15 GPU"), .standard)
+        XCTAssertEqual(Map3DDeviceTier.forGPU(family: 8, name: "Apple M2"), .higher)
+        XCTAssertEqual(Map3DDeviceTier.forGPU(family: 9, name: "Apple M4 GPU"), .higher)
+        XCTAssertNil(Map3DDeviceTier.forGPU(family: 4, name: "Apple M1"))
+        XCTAssertFalse(Map3DDeviceTier.isMSeries("Apple Mystery"))
+        XCTAssertFalse(Map3DDeviceTier.isMSeries("Apple A17 Pro GPU"))
+    }
+
+    /// Lowered, an iPhone draws two by two as before; an iPad, whose 2×
+    /// screen drew as many pixels lowered as not, draws fewer.
+    func testLoweredPixelsByTheScreensArea() {
+        let devices: [(String, Double, Double, Double, Double)] = [
+            ("iPhone 16", 3, 393 * 852, 2, 3), ("iPhone 16 Pro Max", 3, 440 * 956, 2, 3),
+            ("iPad Pro 12.9-inch", 2, 1_366 * 1_024, 1.10, 2), ("iPad Air 11-inch", 2, 1_180 * 820, 1.33, 2),
+        ]
+        for (name, display, points, lowered, full) in devices {
+            XCTAssertEqual(Map3DDrawScale.scale(display: display, lowered: true, points: points), lowered, accuracy: 0.01, name)
+            XCTAssertEqual(Map3DDrawScale.scale(display: display, lowered: false, points: points), full, name)
+        }
+        XCTAssertEqual(Map3DDrawScale.scale(display: 2, lowered: true, points: 4_000_000), 1, "never below a pixel a point")
+        XCTAssertEqual(Map3DDrawScale.scale(display: 3, lowered: true), 2, "the area not known")
+    }
 }

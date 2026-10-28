@@ -42,6 +42,21 @@ public enum Map3DDeviceTier: Int, CaseIterable, Comparable, Sendable {
         family >= 9 ? .higher : family >= 8 ? .standard : family >= 5 ? .lower : nil
     }
 
+    /// Decision 460: the tier of a GPU of family `family` named `name`
+    /// (`MTLDevice.name`): an M-series chip's one higher than its family
+    /// (the M1 shares the A14's family with twice its GPU cores, the M2
+    /// the A15's), so an iPad of the M1 draws as an iPhone of the A15.
+    public static func forGPU(family: Int, name: String) -> Map3DDeviceTier? {
+        guard let tier = forGPUFamily(family) else { return nil }
+        return isMSeries(name) ? Map3DDeviceTier(rawValue: tier.rawValue + 1) ?? tier : tier
+    }
+
+    /// Whether `name` is an M-series chip's ("Apple M1", "Apple M2 GPU").
+    public static func isMSeries(_ name: String) -> Bool {
+        guard name.hasPrefix("Apple M"), let digit = name.dropFirst("Apple M".count).first else { return false }
+        return digit.isNumber
+    }
+
     /// Decision 259's street detail of the tier (the rain's too).
     public var streetDetail: Map3DStreetDetail { self == .lower ? .reduced : .full }
 
