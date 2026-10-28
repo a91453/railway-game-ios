@@ -167,11 +167,6 @@ struct RailwayGameApp: App {
                 launcher.openDemo()
             }
         }
-        // Freeze the demo before its first frame so camera UI tests select
-        // known train positions without racing the simulation's first tick.
-        if DebugLaunch.isSet("-ui-testing-paused") {
-            launcher.session?.setSpeed(.paused)
-        }
         // A data layer left on, as a player's last game can leave it
         // (TutorialUITests: the tutorial starts without it).
         if let layer = DebugLaunch.value(of: "-map-layer") {
@@ -181,6 +176,13 @@ struct RailwayGameApp: App {
         // build (TutorialUITests: the line step's screen on a phone).
         if let step = DebugLaunch.value(of: "-tutorial-step") {
             launcher.startTutorial(atStep: step)
+        }
+        // Freeze the demo before its first frame so camera UI tests select
+        // known train positions without racing the simulation's first tick.
+        // After the tutorial's step: a lesson built from it starts at
+        // midnight too, however slow the runner (LessonUITests).
+        if DebugLaunch.isSet("-ui-testing-paused") {
+            launcher.session?.setSpeed(.paused)
         }
         // Decision 409: the demo's network as if a friend had sent it, for
         // the UI test of the sheet that offers it.
