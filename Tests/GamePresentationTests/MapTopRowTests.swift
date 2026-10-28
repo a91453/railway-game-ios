@@ -34,30 +34,41 @@ final class MapTopRowTests: XCTestCase {
         XCTAssertEqual(crowded.layers, .button)
     }
 
-    func testALargePhoneUprightKeepsTheStripWithTheCardClosed() {
-        // An iPhone 17 Pro, 402 points: the strip and the next step's flag.
-        let row = MapTopRow.arrange(width: room(screen: 402), showsLayers: true, nightSkipWidth: 0, nextStep: true, follows: false)
+    // An iPhone is only held on its side (decision 106): an iPhone 17 Pro
+    // is 750 points wide inside its safe area, an iPhone SE 667.
+
+    func testALargePhoneKeepsTheStripBesideTheCard() {
+        // The card takes 35 % (263): 457 points are left, room for the
+        // strip and the next step's flag (373).
+        let card = SidePanelWidth.card(screenWidth: 750, compactHeight: true)
+        let width = room(screen: 750, card: card)
+        XCTAssertEqual(width, 457)
+        let row = MapTopRow.arrange(width: width, showsLayers: true, nightSkipWidth: 0, nextStep: true, follows: false)
         XCTAssertEqual(row, .init(layers: .strip, showsNextStep: true, nightSkip: .full))
     }
 
-    func testTheStripFoldsBesideTheCardOnAPhoneUpright() {
-        // The card takes 40 % of a 402-point phone: 211 points are left,
-        // where the 299-point strip ran under the card.
-        let card = SidePanelWidth.card(screenWidth: 402, compactHeight: false)
-        let width = room(screen: 402, card: card)
-        XCTAssertLessThan(width, MapTopRow.stripWidth)
-        let row = MapTopRow.arrange(width: width, showsLayers: true, nightSkipWidth: 0, nextStep: true, follows: false)
-        XCTAssertEqual(row.layers, .button)
-        XCTAssertTrue(row.showsNextStep)
+    func testTheStripFoldsAtNightBesideTheCard() {
+        // At night the skip (190), the strip and the next step are 573
+        // points, and ran under the card; folded they are 326.
+        let card = SidePanelWidth.card(screenWidth: 750, compactHeight: true)
+        let width = room(screen: 750, card: card)
+        let row = MapTopRow.arrange(width: width, showsLayers: true, nightSkipWidth: 190, nextStep: true, follows: false)
+        XCTAssertEqual(row, .init(layers: .button, showsNextStep: true, nightSkip: .full))
         XCTAssertLessThanOrEqual(
-            MapTopRow.width(of: row, showsLayers: true, nightSkipWidth: 0, follows: false), width
+            MapTopRow.width(of: row, showsLayers: true, nightSkipWidth: 190, follows: false), width
         )
+        // With the card closed the strip stays.
+        let open = MapTopRow.arrange(width: room(screen: 750), showsLayers: true, nightSkipWidth: 190, nextStep: true, follows: false)
+        XCTAssertEqual(open.layers, .strip)
     }
 
     func testTheNightSkipKeepsItsNameBeforeTheStripOnASmallPhone() {
-        // An iPhone SE upright, 375 points, at night: the skip's name and
-        // time (190) and the strip (299) do not both fit in 355.
-        let row = MapTopRow.arrange(width: room(screen: 375), showsLayers: true, nightSkipWidth: 190, nextStep: false, follows: false)
+        // An iPhone SE with the card open (233): 404 points, short of the
+        // skip and the strip (499).
+        let card = SidePanelWidth.card(screenWidth: 667, compactHeight: true)
+        let width = room(screen: 667, card: card)
+        XCTAssertEqual(width, 404)
+        let row = MapTopRow.arrange(width: width, showsLayers: true, nightSkipWidth: 190, nextStep: false, follows: false)
         XCTAssertEqual(row, .init(layers: .button, showsNextStep: false, nightSkip: .full))
     }
 
@@ -68,14 +79,14 @@ final class MapTopRowTests: XCTestCase {
     }
 
     func testTheNightSkipKeepsItsIconWhereNothingElseFits() {
-        // Beside the card on a small phone upright: 375 less the card's
-        // 150 leaves 195, short of the skip's 190, a gap and the button.
-        let card = SidePanelWidth.card(screenWidth: 375, compactHeight: false)
-        let width = room(screen: 375, card: card)
-        let row = MapTopRow.arrange(width: width, showsLayers: true, nightSkipWidth: 190, nextStep: true, follows: false)
+        // At the largest text the skip is about 360 points: beside the
+        // card on an iPhone SE (404) not even it and the button fit (422).
+        let card = SidePanelWidth.card(screenWidth: 667, compactHeight: true)
+        let width = room(screen: 667, card: card)
+        let row = MapTopRow.arrange(width: width, showsLayers: true, nightSkipWidth: 360, nextStep: true, follows: false)
         XCTAssertEqual(row, .init(layers: .button, showsNextStep: false, nightSkip: .icon))
         XCTAssertLessThanOrEqual(
-            MapTopRow.width(of: row, showsLayers: true, nightSkipWidth: 190, follows: false), width
+            MapTopRow.width(of: row, showsLayers: true, nightSkipWidth: 360, follows: false), width
         )
     }
 

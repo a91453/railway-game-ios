@@ -2,9 +2,10 @@
 // crowded"): the row under the status pill (the night skip, the layer
 // strip, a free game's next step and the follow bar) took its pieces at
 // their full widths, about 300 points for the strip and 190 for the night
-// skip, and on a phone held upright with the details card open, or at night,
-// ran past the screen or under the card. Now each piece gives way in turn,
-// the least pressing first, until the row fits the room it has.
+// skip, and on a phone (held on its side, decision 106) with the details
+// card open at night, beside the follow bar or at a large text size, ran
+// under the card. Now each piece gives way in turn, the least pressing
+// first, until the row fits the room it has.
 
 /// How the row under the status pill is laid out in `width` points.
 public enum MapTopRow {

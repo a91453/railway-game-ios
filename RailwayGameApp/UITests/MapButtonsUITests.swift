@@ -99,14 +99,15 @@ final class MapButtonsUITests: XCTestCase {
         checkTheButtonsShow(in: app)
     }
 
-    /// Decision 469 (UI review 2-3): on a phone held upright with the
-    /// details card open, the row under the status pill stopped short of
-    /// nothing and the layer strip ran under the card. It folds to one
-    /// button there now, clear of the card, and a finger reaches it. When
-    /// it folds is `MapTopRowTests` on Linux.
-    func testThePhonesLayerStripKeepsClearOfTheCardHeldUpright() throws {
-        try XCTSkipIf(UIDevice.current.userInterfaceIdiom != .phone, "a phone held upright")
-        let app = launch(orientation: .portrait)
+    /// Decision 469 (UI review 2-3): on a phone on its side with the
+    /// details card open, the row under the status pill ran under the card
+    /// where it had no room (at night, the skip beside the strip). The
+    /// strip folds to one button there now; either way it stays clear of
+    /// the card and a finger reaches its list. When it folds is
+    /// `MapTopRowTests` on Linux.
+    func testThePhonesLayerStripKeepsClearOfTheCard() throws {
+        try XCTSkipIf(UIDevice.current.userInterfaceIdiom != .phone, "a phone held on its side")
+        let app = launch(orientation: .landscapeLeft)
         defer { app.terminate() }
 
         let card = app.descendants(matching: .any)["details.card"].firstMatch
