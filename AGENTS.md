@@ -25,7 +25,8 @@ not only Claude Code. Read it first and follow it. In particular:
   player, railway fan (how true it is to real railways and their data),
   developer, art and music (`CLAUDE.md`, Workflow).
 - Previews and generated art the game does not load go to
-  a91453/railway-reference-private, `Railway/game-art-previews/docs/art/`.
+  a91453/railway-assets-private, `game-art-previews/docs/art/`
+  (before 2026-10-28: `a91453/railway-reference-private`, `Railway/game-art-previews/docs/art/`).
   Only a model's newest round keeps its models and viewer, with no ZIP of
   the folder's own files; a round it replaces keeps only its PNG previews,
   README and source record, and no `history/` copy (`CLAUDE.md`, Workflow).

@@ -114,11 +114,12 @@ exist; start with its `00_READ_ME_FIRST.md` and `DATA_USE_NOTICES.json`),
 `Railway/tdx-bus-history-2026-10/` (added 2026-10-27; samples of Taipei and
 Kaohsiung city bus positions and stop events, a weekday and a rest day each,
 cut at `$top` because the historical API cannot filter by route; start with
-its `00_READ_ME_FIRST.md`), `Railway/meshy-batch-2026-10/` (added
-2026-10-27; Meshy text-to-3D street and railway props, not yet in the
-game; start with its `00_READ_ME_FIRST.md`), and `city_map_reference_clean/`
+its `00_READ_ME_FIRST.md`), and `city_map_reference_clean/`
 and `power_grid_reference_clean/` at the repository root (start with their
-`REFERENCE_COMPARISON.md` and `SANITIZATION_REPORT.md`).
+`REFERENCE_COMPARISON.md` and `SANITIZATION_REPORT.md`). The Meshy
+text-to-3D street and railway props (`meshy-batch-2026-10/`, added
+2026-10-27, not yet in the game; start with its `00_READ_ME_FIRST.md`) live
+in `a91453/railway-assets-private`, not in the reference repository.
 
 When a problem is hard (an algorithm, a data source, a performance or
 platform limit, a design with no obvious answer), look for prior work before
@@ -382,8 +383,10 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   them), keep the other options' previews in the PR so the owner can look
   later, and go ahead. Previews and generated art the game does not load
   (more than about 2 MB in one pull request) go to
-  a91453/railway-reference-private, `Railway/game-art-previews/docs/art/`
-  (owner, 2026-10-21); the pull request keeps one overview image, the
+  a91453/railway-assets-private, `game-art-previews/docs/art/`
+  (owner, 2026-10-21; moved from `a91453/railway-reference-private`,
+  `Railway/game-art-previews/docs/art/`, on 2026-10-28 because that
+  repository passed 3 GB; its old copy stays readable); the pull request keeps one overview image, the
   README and the images code or docs link to. There, only the newest
   round of a model keeps its models and its viewer (which opens offline,
   so no ZIP of the folder's own files); a round it replaces keeps only its
