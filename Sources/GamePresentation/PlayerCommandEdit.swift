@@ -150,8 +150,17 @@ extension PlayerCommand {
         case setBusCount(BusRouteID, buses: Int)
         case setBusRuns(BusRouteID, BusService)
         case removeBusRoute(BusRouteID)
+        /// Decision 438: a city route, to no station, through its stops
+        /// from the first to the last; `legMetres` as
+        /// ``createBusRoute(_:stops:legMetres:service:buses:)``, one fewer
+        /// than the stops.
+        case createCityBusRoute(stops: [BusStop], legMetres: [Int64]? = nil, service: BusService, buses: Int)
+        /// Decision 438: the player's road along these cells, each beside
+        /// the last, and the player's roads in these cells taken up.
+        case buildRoad(along: [BusStop])
+        case removeRoads([BusStop])
 
-        /// A bus stop's land cell.
+        /// A bus stop's land cell; a road's too (decision 438).
         public struct BusStop: Hashable, Sendable, Codable {
             public let row: Int
             public let column: Int
@@ -315,6 +324,10 @@ extension GameSession {
         case .setBusCount(let id, let buses): try world.setBusCount(id, to: buses)
         case .setBusRuns(let id, let service): try world.setBusRuns(id, to: service)
         case .removeBusRoute(let id): try world.removeBusRoute(id)
+        case .createCityBusRoute(let stops, let legMetres, let service, let buses):
+            try world.createBusRoute(to: nil, stops: stops.map(\.cell), legMetres: legMetres, service: service, buses: buses)
+        case .buildRoad(let cells): try world.buildRoad(along: cells.map(\.cell))
+        case .removeRoads(let cells): try world.removeRoads(cells.map(\.cell))
         case .setFreightProduct(let id, let kind): try world.setFreightProduct(at: id, to: kind)
         case .setStationDepot(let id, let isDepot): try world.setStationDepot(id, to: isDepot)
 

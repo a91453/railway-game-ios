@@ -109,6 +109,28 @@ final class Map3DBusesTests: XCTestCase {
                        Float(safeTint & 0xFF) / 255, accuracy: 0.001)
     }
 
+    /// Decision 438: a city route, to no station, is laid too, from its
+    /// first stop to its last, in the low-floor bus's own colour.
+    func testACityRoutesBusesDriveBetweenItsStops() throws {
+        let (feeder, route) = try world(buses: 2)
+        var world = feeder
+        try world.removeBusRoute(route.id)
+        let city = try world.createBusRoute(to: nil, stops: [route.stops[1], route.stops[0]], service: .every(minutes: 10), buses: 2)
+        XCTAssertNil(city.station)
+        let scene = Map3DScene(world: world)
+        let buses = Map3DBuses(world: world, scene: scene, palette: .standard)
+        XCTAssertEqual(buses.count, 1)
+        XCTAssertEqual(Map3DBuses.Signature(world: world, palette: .standard).routes.first?.station, nil)
+        let middle = city.stops[0].middle
+        let target = scene.point(worldX: Double(middle.x), worldY: Double(middle.y), height: 0)
+        let frame = busFrame(buses, second: 8 * 3_600 + 180, target: target, distance: 900)
+        XCTAssertFalse(frame.instances.isEmpty)
+        let tint = Map3DLowFloorBus.accentColor
+        for bus in frame.instances {
+            XCTAssertEqual(bus.stripe.0, Float(tint & 0xFF) / 255, accuracy: 0.001)
+        }
+    }
+
     func testNoBusAFarCameraOrNoDetailDrawsNone() throws {
         let (world, route) = try world(buses: 0)
         let scene = Map3DScene(world: world)

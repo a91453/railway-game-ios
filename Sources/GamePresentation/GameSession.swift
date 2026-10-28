@@ -462,11 +462,19 @@ public final class GameSession {
     public internal(set) var busPreview: BusRoutePreview?
     /// The drawn route's way along the roads, from the station out.
     public internal(set) var busDraftPath: [PlanPoint] = []
+    /// Decision 438: what the bus tool draws, routes or roads, and the road
+    /// being drawn or the player's road picked to take up (RoadDraft.swift).
+    public internal(set) var busMode = BusToolMode.routes
+    public internal(set) var roadDraft = RoadDraft()
+    public internal(set) var roadPreview: RoadPreview?
+    public internal(set) var roadRemoval: RoadRemoval?
+    /// Where the drag drawing a road began (``dragRoad(from:to:)``).
+    @ObservationIgnored var roadDragStart: PlanPoint?
     /// Each bus route's way on the map, kept for the stops and station it
     /// was worked out for.
     @ObservationIgnored var busPathMemo: [BusRouteID: BusPathMemo] = [:]
     /// The base map's bus roads for this world's frame (``busRoads``).
-    @ObservationIgnored var busRoadsMemo: (frame: RealWorldFrame, roads: BusRoads)?
+    @ObservationIgnored var busRoadsMemo: (frame: RealWorldFrame, roads: BusRoads?)?
     /// Taiwan's real bus stops (decision 424, C2), whose files a real-world
     /// map reads as the bus tool needs them; handed to each session by the
     /// launcher, never saved.
@@ -1191,6 +1199,7 @@ public final class GameSession {
         guard newTool != tool else { return }
         tool = newTool
         clearBusDraft()
+        clearRoadDraft()
         buildingSite = nil
         saleCandidate = nil
         endChoosingMapTile()

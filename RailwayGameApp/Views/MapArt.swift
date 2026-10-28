@@ -61,6 +61,7 @@ enum MapArt {
         journey: JourneyTrace? = nil,
         journeyProgress: Double = 1,
         buses: BusMapOverlay? = nil,
+        roads: RoadMapOverlay? = nil,
         drawsLabels: Bool = true,
         part: MapPart = .all,
         in context: GraphicsContext
@@ -68,7 +69,7 @@ enum MapArt {
         if part != .trafficAndStations {
             drawRailway(world, network: overlay, expansion: expansion, projection: projection, edges: edges, layers: layers, lines: lines,
                         routePreview: routePreview, flowStrokes: flowStrokes, lineCodes: lineCodes, journey: journey,
-                        journeyProgress: journeyProgress, buses: buses, in: context)
+                        journeyProgress: journeyProgress, buses: buses, roads: roads, in: context)
         }
         if part != .railway {
             drawTrafficAndStations(
@@ -108,6 +109,7 @@ enum MapArt {
         journey: JourneyTrace?,
         journeyProgress: Double,
         buses: BusMapOverlay?,
+        roads: RoadMapOverlay?,
         in context: GraphicsContext
     ) {
         let bounds = WorldRegion(bounds: world.bounds)
@@ -147,6 +149,11 @@ enum MapArt {
             drawLines(lines, world: world, projection: projection, cached: edges, codes: lineCodes, in: context)
         } else {
             drawSectionFlow(flowStrokes, world: world, projection: projection, cached: edges, in: context)
+        }
+        // Decision 438: the player's own roads and the road drawn, under
+        // the bus routes that run on them (docs/MAP_LAYERS.md, 24.7).
+        if let roads {
+            drawRoads(roads, projection: projection, in: context)
         }
         // Decision 400 (10i-5): the bus routes along the roads, over the
         // lines and under the transfers (docs/MAP_LAYERS.md, 24.8).
@@ -1176,7 +1183,7 @@ enum MapArt {
                 )
             }
             for item in draft.arrows(every: spacing) { arrow(item, colour: Palette.ink, opacity: opacity) }
-            stops([draft.station], opacity: opacity)
+            if let station = draft.station { stops([station], opacity: opacity) }
             for (point, label) in zip(draft.stops, draft.labels) { pin(point, label: label, opacity: opacity) }
         }
         if buses.showsLabels {
@@ -1187,6 +1194,69 @@ enum MapArt {
         }
         for item in names { plate(item.name, besides: item.centre, gap: 12, opacity: item.opacity, font: .caption2.weight(.semibold)) }
         for stop in faint { plate(stop.name, besides: stop.centre, gap: 5, opacity: 0.7, font: .caption2) }
+    }
+
+    /// Decision 438: on a map with a base map, the player's roads as
+    /// streets between the cells; while the bus tool lays roads, the
+    /// player's cells outlined, the road drawn through its cells (those it
+    /// lays filled, those with a road already faint, the one refused
+    /// dashed red), and the stretch picked to take up in red.
+    private static func drawRoads(_ roads: RoadMapOverlay, projection: some MapProjection, in context: GraphicsContext) {
+        let view = context.clipBoundingRect
+        let cell = Double(Land.cellLength)
+        let width = max(2, cell * projection.pointsPerUnit * 0.35)
+        func rect(_ position: CellPosition) -> CGRect {
+            screenRect(
+                minX: Double(position.column) * cell, minY: Double(position.row) * cell,
+                maxX: Double(position.column + 1) * cell, maxY: Double(position.row + 1) * cell, projection
+            )
+        }
+        func line(_ points: [PlanPoint]) -> Path {
+            var path = Path()
+            guard let first = points.first else { return path }
+            path.move(to: cgPoint(projection.screenPoint(of: first)))
+            for point in points.dropFirst() { path.addLine(to: cgPoint(projection.screenPoint(of: point))) }
+            return path
+        }
+        for street in roads.streets {
+            let path = line(street)
+            guard path.boundingRect.insetBy(dx: -width, dy: -width).intersects(view) else { continue }
+            context.stroke(path, with: .color(Palette.roadCasing), style: StrokeStyle(lineWidth: width + 2, lineCap: .round))
+            context.stroke(path, with: .color(Palette.road), style: StrokeStyle(lineWidth: width, lineCap: .round))
+        }
+        for position in roads.own {
+            let shape = rect(position)
+            guard shape.intersects(view) else { continue }
+            context.stroke(Path(shape), with: .color(Palette.ink.opacity(0.45)), lineWidth: 1)
+        }
+        for position in roads.existing {
+            let shape = rect(position)
+            guard shape.intersects(view) else { continue }
+            context.fill(Path(shape), with: .color(Palette.ink.opacity(0.12)))
+        }
+        let colour = roads.isBuildable ? Palette.metroGreen : Palette.ink
+        for position in roads.laid {
+            let shape = rect(position)
+            guard shape.intersects(view) else { continue }
+            context.fill(Path(shape), with: .color(colour.opacity(0.4)))
+        }
+        if roads.draft.count >= 2 {
+            let path = line(roads.draft)
+            context.stroke(path, with: .color(Palette.ink), style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
+            context.stroke(path, with: .color(Palette.markerFill), style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+        } else if let only = roads.draft.first {
+            let centre = cgPoint(projection.screenPoint(of: only))
+            context.fill(Path(ellipseIn: CGRect(x: centre.x - 4, y: centre.y - 4, width: 8, height: 8)), with: .color(Palette.ink))
+        }
+        if let refused = roads.refused {
+            context.stroke(Path(rect(refused)), with: .color(Palette.metroRed), style: StrokeStyle(lineWidth: 2, dash: [4, 3]))
+        }
+        for position in roads.removal {
+            let shape = rect(position)
+            guard shape.intersects(view) else { continue }
+            context.fill(Path(shape), with: .color(Palette.metroRed.opacity(0.35)))
+            context.stroke(Path(shape), with: .color(Palette.metroRed), lineWidth: 1.5)
+        }
     }
 
     private static func drawTransfers(_ lines: LineMap, projection: some MapProjection, in context: GraphicsContext) {

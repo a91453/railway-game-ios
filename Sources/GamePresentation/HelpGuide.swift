@@ -212,10 +212,19 @@ public enum HelpGuide {
             "roadsAndBuses", .city,
             question: ("Where do roads come from, and how do I run buses?", "道路從哪裡來？怎麼開公車？"),
             answer: (
-                "Roads belong to the city: on a blank map they grow from each town toward your stations a little each month, and on a real map they are the real streets. Until a road reaches a station, its station panel can build a short station road to the nearest one. Buses run from a station along the roads: choose the Buses tool, tap the station, then tap roads for the stops. A game saved without roads can turn them on from the Buses tool.",
-                "道路是城市自己長的：空白地圖上，路每個月從城鎮往車站長一點；實景地圖上就是真實的街道。車站還沒接上路時，可以在車站面板鋪站前路，接到最近的路。公車從車站沿路開：選「公車」工具，點車站，再點路面放站牌。沒有道路的舊存檔，可以在「公車」工具裡打開道路。"
+                "Roads belong to the city: on a blank map they grow from each town toward your stations a little each month, and on a real map they are the real streets. You can also lay your own. Until a road reaches a station, its station panel can build a short station road to the nearest one. Buses run from a station along the roads: choose the Buses tool, tap the station, then tap roads for the stops. A city bus runs only in town, from stop to stop: tap a road away from a station to start one, then tap roads for its other stops. A game saved without roads can turn them on from the Buses tool.",
+                "道路是城市自己長的：空白地圖上，路每個月從城鎮往車站長一點；實景地圖上就是真實的街道。也可以自己鋪路。車站還沒接上路時，可以在車站面板鋪站前路，接到最近的路。公車從車站沿路開：選「公車」工具，點車站，再點路面放站牌。市區公車只在城裡開，從一個站牌開到另一個站牌：點離車站遠的路面開一條，再點路面放其他站牌。沒有道路的舊存檔，可以在「公車」工具裡打開道路。"
             ),
-            keywords: "road street bus stop station road grow old save 道路 街道 公車 站牌 站前路 長 舊存檔"
+            keywords: "road street bus stop station road grow old save city bus town 道路 街道 公車 站牌 站前路 長 舊存檔 市區公車 市區"
+        ),
+        HelpEntry(
+            "ownRoads", .city,
+            question: ("How do I lay my own roads?", "怎麼自己鋪路？"),
+            answer: (
+                "In the Buses tool, switch to Roads and drag across the map where the road goes, then tap the button to lay it. Water and steep slopes can't take a road. To take up one of your roads, tap it in Roads and confirm. Only your own roads can be taken up, and a road a bus route runs on must wait until you change the route.",
+                "在「公車」工具切到「道路」，在地圖上拖過要鋪的地方，再按按鈕鋪下去。水面和太陡的坡不能鋪路。要拆自己的路，在「道路」點它再確認。只能拆自己鋪的路；有公車走的路要先改路線。"
+            ),
+            keywords: "road build lay own drag remove take up 鋪路 道路 自己 拆 拖"
         ),
         HelpEntry(
             "buyMap", .building,
