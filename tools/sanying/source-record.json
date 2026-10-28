@@ -1,0 +1,31 @@
+{
+  "origin": "Original Swift procedural geometry by the project, based on visual observation and published dimensions; no third-party image or mesh is embedded.",
+  "date": "2026-10-28",
+  "license": "Project copyright; reference photographs are observation-only and retain their owners' rights.",
+  "public_use": "Source citations and original procedural recipe only; no reference photo redistributed.",
+  "references": [
+    {
+      "url": "https://www.ntmetro.com.tw/basic/?mode=detail&node=864",
+      "author": "New Taipei Metro Corporation",
+      "type": "operator specifications",
+      "use": "2-car formation, 35 x 2.6 x 3.8 m, steel wheel, 750 V DC third rail"
+    },
+    {
+      "url": "https://www.ntpc.gov.tw/ch/home.jsp?dataserno=202308100011&id=28",
+      "author": "New Taipei City Government",
+      "type": "official report and real train photographs",
+      "use": "17.7 m car, three doors per side, sloped nose and blue wave"
+    }
+  ],
+  "estimated": [
+    "bogie centres",
+    "wheel radius",
+    "roof equipment placement",
+    "exact window widths",
+    "collector shoe shape"
+  ],
+  "private_reference": {
+    "path": "railway-reference-private/Railway/taiwan-rail-reference-clean/source/rail-3d/assets/garage-blender-v1/sanying.json",
+    "finding": "Illustrative Q-proportions model, 9.208 m long, engineeringDimensionsM null; inspected metadata only and did not reuse geometry or dimensions."
+  }
+}
