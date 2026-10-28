@@ -20,4 +20,4 @@ tools/kenney-props/build.sh [WORK_DIR]
 
 樹冠（`Map3DPalette.crown`）與灌木（`embankment`）的顏色讀進遊戲時改成 alpha 0，由每個實例給自己的綠（`Map3DSceneryProp.coniferGreens`、`bushGreens`）。檔案讀不到時，`Map3DModelPack.standard` 裡同尺寸的程式替身照畫。
 
-glTF-Validator：這一版沒有加進 CI（加工具屬於加依賴，等規劃回覆）；本機檢查見 PR 說明。
+glTF-Validator：沒有加進 repo 或 CI（加依賴由作者決定）；2.0.0-dev.3.10 在本機檢查過六件 GLB，0 錯誤 0 警告。

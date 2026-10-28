@@ -432,7 +432,7 @@
 - **BL**（session_01YGNNuqUpKkygZmLQmiFyYw，素材庫與私庫照盤點刪檔 D1–D4、J2、J3、J10）：卡在要作者批准 `add_repo`（railway-game-ios、railway-reference-private）。請作者批准或回它；私庫的刪檔 PR 由作者合。
 
 **等前一項合併再派**：
-- Kenney 三件（針葉樹、灌木、儲槽）接進 `Map3DModelPack`：派工單 BN 做了（決策 458，`claude/kenney-trees-tanks`）；glTF-Validator 進 CI 還等規劃決定（加依賴）。
+- Kenney 三件（針葉樹、灌木、儲槽）接進 `Map3DModelPack`：派工單 BN 做了（決策 458，`claude/kenney-trees-tanks`）；glTF-Validator 進 repo／CI 是加依賴，由作者決定（規劃另外問）。
 - J7：`site_archive_clean` 的路徑改到 `taiwan-rail-reference-clean`（Sonnet）：BK 合併後。
 - 7d（NEXT_PRIORITIES §22.2）：`Map3DChineseRoof` 接進 civic-kit、residential-kit，把「zip 屋頂＋blender-buildings-v1 比例＋OSM 外框」寫進兩個 SKILL.md，補 §c.12 小口磚雙色、雨遮、冷氣室外機（Opus）：決策 457 合併後。
 - 7c 第一批（Opus），有 Blender 參考的車站：臺中、新竹、花蓮、臺東、板橋、南港；高鐵桃園、新竹、台中含新烏日、台南、左營。作者看過台北這輪滿意才派；第二批（基隆、嘉義、臺南與老站、林鐵糖鐵站）最後。作者 10-28「好 照你的建議排」。
@@ -1800,7 +1800,7 @@
 | 演示模式「鋪好這一帶的真實路線」（決策 351 續篇）的後續：(a) 實機量一次鋪設要多久（Linux release 8 km 台北 12 條線：原本 11.8 秒，決策 351「後來」改快到 7.3 秒；196 秒是 debug）、按鈕在 iPhone／iPad 的位置；(b) 決策 351 續篇「缺口」列的：不用真實時刻表、只有 10 個系統有資料、林鐵機廠沒鋪、台北高鐵台鐵並行沒測、文湖線 35 m 彎道略過、中和新蘆共用段鋪兩次 | 決策 351 續篇，session_01Q6ucfu4uY1YiX1buRCZzFr（壓縮兩次後停） | (a) 待實機；(b) 沒有人接，只動 GamePresentation |
 | 實景地圖 3D 的真實股道（決策 402）：照參考的派軌（`dispatch.json`）讓每一班走它被排的股道與待避線、實機看兩條並排的高架橋面、遠景太重時鋼軌只放近景 | 決策 402「下一步」 | 沒有人接；決策 402 先用「靠左／靠右走中間那條」 |
 | ~~第 5 關第一步的卡片在時間走著時會跳：引導指的那段（`tutorialDoubleTrackStretch`，決策 378）每次都重選「現在沒有列車」的最長一段，600 倍速下在 S0、S1、S2 旁輪流換，字跟著換、卡片每幾秒就移到另一邊，玩家要點「略過」「下一步」時會點到地圖。UI 測試改成先暫停再略過（`LessonUITests`，main 12c1235 的 full lane 40085460126 的錄影）。App 的修法要選：開始這一步時記住那一段、列車在上面就叫玩家等它過去；或卡片只在擋到目標時才換位置~~ | session_01VtrfiLxZ1bP4EPrDe6FKZp 2026-10-24 | **修了**（`claude/tutorial-card-steady`）：和 `TutorialUITests.testATouchHeldOnTheFoldedCardAsTheStepMovesOnOpensIt` 7 天紅 2 次是同一個原因，卡片的位置每次排版都從頭算、對著目標置中，大小或要點的地方一變就整張換位置（947c23a 的 full lane 40093122899：膠囊帶著「略過這一步」量位置，步驟完成時那顆按鈕消失、膠囊變窄又置中，手指落在地圖上）。改成卡片留在原位（`TutorialCardPlacement.previous`，左上角不動），只有原位比別處差（擋到要點的地方或按鈕）才換；打開或收合時才重新放。引導指的那段照樣隨列車換（字也換），卡片不跟著跳。 |
-| Kenney（CC0）免費素材接進 3D 地圖：Nature Kit 的針葉樹（`tree_pineTallA` 等 2–3 種）、灌木（`plant_bushLarge` 等 2 種）、City Kit Industrial 的臥式儲槽（`detail-tank`），照 art-style §7 改造形狀後經 `bridge.mjs` 轉檔進 `Map3DModelPack`，放山區、站前與沿線、工業用地 | 派工單 BJ（session_01YGNNumzoGFAQMzumKPx3Ry），`docs/research/FREE_ASSETS_TRIAL_KENNEY_2026-10-28.md` §6；試做的成品與烘焙腳本在私庫 railway-assets-private `game-art-previews/docs/art/free-assets-kenney/revision-1/` | 派工單 BN 做了（決策 458，`claude/kenney-trees-tanks`）：六件改形後進 App，`tools/kenney-props/`。剩下：glTF-Validator 進 CI（加依賴，等規劃）；闊葉樹、竹林與 `wood` 以外山坡的樹沒做 |
+| Kenney（CC0）免費素材接進 3D 地圖：Nature Kit 的針葉樹（`tree_pineTallA` 等 2–3 種）、灌木（`plant_bushLarge` 等 2 種）、City Kit Industrial 的臥式儲槽（`detail-tank`），照 art-style §7 改造形狀後經 `bridge.mjs` 轉檔進 `Map3DModelPack`，放山區、站前與沿線、工業用地 | 派工單 BJ（session_01YGNNumzoGFAQMzumKPx3Ry），`docs/research/FREE_ASSETS_TRIAL_KENNEY_2026-10-28.md` §6；試做的成品與烘焙腳本在私庫 railway-assets-private `game-art-previews/docs/art/free-assets-kenney/revision-1/` | 派工單 BN 做了（決策 458，`claude/kenney-trees-tanks`）：六件改形後進 App，`tools/kenney-props/`。剩下：glTF-Validator 進 repo／CI（加依賴，作者決定）；闊葉樹、竹林與 `wood` 以外山坡的樹沒做 |
 
 ## 6. 留在遠端、沒有合併的 branch
 
