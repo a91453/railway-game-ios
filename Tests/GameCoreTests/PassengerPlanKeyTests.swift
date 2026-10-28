@@ -218,4 +218,51 @@ final class PassengerPlanKeyTests: XCTestCase {
         XCTAssertEqual(kept.passengers, stepped.passengers)
         XCTAssertEqual(kept.riders, stepped.riders)
     }
+
+    /// 派工單 BK: a plan worked out at night, when no line runs, has a graph
+    /// of its own; going back to the day's graph keeps the day's routes
+    /// instead of working each one out again (92.1: 14 s at every 06:00).
+    func testTheNightsEmptyGraphKeepsTheDaysRoutes() throws {
+        var world = try Self.grid(columns: 4, rows: 3)
+        try world.advance(ticks: 1)
+        let day = PassengerRouteGraph(world: world)
+        XCTAssertFalse(day.paths.isEmpty)
+        let pair = PassengerRouteMemo.Pair(origin: world.stations[0].id, destination: world.stations[11].id)
+        let choices = world.passengerRouteChoices(from: pair.origin, to: pair.destination, graph: day)
+        XCTAssertFalse(choices.isEmpty)
+        var memo = PassengerRouteMemo()
+        memo.use(day)
+        memo.choices[pair] = choices
+        memo.use(PassengerRouteGraph(paths: []))
+        XCTAssertTrue(memo.choices.isEmpty, "the night's graph has routes of its own")
+        memo.use(day)
+        XCTAssertEqual(memo.choices[pair], choices, "the day's routes are kept through the night")
+        XCTAssertEqual(memo.graph, day)
+        // Only the graph before: a third one drops the day's.
+        memo.use(PassengerRouteGraph(paths: []))
+        memo.use(PassengerRouteGraph(paths: Array(day.paths.prefix(1))))
+        memo.use(day)
+        XCTAssertNil(memo.choices[pair])
+    }
+
+    /// The same world, its routes kept through nights or worked out afresh
+    /// at every call, across two days of lines that stop at midnight.
+    func testRoutesKeptThroughTheNightGiveTheSameWorld() throws {
+        var kept = try Self.grid(columns: 4, rows: 3)
+        for line in kept.lines {
+            try kept.setLineServiceWindow(line.id, to: .standard)
+        }
+        kept.setSpeed(.fast)
+        var fresh = kept
+        for _ in 0..<(2 * 144) {
+            try kept.advance(ticks: 1)
+            fresh.passengerPlan = GameWorld.PassengerPlanCache()
+            fresh.passengerRouteMemo = PassengerRouteMemo()
+            try fresh.advance(ticks: 1)
+        }
+        XCTAssertGreaterThan(kept.passengers.reduce(Int64(0)) { $0 + $1.released }, 0)
+        XCTAssertEqual(kept, fresh)
+        XCTAssertEqual(kept.passengers, fresh.passengers)
+        XCTAssertEqual(kept.riders, fresh.riders)
+    }
 }
