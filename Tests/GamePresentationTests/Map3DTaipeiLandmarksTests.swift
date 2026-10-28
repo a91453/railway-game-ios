@@ -22,6 +22,7 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
 
     private static let wall = Map3DColor.rgb(0xF5F1E9)
     private static let canopyGrass = Map3DColor.rgb(0xCFE0C8)
+    private static let flatRoof = Map3DColor.rgb(0xE6E4E0)
 
     /// OSM specifications (ODbL):
     /// - Taipei 101: relation 11551064, spire way 615183623 (height = 508 m).
@@ -33,6 +34,10 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
     private static let kaohsiungCanopyLength: Float = 664.78
     private static let kaohsiungCanopyWidth: Float = 333.87
     private static let kaohsiungCanopyHeight: Float = 23.0
+    /// Decision 457 (later): the joint-development towers, 10 and 11
+    /// floors by the news, 3.5 m a floor.
+    private static let kaohsiungOfficesHeight: Float = 35
+    private static let kaohsiungHotelHeight: Float = 38.5
     private static let kaohsiungOldStationWidth: Float = 25.30
     private static let kaohsiungOldStationDepth: Float = 30.36
 
@@ -53,7 +58,7 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
             let expectedTop: Float = switch landmark {
             case .taipei101: 508
             case .taipeiMainStation: 30
-            case .kaohsiungMainStation: Self.kaohsiungCanopyHeight
+            case .kaohsiungMainStation: Self.kaohsiungHotelHeight
             case .chiangKaiShekMemorialHall: 70
             case .libertySquareGate, .sunYatSenMemorialHall: 30
             case .nationalTheater, .nationalConcertHall: 37
@@ -228,7 +233,19 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
             let height = (zs.max() ?? 0) - (zs.min() ?? 0)
             XCTAssertEqual(length, Self.kaohsiungCanopyLength, accuracy: 2.0)
             XCTAssertEqual(width, Self.kaohsiungCanopyWidth, accuracy: 2.0)
-            XCTAssertEqual(height, Self.kaohsiungCanopyHeight, accuracy: 2.0)
+            XCTAssertEqual(height, Self.kaohsiungHotelHeight, accuracy: 0.01)
+            XCTAssertEqual(model.vertices.filter { $0.color == Self.canopyGrass }.map(\.z).max() ?? 0, Self.kaohsiungCanopyHeight, accuracy: 2.0)
+            // The towers on OSM's plans (ways 1298938833, 1298938834:
+            // 58.7 m × 104.2 m and 54.2 m × 57.5 m), the offices west of
+            // the hotel.
+            for (plan, top, size) in [(LandmarkMesh.kaohsiungOffices, Self.kaohsiungOfficesHeight, (x: Float(58.7), y: Float(104.2))),
+                                      (LandmarkMesh.kaohsiungHotel, Self.kaohsiungHotelHeight, (x: 54.2, y: 57.5))] {
+                let xs = plan.map(\.x), ys = plan.map(\.y)
+                XCTAssertEqual((xs.max() ?? 0) - (xs.min() ?? 0), size.x, accuracy: 0.5)
+                XCTAssertEqual((ys.max() ?? 0) - (ys.min() ?? 0), size.y, accuracy: 0.5)
+                let roof = model.vertices.filter { abs($0.z - top) < 0.01 && $0.color == Self.flatRoof }
+                XCTAssertTrue(roof.contains { $0.x >= (xs.min() ?? 0) && $0.x <= (xs.max() ?? 0) })
+            }
             // Old station (OSM way 257770396) on the south plaza.
             let oldStation = model.vertices.filter { $0.y < -109 && abs($0.x) < 20 }
             let oldXs = oldStation.map(\.x), oldYs = oldStation.map(\.y)

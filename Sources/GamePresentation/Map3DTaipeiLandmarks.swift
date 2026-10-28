@@ -909,7 +909,44 @@ struct LandmarkMesh {
             treeColumn(col.x, col.y, top: Self.canopyHeight(col.x, col.y) - 1.1)
         }
 
+        // Decision 457 (later): the joint-development towers on OSM's plans
+        // (way 1298938833 the offices, 1298938834 the hotel; OSM has no
+        // height): 10 and 11 floors by the news, 3.5 m a floor (estimated).
+        jointTower(Self.kaohsiungOffices, height: 35)
+        jointTower(Self.kaohsiungHotel, height: 38.5)
+
         oldKaohsiungStation()
+    }
+
+    /// The offices' and the hotel's plans (OSM ways 1298938833 and
+    /// 1298938834), counter-clockwise.
+    static let kaohsiungOffices: [P2] = Array([
+        (-29.8, -19.5), (-33.1, -62.4), (-33.7, -71.2), (-34.8, -84.6), (-35.9, -99.1), (-36.2, -102.1), (-37.3, -104.8), (-39.3, -107.1),
+        (-41.8, -108.7), (-44.7, -109.4), (-47.7, -109.2), (-77.9, -106.9), (-80.9, -106.6), (-83.7, -105.5), (-86.0, -103.5),
+        (-87.5, -101.0), (-88.3, -98.1), (-88.1, -95.1), (-81.9, -15.5), (-81.7, -12.5), (-80.5, -9.7), (-78.6, -7.5), (-76.0, -5.9),
+        (-73.1, -5.2), (-70.1, -5.4), (-39.9, -7.7), (-36.9, -8.0), (-34.1, -9.1), (-31.9, -11.1), (-30.3, -13.6), (-29.6, -16.5)
+    ].reversed())
+    static let kaohsiungHotel: [P2] = Array([
+        (42.3, -16.0), (57.8, -17.1), (61.0, -18.2), (64.1, -20.2), (67.5, -23.5), (69.5, -26.2), (71.7, -29.6), (72.5, -33.0),
+        (72.7, -38.9), (71.1, -57.6), (69.8, -61.6), (68.0, -64.9), (65.9, -67.8), (63.0, -70.3), (59.9, -72.0), (56.4, -73.0),
+        (51.3, -73.5), (37.8, -72.9), (33.3, -71.8), (31.5, -71.3), (27.6, -69.2), (24.3, -66.3), (21.9, -63.4), (20.1, -59.9),
+        (19.1, -54.7), (18.8, -50.3), (18.5, -44.9), (19.6, -35.5), (21.4, -29.0), (24.1, -24.0), (28.6, -19.9), (31.8, -18.0),
+        (35.8, -17.0), (39.3, -16.4)
+    ].reversed())
+
+    /// A plain glass tower `height` high on `plan`, in the pale look: glass
+    /// with white floor bands every third floor close by, a white parapet
+    /// and a flat roof; every second corner from afar.
+    mutating func jointTower(_ plan: [P2], height h: Float) {
+        let ring = full ? plan : plan.indices.filter { $0.isMultiple(of: 2) }.map { plan[$0] }
+        wallBand(ring, 0, ring, h - 1.2, colour("glass"), Self.curtain)
+        if full {
+            for z in stride(from: Float(10.5), to: h - 1.5, by: 10.5) {
+                wallBand(ring, z, ring, z + 0.5, colour("frame"), Self.plain)
+            }
+        }
+        wallBand(ring, h - 1.2, ring, h, colour("frame"), Self.plain)
+        cap(ring, h, colour("flatRoof"), Self.plain)
     }
 
     /// The preserved 1941 Imperial Crown station building on the south
