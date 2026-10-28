@@ -335,4 +335,74 @@ final class LessonTests: XCTestCase {
         session.keepPlaying()
         XCTAssertTrue(session.world.clock.isPaused, "the player's own pause stays")
     }
+
+    /// LessonUITests passes lesson 1 by building the second town's station
+    /// and a line on the tutorial's fixture, then waits for the result
+    /// card. Opened at midnight, as the UI test now launches it (paused),
+    /// day 0 carries the riders and the lesson passes at its end. Opened
+    /// in the afternoon, as a slow runner once left it running until 09:04
+    /// before it paused, day 0 carries too few: the goal met at midnight
+    /// is the link alone, and the game pauses for it with no result
+    /// (main f70a4cb's full lane, run 40592891253).
+    func testTheUITestsFirstLessonPassesOnDayZero() throws {
+        XCTAssertEqual(try firstLessonOutcome(openingAfterMinutes: 0), .completed(day: 0, rating: .gold))
+        XCTAssertNil(try firstLessonOutcome(openingAfterMinutes: 15 * 60), "too few riders on day 0")
+    }
+
+    /// The outcome at the first midnight of lesson 1 built as LessonUITests'
+    /// `passFirstLesson` builds it, `minutes` after the tutorial's step
+    /// starts, then run at fast forward.
+    private func firstLessonOutcome(openingAfterMinutes minutes: Int) throws -> ScenarioOutcome? {
+        let folder = directory()
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let launcher = GameLauncher(library: SaveLibrary(directory: folder), language: .english)
+        launcher.startTutorial(atStep: "line.open")
+        let session = try XCTUnwrap(launcher.session)
+        session.skipTutorial()
+        session.setSpeed(.normal)
+        for _ in 0..<minutes {
+            let tick = try XCTUnwrap(session.beginLoopTick())
+            session.finish(tick, with: .success(try GameSession.advanced(tick.world, by: 1, listening: false)))
+        }
+        session.togglePause()
+
+        let middle = WorldBounds.standard.width / 2
+        let town = Land.townCentres(seed: 1, in: .standard)[1]
+        let east = town.x >= middle
+        let junction = PlanPoint(x: middle + (east ? 5_120 : -6_144), y: middle)
+        let dx = Double(town.x - junction.x), dy = Double(town.y - junction.y)
+        let span = hypot(dx, dy)
+        let margin = Double(800 * WorldCoordinate.unitsPerMetre)
+        let end = PlanPoint(x: town.x + Int64(dx / span * margin), y: town.y + Int64(dy / span * margin))
+        let curve = try XCTUnwrap(NetworkBuilding.curve(from: junction, leaving: PlanVector(dx: east ? 1 : -1, dy: 0), to: end, leaving: nil))
+        let geometry = try XCTUnwrap(TrackGeometry(from: WorldCoordinate(x: junction.x, y: junction.y), to: WorldCoordinate(x: end.x, y: end.y), curve: curve))
+        let site = try XCTUnwrap(geometry.points.min {
+            hypot(Double($0.x - town.x), Double($0.y - town.y)) < hypot(Double($1.x - town.x), Double($1.y - town.y))
+        })
+        session.selectTool(.network)
+        session.setNetworkMode(.build)
+        session.tapNetwork(at: junction, reach: 512)
+        session.tapNetwork(at: end, reach: 512)
+        session.buildNetworkTrack()
+        session.setNetworkMode(.platform)
+        session.tapNetwork(at: PlanPoint(x: site.x, y: site.y), reach: 512)
+        session.addNetworkPlatform()
+        XCTAssertEqual(session.world.stations.count, 3, "the second town's station")
+        session.selectTool(.select)
+        for station in [session.world.stations[0], session.world.stations[2]] {
+            session.selectStation(station.id)
+            session.addSelectedStationToLineDraft()
+        }
+        session.createLineFromDraft()
+        XCTAssertEqual(session.world.lines.count, 1)
+
+        session.setSpeed(.fast)
+        // The midnight that ends day 0 is judged with the tick after it.
+        let midnight = GameTime.secondsPerDay
+        while session.world.clock.now.seconds <= midnight, let tick = session.beginLoopTick() {
+            session.finish(tick, with: .success(try GameSession.advanced(tick.world, by: 1, listening: false)))
+        }
+        XCTAssertTrue(session.world.clock.isPaused, "a goal met at midnight paused it")
+        return session.world.scenario?.outcome
+    }
 }

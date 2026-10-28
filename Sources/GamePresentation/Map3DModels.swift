@@ -46,6 +46,13 @@ public struct Map3DModelPack: Sendable {
     /// The same pack before the shade is baked (decision 439): the recipes as
     /// they are made, for the tests that check which recipe goes where.
     static let unbaked = Map3DModelPack(styles: Map3DTrainStyle.all, baked: false)
+    /// The static train studies the game never draws (K1-1): TEMU2000,
+    /// PP, E1000, EMU500, EMU800, EMU900, C341 and Taipei 610 models apart
+    /// from their sets. Kept out of ``standard`` so the app neither builds
+    /// nor uploads them; the export tools and `hashes.lock.json` read them.
+    public static let studies = Map3DModelPack(studiesBaked: true)
+    /// ``studies`` before the shade is baked.
+    static let unbakedStudies = Map3DModelPack(studiesBaked: false)
 
     public init(styles: [Map3DTrainStyle]) {
         self.init(styles: styles, baked: true)
@@ -83,9 +90,6 @@ public struct Map3DModelPack: Sendable {
         models.append(Map3DGreenCommuter.formation())
         models += Map3DTEMU1000.Unit.allCases.map { Map3DTEMU1000.model($0) }
         models.append(Map3DTEMU1000.formation())
-        // Static TEMU2000 study; operating Puyuma mapping is a separate step.
-        models += Map3DTEMU2000.Unit.allCases.map { Map3DTEMU2000.model($0) }
-        models.append(Map3DTEMU2000.formation())
         models += Map3DThreeCarUrban.Unit.allCases.map { Map3DThreeCarUrban.model($0) }
         models.append(Map3DThreeCarUrban.formation())
         // Independent static five-section articulated LRT; no operating type binding.
@@ -100,6 +104,20 @@ public struct Map3DModelPack: Sendable {
         models += Map3DTrainShapeRefresh.ids.map { Map3DTrainShapeRefresh.model($0) }
         models += Map3DSteamTender.Unit.allCases.map { Map3DSteamTender.model($0) }
         models.append(Map3DSteamTender.formation())
+        // Decision 400, 10i-6: the player's route buses, last, so no model
+        // before them moves.
+        models.append(Map3DLowFloorBus.routeModel())
+        self.init(recipes: models, baked: baked)
+    }
+
+    /// K1-1, K2-8: the static studies of trains the game draws from their
+    /// sets (`set-…`) or not at all, each finished as the standard pack's
+    /// models are. Only the tools and the model hashes read them.
+    init(studiesBaked baked: Bool) {
+        var models: [Model] = []
+        // Static TEMU2000 study; operating Puyuma mapping is a separate step.
+        models += Map3DTEMU2000.Unit.allCases.map { Map3DTEMU2000.model($0) }
+        models.append(Map3DTEMU2000.formation())
         // Independent PP roles, near and far. The E500-hauled display
         // assembly is exported separately; it exceeds the per-file limit.
         for far in [false, true] {
@@ -130,9 +148,10 @@ public struct Map3DModelPack: Sendable {
             models.append(Map3DTaipei610.model(role, far: true))
             models.append(Map3DTaipei610.model(role, light: true))
         }
-        // Decision 400, 10i-6: the player's route buses, last, so no model
-        // before them moves.
-        models.append(Map3DLowFloorBus.routeModel())
+        self.init(recipes: models, baked: baked)
+    }
+
+    private init(recipes models: [Model], baked: Bool) {
         // Decision 450: their glass and stainless marked, then decision
         // 439's soft shade baked into their colour.
         if baked {
@@ -147,8 +166,9 @@ public struct Map3DModelPack: Sendable {
         headSigns = Map3DHeadSign.anchors(in: models)
     }
 
-    init(models: [Model]) {
+    init(models: [Model], lights: [Int: Map3DTrainLights.Car] = [:]) {
         self.models = models
+        self.lights = lights
         headSigns = Map3DHeadSign.anchors(in: models)
     }
 

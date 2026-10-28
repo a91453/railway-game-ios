@@ -5,7 +5,7 @@ try FileManager.default.createDirectory(at:out,withIntermediateDirectories:true)
 let pack=Map3DModelPack.standard
 let direct=[Map3DE500.model(),Map3DE500.model(far:true),Map3DEMU3000.model(.ed)]
 var signatures:[[String:Any]]=[]
-for (id,m) in pack.models.map({($0.name,$0)}) + direct.map({("direct-"+$0.name,$0)}) {
+for (id,m) in (pack.models+Map3DModelPack.studies.models).map({($0.name,$0)}) + direct.map({("direct-"+$0.name,$0)}) {
  var raw=Data()
  var pin:UInt64=0xcbf29ce484222325
  func word(_ v:UInt32){for shift:UInt32 in [0,8,16,24]{raw.append(UInt8((v>>shift)&255))}}
@@ -19,7 +19,7 @@ for (id,m) in pack.models.map({($0.name,$0)}) + direct.map({("direct-"+$0.name,$
  signatures.append(["id":id,"triangles":m.triangleCount,"minimum":[m.minimum.x,m.minimum.y,m.minimum.z],"maximum":[m.maximum.x,m.maximum.y,m.maximum.z],"payload":file,"payload_fnv1a64":String(pin,radix:16)])
 }
 try JSONSerialization.data(withJSONObject:signatures,options:[.prettyPrinted,.sortedKeys]).write(to:out.appendingPathComponent("fingerprints.json"))
-print("Captured actual base models",pack.models.count)
+print("Captured actual base models",pack.models.count+Map3DModelPack.studies.models.count)
 
 if let m=pack.models.first(where:{$0.name == "set-emu800-head"}) {
  var raw=Data("M3DM".utf8);raw.append(contentsOf:[1,0,0,0])

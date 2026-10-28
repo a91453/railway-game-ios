@@ -69,7 +69,7 @@ try JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted, .
 print("Exported DM, T, M, reverse DM, six-car formation and style comparison through native readback.")
 var existing = Data()
 var existingSegments: [[String:Any]] = []
-for m in Map3DModelPack.standard.models where !m.name.hasPrefix("c341-") {
+for m in Map3DModelPack.standard.models + Map3DModelPack.studies.models where !m.name.hasPrefix("c341-") {
     let begin=existing.count
     existing.append(contentsOf: m.name.utf8);existing.append(0)
     for v in m.vertices {

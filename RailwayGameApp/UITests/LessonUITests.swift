@@ -269,13 +269,14 @@ final class LessonUITests: XCTestCase {
         app.segmentedControls.buttons[name].firstMatch
     }
 
-    private func launch(stars: String? = nil, step: String? = nil) {
+    private func launch(stars: String? = nil, step: String? = nil, paused: Bool = false) {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
         app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         if let stars { app.launchArguments += ["-lesson-stars", stars] }
         if let step { app.launchArguments += ["-tutorial-step", step] }
+        if paused { app.launchArguments += ["-ui-testing-paused"] }
         app.launch()
     }
 
@@ -515,6 +516,12 @@ final class LessonUITests: XCTestCase {
     private func bringMapPointIntoView(_ point: PlanPoint, from known: PlanPoint, zoomIfClamped: Bool = false) -> CGPoint {
         let middle = CGPoint(x: map.frame.midX, y: map.frame.midY)
         let clear = CGRect(x: middle.x - 130, y: middle.y - 60, width: 260, height: 120)
+        // How far the point is from the clear area: a drag that brings it
+        // no closer has hit the world's edge, even while it slides the
+        // point along that edge.
+        func gap(_ p: CGPoint) -> Double {
+            Double(hypot(max(clear.minX - p.x, 0, p.x - clear.maxX), max(clear.minY - p.y, 0, p.y - clear.maxY)))
+        }
         var at = project(point, from: known)
         for _ in 0..<16 {
             if clear.contains(at) { return at }
@@ -523,7 +530,11 @@ final class LessonUITests: XCTestCase {
             coordinate(middle).press(forDuration: 0.1, thenDragTo: coordinate(destination),
                                      withVelocity: XCUIGestureVelocity(rawValue: 200), thenHoldForDuration: 0.3)
             let moved = project(point, from: known)
-            if zoomIfClamped, hypot(moved.x - at.x, moved.y - at.y) < 4 {
+            // e17eb67's full lane: with the point level with the clear area
+            // but left of it, each drag slid it 9 points up or down and none
+            // came closer, so "moved less than 4 points" did not see the
+            // edge and the zoom came too late for the 16 drags.
+            if zoomIfClamped, gap(at) - gap(moved) < 4 {
                 // Near the world's edge, the current zoom has no more room
                 // to pan. A closer view gives the camera room to move.
                 let zoom = app.buttons["Zoom in"]
@@ -549,7 +560,12 @@ final class LessonUITests: XCTestCase {
     // MARK: - Passing lesson 1 through the UI
 
     private func passFirstLesson() {
-        launch(step: "line.open")
+        // Paused at midnight from launch. Left running until `pause()`, the
+        // line opened as late as 09:04 on a slow runner, day 0 carried too
+        // few riders, and the lesson paused at midnight for its link goal
+        // alone, with no result card (main f70a4cb's full lane, run
+        // 40592891253; `LessonTests.testTheUITestsFirstLessonPassesOnDayZero`).
+        launch(step: "line.open", paused: true)
         dismissGuide()
         pause()
         let middle = WorldBounds.standard.width / 2
@@ -586,7 +602,14 @@ final class LessonUITests: XCTestCase {
 
         openControls()
         tap(mode("Platform"))
-        tapMap(project(PlanPoint(x: site.x, y: site.y), from: known))
+        let platform = project(PlanPoint(x: site.x, y: site.y), from: known)
+        tapMap(platform)
+        // The touch on the map can be cancelled (the app's trace: "touch
+        // cancelled at (336, 288)" on MapGestureView, run 40592891253), and
+        // no platform is proposed. Tap once more if no confirm came.
+        if !app.buttons["map.build.confirm"].appears(within: 10) {
+            tapMap(platform)
+        }
         tap(app.buttons["map.build.confirm"])
         XCTAssertTrue(app.buttons["map.build.confirm"].disappears(within: 5))
         XCTAssertEqual(stationPoints().count, 3, "Build the second town's station")

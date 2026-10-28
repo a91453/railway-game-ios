@@ -3,14 +3,15 @@ import XCTest
 
 final class Map3DC371C381Tests: XCTestCase {
     func testSeparateRegisteredUnitsAndBudget() {
-        let pack = Map3DModelPack.standard
+        let pack = Map3DModelPack.studies
         for model in Map3DC371.Unit.allCases.map(Map3DC371.model) + Map3DC381.Unit.allCases.map(Map3DC381.model) {
             XCTAssertNotNil(pack.index(of: model.name))
+            XCTAssertNil(Map3DModelPack.standard.index(of: model.name))
             XCTAssertGreaterThan(model.triangleCount, 0)
             XCTAssertLessThanOrEqual(model.triangleCount, Map3DModelFile.maximumTriangles)
             XCTAssertEqual(model.minimum.z, 0, accuracy: 0.0001)
         }
-        XCTAssertEqual(pack.models.last(where: { !$0.name.hasPrefix(Map3DTrainLights.prefix) })?.name, Map3DLowFloorBus.routeModel().name)
+        XCTAssertEqual(Map3DModelPack.standard.models.last(where: { !$0.name.hasPrefix(Map3DTrainLights.prefix) })?.name, Map3DLowFloorBus.routeModel().name)
     }
 
     func testDistinctFrontGeometryAndSixFinalUnits() {

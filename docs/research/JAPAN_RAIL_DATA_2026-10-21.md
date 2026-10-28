@@ -303,3 +303,22 @@ CC 3.0 的授權（uair01、荒川線的鈴）不允許加上限制使用者權�
 - https://github.com/gsi-cyberjapan/optimal_bvmap 、https://maps.gsi.go.jp/help/pdf/vector/ 、https://www.gsi.go.jp/kikakuchousei/kikakuchousei40182.html 、https://www.digital.go.jp/resources/open_data/public_data_license_v1.0 （PDL 1.0）
 - https://maps.gsi.go.jp/xyz/experimental_multil/15/29140/12897.geojson 、https://maps.gsi.go.jp/development/ichiran.html
 - 作者參考庫：`Railway/world-rail-reference-clean/source/data/route_scope.json`、`tokyo.json`；`Railway/taiwan-rail-reference-clean/source/main-reference.js`（`buildProfile`）、`source/docs/research-tw-jp.md`、`research-intl.md`（之前對 Mini Tokyo 3D 功能面的調查）
+
+## 9. 2026-10-28 複查（作者再貼一次「ひと駅」的資料與音源出處）
+
+作者 2026-10-28 貼了同一款 App 的資料出處與音源出處，問有沒有新的可參考資料。遊戲規劃 session_01YGNNupX9CPMXwaBoNU5tma 對照本文。
+
+**資料出處：和 §1 相同**（同一個 Mini Tokyo 3D commit `220adf8`、N02 2025 年版、最適化ベクトルタイル 2026-07-01 版、多言語表記）。新的只有：
+- N02 沒有更新的版本：`KsjTmplt-N02-2026.html` 是 404（2026-10-28），2025 年版仍是最新。
+- Mini Tokyo 3D 在 `220adf8` 之後多了 12 個 commit（到 `68314fe`，2026-10-21）。大多是 iOS Safari 的修正、站點縮圖的照片署名、車站出口資料（`data/` 仍沒有授權，不用）。值得參考的一項：`804b402` 的 `RailwayStatusGlowLayer`（誤點、停駛的區段畫有顏色的光）與 `c205118` 的 `NotificationControl`／`TrainInfoModule`（運行資訊通知），程式 MIT。排進 NEXT_PRIORITIES §22.17 第 3 張（2.85），接在「停站小抖動＋設備事故」之後。
+
+**音源出處：§7.2 已經看過的**（ポケットサウンド、TAM 不能放公開 repo；OtoLogic、uair01 已用在決策 343 的頻譜；Shuhmi 只當頻譜參考；都電的鈴不用）。新的兩筆：
+
+| 音源 | 授權 | 是什麼 | 結論 |
+| --- | --- | --- | --- |
+| 月本國（ごとりん，gepponkoku.nation.jp）走行音・モーター音素材 | 網站自己的條件。素材頁寫「用途や開発環境を問わず、誰でも御自由に御利用になれます。加工二次配布もOKです」（2026-10-28 讀 `tetsuon/lite.html`、`tetsuon/advance.html`、`naikakufu/mat_n100_a.html`）。ひと駅寫「原素材の単独再配布は許可されていません」，比網站寬鬆的說法嚴；另有完整規約頁與否沒找到，UNVERIFIED | 313 系等電車的走行音、モーター音；キハ40 系更新車素材集（キハ41 2000 番台實錄） | 只當頻譜與頻率變化的參考，錄音不提交進公開 repo（保守照ひと駅的讀法）；致謝寫網站名與網址。排進 §22.2 第 7a 名（柴油車行駛聲 3.25）、7b 名（馬達聲 3.15） |
+| Spaceaero2「Hokuetsu express 683series …」（Wikimedia Commons） | CC BY-SA 4.0 | 北越急行 683 系的馬達聲 | 不用：ひと駅照它做的音也標 BY-SA 4.0，遊戲的音檔會被帶成 BY-SA；月本國的素材做得到同樣的事 |
+
+ひと駅的做法（分析參考錄音的頻率隨時間變化，重新做發振音，不收原錄音的波形、相位、人聲、雜音）和決策 343「照頻譜合成、不打包錄音」同一條路，7a、7b 都照這條路。
+
+**驗證**：Mini Tokyo 3D 用 `git clone --filter=blob:none` 讀 `git log 220adf8..HEAD` 與 `804b402`、`c205118` 的檔案清單（沒有執行）；N02 2026 年版頁面 curl 回 404；月本國三頁 curl 後讀文字。

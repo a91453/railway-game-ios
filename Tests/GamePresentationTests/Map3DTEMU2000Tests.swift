@@ -36,7 +36,9 @@ final class Map3DTEMU2000Tests: XCTestCase {
     }
 
     func testStaticModelsAreStillRegistered() {
-        let pack = Map3DModelPack.unbaked
+        // K1-1: in the tools' pack, not the game's.
+        let pack = Map3DModelPack.unbakedStudies
+        XCTAssertNil(Map3DModelPack.unbaked.index(of: "temu2000-formation"))
         for unit in Map3DTEMU2000.Unit.allCases {
             XCTAssertNotNil(pack.index(of: "temu2000-\(unit.rawValue)"))
         }

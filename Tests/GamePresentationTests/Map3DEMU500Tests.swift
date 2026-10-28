@@ -32,7 +32,9 @@ final class Map3DEMU500Tests: XCTestCase {
     func testRegistrationPreservesExistingVehiclePayload() {
         let pack = Map3DModelPack.unbaked
         for unit in Map3DEMU500.Unit.allCases {
-            XCTAssertNotNil(pack.index(of: "emu500-"+unit.rawValue))
+            // K1-1: the static units are the tools' pack's.
+            XCTAssertNotNil(Map3DModelPack.unbakedStudies.index(of: "emu500-"+unit.rawValue))
+            XCTAssertNil(pack.index(of: "emu500-"+unit.rawValue))
         }
         for unit in Map3DTEMU1000.Unit.allCases {
             let expected=Map3DTEMU1000.model(unit)

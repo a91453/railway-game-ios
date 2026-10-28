@@ -14,6 +14,7 @@ import XCTest
 /// 05:59:57); `PASSENGER_ROUTE_SPEED` the speed (a ``GameSpeed`` raw
 /// value, default `x60`). `PASSENGER_ROUTE_DUMP`, when set, is where the
 /// world at the end is written, to compare two builds byte for byte.
+/// It prints the process's peak resident memory too (派工單 BB).
 final class PassengerRouteSaveReportTests: XCTestCase {
     private struct SharedFile: Decodable {
         let game: SavedGame
@@ -43,7 +44,7 @@ final class PassengerRouteSaveReportTests: XCTestCase {
             slowest = max(slowest, spent)
             if spent > .milliseconds(200) { print("tick at \(before): \(spent)") }
         }
-        print("ticks \(ticks), total \(total), slowest \(slowest)")
+        print("ticks \(ticks), total \(total), slowest \(slowest), peak memory \(PassengerRouteMemoryReportTests.peakMegabytes()) MB")
         if let dump = environment["PASSENGER_ROUTE_DUMP"] {
             let encoder = JSONEncoder()
             encoder.outputFormatting = .sortedKeys

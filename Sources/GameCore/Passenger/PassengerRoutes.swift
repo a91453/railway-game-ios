@@ -71,7 +71,7 @@ private func passengerRouteOrderPrecedes(_ lhs: [PassengerRouteOrderLeg], _ rhs:
     return lhs.count < rhs.count
 }
 
-private func passengerRoutePrecedes(_ lhs: PassengerRoute, _ rhs: PassengerRoute) -> Bool {
+func passengerRoutePrecedes(_ lhs: PassengerRoute, _ rhs: PassengerRoute) -> Bool {
     if lhs.totalMinutes != rhs.totalMinutes { return lhs.totalMinutes < rhs.totalMinutes }
     if lhs.transfers != rhs.transfers { return lhs.transfers < rhs.transfers }
     if lhs.totalSeconds != rhs.totalSeconds { return lhs.totalSeconds < rhs.totalSeconds }
@@ -471,6 +471,9 @@ struct PassengerRouteSearch {
         graph.reconstruct(index, from: labels)
     }
 
+    /// How many labels it holds: what a copy of it costs.
+    var size: Int { labels.count }
+
     /// The first label to arrive at station slot `target`, if one has.
     func arrival(at target: Int) -> Int? {
         arrived[target] >= 0 ? arrived[target] : nil
@@ -689,21 +692,56 @@ struct PassengerRouteSearch {
 ///
 /// A search banning some rides is the one banning none up to the first
 /// time it would take one of them: the unbanned search keeps a copy of
-/// itself paused before each call's first expansion, and a banned one
-/// starts from the earliest copy at a banned call. Nothing differs from
-/// starting it afresh but the work.
+/// itself paused before some calls' first expansions, and a banned one
+/// starts from the latest copy before the earliest banned call, run on
+/// to that call. Nothing differs from starting it afresh but the work.
+///
+/// Each copy is a whole search, so they are held to a number (派工單 BB:
+/// a copy at every call took a game of 200 stations past 1.4 GB): copies
+/// every `spacing` calls, the spacing doubling when they would pass
+/// `checkpointLimit`, and the banned searches asked most lately, at most
+/// `searchLimit` of them and `labelBudget` labels together. A dropped
+/// one starts again when asked.
 struct PassengerRouteSearches {
     let graph: PassengerRouteGraph
+    /// At most this many copies of the unbanned search are kept.
+    let checkpointLimit: Int
+    /// At most this many banned searches are kept.
+    let searchLimit: Int
+    /// The banned searches kept hold at most this many labels, but for
+    /// the one asked last.
+    let labelBudget: Int
     private var origin: StationID?
     private var unbanned: PassengerRouteSearch?
-    /// The unbanned search paused before each call's first expansion, by
-    /// call number, in the order it reached them.
-    private var paused: [Int: (order: Int, search: PassengerRouteSearch)] = [:]
+    /// The order in which the unbanned search first reached each call, by
+    /// number; -1 before it has.
+    private var reached: [Int] = []
+    /// How many calls the unbanned search has reached.
+    private var reachedCount = 0
+    /// The unbanned search paused before the first expansion of its call
+    /// `order`, every `spacing` calls, in order.
+    private var checkpoints: [(order: Int, search: PassengerRouteSearch)] = []
+    private var spacing = 1
     private var searches: [Set<PassengerRideEdge>: PassengerRouteSearch] = [:]
+    /// The keys of `searches`, the one asked longest ago first.
+    private var searchOrder: [Set<PassengerRideEdge>] = []
 
-    init(graph: PassengerRouteGraph) {
+    init(graph: PassengerRouteGraph, checkpointLimit: Int = 16, searchLimit: Int = 512,
+         labelBudget: Int = 400_000) {
         self.graph = graph
+        self.checkpointLimit = max(1, checkpointLimit)
+        self.searchLimit = max(1, searchLimit)
+        self.labelBudget = max(0, labelBudget)
     }
+
+    /// How many whole searches are kept besides the unbanned one.
+    var copies: Int { checkpoints.count + searches.count }
+
+    /// How many banned searches are kept.
+    var bannedSearches: Int { searches.count }
+
+    /// The labels of the banned searches kept.
+    var bannedLabels: Int { searches.values.reduce(0) { $0 + $1.size } }
 
     /// What ``PassengerRouteGraph/shortest(from:to:banning:)`` gives.
     mutating func shortest(from origin: StationID, to destination: StationID,
@@ -711,8 +749,12 @@ struct PassengerRouteSearches {
         if origin != self.origin {
             self.origin = origin
             unbanned = PassengerRouteSearch(graph: graph, from: origin, banning: [])
-            paused = [:]
+            reached = Array(repeating: -1, count: graph.lookup.nodeSlot.count)
+            reachedCount = 0
+            checkpoints = []
+            spacing = 1
             searches = [:]
+            searchOrder = []
         }
         guard !forbidden.isEmpty else {
             guard let target = unbanned!.slot(of: destination) else { return nil }
@@ -721,21 +763,54 @@ struct PassengerRouteSearches {
             return unbanned!.route(ending: index)
         }
         if searches[forbidden] == nil {
+            if searches.count >= searchLimit {
+                searches[searchOrder.removeFirst()] = nil
+            }
             searches[forbidden] = start(banning: forbidden)
+        } else {
+            searchOrder.remove(at: searchOrder.firstIndex(of: forbidden)!)
         }
-        return searches[forbidden]!.route(to: destination)
+        searchOrder.append(forbidden)
+        let found = searches[forbidden]!.route(to: destination)
+        var held = bannedLabels
+        while held > labelBudget && searchOrder.count > 1 {
+            held -= searches.removeValue(forKey: searchOrder.removeFirst())!.size
+        }
+        return found
     }
 
-    /// Runs the unbanned search on, keeping a copy before each call's first
-    /// expansion, until it arrives at slot `target` or reaches one of the
-    /// calls `calls` for the first time.
+    /// Runs the unbanned search on, noting each call's first expansion,
+    /// until it arrives at slot `target` or reaches one of the calls
+    /// `calls` for the first time.
     private mutating func runUnbanned(until target: Int, orBefore calls: [Int]) -> PassengerRouteSearch.Stop {
         while true {
             let stop = unbanned!.run(until: target, pausing: true)
             guard case .firstExpansion(let number) = stop else { return stop }
-            paused[number] = (paused.count, unbanned!)
+            let order = reachedCount
+            reached[number] = order
+            reachedCount += 1
+            if order % spacing == 0 {
+                checkpoints.append((order, unbanned!))
+                if checkpoints.count > checkpointLimit {
+                    spacing *= 2
+                    checkpoints.removeAll { $0.order % spacing != 0 }
+                }
+            }
             if calls.contains(number) { return stop }
         }
+    }
+
+    /// The unbanned search paused before the first expansion of its call
+    /// `order`: the latest copy before it, run on to it.
+    private func paused(at order: Int) -> PassengerRouteSearch {
+        let checkpoint = checkpoints.last { $0.order <= order }!
+        var search = checkpoint.search
+        for _ in checkpoint.order..<order {
+            guard case .firstExpansion = search.run(until: -1, pausing: true) else {
+                preconditionFailure("the unbanned search reached call \(order) before")
+            }
+        }
+        return search
     }
 
     /// A search banning `forbidden`, as far on as the unbanned one is the
@@ -743,7 +818,7 @@ struct PassengerRouteSearches {
     private mutating func start(banning forbidden: Set<PassengerRideEdge>) -> PassengerRouteSearch {
         let calls = PassengerRouteSearch.calls(banned: forbidden, on: graph)
         func earliest() -> PassengerRouteSearch? {
-            calls.compactMap { paused[$0] }.min { $0.order < $1.order }?.search
+            calls.map { reached[$0] }.filter { $0 >= 0 }.min().map(paused(at:))
         }
         var search: PassengerRouteSearch
         if calls.isEmpty {
@@ -754,7 +829,8 @@ struct PassengerRouteSearches {
             // It never takes a banned ride.
             search = unbanned!
         } else {
-            search = earliest()!
+            // Paused before the first banned call it reaches.
+            search = unbanned!
         }
         search.banned = calls
         return search

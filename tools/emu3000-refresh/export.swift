@@ -80,7 +80,7 @@ print("Exported \(records.count) models; all native units read back exactly.")
 if let scratch=ProcessInfo.processInfo.environment["EMU_FINGERPRINTS"] {
  let dir=URL(fileURLWithPath:scratch,isDirectory:true);try FileManager.default.createDirectory(at:dir,withIntermediateDirectories:true)
  var rows:[[String:Any]]=[]
- for m in Map3DModelPack.standard.models {
+ for m in Map3DModelPack.standard.models+Map3DModelPack.studies.models {
   var payload=Data()
   func w(_ n:UInt32){for s:UInt32 in [0,8,16,24]{payload.append(UInt8((n>>s)&255))}}
   for v in m.vertices {w(v.x.bitPattern);w(v.y.bitPattern);w(v.z.bitPattern);w(v.color);w(v.layer.bitPattern)}
