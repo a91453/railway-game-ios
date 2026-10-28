@@ -1354,35 +1354,35 @@
       "triangles" : 3944
     },
     "prop-busStop" : {
-      "hash" : "50023776638d18c",
+      "hash" : "f6164ac602566f20",
       "triangles" : 288
     },
     "prop-lamp" : {
-      "hash" : "333474283dd11b6e",
+      "hash" : "a74add8f36ae0b92",
       "triangles" : 36
     },
     "prop-pole" : {
-      "hash" : "9ec7dbd8ca449800",
+      "hash" : "fcf999d1b19ce458",
       "triangles" : 88
     },
     "prop-signalAmber" : {
-      "hash" : "99db8dfa18e7baab",
+      "hash" : "c8787c39d5e9746f",
       "triangles" : 76
     },
     "prop-signalGo" : {
-      "hash" : "971614e8bce73bbb",
+      "hash" : "6afe355f070b4c6b",
       "triangles" : 76
     },
     "prop-signalStop" : {
-      "hash" : "b6cf28be93afa9af",
+      "hash" : "f1a45321d2d9463",
       "triangles" : 76
     },
     "prop-tree" : {
-      "hash" : "5ac349ccb3ef07b7",
+      "hash" : "1d955bff82c6ceb3",
       "triangles" : 76
     },
     "prop-vending" : {
-      "hash" : "86d9dc0d994d5203",
+      "hash" : "759374631344a91f",
       "triangles" : 38
     },
     "refresh-700t-cab" : {
@@ -2362,115 +2362,115 @@
       "triangles" : 2596
     },
     "walk-0" : {
-      "hash" : "54a36e75baeefa6a",
+      "hash" : "69bc04e6ab5d6de",
       "triangles" : 64
     },
     "walk-1" : {
-      "hash" : "89734d8932804e0a",
+      "hash" : "44f85f5c8b46866",
       "triangles" : 64
     },
     "walk-2" : {
-      "hash" : "19054cd9397cbaf0",
+      "hash" : "116a49cb4534f170",
       "triangles" : 64
     },
     "walk-3" : {
-      "hash" : "e91c8eb867ad1c7a",
+      "hash" : "8779c9a0ba19e99e",
       "triangles" : 64
     },
     "walk-4" : {
-      "hash" : "e749e912732505f",
+      "hash" : "f392804cef2b370f",
       "triangles" : 64
     },
     "walk-5" : {
-      "hash" : "e4dc4320a83c8120",
+      "hash" : "f0590b346d38bb80",
       "triangles" : 64
     },
     "walk-6" : {
-      "hash" : "3bfd95129507d3ad",
+      "hash" : "97888354f8cfdfc5",
       "triangles" : 64
     },
     "walk-dark" : {
-      "hash" : "2529a6637a506f32",
+      "hash" : "37f3284788b7f0ea",
       "triangles" : 64
     },
     "walk-ones-0" : {
-      "hash" : "cc53f8d695e36f61",
+      "hash" : "953696dfdd4812c9",
       "triangles" : 12
     },
     "walk-ones-1" : {
-      "hash" : "e3706fb74df39d63",
+      "hash" : "2d0522b41fe8d93",
       "triangles" : 4
     },
     "walk-ones-2" : {
-      "hash" : "d03683166acebca7",
+      "hash" : "864aad96f09c084b",
       "triangles" : 10
     },
     "walk-ones-3" : {
-      "hash" : "263077bce08f2298",
+      "hash" : "64a853115469cfcc",
       "triangles" : 10
     },
     "walk-ones-4" : {
-      "hash" : "fbfae04712ae81d1",
+      "hash" : "2e71184a618ea829",
       "triangles" : 8
     },
     "walk-ones-5" : {
-      "hash" : "db02625355a8992b",
+      "hash" : "4e7f4a85d8b41467",
       "triangles" : 10
     },
     "walk-ones-6" : {
-      "hash" : "5bfb96b5aeb45004",
+      "hash" : "30ad19a7ef7cebfc",
       "triangles" : 12
     },
     "walk-ones-7" : {
-      "hash" : "2135aa935d2e1ea7",
+      "hash" : "49c53c44ba8ab03",
       "triangles" : 6
     },
     "walk-ones-8" : {
-      "hash" : "77da9266a50c6e2a",
+      "hash" : "13e03b44648e93e",
       "triangles" : 14
     },
     "walk-ones-9" : {
-      "hash" : "3a3f47dc35ca9595",
+      "hash" : "626c7f801fe1fbc5",
       "triangles" : 12
     },
     "walk-stop" : {
-      "hash" : "3fc037b821f54c02",
+      "hash" : "e8beb7c09b34002a",
       "triangles" : 64
     },
     "walk-tens-1" : {
-      "hash" : "7941209e1513aca3",
+      "hash" : "f334dad2586e51a3",
       "triangles" : 4
     },
     "walk-tens-2" : {
-      "hash" : "f372d5f0d78a68f9",
+      "hash" : "6effe9be303859e5",
       "triangles" : 10
     },
     "walk-tens-3" : {
-      "hash" : "90f5012fdaa47990",
+      "hash" : "4d23b7f888d884dc",
       "triangles" : 10
     },
     "walk-tens-4" : {
-      "hash" : "eadcd6c73e175130",
+      "hash" : "5176d8a8a61b20d8",
       "triangles" : 8
     },
     "walk-tens-5" : {
-      "hash" : "ddcf5f7e03821861",
+      "hash" : "7b69fdba6eaf013d",
       "triangles" : 10
     },
     "walk-tens-6" : {
-      "hash" : "1246853299dc80a3",
+      "hash" : "42af046da576839b",
       "triangles" : 12
     },
     "walk-tens-7" : {
-      "hash" : "662a6da749c34c9f",
+      "hash" : "a1f61621ddbe69b3",
       "triangles" : 6
     },
     "walk-tens-8" : {
-      "hash" : "d33d947784787f82",
+      "hash" : "b6830bebf18dd27e",
       "triangles" : 14
     },
     "walk-tens-9" : {
-      "hash" : "231af40fe41239d4",
+      "hash" : "e8db78b1b62aa73c",
       "triangles" : 12
     }
   }

@@ -62,7 +62,8 @@ public struct Map3DModelPack: Sendable {
             }
         }
         // Decision 244: and the street furniture.
-        // Decision 370: in the model look, as the city round them.
+        // Decision 370: in the model look, as the city round them; the
+        // signals keeping their colours (decision 451).
         models += Map3DProp.allCases.map { Map3DLook.restyle($0.model()) }
         // Decision 445: and the pedestrian signals' faces and countdowns.
         models += Map3DPedestrianSignal.models()
