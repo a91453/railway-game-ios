@@ -172,7 +172,10 @@ public struct Map3DTrainSet: Sendable {
             // triangles still.
             n700sG(),
             n700sGFar(),
-            multipleUnit("metroC381", asset: "02_HSR_MRT_3x2-02", lineColoured: true),
+            // Decision 461: the scene kit's generic metro car, line-coloured,
+            // for the metros that are not Taipei's (Kaohsiung, Taoyuan,
+            // Taichung); it was `metroC381` before.
+            multipleUnit("metroGeneric", asset: "02_HSR_MRT_3x2-02", lineColoured: true),
             multipleUnit("wenhu", asset: "02_HSR_MRT_3x2-03", lineColoured: true),
             // Decision 426: the Puyuma as #1292's TEMU2000, and its light
             // version from 500 m out.
@@ -199,6 +202,18 @@ public struct Map3DTrainSet: Sendable {
             // 500 m out its light cars; the even-numbered stay the C381.
             metroC341(),
             metroC341(far: true),
+            // Decision 461: and the C371 and C381 (#1323's studies), each car
+            // its own length, from 500 m out their light cars; the player's
+            // metro and the Taipei Metro's lines by ``variant(of:number:locked:)``
+            // and ``Map3DRealTrains/formation(system:line:)``.
+            metroC371(),
+            metroC371(far: true),
+            metroC381(),
+            metroC381(far: true),
+            // Decision 461: the Circular line's four-car 610, from 500 m out
+            // its light cars.
+            circular610(),
+            circular610(far: true),
             // The DR1000 railcar and the DR3100 diesel express: silver, a thin
             // orange band, yellow-orange faces (the reference's `dr1000`,
             // `dr3100`) on #900's curved fronts.
@@ -265,8 +280,9 @@ public struct Map3DTrainSet: Sendable {
     /// 4,500 triangles a cab car.
     /// Decision 433: and the C341 (its far set), 3,900 a cab car.
     /// Decision 435: and the EMU900 (its far set), 9,300 a cab car.
+    /// Decision 461: and the C371, C381 and 610 (their far sets).
     static let nearOnly: Set = ["E200CK", "R100CK", "R200CK", "E500CK", "MINGRI", "STAR", "pushPull", "pushPullE1000", "greenTram", "SUMMER", "STEAM", "highSpeed", "n700sG", "emu3000",
-                                "taroko", "emu800", "emu500", "puyuma", "metroC341", "emu900"]
+                                "taroko", "emu800", "emu500", "puyuma", "metroC341", "emu900", "metroC371", "metroC381", "circular610"]
 
     /// Decision 408: the set a train of `key` numbered `number` is drawn
     /// as: half the high-speed trains, the odd-numbered, the N700S-G, the
@@ -282,10 +298,13 @@ public struct Map3DTrainSet: Sendable {
     /// (the player's metro too, but not the linear-motor metro the unlocked
     /// train pack draws as its own); the other cities' are not Taipei's
     /// (``Map3DRealTrains/variantKey(system:key:number:locked:)``).
+    /// Decision 461: the player's metro three ways instead, by
+    /// ``taipeiMetro(number:)``; the Taipei Metro's real lines by their own
+    /// fleets (``Map3DRealTrains/formation(system:line:)``).
     public static func variant(of key: String, number: Int, locked: Set<String> = []) -> String {
         switch named(key)?.key {
-        case "metroC381" where number % 2 != 0 && (key != "L" || locked.contains("fourCarMetro")):
-            return "metroC341"
+        case "metroC381" where key != "L" || locked.contains("fourCarMetro"):
+            return taipeiMetro(number: number)
         case "highSpeed" where number % 2 != 0 && !locked.contains("n700sG"):
             return "n700sG"
         case "emu800":
@@ -306,6 +325,19 @@ public struct Map3DTrainSet: Sendable {
     static func localTrain(number: Int) -> String {
         let share = ((number % 20 + 20) % 20) * 7 % 20
         return share < 9 ? "emu900" : share < 15 ? "emu500" : "emu800"
+    }
+
+    /// Decision 461: the set a player's metro train numbered `number` is
+    /// drawn as, as many of each as the Taipei Metro's high-capacity cars
+    /// each model stands for: the C371's 321, the C381's 144 and the
+    /// C301's 132 (the Tamsui-Xinyi line's other fleet, drawn as the C381
+    /// it runs beside) and the C341's 36 and the C321's 216 (the Bannan
+    /// line's, drawn as the C341): 8, 6 and 6 in 20, by seven times the
+    /// number's remainder by 20 as ``localTrain(number:)``: 0 to 7 the
+    /// C371, 8 to 13 the C381, 14 to 19 the C341.
+    static func taipeiMetro(number: Int) -> String {
+        let share = ((number % 20 + 20) % 20) * 7 % 20
+        return share < 8 ? "metroC371" : share < 14 ? "metroC381" : "metroC341"
     }
 
     /// Decision 408: the number at the end of a real train's key
@@ -603,6 +635,46 @@ public struct Map3DTrainSet: Sendable {
             func part(_ unit: Map3DC341.Unit) -> Map3DModelPack.Model { Map3DC341.model(unit, far: far) }
             return Cars(head: lit(part(.dm), front: true), middle: part(.t), tail: lit(part(.rear), front: false), single: nil,
                         centre: part(.m))
+        }
+    }
+
+    /// Decision 461: #1323's C371 units, laid and lit as the C341's
+    /// (``metroC341(far:)``): DM T M M T DM for six cars, DM T DM for the
+    /// branches' three (the real three-car sets' DM1 T DM2). `far`:
+    /// ``Map3DC371/model(_:far:)``'s light units.
+    static func metroC371(far: Bool = false) -> Map3DTrainSet {
+        Map3DTrainSet(key: far ? "metroC371Far" : "metroC371", cycle: [.middle, .centre], ownLengths: true,
+                      far: far ? nil : "metroC371Far") {
+            func part(_ unit: Map3DC371.Unit) -> Map3DModelPack.Model { Map3DC371.model(unit, far: far) }
+            return Cars(head: lit(part(.dm), front: true), middle: part(.t), tail: lit(part(.rear), front: false), single: nil,
+                        centre: part(.m))
+        }
+    }
+
+    /// Decision 461: #1323's C381 units, laid and lit as the C341's: DM T
+    /// M M T DM, the cabs 23.71 m. `far`: ``Map3DC381/model(_:far:)``'s
+    /// light units. The scene kit's generic car this key drew before is
+    /// `metroGeneric`'s now.
+    static func metroC381(far: Bool = false) -> Map3DTrainSet {
+        Map3DTrainSet(key: far ? "metroC381Far" : "metroC381", cycle: [.middle, .centre], ownLengths: true,
+                      far: far ? nil : "metroC381Far") {
+            func part(_ unit: Map3DC381.Unit) -> Map3DModelPack.Model { Map3DC381.model(unit, far: far) }
+            return Cars(head: lit(part(.dm), front: true), middle: part(.t), tail: lit(part(.rear), front: false), single: nil,
+                        centre: part(.m))
+        }
+    }
+
+    /// Decision 461: the Circular line's 610 (#1323's study): its cab A at
+    /// the front, C and D between, cab B at the back (``Map3DTaipei610/sequence``,
+    /// the back half's car ``Cars/middleBack``), each car its own length,
+    /// the cabs' lamps lit (white at the front, red at the back). `far`:
+    /// the `light` cars.
+    static func circular610(far: Bool = false) -> Map3DTrainSet {
+        Map3DTrainSet(key: far ? "circular610Far" : "circular610", cycle: [.middle], ownLengths: true,
+                      far: far ? nil : "circular610Far") {
+            func part(_ role: Map3DTaipei610.Role) -> Map3DModelPack.Model { Map3DTaipei610.model(role, light: far) }
+            return Cars(head: lit(part(.a), front: true), middle: part(.c), tail: lit(part(.b), front: false), single: nil,
+                        middleBack: part(.d))
         }
     }
 

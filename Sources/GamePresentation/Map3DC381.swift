@@ -5,15 +5,19 @@ public enum Map3DC381 {
     public enum Unit: String, CaseIterable, Sendable { case dm, t, m, rear }
     public static let arrangement: [Unit] = [.dm,.t,.m,.m,.t,.rear]
     public static let lengths: [Float] = [23.710,23.5,23.5,23.5,23.5,23.710]
-    public static func model(_ unit: Unit) -> Map3DModelPack.Model {
+    /// Decision 461: `far`, the light car drawn from 500 m out
+    /// (``MetroStudyGeometry/far``); the near car is as it was.
+    public static func model(_ unit: Unit) -> Map3DModelPack.Model { model(unit, far: false) }
+    public static func model(_ unit: Unit, far: Bool) -> Map3DModelPack.Model {
+        let suffix = far ? "-far" : ""
         if unit == .rear {
-            let first=model(.dm)
+            let first=model(.dm, far: far)
             var b=StationKitBuilder();b.add(first,at:.zero,angle:.pi)
-            return .flat(named:"c381-rear",from:b.mesh)
+            return .flat(named:"c381-rear"+suffix,from:b.mesh)
         }
-        var b=MetroStudyGeometry(cab:unit == .dm,trailer:unit == .t,curved:true,length:unit == .dm ? 23.710 : 23.5,body:Map3DPalette.counters[2],blue:Map3DPalette.containers[1])
+        var b=MetroStudyGeometry(cab:unit == .dm,trailer:unit == .t,curved:true,length:unit == .dm ? 23.710 : 23.5,body:Map3DPalette.counters[2],blue:Map3DPalette.containers[1],far:far)
         b.build()
-        return .flat(named:"c381-"+unit.rawValue,from:b.kit.mesh)
+        return .flat(named:"c381-"+unit.rawValue+suffix,from:b.kit.mesh)
     }
     public static func formation() -> Map3DModelPack.Model {
         var b=StationKitBuilder()
@@ -40,8 +44,9 @@ extension MetroStudyGeometry {
     /// Closed layered patches, split at every surface-plane boundary before
     /// triangulation, so the black mask and glass cannot cross their backing.
     mutating func c381Patch(_ polygon: [(Float,Float)],_ color: UInt32,lift: Float = 0,thickness: Float = 0.035) {
-        let hs: [Float] = [0.50,0.60,0.95,1.40,2.10,2.75,3.20,3.60]
-        let zs: [Float] = [-1.55,-1.20,-0.80,-0.40,0,0.40,0.80,1.20,1.55]
+        // Decision 461: the far car's patches cut on half the planes.
+        let hs: [Float] = far ? [0.50,0.95,2.10,3.20,3.60] : [0.50,0.60,0.95,1.40,2.10,2.75,3.20,3.60]
+        let zs: [Float] = far ? [-1.55,-0.80,0,0.80,1.55] : [-1.55,-1.20,-0.80,-0.40,0,0.40,0.80,1.20,1.55]
         func clip(_ p: [(Float,Float)],_ axis: Int,_ limit: Float,_ greater: Bool) -> [(Float,Float)] {
             func value(_ q: (Float,Float)) -> Float { axis == 0 ? q.0 : q.1 }
             var out: [(Float,Float)] = []
@@ -108,13 +113,14 @@ extension MetroStudyGeometry {
         } }
     }
     mutating func buildC381Cab() {
-        let outerBrow=(-16...16).map { i -> (Float,Float) in
-            let a=Float(i)*Float.pi/32
+        let browSteps = far ? 4 : 16
+        let outerBrow=(-browSteps...browSteps).map { i -> (Float,Float) in
+            let a=Float(i)*Float.pi/Float(2*browSteps)
             return (3.17+0.415*cosf(a),1.55*sinf(a))
         }
         c381Patch([(0.98,-1.43),(1.08,-1.54)]+outerBrow+[(1.08,1.54),(0.98,1.43)],body,lift:-0.015,thickness:0.18)
-        let maskBrow=(-16...16).map { i -> (Float,Float) in
-            let a=Float(i)*Float.pi/32
+        let maskBrow=(-browSteps...browSteps).map { i -> (Float,Float) in
+            let a=Float(i)*Float.pi/Float(2*browSteps)
             return (3.18+0.385*cosf(a),1.46*sinf(a))
         }
         c381Patch([(1.94,-1.23),(1.98,-1.39),(2.11,-1.46)]+maskBrow+[(2.11,1.46),(1.98,1.39),(1.94,1.23)],ink)
@@ -131,11 +137,12 @@ extension MetroStudyGeometry {
             c381Patch(pane,glass,lift:0.043)
             c381Patch([(2.93,l+0.06),(2.93,r-0.08),(2.96,r-0.08),(2.96,l+0.06)],Map3DPalette.shopAwnings[0],lift:0.066)
             if sign>0 { c381Patch(roundRect(l+0.04,r-0.08,3.00,3.12,0.025),Map3DColor.shaded(glass,0.55),lift:0.065) }
+            if far { continue }
             let footZ=sign*1.12,tipZ=sign*0.72
             kit.beam(Map3DPoint(c381FaceX(1.99,footZ)+0.050,1.99,footZ),Map3DPoint(c381FaceX(2.48,tipZ)+0.050,2.48,tipZ),0.016,ink)
         }
         // Feathered main wings and the independent thin lower stripe.
-        let spans: [Float] = [-1.55,-1.30,-1.10,-0.85,-0.65,-0.45,-0.25,0,0.25,0.45,0.65,0.85,1.10,1.30,1.55]
+        let spans: [Float] = far ? [-1.55,-1.10,-0.65,-0.25,0.25,0.65,1.10,1.55] : [-1.55,-1.30,-1.10,-0.85,-0.65,-0.45,-0.25,0,0.25,0.45,0.65,0.85,1.10,1.30,1.55]
         func boundaries(_ z: Float,_ fine: Bool) -> (Float,Float) {
             let t=abs(z)/1.55,curve=1-(1-t)*(1-t)
             if fine { let low: Float = 1.075+0.095*curve;return (low,low+0.05) }
@@ -148,7 +155,8 @@ extension MetroStudyGeometry {
         // Rounded lamp recesses; lenses follow the final surface rather than
         // being cylinders floating ahead of a curved nose.
         func circle(_ h: Float,_ z: Float,_ radius: Float) -> [(Float,Float)] {
-            (0..<16).map { i in let a=Float(i)*Float.pi/8;return (h+radius*sinf(a),z+radius*cosf(a)) }
+            if far { return (0..<8).map { i in let a=Float(i)*Float.pi/4;return (h+radius*sinf(a),z+radius*cosf(a)) } }
+            return (0..<16).map { i in let a=Float(i)*Float.pi/8;return (h+radius*sinf(a),z+radius*cosf(a)) }
         }
         func cut(_ p: [(Float,Float)],_ field: ((Float,Float)) -> Float) -> [(Float,Float)] {
             var out: [(Float,Float)] = []
@@ -181,7 +189,7 @@ extension MetroStudyGeometry {
                 let zz=z+offset
                 c381Patch(circle(1.50,zz,0.126),steel,lift:0.087,thickness:0.025)
                 c381Patch(circle(1.50,zz,0.106),offset*sign>0 ? Map3DColor.rgb(0xD9473F) : Map3DPalette.tunnelLamp,lift:0.099,thickness:0.020)
-                if offset*sign>0 { c381Patch(circle(1.50,zz,0.080),ink,lift:0.110,thickness:0.020) }
+                if offset*sign>0 && !far { c381Patch(circle(1.50,zz,0.080),ink,lift:0.110,thickness:0.020) }
             }
             c381Patch(circle(3.35,sign*1.18,0.060),steel,lift:0.028,thickness:0.030)
             c381Patch(circle(3.35,sign*1.18,0.043),Map3DPalette.tunnelLamp,lift:0.040,thickness:0.025)
@@ -194,7 +202,7 @@ extension MetroStudyGeometry {
             kit.box(half-0.16,0.70,sign*0.96,0.22,0.20,0.25,ink)
         }
         c381Patch([(0.905,-1.43),(0.905,1.43),(1.04,1.43),(1.04,-1.43)],ink,lift:0.066,thickness:0.17)
-        for h: Float in [0.920,0.960,1.000] { c381Patch([(h,-1.43),(h,1.43),(h+0.014,1.43),(h+0.014,-1.43)],Map3DColor.shaded(steel,0.48),lift:0.081,thickness:0.025) }
+        for h: Float in [0.920,0.960,1.000] where !far { c381Patch([(h,-1.43),(h,1.43),(h+0.014,1.43),(h+0.014,-1.43)],Map3DColor.shaded(steel,0.48),lift:0.081,thickness:0.025) }
         kit.box(half-0.10,0.70,0,0.30,0.32,0.30,ink)
         kit.box(half+0.21,0.64,0,0.13,0.22,0.14,steel)
     }

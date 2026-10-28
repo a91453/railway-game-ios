@@ -5,15 +5,19 @@ public enum Map3DC371 {
     public enum Unit: String, CaseIterable, Sendable { case dm, t, m, rear }
     public static let arrangement: [Unit] = [.dm,.t,.m,.m,.t,.rear]
     public static let pitch: Float = 23.5
-    public static func model(_ unit: Unit) -> Map3DModelPack.Model {
+    /// Decision 461: `far`, the light car drawn from 500 m out
+    /// (``MetroStudyGeometry/far``); the near car is as it was.
+    public static func model(_ unit: Unit) -> Map3DModelPack.Model { model(unit, far: false) }
+    public static func model(_ unit: Unit, far: Bool) -> Map3DModelPack.Model {
+        let suffix = far ? "-far" : ""
         if unit == .rear {
-            let first=model(.dm)
+            let first=model(.dm, far: far)
             var b=StationKitBuilder();b.add(first,at:.zero,angle:.pi)
-            return .flat(named:"c371-rear",from:b.mesh)
+            return .flat(named:"c371-rear"+suffix,from:b.mesh)
         }
-        var b=MetroStudyGeometry(cab:unit == .dm,trailer:unit == .t,curved:false,length:23.5,body:Map3DPalette.counters[2],blue:Map3DPalette.containers[1])
+        var b=MetroStudyGeometry(cab:unit == .dm,trailer:unit == .t,curved:false,length:23.5,body:Map3DPalette.counters[2],blue:Map3DPalette.containers[1],far:far)
         b.build()
-        return .flat(named:"c371-"+unit.rawValue,from:b.kit.mesh)
+        return .flat(named:"c371-"+unit.rawValue+suffix,from:b.kit.mesh)
     }
     public static func formation() -> Map3DModelPack.Model {
         var b=StationKitBuilder()

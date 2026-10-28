@@ -15,7 +15,8 @@ final class Map3DTrainSetTests: XCTestCase {
     /// rail, up to a lowered pantograph's height, in their own colours (none
     /// takes the line's but the metro's band), lit at the right end.
     func testEverySetsCarsAreInThePack() throws {
-        let lineColoured: Set = ["metroC381", "wenhu"]
+        // Decision 461: the generic metro car the C381 key drew before.
+        let lineColoured: Set = ["metroGeneric", "wenhu"]
         // Decision 430: the Chu-Kuang sets, near and far.
         let chuKuang: Set = ["E200CK", "E500CK", "R100CK", "R200CK", "SUMMER", "E200CKFar", "E500CKFar", "R100CKFar", "R200CKFar", "SUMMERFar"]
         for set in Map3DTrainSet.all {
@@ -51,6 +52,8 @@ final class Map3DTrainSetTests: XCTestCase {
                     : set.key == "emu500" ? (name == set.middleName || name == set.middleBackName || [set.headName, set.tailName].contains(name) ? 4_400...4_700 : 2_800...2_950)
                     : set.key == "highSpeed" ? ([set.headName, set.tailName].contains(name) ? 8_000...9_500 : 5_000...6_000)
                     : set.key == "n700sG" ? ([set.headName, set.tailName].contains(name) ? 6_700...7_300 : 5_700...6_300)
+                    // Decision 461: #1323's C371 and C381 cabs, 5,358 and 6,976.
+                    : ["metroC371", "metroC381"].contains(set.key) && [set.headName, set.tailName].contains(name) ? 5_300...7_000
                     : name == set.headName && ["E200CK", "E200CKFar"].contains(set.key) ? 5_000...6_000 : 100...4_100
                 XCTAssertTrue(triangles.contains(model.triangleCount), "\(name): \(model.triangleCount) triangles")
                 // #900's 700T is 24 m, its Wenhu car 12.6 m, #988's urban
@@ -64,7 +67,10 @@ final class Map3DTrainSetTests: XCTestCase {
                 // Decision 422: the 700T's far set as long as its near one.
                 let length: ClosedRange<Float> = ["highSpeed", "highSpeedFar"].contains(set.key) ? 25...25.6 : ["n700sG", "n700sGFar"].contains(set.key) ? 24.9...25.4
                     // Decision 433: and #1323's C341 units, 23.6 and 23.7 m with their couplers.
-                    : ["taroko", "tarokoFar", "metroC341", "metroC341Far"].contains(set.key) ? 23...24.5 : set.key == "wenhu" ? 12...13.5
+                    // Decision 461: and its C371 and C381 units, 23.6 and 23.9 m; the
+                    // 610's 16.7 and 17.6 m.
+                    : ["taroko", "tarokoFar", "metroC341", "metroC341Far", "metroC371", "metroC371Far", "metroC381", "metroC381Far"].contains(set.key) ? 23...24.5
+                    : ["circular610", "circular610Far"].contains(set.key) ? 16.5...17.7 : set.key == "wenhu" ? 12...13.5
                     : set.key == "threeCarUrban" ? 15...16 : set.key == "sevenSectionLRT" ? 14...16
                     : name == set.headName && ["SUMMER", "SUMMERFar", "STEAM"].contains(set.key) ? 14.5...15.5
                     : name == set.tenderName ? 8.9...9.6 : set.key == "fourCarMetro" ? 12.3...12.8
@@ -147,12 +153,16 @@ final class Map3DTrainSetTests: XCTestCase {
         let steam = try layout("STEAM", 3)
         XCTAssertEqual(steam[0].1 + steam[0].2 + steam[1].1, Map3DDuplexSteam.formation().length, accuracy: 0.01,
                        "the locomotive and tender as #1118 couples them")
-        for key in ["R100CK", "", "C", "A"] { XCTAssertNil(pack.layout(forType: key, count: 3), key) }
+        for key in ["R100CK", "", "C"] { XCTAssertNil(pack.layout(forType: key, count: 3), key) }
+        // Decision 461: the player's metro is the C381's units at their own lengths.
+        XCTAssertEqual(try layout("A", 3).map(\.0), ["set-metroC381-head", "set-metroC381-car", "set-metroC381-tail"])
         // Only half as far as other cars: the steam locomotives are eight
         // to ten thousand triangles.
         XCTAssertEqual(Map3DTrainSet.reach(of: "SUMMER"), Map3DTrainSet.tramReach)
         XCTAssertEqual(Map3DTrainSet.reach(of: "STEAM"), Map3DTrainSet.tramReach)
-        XCTAssertEqual(Map3DTrainSet.reach(of: "L"), Map3DTrains.modelReach)
+        // Decision 461: the L's set while the pack is locked is the C381, whose far set takes over from 500 m.
+        XCTAssertEqual(Map3DTrainSet.reach(of: "L"), Map3DTrainSet.tramReach)
+        XCTAssertEqual(Map3DTrainSet.reach(of: "fourCarMetro"), Map3DTrains.modelReach)
         // The locomotive's headlamp lit at its smokebox's lens.
         let head = recipes.models[try XCTUnwrap(pack.index(of: "set-SUMMER-head"))]
         let lamp = head.vertices.filter(\.glows)
@@ -208,7 +218,8 @@ final class Map3DTrainSetTests: XCTestCase {
         XCTAssertEqual(names("", 4), ["commuter-cab", "commuter-car", "commuter-car", "commuter-cab turned"])
         XCTAssertEqual(names("EMU100", 2), ["commuter-cab", "commuter-cab turned"])
         // As #900 has them (the author, 2026-10-21): the 700T with its two
-        // pantograph cars, the EMU3000, every metro size a C381.
+        // pantograph cars, the EMU3000, every metro size a C381 (decision
+        // 461: #1323's, at its own lengths).
         XCTAssertEqual(names("HSR", 1), ["set-highSpeed-head"])
         XCTAssertEqual(names("HSR", 12), ["set-highSpeed-head", "set-highSpeed-car", "set-highSpeed-car", "set-highSpeed-panto"]
             + Array(repeating: "set-highSpeed-car", count: 4) + ["set-highSpeed-panto", "set-highSpeed-car", "set-highSpeed-car", "set-highSpeed-tail"])
@@ -244,7 +255,9 @@ final class Map3DTrainSetTests: XCTestCase {
         XCTAssertEqual(Map3DTrainSet.reach(of: "EMU3000"),Map3DTrainSet.tramReach)
         XCTAssertEqual(Map3DTrainSet.reach(of: "C"), 500)
         XCTAssertEqual(Map3DTrainSet.reach(of: "greenTram"), 500)
-        for key in ["B", "", "dieselExpress", "puyumaFar"] { XCTAssertEqual(Map3DTrainSet.reach(of: key), Map3DTrains.modelReach, key) }
+        for key in ["", "dieselExpress", "puyumaFar", "metroGeneric"] { XCTAssertEqual(Map3DTrainSet.reach(of: key), Map3DTrains.modelReach, key) }
+        // Decision 461: the player's metro is the C381 now, its far set from 500 m.
+        XCTAssertEqual(Map3DTrainSet.reach(of: "B"), Map3DTrainSet.tramReach)
         // Decision 426: the Puyuma, ten thousand triangles a set, like the Taroko.
         XCTAssertEqual(Map3DTrainSet.reach(of: "puyuma"), Map3DTrainSet.tramReach)
     }

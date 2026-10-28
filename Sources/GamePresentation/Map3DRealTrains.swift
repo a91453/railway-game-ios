@@ -25,6 +25,10 @@ public struct Map3DRealTrains: Sendable {
     struct Formation: Hashable, Sendable {
         let key: String
         let cars: Int
+        /// Decision 461: the set the line's odd-numbered trains are drawn
+        /// as, a line two fleets share (the Songshan-Xindian line's C371
+        /// and C381); `nil` for a line of one.
+        var alternate: String? = nil
     }
 
     /// A stretch of a line within the scene: how far along the line's
@@ -124,17 +128,23 @@ public struct Map3DRealTrains: Sendable {
     /// Decision 433: the key a train of `system`'s `key` set is drawn as,
     /// ``Map3DTrainSet/variant(of:number:locked:)``, but the C341 only on
     /// Taipei Metro's lines: Kaohsiung's, Taoyuan's and Taichung's metro
-    /// trains are not C341s, and stay the C381's set.
+    /// trains are not C341s. Decision 461: the Taipei Metro's lines are
+    /// drawn as their own fleets (``formation(system:line:)``), not split
+    /// as the player's metro is; the other cities' are `metroGeneric`,
+    /// which no variant splits.
     static func variantKey(system: String, key: String, number: Int, locked: Set<String> = []) -> String {
-        key == "metroC381" && system != "trtc" ? key : Map3DTrainSet.variant(of: key, number: number, locked: locked)
+        system == "trtc" ? key : Map3DTrainSet.variant(of: key, number: number, locked: locked)
     }
 
     /// Decision 435: the formation a train of a line of `system` whose
     /// trains are `line`, numbered `number`, is drawn as: its set
     /// ``variantKey(system:key:number:locked:)``, as many cars as the line's,
     /// but the EMU900 ten, as it always runs.
+    /// Decision 461: and a line's ``Formation/alternate`` for its
+    /// odd-numbered trains.
     static func formation(of line: Formation, system: String, number: Int, locked: Set<String> = []) -> Formation {
-        let key = variantKey(system: system, key: line.key, number: number, locked: locked)
+        let key = line.alternate.map { number % 2 != 0 ? $0 : line.key }
+            ?? variantKey(system: system, key: line.key, number: number, locked: locked)
         return Formation(key: key, cars: key == "emu900" ? Map3DEMU900.sequence.count : line.cars)
     }
 
@@ -154,21 +164,34 @@ public struct Map3DRealTrains: Sendable {
             if Map3DScene.dieselBranches.contains(where: { line.name.hasPrefix($0) }) { return Formation(key: "dieselRailcar", cars: 3) }
             return Formation(key: "emu800", cars: 8)
         case "trtc":
+            // Decision 461: each line's own fleet, of the models the game
+            // has (the C301 and C321 have none: the line's other fleet
+            // stands in for them).
             switch line.id {
-            // The Wenhu and Circular lines' four cars (`wenhu`, `y100`).
-            case "BR", "Y": return Formation(key: "wenhu", cars: 4)
-            // The branch shuttles' three.
-            case "R_XBT", "G_XBT": return Formation(key: "metroC381", cars: 3)
-            default: return Formation(key: "metroC381", cars: 6)
+            // The Wenhu line's four cars (`wenhu`).
+            case "BR": return Formation(key: "wenhu", cars: 4)
+            // The Circular line's four-car 610.
+            case "Y": return Formation(key: "circular610", cars: 4)
+            // The branch shuttles' three-car C371s.
+            case "R_XBT", "G_XBT": return Formation(key: "metroC371", cars: 3)
+            // The Bannan line's C321 and C341: the C341.
+            case "BL": return Formation(key: "metroC341", cars: 6)
+            // The Tamsui-Xinyi line's C301 and C381: the C381.
+            case "R": return Formation(key: "metroC381", cars: 6)
+            // The Songshan-Xindian line's C371 and C381: half each.
+            case "G": return Formation(key: "metroC381", cars: 6, alternate: "metroC371")
+            // The Zhonghe-Xinlu line's (both branches) C371.
+            default: return Formation(key: "metroC371", cars: 6)
             }
         case "krtc":
+            // Decision 461: the other cities' metros are not Taipei's.
             if line.id == "C" { return Formation(key: "greenTram", cars: 2) }
-            return Formation(key: "metroC381", cars: 3)
+            return Formation(key: "metroGeneric", cars: 3)
         case "tymc":
             // The commuter train's four (`airportunknown`).
-            return Formation(key: "metroC381", cars: 4)
+            return Formation(key: "metroGeneric", cars: 4)
         case "tmrt":
-            return Formation(key: "metroC381", cars: 2)
+            return Formation(key: "metroGeneric", cars: 2)
         case "sanying":
             return Formation(key: "wenhu", cars: 2)
         case "ntdlrt", "ntalrt":

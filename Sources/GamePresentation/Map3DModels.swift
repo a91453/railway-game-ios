@@ -142,7 +142,7 @@ public struct Map3DModelPack: Sendable {
         }
         models += Map3DC371.Unit.allCases.map { Map3DC371.model($0) }
         models += Map3DC381.Unit.allCases.map { Map3DC381.model($0) }
-        // Static 610 study; no shared metro operating mapping is changed.
+        // Static 610 study; decision 461's `circular610` set draws its cars.
         for role in Map3DTaipei610.Role.allCases {
             models.append(Map3DTaipei610.model(role))
             models.append(Map3DTaipei610.model(role, far: true))
@@ -270,7 +270,10 @@ public struct Map3DModelPack: Sendable {
     /// a stronger device, nearer under load); a car with no far set keeps
     /// its own model as far as before, never farther.
     public func model(_ near: Int, forType code: String, count: Int, at distance: Float, reach scale: Map3DModelReach = .standard) -> Int? {
-        let reach = Map3DTrainSet.reach(of: code)
+        // Decision 461: a type the unlocked train pack draws as its own set
+        // (the L's four-car metro) is as far as that set, not the C381's.
+        let packed = Map3DTrainSet.packByType[code].flatMap { locked.contains($0) ? nil : $0 }
+        let reach = Map3DTrainSet.reach(of: packed ?? code)
         let far = farModel(of: near, forType: code, count: count)
         guard distance < Map3DTrains.modelReach * (far == nil ? min(scale.box, 1) : scale.box) else { return nil }
         if distance < reach * (far == nil ? min(scale.farModel, 1) : scale.farModel) { return near }
