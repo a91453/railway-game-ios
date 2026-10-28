@@ -932,14 +932,31 @@ public final class GameSession {
     /// Shows what ``speedLagWatch`` says, unless hints are switched off.
     func syncSpeedLagHint() {
         let hint = Self.showsSpeedLagHint ? speedLagWatch.hint : nil
-        if hint != speedLagHint { speedLagHint = hint }
+        if hint != speedLagHint {
+            speedLagHint = hint
+            speedLagHintSeen = false
+        }
     }
 
-    /// The player dismissed the speed hint: none again this game
-    /// (decision 464).
+    /// Whether ``speedLagHint`` has come on screen.
+    @ObservationIgnored private var speedLagHintSeen = false
+
+    /// The speed hint's card came on screen.
+    public func noteSpeedLagHintSeen() {
+        if speedLagHint != nil { speedLagHintSeen = true }
+    }
+
+    /// The speed hint went: dismissed by the player, none again this game
+    /// (decision 464); closed before it was ever on screen (review L-2: a
+    /// popover the system could not show), it may come again.
     public func dismissSpeedLagHint() {
-        speedLagWatch.dismiss()
+        if speedLagHintSeen {
+            speedLagWatch.dismiss()
+        } else {
+            speedLagWatch.withdraw()
+        }
         speedLagHint = nil
+        speedLagHintSeen = false
     }
 
     /// The player took the hint's speed (decision 464).

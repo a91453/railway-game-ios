@@ -101,6 +101,15 @@ public struct SpeedLagWatch: Equatable, Sendable {
         hint = nil
     }
 
+    /// The hint went before the player saw it (review L-2: the system
+    /// closed the popover it could not show): it may come again at this
+    /// speed after another ``sustained`` stretch behind.
+    public mutating func withdraw() {
+        if let speed = hint?.speed { shown.remove(speed) }
+        behindSince = nil
+        hint = nil
+    }
+
     /// Notes that once the game had run `real` time at `speed`, it ran
     /// `permille` thousandths of that speed over the last seconds
     /// (``GameSpeedMeter/permilleOfSpeed``), with the phone at `heat`.
