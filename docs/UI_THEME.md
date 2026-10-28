@@ -50,6 +50,8 @@ PR：#187（配色與 HUD）、#190／#192（地圖為主的玻璃版面）、#1
 
 `.borderedProminent` 固定用白字，在 Dark 的 `primary`（1.85:1）和 `error` 上都不到 AA，所以主要動作改用 `ThemeProminentButtonStyle`。`.bordered` 按鈕沿用全域 tint。
 
+同樣的理由，`error`、`warning`、`success`、`primary`、`accent` 實心底上的字不用 `.white`，用對應的 `on…`（狀態列的破產倒數與新聞未讀數：`onError` 在 `error` 上，5.62／6.59；2026-10-28 UI 健檢 C 以前是白字，Dark 約 2:1）。`Theme` 沒有「增加對比」的另一組色，打開時用同一組，數字相同。Linux 的 `ThemeContrastTests` 讀 `Theme.swift` 與 `AccentColor`，檢查每個 `on…` 對它的底到 4.5:1，並找出 View 裡主題色底上的白字。
+
 ## 玩家看的文字（2026-10-14，作者；CLAUDE.md Workflow）
 
 作者實機看到設定裡「色盲友善配色」的說明寫著「取最接近原色的那一個」「只改畫面」，回報：「怎麼把我的決策都寫到遊戲內？」遊戲裡給玩家看的字（中英文都算：`language.text(...)`、`Text(...)` 與 `Localizable.xcstrings`、說明、教學、提示卡、錯誤訊息、設定、面板）照下面寫：
