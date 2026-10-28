@@ -12,7 +12,7 @@
 
 ## 重建
 
-Swift 6.4 必須先安裝並在 PATH；本環境位於 `/workspace/swift/usr/bin`。OUT 與 BEFORE 均放在公開庫外。BEFORE 是 producer `2b2bfab2ae6f2a94407c8acd0224516d590a07f5` 的三台全部單元／編組 native，私有 `train-colors-2026-10-22-before/` 有保存；不要使用本輪新模型自己充當比較基準。
+Swift 6.4 必須先安裝並在 PATH；本環境位於 `/workspace/swift/usr/bin`。OUT 與 BEFORE 均放在公開庫外。BEFORE 是 producer `2b2bfab2ae6f2a94407c8acd0224516d590a07f5` 的三台全部單元／編組 native，私有 `train-colors-2026-10-22-before/` 已在 2026-10-28 從素材庫刪除，要比較就用該 producer commit 在公開庫重建；不要使用本輪新模型自己充當比較基準。
 
 ```sh
 export PATH=/workspace/swift/usr/bin:$PATH
