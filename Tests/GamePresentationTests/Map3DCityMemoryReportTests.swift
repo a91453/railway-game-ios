@@ -105,6 +105,13 @@ final class Map3DCityMemoryReportTests: XCTestCase {
     /// would draw in their place.
     static func sunLayers(_ scene: Map3DScene) {
         let pack = Map3DModelPack.standard
+        var used: [Int: Int] = [:]
+        for chunk in scene.chunks { for prop in chunk.props { used[prop.model, default: 0] += 1 } }
+        for (model, count) in used.sorted(by: { $0.value > $1.value }) {
+            let m = pack.models[model]
+            print(String(format: "  street furniture %@: %d, %.2f m wide, %.1f m high, %d triangles", m.name, count,
+                         max(m.maximum.x - m.minimum.x, m.maximum.z - m.minimum.z), m.maximum.y - m.minimum.y, m.triangleCount))
+        }
         for distance: Float in [120, 280, 600, 1_000] {
             let camera = Map3DCamera(target: .zero, distance: distance, viewport: (402, 874))
             let lighting = Map3DLighting(minute: 10 * 60)
@@ -124,6 +131,7 @@ final class Map3DCityMemoryReportTests: XCTestCase {
                 far += chunk.farTriangleCount
                 farDraws += (chunk.far.isEmpty ? 0 : 1) + (chunk.farBoxes.isEmpty ? 0 : 1)
             }
+            print("  sun map at \(Int(distance)) m: texel \(String(format: "%.2f", region.texel)) m")
             print("  sun map at \(Int(distance)) m: \(chunks) chunks (\(detailedChunks) in full); base \(base) triangles; in full: city \(city), "
                   + "kit boxes \(standIn), street furniture \(props) in \(propDraws) draws; simplified instead: \(far) in \(farDraws) draws")
         }
