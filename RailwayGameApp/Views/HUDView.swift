@@ -888,12 +888,27 @@ private struct ViewingReadout: View {
                         .frame(width: 16, height: 32)
                 }
                 .buttonStyle(TouchTargetButtonStyle(size: CGSize(width: 16, height: 32)))
-                .popover(isPresented: $showsLag) {
-                    Text(verbatim: viewing.lagText(in: language) ?? viewing.actualText(in: language) ?? "")
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.textPrimary)
-                        .padding()
-                        .presentationCompactAdaptation(.popover)
+                // Decision 464: the same popover opens by itself, once, when
+                // the game has stayed far behind; the system popover moves
+                // as the system's Reduce Motion asks.
+                .popover(isPresented: Binding(
+                    get: { showsLag || session.speedLagHint != nil },
+                    set: { shown in
+                        guard !shown else { return }
+                        showsLag = false
+                        if session.speedLagHint != nil { session.dismissSpeedLagHint() }
+                    }
+                )) {
+                    if let hint = session.speedLagHint {
+                        SpeedLagHintCard(session: session, hint: hint, language: language)
+                            .presentationCompactAdaptation(.popover)
+                    } else {
+                        Text(verbatim: viewing.lagText(in: language) ?? viewing.actualText(in: language) ?? "")
+                            .font(.subheadline)
+                            .foregroundStyle(Theme.textPrimary)
+                            .padding()
+                            .presentationCompactAdaptation(.popover)
+                    }
                 }
                 .accessibilityLabel(Text(verbatim: viewing.accessibilityText(in: language)))
                 .accessibilityIdentifier("hud.lag")
@@ -929,6 +944,36 @@ private struct ViewingReadout: View {
                 .accessibilityIdentifier("hud.viewing")
             }
         }
+    }
+}
+
+/// Decision 464: what the popover beside the speed says when the game has
+/// stayed far behind its speed, with the speed it keeps and a way to dismiss.
+private struct SpeedLagHintCard: View {
+    let session: GameSession
+    let hint: SpeedLagHint
+    let language: DisplayLanguage
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(verbatim: hint.text(in: language))
+                .font(.subheadline)
+                .foregroundStyle(Theme.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 16) {
+                if let switchText = hint.switchText(in: language) {
+                    Button(switchText) { session.acceptSpeedLagHint() }
+                        .font(.subheadline.weight(.semibold))
+                        .accessibilityIdentifier("hud.lagHint.switch")
+                }
+                Button(hint.dismissText(in: language)) { session.dismissSpeedLagHint() }
+                    .font(.subheadline)
+                    .accessibilityIdentifier("hud.lagHint.dismiss")
+            }
+        }
+        .padding()
+        .frame(maxWidth: 280, alignment: .leading)
+        .accessibilityIdentifier("hud.lagHint")
     }
 }
 
