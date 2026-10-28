@@ -868,7 +868,8 @@ private struct ControlDetailsToggle: View {
                 icon.frame(minWidth: 40, minHeight: 40)
             }
         }
-        .buttonStyle(ThemeSelectableButtonStyle(isActive: isOpen))
+        // As wide as Undo and Redo beside it, touched over 44.
+        .buttonStyle(ThemeSelectableTouchTargetButtonStyle(isActive: isOpen, size: EditButtonSize.drawn))
         .accessibilityLabel(isOpen ? "Hide Controls" : "Show Controls")
         .accessibilityIdentifier("controls.toggle")
     }

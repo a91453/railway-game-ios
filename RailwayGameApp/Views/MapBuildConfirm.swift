@@ -220,7 +220,10 @@ struct MapBuildConfirm: View {
                             .monospacedDigit()
                     }
                 }
-                .frame(minHeight: 40)
+                // As tall as ✕ beside it (40 and the selectable style's 4
+                // above and below), and never narrower: the main action is
+                // not the smallest.
+                .frame(minWidth: 44, minHeight: 48)
             }
             .buttonStyle(ThemeProminentButtonStyle(isPurchase: build.kind == .mapTile))
             .disabled(!build.canConfirm)

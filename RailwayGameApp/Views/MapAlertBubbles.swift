@@ -127,7 +127,9 @@ struct MapAlertBubbles: View {
             .background(Capsule().fill(Color.black.opacity(0.18)).offset(y: 2))
             .contentShape(Capsule())
         }
-        .buttonStyle(.plain)
+        // 28 high, touched over 44: bubbles over one station are 46
+        // apart, so two areas never meet.
+        .buttonStyle(TouchTargetButtonStyle(size: CGSize(width: 44, height: 28)))
         .accessibilityLabel(Text(verbatim: why.map { "\(text), \($0)" } ?? text))
         .accessibilityHint(Text(verbatim: session.language.text("Goes to it.", "前往處理。")))
         .accessibilityIdentifier("map.alert")
