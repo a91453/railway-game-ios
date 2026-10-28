@@ -154,6 +154,10 @@ public struct Map3DModelPack: Sendable {
             models.append(Map3DSanying.model(unit))
             models.append(Map3DSanying.model(unit, far: true))
         }
+        for far in [false, true] {
+            models += Map3DTaichungGreen.Role.allCases.map { Map3DTaichungGreen.model($0, far: far) }
+
+        }
         self.init(recipes: models, baked: baked)
     }
 

@@ -2290,6 +2290,16 @@ EMU900第二版（#1338／draft#1339↔私庫#102）：使用者要求修圓車�
 
 依作者要求更新列車技能／新對話指令與共用編組、GLB、幾何／故障驗收、自含互動檢視頁及限量交付。新任從[三鶯線指令](art/native-vehicle-modeling/SANYING_PROMPT.md)開始，先查工具PR是否已合併，再讀最新main及素材庫AGENTS；[工具說明](../tools/train-models/README.md)列操作與驗證限制。本輪沒有製作三鶯線或更動任何車款配方／營運映射；不合併、不啟動TestFlight。歷史專用工具保留供舊成果重建，新輪次不交ZIP／history副本。
 
+### 2026-10-28 Codex 台中捷運綠線 studies
+
+[獨立配方／官方來源／重建與狀態](art/taichung-green/README.md)。從main04f81f7a新建DM1/DM2近遠四單元及資料描述兩車編組；工具#1416/#1357已合、三鶯#1422未合，不套舊殼。只追加studies；既有tmrt→metroGeneric兩車營運映射保護。外觀未經使用者接受，隱藏底箱／輪徑／設備站位是推估；Simulator／真機Metal／效能／動畫與營運接入UNVERIFIED。實跑producer、完整私庫revision-1、下載SHA與最新CI見自有交付紀錄；不合併／auto-merge／TestFlight，不動GameCore／存檔／fixtures／玩法。
+
+台中綠線交付補記：公開draft[#1430](https://github.com/a91453/railway-game-ios/pull/1430)↔素材draft[railway-assets-private#21](https://github.com/a91453/railway-assets-private/pull/21)，固定producer ebf978be；[完整證據](art/taichung-green/verification.json)。680舊原生逐bytes不變、14成品獨立重建一致、20私庫PNG＋1公開總覽、最終viewer真下載已驗。額外相容性測試發現Map3DModelTests的studies計數漏四件，已只補本型×2。最新head CI與記憶體報告見自有README及PR，不把測試通過當外觀接受。
+
+台中綠線第二版收尾：最後實看發現風琴間隙，僅延伸實際風琴至共同連結面並新增縮回100mm反例；最終producer `e525a29a`／素材`61084334` revision-2。真正前版公開`ebf978be`／素材`d90867d7`可重建，第一輪重檔已在同PR移除、保留PNG／README／來源。最終12項Swift通過，另啟用記憶體報告的13項通過、standard仍583模型／133.3MB；技術／來源／viewer下載SHA及兩庫draft仍見自有README。外觀接受／營運／裝置仍UNVERIFIED。
+
 ### 2026-10-28 Codex 三鶯線原生靜態模型
 
 三鶯線兩節車靜態模型的重建入口與來源在 [SANYING_MODEL.md](art/native-vehicle-modeling/SANYING_MODEL.md)。使用者否定第一版外觀，又指出第二版與實車照片不夠像；第三版修白色側板／門柱、獨立深色窗、藍色車頭與銀色橫飾帶。使用者於 2026-10-28 回覆「可以」，僅第三版 producer `495468fe0bef6bf9e56b4543e1db5642bf0328c1` 記外觀接受。前版由 git producer 恢復；營運映射、真機仍未驗，公開／私有 draft PR 見本輪 #1041 登記。
+
+台中收尾合main b4fff5ed後13項相關測試綠、本批14成品與producer逐bytes相同。全包重算另抓到最新main鎖檔28項既有EMU3000／莒光等set值不符；[名單／證據](art/taichung-green/verification.json)，本PR不改任何舊鎖、台中四項正確，680原實際模型仍不變。共用鎖全包驗收不能稱綠，留共用工具／原車作者處理；本型專用素材驗收保持。最新CI看公開#1430 head checks。

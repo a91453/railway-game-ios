@@ -2565,6 +2565,22 @@
       "hash" : "eecbf60bce777858",
       "triangles" : 1252
     },
+    "taichung-green-dm1" : {
+      "hash" : "8c248a399b9d85b3",
+      "triangles" : 3120
+    },
+    "taichung-green-dm1-far" : {
+      "hash" : "2d2d5fd1154786cc",
+      "triangles" : 1512
+    },
+    "taichung-green-dm2" : {
+      "hash" : "70efea4873864944",
+      "triangles" : 3120
+    },
+    "taichung-green-dm2-far" : {
+      "hash" : "764dc4b98d9883f7",
+      "triangles" : 1512
+    },
     "temu1000-formation" : {
       "hash" : "6035abce8d5e82de",
       "triangles" : 14136
