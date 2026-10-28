@@ -31,6 +31,57 @@ public enum WhatsNew {
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
         Entry(
+            id: "2026-10-28-93",
+            items: [
+                Line(
+                    english: "Each Taipei Metro line in 3D runs its own trains: C371, C381 and C341, and the Circular line's four-car train.",
+                    chinese: "3D 的台北捷運各線跑自己的車：C371、C381、C341，環狀線是四節的列車。"
+                ),
+                Line(
+                    english: "The Liujia and Neiwan lines can both be bought, in either order; Zhuzhong's Liujia line platform is raised, as in reality.",
+                    chinese: "六家線和內灣線都能買，先買哪條都行；竹中的六家線月台照真實架高。"
+                ),
+                Line(
+                    english: "Central Taipei in 3D has its landmarks and old city gates; Taipei Station and Taipei 101 are redrawn, and Kaohsiung Station has its two towers.",
+                    chinese: "3D 的台北市中心多了地標與城門；台北車站和 101 重畫，高雄車站多了兩棟共構大樓。"
+                ),
+                Line(
+                    english: "3D maps have conifers, shrubs and storage tanks.",
+                    chinese: "3D 地圖多了針葉樹、灌木叢和儲槽。"
+                ),
+                Line(
+                    english: "3D quality follows each device's memory and chip: larger iPads look sharper, and phones with less memory stay steady.",
+                    chinese: "3D 的畫質照每台裝置的記憶體與晶片調整：大 iPad 更清楚，記憶體小的手機更穩。"
+                ),
+                Line(
+                    english: "When your device can't keep up with the speed you set, a tip says how fast this map really runs and offers to switch to that speed.",
+                    chinese: "裝置跑不到設定的倍速時，會跳一次提示，告訴你這張地圖實際跑得到多快，並可一鍵改成那一檔。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "At 6000× on a big map the game no longer pauses every few seconds or at 6:00 each morning.",
+                    chinese: "大地圖開 6000 倍速，不再每隔幾秒或每天早上 6 點卡一下。"
+                ),
+                Line(
+                    english: "The first time 3D opens it no longer freezes for a moment, and far-off city blocks draw faster.",
+                    chinese: "第一次開 3D 不再頓一下，遠處的城市畫得更快。"
+                ),
+                Line(
+                    english: "The speed you set is kept through the night skip and in the demo lines.",
+                    chinese: "設定的遊戲速度在跳過夜晚和示範路線裡都會保留。"
+                ),
+                Line(
+                    english: "Road markings on bridge approaches lie flat on the road, and pedestrian signals no longer jump.",
+                    chinese: "橋頭引道的標線貼著路面，行人號誌不再跳格。"
+                ),
+                Line(
+                    english: "On the whole-island map, bus stops, stations and track line up with Apple Maps instead of sitting about 1 km off.",
+                    chinese: "整島世界的站牌、車站和軌道對齊 Apple 地圖，不再偏約 1 公里。"
+                ),
+            ]
+        ),
+        Entry(
             id: "2026-10-28",
             items: [
                 Line(
