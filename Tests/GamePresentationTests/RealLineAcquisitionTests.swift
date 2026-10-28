@@ -9,7 +9,7 @@ import XCTest
 final class RealLineAcquisitionTests: XCTestCase {
     /// A real-world game round the middle of `line`'s stations, with the
     /// bundled railways and `balance`.
-    private func game(round network: String, balance: Money = Money(100_000_000_000), side: Int64 = 1 << 20, heights: Bool = false, transfers: Bool = false, rules: NewGameRules = .realistic) throws -> GameSession {
+    static func game(round network: String, balance: Money = Money(100_000_000_000), side: Int64 = 1 << 20, heights: Bool = false, transfers: Bool = false, rules: NewGameRules = .realistic) throws -> GameSession {
         let railways = try BundledRealData.railways()
         let runs = try XCTUnwrap(railways.branchRuns[network] ?? railways.metroRuns[network], network)
         let prefix = String(network.prefix { $0 != ":" })
@@ -32,7 +32,7 @@ final class RealLineAcquisitionTests: XCTestCase {
     }
 
     func testThePingxiLineIsBoughtAsOneCommandAndRunsItsRealTrains() throws {
-        let session = try game(round: "PINGXI")
+        let session = try Self.game(round: "PINGXI")
         let pingxi = try line("PINGXI", in: session)
         XCTAssertEqual(pingxi.stops, ["三貂嶺", "大華", "十分", "望古", "嶺腳", "平溪", "菁桐"])
         XCTAssertEqual(session.buyableRealLine(through: "十分"), pingxi)
@@ -93,7 +93,7 @@ final class RealLineAcquisitionTests: XCTestCase {
     /// platforms and track come down. With the old command its trains
     /// stayed, standing in the way.
     func testRemovingALineBoughtSellsItsTrains() throws {
-        let bought = try game(round: "PINGXI")
+        let bought = try Self.game(round: "PINGXI")
         XCTAssertTrue(bought.acquireRealLine(bought.realLineOffer(for: try line("PINGXI", in: bought))), bought.message?.text ?? "")
         let id = try XCTUnwrap(bought.world.acquisition(of: "tra:PINGXI")?.line)
         var world = bought.world
@@ -142,7 +142,7 @@ final class RealLineAcquisitionTests: XCTestCase {
     /// than one track once waited there for good.
     func testEveryLineOnSaleIsBoughtOverTheRealGroundAndRunsItsDay() throws {
         for network in ["PINGXI", "SHENAO", "JIJI", "NEIWAN", "LIUJIA", "SHALUN"] {
-            let session = try game(round: network, side: 1 << 21, heights: true, rules: .simple)
+            let session = try Self.game(round: network, side: 1 << 21, heights: true, rules: .simple)
             let line = try line(network, in: session)
             let offer = session.realLineOffer(for: line)
             XCTAssertNil(offer.problem, network)
@@ -171,7 +171,7 @@ final class RealLineAcquisitionTests: XCTestCase {
     /// level at Zhuzhong.
     func testTheLiujiaAndNeiwanLinesAreBothBoughtThroughZhuzhong() throws {
         for order in [["LIUJIA", "NEIWAN"], ["NEIWAN", "LIUJIA"]] {
-            let session = try game(round: "NEIWAN", side: 1 << 21, heights: true, rules: .simple)
+            let session = try Self.game(round: "NEIWAN", side: 1 << 21, heights: true, rules: .simple)
             var platformsOf: [String: [TrackPlatform]] = [:]
             for network in order {
                 let line = try line(network, in: session)
@@ -215,7 +215,7 @@ final class RealLineAcquisitionTests: XCTestCase {
     /// over the Liujia Line's there, at the station both share, and both
     /// run their day.
     func testASaveOfBeforeWithTheLiujiaLineBuysTheNeiwanLine() throws {
-        let session = try game(round: "NEIWAN", side: 1 << 21, heights: true, rules: .simple)
+        let session = try Self.game(round: "NEIWAN", side: 1 << 21, heights: true, rules: .simple)
         let before = session.realLineOffer(for: try line("LIUJIA", in: session), raising: .none).offer
         XCTAssertTrue(session.acquireRealLine(before), session.message?.text ?? "")
         let liujia = try XCTUnwrap(session.world.line(id: try XCTUnwrap(session.world.acquisition(of: "tra:LIUJIA")?.line)))
@@ -255,63 +255,72 @@ final class RealLineAcquisitionTests: XCTestCase {
     /// and Xiaobitan Branch Lines are on sale beside
     /// the branch lines, each bought as one command, its two tracks laid
     /// along the real line, and a day of its real timetable run, every run
-    /// sent out, under simple and realistic rules (decision 258). Not on
+    /// sent out, under simple and realistic rules (decision 258); the
+    /// Sanying Line too, in classes of its own (`SanyingLineSimpleDayTests`,
+    /// `SanyingLineRealisticDayTests`), its two days the longest. Not on
     /// sale: the Green Mountain Line and the other metro lines, whose ends
     /// stand more trains at once than the game lays tracks
-    /// (`extract_metro_runs.py`); the Ankeng LRT and the Sanying Line, not yet
+    /// (`extract_metro_runs.py`); the Ankeng LRT, not yet
     /// (docs/HANDOFF.md); Kaohsiung's Circular Light Rail, which runs one
     /// way round its loop; and the Wenhu Line, its curves too tight.
     func testTheLightRailsAndMetrosAreBoughtAndRunTheirRealDay() throws {
         let lines: [(id: String, type: TrainType, tier: LineAcquisition.Tier)] = [
             ("ntdlrt:VB", .c, .lightRail), ("trtc:R_XBT", .a, .metro), ("trtc:G_XBT", .a, .metro),
         ]
-        let absent = [
-            "ntdlrt:V", "ntalrt:K", "krtc:C", "trtc:BR", "trtc:R", "trtc:G", "trtc:O_XINZHUANG", "trtc:O_LUZHOU", "trtc:BL", "trtc:Y",
-            "tymc:A", "krtc:KR", "krtc:KO", "tmrt:TG", "sanying:LB",
-        ]
         for (id, type, tier) in lines {
             for rules in [NewGameRules.simple, .realistic] {
-                let session = try game(round: id, side: 1 << 21, heights: true, rules: rules)
-                for absent in absent {
-                    XCTAssertFalse(session.buyableRealLines.contains { $0.id == absent }, absent)
-                }
-                let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == id }, "\(id) on sale")
-                XCTAssertEqual(line.tier, tier, id)
-                let runs = try XCTUnwrap(session.railways?.metroRuns[id])
-                XCTAssertEqual(line.stops, runs.stops, id)
-                let offer = session.realLineOffer(for: line)
-                XCTAssertNil(offer.problem, "\(id): \(offer.problem ?? "")")
-                let acquisition = try XCTUnwrap(offer.acquisition, id)
-                XCTAssertEqual(acquisition.runs.count, runs.runs.count, id)
-                XCTAssertEqual(acquisition.trains.count, runs.overnight.values.reduce(0, +), id)
-                XCTAssertEqual(acquisition.trainType, type, id)
-                XCTAssertEqual(acquisition.tier, tier, id)
-                XCTAssertNotNil(acquisition.color, "\(id): its official colour")
-                XCTAssertEqual(offer.price?.riders, LineAcquisition.value(ofDailyRiders: acquisition.dailyRiders, tier: tier), id)
-                XCTAssertTrue(session.acquireRealLine(offer), "\(id): \(session.message?.text ?? "")")
-                var world = session.world
-                let bought = try XCTUnwrap(world.acquisition(of: id))
-                XCTAssertEqual(bought.value, offer.price?.riders, id)
-                // To three in the morning: a light rail's and a metro's last
-                // runs of a day leave after midnight.
-                let started = Date()
-                for hour in 0..<51 {
-                    try world.advance(ticks: 60)
-                    if ProcessInfo.processInfo.environment["ACQUIRE_TRACE"] != nil {
-                        FileHandle.standardError.write(Data("\(id) \(rules) hour \(hour) \(String(format: "%.1f", Date().timeIntervalSince(started))) s\n".utf8))
-                    }
-                }
-                let ran = try XCTUnwrap(world.line(id: try XCTUnwrap(bought.line)))
-                let today = world.clock.now.seconds / GameTime.secondsPerDay
-                let missed = zip(ran.runs, ran.runDays).filter { run, day in
-                    run.days & (1 << StationDemand.weekday(ofDay: today - 1)) != 0 && (day ?? -1) < today - 1
-                }
-                XCTAssertEqual(missed.count, 0, "\(id) (\(rules)): runs not sent out yesterday: \(missed.count) of \(ran.runs.count)")
-                FileHandle.standardError.write(Data(
-                    "\(id) (\(rules)): \(acquisition.trains.count) trains, \(ran.runs.count) runs, 51 hours played in \(String(format: "%.1f", Date().timeIntervalSince(started))) s\n".utf8
-                ))
+                try Self.buyAndRunRealDay(id, type: type, tier: tier, rules: rules)
             }
         }
+    }
+
+    /// `id` bought on a game round it under `rules`, as one command, and
+    /// run to three in the morning of the third day: none of the lines not
+    /// on sale is offered, and every run of the second day was sent out.
+    static func buyAndRunRealDay(_ id: String, type: TrainType, tier: LineAcquisition.Tier, rules: NewGameRules) throws {
+        let absent = [
+            "ntdlrt:V", "ntalrt:K", "krtc:C", "trtc:BR", "trtc:R", "trtc:G", "trtc:O_XINZHUANG", "trtc:O_LUZHOU", "trtc:BL", "trtc:Y",
+            "tymc:A", "krtc:KR", "krtc:KO", "tmrt:TG",
+        ]
+        let session = try game(round: id, side: 1 << 21, heights: true, rules: rules)
+        for absent in absent {
+            XCTAssertFalse(session.buyableRealLines.contains { $0.id == absent }, absent)
+        }
+        let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == id }, "\(id) on sale")
+        XCTAssertEqual(line.tier, tier, id)
+        let runs = try XCTUnwrap(session.railways?.metroRuns[id])
+        XCTAssertEqual(line.stops, runs.stops, id)
+        let offer = session.realLineOffer(for: line)
+        XCTAssertNil(offer.problem, "\(id): \(offer.problem ?? "")")
+        let acquisition = try XCTUnwrap(offer.acquisition, id)
+        XCTAssertEqual(acquisition.runs.count, runs.runs.count, id)
+        XCTAssertEqual(acquisition.trains.count, runs.overnight.values.reduce(0, +), id)
+        XCTAssertEqual(acquisition.trainType, type, id)
+        XCTAssertEqual(acquisition.tier, tier, id)
+        XCTAssertNotNil(acquisition.color, "\(id): its official colour")
+        XCTAssertEqual(offer.price?.riders, LineAcquisition.value(ofDailyRiders: acquisition.dailyRiders, tier: tier), id)
+        XCTAssertTrue(session.acquireRealLine(offer), "\(id): \(session.message?.text ?? "")")
+        var world = session.world
+        let bought = try XCTUnwrap(world.acquisition(of: id))
+        XCTAssertEqual(bought.value, offer.price?.riders, id)
+        // To three in the morning: a light rail's and a metro's last
+        // runs of a day leave after midnight.
+        let started = Date()
+        for hour in 0..<51 {
+            try world.advance(ticks: 60)
+            if ProcessInfo.processInfo.environment["ACQUIRE_TRACE"] != nil {
+                FileHandle.standardError.write(Data("\(id) \(rules) hour \(hour) \(String(format: "%.1f", Date().timeIntervalSince(started))) s\n".utf8))
+            }
+        }
+        let ran = try XCTUnwrap(world.line(id: try XCTUnwrap(bought.line)))
+        let today = world.clock.now.seconds / GameTime.secondsPerDay
+        let missed = zip(ran.runs, ran.runDays).filter { run, day in
+            run.days & (1 << StationDemand.weekday(ofDay: today - 1)) != 0 && (day ?? -1) < today - 1
+        }
+        XCTAssertEqual(missed.count, 0, "\(id) (\(rules)): runs not sent out yesterday: \(missed.count) of \(ran.runs.count)")
+        FileHandle.standardError.write(Data(
+            "\(id) (\(rules)): \(acquisition.trains.count) trains, \(ran.runs.count) runs, 51 hours played in \(String(format: "%.1f", Date().timeIntervalSince(started))) s\n".utf8
+        ))
     }
 
     /// A normal game on a place of Taiwan, bought tile by tile (decision
@@ -396,7 +405,7 @@ final class RealLineAcquisitionTests: XCTestCase {
     func testALineBoughtFollowsTheRealStructures() throws {
         var tunnel = (inside: 0, all: 0), carried = (up: 0, all: 0), ground = (off: 0, all: 0)
         for network in ["PINGXI", "SHENAO", "JIJI", "NEIWAN", "LIUJIA", "SHALUN"] {
-            let session = try game(round: network, side: 1 << 21, heights: true)
+            let session = try Self.game(round: network, side: 1 << 21, heights: true)
             let offer = session.realLineOffer(for: try line(network, in: session))
             let acquisition = try XCTUnwrap(offer.acquisition, "\(network): \(offer.problem ?? "")")
             XCTAssertTrue(session.acquireRealLine(offer), "\(network): \(session.message?.text ?? "")")
@@ -464,7 +473,7 @@ final class RealLineAcquisitionTests: XCTestCase {
     /// Past the junction, the station card calls Taiwan Railway's riders
     /// the line's regulars; at the junction they still change from it.
     func testTheStationCardCallsTheRidersAlongALineBoughtItsRegulars() throws {
-        let session = try game(round: "PINGXI", transfers: true)
+        let session = try Self.game(round: "PINGXI", transfers: true)
         let offer = session.realLineOffer(for: try line("PINGXI", in: session))
         XCTAssertTrue(session.acquireRealLine(offer), session.message?.text ?? "")
         let stops = try XCTUnwrap(session.world.line(id: try XCTUnwrap(session.world.acquisition(of: "tra:PINGXI")).line!)?.stops)
@@ -480,7 +489,7 @@ final class RealLineAcquisitionTests: XCTestCase {
     /// offers the line; the card lists the price, and closes once bought for
     /// the card that says so.
     func testAStationBesideTheLineOffersIt() throws {
-        let session = try game(round: "PINGXI")
+        let session = try Self.game(round: "PINGXI")
         let pingxi = try line("PINGXI", in: session)
         let frame = try XCTUnwrap(RealWorldFrame(world: session.world))
         let shifen = try BundledRealData.station("十分", in: "tra_sched").coordinate
@@ -499,5 +508,26 @@ final class RealLineAcquisitionTests: XCTestCase {
         XCTAssertTrue(session.acquireRealLine(offer), session.message?.text ?? "")
         XCTAssertNil(session.shownRealLineOffer)
         XCTAssertNotNil(session.lastLineAcquired)
+    }
+}
+
+/// Decision 400 (10j-3): the Sanying Line bought and its two real days run
+/// under simple rules (decision 258), every run sent out: its trains
+/// standing overnight at stations between once stood across the night's
+/// last runs and held the line still from the second day. A class of its
+/// own, each rule apart, as two days of its twelve trains take minutes
+/// (`swift-shards.sh` deals them to two shards).
+@MainActor
+final class SanyingLineSimpleDayTests: XCTestCase {
+    func testTheSanyingLineRunsTwoRealDays() throws {
+        try RealLineAcquisitionTests.buyAndRunRealDay("sanying:LB", type: .b, tier: .metro, rules: .simple)
+    }
+}
+
+/// Decision 400 (10j-3): the same under realistic rules.
+@MainActor
+final class SanyingLineRealisticDayTests: XCTestCase {
+    func testTheSanyingLineRunsTwoRealDays() throws {
+        try RealLineAcquisitionTests.buyAndRunRealDay("sanying:LB", type: .b, tier: .metro, rules: .realistic)
     }
 }
