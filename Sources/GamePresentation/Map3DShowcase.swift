@@ -311,7 +311,7 @@ public enum Map3DShowcase {
             }
         }
         let count = mesh.indices.count
-        return Map3DScene.Chunk(column: 0, row: 0, mesh: mesh, baseIndexCount: count, far: Map3DMesh(), close: Map3DMesh(),
+        return Map3DScene.Chunk(column: 0, row: 0, mesh: mesh, baseIndexCount: count, far: Map3DMesh(), farBoxes: [], close: Map3DMesh(),
                                 standIn: Map3DMesh(), shadows: Map3DMesh(), props: [], minimum: Map3DPoint(low.x, -1, low.z),
                                 maximum: Map3DPoint(high.x, 8, high.z),
                                 cityTops: Array(repeating: -.infinity, count: Map3DSeeThrough.cells * Map3DSeeThrough.cells),

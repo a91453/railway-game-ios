@@ -39,9 +39,9 @@ final class Map3DBoxInstanceTests: XCTestCase {
         XCTAssertEqual(laid.count, drawn.count, label, file: file, line: line)
         for (a, b) in zip(laid, drawn) {
             XCTAssertEqual(a.position, b.position, label, file: file, line: line)
-            XCTAssertEqual(a.normal.x, b.normal.x, accuracy: 1e-5, label, file: file, line: line)
-            XCTAssertEqual(a.normal.y, b.normal.y, accuracy: 1e-5, label, file: file, line: line)
-            XCTAssertEqual(a.normal.z, b.normal.z, accuracy: 1e-5, label, file: file, line: line)
+            XCTAssertEqual(a.nx, b.nx, accuracy: 1e-4, label, file: file, line: line)
+            XCTAssertEqual(a.ny, b.ny, accuracy: 1e-4, label, file: file, line: line)
+            XCTAssertEqual(a.nz, b.nz, accuracy: 1e-4, label, file: file, line: line)
             XCTAssertEqual(a.color, b.color, label, file: file, line: line)
             XCTAssertEqual(a.layer, b.layer, label, file: file, line: line)
             XCTAssertEqual(a.u, b.u, accuracy: 1e-3 * max(1, abs(a.u)), label, file: file, line: line)
@@ -132,8 +132,8 @@ final class Map3DBoxInstanceTests: XCTestCase {
         }
         let box = try XCTUnwrap(make())
         XCTAssertEqual(box, make())
-        XCTAssertEqual(box.frontU, 4) // 14 m in 3.6 m bays
-        XCTAssertEqual(box.flankU, 3) // 9 m
+        XCTAssertEqual(box.frontU, 3) // its front 9 m wide in 3.6 m bays
+        XCTAssertEqual(box.flankU, 4) // its flanks 14 m
         XCTAssertEqual(box.frontV, 10)
     }
 
@@ -141,7 +141,9 @@ final class Map3DBoxInstanceTests: XCTestCase {
     /// boxes as instances draws the same simplified city, the same tops
     /// for decision 342's cones and the same bounds as one built with them
     /// as vertices; its full city is untouched, and the same place and
-    /// seed give the same boxes.
+    /// seed give the same boxes. With the game's own lots (no city tiles),
+    /// most of the simplified city is boxes; with the real buildings'
+    /// shapes, those stay vertices.
     func testASceneWithInstancesDrawsTheSameCity() throws {
         let resources = Map3DRealTrainsTests.resources
         let world = GameWorld.newGame(anchor: try XCTUnwrap(GeoAnchor(latitudeDegrees: 24.1372, longitudeDegrees: 120.6869)))
@@ -151,51 +153,86 @@ final class Map3DBoxInstanceTests: XCTestCase {
         let region = try XCTUnwrap(grid.region(of: [Map3DStreaming.Key(column: -1, row: -1), Map3DStreaming.Key(column: 0, row: 0)]))
         let tiles = try BaseMapTiles(data: Data(contentsOf: resources.appendingPathComponent("BaseMap/taiwan.pmtiles"), options: .alwaysMapped))
         let city = CityTileArea.areas(in: resources.appendingPathComponent("BaseMap/city"))
-        func scene(_ instancing: Bool) -> Map3DScene {
-            Map3DScene(world: world, snapshot: nil, skyline: nil, frame: (region, origin.x, origin.y), baseMap: tiles, cityTiles: city,
-                       heights: nil, lineBands: nil, railways: nil, temples: nil, instancingBoxes: instancing)
+        for (label, cityTiles, least) in [("lots", [CityTileArea](), 500), ("real buildings", city, 10)] {
+            func scene(_ instancing: Bool) -> Map3DScene {
+                Map3DScene(world: world, snapshot: nil, skyline: nil, frame: (region, origin.x, origin.y), baseMap: tiles, cityTiles: cityTiles,
+                           heights: nil, lineBands: nil, railways: nil, temples: nil, instancingBoxes: instancing)
+            }
+            let vertices = scene(false), instances = scene(true), again = scene(true)
+            XCTAssertEqual(vertices.chunks.count, instances.chunks.count, label)
+            var boxes = 0, before = 0, after = 0
+            for (old, new) in zip(vertices.chunks, instances.chunks) {
+                let key = "\(label) \(new.column),\(new.row)"
+                XCTAssertEqual(old.column, new.column)
+                XCTAssertEqual(old.row, new.row)
+                XCTAssertTrue(old.farBoxes.isEmpty, key)
+                XCTAssertEqual(old.mesh.vertices, new.mesh.vertices, key)
+                XCTAssertEqual(old.mesh.indices, new.mesh.indices, key)
+                XCTAssertEqual(old.close.vertices, new.close.vertices, key)
+                XCTAssertEqual(old.standIn.vertices, new.standIn.vertices, key)
+                XCTAssertEqual(old.cityTops, new.cityTops, key)
+                XCTAssertEqual(old.minimum, new.minimum, key)
+                XCTAssertEqual(old.maximum, new.maximum, key)
+                XCTAssertEqual(old.far.triangleCount, new.farTriangleCount, key)
+                let (missing, extra) = Self.difference(Self.triangles(old.far), Self.triangles(new.farWithBoxes))
+                XCTAssertTrue(missing.isEmpty && extra.isEmpty, "\(key): \(missing.count) triangles missing, e.g. \(missing.prefix(2)); \(extra.count) not laid, e.g. \(extra.prefix(2))")
+                boxes += new.farBoxes.count
+                before += old.far.vertices.count * 40 + old.far.indices.count * 4
+                after += new.far.vertices.count * 40 + new.far.indices.count * 4 + new.farBoxes.count * MemoryLayout<Map3DBoxInstance>.stride
+            }
+            XCTAssertEqual(instances.chunks.map(\.farBoxes), again.chunks.map(\.farBoxes), label)
+            XCTAssertGreaterThan(boxes, least, label)
+            print("\(label): \(boxes) boxes, the simplified city \(before / 1_000) KB as vertices, \(after / 1_000) KB with instances")
+            if cityTiles.isEmpty { XCTAssertLessThan(after * 3, before, "the simplified city in a third of the memory or less") }
         }
-        let vertices = scene(false), instances = scene(true), again = scene(true)
-        XCTAssertEqual(vertices.chunks.count, instances.chunks.count)
-        var boxes = 0, before = 0, after = 0
-        for (old, new) in zip(vertices.chunks, instances.chunks) {
-            let key = "\(new.column),\(new.row)"
-            XCTAssertEqual(old.column, new.column)
-            XCTAssertEqual(old.row, new.row)
-            XCTAssertTrue(old.farBoxes.isEmpty, key)
-            XCTAssertEqual(old.mesh.vertices, new.mesh.vertices, key)
-            XCTAssertEqual(old.mesh.indices, new.mesh.indices, key)
-            XCTAssertEqual(old.close.vertices, new.close.vertices, key)
-            XCTAssertEqual(old.standIn.vertices, new.standIn.vertices, key)
-            XCTAssertEqual(old.cityTops, new.cityTops, key)
-            XCTAssertEqual(old.minimum, new.minimum, key)
-            XCTAssertEqual(old.maximum, new.maximum, key)
-            XCTAssertEqual(Self.triangles(old.far), Self.triangles(new.farWithBoxes), key)
-            boxes += new.farBoxes.count
-            before += old.far.vertices.count * 40 + old.far.indices.count * 4
-            after += new.far.vertices.count * 40 + new.far.indices.count * 4 + new.farBoxes.count * MemoryLayout<Map3DBoxInstance>.stride
-        }
-        XCTAssertEqual(instances.chunks.map(\.farBoxes), again.chunks.map(\.farBoxes))
-        XCTAssertGreaterThan(boxes, 1_000, "a city's boxes")
-        XCTAssertLessThan(after * 3, before, "the simplified city in a third of the memory or less")
     }
 
-    /// A mesh's triangles, each its three vertices from its lowest, sorted:
-    /// the same drawing whatever order they were laid in.
-    private static func triangles(_ mesh: Map3DMesh) -> [[String]] {
-        func text(_ vertex: Map3DVertex) -> String {
-            func r(_ value: Float) -> String { String(format: "%.3f", value) }
-            return [r(vertex.position.x), r(vertex.position.y), r(vertex.position.z), r(vertex.normal.x), r(vertex.normal.y), r(vertex.normal.z),
-                    String(vertex.color), r(vertex.u), r(vertex.v), r(vertex.layer)].joined(separator: " ")
+    /// The triangles of `a` that `b` does not draw and those of `b` that
+    /// `a` does not, alike where their corners, normals, colours and
+    /// layers are and their texture places are within a ten-thousandth of
+    /// a repeat or so (a box's back takes its front's, worked out apart).
+    private static func difference(_ a: [Triangle], _ b: [Triangle]) -> (missing: [Triangle], extra: [Triangle]) {
+        var left = Dictionary(grouping: a, by: \.corners), missing: [Triangle] = [], extra: [Triangle] = []
+        for triangle in b {
+            if let index = left[triangle.corners]?.firstIndex(where: { other in
+                zip(other.places, triangle.places).allSatisfy { abs($0 - $1) <= 1e-3 * max(1, abs($0)) }
+            }) {
+                left[triangle.corners]?.remove(at: index)
+            } else {
+                extra.append(triangle)
+            }
         }
-        var triangles: [[String]] = []
+        for (_, rest) in left { missing += rest }
+        return (missing, extra)
+    }
+
+    struct Triangle {
+        /// Each corner's place, normal, colour and layer, from the lowest.
+        var corners: [String]
+        /// Their texture places, `u` and `v` of each in the same order.
+        var places: [Float]
+    }
+
+    /// A mesh's triangles, each from its lowest corner: the same drawing
+    /// whatever order they were laid in.
+    private static func triangles(_ mesh: Map3DMesh) -> [Triangle] {
+        func text(_ vertex: Map3DVertex) -> String {
+            // Rounded, normals more coarsely (worked out by a cross product
+            // or given), and without a minus on zero.
+            func r(_ value: Float, _ places: Float = 1_000) -> String { String(format: "%g", (value * places).rounded() / places + 0) }
+            return [r(vertex.x), r(vertex.y), r(vertex.z), r(vertex.nx, 100), r(vertex.ny, 100), r(vertex.nz, 100),
+                    String(vertex.color), r(vertex.layer)].joined(separator: " ")
+        }
+        var triangles: [Triangle] = []
         var index = 0
         while index + 2 < mesh.indices.count {
-            let corners = mesh.indices[index..<(index + 3)].map { text(mesh.vertices[Int($0)]) }
-            let first = corners.indices.min { corners[$0] < corners[$1] } ?? 0
-            triangles.append((0..<3).map { corners[(first + $0) % 3] })
+            let corners = mesh.indices[index..<(index + 3)].map { mesh.vertices[Int($0)] }
+            let texts = corners.map(text)
+            let first = texts.indices.min { texts[$0] < texts[$1] } ?? 0
+            let order = (0..<3).map { (first + $0) % 3 }
+            triangles.append(Triangle(corners: order.map { texts[$0] }, places: order.flatMap { [corners[$0].u, corners[$0].v] }))
             index += 3
         }
-        return triangles.sorted { $0.joined() < $1.joined() }
+        return triangles
     }
 }

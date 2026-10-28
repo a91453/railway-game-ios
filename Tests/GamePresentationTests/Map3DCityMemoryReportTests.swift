@@ -108,3 +108,35 @@ final class Map3DCityMemoryReportTests: XCTestCase {
         }
     }
 }
+
+extension Map3DCityMemoryReportTests {
+    /// Decision 455: how many of the real footprints round Banqiao and
+    /// Taipei are rectangles (one ring of four corners), and how far their
+    /// corners lie from the box round them.
+    func testHowManyFootprintsAreRectangles() throws {
+        guard ProcessInfo.processInfo.environment["MAP3D_FRAME_REPORT"] != nil else { throw XCTSkip("Set MAP3D_FRAME_REPORT=1.") }
+        let world = try HighSpeedDemoTests.opened.get()
+        let frame = try XCTUnwrap(RealWorldFrame(world: world))
+        let baseMap = Map3DFrameCostReportTests.baseMap
+        let tiles = try FootprintTiles(data: Data(contentsOf: baseMap.appendingPathComponent("taiwan_buildings.pmtiles"), options: .alwaysMapped))
+        let metre = Double(WorldCoordinate.unitsPerMetre)
+        for (name, latitude, longitude) in [("Banqiao", 25.0133, 121.4637), ("Taipei", 25.0478, 121.5170)] {
+            let at = frame.worldPosition(latitude: latitude, longitude: longitude)
+            let half = 6_000 * metre
+            let footprints = Map3DFootprints(tiles: tiles, frame: frame, region: WorldRegion(minX: at.x - half, minY: at.y - half, maxX: at.x + half, maxY: at.y + half))
+            var four = 0, within = [0.02: 0, 0.1: 0, 0.2: 0, 0.5: 0], corners = 0, holes = 0
+            for building in footprints.buildings {
+                let outline = building.rings[0].map { Map3DPoint(Float(($0.x - at.x) / metre), 0, Float(($0.y - at.y) / metre)) }
+                corners += outline.count
+                if building.rings.count > 1 { holes += 1; continue }
+                guard outline.count == 4 else { continue }
+                four += 1
+                let box = Map3DScene.Builder.orientedBox(outline)
+                let (ground, _) = Map3DBoxInstance.corners(base: box.centre, along: box.along, length: box.length, width: box.width, height: 1)
+                let off = outline.map { p in ground.map { Map3DPoint(p.x - $0.x, 0, p.z - $0.z).length }.min() ?? 0 }.max() ?? 0
+                for limit in within.keys where Double(off) <= limit { within[limit, default: 0] += 1 }
+            }
+            print("\(name): \(footprints.buildings.count) footprints, \(corners) corners, \(holes) with holes, \(four) of four corners; within 2 cm of their box \(within[0.02]!), 10 cm \(within[0.1]!), 20 cm \(within[0.2]!), 50 cm \(within[0.5]!)")
+        }
+    }
+}
