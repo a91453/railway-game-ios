@@ -2289,3 +2289,7 @@ EMU900第二版（#1338／draft#1339↔私庫#102）：使用者要求修圓車�
 ### 2026-10-28 Codex 列車共用製作模組與三鶯線接手入口
 
 依作者要求更新列車技能／新對話指令與共用編組、GLB、幾何／故障驗收、自含互動檢視頁及限量交付。新任從[三鶯線指令](art/native-vehicle-modeling/SANYING_PROMPT.md)開始，先查工具PR是否已合併，再讀最新main及素材庫AGENTS；[工具說明](../tools/train-models/README.md)列操作與驗證限制。本輪沒有製作三鶯線或更動任何車款配方／營運映射；不合併、不啟動TestFlight。歷史專用工具保留供舊成果重建，新輪次不交ZIP／history副本。
+
+### 2026-10-28 Codex 三鶯線原生靜態模型
+
+三鶯線兩節車靜態模型的重建入口與來源在 [SANYING_MODEL.md](art/native-vehicle-modeling/SANYING_MODEL.md)。使用者否定第一版外觀，又指出第二版與實車照片不夠像；第三版修白色側板／門柱、獨立深色窗、藍色車頭與銀色橫飾帶。使用者於 2026-10-28 回覆「可以」，僅第三版 producer `495468fe0bef6bf9e56b4543e1db5642bf0328c1` 記外觀接受。前版由 git producer 恢復；營運映射、真機仍未驗，公開／私有 draft PR 見本輪 #1041 登記。
