@@ -256,3 +256,33 @@ extension AnyTransition {
         return .scale(scale: scale, anchor: anchor).combined(with: .opacity).animation(MotionRule.pop.animation)
     }
 }
+
+extension View {
+    /// Asks before a removal one tap would otherwise make from a panel
+    /// (UI review 2026-10-28, A): Undo is emptied by the next tick, and the
+    /// panels leave the game running. The removing button is the
+    /// destructive one, named for what it does; Cancel keeps everything.
+    func removalConfirmation(
+        _ removal: RemovalConfirmation,
+        isPresented: Binding<Bool>,
+        language: DisplayLanguage,
+        perform: @escaping @MainActor () -> Void
+    ) -> some View {
+        confirmationDialog(
+            Text(verbatim: removal.title(in: language)), isPresented: isPresented, titleVisibility: .visible
+        ) {
+            Button(role: .destructive) {
+                perform()
+            } label: {
+                Text(verbatim: removal.button(in: language))
+            }
+            Button(role: .cancel) {} label: {
+                Text(verbatim: language.text("Cancel", "取消"))
+            }
+        } message: {
+            if let message = removal.message(in: language) {
+                Text(verbatim: message)
+            }
+        }
+    }
+}

@@ -22,6 +22,9 @@ struct StationPanel: View {
     @State private var renaming: String?
     /// Whether the demolish confirmation is up.
     @State private var confirmingRemoval = false
+    /// The panel removal asking first (UI review 2026-10-28, A): Undo is
+    /// emptied by the next tick, and the panel leaves the game running.
+    @State private var confirmingPanelRemoval: RemovalConfirmation?
     /// The bus route whose closing is being confirmed (decision 400, 10i-5).
     @State private var closingBusRoute: BusRouteID?
     /// The selected station's trips by hour and by station, worked out off
@@ -588,11 +591,14 @@ struct StationPanel: View {
                 .equatable()
             if group != nil {
                 Button(role: .destructive) {
-                    session.unlinkSelectedStationTransfer()
+                    confirmingPanelRemoval = .leaveTransferGroup
                 } label: {
                     Text(verbatim: language.text("Leave Transfer Group", "離開轉乘群組"))
                 }
                 .accessibilityIdentifier("station.unlinkTransfer")
+                .removalConfirmation(.leaveTransferGroup, isPresented: confirming(.leaveTransferGroup), language: language) {
+                    session.unlinkSelectedStationTransfer()
+                }
             }
         } header: {
             Text(verbatim: language.text("Transfers", "轉乘"))
@@ -644,7 +650,7 @@ struct StationPanel: View {
                 // 56.1: a platform can be removed here too (Undo brings it
                 // back); the track under it then can be.
                 Button(role: .destructive) {
-                    session.removeNetworkPlatform(platform)
+                    confirmingPanelRemoval = .removePlatform(number: index + 1)
                 } label: {
                     Label {
                         Text(verbatim: language.text("Remove platform \(index + 1)", "拆除第 \(index + 1) 月台"))
@@ -653,6 +659,11 @@ struct StationPanel: View {
                     }
                 }
                 .accessibilityIdentifier("station.removePlatform.\(index)")
+                .removalConfirmation(
+                    .removePlatform(number: index + 1), isPresented: confirming(.removePlatform(number: index + 1)), language: language
+                ) {
+                    session.removeNetworkPlatform(platform)
+                }
             }
         } header: {
             Text(verbatim: language.text("Platforms", "月台"))
@@ -706,7 +717,7 @@ struct StationPanel: View {
                         }
                     }
                     Button(role: .destructive) {
-                        session.removeFreightYardAtSelectedStation()
+                        confirmingPanelRemoval = .removeFreightYard
                     } label: {
                         Label {
                             Text(verbatim: language.text("Remove Freight Yard", "拆除貨運場"))
@@ -715,6 +726,9 @@ struct StationPanel: View {
                         }
                     }
                     .accessibilityIdentifier("station.freight.remove")
+                    .removalConfirmation(.removeFreightYard, isPresented: confirming(.removeFreightYard), language: language) {
+                        session.removeFreightYardAtSelectedStation()
+                    }
                 } else {
                     Button {
                         session.buildFreightYardAtSelectedStation()
@@ -1231,9 +1245,12 @@ struct StationPanel: View {
             .disabled(demand == nil)
             if demand != nil {
                 Button(role: .destructive) {
-                    session.removeSelectedStationDemand()
+                    confirmingPanelRemoval = .removeRidership
                 } label: {
                     Label("Remove Ridership", systemImage: "xmark.circle")
+                }
+                .removalConfirmation(.removeRidership, isPresented: confirming(.removeRidership), language: session.language) {
+                    session.removeSelectedStationDemand()
                 }
             }
         } header: {
@@ -1372,6 +1389,16 @@ struct StationPanel: View {
 /// worked out from, so the panel works it out again only when one of them
 /// changes, not on every tick: the station and what its day reads
 /// (``RidershipInputs``, shared with the map's travel layers).
+extension StationPanel {
+    /// Whether the panel removal `removal` is the one asking first.
+    fileprivate func confirming(_ removal: RemovalConfirmation) -> Binding<Bool> {
+        Binding(
+            get: { confirmingPanelRemoval == removal },
+            set: { if !$0, confirmingPanelRemoval == removal { confirmingPanelRemoval = nil } }
+        )
+    }
+}
+
 private struct RidershipKey: Equatable {
     let station: StationID?
     let inputs: RidershipInputs
