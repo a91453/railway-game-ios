@@ -52,9 +52,9 @@ enum AppleMapStyle: String, CaseIterable, Identifiable {
 /// the Earth, top-down and north up, so the railway drawn over it lines up.
 ///
 /// The world lies over the Earth as ``RealWorldFrame`` says: a world metre
-/// is a metre at the anchor's latitude, in MapKit's own map points
-/// (`MKMapPointsPerMeterAtLatitude`), so the drawing and the map agree all
-/// over the 16 km map.
+/// is a metre at the anchor's latitude, in MapKit's own map points, at the
+/// game's scale (``RealWorldFrame/mapPoint(worldX:worldY:)``, decision 463),
+/// so the drawing and the map agree all over the map, the whole island too.
 ///
 /// The map takes no gestures of its own, but its view stays interactive:
 /// Apple's logo and legal link sit in a band at its bottom
@@ -469,7 +469,7 @@ final class FollowingMapView: MKMapView, MKMapViewDelegate {
         look: RailwayLook
     ) -> (overlay: MKPolygon, renderer: StationDotsRenderer) {
         let middle = MKMapPoint(CLLocationCoordinate2D(latitude: anchor.latitudeDegrees, longitude: anchor.longitudeDegrees))
-        let reach = look.reach * MKMapPointsPerMeterAtLatitude(anchor.latitudeDegrees)
+        let reach = look.reach * RealWorldFrame.mapPointsPerMetre(atLatitude: anchor.latitudeDegrees)
         let corners = [(-1.0, -1.0), (1, -1), (1, 1), (-1, 1)].map { MKMapPoint(x: middle.x + $0.0 * reach, y: middle.y + $0.1 * reach) }
         let square = MKPolygon(points: corners, count: corners.count)
         let dots = marks.map { mark in
@@ -522,17 +522,12 @@ final class FollowingMapView: MKMapView, MKMapViewDelegate {
     static func mapRect(_ realWorld: RealWorldFrame, camera: PlanCamera, from start: CGPoint, to end: CGPoint) -> MKMapRect {
         let topLeft = camera.worldPosition(at: ScreenPoint(x: start.x, y: start.y))
         let bottomRight = camera.worldPosition(at: ScreenPoint(x: end.x, y: end.y))
-        let from = realWorld.metresFromAnchor(worldX: topLeft.x, worldY: topLeft.y)
-        let to = realWorld.metresFromAnchor(worldX: bottomRight.x, worldY: bottomRight.y)
-        let anchor = CLLocationCoordinate2D(latitude: realWorld.anchor.latitudeDegrees, longitude: realWorld.anchor.longitudeDegrees)
-        let origin = MKMapPoint(anchor)
-        let pointsPerMetre = MKMapPointsPerMeterAtLatitude(anchor.latitude)
-        return MKMapRect(
-            x: origin.x + from.east * pointsPerMetre,
-            y: origin.y + from.south * pointsPerMetre,
-            width: (to.east - from.east) * pointsPerMetre,
-            height: (to.south - from.south) * pointsPerMetre
-        )
+        // The game's own scale, not MapKit's MKMapPointsPerMeterAtLatitude
+        // (decision 463): on a world as large as the island that put
+        // Taipei's stops about a kilometre off the map.
+        let from = realWorld.mapPoint(worldX: topLeft.x, worldY: topLeft.y)
+        let to = realWorld.mapPoint(worldX: bottomRight.x, worldY: bottomRight.y)
+        return MKMapRect(x: from.x, y: from.y, width: to.x - from.x, height: to.y - from.y)
     }
 }
 
