@@ -506,17 +506,23 @@ set -euo pipefail
 # runner's job is that plus a build of about 5 minutes, some 17.5 minutes;
 # one more shard would save only some 35 s. The build, 29% of the Swift
 # jobs' time, is the room left (docs/research/CI_SHARED_BUILD_2026-10-25.md).
+# 2026-10-28 (decision 400, 10j-3): the Sanying Line's two real days, a
+# class for each rule: SanyingLineSimpleDayTests 365 s locally and
+# SanyingLineRealisticDayTests 229-243 s (debug, this Linux container;
+# about 1.24 times that on CI), too long together for one shard's 20
+# minutes. The simple one goes to campaigns-9 and the realistic one to
+# campaigns-2, two of the shortest jobs above (8m39s and 9m07s).
 classes_of() {
   case "$1" in
     campaigns-1) echo "ScheduledTrafficPropertyTests RealRailwayTracingTests NetworkServicePropertyTests FlexDispatchPropertyTests" ;;
-    campaigns-2) echo "ServicePropertyTests ScheduledOvertakeTrackMiddlePropertyTests Map3DOpenEveryStartTests SingleTrackCapacityPropertyTests RealWorldDemoTests" ;;
+    campaigns-2) echo "ServicePropertyTests ScheduledOvertakeTrackMiddlePropertyTests Map3DOpenEveryStartTests SingleTrackCapacityPropertyTests RealWorldDemoTests SanyingLineRealisticDayTests" ;;
     campaigns-3) echo "ServiceRepeatingPropertyTests TRADemoTests NewGameSavePropertyTests LineRoutePreferencePropertyTests Map3DStreetLifeTests" ;;
     campaigns-4) echo "Map3DSceneMemoryTests KernelDifferentialTests DeadlockPropertyTests LocalPassTests Map3DBusLayerTests Map3DRealBuildingsTests Map3DModelTests" ;;
     campaigns-5) echo "SaveMutationSecondHalfTests Map3DPlatformClearanceTests NetworkPostcardTests SharedNetworkTests FrameTimeBenchTests Map3DTrainOcclusionTests Map3DTrainSetTests" ;;
     campaigns-6) echo "ServiceRepeatingSecondHalfPropertyTests PassengerPropertyTests CityRequestsTests Map3DTests StationCommerceCardTests LineLossDiagnosisTests" ;;
     campaigns-7) echo "SaveMutationTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests Map3DRealGroundTests ReservationShortcutTests PolicyTests Map3DBusesTests RoadsTurnOnTests Map3DEMU800IntegrationTests Map3DFrontageTests BusReadAheadTests" ;;
     campaigns-8) echo "LineDispatchPropertyTests NewGameBalanceTests ScreenshotSceneTests TimetablePropertyTests" ;;
-    campaigns-9) echo "EconomySecondHalfPropertyTests VerticalRailwayPropertyTests RealLineAcquisitionTests NightSkipTests FreightSessionTests" ;;
+    campaigns-9) echo "EconomySecondHalfPropertyTests VerticalRailwayPropertyTests RealLineAcquisitionTests NightSkipTests FreightSessionTests SanyingLineSimpleDayTests" ;;
     campaigns-10) echo "GoldenScenarioTests ScheduledOvertakeTrackLastPropertyTests OnboardingTests WorldStateMachineTests" ;;
     campaigns-11) echo "LinePatternPropertyTests ScheduledTrafficSecondHalfPropertyTests DemoRealLinesTests LoopLineBoardingTests LongLegReplayTests LineAccountsTests" ;;
     campaigns-12) echo "TrafficControlPropertyTests LineConfirmationTests SparseCityLandTests Map3DStationKitTests LinePanelMemoTests ContinuousTrackPropertyTests LessonTests" ;;
@@ -630,7 +636,7 @@ CLASS_WEIGHTS="BoardingPropertyTests:624 LineDispatchPropertyTests:602
   HighSpeedDemoTests:400 HighSpeedDemoDayTests:328 TRADemoTests:121
   HighSpeedDemoBatchTests:146 NewGameSavePropertyTests:92 TRADemoDayTests:93
   OnboardingTests:92 CommandLogTests:66 LessonGuideTests:62
-  RealLineAcquisitionTests:165 DemoRealLinesTrackTests:160 NetworkPostcardTests:64 Map3DSceneMemoryTests:310
+  RealLineAcquisitionTests:165 SanyingLineSimpleDayTests:450 SanyingLineRealisticDayTests:300 DemoRealLinesTrackTests:160 NetworkPostcardTests:64 Map3DSceneMemoryTests:310
   Map3DPlatformClearanceTests:113
   NightSkipTests:57 RealWorldDemoTests:51 LineLossFixesTests:49
   Map3DCoarseChunkTests:31 Map3DStreetLifeTests:29 RealRailwayTracingTests:29
