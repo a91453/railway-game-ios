@@ -353,4 +353,53 @@ final class LineLossFixesTests: XCTestCase {
         XCTAssertEqual(looped.worstLosingLineWorkedOut, 3)
         XCTAssertEqual(looped.worstLosingLine, looped.world.worstLosingLine())
     }
+
+    /// Decision 459: the station master's corner reads the advice the
+    /// news worked out for the hour (off the main actor in the game loop)
+    /// instead of working it out again on the main actor, and it is the
+    /// advice the corner worked out before for the same world: at every
+    /// new hour, over a midnight and after a command.
+    func testTheCornerReadsTheHoursAdviceWorkedOutOnce() async throws {
+        var world = try tooManyTrains()
+        world.setSpeed(.fast)
+        let looped = GameSession(world: world)
+        let stepped = GameSession(world: world)
+        var hours = 0, lastHour = looped.adviceHour
+        for index in 0..<200 {
+            if index == 120 {
+                for session in [stepped, looped] {
+                    session.selectLine(Self.line)
+                    session.setSelectedLineColor(LineColor.presets[1])
+                    // An edit: the corner looks again, worked out once.
+                    let before = session.stationMasterAdviceWorkedOut
+                    XCTAssertEqual(session.stationMasterAdvice, StationMasterAdvice(world: session.world))
+                    XCTAssertEqual(session.stationMasterAdvice, StationMasterAdvice(world: session.world))
+                    XCTAssertEqual(session.stationMasterAdviceWorkedOut, before + 1)
+                }
+            }
+            stepped.advance(realElapsed: GameSession.tickInterval)
+            let tick = try XCTUnwrap(looped.beginLoopTick())
+            let outcome = await tick.work()
+            XCTAssertTrue(looped.finish(tick, with: outcome))
+            XCTAssertEqual(looped.world, stepped.world, "tick \(index)")
+            // What the corner reads when its key changes, as it worked
+            // it out before (decision 184, later).
+            if looped.adviceHour != lastHour {
+                lastHour = looped.adviceHour
+                hours += 1
+                let before = StationMasterAdvice(world: looped.world, worstLosingLine: { looped.world.worstLosingLine() })
+                XCTAssertEqual(looped.stationMasterAdvice, before, "tick \(index)")
+                XCTAssertEqual(stepped.stationMasterAdvice, before, "tick \(index)")
+            }
+        }
+        // The hours begun after the first, which the corner read at the start.
+        XCTAssertEqual(hours, 200 / 6)
+        // The loop worked every hour's out off the main actor: on the main
+        // actor only after the edit. Ticks on the main actor work each
+        // hour out once, for the news and the corner both: the first hour,
+        // every new one and the edit.
+        XCTAssertEqual(looped.stationMasterAdviceWorkedOut, 1)
+        XCTAssertEqual(stepped.stationMasterAdviceWorkedOut, 1 + hours + 1)
+        XCTAssertEqual(looped.news, stepped.news)
+    }
 }

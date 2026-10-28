@@ -42,6 +42,21 @@ public enum Map3DDeviceTier: Int, CaseIterable, Comparable, Sendable {
         family >= 9 ? .higher : family >= 8 ? .standard : family >= 5 ? .lower : nil
     }
 
+    /// Decision 460: the tier of a GPU of family `family` named `name`
+    /// (`MTLDevice.name`): an M-series chip's one higher than its family
+    /// (the M1 shares the A14's family with twice its GPU cores, the M2
+    /// the A15's), so an iPad of the M1 draws as an iPhone of the A15.
+    public static func forGPU(family: Int, name: String) -> Map3DDeviceTier? {
+        guard let tier = forGPUFamily(family) else { return nil }
+        return isMSeries(name) ? Map3DDeviceTier(rawValue: tier.rawValue + 1) ?? tier : tier
+    }
+
+    /// Whether `name` is an M-series chip's ("Apple M1", "Apple M2 GPU").
+    public static func isMSeries(_ name: String) -> Bool {
+        guard name.hasPrefix("Apple M"), let digit = name.dropFirst("Apple M".count).first else { return false }
+        return digit.isNumber
+    }
+
     /// Decision 259's street detail of the tier (the rain's too).
     public var streetDetail: Map3DStreetDetail { self == .lower ? .reduced : .full }
 
@@ -341,13 +356,16 @@ public struct Map3DLoadGovernor: Equatable, Sendable {
     /// least: its fewest on the streets, the player's trains and buses in
     /// full), or where it got to last time (`remembered`,
     /// ``remembered(_:quality:system:)``); on Battery Saver and High
-    /// Quality its tier's full.
-    public static func start(for quality: Map3DQuality, device: Map3DDeviceTier?, remembered: Int? = nil) -> Int {
+    /// Quality its tier's full. Decision 460: on Automatic a device of
+    /// little `memory` (``DeviceMemoryTier/startsLower``) starts a rung
+    /// lower still when it keeps no rung from last time.
+    public static func start(for quality: Map3DQuality, device: Map3DDeviceTier?, remembered: Int? = nil,
+                             memory: DeviceMemoryTier = .ample) -> Int {
         guard let tier = quality.tier(device: device) else { return 0 }
         let top = Map3DLoadLevel.top(of: tier)
         guard quality == .automatic else { return top }
         if let remembered { return min(max(remembered, 0), top) }
-        return tier == .lower ? 0 : top - 1
+        return max((tier == .lower ? 0 : top - 1) - (memory.startsLower ? 1 : 0), 0)
     }
 
     /// The rung kept on the device in `stored` (``remembering(_:quality:system:)``),
