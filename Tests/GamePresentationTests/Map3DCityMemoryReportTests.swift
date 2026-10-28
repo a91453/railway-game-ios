@@ -58,6 +58,7 @@ final class Map3DCityMemoryReportTests: XCTestCase {
         print("  city simplified on the GPU: \(mb(far.bytes + boxBytes)) as instances, \(mb(far.bytes + expanded)) made into vertices")
         print("  props \(props) instances (\(mb(props * 80))), signs \(signs)")
         frame(scene)
+        sunLayers(scene)
     }
 
     /// The city a frame draws from three distances over the scene's middle
@@ -94,6 +95,37 @@ final class Map3DCityMemoryReportTests: XCTestCase {
                 sun = "sun map \(sunDraws) draws, \(sunTriangles) triangles (city \(sunCity))"
             }
             print("  frame at \(Int(distance)) m: \(draws) chunk draws, \(triangles) triangles (city in full \(cityTriangles), simplified \(farTriangles)); \(sun)")
+        }
+    }
+
+    /// Decision 456: the sun's shadow map close up, layer by layer: the
+    /// ground, track and stations (the base) of every chunk it holds; the
+    /// city in full, the kit buildings' boxes and the street furniture of
+    /// the chunks drawn in full; and the simplified city those chunks
+    /// would draw in their place.
+    static func sunLayers(_ scene: Map3DScene) {
+        let pack = Map3DModelPack.standard
+        for distance: Float in [120, 280, 600, 1_000] {
+            let camera = Map3DCamera(target: .zero, distance: distance, viewport: (402, 874))
+            let lighting = Map3DLighting(minute: 10 * 60)
+            guard let region = Map3DSunShadow.region(target: camera.target, distance: camera.distance, sun: lighting.sunDirection, size: 2048)
+            else { continue }
+            var chunks = 0, detailedChunks = 0, base = 0, city = 0, standIn = 0, props = 0, propDraws = 0, far = 0, farDraws = 0
+            for chunk in scene.chunks where Map3DCamera.sees(minimum: chunk.minimum, maximum: chunk.maximum, through: region.matrix) {
+                chunks += 1
+                base += chunk.baseIndexCount / 3
+                let detailed = !chunk.coarse && camera.wantsDetail(minimum: chunk.minimum, maximum: chunk.maximum, wasDetailed: false)
+                guard detailed else { continue }
+                detailedChunks += 1
+                city += (chunk.mesh.indices.count - chunk.baseIndexCount) / 3
+                standIn += chunk.standIn.triangleCount
+                props += chunk.props.reduce(0) { $0 + pack.models[$1.model].triangleCount }
+                propDraws += Set(chunk.props.map(\.model)).count
+                far += chunk.farTriangleCount
+                farDraws += (chunk.far.isEmpty ? 0 : 1) + (chunk.farBoxes.isEmpty ? 0 : 1)
+            }
+            print("  sun map at \(Int(distance)) m: \(chunks) chunks (\(detailedChunks) in full); base \(base) triangles; in full: city \(city), "
+                  + "kit boxes \(standIn), street furniture \(props) in \(propDraws) draws; simplified instead: \(far) in \(farDraws) draws")
         }
     }
 
