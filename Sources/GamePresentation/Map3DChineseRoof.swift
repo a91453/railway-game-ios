@@ -1,7 +1,8 @@
 import Foundation
 
-// Decision 457: the Chinese roof as a part. A hip (廡殿) or a hip-and-gable
-// (歇山), one eave or several (重簷), concave slopes and corners swept up,
+// Decision 457: the Chinese roof as a part. A hip (廡殿), a hip-and-gable
+// (歇山) or a hip round a flat top (盝頂, Taipei Main Station's), one eave
+// or several (重簷), concave slopes and corners swept up,
 // over any rectangle, in the colours its caller gives. The landmarks of
 // `Map3DTaipeiPalaces.swift` are its first users; the way it is built
 // (rings from the eaves in to the ridge, the slope's `t^1.6`, the corner
@@ -22,9 +23,11 @@ struct ChineseRoofColours: Sendable {
 }
 
 extension LandmarkMesh {
-    /// How a palace roof ends: a hip at each end (廡殿), or a hip that turns
-    /// into a gable near the top (歇山).
-    enum RoofKind { case hipped, hipGable }
+    /// How a palace roof ends: a hip at each end (廡殿), a hip that turns
+    /// into a gable near the top (歇山), or slopes that stop at a flat top of
+    /// half sides `x`, `y` edged by a ridge (盝頂; the flat itself is the
+    /// caller's).
+    enum RoofKind: Equatable { case hipped, hipGable, flat(x: Float, y: Float) }
 
     /// A Chinese roof over walls of half sides `hx`, `hy` whose eaves stand
     /// `over` beyond them at `z0`, rising `rise` to the ridge's top: the
@@ -43,12 +46,15 @@ extension LandmarkMesh {
         // The ridge's half length: a hip's slopes meet it at 0.8 of the
         // eave's half width in; a hip-and-gable's hips stop 0.45 of the way.
         let ridgeHalf = kind == .hipped ? max(1, ex - ey * 0.8) : ex - ey * 0.45
-        let top = z0 + rise - 0.6
+        // A flat top's slopes end a metre under its ridge's top.
+        let flatTop: (x: Float, y: Float)? = if case let .flat(x, y) = kind { (x, y) } else { nil }
+        let top = z0 + rise - (flatTop == nil ? 0.6 : 1)
         var rings: [(points: [P2], heights: [Float])] = []
         for s in 0...steps {
             let t = Float(s) / Float(steps)
-            let sy = ey * (1 - t)
-            let sx = kind == .hipped ? ex - (ex - ridgeHalf) * t : max(ridgeHalf, ex - (ey - sy))
+            let sy = flatTop.map { ey - (ey - $0.y) * t } ?? ey * (1 - t)
+            let sx = flatTop.map { ex - (ex - $0.x) * t }
+                ?? (kind == .hipped ? ex - (ex - ridgeHalf) * t : max(ridgeHalf, ex - (ey - sy)))
             let lift = sweep * (1 - t) * (1 - t) * (1 - t)
             let heights = zip(unit, near).map { p, n -> Float in
                 let corner = 1 - min(n, 0.3) / 0.3
@@ -73,16 +79,23 @@ extension LandmarkMesh {
                 tri(a, b, c, gable, Self.plain)
             }
         }
-        // The ridge, its top the roof's, an ornament at each end; the hip
-        // ridges close by.
-        box(-ridgeHalf - 0.4, -0.45, top - 0.3, ridgeHalf + 0.4, 0.45, top + 0.6, ridge, Self.plain)
-        for sign in [Float(-1), 1] {
-            let x = sign * (ridgeHalf + 0.4)
-            box(min(x, x - sign * 1.2), -0.35, top + 0.6 - 0.01, max(x, x - sign * 1.2), 0.35, z0 + rise, ridge, Self.plain)
+        // The ridge, its top the roof's, an ornament at each end (round a
+        // flat top, a ridge all the way round its edge); the hip ridges
+        // close by.
+        if let flatTop {
+            let edge = rings[steps].points, ridgeRing = edge.map { (x: $0.x * (flatTop.x + 1.2) / flatTop.x, y: $0.y * (flatTop.y + 1.2) / flatTop.y) }
+            band(ridgeRing, edge.map { _ in top - 0.3 }, ridgeRing, edge.map { _ in z0 + rise }, ridge, Self.plain)
+            band(ridgeRing, edge.map { _ in z0 + rise }, edge, edge.map { _ in z0 + rise }, ridge, Self.plain)
+        } else {
+            box(-ridgeHalf - 0.4, -0.45, top - 0.3, ridgeHalf + 0.4, 0.45, top + 0.6, ridge, Self.plain)
+            for sign in [Float(-1), 1] {
+                let x = sign * (ridgeHalf + 0.4)
+                box(min(x, x - sign * 1.2), -0.35, top + 0.6 - 0.01, max(x, x - sign * 1.2), 0.35, z0 + rise, ridge, Self.plain)
+            }
         }
         if full {
             for k in [0, perSide, 2 * perSide, 3 * perSide] {
-                for s in 0..<(kind == .hipped ? steps : steps * 45 / 100) {
+                for s in 0..<(kind == .hipGable ? steps * 45 / 100 : steps) {
                     let a = rings[s].points[k], b = rings[s + 1].points[k]
                     let za = rings[s].heights[k], zb = rings[s + 1].heights[k]
                     let d = Self.distance(a, b)

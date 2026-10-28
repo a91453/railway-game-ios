@@ -7,7 +7,10 @@ import XCTest
 /// (as Map3DPreviewDump's), to <dir>/<case>.raw. STUDIO_DUMP=<prefix>
 /// with STUDIO_COLUMNS=<dir|LIVE>,... lays the four landmarks the Blender
 /// models also have in rows, one column a version, and writes a dump for
-/// tools/map3d-preview/render.sh with seven views of each.
+/// tools/map3d-preview/render.sh with seven views of each. STUDIO_MARKS=
+/// <case>,... picks other landmarks for the rows (decision 457's later
+/// round: Taipei Main Station, 101, Kaohsiung Main Station), spaced and
+/// framed by their size.
 final class Map3DLandmarkStudio: XCTestCase {
     static let marks: [Map3DTaipeiLandmark] = [.chiangKaiShekMemorialHall, .nationalTheater, .nationalConcertHall, .sunYatSenMemorialHall]
 
@@ -30,19 +33,31 @@ final class Map3DLandmarkStudio: XCTestCase {
             return
         }
         guard let out = env["STUDIO_DUMP"], let columns = env["STUDIO_COLUMNS"]?.split(separator: ",").map(String.init) else { return }
-        let spacing: Float = 400
+        let marks = env["STUDIO_MARKS"].map { names in
+            names.split(separator: ",").map { name in Map3DTaipeiLandmark.allCases.first { "\($0)" == name }! }
+        } ?? Self.marks
+        let models: [[[Float]]] = try marks.map { mark in
+            try columns.map { source in
+                source == "LIVE" ? Self.raw(mark)
+                    : try Data(contentsOf: URL(fileURLWithPath: "\(source)/\(mark).raw")).withUnsafeBytes { Array($0.bindMemory(to: Float.self)) }
+            }
+        }
+        // Each row's widest half across, of all its columns.
+        let halves: [Float] = models.map { row in
+            row.flatMap { m in stride(from: 0, to: m.count, by: 12).map { max(abs(m[$0]), abs(m[$0 + 1])) } }.max() ?? 0
+        }
+        let spacing: Float = env["STUDIO_MARKS"] == nil ? 400 : max(400, 2 * (halves.max() ?? 0) + 200)
         var floats: [Float] = [], indices: [UInt32] = []
-        let w = spacing * Float(max(columns.count, Self.marks.count)) + 400
+        let w = spacing * Float(max(columns.count, marks.count)) + 400
         let g = UInt32(0)
         for (x, z) in [(-400, -400), (w, -400), (w, w), (-400, w)] as [(Float, Float)] {
             floats += [x, -0.02, z, 0, 1, 0, 0.78, 0.79, 0.76, 0, 0, -1]
         }
         indices += [g, g + 3, g + 2, g, g + 2, g + 1]
         var tops: [String: Float] = [:]
-        for (row, mark) in Self.marks.enumerated() {
-            for (column, source) in columns.enumerated() {
-                let model: [Float] = source == "LIVE" ? Self.raw(mark)
-                    : try Data(contentsOf: URL(fileURLWithPath: "\(source)/\(mark).raw")).withUnsafeBytes { Array($0.bindMemory(to: Float.self)) }
+        for row in marks.indices {
+            for column in columns.indices {
+                let model = models[row][column]
                 let ox = Float(column) * spacing, oz = Float(row) * spacing
                 let base = UInt32(floats.count / 12)
                 var top: Float = 0
@@ -73,12 +88,13 @@ final class Map3DLandmarkStudio: XCTestCase {
         let looks: [(String, Float, Float)] = [("front", 0, 74), ("frontright", -45, 70), ("right", -90, 74), ("back", 180, 74),
                                                 ("left", 90, 74), ("frontleft", 45, 70), ("high", 30, 40)]
         var views: [String: [Float]] = [:]
-        for (row, _) in Self.marks.enumerated() {
+        for row in marks.indices {
             for column in columns.indices {
                 let top = tops["\(row):\(column)"]!
+                let distance: Float = env["STUDIO_MARKS"] == nil ? 175 : max(175, 1.25 * max(top * 1.5, 2 * halves[row]))
                 for (name, heading, pitch) in looks {
                     var camera = Map3DCamera(target: Map3DPoint(Float(column) * spacing, top * 0.4, Float(row) * spacing),
-                                             distance: 175, heading: heading * .pi / 180, viewport: (1600, 900))
+                                             distance: distance, heading: heading * .pi / 180, viewport: (1600, 900))
                     camera.pitch = pitch * .pi / 180
                     views["r\(row)c\(column)-\(name)"] = uniforms(camera)
                 }
