@@ -1,4 +1,4 @@
-# 台中捷運綠線：原生靜態展示第一版
+# 台中捷運綠線：原生靜態展示第二版
 
 本輪從公開 main `04f81f7a8ebffa94719785ce545f5e52e6aa7101` 獨立重建，配方為 Codex 製作。只追加 `Map3DModelPack.studies`，不增加 `standard` 常駐模型；既有 `tmrt → metroGeneric、2車` 營運接點完全保護。三鶯 #1422 未合併；工具 #1416/#1357、C371/C381 #1342 已合併，沒有搬三鶯分支或換色套其殼。
 
@@ -20,7 +20,7 @@
 
 ## 重建及證據
 
-[操作／專用驗收](../../../tools/taichung-green/README.md)；[編組資料](../../../tools/taichung-green/assembly.json)。真正producer、重建bytes與兩庫draft鏈結在此PR後續交付紀錄及素材README填入。首次新建，沒有先前已交付的台中原生前版；試作不冒充真前版。
+[操作／專用驗收](../../../tools/taichung-green/README.md)；[編組資料](../../../tools/taichung-green/assembly.json)。真正producer、重建bytes與兩庫draft鏈結見下方交付紀錄及素材README。本對話已推第一版 ebf978be 為真正前版，第二版只延伸車間風琴，並新增縮回100mm的實際故障反例。
 
 - Swift 6.4，warnings-as-errors build-tests；本型與ModelPackSize測試。以最終交付紀錄的實跑結果為準。
 - 共用GLB／拓樸／缺面／反面／100mm編組錯位反例；本車玻璃射線、八輪逐一Z0和向上淨空射線、空調中央底面與真屋頂接觸；埋玻璃100mm、抬輪40mm、抬設備60mm反例。這些是幾何抽樣，不是全碰撞或工程支承認證。
@@ -36,3 +36,19 @@
 素材技術與證據見交付紀錄；**使用者外觀接受 UNVERIFIED、營運接入 UNVERIFIED（本輪未接）、Simulator／真機Metal／效能／記憶體／動畫 UNVERIFIED**。Linux WebGL不等於Metal。沒有更動GameCore、存檔、fixtures、購車、班表或動畫；draft不授權合併、auto-merge或TestFlight。
 
 原創配方／輸出遵循公開庫 [LICENSE.md](../../../LICENSE.md)（Copyright 2026 a91453，All rights reserved）；外部來源只觀察，保留其權利，不把效果圖／照片再授權為本模型。
+
+## 本批交付紀錄
+
+- 公開 draft [#1430](https://github.com/a91453/railway-game-ios/pull/1430) ↔ 素材 draft [#21](https://github.com/a91453/railway-assets-private/pull/21)。
+- 固定producer：[e525a29aa141f46162662e361037f4901d8ec77a](https://github.com/a91453/railway-game-ios/commit/e525a29aa141f46162662e361037f4901d8ec77a)。以該commit獨立checkout重建，14份native／GLB／assembly／bin全部逐bytes相同。
+- [完整素材／20張預覽／viewer／SHA／重建README](https://github.com/a91453/railway-assets-private/tree/codex/taichung-green-assets-2026-10-28/game-art-previews/docs/art/taichung-green/revision-2)，最終PR約8.4MiB（含前版PNG），staged及committed asset_guard通過。公開只一張[總覽](overview.png)，合計21PNG。
+- [技術證據](verification.json)：共用六模型audit、本車近遠射線與實際反例、Blender六GLB、Swift直接組裝27792頂點（最大位置差1.67µm、全部色相同）、168PNG完整解碼、最終交付viewer六模型日夜七向／旋轉／縮放／手機寬度／真下載bytes檢查均本機VERIFIED。file:// transport仍UNVERIFIED。
+- 另以獨立main checkout匯出**680個既有原生檔**與本分支逐bytes核對，全相同；680個全頂點欄位FNV也相同，hash鎖只追加本型四行項目。
+- 外觀已實看最終六件七向配色／白模／剪影，另同一公尺空間／相機並排C371作風格比較；不是照片相似度或使用者接受。
+- 相容性擴查抓到studies總數原97漏新增4件，已補本型Role×2計數；模型及producer保持。
+
+素材技術 **VERIFIED（限上述證據）**；使用者外觀接受、營運接入及裝置驗證皆 **UNVERIFIED**。不將綠燈解讀為使用者接受。
+
+第二版真正前版為公開producer `ebf978be13e1be6eec1218389f596ff92137d6cb`／私庫`d90867d7`。本PR已刪revision-1重檔，只保留PNG／README／來源／授權。最終producer `e525a29a`，私包提交`61084334`。每單元只有36個位置頂點在風琴區改動；近景另有163個色值頂點因自動遮蔽重烘而變，遠景色值保持，不能說是全部其他payload不變。詳見revision-delta.json。
+
+最終Swift6.4 warnings-as-errors與12項相關測試通過；另啟用記憶體報告的13項測試通過，standard仍583模型／133.3MB（單份模型資料，非真機實測）。最終viewer真下載原生／GLB逐bytes及SHA驗收見verification.json。完整CI／iOS以公開PR最新head checks為準，不拿舊head綠燈代替。

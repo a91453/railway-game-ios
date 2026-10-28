@@ -131,5 +131,7 @@
   "reference_repository": {
     "path": "Railway/taiwan-rail-reference-clean/source/rail-3d/assets/garage-blender-v1/taichung.json",
     "finding": "Q-proportions-photo-informed, illustrative single car, 10.708m model, engineeringDimensionsM null; not used as dimensions or geometry; mesh not reused"
-  }
+  },
+  "latest_producer": "e525a29aa141f46162662e361037f4901d8ec77a",
+  "true_previous_producer": "ebf978be13e1be6eec1218389f596ff92137d6cb"
 }
