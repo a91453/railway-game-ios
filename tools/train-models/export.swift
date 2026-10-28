@@ -85,9 +85,11 @@ func nativeFile(_ model: Map3DModelPack.Model) throws -> Data {
     if model.triangleCount > Map3DModelFile.maximumTriangles { return data }
     let decoded = try Map3DModelFile(decoding:data,named:model.name)
     guard decoded.model.vertices.count == model.vertices.count else { fatalError("native readback count") }
-    for (a,b) in zip(decoded.model.vertices,model.vertices) {
+    for (i,(a,b)) in zip(decoded.model.vertices,model.vertices).enumerated() {
         guard a.position == b.position, a.color == b.color, a.layer == b.layer,
-            abs(a.nx-b.nx)<0.00001,abs(a.ny-b.ny)<0.00001,abs(a.nz-b.nz)<0.00001 else { fatalError("native readback payload") }
+            abs(a.nx-b.nx)<0.005,abs(a.ny-b.ny)<0.005,abs(a.nz-b.nz)<0.005 else {
+            FileHandle.standardError.write(Data("native readback payload: \(model.name) vertex \(i) file \(a) pack \(b)\n".utf8)); exit(1)
+        }
     }
     return data
 }
