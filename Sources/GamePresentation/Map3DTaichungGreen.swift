@@ -161,7 +161,7 @@ private struct TaichungGreenRecipe {
         kit.box(10.98,0.58,0,0.21,0.62,0.40,hardware)
         for side: Float in [-1,1] { kit.box(10.28,0.66,side*1.04,0.80,0.62,0.32,white) }
         kit.box(-10.91,0.65,0,0.35,0.28,0.19,hardware)
-        kit.box(-10.81,1.08,0,0.27,1.54,2.18,dark)
+        kit.box(-10.81,1.08,0,0.55,1.54,2.18,dark)
         if !far {
             for x: Float in [-10.93,-10.84,-10.75] { kit.box(x,1.08,0,0.035,1.58,2.18,hardware) }
             kit.beam(Map3DPoint(front(2.17,-0.5)+0.045,2.17,-0.5),Map3DPoint(front(2.28,0.46)+0.045,2.28,0.46),0.026,dark)

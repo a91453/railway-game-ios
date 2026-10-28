@@ -30,3 +30,5 @@ Swift 6.4 warnings-as-errors；Node 22+；既有 Playwright/Chromium、Blender�
 共用 audit 另驗缺面／反面及整列 100mm 位移反例。以上都不是所有視角的全像素或全碰撞保證。
 
 重建版本由交付 README 的 producer 釘住。首次新增沒有先前已交付版本；不把試作當使用者接受的前版。
+
+風琴端面逐單元確認到達共同連結平面−11.085m；實際風琴縮回100mm反例必須失敗。

@@ -42,6 +42,11 @@ def wheels(t):
    ds=hits(t,np.array([x,y,.79]),np.array([0.,0,1.]))
    assert len(ds) and min(ds)>.10,'wheel/body clearance'
 
+def gangway(t):
+ p=t.reshape(-1,3)
+ contact=p[(abs(p[:,0]+11.085)<1e-5)&(abs(p[:,1])>.75)&(p[:,2]>3.1)]
+ assert len(contact)>=4,'gangway does not reach common coupling plane'
+
 def roof(t):
  for x in [-7.3,7.1]:
   ds=hits(t[t[:,:,2].max(axis=1)<3.651],np.array([x,0,3.66]),np.array([0,0,-1.]));assert len(ds) and min(ds)<.10,'roof support missing'
@@ -56,7 +61,7 @@ def rejected(call):
 root=Path(sys.argv[1]);m=json.loads((root/'manifest.json').read_text());rows=[]
 for r in m['models']:
  if r.get('native_kind')=='assembly':continue
- t,f=read(root/r['native']);ids=visible(t,f);wheels(t);roof(t)
+ t,f=read(root/r['native']);ids=visible(t,f);wheels(t);roof(t);gangway(t)
  broken=t.copy();n=normals(t);g=(f&2)!=0
  # Move the real connected glass inwards, including backs/walls.
  for i in np.flatnonzero(g):
@@ -66,7 +71,9 @@ for r in m['models']:
  broken=t.copy();c=t.mean(axis=1);sel=(abs(c[:,0]-7.9)<.40)&(abs(c[:,1]-.7175)<.07)&(c[:,2]<.79);broken[sel,:,2]+=.04
  rejected(lambda:wheels(broken))
  broken=t.copy();sel=broken[:,:,2]>=3.649;broken[:,:,2][sel]+=.06;rejected(lambda:roof(broken))
- rows.append({'id':r['id'],'glass_exterior_faces':len(ids),'tyres':8,'glass_burial_100mm':'rejected','wheel_lift_40mm':'rejected','equipment_lift_60mm':'rejected'})
+ broken=t.copy();c=t.mean(axis=1);sel=(c[:,0]<-10.5)&(c[:,2]>1.05)&(abs(c[:,1])<.81);broken[sel,:,0]+=.10
+ rejected(lambda:gangway(broken))
+ rows.append({'gangway_retraction_100mm':'rejected','id':r['id'],'glass_exterior_faces':len(ids),'tyres':8,'glass_burial_100mm':'rejected','wheel_lift_40mm':'rejected','equipment_lift_60mm':'rejected'})
 near=[r for r in m['models'] if r['id'].endswith(('dm1','dm2'))]
 for a in near:
  b=next(r for r in m['models'] if r['id']==a['id']+'-far');assert b['triangles']<a['triangles']/2
