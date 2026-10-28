@@ -55,9 +55,12 @@ final class BaseMapProjectionUITests: XCTestCase {
     }
 
     /// Before decision 463 the app scaled world metres by MapKit's own
-    /// `MKMapPointsPerMeterAtLatitude` at the anchor. This measures how far
-    /// that put each place, so the decision's table can be checked again.
-    func testMapKitsOwnScaleAgreesWithTheGames() throws {
+    /// `MKMapPointsPerMeterAtLatitude` at the anchor, which is not Web
+    /// Mercator's sphere (run 40684884134: 1.00514 times the game's scale
+    /// at 23.6°; Taipei 949 m off, the island's corners about 1.24 km).
+    /// This measures it again and keeps the table with the result; it
+    /// does not fail, as the app no longer uses that scale.
+    func testMeasureMapKitsOwnScale() throws {
         let offsets = try offsets { frame, x, y in
             let metres = frame.metresFromAnchor(worldX: x, worldY: y)
             let anchor = MKMapPoint(CLLocationCoordinate2D(latitude: frame.anchor.latitudeDegrees, longitude: frame.anchor.longitudeDegrees))
@@ -66,9 +69,11 @@ final class BaseMapProjectionUITests: XCTestCase {
         }
         let latitude = 23.6
         let ratio = MKMapPointsPerMeterAtLatitude(latitude) / RealWorldFrame.mapPointsPerMetre(atLatitude: latitude)
-        let report = "MapKit/game scale at 23.6°: \(ratio); " + offsets.map { "\($0.0) \(Int($0.1.rounded())) m" }.joined(separator: "; ")
-        for (name, metres) in offsets {
-            XCTAssertLessThan(metres, 1, "\(name): \(report)")
-        }
+        let report = (["MapKit/game scale at 23.6°: \(ratio)"] + offsets.map { "\($0.0) \(Int($0.1.rounded())) m" }).joined(separator: "\n")
+        let attachment = XCTAttachment(string: report)
+        attachment.name = "MapKit's own scale"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        print(report)
     }
 }
