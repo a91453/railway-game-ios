@@ -411,7 +411,7 @@ extension GameWorld {
         guard let demand = stationDemand(of: origin), demand.dailyTrips > 0 || (network && demand.hinterland > 0) || !tourists.isEmpty,
               allowsEntry(at: origin) else { return [] }
         var reached: [(destination: StationID, weight: Int64, trip: PassengerTrip)] = []
-        let graph = network ? PassengerRouteGraph(world: self) : nil
+        var searches = network ? PassengerRouteSearches(graph: PassengerRouteGraph(world: self)) : nil
         var fastest: [StationID: PassengerRoute] = [:]
         var destinations: [StationID: StationDemand] = [:]
         for record in passengers {
@@ -421,7 +421,7 @@ extension GameWorld {
             destinations[record.station] = demand
             let trip: PassengerTrip?
             if network {
-                let choices = passengerRouteChoices(from: origin, to: record.station, graph: graph)
+                let choices = passengerRouteChoices(from: origin, to: record.station, searches: &searches!)
                 if let leg = choices.first?.route.legs.first {
                     trip = PassengerTrip(line: leg.line, direction: leg.direction)
                     fastest[record.station] = choices.map(\.route).min { $0.totalMinutes < $1.totalMinutes }
@@ -747,10 +747,11 @@ extension GameWorld {
         let typhoons = typhoonMultipliers()
         let graph = PassengerRouteGraph(world: self)
         memo.use(graph)
+        var searches = PassengerRouteSearches(graph: graph)
         // Decision 174: the tourists' pairs, added to the ordinary ones.
         let tourists = tourism == nil ? TouristFlows() : touristFlows(onDay: dayIndex(of: clock.now)) { from, to in
             let pair = PassengerRouteMemo.Pair(origin: from, destination: to)
-            let found = memo.choices[pair] ?? passengerRouteChoices(from: from, to: to, graph: graph)
+            let found = memo.choices[pair] ?? passengerRouteChoices(from: from, to: to, searches: &searches)
             memo.choices[pair] = found
             return !found.isEmpty
         }.flows
@@ -776,7 +777,7 @@ extension GameWorld {
             }
             let reached = candidates.compactMap { other -> (StationPassengers, [PassengerRouteChoice], [PassengerJourney])? in
                 let pair = PassengerRouteMemo.Pair(origin: record.station, destination: other.station)
-                let found = memo.choices[pair] ?? passengerRouteChoices(from: record.station, to: other.station, graph: graph)
+                let found = memo.choices[pair] ?? passengerRouteChoices(from: record.station, to: other.station, searches: &searches)
                 memo.choices[pair] = found
                 var options: [PassengerRouteChoice] = []
                 var journeys: [PassengerJourney] = []

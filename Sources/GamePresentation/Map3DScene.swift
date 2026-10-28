@@ -838,10 +838,11 @@ extension Map3DScene {
                 mesh.append(nearMeshes[key] ?? Map3DMesh())
                 var far = farMeshes[key] ?? Map3DMesh(), close = closeMeshes[key] ?? Map3DMesh(), standIn = standInMeshes[key] ?? Map3DMesh()
                 let shadows = shadows[key] ?? Map3DMesh()
-                // Decision 370: the city in the model look.
+                // Decision 370: the city in the model look; decision 451:
+                // its closest detail nearer its own colours.
                 Map3DLook.restyle(&mesh, keeping: keptColours)
                 Map3DLook.restyle(&far, keeping: keptColours)
-                Map3DLook.restyle(&close, keeping: keptColours)
+                Map3DLook.restyle(&close, keeping: keptColours, strength: Map3DLook.close)
                 Map3DLook.restyle(&standIn, keeping: keptColours)
                 // The props too: the renderer leaves out a chunk whose box
                 // is off screen, which cut off a pole's top still in view.

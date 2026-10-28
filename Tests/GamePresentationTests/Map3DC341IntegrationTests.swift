@@ -20,7 +20,11 @@ final class Map3DC341IntegrationTests: XCTestCase {
             && zip(car.vertices, unit.vertices).allSatisfy { $0.x == $1.x && $0.y == $1.y && $0.z == $1.z }
     }
 
-    private func lit(_ model: Map3DModelPack.Model) -> [Map3DVertex] { model.vertices.filter(\.glows) }
+    /// The recipe's lit lamps (decision 449 lights a running car's in the
+    /// pack only at its train's ends).
+    private func lit(_ model: Map3DModelPack.Model) -> [Map3DVertex] {
+        Map3DModelPack.unbaked.models[pack.index(of: model.name)!].vertices.filter(\.glows)
+    }
 
     /// The units each car of a `count`-car train is: a DM at the front, the
     /// rear DM at the back, T and M between them over and over, the back
@@ -231,7 +235,7 @@ final class Map3DC341IntegrationTests: XCTestCase {
         // The four static units are still in the pack, and nothing else of the C341's: the sets' cars are their own models.
         for unit in Map3DC341.Unit.allCases { XCTAssertNotNil(pack.index(of: "c341-" + unit.rawValue), "\(unit)") }
         XCTAssertNil(pack.index(of: "c341-dm-far"))
-        XCTAssertEqual(pack.models.last?.name, Map3DLowFloorBus.routeModel().name, "the route bus is still the last model")
+        XCTAssertEqual(pack.models.last(where: { !$0.name.hasPrefix(Map3DTrainLights.prefix) })?.name, Map3DLowFloorBus.routeModel().name, "the route bus is still the last model")
     }
 
     // MARK: Triangles (decision 433)

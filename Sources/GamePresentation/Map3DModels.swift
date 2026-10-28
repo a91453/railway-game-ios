@@ -37,6 +37,9 @@ public struct Map3DModelPack: Sendable {
     /// Decision 436: the destination signs of the cab cars that carry one,
     /// by model index (``Map3DHeadSign/add(to:signs:eye:)``).
     public private(set) var headSigns: [Int: Map3DHeadSign] = [:]
+    /// Decision 449: each running car's lamps and windows' model, by model
+    /// index (``Map3DTrainLights/add(to:pack:lights:)``).
+    public private(set) var lights: [Int: Map3DTrainLights.Car] = [:]
 
     /// Every style's cab car and middle car, made once.
     public static let standard = Map3DModelPack(styles: Map3DTrainStyle.all)
@@ -59,7 +62,8 @@ public struct Map3DModelPack: Sendable {
             }
         }
         // Decision 244: and the street furniture.
-        // Decision 370: in the model look, as the city round them.
+        // Decision 370: in the model look, as the city round them; the
+        // signals keeping their colours (decision 451).
         models += Map3DProp.allCases.map { Map3DLook.restyle($0.model()) }
         // Decision 445: and the pedestrian signals' faces and countdowns.
         models += Map3DPedestrianSignal.models()
@@ -131,7 +135,15 @@ public struct Map3DModelPack: Sendable {
         models.append(Map3DLowFloorBus.routeModel())
         // Decision 450: their glass and stainless marked, then decision
         // 439's soft shade baked into their colour.
-        self.models = baked ? Map3DTrainOcclusion.baked(Map3DTrainMaterial.marked(models)) : models
+        if baked {
+            // Decision 449: the running cars' lamps lit each frame at the
+            // train's ends, and their windows' models, last.
+            let lit = Map3DTrainLights.split(Map3DTrainOcclusion.baked(Map3DTrainMaterial.marked(models)), recipes: models)
+            self.models = lit.models
+            lights = lit.cars
+        } else {
+            self.models = models
+        }
         headSigns = Map3DHeadSign.anchors(in: models)
     }
 

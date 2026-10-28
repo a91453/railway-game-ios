@@ -10,7 +10,7 @@ final class Map3DC371C381Tests: XCTestCase {
             XCTAssertLessThanOrEqual(model.triangleCount, Map3DModelFile.maximumTriangles)
             XCTAssertEqual(model.minimum.z, 0, accuracy: 0.0001)
         }
-        XCTAssertEqual(pack.models.last?.name, Map3DLowFloorBus.routeModel().name)
+        XCTAssertEqual(pack.models.last(where: { !$0.name.hasPrefix(Map3DTrainLights.prefix) })?.name, Map3DLowFloorBus.routeModel().name)
     }
 
     func testDistinctFrontGeometryAndSixFinalUnits() {

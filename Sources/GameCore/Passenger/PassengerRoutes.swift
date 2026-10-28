@@ -154,6 +154,50 @@ struct PassengerRouteGraph: Equatable {
     /// Served stations where nobody boards, alights or changes (see
     /// ``StationOperationMode/closed``): trains run through them.
     let closed: Set<StationID>
+    /// The same, in arrays for ``PassengerRouteSearch``.
+    let lookup: Lookup
+
+    /// The graph's served stations numbered from 0 in the order the paths
+    /// first call at them, and what a search asks of each: its calls, its
+    /// walks and whether it is closed; and each call's station.
+    struct Lookup {
+        struct Walk {
+            let seconds: Int64
+            let penalty: Int64
+            let slot: Int
+        }
+
+        var slot: [StationID: Int] = [:]
+        /// The number of each path's first call; a call's number is its
+        /// path's plus its stop.
+        var firstNode: [Int] = []
+        var nodeSlot: [Int] = []
+        var calls: [[PassengerRouteNode]] = []
+        var walks: [[Walk]] = []
+        var closed: [Bool] = []
+
+        init(paths: [ServicePath], stopsAt: [StationID: [PassengerRouteNode]],
+             walks: [StationID: [PassengerWalk]], closed: Set<StationID>) {
+            var stations: [StationID] = []
+            for path in paths {
+                firstNode.append(nodeSlot.count)
+                for station in path.stations {
+                    if slot[station] == nil {
+                        slot[station] = stations.count
+                        stations.append(station)
+                    }
+                    nodeSlot.append(slot[station]!)
+                }
+            }
+            calls = stations.map { stopsAt[$0] ?? [] }
+            self.closed = stations.map { closed.contains($0) }
+            self.walks = stations.map { station in
+                (walks[station] ?? []).compactMap { walk in
+                    slot[walk.to].map { Walk(seconds: walk.seconds, penalty: walk.tier.penaltySeconds, slot: $0) }
+                }
+            }
+        }
+    }
 
     /// The calls are derived from the paths.
     static func == (lhs: Self, rhs: Self) -> Bool {
@@ -170,6 +214,7 @@ struct PassengerRouteGraph: Equatable {
         stopsAt = calls
         self.walks = walks
         self.closed = closed
+        lookup = Lookup(paths: included, stopsAt: calls, walks: walks, closed: closed)
     }
 
     init(world: GameWorld) {
@@ -262,6 +307,7 @@ struct PassengerRouteGraph: Equatable {
             }
         }
         self.walks = walks
+        lookup = Lookup(paths: included, stopsAt: calls, walks: walks, closed: closed)
     }
 
     private static func add(_ path: ServicePath, to paths: inout [ServicePath], calls: inout [StationID: [PassengerRouteNode]]) {
@@ -273,11 +319,11 @@ struct PassengerRouteGraph: Equatable {
         }
     }
 
-    private func station(_ node: PassengerRouteNode) -> StationID {
+    fileprivate func station(_ node: PassengerRouteNode) -> StationID {
         paths[node.line].stations[node.stop]
     }
 
-    private func nextRide(_ node: PassengerRouteNode) -> (PassengerRouteNode, PassengerRideEdge, Int64)? {
+    fileprivate func nextRide(_ node: PassengerRouteNode) -> (PassengerRouteNode, PassengerRideEdge, Int64)? {
         let path = paths[node.line]
         let next = node.stop + 1
         guard next < path.stations.count else { return nil }
@@ -286,179 +332,14 @@ struct PassengerRouteGraph: Equatable {
                 path.runSeconds[node.stop])
     }
 
-    /// Dijkstra over service calls and boarding state. Each state keeps the
-    /// nondominated (elapsed seconds, line changes) labels, since rounding
-    /// to whole minutes can favor a later arrival with fewer changes. Exact
-    /// metric ties keep the lower full-route line/stop order.
+    /// The cheapest route from `origin` to `destination` with the rides in
+    /// `forbidden` banned: a ``PassengerRouteSearch`` asked once.
     func shortest(from origin: StationID, to destination: StationID, banning forbidden: Set<PassengerRideEdge>) -> (PassengerRoute, [PassengerRideEdge])? {
-        guard let starts = stopsAt[origin], stopsAt[destination] != nil,
-              !closed.contains(origin), !closed.contains(destination) else { return nil }
-        var labels: [PassengerRouteLabel] = []
-        var frontier: [PassengerRouteState: [Int]] = [:]
-        var active: [Bool] = []
-        // A binary heap of open labels under one strict total order, so it
-        // pops exactly the label a full sort would put first.
-        var open: [Int] = []
-
-        func precedes(_ a: Int, _ b: Int) -> Bool {
-            let left = labels[a]
-            let right = labels[b]
-            let leftMinutes = passengerMinutesRoundingUp(left.total, by: GameTime.secondsPerMinute)
-            let rightMinutes = passengerMinutesRoundingUp(right.total, by: GameTime.secondsPerMinute)
-            if leftMinutes != rightMinutes { return leftMinutes < rightMinutes }
-            if left.changes != right.changes { return left.changes < right.changes }
-            if left.total != right.total { return left.total < right.total }
-            if passengerRouteOrderPrecedes(left.order, right.order) { return true }
-            if passengerRouteOrderPrecedes(right.order, left.order) { return false }
-            if left.state.node != right.state.node { return left.state.node < right.state.node }
-            if left.state.onboard != right.state.onboard { return !left.state.onboard }
-            return a < b
-        }
-
-        func push(_ index: Int) {
-            open.append(index)
-            var child = open.count - 1
-            while child > 0 {
-                let parent = (child - 1) / 2
-                guard precedes(open[child], open[parent]) else { break }
-                open.swapAt(child, parent)
-                child = parent
-            }
-        }
-
-        func popFirst() -> Int? {
-            guard let first = open.first else { return nil }
-            let last = open.removeLast()
-            if !open.isEmpty {
-                open[0] = last
-                var parent = 0
-                while true {
-                    let left = 2 * parent + 1
-                    guard left < open.count else { break }
-                    var best = left
-                    if left + 1 < open.count, precedes(open[left + 1], open[left]) { best = left + 1 }
-                    guard precedes(open[best], open[parent]) else { break }
-                    open.swapAt(best, parent)
-                    parent = best
-                }
-            }
-            return first
-        }
-
-        func dominates(_ lhs: PassengerRouteLabel, _ rhs: PassengerRouteLabel) -> Bool {
-            guard lhs.total <= rhs.total, lhs.changes <= rhs.changes else { return false }
-            if lhs.total < rhs.total || lhs.changes < rhs.changes { return true }
-            return !passengerRouteOrderPrecedes(rhs.order, lhs.order)
-        }
-
-        func offer(_ label: PassengerRouteLabel) {
-            let state = label.state
-            let existing = frontier[state] ?? []
-            if existing.contains(where: { dominates(labels[$0], label) }) { return }
-            var survivors: [Int] = []
-            for index in existing {
-                if dominates(label, labels[index]) {
-                    active[index] = false
-                } else {
-                    survivors.append(index)
-                }
-            }
-            let index = labels.count
-            labels.append(label)
-            active.append(true)
-            push(index)
-            survivors.append(index)
-            frontier[state] = survivors
-        }
-
-        for node in starts {
-            let wait = max(1, passengerMinutesRoundingUp(paths[node.line].headway, by: 2)) * GameTime.secondsPerMinute
-            offer(PassengerRouteLabel(state: PassengerRouteState(node: node, onboard: false),
-                                      total: wait, ride: 0, wait: wait, transfer: 0, walk: 0,
-                                      changes: 0, order: [], previous: nil, arrival: .board))
-        }
-        while let index = popFirst() {
-            guard active[index] else { continue }
-            let label = labels[index]
-            let node = label.state.node
-            // Only a ride arrives: a walk ends where another ride starts.
-            if label.state.onboard && station(node) == destination {
-                return reconstruct(index, from: labels)
-            }
-            if let (next, edge, run) = nextRide(node), !forbidden.contains(edge) {
-                // A passenger already aboard stays through this stop's
-                // dwell. One boarding here has waited for departure already.
-                let dwell = label.state.onboard ? paths[edge.line].dwellSeconds : 0
-                let seconds = run + dwell
-                let ridePath = paths[edge.line]
-                let to = ridePath.stations[edge.to]
-                var order = label.order
-                if label.state.onboard, let last = order.last {
-                    order[order.count - 1] = PassengerRouteOrderLeg(line: last.line, from: last.from, to: to)
-                } else {
-                    order.append(PassengerRouteOrderLeg(line: ridePath.line,
-                                                        from: ridePath.stations[edge.from], to: to))
-                }
-                offer(PassengerRouteLabel(state: PassengerRouteState(node: next, onboard: true),
-                                          total: label.total + seconds, ride: label.ride + seconds,
-                                          wait: label.wait, transfer: label.transfer, walk: label.walk,
-                                          changes: label.changes, order: order, previous: index,
-                                          arrival: .ride(edge, seconds)))
-            }
-            // Nobody gets off, changes or walks at a closed station: trains
-            // run through it (the reference's
-            // `metroStationAllowsTrainServiceAtStation`,
-            // `metroStationAllowsTransfer`).
-            guard !closed.contains(station(node)) else { continue }
-            let path = paths[node.line]
-            if path.isRing && node.stop == path.stations.count - 1 {
-                // The final call is the starting station, but it ends this
-                // train's lap. Crossing to the next lap requires a new wait.
-                let wait = max(1, passengerMinutesRoundingUp(path.headway, by: 2)) * GameTime.secondsPerMinute
-                let first = PassengerRouteNode(line: node.line, stop: 0, direction: node.direction)
-                offer(PassengerRouteLabel(state: PassengerRouteState(node: first, onboard: false),
-                                          total: label.total + wait, ride: label.ride,
-                                          wait: label.wait + wait, transfer: label.transfer, walk: label.walk,
-                                          changes: label.changes, order: label.order,
-                                          previous: index, arrival: .board))
-            }
-            for other in stopsAt[station(node)] ?? [] where other != node {
-                guard other.line != node.line else { continue }
-                let sameLine = paths[other.line].line == paths[node.line].line
-                let wait = max(1, passengerMinutesRoundingUp(paths[other.line].headway, by: 2)) * GameTime.secondsPerMinute
-                // A change of line within a station: the reference's
-                // default transfer type for one station, same-platform.
-                let transfer: Int64 = sameLine ? 0 : PassengerTransferTier.samePlatform.penaltySeconds
-                offer(PassengerRouteLabel(state: PassengerRouteState(node: other, onboard: false),
-                                          total: label.total + wait + transfer,
-                                          ride: label.ride, wait: label.wait + wait,
-                                          transfer: label.transfer + transfer, walk: label.walk,
-                                          changes: label.changes + (sameLine ? 0 : 1),
-                                          order: label.order, previous: index, arrival: .board))
-            }
-            // A passenger who has just got off may walk to a station near
-            // by and wait there for another ride: never at the start of a
-            // journey, nor twice in a row. The walk costs its time and its
-            // tier's transfer penalty (the reference's transfer link,
-            // `isXfer`).
-            guard label.state.onboard else { continue }
-            for walk in walks[station(node)] ?? [] {
-                for other in stopsAt[walk.to] ?? [] {
-                    let wait = max(1, passengerMinutesRoundingUp(paths[other.line].headway, by: 2)) * GameTime.secondsPerMinute
-                    let transfer = walk.tier.penaltySeconds
-                    offer(PassengerRouteLabel(state: PassengerRouteState(node: other, onboard: false),
-                                              total: label.total + wait + transfer + walk.seconds,
-                                              ride: label.ride, wait: label.wait + wait,
-                                              transfer: label.transfer + transfer, walk: label.walk + walk.seconds,
-                                              changes: label.changes + 1,
-                                              order: label.order, previous: index, arrival: .board))
-                }
-            }
-        }
-        return nil
+        var search = PassengerRouteSearch(graph: self, from: origin, banning: forbidden)
+        return search.route(to: destination)
     }
 
-    private func reconstruct(_ endIndex: Int, from labels: [PassengerRouteLabel]) -> (PassengerRoute, [PassengerRideEdge]) {
+    fileprivate func reconstruct(_ endIndex: Int, from labels: [PassengerRouteLabel]) -> (PassengerRoute, [PassengerRideEdge]) {
         var chain: [PassengerRouteLabel] = []
         var current: Int? = endIndex
         while let index = current {
@@ -495,6 +376,388 @@ struct PassengerRouteGraph: Equatable {
                                waitMinutes: labels[endIndex].wait / GameTime.secondsPerMinute,
                                transferSeconds: labels[endIndex].transfer,
                                walkSeconds: labels[endIndex].walk), edges)
+    }
+}
+
+/// Dijkstra over service calls and boarding state, from one origin with
+/// some rides banned. Each state keeps the nondominated (elapsed seconds,
+/// line changes) labels, since rounding to whole minutes can favor a later
+/// arrival with fewer changes. Exact metric ties keep the lower full-route
+/// line/stop order.
+///
+/// Nothing in the search but where it stops depends on the destination: a
+/// route to a station is the first label that arrives there aboard. So one
+/// search answers every destination, in the order it reaches them, and is
+/// resumed where it stopped for the next one; each answer is exactly the
+/// one a search for that destination alone finds (派工單 AQ: a day's plan
+/// asked tens of thousands of searches that were the same but for their
+/// destination).
+struct PassengerRouteSearch {
+    /// Where ``run(until:pausing:)`` stopped.
+    enum Stop {
+        /// Label `index` is the first to arrive at the target station.
+        case arrived(Int)
+        case exhausted
+        /// Paused before the first label at call `number` is expanded.
+        case firstExpansion(Int)
+    }
+
+    private let graph: PassengerRouteGraph
+    /// The calls whose ride to the next call is banned, by number (see
+    /// ``PassengerRouteGraph/Lookup/firstNode``).
+    var banned: [Int] = []
+    private var labels: [PassengerRouteLabel] = []
+    /// Each state's labels no other label dominates: a state is its call's
+    /// number, twice, plus one aboard.
+    private var frontier: [[Int]]
+    private var active: [Bool] = []
+    /// A binary heap of open labels under one strict total order, so it
+    /// pops exactly the label a full sort would put first.
+    private var open: [Int] = []
+    /// The first label to arrive at each station aboard, by station slot;
+    /// -1 before one has.
+    private var arrived: [Int]
+    /// Whether a label at each call, by number, has been expanded.
+    private var expanded: [Bool]
+    /// A label popped and not expanded yet: the search paused before it.
+    private var pending: Int?
+
+    init(graph: PassengerRouteGraph, from origin: StationID, banning forbidden: Set<PassengerRideEdge>) {
+        self.graph = graph
+        let lookup = graph.lookup
+        banned = Self.calls(banned: forbidden, on: graph)
+        frontier = Array(repeating: [], count: 2 * lookup.nodeSlot.count)
+        arrived = Array(repeating: -1, count: lookup.calls.count)
+        expanded = Array(repeating: false, count: lookup.nodeSlot.count)
+        guard let slot = lookup.slot[origin], !lookup.closed[slot] else { return }
+        for node in lookup.calls[slot] {
+            let wait = max(1, passengerMinutesRoundingUp(graph.paths[node.line].headway, by: 2)) * GameTime.secondsPerMinute
+            offer(PassengerRouteLabel(state: PassengerRouteState(node: node, onboard: false),
+                                      total: wait, ride: 0, wait: wait, transfer: 0, walk: 0,
+                                      changes: 0, order: [], previous: nil, arrival: .board))
+        }
+    }
+
+    /// The calls, by number, whose rides to the next call are the edges
+    /// `forbidden` (see `PassengerRouteGraph.nextRide`); an edge no ride is
+    /// bans nothing.
+    static func calls(banned forbidden: Set<PassengerRideEdge>, on graph: PassengerRouteGraph) -> [Int] {
+        forbidden.compactMap { edge in
+            guard graph.paths.indices.contains(edge.line), edge.to == edge.from + 1,
+                  graph.paths[edge.line].stations.indices.contains(edge.to),
+                  edge.direction == (graph.paths[edge.line].direction == .outbound ? 1 : -1) else { return nil }
+            return graph.lookup.firstNode[edge.line] + edge.from
+        }
+    }
+
+    /// The cheapest route to `destination`, searching on from where the
+    /// last question stopped if it has not been reached yet.
+    mutating func route(to destination: StationID) -> (PassengerRoute, [PassengerRideEdge])? {
+        guard let target = slot(of: destination) else { return nil }
+        if arrived[target] >= 0 { return graph.reconstruct(arrived[target], from: labels) }
+        guard case .arrived(let index) = run(until: target, pausing: false) else { return nil }
+        return graph.reconstruct(index, from: labels)
+    }
+
+    /// The station slot of `destination`, or `nil` if no route can end
+    /// there.
+    func slot(of destination: StationID) -> Int? {
+        guard let target = graph.lookup.slot[destination], !graph.lookup.closed[target] else { return nil }
+        return target
+    }
+
+    /// The route ending with label `index`.
+    func route(ending index: Int) -> (PassengerRoute, [PassengerRideEdge]) {
+        graph.reconstruct(index, from: labels)
+    }
+
+    /// The first label to arrive at station slot `target`, if one has.
+    func arrival(at target: Int) -> Int? {
+        arrived[target] >= 0 ? arrived[target] : nil
+    }
+
+    /// Searches on until the first label arrives aboard at station slot
+    /// `target` (-1: none), or until there is nothing left. When `pausing`,
+    /// it also stops before expanding a call for the first time, holding
+    /// that label for the next run: a search banning that call's ride is
+    /// this one up to here.
+    mutating func run(until target: Int, pausing: Bool) -> Stop {
+        let lookup = graph.lookup
+        while true {
+            let index: Int
+            if let held = pending {
+                index = held
+                pending = nil
+            } else {
+                guard let next = popFirst() else { return .exhausted }
+                guard active[next] else { continue }
+                index = next
+                // Only a ride arrives: a walk ends where another ride starts.
+                let state = labels[index].state
+                if state.onboard {
+                    let slot = lookup.nodeSlot[lookup.firstNode[state.node.line] + state.node.stop]
+                    if arrived[slot] < 0 { arrived[slot] = index }
+                }
+            }
+            let node = labels[index].state.node
+            let number = lookup.firstNode[node.line] + node.stop
+            if pausing && !expanded[number] {
+                expanded[number] = true
+                pending = index
+                return .firstExpansion(number)
+            }
+            expanded[number] = true
+            // A search for this destination alone stops here, after
+            // arriving; another goes on from this label.
+            expand(index)
+            if target >= 0 && arrived[target] == index { return .arrived(index) }
+        }
+    }
+
+    private func state(_ state: PassengerRouteState) -> Int {
+        2 * (graph.lookup.firstNode[state.node.line] + state.node.stop) + (state.onboard ? 1 : 0)
+    }
+
+    private func precedes(_ a: Int, _ b: Int) -> Bool {
+        // Field by field: a copy of a whole label would retain its order.
+        let leftTotal = labels[a].total
+        let rightTotal = labels[b].total
+        let leftMinutes = passengerMinutesRoundingUp(leftTotal, by: GameTime.secondsPerMinute)
+        let rightMinutes = passengerMinutesRoundingUp(rightTotal, by: GameTime.secondsPerMinute)
+        if leftMinutes != rightMinutes { return leftMinutes < rightMinutes }
+        let leftChanges = labels[a].changes
+        let rightChanges = labels[b].changes
+        if leftChanges != rightChanges { return leftChanges < rightChanges }
+        if leftTotal != rightTotal { return leftTotal < rightTotal }
+        if passengerRouteOrderPrecedes(labels[a].order, labels[b].order) { return true }
+        if passengerRouteOrderPrecedes(labels[b].order, labels[a].order) { return false }
+        let left = labels[a].state
+        let right = labels[b].state
+        if left.node != right.node { return left.node < right.node }
+        if left.onboard != right.onboard { return !left.onboard }
+        return a < b
+    }
+
+    private mutating func push(_ index: Int) {
+        open.append(index)
+        var child = open.count - 1
+        while child > 0 {
+            let parent = (child - 1) / 2
+            guard precedes(open[child], open[parent]) else { break }
+            open.swapAt(child, parent)
+            child = parent
+        }
+    }
+
+    private mutating func popFirst() -> Int? {
+        guard let first = open.first else { return nil }
+        let last = open.removeLast()
+        if !open.isEmpty {
+            open[0] = last
+            var parent = 0
+            while true {
+                let left = 2 * parent + 1
+                guard left < open.count else { break }
+                var best = left
+                if left + 1 < open.count, precedes(open[left + 1], open[left]) { best = left + 1 }
+                guard precedes(open[best], open[parent]) else { break }
+                open.swapAt(best, parent)
+                parent = best
+            }
+        }
+        return first
+    }
+
+    /// Whether label `index` dominates `label`, or (`reversed`) `label`
+    /// dominates it.
+    private func dominates(_ index: Int, _ label: PassengerRouteLabel, reversed: Bool = false) -> Bool {
+        let (lhsTotal, rhsTotal) = reversed ? (label.total, labels[index].total) : (labels[index].total, label.total)
+        let (lhsChanges, rhsChanges) = reversed ? (label.changes, labels[index].changes) : (labels[index].changes, label.changes)
+        guard lhsTotal <= rhsTotal, lhsChanges <= rhsChanges else { return false }
+        if lhsTotal < rhsTotal || lhsChanges < rhsChanges { return true }
+        return reversed ? !passengerRouteOrderPrecedes(labels[index].order, label.order)
+            : !passengerRouteOrderPrecedes(label.order, labels[index].order)
+    }
+
+    private mutating func offer(_ label: PassengerRouteLabel) {
+        let slot = state(label.state)
+        if frontier[slot].contains(where: { dominates($0, label) }) { return }
+        // Kept in their order, the new one last, in place.
+        var survivors = frontier[slot]
+        frontier[slot] = []
+        var kept = 0
+        for index in survivors {
+            if dominates(index, label, reversed: true) {
+                active[index] = false
+            } else {
+                survivors[kept] = index
+                kept += 1
+            }
+        }
+        survivors.removeLast(survivors.count - kept)
+        let index = labels.count
+        labels.append(label)
+        active.append(true)
+        push(index)
+        survivors.append(index)
+        frontier[slot] = survivors
+    }
+
+    /// Offers every label one step on from label `index`.
+    private mutating func expand(_ index: Int) {
+        let label = labels[index]
+        let node = label.state.node
+        let paths = graph.paths
+        let lookup = graph.lookup
+        let number = lookup.firstNode[node.line] + node.stop
+        if let (next, edge, run) = graph.nextRide(node), !banned.contains(number) {
+            // A passenger already aboard stays through this stop's
+            // dwell. One boarding here has waited for departure already.
+            let dwell = label.state.onboard ? paths[edge.line].dwellSeconds : 0
+            let seconds = run + dwell
+            let ridePath = paths[edge.line]
+            let to = ridePath.stations[edge.to]
+            var order = label.order
+            if label.state.onboard, let last = order.last {
+                order[order.count - 1] = PassengerRouteOrderLeg(line: last.line, from: last.from, to: to)
+            } else {
+                order.append(PassengerRouteOrderLeg(line: ridePath.line,
+                                                    from: ridePath.stations[edge.from], to: to))
+            }
+            offer(PassengerRouteLabel(state: PassengerRouteState(node: next, onboard: true),
+                                      total: label.total + seconds, ride: label.ride + seconds,
+                                      wait: label.wait, transfer: label.transfer, walk: label.walk,
+                                      changes: label.changes, order: order, previous: index,
+                                      arrival: .ride(edge, seconds)))
+        }
+        // Nobody gets off, changes or walks at a closed station: trains
+        // run through it (the reference's
+        // `metroStationAllowsTrainServiceAtStation`,
+        // `metroStationAllowsTransfer`).
+        let station = lookup.nodeSlot[number]
+        guard !lookup.closed[station] else { return }
+        let path = paths[node.line]
+        if path.isRing && node.stop == path.stations.count - 1 {
+            // The final call is the starting station, but it ends this
+            // train's lap. Crossing to the next lap requires a new wait.
+            let wait = max(1, passengerMinutesRoundingUp(path.headway, by: 2)) * GameTime.secondsPerMinute
+            let first = PassengerRouteNode(line: node.line, stop: 0, direction: node.direction)
+            offer(PassengerRouteLabel(state: PassengerRouteState(node: first, onboard: false),
+                                      total: label.total + wait, ride: label.ride,
+                                      wait: label.wait + wait, transfer: label.transfer, walk: label.walk,
+                                      changes: label.changes, order: label.order,
+                                      previous: index, arrival: .board))
+        }
+        for other in lookup.calls[station] where other != node {
+            guard other.line != node.line else { continue }
+            let sameLine = paths[other.line].line == paths[node.line].line
+            let wait = max(1, passengerMinutesRoundingUp(paths[other.line].headway, by: 2)) * GameTime.secondsPerMinute
+            // A change of line within a station: the reference's
+            // default transfer type for one station, same-platform.
+            let transfer: Int64 = sameLine ? 0 : PassengerTransferTier.samePlatform.penaltySeconds
+            offer(PassengerRouteLabel(state: PassengerRouteState(node: other, onboard: false),
+                                      total: label.total + wait + transfer,
+                                      ride: label.ride, wait: label.wait + wait,
+                                      transfer: label.transfer + transfer, walk: label.walk,
+                                      changes: label.changes + (sameLine ? 0 : 1),
+                                      order: label.order, previous: index, arrival: .board))
+        }
+        // A passenger who has just got off may walk to a station near
+        // by and wait there for another ride: never at the start of a
+        // journey, nor twice in a row. The walk costs its time and its
+        // tier's transfer penalty (the reference's transfer link,
+        // `isXfer`).
+        guard label.state.onboard else { return }
+        for walk in lookup.walks[station] {
+            for other in lookup.calls[walk.slot] {
+                let wait = max(1, passengerMinutesRoundingUp(paths[other.line].headway, by: 2)) * GameTime.secondsPerMinute
+                offer(PassengerRouteLabel(state: PassengerRouteState(node: other, onboard: false),
+                                          total: label.total + wait + walk.penalty + walk.seconds,
+                                          ride: label.ride, wait: label.wait + wait,
+                                          transfer: label.transfer + walk.penalty, walk: label.walk + walk.seconds,
+                                          changes: label.changes + 1,
+                                          order: label.order, previous: index, arrival: .board))
+            }
+        }
+    }
+}
+
+/// The searches of one plan, kept for the origin last asked: the routes
+/// from it with each set of rides banned (see
+/// ``GameWorld/passengerRoutes(from:to:limit:searches:)``). A plan asks
+/// its pairs origin by origin, so a new origin drops the last one's.
+///
+/// A search banning some rides is the one banning none up to the first
+/// time it would take one of them: the unbanned search keeps a copy of
+/// itself paused before each call's first expansion, and a banned one
+/// starts from the earliest copy at a banned call. Nothing differs from
+/// starting it afresh but the work.
+struct PassengerRouteSearches {
+    let graph: PassengerRouteGraph
+    private var origin: StationID?
+    private var unbanned: PassengerRouteSearch?
+    /// The unbanned search paused before each call's first expansion, by
+    /// call number, in the order it reached them.
+    private var paused: [Int: (order: Int, search: PassengerRouteSearch)] = [:]
+    private var searches: [Set<PassengerRideEdge>: PassengerRouteSearch] = [:]
+
+    init(graph: PassengerRouteGraph) {
+        self.graph = graph
+    }
+
+    /// What ``PassengerRouteGraph/shortest(from:to:banning:)`` gives.
+    mutating func shortest(from origin: StationID, to destination: StationID,
+                           banning forbidden: Set<PassengerRideEdge>) -> (PassengerRoute, [PassengerRideEdge])? {
+        if origin != self.origin {
+            self.origin = origin
+            unbanned = PassengerRouteSearch(graph: graph, from: origin, banning: [])
+            paused = [:]
+            searches = [:]
+        }
+        guard !forbidden.isEmpty else {
+            guard let target = unbanned!.slot(of: destination) else { return nil }
+            if let index = unbanned!.arrival(at: target) { return unbanned!.route(ending: index) }
+            guard case .arrived(let index) = runUnbanned(until: target, orBefore: []) else { return nil }
+            return unbanned!.route(ending: index)
+        }
+        if searches[forbidden] == nil {
+            searches[forbidden] = start(banning: forbidden)
+        }
+        return searches[forbidden]!.route(to: destination)
+    }
+
+    /// Runs the unbanned search on, keeping a copy before each call's first
+    /// expansion, until it arrives at slot `target` or reaches one of the
+    /// calls `calls` for the first time.
+    private mutating func runUnbanned(until target: Int, orBefore calls: [Int]) -> PassengerRouteSearch.Stop {
+        while true {
+            let stop = unbanned!.run(until: target, pausing: true)
+            guard case .firstExpansion(let number) = stop else { return stop }
+            paused[number] = (paused.count, unbanned!)
+            if calls.contains(number) { return stop }
+        }
+    }
+
+    /// A search banning `forbidden`, as far on as the unbanned one is the
+    /// same.
+    private mutating func start(banning forbidden: Set<PassengerRideEdge>) -> PassengerRouteSearch {
+        let calls = PassengerRouteSearch.calls(banned: forbidden, on: graph)
+        func earliest() -> PassengerRouteSearch? {
+            calls.compactMap { paused[$0] }.min { $0.order < $1.order }?.search
+        }
+        var search: PassengerRouteSearch
+        if calls.isEmpty {
+            search = unbanned!
+        } else if let known = earliest() {
+            search = known
+        } else if case .exhausted = runUnbanned(until: -1, orBefore: calls) {
+            // It never takes a banned ride.
+            search = unbanned!
+        } else {
+            search = earliest()!
+        }
+        search.banned = calls
+        return search
     }
 }
 
@@ -540,8 +803,17 @@ extension GameWorld {
                          graph shared: PassengerRouteGraph?) -> [PassengerRoute] {
         guard origin != destination, station(id: origin) != nil, station(id: destination) != nil,
               limit > 0 else { return [] }
-        let graph = shared ?? PassengerRouteGraph(world: self)
-        guard let first = graph.shortest(from: origin, to: destination, banning: []) else { return [] }
+        var searches = PassengerRouteSearches(graph: shared ?? PassengerRouteGraph(world: self))
+        return passengerRoutes(from: origin, to: destination, limit: limit, searches: &searches)
+    }
+
+    /// The same, on the graph of `searches`, asking it for the searches
+    /// from `origin`: it keeps them for the next destination.
+    func passengerRoutes(from origin: StationID, to destination: StationID, limit: Int = 3,
+                         searches: inout PassengerRouteSearches) -> [PassengerRoute] {
+        guard origin != destination, station(id: origin) != nil, station(id: destination) != nil,
+              limit > 0 else { return [] }
+        guard let first = searches.shortest(from: origin, to: destination, banning: []) else { return [] }
         var selected = [first.0]
         var candidates: [(route: PassengerRoute, edges: [PassengerRideEdge], bans: Set<PassengerRideEdge>)] = []
         var chosen = (route: first.0, edges: first.1, bans: Set<PassengerRideEdge>())
@@ -551,7 +823,7 @@ extension GameWorld {
                 var bans = chosen.bans
                 bans.insert(edge)
                 guard tried.insert(bans).inserted,
-                      let found = graph.shortest(from: origin, to: destination, banning: bans),
+                      let found = searches.shortest(from: origin, to: destination, banning: bans),
                       !selected.contains(found.0), !candidates.contains(where: { $0.route == found.0 })
                 else { continue }
                 candidates.append((found.0, found.1, bans))
@@ -588,7 +860,15 @@ extension GameWorld {
 
     func passengerRouteChoices(from origin: StationID, to destination: StationID,
                                graph: PassengerRouteGraph? = nil) -> [PassengerRouteChoice] {
-        let routes = passengerRoutes(from: origin, to: destination, graph: graph)
+        var searches = PassengerRouteSearches(graph: graph ?? PassengerRouteGraph(world: self))
+        return passengerRouteChoices(from: origin, to: destination, searches: &searches)
+    }
+
+    /// The same, keeping the searches from `origin` in `searches` for the
+    /// next destination.
+    func passengerRouteChoices(from origin: StationID, to destination: StationID,
+                               searches: inout PassengerRouteSearches) -> [PassengerRouteChoice] {
+        let routes = passengerRoutes(from: origin, to: destination, searches: &searches)
         guard let fastest = routes.first?.totalMinutes else { return [] }
         let allowance = max(5, fastest / 2)
         return routes.filter { $0.totalMinutes - fastest <= allowance && $0.legs.count <= 32 }

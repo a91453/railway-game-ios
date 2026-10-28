@@ -37,7 +37,13 @@ CLAUDE.md 的參考庫檢查照舊：新的車先看 `a91453/railway-reference-p
 ## 4. 塗裝、發光、影子
 
 - **塗裝帶**：頂點 alpha 小於 1 的地方，遊戲用**線的顏色**（`SceneKitBuilder.baked` 在預覽裡烘進去）。所以一款車的線色帶、命名編組的主色畫成 alpha 0；固定的塗裝（白、窗、門、裙）畫實色。
-- **發光頂點**：一個三角形帶旗標就是「夜裡從裡面亮」（`Map3DVertex.glows`、M3DM 的 flags bit 0）：頭燈、尾燈、客室窗、方向幕。白天不發光；夜裡著色器加 `1.3 × lights`。每款車自己決定哪些三角形亮；統一的夜間亮燈是路線圖第 1 項，還沒做。在 pack 裡，玻璃色的發光三角形會變成 `trainGlassLit`（-15，見下一條），`glows` 照樣是 true，找燈請用 `.glows`，不要比 `layer == glowing`。
+- **發光頂點**：一個三角形帶旗標就是「夜裡從裡面亮」（`Map3DVertex.glows`、M3DM 的 flags bit 0）。白天不發光；夜裡著色器加 `1.3 × lights`。 在 pack 裡，玻璃色的發光三角形會變成 `trainGlassLit`（-15，見「車窗反光」），`glows` 照樣是 true，找燈請用 `.glows`，不要比 `layer == glowing`。
+- **夜間亮燈**（決策 449，`Map3DTrainLights`）：每一列車都一樣，配方只要畫燈的鏡片和窗玻璃，不必自己決定哪裡亮。
+  - 做 pack 時，跑的車（`set-*`，與 `Map3DTrainStyle` 的 `-cab`／`-car`／`-panto`）自己的發光三角形改成不亮。它的燈從配方找：發光的三角形，或鏡片色（`Map3DTrainStyle.headlamp`、`Map3DPalette.lantern`、`tunnelLamp` 與它們的暗色），在車長兩端各 30 % 內；紅的是尾燈，其餘是頭燈。一端只有一種，另一種用同一組鏡片換色；兩種都沒有，就在車端面高 1.25 m、左右 0.82 m 補兩盞小燈。
+  - 每一格畫面：列車的第一節在前進那端亮頭燈，最後一節在另一端亮紅尾燈，不管駕駛室在哪、列車往哪開（推拉式與機車牽引的後面那台動力車是轉過來的那台）。
+  - 客室窗：每款跑的車另有一個窗模型（`light-` 加車名），是側面玻璃三角形的複製（玻璃色見 `Map3DTrainLights.isGlass`：`Map3DTrainStyle.glass`、`Map3DPalette.glazing` 和 TEMU 的客室玻璃），離有燈的那端 2.8 m 內的駕駛室窗不亮。新車的窗要用這幾種玻璃色才會亮；用別的顏色就加進 `glassShades`。
+  - 方向幕由 `Map3DHeadSigns`（決策 436）畫，本來就發光。
+  - `tools/train-models/run.sh OUT --night-lights` 匯出夜裡的樣子，拍圖時就看得到。
 - **遮蔽陰影**（決策 439）：配方不畫。`Map3DModelPack` 做 pack 時用 `Map3DTrainOcclusion.baked` 把每個列車模型（名字不是 `prop-`、`life-`、`walk-` 開頭的）被自己遮住多少烘進頂點顏色：車底、轉向架、車頂設備旁、中間車兩端的車間（名字裡沒有 `cab`／`head`／`tail`／`leading`／`trailing`／`rear`／`single`／`formation`／`locomotive`／`ed`／`dm`／`e1000`／`e200`／`steam`／`duplex` 的車，當作前後都有車）。發光三角形與塗裝帶（alpha 小於 1 的那一份）不變暗；一條邊長過 2.5 m 的面取三個角最亮的那個，車側不會變成漸層。遠景版（名字有 `Far-` 或結尾 `-far`）用粗格子。所以：配方的雜湊（各車測試釘的）不變，pack 裡的雜湊（`hashes.lock.json`）會變；新車照常把 pack 的雜湊加進鎖。新車要被當成中間車或頭尾車，就照上面的字取名。
 - **車窗反光與不鏽鋼光澤**（決策 450）：配方不畫，照常用實色。`Map3DModelPack` 做 pack 時（在遮蔽烘焙之前），`Map3DTrainMaterial.marked` 依顏色標材質：
   - **玻璃**：顏色是 `Map3DPalette.glazing`、`Map3DTrainStyle.glass`（#26313D）、`Map3DTEMU2000.glass`（#405560）任一個的深淺（0.35 倍以上、亮度 ≥ 0.11），面不朝下，就標成 `trainGlass`（-13）；本來發光的標成 `trainGlassLit`（-15）。著色器照車窗的 Fresnel 映出天空，有太陽亮點。

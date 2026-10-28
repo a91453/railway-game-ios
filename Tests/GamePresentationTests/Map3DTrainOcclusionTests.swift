@@ -13,13 +13,18 @@ final class Map3DTrainOcclusionTests: XCTestCase {
     }
 
     func testThePackIsTheRecipesWithTheShadeBaked() {
-        XCTAssertEqual(pack.models.map(\.name), recipes.models.map(\.name))
+        // Decision 449: the running cars' window models follow the recipes.
+        XCTAssertEqual(pack.models.prefix(recipes.models.count).map(\.name), recipes.models.map(\.name))
+        XCTAssertTrue(pack.models.dropFirst(recipes.models.count).allSatisfy { $0.name.hasPrefix(Map3DTrainLights.prefix) })
         for (shaded, recipe) in zip(pack.models, recipes.models) {
             XCTAssertEqual(shaded.vertices.count, recipe.vertices.count, recipe.name)
             // Decision 450: glass and stainless keep their shade in `u` too.
             XCTAssertEqual(shaded.vertices.map { [$0.x, $0.y, $0.z, $0.nx, $0.ny, $0.nz, $0.isTrainMaterial ? 0 : $0.u, $0.v] },
                            recipe.vertices.map { [$0.x, $0.y, $0.z, $0.nx, $0.ny, $0.nz, $0.u, $0.v] }, recipe.name)
-            if Map3DTrainOcclusion.isTrain(recipe.name) {
+            if Map3DTrainLights.isRunning(recipe.name) {
+                // Decision 449: a running car's lamps light only at its train's ends.
+                XCTAssertEqual(shaded.vertices, Map3DTrainLights.unlit(Map3DTrainOcclusion.baked(Map3DTrainMaterial.marked(recipe))).vertices, recipe.name)
+            } else if Map3DTrainOcclusion.isTrain(recipe.name) {
                 XCTAssertEqual(shaded.vertices, Map3DTrainOcclusion.baked(Map3DTrainMaterial.marked(recipe)).vertices, recipe.name)
             } else {
                 XCTAssertEqual(shaded.vertices, recipe.vertices, "\(recipe.name): props, people and road vehicles are not shaded")

@@ -375,6 +375,7 @@ public struct Map3DRealTrains: Sendable {
                         let turned = models.isTurned(forType: formation.key, carIndex: car, count: formation.cars)
                         frame.instances.append(Map3DTrains.instance(of: models.models[model], index: model, from: turned ? a : b, to: turned ? b : a,
                                                                     stripe: stripe))
+                        frame.addEnds(ofCar: car, count: formation.cars, turned: turned)
                         continue
                     }
                     frame.boxes.addBox(base: base + Map3DPoint(0, 0.3, 0), forward: a - b, length: along, width: Map3DTrains.carWidth,

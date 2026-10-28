@@ -18,7 +18,11 @@ final class Map3DEMU900IntegrationTests: XCTestCase {
             && zip(car.vertices, unit.vertices).allSatisfy { $0.x == $1.x && $0.y == $1.y && $0.z == $1.z }
     }
 
-    private func lit(_ model: Map3DModelPack.Model) -> [Map3DVertex] { model.vertices.filter(\.glows) }
+    /// The recipe's lit lamps (decision 449 lights a running car's in the
+    /// pack only at its train's ends).
+    private func lit(_ model: Map3DModelPack.Model) -> [Map3DVertex] {
+        Map3DModelPack.unbaked.models[pack.index(of: model.name)!].vertices.filter(\.glows)
+    }
 
     /// The units each car of a `count`-car train is: the ED at each end,
     /// then the toilet EM, the compressor EP, the SIV EM and the crew EM
@@ -231,7 +235,7 @@ final class Map3DEMU900IntegrationTests: XCTestCase {
             XCTAssertEqual(Map3DEMU900.model(role, light: true).triangleCount, light[role]?.0, "\(role) light")
             XCTAssertEqual(hash(Map3DEMU900.model(role, light: true)), light[role]?.1, "\(role) light")
         }
-        XCTAssertEqual(pack.models.last?.name, Map3DLowFloorBus.routeModel().name, "the route bus is still the last model")
+        XCTAssertEqual(pack.models.last(where: { !$0.name.hasPrefix(Map3DTrainLights.prefix) })?.name, Map3DLowFloorBus.routeModel().name, "the route bus is still the last model")
     }
 
     /// Only on request: the numbers decision 435 gives. `MAP3D_FRAME_REPORT=1`.
