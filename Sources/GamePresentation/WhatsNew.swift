@@ -75,6 +75,10 @@ public enum WhatsNew {
                     english: "Road markings on bridge approaches lie flat on the road, and pedestrian signals no longer jump.",
                     chinese: "橋頭引道的標線貼著路面，行人號誌不再跳格。"
                 ),
+                Line(
+                    english: "On the whole-island map, bus stops, stations and track line up with Apple Maps instead of sitting about 1 km off.",
+                    chinese: "整島世界的站牌、車站和軌道對齊 Apple 地圖，不再偏約 1 公里。"
+                ),
             ]
         ),
         Entry(
