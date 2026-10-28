@@ -142,7 +142,7 @@ struct LineConfirmationCard: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.borderless)
-        .accessibilityLabel(Text(verbatim: color.map(\.hexText) ?? language.text("Automatic colour", "自動顏色")))
+        .accessibilityLabel(Text(verbatim: color.map { $0.nameText(in: language) } ?? language.text("Automatic colour", "自動顏色")))
         .accessibilityAddTraits(chosen ? .isSelected : [])
     }
 

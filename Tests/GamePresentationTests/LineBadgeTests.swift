@@ -82,4 +82,15 @@ final class LineBadgeTests: XCTestCase {
         XCTAssertEqual(Set(LineColor.presets.map { LinePalette.safeColor(for: $0.rgb) }), safe)
         XCTAssertEqual(LinePalette.colourBlindSafe.color(for: 0xEF5350), 0xD55E00)
     }
+
+    /// The lines panel's trains are navy on the light line colours, white
+    /// on the rest.
+    func testDarkMarksOnLightLineColours() {
+        for rgb in [0xF5F5F5, 0xFFD54F, 0xAED581, 0xFFCC02, 0x00E5FF, 0x69F0AE, 0xEEFF41, 0x4DD0E1] {
+            XCTAssertTrue(LineBadge.wantsDarkMark(on: rgb), String(rgb, radix: 16))
+        }
+        for rgb in [0xEF5350, 0x5C6BC0, 0xAB47BC, 0x1273E0, 0x219E5C, 0xD93D3D] + [0x262C57] {
+            XCTAssertFalse(LineBadge.wantsDarkMark(on: rgb), String(rgb, radix: 16))
+        }
+    }
 }

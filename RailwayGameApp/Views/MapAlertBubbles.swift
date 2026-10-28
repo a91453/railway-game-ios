@@ -16,6 +16,7 @@ struct MapAlertBubbles: View {
     /// What floats over the map's edges (``EnvironmentValues/mapInsets``).
     let insets: EdgeInsets
     @Environment(GameScreenState.self) private var screen
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -30,12 +31,12 @@ struct MapAlertBubbles: View {
                         .fixedSize()
                         .frame(width: 0, height: 0, alignment: .bottom)
                         .position(item.point)
-                        .transition(.scale(scale: 0.6).combined(with: .opacity))
+                        .transition(.pop(reduceMotion: reduceMotion))
                 }
             }
         }
         .frame(width: viewport.width, height: viewport.height, alignment: .topLeading)
-        .animation(.spring(duration: 0.3, bounce: 0.4), value: placed.map(\.id))
+        .animation(MotionRule.pop.layout(reduceMotion: reduceMotion), value: placed.map(\.id))
     }
 
     /// An alert on screen, and where its bubble's bottom middle goes.

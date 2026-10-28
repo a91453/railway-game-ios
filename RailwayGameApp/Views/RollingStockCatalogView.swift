@@ -16,6 +16,7 @@ struct RollingStockCatalogView: View {
     @Binding var type: TrainType?
     @Binding var cars: Int
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var shown: TrainType?
     @State private var shownCars = 4
 
@@ -99,7 +100,7 @@ struct RollingStockCatalogView: View {
                 arrow("chevron.left", to: catalog.previous(before: entry.type), label: language.text("Previous", "上一款"))
                 CatalogTrain(stripe: stripe(entry.family), cars: min(shownCars, 8))
                     .frame(maxWidth: .infinity, minHeight: 60)
-                    .animation(.spring(duration: 0.3), value: shownCars)
+                    .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: shownCars)
                 arrow("chevron.right", to: catalog.next(after: entry.type), label: language.text("Next", "下一款"))
             }
             // The track and the platform's edge under it.
@@ -121,7 +122,7 @@ struct RollingStockCatalogView: View {
 
     private func arrow(_ symbol: String, to type: TrainType?, label: String) -> some View {
         Button {
-            withAnimation(.easeInOut(duration: 0.2)) { shown = type }
+            withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) { shown = type }
         } label: {
             Image(systemName: symbol)
                 .font(.headline.weight(.heavy))
@@ -270,7 +271,7 @@ struct RollingStockCatalogView: View {
             HStack(spacing: 8) {
                 ForEach(catalog.entries(of: entry.family)) { other in
                     Button {
-                        withAnimation(.easeInOut(duration: 0.2)) { shown = other.type }
+                        withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) { shown = other.type }
                     } label: {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(verbatim: Train.typeText(other.type, in: language))

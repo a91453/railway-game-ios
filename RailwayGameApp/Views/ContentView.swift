@@ -554,7 +554,7 @@ struct ContentView: View {
                         BuildToolRail(session: session, maxHeight: railHeight)
                             .padding(.top, pillDepth)
                             .padding([.top, .leading], margin)
-                            .transition(.move(edge: .leading).combined(with: .opacity))
+                            .transition(.card(from: .leading, reduceMotion: reduceMotion))
                     }
                 }
                 .overlay(alignment: .bottomLeading) {
@@ -589,7 +589,7 @@ struct ContentView: View {
                     // Decision 226: faded while a finger draws under them.
                     .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { screen.toolsFrame = $0 }
                     .opacity(screen.isDrawingUnderTools ? 0.4 : 1)
-                    .animation(.easeInOut(duration: 0.15), value: screen.isDrawingUnderTools)
+                    .animation(MotionRule.change.running(reduceMotion: reduceMotion)?.animation, value: screen.isDrawingUnderTools)
                     // A drag whose end the map never sees (the tool or the
                     // panel changed under the finger) must not leave them faded.
                     .onChange(of: session.tool) { _, _ in endDrawingUnderTools() }
@@ -672,7 +672,7 @@ struct ContentView: View {
                             // Beside the tools column, above the station
                             // master, who stands at its foot.
                             .padding(.bottom, strip + dockBottom + 2 * margin)
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                            .transition(.card(from: .bottom, reduceMotion: reduceMotion))
                     }
                 }
                 .overlay(alignment: .trailing) {
@@ -687,7 +687,6 @@ struct ContentView: View {
                             .hudFrameMark("hud.panel")
                             // The tutorial's card keeps clear of it.
                             .tutorialTarget(.sidePanel)
-                            .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
                             // Under the status pill, which it would cover
                             // on a phone.
                             .padding(.top, pillDepth)
