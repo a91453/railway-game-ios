@@ -378,14 +378,24 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第二十八次換手（2026-10-28 約 22:00 UTC，session_01YGNNumoD1XSP8eSkjabCvp 壓縮 2 次、用量約 210k → 本任用 `create_session` 開的新規劃 session_01YGNNumk6UqdBm6JrBhsdZY，第 4 層）**：照下一段「第二十七任做到哪」接。
+- 新規劃先讀第 1 節、本段與下一段、#1041 從「session_01YGNNumoD1XSP8eSkjabCvp 壓縮第 2 次」往後，然後在 #1041 留言接手。
+- **排程**：Threads 每日排程 `trig_01NzMKnCRdBjC6csJMQEPJVy` 綁在舊規劃；新規劃用 `get_trigger` 讀它的 prompt，建一個綁自己的，再刪掉舊的。舊規劃的巡查排程交接時已刪，新規劃自己排（約 45 分一次）。
+- **在跑的 session**：只有 CF（session_01YGNNuqWY2PSBocJBUDh9eW，決策 470，10/31 後合），已被告知改向新規劃回報。
+- **main**：`03c911f`（#1450）的 push `ci.yml` 交接時在跑；綠了才合下一批。這份交接的 PR 也由新規劃照 §1.2 合。
+- **還在等作者**：10/30 台灣中午截止與 94 版（下一段）。作者在新規劃那邊回答。
+- 新規劃是第 4 層；開到第 7 層時改請作者在 claude.ai 開（§1）。
+
 **第二十七任（session_01YGNNumoD1XSP8eSkjabCvp，2026-10-28 晚）做到哪**：和下面不同時以這段為準。
 - **作者 2026-10-28 定 10/29–30 是「使用者優化與 bug 修復」**：照 UI 健檢（`docs/research/UI_UX_REVIEW_2026-10-28.md` §3 的 16 件）修既有畫面，不開新功能。
 - **本任合的**（照 §1.2，記在 #1041）：#1433（BX，full lane 那 9 支）、#1436（CA，UI 健檢研究）、#1438（CC）、#1443（CE，財務圖表）、#1442（CD，決策 469）、#1434（BP-2，決策 465）、#1444（CB，審查 L-1、L-2）、#1439（BZ，決策 468）、#1441（CE，UI 健檢 O、G、E、F）。main `9213b20` 的 full lane（run 40728356732）全綠，BX 的修正驗證過了。
 - **HANDOFF 重號**：#1442（CD）與 #1439（BZ）都加了 §4.17；BZ 合 main 時把自己的改成 §4.18。之後加 §4 小節的 PR，合 main 前先看最大號。
 - **不穩的測試**：「捏合開 3D」的 UI 測試在 main `cca7013` 的 full lane 與 CE 第一次 only_testing 紅、`9213b20` 的 full lane 綠。7 天內再紅一次就照 diagnosing-bugs 派人修穩（§1 的 CI 線）。
-- **10/31 前還沒合的**：#1445（CG，session_01YGNNum8d2w8nNYAMYvTp71，UI 健檢 B：觸控範圍 44 點），ready、only_testing 綠就合。
+- **10/31 前的 UI 健檢都合完了**：#1445（CG，健檢 B，觸控範圍 44 點，main `7e72db8`）、#1450（CH，決策 471，健檢 K，跟隨列與財務面板不再每個 tick 重算，main `03c911f`）。CG、CH 已封存。
+  - 規劃代為決定（CG 問）：地圖列車卡的膠囊（3-2）這次只到約 27 點高，10/31 前不加大排距；10/31 後和健檢 N 一起重排卡片時補到 44（五方在 #1041）。
+  - `testTheStationTagsPencilRenamesAtOnce` 在 #1445 的 only_testing 紅過一次（空白鍵沒打進欄位，慢 runner），單跑綠；和「捏合開 3D」一起看，7 天內再紅就派人修穩。
 - **還在等作者回答**：合併截止要不要改成 10/30 台灣中午；改的話當天下午 main HEAD 的完整 `ci.yml` 與 full lane 都綠就請作者發 94，作者晚上實機看，10/31 公開連結用 94，94 有問題就用 93.1。作者沒回答前照舊（10/31 用 93.1 或當時已發的版）。
-- **10/31 後才合**（PR 都是 draft，標題寫著）：#1446（BO，決策 467，Meshy 第一批＋glTF-Validator 進 CI，作者已同意，§7.4）、#1447、#1448（BY，三鶯線）、#1437（Codex 台中綠線）、CF（session_01YGNNuqWY2PSBocJBUDh9eW，決策 470，PR 還沒開）。為了讓出 macOS runner，本任取消過這幾張的 PR iOS run（例如 #1447 的 run 40734596376，gate 因此紅）：10/31 後一張一張重跑 iOS run，再對 gate 按 Re-run failed jobs。BO、BY 都壓縮 2 次停了，10/31 後開一個照顧 session 收尾三張。
+- **10/31 後才合**（PR 都是 draft，標題寫著）：#1446（BO，決策 467，Meshy 第一批＋glTF-Validator 進 CI，作者已同意，§7.4）、#1447、#1448（BY，三鶯線）、#1437（Codex 台中綠線）、CF（session_01YGNNuqWY2PSBocJBUDh9eW，決策 470，#1451）。為了讓出 macOS runner，本任取消過這幾張的 PR iOS run（例如 #1447 的 run 40734596376，gate 因此紅）：10/31 後一張一張重跑 iOS run，再對 gate 按 Re-run failed jobs。BO、BY 都壓縮 2 次停了，10/31 後開一個照顧 session 收尾三張。
 - **10/31 後的順序**（規劃定）：公開測試的回報 → CF、BO、BY 收尾合併 → UI 健檢 N（車站面板 20 段）→ P（事件×通道回饋稽核）→ M（載入畫面的進度與取消）→ 審查 L 的 L-3～L-7（L-1、L-2 是 #1444）→ **跟隨公車視角** → 新台幣 PR-0、PR-1（存檔 76）→ 預覽提示可收購 → 機廠與終點站停車場（存檔 77）→ 台灣節慶研究、3D 動物與無人機秀、資料來源頁補資料日期 → 安坑輕軌 → 環狀輕軌。
 - **跟隨公車視角**（作者 2026-10-28 問「要加跟隨公車視角嗎 把列車那套移過來就好」，規劃答 10/31 後、排第 7）：
   - 怎麼做：`Map3DFollow` 從 `Map3DTrains.Head` 算鏡頭（後方、後上方、駕駛座、側面、車站五種），公車沒有 Head。`BusMotion`（決策 400 10i-6）在 GamePresentation 已有確定的公車位置與方向，補一個公車的 Head 轉接，`GameSession` 加跟隨公車（照 `followTrain`、`stopFollowingTrain`），`FollowBar` 顯示路線與下一站；公車在班次頭尾會淡出，跟到淡出時換同路線的下一班或回到一般視角。只動 GamePresentation 與 App，不動 GameCore、存檔。約一個 PR。
