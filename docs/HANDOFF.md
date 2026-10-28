@@ -1836,6 +1836,11 @@
 - **等作者在 TestFlight 看**（UNVERIFIED）：4 GB 的 iPhone 開關 3D、在台北拖動時有沒有閃退、回報裡的「記憶體最高／最少剩」與「裝置」；`tight` 每次開 3D 要等多久；6000× 大地圖上 A14 以前的手機畫面順不順、燙不燙、實際倍速；M1 iPad 的 `MTLDevice.name` 是否以「Apple M」開頭、升級後順不順，iPad 降像素後的清晰度。
 - **下一步**（沒派）：3D 場景上傳 GPU 後放掉 App 留著的那份（tw3d `gpu-residency.js` 的做法，所有機型省 370–520 MB），見決策 460「下一步」。
 
+### 4.16 跑不到設定倍速時的一次性提示（決策 464，session_01YGNNumnQtaMdPM5echyBfu，派工單 BV，2026-10-28）
+
+- 做了的在 [決策 464](decisions/464.md)：連續 20 秒低於設定的 70% 時，倍速旁的點自動打開一次 popover（「這張地圖在這台裝置上大約只跑得到 ×N」＋改成最近跑得到的一檔＋知道了；發燙時只說「裝置有點燙，遊戲先放慢」）。規則在 `SpeedLagHint.swift`，Linux 測試 `SpeedLagHintTests`。
+- **等作者在 TestFlight 看**（UNVERIFIED，Linux 編不了 SwiftUI）：舊 iPhone／iPad (A16) 在大地圖 6000× 時 20 秒後有沒有跳、popover 擋不擋操作、「改成」那一檔順不順；70%／20 秒是不是剛好（太吵就調 `SpeedLagWatch.lowPermille`／`sustained`）。沒有新的 UI 測試。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |
