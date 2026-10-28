@@ -491,5 +491,46 @@
       "note": "Run before final gangway-only study change; standard pack unchanged and all680 prior FNV still identical."
     }
   },
-  "downloaded_PNG_complete_decodes": 6
+  "downloaded_PNG_complete_decodes": 6,
+  "latest_main_merge": {
+    "main": "b4fff5ed",
+    "commit": "ed77fc652842c00211f101ebc7ad4dd8736a3aed",
+    "strict_build": "VERIFIED",
+    "related_tests": 13,
+    "failures": 0,
+    "final14_model_files_byte_identical_to_producer": true,
+    "original680_actual_FNV_unchanged": true,
+    "existing_main_lock_entries_changed_by_this_PR": 0,
+    "whole_pack_lock_check": "FAIL: 28 inherited current-main entries differ from recomputed actual fields; not rewritten",
+    "inherited_lock_mismatches": [
+      "light-set-emu3000-head",
+      "light-set-emu3000-tail",
+      "set-E200CK-car",
+      "set-E200CK-tail",
+      "set-E500CK-car",
+      "set-E500CK-tail",
+      "set-emu3000-car",
+      "set-emu3000-em6",
+      "set-emu3000-ep7",
+      "set-emu3000-ep10",
+      "set-emu3000-et",
+      "set-emu3000-head",
+      "set-emu3000-panto",
+      "set-emu3000-tail",
+      "set-emu3000Far-car",
+      "set-emu3000Far-em6",
+      "set-emu3000Far-ep7",
+      "set-emu3000Far-ep10",
+      "set-emu3000Far-et",
+      "set-emu3000Far-head",
+      "set-emu3000Far-panto",
+      "set-emu3000Far-tail",
+      "set-R100CK-car",
+      "set-R100CK-tail",
+      "set-R200CK-car",
+      "set-R200CK-tail",
+      "set-SUMMER-car",
+      "set-SUMMER-tail"
+    ]
+  }
 }

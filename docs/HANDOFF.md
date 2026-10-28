@@ -2301,3 +2301,5 @@ EMU900第二版（#1338／draft#1339↔私庫#102）：使用者要求修圓車�
 ### 2026-10-28 Codex 三鶯線原生靜態模型
 
 三鶯線兩節車靜態模型的重建入口與來源在 [SANYING_MODEL.md](art/native-vehicle-modeling/SANYING_MODEL.md)。使用者否定第一版外觀，又指出第二版與實車照片不夠像；第三版修白色側板／門柱、獨立深色窗、藍色車頭與銀色橫飾帶。使用者於 2026-10-28 回覆「可以」，僅第三版 producer `495468fe0bef6bf9e56b4543e1db5642bf0328c1` 記外觀接受。前版由 git producer 恢復；營運映射、真機仍未驗，公開／私有 draft PR 見本輪 #1041 登記。
+
+台中收尾合main b4fff5ed後13項相關測試綠、本批14成品與producer逐bytes相同。全包重算另抓到最新main鎖檔28項既有EMU3000／莒光等set值不符；[名單／證據](art/taichung-green/verification.json)，本PR不改任何舊鎖、台中四項正確，680原實際模型仍不變。共用鎖全包驗收不能稱綠，留共用工具／原車作者處理；本型專用素材驗收保持。最新CI看公開#1430 head checks。
