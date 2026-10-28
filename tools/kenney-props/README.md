@@ -20,4 +20,4 @@ tools/kenney-props/build.sh [WORK_DIR]
 
 樹冠（`Map3DPalette.crown`）與灌木（`embankment`）的顏色讀進遊戲時改成 alpha 0，由每個實例給自己的綠（`Map3DSceneryProp.coniferGreens`、`bushGreens`）。檔案讀不到時，`Map3DModelPack.standard` 裡同尺寸的程式替身照畫。
 
-glTF-Validator：沒有加進 repo 或 CI（加依賴由作者決定）；2.0.0-dev.3.10 在本機檢查過六件 GLB，0 錯誤 0 警告。
+glTF-Validator：決策 467 起由 `tools/gltf-validate/` 在 CI 檢查 repo 裡所有 GLB（`.github/workflows/gltf-validate.yml`）；`source/detail-tank.glb` 原件有六個長度 0 的法線（在沒有面積、轉檔時會丟掉的三角形上），記在它的 `known.json`。

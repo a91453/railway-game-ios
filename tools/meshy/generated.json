@@ -109,5 +109,59 @@
     "credits": 15,
     "raw_sha256": "4441a1213c6b7d6def6eadc754ba48899364f29b9e28afd0d3c3a23d8861769a",
     "raw_bytes": 2045828
+  },
+  "mailbox-green": {
+    "tasks": [
+      {
+        "id": "01a17c07-5906-748e-b8eb-ab29fdd3e2aa",
+        "type": "text-to-3d-preview",
+        "model_type": "standard",
+        "ai_model": "meshy-7.1",
+        "prompt": "Taiwan green post box (郵筒): a short free-standing cylindrical pillar box painted bright vivid green, a round dome top, one horizontal letter slot with a small sloped hood over it, a plain round base, about 1.1 m tall, the same shape as a classic red pillar box but green. No lettering. Single object only, clean simple stylised shapes, no text, no logos, no base, no ground, no people.",
+        "texture_prompt": null,
+        "credits": 20,
+        "finished": "2026-10-27T06:24:09Z"
+      },
+      {
+        "id": "01a17c08-04b6-716f-b2f2-846ce131cccb",
+        "type": "text-to-3d-refine",
+        "model_type": "standard",
+        "ai_model": null,
+        "prompt": "Taiwan green post box (郵筒): a short free-standing cylindrical pillar box painted bright vivid green, a round dome top, one horizontal letter slot with a small sloped hood over it, a plain round base, about 1.1 m tall, the same shape as a classic red pillar box but green. No lettering. Single object only, clean simple stylised shapes, no text, no logos, no base, no ground, no people.",
+        "texture_prompt": "No text, no logos, no wear or dirt. Bright vivid green body (clearly green, not grey), black slot, dark grey base.",
+        "credits": 10,
+        "finished": "2026-10-27T06:25:13Z"
+      }
+    ],
+    "credits": 30,
+    "raw_sha256": "bbc5664b0fa9a643a055db21db0b6106f133e6cd6df363cbd68e14cbe5c4aa33",
+    "raw_bytes": 15108840
+  },
+  "bus-stop-pole": {
+    "tasks": [
+      {
+        "id": "01a17bef-de42-727f-b82f-ded6739eae65",
+        "type": "text-to-3d-preview",
+        "model_type": "standard",
+        "ai_model": "meshy-7.1",
+        "prompt": "City bus stop pole sign (公車站牌): a tall slim metal pole with a flat rectangular blank sign panel at the top and a smaller blank panel below, a short round foot, about 2.8 m tall. Single object only, clean simple stylised shapes, no text, no logos, no base, no ground, no people.",
+        "texture_prompt": null,
+        "credits": 20,
+        "finished": "2026-10-27T05:58:24Z"
+      },
+      {
+        "id": "01a17bf0-4e46-7015-81cd-bbaa90fa5801",
+        "type": "text-to-3d-refine",
+        "model_type": "standard",
+        "ai_model": null,
+        "prompt": "City bus stop pole sign (公車站牌): a tall slim metal pole with a flat rectangular blank sign panel at the top and a smaller blank panel below, a short round foot, about 2.8 m tall. Single object only, clean simple stylised shapes, no text, no logos, no base, no ground, no people.",
+        "texture_prompt": "No text, no logos, no wear or dirt. Grey pole, white blank panels with a blue border.",
+        "credits": 10,
+        "finished": "2026-10-27T05:59:04Z"
+      }
+    ],
+    "credits": 30,
+    "raw_sha256": "f4c5363cea28dcd5889eff54a6d6363c579850e08a873c7bf9d3d3855aac40a5",
+    "raw_bytes": 5059460
   }
 }

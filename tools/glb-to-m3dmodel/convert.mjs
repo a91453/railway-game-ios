@@ -8,7 +8,7 @@ const root = fileURLToPath(new URL('../..', import.meta.url));
 const defaultModels = resolve(root, 'tools/meshy/models.json');
 const defaultGenerated = resolve(root, 'tools/meshy/generated.json');
 
-function directions(front, [x, y, z]) {
+export function directions(front, [x, y, z]) {
   switch (front) {
     case '+x': return [x, -z, y];
     case '-x': return [-x, z, y];
@@ -18,7 +18,7 @@ function directions(front, [x, y, z]) {
   }
 }
 
-function area([a, b, c]) {
+export function area([a, b, c]) {
   const u = b.map((v, i) => v - a[i]), v = c.map((n, i) => n - a[i]);
   const cross = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
   return Math.hypot(...cross) / 2;
@@ -45,7 +45,7 @@ function textureSample(gltf, material, uv, images) {
   return rgba.map((value, i) => Math.max(0, Math.min(255, Math.round(value * factor[i]))));
 }
 
-function triangleColor(gltf, material, uvs, vertexColors, images) {
+export function triangleColor(gltf, material, uvs, vertexColors, images) {
   const result = [0, 0, 0, 0];
   let samples = 0;
   // A regular barycentric grid samples the triangle interior, not just the

@@ -46,8 +46,10 @@ public enum Map3DProp: String, CaseIterable, Sendable {
     /// as `quality` says; none otherwise.
     public static func modelsLeftOut(_ quality: Map3DQuality, in pack: Map3DModelPack = .standard) -> Set<Int> {
         guard quality == .saving else { return [] }
-        // Decision 458: and the bushes.
-        return Set(leftOutWhenSaving.compactMap { pack.index(of: $0.modelName) } + Map3DSceneryProp.bushClumps.compactMap { pack.index(of: $0.modelName) })
+        // Decision 458: and the bushes; decision 467: and the post boxes
+        // and stop poles.
+        return Set((leftOutWhenSaving.map(\.modelName) + (Map3DSceneryProp.bushClumps + Map3DSceneryProp.streetFurniture).map(\.modelName))
+            .compactMap { pack.index(of: $0) })
     }
 
     /// The model's name in ``Map3DModelPack``.

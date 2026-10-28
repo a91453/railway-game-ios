@@ -1,0 +1,41 @@
+name: glTF validation
+# Decision 467: the Khronos glTF Validator over the repository's GLB and
+# glTF files (tools/gltf-validate), on Linux, beside the Swift jobs and
+# only when a model file or the tools that read them change. It took
+# 0.6 s for 35 files on Linux; past 2 minutes it goes back to a local
+# check (decision 467).
+on:
+  pull_request:
+    paths:
+      - '**/*.glb'
+      - '**/*.gltf'
+      - 'tools/glb-to-m3dmodel/**'
+      - 'tools/kenney-props/**'
+      - 'tools/gltf-validate/**'
+      - '.github/workflows/gltf-validate.yml'
+  push:
+    branches: [main]
+    paths:
+      - '**/*.glb'
+      - '**/*.gltf'
+      - 'tools/glb-to-m3dmodel/**'
+      - 'tools/kenney-props/**'
+      - 'tools/gltf-validate/**'
+      - '.github/workflows/gltf-validate.yml'
+permissions:
+  contents: read
+concurrency:
+  group: gltf-validate-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+        working-directory: tools/gltf-validate
+      - run: node tools/gltf-validate/validate.mjs
