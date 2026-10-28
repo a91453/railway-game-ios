@@ -140,6 +140,8 @@ public struct Map3DModelPack: Sendable {
                 if !far { for reversed in [false, true] { models.append(Map3DEMU900.model(role, reversed: reversed, light: true)) } }
             }
         }
+        models += Map3DC371.Unit.allCases.map { Map3DC371.model($0) }
+        models += Map3DC381.Unit.allCases.map { Map3DC381.model($0) }
         // Static 610 study; no shared metro operating mapping is changed.
         for role in Map3DTaipei610.Role.allCases {
             models.append(Map3DTaipei610.model(role))

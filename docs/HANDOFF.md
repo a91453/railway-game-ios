@@ -1,3 +1,5 @@
+> Codex C371／C381雙車續修（公開draft #1342／工作#1341）：[現版／main格式核對](art/c371-c381-2026-10-27/README.md)、[接手／重建](art/c371-c381-2026-10-27/CROSS_ACCOUNT_HANDOFF.md)。兩型外觀均待驗收，先前推定C371已接受撤回。修肩部曲面／圓角燈腔／鼻下設備；T/M裸模型與原屋頂／輪組位置保護。已整合main8be22423的studies，standard529模型／3,127,704頂點不增加。新railway-assets-private各車獨立revision-1，各19PNG／最新模型與viewer，不新增history或ZIP；完整真前包仍在舊reference-private #103固定63b44693／素材e791fdb7。原#103只作前版交接，新素材draft互鏈見#1342。無營運映射／GameCore／存檔／fixtures變更；不合併／auto-merge／TestFlight。
+
 > 共用做車工具與新 skill（派工單 AC）：`tools/train-models/`（匯出、預算與雜湊檢查、七向圖用模型光、離線預覽，[README](../tools/train-models/README.md)）、`.claude/skills/rolling-stock/SKILL.md` 已改成原生做法，新車只用這個工具。列車畫面四項的第 1–3 項（夜間亮燈、遮蔽烘焙、車窗反光）等 10/31 公開測試之後由規劃派，用同一個工具拍改前／改後（`renderer.js` 的 `features` 旗標是接口）。
 
 > Codex C341（issue [#1322](https://github.com/a91453/railway-game-ios/issues/1322)，公開draft [#1323](https://github.com/a91453/railway-game-ios/pull/1323)）：[來源／外觀／重建與整合範圍](art/c341-2026-10-27/README.md)。四附件與Blair C341外觀原圖已看；獨立DM/T/M/反向DM，六輛21,036三角用合法原生組裝，不寫超限M3DM。完整素材／真第一至第三版／viewer／ZIP在私庫同名分支新目錄。僅四單元靜態註冊，沒有C341專用營運映射，合併不會自動換遊戲車輛。已保留新合併EMU800註冊及route bus末項；GameCore／存檔／fixtures不動。工程尺寸／單元方向與隱藏設備仍資料不足，真機Metal／效能／動畫與完整碰撞未驗；最新CI、衝突及私有互鏈見issue，不合併／auto-merge／TestFlight。
@@ -2173,6 +2175,17 @@ TEMU1000 原生外形（Codex，初版 issue #1228／公開 #1230／私庫 #78 �
 
 EMU900第二版（#1338／draft#1339↔私庫#102）：使用者要求修圓車頭、下裙／連結器、輪架與遊戲配色。真8ebfd9fd第一版完整包保持；新revision-2，罩面沿實際殼曲線、圓裙凹槽與折面排障器，車身用既有D3D4DA、玻璃shade0.62，綠松／藏青保持；輪胎與屋頂設備原三角保護。另補#1041前版漏做的light介面，頭2188／中868–1092三角，36單元與近59448／遠33800／light12056十輛展示及18全payload pins。最新main b7710cb7 C341整合保持；只靜態註冊，無營運自動換用。全量重出／真前後／驗證與固定producer、下載SHA、最新同head CI見自有README及issue，外觀自檢不等於使用者接受，人工Simulator／真機Metal效能與動畫仍未驗。不改GameCore／存檔／fixtures／玩法，不合併／auto-merge／TestFlight。
 
+### 2026-10-27 Codex C371／C381 原生靜態素材
+
+本次製作各自 DM/T/M/反向端車與原廠六輛 DM1–T–M2＋M2–T–DM1。台灣車輛官網規格及兩張已開啟的 Commons 實車照片、兩張使用者插畫來源與缺口詳見 [製作紀錄](art/c371-c381-2026-10-27/README.md)。真第一版與最終版原生、GLB、預覽及同相機比較保留於互鏈私庫 draft。只在 Map3DModels 註冊單元；`metroC381` 是含其他路線及 C371/C381 性能的共用營運接點，沒有更動，合併後不會自動出現在營運列車。外觀仍待改善 C381 圓鼻、兩款車頂與設備精度；真機 Metal／動畫／效能／完整碰撞未驗。技術、ZIP、producer 和最新 CI 以本次 issue 及私包紀錄為準。不動 GameCore、存檔、Golden／Replay／Save fixtures、玩法，不合併、不啟動 TestFlight。
+
+**C371／C381 外觀修訂（Codex，同 #1341／公開 draft #1342／私有 draft #103）**：使用者明確指出兩款第一交付很醜，撤回任何外觀合格推斷。重新開啟 C371 月台前斜及 C381 近正實車照片，重做兩車頭圓罩、駕駛／逃生窗、燈組與雨刷，C381 另有前下 V 形藍分色、側主藍帶；屋頂補低矮格柵與肋條。原廠尺寸／六輛編組與營運映射不變。真正先前私包 `df3f041a` 將完整保留於新包 `history/true-v4/`；同相機比較和新來源、獨立驗證以私包／issue 最新紀錄為準。黑罩曲率、燈腔、設備站位仍有比例推估，不代表已獲外觀接受。只靜態註冊，合併不會自動出現在營運列車。
+
+**C371 優先修訂（Codex，同 PR／issue）**：使用者又提供三張實車照片，要求先以 C341 的完成度標準修 C371。三張均直接目視，原始檔與授權未取得；銀灰側殼、連續低矮肋條、黑色直立前罩與小型下緣設備的目視依據和限制見[製作紀錄](art/c371-c381-2026-10-27/README.md)。前一次完整交付含 ZIP 原樣保留於私包 `history/true-v5/`；本輪只改 C371 配方與共用 builder 的 C371 分支，C381 10 個原生／GLB 檔案逐 bytes 相同。C371 六車 14,816 三角，低於 15,000 單檔上限；C341 和其他車模型幾何未取用。外觀自檢有進步但設備精確站位、真機 Metal 與使用者接受仍未驗證；仍只靜態素材註冊，合併後不會自動出現在營運列車。
+
+**C371 方框再修（Codex，同 PR／issue）**：使用者仍嫌正面方框，並要求用已合併的 PR #1357。從最新 main 取得 rolling-stock skill 與 `tools/train-models/`，共用工具拍 C371 日夜七向並檢 FNV 鎖；原生編組／GLB／ZIP 仍由自有專用驗收製作。圓角銀色端面有厚度並重疊支承，黑罩與前窗圓角加大，側窗／門框變薄；試作末段漸縮在正面露出藍色方塊，撤回而非出貨。真前版全包在私庫 `history/true-v6/`，目前 C371 六車 14,936 三角；C381 原生／GLB 仍應逐 bytes 核對。新外觀與測試、CI 以自有製作紀錄及 #1341 最新狀態為準，尚無使用者外觀接受或真機驗證。靜態註冊依舊不會自動替換營運列車。
+
+**跨帳戶續作（Codex，同 #1341）**：使用者要由另一個帳戶的 Codex 接手 C371 查實車圖、修原生幾何並更新既有兩個 draft PR。接手起點、可跨帳戶開啟的原圖、現存可見缺陷、真前版與完整 ZIP、分支權限及重建驗證步驟見 [C371 跨帳戶交接](art/c371-c381-2026-10-27/CROSS_ACCOUNT_HANDOFF.md)。本對話的內嵌照片不會自動出現在另一帳戶，不能寫成接手者已查看。C371 方框感仍待修；C381 本輪未修形、未獲外觀接受。
 ### 2026-10-27 Codex 台北捷運610（#1359）
 
 [專用來源／角色／重建與驗收](art/taipei610-2026-10-27/README.md)。使用者命名台北捷運610，環狀線第一階段正常白黃塗裝，獨立A-C-D-B四動車，三級12單元與合法assembly；沒有同車型獨立原生前版，私庫Q比例y100不套殼，接入前顯示只取真wenhu並明標。最新373註冊＋3直接比較完整payload保持（包含最新月台整合新增項）；已接受E500v3／EMU3000v5及EMU900第二版、其他既有包不動。私庫E1000#88合在PP分支而非main祖先，不能只因merged宣稱main已有素材。沒有610獨占營運接點（BR/Y共用wenhu），本批尚未接入營運，合併不會有營運車自動換用；解鎖／列車包／fallback保持。外觀自檢與使用者接受分開，未經使用者接受；Linux幾何／WebGL／Swift6.4與ZIP證據及互鏈draft見#1359。人工Simulator／真機Metal效能／動畫與完整動態碰撞未驗。只追加自有配方與必要通用匯出適配，不改GameCore／存檔／fixtures；不合併、不推main／auto-merge／TestFlight。
