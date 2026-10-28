@@ -77,6 +77,13 @@ public final class GameSession {
     /// Decision 330: the station master's advice the game loop's tick
     /// worked out, for the world at ``worldRevision`` `revision`.
     @ObservationIgnored var workedAdvice: (revision: Int, advice: WorkedAdvice)?
+    /// Decision 459: the station master's advice for a game hour and
+    /// ``commandRevision`` (``stationMasterAdvice``), which the news
+    /// and the station master's corner both read.
+    @ObservationIgnored var hourAdvice: HourAdvice?
+    /// How many times ``stationMasterAdvice`` was worked out on the main
+    /// actor (for the tests).
+    @ObservationIgnored var stationMasterAdviceWorkedOut = 0
 
     /// ``GameWorld/worstLosingLine()``, worked out again only after a
     /// command or once a day has settled (decision 194, later): the station

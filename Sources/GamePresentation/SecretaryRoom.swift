@@ -339,8 +339,9 @@ extension GameSession {
         if let worked {
             if let leader = worked.leader { lineLossLeaderMemo.keep(leader, atRevision: commandRevision) }
             said = worked.advice
+            hourAdvice = HourAdvice(hour: world.clock.now.seconds / GameTime.secondsPerHour, revision: commandRevision, advice: said)
         } else {
-            said = StationMasterAdvice(world: world, worstLosingLine: { worstLosingLine })
+            said = stationMasterAdvice
         }
         guard let advice = said, let entry = advice.newsEntry else { return }
         if let last = newsWatch.adviceDays[entry.key], today - last < 10 { return }
@@ -350,6 +351,31 @@ extension GameSession {
         if news.items.prefix(30).contains(where: { $0.english == english && $0.chinese == chinese }) { return }
         news.add(day: today, entry.category, english: english, chinese: chinese, target: entry.target)
     }
+}
+
+extension GameSession {
+    /// What the station master advises now (``StationMasterAdvice``), the
+    /// same for the whole game hour until a command changes the world
+    /// (decision 459): the news's hourly look keeps what it read, often
+    /// worked out off the main actor with the tick (decision 330), and
+    /// the station master's corner reads that rather than work it out
+    /// again on the main actor (92.1: some 400 ms an hour at 6000×).
+    public var stationMasterAdvice: StationMasterAdvice? {
+        let hour = world.clock.now.seconds / GameTime.secondsPerHour
+        if let kept = hourAdvice, kept.hour == hour, kept.revision == commandRevision { return kept.advice }
+        let advice = StationMasterAdvice(world: world, worstLosingLine: { worstLosingLine })
+        stationMasterAdviceWorkedOut += 1
+        hourAdvice = HourAdvice(hour: hour, revision: commandRevision, advice: advice)
+        return advice
+    }
+}
+
+/// Decision 459: the station master's advice kept for game hour `hour`
+/// and ``GameSession/commandRevision`` `revision`.
+struct HourAdvice: Sendable {
+    let hour: Int64
+    let revision: Int
+    let advice: StationMasterAdvice?
 }
 
 /// Decision 330: the station master's advice (``StationMasterAdvice``),

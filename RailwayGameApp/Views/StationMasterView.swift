@@ -390,8 +390,8 @@ struct StationMasterCorner: View {
     }
 
     private func refreshAdvice() {
-        let own = StationMasterAdvice(world: session.world, worstLosingLine: { session.worstLosingLine })
-        advice = ModeShiftHint.advice(own, hint: modeShiftHint)
+        // Decision 459: the hour's advice the session already worked out.
+        advice = ModeShiftHint.advice(session.stationMasterAdvice, hint: modeShiftHint)
     }
 
     /// The game day the hint is worked out for, or `nil` once said, with
