@@ -135,5 +135,11 @@
   "latest_producer": "0b6d26dfac46e702550fc5e9d1afc7a7bc9af339",
   "true_previous_producer": "e525a29aa141f46162662e361037f4901d8ec77a",
   "producer_commit": "0b6d26dfac46e702550fc5e9d1afc7a7bc9af339",
-  "recheck": "User supplied the same four real-train photos again. All four re-inspected in chat; no downloadable originals/SHA for these attachments. Revised cab mask, green wrap, lower skirt/coupler; withdrew lenient revision2 self-assessment. Primary downloaded originals still listed below."
+  "recheck": "User supplied the same four real-train photos again. All four re-inspected in chat; no downloadable originals/SHA for these attachments. Revised cab mask, green wrap, lower skirt/coupler; withdrew lenient revision2 self-assessment. Primary downloaded originals still listed below.",
+  "revision4_paint_review": {
+    "date": "2026-10-28",
+    "observed": "Reopened actual TMRT official front and Blair Nantun photos alongside true revision3 native views. Outer dark cheeks join shoulder to lamp housings; white U lies between central black mask and dark cheeks. Upper green returns across shoulder.",
+    "simplification": "Real green/navy transition is soft; model uses existing solid palette boundaries, no gradient/photo texture. Paint curve dimensions remain photo estimates.",
+    "geometry_protection": "Body, glazing, lights and equipment unchanged; only added front paint panels and repainted/resegmented shoulder strips. Baked cab occlusion changes nearby colours."
+  }
 }

@@ -1,26 +1,28 @@
 {
-  "producer_commit": "0b6d26dfac46e702550fc5e9d1afc7a7bc9af339",
-  "previous_producer": "e525a29aa141f46162662e361037f4901d8ec77a",
-  "previous_assets_commit": "61084334187422a4383e05e058fa4afc8d1073f8",
-  "base": "12e4590a",
-  "platform": "Linux, Swift6.4 warnings-as-errors, Node24, Chromium, Blender4.3.2",
+  "producer_commit": "498d85ef234a00345b4b024c4aa0e6783d73b933",
+  "previous_producer": "0b6d26dfac46e702550fc5e9d1afc7a7bc9af339",
+  "previous_assets_commit": "1adbab9f0f03ca7636abfc3ea5b7f0118e156fca",
+  "branch_point": "12e4590a",
+  "latest_main_inspected": "7bc5539a",
+  "platform": "Linux / Swift6.4 warnings-as-errors / Blender4.3.2 / Node24 Chromium",
   "final_related_tests": {
     "passed": 12,
     "failed": 0
   },
-  "with_enabled_memory_report": {
-    "passed": 13,
-    "failed": 0,
-    "standard_models": 583,
-    "model_MB": 133.3,
-    "device": false
+  "triangles": {
+    "near_unit": 4804,
+    "far_unit": 2208,
+    "near_formation": 9608,
+    "far_formation": 4416
   },
   "other_model_protection": {
     "byte_identical_native_models": 684,
-    "all_actual_vertex_fields_FNV_unchanged": true,
-    "evidence": "private revision-3/preserved-payloads.json"
+    "all_vertex_fields_FNV_unchanged": true,
+    "comparison": "true revision3 and branch-point baseline",
+    "evidence": "private revision-4/preserved-payloads.json"
   },
-  "inherited_main_lock_mismatches": [
+  "whole_pack_lock_status": "FAIL inherited branch-point entries; only own four changed and correct",
+  "inherited_lock_mismatches": [
     "light-set-emu3000-head",
     "light-set-emu3000-tail",
     "set-E200CK-car",
@@ -50,305 +52,27 @@
     "set-SUMMER-car",
     "set-SUMMER-tail"
   ],
-  "whole_pack_lock_status": "FAIL inherited main entries; this PR changes only four own locks",
   "PNG": {
-    "rendered_complete_decodes": 168,
+    "rendered_complete_decodes": 170,
     "actual_downloaded_complete_decodes": 6,
     "delivered_private": 20,
     "public_overview": 1
   },
   "manual_review": {
     "final_colour_clay_silhouette_seven_views_all_six_models": true,
-    "true_before_after_matched_bounds_camera_canvas": true,
-    "photos": "Four re-supplied in chat plus downloaded TMRT/Kawasaki/Blair originals; no photo pixels republished",
-    "missing_top_photograph": "No calibrated complete orthographic real top photograph; official diagram and oblique photos only",
+    "night": true,
+    "true_before_after_same_camera_bounds_canvas": true,
+    "photo_comparison": "TMRT official photo and Blair Nantun original reopened; user photos seen in chat. Soft green transition simplified to solid palette. No redistribution of source pixels.",
     "appearance_acceptance": "UNVERIFIED"
-  },
-  "producer_rebuild": {
-    "status": "VERIFIED",
-    "producer": "0b6d26dfac46e702550fc5e9d1afc7a7bc9af339",
-    "independent_checkout": true,
-    "files": [
-      {
-        "file": "models/taichung-green-dm1.m3dmodel",
-        "sha256": "fa2be478d19f23d8733c5e7d1a4f4c0ed666221a524ce0af9730e6a4a96d56f6"
-      },
-      {
-        "file": "models/taichung-green-dm1.glb",
-        "sha256": "a8a97a7385aa083de96836139272f74338226c567d44962411602b3918360db0"
-      },
-      {
-        "file": "models/taichung-green-dm2.m3dmodel",
-        "sha256": "aa4a4ac618dbe580542c799886d6866fcced0ff98fe334b36a4c31bef0738269"
-      },
-      {
-        "file": "models/taichung-green-dm2.glb",
-        "sha256": "01408fc3e4841077d70ca5e1de895521d1b90518756f465828b12a88527241c0"
-      },
-      {
-        "file": "models/taichung-green-dm1-far.m3dmodel",
-        "sha256": "071b65225fe9d15ff1290c989bc1ea78f019c0d38ad74e996022ecfe4a8b0da3"
-      },
-      {
-        "file": "models/taichung-green-dm1-far.glb",
-        "sha256": "e031f6083944490fe91d5519b7ff46ff0626259e20308b9fbc33c09903cc7809"
-      },
-      {
-        "file": "models/taichung-green-dm2-far.m3dmodel",
-        "sha256": "7fa3e64e32eae219d50d527ff17a7ab7d04faed950debf7d26d0e7515bcfd16a"
-      },
-      {
-        "file": "models/taichung-green-dm2-far.glb",
-        "sha256": "b2ee7f7aeaf8f025faadc6981e2cfd1e5937773b13cbc34c29bdf90337d5d56f"
-      },
-      {
-        "file": "models/taichung-green-formation.m3dscene.json",
-        "sha256": "bcd7ff2777e62938277d7ed145081ab93aaba9667210282f630ad65d85443c2d"
-      },
-      {
-        "file": "models/taichung-green-formation.glb",
-        "sha256": "3d50b8c0ae532f0b094064fc84f87e7311bc5981e2fb6ff2a868fe824716a9aa"
-      },
-      {
-        "file": "models/taichung-green-formation.triangles.bin",
-        "sha256": "caa4d9548e687fcd3b3d60f3b6b260c4298d3b9d6947aaa259855f9a0441a493"
-      },
-      {
-        "file": "models/taichung-green-formation-far.m3dscene.json",
-        "sha256": "c2e05f8f948c1b32937e7fa7e9c13df6db6a3d7b4e52fe252bc649345ae1b917"
-      },
-      {
-        "file": "models/taichung-green-formation-far.glb",
-        "sha256": "f895765379300444120d8f70b022f3f47320047c165ab11142f3d8372c479f4e"
-      },
-      {
-        "file": "models/taichung-green-formation-far.triangles.bin",
-        "sha256": "659dba0f012851e8fac842e2fb4a04f3217922e6d0f83c10f6943643fba6a7e1"
-      }
-    ]
-  },
-  "geometry": {
-    "status": "VERIFIED",
-    "models": [
-      {
-        "id": "taichung-green-dm1",
-        "balanced_edges": 5600,
-        "positive_components": 116,
-        "precision_metres": 1e-05,
-        "missing_and_reversed_face_rejected": true
-      },
-      {
-        "id": "taichung-green-dm2",
-        "balanced_edges": 5600,
-        "positive_components": 116,
-        "precision_metres": 1e-05,
-        "missing_and_reversed_face_rejected": true
-      },
-      {
-        "id": "taichung-green-dm1-far",
-        "balanced_edges": 2741,
-        "positive_components": 82,
-        "precision_metres": 1e-05,
-        "missing_and_reversed_face_rejected": true
-      },
-      {
-        "id": "taichung-green-dm2-far",
-        "balanced_edges": 2741,
-        "positive_components": 82,
-        "precision_metres": 1e-05,
-        "missing_and_reversed_face_rejected": true
-      },
-      {
-        "id": "taichung-green-formation",
-        "balanced_edges": 11192,
-        "positive_components": 230,
-        "precision_metres": 1e-05,
-        "assembly_shift_100mm_detected": true,
-        "missing_and_reversed_face_rejected": true
-      },
-      {
-        "id": "taichung-green-formation-far",
-        "balanced_edges": 5474,
-        "positive_components": 162,
-        "precision_metres": 1e-05,
-        "assembly_shift_100mm_detected": true,
-        "missing_and_reversed_face_rejected": true
-      }
-    ],
-    "limits": [
-      "GLB is checked against the shared writer; run an independent importer separately.",
-      "No vehicle-specific glass visibility, equipment support, tyre/rail or clearance proof.",
-      "No exhaustive intersections, engineering precision, appearance acceptance or device performance.",
-      "Assembly payload is a JS expansion check; independently compare a Swift formation when available."
-    ]
-  },
-  "vehicle_specific": {
-    "status": "VERIFIED",
-    "true_previous_socket_rejected": [
-      "taichung-green-dm1",
-      "taichung-green-dm2",
-      "taichung-green-dm1-far",
-      "taichung-green-dm2-far"
-    ],
-    "models": [
-      {
-        "deleted_bogie_coupler_mounts": "rejected",
-        "filled_opening_and_socket": "rejected",
-        "gangway_retraction_100mm": "rejected",
-        "id": "taichung-green-dm1",
-        "glass_exterior_faces": 92,
-        "tyres": 8,
-        "glass_burial_100mm": "rejected",
-        "wheel_lift_40mm": "rejected",
-        "equipment_lift_60mm": "rejected"
-      },
-      {
-        "deleted_bogie_coupler_mounts": "rejected",
-        "filled_opening_and_socket": "rejected",
-        "gangway_retraction_100mm": "rejected",
-        "id": "taichung-green-dm2",
-        "glass_exterior_faces": 92,
-        "tyres": 8,
-        "glass_burial_100mm": "rejected",
-        "wheel_lift_40mm": "rejected",
-        "equipment_lift_60mm": "rejected"
-      },
-      {
-        "deleted_bogie_coupler_mounts": "rejected",
-        "filled_opening_and_socket": "rejected",
-        "gangway_retraction_100mm": "rejected",
-        "id": "taichung-green-dm1-far",
-        "glass_exterior_faces": 48,
-        "tyres": 8,
-        "glass_burial_100mm": "rejected",
-        "wheel_lift_40mm": "rejected",
-        "equipment_lift_60mm": "rejected"
-      },
-      {
-        "deleted_bogie_coupler_mounts": "rejected",
-        "filled_opening_and_socket": "rejected",
-        "gangway_retraction_100mm": "rejected",
-        "id": "taichung-green-dm2-far",
-        "glass_exterior_faces": 48,
-        "tyres": 8,
-        "glass_burial_100mm": "rejected",
-        "wheel_lift_40mm": "rejected",
-        "equipment_lift_60mm": "rejected"
-      }
-    ],
-    "limits": "Exterior triangle-centroid rays; central roof contact, eight tyre envelopes. Not exhaustive collision/engineering accuracy/appearance acceptance."
-  },
-  "independent_glb": {
-    "importer": "4.3.2",
-    "status": "VERIFIED",
-    "models": [
-      {
-        "id": "taichung-green-dm1",
-        "triangles": 3828,
-        "minimum": [
-          -11.085000038146973,
-          -1.4900000095367432,
-          0.0
-        ],
-        "maximum": [
-          11.085000038146973,
-          1.4900000095367432,
-          3.7800002098083496
-        ],
-        "vertex_colors": true
-      },
-      {
-        "id": "taichung-green-dm2",
-        "triangles": 3828,
-        "minimum": [
-          -11.085000038146973,
-          -1.4900000095367432,
-          0.0
-        ],
-        "maximum": [
-          11.085000038146973,
-          1.4900000095367432,
-          3.7800002098083496
-        ],
-        "vertex_colors": true
-      },
-      {
-        "id": "taichung-green-dm1-far",
-        "triangles": 1848,
-        "minimum": [
-          -11.085000038146973,
-          -1.4900000095367432,
-          0.0
-        ],
-        "maximum": [
-          11.085000038146973,
-          1.4900000095367432,
-          3.7800002098083496
-        ],
-        "vertex_colors": true
-      },
-      {
-        "id": "taichung-green-dm2-far",
-        "triangles": 1848,
-        "minimum": [
-          -11.085000038146973,
-          -1.4900000095367432,
-          0.0
-        ],
-        "maximum": [
-          11.085000038146973,
-          1.4900000095367432,
-          3.7800002098083496
-        ],
-        "vertex_colors": true
-      },
-      {
-        "id": "taichung-green-formation",
-        "triangles": 7656,
-        "minimum": [
-          -22.170000076293945,
-          -1.4900000095367432,
-          0.0
-        ],
-        "maximum": [
-          22.170000076293945,
-          1.4900000095367432,
-          3.7800002098083496
-        ],
-        "vertex_colors": true
-      },
-      {
-        "id": "taichung-green-formation-far",
-        "triangles": 3696,
-        "minimum": [
-          -22.170000076293945,
-          -1.4900000095367432,
-          0.0
-        ],
-        "maximum": [
-          22.170000076293945,
-          1.4900000095367432,
-          3.7800002098083496
-        ],
-        "vertex_colors": true
-      }
-    ]
-  },
-  "comparison": {
-    "previous_producer": "e525a29aa141f46162662e361037f4901d8ec77a",
-    "previous_assets": "61084334187422a4383e05e058fa4afc8d1073f8",
-    "same_native_bounds": true,
-    "same_renderer_camera_and_canvas": true,
-    "engineering_accuracy": false
   },
   "status": {
     "asset": {
       "status": "VERIFIED",
-      "evidence": "Six native/GLB model audits, car-specific actual glass/tyre/roof/mount/opening/gangway fault examples, true revision2 rejected by new coupler probe, Blender4.3.2, independent Swift formation, RGBA full decode, matched-camera true previous images, fourteen independent producer rebuild files byte-identical, 684 other payloads byte-identical, strict Swift6.4/tests; final viewer SHA report in public verification."
+      "evidence": "Six native/GLB topology audits, vehicle-specific geometry and front-paint visible-material/fault probes, actual revision3 paint rejection and triangle/body-colour protection, Blender4.3.2, independent Swift formation, 170 PNG full decodes, 14 files independently rebuilt byte-identical, 684 other payloads/FNV preserved, Swift6.4 warnings-as-errors and 12 related tests. Final delivered viewer download SHA in public verification."
     },
     "appearance": {
       "status": "UNVERIFIED",
-      "evidence": "User has not accepted revision3. Mask curvature/skirt remain low-poly; hidden equipment stations and exact engineering shapes remain approximate.",
+      "evidence": "User rejected revision3 front paint. Revision4 is not accepted. Soft real green-to-navy transition simplified to solid palette boundaries; engineering fittings remain estimates.",
       "accepted_producer": null
     },
     "integration": {
@@ -361,7 +85,7 @@
     }
   },
   "independent_Swift_formation": {
-    "vertices": 34056,
+    "vertices": 42072,
     "maximum_position_error_m": 1.6763806e-06,
     "all_colours_equal": true
   },
@@ -370,92 +94,92 @@
       {
         "id": "taichung-green-dm1",
         "kind": "native",
-        "sha256": "fa2be478d19f23d8733c5e7d1a4f4c0ed666221a524ce0af9730e6a4a96d56f6"
+        "sha256": "0ddd59ec8deb88973198ed08ab4077d24fc3a67ae0052dd0b4cfd94e745e8602"
       },
       {
         "id": "taichung-green-dm1",
         "kind": "glb",
-        "sha256": "a8a97a7385aa083de96836139272f74338226c567d44962411602b3918360db0"
+        "sha256": "9d29a3d13f1386cbfbd5fa3a77cf860f210115ef5506d04a0ef8a7cbc7ed24b8"
       },
       {
         "id": "taichung-green-dm1",
         "kind": "png",
-        "sha256": "e002e032fa36d96e87cf7f3d38ea897da5bbf13a3e19af8786b591c641e90a69"
+        "sha256": "0564f7463bb91bdad9b9d302dab077760b75a07c9ad81a6e2a54bc1e135a5987"
       },
       {
         "id": "taichung-green-dm2",
         "kind": "native",
-        "sha256": "aa4a4ac618dbe580542c799886d6866fcced0ff98fe334b36a4c31bef0738269"
+        "sha256": "a04c6de70aaadc2e879ff51875b4f280f75e5915d460fde30e540a546e10d0f9"
       },
       {
         "id": "taichung-green-dm2",
         "kind": "glb",
-        "sha256": "01408fc3e4841077d70ca5e1de895521d1b90518756f465828b12a88527241c0"
+        "sha256": "8fa552a2c1d353a2441c4ebd88def3de06c7610593f78ebc4db23703cab983ac"
       },
       {
         "id": "taichung-green-dm2",
         "kind": "png",
-        "sha256": "ac94444005e1d446614fb2c7948210ca002dee7180d41cddf9aace10269550ce"
+        "sha256": "af95db04ee11e3603b3af18f6221f41e5d4e1a8665e2aaad88d67db809568f1f"
       },
       {
         "id": "taichung-green-dm1-far",
         "kind": "native",
-        "sha256": "071b65225fe9d15ff1290c989bc1ea78f019c0d38ad74e996022ecfe4a8b0da3"
+        "sha256": "b03cb329abd071a5092023556ca55fd61fc0d1000a6067e2f53f3e791244c265"
       },
       {
         "id": "taichung-green-dm1-far",
         "kind": "glb",
-        "sha256": "e031f6083944490fe91d5519b7ff46ff0626259e20308b9fbc33c09903cc7809"
+        "sha256": "8d0475309cbaab9344ba7ca2c61dc2d5a37daef432308d8e68eb4a5099c821f9"
       },
       {
         "id": "taichung-green-dm1-far",
         "kind": "png",
-        "sha256": "66ad346c56db8ee404b6943890a62245d421109edd8e0ca95db45bf05ce1f922"
+        "sha256": "acbd32da8ce3d18176e62e6dafe60774dcb2329b890b8e44877d0ff27a177e51"
       },
       {
         "id": "taichung-green-dm2-far",
         "kind": "native",
-        "sha256": "7fa3e64e32eae219d50d527ff17a7ab7d04faed950debf7d26d0e7515bcfd16a"
+        "sha256": "9b27075222da295fb918da3cf7a57d810b7416d1adad70a95516f901bfdaeb58"
       },
       {
         "id": "taichung-green-dm2-far",
         "kind": "glb",
-        "sha256": "b2ee7f7aeaf8f025faadc6981e2cfd1e5937773b13cbc34c29bdf90337d5d56f"
+        "sha256": "5adc9d712aaf6f2d9aa4e2adcf9881e68f9a0d90d17385606186b10fe12f3096"
       },
       {
         "id": "taichung-green-dm2-far",
         "kind": "png",
-        "sha256": "c82102ef5bec0e8061d86e63dbd3d81626dfc4146c5d9980111b69a2843a016c"
+        "sha256": "e09fb3a7f9dafc0a937a2813ab5833d1910f0ed8d66a2f1443ef6289dc9f8a6f"
       },
       {
         "id": "taichung-green-formation",
         "kind": "native",
-        "sha256": "bcd7ff2777e62938277d7ed145081ab93aaba9667210282f630ad65d85443c2d"
+        "sha256": "deab18f8e46b7daf8b76919355401fd534e825729861f619b4c5619cf7da061f"
       },
       {
         "id": "taichung-green-formation",
         "kind": "glb",
-        "sha256": "3d50b8c0ae532f0b094064fc84f87e7311bc5981e2fb6ff2a868fe824716a9aa"
+        "sha256": "a69524184eb0e32a603fd0bce219321526b556a93c0e78e16c1842c3ead1d283"
       },
       {
         "id": "taichung-green-formation",
         "kind": "png",
-        "sha256": "6e07eb3aed5cbbbeaab5c978c8fbc57d7a19b6c8b1077df830e91e76e5a0a803"
+        "sha256": "be6b17b0a162945e989d9aae41f0fcc679e400e954cc7dfa9bb0a2b27dfb7832"
       },
       {
         "id": "taichung-green-formation-far",
         "kind": "native",
-        "sha256": "c2e05f8f948c1b32937e7fa7e9c13df6db6a3d7b4e52fe252bc649345ae1b917"
+        "sha256": "10f98bbdd062455148057a9f6ddc4195832cb62144b3db4a2efd32ba82918769"
       },
       {
         "id": "taichung-green-formation-far",
         "kind": "glb",
-        "sha256": "f895765379300444120d8f70b022f3f47320047c165ab11142f3d8372c479f4e"
+        "sha256": "6120c0223f1e99e6805313fb608c7edf6fd6288ccb7be1e3600485f2c994a74f"
       },
       {
         "id": "taichung-green-formation-far",
         "kind": "png",
-        "sha256": "a8a63e51bc8771f01368646e28d0ce4f9761b9b64c6952a17104d0187ded59a4"
+        "sha256": "40c6e92e3eed3e36483fe1f1036a4b097b1fed6e663b37d9831a1b885d29d901"
       }
     ],
     "status": "VERIFIED",
@@ -515,5 +239,319 @@
     "limits": [
       "Browser WebGL only; no device Metal, animation or appearance acceptance."
     ]
+  },
+  "device": "UNVERIFIED",
+  "remote_CI": "Read actual checks of final draft PR head; local checks do not assert remote CI green.",
+  "producer_rebuild": {
+    "status": "VERIFIED",
+    "producer": "498d85ef234a00345b4b024c4aa0e6783d73b933",
+    "independent_checkout": true,
+    "files": [
+      {
+        "file": "models/taichung-green-dm1-far.glb",
+        "sha256": "8d0475309cbaab9344ba7ca2c61dc2d5a37daef432308d8e68eb4a5099c821f9"
+      },
+      {
+        "file": "models/taichung-green-dm1-far.m3dmodel",
+        "sha256": "b03cb329abd071a5092023556ca55fd61fc0d1000a6067e2f53f3e791244c265"
+      },
+      {
+        "file": "models/taichung-green-dm1.glb",
+        "sha256": "9d29a3d13f1386cbfbd5fa3a77cf860f210115ef5506d04a0ef8a7cbc7ed24b8"
+      },
+      {
+        "file": "models/taichung-green-dm1.m3dmodel",
+        "sha256": "0ddd59ec8deb88973198ed08ab4077d24fc3a67ae0052dd0b4cfd94e745e8602"
+      },
+      {
+        "file": "models/taichung-green-dm2-far.glb",
+        "sha256": "5adc9d712aaf6f2d9aa4e2adcf9881e68f9a0d90d17385606186b10fe12f3096"
+      },
+      {
+        "file": "models/taichung-green-dm2-far.m3dmodel",
+        "sha256": "9b27075222da295fb918da3cf7a57d810b7416d1adad70a95516f901bfdaeb58"
+      },
+      {
+        "file": "models/taichung-green-dm2.glb",
+        "sha256": "8fa552a2c1d353a2441c4ebd88def3de06c7610593f78ebc4db23703cab983ac"
+      },
+      {
+        "file": "models/taichung-green-dm2.m3dmodel",
+        "sha256": "a04c6de70aaadc2e879ff51875b4f280f75e5915d460fde30e540a546e10d0f9"
+      },
+      {
+        "file": "models/taichung-green-formation-far.glb",
+        "sha256": "6120c0223f1e99e6805313fb608c7edf6fd6288ccb7be1e3600485f2c994a74f"
+      },
+      {
+        "file": "models/taichung-green-formation-far.m3dscene.json",
+        "sha256": "10f98bbdd062455148057a9f6ddc4195832cb62144b3db4a2efd32ba82918769"
+      },
+      {
+        "file": "models/taichung-green-formation-far.triangles.bin",
+        "sha256": "8cc82b08d149f32f705ea3707416386e20e07b4512cf50f13340b9ccd2f2a7d5"
+      },
+      {
+        "file": "models/taichung-green-formation.glb",
+        "sha256": "a69524184eb0e32a603fd0bce219321526b556a93c0e78e16c1842c3ead1d283"
+      },
+      {
+        "file": "models/taichung-green-formation.m3dscene.json",
+        "sha256": "deab18f8e46b7daf8b76919355401fd534e825729861f619b4c5619cf7da061f"
+      },
+      {
+        "file": "models/taichung-green-formation.triangles.bin",
+        "sha256": "9ab11e521c59eb750989e6448cfd310f526b1d08e43858c20985e5e6ff2f179d"
+      }
+    ]
+  },
+  "geometry": {
+    "status": "VERIFIED",
+    "models": [
+      {
+        "id": "taichung-green-dm1",
+        "balanced_edges": 6840,
+        "positive_components": 114,
+        "precision_metres": 1e-05,
+        "missing_and_reversed_face_rejected": true
+      },
+      {
+        "id": "taichung-green-dm2",
+        "balanced_edges": 6840,
+        "positive_components": 114,
+        "precision_metres": 1e-05,
+        "missing_and_reversed_face_rejected": true
+      },
+      {
+        "id": "taichung-green-dm1-far",
+        "balanced_edges": 3209,
+        "positive_components": 82,
+        "precision_metres": 1e-05,
+        "missing_and_reversed_face_rejected": true
+      },
+      {
+        "id": "taichung-green-dm2-far",
+        "balanced_edges": 3209,
+        "positive_components": 82,
+        "precision_metres": 1e-05,
+        "missing_and_reversed_face_rejected": true
+      },
+      {
+        "id": "taichung-green-formation",
+        "balanced_edges": 13672,
+        "positive_components": 226,
+        "precision_metres": 1e-05,
+        "assembly_shift_100mm_detected": true,
+        "missing_and_reversed_face_rejected": true
+      },
+      {
+        "id": "taichung-green-formation-far",
+        "balanced_edges": 6410,
+        "positive_components": 162,
+        "precision_metres": 1e-05,
+        "assembly_shift_100mm_detected": true,
+        "missing_and_reversed_face_rejected": true
+      }
+    ],
+    "limits": [
+      "GLB is checked against the shared writer; run an independent importer separately.",
+      "No vehicle-specific glass visibility, equipment support, tyre/rail or clearance proof.",
+      "No exhaustive intersections, engineering precision, appearance acceptance or device performance.",
+      "Assembly payload is a JS expansion check; independently compare a Swift formation when available."
+    ]
+  },
+  "vehicle_specific": {
+    "status": "VERIFIED",
+    "protected_previous_triangles": [
+      {
+        "id": "taichung-green-dm1",
+        "unchanged_geometry_triangles_outside_paint_envelope": 2706,
+        "body_colours_behind_cab_unchanged": true,
+        "note": "Adjacent cab baked occlusion can change with added paint panels."
+      },
+      {
+        "id": "taichung-green-dm2",
+        "unchanged_geometry_triangles_outside_paint_envelope": 2706,
+        "body_colours_behind_cab_unchanged": true,
+        "note": "Adjacent cab baked occlusion can change with added paint panels."
+      },
+      {
+        "id": "taichung-green-dm1-far",
+        "unchanged_geometry_triangles_outside_paint_envelope": 1359,
+        "body_colours_behind_cab_unchanged": true,
+        "note": "Adjacent cab baked occlusion can change with added paint panels."
+      },
+      {
+        "id": "taichung-green-dm2-far",
+        "unchanged_geometry_triangles_outside_paint_envelope": 1359,
+        "body_colours_behind_cab_unchanged": true,
+        "note": "Adjacent cab baked occlusion can change with added paint panels."
+      }
+    ],
+    "true_previous_paint_rejected": [
+      "taichung-green-dm1",
+      "taichung-green-dm2",
+      "taichung-green-dm1-far",
+      "taichung-green-dm2-far"
+    ],
+    "true_previous_socket_rejected": [],
+    "models": [
+      {
+        "white_cheek_repaint": "rejected",
+        "front_paint_first_visible_material": "VERIFIED",
+        "deleted_bogie_coupler_mounts": "rejected",
+        "filled_opening_and_socket": "rejected",
+        "gangway_retraction_100mm": "rejected",
+        "id": "taichung-green-dm1",
+        "glass_exterior_faces": 92,
+        "tyres": 8,
+        "glass_burial_100mm": "rejected",
+        "wheel_lift_40mm": "rejected",
+        "equipment_lift_60mm": "rejected"
+      },
+      {
+        "white_cheek_repaint": "rejected",
+        "front_paint_first_visible_material": "VERIFIED",
+        "deleted_bogie_coupler_mounts": "rejected",
+        "filled_opening_and_socket": "rejected",
+        "gangway_retraction_100mm": "rejected",
+        "id": "taichung-green-dm2",
+        "glass_exterior_faces": 92,
+        "tyres": 8,
+        "glass_burial_100mm": "rejected",
+        "wheel_lift_40mm": "rejected",
+        "equipment_lift_60mm": "rejected"
+      },
+      {
+        "white_cheek_repaint": "rejected",
+        "front_paint_first_visible_material": "VERIFIED",
+        "deleted_bogie_coupler_mounts": "rejected",
+        "filled_opening_and_socket": "rejected",
+        "gangway_retraction_100mm": "rejected",
+        "id": "taichung-green-dm1-far",
+        "glass_exterior_faces": 48,
+        "tyres": 8,
+        "glass_burial_100mm": "rejected",
+        "wheel_lift_40mm": "rejected",
+        "equipment_lift_60mm": "rejected"
+      },
+      {
+        "white_cheek_repaint": "rejected",
+        "front_paint_first_visible_material": "VERIFIED",
+        "deleted_bogie_coupler_mounts": "rejected",
+        "filled_opening_and_socket": "rejected",
+        "gangway_retraction_100mm": "rejected",
+        "id": "taichung-green-dm2-far",
+        "glass_exterior_faces": 48,
+        "tyres": 8,
+        "glass_burial_100mm": "rejected",
+        "wheel_lift_40mm": "rejected",
+        "equipment_lift_60mm": "rejected"
+      }
+    ],
+    "limits": "Exterior triangle-centroid rays; central roof contact, eight tyre envelopes; sampled visible paint. Not exhaustive collision/engineering accuracy/appearance acceptance."
+  },
+  "independent_glb": {
+    "importer": "4.3.2",
+    "status": "VERIFIED",
+    "models": [
+      {
+        "id": "taichung-green-dm1",
+        "triangles": 4804,
+        "minimum": [
+          -11.085000038146973,
+          -1.4900000095367432,
+          0.0
+        ],
+        "maximum": [
+          11.085000038146973,
+          1.4900000095367432,
+          3.7800002098083496
+        ],
+        "vertex_colors": true
+      },
+      {
+        "id": "taichung-green-dm2",
+        "triangles": 4804,
+        "minimum": [
+          -11.085000038146973,
+          -1.4900000095367432,
+          0.0
+        ],
+        "maximum": [
+          11.085000038146973,
+          1.4900000095367432,
+          3.7800002098083496
+        ],
+        "vertex_colors": true
+      },
+      {
+        "id": "taichung-green-dm1-far",
+        "triangles": 2208,
+        "minimum": [
+          -11.085000038146973,
+          -1.4900000095367432,
+          0.0
+        ],
+        "maximum": [
+          11.085000038146973,
+          1.4900000095367432,
+          3.7800002098083496
+        ],
+        "vertex_colors": true
+      },
+      {
+        "id": "taichung-green-dm2-far",
+        "triangles": 2208,
+        "minimum": [
+          -11.085000038146973,
+          -1.4900000095367432,
+          0.0
+        ],
+        "maximum": [
+          11.085000038146973,
+          1.4900000095367432,
+          3.7800002098083496
+        ],
+        "vertex_colors": true
+      },
+      {
+        "id": "taichung-green-formation",
+        "triangles": 9608,
+        "minimum": [
+          -22.170000076293945,
+          -1.4900000095367432,
+          0.0
+        ],
+        "maximum": [
+          22.170000076293945,
+          1.4900000095367432,
+          3.7800002098083496
+        ],
+        "vertex_colors": true
+      },
+      {
+        "id": "taichung-green-formation-far",
+        "triangles": 4416,
+        "minimum": [
+          -22.170000076293945,
+          -1.4900000095367432,
+          0.0
+        ],
+        "maximum": [
+          22.170000076293945,
+          1.4900000095367432,
+          3.7800002098083496
+        ],
+        "vertex_colors": true
+      }
+    ]
+  },
+  "comparison": {
+    "previous_producer": "0b6d26dfac46e702550fc5e9d1afc7a7bc9af339",
+    "previous_assets": "1adbab9f0f03ca7636abfc3ea5b7f0118e156fca",
+    "same_native_bounds": true,
+    "same_renderer_camera_and_canvas": true,
+    "engineering_accuracy": false
   }
 }

@@ -2308,3 +2308,9 @@ EMU900第二版（#1338／draft#1339↔私庫#102）：使用者要求修圓車�
 ### 台中綠線第三版（Codex，使用者重貼四張實車照重新核對）
 
 前#1430已合，因此從最新main12e4590a開codex/taichung-green-shape-2026-10-28。撤回前版將車頭／綠帶／裙部偏差只列為細節簡化的寬鬆自評；已重修圓罩／風擋、連續遊戲綠帶、弧形下裙／凹孔及實體枕座／吊座。producer0b6d26df，真前版e525a29a／素材61084334；私draft#21新revision-3，同PR刪第二輪重檔、留PNG／README／來源。近3828／遠1848各單元，兩車7656／3696。684其他原生逐bytes與main相同，本型14成品獨立producer重建一致；新開口／凹孔／刪支承probe與真前版反例均已跑。本型[交接／來源／重建與證據](art/taichung-green/README.md)為入口；公開新draft及最新head CI看#1041。只studies、tmrt映射不變，外觀接受／營運接入／Simulator及真機仍UNVERIFIED；不合併／auto-merge／TestFlight。最新main繼承的28舊鎖差異不擅改，仍明列全包驗收限制。
+
+### 台中綠線第四版（Codex，正面塗裝回饋）
+
+使用者指出第三版正面塗裝奇怪，重看官方與Blair原圖確認少了接肩部／燈座的深色兩頰；第四版只補正面分色、上肩綠色與相接肩帶，保留車殼／玻璃／燈／設備。producer `498d85ef`，真前版`0b6d26df`／素材`1adbab9f`；新素材`e9c8de91`的revision-4與原公開draft[#1437](https://github.com/a91453/railway-game-ios/pull/1437)↔素材draft[#21](https://github.com/a91453/railway-assets-private/pull/21)互鏈。第三輪重檔同PR刪除，保留PNG／README／來源／授權。近4804／遠2208、兩車9608／4416；20私庫PNG＋1公開小總覽，asset_guard通過，PR新增13.3MB。
+
+本機Swift6.4 warnings-as-errors與最終12測試通過；前臉第一可見材質／實際塗白故障反例拒收、真第三版四單元拒收，逐三角驗分色包絡外幾何與車頭後方頂點色保持（相鄰車頭烘焙遮蔽可變）。既有六模型幾何／玻璃／八輪／支承反例、Blender、Swift42072頂點編組、170PNG與六下載PNG完整解碼、最終七向配色白模剪影目視、viewer18下載SHA通過；14檔獨立producer重建bytes相同，684其他原生與FNV保持。本型四鎖正確，分支繼承28他車舊鎖差異不擅改。詳見[交接／來源／重建／驗證](art/taichung-green/README.md)；最終CI見本輪PR checks及#1041。真實綠藍柔和過渡簡化成乾淨色塊，第四版外觀接受／營運接入／Simulator與真機Metal效能動畫仍UNVERIFIED。仍studies、tmrt映射不動，不合併／auto-merge／TestFlight。
