@@ -53,3 +53,13 @@ test('GLB packaging, closure, mutations and assembly payload all checked on fina
   const vertices=unit(tetra()).vertices;assert.throws(()=>topology(vertices.slice(3)));
   assert.throws(()=>topology([vertices[1],vertices[0],vertices[2],...vertices.slice(3)]));
 });
+test('pack hash check skips formation scenes while still rejecting changed units', t => {
+  const root=fixture(t), path=join(root,'manifest.json'), manifest=JSON.parse(readFileSync(path));
+  manifest.models[0].hash='fixture-hash';writeFileSync(path,JSON.stringify(manifest));assemble(root,spec);
+  const lock=join(root,'lock.json');writeFileSync(lock,JSON.stringify({models:{a:{triangles:4,hash:'fixture-hash'}}}));
+  const script=new URL('./check.mjs',import.meta.url).pathname;
+  const output=execFileSync(process.execPath,[script,root,'--lock',lock],{encoding:'utf8'});
+  assert(!output.includes('hash undefined'));assert(output.includes('1 hashes compared'));
+  const changed=JSON.parse(readFileSync(path));changed.models[0].hash='changed';writeFileSync(path,JSON.stringify(changed));
+  assert.throws(()=>execFileSync(process.execPath,[script,root,'--lock',lock],{stdio:'pipe'}));
+});
