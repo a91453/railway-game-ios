@@ -902,6 +902,7 @@ private struct ViewingReadout: View {
                     if let hint = session.speedLagHint {
                         SpeedLagHintCard(session: session, hint: hint, language: language)
                             .presentationCompactAdaptation(.popover)
+                            .onAppear { session.noteSpeedLagHintSeen() }
                     } else {
                         Text(verbatim: viewing.lagText(in: language) ?? viewing.actualText(in: language) ?? "")
                             .font(.subheadline)
