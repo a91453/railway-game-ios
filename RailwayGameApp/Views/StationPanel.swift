@@ -1,3 +1,4 @@
+import Charts
 import GameCore
 import GamePresentation
 import SwiftUI
@@ -54,48 +55,31 @@ struct StationPanel: View {
     @State private var choosingDestination = false
     @State private var destinationSearch = ListSearch()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Decision 472: the groups folded by their headings, kept for the next
+    /// station and the next launch (``StationPanelFolds``).
+    @AppStorage("stationPanelFolded") private var foldedGroups = ""
+
+    private var folds: StationPanelFolds {
+        StationPanelFolds(stored: foldedGroups)
+    }
 
     var body: some View {
         NavigationStack {
             ScrollViewReader { proxy in
             Form {
                 if let station = session.selectedStation {
-                    // Decision 336: a real line on sale through here, above
-                    // everything else.
-                    buyLineSection(station)
-                    // Decision 224: the platforms and the weather, first.
-                    StationOperationsSection(session: session, station: station.id)
-                    // Decision 222: the station's shops.
-                    StationCommerceSection(session: session, station: station.id)
-                    departureBoardSection(station)
-                    journeySection(station)
-                    Section {
-                        Button {
-                            renaming = station.name
-                        } label: {
-                            Label {
-                                Text(verbatim: session.language.text("Rename Station", "車站更名"))
-                            } icon: {
-                                Image(systemName: "pencil")
+                    // Decision 472 (UI health check N): the sections in
+                    // four groups, the everyday ones first, each folded by
+                    // its heading and reached from the buttons on top.
+                    groupJumpSection(proxy)
+                    ForEach(StationPanelGroup.allCases) { group in
+                        groupHeader(group)
+                        if !folds.isFolded(group) {
+                            ForEach(group.parts, id: \.self) { part in
+                                self.part(part, of: station)
                             }
                         }
-                        .accessibilityIdentifier("station.rename")
                     }
-                    operationSection(station)
-                    depotSection
-                    transferSection(station)
-                    platformsSection(station)
-                    realStationSection(station)
-                    catchmentPopulationSection(station)
-                    landSection(station)
-                    roadSection(station)
-                    busSection(station)
-                    demandSection(station)
-                    eventsSection(station)
-                    ridershipSections(station)
-                    passengersSection(station)
-                    freightSection(station)
-                    removalSection(station)
                 } else {
                     Section {
                         Text("Select a station on the map, or choose one above.")
@@ -108,6 +92,11 @@ struct StationPanel: View {
             // freight yard, last in the form) is scrolled into view.
             .onChange(of: RevealKey(step: session.tutorial?.step.id, target: session.tutorial?.step.revealsInPanel, station: session.selectedStationID), initial: true) { _, key in
                 guard let target = key.target else { return }
+                if let group = StationPanelGroup.holding(target), folds.isFolded(group) {
+                    var unfolded = folds
+                    unfolded.unfold(group)
+                    foldedGroups = unfolded.stored
+                }
                 Task { @MainActor in
                     await Task.yield()
                     withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) { proxy.scrollTo(target, anchor: .center) }
@@ -159,6 +148,157 @@ struct StationPanel: View {
         let step: String?
         let target: TutorialTarget?
         let station: StationID?
+    }
+
+    // MARK: - Groups (decision 472)
+
+    /// The section `part` of the panel, for `station`.
+    @ViewBuilder
+    private func part(_ part: StationPanelPart, of station: Station) -> some View {
+        switch part {
+        // Decision 336: a real line on sale through here, above everything else.
+        case .buyLine: buyLineSection(station)
+        // Decision 224: the platforms and the weather, first.
+        case .operations: StationOperationsSection(session: session, station: station.id)
+        case .departureBoard: departureBoardSection(station)
+        case .journey: journeySection(station)
+        case .rename: renameSection(station)
+        case .operationMode: operationSection(station)
+        case .depot: depotSection
+        case .transfer: transferSection(station)
+        case .platforms: platformsSection(station)
+        case .tripsByHour: tripsByHourSection(station)
+        case .passengers: passengersSection(station)
+        case .demand: demandSection(station)
+        case .events: eventsSection(station)
+        case .tripsByStation: tripsByStationSection(station)
+        // Decision 222: the station's shops.
+        case .commerce: StationCommerceSection(session: session, station: station.id)
+        case .realStation: realStationSection(station)
+        case .catchment: catchmentPopulationSection(station)
+        case .land: landSection(station)
+        case .road: roadSection(station)
+        case .bus: busSection(station)
+        case .freight: freightSection(station)
+        case .removal: removalSection(station)
+        }
+    }
+
+    /// A button a group, on top of the panel: it unfolds the group and
+    /// scrolls to its heading. Four in a row, or a menu when they do not
+    /// fit (a phone at the larger text sizes).
+    private func groupJumpSection(_ proxy: ScrollViewProxy) -> some View {
+        let language = session.language
+        return Section {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 6) {
+                    ForEach(StationPanelGroup.allCases) { group in
+                        Button {
+                            jump(to: group, proxy)
+                        } label: {
+                            VStack(spacing: 2) {
+                                Image(systemName: group.systemImage)
+                                    .font(.body.weight(.semibold))
+                                Text(verbatim: group.title(in: language))
+                                    .font(.caption2)
+                                    .lineLimit(1)
+                                    .fixedSize()
+                            }
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                        }
+                        .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
+                        .accessibilityLabel(Text(verbatim: language.text("Go to \(group.title(in: language))", "跳到\(group.title(in: language))")))
+                        .accessibilityIdentifier("station.jump.\(group.rawValue)")
+                    }
+                }
+                Menu {
+                    ForEach(StationPanelGroup.allCases) { group in
+                        Button {
+                            jump(to: group, proxy)
+                        } label: {
+                            Label {
+                                Text(verbatim: group.title(in: language))
+                            } icon: {
+                                Image(systemName: group.systemImage)
+                            }
+                        }
+                    }
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("Go to…", "跳到…"))
+                    } icon: {
+                        Image(systemName: "list.bullet")
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                }
+                .accessibilityIdentifier("station.jump")
+            }
+        }
+    }
+
+    /// A group's heading: its name, and a chevron that folds or unfolds it.
+    private func groupHeader(_ group: StationPanelGroup) -> some View {
+        let language = session.language
+        let folded = folds.isFolded(group)
+        return Section {
+            Button {
+                var changed = folds
+                changed.toggle(group)
+                withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) {
+                    foldedGroups = changed.stored
+                }
+            } label: {
+                HStack {
+                    Label {
+                        Text(verbatim: group.title(in: language))
+                    } icon: {
+                        Image(systemName: group.systemImage)
+                            .foregroundStyle(Theme.primary)
+                    }
+                    .font(.headline)
+                    .foregroundStyle(Theme.textPrimary)
+                    Spacer(minLength: 8)
+                    Image(systemName: "chevron.down")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Theme.textSecondary)
+                        .rotationEffect(.degrees(folded ? -90 : 0))
+                        .accessibilityHidden(true)
+                }
+                .contentShape(Rectangle())
+            }
+            .accessibilityAddTraits(.isHeader)
+            .accessibilityValue(Text(verbatim: folded ? language.text("Folded", "已收合") : language.text("Unfolded", "已展開")))
+            .accessibilityHint(Text(verbatim: folded ? language.text("Shows its sections.", "顯示這一組。") : language.text("Hides its sections.", "收起這一組。")))
+            .accessibilityIdentifier("station.group.\(group.rawValue)")
+            .listRowBackground(Color.clear)
+            .id(group)
+        }
+    }
+
+    /// Unfolds `group` and scrolls to its heading.
+    private func jump(to group: StationPanelGroup, _ proxy: ScrollViewProxy) {
+        var changed = folds
+        changed.unfold(group)
+        foldedGroups = changed.stored
+        Task { @MainActor in
+            await Task.yield()
+            withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) { proxy.scrollTo(group, anchor: .top) }
+        }
+    }
+
+    private func renameSection(_ station: Station) -> some View {
+        Section {
+            Button {
+                renaming = station.name
+            } label: {
+                Label {
+                    Text(verbatim: session.language.text("Rename Station", "車站更名"))
+                } icon: {
+                    Image(systemName: "pencil")
+                }
+            }
+            .accessibilityIdentifier("station.rename")
+        }
     }
 
     /// Puts up the rename alert when the station tag's pencil opened the
@@ -1288,8 +1428,8 @@ struct StationPanel: View {
     private func flowSection(_ flow: StationFlow) -> some View {
         let now = session.world.clock.now.minuteOfDay / 60
         return Section {
-            HourlyBarChart(title: "Entries", hours: flow.entries, now: now, language: session.language)
-            HourlyBarChart(title: "Exits", hours: flow.exits, now: now, language: session.language)
+            HourlyBarChart(title: "Entries", spec: flow.chart(.entries, in: session.language), hours: flow.entries, now: now, language: session.language)
+            HourlyBarChart(title: "Exits", spec: flow.chart(.exits, in: session.language), hours: flow.exits, now: now, language: session.language)
         } header: {
             Text("Trips by hour")
         } footer: {
@@ -1301,15 +1441,14 @@ struct StationPanel: View {
 
     // MARK: - Read-only
 
-    /// The trips by hour and by station, once worked out for this station;
-    /// the last ones while they are worked out again.
+    /// The trips by hour, once worked out for this station; the last ones
+    /// while they are worked out again.
     @ViewBuilder
-    private func ridershipSections(_ station: Station) -> some View {
+    private func tripsByHourSection(_ station: Station) -> some View {
         if let ridership, ridership.key.station == station.id {
             if let flow = ridership.value.flow {
                 flowSection(flow)
             }
-            pairsSection(ridership.value.pairs, modeShift: ridership.modeShift)
         } else {
             Section {
                 HStack(spacing: 8) {
@@ -1320,8 +1459,16 @@ struct StationPanel: View {
                 }
                 .accessibilityElement(children: .combine)
             } header: {
-                Text("Trips a day by station")
+                Text("Trips by hour")
             }
+        }
+    }
+
+    /// The trips to and from each other station, once worked out.
+    @ViewBuilder
+    private func tripsByStationSection(_ station: Station) -> some View {
+        if let ridership, ridership.key.station == station.id {
+            pairsSection(ridership.value.pairs, modeShift: ridership.modeShift)
         }
     }
 
@@ -1411,86 +1558,77 @@ private struct RidershipKey: Equatable {
 
 /// One single-series chart of trips by hour of the day, after the
 /// reference's canvas (`drawStationFlowAdjustCanvas`): a bar an hour from
-/// one baseline, the current hour in the accent colour and the rest muted.
-/// Tapping a bar, or swiping up and down with VoiceOver, reads that hour
-/// instead; the text below always says the day's total, the busiest hour
-/// and the hour shown, so nothing depends on colour alone.
+/// one baseline, the hour shown at full strength and the rest muted.
+/// Decision 472: drawn with Swift Charts in the finance charts' blue, with
+/// the rush hours named under it and the bars as VoiceOver's audio graph.
+/// Touching a bar, or swiping up and down with VoiceOver, reads that hour
+/// instead; the text below always says the day's total, the busiest hour,
+/// the rush and the hour shown, so nothing depends on colour alone.
 private struct HourlyBarChart: View {
     let title: LocalizedStringKey
+    let spec: ChartSpec
     let hours: [Int64]
     let now: Int
     let language: DisplayLanguage
-    @State private var picked: Int?
+    @State private var picked: String?
 
-    private static let height: CGFloat = 64
+    /// Not a literal: a literal here would be a string to translate.
+    private static let hourAxis = "Hour"
+    /// Grows with the text size, with the axis labels under it.
+    @ScaledMetric(relativeTo: .caption) private var chartHeight: CGFloat = 96
 
     var body: some View {
-        let shown = picked ?? now
+        let shown = picked.flatMap { spec.xLabels.firstIndex(of: $0) } ?? now
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.subheadline.weight(.semibold))
-            bars(highlighting: shown)
-            axis
+            Chart {
+                ForEach(0..<24, id: \.self) { hour in
+                    BarMark(x: .value(Self.hourAxis, spec.xLabels[hour]), y: .value(spec.title, hours[hour]))
+                        .foregroundStyle(Theme.chartBlue.opacity(hour == shown ? 1 : 0.45))
+                }
+            }
+            .chartXSelection(value: $picked)
+            .chartXAxis {
+                AxisMarks(values: [0, 6, 12, 18].map { spec.xLabels[$0] }) { _ in
+                    AxisValueLabel().foregroundStyle(Theme.textSecondary)
+                }
+            }
+            .chartYAxis {
+                AxisMarks(position: .leading) { value in
+                    AxisGridLine().foregroundStyle(Theme.panelBorder)
+                    AxisValueLabel {
+                        if let number = value.as(Double.self) {
+                            Text(verbatim: number.formatted(.number.notation(.compactName)))
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                    }
+                }
+            }
+            .frame(height: chartHeight)
             Text(verbatim: StationFlow.summaryText(of: hours, in: language))
                 .font(.caption)
                 .foregroundStyle(Theme.textSecondary)
+            if let rush = StationFlow.rushText(of: hours, in: language) {
+                Text(verbatim: rush)
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
+            }
             Text(verbatim: StationFlow.hourText(shown, of: hours, in: language))
                 .font(.caption.weight(.semibold))
         }
         .monospacedDigit()
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(title)
-        .accessibilityValue(Text(verbatim: "\(StationFlow.hourText(shown, of: hours, in: language)). \(StationFlow.summaryText(of: hours, in: language))"))
+        .accessibilityValue(Text(verbatim: "\(StationFlow.hourText(shown, of: hours, in: language)). \(spec.summary)"))
         .accessibilityAdjustableAction { direction in
             switch direction {
-            case .increment: picked = (shown + 1) % 24
-            case .decrement: picked = (shown + 23) % 24
+            case .increment: picked = spec.xLabels[(shown + 1) % 24]
+            case .decrement: picked = spec.xLabels[(shown + 23) % 24]
             @unknown default: break
             }
         }
-    }
-
-    private func bars(highlighting shown: Int) -> some View {
-        let top = CGFloat(max(hours.max() ?? 0, 1))
-        return GeometryReader { proxy in
-            HStack(alignment: .bottom, spacing: 2) {
-                ForEach(0..<24, id: \.self) { hour in
-                    UnevenRoundedRectangle(topLeadingRadius: 2, topTrailingRadius: 2)
-                        .fill(hour == shown ? Theme.primary : Theme.primary.opacity(0.25))
-                        .frame(height: max(1, Self.height * CGFloat(hours[hour]) / top))
-                        .frame(maxWidth: 24, maxHeight: .infinity, alignment: .bottom)
-                }
-            }
-            .contentShape(Rectangle())
-            .gesture(SpatialTapGesture().onEnded { tap in
-                let width = max(proxy.size.width, 1)
-                picked = min(23, max(0, Int(tap.location.x / width * 24)))
-            })
-        }
-        .frame(height: Self.height)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(Theme.textSecondary.opacity(0.4))
-                .frame(height: 1)
-        }
-    }
-
-    /// Hours 0, 6, 12 and 18 under their bars.
-    private var axis: some View {
-        HStack(spacing: 2) {
-            ForEach(0..<24, id: \.self) { hour in
-                Color.clear
-                    .frame(maxWidth: 24, minHeight: 12, maxHeight: 12)
-                    .overlay(alignment: .leading) {
-                        if hour % 6 == 0 {
-                            Text(verbatim: "\(hour)")
-                                .font(.caption2)
-                                .foregroundStyle(Theme.textSecondary)
-                                .fixedSize()
-                        }
-                    }
-            }
-        }
+        .accessibilityChartDescriptor(ChartAudioGraph(spec: spec))
     }
 }
 

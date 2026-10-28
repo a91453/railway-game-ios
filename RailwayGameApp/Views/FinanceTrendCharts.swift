@@ -338,10 +338,10 @@ private struct ChartLegend: View {
     }
 }
 
-/// A finance chart as VoiceOver's audio graph (Apple's Audio Graphs): the
+/// A chart (the finance charts, and decision 472's) as VoiceOver's audio graph (Apple's Audio Graphs): the
 /// periods or days along x, dollars or people up y, one series each. The
 /// data is the chart's ``ChartSpec``.
-private struct ChartAudioGraph: AXChartDescriptorRepresentable {
+struct ChartAudioGraph: AXChartDescriptorRepresentable {
     let spec: ChartSpec
 
     func makeChartDescriptor() -> AXChartDescriptor {
