@@ -99,3 +99,5 @@ python3 tools/train-models/deliver.py OUT DELIVERY.json /assets/game-art-preview
 使用者要合併不等於四欄全部通過。公開只放一張約≤2MB總覽及配方／工具／文件；兩庫開互鏈draft PR、更新#1041及HANDOFF，不merge／auto-merge／TestFlight。
 
 [新車通用prompt](../../docs/art/VEHICLE_ASSET_HANDOFF_PROMPT.md)；[三鶯線prompt](../../docs/art/native-vehicle-modeling/SANYING_PROMPT.md)。單元測試：`node --test tools/train-models/test.mjs`、`python3 -m unittest discover -s tools/train-models -p 'test_*.py'`；實際匯出／browser／Blender驗證另跑，不把fixture測試當實車驗收。
+
+台中捷運綠線的玻璃／八輪／屋頂接觸與反例、獨立GLB匯入、Swift編組對照：[`tools/taichung-green`](../taichung-green/README.md)。只提供本型資料與驗收，匯出／交付沿用本共用工具。

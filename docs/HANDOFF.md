@@ -2284,3 +2284,7 @@ EMU900第二版（#1338／draft#1339↔私庫#102）：使用者要求修圓車�
 ### 2026-10-28 Codex 列車共用製作模組與三鶯線接手入口
 
 依作者要求更新列車技能／新對話指令與共用編組、GLB、幾何／故障驗收、自含互動檢視頁及限量交付。新任從[三鶯線指令](art/native-vehicle-modeling/SANYING_PROMPT.md)開始，先查工具PR是否已合併，再讀最新main及素材庫AGENTS；[工具說明](../tools/train-models/README.md)列操作與驗證限制。本輪沒有製作三鶯線或更動任何車款配方／營運映射；不合併、不啟動TestFlight。歷史專用工具保留供舊成果重建，新輪次不交ZIP／history副本。
+
+### 2026-10-28 Codex 台中捷運綠線 studies
+
+[獨立配方／官方來源／重建與狀態](art/taichung-green/README.md)。從main04f81f7a新建DM1/DM2近遠四單元及資料描述兩車編組；工具#1416/#1357已合、三鶯#1422未合，不套舊殼。只追加studies；既有tmrt→metroGeneric兩車營運映射保護。外觀未經使用者接受，隱藏底箱／輪徑／設備站位是推估；Simulator／真機Metal／效能／動畫與營運接入UNVERIFIED。實跑producer、完整私庫revision-1、下載SHA與最新CI見自有交付紀錄；不合併／auto-merge／TestFlight，不動GameCore／存檔／fixtures／玩法。

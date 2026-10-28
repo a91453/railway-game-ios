@@ -1,0 +1,135 @@
+{
+  "origin": "Independent Swift vertex-colour recipe by Codex; external photos observed only",
+  "date": "2026-10-28",
+  "license": "Original recipe under repository license; third-party source rights retained",
+  "public_use": "No source image pixels, source mesh, real logos, or third-party files included",
+  "sources": [
+    {
+      "file": "official-front.png",
+      "kind": "photo",
+      "url": "https://www.tmrt.com.tw/static/img/train-info/電聯車.jpg",
+      "author": "臺中捷運股份有限公司",
+      "date": "undated",
+      "retrieved": "2026-10-28",
+      "license": "All rights reserved; visual observation only",
+      "viewed": true,
+      "sha256": "51c2c5dbb1f0fee2237b6756dff9f58f43689e0ce06b4fb22f5deec68b10bb9e",
+      "redistributed": false
+    },
+    {
+      "file": "official-plan.png",
+      "kind": "diagram",
+      "url": "https://www.tmrt.com.tw/static/img/icons/train-info-1.png",
+      "author": "臺中捷運股份有限公司",
+      "date": "undated",
+      "retrieved": "2026-10-28",
+      "license": "All rights reserved; specifications and observation only",
+      "viewed": true,
+      "sha256": "ad8a237e5334fa126fca027d94abe400f9eece927c3f53e7b89588696baca906",
+      "redistributed": false
+    },
+    {
+      "file": "kawasaki-real.jpg",
+      "kind": "photo",
+      "url": "https://www.khi.co.jp/rail/img/export_im12.jpg",
+      "author": "Kawasaki Heavy Industries / 川崎車両",
+      "date": "undated",
+      "retrieved": "2026-10-28",
+      "license": "All rights reserved; visual observation only",
+      "viewed": true,
+      "sha256": "13b52e7e77a8d0d22c0b38cbe4d78e8d3079f22e1c6ba5cdf97c0d1b785adb72",
+      "redistributed": false
+    },
+    {
+      "file": "kawasaki-contract.jpg",
+      "kind": "rendering",
+      "url": "https://global.kawasaki.com/en/corp/rd/news/detail/img/C3110309-1.jpg",
+      "author": "Kawasaki Heavy Industries",
+      "date": "2011-04-01",
+      "retrieved": "2026-10-28",
+      "license": "All rights reserved; not used for current body/paint",
+      "viewed": true,
+      "sha256": "b8eb5a1b0bb497a3d320175695beab901993ea8a0f16fae5878f4723f7b36b84",
+      "redistributed": false
+    },
+    {
+      "file": "blair-real.jpg",
+      "kind": "photo",
+      "url": "https://blair-bus.blogspot.com/2023/08/blog-post_20.html",
+      "author": "Blair Yu",
+      "date": "2023-08-20",
+      "retrieved": "2026-10-28",
+      "license": "No reuse license found; visual observation only",
+      "viewed": true,
+      "sha256": "d01341f06ba6ab661d863fd613f4dac69d5e572ad7fd2a2083dd520ebece5764",
+      "redistributed": false
+    },
+    {
+      "file": "authority.jpg",
+      "kind": "composite/photo-background",
+      "url": "https://tcrt.taichung.gov.tw/df_ufiles/017/s_照片.jpg",
+      "author": "臺中市政府捷運工程局",
+      "date": "undated",
+      "retrieved": "2026-10-28",
+      "license": "Government website terms; observation only, presenter excluded",
+      "viewed": true,
+      "sha256": "4dd23cf34103ba966c145c6be3f23b657b11fe34ac89a3a5cfcf0abf086ce4c4",
+      "redistributed": false
+    }
+  ],
+  "documents": [
+    {
+      "url": "https://www.tmrt.com.tw/metro-status/train-info",
+      "author": "臺中捷運股份有限公司",
+      "date": "undated",
+      "facts": "DM1/DM2, 22.17 x 2.98 x 3.78 m per car, 44.34m train, 1435mm gauge, 750VDC third rail, five doors per side per car, two HVAC/car, steel body/FRP cab, automatic end and semi-permanent intermediate couplers"
+    },
+    {
+      "url": "https://global.kawasaki.com/en/corp/newsroom/news/detail/20110401_1.html",
+      "author": "Kawasaki Heavy Industries",
+      "date": "2011-04-01",
+      "facts": "36 MCT cars, eighteen two-car trains, unmanned, third rail 750VDC"
+    },
+    {
+      "url": "https://www.khi.co.jp/rail/products.html",
+      "author": "Kawasaki",
+      "date": "undated",
+      "facts": "Product named 緑線MRT電車 台湾 台中捷運; real factory photograph"
+    },
+    {
+      "url": "https://tcrt.taichung.gov.tw/form/index?Parser=2,6,45",
+      "author": "臺中市政府捷運工程局",
+      "date": "retrieved 2026-10-28",
+      "facts": "18 trains delivered 2017-12-01; vehicle reference links to TMRT official page"
+    }
+  ],
+  "unknowns": [
+    "No confirmed numeric series designation; use 台中捷運中運量電聯車/Green line DM1/DM2, never C371/C381",
+    "TRSC shared manufacture and car-number allocation reported by Blair Yu; not independently confirmed by manufacturer primary page",
+    "Bogie centres, 0.39m visual tyre radius, 2.1m wheelbase, HVAC length and individual equipment stations are photo estimates",
+    "DM1 and DM2 underfloor boxes simplified differently; exact hidden component identities/stations UNVERIFIED",
+    "A/B side doorway count from official diagram; hidden left/right underfloor asymmetry not established",
+    "Official height used as overall rail-to-equipment top; precise engineering datum not supplied"
+  ],
+  "user_supplied": [
+    {
+      "kind": "illustration",
+      "author": "K.Y.Chung / Nanyue Express",
+      "license": "CC BY-NC-ND 4.0 as printed",
+      "use": "Observed only; no tracing or redistribution",
+      "url": "https://rail.kychung.com",
+      "date": "unknown"
+    },
+    {
+      "kind": "four photos",
+      "author": "unknown (one printed credit 台中捷運)",
+      "license": "unknown",
+      "use": "Viewed in chat only; no local originals or download SHA; not redistributed",
+      "date": "unknown"
+    }
+  ],
+  "reference_repository": {
+    "path": "Railway/taiwan-rail-reference-clean/source/rail-3d/assets/garage-blender-v1/taichung.json",
+    "finding": "Q-proportions-photo-informed, illustrative single car, 10.708m model, engineeringDimensionsM null; not used as dimensions or geometry; mesh not reused"
+  }
+}
