@@ -162,7 +162,7 @@ final class HolidayTests: XCTestCase {
     }
 
     /// The rules on the real calendar give the owner's reference's days off
-    /// (`Railway/site_archive_clean/index.html`, `TW_DAYTYPE`: Taiwan's days
+    /// (`Railway/taiwan-rail-reference-clean/source/main-reference.js`, `TW_DAYTYPE`: Taiwan's days
     /// off of 2026 and 2027, the 31 December of 2027 being 2028's New
     /// Year's Day made up), counting the days that are not weekends.
     func testOnTheRealCalendarTheRulesGiveTheReferencesDaysOff() {

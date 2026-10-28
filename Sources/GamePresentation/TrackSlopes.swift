@@ -14,7 +14,7 @@ import GameCore
 /// cut. Presentation only, worked out once for each edge with its drawing.
 ///
 /// Reference (`a91453/railway-reference-private` `05d7000`):
-/// `Railway/site_archive_clean/rail-3d/integration/rail-structures.js`
+/// `Railway/taiwan-rail-reference-clean/source/rail-3d/integration/rail-structures.js`
 /// draws only fills in 3D, a trapezoid widening by its slope with the lift
 /// (`FILL_SLOPE`, `BED_BOTTOM_MAX`), in its bank colour `#c6c0b1`; there is
 /// no cutting and no flat map drawing of either (gap). The bands and
