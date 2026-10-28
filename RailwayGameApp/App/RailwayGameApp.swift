@@ -130,6 +130,13 @@ struct RailwayGameApp: App {
         if DebugLaunch.isSet("-ui-testing"), !DebugLaunch.isSet("-show-first-game-card") {
             launcher.dismissFirstGameCard()
         }
+        // Decision 464: a slow Simulator would open the speed hint's popover
+        // by itself in the middle of a test and the next tap would close it;
+        // UI tests start with it off unless a test asks with
+        // -show-speed-lag-hint. Tapping the dot still opens its popover.
+        if DebugLaunch.isSet("-ui-testing") {
+            GameSession.showsSpeedLagHint = DebugLaunch.isSet("-show-speed-lag-hint")
+        }
         // A new game's seed, so a test that needs what the towns and
         // sights of a blank map put on screen gets the same map each run.
         if DebugLaunch.isSet("-ui-testing"), let seed = DebugLaunch.value(of: "-ui-test-seed").flatMap(UInt32.init) {

@@ -893,7 +893,11 @@ public final class GameSession {
     @ObservationIgnored private var speedMeter = GameSpeedMeter()
     /// Decision 464: when the status board tells the player the device
     /// cannot keep up with the speed; screen state, not saved.
-    @ObservationIgnored private var speedLagWatch = SpeedLagWatch()
+    @ObservationIgnored var speedLagWatch = SpeedLagWatch()
+    /// Whether the hint may come up by itself. UI tests turn it off (the
+    /// app's `-ui-testing`, back on with `-show-speed-lag-hint`): a slow
+    /// Simulator would open the popover mid-test and take a tap.
+    public static var showsSpeedLagHint = true
     /// The hint beside the speed, while there is one.
     public private(set) var speedLagHint: SpeedLagHint?
     @ObservationIgnored private var trainSpeedometer = TrainSpeedometer()
@@ -917,12 +921,18 @@ public final class GameSession {
             speedMeter.record(real: realTimeRun, ticks: ticksRun, speed: world.clock.speed)
             speedLagWatch.record(real: realTimeRun, speed: world.clock.speed, permille: speedMeter.permilleOfSpeed, heat: Self.tickPace.heat)
         }
-        if speedLagWatch.hint != speedLagHint { speedLagHint = speedLagWatch.hint }
+        syncSpeedLagHint()
         let shown = ViewingSpeed(
             speed: world.clock.speed, permille: speedMeter.permilleOfSpeed,
             trainKilometresPerHour: followedTrainID == nil ? nil : trainSpeedometer.kilometresPerHour
         )
         if shown != shownViewingSpeed { shownViewingSpeed = shown }
+    }
+
+    /// Shows what ``speedLagWatch`` says, unless hints are switched off.
+    func syncSpeedLagHint() {
+        let hint = Self.showsSpeedLagHint ? speedLagWatch.hint : nil
+        if hint != speedLagHint { speedLagHint = hint }
     }
 
     /// The player dismissed the speed hint: none again this game

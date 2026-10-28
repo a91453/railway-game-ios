@@ -104,4 +104,20 @@ final class SpeedLagHintTests: XCTestCase {
         let none = SpeedLagHint(speed: .x1, actualTenths: 5, reason: .slow)
         XCTAssertNil(none.switchText(in: .english), "no slower speed: the words only")
     }
+
+    @MainActor
+    func testTheSwitchKeepsTheHintFromComingByItself() {
+        let session = GameSession(world: try! makeWorld(speed: .paused))
+        for second in 1...21 {
+            session.speedLagWatch.record(real: .seconds(second), speed: .fast, permille: 330, heat: .nominal)
+        }
+        XCTAssertNotNil(session.speedLagWatch.hint)
+        GameSession.showsSpeedLagHint = false
+        defer { GameSession.showsSpeedLagHint = true }
+        session.syncSpeedLagHint()
+        XCTAssertNil(session.speedLagHint, "switched off: the watch has one, the screen does not")
+        GameSession.showsSpeedLagHint = true
+        session.syncSpeedLagHint()
+        XCTAssertNotNil(session.speedLagHint, "switched on again: it comes")
+    }
 }
