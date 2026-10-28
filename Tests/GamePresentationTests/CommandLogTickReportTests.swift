@@ -18,6 +18,8 @@ import XCTest
 /// `COMMAND_LOG_SLOW` the milliseconds above which a tick is printed
 /// (default 200); `COMMAND_LOG_PREFETCH`, when set, works each slow
 /// tick's routes out ahead too, on one core and on all (decision 470);
+/// `COMMAND_LOG_GIVE`, when set, gives every tick its routes worked out
+/// ahead, through the game loop's begin and finish (decision 470);
 /// `COMMAND_LOG_DUMP`, when set, where the world at the
 /// log's end is written, to compare two builds byte for byte.
 @MainActor
@@ -38,6 +40,7 @@ final class CommandLogTickReportTests: XCTestCase {
         var core = Duration.zero, total = Duration.zero, ticks = 0
         var slowest: [(Duration, String)] = []
         let prefetching = environment["COMMAND_LOG_PREFETCH"] != nil
+        let giving = environment["COMMAND_LOG_GIVE"] != nil
         var looking = Duration.zero, longestLook = Duration.zero
         func tick() throws {
             let world = session.world
@@ -53,7 +56,20 @@ final class CommandLogTickReportTests: XCTestCase {
             if prefetching, spentCore > slow {
                 try prefetch(world, plain: after!, spent: spentCore)
             }
-            let spent = clock.measure { session.advance(ticks: 1) }
+            let spent = try clock.measure {
+                // Decision 470: every tick given its routes first, as the
+                // game loop does, to compare the log's end byte for byte.
+                if giving, let loop = session.beginLoopTick() {
+                    var given = loop.world
+                    if let work = given.passengerRoutesToWorkOut() {
+                        given.takePassengerRoutes(given.workingOutPassengerRoutes(work))
+                    }
+                    let step = try GameSession.advanced(given, by: 1, listening: false)
+                    XCTAssertTrue(session.finish(loop, with: .success(step)))
+                } else {
+                    session.advance(ticks: 1)
+                }
+            }
             ticks += 1
             core += spentCore
             total += spent
