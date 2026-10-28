@@ -378,6 +378,51 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第二十六次換手（2026-10-28 約 12:15 UTC，session_01YGNNuqBYkjv4r12NahDH4X 壓縮第 3 次 → 本任用 `create_session` 開的新規劃，第 2 層）**：和下面不同時以這段為準。
+
+新任開工：
+- 讀第 1 節與這一段。
+- 先用 `add_repo` 加 railway-reference-private 與 railway-assets-private。
+- #1041 從「session_01YGNNuqBYkjv4r12NahDH4X 壓縮第 3 次」往後讀。這一任合的與派的都記在 #1041，從第二十五次換手那段往後。
+
+**93.1 今晚發**（作者：「還是順便有綠的都加入 反正我大概9點多才要發」，台灣 21:xx ＝ 13:xx UTC）：
+1. 合 #1424（BS，決策 461，台北捷運 C371／C381／C341／610 照實際配車，head `29eb160`）與 #1423（BT，決策 462，六家線、內灣線都能收購、竹中六家線月台架高，head `8abdd15`）。兩個都等 Xcode build，Swift 已綠；session 會自己改 ready 並 `send_message` 規劃。照 §1.2 合，合後封存 BS（session_01YGNNukixzoSrgvZpoo21mP）與 BT（session_01YGNNuozVE7YV18bpitdwBA）。趕不上的留 94，不擋發版。
+   - 這批 main 已有 #1415（`3431a04`）、#1421（`57c18d6`）、#1425（`8b158ef`），push 的 `ci.yml` 跑中。加上 #1423、#1424 共 5 個，合完要等 main 綠。
+2. 最後一個合完，在 main HEAD 用 `workflow_dispatch` 跑完整 `ci.yml`，再跑 full lane（`ios-build.yml`，發版 commit 用手動）。
+3. 兩個都綠，告訴作者「可以發（commit）」。作者在**新任**這邊說「發」才按 `testflight.yml`（一次、main HEAD）。
+4. 發完寫 What to Test，要放：
+   - 6000× 停頓（#1414、#1415，決策 459）；編輯後仍可能停頓（BP-2 還沒修，下面）。
+   - 決策 460（§4.15）：4 GB iPhone 開 3D 會不會閃退、記憶體；M 系列 iPad 的畫質；iPad 的像素；舊機實際跑到的速度。
+   - 台北捷運各線的車（#1424）；竹中先後買六家線、內灣線（#1423）。
+   - Kenney 針葉樹、灌木、儲槽（決策 458）；台北車站、101、高雄車站兩棟共構大樓（決策 457 後來）。
+   - 再來是 PLAYER_FEEDBACK 記 93.1，提醒作者回答出口合規。
+5. Threads：排程 `trig_01DmgURkgMM1RxCUQPhn6eSv`（每天 21:43 台灣時間）綁本任。新任用同一份 prompt（`get_trigger` 讀得到）建一個綁自己的，再刪掉這個。發了 TestFlight，它就會開寫作 session。
+
+**在跑的 session**（新任用 `send_message` 告訴它們改向新任回報；共同規則：不動 #1342、私庫 #103，壓縮 1 次不接新工作、2 次停）：
+- **BU**（session_01YGNNuprdU1h3hhSZn6UjES）：玩家回報 90.1「站牌與實際位置不一致、路線沒照真實路線」。
+  - 公車資料本身是對的：`real_buses_Taipei.json` 解出臺北車站各站牌在 25.046、121.513 附近。
+  - 假說：`RealWorldFrame` 把全島當平面、錨點在島中央，台北偏約 1 km（`RealWorldExpansion` 決策 167）。
+  - BU 也把這批玩家回報寫進 PLAYER_FEEDBACK。給 94。
+- **BV**（session_01YGNNumnQtaMdPM5echyBfu，Sonnet）：作者要的「你的手機跑不到那麼快」提醒。
+  - 決策 226 的小點保留；主動跳一次「這張地圖在這台裝置上大約只跑得到 ×N」，附「改成 ×N」與「知道了」。
+  - 太燙時改說「裝置有點燙，遊戲先放慢」。不說手機舊，不限制速度。給 94。
+- **BR**（session_01YGNNumq4dA2CQatfUojyhs，#1418 draft，CI 重新分配）：等 full lane run 40668230502 的 second job 量時間；綠了它會改 ready 並回報。
+
+**93.1 之後要派**：
+- **BP-2**（編輯後主執行緒停頓）：91.1、92.1 的 iPad (A16) 玩家建站、新設路線、買車、連轉乘站都會卡 0.5–0.7 秒。量法與存檔在 §5 那一列（#1425）。開新 session（Opus），決策號重新預約（463 已釋出）。
+- **BO**：Meshy 第一批接進遊戲，Opus。glTF-Validator 進 CI 是加依賴，作者同意了沒以 #1041 為準，沒有就先問。
+  - 同時處理 `Map3DMeshSimplifier`（決策 420）接到畫面要補的三件：誤差上限、單面板不被壓扁、背景建好並在裝置上快取。
+  - 列車不用它：有配方的列車自己做遠景版（決策 420、422、426、432、433；rolling-stock skill）。
+- **三鶯線**：#1422（Codex，draft，只是研究）的後續；素材庫 PR #19 作者合。
+- **市區公車 PR 2**（決策 438：沒有車站的市區路線要畫出來、能編輯）：玩家回報的「舊存檔沒有公車」是決策 428、440 已修的重複回報；「不經車站的公車」要等這個 PR。
+
+**還要看的**：
+- 審查點數從 #1386 起約 22／30，滿 30 開下一輪。
+- 編號：決策到 462（461 BS、462 BT）。BU、BV 若預約了，以 #1041 為準；新號取 #1041 未釋出預約的最大＋1。存檔 75、golden schema 不動。
+- 玩家 3 是 iPad (A16)（作者 10-28）；91.1 報告的 iPhone15,5 當作另一台。
+
+**排程**：本任的巡邏（`trig_01Jpuzfkf7tVgTJsPgP9kQg8`）在交接時刪掉，新任自己排（約 45 分鐘一次）。
+
 **第二十二次換手（2026-10-27 約 16:50 UTC，session_01YGNNunheBBBwyekk4Pq7b4 壓縮第 3 次 → 本任用 `create_session` 開的新規劃 session_01YGNNunBu1rxrPwN6bsA7g2，第 2 層）**。新任開工：讀第 1 節、這一段、下面「第二十一次換手之後」那段；#1041 從「遊戲規劃（session_01YGNNunheBBBwyekk4Pq7b4）壓縮第 3 次」（16:4x UTC）往後讀。和下面不同時以這段為準。
 
 - **新規則（作者 2026-10-27「不顯示網站名稱」）**：作者給過一個整理交通開放資料的第三方網站。它的名稱與網址**哪裡都不寫**：repository、私庫、檔名、branch、PR、commit、#1041。要提就寫「一個整理交通開放資料的第三方網站」。有一個舊的遠端 branch（`claude/` 開頭、名字含那個網站、結尾 `-tdx-map`）帶著這個名字，session 沒有刪 branch 的權限，**請作者刪**；已關閉的 #1363 標題與內容已改掉。
