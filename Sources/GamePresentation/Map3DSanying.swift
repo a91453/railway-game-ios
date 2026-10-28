@@ -1,155 +1,218 @@
 import Foundation
 
-/// New Taipei Sanying Line's two-car, third-rail metro as a static study.
-/// The published 17.7 × 2.6 × 3.8 m car envelope anchors the proportions;
-/// positions of smaller fittings are visual estimates from the cited photos.
+/// New Taipei Sanying Line, two-car static study. The rounded cab shape is
+/// adapted from this project's Circular Line 610 recipe; its blue/white
+/// livery, two-car assembly and published dimensions are Sanying-specific.
 public enum Map3DSanying {
     public enum Unit: String, CaseIterable, Sendable { case a, b }
+    public static let body = Map3DPalette.concreteWalls[2]
+    public static let roof = Map3DPalette.concreteWalls[0]
+    public static let blue = Map3DColor.rgb(0x13A9CF)
+    public static let mask = Map3DColor.rgb(0x343D45)
+    public static let glass = Map3DColor.shaded(Map3DPalette.glazing, 0.62)
+    public static let rubber = Map3DColor.rgb(0x2B2E34)
     public static func id(_ unit: Unit, far: Bool = false) -> String {
-        "sanying-\(unit.rawValue)\(far ? "-far" : "")"
+        "sanying-" + unit.rawValue + (far ? "-far" : "")
     }
     public static func model(_ unit: Unit, far: Bool = false) -> Map3DModelPack.Model {
-        var builder = SanyingBuilder(unit: unit, far: far)
+        var builder = SanyingBuilder(role: unit, far: far, light: false)
         builder.build()
-        return .flat(named: id(unit, far: far), from: builder.k.mesh)
+        let shell = Map3DModelPack.Model.flat(named: id(unit, far: far), from: builder.k.mesh)
+        // Match the operator's 17.7 x 2.6 x 3.8 m car body envelope. The
+        // third-rail shoes intentionally project beyond the body width.
+        let sx:Float=17.7/17.585, sy:Float=2.6/2.65, sz:Float=3.8/3.612
+        let vertices=shell.vertices.map { vertex -> Map3DVertex in
+            let nx=vertex.nx/sx,ny=vertex.ny/sy,nz=vertex.nz/sz
+            let length=sqrtf(nx*nx+ny*ny+nz*nz)
+            return .init(.init(vertex.x*sx,vertex.y*sy,vertex.z*sz),
+                         normal:.init(nx/length,ny/length,nz/length),
+                         color:vertex.color,u:vertex.u,v:vertex.v,layer:vertex.layer)
+        }
+        return .init(name:shell.name,vertices:vertices,
+                     minimum:.init(shell.minimum.x*sx,shell.minimum.y*sy,shell.minimum.z*sz),
+                     maximum:.init(shell.maximum.x*sx,shell.maximum.y*sy,shell.maximum.z*sz))
     }
 }
 
 private struct SanyingBuilder {
-    let unit: Map3DSanying.Unit
+    typealias E = Map3DSanying
+    let role: E.Unit
     let far: Bool
+    let light: Bool
     var k = StationKitBuilder()
-    let white = Map3DPalette.concreteWalls[2]
-    let roof = Map3DPalette.concreteWalls[0]
-    let blue = Map3DColor.rgb(0x13A9CF)
-    let pale = Map3DColor.rgb(0x7DCFE3)
-    let dark = Map3DColor.rgb(0x323C45)
-    let glass = Map3DColor.shaded(Map3DPalette.glazing, 0.62)
-    let steel = Map3DColor.rgb(0x626B70)
-
-    mutating func face(_ points: [Map3DPoint], _ inside: Map3DPoint, _ color: UInt32) {
-        if points.count == 4 {
-            k.face([points[0], points[1], points[2]], inside: inside, color: color)
-            k.face([points[0], points[2], points[3]], inside: inside, color: color)
-        } else { k.face(points, inside: inside, color: color) }
+    var cab: Bool { role == .a || role == .b }
+    var half: Float { 8.4775 }
+    var segments: Int { far ? 8 : 32 }
+    // Mesh primitives stay local to this recipe; the original 610 is unchanged.
+    mutating func face(_ p:[Map3DPoint],_ centre:Map3DPoint,_ color:UInt32) {
+        if p.count == 4 {
+            k.face([p[0],p[1],p[2]],inside:centre,color:color)
+            k.face([p[0],p[2],p[3]],inside:centre,color:color)
+        } else { k.face(p,inside:centre,color:color) }
     }
-    mutating func solid(_ points: [Map3DPoint], _ delta: Map3DPoint, _ color: UInt32) {
-        let other = points.map { $0 + delta }
-        let centre = (points + other).reduce(Map3DPoint.zero,+) * (1 / Float(points.count * 2))
-        for i in 1..<(points.count-1) {
-            face([points[0],points[i],points[i+1]],centre,color)
-            face([other[0],other[i],other[i+1]],centre,color)
-        }
-        for i in points.indices {
-            let j=(i+1)%points.count
-            face([points[i],points[j],other[j],other[i]],centre,color)
+    mutating func solid(_ a:[Map3DPoint],_ b:[Map3DPoint],_ color:UInt32) {
+        let c=(a+b).reduce(.zero,+)*(1/Float(a.count+b.count))
+        for p in [a,b] { for i in 1..<p.count-1 { face([p[0],p[i],p[i+1]],c,color) } }
+        for i in a.indices { let j=(i+1)%a.count;face([a[i],a[j],b[j],b[i]],c,color) }
+    }
+    static func noseX(_ h:Float,_ w:Float,_ half:Float)->Float {
+        half-max(0,h-1.3)*0.34-0.12*powf(abs(w)/1.325,4)
+    }
+    func frontRing(_ width:Float,_ height:Float,_ centre:Float,_ inset:Float=0)->[Map3DPoint] {
+        (0..<segments).map { i in
+            let t=Float(i)*2*Float.pi/Float(segments),c=cosf(t),s=sinf(t)
+            let h=centre+height*(s>=0 ? 1:-1)*powf(abs(s),0.48)
+            let w=width*(c>=0 ? 1:-1)*powf(abs(c),0.48)*(1+0.06*(h-centre))
+            return .init(Self.noseX(h,w,half)+inset,h,w)
         }
     }
-    mutating func panel(_ x0: Float, _ x1: Float, _ y0: Float, _ y1: Float, _ side: Float, _ offset: Float, _ color: UInt32) {
-        let z = side * offset
-        solid([.init(x0,y0,z),.init(x1,y0,z),.init(x1,y1,z),.init(x0,y1,z)],
-              .init(0,0,side*0.012),color)
+    mutating func join(_ a:[Map3DPoint],_ b:[Map3DPoint],_ color:UInt32) {
+        for i in a.indices {let j=(i+1)%a.count;face([a[i],a[j],b[j],b[i]],.init(0,2.0,0),color)}
     }
-    mutating func nose() {
-        // Eight-sided cross sections taper in plan and profile. The front
-        // ring is appreciably narrower than the passenger compartment.
-        let rear: [(Float,Float)] = [(1.00,-1.12),(1.00,1.12),(1.30,1.30),(3.24,1.30),(3.53,1.08),(3.53,-1.08),(3.24,-1.30),(1.30,-1.30)]
-        let tip: [(Float,Float)] = [(0.90,-0.84),(0.90,0.84),(1.32,1.06),(3.13,1.06),(3.43,0.82),(3.43,-0.82),(3.13,-1.06),(1.32,-1.06)]
-        let a = rear.map { Map3DPoint(7.37,$0.0,$0.1) }
-        let b = tip.map { Map3DPoint(8.64,$0.0,$0.1) }
-        for i in a.indices {
-            let j = (i+1) % a.count
-            let c: UInt32 = (i == 2 || i == 4) ? blue : (i == 3 ? roof : (i == 0 ? dark : white))
-            face([a[i],a[j],b[j],b[i]],.init(7.1,2.1,0),c)
-        }
-        face(a,.init(7.8,2.1,0),white)
-        face(b,.init(7.5,2.1,0),blue)
-        // Sloped panoramic windscreen and thin silver band are backed by
-        // the solid cab end; there is no unsupported floating glass.
-        let wind: [Map3DPoint] = [
-            .init(8.67,1.79,-0.78),.init(8.67,1.79,0.78),
-            .init(8.67,3.22,0.82),.init(8.67,3.22,-0.82)]
-        solid(wind,.init(0.012,0,0),glass)
-        let band: [Map3DPoint] = [
-            .init(8.71,1.74,-0.88),.init(8.71,1.74,0.88),
-            .init(8.71,1.84,0.91),.init(8.71,1.84,-0.91)]
-        solid(band,.init(0.012,0,0),roof)
-        for side: Float in [-1,1] {
-            let z = side * 0.82
-            k.box(8.58,1.52,z,0.18,0.30,0.13,roof)
-            k.box(8.69,1.53,z,0.06,0.20,0.075,Map3DPalette.tunnelLamp)
-            panel(6.88,7.68,1.64,3.07,side,1.311,glass)
-        }
-        k.box(8.54,1.03,0,0.30,1.95,0.43,dark)
-        k.box(8.83,0.74,0,0.40,0.55,0.23,steel)
+    mutating func pane(_ x:Float,_ h:Float,_ width:Float,_ height:Float,_ side:Float,_ color:UInt32,_ depth:Float=0.014) {
+        let r:Float = light ? 0 : 0.065
+        let p:[(Float,Float)] = far ? [(-width/2,-height/2),(width/2,-height/2),(width/2,height/2),(-width/2,height/2)] : [(-width/2+r,-height/2),(width/2-r,-height/2),(width/2,-height/2+r),(width/2,height/2-r),(width/2-r,height/2),(-width/2+r,height/2),(-width/2,height/2-r),(-width/2,-height/2+r)]
+        solid(p.map{.init(x+$0.0,h+$0.1,side*1.325)},p.map{.init(x+$0.0,h+$0.1,side*(1.325+depth))},color)
     }
     mutating func build() {
-        // Central closed body. The flat-sided envelope makes three equally
-        // spaced double doors visible on each side.
-        k.box(-0.58,0.94,0,15.9,2.58,2.55,white)
-        k.box(-0.58,3.53,0,15.9,2.38,0.14,roof)
-        k.box(-0.58,0.90,0,15.9,2.45,0.12,dark)
-        nose()
-        for side: Float in [-1,1] {
-            // Window ribbon remains behind individual door and window panes.
-            panel(-8.20,6.60,2.16,3.15,side,1.299,dark)
-            panel(-8.20,6.55,1.44,1.79,side,1.302,blue)
-            panel(-8.20,6.55,3.18,3.25,side,1.302,pale)
-            for x: Float in [-5.86,-0.74,4.38] {
-                panel(x-0.78,x+0.78,1.08,3.13,side,1.308,white)
-                for leaf: Float in far ? [0] : [-1,1] {
-                    let halfWidth: Float = far ? 0.62 : 0.32
-                    panel(x+leaf*0.38-halfWidth,x+leaf*0.38+halfWidth,2.10,3.04,side,1.319,glass)
-                }
-                if !far { k.box(x,1.08,side*1.33,0.025,0.012,2.05,dark) }
+        let white=E.body,ink=E.mask,glass=E.glass,rubber=E.rubber
+        // Shell stations deliberately include paint boundaries: coplanar faces,
+        // no floating livery plates across passenger doors or glazing.
+        let profile:[(Float,Float)] = [(0.94,-1.18),(1.05,-1.325),(1.22,-1.325),(1.77,-1.325),(3.13,-1.325),(3.32,-1.23),(3.40,-0.95),(3.42,0),(3.40,0.95),(3.32,1.23),(3.13,1.325),(1.77,1.325),(1.22,1.325),(1.05,1.325),(0.94,1.18)]
+        let end=cab ? half-1.15 : half
+        let back=profile.map{Map3DPoint(-half,$0.0,$0.1)},straight=profile.map{Map3DPoint(end,$0.0,$0.1)}
+        for i in profile.indices {
+            let j=(i+1)%profile.count,mid=(profile[i].0+profile[j].0)/2
+            let color:UInt32 = mid>1.22 && mid<1.77 ? E.blue : mid>1.77 && mid<3.13 ? ink:white
+            face([back[i],back[j],straight[j],straight[i]],.init(0,2,0),color)
+        }
+        k.face(back,inside:.init(0,2,0),color:white)
+        k.face(straight,inside:.init(0,2,0),color:white)
+        if cab {
+            // Rounded cab front. Front glass/mask/blue surround are
+            // regions of the closed nose itself, following the same surface.
+            let outer=frontRing(1.25,1.24,2.18)
+            // Connect the straight-section contour to a matching sampled ring.
+            let rear=outer.map{Map3DPoint(end,$0.y,$0.z)}
+            k.face(Array(rear.reversed()),inside:.init(half,2,0),color:white)
+            for i in rear.indices {
+                let j=(i+1)%rear.count
+                let shade:UInt32 = (outer[i].y+outer[j].y)/2 > 3.18 ? white:E.blue
+                face([rear[i],rear[j],outer[j],outer[i]],.init(0,2,0),shade)
             }
-            let windows: [(Float,Float)] = [(-7.94,-6.80),(-4.95,-3.42),(-3.30,-1.70),
-                                           (0.16,1.66),(1.79,3.42),(5.25,6.40)]
-            if !far { for (lo,hi) in windows { panel(lo,hi,2.22,3.10,side,1.316,glass) } }
-            // A broad turquoise wave at the cab end, following the lower skirt.
-            solid([.init(4.90,1.08,side*1.307),.init(6.86,1.08,side*1.307),
-                  .init(7.40,1.58,side*1.29),.init(5.40,1.78,side*1.307)],
-                 .init(0,0,side*0.012),blue)
+            // Fill transition back to main body; a short tapered roof/shoulder.
+            let rim=frontRing(1.08,0.91,2.45)
+            for i in outer.indices {let j=(i+1)%outer.count;face([outer[i],outer[j],rim[j],rim[i]],.init(0,2,0),(rim[i].y+rim[j].y)/2>3.18 ? ink:white)}
+            let border=frontRing(0.98,0.83,2.45)
+            for i in rim.indices {let j=(i+1)%rim.count;face([rim[i],rim[j],border[j],border[i]],.init(0,2,0),(rim[i].y+rim[j].y)/2>3.18 ? ink:E.blue)}
+            let window=frontRing(0.92,0.76,2.47)
+            join(border,window,ink)
+            let backingFront=window.map { $0 - Map3DPoint(0.035,0,0) }
+            let backingBack=window.map { $0 - Map3DPoint(0.065,0,0) }
+            let fc=Map3DPoint(Self.noseX(2.47,0,half)-0.035,2.47,0),bc=fc-Map3DPoint(0.030,0,0)
+            for i in window.indices {
+                let j=(i+1)%window.count
+                face([fc,backingFront[i],backingFront[j]],fc-Map3DPoint(1,0,0),ink)
+                face([bc,backingBack[i],backingBack[j]],bc+Map3DPoint(1,0,0),ink)
+                face([backingFront[i],backingFront[j],backingBack[j],backingBack[i]],.init(fc.x,2.47,0),ink)
+            }
+            // Internal ties mount the backing to the structural rear bulkhead.
+            // Keep them wholly behind the glass, without exterior frame studs;
+            // the exterior shell and glazing remain untouched.
+            for i in [0,segments/4,segments/2,segments*3/4] {
+                k.beam(backingBack[i],.init(end-0.010,backingBack[i].y,backingBack[i].z),0.040,ink)
+            }
+            let c=Map3DPoint(Self.noseX(2.47,0,half),2.47,0)
+            for i in window.indices {face([c,window[i],window[(i+1)%window.count]],.init(0,2,0),glass)}
+            // Paired organic lamp bezels; no red tail lenses or brand text.
+            for s:Float in [-1,1] {
+                let y:Float=1.65,w=s*1.02,x=Self.noseX(y,w,half)
+                let n=far ? 8:16
+                let a=(0..<n).map { i -> Map3DPoint in let t=Float(i)*2*Float.pi/Float(n);return .init(x+0.01,y+0.105*sinf(t),w+0.20*cosf(t)) }
+                solid(a,a.map{$0 + Map3DPoint(0.025,0,0)},rubber)
+                for off:Float in [-0.075,0.075] { k.box(x+0.04,y-0.040,w+off,0.025,0.08,0.08,Map3DPalette.tunnelLamp) }
+            }
+            k.box(half-0.20,0.98,0,0.35,2.45,0.32,white)
+            for s:Float in [-1,1] {
+                k.box(half+0.01,1.04,s*0.87,0.16,0.39,0.25,E.roof)
+                if !far {for i in 0..<4 {k.box(half+0.10,1.07+Float(i)*0.048,s*0.87,0.06,0.36,0.02,StationKitBuilder.steel)}}
+            }
+            if !light {
+                let pivot=Map3DPoint(Self.noseX(1.80,0.04,half)+0.030,1.80,0.04)
+                k.box(pivot.x-0.010,1.76,0.04,0.050,0.080,0.080,rubber)
+                k.beam(pivot,.init(Self.noseX(2.32,0.53,half)+0.030,2.32,0.53),0.035,rubber)
+            }
+            // Actual drawbar hanger contacts both the drawbar and floor.
+            // This is structural detail beneath the front skirt.
+            k.box(half-0.45,0.77,0,0.24,0.22,0.12,StationKitBuilder.steel)
+            k.beam(.init(half-0.60,0.70,0),.init(half+0.25,0.70,0),0.17,StationKitBuilder.steel)
+            k.box(half+0.29,0.56,0,0.20,0.40,0.26,StationKitBuilder.steel)
+        }
+        k.box(0,0.87,0,2*half,2.36,0.10,StationKitBuilder.steel)
+        let doors:[Float] = cab ? [-5.90,-0.65,4.60] : [-5.30,0,5.30]
+        for s:Float in [-1,1] {
+            for d in doors {
+                pane(d,2.08,1.52,2.05,s,ink)
+                pane(d,1.22,1.50,0.34,s,white,0.019)
+                for leaf:Float in [-1,1] {
+                    pane(d+leaf*0.35,2.50,0.44,0.97,s,glass,0.026)
+                }
+                k.box(d,1.07,s*1.354,0.025,0.018,2.02,rubber)
+                k.box(d,1.22,s*1.345,1.48,0.025,0.55,E.blue)
+            }
+            for i in 0..<2 {
+                let start=doors[i]+0.85,end=doors[i+1]-0.85,gap:Float=0.12,w=(end-start-gap)/2
+                for j in 0..<2 {pane(start+w/2+Float(j)*(w+gap),2.50,w,1.02,s,glass)}
+            }
+            if cab {
+                // Unmanned observation-end side window, no crew door.
+                solid([.init(6.02,1.76,s*1.326),.init(7.25,1.76,s*1.326),.init(6.85,3.09,s*1.326),.init(6.02,3.09,s*1.326)], [.init(6.02,1.76,s*1.344),.init(7.25,1.76,s*1.344),.init(6.85,3.09,s*1.344),.init(6.02,3.09,s*1.344)],glass)
+            }
+        }
+        // Two continuous HVAC cases per car, supported on the actual roof.
+        for x:Float in [-4.25,4.25] {
+            k.box(x,3.42,0,3.45,1.72,0.18,E.roof)
+            if !far {for i in 0..<9 {k.box(x-1.4+Float(i)*0.35,3.60,0,0.055,1.42,0.012,StationKitBuilder.steel)}}
+        }
+        // Equipment layout is photo-informed and remains an estimate.
+        k.box(-1.6,0.40,0,2.8,1.9,0.47,StationKitBuilder.steel)
+        k.box(1.6,0.47,0.12,1.7,1.65,0.40,E.roof)
+        if cab {k.cylinder(3.0,0.42,-0.50,radius:0.25,height:0.35,color:StationKitBuilder.steel,sides:far ? 8:12); k.box(3.0,0.77,-0.50,0.35,0.30,0.10,StationKitBuilder.steel)}
+        else if !far {k.box(3.45,0.44,-0.30,1.0,1.05,0.43,E.roof)}
+        let bogie:Float = cab ? 5.72:5.60
+        for bx in [-bogie,bogie] {
+            k.box(bx,0.58,0,2.55,1.20,0.23,StationKitBuilder.steel)
+            k.beam(.init(bx,0.77,-1.00),.init(bx,0.77,1.00),0.12,StationKitBuilder.steel)
+            if far { k.box(bx,0.81,0,0.85,1.45,0.13,rubber) }
+            else { for s:Float in [-1,1] { k.cylinder(bx,0.81,s*0.45,radius:0.18,height:0.13,color:rubber,sides:8) } }
+            for dx:Float in [-0.90,0.90] {
+                let x=bx+dx
+                k.box(x,0.40,0,0.30,1.20,0.20,StationKitBuilder.steel)
+                for s:Float in [-1,1] {
+                    let n=far ? 8:20
+                    let a=(0..<n).map { i -> Map3DPoint in let t=Float(i)*2*Float.pi/Float(n);return .init(x+0.355*cosf(t),0.355+0.355*sinf(t),s*0.67) }
+                    solid(a,a.map{$0 + Map3DPoint(0,0,s*0.18)},rubber)
+                    if !far {k.box(x,0.39,s*1.00,0.36,0.25,0.26,E.roof); k.beam(.init(x,0.55,s*1.00),.init(bx,0.77,s*1.00),0.10,StationKitBuilder.steel)}
+                }
+                k.beam(.init(x,0.355,-1.00),.init(x,0.355,1.00),0.12,StationKitBuilder.steel)
+            }
+            // Third-rail collector: insulated mount, arm and shoe. Position
+            // and dimensions are estimated; there is no roof collection gear.
+            for s:Float in [-1,1] {
+                k.box(bx,0.56,s*1.00,0.48,0.35,0.25,E.roof)
+                k.box(bx,0.48,s*1.23,0.30,0.16,0.55,E.blue)
+                k.beam(.init(bx,0.52,s*1.28),.init(bx,0.27,s*1.48),0.12,E.roof)
+                k.box(bx,0.22,s*1.48,0.52,0.18,0.06,rubber)
+            }
+        }
+        // Each end owns half of the flexible gangway; no stretched train mesh.
+        for s:Float in cab ? [-1]:[-1,1] {
             if !far {
-                for x: Float in [-7.65,-2.15,2.85] {
-                    k.box(x,1.64,side*1.34,0.08,0.03,0.11,Map3DPalette.lantern)
-                }
+                k.box(s*(half+0.10),0.65,0,0.28,0.18,0.12,StationKitBuilder.steel)
+                k.box(s*(half-0.08),0.77,0,0.28,0.18,0.10,StationKitBuilder.steel)
             }
-        }
-        // Two roof HVAC banks with direct feet to the roof; third-rail car
-        // has no pantograph. Underbody collector shoes sit near the bogies.
-        for x: Float in [-4.38,2.95] {
-            k.box(x,3.60,0,3.48,1.66,0.18,roof)
-            if !far {
-                for dx: Float in [-1.30,1.30] { k.box(x+dx,3.57,0,0.16,1.40,0.19,steel) }
-                for i in 0..<6 { k.box(x-1.22+Float(i)*0.48,3.755,0,0.045,1.22,0.012,steel) }
-            }
-        }
-        k.box(-0.60,0.56,0,4.10,1.68,0.52,steel)
-        for bx: Float in [-5.63,5.54] {
-            k.box(bx,0.64,0,2.60,1.38,0.26,dark)
-            for dx: Float in [-0.90,0.90] {
-                for side: Float in [-1,1] {
-                    // Cylinder's axis follows the builder's vertical axis;
-                    // a closed polygonal wheel is instead extruded sideways.
-                    let n = far ? 8 : 16
-                    let ring = (0..<n).map { i -> Map3DPoint in
-                        let t=Float(i)*2*Float.pi/Float(n)
-                        return .init(bx+dx+0.37*cosf(t),0.37+0.37*sinf(t),side*0.68)
-                    }
-                    solid(ring,.init(0,0,side*0.16),dark)
-                }
-            }
-            for side: Float in [-1,1] {
-                k.box(bx,0.52,side*1.05,0.50,0.24,0.16,roof)
-                k.box(bx,0.32,side*1.22,0.44,0.18,0.11,dark)
-            }
-        }
-        // Half of the flexible gangway belongs to each car.
-        k.box(-8.58,1.05,0,0.28,2.10,2.00,dark)
-        if far { k.box(-8.73,1.05,0,0.305,2.10,2.00,dark) }
-        if !far {
-            for i in 0..<4 { k.box(-8.72-Float(i)*0.05,1.05,0,0.025,2.15,2.03,roof) }
+            k.box(s*(half+0.12),1.10,0,0.24,1.75,2.12,rubber)
+            if !light {for i in 0..<5 {k.box(s*(half+0.025+Float(i)*0.045),1.10,0,0.018,1.82,2.12,E.roof)}}
         }
     }
 }

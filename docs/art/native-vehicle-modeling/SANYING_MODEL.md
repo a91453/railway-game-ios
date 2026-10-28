@@ -1,4 +1,4 @@
-# 三鶯線列車靜態模型（revision 1）
+# 三鶯線列車靜態模型（revision 2）
 
 本模型是兩節編組的原生程序化靜態展示素材，模型 ID 為 `sanying-a`、`sanying-b` 及兩個 `-far` 版本。`tools/sanying/assembly.json` 使用兩節單元及 180° 尾車旋轉重建整列。它註冊在 `Map3DModelPack.studies`，未接營運映射、購車或動畫。
 
@@ -10,7 +10,7 @@
 
 已檢視作者私有參考庫的 `garage-blender-v1/sanying.json`，其 Q 比例模型只有 9.208 m 長，且 `engineeringDimensionsM` 為空；未複用幾何或當作尺寸來源。
 
-車身長高寬依公開諸元；車窗寬、鼻部曲面、轉向架軸距、輪徑、空調箱和集電靴位置由照片估計，尚未取得工程圖。風擋、藍色肩線、銀灰前臉與每側三門是主要辨識點。模型使用遊戲既有霧面頂點色，不含真實標誌、照片貼圖或第三方網格。
+第二版因使用者明確否定第一版外觀，以本專案 `Map3DTaipei610` 的圓角前罩與門窗比例為內部造型參考，重寫為獨立三鶯線配方，依官方 17.7 × 2.6 × 3.8 m 對車體做比例校正；集電靴超出 2.6 m 車體寬。車窗寬、鼻部曲面、轉向架軸距、輪徑、空調箱和集電靴位置由照片估計，尚未取得工程圖。風擋、藍色肩線、銀灰前臉與每側三門是主要辨識點。模型使用遊戲既有霧面頂點色，不含真實標誌、照片貼圖或第三方網格。
 
 ## 重建
 
@@ -21,4 +21,4 @@ node tools/train-models/audit.mjs /tmp/sanying
 node tools/train-models/render.mjs /tmp/sanying --time both
 ```
 
-完整檢查與來源記錄隨資產庫 `game-art-previews/docs/art/sanying/revision-1/`；Linux 預覽不能代替真機 Metal 與工程尺寸驗收。
+完整檢查與來源記錄隨資產庫 `game-art-previews/docs/art/sanying/revision-2/`；Linux 預覽不能代替真機 Metal 與工程尺寸驗收。

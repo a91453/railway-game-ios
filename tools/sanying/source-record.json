@@ -1,8 +1,8 @@
 {
-  "origin": "Original Swift procedural geometry by the project, based on visual observation and published dimensions; no third-party image or mesh is embedded.",
+  "origin": "Original project Swift procedural geometry adapted from its own Taipei Circular Line 610 rounded cab recipe at the user's request; Sanying two-car assembly, dimensions and livery are derived from the cited operator data and photographs. No third-party image or mesh embedded.",
   "date": "2026-10-28",
   "license": "Project copyright; reference photographs are observation-only and retain their owners' rights.",
-  "public_use": "Source citations and original procedural recipe only; no reference photo redistributed.",
+  "public_use": "Project-owned procedural recipe and citations only; reference photos and private Q-proportion mesh are not redistributed.",
   "references": [
     {
       "url": "https://www.ntmetro.com.tw/basic/?mode=detail&node=864",
@@ -27,5 +27,6 @@
   "private_reference": {
     "path": "railway-reference-private/Railway/taiwan-rail-reference-clean/source/rail-3d/assets/garage-blender-v1/sanying.json",
     "finding": "Illustrative Q-proportions model, 9.208 m long, engineeringDimensionsM null; inspected metadata only and did not reuse geometry or dimensions."
-  }
+  },
+  "revision_2_feedback": "User rejected revision-1 appearance and requested a Circular Line-inspired two-car Sanying redesign on 2026-10-28."
 }

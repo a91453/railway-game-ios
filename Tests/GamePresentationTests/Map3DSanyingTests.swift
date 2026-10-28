@@ -9,7 +9,10 @@ final class Map3DSanyingTests: XCTestCase {
             XCTAssertLessThan(near.triangleCount, 15_000)
             XCTAssertLessThan(far.triangleCount, near.triangleCount / 2)
             XCTAssertEqual(near.maximum.x - near.minimum.x, 17.7, accuracy: 0.25)
-            XCTAssertEqual(near.maximum.y - near.minimum.y, 2.6, accuracy: 0.15)
+            // Third-rail shoes project beyond the published 2.6 m body.
+            let bodyHalfWidth = near.vertices.filter { $0.z > 1.5 }.map { abs($0.y) }.max() ?? 0
+            XCTAssertEqual(bodyHalfWidth * 2, 2.6, accuracy: 0.15)
+            XCTAssertLessThan(near.maximum.y - near.minimum.y, 3.2)
             XCTAssertEqual(near.minimum.z, 0, accuracy: 0.001)
             XCTAssertLessThanOrEqual(near.maximum.z, 3.81) // no pantograph on third-rail train
             XCTAssertTrue(near.vertices.allSatisfy { $0.x.isFinite && $0.y.isFinite && $0.z.isFinite })
