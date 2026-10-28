@@ -342,6 +342,7 @@ struct MapView: View {
             // Once for the map and its loupe, not once for each canvas.
             let waitingCounts = MapLayers.waitingPassengerCounts(in: session.world)
             let networkOverlay = session.networkOverlay, buildingOverlay = session.buildingOverlay, busOverlay = session.busMapOverlay
+            let roadOverlay = session.roadMapOverlay
             let expansionOverlay = session.mapExpansionOverlay, routePreview = session.routePreview
             let lineCodes = LineBadge.codes(for: session.world.lines)
 
@@ -407,6 +408,7 @@ struct MapView: View {
                             journey: journeyTrace.flatMap { $0.station == tracedStationID && $0.line == tracedLineID ? $0 : nil },
                             journeyProgress: journeyProgress,
                             buses: busOverlay,
+                            roads: roadOverlay,
                             drawsLabels: false,
                             part: part
                         )
@@ -526,7 +528,8 @@ struct MapView: View {
                                     linePalette: linePalette,
                                     journey: nil,
                                     journeyProgress: 1,
-                                    buses: session.busMapOverlay
+                                    buses: session.busMapOverlay,
+                                    roads: session.roadMapOverlay
                                 )
                                 .equatable()
                                 // Where the finger is.
@@ -578,6 +581,8 @@ struct MapView: View {
                         // and zoom the map.
                         if isZoning { return true }
                         guard screen.panel != .lines else { return false }
+                        // Decision 438: laying a road, one finger draws it.
+                        if session.tool == .bus { return session.busMode == .roads && session.world.roads != nil }
                         // Decision 103: a drag on the building shown moves it.
                         if session.tool == .building {
                             return session.buildingDragMoves(from: projection.planPoint(at: location))
@@ -596,6 +601,12 @@ struct MapView: View {
                             case .moved: session.dragZone(from: from, to: to)
                             case .ended: session.endZoneDrag(from: from, to: to)
                             case .cancelled: session.cancelZoneDrag()
+                            }
+                        } else if session.tool == .bus {
+                            switch phase {
+                            case .moved: session.dragRoad(from: from, to: to)
+                            case .ended: session.endRoadDrag(from: from, to: to)
+                            case .cancelled: session.cancelRoadDrag()
                             }
                         } else if session.tool == .building {
                             switch phase {
@@ -2183,6 +2194,8 @@ private struct MapCanvas: View, Equatable {
     /// Decision 400 (10i-5): the company's bus routes and the bus tool's
     /// route (docs/MAP_LAYERS.md, 24.8).
     var buses: BusMapOverlay?
+    /// Decision 438: the player's roads and the road the bus tool draws.
+    var roads: RoadMapOverlay?
     /// Whether the stations' names and waiting counts, the network tool's
     /// preview and the tracks' numbers are drawn here; the map draws them
     /// over the trains instead, in ``MapLabelCanvas``.
@@ -2212,7 +2225,7 @@ private struct MapCanvas: View, Equatable {
             if lhs.flowVersion != rhs.flowVersion { return .flow }
             if lhs.lineCodes != rhs.lineCodes { return .lineCodes }
             if lhs.journey != rhs.journey || lhs.journeyProgress != rhs.journeyProgress { return .journey }
-            if lhs.buses != rhs.buses { return .buses }
+            if lhs.buses != rhs.buses || lhs.roads != rhs.roads { return .buses }
             return nil
         }
         if lhs.part == .railway, rhs.part == .railway, lhs.drawsLabels == rhs.drawsLabels {
@@ -2254,7 +2267,7 @@ private struct MapCanvas: View, Equatable {
         let selectedStationID = selectedStationID, network = network, building = building, expansion = expansion, traffic = traffic, camera = camera, edges = edges, layers = layers, waitingCounts = waitingCounts, lines = lines
         let labels = labels, latitude = world.geoAnchor?.latitudeDegrees ?? 0, flowStrokes = flowStrokes
         let routePreview = routePreview, journey = journey, journeyProgress = journeyProgress, drawsLabels = drawsLabels, part = part
-        let buses = buses
+        let buses = buses, roads = roads
         return Canvas { context, size in
             // Decision 328: timed for the frame readout; decision 377, each
             // canvas on a line of its own (the loupe's with the railway).
@@ -2283,6 +2296,7 @@ private struct MapCanvas: View, Equatable {
                     journey: journey,
                     journeyProgress: journeyProgress,
                     buses: buses,
+                    roads: roads,
                     drawsLabels: drawsLabels,
                     part: part,
                     in: context

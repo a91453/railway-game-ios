@@ -312,7 +312,21 @@ private struct ToolOptions: View {
             if let offer = session.roadsOffer {
                 RoadsOfferControls(session: session, offer: offer)
             } else {
-                BusControls(session: session)
+                VStack(alignment: .leading, spacing: 8) {
+                    // Decision 438: routes, or the player's own roads.
+                    Picker(selection: Binding(get: { session.busMode }, set: { session.setBusMode($0) })) {
+                        Text(verbatim: session.language.text("Routes", "路線")).tag(BusToolMode.routes)
+                        Text(verbatim: session.language.text("Roads", "道路")).tag(BusToolMode.roads)
+                    } label: {
+                        Text(verbatim: session.language.text("Draw", "畫"))
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityIdentifier("bus.mode")
+                    switch session.busMode {
+                    case .routes: BusControls(session: session)
+                    case .roads: RoadControls(session: session)
+                    }
+                }
             }
         }
     }
@@ -387,7 +401,7 @@ private struct BusControls: View {
             .font(.footnote)
             .foregroundStyle(Theme.textSecondary)
             .accessibilityIdentifier("bus.hint")
-            if draft.station != nil {
+            if draft.isBegun {
                 Picker(selection: Binding(get: { session.busDraft.headway }, set: { session.setBusDraftHeadway($0) })) {
                     ForEach(headways, id: \.self) { minutes in
                         Text(verbatim: language.text("\(minutes) min", "\(minutes) 分")).tag(minutes)
@@ -417,12 +431,12 @@ private struct BusControls: View {
                         .accessibilityIdentifier("bus.problem")
                 }
             }
-            if draft.station != nil {
+            if draft.isBegun {
                 Button {
                     session.removeLastBusStop()
                 } label: {
                     Label {
-                        Text(verbatim: draft.stops.isEmpty
+                        Text(verbatim: draft.stops.isEmpty && !draft.city
                              ? language.text("Pick another station", "換一座車站")
                              : language.text("Take back the last stop", "收回最後一個站牌"))
                     } icon: {
@@ -432,6 +446,8 @@ private struct BusControls: View {
                 }
                 .disabled(draft.stops.isEmpty && draft.route != nil)
                 .accessibilityIdentifier("bus.undoStop")
+            } else {
+                CityBusRouteList(session: session)
             }
         }
     }
@@ -444,16 +460,163 @@ private struct BusControls: View {
 
     private var hint: String {
         let language = session.language
+        if session.busDraft.city {
+            return language.text(
+                "Tap roads for its other stops, in the order the bus calls. Tap a stop again to take it away.",
+                "照公車停靠的順序點路面放其他站牌。再點一次站牌就拿掉。"
+            )
+        }
         guard let id = session.busDraft.station, let station = session.world.station(id: id) else {
             return language.text(
-                "Tap the station the bus route feeds. People beyond walking distance ride it to your trains.",
-                "點公車路線要接的車站。走路到不了車站的人會搭它來坐你的車。"
+                "Tap a station for a bus that brings riders to your trains, or a road to start a city bus route between stops.",
+                "點車站開公車把人載來坐車，或點路面開一條在站牌之間跑的市區公車。"
             )
         }
         return language.text(
             "Tap roads for its stops, out from \(station.name). Tap a stop again to take it away.",
             "從\(station.name)往外，點路面放站牌。再點一次站牌就拿掉。"
         )
+    }
+}
+
+/// The bus tool's roads mode (decision 438): drag across the map to draw
+/// a road, the action button or the map's ✓ lays it; a tap on one of the
+/// player's roads picks its stretch to take up.
+private struct RoadControls: View {
+    let session: GameSession
+
+    var body: some View {
+        let language = session.language
+        VStack(alignment: .leading, spacing: 8) {
+            Label {
+                Text(verbatim: language.text(
+                    "Drag across the map to lay a road where buses can run. Tap one of your roads to take it up.",
+                    "在地圖上拖過要鋪路的地方，公車就能走。點自己鋪的路可以拆掉。"
+                ))
+            } icon: {
+                Image(systemName: "hand.draw")
+            }
+            .font(.footnote)
+            .foregroundStyle(Theme.textSecondary)
+            .accessibilityIdentifier("road.hint")
+            if let removal = session.roadRemoval {
+                Text(verbatim: language.text("\(removal.cells.count) cells of your road", "自己鋪的路 \(removal.cells.count) 格"))
+                    .font(.footnote)
+                    .monospacedDigit()
+                if let problem = removal.problem {
+                    Text(verbatim: problem)
+                        .font(.footnote)
+                        .foregroundStyle(Theme.error)
+                        .accessibilityIdentifier("road.problem")
+                } else {
+                    Text(verbatim: language.text("Nothing is refunded.", "不退還費用。"))
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            }
+            if let preview = session.roadPreview {
+                if let line = preview.line(in: language) {
+                    Text(verbatim: line)
+                        .font(.footnote)
+                        .monospacedDigit()
+                }
+                if let problem = preview.problem {
+                    Text(verbatim: problem)
+                        .font(.footnote)
+                        .foregroundStyle(Theme.error)
+                        .accessibilityIdentifier("road.problem")
+                }
+            }
+            if !session.roadDraft.isEmpty {
+                HStack {
+                    Button {
+                        session.removeLastRoadCell()
+                    } label: {
+                        Label {
+                            Text(verbatim: language.text("Take back the last cell", "收回最後一格"))
+                        } icon: {
+                            Image(systemName: "arrow.uturn.backward")
+                        }
+                        .font(.footnote)
+                    }
+                    .accessibilityIdentifier("road.undoCell")
+                    Spacer()
+                    Button {
+                        session.clearRoadDraft()
+                    } label: {
+                        Text(verbatim: language.text("Clear", "清除"))
+                            .font(.footnote)
+                    }
+                    .accessibilityIdentifier("road.clear")
+                }
+            }
+        }
+    }
+}
+
+/// The city bus routes (decision 438), which feed no station and so have
+/// no station's panel: each with its last day's account, and a way to
+/// change its stops or close it.
+private struct CityBusRouteList: View {
+    let session: GameSession
+    @State private var closing: BusRouteID?
+
+    var body: some View {
+        let language = session.language
+        let cards = session.world.cityBusRouteCards(in: language)
+        if !cards.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(verbatim: language.text("City bus routes", "市區公車路線"))
+                    .font(.footnote.weight(.semibold))
+                ForEach(cards) { card in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(verbatim: card.title)
+                            .font(.subheadline.weight(.semibold))
+                        Text(verbatim: "\(card.wayText) · \(card.serviceText)")
+                            .font(.footnote)
+                            .foregroundStyle(Theme.textSecondary)
+                        Text(verbatim: card.dayText)
+                            .font(.footnote.monospacedDigit())
+                            .foregroundStyle(card.net.map { $0 < .zero ? Theme.error : Theme.textPrimary } ?? Theme.textSecondary)
+                        HStack {
+                            Button {
+                                session.editBusRoute(card.id)
+                            } label: {
+                                Text(verbatim: language.text("Change Route", "改路線"))
+                            }
+                            .buttonStyle(.borderless)
+                            .accessibilityIdentifier("bus.city.edit")
+                            Spacer()
+                            Button(role: .destructive) {
+                                closing = card.id
+                            } label: {
+                                Text(verbatim: language.text("Close Route", "停駛"))
+                            }
+                            .buttonStyle(.borderless)
+                            .accessibilityIdentifier("bus.city.close")
+                        }
+                        .font(.footnote)
+                    }
+                }
+            }
+            .confirmationDialog(
+                Text(verbatim: language.text("Close this bus route?", "要讓這條公車路線停駛嗎？")),
+                isPresented: Binding(get: { closing != nil }, set: { if !$0 { closing = nil } }),
+                titleVisibility: .visible,
+                presenting: closing
+            ) { id in
+                Button(role: .destructive) {
+                    session.removeBusRoute(id)
+                } label: {
+                    Text(verbatim: language.text("Close Route", "停駛"))
+                }
+            } message: { _ in
+                Text(verbatim: language.text(
+                    "Its stops come down and its buses go. Nothing is refunded.",
+                    "站牌會拆掉，公車也會開走。不退還費用。"
+                ))
+            }
+        }
     }
 }
 
@@ -779,7 +942,10 @@ private struct ActionButton: View {
     }
 
     private var isReady: Bool {
-        if session.tool == .bus { return session.busPreview?.canOpen ?? false }
+        if session.tool == .bus {
+            guard session.busMode == .roads else { return session.busPreview?.canOpen ?? false }
+            return session.roadRemoval?.canRemove ?? session.roadPreview?.canBuild ?? false
+        }
         if session.tool == .building {
             if session.buildingMode == .sell { return session.salePreview != nil }
             return session.buildingPreview.map { $0.problem == nil } ?? false
@@ -795,7 +961,11 @@ private struct ActionButton: View {
 
     private func act() {
         if session.tool == .bus {
-            session.confirmBusRoute()
+            if session.busMode == .roads {
+                session.confirmRoad()
+            } else {
+                session.confirmBusRoute()
+            }
             return
         }
         if session.tool == .building {
@@ -826,7 +996,11 @@ private struct ActionButton: View {
         case .building:
             if session.buildingMode == .sell { return session.language.text("Tap one of your buildings first.", "請先點選自己的建物。") }
             return String(localized: "Tap the map where it goes first.")
-        case .bus: return session.language.text("Tap a station, then roads for the stops.", "先點車站，再點路面放站牌。")
+        case .bus:
+            if session.busMode == .roads {
+                return session.language.text("Drag across the map for a road, or tap one of yours.", "先在地圖上拖出路，或點自己鋪的路。")
+            }
+            return session.language.text("Tap a station or a road, then roads for the stops.", "先點車站或路面，再點路面放站牌。")
         case .select, .train: return String(localized: "Select a station on the map first.")
         }
     }
@@ -869,6 +1043,11 @@ private struct ActionButton: View {
             guard session.world.roads != nil else { return nil }
             // Decision 400, 10i-5: the route drawn, or the edited one's stops.
             let language = session.language
+            if session.busMode == .roads {
+                if session.roadRemoval != nil { return language.text("Take Up Road", "拆掉這段路") }
+                guard let price = session.roadPreview?.price, price > .zero else { return language.text("Build Road", "鋪路") }
+                return language.text("Build Road · \(price.moneyText)", "鋪路 · \(price.moneyText)")
+            }
             let what = session.busDraft.route == nil ? language.text("Open Bus Route", "開公車路線") : language.text("Save Bus Route", "儲存公車路線")
             guard let price = session.busPreview?.price, price > .zero else { return what }
             return "\(what) · \(price.moneyText)"

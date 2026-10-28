@@ -485,6 +485,12 @@ struct BusWay: Hashable, Sendable {
         marks.dropLast().map { points[$0] }
     }
 
+    /// Where every end of a leg lies on the way: a city route's stops, the
+    /// last with them (decision 438).
+    var ends: [PlanPoint] {
+        marks.map { points[$0] }
+    }
+
     /// The metres of every leg, or `nil` when a leg is broken.
     var legMetres: [Int64]? {
         let metres = legs.compactMap(\.metres)
@@ -570,11 +576,12 @@ extension BusRoads {
     }
 
     /// The way of a saved route through `stops` (GameCore's order, cells) to
-    /// `station`: each stop put from its cell's middle on the nearest bus
-    /// road (in the cell when one crosses it), the route's metres not
-    /// worked out again. `nil` when a stop has no road near or a leg no road
-    /// joins; the route is then drawn along the road cells.
-    func way(ofSaved stops: [CellPosition], station: PlanPoint) -> BusWay? {
+    /// `station`, or from the first stop to the last with none (a city
+    /// route, decision 438): each stop put from its cell's middle on the
+    /// nearest bus road (in the cell when one crosses it), the route's
+    /// metres not worked out again. `nil` when a stop has no road near or a
+    /// leg no road joins; the route is then drawn along the road cells.
+    func way(ofSaved stops: [CellPosition], station: PlanPoint?) -> BusWay? {
         var pins: [PlanPoint] = []
         for cell in stops {
             guard let pin = place(near: cell.middle, within: BusRoadNetwork.cellReach, accepting: { CellPosition(containing: $0) == cell })
@@ -591,12 +598,13 @@ extension BusRoads {
     /// road: a stop where it is (it was put there when it was tapped), the
     /// station within ``BusRoadNetwork/stationReach`` of it. A leg ends at
     /// the station itself, over the short way from its road. A leg whose
-    /// ends no road joins is broken (`nil`).
-    func way(stops: [PlanPoint], station: PlanPoint) -> BusWay {
-        let ends = stops + [station]
+    /// ends no road joins is broken (`nil`). With no station (a city route,
+    /// decision 438) the way ends at the last stop, a leg fewer.
+    func way(stops: [PlanPoint], station: PlanPoint?) -> BusWay {
+        let ends = stops + (station.map { [$0] } ?? [])
         var lines: [[PlanPoint]?] = []
-        for index in stops.indices {
-            lines.append(leg(from: ends[index], to: ends[index + 1], toStation: index == stops.count - 1))
+        for index in ends.indices.dropLast() {
+            lines.append(leg(from: ends[index], to: ends[index + 1], toStation: station != nil && index == stops.count - 1))
         }
         return BusWay(lines: lines)
     }

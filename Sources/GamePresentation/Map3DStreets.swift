@@ -424,6 +424,31 @@ extension Map3DScene.Builder {
         for crossing in crossings { addLevelCrossing(crossing) }
     }
 
+    /// Decision 438: on a real-world map, the player's own roads, which the
+    /// base map does not have: from each of their cells' middle to each
+    /// beside it (corner to corner too), laid as the base map's minor
+    /// roads.
+    mutating func addOwnRoads() {
+        guard let built = world.roads?.built, !built.isEmpty else { return }
+        let bounds = Map3DBaseMap.Bounds(minX: (region.minX - originX) / Self.metre, minZ: (region.minY - originY) / Self.metre,
+                                         maxX: (region.maxX - originX) / Self.metre, maxZ: (region.maxY - originY) / Self.metre)
+        func point(_ cell: CellPosition) -> Map3DBaseMap.Point {
+            Map3DBaseMap.Point(x: (Double(cell.middle.x) - originX) / Self.metre, z: (Double(cell.middle.y) - originY) / Self.metre)
+        }
+        var roads: [Map3DBaseMap.Road] = []
+        for cell in built.sorted() {
+            // Each pair once: to the cells after it, row by row.
+            for (dr, dc) in [(0, 1), (1, -1), (1, 0), (1, 1)] {
+                let near = CellPosition(row: cell.row + dr, column: cell.column + dc)
+                guard built.contains(near),
+                      contains(x: Double(cell.middle.x + near.middle.x) / 2, y: Double(cell.middle.y + near.middle.y) / 2) else { continue }
+                roads.append(Map3DBaseMap.Road(kind: .minor, isRamp: false, points: [point(cell), point(near)], bounds: bounds))
+            }
+        }
+        var taken = Set<Map3DScene.ChunkKey>()
+        addRoads(roads, taking: &taken)
+    }
+
     /// Whether a street from `a` to `b`, reaching `reach` either side
     /// of its middle, comes within a metre of a station's building.
     func nearHouse(_ a: Map3DPoint, _ b: Map3DPoint, reach: Float) -> Bool {

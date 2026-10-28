@@ -237,8 +237,10 @@ final class RoadsTurnOnTests: XCTestCase {
     }
 
     /// A real-world map outside Taiwan whose land came all at once: the
-    /// base map is Taiwan's alone, so the tool says why and offers nothing.
-    func testAMapOutsideTaiwanHasNoRoadsToRead() throws {
+    /// base map is Taiwan's alone, so no city roads come; decision 438:
+    /// the roads still turn on, empty, for the player to lay their own,
+    /// and the bus tool's stops go along those (no base map roads).
+    func testAMapOutsideTaiwanTurnsOnOnlyThePlayersOwnRoads() throws {
         var world = try fixture("v4-real-world-demo-90-minutes.json")
         world.setGeoAnchor(GeoAnchor(latitude: 356_812_000, longitude: 1_397_671_000)) // Tokyo Station
         XCTAssertNil(world.landBlocks)
@@ -247,13 +249,18 @@ final class RoadsTurnOnTests: XCTestCase {
             RealWorldDataSet(population: true, places: true, water: true, heights: true, coverage: true, baseMap: true), in: session
         )
         XCTAssertTrue(session.allows(ConstructionTool.bus))
-        XCTAssertEqual(session.roadsOffer, .unreadable)
-        let before = session.world
+        XCTAssertEqual(session.roadsOffer, .ownRoadsOnly)
         session.turnOnRoads()
-        XCTAssertEqual(session.world, before)
-        XCTAssertEqual(session.message?.text, RoadsOffer.unreadable.text(in: .english))
-        XCTAssertEqual(RoadsOffer.unreadable.text(in: .english), "Maps outside Taiwan have no road data yet, so buses can't run here.")
-        XCTAssertEqual(RoadsOffer.unreadable.text(in: .traditionalChinese), "台灣以外的地圖還沒有道路資料，不能開公車。")
+        let roads = try XCTUnwrap(session.world.roads)
+        XCTAssertTrue(roads.allCells.isEmpty, "no city roads where the base map has none")
+        XCTAssertNil(session.roadsOffer)
+        XCTAssertEqual(session.message?.kind, .success)
+        XCTAssertNil(session.busRoads, "stops go along the player's road cells, not the base map's")
+        XCTAssertEqual(
+            RoadsOffer.ownRoadsOnly.text(in: .english),
+            "This map has no roads of its own. Turn roads on, then lay your own in the Buses tool and run buses on them."
+        )
+        XCTAssertEqual(RoadsOffer.ownRoadsOnly.text(in: .traditionalChinese), "這張地圖沒有現成的道路。打開後，可以在「公車」工具自己鋪路，再開公車。")
     }
 
     /// The real railways the Pingxi challenge and the real-world demo are
@@ -347,7 +354,7 @@ final class RoadsTurnOnTests: XCTestCase {
         let tokyo = try XCTUnwrap(GeoAnchor(latitude: 356_812_000, longitude: 1_397_671_000))
         let world = GameWorld.newGame(anchor: tokyo, land: [LandCell(row: 128, column: 128, use: .residential, residents: 100, jobs: 0)])
         XCTAssertNil(world.roads)
-        XCTAssertEqual(GameSession(world: world).roadsOffer, .unreadable)
+        XCTAssertEqual(GameSession(world: world).roadsOffer, .ownRoadsOnly)
     }
 
     /// Which places the base map has roads for: Taiwan, Penghu, Kinmen
@@ -451,12 +458,16 @@ final class RoadsTurnOnTests: XCTestCase {
     // MARK: - Words
 
     func testTheToolSaysWhatTheButtonDoesInBothLanguages() {
-        for offer in [RoadsOffer.available, .unreadable] {
+        for offer in [RoadsOffer.available, .ownRoadsOnly] {
             XCTAssertNotEqual(offer.text(in: .english), offer.text(in: .traditionalChinese))
         }
         XCTAssertEqual(RoadsOffer.available.text(in: .traditionalChinese), "這個存檔還沒有道路。打開後，城鎮的路會慢慢長向車站，就能開公車。")
         XCTAssertTrue(HelpGuide.entries(matching: "道路 公車").contains { $0.id == "roadsAndBuses" })
         XCTAssertTrue(HelpGuide.entries(matching: "road bus").contains { $0.id == "roadsAndBuses" })
+        // Decision 438: the city buses and the player's own roads.
+        XCTAssertTrue(HelpGuide.entries(matching: "市區公車").contains { $0.id == "roadsAndBuses" })
+        XCTAssertTrue(HelpGuide.entries(matching: "鋪路").contains { $0.id == "ownRoads" })
+        XCTAssertTrue(HelpGuide.entries(matching: "lay road").contains { $0.id == "ownRoads" })
     }
 }
 

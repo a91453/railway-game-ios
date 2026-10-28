@@ -12,7 +12,9 @@ public enum RoadsOffer: Hashable, Sendable {
     case available
     /// A real-world map outside Taiwan whose land came all at once (or not
     /// at all): the base map is Taiwan's alone, so no roads would come.
-    case unreadable
+    /// Decision 438: they can still be turned on, with none of the city's,
+    /// for the player to lay their own.
+    case ownRoadsOnly
 
     /// What the bus tool says about it.
     public func text(in language: DisplayLanguage) -> String {
@@ -22,8 +24,11 @@ public enum RoadsOffer: Hashable, Sendable {
                 "This game has no roads yet. Turn them on and the towns' roads grow toward your stations, and buses can run on them.",
                 "這個存檔還沒有道路。打開後，城鎮的路會慢慢長向車站，就能開公車。"
             )
-        case .unreadable:
-            language.text("Maps outside Taiwan have no road data yet, so buses can't run here.", "台灣以外的地圖還沒有道路資料，不能開公車。")
+        case .ownRoadsOnly:
+            language.text(
+                "This map has no roads of its own. Turn roads on, then lay your own in the Buses tool and run buses on them.",
+                "這張地圖沒有現成的道路。打開後，可以在「公車」工具自己鋪路，再開公車。"
+            )
         }
     }
 
@@ -84,18 +89,20 @@ extension GameSession {
     /// game has them or is the tutorial or a lesson (decision 428).
     /// Decision 440: a real-world map of Taiwan whose land came all at once
     /// reads the base map's roads round its stations
-    /// (``readRoads(in:baseMap:ahead:)``); only one elsewhere has none.
+    /// (``readRoads(in:baseMap:ahead:)``); only one elsewhere has none, and
+    /// gets only the player's own (decision 438).
     public var roadsOffer: RoadsOffer? {
         guard world.roads == nil, offersBusTool else { return nil }
         guard let anchor = world.geoAnchor, world.landBlocks == nil else { return .available }
-        return RoadsOffer.baseMapHasRoads(at: anchor) ? .available : .unreadable
+        return RoadsOffer.baseMapHasRoads(at: anchor) ? .available : .ownRoadsOnly
     }
 
     /// Turns the roads on (decision 428): a blank map's from the towns it
     /// began with (``GameWorld/startingTowns()``), a real-world map's read
     /// from the base map with its land, in the same edit. Free, and they
-    /// stay on. Refused in the tutorial and the lessons, and on a map
-    /// whose roads cannot be read; GameCore refuses a game that has them.
+    /// stay on. Refused in the tutorial and the lessons; GameCore refuses a
+    /// game that has them. Decision 438: a map whose roads cannot be read
+    /// gets none of the city's, for the player to lay their own.
     public func turnOnRoads() {
         guard offersBusTool else {
             message = StatusMessage(kind: .failure, text: language.text(
@@ -103,15 +110,17 @@ extension GameSession {
             ))
             return
         }
-        guard roadsOffer != .unreadable else {
-            message = StatusMessage(kind: .failure, text: RoadsOffer.unreadable.text(in: language))
-            return
-        }
+        let ownOnly = roadsOffer == .ownRoadsOnly
         perform(.turnOnRoads(towns: world.geoAnchor == nil ? world.startingTowns() : [])) { _, _, _ in
-            language.text(
-                "Roads and buses are on. The roads grow toward your stations each month.",
-                "道路與公車打開了。路每個月會往車站長一點。"
-            )
+            ownOnly
+                ? language.text(
+                    "Roads and buses are on. Switch the Buses tool to Roads to lay your own.",
+                    "道路與公車打開了。把「公車」工具切到「道路」就能自己鋪路。"
+                )
+                : language.text(
+                    "Roads and buses are on. The roads grow toward your stations each month.",
+                    "道路與公車打開了。路每個月會往車站長一點。"
+                )
         }
     }
 }

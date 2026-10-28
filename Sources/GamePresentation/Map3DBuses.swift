@@ -26,7 +26,8 @@ public struct Map3DBuses: Sendable {
     public struct Signature: Hashable, Sendable {
         struct Route: Hashable, Sendable {
             let route: BusRoute.Shape
-            let station: PlanPoint
+            /// Its station's place; `nil` for a city route (decision 438).
+            let station: PlanPoint?
             let colour: Int?
         }
 
@@ -38,9 +39,9 @@ public struct Map3DBuses: Sendable {
 
         public init(world: GameWorld, palette: LinePalette, roads onRoads: BusRoads? = nil) {
             routes = world.busRoutes.compactMap { route in
-                // Decision 438: a city route is drawn once the 3D map has
-                // its way (the next pull request).
-                route.station.flatMap { world.station(id: $0) }.map { station in
+                // Decision 438: a city route has no station.
+                guard let id = route.station else { return Route(route: BusRoute.Shape(route), station: nil, colour: nil) }
+                return world.station(id: id).map { station in
                     Route(route: BusRoute.Shape(route), station: station.location,
                           colour: world.lines(callingAt: station.id).first?.color?.rgb)
                 }
@@ -91,18 +92,23 @@ public struct Map3DBuses: Sendable {
             routes = []
             return
         }
-        var laid: [(BusMotion, [PlanPoint], [Int], PlanPoint, UInt32)] = []
+        var laid: [(BusMotion, [PlanPoint], [Int], PlanPoint?, UInt32)] = []
         for route in world.busRoutes {
-            guard let motion = BusMotion(route), let station = route.station.flatMap({ world.station(id: $0) }) else { continue }
+            let station = route.station.flatMap { world.station(id: $0) }
+            guard let motion = BusMotion(route), route.station == nil || station != nil, let last = route.stops.last else { continue }
             let way: (points: [PlanPoint], stops: [Int])
-            if world.geoAnchor != nil, let saved = onRoads?.way(ofSaved: route.stops, station: station.location) {
+            if world.geoAnchor != nil, let saved = onRoads?.way(ofSaved: route.stops, station: station?.location) {
                 way = (saved.points, saved.marks)
-            } else {
+            } else if let station {
                 way = Self.way(stops: route.stops, station: station.location, roads: roads.allCells, alongEdges: world.geoAnchor == nil)
+            } else {
+                // Decision 438: a city route, its last stop where a
+                // station would be.
+                way = Self.way(stops: Array(route.stops.dropLast()), station: last.middle, roads: roads.allCells, alongEdges: world.geoAnchor == nil)
             }
-            let colour = world.lines(callingAt: station.id).first?.color
+            let colour = station.flatMap { world.lines(callingAt: $0.id).first?.color }
             let tint = colour.map { Map3DColor.rgb(UInt32(palette.color(for: $0.rgb))) } ?? Map3DLowFloorBus.accentColor
-            laid.append((motion, way.points, way.stops, station.location, tint))
+            laid.append((motion, way.points, way.stops, station?.location, tint))
         }
         let roadIndex = RoadIndex(lanes: scene.streetLife.lanes,
                                   near: laid.flatMap(\.1).map { scene.point(worldX: Double($0.x), worldY: Double($0.y), height: 0) })
@@ -213,8 +219,10 @@ public struct Map3DBuses: Sendable {
     /// How near a road the way's end keeps, metres.
     static let roadEnd: Float = 4
 
-    /// `plan`'s way in `scene`, on its roads' height, kept to the right.
-    static func lay(_ motion: BusMotion, plan: [PlanPoint], stops: [Int], station: PlanPoint, tint: UInt32, in scene: Map3DScene,
+    /// `plan`'s way in `scene`, on its roads' height, kept to the right;
+    /// short of its station, when it has one (a city route, decision 438,
+    /// ends at its last stop).
+    static func lay(_ motion: BusMotion, plan: [PlanPoint], stops: [Int], station: PlanPoint?, tint: UInt32, in scene: Map3DScene,
                     roads: RoadIndex, snaps: Bool) -> Route? {
         var corners = plan.map { scene.point(worldX: Double($0.x), worldY: Double($0.y), height: 0) }
         var halves: [Float] = []
@@ -249,7 +257,7 @@ public struct Map3DBuses: Sendable {
             marks.append(points.count - 1)
         }
         // Short of the station's house, at its front.
-        do {
+        if let station {
             let station = scene.point(worldX: Double(station.x), worldY: Double(station.y), height: 0)
             while points.count > 2, let end = points.last, Map3DPoint(end.x - station.x, 0, end.z - station.z).length < stationClearance {
                 points.removeLast()

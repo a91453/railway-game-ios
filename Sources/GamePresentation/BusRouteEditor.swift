@@ -23,10 +23,15 @@ import GameCore
 /// it feeds, then its stops in the order the player tapped them, from the
 /// station outwards. GameCore lists a route's stops the other way, the
 /// farthest first and the station after the last (``coreStops``).
+/// Decision 438: a city route feeds no station; its stops run in the order
+/// tapped, from its first to its last, as GameCore lists them.
 public struct BusRouteDraft: Hashable, Sendable {
     /// The station the route feeds, picked by the first tap.
     public var station: StationID?
-    /// The stops, nearest the station first.
+    /// Whether it is a city route (decision 438), begun with a tap on a
+    /// road away from a station.
+    public var city = false
+    /// The stops, nearest the station first; a city route's as tapped.
     public var stops: [CellPosition] = []
     /// Where each stop was put on its road (decision 424), as ``stops``:
     /// the cell's middle on a map with no base map.
@@ -51,14 +56,21 @@ public struct BusRouteDraft: Hashable, Sendable {
 
     public init() {}
 
-    /// The stops as GameCore takes them: the farthest first.
+    /// The stops as GameCore takes them: the farthest first, or a city
+    /// route's as tapped.
     public var coreStops: [CellPosition] {
-        stops.reversed()
+        city ? stops : stops.reversed()
     }
 
-    /// ``stopPoints``, the farthest first.
+    /// ``stopPoints``, as ``coreStops``.
     var corePoints: [PlanPoint] {
-        pins.reversed()
+        city ? pins : pins.reversed()
+    }
+
+    /// Whether a route is begun: its station picked, or a city route's
+    /// first stop put down.
+    public var isBegun: Bool {
+        station != nil || city
     }
 
     /// Where the stops are on the plan, nearest the station first.
@@ -123,6 +135,12 @@ public struct BusRoutePreview: Hashable, Sendable {
     public let riders: Int64
     /// The minutes from door to station, on average.
     public let minutes: Int64
+    /// Decision 438: a city route's trips a day between its own stops, and
+    /// their minutes door to door, on average.
+    public var localTrips: Int64 = 0
+    public var localMinutes: Int64 = 0
+    /// The station a city route's riders change to the trains at, by name.
+    public var transfer: String?
     /// Why it cannot open, as the player reads it; `nil` when it can.
     public let problem: String?
     /// The stop and the next (or the station) no road joins, when GameCore
@@ -138,19 +156,20 @@ public struct BusRoutePreview: Hashable, Sendable {
     /// `draft` run on a copy of `world` (``GameWorld/pricingCopy()``),
     /// whose price is its cash before less after; refused there, or more
     /// than the company has, its problem says why. `nil` before a station
-    /// and a stop are picked.
+    /// and a stop are picked, or a city route's two stops.
     ///
     /// Decision 424: `brokenLeg` is the leg (as GameCore counts them) the
     /// way drawn along the base map's roads could not join; it cannot open.
     public static func make(_ draft: BusRouteDraft, in world: GameWorld, language: DisplayLanguage, brokenLeg: Int? = nil) -> BusRoutePreview? {
-        guard let station = draft.station, !draft.stops.isEmpty else { return nil }
+        guard draft.isBegun, draft.stops.count >= (draft.city ? 2 : 1) else { return nil }
         func ends(of leg: Int) -> [PlanPoint] {
-            guard let location = world.station(id: station)?.location else { return [] }
-            let ends = draft.corePoints + [location]
+            let location = draft.station.flatMap { world.station(id: $0)?.location }
+            guard draft.city || location != nil else { return [] }
+            let ends = draft.corePoints + (location.map { [$0] } ?? [])
             return leg + 1 < ends.count ? [ends[leg], ends[leg + 1]] : []
         }
         if let leg = brokenLeg {
-            let toStation = leg == draft.stops.count - 1
+            let toStation = !draft.city && leg == draft.stops.count - 1
             return BusRoutePreview(
                 price: .zero, metres: 0, headway: nil, departures: 0, dailyCost: .zero, riders: 0, minutes: 0,
                 problem: toStation
@@ -179,11 +198,15 @@ public struct BusRoutePreview: Hashable, Sendable {
         let unchanged = draft.route.flatMap { world.busRoute(id: $0) }.map {
             $0.stops == draft.coreStops && $0.service == draft.service && $0.buses == draft.buses
         } ?? false
-        return BusRoutePreview(
+        var preview = BusRoutePreview(
             price: price, metres: route?.metres ?? 0, headway: route?.headway, departures: route?.dailyDepartures ?? 0,
             dailyCost: route?.dailyCost ?? .zero, riders: route?.feederTrips ?? 0, minutes: route?.feederMinutes ?? 0,
             problem: problem, brokenLeg: [], isUnchanged: unchanged
         )
+        preview.localTrips = route?.localTrips ?? 0
+        preview.localMinutes = route?.localMinutes ?? 0
+        preview.transfer = route?.transfer.flatMap { copy.station(id: $0.station)?.name }
+        return preview
     }
 
     /// The minutes a bus takes to run `metres` at its speed
@@ -213,12 +236,25 @@ public struct BusRoutePreview: Hashable, Sendable {
         } else {
             lines.append(language.text("No buses: the route does not run.", "沒有車：路線不會開。"))
         }
+        if let transfer {
+            // Decision 438: a city route that meets a station.
+            lines.append(language.text("Riders can change to the trains at \(transfer).", "在\(transfer)站可以轉乘。"))
+        }
         if riders > 0 {
             lines.append(language.text(
                 "Its stops reach up to \(Money(riders).displayText) trips a day, about \(minutes) min door to station",
                 "站牌一帶每天最多 \(Money(riders).displayText) 人次，門口到車站約 \(minutes) 分"
             ))
-        } else if headway != nil {
+        }
+        if localTrips > 0 {
+            lines.append(language.text(
+                "About \(Money(localTrips).displayText) trips a day between its stops, about \(localMinutes) min door to door",
+                "站牌之間每天約 \(Money(localTrips).displayText) 人次，門口到門口約 \(localMinutes) 分"
+            ))
+        }
+        if riders == 0, localTrips == 0, headway != nil, draft.city {
+            lines.append(language.text("Few people ride between its stops.", "站牌之間搭的人很少。"))
+        } else if riders == 0, localTrips == 0, headway != nil {
             lines.append(language.text(
                 "Few people live beyond walking distance of a station along it.",
                 "沿線走路到不了車站的地方人很少。"
@@ -235,13 +271,14 @@ enum BusRouteEdits {
     /// Opens `draft` as a new route, or moves the stops of the route it
     /// edits and sets its buses: returns the route.
     static func run(_ draft: BusRouteDraft, on world: inout GameWorld) throws(GameError) -> BusRouteID {
-        guard let station = draft.station else { throw .invalidBusRoute }
+        guard draft.isBegun else { throw .invalidBusRoute }
         if let id = draft.route {
             try revise(id, stops: draft.coreStops, legMetres: draft.legMetres, service: draft.service, buses: draft.buses, on: &world)
             return id
         }
+        // Decision 438: a city route, to no station.
         return try world.createBusRoute(
-            to: station, stops: draft.coreStops, legMetres: draft.legMetres, service: draft.service, buses: draft.buses
+            to: draft.city ? nil : draft.station, stops: draft.coreStops, legMetres: draft.legMetres, service: draft.service, buses: draft.buses
         ).id
     }
 
@@ -314,18 +351,26 @@ public enum BusRoadPath {
     }
 
     /// The line a route is drawn along: from its first stop through each
-    /// stop to `station`, along the roads, a straight line where none
-    /// joins two of them.
-    public static func points(stops: [CellPosition], station: PlanPoint, roads: Set<CellPosition>) -> [PlanPoint] {
-        let ends = stops + [CellPosition(containing: station)]
+    /// stop to `station`, or to its last stop with none (a city route,
+    /// decision 438), along the roads, a straight line where none joins
+    /// two of them.
+    public static func points(stops: [CellPosition], station: PlanPoint?, roads: Set<CellPosition>) -> [PlanPoint] {
+        let ends = stops + (station.map { [CellPosition(containing: $0)] } ?? [])
         var points: [PlanPoint] = []
         for (from, to) in zip(ends, ends.dropFirst()) {
             let cells = Self.cells(from: from, to: to, roads: roads) ?? [from, to]
             points += (points.isEmpty ? cells : Array(cells.dropFirst())).map(\.middle)
         }
         if points.isEmpty, let only = stops.first { points = [only.middle] }
-        points.append(station)
+        if let station { points.append(station) }
         return points
+    }
+
+    /// Whether the road cells join each stop to the next, and the last to
+    /// `station` when there is one.
+    static func joins(stops: [CellPosition], station: PlanPoint?, roads: Set<CellPosition>) -> Bool {
+        let ends = stops + (station.map { [CellPosition(containing: $0)] } ?? [])
+        return zip(ends, ends.dropFirst()).allSatisfy { cells(from: $0, to: $1, roads: roads) != nil }
     }
 
     /// A binary heap of (metres, cell), the least first, then by row and
@@ -379,7 +424,8 @@ struct BusStopNameKey: Hashable {
 /// worked out for.
 struct BusPathMemo {
     let stops: [CellPosition]
-    let station: PlanPoint
+    /// The station, or `nil` for a city route.
+    let station: PlanPoint?
     /// Whether it follows the base map's roads (else the road cells).
     let onRoads: Bool
     let points: [PlanPoint]
@@ -400,11 +446,12 @@ struct BusReadAhead {
 extension GameSession {
     /// The base map's bus roads (decision 424) of a real-world map with a
     /// base map and roads; `nil` on any other, whose buses go along the road
-    /// cells.
+    /// cells. Decision 438: `nil` too where the base map has no roads (a map
+    /// outside Taiwan, whose roads are all the player's own).
     public var busRoads: BusRoads? {
-        guard let baseMap, world.roads != nil, let frame = RealWorldFrame(world: world) else { return nil }
+        guard let baseMap, world.roads != nil, let frame = RealWorldFrame(world: world), let anchor = world.geoAnchor else { return nil }
         if let known = busRoadsMemo, known.frame == frame { return known.roads }
-        let roads = BusRoads(tiles: baseMap, frame: frame)
+        let roads = RoadsOffer.baseMapHasRoads(at: anchor) ? BusRoads(tiles: baseMap, frame: frame) : nil
         busRoadsMemo = (frame, roads)
         return roads
     }
@@ -416,10 +463,11 @@ public struct BusMapOverlay: Hashable, Sendable {
     public struct Route: Hashable, Sendable {
         public let id: BusRouteID
         /// The line whose colour it takes: the first line calling at its
-        /// station, or none.
+        /// station, or none (a city route's, decision 438: the ink's navy).
         public let line: LineID?
         public let color: LineColor?
-        /// Its way, the farthest stop first and the station last.
+        /// Its way, the farthest stop first and the station last; a city
+        /// route's from its first stop to its last.
         public let points: [PlanPoint]
         public let stops: [PlanPoint]
         /// Whether it runs: a route of no bus is drawn faint.
@@ -439,7 +487,8 @@ public struct BusMapOverlay: Hashable, Sendable {
         /// Its way along the roads, from the station out.
         public let points: [PlanPoint]
         public let stops: [PlanPoint]
-        public let station: PlanPoint
+        /// The station it feeds; `nil` for a city route (decision 438).
+        public let station: PlanPoint?
         /// Two ends no road joins, drawn as a broken line.
         public let broken: [PlanPoint]
         public let isBuildable: Bool
@@ -487,9 +536,12 @@ public enum BusRouteText {
         count == 1 ? "1 bus" : "\(count) buses"
     }
 
-    /// A route's name: "Feeder bus 3".
-    public static func name(_ id: BusRouteID, in language: DisplayLanguage) -> String {
-        language.text("Feeder bus \(id.rawValue)", "接駁公車 \(id.rawValue) 號")
+    /// A route's name: "Feeder bus 3", or a city route's "City bus 3"
+    /// (decision 438).
+    public static func name(_ id: BusRouteID, city: Bool = false, in language: DisplayLanguage) -> String {
+        city
+            ? language.text("City bus \(id.rawValue)", "市區公車 \(id.rawValue) 號")
+            : language.text("Feeder bus \(id.rawValue)", "接駁公車 \(id.rawValue) 號")
     }
 }
 
@@ -514,32 +566,44 @@ public struct BusRouteCard: Hashable, Sendable, Identifiable {
 extension GameWorld {
     /// The cards of the bus routes feeding station `id`, by number.
     public func busRouteCards(feeding id: StationID, in language: DisplayLanguage) -> [BusRouteCard] {
-        busRoutes.filter { $0.station == id }.map { route in
-            let way = language.text(
-                "\(BusRouteText.distance(route.metres, in: language)) · \(BusRouteText.stops(route.stops.count))",
-                "\(BusRouteText.distance(route.metres, in: language)) · \(route.stops.count) 個站牌"
-            )
-            let service: String
-            if let headway = route.headway {
-                service = language.text("A bus every \(headway) min · \(BusRouteText.buses(route.buses))", "每 \(headway) 分一班 · \(route.buses) 輛車")
-            } else {
-                service = language.text("No buses: it does not run.", "沒有車：路線停駛中。")
-            }
-            let day: String
-            if let last = route.days.last {
-                let net = last.fares - last.cost
-                day = language.text(
-                    "Last day: \(Money(last.riders).displayText) riders · fares \(last.fares.moneyText) · cost \(last.cost.moneyText) · \(net.moneyText)",
-                    "前一天：\(Money(last.riders).displayText) 人搭 · 票收 \(last.fares.moneyText) · 成本 \(last.cost.moneyText) · \(net.moneyText)"
-                )
-            } else {
-                day = language.text("No whole day run yet.", "還沒跑滿一天。")
-            }
-            return BusRouteCard(
-                id: route.id, title: BusRouteText.name(route.id, in: language), wayText: way, serviceText: service, dayText: day,
-                net: route.days.last.map { $0.fares - $0.cost }, headway: route.service.averageMinutes, buses: route.buses
-            )
+        busRoutes.filter { $0.station == id }.map { busRouteCard($0, in: language) }
+    }
+
+    /// The cards of the city routes (decision 438), which feed no station,
+    /// by number.
+    public func cityBusRouteCards(in language: DisplayLanguage) -> [BusRouteCard] {
+        busRoutes.filter { $0.station == nil }.map { busRouteCard($0, in: language) }
+    }
+
+    private func busRouteCard(_ route: BusRoute, in language: DisplayLanguage) -> BusRouteCard {
+        var way = language.text(
+            "\(BusRouteText.distance(route.metres, in: language)) · \(BusRouteText.stops(route.stops.count))",
+            "\(BusRouteText.distance(route.metres, in: language)) · \(route.stops.count) 個站牌"
+        )
+        if route.station == nil, let transfer = route.transfer.flatMap({ station(id: $0.station) }) {
+            way += language.text(" · trains at \(transfer.name)", " · 可在\(transfer.name)站轉乘")
         }
+        let service: String
+        if let headway = route.headway {
+            service = language.text("A bus every \(headway) min · \(BusRouteText.buses(route.buses))", "每 \(headway) 分一班 · \(route.buses) 輛車")
+        } else {
+            service = language.text("No buses: it does not run.", "沒有車：路線停駛中。")
+        }
+        let day: String
+        if let last = route.days.last {
+            let net = last.fares - last.cost
+            day = language.text(
+                "Last day: \(Money(last.riders).displayText) riders · fares \(last.fares.moneyText) · cost \(last.cost.moneyText) · \(net.moneyText)",
+                "前一天：\(Money(last.riders).displayText) 人搭 · 票收 \(last.fares.moneyText) · 成本 \(last.cost.moneyText) · \(net.moneyText)"
+            )
+        } else {
+            day = language.text("No whole day run yet.", "還沒跑滿一天。")
+        }
+        return BusRouteCard(
+            id: route.id, title: BusRouteText.name(route.id, city: route.station == nil, in: language), wayText: way,
+            serviceText: service, dayText: day,
+            net: route.days.last.map { $0.fares - $0.cost }, headway: route.service.averageMinutes, buses: route.buses
+        )
     }
 }
 
@@ -552,27 +616,41 @@ extension GameSession {
     }
 
     /// A tap with the bus tool at `point`, reaching `reach`: the first picks
-    /// the station the route feeds (one a road reaches); then each tap on a
-    /// road puts a stop there, and a tap on a stop takes it away. Never
-    /// changes the world.
+    /// the station the route feeds (one a road reaches), or on a road away
+    /// from a station puts the first stop of a city route (decision 438);
+    /// then each tap on a road puts a stop there, and a tap on a stop takes
+    /// it away. In the roads mode a tap picks a road of the player's to
+    /// take up (``tapRoadTool(at:)``). Never changes the world.
     public func tapBusTool(at point: PlanPoint, reach: Int64) {
         guard world.bounds.contains(point), let roads = world.roads else { return }
         message = nil
-        guard busDraft.station != nil else {
-            guard let station = world.station(near: point, within: reach) else {
+        if busMode == .roads {
+            tapRoadTool(at: point)
+            return
+        }
+        guard busDraft.isBegun else {
+            if let station = world.station(near: point, within: reach) {
+                guard roads.contains(CellPosition(containing: station.location)) else {
+                    message = StatusMessage(kind: .failure, text: language.text(
+                        "No road reaches \(station.name) yet: build its station road in the station's panel first.",
+                        "\(station.name) 還沒有路接到：先在車站面板鋪站前路。"
+                    ))
+                    return
+                }
+                busDraft.station = station.id
+                refreshBusPreview()
+                return
+            }
+            // Decision 438: a road away from a station starts a city route.
+            busDraft.city = true
+            guard placeBusStop(at: point, roads: roads) else {
+                busDraft.city = false
                 message = StatusMessage(kind: .failure, text: language.text(
-                    "Tap the station the bus route feeds first.", "先點公車路線要接的車站。"
+                    "Tap a station for a bus to it, or a road to start a city bus route.",
+                    "點車站開接駁公車，或點路面開市區公車。"
                 ))
                 return
             }
-            guard roads.contains(CellPosition(containing: station.location)) else {
-                message = StatusMessage(kind: .failure, text: language.text(
-                    "No road reaches \(station.name) yet: build its station road in the station's panel first.",
-                    "\(station.name) 還沒有路接到：先在車站面板鋪站前路。"
-                ))
-                return
-            }
-            busDraft.station = station.id
             refreshBusPreview()
             return
         }
@@ -590,40 +668,58 @@ extension GameSession {
         }
         if let index = taken {
             busDraft.remove(at: index)
-        } else if busDraft.stops.isEmpty, busDraft.route == nil, let station = world.station(near: point, within: reach / 2),
+            if busDraft.city, busDraft.stops.isEmpty, busDraft.route == nil { busDraft.city = false }
+        } else if !busDraft.city, busDraft.stops.isEmpty, busDraft.route == nil, let station = world.station(near: point, within: reach / 2),
                   station.id != busDraft.station, roads.contains(CellPosition(containing: station.location)) {
             // Another station, before any stop: the route starts there.
             busDraft.station = station.id
         } else {
-            var placed = (cell: cell, point: cell.middle)
-            if let onRoads {
-                // The nearest bus road, at a cell GameCore knows as a road.
-                // Decision 424, C2: a real bus stop within 25 m of the tap
-                // is where the stop goes, when a bus road reaches it; else
-                // the tap is put on the road as before.
-                func onARoad(near point: PlanPoint) -> PlanPoint? {
-                    onRoads.place(near: point, within: BusRoadNetwork.snapReach, accepting: { roads.contains(CellPosition(containing: $0)) })
-                }
-                let real = busDraft.station.flatMap { world.station(id: $0) }
-                    .flatMap { realBusStops(around: $0.location) }?.nearest(to: point)
-                guard let pin = real.flatMap({ onARoad(near: $0.point) }) ?? onARoad(near: point) else {
-                    message = StatusMessage(kind: .failure, text: language.text("Bus stops go on roads.", "公車站牌要放在路上。"))
-                    return
-                }
-                placed = (CellPosition(containing: pin), pin)
-            } else if !roads.contains(cell) {
-                message = StatusMessage(kind: .failure, text: language.text("Bus stops go on roads.", "公車站牌要放在路上。"))
-                return
-            }
             guard busDraft.stops.count < BusRoute.maximumStops else {
                 message = StatusMessage(kind: .failure, text: language.text(
                     "A bus route has at most \(BusRoute.maximumStops) stops.", "一條公車路線最多 \(BusRoute.maximumStops) 個站牌。"
                 ))
                 return
             }
-            busDraft.append(placed.cell, at: placed.point)
+            guard placeBusStop(at: point, roads: roads) else {
+                message = StatusMessage(kind: .failure, text: language.text("Bus stops go on roads.", "公車站牌要放在路上。"))
+                return
+            }
         }
         refreshBusPreview()
+    }
+
+    /// Puts a stop of the drawn route on the road at `point`, after the
+    /// others: returns whether a road was there.
+    private func placeBusStop(at point: PlanPoint, roads: RoadGrid) -> Bool {
+        let cell = CellPosition(containing: point)
+        var placed = (cell: cell, point: cell.middle)
+        if let onRoads = busRoads {
+            // The nearest bus road, at a cell GameCore knows as a road.
+            // Decision 424, C2: a real bus stop within 25 m of the tap
+            // is where the stop goes, when a bus road reaches it; else
+            // the tap is put on the road as before.
+            func onARoad(near point: PlanPoint) -> PlanPoint? {
+                onRoads.place(near: point, within: BusRoadNetwork.snapReach, accepting: { roads.contains(CellPosition(containing: $0)) })
+            }
+            let real = realBusStops(around: busDraftCentre ?? point)?.nearest(to: point)
+            if let pin = real.flatMap({ onARoad(near: $0.point) }) ?? onARoad(near: point) {
+                placed = (CellPosition(containing: pin), pin)
+            } else if !roads.built.contains(cell) {
+                // Decision 438: the player's own roads, which the base map
+                // does not have, take a stop in the cell's middle.
+                return false
+            }
+        } else if !roads.contains(cell) {
+            return false
+        }
+        busDraft.append(placed.cell, at: placed.point)
+        return true
+    }
+
+    /// Where the drawn route's real stops and names are looked for round:
+    /// its station, or a city route's first stop.
+    var busDraftCentre: PlanPoint? {
+        busDraft.station.flatMap { world.station(id: $0)?.location } ?? busDraft.pins.first
     }
 
     /// The real bus stops round `station`, read when first asked (decision
@@ -681,13 +777,15 @@ extension GameSession {
         return name
     }
 
-    /// Takes back the last stop, then the station.
+    /// Takes back the last stop, then the station; a new city route's
+    /// last stop lets go of it.
     public func removeLastBusStop() {
         if busDraft.stops.isEmpty {
             guard busDraft.route == nil else { return }
             busDraft.station = nil
         } else {
             busDraft.remove(at: busDraft.stops.count - 1)
+            if busDraft.city, busDraft.stops.isEmpty, busDraft.route == nil { busDraft.city = false }
         }
         refreshBusPreview()
     }
@@ -718,17 +816,27 @@ extension GameSession {
     /// pays for it. Returns whether it did.
     @discardableResult
     public func confirmBusRoute() -> Bool {
-        guard let station = busDraft.station, busPreview?.canOpen == true else { return false }
+        guard busDraft.isBegun, busPreview?.canOpen == true else { return false }
         let draft = busDraft
         let stops = draft.coreStops.map(PlayerCommand.Edit.BusStop.init)
         let edit: PlayerCommand.Edit = if let id = draft.route {
             .reviseBusRoute(id, stops: stops, legMetres: draft.legMetres, service: draft.service, buses: draft.buses)
-        } else {
+        } else if let station = draft.station, !draft.city {
             .createBusRoute(station, stops: stops, legMetres: draft.legMetres, service: draft.service, buses: draft.buses)
+        } else {
+            .createCityBusRoute(stops: stops, legMetres: draft.legMetres, service: draft.service, buses: draft.buses)
         }
         let done = perform(edit) { _, before, after in
             let price = before.economy.balance - after.economy.balance
-            let name = after.station(id: station)?.name ?? ""
+            if draft.city {
+                // Decision 438: a city route has no station to name.
+                let id = draft.route ?? after.busRoutes.last?.id ?? BusRouteID(rawValue: 0)
+                let name = BusRouteText.name(id, city: true, in: language)
+                return draft.route == nil
+                    ? language.text("\(name) now runs, for \(price.moneyText).", "\(name)開通了，花費 \(price.moneyText)。")
+                    : language.text("\(name) is changed, for \(price.moneyText).", "\(name)改好了，花費 \(price.moneyText)。")
+            }
+            let name = draft.station.flatMap { after.station(id: $0)?.name } ?? ""
             return draft.route == nil
                 ? language.text("A bus now runs to \(name), for \(price.moneyText).", "接到\(name)的公車開通了，花費 \(price.moneyText)。")
                 : language.text("The bus route to \(name) is changed, for \(price.moneyText).", "接到\(name)的公車改好了，花費 \(price.moneyText)。")
@@ -740,19 +848,28 @@ extension GameSession {
 
     /// Opens the bus tool on route `id`, to move its stops.
     public func editBusRoute(_ id: BusRouteID) {
-        // Decision 438: a city route is drawn in the tool once it can
-        // start from a road (the next pull request).
-        guard let route = world.busRoute(id: id), let fed = route.station else { return }
+        guard let route = world.busRoute(id: id) else { return }
         selectTool(.bus)
-        readBusesAhead(for: fed)
+        setBusMode(.routes)
         var draft = BusRouteDraft()
-        draft.station = fed
-        draft.stops = route.stops.reversed()
-        draft.stopPoints = draft.stops.map(\.middle)
-        if let roads = busRoads, let station = world.station(id: fed), let saved = roads.way(ofSaved: route.stops, station: station.location) {
-            // Decision 424: each saved stop from its cell's middle onto the
-            // nearest bus road.
-            draft.stopPoints = saved.pins.reversed()
+        if let fed = route.station {
+            readBusesAhead(for: fed)
+            draft.station = fed
+            draft.stops = route.stops.reversed()
+            draft.stopPoints = draft.stops.map(\.middle)
+            if let roads = busRoads, let station = world.station(id: fed), let saved = roads.way(ofSaved: route.stops, station: station.location) {
+                // Decision 424: each saved stop from its cell's middle onto the
+                // nearest bus road.
+                draft.stopPoints = saved.pins.reversed()
+            }
+        } else {
+            // Decision 438: a city route's stops, first to last.
+            draft.city = true
+            draft.stops = route.stops
+            draft.stopPoints = route.stops.map(\.middle)
+            if let roads = busRoads, let saved = roads.way(ofSaved: route.stops, station: nil) {
+                draft.stopPoints = saved.ends
+            }
         }
         draft.service = route.service
         draft.buses = route.buses
@@ -764,6 +881,7 @@ extension GameSession {
     /// Opens the bus tool with a new route from station `id`.
     public func startBusRoute(from id: StationID) {
         selectTool(.bus)
+        setBusMode(.routes)
         clearBusDraft()
         busDraft.station = id
         refreshBusPreview()
@@ -803,51 +921,66 @@ extension GameSession {
         busDraft.legMetres = nil
         busDraftPath = []
         var broken: Int?
-        if let station = busDraft.station.flatMap({ world.station(id: $0) }), !busDraft.stops.isEmpty {
+        let station = busDraft.station.flatMap { world.station(id: $0)?.location }
+        if station != nil || busDraft.city, !busDraft.stops.isEmpty, let roads = world.roads {
+            let cells = roads.allCells
             if let onRoads = busRoads {
                 // Decision 424: the way along the base map's roads, and its
                 // legs' metres for GameCore; a leg no road joins is not
                 // drawn as a straight line, and cannot open.
-                let way = onRoads.way(stops: busDraft.corePoints, station: station.location)
-                busDraft.legMetres = way.legMetres
-                broken = way.firstBroken
-                busDraftPath = way.points.reversed()
-            } else if let roads = world.roads {
-                busDraftPath = BusRoadPath.points(stops: busDraft.coreStops, station: station.location, roads: roads.allCells).reversed()
+                let way = onRoads.way(stops: busDraft.corePoints, station: station)
+                if way.firstBroken != nil, !roads.built.isEmpty, BusRoadPath.joins(stops: busDraft.coreStops, station: station, roads: cells) {
+                    // Decision 438: the player's own roads, which the base
+                    // map does not have: along the road cells, as GameCore
+                    // finds the way.
+                    busDraftPath = BusRoadPath.points(stops: busDraft.coreStops, station: station, roads: cells).reversed()
+                } else {
+                    busDraft.legMetres = way.legMetres
+                    broken = way.firstBroken
+                    busDraftPath = way.points.reversed()
+                }
+            } else {
+                busDraftPath = BusRoadPath.points(stops: busDraft.coreStops, station: station, roads: cells).reversed()
             }
         }
         busPreview = BusRoutePreview.make(busDraft, in: world, language: language, brokenLeg: broken)
     }
 
     /// The player's bus routes and the one drawn, for the map; `nil` with
-    /// neither.
+    /// neither. Decision 438: with the bus tool in its roads mode, the
+    /// roads drawn and the player's own (``roadMapOverlay``) instead of the
+    /// draft.
     public var busMapOverlay: BusMapOverlay? {
-        guard let roads = world.roads, !world.busRoutes.isEmpty || busDraft.station != nil else { return nil }
+        guard let roads = world.roads, !world.busRoutes.isEmpty || busDraft.isBegun else { return nil }
         var overlay = BusMapOverlay()
         let onRoads = busRoads
         for route in world.busRoutes where route.id != busDraft.route || tool != .bus {
-            // Decision 438: a city route's overlay comes with the tool's.
-            guard let station = route.station.flatMap({ world.station(id: $0) }) else { continue }
+            let station = route.station.flatMap { world.station(id: $0) }
+            guard route.station == nil || station != nil, let first = route.stops.first else { continue }
+            let at = station?.location
             let memo: BusPathMemo
-            if let known = busPathMemo[route.id], known.stops == route.stops, known.station == station.location, known.onRoads == (onRoads != nil) {
+            if let known = busPathMemo[route.id], known.stops == route.stops, known.station == at, known.onRoads == (onRoads != nil) {
                 memo = known
             } else {
-                if let onRoads, let way = onRoads.way(ofSaved: route.stops, station: station.location) {
-                    memo = BusPathMemo(stops: route.stops, station: station.location, onRoads: true, points: way.points, pins: way.pins)
+                if let onRoads, let way = onRoads.way(ofSaved: route.stops, station: at) {
+                    memo = BusPathMemo(stops: route.stops, station: at, onRoads: true, points: way.points, pins: at == nil ? way.ends : way.pins)
                 } else {
                     memo = BusPathMemo(
-                        stops: route.stops, station: station.location, onRoads: onRoads != nil,
-                        points: BusRoadPath.points(stops: route.stops, station: station.location, roads: roads.allCells),
+                        stops: route.stops, station: at, onRoads: onRoads != nil,
+                        points: BusRoadPath.points(stops: route.stops, station: at, roads: roads.allCells),
                         pins: route.stops.map(\.middle)
                     )
                 }
                 busPathMemo[route.id] = memo
             }
-            let line = world.lines(callingAt: station.id).first
+            // Decision 438: a city route takes no line's colour.
+            let line = station.flatMap { world.lines(callingAt: $0.id).first }
             // GameCore lists the farthest stop first; the numbers count
-            // from the station. Names are only worked out for the tool.
-            let labels = zip(BusStopLabel.numbers(count: memo.pins.count, farthestFirst: true), memo.pins).map { number, pin in
-                BusStopLabel(number: number, name: tool == .bus ? busStopName(at: pin, near: station.location) : nil)
+            // from the station (a city route's from its first stop). Names
+            // are only worked out for the tool.
+            let centre = at ?? first.middle
+            let labels = zip(BusStopLabel.numbers(count: memo.pins.count, farthestFirst: at != nil), memo.pins).map { number, pin in
+                BusStopLabel(number: number, name: tool == .bus ? busStopName(at: pin, near: centre) : nil)
             }
             overlay.routes.append(BusMapOverlay.Route(
                 id: route.id, line: line?.id, color: line?.color, points: memo.points, stops: memo.pins, runs: route.buses > 0,
@@ -855,16 +988,17 @@ extension GameSession {
             ))
         }
         overlay.showsLabels = tool == .bus
-        if tool == .bus, let id = busDraft.station, let station = world.station(id: id) {
+        if tool == .bus, busMode == .routes, busDraft.isBegun, let centre = busDraftCentre {
             let pins = busDraft.pins
+            let station = busDraft.station.flatMap { world.station(id: $0)?.location }
             overlay.draft = BusMapOverlay.Draft(
-                points: busDraftPath, stops: pins, station: station.location,
+                points: busDraftPath, stops: pins, station: station,
                 broken: busPreview?.brokenLeg ?? [], isBuildable: busPreview?.canOpen ?? false,
                 labels: zip(BusStopLabel.numbers(count: pins.count, farthestFirst: false), pins).map { number, pin in
-                    BusStopLabel(number: number, name: busStopName(at: pin, near: station.location))
+                    BusStopLabel(number: number, name: busStopName(at: pin, near: centre))
                 }
             )
-            overlay.realStops = realBusStops(around: station.location)
+            overlay.realStops = realBusStops(around: centre)
         }
         return overlay
     }

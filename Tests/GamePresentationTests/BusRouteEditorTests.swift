@@ -44,9 +44,11 @@ final class BusRouteEditorTests: XCTestCase {
     func testTheFirstTapPicksAStationAndTheNextPutStopsOnRoads() throws {
         let (session, a) = try session()
         XCTAssertTrue(session.allowsBusTool)
-        session.tapBusTool(at: CellPosition(row: 8, column: 20).middle, reach: reach)
-        XCTAssertNil(session.busDraft.station, "no station there")
-        XCTAssertEqual(session.message?.text, "Tap the station the bus route feeds first.")
+        // Decision 438: a first tap on a road starts a city route; off
+        // the roads and the stations it says what to tap.
+        session.tapBusTool(at: CellPosition(row: 9, column: 20).middle, reach: reach)
+        XCTAssertFalse(session.busDraft.isBegun, "no station or road there")
+        XCTAssertEqual(session.message?.text, "Tap a station for a bus to it, or a road to start a city bus route.")
         session.tapBusTool(at: CellPosition(row: 8, column: 5).middle, reach: reach)
         XCTAssertEqual(session.busDraft.station, a)
         XCTAssertNil(session.busPreview, "no stop yet")

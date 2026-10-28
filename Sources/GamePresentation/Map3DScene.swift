@@ -320,6 +320,8 @@ public struct Map3DScene: Sendable {
         builder.trackCover = trackCover ?? Map3DTrackCover(snapshot, builder: &builder)
         builder.addGround(water: real == nil)
         let taken = real.map { builder.addBaseMap($0) } ?? Builder.TakenGround()
+        // Decision 438: the player's own roads, which the base map has not.
+        if real != nil { builder.addOwnRoads() }
         let cleared = builder.addTrack(snapshot)
         builder.addTrenches()
         if let lineBands { builder.addLineBands(lineBands, snapshot: snapshot) }
