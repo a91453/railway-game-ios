@@ -431,6 +431,43 @@ final class Map3DRoadMarkingTests: XCTestCase {
         XCTAssertEqual(sorted(again.props), sorted(builder.props))
     }
 
+    /// Decision 467: a tertiary road's stops (a 2 m pavement, too narrow
+    /// for a shelter) have the sign on its own pole by the kerb, a main
+    /// road's none; some stops of each have the post boxes at the back of
+    /// the pavement, their slots toward the road.
+    func testNarrowStopsHaveAPoleAndSomeHavePostBoxes() throws {
+        let pole = try XCTUnwrap(Builder.sceneryModels[.busStopPole]), boxes = try XCTUnwrap(Builder.sceneryModels[.postBoxes])
+        func placed(_ kind: Map3DBaseMap.RoadKind) -> [Map3DInstance] {
+            var builder = builder(), taken = Set<Map3DScene.ChunkKey>()
+            builder.addRoads([road(kind, [(-3_000, 0), (0, 0), (3_000, 0)])], taking: &taken)
+            return builder.props.values.flatMap { $0 }
+        }
+        let narrow = placed(.tertiary), wide = placed(.primary)
+        let poles = narrow.filter { $0.model == pole }
+        // 6 km, a stop every 260 m.
+        XCTAssertGreaterThanOrEqual(poles.count, 18)
+        XCTAssertTrue(narrow.allSatisfy { $0.model != Builder.propModels[.busStop] })
+        XCTAssertTrue(wide.allSatisfy { $0.model != pole })
+        let half = Double(Map3DBaseMap.RoadKind.tertiary.width(ramp: false)) / 2
+        for stop in poles {
+            XCTAssertEqual(Double(abs(stop.transform[14])), half + 0.45, accuracy: 1e-3)
+        }
+        for (instances, kind) in [(narrow, Map3DBaseMap.RoadKind.tertiary), (wide, .primary)] {
+            let stops = instances.filter { $0.model == (kind == .tertiary ? pole : Builder.propModels[.busStop]) }.count
+            let pairs = instances.filter { $0.model == boxes }
+            // About 30% of the stops.
+            XCTAssertGreaterThan(pairs.count, stops / 8, "\(kind)")
+            XCTAssertLessThan(pairs.count, stops / 2, "\(kind)")
+            let edge = Double(kind.width(ramp: false)) / 2 + Double(Builder.sidewalk(of: kind)) - 0.4
+            for pair in pairs {
+                let z = pair.transform[14]
+                XCTAssertEqual(Double(abs(z)), edge, accuracy: 1e-3, "\(kind)")
+                // Its +y (the slots) toward the road.
+                XCTAssertLessThan(pair.transform[6] * (z < 0 ? -1 : 1), 0, "\(kind)")
+            }
+        }
+    }
+
     func testTheNewModelsAreSmall() throws {
         let pack = Map3DModelPack.standard
         var sizes: [String: Int] = [:]
@@ -455,8 +492,9 @@ final class Map3DRoadMarkingTests: XCTestCase {
         XCTAssertTrue(vending.vertices.contains { $0.color >> 24 == 0 })
         XCTAssertGreaterThan(vending.maximum.y, 0.4, "its front toward the road")
         // The power-saving look leaves the small things out, and since
-        // decision 458 the bush clumps.
-        XCTAssertEqual(Map3DProp.modelsLeftOut(.saving).count, 2 + Map3DSceneryProp.bushClumps.count)
+        // decision 458 the bush clumps, since decision 467 the post boxes
+        // and stop poles.
+        XCTAssertEqual(Map3DProp.modelsLeftOut(.saving).count, 2 + Map3DSceneryProp.bushClumps.count + Map3DSceneryProp.streetFurniture.count)
         XCTAssertTrue(Map3DProp.modelsLeftOut(.automatic).isEmpty)
         XCTAssertTrue(Map3DProp.modelsLeftOut(.high).isEmpty)
     }

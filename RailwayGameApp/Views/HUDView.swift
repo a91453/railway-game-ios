@@ -237,7 +237,7 @@ private struct HUDCash: View {
                 if let days = session.world.insolvencyCountdown {
                     Text(verbatim: insolvencyCountdownText(days, in: session.language))
                         .font(.caption2.weight(.bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.onError)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(Capsule().fill(Theme.error))
@@ -414,7 +414,7 @@ private struct HUDNewsBell: View {
                     if unread > 0 {
                         Text(verbatim: unread > 99 ? "99+" : "\(unread)")
                             .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Theme.onError)
                             .padding(.horizontal, 4)
                             .background(Capsule().fill(Theme.error))
                             .offset(x: 4, y: -2)
@@ -902,6 +902,7 @@ private struct ViewingReadout: View {
                     if let hint = session.speedLagHint {
                         SpeedLagHintCard(session: session, hint: hint, language: language)
                             .presentationCompactAdaptation(.popover)
+                            .onAppear { session.noteSpeedLagHintSeen() }
                     } else {
                         Text(verbatim: viewing.lagText(in: language) ?? viewing.actualText(in: language) ?? "")
                             .font(.subheadline)
@@ -977,20 +978,6 @@ private struct SpeedLagHintCard: View {
     }
 }
 
-/// A plain icon button, dimmed while pressed, touched over at least 44
-/// by 44 points while drawn at `size`. The touch area belongs to the
-/// style's body: one set inside a button's label was not used (run
-/// 38333522943: a tap 4 points under the drawn bell missed it).
-private struct TouchTargetButtonStyle: ButtonStyle {
-    let size: CGSize
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .opacity(configuration.isPressed ? 0.5 : 1)
-            .touchTarget(around: size)
-    }
-}
-
 /// The pause button's look (``ThemeSelectableButtonStyle``: 38 by 40
 /// points with its padding), touched over at least 44 by 44.
 private struct PauseButtonStyle: ButtonStyle {
@@ -1000,24 +987,6 @@ private struct PauseButtonStyle: ButtonStyle {
         ThemeSelectableButtonStyle(isActive: isActive)
             .makeBody(configuration: configuration)
             .touchTarget(around: CGSize(width: 38, height: 40))
-    }
-}
-
-private extension View {
-    /// Touched over at least 44 by 44 points (Apple's smallest target)
-    /// while drawn and laid out at `size`, so the status pill keeps its
-    /// size: the touch area reaches into the pill's margins and the spaces
-    /// between its controls, and two neighbours' areas never meet (the
-    /// bell's 5 and the menu's 3 points in at least 10 between them, the
-    /// pause button's 3 in the 4 before the speed menu).
-    func touchTarget(around size: CGSize) -> some View {
-        let dx = max(0, (44 - size.width) / 2)
-        let dy = max(0, (44 - size.height) / 2)
-        return padding(.horizontal, dx)
-            .padding(.vertical, dy)
-            .contentShape(Rectangle())
-            .padding(.horizontal, -dx)
-            .padding(.vertical, -dy)
     }
 }
 
@@ -1076,8 +1045,15 @@ private struct SpeedMenu: View, Equatable {
             }
             .padding(.horizontal, 8)
             .frame(minWidth: 48, minHeight: 32)
+            // Touched over 44 points high, like the game menu: a menu is
+            // touched over its label's own frame, so the label is that
+            // tall and the negative padding keeps the 32 the pill lays
+            // out. It is already 48 wide; the pause button's area keeps
+            // to 3 of the 4 points between them.
+            .frame(minHeight: 44)
             .contentShape(Rectangle())
         }
+        .padding(.vertical, -6)
         .accessibilityLabel("Speed: \(runningSpeed.accessibilityName(in: language))")
         .accessibilityHint("Chooses how fast game time runs.")
     }

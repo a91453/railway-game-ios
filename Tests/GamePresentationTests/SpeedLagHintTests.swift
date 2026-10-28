@@ -104,4 +104,56 @@ final class SpeedLagHintTests: XCTestCase {
         let none = SpeedLagHint(speed: .x1, actualTenths: 5, reason: .slow)
         XCTAssertNil(none.switchText(in: .english), "no slower speed: the words only")
     }
+
+    /// Review L-2: a popover the system closed before it showed the card
+    /// is not the player's "Got it"; one the player saw is.
+    @MainActor
+    func testAHintClosedBeforeItWasSeenComesAgain() {
+        let session = GameSession(world: try! makeWorld(speed: .paused))
+        func behind(from start: Int) -> Int {
+            for second in 1...21 {
+                session.speedLagWatch.record(real: .seconds(start + second), speed: .fast, permille: 330, heat: .nominal)
+            }
+            session.syncSpeedLagHint()
+            return start + 21
+        }
+        var now = behind(from: 0)
+        XCTAssertNotNil(session.speedLagHint)
+        session.dismissSpeedLagHint()
+        XCTAssertNil(session.speedLagHint, "closed: it goes")
+        now = behind(from: now)
+        XCTAssertNotNil(session.speedLagHint, "never on screen: it comes again")
+        session.noteSpeedLagHintSeen()
+        session.dismissSpeedLagHint()
+        _ = behind(from: now)
+        XCTAssertNil(session.speedLagHint, "seen and dismissed: none again this game")
+    }
+
+    func testAWithdrawnHintComesAgainOnlyAfterAnotherStretch() {
+        var watch = SpeedLagWatch()
+        var now = feed(&watch, from: 0, seconds: 21, permille: 330)
+        XCTAssertNotNil(watch.hint)
+        watch.withdraw()
+        XCTAssertNil(watch.hint)
+        now = feed(&watch, from: now, seconds: 20, permille: 330)
+        XCTAssertNil(watch.hint, "the 20 seconds start again")
+        feed(&watch, from: now, seconds: 1, permille: 330)
+        XCTAssertEqual(watch.hint?.speed, .fast)
+    }
+
+    @MainActor
+    func testTheSwitchKeepsTheHintFromComingByItself() {
+        let session = GameSession(world: try! makeWorld(speed: .paused))
+        for second in 1...21 {
+            session.speedLagWatch.record(real: .seconds(second), speed: .fast, permille: 330, heat: .nominal)
+        }
+        XCTAssertNotNil(session.speedLagWatch.hint)
+        GameSession.showsSpeedLagHint = false
+        defer { GameSession.showsSpeedLagHint = true }
+        session.syncSpeedLagHint()
+        XCTAssertNil(session.speedLagHint, "switched off: the watch has one, the screen does not")
+        GameSession.showsSpeedLagHint = true
+        session.syncSpeedLagHint()
+        XCTAssertNotNil(session.speedLagHint, "switched on again: it comes")
+    }
 }

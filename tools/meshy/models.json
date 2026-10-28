@@ -77,6 +77,26 @@
       "front": "-x",
       "length_m": 6.5,
       "out": null
+    },
+    {
+      "id": "mailbox-green",
+      "use": "Taiwan's post boxes by a bus stop in the native 3D map, the pair red and green from this one shape (decision 467); made in the owner's batch meshy-batch-2026-10 (its glb-hq)",
+      "prompt": "Taiwan green post box (郵筒): a short free-standing cylindrical pillar box painted bright vivid green, a round dome top, one horizontal letter slot with a small sloped hood over it, a plain round base, about 1.1 m tall, the same shape as a classic red pillar box but green. No lettering. Single object only, clean simple stylised shapes, no text, no logos, no base, no ground, no people.",
+      "texture_prompt": "No text, no logos, no wear or dirt. Bright vivid green body (clearly green, not grey), black slot, dark grey base.",
+      "target_polycount": null,
+      "front": null,
+      "height_m": 1.1,
+      "out": null
+    },
+    {
+      "id": "bus-stop-pole",
+      "use": "A bus stop's sign on its own pole in the native 3D map where the pavement is too narrow for a shelter (decision 467); made in the owner's batch meshy-batch-2026-10 (its glb-hq)",
+      "prompt": "City bus stop pole sign (公車站牌): a tall slim metal pole with a flat rectangular blank sign panel at the top and a smaller blank panel below, a short round foot, about 2.8 m tall. Single object only, clean simple stylised shapes, no text, no logos, no base, no ground, no people.",
+      "texture_prompt": "No text, no logos, no wear or dirt. Grey pole, white blank panels with a blue border.",
+      "target_polycount": null,
+      "front": null,
+      "height_m": 2.8,
+      "out": null
     }
   ]
 }

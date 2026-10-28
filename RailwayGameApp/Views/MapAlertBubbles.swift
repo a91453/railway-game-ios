@@ -16,6 +16,7 @@ struct MapAlertBubbles: View {
     /// What floats over the map's edges (``EnvironmentValues/mapInsets``).
     let insets: EdgeInsets
     @Environment(GameScreenState.self) private var screen
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -30,12 +31,12 @@ struct MapAlertBubbles: View {
                         .fixedSize()
                         .frame(width: 0, height: 0, alignment: .bottom)
                         .position(item.point)
-                        .transition(.scale(scale: 0.6).combined(with: .opacity))
+                        .transition(.pop(reduceMotion: reduceMotion))
                 }
             }
         }
         .frame(width: viewport.width, height: viewport.height, alignment: .topLeading)
-        .animation(.spring(duration: 0.3, bounce: 0.4), value: placed.map(\.id))
+        .animation(MotionRule.pop.layout(reduceMotion: reduceMotion), value: placed.map(\.id))
     }
 
     /// An alert on screen, and where its bubble's bottom middle goes.
@@ -126,7 +127,9 @@ struct MapAlertBubbles: View {
             .background(Capsule().fill(Color.black.opacity(0.18)).offset(y: 2))
             .contentShape(Capsule())
         }
-        .buttonStyle(.plain)
+        // 28 high, touched over 44: bubbles over one station are 46
+        // apart, so two areas never meet.
+        .buttonStyle(TouchTargetButtonStyle(size: CGSize(width: 44, height: 28)))
         .accessibilityLabel(Text(verbatim: why.map { "\(text), \($0)" } ?? text))
         .accessibilityHint(Text(verbatim: session.language.text("Goes to it.", "前往處理。")))
         .accessibilityIdentifier("map.alert")

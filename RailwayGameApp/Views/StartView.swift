@@ -251,8 +251,9 @@ struct StartView: View {
                     .font(.footnote.weight(.bold))
                     .foregroundStyle(Theme.textSecondary)
                     .frame(width: 32, height: 32)
-                    .contentShape(Rectangle())
             }
+            // 6 points round it, within the card's 14.
+            .buttonStyle(TouchTargetButtonStyle(size: CGSize(width: 32, height: 32)))
             .accessibilityLabel(Text(verbatim: language.text("Close", "關閉")))
             .accessibilityIdentifier("start.firstGame.dismiss")
         }

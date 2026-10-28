@@ -8,10 +8,11 @@ import SwiftUI
 /// (its line's, ``Palette/lineColor(_:)``), the train's name in bold, its
 /// service, first → last stop and first departure – last arrival, the
 /// follow status ("Not departed", "Arrived"), and the stop-following button
-/// (`取消跟隨`, "Stop following") at the end. Its content is read from the
-/// world each time (``GameWorld/followBarInfo(of:in:)``).
+/// (`取消跟隨`, "Stop following") at the end. Its content is what the
+/// session keeps of the world for it (``GameSession/followBar``, decision
+/// 471), so a tick that changes nothing it shows does not rebuild it.
 struct FollowBar: View {
-    let train: Train
+    let facts: FollowBarFacts
     let session: GameSession
     /// Decision 333: opens the 3D map following this train from behind;
     /// `nil` hides the button.
@@ -21,56 +22,54 @@ struct FollowBar: View {
 
     var body: some View {
         let language = session.language
-        let info = session.world.followBarInfo(of: train.id, in: language)
-        let card = session.world.trainCard(of: train.id, in: language)
         // Decision 226 (2026-10-15): beside the layer strip, the room left
         // before the details card, which says the trip in full: the widest
         // of these that fits, the name never broken over lines, down to the
         // badge and the stop (decision 251).
         ViewThatFits(in: .horizontal) {
             row {
-                badge(info)
+                badge
                 name
-                if let detail = info?.detail(in: language, times: card == nil), !detail.isEmpty {
+                if let detail = facts.detail, !detail.isEmpty {
                     Text(verbatim: detail)
                         .font(.footnote.monospacedDigit())
                         .foregroundStyle(Theme.textPrimary)
                         .lineLimit(2)
                         .minimumScaleFactor(0.85)
                 }
-                if let card {
+                if let trip = facts.trip {
                     if horizontalSizeClass == .regular {
-                        TrainTripProgressBar(progress: card.progress, height: 6, marker: 16)
+                        FollowBarProgress(session: session)
                             .frame(width: 72)
                     }
-                    times(card)
-                    TrainStatusCapsule(card: card, language: language)
+                    times(trip)
+                    status(trip)
                 }
-                speeds
+                speeds(language)
                 threeD
                 unfollow(short: false)
             }
             row {
-                badge(info)
+                badge
                 name
-                if let card {
-                    times(card)
-                    TrainStatusCapsule(card: card, language: language)
+                if let trip = facts.trip {
+                    times(trip)
+                    status(trip)
                 }
-                speeds
+                speeds(language)
                 threeD
                 unfollow(short: true)
             }
             row {
-                badge(info)
+                badge
                 name
-                speeds
+                speeds(language)
                 threeD
                 unfollow(short: true)
             }
             row {
-                badge(info)
-                speeds
+                badge
+                speeds(language)
                 threeD
                 unfollow(short: true)
             }
@@ -79,7 +78,7 @@ struct FollowBar: View {
             // phone went past the screen's edge); the speeds are in the
             // status bar too.
             row {
-                badge(info)
+                badge
                 unfollow(short: true)
             }
         }
@@ -104,11 +103,11 @@ struct FollowBar: View {
     /// Decision 216: the train's line by its badge; a dot when it runs on
     /// none.
     @ViewBuilder
-    private func badge(_ info: FollowBarInfo?) -> some View {
-        if let line = info?.line {
+    private var badge: some View {
+        if let line = facts.line {
             LineCodeBadge(
-                code: LineBadge.codes(for: session.world.lines)[line] ?? "",
-                color: Palette.lineColor(line, custom: session.world.line(id: line)?.color),
+                code: facts.lineCode,
+                color: Palette.lineColor(line, custom: facts.lineColor),
                 size: .small
             )
         } else {
@@ -119,7 +118,7 @@ struct FollowBar: View {
     }
 
     private var name: some View {
-        Text(verbatim: train.name)
+        Text(verbatim: facts.name)
             .font(.subheadline.weight(.bold))
             .foregroundStyle(Theme.textPrimary)
             .monospacedDigit()
@@ -127,24 +126,28 @@ struct FollowBar: View {
     }
 
     /// Decision 223: the trip's times, the arrival struck through when late.
-    private func times(_ card: TrainCard) -> some View {
+    private func times(_ trip: FollowBarFacts.Trip) -> some View {
         HStack(spacing: 3) {
-            Text(verbatim: card.departure.clockText + "–")
+            Text(verbatim: trip.departure + "–")
                 .foregroundStyle(Theme.textPrimary)
-            LateTimeText(scheduled: card.arrival.clockText, expected: card.isLate ? card.expectedArrival.clockText : nil)
+            LateTimeText(scheduled: trip.arrival, expected: trip.expectedArrival)
                 .foregroundStyle(Theme.textPrimary)
         }
         .font(.footnote.monospacedDigit())
         .lineLimit(1)
     }
 
+    /// Decision 223: on time, late or the follow status, as the train
+    /// card's capsule (``TrainStatusCapsule/init(card:language:)``).
+    private func status(_ trip: FollowBarFacts.Trip) -> some View {
+        TrainStatusCapsule(text: trip.statusText, kind: trip.showsPunctuality ? (trip.isLate ? .late : .onTime) : .neutral)
+    }
+
     /// Decision 195: real time or ten times it, one tap each, through the
     /// speed the speed menu sets; following stops without changing it back.
-    private var speeds: some View {
-        let language = session.language
-        let clock = session.world.clock
-        return ForEach(FollowBarInfo.speedShortcuts, id: \.self) { speed in
-            let isCurrent = !clock.isPaused && clock.speed == speed
+    private func speeds(_ language: DisplayLanguage) -> some View {
+        ForEach(FollowBarInfo.speedShortcuts, id: \.self) { speed in
+            let isCurrent = facts.runningSpeed == speed
             Button {
                 session.setSpeed(speed)
             } label: {
@@ -189,16 +192,19 @@ struct FollowBar: View {
                     Image(systemName: "xmark")
                         .font(.caption.weight(.heavy))
                         .frame(width: 26, height: 26)
-                        .background(Theme.error, in: Circle())
+                        .background(Theme.chip, in: Circle())
+                        .overlay(Circle().strokeBorder(Theme.panelBorder, lineWidth: 1))
                 } else {
                     Text(verbatim: unfollowText)
                         .font(.caption.weight(.bold))
                         .padding(.horizontal, 9)
                         .padding(.vertical, 3)
-                        .background(Theme.error, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        .background(Theme.chip, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(Theme.panelBorder, lineWidth: 1))
                 }
             }
-            .foregroundStyle(Theme.onError)
+            // Stopping following loses nothing, so it is not red (UI health check O).
+            .foregroundStyle(Theme.textPrimary)
             .frame(minWidth: 44, minHeight: 44)
             .contentShape(Rectangle())
         }
@@ -210,6 +216,16 @@ struct FollowBar: View {
     /// The site's `取消跟隨` ("Stop following" in its translations).
     private var unfollowText: String {
         session.language.text("Stop following", "取消跟隨")
+    }
+}
+
+/// Decision 471: the follow bar's trip progress, its own view, so the
+/// progress, which moves at most ticks, rebuilds only itself.
+private struct FollowBarProgress: View {
+    let session: GameSession
+
+    var body: some View {
+        TrainTripProgressBar(progress: session.followProgress, height: 6, marker: 16)
     }
 }
 

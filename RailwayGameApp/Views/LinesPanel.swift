@@ -27,6 +27,9 @@ struct LinesPanel: View {
     @State private var renamingLine: String?
     /// Whether the selected line's removal is being confirmed (decision 327).
     @State private var confirmsRemoval = false
+    /// The panel removal asking first (UI review 2026-10-28, A): Undo is
+    /// emptied by the next tick, and the panel leaves the game running.
+    @State private var confirmingPanelRemoval: RemovalConfirmation?
     /// Decision 216: the code being typed for the selected line, while its
     /// alert is up.
     @State private var editingCode: String?
@@ -77,6 +80,7 @@ struct LinesPanel: View {
     @AppStorage(RouteHint.seenKey) private var routeHintSeen = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Target headways offered in the menu, in minutes.
     private static let targets: [Int64] = [5, 10, 15, 20, 30, 60]
@@ -151,7 +155,7 @@ struct LinesPanel: View {
                     guard let target = key.target else { return }
                     Task { @MainActor in
                         await Task.yield()
-                        withAnimation { proxy.scrollTo(target, anchor: .center) }
+                        withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) { proxy.scrollTo(target, anchor: .center) }
                     }
                 }
                 // Decision 299: the first station added (or picking begun)
@@ -162,7 +166,7 @@ struct LinesPanel: View {
                     guard was, !now else { return }
                     Task { @MainActor in
                         await Task.yield()
-                        withAnimation { proxy.scrollTo(Self.draftAnchor, anchor: .center) }
+                        withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) { proxy.scrollTo(Self.draftAnchor, anchor: .center) }
                     }
                 }
             }
@@ -287,7 +291,7 @@ struct LinesPanel: View {
     private var newLineRow: some View {
         Section {
             Button {
-                withAnimation { showsNewLine.toggle() }
+                withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) { showsNewLine.toggle() }
             } label: {
                 Label {
                     Text(verbatim: session.language.text("New Line…", "新路線…"))
@@ -490,11 +494,14 @@ struct LinesPanel: View {
                 Label("Split the Longest Band", systemImage: "plus.circle")
             }
             Button {
-                session.resetServiceDay()
+                confirmingPanelRemoval = .standardDay
             } label: {
                 Label("Standard Day", systemImage: "arrow.counterclockwise")
             }
             .disabled(day == .standard)
+            .removalConfirmation(.standardDay, isPresented: confirming(.standardDay), language: session.language) {
+                session.resetServiceDay()
+            }
         } header: {
             Text("Service day")
         } footer: {
@@ -830,7 +837,7 @@ struct LinesPanel: View {
                                 session.setSelectedLineColor(color)
                             } label: {
                                 Label {
-                                    Text(verbatim: color.hexText)
+                                    Text(verbatim: color.nameText(in: language))
                                 } icon: {
                                     Image(systemName: line.color == color ? "checkmark.circle.fill" : "circle.fill")
                                 }
@@ -999,6 +1006,7 @@ struct LinesPanel: View {
             RouteStrip(
                 names: line.stops.map { name(of: $0) },
                 color: Palette.lineColor(line.id, custom: line.color),
+                mark: Palette.lineMark(line.id, custom: line.color),
                 trains: session.world.lineTrainDots(line.id)
             )
             // Decision 206: the line's train diagram, view only.
@@ -1114,6 +1122,12 @@ struct LinesPanel: View {
                 .equatable()
             if let pattern = summary.pattern {
                 Button("Remove This Pattern", role: .destructive) {
+                    confirmingPanelRemoval = .removePattern(title: summary.title)
+                }
+                .removalConfirmation(
+                    .removePattern(title: summary.title), isPresented: confirming(.removePattern(title: summary.title)),
+                    language: session.language
+                ) {
                     session.removePatternFromSelectedLine(pattern)
                 }
             }
@@ -1915,6 +1929,16 @@ struct LinesPanel: View {
 /// Decision 194, later: beside each reason the change that answers it
 /// (``LineLossFix``), asked before it is made; one the balance does not
 /// pay for is off, and says so.
+extension LinesPanel {
+    /// Whether the panel removal `removal` is the one asking first.
+    fileprivate func confirming(_ removal: RemovalConfirmation) -> Binding<Bool> {
+        Binding(
+            get: { confirmingPanelRemoval == removal },
+            set: { if !$0, confirmingPanelRemoval == removal { confirmingPanelRemoval = nil } }
+        )
+    }
+}
+
 private struct LineLossCard: View, Equatable {
     let diagnosis: LineLossDiagnosis
     let language: DisplayLanguage
@@ -2249,6 +2273,8 @@ private struct StopMenu: View, Equatable {
     let count: Int
     let stationName: String
     let choices: [MenuChoice<StationID>]
+    /// Whether Remove Stop is asking first (UI review 2026-10-28, A).
+    @State private var confirmsRemoval = false
 
     nonisolated static func == (lhs: StopMenu, rhs: StopMenu) -> Bool {
         lhs.session === rhs.session && lhs.index == rhs.index && lhs.count == rhs.count
@@ -2273,13 +2299,16 @@ private struct StopMenu: View, Equatable {
                 }
             }
             Button("Remove Stop", role: .destructive) {
-                session.removeStopFromSelectedLine(at: index)
+                confirmsRemoval = true
             }
         } label: {
             Image(systemName: "ellipsis.circle")
                 .frame(minWidth: 44, minHeight: 32)
         }
         .accessibilityLabel("Edit stop \(index + 1), \(stationName)")
+        .removalConfirmation(.removeStop(station: stationName), isPresented: $confirmsRemoval, language: session.language) {
+            session.removeStopFromSelectedLine(at: index)
+        }
     }
 }
 

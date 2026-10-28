@@ -144,12 +144,12 @@ struct FleetOverviewSheet: View {
         } message: { train in
             Text(verbatim: train.position == nil
                 ? session.language.text(
-                    "Brings 70 % of what is left of its cost on the books.",
-                    "可取回帳面價值的 70 %。"
+                    "Brings \(session.world.trainSaleQuote(train.id).moneyText).",
+                    "可取回 \(session.world.trainSaleQuote(train.id).moneyText)。"
                 )
                 : session.language.text(
-                    "Takes it off the track and brings 70 % of what is left of its cost on the books.",
-                    "會先把它移出軌道，可取回帳面價值的 70 %。"
+                    "Takes it off the track and brings \(session.world.trainSaleQuote(train.id).moneyText).",
+                    "會先把它移出軌道，可取回 \(session.world.trainSaleQuote(train.id).moneyText)。"
                 ))
         }
         .fullScreenCover(isPresented: $showsRoster) {
@@ -177,7 +177,7 @@ struct FleetOverviewSheet: View {
                 .foregroundStyle(Theme.textPrimary)
                 .clipShape(Capsule())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(Self.chipStyle)
             .accessibilityIdentifier("fleet.sell.\(train.name)")
         }
     }
@@ -250,6 +250,11 @@ struct FleetOverviewSheet: View {
         .padding(.vertical, 8)
     }
 
+    /// Sell and Follow, about 21 points high, touched over 44: a tap just
+    /// off one selects the train and closes the sheet. Each is the only
+    /// button at its end of the row.
+    private static let chipStyle = TouchTargetButtonStyle(size: CGSize(width: 44, height: 21))
+
     private func trainRow(_ train: Train) -> some View {
         let isSelected = session.selectedTrainID == train.id
         let isFollowing = session.isFollowing(train.id)
@@ -293,7 +298,7 @@ struct FleetOverviewSheet: View {
                         .foregroundStyle(isFollowing ? Theme.primary : Theme.textPrimary)
                         .clipShape(Capsule())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(Self.chipStyle)
                     .accessibilityIdentifier("fleet.follow.\(train.name)")
                 }
             }

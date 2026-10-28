@@ -243,8 +243,19 @@ struct TracePlan {
     /// edge from one end of the span to the other (decision 351); `nil`
     /// where the span is not one edge.
     var platformStretches: [Int?] = []
+    /// Decision 468: the track already laid along the way that the trace
+    /// skips, each with the number of stretches before it, and its centre
+    /// line.
+    var existing: [(after: Int, points: [WorldCoordinate])] = []
+    /// How long that track is, in world units.
+    var existingLength = 0.0
+    /// The node the trace ends at where it ends on track already laid.
+    var endNode: TrackNodeID?
+    /// Decision 468: the trace stops after all its stretches, where track
+    /// already laid leaves no room to go on.
+    var stopsAfter = false
 
-    var stopped: Bool { buildable < stretches.count }
+    var stopped: Bool { buildable < stretches.count || stopsAfter }
 }
 
 extension GameSession {
@@ -546,7 +557,7 @@ extension GameSession {
     /// does; `nil` when the ends are not both on real lines that join, so
     /// the tool lays one stretch as usual.
     func tracePreview(from start: NetworkAnchor, to end: NetworkAnchor) -> (NetworkPreview, [WorldCoordinate])? {
-        guard let plan = tracePlan(from: start, to: end) else { return nil }
+        guard let plan = traceAlong(from: start, to: end) else { return nil }
         let points = plan.stretches.map { stretch in
             TrackGeometry(from: stretch.from, to: stretch.to, curve: stretch.curve)?.points ?? [stretch.from, stretch.to]
         }
@@ -555,8 +566,9 @@ extension GameSession {
         var cost: Money?
         var command = PlayerCommand.buildTrackChain(built)
         // Decision 247: with double track on, the second track beside it;
-        // its later: or where the real line is double.
-        let decided = tracedDouble(built)
+        // its later: or where the real line is double. Decision 468: single
+        // where the trace joins track already laid.
+        let decided = plan.existing.isEmpty ? tracedDouble(built) : (double: false, real: nil)
         var double: Result<DoubleChainPlan, TraceDoubleProblem>?
         if decided.double, !built.isEmpty {
             double = tracedDoublePlan(built, from: start, to: end, reachesEnd: !plan.stopped)
@@ -576,7 +588,27 @@ extension GameSession {
         var shortfall = cost.flatMap { shortfallText($0, doing: command) }
         if case .failure(let problem)? = double { shortfall = problem.text }
         let length = built.compactMap { TrackGeometry(from: $0.from, to: $0.to, curve: $0.curve)?.length }.reduce(0, +)
-        let shown = built.isEmpty ? points.flatMap { $0 } : points.prefix(plan.buildable).flatMap { $0 }
+        // Decision 468: the track already laid that it joins, in its place
+        // along the way.
+        var shown: [WorldCoordinate] = []
+        var pieces: [[WorldCoordinate]] = []
+        if built.isEmpty {
+            shown = points.flatMap { $0 }
+        } else {
+            var piece: [WorldCoordinate] = []
+            for index in 0...plan.buildable {
+                for run in plan.existing where run.after == index {
+                    shown += run.points
+                    if !piece.isEmpty { pieces.append(piece) }
+                    piece = []
+                }
+                if index < plan.buildable {
+                    shown += points[index]
+                    piece += points[index]
+                }
+            }
+            if !piece.isEmpty { pieces.append(piece) }
+        }
         let first = plan.stretches.first, last = built.last
         let isJoined: (NetworkAnchor) -> Bool = { if case .point = $0 { false } else { true } }
         var preview = NetworkPreview(
@@ -589,6 +621,8 @@ extension GameSession {
         )
         preview.traced = built.count
         preview.tracedDouble = decided.real
+        preview.existing = built.isEmpty ? [] : plan.existing.map(\.points)
+        preview.newPieces = preview.existing.isEmpty ? [] : pieces
         var second: [WorldCoordinate] = []
         if case .success(let found)? = double {
             second = found.parallelPoints
@@ -608,7 +642,29 @@ extension GameSession {
                 "描到 \(stop) 處停下：\(plan.problem ?? "")"
             )
         }
+        if !preview.existing.isEmpty {
+            preview.traceNote = [Self.joinedText(plan, wantedDouble: networkBuildsDouble || tracedDouble(built).double, in: language), preview.traceNote]
+                .compactMap { $0 }.joined(separator: " ")
+        }
         return (preview, second)
+    }
+
+    /// What a trace that joins track already laid says (decision 468):
+    /// "Joins the track already laid for 1.2 km, at no cost.", and where
+    /// the player wanted double track, that it is single here.
+    static func joinedText(_ plan: TracePlan, wantedDouble: Bool, in language: DisplayLanguage) -> String {
+        let distance = NetworkBuilding.distanceText(Int64(plan.existingLength.rounded()), in: language)
+        var text = language.text(
+            "Joins the track already laid for \(distance), at no cost.",
+            "接上已經鋪好的軌道 \(distance)，這段不用錢。"
+        )
+        if wantedDouble {
+            text += language.text(
+                " Laid single where it joins; add the second track with Upgrade to double track.",
+                "接上的這次鋪成單線，第二條可以用「升級為複線」加。"
+            )
+        }
+        return text
     }
 
     /// The traced stretch's `built` edges with a second track beside them
@@ -635,7 +691,7 @@ extension GameSession {
     /// it, as one command: all of it or none. Its end becomes the start of
     /// the next stretch.
     func buildTracedTrack(from start: NetworkAnchor, to end: NetworkAnchor) -> Bool {
-        guard let plan = tracePlan(from: start, to: end) else { return false }
+        guard let plan = traceAlong(from: start, to: end) else { return false }
         guard plan.buildable > 0 else {
             message = StatusMessage(kind: .failure, text: plan.problem ?? language.text("This stretch cannot be traced.", "這段無法描線。"))
             return true
@@ -643,7 +699,7 @@ extension GameSession {
         let stretches = Array(plan.stretches.prefix(plan.buildable))
         var command = PlayerCommand.buildTrackChain(stretches)
         var crossovers = DoubleTrack.CrossoverOutcome.none
-        let decided = tracedDouble(stretches)
+        let decided = plan.existing.isEmpty ? tracedDouble(stretches) : (double: false, real: nil)
         if decided.double {
             switch tracedDoublePlan(stretches, from: start, to: end, reachesEnd: !plan.stopped) {
             case .success(let found):
@@ -668,13 +724,16 @@ extension GameSession {
             if case .buildDoubleTrackChain = command {
                 text += language.text(" With a second track beside it.", "旁邊也鋪了第二條。") + Self.crossoverText(crossovers, in: language)
             }
+            if !plan.existing.isEmpty {
+                text += " " + Self.joinedText(plan, wantedDouble: false, in: language)
+            }
             if plan.stopped, let problem = plan.problem {
                 text += language.text(" It stops there: \(problem)", "在那裡停下：\(problem)")
             }
             return text
         }
         if let track = built?.track {
-            networkStart = .node(track.to)
+            networkStart = .node(plan.endNode ?? track.to)
             networkEnd = nil
             playSound?(.track)
         }
@@ -732,9 +791,12 @@ struct TracedWayKey: Equatable {
 extension PlayerCommand.TrackStretch {
     /// The stretch, starting at node `node` when one is given: an edge of a
     /// chain (``PlayerCommand/buildTrackChain(_:)``) starts at the node the
-    /// edge before ended at.
+    /// edge before ended at. Decision 468: unless it starts at a node of its
+    /// own, as a trace goes on beyond track already laid from that track's
+    /// far end.
     func starting(at node: TrackNodeID?) -> PlayerCommand.TrackStretch {
         guard let node else { return self }
+        if case .node = start { return self }
         return PlayerCommand.TrackStretch(
             start: .node(node), end: end, from: from, to: to, curve: curve, profile: profile, structure: structure, ground: ground
         )

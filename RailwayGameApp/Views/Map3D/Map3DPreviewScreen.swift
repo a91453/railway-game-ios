@@ -376,6 +376,8 @@ final class Map3DSceneCache {
     private var key: Map3DSceneKey?
     private weak var game: GameSession?
     private var building: Task<Map3DBuiltScene, Never>?
+    /// Review L-1: a build still running when let go is held until it ends.
+    private var hold = Map3DSceneHold()
     /// What the scene built or building covers.
     private var region: WorldRegion?
     private var memoryWarning: NSObjectProtocol?
@@ -388,12 +390,22 @@ final class Map3DSceneCache {
         }
     }
 
-    /// Lets go of the scene built or building; the next 3D map builds anew.
+    /// Lets go of the scene built; one still building is let go once it
+    /// ends, and a 3D map opened meanwhile takes it (review L-1). The
+    /// next 3D map after that builds anew.
     func clear() {
+        if hold.clear() { drop() }
+    }
+
+    private func drop() {
         key = nil
         game = nil
         building = nil
         region = nil
+    }
+
+    private func finished(_ number: Int) {
+        if hold.finished(number) { drop() }
     }
 
     /// Starts building `session`'s scene round `focus` (decision 313,
@@ -412,6 +424,7 @@ final class Map3DSceneCache {
     private func task(for session: GameSession, focus: (x: Double, y: Double)?, palette: LinePalette) -> Task<Map3DBuiltScene, Never> {
         let key = Map3DSceneKey(world: session.world, hasHeights: session.heights != nil, hasRailways: session.railways != nil, focus: focus, palette: palette)
         if key == self.key, game === session, let building, let region, Map3DScene.holds(focus, in: region, world: session.world) {
+            hold.reuse()
             return building
         }
         let world = session.world
@@ -449,6 +462,11 @@ final class Map3DSceneCache {
         game = session
         building = task
         region = Map3DScene.region(world: world, focus: focus)
+        let number = hold.start()
+        Task {
+            _ = await task.value
+            finished(number)
+        }
         return task
     }
 }

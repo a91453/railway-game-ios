@@ -99,6 +99,33 @@ final class MapButtonsUITests: XCTestCase {
         checkTheButtonsShow(in: app)
     }
 
+    /// Decision 469 (UI review 2-3): on a phone on its side with the
+    /// details card open, the row under the status pill ran under the card
+    /// where it had no room (at night, the skip beside the strip). The
+    /// strip folds to one button there now; either way it stays clear of
+    /// the card and a finger reaches its list. When it folds is
+    /// `MapTopRowTests` on Linux.
+    func testThePhonesLayerStripKeepsClearOfTheCard() throws {
+        try XCTSkipIf(UIDevice.current.userInterfaceIdiom != .phone, "a phone held on its side")
+        let app = launch(orientation: .landscapeLeft)
+        defer { app.terminate() }
+
+        let card = app.descendants(matching: .any)["details.card"].firstMatch
+        if !card.appears(within: 5) {
+            let controls = app.buttons["controls.toggle"]
+            XCTAssertTrue(controls.appears(within: 10))
+            controls.tap()
+        }
+        XCTAssertTrue(card.appears(within: 10), "The details card opens")
+        card.waitUntilSettled()
+        let strip = app.descendants(matching: .any)["map.quickLayer.strip"].firstMatch
+        XCTAssertTrue(strip.appears(within: 10), "The layer strip shows")
+        strip.waitUntilSettled()
+        XCTAssertLessThanOrEqual(strip.frame.maxX, card.frame.minX, "Clear of the card: \(strip.frame) and \(card.frame)")
+        let more = app.buttons["map.quickLayer.more"]
+        XCTAssertTrue(more.becomesHittable(within: 10), "\(more) is covered: \(more.frame)")
+    }
+
     private func launch(orientation: UIDeviceOrientation) -> XCUIApplication {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = orientation

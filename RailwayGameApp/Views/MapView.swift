@@ -99,6 +99,10 @@ struct MapView: View {
     @State private var realTrains: RealTrainTraffic?
     @State private var realTrainsVersion = 0
     @State private var realTrainClock: RealTrainClock?
+    /// Decision 468: what of the real railways makes way for the player's
+    /// track and stations, worked out off the main actor when they change.
+    @State private var realRailwayYield = RealRailwayYield.none
+    @State private var realRailwayYieldVersion = 0
     /// Decision 216: the lines' colours, the player's or the
     /// colour-blind-safe palette's; the canvases redraw when it changes.
     @AppStorage(LinePalette.key) private var linePalette: LinePalette = .standard
@@ -428,6 +432,8 @@ struct MapView: View {
                         RealTrainCanvas(
                             traffic: realTrains,
                             version: realTrainsVersion,
+                            yield: realRailwayYield,
+                            yieldVersion: realRailwayYieldVersion,
                             clock: realTrainClock,
                             frame: realWorld,
                             animating: !session.world.clock.isPaused && !reduceMotion && realTrainClock.isMoving,
@@ -1011,6 +1017,7 @@ struct MapView: View {
                                 railways: session.railways,
                                 water: session.water,
                                 trackStyle: trackStyle,
+                                yield: realRailwayYield,
                                 language: session.language,
                                 stations: OSMMapBackground.stationMarks(of: session.world, in: realWorld),
                                 safeArea: safeArea,
@@ -1024,6 +1031,7 @@ struct MapView: View {
                                 style: mapStyle,
                                 railways: session.railways,
                                 trackStyle: trackStyle,
+                                yield: realRailwayYield,
                                 language: session.language,
                                 safeArea: safeArea,
                                 onAttributionFrames: { attributionFrames = $0 },
@@ -1182,9 +1190,12 @@ struct MapView: View {
         .task(id: RealTrainsKey(
             realWorld: RealWorldFrame(world: session.world), bounds: session.world.bounds,
             hasData: session.railways?.operations != nil, shown: showsRealTrains,
-            bought: Set(session.world.acquisitions.map(\.realLine))
+            bought: Set(session.world.acquisitions.map(\.realLine)).union(realRailwayYield.quietLines)
         )) {
             await workOutRealTrains()
+        }
+        .task(id: RealRailwayYieldKey(world: session.world, hasData: session.railways != nil)) {
+            await workOutRealRailwayYield()
         }
         .onChange(of: MapWeatherKey(world: session.world), initial: true) { _, _ in
             FrameCostMeter.shared.measure(.mapTick) { mapWeather = MapWeather(world: session.world) }
@@ -1397,8 +1408,9 @@ struct MapView: View {
             return
         }
         let bounds = session.world.bounds
-        // Decision 315: a bought line runs the company's trains, not these.
-        let bought = Set(session.world.acquisitions.map(\.realLine))
+        // Decision 315: a bought line runs the company's trains, not these;
+        // decision 468: nor a line whose stations are mostly the player's.
+        let bought = Set(session.world.acquisitions.map(\.realLine)).union(realRailwayYield.quietLines)
         let traffic = await Task.detached(priority: .utility) {
             RealTrainTraffic(operations: operations, frame: frame, bounds: bounds, bought: bought)
         }.value
@@ -1406,6 +1418,26 @@ struct MapView: View {
         realTrains = traffic.lines.isEmpty ? nil : traffic
         realTrainsVersion &+= 1
         realTrainClock = realTrains == nil ? nil : RealTrainClock(world: session.world, time: Date().timeIntervalSinceReferenceDate)
+    }
+
+    /// Decision 468: what of the real railways makes way for the player's
+    /// track and stations, worked out off the main actor; nothing on a map
+    /// of no real place.
+    private func workOutRealRailwayYield() async {
+        guard let railways = session.railways, let frame = RealWorldFrame(world: session.world) else {
+            if realRailwayYield != .none {
+                realRailwayYield = .none
+                realRailwayYieldVersion &+= 1
+            }
+            return
+        }
+        let world = session.world
+        let yield = await Task.detached(priority: .utility) {
+            RealRailwayYield(railways: railways, operations: railways.operations, world: world, frame: frame)
+        }.value
+        guard !Task.isCancelled, yield != realRailwayYield else { return }
+        realRailwayYield = yield
+        realRailwayYieldVersion &+= 1
     }
 
     /// Decision 311: the building layer's switches in its legend.
@@ -2579,18 +2611,22 @@ private struct RealTrainCanvas: View, Equatable {
     let traffic: RealTrainTraffic
     /// Compared by its number, not line by line.
     let version: Int
+    /// Decision 468: the stretches whose real trains are not drawn, also
+    /// compared by its number.
+    let yield: RealRailwayYield
+    let yieldVersion: Int
     let clock: RealTrainClock
     let frame: RealWorldFrame
     let animating: Bool
     let camera: PlanCamera
 
     nonisolated static func == (lhs: RealTrainCanvas, rhs: RealTrainCanvas) -> Bool {
-        lhs.version == rhs.version && lhs.clock == rhs.clock && lhs.frame == rhs.frame
+        lhs.version == rhs.version && lhs.yieldVersion == rhs.yieldVersion && lhs.clock == rhs.clock && lhs.frame == rhs.frame
             && lhs.animating == rhs.animating && lhs.camera == rhs.camera
     }
 
     var body: some View {
-        let traffic = traffic, clock = clock, frame = frame, animating = animating, camera = camera
+        let traffic = traffic, yield = yield, clock = clock, frame = frame, animating = animating, camera = camera
         return TimelineView(.animation(minimumInterval: MapGlide.minimumInterval, paused: !animating)) { timeline in
             Canvas { context, size in
                 guard RealTrainTraffic.isShown(referenceSize: camera.referenceSize) else { return }
@@ -2600,7 +2636,7 @@ private struct RealTrainCanvas: View, Equatable {
                         at: second, on: clock.today, dayBefore: clock.dayBefore, frame: frame,
                         visible: camera.visibleRegion.expanded(by: 12 / camera.pointsPerUnit)
                     )
-                    MapArt.drawRealTrains(dots.prefix(RealTrainTraffic.mostDrawn), projection: camera, in: context)
+                    MapArt.drawRealTrains(dots.lazy.filter { !yield.hidesTrain($0) }.prefix(RealTrainTraffic.mostDrawn), projection: camera, in: context)
                 }
             }
         }
@@ -2805,6 +2841,27 @@ private struct CityMapKey: Equatable {
         zones = isShown ? world.zones : nil
         placed = isShown ? world.placedBuildings : []
         setsRidership = isShown && world.landDemand && world.accounts.mode == .management
+    }
+}
+
+/// What the real railways' making way for the player (decision 468) is
+/// worked out from: the track's edges (an edge never changes, and its ID is
+/// never reused), the stations' names and places, and the map.
+private struct RealRailwayYieldKey: Equatable {
+    let realWorld: RealWorldFrame?
+    let bounds: WorldBounds
+    let edges: [TrackEdgeID]
+    let stations: [String]
+    let stationPlaces: [PlanPoint]
+    let hasData: Bool
+
+    init(world: GameWorld, hasData: Bool) {
+        realWorld = RealWorldFrame(world: world)
+        bounds = world.bounds
+        edges = realWorld == nil ? [] : world.network.edges.map(\.id)
+        stations = realWorld == nil ? [] : world.stations.map(\.name)
+        stationPlaces = realWorld == nil ? [] : world.stations.map(\.location)
+        self.hasData = hasData
     }
 }
 

@@ -21,20 +21,48 @@ import Foundation
 ///
 /// The same corners give the same triangles on every device: the order is
 /// the cost, then the vertex numbers.
+///
+/// Decision 467: before it draws anything on screen, three guards.
+/// - A limit on how far the surface may move (`maxError`): a collapse
+///   whose corner would leave the planes of the triangles merged into it
+///   by more than that, on average by area (root mean square, as
+///   meshoptimizer's `target_error`), is not made, so a target the limit
+///   stops short of gets what the limit allows.
+/// - A part's outline keeps its corners: a corner on one seam slides only
+///   where the seam runs nearly straight through it (``straightSeam``), so
+///   a one-sided panel (a sign, a railing, a bus's side) keeps its four
+///   corners and its area instead of being collapsed away.
+/// - ``Map3DSimplifiedCache`` makes the versions off the main thread and
+///   keeps them in the device's caches.
 public enum Map3DMeshSimplifier {
     /// Corners closer than this, metres, are one vertex.
     static let weldStep: Double = 1e-4
     /// How much more a seam's plane weighs than a surface's.
     static let seamWeight: Double = 50
+    /// Decision 467: a corner on a seam slides along it only where the
+    /// seam turns by less than this many degrees there; where it turns
+    /// more (a panel's corner, a window's) it stays.
+    static let straightSeam: Double = 20
+    /// Decision 467: raised whenever the triangles this makes for the same
+    /// corners change, so the versions cached on a device are made again
+    /// (``Map3DSimplifiedCache``).
+    public static let version = 2
+    /// Decision 467: the limit the game asks for, half a centimetre a
+    /// metre (6 cm on a 12 m bus): below it a closed part as small as a
+    /// bogie or a wheel can be collapsed away.
+    public static let recommendedMaxError = 0.005
 
     /// `corners` (three to a triangle) with as few triangles left as each
     /// of `targets` asks, largest first; a target the collapses cannot
     /// reach gets the fewest they could leave. `areaWeighted`: whether a
     /// surface's error is weighed by its area (`decimate.py`'s choice per
     /// car; without it a small curved part costs as much as a large flat
-    /// one).
-    public static func simplify(_ corners: [Map3DVertex], targets: [Int], areaWeighted: Bool = true) -> [[Map3DVertex]] {
-        var collapser = Collapser(corners: corners, areaWeighted: areaWeighted)
+    /// one). `maxError`: decision 467's limit on how far the surface may
+    /// move, a share of the corners' largest side (0.01: a centimetre on a
+    /// metre-high post box, 20 cm on a 20 m car); `nil` for none.
+    public static func simplify(_ corners: [Map3DVertex], targets: [Int], areaWeighted: Bool = true,
+                                maxError: Double? = nil) -> [[Map3DVertex]] {
+        var collapser = Collapser(corners: corners, areaWeighted: areaWeighted, maxError: maxError)
         return collapser.run(targets: targets.sorted(by: >))
     }
 }
@@ -42,15 +70,16 @@ public enum Map3DMeshSimplifier {
 extension Map3DModelPack.Model {
     /// Decision 420: this model with about `share` of its triangles, its
     /// name and box as they are (a car's length lays out its train).
-    public func simplified(to share: Double) -> Map3DModelPack.Model {
-        simplified(to: [share])[0]
+    public func simplified(to share: Double, maxError: Double? = nil) -> Map3DModelPack.Model {
+        simplified(to: [share], maxError: maxError)[0]
     }
 
     /// One model for each of `shares` (each from this model's triangles,
-    /// made in one run, largest share first).
-    public func simplified(to shares: [Double]) -> [Map3DModelPack.Model] {
+    /// made in one run, largest share first), the surface moving no more
+    /// than `maxError` (``Map3DMeshSimplifier/simplify(_:targets:areaWeighted:maxError:)``).
+    public func simplified(to shares: [Double], maxError: Double? = nil) -> [Map3DModelPack.Model] {
         let targets = shares.map { Int((Double(triangleCount) * $0).rounded()) }
-        let made = Map3DMeshSimplifier.simplify(vertices, targets: targets)
+        let made = Map3DMeshSimplifier.simplify(vertices, targets: targets, maxError: maxError)
         let byTarget = Dictionary(zip(targets.sorted(by: >), made), uniquingKeysWith: { first, _ in first })
         return targets.map { Map3DModelPack.Model(name: name, vertices: byTarget[$0] ?? vertices, minimum: minimum, maximum: maximum) }
     }
@@ -166,11 +195,22 @@ private struct Collapser {
     /// The triangles round each vertex.
     var around: [[Int32]] = []
     var quadrics: [Quadric] = []
+    /// Decision 467: the planes of the triangles merged into each vertex,
+    /// by area, without the seams', and their area: how far a corner
+    /// moves from the surface.
+    var surfaces: [Quadric] = []
+    var surfaceArea: [Double] = []
+    /// The largest squared distance a corner may move, metres²; `nil` for
+    /// no limit.
+    var limit: Double?
+    /// Decision 467: the cosine above which two seam edges at a corner turn
+    /// too much for it to slide.
+    let turning = -cos(Map3DMeshSimplifier.straightSeam * Double.pi / 180)
     var version: [UInt32] = []
     var heap = CandidateHeap()
     var count = 0
 
-    init(corners: [Map3DVertex], areaWeighted: Bool) {
+    init(corners: [Map3DVertex], areaWeighted: Bool, maxError: Double?) {
         self.corners = corners
         let triangles = corners.count / 3
         var index: [SIMD3<Int64>: Int32] = [:]
@@ -220,11 +260,27 @@ private struct Collapser {
         }
         count = alive.lazy.filter { $0 }.count
         quadrics = Array(repeating: Quadric(), count: points.count)
+        surfaces = Array(repeating: Quadric(), count: points.count)
+        surfaceArea = Array(repeating: 0, count: points.count)
         version = Array(repeating: 0, count: points.count)
         for (i, f) in faces.enumerated() where alive[i] {
             guard let (n, d, area) = plane(f) else { continue }
             let q = Quadric(plane: n, d, weight: areaWeighted ? area : 1)
-            for k in 0..<3 { quadrics[Int(f[k])] += q }
+            let s = Quadric(plane: n, d, weight: area)
+            for k in 0..<3 {
+                quadrics[Int(f[k])] += q
+                surfaces[Int(f[k])] += s
+                surfaceArea[Int(f[k])] += area
+            }
+        }
+        if let maxError, let first = points.first {
+            var low = first, high = first
+            for p in points {
+                low = SIMD3(Swift.min(low.x, p.x), Swift.min(low.y, p.y), Swift.min(low.z, p.z))
+                high = SIMD3(Swift.max(high.x, p.x), Swift.max(high.y, p.y), Swift.max(high.z, p.z))
+            }
+            let side = (high - low).max() * maxError
+            limit = side * side
         }
         // A plane through each seam, upright on its triangles, holds it in
         // place.
@@ -286,6 +342,8 @@ private struct Collapser {
         }
         around[Int(u)] = []
         quadrics[Int(v)] += quadrics[Int(u)]
+        surfaces[Int(v)] += surfaces[Int(u)]
+        surfaceArea[Int(v)] += surfaceArea[Int(u)]
         let ring = neighbours(v)
         version[Int(u)] &+= 1
         version[Int(v)] &+= 1
@@ -321,6 +379,16 @@ private struct Collapser {
             var paints: [Int32] = []
             for i in around[Int(u)] where !paints.contains(paint[Int(i)]) { paints.append(paint[Int(i)]) }
             guard along.count == 2, paints.count <= 2, along.contains(v) else { return false }
+            // Decision 467: and only where the seam runs on nearly straight.
+            guard let a = normalized(points[Int(along[0])] - points[Int(u)]),
+                  let b = normalized(points[Int(along[1])] - points[Int(u)]),
+                  (a * b).sum() <= turning else { return false }
+        }
+        if let limit {
+            // Decision 467: not farther from its surfaces than the limit.
+            let area = surfaceArea[Int(u)] + surfaceArea[Int(v)]
+            let moved = area > 0 ? surfaces[Int(u)].sum(surfaces[Int(v)]).error(at: points[Int(v)]) / area : 0
+            guard moved <= limit else { return false }
         }
         let both = shared(u, v)
         guard !both.isEmpty else { return false }

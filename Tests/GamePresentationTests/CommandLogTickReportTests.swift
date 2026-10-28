@@ -16,7 +16,11 @@ import XCTest
 /// many game seconds to run on after the log's end at its last speed
 /// (default 1,200, which crosses 06:00 from 05:59:57);
 /// `COMMAND_LOG_SLOW` the milliseconds above which a tick is printed
-/// (default 200); `COMMAND_LOG_DUMP`, when set, where the world at the
+/// (default 200); `COMMAND_LOG_PREFETCH`, when set, works each slow
+/// tick's routes out ahead too, on one core and on all (decision 470);
+/// `COMMAND_LOG_GIVE`, when set, gives every tick its routes worked out
+/// ahead, through the game loop's begin and finish (decision 470);
+/// `COMMAND_LOG_DUMP`, when set, where the world at the
 /// log's end is written, to compare two builds byte for byte.
 @MainActor
 final class CommandLogTickReportTests: XCTestCase {
@@ -35,11 +39,37 @@ final class CommandLogTickReportTests: XCTestCase {
         let clock = ContinuousClock()
         var core = Duration.zero, total = Duration.zero, ticks = 0
         var slowest: [(Duration, String)] = []
+        let prefetching = environment["COMMAND_LOG_PREFETCH"] != nil
+        let giving = environment["COMMAND_LOG_GIVE"] != nil
+        var looking = Duration.zero, longestLook = Duration.zero
         func tick() throws {
             let world = session.world
             let time = world.clock.now.seconds
-            let spentCore = try clock.measure { _ = try GameSession.advanced(world, by: 1, listening: false) }
-            let spent = clock.measure { session.advance(ticks: 1) }
+            if prefetching {
+                // What asking costs every tick.
+                let look = clock.measure { _ = world.passengerRoutesToWorkOut() }
+                looking += look
+                longestLook = max(longestLook, look)
+            }
+            var after: GameWorld?
+            let spentCore = try clock.measure { after = try GameSession.advanced(world, by: 1, listening: false).world }
+            if prefetching, spentCore > slow {
+                try prefetch(world, plain: after!, spent: spentCore)
+            }
+            let spent = try clock.measure {
+                // Decision 470: every tick given its routes first, as the
+                // game loop does, to compare the log's end byte for byte.
+                if giving, let loop = session.beginLoopTick() {
+                    var given = loop.world
+                    if let work = given.passengerRoutesToWorkOut() {
+                        given.takePassengerRoutes(given.workingOutPassengerRoutes(work))
+                    }
+                    let step = try GameSession.advanced(given, by: 1, listening: false)
+                    XCTAssertTrue(session.finish(loop, with: .success(step)))
+                } else {
+                    session.advance(ticks: 1)
+                }
+            }
             ticks += 1
             core += spentCore
             total += spent
@@ -48,6 +78,9 @@ final class CommandLogTickReportTests: XCTestCase {
             slowest.append((spentCore, label))
             if spentCore > slow || spent - spentCore > slow {
                 print("\(label): GameCore \(spentCore), session after \(spent - spentCore)")
+                // Decision 470: the parts of the route graph, each kept on its own.
+                let parts = PassengerRouteMemo.components(of: PassengerRouteGraph(world: session.world)).parts
+                print("  route graph parts (stations, paths): " + parts.map { "(\(Set($0.paths.flatMap(\.stations)).count), \($0.paths.count))" }.joined(separator: " "))
             }
         }
         print("stations \(session.world.stations.count), lines \(session.world.lines.count), trains \(session.world.trains.count), buses \(session.world.busRoutes.count) routes, from \(session.world.clock.now.seconds)")
@@ -72,7 +105,47 @@ final class CommandLogTickReportTests: XCTestCase {
         let until = session.world.clock.now.seconds + after
         while session.world.clock.now.seconds < until { try tick() }
         slowest.sort { $0.0 > $1.0 }
+        if prefetching { print("asking for routes to work out ahead: \(looking) in all, at most \(longestLook)") }
         print("ticks \(ticks), GameCore \(core), session \(total), slowest GameCore: " + slowest.prefix(12).map { "\($0.1) \($0.0)" }.joined(separator: "; "))
+    }
+
+    /// Decision 470: the tick's routes worked out ahead, one origin after
+    /// another and then on every core, and the tick after them; the world
+    /// after it must be the one the tick makes alone.
+    private func prefetch(_ world: GameWorld, plain: GameWorld, spent: Duration) throws {
+        let clock = ContinuousClock()
+        guard let work = world.passengerRoutesToWorkOut() else {
+            print("  routes ahead: none to work out")
+            return
+        }
+        let origins = work.origins
+        var serial: PassengerRouteCache?
+        let one = clock.measure { serial = world.workingOutPassengerRoutes(work) }
+        let lanes = ProcessInfo.processInfo.activeProcessorCount
+        let chunks = (0..<(lanes * 4)).map { lane in stride(from: lane, to: origins.count, by: lanes * 4).map { origins[$0] } }
+        let caches = Caches(count: chunks.count)
+        let all = clock.measure {
+            DispatchQueue.concurrentPerform(iterations: chunks.count) { caches.set($0, world.workingOutPassengerRoutes(work, origins: chunks[$0])) }
+        }
+        var given = world
+        for cache in caches.values { given.takePassengerRoutes(cache) }
+        var after: GameWorld?
+        let rest = try clock.measure { after = try GameSession.advanced(given, by: 1, listening: false).world }
+        var serialGiven = world
+        serialGiven.takePassengerRoutes(serial!)
+        let serialAfter = try GameSession.advanced(serialGiven, by: 1, listening: false).world
+        print("  routes ahead: \(origins.count) origins, \(serial!.pairs) pairs; one core \(one), \(lanes) cores \(all); the tick after them \(rest) (alone \(spent)); same world: \(after! == plain && serialAfter == plain && after!.passengers == plain.passengers)")
+        XCTAssertEqual(after, plain)
+        XCTAssertEqual(after?.passengers, plain.passengers)
+        XCTAssertEqual(serialAfter, plain)
+    }
+
+    private final class Caches: @unchecked Sendable {
+        private let lock = NSLock()
+        private var held: [PassengerRouteCache?]
+        init(count: Int) { held = Array(repeating: nil, count: count) }
+        func set(_ index: Int, _ cache: PassengerRouteCache) { lock.withLock { held[index] = cache } }
+        var values: [PassengerRouteCache] { lock.withLock { held.compactMap { $0 } } }
     }
 
     /// What the screen works out on the main actor once a game hour or a

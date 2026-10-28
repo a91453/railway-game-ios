@@ -148,16 +148,48 @@ public struct FinanceHistory: Hashable, Sendable {
     /// The history of `range` as of day `today` (the day in progress is the
     /// last one in the window).
     public static func make(_ range: FinanceTrendRange, accounts: CompanyAccounts, today: Int64) -> FinanceHistory {
-        switch range {
-        case .allYears:
-            return years(accounts.years)
-        case .thirtyDays, .ninetyDays, .oneYear:
-            return windowed(range, accounts: accounts, today: today)
-        }
+        Source(range: range, days: accounts.days, years: accounts.years, today: today).history()
     }
 
     public static func make(_ range: FinanceTrendRange, world: GameWorld) -> FinanceHistory {
-        make(range, accounts: world.accounts, today: floorDay(world.clock.now))
+        Source(range, world: world).history()
+    }
+
+    /// Decision 471 (UI health check K, 3-22): what a trend chart of
+    /// `range` is made from, and nothing else: the economy panel draws its
+    /// charts again only when this changes, not at every tick. The day in
+    /// progress is in the charts, so it changes with the hour's ledger
+    /// rows and when a new day begins.
+    public struct Source: Equatable, Sendable {
+        public let range: FinanceTrendRange
+        /// The windowed ranges' days; empty for ``FinanceTrendRange/allYears``.
+        let days: [DayAccount]
+        /// The closed years; empty for the windowed ranges.
+        let years: [AnnualStatement]
+        /// Today's day, for the windowed ranges; 0 for ``FinanceTrendRange/allYears``.
+        let today: Int64
+
+        init(range: FinanceTrendRange, days: [DayAccount], years: [AnnualStatement], today: Int64) {
+            self.range = range
+            // Only what the range reads, so the rest changing leaves it as it is.
+            self.days = range == .allYears ? [] : days
+            self.years = range == .allYears ? years : []
+            self.today = range == .allYears ? 0 : today
+        }
+
+        public init(_ range: FinanceTrendRange, world: GameWorld) {
+            self.init(range: range, days: world.accounts.days, years: world.accounts.years, today: floorDay(world.clock.now))
+        }
+
+        /// The history it makes (``FinanceHistory/make(_:accounts:today:)``).
+        public func history() -> FinanceHistory {
+            switch range {
+            case .allYears:
+                return FinanceHistory.years(years)
+            case .thirtyDays, .ninetyDays, .oneYear:
+                return FinanceHistory.windowed(range, days: days, today: today)
+            }
+        }
     }
 
     static func floorDay(_ time: GameTime) -> Int64 {
@@ -165,12 +197,12 @@ public struct FinanceHistory: Hashable, Sendable {
         return time.seconds % GameTime.secondsPerDay < 0 ? quotient - 1 : quotient
     }
 
-    private static func windowed(_ range: FinanceTrendRange, accounts: CompanyAccounts, today: Int64) -> FinanceHistory {
+    private static func windowed(_ range: FinanceTrendRange, days: [DayAccount], today: Int64) -> FinanceHistory {
         let size = range.bucketDays
         let count = Int64(range.bucketCount)
         let first = today - size * count + 1
         // One window earlier too, for the comparison.
-        let byDay = Dictionary(accounts.days.map { ($0.day, $0) }, uniquingKeysWith: { _, latest in latest })
+        let byDay = Dictionary(days.map { ($0.day, $0) }, uniquingKeysWith: { _, latest in latest })
         func bucket(_ start: Int64) -> FinanceTrendPoint {
             var fare = Money.zero, freight = Money.zero, property = Money.zero, cost = Money.zero
             var trips: Int64 = 0
@@ -196,8 +228,8 @@ public struct FinanceHistory: Hashable, Sendable {
         // there for all of it: one mostly before its first day would read
         // as growth (decision 176, "nothing earlier to compare with"). Books
         // full to ``CompanyAccounts/keptDays`` have let older days go.
-        let comparable = accounts.days.count >= CompanyAccounts.keptDays
-            || accounts.days.first.map { first - size * count >= $0.day } ?? false
+        let comparable = days.count >= CompanyAccounts.keptDays
+            || days.first.map { first - size * count >= $0.day } ?? false
         return FinanceHistory(
             range: range, points: Array(kept), fareRevenue: points.reduce(.zero) { $0 + $1.fareRevenue },
             previousFareRevenue: comparable ? before.reduce(.zero) { $0 + $1.fareRevenue } : .zero,

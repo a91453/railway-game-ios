@@ -66,6 +66,23 @@ final class RouteHintTests: XCTestCase {
         XCTAssertNil(session.routeHint, "the same second track does not bring it up again")
     }
 
+    /// Decision 465: looked for off the main actor, the card comes up as
+    /// when looked for on it.
+    func testASecondTrackLookedForOffTheMainActorBringsTheCardUp() async throws {
+        let session = GameSession(world: try world(double: false), language: .english)
+        await session.watchRouteHintOffTheMainActor()
+        XCTAssertNil(session.routeHint, "single track: nothing to choose")
+        XCTAssertTrue(session.perform { world throws(GameError) in
+            try self.addSecondTrack(to: &world)
+            return "a second track"
+        })
+        await session.watchRouteHintOffTheMainActor()
+        XCTAssertEqual(session.routeHint, .parallelTrack(Self.main))
+        session.dismissRouteHint()
+        await session.watchRouteHintOffTheMainActor()
+        XCTAssertNil(session.routeHint, "the same second track does not bring it up again")
+    }
+
     func testAGameOpenedWithDoubleTrackWaitsForANewOne() throws {
         let session = GameSession(world: try world(double: true), language: .traditionalChinese)
         session.watchRouteHint()

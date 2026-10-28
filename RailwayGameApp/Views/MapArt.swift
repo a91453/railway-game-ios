@@ -708,7 +708,21 @@ enum MapArt {
             let width = max(2, referenceSize * 0.12)
             context.stroke(wholePolyline(overlay.unbuilt, projection: projection), with: .color(Color.gray), style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round, dash: [max(2, referenceSize * 0.25), max(2, referenceSize * 0.2)]))
         }
-        for points in [overlay.preview, overlay.crossing] + overlay.crossovers where points.count > 1 {
+        // Decision 468: a trace that joins track already laid: the glow
+        // along all of it, the new track's pieces solid and the track
+        // already there dashed in the same colour.
+        if overlay.previewIsBuildable, !overlay.existing.isEmpty {
+            let width = max(2, referenceSize * 0.12)
+            context.stroke(polyline(overlay.preview, projection: projection), with: .color(Color.accentColor.opacity(0.3)), style: StrokeStyle(lineWidth: referenceSize * 0.5, lineCap: .round, lineJoin: .round))
+            for points in overlay.newPieces where points.count > 1 {
+                context.stroke(polyline(points, projection: projection), with: .color(Color.accentColor), style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
+            }
+            for points in overlay.existing where points.count > 1 {
+                context.stroke(wholePolyline(points, projection: projection), with: .color(Color.accentColor), style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round, dash: [max(2, referenceSize * 0.25), max(2, referenceSize * 0.2)]))
+            }
+        }
+        let joined = overlay.previewIsBuildable && !overlay.existing.isEmpty
+        for points in (joined ? [] : [overlay.preview]) + [overlay.crossing] + overlay.crossovers where points.count > 1 {
             let line = polyline(points, projection: projection)
             let width = max(2, referenceSize * 0.12)
             if overlay.previewIsBuildable {

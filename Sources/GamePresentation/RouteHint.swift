@@ -117,7 +117,21 @@ extension GameSession {
     /// opened with double track already does not bring the card up; after
     /// that, a leg that was not there before does. Not during the tutorial.
     public func watchRouteHint() {
-        let legs = RouteHint.parallelLegs(in: world)
+        noteRouteHint(legs: RouteHint.parallelLegs(in: world))
+    }
+
+    /// ``watchRouteHint()``, its maximum flows worked out off the main
+    /// actor (decision 465: some 50 ms after a line or a station on the
+    /// real map of 78 stations, on top of the rest an edit asks for);
+    /// nothing when the task is cancelled, as a newer change looks again.
+    public func watchRouteHintOffTheMainActor() async {
+        let world = world
+        let legs = await Task.detached(priority: .userInitiated) { RouteHint.parallelLegs(in: world) }.value
+        guard !Task.isCancelled else { return }
+        noteRouteHint(legs: legs)
+    }
+
+    private func noteRouteHint(legs: Set<RouteHint.Leg>) {
         defer { routeHintLegs = legs }
         guard let known = routeHintLegs, tutorial == nil, routeHint == nil else { return }
         if let new = legs.subtracting(known).min(by: { ($0.line, $0.stop) < ($1.line, $1.stop) }) {

@@ -17,8 +17,10 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // files' 2,760). Decision 461 added the C371, C381 and 610 sets,
         // near and far (48 models, 203,424 vertices). Decision 466 added
         // the Sanying set, near and far (8 models, 42,024 vertices).
-        XCTAssertEqual(pack.models.count, 591)
-        XCTAssertEqual(vertices, 3_374_106)
+        // Decision 467 added the post boxes' and stop pole's stand-ins (498
+        // vertices; the app swaps in their files' 6,072).
+        XCTAssertEqual(pack.models.count, 593)
+        XCTAssertEqual(vertices, 3_374_604)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 

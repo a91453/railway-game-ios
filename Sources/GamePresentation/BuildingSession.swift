@@ -297,7 +297,7 @@ extension GameSession {
         let placed = perform(.placeBuilding(kind, at: point, look: look == 0 ? nil : look)) { outcome, _, world in
             guard let building = outcome.building else { return "" }
             let cleared = outcome.number
-            let english = kind.title(in: .english).lowercased(), chinese = kind.title(in: .traditionalChinese), id = building.id.rawValue
+            let english = kind.title(in: .english).lowercased(), chinese = kind.title(in: .traditionalChinese)
             var bought = cleared == 0 ? ("", "") : (
                 cleared == 1 ? ", pulling down 1 city building" : ", pulling down \(cleared) city buildings",
                 "，拆除城市建物 \(cleared) 棟"
@@ -307,11 +307,11 @@ extension GameSession {
                 bought = (bought.0 + ", " + movingIn.english, bought.1 + "，" + movingIn.chinese)
             }
             guard building.cost > .zero else {
-                return language.text("Built \(english) #\(id)\(bought.0).", "蓋好\(chinese) #\(id)\(bought.1)。")
+                return language.text("Built \(english)\(bought.0).", "蓋好\(chinese)\(bought.1)。")
             }
             return language.text(
-                "Built \(english) #\(id) for \(building.cost.moneyText)\(bought.0).",
-                "蓋好\(chinese) #\(id)，花費 \(building.cost.moneyText)\(bought.1)。"
+                "Built \(english) for \(building.cost.moneyText)\(bought.0).",
+                "蓋好\(chinese)，花費 \(building.cost.moneyText)\(bought.1)。"
             )
         }
         if placed != nil {
@@ -334,12 +334,12 @@ extension GameSession {
         return perform(.demolishBuilding(id)) { _, _, _ in
             guard fee > .zero else {
                 return language.text(
-                    "Demolished \(name(.english).lowercased()) #\(id.rawValue).", "拆除\(name(.traditionalChinese)) #\(id.rawValue)。"
+                    "Demolished \(name(.english).lowercased()).", "拆除\(name(.traditionalChinese))。"
                 )
             }
             return language.text(
-                "Demolished \(name(.english).lowercased()) #\(id.rawValue) for \(fee.moneyText).",
-                "拆除\(name(.traditionalChinese)) #\(id.rawValue)，花費 \(fee.moneyText)。"
+                "Demolished \(name(.english).lowercased()) for \(fee.moneyText).",
+                "拆除\(name(.traditionalChinese))，花費 \(fee.moneyText)。"
             )
         } != nil
     }

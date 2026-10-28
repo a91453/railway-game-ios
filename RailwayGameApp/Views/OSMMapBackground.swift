@@ -30,6 +30,9 @@ struct OSMMapBackground: UIViewRepresentable {
     /// Taiwan and draws the bundled tiles (decision 151).
     let water: WaterGrid?
     let trackStyle: RealRailways.TrackStyle
+    /// Decision 468: the stretches of real line the player's track covers,
+    /// left out.
+    var yield = RealRailwayYield.none
     let language: DisplayLanguage
     /// The game's stations (decision 123), so the map's place names make
     /// way for the names the game draws under them.
@@ -56,7 +59,8 @@ struct OSMMapBackground: UIViewRepresentable {
             anchor: realWorld.anchor,
             reach: FollowingMapView.railwayReach(of: camera.mapRegion),
             style: trackStyle,
-            theme: dark ? .dark : .light
+            theme: dark ? .dark : .light,
+            yield: yield
         )
         let taiwan = BaseMapStyle.drawsTaiwan(anchor: realWorld.anchor, water: water) && BaseMapFiles.tiles != nil
         map.show(
@@ -467,9 +471,10 @@ final class FollowingMapLibreView: MLNMapView {
 
         let lines = railways.lines(near: look.anchor, within: look.reach)
         for sortKey in Set(lines.map(\.sortKey)).sorted() {
-            let rank = lines.filter { $0.sortKey == sortKey }
-            let polylines = rank.map { line in
-                let coordinates = line.points.map { CLLocationCoordinate2D($0) }
+            // Decision 468: a line in the pieces the player's track leaves.
+            let rank = lines.filter { $0.sortKey == sortKey }.flatMap { line in look.yield.drawnPieces(of: line).map { (line, $0) } }
+            let polylines = rank.map { _, points in
+                let coordinates = points.map { CLLocationCoordinate2D($0) }
                 return MLNPolyline(coordinates: coordinates, count: UInt(coordinates.count))
             }
             let casing = source("railways.\(sortKey).casing", MLNMultiPolyline(polylines: polylines))
@@ -479,7 +484,7 @@ final class FollowingMapLibreView: MLNMapView {
             }
             var colors: [RealRailways.RGB] = []
             var byColor: [RealRailways.RGB: [MLNPolyline]] = [:]
-            for (line, polyline) in zip(rank, polylines) {
+            for ((line, _), polyline) in zip(rank, polylines) {
                 let color = line.palette.color(look.style, on: look.theme)
                 if byColor[color] == nil { colors.append(color) }
                 byColor[color, default: []].append(polyline)

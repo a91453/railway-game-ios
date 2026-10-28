@@ -1,3 +1,4 @@
+import Foundation
 import GameCore
 
 /// A line's badge (ARCHITECTURE decision 216): its code, such as the Taipei
@@ -59,6 +60,18 @@ public enum LineBadge {
     /// other colour is named by its hue (``hueCode(rgb:)``).
     public static func automaticCode(rgb: Int) -> String {
         namedCodes[rgb] ?? hueCode(rgb: rgb)
+    }
+
+    /// Whether a white mark on `rgb` would be hard to see (under 3:1,
+    /// WCAG's least for a graphic), so it is drawn in navy: yellow, white,
+    /// light green, cyan, sky blue. The lines panel's trains on their line.
+    public static func wantsDarkMark(on rgb: Int) -> Bool {
+        func channel(_ shift: Int) -> Double {
+            let c = Double((rgb >> shift) & 0xFF) / 255
+            return c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
+        }
+        let luminance = 0.2126 * channel(16) + 0.7152 * channel(8) + 0.0722 * channel(0)
+        return 1.05 / (luminance + 0.05) < 3
     }
 
     static let namedCodes: [Int: String] = [

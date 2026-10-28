@@ -41,6 +41,7 @@ public final class GameSession {
             if !isLogging { log(.unrecorded("world")) }
             refreshScreenFacts()
             refreshMapMarks()
+            refreshFollowBar()
         }
     }
     /// Decision 367: what the screen's frame shows of the world, changed
@@ -52,6 +53,13 @@ public final class GameSession {
     /// Decision 377: what the map's sight marks show, apart from the
     /// bubbles, whose waiting counts change at most ticks.
     public internal(set) var mapSights: [MapMarks.Sight] = []
+    /// Decision 471: what the follow bar shows of the followed train,
+    /// `nil` while no train is followed (``FollowBarFacts``), changed only
+    /// when it changes.
+    public internal(set) var followBar: FollowBarFacts?
+    /// Decision 471: the followed train's trip progress, in thousandths
+    /// (``FollowBarFacts/progress(of:)``), apart from ``followBar``.
+    public internal(set) var followProgress: Double = 0
     /// Decision 377: the game hour the station master's corner last looked
     /// at (``stationMasterRefreshKey``), changed only when a new hour
     /// begins, so the corner is not told to look again at every tick.
@@ -307,7 +315,10 @@ public final class GameSession {
     /// train with ``clearSelection()``), or when the train leaves the track,
     /// stops existing or its line is removed.
     public private(set) var followedTrainID: TrainID? {
-        didSet { if followedTrainID != oldValue { updateMap3DSpeedCap() } }
+        didSet {
+            if followedTrainID != oldValue { updateMap3DSpeedCap() }
+            refreshFollowBar()
+        }
     }
 
     /// The way the selected train faces when it is placed: along its
@@ -893,7 +904,11 @@ public final class GameSession {
     @ObservationIgnored private var speedMeter = GameSpeedMeter()
     /// Decision 464: when the status board tells the player the device
     /// cannot keep up with the speed; screen state, not saved.
-    @ObservationIgnored private var speedLagWatch = SpeedLagWatch()
+    @ObservationIgnored var speedLagWatch = SpeedLagWatch()
+    /// Whether the hint may come up by itself. UI tests turn it off (the
+    /// app's `-ui-testing`, back on with `-show-speed-lag-hint`): a slow
+    /// Simulator would open the popover mid-test and take a tap.
+    public static var showsSpeedLagHint = true
     /// The hint beside the speed, while there is one.
     public private(set) var speedLagHint: SpeedLagHint?
     @ObservationIgnored private var trainSpeedometer = TrainSpeedometer()
@@ -917,7 +932,7 @@ public final class GameSession {
             speedMeter.record(real: realTimeRun, ticks: ticksRun, speed: world.clock.speed)
             speedLagWatch.record(real: realTimeRun, speed: world.clock.speed, permille: speedMeter.permilleOfSpeed, heat: Self.tickPace.heat)
         }
-        if speedLagWatch.hint != speedLagHint { speedLagHint = speedLagWatch.hint }
+        syncSpeedLagHint()
         let shown = ViewingSpeed(
             speed: world.clock.speed, permille: speedMeter.permilleOfSpeed,
             trainKilometresPerHour: followedTrainID == nil ? nil : trainSpeedometer.kilometresPerHour
@@ -925,11 +940,34 @@ public final class GameSession {
         if shown != shownViewingSpeed { shownViewingSpeed = shown }
     }
 
-    /// The player dismissed the speed hint: none again this game
-    /// (decision 464).
+    /// Shows what ``speedLagWatch`` says, unless hints are switched off.
+    func syncSpeedLagHint() {
+        let hint = Self.showsSpeedLagHint ? speedLagWatch.hint : nil
+        if hint != speedLagHint {
+            speedLagHint = hint
+            speedLagHintSeen = false
+        }
+    }
+
+    /// Whether ``speedLagHint`` has come on screen.
+    @ObservationIgnored private var speedLagHintSeen = false
+
+    /// The speed hint's card came on screen.
+    public func noteSpeedLagHintSeen() {
+        if speedLagHint != nil { speedLagHintSeen = true }
+    }
+
+    /// The speed hint went: dismissed by the player, none again this game
+    /// (decision 464); closed before it was ever on screen (review L-2: a
+    /// popover the system could not show), it may come again.
     public func dismissSpeedLagHint() {
-        speedLagWatch.dismiss()
+        if speedLagHintSeen {
+            speedLagWatch.dismiss()
+        } else {
+            speedLagWatch.withdraw()
+        }
         speedLagHint = nil
+        speedLagHintSeen = false
     }
 
     /// The player took the hint's speed (decision 464).
@@ -959,6 +997,7 @@ public final class GameSession {
         refreshNightSkipOffer()
         refreshScreenFacts()
         refreshMapMarks()
+        refreshFollowBar()
     }
 
     // MARK: - Selection
@@ -1858,10 +1897,13 @@ public final class GameSession {
         func work() async -> Result<TickStep, GameError> {
             let tick = self
             return await Task.detached(priority: .userInitiated) {
+                // Decision 470: the routes of a new passenger plan worked
+                // out first, on every core.
+                let world = await PassengerRoutesAhead.given(to: tick.world)
                 // Decision 328: timed for the map's frame readout.
-                FrameCostMeter.shared.measure(.step) {
+                return FrameCostMeter.shared.measure(.step) {
                     Result { () throws(GameError) in
-                        var step = try GameSession.advanced(tick.world, by: 1, listening: tick.listening)
+                        var step = try GameSession.advanced(world, by: 1, listening: tick.listening)
                         if tick.readsTraffic {
                             step.traffic = TrafficReading(world: step.world, train: tick.train, in: tick.language, previous: tick.previousTraffic)
                         }

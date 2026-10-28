@@ -222,10 +222,10 @@ struct SettingsView: View {
                 Text(verbatim: title)
             } minimumValueLabel: {
                 Image(systemName: "speaker.fill")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
             } maximumValueLabel: {
                 Image(systemName: "speaker.wave.3.fill")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
             }
             .accessibilityIdentifier("settings.volume.\(category.rawValue)")
         }
@@ -563,7 +563,7 @@ struct SettingsView: View {
                                 "所有課程都打開，新遊戲資金無限、整張地圖都能蓋。打開時玩的遊戲不算成就與紀念章。"
                             ))
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Theme.textSecondary)
                         }
                     } icon: {
                         Image(systemName: "sparkles.tv")
@@ -671,7 +671,7 @@ struct ProblemReportRows: View {
                 if let commandLog {
                     Text(verbatim: commandLog.text)
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                         .accessibilityIdentifier("settings.report.attached")
                 } else {
                     ProgressView()

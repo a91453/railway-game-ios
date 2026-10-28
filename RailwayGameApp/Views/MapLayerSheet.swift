@@ -38,7 +38,7 @@ struct MapLayerSheet: View {
                 } header: {
                     Text("Station Overlays")
                 } footer: {
-                    Text("Station catchment area shows the 800-metre walking reference area (~10 minutes walk). Fares and full trains: the fare each station takes, and a stamp where a full train ends its trip.")
+                    Text("Station catchment area: the land within about 10 minutes' walk (800 m) of each station. Fares and full trains: the fare each station takes, and a stamp where a full train ends its trip.")
                 }
 
                 // The reference's "population and travel data" column of its
@@ -61,7 +61,7 @@ struct MapLayerSheet: View {
                 } header: {
                     Text("Population and Travel Data")
                 } footer: {
-                    Text("Population: where people live, from WorldPop estimates on real-world maps and from your towns on blank maps. Travel demand: the trips starting in each area each hour. Demand change: how they rise or fall from the hour before.")
+                    Text("Population: where people live. Travel demand: the trips starting in each area each hour. Demand change: how they rise or fall from the hour before. Real-world maps' population: WorldPop.")
                 }
 
                 // Phase 6d: the city's layers, in the same group as the

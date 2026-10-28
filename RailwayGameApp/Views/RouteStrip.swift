@@ -12,7 +12,10 @@ import SwiftUI
 struct RouteStrip: View {
     let names: [String]
     let color: Color
+    /// What the trains on it are drawn in: navy on a light line.
+    var mark: Color = .white
     var trains: [LineTrainDot] = []
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// The width each stop takes; the line runs through their middles.
     private static let stopWidth = 64.0
@@ -50,12 +53,13 @@ struct RouteStrip: View {
             .resizable()
             .scaledToFit()
             .frame(width: 10, height: 10)
-            .foregroundStyle(.white)
+            .foregroundStyle(mark)
             .frame(width: size, height: size)
             .background(color, in: Circle())
             .overlay(Circle().strokeBorder(Theme.panel, lineWidth: 1.5))
             .offset(x: x, y: y)
-            .animation(.linear(duration: 0.5), value: dot.position)
+            // Steady, as the train moves (motion skill §2); none with Reduce Motion.
+            .animation(reduceMotion ? nil : .linear(duration: 0.5), value: dot.position)
             .accessibilityHidden(true)
     }
 
