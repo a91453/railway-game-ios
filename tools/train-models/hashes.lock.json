@@ -2550,20 +2550,20 @@
       "triangles" : 4000
     },
     "taichung-green-dm1" : {
-      "hash" : "8c248a399b9d85b3",
-      "triangles" : 3120
+      "hash" : "c1f1db74f733a500",
+      "triangles" : 4804
     },
     "taichung-green-dm1-far" : {
-      "hash" : "2d2d5fd1154786cc",
-      "triangles" : 1512
+      "hash" : "f92538680c35bd79",
+      "triangles" : 2208
     },
     "taichung-green-dm2" : {
-      "hash" : "70efea4873864944",
-      "triangles" : 3120
+      "hash" : "eea9dc8aad6d4573",
+      "triangles" : 4804
     },
     "taichung-green-dm2-far" : {
-      "hash" : "764dc4b98d9883f7",
-      "triangles" : 1512
+      "hash" : "a5ee8f72ee4033d4",
+      "triangles" : 2208
     },
     "taipei610-a" : {
       "hash" : "6ee17842b70750b3",

@@ -107,6 +107,7 @@ public struct RealBranchLine: Hashable, Sendable {
         ("ntalrt", "K", "Ankeng LRT", "安坑輕軌", nil, .lightRail, false),
         ("mrt", "R_XBT", "Xinbeitou Branch Line", "新北投支線", nil, .metro, true),
         ("mrt", "G_XBT", "Xiaobitan Branch Line", "小碧潭支線", nil, .metro, true),
+        ("sanying", "LB", "Sanying Line", "三鶯線", nil, .metro, false),
     ]
 
     public func name(in language: DisplayLanguage) -> String {

@@ -40,9 +40,12 @@ A metro's evening brings trains in faster than it sends them out, so a
 train no later run of the day needs leaves for where it stands overnight
 as soon as it is in and turned round (`balanced`'s `prompt="spare"`),
 not after the day's last train out. Only the Xinbeitou and Xiaobitan
-Branch Lines pass: every other metro line's ends stand more trains at
-once than the game lays tracks (the tool prints each one's count),
-and the Sanying Line's runs pass but are not listed (see `LINES`).
+Branch Lines and the Sanying Line pass: every other metro line's ends
+stand more trains at once than the game lays tracks (the tool prints
+each one's count). The Sanying Line's trains standing overnight at
+stations between come in from beyond them after the day's last train
+there (`extract_branch_runs.facing`); before, they stood across the
+night's last runs and the line stood still from the second day.
 
 Danhai's Green Mountain Line does not pass: its ends stand more trains
 overnight than the game lays tracks (Kanding's depot stables nine), and
@@ -89,15 +92,15 @@ LINES = [
     ("krtc", "KR", None, None),
     ("krtc", "KO", None, None),
     ("tmrt", "TG", None, None),
-    # Not the Sanying Line (sanying:LB): its runs pass here, but its
-    # twelve trains slow the game's dispatch to some 13 s a game hour and
-    # stall it on the second afternoon (docs/HANDOFF.md).
+    # Decision 400 (10j-3): the Sanying Line, its trains standing overnight
+    # at stations between brought in after the last train there.
+    ("sanying", "LB", None, None),
 ]
 # The metros' systems: their trains a day has no more runs for leave for
 # where they stand overnight as soon as they are in (`balanced`'s
 # `prompt="spare"`), not after the last train out, as their evening
 # brings trains in faster than it sends them out.
-METROS = {"trtc", "tymc", "krtc", "tmrt"}
+METROS = {"trtc", "tymc", "krtc", "tmrt", "sanying"}
 
 
 def branch_tool():

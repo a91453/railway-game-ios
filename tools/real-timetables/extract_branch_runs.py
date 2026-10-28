@@ -271,6 +271,35 @@ def line_runs(data, days, stops, start=None, prompt=True):
     return balanced(found, start, stops)
 
 
+def facing(surplus, deficit, stops):
+    """Decision 400 (10j-3, Sanying): the trains `surplus` holds (earliest
+    free first) paired with the stations `deficit` lacks one at, as `zip`
+    does, but each station between taken by a train from beyond it, so
+    that it comes in on the track toward the end nearer it, facing that
+    end, as the game stands it at midnight and its first run of the
+    morning leaves; those nearest an end first, so a later one never runs
+    past one standing."""
+    def between(station):
+        return station not in (stops[0], stops[-1])
+
+    def toward_first(station):
+        return 2 * stops.index(station) <= len(stops) - 1
+
+    def from_beyond(origin, destination):
+        index = stops.index(origin)
+        return index > stops.index(destination) if toward_first(destination) else index < stops.index(destination)
+
+    inner = sorted((d for d in deficit if between(d)),
+                   key=lambda d: min(stops.index(d), len(stops) - 1 - stops.index(d)))
+    left = list(surplus)
+    pairs = []
+    for destination in inner:
+        taken = next((t for t in left if from_beyond(t[1], destination)), left[0])
+        left.remove(taken)
+        pairs.append((taken, destination))
+    return pairs + list(zip(left, [d for d in deficit if not between(d)]))
+
+
 def balanced(found, start, stops, prompt=False):
     """`found` with positioning runs that take the trains back to `start`
     after each day's last arrival, checked, and each station's tracks;
@@ -292,14 +321,29 @@ def balanced(found, start, stops, prompt=False):
         for station, count in start.items():
             deficit += [station] * max(0, count - len(idle[station]))
         surplus.sort()
-        for (free, origin), destination in zip(surplus, deficit):
+        pairs = list(zip(surplus, deficit))
+        if prompt == "spare":
+            pairs = facing(surplus, deficit, stops)
+        for (free, origin), destination in pairs:
             if prompt == "spare":
                 last = free - TURNAROUND
             elif prompt:
                 last = max([r["calls"][0][2] for r in day_of(found, day) if r["calls"][0][0] == origin] + [free])
             else:
                 last = max([r["calls"][-1][1] for r in day_of(found, day)] + [free])
-            moved = stretch(found, origin, destination, max(free, last + TURNAROUND))
+            leaves = max(free, last + TURNAROUND)
+            if prompt == "spare" and destination not in (stops[0], stops[-1]):
+                # Decision 400 (10j-3, Sanying): a train standing overnight
+                # at a station between stands on a running track, so it
+                # comes in after the day's last train there (the Sanying
+                # Line's last trains were held behind it till the next
+                # day); `facing` brings the one nearer an end first, so
+                # the other passes it before.
+                probe = stretch(found, origin, destination, 0)
+                through = max([c[2] for r in day_of(found, day) for c in r["calls"] if c[0] == destination], default=0)
+                if probe is not None:
+                    leaves = max(leaves, through + TURNAROUND - (probe[-1][1] - probe[0][2]))
+            moved = stretch(found, origin, destination, leaves)
             if moved is None:
                 return None, f"weekday {day}: no real train runs {origin} to {destination} to time a positioning run"
             if moved[-1][1] >= 2 * DAY:
