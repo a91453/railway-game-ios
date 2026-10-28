@@ -80,21 +80,67 @@ public enum Map3DPedestrianSignal {
         public let count: Int64?
     }
 
+    /// Review K2-6: how far each light group's little green man has
+    /// walked since its green started, in frames, for a renderer to carry
+    /// from one of its frames to the next. Each frame of the screen adds
+    /// the time since the last over the step the green's seconds left give
+    /// (``step(left:of:)``), so the figure walks on, faster, where dividing
+    /// the screen's clock by a step that changes each second would jump it
+    /// to any frame; while theirs is red (or the figure stands still) it
+    /// starts again from its first frame.
+    public struct Pace: Sendable, Equatable {
+        /// By ``group(_:road:)``, frames walked (less than ``frames``).
+        var walked = [Double](repeating: 0, count: 2 * Map3DSignalTiming.groups)
+        /// The screen's clock at the last frame.
+        var last: Double?
+
+        public init() {}
+
+        /// The longest time one frame of the screen counts, seconds: one
+        /// after a pause in drawing walks on from where it stood.
+        static let longestFrame = 0.25
+
+        /// On to `time` seconds into the screen's own clock, the signals
+        /// showing `clock` (``face(_:group:clock:time:pace:reduceMotion:)``).
+        public mutating func advance(to time: Double, clock: Map3DSignalTiming.Clock?, reduceMotion: Bool) {
+            let elapsed = last.map { min(max(0, time - $0), Self.longestFrame) } ?? 0
+            last = time
+            for index in walked.indices {
+                let (junction, road) = Map3DPedestrianSignal.junction(of: index)
+                guard let clock, clock.changes, !clock.paused, !reduceMotion,
+                      let left = Map3DPedestrianSignal.left(road, at: clock.second + Map3DSignalTiming.offset(junction))
+                else {
+                    walked[index] = 0
+                    continue
+                }
+                let step = Map3DPedestrianSignal.step(left: left, of: Int64(Map3DPedestrianSignal.window(road).count))
+                walked[index] = (walked[index] + elapsed / step).truncatingRemainder(dividingBy: Double(Map3DPedestrianSignal.frames))
+            }
+        }
+
+        /// The frame the figure of `road`'s pedestrians at a junction of
+        /// `group` is at.
+        func frame(_ road: Road, group: Int) -> Int {
+            let index = Map3DPedestrianSignal.group(group % Map3DSignalTiming.groups, road: road)
+            return min(Map3DPedestrianSignal.frames - 1, Int(walked[index].rounded(.down)))
+        }
+    }
+
     /// What the pedestrians alongside `road` at a junction of `group` see
     /// at `clock`, `time` seconds into the screen's own clock (for the
-    /// figure's steps and the flashing). With no clock, or one too fast for
-    /// the lights to change, as the traffic signals stand (decision 429:
-    /// the main road's green) and no countdown. Paused or with Reduce
-    /// Motion, the figure stands in its first frame and the green does not
-    /// flash; the countdown still shows.
-    public static func face(_ road: Road, group: Int, clock: Map3DSignalTiming.Clock?, time: Double, reduceMotion: Bool) -> Face {
+    /// flashing), the figure at the frame `pace` has walked it to. With no
+    /// clock, or one too fast for the lights to change, as the traffic
+    /// signals stand (decision 429: the main road's green) and no
+    /// countdown. Paused or with Reduce Motion, the figure stands in its
+    /// first frame and the green does not flash; the countdown still shows.
+    public static func face(_ road: Road, group: Int, clock: Map3DSignalTiming.Clock?, time: Double, pace: Pace,
+                            reduceMotion: Bool) -> Face {
         guard let clock, clock.changes else { return Face(figure: road == .main ? .walk(0) : .stop, count: nil) }
         guard let left = left(road, at: clock.second + Map3DSignalTiming.offset(group)) else { return Face(figure: .stop, count: nil) }
         guard !reduceMotion, !clock.paused else { return Face(figure: .walk(0), count: left) }
         let fraction = time - time.rounded(.down)
         if left <= flashing, fraction >= 0.5 { return Face(figure: .dark, count: left) }
-        let steps = Int64((time / step(left: left, of: Int64(window(road).count))).rounded(.down))
-        return Face(figure: .walk(Int((steps % Int64(frames) + Int64(frames)) % Int64(frames))), count: left)
+        return Face(figure: .walk(pace.frame(road, group: group)), count: left)
     }
 
     /// The group a pedestrian signal's instances carry
@@ -271,12 +317,12 @@ public enum Map3DPedestrianSignal {
         }
 
         /// The model to draw the instances of `model` of `group` with: what
-        /// the face or countdown shows (``Map3DPedestrianSignal/face(_:group:clock:time:reduceMotion:)``),
+        /// the face or countdown shows (``Map3DPedestrianSignal/face(_:group:clock:time:pace:reduceMotion:)``),
         /// `nil` for a blank digit; any other model itself.
-        public func model(_ model: Int, group: Int, clock: Map3DSignalTiming.Clock?, time: Double, reduceMotion: Bool) -> Int? {
+        public func model(_ model: Int, group: Int, clock: Map3DSignalTiming.Clock?, time: Double, pace: Pace, reduceMotion: Bool) -> Int? {
             guard places(model) else { return model }
             let (junction, road) = Map3DPedestrianSignal.junction(of: group)
-            let face = Map3DPedestrianSignal.face(road, group: junction, clock: clock, time: time, reduceMotion: reduceMotion)
+            let face = Map3DPedestrianSignal.face(road, group: junction, clock: clock, time: time, pace: pace, reduceMotion: reduceMotion)
             switch model {
             case placed.head:
                 switch face.figure {

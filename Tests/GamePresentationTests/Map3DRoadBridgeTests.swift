@@ -277,6 +277,40 @@ final class Map3DRoadBridgeTests: XCTestCase {
         XCTAssertTrue(under.allSatisfy { $0.y < 20 + 1 }, "on the ground, not the deck")
     }
 
+    /// Review K2-3: the long paint along a road running on from a
+    /// bridge's end (the kerb lines and a lane's painted walkway, up to
+    /// 64 m a piece) follows its ramp down, each corner at the road's
+    /// height there, rather than standing at its middle's height: once
+    /// 1.62 m over the ramp at one end and 1.86 m under it at the other.
+    func testTheLongPaintFollowsARampDown() throws {
+        let world = try flatWorld(track: false)
+        // A secondary road and a lane, each a level up over a street and
+        // running on east from their bridge's end at 400 m.
+        let builder = built(world, roads: [
+            road([(100, 300), (400, 300)], level: 1), road([(400, 300), (700, 300)]),
+            road([(100, 600), (400, 600)], level: 1, kind: .minor), road([(400, 600), (700, 600)], kind: .minor),
+            road([(250, 200), (250, 700)], kind: .minor),
+        ])
+        let near = Array(builder.nearMeshes.values)
+        let meshes = meshes(builder)
+        let kerbs: Set<UInt32> = [Map3DScene.Builder.kerbRed, Map3DPalette.centreLine]
+        let walkway: Set<UInt32> = [Map3DScene.Builder.walkwayGreen, Map3DScene.Builder.paint]
+        let offset = Float(Map3DBaseMap.RoadKind.secondary.width(ramp: false)) / 2 - Float(Map3DRoadMarkings.kerbInset)
+        for (z, colours, kind) in [(300 + offset, kerbs, Map3DBaseMap.RoadKind.secondary), (300 - offset, kerbs, .secondary),
+                                   (600, walkway, .minor)] {
+            let paint = near.flatMap(\.vertices).filter {
+                colours.contains($0.color) && $0.x > 401 && $0.x < 690 && (kind == .minor ? abs($0.z - 600) < 3 : abs($0.z - z) < 0.2)
+            }
+            XCTAssertTrue(paint.contains { $0.x < 440 }, "paint on the ramp by the bridge's end, \(kind)")
+            XCTAssertTrue(paint.contains { $0.x > 600 }, "paint on the ground, \(kind)")
+            let above = Map3DScene.Builder.centreLineLift - Map3DScene.Builder.lift(of: kind)
+            for vertex in paint {
+                let top = try XCTUnwrap(roadTop(vertex.x, vertex.z, in: meshes, kind: kind), "the road under \(vertex.x), \(vertex.z)")
+                XCTAssertEqual(vertex.y - top, above, accuracy: 0.05, "\(kind) paint at \(vertex.x), \(vertex.z)")
+            }
+        }
+    }
+
     /// The tallest freeway bridges stand at their real decks: 國姓高架橋's
     /// 265.55 m over the sea at its tallest pier.
     func testTheTallestFreewayBridgeStandsAtItsRealDeck() throws {
