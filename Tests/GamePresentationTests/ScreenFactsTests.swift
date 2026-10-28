@@ -21,7 +21,7 @@ final class ScreenFactsTests: XCTestCase {
     static func frameReads(_ session: GameSession) {
         _ = session.screenFacts
         _ = session.tutorial
-        _ = session.followedTrain
+        _ = session.followBar
         _ = session.lineDraft
         _ = session.tool
         _ = session.canUndo
