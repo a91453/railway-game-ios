@@ -381,7 +381,7 @@
 **第二十七次換手（2026-10-28 約 15:30 UTC，session_01YGNNuknN8czzHmJ7zU9h3R 壓縮第 3 次 → 本任用 `create_session` 開的新規劃，第 3 層）**：下一段（第二十六次換手之後）就是交接內容，新規劃照它接。
 - 新規劃先讀 #1041 最後 30 則與本段、下一段，然後在 #1041 留言接手。
 - 在跑的 BX、BP-2、BO、BY、BZ 已被告知改向新規劃回報。
-- Threads 每日排程（`trig_01X6aHx44xiCGGvXkU78pcGd`）已改綁新規劃。舊規劃的巡查排程已刪。
+- 新規劃是 session_01YGNNumoD1XSP8eSkjabCvp。Threads 每日排程改成綁它的 `trig_01NzMKnCRdBjC6csJMQEPJVy`；舊的 `trig_01X6aHx44xiCGGvXkU78pcGd` 與舊規劃的巡查排程已刪。
 - 10/31 公開連結的條件：(1) main HEAD 的完整 `ci.yml` 與 full lane 都綠（full lane 等 BX 修好）；(2) 93.1 兩天沒有新的閃退回報；(3) 作者實機看過。三樣都到了，才請作者在 App Store Connect 開公開連結。公開連結是作者的事，規劃不按。
 - 這任 session 是第 2 層，新規劃第 3 層；到第 7 層時改請作者在 claude.ai 開（§1）。
 
