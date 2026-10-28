@@ -9,6 +9,12 @@ import SwiftUI
 /// view only draws them, and does not follow the world every tick.
 struct NightSkipChip: View {
     let session: GameSession
+    /// Decision 469: the icon alone where the row under the status pill has
+    /// no room for the name (the time is in the status pill above).
+    var iconOnly = false
+    /// The chip's full width, measured whether or not it shows in full, so
+    /// the row knows when the name fits again.
+    var onFullWidth: (CGFloat) -> Void = { _ in }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -41,22 +47,43 @@ struct NightSkipChip: View {
 
     private func chip(title: String, symbol: String, id: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 6) {
-                Image(systemName: symbol)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Theme.primary)
-                Text(verbatim: title)
-                    .font(.caption.weight(.semibold).monospacedDigit())
-                    .foregroundStyle(Theme.textPrimary)
-                    .lineLimit(1)
+            Group {
+                if iconOnly {
+                    icon(symbol)
+                        .frame(width: CGFloat(MapTopRow.nightSkipIconWidth), height: 44)
+                } else {
+                    label(title: title, symbol: symbol)
+                }
             }
-            .fixedSize()
-            .padding(.horizontal, 10)
-            .frame(minHeight: 44)
             .glassBackground(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(.plain)
+        .background {
+            label(title: title, symbol: symbol)
+                .hidden()
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { onFullWidth($0) }
+                .accessibilityHidden(true)
+        }
         .accessibilityLabel(Text(verbatim: title))
         .accessibilityIdentifier(id)
+    }
+
+    private func icon(_ symbol: String) -> some View {
+        Image(systemName: symbol)
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(Theme.primary)
+    }
+
+    private func label(title: String, symbol: String) -> some View {
+        HStack(spacing: 6) {
+            icon(symbol)
+            Text(verbatim: title)
+                .font(.caption.weight(.semibold).monospacedDigit())
+                .foregroundStyle(Theme.textPrimary)
+                .lineLimit(1)
+        }
+        .fixedSize()
+        .padding(.horizontal, 10)
+        .frame(minHeight: 44)
     }
 }
