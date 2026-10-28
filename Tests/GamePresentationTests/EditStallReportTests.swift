@@ -70,45 +70,63 @@ final class EditStallReportTests: XCTestCase {
             let steps = clock.measure { _ = session.nextSteps }
             let rank = clock.measure { _ = CompanyRank(world: session.world) }
             let traffic = clock.measure { _ = session.trafficOverlay }
-            let panel = clock.measure { Self.readLinesPanel(line.id, of: session, memos: memos) }
+            var panelParts: [(String, Duration)] = []
+            let panel = clock.measure { panelParts = Self.readLinesPanel(line.id, of: session, memos: memos) }
             let hint = clock.measure { session.watchRouteHint() }
             var finish = Duration.zero
             let first = try await tick(session) { finish = $0 }
             print("\(name.padding(toLength: 18, withPad: " ", startingAt: 0)): edit \(ms(edit)), advice \(ms(advice)), "
                 + "alerts \(ms(alerts)), next steps \(ms(steps)), rank \(ms(rank)), traffic \(ms(traffic)), lines panel \(ms(panel)), route hint \(ms(hint)), "
                 + "first tick off the main actor \(ms(first)), finishing it \(ms(finish))")
+            print("    lines panel: " + panelParts.map { "\($0.0) \(ms($0.1))" }.joined(separator: ", "))
         }
     }
 
     /// What the lines panel's body reads with line `id` selected
-    /// (`LinesPanel`): its memos start again after every command.
+    /// (`LinesPanel`), part by part: its memos start again after every
+    /// command.
+    @discardableResult
     static func readLinesPanel(
         _ id: LineID, of session: GameSession, memos: (LinePanelMemo, LineLossMemo, LineSatisfactionMemo)
-    ) {
+    ) -> [(String, Duration)] {
         let (memo, loss, satisfaction) = memos
         let world = session.world
-        for report in world.lineReports(sortedBy: .name) {
-            _ = world.lineStatusText(report.line, at: world.clock.now, in: session.language)
+        let clock = ContinuousClock()
+        var parts: [(String, Duration)] = []
+        func part(_ name: String, _ work: () -> Void) { parts.append((name, clock.measure(work))) }
+        part("rows") {
+            for report in world.lineReports(sortedBy: .name) {
+                _ = world.lineStatusText(report.line, at: world.clock.now, in: session.language)
+            }
         }
-        guard let line = world.line(id: id) else { return }
-        _ = memo.serviceSummaries(id, of: session)
-        _ = memo.journeyText(id, of: session)
-        _ = memo.trackCountTexts(id, of: session)
-        for level in ServiceLevel.allCases { _ = memo.coverageText(id, at: level, of: session) }
-        _ = memo.capacityWarning(id, of: session)
-        let calls = Array(line.stops.indices)
-        let order = line.isRing ? calls + [0] + (calls + [0]).dropLast().reversed() : calls + calls.dropLast().reversed()
-        for (from, to) in zip(order, order.dropFirst()) {
-            _ = memo.routeChoices(id, from: from, to: to, pattern: nil, of: session)
+        guard let line = world.line(id: id) else { return parts }
+        part("services") { _ = memo.serviceSummaries(id, of: session) }
+        part("journey") { _ = memo.journeyText(id, of: session) }
+        part("tracks") { _ = memo.trackCountTexts(id, of: session) }
+        part("coverage") { for level in ServiceLevel.allCases { _ = memo.coverageText(id, at: level, of: session) } }
+        part("capacity") { _ = memo.capacityWarning(id, of: session) }
+        part("routes") {
+            let calls = Array(line.stops.indices)
+            let order = line.isRing ? calls + [0] + (calls + [0]).dropLast().reversed() : calls + calls.dropLast().reversed()
+            for (from, to) in zip(order, order.dropFirst()) {
+                _ = memo.routeChoices(id, from: from, to: to, pattern: nil, of: session)
+            }
         }
-        _ = memo.headwayChange(id, headway: 600, of: session)
-        _ = memo.trainShortfall(id, of: session)
-        _ = memo.runningHeadway(id, of: session)
-        _ = memo.staffingPlan(id, headway: 600, type: nil, cars: 4, of: session)
-        _ = loss.diagnosis(id, of: session)
-        _ = loss.fixes(id, of: session)
-        _ = satisfaction.satisfaction(id, of: session)
-        _ = satisfaction.fix(id, of: session)
+        part("staffing") {
+            _ = memo.headwayChange(id, headway: 600, of: session)
+            _ = memo.trainShortfall(id, of: session)
+            _ = memo.runningHeadway(id, of: session)
+            _ = memo.staffingPlan(id, headway: 600, type: nil, cars: 4, of: session)
+        }
+        part("loss") {
+            _ = loss.diagnosis(id, of: session)
+            _ = loss.fixes(id, of: session)
+        }
+        part("satisfaction") {
+            _ = satisfaction.satisfaction(id, of: session)
+            _ = satisfaction.fix(id, of: session)
+        }
+        return parts
     }
 
     /// One game loop tick; returns how long its work took off the main
