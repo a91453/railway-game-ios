@@ -129,7 +129,7 @@ final class RealWorldDataLoadTests: XCTestCase {
         XCTAssertNotNil(launcher.session?.railways)
 
         launcher.returnToStart()
-        launcher.openRealWorldDemo(railways: try XCTUnwrap(launcher.railways))
+        await launcher.openRealWorldDemo(railways: try XCTUnwrap(launcher.railways))?.value
         XCTAssertEqual(launcher.session?.world.geoAnchor, RealWorldDemo.anchor)
     }
 

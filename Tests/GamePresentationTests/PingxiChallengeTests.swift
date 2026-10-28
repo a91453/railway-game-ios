@@ -46,7 +46,7 @@ final class PingxiChallengeTests: XCTestCase {
     }
 
     @MainActor
-    func testTheLauncherWaitsForTheRealRailways() throws {
+    func testTheLauncherWaitsForTheRealRailways() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("Pingxi-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .traditionalChinese)
@@ -54,7 +54,7 @@ final class PingxiChallengeTests: XCTestCase {
         XCTAssertNil(launcher.session)
         XCTAssertEqual(launcher.message?.text, "實景資料還沒準備好。")
         launcher.railways = try Self.bundledRailways()
-        launcher.startChallenge(Challenge.pingxi)
+        await launcher.startChallenge(Challenge.pingxi)?.value
         XCTAssertEqual(launcher.session?.world.scenario?.scenario.id, "history.pingxi")
     }
 }

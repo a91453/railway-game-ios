@@ -104,10 +104,10 @@ final class Map3DOpenEveryStartTests: XCTestCase {
         case .realWorldGameInTaiwan: launcher.startNewGame(at: Self.taipei)
         case .realWorldGameAbroad: await launcher.openRealWorldGame(at: Self.tokyo)?.value
         case .wholeTaiwan: launcher.startWholeTaiwan()
-        case .challenge(let challenge): launcher.startChallenge(challenge)
+        case .challenge(let challenge): await launcher.startChallenge(challenge)?.value
         case .weeklyChallenge: launcher.startWeeklyChallenge(at: Date(timeIntervalSince1970: 1_792_000_000))
         case .demo: launcher.openDemo()
-        case .realWorldDemo: launcher.openRealWorldDemo(railways: railways)
+        case .realWorldDemo: await launcher.openRealWorldDemo(railways: railways)?.value
         case .highSpeedDemo: await launcher.openHighSpeedDemo(railways: railways)?.value
         case .traDemo: await launcher.openTRADemo(railways: railways)?.value
         case .frameTimeBench: _ = await launcher.openFrameTimeBench(lines: 1)

@@ -512,8 +512,11 @@ public final class GameLauncher {
     }
 
     /// Starts a new game on a blank map with `challenge`'s goals (decision
-    /// 86), its towns drawn from a new seed.
-    public func startChallenge(_ challenge: Challenge) {
+    /// 86), its towns drawn from a new seed. The Pingxi challenge reads its
+    /// roads first (``beginReadingRoads(of:place:isDemo:)``): the task that
+    /// opens it, or `nil` for the rest, which open at once.
+    @discardableResult
+    public func startChallenge(_ challenge: Challenge) -> Task<Void, Never>? {
         switch challenge.map {
         case .blank:
             begin(.newGame(challenge: challenge, eventSeed: .random(in: .min ... .max)), keepingAutosave: true)
@@ -524,9 +527,9 @@ public final class GameLauncher {
                 message = StatusMessage(kind: .failure, text: language.text(
                     "The real-world data is not ready yet.", "實景資料還沒準備好。"
                 ))
-                return
+                return nil
             }
-            beginReadingRoads(
+            return beginReadingRoads(
                 of: PingxiChallenge.make(
                     in: language, railways: railways, land: land(at: RealWorldDemo.anchor), water: water(at: RealWorldDemo.anchor),
                     steep: steep(at: RealWorldDemo.anchor)
@@ -541,7 +544,7 @@ public final class GameLauncher {
                 message = StatusMessage(kind: .failure, text: language.text(
                     "The real-world data is not ready yet.", "實景資料還沒準備好。"
                 ))
-                return
+                return nil
             }
             var world = LiuMingchuanChallenge.make(eventSeed: .random(in: .min ... .max))
             GameSession.readLand(
@@ -556,7 +559,7 @@ public final class GameLauncher {
                 message = StatusMessage(kind: .failure, text: language.text(
                     "The real-world data is not ready yet.", "實景資料還沒準備好。"
                 ))
-                return
+                return nil
             }
             var world = line.make(eventSeed: .random(in: .min ... .max))
             GameSession.readLand(
@@ -564,6 +567,7 @@ public final class GameLauncher {
             )
             begin(Self.grounded(world, .real, heights: heights), keepingAutosave: true)
         }
+        return nil
     }
 
     /// Starts the week's challenge (decision 87): the map every player gets
