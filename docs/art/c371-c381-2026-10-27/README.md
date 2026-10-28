@@ -103,3 +103,7 @@ Swift 6.4 warnings-as-errors build-tests 通過；30 項選定測試（1 項 BUS
 最新 producer bytes、viewer 下載、ZIP 與遠端回讀驗證依私包 source-record／verification 及兩 PR 記錄。最新 head CI 另查；未觸發、跳過與 pending 不能當通過。本輪未作 Simulator 畫面或真機驗收。
 
 本輪 producer：`5e1e76aad0b056c519d39e14b5a21f6304cc4ae5`，提交後重建 22 件原生／GLB 完整 bytes 一致。當前 ZIP `be655c5541042d89f72aef55711d0c6a874ff46464106988d05d2dda2453dee3`，361 個 member，CRC／完整解壓逐 bytes 已核對，viewer 真下載 ZIP 一致；遠端回讀另見 PR／issue。
+
+## 第五輪最終交付
+
+producer `d4ee39b5eaec951137af6158959e8d6ff2cc97de`：提交後重建22件模型及Swift整列預期payload逐bytes一致。最終42項相關測試（1項配置跳過、0失敗）；支座／底板／橫樑的實際箱形接觸與降低真支座頂點50mm反例通過。189張七向完整RGBA解碼／透明／不裁邊，全部307張PNG完整解碼；兩種viewer互動／手機寬度／原生、GLB、PNG、ZIP真下載通過。當前ZIP `be95b0a0ca240cd0f62462a3a2819eca87ee3fc44e3ce236bab833c8f2cb0651`，362項CRC／完整解壓逐bytes通過。遠端回讀及最新head CI另見兩PR／issue，不沿用舊head。
